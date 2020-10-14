@@ -1117,7 +1117,7 @@ void cLuxInputHandler::UpdateGamePlayerInput()
 
 	// Mouse
 	cVector2l vMouseRelPos = mpInput->GetMouse()->GetRelPosition();
-	cVector2f vMouseRelPosFloat = cVector2f(vMouseRelPos.x, vMouseRelPos.y)*mfMouseSensitivity;
+	cVector2f vMouseRelPosFloat = cVector2f((float)vMouseRelPos.x, (float)vMouseRelPos.y)*mfMouseSensitivity;
 	cVector2l vAbsRel = cMath::RoundToInt(vMouseRelPosFloat);
 	cVector2f vRelPos = cVector2f((float)vAbsRel.x,(float)vAbsRel.y) / (1.7 * mpGraphics->GetLowLevel()->GetScreenSizeFloat().y);
 	cVector2f vFinalPos;

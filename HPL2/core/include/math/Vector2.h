@@ -20,7 +20,7 @@
 #ifndef HPL_VECTOR2_H
 #define HPL_VECTOR2_H
 
-#include <math.h>
+#include <cmath>
 #include <stdio.h>
 #include "system/SystemTypes.h"
 
@@ -207,7 +207,7 @@ namespace hpl {
 			 */
 			T Normalize()
 			{
-				T length  = sqrt( x * x + y * y);
+				T length  = std::sqrt( x * x + y * y);
 
 				if ( length > 1e-08 )
 				{

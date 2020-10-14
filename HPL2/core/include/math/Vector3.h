@@ -20,7 +20,7 @@
 #ifndef HPL_VECTOR3_H
 #define HPL_VECTOR3_H
 
-#include <math.h>
+#include <cmath>
 #include "Vector2.h"
 
 namespace hpl {
@@ -315,7 +315,7 @@ namespace hpl {
 		*/
 		T Normalize()
 		{
-			T length  = sqrt( x * x + y * y +  z * z);
+			T length  = std::sqrt( x * x + y * y +  z * z);
 
 			// Will also work for zero-sized vectors, but will change nothing
 			if ( length > 1e-08 )
