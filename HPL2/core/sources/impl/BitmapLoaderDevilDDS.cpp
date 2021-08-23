@@ -78,8 +78,16 @@ namespace hpl {
 		int lNumOfImages = ilGetInteger(IL_NUM_IMAGES) + 1; //Returns number of images - 1, so need to add 1
 		int lNumOfMipMaps = ilGetInteger(IL_NUM_MIPMAPS) + 1; //We count first image as mimap too, so add 1
 		int lCubeFlags = ilGetInteger(IL_IMAGE_CUBEFLAGS);
+		bool useFacesInsteadOfImages = false;
 
-		if(lCubeFlags != 0) lNumOfImages = 6;
+		if (lCubeFlags != 0 && lNumOfImages != 6)
+		{
+			lNumOfImages = ilGetInteger(IL_NUM_FACES) + 1;
+			if (lNumOfImages > 1)
+				useFacesInsteadOfImages = true;
+			else
+				lNumOfImages = 6;
+		}
 
 		//No need to setup if only one image and mipmap, data is already setup for that.
 		if(lNumOfImages > 1 || lNumOfMipMaps > 1)
@@ -122,8 +130,15 @@ namespace hpl {
 				if(lNumOfImages > 1 || lNumOfMipMaps > 1)
 				{
 					ilBindImage(lImageId); // For some reason this is needed....
-					if(lNumOfImages > 1)	ilActiveImage(image);
-					if(lNumOfMipMaps > 1)	ilActiveMipmap(mip);
+					if (lNumOfImages > 1)
+					{
+						if (useFacesInsteadOfImages)
+							ilActiveFace(image);
+						else
+							ilActiveImage(image);
+					}
+					if(lNumOfMipMaps > 1)
+						ilActiveMipmap(mip);
 				}
 
 				cBitmapData *pImage = pBitmap->GetData(image,mip);
@@ -153,8 +168,15 @@ namespace hpl {
 				if(lNumOfImages > 1 || lNumOfMipMaps > 1)
 				{
 					ilBindImage(lImageId); // For some reason this is needed....
-					if(lNumOfImages > 1)	ilActiveImage(image);
-					if(lNumOfMipMaps > 1)	ilActiveMipmap(mip);
+					if (lNumOfImages > 1)
+					{
+						if (useFacesInsteadOfImages)
+							ilActiveFace(image);
+						else
+							ilActiveImage(image);
+					}
+					if (lNumOfMipMaps > 1)
+						ilActiveMipmap(mip);
 				}
 
 				cBitmapData *pImage = pBitmap->GetData(image,mip);
