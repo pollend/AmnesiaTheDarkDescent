@@ -5,4 +5,3 @@ ExternalProject_Add(external_SDL2
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${LIBDIR}/SDL2
         INSTALL_DIR ${LIBDIR}/SDL2
         )
-

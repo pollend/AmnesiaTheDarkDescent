@@ -15,16 +15,21 @@ find_program(MAKE_EXECUTABLE
 
 set(LIBDIR ${CMAKE_CURRENT_BINARY_DIR}/Debug)
 set(BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR}/build)
+set(DEPENDENCY_ROOT "${CMAKE_CURRENT_SOURCE_DIR}")
 
+set (libtheora_Version 1.1.1)
 set (libvorbis_Version 1.3.7)
 set (libogg_Version 1.3.5)
 set (libSDL2_Version 2.0.16)
 set (libGLEW_Version glew-2.2.0)
+set (libAngleScript_Version 2.19.2)
 
 include(cmake/ogg.cmake)
 include(cmake/SDL2.cmake)
 include(cmake/vorbis.cmake)
 include(cmake/OALWrapper.cmake)
 include(cmake/glew.cmake)
-include(cmake/theora.cmake)
+#include(cmake/theora.cmake)
 include(cmake/DevIL.cmake)
+include(cmake/angelscript.cmake)
+include(cmake/newton.cmake)

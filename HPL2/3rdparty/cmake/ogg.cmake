@@ -1,4 +1,3 @@
-set (libogg_Version 1.3.5)
 ExternalProject_Add(external_ogg
         URL http://downloads.xiph.org/releases/ogg/libogg-${libogg_Version}.tar.gz
         PREFIX ${BUILD_DIR}/ogg
