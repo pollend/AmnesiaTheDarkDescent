@@ -1,0 +1,3 @@
+[submodule "HPL2/OALWrapper"]
+	path = HPL2/OALWrapper
+	url = https://github.com/FrictionalGames/OALWrapper.git

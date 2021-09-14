@@ -12,8 +12,9 @@ find_program(MAKE_EXECUTABLE
         NAMES_PER_DIR
         DOC "GNU Make")
 
+set(LIB_INSTALL_PATH ${CMAKE_CURRENT_BINARY_DIR} CACHE PATH "Install path for the build dependencies")
 
-set(LIBDIR ${CMAKE_CURRENT_BINARY_DIR}/Debug)
+set(LIBDIR ${LIB_INSTALL_PATH}/linux)
 set(BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR}/build)
 set(DEPENDENCY_ROOT "${CMAKE_CURRENT_SOURCE_DIR}")
 

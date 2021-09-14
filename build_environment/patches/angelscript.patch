@@ -1,0 +1,10 @@
+--- ./angelscript/include/angelscript.h	2010-09-05 15:49:18.000000000 -0700
++++ ./angelscript/include/angelscript.h	2021-09-13 21:17:53.393335450 -0700
+@@ -952,7 +952,7 @@
+ 		// as it would mean that the size of the method pointer cannot be determined.
+ 
+ 		int ERROR_UnsupportedMethodPtr[N-100];
+-		return 0;
++//		return 0;
+ 	}
+ };
