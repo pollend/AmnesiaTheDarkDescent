@@ -1,9 +1,9 @@
 cmake_minimum_required (VERSION 2.8.11)
 project(Launcher)
 
-FindPrebuiltLibrary(FLTK_LIBRARY fltk)
-FindPrebuiltLibrary(FLTK_IMAGES_LIBRARY fltk_images)
-FindPrebuiltLibrary(JPEG_LIBRARY jpeg)
+find_package(fltk)
+find_package(fltk_images)
+find_package(jpeg)
 
 add_executable(Launcher
     launcher.cpp
