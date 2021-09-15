@@ -1,11 +1,5 @@
 cmake_minimum_required (VERSION 2.8.11)
-project(HPL2)
 
-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-include(BoilerPlate)
-
-set(HPL2_VERSION_MAJOR 2)
-set(HPL2_VERSION_MINOR 0)
 if(IS_APPLE_64)
     set(BIN_LIBROOT "${PLATFORM_PREFIX}64")
 else()
@@ -24,7 +18,6 @@ mark_as_advanced(
     PREBUILT_PLATFORM_ROOT
 )
 
-include(UtilityFunctions)
 
 IF(APPLE)
     SET(PRIVATE_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../dependencies CACHE PATH "")
@@ -37,10 +30,6 @@ ELSEIF(LINUX)
     SET(PRIVATE_LIB_SUFFIX "lib/linux")
     SET(PRIVATE_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../dependencies CACHE PATH "")
 ENDIF()
-
-OPTION(USE_SDL2 "Use SDL2 instead of SDL1.2" ON)
-
-add_subdirectory(../dependencies/OALWrapper OALWrapper)
 
 SET(HPL2_DEFINES
     PUBLIC $<$<BOOL:${USE_SDL2}>:USE_SDL2>
@@ -182,6 +171,7 @@ ELSEIF(LINUX)
 ELSE()
     message(FATAL_ERROR "Unknown platform")
 ENDIF()
+
 SET(BUILDID_SUFFIX ${BUILDID_SUFFIX} CACHE STRING "Build ID Suffix")
 find_file(BUILDID_BIN buildcounter.pl
     PATHS ${CMAKE_CURRENT_SOURCE_DIR}

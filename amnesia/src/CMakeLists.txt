@@ -23,7 +23,7 @@ add_definitions(
     -Wno-unused-function
 )
 
-add_subdirectory(../../HPL2/core core2)
+add_subdirectory(../../HPL2 core2)
 
 if(USERDIR_RESOURCES)
     add_definitions(
