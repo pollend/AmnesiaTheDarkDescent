@@ -1,9 +1,13 @@
 cmake_minimum_required (VERSION 2.8.11)
 project(Launcher)
 
-find_package(fltk)
+SET(FLTK_FLUID_EXECUTABLE "${LIBDIR}/FLTK/bin/fluid")
+
+FIND_PACKAGE(FLTK REQUIRED)
 find_package(fltk_images)
 find_package(jpeg)
+
+include_directories(${FLTK_INCLUDE_DIR})
 
 add_executable(Launcher
     launcher.cpp

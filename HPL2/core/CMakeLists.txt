@@ -46,12 +46,15 @@ set(HPL2_INCLUDES
     PUBLIC ../dependencies/include
 )
 
-IF(LINUX)
-    add_library(binreloc STATIC ../dependencies/sources/binreloc/binreloc.c)
+IF(UNIX AND NOT APPLE)
+
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
+
+    add_library(binreloc STATIC ../binreloc/binreloc.c)
     set_target_properties(binreloc PROPERTIES COMPILE_DEFINITIONS "ENABLE_BINRELOC")
 
     list(APPEND HPL2_INCLUDES
-        ../dependencies/sources/binreloc/
+        ../binreloc/
     )
 ENDIF()
 
@@ -155,7 +158,7 @@ IF(APPLE)
             SDLMain.h
         )
     ENDIF()
-ELSEIF(LINUX)
+ELSEIF(UNIX)
     LIST(APPEND impl_sources
         sources/impl/PlatformUnix.cpp
         sources/impl/PlatformSDL.cpp
@@ -166,7 +169,7 @@ ENDIF()
 
 IF(APPLE)
     SET(BUILDID_SUFFIX MacOSX)
-ELSEIF(LINUX)
+ELSEIF(UNIX)
     SET(BUILDID_SUFFIX Linux)
 ELSE()
     message(FATAL_ERROR "Unknown platform")
@@ -227,14 +230,13 @@ source_group("Platform" REGULAR_EXPRESSION "\\/impl\\/Platform.+")
 
 # setup libs
 
-FindPrebuiltLibrary(NEWTON_LIBRARY Newton)
-FindPrebuiltLibrary(ANGELSCRIPT_LIBRARY angelscript)
-FindPrebuiltLibrary(FBX_LIBRARY fbxsdk-2012.2-static)
-FindPrebuiltLibrary(GLEW_LIBRARY GLEW)
-FindPrebuiltLibrary(THEORA_LIBRARY theora)
-FindPrebuiltLibrary(DEVIL_LIBRARY IL)
+# FindPrebuiltLibrary(NEWTON_LIBRARY Newton)
+# FindPrebuiltLibrary(ANGELSCRIPT_LIBRARY angelscript)
+# FindPrebuiltLibrary(FBX_LIBRARY fbxsdk-2012.2-static)
+# FindPrebuiltLibrary(GLEW_LIBRARY GLEW)
+# FindPrebuiltLibrary(THEORA_LIBRARY theora)
+# FindPrebuiltLibrary(DEVIL_LIBRARY IL)
 
-find_package(OpenGL)
 mark_as_advanced(NEWTON_LIBRARY ANGELSCRIPT_LIBRARY FBX_LIBRARY GLEW_LIBRARY THEORA_LIBRARY DEVIL_LIBRARY)
 
 # setup HPL2 compile target
@@ -253,7 +255,7 @@ target_compile_definitions(HPL2
     ${HPL2_DEFINES}
 )
 
-if(LINUX)
+if(UNIX AND NOT APPLE)
     set(PLATFORM_LIBS
         binreloc
         pthread
@@ -273,11 +275,13 @@ endif()
 target_link_libraries(HPL2
     OALWrapper # also pulls in ogg,vorbis,SDL
     ${NEWTON_LIBRARY}
-    ${ANGELSCRIPT_LIBRARY}
+    ${ANGLESCRIPT_LIBRARY}
     ${OPENGL_gl_LIBRARY} ${OPENGL_glu_LIBRARY}
-    ${GLEW_LIBRARY}
-    ${THEORA_LIBRARY}
-    ${DEVIL_LIBRARY}
+    ${GLEW_LIBRARIES}
+    ${THEORA_LIBRARIES}
+    ${DevIL_LIBRARIES}
+    ${FLTK_LIBRARIES}
+    ${SDL2_LIBRARY}
     z
     ${FBX_LIBRARY}
     ${PLATFORM_LIBS}
@@ -334,7 +338,7 @@ FUNCTION(AddTestTarget target_name)
     )
 ENDFUNCTION()
 
-add_subdirectory(../tests tests)
+# add_subdirectory(../tests tests)
 add_subdirectory(../tools tools)
 
 

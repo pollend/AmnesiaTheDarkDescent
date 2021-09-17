@@ -61,7 +61,7 @@ IF(APPLE)
 add_definitions(
     -DMAC_OS
 )
-ELSEIF(LINUX)
+ELSEIF(UNIX)
 add_definitions(
     -DLINUX
 )

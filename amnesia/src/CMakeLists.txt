@@ -23,6 +23,13 @@ add_definitions(
     -Wno-unused-function
 )
 
+
+find_package(PkgConfig REQUIRED) 
+
+pkg_search_module(THEORA REQUIRED IMPORTED_TARGET theora)
+include_directories(${THEORA_INCLUDEDIR})
+link_directories(${THEORA_LIBRARY_DIRS})
+
 add_subdirectory(../../HPL2 core2)
 
 if(USERDIR_RESOURCES)

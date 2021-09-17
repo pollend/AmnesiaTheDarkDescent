@@ -1,4 +1,3 @@
-set (libvorbis_Version 1.3.7)
 ExternalProject_Add(external_vorbis
         URL http://downloads.xiph.org/releases/vorbis/libvorbis-${libvorbis_Version}.tar.gz
         PREFIX ${BUILD_DIR}/vorbis
