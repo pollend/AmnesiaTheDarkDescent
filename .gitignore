@@ -351,5 +351,4 @@ MigrationBackup/
 
 .build/
 
-3drparty/
-HPL2/3rdparty/
+lib/

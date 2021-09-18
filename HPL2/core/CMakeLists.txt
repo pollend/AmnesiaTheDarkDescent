@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 2.8.11)
+# cmake_minimum_required(VERSION 3.1)
 
 if(IS_APPLE_64)
     set(BIN_LIBROOT "${PLATFORM_PREFIX}64")
@@ -46,17 +46,6 @@ set(HPL2_INCLUDES
     PUBLIC ../dependencies/include
 )
 
-IF(UNIX AND NOT APPLE)
-
-    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
-
-    add_library(binreloc STATIC ../binreloc/binreloc.c)
-    set_target_properties(binreloc PROPERTIES COMPILE_DEFINITIONS "ENABLE_BINRELOC")
-
-    list(APPEND HPL2_INCLUDES
-        ../binreloc/
-    )
-ENDIF()
 
 
 # common shared source
@@ -227,18 +216,6 @@ source_group("OpenAL Specific" REGULAR_EXPRESSION "\\/impl\\/.*OpenAL.+")
 source_group("Win32" REGULAR_EXPRESSION "\\/impl\\/.+Win32.+")
 source_group("Platform" REGULAR_EXPRESSION "\\/impl\\/Platform.+")
 
-
-# setup libs
-
-# FindPrebuiltLibrary(NEWTON_LIBRARY Newton)
-# FindPrebuiltLibrary(ANGELSCRIPT_LIBRARY angelscript)
-# FindPrebuiltLibrary(FBX_LIBRARY fbxsdk-2012.2-static)
-# FindPrebuiltLibrary(GLEW_LIBRARY GLEW)
-# FindPrebuiltLibrary(THEORA_LIBRARY theora)
-# FindPrebuiltLibrary(DEVIL_LIBRARY IL)
-
-mark_as_advanced(NEWTON_LIBRARY ANGELSCRIPT_LIBRARY FBX_LIBRARY GLEW_LIBRARY THEORA_LIBRARY DEVIL_LIBRARY)
-
 # setup HPL2 compile target
 
 add_library(HPL2 STATIC
@@ -256,11 +233,7 @@ target_compile_definitions(HPL2
 )
 
 if(UNIX AND NOT APPLE)
-    set(PLATFORM_LIBS
-        binreloc
-        pthread
-        dl
-    )
+    set(PLATFORM_LIBS pthread dl)
 elseif(APPLE)
     FIND_LIBRARY(SC_LIBRARY SystemConfiguration)
     FIND_LIBRARY(COCOA_LIBRARY Cocoa)
@@ -272,21 +245,30 @@ elseif(APPLE)
     )
 endif()
 
+
+IF(UNIX AND NOT APPLE)
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
+    target_link_libraries(HPL2 extern_binreloc)
+ENDIF()
+
+# hack to add to include path
+include_directories(${FLTK_INCLUDE_DIR})
 target_link_libraries(HPL2
-    OALWrapper # also pulls in ogg,vorbis,SDL
-    ${NEWTON_LIBRARY}
-    ${ANGLESCRIPT_LIBRARY}
-    ${OPENGL_gl_LIBRARY} ${OPENGL_glu_LIBRARY}
-    ${GLEW_LIBRARIES}
-    ${THEORA_LIBRARIES}
-    ${DevIL_LIBRARIES}
-    ${FLTK_LIBRARIES}
-    ${SDL2_LIBRARY}
+    external_newton
+    external_anglescript
+    external_OALWrapper
+    Vorbis::vorbisfile
+    Vorbis::vorbis
+    SDL2
+    ${FLTK_LIBRARY}
+    PkgConfig::THEORA
+    PkgConfig::DevIL
+    GLEW
+    OpenGL::GL
     z
     ${FBX_LIBRARY}
     ${PLATFORM_LIBS}
 )
-
 
 if(APPLE)   
     # helper function to copy the needed frameworks in at build time
@@ -339,6 +321,5 @@ FUNCTION(AddTestTarget target_name)
 ENDFUNCTION()
 
 # add_subdirectory(../tests tests)
-add_subdirectory(../tools tools)
 
 

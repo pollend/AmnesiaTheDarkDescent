@@ -1,0 +1,3 @@
+add_library(extern_binreloc STATIC src/binreloc.c)
+set_target_properties(extern_binreloc PROPERTIES COMPILE_DEFINITIONS "ENABLE_BINRELOC")
+target_include_directories(extern_binreloc PUBLIC include)

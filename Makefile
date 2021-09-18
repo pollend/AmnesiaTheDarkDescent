@@ -5,8 +5,7 @@ ifndef BUILD_DIR
 endif
 
 build_deps: .FORCE
-	cmake -S "build_environment" -B"${BUILD_DIR}/build_environment" -DLIB_INSTALL_PATH="${ROOT_DIR}/HPL2/3rdparty"
+	cmake -S "build_environment" -B"${BUILD_DIR}/build_environment" -DLIB_INSTALL_PATH="${ROOT_DIR}/lib"
 	cd "${BUILD_DIR}/build_environment"; make
-
 
 .FORCE:
