@@ -1,4 +1,3 @@
-cmake_minimum_required (VERSION 2.8.11)
 project(Lux)
 
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR})
@@ -22,8 +21,6 @@ add_definitions(
     -Wno-unused-variable
     -Wno-unused-function
 )
-
-add_subdirectory(../../HPL2/core core2)
 
 if(USERDIR_RESOURCES)
     add_definitions(

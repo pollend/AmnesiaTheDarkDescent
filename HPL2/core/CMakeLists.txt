@@ -1,11 +1,5 @@
-cmake_minimum_required (VERSION 2.8.11)
-project(HPL2)
+# cmake_minimum_required(VERSION 3.1)
 
-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-include(BoilerPlate)
-
-set(HPL2_VERSION_MAJOR 2)
-set(HPL2_VERSION_MINOR 0)
 if(IS_APPLE_64)
     set(BIN_LIBROOT "${PLATFORM_PREFIX}64")
 else()
@@ -24,7 +18,6 @@ mark_as_advanced(
     PREBUILT_PLATFORM_ROOT
 )
 
-include(UtilityFunctions)
 
 IF(APPLE)
     SET(PRIVATE_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../dependencies CACHE PATH "")
@@ -37,10 +30,6 @@ ELSEIF(LINUX)
     SET(PRIVATE_LIB_SUFFIX "lib/linux")
     SET(PRIVATE_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../dependencies CACHE PATH "")
 ENDIF()
-
-OPTION(USE_SDL2 "Use SDL2 instead of SDL1.2" ON)
-
-add_subdirectory(../dependencies/OALWrapper OALWrapper)
 
 SET(HPL2_DEFINES
     PUBLIC $<$<BOOL:${USE_SDL2}>:USE_SDL2>
@@ -57,14 +46,6 @@ set(HPL2_INCLUDES
     PUBLIC ../dependencies/include
 )
 
-IF(LINUX)
-    add_library(binreloc STATIC ../dependencies/sources/binreloc/binreloc.c)
-    set_target_properties(binreloc PROPERTIES COMPILE_DEFINITIONS "ENABLE_BINRELOC")
-
-    list(APPEND HPL2_INCLUDES
-        ../dependencies/sources/binreloc/
-    )
-ENDIF()
 
 
 # common shared source
@@ -166,7 +147,7 @@ IF(APPLE)
             SDLMain.h
         )
     ENDIF()
-ELSEIF(LINUX)
+ELSEIF(UNIX)
     LIST(APPEND impl_sources
         sources/impl/PlatformUnix.cpp
         sources/impl/PlatformSDL.cpp
@@ -177,11 +158,12 @@ ENDIF()
 
 IF(APPLE)
     SET(BUILDID_SUFFIX MacOSX)
-ELSEIF(LINUX)
+ELSEIF(UNIX)
     SET(BUILDID_SUFFIX Linux)
 ELSE()
     message(FATAL_ERROR "Unknown platform")
 ENDIF()
+
 SET(BUILDID_SUFFIX ${BUILDID_SUFFIX} CACHE STRING "Build ID Suffix")
 find_file(BUILDID_BIN buildcounter.pl
     PATHS ${CMAKE_CURRENT_SOURCE_DIR}
@@ -234,19 +216,6 @@ source_group("OpenAL Specific" REGULAR_EXPRESSION "\\/impl\\/.*OpenAL.+")
 source_group("Win32" REGULAR_EXPRESSION "\\/impl\\/.+Win32.+")
 source_group("Platform" REGULAR_EXPRESSION "\\/impl\\/Platform.+")
 
-
-# setup libs
-
-FindPrebuiltLibrary(NEWTON_LIBRARY Newton)
-FindPrebuiltLibrary(ANGELSCRIPT_LIBRARY angelscript)
-FindPrebuiltLibrary(FBX_LIBRARY fbxsdk-2012.2-static)
-FindPrebuiltLibrary(GLEW_LIBRARY GLEW)
-FindPrebuiltLibrary(THEORA_LIBRARY theora)
-FindPrebuiltLibrary(DEVIL_LIBRARY IL)
-
-find_package(OpenGL)
-mark_as_advanced(NEWTON_LIBRARY ANGELSCRIPT_LIBRARY FBX_LIBRARY GLEW_LIBRARY THEORA_LIBRARY DEVIL_LIBRARY)
-
 # setup HPL2 compile target
 
 add_library(HPL2 STATIC
@@ -263,12 +232,8 @@ target_compile_definitions(HPL2
     ${HPL2_DEFINES}
 )
 
-if(LINUX)
-    set(PLATFORM_LIBS
-        binreloc
-        pthread
-        dl
-    )
+if(UNIX AND NOT APPLE)
+    set(PLATFORM_LIBS pthread dl)
 elseif(APPLE)
     FIND_LIBRARY(SC_LIBRARY SystemConfiguration)
     FIND_LIBRARY(COCOA_LIBRARY Cocoa)
@@ -280,19 +245,30 @@ elseif(APPLE)
     )
 endif()
 
+
+IF(UNIX AND NOT APPLE)
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
+    target_link_libraries(HPL2 extern_binreloc)
+ENDIF()
+
+# hack to add to include path
+include_directories(${FLTK_INCLUDE_DIR})
 target_link_libraries(HPL2
-    OALWrapper # also pulls in ogg,vorbis,SDL
-    ${NEWTON_LIBRARY}
-    ${ANGELSCRIPT_LIBRARY}
-    ${OPENGL_gl_LIBRARY} ${OPENGL_glu_LIBRARY}
-    ${GLEW_LIBRARY}
-    ${THEORA_LIBRARY}
-    ${DEVIL_LIBRARY}
+    external_newton
+    external_anglescript
+    external_OALWrapper
+    Vorbis::vorbisfile
+    Vorbis::vorbis
+    SDL2
+    ${FLTK_LIBRARY}
+    PkgConfig::THEORA
+    PkgConfig::DevIL
+    GLEW
+    OpenGL::GL
     z
     ${FBX_LIBRARY}
     ${PLATFORM_LIBS}
 )
-
 
 if(APPLE)   
     # helper function to copy the needed frameworks in at build time
@@ -344,7 +320,6 @@ FUNCTION(AddTestTarget target_name)
     )
 ENDFUNCTION()
 
-add_subdirectory(../tests tests)
-add_subdirectory(../tools tools)
+# add_subdirectory(../tests tests)
 
 

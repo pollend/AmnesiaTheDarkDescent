@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
-
+#define HPL_MESH_LOADER_FBX_H
 #ifndef HPL_MESH_LOADER_FBX_H
 #define HPL_MESH_LOADER_FBX_H
 

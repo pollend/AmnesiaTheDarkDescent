@@ -1,5 +1,5 @@
-cmake_minimum_required (VERSION 2.8.11)
-project(Tools)
+# cmake_minimum_required (VERSION 2.8.11)
+# project(Tools)
 
 find_file(TOOLINFO_PLIST Tool-Info.plist
     PATHS ${CMAKE_CURRENT_SOURCE_DIR}

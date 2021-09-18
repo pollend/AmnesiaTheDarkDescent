@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 2.8.11)
+# cmake_minimum_required(VERSION 3.1)
 project(Amnesia)
 
 file(GLOB all_sources RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
@@ -61,7 +61,7 @@ IF(APPLE)
 add_definitions(
     -DMAC_OS
 )
-ELSEIF(LINUX)
+ELSEIF(UNIX)
 add_definitions(
     -DLINUX
 )
