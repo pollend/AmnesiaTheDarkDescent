@@ -352,3 +352,6 @@ MigrationBackup/
 .build/
 
 lib/
+
+BuildID_*.cpp
+BuildID_*.h
