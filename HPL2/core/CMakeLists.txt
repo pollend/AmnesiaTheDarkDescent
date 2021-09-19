@@ -10,10 +10,6 @@ endif()
 set(HPL2_VERSION_MAJOR 2)
 set(HPL2_VERSION_MINOR 0)
 
-add_subdirectory(../dependencies/OALWrapper OALWrapper)
-add_subdirectory(../dependencies/AngelScript AngelScript)
-add_subdirectory(../dependencies/Newton Newton)
-
 add_definitions(
   -DUSE_OALWRAPPER
   -DUSE_SDL2
@@ -215,9 +211,6 @@ set(HPL2_INCLUDES
     PRIVATE ${DEVIL_INCLUDE_DIR}
     PRIVATE ${GLEW_INCLUDE_DIRS}
     PRIVATE ${OPENGL_INCLUDE_DIR}
-    PUBLIC ../dependencies/include
-    PUBLIC ../dependencies/AngelScript/include
-    PUBLIC ../dependencies/Newton/include
 )
 
 target_include_directories(HPL2

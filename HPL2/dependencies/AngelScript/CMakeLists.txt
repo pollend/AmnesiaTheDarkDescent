@@ -50,3 +50,5 @@ add_library(AngelScript STATIC
   sources/as_typeinfo.cpp
   sources/as_variablescope.cpp
   )
+
+target_include_directories(AngelScript PUBLIC include)

@@ -84,3 +84,5 @@ add_library(Newton STATIC
   newton/Newton.cpp
   newton/NewtonClass.cpp
   )
+
+target_include_directories(Newton PUBLIC include)

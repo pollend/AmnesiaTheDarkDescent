@@ -16,7 +16,7 @@ if (NOT DEFINED SYSTEMWIDE_RESOURCES_LOCATION)
   set (SYSTEMWIDE_RESOURCES_LOCATION "/usr/local/share/amnesia-tdd")
 endif (NOT DEFINED SYSTEMWIDE_RESOURCES_LOCATION)
 
-add_subdirectory(../../HPL2/core core2)
+#add_subdirectory(../../HPL2/core core2)
 
 if(USERDIR_RESOURCES)
     add_definitions(
@@ -33,4 +33,4 @@ add_custom_target(GameRelease
 )
 
 install (TARGETS Amnesia RUNTIME
-         DESTINATION bin)
+         DESTINATION ${CMAKE_BINARY_DIR}/bin)
