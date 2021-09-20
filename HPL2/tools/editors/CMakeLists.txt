@@ -232,16 +232,16 @@ file(GLOB_RECURSE modeleditor_sources
     ModelEditorWorld.cpp
     )
 
-#GenerateBuildID(MODELEDITOR_BUILDID
-#    ModelEditor
-#    ${CMAKE_CURRENT_SOURCE_DIR}/modeleditor
-#    ${CMAKE_CURRENT_SOURCE_DIR}/modeleditor
-#)
+GenerateBuildID(MODELEDITOR_BUILDID
+    ModelEditor
+    ${CMAKE_CURRENT_SOURCE_DIR}/modeleditor
+    ${CMAKE_CURRENT_SOURCE_DIR}/modeleditor
+)
 
-#AddToolTarget(ModelEditor
-#    ${modeleditor_sources}
-#    ${MODELEDITOR_BUILDID}
-#)
+AddToolTarget(ModelEditor
+    ${modeleditor_sources}
+    ${MODELEDITOR_BUILDID}
+)
 
 ### ParticleEditor
 
@@ -304,16 +304,16 @@ file(GLOB_RECURSE particleeditor_sources
     ParticleEditorWorld.cpp
     )
 
-#GenerateBuildID(PARTCLEEDITOR_BUILDID
-#    ParticleEditor
-#    ${CMAKE_CURRENT_SOURCE_DIR}/particleeditor
-#    ${CMAKE_CURRENT_SOURCE_DIR}/particleeditor
-#)
+GenerateBuildID(PARTCLEEDITOR_BUILDID
+    ParticleEditor
+    ${CMAKE_CURRENT_SOURCE_DIR}/particleeditor
+    ${CMAKE_CURRENT_SOURCE_DIR}/particleeditor
+)
 
-#AddToolTarget(ParticleEditor
-#    ${particleeditor_sources}
-#    ${PARTCLEEDITOR_BUILDID}
-#)
+AddToolTarget(ParticleEditor
+    ${particleeditor_sources}
+    ${PARTCLEEDITOR_BUILDID}
+)
 
 ### MaterialEditor
 
@@ -371,16 +371,16 @@ file(GLOB_RECURSE materialeditor_sources
     MaterialEditorMain.cpp
     )
 
-#GenerateBuildID(MATERIALEDITOR_BUILDID
-#    MaterialEditor
-#    ${CMAKE_CURRENT_SOURCE_DIR}/materialeditor
-#    ${CMAKE_CURRENT_SOURCE_DIR}/materialeditor
-#)
+GenerateBuildID(MATERIALEDITOR_BUILDID
+    MaterialEditor
+    ${CMAKE_CURRENT_SOURCE_DIR}/materialeditor
+    ${CMAKE_CURRENT_SOURCE_DIR}/materialeditor
+)
 
-#AddToolTarget(MaterialEditor
-#    ${materialeditor_sources}
-#    ${MATERIALEDITOR_BUILDID}
-#)
+AddToolTarget(MaterialEditor
+    ${materialeditor_sources}
+    ${MATERIALEDITOR_BUILDID}
+)
 
 # vim: noet ts=4:
 
