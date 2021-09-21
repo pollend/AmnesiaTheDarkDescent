@@ -1,8 +1,8 @@
 <GuiSkin>
 	<GfxElements>
 		<!-- PONITER GRAPHICS -->
-		<Gfx type="PointerNormal" 	file="gui_def_pointer_normal.bmp" 	offset="0 0" active_size="-1 -1" color="1 1 1 1"/>
-		<Gfx type="PointerText" 	file="gui_def_pointer_text.bmp"		offset="-7 -11" active_size="-1 -1" color="1 1 1 1"/>
+		<Gfx type="PointerNormal" 	file="gui_def_pointer_normal.png" 	offset="0 0" active_size="-1 -1" color="1 1 1 1"/>
+		<Gfx type="PointerText" 	file="gui_def_pointer_text.png"		offset="-7 -11" active_size="-1 -1" color="1 1 1 1"/>
 		
 		
 		<!-- WINDOW GRAPHICS -->
