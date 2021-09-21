@@ -101,6 +101,60 @@
 		
 		<Gfx type="ButtonDownBackground" 	file="" 				offset="0 0" active_size="-1 -1" color="0.53 0.53 0.53 1"/>
 		
+		<!-- HPL2 - Placeholder GFX -->
+
+		<Gfx type="WindowButtonCross" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="SliderHandleBorderRight" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="SliderHandleBorderLeft" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="SliderHandleBorderUp" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="SliderHandleBorderDown" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="SliderHandleCornerLU" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="SliderHandleCornerRU" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="SliderHandleCornerRD" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="SliderHandleCornerLD" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="SliderHandleBackground" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="MenuEnabledChecked" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="MenuDisabledChecked" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="MenuSeparatorLine" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="MenuItemArrow" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="TabLabelBorderRight" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="TabLabelBorderLeft" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="TabLabelBorderUp" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="TabLabelBorderDown" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="TabLabelCornerLU" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="TabLabelCornerRU" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="TabLabelCornerRD" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="TabLabelCornerLD" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="TabBorderRight" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="TabBorderLeft" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="TabBorderUp" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="TabBorderDown" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="TabCornerLU" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="TabCornerRU" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="TabCornerRD" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="TabCornerLD" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="TabLabelBackground" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="TabLabelBackgroundActive" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="TabBackground" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="TabFrameArrowLeft" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="TabFrameArrowRight" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="GroupBorderLeft" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="GroupBorderRight" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="GroupBorderUp" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="GroupBorderDown" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="GroupCornerLU" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="GroupCornerRU" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="GroupCornerRD" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="GroupCornerLD" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="GroupBackground" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="FilePickerUpButton" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="FilePickerIconGraphics" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="FilePickerIconModels" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="FilePickerIconSounds" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="FilePickerIconText" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="FilePickerIconOther" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+		<Gfx type="FilePickerIconFolder" file="" offset="0 0" active_size="-1 -1" color="1.0 0.53 0.53 1"/>
+
 	</GfxElements>
 	
 	<Fonts>
@@ -120,8 +174,34 @@
 		
 		<Attribute type="ComboBoxButtonWidth"		value="20"/>
 		<Attribute type="ComboBoxSliderWidth"		value="20"/>
+
+		<!-- HPL2 - Placeholder Values -->
+		<Attribute type="WindowButtonSize" value="1"/>
+		<Attribute type="WindowBordersOutside" value="1"/>
+		<Attribute type="ContextMenuItemArrowSize" value="1"/>
+		<Attribute type="ContextMenuItemCheckSize" value="1"/>
+		<Attribute type="ContextMenuItemHPadding" value="1"/>
+		<Attribute type="ContextMenuItemVPadding" value="1"/>
+		<Attribute type="ContextMenuItemSeparation" value="1"/>
+		<Attribute type="ContextMenuItemTextLeftPadding" value="1"/>
+		<Attribute type="ContextMenuItemTextRightPadding" value="1"/>
+		<Attribute type="ContextMenuSeparatorPadding" value="1"/>
+		<Attribute type="MainMenuItemTextPadding" value="1"/>
+		<Attribute type="MainMenuItemVPadding" value="1"/>
+		<Attribute type="MainMenuItemSeparation" value="1"/>
+		<Attribute type="MenuSeparatorPadding" value="1"/>
+		<Attribute type="MenuSeparatorHeight" value="1"/>
+		<Attribute type="DefaultFontHighlightColor" value="1"/>
+		<Attribute type="TabFrameButtonSize" value="1"/>
+		<Attribute type="TabFrameIconPadding" value="1"/>
+		<Attribute type="TabFrameTextLeftPadding" value="1"/>
+		<Attribute type="TabFrameTextRightPadding" value="1"/>
+		<Attribute type="TabFrameLabelInactiveOffset" value="1"/>
+		<Attribute type="TabFrameLabelActiveOffset" value="1"/>
+		<Attribute type="FirstTabOffset" value="1"/>
+		<Attribute type="TabSeparation" value="1"/>
+		<Attribute type="GroupHeaderOffset" value="1"/>
+		<Attribute type="GroupHeaderOverUpperBorder" value="1"/>
 	</Attributes>
 </GuiSkin>
-
-
 
