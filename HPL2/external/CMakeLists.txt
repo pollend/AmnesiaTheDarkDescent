@@ -1,3 +1,25 @@
+if( NOT BX_DIR )
+    set( BX_DIR "${CMAKE_CURRENT_SOURCE_DIR}/bx" CACHE STRING "Location of bx." )
+elseif( NOT IS_ABSOLUTE "${BX_DIR}")
+    get_filename_component(BX_DIR "${BX_DIR}" REALPATH BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+endif()
+
+if( NOT BIMG_DIR )
+    set( BIMG_DIR "${CMAKE_CURRENT_SOURCE_DIR}/bimg" CACHE STRING "Location of bimg." )
+elseif( NOT IS_ABSOLUTE "${BIMG_DIR}")
+    get_filename_component(BIMG_DIR "${BIMG_DIR}" REALPATH BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+endif()
+
+if( NOT BGFX_DIR )
+    set( BGFX_DIR "${CMAKE_CURRENT_SOURCE_DIR}/bgfx" CACHE STRING "Location of bgfx." )
+elseif( NOT IS_ABSOLUTE "${BGFX_DIR}")
+    get_filename_component(BGFX_DIR "${BGFX_DIR}" REALPATH BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+endif()
+
+include( cmake/bx.cmake )
+include( cmake/bimg.cmake )
+include( cmake/bgfx.cmake )
+
 add_subdirectory(OALWrapper)
 add_subdirectory(Newton)
 add_subdirectory(AngelScript)
