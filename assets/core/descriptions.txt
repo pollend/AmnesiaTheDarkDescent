@@ -1,0 +1,99 @@
+This description set is for reimplementation of core HPL2 assets.
+
+models:
+	All information as default import settings in Blender 2.93.0.
+	All meshes have been triangulated.
+	All meshes have undergone a node transformation of 90 degrees on the X axis, assumed to be the result of the import process.
+	All meshes use a material of diffuse #808080 with nothing else.
+	core_box.dae:
+		Mesh (pre-transform): An origin-centred cube extending 0.5 units in each axis.
+		UVs: This has, by accident or otherwise, been mapped with the intent that each face should display the texture.
+			However orientation is variable.
+			These faces correspond to the equivalent Blender views:
+				Top, Bottom, Front, Right, Left
+				Back is flipped on both the X and Y axis.
+		Node Transform: Scaled to 0.01x size.
+	core_pyramid.dae:
+		Mesh (pre-transform): A pyramid with the tip at the origin, extending -Z by 1 unit, and along the XY plane by 0.5 in each diagonal direction.
+		UVs: UVs overlap themselves and are not really too useful. Lots of overlap, for one.
+			It's safe to say that matching these UVs is completely unnecessary.
+		Node Transform: No additional notes.
+	core_5_5_sphere.dae:
+		Mesh (pre-transform): An origin-centred 5x5 UV sphere with a radius of 1 unit. Top and bottom are effectively pentagonal-base pyramids.
+			Structure is identical to Blender-generated output (5 segments, 5 rings), with the exception of a -90/5 Z-axis rotation required to align the rotation.
+		UVs: UV generation is identical in structure to Blender output but would require further rotation for 'perfect' output. This is almost certainly unnecessary.
+		Node Transform: Scaled to 0.01x size.
+	core_7_7_sphere.dae: Not sufficiently distinct from core_5_5_sphere.dae
+	core_12_12_sphere.dae: Not sufficiently distinct from core_5_5_sphere.dae
+	core_18_18_sphere.dae:
+		Mesh (pre-transform): Mainly see core_5_5_sphere, however, the faces are smoothed.
+		UVs: UV generation is structurally indistinct, simply more faces.
+		Node Transform: Scaled to 0.01x size.
+
+shaders:
+	Information on this is TODO.
+	Some notes:
+	+ All shaders are #version 120
+	+ Shaders have to deal with HPL2 shader stuff, such as @ifdef and @define
+	+ Shader units are effectively declared in-shader, i.e.:
+		uniform sampler2D exampleSampler;
+		@define sampler_exampleSampler 0
+	+ Sampler names DO NOT MATTER. HPL2 renderer code doesn't use them, it uses unit numbers.
+		Therefore, the explicit sampler names ought NOT to be documented here.
+	+ Uniform names DO MATTER. HPL2 renderer code does use these, a lot.
+	+ There are NO vertex attributes.
+	Vertex Shaders:
+	deferred_base_vtx.glsl: This shader does a lot of optional stuff that is then forwarded to other shaders.
+		Position is absolutely always the result of ftransform.
+		Every other bit of functionality has an enable flag.
+		uniforms:
+			a_mtxUV: mat4 if UseUvAnimation
+			afInvFarPlane: float if Deferred_32bit
+			afNegFarPlane: float if DeferredLight && Deferred_32bit
+		ifdefs:
+			+ UseColor: Enables forwarding gl_Color to a custom varying.
+			+ UseUv: Forwards gl_MultiTexCoord0 to gl_TexCoord[0].
+			+ UseUvAnimation: Applies uniform mat4 a_mtxUV to gl_TexCoord[0].
+			+ UseUvCoord1: Forwards gl_MultiTexCoord0 to gl_TexCoord[1]. UV animation not applied.
+			+ UseNormals: Enables gl_Normal and gl_NormalMatrix processing, results go to a custom varying.
+			+ UseNormalMapping: Calculates tangent and binormal using information from gl_MultiTexCoord1.
+			+ UseParallax: Calculates 'tangent eye position', which goes to a custom varying.
+			+ UseVertexPosition: Enables what appears to be viewspace or worldspace position calculation, in a custom varying.
+			+ UseEnvMap: Force-enables UseVertexPosition.
+			+ UseFog: Force-enables UseVertexPosition.
+			+ UseRefraction: Force-enables UseVertexPosition.
+			+ DeferredLight: Needed for other Deferred options to have most (but not all!) effects.
+			+ UseBatching: If with DeferredLight, gl_MultiTexCoord0.xyz is light position, gl_Color is light colour, and gl_MultiTexCoord1.x is radius, all stored in custom varyings.
+			+ Deferred_32bit: Enables some sort of depth calculation, which goes to a custom varying.
+				If with DeferredLight, does some magic modified by UseDeferredLightShapes.
+			+ UseDeferredLightShapes: Magic.
+			+ DivideInFrag: If with DeferredLight, and Deferred_32bit, and UseDeferredLightShapes, seems to be a performance/accuracy tradeoff.
+			+ Deferred_64bit: Force-enables UseVertexPosition.
+	deferred_base_frag.glsl: Textured draw without lighting.
+	deferred_decal_frag.glsl: Essentially deferred_base_frag with UseColor and UseDiffuse enabled, no ifdefs.
+	deferred_depthonly_frag.glsl: White pixels
+	deferred_edge_smooth_frag.glsl: Looks like an attempt at something akin to FXAA.
+	deferred_fog_frag.glsl: Appears to be effectively post-processed fog blended into the screen colour FBO.
+	deferred_fog_vtx.glsl: Surprisingly this effect is 'in-world' somehow, and this is part of it.
+	deferred_gbuffer_skybox_frag.glsl: Draws from a cubemap.
+	deferred_gbuffer_solid_frag.glsl: The main thing drawing everything into the gbuffers.
+	deferred_illumination_frag.glsl: Unceremonious draw-texture-with-colour-multiplier.
+	deferred_light_box_frag.glsl: Even more confusing, really.
+	deferred_light_frag.glsl: Gets increasingly complicated.
+	deferred_ssao_blur_frag.glsl: SSAO blur stuff.
+	deferred_ssao_blur_vtx.glsl: Relatively minimal vertex shader to transform position (manually) and copy texture coordinates.
+		TBD: Investigate if engine REALLY needs anything more than two copies.
+	deferred_ssao_render_frag.glsl: Main SSAO pass. Appears to be done before the SSAO blur.
+	deferred_ssao_render_vtx.glsl: Apparently an even more boring vertex shader, yet still more complex than it could've been.
+		TBD: Investigate if engine REALLY needs anything more than two copies.
+	deferred_transparent_frag.glsl: I guess it's a thing.
+	deferred_unpack_depth_frag.glsl: Almost entirely useless, unpacking a compressed depth representation for... some reason?
+	posteffect_bloom_add_frag.glsl: Main 'apply bloom' shader.
+	posteffect_bloom_blur_frag.glsl: Blur ready for bloom.
+	posteffect_bloom_blur_vtx.glsl: Exactly equivalent to deferred_ssao_render_vtx.glsl
+	posteffect_color_conv_tex_frag.glsl: Gamma-curve-like adjustment via texture.
+	posteffect_image_trail_frag.glsl: Read screen texture and override alpha.
+	posteffect_radial_blur_frag.glsl: Another blur
+	_test_array_support_frag.glsl: Detects an oddity in Mac OS X's OpenGL implementation: It won't let you use preset constant arrays.
+	water_surface_frag.glsl: As stated.
+
