@@ -3,7 +3,6 @@ completely unfinished:
 deferred_base_frag.glsl
 deferred_base_vtx.glsl
 deferred_decal_frag.glsl
-deferred_depthonly_frag.glsl
 deferred_edge_smooth_frag.glsl
 deferred_fog_frag.glsl
 deferred_fog_vtx.glsl
@@ -26,4 +25,12 @@ posteffect_image_trail_frag.glsl
 posteffect_radial_blur_frag.glsl
 _test_array_support_frag.glsl
 water_surface_frag.glsl
+
+technically functioning:
+
+
+
+finished:
+
+deferred_depthonly_frag.glsl
 
