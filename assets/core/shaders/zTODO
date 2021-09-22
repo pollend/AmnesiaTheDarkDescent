@@ -1,34 +1,40 @@
 completely unfinished:
 
-deferred_base_frag.glsl
-deferred_base_vtx.glsl
 deferred_decal_frag.glsl
-deferred_edge_smooth_frag.glsl
 deferred_fog_frag.glsl
-deferred_fog_vtx.glsl
 deferred_gbuffer_skybox_frag.glsl
-deferred_gbuffer_solid_frag.glsl
 deferred_illumination_frag.glsl
-deferred_light_box_frag.glsl
-deferred_light_frag.glsl
 deferred_ssao_blur_frag.glsl
-deferred_ssao_blur_vtx.glsl
 deferred_ssao_render_frag.glsl
-deferred_ssao_render_vtx.glsl
 deferred_transparent_frag.glsl
 deferred_unpack_depth_frag.glsl
+water_surface_frag.glsl
+
+completely unfinished but with special code:
+_test_array_support_frag.glsl
+
+completely unfinished but with fake copy/pasted 'sample texture' code b/c of include limitations:
+
 posteffect_bloom_add_frag.glsl
 posteffect_bloom_blur_frag.glsl
 posteffect_bloom_blur_vtx.glsl
 posteffect_color_conv_tex_frag.glsl
 posteffect_image_trail_frag.glsl
 posteffect_radial_blur_frag.glsl
-_test_array_support_frag.glsl
-water_surface_frag.glsl
 
-technically functioning:
+might be 'technically functioning', unsure:
+deferred_ssao_blur_vtx.glsl
+deferred_fog_vtx.glsl
+deferred_ssao_render_vtx.glsl
 
+technically 'functioning':
 
+deferred_base_frag.glsl
+deferred_base_vtx.glsl
+deferred_edge_smooth_frag.glsl
+deferred_gbuffer_solid_frag.glsl
+deferred_light_box_frag.glsl
+deferred_light_frag.glsl
 
 finished:
 

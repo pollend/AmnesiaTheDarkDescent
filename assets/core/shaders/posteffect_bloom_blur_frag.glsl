@@ -1,7 +1,10 @@
-uniform sampler2D unit0;
+#version 120
+#extension GL_ARB_texture_rectangle : enable
+
+uniform sampler2DRect unit0;
 @define sampler_unit0 0
 
 void main() {
-	gl_Color = texture2D(unit0, gl_TexCoord[0]);
+	gl_FragColor = texture2DRect(unit0, gl_FragCoord.xy);
 }
 

@@ -1,3 +1,2 @@
-void main() {
-}
+@include fake.glsl
 
