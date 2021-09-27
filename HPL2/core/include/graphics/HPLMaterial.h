@@ -37,13 +37,15 @@ public:
       case HPL_MEMBER_TEXTURE: {
         auto &target = member.member_texture;
         void *memberData = data + target.offset;
-        Texture *texture = dynamic_cast<iTexture *>(memberData);
-        descriptor.pName = target.memberName;
-        descriptor.ppTextures = &texture;
+//        Texture *texture = dynamic_cast<iTexture *>(memberData);
+//        descriptor.pName = target.memberName;
+//        descriptor.ppTextures = &texture;
       } break;
       case HPL_MEMBER_STRUCT: {
         auto &target = member.member_struct;
         void *memberData = data + target.offset;
+        char structData[target.size];
+
       } break;
       }
       params.push_back(descriptor);
@@ -70,12 +72,13 @@ private:
 template <typename TData> class HPLMaterial : public IHPLMaterial {
 public:
   HPLMaterial(cResources* resource, Renderer *render, const HPLMember *members, int nMembers)
-      : _members(members), _memberCount(nMembers), _render(render) {}
+      : _resources(resource), _members(members), _memberCount(nMembers), _render(render) {}
 
 
   std::unique_ptr<HPLMaterialRef<TData>> createRef(uint32_t features) {
     return std::make_unique<TData>(this, nullptr);
   }
+
   const HPLMember *byField(const char *field) {
     for (size_t index = 0; index < nMembers(); index++) {
       HPLMember &member = byIndex(index);
@@ -93,6 +96,7 @@ public:
   size_t nMembers() { return _memberCount; }
 
 protected:
+  cResources* _resources;
   const HPLMember *_members;
   const int _memberCount;
   Renderer *_render;

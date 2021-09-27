@@ -31,16 +31,24 @@
 namespace hpl {
 namespace MaterialType_Water {
 
-  typedef struct {
-    int x;
-    int y;
-    float tt;
-  } MaterialUniform;
+typedef struct {
+  float afT;
+  float afRefractionScale;
+  cMatrixf a_mtxInvViewRotation;
+  cVector2f avReflectionMapSizeMul;
+  cVector2f avFrenselBiasPow;
+  cVector2f avReflectionFadeStartAndLength;
+  float afWaveAmplitude;
+  float afWaveFreq;
+  cVector2f avFogStartAndLength;
+  cColor avFogColor;
+  float afFalloffExp;
+} MaterialUniform;
 
-  typedef struct {
-    MaterialUniform uniform;
-    iTexture* texture;
-  } MaterialData;
+typedef struct {
+  MaterialUniform uniform;
+  iTexture *texture;
+} MaterialData;
 
 }
 

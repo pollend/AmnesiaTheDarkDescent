@@ -71,35 +71,44 @@ namespace hpl {
 	#define kDiffuseFeatureNum 4
 
 
-          static const HPLStructParameter MaterialUniform[] = {
-              {},
-              {},
-              {}
-          };
+        static const HPLStructParameter MaterialUniform[] = {
+            {.type = HPL_PARAMETER_FLOAT, .memberName = "afT",.offset = offsetof(MaterialType_Water::MaterialUniform, afT)},
+            {.type = HPL_PARAMETER_FLOAT, .memberName = "afRefractionScale",.offset = offsetof(MaterialType_Water::MaterialUniform, afRefractionScale)},
+            {.type = HPL_PARAMETER_FLOAT, .memberName = "a_mtxInvViewRotation",.offset = offsetof(MaterialType_Water::MaterialUniform, a_mtxInvViewRotation)},
+            {.type = HPL_PARAMETER_FLOAT, .memberName = "avReflectionMapSizeMul",.offset = offsetof(MaterialType_Water::MaterialUniform, avReflectionMapSizeMul)},
+            {.type = HPL_PARAMETER_FLOAT, .memberName = "avFrenselBiasPow",.offset = offsetof(MaterialType_Water::MaterialUniform, avFrenselBiasPow)},
+            {.type = HPL_PARAMETER_FLOAT, .memberName = "avReflectionFadeStartAndLength",.offset = offsetof(MaterialType_Water::MaterialUniform, avReflectionFadeStartAndLength)},
+            {.type = HPL_PARAMETER_FLOAT, .memberName = "afWaveAmplitude",.offset = offsetof(MaterialType_Water::MaterialUniform, afWaveAmplitude)},
+            {.type = HPL_PARAMETER_FLOAT, .memberName = "afWaveFreq",.offset = offsetof(MaterialType_Water::MaterialUniform, afWaveFreq)},
 
-          static const HPLShaderPermutation SupportPermutations[] = {
-              {.bits = eFeature_Diffuse_Reflection, .key = "UseReflection", .value = "TRUE"},
-              {.bits = eFeature_Diffuse_CubeMapReflection, .key = "UseCubeMapReflection", .value = "TRUE"},
-              {.bits = eFeature_Diffuse_ReflectionFading, .key = "UseReflectionFading", .value = "TRUE"},
-              {.bits = eFeature_Diffuse_Fog, .key = "UseFog", .value = "TRUE"}
-          };
+            {.type = HPL_PARAMETER_FLOAT, .memberName = "avFogStartAndLength",.offset = offsetof(MaterialType_Water::MaterialUniform, avFogStartAndLength)},
+            {.type = HPL_PARAMETER_FLOAT, .memberName = "avFogColor",.offset = offsetof(MaterialType_Water::MaterialUniform, avFogColor)},
+            {.type = HPL_PARAMETER_FLOAT, .memberName = "afFalloffExp",.offset = offsetof(MaterialType_Water::MaterialUniform, afFalloffExp)},
+        };
 
-          static const HPLMember MaterialMetaData[] = {
-              {.type = HPL_MEMBER_VERTEX_SHADER, .pixel_shader = {.name = "water.vert", .permutations = SupportPermutations, .permutationCount = ARRAY_LEN(SupportPermutations)}},
-              {.type = HPL_MEMBER_VERTEX_SHADER, .vertex_shader = {.name = "water.frag", .permutations = SupportPermutations, .permutationCount = ARRAY_LEN(SupportPermutations) }},
-              {.type = HPL_MEMBER_STRUCT,
-               .member_struct = {.memberName = "uniform",
-                                 .offset = offsetof(MaterialType_Water::MaterialData, uniform),
-                                 .size = sizeof(MaterialType_Water::MaterialData),
-                                 .parameters = MaterialUniform,
-                                 .parameterCount = ARRAY_LEN(MaterialUniform)}},
-              {.type = HPL_MEMBER_TEXTURE, .member_texture = {.offset = offsetof(MaterialType_Water::MaterialData, texture)}}
-          };
+        static const HPLShaderPermutation SupportPermutations[] = {
+            {.bits = eFeature_Diffuse_Reflection, .key = "UseReflection", .value = "TRUE"},
+            {.bits = eFeature_Diffuse_CubeMapReflection, .key = "UseCubeMapReflection", .value = "TRUE"},
+            {.bits = eFeature_Diffuse_ReflectionFading, .key = "UseReflectionFading", .value = "TRUE"},
+            {.bits = eFeature_Diffuse_Fog, .key = "UseFog", .value = "TRUE"}
+        };
+
+        static const HPLMember MaterialMetaData[] = {
+            {.type = HPL_MEMBER_VERTEX_SHADER, .pixel_shader = {.name = "water.vert", .permutations = SupportPermutations, .permutationCount = ARRAY_LEN(SupportPermutations)}},
+            {.type = HPL_MEMBER_VERTEX_SHADER, .vertex_shader = {.name = "water.frag", .permutations = SupportPermutations, .permutationCount = ARRAY_LEN(SupportPermutations) }},
+            {.type = HPL_MEMBER_STRUCT,
+             .member_struct = {.memberName = "uniform",
+                               .offset = offsetof(MaterialType_Water::MaterialData, uniform),
+                               .size = sizeof(MaterialType_Water::MaterialData),
+                               .parameters = MaterialUniform,
+                               .parameterCount = ARRAY_LEN(MaterialUniform)}},
+            {.type = HPL_MEMBER_TEXTURE, .member_texture = {.offset = offsetof(MaterialType_Water::MaterialData, texture)}}
+        };
 
 
-          MaterialWater::MaterialWater(cResources* resource, Renderer *render): HPLMaterial<MaterialType_Water::MaterialData>(resource, render, MaterialMetaData, ARRAY_LEN(MaterialMetaData)) {
+        MaterialWater::MaterialWater(cResources* resource, Renderer *render): HPLMaterial<MaterialType_Water::MaterialData>(resource, render, MaterialMetaData, ARRAY_LEN(MaterialMetaData)) {
 
-          }
+        }
 
 
 	static cProgramComboFeature vDiffuseFeatureVec[] =
