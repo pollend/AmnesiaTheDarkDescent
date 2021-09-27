@@ -23,7 +23,32 @@
 #include "graphics/MaterialType.h"
 #include "graphics/Material.h"
 
+#include "graphics/HPLMaterial.h"
+#include "graphics/HPLTexture.h"
+#include "system/SystemTypes.h"
+
+
 namespace hpl {
+namespace MaterialType_Water {
+
+  typedef struct {
+    int x;
+    int y;
+    float tt;
+  } MaterialUniform;
+
+  typedef struct {
+    MaterialUniform uniform;
+    iTexture* texture;
+  } MaterialData;
+
+}
+
+class MaterialWater : public HPLMaterial<MaterialType_Water::MaterialData> {
+public:
+  MaterialWater(cResources* resource, Renderer *render);
+};
+
 
 	//---------------------------------------------------
 	// WATER

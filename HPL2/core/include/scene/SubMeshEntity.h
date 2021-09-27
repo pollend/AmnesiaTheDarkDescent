@@ -119,6 +119,12 @@ namespace hpl {
 
 		cMaterialManager* mpMaterialManager;
 
+                // DescriptorSet mUniformDescriptor[kImageCount];
+                // DescriptorSet mTextureDescriptor[kImageCount];
+
+                // Buffer* mVertexBuffer[kImageCount];
+                // Buffer* mUniformBuffer[kImageCount];
+
 		iVertexBuffer* mpDynVtxBuffer;
 		tTriangleDataVec mvDynTriangles;
 

@@ -56,6 +56,8 @@ namespace hpl {
 	#define eFlagBit_14		(0x00004000)
 	#define eFlagBit_15		(0x00008000)
 
+        #define ARRAY_LEN(A) (sizeof(A) / sizeof(A[0]))
+
 	#define _W(t) L ## t
 
 	//--------------------------------------------------------

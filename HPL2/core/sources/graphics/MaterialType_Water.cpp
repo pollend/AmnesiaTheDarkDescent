@@ -39,10 +39,9 @@
 #include "graphics/Renderer.h"
 
 
-
 namespace hpl {
 
-	//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
 	// DEFINES
 	//////////////////////////////////////////////////////////////////////////
 
@@ -70,6 +69,38 @@ namespace hpl {
 	#define eFeature_Diffuse_Fog					eFlagBit_3
 
 	#define kDiffuseFeatureNum 4
+
+
+          static const HPLStructParameter MaterialUniform[] = {
+              {},
+              {},
+              {}
+          };
+
+          static const HPLShaderPermutation SupportPermutations[] = {
+              {.bits = eFeature_Diffuse_Reflection, .key = "UseReflection", .value = "TRUE"},
+              {.bits = eFeature_Diffuse_CubeMapReflection, .key = "UseCubeMapReflection", .value = "TRUE"},
+              {.bits = eFeature_Diffuse_ReflectionFading, .key = "UseReflectionFading", .value = "TRUE"},
+              {.bits = eFeature_Diffuse_Fog, .key = "UseFog", .value = "TRUE"}
+          };
+
+          static const HPLMember MaterialMetaData[] = {
+              {.type = HPL_MEMBER_VERTEX_SHADER, .pixel_shader = {.name = "water.vert", .permutations = SupportPermutations, .permutationCount = ARRAY_LEN(SupportPermutations)}},
+              {.type = HPL_MEMBER_VERTEX_SHADER, .vertex_shader = {.name = "water.frag", .permutations = SupportPermutations, .permutationCount = ARRAY_LEN(SupportPermutations) }},
+              {.type = HPL_MEMBER_STRUCT,
+               .member_struct = {.memberName = "uniform",
+                                 .offset = offsetof(MaterialType_Water::MaterialData, uniform),
+                                 .size = sizeof(MaterialType_Water::MaterialData),
+                                 .parameters = MaterialUniform,
+                                 .parameterCount = ARRAY_LEN(MaterialUniform)}},
+              {.type = HPL_MEMBER_TEXTURE, .member_texture = {.offset = offsetof(MaterialType_Water::MaterialData, texture)}}
+          };
+
+
+          MaterialWater::MaterialWater(cResources* resource, Renderer *render): HPLMaterial<MaterialType_Water::MaterialData>(resource, render, MaterialMetaData, ARRAY_LEN(MaterialMetaData)) {
+
+          }
+
 
 	static cProgramComboFeature vDiffuseFeatureVec[] =
 	{
@@ -422,6 +453,4 @@ namespace hpl {
 	}
 
 	//--------------------------------------------------------------------------
-
-
 }

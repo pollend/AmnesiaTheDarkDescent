@@ -20,11 +20,13 @@
 #ifndef HPL_SUB_MESH_H
 #define HPL_SUB_MESH_H
 
-#include "math/MathTypes.h"
+#include "HPLMaterial.h"
+#include "MaterialType_Water.h"
 #include "graphics/GraphicsTypes.h"
-#include "system/SystemTypes.h"
+#include "math/MathTypes.h"
 #include "math/MeshTypes.h"
 #include "physics/PhysicsTypes.h"
+#include "system/SystemTypes.h"
 
 namespace hpl {
 
@@ -69,6 +71,8 @@ namespace hpl {
 		//Renderable implementation.
 		cMaterial *GetMaterial();
 		iVertexBuffer* GetVertexBuffer();
+
+                IHPLMaterialRef* material() { return nullptr; }
 
 		const tString& GetName(){ return msName;}
 
