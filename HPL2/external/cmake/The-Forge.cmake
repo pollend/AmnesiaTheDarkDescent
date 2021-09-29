@@ -36,20 +36,7 @@ set(FORGE_RENDERER
         )
 
 #eastl
-set(FORGE_EASTL
-        ${THE_FORGE_DIR}/Common_3/ThirdParty/OpenSource/EASTL/EAStdC/EASprintf.cpp
-        ${THE_FORGE_DIR}/Common_3/ThirdParty/OpenSource/EASTL/EAStdC/EAMemory.cpp
-        ${THE_FORGE_DIR}/Common_3/ThirdParty/OpenSource/EASTL/thread_support.cpp
-        ${THE_FORGE_DIR}/Common_3/ThirdParty/OpenSource/EASTL/string.cpp
-        ${THE_FORGE_DIR}/Common_3/ThirdParty/OpenSource/EASTL/red_black_tree.cpp
-        ${THE_FORGE_DIR}/Common_3/ThirdParty/OpenSource/EASTL/numeric_limits.cpp
-        ${THE_FORGE_DIR}/Common_3/ThirdParty/OpenSource/EASTL/intrusive_list.cpp
-        ${THE_FORGE_DIR}/Common_3/ThirdParty/OpenSource/EASTL/hashtable.cpp
-        ${THE_FORGE_DIR}/Common_3/ThirdParty/OpenSource/EASTL/fixed_pool.cpp
-        ${THE_FORGE_DIR}/Common_3/ThirdParty/OpenSource/EASTL/assert.cpp
-        ${THE_FORGE_DIR}/Common_3/ThirdParty/OpenSource/EASTL/allocator_forge.cpp
-        ${THE_FORGE_DIR}/Common_3/ThirdParty/OpenSource/EASTL/allocator_eastl.cpp
-        )
+file(GLOB FORGE_EASTL ${THE_FORGE_DIR}/Common_3/ThirdParty/OpenSource/EASTL/*.*)
 
 #basis transcoder
 file(GLOB FORGE_BASIS_TRANSCODER "${THE_FORGE_DIR}/Common_3/ThirdParty/OpenSource/basis_universal/transcoder/*.*")

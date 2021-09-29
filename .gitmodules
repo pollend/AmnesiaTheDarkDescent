@@ -1,3 +1,6 @@
 [submodule "HPL2/external/The-Forge"]
 	path = HPL2/external/The-Forge
 	url = git@github.com:ConfettiFX/The-Forge.git
+[submodule "HPL2/external/abseil-cpp"]
+	path = HPL2/external/abseil-cpp
+	url = https://github.com/abseil/abseil-cpp.git

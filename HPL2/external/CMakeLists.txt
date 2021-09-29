@@ -8,7 +8,7 @@ elseif( NOT IS_ABSOLUTE "${THE_FORGE_DIR}")
 endif()
 
 include(cmake/The-Forge.cmake)
-
+add_subdirectory(abseil-cpp)
 add_subdirectory(OALWrapper)
 add_subdirectory(Newton)
 add_subdirectory(AngelScript)

@@ -228,6 +228,8 @@ target_link_libraries(HPL2
   OALWrapper # also pulls in ogg,vorbis,SDL
   AngelScript
   Newton
+  absl::base
+  absl::strings
   the-forge
   ${GLEW_LIBRARIES}
   ${OPENGL_gl_LIBRARY}

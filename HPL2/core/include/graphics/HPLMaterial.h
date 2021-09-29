@@ -79,18 +79,17 @@ public:
     return std::make_unique<TData>(this, nullptr);
   }
 
-  const HPLMember *byField(const char *field) {
-    for (size_t index = 0; index < nMembers(); index++) {
-      HPLMember &member = byIndex(index);
-      switch (member.type) {
-      case HPL_MEMBER_STRUCT:
-        if (strcmp(member.member_struct.memberName, field)) {
-          return &member;
-        }
-        break;
+  const HPLMember& byField(const char *field) {
+    for (HPLMember &m : members()) {
+      if (strcmp(m.memberName, field) != 0) {
+        return m;
       }
     }
   }
+
+   std::vector<HPLMember> members() {
+     return std::vector<HPLMember>{_members, &_members[_memberCount]};
+   }
 
   const HPLMember &byIndex(size_t index) { return _members[index]; }
   size_t nMembers() { return _memberCount; }

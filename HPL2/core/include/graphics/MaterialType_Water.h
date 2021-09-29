@@ -25,12 +25,14 @@
 
 #include "graphics/HPLMaterial.h"
 #include "graphics/HPLTexture.h"
+#include "graphics/HPLParameterStruct.h"
 #include "system/SystemTypes.h"
 
+#include "graphics/HPLMemberLayout.h"
 
 namespace hpl {
-namespace MaterialType_Water {
 
+namespace MaterialType_Water {
 typedef struct {
   float afT;
   float afRefractionScale;
@@ -46,38 +48,34 @@ typedef struct {
 } MaterialUniform;
 
 typedef struct {
-  MaterialUniform uniform;
-  iTexture *texture;
+  hpl::HPLParameterStruct<MaterialUniform> uniform;
+  IHPLTexture *texture;
 } MaterialData;
+class HPLWaterParameterLayout : hpl::HPLMemberLayout<MaterialData> {};
 
 }
-
-class MaterialWater : public HPLMaterial<MaterialType_Water::MaterialData> {
-public:
-  MaterialWater(cResources* resource, Renderer *render);
-};
-
 
 	//---------------------------------------------------
 	// WATER
 	//---------------------------------------------------
 
-	class cMaterialType_Water_Vars : public iMaterialVars
-	{
-	public:
-		cMaterialType_Water_Vars() : mbHasReflection(true), mfRefractionScale(0.1f), mfFrenselBias(0.2f), mfFrenselPow(8.0f){}
-		~cMaterialType_Water_Vars(){}
+	class cMaterialType_Water_Vars : public iMaterialVars {
+        public:
+          cMaterialType_Water_Vars()
+              : mbHasReflection(true), mfRefractionScale(0.1f), mfFrenselBias(0.2f),
+                mfFrenselPow(8.0f) {}
+          ~cMaterialType_Water_Vars() {}
 
-        bool mbHasReflection;
-		float mfRefractionScale;
-		float mfFrenselBias;
-		float mfFrenselPow;
-		float mfReflectionFadeStart;
-		float mfReflectionFadeEnd;
-		float mfWaveSpeed;
-		float mfWaveAmplitude;
-		float mfWaveFreq;
-	};
+          bool mbHasReflection;
+          float mfRefractionScale;
+          float mfFrenselBias;
+          float mfFrenselPow;
+          float mfReflectionFadeStart;
+          float mfReflectionFadeEnd;
+          float mfWaveSpeed;
+          float mfWaveAmplitude;
+          float mfWaveFreq;
+        };
 
 	//-----------------------------------------------------
 
