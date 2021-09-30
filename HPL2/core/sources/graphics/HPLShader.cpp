@@ -1,5 +1,21 @@
 #include "graphics/HPLShader.h"
-#include <Common_3/Renderer/IResourceLoader.h>
+
+
+
+//
+//template<>
+//hpl::HPLShader::HPLShader(Renderer* renderer): _renderer(renderer) {
+//}
+//
+//hpl::HPLShader::HPLShader(Renderer* renderer, const ShaderLoadDesc& desc): _renderer(renderer) {
+//  addShader(renderer, &desc, &_shader);
+//}
+//
+//
+//hpl::HPLShader::~HPLShader() {
+//}
+
+
 //
 //hpl::HPLShader::HPLShader(Renderer* renderer, const absl::Span<HPLMember> members): _members(members){
 ////  ShaderLoadDesc desc = {};

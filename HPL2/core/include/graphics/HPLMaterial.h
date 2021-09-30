@@ -24,7 +24,7 @@ template <typename> class HPLMaterial;
 
 template <typename TData> class HPLMaterialRef : public IHPLMaterialRef {
 public:
-  HPLMaterialRef(HPLMaterial<TData> *target, HPLShader* shader) : _target(target) {}
+  HPLMaterialRef(HPLMaterial<TData> *target) : _target(target) {}
   ~HPLMaterialRef() {}
 
   void init() {
