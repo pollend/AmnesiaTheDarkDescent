@@ -94,8 +94,8 @@ namespace hpl {
         };
 
         static const HPLMember MaterialMetaData[] = {
-            {.memberName = "water.vert", .type = HPL_MEMBER_VERTEX_SHADER, .shader = { .permutations = SupportPermutations, .permutationCount = ARRAY_LEN(SupportPermutations)}},
-            {.memberName = "water.frag", .type = HPL_MEMBER_VERTEX_SHADER, .shader = { .permutations = SupportPermutations, .permutationCount = ARRAY_LEN(SupportPermutations) }},
+            {.memberName = "water.vert", .type = HPL_MEMBER_VERTEX_SHADER, .member_shader = { .permutations = SupportPermutations, .permutationCount = ARRAY_LEN(SupportPermutations)}},
+            {.memberName = "water.frag", .type = HPL_MEMBER_VERTEX_SHADER, .member_shader = { .permutations = SupportPermutations, .permutationCount = ARRAY_LEN(SupportPermutations) }},
             {.memberName = "uniform",
              .type = HPL_MEMBER_STRUCT,
              .member_struct = {
@@ -106,10 +106,10 @@ namespace hpl {
             {.memberName = "texture", .type = HPL_MEMBER_TEXTURE, .member_texture = {.offset = offsetof(MaterialType_Water::MaterialData, texture)}}
         };
 
-//
-//        MaterialWater::MaterialWater(cResources* resource, Renderer *render): HPLMaterial<MaterialType_Water::MaterialData>(resource, render, MaterialMetaData, ARRAY_LEN(MaterialMetaData)) {
-//
-//        }
+        hpl::MaterialType_Water::HPLWaterParameterLayout::HPLWaterParameterLayout()
+            : HPLMemberLayout(const_cast<HPLMember *>(MaterialMetaData), ARRAY_LEN(MaterialMetaData)) {
+        }
+        
 
 
 	static cProgramComboFeature vDiffuseFeatureVec[] =

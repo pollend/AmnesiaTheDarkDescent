@@ -23,6 +23,12 @@ template<> struct is_shader_type<HPLMemberType::HPL_MEMBER_VERTEX_SHADER>: std::
 template<HPLMemberType T> struct is_struct_type: std::false_type {};
 template<> struct is_struct_type<HPLMemberType::HPL_MEMBER_STRUCT>: std::true_type {};
 
+template<HPLMemberType T> struct is_texture_type: std::false_type {};
+template<> struct is_texture_type<HPLMemberType::HPL_MEMBER_TEXTURE>: std::true_type {};
+template<> struct is_texture_type<HPLMemberType::HPL_MEMBER_TEXTURE_3D>: std::true_type {};
+
+
+
 
 enum HPLParameterType {
   HPL_PARAMETER_NONE,
@@ -67,7 +73,7 @@ struct HPLMember {
   const char *memberName;
   HPLMemberType type;
   union {
-    ShaderMember shader;
+    ShaderMember member_shader;
     MemberStruct member_struct;
     MemberTexture member_texture;
   };

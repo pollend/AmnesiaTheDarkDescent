@@ -51,7 +51,10 @@ typedef struct {
   hpl::HPLParameterStruct<MaterialUniform> uniform;
   IHPLTexture *texture;
 } MaterialData;
-class HPLWaterParameterLayout : hpl::HPLMemberLayout<MaterialData> {};
+class HPLWaterParameterLayout : hpl::HPLMemberLayout<MaterialData> {
+public:
+  HPLWaterParameterLayout();
+};
 
 }
 
