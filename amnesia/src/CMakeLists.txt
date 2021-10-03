@@ -30,13 +30,11 @@ if(USERDIR_RESOURCES)
 endif()
 
 set(VERSION "1.3.1")
-
 add_subdirectory(game game)
 
 add_custom_target(GameRelease
     DEPENDS Amnesia
 )
-
 
 set(AMNESIA_EXECUTABLE_OUTPUT_PATH  ${INSTALL_OUTPUT_PATH}/Amnesia)
 install(DIRECTORY DESTINATION ${AMNESIA_EXECUTABLE_OUTPUT_PATH})

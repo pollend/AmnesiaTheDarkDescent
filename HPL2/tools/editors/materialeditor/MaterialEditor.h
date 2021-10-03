@@ -28,7 +28,6 @@ using namespace hpl;
 
 #include "../common/EditorTypes.h"
 
-#include "MaterialEditorTypes.h"
 
 //--------------------------------------------------------------------
 

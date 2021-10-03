@@ -25,7 +25,6 @@
 
 #include "graphics/HPLMaterial.h"
 #include "graphics/HPLTexture.h"
-#include "graphics/HPLParameterStruct.h"
 #include "system/SystemTypes.h"
 
 #include "graphics/HPLMemberLayout.h"
@@ -48,10 +47,11 @@ typedef struct {
 } MaterialUniform;
 
 typedef struct {
-  hpl::HPLParameterStruct<MaterialUniform> uniform;
+  MaterialUniform uniform;
   IHPLTexture *texture;
 } MaterialData;
-class HPLWaterParameterLayout : hpl::HPLMemberLayout<MaterialData> {
+
+class HPLWaterParameterLayout : HPLMemberLayout<MaterialData> {
 public:
   HPLWaterParameterLayout();
 };

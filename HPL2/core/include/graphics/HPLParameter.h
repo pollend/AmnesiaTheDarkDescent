@@ -2,48 +2,59 @@
 
 #include "graphics/GraphicsTypes.h"
 #include "system/SystemTypes.h"
+
+#include "IRenderingInc.h"
+
+#include <absl/container/inlined_vector.h>
 #include <absl/types/span.h>
 
 namespace hpl {
+
+class HPLMember;
+
+typedef absl::InlinedVector<const HPLMember *, 10> HPLMemberCapture;
+typedef absl::Span<const HPLMember> HPLMemberSpan;
+
+enum HPLParameterType {
+  HPL_PARAMETER_NONE,
+  HPL_PARAMETER_FLOAT,
+  HPL_PARAMETER_INT,
+  HPL_PARAMETER_BOOL,
+  HPL_PARAMETER_VEC2F,
+  HPL_PARAMETER_VEC2I
+};
+
+template <HPLParameterType T> struct parameter_type : public std::bad_typeid {};
+template <> struct parameter_type<HPLParameterType::HPL_PARAMETER_INT> { typedef int type; };
+template <> struct parameter_type<HPLParameterType::HPL_PARAMETER_FLOAT> { typedef float type; };
+template <> struct parameter_type<HPLParameterType::HPL_PARAMETER_BOOL> { typedef bool type; };
 
 enum HPLMemberType {
   HPL_MEMBER_NONE,
   HPL_MEMBER_STRUCT,
   HPL_MEMBER_TEXTURE,
-  HPL_MEMBER_TEXTURE_3D,
   HPL_MEMBER_VERTEX_SHADER,
   HPL_MEMBER_PIXEL_SHADER,
   HPL_MEMBER_COUNT
 };
 
-template<HPLMemberType T> struct is_shader_type: std::false_type {};
-template<> struct is_shader_type<HPLMemberType::HPL_MEMBER_PIXEL_SHADER>: std::true_type {};
-template<> struct is_shader_type<HPLMemberType::HPL_MEMBER_VERTEX_SHADER>: std::true_type {};
+template <HPLMemberType T> struct is_shader_type : std::false_type {};
+template <> struct is_shader_type<HPLMemberType::HPL_MEMBER_PIXEL_SHADER> : std::true_type {};
+template <> struct is_shader_type<HPLMemberType::HPL_MEMBER_VERTEX_SHADER> : std::true_type {};
 
-template<HPLMemberType T> struct is_struct_type: std::false_type {};
-template<> struct is_struct_type<HPLMemberType::HPL_MEMBER_STRUCT>: std::true_type {};
+template <HPLMemberType T> struct is_struct_type : std::false_type {};
+template <> struct is_struct_type<HPLMemberType::HPL_MEMBER_STRUCT> : std::true_type {};
 
-template<HPLMemberType T> struct is_texture_type: std::false_type {};
-template<> struct is_texture_type<HPLMemberType::HPL_MEMBER_TEXTURE>: std::true_type {};
-template<> struct is_texture_type<HPLMemberType::HPL_MEMBER_TEXTURE_3D>: std::true_type {};
+template <HPLMemberType T> struct is_texture_type : std::false_type {};
+template <> struct is_texture_type<HPLMemberType::HPL_MEMBER_TEXTURE> : std::true_type {};
 
-
-
-
-enum HPLParameterType {
-  HPL_PARAMETER_NONE,
-  HPL_PARAMETER_FLOAT,
-  HPL_PARAMETER_BOOL,
-  HPL_PARAMETER_INTEGER,
-  HPL_PARAMETER_VEC2F,
-  HPL_PARAMETER_VEC2I
-};
 
 struct HPLStructParameter {
   HPLParameterType type;
   const char *memberName;
   size_t offset;
   uint16_t number;
+
 };
 
 typedef struct {
@@ -61,8 +72,9 @@ typedef struct {
 typedef struct {
   size_t offset;
   size_t size;
-  const HPLStructParameter *parameters;
-  size_t parameterCount;
+  const absl::Span<const HPLStructParameter> parameters;
+
+  static const HPLStructParameter& byFieldName(const HPLMember& mm, const std::string& fieldName);
 } MemberStruct;
 
 typedef struct {
@@ -77,8 +89,15 @@ struct HPLMember {
     MemberStruct member_struct;
     MemberTexture member_texture;
   };
+
+  static size_t getOffset(const HPLMember& member);
+  static void byType(const HPLMemberSpan& members, HPLMemberType type, HPLMemberCapture& capture);
+  static const HPLMember& byMemberName(const HPLMemberSpan& members, const std::string& memberName);
+  static int countByType(const HPLMemberSpan& members, HPLMemberType type);
 };
 
+static const HPLMember EMPTY_MEMBER = {.type = HPLMemberType::HPL_MEMBER_NONE};
+static const HPLStructParameter EMPTY_STRUCT_PARAMETER = {.type = HPLParameterType::HPL_PARAMETER_NONE};
 
 
 

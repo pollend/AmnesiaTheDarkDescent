@@ -86,6 +86,7 @@ namespace hpl {
             {.type = HPL_PARAMETER_FLOAT, .memberName = "afFalloffExp",.offset = offsetof(MaterialType_Water::MaterialUniform, afFalloffExp)},
         };
 
+
         static const HPLShaderPermutation SupportPermutations[] = {
             {.bits = eFeature_Diffuse_Reflection, .key = "UseReflection", .value = "TRUE"},
             {.bits = eFeature_Diffuse_CubeMapReflection, .key = "UseCubeMapReflection", .value = "TRUE"},
@@ -101,16 +102,13 @@ namespace hpl {
              .member_struct = {
                                .offset = offsetof(MaterialType_Water::MaterialData, uniform),
                                .size = sizeof(MaterialType_Water::MaterialData),
-                               .parameters = MaterialUniform,
-                               .parameterCount = ARRAY_LEN(MaterialUniform)}},
+                               .parameters = absl::Span<const HPLStructParameter>(MaterialUniform, ARRAY_LEN(MaterialUniform))}},
             {.memberName = "texture", .type = HPL_MEMBER_TEXTURE, .member_texture = {.offset = offsetof(MaterialType_Water::MaterialData, texture)}}
         };
 
-        hpl::MaterialType_Water::HPLWaterParameterLayout::HPLWaterParameterLayout()
-            : HPLMemberLayout(const_cast<HPLMember *>(MaterialMetaData), ARRAY_LEN(MaterialMetaData)) {
+        MaterialType_Water::HPLWaterParameterLayout::HPLWaterParameterLayout()
+            : HPLMemberLayout(absl::Span<const HPLMember>(MaterialMetaData, ARRAY_LEN(MaterialMetaData))) {
         }
-        
-
 
 	static cProgramComboFeature vDiffuseFeatureVec[] =
 	{

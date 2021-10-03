@@ -239,3 +239,9 @@ target_link_libraries(HPL2
   z
   ${PLATFORM_LIBS}
   )
+
+file(GLOB test_sources RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} test/*.cpp)
+add_executable(HPL2_Test ${test_sources})
+target_link_libraries(HPL2_Test PRIVATE Catch2::Catch2WithMain HPL2)
+catch_discover_tests(HPL2_Test)
+
