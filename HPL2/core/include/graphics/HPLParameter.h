@@ -65,8 +65,9 @@ public:
 } HPLShaderPermutation;
 
 typedef struct {
-  const HPLShaderPermutation *permutations;
-  size_t permutationCount;
+  const absl::Span<const HPLShaderPermutation> permutations;
+//  const HPLShaderPermutation *permutations;
+//  size_t permutationCount;
 } ShaderMember;
 
 typedef struct {

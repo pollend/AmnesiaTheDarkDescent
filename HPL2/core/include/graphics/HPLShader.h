@@ -10,55 +10,62 @@
 
 namespace hpl {
 
-enum { GLOBAL_SHADER, MATERIAL_SHADER } HPLShaderType;
+enum { HPL_GLOBAL_SHADER, HPL_MATERIAL_SHADER } HPLShaderType;
 
-class IHPLShader {};
+class IHPLShader {
+  virtual Shader *HALShader() = 0;
+};
 
-template <class TParameter> class HPLShader : public IHPLShader {
+template <class TMemberLayout>
+class HPLShader : public IHPLShader {
 public:
-
   HPLShader(Renderer *renderer, uint32_t permutation) : _renderer(renderer) {
-    uint16_t flags = 0;
     assert(_layout.countByType(HPL_MEMBER_VERTEX_SHADER) <= 1);
     assert(_layout.countByType(HPL_MEMBER_PIXEL_SHADER) <= 1);
 
-    int idx = 0;
     ShaderLoadDesc desc = {};
-    std::vector<const char *> _macros[SHADER_STAGE_COUNT];
+    absl::InlinedVector<ShaderMacro, 10> _macros[SHADER_STAGE_COUNT];
     hpl::HPLMemberCapture members;
     _layout.byType(HPL_MEMBER_VERTEX_SHADER, members);
     _layout.byType(HPL_MEMBER_PIXEL_SHADER, members);
 
-//    _layout.byType(HPL_MEMBER_VERTEX_SHADER,
-//        [&](const char *name, const ShaderMember &member) {
-//          auto &macros = _macros[idx];
-//          ShaderStageLoadDesc &stage = desc.mStages[idx];
-//          stage.pFileName = name;
-//          idx++;
-//        });
-//    _layout.byType<HPL_MEMBER_PIXEL_SHADER>(
-//        [&](const char *name, const auto &v) {
-//          auto &macros = _macros[idx];
-//          ShaderStageLoadDesc &stage = desc.mStages[idx];
-//          stage.pFileName = name;
-//          idx++;
-//        });
+    int stageCount = 0;
+    for (auto &mem : members) {
+      size_t current_index = stageCount++;
+      auto &stage = desc.mStages[current_index];
+      stage.pFileName = mem->memberName;
+      for (const auto &perm : mem->member_shader.permutations) {
+        if ((perm.bits & permutation) > 0) {
+          _macros[current_index].push_back(
+              {.definition = perm.key, .value = perm.value});
+        }
+      }
+      stage.pMacros = _macros[current_index].data();
+      stage.mMacroCount = _macros[current_index].size();
+    }
+    addShader(renderer, &desc, &_shader);
+    RootSignatureDesc rootDesc = {
+        .ppShaders = &_shader,
+        .mShaderCount = 1,
+    };
+    addRootSignature(renderer, &rootDesc, &_signature);
   }
   HPLShader(Renderer *renderer, const ShaderLoadDesc &desc)
       : _renderer(renderer) {
     addShader(renderer, &desc, &_shader);
   }
-  ~HPLShader() {
+  ~HPLShader() {}
 
-  }
+  Shader *HALShader() override { return _shader; }
+  typename TMemberLayout::TParamType& parameter() { return _parameter; }
 
 private:
   Shader *_shader;
+  RootSignature* _signature;
   Renderer *_renderer;
-  HPLMemberLayout<TParameter> _layout;
+  TMemberLayout _layout;
+  typename TMemberLayout::TParamType _parameter;
 };
-
-class HPLShaderType {};
 
 }
 

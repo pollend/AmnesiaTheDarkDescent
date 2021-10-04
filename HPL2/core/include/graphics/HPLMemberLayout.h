@@ -20,12 +20,18 @@ public:
 
 template <typename TParameter> class HPLMemberLayout : public IHPLMemberLayout {
 public:
+  typedef TParameter TParamType;
+
+  HPLMemberLayout(const HPLMemberLayout<TParameter>& layout)
+      : _members(layout._members), _copy(layout._copy){
+  }
   HPLMemberLayout(const HPLMember *members, size_t len)
       : _members(members, len) {}
   HPLMemberLayout(const absl::Span<const HPLMember> &members)
       : _members(members) {}
   HPLMemberLayout(const std::vector<HPLMember> &members)
       : _copy(members), _members(_copy) {}
+
 
   const HPLMember &byMemberName(const std::string &field) override {
     return HPLMember::byMemberName(members(), field);
