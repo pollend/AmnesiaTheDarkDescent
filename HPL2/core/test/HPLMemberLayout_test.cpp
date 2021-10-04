@@ -49,14 +49,19 @@ static const hpl::HPLMember TestLayoutMetaData[] = {
 };
 
 
-TEST_CASE("test modify field in struct", "[unit]") {
-  auto layout = hpl::HPLMemberLayout<TestLayout>(hpl::HPLMemberSpan(TestLayoutMetaData, ARRAY_LEN(TestLayoutMetaData)));
-  TestLayout testField = {};
-  int* value = nullptr;
-  if(layout.getParameter<hpl::HPL_PARAMETER_INT>(&testField, "test_1", "x", &value)) {
-    (*value) = 10;
+TEST_CASE( "testing layout configuration", "[unit]" ) {
+  auto layout = hpl::HPLMemberLayout<TestLayout>(
+      hpl::HPLMemberSpan(TestLayoutMetaData, ARRAY_LEN(TestLayoutMetaData)));
+
+  SECTION("test modify field in struct") {
+    TestLayout testField = {};
+    int *value = nullptr;
+    if (layout.getParameter<hpl::HPL_PARAMETER_INT>(&testField, "test_1", "x",
+                                                    &value)) {
+      (*value) = 10;
+    }
+    REQUIRE(testField.t1.x == 10);
+    REQUIRE(testField.t2.x == 0);
+    REQUIRE(testField.t1.y == 0);
   }
-  REQUIRE(testField.t1.x == 10);
-  REQUIRE(testField.t2.x == 0);
-  REQUIRE(testField.t1.y == 0);
 }
