@@ -22,7 +22,6 @@ public:
 template <typename TParameter> class HPLMemberLayout : public IHPLMemberLayout  {
 public:
   using TParamType = TParameter;
-//  using type_parameter_layout = TParameter
 
   HPLMemberLayout(const HPLMemberLayout<TParameter>& layout)
       : _members(layout._members), _copy(layout._copy){

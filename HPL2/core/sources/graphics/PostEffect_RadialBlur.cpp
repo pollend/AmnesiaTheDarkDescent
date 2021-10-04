@@ -34,15 +34,30 @@ namespace hpl {
 
 namespace PostEffect_RadialBlur {
 
+static const hpl::HPLStructParameter PostRadialUniformParameters[] = {
+    {.type = hpl::HPL_PARAMETER_FLOAT,
+     .memberName = "mfSize",
+     .offset = offsetof(RadialBlurUniform, mfSize)},
+    {.type = hpl::HPL_PARAMETER_FLOAT,
+     .memberName = "mfAlpha",
+     .offset = offsetof(RadialBlurUniform, mfAlpha)},
+    {.type = hpl::HPL_PARAMETER_FLOAT,
+     .memberName = "mfBlurStartDist",
+     .offset = offsetof(RadialBlurUniform, mfBlurStartDist)}};
 
 static const HPLMember RadialBlurMetaData[] = {
-};
+    {.memberName= "", .type = HPL_MEMBER_PIXEL_SHADER, .member_shader = {}},
+    {.memberName = "constants",
+     .type = HPL_MEMBER_STRUCT,
+     .member_struct = {.offset = offsetof(RadialBlurLayoutData, uniform),
+                       .size = sizeof(RadialBlurLayoutData),
+                       .parameters = HPLParameterSpan(
+                           PostRadialUniformParameters,
+                           ARRAY_LEN(PostRadialUniformParameters))}}};
 
 HPLRadialBlurLayout::HPLRadialBlurLayout()
-    : HPLMemberLayout(absl::Span<const HPLMember>(RadialBlurMetaData, ARRAY_LEN(RadialBlurMetaData))){
-}
-
-
+    : HPLMemberLayout(absl::Span<const HPLMember>(
+          RadialBlurMetaData, ARRAY_LEN(RadialBlurMetaData))) {}
 
 }
 

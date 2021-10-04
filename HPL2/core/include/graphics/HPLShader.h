@@ -19,6 +19,8 @@ class IHPLShader {
 
 template <class TMemberLayout> class HPLShader : public IHPLShader {
 public:
+  using TParamType = typename TMemberLayout::TParamType;
+
   HPLShader(HPLShader& copy): _shader(copy.HALShader()) {
 
   }
@@ -62,7 +64,7 @@ public:
 
   Shader *HALShader() override { return _shader; }
   RootSignature *HALRootSignature() override { return _signature; }
-//  typename TMemberLayout::TParamType &parameter() { return _parameter; }
+  TParamType &parameter() { return _parameter; }
 
 protected:
 private:
@@ -70,7 +72,7 @@ private:
   RootSignature *_signature;
   Renderer *_renderer;
   TMemberLayout _layout;
-  typename TMemberLayout::TParamType _parameter;
+  TParamType _parameter;
 };
 
 }

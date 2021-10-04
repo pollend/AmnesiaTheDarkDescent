@@ -11,9 +11,11 @@
 namespace hpl {
 
 class HPLMember;
+class HPLStructParameter;
 
 typedef absl::InlinedVector<const HPLMember *, 10> HPLMemberCapture;
 typedef absl::Span<const HPLMember> HPLMemberSpan;
+typedef absl::Span<const HPLStructParameter> HPLParameterSpan;
 
 enum HPLParameterType {
   HPL_PARAMETER_NONE,
@@ -60,7 +62,6 @@ struct HPLStructParameter {
   const char *memberName;
   size_t offset;
   uint16_t number;
-
 };
 
 typedef struct {
@@ -105,7 +106,5 @@ struct HPLMember {
 
 static const HPLMember EMPTY_MEMBER = {.type = HPLMemberType::HPL_MEMBER_NONE};
 static const HPLStructParameter EMPTY_STRUCT_PARAMETER = {.type = HPLParameterType::HPL_PARAMETER_NONE};
-
-
 
 }
