@@ -18,9 +18,11 @@ public:
   virtual const absl::Span<const HPLMember> &members() = 0;
 };
 
-template <typename TParameter> class HPLMemberLayout : public IHPLMemberLayout {
+
+template <typename TParameter> class HPLMemberLayout : public IHPLMemberLayout  {
 public:
-  typedef TParameter TParamType;
+  using TParamType = TParameter;
+//  using type_parameter_layout = TParameter
 
   HPLMemberLayout(const HPLMemberLayout<TParameter>& layout)
       : _members(layout._members), _copy(layout._copy){
@@ -63,9 +65,12 @@ public:
 
       return true;
   }
+
+
 private:
   std::vector<HPLMember> _copy;
   const HPLMemberSpan _members;
+
 };
 
 }

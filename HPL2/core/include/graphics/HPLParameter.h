@@ -24,6 +24,12 @@ enum HPLParameterType {
   HPL_PARAMETER_VEC2I
 };
 
+enum HPLAccessPattern {
+  HPL_UNKNOWN_ACCESS_PATTERN,
+  HPL_STATIC_ACCESS_PATTERN,
+  HPL_PER_FRAME_ACCESS_PATTERN,
+};
+
 template <HPLParameterType T> struct parameter_type : public std::bad_typeid {};
 template <> struct parameter_type<HPLParameterType::HPL_PARAMETER_INT> { typedef int type; };
 template <> struct parameter_type<HPLParameterType::HPL_PARAMETER_FLOAT> { typedef float type; };

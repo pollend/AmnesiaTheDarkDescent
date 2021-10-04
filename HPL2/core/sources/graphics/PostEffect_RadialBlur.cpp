@@ -32,6 +32,20 @@
 
 namespace hpl {
 
+namespace PostEffect_RadialBlur {
+
+
+static const HPLMember RadialBlurMetaData[] = {
+};
+
+HPLRadialBlurLayout::HPLRadialBlurLayout()
+    : HPLMemberLayout(absl::Span<const HPLMember>(RadialBlurMetaData, ARRAY_LEN(RadialBlurMetaData))){
+}
+
+
+
+}
+
 	//////////////////////////////////////////////////////////////////////////
 	// PROGRAM VARS
 	//////////////////////////////////////////////////////////////////////////

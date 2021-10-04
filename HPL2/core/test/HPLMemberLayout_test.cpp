@@ -32,8 +32,8 @@ static const hpl::HPLStructParameter TestUniformParameters[] = {
 };
 
 static const hpl::HPLMember TestLayoutMetaData[] = {
-    {.memberName = "water.vert", .type = hpl::HPL_MEMBER_VERTEX_SHADER, .member_shader = { .permutations = SupportPermutations, .permutationCount = ARRAY_LEN(SupportPermutations)}},
-    {.memberName = "water.frag", .type = hpl::HPL_MEMBER_VERTEX_SHADER, .member_shader = { .permutations = SupportPermutations, .permutationCount = ARRAY_LEN(SupportPermutations) }},
+    {.memberName = "water.vert", .type = hpl::HPL_MEMBER_VERTEX_SHADER, .member_shader = { .permutations = absl::Span<const hpl::HPLShaderPermutation>(SupportPermutations, ARRAY_LEN(SupportPermutations))}},
+    {.memberName = "water.frag", .type = hpl::HPL_MEMBER_VERTEX_SHADER, .member_shader = { .permutations = absl::Span<const hpl::HPLShaderPermutation>(SupportPermutations, ARRAY_LEN(SupportPermutations))}},
     {.memberName = "test_1",
      .type = hpl::HPL_MEMBER_STRUCT,
      .member_struct = {

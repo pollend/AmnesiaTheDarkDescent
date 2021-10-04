@@ -22,8 +22,30 @@
 
 #include "graphics/PostEffect.h"
 
-namespace hpl {
+#include "graphics/HPLMemberLayout.h"
+#include "graphics/HPLShader.h"
 
+namespace hpl {
+namespace  PostEffect_RadialBlur {
+
+typedef struct {
+  float mfSize;
+  float mfAlpha;
+  float mfBlurStartDist;
+} RadialBlurUniform;
+
+typedef struct {
+  RadialBlurUniform uniform;
+} RadialBlurLayoutData;
+
+class HPLRadialBlurLayout : public HPLMemberLayout<RadialBlurLayoutData> {
+public:
+  HPLRadialBlurLayout();
+};
+
+class HPLGlobalPostEffect_RadialBlur : public HPLShader<HPLRadialBlurLayout> {};
+
+}
 	//------------------------------------------
 
 	class cPostEffectParams_RadialBlur : public iPostEffectParams

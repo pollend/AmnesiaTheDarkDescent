@@ -14,11 +14,15 @@ enum { HPL_GLOBAL_SHADER, HPL_MATERIAL_SHADER } HPLShaderType;
 
 class IHPLShader {
   virtual Shader *HALShader() = 0;
+  virtual RootSignature *HALRootSignature() = 0;
 };
 
-template <class TMemberLayout>
-class HPLShader : public IHPLShader {
+template <class TMemberLayout> class HPLShader : public IHPLShader {
 public:
+  HPLShader(HPLShader& copy): _shader(copy.HALShader()) {
+
+  }
+
   HPLShader(Renderer *renderer, uint32_t permutation) : _renderer(renderer) {
     assert(_layout.countByType(HPL_MEMBER_VERTEX_SHADER) <= 1);
     assert(_layout.countByType(HPL_MEMBER_PIXEL_SHADER) <= 1);
@@ -57,11 +61,13 @@ public:
   ~HPLShader() {}
 
   Shader *HALShader() override { return _shader; }
-  typename TMemberLayout::TParamType& parameter() { return _parameter; }
+  RootSignature *HALRootSignature() override { return _signature; }
+//  typename TMemberLayout::TParamType &parameter() { return _parameter; }
 
+protected:
 private:
   Shader *_shader;
-  RootSignature* _signature;
+  RootSignature *_signature;
   Renderer *_renderer;
   TMemberLayout _layout;
   typename TMemberLayout::TParamType _parameter;
