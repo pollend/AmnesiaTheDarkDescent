@@ -5,17 +5,12 @@
 
 namespace hpl {
 
-typedef std::function<void(const char *shaderName, const ShaderMember &)>
-    ShaderMemberHandler;
-typedef std::function<void(const char *shaderName, const MemberStruct &)>
-    StructMemberHandler;
-
 class IHPLMemberLayout {
 public:
-  virtual const HPLMember &byMemberName(const std::string &field) = 0;
-  virtual void byType(HPLMemberType type, HPLMemberCapture &list) = 0;
-  virtual int countByType(HPLMemberType type) = 0;
-  virtual const absl::Span<const HPLMember> &members() = 0;
+  virtual const HPLMember &byMemberName(const std::string &field) const = 0;
+  virtual void byType(HPLMemberType type, HPLMemberCapture &list) const = 0;
+  virtual int countByType(HPLMemberType type) const = 0;
+  virtual const absl::Span<const HPLMember> &members() const = 0;
 };
 
 
@@ -34,17 +29,17 @@ public:
       : _copy(members), _members(_copy) {}
 
 
-  const HPLMember &byMemberName(const std::string &field) override {
+  const HPLMember &byMemberName(const std::string &field) const override {
     return HPLMember::byMemberName(members(), field);
   }
-  void byType(HPLMemberType type, HPLMemberCapture &list) override {
+  void byType(HPLMemberType type, HPLMemberCapture &list) const override {
     HPLMember::byType(members(), type, list);
   }
-  int countByType(HPLMemberType type) override {
+  int countByType(HPLMemberType type) const override {
     return HPLMember::countByType(members(), type);
   }
 
-  const absl::Span<const HPLMember> &members() override { return _members; }
+  const absl::Span<const HPLMember> &members() const override { return _members; }
 
   template <HPLParameterType TType>
   bool getParameter(TParameter *parameter, const std::string &memberName,

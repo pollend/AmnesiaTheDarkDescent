@@ -95,8 +95,8 @@ namespace hpl {
         };
 
         static const HPLMember MaterialMetaData[] = {
-            {.memberName = "water.vert", .type = HPL_MEMBER_VERTEX_SHADER, .member_shader = { .permutations = absl::Span<const HPLShaderPermutation>(SupportPermutations,ARRAY_LEN(SupportPermutations)) }},
-            {.memberName = "water.frag", .type = HPL_MEMBER_VERTEX_SHADER, .member_shader = { .permutations = absl::Span<const HPLShaderPermutation>(SupportPermutations,ARRAY_LEN(SupportPermutations)) }},
+            {.memberName = "shader", .type = HPL_MEMBER_SHADER, .member_shader = { }},
+            {.memberName = "water.frag", .type = HPL_MEMBER_SHADER, .member_shader = { }},
             {.memberName = "uniform",
              .type = HPL_MEMBER_STRUCT,
              .member_struct = {

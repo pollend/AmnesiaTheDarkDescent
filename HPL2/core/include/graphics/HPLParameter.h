@@ -1,6 +1,7 @@
 #pragma once
 
 #include "graphics/GraphicsTypes.h"
+#include "graphics/HPLSampler.h"
 #include "system/SystemTypes.h"
 
 #include "IRenderingInc.h"
@@ -12,10 +13,14 @@ namespace hpl {
 
 class HPLMember;
 class HPLStructParameter;
+class HPLShaderPermutation;
+class HPLShaderStage;
 
 typedef absl::InlinedVector<const HPLMember *, 10> HPLMemberCapture;
 typedef absl::Span<const HPLMember> HPLMemberSpan;
 typedef absl::Span<const HPLStructParameter> HPLParameterSpan;
+typedef absl::Span<const HPLShaderStage> HPLShaderStageSpan;
+typedef absl::Span<const HPLShaderPermutation> HPLPermutationSpan;
 
 enum HPLParameterType {
   HPL_PARAMETER_NONE,
@@ -41,14 +46,18 @@ enum HPLMemberType {
   HPL_MEMBER_NONE,
   HPL_MEMBER_STRUCT,
   HPL_MEMBER_TEXTURE,
-  HPL_MEMBER_VERTEX_SHADER,
-  HPL_MEMBER_PIXEL_SHADER,
+  HPL_MEMBER_SHADER,
+  HPL_MEMBER_SAMPLER,
   HPL_MEMBER_COUNT
 };
 
+enum HPLShaderStageType {
+  HPL_VERTEX_SHADER,
+  HPL_PIXEL_SHADER
+};
+
 template <HPLMemberType T> struct is_shader_type : std::false_type {};
-template <> struct is_shader_type<HPLMemberType::HPL_MEMBER_PIXEL_SHADER> : std::true_type {};
-template <> struct is_shader_type<HPLMemberType::HPL_MEMBER_VERTEX_SHADER> : std::true_type {};
+template <> struct is_shader_type<HPLMemberType::HPL_MEMBER_SHADER> : std::true_type {};
 
 template <HPLMemberType T> struct is_struct_type : std::false_type {};
 template <> struct is_struct_type<HPLMemberType::HPL_MEMBER_STRUCT> : std::true_type {};
@@ -64,20 +73,29 @@ struct HPLStructParameter {
   uint16_t number;
 };
 
-typedef struct {
-public:
+struct HPLShaderPermutation {
   uint32_t bits;
   const char *key;
   const char *value;
-} HPLShaderPermutation;
+};
+
+struct HPLShaderStage {
+  const absl::Span<const HPLShaderPermutation> permutations;
+  const char *shaderName;
+  HPLShaderStageType stageType;
+  const char *entryPointName;
+};
 
 typedef struct {
-  const absl::Span<const HPLShaderPermutation> permutations;
-//  const HPLShaderPermutation *permutations;
-//  size_t permutationCount;
+  const absl::Span<const HPLShaderStage> stages;
+  int numBindlessTexture;
 } ShaderMember;
 
-typedef struct {
+typedef struct _SamplerMember{
+  HPLSampler* sampler;
+} SamplerMember;
+
+typedef struct _MemberStruct {
   size_t offset;
   size_t size;
   const absl::Span<const HPLStructParameter> parameters;
@@ -93,6 +111,7 @@ struct HPLMember {
   const char *memberName;
   HPLMemberType type;
   union {
+    SamplerMember member_sampler;
     ShaderMember member_shader;
     MemberStruct member_struct;
     MemberTexture member_texture;
@@ -104,7 +123,7 @@ struct HPLMember {
   static int countByType(const HPLMemberSpan& members, HPLMemberType type);
 };
 
-static const HPLMember EMPTY_MEMBER = {.type = HPLMemberType::HPL_MEMBER_NONE};
+static const HPLMember EMPTY_MEMBER = {.type = HPLMemberType::HPL_MEMBER_NONE };
 static const HPLStructParameter EMPTY_STRUCT_PARAMETER = {.type = HPLParameterType::HPL_PARAMETER_NONE};
 
 }

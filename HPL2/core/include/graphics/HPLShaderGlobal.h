@@ -2,7 +2,7 @@
 
 #include "HPLShader.h"
 
+
 template <class TMemberLayout> class HPLShaderGlobal: public HPLShader<TMemberLayout> {
-//  HPLShaderGlobal: HPLShader<
 
 };

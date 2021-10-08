@@ -45,8 +45,12 @@ static const hpl::HPLStructParameter PostRadialUniformParameters[] = {
      .memberName = "mfBlurStartDist",
      .offset = offsetof(RadialBlurUniform, mfBlurStartDist)}};
 
+static const hpl::HPLShaderStage RadialBlurStages[] = {
+    {.shaderName = "water", .stageType = HPL_PIXEL_SHADER}
+};
+
 static const HPLMember RadialBlurMetaData[] = {
-    {.memberName= "", .type = HPL_MEMBER_PIXEL_SHADER, .member_shader = {}},
+    {.memberName= "", .type = HPL_MEMBER_SHADER, .member_shader = {.stages = HPLShaderStageSpan(RadialBlurStages, ARRAY_LEN(RadialBlurStages))}},
     {.memberName = "constants",
      .type = HPL_MEMBER_STRUCT,
      .member_struct = {.offset = offsetof(RadialBlurLayoutData, uniform),

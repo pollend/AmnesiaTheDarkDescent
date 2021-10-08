@@ -1,43 +1,29 @@
 #include "graphics/HPLShader.h"
 
+void hpl::IHPLShader::configureShader(Renderer* render,const HPLMember& member, HPLShaderType& shaderTypes, uint32_t permutation) {
 
+    ShaderLoadDesc shaderDesc = {};
+    absl::InlinedVector<ShaderMacro, 10> _macros[SHADER_STAGE_COUNT];
+    size_t current_stage = 0; //stageCount++;
+    for(auto& stage: member.member_shader.stages) {
+      auto& descStage = shaderDesc.mStages[current_stage];
+      current_stage++;
+      for (const auto &perm : stage.permutations) {
+        if (perm.bits == 0 || (perm.bits & permutation) > 0) {
+          _macros[current_stage].push_back(
+              {.definition = perm.key, .value = perm.value});
+        }
+      }
+      descStage.pFileName = stage.shaderName;
+      descStage.pEntryPointName = stage.entryPointName;
+      descStage.pMacros = _macros[current_stage].data();
+      descStage.mMacroCount = _macros[current_stage].size();
+      Shader* shader = nullptr;
+      shaderTypes.name = member.memberName;
+      addShader(render, &shaderDesc, &shaderTypes.shader);
+    }
 
-//
-//template<>
-//hpl::HPLShader::HPLShader(Renderer* renderer): _renderer(renderer) {
-//}
-//
-//hpl::HPLShader::HPLShader(Renderer* renderer, const ShaderLoadDesc& desc): _renderer(renderer) {
-//  addShader(renderer, &desc, &_shader);
-//}
-//
-//
-//hpl::HPLShader::~HPLShader() {
-//}
+}
+void hpl::IHPLShader::configureRootSignature(const IHPLMemberLayout& layout, const absl::Span<Shader*>& shader) {
 
-
-//
-//hpl::HPLShader::HPLShader(Renderer* renderer, const absl::Span<HPLMember> members): _members(members){
-////  ShaderLoadDesc desc = {};
-////  std::vector<ShaderMacro> targetMacros[SHADER_STAGE_COUNT];
-////  for (int i = 0; i < numStages; ++i) {
-////    const ShaderMember &member = stages[i];
-////    desc.mStages[i].pFileName = member.name;
-////    for (int st = 0; st < stages[i].permutationCount; st++) {
-////      if ((member.permutations->bits & features) > 0 ||
-////          member.permutations->bits == 0) {
-////        targetMacros[i].push_back({.definition = member.permutations->key,
-////                                   .value = member.permutations->value});
-////      }
-////    }
-////    desc.mStages[i].pMacros = targetMacros[i].data();
-////    desc.mStages[i].mMacroCount = targetMacros[i].size();
-////  }
-////  addShader(renderer, &desc, &_shader);
-//}
-
-//const absl::Span<hpl::HPLMember> &hpl::HPLShader::members() { return _members; }
-//
-//hpl::HPLShader::~HPLShader() {
-//
-//}
+}

@@ -31,9 +31,13 @@ static const hpl::HPLStructParameter TestUniformParameters[] = {
     {.type = hpl::HPL_PARAMETER_INT, .memberName = "z", .offset = offsetof(TestStruct, z)}
 };
 
+static const hpl::HPLShaderStage TestStages[] = {
+};
+
 static const hpl::HPLMember TestLayoutMetaData[] = {
-    {.memberName = "water.vert", .type = hpl::HPL_MEMBER_VERTEX_SHADER, .member_shader = { .permutations = absl::Span<const hpl::HPLShaderPermutation>(SupportPermutations, ARRAY_LEN(SupportPermutations))}},
-    {.memberName = "water.frag", .type = hpl::HPL_MEMBER_VERTEX_SHADER, .member_shader = { .permutations = absl::Span<const hpl::HPLShaderPermutation>(SupportPermutations, ARRAY_LEN(SupportPermutations))}},
+    {.memberName = "shader", .type = hpl::HPL_MEMBER_SHADER, .member_shader = {}},
+//    {.memberName = "water.vert", .type = hpl::HPL_MEMBER_VERTEX_SHADER, .member_shader = { .permutations = absl::Span<const hpl::HPLShaderPermutation>(SupportPermutations, ARRAY_LEN(SupportPermutations))}},
+//    {.memberName = "water.frag", .type = hpl::HPL_MEMBER_VERTEX_SHADER, .member_shader = { .permutations = absl::Span<const hpl::HPLShaderPermutation>(SupportPermutations, ARRAY_LEN(SupportPermutations))}},
     {.memberName = "test_1",
      .type = hpl::HPL_MEMBER_STRUCT,
      .member_struct = {
