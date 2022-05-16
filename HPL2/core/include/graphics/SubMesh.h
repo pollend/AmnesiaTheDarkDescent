@@ -20,7 +20,6 @@
 #ifndef HPL_SUB_MESH_H
 #define HPL_SUB_MESH_H
 
-#include "HPLMaterial.h"
 #include "MaterialType_Water.h"
 #include "graphics/GraphicsTypes.h"
 #include "math/MathTypes.h"
@@ -72,7 +71,7 @@ namespace hpl {
 		cMaterial *GetMaterial();
 		iVertexBuffer* GetVertexBuffer();
 
-                IHPLMaterialRef* material() { return nullptr; }
+//                IHPLMaterialRef* material() { return nullptr; }
 
 		const tString& GetName(){ return msName;}
 

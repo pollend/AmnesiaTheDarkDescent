@@ -23,41 +23,40 @@
 #include "graphics/MaterialType.h"
 #include "graphics/Material.h"
 
-#include "graphics/HPLMaterial.h"
 #include "graphics/HPLTexture.h"
 #include "system/SystemTypes.h"
 
 #include "graphics/HPLMemberLayout.h"
 
 namespace hpl {
-
-namespace MaterialType_Water {
-typedef struct {
-  float afT;
-  float afRefractionScale;
-  cMatrixf a_mtxInvViewRotation;
-  cVector2f avReflectionMapSizeMul;
-  cVector2f avFrenselBiasPow;
-  cVector2f avReflectionFadeStartAndLength;
-  float afWaveAmplitude;
-  float afWaveFreq;
-  cVector2f avFogStartAndLength;
-  cColor avFogColor;
-  float afFalloffExp;
-} MaterialUniform;
-
-typedef struct {
-  MaterialUniform uniform;
-  IHPLTexture *texture;
-} MaterialData;
-
-class HPLWaterParameterLayout : HPLMemberLayout<MaterialData> {
-public:
-  HPLWaterParameterLayout();
-};
-
-
-}
+//
+//namespace MaterialType_Water {
+//typedef struct {
+//  float afT;
+//  float afRefractionScale;
+//  cMatrixf a_mtxInvViewRotation;
+//  cVector2f avReflectionMapSizeMul;
+//  cVector2f avFrenselBiasPow;
+//  cVector2f avReflectionFadeStartAndLength;
+//  float afWaveAmplitude;
+//  float afWaveFreq;
+//  cVector2f avFogStartAndLength;
+//  cColor avFogColor;
+//  float afFalloffExp;
+//} MaterialUniform;
+//
+//typedef struct {
+//  MaterialUniform uniform;
+//  IHPLTexture *texture;
+//} MaterialData;
+//
+//class HPLWaterParameterLayout : HPLMemberLayout<MaterialData> {
+//public:
+//  HPLWaterParameterLayout();
+//};
+//
+//
+//}
 
 	//---------------------------------------------------
 	// WATER

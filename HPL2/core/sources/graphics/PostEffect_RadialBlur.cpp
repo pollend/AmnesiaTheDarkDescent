@@ -34,34 +34,42 @@ namespace hpl {
 
 namespace PostEffect_RadialBlur {
 
-static const hpl::HPLStructParameter PostRadialUniformParameters[] = {
-    {.type = hpl::HPL_PARAMETER_FLOAT,
-     .memberName = "mfSize",
-     .offset = offsetof(RadialBlurUniform, mfSize)},
-    {.type = hpl::HPL_PARAMETER_FLOAT,
-     .memberName = "mfAlpha",
-     .offset = offsetof(RadialBlurUniform, mfAlpha)},
-    {.type = hpl::HPL_PARAMETER_FLOAT,
-     .memberName = "mfBlurStartDist",
-     .offset = offsetof(RadialBlurUniform, mfBlurStartDist)}};
+//static const hpl::HPLStructParameter PostRadialUniformParameters[] = {
+//    {.type = hpl::HPL_PARAMETER_FLOAT,
+//     .memberName = "mfSize",
+//     .offset = offsetof(RadialBlurUniform, mfSize)},
+//    {.type = hpl::HPL_PARAMETER_FLOAT,
+//     .memberName = "mfAlpha",
+//     .offset = offsetof(RadialBlurUniform, mfAlpha)},
+//    {.type = hpl::HPL_PARAMETER_FLOAT,
+//     .memberName = "mfBlurStartDist",
+//     .offset = offsetof(RadialBlurUniform, mfBlurStartDist)}};
+//
+//static const hpl::HPLShaderStage RadialBlurStages[] = {
+//    {.shaderName = "water", .stageType = HPL_PIXEL_SHADER}
+//};
 
-static const hpl::HPLShaderStage RadialBlurStages[] = {
-    {.shaderName = "water", .stageType = HPL_PIXEL_SHADER}
-};
+//static const HPLMember RadialBlurMetaData[] = {
+//    {.memberName= "", .type = HPL_MEMBER_SHADER, .member_shader = {.stages = HPLShaderStageSpan(RadialBlurStages, ARRAY_LEN(RadialBlurStages))}},
+//    {.memberName = "constants",
+//     .type = HPL_MEMBER_STRUCT,
+//     .member_struct = {.offset = offsetof(RadialBlurLayoutData, uniform),
+//                       .size = sizeof(RadialBlurLayoutData),
+//                       .parameters = HPLParameterSpan(
+//                           PostRadialUniformParameters,
+//                           ARRAY_LEN(PostRadialUniformParameters))}}};
+//
+HPLRadialBlurShader::HPLRadialBlurShader()
+    : HPLShader() {
+    addUniform(&RadialBlurLayoutData::uniform)
+      .addField("u_alpha",&RadialBlurUniform::mfAlpha)
+      .addField("u_blueStartDis",&RadialBlurUniform::mfBlurStartDist)
+      .addField("u_size",&RadialBlurUniform::mfSize);
 
-static const HPLMember RadialBlurMetaData[] = {
-    {.memberName= "", .type = HPL_MEMBER_SHADER, .member_shader = {.stages = HPLShaderStageSpan(RadialBlurStages, ARRAY_LEN(RadialBlurStages))}},
-    {.memberName = "constants",
-     .type = HPL_MEMBER_STRUCT,
-     .member_struct = {.offset = offsetof(RadialBlurLayoutData, uniform),
-                       .size = sizeof(RadialBlurLayoutData),
-                       .parameters = HPLParameterSpan(
-                           PostRadialUniformParameters,
-                           ARRAY_LEN(PostRadialUniformParameters))}}};
+//    getShaderLayout()
+//    addShaderStage(HPLShaderLayout::VERTEX_STAGE);
 
-HPLRadialBlurLayout::HPLRadialBlurLayout()
-    : HPLMemberLayout(absl::Span<const HPLMember>(
-          RadialBlurMetaData, ARRAY_LEN(RadialBlurMetaData))) {}
+}
 
 }
 

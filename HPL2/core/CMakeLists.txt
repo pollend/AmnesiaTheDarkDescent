@@ -230,7 +230,7 @@ target_link_libraries(HPL2
   Newton
   absl::base
   absl::strings
-  the-forge
+  bgfx
   ${GLEW_LIBRARIES}
   ${OPENGL_gl_LIBRARY}
   ${OPENGL_glu_LIBRARY}
@@ -241,7 +241,7 @@ target_link_libraries(HPL2
   )
 
 file(GLOB test_sources RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} test/*.cpp)
-add_executable(HPL2_Test ${test_sources})
-target_link_libraries(HPL2_Test PRIVATE Catch2::Catch2WithMain HPL2)
-catch_discover_tests(HPL2_Test)
+#add_executable(HPL2_Test ${test_sources})
+#target_link_libraries(HPL2_Test PRIVATE Catch2::Catch2WithMain HPL2)
+#catch_discover_tests(HPL2_Test)
 

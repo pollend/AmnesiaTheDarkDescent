@@ -1,70 +1,97 @@
 #pragma once
+#include <memory>
+#include <vector>
+#include <map>
 
-#include "graphics/HPLMemberLayout.h"
 #include "graphics/HPLParameter.h"
-
-#include <unordered_map>
-
-#include "absl/types/span.h"
-
-#include <Common_3/Renderer/IRenderer.h>
-#include <Common_3/Renderer/IResourceLoader.h>
+#include "graphics/HPLTexture.h"
+#include "system/SystemTypes.h"
+#include "resources/Resources.h"
+#include "graphics/HPLShader.h"
+#include <graphics/HPLParameter.h>
 
 namespace hpl {
 
-enum { HPL_GLOBAL_SHADER, HPL_MATERIAL_SHADER } HPLShaderType;
+class IHPLShader {};
 
-class IHPLShader {
+class IHPLMaterialRef {};
+
+
+//template <typename TData> class HPLMaterialRef : public IHPLMaterialRef {
+//public:
+//  HPLMaterialRef(HPLMaterial<TData> *target) : _target(target) {}
+//  ~HPLMaterialRef() {}
+//
+//  void init() {
+//    void *data = &_data;
+//    //        std::vector<DescriptorData> params;
+//    for (int i = 0; i < _target->nMembers(); i++) {
+//      const HPLMember &member = _target->byIndex(i);
+//      //          DescriptorData descriptor;
+//      switch (member.type) {
+//      case HPL_MEMBER_TEXTURE: {
+//        auto &target = member.member_texture;
+//        void *memberData = data + target.offset;
+//        //        Texture *texture = dynamic_cast<iTexture *>(memberData);
+//        //        descriptor.pName = target.memberName;
+//        //        descriptor.ppTextures = &texture;
+//      } break;
+//      case HPL_MEMBER_STRUCT: {
+//        auto &target = member.member_struct;
+//        void *memberData = data + target.offset;
+//        char structData[target.size];
+//
+//      } break;
+//      }
+//      //          params.push_back(descriptor);
+//    }
+//  }
+//
+////  void updateBuffers(const char *fields) {
+////    void *data = &_data;
+////    HPLMember *member = _target->byField(fields);
+////    if (member != nullptr) {
+////      char *memberData = data + member->member_struct.offset;
+////    }
+////  }
+//
+//  TData &get() { return _data; }
+//
+//private:
+//  TData _data;
+//  HPLMaterial<TData> *_target;
+//
+//  friend class HPLMaterial<TData>;
+//};
+
+template <typename TData> class HPLShader : public IHPLShader {
 public:
-  struct HPLShaderType {
-    const char *name;
-    Shader *shader;
-  };
-
-  static void configureShader(Renderer *render, const HPLMember &member,
-                              HPLShaderType &shaderTypes, uint32_t permutation);
-  static void configureRootSignature(const IHPLMemberLayout &layout,
-                                     const absl::Span<Shader *> &shader);
-
-  virtual Shader *getShader() = 0;
-};
-
-template <class TMemberLayout> class HPLShader : public IHPLShader {
-public:
-  using TParamType = typename TMemberLayout::TParamType;
-
-  //  HPLShader(HPLShader& copy): _shader(copy.HALShader()) {
-  //
-  //  }
-
-  HPLShader(Renderer *renderer, const IHPLMemberLayout &layout,
-            uint32_t permutation)
-      : _renderer(renderer) {
-    hpl::HPLMemberCapture members;
-    layout.byType(HPL_MEMBER_SHADER, members);
-    for (auto &mem : members) {
-      HPLShaderType shaderType = {};
-      configureShader(renderer, *mem, shaderType, permutation);
-      _shaderTypes.push_back(shaderType);
-    }
-  }
-
-  ~HPLShader() {}
-
-  TParamType &parameter() { return _parameter; }
+  HPLShader() {}
 
 protected:
-  void addShaderType(const HPLShaderType &shaderType) {
-    _shaderTypes.push_back(shaderType);
+  template <typename TStruct>
+  HPLUniformLayout<TData, TStruct> &addUniform(TStruct TData::*field) {
+    return *static_cast<HPLUniformLayout<TData, TStruct> *>(
+        _uniform
+            .emplace_back(
+                std::make_unique<HPLUniformLayout<TData, TStruct>>(field))
+            .get());
+  }
+
+  HPLSamplerLayout<TData> &addSampler(HPLSampler TData::*field) {
+    return *_samplers.emplace_back(HPLSamplerLayout<TData>(field));
+  }
+
+  HPLShaderStages& getStages() {
+    return _stages;
   }
 
 private:
-  Shader *_shader;
-  Renderer *_renderer;
-  RootSignature *_rootSignature;
-  TMemberLayout _layout;
-  TParamType _parameter;
-  absl::InlinedVector<const HPLShaderType, 4> _shaderTypes;
+  std::vector<HPLSamplerLayout<TData>> _samplers;
+  HPLShaderStages _stages;
+  std::vector<std::unique_ptr<IHPLUniformLayout>> _uniform;
+
+  //  Renderer *_render;
 };
 
 }
