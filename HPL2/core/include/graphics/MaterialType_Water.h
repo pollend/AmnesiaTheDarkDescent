@@ -26,7 +26,6 @@
 #include "graphics/HPLTexture.h"
 #include "system/SystemTypes.h"
 
-#include "graphics/HPLMemberLayout.h"
 
 namespace hpl {
 //

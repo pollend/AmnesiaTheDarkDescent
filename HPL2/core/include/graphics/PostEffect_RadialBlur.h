@@ -21,32 +21,37 @@
 #define HPL_POSTEFFECT_RADIAL_BLUR_H
 
 #include "graphics/PostEffect.h"
+#include <graphics/HPLMaterial.h>
 
-#include "graphics/HPLMemberLayout.h"
-#include "graphics/HPLShader.h"
-
+#include "graphics/HPLShaderDefinition.h"
+class HPLSampler;
 namespace hpl {
-namespace  PostEffect_RadialBlur {
 
-  typedef struct {
-    float mfSize;
-    float mfAlpha;
-    float mfBlurStartDist;
-  } RadialBlurUniform;
+namespace PostEffectRadialBlur {
 
-  typedef struct {
-    RadialBlurUniform uniform;
-  } RadialBlurLayoutData;
+static const HPLMemberID UNIFORM_ALPHA = HPLMemberID("u_alpha");
+static const HPLMemberID UNIFORM_BLUR_START_DIST =
+    HPLMemberID("u_blueStartDis");
+static const HPLMemberID UNIFORM_SIZE = HPLMemberID("u_size");
 
-  class HPLRadialBlurShader : public HPLShader<RadialBlurLayoutData> {
-  public:
-    HPLRadialBlurShader();
-  };
+typedef struct {
+  float mfSize;
+  float mfAlpha;
+  float mfBlurStartDist;
+} RadialBlurData;
+
+class HPLRadialBlurShaderDefinition
+    : public HPLShaderDefinition<RadialBlurData> {
+public:
+  HPLRadialBlurShaderDefinition();
+};
+
+class HPLRadialBlurMaterial : public HPLMaterial<RadialBlurData> {
+
+};
+
 }
 
-//class HPLGlobalPostEffect_RadialBlur : public HPLShader<HPLRadialBlurLayout> {};
-//
-//}
 	//------------------------------------------
 
 	class cPostEffectParams_RadialBlur : public iPostEffectParams

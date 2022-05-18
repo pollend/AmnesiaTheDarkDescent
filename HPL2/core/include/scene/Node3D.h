@@ -22,7 +22,6 @@
 
 #include "math/MathTypes.h"
 #include "scene/SceneTypes.h"
-#include "graphics/HPLMemberLayout.h"
 
 namespace hpl {
 

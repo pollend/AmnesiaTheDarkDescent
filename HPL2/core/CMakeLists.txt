@@ -32,6 +32,7 @@ file(GLOB common_sources RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
     sources/system/*
 
     include/ai/*
+    include/core/*
     include/engine/*
     include/generate/*
     include/graphics/*
