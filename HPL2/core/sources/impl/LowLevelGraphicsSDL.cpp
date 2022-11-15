@@ -1072,8 +1072,6 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::FlushRendering()
 	{
-		;
-
 		glFlush();
 	}
 

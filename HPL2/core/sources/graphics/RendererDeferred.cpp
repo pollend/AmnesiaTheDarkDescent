@@ -39,6 +39,7 @@
 #include "graphics/ProgramComboManager.h"
 #include "graphics/OcclusionQuery.h"
 #include "graphics/TextureCreator.h"
+#include "graphics/ShaderUtil.h"
 
 #include "resources/Resources.h"
 #include "resources/TextureManager.h"
@@ -405,21 +406,6 @@ namespace hpl {
 		}
 
 		////////////////////////////////////
-		//Create Sky box program
-		{
-			cParserVarContainer vars;
-			vars.Add("UseUv");
-			iGpuShader *pVtxShader = mpShaderManager->CreateShader("deferred_base_vtx.glsl",eGpuShaderType_Vertex,&vars);
-			iGpuShader *pFragShader = mpShaderManager->CreateShader("deferred_gbuffer_skybox_frag.glsl", eGpuShaderType_Fragment,&vars);
-
-			mpSkyBoxProgram = mpGraphics->CreateGpuProgram("DeferredSkyBox");
-			mpSkyBoxProgram->SetShader(eGpuShaderType_Vertex, pVtxShader);
-			mpSkyBoxProgram->SetShader(eGpuShaderType_Fragment, pFragShader);
-			mpSkyBoxProgram->Link();
-		}
-
-
-		////////////////////////////////////
 		//Create Fog program
 		{
 			cParserVarContainer vars;
@@ -758,10 +744,6 @@ namespace hpl {
 			mpGraphics->DestroyGpuProgram(mpEdgeSmooth_UnpackDepthProgram);
 			mpGraphics->DestroyGpuProgram(mpEdgeSmooth_RenderProgram);
 		}
-
-		/////////////////////////
-		//Gpu programs
-		mpGraphics->DestroyGpuProgram(mpSkyBoxProgram);
 
 		mpProgramManager->DestroyShadersAndPrograms();
 	}

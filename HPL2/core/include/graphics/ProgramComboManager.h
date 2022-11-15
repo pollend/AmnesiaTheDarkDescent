@@ -17,12 +17,13 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef HPL_PROGRAM_COMBO_MANAGER_H
-#define HPL_PROGRAM_COMBO_MANAGER_H
+#pragma once 
 
 #include "system/SystemTypes.h"
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
+
+#include "bgfx/bgfx.h"
 
 namespace hpl {
 
@@ -60,8 +61,9 @@ namespace hpl {
 	class cProgramComboShader
 	{
 	public:
-		cProgramComboShader() : mpShader(NULL), mlUserCount(0) {}
+		cProgramComboShader() : m_shader_handle(BGFX_INVALID_HANDLE),mpShader(NULL), mlUserCount(0) {}
 
+		bgfx::ShaderHandle m_shader_handle;
 		iGpuShader* mpShader;
 		int mlUserCount;
 	};
@@ -74,11 +76,12 @@ namespace hpl {
 	class cProgramComboProgram
 	{
 	public:
-		cProgramComboProgram() : mpProgram(NULL), mlUserCount(0) {}
+		cProgramComboProgram() : mpProgram(NULL), m_program(BGFX_INVALID_HANDLE), mlUserCount(0) {}
 
 		void DestroyProgram();
 
 		iGpuProgram* mpProgram;
+		bgfx::ProgramHandle m_program;
 		int mlUserCount;
 	};
 
@@ -108,7 +111,7 @@ namespace hpl {
 		tString msFragShader;
 
 		std::vector<cProgramComboFeature> mvFeatures;
-		std::vector<cProgramComboSettingsVar> mvDefaultVars;       
+		std::vector<cProgramComboSettingsVar> mvDefaultVars;
 	};
 
 	//---------------------------------------------------
@@ -137,6 +140,7 @@ namespace hpl {
 		iGpuShader *CreateShader(const tString& asName, eGpuShaderType aType, cParserVarContainer *apVars, bool abAddtoList);
 		iGpuProgram *CreateProgram(const tString& asName, bool abAddtoList);
 
+		
 		/**
 		 * Do NOT use these to destroy program create with SetupProgramModeData
 		 */
@@ -149,6 +153,7 @@ namespace hpl {
 		iGpuProgram* CreateProgramFromShaders(	const tString &asProgramName, iGpuShader *apVtxShader,iGpuShader *apFragShader,
 												bool abAddtoList);
 
+		
 		void DestroyShadersAndPrograms();
 
 	private:
@@ -192,4 +197,3 @@ namespace hpl {
 	//---------------------------------------------------
 
 };
-#endif // HPL_PROGRAM_COMBO_MANAGER_H

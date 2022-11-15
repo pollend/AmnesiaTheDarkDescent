@@ -19,6 +19,7 @@
 
 #include "graphics/PostEffect_RadialBlur.h"
 
+#include "bgfx/bgfx.h"
 #include "graphics/Graphics.h"
 
 #include "graphics/LowLevelGraphics.h"
@@ -27,35 +28,28 @@
 #include "graphics/Texture.h"
 #include "graphics/GPUProgram.h"
 #include "graphics/GPUShader.h"
+#include "graphics/ShaderUtil.h"
 
+#include "math/MathTypes.h"
 #include "system/PreprocessParser.h"
 
 namespace hpl {
 
-	//////////////////////////////////////////////////////////////////////////
-	// PROGRAM VARS
-	//////////////////////////////////////////////////////////////////////////
-
-	#define kVar_afSize				0
-	#define kVar_avHalfScreenSize	1
-	#define kVar_afBlurStartDist	2
-
-	//////////////////////////////////////////////////////////////////////////
-	// POST EFFECT BASE
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	cPostEffectType_RadialBlur::cPostEffectType_RadialBlur(cGraphics *apGraphics, cResources *apResources) : iPostEffectType("RadialBlur",apGraphics,apResources)
 	{
-		cParserVarContainer vars;
-		mpProgram = mpGraphics->CreateGpuProgramFromShaders("RadialBlur","deferred_base_vtx.glsl", "posteffect_radial_blur_frag.glsl", &vars);
-		if(mpProgram)
-		{
-			mpProgram->GetVariableAsId("afSize",kVar_afSize);
-			mpProgram->GetVariableAsId("avHalfScreenSize",kVar_avHalfScreenSize);
-			mpProgram->GetVariableAsId("afBlurStartDist", kVar_afBlurStartDist);
-		}
+		// cParserVarContainer vars;
+		// mpProgram = mpGraphics->CreateGpuProgramFromShaders("RadialBlur","deferred_base_vtx.glsl", "posteffect_radial_blur_frag.glsl", &vars);
+		// if(mpProgram)
+		// {
+		// 	mpProgram->GetVariableAsId("afSize",kVar_afSize);
+		// 	mpProgram->GetVariableAsId("avHalfScreenSize",kVar_avHalfScreenSize);
+		// 	mpProgram->GetVariableAsId("afBlurStartDist", kVar_afBlurStartDist);
+		// }
+
+		_program = hpl::loadProgram("vs_post_effect", "fs_posteffect_radial_blur_frag");
+		_u_uniform = bgfx::createUniform("u_params", bgfx::UniformType::Vec4);
+		_s_diffuseMap = bgfx::createUniform("diffuseMap", bgfx::UniformType::Sampler);
 	}
 
 	//-----------------------------------------------------------------------
@@ -112,6 +106,11 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	void cPostEffect_RadialBlur::RenderEffect(GraphicsContext&, iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer)
+	{
+		
+	}
+
 
 	iTexture* cPostEffect_RadialBlur::RenderEffect(iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer)
 	{
@@ -132,11 +131,19 @@ namespace hpl {
 
 		mpCurrentComposite->SetProgram(mpRadialBlurType->mpProgram);
 
-		if(mpRadialBlurType->mpProgram)
+		if(bgfx::isValid(mpRadialBlurType->_program))
 		{
-			mpRadialBlurType->mpProgram->SetFloat(kVar_afSize, mParams.mfSize*vRenderTargetSizeFloat.x);
-			mpRadialBlurType->mpProgram->SetFloat(kVar_afBlurStartDist, mParams.mfBlurStartDist);
-			mpRadialBlurType->mpProgram->SetVec2f(kVar_avHalfScreenSize,  vRenderTargetSizeFloat*0.5f);
+			float value[4] = {{0}};
+			value[0] = mParams.mfSize*vRenderTargetSizeFloat.x; // afSize
+			value[1] = mParams.mfBlurStartDist; // afBlurStartDist
+			
+			cVector2f blurStartDist = vRenderTargetSizeFloat*0.5f;
+			value[2] = blurStartDist.x; // avHalfScreenSize
+			value[3] = blurStartDist.y;
+			
+			bgfx::setUniform(mpRadialBlurType->_u_uniform, &value);
+
+			bgfx::submit(0, mpRadialBlurType->_program);
 		}
 
 		mpCurrentComposite->SetTexture(0, apInputTexture);

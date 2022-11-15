@@ -181,7 +181,7 @@ namespace hpl {
 		cParserVarContainer defaultVars;
 		defaultVars.Add("UseUv");
 
-		mpProgramManager->SetupGenerateProgramData(	eMaterialRenderMode_Z,"Z","deferred_base_vtx.glsl", "deferred_base_frag.glsl",
+		mpProgramManager->SetupGenerateProgramData(	eMaterialRenderMode_Z,"Z","vs_deferred_base", "fs_deferred_base",
 													vZFeatureVec,kZFeatureNum, defaultVars);
 
 		mpProgramManager->AddGenerateProgramVariableId("a_mtxUV",kVar_a_mtxUV,eMaterialRenderMode_Z);

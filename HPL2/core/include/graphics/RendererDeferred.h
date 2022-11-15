@@ -16,9 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
-
-#ifndef HPL_RENDERER_DEFERRED_H
-#define HPL_RENDERER_DEFERRED_H
+#pragma once
 
 #include "graphics/Renderer.h"
 
@@ -313,7 +311,6 @@ namespace hpl {
 		std::vector<cDeferredLight*> mvTempDeferredLights;
 		std::vector<cDeferredLight*> mvSortedLights[eDeferredLightList_LastEnum];
 
-		iGpuProgram *mpSkyBoxProgram;
 		iGpuProgram *mpLightStencilProgram;
 		iGpuProgram *mpLightBoxProgram[2];//1=SSAO used, 0=no SSAO
 
@@ -347,4 +344,3 @@ namespace hpl {
 	//---------------------------------------------
 
 };
-#endif // HPL_RENDERER_DEFERRED_H

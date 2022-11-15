@@ -20,7 +20,9 @@
 #ifndef HPL_POSTEFFECT_RADIAL_BLUR_H
 #define HPL_POSTEFFECT_RADIAL_BLUR_H
 
-#include "graphics/PostEffect.h"
+#include <bgfx/bgfx.h>
+#include <graphics/PostEffect.h>
+#include <graphics/GraphicsContext.h>
 
 namespace hpl {
 
@@ -55,6 +57,10 @@ namespace hpl {
 
 	private:
 		iGpuProgram *mpProgram;
+
+		bgfx::ProgramHandle _program;
+		bgfx::UniformHandle _u_uniform;
+		bgfx::UniformHandle _s_diffuseMap;
 	};
 
 	//------------------------------------------
@@ -71,12 +77,14 @@ namespace hpl {
 		void OnSetParams();
 		iPostEffectParams *GetTypeSpecificParams() { return &mParams; }
 
+		void RenderEffect(GraphicsContext&, iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer);
 		iTexture* RenderEffect(iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer);
 
 		void RenderBlur(iTexture *apInputTex);
 
 		cPostEffectType_RadialBlur *mpRadialBlurType;
 		cPostEffectParams_RadialBlur mParams;
+
 	};
 
 	//------------------------------------------

@@ -19,6 +19,8 @@
 
 #include "graphics/ProgramComboManager.h"
 
+#include <bgfx/bgfx.h>
+
 #include "system/LowLevelSystem.h"
 #include "system/PreprocessParser.h"
 
@@ -26,6 +28,8 @@
 #include "graphics/GPUShader.h"
 #include "graphics/GPUProgram.h"
 #include "graphics/LowLevelGraphics.h"
+#include <graphics/ShaderUtil.h>
+
 
 #include "resources/Resources.h"
 #include "resources/TextureManager.h"
@@ -34,6 +38,10 @@
 #include "math/Math.h"
 
 #include "system/String.h"
+#include "system/SystemTypes.h"
+
+#include <absl/strings/str_format.h>
+
 
 namespace hpl {
 
@@ -43,20 +51,21 @@ namespace hpl {
 	// PROGRAM
 	//////////////////////////////////////////////////////////////////////////
 
-	//-----------------------------------------------------------------------
+    void cProgramComboProgram::DestroyProgram()
+    {
+        if (bgfx::isValid(m_program))
+        {
+            bgfx::destroy(m_program);
+            m_program = BGFX_INVALID_HANDLE;
+        }
+        if (!mpProgram)
+        {
+            hplDelete(mpProgram);
+            mpProgram = NULL;
+        }
+    }
 
-	void cProgramComboProgram::DestroyProgram()
-	{
-		if(mpProgram==NULL) return;
-
-		hplDelete(mpProgram);
-		mpProgram = NULL;
-	}
-
-	//-----------------------------------------------------------------------
-
-
-	//////////////////////////////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////////
 	// CONSTRUCTORS
 	//////////////////////////////////////////////////////////////////////////
 
@@ -120,8 +129,10 @@ namespace hpl {
 			// Create program
 			iGpuProgram* pProgram = NULL;
 
-			if(pVtxShader && pFragShader)
+			if(pVtxShader && pFragShader) 
+            {
 				pProgram = CreateProgramFromShaders(sProgramName, pVtxShader, pFragShader,false);
+            }
 
 			pProgData->mpProgram = pProgram;
 
@@ -281,6 +292,7 @@ namespace hpl {
 
 		return pProgram;
 	}
+
 
 	//-----------------------------------------------------------------------
 
@@ -444,15 +456,6 @@ namespace hpl {
 		}
 	}
 
-	//--------------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PRIVATE METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//--------------------------------------------------------------------------
-
-
 	tString cProgramComboManager::GenerateProgramName(int alMainMode, int alBitFlags)
 	{
 		cProgramComboSettings& settings = mvSettings[alMainMode];
@@ -505,14 +508,21 @@ namespace hpl {
 		//////////////////////////////
 		// Create program, add to set and return it
 		cProgramComboShader *pShaderData = hplNew(cProgramComboShader , ());
+
 		iGpuShader* pShader = CreateShaderFromFeatures(	asShaderName, aShaderType, alBitFlags,
 														&comboSettings.mvFeatures[0], (int)comboSettings.mvFeatures.size(),
 														&comboSettings.mvDefaultVars[0], (int)comboSettings.mvDefaultVars.size());
+		
+		std::string shaderIdentifier = absl::StrFormat("%s_c%d", asShaderName.c_str(), lValidBits);
+		pShaderData->m_shader_handle = hpl::loadShader(shaderIdentifier.c_str());
 		pShaderData->mpShader = pShader;
 		pShaderData->mlUserCount++;
 		pShaderSet->insert(tProgramComboShaderMap::value_type(lValidBits, pShaderData));
 
-		if(pShader) pShader->SetUserId(lValidBits);
+		if(pShader)
+		{
+			pShader->SetUserId(lValidBits);
+		}
 
 		//tString sTempName = asShaderName +"_"+GenerateProgramName(alMainMode, lValidBits);
 		//Log("Created shader '%s' id: %d\n", pShader->GetName().c_str(), pShader->GetUserId());

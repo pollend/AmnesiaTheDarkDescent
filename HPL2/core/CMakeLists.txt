@@ -1,6 +1,8 @@
 cmake_minimum_required (VERSION 3.0)
 project(HPL2)
 
+include( ${CMAKE_CURRENT_SOURCE_DIR}/tools/ShaderUtil.cmake )
+
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux" OR ${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD")
   set(LINUX ON)
@@ -100,6 +102,8 @@ file(GLOB impl_sources RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
     sources/impl/MeshLoaderColladaLoader.cpp
     sources/impl/MeshLoaderMSH.cpp
     sources/impl/MeshLoaderFBX.cpp
+
+    sources/impl/ShaderUtil.cpp
 )
 
 IF(APPLE)
@@ -228,7 +232,12 @@ target_link_libraries(HPL2
   OALWrapper # also pulls in ogg,vorbis,SDL
   AngelScript
   Newton
+  absl::base
+  absl::strings
+  absl::str_format
   bgfx
+  bx
+  bimg
   ${GLEW_LIBRARIES}
   ${OPENGL_gl_LIBRARY}
   ${OPENGL_glu_LIBRARY}
@@ -237,3 +246,24 @@ target_link_libraries(HPL2
   z
   ${PLATFORM_LIBS}
   )
+
+
+hpl_add_shader(
+    HPL_CORE_SHADER
+        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_ssao_blur.sc" 
+    INCLUDES
+        ${CMAKE_CURRENT_SOURCE_DIR}/resources)
+
+hpl_add_shader(
+    HPL_CORE_SHADER
+        "${CMAKE_CURRENT_SOURCE_DIR}/resource/fs_posteffect_radial_blur_frag.sc" 
+    INCLUDES
+        ${CMAKE_CURRENT_SOURCE_DIR}/resources)
+        
+
+add_custom_target(
+  HPL_SHADERS
+  DEPENDS 
+    ${HPL_CORE_SHADER}
+)
+add_dependencies(HPL2 HPL_SHADERS)

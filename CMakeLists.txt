@@ -6,6 +6,7 @@ set(INSTALL_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/bin)
 if(NOT APPLE AND UNIX)
     set(LINUX TRUE)
 ENDIF()
+
 option(COPY_GAME_ASSETS "copy games assets into output directory" ON)
 option(WITH_TOOLS "build HPL2 with tools" ON)
 

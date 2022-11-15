@@ -1,9 +1,3 @@
-[submodule "HPL2/external/bx"]
-	path = HPL2/external/bx
-	url = https://github.com/bkaradzic/bx
-[submodule "HPL2/external/bgfx"]
-	path = HPL2/external/bgfx
-	url = https://github.com/bkaradzic/bgfx/
-[submodule "HPL2/external/bimg"]
-	path = HPL2/external/bimg
-	url = https://github.com/bkaradzic/bimg/
+[submodule "HPL2/external/bgfx.cmake"]
+	path = HPL2/external/bgfx.cmake
+	url = git@github.com:bkaradzic/bgfx.cmake.git
