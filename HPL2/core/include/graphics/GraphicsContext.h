@@ -2,14 +2,17 @@
 
 #include <bgfx/bgfx.h>
 
-class GraphicsContext final
+namespace hpl
 {
-public:
-    GraphicsContext();
+    class GraphicsContext final
+    {
+    public:
+        GraphicsContext();
 
-    void Reset();
-    bgfx::ViewId StartPass();
+        void Reset();
+        bgfx::ViewId StartPass();
 
-private:
-    bgfx::ViewId _current;
-};
+    private:
+        bgfx::ViewId _current;
+    };
+} // namespace hpl

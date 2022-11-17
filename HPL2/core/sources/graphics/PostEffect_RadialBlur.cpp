@@ -106,9 +106,27 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cPostEffect_RadialBlur::RenderEffect(GraphicsContext&, iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer)
+	void cPostEffect_RadialBlur::RenderEffect(GraphicsContext& context, iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer)
 	{
+		bgfx::ViewId view = context.StartPass();
 		
+		cVector2l vRenderTargetSize = mpCurrentComposite->GetRenderTargetSize();
+		cVector2f vRenderTargetSizeFloat((float)vRenderTargetSize.x, (float)vRenderTargetSize.y);
+
+		if(bgfx::isValid(mpRadialBlurType->_program))
+		{
+			float value[4] = {0};
+			value[0] = mParams.mfSize*vRenderTargetSizeFloat.x; // afSize
+			value[1] = mParams.mfBlurStartDist; // afBlurStartDist
+			
+			cVector2f blurStartDist = vRenderTargetSizeFloat*0.5f;
+			value[2] = blurStartDist.x; // avHalfScreenSize
+			value[3] = blurStartDist.y;
+			
+			bgfx::setUniform(mpRadialBlurType->_u_uniform, &value);
+
+			bgfx::submit(0, mpRadialBlurType->_program);
+		}
 	}
 
 

@@ -1,5 +1,7 @@
 #include <graphics/GraphicsContext.h>
 
+namespace hpl {
+
 GraphicsContext::GraphicsContext()
     : _current(0)
 {
@@ -13,4 +15,6 @@ void GraphicsContext::Reset()
 bgfx::ViewId GraphicsContext::StartPass()
 {
     return ++_current;
+}
+
 }
