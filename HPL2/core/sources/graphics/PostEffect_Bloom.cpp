@@ -131,6 +131,9 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	void cPostEffect_Bloom::RenderEffect(GraphicsContext& context, Image& input, RenderTarget& target) {
+
+	}
 
 	iTexture* cPostEffect_Bloom::RenderEffect(iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer)
 	{

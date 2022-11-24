@@ -1,3 +1,6 @@
 [submodule "HPL2/external/bgfx.cmake"]
 	path = HPL2/external/bgfx.cmake
 	url = git@github.com:bkaradzic/bgfx.cmake.git
+[submodule "HPL2/external/abseil-cpp"]
+	path = HPL2/external/abseil-cpp
+	url = git@github.com:abseil/abseil-cpp.git

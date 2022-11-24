@@ -20,6 +20,8 @@
 #ifndef HPL_POSTEFFECT_H
 #define HPL_POSTEFFECT_H
 
+#include "graphics/Image.h"
+#include "graphics/RenderTarget.h"
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
 
@@ -37,8 +39,10 @@ namespace hpl {
 	class iPostEffect;
 
 
-	//------------------------------------------
-
+	class GraphicsContext;
+	class Image;
+	class RenderTarget;
+	
 	#define kPostEffectParamsClassInit(aClass)							\
 		void CopyTo(iPostEffectParams* apDestParams) {					\
 			aClass *pCastParams = static_cast< aClass *>(apDestParams);	\
@@ -48,9 +52,6 @@ namespace hpl {
 			aClass *pCastParams = static_cast< aClass *>(apSrcParams);	\
 			*this = *pCastParams;										\
 		}
-
-
-	//------------------------------------------
 
 	class iPostEffectParams
 	{
@@ -94,6 +95,7 @@ namespace hpl {
 		virtual ~iPostEffect();
 
 		iTexture* Render(cPostEffectComposite *apComposite, iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer, bool abLastEffect);
+		virtual void RenderEffect(GraphicsContext& context, Image& input, RenderTarget& target) {};
 
 		/** SetDisabled - Method to disable the Effect completely, meaning IsActive will always return false even
 		 * after a SetActive(true) call
@@ -115,7 +117,8 @@ namespace hpl {
 		virtual void OnSetActive(bool abX){}
 		virtual void OnSetParams()=0;
 		virtual iPostEffectParams *GetTypeSpecificParams()=0;
-		virtual iTexture* RenderEffect(iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer)=0;
+		virtual iTexture* RenderEffect(iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer) =0;
+
 
 		/**
 		 * Very important! Only set this if the contents of the final buffer does not matter!
@@ -144,8 +147,6 @@ namespace hpl {
 
 		bool mbFinalFrameBufferUsed;
 	};
-
-	//------------------------------------------
 
 };
 #endif // HPL_POSTEFFECT_H

@@ -20,9 +20,11 @@
 #ifndef HPL_POSTEFFECT_RADIAL_BLUR_H
 #define HPL_POSTEFFECT_RADIAL_BLUR_H
 
+#include "graphics/Image.h"
 #include <bgfx/bgfx.h>
 #include <graphics/PostEffect.h>
 #include <graphics/GraphicsContext.h>
+#include <graphics/RenderTarget.h>
 
 namespace hpl {
 
@@ -77,7 +79,7 @@ namespace hpl {
 		void OnSetParams();
 		iPostEffectParams *GetTypeSpecificParams() { return &mParams; }
 
-		void RenderEffect(GraphicsContext&, iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer);
+		void RenderEffect(GraphicsContext& context, Image& input, RenderTarget& target);
 		iTexture* RenderEffect(iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer);
 
 		void RenderBlur(iTexture *apInputTex);

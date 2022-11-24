@@ -60,6 +60,7 @@ namespace hpl {
 	class cPostEffect_ColorConvTex : public iPostEffect
 	{
 	public:
+		virtual void RenderEffect(GraphicsContext& context, Image& input, RenderTarget& target) override;
 		cPostEffect_ColorConvTex(cGraphics *apGraphics, cResources *apResources, iPostEffectType *apType);
 		~cPostEffect_ColorConvTex();
 

@@ -51,15 +51,11 @@ namespace hpl {
 		_u_uniform = bgfx::createUniform("u_params", bgfx::UniformType::Vec4);
 		_s_diffuseMap = bgfx::createUniform("diffuseMap", bgfx::UniformType::Sampler);
 	}
-
-	//-----------------------------------------------------------------------
-
+	
 	cPostEffectType_RadialBlur::~cPostEffectType_RadialBlur()
 	{
 
 	}
-
-	//-----------------------------------------------------------------------
 
 	iPostEffect * cPostEffectType_RadialBlur::CreatePostEffect(iPostEffectParams *apParams)
 	{
@@ -68,14 +64,6 @@ namespace hpl {
 
 		return pEffect;
 	}
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// POST EFFECT
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	cPostEffect_RadialBlur::cPostEffect_RadialBlur(cGraphics *apGraphics, cResources *apResources, iPostEffectType *apType) : iPostEffect(apGraphics,apResources,apType)
 	{
@@ -106,29 +94,34 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cPostEffect_RadialBlur::RenderEffect(GraphicsContext& context, iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer)
+	void cPostEffect_RadialBlur::RenderEffect(GraphicsContext& context, Image& input, RenderTarget& target)
 	{
-		bgfx::ViewId view = context.StartPass();
-		
+		bgfx::ViewId view = context.StartPass("Radial Blur");
+
 		cVector2l vRenderTargetSize = mpCurrentComposite->GetRenderTargetSize();
 		cVector2f vRenderTargetSizeFloat((float)vRenderTargetSize.x, (float)vRenderTargetSize.y);
-
-		if(bgfx::isValid(mpRadialBlurType->_program))
+		if (bgfx::isValid(mpRadialBlurType->_program))
 		{
-			float value[4] = {0};
-			value[0] = mParams.mfSize*vRenderTargetSizeFloat.x; // afSize
+			float value[4] = {  0  };
+			value[0] = mParams.mfSize * vRenderTargetSizeFloat.x; // afSize
 			value[1] = mParams.mfBlurStartDist; // afBlurStartDist
-			
-			cVector2f blurStartDist = vRenderTargetSizeFloat*0.5f;
+
+			cVector2f blurStartDist = vRenderTargetSizeFloat * 0.5f;
 			value[2] = blurStartDist.x; // avHalfScreenSize
 			value[3] = blurStartDist.y;
-			
-			bgfx::setUniform(mpRadialBlurType->_u_uniform, &value);
 
-			bgfx::submit(0, mpRadialBlurType->_program);
+			auto& descriptor = target.GetDescriptor();
+			bgfx::setViewRect(view, 0, 0, descriptor.width, descriptor.height);
+			bgfx::setViewFrameBuffer(view, target.GetHandle());
+			bgfx::setTexture(0, mpRadialBlurType->_s_diffuseMap, input.GetHandle());
+			bgfx::setUniform(mpRadialBlurType->_u_uniform, &value);
+			bgfx::setState(0 | 
+				BGFX_STATE_WRITE_RGB | 
+				BGFX_STATE_WRITE_A);
+			context.ScreenSpaceQuad(target.GetDescriptor().width, target.GetDescriptor().height);
+			bgfx::submit(view, mpRadialBlurType->_program);
 		}
 	}
-
 
 	iTexture* cPostEffect_RadialBlur::RenderEffect(iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer)
 	{

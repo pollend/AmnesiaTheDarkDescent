@@ -128,6 +128,9 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	void cPostEffect_ColorConvTex::RenderEffect(GraphicsContext& context, Image& input, RenderTarget& target) {
+		
+	}
 
 	iTexture* cPostEffect_ColorConvTex::RenderEffect(iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer)
 	{

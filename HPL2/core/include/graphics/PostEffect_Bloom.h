@@ -72,7 +72,8 @@ namespace hpl {
 		iPostEffectParams *GetTypeSpecificParams() { return &mParams; }
 
 		iTexture* RenderEffect(iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer);
-
+		virtual void RenderEffect(GraphicsContext& context, Image& input, RenderTarget& target) override;
+		
 		void RenderBlur(iTexture *apInputTex);
 
 		iFrameBuffer *mpBlurBuffer[2];
