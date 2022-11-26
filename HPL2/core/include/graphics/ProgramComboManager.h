@@ -24,6 +24,7 @@
 #include "graphics/GraphicsTypes.h"
 
 #include "bgfx/bgfx.h"
+#include <functional>
 
 namespace hpl {
 
@@ -76,12 +77,11 @@ namespace hpl {
 	class cProgramComboProgram
 	{
 	public:
-		cProgramComboProgram() : mpProgram(NULL), m_program(BGFX_INVALID_HANDLE), mlUserCount(0) {}
+		cProgramComboProgram() : mpProgram(NULL), mlUserCount(0) {}
 
 		void DestroyProgram();
 
 		iGpuProgram* mpProgram;
-		bgfx::ProgramHandle m_program;
 		int mlUserCount;
 	};
 
@@ -124,7 +124,9 @@ namespace hpl {
 
 		void SetName( const tString& asName){ msName = asName;}
 
+		iGpuProgram* GenerateProgram(int alMainMode, int alFlags, std::function<iGpuProgram*(const tString& name)> handler);
 		iGpuProgram* GenerateProgram(int alMainMode, int alFlags);
+
 		int GetGenerateCombinationNum(int alMainMode){ return mvCombinationNum[alMainMode]; }
 
 		void SetupGenerateProgramData(int alMainMode, const tString &asModeName,
@@ -157,23 +159,12 @@ namespace hpl {
 		void DestroyShadersAndPrograms();
 
 	private:
+	
 		tString GenerateProgramName(int alMainMode, int alBitFlags);
 
 		iGpuShader* GetShaderForCombo(int alMainMode, int alBitFlags, const tString& asShaderName, tFlag aShaderType);
 		iGpuShader* CreateShaderFromFeatures(	const tString& asShaderFile, tFlag aShaderType, int alBitFlags, cProgramComboFeature* apFeatures, int alFeatureNum,
 												cProgramComboSettingsVar *apDefaultVars, int alDefaultVarsNum);
-
-
-		/*void CreateValidShaderCombos(	const tString& asFile, tFlag aShaderType, iGpuShader **apShaderVec,
-										cProgramComboFeature *apFeatures, int alCombinations, int alFeatureNum,
-										cParserVarContainer &avDefaultVars);
-		void CreateProgramCombos(	int alMode,
-									cProgramComboProgram *apProgramDataVec,
-									iGpuShader **apVtxShaderVec,iGpuShader **apFragShaderVec,
-									cProgramComboFeature *apFeatures, int alCombinations, int alFeatureNum);
-		iGpuShader* GetShaderWithCombo(	iGpuShader **apShaderVec, tFlag aShaderType, int alBitFlag,
-										cProgramComboFeature *apFeatures, int alFeatureNum);*/
-
 
 		cGraphics *mpGraphics;
 		cResources *mpResources;

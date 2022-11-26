@@ -19,6 +19,8 @@
 
 #include "graphics/MaterialType_BasicSolid.h"
 
+#include "graphics/BGFXProgram.h"
+#include "graphics/GraphicsTypes.h"
 #include "system/LowLevelSystem.h"
 #include "system/PreprocessParser.h"
 
@@ -37,6 +39,9 @@
 #include "graphics/ProgramComboManager.h"
 #include "graphics/Renderable.h"
 #include "graphics/RendererDeferred.h"
+#include "system/SystemTypes.h"
+#include <cstddef>
+#include <memory>
 
 
 namespace hpl {
@@ -145,7 +150,6 @@ namespace hpl {
 
 	iMaterialType_SolidBase::~iMaterialType_SolidBase()
 	{
-
 	}
 
 	//--------------------------------------------------------------------------
@@ -459,12 +463,55 @@ namespace hpl {
 		//Z
 		if(aRenderMode == eMaterialRenderMode_Z)
 		{
-			tFlag lFlags =0;
-			if(apMaterial->GetTexture(eMaterialTexture_Alpha))	lFlags |= eFeature_Z_UseAlpha;
-			if(apMaterial->HasUvAnimation())					lFlags |= eFeature_Z_UvAnimation;
-			if(pVars->mbAlphaDissolveFilter)					lFlags |= eFeature_Z_UseAlphaDissolveFilter;
+			tFlag lFlags = 0;
+			if (apMaterial->GetTexture(eMaterialTexture_Alpha))
+			{
+				lFlags |= eFeature_Z_UseAlpha;
+			}
+			if (apMaterial->HasUvAnimation())
+			{
+				lFlags |= eFeature_Z_UvAnimation;
+			}
+			if (pVars->mbAlphaDissolveFilter)
+			{
+				lFlags |= eFeature_Z_UseAlphaDissolveFilter;
+			}
 
-			return mpGlobalProgramManager->GenerateProgram(eMaterialRenderMode_Z, lFlags);
+			return mpGlobalProgramManager->GenerateProgram(eMaterialRenderMode_Z, lFlags, [&lFlags](const tString& name) {
+				BGFXProgram* program = new BGFXProgram(name, eGpuProgramFormat_BGFX);
+				struct ShaderConfiguration {
+					float afInvFarPlane;
+				};
+				auto config = std::shared_ptr<ShaderConfiguration>();
+				program->SetUniformHandler([config](int varId, const BGFXProgram::UniformData& data){
+					
+					switch (varId){
+						case kVar_afInvFarPlane:
+							if(data.type == BGFXProgram::UniformType_Float){
+								config->afInvFarPlane = data.input.f;
+								return true;
+							}
+							break;
+						case kVar_avHeightMapScaleAndBias:
+							break;
+						case kVar_a_mtxUV:
+							break;
+						case kVar_afColorMul:
+							break;
+						case kVar_afDissolveAmount:
+							break;
+						case kVar_avFrenselBiasPow:
+							break;
+						case kVar_a_mtxInvViewRotation:
+							break;
+					}
+					return false;
+				})
+				.SetSubmitHandler([config](bgfx::ViewId view, GraphicsContext& context) {
+
+				});
+				return program;
+			});
 		}
 		////////////////////////////
 		//Z Dissolve

@@ -16,60 +16,89 @@
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
+#pragma once
 
-#ifndef HPL_POSTEFFECT_COMPOSITE_H
-#define HPL_POSTEFFECT_COMPOSITE_H
-
+#include "graphics/Image.h"
 #include "graphics/RenderFunctions.h"
+#include <graphics/GraphicsContext.h>
+#include <absl/container/fixed_array.h>
+#include <graphics/RenderTarget.h>
+#include <memory>
+#include <vector>
+namespace hpl
+{
 
-namespace hpl {
+    //------------------------------------------
 
-	//------------------------------------------
+    class cGraphics;
+    class iLowLevelGraphics;
+    class iPostEffect;
 
-	class cGraphics;
-	class iLowLevelGraphics;
-	class iPostEffect;
+    //------------------------------------------
 
-	//------------------------------------------
+    typedef std::multimap<int, iPostEffect*, std::greater<int>> tPostEffectMap;
+    typedef tPostEffectMap::iterator tPostEffectMapIt;
 
-	typedef std::multimap<int, iPostEffect*, std::greater<int> > tPostEffectMap;
-	typedef tPostEffectMap::iterator tPostEffectMapIt;
+    //------------------------------------------
 
-	//------------------------------------------
+    class cPostEffectComposite : public iRenderFunctions
+    {
+    public:
+        cPostEffectComposite(cGraphics* apGraphics);
+        ~cPostEffectComposite();
 
-	class cPostEffectComposite : public iRenderFunctions
-	{
-	public:
-		cPostEffectComposite(cGraphics *apGraphics);
-		~cPostEffectComposite();
+        void Render(float afFrameTime, cFrustum* apFrustum, iTexture* apInputTexture, cRenderTarget* apRenderTarget);
 
-		void Render(float afFrameTime, cFrustum *apFrustum, iTexture *apInputTexture, cRenderTarget *apRenderTarget);
+		virtual void RebuildSwapChain(uint16_t width, uint16_t height) override;
+        void Render(GraphicsContext& context, Image& inputTexture, RenderTarget& renderTarget);
 
-		/**
-		 * Highest prio is first!
-		 */
-		void AddPostEffect(iPostEffect *apPostEffect, int alPrio);
-		inline int GetPostEffectNum()const{ return (int)mvPostEffects.size(); }
-		inline iPostEffect* GetPostEffect(int alIdx)const{ return mvPostEffects[alIdx]; }
 
-		bool HasActiveEffects();
+        /**
+         * Highest prio is first!
+         */
+        void AddPostEffect(iPostEffect* apPostEffect, int alPrio);
+        inline int GetPostEffectNum() const
+        {
+            return _postEffects.size();
+        }
+        inline iPostEffect* GetPostEffect(int alIdx) const
+        {
+			for(auto& it: _postEffects) {
+				if(it._index == alIdx) {
+					return it._effect;
+				}
 
-		float GetCurrentFrameTime(){ return mfCurrentFrameTime;}
+			}
+			return nullptr;
+        }
 
-	private:
-		void BeginRendering(float afFrameTime, cFrustum *apFrustum, iTexture *apInputTexture, cRenderTarget *apRenderTarget);
-		void EndRendering();
-		void CopyToFrameBuffer(iTexture *apOutputTexture);
+        bool HasActiveEffects();
 
-		tPostEffectMap m_mapPostEffects;
-		std::vector<iPostEffect*> mvPostEffects;
+        float GetCurrentFrameTime()
+        {
+            return mfCurrentFrameTime;
+        }
 
-		iFrameBuffer *mpFinalTempBuffer[2];
+    private:
+        struct PostEffectEntry
+        {
+            int _index;
+            iPostEffect* _effect;
+        };
 
-		float mfCurrentFrameTime;
-	};
+        void BeginRendering(float afFrameTime, cFrustum* apFrustum, iTexture* apInputTexture, cRenderTarget* apRenderTarget);
+        void EndRendering();
+        void CopyToFrameBuffer(iTexture* apOutputTexture);
+        
+        std::vector<PostEffectEntry> _postEffects;
+        absl::FixedArray<std::shared_ptr<Image>, 2> _images;
+        absl::FixedArray<RenderTarget, 2> _renderTargets;
 
-	//------------------------------------------
+        iFrameBuffer* mpFinalTempBuffer[2];
 
-};
-#endif // HPL_POSTEFFECT_COMPOSITE_H
+        float mfCurrentFrameTime;
+    };
+
+    //------------------------------------------
+
+}; // namespace hpl

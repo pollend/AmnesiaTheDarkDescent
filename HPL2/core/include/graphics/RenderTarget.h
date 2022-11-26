@@ -8,6 +8,7 @@ namespace hpl {
 class RenderTarget {
 public:
     RenderTarget(std::shared_ptr<Image> image);
+    RenderTarget();
 
     bgfx::FrameBufferHandle GetHandle();
     const ImageDescriptor& GetDescriptor() const;

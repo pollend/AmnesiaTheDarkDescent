@@ -22,6 +22,7 @@
 
 #include "graphics/GraphicsTypes.h"
 #include "math/MathTypes.h"
+#include <cstdint>
 
 namespace hpl {
 
@@ -42,6 +43,8 @@ namespace hpl {
 	{
 	public:
 		virtual ~iRenderFunctions() { }
+
+		virtual void RebuildSwapChain(uint16_t width, uint16_t height) {};
 
 		/*
 		 * This function must be set before the render functions can be used!

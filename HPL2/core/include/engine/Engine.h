@@ -20,6 +20,7 @@
 #ifndef HPL_ENGINE_H
 #define HPL_ENGINE_H
 
+#include <graphics/GraphicsContext.h>
 #include "system/SystemTypes.h"
 #include "engine/EngineTypes.h"
 
@@ -236,6 +237,8 @@ namespace hpl {
 		cHaptic *mpHaptic;
 		cGui *mpGui;
 		cGenerate* mpGenerate;
+
+		GraphicsContext _context;
 	};
 
 };

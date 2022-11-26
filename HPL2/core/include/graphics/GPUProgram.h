@@ -20,9 +20,11 @@
 #ifndef HPL_GPU_PROGRAM_H
 #define HPL_GPU_PROGRAM_H
 
+#include "graphics/GraphicsContext.h"
 #include "system/SystemTypes.h"
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
+#include <bgfx/bgfx.h>
 
 namespace hpl {
 
@@ -49,10 +51,11 @@ namespace hpl {
 
 		void SetResources(cResources *apResources){ mpResources = apResources;}
 
-		virtual bool Link()=0;
+		virtual bool Link()=0; // DEPRECATE
+		virtual void Bind()=0; // DEPRECATE
+		virtual void UnBind()=0; // DEPRECATE
 
-		virtual void Bind()=0;
-		virtual void UnBind()=0;
+		virtual void Submit(bgfx::ViewId view, GraphicsContext& context) {};
 
 		virtual bool CanAccessAPIMatrix()=0;
 

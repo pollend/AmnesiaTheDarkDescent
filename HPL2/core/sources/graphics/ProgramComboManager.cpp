@@ -53,11 +53,6 @@ namespace hpl {
 
     void cProgramComboProgram::DestroyProgram()
     {
-        if (bgfx::isValid(m_program))
-        {
-            bgfx::destroy(m_program);
-            m_program = BGFX_INVALID_HANDLE;
-        }
         if (!mpProgram)
         {
             hplDelete(mpProgram);
@@ -102,6 +97,32 @@ namespace hpl {
 	//////////////////////////////////////////////////////////////////////////
 
 	//--------------------------------------------------------------------------
+
+	iGpuProgram* cProgramComboManager::GenerateProgram(int alMainMode, int alFlags, std::function<iGpuProgram*(const tString& name)> handler)
+	{
+		cProgramComboProgram *pProgData = nullptr;
+
+		auto& programMap = mvProgramSets[alMainMode];
+		auto it = programMap.find(alFlags);
+		// auto it = mvProgramSets[alMainMode].find(alFlags);
+		if(it != programMap.end())
+		{
+			pProgData = hplNew(cProgramComboProgram, () );
+			tString sProgramName = GenerateProgramName(alMainMode, alFlags);
+			pProgData->mpProgram = handler(sProgramName);
+		}
+		else 
+		{
+			pProgData = it->second;
+		}
+		
+		//////////////////////////////////////
+		// Increase user count
+		pProgData->mlUserCount++;
+
+		return pProgData->mpProgram;
+	}
+		
 
 	iGpuProgram* cProgramComboManager::GenerateProgram(int alMainMode, int alFlags)
 	{

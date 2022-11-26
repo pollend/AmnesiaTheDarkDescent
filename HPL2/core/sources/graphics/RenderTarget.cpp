@@ -10,6 +10,11 @@ namespace hpl
         _buffer = bgfx::createFrameBuffer(1, &handle, true);
     }
 
+    RenderTarget::RenderTarget()
+        : _image(nullptr)
+    {
+    }
+
     const ImageDescriptor& RenderTarget::GetDescriptor() const
     {
         return _image->GetDescriptor();

@@ -177,7 +177,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cScene::Render(float afFrameTime, tFlag alFlags)
+	void cScene::Render(GraphicsContext& context, float afFrameTime, tFlag alFlags)
 	{
 		//Increase the frame count (do this at top, so render count is valid until this Render is called again!)
 		iRenderer::IncRenderFrameCount();
@@ -247,6 +247,7 @@ namespace hpl {
 				iTexture *pInputTexture = pRenderer->GetPostEffectTexture();
 
 				START_TIMING(RenderPostEffects)
+				// pPostEffectComposite->Render(context, )
 				pPostEffectComposite->Render(afFrameTime, pFrustum, pInputTexture,pViewPort->GetRenderTarget());
 				STOP_TIMING(RenderPostEffects)
 			}
@@ -374,7 +375,7 @@ namespace hpl {
 		}
 	}
 
-	void cScene::RenderScreenGui(cViewport *apViewPort,float afTimeStep)
+	void cScene::RenderScreenGui(cViewport *apViewPort, float afTimeStep)
 	{
 		///////////////////////////////////////
 		//Put all of the non 3D sets in to a sorted map

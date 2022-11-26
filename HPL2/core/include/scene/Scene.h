@@ -22,6 +22,7 @@
 
 #include <list>
 
+#include "graphics/GraphicsContext.h"
 #include "system/SystemTypes.h"
 #include "engine/EngineTypes.h"
 
@@ -80,7 +81,8 @@ namespace hpl {
 		/**
 		 * Called by cEngine
 		 */
-		void Render(float afFrameTime, tFlag alFlags);
+		void Render(float afFrameTime, tFlag alFlags) {} //TODO MP: this needs to be replaced
+		void Render(GraphicsContext& context, float afFrameTime, tFlag alFlags);
 
 		void PostUpdate(float afTimeStep);
 

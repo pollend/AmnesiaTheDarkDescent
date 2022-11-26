@@ -180,23 +180,30 @@ namespace hpl {
 
 		///////////////////
 		// Get the programs
-		for(int i=0;i<eMaterialRenderMode_LastEnum; ++i)
-		for(int j=0;j<2; ++j)
+		for (int i = 0; i < eMaterialRenderMode_LastEnum; ++i)
 		{
-			iGpuProgram *pPrevProg = mvPrograms[j][i];
-			mvPrograms[j][i] = mpType->GetGpuProgram(this, (eMaterialRenderMode)i, j);
+			for (int j = 0; j < 2; ++j)
+			{
+				iGpuProgram* pPrevProg = mvPrograms[j][i];
+				mvPrograms[j][i] = mpType->GetGpuProgram(this, (eMaterialRenderMode)i, j);
 
-			//Destroy any previous program (this is so recompilations work with program count!)
-			if(pPrevProg) mpType->DestroyProgram(this, (eMaterialRenderMode)i,pPrevProg, j);
+				// Destroy any previous program (this is so recompilations work with program count!)
+				if (pPrevProg) 
+				{
+					mpType->DestroyProgram(this, (eMaterialRenderMode)i, pPrevProg, j);
+				}
+			}
 		}
 
 		///////////////////
 		// Compile texture lookup
-		for(int i=0;i<eMaterialRenderMode_LastEnum; ++i)
+		for(int i=0;i<eMaterialRenderMode_LastEnum; ++i) 
+		{
 			for(int j=0; j<kMaxTextureUnits; ++j)
 			{
 				mvTextureInUnit[i][j] = mpType->GetTextureForUnit(this, (eMaterialRenderMode)i, j);
 			}
+		}
 
 		///////////////////
 		// Type specifics

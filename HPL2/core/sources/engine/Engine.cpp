@@ -535,7 +535,7 @@ namespace hpl {
 
 				//Render this frame
 				START_TIMING(RenderAll)
-				mpScene->Render(mfFrameTime, tSceneRenderFlag_All);
+				mpScene->Render(_context, mfFrameTime, tSceneRenderFlag_All);
 				STOP_TIMING(RenderAll)
 
 				START_TIMING(PostRender)

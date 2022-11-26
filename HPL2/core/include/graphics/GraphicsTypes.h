@@ -458,8 +458,9 @@ namespace hpl {
 
 	enum eGpuProgramFormat
 	{
-		eGpuProgramFormat_CG,
-		eGpuProgramFormat_GLSL,
+		eGpuProgramFormat_CG, // DEPRECATED
+		eGpuProgramFormat_GLSL, // DEPRECATED
+		eGpuProgramFormat_BGFX,
 		eGpuProgramFormat_LastEnum
 	};
 

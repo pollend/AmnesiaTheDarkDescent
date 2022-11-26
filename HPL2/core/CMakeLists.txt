@@ -233,6 +233,7 @@ target_link_libraries(HPL2
   AngelScript
   Newton
   absl::base
+  absl::fixed_array
   absl::strings
   absl::str_format
   bgfx
