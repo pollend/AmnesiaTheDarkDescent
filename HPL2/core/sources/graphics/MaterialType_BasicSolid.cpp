@@ -21,6 +21,7 @@
 
 #include "graphics/BGFXProgram.h"
 #include "graphics/GraphicsTypes.h"
+#include "graphics/HPLShaderDefinition.h"
 #include "system/LowLevelSystem.h"
 #include "system/PreprocessParser.h"
 
@@ -41,6 +42,7 @@
 #include "graphics/RendererDeferred.h"
 #include "system/SystemTypes.h"
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 
 
@@ -60,6 +62,7 @@ namespace hpl {
 	#define kVar_afDissolveAmount				4
 	#define kVar_avFrenselBiasPow				5
 	#define kVar_a_mtxInvViewRotation			6
+	#define kVar_a_Flag							7
 
 
 	//------------------------------
@@ -459,6 +462,20 @@ namespace hpl {
 	{
 		cMaterialType_SolidDiffuse_Vars *pVars = (cMaterialType_SolidDiffuse_Vars*)apMaterial->GetVars();
 
+		const auto afInvFarPlane = shader::definition::HPLMemberID("afInvFarPlane", kVar_afInvFarPlane);
+		const auto avHeightMapScaleAndBias = shader::definition::HPLMemberID("avHeightMapScaleAndBias", kVar_avHeightMapScaleAndBias);
+		const auto a_mtxUV = shader::definition::HPLMemberID("a_mtxUV", kVar_a_mtxUV);
+		const auto afColorMul = shader::definition::HPLMemberID("afColorMul", kVar_afColorMul);
+		const auto afDissolveAmount = shader::definition::HPLMemberID("afDissolveAmount", kVar_afDissolveAmount);
+		const auto avFrenselBiasPow = shader::definition::HPLMemberID("avHeightMapScaleAndBias", kVar_avFrenselBiasPow);
+		const auto a_mtxInvViewRotation = shader::definition::HPLMemberID("a_mtxInvViewRotation", kVar_a_mtxInvViewRotation);
+		const auto a_Flag = shader::definition::HPLMemberID("flag", kVar_a_Flag);
+				
+
+		struct ShaderData {
+			uint32_t flags;
+		};
+
 		////////////////////////////
 		//Z
 		if(aRenderMode == eMaterialRenderMode_Z)
@@ -477,40 +494,14 @@ namespace hpl {
 				lFlags |= eFeature_Z_UseAlphaDissolveFilter;
 			}
 
-			return mpGlobalProgramManager->GenerateProgram(eMaterialRenderMode_Z, lFlags, [&lFlags](const tString& name) {
-				BGFXProgram* program = new BGFXProgram(name, eGpuProgramFormat_BGFX);
-				struct ShaderConfiguration {
-					float afInvFarPlane;
-				};
-				auto config = std::shared_ptr<ShaderConfiguration>();
-				program->SetUniformHandler([config](int varId, const BGFXProgram::UniformData& data){
-					
-					switch (varId){
-						case kVar_afInvFarPlane:
-							if(data.type == BGFXProgram::UniformType_Float){
-								config->afInvFarPlane = data.input.f;
-								return true;
-							}
-							break;
-						case kVar_avHeightMapScaleAndBias:
-							break;
-						case kVar_a_mtxUV:
-							break;
-						case kVar_afColorMul:
-							break;
-						case kVar_afDissolveAmount:
-							break;
-						case kVar_avFrenselBiasPow:
-							break;
-						case kVar_a_mtxInvViewRotation:
-							break;
-					}
-					return false;
-				})
-				.SetSubmitHandler([config](bgfx::ViewId view, GraphicsContext& context) {
-
-				});
-				return program;
+			return mpGlobalProgramManager->GenerateProgram(eMaterialRenderMode_Z, lFlags, [&](const tString& name) {
+				using UniformDef = hpl::shader::definition::HPLShaderDefinition<ShaderData>;
+			
+				return (new BGFXProgram<ShaderData>({
+					UniformDef::HPLUniformDefinition(a_Flag, (UniformDef::ParameterField::IntMapper([](ShaderData& data, int value) {
+						data.flags = value;
+					})))
+				}, name, eGpuProgramFormat_BGFX));
 			});
 		}
 		////////////////////////////
