@@ -57,7 +57,6 @@ namespace hpl {
 		void Bind();
 		void UnBind();
 
-		bool CanAccessAPIMatrix(){ return true;}
 		bool SamplerNeedsTextureUnitSetup(){ return true; }
 
 		/**

@@ -57,8 +57,6 @@ namespace hpl {
 
 		virtual void Submit(bgfx::ViewId view, GraphicsContext& context) {};
 
-		virtual bool CanAccessAPIMatrix()=0;
-
 		virtual bool SetSamplerToUnit(const tString& asSamplerName, int alUnit)=0;
 
 		virtual int GetVariableId(const tString& asName)=0;
