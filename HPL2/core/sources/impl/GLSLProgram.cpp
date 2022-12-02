@@ -339,15 +339,6 @@ namespace hpl{
 
 	//-----------------------------------------------------------------------
 
-	bool cGLSLProgram::SetMatrixf(int alVarId, eGpuShaderMatrix aType,
-									eGpuShaderMatrixOp aOp)
-	{
-		;
-
-		//Not needed for GLSL
-		return false;
-	}
-
 
 	//-----------------------------------------------------------------------
 

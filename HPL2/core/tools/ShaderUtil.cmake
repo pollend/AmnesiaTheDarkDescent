@@ -1,6 +1,6 @@
 
 function( hpl_add_shader ARG_OUT FILE FOLDER)
-    cmake_parse_arguments( ARG "" "DEFINES;INCLUDES;TARGET_FILES" "" ${ARGN} )
+    cmake_parse_arguments( ARG "TARGET_NAME" "DEFINES;INCLUDES" "" ${ARGN} )
     get_filename_component( FILENAME "${FILE}" NAME_WE )
     string( SUBSTRING "${FILENAME}" 0 2 TYPE )
     if( "${TYPE}" STREQUAL "fs" )
@@ -15,6 +15,10 @@ function( hpl_add_shader ARG_OUT FILE FOLDER)
     else()
         set( TYPE "" )
     endif()
+    
+    if(ARG_TARGET_NAME)
+        set(FILENAME ${TARGET_NAME})
+    endif()    
 
     if( NOT "${TYPE}" STREQUAL "" )
         set(COMMON FILE ${FILE} ${TYPE}) 

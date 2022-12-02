@@ -38,15 +38,6 @@ namespace hpl {
 
 	cPostEffectType_RadialBlur::cPostEffectType_RadialBlur(cGraphics *apGraphics, cResources *apResources) : iPostEffectType("RadialBlur",apGraphics,apResources)
 	{
-		// cParserVarContainer vars;
-		// mpProgram = mpGraphics->CreateGpuProgramFromShaders("RadialBlur","deferred_base_vtx.glsl", "posteffect_radial_blur_frag.glsl", &vars);
-		// if(mpProgram)
-		// {
-		// 	mpProgram->GetVariableAsId("afSize",kVar_afSize);
-		// 	mpProgram->GetVariableAsId("avHalfScreenSize",kVar_avHalfScreenSize);
-		// 	mpProgram->GetVariableAsId("afBlurStartDist", kVar_afBlurStartDist);
-		// }
-
 		_program = hpl::loadProgram("vs_post_effect", "fs_posteffect_radial_blur_frag");
 		_u_uniform = bgfx::createUniform("u_params", bgfx::UniformType::Vec4);
 		_s_diffuseMap = bgfx::createUniform("diffuseMap", bgfx::UniformType::Sampler);

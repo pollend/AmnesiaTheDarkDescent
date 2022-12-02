@@ -74,8 +74,6 @@ namespace hpl {
 		bool SetVec4f(int alVarId, float afX,float afY,float afZ, float afW);
 
 		bool SetMatrixf(int alVarId, const cMatrixf& aMtx);
-		bool SetMatrixf(int alVarId, eGpuShaderMatrix aType, eGpuShaderMatrixOp aOp);
-
 	private:
 		void LogProgramInfoLog();
 

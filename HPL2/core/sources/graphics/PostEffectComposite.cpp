@@ -115,7 +115,6 @@ namespace hpl
             it = nextIt;
         }
 
-        // EndRendering();
     }
 
     void cPostEffectComposite::Render(float afFrameTime, cFrustum* apFrustum, iTexture* apInputTexture, cRenderTarget* apRenderTarget)

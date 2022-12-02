@@ -19,9 +19,13 @@
 
 #include "graphics/MaterialType_BasicSolid.h"
 
+#include "bgfx/bgfx.h"
 #include "graphics/BGFXProgram.h"
 #include "graphics/GraphicsTypes.h"
-#include "graphics/HPLShaderDefinition.h"
+#include "graphics/MemberID.h"
+#include "graphics/ShaderUtil.h"
+#include "math/MathTypes.h"
+#include "math/Matrix.h"
 #include "system/LowLevelSystem.h"
 #include "system/PreprocessParser.h"
 
@@ -41,8 +45,10 @@
 #include "graphics/Renderable.h"
 #include "graphics/RendererDeferred.h"
 #include "system/SystemTypes.h"
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <iterator>
 #include <memory>
 
 
@@ -146,6 +152,12 @@ namespace hpl {
 
 	iMaterialType_SolidBase::iMaterialType_SolidBase(cGraphics *apGraphics, cResources *apResources) : iMaterialType(apGraphics,apResources)
 	{
+		_basicSolidZProgram = hpl::loadProgram("vs_basic_solid_z", "fs_basic_solid_z");
+		_u_param = bgfx::createUniform("u_params", bgfx::UniformType::Vec4, 1);
+		_u_mtxUv = bgfx::createUniform("a_mtxUV", bgfx::UniformType::Mat4, 1);
+		_s_diffuseMap  = bgfx::createUniform("diffuseMap", bgfx::UniformType::Sampler, 1);
+		_s_dissolveMap  = bgfx::createUniform("dissolveMap", bgfx::UniformType::Sampler, 1);
+
 		mbIsGlobalDataCreator = false;
 	}
 
@@ -462,24 +474,29 @@ namespace hpl {
 	{
 		cMaterialType_SolidDiffuse_Vars *pVars = (cMaterialType_SolidDiffuse_Vars*)apMaterial->GetVars();
 
-		const auto afInvFarPlane = shader::definition::HPLMemberID("afInvFarPlane", kVar_afInvFarPlane);
-		const auto avHeightMapScaleAndBias = shader::definition::HPLMemberID("avHeightMapScaleAndBias", kVar_avHeightMapScaleAndBias);
-		const auto a_mtxUV = shader::definition::HPLMemberID("a_mtxUV", kVar_a_mtxUV);
-		const auto afColorMul = shader::definition::HPLMemberID("afColorMul", kVar_afColorMul);
-		const auto afDissolveAmount = shader::definition::HPLMemberID("afDissolveAmount", kVar_afDissolveAmount);
-		const auto avFrenselBiasPow = shader::definition::HPLMemberID("avHeightMapScaleAndBias", kVar_avFrenselBiasPow);
-		const auto a_mtxInvViewRotation = shader::definition::HPLMemberID("a_mtxInvViewRotation", kVar_a_mtxInvViewRotation);
-		const auto a_Flag = shader::definition::HPLMemberID("flag", kVar_a_Flag);
-				
-
-		struct ShaderData {
-			uint32_t flags;
-		};
-
+		static const auto afInvFarPlane = MemberID("afInvFarPlane", kVar_afInvFarPlane);
+		static const auto avHeightMapScaleAndBias = MemberID("avHeightMapScaleAndBias", kVar_avHeightMapScaleAndBias);
+		static const auto a_mtxUV = MemberID("a_mtxUV", kVar_a_mtxUV);
+		static const auto afColorMul = MemberID("afColorMul", kVar_afColorMul);
+		static const auto afDissolveAmount = MemberID("afDissolveAmount", kVar_afDissolveAmount);
+		static const auto avFrenselBiasPow = MemberID("avHeightMapScaleAndBias", kVar_avFrenselBiasPow);
+		static const auto a_mtxInvViewRotation = MemberID("a_mtxInvViewRotation", kVar_a_mtxInvViewRotation);
+		
 		////////////////////////////
 		//Z
 		if(aRenderMode == eMaterialRenderMode_Z)
 		{
+			struct RenderZData {
+				float mtxUv[16];
+				struct u_params {
+					float u_useAlphaMap;
+					float u_useDissolveFilter;
+					float u_unused1;
+					float u_unused2;
+				} params;
+			};
+			using MaterialZProgram = BGFXProgram<RenderZData>;
+
 			tFlag lFlags = 0;
 			if (apMaterial->GetTexture(eMaterialTexture_Alpha))
 			{
@@ -495,13 +512,21 @@ namespace hpl {
 			}
 
 			return mpGlobalProgramManager->GenerateProgram(eMaterialRenderMode_Z, lFlags, [&](const tString& name) {
-				using UniformDef = hpl::shader::definition::HPLShaderDefinition<ShaderData>;
-			
-				return (new BGFXProgram<ShaderData>({
-					UniformDef::HPLUniformDefinition(a_Flag, (UniformDef::ParameterField::IntMapper([](ShaderData& data, int value) {
-						data.flags = value;
-					})))
-				}, name, eGpuProgramFormat_BGFX));
+				auto program =  (new MaterialZProgram({
+					MaterialZProgram::ParameterField(a_mtxUV, MaterialZProgram::Matrix4fMapper([](RenderZData& data, const cMatrixf& value) {
+						std::copy(std::begin(value.v),std::end(value.v), std::begin(data.mtxUv));
+					}))
+				}, name, _basicSolidZProgram, false, eGpuProgramFormat_BGFX));
+				program->SetSubmitHandler([u_param = _u_param, u_mtxUv = _u_mtxUv]
+					(const RenderZData& data, bgfx::ViewId view, GraphicsContext& context) {
+					bgfx::setUniform(u_param, &data.params);
+					bgfx::setUniform(u_mtxUv, &data.mtxUv);
+				});
+
+				program->data().params.u_useAlphaMap = apMaterial->GetTexture(eMaterialTexture_Alpha) ? 1 : 0;
+				program->data().params.u_useDissolveFilter = pVars->mbAlphaDissolveFilter ? 1 : 0;
+				program->SetMatrixf(a_mtxUV.id(), cMatrixf::Identity);
+				return program;
 			});
 		}
 		////////////////////////////

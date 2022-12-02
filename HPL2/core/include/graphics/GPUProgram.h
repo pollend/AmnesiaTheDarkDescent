@@ -68,7 +68,6 @@ namespace hpl {
 		virtual bool SetVec3f(int alVarId, float afX,float afY,float afZ)=0;
 		virtual bool SetVec4f(int alVarId, float afX,float afY,float afZ, float afW)=0;
 		virtual bool SetMatrixf(int alVarId, const cMatrixf& mMtx)=0;
-		virtual bool SetMatrixf(int alVarId, eGpuShaderMatrix mType, eGpuShaderMatrixOp mOp)=0;
 
         bool SetVec2f(int alVarId, const cVector2f avVec){return SetVec2f(alVarId,avVec.x, avVec.y);}
 

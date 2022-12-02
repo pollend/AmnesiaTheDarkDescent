@@ -22,6 +22,7 @@
 
 #include "graphics/MaterialType.h"
 #include "graphics/Material.h"
+#include <bgfx/bgfx.h>
 
 namespace hpl {
 
@@ -63,6 +64,14 @@ namespace hpl {
 		static bool mbGlobalDataCreated;
 		static cProgramComboManager* mpGlobalProgramManager;
 		//[skeleton][uv animation]
+		
+		bgfx::ProgramHandle _basicSolidZProgram;
+
+		bgfx::UniformHandle _u_param;
+		bgfx::UniformHandle _u_mtxUv;
+
+		bgfx::UniformHandle _s_diffuseMap;
+		bgfx::UniformHandle _s_dissolveMap;
 
 		iTexture *mpDissolveTexture;
 

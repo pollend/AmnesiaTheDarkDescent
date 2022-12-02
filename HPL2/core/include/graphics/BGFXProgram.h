@@ -6,10 +6,9 @@
 #include <functional>
 #include <graphics/GPUProgram.h>
 #include <graphics/GraphicsContext.h>
-#include <graphics/HPLShaderDefinition.h>
+#include <graphics/MemberID.h>
 
 #include <bx/debug.h>
-#include <graphics/HPLShaderDefinition.h>
 #include <optional>
 #include <vector>
 
@@ -22,48 +21,17 @@ namespace hpl
     {
     public:
         using SubmitHandler = std::function<void(const TData& data, bgfx::ViewId view, GraphicsContext& context)>;
-
-        class MemberID
-        {
-        public:
-            MemberID(const tString& asName, int id)
-                : _id(id)
-                , _name(name)
-            {
-            }
-
-            MemberID(): 
-                _id(-1),
-                _name() {
-
-                }
-
-            const tString& name() const
-            {
-                return _name;
-            }
-
-            int id() const
-            {
-                return _id;
-            }
-
-        private:
-            int _id;
-            tString _name;
-        };
+        using IntMapper = std::function<void(TData& data, int value)>;
+        using FloatMapper = std::function<void(TData& data, float value)>;
+        using BoolMapper = std::function<void(TData& data, bool value)>;
+        using Vec2Mapper = std::function<void(TData& data, float afx, float afy)>;
+        using Vec3Mapper = std::function<void(TData& data, float afx, float afy, float afz)>;
+        using Vec4Mapper = std::function<void(TData& data, float afx, float afy, float afz, float afw)>;
+        using Matrix4fMapper = std::function<void(TData& data, cMatrixf mat)>;
 
         class ParameterField
         {
         public:
-            using IntMapper = std::function<bool(TData& data, int value)>;
-            using FloatMapper = std::function<bool(TData& data, float value)>;
-            using BoolMapper = std::function<bool(TData& data, bool value)>;
-            using Vec2Mapper = std::function<bool(TData& data, float afx, float afy)>;
-            using Vec3Mapper = std::function<bool(TData& data, float afx, float afy, float afz)>;
-            using Vec4Mapper = std::function<bool(TData& data, float afx, float afy, float afz, float afw)>;
-            using Matrix4fMapper = std::function<bool(TData& data, cMatrixf mat)>;
-
             explicit ParameterField(const MemberID id, IntMapper mapper)
                 : _member(id)
                 , _intMapper(mapper)
@@ -125,9 +93,10 @@ namespace hpl
         };
 
         BGFXProgram(
-            hpl::shader::definition::HPLShaderDefinition<TData>&& definition, const tString& asName, eGpuProgramFormat aProgramFormat)
+            std::vector<ParameterField>&& fields, const tString& asName, bgfx::ProgramHandle programHandle, bool destroyProgram, eGpuProgramFormat aProgramFormat)
             : iGpuProgram(asName, aProgramFormat)
-            , _definition(definition)
+            , _fields(fields)
+            , _handle(programHandle)
         {
         }
 
@@ -140,7 +109,11 @@ namespace hpl
             _submitHandler = handler;
             return this;
         }
-
+        
+        TData& data() {
+            return _data;
+        }
+        
         virtual void Submit(bgfx::ViewId view, GraphicsContext& context) override
         {
         }
@@ -262,11 +235,6 @@ namespace hpl
                 });
         }
 
-        virtual bool SetMatrixf(int alVarId, eGpuShaderMatrix mType, eGpuShaderMatrixOp mOp) override
-        {
-            return true;
-        }
-
     private:
         bool _setterById(int varId, std::function<bool(ParameterField&)> handler)
         {
@@ -283,8 +251,7 @@ namespace hpl
         TData _data;
         SubmitHandler _submitHandler;
         std::vector<ParameterField> _fields;
-        hpl::shader::definition::HPLShaderDefinition<TData> _definition;
-        bgfx::ProgramHandle _handler;
+        bgfx::ProgramHandle _handle;
     };
 
 } // namespace hpl
