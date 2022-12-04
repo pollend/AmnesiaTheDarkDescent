@@ -22,13 +22,8 @@ uniform vec4 u_params[3];
 
 #define u_useParallax (u_params[2].x)
 
-
-///////////////////////////////
-// Main program
 void main()
 {
-	//////////////////////////////////
-	//Diffuse
     vec4 diffuseColor = vec4(0.0, 0.0, 0.0, 0.0);
     vec2 texCoord = v_texcoord0.xy;
 
@@ -73,41 +68,41 @@ void main()
             } 
         }
 
-		diffuseColor = texture2D(s_diffuseMap, parallaxPosCoord.xy);
+        diffuseColor = texture2D(s_diffuseMap, parallaxPosCoord.xy);
         texCoord = parallaxPosCoord.xy;
-	} else {
+    } else {
         diffuseColor = texture2D(s_diffuseMap, texCoord.xy);
-	}
-	
+    }
+    
     vec3 screenNormal = vec3(0, 0, 0);
-	if (0.0 < u_useNormalMap) {
-		vec3 vNormal = texture2D(s_normalMap, texCoord).xyz - 0.5; //No need for full unpack x*2-1, becuase normal is normalized. (but now we do not normalize...)
-		screenNormal = normalize(vNormal.x * v_tangent + vNormal.y * v_bitangent + vNormal.z * v_normal);
-	} else {
-		screenNormal = normalize(v_normal);
-	}
+    if (0.0 < u_useNormalMap) {
+        vec3 vNormal = texture2D(s_normalMap, texCoord).xyz - 0.5; //No need for full unpack x*2-1, becuase normal is normalized. (but now we do not normalize...)
+        screenNormal = normalize(vNormal.x * v_tangent + vNormal.y * v_bitangent + vNormal.z * v_normal);
+    } else {
+        screenNormal = normalize(v_normal);
+    }
 
-	if(0.0 < u_useEnvMap) {
-		vec3 normalizedView = normalize(v_view);	
-	
-		vec3 vEnvUv = reflect(normalizedView, screenNormal);
-		vEnvUv = (u_mtxInvViewRotation * vec4(vEnvUv,1)).xyz;
-					
-		vec4 reflectionColor = textureCube(s_envMap, vEnvUv);
-		
-		float afEDotN = max(dot(-normalizedView, screenNormal),0.0);
-		float fFresnel = Fresnel(afEDotN, u_frenselBiasPow.x, u_frenselBiasPow.y);
-		
-		if(0.0 < u_useCubeMapAlpha) {
-			float fEnvMapAlpha = texture2D(s_envMapAlphaMap, texCoord).w;
-			reflectionColor *= fEnvMapAlpha;
-		}
-				
-		gl_FragData[0] = diffuseColor + reflectionColor * fFresnel;
-	} else {
+    if(0.0 < u_useEnvMap) {
+        vec3 normalizedView = normalize(v_view);	
+    
+        vec3 vEnvUv = reflect(normalizedView, screenNormal);
+        vEnvUv = (u_mtxInvViewRotation * vec4(vEnvUv,1)).xyz;
+                    
+        vec4 reflectionColor = textureCube(s_envMap, vEnvUv);
+        
+        float afEDotN = max(dot(-normalizedView, screenNormal),0.0);
+        float fFresnel = Fresnel(afEDotN, u_frenselBiasPow.x, u_frenselBiasPow.y);
+        
+        if(0.0 < u_useCubeMapAlpha) {
+            float fEnvMapAlpha = texture2D(s_envMapAlphaMap, texCoord).w;
+            reflectionColor *= fEnvMapAlpha;
+        }
+                
+        gl_FragData[0] = diffuseColor + reflectionColor * fFresnel;
+    } else {
         gl_FragData[0] = diffuseColor;
     }
-	
+    
     gl_FragData[1].xyz = screenNormal; 
     gl_FragData[2].xyz = v_position;
     if(u_useSpecular < 0.0) {
