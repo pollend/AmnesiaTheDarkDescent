@@ -1,7 +1,7 @@
 
 #include <common.sh>
 
-SAMPLER2D(diffuseMap, 0);
+SAMPLER2D(s_diffuseMap, 0);
 
 uniform vec4 u_params;
 #define afSize  u_params.x
@@ -40,7 +40,7 @@ void main()
 	
 	for(int i=0; i<5; ++i)
 	{
-		vDiffuseColor += texture2D(diffuseMap, vScreenCoord + vDir * vSizeMul[i]).xyz * vColorMul[i];
+		vDiffuseColor += texture2D(s_diffuseMap, vScreenCoord + vDir * vSizeMul[i]).xyz * vColorMul[i];
 	}
 	
 	vDiffuseColor /= fTotalMul;

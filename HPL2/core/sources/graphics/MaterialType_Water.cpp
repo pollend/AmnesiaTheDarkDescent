@@ -19,6 +19,8 @@
 
 #include "graphics/MaterialType_Water.h"
 
+#include <graphics/BGFXProgram.h>
+#include "graphics/ShaderUtil.h"
 #include "system/LowLevelSystem.h"
 #include "system/PreprocessParser.h"
 
@@ -87,6 +89,8 @@ namespace hpl {
 
 	cMaterialType_Water::cMaterialType_Water(cGraphics *apGraphics, cResources *apResources) : iMaterialType(apGraphics, apResources)
 	{
+		_waterProgram = hpl::loadProgram("vs_water_surface", "fs_water_surface");
+		
 		mbIsTranslucent = true;
 
 		AddUsedTexture(eMaterialTexture_Diffuse);
@@ -219,30 +223,69 @@ namespace hpl {
 
 	iGpuProgram* cMaterialType_Water::GetGpuProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, char alSkeleton)
 	{
-		////////////////////////////
-		//Z
+		struct RenderWaterData {
+			struct u_params {
+				float u_frenselBiasPow[2];
+				float u_fogStart;
+				float u_fogEnd;
+
+				float reflectionMapSizeMul[2];
+				float reflectionFadeStart;
+				float reflectionFadeStarLength;
+
+				float falloffExp;
+				float afT;
+				float afWaveAmplitude;
+				float afWaveFreq;
+
+				float afRefractionScale;
+				float useFog;
+				float useRefraction;
+				float useReflection;
+
+				float useReflectionFading;
+				float useCubeMapReflection;
+				float useRefractionEdgeCheck;
+				float unused_1;
+			} params;
+		};
+		using MaterialWaterProgram = BGFXProgram<RenderWaterData>;
+
 		if(aRenderMode == eMaterialRenderMode_Z)
 		{
 			return NULL;
 		}
-		////////////////////////////
-		//Diffuse
 		else if(aRenderMode == eMaterialRenderMode_Diffuse || aRenderMode == eMaterialRenderMode_DiffuseFog)
 		{
 			cMaterialType_Water_Vars *pVars = static_cast<cMaterialType_Water_Vars*>(apMaterial->GetVars());
 
-			tFlag lFlags =0;
+			const bool refractionEnabled = iRenderer::GetRefractionEnabled();
 
-			if(iRenderer::GetRefractionEnabled())
-			{
-				if(pVars->mbHasReflection)								lFlags |= eFeature_Diffuse_Reflection;
-				if(apMaterial->GetTexture(eMaterialTexture_CubeMap))	lFlags |= eFeature_Diffuse_CubeMapReflection;
-			}
+			const bool hasReflection = refractionEnabled && pVars->mbHasReflection;
+			const bool hasCubeMap = refractionEnabled && apMaterial->GetTexture(eMaterialTexture_CubeMap);
+			const bool hasReflectionFading = pVars->mfReflectionFadeEnd;
+			const bool hasDiffuseFog = (aRenderMode == eMaterialRenderMode_DiffuseFog);
 
-			if(pVars->mfReflectionFadeEnd>0)						lFlags |= eFeature_Diffuse_ReflectionFading;
-			if(aRenderMode == eMaterialRenderMode_DiffuseFog)		lFlags |= eFeature_Diffuse_Fog;
+			tFlag lFlags = 
+				(hasReflection ? eFeature_Diffuse_Reflection : 0) |
+				(hasCubeMap ? eFeature_Diffuse_CubeMapReflection : 0) |
+				(hasReflectionFading ? eFeature_Diffuse_ReflectionFading : 0) |
+				(hasDiffuseFog ? eFeature_Diffuse_Fog : 0);
 
-			return mpProgramManager->GenerateProgram(eMaterialRenderMode_Diffuse,lFlags);
+			return mpProgramManager->GenerateProgram(eMaterialRenderMode_Diffuse, lFlags, [
+				programHandle = _waterProgram,
+				hasReflection,
+				hasCubeMap,
+				hasReflectionFading,
+				hasDiffuseFog
+			](const tString& name) {
+				auto program = new MaterialWaterProgram({
+
+				},
+				name, programHandle, false, eGpuProgramFormat_BGFX);
+
+				return program;
+			});
 		}
 
 		return NULL;

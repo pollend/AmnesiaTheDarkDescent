@@ -19,6 +19,8 @@
 
 #include "graphics/MaterialType_Decal.h"
 
+#include "graphics/BGFXProgram.h"
+#include "graphics/ShaderUtil.h"
 #include "system/LowLevelSystem.h"
 #include "system/PreprocessParser.h"
 
@@ -35,6 +37,7 @@
 #include "graphics/ProgramComboManager.h"
 #include "graphics/Renderable.h"
 #include "graphics/Renderer.h"
+#include "system/SystemTypes.h"
 
 
 
@@ -48,6 +51,11 @@ namespace hpl {
 	// Variables
 	//------------------------------
 	#define kVar_a_mtxUV						0
+
+
+	namespace material::decal {
+		static const auto a_mtxUV = MemberID("a_mtxUV", kVar_a_mtxUV);
+	};
 
 	//------------------------------
 	//Diffuse Features and data
@@ -73,6 +81,9 @@ namespace hpl {
 		mbIsDecal = true;
 
 		mbHasTypeSpecifics[eMaterialRenderMode_Diffuse] = true;
+
+		_u_mtxUV = bgfx::createUniform("a_mtxUV", bgfx::UniformType::Mat4, 1);
+		_decalProgram = hpl::loadProgram("vs_decal", "fs_decal");
 
 		AddUsedTexture(eMaterialTexture_Diffuse);
 	}
@@ -140,14 +151,38 @@ namespace hpl {
 
 	iGpuProgram* cMaterialType_Decal::GetGpuProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, char alSkeleton)
 	{
-		////////////////////////////
-		//Diffuse
+
+		struct DecalData {
+			float mtxUv[16];
+		};
+		using MaterialDecalProgram = BGFXProgram<DecalData>;
+
 		if(aRenderMode == eMaterialRenderMode_Diffuse)
 		{
-			tFlag lFlags =0;
-			if(apMaterial->HasUvAnimation())						lFlags |= eFeature_Diffuse_UvAnimation;
+			const bool hasUVAnimation = apMaterial->HasUvAnimation();
 
-			return mpProgramManager->GenerateProgram(aRenderMode,lFlags);
+			tFlag lFlags =
+				(hasUVAnimation ? eFeature_Diffuse_UvAnimation : 0);
+
+			return mpProgramManager->GenerateProgram(aRenderMode, lFlags, [
+				programHandle = _decalProgram,
+				u_mtxUV = _u_mtxUV,
+				hasUVAnimation
+			](const tString& name) {
+				auto program =  new MaterialDecalProgram({
+					MaterialDecalProgram::ParameterField(material::decal::a_mtxUV, MaterialDecalProgram::Matrix4fMapper([](DecalData& data, const cMatrixf& value) {
+						std::copy(std::begin(value.v),std::end(value.v), std::begin(data.mtxUv));
+					}))
+				}, name, programHandle,false, eGpuProgramFormat_BGFX);
+				program->SetSubmitHandler([u_mtxUV]
+					(const DecalData& data, bgfx::ViewId view, GraphicsContext& context) {
+					bgfx::setUniform(u_mtxUV, &data.mtxUv);
+				});
+				program->SetMatrixf(material::decal::a_mtxUV.id(), cMatrixf::Identity);
+				
+
+				return program;
+			});
 		}
 
 		return NULL;
@@ -217,19 +252,10 @@ namespace hpl {
 	{
 		cMaterialType_Decal_Vars *pVars = static_cast<cMaterialType_Decal_Vars*>(apMaterial->GetVars());
 
-		//////////////////////////////////
-		//UV animation specifics
 		if(apMaterial->HasUvAnimation())
 		{
 			apMaterial->SetHasSpecificSettings(eMaterialRenderMode_Diffuse,true);
 		}
-
-		/////////////////////////////////////
-		//Set up the blend mode
-		//apMaterial->SetBlendMode(eMaterialBlendMode_Alpha);
 	}
-
-	//--------------------------------------------------------------------------
-
 
 }

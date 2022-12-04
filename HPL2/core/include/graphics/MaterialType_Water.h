@@ -16,18 +16,13 @@
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
-
-#ifndef HPL_MATERIAL_WATER_H
-#define HPL_MATERIAL_WATER_H
+#pragma once
 
 #include "graphics/MaterialType.h"
 #include "graphics/Material.h"
+#include <bgfx/bgfx.h>
 
 namespace hpl {
-
-	//---------------------------------------------------
-	// WATER
-	//---------------------------------------------------
 
 	class cMaterialType_Water_Vars : public iMaterialVars
 	{
@@ -74,6 +69,8 @@ namespace hpl {
 		void CompileMaterialSpecifics(cMaterial *apMaterial);
 
 	private:
+		bgfx::ProgramHandle _waterProgram;
+
 		void LoadData();
 		void DestroyData();
 	};
@@ -81,4 +78,3 @@ namespace hpl {
 	//---------------------------------------------------
 
 };
-#endif // HPL_MATERIAL_WATER_H

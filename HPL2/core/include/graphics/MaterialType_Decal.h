@@ -20,6 +20,7 @@
 #ifndef HPL_MATERIAL_DECAL_H
 #define HPL_MATERIAL_DECAL_H
 
+#include "bgfx/bgfx.h"
 #include "graphics/MaterialType.h"
 #include "graphics/Material.h"
 
@@ -64,6 +65,10 @@ namespace hpl {
 		void CompileMaterialSpecifics(cMaterial *apMaterial);
 
 	private:
+		bgfx::ProgramHandle _decalProgram;
+
+		bgfx::UniformHandle _u_mtxUV;
+
 		void LoadData();
 		void DestroyData();
 	};

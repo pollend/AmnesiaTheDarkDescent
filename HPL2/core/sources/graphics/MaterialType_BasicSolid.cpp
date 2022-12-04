@@ -129,6 +129,16 @@ namespace hpl {
 			cProgramComboFeature("UseAlphaUseDissolveFilter",	kPC_FragmentBit)
 	};
 
+	namespace material::solid {
+		static const auto afInvFarPlane = MemberID("afInvFarPlane", kVar_afInvFarPlane);
+		static const auto avHeightMapScaleAndBias = MemberID("avHeightMapScaleAndBias", kVar_avHeightMapScaleAndBias);
+		static const auto a_mtxUV = MemberID("a_mtxUV", kVar_a_mtxUV);
+		static const auto afColorMul = MemberID("afColorMul", kVar_afColorMul);
+		static const auto afDissolveAmount = MemberID("afDissolveAmount", kVar_afDissolveAmount);
+		static const auto avFrenselBiasPow = MemberID("avFrenselBiasPow", kVar_avFrenselBiasPow);
+		static const auto mtxInvViewRotation = MemberID("a_mtxInvViewRotation", kVar_a_mtxInvViewRotation);
+	}
+
 	//------------------------------
 
 	//////////////////////////////////////////////////////////////////////////
@@ -154,11 +164,13 @@ namespace hpl {
 	{
 		_basicSolidZProgram = hpl::loadProgram("vs_basic_solid_z", "fs_basic_solid_z");
 		_basicSolidDiffuseProgram = hpl::loadProgram("vs_basic_solid_diffuse", "fs_basic_solid_diffuse");
+		_illuminationProgram = hpl::loadProgram("vs_basic_solid_illumination", "fs_basic_solid_illumination");
 		_u_param = bgfx::createUniform("u_params", bgfx::UniformType::Vec4, 1);
 		_u_mtxUv = bgfx::createUniform("a_mtxUV", bgfx::UniformType::Mat4, 1);
+		_u_mtxInvViewRotation = bgfx::createUniform("u_mtxInvViewRotation", bgfx::UniformType::Mat4, 1);
 		_s_diffuseMap  = bgfx::createUniform("diffuseMap", bgfx::UniformType::Sampler, 1);
 		_s_dissolveMap  = bgfx::createUniform("dissolveMap", bgfx::UniformType::Sampler, 1);
-
+		
 		mbIsGlobalDataCreator = false;
 	}
 
@@ -475,14 +487,6 @@ namespace hpl {
 	{
 		cMaterialType_SolidDiffuse_Vars *pVars = (cMaterialType_SolidDiffuse_Vars*)apMaterial->GetVars();
 
-		static const auto afInvFarPlane = MemberID("afInvFarPlane", kVar_afInvFarPlane);
-		static const auto avHeightMapScaleAndBias = MemberID("avHeightMapScaleAndBias", kVar_avHeightMapScaleAndBias);
-		static const auto a_mtxUV = MemberID("a_mtxUV", kVar_a_mtxUV);
-		static const auto afColorMul = MemberID("afColorMul", kVar_afColorMul);
-		static const auto afDissolveAmount = MemberID("afDissolveAmount", kVar_afDissolveAmount);
-		static const auto avFrenselBiasPow = MemberID("avFrenselBiasPow", kVar_avFrenselBiasPow);
-		static const auto a_mtxInvViewRotation = MemberID("a_mtxInvViewRotation", kVar_a_mtxInvViewRotation);
-		
 		struct RenderZData {
 			float mtxUv[16];
 			float heighScaleMapBias[2];
@@ -498,6 +502,7 @@ namespace hpl {
 
 		struct RenderDiffuseData {
 			float mtxUv[16];
+			float mtxInvViewRotation[16];
 			struct u_params {
 				float heightMapScale[2];
 				float frenselBiasPow[2];
@@ -508,12 +513,23 @@ namespace hpl {
 				float u_useCubeMapAlpha;
 
 				float u_useParallax;
-				float u_unused2;
+				float u_dissolveAmount;
 				float u_unused3;
 				float u_unused4;
 			} params;
 		};
 		using MaterialDiffuseProgram = BGFXProgram<RenderDiffuseData>;
+
+		struct RenderIlluminationData {
+			float mtxUv[16];
+			struct u_params {
+				float u_colorMul;
+				float u_unused1;
+				float u_unused2;
+				float u_unused3;
+			} params;
+		};
+		using MaterialIlluminationProgram = BGFXProgram<RenderIlluminationData>;
 
 		if(aRenderMode == eMaterialRenderMode_Z) 
 		{
@@ -531,8 +547,9 @@ namespace hpl {
 				programHandle = _basicSolidZProgram, 
 				u_param = _u_param, 
 				u_mtxUv = _u_mtxUv](const tString& name) {
+				
 				auto program =  (new MaterialZProgram({
-					MaterialZProgram::ParameterField(a_mtxUV, MaterialZProgram::Matrix4fMapper([](RenderZData& data, const cMatrixf& value) {
+					MaterialZProgram::ParameterField(material::solid::a_mtxUV, MaterialZProgram::Matrix4fMapper([](RenderZData& data, const cMatrixf& value) {
 						std::copy(std::begin(value.v),std::end(value.v), std::begin(data.mtxUv));
 					}))
 				}, name, programHandle, false, eGpuProgramFormat_BGFX));
@@ -542,10 +559,10 @@ namespace hpl {
 					bgfx::setUniform(u_mtxUv, &data.mtxUv);
 				});
 
-				program->data().params.u_useAlphaMap = useAlpha;
-				program->data().params.u_useDissolveFilter = hasDissolveFilter;
-				program->data().params.u_useDissolveAlphaMap = 0;
-				program->SetMatrixf(a_mtxUV.id(), cMatrixf::Identity);
+				program->data().params.u_useAlphaMap = useAlpha ? 1.0f : 0.0f;
+				program->data().params.u_useDissolveFilter = hasDissolveFilter ? 1.0f : 0.0f;
+				program->data().params.u_useDissolveAlphaMap = 0.0f;
+				program->SetMatrixf(material::solid::a_mtxUV.id(), cMatrixf::Identity);
 				return program;
 			});
 		}
@@ -571,8 +588,11 @@ namespace hpl {
 				u_param = _u_param, 
 				u_mtxUv = _u_mtxUv](const tString& name) {
 				auto program =  (new MaterialZProgram({
-					MaterialZProgram::ParameterField(a_mtxUV, MaterialZProgram::Matrix4fMapper([](RenderZData& data, const cMatrixf& value) {
+					MaterialZProgram::ParameterField(material::solid::a_mtxUV, MaterialZProgram::Matrix4fMapper([](RenderZData& data, const cMatrixf& value) {
 						std::copy(std::begin(value.v),std::end(value.v), std::begin(data.mtxUv));
+					})),
+					MaterialZProgram::ParameterField(material::solid::afDissolveAmount, MaterialZProgram::FloatMapper([](RenderZData& data, float value) {
+						// data.params.dis
 					}))
 				}, name, programHandle, false, eGpuProgramFormat_BGFX));
 				program->SetSubmitHandler([u_param, u_mtxUv]
@@ -584,7 +604,7 @@ namespace hpl {
 				program->data().params.u_useAlphaMap = useAlpha;
 				program->data().params.u_useDissolveFilter = hasDissolveFilter;
 				program->data().params.u_useDissolveAlphaMap = hasDissolveAlphaMap;
-				program->SetMatrixf(a_mtxUV.id(), cMatrixf::Identity);
+				program->SetMatrixf(material::solid::a_mtxUV.id(), cMatrixf::Identity);
 				return program;
 			});
 		}
@@ -616,26 +636,34 @@ namespace hpl {
 				useCubeAlpha,
 				useUvAnimation, 
 				u_param = _u_param, 
-				u_mtxUv = _u_mtxUv
+				u_mtxUv = _u_mtxUv,
+				u_mtxInvViewRotation = _u_mtxInvViewRotation
 			](const tString& name) {
 				auto program =  (new MaterialDiffuseProgram({
-				MaterialDiffuseProgram::ParameterField(a_mtxUV, 
+				MaterialDiffuseProgram::ParameterField(material::solid::a_mtxUV, 
 					MaterialDiffuseProgram::Matrix4fMapper([](RenderDiffuseData& data, const cMatrixf& value) {
 						std::copy(std::begin(value.v),std::end(value.v), std::begin(data.mtxUv));
 					})),
-					MaterialDiffuseProgram::ParameterField(avFrenselBiasPow, MaterialDiffuseProgram::Vec2Mapper([](RenderDiffuseData& data, float afx, float afy) {
+					MaterialDiffuseProgram::ParameterField(material::solid::avFrenselBiasPow, MaterialDiffuseProgram::Vec2Mapper([](RenderDiffuseData& data, float afx, float afy) {
 						data.params.frenselBiasPow[0] = afx;
 						data.params.frenselBiasPow[1] = afy;
 					})),
-					MaterialDiffuseProgram::ParameterField(avHeightMapScaleAndBias, MaterialDiffuseProgram::Vec2Mapper([](RenderDiffuseData& data, float afx, float afy) {
+					MaterialDiffuseProgram::ParameterField(material::solid::avHeightMapScaleAndBias, MaterialDiffuseProgram::Vec2Mapper([](RenderDiffuseData& data, float afx, float afy) {
 						data.params.heightMapScale[0] = afx;
 						data.params.heightMapScale[1] = afy;
+					})),
+					MaterialDiffuseProgram::ParameterField(material::solid::mtxInvViewRotation, MaterialDiffuseProgram::Matrix4fMapper([](RenderDiffuseData& data, const cMatrixf& value) {
+						std::copy(std::begin(value.v),std::end(value.v), std::begin(data.mtxInvViewRotation));
 					}))
 				}, name, programHandle, false, eGpuProgramFormat_BGFX));
 				
-				program->SetSubmitHandler([u_param, u_mtxUv] (const RenderDiffuseData& data, bgfx::ViewId view, GraphicsContext& context) {
+				program->SetSubmitHandler([
+					u_param, 
+					u_mtxUv,
+					u_mtxInvViewRotation] (const RenderDiffuseData& data, bgfx::ViewId view, GraphicsContext& context) {
 					bgfx::setUniform(u_mtxUv, &data.mtxUv);
 					bgfx::setUniform(u_param, &data.params, 3);
+					bgfx::setUniform(u_mtxInvViewRotation, &data.mtxInvViewRotation);
 				});
 
 				program->data().params.u_useNormalMap = useDiffuseNormalMap;
@@ -644,7 +672,7 @@ namespace hpl {
 				program->data().params.u_useCubeMapAlpha = useCubeAlpha;
 				program->data().params.u_useParallax = useDiffuseParallaxMap;
 
-				program->SetMatrixf(a_mtxUV.id(), cMatrixf::Identity);
+				program->SetMatrixf(material::solid::a_mtxUV.id(), cMatrixf::Identity);
 				return program;
 			});
 		}
@@ -652,10 +680,17 @@ namespace hpl {
 		//Illumination
 		else if(aRenderMode == eMaterialRenderMode_Illumination)
 		{
-			tFlag lFlags =0;
-			if(apMaterial->HasUvAnimation())	lFlags |= eFeature_Illum_UvAnimation;
+			const bool hasUvAnimation = apMaterial->HasUvAnimation();
+			tFlag lFlags = 
+				(hasUvAnimation ? eFeature_Illum_UvAnimation : 0);
 
-			return mpProgramManager->GenerateProgram(aRenderMode,lFlags);
+			return mpProgramManager->GenerateProgram(aRenderMode, lFlags, [
+				programHandle = _illuminationProgram
+			](const tString& name ) {
+				auto program = (new MaterialIlluminationProgram({
+				}, name, programHandle, false, eGpuProgramFormat_BGFX));
+				return program;
+			});
 		}
 
 		return NULL;
@@ -736,9 +771,6 @@ namespace hpl {
 			bool bRet = apProgram->SetFloat(kVar_afColorMul, apObject->GetIlluminationAmount());
 		}
 	}
-
-
-	//--------------------------------------------------------------------------
 
 	iMaterialVars* cMaterialType_SolidDiffuse::CreateSpecificVariables()
 	{

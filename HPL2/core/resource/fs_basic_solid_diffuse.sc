@@ -8,8 +8,9 @@ SAMPLER2D(s_heightMap, 2);
 SAMPLER2D(s_diffuseMap, 3);
 SAMPLER2D(s_envMapAlphaMap, 4);
 
-SAMPLERCUBE(aEnvMap, 5);
+SAMPLERCUBE(s_envMap, 5);
 
+uniform mat4 u_mtxInvViewRotation;
 uniform vec4 u_params[3];
 #define u_heightMapScaleAndBias (u_params[0].xy)
 #define u_frenselBiasPow (u_params[0].zw)
@@ -21,7 +22,6 @@ uniform vec4 u_params[3];
 
 #define u_useParallax (u_params[2].x)
 
-uniform mat4 a_mtxInvViewRotation;
 
 ///////////////////////////////
 // Main program
@@ -29,7 +29,7 @@ void main()
 {
 	//////////////////////////////////
 	//Diffuse
-    vec4 diffuseColor = vec4(0.0, 0.0, 0.0, 1.0);
+    vec4 diffuseColor = vec4(0.0, 0.0, 0.0, 0.0);
     vec2 texCoord = v_texcoord0.xy;
 
     if(0.0 < u_useParallax) {
@@ -73,12 +73,6 @@ void main()
             } 
         }
 
-        //Do a linear search to find the first intersection.
-        // RayLinearIntersectionSM3(s_heightMap,fSteps, parallaxPosCoord,  eyeVec);
-        
-        //Do a binary search between start and first intersection to pinpoint the postion.		
-        //RayBinaryIntersection(s_heightMap, parallaxPosCoord,  eyeVec);
-        
 		diffuseColor = texture2D(s_diffuseMap, parallaxPosCoord.xy);
         texCoord = parallaxPosCoord.xy;
 	} else {
@@ -97,9 +91,9 @@ void main()
 		vec3 normalizedView = normalize(v_view);	
 	
 		vec3 vEnvUv = reflect(normalizedView, screenNormal);
-		vEnvUv = (a_mtxInvViewRotation * vec4(vEnvUv,1)).xyz;
+		vEnvUv = (u_mtxInvViewRotation * vec4(vEnvUv,1)).xyz;
 					
-		vec4 reflectionColor = textureCube(aEnvMap, vEnvUv);
+		vec4 reflectionColor = textureCube(s_envMap, vEnvUv);
 		
 		float afEDotN = max(dot(-normalizedView, screenNormal),0.0);
 		float fFresnel = Fresnel(afEDotN, u_frenselBiasPow.x, u_frenselBiasPow.y);

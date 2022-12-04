@@ -17,8 +17,7 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef HPL_MATERIAL_TYPE_BASIC_SURFACES_H
-#define HPL_MATERIAL_TYPE_BASIC_SURFACES_H
+#pragma once
 
 #include "graphics/MaterialType.h"
 #include "graphics/Material.h"
@@ -67,9 +66,12 @@ namespace hpl {
 		
 		bgfx::ProgramHandle _basicSolidZProgram;
 		bgfx::ProgramHandle _basicSolidDiffuseProgram;
+		bgfx::ProgramHandle _illuminationProgram;
 
 		bgfx::UniformHandle _u_param;
 		bgfx::UniformHandle _u_mtxUv;
+
+		bgfx::UniformHandle _u_mtxInvViewRotation;
 
 		bgfx::UniformHandle _s_diffuseMap;
 		bgfx::UniformHandle _s_dissolveMap;
@@ -130,4 +132,3 @@ namespace hpl {
 	//---------------------------------------------------
 
 };
-#endif // HPL_MATERIAL_TYPE_BASIC_SURFACES_H
