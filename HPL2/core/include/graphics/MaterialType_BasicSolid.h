@@ -66,6 +66,7 @@ namespace hpl {
 		//[skeleton][uv animation]
 		
 		bgfx::ProgramHandle _basicSolidZProgram;
+		bgfx::ProgramHandle _basicSolidDiffuseProgram;
 
 		bgfx::UniformHandle _u_param;
 		bgfx::UniformHandle _u_mtxUv;

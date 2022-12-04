@@ -153,6 +153,7 @@ namespace hpl {
 	iMaterialType_SolidBase::iMaterialType_SolidBase(cGraphics *apGraphics, cResources *apResources) : iMaterialType(apGraphics,apResources)
 	{
 		_basicSolidZProgram = hpl::loadProgram("vs_basic_solid_z", "fs_basic_solid_z");
+		_basicSolidDiffuseProgram = hpl::loadProgram("vs_basic_solid_diffuse", "fs_basic_solid_diffuse");
 		_u_param = bgfx::createUniform("u_params", bgfx::UniformType::Vec4, 1);
 		_u_mtxUv = bgfx::createUniform("a_mtxUV", bgfx::UniformType::Mat4, 1);
 		_s_diffuseMap  = bgfx::createUniform("diffuseMap", bgfx::UniformType::Sampler, 1);
@@ -479,87 +480,173 @@ namespace hpl {
 		static const auto a_mtxUV = MemberID("a_mtxUV", kVar_a_mtxUV);
 		static const auto afColorMul = MemberID("afColorMul", kVar_afColorMul);
 		static const auto afDissolveAmount = MemberID("afDissolveAmount", kVar_afDissolveAmount);
-		static const auto avFrenselBiasPow = MemberID("avHeightMapScaleAndBias", kVar_avFrenselBiasPow);
+		static const auto avFrenselBiasPow = MemberID("avFrenselBiasPow", kVar_avFrenselBiasPow);
 		static const auto a_mtxInvViewRotation = MemberID("a_mtxInvViewRotation", kVar_a_mtxInvViewRotation);
 		
-		////////////////////////////
-		//Z
-		if(aRenderMode == eMaterialRenderMode_Z)
+		struct RenderZData {
+			float mtxUv[16];
+			float heighScaleMapBias[2];
+			struct u_params {
+				float u_useAlphaMap;
+				float u_useDissolveFilter;
+				float u_useDissolveAlphaMap;
+				float u_unused2;
+			} params;
+		};
+		using MaterialZProgram = BGFXProgram<RenderZData>;
+
+
+		struct RenderDiffuseData {
+			float mtxUv[16];
+			struct u_params {
+				float heightMapScale[2];
+				float frenselBiasPow[2];
+
+				float u_useNormalMap;
+				float u_useSpecular;
+				float u_useEnvMap;
+				float u_useCubeMapAlpha;
+
+				float u_useParallax;
+				float u_unused2;
+				float u_unused3;
+				float u_unused4;
+			} params;
+		};
+		using MaterialDiffuseProgram = BGFXProgram<RenderDiffuseData>;
+
+		if(aRenderMode == eMaterialRenderMode_Z) 
 		{
-			struct RenderZData {
-				float mtxUv[16];
-				struct u_params {
-					float u_useAlphaMap;
-					float u_useDissolveFilter;
-					float u_unused1;
-					float u_unused2;
-				} params;
-			};
-			using MaterialZProgram = BGFXProgram<RenderZData>;
 
-			tFlag lFlags = 0;
-			if (apMaterial->GetTexture(eMaterialTexture_Alpha))
-			{
-				lFlags |= eFeature_Z_UseAlpha;
-			}
-			if (apMaterial->HasUvAnimation())
-			{
-				lFlags |= eFeature_Z_UvAnimation;
-			}
-			if (pVars->mbAlphaDissolveFilter)
-			{
-				lFlags |= eFeature_Z_UseAlphaDissolveFilter;
-			}
+			const bool useAlpha = apMaterial->GetTexture(eMaterialTexture_Alpha);
+			const bool hasDissolveFilter = pVars->mbAlphaDissolveFilter;
+			tFlag lFlags = 
+				(useAlpha ? eFeature_Z_UseAlpha : 0) |
+				(hasDissolveFilter ? eFeature_Z_UseAlphaDissolveFilter : 0) |
+				(apMaterial->HasUvAnimation() ? eFeature_Z_UvAnimation : 0);
 
-			return mpGlobalProgramManager->GenerateProgram(eMaterialRenderMode_Z, lFlags, [&](const tString& name) {
+			return mpGlobalProgramManager->GenerateProgram(eMaterialRenderMode_Z, lFlags, [
+				useAlpha, 
+				hasDissolveFilter, 
+				programHandle = _basicSolidZProgram, 
+				u_param = _u_param, 
+				u_mtxUv = _u_mtxUv](const tString& name) {
 				auto program =  (new MaterialZProgram({
 					MaterialZProgram::ParameterField(a_mtxUV, MaterialZProgram::Matrix4fMapper([](RenderZData& data, const cMatrixf& value) {
 						std::copy(std::begin(value.v),std::end(value.v), std::begin(data.mtxUv));
 					}))
-				}, name, _basicSolidZProgram, false, eGpuProgramFormat_BGFX));
-				program->SetSubmitHandler([u_param = _u_param, u_mtxUv = _u_mtxUv]
+				}, name, programHandle, false, eGpuProgramFormat_BGFX));
+				program->SetSubmitHandler([u_param, u_mtxUv]
 					(const RenderZData& data, bgfx::ViewId view, GraphicsContext& context) {
 					bgfx::setUniform(u_param, &data.params);
 					bgfx::setUniform(u_mtxUv, &data.mtxUv);
 				});
 
-				program->data().params.u_useAlphaMap = apMaterial->GetTexture(eMaterialTexture_Alpha) ? 1 : 0;
-				program->data().params.u_useDissolveFilter = pVars->mbAlphaDissolveFilter ? 1 : 0;
+				program->data().params.u_useAlphaMap = useAlpha;
+				program->data().params.u_useDissolveFilter = hasDissolveFilter;
+				program->data().params.u_useDissolveAlphaMap = 0;
+				program->SetMatrixf(a_mtxUV.id(), cMatrixf::Identity);
+				return program;
+			});
+		}
+		else if(aRenderMode == eMaterialRenderMode_Z_Dissolve)
+		{
+			const bool useAlpha = apMaterial->GetTexture(eMaterialTexture_Alpha);
+			const bool hasDissolveAlphaMap = apMaterial->GetTexture(eMaterialTexture_DissolveAlpha);
+			const bool hasDissolveFilter = pVars->mbAlphaDissolveFilter;
+			const bool useUvAnimation = apMaterial->HasUvAnimation();
+
+			tFlag lFlags = 
+				eFeature_Z_Dissolve |
+				(useAlpha ? eFeature_Z_UseAlpha : 0) |
+				(hasDissolveFilter ? eFeature_Z_UseAlphaDissolveFilter : 0) |
+				(hasDissolveAlphaMap ? eFeature_Z_DissolveAlpha : 0) |
+				(useUvAnimation ? eFeature_Z_UvAnimation : 0);
+
+			return mpGlobalProgramManager->GenerateProgram(eMaterialRenderMode_Z, lFlags, [
+				useAlpha, 
+				hasDissolveFilter, 
+				hasDissolveAlphaMap, 
+				programHandle = _basicSolidZProgram, 
+				u_param = _u_param, 
+				u_mtxUv = _u_mtxUv](const tString& name) {
+				auto program =  (new MaterialZProgram({
+					MaterialZProgram::ParameterField(a_mtxUV, MaterialZProgram::Matrix4fMapper([](RenderZData& data, const cMatrixf& value) {
+						std::copy(std::begin(value.v),std::end(value.v), std::begin(data.mtxUv));
+					}))
+				}, name, programHandle, false, eGpuProgramFormat_BGFX));
+				program->SetSubmitHandler([u_param, u_mtxUv]
+					(const RenderZData& data, bgfx::ViewId view, GraphicsContext& context) {
+					bgfx::setUniform(u_param, &data.params);
+					bgfx::setUniform(u_mtxUv, &data.mtxUv);
+				});
+
+				program->data().params.u_useAlphaMap = useAlpha;
+				program->data().params.u_useDissolveFilter = hasDissolveFilter;
+				program->data().params.u_useDissolveAlphaMap = hasDissolveAlphaMap;
 				program->SetMatrixf(a_mtxUV.id(), cMatrixf::Identity);
 				return program;
 			});
 		}
 		////////////////////////////
-		//Z Dissolve
-		else if(aRenderMode == eMaterialRenderMode_Z_Dissolve)
-		{
-			tFlag lFlags =0;
-			lFlags |= eFeature_Z_Dissolve;
-			if(apMaterial->GetTexture(eMaterialTexture_Alpha))			lFlags |= eFeature_Z_UseAlpha;
-			if(apMaterial->GetTexture(eMaterialTexture_DissolveAlpha))	lFlags |= eFeature_Z_DissolveAlpha;
-			if(apMaterial->HasUvAnimation())							lFlags |= eFeature_Z_UvAnimation;
-			if(pVars->mbAlphaDissolveFilter)							lFlags |= eFeature_Z_UseAlphaDissolveFilter;
-
-			return mpGlobalProgramManager->GenerateProgram(eMaterialRenderMode_Z, lFlags);
-		}
-		////////////////////////////
 		//Diffuse
 		else if(aRenderMode == eMaterialRenderMode_Diffuse)
 		{
-			tFlag lFlags =0;
-			if(apMaterial->GetTexture(eMaterialTexture_NMap))			lFlags |= eFeature_Diffuse_NormalMaps;
-			if(apMaterial->GetTexture(eMaterialTexture_Specular))		lFlags |= eFeature_Diffuse_Specular;
-			if(	apMaterial->GetTexture(eMaterialTexture_Height) &&
-				iRenderer::GetParallaxEnabled())			    		lFlags |= eFeature_Diffuse_Parallax;
-			if(apMaterial->GetTexture(eMaterialTexture_CubeMap))
-			{
-				lFlags |= eFeature_Diffuse_EnvMap;
-				if(apMaterial->GetTexture(eMaterialTexture_CubeMapAlpha))	lFlags |= eFeature_Diffuse_CubeMapAlpha;
-			}
-			if(apMaterial->HasUvAnimation())							lFlags |= eFeature_Diffuse_UvAnimation;
+			const bool useDiffuseNormalMap = apMaterial->GetTexture(eMaterialTexture_NMap);
+			const bool useSpecularMap = apMaterial->GetTexture(eMaterialTexture_Specular);
+			const bool useDiffuseParallaxMap = apMaterial->GetTexture(eMaterialTexture_Height)&& iRenderer::GetParallaxEnabled();
+			const bool useDiffuseEnvMap = apMaterial->GetTexture(eMaterialTexture_CubeMap);
+			const bool useCubeAlpha = useDiffuseEnvMap && apMaterial->GetTexture(eMaterialTexture_CubeMapAlpha);
+			const bool useUvAnimation = apMaterial->HasUvAnimation();
 
+			tFlag lFlags = 
+				(useDiffuseNormalMap ? eFeature_Diffuse_NormalMaps : 0) |
+				(useSpecularMap ? eFeature_Diffuse_Specular : 0) |
+				(useDiffuseParallaxMap ? eFeature_Diffuse_Parallax : 0) |
+				(useDiffuseEnvMap ? eFeature_Diffuse_EnvMap : 0) |
+				(useCubeAlpha ? eFeature_Diffuse_CubeMapAlpha : 0) |
+				(useUvAnimation ? eFeature_Diffuse_UvAnimation : 0);
 
-			return mpProgramManager->GenerateProgram(aRenderMode,lFlags);
+			return mpProgramManager->GenerateProgram(aRenderMode, lFlags, [
+				programHandle = _basicSolidDiffuseProgram,
+				useDiffuseNormalMap,
+				useSpecularMap,
+				useDiffuseParallaxMap,
+				useDiffuseEnvMap,
+				useCubeAlpha,
+				useUvAnimation, 
+				u_param = _u_param, 
+				u_mtxUv = _u_mtxUv
+			](const tString& name) {
+				auto program =  (new MaterialDiffuseProgram({
+				MaterialDiffuseProgram::ParameterField(a_mtxUV, 
+					MaterialDiffuseProgram::Matrix4fMapper([](RenderDiffuseData& data, const cMatrixf& value) {
+						std::copy(std::begin(value.v),std::end(value.v), std::begin(data.mtxUv));
+					})),
+					MaterialDiffuseProgram::ParameterField(avFrenselBiasPow, MaterialDiffuseProgram::Vec2Mapper([](RenderDiffuseData& data, float afx, float afy) {
+						data.params.frenselBiasPow[0] = afx;
+						data.params.frenselBiasPow[1] = afy;
+					})),
+					MaterialDiffuseProgram::ParameterField(avHeightMapScaleAndBias, MaterialDiffuseProgram::Vec2Mapper([](RenderDiffuseData& data, float afx, float afy) {
+						data.params.heightMapScale[0] = afx;
+						data.params.heightMapScale[1] = afy;
+					}))
+				}, name, programHandle, false, eGpuProgramFormat_BGFX));
+				
+				program->SetSubmitHandler([u_param, u_mtxUv] (const RenderDiffuseData& data, bgfx::ViewId view, GraphicsContext& context) {
+					bgfx::setUniform(u_mtxUv, &data.mtxUv);
+					bgfx::setUniform(u_param, &data.params, 3);
+				});
+
+				program->data().params.u_useNormalMap = useDiffuseNormalMap;
+				program->data().params.u_useSpecular = useSpecularMap;
+				program->data().params.u_useEnvMap = useDiffuseEnvMap;
+				program->data().params.u_useCubeMapAlpha = useCubeAlpha;
+				program->data().params.u_useParallax = useDiffuseParallaxMap;
+
+				program->SetMatrixf(a_mtxUV.id(), cMatrixf::Identity);
+				return program;
+			});
 		}
 		////////////////////////////
 		//Illumination

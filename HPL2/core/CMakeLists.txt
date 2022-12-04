@@ -249,29 +249,68 @@ target_link_libraries(HPL2
   )
 
 
+# hpl_add_shader(
+#     HPL_CORE_SHADER
+#         "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_ssao_blur.sc" 
+#     INCLUDES
+#         ${CMAKE_CURRENT_SOURCE_DIR}/resources)
+
+# hpl_add_shader(
+#     HPL_CORE_SHADER
+#         "${CMAKE_CURRENT_SOURCE_DIR}/resource/fs_posteffect_radial_blur_frag.sc" 
+#     INCLUDES
+#         ${CMAKE_CURRENT_SOURCE_DIR}/resources)
+
 hpl_add_shader(
     HPL_CORE_SHADER
-        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_ssao_blur.sc" 
+        "${CMAKE_CURRENT_SOURCE_DIR}/resource/fs_basic_solid_z.sc"
+    VARYING
+        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_basic_solid_z.io"
     INCLUDES
         ${CMAKE_CURRENT_SOURCE_DIR}/resources)
 
 hpl_add_shader(
     HPL_CORE_SHADER
-        "${CMAKE_CURRENT_SOURCE_DIR}/resource/fs_posteffect_radial_blur_frag.sc" 
+        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_basic_solid_z.sc"
+    VARYING
+        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_basic_solid_z.io"
+    INCLUDES
+        ${CMAKE_CURRENT_SOURCE_DIR}/resources)
+
+
+hpl_add_shader(
+    HPL_CORE_SHADER
+        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_basic_solid_diffuse.sc"
+    VARYING
+        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_basic_solid_diffuse.io" 
     INCLUDES
         ${CMAKE_CURRENT_SOURCE_DIR}/resources)
 
 hpl_add_shader(
     HPL_CORE_SHADER
-        "${CMAKE_CURRENT_SOURCE_DIR}/resource/fs_basic_solid_z.sc" 
+        "${CMAKE_CURRENT_SOURCE_DIR}/resource/fs_basic_solid_diffuse.sc"
+    VARYING
+        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_basic_solid_diffuse.io" 
+    INCLUDES
+        ${CMAKE_CURRENT_SOURCE_DIR}/resources)
+
+
+hpl_add_shader(
+    HPL_CORE_SHADER
+        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_basic_solid_illumination.sc"
+    VARYING
+        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_basic_solid_illumination.io" 
     INCLUDES
         ${CMAKE_CURRENT_SOURCE_DIR}/resources)
 
 hpl_add_shader(
     HPL_CORE_SHADER
-        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_basic_solid_z.sc" 
+        "${CMAKE_CURRENT_SOURCE_DIR}/resource/fs_basic_solid_illumination.sc"
+    VARYING
+        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_basic_solid_illumination.io" 
     INCLUDES
         ${CMAKE_CURRENT_SOURCE_DIR}/resources)
+
 
 add_custom_target(
   HPL_SHADERS
