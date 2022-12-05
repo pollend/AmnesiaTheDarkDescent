@@ -16,10 +16,12 @@ uniform vec4 u_fogColor;
 
 uniform vec4 u_params[5];
 #define u_frenselBiasPow (u_params[0].xy)
-#define u_fogStartAndLength (u_params[0].zw)
+#define u_fogStart (u_params[0].z)
+#define u_fogLength (u_params[0].w)
 
 #define u_reflectionMapSizeMul (u_params[1].xy)
-#define u_reflectionFadeStartAndLength (u_params[1].zw)
+#define u_reflectionFadeStart (u_params[1].z)
+#define u_reflectionFadeLength (u_params[1].w)
 
 #define u_falloffExp (u_params[2].x)
 #define u_afT (u_params[2].y)
@@ -62,9 +64,10 @@ void main()
 	vec4 surfaceColor = texture2D(s_diffuseMap, vUv1);
 	
 	vec4 vRefractionColor = vec4(1);
-	if(0.0 < u_useRefraction) {
+	vec2 vDistortedScreenPos = vec2(0);
+	if (0.0 < u_useRefraction) {
 		float fInvDist = min(1.0 / v_position.z, 10.0);
-		vec2 vDistortedScreenPos = gl_FragCoord.xy + vFinalNormal.xy * u_afRefractionScale * fInvDist;
+		vDistortedScreenPos = gl_FragCoord.xy + vFinalNormal.xy * u_afRefractionScale * fInvDist;
 		
 		vec4 vRefractionColor = texture2D(s_refractionMap, vDistortedScreenPos);
 		
@@ -87,13 +90,15 @@ void main()
 		fFresnel = Fresnel(afEDotN, u_frenselBiasPow.x, u_frenselBiasPow.y);
 		
 		if(0.0 < u_useReflectionFading) {
-			fFresnel *= 1.0 - clamp( (v_position.z - u_reflectionFadeStartAndLength.x) / u_reflectionFadeStartAndLength.y, 0.0, 1.0);
+			fFresnel *= 1.0 - clamp( (v_position.z - u_reflectionFadeStart) / u_reflectionFadeLength, 0.0, 1.0);
 		}
 
 		//////////////////
 		//Cubemap
 		if(0.0 < u_useCubeMapReflection) {
-			vec3 vEnvUv = reflect(vEyeVec, * vec4(vEnvUv,1)).xyz;
+			vec3 vEnvUv = reflect(vEyeVec, vScreenNormal);
+			vEnvUv = (u_mtxInvViewRotation * vec4(vEnvUv,1)).xyz;
+			
 			vReflectionColor = textureCube(s_envMap,vEnvUv);
 		} else {
 			vReflectionColor = texture2D(s_reflectionMap, vDistortedScreenPos * u_reflectionMapSizeMul);
@@ -101,17 +106,18 @@ void main()
 		
 	}
 	
+
+	vec3 vLightDir = normalize(vec3(0.5, 0.5, 0.5));
+	float fLDotN = max(dot(vLightDir, vFinalNormal),0.0);
+	float fDiffuse =  fLDotN * 0.5 + 0.5;
+	float fSpecular = pow(fLDotN,16.0);
+
 	///////////////////////////////
 	//Caclulate the final color
 	if(0.0 < u_useFog) {
-		float fFogAmount = (-v_position.z - u_fogStartAndLength.x) / u_fogStartAndLength.y;
+		float fFogAmount = (-v_position.z - u_fogStart) / u_fogLength;
 		fFogAmount = clamp(fFogAmount, 0.0, 1.0);
 		fFogAmount = pow(fFogAmount, u_falloffExp) * u_fogColor.a;
-
-		vec3 vLightDir = normalize(vec3(0.5, 0.5, 0.5));
-		float fLDotN = max(dot(vLightDir, vFinalNormal),0.0);
-		float fDiffuse =  fLDotN * 0.5 + 0.5;
-		float fSpecular = pow(fLDotN,16.0);
 
 		if(0.0 < u_useRefraction) {
 			if(0.0 < u_useReflection) {

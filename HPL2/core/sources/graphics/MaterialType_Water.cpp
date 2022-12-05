@@ -20,9 +20,12 @@
 #include "graphics/MaterialType_Water.h"
 
 #include "graphics/ShaderUtil.h"
+#include "math/MathTypes.h"
 #include "system/LowLevelSystem.h"
 #include "system/PreprocessParser.h"
+#include <algorithm>
 #include <graphics/BGFXProgram.h>
+#include <iterator>
 
 #include "resources/Resources.h"
 
@@ -72,6 +75,21 @@ namespace hpl
 
 #define kDiffuseFeatureNum 4
 
+    namespace material::water
+    {
+        static const auto afT = MemberID("afT", kVar_afT);
+        static const auto afRefractionScale = MemberID("afRefractionScale", kVar_afRefractionScale);
+        static const auto a_mtxInvViewRotation = MemberID("a_mtxInvViewRotation", kVar_a_mtxInvViewRotation);
+        static const auto avReflectionMapSizeMul = MemberID("avReflectionMapSizeMul", kVar_avReflectionMapSizeMul);
+        static const auto avFrenselBiasPow = MemberID("avFrenselBiasPow", kVar_avFrenselBiasPow);
+        static const auto avReflectionFadeStartAndLength = MemberID("avReflectionFadeStartAndLength", kVar_avReflectionFadeStartAndLength);
+        static const auto afWaveAmplitude = MemberID("afWaveAmplitude", kVar_afWaveAmplitude);
+        static const auto afWaveFreq = MemberID("afWaveFreq", kVar_afWaveFreq);
+        static const auto avFogStartAndLength = MemberID("avFogStartAndLength", kVar_avFogStartAndLength);
+        static const auto avFogColor = MemberID("avFogColor", kVar_avFogColor);
+        static const auto afFalloffExp = MemberID("afFalloffExp", kVar_afFalloffExp);
+    } // namespace material::water
+
     static cProgramComboFeature vDiffuseFeatureVec[] = {
         cProgramComboFeature("UseReflection", kPC_FragmentBit),
         cProgramComboFeature("UseCubeMapReflection", kPC_FragmentBit, eFeature_Diffuse_Reflection),
@@ -79,16 +97,10 @@ namespace hpl
         cProgramComboFeature("UseFog", kPC_FragmentBit | kPC_VertexBit),
     };
 
-    //////////////////////////////////////////////////////////////////////////
-    // TRANSLUCENT
-    //////////////////////////////////////////////////////////////////////////
-
-    //--------------------------------------------------------------------------
-
     cMaterialType_Water::cMaterialType_Water(cGraphics* apGraphics, cResources* apResources)
         : iMaterialType(apGraphics, apResources)
     {
-        _waterProgram = hpl::loadProgram("vs_water_surface", "fs_water_surface");
+        _waterProgram = hpl::loadProgram("vs_water_material", "fs_water_material");
 
         mbIsTranslucent = true;
 
@@ -241,6 +253,10 @@ namespace hpl
     {
         struct RenderWaterData
         {
+            float fogColor[4];
+            float mtxInvViewRotation[16];
+            float normlaMtx[16];
+            float mtxUV[16];
             struct u_params
             {
                 float u_frenselBiasPow[2];
@@ -269,11 +285,7 @@ namespace hpl
         };
         using MaterialWaterProgram = BGFXProgram<RenderWaterData>;
 
-        if (aRenderMode == eMaterialRenderMode_Z)
-        {
-            return NULL;
-        }
-        else if (aRenderMode == eMaterialRenderMode_Diffuse || aRenderMode == eMaterialRenderMode_DiffuseFog)
+        if (aRenderMode == eMaterialRenderMode_Diffuse || aRenderMode == eMaterialRenderMode_DiffuseFog)
         {
             cMaterialType_Water_Vars* pVars = static_cast<cMaterialType_Water_Vars*>(apMaterial->GetVars());
 
@@ -284,28 +296,127 @@ namespace hpl
             const bool hasReflectionFading = pVars->mfReflectionFadeEnd;
             const bool hasDiffuseFog = (aRenderMode == eMaterialRenderMode_DiffuseFog);
 
-            tFlag lFlags = (hasReflection ? eFeature_Diffuse_Reflection : 0) | (hasCubeMap ? eFeature_Diffuse_CubeMapReflection : 0) |
-                (hasReflectionFading ? eFeature_Diffuse_ReflectionFading : 0) | (hasDiffuseFog ? eFeature_Diffuse_Fog : 0);
+            tFlag lFlags = (hasReflection ? eFeature_Diffuse_Reflection : 0) | 
+                (hasCubeMap ? eFeature_Diffuse_CubeMapReflection : 0) |
+                (hasReflectionFading ? eFeature_Diffuse_ReflectionFading : 0) | 
+                (hasDiffuseFog ? eFeature_Diffuse_Fog : 0);
 
             return mpProgramManager->GenerateProgram(
                 eMaterialRenderMode_Diffuse,
                 lFlags,
-                [programHandle = _waterProgram, hasReflection, hasCubeMap, hasReflectionFading, hasDiffuseFog](const tString& name)
+                [
+                    programHandle = _waterProgram, 
+                    hasReflection, 
+                    hasCubeMap, 
+                    hasReflectionFading, 
+                    hasDiffuseFog](const tString& name)
                 {
                     auto program = new MaterialWaterProgram(
                         {
-
+                            MaterialWaterProgram::ParameterField(
+                                material::water::afT,
+                                MaterialWaterProgram::FloatMapper(
+                                    [](RenderWaterData& data, float afx)
+                                    {
+                                        data.params.afT = afx;
+                                    })),
+                            MaterialWaterProgram::ParameterField(
+                                material::water::afRefractionScale,
+                                MaterialWaterProgram::FloatMapper(
+                                    [](RenderWaterData& data, float afx)
+                                    {
+                                        data.params.afRefractionScale = afx;
+                                    })),
+                            MaterialWaterProgram::ParameterField(
+                                material::water::a_mtxInvViewRotation,
+                                MaterialWaterProgram::Matrix4fMapper(
+                                    [](RenderWaterData& data, const cMatrixf& mtx)
+                                    {
+                                        std::copy(
+                                            std::begin(mtx.v), 
+                                            std::end(mtx.v), 
+                                            std::begin(data.mtxInvViewRotation));
+                                    })),
+                            MaterialWaterProgram::ParameterField(
+                                material::water::avReflectionMapSizeMul,
+                                MaterialWaterProgram::Vec2Mapper(
+                                    [](RenderWaterData& data, float afx, float afy)
+                                    {
+                                        data.params.reflectionMapSizeMul[0] = afx;
+                                        data.params.reflectionMapSizeMul[1] = afy;
+                                    })),
+                            MaterialWaterProgram::ParameterField(
+                                material::water::afWaveAmplitude,
+                                MaterialWaterProgram::FloatMapper(
+                                    [](RenderWaterData& data, float afx)
+                                    {
+                                        data.params.afWaveAmplitude = afx;
+                                    })),
+                            MaterialWaterProgram::ParameterField(
+                                material::water::afWaveFreq,
+                                MaterialWaterProgram::FloatMapper(
+                                    [](RenderWaterData& data, float afx)
+                                    {
+                                        data.params.afWaveFreq = afx;
+                                    })),
+                             MaterialWaterProgram::ParameterField(
+                                material::water::avFogStartAndLength,
+                                MaterialWaterProgram::Vec2Mapper(
+                                    [](RenderWaterData& data, float afx, float afy)
+                                    {
+                                        data.params.u_fogStart = afx;
+                                        data.params.u_fogEnd = afy;
+                                    })),
+                            MaterialWaterProgram::ParameterField(
+                                material::water::avFogColor,
+                                MaterialWaterProgram::Vec4Mapper(
+                                    [](RenderWaterData& data, float afx, float afy, float afz, float afw)
+                                    {
+                                        data.fogColor[0] = afx;
+                                        data.fogColor[1] = afy;
+                                        data.fogColor[2] = afz;
+                                        data.fogColor[3] = afw;
+                                    })),
+                            MaterialWaterProgram::ParameterField(
+                                material::water::afFalloffExp,
+                                MaterialWaterProgram::FloatMapper(
+                                    [](RenderWaterData& data, float afx)
+                                    {
+                                        data.params.falloffExp = afx;
+                                    })),
+                            MaterialWaterProgram::ParameterField(
+                                material::water::avReflectionFadeStartAndLength,
+                                MaterialWaterProgram::Vec2Mapper(
+                                    [](RenderWaterData& data, float afx, float afy)
+                                    {
+                                        data.params.reflectionFadeStart = afx;
+                                        data.params.reflectionFadeStarLength = afy;
+                                    })),
+                            MaterialWaterProgram::ParameterField(
+                                material::water::avFrenselBiasPow,
+                                MaterialWaterProgram::Vec2Mapper(
+                                    [](RenderWaterData& data, float afx, float afy)
+                                    {
+                                        data.params.u_frenselBiasPow[0] = afx;
+                                        data.params.u_frenselBiasPow[1] = afy;
+                                    })),
                         },
                         name,
                         programHandle,
                         false,
                         eGpuProgramFormat_BGFX);
 
+                    program->data().params.useFog = hasDiffuseFog ? 1.0f : 0.0f;
+                    program->data().params.useRefraction = iRenderer::GetRefractionEnabled() ? 1.0f : 0.0f;
+                    program->data().params.useReflection = hasReflection;
+                    program->data().params.useReflectionFading = hasReflectionFading;
+                    program->data().params.useCubeMapReflection = hasCubeMap;
+                    program->data().params.useRefractionEdgeCheck = 1.0f;
                     return program;
                 });
         }
+        return nullptr;
 
-        return NULL;
     }
 
     //--------------------------------------------------------------------------
@@ -456,10 +567,11 @@ namespace hpl
 
         /////////////////////////////////////
         // Set up the blend mode
-        if (iRenderer::GetRefractionEnabled())
+        if (iRenderer::GetRefractionEnabled()) {
             apMaterial->SetBlendMode(eMaterialBlendMode_None);
-        else
+        } else {
             apMaterial->SetBlendMode(eMaterialBlendMode_Mul);
+        }
 
         /////////////////////////////////////
         // Set up the refraction

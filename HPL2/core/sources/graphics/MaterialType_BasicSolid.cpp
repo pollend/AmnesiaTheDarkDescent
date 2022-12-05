@@ -513,7 +513,7 @@ namespace hpl
                 float u_useAlphaMap;
                 float u_useDissolveFilter;
                 float u_useDissolveAlphaMap;
-                float u_unused2;
+                float u_unused1;
             } params;
         };
         using MaterialZProgram = BGFXProgram<RenderZData>;

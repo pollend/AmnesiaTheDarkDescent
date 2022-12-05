@@ -261,55 +261,107 @@ target_link_libraries(HPL2
 #     INCLUDES
 #         ${CMAKE_CURRENT_SOURCE_DIR}/resources)
 
+
+hpl_add_shader(
+    HPL_CORE_SHADER
+        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_decal_material.sc"
+    INCLUDES
+        ${CMAKE_CURRENT_SOURCE_DIR}/resources
+    VARYINGDEF
+        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_decal_material.io")
+
+hpl_add_shader(
+    HPL_CORE_SHADER
+        "${CMAKE_CURRENT_SOURCE_DIR}/resource/fs_decal_material.sc"
+    INCLUDES
+        ${CMAKE_CURRENT_SOURCE_DIR}/resources
+    VARYINGDEF
+        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_decal_material.io")
+
+hpl_add_shader(
+    HPL_CORE_SHADER
+        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_water_material.sc"
+    INCLUDES
+        ${CMAKE_CURRENT_SOURCE_DIR}/resources
+    VARYINGDEF
+        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_water_material.io")
+
+hpl_add_shader(
+    HPL_CORE_SHADER
+        "${CMAKE_CURRENT_SOURCE_DIR}/resource/fs_water_material.sc"
+    INCLUDES
+        ${CMAKE_CURRENT_SOURCE_DIR}/resources
+    VARYINGDEF
+        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_water_material.io")
+
+
+
 hpl_add_shader(
     HPL_CORE_SHADER
         "${CMAKE_CURRENT_SOURCE_DIR}/resource/fs_basic_solid_z.sc"
-    VARYING
-        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_basic_solid_z.io"
     INCLUDES
-        ${CMAKE_CURRENT_SOURCE_DIR}/resources)
+        ${CMAKE_CURRENT_SOURCE_DIR}/resources
+    VARYINGDEF
+        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_basic_solid_z.io")
 
 hpl_add_shader(
     HPL_CORE_SHADER
         "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_basic_solid_z.sc"
-    VARYING
-        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_basic_solid_z.io"
     INCLUDES
-        ${CMAKE_CURRENT_SOURCE_DIR}/resources)
+        ${CMAKE_CURRENT_SOURCE_DIR}/resources
+    VARYINGDEF
+        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_basic_solid_z.io")
 
 
 hpl_add_shader(
     HPL_CORE_SHADER
         "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_basic_solid_diffuse.sc"
-    VARYING
-        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_basic_solid_diffuse.io" 
     INCLUDES
-        ${CMAKE_CURRENT_SOURCE_DIR}/resources)
+        ${CMAKE_CURRENT_SOURCE_DIR}/resources
+    VARYINGDEF
+        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_basic_solid_diffuse.io" )
 
 hpl_add_shader(
     HPL_CORE_SHADER
         "${CMAKE_CURRENT_SOURCE_DIR}/resource/fs_basic_solid_diffuse.sc"
-    VARYING
-        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_basic_solid_diffuse.io" 
     INCLUDES
-        ${CMAKE_CURRENT_SOURCE_DIR}/resources)
+        ${CMAKE_CURRENT_SOURCE_DIR}/resources
+    VARYINGDEF
+        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_basic_solid_diffuse.io" )
 
 
 hpl_add_shader(
     HPL_CORE_SHADER
         "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_basic_solid_illumination.sc"
-    VARYING
-        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_basic_solid_illumination.io" 
     INCLUDES
-        ${CMAKE_CURRENT_SOURCE_DIR}/resources)
+        ${CMAKE_CURRENT_SOURCE_DIR}/resources
+    VARYINGDEF
+        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_basic_solid_illumination.io" )
 
 hpl_add_shader(
     HPL_CORE_SHADER
         "${CMAKE_CURRENT_SOURCE_DIR}/resource/fs_basic_solid_illumination.sc"
-    VARYING
-        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_basic_solid_illumination.io" 
     INCLUDES
-        ${CMAKE_CURRENT_SOURCE_DIR}/resources)
+        ${CMAKE_CURRENT_SOURCE_DIR}/resources
+    VARYINGDEF
+        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_basic_solid_illumination.io" )
+
+hpl_add_shader(
+    HPL_CORE_SHADER
+        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_basic_translucent_material.sc"
+    INCLUDES
+        ${CMAKE_CURRENT_SOURCE_DIR}/resources
+    VARYINGDEF
+        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_basic_translucent_material.io" )
+
+hpl_add_shader(
+    HPL_CORE_SHADER
+        "${CMAKE_CURRENT_SOURCE_DIR}/resource/fs_basic_translucent_material.sc"
+    INCLUDES
+        ${CMAKE_CURRENT_SOURCE_DIR}/resources
+    VARYINGDEF
+        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_basic_translucent_material.io" )
+        
 
 
 add_custom_target(

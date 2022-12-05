@@ -1,6 +1,6 @@
 
 function( hpl_add_shader ARG_OUT FILE FOLDER)
-    cmake_parse_arguments( ARG "TARGET_NAME" "DEFINES;INCLUDES;VARYING" "" ${ARGN} )
+    cmake_parse_arguments( ARG "" "DEFINES;INCLUDES;VARYINGDEF;TARGET_NAME" "" ${ARGN} )
     get_filename_component( FILENAME "${FILE}" NAME_WE )
     
     string( SUBSTRING "${FILENAME}" 0 2 TYPE )
@@ -37,8 +37,8 @@ function( hpl_add_shader ARG_OUT FILE FOLDER)
         endif()
         list(APPEND COMMON INCLUDES "${BGFX_DIR}/src" )
 
-        if(ARG_VARYING)
-            list(APPEND COMMON VARYINGDEF "${VARYING}" )
+        if (ARG_VARYINGDEF)
+            list(APPEND COMMON VARYINGDEF "${ARG_VARYINGDEF}" )
         endif()
 
         if( WIN32 )

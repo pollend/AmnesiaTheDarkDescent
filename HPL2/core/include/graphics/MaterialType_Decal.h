@@ -16,9 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
-
-#ifndef HPL_MATERIAL_DECAL_H
-#define HPL_MATERIAL_DECAL_H
+#pragma once 
 
 #include "bgfx/bgfx.h"
 #include "graphics/MaterialType.h"
@@ -65,8 +63,7 @@ namespace hpl {
 		void CompileMaterialSpecifics(cMaterial *apMaterial);
 
 	private:
-		bgfx::ProgramHandle _decalProgram;
-
+		bgfx::ProgramHandle _programHandler;
 		bgfx::UniformHandle _u_mtxUV;
 
 		void LoadData();
@@ -76,4 +73,3 @@ namespace hpl {
 	//---------------------------------------------------
 
 };
-#endif // HPL_MATERIAL_DECAL_H
