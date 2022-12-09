@@ -20,6 +20,7 @@
 #ifndef HPL_MATERIAL_TYPE_H
 #define HPL_MATERIAL_TYPE_H
 
+#include "graphics/GraphicsContext.h"
 #include "system/SystemTypes.h"
 #include "engine/EngineTypes.h"
 #include "math/MathTypes.h"
@@ -97,8 +98,11 @@ namespace hpl {
 		virtual void SetupTypeSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderer *apRenderer)=0;
 		virtual void SetupMaterialSpecificData(	eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial *apMaterial,
 												iRenderer *apRenderer)=0;
-		virtual void SetupObjectSpecificData(	eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderable *apObject,
+		virtual void SetupObjectSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderable *apObject,
 												iRenderer *apRenderer)=0;
+
+		virtual void SubmitMaterial(GraphicsContext& context, eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial* apMaterial, iRenderable *apObject,
+												iRenderer *apRenderer){};
 
 		int GetUsedTextureNum(){ return (int)mvUsedTextures.size(); }
 		cMaterialUsedTexture* GetUsedTexture(int alIdx){ return &mvUsedTextures[alIdx]; }

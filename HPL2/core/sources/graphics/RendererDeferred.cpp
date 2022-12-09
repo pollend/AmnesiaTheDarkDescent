@@ -2682,6 +2682,11 @@ namespace hpl {
 			iRenderable *pObject = transIt.Next();
 			cMaterial *pMaterial = pObject->GetMaterial();
 
+			iMaterialType *pMatType = pMaterial->GetType();
+			iGpuProgram *pProgram = pMaterial->GetProgram(0, eMaterialRenderMode_Diffuse);
+			pMatType->SetupTypeSpecificData(eMaterialRenderMode_Diffuse, pProgram, this);
+			pMatType->SetupMaterialSpecificData(eMaterialRenderMode_Diffuse,pProgram,pMaterial,this);
+
 			SetBlendMode(pMaterial->GetBlendMode());
 
 			SetMaterialProgram(eMaterialRenderMode_Diffuse,pMaterial);

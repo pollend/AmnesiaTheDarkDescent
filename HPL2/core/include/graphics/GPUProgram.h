@@ -17,13 +17,14 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef HPL_GPU_PROGRAM_H
-#define HPL_GPU_PROGRAM_H
-
+#pragma once
 #include "graphics/GraphicsContext.h"
+#include "graphics/Image.h"
 #include "system/SystemTypes.h"
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
+
+#include <graphics/MemberID.h>
 #include <bgfx/bgfx.h>
 
 namespace hpl {
@@ -32,6 +33,7 @@ namespace hpl {
 
 	class iGpuShader;
 	class cResources;
+	class MemberID;
 
 	//---------------------------------------------------
 
@@ -61,6 +63,8 @@ namespace hpl {
 
 		virtual int GetVariableId(const tString& asName)=0;
 		virtual bool GetVariableAsId(const tString& asName, int alId)=0;
+
+		virtual bool setImage(const MemberID& id, const Image* image) { return false;}
 
 		virtual bool SetInt(int alVarId, int alX)=0;
 		virtual bool SetFloat(int alVarId, float afX)=0;
@@ -97,6 +101,3 @@ namespace hpl {
 	//---------------------------------------------------
 
 };
-#endif // HPL_GPU_PROGRAM_H
-
-

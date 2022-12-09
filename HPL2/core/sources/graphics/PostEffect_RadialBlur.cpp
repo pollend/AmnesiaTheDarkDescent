@@ -102,14 +102,14 @@ namespace hpl {
 			value[3] = blurStartDist.y;
 
 			auto& descriptor = target.GetDescriptor();
-			bgfx::setViewRect(view, 0, 0, descriptor.width, descriptor.height);
+			bgfx::setViewRect(view, 0, 0, descriptor.m_width, descriptor.m_height);
 			bgfx::setViewFrameBuffer(view, target.GetHandle());
 			bgfx::setTexture(0, mpRadialBlurType->_s_diffuseMap, input.GetHandle());
 			bgfx::setUniform(mpRadialBlurType->_u_uniform, &value);
 			bgfx::setState(0 | 
 				BGFX_STATE_WRITE_RGB | 
 				BGFX_STATE_WRITE_A);
-			context.ScreenSpaceQuad(target.GetDescriptor().width, target.GetDescriptor().height);
+			context.ScreenSpaceQuad(target.GetDescriptor().m_width, target.GetDescriptor().m_height);
 			bgfx::submit(view, mpRadialBlurType->_program);
 		}
 	}

@@ -19,6 +19,8 @@
 
 #include "resources/MaterialManager.h"
 
+#include "graphics/Image.h"
+#include "graphics/ImageResource.h"
 #include "system/LowLevelSystem.h"
 #include "system/String.h"
 #include "system/System.h"
@@ -369,7 +371,9 @@ namespace hpl {
 		for(int i=0; i< pMatType->GetUsedTextureNum(); ++i)
 		{
 			cMaterialUsedTexture* pUsedTexture = pMatType->GetUsedTexture(i);
-			iTexture *pTex = NULL;
+			// iTexture *pTex = NULL;
+
+			ImageResource* pImageResource = nullptr;
 
 			tString sTextureType = GetTextureString(pUsedTexture->mType);
 			//Log("Trying to load type: %s\n",sTextureType.c_str());
@@ -402,54 +406,58 @@ namespace hpl {
 
 			if(animMode != eTextureAnimMode_None)
 			{
-				pTex = mpResources->GetTextureManager()->CreateAnim(sFile,bMipMaps,type,eTextureUsage_Normal,mlTextureSizeDownScaleLevel);
+				// pTex = mpResources->GetTextureManager()->CreateAnim(sFile,bMipMaps,type,eTextureUsage_Normal,mlTextureSizeDownScaleLevel);
 			}
 			else
 			{
 
 				if(type == eTextureType_1D)
 				{
-					pTex = mpResources->GetTextureManager()->Create1D(sFile,bMipMaps,
-																			eTextureUsage_Normal,
-																			mlTextureSizeDownScaleLevel);
+					// pTex = mpResources->GetTextureManager()->Create1D(sFile,bMipMaps,
+					// 														eTextureUsage_Normal,
+					// 														mlTextureSizeDownScaleLevel);
 				}
 				else if(type == eTextureType_2D)
 				{
-					pTex = mpResources->GetTextureManager()->Create2D(sFile,bMipMaps, eTextureType_2D,
+					pImageResource = mpResources->GetTextureManager()->Create2DImage(sFile,bMipMaps, eTextureType_2D,
 																		eTextureUsage_Normal,
 																		mlTextureSizeDownScaleLevel);
+					// pImageResource = mpResources->
+					// pTex = mpResources->GetTextureManager()->Create2D(sFile,bMipMaps, eTextureType_2D,
+					// 													eTextureUsage_Normal,
+					// 													mlTextureSizeDownScaleLevel);
 				}
 				else if(type == eTextureType_3D)
 				{
-					pTex = mpResources->GetTextureManager()->Create3D(sFile,bMipMaps,
-																		eTextureUsage_Normal,
-																		mlTextureSizeDownScaleLevel);
+					// pTex = mpResources->GetTextureManager()->Create3D(sFile,bMipMaps,
+					// 													eTextureUsage_Normal,
+					// 													mlTextureSizeDownScaleLevel);
 				}
 				else if(type == eTextureType_CubeMap)
 				{
 					//Check for DDS ending and load cubemap as file.
-					pTex = mpResources->GetTextureManager()->CreateCubeMap(sFile,bMipMaps,
-																			eTextureUsage_Normal,
-																			mlTextureSizeDownScaleLevel);
+					// pTex = mpResources->GetTextureManager()->CreateCubeMap(sFile,bMipMaps,
+					// 														eTextureUsage_Normal,
+					// 														mlTextureSizeDownScaleLevel);
 				}
 			}
 
-			if(pTex==NULL)
+			if(!pImageResource)
 			{
 				mpResources->DestroyXmlDocument(pDoc);
 				hplDelete(pMat);
-				return NULL;
+				return nullptr;
 			}
 
-			pTex->SetFrameTime(fFrameTime);
-			pTex->SetAnimMode(animMode);
+			// pTex->SetFrameTime(fFrameTime);
+			// pTex->SetAnimMode(animMode);
 
-			pTex->SetWrapSTR(wrap);
+			// pTex->SetWrapSTR(wrap);
 
-			pTex->SetFilter(mTextureFilter);
-			pTex->SetAnisotropyDegree(mfTextureAnisotropy);
+			// pTex->SetFilter(mTextureFilter);
+			// pTex->SetAnisotropyDegree(mfTextureAnisotropy);
 
-			pMat->SetTexture(pUsedTexture->mType, pTex);
+			pMat->SetImage(pUsedTexture->mType, pImageResource);
 		}
 
 		///////////////////////////

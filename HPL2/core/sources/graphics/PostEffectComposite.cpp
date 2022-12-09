@@ -62,12 +62,15 @@ namespace hpl
 
     void cPostEffectComposite::RebuildSwapChain(uint16_t width, uint16_t height)  {
         ImageDescriptor desc;
-        desc.width = width;
-        desc.height = height;
+        desc.m_width = width;
+        desc.m_height = height;
         desc.format = bgfx::TextureFormat::RGBA8;
 
-        _images[0] = std::make_shared<Image>(desc);
-        _images[1] = std::make_shared<Image>(desc);
+        _images[0] = std::make_shared<Image>();
+        _images[1] = std::make_shared<Image>();
+
+        _images[0]->Initialize(desc, nullptr);
+        _images[1]->Initialize(desc, nullptr);
 
         _renderTargets[0] = RenderTarget(_images[0]);
         _renderTargets[1] = RenderTarget(_images[1]);

@@ -2,41 +2,37 @@
 #include "bgfx/bgfx.h"
 #include <cstdint>
 
-
 namespace hpl
 {
 
     ImageDescriptor::ImageDescriptor(const ImageDescriptor& desc)
-        : width(desc.width)
-        , height(desc.height)
+        : m_width(desc.m_width)
+        , m_height(desc.m_height)
+        , m_arraySize(desc.m_arraySize)
+        , m_hasMipMaps(desc.m_hasMipMaps)
         , format(desc.format)
     {
     }
     ImageDescriptor::ImageDescriptor()
-        : width(0)
-        , height(0)
+        : m_width(0)
+        , m_height(0)
+        , m_arraySize(1)
+        , m_hasMipMaps(false)
         , format(bgfx::TextureFormat::Unknown)
     {
     }
 
+    ImageDescriptor ImageDescriptor::CreateTexture2D(uint16_t width, uint16_t height, bool hasMipMaps, bgfx::TextureFormat::Enum format) {
+        ImageDescriptor desc;
+        desc.m_width = width;
+        desc.m_height = height;
+        desc.m_hasMipMaps = hasMipMaps;
+        desc.format = format;
+        return desc;
+    }
+
     Image::Image()
     {
-    }
-
-    Image::Image(const ImageDescriptor& descriptor)
-        : _descriptor(descriptor)
-    {
-        _handle = bgfx::createTexture2D(descriptor.width, descriptor.height, false, 1, descriptor.format, BGFX_TEXTURE_RT);
-    }
-
-    void Image::write(uint16_t x, uint16_t y, uint16_t width, uint16_t height, size_t offset, void* data, size_t size)
-    {
-        bgfx::updateTexture2D(_handle, 0, 0, x, y, width, height, bgfx::copy(data, size));
-    }
-
-    const ImageDescriptor& Image::GetDescriptor() const
-    {
-        return _descriptor;
     }
 
     Image::~Image()
@@ -47,7 +43,30 @@ namespace hpl
         }
     }
 
-    static bgfx::TextureFormat::Enum FromHPLTextureFormat(ePixelFormat format)
+    void Image::Initialize(const ImageDescriptor& descriptor, const bgfx::Memory* mem) {
+        _descriptor = descriptor;
+
+        _handle = bgfx::createTexture2D(
+            descriptor.m_width, descriptor.m_height, 
+            descriptor.m_hasMipMaps, 1, descriptor.format, BGFX_TEXTURE_RT, mem);
+    }
+    
+    void Image::Invalidate() {
+
+    }
+
+    // void Image::write(uint16_t x, uint16_t y, uint16_t width, uint16_t height, size_t offset, void* data, size_t size)
+    // {
+    //     bgfx::updateTexture2D(_handle, 0, 0, x, y, width, height, bgfx::copy(data, size));
+    // }
+
+    const ImageDescriptor& Image::GetDescriptor() const
+    {
+        return _descriptor;
+    }
+
+
+    bgfx::TextureFormat::Enum Image::FromHPLTextureFormat(ePixelFormat format)
     {
         switch (format)
         {
@@ -107,18 +126,7 @@ namespace hpl
         return bgfx::TextureFormat::Unknown;
     }
 
-    static Image FromBitmap(const cBitmap& bitmap)
-    {
-        ImageDescriptor descriptor;
-        descriptor.format = FromHPLTextureFormat(bitmap.GetPixelFormat());
-        // bitmap.GetPixelFormat()
-
-        // bitmap.GetPixelFormat()
-        // bgfx::createTexture2D()
-        return Image();
-    }
-
-    bgfx::TextureHandle Image::GetHandle()
+    bgfx::TextureHandle Image::GetHandle() const
     {
         return _handle;
     }

@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include "graphics/Image.h"
 #include "graphics/MaterialType.h"
 #include "graphics/Material.h"
 #include <bgfx/bgfx.h>
@@ -68,6 +69,17 @@ namespace hpl {
 		bgfx::ProgramHandle _basicSolidDiffuseProgram;
 		bgfx::ProgramHandle _illuminationProgram;
 
+		bgfx::UniformHandle m_s_normalMap;
+		bgfx::UniformHandle m_s_specularMap;
+		bgfx::UniformHandle m_s_heightMap;
+		bgfx::UniformHandle m_s_diffuseMap;
+		bgfx::UniformHandle m_s_envMapAlphaMap;
+
+		bgfx::UniformHandle m_s_dissolveMap;
+		bgfx::UniformHandle m_s_dissolveAlphaMap;
+
+		bgfx::UniformHandle m_s_envMap;
+
 		bgfx::UniformHandle _u_param;
 		bgfx::UniformHandle _u_mtxUv;
 
@@ -75,6 +87,8 @@ namespace hpl {
 
 		bgfx::UniformHandle _s_diffuseMap;
 		bgfx::UniformHandle _s_dissolveMap;
+
+		ImageResource *m_dissolveImage;
 
 		iTexture *mpDissolveTexture;
 
@@ -118,6 +132,9 @@ namespace hpl {
 										iRenderer *apRenderer);
 		void SetupObjectSpecificData(	eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderable *apObject,
 										iRenderer *apRenderer);
+		
+		virtual void SubmitMaterial(GraphicsContext& context, eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial* apMaterial, iRenderable *apObject,
+												iRenderer *apRenderer) override;
 
 		iMaterialVars* CreateSpecificVariables();
 		void LoadVariables(cMaterial *apMaterial, cResourceVarsObject *apVars);

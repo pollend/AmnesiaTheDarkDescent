@@ -17,11 +17,12 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef HPL_TEXTURE_MANAGER_H
-#define HPL_TEXTURE_MANAGER_H
+#pragma once
 
+#include <graphics/Image.h>
 #include "resources/ResourceManager.h"
 #include "graphics/Texture.h"
+#include <functional>
 
 namespace hpl {
 
@@ -29,6 +30,7 @@ namespace hpl {
 	class cResources;
 	class iTexture;
 	class cBitmapLoaderHandler;
+	class ImageResource;
 
 	//------------------------------------------------------
 
@@ -42,6 +44,16 @@ namespace hpl {
 	public:
 		cTextureManager(cGraphics* apGraphics,cResources *apResources);
 		~cTextureManager();
+
+
+		ImageResource* Create1DImage(const tString& asName,bool abUseMipMaps, eTextureUsage aUsage=eTextureUsage_Normal,
+							unsigned int alTextureSizeLevel=0);
+
+		ImageResource* Create2DImage(const tString& asName,bool abUseMipMaps,eTextureType aType= eTextureType_2D,
+							eTextureUsage aUsage=eTextureUsage_Normal,unsigned int alTextureSizeLevel=0);
+
+		ImageResource* Create3DImage(const tString& asName,bool abUseMipMaps, eTextureUsage aUsage=eTextureUsage_Normal,
+							unsigned int alTextureSizeLevel=0);
 
 		iTexture* Create1D(	const tString& asName,bool abUseMipMaps, eTextureUsage aUsage=eTextureUsage_Normal,
 							unsigned int alTextureSizeLevel=0);
@@ -76,7 +88,10 @@ namespace hpl {
 									eTextureUsage aUsage, eTextureType aType,
 									unsigned int alTextureSizeLevel);
 
+		ImageResource* _wrapperImageResource(const tString& asName, std::function<ImageResource*(const tString& asName, const tWString& path, cBitmap* bitmap)> createImageHandler);
+
 		iTexture* FindTexture2D(const tString &asName, tWString &asFilePath);
+		ImageResource* FindImageResource(const tString &asName, tWString &asFilePath);
 
 		tTextureAttenuationMap m_mapAttenuationTextures;
 
@@ -90,4 +105,3 @@ namespace hpl {
 	};
 
 };
-#endif // HPL_TEXTURE_MANAGER_H

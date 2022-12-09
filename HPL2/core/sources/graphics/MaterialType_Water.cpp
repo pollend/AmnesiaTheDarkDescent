@@ -406,6 +406,8 @@ namespace hpl
                         false,
                         eGpuProgramFormat_BGFX);
 
+                    program->SetMatrixf(material::water::a_mtxInvViewRotation.id(), cMatrixf::Identity);
+                    
                     program->data().params.useFog = hasDiffuseFog ? 1.0f : 0.0f;
                     program->data().params.useRefraction = iRenderer::GetRefractionEnabled() ? 1.0f : 0.0f;
                     program->data().params.useReflection = hasReflection;

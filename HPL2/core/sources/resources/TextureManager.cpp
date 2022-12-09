@@ -18,17 +18,19 @@
  */
 
 #include "resources/TextureManager.h"
-#include "system/String.h"
-#include "graphics/Graphics.h"
-#include "resources/Resources.h"
-#include "graphics/Texture.h"
-#include "graphics/LowLevelGraphics.h"
-#include "resources/LowLevelResources.h"
-#include "system/LowLevelSystem.h"
-#include "resources/FileSearcher.h"
+#include "bgfx/bgfx.h"
 #include "graphics/Bitmap.h"
+#include "graphics/Graphics.h"
+#include "graphics/Image.h"
+#include "graphics/ImageResource.h"
+#include "graphics/LowLevelGraphics.h"
+#include "graphics/Texture.h"
 #include "resources/BitmapLoaderHandler.h"
-
+#include "resources/FileSearcher.h"
+#include "resources/LowLevelResources.h"
+#include "resources/Resources.h"
+#include "system/LowLevelSystem.h"
+#include "system/String.h"
 
 namespace hpl {
 
@@ -64,13 +66,70 @@ namespace hpl {
 		Log(" Destroyed all textures\n");
 	}
 
-	//-----------------------------------------------------------------------
 
-	//////////////////////////////////////////////////////////////////////////
-	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
+	ImageResource* cTextureManager::_wrapperImageResource(const tString& asName, std::function<ImageResource*(const tString& asName, const tWString& path, cBitmap* bitmap)> createImageHandler) {
+		tWString sPath;
+		BeginLoad(asName);
 
-	//-----------------------------------------------------------------------
+		ImageResource* resource = FindImageResource(asName, sPath);
+		if( resource==NULL && sPath!=_W(""))
+		{
+			// pTexture = FindTexture2D(asName,sPath);
+			cBitmap *pBmp = mpBitmapLoaderHandler->LoadBitmap(sPath,0);
+			if(!pBmp) {
+				
+				Error("Texture manager Couldn't load bitmap '%s'\n", cString::To8Char(sPath).c_str());
+				EndLoad();
+				return nullptr;
+			}
+			resource = createImageHandler(asName, sPath, pBmp);
+		
+			//Bitmap is no longer needed so delete it.
+			hplDelete(pBmp);
+
+			// mlMemoryUsage += pTexture->GetMemorySize();
+			AddResource(resource);
+		}
+
+		if(resource) {
+			resource->IncUserCount();
+		}
+		EndLoad();
+
+		return resource;
+	}
+
+	ImageResource* cTextureManager::Create1DImage(
+		const tString& asName, bool abUseMipMaps, eTextureUsage aUsage, unsigned int alTextureSizeLevel)
+	{
+		return nullptr;
+	}
+
+	ImageResource* cTextureManager::Create2DImage(
+		const tString& asName, bool abUseMipMaps, eTextureType aType, eTextureUsage aUsage, unsigned int alTextureSizeLevel)
+	{
+		return _wrapperImageResource(
+			asName,
+			[](const tString& asName, const tWString& path, cBitmap* pBmp) -> ImageResource*
+			{
+				auto* resource = new ImageResource(asName, path);
+				ImageDescriptor desc;
+				desc.format = Image::FromHPLTextureFormat(pBmp->GetPixelFormat());
+				desc.m_width = pBmp->GetWidth();
+				desc.m_height = pBmp->GetHeight();
+				auto* image = new Image();
+
+				auto data = pBmp->GetData(0, 0);
+				resource->GetImage().Initialize(desc, bgfx::copy(data->mpData, data->mlSize));
+				return resource;
+			});
+	}
+
+	ImageResource* cTextureManager::Create3DImage(
+		const tString& asName, bool abUseMipMaps, eTextureUsage aUsage, unsigned int alTextureSizeLevel)
+	{
+		return nullptr;
+	}
 
 	iTexture* cTextureManager::Create1D(const tString& asName,bool abUseMipMaps,
 										eTextureUsage aUsage, unsigned int alTextureSizeLevel)
@@ -414,6 +473,40 @@ namespace hpl {
 	}
 
 	//-----------------------------------------------------------------------
+	ImageResource* cTextureManager::FindImageResource(const tString &asName, tWString &asFilePath) {
+		ImageResource *pTexture=NULL;
+
+		if(cString::GetFileExt(asName)=="")
+		{
+			int lMaxCount =-1;
+
+			///////////////////////
+			//Iterate the different formats
+			tStringVec *apFileFormatsVec = mpBitmapLoaderHandler->GetSupportedTypes();
+			for(tStringVecIt it = apFileFormatsVec->begin();it!= apFileFormatsVec->end();++it)
+			{
+				tWString sTempPath = _W("");
+				int lCount=0;
+
+				tString sNewName = cString::SetFileExt(asName,*it);
+				auto resource = static_cast<ImageResource*> (FindLoadedResource(sNewName, sTempPath, &lCount));
+
+				///////////////////////
+				//Check if the image exists and then check if it has the hightest equal count.
+				if((resource==nullptr && sTempPath!=_W("")) || resource != nullptr)
+				{
+					if(lCount > lMaxCount)
+					{
+						lMaxCount = lCount;
+						asFilePath = sTempPath;
+						return resource;
+					}
+				}
+			}
+		}
+		return static_cast<ImageResource*> (FindLoadedResource(asName, asFilePath));
+	}
+
 
 	iTexture* cTextureManager::FindTexture2D(const tString &asName, tWString &asFilePath)
 	{

@@ -294,8 +294,6 @@ hpl_add_shader(
     VARYINGDEF
         "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_water_material.io")
 
-
-
 hpl_add_shader(
     HPL_CORE_SHADER
         "${CMAKE_CURRENT_SOURCE_DIR}/resource/fs_basic_solid_z.sc"

@@ -19,6 +19,8 @@
 
 #include "graphics/Material.h"
 
+#include "graphics/Image.h"
+#include "graphics/ImageResource.h"
 #include "system/LowLevelSystem.h"
 #include "system/String.h"
 
@@ -90,6 +92,7 @@ namespace hpl {
 		for(int i=0;i<eMaterialTexture_LastEnum; ++i)
 		{
 			mvTextures[i] = NULL;
+			m_image[i] = NULL;
 		}
 		for(int j=0; j<2; ++j)
 		for(int i=0;i<eMaterialRenderMode_LastEnum; ++i)
@@ -100,6 +103,7 @@ namespace hpl {
 		for(int j=0; j<kMaxTextureUnits; ++j)
 		{
 			mvTextureInUnit[i][j] = NULL;
+			m_imageInUnit[i][j] = NULL;
 		}
 
 
@@ -211,6 +215,21 @@ namespace hpl {
 	}
 
 	//-----------------------------------------------------------------------
+
+
+	void cMaterial::SetImage(eMaterialTexture aType, ImageResource *apTexture) 
+	{
+		m_image[aType] = apTexture;
+	}
+
+	Image* cMaterial::GetImage(eMaterialTexture aType)
+	{
+		auto resource = m_image[aType];
+		if (resource) {
+			return &resource->GetImage();
+		}
+		return nullptr;
+	}
 
 	void cMaterial::SetTexture(eMaterialTexture aType, iTexture *apTexture)
 	{

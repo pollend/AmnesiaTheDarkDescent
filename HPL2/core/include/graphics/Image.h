@@ -1,10 +1,7 @@
 #pragma once
 
-#include "graphics/Bitmap.h"
-#include "graphics/GraphicsTypes.h"
+#include <graphics/GraphicsTypes.h>
 #include <bgfx/bgfx.h>
-#include <cstddef>
-#include <cstdint>
 
 namespace hpl
 {
@@ -12,29 +9,31 @@ namespace hpl
         ImageDescriptor();
         ImageDescriptor(const ImageDescriptor& desc);
 
-        uint16_t width;
-        uint16_t height;
+        uint16_t m_width;
+        uint16_t m_height;
+        uint16_t m_arraySize;
+        bool m_hasMipMaps;
 
+        static ImageDescriptor CreateTexture2D(uint16_t width, uint16_t height, bool hasMipMaps, bgfx::TextureFormat::Enum format);
+        
         bgfx::TextureFormat::Enum format;
 
-        // static uint32_t GetNumberChannels(bgfx::TextureFormat::Enum format);
     };
 
     class Image
     {
     public:
         Image();
-        Image(const ImageDescriptor& descriptor);
         ~Image();
 
-        void write(uint16_t x, uint16_t y, 
-            uint16_t width, uint16_t height, size_t offset, void* data, size_t size);
-        
-        bgfx::TextureHandle GetHandle();
+        // bool isValid() const { return true;}
+        void Initialize(const ImageDescriptor& descriptor,const bgfx::Memory* mem = nullptr);
+        void Invalidate();
+
+        bgfx::TextureHandle GetHandle() const;
         const ImageDescriptor& GetDescriptor() const;
 
         static bgfx::TextureFormat::Enum FromHPLTextureFormat(ePixelFormat format);
-        static Image FromBitmap(const cBitmap& bitmap);
     private:
         bgfx::TextureHandle _handle = BGFX_INVALID_HANDLE;
         ImageDescriptor _descriptor = ImageDescriptor();

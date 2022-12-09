@@ -1,5 +1,6 @@
 #pragma once
 
+#include "graphics/Image.h"
 #include "math/MathTypes.h"
 #include <algorithm>
 #include <bgfx/bgfx.h>
@@ -21,6 +22,7 @@ namespace hpl
     {
     public:
         using SubmitHandler = std::function<void(const TData& data, bgfx::ViewId view, GraphicsContext& context)>;
+        using ImageMapper = std::function<void(TData& data,const Image* value)>;
         using IntMapper = std::function<void(TData& data, int value)>;
         using FloatMapper = std::function<void(TData& data, float value)>;
         using BoolMapper = std::function<void(TData& data, bool value)>;
@@ -74,6 +76,13 @@ namespace hpl
             {
             }
 
+
+            explicit ParameterField(const MemberID id, ImageMapper mapper)
+                : _member(id)
+                , _imageMapper(mapper)
+            {
+            }
+
             const MemberID& member()
             {
                 return _member;
@@ -82,6 +91,7 @@ namespace hpl
         private:
             MemberID _member = MemberID();
             IntMapper _intMapper = nullptr;
+            ImageMapper _imageMapper = nullptr;
             FloatMapper _floatMapper = nullptr;
             BoolMapper _boolMapper = nullptr;
             Vec2Mapper _vec2Mapper = nullptr;
@@ -116,14 +126,18 @@ namespace hpl
         
         virtual void Submit(bgfx::ViewId view, GraphicsContext& context) override
         {
+            bgfx::submit(view, _handle);
         }
+
         virtual bool Link() override
         {
             return false;
         }
+
         virtual void Bind() override
         {
         }
+
         virtual void UnBind() override
         {
         }
@@ -132,6 +146,7 @@ namespace hpl
         {
             return true;
         }
+
         virtual int GetVariableId(const tString& asName) override
         {
             for (auto& field : _fields)
@@ -147,6 +162,24 @@ namespace hpl
         virtual bool GetVariableAsId(const tString& asName, int alId) override
         {
             return true;
+        }
+
+		virtual bool setImage(const MemberID& id, const Image* image) override { 
+            if(!image) {
+                return false;
+            }
+
+            return _setterById(
+                id.id(),
+                [&](ParameterField& field)
+                {
+                    if (field._imageMapper)
+                    {
+                        field._imageMapper(_data, image);
+                        return true;
+                    }
+                    return false;
+                });
         }
 
         virtual bool SetInt(int alVarId, int alX) override
