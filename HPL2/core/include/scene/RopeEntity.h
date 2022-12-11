@@ -16,10 +16,10 @@
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
+#pragma once
 
-#ifndef HPL_ROPE_ENTITY_H
-#define HPL_ROPE_ENTITY_H
-
+#include <graphics/BufferIndex.h>
+#include <graphics/BufferVertex.h>
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
 #include "system/SystemTypes.h"
@@ -79,7 +79,6 @@ namespace hpl {
 		tString GetEntityType(){ return "RopeEntity";}
 
 		bool IsVisible();
-
 		/////////////////////////////////
 		//Renderable implementations
 		cMaterial *GetMaterial(){ return mpMaterial;}
@@ -95,8 +94,14 @@ namespace hpl {
 		int GetMatrixUpdateCount();
 
 
+		virtual BufferVertexView getVtxBuffer() override { return mlLastUpdateCount == -1 ?  BufferVertexView() : BufferVertexView(&m_vtxData, 0, (mlLastUpdateCount - 1) * 4); }
+		virtual BufferIndexView getIdxBuffer() override { return mlLastUpdateCount == -1 ?  BufferIndexView() : BufferIndexView(&m_idxData, 0, (mlLastUpdateCount - 1) * 6); }
+
 		eRenderableType GetRenderType(){ return eRenderableType_Rope;}
 	private:
+		BufferVertex  m_vtxData;
+		BufferIndex m_idxData;
+
 		cMaterialManager* mpMaterialManager;
 		iLowLevelGraphics* mpLowLevelGraphics;
 
@@ -118,4 +123,3 @@ namespace hpl {
 	};
 
 };
-#endif // HPL_ROPE_ENTITY_H

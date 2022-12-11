@@ -18,6 +18,8 @@
  */
 #pragma once
 
+#include "graphics/GraphicsContext.h"
+#include "graphics/Image.h"
 #include "graphics/Renderer.h"
 
 namespace hpl {
@@ -141,6 +143,9 @@ namespace hpl {
 		iTexture* GetRefractionTexture(){ return mpRefractionTexture;}
 		iTexture* GetReflectionTexture(){ return mpReflectionTexture;}
 
+		Image* GetRefractionImage(){ return m_refractionImage;}
+		Image* GetReflectionImage(){ return m_reflectionImage;}
+
 		//Static properties. Must be set before renderer data load.
 		static void SetGBufferType(eDeferredGBuffer aType){ mGBufferType = aType; }
 		static eDeferredGBuffer GetGBufferType(){ return mGBufferType; }
@@ -206,12 +211,12 @@ namespace hpl {
 		void RenderLights_Box_StencilFront_RenderBack();
 		void RenderLights_Box_RenderBack();
 
-		void RenderIllumination();
+		void RenderIllumination(GraphicsContext& context);
 
 		void RenderReflection(iRenderable *apObject);
 		void RenderSubMeshEntityReflection(cSubMeshEntity *pReflectionObject);
 
-		void RenderDecals();
+		void RenderDecals(GraphicsContext& context);
 		void RenderFullScreenFog();
 		void RenderFog();
 		void RenderTranslucent();
@@ -277,6 +282,10 @@ namespace hpl {
 		iTexture *mpAccumBufferTexture;
 		iTexture *mpRefractionTexture;
 		iTexture *mpReflectionTexture;
+
+
+		Image *m_refractionImage;
+		Image *m_reflectionImage;
 		iDepthStencilBuffer* mpDepthStencil[2];	//[2] = reflection or not
 
 

@@ -21,6 +21,7 @@
 #define HPL_RENDERER_H
 
 #include "graphics/GraphicsTypes.h"
+#include "graphics/Image.h"
 #include "math/MathTypes.h"
 #include "scene/SceneTypes.h"
 
@@ -265,6 +266,9 @@ namespace hpl {
 
 		virtual iTexture* GetRefractionTexture(){ return NULL;}
 		virtual iTexture* GetReflectionTexture(){ return NULL;}
+
+		Image* GetRefractionImage(){ return nullptr;}
+		Image* GetReflectionImage(){ return nullptr;}
 
 		cWorld *GetCurrentWorld(){ return mpCurrentWorld;}
 		cFrustum *GetCurrentFrustum(){ return mpCurrentFrustum;}

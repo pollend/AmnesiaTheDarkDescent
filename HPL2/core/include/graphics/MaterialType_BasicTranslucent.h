@@ -83,6 +83,9 @@ namespace hpl
             eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial* apMaterial, iRenderer* apRenderer);
         void SetupObjectSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderable* apObject, iRenderer* apRenderer);
 
+        virtual void SubmitMaterial(bgfx::ViewId id, GraphicsContext& context, eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial* apMaterial, iRenderable *apObject,
+                                    iRenderer *apRenderer) override;
+
         iMaterialVars* CreateSpecificVariables();
         void LoadVariables(cMaterial* apMaterial, cResourceVarsObject* apVars);
         void GetVariableValues(cMaterial* apMaterial, cResourceVarsObject* apVars);
@@ -96,6 +99,12 @@ namespace hpl
 		bgfx::UniformHandle _u_mtxUv;
 		bgfx::UniformHandle _u_normalMtx;
         bgfx::UniformHandle _u_invViewRotation;
+
+		bgfx::UniformHandle _s_diffuseMap;
+		bgfx::UniformHandle _s_normalMap;
+		bgfx::UniformHandle _s_refractionMap;
+		bgfx::UniformHandle _s_envMapAlphaMap;
+		bgfx::UniformHandle _s_envMap;
 
         void LoadData();
         void DestroyData();

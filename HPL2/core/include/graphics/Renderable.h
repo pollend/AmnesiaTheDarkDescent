@@ -20,6 +20,8 @@
 #ifndef HPL_RENDERABLE_H
 #define HPL_RENDERABLE_H
 
+#include "graphics/BufferIndex.h"
+#include "graphics/BufferVertex.h"
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
 #include "system/SystemTypes.h"
@@ -41,6 +43,8 @@ namespace hpl {
 	class iRenderableContainerNode;
 	class iPhysicsBody;
 	class iRenderer;
+	class BufferVertex;
+	class BufferIndex;
 
 	//------------------------------------------
 
@@ -55,6 +59,9 @@ namespace hpl {
 
 		virtual cMaterial *GetMaterial()=0;
 		virtual iVertexBuffer* GetVertexBuffer()=0;
+
+		virtual BufferVertexView getVtxBuffer() { return BufferVertexView(); }
+		virtual BufferIndexView getIdxBuffer() { return BufferIndexView(); }
 
 		virtual bool CollidesWithBV(cBoundingVolume *apBV);
 		virtual bool CollidesWithFrustum(cFrustum *apFrustum);

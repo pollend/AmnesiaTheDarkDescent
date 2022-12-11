@@ -2709,6 +2709,7 @@ namespace hpl {
 		apVec[3] = afW;
 	}
 
+	// @deprecated replace with Vector3EqualEpsilon
 	static inline bool Vector3Equal(const float* apArrayA, int alIdxA,const float* apArrayB, int alIdxB,
 					int alStride)
 	{

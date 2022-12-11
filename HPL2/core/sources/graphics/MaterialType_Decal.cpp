@@ -19,7 +19,9 @@
 
 #include "graphics/MaterialType_Decal.h"
 
+#include "bgfx/bgfx.h"
 #include "graphics/BGFXProgram.h"
+#include "graphics/Image.h"
 #include "graphics/ShaderUtil.h"
 #include "system/LowLevelSystem.h"
 #include "system/PreprocessParser.h"
@@ -54,6 +56,8 @@ namespace hpl
     namespace material::decal
     {
         static const auto a_mtxUV = MemberID("a_mtxUV", kVar_a_mtxUV);
+
+        static const auto s_diffuseMap = MemberID("s_diffuseMap");
     };
 
 //------------------------------
@@ -160,6 +164,7 @@ namespace hpl
     {
         struct DecalData
         {
+            bgfx::TextureHandle s_diffuseMap;
             float mtxUv[16];
         };
         using MaterialDecalProgram = BGFXProgram<DecalData>;
@@ -182,6 +187,13 @@ namespace hpl
                                 [](DecalData& data, const cMatrixf& value)
                                 {
                                     std::copy(std::begin(value.v), std::end(value.v), std::begin(data.mtxUv));
+                                })),
+                                MaterialDecalProgram::ParameterField(
+                            material::decal::s_diffuseMap,
+                            MaterialDecalProgram::ImageMapper(
+                                [](DecalData& data, const Image* value)
+                                {
+                                    data.s_diffuseMap = value ? value->GetHandle() : bgfx::TextureHandle{BGFX_INVALID_HANDLE};
                                 })) },
                         name,
                         programHandle,
@@ -212,19 +224,28 @@ namespace hpl
     void cMaterialType_Decal::SetupMaterialSpecificData(
         eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial* apMaterial, iRenderer* apRenderer)
     {
-        ////////////////////////////
-        // Diffuse
+        
+    }
+
+    void cMaterialType_Decal::SubmitMaterial(
+        bgfx::ViewId id,
+        GraphicsContext& context,
+        eMaterialRenderMode aRenderMode,
+        iGpuProgram* apProgram,
+        cMaterial* apMaterial,
+        iRenderable* apObject,
+        iRenderer* apRenderer)
+    {
         if (aRenderMode == eMaterialRenderMode_Diffuse)
         {
             cMaterialType_Decal_Vars* pVars = static_cast<cMaterialType_Decal_Vars*>(apMaterial->GetVars());
-
-            /////////////////////////
-            // UV Animation
             if (apMaterial->HasUvAnimation())
             {
                 apProgram->SetMatrixf(kVar_a_mtxUV, apMaterial->GetUvMatrix());
             }
         }
+        apProgram->setImage(material::decal::s_diffuseMap, apMaterial->GetImage(eMaterialTexture_Diffuse));
+        apProgram->Submit(id, context);
     }
 
     //--------------------------------------------------------------------------

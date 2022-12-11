@@ -17,6 +17,7 @@ namespace hpl
 {
 
     // this is wrapper around GpuProgram until a replacement is found
+    // mapping is too complicated need to be replaced with some kind of table or sorts maybe??
     template<typename TData>
     class BGFXProgram : public iGpuProgram
     {
@@ -165,10 +166,6 @@ namespace hpl
         }
 
 		virtual bool setImage(const MemberID& id, const Image* image) override { 
-            if(!image) {
-                return false;
-            }
-
             return _setterById(
                 id.id(),
                 [&](ParameterField& field)

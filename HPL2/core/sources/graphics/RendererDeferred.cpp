@@ -19,6 +19,8 @@
 
 #include "graphics/RendererDeferred.h"
 
+#include "bgfx/bgfx.h"
+#include "graphics/GraphicsContext.h"
 #include "math/Math.h"
 
 #include "system/LowLevelSystem.h"
@@ -879,7 +881,8 @@ namespace hpl {
 			return;
 		}
 
-		RenderDecals();
+		hpl::GraphicsContext contex;
+		RenderDecals(contex);
 
 		RunCallback(eRendererMessage_PostGBuffer);
 
@@ -897,7 +900,7 @@ namespace hpl {
 		//return;
 
 
-		RenderIllumination();
+		RenderIllumination(contex);
 
 		RenderFog();
 		RenderFullScreenFog();
@@ -2615,7 +2618,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cRendererDeferred::RenderIllumination()
+	void cRendererDeferred::RenderIllumination(GraphicsContext& context)
 	{
 		if(mpCurrentRenderList->ArrayHasObjects(eRenderListType_Illumination)==false) return;
 
@@ -2624,6 +2627,8 @@ namespace hpl {
 		cRenderableVecIterator illumIt = mpCurrentRenderList->GetArrayIterator(eRenderListType_Illumination);
 		if(illumIt.HasNext()==false) return;
 
+
+		bgfx::ViewId illuminationId = context.StartPass("Illumination");
 
 		SetDepthTest(true);
 		SetDepthWrite(false);
@@ -2637,16 +2642,24 @@ namespace hpl {
 		while(illumIt.HasNext())
 		{
 			iRenderable *pObject = illumIt.Next();
-			cMaterial *pMaterial = pObject->GetMaterial();
+			cMaterial* pMaterial = pObject->GetMaterial();
+			iMaterialType* materialType = pMaterial->GetType();
+			iGpuProgram* program = pMaterial->GetProgram(0, eMaterialRenderMode_Illumination);
+
+			
 			SetMaterialProgram(eMaterialRenderMode_Illumination,pMaterial);
 
 			SetTexture(0,pMaterial->GetTextureInUnit(eMaterialRenderMode_Illumination,0));
 
-			SetMatrix(pObject->GetModelMatrixPtr());
+			// SetMatrix(pObject->GetModelMatrixPtr());
+			bgfx::setTransform(pObject->GetModelMatrixPtr()->v);
 
 			SetVertexBuffer(pObject->GetVertexBuffer());
 
 			DrawCurrentMaterial(eMaterialRenderMode_Illumination, pObject);
+		
+		
+			materialType->SubmitMaterial(illuminationId, context, eMaterialRenderMode_Illumination, program, pMaterial, pObject, this);
 		}
 
 		SetDepthTestFunc(eDepthTestFunc_LessOrEqual);
@@ -2657,7 +2670,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cRendererDeferred::RenderDecals()
+	void cRendererDeferred::RenderDecals(GraphicsContext& context)
 	{
 		if(mpCurrentRenderList->ArrayHasObjects(eRenderListType_Decal)==false) return;
 
@@ -2698,6 +2711,8 @@ namespace hpl {
 			SetVertexBuffer(pObject->GetVertexBuffer());
 
 			DrawCurrent();
+
+			// pMatType->SubmitMaterial()
 		}
 
 		SetAlphaMode(eMaterialAlphaMode_Solid);
@@ -3505,7 +3520,5 @@ namespace hpl {
 		SetNormalFrustumProjection();
 		END_RENDER_PASS();
 	}
-
-	//-----------------------------------------------------------------------
 
 }

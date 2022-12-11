@@ -22,6 +22,7 @@
 #include "bgfx/bgfx.h"
 #include "graphics/BGFXProgram.h"
 #include "graphics/GraphicsTypes.h"
+#include "graphics/Image.h"
 #include "graphics/ShaderUtil.h"
 #include "math/MathTypes.h"
 #include "system/LowLevelSystem.h"
@@ -94,6 +95,11 @@ namespace hpl
         static const auto avRimLightMulPow = MemberID("avRimLightMulPow", kVar_avRimLightMulPow);
         static const auto afLightLevel = MemberID("afLightLevel", kVar_afLightLevel);
 
+        static const auto s_diffuseMap = MemberID("s_diffuseMap");
+        static const auto s_normalMap = MemberID("s_normalMap");
+        static const auto s_refractionMap = MemberID("s_refractionMap");
+        static const auto s_envMapAlphaMap = MemberID("s_envMapAlphaMap");
+        static const auto s_envMap = MemberID("s_envMap");
     }
 
     static cProgramComboFeature vDiffuseFeatureVec[] = {
@@ -155,6 +161,13 @@ namespace hpl
         _u_mtxUv = bgfx::createUniform("u_mtxUV", bgfx::UniformType::Mat4);
         _u_normalMtx = bgfx::createUniform("u_normalMtx", bgfx::UniformType::Mat4);
         _u_invViewRotation = bgfx::createUniform("mtxInvViewRotation", bgfx::UniformType::Mat4);
+        
+        _s_diffuseMap  = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
+        _s_normalMap  = bgfx::createUniform("s_normalMap", bgfx::UniformType::Sampler);
+        _s_refractionMap  = bgfx::createUniform("s_refractionMap", bgfx::UniformType::Sampler);
+        _s_envMapAlphaMap  = bgfx::createUniform("s_envMapAlphaMap", bgfx::UniformType::Sampler);
+        _s_envMap  = bgfx::createUniform("s_envMap", bgfx::UniformType::Sampler);
+
         _programHandle = hpl::loadProgram("vs_basic_translucent_material", "fs_basic_translucent_material");
     }
 
@@ -305,6 +318,13 @@ namespace hpl
             float normalMtx[16];
             float mtxInvViewRotation[16];
             float mtxUV[16];
+
+            bgfx::TextureHandle s_diffuseMap = BGFX_INVALID_HANDLE;
+            bgfx::TextureHandle s_normalMap = BGFX_INVALID_HANDLE;
+            bgfx::TextureHandle s_refractionMap = BGFX_INVALID_HANDLE;
+            bgfx::TextureHandle s_envMapAlphaMap = BGFX_INVALID_HANDLE;
+            bgfx::TextureHandle s_envMap = BGFX_INVALID_HANDLE;
+
             struct
             {
                 float useBlendModeAdd;
@@ -455,11 +475,48 @@ namespace hpl
                                     {
                                         data.params.lightLevel = afx;
                                     })),
+                            MaterialTranslucentProgram::ParameterField(
+                                material::translucent::s_diffuseMap,
+                                MaterialTranslucentProgram::ImageMapper(
+                                    [](RefractionData& data,const Image* value)
+                                    {
+                                        data.s_diffuseMap = value ? value->GetHandle() : bgfx::TextureHandle{BGFX_INVALID_HANDLE};
+                                    })),
+                            MaterialTranslucentProgram::ParameterField(
+                                material::translucent::s_normalMap,
+                                MaterialTranslucentProgram::ImageMapper(
+                                    [](RefractionData& data,const Image* value)
+                                    {
+                                        data.s_normalMap = value ? value->GetHandle() : bgfx::TextureHandle{BGFX_INVALID_HANDLE};
+                                    })),
+                            MaterialTranslucentProgram::ParameterField(
+                                material::translucent::s_refractionMap,
+                                MaterialTranslucentProgram::ImageMapper(
+                                    [](RefractionData& data,const Image* value)
+                                    {
+                                        data.s_refractionMap = value ? value->GetHandle() : bgfx::TextureHandle{BGFX_INVALID_HANDLE};
+                                    })),
+                            MaterialTranslucentProgram::ParameterField(
+                                material::translucent::s_envMapAlphaMap,
+                                MaterialTranslucentProgram::ImageMapper(
+                                    [](RefractionData& data,const Image* value)
+                                    {
+                                        data.s_envMapAlphaMap = value ? value->GetHandle() : bgfx::TextureHandle{BGFX_INVALID_HANDLE};
+                                    })),
+                            MaterialTranslucentProgram::ParameterField(
+                                material::translucent::s_envMap,
+                                MaterialTranslucentProgram::ImageMapper(
+                                    [](RefractionData& data,const Image* value)
+                                    {
+                                        data.s_envMap = value ? value->GetHandle() : bgfx::TextureHandle{BGFX_INVALID_HANDLE};
+                                    })),
                         },
                         name,
                         programHandle,
                         false,
                         eGpuProgramFormat_BGFX);
+
+
 
                     program->SetSubmitHandler(
                         [
@@ -523,7 +580,12 @@ namespace hpl
                      u_mtxUv = _u_mtxUv,
                      u_normalMtx = _u_normalMtx,
                      u_invViewRotation = _u_invViewRotation,
-                     programHandle = _programHandle](const tString& name)
+                     programHandle = _programHandle,
+                     s_diffuseMap = _s_diffuseMap,
+                     s_normalMap = _s_normalMap,
+                     s_refractionMap = _s_refractionMap,
+                     s_envMapAlphaMap = _s_envMapAlphaMap,
+                     s_envMap = _s_envMap](const tString& name)
                     {
                         auto program = new MaterialTranslucentProgram(
                             {
@@ -600,19 +662,67 @@ namespace hpl
                                         {
                                             data.params.lightLevel = afx;
                                         })),
+                            MaterialTranslucentProgram::ParameterField(
+                                material::translucent::s_diffuseMap,
+                                MaterialTranslucentProgram::ImageMapper(
+                                    [](RefractionData& data,const Image* value)
+                                    {
+                                        data.s_diffuseMap = value ? value->GetHandle() : bgfx::TextureHandle{BGFX_INVALID_HANDLE};
+                                    })),
+                            MaterialTranslucentProgram::ParameterField(
+                                material::translucent::s_normalMap,
+                                MaterialTranslucentProgram::ImageMapper(
+                                    [](RefractionData& data,const Image* value)
+                                    {
+                                        data.s_normalMap = value ? value->GetHandle() : bgfx::TextureHandle{BGFX_INVALID_HANDLE};
+                                    })),
+                            MaterialTranslucentProgram::ParameterField(
+                                material::translucent::s_refractionMap,
+                                MaterialTranslucentProgram::ImageMapper(
+                                    [](RefractionData& data,const Image* value)
+                                    {
+                                        data.s_refractionMap = value ? value->GetHandle() : bgfx::TextureHandle{BGFX_INVALID_HANDLE};
+                                    })),
+                            MaterialTranslucentProgram::ParameterField(
+                                material::translucent::s_envMapAlphaMap,
+                                MaterialTranslucentProgram::ImageMapper(
+                                    [](RefractionData& data,const Image* value)
+                                    {
+                                        data.s_envMapAlphaMap = value ? value->GetHandle() : bgfx::TextureHandle{BGFX_INVALID_HANDLE};
+                                    })),
+                            MaterialTranslucentProgram::ParameterField(
+                                material::translucent::s_envMap,
+                                MaterialTranslucentProgram::ImageMapper(
+                                    [](RefractionData& data,const Image* value)
+                                    {
+                                        data.s_envMap = value ? value->GetHandle() : bgfx::TextureHandle{BGFX_INVALID_HANDLE};
+                                    })),
                             },
                             name,
                             programHandle,
                             false,
                             eGpuProgramFormat_BGFX);
                         program->SetSubmitHandler(
-                            [u_param, u_mtxUv, u_normalMtx, u_invViewRotation](
-                                const RefractionData& data, bgfx::ViewId view, GraphicsContext& context)
+                            [u_param,
+                             u_mtxUv,
+                             u_normalMtx,
+                             u_invViewRotation,
+                             s_diffuseMap,
+                             s_normalMap,
+                             s_refractionMap,
+                             s_envMapAlphaMap,
+                             s_envMap](const RefractionData& data, bgfx::ViewId view, GraphicsContext& context)
                             {
                                 bgfx::setUniform(u_param, &data.params, 6);
                                 bgfx::setUniform(u_mtxUv, &data.mtxUV);
                                 bgfx::setUniform(u_normalMtx, &data.normalMtx);
                                 bgfx::setUniform(u_invViewRotation, &data.mtxInvViewRotation);
+
+                                bgfx::setTexture(0, s_diffuseMap, data.s_diffuseMap);
+                                bgfx::setTexture(1, s_normalMap, data.s_normalMap);
+                                bgfx::setTexture(2, s_refractionMap, data.s_refractionMap);
+                                bgfx::setTexture(3, s_envMapAlphaMap, data.s_envMapAlphaMap);
+                                bgfx::setTexture(4, s_envMap, data.s_envMap);
                             });
 
                         program->data().params.useBlendModeAdd = (blendMode == eMaterialBlendMode_Add) ? 1.0f : 0.0f;
@@ -648,10 +758,82 @@ namespace hpl
     void cMaterialType_Translucent::SetupMaterialSpecificData(
         eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial* apMaterial, iRenderer* apRenderer)
     {
-        cMaterialType_Translucent_Vars* pVars = (cMaterialType_Translucent_Vars*)apMaterial->GetVars();
+    }
+
+    //--------------------------------------------------------------------------
+
+    static inline float GetMaxColorValue(const cColor& aCol)
+    {
+        return cMath::Max(cMath::Max(aCol.r, aCol.g), aCol.b);
+    }
+
+    void cMaterialType_Translucent::SetupObjectSpecificData(
+        eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderable* apObject, iRenderer* apRenderer)
+    {
+        
+    }
+
+    void cMaterialType_Translucent::SubmitMaterial(
+        bgfx::ViewId id,
+        GraphicsContext& context,
+        eMaterialRenderMode aRenderMode,
+        iGpuProgram* apProgram,
+        cMaterial* apMaterial,
+        iRenderable* apObject,
+        iRenderer* apRenderer)
+    {
+        cMaterialType_Translucent_Vars* pVars = (cMaterialType_Translucent_Vars*)apObject->GetMaterial()->GetVars();
 
         bool bIlluminationPass = (aRenderMode == eMaterialRenderMode_IlluminationFog || aRenderMode == eMaterialRenderMode_Illumination);
         bool bRefractionEnabled = pVars->mbRefraction && iRenderer::GetRefractionEnabled();
+
+
+        ////////////////////////////
+        // Diffuse
+        if (aRenderMode == eMaterialRenderMode_Diffuse || aRenderMode == eMaterialRenderMode_DiffuseFog)
+        {
+            apProgram->setImage(material::translucent::s_diffuseMap, apMaterial->GetImage(eMaterialTexture_Diffuse));
+            apProgram->setImage(material::translucent::s_normalMap, apMaterial->GetImage(eMaterialTexture_NMap));
+            apProgram->setImage(material::translucent::s_refractionMap,  nullptr);
+            apProgram->setImage(material::translucent::s_envMap, apMaterial->GetImage(eMaterialTexture_CubeMap));
+            apProgram->setImage(material::translucent::s_envMapAlphaMap, apMaterial->GetImage(eMaterialTexture_CubeMapAlpha));
+
+            // switch (alUnit)
+            // {
+            // case 0:
+            //     return apMaterial->GetTexture(eMaterialTexture_Diffuse);
+            // case 1:
+            //     return apMaterial->GetTexture(eMaterialTexture_NMap);
+            // case 2:
+            //     if (bRefractionEnabled)
+            //         return mpGraphics->GetRenderer(eRenderer_Main)->GetRefractionTexture();
+            //     else
+            //         return NULL;
+            // case 3:
+            //     return apMaterial->GetTexture(eMaterialTexture_CubeMap);
+            // case 4:
+            //     return apMaterial->GetTexture(eMaterialTexture_CubeMapAlpha);
+            // }
+        }
+        ////////////////////////////
+        // Illumination
+        else if (aRenderMode == eMaterialRenderMode_Illumination || aRenderMode == eMaterialRenderMode_IlluminationFog)
+        {
+
+            apProgram->setImage(material::translucent::s_normalMap, apMaterial->GetImage(eMaterialTexture_NMap));
+            apProgram->setImage(material::translucent::s_envMap, apMaterial->GetImage(eMaterialTexture_CubeMap));
+            apProgram->setImage(material::translucent::s_envMapAlphaMap, apMaterial->GetImage(eMaterialTexture_CubeMapAlpha));
+
+            // switch (alUnit)
+            // {
+            // case 1:
+            //     return apMaterial->GetTexture(eMaterialTexture_NMap);
+            // case 3:
+            //     return apMaterial->GetTexture(eMaterialTexture_CubeMap);
+            // case 4:
+            //     return apMaterial->GetTexture(eMaterialTexture_CubeMapAlpha);
+            // }
+        }
 
         /////////////////////////
         // UV Animation
@@ -689,20 +871,6 @@ namespace hpl
             apProgram->SetFloat(kVar_afOneMinusFogAlpha, 1 - pWorld->GetFogColor().a);
             apProgram->SetFloat(kVar_afFalloffExp, pWorld->GetFogFalloffExp());
         }
-    }
-
-    //--------------------------------------------------------------------------
-
-    static inline float GetMaxColorValue(const cColor& aCol)
-    {
-        return cMath::Max(cMath::Max(aCol.r, aCol.g), aCol.b);
-    }
-
-    void cMaterialType_Translucent::SetupObjectSpecificData(
-        eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderable* apObject, iRenderer* apRenderer)
-    {
-        cMaterialType_Translucent_Vars* pVars = (cMaterialType_Translucent_Vars*)apObject->GetMaterial()->GetVars();
-
         ////////////////////////////
         // Light affects Alpha
         if (pVars->mbAffectedByLightLevel)
@@ -746,13 +914,12 @@ namespace hpl
             apProgram->SetFloat(kVar_afAlpha, apRenderer->GetTempAlpha());
             apProgram->SetFloat(kVar_afLightLevel, fLightAmount);
         }
-        ////////////////////////////
-        // Normal Alpha
         else
         {
             apProgram->SetFloat(kVar_afAlpha, apRenderer->GetTempAlpha());
             apProgram->SetFloat(kVar_afLightLevel, 1.0f);
         }
+        apProgram->Submit(id, context);
     }
 
     //--------------------------------------------------------------------------

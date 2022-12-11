@@ -616,21 +616,21 @@ namespace hpl
                             MaterialZProgram::ImageMapper(
                                 [](RenderZData& data, const Image* value)
                                 {
-                                    data.s_diffuseMap = value->GetHandle();
+                                    data.s_diffuseMap = value ? value->GetHandle() : bgfx::TextureHandle{BGFX_INVALID_HANDLE};
                                 })),
                                 MaterialZProgram::ParameterField(
                             material::solid::s_dissolveMap,
                             MaterialZProgram::ImageMapper(
                                 [](RenderZData& data, const Image* value)
                                 {
-                                    data.s_dissolveMap = value->GetHandle();
+                                    data.s_dissolveMap = value ? value->GetHandle() : bgfx::TextureHandle{BGFX_INVALID_HANDLE};
                                 })),
                                 MaterialZProgram::ParameterField(
                             material::solid::s_dissolveAlphaMap,
                             MaterialZProgram::ImageMapper(
                                 [](RenderZData& data, const Image* value)
                                 {
-                                    data.s_dissolveAlphaMap = value->GetHandle();
+                                    data.s_dissolveAlphaMap = value ? value->GetHandle() : bgfx::TextureHandle{BGFX_INVALID_HANDLE};
                                 }))},
                         name,
                         programHandle,
@@ -696,21 +696,21 @@ namespace hpl
                               MaterialZProgram::ImageMapper(
                                   [](RenderZData& data, const Image* value)
                                   {
-                                      data.s_diffuseMap = value->GetHandle();
+                                      data.s_diffuseMap = value ? value->GetHandle() : bgfx::TextureHandle{BGFX_INVALID_HANDLE};
                                   })),
                           MaterialZProgram::ParameterField(
                               material::solid::s_dissolveMap,
                               MaterialZProgram::ImageMapper(
                                   [](RenderZData& data, const Image* value)
                                   {
-                                      data.s_dissolveMap = value->GetHandle();
+                                      data.s_dissolveMap = value ? value->GetHandle() : bgfx::TextureHandle{BGFX_INVALID_HANDLE};
                                   })),
                           MaterialZProgram::ParameterField(
                               material::solid::s_dissolveAlphaMap,
                               MaterialZProgram::ImageMapper(
                                   [](RenderZData& data, const Image* value)
                                   {
-                                      data.s_dissolveAlphaMap = value->GetHandle();
+                                      data.s_dissolveAlphaMap = value ? value->GetHandle() : bgfx::TextureHandle{BGFX_INVALID_HANDLE};
                                   })) },
                         name,
                         programHandle,
@@ -809,42 +809,42 @@ namespace hpl
                               MaterialDiffuseProgram::ImageMapper(
                                   [](RenderDiffuseData& data, const Image* value)
                                   {
-                                      data.s_normalMap = value->GetHandle();
+                                      data.s_normalMap = value ? value->GetHandle() : bgfx::TextureHandle{BGFX_INVALID_HANDLE};
                                   })),
                           MaterialDiffuseProgram::ParameterField(
                               material::solid::s_specularMap,
                               MaterialDiffuseProgram::ImageMapper(
                                   [](RenderDiffuseData& data, const Image* value)
                                   {
-                                      data.s_specularMap = value->GetHandle();
+                                      data.s_specularMap = value ? value->GetHandle() : bgfx::TextureHandle{BGFX_INVALID_HANDLE};
                                   })),
                           MaterialDiffuseProgram::ParameterField(
                               material::solid::s_heightMap,
                               MaterialDiffuseProgram::ImageMapper(
                                   [](RenderDiffuseData& data, const Image* value)
                                   {
-                                      data.s_heightMap = value->GetHandle();
+                                      data.s_heightMap = value ? value->GetHandle() : bgfx::TextureHandle{BGFX_INVALID_HANDLE};
                                   })),
                           MaterialDiffuseProgram::ParameterField(
                               material::solid::s_diffuseMap,
                               MaterialDiffuseProgram::ImageMapper(
                                   [](RenderDiffuseData& data, const Image* value)
                                   {
-                                      data.s_diffuseMap = value->GetHandle();
+                                      data.s_diffuseMap = value ? value->GetHandle() : bgfx::TextureHandle{BGFX_INVALID_HANDLE};
                                   })),
                           MaterialDiffuseProgram::ParameterField(
                               material::solid::s_envMapAlphaMap,
                               MaterialDiffuseProgram::ImageMapper(
                                   [](RenderDiffuseData& data, const Image* value)
                                   {
-                                      data.s_envMapAlphaMap = value->GetHandle();
+                                      data.s_envMapAlphaMap = value ? value->GetHandle() : bgfx::TextureHandle{BGFX_INVALID_HANDLE};
                                   })),
                           MaterialDiffuseProgram::ParameterField(
                               material::solid::s_envMap,
                               MaterialDiffuseProgram::ImageMapper(
                                   [](RenderDiffuseData& data, const Image* value)
                                   {
-                                      data.s_envMap = value->GetHandle();
+                                      data.s_envMap = value ? value->GetHandle() : bgfx::TextureHandle{BGFX_INVALID_HANDLE};
                                   })) },
                         name,
                         programHandle,
@@ -919,7 +919,7 @@ namespace hpl
         return NULL;
     }
 
-    void cMaterialType_SolidDiffuse::SubmitMaterial(GraphicsContext& context, eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial* apMaterial, iRenderable *apObject,
+    void cMaterialType_SolidDiffuse::SubmitMaterial(bgfx::ViewId id, GraphicsContext& context, eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial* apMaterial, iRenderable *apObject,
 												iRenderer *apRenderer)
     {
         const auto tryUpdateUvAnimation = [&]() {

@@ -88,6 +88,13 @@ namespace hpl
         static const auto avFogStartAndLength = MemberID("avFogStartAndLength", kVar_avFogStartAndLength);
         static const auto avFogColor = MemberID("avFogColor", kVar_avFogColor);
         static const auto afFalloffExp = MemberID("afFalloffExp", kVar_afFalloffExp);
+    
+        static const auto s_diffuseMap = MemberID("s_diffuseMap");
+        static const auto s_normalMap = MemberID("s_normalMap");
+        static const auto s_refractionMap = MemberID("s_refractionMap");
+        static const auto s_reflectionMap = MemberID("s_reflectionMap");
+        static const auto s_envMap = MemberID("s_envMap");
+    
     } // namespace material::water
 
     static cProgramComboFeature vDiffuseFeatureVec[] = {
@@ -190,7 +197,6 @@ namespace hpl
         mpProgramManager->DestroyShadersAndPrograms();
     }
 
-    //--------------------------------------------------------------------------
 
     iTexture* cMaterialType_Water::GetTextureForUnit(cMaterial* apMaterial, eMaterialRenderMode aRenderMode, int alUnit)
     {
@@ -239,7 +245,6 @@ namespace hpl
         return NULL;
     }
 
-    //--------------------------------------------------------------------------
 
     iTexture* cMaterialType_Water::GetSpecialTexture(
         cMaterial* apMaterial, eMaterialRenderMode aRenderMode, iRenderer* apRenderer, int alUnit)
@@ -247,7 +252,6 @@ namespace hpl
         return NULL;
     }
 
-    //--------------------------------------------------------------------------
 
     iGpuProgram* cMaterialType_Water::GetGpuProgram(cMaterial* apMaterial, eMaterialRenderMode aRenderMode, char alSkeleton)
     {
@@ -257,6 +261,13 @@ namespace hpl
             float mtxInvViewRotation[16];
             float normlaMtx[16];
             float mtxUV[16];
+
+            bgfx::TextureHandle s_diffuseMap = BGFX_INVALID_HANDLE;
+            bgfx::TextureHandle s_normalMap = BGFX_INVALID_HANDLE;
+            bgfx::TextureHandle s_refractionMap = BGFX_INVALID_HANDLE;
+            bgfx::TextureHandle s_reflectionMap = BGFX_INVALID_HANDLE;
+            bgfx::TextureHandle s_envMap = BGFX_INVALID_HANDLE;
+
             struct u_params
             {
                 float u_frenselBiasPow[2];
@@ -359,7 +370,7 @@ namespace hpl
                                     {
                                         data.params.afWaveFreq = afx;
                                     })),
-                             MaterialWaterProgram::ParameterField(
+                            MaterialWaterProgram::ParameterField(
                                 material::water::avFogStartAndLength,
                                 MaterialWaterProgram::Vec2Mapper(
                                     [](RenderWaterData& data, float afx, float afy)
@@ -400,6 +411,41 @@ namespace hpl
                                         data.params.u_frenselBiasPow[0] = afx;
                                         data.params.u_frenselBiasPow[1] = afy;
                                     })),
+                            MaterialWaterProgram::ParameterField(
+                                material::water::s_diffuseMap,
+                                MaterialWaterProgram::ImageMapper(
+                                    [](RenderWaterData& data, const Image* value)
+                                    {
+                                        data.s_diffuseMap = value ? value->GetHandle() : bgfx::TextureHandle{ BGFX_INVALID_HANDLE };
+                                    })),
+                            MaterialWaterProgram::ParameterField(
+                                material::water::s_normalMap,
+                                MaterialWaterProgram::ImageMapper(
+                                    [](RenderWaterData& data, const Image* value)
+                                    {
+                                        data.s_normalMap = value ? value->GetHandle() : bgfx::TextureHandle{ BGFX_INVALID_HANDLE };
+                                    })),
+                            MaterialWaterProgram::ParameterField(
+                                material::water::s_refractionMap,
+                                MaterialWaterProgram::ImageMapper(
+                                    [](RenderWaterData& data, const Image* value)
+                                    {
+                                        data.s_refractionMap = value ? value->GetHandle() : bgfx::TextureHandle{ BGFX_INVALID_HANDLE };
+                                    })),
+                            MaterialWaterProgram::ParameterField(
+                                material::water::s_reflectionMap,
+                                MaterialWaterProgram::ImageMapper(
+                                    [](RenderWaterData& data, const Image* value)
+                                    {
+                                        data.s_reflectionMap = value ? value->GetHandle() : bgfx::TextureHandle{ BGFX_INVALID_HANDLE };
+                                    })),
+                            MaterialWaterProgram::ParameterField(
+                                material::water::s_envMap,
+                                MaterialWaterProgram::ImageMapper(
+                                    [](RenderWaterData& data, const Image* value)
+                                    {
+                                        data.s_envMap = value ? value->GetHandle() : bgfx::TextureHandle{ BGFX_INVALID_HANDLE };
+                                    })),
                         },
                         name,
                         programHandle,
@@ -425,33 +471,77 @@ namespace hpl
 
     void cMaterialType_Water::SetupTypeSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderer* apRenderer)
     {
-        ////////////////////////////
-        // Diffuse
-        if (aRenderMode == eMaterialRenderMode_Diffuse)
-        {
-        }
     }
 
-    //--------------------------------------------------------------------------
-
-    void cMaterialType_Water::SetupMaterialSpecificData(
-        eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial* apMaterial, iRenderer* apRenderer)
+    void cMaterialType_Water::SubmitMaterial(
+        bgfx::ViewId id,
+        GraphicsContext& context,
+        eMaterialRenderMode aRenderMode,
+        iGpuProgram* apProgram,
+        cMaterial* apMaterial,
+        iRenderable* apObject,
+        iRenderer* apRenderer)
     {
         ////////////////////////////
+        // Z
+        if (aRenderMode == eMaterialRenderMode_Z)
+        {
+            apProgram->setImage(material::water::s_diffuseMap, apMaterial->GetImage(eMaterialTexture_Diffuse));
+            // apMaterial->SetTexture(eMaterialTexture aType, iTexture *apTexture)
+            // switch (alUnit)
+            // {
+            // case 0:
+            //     return apMaterial->GetTexture(eMaterialTexture_Diffuse);
+            // }
+        }
+        ////////////////////////////
         // Diffuse
+        else if (aRenderMode == eMaterialRenderMode_Diffuse || aRenderMode == eMaterialRenderMode_DiffuseFog)
+        {
+            cMaterialType_Water_Vars* pVars = static_cast<cMaterialType_Water_Vars*>(apMaterial->GetVars());
+
+            apProgram->setImage(material::water::s_diffuseMap, apMaterial->GetImage(eMaterialTexture_Diffuse));
+            apProgram->setImage(material::water::s_normalMap, apMaterial->GetImage(eMaterialTexture_NMap));
+            apProgram->setImage(material::water::s_refractionMap, iRenderer::GetRefractionEnabled()  ? 
+                mpGraphics->GetRenderer(eRenderer_Main)->GetRefractionImage() : nullptr);
+            apProgram->setImage(material::water::s_reflectionMap, apMaterial->GetImage(eMaterialTexture_CubeMap) ?
+                apMaterial->GetImage(eMaterialTexture_CubeMap) : mpGraphics->GetRenderer(eRenderer_Main)->GetReflectionImage());
+            // apProgram->setImage(material::water::s_envMap, apMaterial->GetImage(eMaterialTexture_Diffuse));
+            // switch (alUnit)
+            // {
+            // case 0:
+            //     return apMaterial->GetTexture(eMaterialTexture_Diffuse);
+            // case 1:
+            //     return apMaterial->GetTexture(eMaterialTexture_NMap);
+            // case 2:
+            //     if (iRenderer::GetRefractionEnabled())
+            //         return mpGraphics->GetRenderer(eRenderer_Main)->GetRefractionTexture();
+            //     else
+            //         return NULL;
+            // case 3:
+            //     if (iRenderer::GetRefractionEnabled())
+            //     {
+            //         if (apMaterial->GetTexture(eMaterialTexture_CubeMap))
+            //             return apMaterial->GetTexture(eMaterialTexture_CubeMap);
+            //         else
+            //             return mpGraphics->GetRenderer(eRenderer_Main)->GetReflectionTexture();
+            //     }
+            //     else
+            //     {
+            //         return NULL;
+            //     }
+            // }
+        }
+
         if (aRenderMode == eMaterialRenderMode_Diffuse || aRenderMode == eMaterialRenderMode_DiffuseFog)
         {
             cMaterialType_Water_Vars* pVars = static_cast<cMaterialType_Water_Vars*>(apMaterial->GetVars());
 
-            ////////////////////////////
-            // General
             apProgram->SetFloat(kVar_afT, apRenderer->GetTimeCount() * pVars->mfWaveSpeed);
             apProgram->SetFloat(kVar_afRefractionScale, pVars->mfRefractionScale * (float)apRenderer->GetRenderTargetSize().x);
             apProgram->SetFloat(kVar_afWaveAmplitude, pVars->mfWaveAmplitude * 0.04f);
             apProgram->SetFloat(kVar_afWaveFreq, pVars->mfWaveFreq * 10.0f);
 
-            ////////////////////////////
-            // Fog
             cWorld* pWorld = apRenderer->GetCurrentWorld();
 
             apProgram->SetVec2f(kVar_avFogStartAndLength, cVector2f(pWorld->GetFogStart(), pWorld->GetFogEnd() - pWorld->GetFogStart()));
@@ -487,16 +577,22 @@ namespace hpl
                 }
             }
         }
+        apProgram->Submit(id, context);
     }
 
     //--------------------------------------------------------------------------
+
+    void cMaterialType_Water::SetupMaterialSpecificData(
+        eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial* apMaterial, iRenderer* apRenderer)
+    {
+        
+    }
 
     void cMaterialType_Water::SetupObjectSpecificData(
         eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderable* apObject, iRenderer* apRenderer)
     {
     }
 
-    //--------------------------------------------------------------------------
 
     iMaterialVars* cMaterialType_Water::CreateSpecificVariables()
     {
@@ -510,7 +606,6 @@ namespace hpl
         return pVars;
     }
 
-    //--------------------------------------------------------------------------
 
     void cMaterialType_Water::LoadVariables(cMaterial* apMaterial, cResourceVarsObject* apVars)
     {
@@ -536,7 +631,6 @@ namespace hpl
         apMaterial->SetLargeTransperantSurface(apVars->GetVarBool("LargeSurface", false));
     }
 
-    //--------------------------------------------------------------------------
 
     void cMaterialType_Water::GetVariableValues(cMaterial* apMaterial, cResourceVarsObject* apVars)
     {
@@ -556,7 +650,6 @@ namespace hpl
         apVars->AddVarBool("LargeSurface", apMaterial->GetLargeTransperantSurface());
     }
 
-    //--------------------------------------------------------------------------
 
     void cMaterialType_Water::CompileMaterialSpecifics(cMaterial* apMaterial)
     {
@@ -594,6 +687,5 @@ namespace hpl
         }
     }
 
-    //--------------------------------------------------------------------------
 
 } // namespace hpl
