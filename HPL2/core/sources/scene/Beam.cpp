@@ -19,11 +19,15 @@
 
 #include "scene/Beam.h"
 
+#include "absl/types/span.h"
+#include "graphics/Buffer.h"
 #include "impl/tinyXML/tinyxml.h"
 
 #include "math/Math.h"
+#include "math/MathTypes.h"
 #include "system/String.h"
 #include "system/Platform.h"
+#include <bx/debug.h>
 
 #include "resources/Resources.h"
 #include "resources/MaterialManager.h"
@@ -34,23 +38,33 @@
 #include "graphics/Material.h"
 #include "graphics/MaterialType.h"
 #include "graphics/LowLevelGraphics.h"
+#include <graphics/BufferHelper.h>
 
 #include "scene/Camera.h"
 #include "scene/World.h"
 #include "scene/Scene.h"
 
 #include "engine/Engine.h"
+#include <array>
+#include <cstdint>
 
 namespace hpl {
 
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
 
-	//-----------------------------------------------------------------------
+    namespace entity::beam {
+
+		struct VertexElement
+		{
+			float position[3];
+			float normal[3];
+			float tangent[4];
+			float color[4];
+			float texcoord[2];
+		};
+	}
 
 	cBeam::cBeam(const tString asName, cResources *apResources,cGraphics *apGraphics) :
-	iRenderable(asName)
+		iRenderable(asName)
 	{
 		mpMaterialManager = apResources->GetMaterialManager();
 		mpFileSearcher = apResources->GetFileSearcher();
@@ -68,37 +82,60 @@ namespace hpl {
 
 		mlLastRenderCount = -1;
 
+		bgfx::VertexLayout layout;
+        layout.begin()
+                .add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float)
+                .add(bgfx::Attrib::Normal, 3, bgfx::AttribType::Float)
+                .add(bgfx::Attrib::Tangent, 4, bgfx::AttribType::Float)
+                .add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Float)
+                .add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Float)
+            .end();
 
-		mpVtxBuffer = mpLowLevelGraphics->CreateVertexBuffer(
-								eVertexBufferType_Hardware,
-								eVertexBufferDrawType_Tri, eVertexBufferUsageType_Dynamic,4,6);
-		mpVtxBuffer->CreateElementArray(eVertexBufferElement_Position,eVertexBufferElementFormat_Float,4);
-		mpVtxBuffer->CreateElementArray(eVertexBufferElement_Normal,eVertexBufferElementFormat_Float,3);
-		mpVtxBuffer->CreateElementArray(eVertexBufferElement_Color0,eVertexBufferElementFormat_Float,4);
-		mpVtxBuffer->CreateElementArray(eVertexBufferElement_Texture0,eVertexBufferElementFormat_Float,3);
+        auto vertexDef = BufferDefinition::CreateStructureBuffer(layout, 4);
+        auto indexDef = BufferDefinition::CreateUint16IndexBuffer(6);
+        m_vertexBuffer = std::move(Buffer(vertexDef));
+        m_indexBuffer = std::move(Buffer(indexDef));
 
-		cVector3f vCoords[4] = {cVector3f((mvSize.x/2),-(mvSize.y/2),0),
-								cVector3f(-(mvSize.x/2),-(mvSize.y/2),0),
-								cVector3f(-(mvSize.x/2),(mvSize.y/2),0),
-								cVector3f((mvSize.x/2),(mvSize.y/2),0)};
+		// Buffer vtxData(entity::beam::VertexDefinition);
+        // BufferIndex indexData(entity::beam::IndexDefinition);
 
-		cVector3f vTexCoords[4] = {cVector3f(1,1,0),	//Bottom left
-									cVector3f(-1,1,0),	//Bottom right
-									cVector3f(-1,-1,0),	//Top left
-									cVector3f(1,-1,0)};	//Top right
-
-		for(int i=0;i<4;i++)
-		{
-			mpVtxBuffer->AddVertexVec3f(eVertexBufferElement_Position, vCoords[i]);
-			mpVtxBuffer->AddVertexColor(eVertexBufferElement_Color0, cColor(1,1,1,1));
-			mpVtxBuffer->AddVertexVec3f(eVertexBufferElement_Texture0, (vTexCoords[i] + cVector2f(1,1))/2);
-			mpVtxBuffer->AddVertexVec3f(eVertexBufferElement_Normal,cVector3f(0,0,1));
-		}
-
-		for(int i=0;i<3;i++) mpVtxBuffer->AddIndex(i);
-		for(int i=2;i<5;i++) mpVtxBuffer->AddIndex(i==4?0:i);
-
-		mpVtxBuffer->Compile(eVertexCompileFlag_CreateTangents);
+		m_vertexBuffer.SetElementRange<entity::beam::VertexElement>(0, {
+			{
+				{
+					{(mvSize.x/2),-(mvSize.y/2),0},
+					{0, 0, 1},
+					{0, 0, 0, 0},
+					{1, 1, 1, 1},
+					{1,1}
+				},
+				{
+					{-(mvSize.x/2),-(mvSize.y/2),0},
+					{0, 0, 1},
+					{0, 0, 0, 0},
+					{1, 1, 1, 1},
+					{-1,1}
+				},
+				{
+					{-(mvSize.x/2),(mvSize.y/2),0},
+					{0, 0, 1},
+					{0, 0, 0, 0},
+					{1, 1, 1, 1},
+					{-1,-1}
+				},
+				{
+					{(mvSize.x/2),(mvSize.y/2),0},
+					{0, 0, 1},
+					{0, 0, 0, 0},
+					{1, 1, 1, 1},
+					{1,-1}
+				}
+			}
+		});
+		m_indexBuffer.SetElementRange<uint16_t>(0, {0, 1, 2, 2, 3, 0});
+		
+		std::array<Buffer*, 1> vertexBuffers = { &m_vertexBuffer };
+        hpl::vertex::helper::UpdateTangentsFromPositionTexCoords(&m_indexBuffer, 
+            absl::MakeSpan(vertexBuffers.begin(), vertexBuffers.end()), 4);
 
 		mpEnd = hplNew( cBeamEnd, (asName + "_end",this));
 		mpEnd->AddCallback(&mEndCallback);
@@ -115,16 +152,8 @@ namespace hpl {
 	{
 		hplDelete(mpEnd);
 		if(mpMaterial) mpMaterialManager->Destroy(mpMaterial);
-		if(mpVtxBuffer) hplDelete(mpVtxBuffer);
+		// if(mpVtxBuffer) hplDelete(mpVtxBuffer);
 	}
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	void cBeam::SetSize(const cVector2f& avSize)
 	{
@@ -133,8 +162,6 @@ namespace hpl {
 
 		SetTransformUpdated();
 	}
-
-	//-----------------------------------------------------------------------
 
 	void cBeam::SetTileHeight(bool abX)
 	{
@@ -145,8 +172,6 @@ namespace hpl {
 		SetTransformUpdated();
 	}
 
-	//-----------------------------------------------------------------------
-
 	void cBeam::SetMultiplyAlphaWithColor(bool abX)
 	{
 		if(mbMultiplyAlphaWithColor == abX) return;
@@ -154,40 +179,35 @@ namespace hpl {
 		mbMultiplyAlphaWithColor = abX;
 	}
 
-	//-----------------------------------------------------------------------
-
 	void cBeam::SetColor(const cColor &aColor)
 	{
 		if(mColor == aColor) return;
 
 		mColor = aColor;
 
-		float *pColors = mpVtxBuffer->GetFloatArray(eVertexBufferElement_Color0);
+		auto elements = m_vertexBuffer.GetElements<entity::beam::VertexElement>().subspan(2);
+		// // auto bufferView = BufferView(m_vtxData, 0, 2);
+		// auto elements = bufferView
+		// 			.GetElements<entity::beam::VertexElement>();
 
-		//Change "lower colors"
+		//Change "upper colors"
 		if(mbMultiplyAlphaWithColor)
 		{
-			for(int i=0; i<2;++i)
+			std::array<float, 4> arr = {mColor.r  * mColor.a, mColor.g  * mColor.a, mColor.b  * mColor.a, mColor.a};
+			for(int i = 0; i < 2;++i)
 			{
-				pColors[0] = mColor.r * mColor.a;
-				pColors[1] = mColor.g * mColor.a;
-				pColors[2] = mColor.b * mColor.a;
-				pColors[3] = mColor.a;
-				pColors+=4;
+				std::copy(arr.begin(), arr.end(), elements[i].color);
 			}
 		}
 		else
 		{
-			for(int i=0; i<2;++i)
+			std::array<float, 4> arr = {mColor.r, mColor.g, mColor.b, mColor.a};
+			for(int i = 0; i < 2; ++i)
 			{
-				pColors[0] = mColor.r;
-				pColors[1] = mColor.g;
-				pColors[2] = mColor.b;
-				pColors[3] = mColor.a;
-				pColors+=4;
+				std::copy(arr.begin(), arr.end(), elements[i].color);
 			}
 		}
-		mpVtxBuffer->UpdateData(eVertexElementFlag_Color0,false);
+		// bufferView.Update();
 	}
 
 	//-----------------------------------------------------------------------
@@ -242,59 +262,33 @@ namespace hpl {
 
 		mvMidPosition =GetWorldPosition() + mvAxis*0.5f;
 		float fDist = mvAxis.Length();
-
 		mvAxis.Normalize();
 
 		////////////////////////////////
 		//Update vertex buffer
 		cVector2f vBeamSize = cVector2f(mvSize.x, fDist);
-
-		float *pPos = mpVtxBuffer->GetFloatArray(eVertexBufferElement_Position);
-		float *pTex = mpVtxBuffer->GetFloatArray(eVertexBufferElement_Texture0);
-
-		cVector3f vCoords[4] = {cVector3f((vBeamSize.x/2),-(vBeamSize.y/2),0),
+	
+		auto elements = m_vertexBuffer.GetElements<entity::beam::VertexElement>();
+		auto texcoords = std::array<cVector2f, 4>({{
+				{1,1},
+				{0,1},
+				{0, mbTileHeight ? -fDist/mvSize.y : 0},
+				{1, mbTileHeight ? -fDist/mvSize.y : 0},
+			}});
+		std::array<cVector3f, 4> positions = {cVector3f((vBeamSize.x/2),-(vBeamSize.y/2),0),
 								cVector3f(-(vBeamSize.x/2),-(vBeamSize.y/2),0),
 								cVector3f(-(vBeamSize.x/2),(vBeamSize.y/2),0),
 								cVector3f((vBeamSize.x/2),(vBeamSize.y/2),0)};
 
-		cVector3f vTexCoords[4];
-		if(mbTileHeight)
-		{
-			vTexCoords[0] = cVector3f(1,1,0);	//Bottom left
-			vTexCoords[1] = cVector3f(0,1,0);	//Bottom right
-			vTexCoords[2] = cVector3f(0,-fDist/mvSize.y,0);	//Top left
-			vTexCoords[3] = cVector3f(1,-fDist/mvSize.y,0);	//Top right
+		BX_ASSERT(elements.size() == positions.size(), "Invalid number of elements");
+		BX_ASSERT(elements.size() == texcoords.size(), "Invalid number of elements");
+	    static_assert(sizeof(elements[0].position) == sizeof(positions[0].v), "Size mismatch" );
+		static_assert(sizeof(elements[0].texcoord) == sizeof(texcoords[0].v), "Size mismatch" );
+		for(size_t i = 0; i < elements.size(); i++) {
+			std::copy(std::begin(positions[i].v), std::end(positions[i].v), elements[i].position);
+			std::copy(std::begin(texcoords[i].v), std::end(texcoords[i].v), elements[i].texcoord);
 		}
-		else
-		{
-			vTexCoords[0] = cVector3f(1,1,0);	//Bottom left
-			vTexCoords[1] = cVector3f(0,1,0);	//Bottom right
-			vTexCoords[2] = cVector3f(0,0,0);	//Top left
-			vTexCoords[3] = cVector3f(1,0,0);	//Top right
-		}
-
-		for(int i=0; i<4;++i)
-		{
-			pPos[0] = vCoords[i].x;
-			pPos[1] = vCoords[i].y;
-			pPos[2] = vCoords[i].z;
-			pPos+=4;
-
-			pTex[0] = vTexCoords[i].x;
-			pTex[1] = vTexCoords[i].y;
-			pTex+=3;
-		}
-
-		if(mpMaterial->GetType()->IsTranslucent())
-		{
-			mpVtxBuffer->UpdateData(eVertexElementFlag_Position | eVertexElementFlag_Texture0,false);
-		}
-		else
-		{
-			mpVtxBuffer->UpdateData(eVertexElementFlag_Position | eVertexElementFlag_Texture0,false);
-		}
-
-
+		// m_vtxData.Update();
 
 	}
 
@@ -381,7 +375,6 @@ namespace hpl {
 					cColor StartColor = cString::ToColor(pMainElem->Attribute("StartColor"),cColor(1,1));
 					cColor EndColor = cString::ToColor(pMainElem->Attribute("EndColor"),cColor(1,1));
 
-
 					SetSize(vSize);
 					SetTileHeight(bTileHeight);
 					SetMultiplyAlphaWithColor(bMultiplyAlphaWithColor);
@@ -431,6 +424,10 @@ namespace hpl {
 		return mbIsVisible;
 	}
 
+	bool cBeam::Submit(LayoutStream& input, GraphicsContext& context) {
+		return false;
+	}
+
 	//-----------------------------------------------------------------------
 
 	//////////////////////////////////////////////////////////////////////////
@@ -446,68 +443,41 @@ namespace hpl {
 		pEnd->mpBeam->SetTransformUpdated(true);
 	}
 
-	//-----------------------------------------------------------------------
-
-
-	//////////////////////////////////////////////////////////////////////////
-	// BEAM END
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
 	void cBeamEnd::SetColor(const cColor &aColor)
 	{
-		if(mColor == aColor) return;
+		if(mColor == aColor) {
+			return;
+		}
 
 		mColor = aColor;
 
-		float *pColors = mpBeam->mpVtxBuffer->GetFloatArray(eVertexBufferElement_Color0);
+		auto elements = 
+			mpBeam->m_vertexBuffer.GetElements<entity::beam::VertexElement>()
+				.subspan(2);
+
+		// auto bufferView = BufferView(mpBeam->m_vtxData, 2, 2);
+		// auto elements = bufferView
+		// 			.GetElements<entity::beam::VertexElement>();
 
 		//Change "upper colors"
-		pColors+= 4*2;
 		if(mpBeam->mbMultiplyAlphaWithColor)
 		{
-			for(int i=0; i<2;++i)
+			std::array<float, 4> arr = {mColor.r  * mColor.a, mColor.g  * mColor.a, mColor.b  * mColor.a, mColor.a};
+			for(int i = 0; i < 2;++i)
 			{
-				pColors[0] = mColor.r * mColor.a;
-				pColors[1] = mColor.g * mColor.a;
-				pColors[2] = mColor.b * mColor.a;
-				pColors[3] = mColor.a;
-				pColors+=4;
+				std::copy(arr.begin(), arr.end(), elements[i].color);
 			}
 		}
 		else
 		{
-			for(int i=0; i<2;++i)
+			std::array<float, 4> arr = {mColor.r, mColor.g, mColor.b, mColor.a};
+			for(int i = 0; i < 2; ++i)
 			{
-				pColors[0] = mColor.r;
-				pColors[1] = mColor.g;
-				pColors[2] = mColor.b;
-				pColors[3] = mColor.a;
-				pColors+=4;
+				std::copy(arr.begin(), arr.end(), elements[i].color);
 			}
 		}
+		// bufferView.Update();
 
-		mpBeam->mpVtxBuffer->UpdateData(eVertexElementFlag_Color0,false);
 	}
-
-	//-----------------------------------------------------------------------
-
-
-	//////////////////////////////////////////////////////////////////////////
-	// PRIVATE METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// SAVE OBJECT STUFF
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
-	//-----------------------------------------------------------------------
 
 }

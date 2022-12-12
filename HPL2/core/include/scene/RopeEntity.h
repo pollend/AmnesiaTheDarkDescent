@@ -19,7 +19,9 @@
 #pragma once
 
 #include <graphics/BufferIndex.h>
-#include <graphics/BufferVertex.h>
+#include <graphics/Buffer.h>
+#include <vector>
+#include "graphics/VertexBufferDrawRequest.h"
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
 #include "system/SystemTypes.h"
@@ -93,14 +95,18 @@ namespace hpl {
 
 		int GetMatrixUpdateCount();
 
-
-		virtual BufferVertexView getVtxBuffer() override { return mlLastUpdateCount == -1 ?  BufferVertexView() : BufferVertexView(&m_vtxData, 0, (mlLastUpdateCount - 1) * 4); }
-		virtual BufferIndexView getIdxBuffer() override { return mlLastUpdateCount == -1 ?  BufferIndexView() : BufferIndexView(&m_idxData, 0, (mlLastUpdateCount - 1) * 6); }
+		// virtual BufferView getVtxBuffer() override { return mlLastUpdateCount == -1 ?  BufferView() : BufferView(m_vtxData, 0, (mlLastUpdateCount - 1) * 4); }
+		// virtual BufferIndexView getIdxBuffer() override { return mlLastUpdateCount == -1 ?  BufferIndexView() : BufferIndexView(&m_idxData, 0, (mlLastUpdateCount - 1) * 6); }
+		
+		virtual bool Submit(LayoutStream& input, GraphicsContext& context) override;
 
 		eRenderableType GetRenderType(){ return eRenderableType_Rope;}
 	private:
-		BufferVertex  m_vtxData;
-		BufferIndex m_idxData;
+		Buffer m_vertexBuffer;
+		Buffer m_indexBuffer;
+
+		VertexStream m_vertexStream;
+		IndexStream m_indexStream;
 
 		cMaterialManager* mpMaterialManager;
 		iLowLevelGraphics* mpLowLevelGraphics;

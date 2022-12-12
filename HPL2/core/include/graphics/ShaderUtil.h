@@ -4,12 +4,11 @@
 #include <memory>
 #include <bx/file.h>
 #include <bgfx/bgfx.h>
-#include "graphics/BufferVertex.h"
+#include "graphics/Buffer.h"
 #include "system/SystemTypes.h"
 
 namespace hpl
 {
-    static void HelperSubmitVertexBuffer(uint32_t stream, BufferVertexView vertexBuffer, BufferIndexView indexBuffer);
 
     bgfx::ShaderHandle CreateShaderHandleFromFile(const tWString& asFile);
     bgfx::ShaderHandle CreateShaderHandleFromString(const char* apStringData);

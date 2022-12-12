@@ -19,15 +19,20 @@
 
 #include "scene/RopeEntity.h"
 
+#include "absl/types/span.h"
 #include "bgfx/bgfx.h"
 #include "graphics/BufferIndex.h"
-#include "graphics/BufferVertex.h"
+#include "graphics/Buffer.h"
+#include "graphics/VertexBufferDrawRequest.h"
 #include "math/Math.h"
 
 #include "graphics/Graphics.h"
 #include "graphics/LowLevelGraphics.h"
 #include "graphics/Material.h"
 #include "graphics/VertexBuffer.h"
+#include <array>
+#include <cmath>
+#include <graphics/BufferHelper.h>
 
 #include "math/MathTypes.h"
 #include "resources/MaterialManager.h"
@@ -43,34 +48,17 @@
 namespace hpl
 {
 
-    static const BufferVertex::VertexDefinition VertexDefinition = 
-		([]() {
-			BufferVertex::VertexDefinition definition;
-			definition.m_layout.begin()
-				.add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float)
-				.add(bgfx::Attrib::Normal, 3, bgfx::AttribType::Float)
-				.add(bgfx::Attrib::Tangent, 4, bgfx::AttribType::Float)
-				.add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Float)
-				.add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Float)
-			.end();
-            definition.m_accessType = BufferVertex::AccessType::AccessDynamic;
-			return definition;
-		})();
-    static const BufferIndex::BufferIndexDefinition IndexDefinition = ([]() {
-		BufferIndex::BufferIndexDefinition definition;
-		definition.m_format = BufferIndex::IndexFormatType::Uint16;
-        
-		return definition;
-	})();
+    namespace entity::rope {
+        struct VertexElement
+        {
+            float position[3];
+            float normal[3];
+            float tangent[4];
+            float color[4];
+            float texcoord[2];
+        };
+    }
 
-    struct RopeVertexElement
-    {
-        float position[3];
-        float normal[3];
-        float tangent[4];
-        float color[4];
-        float texcoord[2];
-    };
 
     cRopeEntity::cRopeEntity(const tString& asName, cResources* apResources, cGraphics* apGraphics, iPhysicsRope* apRope, int alMaxSegments)
         : iRenderable(asName)
@@ -88,10 +76,26 @@ namespace hpl
         mfRadius = mpRope->GetParticleRadius();
         mfLengthTileAmount = 1;
         mfLengthTileSize = 1;
+        
+        bgfx::VertexLayout layout;
+        layout.begin()
+                .add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float)
+                .add(bgfx::Attrib::Normal, 3, bgfx::AttribType::Float)
+                .add(bgfx::Attrib::Tangent, 4, bgfx::AttribType::Float)
+                .add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Float)
+                .add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Float)
+            .end();
 
-        BufferVertex vtxData(VertexDefinition);
-        BufferIndex indexData(IndexDefinition);
+        auto vertexDef = BufferDefinition::CreateStructureBuffer(layout, 4 * mlMaxSegments);
+        auto indexDef = BufferDefinition::CreateUint16IndexBuffer(6 * mlMaxSegments);
+        m_vertexBuffer = Buffer(vertexDef);
+        m_indexBuffer = Buffer(indexDef);
 
+        auto elementSpan = m_vertexBuffer.GetElements<entity::rope::VertexElement>();
+        auto indexSpan = m_indexBuffer.GetElements<uint16_t>();
+
+        auto elementIt = elementSpan.begin();
+        auto indexIt = indexSpan.begin();
         for (int i = 0; i < mlMaxSegments; ++i)
         {
             const cVector2f vTexCoords[4] = { cVector2f(1, 1), // Bottom left
@@ -101,32 +105,52 @@ namespace hpl
 
             for (int j = 0; j < 4; j++)
             {
-                vtxData.Append<RopeVertexElement>({ { 0, 0, 0 },
-                                                       { 0, 0, 1 },
-                                                       { 0, 0, 0 },
-                                                       { mColor.r, mColor.g, mColor.b, mColor.a },
-                                                       { vTexCoords[j].x, vTexCoords[j].y } });
+                (*elementIt) = { { 0, 0, 0 },
+                                 { 0, 0, 1 },
+                                 { 0, 0, 0 },
+                                 { mColor.r, mColor.g, mColor.b, mColor.a },
+                                 { vTexCoords[j].x, vTexCoords[j].y } };
+                ++elementIt;
                 for (int j = 0; j < 3; j++)
                 {
-                    indexData.Append(j + i * 4);
+                    (*indexIt) = j + i * 4;
+                    ++indexIt;
                 }
                 for (int j = 2; j < 5; j++)
                 {
-                    indexData.Append((j == 4 ? 0 : j) + i * 4);
+                    (*indexIt) = (j == 4 ? 0 : j) + i * 4;
+                    ++indexIt;
                 }
             }
         }
-        BufferVertexView(&vtxData)
-            .UpdateTangentsFromPositionTexCoords(BufferIndexView(&indexData));
-        
-        vtxData.Initialize();
-        indexData.Initialize();
+        std::array<Buffer*, 1> vertexBuffers = { &m_vertexBuffer };
+        hpl::vertex::helper::UpdateTangentsFromPositionTexCoords(&m_indexBuffer, 
+            absl::MakeSpan(vertexBuffers.begin(), vertexBuffers.end()), mlMaxSegments * 4);
+
+        VertexStream::VertexStreamDefinition vertexStreamDefinition = {
+            AccessType::AccessDynamic,
+            layout
+        };
+        m_vertexStream = VertexStream(vertexStreamDefinition, m_vertexBuffer, 0, m_vertexBuffer.NumberElements());
+        IndexStream::IndexStreamDefinition indexStreamDefinition = {
+            AccessType::AccessStatic,
+            BufferDefinition::FormatType::Uint16
+        };
+        m_indexStream = IndexStream(indexStreamDefinition, m_indexBuffer, 0, m_indexBuffer.NumberElements());
 
         mbApplyTransformToBV = false;
         mlLastUpdateCount = -1;
+    }
 
-        m_vtxData = std::move(vtxData);
-        m_idxData = std::move(indexData);
+    bool cRopeEntity::Submit(LayoutStream& input, GraphicsContext& context) {
+        if(mlLastUpdateCount == -1 || mlLastUpdateCount == 1) {
+            return false;
+        }
+        input.m_indexStream = &m_indexStream;
+        input.m_vertexStream.push_back(&m_vertexStream);
+        // context.SubmitIndexBuffer(BufferIndexView(&m_idxData, 0, (mlLastUpdateCount - 1) * 4));
+        // context.SubmitVertexBuffer(0, BufferView(m_vtxData, 0, (mlLastUpdateCount - 1) * 6));
+        return true;
     }
 
     //-----------------------------------------------------------------------
@@ -161,13 +185,14 @@ namespace hpl
             finalColor.b = finalColor.b * mColor.a;
         }
 
-        for (auto& element : m_vtxData.GetElements<RopeVertexElement>())
+        for (auto& element : m_vertexBuffer.GetElements<entity::rope::VertexElement>())
         {
             element.color[0] = finalColor.r;
             element.color[1] = finalColor.g;
             element.color[2] = finalColor.b;
             element.color[3] = finalColor.a;
         }
+        m_vertexStream.Update(m_vertexBuffer, 0, m_vertexBuffer.NumberElements());
         mpVtxBuffer->UpdateData(eVertexElementFlag_Color0, false);
     }
 
@@ -218,7 +243,7 @@ namespace hpl
 
     bool cRopeEntity::UpdateGraphicsForViewport(cFrustum* apFrustum, float afFrameTime)
     {
-        auto elements = m_vtxData.GetElements<RopeVertexElement>();
+        auto elements = m_vertexBuffer.GetElements<entity::rope::VertexElement>();
         auto elementIt = elements.begin();
 
         float fSegmentLength = mpRope->GetSegmentLength();
@@ -324,9 +349,10 @@ namespace hpl
             elementIt += 4;
             vPrevPos = vPos;
         }
+        m_vertexStream.Update(m_vertexBuffer, 0, m_vertexBuffer.NumberElements());
 
         // mpVtxBuffer->SetElementNum((lCount - 1) * 6);
-        m_vtxData.Update(0, (lCount - 1) * 4);
+        // m_vtxData.Update(0, (lCount - 1) * 4);
 
         // mpVtxBuffer->UpdateData(
         //     eVertexElementFlag_Position | eVertexElementFlag_Texture0 | eVertexElementFlag_Texture1 | eVertexElementFlag_Normal, false);

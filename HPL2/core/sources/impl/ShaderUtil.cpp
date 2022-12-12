@@ -2,7 +2,7 @@
 
 #include "bgfx/bgfx.h"
 #include <bx/debug.h>
-#include "graphics/BufferVertex.h"
+#include "graphics/Buffer.h"
 #include "impl/LowLevelGraphicsSDL.h"
 #include "impl/SDLTexture.h"
 #include "system/LowLevelSystem.h"
@@ -18,41 +18,6 @@
 
 namespace hpl
 {
-    void HelperSubmitVertexBuffer(uint32_t stream, BufferVertexView vertexBuffer, BufferIndexView indexBuffer)
-    {
-
-        if (!vertexBuffer.IsEmpty())
-        {
-            auto& definition = vertexBuffer.GetVertexBuffer().GetDefinition();
-            switch (definition.m_accessType)
-            {
-            case BufferVertex::AccessType::AccessStatic:
-                bgfx::setVertexBuffer(stream, 
-                    vertexBuffer.GetVertexBuffer().GetHandle(), vertexBuffer.Offset(), vertexBuffer.Count());
-                break;
-            case BufferVertex::AccessType::AccessDynamic:
-            case BufferVertex::AccessType::AccessStream:
-                bgfx::setVertexBuffer(stream, 
-                    vertexBuffer.GetVertexBuffer().GetDynamicHandle(), vertexBuffer.Offset(), vertexBuffer.Count());
-                break;
-            }
-        }
-
-        if (!indexBuffer.IsEmpty())
-        {
-            auto& definition = indexBuffer.GetIndexBuffer().GetDefinition();
-            switch (definition.m_accessType)
-            {
-            case BufferIndex::AccessType::AccessStatic:
-                bgfx::setIndexBuffer(indexBuffer.GetIndexBuffer().GetHandle(), indexBuffer.Offset(), indexBuffer.Count());
-                break;
-            case BufferIndex::AccessType::AccessDynamic:
-            case BufferIndex::AccessType::AccessStream:
-                BX_ASSERT(false, "TODO: Implement dynamic index buffer");
-                break;
-            }
-        }
-    }
 
     bgfx::ShaderHandle CreateShaderHandleFromFile(const tWString& asFile)
     {

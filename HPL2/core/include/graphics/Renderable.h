@@ -17,11 +17,12 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef HPL_RENDERABLE_H
-#define HPL_RENDERABLE_H
+#pragma once
 
 #include "graphics/BufferIndex.h"
-#include "graphics/BufferVertex.h"
+#include "graphics/Buffer.h"
+#include "graphics/GraphicsContext.h"
+#include <graphics/VertexBufferDrawRequest.h>
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
 #include "system/SystemTypes.h"
@@ -43,7 +44,7 @@ namespace hpl {
 	class iRenderableContainerNode;
 	class iPhysicsBody;
 	class iRenderer;
-	class BufferVertex;
+	class Buffer;
 	class BufferIndex;
 
 	//------------------------------------------
@@ -60,8 +61,10 @@ namespace hpl {
 		virtual cMaterial *GetMaterial()=0;
 		virtual iVertexBuffer* GetVertexBuffer()=0;
 
-		virtual BufferVertexView getVtxBuffer() { return BufferVertexView(); }
+		// virtual BufferView getVtxBuffer() { return BufferView(); }
 		virtual BufferIndexView getIdxBuffer() { return BufferIndexView(); }
+
+		virtual bool Submit(LayoutStream& input, GraphicsContext& context) { return false;}
 
 		virtual bool CollidesWithBV(cBoundingVolume *apBV);
 		virtual bool CollidesWithFrustum(cFrustum *apFrustum);
@@ -171,4 +174,3 @@ namespace hpl {
 		void* mpRenderableUserData;
 	};
 };
-#endif // HPL_RENDERABLE_H
