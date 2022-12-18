@@ -60,11 +60,6 @@ namespace hpl {
 		virtual bool Compile(tVertexCompileFlag aFlags)=0;
 		virtual void UpdateData(tVertexElementFlag aTypes, bool abIndices)=0;
 
-		/**
-		* This creates a double of the vertex array with w=0.
-		* \param abUpdateData if the hardware buffer should be updated as well.
-		*/
-		virtual void CreateShadowDouble(bool abUpdateData)=0;
 
 		/**
 		 * Transform the entire buffer with transform.

@@ -19,10 +19,7 @@
 
 #pragma once
 
-#include "graphics/BufferIndex.h"
-#include "graphics/Buffer.h"
 #include "graphics/GraphicsContext.h"
-#include <graphics/VertexBufferDrawRequest.h>
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
 #include "system/SystemTypes.h"
@@ -44,8 +41,6 @@ namespace hpl {
 	class iRenderableContainerNode;
 	class iPhysicsBody;
 	class iRenderer;
-	class Buffer;
-	class BufferIndex;
 
 	//------------------------------------------
 
@@ -61,10 +56,8 @@ namespace hpl {
 		virtual cMaterial *GetMaterial()=0;
 		virtual iVertexBuffer* GetVertexBuffer()=0;
 
-		// virtual BufferView getVtxBuffer() { return BufferView(); }
-		virtual BufferIndexView getIdxBuffer() { return BufferIndexView(); }
 
-		virtual bool Submit(LayoutStream& input, GraphicsContext& context) { return false;}
+		// virtual bool Submit(LayoutStream& input, GraphicsContext& context) { return false;}
 
 		virtual bool CollidesWithBV(cBoundingVolume *apBV);
 		virtual bool CollidesWithFrustum(cFrustum *apFrustum);

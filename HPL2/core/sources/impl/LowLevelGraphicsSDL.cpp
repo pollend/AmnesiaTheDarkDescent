@@ -17,6 +17,7 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "impl/VertexBufferBGFX.h"
 #ifdef WIN32
 #pragma comment(lib, "OpenGL32.lib")
 #pragma comment(lib, "GLu32.lib")
@@ -827,20 +828,7 @@ namespace hpl {
 															eVertexBufferUsageType aUsageType,
 															int alReserveVtxSize,int alReserveIdxSize)
 	{
-		;
-
-		//return hplNew( cVertexBufferVBO,(this, aFlags,aDrawType,aUsageType,alReserveVtxSize,alReserveIdxSize) );
-		//return hplNew( cVertexBufferOGL, (this, aFlags,aDrawType,aUsageType,alReserveVtxSize,alReserveIdxSize) );
-
-		if(GetCaps(eGraphicCaps_VertexBufferObject) && aType == eVertexBufferType_Hardware)
-		{
-			return hplNew( cVertexBufferOGL_VBO, (this, aDrawType,aUsageType,alReserveVtxSize,alReserveIdxSize) );
-		}
-		else
-		{
-			//Error("VBO is not supported, using Vertex array!\n");
-			return hplNew( cVertexBufferOGL_Array, (this, aDrawType,aUsageType,alReserveVtxSize,alReserveIdxSize) );
-		}
+		return new iVertexBufferBGFX(this,eVertexBufferType_Hardware, aDrawType, aUsageType, alReserveVtxSize, alReserveIdxSize);
 	}
 
 	//-----------------------------------------------------------------------

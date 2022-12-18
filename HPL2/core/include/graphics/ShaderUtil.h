@@ -4,7 +4,6 @@
 #include <memory>
 #include <bx/file.h>
 #include <bgfx/bgfx.h>
-#include "graphics/Buffer.h"
 #include "system/SystemTypes.h"
 
 namespace hpl

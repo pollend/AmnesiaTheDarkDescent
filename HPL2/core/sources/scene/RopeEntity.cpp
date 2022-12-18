@@ -19,371 +19,342 @@
 
 #include "scene/RopeEntity.h"
 
-#include "absl/types/span.h"
-#include "bgfx/bgfx.h"
-#include "graphics/BufferIndex.h"
-#include "graphics/Buffer.h"
-#include "graphics/VertexBufferDrawRequest.h"
 #include "math/Math.h"
 
 #include "graphics/Graphics.h"
-#include "graphics/LowLevelGraphics.h"
 #include "graphics/Material.h"
+#include "graphics/LowLevelGraphics.h"
 #include "graphics/VertexBuffer.h"
-#include <array>
-#include <cmath>
-#include <graphics/BufferHelper.h>
 
-#include "math/MathTypes.h"
-#include "resources/MaterialManager.h"
 #include "resources/Resources.h"
+#include "resources/MaterialManager.h"
 
 #include "scene/Camera.h"
-#include "scene/Scene.h"
 #include "scene/World.h"
+#include "scene/Scene.h"
 
 #include "physics/PhysicsRope.h"
-#include <algorithm>
 
-namespace hpl
-{
+namespace hpl {
 
-    namespace entity::rope {
-        struct VertexElement
-        {
-            float position[3];
-            float normal[3];
-            float tangent[4];
-            float color[4];
-            float texcoord[2];
-        };
-    }
+	//////////////////////////////////////////////////////////////////////////
+	// CONSTRUCTORS
+	//////////////////////////////////////////////////////////////////////////
+
+	//-----------------------------------------------------------------------
+
+	cRopeEntity::cRopeEntity(const tString& asName, cResources *apResources,cGraphics *apGraphics,
+								iPhysicsRope *apRope, int alMaxSegments) :	iRenderable(asName)
+	{
+		mpMaterialManager = apResources->GetMaterialManager();
+		mpLowLevelGraphics = apGraphics->GetLowLevel();
+
+		mColor = cColor(1,1,1,1);
+
+		mpMaterial = NULL;
+
+		mpRope = apRope;
+		mlMaxSegments = alMaxSegments;
+
+		mfRadius = mpRope->GetParticleRadius();
+		mfLengthTileAmount = 1;
+		mfLengthTileSize = 1;
+
+		mpVtxBuffer = mpLowLevelGraphics->CreateVertexBuffer(	eVertexBufferType_Hardware, eVertexBufferDrawType_Tri, eVertexBufferUsageType_Dynamic,
+																4 * mlMaxSegments, 6 * mlMaxSegments);
+
+		mpVtxBuffer->CreateElementArray(eVertexBufferElement_Position,eVertexBufferElementFormat_Float,4);
+		mpVtxBuffer->CreateElementArray(eVertexBufferElement_Normal,eVertexBufferElementFormat_Float,3);
+		mpVtxBuffer->CreateElementArray(eVertexBufferElement_Color0,eVertexBufferElementFormat_Float,4);
+		mpVtxBuffer->CreateElementArray(eVertexBufferElement_Texture0,eVertexBufferElementFormat_Float,3);
+
+		for(int i=0; i<mlMaxSegments; ++i)
+		{
+			cVector3f vTexCoords[4] = {cVector3f(1,1,0),	//Bottom left
+										cVector3f(-1,1,0),	//Bottom right
+										cVector3f(-1,-1,0),	//Top left
+										cVector3f(1,-1,0)};	//Top right
+
+			for(int j=0;j<4;j++)
+			{
+				mpVtxBuffer->AddVertexVec3f(eVertexBufferElement_Position,	0);
+				mpVtxBuffer->AddVertexColor(eVertexBufferElement_Color0,	mColor);
+				mpVtxBuffer->AddVertexVec3f(eVertexBufferElement_Texture0, 0);
+				mpVtxBuffer->AddVertexVec3f(eVertexBufferElement_Normal,	cVector3f(0,0,1));
+			}
+
+			for(int j=0;j<3;j++) mpVtxBuffer->AddIndex(j + i*4);
+			for(int j=2;j<5;j++) mpVtxBuffer->AddIndex( (j==4?0:j)  + i*4);
+		}
+
+		mpVtxBuffer->Compile(eVertexCompileFlag_CreateTangents);
+
+		mbApplyTransformToBV = false;
+
+		mlLastUpdateCount = -1;
+	}
+
+	//-----------------------------------------------------------------------
+
+	cRopeEntity::~cRopeEntity()
+	{
+		if(mpMaterial) mpMaterialManager->Destroy(mpMaterial);
+		if(mpVtxBuffer) hplDelete(mpVtxBuffer);
+	}
+
+	//-----------------------------------------------------------------------
+
+	//////////////////////////////////////////////////////////////////////////
+	// PUBLIC METHODS
+	//////////////////////////////////////////////////////////////////////////
+
+	//-----------------------------------------------------------------------
+
+	void cRopeEntity::SetMultiplyAlphaWithColor(bool abX)
+	{
+		if(mbMultiplyAlphaWithColor == abX) return;
+
+		mbMultiplyAlphaWithColor = abX;
+	}
+
+	//-----------------------------------------------------------------------
+
+	void cRopeEntity::SetColor(const cColor &aColor)
+	{
+		if(mColor == aColor) return;
+
+		mColor = aColor;
+
+		float *pColors = mpVtxBuffer->GetFloatArray(eVertexBufferElement_Color0);
+
+		cColor finalColor = mColor;
+		if(mbMultiplyAlphaWithColor)
+		{
+			finalColor.r = finalColor.r * mColor.a;
+			finalColor.g = finalColor.g * mColor.a;
+			finalColor.b = finalColor.b * mColor.a;
+		}
+
+		for(int i=0; i<mlMaxSegments * 4; ++i)
+		{
+			pColors[0] = finalColor.r;
+			pColors[1] = finalColor.g;
+			pColors[2] = finalColor.b;
+			pColors[3] = finalColor.a;
+			pColors+=4;
+		}
+
+		mpVtxBuffer->UpdateData(eVertexElementFlag_Color0,false);
+	}
+
+	//-----------------------------------------------------------------------
+
+	void cRopeEntity::SetMaterial(cMaterial * apMaterial)
+	{
+		mpMaterial = apMaterial;
+	}
+
+	//-----------------------------------------------------------------------
+
+	cBoundingVolume* cRopeEntity::GetBoundingVolume()
+	{
+		if(mlLastUpdateCount != mpRope->GetUpdateCount())
+		{
+			cVector3f vMin(1000000.0f);
+			cVector3f vMax(-1000000.0f);
+
+			cVerletParticleIterator it = mpRope->GetParticleIterator();
+			while(it.HasNext())
+			{
+				cVerletParticle *pPart = it.Next();
+
+				cMath::ExpandAABB(vMin,vMax, pPart->GetPosition(), pPart->GetPosition());
+			}
+
+			mBoundingVolume.SetLocalMinMax(vMin-cVector3f(mfRadius),vMax+cVector3f(mfRadius));
+
+			mlLastUpdateCount = mpRope->GetUpdateCount();
+		}
+
+		return &mBoundingVolume;
+	}
+
+	//-----------------------------------------------------------------------
+
+	void cRopeEntity::UpdateGraphicsForFrame(float afFrameTime)
+	{
+
+	}
+
+	//-----------------------------------------------------------------------
+
+	static inline void SetVec3(float *apPos, const cVector3f &aPos)
+	{
+		apPos[0] = aPos.x;
+		apPos[1] = aPos.y;
+		apPos[2] = aPos.z;
+	}
+
+	static inline void SetVec4(float *apPos, const cVector3f &aPos)
+	{
+		apPos[0] = aPos.x;
+		apPos[1] = aPos.y;
+		apPos[2] = aPos.z;
+		apPos[3] = 1;
+	}
+
+	//-----------------------------------------------------------------------
+
+	static cVector2f gvPosAdd[4] = {
+		//cVector2f (1,1), cVector2f (1,0), cVector2f (-1,0), cVector2f (-1,1)
+		cVector2f (1,0), cVector2f (-1,0), cVector2f (-1,1), cVector2f (1,1)
+	};
+
+	bool cRopeEntity::UpdateGraphicsForViewport(cFrustum *apFrustum,float afFrameTime)
+	{
+		float *pPosArray = mpVtxBuffer->GetFloatArray(eVertexBufferElement_Position);
+		float *pUvArray = mpVtxBuffer->GetFloatArray(eVertexBufferElement_Texture0);
+		float *pNrmArray = mpVtxBuffer->GetFloatArray(eVertexBufferElement_Normal);
+		float *pTanArray = mpVtxBuffer->GetFloatArray(eVertexBufferElement_Texture1Tangent);
+
+		float fSegmentLength = mpRope->GetSegmentLength();
+
+		cVector3f vTexCoords[4] = {
+				cVector3f(1,1,0),	//Bottom left
+				cVector3f(0,1,0),	//Bottom right
+				cVector3f(0,0,0),	//Top left
+				cVector3f(1,0,0)	//Top right
+		};
+
+		vTexCoords[0].y *= mfLengthTileAmount;
+		vTexCoords[1].y *= mfLengthTileAmount;
+
+		cVerletParticleIterator it = mpRope->GetParticleIterator();
+		int lCount=0;
+		cVector3f vPrevPos;
+		while(it.HasNext())
+		{
+			if(lCount >= mlMaxSegments) break;
+			++lCount;
+
+			cVerletParticle *pPart = it.Next();
+
+			if(lCount == 1){
+				vPrevPos = pPart->GetPosition();
+				continue;
+			}
+
+			/////////////////////////
+			//Calculate properties
+			cVector3f vPos = pPart->GetSmoothPosition();
+			cVector3f vDelta = vPos - vPrevPos;
+			float fLength = vDelta.Length();
+			cVector3f vUp = vDelta / fLength;
+			cVector3f vRight = cMath::Vector3Normalize(cMath::Vector3Cross(vUp, apFrustum->GetForward()));
+			cVector3f vFwd = cMath::Vector3Cross(vRight, vUp);
+
+			/////////////////////////
+			//Update position
+			for(int i=0; i<4; ++i)
+				SetVec4(&pPosArray[i*4], vPrevPos + vRight * gvPosAdd[i].x*mfRadius + vUp * gvPosAdd[i].y*fLength);
+
+			/////////////////////////
+			//Update uv
+			if(lCount==2 && (fLength < fSegmentLength || fSegmentLength==0))
+			{
+				//////////////////
+				//No segments
+				if(fSegmentLength==0)
+				{
+					float fYAdd = 1 - fLength/ mfLengthTileSize;
+
+					SetVec3(&pUvArray[0*3], vTexCoords[0] - cVector3f(0,fYAdd,0));
+					SetVec3(&pUvArray[1*3], vTexCoords[1] - cVector3f(0,fYAdd,0));
+
+					SetVec3(&pUvArray[2*3], vTexCoords[2]);
+					SetVec3(&pUvArray[3*3], vTexCoords[3]);
+				}
+				//////////////////
+				//First segment of many
+				else
+				{
+					float fYAdd = (1 - (fLength / fSegmentLength))*mfLengthTileAmount;
+
+					SetVec3(&pUvArray[0*3], vTexCoords[0] - cVector3f(0,fYAdd,0) );
+					SetVec3(&pUvArray[1*3], vTexCoords[1] - cVector3f(0,fYAdd,0) );
+
+					SetVec3(&pUvArray[2*3], vTexCoords[2]);
+					SetVec3(&pUvArray[3*3], vTexCoords[3]);
+				}
+			}
+			else
+			{
+				for(int i=0; i<4; ++i)
+					SetVec3(&pUvArray[i*3], vTexCoords[i]);
+			}
+
+			/////////////////////////
+			//Update Normal and Tangent
+			for(int i=0; i<4; ++i)
+			{
+				SetVec3(&pNrmArray[i*3], vFwd);
+				SetVec4(&pTanArray[i*4], vRight);
+			}
+
+			/////////////////////////
+			//Update pointers
+			pPosArray += 4 * 4;
+			pUvArray +=	 3 * 4;
+			pNrmArray += 3 * 4;
+			pTanArray += 4 * 4;
+
+			/////////////////////////
+			//Update misc
+			vPrevPos = vPos;
+		}
+
+		mpVtxBuffer->SetElementNum((lCount-1) * 6);
+
+		mpVtxBuffer->UpdateData(eVertexElementFlag_Position | eVertexElementFlag_Texture0 | eVertexElementFlag_Texture1 | eVertexElementFlag_Normal, false);
+
+		return true;
+	}
+
+	//-----------------------------------------------------------------------
+
+	cMatrixf* cRopeEntity::GetModelMatrix(cFrustum *apFrustum)
+	{
+		if(apFrustum==NULL)return &GetWorldMatrix();
+
+		return NULL;
+	}
+
+	//-----------------------------------------------------------------------
+
+	int cRopeEntity::GetMatrixUpdateCount()
+	{
+		return GetTransformUpdateCount();
+	}
+
+	//-----------------------------------------------------------------------
+
+	bool cRopeEntity::IsVisible()
+	{
+		if(mColor.r <= 0 && mColor.g <= 0 && mColor.b <= 0) return false;
+
+		return mbIsVisible;
+	}
 
 
-    cRopeEntity::cRopeEntity(const tString& asName, cResources* apResources, cGraphics* apGraphics, iPhysicsRope* apRope, int alMaxSegments)
-        : iRenderable(asName)
-    {
-        mpMaterialManager = apResources->GetMaterialManager();
-        mpLowLevelGraphics = apGraphics->GetLowLevel();
+	//-----------------------------------------------------------------------
 
-        mColor = cColor(1, 1, 1, 1);
 
-        mpMaterial = NULL;
 
-        mpRope = apRope;
-        mlMaxSegments = alMaxSegments;
+	//////////////////////////////////////////////////////////////////////////
+	// PRIVATE METHODS
+	//////////////////////////////////////////////////////////////////////////
 
-        mfRadius = mpRope->GetParticleRadius();
-        mfLengthTileAmount = 1;
-        mfLengthTileSize = 1;
-        
-        bgfx::VertexLayout layout;
-        layout.begin()
-                .add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float)
-                .add(bgfx::Attrib::Normal, 3, bgfx::AttribType::Float)
-                .add(bgfx::Attrib::Tangent, 4, bgfx::AttribType::Float)
-                .add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Float)
-                .add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Float)
-            .end();
+	//-----------------------------------------------------------------------
 
-        auto vertexDef = BufferDefinition::CreateStructureBuffer(layout, 4 * mlMaxSegments);
-        auto indexDef = BufferDefinition::CreateUint16IndexBuffer(6 * mlMaxSegments);
-        m_vertexBuffer = Buffer(vertexDef);
-        m_indexBuffer = Buffer(indexDef);
-
-        auto elementSpan = m_vertexBuffer.GetElements<entity::rope::VertexElement>();
-        auto indexSpan = m_indexBuffer.GetElements<uint16_t>();
-
-        auto elementIt = elementSpan.begin();
-        auto indexIt = indexSpan.begin();
-        for (int i = 0; i < mlMaxSegments; ++i)
-        {
-            const cVector2f vTexCoords[4] = { cVector2f(1, 1), // Bottom left
-                                              cVector2f(-1, 1), // Bottom right
-                                              cVector2f(-1, -1), // Top left
-                                              cVector2f(1, -1) }; // Top right
-
-            for (int j = 0; j < 4; j++)
-            {
-                (*elementIt) = { { 0, 0, 0 },
-                                 { 0, 0, 1 },
-                                 { 0, 0, 0 },
-                                 { mColor.r, mColor.g, mColor.b, mColor.a },
-                                 { vTexCoords[j].x, vTexCoords[j].y } };
-                ++elementIt;
-                for (int j = 0; j < 3; j++)
-                {
-                    (*indexIt) = j + i * 4;
-                    ++indexIt;
-                }
-                for (int j = 2; j < 5; j++)
-                {
-                    (*indexIt) = (j == 4 ? 0 : j) + i * 4;
-                    ++indexIt;
-                }
-            }
-        }
-        std::array<Buffer*, 1> vertexBuffers = { &m_vertexBuffer };
-        hpl::vertex::helper::UpdateTangentsFromPositionTexCoords(&m_indexBuffer, 
-            absl::MakeSpan(vertexBuffers.begin(), vertexBuffers.end()), mlMaxSegments * 4);
-
-        VertexStream::VertexStreamDefinition vertexStreamDefinition = {
-            AccessType::AccessDynamic,
-            layout
-        };
-        m_vertexStream = VertexStream(vertexStreamDefinition, m_vertexBuffer, 0, m_vertexBuffer.NumberElements());
-        IndexStream::IndexStreamDefinition indexStreamDefinition = {
-            AccessType::AccessStatic,
-            BufferDefinition::FormatType::Uint16
-        };
-        m_indexStream = IndexStream(indexStreamDefinition, m_indexBuffer, 0, m_indexBuffer.NumberElements());
-
-        mbApplyTransformToBV = false;
-        mlLastUpdateCount = -1;
-    }
-
-    bool cRopeEntity::Submit(LayoutStream& input, GraphicsContext& context) {
-        if(mlLastUpdateCount == -1 || mlLastUpdateCount == 1) {
-            return false;
-        }
-        input.m_indexStream = &m_indexStream;
-        input.m_vertexStream.push_back(&m_vertexStream);
-        // context.SubmitIndexBuffer(BufferIndexView(&m_idxData, 0, (mlLastUpdateCount - 1) * 4));
-        // context.SubmitVertexBuffer(0, BufferView(m_vtxData, 0, (mlLastUpdateCount - 1) * 6));
-        return true;
-    }
-
-    //-----------------------------------------------------------------------
-
-    cRopeEntity::~cRopeEntity()
-    {
-        if (mpMaterial)
-            mpMaterialManager->Destroy(mpMaterial);
-        if (mpVtxBuffer)
-            hplDelete(mpVtxBuffer);
-    }
-
-    void cRopeEntity::SetMultiplyAlphaWithColor(bool abX)
-    {
-        if (mbMultiplyAlphaWithColor == abX)
-            return;
-
-        mbMultiplyAlphaWithColor = abX;
-    }
-
-    void cRopeEntity::SetColor(const cColor& aColor)
-    {
-        if (mColor == aColor)
-            return;
-
-        mColor = aColor;
-        cColor finalColor = mColor;
-        if (mbMultiplyAlphaWithColor)
-        {
-            finalColor.r = finalColor.r * mColor.a;
-            finalColor.g = finalColor.g * mColor.a;
-            finalColor.b = finalColor.b * mColor.a;
-        }
-
-        for (auto& element : m_vertexBuffer.GetElements<entity::rope::VertexElement>())
-        {
-            element.color[0] = finalColor.r;
-            element.color[1] = finalColor.g;
-            element.color[2] = finalColor.b;
-            element.color[3] = finalColor.a;
-        }
-        m_vertexStream.Update(m_vertexBuffer, 0, m_vertexBuffer.NumberElements());
-        mpVtxBuffer->UpdateData(eVertexElementFlag_Color0, false);
-    }
-
-    //-----------------------------------------------------------------------
-
-    void cRopeEntity::SetMaterial(cMaterial* apMaterial)
-    {
-        mpMaterial = apMaterial;
-    }
-
-    //-----------------------------------------------------------------------
-
-    cBoundingVolume* cRopeEntity::GetBoundingVolume()
-    {
-        if (mlLastUpdateCount != mpRope->GetUpdateCount())
-        {
-            cVector3f vMin(1000000.0f);
-            cVector3f vMax(-1000000.0f);
-
-            cVerletParticleIterator it = mpRope->GetParticleIterator();
-            while (it.HasNext())
-            {
-                cVerletParticle* pPart = it.Next();
-                cMath::ExpandAABB(vMin, vMax, pPart->GetPosition(), pPart->GetPosition());
-            }
-
-            mBoundingVolume.SetLocalMinMax(vMin - cVector3f(mfRadius), vMax + cVector3f(mfRadius));
-
-            mlLastUpdateCount = mpRope->GetUpdateCount();
-        }
-
-        return &mBoundingVolume;
-    }
-
-    //-----------------------------------------------------------------------
-
-    void cRopeEntity::UpdateGraphicsForFrame(float afFrameTime)
-    {
-    }
-
-    static cVector2f gvPosAdd[4] = {
-        // cVector2f (1,1), cVector2f (1,0), cVector2f (-1,0), cVector2f (-1,1)
-        cVector2f(1, 0),
-        cVector2f(-1, 0),
-        cVector2f(-1, 1),
-        cVector2f(1, 1)
-    };
-
-    bool cRopeEntity::UpdateGraphicsForViewport(cFrustum* apFrustum, float afFrameTime)
-    {
-        auto elements = m_vertexBuffer.GetElements<entity::rope::VertexElement>();
-        auto elementIt = elements.begin();
-
-        float fSegmentLength = mpRope->GetSegmentLength();
-
-        cVector3f vTexCoords[4] = {
-            cVector3f(1, 1, 0), // Bottom left
-            cVector3f(0, 1, 0), // Bottom right
-            cVector3f(0, 0, 0), // Top left
-            cVector3f(1, 0, 0) // Top right
-        };
-
-        vTexCoords[0].y *= mfLengthTileAmount;
-        vTexCoords[1].y *= mfLengthTileAmount;
-
-        cVerletParticleIterator it = mpRope->GetParticleIterator();
-        int lCount = 0;
-        cVector3f vPrevPos;
-        while (it.HasNext())
-        {
-            if (lCount >= mlMaxSegments)
-                break;
-            ++lCount;
-
-            cVerletParticle* pPart = it.Next();
-
-            if (lCount == 1)
-            {
-                vPrevPos = pPart->GetPosition();
-                continue;
-            }
-
-            /////////////////////////
-            // Calculate properties
-            cVector3f vPos = pPart->GetSmoothPosition();
-            cVector3f vDelta = vPos - vPrevPos;
-            float fLength = vDelta.Length();
-            cVector3f vUp = vDelta / fLength;
-            cVector3f vRight = cMath::Vector3Normalize(cMath::Vector3Cross(vUp, apFrustum->GetForward()));
-            cVector3f vFwd = cMath::Vector3Cross(vRight, vUp);
-
-            /////////////////////////
-            // Update position
-            for (int i = 0; i < 4; ++i)
-            {
-                cVector3f pos = vPrevPos + vRight * gvPosAdd[i].x * mfRadius + vUp * gvPosAdd[i].y * fLength;
-                elementIt[i].position[0] = pos.x;
-                elementIt[i].position[1] = pos.y;
-                elementIt[i].position[2] = pos.z;
-            }
-
-            /////////////////////////
-            // Update uv
-            if (lCount == 2 && (fLength < fSegmentLength || fSegmentLength == 0))
-            {
-                //////////////////
-                // No segments
-                if (fSegmentLength == 0)
-                {
-                    float fYAdd = 1 - fLength / mfLengthTileSize;
-                    const cVector3f uv1 = vTexCoords[0] - cVector3f(0, fYAdd, 0);
-                    const cVector3f uv2 = vTexCoords[1] - cVector3f(0, fYAdd, 0);
-                    const cVector3f uv3 = vTexCoords[2];
-                    const cVector3f uv4 = vTexCoords[3];
-
-                    std::copy(uv1.v, uv1.v + 2, elementIt[0 * 3].texcoord);
-                    std::copy(uv2.v, uv2.v + 2, elementIt[1 * 3].texcoord);
-                    std::copy(uv3.v, uv3.v + 2, elementIt[2 * 3].texcoord);
-                    std::copy(uv4.v, uv4.v + 2, elementIt[3 * 3].texcoord);
-                }
-                //////////////////
-                // First segment of many
-                else
-                {
-                    float fYAdd = (1 - (fLength / fSegmentLength)) * mfLengthTileAmount;
-                    const cVector3f uv1 = vTexCoords[0] - cVector3f(0, fYAdd, 0);
-                    const cVector3f uv2 = vTexCoords[1] - cVector3f(0, fYAdd, 0);
-                    const cVector3f uv3 = vTexCoords[2];
-                    const cVector3f uv4 = vTexCoords[3];
-
-                    std::copy(uv1.v, uv1.v + 2, elementIt[0].texcoord);
-                    std::copy(uv2.v, uv2.v + 2, elementIt[1].texcoord);
-                    std::copy(uv3.v, uv3.v + 2, elementIt[2].texcoord);
-                    std::copy(uv4.v, uv4.v + 2, elementIt[3].texcoord);
-                }
-            }
-            else
-            {
-                for (int i = 0; i < 4; ++i)
-                {
-                    const cVector3f uv = vTexCoords[i];
-                    std::copy(uv.v, uv.v + 2, elementIt[i].texcoord);
-                }
-            }
-
-            /////////////////////////
-            // Update Normal and Tangent
-            for (int i = 0; i < 4; ++i)
-            {
-                std::copy(vFwd.v, vFwd.v + 3, elementIt[i].normal);
-                std::copy(vRight.v, vRight.v + 3, elementIt[i].tangent);
-            }
-
-            elementIt += 4;
-            vPrevPos = vPos;
-        }
-        m_vertexStream.Update(m_vertexBuffer, 0, m_vertexBuffer.NumberElements());
-
-        // mpVtxBuffer->SetElementNum((lCount - 1) * 6);
-        // m_vtxData.Update(0, (lCount - 1) * 4);
-
-        // mpVtxBuffer->UpdateData(
-        //     eVertexElementFlag_Position | eVertexElementFlag_Texture0 | eVertexElementFlag_Texture1 | eVertexElementFlag_Normal, false);
-
-        return true;
-    }
-
-    //-----------------------------------------------------------------------
-
-    cMatrixf* cRopeEntity::GetModelMatrix(cFrustum* apFrustum)
-    {
-        if (apFrustum == NULL)
-            return &GetWorldMatrix();
-
-        return NULL;
-    }
-
-    //-----------------------------------------------------------------------
-
-    int cRopeEntity::GetMatrixUpdateCount()
-    {
-        return GetTransformUpdateCount();
-    }
-
-    //-----------------------------------------------------------------------
-
-    bool cRopeEntity::IsVisible()
-    {
-        if (mColor.r <= 0 && mColor.g <= 0 && mColor.b <= 0)
-            return false;
-
-        return mbIsVisible;
-    }
-} // namespace hpl
+	//-----------------------------------------------------------------------
+}

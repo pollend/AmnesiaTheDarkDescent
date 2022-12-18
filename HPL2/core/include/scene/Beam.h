@@ -20,8 +20,6 @@
 #ifndef HPL_BEAM_H
 #define HPL_BEAM_H
 
-#include "graphics/Buffer.h"
-#include "graphics/VertexBufferDrawRequest.h"
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
 #include "system/SystemTypes.h"
@@ -125,22 +123,9 @@ namespace hpl {
 
 		int GetMatrixUpdateCount();
 
-		// virtual BufferView getVtxBuffer() override { return BufferView(); }
-		virtual BufferIndexView getIdxBuffer() override { return BufferIndexView(); }
-		virtual bool Submit(LayoutStream& input, GraphicsContext& context) override;
 
 		eRenderableType GetRenderType(){ return eRenderableType_Beam;}
 	private:
-		// probably want some kind of buffer pool	
-		Buffer m_vertexBuffer;
-		Buffer m_indexBuffer;
-		
-		VertexStream m_vertexStream;
-		IndexStream m_indexStream;
-
-		// BufferView m_vertexBufferView;
-		// BufferView m_indexBufferView;
-
 		cMaterialManager* mpMaterialManager;
 		cFileSearcher *mpFileSearcher;
 		iLowLevelGraphics* mpLowLevelGraphics;

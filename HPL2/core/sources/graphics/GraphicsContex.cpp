@@ -45,43 +45,6 @@ namespace hpl
     {
     }
 
-    void GraphicsContext::SubmitIndexBuffer(BufferIndexView indexBuffer) {
-
-        if (!indexBuffer.IsEmpty())
-        {
-            auto& definition = indexBuffer.GetIndexBuffer().GetDefinition();
-            switch (definition.m_accessType)
-            {
-            case BufferIndex::AccessType::AccessStatic:
-                bgfx::setIndexBuffer(indexBuffer.GetIndexBuffer().GetHandle(), indexBuffer.Offset(), indexBuffer.Count());
-                break;
-            case BufferIndex::AccessType::AccessDynamic:
-            case BufferIndex::AccessType::AccessStream:
-                BX_ASSERT(false, "TODO: Implement dynamic index buffer");
-                break;
-            }
-        }
-    }
-    // void GraphicsContext::SubmitVertexBuffer(uint32_t stream, BufferView vertexBuffer) {
-    //     // if (!vertexBuffer.IsEmpty())
-    //     // {
-    //     //     auto& definition = vertexBuffer.Definition();
-    //     //     switch (definition.m_accessType)
-    //     //     {
-    //     //     case Buffer::AccessType::AccessStatic:
-    //     //         bgfx::setVertexBuffer(stream, 
-    //     //             vertexBuffer.GetSource()->GetHandle(), vertexBuffer.Offset(), vertexBuffer.Count());
-    //     //         break;
-    //     //     case Buffer::AccessType::AccessDynamic:
-    //     //     case Buffer::AccessType::AccessStream:
-    //     //         bgfx::setVertexBuffer(stream, 
-    //     //             vertexBuffer.GetSource()->GetDynamicHandle(), vertexBuffer.Offset(), vertexBuffer.Count());
-    //     //         break;
-    //     //     }
-    //     // }
-
-    // }
-
 
     void GraphicsContext::Init()
     {

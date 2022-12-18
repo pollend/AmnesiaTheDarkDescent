@@ -76,6 +76,7 @@ file(GLOB impl_sources RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
     sources/impl/GLSL*
     sources/impl/OcclusionQueryOGL.cpp
     sources/impl/VertexBufferOGL_Array.cpp
+    sources/impl/VertexBufferBGFX.cpp
     sources/impl/VertexBufferOGL_VBO.cpp
     sources/impl/VertexBufferOpenGL.cpp
     # SDL

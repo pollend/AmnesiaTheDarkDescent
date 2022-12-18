@@ -479,11 +479,7 @@ namespace hpl {
 			eVertexBufferUsageType UsageType = eVertexBufferUsageType_Static;
 			iVertexBuffer *pVtxBuffer = CreateVertexBuffer(Geom, UsageType);//, vExtraVtxVec);
 			pSubMesh->SetVertexBuffer(pVtxBuffer);
-
-			//Create an extra set of vertices for shadow rendering
-			//Not needed... no stencil shadows.
-			//pVtxBuffer->CreateShadowDouble(true);
-
+			
 			/////////////////////////////
 			//Add material
 			tString sNodeMaterial = pGeomNode->msInstanceMaterial != "" ? pGeomNode->msInstanceMaterial : Geom.msMaterial;

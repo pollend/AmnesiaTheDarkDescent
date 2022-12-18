@@ -2,7 +2,6 @@
 
 #include "bgfx/bgfx.h"
 #include <bx/debug.h>
-#include "graphics/Buffer.h"
 #include "impl/LowLevelGraphicsSDL.h"
 #include "impl/SDLTexture.h"
 #include "system/LowLevelSystem.h"

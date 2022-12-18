@@ -197,8 +197,6 @@ namespace hpl {
 		if(alReserveIdxSize>0)
 			mvIndexArray.reserve(alReserveIdxSize);
 
-		mbHasShadowDouble = false;
-
 		mpLowLevelGraphics = apLowLevelGraphics;
 
 		for(int i=0; i< eVertexBufferElement_LastEnum; ++i)	mvElementArrayIndex[i] =-1;
@@ -353,38 +351,6 @@ namespace hpl {
 		return true;
 	}
 
-	//-----------------------------------------------------------------------
-
-	void iVertexBufferOpenGL::CreateShadowDouble(bool abUpdateData)
-	{
-		cVtxBufferGLElementArray *pPosElement = GetElementArray(eVertexBufferElement_Position);
-
-		//Set to new size.
-		int lSize = (int)pPosElement->Size();
-		pPosElement->Reserve(lSize*2);
-
-		float *pPosArray = (float*)pPosElement->GetArrayPtr();
-
-		int lCount = lSize /4;
-		int lZero =0;
-		for(int i=0; i< lCount; i++)
-		{
-			pPosElement->PushBack(&pPosArray[i*4+0]);
-			pPosElement->PushBack(&pPosArray[i*4+1]);
-			pPosElement->PushBack(&pPosArray[i*4+2]);
-			pPosElement->PushBack(&lZero);
-		}
-
-		mbHasShadowDouble = true;
-
-		if(abUpdateData)
-		{
-			UpdateData(eVertexElementFlag_Position, false);
-		}
-	}
-
-	//-----------------------------------------------------------------------
-
 	void iVertexBufferOpenGL::Transform(const cMatrixf &a_mtxTransform)
 	{
 		///////////////
@@ -425,11 +391,6 @@ namespace hpl {
 
 				cVector3f vPos = cMath::MatrixMul(a_mtxTransform, cVector3f(pPos[0],pPos[1],pPos[2]));
 				pPos[0] = vPos.x; pPos[1] = vPos.y; pPos[2] = vPos.z;
-
-				if(mbHasShadowDouble){
-					float* pExtraPos = &pPosArray[i*lVtxStride + lShadowDoubleOffset];
-					pExtraPos[0] = vPos.x; pExtraPos[1] = vPos.y; pExtraPos[2] = vPos.z;
-				}
 			}
 
 			//////////////////
@@ -596,7 +557,6 @@ namespace hpl {
 		memcpy(pVtxBuff->GetIndices(), GetIndices(), GetIndexNum() * sizeof(unsigned int) );
 
 		pVtxBuff->mbTangents = mbTangents;
-		pVtxBuff->mbHasShadowDouble = mbHasShadowDouble;
 
 		pVtxBuff->Compile(0);
 
@@ -611,8 +571,7 @@ namespace hpl {
 		int lSize = (int)pPosElement->Size() / pPosElement->mlElementNum;
 
 		//If there is a shadow double, just return the length of the first half.
-		if(mbHasShadowDouble)	return lSize / 2;
-		else					return lSize;
+		return lSize;
 	}
 
 	//-----------------------------------------------------------------------
