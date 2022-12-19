@@ -473,9 +473,8 @@ namespace hpl
     {
     }
 
-    void cMaterialType_Water::SubmitMaterial(
-        bgfx::ViewId id,
-        GraphicsContext& context,
+    void cMaterialType_Water::GetShaderData(
+        GraphicsContext::ShaderProgram& input,
         eMaterialRenderMode aRenderMode,
         iGpuProgram* apProgram,
         cMaterial* apMaterial,
@@ -577,7 +576,7 @@ namespace hpl
                 }
             }
         }
-        apProgram->Submit(id, context);
+        // apProgram->Submit(id, context);
     }
 
     //--------------------------------------------------------------------------

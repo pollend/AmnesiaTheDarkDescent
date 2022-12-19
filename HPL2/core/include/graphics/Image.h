@@ -12,6 +12,7 @@ namespace hpl
         uint16_t m_width;
         uint16_t m_height;
         uint16_t m_arraySize;
+        
         bool m_hasMipMaps;
 
         static ImageDescriptor CreateTexture2D(uint16_t width, uint16_t height, bool hasMipMaps, bgfx::TextureFormat::Enum format);

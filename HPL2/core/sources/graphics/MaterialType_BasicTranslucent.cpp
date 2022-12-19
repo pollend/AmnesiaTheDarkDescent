@@ -524,12 +524,12 @@ namespace hpl
                             u_mtxUv,
                             u_normalMtx,
                             u_invViewRotation
-                        ](const RefractionData& data, bgfx::ViewId view, GraphicsContext& context)
+                        ](const RefractionData& data, GraphicsContext::ShaderProgram& program)
                         {
-                            bgfx::setUniform(u_param, &data.params, 6);
-                            bgfx::setUniform(u_mtxUv, &data.mtxUV);
-                            bgfx::setUniform(u_normalMtx, &data.normalMtx);
-                            bgfx::setUniform(u_invViewRotation, &data.mtxInvViewRotation);
+                            program.m_uniforms.push_back({u_param,&data.params,6});
+                            program.m_uniforms.push_back({u_mtxUv,&data.mtxUV});
+                            program.m_uniforms.push_back({u_normalMtx,&data.normalMtx});
+                            program.m_uniforms.push_back({u_invViewRotation,&data.mtxInvViewRotation});
                         });
 
                     program->data().params.useBlendModeAdd = (blendMode == eMaterialBlendMode_Add) ? 1.0f : 0.0f;
@@ -711,18 +711,18 @@ namespace hpl
                              s_normalMap,
                              s_refractionMap,
                              s_envMapAlphaMap,
-                             s_envMap](const RefractionData& data, bgfx::ViewId view, GraphicsContext& context)
+                             s_envMap](const RefractionData& data, GraphicsContext::ShaderProgram& program)
                             {
-                                bgfx::setUniform(u_param, &data.params, 6);
-                                bgfx::setUniform(u_mtxUv, &data.mtxUV);
-                                bgfx::setUniform(u_normalMtx, &data.normalMtx);
-                                bgfx::setUniform(u_invViewRotation, &data.mtxInvViewRotation);
+                                program.m_uniforms.push_back({u_param, &data.params, 6});
+                                program.m_uniforms.push_back({u_mtxUv, &data.mtxUV});
+                                program.m_uniforms.push_back({u_normalMtx, &data.normalMtx});
+                                program.m_uniforms.push_back({u_invViewRotation, &data.mtxInvViewRotation});
 
-                                bgfx::setTexture(0, s_diffuseMap, data.s_diffuseMap);
-                                bgfx::setTexture(1, s_normalMap, data.s_normalMap);
-                                bgfx::setTexture(2, s_refractionMap, data.s_refractionMap);
-                                bgfx::setTexture(3, s_envMapAlphaMap, data.s_envMapAlphaMap);
-                                bgfx::setTexture(4, s_envMap, data.s_envMap);
+                                program.m_textures.push_back({s_diffuseMap, data.s_diffuseMap, 0});
+                                program.m_textures.push_back({s_normalMap, data.s_normalMap, 1});
+                                program.m_textures.push_back({s_refractionMap, data.s_refractionMap, 2});
+                                program.m_textures.push_back({s_envMapAlphaMap, data.s_envMapAlphaMap, 3});
+                                program.m_textures.push_back({s_envMap, data.s_envMap, 4});
                             });
 
                         program->data().params.useBlendModeAdd = (blendMode == eMaterialBlendMode_Add) ? 1.0f : 0.0f;
@@ -773,9 +773,8 @@ namespace hpl
         
     }
 
-    void cMaterialType_Translucent::SubmitMaterial(
-        bgfx::ViewId id,
-        GraphicsContext& context,
+    void cMaterialType_Translucent::GetShaderData(
+        GraphicsContext::ShaderProgram& input,
         eMaterialRenderMode aRenderMode,
         iGpuProgram* apProgram,
         cMaterial* apMaterial,
@@ -919,7 +918,8 @@ namespace hpl
             apProgram->SetFloat(kVar_afAlpha, apRenderer->GetTempAlpha());
             apProgram->SetFloat(kVar_afLightLevel, 1.0f);
         }
-        apProgram->Submit(id, context);
+        apProgram->GetProgram(input);
+        // apProgram->Submit(id, context);
     }
 
     //--------------------------------------------------------------------------

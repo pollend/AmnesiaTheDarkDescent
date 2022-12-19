@@ -101,8 +101,12 @@ namespace hpl {
 		virtual void SetupObjectSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderable *apObject,
 												iRenderer *apRenderer)=0;
 
-		virtual void SubmitMaterial(bgfx::ViewId id, GraphicsContext& context, eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial* apMaterial, iRenderable *apObject,
-												iRenderer *apRenderer){};
+		virtual void GetShaderData(GraphicsContext::ShaderProgram& input, 
+										eMaterialRenderMode aRenderMode, 
+										iGpuProgram* apProgram, 
+										cMaterial* apMaterial, 
+										iRenderable *apObject,
+										iRenderer *apRenderer){};
 
 		int GetUsedTextureNum(){ return (int)mvUsedTextures.size(); }
 		cMaterialUsedTexture* GetUsedTexture(int alIdx){ return &mvUsedTextures[alIdx]; }

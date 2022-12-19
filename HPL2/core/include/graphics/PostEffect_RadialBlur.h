@@ -17,8 +17,7 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef HPL_POSTEFFECT_RADIAL_BLUR_H
-#define HPL_POSTEFFECT_RADIAL_BLUR_H
+#pragma once
 
 #include "graphics/Image.h"
 #include <bgfx/bgfx.h>
@@ -60,9 +59,9 @@ namespace hpl {
 	private:
 		iGpuProgram *mpProgram;
 
-		bgfx::ProgramHandle _program;
-		bgfx::UniformHandle _u_uniform;
-		bgfx::UniformHandle _s_diffuseMap;
+		bgfx::ProgramHandle m_program;
+		bgfx::UniformHandle m_u_uniform;
+		bgfx::UniformHandle m_s_diffuseMap;
 	};
 
 	//------------------------------------------
@@ -73,13 +72,13 @@ namespace hpl {
 		cPostEffect_RadialBlur(cGraphics *apGraphics,cResources *apResources, iPostEffectType *apType);
 		~cPostEffect_RadialBlur();
 
-		void Reset();
+		virtual void RenderEffect(GraphicsContext& context, Image& input, RenderTarget& target) override;
+		virtual void Reset() override;
 
 	private:
 		void OnSetParams();
 		iPostEffectParams *GetTypeSpecificParams() { return &mParams; }
 
-		void RenderEffect(GraphicsContext& context, Image& input, RenderTarget& target);
 		iTexture* RenderEffect(iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer);
 
 		void RenderBlur(iTexture *apInputTex);
@@ -92,4 +91,3 @@ namespace hpl {
 	//------------------------------------------
 
 };
-#endif // HPL_POSTEFFECT_IMAGE_TRAIL_H

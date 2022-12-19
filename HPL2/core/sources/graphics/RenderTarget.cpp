@@ -15,12 +15,30 @@ namespace hpl
     {
     }
 
+    RenderTarget::RenderTarget(RenderTarget&& target) {
+        _image = std::move(target._image);
+        _buffer = target._buffer;
+        target._buffer = BGFX_INVALID_HANDLE;
+    }
+
+    void RenderTarget::operator=(RenderTarget&& target) {
+        _image = std::move(target._image);
+        _buffer = target._buffer;
+        target._buffer = BGFX_INVALID_HANDLE;
+    }
+
+    RenderTarget::~RenderTarget() {
+        if (bgfx::isValid(_buffer)) {
+            bgfx::destroy(_buffer);
+        }
+    }
+
     const ImageDescriptor& RenderTarget::GetDescriptor() const
     {
         return _image->GetDescriptor();
     }
 
-    bgfx::FrameBufferHandle RenderTarget::GetHandle()
+    const bgfx::FrameBufferHandle RenderTarget::GetHandle() const
     {
         return _buffer;
     }

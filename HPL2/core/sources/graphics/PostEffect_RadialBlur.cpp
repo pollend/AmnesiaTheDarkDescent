@@ -22,6 +22,7 @@
 #include "bgfx/bgfx.h"
 #include "graphics/Graphics.h"
 
+#include "graphics/GraphicsContext.h"
 #include "graphics/LowLevelGraphics.h"
 #include "graphics/PostEffectComposite.h"
 #include "graphics/FrameBuffer.h"
@@ -38,9 +39,9 @@ namespace hpl {
 
 	cPostEffectType_RadialBlur::cPostEffectType_RadialBlur(cGraphics *apGraphics, cResources *apResources) : iPostEffectType("RadialBlur",apGraphics,apResources)
 	{
-		_program = hpl::loadProgram("vs_post_effect", "fs_posteffect_radial_blur_frag");
-		_u_uniform = bgfx::createUniform("u_params", bgfx::UniformType::Vec4);
-		_s_diffuseMap = bgfx::createUniform("diffuseMap", bgfx::UniformType::Sampler);
+		m_program = hpl::loadProgram("vs_post_effect", "fs_posteffect_radial_blur_frag");
+		m_u_uniform = bgfx::createUniform("u_params", bgfx::UniformType::Vec4);
+		m_s_diffuseMap = bgfx::createUniform("diffuseMap", bgfx::UniformType::Sampler);
 	}
 	
 	cPostEffectType_RadialBlur::~cPostEffectType_RadialBlur()
@@ -91,7 +92,9 @@ namespace hpl {
 
 		cVector2l vRenderTargetSize = mpCurrentComposite->GetRenderTargetSize();
 		cVector2f vRenderTargetSizeFloat((float)vRenderTargetSize.x, (float)vRenderTargetSize.y);
-		if (bgfx::isValid(mpRadialBlurType->_program))
+		
+		BX_ASSERT(mpRadialBlurType, "radial blur type is null");
+		if (bgfx::isValid(mpRadialBlurType->m_program))
 		{
 			float value[4] = {  0  };
 			value[0] = mParams.mfSize * vRenderTargetSizeFloat.x; // afSize
@@ -102,15 +105,19 @@ namespace hpl {
 			value[3] = blurStartDist.y;
 
 			auto& descriptor = target.GetDescriptor();
-			bgfx::setViewRect(view, 0, 0, descriptor.m_width, descriptor.m_height);
-			bgfx::setViewFrameBuffer(view, target.GetHandle());
-			bgfx::setTexture(0, mpRadialBlurType->_s_diffuseMap, input.GetHandle());
-			bgfx::setUniform(mpRadialBlurType->_u_uniform, &value);
-			bgfx::setState(0 | 
-				BGFX_STATE_WRITE_RGB | 
-				BGFX_STATE_WRITE_A);
-			context.ScreenSpaceQuad(target.GetDescriptor().m_width, target.GetDescriptor().m_height);
-			bgfx::submit(view, mpRadialBlurType->_program);
+			GraphicsContext::LayoutStream layoutStream;
+			context.ScreenSpaceQuad(layoutStream, target.GetDescriptor().m_width, target.GetDescriptor().m_height);
+			GraphicsContext::ShaderProgram shaderProgram;
+			shaderProgram.m_uniforms.push_back({ mpRadialBlurType->m_u_uniform, value });
+			shaderProgram.m_textures.push_back({ mpRadialBlurType->m_s_diffuseMap, input.GetHandle() });
+			shaderProgram.m_configuration.m_write = Write::RGBA | Write::Depth;
+
+			GraphicsContext::DrawRequest request { target, layoutStream, shaderProgram };
+			request.m_width = target.GetDescriptor().m_width;
+			request.m_height = target.GetDescriptor().m_height;
+			
+			context.Submit(view, request);
+
 		}
 	}
 
@@ -133,7 +140,7 @@ namespace hpl {
 
 		mpCurrentComposite->SetProgram(mpRadialBlurType->mpProgram);
 
-		if(bgfx::isValid(mpRadialBlurType->_program))
+		if(bgfx::isValid(mpRadialBlurType->m_program))
 		{
 			float value[4] = {{0}};
 			value[0] = mParams.mfSize*vRenderTargetSizeFloat.x; // afSize
@@ -143,9 +150,9 @@ namespace hpl {
 			value[2] = blurStartDist.x; // avHalfScreenSize
 			value[3] = blurStartDist.y;
 			
-			bgfx::setUniform(mpRadialBlurType->_u_uniform, &value);
+			bgfx::setUniform(mpRadialBlurType->m_u_uniform, &value);
 
-			bgfx::submit(0, mpRadialBlurType->_program);
+			bgfx::submit(0, mpRadialBlurType->m_program);
 		}
 
 		mpCurrentComposite->SetTexture(0, apInputTexture);

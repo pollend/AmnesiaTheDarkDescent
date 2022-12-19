@@ -22,6 +22,7 @@
 #include "absl/types/span.h"
 #include "bgfx/bgfx.h"
 #include "bgfx/defines.h"
+#include "graphics/GraphicsContext.h"
 #include "math/Math.h"
 #include "system/LowLevelSystem.h"
 
@@ -53,14 +54,16 @@ namespace hpl
         return 0;
     }
 
-    bgfx::AttribType::Enum iVertexBufferBGFX::GetAttribTypeFromHPL(eVertexBufferElementFormat format) {
-        switch(format) {
-            case eVertexBufferElementFormat_Float:
-                return bgfx::AttribType::Float;
-            case eVertexBufferElementFormat_Int:
-                return bgfx::AttribType::Float;
-            case eVertexBufferElementFormat_Byte:
-                return bgfx::AttribType::Uint8;
+    bgfx::AttribType::Enum iVertexBufferBGFX::GetAttribTypeFromHPL(eVertexBufferElementFormat format)
+    {
+        switch (format)
+        {
+        case eVertexBufferElementFormat_Float:
+            return bgfx::AttribType::Float;
+        case eVertexBufferElementFormat_Int:
+            return bgfx::AttribType::Float;
+        case eVertexBufferElementFormat_Byte:
+            return bgfx::AttribType::Uint8;
         }
         BX_ASSERT(false, "Unknown vertex attribute type.");
         return bgfx::AttribType::Count;
@@ -105,33 +108,36 @@ namespace hpl
     }
 
     iVertexBufferBGFX::iVertexBufferBGFX(
-            iLowLevelGraphics* apLowLevelGraphics,
-            eVertexBufferType aType,
-            eVertexBufferDrawType aDrawType,
-            eVertexBufferUsageType aUsageType,
-            int alReserveVtxSize,
-            int alReserveIdxSize)
+        iLowLevelGraphics* apLowLevelGraphics,
+        eVertexBufferType aType,
+        eVertexBufferDrawType aDrawType,
+        eVertexBufferUsageType aUsageType,
+        int alReserveVtxSize,
+        int alReserveIdxSize)
         : iVertexBuffer(apLowLevelGraphics, aType, aDrawType, aUsageType, alReserveVtxSize, alReserveIdxSize)
     {
     }
 
     iVertexBufferBGFX::~iVertexBufferBGFX()
     {
-        for(auto& element: m_vertexElements) {
-            if(bgfx::isValid(element.m_handle)) {
+        for (auto& element : m_vertexElements)
+        {
+            if (bgfx::isValid(element.m_handle))
+            {
                 bgfx::destroy(element.m_handle);
             }
-            if(bgfx::isValid(element.m_dynamicHandle)) {
+            if (bgfx::isValid(element.m_dynamicHandle))
+            {
                 bgfx::destroy(element.m_dynamicHandle);
             }
             element.m_dynamicHandle = BGFX_INVALID_HANDLE;
             element.m_handle = BGFX_INVALID_HANDLE;
         }
-        if(bgfx::isValid(m_dynamicIndexHandle)) {
+        if (bgfx::isValid(m_dynamicIndexHandle))
+        {
             bgfx::destroy(m_dynamicIndexHandle);
         }
         m_dynamicIndexHandle = BGFX_INVALID_HANDLE;
-
     }
 
     static void PushVertexElements(
@@ -182,6 +188,16 @@ namespace hpl
                 return;
             }
         }
+    }
+
+    size_t iVertexBufferBGFX::VertexElement::Stride() const
+    {
+        return GetSizeFromHPL(m_format) * m_num;
+    }
+
+    size_t iVertexBufferBGFX::VertexElement::NumElements() const
+    {
+        return m_buffer.size() / Stride();
     }
 
     void iVertexBufferBGFX::AddVertexVec3f(eVertexBufferElement aElement, const cVector3f& avVtx)
@@ -312,7 +328,8 @@ namespace hpl
         UpdateData(vtxFlag, false);
     }
 
-    int iVertexBufferBGFX::GetElementNum(eVertexBufferElement aElement) {
+    int iVertexBufferBGFX::GetElementNum(eVertexBufferElement aElement)
+    {
         auto element = std::find_if(
             m_vertexElements.begin(),
             m_vertexElements.end(),
@@ -326,7 +343,8 @@ namespace hpl
         }
         return 0;
     }
-    eVertexBufferElementFormat iVertexBufferBGFX::GetElementFormat(eVertexBufferElement aElement) {
+    eVertexBufferElementFormat iVertexBufferBGFX::GetElementFormat(eVertexBufferElement aElement)
+    {
         auto element = std::find_if(
             m_vertexElements.begin(),
             m_vertexElements.end(),
@@ -342,7 +360,8 @@ namespace hpl
         return eVertexBufferElementFormat_LastEnum;
     }
 
-    int iVertexBufferBGFX::GetElementProgramVarIndex(eVertexBufferElement aElement) {
+    int iVertexBufferBGFX::GetElementProgramVarIndex(eVertexBufferElement aElement)
+    {
         auto element = std::find_if(
             m_vertexElements.begin(),
             m_vertexElements.end(),
@@ -357,7 +376,6 @@ namespace hpl
         BX_ASSERT(false, "program Var Index not found")
         return 0;
     }
-
 
     bool iVertexBufferBGFX::Compile(tVertexCompileFlag aFlags)
     {
@@ -421,9 +439,7 @@ namespace hpl
         for (auto& element : m_vertexElements)
         {
             bgfx::VertexLayout layout{};
-            layout.begin()
-                .add(GetAttribFromHPL(element.m_type), element.m_num, GetAttribTypeFromHPL(element.m_format))
-            .end();
+            layout.begin().add(GetAttribFromHPL(element.m_type), element.m_num, GetAttribTypeFromHPL(element.m_format)).end();
             switch (mUsageType)
             {
             case eVertexBufferUsageType_Static:
@@ -431,7 +447,8 @@ namespace hpl
                 break;
             case eVertexBufferUsageType_Dynamic:
             case eVertexBufferUsageType_Stream:
-                element.m_dynamicHandle = bgfx::createDynamicVertexBuffer(bgfx::copy(element.m_buffer.data(), element.m_buffer.size()), layout);
+                element.m_dynamicHandle =
+                    bgfx::createDynamicVertexBuffer(bgfx::copy(element.m_buffer.data(), element.m_buffer.size()), layout);
                 break;
             default:
                 BX_ASSERT(false, "Unknown usage type %d", mUsageType);
@@ -442,8 +459,8 @@ namespace hpl
         return true;
     }
 
-
-    void iVertexBufferBGFX::UpdateData(tVertexElementFlag aTypes, bool abIndices)  {
+    void iVertexBufferBGFX::UpdateData(tVertexElementFlag aTypes, bool abIndices)
+    {
         for (auto& element : m_vertexElements)
         {
             if (aTypes & element.m_flag)
@@ -469,8 +486,8 @@ namespace hpl
         }
     }
 
-
-	float* iVertexBufferBGFX::GetFloatArray(eVertexBufferElement aElement) {
+    float* iVertexBufferBGFX::GetFloatArray(eVertexBufferElement aElement)
+    {
         auto element = std::find_if(
             m_vertexElements.begin(),
             m_vertexElements.end(),
@@ -484,8 +501,9 @@ namespace hpl
         }
         return nullptr;
     }
-    
-    int* iVertexBufferBGFX::GetIntArray(eVertexBufferElement aElement) {
+
+    int* iVertexBufferBGFX::GetIntArray(eVertexBufferElement aElement)
+    {
         auto element = std::find_if(
             m_vertexElements.begin(),
             m_vertexElements.end(),
@@ -500,7 +518,8 @@ namespace hpl
         return nullptr;
     }
 
-    unsigned char* iVertexBufferBGFX::GetByteArray(eVertexBufferElement aElement) {
+    unsigned char* iVertexBufferBGFX::GetByteArray(eVertexBufferElement aElement)
+    {
         auto element = std::find_if(
             m_vertexElements.begin(),
             m_vertexElements.end(),
@@ -515,12 +534,13 @@ namespace hpl
         return nullptr;
     }
 
-    unsigned int* iVertexBufferBGFX::GetIndices() {
+    unsigned int* iVertexBufferBGFX::GetIndices()
+    {
         return m_indices.data();
     }
 
-    void iVertexBufferBGFX::ResizeArray(eVertexBufferElement aElement, int alSize) {
-
+    void iVertexBufferBGFX::ResizeArray(eVertexBufferElement aElement, int alSize)
+    {
         auto element = std::find_if(
             m_vertexElements.begin(),
             m_vertexElements.end(),
@@ -533,8 +553,9 @@ namespace hpl
             element->m_buffer.resize(alSize * element->Stride());
         }
     }
-    
-    void iVertexBufferBGFX::ResizeIndices(int alSize) {
+
+    void iVertexBufferBGFX::ResizeIndices(int alSize)
+    {
         m_indices.resize(alSize);
     }
 
@@ -542,11 +563,12 @@ namespace hpl
         eVertexBufferElement aType, eVertexBufferElementFormat aFormat, int alElementNum, int alProgramVarIndex)
     {
         tVertexElementFlag elementFlag = GetVertexElementFlagFromEnum(aType);
-		if(elementFlag & mVertexFlags){
-			Error("Vertex element of type %d already present in buffer %d!\n",aType,this);
-			return;
-		}
-		mVertexFlags |= elementFlag;
+        if (elementFlag & mVertexFlags)
+        {
+            Error("Vertex element of type %d already present in buffer %d!\n", aType, this);
+            return;
+        }
+        mVertexFlags |= elementFlag;
 
         VertexElement element;
         element.m_buffer.resize(alElementNum * GetSizeFromHPL(aFormat));
@@ -558,7 +580,8 @@ namespace hpl
         m_vertexElements.push_back(std::move(element));
     }
 
-    int iVertexBufferBGFX::GetVertexNum() {
+    int iVertexBufferBGFX::GetVertexNum()
+    {
         auto positionElement = std::find_if(
             m_vertexElements.begin(),
             m_vertexElements.end(),
@@ -569,57 +592,94 @@ namespace hpl
         BX_ASSERT(positionElement != m_vertexElements.end(), "No position element found");
         return positionElement->NumElements();
     }
-    
-    int iVertexBufferBGFX::GetIndexNum() {
+
+    int iVertexBufferBGFX::GetIndexNum()
+    {
         return m_indices.size();
     }
 
-    cBoundingVolume iVertexBufferBGFX::CreateBoundingVolume() {
+    cBoundingVolume iVertexBufferBGFX::CreateBoundingVolume()
+    {
         cBoundingVolume bv;
-        if( (mVertexFlags & eVertexElementFlag_Position) == 0)
-		{
-			Warning("Could not create bounding volume from buffer %d  because no position element was present!\n",this);
-			return bv;
-		}
+        if ((mVertexFlags & eVertexElementFlag_Position) == 0)
+        {
+            Warning("Could not create bounding volume from buffer %d  because no position element was present!\n", this);
+            return bv;
+        }
 
-         auto positionElement = std::find_if(
+        auto positionElement = std::find_if(
             m_vertexElements.begin(),
             m_vertexElements.end(),
             [](const auto& element)
             {
                 return element.m_type == eVertexBufferElement_Position;
             });
-        
-        if (positionElement == m_vertexElements.end()){
+
+        if (positionElement == m_vertexElements.end())
+        {
             return bv;
         }
 
-		if(positionElement->m_format != eVertexBufferElementFormat_Float)
-		{
-			Warning("Could not breate bounding volume since postion was not for format float in buffer %d!\n",this);
-			return bv;
-		}
+        if (positionElement->m_format != eVertexBufferElementFormat_Float)
+        {
+            Warning("Could not breate bounding volume since postion was not for format float in buffer %d!\n", this);
+            return bv;
+        }
 
-		bv.AddArrayPoints( reinterpret_cast<float*>(positionElement->m_buffer.data()), GetVertexNum());
-		bv.CreateFromPoints(positionElement->m_num);
+        bv.AddArrayPoints(reinterpret_cast<float*>(positionElement->m_buffer.data()), GetVertexNum());
+        bv.CreateFromPoints(positionElement->m_num);
 
-		return bv;
+        return bv;
     }
 
-    void iVertexBufferBGFX::Draw(eVertexBufferDrawType aDrawType) {
-
+    void iVertexBufferBGFX::Draw(eVertexBufferDrawType aDrawType)
+    {
     }
-    void iVertexBufferBGFX::DrawIndices(	unsigned int *apIndices, int alCount,
-                            eVertexBufferDrawType aDrawType) {
+    void iVertexBufferBGFX::DrawIndices(unsigned int* apIndices, int alCount, eVertexBufferDrawType aDrawType)
+    {
         BX_ASSERT(false, "Not implemented");
     }
 
-    void iVertexBufferBGFX::Bind() {
-        
+    // void iVertexBufferBGFX::Submit(GraphicsContext& context, eVertexBufferDrawType aDrawType) {
+
+    //     GraphicsContext::LayoutStream layoutStream;
+    //     layoutStream.m_drawType = aDrawType == eVertexBufferDrawType_LastEnum ?  mDrawType : aDrawType;
+    //     for(auto& element: m_vertexElements) {
+    //         layoutStream.m_vertexStreams.push_back({
+    //             .m_handle = element.m_handle,
+    //             .m_dynamicHandle = element.m_dynamicHandle,
+    //         });
+    //     }
+    //     layoutStream.m_indexStream = {
+    //         .m_handle = BGFX_INVALID_HANDLE,
+    //         .m_dynamicHandle = m_dynamicIndexHandle,
+    //     };
+    //     context.SubmitLayoutStream(layoutStream);
+    // }
+
+    void iVertexBufferBGFX::GetLayoutStream(GraphicsContext::LayoutStream& layoutStream, 
+        eVertexBufferDrawType aDrawType) {
+        layoutStream.m_drawType = aDrawType == eVertexBufferDrawType_LastEnum ?  mDrawType : aDrawType;
+        for(auto& element: m_vertexElements) {
+            layoutStream.m_vertexStreams.push_back({
+                .m_handle = element.m_handle,
+                .m_dynamicHandle = element.m_dynamicHandle,
+            });
+        }
+        layoutStream.m_indexStream = {
+            .m_handle = BGFX_INVALID_HANDLE,
+            .m_dynamicHandle = m_dynamicIndexHandle,
+        };
+    }
+
+
+
+    void iVertexBufferBGFX::Bind()
+    {
         uint8_t stream = 0;
-        for(auto& element : m_vertexElements)
+        for (auto& element : m_vertexElements)
         {
-            if(bgfx::isValid(element.m_handle))
+            if (bgfx::isValid(element.m_handle))
             {
                 bgfx::setVertexBuffer(++stream, element.m_handle);
             }
@@ -629,27 +689,28 @@ namespace hpl
             }
         }
         bgfx::setIndexBuffer(m_dynamicIndexHandle);
-
     }
-    void iVertexBufferBGFX::UnBind() {
+    void iVertexBufferBGFX::UnBind()
+    {
         return;
     }
 
-    iVertexBuffer* iVertexBufferBGFX::CreateCopy(eVertexBufferType aType, eVertexBufferUsageType aUsageType, tVertexElementFlag alVtxToCopy) {
-        auto* vertexBuffer = new iVertexBufferBGFX(mpLowLevelGraphics, eVertexBufferType_Hardware, mDrawType,aUsageType,GetIndexNum(),GetVertexNum());
-        // vertexBuffer->m_vertexElements = m_vertexElements;
+    iVertexBuffer* iVertexBufferBGFX::CreateCopy(eVertexBufferType aType, eVertexBufferUsageType aUsageType, tVertexElementFlag alVtxToCopy)
+    {
+        auto* vertexBuffer =
+            new iVertexBufferBGFX(mpLowLevelGraphics, eVertexBufferType_Hardware, mDrawType, aUsageType, GetIndexNum(), GetVertexNum());
         vertexBuffer->m_indices = m_indices;
 
-        for(auto element: m_vertexElements)
+        for (auto element : m_vertexElements)
         {
-           if(element.m_flag & alVtxToCopy) {
+            if (element.m_flag & alVtxToCopy)
+            {
                 auto& eleCopy = vertexBuffer->m_vertexElements.emplace_back(element);
                 eleCopy.m_handle = BGFX_INVALID_HANDLE;
                 eleCopy.m_dynamicHandle = BGFX_INVALID_HANDLE;
-           }
+            }
         }
         vertexBuffer->m_dynamicIndexHandle = BGFX_INVALID_HANDLE;
-
         vertexBuffer->Compile(0);
 
         return vertexBuffer;

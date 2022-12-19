@@ -53,6 +53,10 @@ namespace hpl {
 
 	private:
 		iGpuProgram *mpProgram;
+
+		bgfx::ProgramHandle m_program;
+		bgfx::UniformHandle m_u_uniform;
+		bgfx::UniformHandle m_s_diffuseMap;
 	};
 
 	//------------------------------------------
@@ -63,6 +67,8 @@ namespace hpl {
 		cPostEffect_ImageTrail(cGraphics *apGraphics,cResources *apResources, iPostEffectType *apType);
 		~cPostEffect_ImageTrail();
 
+		virtual void RenderEffect(GraphicsContext& context, Image& input, RenderTarget& target) override;
+		
 		void Reset();
 
 	private:

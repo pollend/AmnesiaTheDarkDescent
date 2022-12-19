@@ -21,6 +21,7 @@
 
 #include "bgfx/bgfx.h"
 #include "graphics/GraphicsContext.h"
+#include "graphics/RenderTarget.h"
 #include "math/Math.h"
 
 #include "system/LowLevelSystem.h"
@@ -202,6 +203,12 @@ namespace hpl {
 	}
 
 	//-----------------------------------------------------------------------
+
+	static RenderTarget& resolveRenderTarget(std::array<RenderTarget, 2>& rt, bool isReflection)
+	{
+		return rt[isReflection ? 1 : 0];
+	}
+
 
 	cRendererDeferred::~cRendererDeferred()
 	{
@@ -825,11 +832,14 @@ namespace hpl {
 
 	void cRendererDeferred::RenderObjects()
 	{
+
+		GraphicsContext cntx;
+
 		//Set up variables used in rendering later on.
 		SetupRenderVariables();
 
 		//Set up the frame buffers needed for G-buffer
-		SetupGBuffer();
+		SetupGBuffer(cntx);
 
 		tRenderableFlag lVisibleFlags=0;
 		if(mpCurrentSettings->mbIsReflection)	lVisibleFlags |= eRenderableFlag_VisibleInReflection;
@@ -874,7 +884,7 @@ namespace hpl {
 			SetupLightsAndRenderQueries();
 		}
 
-		RenderGbuffer();
+		RenderGbuffer(cntx);
 		if(mbDebugRenderFrameBuffers)
 		{
 			RenderGbufferContent();
@@ -903,7 +913,8 @@ namespace hpl {
 		RenderIllumination(contex);
 
 		RenderFog();
-		RenderFullScreenFog();
+		GraphicsContext context;
+		RenderFullScreenFog(context);
 
 		RenderEdgeSmooth();
 
@@ -930,19 +941,19 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cRendererDeferred::SetupGBuffer()
+	void cRendererDeferred::SetupGBuffer(GraphicsContext& context)
 	{
-		START_RENDER_PASS(GBufferSetup);
-		/////////////////////////////
-		// Set G-Buffer as frame buffer (need to set something with color else textures will not be used and alpha will not work!)
-		SetGBuffer(eGBufferComponents_Full);
-
-		/////////////////////////////
-		// Clear depth (no need to clear any of the textures!)
-
-		mpLowLevelGraphics->SetClearDepth(1);
-		ClearFrameBuffer(eClearFrameBufferFlag_Depth, true);
-		END_RENDER_PASS();
+		auto& target = resolveRenderTarget(m_gBuffer_full, mpCurrentSettings->mbIsReflection);
+		auto view = context.StartPass("ClearGBuffer");
+		GraphicsContext::DrawClear clear {
+			target,
+			{0, 1, 0, ClearOp::Depth},
+			0,
+			0,
+			target.GetDescriptor().m_width,
+			target.GetDescriptor().m_height,
+		};
+		context.ClearTarget(view, clear);	
 	}
 
 	//-----------------------------------------------------------------------
@@ -1028,38 +1039,41 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cRendererDeferred::RenderGbuffer()
+	void cRendererDeferred::RenderGbuffer(GraphicsContext& context)
 	{
 		START_RENDER_PASS(GBuffer);
-
-		SetDepthTestFunc(eDepthTestFunc_Equal);
-		SetDepthTest(true);
-		SetDepthWrite(false);
-		SetBlendMode(eMaterialBlendMode_None);
-		SetAlphaMode(eMaterialAlphaMode_Solid);
-		SetChannelMode(eMaterialChannelMode_RGBA);
-
-
-		////////////////////////////////////
-		//Iterate renderable objects and render to G-Buffer
-		cRenderableVecIterator diffuseIt = mpCurrentRenderList->GetArrayIterator(eRenderListType_Diffuse);
-		while(diffuseIt.HasNext())
+		auto& target = resolveRenderTarget(m_gBuffer_full, mpCurrentSettings->mbIsReflection);
+	
+		// Iterate renderable objects and render to G-Buffer
 		{
-			iRenderable *pObject = diffuseIt.Next();
-			cMaterial *pMaterial = pObject->GetMaterial();
+			auto view = context.StartPass("RenderGBuffer");
+			cRenderableVecIterator diffuseIt = mpCurrentRenderList->GetArrayIterator(eRenderListType_Diffuse);
+			while(diffuseIt.HasNext())
+			{
+				iRenderable *pObject = diffuseIt.Next();
+				cMaterial *pMaterial = pObject->GetMaterial();
+				iMaterialType* materialType = pMaterial->GetType();
+				iGpuProgram* program = pMaterial->GetProgram(0, eMaterialRenderMode_Diffuse);
+				iVertexBuffer* vertexBuffer = pObject->GetVertexBuffer();
+				if(vertexBuffer == nullptr || program == nullptr || materialType == nullptr) {
+					continue;
+				}
 
-			SetMaterialProgram(eMaterialRenderMode_Diffuse,pMaterial);
-
-			SetMaterialTextures(eMaterialRenderMode_Diffuse, pMaterial);
-
-			SetMatrix(pObject->GetModelMatrixPtr());
-
-			SetVertexBuffer(pObject->GetVertexBuffer());
-
-			DrawCurrentMaterial(eMaterialRenderMode_Diffuse, pObject);
+				GraphicsContext::LayoutStream layoutInput;
+				GraphicsContext::ShaderProgram shaderInput;
+				vertexBuffer->GetLayoutStream(layoutInput);
+				bgfx::setTransform(pObject->GetModelMatrixPtr()->v);
+				materialType->GetShaderData(shaderInput, eMaterialRenderMode_Diffuse, program, pMaterial, pObject, this);
+				
+				shaderInput.m_configuration.m_depthTest = DepthTest::LessEqual;
+				shaderInput.m_configuration.m_write = Write::RGBA;
+				
+				GraphicsContext::DrawRequest drawRequest {target, layoutInput, shaderInput};
+				drawRequest.m_width = target.GetDescriptor().m_width;
+				drawRequest.m_height = target.GetDescriptor().m_height;
+				context.Submit(view, drawRequest);
+			}
 		}
-
-		SetDepthTestFunc(eDepthTestFunc_LessOrEqual);
 
 		END_RENDER_PASS();
 	}
@@ -2657,9 +2671,11 @@ namespace hpl {
 			SetVertexBuffer(pObject->GetVertexBuffer());
 
 			DrawCurrentMaterial(eMaterialRenderMode_Illumination, pObject);
-		
-		
-			materialType->SubmitMaterial(illuminationId, context, eMaterialRenderMode_Illumination, program, pMaterial, pObject, this);
+			
+			GraphicsContext::ShaderProgram input;
+			materialType->GetShaderData(input, eMaterialRenderMode_Illumination, program, pMaterial, pObject, this);
+			
+			
 		}
 
 		SetDepthTestFunc(eDepthTestFunc_LessOrEqual);
@@ -2724,9 +2740,13 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cRendererDeferred::RenderFullScreenFog()
+	void cRendererDeferred::RenderFullScreenFog(GraphicsContext& context)
 	{
-		if(mpCurrentWorld->GetFogActive()==false) return;
+		if(mpCurrentWorld->GetFogActive()==false) {
+			return;
+		}
+		const auto& viewId = context.StartPass("FullScreenFog");
+		auto& target = resolveRenderTarget(m_gBuffer_depth, mpCurrentSettings->mbIsReflection);
 
 		START_RENDER_PASS(FullScreenFog);
 
@@ -2749,7 +2769,9 @@ namespace hpl {
 		// Set up program
 		int lFlags =0;
 		iGpuProgram *pProgram = mpFogProgramManager->GenerateProgram(0, lFlags);
-		SetProgram(pProgram);
+
+		// pProgram->Submit(bgfx::ViewId view, GraphicsContext &context)
+		// SetProgram(pProgram);
 
 		if(pProgram)
 		{
@@ -2759,21 +2781,30 @@ namespace hpl {
 			pProgram->SetColor4f(kVar_avFogColor, mpCurrentWorld->GetFogColor());
 			pProgram->SetFloat(kVar_afFalloffExp, mpCurrentWorld->GetFogFalloffExp());
 		}
+		// pProgram->Submit(viewId, context);
 
+		// //////////////////////////
+		// // Set up flat project
+		// SetFlatProjection();
 
-		//////////////////////////
-		// Set up flat project
-		SetFlatProjection();
+		// //////////////////////////
+		// // Render
+		// DrawQuad(0, 1);
 
-		//////////////////////////
-		// Render
-		DrawQuad(0, 1);
+		// //////////////////////////
+		// // Reset
+		// SetNormalFrustumProjection();
+		// SetDepthTest(true);
 
-		//////////////////////////
-		// Reset
-		SetNormalFrustumProjection();
-		SetDepthTest(true);
+		GraphicsContext::LayoutStream layoutStream;
+		bgfx::setViewFrameBuffer(viewId, target.GetHandle());
+		context.ScreenSpaceQuad(layoutStream, target.GetDescriptor().m_width, target.GetDescriptor().m_height);
+		
+		// bgfx::submit(viewId, pProgram->GetHandle());
+		
+		// context.Submit(pProgram);
 
+		
 		END_RENDER_PASS();
 	}
 

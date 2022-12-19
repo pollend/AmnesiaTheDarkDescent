@@ -19,11 +19,13 @@
 
 #include "graphics/PostEffect_ImageTrail.h"
 
+#include "bgfx/bgfx.h"
 #include "graphics/Graphics.h"
 
 #include "graphics/LowLevelGraphics.h"
 #include "graphics/PostEffectComposite.h"
 #include "graphics/FrameBuffer.h"
+#include "graphics/ShaderUtil.h"
 #include "graphics/Texture.h"
 #include "graphics/GPUProgram.h"
 #include "graphics/GPUShader.h"
@@ -46,6 +48,10 @@ namespace hpl {
 
 	cPostEffectType_ImageTrail::cPostEffectType_ImageTrail(cGraphics *apGraphics, cResources *apResources) : iPostEffectType("ImageTrail",apGraphics,apResources)
 	{
+		m_program = hpl::loadProgram("vs_post_effect", "fs_posteffect_image_trail_frag");
+		m_u_uniform = bgfx::createUniform("u_params", bgfx::UniformType::Vec4);
+		m_s_diffuseMap = bgfx::createUniform("diffuseMap", bgfx::UniformType::Sampler);
+	
 		cParserVarContainer vars;
 		vars.Add("UseUv");
 
@@ -133,6 +139,14 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	void cPostEffect_ImageTrail::RenderEffect(GraphicsContext& context, Image& input, RenderTarget& target) {
+		bgfx::ViewId view = context.StartPass("Image Trail");
+
+// bgfx::blit(view, target.GetHandle(), input.GetHandle())
+
+
+	}
+		
 
 	iTexture* cPostEffect_ImageTrail::RenderEffect(iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer)
 	{

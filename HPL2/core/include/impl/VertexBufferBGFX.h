@@ -19,6 +19,7 @@
 #pragma once
 
 #include "absl/container/inlined_vector.h"
+#include "graphics/GraphicsContext.h"
 #include "graphics/VertexBuffer.h"
 #include <array>
 #include <bgfx/bgfx.h>
@@ -47,15 +48,8 @@ namespace hpl
             int m_programVarIndex = 0;
             std::vector<uint8_t> m_buffer = {};
 
-            size_t Stride() const
-            {
-                return GetSizeFromHPL(m_format) * m_num;
-            }
-
-            size_t NumElements() const
-            {
-                return m_buffer.size() / Stride();
-            }
+            size_t Stride() const;
+            size_t NumElements() const;
 
             template<typename TData>
             absl::Span<TData> GetElements()
@@ -90,7 +84,9 @@ namespace hpl
         virtual void Draw(eVertexBufferDrawType aDrawType = eVertexBufferDrawType_LastEnum) override;
         virtual void DrawIndices(	unsigned int *apIndices, int alCount,
                                     eVertexBufferDrawType aDrawType = eVertexBufferDrawType_LastEnum) override;
-
+        // virtual void Submit(GraphicsContext& context, eVertexBufferDrawType aDrawType = eVertexBufferDrawType_LastEnum) override;
+        virtual void GetLayoutStream(GraphicsContext::LayoutStream& layoutStream, eVertexBufferDrawType aDrawType = eVertexBufferDrawType_LastEnum) override; 
+    
         virtual void Bind() override;
         virtual void UnBind() override;
 
@@ -113,6 +109,7 @@ namespace hpl
 
         virtual void ResizeArray(eVertexBufferElement aElement, int alSize) override;
         virtual void ResizeIndices(int alSize) override;
+        
 
     protected:
         absl::InlinedVector<VertexElement, 10> m_vertexElements = {};

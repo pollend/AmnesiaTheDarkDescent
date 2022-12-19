@@ -22,7 +22,7 @@ namespace hpl
     class BGFXProgram : public iGpuProgram
     {
     public:
-        using SubmitHandler = std::function<void(const TData& data, bgfx::ViewId view, GraphicsContext& context)>;
+        using SubmitHandler = std::function<void(const TData& data, GraphicsContext::ShaderProgram& program)>;
         using ImageMapper = std::function<void(TData& data,const Image* value)>;
         using IntMapper = std::function<void(TData& data, int value)>;
         using FloatMapper = std::function<void(TData& data, float value)>;
@@ -124,7 +124,15 @@ namespace hpl
         TData& data() {
             return _data;
         }
-        
+
+        virtual void GetProgram(GraphicsContext::ShaderProgram& shaderProgram) override {
+            shaderProgram.m_handle = _handle;
+            if(_submitHandler) {
+                _submitHandler(_data, shaderProgram);
+            }
+        }
+
+
         virtual void Submit(bgfx::ViewId view, GraphicsContext& context) override
         {
             bgfx::submit(view, _handle);

@@ -200,9 +200,9 @@ namespace hpl
                         false,
                         eGpuProgramFormat_BGFX);
                     program->SetSubmitHandler(
-                        [u_mtxUV](const DecalData& data, bgfx::ViewId view, GraphicsContext& context)
+                        [u_mtxUV](const DecalData& data, GraphicsContext::ShaderProgram& program)
                         {
-                            bgfx::setUniform(u_mtxUV, &data.mtxUv);
+                            program.m_uniforms.push_back({ u_mtxUV, &data.mtxUv });
                         });
                     program->SetMatrixf(material::decal::a_mtxUV.id(), cMatrixf::Identity);
 
@@ -227,9 +227,8 @@ namespace hpl
         
     }
 
-    void cMaterialType_Decal::SubmitMaterial(
-        bgfx::ViewId id,
-        GraphicsContext& context,
+    void cMaterialType_Decal::GetShaderData(
+        GraphicsContext::ShaderProgram& input,
         eMaterialRenderMode aRenderMode,
         iGpuProgram* apProgram,
         cMaterial* apMaterial,
@@ -245,7 +244,7 @@ namespace hpl
             }
         }
         apProgram->setImage(material::decal::s_diffuseMap, apMaterial->GetImage(eMaterialTexture_Diffuse));
-        apProgram->Submit(id, context);
+        apProgram->GetProgram(input);
     }
 
     //--------------------------------------------------------------------------

@@ -21,6 +21,7 @@
 
 #include "bgfx/bgfx.h"
 #include "graphics/BGFXProgram.h"
+#include "graphics/GraphicsContext.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/MemberID.h"
 #include "graphics/ShaderUtil.h"
@@ -637,10 +638,10 @@ namespace hpl
                         false,
                         eGpuProgramFormat_BGFX));
                     program->SetSubmitHandler(
-                        [u_param, u_mtxUv](const RenderZData& data, bgfx::ViewId view, GraphicsContext& context)
+                        [u_param, u_mtxUv](const RenderZData& data, GraphicsContext::ShaderProgram& program)
                         {
-                            bgfx::setUniform(u_param, &data.params);
-                            bgfx::setUniform(u_mtxUv, &data.mtxUv);
+                            program.m_uniforms.push_back({u_param, &data.params});
+                            program.m_uniforms.push_back({u_mtxUv, &data.mtxUv});
                         });
 
                     program->data().params.u_useAlphaMap = useAlpha ? 1.0f : 0.0f;
@@ -718,14 +719,14 @@ namespace hpl
                         eGpuProgramFormat_BGFX));
                     program->SetSubmitHandler(
                         [u_param, u_mtxUv, s_diffuseMap, s_dissolveMap, s_dissolveAlphaMap](
-                            const RenderZData& data, bgfx::ViewId view, GraphicsContext& context)
+                            const RenderZData& data, GraphicsContext::ShaderProgram& program)
                         {
-                            bgfx::setUniform(u_param, &data.params);
-                            bgfx::setUniform(u_mtxUv, &data.mtxUv);
+                            program.m_uniforms.push_back({u_param, &data.params});
+                            program.m_uniforms.push_back({u_mtxUv, &data.mtxUv});
 
-                            bgfx::setTexture(0, s_diffuseMap, data.s_diffuseMap);
-                            bgfx::setTexture(1, s_dissolveMap, data.s_dissolveMap);
-                            bgfx::setTexture(2, s_dissolveAlphaMap, data.s_dissolveAlphaMap);
+                            program.m_textures.push_back({s_diffuseMap, data.s_diffuseMap, 0});
+                            program.m_textures.push_back({s_dissolveMap, data.s_dissolveMap, 1});
+                            program.m_textures.push_back({s_dissolveAlphaMap, data.s_dissolveAlphaMap, 2});
                         });
 
                     program->data().params.u_useAlphaMap = useAlpha;
@@ -862,17 +863,18 @@ namespace hpl
                             s_diffuseMap, 
                             s_envMapAlphaMap,
                             s_envMap](
-                            const RenderDiffuseData& data, bgfx::ViewId view, GraphicsContext& context)
+                            const RenderDiffuseData& data, GraphicsContext::ShaderProgram& program)
                         {
-                            bgfx::setUniform(u_mtxUv, &data.mtxUv);
-                            bgfx::setUniform(u_param, &data.params, 3);
-                            bgfx::setUniform(u_mtxInvViewRotation, &data.mtxInvViewRotation);
-                            bgfx::setTexture(0, s_normalMap, data.s_normalMap);
-                            bgfx::setTexture(1, s_specularMap, data.s_specularMap);
-                            bgfx::setTexture(2, s_heightMap, data.s_heightMap);
-                            bgfx::setTexture(3, s_diffuseMap, data.s_diffuseMap);
-                            bgfx::setTexture(4, s_envMapAlphaMap, data.s_envMapAlphaMap);
-                            bgfx::setTexture(5, s_envMap, data.s_envMap);
+                            program.m_uniforms.push_back({u_param, &data.params, 3});
+                            program.m_uniforms.push_back({u_mtxUv, &data.mtxUv});
+                            program.m_uniforms.push_back({u_mtxInvViewRotation, &data.mtxInvViewRotation});
+
+                            program.m_textures.push_back({s_normalMap, data.s_normalMap, 0});
+                            program.m_textures.push_back({s_specularMap, data.s_specularMap, 1});
+                            program.m_textures.push_back({s_heightMap, data.s_heightMap, 2});
+                            program.m_textures.push_back({s_diffuseMap, data.s_diffuseMap, 3});
+                            program.m_textures.push_back({s_envMapAlphaMap, data.s_envMapAlphaMap, 4});
+                            program.m_textures.push_back({s_envMap, data.s_envMap, 5});
                         });
 
                     program->data().params.u_useNormalMap = useDiffuseNormalMap ? 1.0f : 0.0f;
@@ -919,7 +921,7 @@ namespace hpl
         return NULL;
     }
 
-    void cMaterialType_SolidDiffuse::SubmitMaterial(bgfx::ViewId id, GraphicsContext& context, eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial* apMaterial, iRenderable *apObject,
+    void cMaterialType_SolidDiffuse::GetShaderData(GraphicsContext::ShaderProgram& input, eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial* apMaterial, iRenderable *apObject,
 												iRenderer *apRenderer)
     {
         const auto tryUpdateUvAnimation = [&]() {

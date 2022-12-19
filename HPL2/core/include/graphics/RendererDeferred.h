@@ -21,6 +21,8 @@
 #include "graphics/GraphicsContext.h"
 #include "graphics/Image.h"
 #include "graphics/Renderer.h"
+#include <array>
+#include <graphics/RenderTarget.h>
 
 namespace hpl {
 
@@ -190,13 +192,13 @@ namespace hpl {
 		void SetupRenderList();
 		void RenderObjects();
 
-		void SetupGBuffer();
+		void SetupGBuffer(GraphicsContext& context);
 
 		void SetupRenderVariables();
 
 		void RenderZ();
 		void RenderDynamicZTemp();
-		void RenderGbuffer();
+		void RenderGbuffer(GraphicsContext& context);
 		void RenderSSAO();
 		void RenderEdgeSmooth();
 		void RenderDeferredSkyBox();
@@ -217,7 +219,7 @@ namespace hpl {
 		void RenderSubMeshEntityReflection(cSubMeshEntity *pReflectionObject);
 
 		void RenderDecals(GraphicsContext& context);
-		void RenderFullScreenFog();
+		void RenderFullScreenFog(GraphicsContext& context);
 		void RenderFog();
 		void RenderTranslucent();
 
@@ -239,7 +241,6 @@ namespace hpl {
 		void SetupLightProgramVariables(iGpuProgram *apProgram, cDeferredLight* apLightData);
 		iGpuProgram* SetupProgramAndTextures(cDeferredLight* apLightData, tFlag alExtraFlags);
 		iVertexBuffer* GetLightShape(iLight *apLight, eDeferredShapeQuality aQuality);
-
 
 		iVertexBuffer *mpShapeSphere[eDeferredShapeQuality_LastEnum];
 		iVertexBuffer *mpShapePyramid;
@@ -273,6 +274,13 @@ namespace hpl {
 		bool mbStencilNeedClearing;
 		cRect2l mStencilDirtyRect;
 
+		std::array<RenderTarget, 2> m_gBuffer_full;
+		std::array<RenderTarget, 2> m_gBuffer_colorAndDepth;
+		std::array<RenderTarget, 2> m_gBuffer_color;
+		std::array<RenderTarget, 2> m_gBuffer_depth;
+		std::array<RenderTarget, 2> m_gBuffer_normals;
+		std::array<RenderTarget, 2> m_gBuffer_linearDepth;
+		
 		iFrameBuffer *mpGBuffer[2][eGBufferComponents_LastEnum]; //[2] = reflection or not
 
 		iFrameBuffer *mpAccumBuffer;

@@ -56,8 +56,9 @@ namespace hpl {
 		virtual bool Link()=0; // DEPRECATE
 		virtual void Bind()=0; // DEPRECATE
 		virtual void UnBind()=0; // DEPRECATE
-
 		virtual void Submit(bgfx::ViewId view, GraphicsContext& context) {};
+
+		virtual void GetProgram(GraphicsContext::ShaderProgram& program) {};
 
 		virtual bool SetSamplerToUnit(const tString& asSamplerName, int alUnit)=0;
 
@@ -91,8 +92,6 @@ namespace hpl {
 		unsigned int mlUserId;
 
 		eGpuProgramFormat mProgramFormat;
-
-
 		iGpuShader* mpShader[2];
 
 		bool mbAutoDestroyShaders;

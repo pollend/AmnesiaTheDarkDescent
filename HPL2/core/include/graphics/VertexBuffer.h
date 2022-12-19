@@ -20,6 +20,7 @@
 #ifndef HPL_VERTEXBUFFER_H
 #define HPL_VERTEXBUFFER_H
 
+#include "graphics/GraphicsContext.h"
 #include "graphics/GraphicsTypes.h"
 #include "math/MathTypes.h"
 #include "system/SystemTypes.h"
@@ -72,6 +73,10 @@ namespace hpl {
 
 		virtual void Bind()=0;
 		virtual void UnBind()=0;
+
+		// virtual void Submit(GraphicsContext& context, eVertexBufferDrawType aDrawType = eVertexBufferDrawType_LastEnum) {}
+    	virtual void GetLayoutStream(GraphicsContext::LayoutStream& layoutStream, eVertexBufferDrawType aDrawType = eVertexBufferDrawType_LastEnum) {}; 
+
 
         virtual iVertexBuffer* CreateCopy(	eVertexBufferType aType,eVertexBufferUsageType aUsageType,
 											tVertexElementFlag alVtxToCopy)=0;
