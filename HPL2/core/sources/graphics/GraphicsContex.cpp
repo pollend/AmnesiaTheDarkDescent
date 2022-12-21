@@ -195,7 +195,8 @@ namespace hpl
                         break;
                 }
                 return 0;
-            })());
+            })() | 
+            (program.m_configuration.m_blendAlpha ? BGFX_STATE_BLEND_ALPHA : 0));
         if(request.m_clear.has_value()) {
             auto& clear = request.m_clear.value();
             bgfx::setViewClear(view, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, clear.m_rgba, clear.m_depth, clear.m_stencil);

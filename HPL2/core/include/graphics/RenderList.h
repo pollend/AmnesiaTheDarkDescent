@@ -20,6 +20,7 @@
 #ifndef HPL_RENDER_LIST_H
 #define HPL_RENDER_LIST_H
 
+#include <absl/types/span.h>
 #include "graphics/GraphicsTypes.h"
 #include "math/MathTypes.h"
 #include "system/SystemTypes.h"
@@ -52,6 +53,9 @@ namespace hpl {
 		void Compile(tRenderListCompileFlag aFlags);
 
 		bool ArrayHasObjects(eRenderListType aType);
+		
+		absl::Span<iRenderable*> GetRenderableItems(eRenderListType aType);
+
 		cRenderableVecIterator GetArrayIterator(eRenderListType aType);
 
 		cRenderableVecIterator GetOcclusionQueryObjectIterator();

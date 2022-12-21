@@ -18,6 +18,7 @@
  */
 #pragma once
 
+#include "bgfx/bgfx.h"
 #include "graphics/GraphicsContext.h"
 #include "graphics/Image.h"
 #include "graphics/Renderer.h"
@@ -192,16 +193,18 @@ namespace hpl {
 		void SetupRenderList();
 		void RenderObjects();
 
-		void SetupGBuffer(GraphicsContext& context);
+		// void SetupGBuffer(GraphicsContext& context);
 
-		void SetupRenderVariables();
+		// void SetupRenderVariables();
 
-		void RenderZ();
+		void RenderableHelper(eRenderListType type, eMaterialRenderMode mode, std::function<void(iRenderable* obj, GraphicsContext::LayoutStream&, GraphicsContext::ShaderProgram&)> handler);
+
+
+		void RenderZ(GraphicsContext& context);
 		void RenderDynamicZTemp();
-		void RenderGbuffer(GraphicsContext& context);
+		// void RenderGbuffer(GraphicsContext& context);
 		void RenderSSAO();
 		void RenderEdgeSmooth();
-		void RenderDeferredSkyBox();
 
 		void SetupLightsAndRenderQueries();
 		void InitLightRendering();
@@ -213,12 +216,10 @@ namespace hpl {
 		void RenderLights_Box_StencilFront_RenderBack();
 		void RenderLights_Box_RenderBack();
 
-		void RenderIllumination(GraphicsContext& context);
-
+		
 		void RenderReflection(iRenderable *apObject);
 		void RenderSubMeshEntityReflection(cSubMeshEntity *pReflectionObject);
 
-		void RenderDecals(GraphicsContext& context);
 		void RenderFullScreenFog(GraphicsContext& context);
 		void RenderFog();
 		void RenderTranslucent();
@@ -332,6 +333,7 @@ namespace hpl {
 		iGpuProgram *mpLightBoxProgram[2];//1=SSAO used, 0=no SSAO
 
 		cProgramComboManager* mpFogProgramManager;
+		bgfx::ProgramHandle m_fogProgram;
 
 		cMatrixf m_mtxTempLight;
 

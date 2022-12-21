@@ -4,6 +4,7 @@
 #include "graphics/Enum.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/RenderTarget.h"
+#include "math/MathTypes.h"
 #include <absl/strings/string_view.h>
 #include <bgfx/bgfx.h>
 #include <cstdint>
@@ -52,10 +53,12 @@ namespace hpl
                     Write m_write: 5;
                     DepthTest m_depthTest: 3;
                     Cull m_cull: 2;
+                    bool m_blendAlpha: 1;
                 };
                 uint64_t m_state = 0;
             } m_configuration;
 
+            cMatrixf m_modelTransform = cMatrixf::Identity;
             absl::InlinedVector<TextureData, 10> m_textures;
             absl::InlinedVector<UniformData, 25> m_uniforms;
         };

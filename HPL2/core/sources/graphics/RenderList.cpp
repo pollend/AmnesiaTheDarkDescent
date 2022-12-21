@@ -267,6 +267,13 @@ namespace hpl {
 	}
 
 	//-----------------------------------------------------------------------
+	
+	absl::Span<iRenderable*> cRenderList::GetRenderableItems(eRenderListType aType) {
+		if(mvSortedArrays[aType].empty()) {
+			return absl::Span<iRenderable*>();
+		}
+		return absl::MakeSpan(mvSortedArrays[aType]);
+	}
 
 
 	cRenderableVecIterator cRenderList::GetArrayIterator(eRenderListType aType)

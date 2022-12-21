@@ -19,6 +19,7 @@
 
 #include "graphics/Renderer.h"
 
+#include "graphics/GraphicsContext.h"
 #include "math/Math.h"
 #include "math/BoundingVolume.h"
 
@@ -840,11 +841,28 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void iRenderer::RenderZObject(iRenderable *apObject, cFrustum *apCustomFrustum)
+	void iRenderer::RenderZObject(GraphicsContext& context, iRenderable *apObject, cFrustum *apCustomFrustum)
 	{
 		cMaterial *pMaterial = apObject->GetMaterial();
 
-		eMaterialRenderMode renderMode = apObject->GetCoverageAmount()>=1 ? eMaterialRenderMode_Z : eMaterialRenderMode_Z_Dissolve;
+		eMaterialRenderMode renderMode = apObject->GetCoverageAmount() >= 1 ? eMaterialRenderMode_Z : eMaterialRenderMode_Z_Dissolve;
+		iMaterialType* materialType = pMaterial->GetType();
+		iGpuProgram* program = pMaterial->GetProgram(0, renderMode);
+		iVertexBuffer* vertexBuffer = apObject->GetVertexBuffer();
+		if(vertexBuffer == nullptr || program == nullptr || materialType == nullptr) {
+			return;
+		}
+
+		GraphicsContext::LayoutStream layoutInput;
+		GraphicsContext::ShaderProgram shaderInput;
+		vertexBuffer->GetLayoutStream(layoutInput);
+		materialType->GetShaderData(shaderInput, renderMode, program, pMaterial, apObject, this);
+		
+		if(apCustomFrustum) {
+			shaderInput.m_modelTransform = *apObject->GetModelMatrix(apCustomFrustum);
+		} else {
+			shaderInput.m_modelTransform = *apObject->GetModelMatrixPtr();
+		}
 
 		////////////////////////
 		//Set up render modes
@@ -1103,7 +1121,8 @@ namespace hpl {
 		//Set up states
 		SetDepthWrite(true);
 
-		RenderZObject(apObject, NULL);
+		GraphicsContext contx;
+		RenderZObject(contx, apObject, NULL);
 
 		return true;
 	}
@@ -1796,7 +1815,8 @@ namespace hpl {
 
 	void iRenderer::RenderShadowCaster(iRenderable *apObject, cFrustum *apLightFrustum)
 	{
-		RenderZObject(apObject, apLightFrustum);
+		GraphicsContext contx;
+		RenderZObject(contx, apObject, apLightFrustum);
 	}
 
 	//-----------------------------------------------------------------------

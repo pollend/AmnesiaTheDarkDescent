@@ -20,6 +20,7 @@
 #ifndef HPL_RENDERER_H
 #define HPL_RENDERER_H
 
+#include "graphics/GraphicsContext.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Image.h"
 #include "math/MathTypes.h"
@@ -329,7 +330,7 @@ namespace hpl {
 		void DestroyShadowMaps();
 
 
-        void RenderZObject(iRenderable *apObject, cFrustum *apCustomFrustum);
+        void RenderZObject(GraphicsContext& context, iRenderable *apObject, cFrustum *apCustomFrustum);
 
 		/**
 		 * Brute force adding of visible objects. Nothing is rendered.
