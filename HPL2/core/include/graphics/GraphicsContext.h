@@ -95,6 +95,8 @@ namespace hpl
         GraphicsContext();
         void Init();
         void UpdateScreenSize(uint16_t width, uint16_t height);
+
+        void Quad(GraphicsContext::LayoutStream& input, const cVector3f& pos, const cVector2f& size, const cVector2f& uv0 = cVector2f(0.0f, 0.0f), const cVector2f& uv1 = cVector2f(1.0f, 1.0f));
         void ScreenSpaceQuad(GraphicsContext::LayoutStream& input, float textureWidth, float textureHeight, float width = 1.0f, float height = 1.0f);
         
         void ClearTarget(bgfx::ViewId view, const DrawClear& request);

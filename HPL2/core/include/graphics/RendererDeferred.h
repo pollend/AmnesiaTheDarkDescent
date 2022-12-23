@@ -24,6 +24,7 @@
 #include "graphics/Renderer.h"
 #include <array>
 #include <graphics/RenderTarget.h>
+#include <memory>
 
 namespace hpl {
 
@@ -189,6 +190,10 @@ namespace hpl {
 		static bool GetDebugRenderFrameBuffers(){ return mbDebugRenderFrameBuffers;}
 
 	private:
+		RenderTarget& resolveRenderTarget(std::array<RenderTarget, 2>& rt);
+		std::shared_ptr<Image>& resolveRenderImage(std::array<std::shared_ptr<Image>, 2>& img);
+
+
 		void CopyToFrameBuffer();
 		void SetupRenderList();
 		void RenderObjects();
@@ -282,6 +287,14 @@ namespace hpl {
 		std::array<RenderTarget, 2> m_gBuffer_normals;
 		std::array<RenderTarget, 2> m_gBuffer_linearDepth;
 		
+		std::array<std::shared_ptr<Image>, 2> m_colorDepth;
+		std::array<std::shared_ptr<Image>, 2> m_normal;
+		std::array<std::shared_ptr<Image>, 2> m_linearDepth;
+
+		std::array<std::shared_ptr<Image>, 2> m_depthStencil;
+
+		RenderTarget m_edgeSmooth_LinearDepth;
+
 		iFrameBuffer *mpGBuffer[2][eGBufferComponents_LastEnum]; //[2] = reflection or not
 
 		iFrameBuffer *mpAccumBuffer;
@@ -324,6 +337,27 @@ namespace hpl {
 		iGpuProgram *mpSSAOBlurProgram[2];
 		iGpuProgram *mpSSAORenderProgram;
 		iGpuProgram *mpEdgeSmooth_UnpackDepthProgram;
+
+		bgfx::UniformHandle m_u_param;
+		bgfx::UniformHandle m_u_boxInvViewModelRotation;
+
+		struct DeferredFogUniforms {
+			float u_fogStart;
+			float u_fogLength;
+			float u_fogFalloffExp;
+
+			float u_fogRayCastStart[3];
+			float u_fogNegPlaneDistNeg[3];
+			float u_fogNegPlaneDistPos[3];
+
+			float u_useBackside;
+			float u_useOutsideBox;
+			float u_unused1;
+			float u_unused2;
+		};
+		bgfx::ProgramHandle m_deferredFog;
+		bgfx::ProgramHandle m_edgeSmooth_UnpackDepthProgram;
+
 		iGpuProgram *mpEdgeSmooth_RenderProgram;
 
 		std::vector<cDeferredLight*> mvTempDeferredLights;
@@ -332,8 +366,7 @@ namespace hpl {
 		iGpuProgram *mpLightStencilProgram;
 		iGpuProgram *mpLightBoxProgram[2];//1=SSAO used, 0=no SSAO
 
-		cProgramComboManager* mpFogProgramManager;
-		bgfx::ProgramHandle m_fogProgram;
+		// cProgramComboManager* mpFogProgramManager;
 
 		cMatrixf m_mtxTempLight;
 

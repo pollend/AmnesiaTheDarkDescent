@@ -1,6 +1,8 @@
 #pragma once
 
-#include "graphics/Image.h"
+#include "absl/types/span.h"
+#include <absl/container/inlined_vector.h>
+#include <graphics/Image.h>
 #include <bgfx/bgfx.h>
 #include <memory>
 
@@ -8,6 +10,7 @@ namespace hpl {
 class RenderTarget {
 public:
     RenderTarget(std::shared_ptr<Image> image);
+    RenderTarget(absl::Span<std::shared_ptr<Image>> images);
     RenderTarget(RenderTarget&& target);
     RenderTarget();
     ~RenderTarget();
@@ -15,12 +18,11 @@ public:
     void operator=(RenderTarget&& target);
 
     const bgfx::FrameBufferHandle GetHandle() const;
-    const ImageDescriptor& GetDescriptor() const;
-    
+    const ImageDescriptor& GetDescriptor(size_t index) const;
 
 private:
-    std::shared_ptr<Image> _image;
-    bgfx::FrameBufferHandle _buffer;
+    absl::InlinedVector<std::shared_ptr<Image>, 7> m_image;
+    bgfx::FrameBufferHandle m_buffer;
 };
 
 }

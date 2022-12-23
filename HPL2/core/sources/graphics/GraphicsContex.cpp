@@ -13,11 +13,11 @@ namespace hpl
 
     struct PositionTexCoord0
     {
-        float _x;
-        float _y;
-        float _z;
-        float _u;
-        float _v;
+        float m_x;
+        float m_y;
+        float m_z;
+        float m_u;
+        float m_v;
 
         static void init()
         {
@@ -218,6 +218,47 @@ namespace hpl
         return _caps->originBottomLeft; 
     }
 
+    void GraphicsContext::Quad(GraphicsContext::LayoutStream& input, const cVector3f& pos, const cVector2f& size, const cVector2f& uv0, const cVector2f& uv1) {
+        BX_ASSERT(_caps, "GraphicsContext::Init() must be called before ScreenSpaceQuad()");
+
+        bgfx::TransientVertexBuffer vb;
+        bgfx::allocTransientVertexBuffer(&vb, 4, PositionTexCoord0::_layout);
+        PositionTexCoord0* vertex = (PositionTexCoord0*)vb.data;
+
+        const float minx = pos.x;
+        const float maxx = pos.x + size.x;
+        const float miny = pos.y;
+        const float maxy = pos.y + size.y;
+
+        vertex[0].m_x = minx;
+        vertex[0].m_y = miny;
+        vertex[0].m_z = pos.z;
+        vertex[0].m_u = uv0.x;
+        vertex[0].m_v = uv0.y;
+
+        vertex[1].m_x = maxx;
+        vertex[1].m_y = miny;
+        vertex[1].m_z = pos.z;
+        vertex[1].m_u = uv1.x;
+        vertex[1].m_v = uv0.y;
+
+        vertex[2].m_x = maxx;
+        vertex[2].m_y = maxy;
+        vertex[2].m_z = pos.z;
+        vertex[2].m_u = uv1.x;
+
+        vertex[3].m_x = minx;
+        vertex[3].m_y = maxy;
+        vertex[3].m_z = pos.z;
+        vertex[3].m_u = uv0.x;
+        vertex[3].m_v = uv1.y;
+        
+        input.m_vertexStreams.push_back({
+            .m_transient = vb,
+        });
+    }
+        
+
     void GraphicsContext::ScreenSpaceQuad(GraphicsContext::LayoutStream& input, float textureWidth, float textureHeight, float width, float height)
     {
         BX_ASSERT(_caps, "GraphicsContext::Init() must be called before ScreenSpaceQuad()");
@@ -254,29 +295,27 @@ namespace hpl
             maxv -= 1.0f;
         }
 
-        vertex[0]._x = minx;
-        vertex[0]._y = miny;
-        vertex[0]._z = zz;
-        vertex[0]._u = minu;
-        vertex[0]._v = minv;
+        vertex[0].m_x = minx;
+        vertex[0].m_y = miny;
+        vertex[0].m_z = zz;
+        vertex[0].m_u = minu;
+        vertex[0].m_v = minv;
 
-        vertex[1]._x = maxx;
-        vertex[1]._y = miny;
-        vertex[1]._z = zz;
-        vertex[1]._u = maxu;
-        vertex[1]._v = minv;
+        vertex[1].m_x = maxx;
+        vertex[1].m_y = miny;
+        vertex[1].m_z = zz;
+        vertex[1].m_u = maxu;
+        vertex[1].m_v = minv;
 
-        vertex[2]._x = maxx;
-        vertex[2]._y = maxy;
-        vertex[2]._z = zz;
-        vertex[2]._u = maxu;
-        vertex[2]._v = maxv;
+        vertex[2].m_x = maxx;
+        vertex[2].m_y = maxy;
+        vertex[2].m_z = zz;
+        vertex[2].m_u = maxu;
+        vertex[2].m_v = maxv;
 
         input.m_vertexStreams.push_back({
             .m_transient = vb,
         });
-
-		// bgfx::setVertexBuffer(0, &vb);
     }
 
 } // namespace hpl

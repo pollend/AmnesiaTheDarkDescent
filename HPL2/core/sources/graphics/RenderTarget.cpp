@@ -4,42 +4,51 @@
 namespace hpl
 {
     RenderTarget::RenderTarget(std::shared_ptr<Image> image)
-        : _image(image)
+        : m_image({image})
     {
         bgfx::TextureHandle handle = image->GetHandle();
-        _buffer = bgfx::createFrameBuffer(1, &handle, true);
+        m_buffer = bgfx::createFrameBuffer(1, &handle, false);
+    }
+
+    RenderTarget::RenderTarget(absl::Span<std::shared_ptr<Image>> images) {
+        m_image.insert(m_image.end(), images.begin(), images.end());
+        absl::InlinedVector<bgfx::TextureHandle, 7> handles = {}; 
+        for (auto& image : m_image) {
+            handles.push_back(image->GetHandle());
+        }
+        m_buffer = bgfx::createFrameBuffer(handles.size(), handles.data(), false);
     }
 
     RenderTarget::RenderTarget()
-        : _image(nullptr)
+        : m_image({})
     {
     }
 
     RenderTarget::RenderTarget(RenderTarget&& target) {
-        _image = std::move(target._image);
-        _buffer = target._buffer;
-        target._buffer = BGFX_INVALID_HANDLE;
+        m_image = std::move(target.m_image);
+        m_buffer = target.m_buffer;
+        target.m_buffer = BGFX_INVALID_HANDLE;
     }
 
     void RenderTarget::operator=(RenderTarget&& target) {
-        _image = std::move(target._image);
-        _buffer = target._buffer;
-        target._buffer = BGFX_INVALID_HANDLE;
+        m_image = std::move(target.m_image);
+        m_buffer = target.m_buffer;
+        target.m_buffer = BGFX_INVALID_HANDLE;
     }
 
     RenderTarget::~RenderTarget() {
-        if (bgfx::isValid(_buffer)) {
-            bgfx::destroy(_buffer);
+        if (bgfx::isValid(m_buffer)) {
+            bgfx::destroy(m_buffer);
         }
     }
 
-    const ImageDescriptor& RenderTarget::GetDescriptor() const
+    const ImageDescriptor& RenderTarget::GetDescriptor(size_t index) const
     {
-        return _image->GetDescriptor();
+        return m_image[index]->GetDescriptor();
     }
 
     const bgfx::FrameBufferHandle RenderTarget::GetHandle() const
     {
-        return _buffer;
+        return m_buffer;
     }
 } // namespace hpl

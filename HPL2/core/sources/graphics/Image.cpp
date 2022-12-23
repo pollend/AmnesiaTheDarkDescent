@@ -35,12 +35,28 @@ namespace hpl
     {
     }
 
+    Image::Image(const ImageDescriptor& desc) {
+        Initialize(desc);
+    }
+
+    Image::Image(Image&& other) {
+        _handle = other._handle;
+        _descriptor = other._descriptor;
+        other._handle = BGFX_INVALID_HANDLE;
+    }
+
     Image::~Image()
     {
         if (bgfx::isValid(_handle))
         {
             bgfx::destroy(_handle);
         }
+    }
+
+    void Image::operator=(Image&& other) {
+        _handle = other._handle;
+        _descriptor = other._descriptor;
+        other._handle = BGFX_INVALID_HANDLE;
     }
 
     void Image::Initialize(const ImageDescriptor& descriptor, const bgfx::Memory* mem) {
@@ -54,11 +70,6 @@ namespace hpl
     void Image::Invalidate() {
 
     }
-
-    // void Image::write(uint16_t x, uint16_t y, uint16_t width, uint16_t height, size_t offset, void* data, size_t size)
-    // {
-    //     bgfx::updateTexture2D(_handle, 0, 0, x, y, width, height, bgfx::copy(data, size));
-    // }
 
     const ImageDescriptor& Image::GetDescriptor() const
     {

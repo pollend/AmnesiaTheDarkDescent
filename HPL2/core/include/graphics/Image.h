@@ -27,6 +27,13 @@ namespace hpl
         Image();
         ~Image();
 
+        Image(const ImageDescriptor& desc);
+        Image(Image&& other);
+        Image(const Image& other) = delete;
+        
+        Image& operator=(const Image& other) = delete;
+        void operator=(Image&& other);
+
         // bool isValid() const { return true;}
         void Initialize(const ImageDescriptor& descriptor,const bgfx::Memory* mem = nullptr);
         void Invalidate();

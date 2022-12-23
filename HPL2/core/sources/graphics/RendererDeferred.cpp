@@ -19,12 +19,15 @@
 
 #include "graphics/RendererDeferred.h"
 
+#include "absl/types/span.h"
 #include "bgfx/bgfx.h"
 #include "graphics/GraphicsContext.h"
 #include "graphics/GraphicsTypes.h"
+#include "graphics/Image.h"
 #include "graphics/RenderTarget.h"
 #include "math/Math.h"
 
+#include "math/MathTypes.h"
 #include "system/LowLevelSystem.h"
 #include "system/String.h"
 #include "system/PreprocessParser.h"
@@ -62,7 +65,9 @@
 #include "scene/MeshEntity.h"
 
 #include <algorithm>
+#include <array>
 #include <functional>
+#include <memory>
 
 namespace hpl {
 
@@ -205,11 +210,18 @@ namespace hpl {
 	}
 
 	//-----------------------------------------------------------------------
+	RenderTarget& cRendererDeferred::resolveRenderTarget(std::array<RenderTarget, 2>& rt) {
+		return rt[ mpCurrentSettings->mbIsReflection ? 1 : 0];
 
-	static RenderTarget& resolveRenderTarget(std::array<RenderTarget, 2>& rt, bool isReflection)
-	{
-		return rt[isReflection ? 1 : 0];
 	}
+	std::shared_ptr<Image>& cRendererDeferred::resolveRenderImage(std::array<std::shared_ptr<Image>, 2>& img) {
+		return img[ mpCurrentSettings->mbIsReflection ? 1 : 0];
+	}
+	
+	// static RenderTarget& resolveRenderTarget(std::array<RenderTarget, 2>& rt, bool isReflection)
+	// {
+	// 	return rt[isReflection ? 1 : 0];
+	// }
 
 
 	cRendererDeferred::~cRendererDeferred()
@@ -230,27 +242,49 @@ namespace hpl {
 		cVector2l vRelfectionSize = cVector2l(mvScreenSize.x/mlReflectionSizeDiv, mvScreenSize.y/mlReflectionSizeDiv);
 
 		Log("Setting up G-Bugger: type: %d texturenum: %d\n", mGBufferType, mlNumOfGBufferTextures);
-		////////////////////////////////////
-		//Create G-Buffer textures
-		for(int i=0; i<mlNumOfGBufferTextures; ++i)
+		
+		m_colorDepth = 
+			{ std::shared_ptr<Image>(new Image(ImageDescriptor::CreateTexture2D(mvScreenSize.x, mvScreenSize.y, false, bgfx::TextureFormat::Enum::RGBA32F))),
+			 std::shared_ptr<Image>(new Image(ImageDescriptor::CreateTexture2D(mvScreenSize.x, mvScreenSize.y, false, bgfx::TextureFormat::Enum::RGBA32F)))};
+		m_normal = 
+			{ std::shared_ptr<Image>(new Image(ImageDescriptor::CreateTexture2D(mvScreenSize.x, mvScreenSize.y, false, bgfx::TextureFormat::Enum::RGBA32F))),
+			 std::shared_ptr<Image>(new Image(ImageDescriptor::CreateTexture2D(mvScreenSize.x, mvScreenSize.y, false, bgfx::TextureFormat::Enum::RGBA32F)))};
+		m_linearDepth = 
+			{ std::shared_ptr<Image>(new Image(ImageDescriptor::CreateTexture2D(mvScreenSize.x, mvScreenSize.y, false, bgfx::TextureFormat::Enum::RGBA32F))),
+			 std::shared_ptr<Image>(new Image(ImageDescriptor::CreateTexture2D(mvScreenSize.x, mvScreenSize.y, false, bgfx::TextureFormat::Enum::RGBA32F)))};
+		m_depthStencil = { std::shared_ptr<Image>(new Image(ImageDescriptor::CreateTexture2D(mvScreenSize.x, mvScreenSize.y, false, bgfx::TextureFormat::Enum::D24S8))),
+			std::shared_ptr<Image>(new Image(ImageDescriptor::CreateTexture2D(mvScreenSize.x, mvScreenSize.y, false, bgfx::TextureFormat::Enum::D24S8)))};
+		
 		{
-			ePixelFormat pixelFormat = mGBufferType == eDeferredGBuffer_32Bit ? ePixelFormat_RGBA : ePixelFormat_RGBA16;
-			//ePixelFormat pixelFormat = ePixelFormat_RGBA16;
-
-			tString sName = "G-BufferTexure"+cString::ToString(i);
-			mpGBufferTexture[0][i] = CreateRenderTexture(sName, mvScreenSize,pixelFormat,eTextureFilter_Nearest);
-			mpGBufferTexture[1][i] = CreateRenderTexture(sName+"_Reflection", vRelfectionSize, pixelFormat,eTextureFilter_Nearest);
+			std::array<std::shared_ptr<Image>, 4> images = {m_colorDepth[0], m_normal[0], m_linearDepth[0], m_depthStencil[0]};
+			std::array<std::shared_ptr<Image>, 4> reflectionImages = {m_colorDepth[1], m_normal[1], m_linearDepth[1], m_depthStencil[1]};
+			m_gBuffer_full = {
+				RenderTarget(absl::MakeSpan(images)),
+				RenderTarget(absl::MakeSpan(reflectionImages))
+			};
+		}
+		
+		{
+			std::array<std::shared_ptr<Image>, 2> images = {m_colorDepth[0], m_depthStencil[0]};
+			std::array<std::shared_ptr<Image>, 2> reflectionImages = {m_colorDepth[1], m_depthStencil[1]};
+			m_gBuffer_colorAndDepth = {
+					RenderTarget(absl::MakeSpan(images)), 
+				RenderTarget(absl::MakeSpan(reflectionImages))};
 		}
 
-		////////////////////////////////////
-		//Create Depth and stencil
-		mpDepthStencil[0] = mpGraphics->CreateDepthStencilBuffer(mvScreenSize,24,8, false);
-		mpDepthStencil[1] = mpGraphics->CreateDepthStencilBuffer(vRelfectionSize, 24,8, false);
+		m_gBuffer_color = {RenderTarget(m_colorDepth[0]), RenderTarget(m_colorDepth[1])};
+		m_gBuffer_depth = {m_depthStencil[0], m_depthStencil[1]};
+		m_gBuffer_normals = {m_normal[0], m_normal[1]};
+		m_gBuffer_linearDepth = {m_linearDepth[0], m_linearDepth[1]};
 
 		////////////////////////////////////
 		//Create Frame buffers
 		for(int type=0; type<2; ++type)
 		{
+			// m_gBuffer_full = {
+
+			// }
+			
 			mpGBuffer[type][eGBufferComponents_Full] = mpGraphics->CreateFrameBuffer("Deferred_GBuffer_Main");
 			for(int i=0;i<mlNumOfGBufferTextures; ++i)
 			{
@@ -419,22 +453,23 @@ namespace hpl {
 		////////////////////////////////////
 		//Create Fog program
 		{
-			cParserVarContainer vars;
-			if(GetGBufferType() == eDeferredGBuffer_32Bit)	vars.Add("PackedDepth");
+			m_deferredFog = hpl::loadProgram("vs_deferred_fog", "fs_deferred_fog");
+			// cParserVarContainer vars;
+			// if(GetGBufferType() == eDeferredGBuffer_32Bit)	vars.Add("PackedDepth");
 
-			mpFogProgramManager = hplNew(	cProgramComboManager, ("FogArea", mpGraphics, mpResources, 1));
+			// mpFogProgramManager = hplNew(	cProgramComboManager, ("FogArea", mpGraphics, mpResources, 1));
 
-			mpFogProgramManager->SetupGenerateProgramData(0,"Fog","deferred_fog_vtx.glsl","deferred_fog_frag.glsl",gvFogAreaFeatureVec,kFogAreaFeatureNum,vars);
+			// mpFogProgramManager->SetupGenerateProgramData(0,"Fog","deferred_fog_vtx.glsl","deferred_fog_frag.glsl",gvFogAreaFeatureVec,kFogAreaFeatureNum,vars);
 
-			if(GetGBufferType() == eDeferredGBuffer_32Bit)
-					mpFogProgramManager->AddGenerateProgramVariableId("afNegFarPlane", kVar_afNegFarPlane,0);
-			mpFogProgramManager->AddGenerateProgramVariableId("avFogStartAndLength", kVar_avFogStartAndLength,0);
-			mpFogProgramManager->AddGenerateProgramVariableId("avFogColor", kVar_avFogColor,0);
-			mpFogProgramManager->AddGenerateProgramVariableId("avRayCastStart", kVar_avRayCastStart,0);
-			mpFogProgramManager->AddGenerateProgramVariableId("a_mtxBoxInvViewModelRotation", kVar_a_mtxBoxInvViewModelRotation,0);
-			mpFogProgramManager->AddGenerateProgramVariableId("avNegPlaneDistNeg",kVar_avNegPlaneDistNeg,0);
-			mpFogProgramManager->AddGenerateProgramVariableId("avNegPlaneDistPos",kVar_avNegPlaneDistPos,0);
-			mpFogProgramManager->AddGenerateProgramVariableId("afFalloffExp",kVar_afFalloffExp,0);
+			// if(GetGBufferType() == eDeferredGBuffer_32Bit)
+			// 		mpFogProgramManager->AddGenerateProgramVariableId("afNegFarPlane", kVar_afNegFarPlane,0);
+			// mpFogProgramManager->AddGenerateProgramVariableId("avFogStartAndLength", kVar_avFogStartAndLength,0);
+			// mpFogProgramManager->AddGenerateProgramVariableId("avFogColor", kVar_avFogColor,0);
+			// mpFogProgramManager->AddGenerateProgramVariableId("avRayCastStart", kVar_avRayCastStart,0);
+			// mpFogProgramManager->AddGenerateProgramVariableId("a_mtxBoxInvViewModelRotation", kVar_a_mtxBoxInvViewModelRotation,0);
+			// mpFogProgramManager->AddGenerateProgramVariableId("avNegPlaneDistNeg",kVar_avNegPlaneDistNeg,0);
+			// mpFogProgramManager->AddGenerateProgramVariableId("avNegPlaneDistPos",kVar_avNegPlaneDistPos,0);
+			// mpFogProgramManager->AddGenerateProgramVariableId("afFalloffExp",kVar_afFalloffExp,0);
 		}
 
 		////////////////////////////////////
@@ -724,7 +759,7 @@ namespace hpl {
 
 		/////////////////////////
 		//Fog stuff
-		hplDelete(mpFogProgramManager);
+		// hplDelete(mpFogProgramManager);
 
 		/////////////////////////
 		//SSAO textures and programs
@@ -834,9 +869,7 @@ namespace hpl {
 
 	void cRendererDeferred::RenderObjects()
 	{
-
 		GraphicsContext context;
-
 		
 		//Setup far plane coordinates
 		mfFarPlane = mpCurrentFrustum->GetFarPlane();
@@ -846,15 +879,15 @@ namespace hpl {
 		mfFarLeft = -mfFarRight;
 
 		{
-			auto& target = resolveRenderTarget(m_gBuffer_full, mpCurrentSettings->mbIsReflection);
+			auto& target = resolveRenderTarget(m_gBuffer_full);
 			auto view = context.StartPass("ClearGBuffer");
 			GraphicsContext::DrawClear clear {
 				target,
 				{0, 1, 0, ClearOp::Depth},
 				0,
 				0,
-				target.GetDescriptor().m_width,
-				target.GetDescriptor().m_height,
+				static_cast<uint16_t>(mvScreenSize.x),
+ 				static_cast<uint16_t>(mvScreenSize.y)
 			};
 			context.ClearTarget(view, clear);	
 		}
@@ -905,7 +938,7 @@ namespace hpl {
 
 		// Render GBuffer to m_gBuffer_full old method is RenderGbuffer(context);
 		{
-			auto& target = resolveRenderTarget(m_gBuffer_full, mpCurrentSettings->mbIsReflection);
+			auto& target = resolveRenderTarget(m_gBuffer_full);
 			auto view = context.StartPass("RenderGBuffer");
 			RenderableHelper(eRenderListType_Diffuse, eMaterialRenderMode_Diffuse, [&](iRenderable* obj, GraphicsContext::LayoutStream& layoutInput, GraphicsContext::ShaderProgram& shaderInput) {
 				shaderInput.m_modelTransform = *obj->GetModelMatrixPtr();
@@ -913,8 +946,8 @@ namespace hpl {
 				shaderInput.m_configuration.m_write = Write::RGBA;
 				
 				GraphicsContext::DrawRequest drawRequest {target, layoutInput, shaderInput};
-				drawRequest.m_width = target.GetDescriptor().m_width;
-				drawRequest.m_height = target.GetDescriptor().m_height;
+				drawRequest.m_width = mvScreenSize.x;
+				drawRequest.m_height = mvScreenSize.y;
 				context.Submit(view, drawRequest);
 			});
 		}
@@ -925,10 +958,9 @@ namespace hpl {
 			return;
 		}
 
-
 		// RenderDecals(context);
 		{
-			auto& target = resolveRenderTarget(m_gBuffer_colorAndDepth, mpCurrentSettings->mbIsReflection);
+			auto& target = resolveRenderTarget(m_gBuffer_colorAndDepth);
 			auto view = context.StartPass("RenderDecals");
 			RenderableHelper(eRenderListType_Decal, eMaterialRenderMode_Diffuse, [&](iRenderable* obj, GraphicsContext::LayoutStream& layoutInput, GraphicsContext::ShaderProgram& shaderInput) {
 				shaderInput.m_modelTransform = *obj->GetModelMatrixPtr();
@@ -936,8 +968,8 @@ namespace hpl {
 				shaderInput.m_configuration.m_write = Write::RGBA;
 				
 				GraphicsContext::DrawRequest drawRequest {target, layoutInput, shaderInput};
-				drawRequest.m_width = target.GetDescriptor().m_width;
-				drawRequest.m_height = target.GetDescriptor().m_height;
+				drawRequest.m_width = mvScreenSize.x;
+				drawRequest.m_height = mvScreenSize.y;
 				context.Submit(view, drawRequest);
 			});
 		}
@@ -952,40 +984,231 @@ namespace hpl {
 			RenderGbufferContent(); //Debug, used to see what gbuffers contain
 			return;
 		}*/
-		RenderLights();
+		// RenderLights();
+		([&](bool active) {
+			if(!active) {
+				return;
+			}
+
+
+		})(false);
 
 		//Debug:
 		//RenderSSAO();
 		//return;
 
 		// render illumination into gbuffer color RenderIllumination
-		{
-			auto& target = resolveRenderTarget(m_gBuffer_color, mpCurrentSettings->mbIsReflection);
+		([&](bool active) {
+			if(!active) {
+				return;
+			}
+
+			auto& target = resolveRenderTarget(m_gBuffer_color);
 			bgfx::ViewId view = context.StartPass("RenderIllumination");
 			RenderableHelper(eRenderListType_Illumination, eMaterialRenderMode_Illumination, [&](iRenderable* obj, GraphicsContext::LayoutStream& layoutInput, GraphicsContext::ShaderProgram& shaderInput) {
 				shaderInput.m_configuration.m_depthTest = DepthTest::Equal;
 				shaderInput.m_configuration.m_write = Write::RGBA;
 
 				GraphicsContext::DrawRequest drawRequest {target, layoutInput, shaderInput};
-				drawRequest.m_width = target.GetDescriptor().m_width;
-				drawRequest.m_height = target.GetDescriptor().m_height;
+				drawRequest.m_width = mvScreenSize.x;
+				drawRequest.m_height = mvScreenSize.y;
 				context.Submit(view, drawRequest);
 			});
-		}
+		})(true);
 		
+		// RenderFog();
+		([&](bool active) {
+			if(!active) {
+				return;
+			}
 
-		RenderFog();
-		RenderFullScreenFog(context);
+			if(mpCurrentRenderList->GetFogAreaNum() == 0)
+			{
+				mpCurrentSettings->mvFogRenderData.resize(0); //Make sure render data array is empty!
+				return;
+			}
 
-		RenderEdgeSmooth();
+			for(auto& fogData: mpCurrentSettings->mvFogRenderData)
+			{
+				cFogArea* pFogArea = fogData.mpFogArea;
 
-		#ifndef kDebug_RenderLightData
-		RenderBasicSkyBox();
-		#endif
+				DeferredFogUniforms uniforms = {0};
+
+				//Outside of box setup
+				cMatrixf rotationMatrix = cMatrixf::Identity;
+				if(fogData.mbInsideNearFrustum==false)
+				{
+					cMatrixf mtxInvModelView = cMath::MatrixInverse( cMath::MatrixMul(mpCurrentFrustum->GetViewMatrix(), *pFogArea->GetModelMatrixPtr()) );
+					cVector3f vRayCastStart = cMath::MatrixMul(mtxInvModelView, cVector3f(0));
+
+					uniforms.u_fogRayCastStart[0] = vRayCastStart.x;
+					uniforms.u_fogRayCastStart[1] = vRayCastStart.y;
+					uniforms.u_fogRayCastStart[2] = vRayCastStart.z;
+
+					rotationMatrix = mtxInvModelView.GetRotation();
+
+					cVector3f vNegPlaneDistNeg( cMath::PlaneToPointDist(cPlanef(-1,0,0,0.5f),vRayCastStart), cMath::PlaneToPointDist(cPlanef(0,-1,0,0.5f),vRayCastStart),
+												cMath::PlaneToPointDist(cPlanef(0,0,-1,0.5f),vRayCastStart));
+					cVector3f vNegPlaneDistPos( cMath::PlaneToPointDist(cPlanef(1,0,0,0.5f),vRayCastStart), cMath::PlaneToPointDist(cPlanef(0,1,0,0.5f),vRayCastStart),
+												cMath::PlaneToPointDist(cPlanef(0,0,1,0.5f),vRayCastStart));
+					
+					uniforms.u_fogNegPlaneDistNeg[0] = vNegPlaneDistNeg.x * -1;
+					uniforms.u_fogNegPlaneDistNeg[1] = vNegPlaneDistNeg.y * -1;
+					uniforms.u_fogNegPlaneDistNeg[2] = vNegPlaneDistNeg.z * -1;
+
+					uniforms.u_fogNegPlaneDistPos[0] = vNegPlaneDistPos.x * -1;
+					uniforms.u_fogNegPlaneDistPos[1] = vNegPlaneDistPos.y * -1;
+					uniforms.u_fogNegPlaneDistPos[2] = vNegPlaneDistPos.z * -1;
+				}
+				if(fogData.mbInsideNearFrustum)
+				{
+					uniforms.u_useBackside = pFogArea->GetShowBacksideWhenInside()? 1.0 : 0.0;
+				} 
+				else 
+				{
+					uniforms.u_useBackside = pFogArea->GetShowBacksideWhenOutside() ? 1.0 : 0.0;
+					uniforms.u_useOutsideBox = 1.0;
+				}
+
+
+				GraphicsContext::LayoutStream layoutStream;
+				GraphicsContext::ShaderProgram shaderProgram;
+				shaderProgram.m_uniforms.push_back(
+					{m_u_param, &uniforms, 3});
+				shaderProgram.m_uniforms.push_back(
+					{m_u_boxInvViewModelRotation, rotationMatrix.v, 1});
+
+				mpShapeBox->GetLayoutStream(layoutStream);
+			}
+		})(false);
+
+
+		// RenderFullScreenFog(context);
+		([&](bool active) {
+			if(!active) {
+				return;
+			}
+			if(!mpCurrentWorld->GetFogActive()==false) {
+				return;
+			}
+			const auto& view = context.StartPass("FullScreenFog");
+			auto& target = resolveRenderTarget(m_gBuffer_depth);
+			
+			DeferredFogUniforms uniforms = {0};
+
+			GraphicsContext::LayoutStream layout;
+			// context.ScreenSpaceQuad(layout, float textureWidth, float textureHeight)
+
+
+
+			
+		})(true);
+	
+		//  RenderEdgeSmooth();
+		([&](bool active) {
+			if(!active) {
+				return;
+			}
+
+			if(mbEdgeSmoothLoaded==false || mpCurrentSettings->mbUseEdgeSmooth==false) {
+				return;
+			}
+			auto edgeSmoothView = context.StartPass("EdgeSmooth");
+
+			cVector3f vQuadPos = cVector3f(mfFarLeft,mfFarBottom,-mfFarPlane);
+			cVector2f vQuadSize = cVector2f(mfFarRight*2,mfFarTop*2);
+
+			GraphicsContext::ShaderProgram shaderProgram;
+			shaderProgram.m_handle = m_edgeSmooth_UnpackDepthProgram;
+			shaderProgram.m_textures.push_back({BGFX_INVALID_HANDLE,resolveRenderImage(m_linearDepth)->GetHandle(), 0});
+			shaderProgram.m_textures.push_back({BGFX_INVALID_HANDLE,resolveRenderImage(m_normal)->GetHandle(), 0});
+
+			GraphicsContext::LayoutStream layout;
+			context.Quad(layout, vQuadPos, cVector2f(1,1), cVector2f(0,0), cVector2f(1,1));
+
+			GraphicsContext::DrawRequest drawRequest {m_edgeSmooth_LinearDepth, layout, shaderProgram};
+			context.Submit(edgeSmoothView, drawRequest);
+		})(true);
+
+
+		// #ifndef kDebug_RenderLightData
+		// RenderBasicSkyBox();
+		// #endif
 
 		RunCallback(eRendererMessage_PostSolid);
 
-		RenderTranslucent();
+		// not going to even try.
+		// calls back through RendererDeffered need to untangle all the complicated state ...
+		([&](bool active) {
+			if(!active) {
+				return;
+			}
+
+			if(!mpCurrentRenderList->ArrayHasObjects(eRenderListType_Translucent)) {
+				return;
+			}
+
+			auto& target = resolveRenderTarget(m_gBuffer_color);
+			auto view = context.StartPass("RenderTranslucent");
+			for(auto& obj: mpCurrentRenderList->GetRenderableItems(eRenderListType_Translucent))
+			{
+				cMaterial *pMaterial = obj->GetMaterial();
+
+				eMaterialRenderMode renderMode = mpCurrentWorld->GetFogActive() ? eMaterialRenderMode_DiffuseFog : eMaterialRenderMode_Diffuse;
+				if(!pMaterial->GetAffectedByFog()) {
+					renderMode = eMaterialRenderMode_Diffuse;
+				}
+				if((mpCurrentSettings->mbIsReflection && pMaterial->HasWorldReflection()) ||
+					!obj->UpdateGraphicsForViewport(mpCurrentFrustum, mfCurrentFrameTime)) {
+					continue;
+				}
+
+				if(pMaterial->HasWorldReflection() && obj->GetRenderType() == eRenderableType_SubMesh)
+				{
+					if(!CheckRenderablePlaneIsVisible(obj, mpCurrentFrustum)) {
+						continue;
+					}
+
+					cSubMeshEntity *subMeshEntity = static_cast<cSubMeshEntity*>(obj);
+					cMaterial *pRelfMaterial = subMeshEntity->GetMaterial();
+					bool bReflectionIsInRange=true;
+					if(pRelfMaterial->GetMaxReflectionDistance() > 0)
+					{
+						cVector3f vPoint = mpCurrentFrustum->GetOrigin() + mpCurrentFrustum->GetForward()*-1*pRelfMaterial->GetMaxReflectionDistance();
+						cVector3f vNormal = mpCurrentFrustum->GetForward();
+						cPlanef maxRelfctionDistPlane;
+						maxRelfctionDistPlane.FromNormalPoint(vNormal, vPoint);
+
+						if(cMath::CheckPlaneBVCollision(maxRelfctionDistPlane, *obj->GetBoundingVolume())==eCollision_Outside)
+						{
+							bReflectionIsInRange = false;
+						}
+					}
+
+					if(mpCurrentSettings->mbRenderWorldReflection && bReflectionIsInRange && obj->GetIsOneSided())
+					{
+					}
+					else
+					{
+						if(mbReflectionTextureCleared == false)
+						{
+							cRenderTarget renderTarget;
+							renderTarget.mpFrameBuffer = mpReflectionBuffer;
+							SetFrameBuffer(mpReflectionBuffer, false, false);
+							ClearFrameBuffer(eClearFrameBufferFlag_Color, false);
+							SetAccumulationBuffer();
+							mbReflectionTextureCleared = true;
+						}
+					}
+				}
+				
+				//TODO: need to implement occlusion query for translucent objects
+				// if(obj->RetrieveOcculsionQuery(this)==false)
+				// {
+				// 	continue;
+				// }
+			}
+		})(false);
 
 		RunCallback(eRendererMessage_PostTranslucent);
 
@@ -1316,9 +1539,15 @@ namespace hpl {
 
 		SetFlatProjectionMinMax(cVector3f(mfFarLeft,mfFarBottom,-mfFarPlane*1.5f),cVector3f(mfFarRight,mfFarTop,mfFarPlane*1.5f));
 
+
+	
+		// shaderProgram.m_textures.push_back({m_linearDepth}})
+		
+
 		////////////////////////////////////////////
 		// Render linear depth to texture
 		SetFrameBuffer(mpEdgeSmooth_LinearDepthBuffer);
+
 
 		if(mGBufferType == eDeferredGBuffer_64Bit)
 		{
@@ -2786,7 +3015,7 @@ namespace hpl {
 			return;
 		}
 		const auto& viewId = context.StartPass("FullScreenFog");
-		auto& target = resolveRenderTarget(m_gBuffer_depth, mpCurrentSettings->mbIsReflection);
+		auto& target = resolveRenderTarget(m_gBuffer_depth);
 
 		START_RENDER_PASS(FullScreenFog);
 
@@ -2808,19 +3037,19 @@ namespace hpl {
 		//////////////////////////
 		// Set up program
 		int lFlags =0;
-		iGpuProgram *pProgram = mpFogProgramManager->GenerateProgram(0, lFlags);
+		// iGpuProgram *pProgram = mpFogProgramManager->GenerateProgram(0, lFlags);
 
 		// pProgram->Submit(bgfx::ViewId view, GraphicsContext &context)
 		// SetProgram(pProgram);
 
-		if(pProgram)
-		{
-			if(GetGBufferType() == eDeferredGBuffer_32Bit)
-				pProgram->SetFloat(kVar_afNegFarPlane, -mpCurrentFrustum->GetFarPlane());
-			pProgram->SetVec2f(kVar_avFogStartAndLength, cVector2f(mpCurrentWorld->GetFogStart(), mpCurrentWorld->GetFogEnd() - mpCurrentWorld->GetFogStart()));
-			pProgram->SetColor4f(kVar_avFogColor, mpCurrentWorld->GetFogColor());
-			pProgram->SetFloat(kVar_afFalloffExp, mpCurrentWorld->GetFogFalloffExp());
-		}
+		// if(pProgram)
+		// {
+		// 	if(GetGBufferType() == eDeferredGBuffer_32Bit)
+		// 		pProgram->SetFloat(kVar_afNegFarPlane, -mpCurrentFrustum->GetFarPlane());
+		// 	pProgram->SetVec2f(kVar_avFogStartAndLength, cVector2f(mpCurrentWorld->GetFogStart(), mpCurrentWorld->GetFogEnd() - mpCurrentWorld->GetFogStart()));
+		// 	pProgram->SetColor4f(kVar_avFogColor, mpCurrentWorld->GetFogColor());
+		// 	pProgram->SetFloat(kVar_afFalloffExp, mpCurrentWorld->GetFogFalloffExp());
+		// }
 		// pProgram->Submit(viewId, context);
 
 		// //////////////////////////
@@ -2892,38 +3121,38 @@ namespace hpl {
 				lFlags |= eFeature_FogArea_OutsideBox;
 			}
 
-			iGpuProgram *pProgram = mpFogProgramManager->GenerateProgram(0, lFlags);
-			if(pProgram==NULL) continue;
+			// iGpuProgram *pProgram = mpFogProgramManager->GenerateProgram(0, lFlags);
+			// if(pProgram==NULL) continue;
 
 			/////////////////////////////////////////////
 			// Setup program
-			SetProgram(pProgram);
+			// SetProgram(pProgram);
 
-			if(GetGBufferType() == eDeferredGBuffer_32Bit)
-					pProgram->SetFloat(kVar_afNegFarPlane, -mpCurrentFrustum->GetFarPlane());
-			pProgram->SetVec2f(kVar_avFogStartAndLength, cVector2f(pFogArea->GetStart(), pFogArea->GetEnd() - pFogArea->GetStart()));
-			pProgram->SetColor4f(kVar_avFogColor, pFogArea->GetColor());
-			pProgram->SetFloat(kVar_afFalloffExp, pFogArea->GetFalloffExp());
+			// if(GetGBufferType() == eDeferredGBuffer_32Bit)
+			// 		pProgram->SetFloat(kVar_afNegFarPlane, -mpCurrentFrustum->GetFarPlane());
+			// pProgram->SetVec2f(kVar_avFogStartAndLength, cVector2f(pFogArea->GetStart(), pFogArea->GetEnd() - pFogArea->GetStart()));
+			// pProgram->SetColor4f(kVar_avFogColor, pFogArea->GetColor());
+			// pProgram->SetFloat(kVar_afFalloffExp, pFogArea->GetFalloffExp());
 
-			/////////////////////////////////////////////
-			//Outside of box setup
-			if(fogData.mbInsideNearFrustum==false)
-			{
-				cMatrixf mtxInvModelView = cMath::MatrixInverse( cMath::MatrixMul(mpCurrentFrustum->GetViewMatrix(), *pFogArea->GetModelMatrixPtr()) );
-				cVector3f vRayCastStart = cMath::MatrixMul(mtxInvModelView, cVector3f(0));
+			// /////////////////////////////////////////////
+			// //Outside of box setup
+			// if(fogData.mbInsideNearFrustum==false)
+			// {
+			// 	cMatrixf mtxInvModelView = cMath::MatrixInverse( cMath::MatrixMul(mpCurrentFrustum->GetViewMatrix(), *pFogArea->GetModelMatrixPtr()) );
+			// 	cVector3f vRayCastStart = cMath::MatrixMul(mtxInvModelView, cVector3f(0));
 
 
-				pProgram->SetVec3f(kVar_avRayCastStart, vRayCastStart);
-				pProgram->SetMatrixf(kVar_a_mtxBoxInvViewModelRotation, mtxInvModelView.GetRotation());
+			// 	pProgram->SetVec3f(kVar_avRayCastStart, vRayCastStart);
+			// 	pProgram->SetMatrixf(kVar_a_mtxBoxInvViewModelRotation, mtxInvModelView.GetRotation());
 
-				cVector3f vNegPlaneDistNeg( cMath::PlaneToPointDist(cPlanef(-1,0,0,0.5f),vRayCastStart), cMath::PlaneToPointDist(cPlanef(0,-1,0,0.5f),vRayCastStart),
-											cMath::PlaneToPointDist(cPlanef(0,0,-1,0.5f),vRayCastStart));
-				cVector3f vNegPlaneDistPos( cMath::PlaneToPointDist(cPlanef(1,0,0,0.5f),vRayCastStart), cMath::PlaneToPointDist(cPlanef(0,1,0,0.5f),vRayCastStart),
-											cMath::PlaneToPointDist(cPlanef(0,0,1,0.5f),vRayCastStart));
+			// 	cVector3f vNegPlaneDistNeg( cMath::PlaneToPointDist(cPlanef(-1,0,0,0.5f),vRayCastStart), cMath::PlaneToPointDist(cPlanef(0,-1,0,0.5f),vRayCastStart),
+			// 								cMath::PlaneToPointDist(cPlanef(0,0,-1,0.5f),vRayCastStart));
+			// 	cVector3f vNegPlaneDistPos( cMath::PlaneToPointDist(cPlanef(1,0,0,0.5f),vRayCastStart), cMath::PlaneToPointDist(cPlanef(0,1,0,0.5f),vRayCastStart),
+			// 								cMath::PlaneToPointDist(cPlanef(0,0,1,0.5f),vRayCastStart));
 
-				pProgram->SetVec3f(kVar_avNegPlaneDistNeg, vNegPlaneDistNeg*-1);
-				pProgram->SetVec3f(kVar_avNegPlaneDistPos, vNegPlaneDistPos*-1);
-			}
+			// 	pProgram->SetVec3f(kVar_avNegPlaneDistNeg, vNegPlaneDistNeg*-1);
+			// 	pProgram->SetVec3f(kVar_avNegPlaneDistPos, vNegPlaneDistPos*-1);
+			// }
 
 			/////////////////////////////////////////////
 			// Render
