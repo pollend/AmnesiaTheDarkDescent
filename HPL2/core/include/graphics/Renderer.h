@@ -16,13 +16,13 @@
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
-
-#ifndef HPL_RENDERER_H
-#define HPL_RENDERER_H
+#pragma once
 
 #include "graphics/GraphicsContext.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Image.h"
+#include "graphics/RenderTarget.h"
+#include "graphics/RenderViewport.h"
 #include "math/MathTypes.h"
 #include "scene/SceneTypes.h"
 
@@ -234,8 +234,9 @@ namespace hpl {
 		iTexture *mpTempDiffTexture;
 		iTexture *mpTexture;
 		iFrameBuffer *mpBuffer;
+		
 		int mlFrameCount;
-
+		RenderTarget m_target;
 		cShadowMapLightCache mCache;
 	};
 
@@ -250,7 +251,13 @@ namespace hpl {
 		iRenderer(const tString& asName, cGraphics *apGraphics,cResources* apResources, int alNumOfProgramComboModes);
 		virtual ~iRenderer();
 
-		void Render(float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, cRenderTarget *apRenderTarget,
+		// plan to just use the single draw call need to call BeginRendering to setup state
+		// ensure the contents is copied to the RenderViewport
+		virtual void Draw(GraphicsContext& context, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, std::weak_ptr<RenderViewport> apRenderTarget,
+					bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList) {} ;
+
+		[[deprecated("Use Draw instead")]]
+		void Render(float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, std::weak_ptr<RenderViewport> apRenderTarget,
 					bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList);
 
 		void Update(float afTimeStep);
@@ -307,11 +314,13 @@ namespace hpl {
 		static void SetRefractionEnabled(bool abX) { mbRefractionEnabled = abX;}
 		static bool GetRefractionEnabled(){ return mbRefractionEnabled;}
 
-
 		//Debug
 		tRenderableVec *GetShadowCasterVec(){ return &mvShadowCasters;}
 
 	protected:
+		// a utility to collect renderable objects from the current render list
+		void RenderableHelper(eRenderListType type, eMaterialRenderMode mode, std::function<void(iRenderable* obj, GraphicsContext::LayoutStream&, GraphicsContext::ShaderProgram&)> handler);
+
 		/**
 		* In case some intermediate format is used then make sure it is at the correct buffer before ending rendering.
 		* When sending to a frame buffer at the end, then this method is never called and the intermediate can be returned with GetPostEffectFrameBuffer
@@ -320,11 +329,11 @@ namespace hpl {
 		virtual void SetupRenderList()=0;
 		virtual void RenderObjects()=0;
 
-		void BeginRendering(float afFrameTime,cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, cRenderTarget *apRenderTarget,
+		void BeginRendering(float afFrameTime,cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, std::weak_ptr<RenderViewport> apRenderTarget,
 							bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList, bool abAtStartOfRendering=true);
+		[[deprecated("just ensure the contents is transfer to the viewport")]]
 		void EndRendering(bool abAtEndOfRendering=true);
 
-		void CreateAndAddShadowMap(eShadowMapResolution aResolution, const cVector3l &avSize, ePixelFormat aFormat);
 		cShadowMapData* GetShadowMapData(eShadowMapResolution aResolution, iLight *apLight);
 		bool ShadowMapNeedsUpdate(iLight *apLight, cShadowMapData *apShadowData);
 		void DestroyShadowMaps();
@@ -550,4 +559,3 @@ namespace hpl {
 	//---------------------------------------------
 
 };
-#endif // HPL_RENDERER_H

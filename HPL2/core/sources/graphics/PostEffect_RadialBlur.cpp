@@ -104,17 +104,18 @@ namespace hpl {
 			value[2] = blurStartDist.x; // avHalfScreenSize
 			value[3] = blurStartDist.y;
 
-			auto& descriptor = target.GetDescriptor();
+			// auto& image = target.GetImage().lock();
+
 			GraphicsContext::LayoutStream layoutStream;
-			context.ScreenSpaceQuad(layoutStream, target.GetDescriptor().m_width, target.GetDescriptor().m_height);
+			context.ScreenSpaceQuad(layoutStream, vRenderTargetSize.x, vRenderTargetSize.y);
 			GraphicsContext::ShaderProgram shaderProgram;
 			shaderProgram.m_uniforms.push_back({ mpRadialBlurType->m_u_uniform, value });
 			shaderProgram.m_textures.push_back({ mpRadialBlurType->m_s_diffuseMap, input.GetHandle() });
 			shaderProgram.m_configuration.m_write = Write::RGBA | Write::Depth;
 
 			GraphicsContext::DrawRequest request { target, layoutStream, shaderProgram };
-			request.m_width = target.GetDescriptor().m_width;
-			request.m_height = target.GetDescriptor().m_height;
+			request.m_width = vRenderTargetSize.x;
+			request.m_height = vRenderTargetSize.y;
 			
 			context.Submit(view, request);
 

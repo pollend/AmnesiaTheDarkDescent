@@ -19,6 +19,7 @@
 
 #include "graphics/RendererSimple.h"
 
+#include "graphics/ShaderUtil.h"
 #include "math/Math.h"
 
 #include "system/LowLevelSystem.h"
@@ -79,6 +80,9 @@ namespace hpl {
 	bool cRendererSimple::LoadData()
 	{
 		cParserVarContainer programVars;
+
+		m_flatProgram = hpl::loadProgram("vs_simple_flat", "fs_simple_flat");
+		m_diffuseProgram = hpl::loadProgram("vs_simple_diffuse", "fs_simple_diffuse");
 
 		////////////////////////
 		// Z shader
@@ -141,6 +145,18 @@ namespace hpl {
 	}
 
 	//-----------------------------------------------------------------------
+
+
+	void cRendererSimple::Draw(GraphicsContext& context, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, std::weak_ptr<RenderViewport> apRenderTarget,
+					bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList) {
+		BeginRendering(afFrameTime,apFrustum, apWorld, apSettings,apRenderTarget,abSendFrameBufferToPostEffects,apCallbackList);
+
+		([&](bool active) {
+			if(!active) {
+				return;
+			}
+		})(true);
+	}
 
 	void cRendererSimple::RenderObjects()
 	{

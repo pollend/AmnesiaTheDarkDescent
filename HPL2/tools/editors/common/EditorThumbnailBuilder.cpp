@@ -20,6 +20,8 @@
 #include "EditorThumbnailBuilder.h"
 
 #include "EditorBaseClasses.h"
+#include "graphics/RenderViewport.h"
+#include <memory>
 
 //-------------------------------------------------------------------
 
@@ -104,13 +106,17 @@ cEditorThumbnailBuilder::cEditorThumbnailBuilder(iEditorBase* apEditor)
 	mpRenderTarget128->SetWrapS(eTextureWrap_Clamp);
 	mpRenderTarget128->CreateFromRawData(cVector3l(128,128,0), ePixelFormat_RGBA, NULL);
 
-	mpFB128 = pGfx->CreateFrameBuffer("ThumbnailDestination");
-	mpFB128->SetTexture2D(0,mpRenderTarget128);
-	mpFB128->CompileAndValidate();
+	mpFB128 = std::shared_ptr<RenderViewport>(new RenderViewport(
+		RenderTarget(), cVector2l(0,0)
+	));
+	// mpFB128 = pGfx->CreateFrameBuffer("ThumbnailDestination");
+	// mpFB128->SetTexture2D(0,mpRenderTarget128);
+	// mpFB128->CompileAndValidate();
+
 
 	mpViewport = pScene->CreateViewport(pCamera,pWorld,true);
 	mpViewport->SetSize(cVector2l(128));
-	mpViewport->SetFrameBuffer(mpFB128);
+	mpViewport->setRenderViewport(mpFB128);
 	mpViewport->SetActive(false);
 	mpViewport->SetVisible(false);
 	mpViewport->GetRenderSettings()->mClearColor = cColor(0,1);
@@ -152,7 +158,7 @@ void cEditorThumbnailBuilder::BuildThumbnailFromMeshEntity(cMeshEntity* apEntity
 										pCamera->GetFrustum(),
 										pWorld,
 										mpViewport->GetRenderSettings(),
-										mpViewport->GetRenderTarget(),
+										mpViewport->GetRenderViewport(),
 										false,
 										mpViewport->GetRendererCallbackList() );
 	pGfx->WaitAndFinishRendering();
@@ -236,7 +242,7 @@ void cEditorThumbnailBuilder::BuildThumbnailFromMesh(const tWString& asMeshFilen
 										pCamera->GetFrustum(),
 										pWorld,
 										mpViewport->GetRenderSettings(),
-										mpViewport->GetRenderTarget(),
+										mpViewport->GetRenderViewport(),
 										false,
 										mpViewport->GetRendererCallbackList() );
 	pGfx->WaitAndFinishRendering();
@@ -505,7 +511,8 @@ void cEditorThumbnailBuilder::PreBuild()
 {
 	iLowLevelGraphics* pGfx = mpEditor->GetEngine()->GetGraphics()->GetLowLevel();
 
-	pGfx->SetCurrentFrameBuffer(mpFB128);
+	// TODO: need to replace with RendTarget
+	// pGfx->SetCurrentFrameBuffer(mpFB128); 
 }
 
 //-------------------------------------------------------------------

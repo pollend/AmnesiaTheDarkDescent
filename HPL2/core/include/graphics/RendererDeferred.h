@@ -197,18 +197,9 @@ namespace hpl {
 		void CopyToFrameBuffer();
 		void SetupRenderList();
 		void RenderObjects();
-
-		// void SetupGBuffer(GraphicsContext& context);
-
-		// void SetupRenderVariables();
-
-		void RenderableHelper(eRenderListType type, eMaterialRenderMode mode, std::function<void(iRenderable* obj, GraphicsContext::LayoutStream&, GraphicsContext::ShaderProgram&)> handler);
-
+		
 
 		void RenderZ(GraphicsContext& context);
-		void RenderDynamicZTemp();
-		// void RenderGbuffer(GraphicsContext& context);
-		void RenderSSAO();
 		void RenderEdgeSmooth();
 
 		void SetupLightsAndRenderQueries();
@@ -225,8 +216,6 @@ namespace hpl {
 		void RenderReflection(iRenderable *apObject);
 		void RenderSubMeshEntityReflection(cSubMeshEntity *pReflectionObject);
 
-		void RenderFullScreenFog(GraphicsContext& context);
-		void RenderFog();
 		void RenderTranslucent();
 
 		void SetAccumulationBuffer();
@@ -251,7 +240,6 @@ namespace hpl {
 		iVertexBuffer *mpShapeSphere[eDeferredShapeQuality_LastEnum];
 		iVertexBuffer *mpShapePyramid;
 
-		iVertexBuffer *mpBatchBuffer;
 		int mlMaxBatchLights;
 		int mlMaxBatchVertices;
 		int mlMaxBatchIndices;
@@ -290,12 +278,10 @@ namespace hpl {
 		std::array<std::shared_ptr<Image>, 2> m_colorDepth;
 		std::array<std::shared_ptr<Image>, 2> m_normal;
 		std::array<std::shared_ptr<Image>, 2> m_linearDepth;
-
 		std::array<std::shared_ptr<Image>, 2> m_depthStencil;
 
+		std::array<absl::InlinedVector<cShadowMapData, 10>, eShadowMapResolution_LastEnum> m_shadowMapData;
 		RenderTarget m_edgeSmooth_LinearDepth;
-
-		iFrameBuffer *mpGBuffer[2][eGBufferComponents_LastEnum]; //[2] = reflection or not
 
 		iFrameBuffer *mpAccumBuffer;
 		iFrameBuffer *mpReflectionBuffer;
@@ -305,30 +291,22 @@ namespace hpl {
 		iTexture *mpRefractionTexture;
 		iTexture *mpReflectionTexture;
 
-
 		Image *m_refractionImage;
 		Image *m_reflectionImage;
 		iDepthStencilBuffer* mpDepthStencil[2];	//[2] = reflection or not
 
-
 		bool mbReflectionTextureCleared;
 
-		/*iTexture *mpShadowTempDiffTexture[eShadowMapResolution_LastEnum];
-		iTexture *mpShadowTexture[eShadowMapResolution_LastEnum];
-		iFrameBuffer *mpShadowBuffer[eShadowMapResolution_LastEnum];
-		cShadowMapLightCache mShadowMapCacheData[eShadowMapResolution_LastEnum];*/
 		iTexture *mpShadowJitterTexture;
 		int mlShadowJitterSize;
 		int mlShadowJitterSamples;
 
-		iTexture *mpLinearDepthTexture;
 		iTexture *mpSSAOTexture;
 		iTexture *mpSSAOBlurTexture;
 		iTexture *mpSSAOScatterDisk;
 		iTexture *mpEdgeSmooth_LinearDepthTexture;
 		iTexture *mpEdgeSmooth_TempAccum;
 
-		iFrameBuffer *mpLinearDepthBuffer;
 		iFrameBuffer *mpSSAOBuffer;
 		iFrameBuffer *mpSSAOBlurBuffer;
 		iFrameBuffer *mpEdgeSmooth_LinearDepthBuffer;
@@ -340,6 +318,7 @@ namespace hpl {
 
 		bgfx::UniformHandle m_u_param;
 		bgfx::UniformHandle m_u_boxInvViewModelRotation;
+		bgfx::UniformHandle m_u_depthMap;
 
 		struct DeferredFogUniforms {
 			float u_fogStart;
@@ -365,8 +344,6 @@ namespace hpl {
 
 		iGpuProgram *mpLightStencilProgram;
 		iGpuProgram *mpLightBoxProgram[2];//1=SSAO used, 0=no SSAO
-
-		// cProgramComboManager* mpFogProgramManager;
 
 		cMatrixf m_mtxTempLight;
 

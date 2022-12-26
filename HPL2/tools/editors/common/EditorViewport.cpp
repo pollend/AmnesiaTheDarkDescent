@@ -773,7 +773,7 @@ iEditorViewport::iEditorViewport(iEditorBase* apEditor, cWorld* apWorld, iFrameB
 
 iEditorViewport::~iEditorViewport()
 {
-	mpEngineViewport->SetFrameBuffer(NULL);
+	// mpEngineViewport->SetFrameBuffer(NULL);
 	mpEngine->GetScene()->DestroyViewport(mpEngineViewport);
 	if(mpImgViewport) mpGuiSet->DestroyWidget(mpImgViewport);
 
@@ -850,7 +850,7 @@ void iEditorViewport::SetFrameBuffer(iFrameBuffer* apFB)
 	iFrameBufferAttachment* pColorBuffer = mpFB->GetColorBuffer(0);
 	if(pColorBuffer) mpRenderTarget = pColorBuffer->ToTexture();
 
-	mpEngineViewport->SetFrameBuffer(mpFB);
+	// mpEngineViewport->SetFrameBuffer(mpFB);
 	mbViewportNeedsUpdate = true;
 }
 

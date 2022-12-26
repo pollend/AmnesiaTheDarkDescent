@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <optional>
 #include <vector>
+#include <optional>
 
 namespace hpl
 {
@@ -54,11 +55,18 @@ namespace hpl
                     DepthTest m_depthTest: 3;
                     Cull m_cull: 2;
                     bool m_blendAlpha: 1;
+                    char m_alphaReference;
+
+                    BlendFunc m_rgbBlendFunc: 16;
+                    BlendFunc m_alphaBlendFunc: 16;
                 };
                 uint64_t m_state = 0;
             } m_configuration;
 
-            cMatrixf m_modelTransform = cMatrixf::Identity;
+            cMatrixf m_modelTransform = cMatrixf(cMatrixf::Identity);
+            cMatrixf m_view = cMatrixf(cMatrixf::Identity);
+            cMatrixf m_projection = cMatrixf(cMatrixf::Identity);
+
             absl::InlinedVector<TextureData, 10> m_textures;
             absl::InlinedVector<UniformData, 25> m_uniforms;
         };
@@ -99,6 +107,7 @@ namespace hpl
         void Quad(GraphicsContext::LayoutStream& input, const cVector3f& pos, const cVector2f& size, const cVector2f& uv0 = cVector2f(0.0f, 0.0f), const cVector2f& uv1 = cVector2f(1.0f, 1.0f));
         void ScreenSpaceQuad(GraphicsContext::LayoutStream& input, float textureWidth, float textureHeight, float width = 1.0f, float height = 1.0f);
         
+        void CopyTextureToFrameBuffer(Image& image, RenderTarget& target);
         void ClearTarget(bgfx::ViewId view, const DrawClear& request);
         void Submit(bgfx::ViewId view, const DrawRequest& request);
 

@@ -214,8 +214,9 @@ namespace hpl {
 				{
 					START_TIMING(RenderWorld)
 					pRenderer->Render(	afFrameTime,pFrustum,
-										pViewPort->GetWorld(),pViewPort->GetRenderSettings(),
-										pViewPort->GetRenderTarget(),
+										pViewPort->GetWorld(),
+										pViewPort->GetRenderSettings(),
+										pViewPort->GetRenderViewport(),
 										bPostEffects,
 										pViewPort->GetRendererCallbackList());
 					STOP_TIMING(RenderWorld)
@@ -223,10 +224,11 @@ namespace hpl {
 				else
 				{
 					//If no renderer sets up viewport do that by our selves.
-					cRenderTarget* pRenderTarget = pViewPort->GetRenderTarget();
-					mpGraphics->GetLowLevel()->SetCurrentFrameBuffer(	pRenderTarget->mpFrameBuffer,
-																		pRenderTarget->mvPos,
-																		pRenderTarget->mvSize);
+					// cRenderTarget* pRenderTarget = pViewPort->GetRenderTarget();
+					// mpGraphics->GetLowLevel()->SetCurrentFrameBuffer(	pRenderTarget->mpFrameBuffer,
+					// 													pRenderTarget->mvPos,
+					// 													pRenderTarget->mvSize);
+					// umm need to workout how this framebuffer is used ...
 				}
 				pViewPort->RunViewportCallbackMessage(eViewportMessage_OnPostWorldDraw);
 
@@ -248,7 +250,14 @@ namespace hpl {
 
 				START_TIMING(RenderPostEffects)
 				// pPostEffectComposite->Render(context, )
-				pPostEffectComposite->Render(afFrameTime, pFrustum, pInputTexture,pViewPort->GetRenderTarget());
+				auto target = pViewPort->GetRenderViewport();
+				if(auto renderViewport = target.lock()) {
+					
+					pPostEffectComposite->Render(context,
+						*renderViewport->GetRenderTarget().GetImage().lock(),
+						renderViewport->GetRenderTarget());
+				}
+
 				STOP_TIMING(RenderPostEffects)
 			}
 

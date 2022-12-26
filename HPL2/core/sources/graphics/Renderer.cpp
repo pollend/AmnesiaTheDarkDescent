@@ -20,6 +20,8 @@
 #include "graphics/Renderer.h"
 
 #include "graphics/GraphicsContext.h"
+#include "graphics/RenderTarget.h"
+#include "graphics/RenderViewport.h"
 #include "math/Math.h"
 #include "math/BoundingVolume.h"
 
@@ -59,6 +61,7 @@
 #include "scene/FogArea.h"
 
 #include <algorithm>
+#include <memory>
 
 namespace hpl {
 
@@ -467,7 +470,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void iRenderer::Render(float afFrameTime,cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, cRenderTarget *apRenderTarget,
+	void iRenderer::Render(float afFrameTime,cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, std::weak_ptr<RenderViewport> apRenderTarget,
 							bool abSendFrameBufferToPostEffects,tRendererCallbackList *apCallbackList)
 	{
 		BeginRendering(afFrameTime,apFrustum, apWorld, apSettings,apRenderTarget,abSendFrameBufferToPostEffects,apCallbackList);
@@ -477,6 +480,32 @@ namespace hpl {
 
         EndRendering();
 	}
+
+	void iRenderer::RenderableHelper(eRenderListType type, eMaterialRenderMode mode, std::function<void(iRenderable* obj, GraphicsContext::LayoutStream&, GraphicsContext::ShaderProgram&)> handler) {
+		if(!mpCurrentRenderList->ArrayHasObjects(type)) {
+			return;
+		}
+
+		for(auto& obj: mpCurrentRenderList->GetRenderableItems(type))
+		{
+			GraphicsContext::LayoutStream layoutStream;
+			GraphicsContext::ShaderProgram shaderProgram;
+			
+			cMaterial *pMaterial = obj->GetMaterial();
+			iMaterialType* materialType = pMaterial->GetType();
+			iGpuProgram* program = pMaterial->GetProgram(0, mode);
+			iVertexBuffer* vertexBuffer = obj->GetVertexBuffer();
+			if(vertexBuffer == nullptr || program == nullptr || materialType == nullptr) {
+				continue;
+			}
+			vertexBuffer->GetLayoutStream(layoutStream);
+			materialType->GetShaderData(shaderProgram, mode, program, pMaterial, obj, this);
+			shaderProgram.m_modelTransform = *obj->GetModelMatrixPtr();
+			
+			handler(obj, layoutStream, shaderProgram);
+		}
+	}
+
 
 	//-----------------------------------------------------------------------
 
@@ -491,6 +520,8 @@ namespace hpl {
 	{
 		if(mpCurrentRenderTarget->mpFrameBuffer)
 		{
+			auto image = m_currentRenderTarget->GetRenderTarget().GetImage();
+
 			iFrameBufferAttachment *pAttachement = mpCurrentRenderTarget->mpFrameBuffer->GetColorBuffer(0);
             iTexture *pTexture = static_cast<iTexture*>(pAttachement);
 
@@ -536,17 +567,28 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void iRenderer::BeginRendering(	float afFrameTime,cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, cRenderTarget *apRenderTarget,
-									bool abSendFrameBufferToPostEffects,tRendererCallbackList *apCallbackList, bool abAtStartOfRendering)
+	void iRenderer::BeginRendering(
+		float afFrameTime,
+		cFrustum* apFrustum,
+		cWorld* apWorld,
+		cRenderSettings* apSettings,
+		std::weak_ptr<RenderViewport>  apRenderTarget,
+		bool abSendFrameBufferToPostEffects,
+		tRendererCallbackList* apCallbackList,
+		bool abAtStartOfRendering)
 	{
-		if(apSettings->mbLog)
+		if (apSettings->mbLog)
 		{
-			Log("Start Rendering Frustum: %d, World: '%s' TargetBuffer %d\n", apFrustum, apWorld->GetName().c_str(), apRenderTarget->mpFrameBuffer);
+			
+			// Log("Start Rendering Frustum: %d, World: '%s' TargetBuffer %d\n",
+			// 	apFrustum,
+			// 	apWorld->GetName().c_str(),
+			// 	apRenderTarget->mpFrameBuffer);
 			Log("-----------------  START -------------------------\n");
 		}
 
 		//////////////////////////////////////////
-		//Set up variables
+		// Set up variables
 		mfCurrentFrameTime = afFrameTime;
 		mpCurrentWorld = apWorld;
 		mpCurrentSettings = apSettings;
@@ -558,89 +600,67 @@ namespace hpl {
 		mbOcclusionPlanesActive = true;
 
 		////////////////////////////////
-		//Initialize render functions
-		InitAndResetRenderFunctions(apFrustum, apRenderTarget, apSettings->mbLog,
-									apSettings->mbUseScissorRect, apSettings->mvScissorRectPos, apSettings->mvScissorRectSize);
-
+		// Initialize render functions
+		InitAndResetRenderFunctions(
+			apFrustum,
+			apRenderTarget,
+			apSettings->mbLog,
+			apSettings->mbUseScissorRect,
+			apSettings->mvScissorRectPos,
+			apSettings->mvScissorRectSize);
 
 		////////////////////////////////
-		//Set up near plane variables
+		// Set up near plane variables
 
-		//Calculate radius for near plane so that it is always inside it.
-		float fTanHalfFOV = tan(mpCurrentFrustum->GetFOV()*0.5f);
+		// Calculate radius for near plane so that it is always inside it.
+		float fTanHalfFOV = tan(mpCurrentFrustum->GetFOV() * 0.5f);
 
 		float fNearPlane = mpCurrentFrustum->GetNearPlane();
-		mfCurrentNearPlaneTop =  fTanHalfFOV * fNearPlane;
+		mfCurrentNearPlaneTop = fTanHalfFOV * fNearPlane;
 		mfCurrentNearPlaneRight = mpCurrentFrustum->GetAspect() * mfCurrentNearPlaneTop;
-
 
 		/////////////////////////////////////////////
 		// Setup occlusion planes
 		mvCurrentOcclusionPlanes.resize(0);
 
-		//User clip planes
-		for(size_t i=0; i<apSettings->mvOcclusionPlanes.size(); ++i)
+		// User clip planes
+		for (size_t i = 0; i < apSettings->mvOcclusionPlanes.size(); ++i) {
 			mvCurrentOcclusionPlanes.push_back(apSettings->mvOcclusionPlanes[i]);
-
-        //Fog
-		if(mbSetupOcclusionPlaneForFog && apWorld->GetFogActive() && apWorld->GetFogColor().a >= 1.0f && apWorld->GetFogCulling())
-		{
-			cPlanef fogPlane;
-			fogPlane.FromNormalPoint(	apFrustum->GetForward(),
-										apFrustum->GetOrigin() + apFrustum->GetForward()*-apWorld->GetFogEnd());
-			mvCurrentOcclusionPlanes.push_back(fogPlane);
 		}
 
+		// Fog
+		if (mbSetupOcclusionPlaneForFog && apWorld->GetFogActive() && apWorld->GetFogColor().a >= 1.0f && apWorld->GetFogCulling())
+		{
+			cPlanef fogPlane;
+			fogPlane.FromNormalPoint(apFrustum->GetForward(), apFrustum->GetOrigin() + apFrustum->GetForward() * -apWorld->GetFogEnd());
+			mvCurrentOcclusionPlanes.push_back(fogPlane);
+		}
+		
+		// if (mbSetFrameBufferAtBeginRendering && abAtStartOfRendering)
+		// {
+		// 	SetFrameBuffer(mpCurrentRenderTarget->mpFrameBuffer, true, true);
+		// }
+
+
+		// //////////////////////////////
+		// // Clear screen
+		// if (mbClearFrameBufferAtBeginRendering && abAtStartOfRendering)
+		// {
+		// 	// TODO: need to work out clearing framebuffer
+		// 	ClearFrameBuffer(eClearFrameBufferFlag_Depth | eClearFrameBufferFlag_Color, true);
+		// }
+
+		//////////////////////////////////////////////////
+		// Projection matrix
+		SetNormalFrustumProjection();
+
 		/////////////////////////////////////////////
-		// Init rendering
-
-			//////////////////////////////
-			//Render Target
-			if(mbSetFrameBufferAtBeginRendering && abAtStartOfRendering)
-			{
-				SetFrameBuffer(mpCurrentRenderTarget->mpFrameBuffer, true, true);
-			}
-
-			/////////////////////////
-			// General states
-			mpLowLevelGraphics->SetClearColor(mpCurrentSettings->mClearColor);
-			mpLowLevelGraphics->SetClearDepth(1);
-
-			/////////////////////////
-			// Render states
-			mpLowLevelGraphics->SetColorWriteActive(true, true, true, true);
-
-			mpLowLevelGraphics->SetCullActive(true);
-			mpLowLevelGraphics->SetCullMode(eCullMode_CounterClockwise);
-
-			mpLowLevelGraphics->SetDepthTestActive(true);
-			mpLowLevelGraphics->SetDepthWriteActive(true);
-			mpLowLevelGraphics->SetDepthTestFunc(eDepthTestFunc_LessOrEqual);
-
-			mpLowLevelGraphics->SetColor(cColor(1,1,1,1));
-
-			for(int i=0; i<kMaxTextureUnits; ++i)
-				mpLowLevelGraphics->SetTexture(i, NULL);
-
-			//////////////////////////////
-			//Clear screen
-			if(mbClearFrameBufferAtBeginRendering && abAtStartOfRendering)
-			{
-				ClearFrameBuffer(eClearFrameBufferFlag_Depth | eClearFrameBufferFlag_Color, true);
-			}
-
-
-			//////////////////////////////////////////////////
-			// Projection matrix
-			SetNormalFrustumProjection();
-
-			/////////////////////////////////////////////
-			// Clear Render list
-			if(abAtStartOfRendering)
-				mpCurrentRenderList->Clear();
+		// Clear Render list
+		if (abAtStartOfRendering)
+			mpCurrentRenderList->Clear();
 	}
 
-	//-----------------------------------------------------------------------
+        //-----------------------------------------------------------------------
 
 	void iRenderer::EndRendering(bool abAtEndOfRendering)
 	{
@@ -655,32 +675,12 @@ namespace hpl {
 		{
 			CopyToFrameBuffer();
 		}
-
-		/////////////////////////////////////////////
-		// Reset all rendering states
-		SetBlendMode(eMaterialBlendMode_None);
-		SetChannelMode(eMaterialChannelMode_RGBA);
-		SetAlphaMode(eMaterialAlphaMode_Solid);
-
 		/////////////////////////////////////////////
 		// Reset the cull mode setup
 		mbInvertCullMode = false;
-		mpLowLevelGraphics->SetCullMode(eCullMode_CounterClockwise);
+		// mpLowLevelGraphics->SetCullMode(eCullMode_CounterClockwise);
 
-		/////////////////////////////////////////////
-		// Unbind all rendering data
-		for(int i=0; i<kMaxTextureUnits; ++i)
-		{
-			if(mvCurrentTexture[i]) mpLowLevelGraphics->SetTexture(i, NULL);
-		}
-
-		if(mpCurrentProgram) mpCurrentProgram->UnBind();
-		if(mpCurrentVtxBuffer) mpCurrentVtxBuffer->UnBind();
-
-		/////////////////////////////////////////////
-		// Clean up render functions
-		ExitAndCleanUpRenderFunctions();
-
+	
 		if(abAtEndOfRendering && mbLog)
 		{
 			Log("----------\n");
@@ -693,46 +693,6 @@ namespace hpl {
 		}
 
 	}
-
-	//-----------------------------------------------------------------------
-
-	void iRenderer::CreateAndAddShadowMap(eShadowMapResolution aResolution, const cVector3l &avSize, ePixelFormat aFormat)
-	{
-		tString sName = "ShadowMap"+cString::ToString(avSize.x)+"x"+cString::ToString(avSize.y)+"_"+
-						cString::ToString((int)mvShadowMapData[aResolution].size());
-		cShadowMapData *pData = hplNew(cShadowMapData, ());
-		pData->mlFrameCount = -1;
-
-		pData->mpTexture = mpGraphics->CreateTexture(sName+"_Texture",eTextureType_2D, eTextureUsage_RenderTarget);
-		pData->mpTexture->CreateFromRawData(avSize, aFormat, NULL);
-		pData->mpTexture->SetCompareMode(eTextureCompareMode_RToTexture);
-		pData->mpTexture->SetCompareFunc(eTextureCompareFunc_LessOrEqual);
-		pData->mpTexture->SetFilter(eTextureFilter_Nearest);
-		pData->mpTexture->SetWrapSTR(eTextureWrap_ClampToEdge);
-
-		//Hack to avoid ATI drier failure:
-		if(mpLowLevelGraphics->GetCaps(eGraphicCaps_OGL_ATIFragmentShader))
-		{
-			pData->mpTempDiffTexture = mpGraphics->CreateTexture(sName+"_TempDiff",eTextureType_2D, eTextureUsage_RenderTarget);
-			pData->mpTempDiffTexture->CreateFromRawData(avSize, ePixelFormat_Alpha, NULL);
-		}
-		else
-		{
-			pData->mpTempDiffTexture = NULL;
-		}
-
-		pData->mpBuffer = mpGraphics->CreateFrameBuffer(sName+"_Buffer");
-		if(pData->mpTempDiffTexture) pData->mpBuffer->SetTexture2D(0, pData->mpTempDiffTexture);
-		pData->mpBuffer->SetDepthTexture2D(pData->mpTexture);
-
-		pData->mpBuffer->CompileAndValidate();
-
-		mvShadowMapData[aResolution].push_back(pData);
-	}
-
-	//-----------------------------------------------------------------------
-
-
 
 	cShadowMapData* iRenderer::GetShadowMapData(eShadowMapResolution aResolution, iLight *apLight)
 	{
@@ -778,8 +738,6 @@ namespace hpl {
 
 		return pBestData;
 	}
-
-	//-----------------------------------------------------------------------
 
 
 	bool iRenderer::ShadowMapNeedsUpdate(iLight *apLight, cShadowMapData *apShadowData)
@@ -1900,7 +1858,7 @@ namespace hpl {
 
 		SetOcclusionPlanesActive(true);
 
-		mpLowLevelGraphics->SetPolygonOffsetActive(false);
+		// mpLowLevelGraphics->SetPolygonOffsetActive(false);
 
 		/////////////////////////
 		// Reset projection
@@ -2005,7 +1963,7 @@ namespace hpl {
 
 
 		//Make sure rendering is on its way!
-		mpLowLevelGraphics->FlushRendering();
+		// mpLowLevelGraphics->FlushRendering();
 
 		///////////////////////////////////
 		// Reset some settings

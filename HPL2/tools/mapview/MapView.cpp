@@ -17,10 +17,17 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "absl/types/span.h"
+#include "graphics/Image.h"
+#include "graphics/RenderTarget.h"
+#include "graphics/RenderViewport.h"
 #include "hpl.h"
+#include "math/MathTypes.h"
 #include "scene/RenderableContainer_DynBoxTree.h"
 
 #include "../../tests/Common/SimpleCamera.h"
+#include <array>
+#include <memory>
 
 using namespace hpl;
 
@@ -614,24 +621,31 @@ public:
 		/////////////////////////////////
 		// Setup test window
 		cVector2l vTestWindowSize(400,300);
-		mpTestFrameBuffer = gpEngine->GetGraphics()->CreateFrameBuffer("");
+		// mpTestFrameBuffer = gpEngine->GetGraphics()->CreateFrameBuffer("");
+		std::array<std::shared_ptr<Image>, 2> images= {
+			std::shared_ptr<Image>( new Image(ImageDescriptor::CreateTexture2D(vTestWindowSize.x, vTestWindowSize.y, false, bgfx::TextureFormat::Enum::RGBA32F))),
+			std::shared_ptr<Image>(new Image(ImageDescriptor::CreateTexture2D(vTestWindowSize.x, vTestWindowSize.y, false, bgfx::TextureFormat::Enum::D24S8)))
+		};
+		mpTestFrameBuffer = std::shared_ptr<RenderViewport>(new RenderViewport(
+			RenderTarget(absl::MakeSpan(images)), cVector2l(0,0)));
 
-		mpTestRenderTexture = gpEngine->GetGraphics()->CreateTexture("TestTarget",eTextureType_Rect,eTextureUsage_RenderTarget);
-		mpTestRenderTexture->CreateFromRawData(cVector3l(vTestWindowSize.x, vTestWindowSize.y,1),ePixelFormat_RGBA, NULL);
+		// todo need to work with CreateGfxTexture
+		// mpTestRenderTexture = gpEngine->GetGraphics()->CreateTexture("TestTarget",eTextureType_Rect,eTextureUsage_RenderTarget);
+		// mpTestRenderTexture->CreateFromRawData(cVector3l(vTestWindowSize.x, vTestWindowSize.y,1),ePixelFormat_RGBA, NULL);
 
-		mpTestRenderGfx = gpEngine->GetGui()->CreateGfxTexture(mpTestRenderTexture,false,eGuiMaterial_Diffuse);
+		// mpTestRenderGfx = gpEngine->GetGui()->CreateGfxTexture(mpTestRenderTexture,false,eGuiMaterial_Diffuse);
 
-		iDepthStencilBuffer *pDepthBuffer = gpEngine->GetGraphics()->CreateDepthStencilBuffer(vTestWindowSize,24,8,false);
+		// iDepthStencilBuffer *pDepthBuffer = gpEngine->GetGraphics()->CreateDepthStencilBuffer(vTestWindowSize,24,8,false);
 
-		mpTestFrameBuffer->SetDepthStencilBuffer(pDepthBuffer);
-		mpTestFrameBuffer->SetTexture2D(0,mpTestRenderTexture);
+		// mpTestFrameBuffer->SetDepthStencilBuffer(pDepthBuffer);
+		// mpTestFrameBuffer->SetTexture2D(0,mpTestRenderTexture);
 
 		mpTestWorld = gpEngine->GetScene()->CreateWorld("Test");
 
 		mpTestViewPort = gpEngine->GetScene()->CreateViewport(gpSimpleCamera->GetCamera(),mpTestWorld);
 		mpTestViewPort->SetRenderer(gpEngine->GetGraphics()->GetRenderer(eRenderer_WireFrame));
 
-		mpTestViewPort->SetFrameBuffer(mpTestFrameBuffer);
+		mpTestViewPort->setRenderViewport(mpTestFrameBuffer);
 		mpTestViewPort->SetSize(cVector2l(mpTestRenderTexture->GetWidth(),mpTestRenderTexture->GetHeight()));
 
 		//mpTestViewPort->SetVisible(gbDrawOcclusionGfxInfo);
@@ -1962,7 +1976,7 @@ public:
 	iPhysicsWorld *mpPhysicsWorld;
 	iTexture *mpTestRenderTexture;
 	cViewport *mpTestViewPort;
-	iFrameBuffer *mpTestFrameBuffer;
+	std::shared_ptr<RenderViewport> mpTestFrameBuffer;
 	cGuiGfxElement *mpTestRenderGfx;
 
 	tWStringVec mvPickedFiles;

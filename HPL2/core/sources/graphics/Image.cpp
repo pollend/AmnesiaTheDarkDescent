@@ -1,7 +1,8 @@
 #include <graphics/Image.h>
 #include "bgfx/bgfx.h"
+#include "bgfx/defines.h"
 #include <cstdint>
-
+#include <bx/debug.h>
 namespace hpl
 {
 
@@ -31,6 +32,16 @@ namespace hpl
         return desc;
     }
 
+    ImageDescriptor ImageDescriptor::CreateTexture3D(uint16_t width, uint16_t height, uint16_t depth, bool hasMipMaps, bgfx::TextureFormat::Enum format) {
+        ImageDescriptor desc;
+        desc.m_width = width;
+        desc.m_height = height;
+        desc.m_depth = depth;
+        desc.m_hasMipMaps = hasMipMaps;
+        desc.format = format;
+        return desc;
+    }
+
     Image::Image()
     {
     }
@@ -40,42 +51,88 @@ namespace hpl
     }
 
     Image::Image(Image&& other) {
-        _handle = other._handle;
-        _descriptor = other._descriptor;
-        other._handle = BGFX_INVALID_HANDLE;
+        m_handle = other.m_handle;
+        m_descriptor = other.m_descriptor;
+        other.m_handle = BGFX_INVALID_HANDLE;
     }
 
     Image::~Image()
     {
-        if (bgfx::isValid(_handle))
+        if (bgfx::isValid(m_handle))
         {
-            bgfx::destroy(_handle);
+            bgfx::destroy(m_handle);
         }
     }
 
     void Image::operator=(Image&& other) {
-        _handle = other._handle;
-        _descriptor = other._descriptor;
-        other._handle = BGFX_INVALID_HANDLE;
+        m_handle = other.m_handle;
+        m_descriptor = other.m_descriptor;
+        other.m_handle = BGFX_INVALID_HANDLE;
     }
 
     void Image::Initialize(const ImageDescriptor& descriptor, const bgfx::Memory* mem) {
-        _descriptor = descriptor;
+        BX_ASSERT(!bgfx::isValid(m_handle), "RenderTarget already initialized");
 
-        _handle = bgfx::createTexture2D(
-            descriptor.m_width, descriptor.m_height, 
-            descriptor.m_hasMipMaps, 1, descriptor.format, BGFX_TEXTURE_RT, mem);
+        m_descriptor = descriptor;
+        uint64_t flags = (m_descriptor.m_configuration.m_uClamp ? BGFX_SAMPLER_U_CLAMP : 0) |
+            (m_descriptor.m_configuration.m_vClamp ? BGFX_SAMPLER_V_CLAMP : 0) |
+            (m_descriptor.m_configuration.m_wClamp ? BGFX_SAMPLER_W_CLAMP : 0) |
+            [&] () -> uint64_t {
+                switch(m_descriptor.m_configuration.m_rt) {
+                    case RTType::RT_Write:
+                        return BGFX_TEXTURE_RT;
+                    case RTType::RT_WriteOnly:
+                        return BGFX_TEXTURE_RT_WRITE_ONLY;
+                    case RTType::RT_MSAA_X2:
+                        return BGFX_TEXTURE_RT_MSAA_X2;
+                    case RTType::RT_MSAA_X4:
+                        return BGFX_TEXTURE_RT_MSAA_X4;
+                    case RTType::RT_MSAA_X8:
+                        return BGFX_TEXTURE_RT_MSAA_X8;
+                    case RTType::RT_MSAA_X16:
+                        return BGFX_TEXTURE_RT_MSAA_X16;
+                    default:
+                        break;
+                }
+                return 0;
+            }();
+
+        if (m_descriptor.m_depth > 1)
+        {
+            m_handle = bgfx::createTexture3D(
+                m_descriptor.m_width,
+                m_descriptor.m_height,
+                m_descriptor.m_depth,
+                m_descriptor.m_hasMipMaps,
+                m_descriptor.format,
+                flags,
+                mem);
+        }
+        else
+        {
+            m_handle = bgfx::createTexture2D(
+                m_descriptor.m_width, 
+                m_descriptor.m_height, 
+                m_descriptor.m_hasMipMaps, 
+                m_descriptor.m_arraySize, 
+                m_descriptor.format, 
+                flags, 
+                mem);
+        }
     }
     
     void Image::Invalidate() {
-
+        if (bgfx::isValid(m_handle))
+        {
+            bgfx::destroy(m_handle);
+        }
+        m_handle = BGFX_INVALID_HANDLE;
     }
 
     const ImageDescriptor& Image::GetDescriptor() const
     {
-        return _descriptor;
+        return m_descriptor;
     }
-
 
     bgfx::TextureFormat::Enum Image::FromHPLTextureFormat(ePixelFormat format)
     {
@@ -139,6 +196,6 @@ namespace hpl
 
     bgfx::TextureHandle Image::GetHandle() const
     {
-        return _handle;
+        return m_handle;
     }
 } // namespace hpl

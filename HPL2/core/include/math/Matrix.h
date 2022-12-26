@@ -50,8 +50,15 @@ template <class T> 	class cMatrix {
 		FromVec(pA);
 	}
 
-	//-----------------------------------------------------------------------
+	inline cMatrix(const cMatrix<T>& pA)
+	{
+		std::copy(&pA.v[0], &pA.v[16], &v[0]);
+	}
 
+	inline void operator=(const cMatrix<T>& pA)
+	{
+		std::copy(&pA.v[0], &pA.v[16], &v[0]);
+	}
 
 	inline cMatrix(double* pA)
 	{

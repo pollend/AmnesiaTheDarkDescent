@@ -22,6 +22,7 @@
 #include "graphics/RenderList.h"
 #include "graphics/FrameBuffer.h"
 #include "graphics/GPUProgram.h"
+#include "graphics/RenderTarget.h"
 #include "graphics/VertexBuffer.h"
 #include "graphics/LowLevelGraphics.h"
 #include "graphics/Texture.h"
@@ -49,12 +50,12 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void iRenderFunctions::InitAndResetRenderFunctions(	cFrustum *apFrustum, cRenderTarget *apRenderTarget, bool abLog,
+	void iRenderFunctions::InitAndResetRenderFunctions(	cFrustum *apFrustum, std::weak_ptr<RenderViewport> apRenderTarget, bool abLog,
 														bool abUseGlobalScissorRect,
 														const cVector2l& avGlobalScissorRectPos, const cVector2l& avGlobalScissorRectSize)
 	{
 		mpCurrentFrustum = apFrustum;
-		mpCurrentRenderTarget = apRenderTarget;
+		m_currentRenderTarget = apRenderTarget.lock();
 		mbLog = abLog;
 
 		////////////////////////////////

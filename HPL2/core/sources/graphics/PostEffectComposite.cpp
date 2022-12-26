@@ -21,6 +21,7 @@
 
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Image.h"
+#include "graphics/RenderTarget.h"
 #include "system/LowLevelSystem.h"
 
 #include "graphics/GPUProgram.h"
@@ -120,82 +121,82 @@ namespace hpl
 
     }
 
-    void cPostEffectComposite::Render(float afFrameTime, cFrustum* apFrustum, iTexture* apInputTexture, cRenderTarget* apRenderTarget)
-    {
-        ////////////////////////////////
-        // Set up stuff needed for rendering
-        BeginRendering(afFrameTime, apFrustum, apInputTexture, apRenderTarget);
+    // void cPostEffectComposite::Render(float afFrameTime, cFrustum* apFrustum, iTexture* apInputTexture, RenderTarget* apRenderTarget)
+    // {
+    //     ////////////////////////////////
+    //     // Set up stuff needed for rendering
+    //     BeginRendering(afFrameTime, apFrustum, apInputTexture, apRenderTarget);
 
-        auto lastIt = [&]()
-        {
-            for (auto it = _postEffects.cend(); it != _postEffects.cbegin();)
-            {
-                it--;
-                if (!it->_effect->IsActive())
-                {
-                    continue;
-                }
-                return it;
-            }
-            return _postEffects.cend();
-        }();
+    //     auto lastIt = [&]()
+    //     {
+    //         for (auto it = _postEffects.cend(); it != _postEffects.cbegin();)
+    //         {
+    //             it--;
+    //             if (!it->_effect->IsActive())
+    //             {
+    //                 continue;
+    //             }
+    //             return it;
+    //         }
+    //         return _postEffects.cend();
+    //     }();
 
-        for (auto it = _postEffects.cbegin(); it != _postEffects.cend(); it++)
-        {
-            if (!it->_effect->IsActive())
-            {
-                continue;
-            }
-            if (it == lastIt)
-            {
-                // it->_effect->Render(afFrameTime, apFrustum, apInputTexture, apRenderTarget);
-            }
-            else
-            {
-                // it->_effect->Render(afFrameTime, apFrustum, apInputTexture, _renderTargets[it->_index].get());
-            }
-        }
+    //     for (auto it = _postEffects.cbegin(); it != _postEffects.cend(); it++)
+    //     {
+    //         if (!it->_effect->IsActive())
+    //         {
+    //             continue;
+    //         }
+    //         if (it == lastIt)
+    //         {
+    //             // it->_effect->Render(afFrameTime, apFrustum, apInputTexture, apRenderTarget);
+    //         }
+    //         else
+    //         {
+    //             // it->_effect->Render(afFrameTime, apFrustum, apInputTexture, _renderTargets[it->_index].get());
+    //         }
+    //     }
 
-        // for(auto& it: m_mapPostEffects) {
-        // 	if(!it.second->IsActive()) {
-        // 		continue;
-        // 	}
+    //     // for(auto& it: m_mapPostEffects) {
+    //     // 	if(!it.second->IsActive()) {
+    //     // 		continue;
+    //     // 	}
 
-        // }
+    //     // }
 
-        // ////////////////////////////////
-        // //Iterate post effects and find the last one.
-        // iPostEffect *pLastEffect = NULL;
-        // tPostEffectMapIt it = m_mapPostEffects.begin();
-        // for(; it!= m_mapPostEffects.end(); ++it)
-        // {
-        // 	iPostEffect *pPostEffect = it->second;
-        // 	if(pPostEffect->IsActive()==false) continue;
+    //     // ////////////////////////////////
+    //     // //Iterate post effects and find the last one.
+    //     // iPostEffect *pLastEffect = NULL;
+    //     // tPostEffectMapIt it = m_mapPostEffects.begin();
+    //     // for(; it!= m_mapPostEffects.end(); ++it)
+    //     // {
+    //     // 	iPostEffect *pPostEffect = it->second;
+    //     // 	if(pPostEffect->IsActive()==false) continue;
 
-        // 	pLastEffect = pPostEffect;
-        // }
+    //     // 	pLastEffect = pPostEffect;
+    //     // }
 
-        // ////////////////////////////////
-        // //Iterate post effects and render them
-        // int lCurrentTempBuffer =0;
-        // iTexture *pInputTex = apInputTexture;
-        // it = m_mapPostEffects.begin();
-        // for(; it!= m_mapPostEffects.end(); ++it)
-        // {
-        // 	iPostEffect *pPostEffect =it->second;
-        // 	if(pPostEffect->IsActive()==false) continue;
+    //     // ////////////////////////////////
+    //     // //Iterate post effects and render them
+    //     // int lCurrentTempBuffer =0;
+    //     // iTexture *pInputTex = apInputTexture;
+    //     // it = m_mapPostEffects.begin();
+    //     // for(; it!= m_mapPostEffects.end(); ++it)
+    //     // {
+    //     // 	iPostEffect *pPostEffect =it->second;
+    //     // 	if(pPostEffect->IsActive()==false) continue;
 
-        // 	bool bLastEffect = pPostEffect == pLastEffect;
+    //     // 	bool bLastEffect = pPostEffect == pLastEffect;
 
-        // 	pInputTex = pPostEffect->Render(this,pInputTex,mpFinalTempBuffer[lCurrentTempBuffer] ,bLastEffect);
+    //     // 	pInputTex = pPostEffect->Render(this,pInputTex,mpFinalTempBuffer[lCurrentTempBuffer] ,bLastEffect);
 
-        // 	lCurrentTempBuffer = lCurrentTempBuffer==0 ? 1 : 0;
-        // }
+    //     // 	lCurrentTempBuffer = lCurrentTempBuffer==0 ? 1 : 0;
+    //     // }
 
-        ///////////////////////////////
-        // Reset rendering stuff
-        EndRendering();
-    }
+    //     ///////////////////////////////
+    //     // Reset rendering stuff
+    //     EndRendering();
+    // }
 
     //-----------------------------------------------------------------------
 
@@ -238,31 +239,31 @@ namespace hpl
 
     //-----------------------------------------------------------------------
 
-    void cPostEffectComposite::BeginRendering(
-        float afFrameTime, cFrustum* apFrustum, iTexture* apInputTexture, cRenderTarget* apRenderTarget)
-    {
-        ///////////////////////////////
-        // Init the render functions
-        mfCurrentFrameTime = afFrameTime;
+    // void cPostEffectComposite::BeginRendering(
+    //     float afFrameTime, cFrustum* apFrustum, iTexture* apInputTexture, cRenderTarget* apRenderTarget)
+    // {
+    //     ///////////////////////////////
+    //     // Init the render functions
+    //     mfCurrentFrameTime = afFrameTime;
 
-        InitAndResetRenderFunctions(apFrustum, apRenderTarget, false);
+    //     InitAndResetRenderFunctions(apFrustum, apRenderTarget, false);
 
-        ///////////////////////////////
-        // Init the render states
-        mpLowLevelGraphics->SetColorWriteActive(true, true, true, true);
+    //     ///////////////////////////////
+    //     // Init the render states
+    //     mpLowLevelGraphics->SetColorWriteActive(true, true, true, true);
 
-        mpLowLevelGraphics->SetCullActive(true);
-        mpLowLevelGraphics->SetCullMode(eCullMode_CounterClockwise);
+    //     mpLowLevelGraphics->SetCullActive(true);
+    //     mpLowLevelGraphics->SetCullMode(eCullMode_CounterClockwise);
 
-        SetDepthTest(false);
-        SetDepthWrite(false);
-        mpLowLevelGraphics->SetDepthTestFunc(eDepthTestFunc_LessOrEqual);
+    //     SetDepthTest(false);
+    //     SetDepthWrite(false);
+    //     mpLowLevelGraphics->SetDepthTestFunc(eDepthTestFunc_LessOrEqual);
 
-        mpLowLevelGraphics->SetColor(cColor(1, 1, 1, 1));
+    //     mpLowLevelGraphics->SetColor(cColor(1, 1, 1, 1));
 
-        for (int i = 0; i < kMaxTextureUnits; ++i)
-            mpLowLevelGraphics->SetTexture(i, NULL);
-    }
+    //     for (int i = 0; i < kMaxTextureUnits; ++i)
+    //         mpLowLevelGraphics->SetTexture(i, NULL);
+    // }
 
     //-----------------------------------------------------------------------
 

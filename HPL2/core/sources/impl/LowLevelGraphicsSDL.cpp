@@ -1542,50 +1542,6 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cLowLevelGraphicsSDL::SetActiveTextureUnit(unsigned int alUnit)
-	{
-		;
-
-		glActiveTextureARB(GL_TEXTURE0_ARB + alUnit);
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cLowLevelGraphicsSDL::SetTextureEnv(eTextureParam aParam, int alVal)
-	{
-		;
-
-		GLenum lParam = GetGLTextureParamEnum(aParam);
-
-		glTexEnvi(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_COMBINE_ARB);
-
-		if(aParam==eTextureParam_ColorFunc || aParam==eTextureParam_AlphaFunc){
-			glTexEnvi(GL_TEXTURE_ENV,lParam,GetGLTextureFuncEnum((eTextureFunc)alVal));
-		}
-		else if(aParam>=eTextureParam_ColorSource0 && aParam<=eTextureParam_AlphaSource2){
-			glTexEnvi(GL_TEXTURE_ENV,lParam,GetGLTextureSourceEnum((eTextureSource)alVal));
-		}
-		else if(aParam>=eTextureParam_ColorOp0 && aParam<=eTextureParam_AlphaOp2){
-			glTexEnvi(GL_TEXTURE_ENV,lParam,GetGLTextureOpEnum((eTextureOp)alVal));
-		}
-		else {
-			glTexEnvi(GL_TEXTURE_ENV,lParam,alVal);
-		}
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cLowLevelGraphicsSDL::SetTextureConstantColor(const cColor &aColor)
-	{
-		;
-
-		float vColor[4] = {	aColor.r, aColor.g, aColor.b, aColor.a	};
-
-		glTexEnvfv(GL_TEXTURE_ENV, GL_TEXTURE_ENV_COLOR, &vColor[0]);
-	}
-
-	//-----------------------------------------------------------------------
-
 	void cLowLevelGraphicsSDL::SetColor(const cColor &aColor)
 	{
 		;

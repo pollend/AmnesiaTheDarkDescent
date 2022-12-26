@@ -20,10 +20,12 @@
 #ifndef HPL_VIEWPORT_H
 #define HPL_VIEWPORT_H
 
+#include "graphics/RenderViewport.h"
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
 #include "gui/GuiTypes.h"
 #include "scene/SceneTypes.h"
+#include <memory>
 
 namespace hpl {
 
@@ -67,9 +69,6 @@ namespace hpl {
 
 		cRenderSettings* GetRenderSettings(){ return mpRenderSettings;}
 
-		void SetFrameBuffer(iFrameBuffer *apFrameBuffer){ mRenderTarget.mpFrameBuffer = apFrameBuffer;}
-		iFrameBuffer* GetFrameBuffer(){ return mRenderTarget.mpFrameBuffer;}
-
 		void SetPostEffectComposite(cPostEffectComposite *apPostEffectComposite){ mpPostEffectComposite = apPostEffectComposite;}
 		cPostEffectComposite* GetPostEffectComposite(){ return mpPostEffectComposite;}
 
@@ -77,13 +76,15 @@ namespace hpl {
 		void RemoveGuiSet(cGuiSet *apSet);
 		cGuiSetListIterator GetGuiSetIterator();
 
-		void SetPosition(const cVector2l& avPos){ mRenderTarget.mvPos = avPos;}
-		void SetSize(const cVector2l& avSize){ mRenderTarget.mvSize = avSize;}
+		void SetPosition(const cVector2l& avPos){ mRenderTarget->setPosition(avPos);}
+		void SetSize(const cVector2l& avSize){ mRenderTarget->setSize(avSize);}
 
-		const cVector2l& GetPosition(){ return  mRenderTarget.mvPos;}
-		const cVector2l& GetSize(){ return mRenderTarget.mvSize;}
+		const cVector2l GetPosition(){ return mRenderTarget->GetPosition();}
+		const cVector2l GetSize(){ return mRenderTarget->GetSize();}
 
-		cRenderTarget* GetRenderTarget(){ return &mRenderTarget; }
+		// RenderViewport* GetRenderTarget(){ return &mRenderTarget; }
+		void setRenderViewport(std::shared_ptr<RenderViewport> renderTarget) { mRenderTarget = renderTarget; }
+		std::weak_ptr<RenderViewport> GetRenderViewport() { return mRenderTarget; }
 
 		void AddViewportCallback(iViewportCallback *apCallback);
 		void RemoveViewportCallback(iViewportCallback *apCallback);
@@ -107,7 +108,7 @@ namespace hpl {
 		iRenderer *mpRenderer;
 		cPostEffectComposite *mpPostEffectComposite;
 
-		cRenderTarget mRenderTarget;
+		std::shared_ptr<RenderViewport> mRenderTarget;
 
 		tViewportCallbackList mlstCallbacks;
 		tRendererCallbackList mlstRendererCallbacks;

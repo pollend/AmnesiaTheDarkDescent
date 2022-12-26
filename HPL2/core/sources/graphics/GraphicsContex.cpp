@@ -1,3 +1,4 @@
+#include "graphics/Enum.h"
 #include <absl/container/inlined_vector.h>
 #include <absl/strings/string_view.h>
 #include <bgfx/defines.h>
@@ -91,8 +92,12 @@ namespace hpl
             request.m_clear.m_rgba, 
             request.m_clear.m_depth, 
             request.m_clear.m_stencil);
-        bgfx::setViewFrameBuffer(view, request.m_target.GetHandle());
         bgfx::setViewRect(view, request.m_x, request.m_y, request.m_width, request.m_height);
+        if(request.m_target.IsValid()) {
+            bgfx::setViewFrameBuffer(view, request.m_target.GetHandle());
+        } else {
+            bgfx::setViewFrameBuffer(view, BGFX_INVALID_HANDLE);
+        }
         bgfx::touch(view);
     }
         
@@ -196,13 +201,84 @@ namespace hpl
                 }
                 return 0;
             })() | 
-            (program.m_configuration.m_blendAlpha ? BGFX_STATE_BLEND_ALPHA : 0));
+            (program.m_configuration.m_blendAlpha ? BGFX_STATE_BLEND_ALPHA : 0) |
+            (BGFX_STATE_ALPHA_REF(program.m_configuration.m_alphaReference)) | ([&] {
+                auto mapToBGFXBlendOperator = [](BlendOperator op) -> uint64_t {
+                    switch(op) {
+                        case BlendOperator::Add:
+                            return BGFX_STATE_BLEND_EQUATION_ADD;
+                        case BlendOperator::Subtract:
+                            return BGFX_STATE_BLEND_EQUATION_SUB;
+                        case BlendOperator::ReverseSubtract:
+                            return BGFX_STATE_BLEND_EQUATION_REVSUB;
+                        case BlendOperator::Min:
+                            return BGFX_STATE_BLEND_EQUATION_MIN;
+                        case BlendOperator::Max:
+                            return BGFX_STATE_BLEND_EQUATION_MAX;
+                        default:
+                            break;
+                    }
+                    return BGFX_STATE_BLEND_EQUATION_ADD;
+                };
+
+                auto mapToBGFXBlendOperand = [](BlendOperand op) -> uint64_t {
+                    switch(op) {
+                        case BlendOperand::Zero:
+                            return BGFX_STATE_BLEND_ZERO;
+                        case BlendOperand::One:
+                            return BGFX_STATE_BLEND_ONE;
+                        case BlendOperand::SrcColor:
+                            return BGFX_STATE_BLEND_SRC_COLOR;
+                        case BlendOperand::InvSrcColor:
+                            return BGFX_STATE_BLEND_INV_SRC_COLOR;
+                        case BlendOperand::SrcAlpha:
+                            return BGFX_STATE_BLEND_SRC_ALPHA;
+                        case BlendOperand::InvSrcAlpha:
+                            return BGFX_STATE_BLEND_INV_SRC_ALPHA;
+                        case BlendOperand::DstAlpha:
+                            return BGFX_STATE_BLEND_DST_ALPHA;
+                        case BlendOperand::InvDestAlpha:
+                            return BGFX_STATE_BLEND_INV_DST_ALPHA;
+                        case BlendOperand::DstColor:
+                            return BGFX_STATE_BLEND_DST_COLOR;
+                        case BlendOperand::InvDestColor:
+                            return BGFX_STATE_BLEND_INV_DST_COLOR;
+                        case BlendOperand::AlphaSat:
+                            return BGFX_STATE_BLEND_SRC_ALPHA_SAT;
+                        case BlendOperand::BlendFactor:
+                            return BGFX_STATE_BLEND_FACTOR;
+                        case BlendOperand::BlendInvFactor:
+                            return BGFX_STATE_BLEND_INV_FACTOR;
+                        default:
+                        case BlendOperand::None:
+                            break;
+                    }
+                    return 0;
+                };
+
+                BlendFunc alphaFunc = program.m_configuration.m_alphaBlendFunc;
+                const auto srcOperandAlpha = mapToBGFXBlendOperand(GetBlendOperandSrc(alphaFunc));
+                const auto srcDestAlpha = mapToBGFXBlendOperand(GetBlendOperandDst(alphaFunc));
+                const auto alphaEquation = mapToBGFXBlendOperator(GetBlendOperator(alphaFunc));
+
+                BlendFunc rgbFunc = program.m_configuration.m_rgbBlendFunc;
+                const auto srcOperandRgb = mapToBGFXBlendOperand(GetBlendOperandSrc(rgbFunc));
+                const auto srcDestRgb = mapToBGFXBlendOperand(GetBlendOperandDst(rgbFunc));
+                const auto rgbEquation = mapToBGFXBlendOperator(GetBlendOperator(rgbFunc));
+
+                return BGFX_STATE_BLEND_FUNC_SEPARATE(srcOperandRgb, srcDestAlpha, srcDestRgb, srcDestAlpha) |
+                    BGFX_STATE_BLEND_EQUATION_SEPARATE(rgbEquation, alphaEquation);
+            })());
         if(request.m_clear.has_value()) {
             auto& clear = request.m_clear.value();
             bgfx::setViewClear(view, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, clear.m_rgba, clear.m_depth, clear.m_stencil);
         }
         bgfx::setViewRect(view, request.m_x, request.m_y, request.m_width, request.m_height);
-        bgfx::setViewFrameBuffer(view, request.m_target.GetHandle());
+        if(request.m_target.IsValid()) {
+            bgfx::setViewFrameBuffer(view, request.m_target.GetHandle());
+        } else {
+            bgfx::setViewFrameBuffer(view, BGFX_INVALID_HANDLE);
+        }
         bgfx::submit(view, program.m_handle);
     }
 
@@ -216,6 +292,10 @@ namespace hpl
     bool GraphicsContext::isOriginBottomLeft() const { 
         BX_ASSERT(_caps, "GraphicsContext::Init() must be called before isOriginBottomLeft()");
         return _caps->originBottomLeft; 
+    }
+
+    void GraphicsContext::CopyTextureToFrameBuffer(Image& image, RenderTarget& target) {
+        
     }
 
     void GraphicsContext::Quad(GraphicsContext::LayoutStream& input, const cVector3f& pos, const cVector2f& size, const cVector2f& uv0, const cVector2f& uv1) {
@@ -257,7 +337,7 @@ namespace hpl
             .m_transient = vb,
         });
     }
-        
+
 
     void GraphicsContext::ScreenSpaceQuad(GraphicsContext::LayoutStream& input, float textureWidth, float textureHeight, float width, float height)
     {

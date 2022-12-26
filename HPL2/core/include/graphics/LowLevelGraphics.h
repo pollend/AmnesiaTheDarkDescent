@@ -234,9 +234,6 @@ namespace hpl {
 		/////////////////////////////////////////////////////
 
 		virtual void SetTexture(unsigned int alUnit,iTexture* apTex)=0;
-		virtual void SetActiveTextureUnit(unsigned int alUnit)=0;
-		virtual void SetTextureEnv(eTextureParam aParam, int alVal)=0;
-		virtual void SetTextureConstantColor(const cColor &aColor)=0;
 
 
 		/////////////////////////////////////////////////////

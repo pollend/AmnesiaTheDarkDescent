@@ -1,28 +1,45 @@
 #pragma once
 
-#include "absl/types/span.h"
+#include "math/MathTypes.h"
 #include <absl/container/inlined_vector.h>
-#include <graphics/Image.h>
+#include <absl/types/span.h>
 #include <bgfx/bgfx.h>
+#include <cstdint>
+#include <graphics/Image.h>
 #include <memory>
 
-namespace hpl {
-class RenderTarget {
-public:
-    RenderTarget(std::shared_ptr<Image> image);
-    RenderTarget(absl::Span<std::shared_ptr<Image>> images);
-    RenderTarget(RenderTarget&& target);
-    RenderTarget();
-    ~RenderTarget();
+namespace hpl
+{
+    class RenderTarget
+    {
+    public:
+        static const RenderTarget EmptyRenderTarget;
 
-    void operator=(RenderTarget&& target);
+        RenderTarget(std::shared_ptr<Image> image);
+        RenderTarget(absl::Span<std::shared_ptr<Image>> images);
 
-    const bgfx::FrameBufferHandle GetHandle() const;
-    const ImageDescriptor& GetDescriptor(size_t index) const;
+        RenderTarget(RenderTarget&& target);
+        RenderTarget(const RenderTarget& target) = delete;
+        RenderTarget();
+        ~RenderTarget();
 
-private:
-    absl::InlinedVector<std::shared_ptr<Image>, 7> m_image;
-    bgfx::FrameBufferHandle m_buffer;
-};
+        void Initialize(absl::Span<std::shared_ptr<Image>> descriptor);
+        void Invalidate();
+        const bool IsValid() const;
 
-}
+        void operator=(const RenderTarget& target) = delete;
+        void operator=(RenderTarget&& target);
+
+        const bgfx::FrameBufferHandle GetHandle() const;
+        absl::Span<std::shared_ptr<Image>> GetImages();
+        std::weak_ptr<Image> GetImage(size_t index = 0);
+
+        const absl::Span<const std::shared_ptr<Image>> GetImages() const;
+        const std::weak_ptr<Image> GetImage(size_t index = 0) const;
+
+    private:
+        absl::InlinedVector<std::shared_ptr<Image>, 7> m_images;
+        bgfx::FrameBufferHandle m_buffer;
+    };
+
+} // namespace hpl

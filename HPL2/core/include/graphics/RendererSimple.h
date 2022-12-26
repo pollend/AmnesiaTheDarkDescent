@@ -20,6 +20,7 @@
 #ifndef HPL_RENDERER_SIMPLE_H
 #define HPL_RENDERER_SIMPLE_H
 
+#include "bgfx/bgfx.h"
 #include "graphics/Renderer.h"
 
 namespace hpl {
@@ -42,6 +43,9 @@ namespace hpl {
 		bool LoadData();
 		void DestroyData();
 
+		virtual void Draw(GraphicsContext& context, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, std::weak_ptr<RenderViewport> apRenderTarget,
+					bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList) override;
+
 		static void SetUseShaders(bool abX){mbUseShaders = abX; }
 		static bool GetUseShaders(){return mbUseShaders; }
 
@@ -54,6 +58,9 @@ namespace hpl {
 
 		iGpuProgram *mpFlatProgram;
 		iGpuProgram *mpDiffuseProgram;
+
+		bgfx::ProgramHandle m_flatProgram;
+		bgfx::ProgramHandle m_diffuseProgram;
 	};
 
 	//---------------------------------------------

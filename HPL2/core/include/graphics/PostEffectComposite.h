@@ -47,7 +47,7 @@ namespace hpl
         cPostEffectComposite(cGraphics* apGraphics);
         ~cPostEffectComposite();
 
-        void Render(float afFrameTime, cFrustum* apFrustum, iTexture* apInputTexture, cRenderTarget* apRenderTarget);
+        // void Render(float afFrameTime, cFrustum* apFrustum, iTexture* apInputTexture, cRenderTarget* apRenderTarget);
 
 		virtual void RebuildSwapChain(uint16_t width, uint16_t height) override;
         void Render(GraphicsContext& context, Image& inputTexture, RenderTarget& renderTarget);
@@ -67,7 +67,6 @@ namespace hpl
 				if(it._index == alIdx) {
 					return it._effect;
 				}
-
 			}
 			return nullptr;
         }
@@ -86,7 +85,6 @@ namespace hpl
             iPostEffect* _effect;
         };
 
-        void BeginRendering(float afFrameTime, cFrustum* apFrustum, iTexture* apInputTexture, cRenderTarget* apRenderTarget);
         void EndRendering();
         void CopyToFrameBuffer(iTexture* apOutputTexture);
         
