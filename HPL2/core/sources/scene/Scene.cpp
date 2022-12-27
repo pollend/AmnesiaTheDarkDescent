@@ -19,6 +19,7 @@
 
 #include "scene/Scene.h"
 
+#include "graphics/GraphicsContext.h"
 #include "scene/Viewport.h"
 #include "scene/Camera.h"
 #include "scene/World.h"
@@ -212,8 +213,10 @@ namespace hpl {
 
 				if(pRenderer && pViewPort->GetWorld() && pFrustum)
 				{
+					GraphicsContext context;
 					START_TIMING(RenderWorld)
-					pRenderer->Render(	afFrameTime,pFrustum,
+					pRenderer->Draw(context, 
+								afFrameTime,pFrustum,
 										pViewPort->GetWorld(),
 										pViewPort->GetRenderSettings(),
 										pViewPort->GetRenderViewport(),

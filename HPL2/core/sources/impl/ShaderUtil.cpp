@@ -9,7 +9,10 @@
 #include "system/Platform.h"
 #include "system/String.h"
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
+#include <string>
+#include <bx/debug.h>
 
 #ifdef WIN32
 #include <io.h>
@@ -17,6 +20,21 @@
 
 namespace hpl
 {
+    static const bgfx::Memory* loadMem(bx::FileReaderI* _reader, const char* _filePath)
+    {
+        if (bx::open(_reader, _filePath) )
+        {
+            uint32_t size = (uint32_t)bx::getSize(_reader);
+            const bgfx::Memory* mem = bgfx::alloc(size+1);
+            bx::read(_reader, mem->data, size, bx::ErrorAssert{});
+            bx::close(_reader);
+            mem->data[mem->size-1] = '\0';
+            return mem;
+        }
+
+        bx::debugPrintf("Failed to load %s.", _filePath);
+        return NULL;
+    }
 
     bgfx::ShaderHandle CreateShaderHandleFromFile(const tWString& asFile)
     {
@@ -56,7 +74,12 @@ namespace hpl
     {
         return bgfx::ProgramHandle(BGFX_INVALID_HANDLE);
     }
-    bgfx::ProgramHandle loadProgram(bx::FileReaderI* _reader, const char* vsName, const char* fsName)
+    bgfx::ProgramHandle loadProgram(bx::FileReaderI* reader, const char* vsName, const char* fsName)
+    {
+        return bgfx::createProgram(loadShader(reader, vsName), loadShader(reader, fsName), true);   
+    }
+
+    bgfx::ShaderHandle loadShader(bx::FileReaderI* reader, const char* name)
     {
         const char* shaderPath = "";
         switch (bgfx::getRendererType())
@@ -95,18 +118,20 @@ namespace hpl
             BX_ASSERT(false, "You should not be here!");
             break;
         }
+        char filePath[1024] = { 0 };
+        bx::strCopy(filePath, BX_COUNTOF(filePath), shaderPath);
+        bx::strCat(filePath, BX_COUNTOF(filePath), name);
+        bx::strCat(filePath, BX_COUNTOF(filePath), ".bin");
+        
+        bgfx::ShaderHandle handle = bgfx::createShader(loadMem(reader, filePath) );
+	    bgfx::setName(handle, name);
 
-        return bgfx::ProgramHandle(BGFX_INVALID_HANDLE);
-    }
-
-    bgfx::ShaderHandle loadShader(bx::FileReaderI* _reader, const char* name)
-    {
-        return bgfx::ShaderHandle(BGFX_INVALID_HANDLE);
+        return handle;
     }
 
     bgfx::ShaderHandle loadShader(const char* name)
     {
-        return bgfx::ShaderHandle(BGFX_INVALID_HANDLE);
+        return loadShader(bx::getFileReader(), name);
     }
 
 } // namespace hpl

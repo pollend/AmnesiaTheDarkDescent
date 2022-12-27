@@ -1,8 +1,6 @@
 cmake_minimum_required (VERSION 3.0)
 project(HPL2)
 
-include( ${CMAKE_CURRENT_SOURCE_DIR}/tools/ShaderUtil.cmake )
-
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux" OR ${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD")
   set(LINUX ON)
@@ -199,6 +197,8 @@ find_package(OpenGL REQUIRED)
 find_package(Theora REQUIRED)
 find_package(Devil REQUIRED)
 find_package(GLEW REQUIRED)
+find_package(PythonInterp)
+find_package(Python)
 
 # setup HPL2 compile target
 
@@ -249,123 +249,30 @@ target_link_libraries(HPL2
   ${PLATFORM_LIBS}
   )
 
-
-# hpl_add_shader(
-#     HPL_CORE_SHADER
-#         "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_ssao_blur.sc" 
-#     INCLUDES
-#         ${CMAKE_CURRENT_SOURCE_DIR}/resources)
-
-# hpl_add_shader(
-#     HPL_CORE_SHADER
-#         "${CMAKE_CURRENT_SOURCE_DIR}/resource/fs_posteffect_radial_blur_frag.sc" 
-#     INCLUDES
-#         ${CMAKE_CURRENT_SOURCE_DIR}/resources)
-
-
-hpl_add_shader(
-    HPL_CORE_SHADER
-        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_decal_material.sc"
-    INCLUDES
-        ${CMAKE_CURRENT_SOURCE_DIR}/resources
-    VARYINGDEF
-        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_decal_material.io")
-
-hpl_add_shader(
-    HPL_CORE_SHADER
-        "${CMAKE_CURRENT_SOURCE_DIR}/resource/fs_decal_material.sc"
-    INCLUDES
-        ${CMAKE_CURRENT_SOURCE_DIR}/resources
-    VARYINGDEF
-        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_decal_material.io")
-
-hpl_add_shader(
-    HPL_CORE_SHADER
-        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_water_material.sc"
-    INCLUDES
-        ${CMAKE_CURRENT_SOURCE_DIR}/resources
-    VARYINGDEF
-        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_water_material.io")
-
-hpl_add_shader(
-    HPL_CORE_SHADER
-        "${CMAKE_CURRENT_SOURCE_DIR}/resource/fs_water_material.sc"
-    INCLUDES
-        ${CMAKE_CURRENT_SOURCE_DIR}/resources
-    VARYINGDEF
-        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_water_material.io")
-
-hpl_add_shader(
-    HPL_CORE_SHADER
-        "${CMAKE_CURRENT_SOURCE_DIR}/resource/fs_basic_solid_z.sc"
-    INCLUDES
-        ${CMAKE_CURRENT_SOURCE_DIR}/resources
-    VARYINGDEF
-        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_basic_solid_z.io")
-
-hpl_add_shader(
-    HPL_CORE_SHADER
-        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_basic_solid_z.sc"
-    INCLUDES
-        ${CMAKE_CURRENT_SOURCE_DIR}/resources
-    VARYINGDEF
-        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_basic_solid_z.io")
-
-
-hpl_add_shader(
-    HPL_CORE_SHADER
-        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_basic_solid_diffuse.sc"
-    INCLUDES
-        ${CMAKE_CURRENT_SOURCE_DIR}/resources
-    VARYINGDEF
-        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_basic_solid_diffuse.io" )
-
-hpl_add_shader(
-    HPL_CORE_SHADER
-        "${CMAKE_CURRENT_SOURCE_DIR}/resource/fs_basic_solid_diffuse.sc"
-    INCLUDES
-        ${CMAKE_CURRENT_SOURCE_DIR}/resources
-    VARYINGDEF
-        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_basic_solid_diffuse.io" )
-
-
-hpl_add_shader(
-    HPL_CORE_SHADER
-        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_basic_solid_illumination.sc"
-    INCLUDES
-        ${CMAKE_CURRENT_SOURCE_DIR}/resources
-    VARYINGDEF
-        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_basic_solid_illumination.io" )
-
-hpl_add_shader(
-    HPL_CORE_SHADER
-        "${CMAKE_CURRENT_SOURCE_DIR}/resource/fs_basic_solid_illumination.sc"
-    INCLUDES
-        ${CMAKE_CURRENT_SOURCE_DIR}/resources
-    VARYINGDEF
-        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_basic_solid_illumination.io" )
-
-hpl_add_shader(
-    HPL_CORE_SHADER
-        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_basic_translucent_material.sc"
-    INCLUDES
-        ${CMAKE_CURRENT_SOURCE_DIR}/resources
-    VARYINGDEF
-        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_basic_translucent_material.io" )
-
-hpl_add_shader(
-    HPL_CORE_SHADER
-        "${CMAKE_CURRENT_SOURCE_DIR}/resource/fs_basic_translucent_material.sc"
-    INCLUDES
-        ${CMAKE_CURRENT_SOURCE_DIR}/resources
-    VARYINGDEF
-        "${CMAKE_CURRENT_SOURCE_DIR}/resource/vs_basic_translucent_material.io" )
-        
-
+  file(GLOB shader_resources RELATIVE 
+    "${CMAKE_CURRENT_SOURCE_DIR}/resource/*.sc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/resource/*.io"
+    "${CMAKE_CURRENT_SOURCE_DIR}/resource/*.sh")
 
 add_custom_target(
-  HPL_SHADERS
-  DEPENDS 
-    ${HPL_CORE_SHADER}
+    HPL_SHADERS
+    )
+
+add_custom_command(
+    TARGET HPL_SHADERS
+    MAIN_DEPENDENCY
+    ${shader_resources}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    COMMAND "${PYTHON_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/shader_compile.py"
+    --output ${CMAKE_CURRENT_BINARY_DIR}
+    --bgfx "${BGFX_DIR}"
+    --compiler $<TARGET_FILE:shaderc>
 )
+
+install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/shaders"
+            DESTINATION  ${INSTALL_OUTPUT_PATH}/Amnesia
+            FILES_MATCHING
+            PATTERN "*"
+            )
+   
 add_dependencies(HPL2 HPL_SHADERS)

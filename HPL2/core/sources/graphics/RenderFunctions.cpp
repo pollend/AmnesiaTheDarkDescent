@@ -158,7 +158,6 @@ namespace hpl {
 	void iRenderFunctions::SetFrustumProjection(cFrustum *apFrustum)
 	{
 		SetProjectionMatrix(&apFrustum->GetProjectionMatrix());
-
 		SetInvertCullMode(mpCurrentFrustum->GetInvertsCullMode());
 	}
 
@@ -170,7 +169,6 @@ namespace hpl {
 
 		if(mbLog) Log(" Setting projection matrix: %d  %s.\n",apProjMatrix, apProjMatrix->ToString().c_str());
 
-		mpLowLevelGraphics->SetMatrix(eMatrix_Projection, *apProjMatrix);
 		mpCurrentMatrix = &m_mtxNULL;
 		mpCurrentProjectionMatrix = apProjMatrix;
 	}

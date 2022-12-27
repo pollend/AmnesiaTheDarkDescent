@@ -326,7 +326,9 @@ namespace hpl {
 		* When sending to a frame buffer at the end, then this method is never called and the intermediate can be returned with GetPostEffectFrameBuffer
 		*/
 		virtual void CopyToFrameBuffer()=0;
+		[[deprecated("Moved into Draw")]]
 		virtual void SetupRenderList()=0;
+		[[deprecated("Moved into Draw")]]
 		virtual void RenderObjects()=0;
 
 		void BeginRendering(float afFrameTime,cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, std::weak_ptr<RenderViewport> apRenderTarget,
