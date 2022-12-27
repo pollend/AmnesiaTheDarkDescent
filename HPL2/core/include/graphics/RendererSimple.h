@@ -46,21 +46,16 @@ namespace hpl {
 		virtual void Draw(GraphicsContext& context, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, std::weak_ptr<RenderViewport> apRenderTarget,
 					bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList) override;
 
-		static void SetUseShaders(bool abX){mbUseShaders = abX; }
-		static bool GetUseShaders(){return mbUseShaders; }
-
 	private:
 		void CopyToFrameBuffer();
 		void SetupRenderList();
 		void RenderObjects();
 
-		static bool mbUseShaders;
-
-		iGpuProgram *mpFlatProgram;
-		iGpuProgram *mpDiffuseProgram;
 
 		bgfx::ProgramHandle m_flatProgram;
 		bgfx::ProgramHandle m_diffuseProgram;
+
+		bgfx::UniformHandle m_s_diffuseMap;
 	};
 
 	//---------------------------------------------

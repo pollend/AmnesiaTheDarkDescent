@@ -23,7 +23,11 @@ shaders = [
     { "type" : ShaderType.VS, "inout" :  "resource/vs_decal_material.io",              "input": "resource/vs_decal_material.sc", "includes": ["resource"]},
     { "type" : ShaderType.VS, "inout" :  "resource/vs_deferred_fog.io",                "input": "resource/vs_deferred_fog.sc", "includes": ["resource"]},
     { "type" : ShaderType.VS, "inout" :  "resource/vs_post_effect.io",                 "input": "resource/vs_post_effect.sc", "includes": ["resource"]},
-    { "type" : ShaderType.VS, "inout" :  "resource/vs_water_material.io",              "input": "resource/vs_water_material.sc", "includes": ["resource"]}
+    { "type" : ShaderType.VS, "inout" :  "resource/vs_water_material.io",              "input": "resource/vs_water_material.sc", "includes": ["resource"]},
+    { "type" : ShaderType.VS, "inout" :  "resource/vs_simple_flat.io",                 "input": "resource/vs_simple_flat.sc" , "includes": ["resource"]},
+    { "type" : ShaderType.FS, "inout" :  "resource/vs_simple_flat.io",                 "input": "resource/fs_simple_flat.sc" , "includes": ["resource"]},
+    { "type" : ShaderType.VS, "inout" :  "resource/vs_simple_diffuse.io",              "input": "resource/vs_simple_diffuse.sc" , "includes": ["resource"]},
+    { "type" : ShaderType.FS, "inout" :  "resource/vs_simple_diffuse.io",              "input": "resource/fs_simple_diffuse.sc" , "includes": ["resource"]},
 ]
 
 def toD3dPrefix(shaderType):

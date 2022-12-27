@@ -2,19 +2,36 @@
 
 #include <bx/file.h>
 
-namespace hpl {
-namespace bootstrap {
+namespace hpl
+{
+    namespace bootstrap
+    {
 
-static bx::FileReaderI *s_fileReader = NULL;
-static bx::FileWriterI *s_fileWriter = NULL;
+        static bx::FileReaderI* s_fileReader = NULL;
+        static bx::FileWriterI* s_fileWriter = NULL;
 
-class FileReader : public bx::FileReader {};
-class FileWriter: public bx::FileWriter {};
+        class FileReader : public bx::FileReader
+        {
+        };
+        class FileWriter : public bx::FileWriter
+        {
+        };
 
-void Init() {
-    s_fileReader = new FileReader();
-    s_fileWriter = new FileWriter();
-}
+        void Init()
+        {
+            s_fileReader = new FileReader();
+            s_fileWriter = new FileWriter();
+        }
 
-} // namespace bootstrap
+        bx::FileReaderI* GetFileReader()
+        {
+            return s_fileReader;
+        }
+
+        bx::FileWriterI* GetFileWriter()
+        {
+            return s_fileWriter;
+        }
+
+    } // namespace bootstrap
 } // namespace hpl

@@ -279,6 +279,8 @@ namespace hpl
         } else {
             bgfx::setViewFrameBuffer(view, BGFX_INVALID_HANDLE);
         }
+        bgfx::setViewTransform(view, program.m_view.v, program.m_projection.v);
+        bgfx::setTransform(program.m_modelTransform.v);
         bgfx::submit(view, program.m_handle);
     }
 

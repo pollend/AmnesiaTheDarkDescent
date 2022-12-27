@@ -77,7 +77,7 @@ namespace hpl
         _renderTargets[1] = RenderTarget(_images[1]);
     }
 
-    void cPostEffectComposite::Render(GraphicsContext& context, Image& inputTexture, RenderTarget& renderTarget)
+    void cPostEffectComposite::Draw(GraphicsContext& context, Image& inputTexture, RenderTarget& renderTarget)
     {
         auto it = _postEffects.begin();
         size_t currentIndex = 0;
@@ -121,85 +121,6 @@ namespace hpl
 
     }
 
-    // void cPostEffectComposite::Render(float afFrameTime, cFrustum* apFrustum, iTexture* apInputTexture, RenderTarget* apRenderTarget)
-    // {
-    //     ////////////////////////////////
-    //     // Set up stuff needed for rendering
-    //     BeginRendering(afFrameTime, apFrustum, apInputTexture, apRenderTarget);
-
-    //     auto lastIt = [&]()
-    //     {
-    //         for (auto it = _postEffects.cend(); it != _postEffects.cbegin();)
-    //         {
-    //             it--;
-    //             if (!it->_effect->IsActive())
-    //             {
-    //                 continue;
-    //             }
-    //             return it;
-    //         }
-    //         return _postEffects.cend();
-    //     }();
-
-    //     for (auto it = _postEffects.cbegin(); it != _postEffects.cend(); it++)
-    //     {
-    //         if (!it->_effect->IsActive())
-    //         {
-    //             continue;
-    //         }
-    //         if (it == lastIt)
-    //         {
-    //             // it->_effect->Render(afFrameTime, apFrustum, apInputTexture, apRenderTarget);
-    //         }
-    //         else
-    //         {
-    //             // it->_effect->Render(afFrameTime, apFrustum, apInputTexture, _renderTargets[it->_index].get());
-    //         }
-    //     }
-
-    //     // for(auto& it: m_mapPostEffects) {
-    //     // 	if(!it.second->IsActive()) {
-    //     // 		continue;
-    //     // 	}
-
-    //     // }
-
-    //     // ////////////////////////////////
-    //     // //Iterate post effects and find the last one.
-    //     // iPostEffect *pLastEffect = NULL;
-    //     // tPostEffectMapIt it = m_mapPostEffects.begin();
-    //     // for(; it!= m_mapPostEffects.end(); ++it)
-    //     // {
-    //     // 	iPostEffect *pPostEffect = it->second;
-    //     // 	if(pPostEffect->IsActive()==false) continue;
-
-    //     // 	pLastEffect = pPostEffect;
-    //     // }
-
-    //     // ////////////////////////////////
-    //     // //Iterate post effects and render them
-    //     // int lCurrentTempBuffer =0;
-    //     // iTexture *pInputTex = apInputTexture;
-    //     // it = m_mapPostEffects.begin();
-    //     // for(; it!= m_mapPostEffects.end(); ++it)
-    //     // {
-    //     // 	iPostEffect *pPostEffect =it->second;
-    //     // 	if(pPostEffect->IsActive()==false) continue;
-
-    //     // 	bool bLastEffect = pPostEffect == pLastEffect;
-
-    //     // 	pInputTex = pPostEffect->Render(this,pInputTex,mpFinalTempBuffer[lCurrentTempBuffer] ,bLastEffect);
-
-    //     // 	lCurrentTempBuffer = lCurrentTempBuffer==0 ? 1 : 0;
-    //     // }
-
-    //     ///////////////////////////////
-    //     // Reset rendering stuff
-    //     EndRendering();
-    // }
-
-    //-----------------------------------------------------------------------
-
     void cPostEffectComposite::AddPostEffect(iPostEffect* apPostEffect, int alPrio)
     {
         BX_ASSERT(apPostEffect, "Post Effect is not defined");
@@ -231,42 +152,6 @@ namespace hpl
         return false;
     }
 
-    //-----------------------------------------------------------------------
-
-    //////////////////////////////////////////////////////////////////////////
-    // PRIVATE METHODS
-    //////////////////////////////////////////////////////////////////////////
-
-    //-----------------------------------------------------------------------
-
-    // void cPostEffectComposite::BeginRendering(
-    //     float afFrameTime, cFrustum* apFrustum, iTexture* apInputTexture, cRenderTarget* apRenderTarget)
-    // {
-    //     ///////////////////////////////
-    //     // Init the render functions
-    //     mfCurrentFrameTime = afFrameTime;
-
-    //     InitAndResetRenderFunctions(apFrustum, apRenderTarget, false);
-
-    //     ///////////////////////////////
-    //     // Init the render states
-    //     mpLowLevelGraphics->SetColorWriteActive(true, true, true, true);
-
-    //     mpLowLevelGraphics->SetCullActive(true);
-    //     mpLowLevelGraphics->SetCullMode(eCullMode_CounterClockwise);
-
-    //     SetDepthTest(false);
-    //     SetDepthWrite(false);
-    //     mpLowLevelGraphics->SetDepthTestFunc(eDepthTestFunc_LessOrEqual);
-
-    //     mpLowLevelGraphics->SetColor(cColor(1, 1, 1, 1));
-
-    //     for (int i = 0; i < kMaxTextureUnits; ++i)
-    //         mpLowLevelGraphics->SetTexture(i, NULL);
-    // }
-
-    //-----------------------------------------------------------------------
-
     void cPostEffectComposite::EndRendering()
     {
         /////////////////////////////////////////////
@@ -291,36 +176,5 @@ namespace hpl
         // Clean up render functions
         ExitAndCleanUpRenderFunctions();
     }
-
-    //-----------------------------------------------------------------------
-
-    /*void cPostEffectComposite::CopyToFrameBuffer(iTexture *apOutputTexture)
-    {
-            SetDepthTest(false);
-            SetDepthWrite(false);
-            SetBlendMode(eMaterialBlendMode_None);
-            SetAlphaMode(eMaterialAlphaMode_Solid);
-            SetChannelMode(eMaterialChannelMode_RGBA);
-
-            SetFrameBuffer(mpCurrentRenderTarget->mpFrameBuffer,true);
-
-            SetFlatProjection();
-
-            SetProgram(NULL);
-            SetTexture(0,apOutputTexture);
-            SetTextureRange(NULL, 1);
-
-            ////////////////////////////////////
-            //Draw the accumulation buffer to the current frame buffer
-            //Since the texture v coordinate is reversed, need to do some math.
-            cVector2f vViewportPos((float)mpCurrentRenderTarget->mvPos.x, (float)mpCurrentRenderTarget->mvPos.y);
-            cVector2f vViewportSize((float)mvRenderTargetSize.x, (float)mvRenderTargetSize.y);
-            DrawQuad(	cVector2f(0,0),1,
-                                    cVector2f(vViewportPos.x, (mvScreenSizeFloat.y - vViewportSize.y)-vViewportPos.y ),
-                                    cVector2f(vViewportPos.x + vViewportSize.x,mvScreenSizeFloat.y - vViewportPos.y),
-                                    true);
-    }*/
-
-    //-----------------------------------------------------------------------
 
 } // namespace hpl

@@ -13,6 +13,7 @@
 #include <cstring>
 #include <string>
 #include <bx/debug.h>
+#include <system/bootstrap.h>
 
 #ifdef WIN32
 #include <io.h>
@@ -72,8 +73,9 @@ namespace hpl
 
     bgfx::ProgramHandle loadProgram(const char* vsName, const char* fsName)
     {
-        return bgfx::ProgramHandle(BGFX_INVALID_HANDLE);
+        return loadProgram(hpl::bootstrap::GetFileReader(), vsName, fsName);
     }
+    
     bgfx::ProgramHandle loadProgram(bx::FileReaderI* reader, const char* vsName, const char* fsName)
     {
         return bgfx::createProgram(loadShader(reader, vsName), loadShader(reader, fsName), true);   
@@ -131,7 +133,7 @@ namespace hpl
 
     bgfx::ShaderHandle loadShader(const char* name)
     {
-        return loadShader(bx::getFileReader(), name);
+        return loadShader(hpl::bootstrap::GetFileReader(), name);
     }
 
 } // namespace hpl

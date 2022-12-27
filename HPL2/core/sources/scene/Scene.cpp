@@ -213,7 +213,6 @@ namespace hpl {
 
 				if(pRenderer && pViewPort->GetWorld() && pFrustum)
 				{
-					GraphicsContext context;
 					START_TIMING(RenderWorld)
 					pRenderer->Draw(context, 
 								afFrameTime,pFrustum,
@@ -256,7 +255,7 @@ namespace hpl {
 				auto target = pViewPort->GetRenderViewport();
 				if(auto renderViewport = target.lock()) {
 					
-					pPostEffectComposite->Render(context,
+					pPostEffectComposite->Draw(context,
 						*renderViewport->GetRenderTarget().GetImage().lock(),
 						renderViewport->GetRenderTarget());
 				}
