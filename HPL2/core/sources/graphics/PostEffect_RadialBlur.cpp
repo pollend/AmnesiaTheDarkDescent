@@ -109,6 +109,7 @@ namespace hpl {
 			GraphicsContext::LayoutStream layoutStream;
 			context.ScreenSpaceQuad(layoutStream, vRenderTargetSize.x, vRenderTargetSize.y);
 			GraphicsContext::ShaderProgram shaderProgram;
+			shaderProgram.m_handle = mpRadialBlurType->m_program;
 			shaderProgram.m_uniforms.push_back({ mpRadialBlurType->m_u_uniform, value });
 			shaderProgram.m_textures.push_back({ mpRadialBlurType->m_s_diffuseMap, input.GetHandle() });
 			shaderProgram.m_configuration.m_write = Write::RGBA | Write::Depth;

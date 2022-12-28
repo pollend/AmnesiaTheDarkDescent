@@ -16,11 +16,11 @@
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
+#pragma once
 
-#ifndef HPL_POSTEFFECT_BLOOM_H
-#define HPL_POSTEFFECT_BLOOM_H
-
+#include "bgfx/bgfx.h"
 #include "graphics/PostEffect.h"
+#include "graphics/RenderTarget.h"
 
 namespace hpl {
 
@@ -55,6 +55,15 @@ namespace hpl {
 		iPostEffect *CreatePostEffect(iPostEffectParams *apParams);
 
 	private:
+		bgfx::ProgramHandle m_blurProgram;
+		bgfx::ProgramHandle m_bloomProgram;
+
+		bgfx::UniformHandle m_u_blurMap;
+		bgfx::UniformHandle m_u_diffuseMap;
+
+		bgfx::UniformHandle m_u_rgbToIntensity;
+		bgfx::UniformHandle m_u_param;
+
 		iGpuProgram *mpBlurProgram[2];
 		iGpuProgram *mpBloomProgram;
 	};
@@ -70,21 +79,16 @@ namespace hpl {
 	private:
 		void OnSetParams();
 		iPostEffectParams *GetTypeSpecificParams() { return &mParams; }
+		virtual void RenderEffect(GraphicsContext& context, Image& input, RenderTarget& target) override;
 
 		iTexture* RenderEffect(iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer);
-		virtual void RenderEffect(GraphicsContext& context, Image& input, RenderTarget& target) override;
 		
-		void RenderBlur(iTexture *apInputTex);
-
-		iFrameBuffer *mpBlurBuffer[2];
-		iTexture *mpBlurTexture[2];
+		std::array<RenderTarget, 2> m_blurTarget;
 
 		cPostEffectType_Bloom *mpBloomType;
-
 		cPostEffectParams_Bloom mParams;
 	};
 
 	//------------------------------------------
 
 };
-#endif // HPL_POSTEFFECT_BLOOM_H
