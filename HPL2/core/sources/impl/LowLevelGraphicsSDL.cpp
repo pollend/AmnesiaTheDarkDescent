@@ -17,6 +17,7 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "bgfx/bgfx.h"
 #include "impl/VertexBufferBGFX.h"
 #ifdef WIN32
 #pragma comment(lib, "OpenGL32.lib")
@@ -191,33 +192,6 @@ namespace hpl {
 		mGpuProgramFormat = aGpuProgramFormat;
 		if(mGpuProgramFormat == eGpuProgramFormat_LastEnum) mGpuProgramFormat = eGpuProgramFormat_GLSL;
 
-		//Set some GL Attributes
-		SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER,1);
-
-		SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
-		SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
-		SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
-		SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
-
-		SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
-		SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
-
-		// Multisampling
-		if(mlMultisampling > 0)
-		{
-			if(SDL_GL_SetAttribute( SDL_GL_MULTISAMPLEBUFFERS, 1)==-1)
-			{
-				Error("Multisample buffers not supported!\n");
-			}
-			else
-			{
-				if(SDL_GL_SetAttribute( SDL_GL_MULTISAMPLESAMPLES, mlMultisampling)==-1)
-				{
-					Error("Couldn't set multisampling samples to %d\n",mlMultisampling);
-				}
-			}
-		}
-
 #if SDL_VERSION_ATLEAST(2, 0, 0)
         unsigned int mlFlags = SDL_WINDOW_OPENGL;
         if (alWidth == 0 && alHeight == 0) {
@@ -237,8 +211,6 @@ namespace hpl {
             // try disabling FSAA
 			Error("Could not set display mode setting a lower one! %s\n", SDL_GetError());
 			mvScreenSize = cVector2l(640,480);
-            SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 0);
-            SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 0);
             mpScreen = SDL_CreateWindow(asWindowCaption.c_str(),
                                         SDL_WINDOWPOS_CENTERED_DISPLAY(mlDisplay), SDL_WINDOWPOS_CENTERED_DISPLAY(mlDisplay),
                                         mvScreenSize.x, mvScreenSize.y, mlFlags);
@@ -258,7 +230,67 @@ namespace hpl {
             SDL_GetWindowSize(mpScreen, &w, &h);
             mvScreenSize = cVector2l(w, h);
         }
-        mGLContext = SDL_GL_CreateContext(mpScreen);
+
+		auto getNativeWindowHandle = [&]() -> void* {
+			SDL_SysWMinfo wmi;
+			SDL_VERSION(&wmi.version);
+			if (!SDL_GetWindowWMInfo(mpScreen, &wmi) )
+			{
+				return NULL;
+			}
+#	if BX_PLATFORM_LINUX || BX_PLATFORM_BSD
+#		if ENTRY_CONFIG_USE_WAYLAND
+		wl_egl_window *win_impl = (wl_egl_window*)SDL_GetWindowData(_window, "wl_egl_window");
+		if(!win_impl)
+		{
+			int width, height;
+			SDL_GetWindowSize(_window, &width, &height);
+			struct wl_surface* surface = wmi.info.wl.surface;
+			if(!surface)
+				return nullptr;
+			win_impl = wl_egl_window_create(surface, width, height);
+			SDL_SetWindowData(_window, "wl_egl_window", win_impl);
+		}
+		return (void*)(uintptr_t)win_impl;
+#		else
+		return (void*)wmi.info.x11.window;
+#		endif
+#	elif BX_PLATFORM_OSX || BX_PLATFORM_IOS
+		return wmi.info.cocoa.window;
+#	elif BX_PLATFORM_WINDOWS
+		return wmi.info.win.window;
+#   elif BX_PLATFORM_ANDROID
+		return wmi.info.android.window;
+#	endif // BX_PLATFORM_
+		};
+
+		auto getNativeDisplayHandle = [&]() -> void* {
+			SDL_SysWMinfo wmi;
+		SDL_VERSION(&wmi.version);
+		if (!SDL_GetWindowWMInfo(mpScreen, &wmi) )
+		{
+			return NULL;
+		}
+
+#	if BX_PLATFORM_LINUX || BX_PLATFORM_BSD
+#		if ENTRY_CONFIG_USE_WAYLAND
+		return wmi.info.wl.display;
+#		else
+		return wmi.info.x11.display;
+#		endif // ENTRY_CONFIG_USE_WAYLAND
+#	else
+		return nullptr;
+#	endif // BX_PLATFORM_*
+		};
+
+		bgfx::Init init{};
+		init.type = bgfx::RendererType::OpenGL;
+		init.platformData.nwh = getNativeWindowHandle();
+		init.platformData.ndt = getNativeDisplayHandle();
+		init.resolution.width = mvScreenSize.x;
+		init.resolution.height = mvScreenSize.y;
+		init.resolution.reset = BGFX_RESET_VSYNC;
+		bgfx::init(init);
 #else
 		unsigned int mlFlags = SDL_OPENGL;
 
@@ -323,15 +355,15 @@ namespace hpl {
 		}
 #endif //WIN32
 
-		Log(" Init Glew...");
-		if(glewInit() == GLEW_OK)
-		{
-			Log("OK\n");
-		}
-		else
-		{
-			Error(" Couldn't init glew!\n");
-		}
+		// Log(" Init Glew...");
+		// if(glewInit() == GLEW_OK)
+		// {
+		// 	Log("OK\n");
+		// }
+		// else
+		// {
+		// 	Error(" Couldn't init glew!\n");
+		// }
 
 		///Setup up windows specifc context:
 #if defined(WIN32) && !SDL_VERSION_ATLEAST(2,0,0)
@@ -355,45 +387,8 @@ namespace hpl {
 		SDL_SetGamma(mfGammaCorrection,mfGammaCorrection,mfGammaCorrection);
 #endif
 
-		//GL
-		Log(" Setting up OpenGL\n");
-		SetupGL();
-
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-        SDL_GL_SwapWindow(mpScreen);
-#else
-		//Set the clear color
-		SDL_GL_SwapBuffers();
-#endif
-
 		mbInitHasBeenRun = true;
 
-
-		/*if(GLEW_ARB_debug_output)
-		{
-			glDebugMessageCallbackARB(&OGLDebugOutputCallback, NULL);
-			glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
-		}
-		else
-		{
-			Warning("OGL debug output not supported!\n");
-		}*/
-
-
-		return true;
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cLowLevelGraphicsSDL::CheckMultisampleCaps()
-	{
-
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cLowLevelGraphicsSDL::SetupGL()
-	{
 		///////////////////////////////
 		// Setup variables
 		mColorWrite.r = true; mColorWrite.g = true;
@@ -421,110 +416,16 @@ namespace hpl {
 		mvFrameBufferSize = mvScreenSize;
 		mvFrameBufferTotalSize = mvScreenSize;
 
+		return true;
+	}
 
-		///////////////////////////////
-		//Inits GL stuff
-		//Set Shade model and clear color.
-		glShadeModel(GL_SMOOTH);
-		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+	//-----------------------------------------------------------------------
 
-		///////////////////////////////
-		//Depth Test setup
-		glClearDepth(1.0f);//VAlues buffer is cleared with
-		glEnable(GL_DEPTH_TEST); //enable depth testing
-		glDepthFunc(GL_LEQUAL); //function to do depth test with
-		glDisable(GL_ALPHA_TEST);
-		glDepthMask(true);
-
-		///////////////////////////////
-		//Render Settings
-		glEnable(GL_DEPTH_TEST);
-		glDepthFunc(GetGLDepthTestFuncEnum(mDepthTestFunc));
-		glAlphaFunc(GetGLAlphaTestFuncEnum(mAlphaTestFunc),mfAlphaTestFuncRef);
-
-		glEnable(GL_CULL_FACE);
-		glCullFace(GL_BACK);
-		glFrontFace(GL_CW);
-
-		glDisable(GL_SCISSOR_TEST);
-		glScissor(mvScissorPos.x, (mvScissorSize.y - mvScissorPos.y - 1)-mvScissorSize.y, mvScissorSize.x, mvScissorSize.y);
-		glDisable(GL_BLEND);
-
-		///////////////////////////////
-		//Set best perspective correction
-		glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
-
-		//int lStencilBits=-1;
-		//glGetIntegerv(GL_STENCIL_BITS,&lStencilBits);
-		//Log(" Stencil bits: %d\n",lStencilBits);
-
-		///////////////////////////////
-		//Stencil setup
-		glClearStencil(0);
-
-		///////////////////////////////
-		//Clear the screen
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-
-		glMatrixMode(GL_MODELVIEW);
-		glLoadIdentity();
-		glMatrixMode(GL_PROJECTION);
-		glLoadIdentity();
-
-		//glTexEnvi(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_REPLACE);
-
-
-		/////  BEGIN BATCH ARRAY STUFF ///////////////
-
-		//Enable all the vertex arrays that are used:
-		glEnableClientState(GL_VERTEX_ARRAY ); //The positions
-		glEnableClientState(GL_COLOR_ARRAY ); //The color
-		glEnableClientState(GL_TEXTURE_COORD_ARRAY); //Tex coords
-		glDisableClientState(GL_NORMAL_ARRAY);
-		//Disable the once not used.
-		glDisableClientState(GL_INDEX_ARRAY); //color index
-		glDisableClientState(GL_EDGE_FLAG_ARRAY);
-
-		///// END BATCH ARRAY STUFF ///////////////
-
-
-		//Show some info
-		Log("  Vendor: %s\n", glGetString(GL_VENDOR));
-		Log("  Renderer: %s\n", glGetString(GL_RENDERER));
-		Log("  Version: %s\n", glGetString(GL_VERSION));
-		Log("  Max texture image units: %d\n",GetCaps(eGraphicCaps_MaxTextureImageUnits));
-		Log("  Max texture coord units: %d\n",GetCaps(eGraphicCaps_MaxTextureCoordUnits));
-		Log("  Max user clip planes: %d\n",GetCaps(eGraphicCaps_MaxUserClipPlanes));
-		Log("  Two sided stencil: %d\n",GetCaps(eGraphicCaps_TwoSideStencil));
-		Log("  Vertex Buffer Object: %d\n",GetCaps(eGraphicCaps_VertexBufferObject));
-
-		Log("  Anisotropic filtering: %d\n",GetCaps(eGraphicCaps_AnisotropicFiltering));
-		if(GetCaps(eGraphicCaps_AnisotropicFiltering))
-			Log("  Max Anisotropic degree: %d\n",GetCaps(eGraphicCaps_MaxAnisotropicFiltering));
-
-		Log("  Multisampling: %d\n",GetCaps(eGraphicCaps_Multisampling));
-
-		Log("  Texture compression: %d\n",GetCaps(eGraphicCaps_TextureCompression));
-		Log("  Texture compression S3TC: %d\n",GetCaps(eGraphicCaps_TextureCompression_DXTC));
-
-		Log("  Auto generate MipMaps: %d\n",GetCaps(eGraphicCaps_AutoGenerateMipMaps));
-
-		Log("  Render to texture: %d\n",GetCaps(eGraphicCaps_RenderToTexture));
-		Log("  Max draw buffers: %d\n",GetCaps(eGraphicCaps_MaxDrawBuffers));
-		Log("  Max color render targets: %d\n",GetCaps(eGraphicCaps_MaxColorRenderTargets));
-
-		Log("  Packed depth-stencil: %d\n",GetCaps(eGraphicCaps_PackedDepthStencil));
-
-		Log("  Texture float: %d\n",GetCaps(eGraphicCaps_TextureFloat));
-
-		Log("  GLSL Version: %s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
-		Log("  ShaderModel 2: %d\n",GetCaps(eGraphicCaps_ShaderModel_2));
-		Log("  ShaderModel 3: %d\n",GetCaps(eGraphicCaps_ShaderModel_3));
-		Log("  ShaderModel 4: %d\n",GetCaps(eGraphicCaps_ShaderModel_4));
-
-		Log("  OGL ATIFragmentShader: %d\n",GetCaps(eGraphicCaps_OGL_ATIFragmentShader));
+	void cLowLevelGraphicsSDL::CheckMultisampleCaps()
+	{
 
 	}
+	
 	//-----------------------------------------------------------------------
 
 	int cLowLevelGraphicsSDL::GetCaps(eGraphicCaps aType)
@@ -700,30 +601,30 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SetVsyncActive(bool abX, bool abAdaptive)
 	{
-        ;
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-        SDL_GL_SetSwapInterval(abX ? (abAdaptive ? -1 : 1) : 0);
-#elif defined(WIN32)
-		if(WGLEW_EXT_swap_control)
-		{
-			wglSwapIntervalEXT(abX ? (abAdaptive ? -1 : 1) : 0);
-		}
-#elif defined(__linux__) || defined(__FreeBSD__)
-		if (GLX_SGI_swap_control)
-		{
-			GLXSWAPINTERVALPROC glXSwapInterval = (GLXSWAPINTERVALPROC)glXGetProcAddress((GLubyte*)"glXSwapIntervalSGI");
-			glXSwapInterval(abX ? (abAdaptive ? -1 : 1) : 0);
-		}
-		else if (GLX_MESA_swap_control)
-		{
-			GLXSWAPINTERVALPROC glXSwapInterval = (GLXSWAPINTERVALPROC)glXGetProcAddress((GLubyte*)"glXSwapIntervalMESA");
-			glXSwapInterval(abX ? (abAdaptive ? -1 : 1) : 0);
-		}
-#elif defined(__APPLE__)
-		CGLContextObj ctx = CGLGetCurrentContext();
-		GLint swap = abX ? 1 : 0;
-		CGLSetParameter(ctx, kCGLCPSwapInterval, &swap);
-#endif
+//         ;
+// #if SDL_VERSION_ATLEAST(2, 0, 0)
+//         SDL_GL_SetSwapInterval(abX ? (abAdaptive ? -1 : 1) : 0);
+// #elif defined(WIN32)
+// 		if(WGLEW_EXT_swap_control)
+// 		{
+// 			wglSwapIntervalEXT(abX ? (abAdaptive ? -1 : 1) : 0);
+// 		}
+// #elif defined(__linux__) || defined(__FreeBSD__)
+// 		if (GLX_SGI_swap_control)
+// 		{
+// 			GLXSWAPINTERVALPROC glXSwapInterval = (GLXSWAPINTERVALPROC)glXGetProcAddress((GLubyte*)"glXSwapIntervalSGI");
+// 			glXSwapInterval(abX ? (abAdaptive ? -1 : 1) : 0);
+// 		}
+// 		else if (GLX_MESA_swap_control)
+// 		{
+// 			GLXSWAPINTERVALPROC glXSwapInterval = (GLXSWAPINTERVALPROC)glXGetProcAddress((GLubyte*)"glXSwapIntervalMESA");
+// 			glXSwapInterval(abX ? (abAdaptive ? -1 : 1) : 0);
+// 		}
+// #elif defined(__APPLE__)
+// 		CGLContextObj ctx = CGLGetCurrentContext();
+// 		GLint swap = abX ? 1 : 0;
+// 		CGLSetParameter(ctx, kCGLCPSwapInterval, &swap);
+// #endif
 	}
 
 	//-----------------------------------------------------------------------
@@ -1067,12 +968,12 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SwapBuffers()
 	{
-		;
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-        SDL_GL_SwapWindow(mpScreen);
-#else
-		SDL_GL_SwapBuffers();
-#endif
+// 		;
+// #if SDL_VERSION_ATLEAST(2, 0, 0)
+//         SDL_GL_SwapWindow(mpScreen);
+// #else
+// 		SDL_GL_SwapBuffers();
+// #endif
 	}
 
 	//-----------------------------------------------------------------------
@@ -1085,138 +986,63 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SetColorWriteActive(bool abR,bool abG,bool abB,bool abA)
 	{
-		;
+		// ;
 
-		if( mColorWrite.r == abR &&
-			mColorWrite.g == abG &&
-			mColorWrite.b == abB &&
-			mColorWrite.a == abA)
-		{
-			return;
-		}
-		mColorWrite.r = abR;
-		mColorWrite.g = abG;
-		mColorWrite.b = abB;
-		mColorWrite.a = abA;
+		// if( mColorWrite.r == abR &&
+		// 	mColorWrite.g == abG &&
+		// 	mColorWrite.b == abB &&
+		// 	mColorWrite.a == abA)
+		// {
+		// 	return;
+		// }
+		// mColorWrite.r = abR;
+		// mColorWrite.g = abG;
+		// mColorWrite.b = abB;
+		// mColorWrite.a = abA;
 
-		glColorMask(abR,abG,abB,abA);
+		// glColorMask(abR,abG,abB,abA);
 	}
-
-	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetDepthWriteActive(bool abX)
 	{
-		;
-
-		if(mbDepthWrite == abX) return;
-
-		mbDepthWrite = abX;
-
-		glDepthMask(abX);
 	}
-
-	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetDepthTestActive(bool abX)
 	{
-		;
-
-		if(mbDepthTestActive == abX) return;
-
-		mbDepthTestActive = abX;
-
-		if(abX) glEnable(GL_DEPTH_TEST);
-		else glDisable(GL_DEPTH_TEST);
 	}
-
-	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetDepthTestFunc(eDepthTestFunc aFunc)
 	{
-		;
-
-		if(mDepthTestFunc == aFunc) return;
-		mDepthTestFunc = aFunc;
-
-		glDepthFunc(GetGLDepthTestFuncEnum(aFunc));
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetAlphaTestActive(bool abX)
 	{
-		;
-
-		if(mbAlphaTestActive == abX) return;
-
-		mbAlphaTestActive = abX;
-
-		if(abX) glEnable(GL_ALPHA_TEST);
-		else glDisable(GL_ALPHA_TEST);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetAlphaTestFunc(eAlphaTestFunc aFunc,float afRef)
 	{
-		;
-
-		if(mAlphaTestFunc == aFunc && mfAlphaTestFuncRef == afRef) return;
-
-		mAlphaTestFunc = aFunc;
-		mfAlphaTestFuncRef = afRef;
-
-		glAlphaFunc(GetGLAlphaTestFuncEnum(aFunc),afRef);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetStencilActive(bool abX)
 	{
-		;
-
-		if(abX)
-		{
-			//DO this check, so you can setup stencil and then turn on / off afterwards
-			//and separate will still remain.
-			if(mbDoubleSidedStencilIsSet && GLEW_EXT_stencil_two_side)
-			{
-				glEnable(GL_STENCIL_TEST_TWO_SIDE_EXT);
-			}
-			glEnable(GL_STENCIL_TEST);
-		}
-		else
-		{
-			glDisable(GL_STENCIL_TEST_TWO_SIDE_EXT);
-			glDisable(GL_STENCIL_TEST);
-		}
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetStencilWriteMask(unsigned int alMask)
 	{
-		;
-
-		glStencilMask(alMask);
 	}
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetStencil(eStencilFunc aFunc,int alRef, unsigned int aMask,
 		eStencilOp aFailOp,eStencilOp aZFailOp,eStencilOp aZPassOp)
 	{
-		;
-
-		mbDoubleSidedStencilIsSet = false;
-		if(GLEW_EXT_stencil_two_side)
-		{
-			glDisable(GL_STENCIL_TEST_TWO_SIDE_EXT);
-			glActiveStencilFaceEXT(GL_FRONT);
-		}
-		glStencilFunc(GetGLStencilFuncEnum(aFunc), alRef, aMask);
-
-		glStencilOp(GetGLStencilOpEnum(aFailOp), GetGLStencilOpEnum(aZFailOp),
-			GetGLStencilOpEnum(aZPassOp));
 	}
 
 	//-----------------------------------------------------------------------
@@ -1226,99 +1052,28 @@ namespace hpl {
 		eStencilOp aFrontFailOp,eStencilOp aFrontZFailOp,eStencilOp aFrontZPassOp,
 		eStencilOp aBackFailOp,eStencilOp aBackZFailOp,eStencilOp aBackZPassOp)
 	{
-		;
-
-		mbDoubleSidedStencilIsSet = true;
-
-		//Nvidia implementation
-		if(GLEW_EXT_stencil_two_side)
-		{
-			glEnable(GL_STENCIL_TEST_TWO_SIDE_EXT);
-
-			//Front
-			glActiveStencilFaceEXT(GL_FRONT);
-			glStencilFunc(GetGLStencilFuncEnum(aFrontFunc), alRef, aMask);
-
-			glStencilOp(GetGLStencilOpEnum(aFrontFailOp), GetGLStencilOpEnum(aFrontZFailOp),
-				GetGLStencilOpEnum(aFrontZPassOp));
-			//Back
-			glActiveStencilFaceEXT(GL_BACK);
-			glStencilFunc(GetGLStencilFuncEnum(aBackFunc), alRef, aMask);
-
-			glStencilOp(GetGLStencilOpEnum(aBackFailOp), GetGLStencilOpEnum(aBackZFailOp),
-				GetGLStencilOpEnum(aBackZPassOp));
-		}
-		//Ati implementation
-		else if(GLEW_ATI_separate_stencil)
-		{
-			//Front
-			glStencilOpSeparateATI( GL_FRONT, GetGLStencilOpEnum(aFrontFailOp),
-				GetGLStencilOpEnum(aFrontZFailOp),
-				GetGLStencilOpEnum(aFrontZPassOp));
-			//Back
-			glStencilOpSeparateATI( GL_BACK, GetGLStencilOpEnum(aBackFailOp),
-				GetGLStencilOpEnum(aBackZFailOp),
-				GetGLStencilOpEnum(aBackZPassOp));
-
-			//Front and Back function
-			glStencilFuncSeparateATI(GetGLStencilFuncEnum(aFrontFunc),
-				GetGLStencilFuncEnum(aBackFunc),
-				alRef, aMask);
-		}
-		else
-		{
-			FatalError("Only single sided stencil supported!\n");
-		}
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetCullActive(bool abX)
 	{
-		;
-
-		//if(mbCullActive == abX) return;
-		mbCullActive = abX;
-
-		if(abX) glEnable(GL_CULL_FACE);
-		else	glDisable(GL_CULL_FACE);
-		glCullFace(GL_BACK);
 	}
+
 	void cLowLevelGraphicsSDL::SetCullMode(eCullMode aMode)
 	{
-		//if(mCullMode == aMode) return;
-		mCullMode = aMode;
-
-		glCullFace(GL_BACK);
-		if(aMode == eCullMode_Clockwise)	glFrontFace(GL_CCW);
-		else								glFrontFace(GL_CW);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetScissorActive(bool abX)
 	{
-		;
-
-		if(mbScissorActive == abX) return;
-
-		mbScissorActive = abX;
-
-		if(abX) glEnable(GL_SCISSOR_TEST);
-		else glDisable(GL_SCISSOR_TEST);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetScissorRect(const cVector2l& avPos, const cVector2l& avSize)
 	{
-		;
-
-		cVector2l vFrameBufferSize;
-		if(mpFrameBuffer)	vFrameBufferSize = mpFrameBuffer->GetSize();
-		else				vFrameBufferSize = mvScreenSize;
-
-		glScissor(avPos.x, (vFrameBufferSize.y - avPos.y)-avSize.y, avSize.x, avSize.y);
 	}
 
 	//-----------------------------------------------------------------------
@@ -1326,8 +1081,6 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SetClipPlane(int alIdx, const cPlanef& aPlane)
 	{
-		;
-
 		mvClipPlanes[alIdx] = aPlane;
 
 		double vPlane[4];
@@ -1335,7 +1088,7 @@ namespace hpl {
 		vPlane[1] = aPlane.b;
 		vPlane[2] = aPlane.c;
 		vPlane[3] = aPlane.d;
-		glClipPlane(GL_CLIP_PLANE0 + alIdx,vPlane);
+		// glClipPlane(GL_CLIP_PLANE0 + alIdx,vPlane);
 	}
 	cPlanef cLowLevelGraphicsSDL::GetClipPlane(int alIdx)
 	{
@@ -1345,10 +1098,6 @@ namespace hpl {
 	}
 	void cLowLevelGraphicsSDL::SetClipPlaneActive(int alIdx, bool abX)
 	{
-		;
-
-		if(abX) glEnable(GL_CLIP_PLANE0 + alIdx);
-		else	glDisable(GL_CLIP_PLANE0 + alIdx);
 	}
 
 
@@ -1356,24 +1105,12 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SetBlendActive(bool abX)
 	{
-		;
-
-		if(mbBlendActive == abX) return;
-		mbBlendActive = abX;
-
-		if(abX)
-			glEnable(GL_BLEND);
-		else
-			glDisable(GL_BLEND);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetBlendFunc(eBlendFunc aSrcFactor, eBlendFunc aDestFactor)
 	{
-		;
-
-		glBlendFunc(GetGLBlendEnum(aSrcFactor),GetGLBlendEnum(aDestFactor));
 	}
 
 	//-----------------------------------------------------------------------
@@ -1382,37 +1119,18 @@ namespace hpl {
 	void cLowLevelGraphicsSDL::SetBlendFuncSeparate(eBlendFunc aSrcFactorColor, eBlendFunc aDestFactorColor,
 		eBlendFunc aSrcFactorAlpha, eBlendFunc aDestFactorAlpha)
 	{
-		;
-
-		if(GLEW_EXT_blend_func_separate)
-		{
-			glBlendFuncSeparateEXT(GetGLBlendEnum(aSrcFactorColor),
-				GetGLBlendEnum(aDestFactorColor),
-				GetGLBlendEnum(aSrcFactorAlpha),
-				GetGLBlendEnum(aDestFactorAlpha));
-		}
-		else
-		{
-			glBlendFunc(GetGLBlendEnum(aSrcFactorColor),GetGLBlendEnum(aDestFactorColor));
-		}
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetPolygonOffsetActive(bool abX)
 	{
-		;
-
-		if(abX)	glEnable(GL_POLYGON_OFFSET_FILL);
-		else	glDisable(GL_POLYGON_OFFSET_FILL);
 
 	}
 
+
 	void cLowLevelGraphicsSDL::SetPolygonOffset(float afBias, float afSlopeScaleBias)
 	{
-		;
-
-		glPolygonOffset(afSlopeScaleBias, afBias);
 	}
 
 	//-----------------------------------------------------------------------
@@ -1427,10 +1145,6 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::PushMatrix(eMatrix aMtxType)
 	{
-		;
-
-		SetMatrixMode(aMtxType);
-		glPushMatrix();
 	}
 
 	//-----------------------------------------------------------------------
@@ -1438,21 +1152,11 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::PopMatrix(eMatrix aMtxType)
 	{
-		;
-
-		SetMatrixMode(aMtxType);
-		glPopMatrix();
 	}
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetMatrix(eMatrix aMtxType, const cMatrixf& a_mtxA)
 	{
-		;
-
-		SetMatrixMode(aMtxType);
-		glLoadIdentity();
-		cMatrixf mtxTranpose = a_mtxA.GetTranspose();
-		glLoadMatrixf(mtxTranpose.v);
 	}
 
 	//-----------------------------------------------------------------------
@@ -1460,30 +1164,16 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SetIdentityMatrix(eMatrix aMtxType)
 	{
-		;
-
-		SetMatrixMode(aMtxType);
-		glLoadIdentity();
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetOrthoProjection(const cVector2f& avSize, float afMin, float afMax)
 	{
-		;
-
-		glMatrixMode(GL_PROJECTION);
-		glLoadIdentity();
-		glOrtho(0,avSize.x,avSize.y,0,afMin,afMax);
 	}
 
 	void cLowLevelGraphicsSDL::SetOrthoProjection(const cVector3f& avMin, const cVector3f& avMax)
 	{
-		;
-
-		glMatrixMode(GL_PROJECTION);
-		glLoadIdentity();
-		glOrtho(avMin.x,avMax.x,avMax.y,avMin.y,avMin.z,avMax.z);
 	}
 
 	//-----------------------------------------------------------------------
@@ -1497,56 +1187,12 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SetTexture(unsigned int alUnit,iTexture* apTex)
 	{
-		;
-
-		GLenum NewTarget=0;
-		if(apTex)	NewTarget = GetGLTextureTargetEnum(apTex->GetType());
-
-		GLenum LastTarget = mvCurrentTextureTarget[alUnit];
-
-		//Check if multi texturing is supported.
-		if(GLEW_ARB_multitexture){
-			glActiveTextureARB(GL_TEXTURE0_ARB + alUnit);
-		}
-
-		//Disable this unit if NULL
-		if(apTex == NULL)
-		{
-			if(LastTarget!=0)
-				glDisable(LastTarget);
-
-			//glBindTexture(LastTarget,0);
-		}
-		//Enable the unit, set the texture handle and bind the pbuffer
-		else
-		{
-			if(LastTarget!=0 && NewTarget != LastTarget)
-			{
-				glDisable(LastTarget);
-			}
-
-			cSDLTexture *pSDLTex = static_cast<cSDLTexture*> (apTex);
-
-			glBindTexture(NewTarget, pSDLTex->GetTextureHandle());
-			glEnable(NewTarget);
-
-			//if it is a render target we need to do some more binding.
-			if(pSDLTex->GetUsage() == eTextureUsage_RenderTarget)
-			{
-				//TODO: Do something else?
-			}
-		}
-
-		mvCurrentTextureTarget[alUnit] = NewTarget;
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetColor(const cColor &aColor)
 	{
-		;
-
-		glColor4f(aColor.r, aColor.g, aColor.b, aColor.a);
 	}
 
 	//-----------------------------------------------------------------------

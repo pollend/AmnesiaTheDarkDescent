@@ -86,7 +86,7 @@ namespace hpl
         mbHasTypeSpecifics[eMaterialRenderMode_Diffuse] = true;
 
         _u_mtxUV = bgfx::createUniform("a_mtxUV", bgfx::UniformType::Mat4, 1);
-        _programHandler = hpl::loadProgram("vs_decal", "fs_decal");
+        _programHandler = hpl::loadProgram("vs_decal_material", "fs_decal_material");
 
         AddUsedTexture(eMaterialTexture_Diffuse);
     }

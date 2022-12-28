@@ -16,18 +16,29 @@ class ShaderType(Enum):
 
 
 shaders = [
-    { "type" : ShaderType.VS, "inout" :  "resource/vs_basic_solid_diffuse.io",         "input": "resource/vs_basic_solid_diffuse.sc" , "includes": ["resource"]},
-    { "type" : ShaderType.VS, "inout" :  "resource/vs_basic_solid_illumination.io",    "input": "resource/vs_basic_solid_illumination.sc", "includes": ["resource"]},
-    { "type" : ShaderType.VS, "inout" :  "resource/vs_basic_solid_z.io",               "input": "resource/vs_basic_solid_z.sc", "includes": ["resource"]},
-    { "type" : ShaderType.VS, "inout" :  "resource/vs_basic_translucent_material.io",  "input": "resource/vs_basic_translucent_material.sc", "includes": ["resource"]},
-    { "type" : ShaderType.VS, "inout" :  "resource/vs_decal_material.io",              "input": "resource/vs_decal_material.sc", "includes": ["resource"]},
-    { "type" : ShaderType.VS, "inout" :  "resource/vs_deferred_fog.io",                "input": "resource/vs_deferred_fog.sc", "includes": ["resource"]},
-    { "type" : ShaderType.VS, "inout" :  "resource/vs_post_effect.io",                 "input": "resource/vs_post_effect.sc", "includes": ["resource"]},
-    { "type" : ShaderType.VS, "inout" :  "resource/vs_water_material.io",              "input": "resource/vs_water_material.sc", "includes": ["resource"]},
-    { "type" : ShaderType.VS, "inout" :  "resource/vs_simple_flat.io",                 "input": "resource/vs_simple_flat.sc" , "includes": ["resource"]},
-    { "type" : ShaderType.FS, "inout" :  "resource/vs_simple_flat.io",                 "input": "resource/fs_simple_flat.sc" , "includes": ["resource"]},
-    { "type" : ShaderType.VS, "inout" :  "resource/vs_simple_diffuse.io",              "input": "resource/vs_simple_diffuse.sc" , "includes": ["resource"]},
-    { "type" : ShaderType.FS, "inout" :  "resource/vs_simple_diffuse.io",              "input": "resource/fs_simple_diffuse.sc" , "includes": ["resource"]},
+    { "type" : ShaderType.VS, "inout" : "resource/vs_basic_solid_diffuse.io",          "input": "resource/vs_basic_solid_diffuse.sc" , "includes": ["resource"]},
+    { "type" : ShaderType.VS, "inout" : "resource/vs_basic_solid_illumination.io",     "input": "resource/vs_basic_solid_illumination.sc", "includes": ["resource"]},
+    { "type" : ShaderType.VS, "inout" : "resource/vs_basic_solid_z.io",                "input": "resource/vs_basic_solid_z.sc", "includes": ["resource"]},
+    { "type" : ShaderType.VS, "inout" : "resource/vs_basic_translucent_material.io",   "input": "resource/vs_basic_translucent_material.sc", "includes": ["resource"]},
+    { "type" : ShaderType.VS, "inout" : "resource/vs_decal_material.io",               "input": "resource/vs_decal_material.sc", "includes": ["resource"]},
+    { "type" : ShaderType.VS, "inout" : "resource/vs_deferred_fog.io",                 "input": "resource/vs_deferred_fog.sc", "includes": ["resource"]},
+    { "type" : ShaderType.VS, "inout" : "resource/vs_post_effect.io",                  "input": "resource/vs_post_effect.sc", "includes": ["resource"]},
+    { "type" : ShaderType.VS, "inout" : "resource/vs_water_material.io",               "input": "resource/vs_water_material.sc", "includes": ["resource"]},
+    { "type" : ShaderType.VS, "inout" : "resource/vs_simple_flat.io",                  "input": "resource/vs_simple_flat.sc" , "includes": ["resource"]},
+    { "type" : ShaderType.FS, "inout" : "resource/vs_simple_flat.io",                  "input": "resource/fs_simple_flat.sc" , "includes": ["resource"]},
+    { "type" : ShaderType.VS, "inout" : "resource/vs_simple_diffuse.io",               "input": "resource/vs_simple_diffuse.sc" , "includes": ["resource"]},
+    { "type" : ShaderType.FS, "inout" : "resource/vs_simple_diffuse.io",               "input": "resource/fs_simple_diffuse.sc" , "includes": ["resource"]},
+    { "type" : ShaderType.FS, "inout" : "resource/vs_basic_solid_diffuse.io",          "input": "resource/fs_basic_solid_diffuse.sc", "includes": ["resource"]},
+    { "type" : ShaderType.FS, "inout" : "resource/vs_basic_solid_illumination.io",     "input": "resource/fs_basic_solid_illumination.sc", "includes": ["resource"]},
+    { "type" : ShaderType.FS, "inout" : "resource/vs_basic_solid_z.io",                "input": "resource/fs_basic_solid_z.sc", "includes": ["resource"]},
+    { "type" : ShaderType.FS, "inout" : "resource/vs_basic_translucent_material.io",   "input": "resource/fs_basic_translucent_material.sc", "includes": ["resource"]},
+    { "type" : ShaderType.FS, "inout" : "resource/vs_decal_material.io",               "input": "resource/fs_decal_material.sc", "includes": ["resource"]},
+    { "type" : ShaderType.FS, "inout" : "resource/vs_deferred_fog.io",                 "input": "resource/fs_deferred_fog.sc", "includes": ["resource"]},
+    { "type" : ShaderType.FS, "inout" : "resource/vs_post_effect.io",                  "input": "resource/fs_posteffect_image_trail_frag.sc", "includes": ["resource"]},
+    { "type" : ShaderType.FS, "inout" : "resource/vs_post_effect.io",                  "input": "resource/fs_posteffect_radial_blur_frag.sc", "includes": ["resource"]},
+    { "type" : ShaderType.FS, "inout" : "resource/vs_simple_diffuse.io",               "input": "resource/fs_simple_diffuse.sc", "includes": ["resource"]},
+    { "type" : ShaderType.FS, "inout" : "resource/vs_simple_flat.io",                  "input": "resource/fs_simple_flat.sc", "includes": ["resource"]},
+    { "type" : ShaderType.FS, "inout" : "resource/vs_water_material.io",               "input": "resource/fs_water_material.sc", "includes": ["resource"]},
 ]
 
 def toD3dPrefix(shaderType):
@@ -66,9 +77,9 @@ def main():
     os.makedirs(f'{args.output}/shaders/dx9/', exist_ok=True)
     os.makedirs(f'{args.output}/shaders/dx11/', exist_ok=True)
     os.makedirs(f'{args.output}/shaders/osx/', exist_ok=True)
+    os.makedirs(f'{args.output}/shaders/glsl/', exist_ok=True)
     os.makedirs(f'{args.output}/shaders/essl/', exist_ok=True)
     os.makedirs(f'{args.output}/shaders/spirv/', exist_ok=True)
-    os.makedirs(f'{args.output}/shaders/linux/', exist_ok=True)
     
     for shader in shaders:
         input_file_path = os.path.abspath(shader["input"])
@@ -146,7 +157,7 @@ def main():
             wrap_subprocess([
                 args.compiler,
                 '-f', f'{input_file_path}',
-                '-o', f'{args.output}/shaders/spirv/{name}.bin',
+                '-o', f'{args.output}/shaders/glsl/{name}.bin',
                 '--type', f'{toType(shader["type"])}',
                 '--platform', "linux",
                 '--varyingdef', f'{varying_def_path}',
@@ -157,7 +168,7 @@ def main():
             wrap_subprocess([
                 args.compiler,
                 '-f', f'{input_file_path}',
-                '-o', f'{args.output}/shaders/linux/{name}.bin',
+                '-o', f'{args.output}/shaders/glsl/{name}.bin',
                 '--type', f'{toType(shader["type"])}',
                 '--platform', "linux",
                 '--varyingdef', f'{varying_def_path}',
@@ -169,7 +180,7 @@ def main():
             wrap_subprocess([
                 args.compiler,
                 '-f', f'{input_file_path}',
-                '-o', f'{args.output}/shaders/linux/{name}.bin',
+                '-o', f'{args.output}/shaders/spirv/{name}.bin',
                 '--type', f'{toType(shader["type"])}',
                 '--platform', "linux",
                 '--varyingdef', f'{varying_def_path}',

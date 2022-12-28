@@ -9,6 +9,6 @@ void main()
 {
     vec4 color = texture2D(s_diffuseMap, gl_FragCoord.xy);
  
-    gl_FragColor.xyz = color;
+    gl_FragColor.xyz = color.xyz;
     gl_FragColor.a *= u_alpha;
 }

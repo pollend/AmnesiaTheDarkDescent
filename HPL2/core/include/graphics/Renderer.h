@@ -473,7 +473,7 @@ namespace hpl {
 
 		iVertexBuffer *mpShapeBox;
 
-		iGpuProgram *mpDepthOnlyProgram;
+		// iGpuProgram *mpDepthOnlyProgram;
 
 		cMatrixf m_mtxSkyBox;
 

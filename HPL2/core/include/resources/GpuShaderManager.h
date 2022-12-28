@@ -56,7 +56,6 @@ namespace hpl {
 		void Unload(iResourceBase* apResource);
 
 	private:
-		bool IsShaderSupported(const tString& asName, eGpuShaderType aType);
 
 		iLowLevelGraphics *mpLowLevelGraphics;
 		cPreprocessParser* mpPreprocessParser;

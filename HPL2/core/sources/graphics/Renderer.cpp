@@ -434,10 +434,10 @@ namespace hpl {
 		// Create programs
 		cParserVarContainer vars;
 
-		mpDepthOnlyProgram = mpProgramManager->CreateProgramFromShaders("DepthOnly",
-											"deferred_base_vtx.glsl",
-											"deferred_depthonly_frag.glsl",
-											&vars,false);
+		// mpDepthOnlyProgram = mpProgramManager->CreateProgramFromShaders("DepthOnly",
+		// 									"deferred_base_vtx.glsl",
+		// 									"deferred_depthonly_frag.glsl",
+		// 									&vars,false);
 
 
 		////////////
@@ -459,7 +459,7 @@ namespace hpl {
 		hplDelete(mpCallbackFunctions);
 		hplDelete(mpProgramManager);
 
-		hplDelete(mpDepthOnlyProgram);
+		// hplDelete(mpDepthOnlyProgram);
 	}
 
 	//-----------------------------------------------------------------------
@@ -1022,7 +1022,7 @@ namespace hpl {
 
 		/////////////////////////
 		//Program
-		SetProgram(mpDepthOnlyProgram);
+		// SetProgram(mpDepthOnlyProgram);
 
 		/////////////////////////
 		//Texture

@@ -455,7 +455,7 @@ namespace hpl
                 break;
             }
         }
-        m_dynamicIndexHandle = bgfx::createDynamicIndexBuffer(bgfx::copy(m_indices.data(), m_indices.size()), BGFX_BUFFER_INDEX32);
+        m_dynamicIndexHandle = bgfx::createDynamicIndexBuffer(bgfx::copy(m_indices.data(), m_indices.size() * sizeof(uint32_t)), BGFX_BUFFER_INDEX32);
         return true;
     }
 
@@ -467,8 +467,14 @@ namespace hpl
             {
                 switch (mUsageType)
                 {
-                case eVertexBufferUsageType_Static:
-                    BX_ASSERT(false, "Static buffers can't be updated")
+                case eVertexBufferUsageType_Static: {
+                    if(bgfx::isValid(element.m_handle)) {
+                        bgfx::destroy(element.m_handle);
+                    }
+                    bgfx::VertexLayout layout{};
+                    layout.begin().add(GetAttribFromHPL(element.m_type), element.m_num, GetAttribTypeFromHPL(element.m_format)).end();
+                    element.m_handle = bgfx::createVertexBuffer(bgfx::copy(element.m_buffer.data(), element.m_buffer.size()), layout);
+                }
                     break;
                 case eVertexBufferUsageType_Dynamic:
                 case eVertexBufferUsageType_Stream:
@@ -482,7 +488,7 @@ namespace hpl
         }
         if (abIndices)
         {
-            bgfx::update(m_dynamicIndexHandle, 0, bgfx::copy(m_indices.data(), m_indices.size()));
+            bgfx::update(m_dynamicIndexHandle, 0, bgfx::copy(m_indices.data(), m_indices.size() * sizeof(uint32_t)));
         }
     }
 

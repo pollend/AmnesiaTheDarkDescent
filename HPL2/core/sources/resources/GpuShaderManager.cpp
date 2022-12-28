@@ -87,14 +87,6 @@ namespace hpl {
 		if(mpLowLevelGraphics->GetCaps(eGraphicCaps_ShaderModel_2))		mpPreprocessParser->GetEnvVarContainer()->Add("ShaderModel_2");
 		if(mpLowLevelGraphics->GetCaps(eGraphicCaps_ShaderModel_3))		mpPreprocessParser->GetEnvVarContainer()->Add("ShaderModel_3");
 		if(mpLowLevelGraphics->GetCaps(eGraphicCaps_ShaderModel_4))		mpPreprocessParser->GetEnvVarContainer()->Add("ShaderModel_4");
-
-		/////////////////////////
-		// Test Feature support
-		if(IsShaderSupported("_test_array_support_frag.glsl", eGpuShaderType_Fragment)==false)
-		{
-			Log("ATTENTION: System does not support const arrays in glsl!\n");
-			mpPreprocessParser->GetEnvVarContainer()->Add("FeatureNotSupported_ConstArray");
-		}
 	}
 
 	//-----------------------------------------------------------------------
@@ -219,36 +211,4 @@ namespace hpl {
 			hplDelete(apResource);
 		}
 	}
-
-	//-----------------------------------------------------------------------
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PRIVATE METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
-	bool cGpuShaderManager::IsShaderSupported(const tString& asName, eGpuShaderType aType)
-	{
-		/////////////////////////////////
-		//Get file from file searcher
-		tWString sPath = mpFileSearcher->GetFilePath(asName);
-		if(sPath==_W("")){
-			Error("Couldn't find test file '%s' in resources\n",asName.c_str());
-			return false;
-		}
-
-		/////////////////////////////////
-		//Compile
-		iGpuShader* pShader = mpLowLevelGraphics->CreateGpuShader(asName, aType);
-
-		bool bRet = pShader->CreateFromFile(sPath, "main", false);
-		hplDelete(pShader);
-
-		return bRet;
-	}
-
-	//-----------------------------------------------------------------------
 }

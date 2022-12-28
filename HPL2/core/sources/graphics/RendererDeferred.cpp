@@ -246,35 +246,35 @@ namespace hpl {
 			m_gBuffer_linearDepth = {RenderTarget(m_linearDepth[0]), RenderTarget(m_linearDepth[1])};
 		}
 
-		////////////////////////////////////
-		//Create Accumulation texture
-		mpAccumBufferTexture = mpGraphics->CreateTexture("AccumBiffer",eTextureType_Rect,eTextureUsage_RenderTarget);
-		mpAccumBufferTexture->CreateFromRawData(cVector3l(mvScreenSize.x, mvScreenSize.y,0),ePixelFormat_RGBA, NULL);
-		mpAccumBufferTexture->SetWrapSTR(eTextureWrap_ClampToEdge);
+		// ////////////////////////////////////
+		// //Create Accumulation texture
+		// mpAccumBufferTexture = mpGraphics->CreateTexture("AccumBiffer",eTextureType_Rect,eTextureUsage_RenderTarget);
+		// mpAccumBufferTexture->CreateFromRawData(cVector3l(mvScreenSize.x, mvScreenSize.y,0),ePixelFormat_RGBA, NULL);
+		// mpAccumBufferTexture->SetWrapSTR(eTextureWrap_ClampToEdge);
 
-		////////////////////////////////////
-		//Create Accumulation buffer
-		mpAccumBuffer = mpGraphics->CreateFrameBuffer("Deferred_Accumulation");
-		mpAccumBuffer->SetTexture2D(0,mpAccumBufferTexture);
-		mpAccumBuffer->SetDepthStencilBuffer(mpDepthStencil[0]);
+		// ////////////////////////////////////
+		// //Create Accumulation buffer
+		// mpAccumBuffer = mpGraphics->CreateFrameBuffer("Deferred_Accumulation");
+		// mpAccumBuffer->SetTexture2D(0,mpAccumBufferTexture);
+		// mpAccumBuffer->SetDepthStencilBuffer(mpDepthStencil[0]);
 
-		mpAccumBuffer->CompileAndValidate();
+		// mpAccumBuffer->CompileAndValidate();
 
-		////////////////////////////////////
-		//Create Refraction texture
-		mpRefractionTexture = mpGraphics->GetTempFrameBuffer(mvScreenSize,ePixelFormat_RGBA,0)->GetColorBuffer(0)->ToTexture();
-		mpRefractionTexture->SetWrapSTR(eTextureWrap_ClampToEdge);
+		// ////////////////////////////////////
+		// //Create Refraction texture
+		// mpRefractionTexture = mpGraphics->GetTempFrameBuffer(mvScreenSize,ePixelFormat_RGBA,0)->GetColorBuffer(0)->ToTexture();
+		// mpRefractionTexture->SetWrapSTR(eTextureWrap_ClampToEdge);
 
-		////////////////////////////////////
-		//Create Reflection texture
-		mpReflectionTexture = CreateRenderTexture("ReflectionTexture",vRelfectionSize,ePixelFormat_RGBA);
+		// ////////////////////////////////////
+		// //Create Reflection texture
+		// mpReflectionTexture = CreateRenderTexture("ReflectionTexture",vRelfectionSize,ePixelFormat_RGBA);
 
-		////////////////////////////////////
-		//Create Reflection buffer
-		mpReflectionBuffer = mpGraphics->CreateFrameBuffer("Deferred_Reflection");
-		mpReflectionBuffer->SetTexture2D(0,mpReflectionTexture);
-		mpReflectionBuffer->SetDepthStencilBuffer(mpDepthStencil[1]);
-		mpReflectionBuffer->CompileAndValidate();
+		// ////////////////////////////////////
+		// //Create Reflection buffer
+		// mpReflectionBuffer = mpGraphics->CreateFrameBuffer("Deferred_Reflection");
+		// mpReflectionBuffer->SetTexture2D(0,mpReflectionTexture);
+		// mpReflectionBuffer->SetDepthStencilBuffer(mpDepthStencil[1]);
+		// mpReflectionBuffer->CompileAndValidate();
 
 
 		////////////////////////////////////
@@ -291,10 +291,10 @@ namespace hpl {
 		else if(mShadowMapResolution == eShadowMapResolution_Low)	lStartSize = 0;
 
 		auto createShadowMap = [](const cVector3l &avSize) -> cShadowMapData {
-			auto image = std::shared_ptr<Image>(new Image(ImageDescriptor::CreateTexture2D(avSize.x, avSize.y, false, bgfx::TextureFormat::D16F)));
+			auto desc = ImageDescriptor::CreateTexture2D(avSize.x, avSize.y, false, bgfx::TextureFormat::D16F);
+			desc.m_configuration.m_rt = RTType::RT_Write;
 			return {nullptr, nullptr, nullptr, -1,
-			RenderTarget(
-				std::shared_ptr<Image>(new Image(ImageDescriptor::CreateTexture2D(avSize.x, avSize.y, false, bgfx::TextureFormat::D16F)))), 
+			RenderTarget(std::shared_ptr<Image>(new Image(desc))), 
 				{}
 			};
 		};
@@ -364,84 +364,84 @@ namespace hpl {
 		}
 		m_deferredFog = hpl::loadProgram("vs_deferred_fog", "fs_deferred_fog");
 
-		////////////////////////////////////
-		//Create Light programs
-		{
-			/////////////////////////////
-			//Misc
-			{
-				cParserVarContainer vars;
+		// ////////////////////////////////////
+		// //Create Light programs
+		// {
+		// 	/////////////////////////////
+		// 	//Misc
+		// 	{
+		// 		cParserVarContainer vars;
 
-				//////////////
-				//Light Stencil
-				mpLightStencilProgram = mpProgramManager->CreateProgramFromShaders("LightStencil",
-																					"deferred_base_vtx.glsl",
-																					"deferred_base_frag.glsl",
-																					&vars,true);
+		// 		//////////////
+		// 		//Light Stencil
+		// 		mpLightStencilProgram = mpProgramManager->CreateProgramFromShaders("LightStencil",
+		// 																			"deferred_base_vtx.glsl",
+		// 																			"deferred_base_frag.glsl",
+		// 																			&vars,true);
 
-				//////////////
-				//Light box
-				for(int i=0;i<2; ++i)
-				{
-					if(i==1) vars.Add("UseSSAO");
-					mpLightBoxProgram[i] = mpProgramManager->CreateProgramFromShaders("LightBoxNormal",
-																					"deferred_base_vtx.glsl",
-																					"deferred_light_box_frag.glsl",
-																					&vars,true);
+		// 		//////////////
+		// 		//Light box
+		// 		for(int i=0;i<2; ++i)
+		// 		{
+		// 			if(i==1) vars.Add("UseSSAO");
+		// 			mpLightBoxProgram[i] = mpProgramManager->CreateProgramFromShaders("LightBoxNormal",
+		// 																			"deferred_base_vtx.glsl",
+		// 																			"deferred_light_box_frag.glsl",
+		// 																			&vars,true);
 
-					vars.Clear();
-					if(mpLightBoxProgram[i])
-					{
-						mpLightBoxProgram[i]->GetVariableAsId("avLightColor",kVar_avLightColor);
-					}
-				}
-			}
+		// 			vars.Clear();
+		// 			if(mpLightBoxProgram[i])
+		// 			{
+		// 				mpLightBoxProgram[i]->GetVariableAsId("avLightColor",kVar_avLightColor);
+		// 			}
+		// 		}
+		// 	}
 
-			/////////////////////////////
-			//Lights
-			{
-				cParserVarContainer defaultVars;
+		// 	/////////////////////////////
+		// 	//Lights
+		// 	{
+		// 		cParserVarContainer defaultVars;
 
-				//Shadow variables
-				defaultVars.Add("ShadowJitterLookupMul",1.0f / (float)mlShadowJitterSize);
-				defaultVars.Add("ShadowJitterSamplesDiv2",mlShadowJitterSamples / 2);
-				defaultVars.Add("ShadowJitterSamples", mlShadowJitterSamples);
+		// 		//Shadow variables
+		// 		defaultVars.Add("ShadowJitterLookupMul",1.0f / (float)mlShadowJitterSize);
+		// 		defaultVars.Add("ShadowJitterSamplesDiv2",mlShadowJitterSamples / 2);
+		// 		defaultVars.Add("ShadowJitterSamples", mlShadowJitterSamples);
 
-				if(mShadowMapQuality == eShadowMapQuality_High)		defaultVars.Add("ShadowMapQuality_High");
-				if(mShadowMapQuality == eShadowMapQuality_Medium)	defaultVars.Add("ShadowMapQuality_Medium");
-				if(mShadowMapQuality == eShadowMapQuality_Low)		defaultVars.Add("ShadowMapQuality_Low");
+		// 		if(mShadowMapQuality == eShadowMapQuality_High)		defaultVars.Add("ShadowMapQuality_High");
+		// 		if(mShadowMapQuality == eShadowMapQuality_Medium)	defaultVars.Add("ShadowMapQuality_Medium");
+		// 		if(mShadowMapQuality == eShadowMapQuality_Low)		defaultVars.Add("ShadowMapQuality_Low");
 
-				//Vertex shader will handles deferred lights
-				defaultVars.Add("DeferredLight");
+		// 		//Vertex shader will handles deferred lights
+		// 		defaultVars.Add("DeferredLight");
 
-				//Deferred renderer type
-				if(mGBufferType == eDeferredGBuffer_32Bit)	defaultVars.Add("Deferred_32bit","");
-				else										defaultVars.Add("Deferred_64bit","");
+		// 		//Deferred renderer type
+		// 		if(mGBufferType == eDeferredGBuffer_32Bit)	defaultVars.Add("Deferred_32bit","");
+		// 		else										defaultVars.Add("Deferred_64bit","");
 
-				if(mlNumOfGBufferTextures == 4)				defaultVars.Add("RenderTargets_4","");
-				else										defaultVars.Add("RenderTargets_3","");
+		// 		if(mlNumOfGBufferTextures == 4)				defaultVars.Add("RenderTargets_4","");
+		// 		else										defaultVars.Add("RenderTargets_3","");
 
-				mpProgramManager->SetupGenerateProgramData(	eDefferredProgramMode_Lights,"Lights", "deferred_base_vtx.glsl", "deferred_light_frag.glsl",gvLightFeatureVec,
-													kLightFeatureNum,defaultVars);
-													//1, defaultVars);
+		// 		mpProgramManager->SetupGenerateProgramData(	eDefferredProgramMode_Lights,"Lights", "deferred_base_vtx.glsl", "deferred_light_frag.glsl",gvLightFeatureVec,
+		// 											kLightFeatureNum,defaultVars);
+		// 											//1, defaultVars);
 
 
-				mpProgramManager->AddGenerateProgramVariableId("avLightPos",	kVar_avLightPos, eDefferredProgramMode_Lights);
-				mpProgramManager->AddGenerateProgramVariableId("avLightColor",	kVar_avLightColor, eDefferredProgramMode_Lights);
-				mpProgramManager->AddGenerateProgramVariableId("afInvLightRadius",	kVar_afInvLightRadius, eDefferredProgramMode_Lights);
-				mpProgramManager->AddGenerateProgramVariableId("afNegFarPlane",	kVar_afNegFarPlane, eDefferredProgramMode_Lights);
-				mpProgramManager->AddGenerateProgramVariableId("afOneMinusCosHalfSpotFOV",	kVar_afOneMinusCosHalfSpotFOV, eDefferredProgramMode_Lights);
-				mpProgramManager->AddGenerateProgramVariableId("avLightForward", kVar_avLightForward, eDefferredProgramMode_Lights);
-				mpProgramManager->AddGenerateProgramVariableId("a_mtxSpotViewProj", kVar_a_mtxSpotViewProj, eDefferredProgramMode_Lights);
-				mpProgramManager->AddGenerateProgramVariableId("a_mtxInvViewRotation", kVar_a_mtxInvViewRotation, eDefferredProgramMode_Lights);
-				mpProgramManager->AddGenerateProgramVariableId("avShadowMapOffsetMul", kVar_avShadowMapOffsetMul, eDefferredProgramMode_Lights);
-			}
+		// 		mpProgramManager->AddGenerateProgramVariableId("avLightPos",	kVar_avLightPos, eDefferredProgramMode_Lights);
+		// 		mpProgramManager->AddGenerateProgramVariableId("avLightColor",	kVar_avLightColor, eDefferredProgramMode_Lights);
+		// 		mpProgramManager->AddGenerateProgramVariableId("afInvLightRadius",	kVar_afInvLightRadius, eDefferredProgramMode_Lights);
+		// 		mpProgramManager->AddGenerateProgramVariableId("afNegFarPlane",	kVar_afNegFarPlane, eDefferredProgramMode_Lights);
+		// 		mpProgramManager->AddGenerateProgramVariableId("afOneMinusCosHalfSpotFOV",	kVar_afOneMinusCosHalfSpotFOV, eDefferredProgramMode_Lights);
+		// 		mpProgramManager->AddGenerateProgramVariableId("avLightForward", kVar_avLightForward, eDefferredProgramMode_Lights);
+		// 		mpProgramManager->AddGenerateProgramVariableId("a_mtxSpotViewProj", kVar_a_mtxSpotViewProj, eDefferredProgramMode_Lights);
+		// 		mpProgramManager->AddGenerateProgramVariableId("a_mtxInvViewRotation", kVar_a_mtxInvViewRotation, eDefferredProgramMode_Lights);
+		// 		mpProgramManager->AddGenerateProgramVariableId("avShadowMapOffsetMul", kVar_avShadowMapOffsetMul, eDefferredProgramMode_Lights);
+		// 	}
 
-			//////////////////////////////
-			// Generate some light programs
-			//for(i=0; i<128; ++i)
-			//	mpProgramManager->GenerateProgram(eDefferredProgramMode_Lights, i);
-		}
+		// 	//////////////////////////////
+		// 	// Generate some light programs
+		// 	//for(i=0; i<128; ++i)
+		// 	//	mpProgramManager->GenerateProgram(eDefferredProgramMode_Lights, i);
+		// }
 
 		////////////////////////////////////
 		//Create SSAO programs and textures
@@ -454,70 +454,70 @@ namespace hpl {
 		{
 			cVector2l vSSAOSize = mvScreenSize / mlSSAOBufferSizeDiv;
 
-			/////////////////////////////////////
-			// Textures and frame buffers
+			// /////////////////////////////////////
+			// // Textures and frame buffers
 
-			// Textures
-			mpSSAOTexture = CreateRenderTexture("SSAO", vSSAOSize,ePixelFormat_RGB);
-			mpSSAOBlurTexture = CreateRenderTexture("SSAOBlur", vSSAOSize,ePixelFormat_RGB);
+			// // Textures
+			// mpSSAOTexture = CreateRenderTexture("SSAO", vSSAOSize,ePixelFormat_RGB);
+			// mpSSAOBlurTexture = CreateRenderTexture("SSAOBlur", vSSAOSize,ePixelFormat_RGB);
 
-			// //Frame buffers
+			// // //Frame buffers
 
-			mpSSAOBuffer = mpGraphics->CreateFrameBuffer("SSAO");
-			mpSSAOBuffer->SetTexture2D(0,mpSSAOTexture);
-			mpSSAOBuffer->CompileAndValidate();
+			// mpSSAOBuffer = mpGraphics->CreateFrameBuffer("SSAO");
+			// mpSSAOBuffer->SetTexture2D(0,mpSSAOTexture);
+			// mpSSAOBuffer->CompileAndValidate();
 
-			mpSSAOBlurBuffer = mpGraphics->CreateFrameBuffer("SSAOBlur");
-			mpSSAOBlurBuffer->SetTexture2D(0,mpSSAOBlurTexture);
-			mpSSAOBlurBuffer->CompileAndValidate();
+			// mpSSAOBlurBuffer = mpGraphics->CreateFrameBuffer("SSAOBlur");
+			// mpSSAOBlurBuffer->SetTexture2D(0,mpSSAOBlurTexture);
+			// mpSSAOBlurBuffer->CompileAndValidate();
 
-			//Scatter disk
-			mpSSAOScatterDisk = mpGraphics->CreateTexture("SSAOScatterDisk", eTextureType_2D,eTextureUsage_Normal);
-			mpGraphics->GetTextureCreator()->GenerateScatterDiskMap2D(mpSSAOScatterDisk,4, mlSSAONumOfSamples, false);
+			// //Scatter disk
+			// mpSSAOScatterDisk = mpGraphics->CreateTexture("SSAOScatterDisk", eTextureType_2D,eTextureUsage_Normal);
+			// mpGraphics->GetTextureCreator()->GenerateScatterDiskMap2D(mpSSAOScatterDisk,4, mlSSAONumOfSamples, false);
 
 
-			/////////////////////////////////////
-			// Programs
-			cParserVarContainer programVars;
+			// /////////////////////////////////////
+			// // Programs
+			// cParserVarContainer programVars;
 
-			//Program for unpacking depth to a lower resolution texture
-			if(mGBufferType == eDeferredGBuffer_32Bit)	programVars.Add("Deferred_32bit");
-			else										programVars.Add("Deferred_64bit");
-			programVars.Add("UseUv");
-			mpUnpackDepthProgram = mpGraphics->CreateGpuProgramFromShaders("UnpackDepth","deferred_base_vtx.glsl", "deferred_unpack_depth_frag.glsl",&programVars);
-			if(mpUnpackDepthProgram)
-			{
-				mpUnpackDepthProgram->GetVariableAsId("afNegInvFarPlane",kVar_afNegInvFarPlane);
-			}
-			programVars.Clear();
+			// //Program for unpacking depth to a lower resolution texture
+			// if(mGBufferType == eDeferredGBuffer_32Bit)	programVars.Add("Deferred_32bit");
+			// else										programVars.Add("Deferred_64bit");
+			// programVars.Add("UseUv");
+			// mpUnpackDepthProgram = mpGraphics->CreateGpuProgramFromShaders("UnpackDepth","deferred_base_vtx.glsl", "deferred_unpack_depth_frag.glsl",&programVars);
+			// if(mpUnpackDepthProgram)
+			// {
+			// 	mpUnpackDepthProgram->GetVariableAsId("afNegInvFarPlane",kVar_afNegInvFarPlane);
+			// }
+			// programVars.Clear();
 
-			//SSAO Blur programs (vertical and horizontal)
-			programVars.Add("BlurHorisontal");
-			mpSSAOBlurProgram[0] = mpGraphics->CreateGpuProgramFromShaders("SSAOBlurHori","deferred_ssao_blur_vtx.glsl", "deferred_ssao_blur_frag.glsl",&programVars);
-			programVars.Clear();
-			mpSSAOBlurProgram[1] = mpGraphics->CreateGpuProgramFromShaders("SSAOBlurVert","deferred_ssao_blur_vtx.glsl", "deferred_ssao_blur_frag.glsl",&programVars);
+			// //SSAO Blur programs (vertical and horizontal)
+			// programVars.Add("BlurHorisontal");
+			// mpSSAOBlurProgram[0] = mpGraphics->CreateGpuProgramFromShaders("SSAOBlurHori","deferred_ssao_blur_vtx.glsl", "deferred_ssao_blur_frag.glsl",&programVars);
+			// programVars.Clear();
+			// mpSSAOBlurProgram[1] = mpGraphics->CreateGpuProgramFromShaders("SSAOBlurVert","deferred_ssao_blur_vtx.glsl", "deferred_ssao_blur_frag.glsl",&programVars);
 
-			for(int i=0; i<2; ++i)
-			{
-				if(mpSSAOBlurProgram[i])
-				{
-					mpSSAOBlurProgram[i]->GetVariableAsId("afFarPlane",kVar_afFarPlane);
-				}
-			}
+			// for(int i=0; i<2; ++i)
+			// {
+			// 	if(mpSSAOBlurProgram[i])
+			// 	{
+			// 		mpSSAOBlurProgram[i]->GetVariableAsId("afFarPlane",kVar_afFarPlane);
+			// 	}
+			// }
 
-			//SSAO Rendering
-			programVars.Add("SampleNumDiv2", mlSSAONumOfSamples / 2);
-			mpSSAORenderProgram = mpGraphics->CreateGpuProgramFromShaders(	"SSAORender","deferred_ssao_render_vtx.glsl",
-																			"deferred_ssao_render_frag.glsl",&programVars);
-			if(mpSSAORenderProgram)
-			{
-				mpSSAORenderProgram->GetVariableAsId("afFarPlane",kVar_afFarPlane);
-				mpSSAORenderProgram->GetVariableAsId("afScatterLengthMul", kVar_afScatterLengthMul);
-				mpSSAORenderProgram->GetVariableAsId("avScatterLengthLimits", kVar_avScatterLengthLimits);
-				mpSSAORenderProgram->GetVariableAsId("avScreenSize", kVar_avScreenSize);
-				mpSSAORenderProgram->GetVariableAsId("afDepthDiffMul", kVar_afDepthDiffMul);
-				mpSSAORenderProgram->GetVariableAsId("afSkipEdgeLimit", kVar_afSkipEdgeLimit);
-			}
+			// //SSAO Rendering
+			// programVars.Add("SampleNumDiv2", mlSSAONumOfSamples / 2);
+			// mpSSAORenderProgram = mpGraphics->CreateGpuProgramFromShaders(	"SSAORender","deferred_ssao_render_vtx.glsl",
+			// 																"deferred_ssao_render_frag.glsl",&programVars);
+			// if(mpSSAORenderProgram)
+			// {
+			// 	mpSSAORenderProgram->GetVariableAsId("afFarPlane",kVar_afFarPlane);
+			// 	mpSSAORenderProgram->GetVariableAsId("afScatterLengthMul", kVar_afScatterLengthMul);
+			// 	mpSSAORenderProgram->GetVariableAsId("avScatterLengthLimits", kVar_avScatterLengthLimits);
+			// 	mpSSAORenderProgram->GetVariableAsId("avScreenSize", kVar_avScreenSize);
+			// 	mpSSAORenderProgram->GetVariableAsId("afDepthDiffMul", kVar_afDepthDiffMul);
+			// 	mpSSAORenderProgram->GetVariableAsId("afSkipEdgeLimit", kVar_afSkipEdgeLimit);
+			// }
 		}
 
 		////////////////////////////////////
@@ -529,41 +529,41 @@ namespace hpl {
 		}
 		if(mbEdgeSmoothLoaded)
 		{
-			/////////////////////////////////////
-			// Textures and frame buffers
+			// /////////////////////////////////////
+			// // Textures and frame buffers
 
-			// Textures
-			mpEdgeSmooth_LinearDepthTexture = CreateRenderTexture("EdgeSmoothLinearDepth", mvScreenSize,ePixelFormat_RGB16);
-			mpEdgeSmooth_TempAccum = mpGraphics->GetTempFrameBuffer(mvScreenSize,ePixelFormat_RGBA,0)->GetColorBuffer(0)->ToTexture();
+			// // Textures
+			// mpEdgeSmooth_LinearDepthTexture = CreateRenderTexture("EdgeSmoothLinearDepth", mvScreenSize,ePixelFormat_RGB16);
+			// mpEdgeSmooth_TempAccum = mpGraphics->GetTempFrameBuffer(mvScreenSize,ePixelFormat_RGBA,0)->GetColorBuffer(0)->ToTexture();
 
-			//Frame buffers
-			mpEdgeSmooth_LinearDepthBuffer = mpGraphics->CreateFrameBuffer("EdgeSmoothLinearDepth");
-			mpEdgeSmooth_LinearDepthBuffer->SetTexture2D(0,mpEdgeSmooth_LinearDepthTexture);
-			mpEdgeSmooth_LinearDepthBuffer->CompileAndValidate();
+			// //Frame buffers
+			// mpEdgeSmooth_LinearDepthBuffer = mpGraphics->CreateFrameBuffer("EdgeSmoothLinearDepth");
+			// mpEdgeSmooth_LinearDepthBuffer->SetTexture2D(0,mpEdgeSmooth_LinearDepthTexture);
+			// mpEdgeSmooth_LinearDepthBuffer->CompileAndValidate();
 
-			/////////////////////////////////////
-			// Programs
+			// /////////////////////////////////////
+			// // Programs
 
-			cParserVarContainer programVars;
+			// cParserVarContainer programVars;
 
-			//Program for unpacking depth
-			if(mGBufferType == eDeferredGBuffer_32Bit)	programVars.Add("Deferred_32bit");
-			else										programVars.Add("Deferred_64bit");
-			programVars.Add("UseUv");
-			mpEdgeSmooth_UnpackDepthProgram = mpGraphics->CreateGpuProgramFromShaders("EdgeSmoothUnpackDepth","deferred_base_vtx.glsl", "deferred_unpack_depth_frag.glsl",&programVars);
-			if(mpEdgeSmooth_UnpackDepthProgram)
-			{
-				mpEdgeSmooth_UnpackDepthProgram->GetVariableAsId("afNegInvFarPlane",kVar_afNegInvFarPlane);
-			}
-			programVars.Clear();
+			// //Program for unpacking depth
+			// if(mGBufferType == eDeferredGBuffer_32Bit)	programVars.Add("Deferred_32bit");
+			// else										programVars.Add("Deferred_64bit");
+			// programVars.Add("UseUv");
+			// mpEdgeSmooth_UnpackDepthProgram = mpGraphics->CreateGpuProgramFromShaders("EdgeSmoothUnpackDepth","deferred_base_vtx.glsl", "deferred_unpack_depth_frag.glsl",&programVars);
+			// if(mpEdgeSmooth_UnpackDepthProgram)
+			// {
+			// 	mpEdgeSmooth_UnpackDepthProgram->GetVariableAsId("afNegInvFarPlane",kVar_afNegInvFarPlane);
+			// }
+			// programVars.Clear();
 
-			//Program for edge smoothing
-			programVars.Add("UseUv");
-			mpEdgeSmooth_RenderProgram =  mpGraphics->CreateGpuProgramFromShaders("EdgeSmoothRender","deferred_base_vtx.glsl", "deferred_edge_smooth_frag.glsl",&programVars);
-			if(mpEdgeSmooth_RenderProgram)
-			{
-				mpEdgeSmooth_RenderProgram->GetVariableAsId("afFarPlane",kVar_afFarPlane);
-			}
+			// //Program for edge smoothing
+			// programVars.Add("UseUv");
+			// mpEdgeSmooth_RenderProgram =  mpGraphics->CreateGpuProgramFromShaders("EdgeSmoothRender","deferred_base_vtx.glsl", "deferred_edge_smooth_frag.glsl",&programVars);
+			// if(mpEdgeSmooth_RenderProgram)
+			// {
+			// 	mpEdgeSmooth_RenderProgram->GetVariableAsId("afFarPlane",kVar_afFarPlane);
+			// }
 		}
 
 		////////////////////////////////////
@@ -767,76 +767,78 @@ namespace hpl {
 		tRenderableFlag lVisibleFlags= 
 			(mpCurrentSettings->mbIsReflection ? eRenderableFlag_VisibleInReflection : eRenderableFlag_VisibleInNonReflection);
 
-		///////////////////////////
-		//Occlusion testing
-		if(mpCurrentSettings->mbUseOcclusionCulling) // temp use brute force
-		{
-			CheckForVisibleObjectsAddToListAndRenderZ(	mpCurrentSettings->mpVisibleNodeTracker,eObjectVariabilityFlag_All, lVisibleFlags,
-														true, NULL);
+		if(false) {
+			///////////////////////////
+			//Occlusion testing
+			if(mpCurrentSettings->mbUseOcclusionCulling) // temp use brute force
+			{
+				CheckForVisibleObjectsAddToListAndRenderZ(	mpCurrentSettings->mpVisibleNodeTracker,eObjectVariabilityFlag_All, lVisibleFlags,
+															true, NULL);
 
-			AssignAndRenderOcclusionQueryObjects(false, NULL, true);
+				AssignAndRenderOcclusionQueryObjects(false, NULL, true);
 
-			SetupLightsAndRenderQueries();
+				SetupLightsAndRenderQueries();
 
-			mpCurrentRenderList->Compile(	eRenderListCompileFlag_Diffuse |
-											eRenderListCompileFlag_Translucent |
-											eRenderListCompileFlag_Decal |
-											eRenderListCompileFlag_Illumination);
-			if(mbLog) {
-				mpCurrentRenderList->PrintAllObjects();
+				mpCurrentRenderList->Compile(	eRenderListCompileFlag_Diffuse |
+												eRenderListCompileFlag_Translucent |
+												eRenderListCompileFlag_Decal |
+												eRenderListCompileFlag_Illumination);
+				if(mbLog) {
+					mpCurrentRenderList->PrintAllObjects();
+				}
+
 			}
+			///////////////////////////
+			//Brute force
+			else
+			{
+				CheckForVisibleAndAddToList(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static), lVisibleFlags);
+				CheckForVisibleAndAddToList(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Dynamic), lVisibleFlags);
 
-		}
-		///////////////////////////
-		//Brute force
-		else
-		{
-			CheckForVisibleAndAddToList(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static), lVisibleFlags);
-			CheckForVisibleAndAddToList(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Dynamic), lVisibleFlags);
+				mpCurrentRenderList->Compile(	eRenderListCompileFlag_Z |
+												eRenderListCompileFlag_Diffuse |
+												eRenderListCompileFlag_Translucent |
+												eRenderListCompileFlag_Decal |
+												eRenderListCompileFlag_Illumination);
+				if(mbLog)mpCurrentRenderList->PrintAllObjects();
 
-			mpCurrentRenderList->Compile(	eRenderListCompileFlag_Z |
-											eRenderListCompileFlag_Diffuse |
-											eRenderListCompileFlag_Translucent |
-											eRenderListCompileFlag_Decal |
-											eRenderListCompileFlag_Illumination);
-			if(mbLog)mpCurrentRenderList->PrintAllObjects();
-
-			// RenderZ()
-			([&](bool active) {
-				if(!active) {
-					return;
-				}
-				if(!mpCurrentRenderList->ArrayHasObjects(eRenderListType_Z)) {
-					return;
-				}
-				for(auto& obj: mpCurrentRenderList->GetRenderableItems(eRenderListType_Z))
-				{
-					cMaterial *pMaterial = obj->GetMaterial();
-
-					eMaterialRenderMode renderMode = obj->GetCoverageAmount() >= 1 ? eMaterialRenderMode_Z : eMaterialRenderMode_Z_Dissolve;
-					iMaterialType* materialType = pMaterial->GetType();
-					iGpuProgram* program = pMaterial->GetProgram(0, renderMode);
-					iVertexBuffer* vertexBuffer = obj->GetVertexBuffer();
-					if(vertexBuffer == nullptr || program == nullptr || materialType == nullptr) {
+				// RenderZ()
+				([&](bool active) {
+					if(!active) {
 						return;
 					}
+					if(!mpCurrentRenderList->ArrayHasObjects(eRenderListType_Z)) {
+						return;
+					}
+					for(auto& obj: mpCurrentRenderList->GetRenderableItems(eRenderListType_Z))
+					{
+						cMaterial *pMaterial = obj->GetMaterial();
 
-					GraphicsContext::LayoutStream layoutInput;
-					GraphicsContext::ShaderProgram shaderInput;
-					vertexBuffer->GetLayoutStream(layoutInput);
-					materialType->GetShaderData(shaderInput, renderMode, program, pMaterial, obj, this);
-					shaderInput.m_modelTransform = *obj->GetModelMatrixPtr();
+						eMaterialRenderMode renderMode = obj->GetCoverageAmount() >= 1 ? eMaterialRenderMode_Z : eMaterialRenderMode_Z_Dissolve;
+						iMaterialType* materialType = pMaterial->GetType();
+						iGpuProgram* program = pMaterial->GetProgram(0, renderMode);
+						iVertexBuffer* vertexBuffer = obj->GetVertexBuffer();
+						if(vertexBuffer == nullptr || program == nullptr || materialType == nullptr) {
+							return;
+						}
 
-					// GraphicsContext::DrawRequest drawRequest {target, layoutInput, shaderInput};
-					// drawRequest.m_width = mvScreenSize.x;
-					// drawRequest.m_height = mvScreenSize.y;
-					// context.Draw(shaderInput, layoutInput, vertexBuffer);
-				}
-			})(true);
+						GraphicsContext::LayoutStream layoutInput;
+						GraphicsContext::ShaderProgram shaderInput;
+						vertexBuffer->GetLayoutStream(layoutInput);
+						materialType->GetShaderData(shaderInput, renderMode, program, pMaterial, obj, this);
+						shaderInput.m_modelTransform = *obj->GetModelMatrixPtr();
 
-			AssignAndRenderOcclusionQueryObjects(false, NULL, true);
+						// GraphicsContext::DrawRequest drawRequest {target, layoutInput, shaderInput};
+						// drawRequest.m_width = mvScreenSize.x;
+						// drawRequest.m_height = mvScreenSize.y;
+						// context.Draw(shaderInput, layoutInput, vertexBuffer);
+					}
+				})(true);
 
-			SetupLightsAndRenderQueries();
+				AssignAndRenderOcclusionQueryObjects(false, NULL, true);
+
+				SetupLightsAndRenderQueries();
+			}
 		}
 
 		// Render GBuffer to m_gBuffer_full old method is RenderGbuffer(context);
@@ -1645,7 +1647,7 @@ namespace hpl {
 		SetChannelMode(eMaterialChannelMode_None);
 
 		SetTextureRange(NULL,0);
-		SetProgram(mpDepthOnlyProgram);
+		// SetProgram(mpDepthOnlyProgram);
 
 		///////////////////////////////
 		//Iterate all lights in render list

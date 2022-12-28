@@ -1,5 +1,5 @@
 
-$input v_position, v_boxRay, v_texcoord0
+$input v_position, v_boxRay
 
 #include <common.sh>
 
@@ -36,7 +36,7 @@ float GetPlaneIntersection(vec3 avPlaneNormal, float afNegPlaneDist, float afFin
 
 void main()
 {
-    vec4 vDepthVal = texture2D(s_depthMap, v_texcoord0.xy);
+    vec4 vDepthVal = texture2D(s_depthMap, gl_FragCoord.xy);
     float fDepth = -UnpackVec3ToFloat(vDepthVal.xyz) * afNegFarPlane;
 
     if(0.0 < u_useOutsideBox) {

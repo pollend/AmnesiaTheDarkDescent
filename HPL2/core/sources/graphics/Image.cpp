@@ -139,11 +139,11 @@ namespace hpl
         switch (format)
         {
         case ePixelFormat_Alpha:
-            break;
+            return bgfx::TextureFormat::A8;
         case ePixelFormat_Luminance:
-            break;
+            return bgfx::TextureFormat::R8;
         case ePixelFormat_LuminanceAlpha:
-            break;
+            return bgfx::TextureFormat::RG8;
         case ePixelFormat_RGB:
             return bgfx::TextureFormat::RGB8;
         case ePixelFormat_RGBA:
@@ -151,7 +151,7 @@ namespace hpl
         case ePixelFormat_BGR:
             break;
         case ePixelFormat_BGRA:
-            break;
+            return bgfx::TextureFormat::BGRA8;
         case ePixelFormat_DXT1:
             return bgfx::TextureFormat::BC1;
         case ePixelFormat_DXT2:
@@ -169,25 +169,27 @@ namespace hpl
         case ePixelFormat_Depth32:
             return bgfx::TextureFormat::D32;
         case ePixelFormat_Alpha16:
-            break;
+            return bgfx::TextureFormat::R16F;
         case ePixelFormat_Luminance16:
-            break;
+            return bgfx::TextureFormat::R16F;
         case ePixelFormat_LuminanceAlpha16:
-            break;
+            return bgfx::TextureFormat::RG16F;
         case ePixelFormat_RGB16:
             break;
         case ePixelFormat_RGBA16:
+            return bgfx::TextureFormat::RGBA16F;
             break;
         case ePixelFormat_Alpha32:
+            return bgfx::TextureFormat::R32F;
             break;
         case ePixelFormat_Luminance32:
-            break;
+            return bgfx::TextureFormat::R32F;
         case ePixelFormat_LuminanceAlpha32:
-            break;
+            return bgfx::TextureFormat::RG32F;
         case ePixelFormat_RGB32:
             break;
         case ePixelFormat_RGBA32:
-            break;
+            return bgfx::TextureFormat::RGBA32F;
         default:
             break;
         }

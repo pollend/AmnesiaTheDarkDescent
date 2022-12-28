@@ -41,13 +41,6 @@ namespace hpl {
 	#define kVar_afBlurSize			2
 
 
-
-	//////////////////////////////////////////////////////////////////////////
-	// POST EFFECT BASE
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
 	cPostEffectType_Bloom::cPostEffectType_Bloom(cGraphics *apGraphics, cResources *apResources) : iPostEffectType("Bloom",apGraphics,apResources)
 	{
 		///////////////////////////
@@ -93,14 +86,6 @@ namespace hpl {
 		return pEffect;
 	}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// POST EFFECT
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
 	cPostEffect_Bloom::cPostEffect_Bloom(cGraphics *apGraphics, cResources *apResources, iPostEffectType *apType) : iPostEffect(apGraphics,apResources,apType)
 	{
 		cVector2l vSize = mpLowLevelGraphics->GetScreenSizeInt();
@@ -115,21 +100,15 @@ namespace hpl {
 		mpBloomType = static_cast<cPostEffectType_Bloom*>(mpType);
 	}
 
-	//-----------------------------------------------------------------------
-
 	cPostEffect_Bloom::~cPostEffect_Bloom()
 	{
 
 	}
 
-	//-----------------------------------------------------------------------
-
 	void cPostEffect_Bloom::OnSetParams()
 	{
 
 	}
-
-	//-----------------------------------------------------------------------
 
 	void cPostEffect_Bloom::RenderEffect(GraphicsContext& context, Image& input, RenderTarget& target) {
 

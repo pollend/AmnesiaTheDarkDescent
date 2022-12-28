@@ -39,7 +39,7 @@ namespace hpl
 
     private:
         absl::InlinedVector<std::shared_ptr<Image>, 7> m_images;
-        bgfx::FrameBufferHandle m_buffer;
+        bgfx::FrameBufferHandle m_buffer = BGFX_INVALID_HANDLE;
     };
 
 } // namespace hpl

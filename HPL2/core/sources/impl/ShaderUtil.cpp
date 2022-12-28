@@ -34,7 +34,7 @@ namespace hpl
         }
 
         bx::debugPrintf("Failed to load %s.", _filePath);
-        return NULL;
+        return nullptr;
     }
 
     bgfx::ShaderHandle CreateShaderHandleFromFile(const tWString& asFile)
@@ -120,7 +120,7 @@ namespace hpl
             BX_ASSERT(false, "You should not be here!");
             break;
         }
-        char filePath[1024] = { 0 };
+        char filePath[1024] = { '\0'};
         bx::strCopy(filePath, BX_COUNTOF(filePath), shaderPath);
         bx::strCat(filePath, BX_COUNTOF(filePath), name);
         bx::strCat(filePath, BX_COUNTOF(filePath), ".bin");
