@@ -1,1 +1,0 @@
-python tools/generate_combo.py --output ./resource/combo_deferred --input ./resource/combo_deferred/vs_deferred_base.txt --name vs_deferred_base --features UseFog UseUvAnimation UseRefraction UseNormalMapping UseEnvMap UseDiffuseMap UseCubeMapAlpha UseScreenNormal

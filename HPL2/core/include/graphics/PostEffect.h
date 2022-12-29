@@ -94,9 +94,6 @@ namespace hpl {
 		iPostEffect(cGraphics *apGraphics, cResources *apResources, iPostEffectType *apType);
 		virtual ~iPostEffect();
 
-		[[deprecated("replaced with RenderEffect")]];
-		iTexture* Render(cPostEffectComposite *apComposite, iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer, bool abLastEffect);
-		
 		virtual void RenderEffect(GraphicsContext& context, Image& input, RenderTarget& target) {};
 
 		/** SetDisabled - Method to disable the Effect completely, meaning IsActive will always return false even
@@ -119,20 +116,6 @@ namespace hpl {
 		virtual void OnSetActive(bool abX){}
 		virtual void OnSetParams()=0;
 		virtual iPostEffectParams *GetTypeSpecificParams()=0;
-		virtual iTexture* RenderEffect(iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer) =0;
-
-		/**
-		 * Very important! Only set this if the contents of the final buffer does not matter!
-		 * This function will set the frame buffer if the post effect is last!
-		 */
-		void SetFinalFrameBuffer(iFrameBuffer *apOutputBuffer);
-
-		void GetTextureUvPosAndSize(const cVector2f& avTexSize,cVector2f& avUvPos,  cVector2f& avUvSize);
-
-		void SetFrameBuffer(iFrameBuffer *apFrameBuffer);
-		void DrawQuad(	const cVector3f& avPos,  const cVector2f& avSize, iTexture *apTexture, bool abFlipY);
-		void DrawQuad(	const cVector3f& avPos,  const cVector2f& avSize, iTexture *apTexture0, iTexture *apTexture1,
-						bool abFlipY0,bool abFlipY1);
 
 		cGraphics *mpGraphics;
 		cResources *mpResources;

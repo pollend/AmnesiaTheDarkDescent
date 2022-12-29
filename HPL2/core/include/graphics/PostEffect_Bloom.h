@@ -63,9 +63,6 @@ namespace hpl {
 
 		bgfx::UniformHandle m_u_rgbToIntensity;
 		bgfx::UniformHandle m_u_param;
-
-		iGpuProgram *mpBlurProgram[2];
-		iGpuProgram *mpBloomProgram;
 	};
 
 	//------------------------------------------
@@ -77,12 +74,10 @@ namespace hpl {
 		~cPostEffect_Bloom();
 
 	private:
-		void OnSetParams();
-		iPostEffectParams *GetTypeSpecificParams() { return &mParams; }
+		virtual void OnSetParams() override;
+		virtual iPostEffectParams *GetTypeSpecificParams() override { return &mParams; }
 		virtual void RenderEffect(GraphicsContext& context, Image& input, RenderTarget& target) override;
 
-		iTexture* RenderEffect(iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer);
-		
 		std::array<RenderTarget, 2> m_blurTarget;
 
 		cPostEffectType_Bloom *mpBloomType;

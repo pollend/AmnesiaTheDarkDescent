@@ -23,10 +23,12 @@
 
 #include "scene/Scene.h"
 #include "scene/World.h"
+#include <memory>
 
 namespace hpl {
 
-	cViewport::cViewport(cScene *apScene)
+	cViewport::cViewport(cScene *apScene) :
+		mRenderTarget(std::shared_ptr<RenderViewport>(new RenderViewport()))
 	{
 		mpScene = apScene;
 

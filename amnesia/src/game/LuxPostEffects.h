@@ -23,8 +23,7 @@
 //----------------------------------------------
 
 #include "LuxBase.h"
-
-//----------------------------------------
+#include <bx/debug.h>
 
 class iLuxPostEffect : public iPostEffect
 {
@@ -41,7 +40,7 @@ protected:
 
 
 //----------------------------------------
-
+//TODO: need to migrate this to GraphicsContext
 class cLuxPostEffect_Insanity : public iLuxPostEffect
 {
 public:
@@ -53,9 +52,13 @@ public:
 	void SetWaveAlpha(float afX){ mfWaveAlpha = afX;}
 	void SetZoomAlpha(float afX){ mfZoomAlpha = afX;}
 	void SetWaveSpeed(float afX){ mfWaveSpeed = afX;}
+	
+	virtual void RenderEffect(GraphicsContext& context, Image& input, RenderTarget& target) override {
+		BX_ASSERT(false, "Not implemented");
+	}
 
 private:
-	iTexture* RenderEffect(iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer);
+	// iTexture* RenderEffect(iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer);
 
 	iGpuProgram *mpProgram;
 	std::vector<iTexture*> mvAmpMaps;

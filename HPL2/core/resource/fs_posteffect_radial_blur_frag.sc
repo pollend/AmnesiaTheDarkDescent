@@ -1,4 +1,3 @@
-
 #include <common.sh>
 
 SAMPLER2D(s_diffuseMap, 0);

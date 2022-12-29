@@ -61,11 +61,13 @@ namespace hpl {
             images->Invalidate();
             images->Initialize(desc);
         }
-        absl::InlinedVector<std::shared_ptr<Image>, 7> result;
-        auto targets = m_renderTarget.GetImages();
-        result.insert(result.begin(), targets.begin(), targets.end());
-        m_renderTarget.Invalidate();
-        m_renderTarget.Initialize(absl::MakeSpan(result));
+        if(!m_renderTarget.GetImages().empty()) {
+            absl::InlinedVector<std::shared_ptr<Image>, 7> result;
+            auto targets = m_renderTarget.GetImages();
+            result.insert(result.begin(), targets.begin(), targets.end());
+            m_renderTarget.Invalidate();
+            m_renderTarget.Initialize(absl::MakeSpan(result));
+        }
     }
 
     const bool RenderViewport::IsValid() const {

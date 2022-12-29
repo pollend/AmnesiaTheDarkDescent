@@ -100,50 +100,50 @@ void cLuxPostEffect_Insanity::Update(float afTimeStep)
 //-----------------------------------------------------------------------
 
 
-iTexture* cLuxPostEffect_Insanity::RenderEffect(iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer)
-{
-	/////////////////////////
-	// Init render states
-	mpCurrentComposite->SetFlatProjection();
-	mpCurrentComposite->SetBlendMode(eMaterialBlendMode_None);
-	mpCurrentComposite->SetChannelMode(eMaterialChannelMode_RGBA);
+// iTexture* cLuxPostEffect_Insanity::RenderEffect(iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer)
+// {
+// 	/////////////////////////
+// 	// Init render states
+// 	mpCurrentComposite->SetFlatProjection();
+// 	mpCurrentComposite->SetBlendMode(eMaterialBlendMode_None);
+// 	mpCurrentComposite->SetChannelMode(eMaterialChannelMode_RGBA);
 
-	/////////////////////////
-	// Render the to final buffer
-	// This function sets to frame buffer if post effect is last!
-	SetFinalFrameBuffer(apFinalTempBuffer);
+// 	/////////////////////////
+// 	// Render the to final buffer
+// 	// This function sets to frame buffer if post effect is last!
+// 	SetFinalFrameBuffer(apFinalTempBuffer);
 
-	mpCurrentComposite->SetTexture(0, apInputTexture);
+// 	mpCurrentComposite->SetTexture(0, apInputTexture);
 
-	int lAmp0 = (int)mfAnimCount;
-	int lAmp1 = (int)(mfAnimCount+1);
-	if(lAmp1 >= (int) mvAmpMaps.size()) lAmp1 = 0;
-	float fAmpT = cMath::GetFraction(mfAnimCount);
+// 	int lAmp0 = (int)mfAnimCount;
+// 	int lAmp1 = (int)(mfAnimCount+1);
+// 	if(lAmp1 >= (int) mvAmpMaps.size()) lAmp1 = 0;
+// 	float fAmpT = cMath::GetFraction(mfAnimCount);
 
-	//Log("AnimCount: %f - %d %d - %f\n", mfAnimCount, lAmp0, lAmp1, fAmpT);
+// 	//Log("AnimCount: %f - %d %d - %f\n", mfAnimCount, lAmp0, lAmp1, fAmpT);
 
-	mpCurrentComposite->SetTexture(1, mvAmpMaps[lAmp0]);
-	mpCurrentComposite->SetTexture(2, mvAmpMaps[lAmp1]);
-	mpCurrentComposite->SetTexture(3, mpZoomMap);
+// 	mpCurrentComposite->SetTexture(1, mvAmpMaps[lAmp0]);
+// 	mpCurrentComposite->SetTexture(2, mvAmpMaps[lAmp1]);
+// 	mpCurrentComposite->SetTexture(3, mpZoomMap);
 
-	mpCurrentComposite->SetProgram(mpProgram);
-	if(mpProgram)
-	{
-		mpProgram->SetFloat(kVar_afAlpha, 1.0f);
-		mpProgram->SetFloat(kVar_afT, mfT);
-		mpProgram->SetVec2f(kVar_avScreenSize, mpLowLevelGraphics->GetScreenSizeFloat());
-		mpProgram->SetFloat(kVar_afAmpT, fAmpT);
-		mpProgram->SetFloat(kVar_afWaveAlpha, mfWaveAlpha);
-		mpProgram->SetFloat(kVar_afZoomAlpha, mfZoomAlpha);
-	}
+// 	mpCurrentComposite->SetProgram(mpProgram);
+// 	if(mpProgram)
+// 	{
+// 		mpProgram->SetFloat(kVar_afAlpha, 1.0f);
+// 		mpProgram->SetFloat(kVar_afT, mfT);
+// 		mpProgram->SetVec2f(kVar_avScreenSize, mpLowLevelGraphics->GetScreenSizeFloat());
+// 		mpProgram->SetFloat(kVar_afAmpT, fAmpT);
+// 		mpProgram->SetFloat(kVar_afWaveAlpha, mfWaveAlpha);
+// 		mpProgram->SetFloat(kVar_afZoomAlpha, mfZoomAlpha);
+// 	}
 
 
-	DrawQuad(0,1,apInputTexture, true);
+// 	DrawQuad(0,1,apInputTexture, true);
 
-	mpCurrentComposite->SetTextureRange(NULL, 1);
+// 	mpCurrentComposite->SetTextureRange(NULL, 1);
 
-	return apFinalTempBuffer->GetColorBuffer(0)->ToTexture();
-}
+// 	return apFinalTempBuffer->GetColorBuffer(0)->ToTexture();
+// }
 
 
 //-----------------------------------------------------------------------

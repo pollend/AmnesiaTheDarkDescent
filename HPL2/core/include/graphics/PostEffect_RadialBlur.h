@@ -79,8 +79,6 @@ namespace hpl {
 		void OnSetParams();
 		iPostEffectParams *GetTypeSpecificParams() { return &mParams; }
 
-		iTexture* RenderEffect(iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer);
-
 		void RenderBlur(iTexture *apInputTex);
 
 		cPostEffectType_RadialBlur *mpRadialBlurType;

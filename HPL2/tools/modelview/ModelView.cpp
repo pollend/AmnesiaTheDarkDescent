@@ -17,6 +17,7 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "graphics/ImageResource.h"
 #include "hpl.h"
 
 #include "../../tests/Common/SimpleCamera.h"
@@ -512,9 +513,8 @@ public:
 
 		/////////////////////////////////
 		// Load extra
-
-		mpTexDiffuseNull = gpEngine->GetResources()->GetTextureManager()->Create2D("modelview_diffuse_null.jpg",true);
-		mpTexNMapNull = gpEngine->GetResources()->GetTextureManager()->Create2D("modelview_nmap_null.jpg",true);
+		m_diffuseNull = gpEngine->GetResources()->GetTextureManager()->Create2DImage("modelview_diffuse_null.jpg",true);
+		m_texNMapNull = gpEngine->GetResources()->GetTextureManager()->Create2DImage("modelview_nmap_null.jpg",true);
 
 		/////////////////////////////////
 		// Init variables
@@ -1799,9 +1799,18 @@ public:
 			}
 			else
 			{
-				if(texType == eMaterialTexture_Diffuse)		pMat->SetTexture(texType,mpTexDiffuseNull);
-				else if(texType == eMaterialTexture_NMap)	pMat->SetTexture(texType,mpTexNMapNull);
-				else										pMat->SetTexture(texType,NULL);
+				switch (texType)
+				{
+				case eMaterialTexture_Diffuse:
+					pMat->SetImage(texType, m_diffuseNull);
+					break;
+				case eMaterialTexture_NMap:
+					pMat->SetImage(texType, m_texNMapNull);
+					break;
+				default:
+					pMat->SetImage(texType, NULL);
+					break;
+				}
 			}
 
 			pMat->Compile();
@@ -2246,8 +2255,8 @@ public:
 	cWidgetComboBox *mpCBAnimations;
 
 	std::vector<cMaterialData> mvMaterialData;
-	iTexture *mpTexDiffuseNull;
-	iTexture *mpTexNMapNull;
+	ImageResource* m_diffuseNull;
+	ImageResource* m_texNMapNull;
 };
 
 //-----------------------------------------------------------------------

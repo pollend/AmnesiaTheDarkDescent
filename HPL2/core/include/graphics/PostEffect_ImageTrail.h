@@ -20,6 +20,7 @@
 #ifndef HPL_POSTEFFECT_IMAGE_TRAIL_H
 #define HPL_POSTEFFECT_IMAGE_TRAIL_H
 
+#include "bgfx/bgfx.h"
 #include "graphics/PostEffect.h"
 
 namespace hpl {
@@ -52,11 +53,9 @@ namespace hpl {
 		iPostEffect *CreatePostEffect(iPostEffectParams *apParams);
 
 	private:
-		iGpuProgram *mpProgram;
-
-		bgfx::ProgramHandle m_program;
-		bgfx::UniformHandle m_u_uniform;
-		bgfx::UniformHandle m_s_diffuseMap;
+		bgfx::ProgramHandle m_program = BGFX_INVALID_HANDLE;
+		bgfx::UniformHandle m_u_param = BGFX_INVALID_HANDLE;
+		bgfx::UniformHandle m_s_diffuseMap = BGFX_INVALID_HANDLE;
 	};
 
 	//------------------------------------------
@@ -69,17 +68,14 @@ namespace hpl {
 
 		virtual void RenderEffect(GraphicsContext& context, Image& input, RenderTarget& target) override;
 		
-		void Reset();
+		virtual void Reset() override;
 
 	private:
-		void OnSetActive(bool abX);
-		void OnSetParams();
+		virtual void OnSetActive(bool abX) override;
+		virtual void OnSetParams() override;
 		iPostEffectParams *GetTypeSpecificParams() { return &mParams; }
 
-		iTexture* RenderEffect(iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer);
-
-		iFrameBuffer *mpAccumBuffer;
-		iTexture *mpAccumTexture;
+		RenderTarget m_accumulationBuffer;
 
 		cPostEffectType_ImageTrail *mpImageTrailType;
 		cPostEffectParams_ImageTrail mParams;

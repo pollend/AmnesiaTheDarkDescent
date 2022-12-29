@@ -1,0 +1,6 @@
+<Material>
+  <Main Type="SolidDiffuse" PhysicsMaterial="Rock" DepthTest="True" HeightMapScale="0.04" HeightMapBias="0"/>
+  <TextureUnits>
+    <Diffuse File="editor_primitive_plane.jpg" Type="2D" Mipmaps="true" Wrap="Repeat" AnimMode="" AnimFrameTime="" />
+  </TextureUnits>
+</Material>

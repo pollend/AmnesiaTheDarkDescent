@@ -21,6 +21,7 @@ shaders = [
     { "type" : ShaderType.FS, "inout" : "resource/vs_post_effect.io",                  "input": "resource/fs_posteffect_radial_blur_frag.sc", "includes": ["resource"]},
     { "type" : ShaderType.FS, "inout" : "resource/vs_post_effect.io",                  "input": "resource/fs_posteffect_bloom_blur.sc", "includes": ["resource"]},
     { "type" : ShaderType.FS, "inout" : "resource/vs_post_effect.io",                  "input": "resource/fs_posteffect_bloom_add.sc", "includes": ["resource"]},
+    { "type" : ShaderType.FS, "inout" : "resource/vs_post_effect.io",                  "input": "resource/fs_posteffect_color_conv.sc", "includes": ["resource"]},
 # other
     { "type" : ShaderType.VS, "inout" : "resource/vs_basic_solid_diffuse.io",          "input": "resource/vs_basic_solid_diffuse.sc" , "includes": ["resource"]},
     { "type" : ShaderType.VS, "inout" : "resource/vs_basic_solid_illumination.io",     "input": "resource/vs_basic_solid_illumination.sc", "includes": ["resource"]},

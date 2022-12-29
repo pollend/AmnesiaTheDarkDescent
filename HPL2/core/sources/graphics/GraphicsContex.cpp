@@ -297,7 +297,9 @@ namespace hpl
     }
 
     void GraphicsContext::CopyTextureToFrameBuffer(Image& image, RenderTarget& target) {
-        
+        auto view = StartPass("copy to framebuffer");
+        // TODO need to use a shader to copy the texture to the framebuffer when not supported
+        bgfx::blit(view, target.GetImage().lock()->GetHandle(), 0, 0, image.GetHandle());
     }
 
     void GraphicsContext::Quad(GraphicsContext::LayoutStream& input, const cVector3f& pos, const cVector2f& size, const cVector2f& uv0, const cVector2f& uv1) {

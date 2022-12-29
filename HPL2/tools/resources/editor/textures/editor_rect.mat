@@ -1,0 +1,7 @@
+<Material>
+  <Main Type="SolidDiffuse" PhysicsMaterial="Default" UseAlpha="False" DepthTest="True" HeightMapScale="0.07" HeightMapBias="0"/>
+  <TextureUnits>
+    <Diffuse File="editor_rect.tga" Compress="false" Type="2D" Mipmaps="true" Wrap="Repeat" />
+    <NMap File="editor_rect_nrm.jpg" Type="2D" Mipmaps="true" Wrap="Repeat" />
+  </TextureUnits>
+</Material>

@@ -105,7 +105,7 @@ namespace hpl {
 		auto& programMap = mvProgramSets[alMainMode];
 		auto it = programMap.find(alFlags);
 		// auto it = mvProgramSets[alMainMode].find(alFlags);
-		if(it != programMap.end())
+		if(it == programMap.end())
 		{
 			pProgData = hplNew(cProgramComboProgram, () );
 			tString sProgramName = GenerateProgramName(alMainMode, alFlags);
