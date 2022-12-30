@@ -56,29 +56,29 @@
 
 //--------------------------------------------------------
 
-cEditorWindowViewport* cEditorWindowFactory::CreateWindowViewport(iEditorBase* apEditor,
-																  iFrameBuffer* apFB,
-																  const cVector2l& avFBViewPos,
-																  const cVector2l& avFBViewSize,
-																  const cVector3f& avPosition,
-																  const cVector2f& avSize,
-																  bool abAddViewMenu)
-{
-	////////////////////////////////////////
-	// Create viewport and set parameters
-	cEditorWindowViewport* pViewport = hplNew(cEditorWindowViewport,(apEditor, apFB, abAddViewMenu));
-	pViewport->SetEngineViewportPositionAndSize(avFBViewPos,avFBViewSize);
+// cEditorWindowViewport* cEditorWindowFactory::CreateWindowViewport(iEditorBase* apEditor,
+// 																  iFrameBuffer* apFB,
+// 																  const cVector2l& avFBViewPos,
+// 																  const cVector2l& avFBViewSize,
+// 																  const cVector3f& avPosition,
+// 																  const cVector2f& avSize,
+// 																  bool abAddViewMenu)
+// {
+// 	////////////////////////////////////////
+// 	// Create viewport and set parameters
+// 	cEditorWindowViewport* pViewport = hplNew(cEditorWindowViewport,(apEditor, apFB, abAddViewMenu));
+// 	pViewport->SetEngineViewportPositionAndSize(avFBViewPos,avFBViewSize);
 
-	pViewport->Init();
+// 	pViewport->Init();
 
-	pViewport->SetPosition(avPosition);
-	pViewport->SetSize(avSize);
-	pViewport->UpdateViewport();
+// 	pViewport->SetPosition(avPosition);
+// 	pViewport->SetSize(avSize);
+// 	pViewport->UpdateViewport();
 
-	apEditor->AddWindow(pViewport);
+// 	apEditor->AddWindow(pViewport);
 
-	return pViewport;
-}
+// 	return pViewport;
+// }
 
 //--------------------------------------------------------
 

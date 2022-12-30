@@ -70,6 +70,7 @@
 #include "gui/WidgetGroup.h"
 #include "gui/WidgetDummy.h"
 
+#include <memory>
 #include <stdarg.h>
 #include <stdlib.h>
 
@@ -127,8 +128,8 @@ namespace hpl {
 		}
 
 		//Texture
-		iTexture *pTextureA = aObjectA.mpGfx->mvTextures[0];
-		iTexture *pTextureB = aObjectB.mpGfx->mvTextures[0];
+		Image* pTextureA = aObjectA.mpGfx->mvTextures[0];
+		Image* pTextureB = aObjectB.mpGfx->mvTextures[0];
 		if(pTextureA != pTextureB)
 		{
 			return pTextureA > pTextureB;
@@ -1572,12 +1573,12 @@ namespace hpl {
 		tGuiRenderObjectSetIt it = setRenderObjects.begin();
 
 		iGuiMaterial *pLastMaterial = NULL;
-		iTexture *pLastTexture = NULL;
+		Image* pLastTexture = NULL;
 		cGuiClipRegion *pLastClipRegion = NULL;
 
 		cGuiGfxElement *pGfx = it->mpGfx;
 		iGuiMaterial *pMaterial = it->mpCustomMaterial ? it->mpCustomMaterial : pGfx->mpMaterial;
-		iTexture *pTexture = pGfx->mvTextures[0];
+		Image* pTexture = pGfx->mvTextures[0];
 		cGuiClipRegion *pClipRegion = it->mpClipRegion;
 
 		int lIdxAdd=0;
@@ -1602,8 +1603,9 @@ namespace hpl {
 				SetClipArea(pLowLevelGraphics,pClipRegion);
 			}
 
-			pLowLevelGraphics->SetTexture(0,pTexture);
-			if(kLogRender)Log("Texture %d\n",pTexture);
+			//TODO: rework with Image
+			// pLowLevelGraphics->SetTexture(0,pTexture);
+			// if(kLogRender)Log("Texture %d\n",pTexture);
 
 			//////////////////////////
 			//Iterate for all with same texture and material

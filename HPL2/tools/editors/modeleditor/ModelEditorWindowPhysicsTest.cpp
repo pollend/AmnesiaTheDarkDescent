@@ -21,6 +21,7 @@
 
 #include "ModelEditor.h"
 #include "ModelEditorWorld.h"
+#include "math/MathTypes.h"
 
 #include <algorithm>
 
@@ -500,7 +501,8 @@ void cModelEditorWindowPhysicsTest::OnInitLayout()
 	mpInpBuoyancyAngularViscosity->SetValue(mfBuoyancyAngularViscosity, false);
 	mpInpBuoyancyLinearViscosity->SetValue(mfBuoyancyLinearViscosity, false);
 
-	SetEngineViewportPositionAndSize(0,mpFB->GetSize());
+	auto image = m_target->GetImage();
+	SetEngineViewportPositionAndSize(0,cVector2l(image->GetWidth(), image->GetHeight()));
 	CreateGuiViewport(mpBGFrame);
 	SetGuiViewportPos(cVector3f(2,55,0.1f));
 	SetGuiViewportSize(cVector2f(mpBGFrame->GetSize() - cVector2f(4,58)));

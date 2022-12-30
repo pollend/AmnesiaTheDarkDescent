@@ -21,6 +21,7 @@
 #include "graphics/Texture.h"
 #include "graphics/FrameSubImage.h"
 #include "resources/ImageManager.h"
+#include <memory>
 
 namespace hpl {
 
@@ -30,9 +31,9 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	cFrameTexture::cFrameTexture(iTexture *apTex, int alHandle,cImageManager *apImageManager, bool abIsCustom) : iFrameBase()
+	cFrameTexture::cFrameTexture(Image* pTex, int alHandle,cImageManager *apImageManager, bool abIsCustom) : iFrameBase()
 	{
-		mpTexture = apTex;
+		mpTexture = pTex;
 		mlHandle =alHandle;
 
 		mbIsCustom = abIsCustom;
@@ -42,8 +43,9 @@ namespace hpl {
 
 	cFrameTexture::~cFrameTexture()
 	{
-		if(mpTexture) hplDelete(mpTexture);
-		mpTexture = NULL;
+		if(mpTexture) {
+			delete mpTexture;
+		}
 	}
 
 	//-----------------------------------------------------------------------
@@ -54,7 +56,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	iTexture* cFrameTexture::GetTexture()
+	Image* cFrameTexture::GetTexture()
 	{
 		return mpTexture;
 	}
@@ -67,8 +69,8 @@ namespace hpl {
 
 		mlPicCount++;
 
-        const cVector3l& vSourceSize = mpTexture->GetSize();
-		cVector2f vDestPos = cVector2f((float)avPixelPos.x / (float)vSourceSize.x,(float)avPixelPos.y / (float)vSourceSize.y );
+	    cVector2f vSourceSize = cVector2f(mpTexture->GetWidth(),mpTexture->GetHeight());
+        cVector2f vDestPos = cVector2f((float)avPixelPos.x / (float)vSourceSize.x,(float)avPixelPos.y / (float)vSourceSize.y );
 		cVector2f vDestSize = cVector2f((float)avPixelSize.x / (float)vSourceSize.x,(float)avPixelSize.y / (float)vSourceSize.y );
 
 		cFrameSubImage* pImage = hplNew(cFrameSubImage, ("",_W(""),this,NULL,

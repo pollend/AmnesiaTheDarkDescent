@@ -590,7 +590,7 @@ public:
 			mpWorld = gpEngine->GetScene()->CreateWorld("Temp");
 			mpPhysicsWorld = NULL;
 
-			iTexture *pSkyBox = gpEngine->GetResources()->GetTextureManager()->CreateCubeMap("cubemap_evening.dds",false);
+			auto* pSkyBox = gpEngine->GetResources()->GetTextureManager()->CreateCubeMapImage("cubemap_evening.dds",false);
 			if(pSkyBox)
 			{
 				mpWorld->SetSkyBox(pSkyBox,true);
@@ -623,11 +623,12 @@ public:
 		cVector2l vTestWindowSize(400,300);
 		// mpTestFrameBuffer = gpEngine->GetGraphics()->CreateFrameBuffer("");
 		std::array<std::shared_ptr<Image>, 2> images= {
-			std::shared_ptr<Image>( new Image(ImageDescriptor::CreateTexture2D(vTestWindowSize.x, vTestWindowSize.y, false, bgfx::TextureFormat::Enum::RGBA32F))),
-			std::shared_ptr<Image>(new Image(ImageDescriptor::CreateTexture2D(vTestWindowSize.x, vTestWindowSize.y, false, bgfx::TextureFormat::Enum::D24S8)))
+			std::make_shared<Image>(),
+			std::make_shared<Image>()
 		};
-		mpTestFrameBuffer = std::shared_ptr<RenderViewport>(new RenderViewport(
-			RenderTarget(absl::MakeSpan(images)), cVector2l(0,0)));
+		images[0]->Initialize(ImageDescriptor::CreateTexture2D(vTestWindowSize.x, vTestWindowSize.y, false, bgfx::TextureFormat::Enum::RGBA32F));
+		images[0]->Initialize(ImageDescriptor::CreateTexture2D(vTestWindowSize.x, vTestWindowSize.y, false, bgfx::TextureFormat::Enum::D24S8));
+		mpTestFrameBuffer = RenderViewport(std::make_shared<RenderTarget>(absl::MakeSpan(images)), cVector2l(0,0));
 
 		// todo need to work with CreateGfxTexture
 		// mpTestRenderTexture = gpEngine->GetGraphics()->CreateTexture("TestTarget",eTextureType_Rect,eTextureUsage_RenderTarget);
@@ -858,7 +859,7 @@ public:
 		//////////////////////////////////
 		//Add a skybox now for fun!
 		//iTexture *pSkyBox = gpEngine->GetResources()->GetTextureManager()->CreateCubeMap("dds_cubemap_test.dds",false);
-		iTexture *pSkyBox = gpEngine->GetResources()->GetTextureManager()->CreateCubeMap("cubemap_evening.dds",false);
+		Image* pSkyBox = gpEngine->GetResources()->GetTextureManager()->CreateCubeMapImage("cubemap_evening.dds",false);
 		//iTexture *pSkyBox = gpEngine->GetResources()->GetTextureManager()->CreateCubeMap("stevecube",false);
 		if(pSkyBox)
 		{
@@ -1976,7 +1977,7 @@ public:
 	iPhysicsWorld *mpPhysicsWorld;
 	iTexture *mpTestRenderTexture;
 	cViewport *mpTestViewPort;
-	std::shared_ptr<RenderViewport> mpTestFrameBuffer;
+	RenderViewport mpTestFrameBuffer;
 	cGuiGfxElement *mpTestRenderGfx;
 
 	tWStringVec mvPickedFiles;

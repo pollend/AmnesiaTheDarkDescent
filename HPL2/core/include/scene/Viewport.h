@@ -16,10 +16,9 @@
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
+#pragma once
 
-#ifndef HPL_VIEWPORT_H
-#define HPL_VIEWPORT_H
-
+#include "graphics/RenderTarget.h"
 #include "graphics/RenderViewport.h"
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
@@ -76,15 +75,16 @@ namespace hpl {
 		void RemoveGuiSet(cGuiSet *apSet);
 		cGuiSetListIterator GetGuiSetIterator();
 
-		void SetPosition(const cVector2l& avPos){ mRenderTarget->setPosition(avPos);}
-		void SetSize(const cVector2l& avSize){ mRenderTarget->setSize(avSize);}
+		void SetPosition(const cVector2l& avPos){ mRenderTarget.setPosition(avPos);}
+		void SetSize(const cVector2l& avSize){ mRenderTarget.setSize(avSize);}
 
-		const cVector2l GetPosition(){ return mRenderTarget->GetPosition();}
-		const cVector2l GetSize(){ return mRenderTarget->GetSize();}
+		const cVector2l GetPosition(){ return mRenderTarget.GetPosition();}
+		const cVector2l GetSize(){ return mRenderTarget.GetSize();}
 
 		// RenderViewport* GetRenderTarget(){ return &mRenderTarget; }
-		void setRenderViewport(std::shared_ptr<RenderViewport> renderTarget) { mRenderTarget = renderTarget; }
-		std::weak_ptr<RenderViewport> GetRenderViewport() { return mRenderTarget; }
+		void setRenderViewport(RenderViewport renderTarget) { mRenderTarget = renderTarget; }
+		void setRenderTarget(std::shared_ptr<RenderTarget> renderTarget) { mRenderTarget.setRenderTarget(renderTarget); }
+		RenderViewport& GetRenderViewport() { return mRenderTarget; }
 
 		void AddViewportCallback(iViewportCallback *apCallback);
 		void RemoveViewportCallback(iViewportCallback *apCallback);
@@ -108,7 +108,7 @@ namespace hpl {
 		iRenderer *mpRenderer;
 		cPostEffectComposite *mpPostEffectComposite;
 
-		std::shared_ptr<RenderViewport> mRenderTarget;
+		RenderViewport mRenderTarget;
 
 		tViewportCallbackList mlstCallbacks;
 		tRendererCallbackList mlstRendererCallbacks;
@@ -117,7 +117,4 @@ namespace hpl {
 		cRenderSettings *mpRenderSettings;
 	};
 
-	//------------------------------------------
-
 };
-#endif // HPL_VIEWPORT_H

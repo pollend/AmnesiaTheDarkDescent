@@ -2,18 +2,14 @@
 #include "math/MathTypes.h"
 #include <cinttypes>
 #include <graphics/RenderViewport.h>
+#include <bx/debug.h>
 
 namespace hpl {
 
-    RenderViewport::RenderViewport(RenderTarget&& renderTarget, cVector2l position)
-        : m_renderTarget(std::move(renderTarget))
+    RenderViewport::RenderViewport(std::shared_ptr<RenderTarget> renderTarget, cVector2l position, cVector2l size)
+        : m_renderTarget(renderTarget)
         , m_position(position)
-    {
-    }
-
-    RenderViewport::RenderViewport(RenderViewport&& viewport)
-        : m_renderTarget(std::move(viewport.m_renderTarget))
-        , m_position(viewport.m_position)
+        , m_size(size)
     {
     }
 
@@ -26,12 +22,7 @@ namespace hpl {
     RenderViewport::~RenderViewport() {
     }
 
-    void RenderViewport::operator=(RenderViewport&& viewport) {
-        m_renderTarget = std::move(viewport.m_renderTarget);
-        m_position = viewport.m_position;
-    }
-
-    RenderTarget& RenderViewport::GetRenderTarget() {
+    std::shared_ptr<RenderTarget>& RenderViewport::GetRenderTarget() {
         return m_renderTarget;
     }
 
@@ -40,13 +31,7 @@ namespace hpl {
     }
 
     const cVector2l RenderViewport::GetSize() const {
-        auto image = m_renderTarget.GetImage();
-        if(auto img = image.lock()) {
-            auto& desc = img->GetDescriptor();
-            return cVector2l(desc.m_width, desc.m_height);
-        }
-        return cVector2l(0, 0);
-        
+        return m_size;
     }
 
     void RenderViewport::setPosition(const cVector2l& position) {
@@ -54,23 +39,10 @@ namespace hpl {
     }
 
     void RenderViewport::setSize(const cVector2l& size) {
-        for(auto& images: m_renderTarget.GetImages()) {
-            auto desc = images->GetDescriptor();
-            desc.m_width = size.x;
-            desc.m_height = size.y;
-            images->Invalidate();
-            images->Initialize(desc);
-        }
-        if(!m_renderTarget.GetImages().empty()) {
-            absl::InlinedVector<std::shared_ptr<Image>, 7> result;
-            auto targets = m_renderTarget.GetImages();
-            result.insert(result.begin(), targets.begin(), targets.end());
-            m_renderTarget.Invalidate();
-            m_renderTarget.Initialize(absl::MakeSpan(result));
-        }
+        m_size = size;
     }
 
     const bool RenderViewport::IsValid() const {
-        return m_renderTarget.IsValid();
+        return m_renderTarget->IsValid();
     }
 }

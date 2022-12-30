@@ -38,6 +38,7 @@
 #include "graphics/Renderer.h"
 #include "graphics/PostEffectComposite.h"
 #include "graphics/LowLevelGraphics.h"
+#include <bx/debug.h>
 
 #include "sound/Sound.h"
 #include "sound/LowLevelSound.h"
@@ -252,12 +253,15 @@ namespace hpl {
 
 				START_TIMING(RenderPostEffects)
 				// pPostEffectComposite->Render(context, )
-				auto target = pViewPort->GetRenderViewport();
-				if(auto renderViewport = target.lock()) {
-					
+				auto& viewport = pViewPort->GetRenderViewport();
+				auto target = viewport.GetRenderTarget();
+				if(target && target->IsValid()) {
 					pPostEffectComposite->Draw(context,
-						*renderViewport->GetRenderTarget().GetImage().lock(),
-						renderViewport->GetRenderTarget());
+						*target->GetImage(),
+						*target);
+				
+				} else {
+					BX_ASSERT(false, "umm need to correctly handle an empty render target here!");
 				}
 
 				STOP_TIMING(RenderPostEffects)

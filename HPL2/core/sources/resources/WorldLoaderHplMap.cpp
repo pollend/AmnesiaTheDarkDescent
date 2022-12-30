@@ -19,6 +19,7 @@
 
 #include "resources/WorldLoaderHplMap.h"
 
+#include "graphics/Image.h"
 #include "system/String.h"
 #include "system/LowLevelSystem.h"
 #include "system/Platform.h"
@@ -302,7 +303,7 @@ namespace hpl {
 		tString sSkyBoxTexture = pXmlMapData->GetAttributeString("SkyBoxTexture","");
 		if(sSkyBoxTexture!="")
 		{
-			iTexture *pSkyBoxTexture = mpResources->GetTextureManager()->CreateCubeMap(sSkyBoxTexture,false);
+			Image *pSkyBoxTexture = mpResources->GetTextureManager()->CreateCubeMapImage(sSkyBoxTexture,false);
 			if(pSkyBoxTexture) mpCurrentWorld->SetSkyBox(pSkyBoxTexture, true);
 		}
 

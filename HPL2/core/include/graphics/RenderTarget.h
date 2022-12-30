@@ -32,10 +32,10 @@ namespace hpl
 
         const bgfx::FrameBufferHandle GetHandle() const;
         absl::Span<std::shared_ptr<Image>> GetImages();
-        std::weak_ptr<Image> GetImage(size_t index = 0);
+        std::shared_ptr<Image> GetImage(size_t index = 0);
 
         const absl::Span<const std::shared_ptr<Image>> GetImages() const;
-        const std::weak_ptr<Image> GetImage(size_t index = 0) const;
+        const std::shared_ptr<Image> GetImage(size_t index = 0) const;
 
     private:
         absl::InlinedVector<std::shared_ptr<Image>, 7> m_images;

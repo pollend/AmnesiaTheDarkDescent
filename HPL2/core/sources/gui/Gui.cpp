@@ -33,6 +33,7 @@
 #include "resources/ImageManager.h"
 #include "graphics/FrameSubImage.h"
 #include "graphics/FrameBitmap.h"
+#include <graphics/Image.h>
 #include "resources/FileSearcher.h"
 
 #include "system/String.h"
@@ -41,6 +42,7 @@
 
 
 #include "gui/GuiMaterialBasicTypes.h"
+#include <memory>
 
 namespace hpl {
 
@@ -401,8 +403,8 @@ namespace hpl {
 
 		///////////////////
 		// Load texture
-		iTexture *pTexture = mpResources->GetTextureManager()->Create2D(asFile,abMipMaps,aTextureType);
-		if(pTexture==NULL)
+		Image* image = mpResources->GetTextureManager()->Create2DImage(asFile,abMipMaps,aTextureType);
+		if(image==NULL)
 		{
 			Error("Could not load texture '%s'!\n",asFile.c_str());
 			return NULL;
@@ -410,14 +412,14 @@ namespace hpl {
 
 		/////////////////////////////
 		// Create element
-		cGuiGfxElement *pGfxElem = CreateGfxTexture(pTexture,true,aMaterial,aColor,abAddToList);
+		cGuiGfxElement *pGfxElem = CreateGfxTexture(image,true,aMaterial,aColor,abAddToList);
 
 		return pGfxElem;
 	}
 
 	//-----------------------------------------------------------------------
 
-	cGuiGfxElement* cGui::CreateGfxTexture(iTexture *apTexture, bool abAutoDestroyTexture,
+	cGuiGfxElement* cGui::CreateGfxTexture(Image* apTexture, bool abAutoDestroyTexture,
 											eGuiMaterial aMaterial,
 											const cColor& aColor,
 											bool abAddToList,
@@ -426,7 +428,7 @@ namespace hpl {
 	{
 		cGuiGfxElement *pGfxElem = hplNew( cGuiGfxElement, (this) );
 
-		if(apTexture->GetUsage() == eTextureUsage_RenderTarget) pGfxElem->SetFlipUvYAxis(true);
+		// if(apTexture->GetUsage() == eTextureUsage_RenderTarget) pGfxElem->SetFlipUvYAxis(true);
 
 		pGfxElem->SetColor(aColor);
 		pGfxElem->SetMaterial(GetMaterial(aMaterial));

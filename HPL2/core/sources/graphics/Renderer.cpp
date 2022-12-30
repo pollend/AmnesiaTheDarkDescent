@@ -470,7 +470,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void iRenderer::Render(float afFrameTime,cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, std::weak_ptr<RenderViewport> apRenderTarget,
+	void iRenderer::Render(float afFrameTime,cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, const RenderViewport& apRenderTarget,
 							bool abSendFrameBufferToPostEffects,tRendererCallbackList *apCallbackList)
 	{
 		BeginRendering(afFrameTime,apFrustum, apWorld, apSettings,apRenderTarget,abSendFrameBufferToPostEffects,apCallbackList);
@@ -520,7 +520,7 @@ namespace hpl {
 	{
 		if(mpCurrentRenderTarget->mpFrameBuffer)
 		{
-			auto image = m_currentRenderTarget->GetRenderTarget().GetImage();
+			// auto image = m_currentRenderTarget.GetRenderTarget()->GetImage();
 
 			iFrameBufferAttachment *pAttachement = mpCurrentRenderTarget->mpFrameBuffer->GetColorBuffer(0);
             iTexture *pTexture = static_cast<iTexture*>(pAttachement);
@@ -572,7 +572,7 @@ namespace hpl {
 		cFrustum* apFrustum,
 		cWorld* apWorld,
 		cRenderSettings* apSettings,
-		std::weak_ptr<RenderViewport>  apRenderTarget,
+		const RenderViewport&  apRenderTarget,
 		bool abSendFrameBufferToPostEffects,
 		tRendererCallbackList* apCallbackList,
 		bool abAtStartOfRendering)
@@ -2041,7 +2041,7 @@ namespace hpl {
 
 		/////////////////////////
 		//Texture and vertex buffer
-		SetTexture(0,mpCurrentWorld->GetSkyBoxTexture());
+		// SetTexture(0,mpCurrentWorld->GetSkyBoxTexture());
 		SetTextureRange(NULL,1);
 
 		SetVertexBuffer(mpCurrentWorld->GetSkyBoxVertexBuffer());

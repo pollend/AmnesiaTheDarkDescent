@@ -134,6 +134,7 @@ namespace hpl {
 		bool LoadData();
 		void DestroyData();
 
+		virtual Image* getPostEffectTexture() override;
 		iTexture* GetPostEffectTexture();
 
 		iTexture* GetGbufferTexture(int alIdx);

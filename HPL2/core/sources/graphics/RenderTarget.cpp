@@ -56,8 +56,8 @@ namespace hpl
         updateImages.insert(updateImages.end(), images.begin(), images.end());
         for (auto& image : updateImages)
         {
-            auto& descriptor = image->GetDescriptor();
-            BX_ASSERT(descriptor.m_configuration.m_rt != RTType::None, "Image is not a render target");
+            // auto& descriptor = image->GetDescriptor();
+            // BX_ASSERT(descriptor.m_configuration.m_rt != RTType::None, "Image is not a render target");
             handles.push_back(image->GetHandle());
         }
         m_buffer = bgfx::createFrameBuffer(handles.size(), handles.data(), false);
@@ -76,7 +76,7 @@ namespace hpl
         return bgfx::isValid(m_buffer);
     }
 
-    std::weak_ptr<Image> RenderTarget::GetImage(size_t index){
+    std::shared_ptr<Image> RenderTarget::GetImage(size_t index){
         return m_images[index];
     }
 
@@ -85,7 +85,7 @@ namespace hpl
         return absl::MakeSpan(m_images.begin(), m_images.end());
     }
     
-    const std::weak_ptr<Image> RenderTarget::GetImage(size_t index) const {
+    const std::shared_ptr<Image> RenderTarget::GetImage(size_t index) const {
         return m_images[index];
     }
 

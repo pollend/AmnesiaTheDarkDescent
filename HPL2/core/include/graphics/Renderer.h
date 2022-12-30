@@ -253,11 +253,11 @@ namespace hpl {
 
 		// plan to just use the single draw call need to call BeginRendering to setup state
 		// ensure the contents is copied to the RenderViewport
-		virtual void Draw(GraphicsContext& context, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, std::weak_ptr<RenderViewport> apRenderTarget,
+		virtual void Draw(GraphicsContext& context, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, RenderViewport& apRenderTarget,
 					bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList) {} ;
 
 		[[deprecated("Use Draw instead")]]
-		void Render(float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, std::weak_ptr<RenderViewport> apRenderTarget,
+		void Render(float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, const RenderViewport& apRenderTarget,
 					bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList);
 
 		void Update(float afTimeStep);
@@ -269,6 +269,8 @@ namespace hpl {
 
 		virtual bool LoadData()=0;
 		virtual void DestroyData()=0;
+
+		virtual Image* getPostEffectTexture() { return nullptr; }
 
 		virtual iTexture* GetPostEffectTexture();
 
@@ -331,7 +333,7 @@ namespace hpl {
 		[[deprecated("Moved into Draw")]]
 		virtual void RenderObjects()=0;
 
-		void BeginRendering(float afFrameTime,cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, std::weak_ptr<RenderViewport> apRenderTarget,
+		void BeginRendering(float afFrameTime,cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, const RenderViewport& apRenderTarget,
 							bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList, bool abAtStartOfRendering=true);
 		[[deprecated("just ensure the contents is transfer to the viewport")]]
 		void EndRendering(bool abAtEndOfRendering=true);

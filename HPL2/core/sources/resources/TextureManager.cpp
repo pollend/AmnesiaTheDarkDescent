@@ -22,7 +22,6 @@
 #include "graphics/Bitmap.h"
 #include "graphics/Graphics.h"
 #include "graphics/Image.h"
-#include "graphics/ImageResource.h"
 #include "graphics/LowLevelGraphics.h"
 #include "graphics/Texture.h"
 #include "resources/BitmapLoaderHandler.h"
@@ -31,6 +30,7 @@
 #include "resources/Resources.h"
 #include "system/LowLevelSystem.h"
 #include "system/String.h"
+#include <bx/debug.h>
 
 namespace hpl {
 
@@ -67,11 +67,11 @@ namespace hpl {
 	}
 
 
-	ImageResource* cTextureManager::_wrapperImageResource(const tString& asName, std::function<ImageResource*(const tString& asName, const tWString& path, cBitmap* bitmap)> createImageHandler) {
+	Image* cTextureManager::_wrapperImageResource(const tString& asName, std::function<Image*(const tString& asName, const tWString& path, cBitmap* bitmap)> createImageHandler) {
 		tWString sPath;
 		BeginLoad(asName);
 
-		ImageResource* resource = FindImageResource(asName, sPath);
+		Image* resource = FindImageResource(asName, sPath);
 		if( resource==NULL && sPath!=_W(""))
 		{
 			// pTexture = FindTexture2D(asName,sPath);
@@ -99,14 +99,14 @@ namespace hpl {
 		return resource;
 	}
 
-	ImageResource* cTextureManager::Create1DImage(
+	Image* cTextureManager::Create1DImage(
 		const tString& asName, bool abUseMipMaps, eTextureUsage aUsage, unsigned int alTextureSizeLevel)
 	{
 		return _wrapperImageResource(
 			asName,
-			[](const tString& asName, const tWString& path, cBitmap* pBmp) -> ImageResource*
+			[](const tString& asName, const tWString& path, cBitmap* pBmp) -> Image*
 			{
-				auto* resource = new ImageResource(asName, path);
+				auto* resource = new Image(asName, path);
 				ImageDescriptor desc;
 				desc.format = Image::FromHPLTextureFormat(pBmp->GetPixelFormat());
 				desc.m_width = pBmp->GetWidth();
@@ -114,19 +114,19 @@ namespace hpl {
 				auto* image = new Image();
 
 				auto data = pBmp->GetData(0, 0);
-				resource->GetImage().Initialize(desc, bgfx::copy(data->mpData, data->mlSize));
+				resource->Initialize(desc, bgfx::copy(data->mpData, data->mlSize));
 				return resource;
 			});
 	}
 
-	ImageResource* cTextureManager::Create2DImage(
+	Image* cTextureManager::Create2DImage(
 		const tString& asName, bool abUseMipMaps, eTextureType aType, eTextureUsage aUsage, unsigned int alTextureSizeLevel)
 	{
 		return _wrapperImageResource(
 			asName,
-			[](const tString& asName, const tWString& path, cBitmap* pBmp) -> ImageResource*
+			[](const tString& asName, const tWString& path, cBitmap* pBmp) -> Image*
 			{
-				auto* resource = new ImageResource(asName, path);
+				auto* resource = new Image(asName, path);
 				ImageDescriptor desc;
 				desc.format = Image::FromHPLTextureFormat(pBmp->GetPixelFormat());
 				desc.m_width = pBmp->GetWidth();
@@ -134,19 +134,24 @@ namespace hpl {
 				auto* image = new Image();
 
 				auto data = pBmp->GetData(0, 0);
-				resource->GetImage().Initialize(desc, bgfx::copy(data->mpData, data->mlSize));
+				resource->Initialize(desc, bgfx::copy(data->mpData, data->mlSize));
 				return resource;
 			});
 	}
+	Image* cTextureManager::CreateCubeMapImage(const tString& asName,bool abUseMipMaps, eTextureUsage aUsage,
+				unsigned int alTextureSizeLevel) {
+		BX_ASSERT(false, "Not implemented");
+		return nullptr;
+	}
 
-	ImageResource* cTextureManager::Create3DImage(
+	Image* cTextureManager::Create3DImage(
 		const tString& asName, bool abUseMipMaps, eTextureUsage aUsage, unsigned int alTextureSizeLevel)
 	{
 		return _wrapperImageResource(
 			asName,
-			[](const tString& asName, const tWString& path, cBitmap* pBmp) -> ImageResource*
+			[](const tString& asName, const tWString& path, cBitmap* pBmp) -> Image*
 			{
-				auto* resource = new ImageResource(asName, path);
+				auto* resource = new Image(asName, path);
 				ImageDescriptor desc;
 				desc.format = Image::FromHPLTextureFormat(pBmp->GetPixelFormat());
 				desc.m_width = pBmp->GetWidth();
@@ -155,7 +160,7 @@ namespace hpl {
 				auto* image = new Image();
 
 				auto data = pBmp->GetData(0, 0);
-				resource->GetImage().Initialize(desc, bgfx::copy(data->mpData, data->mlSize));
+				resource->Initialize(desc, bgfx::copy(data->mpData, data->mlSize));
 				return resource;
 			});
 	}
@@ -163,7 +168,8 @@ namespace hpl {
 	iTexture* cTextureManager::Create1D(const tString& asName,bool abUseMipMaps,
 										eTextureUsage aUsage, unsigned int alTextureSizeLevel)
 	{
-		return CreateSimpleTexture(asName,abUseMipMaps,aUsage, eTextureType_1D,alTextureSizeLevel);
+		BX_ASSERT(false, "Not implemented");
+		return nullptr;
 	}
 
 	//-----------------------------------------------------------------------
@@ -171,15 +177,16 @@ namespace hpl {
 	iTexture* cTextureManager::Create2D(const tString& asName,bool abUseMipMaps, eTextureType aType,
 										eTextureUsage aUsage, unsigned int alTextureSizeLevel)
 	{
-		return CreateSimpleTexture(asName,abUseMipMaps,aUsage, aType,alTextureSizeLevel);
+		BX_ASSERT(false, "Not implemented");
+		return nullptr;
 	}
 
 	//-----------------------------------------------------------------------
-
 	iTexture* cTextureManager::Create3D(const tString& asName,bool abUseMipMaps, eTextureUsage aUsage,
 										unsigned int alTextureSizeLevel)
 	{
-		return CreateSimpleTexture(asName,abUseMipMaps,aUsage, eTextureType_3D,alTextureSizeLevel);
+		BX_ASSERT(false, "Not implemented");
+		return nullptr;
 	}
 
 	//-----------------------------------------------------------------------
@@ -320,7 +327,7 @@ namespace hpl {
 		// Load Cubemap from single file
 		if(sExt == "dds")
 		{
-			return CreateSimpleTexture(asPathName,abUseMipMaps,aUsage,eTextureType_CubeMap,alTextureSizeLevel);
+			// return CreateSimpleTexture(asPathName,abUseMipMaps,aUsage,eTextureType_CubeMap,alTextureSizeLevel);
 		}
 		/////////////////////////////////////////////////////////
 		// Load Cubemap from multiple files
@@ -419,7 +426,7 @@ namespace hpl {
 
 		if(apResource->HasUsers()==false)
 		{
-			mlMemoryUsage -= static_cast<iTexture*>(apResource)->GetMemorySize();
+			// mlMemoryUsage -= static_cast<Image*>(apResource)->GetMemorySize();
 
 			RemoveResource(apResource);
 			hplDelete(apResource);
@@ -430,14 +437,14 @@ namespace hpl {
 
 	void cTextureManager::Update(float afTimeStep)
 	{
-		tResourceBaseMapIt it = m_mapResources.begin();
-		for(; it != m_mapResources.end(); ++it)
-		{
-			iResourceBase *pBase = it->second;
-			iTexture *pTexture = static_cast<iTexture*>(pBase);
+		// tResourceBaseMapIt it = m_mapResources.begin();
+		// for(; it != m_mapResources.end(); ++it)
+		// {
+		// 	iResourceBase *pBase = it->second;
+		// 	iTexture *pTexture = static_cast<iTexture*>(pBase);
 
-			pTexture->Update(afTimeStep);
-		}
+		// 	pTexture->Update(afTimeStep);
+		// }
 	}
 
 	//-----------------------------------------------------------------------
@@ -449,61 +456,61 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	iTexture* cTextureManager::CreateSimpleTexture(	const tString& asName,bool abUseMipMaps,
-													eTextureUsage aUsage, eTextureType aType,
-													unsigned int alTextureSizeLevel)
-	{
-		tWString sPath;
-		iTexture* pTexture;
+	// iTexture* cTextureManager::CreateSimpleTexture(	const tString& asName,bool abUseMipMaps,
+	// 												eTextureUsage aUsage, eTextureType aType,
+	// 												unsigned int alTextureSizeLevel)
+	// {
+	// 	tWString sPath;
+	// 	iTexture* pTexture;
 
-		BeginLoad(asName);
+	// 	BeginLoad(asName);
 
-		pTexture = FindTexture2D(asName,sPath);
+	// 	pTexture = FindTexture2D(asName,sPath);
 
-		if(pTexture==NULL && sPath!=_W(""))
-		{
-			//Load the bitmap
-			cBitmap *pBmp;
-			pBmp = mpBitmapLoaderHandler->LoadBitmap(sPath,0);
-			if(pBmp==NULL)
-			{
-				Error("Texture manager Couldn't load bitmap '%s'\n", cString::To8Char(sPath).c_str());
-				EndLoad();
-				return NULL;
-			}
+	// 	if(pTexture==NULL && sPath!=_W(""))
+	// 	{
+	// 		//Load the bitmap
+	// 		cBitmap *pBmp;
+	// 		pBmp = mpBitmapLoaderHandler->LoadBitmap(sPath,0);
+	// 		if(pBmp==NULL)
+	// 		{
+	// 			Error("Texture manager Couldn't load bitmap '%s'\n", cString::To8Char(sPath).c_str());
+	// 			EndLoad();
+	// 			return NULL;
+	// 		}
 
-			//Create the texture and load from bitmap
-			pTexture = mpGraphics->GetLowLevel()->CreateTexture(asName,aType,aUsage);
-			pTexture->SetFullPath(sPath);
+	// 		//Create the texture and load from bitmap
+	// 		pTexture = mpGraphics->GetLowLevel()->CreateTexture(asName,aType,aUsage);
+	// 		pTexture->SetFullPath(sPath);
 
-			pTexture->SetUseMipMaps(abUseMipMaps);
-			pTexture->SetSizeDownScaleLevel(alTextureSizeLevel);
+	// 		pTexture->SetUseMipMaps(abUseMipMaps);
+	// 		pTexture->SetSizeDownScaleLevel(alTextureSizeLevel);
 
-			if(pTexture->CreateFromBitmap(pBmp)==false)
-			{
-				hplDelete(pTexture);
-				hplDelete(pBmp);
-				EndLoad();
-				return NULL;
-			}
+	// 		if(pTexture->CreateFromBitmap(pBmp)==false)
+	// 		{
+	// 			hplDelete(pTexture);
+	// 			hplDelete(pBmp);
+	// 			EndLoad();
+	// 			return NULL;
+	// 		}
 
-			//Bitmap is no longer needed so delete it.
-			hplDelete(pBmp);
+	// 		//Bitmap is no longer needed so delete it.
+	// 		hplDelete(pBmp);
 
-			mlMemoryUsage += pTexture->GetMemorySize();
-			AddResource(pTexture);
-		}
+	// 		mlMemoryUsage += pTexture->GetMemorySize();
+	// 		AddResource(pTexture);
+	// 	}
 
-		if(pTexture)pTexture->IncUserCount();
-		else Error("Couldn't texture '%s'\n",asName.c_str());
+	// 	if(pTexture)pTexture->IncUserCount();
+	// 	else Error("Couldn't texture '%s'\n",asName.c_str());
 
-		EndLoad();
-		return pTexture;
-	}
+	// 	EndLoad();
+	// 	return pTexture;
+	// }
 
 	//-----------------------------------------------------------------------
-	ImageResource* cTextureManager::FindImageResource(const tString &asName, tWString &asFilePath) {
-		ImageResource *pTexture=NULL;
+	Image* cTextureManager::FindImageResource(const tString &asName, tWString &asFilePath) {
+		Image *pTexture=NULL;
 
 		if(cString::GetFileExt(asName)=="")
 		{
@@ -518,7 +525,7 @@ namespace hpl {
 				int lCount=0;
 
 				tString sNewName = cString::SetFileExt(asName,*it);
-				auto resource = static_cast<ImageResource*> (FindLoadedResource(sNewName, sTempPath, &lCount));
+				auto resource = static_cast<Image*> (FindLoadedResource(sNewName, sTempPath, &lCount));
 
 				///////////////////////
 				//Check if the image exists and then check if it has the hightest equal count.
@@ -533,7 +540,7 @@ namespace hpl {
 				}
 			}
 		}
-		return static_cast<ImageResource*> (FindLoadedResource(asName, asFilePath));
+		return static_cast<Image*> (FindLoadedResource(asName, asFilePath));
 	}
 
 

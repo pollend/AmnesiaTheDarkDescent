@@ -384,7 +384,8 @@ void cEditorWindowViewport::SetEnlarged(bool abX)
 		vPos = mvEnlargedPosition;
 		vSize = mvEnlargedSize;
 		vFBPos = cVector2l(0);
-		vFBSize = mpFB->GetSize();
+		auto image = m_target->GetImage();
+		vFBSize = cVector2l(image->GetWidth(), image->GetHeight());
 	}
 	else
 	{

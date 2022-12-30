@@ -26,6 +26,7 @@
 #include "EditorWindowViewport.h"
 
 #include "EditorHelper.h"
+#include "graphics/Image.h"
 
 //---------------------------------------------------------------------------
 
@@ -103,7 +104,7 @@ void cEntityWrapperLightPoint::SetGobo(const tString& asGoboFilename)
 {
 	cResources* pRes = GetEditorWorld()->GetEditor()->GetEngine()->GetResources();
 
-	iTexture* pTex = NULL;
+	Image* pTex = NULL;
 
 	if(cEditorHelper::LoadTextureResource(eEditorTextureResourceType_CubeMap, msGoboFilename, &pTex))
 		msGoboFilename = asGoboFilename;

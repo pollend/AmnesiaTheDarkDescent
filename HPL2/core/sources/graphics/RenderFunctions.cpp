@@ -50,12 +50,12 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void iRenderFunctions::InitAndResetRenderFunctions(	cFrustum *apFrustum, std::weak_ptr<RenderViewport> apRenderTarget, bool abLog,
+	void iRenderFunctions::InitAndResetRenderFunctions(	cFrustum *apFrustum, const RenderViewport& apRenderTarget, bool abLog,
 														bool abUseGlobalScissorRect,
 														const cVector2l& avGlobalScissorRectPos, const cVector2l& avGlobalScissorRectSize)
 	{
 		mpCurrentFrustum = apFrustum;
-		m_currentRenderTarget = apRenderTarget.lock();
+		m_currentRenderTarget = apRenderTarget;
 		mbLog = abLog;
 
 		////////////////////////////////

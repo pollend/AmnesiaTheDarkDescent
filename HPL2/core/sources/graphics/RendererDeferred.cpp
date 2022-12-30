@@ -210,25 +210,29 @@ namespace hpl {
 		
 		// initialize frame buffers;
 		{
-			auto colorDesc = [&] {
+			auto colorImage = [&] {
 				auto desc = ImageDescriptor::CreateTexture2D(mvScreenSize.x, mvScreenSize.y, false, bgfx::TextureFormat::Enum::RGBA32F);
 				desc.m_configuration.m_rt = RTType::RT_Write;
-				return desc;
-			}();
+				auto image = std::make_shared<Image>();
+				image->Initialize(desc);
+				return image;
+			};
 
-			auto depthDesc = [&] {
+			auto depthImage = [&] {
 				auto desc = ImageDescriptor::CreateTexture2D(mvScreenSize.x, mvScreenSize.y, false, bgfx::TextureFormat::Enum::D24S8);
 				desc.m_configuration.m_rt = RTType::RT_Write;
-				return desc;
-			}();
+				auto image = std::make_shared<Image>();
+				image->Initialize(desc);
+				return image;
+			};
 
 			m_colorDepth = 
-				{ std::shared_ptr<Image>(new Image(colorDesc)),std::shared_ptr<Image>(new Image(colorDesc))};
+				{ colorImage(),colorImage()};
 			m_normal = 
-				{ std::shared_ptr<Image>(new Image(colorDesc)), std::shared_ptr<Image>(new Image(colorDesc))};
+				{ colorImage(), colorImage()};
 			m_linearDepth = 
-				{ std::shared_ptr<Image>(new Image(colorDesc)),std::shared_ptr<Image>(new Image(colorDesc))};
-			m_depthStencil = { std::shared_ptr<Image>(new Image(depthDesc)),std::shared_ptr<Image>(new Image(depthDesc))};
+				{ colorImage(),colorImage()};
+			m_depthStencil = { depthImage(),depthImage()};
 			{
 				std::array<std::shared_ptr<Image>, 4> images = {m_colorDepth[0], m_normal[0], m_linearDepth[0], m_depthStencil[0]};
 				std::array<std::shared_ptr<Image>, 4> reflectionImages = {m_colorDepth[1], m_normal[1], m_linearDepth[1], m_depthStencil[1]};
@@ -293,8 +297,10 @@ namespace hpl {
 		auto createShadowMap = [](const cVector3l &avSize) -> cShadowMapData {
 			auto desc = ImageDescriptor::CreateTexture2D(avSize.x, avSize.y, false, bgfx::TextureFormat::D16F);
 			desc.m_configuration.m_rt = RTType::RT_Write;
+			auto image = std::make_shared<Image>();
+			image->Initialize(desc);
 			return {nullptr, nullptr, nullptr, -1,
-			RenderTarget(std::shared_ptr<Image>(new Image(desc))), 
+			RenderTarget(image),
 				{}
 			};
 		};
@@ -668,6 +674,10 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	Image* cRendererDeferred::getPostEffectTexture() {
+		
+	}
+		
 	iTexture* cRendererDeferred::GetPostEffectTexture()
 	{
 		return mpAccumBufferTexture;
@@ -930,7 +940,7 @@ namespace hpl {
 				cVector2f vQuadSize = cVector2f(mfFarRight*2,mfFarTop*2);
 				auto linearDepthImage = resolveRenderImage(m_linearDepth);
 				
-				cVector2f vGBufferDepthSize = cVector2f((float)linearDepthImage->GetDescriptor().m_width, (float)linearDepthImage->GetDescriptor().m_height);
+				cVector2f vGBufferDepthSize = cVector2f((float)linearDepthImage->GetWidth(), (float)linearDepthImage->GetHeight());
 				cVector2f vSSAOSize = cVector2f((float)mpSSAOTexture->GetWidth(), (float)mpSSAOTexture->GetHeight());
 				
 				context.Quad(layoutInput, vQuadPos, vQuadSize, cVector2f(0,0), cVector2f(1,1));
@@ -1420,9 +1430,9 @@ namespace hpl {
 
 		/////////////////////////
 		//Textures
-		SetTexture(4,pLight->GetFalloffMap());
+		// SetTexture(4,pLight->GetFalloffMap());
 
-		if(pLight->GetGoboTexture())		SetTexture(5, pLight->GetGoboTexture());
+		// if(pLight->GetGoboTexture())		SetTexture(5, pLight->GetGoboTexture());
 
 		////////////////////////
 		// Point light specific
@@ -1445,8 +1455,8 @@ namespace hpl {
 			}
 
 			//Spot fall off
-			if(pLight->GetGoboTexture()==NULL)
-				SetTexture(5,pLightSpot->GetSpotFalloffMap());
+			// if(pLight->GetGoboTexture()==NULL)
+			// 	SetTexture(5,pLightSpot->GetSpotFalloffMap());
 
 		}
 
@@ -2857,7 +2867,7 @@ namespace hpl {
 		//Reset settings from normal rendering
 		cFrustum *pSaved_Frustum = mpCurrentFrustum;
 		cRenderSettings *pSaved_Settings = mpCurrentSettings;
-		std::shared_ptr<RenderViewport> pSaved_RenderTarget = m_currentRenderTarget;
+		RenderViewport pSaved_RenderTarget = m_currentRenderTarget;
 		bool bSaved_SendFrameBufferToPostEffects = mbSendFrameBufferToPostEffects;
 
 
@@ -2877,7 +2887,7 @@ namespace hpl {
 
 		///////////////////////////////////
 		//Make render target
-		std::shared_ptr<RenderViewport> renderTarget;
+		RenderViewport renderTarget;
 		// cVector2l vCurrentFrameBufferSize = mpCurrentRenderTarget->mpFrameBuffer ? mpCurrentRenderTarget->mpFrameBuffer->GetSize() : mvScreenSize;
 		// renderTarget.mpFrameBuffer = mpReflectionBuffer;
 		// renderTarget.mvPos = mpCurrentRenderTarget->mvPos / mlReflectionSizeDiv;
@@ -3048,8 +3058,8 @@ namespace hpl {
 				// Add a stencil rect!
 				if(bNeedsClipRect)
 				{
-					auto definition = renderTarget->GetSize();
-					cVector2l vFrameBufferSize = renderTarget->GetSize();
+					// auto definition = renderTarget.GetSize();
+					cVector2l vFrameBufferSize = renderTarget.GetSize();
 					cVector2l vRenderTargetSize;
 					vRenderTargetSize.x = vFrameBufferSize.x;
 					vRenderTargetSize.y = vFrameBufferSize.y;

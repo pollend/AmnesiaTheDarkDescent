@@ -48,10 +48,7 @@ namespace hpl
         SetupRenderFunctions(mpGraphics->GetLowLevel());
 
         cVector2l vSize = mpLowLevelGraphics->GetScreenSizeInt();
-        for (int i = 0; i < 2; ++i)
-        {
-            mpFinalTempBuffer[i] = mpGraphics->GetTempFrameBuffer(vSize, ePixelFormat_RGBA, i);
-        }
+        RebuildSwapChain(vSize.x, vSize.y);
     }
 
     //-----------------------------------------------------------------------
@@ -66,6 +63,7 @@ namespace hpl
         desc.m_width = width;
         desc.m_height = height;
         desc.format = bgfx::TextureFormat::RGBA8;
+        desc.m_configuration.m_rt = RTType::RT_Write; 
 
         _images[0] = std::make_shared<Image>();
         _images[1] = std::make_shared<Image>();
@@ -81,6 +79,7 @@ namespace hpl
     {
         auto it = _postEffects.begin();
         size_t currentIndex = 0;
+        bool isSavedToPrimaryRenderTarget = false;
         for (; it != _postEffects.end(); ++it)
         {
             if (!it->_effect->IsActive())
@@ -109,6 +108,7 @@ namespace hpl
             size_t nextIndex = (currentIndex + 1) % 2;
             if (nextIt == _postEffects.end())
             {
+                isSavedToPrimaryRenderTarget = true;
                 it->_effect->RenderEffect(context, *_images[currentIndex], renderTarget);
             }
             else
@@ -117,6 +117,9 @@ namespace hpl
             }
             currentIndex = nextIndex;
             it = nextIt;
+        }
+        if(!isSavedToPrimaryRenderTarget) {
+            context.CopyTextureToFrameBuffer(*_images[currentIndex], renderTarget);
         }
 
     }
@@ -128,7 +131,8 @@ namespace hpl
         {
             return;
         }
-        _postEffects.push_back({ alPrio, apPostEffect });
+        const auto id = _postEffects.size();
+        _postEffects.push_back({ id ,alPrio, apPostEffect });
         std::sort(
             _postEffects.begin(),
             _postEffects.end(),

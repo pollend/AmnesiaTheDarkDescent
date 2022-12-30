@@ -88,7 +88,7 @@ namespace hpl {
 		bgfx::UniformHandle _s_diffuseMap;
 		bgfx::UniformHandle _s_dissolveMap;
 
-		ImageResource *m_dissolveImage;
+		Image *m_dissolveImage = nullptr;
 
 		iTexture *mpDissolveTexture;
 

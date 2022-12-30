@@ -20,6 +20,7 @@
 #ifndef HPL_WORLD_H
 #define HPL_WORLD_H
 
+#include "graphics/Image.h"
 #include "system/SystemTypes.h"
 #include "graphics/GraphicsTypes.h"
 #include "math/MathTypes.h"
@@ -200,11 +201,11 @@ namespace hpl {
 
 		///// SKYBOX ////////////////////////////////
 
-		void SetSkyBox(iTexture *apTexture, bool abAutoDestroy);
+		void SetSkyBox(Image *apTexture, bool abAutoDestroy);
 		void SetSkyBoxActive(bool abX);
 		void SetSkyBoxColor(const cColor& aColor);
 
-		iTexture* GetSkyBoxTexture(){return mpSkyBoxTexture;}
+		Image* GetSkyBoxTexture(){return mpSkyBoxTexture;}
 		iVertexBuffer *GetSkyBoxVertexBuffer(){ return mpSkyBoxVtxBuffer;}
 		bool GetSkyBoxActive(){ return mbSkyBoxActive;}
 		cColor GetSkyBoxColor(){ return mSkyBoxColor;}
@@ -387,7 +388,7 @@ namespace hpl {
 		iRenderableContainer* mpRenderableContainer[2];
 
 		iVertexBuffer* mpSkyBoxVtxBuffer;
-		iTexture* mpSkyBoxTexture;
+		Image* mpSkyBoxTexture;
 		bool mbAutoDestroySkybox;
 		bool mbSkyBoxActive;
 		cColor mSkyBoxColor;

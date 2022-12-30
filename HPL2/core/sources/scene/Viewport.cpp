@@ -27,8 +27,7 @@
 
 namespace hpl {
 
-	cViewport::cViewport(cScene *apScene) :
-		mRenderTarget(std::shared_ptr<RenderViewport>(new RenderViewport()))
+	cViewport::cViewport(cScene *apScene)
 	{
 		mpScene = apScene;
 

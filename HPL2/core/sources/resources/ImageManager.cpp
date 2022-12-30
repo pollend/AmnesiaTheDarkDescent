@@ -32,6 +32,7 @@
 #include "resources/Resources.h"
 #include "resources/BitmapLoaderHandler.h"
 #include "resources/FileSearcher.h"
+#include <memory>
 
 
 namespace hpl {
@@ -151,7 +152,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	cFrameTexture* cImageManager::CreateCustomFrame(iTexture *apTexture)
+	cFrameTexture* cImageManager::CreateCustomFrame(Image* apTexture)
 	{
 		cFrameTexture *pTFrame = hplNew( cFrameTexture, (apTexture,mlFrameHandle,this,true) );
 
@@ -419,8 +420,9 @@ namespace hpl {
 
 	cFrameBitmap *cImageManager::CreateBitmapFrame(cVector2l avSize)
 	{
-		iTexture *pTex = mpLowLevelGraphics->CreateTexture("ImageFrame",eTextureType_2D,eTextureUsage_Normal);
-		cFrameTexture *pTFrame = hplNew( cFrameTexture, (pTex,mlFrameHandle,this,false) );
+		// iTexture *pTex = mpLowLevelGraphics->CreateTexture("ImageFrame",eTextureType_2D,eTextureUsage_Normal);
+		
+		cFrameTexture *pTFrame = hplNew( cFrameTexture, (new Image(),mlFrameHandle,this,false) );
 		cBitmap *pBmp = hplNew(cBitmap, () );
 		pBmp->CreateData(cVector3l(avSize.x, avSize.y,1),ePixelFormat_RGBA,0,0);
 

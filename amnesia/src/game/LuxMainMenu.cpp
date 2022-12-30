@@ -40,6 +40,7 @@
 #include "LuxDemoEnd.h"
 #include <sstream>
 #include "LuxAchievementHandler.h"
+#include <bx/debug.h>
 
 //--------------------------------------------------------------------------------
 
@@ -1307,15 +1308,16 @@ void cLuxMainMenu::CreateScreenTextures()
 	cVector3l vTexSize = pLowGfx->GetScreenSizeInt();
 	vTexSize.z = 0;
 
-	mpScreenTexture = mpGraphics->CreateTexture("Screen",eTextureType_Rect,eTextureUsage_RenderTarget);
-	mpScreenTexture->CreateFromRawData(vTexSize,ePixelFormat_RGBA,NULL);
-	mpScreenTexture->SetWrapSTR(eTextureWrap_ClampToEdge);
+	BX_ASSERT(false, "TODO: migrate to Image");
+	// mpScreenTexture = mpGraphics->CreateTexture("Screen",eTextureType_Rect,eTextureUsage_RenderTarget);
+	// mpScreenTexture->CreateFromRawData(vTexSize,ePixelFormat_RGBA,NULL);
+	// mpScreenTexture->SetWrapSTR(eTextureWrap_ClampToEdge);
 
-	mpScreenBlurTexture = mpGraphics->CreateTexture("ScreenBlur",eTextureType_Rect,eTextureUsage_RenderTarget);
-	mpScreenBlurTexture->CreateFromRawData(vTexSize,ePixelFormat_RGBA,NULL);
+	// mpScreenBlurTexture = mpGraphics->CreateTexture("ScreenBlur",eTextureType_Rect,eTextureUsage_RenderTarget);
+	// mpScreenBlurTexture->CreateFromRawData(vTexSize,ePixelFormat_RGBA,NULL);
 
-	mpScreenGfx = mpGui->CreateGfxTexture(mpScreenTexture,false,eGuiMaterial_Diffuse);
-	mpScreenBlurGfx = mpGui->CreateGfxTexture(mpScreenBlurTexture,false,eGuiMaterial_Alpha);
+	// mpScreenGfx = mpGui->CreateGfxTexture(mpScreenTexture,false,eGuiMaterial_Diffuse);
+	// mpScreenBlurGfx = mpGui->CreateGfxTexture(mpScreenBlurTexture,false,eGuiMaterial_Alpha);
 }
 
 //-----------------------------------------------------------------------

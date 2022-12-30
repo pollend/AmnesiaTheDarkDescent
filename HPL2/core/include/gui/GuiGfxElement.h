@@ -16,11 +16,10 @@
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
-
-#ifndef HPL_GUI_GFX_ELEMENT_H
-#define HPL_GUI_GFX_ELEMENT_H
+#pragma once
 
 #include "gui/GuiTypes.h"
+#include <memory>
 
 namespace hpl {
 
@@ -28,7 +27,7 @@ namespace hpl {
 	class iTexture;
 	class cFrameSubImage;
 	class cResources;
-
+	class Image;
 	class cGui;
 
 	#define kMaxGuiTextures (4)
@@ -74,7 +73,7 @@ namespace hpl {
 		void Update(float afTimeStep);
 
 		void AddImage(cFrameSubImage* apImage);
-		void AddTexture(iTexture* apTexture, const cVector2f& avStartUV=0, const cVector2f& avEndUV=1);
+		void AddTexture(Image* apTexture, const cVector2f& avStartUV=0, const cVector2f& avEndUV=1);
 
 		void AddImageToBuffer(cFrameSubImage* apImage);
 
@@ -83,7 +82,7 @@ namespace hpl {
 		void SetDestroyTexture(bool abX){mbDestroyTexture = abX;}
 		bool GetDestroyTexture(){ return mbDestroyTexture;}
 
-		iTexture * GetTexture(int alIdx){ return mvTextures[alIdx];}
+		Image* GetTexture(int alIdx){ return mvTextures[alIdx];}
 		cFrameSubImage * GetImage(int alIdx){ return mvImages[alIdx];}
 
 		void SetOffset(const cVector3f& avOffset){mvOffset = avOffset;}
@@ -121,7 +120,7 @@ namespace hpl {
 		cVector2f mvActiveSize;
 
 		iGuiMaterial *mpMaterial;
-		iTexture* mvTextures[kMaxGuiTextures];
+		Image* mvTextures[kMaxGuiTextures];
 		cFrameSubImage* mvImages[kMaxGuiTextures];
 
 		bool mbDestroyTexture;
@@ -146,4 +145,3 @@ namespace hpl {
 		cResources *mpResources;
 	};
 };
-#endif // HPL_GUI_GFX_ELEMENT_H

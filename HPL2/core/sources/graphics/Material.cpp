@@ -20,7 +20,6 @@
 #include "graphics/Material.h"
 
 #include "graphics/Image.h"
-#include "graphics/ImageResource.h"
 #include "system/LowLevelSystem.h"
 #include "system/String.h"
 
@@ -217,18 +216,14 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 
 
-	void cMaterial::SetImage(eMaterialTexture aType, ImageResource *apTexture) 
+	void cMaterial::SetImage(eMaterialTexture aType, Image *apTexture) 
 	{
 		m_image[aType] = apTexture;
 	}
 
 	Image* cMaterial::GetImage(eMaterialTexture aType)
 	{
-		auto resource = m_image[aType];
-		if (resource) {
-			return &resource->GetImage();
-		}
-		return nullptr;
+		return m_image[aType];
 	}
 
 	void cMaterial::SetTexture(eMaterialTexture aType, iTexture *apTexture)

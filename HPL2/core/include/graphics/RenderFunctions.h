@@ -58,7 +58,7 @@ namespace hpl {
 		/**
 		 * This must be called every frame before any render function is called
 		 */
-		void InitAndResetRenderFunctions(	cFrustum *apFrustum, std::weak_ptr<RenderViewport> apRenderTarget, bool abLog,
+		void InitAndResetRenderFunctions(	cFrustum *apFrustum, const RenderViewport& apRenderTarget, bool abLog,
 											bool abUseGlobalScissorRect=false,
 											const cVector2l& avGlobalScissorRectPos=0, const cVector2l& avGlobalScissorRectSize=0);
 		void ExitAndCleanUpRenderFunctions();
@@ -133,7 +133,7 @@ namespace hpl {
 
 		cFrustum *mpCurrentFrustum;
 		cRenderTarget *mpCurrentRenderTarget;
-		std::shared_ptr<RenderViewport> m_currentRenderTarget;
+		RenderViewport m_currentRenderTarget;
 		const cMatrixf *mpCurrentProjectionMatrix;
 
 		cVector2l mvRenderTargetSize;		//Use this when ever some calculations involving the size of rendertarget is involved!

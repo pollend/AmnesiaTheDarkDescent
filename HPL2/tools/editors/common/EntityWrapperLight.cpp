@@ -29,6 +29,7 @@
 #include "EditorWindowEntityEditBoxLight.h"
 
 #include "EntityWrapperBillboard.h"
+#include "graphics/Image.h"
 
 #include <algorithm>
 
@@ -666,7 +667,7 @@ void iEntityWrapperLight::RemoveConnectedBillboard(cEntityWrapperBillboard* apBB
 
 void iEntityWrapperLight::SetFalloffMap(const tString& asFalloffMap)
 {
-	iTexture* pTex = NULL;
+	Image* pTex = NULL;
 
 	cEditorHelper::LoadTextureResource(eEditorTextureResourceType_1D, asFalloffMap, &pTex);
 	if(pTex)
@@ -684,7 +685,7 @@ void iEntityWrapperLight::SetFalloffMap(const tString& asFalloffMap)
 
 void iEntityWrapperLight::SetGobo(const tString& asGoboFilename)
 {
-	iTexture* pTex = NULL;
+	Image* pTex = NULL;
 
 	cEditorHelper::LoadTextureResource(eEditorTextureResourceType_2D, asGoboFilename, &pTex, msGoboAnimMode, mfGoboAnimFrameTime);
 	if(pTex)

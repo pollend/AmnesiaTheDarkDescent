@@ -30,8 +30,6 @@ namespace hpl {
 	class cResources;
 	class iTexture;
 	class cBitmapLoaderHandler;
-	class ImageResource;
-
 	//------------------------------------------------------
 
 	typedef std::map<tString, iTexture*> tTextureAttenuationMap;
@@ -46,21 +44,26 @@ namespace hpl {
 		~cTextureManager();
 
 
-		ImageResource* Create1DImage(const tString& asName,bool abUseMipMaps, eTextureUsage aUsage=eTextureUsage_Normal,
+		Image* Create1DImage(const tString& asName,bool abUseMipMaps, eTextureUsage aUsage=eTextureUsage_Normal,
 							unsigned int alTextureSizeLevel=0);
 
-		ImageResource* Create2DImage(const tString& asName,bool abUseMipMaps,eTextureType aType= eTextureType_2D,
+		Image* Create2DImage(const tString& asName,bool abUseMipMaps,eTextureType aType= eTextureType_2D,
 							eTextureUsage aUsage=eTextureUsage_Normal,unsigned int alTextureSizeLevel=0);
 
-		ImageResource* Create3DImage(const tString& asName,bool abUseMipMaps, eTextureUsage aUsage=eTextureUsage_Normal,
+		Image* Create3DImage(const tString& asName,bool abUseMipMaps, eTextureUsage aUsage=eTextureUsage_Normal,
 							unsigned int alTextureSizeLevel=0);
+		
+		Image* CreateCubeMapImage(const tString& asName,bool abUseMipMaps, eTextureUsage aUsage=eTextureUsage_Normal,
+					unsigned int alTextureSizeLevel=0);
 
+
+		[[deprecated("Use Create1DImage instead")]]
 		iTexture* Create1D(	const tString& asName,bool abUseMipMaps, eTextureUsage aUsage=eTextureUsage_Normal,
 							unsigned int alTextureSizeLevel=0);
-
+		[[deprecated("Use Create2DImage instead")]]
 		iTexture* Create2D(	const tString& asName,bool abUseMipMaps,eTextureType aType= eTextureType_2D,
 							eTextureUsage aUsage=eTextureUsage_Normal,unsigned int alTextureSizeLevel=0);
-
+		[[deprecated("Use Create3DImage instead")]]
 		iTexture* Create3D(	const tString& asName,bool abUseMipMaps, eTextureUsage aUsage=eTextureUsage_Normal,
 							unsigned int alTextureSizeLevel=0);
 
@@ -84,14 +87,10 @@ namespace hpl {
 		int GetMemoryUsage(){ return mlMemoryUsage;}
 
 	private:
-		iTexture* CreateSimpleTexture(const tString& asName,bool abUseMipMaps,
-									eTextureUsage aUsage, eTextureType aType,
-									unsigned int alTextureSizeLevel);
-
-		ImageResource* _wrapperImageResource(const tString& asName, std::function<ImageResource*(const tString& asName, const tWString& path, cBitmap* bitmap)> createImageHandler);
+		Image* _wrapperImageResource(const tString& asName, std::function<Image*(const tString& asName, const tWString& path, cBitmap* bitmap)> createImageHandler);
 
 		iTexture* FindTexture2D(const tString &asName, tWString &asFilePath);
-		ImageResource* FindImageResource(const tString &asName, tWString &asFilePath);
+		Image* FindImageResource(const tString &asName, tWString &asFilePath);
 
 		tTextureAttenuationMap m_mapAttenuationTextures;
 

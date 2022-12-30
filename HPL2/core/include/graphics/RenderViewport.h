@@ -1,6 +1,8 @@
 #pragma once
 
+#include "math/MathTypes.h"
 #include <graphics/RenderTarget.h>
+#include <memory>
 
 namespace hpl
 {
@@ -8,18 +10,20 @@ namespace hpl
     class RenderViewport
     {
     public:
-        RenderViewport(RenderTarget&& renderTarget, cVector2l position);
-        RenderViewport(RenderViewport&& viewport);
-        RenderViewport(const RenderViewport& viewport) = delete;
+        RenderViewport(std::shared_ptr<RenderTarget> renderTarget, cVector2l position, cVector2l size = cVector2l(-1, -1));
         RenderViewport();
         ~RenderViewport();
 
-        void operator=(const RenderViewport& viewport) = delete;
-        void operator=(RenderViewport&& viewport);
+        // void operator=(const RenderViewport& viewport) = delete;
+        // void operator=(RenderViewport&& viewport);
 
-        RenderTarget& GetRenderTarget();
+        std::shared_ptr<RenderTarget>& GetRenderTarget();
         const cVector2l GetPosition() const;
         const cVector2l GetSize() const;
+
+        void setRenderTarget(std::shared_ptr<RenderTarget> target) {
+            m_renderTarget = target;
+        }
 
         void setPosition(const cVector2l& position);
         void setSize(const cVector2l& size);
@@ -27,7 +31,8 @@ namespace hpl
         const bool IsValid() const;
 
     private:
-        RenderTarget m_renderTarget;
-        cVector2l m_position;
+        std::shared_ptr<RenderTarget> m_renderTarget = nullptr;
+        cVector2l m_position = cVector2l(0, 0);
+        cVector2l m_size = cVector2l(-1, -1);
     };
 } // namespace hpl

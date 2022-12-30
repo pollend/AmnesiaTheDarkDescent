@@ -23,6 +23,7 @@
 #include "graphics/Enum.h"
 #include "graphics/GraphicsContext.h"
 #include "graphics/GraphicsTypes.h"
+#include "graphics/RenderTarget.h"
 #include "graphics/ShaderUtil.h"
 #include "graphics/VertexBuffer.h"
 #include "math/Math.h"
@@ -106,11 +107,13 @@ namespace hpl
         cFrustum* apFrustum,
         cWorld* apWorld,
         cRenderSettings* apSettings,
-        std::weak_ptr<RenderViewport> apRenderTarget,
+        RenderViewport& apRenderTarget,
         bool abSendFrameBufferToPostEffects,
         tRendererCallbackList* apCallbackList)
     {
         BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, apRenderTarget, abSendFrameBufferToPostEffects, apCallbackList);
+        auto target = m_currentRenderTarget.GetRenderTarget();
+        auto& outputTarget = (target && target->IsValid()) ? *target : RenderTarget::EmptyRenderTarget;
 
         mpCurrentRenderList->Setup(mfCurrentFrameTime, mpCurrentFrustum);
         CheckForVisibleAndAddToList(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static), 0);
@@ -126,9 +129,9 @@ namespace hpl
                 return;
             }
             auto view = context.StartPass("clear target");
-            const RenderTarget& target = m_currentRenderTarget ? m_currentRenderTarget->GetRenderTarget() : RenderTarget::EmptyRenderTarget;
+            
             GraphicsContext::DrawClear clear{
-                target, { 0, 1.0f, 0, ClearOp::Color | ClearOp::Depth }, 0,
+                outputTarget, { 0, 1.0f, 0, ClearOp::Color | ClearOp::Depth }, 0,
                 0,      static_cast<uint16_t>(mvScreenSize.x),           static_cast<uint16_t>(mvScreenSize.y)
             };
             context.ClearTarget(view, clear);
@@ -164,9 +167,7 @@ namespace hpl
                 GraphicsContext::LayoutStream layoutInput;
                 vertexBuffer->GetLayoutStream(layoutInput);
 
-                const RenderTarget& target =
-                    m_currentRenderTarget ? m_currentRenderTarget->GetRenderTarget() : RenderTarget::EmptyRenderTarget;
-                GraphicsContext::DrawRequest drawRequest{ target, layoutInput, shaderInput };
+                GraphicsContext::DrawRequest drawRequest{ outputTarget, layoutInput, shaderInput };
                 drawRequest.m_width = mvScreenSize.x;
                 drawRequest.m_height = mvScreenSize.y;
                 context.Submit(view, drawRequest);
@@ -208,9 +209,7 @@ namespace hpl
                     shaderInput.m_textures.push_back({m_s_diffuseMap, image->GetHandle(), 0});
                 }
 
-                const RenderTarget& target =
-                    m_currentRenderTarget ? m_currentRenderTarget->GetRenderTarget() : RenderTarget::EmptyRenderTarget;
-                GraphicsContext::DrawRequest drawRequest{ target, layoutInput, shaderInput };
+                GraphicsContext::DrawRequest drawRequest{ outputTarget, layoutInput, shaderInput };
                 drawRequest.m_width = mvScreenSize.x;
                 drawRequest.m_height = mvScreenSize.y;
                 context.Submit(view, drawRequest);
@@ -254,9 +253,7 @@ namespace hpl
                 {
                     shaderInput.m_textures.push_back({m_s_diffuseMap, image->GetHandle(), 0});
                 }
-                const RenderTarget& target =
-                    m_currentRenderTarget ? m_currentRenderTarget->GetRenderTarget() : RenderTarget::EmptyRenderTarget;
-                GraphicsContext::DrawRequest drawRequest{ target, layoutInput, shaderInput };
+                GraphicsContext::DrawRequest drawRequest{ outputTarget, layoutInput, shaderInput };
                 drawRequest.m_width = mvScreenSize.x;
                 drawRequest.m_height = mvScreenSize.y;
                 context.Submit(view, drawRequest);
@@ -302,9 +299,7 @@ namespace hpl
                 {
                     shaderInput.m_textures.push_back({ BGFX_INVALID_HANDLE, image->GetHandle(), 0 });
                 }
-                const RenderTarget& target =
-                    m_currentRenderTarget ? m_currentRenderTarget->GetRenderTarget() : RenderTarget::EmptyRenderTarget;
-                GraphicsContext::DrawRequest drawRequest{ target, layoutInput, shaderInput };
+                GraphicsContext::DrawRequest drawRequest{ outputTarget, layoutInput, shaderInput };
                 drawRequest.m_width = mvScreenSize.x;
                 drawRequest.m_height = mvScreenSize.y;
                 context.Submit(view, drawRequest);

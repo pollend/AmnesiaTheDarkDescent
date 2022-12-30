@@ -17,7 +17,7 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "graphics/ImageResource.h"
+#include "graphics/Image.h"
 #include "hpl.h"
 
 #include "../../tests/Common/SimpleCamera.h"
@@ -2255,8 +2255,8 @@ public:
 	cWidgetComboBox *mpCBAnimations;
 
 	std::vector<cMaterialData> mvMaterialData;
-	ImageResource* m_diffuseNull;
-	ImageResource* m_texNMapNull;
+	Image* m_diffuseNull;
+	Image* m_texNMapNull;
 };
 
 //-----------------------------------------------------------------------

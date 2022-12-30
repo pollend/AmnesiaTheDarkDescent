@@ -21,7 +21,6 @@
 #define HPL_MATERIAL_H
 
 #include "graphics/Image.h"
-#include "graphics/ImageResource.h"
 #include "system/SystemTypes.h"
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
@@ -77,7 +76,7 @@ namespace hpl {
 		void Compile();
 
 
-		void SetImage(eMaterialTexture aType, ImageResource *apTexture);
+		void SetImage(eMaterialTexture aType, Image *apTexture);
 		Image *GetImage(eMaterialTexture aType);
 
 		void SetTexture(eMaterialTexture aType, iTexture *apTexture);
@@ -195,8 +194,8 @@ namespace hpl {
 		bool mbUseAlphaDissolveFilter;
 
 		iGpuProgram *mvPrograms[2][eMaterialRenderMode_LastEnum]; //[2] == If it has skeleton or not.
-		ImageResource* m_image[eMaterialTexture_LastEnum];
-		ImageResource* m_imageInUnit[eMaterialRenderMode_LastEnum][kMaxTextureUnits];
+		Image* m_image[eMaterialTexture_LastEnum];
+		Image* m_imageInUnit[eMaterialRenderMode_LastEnum][kMaxTextureUnits];
 		
 		iTexture* mvTextures[eMaterialTexture_LastEnum];
 		iTexture* mvTextureInUnit[eMaterialRenderMode_LastEnum][kMaxTextureUnits];

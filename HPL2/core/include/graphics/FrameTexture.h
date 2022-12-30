@@ -21,20 +21,22 @@
 #define HPL_FRAMETEXTURE_H
 
 #include "graphics/FrameBase.h"
+#include "graphics/Image.h"
 
 namespace hpl {
 
 	class iTexture;
 	class cFrameSubImage;
 	class cImageManager;
+	class Image;
 
 	class cFrameTexture : public iFrameBase
 	{
 	public:
-		cFrameTexture(iTexture *pTex, int alHandle,cImageManager *apImageManager, bool abIsCustom);
+		cFrameTexture(Image* pTex, int alHandle,cImageManager *apImageManager, bool abIsCustom);
 		~cFrameTexture();
 
-		iTexture* GetTexture();
+		Image* GetTexture();
 		int GetHandle(){return mlHandle;}
 
 		inline bool IsCustom(){ return mbIsCustom;}
@@ -47,7 +49,7 @@ namespace hpl {
 	private:
 
 
-		iTexture *mpTexture;
+		Image* mpTexture;
 		int mlHandle;
 
 		bool mbIsCustom;

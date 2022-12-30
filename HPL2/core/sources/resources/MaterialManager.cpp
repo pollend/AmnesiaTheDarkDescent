@@ -20,7 +20,6 @@
 #include "resources/MaterialManager.h"
 
 #include "graphics/Image.h"
-#include "graphics/ImageResource.h"
 #include "system/LowLevelSystem.h"
 #include "system/String.h"
 #include "system/System.h"
@@ -37,6 +36,8 @@
 #include "resources/XmlDocument.h"
 
 #include "impl/tinyXML/tinyxml.h"
+
+#include <bx/debug.h>
 
 
 
@@ -373,7 +374,7 @@ namespace hpl {
 			cMaterialUsedTexture* pUsedTexture = pMatType->GetUsedTexture(i);
 			// iTexture *pTex = NULL;
 
-			ImageResource* pImageResource = nullptr;
+			Image* pImageResource = nullptr;
 
 			tString sTextureType = GetTextureString(pUsedTexture->mType);
 			//Log("Trying to load type: %s\n",sTextureType.c_str());
@@ -413,9 +414,9 @@ namespace hpl {
 
 				if(type == eTextureType_1D)
 				{
-					// pTex = mpResources->GetTextureManager()->Create1D(sFile,bMipMaps,
-					// 														eTextureUsage_Normal,
-					// 														mlTextureSizeDownScaleLevel);
+					pImageResource = mpResources->GetTextureManager()->Create1DImage(sFile,bMipMaps,
+																			eTextureUsage_Normal,
+																			mlTextureSizeDownScaleLevel);
 				}
 				else if(type == eTextureType_2D)
 				{
@@ -429,14 +430,15 @@ namespace hpl {
 				}
 				else if(type == eTextureType_3D)
 				{
-					// pTex = mpResources->GetTextureManager()->Create3D(sFile,bMipMaps,
-					// 													eTextureUsage_Normal,
-					// 													mlTextureSizeDownScaleLevel);
+					pImageResource = mpResources->GetTextureManager()->Create3DImage(sFile,bMipMaps,
+																		eTextureUsage_Normal,
+																		mlTextureSizeDownScaleLevel);
 				}
 				else if(type == eTextureType_CubeMap)
 				{
+					BX_ASSERT(false, "Not implemented yet!");
 					//Check for DDS ending and load cubemap as file.
-					// pTex = mpResources->GetTextureManager()->CreateCubeMap(sFile,bMipMaps,
+					// pImageResource = mpResources->GetTextureManager()->CreateCubeMap(sFile,bMipMaps,
 					// 														eTextureUsage_Normal,
 					// 														mlTextureSizeDownScaleLevel);
 				}

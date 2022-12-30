@@ -43,7 +43,7 @@ namespace hpl {
 		bool LoadData();
 		void DestroyData();
 
-		virtual void Draw(GraphicsContext& context, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, std::weak_ptr<RenderViewport> apRenderTarget,
+		virtual void Draw(GraphicsContext& context, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, RenderViewport& apRenderTarget,
 					bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList) override;
 
 	private:

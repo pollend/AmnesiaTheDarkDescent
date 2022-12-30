@@ -21,7 +21,7 @@
 #define HPL_POSTEFFECT_COLOR_CONV_TEX_H
 
 #include "bgfx/bgfx.h"
-#include "graphics/ImageResource.h"
+#include "graphics/Image.h"
 #include "graphics/PostEffect.h"
 
 namespace hpl {
@@ -76,7 +76,7 @@ namespace hpl {
 		void OnSetParams();
 		iPostEffectParams *GetTypeSpecificParams() { return &mParams; }
 
-		ImageResource* mpColorConvTex;
+		Image* mpColorConvTex;
 
 		cPostEffectType_ColorConvTex* mpSpecificType;
 

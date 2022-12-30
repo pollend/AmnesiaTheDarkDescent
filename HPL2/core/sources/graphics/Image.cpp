@@ -3,8 +3,10 @@
 #include "bgfx/defines.h"
 #include <cstdint>
 #include <bx/debug.h>
+#include <graphics/Bitmap.h>
 namespace hpl
 {
+
 
     ImageDescriptor::ImageDescriptor(const ImageDescriptor& desc)
         : m_width(desc.m_width)
@@ -21,6 +23,16 @@ namespace hpl
         , m_hasMipMaps(false)
         , format(bgfx::TextureFormat::Unknown)
     {
+    }
+
+    ImageDescriptor ImageDescriptor::CreateFromBitmap(const cBitmap& bitmap) {
+        ImageDescriptor descriptor;
+        BX_ASSERT(bitmap.GetNumOfImages() == 1, "Only single image is supported at the moment");
+        descriptor.format = Image::FromHPLTextureFormat(bitmap.GetPixelFormat());
+        descriptor.m_width = bitmap.GetWidth();
+        descriptor.m_height = bitmap.GetHeight();
+        descriptor.m_depth = bitmap.GetDepth();
+        return descriptor;
     }
 
     ImageDescriptor ImageDescriptor::CreateTexture2D(uint16_t width, uint16_t height, bool hasMipMaps, bgfx::TextureFormat::Enum format) {
@@ -42,17 +54,29 @@ namespace hpl
         return desc;
     }
 
-    Image::Image()
+    Image::Image() :
+        iResourceBase("", _W(""), 0)
     {
     }
 
-    Image::Image(const ImageDescriptor& desc) {
-        Initialize(desc);
+    Image::Image(const tString& asName, const tWString& asFullPath):
+        iResourceBase(asName, asFullPath, 0)
+    {
     }
 
-    Image::Image(Image&& other) {
+    bool Image::Reload() {
+        return false;
+    }
+    
+    void Image::Unload() {
+    }
+
+    void Image::Destroy() {
+    }
+
+    Image::Image(Image&& other) :
+        iResourceBase(other.GetName(), other.GetFullPath(), 0) {
         m_handle = other.m_handle;
-        m_descriptor = other.m_descriptor;
         other.m_handle = BGFX_INVALID_HANDLE;
     }
 
@@ -66,19 +90,19 @@ namespace hpl
 
     void Image::operator=(Image&& other) {
         m_handle = other.m_handle;
-        m_descriptor = other.m_descriptor;
         other.m_handle = BGFX_INVALID_HANDLE;
     }
 
     void Image::Initialize(const ImageDescriptor& descriptor, const bgfx::Memory* mem) {
         BX_ASSERT(!bgfx::isValid(m_handle), "RenderTarget already initialized");
+        m_width = descriptor.m_width;
+        m_height = descriptor.m_height;
 
-        m_descriptor = descriptor;
-        uint64_t flags = (m_descriptor.m_configuration.m_uClamp ? BGFX_SAMPLER_U_CLAMP : 0) |
-            (m_descriptor.m_configuration.m_vClamp ? BGFX_SAMPLER_V_CLAMP : 0) |
-            (m_descriptor.m_configuration.m_wClamp ? BGFX_SAMPLER_W_CLAMP : 0) |
+        uint64_t flags = (descriptor.m_configuration.m_uClamp ? BGFX_SAMPLER_U_CLAMP : 0) |
+            (descriptor.m_configuration.m_vClamp ? BGFX_SAMPLER_V_CLAMP : 0) |
+            (descriptor.m_configuration.m_wClamp ? BGFX_SAMPLER_W_CLAMP : 0) |
             [&] () -> uint64_t {
-                switch(m_descriptor.m_configuration.m_rt) {
+                switch(descriptor.m_configuration.m_rt) {
                     case RTType::RT_Write:
                         return BGFX_TEXTURE_RT;
                     case RTType::RT_WriteOnly:
@@ -97,25 +121,25 @@ namespace hpl
                 return 0;
             }();
 
-        if (m_descriptor.m_depth > 1)
+        if (descriptor.m_depth > 1)
         {
             m_handle = bgfx::createTexture3D(
-                m_descriptor.m_width,
-                m_descriptor.m_height,
-                m_descriptor.m_depth,
-                m_descriptor.m_hasMipMaps,
-                m_descriptor.format,
+                descriptor.m_width,
+                descriptor.m_height,
+                descriptor.m_depth,
+                descriptor.m_hasMipMaps,
+                descriptor.format,
                 flags,
                 mem);
         }
         else
         {
             m_handle = bgfx::createTexture2D(
-                m_descriptor.m_width, 
-                m_descriptor.m_height, 
-                m_descriptor.m_hasMipMaps, 
-                m_descriptor.m_arraySize, 
-                m_descriptor.format, 
+                descriptor.m_width, 
+                descriptor.m_height, 
+                descriptor.m_hasMipMaps, 
+                descriptor.m_arraySize, 
+                descriptor.format, 
                 flags, 
                 mem);
         }
@@ -129,10 +153,10 @@ namespace hpl
         m_handle = BGFX_INVALID_HANDLE;
     }
 
-    const ImageDescriptor& Image::GetDescriptor() const
-    {
-        return m_descriptor;
-    }
+    // const ImageDescriptor& Image::GetDescriptor() const
+    // {
+    //     return m_descriptor;
+    // }
 
     bgfx::TextureFormat::Enum Image::FromHPLTextureFormat(ePixelFormat format)
     {
@@ -195,6 +219,24 @@ namespace hpl
         }
         return bgfx::TextureFormat::Unknown;
     }
+
+    void Image::InitializeFromBitmap(Image& image, cBitmap& bitmap, const ImageDescriptor& desc) {
+
+        auto data = bitmap.GetData(0, 0);
+        image.Initialize(desc, bgfx::copy(data->mpData, data->mlSize));
+    }
+
+    void Image::loadFromBitmap(Image& image, cBitmap& bitmap) {
+        ImageDescriptor descriptor;
+        BX_ASSERT(bitmap.GetNumOfImages() == 1, "Only single image is supported at the moment");
+        descriptor.format = Image::FromHPLTextureFormat(bitmap.GetPixelFormat());
+        descriptor.m_width = bitmap.GetWidth();
+        descriptor.m_height = bitmap.GetHeight();
+        descriptor.m_depth = bitmap.GetDepth();
+        auto data = bitmap.GetData(0, 0);
+        image.Initialize(descriptor, bgfx::copy(data->mpData, data->mlSize));
+    }
+
 
     bgfx::TextureHandle Image::GetHandle() const
     {

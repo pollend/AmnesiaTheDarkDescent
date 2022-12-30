@@ -21,6 +21,7 @@
 #include "graphics/FrameTexture.h"
 #include "graphics/FrameBitmap.h"
 #include "graphics/Texture.h"
+#include <memory>
 
 
 namespace hpl {
@@ -89,7 +90,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	iTexture *cFrameSubImage::GetTexture()const{return mpFrameTexture->GetTexture();}
+	Image* cFrameSubImage::GetTexture()const{return mpFrameTexture->GetTexture();}
 
 	//-----------------------------------------------------------------------
 

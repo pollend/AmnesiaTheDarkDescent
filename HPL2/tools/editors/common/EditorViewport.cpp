@@ -23,6 +23,7 @@
 #include "EditorGrid.h"
 #include "EditorSelection.h"
 #include "EditorWorld.h"
+#include "graphics/RenderTarget.h"
 
 int iEditorViewport::mlViewportCount = 0;
 bool iEditorViewport::mbCamPlanesUpdated = true;
@@ -742,8 +743,6 @@ iEditorViewport::iEditorViewport(iEditorBase* apEditor, cWorld* apWorld, iFrameB
 	mpGfx = mpEngine->GetGraphics();
 	mpGuiSet = apEditor->GetSet();
 
-	mpFB = NULL;
-
 	mCamera = cEditorViewportCamera(this);
 	mpEngineViewport = mpEngine->GetScene()->CreateViewport(mCamera.GetEngineCamera(), apWorld, true);
 	SetViewportActive(false);
@@ -766,7 +765,7 @@ iEditorViewport::iEditorViewport(iEditorBase* apEditor, cWorld* apWorld, iFrameB
 
 	mpGrid = hplNew(cEditorGrid, (this));
 
-	SetFrameBuffer(apFB);
+	// SetFrameBuffer(apFB);
 }
 
 //-------------------------------------------------------------
@@ -782,7 +781,7 @@ iEditorViewport::~iEditorViewport()
 	if(mbDestroyFBOnExit)
 	{
 		mpEngine->GetGraphics()->GetLowLevel()->SetCurrentFrameBuffer(NULL);
-		mpEngine->GetGraphics()->DestroyFrameBuffer(mpFB);
+		// mpEngine->GetGraphics()->DestroyFrameBuffer(mpFB);
 	}
 }
 
@@ -842,15 +841,10 @@ void iEditorViewport::SetRenderMode(eRenderer aMode)
 
 //-------------------------------------------------------------
 
-void iEditorViewport::SetFrameBuffer(iFrameBuffer* apFB)
+void iEditorViewport::SetFrameBuffer(std::shared_ptr<RenderTarget> target)
 {
-	if(apFB==NULL || mpFB==apFB) return;
-
-	mpFB = apFB;
-	iFrameBufferAttachment* pColorBuffer = mpFB->GetColorBuffer(0);
-	if(pColorBuffer) mpRenderTarget = pColorBuffer->ToTexture();
-
-	// mpEngineViewport->SetFrameBuffer(mpFB);
+	m_target = target;
+	mpEngineViewport->setRenderTarget(target);
 	mbViewportNeedsUpdate = true;
 }
 
@@ -870,7 +864,7 @@ void iEditorViewport::UpdateViewport()
 
 	////////////////////////////////////////////
 	// Set updated one
-	pImg = pGui->CreateGfxTexture(mpRenderTarget, false, eGuiMaterial_Diffuse, cColor(1,1), true, mvUVStart, mvUVEnd);
+	pImg = pGui->CreateGfxTexture(m_target->GetImage().get(), false, eGuiMaterial_Diffuse, cColor(1,1), true, mvUVStart, mvUVEnd);
 	mpImgViewport->SetImage(pImg);
 
 	mbViewportNeedsUpdate = false;
@@ -910,7 +904,7 @@ void iEditorViewport::SetEngineViewportPositionAndSize(const cVector2l& avPos, c
 	mvEngineViewportSize = avSize;
 	mpEngineViewport->SetSize(mvEngineViewportSize);
 
-	const cVector2l& vFBSize = mpFB->GetSize();
+	const cVector2l vFBSize = cVector2l(m_target->GetImage(0)->GetWidth(), m_target->GetImage(0)->GetHeight());
 	cVector2f vFBSizeFloat = cVector2f((float)vFBSize.x, (float)vFBSize.y);
 
 	cVector2f vPosFloat = cVector2f((float)mvEngineViewportPos.x, (float)mvEngineViewportPos.y);
@@ -937,7 +931,7 @@ void iEditorViewport::SetEngineViewportSize(const cVector2l& avSize)
 	mvEngineViewportSize = avSize;
 	mpEngineViewport->SetSize(mvEngineViewportSize);
 
-	const cVector2l& vFBSize = mpFB->GetSize();
+	const cVector2l vFBSize = cVector2l(m_target->GetImage(0)->GetWidth(), m_target->GetImage(0)->GetHeight());
 
 	mvUVSize = cVector2f((float)mvEngineViewportSize.x, (float)mvEngineViewportSize.y) /
 			   cVector2f((float)vFBSize.x, (float)vFBSize.y);

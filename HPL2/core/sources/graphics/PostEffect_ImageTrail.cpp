@@ -75,14 +75,14 @@ namespace hpl
         : iPostEffect(apGraphics, apResources, apType)
     {
         cVector2l vSize = mpLowLevelGraphics->GetScreenSizeInt();
-
-        auto colorDesc = [&]
+        m_accumulationBuffer = RenderTarget([&]
         {
             auto desc = ImageDescriptor::CreateTexture2D(vSize.x, vSize.y, false, bgfx::TextureFormat::Enum::RGBA32F);
             desc.m_configuration.m_rt = RTType::RT_Write;
-            return desc;
-        }();
-        m_accumulationBuffer = RenderTarget(std::shared_ptr<Image>(new Image(colorDesc)));
+            auto image = std::make_shared<Image>();
+            image->Initialize(desc);
+            return image;
+        }());
 
         mpImageTrailType = static_cast<cPostEffectType_ImageTrail*>(mpType);
 
@@ -153,7 +153,7 @@ namespace hpl
         request.m_height = vRenderTargetSize.y;
         context.Submit(view, request);
 
-        context.CopyTextureToFrameBuffer(*m_accumulationBuffer.GetImage().lock(), target);
+        context.CopyTextureToFrameBuffer(*m_accumulationBuffer.GetImage(), target);
     }
 
 } // namespace hpl

@@ -20,6 +20,7 @@
 
 #include "graphics/Image.h"
 #include "graphics/RenderFunctions.h"
+#include <cstddef>
 #include <graphics/GraphicsContext.h>
 #include <absl/container/fixed_array.h>
 #include <graphics/RenderTarget.h>
@@ -64,7 +65,7 @@ namespace hpl
         inline iPostEffect* GetPostEffect(int alIdx) const
         {
 			for(auto& it: _postEffects) {
-				if(it._index == alIdx) {
+				if(it._id == alIdx) {
 					return it._effect;
 				}
 			}
@@ -81,6 +82,7 @@ namespace hpl
     private:
         struct PostEffectEntry
         {
+            size_t _id;
             int _index;
             iPostEffect* _effect;
         };
@@ -91,8 +93,6 @@ namespace hpl
         std::vector<PostEffectEntry> _postEffects;
         absl::FixedArray<std::shared_ptr<Image>, 2> _images;
         absl::FixedArray<RenderTarget, 2> _renderTargets;
-
-        iFrameBuffer* mpFinalTempBuffer[2];
 
         float mfCurrentFrameTime;
     };

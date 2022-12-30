@@ -77,10 +77,10 @@ protected:
 
 	cLightPoint* mpCamLight;
 
-	iTexture* mpRenderTarget128;
+	std::shared_ptr<Image> mpRenderTarget128;
 
 	iFrameBuffer* mpFB64;
-	std::shared_ptr<RenderViewport> mpFB128;
+	RenderViewport mpFB128;
 
 	iEditorBase* mpEditor;
 

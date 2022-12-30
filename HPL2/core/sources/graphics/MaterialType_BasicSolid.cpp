@@ -241,7 +241,6 @@ namespace hpl
         // Create textures
         m_dissolveImage = mpResources->GetTextureManager()->Create2DImage("core_dissolve.tga", true);
 
-        mpDissolveTexture = mpResources->GetTextureManager()->Create2D("core_dissolve.tga", true);
 
         LoadSpecificData();
     }
@@ -250,9 +249,7 @@ namespace hpl
 
     void iMaterialType_SolidBase::DestroyData()
     {
-        if (mpDissolveTexture)
-            mpResources->GetTextureManager()->Destroy(mpDissolveTexture);
-
+  
         // If this instace was global data creator, then it needs to be recreated.
         if (mbIsGlobalDataCreator)
         {
@@ -963,7 +960,7 @@ namespace hpl
             case eMaterialRenderMode_Z: {
                 tryUpdateUvAnimation();
                 apProgram->setImage(material::solid::s_diffuseMap, apMaterial->GetImage(eMaterialTexture_Alpha));
-                apProgram->setImage(material::solid::s_dissolveMap, &m_dissolveImage->GetImage());
+                apProgram->setImage(material::solid::s_dissolveMap, m_dissolveImage);
                 
             }
             break;
@@ -971,7 +968,7 @@ namespace hpl
                 tryUpdateUvAnimation();
                 apProgram->SetFloat(kVar_afDissolveAmount, apObject->GetCoverageAmount());
                 apProgram->setImage(material::solid::s_diffuseMap, apMaterial->GetImage(eMaterialTexture_Alpha));
-                apProgram->setImage(material::solid::s_dissolveMap, &m_dissolveImage->GetImage());
+                apProgram->setImage(material::solid::s_dissolveMap, m_dissolveImage);
                 apProgram->setImage(material::solid::s_dissolveAlphaMap, apMaterial->GetImage(eMaterialTexture_DissolveAlpha));
             }
             break;

@@ -19,6 +19,7 @@
 
 #include "scene/Light.h"
 
+#include "graphics/Image.h"
 #include "system/String.h"
 
 #include "impl/tinyXML/tinyxml.h"
@@ -94,9 +95,10 @@ namespace hpl {
 
 		///////////////////////////////
 		//Data init
-		mpFalloffMap = mpTextureManager->Create1D("core_falloff_linear",false);
-		mpFalloffMap->SetWrapS(eTextureWrap_ClampToEdge);
-		mpFalloffMap->SetWrapT(eTextureWrap_ClampToEdge);
+		mpFalloffMap = mpTextureManager->Create1DImage("core_falloff_linear",false);
+		// TODO: MP need to configure clamp to edge
+		// mpFalloffMap->SetWrapS(eTextureWrap_ClampToEdge);
+		// mpFalloffMap->SetWrapT(eTextureWrap_ClampToEdge);
 
 		mpGoboTexture = NULL;
 
@@ -413,35 +415,37 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	iTexture *iLight::GetFalloffMap()
+	Image* iLight::GetFalloffMap()
 	{
 		return mpFalloffMap;
 	}
 
-	void iLight::SetFalloffMap(iTexture* apTexture)
+	void iLight::SetFalloffMap(Image* apTexture)
 	{
 		if(mpFalloffMap) mpTextureManager->Destroy(mpFalloffMap);
 
 		mpFalloffMap = apTexture;
-		mpFalloffMap->SetWrapS(eTextureWrap_ClampToEdge);
-		mpFalloffMap->SetWrapT(eTextureWrap_ClampToEdge);
+		// TODO: MP need to configure clamp to edge
+		// mpFalloffMap->SetWrapS(eTextureWrap_ClampToEdge);
+		// mpFalloffMap->SetWrapT(eTextureWrap_ClampToEdge);
 
 	}
 
 	//-----------------------------------------------------------------------
 
-	void iLight::SetGoboTexture(iTexture *apTexture)
+	void iLight::SetGoboTexture(Image *apTexture)
 	{
 		//Destroy any old texture.
 		if(mpGoboTexture) mpTextureManager->Destroy(mpGoboTexture);
 
 		mpGoboTexture = apTexture;
-		if(mpGoboTexture) mpGoboTexture->SetWrapSTR(eTextureWrap_ClampToEdge);
+		//TODO: MP need to configure clamp to edge
+		// if(mpGoboTexture) mpGoboTexture->SetWrapSTR(eTextureWrap_ClampToEdge);
 	}
 
 	//-----------------------------------------------------------------------
 
-	iTexture* iLight::GetGoboTexture()
+	Image* iLight::GetGoboTexture()
 	{
 		return mpGoboTexture;
 	}
@@ -520,7 +524,7 @@ namespace hpl {
 					mDiffuseColor.a = cString::ToFloat(pMainElem->Attribute("Specular"),mDiffuseColor.a);
 
 					tString sFalloffImage = cString::ToString(pMainElem->Attribute("FalloffImage"),"");
-					iTexture *pTexture = mpTextureManager->Create1D(sFalloffImage,false);
+					auto* pTexture = mpTextureManager->Create1DImage(sFalloffImage,false);
 					if(pTexture) SetFalloffMap(pTexture);
 
 					ExtraXMLProperties(pMainElem);
