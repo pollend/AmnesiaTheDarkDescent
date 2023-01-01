@@ -32,113 +32,11 @@ namespace hpl
     };
     bgfx::VertexLayout PositionTexCoord0::_layout;
 
-    GraphicsContext::GraphicsContext()
-        : _current(0)
-    {
-    }
-
-
-    uint16_t GraphicsContext::ScreenWidth() const
-    {
-        return 0;
-    }
-    uint16_t GraphicsContext::ScreenHeight() const
-    {
-        return 0;
-    }
-
-    void GraphicsContext::UpdateScreenSize(uint16_t width, uint16_t height) 
-    {
-    }
-
-
-    void GraphicsContext::Init()
-    {
-
-	    // bgfx::Init init;
-		// init.type     = args.m_type;
-		// init.vendorId = args.m_pciId;
-		// init.platformData.nwh  = entry::getNativeWindowHandle(entry::kDefaultWindowHandle);
-		// init.platformData.ndt  = entry::getNativeDisplayHandle();
-		// init.resolution.width  = m_width;
-		// init.resolution.height = m_height;
-		// init.resolution.reset  = m_reset;
-		// bgfx::init(init);
-
-        _caps = bgfx::getCaps();
-        PositionTexCoord0::init();
-    }
-
-    void GraphicsContext::Reset()
-    {
-        _current = 0;
-    }
-
-    void GraphicsContext::ClearTarget(bgfx::ViewId view, const DrawClear& request) {
-        bgfx::setViewClear(view, 
-            ([&]() {
-                uint16_t flags = 0;
-                if(request.m_clear.m_clearOp & ClearOp::Color) {
-                    flags |= BGFX_CLEAR_COLOR;
-                }
-                if(request.m_clear.m_clearOp & ClearOp::Depth) {
-                    flags |= BGFX_CLEAR_DEPTH;
-                }
-                if(request.m_clear.m_clearOp & ClearOp::Stencil) {
-                    flags |= BGFX_CLEAR_STENCIL;
-                }
-                return flags;
-            }()), 
-            request.m_clear.m_rgba, 
-            request.m_clear.m_depth, 
-            request.m_clear.m_stencil);
-        bgfx::setViewRect(view, request.m_x, request.m_y, request.m_width, request.m_height);
-        if(request.m_target.IsValid()) {
-            bgfx::setViewFrameBuffer(view, request.m_target.GetHandle());
-        } else {
-            bgfx::setViewFrameBuffer(view, BGFX_INVALID_HANDLE);
-        }
-        bgfx::touch(view);
-    }
-        
-
-    void GraphicsContext::Submit(bgfx::ViewId view, const DrawRequest& request) {
-        
+    uint64_t convertToState(const GraphicsContext::DrawRequest& request) {
         auto& layout = request.m_layout;
         auto& program = request.m_program;
 
-        for(auto& uniform: program.m_uniforms) {
-            if(bgfx::isValid(uniform.m_uniformHandle)) {
-                bgfx::setUniform(uniform.m_uniformHandle, uniform.m_data, uniform.m_num);
-            }
-        }
-
-        for(auto& texture: program.m_textures) {
-            if(bgfx::isValid(texture.m_textureHandle)) {
-                bgfx::setTexture(texture.m_stage, texture.m_uniformHandle, texture.m_textureHandle);
-            }
-        }
-
-        uint8_t streamIndex = 0;
-        for(auto& vertexStream: layout.m_vertexStreams) {
-            if(bgfx::isValid(vertexStream.m_handle)) {
-                bgfx::setVertexBuffer(++streamIndex, vertexStream.m_handle);
-            } else if(bgfx::isValid(vertexStream.m_dynamicHandle)) {
-                bgfx::setVertexBuffer(++streamIndex, vertexStream.m_dynamicHandle);
-            } else if(bgfx::isValid(vertexStream.m_transient.handle)) {
-                bgfx::setVertexBuffer(++streamIndex, &vertexStream.m_transient);
-            }
-        }
-        if(bgfx::isValid(layout.m_indexStream.m_dynamicHandle)) {
-            bgfx::setIndexBuffer(layout.m_indexStream.m_dynamicHandle);
-        } else if(bgfx::isValid(layout.m_indexStream.m_handle)) {
-            bgfx::setIndexBuffer(layout.m_indexStream.m_handle);
-        } else if(bgfx::isValid(layout.m_indexStream.m_transient.handle)) {
-            bgfx::setIndexBuffer(&layout.m_indexStream.m_transient);
-        }
-
-        bgfx::setState( 
-            (((program.m_configuration.m_write & Write::Depth) > 0)  ? BGFX_STATE_WRITE_Z : 0) |
+        return (((program.m_configuration.m_write & Write::Depth) > 0)  ? BGFX_STATE_WRITE_Z : 0) |
             (((program.m_configuration.m_write & Write::R) > 0) ? BGFX_STATE_WRITE_R : 0) |
             (((program.m_configuration.m_write & Write::G) > 0) ? BGFX_STATE_WRITE_G : 0) |
             (((program.m_configuration.m_write & Write::B) > 0) ? BGFX_STATE_WRITE_B : 0) |
@@ -268,7 +166,107 @@ namespace hpl
 
                 return BGFX_STATE_BLEND_FUNC_SEPARATE(srcOperandRgb, srcDestAlpha, srcDestRgb, srcDestAlpha) |
                     BGFX_STATE_BLEND_EQUATION_SEPARATE(rgbEquation, alphaEquation);
-            })());
+            })();
+    }
+
+    void ConfigureLayoutStream(const GraphicsContext::LayoutStream& layout) {
+        uint8_t streamIndex = 0;
+        for(auto& vertexStream: layout.m_vertexStreams) {
+            if(bgfx::isValid(vertexStream.m_handle)) {
+                bgfx::setVertexBuffer(++streamIndex, vertexStream.m_handle);
+            } else if(bgfx::isValid(vertexStream.m_dynamicHandle)) {
+                bgfx::setVertexBuffer(++streamIndex, vertexStream.m_dynamicHandle);
+            } else if(bgfx::isValid(vertexStream.m_transient.handle)) {
+                bgfx::setVertexBuffer(++streamIndex, &vertexStream.m_transient);
+            }
+        }
+        if(bgfx::isValid(layout.m_indexStream.m_dynamicHandle)) {
+            bgfx::setIndexBuffer(layout.m_indexStream.m_dynamicHandle);
+        } else if(bgfx::isValid(layout.m_indexStream.m_handle)) {
+            bgfx::setIndexBuffer(layout.m_indexStream.m_handle);
+        } else if(bgfx::isValid(layout.m_indexStream.m_transient.handle)) {
+            bgfx::setIndexBuffer(&layout.m_indexStream.m_transient);
+        }
+    }
+
+    void ConfigureProgram(const GraphicsContext::ShaderProgram& program) {
+        for(auto& uniform: program.m_uniforms) {
+            if(bgfx::isValid(uniform.m_uniformHandle)) {
+                bgfx::setUniform(uniform.m_uniformHandle, uniform.m_data, uniform.m_num);
+            }
+        }
+
+        for(auto& texture: program.m_textures) {
+            if(bgfx::isValid(texture.m_textureHandle)) {
+                bgfx::setTexture(texture.m_stage, texture.m_uniformHandle, texture.m_textureHandle);
+            }
+        }
+    }
+
+    GraphicsContext::GraphicsContext()
+        : _current(0)
+    {
+    }
+
+
+    uint16_t GraphicsContext::ScreenWidth() const
+    {
+        return 0;
+    }
+    uint16_t GraphicsContext::ScreenHeight() const
+    {
+        return 0;
+    }
+
+    void GraphicsContext::UpdateScreenSize(uint16_t width, uint16_t height) 
+    {
+    }
+
+
+    void GraphicsContext::Init()
+    {
+        PositionTexCoord0::init();
+    }
+
+    void GraphicsContext::Reset()
+    {
+        _current = 0;
+    }
+
+    void GraphicsContext::ClearTarget(bgfx::ViewId view, const DrawClear& request) {
+        bgfx::setViewClear(view, 
+            ([&]() {
+                uint16_t flags = 0;
+                if(request.m_clear.m_clearOp & ClearOp::Color) {
+                    flags |= BGFX_CLEAR_COLOR;
+                }
+                if(request.m_clear.m_clearOp & ClearOp::Depth) {
+                    flags |= BGFX_CLEAR_DEPTH;
+                }
+                if(request.m_clear.m_clearOp & ClearOp::Stencil) {
+                    flags |= BGFX_CLEAR_STENCIL;
+                }
+                return flags;
+            }()), 
+            request.m_clear.m_rgba, 
+            request.m_clear.m_depth, 
+            request.m_clear.m_stencil);
+        bgfx::setViewRect(view, request.m_x, request.m_y, request.m_width, request.m_height);
+        if(request.m_target.IsValid()) {
+            bgfx::setViewFrameBuffer(view, request.m_target.GetHandle());
+        } else {
+            bgfx::setViewFrameBuffer(view, BGFX_INVALID_HANDLE);
+        }
+        bgfx::touch(view);
+    }
+
+
+
+    void GraphicsContext::Submit(bgfx::ViewId view, const DrawRequest& request) {
+        auto& layout = request.m_layout;
+        auto& program = request.m_program;
+        ConfigureLayoutStream(layout);
+        ConfigureProgram(program);
         if(request.m_clear.has_value()) {
             auto& clear = request.m_clear.value();
             bgfx::setViewClear(view, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, clear.m_rgba, clear.m_depth, clear.m_stencil);
@@ -281,8 +279,31 @@ namespace hpl
         }
         bgfx::setViewTransform(view, program.m_view.v, program.m_projection.v);
         bgfx::setTransform(program.m_modelTransform.v);
-        bgfx::submit(view, program.m_handle);
+        bgfx::setState(convertToState(request));
+        bgfx::submit(view, request.m_program.m_handle);
     }
+
+    void GraphicsContext::Submit(bgfx::ViewId view, const DrawRequest& request, bgfx::OcclusionQueryHandle query) {
+        auto& layout = request.m_layout;
+        auto& program = request.m_program;
+        ConfigureLayoutStream(layout);
+        ConfigureProgram(program);
+        if(request.m_clear.has_value()) {
+            auto& clear = request.m_clear.value();
+            bgfx::setViewClear(view, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, clear.m_rgba, clear.m_depth, clear.m_stencil);
+        }
+        bgfx::setViewRect(view, request.m_x, request.m_y, request.m_width, request.m_height);
+        if(request.m_target.IsValid()) {
+            bgfx::setViewFrameBuffer(view, request.m_target.GetHandle());
+        } else {
+            bgfx::setViewFrameBuffer(view, BGFX_INVALID_HANDLE);
+        }
+        bgfx::setViewTransform(view, program.m_view.v, program.m_projection.v);
+        bgfx::setTransform(program.m_modelTransform.v);
+        bgfx::setState(convertToState(request));
+        bgfx::submit(view, request.m_program.m_handle, query);
+    }
+
 
     bgfx::ViewId GraphicsContext::StartPass(absl::string_view name)
     {
@@ -292,8 +313,8 @@ namespace hpl
     }
 
     bool GraphicsContext::isOriginBottomLeft() const { 
-        BX_ASSERT(_caps, "GraphicsContext::Init() must be called before isOriginBottomLeft()");
-        return _caps->originBottomLeft; 
+        BX_ASSERT(bgfx::getCaps(), "GraphicsContext::Init() must be called before isOriginBottomLeft()");
+        return bgfx::getCaps()->originBottomLeft; 
     }
 
     void GraphicsContext::CopyTextureToFrameBuffer(Image& image, RenderTarget& target) {
@@ -303,7 +324,7 @@ namespace hpl
     }
 
     void GraphicsContext::Quad(GraphicsContext::LayoutStream& input, const cVector3f& pos, const cVector2f& size, const cVector2f& uv0, const cVector2f& uv1) {
-        BX_ASSERT(_caps, "GraphicsContext::Init() must be called before ScreenSpaceQuad()");
+        BX_ASSERT(bgfx::getCaps(), "GraphicsContext::Init() must be called before ScreenSpaceQuad()");
 
         bgfx::TransientVertexBuffer vb;
         bgfx::allocTransientVertexBuffer(&vb, 4, PositionTexCoord0::_layout);
@@ -345,7 +366,7 @@ namespace hpl
 
     void GraphicsContext::ScreenSpaceQuad(GraphicsContext::LayoutStream& input, float textureWidth, float textureHeight, float width, float height)
     {
-        BX_ASSERT(_caps, "GraphicsContext::Init() must be called before ScreenSpaceQuad()");
+        BX_ASSERT(bgfx::getCaps(), "GraphicsContext::Init() must be called before ScreenSpaceQuad()");
 
         bgfx::TransientVertexBuffer vb;
         bgfx::allocTransientVertexBuffer(&vb, 3, PositionTexCoord0::_layout);
@@ -369,7 +390,7 @@ namespace hpl
         float minv = texelHalfH;
         float maxv = 2.0f + texelHalfH;
 
-        if (_caps->originBottomLeft)
+        if (bgfx::getCaps()->originBottomLeft)
         {
             const float temp = minv;
             minv = maxv;

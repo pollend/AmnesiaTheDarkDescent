@@ -108,7 +108,7 @@ namespace hpl {
 	class cDeferredLight
 	{
 	public:
-		cDeferredLight() : mpShadowTexture(NULL), mbCastShadows(false){}
+		cDeferredLight() : m_occlusionQuery(BGFX_INVALID_HANDLE), mpShadowTexture(NULL), mbCastShadows(false){}
 
 		iLight *mpLight;
 		cRect2l mClipRect;
@@ -117,6 +117,7 @@ namespace hpl {
 		cMatrixf m_mtxViewSpaceTransform;
 		bool mbInsideNearPlane;
 		iOcclusionQuery *mpQuery;
+		bgfx::OcclusionQueryHandle m_occlusionQuery;
 
 		iTexture *mpShadowTexture;
 		bool mbCastShadows;
@@ -140,6 +141,9 @@ namespace hpl {
 		iTexture* GetGbufferTexture(int alIdx);
 		iFrameBuffer* GetGBufferFrameBuffer(eGBufferComponents aComponents);
 		//iTexture *GetShadowTexture(eShadowMapResolution aQuality){ return mpShadowTexture[aQuality]; }
+
+		virtual void Draw(GraphicsContext& context, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, RenderViewport& apRenderTarget,
+					bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList) override;
 
 		iDepthStencilBuffer* GetDepthStencilBuffer(){ return mpDepthStencil[0];}
 
@@ -198,7 +202,15 @@ namespace hpl {
 		void CopyToFrameBuffer();
 		void SetupRenderList();
 		void RenderObjects();
-		
+
+		void RenderDiffusePass(GraphicsContext& context, RenderTarget& rt);
+		void RenderDecalPass(GraphicsContext& context, RenderTarget& rt);
+		void RenderIlluminationPass(GraphicsContext& context, RenderTarget& rt);
+		void RenderFogPass(GraphicsContext& context, RenderTarget& rt);
+		void RenderFullScreenFogPass(GraphicsContext& context, RenderTarget& rt);
+		void RenderEdgeSmoothPass(GraphicsContext& context, RenderTarget& rt);
+		void RenderTranslucentPass(GraphicsContext& context, RenderTarget& rt);
+		void RenderZPass(GraphicsContext& context, RenderTarget& rt);
 
 		void RenderZ(GraphicsContext& context);
 		void RenderEdgeSmooth();
@@ -213,7 +225,6 @@ namespace hpl {
 		void RenderLights_Box_StencilFront_RenderBack();
 		void RenderLights_Box_RenderBack();
 
-		
 		void RenderReflection(iRenderable *apObject);
 		void RenderSubMeshEntityReflection(cSubMeshEntity *pReflectionObject);
 
@@ -222,8 +233,7 @@ namespace hpl {
 		void SetAccumulationBuffer();
 		void SetGBuffer(eGBufferComponents aComponents);
 		iTexture* GetBufferTexture(int alIdx);
-
-
+		
 		void RenderGbufferContent();
 		void RenderReflectionContent();
 
@@ -276,7 +286,7 @@ namespace hpl {
 		std::array<RenderTarget, 2> m_gBuffer_normals;
 		std::array<RenderTarget, 2> m_gBuffer_linearDepth;
 		
-		std::array<std::shared_ptr<Image>, 2> m_colorDepth;
+		std::array<std::shared_ptr<Image>, 2> m_color;
 		std::array<std::shared_ptr<Image>, 2> m_normal;
 		std::array<std::shared_ptr<Image>, 2> m_linearDepth;
 		std::array<std::shared_ptr<Image>, 2> m_depthStencil;

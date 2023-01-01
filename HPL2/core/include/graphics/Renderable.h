@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include "bgfx/bgfx.h"
 #include "graphics/GraphicsContext.h"
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
@@ -129,7 +130,6 @@ namespace hpl {
 
 		void SetRenderableUserData(void* apData) { mpRenderableUserData = apData; }
 		void* GetRenderableUserData() { return mpRenderableUserData; }
-
 	protected:
 		cMatrixf m_mtxInvModel;
 		cMatrixf m_mtxPrevious;
@@ -165,5 +165,8 @@ namespace hpl {
 		iRenderableContainerNode *mpRenderContainerNode;
 
 		void* mpRenderableUserData;
+
+		// need to hack in this occlusion query to get this to work correctly
+		bgfx::OcclusionQueryHandle m_occlusionQuery;
 	};
 };

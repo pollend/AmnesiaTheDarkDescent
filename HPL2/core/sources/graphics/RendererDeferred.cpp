@@ -21,6 +21,7 @@
 
 #include "absl/types/span.h"
 #include "bgfx/bgfx.h"
+#include <bx/debug.h>
 #include <graphics/Enum.h>
 #include "graphics/GraphicsContext.h"
 #include "graphics/GraphicsTypes.h"
@@ -189,8 +190,8 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 	RenderTarget& cRendererDeferred::resolveRenderTarget(std::array<RenderTarget, 2>& rt) {
 		return rt[ mpCurrentSettings->mbIsReflection ? 1 : 0];
-
 	}
+
 	std::shared_ptr<Image>& cRendererDeferred::resolveRenderImage(std::array<std::shared_ptr<Image>, 2>& img) {
 		return img[ mpCurrentSettings->mbIsReflection ? 1 : 0];
 	}
@@ -226,7 +227,7 @@ namespace hpl {
 				return image;
 			};
 
-			m_colorDepth = 
+			m_color = 
 				{ colorImage(),colorImage()};
 			m_normal = 
 				{ colorImage(), colorImage()};
@@ -234,17 +235,17 @@ namespace hpl {
 				{ colorImage(),colorImage()};
 			m_depthStencil = { depthImage(),depthImage()};
 			{
-				std::array<std::shared_ptr<Image>, 4> images = {m_colorDepth[0], m_normal[0], m_linearDepth[0], m_depthStencil[0]};
-				std::array<std::shared_ptr<Image>, 4> reflectionImages = {m_colorDepth[1], m_normal[1], m_linearDepth[1], m_depthStencil[1]};
+				std::array<std::shared_ptr<Image>, 4> images = {m_color[0], m_normal[0], m_linearDepth[0], m_depthStencil[0]};
+				std::array<std::shared_ptr<Image>, 4> reflectionImages = {m_color[1], m_normal[1], m_linearDepth[1], m_depthStencil[1]};
 				m_gBuffer_full = {RenderTarget(absl::MakeSpan(images)), RenderTarget(absl::MakeSpan(reflectionImages)) };
 			}
 			{
-				std::array<std::shared_ptr<Image>, 2> images = {m_colorDepth[0], m_depthStencil[0]};
-				std::array<std::shared_ptr<Image>, 2> reflectionImages = {m_colorDepth[1], m_depthStencil[1]};
+				std::array<std::shared_ptr<Image>, 2> images = {m_color[0], m_depthStencil[0]};
+				std::array<std::shared_ptr<Image>, 2> reflectionImages = {m_color[1], m_depthStencil[1]};
 				m_gBuffer_colorAndDepth = {RenderTarget(absl::MakeSpan(images)), RenderTarget(absl::MakeSpan(reflectionImages))};
 			}
 
-			m_gBuffer_color = {RenderTarget(m_colorDepth[0]), RenderTarget(m_colorDepth[1])};
+			m_gBuffer_color = {RenderTarget(m_color[0]), RenderTarget(m_color[1])};
 			m_gBuffer_depth = {RenderTarget(m_depthStencil[0]), RenderTarget(m_depthStencil[1])};
 			m_gBuffer_normals = {RenderTarget(m_normal[0]), RenderTarget(m_normal[1])};
 			m_gBuffer_linearDepth = {RenderTarget(m_linearDepth[0]), RenderTarget(m_linearDepth[1])};
@@ -669,7 +670,7 @@ namespace hpl {
 			mpGraphics->DestroyGpuProgram(mpEdgeSmooth_RenderProgram);
 		}
 
-		mpProgramManager->DestroyShadersAndPrograms();
+		// mpProgramManager->DestroyShadersAndPrograms();
 	}
 
 	//-----------------------------------------------------------------------
@@ -699,13 +700,124 @@ namespace hpl {
 		return mpGBufferTexture[lType][alIdx];
 	}
 
-	//-----------------------------------------------------------------------
+	// NOTE: this logic is incomplete
+	void cRendererDeferred::RenderFogPass(GraphicsContext& context, RenderTarget& rt) {
+		if(mpCurrentRenderList->GetFogAreaNum() == 0)
+		{
+			mpCurrentSettings->mvFogRenderData.resize(0); //Make sure render data array is empty!
+			return;
+		}
 
-	//////////////////////////////////////////////////////////////////////////
-	// PRIVATE METHODS
-	//////////////////////////////////////////////////////////////////////////
+		for(auto& fogData: mpCurrentSettings->mvFogRenderData)
+		{
+			cFogArea* pFogArea = fogData.mpFogArea;
+			DeferredFogUniforms uniforms = {0};
 
-	//-----------------------------------------------------------------------
+			//Outside of box setup
+			cMatrixf rotationMatrix = cMatrixf::Identity;
+			if(fogData.mbInsideNearFrustum==false)
+			{
+				cMatrixf mtxInvModelView = cMath::MatrixInverse( cMath::MatrixMul(mpCurrentFrustum->GetViewMatrix(), *pFogArea->GetModelMatrixPtr()) );
+				cVector3f vRayCastStart = cMath::MatrixMul(mtxInvModelView, cVector3f(0));
+
+				uniforms.u_fogRayCastStart[0] = vRayCastStart.x;
+				uniforms.u_fogRayCastStart[1] = vRayCastStart.y;
+				uniforms.u_fogRayCastStart[2] = vRayCastStart.z;
+
+				rotationMatrix = mtxInvModelView.GetRotation();
+
+				cVector3f vNegPlaneDistNeg( cMath::PlaneToPointDist(cPlanef(-1,0,0,0.5f),vRayCastStart), cMath::PlaneToPointDist(cPlanef(0,-1,0,0.5f),vRayCastStart),
+											cMath::PlaneToPointDist(cPlanef(0,0,-1,0.5f),vRayCastStart));
+				cVector3f vNegPlaneDistPos( cMath::PlaneToPointDist(cPlanef(1,0,0,0.5f),vRayCastStart), cMath::PlaneToPointDist(cPlanef(0,1,0,0.5f),vRayCastStart),
+											cMath::PlaneToPointDist(cPlanef(0,0,1,0.5f),vRayCastStart));
+				
+				uniforms.u_fogNegPlaneDistNeg[0] = vNegPlaneDistNeg.x * -1;
+				uniforms.u_fogNegPlaneDistNeg[1] = vNegPlaneDistNeg.y * -1;
+				uniforms.u_fogNegPlaneDistNeg[2] = vNegPlaneDistNeg.z * -1;
+
+				uniforms.u_fogNegPlaneDistPos[0] = vNegPlaneDistPos.x * -1;
+				uniforms.u_fogNegPlaneDistPos[1] = vNegPlaneDistPos.y * -1;
+				uniforms.u_fogNegPlaneDistPos[2] = vNegPlaneDistPos.z * -1;
+			}
+			if(fogData.mbInsideNearFrustum)
+			{
+				uniforms.u_useBackside = pFogArea->GetShowBacksideWhenInside()? 1.0 : 0.0;
+			} 
+			else 
+			{
+				uniforms.u_useBackside = pFogArea->GetShowBacksideWhenOutside() ? 1.0 : 0.0;
+				uniforms.u_useOutsideBox = 1.0;
+			}
+
+			GraphicsContext::LayoutStream layoutStream;
+			GraphicsContext::ShaderProgram shaderProgram;
+			shaderProgram.m_uniforms.push_back(
+				{m_u_param, &uniforms, 3});
+			shaderProgram.m_uniforms.push_back(
+				{m_u_boxInvViewModelRotation, rotationMatrix.v, 1});
+			
+			shaderProgram.m_projection = *mpCurrentProjectionMatrix;
+			shaderProgram.m_view = mpCurrentFrustum->GetViewMatrix();
+			// shaderProgram.m_modelTransform = *obj->GetModelMatrixPtr();
+
+			mpShapeBox->GetLayoutStream(layoutStream);
+		}
+	}
+
+
+	void cRendererDeferred::RenderFullScreenFogPass(GraphicsContext& context, RenderTarget& rt) {
+		const auto& view = context.StartPass("FullScreenFog");
+		auto& image = resolveRenderImage(m_linearDepth);
+		
+		DeferredFogUniforms uniforms = {0};
+		
+		uniforms.u_fogStart = mpCurrentWorld->GetFogStart();
+		uniforms.u_fogLength = mpCurrentWorld->GetFogEnd() - mpCurrentWorld->GetFogStart();
+		uniforms.u_fogFalloffExp = mpCurrentWorld->GetFogFalloffExp();
+		
+		auto fogColor = mpCurrentWorld->GetFogColor();
+		float u_color[4] = {fogColor.r, fogColor.g, fogColor.b, fogColor.a};
+
+		GraphicsContext::LayoutStream layout;
+		context.ScreenSpaceQuad(layout, mvScreenSize.x, mvScreenSize.y);
+		
+		GraphicsContext::ShaderProgram shaderProgram;
+		shaderProgram.m_configuration.m_write = Write::RGBA;
+		shaderProgram.m_configuration.m_depthTest = DepthTest::LessEqual;
+		
+		shaderProgram.m_handle = m_deferredFog;
+		shaderProgram.m_textures.push_back(
+			{m_u_depthMap, image->GetHandle(), 0});
+		shaderProgram.m_uniforms.push_back(
+			{m_u_param, &uniforms, 3});
+		// shaderProgram.m_uniforms.push_back(
+		// 		{m_u_color, u_color, 1});
+
+		GraphicsContext::DrawRequest drawRequest {m_edgeSmooth_LinearDepth, layout, shaderProgram};
+		context.Submit(view, drawRequest);
+	}
+
+	void cRendererDeferred::RenderIlluminationPass(GraphicsContext& context, RenderTarget& rt) {
+		if(!mpCurrentRenderList->ArrayHasObjects(eRenderListType_Illumination)) {
+			return;
+		}
+
+		auto& target = resolveRenderTarget(m_gBuffer_color);
+		bgfx::ViewId view = context.StartPass("RenderIllumination");
+		RenderableHelper(eRenderListType_Illumination, eMaterialRenderMode_Illumination, [&](iRenderable* obj, GraphicsContext::LayoutStream& layoutInput, GraphicsContext::ShaderProgram& shaderInput) {
+			shaderInput.m_configuration.m_depthTest = DepthTest::Equal;
+			shaderInput.m_configuration.m_write = Write::RGBA;
+
+			shaderInput.m_projection = *mpCurrentProjectionMatrix;
+			shaderInput.m_view = mpCurrentFrustum->GetViewMatrix();
+			shaderInput.m_modelTransform = *obj->GetModelMatrixPtr();
+
+			GraphicsContext::DrawRequest drawRequest {rt, layoutInput, shaderInput};
+			drawRequest.m_width = mvScreenSize.x;
+			drawRequest.m_height = mvScreenSize.y;
+			context.Submit(view, drawRequest);
+		});
+	}
 
 	void cRendererDeferred::CopyToFrameBuffer()
 	{
@@ -740,14 +852,273 @@ namespace hpl {
 		END_RENDER_PASS();
 	}
 
-	//-----------------------------------------------------------------------
+	void cRendererDeferred::RenderEdgeSmoothPass(GraphicsContext& context, RenderTarget& rt) {
+
+		auto edgeSmoothView = context.StartPass("EdgeSmooth");
+		cVector3f vQuadPos = cVector3f(mfFarLeft,mfFarBottom,-mfFarPlane);
+		cVector2f vQuadSize = cVector2f(mfFarRight*2,mfFarTop*2);
+
+		GraphicsContext::ShaderProgram shaderProgram;
+		shaderProgram.m_handle = m_edgeSmooth_UnpackDepthProgram;
+		shaderProgram.m_textures.push_back({BGFX_INVALID_HANDLE,resolveRenderImage(m_linearDepth)->GetHandle(), 0});
+		shaderProgram.m_textures.push_back({BGFX_INVALID_HANDLE,resolveRenderImage(m_normal)->GetHandle(), 0});
+
+		GraphicsContext::LayoutStream layout;
+		context.Quad(layout, vQuadPos, cVector2f(1,1), cVector2f(0,0), cVector2f(1,1));
+
+		GraphicsContext::DrawRequest drawRequest {m_edgeSmooth_LinearDepth, layout, shaderProgram};
+		context.Submit(edgeSmoothView, drawRequest);
+	}
+
+	void cRendererDeferred::RenderDiffusePass(GraphicsContext& context, RenderTarget& rt) {
+		if(!mpCurrentRenderList->ArrayHasObjects(eRenderListType_Diffuse)) {
+			return;
+		}
+
+		auto& target = resolveRenderTarget(m_gBuffer_full);
+		auto view = context.StartPass("Diffuse");
+		RenderableHelper(eRenderListType_Diffuse, eMaterialRenderMode_Diffuse, [&](iRenderable* obj, GraphicsContext::LayoutStream& layoutInput, GraphicsContext::ShaderProgram& shaderInput) {
+			shaderInput.m_modelTransform = *obj->GetModelMatrixPtr();
+			shaderInput.m_configuration.m_depthTest = DepthTest::LessEqual;
+			shaderInput.m_configuration.m_write = Write::RGBA;
+			shaderInput.m_projection = *mpCurrentProjectionMatrix;
+			shaderInput.m_view = mpCurrentFrustum->GetViewMatrix();
+			
+			GraphicsContext::DrawRequest drawRequest {target, layoutInput, shaderInput};
+			drawRequest.m_width = mvScreenSize.x;
+			drawRequest.m_height = mvScreenSize.y;
+			context.Submit(view, drawRequest);
+		});
+	}
+
+
+	void cRendererDeferred::RenderDecalPass(GraphicsContext& context, RenderTarget& rt) {
+		if(!mpCurrentRenderList->ArrayHasObjects(eRenderListType_Decal)) {
+			return;
+		}
+
+		auto& target = resolveRenderTarget(m_gBuffer_colorAndDepth);
+		auto view = context.StartPass("RenderDecals");
+		RenderableHelper(eRenderListType_Decal, eMaterialRenderMode_Diffuse, [&](iRenderable* obj, GraphicsContext::LayoutStream& layoutInput, GraphicsContext::ShaderProgram& shaderInput) {
+			shaderInput.m_modelTransform = *obj->GetModelMatrixPtr();
+			shaderInput.m_configuration.m_depthTest = DepthTest::LessEqual;
+			shaderInput.m_configuration.m_write = Write::RGBA;
+			shaderInput.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
+
+			shaderInput.m_projection = *mpCurrentProjectionMatrix;
+			shaderInput.m_view = mpCurrentFrustum->GetViewMatrix();
+
+			// shaderInput.m_configuration.m_alphaBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
+			
+			GraphicsContext::DrawRequest drawRequest {target, layoutInput, shaderInput};
+			drawRequest.m_width = mvScreenSize.x;
+			drawRequest.m_height = mvScreenSize.y;
+
+			context.Submit(view, drawRequest);
+		});
+	}
+
+	void cRendererDeferred::RenderZPass(GraphicsContext& context, RenderTarget& rt) {
+		if(!mpCurrentRenderList->ArrayHasObjects(eRenderListType_Z)) {
+			return;
+		}
+
+		auto view = context.StartPass("RenderZ");
+		for(auto& obj: mpCurrentRenderList->GetRenderableItems(eRenderListType_Z)) {
+			cMaterial *pMaterial = obj->GetMaterial();
+
+			eMaterialRenderMode renderMode = obj->GetCoverageAmount() >= 1 ? eMaterialRenderMode_Z : eMaterialRenderMode_Z_Dissolve;
+			iMaterialType* materialType = pMaterial->GetType();
+			iGpuProgram* program = pMaterial->GetProgram(0, renderMode);
+			iVertexBuffer* vertexBuffer = obj->GetVertexBuffer();
+			if(vertexBuffer == nullptr || program == nullptr || materialType == nullptr) {
+				return;
+			}
+
+			GraphicsContext::LayoutStream layoutInput;
+			GraphicsContext::ShaderProgram shaderInput;
+			vertexBuffer->GetLayoutStream(layoutInput);
+			materialType->GetShaderData(shaderInput, renderMode, program, pMaterial, obj, this);
+			shaderInput.m_modelTransform = *obj->GetModelMatrixPtr();
+
+			shaderInput.m_configuration.m_write = Write::Depth;
+
+			GraphicsContext::DrawRequest drawRequest {rt, layoutInput, shaderInput};
+			drawRequest.m_width = mvScreenSize.x;
+			drawRequest.m_height = mvScreenSize.y;
+			context.Submit(view, drawRequest);
+		}
+	}
+
+
+	void cRendererDeferred::RenderTranslucentPass(GraphicsContext& context, RenderTarget& rt) {
+		if(!mpCurrentRenderList->ArrayHasObjects(eRenderListType_Translucent)) {
+			return;
+		}
+
+		auto& target = resolveRenderTarget(m_gBuffer_color);
+		auto view = context.StartPass("RenderTranslucent");
+		for(auto& obj: mpCurrentRenderList->GetRenderableItems(eRenderListType_Translucent))
+		{
+			cMaterial *pMaterial = obj->GetMaterial();
+
+			eMaterialRenderMode renderMode = mpCurrentWorld->GetFogActive() ? eMaterialRenderMode_DiffuseFog : eMaterialRenderMode_Diffuse;
+			if(!pMaterial->GetAffectedByFog()) {
+				renderMode = eMaterialRenderMode_Diffuse;
+			}
+			if((mpCurrentSettings->mbIsReflection && pMaterial->HasWorldReflection()) ||
+				!obj->UpdateGraphicsForViewport(mpCurrentFrustum, mfCurrentFrameTime)) {
+				continue;
+			}
+
+			if(pMaterial->HasWorldReflection() && obj->GetRenderType() == eRenderableType_SubMesh)
+			{
+				if(!CheckRenderablePlaneIsVisible(obj, mpCurrentFrustum)) {
+					continue;
+				}
+
+				cSubMeshEntity *subMeshEntity = static_cast<cSubMeshEntity*>(obj);
+				cMaterial *pRelfMaterial = subMeshEntity->GetMaterial();
+				bool bReflectionIsInRange=true;
+				if(pRelfMaterial->GetMaxReflectionDistance() > 0)
+				{
+					cVector3f vPoint = mpCurrentFrustum->GetOrigin() + mpCurrentFrustum->GetForward()*-1*pRelfMaterial->GetMaxReflectionDistance();
+					cVector3f vNormal = mpCurrentFrustum->GetForward();
+					cPlanef maxRelfctionDistPlane;
+					maxRelfctionDistPlane.FromNormalPoint(vNormal, vPoint);
+
+					if(cMath::CheckPlaneBVCollision(maxRelfctionDistPlane, *obj->GetBoundingVolume())==eCollision_Outside)
+					{
+						bReflectionIsInRange = false;
+					}
+				}
+
+				if(mpCurrentSettings->mbRenderWorldReflection && bReflectionIsInRange && obj->GetIsOneSided())
+				{
+				}
+				else
+				{
+					if(mbReflectionTextureCleared == false)
+					{
+						cRenderTarget renderTarget;
+						renderTarget.mpFrameBuffer = mpReflectionBuffer;
+						SetFrameBuffer(mpReflectionBuffer, false, false);
+						ClearFrameBuffer(eClearFrameBufferFlag_Color, false);
+						SetAccumulationBuffer();
+						mbReflectionTextureCleared = true;
+					}
+				}
+			}
+			
+			//TODO: need to implement occlusion query for translucent objects
+			// if(obj->RetrieveOcculsionQuery(this)==false)
+			// {
+			// 	continue;
+			// }
+		}
+	}
+
+	void cRendererDeferred::Draw(GraphicsContext& context, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, RenderViewport& apRenderTarget,
+					bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList)  {
+ 		// keep around for the moment ...
+		BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, apRenderTarget, abSendFrameBufferToPostEffects, apCallbackList);
+		
+		mpCurrentRenderList->Setup(mfCurrentFrameTime,mpCurrentFrustum);
+		
+		//Setup far plane coordinates
+		mfFarPlane = mpCurrentFrustum->GetFarPlane();
+		mfFarTop = -tan(mpCurrentFrustum->GetFOV()*0.5f) * mfFarPlane;
+		mfFarBottom = -mfFarTop;
+		mfFarRight = mfFarBottom * mpCurrentFrustum->GetAspect();
+		mfFarLeft = -mfFarRight;
+
+		[&]{
+			auto& target = resolveRenderTarget(m_gBuffer_full);
+			auto view = context.StartPass("Clear GBuffer");
+			GraphicsContext::DrawClear clear {
+				target,
+				{0, 1, 0, ClearOp::Depth},
+				0,
+				0,
+				static_cast<uint16_t>(mvScreenSize.x),
+ 				static_cast<uint16_t>(mvScreenSize.y)
+			};
+			context.ClearTarget(view, clear);	
+		}();
+
+		tRenderableFlag lVisibleFlags= (mpCurrentSettings->mbIsReflection) ?
+			eRenderableFlag_VisibleInReflection : eRenderableFlag_VisibleInNonReflection;
+
+		///////////////////////////
+		//Occlusion testing
+		if(mpCurrentSettings->mbUseOcclusionCulling)
+		{
+			CheckForVisibleObjectsAddToListAndRenderZ(	mpCurrentSettings->mpVisibleNodeTracker,eObjectVariabilityFlag_All, lVisibleFlags,
+														true, NULL);
+
+			AssignAndRenderOcclusionQueryObjects(false, NULL, true);
+
+			SetupLightsAndRenderQueries();
+
+			mpCurrentRenderList->Compile(	eRenderListCompileFlag_Diffuse |
+											eRenderListCompileFlag_Translucent |
+											eRenderListCompileFlag_Decal |
+											eRenderListCompileFlag_Illumination);
+			//RenderDynamicZTemp();
+
+		}
+		///////////////////////////
+		//Brute force
+		else
+		{
+			CheckForVisibleAndAddToList(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static), lVisibleFlags);
+			CheckForVisibleAndAddToList(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Dynamic), lVisibleFlags);
+
+			mpCurrentRenderList->Compile(	eRenderListCompileFlag_Z |
+											eRenderListCompileFlag_Diffuse |
+											eRenderListCompileFlag_Translucent |
+											eRenderListCompileFlag_Decal |
+											eRenderListCompileFlag_Illumination);
+			RenderZPass(context, resolveRenderTarget(m_gBuffer_depth) );
+
+			AssignAndRenderOcclusionQueryObjects(false, NULL, true);
+
+			SetupLightsAndRenderQueries();
+		}
+
+
+		// Render GBuffer to m_gBuffer_full old method is RenderGbuffer(context);
+		RenderDiffusePass(context, resolveRenderTarget(m_gBuffer_full));
+
+		// RenderDecals(context);
+		RenderDecalPass(context, resolveRenderTarget(m_gBuffer_colorAndDepth));		
+		RunCallback(eRendererMessage_PostGBuffer);
+
+		// render illumination into gbuffer color RenderIllumination
+		RenderIlluminationPass(context, resolveRenderTarget(m_gBuffer_color));
+		// RenderFogPass(context, resolveRenderTarget(m_gBuffer_color)); //TODO: MP incomplete 
+		if(mpCurrentWorld->GetFogActive()) {
+			RenderFullScreenFogPass(context, m_edgeSmooth_LinearDepth);
+		}
+
+		//  RenderEdgeSmooth();
+		if(mbEdgeSmoothLoaded && mpCurrentSettings->mbUseEdgeSmooth) {
+			RenderEdgeSmoothPass(context, m_edgeSmooth_LinearDepth);
+		}
+		RunCallback(eRendererMessage_PostSolid);
+
+		// not going to even try.
+		// calls back through RendererDeffered need to untangle all the complicated state ...
+		// RenderTranslucent()
+		// RenderTranslucentPass(context, RenderTarget &rt)
+
+		RunCallback(eRendererMessage_PostTranslucent);
+	}
 
 	void cRendererDeferred::SetupRenderList()
 	{
 		mpCurrentRenderList->Setup(mfCurrentFrameTime,mpCurrentFrustum);
 	}
-
-		//-----------------------------------------------------------------------
 
 	void cRendererDeferred::RenderObjects()
 	{
@@ -777,79 +1148,79 @@ namespace hpl {
 		tRenderableFlag lVisibleFlags= 
 			(mpCurrentSettings->mbIsReflection ? eRenderableFlag_VisibleInReflection : eRenderableFlag_VisibleInNonReflection);
 
-		if(false) {
-			///////////////////////////
-			//Occlusion testing
-			if(mpCurrentSettings->mbUseOcclusionCulling) // temp use brute force
-			{
-				CheckForVisibleObjectsAddToListAndRenderZ(	mpCurrentSettings->mpVisibleNodeTracker,eObjectVariabilityFlag_All, lVisibleFlags,
-															true, NULL);
+		// if(false) {
+		// 	///////////////////////////
+		// 	//Occlusion testing
+		// 	if(mpCurrentSettings->mbUseOcclusionCulling) // temp use brute force
+		// 	{
+		// 		CheckForVisibleObjectsAddToListAndRenderZ(	mpCurrentSettings->mpVisibleNodeTracker,eObjectVariabilityFlag_All, lVisibleFlags,
+		// 													true, NULL);
 
-				AssignAndRenderOcclusionQueryObjects(false, NULL, true);
+		// 		AssignAndRenderOcclusionQueryObjects(false, NULL, true);
 
-				SetupLightsAndRenderQueries();
+		// 		SetupLightsAndRenderQueries();
 
-				mpCurrentRenderList->Compile(	eRenderListCompileFlag_Diffuse |
-												eRenderListCompileFlag_Translucent |
-												eRenderListCompileFlag_Decal |
-												eRenderListCompileFlag_Illumination);
-				if(mbLog) {
-					mpCurrentRenderList->PrintAllObjects();
-				}
+		// 		mpCurrentRenderList->Compile(	eRenderListCompileFlag_Diffuse |
+		// 										eRenderListCompileFlag_Translucent |
+		// 										eRenderListCompileFlag_Decal |
+		// 										eRenderListCompileFlag_Illumination);
+		// 		if(mbLog) {
+		// 			mpCurrentRenderList->PrintAllObjects();
+		// 		}
 
-			}
-			///////////////////////////
-			//Brute force
-			else
-			{
-				CheckForVisibleAndAddToList(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static), lVisibleFlags);
-				CheckForVisibleAndAddToList(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Dynamic), lVisibleFlags);
+		// 	}
+		// 	///////////////////////////
+		// 	//Brute force
+		// 	else
+		// 	{
+		// 		CheckForVisibleAndAddToList(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static), lVisibleFlags);
+		// 		CheckForVisibleAndAddToList(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Dynamic), lVisibleFlags);
 
-				mpCurrentRenderList->Compile(	eRenderListCompileFlag_Z |
-												eRenderListCompileFlag_Diffuse |
-												eRenderListCompileFlag_Translucent |
-												eRenderListCompileFlag_Decal |
-												eRenderListCompileFlag_Illumination);
-				if(mbLog)mpCurrentRenderList->PrintAllObjects();
+		// 		mpCurrentRenderList->Compile(	eRenderListCompileFlag_Z |
+		// 										eRenderListCompileFlag_Diffuse |
+		// 										eRenderListCompileFlag_Translucent |
+		// 										eRenderListCompileFlag_Decal |
+		// 										eRenderListCompileFlag_Illumination);
+		// 		if(mbLog)mpCurrentRenderList->PrintAllObjects();
 
-				// RenderZ()
-				([&](bool active) {
-					if(!active) {
-						return;
-					}
-					if(!mpCurrentRenderList->ArrayHasObjects(eRenderListType_Z)) {
-						return;
-					}
-					for(auto& obj: mpCurrentRenderList->GetRenderableItems(eRenderListType_Z))
-					{
-						cMaterial *pMaterial = obj->GetMaterial();
+		// 		// RenderZ()
+		// 		([&](bool active) {
+		// 			if(!active) {
+		// 				return;
+		// 			}
+		// 			if(!mpCurrentRenderList->ArrayHasObjects(eRenderListType_Z)) {
+		// 				return;
+		// 			}
+		// 			for(auto& obj: mpCurrentRenderList->GetRenderableItems(eRenderListType_Z))
+		// 			{
+		// 				cMaterial *pMaterial = obj->GetMaterial();
 
-						eMaterialRenderMode renderMode = obj->GetCoverageAmount() >= 1 ? eMaterialRenderMode_Z : eMaterialRenderMode_Z_Dissolve;
-						iMaterialType* materialType = pMaterial->GetType();
-						iGpuProgram* program = pMaterial->GetProgram(0, renderMode);
-						iVertexBuffer* vertexBuffer = obj->GetVertexBuffer();
-						if(vertexBuffer == nullptr || program == nullptr || materialType == nullptr) {
-							return;
-						}
+		// 				eMaterialRenderMode renderMode = obj->GetCoverageAmount() >= 1 ? eMaterialRenderMode_Z : eMaterialRenderMode_Z_Dissolve;
+		// 				iMaterialType* materialType = pMaterial->GetType();
+		// 				iGpuProgram* program = pMaterial->GetProgram(0, renderMode);
+		// 				iVertexBuffer* vertexBuffer = obj->GetVertexBuffer();
+		// 				if(vertexBuffer == nullptr || program == nullptr || materialType == nullptr) {
+		// 					return;
+		// 				}
 
-						GraphicsContext::LayoutStream layoutInput;
-						GraphicsContext::ShaderProgram shaderInput;
-						vertexBuffer->GetLayoutStream(layoutInput);
-						materialType->GetShaderData(shaderInput, renderMode, program, pMaterial, obj, this);
-						shaderInput.m_modelTransform = *obj->GetModelMatrixPtr();
+		// 				GraphicsContext::LayoutStream layoutInput;
+		// 				GraphicsContext::ShaderProgram shaderInput;
+		// 				vertexBuffer->GetLayoutStream(layoutInput);
+		// 				materialType->GetShaderData(shaderInput, renderMode, program, pMaterial, obj, this);
+		// 				shaderInput.m_modelTransform = *obj->GetModelMatrixPtr();
 
-						// GraphicsContext::DrawRequest drawRequest {target, layoutInput, shaderInput};
-						// drawRequest.m_width = mvScreenSize.x;
-						// drawRequest.m_height = mvScreenSize.y;
-						// context.Draw(shaderInput, layoutInput, vertexBuffer);
-					}
-				})(true);
+		// 				// GraphicsContext::DrawRequest drawRequest {target, layoutInput, shaderInput};
+		// 				// drawRequest.m_width = mvScreenSize.x;
+		// 				// drawRequest.m_height = mvScreenSize.y;
+		// 				// context.Draw(shaderInput, layoutInput, vertexBuffer);
+		// 			}
+		// 		})(true);
 
-				AssignAndRenderOcclusionQueryObjects(false, NULL, true);
+		// 		AssignAndRenderOcclusionQueryObjects(false, NULL, true);
 
-				SetupLightsAndRenderQueries();
-			}
-		}
+		// 		SetupLightsAndRenderQueries();
+		// 	}
+		// }
 
 		// Render GBuffer to m_gBuffer_full old method is RenderGbuffer(context);
 		([&](bool active) {
@@ -1395,6 +1766,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	// TODO: need to work out logic for setting up light
 	iGpuProgram* cRendererDeferred::SetupProgramAndTextures(cDeferredLight* apLightData, tFlag alExtraFlags)
 	{
 		iLight *pLight = apLightData->mpLight;
@@ -1421,12 +1793,12 @@ namespace hpl {
 
 		/////////////////////////
 		//Program
-		iGpuProgram *pProgram = mpProgramManager->GenerateProgram(eDefferredProgramMode_Lights, lFlags);
-		SetProgram(pProgram);
-		if(pProgram)
-		{
-			pProgram->SetFloat(kVar_afNegFarPlane, -mpCurrentFrustum->GetFarPlane());
-		}
+		// iGpuProgram *pProgram = mpProgramManager->GenerateProgram(eDefferredProgramMode_Lights, lFlags);
+		// SetProgram(pProgram);
+		// if(pProgram)
+		// {
+		// 	pProgram->SetFloat(kVar_afNegFarPlane, -mpCurrentFrustum->GetFarPlane());
+		// }
 
 		/////////////////////////
 		//Textures
@@ -1460,7 +1832,7 @@ namespace hpl {
 
 		}
 
-		return pProgram;
+		return nullptr;
 	}
 
 	//-----------------------------------------------------------------------
@@ -1623,17 +1995,16 @@ namespace hpl {
 		tLightSet setPrevVisibleLights;
 		if(mbOcclusionTestLargeLights)
 		{
-			for(size_t i=0; i<mpCurrentSettings->mvLightOcclusionPairs.size(); ++i)
-			{
-				cLightOcclusionPair &loPair = mpCurrentSettings->mvLightOcclusionPairs[i];
-
-				if(loPair.mlSampleResults > mpCurrentSettings->mlSampleVisiblilityLimit)
-				{
-					setPrevVisibleLights.insert(loPair.mpLight);
+			for(auto& occlusionPair: mpCurrentSettings->m_lightOcclusionPairs) {
+				if(occlusionPair.mlSampleResults > mpCurrentSettings->mlSampleVisiblilityLimit) {
+					setPrevVisibleLights.insert(occlusionPair.mpLight);
+				}
+				if(bgfx::isValid(occlusionPair.m_occlusionQuery)) {
+					bgfx::destroy(occlusionPair.m_occlusionQuery);
 				}
 			}
 
-			mpCurrentSettings->mvLightOcclusionPairs.resize(0);
+			mpCurrentSettings->m_lightOcclusionPairs.resize(0);
 		}
 
 
@@ -1783,11 +2154,14 @@ namespace hpl {
 
 			///////////////////////////
 			// Only check if light was invisible last frame
-			if(STLObjectExists(setPrevVisibleLights,pLight)) continue;
+			
+			if(std::find(setPrevVisibleLights.begin(), setPrevVisibleLights.end(), pLight) != setPrevVisibleLights.end()) {
+				continue;
+			}
 
 			////////////////////////////////
 			//Render light shape and make a query
-			pLightData->mpQuery = GetOcclusionQuery();
+			pLightData->m_occlusionQuery = bgfx::createOcclusionQuery();
 
 			//Model matrix
 			SetModelViewMatrix( pLightData->m_mtxViewSpaceRender );
@@ -1892,7 +2266,8 @@ namespace hpl {
 						Log(" Fetching query for light '%s'/%d. Have %d samples. Visible: %d\n", pLight->GetName().c_str(), pLight,lSampleCount, !bLightInvisible);
 				}
 
-				ReleaseOcclusionQuery(pQuery);
+				BX_ASSERT(false, "occlusion query is released in this situation??")
+				// ReleaseOcclusionQuery(pQuery);
 				pLightData->mpQuery = NULL;
 
 				if(bLightInvisible)
@@ -2249,13 +2624,13 @@ namespace hpl {
 				{
 					cLightOcclusionPair loPair;
 					loPair.mpLight = pLight;
-					loPair.mpQuery = GetOcclusionQuery();
+					loPair.m_occlusionQuery = bgfx::createOcclusionQuery();
 
 					loPair.mpQuery->Begin();
 					DrawCurrent();
 					loPair.mpQuery->End();
 
-					mpCurrentSettings->mvLightOcclusionPairs.push_back(loPair);
+					mpCurrentSettings->m_lightOcclusionPairs.push_back(loPair);
 				}
 				///////////////////////////////
 				//Normal rendering of front

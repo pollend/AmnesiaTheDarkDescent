@@ -18,6 +18,8 @@
  */
 #pragma once
 
+#include "bgfx/bgfx.h"
+#include "graphics/Enum.h"
 #include "graphics/GraphicsContext.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Image.h"
@@ -27,8 +29,11 @@
 #include "scene/SceneTypes.h"
 
 #include "graphics/RenderFunctions.h"
+#include <cstdint>
+#include <functional>
 
 namespace hpl {
+	
 
 	//---------------------------------------------
 
@@ -77,7 +82,8 @@ namespace hpl {
 
 		iLight *mpLight;
 		iOcclusionQuery *mpQuery;
-		int mlSampleResults;
+		bgfx::OcclusionQueryHandle m_occlusionQuery;
+		int32_t mlSampleResults;
 	};
 
 	//---------------------------------------------
@@ -136,7 +142,7 @@ namespace hpl {
 		cRenderList *mpRenderList;
 
 		cVisibleRCNodeTracker *mpVisibleNodeTracker;
-		std::vector<cLightOcclusionPair> mvLightOcclusionPairs;
+		std::vector<cLightOcclusionPair> m_lightOcclusionPairs;
 
 		cRenderSettings *mpReflectionSettings;
 
@@ -356,12 +362,22 @@ namespace hpl {
 		/**
 		 * Uses a Coherent occlusion culling to get visible objects. No early Z needed after calling this
 		 */
+		[[deprecated("Replaced with RenderZPassWithVisibilityCheck")]]
 		void CheckForVisibleObjectsAddToListAndRenderZ(	cVisibleRCNodeTracker *apVisibleNodeTracker,
 														tObjectVariabilityFlag alObjectTypes, tRenderableFlag alNeededFlags,
 														bool abSetupRenderStates,
 														tRenderCHCObjectCallbackFunc apRenderObjectCallback);
 
 		static bool RenderObjectZAndAddToRenderListStaticCallback(iRenderer *apRenderer, iRenderable *apObject);
+		
+		void OcclusionQueryBoundingBoxTest(bgfx::ViewId view, 
+			GraphicsContext& context, 
+			bgfx::OcclusionQueryHandle handle, 
+			const cMatrixf& transform, 
+			RenderTarget& rt,Cull cull = Cull::CounterClockwise);
+		void RenderZPassWithVisibilityCheck(GraphicsContext& context, cVisibleRCNodeTracker *apVisibleNodeTracker, tRenderableFlag alNeededFlags, tObjectVariabilityFlag variabilityFlag,
+			RenderTarget& rt, std::function<bool(iRenderable* object)> renderHandler);
+
 		bool RenderObjectZAndAddToRenderList(iRenderable *apObject);
 
 		void PushUpVisibility(iRenderableContainerNode *apNode);
@@ -443,13 +459,12 @@ namespace hpl {
 
 		eShadowMapResolution GetShadowMapResolution(eShadowMapResolution aWanted, eShadowMapResolution aMax);
 
-		iOcclusionQuery *GetOcclusionQuery();
-		void ReleaseOcclusionQuery(iOcclusionQuery * apQuery);
-
         cResources* mpResources;
 		cGpuShaderManager *mpShaderManager;
 
-		cProgramComboManager* mpProgramManager;
+		bgfx::ProgramHandle m_nullShader;
+
+		// cProgramComboManager* mpProgramManager;
 
 		tString msName;
 
@@ -475,8 +490,6 @@ namespace hpl {
 
 		iVertexBuffer *mpShapeBox;
 
-		// iGpuProgram *mpDepthOnlyProgram;
-
 		cMatrixf m_mtxSkyBox;
 
 		cRect2l mTempClipRect;
@@ -494,7 +507,6 @@ namespace hpl {
 		cRendererCallbackFunctions *mpCallbackFunctions;
 
 		int mlActiveOcclusionQueryNum;
-		std::vector<iOcclusionQuery*> mvOcclusionQueryPool;
 		std::vector<cOcclusionQueryObject*> mvSortedOcclusionObjects;
 
 		std::vector<cShadowMapData*> mvShadowMapData[eShadowMapResolution_LastEnum];

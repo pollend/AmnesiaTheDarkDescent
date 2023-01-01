@@ -14,10 +14,10 @@
 
 namespace hpl
 {
+
     class GraphicsContext final
     {
     public:
-
         struct LayoutStream {
             struct LayoutVertexStream {
                 bgfx::TransientVertexBuffer m_transient = {nullptr, 0, 0, 0, BGFX_INVALID_HANDLE, BGFX_INVALID_HANDLE};
@@ -37,7 +37,6 @@ namespace hpl
 
         struct ShaderProgram {
             bgfx::ProgramHandle m_handle = BGFX_INVALID_HANDLE;
-
             struct UniformData {
                 bgfx::UniformHandle m_uniformHandle = BGFX_INVALID_HANDLE;
                 const void* m_data = nullptr;
@@ -86,8 +85,8 @@ namespace hpl
             uint16_t m_width = 0;
             uint16_t m_height = 0;
         };
-        struct DrawRequest {
 
+        struct DrawRequest {
             const RenderTarget& m_target;
             const GraphicsContext::LayoutStream& m_layout;
             const ShaderProgram& m_program;
@@ -106,24 +105,20 @@ namespace hpl
 
         void Quad(GraphicsContext::LayoutStream& input, const cVector3f& pos, const cVector2f& size, const cVector2f& uv0 = cVector2f(0.0f, 0.0f), const cVector2f& uv1 = cVector2f(1.0f, 1.0f));
         void ScreenSpaceQuad(GraphicsContext::LayoutStream& input, float textureWidth, float textureHeight, float width = 1.0f, float height = 1.0f);
-        
-        void CopyTextureToFrameBuffer(Image& image, RenderTarget& target);
-        void ClearTarget(bgfx::ViewId view, const DrawClear& request);
-        void Submit(bgfx::ViewId view, const DrawRequest& request);
-
+ 
         uint16_t ScreenWidth() const;
         uint16_t ScreenHeight() const;
 
         void Reset();
         bgfx::ViewId StartPass(absl::string_view name);
         bool isOriginBottomLeft() const;
-
+        void CopyTextureToFrameBuffer(Image& image, RenderTarget& target);
+        void ClearTarget(bgfx::ViewId view, const DrawClear& request);
+        void Submit(bgfx::ViewId view, const DrawRequest& request);
+        void Submit(bgfx::ViewId view, const DrawRequest& request, bgfx::OcclusionQueryHandle query);
     private:
         bgfx::ViewId _current;
-        const bgfx::Caps* _caps;
-        // uint64_t m_state = 0;
     };
-
 
 
 } // namespace hpl
