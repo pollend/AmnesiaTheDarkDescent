@@ -1,6 +1,8 @@
 
 $input v_texcoord0
 
+#include <common.sh>
+
 SAMPLER2D(s_convMap, 0);
 SAMPLER2D(s_diffuseMap, 1);
 

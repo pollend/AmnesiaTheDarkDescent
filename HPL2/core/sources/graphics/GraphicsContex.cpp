@@ -1,4 +1,7 @@
+#include "bx/math.h"
 #include "graphics/Enum.h"
+#include "graphics/ShaderUtil.h"
+#include "math/MathTypes.h"
 #include <absl/container/inlined_vector.h>
 #include <absl/strings/string_view.h>
 #include <bgfx/defines.h>
@@ -226,11 +229,14 @@ namespace hpl
     void GraphicsContext::Init()
     {
         PositionTexCoord0::init();
+        m_copyProgram = hpl::loadProgram("vs_post_effect", "fs_post_effect_copy");
+        m_s_diffuseMap = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
     }
 
-    void GraphicsContext::Reset()
+    void GraphicsContext::Frame()
     {
         _current = 0;
+        bgfx::frame();
     }
 
     void GraphicsContext::ClearTarget(bgfx::ViewId view, const DrawClear& request) {
@@ -317,10 +323,22 @@ namespace hpl
         return bgfx::getCaps()->originBottomLeft; 
     }
 
-    void GraphicsContext::CopyTextureToFrameBuffer(Image& image, RenderTarget& target) {
-        auto view = StartPass("copy to framebuffer");
-        // TODO need to use a shader to copy the texture to the framebuffer when not supported
-        bgfx::blit(view, target.GetImage()->GetHandle(), 0, 0, image.GetHandle());
+    void GraphicsContext::CopyTextureToFrameBuffer(bgfx::ViewId view, Image& image, cRect2l dstRect, RenderTarget& target) {
+        GraphicsContext::LayoutStream layout;
+        cMatrixf projMtx;
+        ScreenSpaceQuad(layout, projMtx, dstRect.w,  dstRect.h);
+        GraphicsContext::ShaderProgram program;
+        program.m_handle = m_copyProgram;
+        program.m_configuration.m_write = Write::RGBA;
+        program.m_projection = projMtx;
+
+        program.m_textures.push_back({m_s_diffuseMap, image.GetHandle(), 0});
+        DrawRequest request = {target, layout, program};
+        request.m_x = dstRect.x;
+        request.m_y = dstRect.y;
+        request.m_width = dstRect.w;
+        request.m_height = dstRect.h;
+        Submit(view, request);
     }
 
     void GraphicsContext::Quad(GraphicsContext::LayoutStream& input, const cVector3f& pos, const cVector2f& size, const cVector2f& uv0, const cVector2f& uv1) {
@@ -364,13 +382,15 @@ namespace hpl
     }
 
 
-    void GraphicsContext::ScreenSpaceQuad(GraphicsContext::LayoutStream& input, float textureWidth, float textureHeight, float width, float height)
+    void GraphicsContext::ScreenSpaceQuad(GraphicsContext::LayoutStream& input, cMatrixf& proj, float textureWidth, float textureHeight, float width, float height)
     {
         BX_ASSERT(bgfx::getCaps(), "GraphicsContext::Init() must be called before ScreenSpaceQuad()");
 
         bgfx::TransientVertexBuffer vb;
         bgfx::allocTransientVertexBuffer(&vb, 3, PositionTexCoord0::_layout);
         PositionTexCoord0* vertex = (PositionTexCoord0*)vb.data;
+
+        bx::mtxOrtho(proj.v, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 100.0f, 0.0f, bgfx::getCaps()->homogeneousDepth);
 
         const float minx = -width;
         const float maxx = width;
@@ -401,22 +421,22 @@ namespace hpl
         }
 
         vertex[0].m_x = minx;
-        vertex[0].m_y = miny;
-        vertex[0].m_z = zz;
-        vertex[0].m_u = minu;
-        vertex[0].m_v = minv;
+		vertex[0].m_y = miny;
+		vertex[0].m_z = zz;
+		vertex[0].m_u = minu;
+		vertex[0].m_v = minv;
 
-        vertex[1].m_x = maxx;
-        vertex[1].m_y = miny;
-        vertex[1].m_z = zz;
-        vertex[1].m_u = maxu;
-        vertex[1].m_v = minv;
+		vertex[1].m_x = maxx;
+		vertex[1].m_y = miny;
+		vertex[1].m_z = zz;
+		vertex[1].m_u = maxu;
+		vertex[1].m_v = minv;
 
-        vertex[2].m_x = maxx;
-        vertex[2].m_y = maxy;
-        vertex[2].m_z = zz;
-        vertex[2].m_u = maxu;
-        vertex[2].m_v = maxv;
+		vertex[2].m_x = maxx;
+		vertex[2].m_y = maxy;
+		vertex[2].m_z = zz;
+		vertex[2].m_u = maxu;
+		vertex[2].m_v = maxv;
 
         input.m_vertexStreams.push_back({
             .m_transient = vb,

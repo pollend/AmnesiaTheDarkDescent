@@ -932,48 +932,17 @@ namespace hpl {
 		}
 	}
 
-	//-----------------------------------------------------------------------
-
-	void cLowLevelGraphicsSDL::SetFrameBufferDrawTargets(int *apTargets, int alNumOfTargets)
-	{
-		;
-
-		std::vector<GLenum> vAttachmentVec;
-		for(int i=0; i<alNumOfTargets; ++i)
-		{
-			vAttachmentVec.push_back(GL_COLOR_ATTACHMENT0_EXT + apTargets[i]);
-		}
-		glDrawBuffers(alNumOfTargets, &vAttachmentVec[0]);
-	}
-
-	//-----------------------------------------------------------------------
-
 	void cLowLevelGraphicsSDL::WaitAndFinishRendering()
 	{
-		;
-
-		glFinish();
-		//dont use this any more, SwapBuffers() takes care of it
 	}
-
-	//-----------------------------------------------------------------------
-
 
 	void cLowLevelGraphicsSDL::FlushRendering()
 	{
-		glFlush();
 	}
-
-	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SwapBuffers()
 	{
-// 		;
-// #if SDL_VERSION_ATLEAST(2, 0, 0)
-//         SDL_GL_SwapWindow(mpScreen);
-// #else
-// 		SDL_GL_SwapBuffers();
-// #endif
+
 	}
 
 	//-----------------------------------------------------------------------
@@ -986,21 +955,7 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SetColorWriteActive(bool abR,bool abG,bool abB,bool abA)
 	{
-		// ;
 
-		// if( mColorWrite.r == abR &&
-		// 	mColorWrite.g == abG &&
-		// 	mColorWrite.b == abB &&
-		// 	mColorWrite.a == abA)
-		// {
-		// 	return;
-		// }
-		// mColorWrite.r = abR;
-		// mColorWrite.g = abG;
-		// mColorWrite.b = abB;
-		// mColorWrite.a = abA;
-
-		// glColorMask(abR,abG,abB,abA);
 	}
 
 	void cLowLevelGraphicsSDL::SetDepthWriteActive(bool abX)

@@ -76,7 +76,7 @@ namespace hpl {
 	private:
 		virtual void OnSetParams() override;
 		virtual iPostEffectParams *GetTypeSpecificParams() override { return &mParams; }
-		virtual void RenderEffect(GraphicsContext& context, Image& input, RenderTarget& target) override;
+		virtual void RenderEffect(cPostEffectComposite& compositor, GraphicsContext& context, Image& input, RenderTarget& target) override;
 
 		std::array<RenderTarget, 2> m_blurTarget;
 

@@ -148,7 +148,7 @@ namespace hpl {
 		iRenderableContainerNode *mpParent;
 		tRenderableContainerNodeList mlstChildNodes;
 		tRenderableList mlstObjects;
-		bgfx::OcclusionQueryHandle m_occlusionQuery;
+		bgfx::OcclusionQueryHandle m_occlusionQuery = BGFX_INVALID_HANDLE;
 	};
 
 	//-------------------------------------------

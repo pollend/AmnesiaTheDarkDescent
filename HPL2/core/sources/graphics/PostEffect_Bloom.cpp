@@ -32,6 +32,7 @@
 #include "graphics/ShaderUtil.h"
 #include "graphics/Texture.h"
 
+#include "math/MathTypes.h"
 #include "system/PreprocessParser.h"
 #include <memory>
 
@@ -91,9 +92,9 @@ namespace hpl
     {
     }
 
-    void cPostEffect_Bloom::RenderEffect(GraphicsContext& context, Image& input, RenderTarget& target)
+    void cPostEffect_Bloom::RenderEffect(cPostEffectComposite& compositor, GraphicsContext& context, Image& input, RenderTarget& target)
     {
-        cVector2l vRenderTargetSize = mpCurrentComposite->GetRenderTargetSize();
+        cVector2l vRenderTargetSize = compositor.GetRenderTargetSize();
 
         struct u_blur_params
         {
@@ -110,7 +111,8 @@ namespace hpl
                 blurParams.u_blurSize = mParams.mfBlurSize;
 
                 GraphicsContext::LayoutStream layoutStream;
-                context.ScreenSpaceQuad(layoutStream, vRenderTargetSize.x, vRenderTargetSize.y);
+                cMatrixf projMtx;
+                context.ScreenSpaceQuad(layoutStream, projMtx, vRenderTargetSize.x, vRenderTargetSize.y);
 
                 GraphicsContext::ShaderProgram shaderProgram;
                 shaderProgram.m_configuration.m_write = Write::RGBA;
@@ -118,6 +120,8 @@ namespace hpl
                 shaderProgram.m_textures.push_back({ mpBloomType->m_u_diffuseMap, input.GetHandle(), 0 });
                 shaderProgram.m_uniforms.push_back({ mpBloomType->m_u_param, &blurParams, 1 });
 
+                shaderProgram.m_projection = projMtx;
+                
                 bgfx::ViewId view = context.StartPass("Blur Pass 1");
                 GraphicsContext::DrawRequest request{ m_blurTarget[0], layoutStream, shaderProgram };
                 request.m_width = image->GetWidth();
@@ -131,7 +135,8 @@ namespace hpl
                 blurParams.u_blurSize = mParams.mfBlurSize;
 
                 GraphicsContext::LayoutStream layoutStream;
-                context.ScreenSpaceQuad(layoutStream, vRenderTargetSize.x, vRenderTargetSize.y);
+                cMatrixf projMtx;
+                context.ScreenSpaceQuad(layoutStream, projMtx, vRenderTargetSize.x, vRenderTargetSize.y);
 
                 GraphicsContext::ShaderProgram shaderProgram;
                 shaderProgram.m_configuration.m_write = Write::RGBA;
@@ -139,6 +144,7 @@ namespace hpl
                 shaderProgram.m_textures.push_back({ mpBloomType->m_u_diffuseMap, m_blurTarget[0].GetImage(0)->GetHandle(), 0 });
                 shaderProgram.m_uniforms.push_back({ mpBloomType->m_u_param, &blurParams, 1 });
 
+                shaderProgram.m_view = projMtx;
                 bgfx::ViewId view = context.StartPass("Blur Pass 2");
                 GraphicsContext::DrawRequest request{ m_blurTarget[1], layoutStream, shaderProgram };
                 request.m_width = image->GetWidth();
@@ -156,11 +162,14 @@ namespace hpl
 
         {
             GraphicsContext::LayoutStream layoutStream;
-            context.ScreenSpaceQuad(layoutStream, vRenderTargetSize.x, vRenderTargetSize.y);
+            cMatrixf projMtx;
+            context.ScreenSpaceQuad(layoutStream, projMtx, vRenderTargetSize.x, vRenderTargetSize.y);
 
             GraphicsContext::ShaderProgram shaderProgram;
             shaderProgram.m_configuration.m_write = Write::RGBA;
             shaderProgram.m_handle = mpBloomType->m_bloomProgram;
+
+            shaderProgram.m_projection = projMtx;
 
             float rgbToIntensity[4] = { mParams.mvRgbToIntensity.x, mParams.mvRgbToIntensity.y, mParams.mvRgbToIntensity.z, 0.0f };
             shaderProgram.m_textures.push_back({ mpBloomType->m_u_diffuseMap, input.GetHandle(), 0 });

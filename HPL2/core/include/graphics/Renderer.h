@@ -276,8 +276,7 @@ namespace hpl {
 		virtual bool LoadData()=0;
 		virtual void DestroyData()=0;
 
-		virtual Image* getPostEffectTexture() { return nullptr; }
-
+		virtual Image& FetchOutputFromRenderer() = 0;
 		virtual iTexture* GetPostEffectTexture();
 
 		virtual iTexture* GetRefractionTexture(){ return NULL;}
@@ -329,10 +328,7 @@ namespace hpl {
 		// a utility to collect renderable objects from the current render list
 		void RenderableHelper(eRenderListType type, eMaterialRenderMode mode, std::function<void(iRenderable* obj, GraphicsContext::LayoutStream&, GraphicsContext::ShaderProgram&)> handler);
 
-		/**
-		* In case some intermediate format is used then make sure it is at the correct buffer before ending rendering.
-		* When sending to a frame buffer at the end, then this method is never called and the intermediate can be returned with GetPostEffectFrameBuffer
-		*/
+		[[deprecated("This is apart of the GraphicsContext")]]
 		virtual void CopyToFrameBuffer()=0;
 		[[deprecated("Moved into Draw")]]
 		virtual void SetupRenderList()=0;
@@ -359,9 +355,6 @@ namespace hpl {
 		void CheckNodesAndAddToListIterative(iRenderableContainerNode *apNode, tRenderableFlag alNeededFlags);
 
 
-		/**
-		 * Uses a Coherent occlusion culling to get visible objects. No early Z needed after calling this
-		 */
 		[[deprecated("Replaced with RenderZPassWithVisibilityCheck")]]
 		void CheckForVisibleObjectsAddToListAndRenderZ(	cVisibleRCNodeTracker *apVisibleNodeTracker,
 														tObjectVariabilityFlag alObjectTypes, tRenderableFlag alNeededFlags,
@@ -375,6 +368,9 @@ namespace hpl {
 			bgfx::OcclusionQueryHandle handle, 
 			const cMatrixf& transform, 
 			RenderTarget& rt,Cull cull = Cull::CounterClockwise);
+		/**
+		 * Uses a Coherent occlusion culling to get visible objects. No early Z needed after calling this
+		 */
 		void RenderZPassWithVisibilityCheck(GraphicsContext& context, cVisibleRCNodeTracker *apVisibleNodeTracker, tRenderableFlag alNeededFlags, tObjectVariabilityFlag variabilityFlag,
 			RenderTarget& rt, std::function<bool(iRenderable* object)> renderHandler);
 
@@ -401,7 +397,7 @@ namespace hpl {
 		/**
 		 * Only depth is needed for framebuffer. All objects needs to be added to renderlist!
 		 */
-		void AssignAndRenderOcclusionQueryObjects(bool abSetFrameBuffer, iFrameBuffer *apFrameBuffer, bool abUsePosAndSize);
+		void AssignAndRenderOcclusionQueryObjects(bgfx::ViewId view, GraphicsContext& context, bool abSetFrameBuffer, bool abUsePosAndSize, RenderTarget& rt);
 
 		/**
 		 * This retrieves all occlusion information for light pair queries and release occlusion queries. If specified, this is a waiting operation.
@@ -453,7 +449,7 @@ namespace hpl {
 												const cVector2f& avMinUV=0, const cVector2f& avMaxUV=1,
 												bool abInvertY=false);
 		iVertexBuffer* LoadVertexBufferFromMesh(const tString& asMeshName, tVertexElementFlag alVtxToCopy);
-		void UpdateqQuadVertexPostion(iVertexBuffer *apVtxBuffer,const cVector3f& avPos, const cVector2f& avSize, bool abCallUpdate);
+		void UpdateQuadVertexPostion(iVertexBuffer *apVtxBuffer,const cVector3f& avPos, const cVector2f& avSize, bool abCallUpdate);
 
 		void RunCallback(eRendererMessage aMessage);
 

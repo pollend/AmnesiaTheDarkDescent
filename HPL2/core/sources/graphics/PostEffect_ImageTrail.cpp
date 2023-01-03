@@ -34,6 +34,7 @@
 #include "graphics/ShaderUtil.h"
 #include "graphics/Texture.h"
 
+#include "math/MathTypes.h"
 #include "system/PreprocessParser.h"
 #include <memory>
 
@@ -110,15 +111,17 @@ namespace hpl
         }
     }
 
-    void cPostEffect_ImageTrail::RenderEffect(GraphicsContext& context, Image& input, RenderTarget& target)
+    void cPostEffect_ImageTrail::RenderEffect(cPostEffectComposite& compositor, GraphicsContext& context, Image& input, RenderTarget& target)
     {
         auto view = context.StartPass("Image Trail");
-        cVector2l vRenderTargetSize = mpCurrentComposite->GetRenderTargetSize();
+        cVector2l vRenderTargetSize = compositor.GetRenderTargetSize();
 
         GraphicsContext::LayoutStream layoutStream;
-        context.ScreenSpaceQuad(layoutStream, vRenderTargetSize.x, vRenderTargetSize.y);
+        cMatrixf projMtx;
+        context.ScreenSpaceQuad(layoutStream, projMtx, vRenderTargetSize.x, vRenderTargetSize.y);
         GraphicsContext::ShaderProgram shaderProgram;
         shaderProgram.m_handle = mpImageTrailType->m_program;
+        shaderProgram.m_projection = projMtx;
 
         struct
         {
@@ -141,7 +144,7 @@ namespace hpl
 
             // Get the amount of blur depending frame time.
             //*30 is just so that good amount values are still between 0 - 1
-            float fFrameTime = mpCurrentComposite->GetCurrentFrameTime();
+            float fFrameTime = compositor.GetCurrentFrameTime();
             float fPow = (1.0f / fFrameTime) * mParams.mfAmount; // The higher this is, the more blur!
             float fAmount = exp(-fPow * 0.015f);
             u_params.u_alpha = fAmount;
@@ -153,7 +156,8 @@ namespace hpl
         request.m_height = vRenderTargetSize.y;
         context.Submit(view, request);
 
-        context.CopyTextureToFrameBuffer(*m_accumulationBuffer.GetImage(), target);
+        cRect2l rect = cRect2l(0, 0, vRenderTargetSize.x, vRenderTargetSize.y);
+        context.CopyTextureToFrameBuffer(context.StartPass("Copy Image Trail"),*m_accumulationBuffer.GetImage(), rect, target);
     }
 
 } // namespace hpl

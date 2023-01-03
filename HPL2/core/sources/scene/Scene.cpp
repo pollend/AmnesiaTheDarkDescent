@@ -20,6 +20,7 @@
 #include "scene/Scene.h"
 
 #include "graphics/GraphicsContext.h"
+#include "graphics/RenderTarget.h"
 #include "scene/Viewport.h"
 #include "scene/Camera.h"
 #include "scene/World.h"
@@ -252,17 +253,11 @@ namespace hpl {
 				iTexture *pInputTexture = pRenderer->GetPostEffectTexture();
 
 				START_TIMING(RenderPostEffects)
-				// pPostEffectComposite->Render(context, )
 				auto& viewport = pViewPort->GetRenderViewport();
-				auto target = viewport.GetRenderTarget();
-				if(target && target->IsValid()) {
-					pPostEffectComposite->Draw(context,
-						*target->GetImage(),
-						*target);
-				
-				} else {
-					BX_ASSERT(false, "umm need to correctly handle an empty render target here!");
-				}
+				RenderTarget emptyRenderTarget{};
+				pPostEffectComposite->Draw(context,
+					pRenderer->FetchOutputFromRenderer(),
+					viewport.GetRenderTarget() ? *viewport.GetRenderTarget() : emptyRenderTarget);
 
 				STOP_TIMING(RenderPostEffects)
 			}

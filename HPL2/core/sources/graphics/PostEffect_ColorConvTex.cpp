@@ -23,6 +23,7 @@
 #include "graphics/Graphics.h"
 #include "graphics/GraphicsContext.h"
 #include "graphics/ShaderUtil.h"
+#include "math/MathTypes.h"
 #include "resources/Resources.h"
 
 #include "graphics/FrameBuffer.h"
@@ -89,16 +90,18 @@ namespace hpl
         mpColorConvTex = mpResources->GetTextureManager()->Create1DImage(mParams.msTextureFile, false);
     }
 
-    void cPostEffect_ColorConvTex::RenderEffect(GraphicsContext& context, Image& input, RenderTarget& target)
+    void cPostEffect_ColorConvTex::RenderEffect(cPostEffectComposite& compositor, GraphicsContext& context, Image& input, RenderTarget& target)
     {
 		BX_ASSERT(mpColorConvTex, "ColorConvTex is null");
 	
         auto view = context.StartPass("Color Conv effect");
-        cVector2l vRenderTargetSize = mpCurrentComposite->GetRenderTargetSize();
+        cVector2l vRenderTargetSize = compositor.GetRenderTargetSize();
 
         GraphicsContext::LayoutStream layoutStream;
-        context.ScreenSpaceQuad(layoutStream, vRenderTargetSize.x, vRenderTargetSize.y);
+        cMatrixf projMtx;
+        context.ScreenSpaceQuad(layoutStream, projMtx, vRenderTargetSize.x, vRenderTargetSize.y);
         GraphicsContext::ShaderProgram shaderProgram;
+        shaderProgram.m_projection = projMtx;
         shaderProgram.m_handle = mpSpecificType->m_colorConv;
         struct
         {

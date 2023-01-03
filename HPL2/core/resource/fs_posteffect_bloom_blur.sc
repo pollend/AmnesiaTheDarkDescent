@@ -1,6 +1,8 @@
 
 $input v_texcoord0
 
+#include <common.sh>
+
 SAMPLER2D(s_diffuseMap, 0);
 
 uniform vec4 u_params;
@@ -27,7 +29,7 @@ void main()
 	for(int i=0; i<5; i+=1)
 	{	
 		vec2 vOffset = vec2(fOffset[i])*vOffsetMul;
-		vec3 vColor = texture2D(diffuseMap, v_texcoord0.xy + vOffset).xyz;
+		vec3 vColor = texture2D(s_diffuseMap, v_texcoord0.xy + vOffset).xyz;
 		vAmount += vColor * vMul[i];
 	}
 	

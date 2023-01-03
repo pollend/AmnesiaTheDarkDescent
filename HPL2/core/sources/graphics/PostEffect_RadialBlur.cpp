@@ -76,11 +76,11 @@ namespace hpl
     {
     }
 
-    void cPostEffect_RadialBlur::RenderEffect(GraphicsContext& context, Image& input, RenderTarget& target)
+    void cPostEffect_RadialBlur::RenderEffect(cPostEffectComposite& compositor, GraphicsContext& context, Image& input, RenderTarget& target)
     {
         bgfx::ViewId view = context.StartPass("Radial Blur");
 
-        cVector2l vRenderTargetSize = mpCurrentComposite->GetRenderTargetSize();
+        cVector2l vRenderTargetSize = compositor.GetRenderTargetSize();
         cVector2f vRenderTargetSizeFloat((float)vRenderTargetSize.x, (float)vRenderTargetSize.y);
 
         BX_ASSERT(mpRadialBlurType, "radial blur type is null");
@@ -96,8 +96,10 @@ namespace hpl
         } u_params = { mParams.mfSize * vRenderTargetSizeFloat.x, mParams.mfBlurStartDist, { blurStartDist.x, blurStartDist.y } };
 
         GraphicsContext::LayoutStream layoutStream;
-        context.ScreenSpaceQuad(layoutStream, vRenderTargetSize.x, vRenderTargetSize.y);
+        cMatrixf projMtx;
+        context.ScreenSpaceQuad(layoutStream, projMtx, vRenderTargetSize.x, vRenderTargetSize.y);
         GraphicsContext::ShaderProgram shaderProgram;
+        shaderProgram.m_projection = projMtx;
         shaderProgram.m_handle = mpRadialBlurType->m_program;
         shaderProgram.m_uniforms.push_back({ mpRadialBlurType->m_u_uniform, &u_params });
         shaderProgram.m_textures.push_back({ mpRadialBlurType->m_s_diffuseMap, input.GetHandle() });

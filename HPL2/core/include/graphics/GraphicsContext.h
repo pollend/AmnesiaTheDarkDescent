@@ -104,20 +104,22 @@ namespace hpl
         void UpdateScreenSize(uint16_t width, uint16_t height);
 
         void Quad(GraphicsContext::LayoutStream& input, const cVector3f& pos, const cVector2f& size, const cVector2f& uv0 = cVector2f(0.0f, 0.0f), const cVector2f& uv1 = cVector2f(1.0f, 1.0f));
-        void ScreenSpaceQuad(GraphicsContext::LayoutStream& input, float textureWidth, float textureHeight, float width = 1.0f, float height = 1.0f);
+        void ScreenSpaceQuad(GraphicsContext::LayoutStream& input, cMatrixf& proj, float textureWidth, float textureHeight, float width = 1.0f, float height = 1.0f);
  
         uint16_t ScreenWidth() const;
         uint16_t ScreenHeight() const;
 
-        void Reset();
+        void Frame();
         bgfx::ViewId StartPass(absl::string_view name);
         bool isOriginBottomLeft() const;
-        void CopyTextureToFrameBuffer(Image& image, RenderTarget& target);
+        void CopyTextureToFrameBuffer(bgfx::ViewId view,Image& image, cRect2l dstRect, RenderTarget& target);
         void ClearTarget(bgfx::ViewId view, const DrawClear& request);
         void Submit(bgfx::ViewId view, const DrawRequest& request);
         void Submit(bgfx::ViewId view, const DrawRequest& request, bgfx::OcclusionQueryHandle query);
     private:
         bgfx::ViewId _current;
+        bgfx::ProgramHandle m_copyProgram = BGFX_INVALID_HANDLE;
+        bgfx::UniformHandle m_s_diffuseMap = BGFX_INVALID_HANDLE;
     };
 
 

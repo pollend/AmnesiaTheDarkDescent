@@ -22,6 +22,7 @@
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Image.h"
 #include "graphics/RenderTarget.h"
+#include "math/MathTypes.h"
 #include "system/LowLevelSystem.h"
 
 #include "graphics/GPUProgram.h"
@@ -73,10 +74,16 @@ namespace hpl
 
         _renderTargets[0] = RenderTarget(_images[0]);
         _renderTargets[1] = RenderTarget(_images[1]);
+
+        mvRenderTargetSize.x = width;
+        mvRenderTargetSize.y = height;
+
     }
 
     void cPostEffectComposite::Draw(GraphicsContext& context, Image& inputTexture, RenderTarget& renderTarget)
     {
+
+
         auto it = _postEffects.begin();
         size_t currentIndex = 0;
         bool isSavedToPrimaryRenderTarget = false;
@@ -86,7 +93,7 @@ namespace hpl
             {
                 continue;
             }
-            it->_effect->RenderEffect(context, inputTexture, _renderTargets[currentIndex]);
+            it->_effect->RenderEffect(*this, context, inputTexture, _renderTargets[currentIndex]);
         }
 
         while (it != _postEffects.end())
@@ -109,17 +116,20 @@ namespace hpl
             if (nextIt == _postEffects.end())
             {
                 isSavedToPrimaryRenderTarget = true;
-                it->_effect->RenderEffect(context, *_images[currentIndex], renderTarget);
+                it->_effect->RenderEffect(*this, context, *_images[currentIndex], renderTarget);
             }
             else
             {
-                it->_effect->RenderEffect(context, *_images[currentIndex], _renderTargets[nextIndex]);
+                it->_effect->RenderEffect(*this, context, *_images[currentIndex], _renderTargets[nextIndex]);
             }
             currentIndex = nextIndex;
             it = nextIt;
         }
         if(!isSavedToPrimaryRenderTarget) {
-            context.CopyTextureToFrameBuffer(*_images[currentIndex], renderTarget);
+            cVector2l vRenderTargetSize = GetRenderTargetSize();
+
+            cRect2l rect = cRect2l(0, 0, vRenderTargetSize.x, vRenderTargetSize.y);
+            context.CopyTextureToFrameBuffer(context.StartPass("Copy To Swap"),*_images[currentIndex], rect, renderTarget);
         }
 
     }
@@ -162,14 +172,6 @@ namespace hpl
         // Reset all rendering states
         SetBlendMode(eMaterialBlendMode_None);
         SetChannelMode(eMaterialChannelMode_RGBA);
-
-        /////////////////////////////////////////////
-        // Unbind all rendering data
-        for (int i = 0; i < kMaxTextureUnits; ++i)
-        {
-            if (mvCurrentTexture[i])
-                mpLowLevelGraphics->SetTexture(i, NULL);
-        }
 
         if (mpCurrentProgram)
             mpCurrentProgram->UnBind();

@@ -213,6 +213,7 @@ namespace hpl {
 		mvEngineTypeStrings[eVariableType_String] =	"String";
 		mvEngineTypeStrings[eVariableType_Enum] =	"Enum";
 		mvEngineTypeStrings[eVariableType_Bool] =	"Bool";
+
 	}
 
 
@@ -281,6 +282,8 @@ namespace hpl {
 							apVars->mGraphics.msWindowCaption,
 							apVars->mGraphics.mvWindowPosition,
 							mpResources,alHplSetupFlags);
+
+		m_graphicsContext.Init();
 
 		//Init Sound
 		mpSound->Init(mpResources, apVars->mSound.mlSoundDeviceID,
@@ -504,12 +507,9 @@ namespace hpl {
 			if(bBufferSwap)
 			{
 				bBufferSwap = false;
-				START_TIMING(WaitAndFinishRendering)
-				//mpGraphics->GetLowLevel()->WaitAndFinishRendering();
-				STOP_TIMING(WaitAndFinishRendering)
 
 				START_TIMING(SwapBuffers)
-				mpGraphics->GetLowLevel()->SwapBuffers();
+				m_graphicsContext.Frame();
 				STOP_TIMING(SwapBuffers)
 
 				//Log("Swap done: %d\n", cPlatform::GetApplicationTime());
@@ -522,7 +522,7 @@ namespace hpl {
 
 			////////////////////////////////////
 			// Render frame
-			if(mbLimitFPS==false || bIsUpdated)
+			if(!mbLimitFPS || bIsUpdated)
 			{
 				///////////////////////////////////////
            		//Get the the from the last frame.
@@ -535,16 +535,12 @@ namespace hpl {
 
 				//Render this frame
 				START_TIMING(RenderAll)
-				mpScene->Render(m_context, mfFrameTime, tSceneRenderFlag_All);
+				mpScene->Render(m_graphicsContext, mfFrameTime, tSceneRenderFlag_All);
 				STOP_TIMING(RenderAll)
 
 				START_TIMING(PostRender)
 				mpUpdater->RunMessage(eUpdateableMessage_OnPostRender, mfFrameTime);
 				STOP_TIMING(PostRender)
-
-				START_TIMING(FlushRender)
-				mpGraphics->GetLowLevel()->FlushRendering();
-				STOP_TIMING(FlushRender)
 
 				//Update fps counter.
 				mpFPSCounter->AddFrame();

@@ -47,6 +47,11 @@ namespace hpl {
 					bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList) override;
 
 	private:
+		virtual Image& FetchOutputFromRenderer() override {
+			static Image img{};
+			return img;
+		}
+
 		void CopyToFrameBuffer();
 		void SetupRenderList();
 		void RenderObjects();

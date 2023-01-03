@@ -66,7 +66,7 @@ namespace hpl {
 		cPostEffect_ImageTrail(cGraphics *apGraphics,cResources *apResources, iPostEffectType *apType);
 		~cPostEffect_ImageTrail();
 
-		virtual void RenderEffect(GraphicsContext& context, Image& input, RenderTarget& target) override;
+		virtual void RenderEffect(cPostEffectComposite& compositor, GraphicsContext& context, Image& input, RenderTarget& target) override;
 		
 		virtual void Reset() override;
 

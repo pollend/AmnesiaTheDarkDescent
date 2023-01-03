@@ -22,7 +22,10 @@ shaders = [
     { "type" : ShaderType.FS, "inout" : "resource/vs_post_effect.io",                  "input": "resource/fs_posteffect_bloom_blur.sc", "includes": ["resource"]},
     { "type" : ShaderType.FS, "inout" : "resource/vs_post_effect.io",                  "input": "resource/fs_posteffect_bloom_add.sc", "includes": ["resource"]},
     { "type" : ShaderType.FS, "inout" : "resource/vs_post_effect.io",                  "input": "resource/fs_posteffect_color_conv.sc", "includes": ["resource"]},
+    { "type" : ShaderType.FS, "inout" : "resource/vs_post_effect.io",                  "input": "resource/fs_post_effect_copy.sc", "includes": ["resource"]},
 # other
+    { "type" : ShaderType.VS, "inout" : "resource/vs_null.io",                         "input": "resource/vs_null.sc" , "includes": ["resource"]},
+    { "type" : ShaderType.FS, "inout" : "resource/vs_null.io",                         "input": "resource/fs_null.sc" , "includes": ["resource"]},
     { "type" : ShaderType.VS, "inout" : "resource/vs_basic_solid_diffuse.io",          "input": "resource/vs_basic_solid_diffuse.sc" , "includes": ["resource"]},
     { "type" : ShaderType.VS, "inout" : "resource/vs_basic_solid_illumination.io",     "input": "resource/vs_basic_solid_illumination.sc", "includes": ["resource"]},
     { "type" : ShaderType.VS, "inout" : "resource/vs_basic_solid_z.io",                "input": "resource/vs_basic_solid_z.sc", "includes": ["resource"]},
@@ -92,7 +95,6 @@ def main():
         varying_def_path = os.path.abspath(shader["inout"])
         includes = [item for inc in shader["includes"] for item in ['-i', os.path.abspath(inc)]]
 
-
         if sys.platform == 'win32':
             # dx9
             if not shader["type"] == ShaderType.CS:
@@ -158,7 +160,7 @@ def main():
                 ] + includes)
 
         # spirv
-        if not shader["type"] == ShaderType.CS:
+        if shader["type"] == ShaderType.CS:
             wrap_subprocess([
                 args.compiler,
                 '-f', f'{input_file_path}',

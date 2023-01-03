@@ -116,7 +116,6 @@ namespace hpl {
 		cMatrixf m_mtxViewSpaceRender;
 		cMatrixf m_mtxViewSpaceTransform;
 		bool mbInsideNearPlane;
-		iOcclusionQuery *mpQuery;
 		bgfx::OcclusionQueryHandle m_occlusionQuery;
 
 		iTexture *mpShadowTexture;
@@ -125,6 +124,17 @@ namespace hpl {
 	};
 
 	//---------------------------------------------
+	namespace rendering::detail {
+		struct ShaderInputOptions {
+			float m_width = 0;
+			float m_height = 0;
+
+            cMatrixf m_view = cMatrixf(cMatrixf::Identity);
+            cMatrixf m_projection = cMatrixf(cMatrixf::Identity);
+		};
+
+		void RenderZPassObject(bgfx::ViewId view,const ShaderInputOptions& input, GraphicsContext& context, iRenderer* renderer, iRenderable* object, RenderTarget& rt);
+	};
 
 	class cRendererDeferred : public  iRenderer
 	{
@@ -135,12 +145,10 @@ namespace hpl {
 		bool LoadData();
 		void DestroyData();
 
-		virtual Image* getPostEffectTexture() override;
+		virtual Image& FetchOutputFromRenderer() override;
 		iTexture* GetPostEffectTexture();
 
-		iTexture* GetGbufferTexture(int alIdx);
 		iFrameBuffer* GetGBufferFrameBuffer(eGBufferComponents aComponents);
-		//iTexture *GetShadowTexture(eShadowMapResolution aQuality){ return mpShadowTexture[aQuality]; }
 
 		virtual void Draw(GraphicsContext& context, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, RenderViewport& apRenderTarget,
 					bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList) override;
@@ -197,10 +205,11 @@ namespace hpl {
 	private:
 		RenderTarget& resolveRenderTarget(std::array<RenderTarget, 2>& rt);
 		std::shared_ptr<Image>& resolveRenderImage(std::array<std::shared_ptr<Image>, 2>& img);
-
+		
 
 		void CopyToFrameBuffer();
 		void SetupRenderList();
+		[[deprecated("Unused")]]
 		void RenderObjects();
 
 		void RenderDiffusePass(GraphicsContext& context, RenderTarget& rt);
@@ -215,7 +224,7 @@ namespace hpl {
 		void RenderZ(GraphicsContext& context);
 		void RenderEdgeSmooth();
 
-		void SetupLightsAndRenderQueries();
+		void SetupLightsAndRenderQueries(GraphicsContext& context, RenderTarget& rt);
 		void InitLightRendering();
 		void RenderLights();
 		void RenderLights_StencilBack_ScreenQuad();
@@ -289,6 +298,7 @@ namespace hpl {
 		std::array<std::shared_ptr<Image>, 2> m_color;
 		std::array<std::shared_ptr<Image>, 2> m_normal;
 		std::array<std::shared_ptr<Image>, 2> m_linearDepth;
+		std::array<std::shared_ptr<Image>, 2> m_specular;
 		std::array<std::shared_ptr<Image>, 2> m_depthStencil;
 
 		std::array<absl::InlinedVector<cShadowMapData, 10>, eShadowMapResolution_LastEnum> m_shadowMapData;
@@ -297,7 +307,6 @@ namespace hpl {
 		iFrameBuffer *mpAccumBuffer;
 		iFrameBuffer *mpReflectionBuffer;
 
-		iTexture *mpGBufferTexture[2][4];	//[2] = reflection or not
 		iTexture *mpAccumBufferTexture;
 		iTexture *mpRefractionTexture;
 		iTexture *mpReflectionTexture;
@@ -342,7 +351,7 @@ namespace hpl {
 
 			float u_useBackside;
 			float u_useOutsideBox;
-			float u_unused1;
+			float u_negFarPlane;
 			float u_unused2;
 		};
 		bgfx::ProgramHandle m_deferredFog;

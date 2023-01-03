@@ -183,11 +183,6 @@ namespace hpl {
 		void SetCurrentFrameBuffer(iFrameBuffer* apFrameBuffer, const cVector2l &avPos = 0, const cVector2l& avSize = -1);
 		iFrameBuffer* GetCurrentFrameBuffer() { return mpFrameBuffer; }
 
-		void SetFrameBufferDrawTargets(int *apTargets, int alNumOfTargets);
-
-		/////////////////////////////////////////////////////
-		/////////// RENDER STATE ////////////////////////////
-		/////////////////////////////////////////////////////
 
 		[[deprecated("replaced with BGFX")]]
 		void SetColorWriteActive(bool abR,bool abG,bool abB,bool abA);

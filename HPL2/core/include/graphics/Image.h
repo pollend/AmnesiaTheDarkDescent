@@ -1,6 +1,7 @@
 #pragma once
 
 #include "graphics/Bitmap.h"
+#include "math/MathTypes.h"
 #include "resources/ResourceBase.h"
 #include <absl/types/span.h>
 #include <graphics/Enum.h>
@@ -29,7 +30,7 @@ namespace hpl
                 bool m_uClamp : 1;
                 bool m_vClamp : 1;
                 bool m_wClamp : 1;
-                RTType m_rt: 2;
+                RTType m_rt: 3;
             };
             uint64_t m_settings = 0;
         } m_configuration;
@@ -70,6 +71,8 @@ namespace hpl
 
         uint16_t GetWidth() const {return m_width;}
         uint16_t GetHeight() const {return m_height;}
+
+        cVector2l getSize() const {return cVector2l(m_width, m_height);}
     private:
 
         uint16_t m_width = 0;
@@ -78,4 +81,5 @@ namespace hpl
         bgfx::TextureHandle m_handle = BGFX_INVALID_HANDLE;
         // ImageDescriptor m_descriptor = ImageDescriptor();
     };
+
 } // namespace hpl

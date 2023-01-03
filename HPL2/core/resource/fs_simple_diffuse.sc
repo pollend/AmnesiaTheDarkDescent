@@ -6,5 +6,5 @@ SAMPLER2D(s_diffuseMap, 0);
 
 void main()
 {
-    gl_FragData[0] = texture2D(s_diffuseMap, v_texcoord0.xy);
+    gl_FragColor = texture2D(s_diffuseMap, v_texcoord0.xy);
 }

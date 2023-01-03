@@ -238,7 +238,7 @@ namespace hpl {
 		cGui *mpGui;
 		cGenerate* mpGenerate;
 
-		GraphicsContext m_context;
+		GraphicsContext m_graphicsContext;
 	};
 
 };

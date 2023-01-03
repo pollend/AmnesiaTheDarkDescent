@@ -72,7 +72,7 @@ namespace hpl {
 		cPostEffect_RadialBlur(cGraphics *apGraphics,cResources *apResources, iPostEffectType *apType);
 		~cPostEffect_RadialBlur();
 
-		virtual void RenderEffect(GraphicsContext& context, Image& input, RenderTarget& target) override;
+		virtual void RenderEffect(cPostEffectComposite& compositor, GraphicsContext& context, Image& input, RenderTarget& target) override;
 		virtual void Reset() override;
 
 	private:

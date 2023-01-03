@@ -27,6 +27,7 @@
 #include "graphics/LowLevelGraphics.h"
 #include "graphics/Texture.h"
 #include "graphics/Graphics.h"
+#include <bx/debug.h>
 
 #include "system/LowLevelSystem.h"
 
@@ -61,10 +62,6 @@ namespace hpl {
 		////////////////////////////////
 		//Set up variables
 		mpCurrentProjectionMatrix = NULL;
-		mbInvertCullMode = false;
-		mbCurrentDepthTest = true;
-		mbCurrentDepthWrite = true;
-		mbCurrentStencilActive = false;
 		mvCurrentScissorRectPos =0;
 		mvCurrentScissorRectSize = -1;
 		mbCurrentScissorActive = false;
@@ -81,13 +78,12 @@ namespace hpl {
 		mpCurrentMaterial = NULL;
 		mpCurrentMaterialType = NULL;
 
-		for(int i=0; i<kMaxTextureUnits; ++i) mvCurrentTexture[i] = NULL;
-
 		////////////////////////////////
 		//Get size of render target
-		cVector2l vFrameBufferSize = mpCurrentRenderTarget->mpFrameBuffer ? mpCurrentRenderTarget->mpFrameBuffer->GetSize() : mvScreenSize;
-		mvRenderTargetSize.x = mpCurrentRenderTarget->mvSize.x <0 ? vFrameBufferSize.x : mpCurrentRenderTarget->mvSize.x;
-		mvRenderTargetSize.y = mpCurrentRenderTarget->mvSize.y <0 ? vFrameBufferSize.y : mpCurrentRenderTarget->mvSize.y;
+		auto& renderTarget = m_currentRenderTarget.GetRenderTarget();
+		cVector2l vFrameBufferSize = renderTarget && renderTarget->IsValid() ?  renderTarget->GetImage()->GetSize() : mvScreenSize;
+		mvRenderTargetSize.x = m_currentRenderTarget.GetSize().x < 0 ? vFrameBufferSize.x : m_currentRenderTarget.GetSize().x;
+		mvRenderTargetSize.y = m_currentRenderTarget.GetSize().y < 0 ? vFrameBufferSize.y : m_currentRenderTarget.GetSize().y;
 
 		mvCurrentFrameBufferSize = vFrameBufferSize;
 
@@ -113,14 +109,6 @@ namespace hpl {
 			mpLowLevelGraphics->SetScissorActive(false);
 		}
 	}
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PROTECTED METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	void iRenderFunctions::SetFlatProjection(const cVector2f &avSize,float afMin,float afMax)
 	{
@@ -177,12 +165,6 @@ namespace hpl {
 
 	bool iRenderFunctions::SetDepthTest(bool abX)
 	{
-		if(mbCurrentDepthTest == abX) return false;
-
-		if(mbLog) Log("  Setting depth test active: %d\n", abX);
-
-		mpLowLevelGraphics->SetDepthTestActive(abX);
-		mbCurrentDepthTest = abX;
 
 		return true;
 	}
@@ -191,13 +173,6 @@ namespace hpl {
 
 	bool iRenderFunctions::SetDepthWrite(bool abX)
 	{
-		if(mbCurrentDepthWrite == abX) return false;
-
-		if(mbLog) Log("  Setting depth write active: %d\n", abX);
-
-		mpLowLevelGraphics->SetDepthWriteActive(abX);
-		mbCurrentDepthWrite = abX;
-
 		return true;
 	}
 
@@ -249,25 +224,6 @@ namespace hpl {
 
 	bool iRenderFunctions::SetCullMode(eCullMode aMode, bool abCheckIfInverted)
 	{
-		if(abCheckIfInverted && mbInvertCullMode)
-			aMode = aMode==eCullMode_Clockwise ? eCullMode_CounterClockwise : eCullMode_Clockwise;
-
-		if(mCurrentCullMode == aMode) return false;
-
-		if(mbLog)
-		{
-			tString sMode="Unknown";
-			switch(aMode)
-			{
-			case eCullMode_Clockwise:			sMode = "Clockwise"; break;
-			case eCullMode_CounterClockwise:	sMode = "CounterClockwise"; break;
-			}
-			Log("  Setting cull mode: %s\n", sMode.c_str());
-		}
-
-		mCurrentCullMode = aMode;
-		mpLowLevelGraphics->SetCullMode(aMode);
-
 		return true;
 	}
 
@@ -275,13 +231,6 @@ namespace hpl {
 
 	bool iRenderFunctions::SetStencilActive(bool abX)
 	{
-		if(mbCurrentStencilActive == abX) return false;
-
-		if(mbLog) Log("  Setting stencil active: %d\n",abX);
-
-		mpLowLevelGraphics->SetStencilActive(abX);
-		mbCurrentStencilActive = abX;
-
 		return true;
 	}
 
@@ -297,17 +246,6 @@ namespace hpl {
 										eStencilOp aFailOp,eStencilOp aZFailOp,eStencilOp aZPassOp)
 	{
 		mpLowLevelGraphics->SetStencil(aFunc, alRef, aMask, aFailOp, aZFailOp, aZPassOp);
-	}
-
-	void iRenderFunctions::SetStencilTwoSide(	eStencilFunc aFrontFunc,eStencilFunc aBackFunc,
-												int alRef, unsigned int aMask,
-												eStencilOp aFrontFailOp,eStencilOp aFrontZFailOp,eStencilOp aFrontZPassOp,
-												eStencilOp aBackFailOp,eStencilOp aBackZFailOp,eStencilOp aBackZPassOp)
-	{
-		mpLowLevelGraphics->SetStencilTwoSide(	aFrontFunc, aBackFunc,
-												alRef, aMask,
-												aFrontFailOp, aFrontZFailOp, aFrontZPassOp,
-												aBackFailOp, aBackZFailOp, aBackZPassOp);
 	}
 
 	//-----------------------------------------------------------------------
@@ -354,46 +292,7 @@ namespace hpl {
 
 	bool iRenderFunctions::SetScissorRect(const cVector2l& avPos, const cVector2l& avSize, bool abAutoEnabling)
 	{
-		/////////////////////////////
-		// Clip the rect
-		cVector2l vFinalPos=avPos + mpCurrentRenderTarget->mvPos;
-		cVector2l vFinalSize = avSize;
-
-		cVector2l vMin = mbUseGlobalScissorRect ? mvGlobalScissorRectPos : mpCurrentRenderTarget->mvPos;
-		cVector2l vMax = mbUseGlobalScissorRect ? mvGlobalScissorRectSize+vMin : mvRenderTargetSize+vMin;
-
-		if(vFinalPos.x < vMin.x) vFinalPos.x = vMin.x;
-		if(vFinalPos.y < vMin.y) vFinalPos.y = vMin.y;
-
-		if(vFinalPos.x+vFinalSize.x > vMax.x) vFinalSize.x = vMax.x - vFinalPos.x;
-		if(vFinalPos.y+vFinalSize.y > vMax.y) vFinalSize.y = vMax.y - vFinalPos.y;
-
-		/////////////////////////////
-		// Check if already set
-		if(mvCurrentScissorRectPos == vFinalPos && mvCurrentScissorRectSize == vFinalSize) return false;
-
-		mvCurrentScissorRectPos = vFinalPos;
-		mvCurrentScissorRectSize = vFinalSize;
-
-		/////////////////////////////
-		// Set the clip rect
-		if(	mbUseGlobalScissorRect == false &&
-			vFinalPos.x == 0 && vFinalPos.y ==0 &&
-			vFinalSize.x == mvRenderTargetSize.x && vFinalSize.y == mvRenderTargetSize.y)
-		{
-			if(abAutoEnabling)SetScissorActive(false);
-			return false;
-		}
-		else
-		{
-			if(abAutoEnabling) SetScissorActive(true);
-
-			if(mbLog)
-				Log("  Setting scissor rect: %d, %d, %dx%d\n",	vFinalPos.x, vFinalPos.y, vFinalSize.x,vFinalSize.y);
-
-			mpLowLevelGraphics->SetScissorRect(mvCurrentScissorRectPos, mvCurrentScissorRectSize);
-			return true;
-		}
+		return true;
 	}
 
 	//-----------------------------------------------------------------------
@@ -540,38 +439,12 @@ namespace hpl {
 
 	void iRenderFunctions::SetTexture(int alUnit, iTexture *apTexture)
 	{
-		if(mvCurrentTexture[alUnit] == apTexture) return;
-
-		if(mbLog) {
-			if(apTexture)
-				Log("  Setting texture unit: %d, %d/'%s'\n",alUnit,apTexture,apTexture->GetName().c_str());
-			else
-				Log("  Setting texture unit: %d, 'NULL\n",alUnit);
-		}
-		mpLowLevelGraphics->SetTexture(alUnit, apTexture);
-
-		mvCurrentTexture[alUnit] = apTexture;
 	}
 
 	//-----------------------------------------------------------------------
 
 	void iRenderFunctions::SetTextureRange(iTexture *apTexture, int alFirstUnit, int alLastUnit)
 	{
-		for(int i=alFirstUnit; i<= alLastUnit; ++i)
-		{
-			if(mvCurrentTexture[i] != apTexture)
-			{
-				if(mbLog) {
-					if(apTexture)
-						Log("  Setting texture unit: %d, %d/'%s'\n",i,apTexture,apTexture->GetName().c_str());
-					else
-						Log("  Setting texture unit: %d, 'NULL\n",i);
-				}
-
-				mpLowLevelGraphics->SetTexture(i, apTexture);
-				mvCurrentTexture[i] = apTexture;
-			}
-		}
 	}
 
 	//-----------------------------------------------------------------------
@@ -649,139 +522,19 @@ namespace hpl {
 
 	void iRenderFunctions::SetInvertCullMode(bool abX)
 	{
-		if(mbInvertCullMode == abX) return;
 
-		mbInvertCullMode = abX;
-		if(mbLog) Log(" Inverting Cull Modes!\n");
-
-		SetCullMode(mCurrentCullMode == eCullMode_Clockwise ? eCullMode_CounterClockwise : eCullMode_Clockwise, false);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void iRenderFunctions::SetFrameBuffer(iFrameBuffer *apFrameBuffer, bool abUsePosAndSize, bool abUseGlobalScissor)
 	{
-		if(abUsePosAndSize)
-		{
-			if(mbLog){
-				Log(" Setting FrameBuffer %d '%s', pos: %d,%d size: %dx%d\n",	apFrameBuffer, apFrameBuffer ? apFrameBuffer->GetName().c_str() : "",
-					mpCurrentRenderTarget->mvPos.x,
-					mpCurrentRenderTarget->mvPos.y,
-					mvRenderTargetSize.x,
-					mvRenderTargetSize.y);
-			}
-			mpLowLevelGraphics->SetCurrentFrameBuffer(	apFrameBuffer,mpCurrentRenderTarget->mvPos,	mvRenderTargetSize);
-		}
-		else
-		{
-			if(mbLog){
-				Log(" Setting FrameBuffer %d '%s', default size\n", apFrameBuffer, apFrameBuffer ? apFrameBuffer->GetName().c_str() : "");
-			}
-			mpLowLevelGraphics->SetCurrentFrameBuffer(apFrameBuffer);
-		}
-
-		////////////////////////////////
-		//Set new frame buffer size
-		cVector2l vPrevFrameBufferSize = mvCurrentFrameBufferSize;
-		mvCurrentFrameBufferSize = apFrameBuffer ? apFrameBuffer->GetSize() : mvScreenSize;
-
-		////////////////////////////////////
-		//Setup the scissor rect
-		if(mbUseGlobalScissorRect)
-		{
-			////////////////////////////////////
-			//Global scissor Activated
-			if(abUseGlobalScissor)
-			{
-				////////////////////////////////////
-				//Set Active
-				if(mbGlobalScissorRectActive==false)
-				{
-					if(mbLog)
-					{
-						Log("  Setting scissor active: 1\n");
-
-					}
-
-					mpLowLevelGraphics->SetScissorActive(true);
-				}
-
-				////////////////////////////////////
-				//Setup rect
-				if(mbGlobalScissorRectActive==false || mvCurrentFrameBufferSize != vPrevFrameBufferSize)
-				{
-					if(mbLog)
-					{
-						Log("  Setting scissor rect: %d, %d, %dx%d\n",	mvGlobalScissorRectPos.x, mvGlobalScissorRectPos.y,
-																		mvGlobalScissorRectSize.x,mvGlobalScissorRectSize.y);
-					}
-
-					mpLowLevelGraphics->SetScissorRect(mvGlobalScissorRectPos, mvGlobalScissorRectSize);
-				}
-
-				mbGlobalScissorRectActive = true;
-			}
-			////////////////////////////////////
-			//Global scissor not active
-			else
-			{
-				if(mbGlobalScissorRectActive)
-				{
-					if(mbLog) Log("  Setting scissor active: 0\n");
-
-					mpLowLevelGraphics->SetScissorActive(false);
-					mbGlobalScissorRectActive = false;
-				}
-			}
-		}
 	}
 	//-----------------------------------------------------------------------
 
 	void iRenderFunctions::ClearFrameBuffer(tClearFrameBufferFlag aFlags, bool abUsePosAndSize)
 	{
-		bool bScissorUsed=false;
-		if(	abUsePosAndSize &&
-			(mpCurrentRenderTarget->mvPos != cVector2l(0,0) || mvRenderTargetSize != mvCurrentFrameBufferSize || mbUseGlobalScissorRect) )
-		{
-			/////////////////////////////////
-			// Global scissor rect (do no setup and do not turn off scissor at the end!)
-			if(mbUseGlobalScissorRect)
-			{
-				if(mbLog) {
-					Log(" Clearing portion of frame buffer. Pos: %d,%d Size: %dx%d\n",
-						mvGlobalScissorRectPos.x, mvGlobalScissorRectPos.y,
-						mvGlobalScissorRectSize.x, mvGlobalScissorRectSize.y);
-				}
-			}
-			/////////////////////////////////
-			// Render target size
-			else
-			{
-				if(mbLog) {
-					Log(" Clearing portion of frame buffer. Pos: %d,%d Size: %dx%d\n",
-						mpCurrentRenderTarget->mvPos.x,	mpCurrentRenderTarget->mvPos.y,
-						mvRenderTargetSize.x, mvRenderTargetSize.y);
-				}
-
-				mpLowLevelGraphics->SetScissorActive(true);
-				mpLowLevelGraphics->SetScissorRect(mpCurrentRenderTarget->mvPos, mvRenderTargetSize);
-				bScissorUsed = true;
-			}
-		}
-		else
-		{
-			if(mbLog)
-			{
-				Log(" Clearing entire frame buffer\n");
-			}
-		}
-
-		/////////////////////////////////
-		// Clear the buffer
-		mpLowLevelGraphics->ClearFrameBuffer(aFlags);
-
-		if(bScissorUsed)
-			mpLowLevelGraphics->SetScissorActive(false);
+	
 	}
 
 	//-----------------------------------------------------------------------
@@ -912,25 +665,7 @@ namespace hpl {
 	void iRenderFunctions::CopyFrameBufferToTexure(	iTexture *apTexture, const cVector2l& avPos, const cVector2l& avSize, const cVector2l& avTextureOffset,
 													bool abTextureOffsetUsesRenderTargetPos)
 	{
-		if(mbLog)
-		{
-			if(abTextureOffsetUsesRenderTargetPos)
-				Log(" Copying current to texture '%s' (%d). Pos: %d:%d Size: %dx%d TextureOffset: %d:%d\n",
-								apTexture->GetName().c_str(), apTexture,
-								avPos.x, avPos.y, avSize.x, avSize.y,
-								avTextureOffset.x+mpCurrentRenderTarget->mvPos.x,
-								avTextureOffset.y+mpCurrentRenderTarget->mvPos.y);
-			else
-				Log(" Copying current to texture '%s' (%d). Pos: %d:%d Size: %dx%d TextureOffset: %d:%d\n",
-								apTexture->GetName().c_str(), apTexture,
-								avPos.x, avPos.y, avSize.x, avSize.y, avTextureOffset.x, avTextureOffset.y);
-
-
-		}
-		if(abTextureOffsetUsesRenderTargetPos)
-			mpLowLevelGraphics->CopyFrameBufferToTexure(apTexture, avPos, avSize, avTextureOffset + mpCurrentRenderTarget->mvPos);
-		else
-			mpLowLevelGraphics->CopyFrameBufferToTexure(apTexture, avPos, avSize, avTextureOffset);
+		BX_ASSERT(false, "Noop");
 	}
 
 	//-----------------------------------------------------------------------

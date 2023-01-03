@@ -20,6 +20,7 @@
 #ifndef HPL_RENDERER_WIRE_FRAME_H
 #define HPL_RENDERER_WIRE_FRAME_H
 
+#include "graphics/Image.h"
 #include "graphics/Renderer.h"
 
 namespace hpl {
@@ -43,6 +44,12 @@ namespace hpl {
 		void DestroyData();
 
 	private:
+
+		virtual Image& FetchOutputFromRenderer() override {
+			static Image img{};
+			return img;
+		}
+
 		void CopyToFrameBuffer();
 		void SetupRenderList();
 		void RenderObjects();

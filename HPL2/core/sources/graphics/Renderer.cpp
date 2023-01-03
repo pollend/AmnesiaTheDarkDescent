@@ -520,20 +520,7 @@ namespace hpl {
 
 	iTexture* iRenderer::GetPostEffectTexture()
 	{
-		if(mpCurrentRenderTarget->mpFrameBuffer)
-		{
-			// auto image = m_currentRenderTarget.GetRenderTarget()->GetImage();
-
-			iFrameBufferAttachment *pAttachement = mpCurrentRenderTarget->mpFrameBuffer->GetColorBuffer(0);
-            iTexture *pTexture = static_cast<iTexture*>(pAttachement);
-
-			return pTexture;
-		}
-		else
-		{
-			//TODO: Copy from frambuffer to texture. But what texture?
-			return NULL;
-		}
+		return nullptr;
 	}
 
 	//-----------------------------------------------------------------------
@@ -679,7 +666,6 @@ namespace hpl {
 		}
 		/////////////////////////////////////////////
 		// Reset the cull mode setup
-		mbInvertCullMode = false;
 		// mpLowLevelGraphics->SetCullMode(eCullMode_CounterClockwise);
 
 	
@@ -923,7 +909,9 @@ namespace hpl {
 	*/
 	void iRenderer::PushNodeChildrenToStack(tRendererSortedNodeSet& a_setNodeStack, iRenderableContainerNode *apNode, int alNeededFlags)
 	{
-		if(apNode->HasChildNodes()==false) return;
+		if(apNode->HasChildNodes()==false)  {
+			return;
+		}
 
 		tRenderableContainerNodeListIt childIt = apNode->GetChildNodeList()->begin();
 		for(; childIt != apNode->GetChildNodeList()->end(); ++childIt)
@@ -1166,7 +1154,7 @@ namespace hpl {
 		context.Submit(view, drawRequest);
 	}
 
-	void iRenderer::RenderZPassWithVisibilityCheck(GraphicsContext& context, cVisibleRCNodeTracker *apVisibleNodeTracker, tRenderableFlag alNeededFlags, tObjectVariabilityFlag variabilityFlag,
+	void iRenderer::RenderZPassWithVisibilityCheck(GraphicsContext& context, cVisibleRCNodeTracker *apVisibleNodeTracker, tObjectVariabilityFlag objectTypes,  tRenderableFlag alNeededFlags,
 			RenderTarget& rt, std::function<bool(iRenderable* object)> renderHandler) {
 
 		auto renderNodeHandler = [&](iRenderableContainerNode *apNode, tRenderableFlag alNeededFlags) {
@@ -1216,7 +1204,7 @@ namespace hpl {
 
 
 		for(auto& it: containers) {
-			if(it.flag & variabilityFlag) {
+			if(it.flag & objectTypes) {
 				it.container->UpdateBeforeRendering();
 			}
 		}
@@ -1228,7 +1216,7 @@ namespace hpl {
 		tRendererSortedNodeSet setNodeStack;
 
 		for(auto& it: containers) {
-			if(it.flag & variabilityFlag) {
+			if(it.flag & objectTypes) {
 				iRenderableContainerNode *pNode = it.container->GetRoot();
 				pNode->UpdateBeforeUse();	//Make sure node is updated.
 				pNode->SetInsideView(true);	//We never want to check root! Assume player is inside.
@@ -1243,7 +1231,7 @@ namespace hpl {
 
 		////////////////////////////
 		//Iterate the nodes on the stack.
-		while(setNodeStack.empty()==false)
+		while(!setNodeStack.empty())
 		{
 			tRendererSortedNodeSetIt firstIt = setNodeStack.begin(); //Might be slow...
 			iRenderableContainerNode *pNode = *firstIt;
@@ -2073,7 +2061,7 @@ namespace hpl {
 		return apObjectA->mpMatrix < apObjectB->mpMatrix;
 	}
 
-	void iRenderer::AssignAndRenderOcclusionQueryObjects(bool abSetFrameBuffer, iFrameBuffer *apFrameBuffer, bool abUsePosAndSize)
+	void iRenderer::AssignAndRenderOcclusionQueryObjects(bgfx::ViewId view, GraphicsContext& context, bool abSetFrameBuffer, bool abUsePosAndSize, RenderTarget& rt)
 	{
 		cRenderList *pRenderList = mpCurrentSettings->mpRenderList;
 
@@ -2088,70 +2076,46 @@ namespace hpl {
 
 		/////////////////////////////////////
 		//If no queries added, then skip any rendering
-		if(mpCurrentSettings->mlCurrentOcclusionObject <=0) return;
+		if(mpCurrentSettings->mlCurrentOcclusionObject <=0) {
+			return;
+		}
 
 		START_RENDER_PASS(OcclusionObjects);
 
 		////////////////////////////////////
 		// Copying queries to new array
 		mvSortedOcclusionObjects.resize(mpCurrentSettings->mlCurrentOcclusionObject);
-		for(int i=0; i<mpCurrentSettings->mlCurrentOcclusionObject; ++i)
+		for(int i=0; i<mpCurrentSettings->mlCurrentOcclusionObject; ++i) {
 			mvSortedOcclusionObjects[i] = mpCurrentSettings->mvOcclusionObjectPool[i];
+		}
 
 		////////////////////////////////////
 		// Sort the queries
 		std::sort(mvSortedOcclusionObjects.begin(), mvSortedOcclusionObjects.end(), SortFunc_OcclusionObject);
 
 		///////////////////////////////////
-		// Set up frame buffer
-		if(abSetFrameBuffer)
-		{
-			SetFrameBuffer(apFrameBuffer, abUsePosAndSize);
-		}
-
-		///////////////////////////////////
-		// Set up rendering
-		SetDepthTest(true);
-		SetDepthWrite(false);
-		SetDepthTestFunc(eDepthTestFunc_LessOrEqual);
-		SetBlendMode(eMaterialBlendMode_None);
-		SetAlphaMode(eMaterialAlphaMode_Solid);
-		SetChannelMode(eMaterialChannelMode_None);
-
-		SetTextureRange(NULL,0);
-		SetProgram(NULL);
-
-		///////////////////////////////////
 		// Render the queries
 		for(size_t i=0; i<mvSortedOcclusionObjects.size(); ++i)
 		{
 			cOcclusionQueryObject *pObject = mvSortedOcclusionObjects[i];
+			GraphicsContext::ShaderProgram shaderProgram;
+			GraphicsContext::LayoutStream layoutStream;
+			pObject->mpVtxBuffer->GetLayoutStream(layoutStream);
 
-			if(pObject->mbDepthTest)
-				SetDepthTestFunc(eDepthTestFunc_LessOrEqual);
-			else
-				SetDepthTestFunc(eDepthTestFunc_Always);
+			shaderProgram.m_handle = m_nullShader;
+			shaderProgram.m_configuration.m_depthTest = pObject->mbDepthTest ? DepthTest::LessEqual : DepthTest::Always;
+			shaderProgram.m_configuration.m_cull = Cull::CounterClockwise;
+			
+			shaderProgram.m_modelTransform = *pObject->mpMatrix;
+			shaderProgram.m_view = mpCurrentFrustum->GetViewMatrix();
+			shaderProgram.m_projection = *mpCurrentProjectionMatrix;
+			
+			GraphicsContext::DrawRequest drawRequest {rt, layoutStream, shaderProgram};
+			drawRequest.m_width = mvScreenSize.x;
+			drawRequest.m_height = mvScreenSize.y;
 
-			SetMatrix(pObject->mpMatrix);
-
-
-			SetVertexBuffer(pObject->mpVtxBuffer);
-
-			pObject->mpQuery->Begin();
-			DrawCurrent();
-			pObject->mpQuery->End();
+			context.Submit(view, drawRequest, pObject->m_occlusion);
 		}
-
-
-		//Make sure rendering is on its way!
-		// mpLowLevelGraphics->FlushRendering();
-
-		///////////////////////////////////
-		// Reset some settings
-		SetDepthTestFunc(eDepthTestFunc_LessOrEqual);
-		SetChannelMode(eMaterialChannelMode_RGBA);
-
-
 		END_RENDER_PASS();
 	}
 
@@ -2291,26 +2255,6 @@ namespace hpl {
 
 	void iRenderer::SetMaterialTextures(eMaterialRenderMode aRenderMode, cMaterial *apMaterial)
 	{
-		iMaterialType *pType = apMaterial->GetType();
-
-		for(int i=0; i<kMaxTextureUnits; ++i)
-		{
-			//Set texture, if special textures are used, check for those too!
-			iTexture *pTexture = apMaterial->GetTextureInUnit(aRenderMode,i);
-
-			if(mvCurrentTexture[i] != pTexture)
-			{
-				if(mbLog) {
-					if(pTexture)
-						Log("  Setting texture unit: %d, %d/'%s'\n",i,pTexture,pTexture->GetName().c_str());
-					else
-						Log("  Setting texture unit: %d, 'NULL\n",i);
-				}
-
-				mpLowLevelGraphics->SetTexture(i, pTexture);
-				mvCurrentTexture[i] = pTexture;
-			}
-		}
 	}
 
 	//-----------------------------------------------------------------------
@@ -2658,7 +2602,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void iRenderer::UpdateqQuadVertexPostion(iVertexBuffer *apVtxBuffer,const cVector3f& avPos, const cVector2f& avSize, bool abCallUpdate)
+	void iRenderer::UpdateQuadVertexPostion(iVertexBuffer *apVtxBuffer,const cVector3f& avPos, const cVector2f& avSize, bool abCallUpdate)
 	{
 		int lVtxStride = apVtxBuffer->GetElementNum(eVertexBufferElement_Position);
 		float *pPos = apVtxBuffer->GetFloatArray(eVertexBufferElement_Position);
@@ -2683,7 +2627,9 @@ namespace hpl {
 		pPos[3*lVtxStride +1] = avPos.y+avSize.y;
 		pPos[3*lVtxStride +2] = avPos.z;
 
-		if(abCallUpdate) apVtxBuffer->UpdateData(eVertexElementFlag_Position,false);
+		if(abCallUpdate) { 
+			apVtxBuffer->UpdateData(eVertexElementFlag_Position,false);
+		}
 	}
 
 	//-----------------------------------------------------------------------
@@ -2694,15 +2640,6 @@ namespace hpl {
 		if(pVtxBuffer==NULL) FatalError("Could not load vertex buffer from mesh '%s'\n",asMeshName.c_str());
 
 		return pVtxBuffer;
-
-		/*cMesh *pMesh = mpResources->GetMeshManager()->CreateMesh(asMeshName);
-		if(pMesh==NULL)FatalError("Could not load mesh '%s'\n",asMeshName.c_str());
-
-		iVertexBuffer *pVtxBuffer = pMesh->GetSubMesh(0)->GetVertexBuffer()->CreateCopy(eVertexBufferType_Hardware,
-																						eVertexBufferUsageType_Static,
-																						alVtxToCopy);
-		mpResources->GetMeshManager()->Destroy(pMesh);
-		return pVtxBuffer;*/
 	}
 
 	//-----------------------------------------------------------------------

@@ -15,6 +15,7 @@ FetchContent_Declare(
   bgfx_cmake
   GIT_REPOSITORY git@github.com:bkaradzic/bgfx.cmake.git
 )
+set(BGFX_OPENGL_VERSION 33)
 set(BGFX_INSTALL OFF)
 set(BGFX_INSTALL_EXAMPLES OFF)
 set(BGFX_BUILD_EXAMPLES OFF)

@@ -1,5 +1,5 @@
 
-$input v_position, v_boxRay
+$input v_position, v_ray
 
 #include <common.sh>
 
@@ -18,15 +18,16 @@ uniform vec4 u_params[4];
 
 #define u_useBacksize (u_params[3].x)
 #define u_useOutsideBox (u_params[3].y)
+#define u_negFarPlane (u_params[3].z)
 
-float GetPlaneIntersection(vec3 avPlaneNormal, float afNegPlaneDist, float afFinalT)
+float GetPlaneIntersection(vec3 ray, vec3 avPlaneNormal, float afNegPlaneDist, float afFinalT)
 {
     //Get T (amount of ray) to intersection
-    float fMul  = dot(v_boxRay, avPlaneNormal);
+    float fMul  = dot(ray, avPlaneNormal);
     float fT = afNegPlaneDist / fMul;
     
     //Get the intersection and see if inside box
-    vec3 vIntersection = abs(v_boxRay * fT + u_fogRayCastStart);
+    vec3 vIntersection = abs(ray * fT + u_fogRayCastStart);
     if( all( lessThan(vIntersection, vec3(0.5001)) ) )
     {
         return max(afFinalT, fT);	
@@ -36,20 +37,21 @@ float GetPlaneIntersection(vec3 avPlaneNormal, float afNegPlaneDist, float afFin
 
 void main()
 {
+    
     vec4 vDepthVal = texture2D(s_depthMap, gl_FragCoord.xy);
-    float fDepth = -UnpackVec3ToFloat(vDepthVal.xyz) * afNegFarPlane;
+    float fDepth = -unpackRgbaToFloat(vec4(vDepthVal.xyz, 0)) * u_negFarPlane;
 
     if(0.0 < u_useOutsideBox) {
         fDepth = fDepth +  v_position.z; //VertexPos is negative!
-	
+    
         float fFinalT = 0.0;
         if(0.0 < u_useBacksize) {
-            fFinalT = GetPlaneIntersection(vec3(-1.0, 0.0, 0.0),	avNegPlaneDistNeg.x,	fFinalT);//Left
-            fFinalT = GetPlaneIntersection(vec3(1.0, 0.0, 0.0), 	avNegPlaneDistPos.x,	fFinalT);//Right
-            fFinalT = GetPlaneIntersection(vec3(0.0, -1.0, 0.0),	avNegPlaneDistNeg.y, 	fFinalT);//Bottom
-            fFinalT = GetPlaneIntersection(vec3(0.0, 1.0, 0.0 ),	avNegPlaneDistPos.y, 	fFinalT);//Top
-            fFinalT = GetPlaneIntersection(vec3(0.0, 0.0, -1.0),	avNegPlaneDistNeg.z, 	fFinalT);//Back
-            fFinalT = GetPlaneIntersection(vec3(0.0, 0.0, 1.0), 	avNegPlaneDistPos.z,	fFinalT);//Front
+            fFinalT = GetPlaneIntersection(v_ray, vec3(-1.0, 0.0, 0.0),	u_fogNegPlaneDistNeg.x,	fFinalT);//Left
+            fFinalT = GetPlaneIntersection(v_ray, vec3(1.0, 0.0, 0.0), 	u_fogNegPlaneDistPos.x,	fFinalT);//Right
+            fFinalT = GetPlaneIntersection(v_ray, vec3(0.0, -1.0, 0.0),	u_fogNegPlaneDistNeg.y, fFinalT);//Bottom
+            fFinalT = GetPlaneIntersection(v_ray, vec3(0.0, 1.0, 0.0 ),	u_fogNegPlaneDistPos.y, fFinalT);//Top
+            fFinalT = GetPlaneIntersection(v_ray, vec3(0.0, 0.0, -1.0),	u_fogNegPlaneDistNeg.z, fFinalT);//Back
+            fFinalT = GetPlaneIntersection(v_ray, vec3(0.0, 0.0, 1.0), 	u_fogNegPlaneDistPos.z,	fFinalT);//Front
             
             float fLocalBackZ = fFinalT * v_position.z -  v_position.z;
             fDepth = min(-fLocalBackZ, fDepth);
@@ -57,13 +59,13 @@ void main()
         
     } else {
         if(0.0 < u_useBacksize) {
-			fDepth = min(-v_position.z, fDepth);
-		}
+            fDepth = min(-v_position.z, fDepth);
+        }
     }
 
     fDepth = min(- v_position.z, fDepth);
-	float fAmount = max(fDepth / avFogStartAndLength.y,0.0);
-	
-	gl_FragColor.xyz = avFogColor.xyz;
-	gl_FragColor.w = pow(fAmount, afFalloffExp) * avFogColor.w;
+    float fAmount = max(fDepth / u_fogLength,0.0);
+    
+    gl_FragColor.xyz = avFogColor.xyz;
+    gl_FragColor.w = pow(fAmount, u_fogFalloffExp) * avFogColor.w;
 }
