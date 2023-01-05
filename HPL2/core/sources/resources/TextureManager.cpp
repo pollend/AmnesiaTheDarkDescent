@@ -99,6 +99,7 @@ namespace hpl {
 		return resource;
 	}
 
+
 	Image* cTextureManager::Create1DImage(
 		const tString& asName, bool abUseMipMaps, eTextureUsage aUsage, unsigned int alTextureSizeLevel)
 	{
@@ -106,11 +107,9 @@ namespace hpl {
 			asName,
 			[](const tString& asName, const tWString& path, cBitmap* pBmp) -> Image*
 			{
+
 				auto* resource = new Image(asName, path);
-				ImageDescriptor desc;
-				desc.format = Image::FromHPLTextureFormat(pBmp->GetPixelFormat());
-				desc.m_width = pBmp->GetWidth();
-				desc.m_height = pBmp->GetHeight();
+				ImageDescriptor desc =  ImageDescriptor::CreateFromBitmap(*pBmp);
 				auto* image = new Image();
 
 				auto data = pBmp->GetData(0, 0);
@@ -127,10 +126,7 @@ namespace hpl {
 			[](const tString& asName, const tWString& path, cBitmap* pBmp) -> Image*
 			{
 				auto* resource = new Image(asName, path);
-				ImageDescriptor desc;
-				desc.format = Image::FromHPLTextureFormat(pBmp->GetPixelFormat());
-				desc.m_width = pBmp->GetWidth();
-				desc.m_height = pBmp->GetHeight();
+				ImageDescriptor desc =  ImageDescriptor::CreateFromBitmap(*pBmp);
 				auto* image = new Image();
 
 				auto data = pBmp->GetData(0, 0);
@@ -157,6 +153,7 @@ namespace hpl {
 				desc.m_width = pBmp->GetWidth();
 				desc.m_height = pBmp->GetHeight();
 				desc.m_depth = pBmp->GetDepth();
+				desc.m_name = asName.c_str();
 				auto* image = new Image();
 
 				auto data = pBmp->GetData(0, 0);
@@ -165,6 +162,7 @@ namespace hpl {
 			});
 	}
 
+	
 	iTexture* cTextureManager::Create1D(const tString& asName,bool abUseMipMaps,
 										eTextureUsage aUsage, unsigned int alTextureSizeLevel)
 	{

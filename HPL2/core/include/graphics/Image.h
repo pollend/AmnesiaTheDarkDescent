@@ -44,6 +44,9 @@ namespace hpl
         static ImageDescriptor CreateTexture2D(uint16_t width, uint16_t height, bool hasMipMaps, bgfx::TextureFormat::Enum format);
         static ImageDescriptor CreateTexture3D(uint16_t width, uint16_t height, uint16_t depth, bool hasMipMaps, bgfx::TextureFormat::Enum format);
         static ImageDescriptor CreateFromBitmap(const cBitmap& bitmap);
+
+        static ImageDescriptor CreateTexture2D(const char* name, uint16_t width, uint16_t height, bool hasMipMaps, bgfx::TextureFormat::Enum format);
+        static ImageDescriptor CreateTexture3D(const char* name, uint16_t width, uint16_t height, uint16_t depth, bool hasMipMaps, bgfx::TextureFormat::Enum format);
     };
 
     class Image : public iResourceBase
@@ -65,7 +68,7 @@ namespace hpl
         bgfx::TextureHandle GetHandle() const;
 
         static bgfx::TextureFormat::Enum FromHPLTextureFormat(ePixelFormat format);
-        static void loadFromBitmap(Image& image, cBitmap& bitmap);
+        // static void loadFromBitmap(Image& image, cBitmap& bitmap);
 
         static void InitializeFromBitmap(Image& image, cBitmap& bitmap, const ImageDescriptor& desc);
         

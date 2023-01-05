@@ -375,7 +375,8 @@ cTextureBrowserIcon::cTextureBrowserIcon(cEditorWindowTextureBrowser* apBrowser,
 	auto* img = new Image();
 	cBitmap* pBmp = pRes->GetBitmapLoaderHandler()->LoadBitmap(sThumbFile, 0);
 	auto desc = ImageDescriptor::CreateFromBitmap(*pBmp);
-	Image::loadFromBitmap(*img, *pBmp);
+	desc.m_name = apEntry->GetTextureFileFullPath().c_str();
+	Image::InitializeFromBitmap(*img, *pBmp , desc);
 
 	// if(pTex && pTex->CreateFromBitmap(pBmp))
 	// {

@@ -16,15 +16,15 @@ void main()
     int numClipPlanes = int(u_numClip);
     for(int i = 0; i < numClipPlanes; i++)
     {
-        vec4 plane = u_clip_planes[i];
-        if(dot(plane, vec4(v_position, 1.0)) < 0.0)
+        float d = dot(u_clip_planes[i], vec4(v_position, 1.0));
+        if(d < 0.0)
         {
             discard;
         }
     }
     if(0.0 < u_hasTexture)
     {
-        color *= texture2D(s_diffuseMap, v_texcoord0);
+        color = texture2D(s_diffuseMap, v_texcoord0);
     }
-	gl_FragColor = vec4(1.0);
+	gl_FragColor = color;
 }

@@ -28,19 +28,19 @@ namespace hpl {
     }
 
     BlendFunc CreateBlendFunction(BlendOperator type, BlendOperand src, BlendOperand dst) {
-        return static_cast<BlendFunc>(static_cast<uint32_t>(type) << BlendOpShift | static_cast<uint32_t>(src) << BlendSrcShift | static_cast<uint32_t>(dst) << BlendDstShift);
+        return static_cast<BlendFunc>(((static_cast<uint32_t>(type) & BlendOpMask) << BlendOpShift) | ((static_cast<uint32_t>(src) & BlendSrcMask) << BlendSrcShift) | ((static_cast<uint32_t>(dst) & BlendDstMask) << BlendDstShift));
     }
 
     BlendOperand GetBlendOperandSrc(BlendFunc func) {
-        return static_cast<BlendOperand>(static_cast<uint32_t>(func) >> BlendSrcShift & BlendSrcMask);
+        return static_cast<BlendOperand>((static_cast<uint32_t>(func) >> BlendSrcShift) & BlendSrcMask);
     }
     
     BlendOperand GetBlendOperandDst(BlendFunc func) {
-        return static_cast<BlendOperand>(static_cast<uint32_t>(func) >> BlendDstShift & BlendDstMask);
+        return static_cast<BlendOperand>((static_cast<uint32_t>(func) >> BlendDstShift) & BlendDstMask);
     }
 
     BlendOperator GetBlendOperator(BlendFunc func) {
-        return static_cast<BlendOperator>(static_cast<uint32_t>(func) >> BlendOpShift & BlendOpMask);
+        return static_cast<BlendOperator>((static_cast<uint32_t>(func) >> BlendOpShift) & BlendOpMask);
     }
 
 }

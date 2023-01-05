@@ -159,15 +159,15 @@ namespace hpl
 
                 BlendFunc alphaFunc = program.m_configuration.m_alphaBlendFunc;
                 const auto srcOperandAlpha = mapToBGFXBlendOperand(GetBlendOperandSrc(alphaFunc));
-                const auto srcDestAlpha = mapToBGFXBlendOperand(GetBlendOperandDst(alphaFunc));
+                const auto destOperandAlpha = mapToBGFXBlendOperand(GetBlendOperandDst(alphaFunc));
                 const auto alphaEquation = mapToBGFXBlendOperator(GetBlendOperator(alphaFunc));
 
                 BlendFunc rgbFunc = program.m_configuration.m_rgbBlendFunc;
                 const auto srcOperandRgb = mapToBGFXBlendOperand(GetBlendOperandSrc(rgbFunc));
-                const auto srcDestRgb = mapToBGFXBlendOperand(GetBlendOperandDst(rgbFunc));
+                const auto destOperandRgb = mapToBGFXBlendOperand(GetBlendOperandDst(rgbFunc));
                 const auto rgbEquation = mapToBGFXBlendOperator(GetBlendOperator(rgbFunc));
 
-                return BGFX_STATE_BLEND_FUNC_SEPARATE(srcOperandRgb, srcDestAlpha, srcDestRgb, srcDestAlpha) |
+                return BGFX_STATE_BLEND_FUNC_SEPARATE(srcOperandRgb, destOperandRgb, srcOperandAlpha, destOperandAlpha) |
                     BGFX_STATE_BLEND_EQUATION_SEPARATE(rgbEquation, alphaEquation);
             })();
     }

@@ -87,6 +87,7 @@ namespace hpl {
 		int GetMemoryUsage(){ return mlMemoryUsage;}
 
 	private:
+
 		Image* _wrapperImageResource(const tString& asName, std::function<Image*(const tString& asName, const tWString& path, cBitmap* bitmap)> createImageHandler);
 
 		iTexture* FindTexture2D(const tString &asName, tWString &asFilePath);

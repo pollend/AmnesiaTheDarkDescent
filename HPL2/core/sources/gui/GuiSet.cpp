@@ -165,8 +165,8 @@ namespace hpl {
 		}
 
 		//Material
-		eGuiMaterial pMaterialA = aObjectA.mpCustomMaterial ? aObjectA.mpCustomMaterial : aObjectA.mpGfx->m_materialType;
-		eGuiMaterial pMaterialB = aObjectB.mpCustomMaterial ? aObjectB.mpCustomMaterial : aObjectB.mpGfx->m_materialType;
+		eGuiMaterial pMaterialA = aObjectA.mpCustomMaterial != eGuiMaterial::eGuiMaterial_LastEnum ? aObjectA.mpCustomMaterial : aObjectA.mpGfx->m_materialType;
+		eGuiMaterial pMaterialB = aObjectB.mpCustomMaterial != eGuiMaterial::eGuiMaterial_LastEnum ? aObjectB.mpCustomMaterial : aObjectB.mpGfx->m_materialType;
 		if(pMaterialA != pMaterialB)
 		{
 			return pMaterialA > pMaterialB;
@@ -556,16 +556,16 @@ namespace hpl {
 
 	void cGuiSet::Draw(GraphicsContext& graphicsContext, cFrustum* apFrustum) {
 
+		if(m_setRenderObjects.empty()) {
+			return;
+		}
+
 		iLowLevelGraphics *pLowLevelGraphics = mpGraphics->GetLowLevel();
 
 		bgfx::TransientVertexBuffer vb;
 		bgfx::TransientIndexBuffer ib;
 		bgfx::allocTransientVertexBuffer(&vb, 20000, PositionTexCoordColor::m_layout);
 		bgfx::allocTransientIndexBuffer(&ib, 20000);
-
-		eGuiMaterial pLastMaterial = eGuiMaterial::eGuiMaterial_LastEnum;
-		Image* pLastTexture = NULL;
-		cGuiClipRegion *pLastClipRegion = NULL;
 
 		cMatrixf projectionMtx(cMatrixf::Identity);
 		cMatrixf viewMtx(cMatrixf::Identity);
@@ -603,14 +603,101 @@ namespace hpl {
 		auto view = graphicsContext.StartPass("Draw GUI");
 		auto it = m_setRenderObjects.begin();
 
+		eGuiMaterial pLastMaterial = eGuiMaterial::eGuiMaterial_LastEnum;
+		Image* pLastTexture = NULL;
+		cGuiClipRegion *pLastClipRegion = NULL;
+
 		cGuiGfxElement *pGfx = it->mpGfx;
-		eGuiMaterial materialType = it->mpCustomMaterial ? it->mpCustomMaterial : pGfx->m_materialType;
+		eGuiMaterial materialType = it->mpCustomMaterial != eGuiMaterial_LastEnum ? it->mpCustomMaterial : pGfx->m_materialType;
 		Image* pTexture = pGfx->mvTextures[0];
 		cGuiClipRegion *pClipRegion = it->mpClipRegion;
 
 		while(it != m_setRenderObjects.end()) {
+
 			size_t vertexBufferIndex = 0;
 			size_t indexBufferIndex = 0;
+			GraphicsContext::ShaderProgram shaderProgram;
+			shaderProgram.m_handle = g_guiProgram;
+
+			const bool hasClip = pClipRegion && pClipRegion->mRect.w > 0.0f;
+			struct {
+				float x;
+				float y;
+				float z;
+				float w;
+			} clipPlanes [4] = {0};
+
+			struct {
+				float u_hasTexture;
+				float u_numClip;
+				float u_unused1;
+				float u_unused2;
+			} u_params = {
+				pTexture ? 1.0f : 0.0f,
+				hasClip ? 4.0f: 0.0f,
+				0.0f,
+				0.0f		
+			};
+			if(hasClip)
+			{
+				cRect2f& clipRect = pClipRegion->mRect;
+				cPlanef plane;
+				//Bottom
+				plane.FromNormalPoint(cVector3f(0,-1,0),cVector3f(0,clipRect.y+clipRect.h,0));
+				clipPlanes[0] = {plane.a, plane.b, plane.c, plane.d};
+				
+				//Top
+				plane.FromNormalPoint(cVector3f(0,1,0),cVector3f(0,clipRect.y,0));
+				clipPlanes[1] = {plane.a, plane.b, plane.c, plane.d};
+				
+				//Right
+				plane.FromNormalPoint(cVector3f(1,0,0),cVector3f(clipRect.x,0,0));
+				clipPlanes[2] = {plane.a, plane.b, plane.c, plane.d};
+				
+				//Left
+				plane.FromNormalPoint(cVector3f(-1,0,0),cVector3f(clipRect.x+clipRect.w,0,0));
+				clipPlanes[3] = {plane.a, plane.b, plane.c, plane.d};
+			}
+			shaderProgram.m_uniforms.push_back({ g_u_clip_planes, clipPlanes, 4 });
+			shaderProgram.m_uniforms.push_back({ g_u_params, &u_params});
+			if(pTexture) {
+				shaderProgram.m_textures.push_back({ g_u_s_diffuseMap, pTexture->GetHandle(), 0 });
+			}
+
+			switch(materialType) {
+				case eGuiMaterial_Alpha:
+					// shaderProgram.m_configuration.m_blendAlpha = true;
+					shaderProgram.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
+					shaderProgram.m_configuration.m_alphaBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
+					break;
+				case eGuiMaterial_FontNormal:
+					// shaderProgram.m_configuration.m_blendAlpha = true;
+					shaderProgram.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
+					shaderProgram.m_configuration.m_alphaBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
+				break;
+				case eGuiMaterial_Additive:
+					// shaderProgram.m_configuration.m_blendAlpha = true;
+					shaderProgram.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
+					shaderProgram.m_configuration.m_alphaBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
+					break;
+				case eGuiMaterial_Modulative:
+					// shaderProgram.m_configuration.m_blendAlpha = true;
+					shaderProgram.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::DstColor, BlendOperand::Zero);
+					shaderProgram.m_configuration.m_alphaBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::DstColor, BlendOperand::Zero);
+					break;
+				case eGuiMaterial_PremulAlpha:
+					// shaderProgram.m_configuration.m_blendAlpha = true;
+					shaderProgram.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::InvSrcAlpha);
+					shaderProgram.m_configuration.m_alphaBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::InvSrcAlpha);
+					break;
+				case eGuiMaterial_Diffuse:
+				default:
+					// shaderProgram.m_configuration.m_blendAlpha = true;
+					shaderProgram.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::Zero);
+					shaderProgram.m_configuration.m_alphaBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::Zero);
+					break;
+			}
+
 			do
 			{
 				const cGuiRenderObject &object = *it;
@@ -690,7 +777,7 @@ namespace hpl {
 				++it; if(it == m_setRenderObjects.end()) break;
 
 				pGfx = it->mpGfx;
-				materialType = it->mpCustomMaterial ? it->mpCustomMaterial : pGfx->m_materialType;
+				materialType = it->mpCustomMaterial != eGuiMaterial_LastEnum ? it->mpCustomMaterial : pGfx->m_materialType;
 				pTexture = it->mpGfx->mvTextures[0];
 				pClipRegion = it->mpClipRegion;
 			}
@@ -708,73 +795,6 @@ namespace hpl {
 				.m_numIndices = static_cast<uint32_t>(indexBufferIndex)
 			};
 
-			GraphicsContext::ShaderProgram shaderProgram;
-			shaderProgram.m_handle = g_guiProgram;
-
-			switch(materialType) {
-				case eGuiMaterial_Alpha:
-					shaderProgram.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
-				break;
-				case eGuiMaterial_FontNormal:
-					shaderProgram.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
-				break;
-				case eGuiMaterial_Additive:
-					shaderProgram.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
-				break;
-				case eGuiMaterial_Modulative:
-					shaderProgram.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::DstColor, BlendOperand::Zero);
-				break;
-				case eGuiMaterial_PremulAlpha:
-					shaderProgram.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::InvSrcAlpha);
-				break;
-				case eGuiMaterial_Diffuse:
-				default:
-					shaderProgram.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::Zero);
-					break;
-			}
-
-			const bool hasClip = pClipRegion && pClipRegion->mRect.w > 0.0f;
-			struct {
-				float x;
-				float y;
-				float z;
-				float w;
-			} clipPlanes [4] = {0};
-
-			struct {
-				float u_hasTexture;
-				float u_numClip;
-				float u_unused1;
-				float u_unused2;
-			} u_params = {
-				pTexture ? 1.0f : 0.0f,
-				hasClip ? 4.0f: 0.0f,
-				0.0f,
-				0.0f		
-			};
-			if(hasClip)
-			{
-				cRect2f& clipRect = pClipRegion->mRect;
-				cPlanef plane;
-				//Bottom
-				plane.FromNormalPoint(cVector3f(0,-1,0),cVector3f(0,clipRect.y+clipRect.h,0));
-				clipPlanes[0] = {plane.a, plane.b, plane.c, plane.d};
-				
-				plane.FromNormalPoint(cVector3f(0,1,0),cVector3f(0,clipRect.y+clipRect.h,0));
-				clipPlanes[1] = {plane.a, plane.b, plane.c, plane.d};
-				
-				plane.FromNormalPoint(cVector3f(1,0,0),cVector3f(0,clipRect.y+clipRect.h,0));
-				clipPlanes[2] = {plane.a, plane.b, plane.c, plane.d};
-				
-				plane.FromNormalPoint(cVector3f(-1,0,0),cVector3f(0,clipRect.y+clipRect.h,0));
-				clipPlanes[3] = {plane.a, plane.b, plane.c, plane.d};
-			}
-			shaderProgram.m_uniforms.push_back({ g_u_clip_planes, clipPlanes, 4 });
-			shaderProgram.m_uniforms.push_back({ g_u_params, &u_params});
-			if(pTexture) {
-				shaderProgram.m_textures.push_back({ g_u_s_diffuseMap, pTexture->GetHandle(), 0 });
-			}
-
 			shaderProgram.m_projection = projectionMtx;
 			shaderProgram.m_view = viewMtx;
 			shaderProgram.m_modelTransform = modelMtx;
@@ -790,7 +810,6 @@ namespace hpl {
 				layout,
 				shaderProgram,
 			};
-
 
         	cVector2l vSize = pLowLevelGraphics->GetScreenSizeInt();
 			request.m_width = vSize.x;

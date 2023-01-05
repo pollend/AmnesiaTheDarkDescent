@@ -475,8 +475,9 @@ namespace hpl {
 			desc.m_configuration.m_uClamp = true;
 			desc.m_configuration.m_vClamp = true;
 			mpFrameTexture->GetTexture()->Invalidate();
+			desc.m_name = mpFrameTexture->GetTexture()->GetName().c_str();
 			Image::InitializeFromBitmap(*mpFrameTexture->GetTexture(), *mpBitmap, desc);
-
+			
 			// mpFrameTexture->GetTexture()->CreateFromBitmap(mpBitmap);
 			// mpFrameTexture->GetTexture()->SetWrapS(eTextureWrap_ClampToEdge);
 			// mpFrameTexture->GetTexture()->SetWrapT(eTextureWrap_ClampToEdge);

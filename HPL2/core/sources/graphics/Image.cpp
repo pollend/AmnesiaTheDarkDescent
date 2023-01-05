@@ -32,6 +32,7 @@ namespace hpl
         descriptor.m_width = bitmap.GetWidth();
         descriptor.m_height = bitmap.GetHeight();
         descriptor.m_depth = bitmap.GetDepth();
+        descriptor.m_hasMipMaps = bitmap.GetNumOfMipMaps() > 1;
         return descriptor;
     }
 
@@ -51,6 +52,18 @@ namespace hpl
         desc.m_depth = depth;
         desc.m_hasMipMaps = hasMipMaps;
         desc.format = format;
+        return desc;
+    }
+
+    ImageDescriptor ImageDescriptor::CreateTexture2D(const char* name, uint16_t width, uint16_t height, bool hasMipMaps, bgfx::TextureFormat::Enum format) {
+        ImageDescriptor desc = ImageDescriptor::CreateTexture2D(width, height, hasMipMaps, format);
+        desc.m_name = name;
+        return desc;
+    }
+
+    ImageDescriptor ImageDescriptor::CreateTexture3D(const char* name, uint16_t width, uint16_t height, uint16_t depth, bool hasMipMaps, bgfx::TextureFormat::Enum format) {
+        ImageDescriptor desc = ImageDescriptor::CreateTexture3D(width, height, depth, hasMipMaps, format);
+        desc.m_name = name;
         return desc;
     }
 
@@ -182,13 +195,11 @@ namespace hpl
         case ePixelFormat_DXT1:
             return bgfx::TextureFormat::BC1;
         case ePixelFormat_DXT2:
-            return bgfx::TextureFormat::BC2;
         case ePixelFormat_DXT3:
-            return bgfx::TextureFormat::BC3;
+            return bgfx::TextureFormat::BC2;
         case ePixelFormat_DXT4:
-            return bgfx::TextureFormat::BC4;
-        case ePixelFormat_DXT5:
-            return bgfx::TextureFormat::BC5;
+        case ePixelFormat_DXT5: // DXT4 and DXT5 are the same
+            return bgfx::TextureFormat::BC3;
         case ePixelFormat_Depth16:
             return bgfx::TextureFormat::D16;
         case ePixelFormat_Depth24:
@@ -229,16 +240,16 @@ namespace hpl
         image.Initialize(desc, bgfx::copy(data->mpData, data->mlSize));
     }
 
-    void Image::loadFromBitmap(Image& image, cBitmap& bitmap) {
-        ImageDescriptor descriptor;
-        BX_ASSERT(bitmap.GetNumOfImages() == 1, "Only single image is supported at the moment");
-        descriptor.format = Image::FromHPLTextureFormat(bitmap.GetPixelFormat());
-        descriptor.m_width = bitmap.GetWidth();
-        descriptor.m_height = bitmap.GetHeight();
-        descriptor.m_depth = bitmap.GetDepth();
-        auto data = bitmap.GetData(0, 0);
-        image.Initialize(descriptor, bgfx::copy(data->mpData, data->mlSize));
-    }
+    // void Image::loadFromBitmap(Image& image, cBitmap& bitmap) {
+    //     ImageDescriptor descriptor;
+    //     BX_ASSERT(bitmap.GetNumOfImages() == 1, "Only single image is supported at the moment");
+    //     descriptor.format = Image::FromHPLTextureFormat(bitmap.GetPixelFormat());
+    //     descriptor.m_width = bitmap.GetWidth();
+    //     descriptor.m_height = bitmap.GetHeight();
+    //     descriptor.m_depth = bitmap.GetDepth();
+    //     auto data = bitmap.GetData(0, 0);
+    //     image.Initialize(descriptor, bgfx::copy(data->mpData, data->mlSize));
+    // }
 
 
     bgfx::TextureHandle Image::GetHandle() const

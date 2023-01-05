@@ -252,6 +252,7 @@ void cTextureWrapper::Reload()
 		m_desc = desc;
 		mpTexture = std::make_unique<Image>();
 		Image::InitializeFromBitmap(*mpTexture.get(), *pBmp, desc);
+		
 		// mpTexture->SetUseMipMaps(mbMipMaps);
 
 		// mbValid = (mpTexture!=NULL && mpTexture->CreateFromBitmap(pBmp));
