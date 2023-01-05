@@ -18,8 +18,17 @@
  */
 
 #include "gui/GuiSet.h"
+#include <bgfx/bgfx.h>
+#include <bx/debug.h>
 
+#include "graphics/Color.h"
+#include "graphics/Enum.h"
+#include "graphics/GraphicsContext.h"
+#include "graphics/RenderTarget.h"
+#include "graphics/ShaderUtil.h"
+#include "gui/GuiTypes.h"
 #include "math/Math.h"
+#include "math/MathTypes.h"
 #include "system/LowLevelSystem.h"
 #include "system/String.h"
 
@@ -70,6 +79,8 @@
 #include "gui/WidgetGroup.h"
 #include "gui/WidgetDummy.h"
 
+#include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -78,9 +89,52 @@
 
 namespace hpl {
 
-	//-----------------------------------------------------------------------
+	static bgfx::ProgramHandle g_guiProgram = BGFX_INVALID_HANDLE;
+	static bgfx::UniformHandle g_u_params = BGFX_INVALID_HANDLE;
+	static bgfx::UniformHandle g_u_s_diffuseMap = BGFX_INVALID_HANDLE;
+	static bgfx::UniformHandle g_u_clip_planes = BGFX_INVALID_HANDLE;
 
-	// This is temporary, but works now. Used for sorting widgets Z-wise before sending input
+	struct PositionTexCoordColor {
+		float m_uv[2];
+        float m_pos[3];
+		float color[4];
+
+		static void Init() {
+			m_layout.begin()
+				.add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Float)
+				.add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float)
+				.add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Float)
+				.end();
+		}
+
+		static void set(PositionTexCoordColor& input, const PositionTexCoordColor& value) {
+			input.m_pos[0] = value.m_pos[0];
+			input.m_pos[1] = value.m_pos[1];
+			input.m_pos[2] = value.m_pos[2];
+			input.m_uv[0] = value.m_uv[0];
+			input.m_uv[1] = value.m_uv[1];
+			input.color[0] = value.color[0];
+			input.color[1] = value.color[1];
+			input.color[2] = value.color[2];
+			input.color[3] = value.color[3];
+		}
+
+        static bgfx::VertexLayout m_layout;
+	};
+    bgfx::VertexLayout PositionTexCoordColor::m_layout;
+
+	void cGuiSet::Init() {
+		BX_ASSERT(!bgfx::isValid(g_guiProgram), "Program already initialized");
+
+		PositionTexCoordColor::Init();
+		g_guiProgram = hpl::loadProgram(
+			"vs_gui",
+			"fs_gui"
+		);
+		g_u_params = bgfx::createUniform("u_params", bgfx::UniformType::Vec4);
+		g_u_s_diffuseMap = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
+		g_u_clip_planes = bgfx::createUniform("u_clip_planes", bgfx::UniformType::Vec4, 4);
+	}
 
 	static bool SortWidget_Z (const iWidget* apWidgetA, const iWidget* apWidgetB)
 	{
@@ -90,15 +144,6 @@ namespace hpl {
 		fBZ = ((iWidget*)apWidgetB)->GetGlobalPosition().z;
 		return (fAZ > fBZ);
 	}
-
-	//-----------------------------------------------------------------------
-
-
-	//////////////////////////////////////////////////////////////////////////
-	// RENDER OBJECT
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	bool cGuiRenderObjectCompare::operator()(	const cGuiRenderObject& aObjectA,
 												const cGuiRenderObject& aObjectB) const
@@ -120,8 +165,8 @@ namespace hpl {
 		}
 
 		//Material
-		iGuiMaterial *pMaterialA = aObjectA.mpCustomMaterial ? aObjectA.mpCustomMaterial : aObjectA.mpGfx->mpMaterial;
-		iGuiMaterial *pMaterialB = aObjectB.mpCustomMaterial ? aObjectB.mpCustomMaterial : aObjectB.mpGfx->mpMaterial;
+		eGuiMaterial pMaterialA = aObjectA.mpCustomMaterial ? aObjectA.mpCustomMaterial : aObjectA.mpGfx->m_materialType;
+		eGuiMaterial pMaterialB = aObjectB.mpCustomMaterial ? aObjectB.mpCustomMaterial : aObjectB.mpGfx->m_materialType;
 		if(pMaterialA != pMaterialB)
 		{
 			return pMaterialA > pMaterialB;
@@ -508,6 +553,254 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+
+	void cGuiSet::Draw(GraphicsContext& graphicsContext, cFrustum* apFrustum) {
+
+		iLowLevelGraphics *pLowLevelGraphics = mpGraphics->GetLowLevel();
+
+		bgfx::TransientVertexBuffer vb;
+		bgfx::TransientIndexBuffer ib;
+		bgfx::allocTransientVertexBuffer(&vb, 20000, PositionTexCoordColor::m_layout);
+		bgfx::allocTransientIndexBuffer(&ib, 20000);
+
+		eGuiMaterial pLastMaterial = eGuiMaterial::eGuiMaterial_LastEnum;
+		Image* pLastTexture = NULL;
+		cGuiClipRegion *pLastClipRegion = NULL;
+
+		cMatrixf projectionMtx(cMatrixf::Identity);
+		cMatrixf viewMtx(cMatrixf::Identity);
+		cMatrixf modelMtx(cMatrixf::Identity);
+		if(mbIs3D)
+		{
+			//Invert the y coordinate: = -y, this also get the gui into the correct position.
+			//Also scale to size
+			cVector3f vPreScale = cVector3f(mv3DSize.x / mvVirtualSize.x,
+											-mv3DSize.y / mvVirtualSize.y,
+											mv3DSize.z / (mfVirtualMaxZ - mfVirtualMinZ));
+			cMatrixf mtxPreMul = cMath::MatrixScale(vPreScale);
+			//note: Offset needs to be converted to shape coords (done by multiplying with pre scale)
+			mtxPreMul.SetTranslation(cVector3f(mvVirtualSizeOffset.x*vPreScale.x, mvVirtualSizeOffset.y*vPreScale.y, 0));
+
+			//Create the final model matrix
+			modelMtx = cMath::MatrixMul(m_mtx3DTransform, mtxPreMul);
+			projectionMtx = apFrustum->GetProjectionMatrix();
+			viewMtx = apFrustum->GetViewMatrix();
+		}
+		//Screen projection
+		else
+		{
+
+			//Set up min and max for orth projection
+			cVector3f vProjMin(-mvVirtualSizeOffset.x, -mvVirtualSizeOffset.y, mfVirtualMinZ);
+			cVector3f vProjMax(mvVirtualSize.x-mvVirtualSizeOffset.x, mvVirtualSize.y-mvVirtualSizeOffset.y, mfVirtualMaxZ);
+   			bx::mtxOrtho(projectionMtx.v, 
+				vProjMin.x,vProjMax.x,vProjMax.y,vProjMin.y,vProjMin.z,vProjMax.z, 0.0f, bgfx::getCaps()->homogeneousDepth);
+
+			// modelview is identity
+		}
+
+
+		auto view = graphicsContext.StartPass("Draw GUI");
+		auto it = m_setRenderObjects.begin();
+
+		cGuiGfxElement *pGfx = it->mpGfx;
+		eGuiMaterial materialType = it->mpCustomMaterial ? it->mpCustomMaterial : pGfx->m_materialType;
+		Image* pTexture = pGfx->mvTextures[0];
+		cGuiClipRegion *pClipRegion = it->mpClipRegion;
+
+		while(it != m_setRenderObjects.end()) {
+			size_t vertexBufferIndex = 0;
+			size_t indexBufferIndex = 0;
+			do
+			{
+				const cGuiRenderObject &object = *it;
+				cGuiGfxElement *pGfx = object.mpGfx;
+
+				if(object.mbRotated)
+				{
+					for(int i=0; i<4; ++i)
+					{
+
+						cVertex &vtx = pGfx->mvVtx[i];
+						cVector3f vVtxPos = vtx.pos;
+						const cVector3f& vPos = object.mvPos;
+						const cColor color = vtx.col * object.mColor;
+
+						//Scale
+						vVtxPos.x *= object.mvSize.x;
+						vVtxPos.y *= object.mvSize.y;
+
+						//Rotate
+						vVtxPos.x -= object.mvPivot.x;
+						vVtxPos.y -= object.mvPivot.y;
+						vVtxPos = cMath::MatrixMul(cMath::MatrixRotateZ(object.mfAngle), vVtxPos);
+						vVtxPos.x += object.mvPivot.x;
+						vVtxPos.y += object.mvPivot.y;
+
+						PositionTexCoordColor input = { 
+							{ vtx.tex.x, vtx.tex.y},
+							{vVtxPos.x + vPos.x,
+								vVtxPos.y + vPos.y,
+								vPos.z},
+							{color.r, color.g, color.b, color.a}
+						};
+						BX_ASSERT(vertexBufferIndex <= vb.size, "vertexIndex <= vb.m_size")
+						PositionTexCoordColor::set(reinterpret_cast<PositionTexCoordColor*>(vb.data)[vertexBufferIndex++], input);
+					}
+				}
+				else
+				{
+					for(int i=0; i<4; ++i)
+					{
+						cVertex &vtx = pGfx->mvVtx[i];
+						cVector3f& vVtxPos = vtx.pos;
+						const cVector3f& vPos = object.mvPos;
+						const cColor color = vtx.col * object.mColor;
+
+						PositionTexCoordColor input = {
+							{ vtx.tex.x, vtx.tex.y},
+							{vVtxPos.x * object.mvSize.x + vPos.x,
+								vVtxPos.y * object.mvSize.y + vPos.y,
+								vPos.z},
+							{color.r, color.g, color.b, color.a}
+						};
+						BX_ASSERT(vertexBufferIndex <= vb.size, "vertexIndex <= vb.m_size")
+						PositionTexCoordColor::set(reinterpret_cast<PositionTexCoordColor*>(vb.data)[vertexBufferIndex++], input);
+					}
+				}
+
+				BX_ASSERT((indexBufferIndex + 6) <= ib.size, "indexIndex <= ib.m_size")
+				reinterpret_cast<uint16_t*>(ib.data)[indexBufferIndex++] = vertexBufferIndex - 4;
+				reinterpret_cast<uint16_t*>(ib.data)[indexBufferIndex++] = vertexBufferIndex - 3;
+				reinterpret_cast<uint16_t*>(ib.data)[indexBufferIndex++] = vertexBufferIndex - 2;
+
+				reinterpret_cast<uint16_t*>(ib.data)[indexBufferIndex++] = vertexBufferIndex - 4;
+				reinterpret_cast<uint16_t*>(ib.data)[indexBufferIndex++] = vertexBufferIndex - 2;
+				reinterpret_cast<uint16_t*>(ib.data)[indexBufferIndex++] = vertexBufferIndex - 1;
+				
+
+				///////////////////////////
+				//Set last texture
+				pLastMaterial =  materialType;
+				pLastTexture =   pTexture;
+				pLastClipRegion = pClipRegion;
+
+				/////////////////////////////
+				//Get next object
+				++it; if(it == m_setRenderObjects.end()) break;
+
+				pGfx = it->mpGfx;
+				materialType = it->mpCustomMaterial ? it->mpCustomMaterial : pGfx->m_materialType;
+				pTexture = it->mpGfx->mvTextures[0];
+				pClipRegion = it->mpClipRegion;
+			}
+			while(pTexture == pLastTexture &&
+				materialType == pLastMaterial &&
+				pClipRegion == pLastClipRegion);
+
+			GraphicsContext::LayoutStream layout;
+			layout.m_vertexStreams.push_back({
+				.m_transient = vb,
+				.m_numVertices = static_cast<uint32_t>(vertexBufferIndex)
+			});
+			layout.m_indexStream = {
+				.m_transient = ib,
+				.m_numIndices = static_cast<uint32_t>(indexBufferIndex)
+			};
+
+			GraphicsContext::ShaderProgram shaderProgram;
+			shaderProgram.m_handle = g_guiProgram;
+
+			switch(materialType) {
+				case eGuiMaterial_Alpha:
+					shaderProgram.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
+				break;
+				case eGuiMaterial_FontNormal:
+					shaderProgram.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
+				break;
+				case eGuiMaterial_Additive:
+					shaderProgram.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
+				break;
+				case eGuiMaterial_Modulative:
+					shaderProgram.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::DstColor, BlendOperand::Zero);
+				break;
+				case eGuiMaterial_PremulAlpha:
+					shaderProgram.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::InvSrcAlpha);
+				break;
+				case eGuiMaterial_Diffuse:
+				default:
+					shaderProgram.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::Zero);
+					break;
+			}
+
+			const bool hasClip = pClipRegion && pClipRegion->mRect.w > 0.0f;
+			struct {
+				float x;
+				float y;
+				float z;
+				float w;
+			} clipPlanes [4] = {0};
+
+			struct {
+				float u_hasTexture;
+				float u_numClip;
+				float u_unused1;
+				float u_unused2;
+			} u_params = {
+				pTexture ? 1.0f : 0.0f,
+				hasClip ? 4.0f: 0.0f,
+				0.0f,
+				0.0f		
+			};
+			if(hasClip)
+			{
+				cRect2f& clipRect = pClipRegion->mRect;
+				cPlanef plane;
+				//Bottom
+				plane.FromNormalPoint(cVector3f(0,-1,0),cVector3f(0,clipRect.y+clipRect.h,0));
+				clipPlanes[0] = {plane.a, plane.b, plane.c, plane.d};
+				
+				plane.FromNormalPoint(cVector3f(0,1,0),cVector3f(0,clipRect.y+clipRect.h,0));
+				clipPlanes[1] = {plane.a, plane.b, plane.c, plane.d};
+				
+				plane.FromNormalPoint(cVector3f(1,0,0),cVector3f(0,clipRect.y+clipRect.h,0));
+				clipPlanes[2] = {plane.a, plane.b, plane.c, plane.d};
+				
+				plane.FromNormalPoint(cVector3f(-1,0,0),cVector3f(0,clipRect.y+clipRect.h,0));
+				clipPlanes[3] = {plane.a, plane.b, plane.c, plane.d};
+			}
+			shaderProgram.m_uniforms.push_back({ g_u_clip_planes, clipPlanes, 4 });
+			shaderProgram.m_uniforms.push_back({ g_u_params, &u_params});
+			if(pTexture) {
+				shaderProgram.m_textures.push_back({ g_u_s_diffuseMap, pTexture->GetHandle(), 0 });
+			}
+
+			shaderProgram.m_projection = projectionMtx;
+			shaderProgram.m_view = viewMtx;
+			shaderProgram.m_modelTransform = modelMtx;
+
+			shaderProgram.m_configuration.m_write = Write::RGBA;
+			shaderProgram.m_configuration.m_cull = Cull::CounterClockwise;
+			if(mbIs3D) {
+				shaderProgram.m_configuration.m_depthTest = DepthTest::LessEqual;
+			}
+
+			GraphicsContext::DrawRequest request = {
+				RenderTarget::EmptyRenderTarget,
+				layout,
+				shaderProgram,
+			};
+
+
+        	cVector2l vSize = pLowLevelGraphics->GetScreenSizeInt();
+			request.m_width = vSize.x;
+			request.m_height = vSize.y;
+			graphicsContext.Submit(view, request);
+		}
+
+		mBaseClipRegion.Clear();
+	}
+
 	//TODO: Support multi textures
 	void cGuiSet::Render(cFrustum *apFrustum)
 	{
@@ -629,8 +922,7 @@ namespace hpl {
 
 		///////////////////////////
 		//Material
-		if(aMaterial != eGuiMaterial_LastEnum)	object.mpCustomMaterial = mpGui->GetMaterial(aMaterial);
-		else									object.mpCustomMaterial = NULL;
+		object.mpCustomMaterial = aMaterial;
 
 		///////////////////////////
 		//Rotation
@@ -1577,7 +1869,7 @@ namespace hpl {
 		cGuiClipRegion *pLastClipRegion = NULL;
 
 		cGuiGfxElement *pGfx = it->mpGfx;
-		iGuiMaterial *pMaterial = it->mpCustomMaterial ? it->mpCustomMaterial : pGfx->mpMaterial;
+		iGuiMaterial *pMaterial = nullptr; //  it->mpCustomMaterial ? it->mpCustomMaterial : pGfx->mpMaterial;
 		Image* pTexture = pGfx->mvTextures[0];
 		cGuiClipRegion *pClipRegion = it->mpClipRegion;
 
@@ -1692,7 +1984,7 @@ namespace hpl {
 				++it; if(it == setRenderObjects.end()) break;
 
 				pGfx = it->mpGfx;
-				pMaterial = it->mpCustomMaterial ? it->mpCustomMaterial : pGfx->mpMaterial;
+				// pMaterial = it->mpCustomMaterial ? it->mpCustomMaterial : pGfx->m_materialType;
 				pTexture = it->mpGfx->mvTextures[0];
 				pClipRegion = it->mpClipRegion;
 			}
@@ -1717,14 +2009,14 @@ namespace hpl {
 				}
 			}
 
-			/////////////////////////////////
-			//Material end
-			if(pLastMaterial != pMaterial || it == setRenderObjects.end())
-			{
-				pLastMaterial->AfterRender();
-				if(kLogRender)Log("Material %d '%s' after. new: %d '%s'\n",	pLastMaterial,pLastMaterial->GetName().c_str(),
-																		pMaterial,pMaterial->GetName().c_str());
-			}
+			// /////////////////////////////////
+			// //Material end
+			// if(pLastMaterial != pMaterial || it == setRenderObjects.end())
+			// {
+			// 	pLastMaterial->AfterRender();
+			// 	if(kLogRender)Log("Material %d '%s' after. new: %d '%s'\n",	pLastMaterial,pLastMaterial->GetName().c_str(),
+			// 															pMaterial,pMaterial->GetName().c_str());
+			// }
 		}
 
 		if(kLogRender)Log("---------- END %d -----------\n");

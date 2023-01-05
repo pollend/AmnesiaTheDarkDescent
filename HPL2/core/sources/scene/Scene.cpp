@@ -240,7 +240,7 @@ namespace hpl {
 				//Render 3D GuiSets
 				// Should this really be here? Or perhaps send in a frame buffer depending on the renderer.
 				START_TIMING(Render3DGui)
-				Render3DGui(pViewPort,pFrustum, afFrameTime);
+				Render3DGui(context, pViewPort,pFrustum, afFrameTime);
 				STOP_TIMING(Render3DGui)
 			}
 
@@ -267,7 +267,7 @@ namespace hpl {
 			if(alFlags & tSceneRenderFlag_Gui)
 			{
 				START_TIMING(RenderGUI)
-				RenderScreenGui(pViewPort, afFrameTime);
+				RenderScreenGui(context, pViewPort, afFrameTime);
 				STOP_TIMING(RenderGUI)
 			}
 		}
@@ -370,7 +370,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cScene::Render3DGui(cViewport *apViewPort,cFrustum *apFrustum,float afTimeStep)
+	void cScene::Render3DGui(GraphicsContext& context, cViewport *apViewPort,cFrustum *apFrustum,float afTimeStep)
 	{
 		if(apViewPort->GetCamera()==NULL) return;
 
@@ -380,12 +380,12 @@ namespace hpl {
 			cGuiSet *pSet = it.Next();
 			if(pSet->Is3D())
 			{
-				pSet->Render(apFrustum);
+				pSet->Draw(context, apFrustum);
 			}
 		}
 	}
 
-	void cScene::RenderScreenGui(cViewport *apViewPort, float afTimeStep)
+	void cScene::RenderScreenGui(GraphicsContext& context, cViewport *apViewPort, float afTimeStep)
 	{
 		///////////////////////////////////////
 		//Put all of the non 3D sets in to a sorted map
@@ -411,7 +411,7 @@ namespace hpl {
 
 			//Log("Rendering gui '%s'\n", pSet->GetName().c_str());
 
-			pSet->Render(NULL);
+			pSet->Draw(context, NULL);
 		}
 	}
 

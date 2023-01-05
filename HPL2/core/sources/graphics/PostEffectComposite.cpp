@@ -49,20 +49,10 @@ namespace hpl
         SetupRenderFunctions(mpGraphics->GetLowLevel());
 
         cVector2l vSize = mpLowLevelGraphics->GetScreenSizeInt();
-        RebuildSwapChain(vSize.x, vSize.y);
-    }
-
-    //-----------------------------------------------------------------------
-
-    cPostEffectComposite::~cPostEffectComposite()
-    {
-    }
-
-
-    void cPostEffectComposite::RebuildSwapChain(uint16_t width, uint16_t height)  {
+        
         ImageDescriptor desc;
-        desc.m_width = width;
-        desc.m_height = height;
+        desc.m_width = vSize.x;
+        desc.m_height = vSize.y;
         desc.format = bgfx::TextureFormat::RGBA8;
         desc.m_configuration.m_rt = RTType::RT_Write; 
 
@@ -75,10 +65,17 @@ namespace hpl
         _renderTargets[0] = RenderTarget(_images[0]);
         _renderTargets[1] = RenderTarget(_images[1]);
 
-        mvRenderTargetSize.x = width;
-        mvRenderTargetSize.y = height;
-
+        mvRenderTargetSize.x = vSize.x;
+        mvRenderTargetSize.y = vSize.y;
     }
+
+    //-----------------------------------------------------------------------
+
+    cPostEffectComposite::~cPostEffectComposite()
+    {
+    }
+
+
 
     void cPostEffectComposite::Draw(GraphicsContext& context, Image& inputTexture, RenderTarget& renderTarget)
     {

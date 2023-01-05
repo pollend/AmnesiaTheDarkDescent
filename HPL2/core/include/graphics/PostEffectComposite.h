@@ -50,8 +50,7 @@ namespace hpl
 
         // void Render(float afFrameTime, cFrustum* apFrustum, iTexture* apInputTexture, cRenderTarget* apRenderTarget);
 
-		virtual void RebuildSwapChain(uint16_t width, uint16_t height) override;
-        void Draw(GraphicsContext& context, Image& inputTexture, RenderTarget& renderTarget);
+		void Draw(GraphicsContext& context, Image& inputTexture, RenderTarget& renderTarget);
 
         /**
          * Highest prio is first!

@@ -108,8 +108,8 @@ namespace hpl {
 
 
 	private:
-		void Render3DGui(cViewport* apViewPort,cFrustum *apFrustum,float afTimeStep);
-		void RenderScreenGui(cViewport* apViewPort, float afTimeStep);
+		void Render3DGui(GraphicsContext& context,cViewport* apViewPort,cFrustum *apFrustum,float afTimeStep);
+		void RenderScreenGui(GraphicsContext& context,  cViewport* apViewPort, float afTimeStep);
 
         cGraphics *mpGraphics;
 		cResources *mpResources;

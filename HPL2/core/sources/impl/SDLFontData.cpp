@@ -154,6 +154,7 @@ namespace hpl {
 
 			Image* image = new Image();
 			auto desc = ImageDescriptor::CreateFromBitmap(*pBitmap);
+			desc.m_name = sName.c_str();
 			Image::InitializeFromBitmap(*image,*pBitmap, desc);
 			
 			hplDelete( pBitmap ); //Bitmap no longer needed

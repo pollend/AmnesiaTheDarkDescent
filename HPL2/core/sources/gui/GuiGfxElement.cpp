@@ -114,7 +114,6 @@ namespace hpl {
 		mlActiveImage =0;
 		mbAnimationPaused = false;
 
-		mpMaterial = NULL;
 
 		mbFlipUvYAxis = false;
 
@@ -352,9 +351,9 @@ namespace hpl {
 
 	//---------------------------------------------------
 
-	void cGuiGfxElement::SetMaterial(iGuiMaterial *apMat)
+	void cGuiGfxElement::SetMaterial(eGuiMaterial apMat)
 	{
-		mpMaterial = apMat;
+		m_materialType = apMat;
 	}
 
 	//---------------------------------------------------

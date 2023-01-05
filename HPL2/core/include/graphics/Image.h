@@ -1,14 +1,17 @@
 #pragma once
 
+#include "absl/strings/string_view.h"
 #include "graphics/Bitmap.h"
 #include "math/MathTypes.h"
 #include "resources/ResourceBase.h"
+#include "system/SystemTypes.h"
 #include <absl/types/span.h>
 #include <graphics/Enum.h>
 #include <cstdint>
 #include <graphics/GraphicsTypes.h>
 #include <bgfx/bgfx.h>
 #include <memory>
+#include <string>
 
 namespace hpl
 {
@@ -24,6 +27,7 @@ namespace hpl
         uint16_t m_arraySize = 1;
         bool m_hasMipMaps = false;
         bool m_isCubeMap = false;
+        const char* m_name = nullptr;
 
         union {
             struct {

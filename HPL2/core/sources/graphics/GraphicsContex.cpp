@@ -175,20 +175,41 @@ namespace hpl
     void ConfigureLayoutStream(const GraphicsContext::LayoutStream& layout) {
         uint8_t streamIndex = 0;
         for(auto& vertexStream: layout.m_vertexStreams) {
-            if(bgfx::isValid(vertexStream.m_handle)) {
-                bgfx::setVertexBuffer(++streamIndex, vertexStream.m_handle);
-            } else if(bgfx::isValid(vertexStream.m_dynamicHandle)) {
-                bgfx::setVertexBuffer(++streamIndex, vertexStream.m_dynamicHandle);
-            } else if(bgfx::isValid(vertexStream.m_transient.handle)) {
-                bgfx::setVertexBuffer(++streamIndex, &vertexStream.m_transient);
+            if(vertexStream.m_numVertices != std::numeric_limits<uint32_t>::max()) {
+                if(bgfx::isValid(vertexStream.m_handle)) {
+                    bgfx::setVertexBuffer(streamIndex++, vertexStream.m_handle, vertexStream.m_startVertex, vertexStream.m_numVertices);
+                } else if(bgfx::isValid(vertexStream.m_dynamicHandle)) {
+                    bgfx::setVertexBuffer(streamIndex++, vertexStream.m_dynamicHandle, vertexStream.m_startVertex, vertexStream.m_numVertices);
+                } else if(bgfx::isValid(vertexStream.m_transient.handle)) {
+                    bgfx::setVertexBuffer(streamIndex++, &vertexStream.m_transient, vertexStream.m_startVertex, vertexStream.m_numVertices);
+                }
+            } else {
+                if(bgfx::isValid(vertexStream.m_handle)) {
+                    bgfx::setVertexBuffer(streamIndex++, vertexStream.m_handle);
+                } else if(bgfx::isValid(vertexStream.m_dynamicHandle)) {
+                    bgfx::setVertexBuffer(streamIndex++, vertexStream.m_dynamicHandle);
+                } else if(bgfx::isValid(vertexStream.m_transient.handle)) {
+                    bgfx::setVertexBuffer(streamIndex++, &vertexStream.m_transient);
+                }
             }
+            
         }
-        if(bgfx::isValid(layout.m_indexStream.m_dynamicHandle)) {
-            bgfx::setIndexBuffer(layout.m_indexStream.m_dynamicHandle);
-        } else if(bgfx::isValid(layout.m_indexStream.m_handle)) {
-            bgfx::setIndexBuffer(layout.m_indexStream.m_handle);
-        } else if(bgfx::isValid(layout.m_indexStream.m_transient.handle)) {
-            bgfx::setIndexBuffer(&layout.m_indexStream.m_transient);
+        if(layout.m_indexStream.m_numIndices != std::numeric_limits<uint32_t>::max()) {
+            if(bgfx::isValid(layout.m_indexStream.m_dynamicHandle)) {
+                bgfx::setIndexBuffer(layout.m_indexStream.m_dynamicHandle, layout.m_indexStream.m_startIndex, layout.m_indexStream.m_numIndices);
+            } else if(bgfx::isValid(layout.m_indexStream.m_handle)) {
+                bgfx::setIndexBuffer(layout.m_indexStream.m_handle, layout.m_indexStream.m_startIndex, layout.m_indexStream.m_numIndices);
+            } else if(bgfx::isValid(layout.m_indexStream.m_transient.handle)) {
+                bgfx::setIndexBuffer(&layout.m_indexStream.m_transient, layout.m_indexStream.m_startIndex, layout.m_indexStream.m_numIndices);
+            }
+        } else {
+            if(bgfx::isValid(layout.m_indexStream.m_dynamicHandle)) {
+                bgfx::setIndexBuffer(layout.m_indexStream.m_dynamicHandle);
+            } else if(bgfx::isValid(layout.m_indexStream.m_handle)) {
+                bgfx::setIndexBuffer(layout.m_indexStream.m_handle);
+            } else if(bgfx::isValid(layout.m_indexStream.m_transient.handle)) {
+                bgfx::setIndexBuffer(&layout.m_indexStream.m_transient);
+            }
         }
     }
 
@@ -209,6 +230,12 @@ namespace hpl
     GraphicsContext::GraphicsContext()
         : _current(0)
     {
+        if(bgfx::isValid(m_copyProgram)) {
+            bgfx::destroy(m_copyProgram);
+        }
+        if(bgfx::isValid(m_s_diffuseMap)) {
+            bgfx::destroy(m_s_diffuseMap);
+        }
     }
 
 

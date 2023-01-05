@@ -350,7 +350,7 @@ namespace hpl {
 		cGuiGfxElement *pGfxElem = hplNew( cGuiGfxElement, (this) );
 
 		pGfxElem->SetColor(aColor);
-		pGfxElem->SetMaterial(GetMaterial(aMaterial));
+		pGfxElem->SetMaterial(aMaterial);
 
 		if(abAddToList) mlstGfxElements.push_back(pGfxElem);
 
@@ -375,7 +375,7 @@ namespace hpl {
 		cGuiGfxElement *pGfxElem = hplNew( cGuiGfxElement, (this) );
 
 		pGfxElem->SetColor(aColor);
-		pGfxElem->SetMaterial(GetMaterial(aMaterial));
+		pGfxElem->SetMaterial(aMaterial);
 		pGfxElem->AddImage(pImage);
 
 		if(abAddToList) mlstGfxElements.push_back(pGfxElem);
@@ -431,7 +431,7 @@ namespace hpl {
 		// if(apTexture->GetUsage() == eTextureUsage_RenderTarget) pGfxElem->SetFlipUvYAxis(true);
 
 		pGfxElem->SetColor(aColor);
-		pGfxElem->SetMaterial(GetMaterial(aMaterial));
+		pGfxElem->SetMaterial(aMaterial);
 		pGfxElem->AddTexture(apTexture, avStartUV, avEndUV);
 		pGfxElem->SetDestroyTexture(abAutoDestroyTexture);
 
@@ -477,7 +477,7 @@ namespace hpl {
 		cGuiGfxElement *pGfxElem = hplNew( cGuiGfxElement, (this) );
 
 		pGfxElem->SetColor(aColor);
-		pGfxElem->SetMaterial(GetMaterial(aMaterial));
+		pGfxElem->SetMaterial(aMaterial);
 
 		for(size_t i=0; i< vImages.size(); ++i)
 		{

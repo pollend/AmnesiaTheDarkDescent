@@ -19,6 +19,8 @@
 
 #include "engine/Engine.h"
 
+#include "bgfx/bgfx.h"
+#include "gui/GuiTypes.h"
 #include "system/System.h"
 #include "sound/Sound.h"
 #include "physics/Physics.h"
@@ -41,6 +43,7 @@
 
 #include "graphics/LowLevelGraphics.h"
 #include "graphics/Renderer.h"
+#include <gui/GuiSet.h>
 
 #include "engine/Updater.h"
 #include "engine/ScriptFuncs.h"
@@ -52,7 +55,6 @@
 #include "impl/SDLEngineSetup.h"
 
 namespace hpl {
-
 	//////////////////////////////////////////////////////////////////////////
 	// FPS COUNTER
 	//////////////////////////////////////////////////////////////////////////
@@ -283,8 +285,6 @@ namespace hpl {
 							apVars->mGraphics.mvWindowPosition,
 							mpResources,alHplSetupFlags);
 
-		m_graphicsContext.Init();
-
 		//Init Sound
 		mpSound->Init(mpResources, apVars->mSound.mlSoundDeviceID,
 						apVars->mSound.mbUseEnvironmentalAudio,
@@ -361,6 +361,10 @@ namespace hpl {
 
 		Log("User Initialization\n");
 		Log("--------------------------------------------------------\n");
+
+		m_graphicsContext.Init();
+		cGuiSet::Init();
+		bgfx::setDebug(BGFX_DEBUG_TEXT);
 	}
 
 	//-----------------------------------------------------------------------

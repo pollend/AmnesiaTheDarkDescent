@@ -23,11 +23,15 @@ namespace hpl
                 bgfx::TransientVertexBuffer m_transient = {nullptr, 0, 0, 0, BGFX_INVALID_HANDLE, BGFX_INVALID_HANDLE};
                 bgfx::VertexBufferHandle m_handle = BGFX_INVALID_HANDLE;
                 bgfx::DynamicVertexBufferHandle m_dynamicHandle = BGFX_INVALID_HANDLE;
+                uint32_t m_startVertex = 0;
+                uint32_t m_numVertices = std::numeric_limits<uint32_t>::max();
             };
             struct LayoutIndexStream {
                 bgfx::TransientIndexBuffer m_transient = {nullptr, 0, 0, BGFX_INVALID_HANDLE, false};
                 bgfx::IndexBufferHandle m_handle = BGFX_INVALID_HANDLE;
                 bgfx::DynamicIndexBufferHandle m_dynamicHandle = BGFX_INVALID_HANDLE;
+                uint32_t m_startIndex = 0;
+                uint32_t m_numIndices = std::numeric_limits<uint32_t>::max();
             };
 
             eVertexBufferDrawType m_drawType = eVertexBufferDrawType_Tri;

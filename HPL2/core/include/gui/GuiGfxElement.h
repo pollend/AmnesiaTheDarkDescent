@@ -67,6 +67,7 @@ namespace hpl {
 		friend class cGuiSet;
 		friend class cGuiRenderObjectCompare;
 	public:
+
 		cGuiGfxElement(cGui* apGui);
 		~cGuiGfxElement();
 
@@ -99,7 +100,7 @@ namespace hpl {
 		void SetAnimationPaused(bool abX){mbAnimationPaused = abX;}
 		bool GSetAnimationPaused(){ return mbAnimationPaused;}
 
-		void SetMaterial(iGuiMaterial *apMat);
+		void SetMaterial(eGuiMaterial apMat);
 
 		void SetColor(const cColor &aColor);
 
@@ -119,7 +120,7 @@ namespace hpl {
 		cVector3f mvOffset;
 		cVector2f mvActiveSize;
 
-		iGuiMaterial *mpMaterial;
+		eGuiMaterial m_materialType = eGuiMaterial::eGuiMaterial_LastEnum;
 		Image* mvTextures[kMaxGuiTextures];
 		cFrameSubImage* mvImages[kMaxGuiTextures];
 

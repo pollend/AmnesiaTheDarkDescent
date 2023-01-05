@@ -143,6 +143,9 @@ namespace hpl
                 flags, 
                 mem);
         }
+        if(descriptor.m_name) {
+            bgfx::setName(m_handle, descriptor.m_name);
+        }
     }
     
     void Image::Invalidate() {

@@ -1,4 +1,3 @@
-
 $input a_position, a_texcoord0, a_tangent, a_normal
 $output v_texcoord0, v_normal, v_tangent, v_bitangent, v_position
 
