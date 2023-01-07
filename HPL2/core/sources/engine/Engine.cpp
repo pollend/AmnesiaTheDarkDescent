@@ -364,7 +364,7 @@ namespace hpl {
 
 		m_graphicsContext.Init();
 		cGuiSet::Init();
-		bgfx::setDebug(BGFX_DEBUG_TEXT);
+		// bgfx::setDebug(BGFX_DEBUG_TEXT);
 	}
 
 	//-----------------------------------------------------------------------
@@ -545,6 +545,7 @@ namespace hpl {
 				START_TIMING(PostRender)
 				mpUpdater->RunMessage(eUpdateableMessage_OnPostRender, mfFrameTime);
 				STOP_TIMING(PostRender)
+
 
 				//Update fps counter.
 				mpFPSCounter->AddFrame();

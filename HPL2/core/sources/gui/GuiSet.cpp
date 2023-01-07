@@ -107,18 +107,6 @@ namespace hpl {
 				.end();
 		}
 
-		static void set(PositionTexCoordColor& input, const PositionTexCoordColor& value) {
-			input.m_pos[0] = value.m_pos[0];
-			input.m_pos[1] = value.m_pos[1];
-			input.m_pos[2] = value.m_pos[2];
-			input.m_uv[0] = value.m_uv[0];
-			input.m_uv[1] = value.m_uv[1];
-			input.color[0] = value.color[0];
-			input.color[1] = value.color[1];
-			input.color[2] = value.color[2];
-			input.color[3] = value.color[3];
-		}
-
         static bgfx::VertexLayout m_layout;
 	};
     bgfx::VertexLayout PositionTexCoordColor::m_layout;
@@ -566,6 +554,8 @@ namespace hpl {
 		bgfx::TransientIndexBuffer ib;
 		bgfx::allocTransientVertexBuffer(&vb, 20000, PositionTexCoordColor::m_layout);
 		bgfx::allocTransientIndexBuffer(&ib, 20000);
+		PositionTexCoordColor* vertexBuffer = reinterpret_cast<PositionTexCoordColor*>(vb.data);
+		uint16_t* indexBuffer = reinterpret_cast<uint16_t*>(ib.data);
 
 		cMatrixf projectionMtx(cMatrixf::Identity);
 		cMatrixf viewMtx(cMatrixf::Identity);
@@ -612,6 +602,10 @@ namespace hpl {
 		Image* pTexture = pGfx->mvTextures[0];
 		cGuiClipRegion *pClipRegion = it->mpClipRegion;
 
+		// size_t vertexBufferLastIndex = 0;
+		// size_t indexBufferLastIndex = 0;
+		size_t vertexBufferOffset = 0;
+		size_t indexBufferOffset = 0;
 		while(it != m_setRenderObjects.end()) {
 
 			size_t vertexBufferIndex = 0;
@@ -724,7 +718,7 @@ namespace hpl {
 						vVtxPos.x += object.mvPivot.x;
 						vVtxPos.y += object.mvPivot.y;
 
-						PositionTexCoordColor input = { 
+						vertexBuffer[vertexBufferOffset + (vertexBufferIndex++)] = { 
 							{ vtx.tex.x, vtx.tex.y},
 							{vVtxPos.x + vPos.x,
 								vVtxPos.y + vPos.y,
@@ -732,7 +726,6 @@ namespace hpl {
 							{color.r, color.g, color.b, color.a}
 						};
 						BX_ASSERT(vertexBufferIndex <= vb.size, "vertexIndex <= vb.m_size")
-						PositionTexCoordColor::set(reinterpret_cast<PositionTexCoordColor*>(vb.data)[vertexBufferIndex++], input);
 					}
 				}
 				else
@@ -744,7 +737,7 @@ namespace hpl {
 						const cVector3f& vPos = object.mvPos;
 						const cColor color = vtx.col * object.mColor;
 
-						PositionTexCoordColor input = {
+						vertexBuffer[vertexBufferOffset + (vertexBufferIndex++)] = {
 							{ vtx.tex.x, vtx.tex.y},
 							{vVtxPos.x * object.mvSize.x + vPos.x,
 								vVtxPos.y * object.mvSize.y + vPos.y,
@@ -752,18 +745,17 @@ namespace hpl {
 							{color.r, color.g, color.b, color.a}
 						};
 						BX_ASSERT(vertexBufferIndex <= vb.size, "vertexIndex <= vb.m_size")
-						PositionTexCoordColor::set(reinterpret_cast<PositionTexCoordColor*>(vb.data)[vertexBufferIndex++], input);
 					}
 				}
 
 				BX_ASSERT((indexBufferIndex + 6) <= ib.size, "indexIndex <= ib.m_size")
-				reinterpret_cast<uint16_t*>(ib.data)[indexBufferIndex++] = vertexBufferIndex - 4;
-				reinterpret_cast<uint16_t*>(ib.data)[indexBufferIndex++] = vertexBufferIndex - 3;
-				reinterpret_cast<uint16_t*>(ib.data)[indexBufferIndex++] = vertexBufferIndex - 2;
+				indexBuffer[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex - 4;
+				indexBuffer[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex - 3;
+				indexBuffer[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex - 2;
 
-				reinterpret_cast<uint16_t*>(ib.data)[indexBufferIndex++] = vertexBufferIndex - 4;
-				reinterpret_cast<uint16_t*>(ib.data)[indexBufferIndex++] = vertexBufferIndex - 2;
-				reinterpret_cast<uint16_t*>(ib.data)[indexBufferIndex++] = vertexBufferIndex - 1;
+				indexBuffer[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex - 4;
+				indexBuffer[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex - 2;
+				indexBuffer[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex - 1;
 				
 
 				///////////////////////////
@@ -788,12 +780,16 @@ namespace hpl {
 			GraphicsContext::LayoutStream layout;
 			layout.m_vertexStreams.push_back({
 				.m_transient = vb,
+				.m_startVertex = static_cast<uint32_t>(vertexBufferOffset),
 				.m_numVertices = static_cast<uint32_t>(vertexBufferIndex)
 			});
 			layout.m_indexStream = {
 				.m_transient = ib,
+				.m_startIndex = static_cast<uint32_t>(indexBufferOffset),
 				.m_numIndices = static_cast<uint32_t>(indexBufferIndex)
 			};
+			vertexBufferOffset += vertexBufferIndex;
+			indexBufferOffset += indexBufferIndex;
 
 			shaderProgram.m_projection = projectionMtx;
 			shaderProgram.m_view = viewMtx;
@@ -811,7 +807,7 @@ namespace hpl {
 				shaderProgram,
 			};
 
-        	cVector2l vSize = pLowLevelGraphics->GetScreenSizeInt();
+			cVector2l vSize = pLowLevelGraphics->GetScreenSizeInt();
 			request.m_width = vSize.x;
 			request.m_height = vSize.y;
 			graphicsContext.Submit(view, request);
@@ -869,8 +865,6 @@ namespace hpl {
 
 		///////////////////////////////
 		// Render all clip regions
-
-		RenderClipRegion();
 
 		///////////////////////////////
 		//Clear the render object set
@@ -1856,191 +1850,6 @@ namespace hpl {
 			if(kLogRender)Log("-- Clip region: %d No clipping!\n",apRegion);
 		}
 	}
-
-	//-----------------------------------------------------------------------
-
-	void cGuiSet::RenderClipRegion()
-	{
-		iLowLevelGraphics *pLowLevelGraphics = mpGraphics->GetLowLevel();
-
-		if(kLogRender)Log("-------------------\n");
-
-		///////////////////////////////////////
-		//See if there is anything to draw
-		tGuiRenderObjectSet &setRenderObjects = m_setRenderObjects;
-		if(setRenderObjects.empty())
-		{
-			if(kLogRender) Log("------------------------\n");
-			return;
-		}
-
-		//////////////////////////////////
-		// Graphics setup
-		pLowLevelGraphics->SetTexture(0,NULL);
-
-		//////////////////////////////////
-		// Set up variables
-
-		tGuiRenderObjectSetIt it = setRenderObjects.begin();
-
-		iGuiMaterial *pLastMaterial = NULL;
-		Image* pLastTexture = NULL;
-		cGuiClipRegion *pLastClipRegion = NULL;
-
-		cGuiGfxElement *pGfx = it->mpGfx;
-		iGuiMaterial *pMaterial = nullptr; //  it->mpCustomMaterial ? it->mpCustomMaterial : pGfx->mpMaterial;
-		Image* pTexture = pGfx->mvTextures[0];
-		cGuiClipRegion *pClipRegion = it->mpClipRegion;
-
-		int lIdxAdd=0;
-
-		//Log("bug:Rendering objects!\n");
-
-		///////////////////////////////////
-		// Iterate objects
-		while(it != setRenderObjects.end())
-		{
-			///////////////////////////////
-			//Start rendering
-			if(pLastMaterial != pMaterial){
-				pMaterial->BeforeRender();
-				if(kLogRender)Log("Material %s before\n",pMaterial->GetName().c_str());
-			}
-
-			////////////////////////////
-			// SetClip area
-			if(pLastClipRegion != pClipRegion)
-			{
-				SetClipArea(pLowLevelGraphics,pClipRegion);
-			}
-
-			//TODO: rework with Image
-			// pLowLevelGraphics->SetTexture(0,pTexture);
-			// if(kLogRender)Log("Texture %d\n",pTexture);
-
-			//////////////////////////
-			//Iterate for all with same texture and material
-			do
-			{
-				const cGuiRenderObject &object = *it;
-				cGuiGfxElement *pGfx = object.mpGfx;
-
-				//Log("bug: gfx: %p\n",pGfx);
-
-				if(kLogRender)
-				{
-					if(pGfx->mvImages[0])
-						Log(" gfx: %d '%s'\n",pGfx,pGfx->mvImages[0]->GetName().c_str());
-					else
-						Log(" gfx: %d 'null'\n");
-				}
-
-				//DEBUG!
-				/*if(pGfx->GetImage(0) && pGfx->GetImage(0)->GetName()=="_temp_hand.tga")
-				{
-					Log("Drawing: %d (%s):(%s) %d (%s)\n", object.mpGfx, object.mvPos.ToString().c_str(), object.mvSize.ToString().c_str(),
-															object.mpClipRegion, object.mColor.ToString().c_str());
-				}*/
-
-				///////////////////////////
-				// Add object to batch
-				if(object.mbRotated)
-				{
-					for(int i=0; i<4; ++i)
-					{
-						cVertex &vtx = pGfx->mvVtx[i];
-						cVector3f vVtxPos = vtx.pos;
-						const cVector3f& vPos = object.mvPos;
-
-						//Scale
-						vVtxPos.x *= object.mvSize.x;
-						vVtxPos.y *= object.mvSize.y;
-
-						//Rotate
-						vVtxPos.x -= object.mvPivot.x;
-						vVtxPos.y -= object.mvPivot.y;
-						vVtxPos = cMath::MatrixMul(cMath::MatrixRotateZ(object.mfAngle), vVtxPos);
-						vVtxPos.x += object.mvPivot.x;
-						vVtxPos.y += object.mvPivot.y;
-
-						pLowLevelGraphics->AddVertexToBatch_Raw(
-							cVector3f(	vVtxPos.x + vPos.x,
-										vVtxPos.y + vPos.y,
-										vPos.z),
-							vtx.col * object.mColor,
-							vtx.tex);
-					}
-				}
-				else
-				{
-					for(int i=0; i<4; ++i)
-					{
-						cVertex &vtx = pGfx->mvVtx[i];
-						cVector3f& vVtxPos = vtx.pos;
-						const cVector3f& vPos = object.mvPos;
-						pLowLevelGraphics->AddVertexToBatch_Raw(
-							cVector3f(	vVtxPos.x * object.mvSize.x + vPos.x,
-										vVtxPos.y * object.mvSize.y + vPos.y,
-										vPos.z),
-							vtx.col * object.mColor,
-							vtx.tex);
-					}
-				}
-
-				for(int i=0;i<4;i++)
-					pLowLevelGraphics->AddIndexToBatch(lIdxAdd + i);
-
-				lIdxAdd += 4;
-
-				///////////////////////////
-				//Set last texture
-				pLastMaterial =  pMaterial;
-				pLastTexture =   pTexture;
-				pLastClipRegion = pClipRegion;
-
-				/////////////////////////////
-				//Get next object
-				++it; if(it == setRenderObjects.end()) break;
-
-				pGfx = it->mpGfx;
-				// pMaterial = it->mpCustomMaterial ? it->mpCustomMaterial : pGfx->m_materialType;
-				pTexture = it->mpGfx->mvTextures[0];
-				pClipRegion = it->mpClipRegion;
-			}
-			while(	pTexture == pLastTexture &&
-					pMaterial == pLastMaterial &&
-					pClipRegion == pLastClipRegion);
-
-			//////////////////////////////
-			// Render batch
-			pLowLevelGraphics->FlushQuadBatch(	eVtxBatchFlag_Position | eVtxBatchFlag_Texture0 |
-												eVtxBatchFlag_Color0,false);
-			pLowLevelGraphics->ClearBatch();
-			lIdxAdd=0;
-
-			/////////////////////////////////
-			//Clip region end
-			if(pLastClipRegion  != pClipRegion  || it == setRenderObjects.end())
-			{
-				if(pLastClipRegion->mRect.w >0)
-				{
-					for(int i=0; i<4; ++i) pLowLevelGraphics->SetClipPlaneActive(i, false);
-				}
-			}
-
-			// /////////////////////////////////
-			// //Material end
-			// if(pLastMaterial != pMaterial || it == setRenderObjects.end())
-			// {
-			// 	pLastMaterial->AfterRender();
-			// 	if(kLogRender)Log("Material %d '%s' after. new: %d '%s'\n",	pLastMaterial,pLastMaterial->GetName().c_str(),
-			// 															pMaterial,pMaterial->GetName().c_str());
-			// }
-		}
-
-		if(kLogRender)Log("---------- END %d -----------\n");
-	}
-	//-----------------------------------------------------------------------
 
 	void cGuiSet::AddWidget(iWidget *apWidget,iWidget *apParent)
 	{

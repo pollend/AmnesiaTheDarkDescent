@@ -24,7 +24,7 @@ void main()
     }
     if(0.0 < u_hasTexture)
     {
-        color = texture2D(s_diffuseMap, v_texcoord0);
+        color *= texture2D(s_diffuseMap, v_texcoord0);
     }
 	gl_FragColor = color;
 }

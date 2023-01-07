@@ -488,8 +488,6 @@ namespace hpl {
 									eFontAlign aAlign);
 
 
-		void RenderClipRegion();
-
 		void AddWidget(iWidget *apWidget,iWidget *apParent);
 
 		bool OnMouseMove(const cGuiMessageData &aData);
