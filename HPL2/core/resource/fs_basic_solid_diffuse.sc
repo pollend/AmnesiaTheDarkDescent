@@ -2,13 +2,14 @@ $input v_texcoord0, v_normal, v_tangent, v_bitangent, v_view, v_position
 
 #include <common.sh>
 
+
+// SAMPLERCUBE(s_envMap, 0);
+
 SAMPLER2D(s_normalMap, 0);
 SAMPLER2D(s_specularMap, 1);
 SAMPLER2D(s_heightMap, 2);
 SAMPLER2D(s_diffuseMap, 3);
 SAMPLER2D(s_envMapAlphaMap, 4);
-
-SAMPLERCUBE(s_envMap, 5);
 
 uniform mat4 u_mtxInvViewRotation;
 uniform vec4 u_params[3];
@@ -82,26 +83,26 @@ void main()
         screenNormal = normalize(v_normal);
     }
 
-    if(0.0 < u_useEnvMap) {
-        vec3 normalizedView = normalize(v_view);	
-    
-        vec3 vEnvUv = reflect(normalizedView, screenNormal);
-        vEnvUv = (u_mtxInvViewRotation * vec4(vEnvUv,1)).xyz;
-                    
-        vec4 reflectionColor = textureCube(s_envMap, vEnvUv);
-        
-        float afEDotN = max(dot(-normalizedView, screenNormal),0.0);
-        float fFresnel = Fresnel(afEDotN, u_frenselBiasPow.x, u_frenselBiasPow.y);
-        
-        if(0.0 < u_useCubeMapAlpha) {
-            float fEnvMapAlpha = texture2D(s_envMapAlphaMap, texCoord).w;
-            reflectionColor *= fEnvMapAlpha;
-        }
-                
-        gl_FragData[0] = diffuseColor + reflectionColor * fFresnel;
-    } else {
+    // if(0.0 < u_useEnvMap) {
+    //     vec3 normalizedView = normalize(v_view);	
+    // 
+    //     vec3 vEnvUv = reflect(normalizedView, screenNormal);
+    //     vEnvUv = (u_mtxInvViewRotation * vec4(vEnvUv,1)).xyz;
+    //                 
+    //     vec4 reflectionColor = textureCube(s_envMap, vEnvUv);
+    //     
+    //     float afEDotN = max(dot(-normalizedView, screenNormal),0.0);
+    //     float fFresnel = Fresnel(afEDotN, u_frenselBiasPow.x, u_frenselBiasPow.y);
+    //     
+    //     if(0.0 < u_useCubeMapAlpha) {
+    //         float fEnvMapAlpha = texture2D(s_envMapAlphaMap, texCoord).w;
+    //         reflectionColor *= fEnvMapAlpha;
+    //     }
+    //             
+    //     gl_FragData[0] = diffuseColor + reflectionColor * fFresnel;
+    // } else {
         gl_FragData[0] = diffuseColor;
-    }
+    // }
     
     gl_FragData[1].xyz = screenNormal; 
     gl_FragData[2].xyz = v_position;

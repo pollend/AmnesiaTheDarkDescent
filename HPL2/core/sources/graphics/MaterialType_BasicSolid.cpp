@@ -591,7 +591,9 @@ namespace hpl
         {
             const bool useAlpha = apMaterial->GetTexture(eMaterialTexture_Alpha);
             const bool hasDissolveFilter = pVars->mbAlphaDissolveFilter;
-            tFlag lFlags = (useAlpha ? eFeature_Z_UseAlpha : 0) | (hasDissolveFilter ? eFeature_Z_UseAlphaDissolveFilter : 0) |
+            tFlag lFlags = 
+                (useAlpha ? eFeature_Z_UseAlpha : 0) | 
+                (hasDissolveFilter ? eFeature_Z_UseAlphaDissolveFilter : 0) |
                 (apMaterial->HasUvAnimation() ? eFeature_Z_UvAnimation : 0);
 
             return mpGlobalProgramManager->GenerateProgram(
@@ -981,6 +983,7 @@ namespace hpl
             default:
                 break;
         }
+        apProgram->GetProgram(input);
         
     }
 

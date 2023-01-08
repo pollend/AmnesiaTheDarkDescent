@@ -15,6 +15,8 @@ FetchContent_Declare(
   bgfx_cmake
   GIT_REPOSITORY git@github.com:bkaradzic/bgfx.cmake.git
 )
+
+add_compile_definitions(BGFX_CONFIG_MAX_VERTEX_STREAMS=16)
 set(BGFX_OPENGL_VERSION 33)
 set(BGFX_INSTALL OFF)
 set(BGFX_INSTALL_EXAMPLES OFF)

@@ -546,7 +546,6 @@ namespace hpl {
 				mpUpdater->RunMessage(eUpdateableMessage_OnPostRender, mfFrameTime);
 				STOP_TIMING(PostRender)
 
-
 				//Update fps counter.
 				mpFPSCounter->AddFrame();
 

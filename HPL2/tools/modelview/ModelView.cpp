@@ -424,7 +424,7 @@ public:
 		gpFloor = mpWorld->CreateMeshEntity("Floor",pMesh,true);
 		gpFloor->SetMatrix(cMath::MatrixScale(6));
 		gpFloor->SetRenderFlagBit(eRenderableFlag_ShadowCaster, true);
-		//gpFloor->SetVisible(true);
+		gpFloor->SetVisible(true);
 
 		/*std::vector<iCollideShape*> vShapes;
 		for(int i=0; i<1000; ++i)

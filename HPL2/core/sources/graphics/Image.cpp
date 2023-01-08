@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <bx/debug.h>
 #include <graphics/Bitmap.h>
+#include <vector>
 namespace hpl
 {
 
@@ -235,22 +236,29 @@ namespace hpl
     }
 
     void Image::InitializeFromBitmap(Image& image, cBitmap& bitmap, const ImageDescriptor& desc) {
+        if(bitmap.GetNumOfMipMaps() > 1 && desc.m_hasMipMaps) {
+            auto* memory = bgfx::alloc([&]() {
+                size_t size = 0;
+                for(size_t i = 0; i < bitmap.GetNumOfMipMaps(); ++i) {
+                    size += bitmap.GetData(0, i)->mlSize;
+                }
+                return size;
+            }());
+
+            std::vector<char> data = {};
+            size_t offset = 0;
+            for(auto i = 0; i < bitmap.GetNumOfMipMaps(); ++i) {
+                auto data = bitmap.GetData(0, i);
+                std::copy(data->mpData, data->mpData + data->mlSize, memory->data + offset);
+                offset += data->mlSize;
+            }
+            image.Initialize(desc, memory);
+            return;
+        }
 
         auto data = bitmap.GetData(0, 0);
         image.Initialize(desc, bgfx::copy(data->mpData, data->mlSize));
     }
-
-    // void Image::loadFromBitmap(Image& image, cBitmap& bitmap) {
-    //     ImageDescriptor descriptor;
-    //     BX_ASSERT(bitmap.GetNumOfImages() == 1, "Only single image is supported at the moment");
-    //     descriptor.format = Image::FromHPLTextureFormat(bitmap.GetPixelFormat());
-    //     descriptor.m_width = bitmap.GetWidth();
-    //     descriptor.m_height = bitmap.GetHeight();
-    //     descriptor.m_depth = bitmap.GetDepth();
-    //     auto data = bitmap.GetData(0, 0);
-    //     image.Initialize(descriptor, bgfx::copy(data->mpData, data->mlSize));
-    // }
-
 
     bgfx::TextureHandle Image::GetHandle() const
     {

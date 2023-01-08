@@ -2,6 +2,7 @@
 #define __COMMON_SH__
 
 #include <bgfx_shader.sh>
+#include <inverse.sh>
 
 float Fresnel(float afEDotN, float afFresnelBias, float afFresnelPow)
 {
@@ -414,6 +415,12 @@ mat3 cofactor(mat4 _m)
 		_m[0][2]*_m[1][0]-_m[0][0]*_m[1][2],
 		_m[0][0]*_m[1][1]-_m[0][1]*_m[1][0]
 		);
+}
+
+mat4 normalMatrix(mat4 _m)
+{
+	mat4 inv = inverse(_m);
+	return transpose(inv);
 }
 
 float toClipSpaceDepth(float _depthTextureZ)

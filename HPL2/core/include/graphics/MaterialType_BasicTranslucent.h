@@ -97,7 +97,6 @@ namespace hpl
 
 		bgfx::UniformHandle _u_param;
 		bgfx::UniformHandle _u_mtxUv;
-		bgfx::UniformHandle _u_normalMtx;
         bgfx::UniformHandle _u_invViewRotation;
 
 		bgfx::UniformHandle _s_diffuseMap;

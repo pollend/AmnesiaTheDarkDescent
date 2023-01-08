@@ -25,6 +25,7 @@
 #include "graphics/Image.h"
 #include "graphics/RenderTarget.h"
 #include "graphics/RenderViewport.h"
+#include "math/Frustum.h"
 #include "math/MathTypes.h"
 #include "scene/SceneTypes.h"
 
@@ -366,6 +367,7 @@ namespace hpl {
 		void OcclusionQueryBoundingBoxTest(bgfx::ViewId view, 
 			GraphicsContext& context, 
 			bgfx::OcclusionQueryHandle handle, 
+			const cFrustum& frustum,
 			const cMatrixf& transform, 
 			RenderTarget& rt,Cull cull = Cull::CounterClockwise);
 		/**

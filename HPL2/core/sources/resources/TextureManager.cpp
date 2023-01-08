@@ -127,10 +127,11 @@ namespace hpl {
 			{
 				auto* resource = new Image(asName, path);
 				ImageDescriptor desc =  ImageDescriptor::CreateFromBitmap(*pBmp);
+				desc.m_name = asName.c_str();
 				auto* image = new Image();
 
 				auto data = pBmp->GetData(0, 0);
-				resource->Initialize(desc, bgfx::copy(data->mpData, data->mlSize));
+				Image::InitializeFromBitmap(*resource, *pBmp, desc);
 				return resource;
 			});
 	}

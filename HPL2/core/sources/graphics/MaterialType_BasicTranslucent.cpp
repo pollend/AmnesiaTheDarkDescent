@@ -159,7 +159,6 @@ namespace hpl
         
         _u_param = bgfx::createUniform("u_params", bgfx::UniformType::Vec4, 6);
         _u_mtxUv = bgfx::createUniform("u_mtxUV", bgfx::UniformType::Mat4);
-        _u_normalMtx = bgfx::createUniform("u_normalMtx", bgfx::UniformType::Mat4);
         _u_invViewRotation = bgfx::createUniform("mtxInvViewRotation", bgfx::UniformType::Mat4);
         
         _s_diffuseMap  = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
@@ -315,7 +314,6 @@ namespace hpl
 
         struct RefractionData
         {
-            float normalMtx[16];
             float mtxInvViewRotation[16];
             float mtxUV[16];
 
@@ -396,7 +394,6 @@ namespace hpl
                  useScreenSpaceNormal,
                  u_param = _u_param,
                  u_mtxUv = _u_mtxUv,
-                 u_normalMtx = _u_normalMtx,
                  u_invViewRotation = _u_invViewRotation,
                  programHandle = _programHandle](const tString& name)
                 {
@@ -522,13 +519,11 @@ namespace hpl
                         [
                             u_param,
                             u_mtxUv,
-                            u_normalMtx,
                             u_invViewRotation
                         ](const RefractionData& data, GraphicsContext::ShaderProgram& program)
                         {
                             program.m_uniforms.push_back({u_param,&data.params,6});
                             program.m_uniforms.push_back({u_mtxUv,&data.mtxUV});
-                            program.m_uniforms.push_back({u_normalMtx,&data.normalMtx});
                             program.m_uniforms.push_back({u_invViewRotation,&data.mtxInvViewRotation});
                         });
 
@@ -578,7 +573,6 @@ namespace hpl
                      blendMode,
                      u_param = _u_param,
                      u_mtxUv = _u_mtxUv,
-                     u_normalMtx = _u_normalMtx,
                      u_invViewRotation = _u_invViewRotation,
                      programHandle = _programHandle,
                      s_diffuseMap = _s_diffuseMap,
@@ -705,7 +699,6 @@ namespace hpl
                         program->SetSubmitHandler(
                             [u_param,
                              u_mtxUv,
-                             u_normalMtx,
                              u_invViewRotation,
                              s_diffuseMap,
                              s_normalMap,
@@ -715,7 +708,6 @@ namespace hpl
                             {
                                 program.m_uniforms.push_back({u_param, &data.params, 6});
                                 program.m_uniforms.push_back({u_mtxUv, &data.mtxUV});
-                                program.m_uniforms.push_back({u_normalMtx, &data.normalMtx});
                                 program.m_uniforms.push_back({u_invViewRotation, &data.mtxInvViewRotation});
 
                                 program.m_textures.push_back({s_diffuseMap, data.s_diffuseMap, 0});

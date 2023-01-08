@@ -1137,17 +1137,18 @@ namespace hpl {
 		}
 	}
 
-	void iRenderer::OcclusionQueryBoundingBoxTest(bgfx::ViewId view, GraphicsContext& context, bgfx::OcclusionQueryHandle handle, const cMatrixf& transform, RenderTarget& rt, Cull cull) {
+	void iRenderer::OcclusionQueryBoundingBoxTest(bgfx::ViewId view, GraphicsContext& context, bgfx::OcclusionQueryHandle handle, const cFrustum& frustum, const cMatrixf& transform, RenderTarget& rt, Cull cull) {
 		GraphicsContext::ShaderProgram shaderProgram;
 		GraphicsContext::LayoutStream layoutStream;
 		mpShapeBox->GetLayoutStream(layoutStream);
 
 		shaderProgram.m_handle = m_nullShader;
-		shaderProgram.m_modelTransform = transform;
-		shaderProgram.m_view = mpCurrentFrustum->GetViewMatrix();
-		shaderProgram.m_projection = mpCurrentFrustum->GetProjectionMatrix();
+		shaderProgram.m_modelTransform = transform.GetTranspose();
+		shaderProgram.m_view = frustum.GetViewMatrix().GetTranspose();
+		shaderProgram.m_projection = frustum.GetProjectionMatrix().GetTranspose();
 		shaderProgram.m_configuration.m_depthTest = DepthTest::Less;
 		shaderProgram.m_configuration.m_cull = cull;
+		
 		GraphicsContext::DrawRequest drawRequest {rt, layoutStream, shaderProgram};
 			drawRequest.m_width = mvScreenSize.x;
 			drawRequest.m_height = mvScreenSize.y;
@@ -1193,8 +1194,8 @@ namespace hpl {
 			iRenderableContainer* container;
 			tObjectVariabilityFlag flag;
 		} containers[] = {
-			{ mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static), eWorldContainerType_Static },
-			{ mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Dynamic), eWorldContainerType_Dynamic },
+			{ mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static), eObjectVariabilityFlag_Static },
+			{ mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Dynamic), eObjectVariabilityFlag_Dynamic },
 		};
 
 		mpCurrentSettings->mlNumberOfOcclusionQueries = 0;
@@ -1281,8 +1282,8 @@ namespace hpl {
 				cVector3f vSize = pNode->GetMax() - pNode->GetMin();
 				cMatrixf mtxBox = cMath::MatrixScale(vSize);
 				mtxBox.SetTranslation(pNode->GetCenter());
-				SetModelViewMatrix( cMath::MatrixMul(mpCurrentFrustum->GetViewMatrix(), mtxBox) );
-				OcclusionQueryBoundingBoxTest(pass, context, pNode->GetOcclusionQuery(), mtxBox, rt);
+				// SetModelViewMatrix( cMath::MatrixMul(mpCurrentFrustum->GetViewMatrix(), mtxBox) );
+				OcclusionQueryBoundingBoxTest(pass, context, pNode->GetOcclusionQuery(), *mpCurrentFrustum, mtxBox, rt);
 
 				//////////////////////////
 				//Render node objects after AABB so that an object does not occlude its own node.
