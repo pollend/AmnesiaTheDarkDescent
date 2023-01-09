@@ -322,10 +322,9 @@ namespace hpl {
 		// Write a dummy size for data
 		if(abWriteDataSize)
 		{
-			size_t lTotalDataSize = mlDataPos - lStartPos - 4;
+			unsigned lTotalDataSize = mlDataPos - lStartPos - 4;
 
-			int *pSizeDataPtr = (int*)mpData[lStartPos];
-			*pSizeDataPtr = lTotalDataSize;
+			memcpy(mpData + lStartPos, &lTotalDataSize, sizeof(unsigned));
 		}
 
 		//Log("Compress Size: %d\n", mlDataPos - lStartPos);
