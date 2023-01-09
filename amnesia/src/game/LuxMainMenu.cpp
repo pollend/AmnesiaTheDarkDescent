@@ -340,7 +340,6 @@ void cLuxMainMenu::OnEnterContainer(const tString& asOldContainer)
 		ProgLog(eLuxProgressLogLevel_Low, "Enter main menu.");
 		gpBase->mpMapHandler->PauseSoundsAndMusic();
 	}
-#ifdef USE_GAMEPAD
 	if(gpBase->mpInputHandler->IsGamepadPresent() == false)
 	{
 		mpGuiSet->SetDrawMouse(true);
@@ -351,9 +350,6 @@ void cLuxMainMenu::OnEnterContainer(const tString& asOldContainer)
 		mpGuiSet->SetDrawMouse(false);
 		mpGuiSet->SetMouseMovementEnabled(false);
 	}
-#else
-	mpGuiSet->SetDrawMouse(true);
-#endif
 	////////////////////////////
 	//Set up menu variables
 
@@ -502,9 +498,6 @@ void cLuxMainMenu::SetWindowActive(eLuxMainMenuWindow aWindow)
 {
 	if(mCurrentWindow == aWindow) return;
 
-#ifdef USE_GAMEPAD
-	bool bHasGamepad = gpBase->mpInputHandler->IsGamepadPresent();
-
 	switch(aWindow)
 	{
 	case eLuxMainMenuWindow_Options:
@@ -512,14 +505,12 @@ void cLuxMainMenu::SetWindowActive(eLuxMainMenuWindow aWindow)
 	case eLuxMainMenuWindow_LoadGame:
 	case eLuxMainMenuWindow_Profiles:
 	case eLuxMainMenuWindow_StartGame:
-		mpGuiSet->SetDrawFocus(bHasGamepad);
+		mpGuiSet->SetDrawFocus(gpBase->mpInputHandler->IsGamepadPresent());
 		break;
 	default:
 		mpGuiSet->SetDrawFocus(false);
 		break;
 	}
-
-#endif
 
 	if(mCurrentWindow != eLuxMainMenuWindow_LastEnum)
 	{

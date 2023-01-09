@@ -505,7 +505,6 @@ void cLuxJournal::OnEnterContainer(const tString& asOldContainer)
 	mpViewport->SetVisible(true);
 	mpGuiSet->SetActive(true);
 
-#ifdef USE_GAMEPAD
 	if(gpBase->mpInputHandler->IsGamepadPresent() == false)
 	{
 		mpGuiSet->SetDrawMouse(true);
@@ -516,9 +515,6 @@ void cLuxJournal::OnEnterContainer(const tString& asOldContainer)
 		mpGuiSet->SetDrawMouse(false);
 		mpGuiSet->SetMouseMovementEnabled(false);
 	}
-#else
-	mpGuiSet->SetDrawMouse(true);
-#endif
 
 	mpGuiSet->ResetMouseOver();
 	mpGui->SetFocus(mpGuiSet);
