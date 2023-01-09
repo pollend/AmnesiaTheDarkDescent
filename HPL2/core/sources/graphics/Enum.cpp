@@ -43,4 +43,14 @@ namespace hpl {
         return static_cast<BlendOperator>((static_cast<uint32_t>(func) >> BlendOpShift) & BlendOpMask);
     }
 
+    StencilTest CreateStencilTest(StencilFunction func, StencilFail sfail, StencilDepthFail dpfail, StencilDepthPass dppass, uint8_t ref, uint8_t mask) {
+        StencilTest test;
+        test.m_func = func;
+        test.m_sfail = sfail;
+        test.m_dpfail = dpfail;
+        test.m_dppass = dppass;
+        test.m_ref = ref;
+        test.m_mask = mask;
+        return test;
+    }
 }

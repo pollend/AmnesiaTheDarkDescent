@@ -22,6 +22,7 @@
 #include "graphics/GraphicsContext.h"
 #include "graphics/Image.h"
 #include "graphics/Renderer.h"
+#include "math/MathTypes.h"
 #include <array>
 #include <graphics/RenderTarget.h>
 #include <memory>
@@ -121,11 +122,13 @@ namespace hpl {
 		iTexture *mpShadowTexture;
 		bool mbCastShadows;
 		eShadowMapResolution mShadowResolution;
+
+		cMatrixf GetLightMtx();
 	};
 
 	//---------------------------------------------
 	namespace rendering::detail {
-		struct ShaderInputOptions {
+		struct ZPassInput {
 			float m_width = 0;
 			float m_height = 0;
 
@@ -133,7 +136,7 @@ namespace hpl {
             cMatrixf m_projection = cMatrixf(cMatrixf::Identity);
 		};
 
-		void RenderZPassObject(bgfx::ViewId view,const ShaderInputOptions& input, GraphicsContext& context, iRenderer* renderer, iRenderable* object, RenderTarget& rt);
+		void RenderZPassObject(bgfx::ViewId view,const ZPassInput& input, GraphicsContext& context, iRenderer* renderer, iRenderable* object, RenderTarget& rt);
 	};
 
 	class cRendererDeferred : public  iRenderer
@@ -212,6 +215,8 @@ namespace hpl {
 		[[deprecated("Unused")]]
 		void RenderObjects();
 
+		// takes the contents of the gbuffer and renders the lights
+		void RenderLightPass(GraphicsContext& context, RenderTarget& rt);  
 		void RenderDiffusePass(GraphicsContext& context, RenderTarget& rt);
 		void RenderDecalPass(GraphicsContext& context, RenderTarget& rt);
 		void RenderIlluminationPass(GraphicsContext& context, RenderTarget& rt);
@@ -220,6 +225,9 @@ namespace hpl {
 		void RenderEdgeSmoothPass(GraphicsContext& context, RenderTarget& rt);
 		void RenderTranslucentPass(GraphicsContext& context, RenderTarget& rt);
 		void RenderZPass(GraphicsContext& context, RenderTarget& rt);
+		
+		void RenderShadowLight(GraphicsContext& context, GraphicsContext::ShaderProgram& shaderProgram, RenderTarget& rt);
+		void SetupLightProgram(GraphicsContext::ShaderProgram& shaderProgram, cDeferredLight* apLightData);
 
 		void RenderZ(GraphicsContext& context);
 		void RenderEdgeSmooth();
@@ -294,12 +302,14 @@ namespace hpl {
 		std::array<RenderTarget, 2> m_gBuffer_depth;
 		std::array<RenderTarget, 2> m_gBuffer_normals;
 		std::array<RenderTarget, 2> m_gBuffer_linearDepth;
+		std::array<RenderTarget, 2> m_output_target; // used for rendering to the screen 
 		
 		std::array<std::shared_ptr<Image>, 2> m_color;
 		std::array<std::shared_ptr<Image>, 2> m_normal;
 		std::array<std::shared_ptr<Image>, 2> m_linearDepth;
 		std::array<std::shared_ptr<Image>, 2> m_specular;
 		std::array<std::shared_ptr<Image>, 2> m_depthStencil;
+		std::array<std::shared_ptr<Image>, 2> m_outputImage;
 
 		std::array<absl::InlinedVector<cShadowMapData, 10>, eShadowMapResolution_LastEnum> m_shadowMapData;
 		RenderTarget m_edgeSmooth_LinearDepth;
@@ -338,7 +348,17 @@ namespace hpl {
 
 		bgfx::UniformHandle m_u_param;
 		bgfx::UniformHandle m_u_boxInvViewModelRotation;
-		bgfx::UniformHandle m_u_depthMap;
+		bgfx::UniformHandle m_u_lightPos;
+		bgfx::UniformHandle m_u_lightRadius;
+		
+		
+		bgfx::UniformHandle m_s_depthMap;
+		bgfx::UniformHandle m_s_deferredColorMap; // TODO: combined with diffuseMap
+		bgfx::UniformHandle m_s_diffuseMap;
+		bgfx::UniformHandle m_s_normalMap;
+		bgfx::UniformHandle m_s_specularMap;
+		
+		bgfx::UniformHandle m_u_lightColor;
 
 		struct DeferredFogUniforms {
 			float u_fogStart;
@@ -356,6 +376,8 @@ namespace hpl {
 		};
 		bgfx::ProgramHandle m_deferredFog;
 		bgfx::ProgramHandle m_edgeSmooth_UnpackDepthProgram;
+		bgfx::ProgramHandle m_lightBoxProgram;
+		bgfx::ProgramHandle m_pointLightProgram;
 
 		iGpuProgram *mpEdgeSmooth_RenderProgram;
 

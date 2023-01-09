@@ -22,6 +22,7 @@
 #include "absl/types/span.h"
 #include "bgfx/bgfx.h"
 #include <bx/debug.h>
+#include <cstdint>
 #include <graphics/Enum.h>
 #include "bx/math.h"
 #include "graphics/GraphicsContext.h"
@@ -236,6 +237,9 @@ namespace hpl {
 				{ colorImage(),colorImage()};
 			m_specular = 
 				{ colorImage(),colorImage()};
+			m_outputImage = {
+				colorImage(), colorImage()
+			};
 
 			m_depthStencil = { depthImage(),depthImage()};
 			{
@@ -248,11 +252,17 @@ namespace hpl {
 				std::array<std::shared_ptr<Image>, 2> reflectionImages = {m_color[1], m_depthStencil[1]};
 				m_gBuffer_colorAndDepth = {RenderTarget(absl::MakeSpan(images)), RenderTarget(absl::MakeSpan(reflectionImages))};
 			}
+			{
+				std::array<std::shared_ptr<Image>, 2> images = {m_outputImage[0], m_depthStencil[0] };
+				std::array<std::shared_ptr<Image>, 2> reflectionImages = {m_outputImage[1], m_depthStencil[0]};
+				m_output_target = {RenderTarget(absl::MakeSpan(images)), RenderTarget(absl::MakeSpan(reflectionImages))};
+			}
 
 			m_gBuffer_color = {RenderTarget(m_color[0]), RenderTarget(m_color[1])};
 			m_gBuffer_depth = {RenderTarget(m_depthStencil[0]), RenderTarget(m_depthStencil[1])};
 			m_gBuffer_normals = {RenderTarget(m_normal[0]), RenderTarget(m_normal[1])};
 			m_gBuffer_linearDepth = {RenderTarget(m_linearDepth[0]), RenderTarget(m_linearDepth[1])};
+
 		}
 
 		// ////////////////////////////////////
@@ -374,6 +384,21 @@ namespace hpl {
 			mpShadowJitterTexture = NULL;
 		}
 		m_deferredFog = hpl::loadProgram("vs_deferred_fog", "fs_deferred_fog");
+		m_lightBoxProgram = hpl::loadProgram("vs_light_box", "fs_light_box");
+		m_pointLightProgram = hpl::loadProgram("vs_deferred_light", "fs_deferred_light_point");
+		
+		// uniforms
+		m_u_param = bgfx::createUniform("u_param", bgfx::UniformType::Vec4);
+		m_u_boxInvViewModelRotation  = bgfx::createUniform("u_boxInvViewModelRotation", bgfx::UniformType::Mat4);
+		m_u_lightColor = bgfx::createUniform("u_lightColor", bgfx::UniformType::Vec4);
+
+		// samplers
+		m_s_depthMap = bgfx::createUniform("s_depthMap", bgfx::UniformType::Sampler);
+		m_s_deferredColorMap = bgfx::createUniform("s_deferredColorMap", bgfx::UniformType::Sampler);
+		m_s_diffuseMap = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
+		m_s_normalMap = bgfx::createUniform("s_normalMap", bgfx::UniformType::Sampler);
+		m_s_specularMap = bgfx::createUniform("s_spcularMap", bgfx::UniformType::Sampler);
+		
 
 		// ////////////////////////////////////
 		// //Create Light programs
@@ -674,10 +699,11 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 
 	Image& cRendererDeferred::FetchOutputFromRenderer() {
-		if(m_currentRenderTarget.GetRenderTarget()) {
-			return *m_currentRenderTarget.GetRenderTarget()->GetImage();
-		}
-		return *m_gBuffer_color[0].GetImage();
+		// not going to bother with RenderViewport for the moment ...
+		// if(m_currentRenderTarget.GetRenderTarget()) {
+		// 	return *m_currentRenderTarget.GetRenderTarget()->GetImage();
+		// }
+		return *m_output_target[0].GetImage();
 	}
 		
 	iTexture* cRendererDeferred::GetPostEffectTexture()
@@ -776,7 +802,7 @@ namespace hpl {
 		
 		shaderProgram.m_handle = m_deferredFog;
 		shaderProgram.m_textures.push_back(
-			{m_u_depthMap, image->GetHandle(), 0});
+			{m_s_depthMap, image->GetHandle(), 0});
 		shaderProgram.m_uniforms.push_back(
 			{m_u_param, &uniforms, 3});
 		// shaderProgram.m_uniforms.push_back(
@@ -830,7 +856,11 @@ namespace hpl {
 		context.Submit(edgeSmoothView, drawRequest);
 	}
 
+
 	void cRendererDeferred::RenderDiffusePass(GraphicsContext& context, RenderTarget& rt) {
+		BX_ASSERT(rt.GetImages().size() >= 4, "expected 4 images Diffuse(0), Normal(1), Position(2), Specular(3), Depth(4)");
+		BX_ASSERT(rt.IsValid(), "Invalid render target");
+		
 		if(!mpCurrentRenderList->ArrayHasObjects(eRenderListType_Diffuse)) {
 			return;
 		}
@@ -854,8 +884,9 @@ namespace hpl {
 		});
 	}
 
-
 	void cRendererDeferred::RenderDecalPass(GraphicsContext& context, RenderTarget& rt) {
+		BX_ASSERT(rt.IsValid(), "Invalid render target");
+		BX_ASSERT(rt.GetImages().size() >= 1, "expected atleast 1 image Color(0)");
 		if(!mpCurrentRenderList->ArrayHasObjects(eRenderListType_Decal)) {
 			return;
 		}
@@ -883,7 +914,7 @@ namespace hpl {
 	}
 
 
-	void rendering::detail::RenderZPassObject(bgfx::ViewId view, const ShaderInputOptions& input, GraphicsContext& context, iRenderer* renderer, iRenderable* object, RenderTarget& rt) {
+	void rendering::detail::RenderZPassObject(bgfx::ViewId view, const ZPassInput& input, GraphicsContext& context, iRenderer* renderer, iRenderable* object, RenderTarget& rt) {
 		eMaterialRenderMode renderMode = object->GetCoverageAmount() >= 1 ? eMaterialRenderMode_Z : eMaterialRenderMode_Z_Dissolve;
 		cMaterial *pMaterial = object->GetMaterial();
 		iMaterialType* materialType = pMaterial->GetType();
@@ -900,7 +931,7 @@ namespace hpl {
 		shaderInput.m_configuration.m_write = Write::Depth;
 		shaderInput.m_configuration.m_cull = Cull::CounterClockwise;
 		shaderInput.m_configuration.m_depthTest = DepthTest::LessEqual;
-
+		
 		shaderInput.m_modelTransform = object->GetModelMatrixPtr()->GetTranspose();
 		shaderInput.m_view = input.m_view;
 		shaderInput.m_projection = input.m_projection;
@@ -918,7 +949,7 @@ namespace hpl {
 
 		auto view = context.StartPass("RenderZ");
 		for(auto& obj: mpCurrentRenderList->GetRenderableItems(eRenderListType_Z)) {
-			rendering::detail::ShaderInputOptions options;
+			rendering::detail::ZPassInput options;
 			options.m_height = mvScreenSize.y;
 			options.m_width = mvScreenSize.x;
 			
@@ -1046,7 +1077,7 @@ namespace hpl {
 				if(!pMaterial || pMaterial->GetType()->IsTranslucent()) {
 					return false;
 				}
-				rendering::detail::ShaderInputOptions options;
+				rendering::detail::ZPassInput options;
 				options.m_width = mvScreenSize.x;
 				options.m_height = mvScreenSize.y;
 
@@ -1098,12 +1129,14 @@ namespace hpl {
 
 		// Render GBuffer to m_gBuffer_full old method is RenderGbuffer(context);
 		RenderDiffusePass(context, resolveRenderTarget(m_gBuffer_full));
+		RenderDecalPass(context, resolveRenderTarget(m_gBuffer_colorAndDepth));
 
-		RenderDecalPass(context, resolveRenderTarget(m_gBuffer_colorAndDepth));		
 		RunCallback(eRendererMessage_PostGBuffer);
 
+		RenderLightPass(context, resolveRenderTarget(m_output_target));
+
 		// render illumination into gbuffer color RenderIllumination
-		RenderIlluminationPass(context, resolveRenderTarget(m_gBuffer_colorAndDepth));
+		RenderIlluminationPass(context, resolveRenderTarget(m_output_target));
 		RenderFogPass(context, resolveRenderTarget(m_gBuffer_color));
 		if(mpCurrentWorld->GetFogActive()) {
 			RenderFullScreenFogPass(context, resolveRenderTarget(m_gBuffer_color));
@@ -1127,6 +1160,274 @@ namespace hpl {
 		}
 
 	}
+
+	void cRendererDeferred::RenderLightPass(GraphicsContext& context, RenderTarget& rt) {
+		InitLightRendering();
+		
+		{
+			const auto pass = context.StartPass("Clear Backbuffer");
+			GraphicsContext::DrawClear clear {
+				rt,
+				{0, 1, 0, ClearOp::Color},
+				0,
+				0,
+				static_cast<uint16_t>(mvScreenSize.x),
+				static_cast<uint16_t>(mvScreenSize.y)
+			};
+			context.ClearTarget(pass, clear);	
+		}
+
+		auto clearStencilBuffer = [&](bgfx::ViewId view) {
+			GraphicsContext::DrawClear clear {
+				rt,
+				{0, 1, 0, ClearOp::Stencil},
+				0,
+				0,
+				static_cast<uint16_t>(mvScreenSize.x),
+				static_cast<uint16_t>(mvScreenSize.y)
+			};
+			context.ClearTarget(view, clear);
+		};
+
+		// Drawing Box Lights
+		{
+			const auto pass = context.StartPass("Render Box Lights");
+			auto drawBoxLight = [&](GraphicsContext::ShaderProgram& shaderProgram, cDeferredLight* light) {
+				GraphicsContext::LayoutStream layoutStream;
+				mpShapeBox->GetLayoutStream(layoutStream);
+				cLightBox *pLightBox = static_cast<cLightBox*>(light->mpLight);
+
+				const auto& color = light->mpLight->GetDiffuseColor();
+				float lightColor[4] = {color.r, color.g, color.b, color.a};
+				shaderProgram.m_handle = m_lightBoxProgram;
+				shaderProgram.m_textures.push_back({m_s_deferredColorMap, resolveRenderImage(m_color)->GetHandle(), 0});
+				shaderProgram.m_uniforms.push_back({m_u_lightColor, lightColor});
+
+				shaderProgram.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
+				shaderProgram.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+				shaderProgram.m_modelTransform = cMath::MatrixMul(light->mpLight->GetWorldMatrix(), light->GetLightMtx()).GetTranspose();
+
+				switch(pLightBox->GetBlendFunc())
+				{
+				case eLightBoxBlendFunc_Add:
+					shaderProgram.m_configuration.m_rgbBlendFunc = 
+						CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
+					shaderProgram.m_configuration.m_alphaBlendFunc = 
+						CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
+					break;
+				case eLightBoxBlendFunc_Replace:
+					break;
+				default:
+					BX_ASSERT(false, "Unknown blend func %d", pLightBox->GetBlendFunc());
+					break;
+				}
+
+				GraphicsContext::DrawRequest drawRequest {rt, layoutStream, shaderProgram};
+				drawRequest.m_width = mvScreenSize.x;
+				drawRequest.m_height = mvScreenSize.y;
+				context.Submit(pass, drawRequest);
+			};
+			auto& renderStencilFront = mvSortedLights[eDeferredLightList_Box_StencilFront_RenderBack];
+			auto lightIt = renderStencilFront.begin();
+			while(lightIt != renderStencilFront.end()) {
+				absl::InlinedVector<cDeferredLight*, 8> lights;
+				for(uint8_t bit = 0; bit < 8 && lightIt != renderStencilFront.end(); ++bit, ++lightIt) {
+					lights.push_back(*lightIt);
+				}
+				// stencil buffer is 8 bits wide, so we can only render 8 lights at a time
+				// on the first pass we need to move the iterator
+				for(size_t i = 0; i < lights.size(); ++i) {
+					GraphicsContext::ShaderProgram shaderProgram;
+					GraphicsContext::LayoutStream layoutStream;
+					mpShapeBox->GetLayoutStream(layoutStream);
+
+					shaderProgram.m_handle = m_nullShader;
+					shaderProgram.m_configuration.m_cull = Cull::CounterClockwise;
+					shaderProgram.m_configuration.m_depthTest = DepthTest::GreaterEqual;
+					shaderProgram.m_configuration.m_stencilTest = CreateStencilTest(
+						StencilFunction::Always,
+						StencilFail::Keep, 
+						StencilDepthFail::Replace, 
+						StencilDepthPass::Keep,
+						0xff, 1 << i);
+				
+				
+					shaderProgram.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
+					shaderProgram.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+					shaderProgram.m_modelTransform = cMath::MatrixMul(lights[i]->mpLight->GetWorldMatrix(), lights[i]->GetLightMtx()).GetTranspose();
+
+
+					GraphicsContext::DrawRequest drawRequest {rt, layoutStream, shaderProgram};
+					drawRequest.m_width = mvScreenSize.x;
+					drawRequest.m_height = mvScreenSize.y;
+					context.Submit(pass, drawRequest);
+				}
+				for(size_t i = 0; i < lights.size(); ++i) {
+					GraphicsContext::ShaderProgram shaderProgram;
+					shaderProgram.m_configuration.m_cull = Cull::Clockwise;
+					shaderProgram.m_configuration.m_depthTest = DepthTest::GreaterEqual;
+					shaderProgram.m_configuration.m_write = Write::RGBA;
+					shaderProgram.m_configuration.m_stencilTest = CreateStencilTest(
+						StencilFunction::Equal,
+						StencilFail::Keep, 
+						StencilDepthFail::Keep, 
+						StencilDepthPass::Keep,
+						0xff, 1 << i);
+					drawBoxLight(shaderProgram, lights[i]);
+				}
+				clearStencilBuffer(pass);
+			}
+		
+			for(auto& light: mvSortedLights[eDeferredLightList_Box_RenderBack])
+			{
+				GraphicsContext::ShaderProgram shaderProgram;
+				shaderProgram.m_configuration.m_cull = Cull::Clockwise;
+				shaderProgram.m_configuration.m_depthTest = DepthTest::GreaterEqual;
+				shaderProgram.m_configuration.m_write = Write::RGBA;
+				drawBoxLight(shaderProgram, light);
+			}
+		
+		}
+
+		// note: skipping implementing RenderLights_StencilBack_ScreenQuad
+
+		// render light
+		{
+			const auto pass = context.StartPass("Render Lights");
+			auto& renderStencilFrontRenderBack = mvSortedLights[eDeferredLightList_StencilFront_RenderBack];
+			auto lightIt = renderStencilFrontRenderBack.begin();
+			while(lightIt != renderStencilFrontRenderBack.end()) {
+				absl::InlinedVector<cDeferredLight*, 8> lights;
+				for(uint8_t bit = 0; bit < 8 && lightIt != renderStencilFrontRenderBack.end(); ++bit, ++lightIt) {
+					lights.push_back(*lightIt);
+				}
+
+				for(size_t i = 0; i < lights.size(); ++i) {
+					GraphicsContext::ShaderProgram shaderProgram;
+					GraphicsContext::LayoutStream layoutStream;
+					mpShapeBox->GetLayoutStream(layoutStream);
+
+					GetLightShape(lights[i]->mpLight, eDeferredShapeQuality_Medium)->GetLayoutStream(layoutStream);
+
+					shaderProgram.m_handle = m_nullShader;
+					shaderProgram.m_configuration.m_cull = Cull::CounterClockwise;
+					shaderProgram.m_configuration.m_depthTest = DepthTest::GreaterEqual;
+					
+					shaderProgram.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
+					shaderProgram.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+					shaderProgram.m_modelTransform = cMath::MatrixMul(lights[i]->mpLight->GetWorldMatrix(), lights[i]->GetLightMtx()).GetTranspose();
+					
+					
+					shaderProgram.m_configuration.m_stencilTest = CreateStencilTest(
+						StencilFunction::Always,
+						StencilFail::Keep, 
+						StencilDepthFail::Replace, 
+						StencilDepthPass::Keep,
+						0xff, 1 << i);
+				
+
+					GraphicsContext::DrawRequest drawRequest {rt, layoutStream, shaderProgram};
+					drawRequest.m_width = mvScreenSize.x;
+					drawRequest.m_height = mvScreenSize.y;
+					context.Submit(pass, drawRequest);
+				}
+
+				for(size_t i = 0; i < lights.size(); ++i) {
+					GraphicsContext::ShaderProgram shaderProgram;
+					GraphicsContext::LayoutStream layoutStream;
+					GetLightShape(lights[i]->mpLight, eDeferredShapeQuality_High)->GetLayoutStream(layoutStream);
+					SetupLightProgram(shaderProgram, lights[i]);
+					shaderProgram.m_configuration.m_cull = Cull::Clockwise;
+					shaderProgram.m_configuration.m_write = Write::RGBA;
+					shaderProgram.m_configuration.m_stencilTest = CreateStencilTest(
+						StencilFunction::Equal,
+						StencilFail::Keep, 
+						StencilDepthFail::Keep, 
+						StencilDepthPass::Keep,
+						0xff, 1 << i);
+					shaderProgram.m_configuration.m_depthTest = DepthTest::GreaterEqual;
+					shaderProgram.m_configuration.m_rgbBlendFunc = 
+						CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
+					shaderProgram.m_configuration.m_alphaBlendFunc = 
+						CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
+					
+					shaderProgram.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
+					shaderProgram.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+					shaderProgram.m_modelTransform = cMath::MatrixMul(lights[i]->mpLight->GetWorldMatrix(), lights[i]->GetLightMtx()).GetTranspose();
+
+					GraphicsContext::DrawRequest drawRequest {rt, layoutStream, shaderProgram};
+					drawRequest.m_width = mvScreenSize.x;
+					drawRequest.m_height = mvScreenSize.y;
+					context.Submit(pass, drawRequest);
+				}
+				clearStencilBuffer(pass);
+			}
+
+			for(auto& light: mvSortedLights[eDeferredLightList_RenderBack])
+			{
+				GraphicsContext::ShaderProgram shaderProgram;
+				GraphicsContext::LayoutStream layoutStream;
+				GetLightShape(light->mpLight, eDeferredShapeQuality_Medium)->GetLayoutStream(layoutStream);
+				SetupLightProgram(shaderProgram, light);
+				shaderProgram.m_configuration.m_cull = Cull::Clockwise;
+				shaderProgram.m_configuration.m_write = Write::RGBA;
+				shaderProgram.m_configuration.m_depthTest = DepthTest::GreaterEqual;
+				shaderProgram.m_configuration.m_rgbBlendFunc = 
+					CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
+				shaderProgram.m_configuration.m_alphaBlendFunc = 
+					CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
+				
+				shaderProgram.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
+				shaderProgram.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+				shaderProgram.m_modelTransform = cMath::MatrixMul(light->mpLight->GetWorldMatrix(), light->GetLightMtx()).GetTranspose();
+
+				GraphicsContext::DrawRequest drawRequest {rt, layoutStream, shaderProgram};
+				drawRequest.m_width = mvScreenSize.x;
+				drawRequest.m_height = mvScreenSize.y;
+				context.Submit(pass, drawRequest);
+			}
+		}
+	}
+
+	void cRendererDeferred::RenderShadowLight(GraphicsContext& context, GraphicsContext::ShaderProgram& shaderProgram, RenderTarget& rt) {
+
+	}
+	
+	void cRendererDeferred::SetupLightProgram(GraphicsContext::ShaderProgram& shaderProgram, cDeferredLight* apLightData) {
+		switch(apLightData->mpLight->GetLightType()) {
+			case eLightType_Point: {
+				struct {
+					float hasGobo;
+					float hasSpecular;
+					float farPlaneDepth;
+					float lightRadius;
+				} param = {
+					0.0,
+					0.0,
+					-mpCurrentFrustum->GetFarPlane(),
+					apLightData->mpLight->GetRadius()
+
+				};
+				const auto modelViewMtx = cMath::MatrixMul(mpCurrentFrustum->GetViewMatrix(), apLightData->mpLight->GetWorldMatrix());
+				const auto color = apLightData->mpLight->GetDiffuseColor();
+				cVector3f lightViewPos = cMath::MatrixMul(modelViewMtx, apLightData->GetLightMtx()).GetTranslation();
+				float lightPosition[4] = {lightViewPos.x, lightViewPos.y, lightViewPos.z, 1.0f};
+				float lightColor[4] = {color.r, color.g, color.b, color.a};
+				shaderProgram.m_handle = m_pointLightProgram;
+				shaderProgram.m_uniforms.push_back({m_u_lightPos, lightPosition});
+				shaderProgram.m_uniforms.push_back({m_u_lightColor, lightColor});
+				shaderProgram.m_uniforms.push_back({m_u_param, &param});
+
+				shaderProgram.m_textures.push_back({m_s_normalMap, resolveRenderImage(m_normal)->GetHandle(), 1});
+				shaderProgram.m_textures.push_back({m_s_diffuseMap, resolveRenderImage(m_color)->GetHandle(), 0});
+				shaderProgram.m_textures.push_back({m_s_normalMap, resolveRenderImage(m_normal)->GetHandle(), 1});
+				shaderProgram.m_textures.push_back({m_s_depthMap, resolveRenderImage(m_depthStencil)->GetHandle(), 2});
+				break;
+			}
+		}
+		
+	} 
+		
 
 	void cRendererDeferred::SetupRenderList()
 	{
@@ -1268,6 +1569,35 @@ namespace hpl {
 			a_mtxDestRender = cMath::MatrixMul(a_mtxDestTransform,a_mtxDestRender);
 		}
 	}
+
+	cMatrixf cDeferredLight::GetLightMtx() {
+		if(!mpLight) {
+			return cMatrixf::Identity;
+		}
+		switch(mpLight->GetLightType()) {
+			case eLightType_Point:
+				return cMath::MatrixScale(mpLight->GetRadius() * kLightRadiusMul_Medium);
+			case eLightType_Spot: {
+				cLightSpot *pLightSpot = static_cast<cLightSpot*>(mpLight);
+
+				float fFarHeight = pLightSpot->GetTanHalfFOV() * pLightSpot->GetRadius() * 2.0f;
+				//Note: Aspect might be wonky if there is no gobo.
+				float fFarWidth = fFarHeight * pLightSpot->GetAspect();
+
+				return cMath::MatrixScale(cVector3f(fFarWidth,fFarHeight,mpLight->GetRadius()) );//x and y = "far plane", z = radius
+			}
+			case eLightType_Box: {
+				cLightBox *pLightBox = static_cast<cLightBox*>(mpLight);
+
+				return cMath::MatrixScale(pLightBox->GetSize());
+			}
+			default:
+				break;
+		}
+		
+		return cMatrixf::Identity;
+	}
+
 
 	//-----------------------------------------------------------------------
 

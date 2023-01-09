@@ -44,6 +44,124 @@ namespace hpl
             (((program.m_configuration.m_write & Write::G) > 0) ? BGFX_STATE_WRITE_G : 0) |
             (((program.m_configuration.m_write & Write::B) > 0) ? BGFX_STATE_WRITE_B : 0) |
             (((program.m_configuration.m_write & Write::A) > 0) ? BGFX_STATE_WRITE_A : 0) |
+            ([&]() {
+                uint64_t result = 0;
+                auto& stencilTest = program.m_configuration.m_stencilTest;
+                switch(stencilTest.m_sfail) {
+                    case StencilFail::Zero:
+                        result |= BGFX_STENCIL_OP_FAIL_S_ZERO;
+                        break;
+                    case StencilFail::Keep:
+                        result |= BGFX_STENCIL_OP_FAIL_S_KEEP;
+                        break;
+                    case StencilFail::Replace:
+                        result |= BGFX_STENCIL_OP_FAIL_S_REPLACE;
+                        break;
+                    case StencilFail::IncrSat:
+                        result |= BGFX_STENCIL_OP_FAIL_S_INCRSAT;
+                        break;
+                    case StencilFail::DecrSat:
+                        result |= BGFX_STENCIL_OP_FAIL_S_DECRSAT;
+                        break;
+                    case StencilFail::Invert:
+                        result |= BGFX_STENCIL_OP_FAIL_S_INVERT;
+                        break;
+                    case StencilFail::Incr:
+                        result |= BGFX_STENCIL_OP_FAIL_S_INCR;
+                        break;
+                    case StencilFail::Decr:
+                        result |= BGFX_STENCIL_OP_FAIL_S_DECR;
+                        break;
+                    default:
+                    case StencilFail::None:
+                        break;
+                }
+                switch(stencilTest.m_dpfail) {
+                    case StencilDepthFail::Zero:
+                        result |= BGFX_STENCIL_OP_FAIL_Z_ZERO;
+                        break;
+                    case StencilDepthFail::Keep:
+                        result |= BGFX_STENCIL_OP_FAIL_Z_KEEP;
+                        break;
+                    case StencilDepthFail::Replace:
+                        result |= BGFX_STENCIL_OP_FAIL_Z_REPLACE;
+                        break;
+                    case StencilDepthFail::IncrSat:
+                        result |= BGFX_STENCIL_OP_FAIL_Z_INCRSAT;
+                        break;
+                    case StencilDepthFail::DecrSat:
+                        result |= BGFX_STENCIL_OP_FAIL_Z_DECRSAT;
+                        break;
+                    case StencilDepthFail::Invert:
+                        result |= BGFX_STENCIL_OP_FAIL_Z_INVERT;
+                        break;
+                    case StencilDepthFail::Incr:
+                        result |= BGFX_STENCIL_OP_FAIL_Z_INCR;
+                        break;
+                    case StencilDepthFail::Decr:
+                        result |= BGFX_STENCIL_OP_FAIL_Z_DECR;
+                        break;
+                    default:
+                    case StencilDepthFail::None:
+                        break;
+                }
+                switch(stencilTest.m_dppass) {
+                    case StencilDepthPass::Zero:
+                        result |= BGFX_STENCIL_OP_PASS_Z_ZERO;
+                        break;
+                    case StencilDepthPass::Keep:
+                        result |= BGFX_STENCIL_OP_PASS_Z_KEEP;
+                        break;
+                    case StencilDepthPass::Replace:
+                        result |= BGFX_STENCIL_OP_PASS_Z_REPLACE;
+                        break;
+                    case StencilDepthPass::IncrSat:
+                        result |= BGFX_STENCIL_OP_PASS_Z_INCRSAT;
+                        break;
+                    case StencilDepthPass::DecrSat: 
+                        result |= BGFX_STENCIL_OP_PASS_Z_DECRSAT;
+                        break;
+                    case StencilDepthPass::Invert:
+                        result |= BGFX_STENCIL_OP_PASS_Z_INVERT;
+                        break;
+                    case StencilDepthPass::Incr:
+                        result |= BGFX_STENCIL_OP_PASS_Z_INCR;
+                        break;
+                    case StencilDepthPass::Decr:
+                        result |= BGFX_STENCIL_OP_PASS_Z_DECR;
+                        break;
+                    default:
+                    case StencilDepthPass::None:
+                        break;
+                }
+
+                switch(stencilTest.m_func) {
+                    case StencilFunction::Less:
+                        result |= BGFX_STENCIL_TEST_LESS;
+                        break;
+                    case StencilFunction::LessEqual:
+                        result |= BGFX_STENCIL_TEST_LEQUAL;
+                        break;
+                    case StencilFunction::Equal:
+                        result |= BGFX_STENCIL_TEST_EQUAL;
+                        break;
+                    case StencilFunction::GreaterEqual:
+                        result |= BGFX_STENCIL_TEST_GEQUAL;
+                        break;
+                    case StencilFunction::Greater:
+                        result |= BGFX_STENCIL_TEST_GREATER;
+                        break;
+                    case StencilFunction::NotEqual:
+                        result |= BGFX_STENCIL_TEST_NOTEQUAL;
+                        break;
+                    case StencilFunction::Always:
+                        result |= BGFX_STENCIL_TEST_ALWAYS;
+                        break;
+                    default:
+                        break;
+                }
+                return result | BGFX_STENCIL_FUNC_REF(stencilTest.m_ref) | BGFX_STENCIL_FUNC_RMASK(stencilTest.m_mask);
+            })() |
             ([&]() -> uint64_t {
                 switch(program.m_configuration.m_depthTest) {
                     case DepthTest::Always:
@@ -77,33 +195,24 @@ namespace hpl
             })() | ([&]() -> uint64_t  {
                 switch(layout.m_drawType) {
                     case eVertexBufferDrawType_Tri:
-                        // this is the default 
                         break;
                     case eVertexBufferDrawType_TriStrip:
                         return BGFX_STATE_PT_TRISTRIP;
-                    case eVertexBufferDrawType_TriFan:
-                        // unused
-                        break;
-                    case eVertexBufferDrawType_Quad:
-                        // unused
-                        break;
-                    case eVertexBufferDrawType_QuadStrip:
-                        // unused
-                        break;
                     case eVertexBufferDrawType_Line:
                         return BGFX_STATE_PT_LINES;
-                    case eVertexBufferDrawType_LineLoop:
-                        // unused
-                        break;
                     case eVertexBufferDrawType_LineStrip:
                         return BGFX_STATE_PT_LINESTRIP;
-                    default: 
+                    case eVertexBufferDrawType_LineLoop:
+                    case eVertexBufferDrawType_TriFan:
+                    case eVertexBufferDrawType_Quad:
+                    case eVertexBufferDrawType_QuadStrip:
+                    default:
+                        BX_ASSERT(false, "Unsupported draw type"); 
                         break;
                 }
                 return 0;
             })() | 
-            (program.m_configuration.m_blendAlpha ? BGFX_STATE_BLEND_ALPHA : 0) |
-            (BGFX_STATE_ALPHA_REF(program.m_configuration.m_alphaReference)) | ([&] {
+            (program.m_configuration.m_blendAlpha ? BGFX_STATE_BLEND_ALPHA : 0) | ([&] {
                 auto mapToBGFXBlendOperator = [](BlendOperator op) -> uint64_t {
                     switch(op) {
                         case BlendOperator::Add:

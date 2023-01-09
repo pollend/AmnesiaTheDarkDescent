@@ -16,6 +16,11 @@ class ShaderType(Enum):
 
 
 shaders = [
+# deferred
+    { "type" : ShaderType.VS, "inout" : "resource/vs_deferred_light.io",              "input": "resource/vs_deferred_light.sc", "includes": ["resource"]},
+    { "type" : ShaderType.FS, "inout" : "resource/vs_deferred_light.io",              "input": "resource/fs_deferred_light_point.sc", "includes": ["resource"]},
+    { "type" : ShaderType.VS, "inout" : "resource/vs_light_box.io",                   "input": "resource/vs_light_box.sc", "includes": ["resource"]},
+    { "type" : ShaderType.FS, "inout" : "resource/vs_light_box.io",                   "input": "resource/fs_light_box.sc", "includes": ["resource"]},
 #gui
     { "type" : ShaderType.FS, "inout" : "resource/vs_gui.io",                          "input": "resource/fs_gui.sc", "includes": ["resource"]},
     { "type" : ShaderType.VS, "inout" : "resource/vs_gui.io",                          "input": "resource/vs_gui.sc", "includes": ["resource"]},

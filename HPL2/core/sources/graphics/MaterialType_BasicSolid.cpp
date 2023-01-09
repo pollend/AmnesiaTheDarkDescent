@@ -171,7 +171,7 @@ namespace hpl
         m_s_envMap = bgfx::createUniform("s_envMap", bgfx::UniformType::Sampler);
 
         _u_param = bgfx::createUniform("u_params", bgfx::UniformType::Vec4, 4);
-        _u_mtxUv = bgfx::createUniform("a_mtxUV", bgfx::UniformType::Mat4, 1);
+        _u_mtxUv = bgfx::createUniform("u_mtxUV", bgfx::UniformType::Mat4, 1);
         _u_mtxInvViewRotation = bgfx::createUniform("u_mtxInvViewRotation", bgfx::UniformType::Mat4, 1);
         _s_diffuseMap = bgfx::createUniform("diffuseMap", bgfx::UniformType::Sampler, 1);
         _s_dissolveMap = bgfx::createUniform("dissolveMap", bgfx::UniformType::Sampler, 1);
@@ -600,7 +600,10 @@ namespace hpl
                 eMaterialRenderMode_Z,
                 lFlags,
                 [useAlpha, 
-                hasDissolveFilter, programHandle = _basicSolidZProgram, u_param = _u_param, u_mtxUv = _u_mtxUv](
+                hasDissolveFilter, 
+                programHandle = _basicSolidZProgram, 
+                u_param = _u_param, 
+                u_mtxUv = _u_mtxUv](
                     const tString& name)
                 {
                     auto program = (new MaterialZProgram(
@@ -845,7 +848,7 @@ namespace hpl
                                   [](RenderDiffuseData& data, const Image* value)
                                   {
                                       data.s_envMap = value ? value->GetHandle() : bgfx::TextureHandle{BGFX_INVALID_HANDLE};
-                                  })) },
+                                  }))},
                         name,
                         programHandle,
                         false,
@@ -924,9 +927,10 @@ namespace hpl
 												iRenderer *apRenderer)
     {
         const auto tryUpdateUvAnimation = [&]() {
-            if (apMaterial->HasUvAnimation())
-            {
+            if (apMaterial->HasUvAnimation()) {
                 apProgram->SetMatrixf(kVar_a_mtxUV, apMaterial->GetUvMatrix());
+            }  else {
+                apProgram->SetMatrixf(kVar_a_mtxUV, cMatrixf::Identity);
             }
         };
 

@@ -33,6 +33,55 @@ namespace hpl
         All = Color | Depth | Stencil,
     };
 
+
+    enum class StencilFail : uint8_t {
+        None,
+        Zero,
+        Keep,
+        Replace,
+        IncrSat,
+        DecrSat,
+        Invert,
+        Incr,
+        Decr,
+    };
+
+    enum class StencilDepthFail : uint8_t {
+        None,
+        Zero,
+        Keep,
+        Replace,
+        IncrSat,
+        DecrSat,
+        Invert,
+        Incr,
+        Decr,
+    };
+
+    enum class StencilDepthPass : uint8_t {
+        None,
+        Zero,
+        Keep,
+        Replace,
+        IncrSat,
+        DecrSat,
+        Invert,
+        Incr,
+        Decr,
+    };
+
+    enum class StencilFunction: uint8_t {
+        None,
+        Never,
+        Less,
+        LessEqual,
+        Equal,
+        GreaterEqual,
+        Greater,
+        NotEqual,
+        Always,
+    };
+
     enum class Cull: uint8_t {
         None,
         Clockwise,
@@ -80,6 +129,16 @@ namespace hpl
     BlendOperand GetBlendOperandSrc(BlendFunc func);
     BlendOperand GetBlendOperandDst(BlendFunc func);
     BlendOperator GetBlendOperator(BlendFunc func);
+
+    struct StencilTest {
+        StencilFunction m_func: 4;
+        StencilFail m_sfail: 4;
+        StencilDepthFail m_dpfail: 4;
+        StencilDepthPass m_dppass: 4;
+        uint8_t m_ref;
+        uint8_t m_mask;
+    };
+    StencilTest CreateStencilTest(StencilFunction func, StencilFail sfail, StencilDepthFail dpfail, StencilDepthPass dppass, uint8_t ref, uint8_t mask);
 
     Write operator|(Write lhs, Write rhs);
     bool operator&(Write lhs, Write rhs);

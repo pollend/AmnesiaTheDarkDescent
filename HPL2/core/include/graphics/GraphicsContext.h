@@ -3,6 +3,7 @@
 #include "absl/container/inlined_vector.h"
 #include "graphics/Enum.h"
 #include "graphics/GraphicsTypes.h"
+#include "graphics/Image.h"
 #include "graphics/RenderTarget.h"
 #include "math/MathTypes.h"
 #include <absl/strings/string_view.h>
@@ -51,19 +52,25 @@ namespace hpl
                 bgfx::TextureHandle m_textureHandle = BGFX_INVALID_HANDLE;
                 uint8_t m_stage = 0;
             };
+            struct UAVImage {
+                bgfx::TextureHandle m_textureHandle = BGFX_INVALID_HANDLE;
+                uint8_t m_stage = 0;
+                uint8_t m_mip = 0;
+                bgfx::Access::Enum m_access;
+                bgfx::TextureFormat::Enum m_format;
+            };
 
             union {
                 struct {
+                    StencilTest m_stencilTest;
                     Write m_write: 5;
                     DepthTest m_depthTest: 3;
                     Cull m_cull: 2;
                     bool m_blendAlpha: 1;
-                    char m_alphaReference;
-
                     BlendFunc m_rgbBlendFunc: 16;
                     BlendFunc m_alphaBlendFunc: 16;
                 };
-                uint64_t m_state = 0;
+                uint64_t m_state[2] = {0};
             } m_configuration;
 
             cMatrixf m_modelTransform = cMatrixf(cMatrixf::Identity);
@@ -71,6 +78,7 @@ namespace hpl
             cMatrixf m_projection = cMatrixf(cMatrixf::Identity);
 
             absl::InlinedVector<TextureData, 10> m_textures;
+            // absl::InlinedVector<TextureData, 10> m_UAVImages;
             absl::InlinedVector<UniformData, 25> m_uniforms;
         };
         struct ClearRequest {
