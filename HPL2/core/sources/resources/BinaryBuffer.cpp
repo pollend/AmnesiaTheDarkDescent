@@ -319,12 +319,12 @@ namespace hpl {
 		deflateEnd(&zipStream);
 
 		///////////////////////////
-		// Write a dummy size for data
+		// Replace dummy size for data with actual value
 		if(abWriteDataSize)
 		{
-			unsigned lTotalDataSize = mlDataPos - lStartPos - 4;
+			uint32_t lTotalDataSize = mlDataPos - lStartPos - 4;
 
-			memcpy(mpData + lStartPos, &lTotalDataSize, sizeof(unsigned));
+			memcpy(mpData + lStartPos, &lTotalDataSize, sizeof(lTotalDataSize));
 		}
 
 		//Log("Compress Size: %d\n", mlDataPos - lStartPos);
