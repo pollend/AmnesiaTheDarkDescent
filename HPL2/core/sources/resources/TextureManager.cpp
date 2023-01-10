@@ -101,16 +101,18 @@ namespace hpl {
 
 
 	Image* cTextureManager::Create1DImage(
-		const tString& asName, bool abUseMipMaps, eTextureUsage aUsage, unsigned int alTextureSizeLevel)
+		const tString& asName, bool abUseMipMaps, eTextureUsage aUsage, unsigned int alTextureSizeLevel, ImageOptions options)
 	{
 		return _wrapperImageResource(
 			asName,
-			[](const tString& asName, const tWString& path, cBitmap* pBmp) -> Image*
+			[options](const tString& asName, const tWString& path, cBitmap* pBmp) -> Image*
 			{
-
 				auto* resource = new Image(asName, path);
 				ImageDescriptor desc =  ImageDescriptor::CreateFromBitmap(*pBmp);
 				auto* image = new Image();
+
+				desc.m_configuration.m_uClamp = options.m_uClamp;
+				desc.m_configuration.m_vClamp = options.m_vClamp;
 
 				auto data = pBmp->GetData(0, 0);
 				resource->Initialize(desc, bgfx::copy(data->mpData, data->mlSize));
@@ -119,16 +121,19 @@ namespace hpl {
 	}
 
 	Image* cTextureManager::Create2DImage(
-		const tString& asName, bool abUseMipMaps, eTextureType aType, eTextureUsage aUsage, unsigned int alTextureSizeLevel)
+		const tString& asName, bool abUseMipMaps, eTextureType aType, eTextureUsage aUsage, unsigned int alTextureSizeLevel, ImageOptions options)
 	{
 		return _wrapperImageResource(
 			asName,
-			[](const tString& asName, const tWString& path, cBitmap* pBmp) -> Image*
+			[options](const tString& asName, const tWString& path, cBitmap* pBmp) -> Image*
 			{
 				auto* resource = new Image(asName, path);
 				ImageDescriptor desc =  ImageDescriptor::CreateFromBitmap(*pBmp);
 				desc.m_name = asName.c_str();
 				auto* image = new Image();
+
+				desc.m_configuration.m_uClamp = options.m_uClamp;
+				desc.m_configuration.m_vClamp = options.m_vClamp;
 
 				auto data = pBmp->GetData(0, 0);
 				Image::InitializeFromBitmap(*resource, *pBmp, desc);
@@ -136,17 +141,17 @@ namespace hpl {
 			});
 	}
 	Image* cTextureManager::CreateCubeMapImage(const tString& asName,bool abUseMipMaps, eTextureUsage aUsage,
-				unsigned int alTextureSizeLevel) {
+				unsigned int alTextureSizeLevel, ImageOptions options) {
 		BX_ASSERT(false, "Not implemented");
 		return nullptr;
 	}
 
 	Image* cTextureManager::Create3DImage(
-		const tString& asName, bool abUseMipMaps, eTextureUsage aUsage, unsigned int alTextureSizeLevel)
+		const tString& asName, bool abUseMipMaps, eTextureUsage aUsage, unsigned int alTextureSizeLevel, ImageOptions options)
 	{
 		return _wrapperImageResource(
 			asName,
-			[](const tString& asName, const tWString& path, cBitmap* pBmp) -> Image*
+			[options](const tString& asName, const tWString& path, cBitmap* pBmp) -> Image*
 			{
 				auto* resource = new Image(asName, path);
 				ImageDescriptor desc;

@@ -222,6 +222,14 @@ namespace hpl {
 			};
 
 			auto positionImage = [&] {
+				auto desc = ImageDescriptor::CreateTexture2D(mvScreenSize.x, mvScreenSize.y, false, bgfx::TextureFormat::Enum::RGBA32F);
+				desc.m_configuration.m_rt = RTType::RT_Write;
+				auto image = std::make_shared<Image>();
+				image->Initialize(desc);
+				return image;
+			};
+
+			auto normalImage = [&] {
 				auto desc = ImageDescriptor::CreateTexture2D(mvScreenSize.x, mvScreenSize.y, false, bgfx::TextureFormat::Enum::RGBA16F);
 				desc.m_configuration.m_rt = RTType::RT_Write;
 				auto image = std::make_shared<Image>();
@@ -240,7 +248,7 @@ namespace hpl {
 			m_gBufferColor = 
 				{ colorImage(),colorImage()};
 			m_gBufferNormalImage = 
-				{ positionImage(), positionImage()};
+				{ normalImage(), normalImage()};
 			m_gBufferPositionImage = 
 				{ positionImage(),positionImage()};
 			m_gBufferSpecular = 
@@ -406,9 +414,9 @@ namespace hpl {
 		m_s_deferredColorMap = bgfx::createUniform("s_deferredColorMap", bgfx::UniformType::Sampler);
 		m_s_diffuseMap = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
 		m_s_normalMap = bgfx::createUniform("s_normalMap", bgfx::UniformType::Sampler);
-		m_s_specularMap = bgfx::createUniform("s_spcularMap", bgfx::UniformType::Sampler);
+		m_s_specularMap = bgfx::createUniform("s_specularMap", bgfx::UniformType::Sampler);
 		m_s_positionMap = bgfx::createUniform("s_positionMap", bgfx::UniformType::Sampler);
-		
+		m_s_attenuationLightMap = bgfx::createUniform("s_attenuationLightMap", bgfx::UniformType::Sampler);
 
 		// ////////////////////////////////////
 		// //Create Light programs
@@ -1304,6 +1312,77 @@ namespace hpl {
 		// render light
 		{
 			const auto pass = context.StartPass("Render Lights");
+			auto drawLight = [&](GraphicsContext::ShaderProgram& shaderProgram, cDeferredLight* apLightData) {
+				GraphicsContext::LayoutStream layoutStream;
+				GetLightShape(apLightData->mpLight, eDeferredShapeQuality_High)->GetLayoutStream(layoutStream);
+				GraphicsContext::DrawRequest drawRequest {rt, layoutStream, shaderProgram};
+				drawRequest.m_width = mvScreenSize.x;
+				drawRequest.m_height = mvScreenSize.y;
+				switch(apLightData->mpLight->GetLightType()) {
+					case eLightType_Point: {
+						struct {
+							float hasGobo;
+							float hasSpecular;
+							float farPlaneDepth;
+							float lightRadius;
+						} param = {
+							0.0,
+							0.0,
+							-mpCurrentFrustum->GetFarPlane(),
+							apLightData->mpLight->GetRadius()
+
+						};
+						const auto modelViewMtx = cMath::MatrixMul(mpCurrentFrustum->GetViewMatrix(), apLightData->mpLight->GetWorldMatrix());
+						const auto color = apLightData->mpLight->GetDiffuseColor();
+						cVector3f lightViewPos = cMath::MatrixMul(modelViewMtx, apLightData->GetLightMtx()).GetTranslation();
+						float lightPosition[4] = {lightViewPos.x, lightViewPos.y, lightViewPos.z, 1.0f};
+						float lightColor[4] = {color.r, color.g, color.b, color.a};
+						shaderProgram.m_handle = m_pointLightProgram;
+						shaderProgram.m_uniforms.push_back({m_u_lightPos, lightPosition});
+						shaderProgram.m_uniforms.push_back({m_u_lightColor, lightColor});
+						shaderProgram.m_uniforms.push_back({m_u_param, &param});
+
+						shaderProgram.m_textures.push_back({m_s_normalMap, resolveRenderImage(m_gBufferNormalImage)->GetHandle(), 1});
+						shaderProgram.m_textures.push_back({m_s_diffuseMap, resolveRenderImage(m_gBufferColor)->GetHandle(), 0});
+						shaderProgram.m_textures.push_back({m_s_depthMap, resolveRenderImage(m_gBufferDepthStencil)->GetHandle(), 2});
+						
+
+						context.Submit(pass, drawRequest);
+						break;
+					}
+					case eLightType_Spot: {
+						struct {
+							float hasGobo;
+							float hasSpecular;
+							float lightRadius;
+							float pad;
+						} uParam = {
+							0.0,
+							0.0,
+							apLightData->mpLight->GetRadius(),
+							0
+						};
+						const auto modelViewMtx = cMath::MatrixMul(mpCurrentFrustum->GetViewMatrix(), apLightData->mpLight->GetWorldMatrix());
+						const auto color = apLightData->mpLight->GetDiffuseColor();
+						cVector3f lightViewPos = cMath::MatrixMul(modelViewMtx, apLightData->GetLightMtx()).GetTranslation();
+						float lightPosition[4] = {lightViewPos.x, lightViewPos.y, lightViewPos.z, 1.0f};
+						float lightColor[4] = {color.r, color.g, color.b, color.a};
+						shaderProgram.m_handle = m_spotLightProgram;
+						shaderProgram.m_uniforms.push_back({m_u_lightPos, lightPosition});
+						shaderProgram.m_uniforms.push_back({m_u_lightColor, lightColor});
+						shaderProgram.m_uniforms.push_back({m_u_param, &uParam});
+
+						shaderProgram.m_textures.push_back({m_s_normalMap, resolveRenderImage(m_gBufferNormalImage)->GetHandle(), 1});
+						shaderProgram.m_textures.push_back({m_s_diffuseMap, resolveRenderImage(m_gBufferColor)->GetHandle(), 0});
+						shaderProgram.m_textures.push_back({m_s_positionMap, resolveRenderImage(m_gBufferPositionImage)->GetHandle(), 2});
+						shaderProgram.m_textures.push_back({m_s_specularMap, resolveRenderImage(m_gBufferSpecular)->GetHandle(), 3});
+						shaderProgram.m_textures.push_back({m_s_attenuationLightMap, apLightData->mpLight->GetFalloffMap()->GetHandle(), 5});
+						
+						context.Submit(pass, drawRequest);
+						break;
+					}
+				}
+			};
 			auto& renderStencilFrontRenderBack = mvSortedLights[eDeferredLightList_StencilFront_RenderBack];
 			auto lightIt = renderStencilFrontRenderBack.begin();
 			while(lightIt != renderStencilFrontRenderBack.end()) {
@@ -1333,7 +1412,6 @@ namespace hpl {
 						StencilDepthPass::Keep,
 						0xff, 1 << i);
 				
-
 					GraphicsContext::DrawRequest drawRequest {rt, layoutStream, shaderProgram};
 					drawRequest.m_width = mvScreenSize.x;
 					drawRequest.m_height = mvScreenSize.y;
@@ -1342,8 +1420,6 @@ namespace hpl {
 
 				for(size_t i = 0; i < lights.size(); ++i) {
 					GraphicsContext::ShaderProgram shaderProgram;
-					GraphicsContext::LayoutStream layoutStream;
-					GetLightShape(lights[i]->mpLight, eDeferredShapeQuality_High)->GetLayoutStream(layoutStream);
 					SetupLightProgram(shaderProgram, lights[i]);
 					shaderProgram.m_configuration.m_cull = Cull::Clockwise;
 					shaderProgram.m_configuration.m_write = Write::RGBA;
@@ -1363,10 +1439,7 @@ namespace hpl {
 					shaderProgram.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
 					shaderProgram.m_modelTransform = cMath::MatrixMul(lights[i]->mpLight->GetWorldMatrix(), lights[i]->GetLightMtx()).GetTranspose();
 
-					GraphicsContext::DrawRequest drawRequest {rt, layoutStream, shaderProgram};
-					drawRequest.m_width = mvScreenSize.x;
-					drawRequest.m_height = mvScreenSize.y;
-					// context.Submit(pass, drawRequest);
+					drawLight(shaderProgram, lights[i]);
 				}
 				clearStencilBuffer(pass);
 			}
@@ -1374,8 +1447,6 @@ namespace hpl {
 			for(auto& light: mvSortedLights[eDeferredLightList_RenderBack])
 			{
 				GraphicsContext::ShaderProgram shaderProgram;
-				GraphicsContext::LayoutStream layoutStream;
-				GetLightShape(light->mpLight, eDeferredShapeQuality_Medium)->GetLayoutStream(layoutStream);
 				SetupLightProgram(shaderProgram, light);
 				shaderProgram.m_configuration.m_cull = Cull::Clockwise;
 				shaderProgram.m_configuration.m_write = Write::RGBA;
@@ -1389,10 +1460,7 @@ namespace hpl {
 				shaderProgram.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
 				shaderProgram.m_modelTransform = cMath::MatrixMul(light->mpLight->GetWorldMatrix(), light->GetLightMtx()).GetTranspose();
 
-				GraphicsContext::DrawRequest drawRequest {rt, layoutStream, shaderProgram};
-				drawRequest.m_width = mvScreenSize.x;
-				drawRequest.m_height = mvScreenSize.y;
-				context.Submit(pass, drawRequest);
+				drawLight(shaderProgram, light);
 			}
 		}
 	}
@@ -1402,65 +1470,6 @@ namespace hpl {
 	}
 	
 	void cRendererDeferred::SetupLightProgram(GraphicsContext::ShaderProgram& shaderProgram, cDeferredLight* apLightData) {
-		switch(apLightData->mpLight->GetLightType()) {
-			case eLightType_Point: {
-				struct {
-					float hasGobo;
-					float hasSpecular;
-					float farPlaneDepth;
-					float lightRadius;
-				} param = {
-					0.0,
-					0.0,
-					-mpCurrentFrustum->GetFarPlane(),
-					apLightData->mpLight->GetRadius()
-
-				};
-				const auto modelViewMtx = cMath::MatrixMul(mpCurrentFrustum->GetViewMatrix(), apLightData->mpLight->GetWorldMatrix());
-				const auto color = apLightData->mpLight->GetDiffuseColor();
-				cVector3f lightViewPos = cMath::MatrixMul(modelViewMtx, apLightData->GetLightMtx()).GetTranslation();
-				float lightPosition[4] = {lightViewPos.x, lightViewPos.y, lightViewPos.z, 1.0f};
-				float lightColor[4] = {color.r, color.g, color.b, color.a};
-				shaderProgram.m_handle = m_pointLightProgram;
-				shaderProgram.m_uniforms.push_back({m_u_lightPos, lightPosition});
-				shaderProgram.m_uniforms.push_back({m_u_lightColor, lightColor});
-				shaderProgram.m_uniforms.push_back({m_u_param, &param});
-
-				shaderProgram.m_textures.push_back({m_s_normalMap, resolveRenderImage(m_gBufferNormalImage)->GetHandle(), 1});
-				shaderProgram.m_textures.push_back({m_s_diffuseMap, resolveRenderImage(m_gBufferColor)->GetHandle(), 0});
-				shaderProgram.m_textures.push_back({m_s_depthMap, resolveRenderImage(m_gBufferDepthStencil)->GetHandle(), 2});
-				break;
-			}
-			case eLightType_Spot: {
-				struct {
-					float hasGobo;
-					float hasSpecular;
-					float farPlaneDepth;
-					float lightRadius;
-				} param = {
-					0.0,
-					0.0,
-					-mpCurrentFrustum->GetFarPlane(),
-					apLightData->mpLight->GetRadius()
-
-				};
-				const auto modelViewMtx = cMath::MatrixMul(mpCurrentFrustum->GetViewMatrix(), apLightData->mpLight->GetWorldMatrix());
-				const auto color = apLightData->mpLight->GetDiffuseColor();
-				cVector3f lightViewPos = cMath::MatrixMul(modelViewMtx, apLightData->GetLightMtx()).GetTranslation();
-				float lightPosition[4] = {lightViewPos.x, lightViewPos.y, lightViewPos.z, 1.0f};
-				float lightColor[4] = {color.r, color.g, color.b, color.a};
-				shaderProgram.m_handle = m_spotLightProgram;
-				shaderProgram.m_uniforms.push_back({m_u_lightPos, lightPosition});
-				shaderProgram.m_uniforms.push_back({m_u_lightColor, lightColor});
-				shaderProgram.m_uniforms.push_back({m_u_param, &param});
-
-				shaderProgram.m_textures.push_back({m_s_normalMap, resolveRenderImage(m_gBufferNormalImage)->GetHandle(), 1});
-				shaderProgram.m_textures.push_back({m_s_diffuseMap, resolveRenderImage(m_gBufferColor)->GetHandle(), 0});
-				shaderProgram.m_textures.push_back({m_s_positionMap, resolveRenderImage(m_gBufferPositionImage)->GetHandle(), 2});
-				break;
-			}
-		}
-		
 	} 
 		
 

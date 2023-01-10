@@ -77,20 +77,29 @@ namespace hpl
 
 
 
-    void cPostEffectComposite::Draw(GraphicsContext& context, Image& inputTexture, RenderTarget& renderTarget)
+    bool cPostEffectComposite::Draw(GraphicsContext& context, Image& inputTexture, RenderTarget& renderTarget)
     {
-
-
         auto it = _postEffects.begin();
         size_t currentIndex = 0;
         bool isSavedToPrimaryRenderTarget = false;
+        bool hasEffect = false;
         for (; it != _postEffects.end(); ++it)
         {
             if (!it->_effect->IsActive())
             {
                 continue;
             }
+            hasEffect = true;
             it->_effect->RenderEffect(*this, context, inputTexture, _renderTargets[currentIndex]);
+        }
+
+        // this happens when there are no post effects
+        if(!hasEffect) {
+            cVector2l vRenderTargetSize = GetRenderTargetSize();
+
+            cRect2l rect = cRect2l(0, 0, vRenderTargetSize.x, vRenderTargetSize.y);
+            context.CopyTextureToFrameBuffer(context.StartPass("Copy To Swap"),inputTexture, rect, renderTarget);
+            return false;
         }
 
         while (it != _postEffects.end())
@@ -128,6 +137,7 @@ namespace hpl
             cRect2l rect = cRect2l(0, 0, vRenderTargetSize.x, vRenderTargetSize.y);
             context.CopyTextureToFrameBuffer(context.StartPass("Copy To Swap"),*_images[currentIndex], rect, renderTarget);
         }
+        return true;
 
     }
 

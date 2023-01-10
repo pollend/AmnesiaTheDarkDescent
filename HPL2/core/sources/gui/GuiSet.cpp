@@ -1811,46 +1811,6 @@ namespace hpl {
 
 #define kLogRender (false)
 
-	static void SetClipArea(iLowLevelGraphics *pLowLevelGraphics, cGuiClipRegion *apRegion)
-	{
-		cRect2f& clipRect =apRegion->mRect;
-
-		//////////////////////////////////
-		// Set up clip area
-		if(apRegion->mRect.w >0)
-		{
-			cPlanef plane;
-
-			//Bottom
-			plane.FromNormalPoint(cVector3f(0,-1,0),cVector3f(0,clipRect.y+clipRect.h,0));
-			pLowLevelGraphics->SetClipPlane(0, plane);
-			pLowLevelGraphics->SetClipPlaneActive(0, true);
-
-			//Top
-			plane.FromNormalPoint(cVector3f(0,1,0),cVector3f(0,clipRect.y,0));
-			pLowLevelGraphics->SetClipPlane(1, plane);
-			pLowLevelGraphics->SetClipPlaneActive(1, true);
-
-			//Right
-			plane.FromNormalPoint(cVector3f(1,0,0),cVector3f(clipRect.x,0,0));
-			pLowLevelGraphics->SetClipPlane(2, plane);
-			pLowLevelGraphics->SetClipPlaneActive(2, true);
-
-			//Left
-			plane.FromNormalPoint(cVector3f(-1,0,0),cVector3f(clipRect.x+clipRect.w,0,0));
-			pLowLevelGraphics->SetClipPlane(3, plane);
-			pLowLevelGraphics->SetClipPlaneActive(3, true);
-
-			if(kLogRender) Log("-- Clip region: %d Clipping: x %f y %f w %f h %f\n",apRegion,
-				apRegion->mRect.x,apRegion->mRect.y,
-				apRegion->mRect.w,apRegion->mRect.h);
-		}
-		else
-		{
-			if(kLogRender)Log("-- Clip region: %d No clipping!\n",apRegion);
-		}
-	}
-
 	void cGuiSet::AddWidget(iWidget *apWidget,iWidget *apParent)
 	{
 		mlstWidgets.push_front(apWidget);

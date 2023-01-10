@@ -50,7 +50,7 @@ namespace hpl
 
         // void Render(float afFrameTime, cFrustum* apFrustum, iTexture* apInputTexture, cRenderTarget* apRenderTarget);
 
-		void Draw(GraphicsContext& context, Image& inputTexture, RenderTarget& renderTarget);
+		bool Draw(GraphicsContext& context, Image& inputTexture, RenderTarget& renderTarget);
 
         /**
          * Highest prio is first!

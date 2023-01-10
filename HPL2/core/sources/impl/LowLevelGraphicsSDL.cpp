@@ -787,19 +787,13 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetClearColor(const cColor& aCol){
-		;
 
-		glClearColor(aCol.r, aCol.g, aCol.b, aCol.a);
 	}
 	void cLowLevelGraphicsSDL::SetClearDepth(float afDepth){
-		;
 
-		glClearDepth(afDepth);
 	}
 	void cLowLevelGraphicsSDL::SetClearStencil(int alVal){
-		;
 
-		glClearStencil(alVal);
 	}
 
 	//-----------------------------------------------------------------------
@@ -807,26 +801,6 @@ namespace hpl {
 	void cLowLevelGraphicsSDL::CopyFrameBufferToTexure(iTexture* apTex, const cVector2l &avPos,
 		const cVector2l &avSize, const cVector2l &avTexOffset)
 	{
-		;
-
-		if(apTex==NULL)return;
-
-		cVector2l vSize = avSize;
-		if(vSize.x <= 0) vSize.x = mvFrameBufferSize.x;
-		if(vSize.y <= 0) vSize.y = mvFrameBufferSize.y;
-
-		cVector2l vPos = mvFrameBufferPos + avPos;
-		vPos.y = (mvFrameBufferTotalSize.y - vSize.y)-vPos.y;
-
-		cVector2l vTexPos = avTexOffset;
-		vTexPos.y = (apTex->GetHeight() - vSize.y)-vTexPos.y;
-
-		//Log(" Copying current to texture Pos: %d:%d Size: %dx%d TextureOffset: %d:%d\n",
-		//	vPos.x, vPos.y, vSize.x, vSize.y, vTexPos.x, vTexPos.y);
-
-		SetTexture(0, apTex);
-		glCopyTexSubImage2D(GetGLTextureTargetEnum(apTex->GetType()),0,	vTexPos.x, vTexPos.y,
-							vPos.x, vPos.y, vSize.x, vSize.y);
 	}
 
 	//-----------------------------------------------------------------------
@@ -1779,46 +1753,18 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::FlushTriBatch(tVtxBatchFlag aTypeFlags, bool abAutoClear)
 	{
-		;
-
-		SetVtxBatchStates(aTypeFlags);
-		SetUpBatchArrays();
-
-		glDrawElements(GL_TRIANGLES,mlIndexCount,GL_UNSIGNED_INT, mpIndexArray);
-
-		if(abAutoClear){
-			mlIndexCount = 0;
-			mlVertexCount = 0;
-			for(int i=0;i<kMaxTextureUnits;i++)
-				mlTexCoordArrayCount[i]=0;
-		}
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::FlushQuadBatch(tVtxBatchFlag aTypeFlags, bool abAutoClear)
 	{
-		;
-
-		SetVtxBatchStates(aTypeFlags);
-		SetUpBatchArrays();
-
-		glDrawElements(GL_QUADS,mlIndexCount,GL_UNSIGNED_INT, mpIndexArray);
-
-		if(abAutoClear){
-			mlIndexCount = 0;
-			mlVertexCount = 0;
-			for(int i=0;i<kMaxTextureUnits;i++)
-				mlTexCoordArrayCount[i]=0;
-		}
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::ClearBatch()
 	{
-		mlIndexCount = 0;
-		mlVertexCount = 0;
 	}
 
 	//-----------------------------------------------------------------------
@@ -1839,65 +1785,12 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SetUpBatchArrays()
 	{
-		;
-
-		//Set the arrays
-		glVertexPointer(3,GL_FLOAT, sizeof(float)*mlBatchStride, mpVertexArray);
-		glColorPointer(4,GL_FLOAT,sizeof(float)*mlBatchStride, &mpVertexArray[3]);
-		glNormalPointer(GL_FLOAT,sizeof(float)*mlBatchStride, &mpVertexArray[10]);
-
-		glClientActiveTextureARB(GL_TEXTURE0_ARB);
-		glTexCoordPointer(3,GL_FLOAT,sizeof(float)*mlBatchStride, &mpVertexArray[7]);
-		glClientActiveTextureARB(GL_TEXTURE1_ARB);
-		glTexCoordPointer(3,GL_FLOAT,sizeof(float)*mlBatchStride, &mpVertexArray[7]);
-		glClientActiveTextureARB(GL_TEXTURE2_ARB);
-		glTexCoordPointer(3,GL_FLOAT,sizeof(float)*mlBatchStride, &mpVertexArray[7]);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetVtxBatchStates(tVtxBatchFlag aFlags)
 	{
-		;
-
-		if(aFlags & eVtxBatchFlag_Position)	glEnableClientState(GL_VERTEX_ARRAY );
-		else glDisableClientState(GL_VERTEX_ARRAY );
-
-		if(aFlags & eVtxBatchFlag_Color0) glEnableClientState(GL_COLOR_ARRAY );
-		else glDisableClientState(GL_COLOR_ARRAY );
-
-		if(aFlags & eVtxBatchFlag_Normal) glEnableClientState(GL_NORMAL_ARRAY );
-		else glDisableClientState(GL_NORMAL_ARRAY );
-
-
-		if(aFlags & eVtxBatchFlag_Texture0){
-			glClientActiveTextureARB(GL_TEXTURE0_ARB);
-			glEnableClientState(GL_TEXTURE_COORD_ARRAY );
-		}
-		else {
-			glClientActiveTextureARB(GL_TEXTURE0_ARB);
-			glDisableClientState(GL_TEXTURE_COORD_ARRAY );
-		}
-
-		if(aFlags & eVtxBatchFlag_Texture1){
-			glClientActiveTextureARB(GL_TEXTURE1_ARB);
-			glEnableClientState(GL_TEXTURE_COORD_ARRAY );
-		}
-		else {
-			glClientActiveTextureARB(GL_TEXTURE1_ARB);
-			glDisableClientState(GL_TEXTURE_COORD_ARRAY );
-		}
-
-		if(aFlags & eVtxBatchFlag_Texture2){
-			glClientActiveTextureARB(GL_TEXTURE2_ARB);
-			glEnableClientState(GL_TEXTURE_COORD_ARRAY );
-		}
-		else {
-			glClientActiveTextureARB(GL_TEXTURE2_ARB);
-			glDisableClientState(GL_TEXTURE_COORD_ARRAY );
-		}
-
-
 	}
 #ifdef WITH_CG
 	void cLowLevelGraphicsSDL::InitCG()
@@ -1917,14 +1810,6 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SetMatrixMode(eMatrix mType)
 	{
-		;
-
-		switch(mType)
-		{
-		case eMatrix_ModelView: glMatrixMode(GL_MODELVIEW);break;
-		case eMatrix_Projection: glMatrixMode(GL_PROJECTION); break;
-		case eMatrix_Texture: glMatrixMode(GL_TEXTURE); break;
-		}
 	}
 
 	//-----------------------------------------------------------------------

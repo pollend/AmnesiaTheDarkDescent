@@ -248,10 +248,6 @@ namespace hpl {
 			//Render Post effects
 			if(bPostEffects)
 			{
-				//TODO: If renderer is null get texture from frame buffer and if frame buffer is NULL, then copy to a texture.
-				//		Or this is solved?
-				iTexture *pInputTexture = pRenderer->GetPostEffectTexture();
-
 				START_TIMING(RenderPostEffects)
 				auto& viewport = pViewPort->GetRenderViewport();
 				RenderTarget emptyRenderTarget{};
@@ -260,6 +256,13 @@ namespace hpl {
 					viewport.GetRenderTarget() ? *viewport.GetRenderTarget() : emptyRenderTarget);
 
 				STOP_TIMING(RenderPostEffects)
+			} else {
+				auto& viewport = pViewPort->GetRenderViewport();
+				cVector2l vRenderTargetSize = viewport.GetSize();
+				RenderTarget emptyRenderTarget{};
+				cRect2l rect = cRect2l(0, 0, vRenderTargetSize.x, vRenderTargetSize.y);
+				context.CopyTextureToFrameBuffer(context.StartPass("Copy To Swap"),pRenderer->FetchOutputFromRenderer(), rect, viewport.GetRenderTarget() ? *viewport.GetRenderTarget() : emptyRenderTarget);
+				
 			}
 
 			//////////////////////////////////////////////

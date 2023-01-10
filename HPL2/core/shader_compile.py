@@ -26,10 +26,10 @@ shaders = [
     { "type" : ShaderType.FS, "inout" : "resource/vs_gui.io",                          "input": "resource/fs_gui.sc", "includes": ["resource"]},
     { "type" : ShaderType.VS, "inout" : "resource/vs_gui.io",                          "input": "resource/vs_gui.sc", "includes": ["resource"]},
 #  post effects
+    { "type" : ShaderType.FS, "inout" : "resource/vs_post_effect.io",                  "input": "resource/fs_posteffect_blur.sc", "includes": ["resource"]},
+    { "type" : ShaderType.FS, "inout" : "resource/vs_post_effect.io",                  "input": "resource/fs_posteffect_bloom_add.sc", "includes": ["resource"]},
     { "type" : ShaderType.FS, "inout" : "resource/vs_post_effect.io",                  "input": "resource/fs_posteffect_image_trail_frag.sc", "includes": ["resource"]},
     { "type" : ShaderType.FS, "inout" : "resource/vs_post_effect.io",                  "input": "resource/fs_posteffect_radial_blur_frag.sc", "includes": ["resource"]},
-    { "type" : ShaderType.FS, "inout" : "resource/vs_post_effect.io",                  "input": "resource/fs_posteffect_bloom_blur.sc", "includes": ["resource"]},
-    { "type" : ShaderType.FS, "inout" : "resource/vs_post_effect.io",                  "input": "resource/fs_posteffect_bloom_add.sc", "includes": ["resource"]},
     { "type" : ShaderType.FS, "inout" : "resource/vs_post_effect.io",                  "input": "resource/fs_posteffect_color_conv.sc", "includes": ["resource"]},
     { "type" : ShaderType.FS, "inout" : "resource/vs_post_effect.io",                  "input": "resource/fs_post_effect_copy.sc", "includes": ["resource"]},
 # other

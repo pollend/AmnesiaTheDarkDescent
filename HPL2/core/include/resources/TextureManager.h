@@ -43,18 +43,27 @@ namespace hpl {
 		cTextureManager(cGraphics* apGraphics,cResources *apResources);
 		~cTextureManager();
 
+		struct ImageOptions {
+			ImageOptions(): m_uClamp(false), m_vClamp(false) {
+			};
+
+			bool m_uClamp = false;
+			bool m_vClamp = false;
+		};
+		// static ImageOptions DefaultOptions = ImageOptions();
+
 
 		Image* Create1DImage(const tString& asName,bool abUseMipMaps, eTextureUsage aUsage=eTextureUsage_Normal,
-							unsigned int alTextureSizeLevel=0);
+							unsigned int alTextureSizeLevel=0, ImageOptions options = ImageOptions());
 
 		Image* Create2DImage(const tString& asName,bool abUseMipMaps,eTextureType aType= eTextureType_2D,
-							eTextureUsage aUsage=eTextureUsage_Normal,unsigned int alTextureSizeLevel=0);
+							eTextureUsage aUsage=eTextureUsage_Normal,unsigned int alTextureSizeLevel=0, ImageOptions options = ImageOptions());
 
 		Image* Create3DImage(const tString& asName,bool abUseMipMaps, eTextureUsage aUsage=eTextureUsage_Normal,
-							unsigned int alTextureSizeLevel=0);
+							unsigned int alTextureSizeLevel=0, ImageOptions options = ImageOptions());
 		
 		Image* CreateCubeMapImage(const tString& asName,bool abUseMipMaps, eTextureUsage aUsage=eTextureUsage_Normal,
-					unsigned int alTextureSizeLevel=0);
+					unsigned int alTextureSizeLevel=0, ImageOptions options = ImageOptions());
 
 
 		[[deprecated("Use Create1DImage instead")]]

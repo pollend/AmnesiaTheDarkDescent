@@ -356,6 +356,7 @@ namespace hpl {
 		bgfx::UniformHandle m_s_diffuseMap;
 		bgfx::UniformHandle m_s_normalMap;
 		bgfx::UniformHandle m_s_specularMap;
+		bgfx::UniformHandle m_s_attenuationLightMap;
 		
 		bgfx::UniformHandle m_u_lightColor;
 
