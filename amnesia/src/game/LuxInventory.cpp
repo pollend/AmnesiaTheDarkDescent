@@ -777,7 +777,6 @@ void cLuxInventory::OnEnterContainer(const tString& asOldContainer)
 	mpViewport->SetVisible(true);
 	mpGuiSet->SetActive(true);
 
-#ifdef USE_GAMEPAD
 	if(gpBase->mpInputHandler->IsGamepadPresent() == false)
 	{
 		mpGuiSet->SetDrawMouse(true);
@@ -788,11 +787,7 @@ void cLuxInventory::OnEnterContainer(const tString& asOldContainer)
 		mpGuiSet->SetDrawMouse(false);
 		mpGuiSet->SetMouseMovementEnabled(false);
 	}
-		mpGuiSet->SetDrawFocus(gpBase->mpInputHandler->IsGamepadPresent());
-#else
-	mpGuiSet->SetDrawMouse(true);
-
-#endif
+	mpGuiSet->SetDrawFocus(gpBase->mpInputHandler->IsGamepadPresent());
 
 
 	mpGuiSet->ResetMouseOver();
@@ -831,12 +826,10 @@ void cLuxInventory::OnEnterContainer(const tString& asOldContainer)
 		mpLastCurrentWidget = mpHealthWidget;
 		SetCurrentWidget(mpLastCurrentWidget);
 	}
-#if USE_GAMEPAD
 	if(mpLastCurrentWidget && gpBase->mpInputHandler->IsGamepadPresent())
 	{
 		mpLastCurrentWidget->ProcessMessage(eGuiMessage_GetUINavFocus, cGuiMessageData());
 	}
-#endif
 }
 
 void cLuxInventory::OnLeaveContainer(const tString& asNewContainer)

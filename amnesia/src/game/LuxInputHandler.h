@@ -122,6 +122,8 @@ public:
 
 	void AppDeviceWasPlugged();
 	void AppDeviceWasRemoved();
+#else
+	bool IsGamepadPresent() { return false; }
 #endif
 
 private:

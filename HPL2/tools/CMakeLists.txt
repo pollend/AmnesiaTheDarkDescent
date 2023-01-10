@@ -56,10 +56,10 @@ AddToolTarget(ModelViewer
 
 ### ParticleViewer
 
-#AddToolTarget(ParticleViewer
-#   particleview/ParticleView.cpp
-#   ${common_sources}
-#)
+AddToolTarget(ParticleViewer
+   particleview/ParticleView.cpp
+   ${common_sources}
+)
 
 ##  Mesh Converter
 

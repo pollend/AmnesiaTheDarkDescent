@@ -94,8 +94,8 @@ static cLuxAction gvLuxActions[] =
 	cLuxAction("LeanRight",eLuxAction_LeanRight,true, eLuxActionCategory_Movement),
 	cLuxAction("LeanLeft",eLuxAction_LeanLeft,	true, eLuxActionCategory_Movement),
 
-#ifdef USE_GAMEPAD
 	cLuxAction("Lean",eLuxAction_Lean,	true, eLuxActionCategory_Movement),
+#ifdef USE_GAMEPAD
 	cLuxAction("ZoomOut", eLuxAction_ZoomOut, false, eLuxActionCategory_Action),
 	cLuxAction("ZoomIn", eLuxAction_ZoomIn, false, eLuxActionCategory_Action),
 #endif

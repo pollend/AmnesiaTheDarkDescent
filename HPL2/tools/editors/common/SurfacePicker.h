@@ -48,7 +48,7 @@ public:
 	const std::vector<iEntityWrapper*>& GetFilteredEntities() { return mvFilteredEntities; }
 	const tSubMeshEntityVec& GetFilteredSubMeshes() { return mvFilteredSubMeshes; }
 
-	bool SetAverageNormal(bool abX) { mbAverageNormal=abX; }
+	void SetAverageNormal(bool abX) { mbAverageNormal=abX; }
 	void SetAverageVolumeSize(const cVector3f&);
 	void SetAverageBackfacingAngleThreshold(float);
 

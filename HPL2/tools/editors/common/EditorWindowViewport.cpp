@@ -447,7 +447,7 @@ bool cEditorWindowViewport::MenuView_Rendering(iWidget *apWidget, const cGuiMess
 	// Set render mode
 	cWidgetMenuItem* pItem = (cWidgetMenuItem*) apWidget;
 
-	for(int i=0;i<eRenderer_LastEnum;++i)
+	for(int i=0;i<2;++i)
 	{
 		bool bSelected = (pItem==mpMainMenuRenderModes[i]);
 

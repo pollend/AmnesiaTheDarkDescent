@@ -1130,10 +1130,8 @@ void cLuxMainMenu_KeyConfig::OnSetActive(bool abX)
 	else
 	{
 		//mpGuiSet->SetDrawMouse(true);
-#ifdef USE_GAMEPAD
 		if(gpBase->mpInputHandler->IsGamepadPresent() == false)
 			mpGuiSet->SetDrawMouse(true);
-#endif
 	}
 
 	mpGuiSet->SetAttentionWidget(abX? mpWindow : NULL);
