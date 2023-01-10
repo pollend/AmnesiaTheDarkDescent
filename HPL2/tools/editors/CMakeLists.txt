@@ -114,16 +114,16 @@ file(GLOB_RECURSE leveleditor_sources
     LevelEditorWorld.cpp
     )
 
-#GenerateBuildID(LEVELEDITOR_BUILDID
-#    LevelEditor
-#    ${CMAKE_CURRENT_SOURCE_DIR}/leveleditor
-#    ${CMAKE_CURRENT_SOURCE_DIR}/leveleditor
-#)
+GenerateBuildID(LEVELEDITOR_BUILDID
+    LevelEditor
+    ${CMAKE_CURRENT_SOURCE_DIR}/leveleditor
+    ${CMAKE_CURRENT_SOURCE_DIR}/leveleditor
+)
 
-#AddToolTarget(LevelEditor
-#    ${leveleditor_sources}
-#    ${LEVELEDITOR_BUILDID}
-#)
+AddToolTarget(LevelEditor
+    ${leveleditor_sources}
+    ${LEVELEDITOR_BUILDID}
+)
 ### ModelEditor
 
 file(GLOB_RECURSE modeleditor_sources
