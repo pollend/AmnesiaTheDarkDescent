@@ -62,7 +62,8 @@ namespace hpl
 
             union {
                 struct {
-                    StencilTest m_stencilTest;
+                    StencilTest m_backStencilTest;
+                    StencilTest m_frontStencilTest;
                     Write m_write: 5;
                     DepthTest m_depthTest: 3;
                     Cull m_cull: 2;

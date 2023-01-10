@@ -304,11 +304,11 @@ namespace hpl {
 		std::array<RenderTarget, 2> m_gBuffer_linearDepth;
 		std::array<RenderTarget, 2> m_output_target; // used for rendering to the screen 
 		
-		std::array<std::shared_ptr<Image>, 2> m_color;
-		std::array<std::shared_ptr<Image>, 2> m_normal;
-		std::array<std::shared_ptr<Image>, 2> m_linearDepth;
-		std::array<std::shared_ptr<Image>, 2> m_specular;
-		std::array<std::shared_ptr<Image>, 2> m_depthStencil;
+		std::array<std::shared_ptr<Image>, 2> m_gBufferColor;
+		std::array<std::shared_ptr<Image>, 2> m_gBufferNormalImage;
+		std::array<std::shared_ptr<Image>, 2> m_gBufferPositionImage;
+		std::array<std::shared_ptr<Image>, 2> m_gBufferSpecular;
+		std::array<std::shared_ptr<Image>, 2> m_gBufferDepthStencil;
 		std::array<std::shared_ptr<Image>, 2> m_outputImage;
 
 		std::array<absl::InlinedVector<cShadowMapData, 10>, eShadowMapResolution_LastEnum> m_shadowMapData;
@@ -349,10 +349,9 @@ namespace hpl {
 		bgfx::UniformHandle m_u_param;
 		bgfx::UniformHandle m_u_boxInvViewModelRotation;
 		bgfx::UniformHandle m_u_lightPos;
-		bgfx::UniformHandle m_u_lightRadius;
-		
 		
 		bgfx::UniformHandle m_s_depthMap;
+		bgfx::UniformHandle m_s_positionMap;
 		bgfx::UniformHandle m_s_deferredColorMap; // TODO: combined with diffuseMap
 		bgfx::UniformHandle m_s_diffuseMap;
 		bgfx::UniformHandle m_s_normalMap;
@@ -378,6 +377,7 @@ namespace hpl {
 		bgfx::ProgramHandle m_edgeSmooth_UnpackDepthProgram;
 		bgfx::ProgramHandle m_lightBoxProgram;
 		bgfx::ProgramHandle m_pointLightProgram;
+		bgfx::ProgramHandle m_spotLightProgram;
 
 		iGpuProgram *mpEdgeSmooth_RenderProgram;
 

@@ -35,6 +35,104 @@ namespace hpl
     };
     bgfx::VertexLayout PositionTexCoord0::_layout;
 
+    uint64_t convertBGFXStencil(const StencilTest& stencilTest) {
+        if(!IsValidStencilTest(stencilTest)) {
+            return BGFX_STENCIL_NONE;
+        }
+        return BGFX_STENCIL_FUNC_REF(((uint32_t)stencilTest.m_ref)) | 
+            BGFX_STENCIL_FUNC_RMASK(((uint32_t)stencilTest.m_mask)) |
+            ([&]() -> uint64_t {
+                switch(stencilTest.m_sfail) {
+                    case StencilFail::Zero:
+                        return BGFX_STENCIL_OP_FAIL_S_ZERO;
+                    case StencilFail::Keep:
+                        return BGFX_STENCIL_OP_FAIL_S_KEEP;
+                    case StencilFail::Replace:
+                        return BGFX_STENCIL_OP_FAIL_S_REPLACE;
+                    case StencilFail::IncrSat:
+                        return BGFX_STENCIL_OP_FAIL_S_INCRSAT;
+                    case StencilFail::DecrSat:
+                        return BGFX_STENCIL_OP_FAIL_S_DECRSAT;
+                    case StencilFail::Invert:
+                        return BGFX_STENCIL_OP_FAIL_S_INVERT;
+                    case StencilFail::Incr:
+                        return BGFX_STENCIL_OP_FAIL_S_INCR;
+                    case StencilFail::Decr:
+                        return BGFX_STENCIL_OP_FAIL_S_DECR;
+                    default:
+                        break;
+                }
+                return 0;
+            })() |
+            ([&]() -> uint64_t {
+                switch(stencilTest.m_dpfail) {
+                    case StencilDepthFail::Zero:
+                        return BGFX_STENCIL_OP_FAIL_Z_ZERO;
+                    case StencilDepthFail::Keep:
+                        return BGFX_STENCIL_OP_FAIL_Z_KEEP;
+                    case StencilDepthFail::Replace:
+                        return BGFX_STENCIL_OP_FAIL_Z_REPLACE;
+                    case StencilDepthFail::IncrSat:
+                        return BGFX_STENCIL_OP_FAIL_Z_INCRSAT;
+                    case StencilDepthFail::DecrSat:
+                        return BGFX_STENCIL_OP_FAIL_Z_DECRSAT;
+                    case StencilDepthFail::Invert:
+                        return BGFX_STENCIL_OP_FAIL_Z_INVERT;
+                    case StencilDepthFail::Incr:
+                        return BGFX_STENCIL_OP_FAIL_Z_INCR;
+                    case StencilDepthFail::Decr:
+                        return BGFX_STENCIL_OP_FAIL_Z_DECR;
+                    default:
+                        break;
+                }
+                return 0;
+            })() |
+            ([&]() -> uint64_t {
+                switch(stencilTest.m_dppass) {
+                    case StencilDepthPass::Zero:
+                        return BGFX_STENCIL_OP_PASS_Z_ZERO;
+                    case StencilDepthPass::Keep:
+                        return BGFX_STENCIL_OP_PASS_Z_KEEP;
+                    case StencilDepthPass::Replace:
+                        return BGFX_STENCIL_OP_PASS_Z_REPLACE;
+                    case StencilDepthPass::IncrSat:
+                        return BGFX_STENCIL_OP_PASS_Z_INCRSAT;
+                    case StencilDepthPass::DecrSat: 
+                        return BGFX_STENCIL_OP_PASS_Z_DECRSAT;
+                    case StencilDepthPass::Invert:
+                        return BGFX_STENCIL_OP_PASS_Z_INVERT;
+                    case StencilDepthPass::Incr:
+                        return BGFX_STENCIL_OP_PASS_Z_INCR;
+                    case StencilDepthPass::Decr:
+                        return BGFX_STENCIL_OP_PASS_Z_DECR;
+                    default:
+                        break;
+                }
+                return 0;
+            })() |
+            ([&]() -> uint64_t {
+                switch(stencilTest.m_func) {
+                    case StencilFunction::Less:
+                        return BGFX_STENCIL_TEST_LESS;
+                    case StencilFunction::LessEqual:
+                        return BGFX_STENCIL_TEST_LEQUAL;
+                    case StencilFunction::Equal:
+                        return BGFX_STENCIL_TEST_EQUAL;
+                    case StencilFunction::GreaterEqual:
+                        return BGFX_STENCIL_TEST_GEQUAL;
+                    case StencilFunction::Greater:
+                        return BGFX_STENCIL_TEST_GREATER;
+                    case StencilFunction::NotEqual:
+                        return BGFX_STENCIL_TEST_NOTEQUAL;
+                    case StencilFunction::Always:
+                        return BGFX_STENCIL_TEST_ALWAYS;
+                    default:
+                        break;
+                }
+                return 0;
+            })();
+    }
+
     uint64_t convertToState(const GraphicsContext::DrawRequest& request) {
         auto& layout = request.m_layout;
         auto& program = request.m_program;
@@ -44,124 +142,6 @@ namespace hpl
             (((program.m_configuration.m_write & Write::G) > 0) ? BGFX_STATE_WRITE_G : 0) |
             (((program.m_configuration.m_write & Write::B) > 0) ? BGFX_STATE_WRITE_B : 0) |
             (((program.m_configuration.m_write & Write::A) > 0) ? BGFX_STATE_WRITE_A : 0) |
-            ([&]() {
-                uint64_t result = 0;
-                auto& stencilTest = program.m_configuration.m_stencilTest;
-                switch(stencilTest.m_sfail) {
-                    case StencilFail::Zero:
-                        result |= BGFX_STENCIL_OP_FAIL_S_ZERO;
-                        break;
-                    case StencilFail::Keep:
-                        result |= BGFX_STENCIL_OP_FAIL_S_KEEP;
-                        break;
-                    case StencilFail::Replace:
-                        result |= BGFX_STENCIL_OP_FAIL_S_REPLACE;
-                        break;
-                    case StencilFail::IncrSat:
-                        result |= BGFX_STENCIL_OP_FAIL_S_INCRSAT;
-                        break;
-                    case StencilFail::DecrSat:
-                        result |= BGFX_STENCIL_OP_FAIL_S_DECRSAT;
-                        break;
-                    case StencilFail::Invert:
-                        result |= BGFX_STENCIL_OP_FAIL_S_INVERT;
-                        break;
-                    case StencilFail::Incr:
-                        result |= BGFX_STENCIL_OP_FAIL_S_INCR;
-                        break;
-                    case StencilFail::Decr:
-                        result |= BGFX_STENCIL_OP_FAIL_S_DECR;
-                        break;
-                    default:
-                    case StencilFail::None:
-                        break;
-                }
-                switch(stencilTest.m_dpfail) {
-                    case StencilDepthFail::Zero:
-                        result |= BGFX_STENCIL_OP_FAIL_Z_ZERO;
-                        break;
-                    case StencilDepthFail::Keep:
-                        result |= BGFX_STENCIL_OP_FAIL_Z_KEEP;
-                        break;
-                    case StencilDepthFail::Replace:
-                        result |= BGFX_STENCIL_OP_FAIL_Z_REPLACE;
-                        break;
-                    case StencilDepthFail::IncrSat:
-                        result |= BGFX_STENCIL_OP_FAIL_Z_INCRSAT;
-                        break;
-                    case StencilDepthFail::DecrSat:
-                        result |= BGFX_STENCIL_OP_FAIL_Z_DECRSAT;
-                        break;
-                    case StencilDepthFail::Invert:
-                        result |= BGFX_STENCIL_OP_FAIL_Z_INVERT;
-                        break;
-                    case StencilDepthFail::Incr:
-                        result |= BGFX_STENCIL_OP_FAIL_Z_INCR;
-                        break;
-                    case StencilDepthFail::Decr:
-                        result |= BGFX_STENCIL_OP_FAIL_Z_DECR;
-                        break;
-                    default:
-                    case StencilDepthFail::None:
-                        break;
-                }
-                switch(stencilTest.m_dppass) {
-                    case StencilDepthPass::Zero:
-                        result |= BGFX_STENCIL_OP_PASS_Z_ZERO;
-                        break;
-                    case StencilDepthPass::Keep:
-                        result |= BGFX_STENCIL_OP_PASS_Z_KEEP;
-                        break;
-                    case StencilDepthPass::Replace:
-                        result |= BGFX_STENCIL_OP_PASS_Z_REPLACE;
-                        break;
-                    case StencilDepthPass::IncrSat:
-                        result |= BGFX_STENCIL_OP_PASS_Z_INCRSAT;
-                        break;
-                    case StencilDepthPass::DecrSat: 
-                        result |= BGFX_STENCIL_OP_PASS_Z_DECRSAT;
-                        break;
-                    case StencilDepthPass::Invert:
-                        result |= BGFX_STENCIL_OP_PASS_Z_INVERT;
-                        break;
-                    case StencilDepthPass::Incr:
-                        result |= BGFX_STENCIL_OP_PASS_Z_INCR;
-                        break;
-                    case StencilDepthPass::Decr:
-                        result |= BGFX_STENCIL_OP_PASS_Z_DECR;
-                        break;
-                    default:
-                    case StencilDepthPass::None:
-                        break;
-                }
-
-                switch(stencilTest.m_func) {
-                    case StencilFunction::Less:
-                        result |= BGFX_STENCIL_TEST_LESS;
-                        break;
-                    case StencilFunction::LessEqual:
-                        result |= BGFX_STENCIL_TEST_LEQUAL;
-                        break;
-                    case StencilFunction::Equal:
-                        result |= BGFX_STENCIL_TEST_EQUAL;
-                        break;
-                    case StencilFunction::GreaterEqual:
-                        result |= BGFX_STENCIL_TEST_GEQUAL;
-                        break;
-                    case StencilFunction::Greater:
-                        result |= BGFX_STENCIL_TEST_GREATER;
-                        break;
-                    case StencilFunction::NotEqual:
-                        result |= BGFX_STENCIL_TEST_NOTEQUAL;
-                        break;
-                    case StencilFunction::Always:
-                        result |= BGFX_STENCIL_TEST_ALWAYS;
-                        break;
-                    default:
-                        break;
-                }
-                return result | BGFX_STENCIL_FUNC_REF(stencilTest.m_ref) | BGFX_STENCIL_FUNC_RMASK(stencilTest.m_mask);
-            })() |
             ([&]() -> uint64_t {
                 switch(program.m_configuration.m_depthTest) {
                     case DepthTest::Always:
@@ -402,8 +382,6 @@ namespace hpl
         bgfx::touch(view);
     }
 
-
-
     void GraphicsContext::Submit(bgfx::ViewId view, const DrawRequest& request) {
         auto& layout = request.m_layout;
         auto& program = request.m_program;
@@ -418,6 +396,10 @@ namespace hpl
             bgfx::setViewFrameBuffer(view, request.m_target.GetHandle());
         } else {
             bgfx::setViewFrameBuffer(view, BGFX_INVALID_HANDLE);
+        }
+        if(IsValidStencilTest(program.m_configuration.m_backStencilTest) || IsValidStencilTest(program.m_configuration.m_frontStencilTest)) {
+            bgfx::setStencil(convertBGFXStencil(program.m_configuration.m_frontStencilTest), 
+                convertBGFXStencil(program.m_configuration.m_backStencilTest));
         }
         bgfx::setViewTransform(view, program.m_view.v, program.m_projection.v);
         bgfx::setTransform(program.m_modelTransform.v);
@@ -439,6 +421,11 @@ namespace hpl
             bgfx::setViewFrameBuffer(view, request.m_target.GetHandle());
         } else {
             bgfx::setViewFrameBuffer(view, BGFX_INVALID_HANDLE);
+        }
+        if(IsValidStencilTest(program.m_configuration.m_backStencilTest) || 
+            IsValidStencilTest(program.m_configuration.m_frontStencilTest)) {
+            bgfx::setStencil(convertBGFXStencil(program.m_configuration.m_frontStencilTest), 
+                convertBGFXStencil(program.m_configuration.m_backStencilTest));
         }
         bgfx::setViewTransform(view, program.m_view.v, program.m_projection.v);
         bgfx::setTransform(program.m_modelTransform.v);

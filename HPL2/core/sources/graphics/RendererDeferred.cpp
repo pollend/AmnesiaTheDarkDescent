@@ -214,7 +214,15 @@ namespace hpl {
 		// initialize frame buffers;
 		{
 			auto colorImage = [&] {
-				auto desc = ImageDescriptor::CreateTexture2D(mvScreenSize.x, mvScreenSize.y, false, bgfx::TextureFormat::Enum::RGBA32F);
+				auto desc = ImageDescriptor::CreateTexture2D(mvScreenSize.x, mvScreenSize.y, false, bgfx::TextureFormat::Enum::RGBA8);
+				desc.m_configuration.m_rt = RTType::RT_Write;
+				auto image = std::make_shared<Image>();
+				image->Initialize(desc);
+				return image;
+			};
+
+			auto positionImage = [&] {
+				auto desc = ImageDescriptor::CreateTexture2D(mvScreenSize.x, mvScreenSize.y, false, bgfx::TextureFormat::Enum::RGBA16F);
 				desc.m_configuration.m_rt = RTType::RT_Write;
 				auto image = std::make_shared<Image>();
 				image->Initialize(desc);
@@ -229,39 +237,39 @@ namespace hpl {
 				return image;
 			};
 
-			m_color = 
+			m_gBufferColor = 
 				{ colorImage(),colorImage()};
-			m_normal = 
-				{ colorImage(), colorImage()};
-			m_linearDepth = 
-				{ colorImage(),colorImage()};
-			m_specular = 
+			m_gBufferNormalImage = 
+				{ positionImage(), positionImage()};
+			m_gBufferPositionImage = 
+				{ positionImage(),positionImage()};
+			m_gBufferSpecular = 
 				{ colorImage(),colorImage()};
 			m_outputImage = {
 				colorImage(), colorImage()
 			};
 
-			m_depthStencil = { depthImage(),depthImage()};
+			m_gBufferDepthStencil = { depthImage(),depthImage()};
 			{
-				std::array<std::shared_ptr<Image>, 5> images = {m_color[0], m_normal[0], m_linearDepth[0], m_specular[0], m_depthStencil[0]};
-				std::array<std::shared_ptr<Image>, 5> reflectionImages = {m_color[1], m_normal[1], m_linearDepth[1], m_specular[1], m_depthStencil[1]};
+				std::array<std::shared_ptr<Image>, 5> images = {m_gBufferColor[0], m_gBufferNormalImage[0], m_gBufferPositionImage[0], m_gBufferSpecular[0], m_gBufferDepthStencil[0]};
+				std::array<std::shared_ptr<Image>, 5> reflectionImages = {m_gBufferColor[1], m_gBufferNormalImage[1], m_gBufferPositionImage[1], m_gBufferSpecular[1], m_gBufferDepthStencil[1]};
 				m_gBuffer_full = {RenderTarget(absl::MakeSpan(images)), RenderTarget(absl::MakeSpan(reflectionImages)) };
 			}
 			{
-				std::array<std::shared_ptr<Image>, 2> images = {m_color[0], m_depthStencil[0]};
-				std::array<std::shared_ptr<Image>, 2> reflectionImages = {m_color[1], m_depthStencil[1]};
+				std::array<std::shared_ptr<Image>, 2> images = {m_gBufferColor[0], m_gBufferDepthStencil[0]};
+				std::array<std::shared_ptr<Image>, 2> reflectionImages = {m_gBufferColor[1], m_gBufferDepthStencil[1]};
 				m_gBuffer_colorAndDepth = {RenderTarget(absl::MakeSpan(images)), RenderTarget(absl::MakeSpan(reflectionImages))};
 			}
 			{
-				std::array<std::shared_ptr<Image>, 2> images = {m_outputImage[0], m_depthStencil[0] };
-				std::array<std::shared_ptr<Image>, 2> reflectionImages = {m_outputImage[1], m_depthStencil[0]};
+				std::array<std::shared_ptr<Image>, 2> images = {m_outputImage[0], m_gBufferDepthStencil[0] };
+				std::array<std::shared_ptr<Image>, 2> reflectionImages = {m_outputImage[1], m_gBufferDepthStencil[0]};
 				m_output_target = {RenderTarget(absl::MakeSpan(images)), RenderTarget(absl::MakeSpan(reflectionImages))};
 			}
 
-			m_gBuffer_color = {RenderTarget(m_color[0]), RenderTarget(m_color[1])};
-			m_gBuffer_depth = {RenderTarget(m_depthStencil[0]), RenderTarget(m_depthStencil[1])};
-			m_gBuffer_normals = {RenderTarget(m_normal[0]), RenderTarget(m_normal[1])};
-			m_gBuffer_linearDepth = {RenderTarget(m_linearDepth[0]), RenderTarget(m_linearDepth[1])};
+			m_gBuffer_color = {RenderTarget(m_gBufferColor[0]), RenderTarget(m_gBufferColor[1])};
+			m_gBuffer_depth = {RenderTarget(m_gBufferDepthStencil[0]), RenderTarget(m_gBufferDepthStencil[1])};
+			m_gBuffer_normals = {RenderTarget(m_gBufferNormalImage[0]), RenderTarget(m_gBufferNormalImage[1])};
+			m_gBuffer_linearDepth = {RenderTarget(m_gBufferPositionImage[0]), RenderTarget(m_gBufferPositionImage[1])};
 
 		}
 
@@ -385,12 +393,13 @@ namespace hpl {
 		}
 		m_deferredFog = hpl::loadProgram("vs_deferred_fog", "fs_deferred_fog");
 		m_lightBoxProgram = hpl::loadProgram("vs_light_box", "fs_light_box");
-		m_pointLightProgram = hpl::loadProgram("vs_deferred_light", "fs_deferred_light_point");
-		
+		m_pointLightProgram = hpl::loadProgram("vs_deferred_light", "fs_deferred_pointlight");
+		m_spotLightProgram = hpl::loadProgram("vs_deferred_light", "fs_deferred_spotlight");
 		// uniforms
 		m_u_param = bgfx::createUniform("u_param", bgfx::UniformType::Vec4);
 		m_u_boxInvViewModelRotation  = bgfx::createUniform("u_boxInvViewModelRotation", bgfx::UniformType::Mat4);
 		m_u_lightColor = bgfx::createUniform("u_lightColor", bgfx::UniformType::Vec4);
+		m_u_lightPos = bgfx::createUniform("u_lightPos", bgfx::UniformType::Vec4);
 
 		// samplers
 		m_s_depthMap = bgfx::createUniform("s_depthMap", bgfx::UniformType::Sampler);
@@ -398,6 +407,7 @@ namespace hpl {
 		m_s_diffuseMap = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
 		m_s_normalMap = bgfx::createUniform("s_normalMap", bgfx::UniformType::Sampler);
 		m_s_specularMap = bgfx::createUniform("s_spcularMap", bgfx::UniformType::Sampler);
+		m_s_positionMap = bgfx::createUniform("s_positionMap", bgfx::UniformType::Sampler);
 		
 
 		// ////////////////////////////////////
@@ -780,7 +790,7 @@ namespace hpl {
 
 	void cRendererDeferred::RenderFullScreenFogPass(GraphicsContext& context, RenderTarget& rt) {
 		const auto& view = context.StartPass("FullScreenFog");
-		auto& image = resolveRenderImage(m_linearDepth);
+		auto& image = resolveRenderImage(m_gBufferPositionImage);
 		
 		DeferredFogUniforms uniforms = {0};
 		
@@ -846,8 +856,8 @@ namespace hpl {
 
 		GraphicsContext::ShaderProgram shaderProgram;
 		shaderProgram.m_handle = m_edgeSmooth_UnpackDepthProgram;
-		shaderProgram.m_textures.push_back({BGFX_INVALID_HANDLE,resolveRenderImage(m_linearDepth)->GetHandle(), 0});
-		shaderProgram.m_textures.push_back({BGFX_INVALID_HANDLE,resolveRenderImage(m_normal)->GetHandle(), 0});
+		shaderProgram.m_textures.push_back({BGFX_INVALID_HANDLE,resolveRenderImage(m_gBufferPositionImage)->GetHandle(), 0});
+		shaderProgram.m_textures.push_back({BGFX_INVALID_HANDLE,resolveRenderImage(m_gBufferNormalImage)->GetHandle(), 0});
 
 		GraphicsContext::LayoutStream layout;
 		context.Quad(layout, vQuadPos, cVector2f(1,1), cVector2f(0,0), cVector2f(1,1));
@@ -1200,7 +1210,7 @@ namespace hpl {
 				const auto& color = light->mpLight->GetDiffuseColor();
 				float lightColor[4] = {color.r, color.g, color.b, color.a};
 				shaderProgram.m_handle = m_lightBoxProgram;
-				shaderProgram.m_textures.push_back({m_s_deferredColorMap, resolveRenderImage(m_color)->GetHandle(), 0});
+				shaderProgram.m_textures.push_back({m_s_deferredColorMap, resolveRenderImage(m_gBufferColor)->GetHandle(), 0});
 				shaderProgram.m_uniforms.push_back({m_u_lightColor, lightColor});
 
 				shaderProgram.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
@@ -1244,7 +1254,7 @@ namespace hpl {
 					shaderProgram.m_handle = m_nullShader;
 					shaderProgram.m_configuration.m_cull = Cull::CounterClockwise;
 					shaderProgram.m_configuration.m_depthTest = DepthTest::GreaterEqual;
-					shaderProgram.m_configuration.m_stencilTest = CreateStencilTest(
+					shaderProgram.m_configuration.m_frontStencilTest = CreateStencilTest(
 						StencilFunction::Always,
 						StencilFail::Keep, 
 						StencilDepthFail::Replace, 
@@ -1267,7 +1277,7 @@ namespace hpl {
 					shaderProgram.m_configuration.m_cull = Cull::Clockwise;
 					shaderProgram.m_configuration.m_depthTest = DepthTest::GreaterEqual;
 					shaderProgram.m_configuration.m_write = Write::RGBA;
-					shaderProgram.m_configuration.m_stencilTest = CreateStencilTest(
+					shaderProgram.m_configuration.m_frontStencilTest = CreateStencilTest(
 						StencilFunction::Equal,
 						StencilFail::Keep, 
 						StencilDepthFail::Keep, 
@@ -1305,8 +1315,7 @@ namespace hpl {
 				for(size_t i = 0; i < lights.size(); ++i) {
 					GraphicsContext::ShaderProgram shaderProgram;
 					GraphicsContext::LayoutStream layoutStream;
-					mpShapeBox->GetLayoutStream(layoutStream);
-
+					
 					GetLightShape(lights[i]->mpLight, eDeferredShapeQuality_Medium)->GetLayoutStream(layoutStream);
 
 					shaderProgram.m_handle = m_nullShader;
@@ -1317,8 +1326,7 @@ namespace hpl {
 					shaderProgram.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
 					shaderProgram.m_modelTransform = cMath::MatrixMul(lights[i]->mpLight->GetWorldMatrix(), lights[i]->GetLightMtx()).GetTranspose();
 					
-					
-					shaderProgram.m_configuration.m_stencilTest = CreateStencilTest(
+					shaderProgram.m_configuration.m_frontStencilTest = CreateStencilTest(
 						StencilFunction::Always,
 						StencilFail::Keep, 
 						StencilDepthFail::Replace, 
@@ -1339,7 +1347,7 @@ namespace hpl {
 					SetupLightProgram(shaderProgram, lights[i]);
 					shaderProgram.m_configuration.m_cull = Cull::Clockwise;
 					shaderProgram.m_configuration.m_write = Write::RGBA;
-					shaderProgram.m_configuration.m_stencilTest = CreateStencilTest(
+					shaderProgram.m_configuration.m_frontStencilTest = CreateStencilTest(
 						StencilFunction::Equal,
 						StencilFail::Keep, 
 						StencilDepthFail::Keep, 
@@ -1358,7 +1366,7 @@ namespace hpl {
 					GraphicsContext::DrawRequest drawRequest {rt, layoutStream, shaderProgram};
 					drawRequest.m_width = mvScreenSize.x;
 					drawRequest.m_height = mvScreenSize.y;
-					context.Submit(pass, drawRequest);
+					// context.Submit(pass, drawRequest);
 				}
 				clearStencilBuffer(pass);
 			}
@@ -1418,10 +1426,37 @@ namespace hpl {
 				shaderProgram.m_uniforms.push_back({m_u_lightColor, lightColor});
 				shaderProgram.m_uniforms.push_back({m_u_param, &param});
 
-				shaderProgram.m_textures.push_back({m_s_normalMap, resolveRenderImage(m_normal)->GetHandle(), 1});
-				shaderProgram.m_textures.push_back({m_s_diffuseMap, resolveRenderImage(m_color)->GetHandle(), 0});
-				shaderProgram.m_textures.push_back({m_s_normalMap, resolveRenderImage(m_normal)->GetHandle(), 1});
-				shaderProgram.m_textures.push_back({m_s_depthMap, resolveRenderImage(m_depthStencil)->GetHandle(), 2});
+				shaderProgram.m_textures.push_back({m_s_normalMap, resolveRenderImage(m_gBufferNormalImage)->GetHandle(), 1});
+				shaderProgram.m_textures.push_back({m_s_diffuseMap, resolveRenderImage(m_gBufferColor)->GetHandle(), 0});
+				shaderProgram.m_textures.push_back({m_s_depthMap, resolveRenderImage(m_gBufferDepthStencil)->GetHandle(), 2});
+				break;
+			}
+			case eLightType_Spot: {
+				struct {
+					float hasGobo;
+					float hasSpecular;
+					float farPlaneDepth;
+					float lightRadius;
+				} param = {
+					0.0,
+					0.0,
+					-mpCurrentFrustum->GetFarPlane(),
+					apLightData->mpLight->GetRadius()
+
+				};
+				const auto modelViewMtx = cMath::MatrixMul(mpCurrentFrustum->GetViewMatrix(), apLightData->mpLight->GetWorldMatrix());
+				const auto color = apLightData->mpLight->GetDiffuseColor();
+				cVector3f lightViewPos = cMath::MatrixMul(modelViewMtx, apLightData->GetLightMtx()).GetTranslation();
+				float lightPosition[4] = {lightViewPos.x, lightViewPos.y, lightViewPos.z, 1.0f};
+				float lightColor[4] = {color.r, color.g, color.b, color.a};
+				shaderProgram.m_handle = m_spotLightProgram;
+				shaderProgram.m_uniforms.push_back({m_u_lightPos, lightPosition});
+				shaderProgram.m_uniforms.push_back({m_u_lightColor, lightColor});
+				shaderProgram.m_uniforms.push_back({m_u_param, &param});
+
+				shaderProgram.m_textures.push_back({m_s_normalMap, resolveRenderImage(m_gBufferNormalImage)->GetHandle(), 1});
+				shaderProgram.m_textures.push_back({m_s_diffuseMap, resolveRenderImage(m_gBufferColor)->GetHandle(), 0});
+				shaderProgram.m_textures.push_back({m_s_positionMap, resolveRenderImage(m_gBufferPositionImage)->GetHandle(), 2});
 				break;
 			}
 		}

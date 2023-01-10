@@ -35,7 +35,6 @@ namespace hpl
 
 
     enum class StencilFail : uint8_t {
-        None,
         Zero,
         Keep,
         Replace,
@@ -47,7 +46,6 @@ namespace hpl
     };
 
     enum class StencilDepthFail : uint8_t {
-        None,
         Zero,
         Keep,
         Replace,
@@ -59,7 +57,6 @@ namespace hpl
     };
 
     enum class StencilDepthPass : uint8_t {
-        None,
         Zero,
         Keep,
         Replace,
@@ -137,7 +134,9 @@ namespace hpl
         StencilDepthPass m_dppass: 4;
         uint8_t m_ref;
         uint8_t m_mask;
+
     };
+    bool IsValidStencilTest(const StencilTest& test);
     StencilTest CreateStencilTest(StencilFunction func, StencilFail sfail, StencilDepthFail dpfail, StencilDepthPass dppass, uint8_t ref, uint8_t mask);
 
     Write operator|(Write lhs, Write rhs);
