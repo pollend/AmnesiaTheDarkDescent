@@ -13,7 +13,6 @@ uniform vec4 u_param[2];
 
 uniform vec4 u_lightPos;
 uniform vec4 u_lightColor;
-uniform mat4 u_spotViewProj;
 
 SAMPLER2D(s_diffuseMap, 0);
 SAMPLER2D(s_normalMap, 1);
@@ -22,8 +21,6 @@ SAMPLER2D(s_specularMap, 4);
 
 SAMPLER2D(s_attenuationLightMap, 5);
 SAMPLER2D(s_spotFalloffMap, 6);
-
-SAMPLER2DSHADOW(s_shadowMap, 7);
 
 void main()
 {
@@ -47,12 +44,6 @@ void main()
 	//Calculate diffuse color
     float fLDotN = max(dot(normalizedNormal, normalLightDir), 0.0);
 	vec3 diffuseColor = color.xyz * u_lightColor.xyz * fLDotN;
-
-    if (0.0 < u_useShadow) {
-        vec4 projectionUV = u_spotViewProj * vec4(position,1.0);
-        attenuation *= shadow2DProj(s_shadowMap, projectionUV);
-        
-    }
 
     vec3 specularColor = vec3(0.0);
     if(u_lightColor.w > 0.0) {

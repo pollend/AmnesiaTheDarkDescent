@@ -189,7 +189,7 @@ def main():
                 '--type', f'{toType(shader["type"])}',
                 '--platform', "linux",
                 '--varyingdef', f'{varying_def_path}',
-                '--profile', f'120',
+                '--profile', f'130',
                 '-i', f'{args.bgfx}/src',
                 ] + includes)
         
