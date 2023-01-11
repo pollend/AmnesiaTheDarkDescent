@@ -133,6 +133,21 @@ namespace hpl
             })();
     }
 
+
+    uint64_t convertBGFXClearOp(const ClearOp& op) {
+        uint64_t result = 0;
+        if(op & ClearOp::Color) {
+            result |= BGFX_CLEAR_COLOR;
+        }
+        if(op & ClearOp::Depth) {
+            result |= BGFX_CLEAR_DEPTH;
+        }
+        if(op & ClearOp::Stencil) {
+            result |= BGFX_CLEAR_STENCIL;
+        }
+        return result;
+    }
+
     uint64_t convertToState(const GraphicsContext::DrawRequest& request) {
         auto& layout = request.m_layout;
         auto& program = request.m_program;
@@ -356,20 +371,7 @@ namespace hpl
     }
 
     void GraphicsContext::ClearTarget(bgfx::ViewId view, const DrawClear& request) {
-        bgfx::setViewClear(view, 
-            ([&]() {
-                uint16_t flags = 0;
-                if(request.m_clear.m_clearOp & ClearOp::Color) {
-                    flags |= BGFX_CLEAR_COLOR;
-                }
-                if(request.m_clear.m_clearOp & ClearOp::Depth) {
-                    flags |= BGFX_CLEAR_DEPTH;
-                }
-                if(request.m_clear.m_clearOp & ClearOp::Stencil) {
-                    flags |= BGFX_CLEAR_STENCIL;
-                }
-                return flags;
-            }()), 
+        bgfx::setViewClear(view, convertBGFXClearOp(request.m_clear.m_clearOp), 
             request.m_clear.m_rgba, 
             request.m_clear.m_depth, 
             request.m_clear.m_stencil);
@@ -389,7 +391,9 @@ namespace hpl
         ConfigureProgram(program);
         if(request.m_clear.has_value()) {
             auto& clear = request.m_clear.value();
-            bgfx::setViewClear(view, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, clear.m_rgba, clear.m_depth, clear.m_stencil);
+            bgfx::setViewClear(view, convertBGFXClearOp(clear.m_clearOp), clear.m_rgba, clear.m_depth, clear.m_stencil);
+        } else {
+            bgfx::setViewClear(view, BGFX_CLEAR_NONE);
         }
         bgfx::setViewRect(view, request.m_x, request.m_y, request.m_width, request.m_height);
         if(request.m_target.IsValid()) {
@@ -414,7 +418,9 @@ namespace hpl
         ConfigureProgram(program);
         if(request.m_clear.has_value()) {
             auto& clear = request.m_clear.value();
-            bgfx::setViewClear(view, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, clear.m_rgba, clear.m_depth, clear.m_stencil);
+            bgfx::setViewClear(view, convertBGFXClearOp(clear.m_clearOp), clear.m_rgba, clear.m_depth, clear.m_stencil);
+        } else {
+            bgfx::setViewClear(view, BGFX_CLEAR_NONE);
         }
         bgfx::setViewRect(view, request.m_x, request.m_y, request.m_width, request.m_height);
         if(request.m_target.IsValid()) {

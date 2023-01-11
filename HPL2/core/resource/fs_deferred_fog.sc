@@ -3,9 +3,9 @@ $input v_position, v_ray
 
 #include <common.sh>
 
-SAMPLER2D(s_depthMap, 0);
+SAMPLER2D(s_positionMap, 0);
 
-uniform vec4 avFogColor;
+uniform vec4 u_fogColor;
 uniform vec4 u_params[4];
 
 #define u_fogStart u_params[0].x
@@ -18,7 +18,6 @@ uniform vec4 u_params[4];
 
 #define u_useBacksize (u_params[3].x)
 #define u_useOutsideBox (u_params[3].y)
-#define u_negFarPlane (u_params[3].z)
 
 float GetPlaneIntersection(vec3 ray, vec3 avPlaneNormal, float afNegPlaneDist, float afFinalT)
 {
@@ -37,9 +36,9 @@ float GetPlaneIntersection(vec3 ray, vec3 avPlaneNormal, float afNegPlaneDist, f
 
 void main()
 {
-    
-    vec4 vDepthVal = texture2D(s_depthMap, gl_FragCoord.xy);
-    float fDepth = -unpackRgbaToFloat(vec4(vDepthVal.xyz, 0)) * u_negFarPlane;
+
+    vec2 ndc = gl_FragCoord.xy * u_viewTexel.xy;
+    float fDepth = texture2D(s_positionMap, ndc).z;
 
     if(0.0 < u_useOutsideBox) {
         fDepth = fDepth +  v_position.z; //VertexPos is negative!
@@ -66,6 +65,6 @@ void main()
     fDepth = min(- v_position.z, fDepth);
     float fAmount = max(fDepth / u_fogLength,0.0);
     
-    gl_FragColor.xyz = avFogColor.xyz;
-    gl_FragColor.w = pow(fAmount, u_fogFalloffExp) * avFogColor.w;
+    gl_FragColor.xyz = u_fogColor.xyz;
+    gl_FragColor.w = pow(fAmount, u_fogFalloffExp) * u_fogColor.w;
 }

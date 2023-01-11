@@ -1157,7 +1157,6 @@ bool cLuxBase::InitEngine()
 	cRendererDeferred::SetSSAONumOfSamples(mpConfigHandler->mlSSAOSamples);
 	cRendererDeferred::SetSSAOLoaded(mpConfigHandler->mbSSAOActive);
 	cRendererDeferred::SetGBufferType((eDeferredGBuffer)mpMainConfig->GetInt("Graphics","GBufferType", eDeferredGBuffer_32Bit));
-	cRendererDeferred::SetNumOfGBufferTextures(mpMainConfig->GetInt("Graphics","NumOfGBufferTextures", 3));
 	cRendererDeferred::SetEdgeSmoothLoaded(mpConfigHandler->mbEdgeSmooth);
 
 	cRendererDeferred::SetOcclusionTestLargeLights(mpConfigHandler->mbOcclusionTestLights);

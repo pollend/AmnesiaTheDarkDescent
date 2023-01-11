@@ -209,10 +209,11 @@ namespace hpl {
 		RenderTarget& resolveRenderTarget(std::array<RenderTarget, 2>& rt);
 		std::shared_ptr<Image>& resolveRenderImage(std::array<std::shared_ptr<Image>, 2>& img);
 		
-
+		[[deprecated("apart of the Graphics Context")]]
 		void CopyToFrameBuffer();
+		[[deprecated("just moved into the Draw")]]
 		void SetupRenderList();
-		[[deprecated("Unused")]]
+		[[deprecated("Remove from the engine")]]
 		void RenderObjects();
 
 		// takes the contents of the gbuffer and renders the lights
@@ -227,7 +228,6 @@ namespace hpl {
 		void RenderZPass(GraphicsContext& context, RenderTarget& rt);
 		
 		void RenderShadowLight(GraphicsContext& context, GraphicsContext::ShaderProgram& shaderProgram, RenderTarget& rt);
-		void SetupLightProgram(GraphicsContext::ShaderProgram& shaderProgram, cDeferredLight* apLightData);
 
 		void RenderZ(GraphicsContext& context);
 		void RenderEdgeSmooth();
@@ -349,6 +349,8 @@ namespace hpl {
 		bgfx::UniformHandle m_u_param;
 		bgfx::UniformHandle m_u_boxInvViewModelRotation;
 		bgfx::UniformHandle m_u_lightPos;
+		bgfx::UniformHandle m_u_fogColor;
+		bgfx::UniformHandle m_u_lightColor;
 		
 		bgfx::UniformHandle m_s_depthMap;
 		bgfx::UniformHandle m_s_positionMap;
@@ -357,24 +359,10 @@ namespace hpl {
 		bgfx::UniformHandle m_s_normalMap;
 		bgfx::UniformHandle m_s_specularMap;
 		bgfx::UniformHandle m_s_attenuationLightMap;
+		bgfx::UniformHandle m_s_spotFalloffMap;
 		
-		bgfx::UniformHandle m_u_lightColor;
-
-		struct DeferredFogUniforms {
-			float u_fogStart;
-			float u_fogLength;
-			float u_fogFalloffExp;
-
-			float u_fogRayCastStart[3];
-			float u_fogNegPlaneDistNeg[3];
-			float u_fogNegPlaneDistPos[3];
-
-			float u_useBackside;
-			float u_useOutsideBox;
-			float u_negFarPlane;
-			float u_unused2;
-		};
 		bgfx::ProgramHandle m_deferredFog;
+		bgfx::ProgramHandle m_fullscreenFog;
 		bgfx::ProgramHandle m_edgeSmooth_UnpackDepthProgram;
 		bgfx::ProgramHandle m_lightBoxProgram;
 		bgfx::ProgramHandle m_pointLightProgram;
