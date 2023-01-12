@@ -109,7 +109,7 @@ namespace hpl {
 	class cDeferredLight
 	{
 	public:
-		cDeferredLight() : m_occlusionQuery(BGFX_INVALID_HANDLE), mpShadowTexture(NULL), mbCastShadows(false){}
+		cDeferredLight() : m_occlusionQuery(BGFX_INVALID_HANDLE), mbCastShadows(false){}
 
 		iLight *mpLight;
 		cRect2l mClipRect;
@@ -119,7 +119,7 @@ namespace hpl {
 		bool mbInsideNearPlane;
 		bgfx::OcclusionQueryHandle m_occlusionQuery;
 
-		iTexture *mpShadowTexture;
+		// iTexture *mpShadowTexture;
 		bool mbCastShadows;
 		eShadowMapResolution mShadowResolution;
 
@@ -131,7 +131,8 @@ namespace hpl {
 		struct ZPassInput {
 			float m_width = 0;
 			float m_height = 0;
-
+			
+			Cull m_cull = Cull::CounterClockwise;
             cMatrixf m_view = cMatrixf(cMatrixf::Identity);
             cMatrixf m_projection = cMatrixf(cMatrixf::Identity);
 		};
@@ -226,6 +227,7 @@ namespace hpl {
 		void RenderEdgeSmoothPass(GraphicsContext& context, RenderTarget& rt);
 		void RenderTranslucentPass(GraphicsContext& context, RenderTarget& rt);
 		void RenderZPass(GraphicsContext& context, RenderTarget& rt);
+		void RenderShadowPass(GraphicsContext& context, const cDeferredLight& apLightData, RenderTarget& rt);
 		
 		void RenderShadowLight(GraphicsContext& context, GraphicsContext::ShaderProgram& shaderProgram, RenderTarget& rt);
 
@@ -311,7 +313,6 @@ namespace hpl {
 		std::array<std::shared_ptr<Image>, 2> m_gBufferDepthStencil;
 		std::array<std::shared_ptr<Image>, 2> m_outputImage;
 
-		std::array<absl::InlinedVector<cShadowMapData, 10>, eShadowMapResolution_LastEnum> m_shadowMapData;
 		RenderTarget m_edgeSmooth_LinearDepth;
 
 		iFrameBuffer *mpAccumBuffer;
@@ -351,6 +352,7 @@ namespace hpl {
 		bgfx::UniformHandle m_u_lightPos;
 		bgfx::UniformHandle m_u_fogColor;
 		bgfx::UniformHandle m_u_lightColor;
+		bgfx::UniformHandle m_u_spotViewProj;
 		
 		bgfx::UniformHandle m_s_depthMap;
 		bgfx::UniformHandle m_s_positionMap;
@@ -360,6 +362,7 @@ namespace hpl {
 		bgfx::UniformHandle m_s_specularMap;
 		bgfx::UniformHandle m_s_attenuationLightMap;
 		bgfx::UniformHandle m_s_spotFalloffMap;
+		bgfx::UniformHandle m_s_shadowMap;
 		
 		bgfx::ProgramHandle m_deferredFog;
 		bgfx::ProgramHandle m_fullscreenFog;

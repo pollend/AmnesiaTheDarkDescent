@@ -79,7 +79,7 @@ namespace hpl
         uint16_t GetWidth() const {return m_width;}
         uint16_t GetHeight() const {return m_height;}
 
-        cVector2l getSize() const {return cVector2l(m_width, m_height);}
+        cVector2l GetImageSize() const {return cVector2l(m_width, m_height);}
     private:
 
         uint16_t m_width = 0;

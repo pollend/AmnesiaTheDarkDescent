@@ -686,7 +686,9 @@ namespace hpl {
 	{
 		////////////////////////////
 		//If size is 1, then just return that one
-		if(mvShadowMapData[aResolution].size()==1) return mvShadowMapData[aResolution][0];
+		if(m_shadowMapData[aResolution].size()==1) {
+			return &m_shadowMapData[aResolution][0];
+		}
 
 		//////////////////////////
 		//Set up variables
@@ -696,22 +698,22 @@ namespace hpl {
 		////////////////////////////
 		//Iterate the shadow map array looking for shadow map already used by light
 		//Else find the one with the largest frame length.
-		for(size_t i=0; i<mvShadowMapData[aResolution].size(); ++i)
+		for(size_t i=0; i<m_shadowMapData[aResolution].size(); ++i)
 		{
-			cShadowMapData *pData = mvShadowMapData[aResolution][i];
+			cShadowMapData& pData = m_shadowMapData[aResolution][i];
 
-            if(pData->mCache.mpLight == apLight)
+            if(pData.mCache.mpLight == apLight)
 			{
-				pBestData = pData;
+				pBestData = &pData;
 				break;
 			}
 			else
 			{
-				int lFrameDist = cMath::Abs(pData->mlFrameCount- mlRenderFrameCount);
+				int lFrameDist = cMath::Abs(pData.mlFrameCount- mlRenderFrameCount);
 				if(lFrameDist > lMaxFrameDist)
 				{
 					lMaxFrameDist = lFrameDist;
-					pBestData = pData;
+					pBestData = &pData;
 				}
 			}
 		}
@@ -772,15 +774,15 @@ namespace hpl {
 	{
 		for(int res=0; res < eShadowMapResolution_LastEnum; ++res)
 		{
-			for(size_t i=0; i<mvShadowMapData[res].size(); ++i)
-			{
-				cShadowMapData *pData = mvShadowMapData[res][i];
+			// for(size_t i=0; i<mvShadowMapData[res].size(); ++i)
+			// {
+			// 	cShadowMapData *pData = mvShadowMapData[res][i];
 
-				mpGraphics->DestroyFrameBuffer(pData->mpBuffer);
-				mpGraphics->DestroyTexture(pData->mpTexture);
-				if(pData->mpTempDiffTexture) mpGraphics->DestroyTexture(pData->mpTempDiffTexture);
-			}
-			STLDeleteAll(mvShadowMapData[res]);
+			// 	// mpGraphics->DestroyFrameBuffer(pData->mpBuffer);
+			// 	// mpGraphics->DestroyTexture(pData->mpTexture);
+			// 	// if(pData->mpTempDiffTexture) mpGraphics->DestroyTexture(pData->mpTempDiffTexture);
+			// }
+			// STLDeleteAll(mvShadowMapData[res]);
 		}
 
 	}

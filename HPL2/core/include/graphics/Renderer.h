@@ -238,9 +238,9 @@ namespace hpl {
 	class cShadowMapData
 	{
 	public:
-		iTexture *mpTempDiffTexture;
-		iTexture *mpTexture;
-		iFrameBuffer *mpBuffer;
+		// iTexture *mpTempDiffTexture;
+		// iTexture *mpTexture;
+		// iFrameBuffer *mpBuffer;
 		
 		int mlFrameCount;
 		RenderTarget m_target;
@@ -506,8 +506,7 @@ namespace hpl {
 
 		int mlActiveOcclusionQueryNum;
 		std::vector<cOcclusionQueryObject*> mvSortedOcclusionObjects;
-
-		std::vector<cShadowMapData*> mvShadowMapData[eShadowMapResolution_LastEnum];
+		std::array<absl::InlinedVector<cShadowMapData, 10>, eShadowMapResolution_LastEnum> m_shadowMapData;
 
 		float mfTempAlpha;
 

@@ -3,10 +3,9 @@ $input v_clipPosition
 #include <common.sh>
 
 uniform vec4 u_param[2];
-#define u_hasGobo (u_param[0].x)
+#define u_useShadow (u_param[0].x)
 #define u_hasSpecular (u_param[0].y)
 #define u_lightRadius (u_param[0].z)
-#define u_useShadow (u_param[0].w)
 
 #define u_lightForward (u_param[1].xyz)
 #define u_oneMinusCosHalfSpotFov (u_param[1].w)
@@ -18,13 +17,14 @@ uniform mat4 u_spotViewProj;
 SAMPLER2D(s_diffuseMap, 0);
 SAMPLER2D(s_normalMap, 1);
 SAMPLER2D(s_positionMap, 2);
-SAMPLER2D(s_specularMap, 4);
+SAMPLER2D(s_specularMap, 3);
 
-SAMPLER2D(s_attenuationLightMap, 5);
-SAMPLER2D(s_spotFalloffMap, 6);
+SAMPLER2D(s_attenuationLightMap, 4);
+SAMPLER2D(s_spotFalloffMap, 5);
 
-SAMPLER2DSHADOW(s_shadowMap, 7);
+SAMPLER2DSHADOW(s_shadowMap, 6);
 
+#define SHADOW_MAP_BIAS  0.01
 void main()
 {
     vec2 ndc = gl_FragCoord.xy * u_viewTexel.xy;
@@ -50,8 +50,8 @@ void main()
 
     if (0.0 < u_useShadow) {
         vec4 projectionUV = u_spotViewProj * vec4(position,1.0);
-        attenuation *= shadow2DProj(s_shadowMap, projectionUV);
-        
+        float bias = max(SHADOW_MAP_BIAS * (1.0 - dot(normalizedNormal, normalLightDir)), SHADOW_MAP_BIAS);
+        attenuation *= shadow2DProj(s_shadowMap, vec4(projectionUV.xy, projectionUV.z - bias, projectionUV.w));
     }
 
     vec3 specularColor = vec3(0.0);

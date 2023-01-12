@@ -315,23 +315,26 @@ namespace hpl {
 		////////////////////////////////////
 		//Create Shadow Textures
 		cVector3l vShadowSize[] = {
-									cVector3l(128, 128,1),
-									cVector3l(256, 256,1),
-									cVector3l(256, 256,1),
-									cVector3l(512, 512,1),
-									cVector3l(1024, 1024,1)
+				cVector3l(2*128, 2*128,1),
+				cVector3l(2*256, 2*256,1),
+				cVector3l(2*256, 2*256,1),
+				cVector3l(2*512, 2*512,1),
+				cVector3l(2*1024, 2*1024,1)
 		};
 		int lStartSize = 2;
-		if(mShadowMapResolution == eShadowMapResolution_Medium)		lStartSize = 1;
-		else if(mShadowMapResolution == eShadowMapResolution_Low)	lStartSize = 0;
+		if(mShadowMapResolution == eShadowMapResolution_Medium) {
+			lStartSize = 1;
+		} else if(mShadowMapResolution == eShadowMapResolution_Low) {
+			lStartSize = 0;
+		}
 
 		auto createShadowMap = [](const cVector3l &avSize) -> cShadowMapData {
 			auto desc = ImageDescriptor::CreateTexture2D(avSize.x, avSize.y, false, bgfx::TextureFormat::D16F);
 			desc.m_configuration.m_rt = RTType::RT_Write;
 			auto image = std::make_shared<Image>();
 			image->Initialize(desc);
-			return {nullptr, nullptr, nullptr, -1,
-			RenderTarget(image),
+			return {-1,
+				RenderTarget(image),
 				{}
 			};
 		};
@@ -410,6 +413,7 @@ namespace hpl {
 		m_u_lightColor = bgfx::createUniform("u_lightColor", bgfx::UniformType::Vec4);
 		m_u_lightPos = bgfx::createUniform("u_lightPos", bgfx::UniformType::Vec4);
 		m_u_fogColor = bgfx::createUniform("u_fogColor", bgfx::UniformType::Vec4);
+		m_u_spotViewProj = bgfx::createUniform("u_spotViewProj", bgfx::UniformType::Mat4);
 
 		// samplers
 		m_s_depthMap = bgfx::createUniform("s_depthMap", bgfx::UniformType::Sampler);
@@ -420,6 +424,7 @@ namespace hpl {
 		m_s_positionMap = bgfx::createUniform("s_positionMap", bgfx::UniformType::Sampler);
 		m_s_attenuationLightMap = bgfx::createUniform("s_attenuationLightMap", bgfx::UniformType::Sampler);
 		m_s_spotFalloffMap = bgfx::createUniform("s_spotFalloffMap", bgfx::UniformType::Sampler);
+		m_s_shadowMap = bgfx::createUniform("s_shadowMap", bgfx::UniformType::Sampler);
 		// ////////////////////////////////////
 		// //Create Light programs
 		// {
@@ -977,7 +982,7 @@ namespace hpl {
 		vertexBuffer->GetLayoutStream(layoutInput);
 		materialType->GetShaderData(shaderInput, renderMode, program, pMaterial, object, renderer);
 		shaderInput.m_configuration.m_write = Write::Depth;
-		shaderInput.m_configuration.m_cull = Cull::CounterClockwise;
+		shaderInput.m_configuration.m_cull = input.m_cull;
 		shaderInput.m_configuration.m_depthTest = DepthTest::LessEqual;
 		
 		shaderInput.m_modelTransform = object->GetModelMatrixPtr()->GetTranspose();
@@ -1209,6 +1214,36 @@ namespace hpl {
 
 	}
 
+
+	void cRendererDeferred::RenderShadowPass(GraphicsContext& context, const cDeferredLight& apLightData, RenderTarget& rt) {
+ 		BX_ASSERT(apLightData.mpLight->GetLightType() == eLightType_Spot, "Only spot lights are supported for shadow rendering")
+		cVector2l size = rt.GetImage()->GetImageSize();
+		cLightSpot *pSpotLight = static_cast<cLightSpot*>(apLightData.mpLight);
+		cFrustum *pLightFrustum = pSpotLight->GetFrustum();
+
+		GraphicsContext::DrawClear depthClear {
+			rt,
+			{0, 1.0, 0, ClearOp::Depth},
+			0,
+			0,
+			static_cast<uint16_t>(size.x),
+			static_cast<uint16_t>(size.y)
+		};
+		context.ClearTarget(context.StartPass("Shadow Pass Clear"), depthClear);
+		
+		bgfx::ViewId view = context.StartPass("Shadow Pass");
+		for(size_t i=0; i<mvShadowCasters.size(); ++i)
+		{
+			rendering::detail::ZPassInput options;
+			options.m_height = size.y;
+			options.m_width = size.x;
+			options.m_cull = pLightFrustum->GetInvertsCullMode() ? Cull::Clockwise : Cull::CounterClockwise;
+			options.m_view = pLightFrustum->GetViewMatrix().GetTranspose();
+			options.m_projection = pLightFrustum->GetProjectionMatrix().GetTranspose();
+			rendering::detail::RenderZPassObject(view, options, context, this, mvShadowCasters[i], rt);
+		}
+	}
+
 	void cRendererDeferred::RenderLightPass(GraphicsContext& context, RenderTarget& rt) {
 		InitLightRendering();
 		
@@ -1373,10 +1408,10 @@ namespace hpl {
 						vForward = cMath::MatrixMul3x3(apLightData->m_mtxViewSpaceTransform, vForward);
 
 						struct {
-							float hasGobo;
+							float useShadows;
 							float hasSpecular;
 							float lightRadius;
-							float useGobo;
+							float param0;
 
 							float lightForward[3];
 							float oneMinusCosHalfSpotFOV;
@@ -1389,26 +1424,47 @@ namespace hpl {
 							1 - pLightSpot->GetCosHalfFOV()
 
 						};
+
 						const auto modelViewMtx = cMath::MatrixMul(mpCurrentFrustum->GetViewMatrix(), apLightData->mpLight->GetWorldMatrix());
 						const auto color = apLightData->mpLight->GetDiffuseColor();
 						cVector3f lightViewPos = cMath::MatrixMul(modelViewMtx, apLightData->GetLightMtx()).GetTranslation();
 						float lightPosition[4] = {lightViewPos.x, lightViewPos.y, lightViewPos.z, 1.0f};
 						float lightColor[4] = {color.r, color.g, color.b, color.a};
+						cMatrixf spotViewProj = cMath::MatrixMul(pLightSpot->GetViewProjMatrix(),m_mtxInvView).GetTranspose();
+				
 						shaderProgram.m_handle = m_spotLightProgram;
 						shaderProgram.m_uniforms.push_back({m_u_lightPos, lightPosition});
 						shaderProgram.m_uniforms.push_back({m_u_lightColor, lightColor});
+						shaderProgram.m_uniforms.push_back({m_u_spotViewProj, spotViewProj.v});
+
 						shaderProgram.m_uniforms.push_back({m_u_param, &uParam, 2});
 
-						shaderProgram.m_textures.push_back({m_s_normalMap, resolveRenderImage(m_gBufferNormalImage)->GetHandle(), 1});
 						shaderProgram.m_textures.push_back({m_s_diffuseMap, resolveRenderImage(m_gBufferColor)->GetHandle(), 0});
+						shaderProgram.m_textures.push_back({m_s_normalMap, resolveRenderImage(m_gBufferNormalImage)->GetHandle(), 1});
 						shaderProgram.m_textures.push_back({m_s_positionMap, resolveRenderImage(m_gBufferPositionImage)->GetHandle(), 2});
 						shaderProgram.m_textures.push_back({m_s_specularMap, resolveRenderImage(m_gBufferSpecular)->GetHandle(), 3});
-						shaderProgram.m_textures.push_back({m_s_attenuationLightMap, apLightData->mpLight->GetFalloffMap()->GetHandle(), 5});
-						shaderProgram.m_textures.push_back({m_s_spotFalloffMap, pLightSpot->GetSpotFalloffMap()->GetHandle(), 6});
+						// shaderProgram.m_textures.push_back({m_s_depthMap, resolveRenderImage(m_gBufferDepthStencil)->GetHandle(), 5});
 						
+						shaderProgram.m_textures.push_back({m_s_attenuationLightMap, apLightData->mpLight->GetFalloffMap()->GetHandle(), 4});
+						shaderProgram.m_textures.push_back({m_s_spotFalloffMap, pLightSpot->GetSpotFalloffMap()->GetHandle(), 5});
+						
+						if(apLightData->mbCastShadows && SetupShadowMapRendering(pLightSpot))
+						{
+							uParam.useShadows = 1.0;
+							eShadowMapResolution shadowMapRes = apLightData->mShadowResolution;
+							cShadowMapData *pShadowData = GetShadowMapData(shadowMapRes, apLightData->mpLight);
+							if(ShadowMapNeedsUpdate(apLightData->mpLight, pShadowData))
+							{
+								RenderShadowPass(context, *apLightData, pShadowData->m_target);
+							}
+							shaderProgram.m_textures.push_back({m_s_shadowMap, pShadowData->m_target.GetImage()->GetHandle(), 6});
+						}
+
 						context.Submit(pass, drawRequest);
 						break;
 					}
+					default:
+						break;
 				}
 			};
 			
@@ -1704,16 +1760,16 @@ namespace hpl {
 			apProgram->SetFloat(kVar_afOneMinusCosHalfSpotFOV,  1 - pLightSpot->GetCosHalfFOV());
 
 			//If a shadow, set up shadow variables and then clear shadow map
-            if(apLightData->mpShadowTexture)
-			{
-				cVector2f vInvShadowMapSize(1.0f / (float)apLightData->mpShadowTexture->GetWidth(),
-											1.0f / (float)apLightData->mpShadowTexture->GetHeight());
+            // if(apLightData->mpShadowTexture)
+			// {
+			// 	cVector2f vInvShadowMapSize(1.0f / (float)apLightData->mpShadowTexture->GetWidth(),
+			// 								1.0f / (float)apLightData->mpShadowTexture->GetHeight());
 
-				if(mpShadowJitterTexture)
-					apProgram->SetVec2f(kVar_avShadowMapOffsetMul, vInvShadowMapSize * pLight->GetShadowMapBlurAmount());
+			// 	if(mpShadowJitterTexture)
+			// 		apProgram->SetVec2f(kVar_avShadowMapOffsetMul, vInvShadowMapSize * pLight->GetShadowMapBlurAmount());
 
-				apLightData->mpShadowTexture = NULL;
-			}
+			// 	apLightData->mpShadowTexture = NULL;
+			// }
 
 			if(pLight->GetGoboTexture() || apLightData->mbCastShadows)
 			{
@@ -1756,10 +1812,10 @@ namespace hpl {
 			if(lFlags & eFeature_Light_LightShapes) lFlags |= eFeature_Light_DivideInFrag;
 
 			//Only spot lights can cast shadows (for now)
-			if(apLightData->mbCastShadows && apLightData->mpShadowTexture)
-			{
-				lFlags |= eFeature_Light_ShadowMap;
-			}
+			// if(apLightData->mbCastShadows && apLightData->mpShadowTexture)
+			// {
+			// 	lFlags |= eFeature_Light_ShadowMap;
+			// }
 		}
 
 		/////////////////////////
@@ -1790,12 +1846,12 @@ namespace hpl {
 			cLightSpot *pLightSpot = static_cast<cLightSpot*>(pLight);
 
 			//Shadow stuff
-			if(apLightData->mpShadowTexture)
-			{
-				SetTexture(6, apLightData->mpShadowTexture);
+			// if(apLightData->mpShadowTexture)
+			// {
+			// 	// SetTexture(6, apLightData->mpShadowTexture);
 
-				if(mpShadowJitterTexture) SetTexture(7, mpShadowJitterTexture);
-			}
+			// 	// if(mpShadowJitterTexture) SetTexture(7, mpShadowJitterTexture);
+			// }
 
 			//Spot fall off
 			// if(pLight->GetGoboTexture()==NULL)
@@ -1818,11 +1874,11 @@ namespace hpl {
 		eShadowMapResolution shadowMapRes = apLightData->mShadowResolution;
 
 		cShadowMapData *pShadowData = GetShadowMapData(shadowMapRes, pLight);
-		apLightData->mpShadowTexture = pShadowData->mpTexture;
+		// apLightData->mpShadowTexture = pShadowData->mpTexture;
 
         if(ShadowMapNeedsUpdate(pLight, pShadowData))
 		{
-			RenderShadowMap(pLight, pShadowData->mpBuffer);
+			// RenderShadowMap(pLight, pShadowData->mpBuffer);
 
 			//Reset to previous frame buffer
 			SetAccumulationBuffer();
