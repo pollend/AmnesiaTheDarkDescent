@@ -577,7 +577,6 @@ namespace hpl
         mVertexFlags |= elementFlag;
 
         VertexElement element;
-        element.m_buffer.resize(alElementNum * GetSizeFromHPL(aFormat));
         element.m_type = aType;
         element.m_flag = elementFlag;
         element.m_format = aFormat;
