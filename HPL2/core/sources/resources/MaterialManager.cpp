@@ -423,10 +423,6 @@ namespace hpl {
 					pImageResource = mpResources->GetTextureManager()->Create2DImage(sFile,bMipMaps, eTextureType_2D,
 																		eTextureUsage_Normal,
 																		mlTextureSizeDownScaleLevel);
-					// pImageResource = mpResources->
-					// pTex = mpResources->GetTextureManager()->Create2D(sFile,bMipMaps, eTextureType_2D,
-					// 													eTextureUsage_Normal,
-					// 													mlTextureSizeDownScaleLevel);
 				}
 				else if(type == eTextureType_3D)
 				{
@@ -436,11 +432,9 @@ namespace hpl {
 				}
 				else if(type == eTextureType_CubeMap)
 				{
-					BX_ASSERT(false, "Not implemented yet!");
-					//Check for DDS ending and load cubemap as file.
-					// pImageResource = mpResources->GetTextureManager()->CreateCubeMap(sFile,bMipMaps,
-					// 														eTextureUsage_Normal,
-					// 														mlTextureSizeDownScaleLevel);
+					pImageResource = mpResources->GetTextureManager()->CreateCubeMapImage(sFile,bMipMaps,
+																			eTextureUsage_Normal,
+																			mlTextureSizeDownScaleLevel);
 				}
 			}
 

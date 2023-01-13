@@ -18,6 +18,7 @@
  */
 
 #include "absl/types/span.h"
+#include "graphics/Enum.h"
 #include "graphics/Image.h"
 #include "graphics/RenderTarget.h"
 #include "graphics/RenderViewport.h"
@@ -626,8 +627,12 @@ public:
 			std::make_shared<Image>(),
 			std::make_shared<Image>()
 		};
-		images[0]->Initialize(ImageDescriptor::CreateTexture2D(vTestWindowSize.x, vTestWindowSize.y, false, bgfx::TextureFormat::Enum::RGBA32F));
-		images[0]->Initialize(ImageDescriptor::CreateTexture2D(vTestWindowSize.x, vTestWindowSize.y, false, bgfx::TextureFormat::Enum::D24S8));
+		auto colorDesc = ImageDescriptor::CreateTexture2D(vTestWindowSize.x, vTestWindowSize.y, false, bgfx::TextureFormat::Enum::RGBA8);
+		colorDesc.m_configuration.m_rt = RTType::RT_Write;
+		auto depthDesc = ImageDescriptor::CreateTexture2D(vTestWindowSize.x, vTestWindowSize.y, false, bgfx::TextureFormat::Enum::D24S8);
+		depthDesc.m_configuration.m_rt = RTType::RT_Write;
+		images[0]->Initialize(colorDesc);
+		images[1]->Initialize(depthDesc);
 		mpTestFrameBuffer = RenderViewport(std::make_shared<RenderTarget>(absl::MakeSpan(images)), cVector2l(0,0));
 
 		// todo need to work with CreateGfxTexture
@@ -647,7 +652,7 @@ public:
 		mpTestViewPort->SetRenderer(gpEngine->GetGraphics()->GetRenderer(eRenderer_WireFrame));
 
 		mpTestViewPort->setRenderViewport(mpTestFrameBuffer);
-		mpTestViewPort->SetSize(cVector2l(mpTestRenderTexture->GetWidth(),mpTestRenderTexture->GetHeight()));
+		mpTestViewPort->SetSize(images[0]->GetImageSize());
 
 		//mpTestViewPort->SetVisible(gbDrawOcclusionGfxInfo);
 		//mpTestViewPort->SetActive(gbDrawOcclusionGfxInfo);
@@ -1975,7 +1980,6 @@ public:
 
 	cWorld *mpTestWorld;
 	iPhysicsWorld *mpPhysicsWorld;
-	iTexture *mpTestRenderTexture;
 	cViewport *mpTestViewPort;
 	RenderViewport mpTestFrameBuffer;
 	cGuiGfxElement *mpTestRenderGfx;

@@ -425,8 +425,10 @@ namespace hpl
             BX_ASSERT(textureElement->m_num == 2, "Only 2 component format supported");
             BX_ASSERT(tangentElement->m_num == 4, "Only 4 component format supported");
 
+            ResizeArray(eVertexBufferElement_Texture1Tangent, GetVertexNum() * 4);
+            
             cMath::CreateTriTangentVectors(
-                (float*)tangentElement->m_buffer.data(),
+                reinterpret_cast<float*>(tangentElement->m_buffer.data()),
                 m_indices.data(),
                 m_indices.size(),
                 reinterpret_cast<float*>(positionElement->m_buffer.data()),
@@ -556,7 +558,7 @@ namespace hpl
             });
         if (element != m_vertexElements.end())
         {
-            element->m_buffer.resize(alSize * element->Stride());
+            element->m_buffer.resize(alSize * GetSizeFromHPL(element->m_format));
         }
     }
 

@@ -185,17 +185,17 @@ namespace hpl {
 		iVertexBuffer* pVtxBuffer = mpLowLevelGraphics->CreateVertexBuffer(
 								eVertexBufferType_Hardware,
 								eVertexBufferDrawType_Tri, eVertexBufferUsageType_Dynamic,4,6);
-		pVtxBuffer->CreateElementArray(eVertexBufferElement_Position,eVertexBufferElementFormat_Float,4);
+		pVtxBuffer->CreateElementArray(eVertexBufferElement_Position,eVertexBufferElementFormat_Float,3);
 		pVtxBuffer->CreateElementArray(eVertexBufferElement_Normal,eVertexBufferElementFormat_Float,3);
 		pVtxBuffer->CreateElementArray(eVertexBufferElement_Color0,eVertexBufferElementFormat_Float,4);
-		pVtxBuffer->CreateElementArray(eVertexBufferElement_Texture0,eVertexBufferElementFormat_Float,3);
+		pVtxBuffer->CreateElementArray(eVertexBufferElement_Texture0,eVertexBufferElementFormat_Float,2);
 
-		cVector3f vTexCoords[4] =
+		cVector2f vTexCoords[4] =
 		{
-			cVector3f(avCorner1UV.x, avCorner1UV.y,0),
-			cVector3f(avCorner2UV.x, avCorner2UV.y,0),			// Start Corner
-			cVector3f(avCorner3UV.x, avCorner3UV.y,0),
-			cVector3f(avCorner4UV.x, avCorner4UV.y,0)			// End Corner
+			cVector2f(avCorner1UV.x, avCorner1UV.y),
+			cVector2f(avCorner2UV.x, avCorner2UV.y),			// Start Corner
+			cVector2f(avCorner3UV.x, avCorner3UV.y),
+			cVector2f(avCorner4UV.x, avCorner4UV.y)			// End Corner
 		};
 
 		for(int i=0;i<4;i++)
@@ -232,7 +232,7 @@ namespace hpl {
 		// Create vertex buffer
 		iVertexBuffer* pVtxBuffer = mpLowLevelGraphics->CreateVertexBuffer(eVertexBufferType_Hardware, eVertexBufferDrawType_Tri,
 																	eVertexBufferUsageType_Static);
-		pVtxBuffer->CreateElementArray(eVertexBufferElement_Position,eVertexBufferElementFormat_Float,4);
+		pVtxBuffer->CreateElementArray(eVertexBufferElement_Position,eVertexBufferElementFormat_Float,3);
 		pVtxBuffer->CreateElementArray(eVertexBufferElement_Normal,eVertexBufferElementFormat_Float,3);
 		pVtxBuffer->CreateElementArray(eVertexBufferElement_Color0,eVertexBufferElementFormat_Float,4);
 		pVtxBuffer->CreateElementArray(eVertexBufferElement_Texture0,eVertexBufferElementFormat_Float,3);
@@ -324,7 +324,7 @@ namespace hpl {
 	{
 		iVertexBuffer* pVtxBuffer = mpLowLevelGraphics->CreateVertexBuffer(eVertexBufferType_Hardware, eVertexBufferDrawType_Tri,
 																	eVertexBufferUsageType_Static);
-		pVtxBuffer->CreateElementArray(eVertexBufferElement_Position,eVertexBufferElementFormat_Float,4);
+		pVtxBuffer->CreateElementArray(eVertexBufferElement_Position,eVertexBufferElementFormat_Float,3);
 		pVtxBuffer->CreateElementArray(eVertexBufferElement_Normal,eVertexBufferElementFormat_Float,3);
 		pVtxBuffer->CreateElementArray(eVertexBufferElement_Color0,eVertexBufferElementFormat_Float,4);
 		pVtxBuffer->CreateElementArray(eVertexBufferElement_Texture0,eVertexBufferElementFormat_Float,3);
@@ -400,7 +400,7 @@ namespace hpl {
 	{
 		iVertexBuffer* pVtxBuffer = mpLowLevelGraphics->CreateVertexBuffer(eVertexBufferType_Hardware, eVertexBufferDrawType_Tri,
 																	eVertexBufferUsageType_Static);
-		pVtxBuffer->CreateElementArray(eVertexBufferElement_Position,eVertexBufferElementFormat_Float,4);
+		pVtxBuffer->CreateElementArray(eVertexBufferElement_Position,eVertexBufferElementFormat_Float,3);
 		pVtxBuffer->CreateElementArray(eVertexBufferElement_Normal,eVertexBufferElementFormat_Float,3);
 		pVtxBuffer->CreateElementArray(eVertexBufferElement_Color0,eVertexBufferElementFormat_Float,4);
 		pVtxBuffer->CreateElementArray(eVertexBufferElement_Texture0,eVertexBufferElementFormat_Float,3);
@@ -528,7 +528,7 @@ namespace hpl {
 		// Create Vertex Buffer
 		iVertexBuffer* pVtxBuffer = mpLowLevelGraphics->CreateVertexBuffer(eVertexBufferType_Hardware, eVertexBufferDrawType_Tri,
 																	eVertexBufferUsageType_Static);
-		pVtxBuffer->CreateElementArray(eVertexBufferElement_Position,eVertexBufferElementFormat_Float,4);
+		pVtxBuffer->CreateElementArray(eVertexBufferElement_Position,eVertexBufferElementFormat_Float,3);
 		pVtxBuffer->CreateElementArray(eVertexBufferElement_Normal,eVertexBufferElementFormat_Float,3);
 		pVtxBuffer->CreateElementArray(eVertexBufferElement_Color0,eVertexBufferElementFormat_Float,4);
 		pVtxBuffer->CreateElementArray(eVertexBufferElement_Texture0,eVertexBufferElementFormat_Float,3);
@@ -608,7 +608,7 @@ namespace hpl {
 										eVertexBufferDrawType_Quad,eVertexBufferUsageType_Static);
 		pSkyBox->CreateElementArray(eVertexBufferElement_Color0,eVertexBufferElementFormat_Float,4);
 		pSkyBox->CreateElementArray(eVertexBufferElement_Texture0,eVertexBufferElementFormat_Float,3);
-		pSkyBox->CreateElementArray(eVertexBufferElement_Position,eVertexBufferElementFormat_Float,4);
+		pSkyBox->CreateElementArray(eVertexBufferElement_Position,eVertexBufferElementFormat_Float,3);
 
 
 		float fSize = afSize;
@@ -684,7 +684,7 @@ namespace hpl {
 		iVertexBuffer* pBox = mpLowLevelGraphics->CreateVertexBuffer(
 			eVertexBufferType_Hardware,
 			eVertexBufferDrawType_Tri,eVertexBufferUsageType_Static);
-		pBox->CreateElementArray(eVertexBufferElement_Position,eVertexBufferElementFormat_Float,4);
+		pBox->CreateElementArray(eVertexBufferElement_Position,eVertexBufferElementFormat_Float,3);
 		pBox->CreateElementArray(eVertexBufferElement_Normal,eVertexBufferElementFormat_Float,3);
 		pBox->CreateElementArray(eVertexBufferElement_Color0,eVertexBufferElementFormat_Float,4);
 		pBox->CreateElementArray(eVertexBufferElement_Texture0,eVertexBufferElementFormat_Float,3);
