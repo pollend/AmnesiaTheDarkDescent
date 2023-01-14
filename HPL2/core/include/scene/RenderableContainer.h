@@ -74,7 +74,12 @@ namespace hpl {
 	friend class iRenderableContainer;
 	public:
 		iRenderableContainerNode();
-		virtual ~iRenderableContainerNode(){}
+		virtual ~iRenderableContainerNode(){
+			if(bgfx::isValid(m_occlusionQuery)) {
+				bgfx::destroy(m_occlusionQuery);
+			}
+			m_occlusionQuery = BGFX_INVALID_HANDLE;
+		}
 
 		virtual void UpdateBeforeUse(){}
 

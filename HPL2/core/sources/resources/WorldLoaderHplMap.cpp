@@ -1364,10 +1364,10 @@ namespace hpl {
 			hpl::iVertexBufferBGFX::VertexElement* m_targetElement;
 			size_t offset;
 		} lDataArrayTypes[5] = {
-			{eVertexBufferElement_Position, 3, nullptr, 0},
+			{eVertexBufferElement_Position, 4, nullptr, 0},
 			{eVertexBufferElement_Normal, 3, nullptr, 0},
 			{eVertexBufferElement_Color0, 4, nullptr, 0},
-			{eVertexBufferElement_Texture0, 2, nullptr, 0},
+			{eVertexBufferElement_Texture0, 3, nullptr, 0},
 			{eVertexBufferElement_Texture1Tangent, 4, nullptr, 0}
 		};
 		//Set up the data arrays
@@ -1515,7 +1515,7 @@ namespace hpl {
 		auto* targetVertexBuffer = static_cast<iVertexBufferBGFX*>(mpGraphics->GetLowLevel()->CreateVertexBuffer(	eVertexBufferType_Software, eVertexBufferDrawType_Tri,
 																					eVertexBufferUsageType_Dynamic,lTotalVtxAmount, lTotalIdxAmount));
 
-		targetVertexBuffer->CreateElementArray(eVertexBufferElement_Position,eVertexBufferElementFormat_Float, 3);
+		targetVertexBuffer->CreateElementArray(eVertexBufferElement_Position,eVertexBufferElementFormat_Float, 4);
 		targetVertexBuffer->ResizeArray(eVertexBufferElement_Position, lTotalVtxAmount * 4);
 		auto* targetPositionElement = targetVertexBuffer->GetElement(eVertexBufferElement_Position);
 		BX_ASSERT(targetPositionElement != nullptr, "positionElement is null");

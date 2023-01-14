@@ -161,7 +161,7 @@ namespace hpl
                 shaderInput.m_configuration.m_depthTest = DepthTest::LessEqual;
 
                 shaderInput.m_projection = *mpCurrentProjectionMatrix;
-                shaderInput.m_modelTransform = *obj->GetModelMatrixPtr();
+                shaderInput.m_modelTransform = obj->GetModelMatrixPtr() ? obj->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity;
                 shaderInput.m_view = mpCurrentFrustum->GetViewMatrix();
 
                 GraphicsContext::LayoutStream layoutInput;
@@ -202,7 +202,7 @@ namespace hpl
                 shaderInput.m_configuration.m_depthTest = DepthTest::Equal;
 
                 shaderInput.m_projection = *mpCurrentProjectionMatrix;
-                shaderInput.m_modelTransform = *obj->GetModelMatrixPtr();
+                shaderInput.m_modelTransform = obj->GetModelMatrixPtr() ? obj->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity;
                 shaderInput.m_view = mpCurrentFrustum->GetViewMatrix();
                 if (const auto* image = pMaterial->GetImage(eMaterialTexture_Diffuse))
                 {
@@ -246,7 +246,7 @@ namespace hpl
                     CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
 
                 shaderInput.m_projection = *mpCurrentProjectionMatrix;
-                shaderInput.m_modelTransform = *obj->GetModelMatrixPtr();
+                shaderInput.m_modelTransform = obj->GetModelMatrixPtr() ? obj->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity;
                 shaderInput.m_view = mpCurrentFrustum->GetViewMatrix();
 
                 if (const auto* image = pMaterial->GetImage(eMaterialTexture_Diffuse))
@@ -292,7 +292,7 @@ namespace hpl
                     CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
 
                 shaderInput.m_projection = *mpCurrentProjectionMatrix;
-                shaderInput.m_modelTransform = *obj->GetModelMatrixPtr();
+                shaderInput.m_modelTransform = obj->GetModelMatrixPtr() ? obj->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity;
                 shaderInput.m_view = mpCurrentFrustum->GetViewMatrix();
 
                 if (const auto* image = pMaterial->GetImage(eMaterialTexture_Diffuse))

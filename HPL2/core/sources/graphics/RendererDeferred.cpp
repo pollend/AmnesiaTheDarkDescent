@@ -811,7 +811,7 @@ namespace hpl {
 
 			shaderInput.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
 			shaderInput.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
-			shaderInput.m_modelTransform = obj->GetModelMatrixPtr()->GetTranspose();
+			shaderInput.m_modelTransform = obj->GetModelMatrixPtr() ?  obj->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity.GetTranspose();
 
 			GraphicsContext::DrawRequest drawRequest {rt, layoutInput, shaderInput};
 			drawRequest.m_width = mvScreenSize.x;
@@ -855,14 +855,13 @@ namespace hpl {
 		auto& target = resolveRenderTarget(m_gBuffer_full);
 		auto view = context.StartPass("Diffuse");
 		RenderableHelper(eRenderListType_Diffuse, eMaterialRenderMode_Diffuse, [&](iRenderable* obj, GraphicsContext::LayoutStream& layoutInput, GraphicsContext::ShaderProgram& shaderInput) {
-			shaderInput.m_modelTransform = *obj->GetModelMatrixPtr();
 			shaderInput.m_configuration.m_depthTest = DepthTest::LessEqual;
 			shaderInput.m_configuration.m_write = Write::RGBA;
 			shaderInput.m_configuration.m_cull = Cull::CounterClockwise;
 
 			shaderInput.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
 			shaderInput.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
-			shaderInput.m_modelTransform = obj->GetModelMatrixPtr()->GetTranspose();
+			shaderInput.m_modelTransform = obj->GetModelMatrixPtr() ?  obj->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity.GetTranspose();
 			
 			GraphicsContext::DrawRequest drawRequest {target, layoutInput, shaderInput};
 			drawRequest.m_width = mvScreenSize.x;
@@ -881,14 +880,13 @@ namespace hpl {
 		auto& target = resolveRenderTarget(m_gBuffer_colorAndDepth);
 		auto view = context.StartPass("RenderDecals");
 		RenderableHelper(eRenderListType_Decal, eMaterialRenderMode_Diffuse, [&](iRenderable* obj, GraphicsContext::LayoutStream& layoutInput, GraphicsContext::ShaderProgram& shaderInput) {
-			shaderInput.m_modelTransform = *obj->GetModelMatrixPtr();
 			shaderInput.m_configuration.m_depthTest = DepthTest::LessEqual;
 			shaderInput.m_configuration.m_write = Write::RGBA;
 			shaderInput.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
 
 			shaderInput.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
 			shaderInput.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
-			shaderInput.m_modelTransform = obj->GetModelMatrixPtr()->GetTranspose();
+			shaderInput.m_modelTransform = obj->GetModelMatrixPtr() ?  obj->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity.GetTranspose();
 
 			// shaderInput.m_configuration.m_alphaBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
 			
@@ -919,7 +917,7 @@ namespace hpl {
 		shaderInput.m_configuration.m_cull = input.m_cull;
 		shaderInput.m_configuration.m_depthTest = DepthTest::LessEqual;
 		
-		shaderInput.m_modelTransform = object->GetModelMatrixPtr()->GetTranspose();
+		shaderInput.m_modelTransform = object->GetModelMatrixPtr() ? object->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity ;
 		shaderInput.m_view = input.m_view;
 		shaderInput.m_projection = input.m_projection;
 
@@ -1075,12 +1073,13 @@ namespace hpl {
 				return true;
 			});
 
-			AssignAndRenderOcclusionQueryObjects(
-				context.StartPass("Render Occlusion"), 
-				context, 
-				false, 
-				true,
-				resolveRenderTarget(m_gBuffer_depth));
+			// this occlusion query logic is used for reflections just cut this for now
+			// AssignAndRenderOcclusionQueryObjects(
+			// 	context.StartPass("Render Occlusion"), 
+			// 	context, 
+			// 	false, 
+			// 	true,
+			// 	resolveRenderTarget(m_gBuffer_depth));
 
 			SetupLightsAndRenderQueries(context, resolveRenderTarget(m_gBuffer_depth));
 
@@ -1103,12 +1102,13 @@ namespace hpl {
 											eRenderListCompileFlag_Illumination);
 			RenderZPass(context, resolveRenderTarget(m_gBuffer_depth) );
 
-			AssignAndRenderOcclusionQueryObjects(
-				context.StartPass("Render Occlusion Pass"), 
-				context, 
-				false, 
-				true,
-				resolveRenderTarget(m_gBuffer_depth));
+			// this occlusion query logic is used for reflections just cut this for now
+			// AssignAndRenderOcclusionQueryObjects(
+			// 	context.StartPass("Render Occlusion Pass"), 
+			// 	context, 
+			// 	false, 
+			// 	true,
+			// 	resolveRenderTarget(m_gBuffer_depth));
 
 			SetupLightsAndRenderQueries(context, resolveRenderTarget(m_gBuffer_depth));
 		}
@@ -1124,10 +1124,10 @@ namespace hpl {
 
 		// render illumination into gbuffer color RenderIllumination
 		RenderIlluminationPass(context, resolveRenderTarget(m_output_target));
-		RenderFogPass(context, resolveRenderTarget(m_output_target));
-		if(mpCurrentWorld->GetFogActive()) {
-			RenderFullScreenFogPass(context, resolveRenderTarget(m_output_target));
-		}
+		// RenderFogPass(context, resolveRenderTarget(m_output_target));
+		// if(mpCurrentWorld->GetFogActive()) {
+		// 	RenderFullScreenFogPass(context, resolveRenderTarget(m_output_target));
+		// }
 
 		//  RenderEdgeSmooth();
 		// if(mbEdgeSmoothLoaded && mpCurrentSettings->mbUseEdgeSmooth) {

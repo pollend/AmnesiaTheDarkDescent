@@ -502,7 +502,6 @@ namespace hpl {
 			}
 			vertexBuffer->GetLayoutStream(layoutStream);
 			materialType->GetShaderData(shaderProgram, mode, program, pMaterial, obj, this);
-			shaderProgram.m_modelTransform = *obj->GetModelMatrixPtr();
 			
 			handler(obj, layoutStream, shaderProgram);
 		}
@@ -1256,6 +1255,8 @@ namespace hpl {
 			if(bgfx::isValid(pNode->GetOcclusionQuery())) {
 				occlusionResult = bgfx::getResult(pNode->GetOcclusionQuery());
 			}
+			occlusionResult = bgfx::OcclusionQueryResult::Visible;
+			
 			//////////////////////////
 			//Render nodes and queue queries
 			// Only do this if:
@@ -2578,7 +2579,7 @@ namespace hpl {
 		iVertexBuffer *pVtxBuffer = mpLowLevelGraphics->CreateVertexBuffer(	aType,
 			eVertexBufferDrawType_Quad,
 			eVertexBufferUsageType_Dynamic);
-		pVtxBuffer->CreateElementArray(eVertexBufferElement_Position,eVertexBufferElementFormat_Float,3);
+		pVtxBuffer->CreateElementArray(eVertexBufferElement_Position,eVertexBufferElementFormat_Float,4);
 		pVtxBuffer->CreateElementArray(eVertexBufferElement_Texture0,eVertexBufferElementFormat_Float,3);
 
 		for(int i=0; i<4; ++i) pVtxBuffer->AddIndex(i);

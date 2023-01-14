@@ -199,8 +199,6 @@ namespace hpl
             return bgfx::TextureFormat::RGB8;
         case ePixelFormat_RGBA:
             return bgfx::TextureFormat::RGBA8;
-        case ePixelFormat_BGR:
-            break;
         case ePixelFormat_BGRA:
             return bgfx::TextureFormat::BGRA8;
         case ePixelFormat_DXT1:
@@ -223,14 +221,10 @@ namespace hpl
             return bgfx::TextureFormat::R16F;
         case ePixelFormat_LuminanceAlpha16:
             return bgfx::TextureFormat::RG16F;
-        case ePixelFormat_RGB16:
-            break;
         case ePixelFormat_RGBA16:
             return bgfx::TextureFormat::RGBA16F;
-            break;
         case ePixelFormat_Alpha32:
             return bgfx::TextureFormat::R32F;
-            break;
         case ePixelFormat_Luminance32:
             return bgfx::TextureFormat::R32F;
         case ePixelFormat_LuminanceAlpha32:
@@ -239,7 +233,12 @@ namespace hpl
             break;
         case ePixelFormat_RGBA32:
             return bgfx::TextureFormat::RGBA32F;
+        case ePixelFormat_RGB16:
+            return bgfx::TextureFormat::BC6H;
+        case ePixelFormat_BGR:
+            return bgfx::TextureFormat::RGB8;
         default:
+            BX_ASSERT(false, "Unsupported texture format: %d", format)
             break;
         }
         return bgfx::TextureFormat::Unknown;
