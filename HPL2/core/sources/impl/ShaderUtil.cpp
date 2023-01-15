@@ -65,10 +65,8 @@ namespace hpl
 
     bgfx::ShaderHandle CreateShaderHandleFromString(const char* strData)
     {
-        bgfx::Memory memory = { 0 };
-        memory.data = (uint8_t*)strData;
-        memory.size = strlen(strData) + 1;
-        return bgfx::createShader(&memory);
+        const bgfx::Memory* memory = bgfx::makeRef(strData, strlen(strData) + 1);
+        return bgfx::createShader(memory);
     }
 
     bgfx::ProgramHandle loadProgram(const char* vsName, const char* fsName)
