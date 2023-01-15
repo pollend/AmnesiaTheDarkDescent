@@ -30,11 +30,8 @@
 #include <Cg/cgGL.h>
 #endif
 
-#if USE_SDL2
 #include "SDL2/SDL.h"
-#else
-#include "SDL/SDL.h"
-#endif
+
 
 // Include these AFTER SDL
 #if defined(__linux__) || defined(__FreeBSD__)
@@ -139,7 +136,7 @@ namespace hpl {
 		int GetMultisampling(){ return mlMultisampling;}
 
 		cVector2f GetScreenSizeFloat();
-		const cVector2l& GetScreenSizeInt();
+		const cVector2l GetScreenSizeInt();
 
 		/////////////////////////////////////////////////////
 		/////////////// DATA CREATION //////////////////////
@@ -166,22 +163,33 @@ namespace hpl {
 		/////////// FRAME BUFFER OPERATIONS ///////
 		/////////////////////////////////////////////////////
 
+		[[deprecated("replaced with BGFX")]]
 		void ClearFrameBuffer(tClearFrameBufferFlag aFlags);
 
+		[[deprecated("replaced with BGFX")]]
 		void SetClearColor(const cColor& aCol);
+		[[deprecated("replaced with BGFX")]]
 		void SetClearDepth(float afDepth);
+		[[deprecated("replaced with BGFX")]]
 		void SetClearStencil(int alVal);
 
+		[[deprecated("replaced with BGFX")]]
 		void CopyFrameBufferToTexure(	iTexture* apTex, const cVector2l &avPos,
 									const cVector2l &avSize, const cVector2l &avTexOffset=0);
+		[[deprecated("replaced with BGFX")]]
 		cBitmap* CopyFrameBufferToBitmap(const cVector2l &avScreenPos=0, const cVector2l &avScreenSize=-1);
 
+		[[deprecated("replaced with BGFX")]]
 		void WaitAndFinishRendering();
+		[[deprecated("replaced with BGFX")]]
 		void FlushRendering();
+		[[deprecated("replaced with BGFX")]]
 		void SwapBuffers();
 
+		[[deprecated("replaced with BGFX")]]
 		void SetCurrentFrameBuffer(iFrameBuffer* apFrameBuffer, const cVector2l &avPos = 0, const cVector2l& avSize = -1);
-		iFrameBuffer* GetCurrentFrameBuffer() { return mpFrameBuffer; }
+		[[deprecated("replaced with BGFX")]]
+		iFrameBuffer* GetCurrentFrameBuffer() { return nullptr; }
 
 
 		[[deprecated("replaced with BGFX")]]
@@ -359,29 +367,17 @@ namespace hpl {
 		[[deprecated("replaced with BGFX")]]
 		void ClearBatch();
 
-		/////////////////////////////////////////////////////
-		/////////// IMPLEMENTION SPECIFICS /////////////////
-		/////////////////////////////////////////////////////
-
 #ifdef WITH_CG
 		CGcontext GetGC_Context(){ return mCG_Context;}
 #endif
 
 	private:
-        cVector2l mvScreenSize;
         int mlDisplay;
 		int mlMultisampling;
 		int mlBpp;
 		bool mbFullscreen;
 		eGpuProgramFormat mGpuProgramFormat;
 
-		//////////////////////////////////////
-		//Windows stuff
-		#if defined(WIN32) && !SDL_VERSION_ATLEAST(2,0,0)
-			HGLRC mGLContext;
-			HDC   mDeviceContext;
-			HINSTANCE mhKeyTrapper;
-		#endif
 
 		bool mbInitHasBeenRun;
 
@@ -407,56 +403,33 @@ namespace hpl {
 		bool mbBlendActive;
 
 		iFrameBuffer* mpFrameBuffer;
-		cVector2l mvFrameBufferPos;
-		cVector2l mvFrameBufferSize;
-		cVector2l mvFrameBufferTotalSize;
+		// cVector2l mvFrameBufferPos;
+		// cVector2l mvFrameBufferSize;
+		// cVector2l mvFrameBufferTotalSize;
 
-
-		//////////////////////////////////////
-		//Gamma
-		Uint16 mvStartGammaArray[3][256];
 		float mfGammaCorrection;
-
-		//////////////////////////////////////
-		//Clipping
-		cPlanef mvClipPlanes[kMaxClipPlanes];
-
-
-		//////////////////////////////////////
-		//SDL Variables
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-        SDL_Window *mpScreen;
-        SDL_GLContext mGLContext;
-#else
-		SDL_Surface *mpScreen;
-#endif
         bool mbGrab;
 
 		//////////////////////////////////////
 		//Vertex Array variables
 		//The vertex arrays used:
-		float* mpVertexArray;
+		// float* mpVertexArray;
 		unsigned int mlVertexCount;
-		unsigned int* mpIndexArray;
+		// unsigned int* mpIndexArray;
 		unsigned int mlIndexCount;
 
-		unsigned int mlBatchStride;
+		// unsigned int mlBatchStride;
 
-		float *mpTexCoordArray[kMaxTextureUnits];
-		bool mbTexCoordArrayActive[kMaxTextureUnits];
-		unsigned int mlTexCoordArrayCount[kMaxTextureUnits];
+		// float *mpTexCoordArray[kMaxTextureUnits];
+		// bool mbTexCoordArrayActive[kMaxTextureUnits];
+		// unsigned int mlTexCoordArrayCount[kMaxTextureUnits];
 
 		unsigned int mlBatchArraySize;
 
 		//////////////////////////////////////
 		//Texture
-		GLenum mvCurrentTextureTarget[kMaxTextureUnits];
+		// GLenum mvCurrentTextureTarget[kMaxTextureUnits];
 
-#ifdef WITH_CG
-		//////////////////////////////////////
-		//CG Compiler Variables
-		CGcontext mCG_Context;
-#endif
 
 		//////////////////////////////////////
 		//Multisample
@@ -465,13 +438,6 @@ namespace hpl {
 		//////////////////////////////////////
 		//Double sided stencil
 		bool mbDoubleSidedStencilIsSet;
-
-#ifdef WITH_CG
-		//////////////////////////////////////
-		//CG Helper
-		void InitCG();
-		void ExitCG();
-#endif
 
 		//////////////////////////////////////
 		//Matrix helper

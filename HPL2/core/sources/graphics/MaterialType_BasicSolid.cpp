@@ -170,11 +170,11 @@ namespace hpl
 
         m_s_envMap = bgfx::createUniform("s_envMap", bgfx::UniformType::Sampler);
 
-        _u_param = bgfx::createUniform("u_params", bgfx::UniformType::Vec4, 4);
-        _u_mtxUv = bgfx::createUniform("u_mtxUV", bgfx::UniformType::Mat4, 1);
-        _u_mtxInvViewRotation = bgfx::createUniform("u_mtxInvViewRotation", bgfx::UniformType::Mat4, 1);
-        _s_diffuseMap = bgfx::createUniform("diffuseMap", bgfx::UniformType::Sampler, 1);
-        _s_dissolveMap = bgfx::createUniform("dissolveMap", bgfx::UniformType::Sampler, 1);
+        _u_param = bgfx::createUniform("u_params", bgfx::UniformType::Vec4);
+        _u_mtxUv = bgfx::createUniform("u_mtxUV", bgfx::UniformType::Mat4);
+        _u_mtxInvViewRotation = bgfx::createUniform("u_mtxInvViewRotation", bgfx::UniformType::Mat4);
+        _s_diffuseMap = bgfx::createUniform("diffuseMap", bgfx::UniformType::Sampler);
+        _s_dissolveMap = bgfx::createUniform("dissolveMap", bgfx::UniformType::Sampler);
 
         mbIsGlobalDataCreator = false;
     }
@@ -876,7 +876,7 @@ namespace hpl
                             program.m_textures.push_back({s_heightMap, data.s_heightMap, 2});
                             program.m_textures.push_back({s_diffuseMap, data.s_diffuseMap, 3});
                             program.m_textures.push_back({s_envMapAlphaMap, data.s_envMapAlphaMap, 4});
-                            program.m_textures.push_back({s_envMap, data.s_envMap, 5});
+                            // program.m_textures.push_back({s_envMap, data.s_envMap, 5});
                         });
 
                     program->data().params.u_useNormalMap = useDiffuseNormalMap ? 1.0f : 0.0f;
@@ -952,7 +952,9 @@ namespace hpl
                     apProgram->SetVec2f(kVar_avFrenselBiasPow, pVars->mfFrenselBias, pVars->mfFrenselPow);
 
                     cMatrixf mtxInvView = apRenderer->GetCurrentFrustum()->GetViewMatrix().GetTranspose();
-                    apProgram->SetMatrixf(kVar_a_mtxInvViewRotation, mtxInvView.GetRotation());
+                    apProgram->SetMatrixf(kVar_a_mtxInvViewRotation, mtxInvView.GetRotation().GetTranspose());
+                } else {
+                    apProgram->SetMatrixf(kVar_a_mtxInvViewRotation, cMatrixf::Identity);
                 }
 
                 apProgram->setImage(material::solid::s_diffuseMap, apMaterial->GetImage(eMaterialTexture_Diffuse));

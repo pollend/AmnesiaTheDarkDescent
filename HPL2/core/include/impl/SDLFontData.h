@@ -22,9 +22,6 @@
 
 #include "graphics/FontData.h"
 
-//#include <SDL/SDL.h>
-//#include <SDL/SDL_ttf.h>
-
 namespace hpl {
 
 	class cSDLFontData : public iFontData

@@ -1255,7 +1255,7 @@ namespace hpl {
 			if(bgfx::isValid(pNode->GetOcclusionQuery())) {
 				occlusionResult = bgfx::getResult(pNode->GetOcclusionQuery());
 			}
-			occlusionResult = bgfx::OcclusionQueryResult::Visible;
+			occlusionResult = bgfx::OcclusionQueryResult::Visible; // TODO: occlusion queries are broken
 			
 			//////////////////////////
 			//Render nodes and queue queries

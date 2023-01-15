@@ -26,6 +26,8 @@
 #include "math/MathTypes.h"
 #include "scene/RenderableContainer_DynBoxTree.h"
 
+#include <graphics/EntrySDL.h>
+
 #include "../../tests/Common/SimpleCamera.h"
 #include <array>
 #include <memory>
@@ -2060,16 +2062,21 @@ int hplMain(const tString &asCommandline)
 
 	gpConfig->Load();
 
+
+
 	//Init the game engine
 	cEngineInitVars vars;
-	vars.mGraphics.mvScreenSize.x = gpConfig->GetInt("Screen","Width",1024);
-	vars.mGraphics.mvScreenSize.y = gpConfig->GetInt("Screen","Height",768);
-	vars.mGraphics.mbFullscreen = gpConfig->GetBool("Screen","FullScreen", false);
-	gpEngine = CreateHPLEngine(eHplAPI_OpenGL, eHplSetup_All, &vars);
-	gpEngine->SetLimitFPS(false);
-	gpEngine->GetGraphics()->GetLowLevel()->SetVsyncActive(false);
-	gpEngine->SetWaitIfAppOutOfFocus(true);
 
+	hpl::entry_sdl::Configuration config = {};
+	config.m_name = "HPL2 MapView";
+	config.m_width = gpConfig->GetInt("Screen","Width",1024);
+	config.m_height = gpConfig->GetInt("Screen","Height",768);
+
+
+	// vars.mGraphics.mvScreenSize.x = gpConfig->GetInt("Screen","Width",1024);
+	// vars.mGraphics.mvScreenSize.y = gpConfig->GetInt("Screen","Height",768);
+	vars.mGraphics.mbFullscreen = gpConfig->GetBool("Screen","FullScreen", false);
+	
 	gsNodeCont_Name = gpConfig->GetString("NodeCont","Name", "MapViewTest");
 	gvNodeCont_BodySize = gpConfig->GetVector3f("NodeCont","BodySize", cVector3f(1, 1.5f, 1));
 	gbNodeCont_NodeAtCenter = gpConfig->GetBool("NodeCont","NodeAtCenter", false);
@@ -2078,42 +2085,50 @@ int hplMain(const tString &asCommandline)
 	gfNodeCont_MaxEdgeDistance = gpConfig->GetFloat("NodeCont_","MaxEdgeDistance", 5.0f);
 	gfNodeCont_MaxHeight = gpConfig->GetFloat("NodeCont","MaxHeight", 0.41f);
 
-	if(asCommandline != "")
-	{
-		gsMapFile = asCommandline;
-		gsMapFile = cString::ReplaceCharTo(gsMapFile,"\"","");
+	
+	hpl::entry_sdl::setThreadHandler([&]() {
+		gpEngine = CreateHPLEngine(eHplAPI_OpenGL, eHplSetup_All, &vars);
+		gpEngine->SetLimitFPS(false);
+		gpEngine->GetGraphics()->GetLowLevel()->SetVsyncActive(false);
+		gpEngine->SetWaitIfAppOutOfFocus(true);
+		if(asCommandline != "")
+		{
+			gsMapFile = asCommandline;
+			gsMapFile = cString::ReplaceCharTo(gsMapFile,"\"","");
 
-		tString sModelDir = cString::GetFilePath(gsMapFile);
-		tWString sDir = cString::To16Char(sModelDir);
-		if(sDir != _W(""))
-			gpEngine->GetResources()->AddResourceDir(sDir,false);
+			tString sModelDir = cString::GetFilePath(gsMapFile);
+			tWString sDir = cString::To16Char(sModelDir);
+			if(sDir != _W(""))
+				gpEngine->GetResources()->AddResourceDir(sDir,false);
 
-		gsMapFile = cString::GetFileName(gsMapFile);
-	}
+			gsMapFile = cString::GetFileName(gsMapFile);
+		}
 
-	//Add resources
-#ifdef USERDIR_RESOURCES
-	gpEngine->GetResources()->LoadResourceDirsFile("resources.cfg", sUserResourceDir);
-#else
-	gpEngine->GetResources()->LoadResourceDirsFile("resources.cfg");
-#endif
-#ifdef __APPLE__
-	gpEngine->GetResources()->AddResourceDir(sEditorDir + _W("viewer/"), true);
-#endif
+		//Add updates
+		cSimpleUpdate Update;
 
-	//Add updates
-	cSimpleUpdate Update;
-	gpEngine->GetUpdater()->AddUpdate("Default", &Update);
+		//Add resources
+	#ifdef USERDIR_RESOURCES
+		gpEngine->GetResources()->LoadResourceDirsFile("resources.cfg", sUserResourceDir);
+	#else
+		gpEngine->GetResources()->LoadResourceDirsFile("resources.cfg");
+	#endif
+	#ifdef __APPLE__
+		gpEngine->GetResources()->AddResourceDir(sEditorDir + _W("viewer/"), true);
+	#endif
+		gpEngine->GetUpdater()->AddUpdate("Default", &Update);
 
-	gpSimpleCamera = hplNew(cSimpleCamera, (Update.GetName(),gpEngine, Update.mpWorld, 10, cVector3f(0,0,9), true) );
+		gpSimpleCamera = hplNew(cSimpleCamera, (Update.GetName(),gpEngine, Update.mpWorld, 10, cVector3f(0,0,9), true) );
 
-	gpEngine->GetUpdater()->AddUpdate("Default", gpSimpleCamera);
+		gpEngine->GetUpdater()->AddUpdate("Default", gpSimpleCamera);
 
-	Update.SetupView();
+		Update.SetupView();
 
-	//Run the engine
-	gpEngine->Run();
+		gpEngine->Run();
+		return 0;
+	});
 
+	hpl::entry_sdl::run(config);
 
 	hplDelete (gpSimpleCamera);
 

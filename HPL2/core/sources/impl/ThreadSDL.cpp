@@ -19,13 +19,9 @@
 
 #include "impl/ThreadSDL.h"
 
-#if USE_SDL2
 #include "SDL2/SDL.h"
 #include <typeinfo>
-#else
-#include "SDL/SDL.h"
-#include <pthread.h>
-#endif
+
 
 namespace hpl {
 

@@ -26,9 +26,6 @@
 #include <list>
 #include "system/SystemTypes.h"
 #include "input/Gamepad.h"
-//#include "input/InputTypes.h"
-
-#include "SDL/SDL.h"
 
 namespace hpl {
 

@@ -19,6 +19,7 @@
 
 #include "bgfx/bgfx.h"
 #include "impl/VertexBufferBGFX.h"
+#include "math/MathTypes.h"
 #ifdef WIN32
 #pragma comment(lib, "OpenGL32.lib")
 #pragma comment(lib, "GLu32.lib")
@@ -48,17 +49,14 @@
 #include "impl/FrameBufferGL.h"
 #include "impl/OcclusionQueryOGL.h"
 
+#include <graphics/EntrySDL.h>
 #include "graphics/Bitmap.h"
 
 #ifdef __APPLE__
 #include <OpenGL/OpenGL.h>
 #endif
 
-#if USE_SDL2
 #include "SDL2/SDL_syswm.h"
-#else
-#include "SDL/SDL_syswm.h"
-#endif
 
 #ifdef WIN32
 #include "impl/TaskKeyHook.h"
@@ -93,7 +91,6 @@ namespace hpl {
 		mlVertexCount = 0;
 		mlIndexCount =0;
 		mlMultisampling =0;
-        mpScreen = 0;
         mbGrab = false;
 
 		mbDoubleSidedStencilIsSet = false;
@@ -102,33 +99,8 @@ namespace hpl {
 		mhKeyTrapper = NULL;
 #endif
 
-		mpFrameBuffer = NULL;
-
-		for(int i=0;i<kMaxTextureUnits;i++)
-			mvCurrentTextureTarget[i] = 0;
-
-		//Create the batch arrays:
-		mlBatchStride = 13;
-		//3 Pos floats, 4 color floats, 3 Tex coord floats .
-		mpVertexArray = (float*)hplMalloc(sizeof(float) * mlBatchStride * mlBatchArraySize);
-		mpIndexArray = (unsigned int*)hplMalloc(sizeof(unsigned int) * mlBatchArraySize); //Index is one int.
-
-		for(int i=0;i<kMaxTextureUnits;i++)
-		{
-			mpTexCoordArray[i] = (float*)hplMalloc(sizeof(float) * 3 * mlBatchArraySize);
-			mbTexCoordArrayActive[i] = false;
-			mlTexCoordArrayCount[i]=0;
-		}
-
 		mbInitHasBeenRun = false;
 
-		//Init extra stuff
-#ifdef WITH_CG
-		if(mGpuProgramFormat == eGpuProgramFormat_CG)
-		{
-			InitCG();
-		}
-#endif
 
 		//TTF_Init();
 	}
@@ -137,29 +109,12 @@ namespace hpl {
 
 	cLowLevelGraphicsSDL::~cLowLevelGraphicsSDL()
 	{
-		//#ifdef WIN32
-		//	if(mhKeyTrapper) FreeLibrary(mhKeyTrapper);
-		//#endif
-
-		if(mbInitHasBeenRun)
-		{
-#if !SDL_VERSION_ATLEAST(2, 0, 0)
-			SDL_SetGammaRamp(mvStartGammaArray[0],mvStartGammaArray[1],mvStartGammaArray[2]);
-#endif
-		}
-
-		hplFree(mpVertexArray);
-		hplFree(mpIndexArray);
-		for(int i=0;i<kMaxTextureUnits;i++)	hplFree(mpTexCoordArray[i]);
 
 		//Exit extra stuff
 #ifdef WITH_CG
 		ExitCG();
 #endif
-		//TTF_Quit();
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-        SDL_DestroyWindow(mpScreen);
-#endif
+
 	}
 
 	//-----------------------------------------------------------------------
@@ -181,8 +136,6 @@ namespace hpl {
 		int alMultisampling, eGpuProgramFormat aGpuProgramFormat,const tString& asWindowCaption,
 		const cVector2l &avWindowPos)
 	{
-		mvScreenSize.x = alWidth;
-		mvScreenSize.y = alHeight;
         mlDisplay = alDisplay;
 		mlBpp = alBpp;
 		mbFullscreen = abFullscreen;
@@ -192,168 +145,10 @@ namespace hpl {
 		mGpuProgramFormat = aGpuProgramFormat;
 		if(mGpuProgramFormat == eGpuProgramFormat_LastEnum) mGpuProgramFormat = eGpuProgramFormat_GLSL;
 
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-        unsigned int mlFlags = SDL_WINDOW_OPENGL;
-        if (alWidth == 0 && alHeight == 0) {
-            mvScreenSize = cVector2l(800,600);
-            mlFlags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
-        } else if (abFullscreen) {
-            mlFlags |= SDL_WINDOW_FULLSCREEN;
-        }
-
-
-        Log(" Setting video mode: %d x %d - %d bpp\n",alWidth, alHeight, alBpp);
-        mpScreen = SDL_CreateWindow(asWindowCaption.c_str(),
-                                    SDL_WINDOWPOS_CENTERED_DISPLAY(mlDisplay), SDL_WINDOWPOS_CENTERED_DISPLAY(mlDisplay),
-                                    mvScreenSize.x, mvScreenSize.y, mlFlags);
-		if(mpScreen==NULL)
-        {
-            // try disabling FSAA
-			Error("Could not set display mode setting a lower one! %s\n", SDL_GetError());
-			mvScreenSize = cVector2l(640,480);
-            mpScreen = SDL_CreateWindow(asWindowCaption.c_str(),
-                                        SDL_WINDOWPOS_CENTERED_DISPLAY(mlDisplay), SDL_WINDOWPOS_CENTERED_DISPLAY(mlDisplay),
-                                        mvScreenSize.x, mvScreenSize.y, mlFlags);
-            if(mpScreen==NULL)
-            {
-                FatalError("Unable to initialize display! %s\n", SDL_GetError());
-                return false;
-            }
-            else
-            {
-                cPlatform::CreateMessageBox(_W("Warning!"),_W("Could not set displaymode and 640x480 is used instead!\n"));
-            }
-        }
-        {
-            // update with the screen size ACTUALLY obtained
-            int w,h;
-            SDL_GetWindowSize(mpScreen, &w, &h);
-            mvScreenSize = cVector2l(w, h);
-        }
-
-		auto getNativeWindowHandle = [&]() -> void* {
-			SDL_SysWMinfo wmi;
-			SDL_VERSION(&wmi.version);
-			if (!SDL_GetWindowWMInfo(mpScreen, &wmi) )
-			{
-				return NULL;
-			}
-#	if BX_PLATFORM_LINUX || BX_PLATFORM_BSD
-#		if ENTRY_CONFIG_USE_WAYLAND
-		wl_egl_window *win_impl = (wl_egl_window*)SDL_GetWindowData(_window, "wl_egl_window");
-		if(!win_impl)
-		{
-			int width, height;
-			SDL_GetWindowSize(_window, &width, &height);
-			struct wl_surface* surface = wmi.info.wl.surface;
-			if(!surface)
-				return nullptr;
-			win_impl = wl_egl_window_create(surface, width, height);
-			SDL_SetWindowData(_window, "wl_egl_window", win_impl);
-		}
-		return (void*)(uintptr_t)win_impl;
-#		else
-		return (void*)wmi.info.x11.window;
-#		endif
-#	elif BX_PLATFORM_OSX || BX_PLATFORM_IOS
-		return wmi.info.cocoa.window;
-#	elif BX_PLATFORM_WINDOWS
-		return wmi.info.win.window;
-#   elif BX_PLATFORM_ANDROID
-		return wmi.info.android.window;
-#	endif // BX_PLATFORM_
-		};
-
-		auto getNativeDisplayHandle = [&]() -> void* {
-			SDL_SysWMinfo wmi;
-		SDL_VERSION(&wmi.version);
-		if (!SDL_GetWindowWMInfo(mpScreen, &wmi) )
-		{
-			return NULL;
-		}
-
-#	if BX_PLATFORM_LINUX || BX_PLATFORM_BSD
-#		if ENTRY_CONFIG_USE_WAYLAND
-		return wmi.info.wl.display;
-#		else
-		return wmi.info.x11.display;
-#		endif // ENTRY_CONFIG_USE_WAYLAND
-#	else
-		return nullptr;
-#	endif // BX_PLATFORM_*
-		};
-
-		bgfx::Init init{};
-		init.type = bgfx::RendererType::OpenGL;
-		init.platformData.nwh = getNativeWindowHandle();
-		init.platformData.ndt = getNativeDisplayHandle();
-		init.resolution.width = mvScreenSize.x;
-		init.resolution.height = mvScreenSize.y;
-		init.resolution.reset = BGFX_RESET_VSYNC;
-		bgfx::init(init);
-#else
-		unsigned int mlFlags = SDL_OPENGL;
-
-		if(abFullscreen) mlFlags |= SDL_FULLSCREEN;
-
-		// If caption set before engine creation, no chance for the "SDL_App" to appear for even a msec
-		SetWindowCaption(asWindowCaption);
-
-		Log(" Setting video mode: %d x %d - %d bpp\n",alWidth, alHeight, alBpp);
-		mpScreen = SDL_SetVideoMode( alWidth, alHeight, alBpp, mlFlags);
-		if(mpScreen==NULL){
-			Error("Could not set display mode setting a lower one!\n");
-			mvScreenSize = cVector2l(640,480);
-
-			mpScreen = SDL_SetVideoMode( mvScreenSize.x, mvScreenSize.y, alBpp, mlFlags);
-			if(mpScreen==NULL)
-			{
-				FatalError("Unable to initialize display!\n");
-				return false;
-			}
-			else
-			{
-				//SetWindowCaption(asWindowCaption);
-				cPlatform::CreateMessageBox(_W("Warning!"),_W("Could not set displaymode and 640x480 is used instead!\n"));
-			}
-		}
-		else
-		{
-			//SetWindowCaption(asWindowCaption);
-		}
-        // update with the screen size ACTUALLY obtained
-        mvScreenSize = cVector2l(mpScreen->w, mpScreen->h);
-#   ifdef WIN32
-		//////////////////////////////
-		// Set up window position
-		if(abFullscreen==false)
-		{
-			SDL_SysWMinfo pInfo;
-			SDL_VERSION(&pInfo.version);
-			SDL_GetWMInfo(&pInfo);
-
-			RECT r;
-			GetWindowRect(pInfo.window, &r);
-
-			if(avWindowPos.x >=0 && avWindowPos.y >=0)
-			{
-				SetWindowPos(pInfo.window, HWND_TOP, avWindowPos.x, avWindowPos.y, 0, 0,  SWP_NOSIZE);
-			}
-		}
-#   endif
-#endif
         if (mbGrab) {
             SetWindowGrab(true);
         }
 
-		//Trap Alt tab if in fullscreen
-#if defined(WIN32) && !SDL_VERSION_ATLEAST(2,0,0)
-		if(abFullscreen)
-		{
-			//mhKeyTrapper = LoadLibrary( "keyhook.dll" );
-			//::DisableTaskKeys(true,false);
-		}
-#endif //WIN32
 
 		// Log(" Init Glew...");
 		// if(glewInit() == GLEW_OK)
@@ -366,26 +161,13 @@ namespace hpl {
 		// }
 
 		///Setup up windows specifc context:
-#if defined(WIN32) && !SDL_VERSION_ATLEAST(2,0,0)
-		mGLContext = wglGetCurrentContext();
-		mDeviceContext = wglGetCurrentDC();
-#endif
-
 		//Check Multisample properties
 		CheckMultisampleCaps();
 
 		//Turn off cursor as default
 		ShowCursor(false);
 
-		//Gamma
-		mfGammaCorrection = 1.0f;
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-        SDL_SetWindowBrightness(mpScreen, mfGammaCorrection);
-#else
-		SDL_GetGammaRamp(mvStartGammaArray[0],mvStartGammaArray[1],mvStartGammaArray[2]);
-
-		SDL_SetGamma(mfGammaCorrection,mfGammaCorrection,mfGammaCorrection);
-#endif
+        // SDL_SetWindowBrightness(mpScreen, mfGammaCorrection);
 
 		mbInitHasBeenRun = true;
 
@@ -407,14 +189,13 @@ namespace hpl {
 
 		mbScissorActive = false;
 		mvScissorPos =0;
-		mvScissorSize = mvScreenSize;
+		// mvScissorSize = mvScreenSize;
 
 		mbBlendActive = false;
 
-		mpFrameBuffer = NULL;
-		mvFrameBufferPos =0;
-		mvFrameBufferSize = mvScreenSize;
-		mvFrameBufferTotalSize = mvScreenSize;
+		// mvFrameBufferPos =0;
+		// mvFrameBufferSize = mvScreenSize;
+		// mvFrameBufferTotalSize = mvScreenSize;
 
 		return true;
 	}
@@ -532,8 +313,6 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::ShowCursor(bool abX)
 	{
-		;
-
 		if(abX)
 			SDL_ShowCursor(SDL_ENABLE);
 		else
@@ -545,56 +324,34 @@ namespace hpl {
     void cLowLevelGraphicsSDL::SetWindowGrab(bool abX)
     {
         mbGrab = abX;
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-        if (mpScreen) {
-            SDL_SetWindowGrab(mpScreen, abX ? SDL_TRUE : SDL_FALSE);
+        if (hpl::entry_sdl::getWindow()) {
+            SDL_SetWindowGrab(hpl::entry_sdl::getWindow(), abX ? SDL_TRUE : SDL_FALSE);
         }
-#else
-		SDL_WM_GrabInput(abX ? SDL_GRAB_ON : SDL_GRAB_OFF);
-#endif
     }
 
 	void cLowLevelGraphicsSDL::SetRelativeMouse(bool abX)
 	{
-#if SDL_VERSION_ATLEAST(2, 0, 0)
 		SDL_SetRelativeMouseMode(abX ? SDL_TRUE : SDL_FALSE);
-#endif
 	}
 
     void cLowLevelGraphicsSDL::SetWindowCaption(const tString &asName)
     {
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-        SDL_SetWindowTitle(mpScreen, asName.c_str());
-#else
-        SDL_WM_SetCaption(asName.c_str(), "");
-#endif
+        SDL_SetWindowTitle(hpl::entry_sdl::getWindow(), asName.c_str());
     }
 
     bool cLowLevelGraphicsSDL::GetWindowMouseFocus()
     {
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-        return (SDL_GetWindowFlags(mpScreen) & SDL_WINDOW_MOUSE_FOCUS) != 0;
-#else
-        return (SDL_GetAppState() & SDL_APPMOUSEFOCUS) !=0;
-#endif
+		return (hpl::entry_sdl::getWindowFlags()  & SDL_WINDOW_MOUSE_FOCUS) > 0;
     }
 
     bool cLowLevelGraphicsSDL::GetWindowInputFocus()
     {
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-        return (SDL_GetWindowFlags(mpScreen) & SDL_WINDOW_INPUT_FOCUS) != 0;
-#else
-        return (SDL_GetAppState() & SDL_APPINPUTFOCUS) !=0;
-#endif
+		return (hpl::entry_sdl::getWindowFlags()  & SDL_WINDOW_INPUT_FOCUS) > 0;
     }
 
     bool cLowLevelGraphicsSDL::GetWindowIsVisible()
     {
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-        return (SDL_GetWindowFlags(mpScreen) & SDL_WINDOW_SHOWN) != 0;
-#else
-        return (SDL_GetAppState() & SDL_APPACTIVE) !=0;
-#endif
+		return (hpl::entry_sdl::getWindowFlags()  & SDL_WINDOW_SHOWN) > 0;
     }
 
 	//-----------------------------------------------------------------------
@@ -631,34 +388,18 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SetMultisamplingActive(bool abX)
 	{
-		;
-
-		if(!GLEW_ARB_multisample || mlMultisampling<=0) return;
-
-		if(abX)
-			glEnable(GL_MULTISAMPLE_ARB);
-		else
-			glDisable(GL_MULTISAMPLE_ARB);
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetGammaCorrection(float afX)
 	{
-		;
-
 		mfGammaCorrection = afX;
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-        SDL_SetWindowBrightness(mpScreen, mfGammaCorrection);
-#else
-		SDL_SetGamma(mfGammaCorrection,mfGammaCorrection,mfGammaCorrection);
-#endif
+        SDL_SetWindowBrightness(hpl::entry_sdl::getWindow(), mfGammaCorrection);
 	}
 
 	float cLowLevelGraphicsSDL::GetGammaCorrection()
 	{
-		;
-
 		return mfGammaCorrection;
 	}
 
@@ -666,16 +407,13 @@ namespace hpl {
 
 	cVector2f cLowLevelGraphicsSDL::GetScreenSizeFloat()
 	{
-		;
-
-		return cVector2f((float)mvScreenSize.x, (float)mvScreenSize.y);
+		const auto size = hpl::entry_sdl::getSize();
+		return cVector2f(static_cast<float>(size.x), static_cast<float>(size.y));
 	}
 
-	const cVector2l& cLowLevelGraphicsSDL::GetScreenSizeInt()
+	const cVector2l cLowLevelGraphicsSDL::GetScreenSizeInt()
 	{
-		;
-
-		return mvScreenSize;
+		return hpl::entry_sdl::getSize();
 	}
 
 	//-----------------------------------------------------------------------
@@ -807,103 +545,15 @@ namespace hpl {
 
 	cBitmap* cLowLevelGraphicsSDL::CopyFrameBufferToBitmap(	const cVector2l &avScreenPos,const cVector2l &avScreenSize)
 	{
-		;
+		BX_ASSERT(false, "TODO: need to replace this with a helper method no need to couple this");
 
-		cVector2l vSize = avScreenSize;
-		if(vSize.x <= 0) vSize.x = mvFrameBufferSize.x;
-		if(vSize.y <= 0) vSize.y = mvFrameBufferSize.y;
-
-		cVector2l vPos = mvFrameBufferPos + avScreenPos;
-		vPos.y = (mvFrameBufferTotalSize.y - vSize.y)-vPos.y;
-
-		cBitmap *pBitmap = hplNew(cBitmap, () );
-
-		///////////////////////////////////
-		//Get the correct pixel format
-        ePixelFormat pixelFormat = ePixelFormat_RGBA;
-		if(mpFrameBuffer)
-		{
-			iFrameBufferAttachment *pColorBuffer = mpFrameBuffer->GetColorBuffer(0);
-			if(pColorBuffer && pColorBuffer->GetFrameBufferAttachmentType() == eFrameBufferAttachment_Texture)
-			{
-				iTexture *pTexture = static_cast<iTexture*>(pColorBuffer);
-				pixelFormat = pTexture->GetPixelFormat();
-			}
-		}
-
-		//////////////////////////////
-		//Get create the bitmap data
-		pBitmap->CreateData(cVector3l(vSize.x, vSize.y,1),pixelFormat,0,0);
-
-		//////////////////////////////
-		//Copy pixels
-		glReadPixels(vPos.x, vPos.y, vSize.x, vSize.y,PixelFormatToGLFormat(pixelFormat), GL_UNSIGNED_BYTE, pBitmap->GetData(0,0)->mpData);
-
-		//TODO: Flip, not needed?
-
-		return pBitmap;
+		return nullptr;
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetCurrentFrameBuffer(iFrameBuffer* apFrameBuffer, const cVector2l &avPos, const cVector2l& avSize)
 	{
-		;
-
-		///////////////////////////////////////////////////////
-		//Set frame buffer
-		if(true)//mpFrameBuffer != apFrameBuffer)
-		{
-			iFrameBuffer *pPrevFameBuffer = mpFrameBuffer;
-			mpFrameBuffer = apFrameBuffer;
-
-			if(mpFrameBuffer)
-			{
-				cFrameBufferGL *pFrameBufferGL = static_cast<cFrameBufferGL*>(mpFrameBuffer);
-
-				glBindFramebufferEXT(GL_FRAMEBUFFER_EXT,pFrameBufferGL->GetHandle());
-			}
-			else
-			{
-				glBindFramebufferEXT(GL_FRAMEBUFFER_EXT,0);
-			}
-
-			// Post tasks like generating mipmaps
-			if(pPrevFameBuffer)
-			{
-				pPrevFameBuffer->PostBindUpdate();
-			}
-		}
-
-		/////////////////////////////////////
-		//Get framebuffer size
-		if(mpFrameBuffer)	mvFrameBufferTotalSize = mpFrameBuffer->GetSize();
-		else				mvFrameBufferTotalSize = mvScreenSize;
-
-		cVector2l vFrameBufferSize = avSize;
-		if(vFrameBufferSize.x <0 || vFrameBufferSize.y<0)
-		{
-			vFrameBufferSize = mvFrameBufferTotalSize;
-		}
-		cVector2l vFrameBufferPos = avPos;
-
-		///////////////////////////////////////////////////////
-		//Set Viewport
-		if(true)//mvFrameBufferPos != vFrameBufferPos || mvFrameBufferSize != vFrameBufferSize)
-		{
-			mvFrameBufferSize = vFrameBufferSize;
-			mvFrameBufferPos = vFrameBufferPos;
-
-			if(mpFrameBuffer)
-			{
-				vFrameBufferPos.y = (mpFrameBuffer->GetSize().y - vFrameBufferSize.y)-vFrameBufferPos.y;
-			}
-			else
-			{
-				vFrameBufferPos.y = (mvScreenSize.y - vFrameBufferSize.y)-vFrameBufferPos.y;
-			}
-			glViewport(vFrameBufferPos.x,vFrameBufferPos.y,vFrameBufferSize.x, vFrameBufferSize.y);
-		}
 	}
 
 	void cLowLevelGraphicsSDL::WaitAndFinishRendering()
@@ -1010,20 +660,11 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SetClipPlane(int alIdx, const cPlanef& aPlane)
 	{
-		mvClipPlanes[alIdx] = aPlane;
-
-		double vPlane[4];
-		vPlane[0] = aPlane.a;
-		vPlane[1] = aPlane.b;
-		vPlane[2] = aPlane.c;
-		vPlane[3] = aPlane.d;
-		// glClipPlane(GL_CLIP_PLANE0 + alIdx,vPlane);
 	}
 	cPlanef cLowLevelGraphicsSDL::GetClipPlane(int alIdx)
 	{
-		;
+		return cPlanef();
 
-		return mvClipPlanes[alIdx];
 	}
 	void cLowLevelGraphicsSDL::SetClipPlaneActive(int alIdx, bool abX)
 	{
@@ -1136,74 +777,21 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::DrawTriangle(tVertexVec& avVtx)
 	{
-		;
 
-		assert(avVtx.size()==3);
-
-		glBegin(GL_TRIANGLES);
-		{
-			for(int i=0;i<3;i++){
-				glTexCoord3f(avVtx[i].tex.x,avVtx[i].tex.y,avVtx[i].tex.z);
-				glColor4f(avVtx[i].col.r,avVtx[i].col.g,avVtx[i].col.b,avVtx[i].col.a);
-				glVertex3f(avVtx[i].pos.x,avVtx[i].pos.y,avVtx[i].pos.z);
-			}
-		}
-		glEnd();
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::DrawQuad(const cVector3f &avPos,const cVector2f &avSize,const cColor& aColor)
 	{
-		;
 
-		glBegin(GL_QUADS);
-		{
-			glTexCoord2f(0.0, 0.0);
-			glColor4f(aColor.r,aColor.g,aColor.b,aColor.a);
-			glVertex3f(avPos.x, avPos.y,avPos.z);
-
-			glTexCoord2f(1.0, 0.0);
-			glColor4f(aColor.r,aColor.g,aColor.b,aColor.a);
-			glVertex3f(avPos.x+avSize.x, avPos.y,avPos.z);
-
-			glTexCoord2f(1.0, 1.0);
-			glColor4f(aColor.r,aColor.g,aColor.b,aColor.a);
-			glVertex3f(avPos.x+avSize.x, avPos.y+avSize.y,avPos.z);
-
-			glTexCoord2f(0.0, 1.0);
-			glColor4f(aColor.r,aColor.g,aColor.b,aColor.a);
-			glVertex3f(avPos.x, avPos.y+avSize.y,avPos.z);
-
-		}
-		glEnd();
 	}
 
 	void cLowLevelGraphicsSDL::DrawQuad(const cVector3f &avPos,const cVector2f &avSize,
 		const cVector2f &avMinTexCoord,const cVector2f &avMaxTexCoord,
 		const cColor& aColor)
 	{
-		;
 
-		glBegin(GL_QUADS);
-		{
-			glTexCoord2f(avMinTexCoord.x, avMinTexCoord.y);
-			glColor4f(aColor.r,aColor.g,aColor.b,aColor.a);
-			glVertex3f(avPos.x, avPos.y,avPos.z);
-
-			glTexCoord2f(avMaxTexCoord.x, avMinTexCoord.y);
-			glColor4f(aColor.r,aColor.g,aColor.b,aColor.a);
-			glVertex3f(avPos.x+avSize.x, avPos.y,avPos.z);
-
-			glTexCoord2f(avMaxTexCoord.x, avMaxTexCoord.y);
-			glColor4f(aColor.r,aColor.g,aColor.b,aColor.a);
-			glVertex3f(avPos.x+avSize.x, avPos.y+avSize.y,avPos.z);
-
-			glTexCoord2f(avMinTexCoord.x, avMaxTexCoord.y);
-			glColor4f(aColor.r,aColor.g,aColor.b,aColor.a);
-			glVertex3f(avPos.x, avPos.y+avSize.y,avPos.z);
-		}
-		glEnd();
 	}
 
 	void cLowLevelGraphicsSDL::DrawQuad(const cVector3f &avPos,const cVector2f &avSize,
@@ -1211,76 +799,20 @@ namespace hpl {
 		const cVector2f &avMinTexCoord1,const cVector2f &avMaxTexCoord1,
 		const cColor& aColor)
 	{
-		;
 
-		glBegin(GL_QUADS);
-		{
-			glMultiTexCoord2fARB(GL_TEXTURE0_ARB,avMinTexCoord0.x, avMinTexCoord0.y);
-			glMultiTexCoord2fARB(GL_TEXTURE1_ARB,avMinTexCoord1.x, avMinTexCoord1.y);
-			glColor4f(aColor.r,aColor.g,aColor.b,aColor.a);
-			glVertex3f(avPos.x, avPos.y,avPos.z);
-
-			glMultiTexCoord2fARB(GL_TEXTURE0_ARB,avMaxTexCoord0.x, avMinTexCoord0.y);
-			glMultiTexCoord2fARB(GL_TEXTURE1_ARB,avMaxTexCoord1.x, avMinTexCoord1.y);
-			glColor4f(aColor.r,aColor.g,aColor.b,aColor.a);
-			glVertex3f(avPos.x+avSize.x, avPos.y,avPos.z);
-
-			glMultiTexCoord2fARB(GL_TEXTURE0_ARB,avMaxTexCoord0.x, avMaxTexCoord0.y);
-			glMultiTexCoord2fARB(GL_TEXTURE1_ARB,avMaxTexCoord1.x, avMaxTexCoord1.y);
-			glColor4f(aColor.r,aColor.g,aColor.b,aColor.a);
-			glVertex3f(avPos.x+avSize.x, avPos.y+avSize.y,avPos.z);
-
-			glMultiTexCoord2fARB(GL_TEXTURE0_ARB,avMinTexCoord0.x, avMaxTexCoord0.y);
-			glMultiTexCoord2fARB(GL_TEXTURE1_ARB,avMinTexCoord1.x, avMaxTexCoord1.y);
-			glColor4f(aColor.r,aColor.g,aColor.b,aColor.a);
-			glVertex3f(avPos.x, avPos.y+avSize.y,avPos.z);
-		}
-		glEnd();
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::DrawQuad(const tVertexVec &avVtx)
 	{
-		;
 
-		assert(avVtx.size()==4);
-
-		glBegin(GL_QUADS);
-		{
-			for(int i=0;i<4;i++){
-				glTexCoord3f(avVtx[i].tex.x,avVtx[i].tex.y,avVtx[i].tex.z);
-				glColor4f(avVtx[i].col.r,avVtx[i].col.g,avVtx[i].col.b,avVtx[i].col.a);
-				glVertex3f(avVtx[i].pos.x,avVtx[i].pos.y,avVtx[i].pos.z);
-			}
-		}
-		glEnd();
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::DrawQuadMultiTex(const tVertexVec &avVtx,const tVector3fVec &avExtraUvs)
 	{
-		;
-
-		int lExtraUnits = (int)avExtraUvs.size()/4;
-		glBegin(GL_QUADS);
-		{
-			for(int i=0;i<4;i++)
-			{
-				glMultiTexCoord3fARB(GL_TEXTURE0_ARB,avVtx[i].tex.x,avVtx[i].tex.y,avVtx[i].tex.z);
-
-				for(int unit=0; unit<lExtraUnits; ++unit)
-				{
-					glMultiTexCoord3fARB(GL_TEXTURE0_ARB + unit + 1,
-						avExtraUvs[unit*4 + i].x, avExtraUvs[unit*4 + i].y, avExtraUvs[unit*4 + i].z);
-				}
-
-				glColor4f(avVtx[i].col.r,avVtx[i].col.g,avVtx[i].col.b,avVtx[i].col.a);
-				glVertex3f(avVtx[i].pos.x,avVtx[i].pos.y,avVtx[i].pos.z);
-			}
-		}
-		glEnd();
 
 	}
 
@@ -1289,137 +821,37 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::DrawQuad(const tVertexVec &avVtx, const cColor aCol)
 	{
-		;
 
-		assert(avVtx.size()==4);
-
-		glBegin(GL_QUADS);
-		{
-			//Make all this inline??
-			for(int i=0;i<4;i++){
-				glTexCoord3f(avVtx[i].tex.x,avVtx[i].tex.y,avVtx[i].tex.z);
-				glColor4f(aCol.r,aCol.g,aCol.b,aCol.a);
-				glVertex3f(avVtx[i].pos.x,avVtx[i].pos.y,avVtx[i].pos.z);
-			}
-		}
-		glEnd();
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::DrawQuad(const tVertexVec &avVtx,const float afZ)
 	{
-		;
 
-		assert(avVtx.size()==4);
-
-		glBegin(GL_QUADS);
-		{
-			for(int i=0;i<4;i++){
-				glTexCoord3f(avVtx[i].tex.x,avVtx[i].tex.y,afZ);
-				glColor4f(avVtx[i].col.r,avVtx[i].col.g,avVtx[i].col.b,avVtx[i].col.a);
-				glVertex3f(avVtx[i].pos.x,avVtx[i].pos.y,avVtx[i].pos.z);
-			}
-		}
-		glEnd();
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::DrawQuad(const tVertexVec &avVtx,const float afZ,const cColor &aCol)
 	{
-		;
 
-		assert(avVtx.size()==4);
-
-		glBegin(GL_QUADS);
-		{
-			for(int i=0;i<4;i++){
-				glTexCoord3f(avVtx[i].tex.x,avVtx[i].tex.y,afZ);
-				glColor4f(aCol.r,aCol.g,aCol.b,aCol.a);
-				glVertex3f(avVtx[i].pos.x,avVtx[i].pos.y,avVtx[i].pos.z);
-			}
-		}
-		glEnd();
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::DrawLine(const cVector3f& avBegin, const cVector3f& avEnd, cColor aCol)
 	{
-		;
 
-		glColor4f(aCol.r,aCol.g,aCol.b,aCol.a);
-		glBegin(GL_LINES);
-		{
-			glVertex3f(avBegin.x,avBegin.y,avBegin.z);
-			glVertex3f(avEnd.x,avEnd.y,avEnd.z);
-		}
-		glEnd();
 	}
 
 	void cLowLevelGraphicsSDL::DrawLine(const cVector3f& avBegin, const cColor& aBeginCol, const cVector3f& avEnd, const cColor& aEndCol)
 	{
-		;
 
-		glBegin(GL_LINES);
-		{
-			glColor4f(aBeginCol.r,aBeginCol.g,aBeginCol.b,aBeginCol.a);
-			glVertex3f(avBegin.x,avBegin.y,avBegin.z);
-
-			glColor4f(aEndCol.r,aEndCol.g,aEndCol.b,aEndCol.a);
-			glVertex3f(avEnd.x,avEnd.y,avEnd.z);
-		}
-		glEnd();
 	}
 
 	void cLowLevelGraphicsSDL::DrawBoxMinMax(const cVector3f& avMin, const cVector3f& avMax, cColor aCol)
 	{
-		;
-
-		glColor4f(aCol.r,aCol.g,aCol.b,aCol.a);
-		glBegin(GL_LINES);
-		{
-			//Pos Z Quad
-			glVertex3f(avMax.x,avMax.y,avMax.z);
-			glVertex3f(avMin.x,avMax.y,avMax.z);
-
-			glVertex3f(avMax.x,avMax.y,avMax.z);
-			glVertex3f(avMax.x,avMin.y,avMax.z);
-
-			glVertex3f(avMin.x,avMax.y,avMax.z);
-			glVertex3f(avMin.x,avMin.y,avMax.z);
-
-			glVertex3f(avMin.x,avMin.y,avMax.z);
-			glVertex3f(avMax.x,avMin.y,avMax.z);
-
-			//Neg Z Quad
-			glVertex3f(avMax.x,avMax.y,avMin.z);
-			glVertex3f(avMin.x,avMax.y,avMin.z);
-
-			glVertex3f(avMax.x,avMax.y,avMin.z);
-			glVertex3f(avMax.x,avMin.y,avMin.z);
-
-			glVertex3f(avMin.x,avMax.y,avMin.z);
-			glVertex3f(avMin.x,avMin.y,avMin.z);
-
-			glVertex3f(avMin.x,avMin.y,avMin.z);
-			glVertex3f(avMax.x,avMin.y,avMin.z);
-
-			//Lines between
-			glVertex3f(avMax.x,avMax.y,avMax.z);
-			glVertex3f(avMax.x,avMax.y,avMin.z);
-
-			glVertex3f(avMin.x,avMax.y,avMax.z);
-			glVertex3f(avMin.x,avMax.y,avMin.z);
-
-			glVertex3f(avMin.x,avMin.y,avMax.z);
-			glVertex3f(avMin.x,avMin.y,avMin.z);
-
-			glVertex3f(avMax.x,avMin.y,avMax.z);
-			glVertex3f(avMax.x,avMin.y,avMin.z);
-		}
-		glEnd();
 
 	}
 
@@ -1427,130 +859,24 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::DrawSphere(const cVector3f& avPos, float afRadius, cColor aCol)
 	{
-		;
 
-		int alSegments = 32;
-		float afAngleStep = k2Pif /(float)alSegments;
-
-		glColor4f(aCol.r,aCol.g,aCol.b,aCol.a);
-		glBegin(GL_LINES);
-		{
-			//X Circle:
-			for(float a=0; a< k2Pif; a+= afAngleStep)
-			{
-				glVertex3f(avPos.x, avPos.y + sin(a)*afRadius,
-					avPos.z + cos(a)*afRadius);
-
-				glVertex3f(avPos.x, avPos.y + sin(a+afAngleStep)*afRadius,
-					avPos.z + cos(a+afAngleStep)*afRadius);
-			}
-
-			//Y Circle:
-			for(float a=0; a< k2Pif; a+= afAngleStep)
-			{
-				glVertex3f(avPos.x + cos(a)*afRadius, avPos.y,
-					avPos.z + sin(a)*afRadius);
-
-				glVertex3f(avPos.x + cos(a+afAngleStep)*afRadius, avPos.y ,
-					avPos.z+ sin(a+afAngleStep)*afRadius);
-			}
-
-			//Z Circle:
-			for(float a=0; a< k2Pif; a+= afAngleStep)
-			{
-				glVertex3f(avPos.x + cos(a)*afRadius, avPos.y + sin(a)*afRadius, avPos.z);
-
-				glVertex3f(avPos.x + cos(a+afAngleStep)*afRadius,
-					avPos.y + sin(a+afAngleStep)*afRadius,
-					avPos.z);
-			}
-
-		}
-		glEnd();
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::DrawSphere(const cVector3f& avPos, float afRadius, cColor aColX, cColor aColY, cColor aColZ)
 	{
-		;
 
-		int alSegments = 32;
-		float afAngleStep = k2Pif /(float)alSegments;
-
-		SetTexture(0,NULL);
-		SetBlendActive(false);
-		glBegin(GL_LINES);
-		{
-			//X Circle:
-			glColor4f(aColX.r,aColX.g,aColX.b,aColX.a);
-			for(float a=0; a< k2Pif; a+= afAngleStep)
-			{
-				glVertex3f(avPos.x, avPos.y + sin(a)*afRadius,
-					avPos.z + cos(a)*afRadius);
-
-				glVertex3f(avPos.x, avPos.y + sin(a+afAngleStep)*afRadius,
-					avPos.z + cos(a+afAngleStep)*afRadius);
-			}
-
-			//Y Circle:
-			glColor4f(aColY.r,aColY.g,aColY.b,aColY.a);
-			for(float a=0; a< k2Pif; a+= afAngleStep)
-			{
-				glVertex3f(avPos.x + cos(a)*afRadius, avPos.y,
-					avPos.z + sin(a)*afRadius);
-
-				glVertex3f(avPos.x + cos(a+afAngleStep)*afRadius, avPos.y ,
-					avPos.z+ sin(a+afAngleStep)*afRadius);
-			}
-
-			//Z Circle:
-			glColor4f(aColZ.r,aColZ.g,aColZ.b,aColZ.a);
-			for(float a=0; a< k2Pif; a+= afAngleStep)
-			{
-				glVertex3f(avPos.x + cos(a)*afRadius, avPos.y + sin(a)*afRadius, avPos.z);
-
-				glVertex3f(avPos.x + cos(a+afAngleStep)*afRadius,
-					avPos.y + sin(a+afAngleStep)*afRadius,
-					avPos.z);
-			}
-
-		}
-		glEnd();
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::DrawLineQuad(const cRect2f& aRect, float afZ, cColor aCol)
 	{
-		;
-
-		glColor4f(aCol.r,aCol.g,aCol.b,aCol.a);
-		glBegin(GL_LINE_STRIP);
-		{
-			glVertex3f(aRect.x,aRect.y,afZ);
-			glVertex3f(aRect.x+aRect.w,aRect.y,afZ);
-			glVertex3f(aRect.x+aRect.w,aRect.y+aRect.h,afZ);
-			glVertex3f(aRect.x,aRect.y+aRect.h,afZ);
-			glVertex3f(aRect.x,aRect.y,afZ);
-		}
-		glEnd();
 	}
 
 	void cLowLevelGraphicsSDL::DrawLineQuad(const cVector3f &avPos,const cVector2f &avSize, cColor aCol)
 	{
-		;
-
-		glColor4f(aCol.r,aCol.g,aCol.b,aCol.a);
-		glBegin(GL_LINE_STRIP);
-		{
-			glVertex3f(avPos.x,avPos.y,avPos.z);
-			glVertex3f(avPos.x+avSize.x,avPos.y,avPos.z);
-			glVertex3f(avPos.x+avSize.x,avPos.y+avSize.y,avPos.z);
-			glVertex3f(avPos.x,avPos.y+avSize.y,avPos.z);
-			glVertex3f(avPos.x,avPos.y,avPos.z);
-		}
-		glEnd();
 	}
 
 
@@ -1565,74 +891,12 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::AddVertexToBatch(const cVertex *apVtx)
 	{
-		;
-
-		//Coord
-		mpVertexArray[mlVertexCount + 0] =	apVtx->pos.x;
-		mpVertexArray[mlVertexCount + 1] =	apVtx->pos.y;
-		mpVertexArray[mlVertexCount + 2] =	apVtx->pos.z;
-		//Color
-		mpVertexArray[mlVertexCount + 3] =	apVtx->col.r;
-		mpVertexArray[mlVertexCount + 4] =	apVtx->col.g;
-		mpVertexArray[mlVertexCount + 5] =	apVtx->col.b;
-		mpVertexArray[mlVertexCount + 6] =	apVtx->col.a;
-		//Texture coord
-		mpVertexArray[mlVertexCount + 7] =	apVtx->tex.x;
-		mpVertexArray[mlVertexCount + 8] =	apVtx->tex.y;
-		mpVertexArray[mlVertexCount + 9] =	apVtx->tex.z;
-		//Normal coord
-		mpVertexArray[mlVertexCount + 10] =	apVtx->norm.x;
-		mpVertexArray[mlVertexCount + 11] =	apVtx->norm.y;
-		mpVertexArray[mlVertexCount + 12] =	apVtx->norm.z;
-
-		mlVertexCount = mlVertexCount + mlBatchStride;
-
-		if(mlVertexCount/mlBatchStride >= mlBatchArraySize)
-		{
-			//Make the array larger.
-		}
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::AddVertexToBatch(const cVertex *apVtx, const cVector3f* avTransform)
 	{
-		;
-
-		//Coord
-		mpVertexArray[mlVertexCount + 0] =	apVtx->pos.x+avTransform->x;
-		mpVertexArray[mlVertexCount + 1] =	apVtx->pos.y+avTransform->y;
-		mpVertexArray[mlVertexCount + 2] =	apVtx->pos.z+avTransform->z;
-
-		/*Log("Trans: %s\n",avTransform->ToString().c_str());
-		Log("Adding: %f:%f:%f\n",mpVertexArray[mlVertexCount + 0],
-		mpVertexArray[mlVertexCount + 1],
-		mpVertexArray[mlVertexCount + 2]);*/
-		//Color
-		mpVertexArray[mlVertexCount + 3] =	apVtx->col.r;
-		mpVertexArray[mlVertexCount + 4] =	apVtx->col.g;
-		mpVertexArray[mlVertexCount + 5] =	apVtx->col.b;
-		mpVertexArray[mlVertexCount + 6] =	apVtx->col.a;
-		//Texture coord
-		mpVertexArray[mlVertexCount + 7] =	apVtx->tex.x;
-		mpVertexArray[mlVertexCount + 8] =	apVtx->tex.y;
-		mpVertexArray[mlVertexCount + 9] =	apVtx->tex.z;
-
-		/*Log("Tex: %f:%f:%f\n",mpVertexArray[mlVertexCount + 7],
-		mpVertexArray[mlVertexCount + 8],
-		mpVertexArray[mlVertexCount + 9]);*/
-
-		//Normal coord
-		mpVertexArray[mlVertexCount + 10] =	apVtx->norm.x;
-		mpVertexArray[mlVertexCount + 11] =	apVtx->norm.y;
-		mpVertexArray[mlVertexCount + 12] =	apVtx->norm.z;
-
-		mlVertexCount = mlVertexCount + mlBatchStride;
-
-		if(mlVertexCount/mlBatchStride >= mlBatchArraySize)
-		{
-			//Make the array larger.
-		}
 	}
 
 	//-----------------------------------------------------------------------
@@ -1648,31 +912,6 @@ namespace hpl {
 	void cLowLevelGraphicsSDL::AddVertexToBatch_Size2D(const cVertex *apVtx, const cVector3f* avTransform,
 		const cColor* apCol,const float& mfW, const float& mfH)
 	{
-		;
-
-		//Coord
-		mpVertexArray[mlVertexCount + 0] =	avTransform->x + mfW;
-		mpVertexArray[mlVertexCount + 1] =	avTransform->y + mfH;
-		mpVertexArray[mlVertexCount + 2] =	avTransform->z;
-
-		//Color
-		mpVertexArray[mlVertexCount + 3] =	apCol->r;
-		mpVertexArray[mlVertexCount + 4] =	apCol->g;
-		mpVertexArray[mlVertexCount + 5] =	apCol->b;
-		mpVertexArray[mlVertexCount + 6] =	apCol->a;
-
-		//Texture coord
-		mpVertexArray[mlVertexCount + 7] =	apVtx->tex.x;
-		mpVertexArray[mlVertexCount + 8] =	apVtx->tex.y;
-		mpVertexArray[mlVertexCount + 9] =	apVtx->tex.z;
-
-
-		mlVertexCount = mlVertexCount + mlBatchStride;
-
-		if(mlVertexCount/mlBatchStride >= mlBatchArraySize)
-		{
-			//Make the array larger.
-		}
 	}
 
 	//-----------------------------------------------------------------------
@@ -1680,26 +919,6 @@ namespace hpl {
 	void cLowLevelGraphicsSDL::AddVertexToBatch_Raw(	const cVector3f& avPos, const cColor &aColor,
 		const cVector3f& avTex)
 	{
-		;
-
-		//Coord
-		mpVertexArray[mlVertexCount + 0] =	avPos.x;
-		mpVertexArray[mlVertexCount + 1] =	avPos.y;
-		mpVertexArray[mlVertexCount + 2] =	avPos.z;
-
-		//Color
-		mpVertexArray[mlVertexCount + 3] =	aColor.r;
-		mpVertexArray[mlVertexCount + 4] =	aColor.g;
-		mpVertexArray[mlVertexCount + 5] =	aColor.b;
-		mpVertexArray[mlVertexCount + 6] =	aColor.a;
-
-		//Texture coord
-		mpVertexArray[mlVertexCount + 7] =	avTex.x;
-		mpVertexArray[mlVertexCount + 8] =	avTex.y;
-		mpVertexArray[mlVertexCount + 9] =	avTex.z;
-
-
-		mlVertexCount = mlVertexCount + mlBatchStride;
 	}
 
 
@@ -1707,46 +926,21 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::AddIndexToBatch(int alIndex)
 	{
-		;
 
-		mpIndexArray[mlIndexCount] = alIndex;
-		mlIndexCount++;
-
-		if(mlIndexCount>=mlBatchArraySize)
-		{
-			//Make the array larger.
-		}
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::AddTexCoordToBatch(unsigned int alUnit,const cVector3f *apCoord)
 	{
-		;
 
-		unsigned int lCount = mlTexCoordArrayCount[alUnit];
-
-		mpTexCoordArray[alUnit][lCount+0] = apCoord->x;
-		mpTexCoordArray[alUnit][lCount+1] = apCoord->y;
-		mpTexCoordArray[alUnit][lCount+2] = apCoord->z;
-
-		mlTexCoordArrayCount[alUnit]+=3;
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetBatchTextureUnitActive(unsigned int alUnit,bool abActive)
 	{
-		;
 
-		glClientActiveTextureARB(GL_TEXTURE0_ARB+alUnit);
-
-		if(abActive==false){
-			glTexCoordPointer(3,GL_FLOAT,sizeof(float)*mlBatchStride, &mpVertexArray[7]);
-		}
-		else {
-			glTexCoordPointer(3,GL_FLOAT,0, &mpTexCoordArray[alUnit][0]);
-		}
 	}
 
 	//-----------------------------------------------------------------------
@@ -1792,19 +986,6 @@ namespace hpl {
 	void cLowLevelGraphicsSDL::SetVtxBatchStates(tVtxBatchFlag aFlags)
 	{
 	}
-#ifdef WITH_CG
-	void cLowLevelGraphicsSDL::InitCG()
-	{
-		mCG_Context = cgCreateContext();
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cLowLevelGraphicsSDL::ExitCG()
-	{
-		cgDestroyContext(mCG_Context);
-	}
-#endif
 
 	//-----------------------------------------------------------------------
 

@@ -84,7 +84,7 @@ namespace hpl {
 		 * Get Size of screen
 		 */
 		virtual cVector2f GetScreenSizeFloat()=0;
-		virtual const cVector2l& GetScreenSizeInt()=0;
+		virtual const cVector2l GetScreenSizeInt()=0;
 
 		/*
 		* Get fullscreen mode

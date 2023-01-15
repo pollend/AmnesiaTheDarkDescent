@@ -19,8 +19,12 @@
 
 #include "engine/Engine.h"
 
-#include "bgfx/bgfx.h"
-#include "gui/GuiTypes.h"
+#include  <bgfx/bgfx.h>
+#include <bgfx/platform.h>
+
+#include <gui/GuiTypes.h>
+#include <impl/LowLevelInputSDL.h>
+#include <input/LowLevelInput.h>
 #include "system/System.h"
 #include "sound/Sound.h"
 #include "physics/Physics.h"

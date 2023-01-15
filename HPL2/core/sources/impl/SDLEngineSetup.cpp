@@ -43,13 +43,8 @@
 	#include "impl/LowLevelHapticHaptX.h"
 #endif
 
-#if USE_SDL2
 #include "SDL2/SDL.h"
 #include "SDL2/SDL_syswm.h"
-#else
-#include "SDL/SDL.h"
-#include "SDL/SDL_syswm.h"
-#endif
 #ifdef WIN32
 #include "Windows.h"
 #include "Dbt.h"
@@ -165,11 +160,7 @@ namespace hpl {
 #ifdef INCLUDE_HAPTIC
 		hplDelete(mpLowLevelHaptic);
 #endif
-
-#if SDL_VERSION_ATLEAST(2,0,0)
         SDL_EnableScreenSaver();
-#endif
-		SDL_Quit();
 	}
 
 	//-----------------------------------------------------------------------
