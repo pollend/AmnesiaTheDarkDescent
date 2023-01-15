@@ -68,9 +68,9 @@ namespace hpl
         bgfx::TextureHandle GetHandle() const;
 
         static bgfx::TextureFormat::Enum FromHPLTextureFormat(ePixelFormat format);
-        // static void loadFromBitmap(Image& image, cBitmap& bitmap);
 
         static void InitializeFromBitmap(Image& image, cBitmap& bitmap, const ImageDescriptor& desc);
+        static void InitializeCubemapFromBitmaps(Image& image, const absl::Span<cBitmap*> bitmaps, const ImageDescriptor& desc);
         
         virtual bool Reload() override;
         virtual void Unload() override;
@@ -86,7 +86,6 @@ namespace hpl
         uint16_t m_height = 0;
 
         bgfx::TextureHandle m_handle = BGFX_INVALID_HANDLE;
-        // ImageDescriptor m_descriptor = ImageDescriptor();
     };
 
 } // namespace hpl

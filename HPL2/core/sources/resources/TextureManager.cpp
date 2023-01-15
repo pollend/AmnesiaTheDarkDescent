@@ -18,6 +18,7 @@
  */
 
 #include "resources/TextureManager.h"
+#include "absl/types/span.h"
 #include "bgfx/bgfx.h"
 #include "graphics/Bitmap.h"
 #include "graphics/Graphics.h"
@@ -140,9 +141,92 @@ namespace hpl {
 				return resource;
 			});
 	}
-	Image* cTextureManager::CreateCubeMapImage(const tString& asName,bool abUseMipMaps, eTextureUsage aUsage,
+	Image* cTextureManager::CreateCubeMapImage(const tString& asPathName,bool abUseMipMaps, eTextureUsage aUsage,
 				unsigned int alTextureSizeLevel, ImageOptions options) {
-		BX_ASSERT(false, "Not implemented");
+
+		tString sExt = cString::ToLowerCase(cString::GetFileExt(asPathName));
+
+		if(sExt == "dds")
+		{
+			return _wrapperImageResource(asPathName, 
+			[options](const tString& asName, const tWString& path, cBitmap* pBmp) -> Image*
+				{
+					auto* resource = new Image(asName, path);
+					ImageDescriptor desc =  ImageDescriptor::CreateFromBitmap(*pBmp);
+					desc.m_name = asName.c_str();
+					auto* image = new Image();
+
+					desc.m_configuration.m_uClamp = options.m_uClamp;
+					desc.m_configuration.m_vClamp = options.m_vClamp;
+					desc.m_isCubeMap = true;
+
+					auto data = pBmp->GetData(0, 0);
+					Image::InitializeFromBitmap(*resource, *pBmp, desc);
+					return resource;
+				});
+		}
+
+		tString name = cString::SetFileExt(asPathName,"");
+		tWString fakeFullPath = cString::To16Char(name);
+		Image* image = static_cast<Image*>(GetResource(fakeFullPath));
+		
+		BeginLoad(asPathName);
+		if(!image) {
+			//See if files for all faces exist
+			tWStringVec vPaths;
+			tWString sPath=_W("");
+			for(int i=0;i <6 ;i++)
+			{
+				tStringVec *apFileFormatsVec = mpBitmapLoaderHandler->GetSupportedTypes();
+				for(tStringVecIt it = apFileFormatsVec->begin();it!=apFileFormatsVec->end();++it)
+				{
+					tString sNewName = name + mvCubeSideSuffixes[i] + "." + *it;
+					sPath = mpFileSearcher->GetFilePath(sNewName);
+	
+					if(sPath!=_W(""))break;
+				}
+
+				if(sPath==_W(""))
+				{
+					tString sNewName = name + mvCubeSideSuffixes[i];
+					Error("Couldn't find %d-face '%s', for cubemap '%s' in path: '%s'\n",i,sNewName.c_str(),name.c_str(), asPathName.c_str());
+					return NULL;
+				}
+
+				vPaths.push_back(sPath);
+			}
+
+			//Load bitmaps for all faces
+			std::vector<cBitmap*> vBitmaps;
+			for(int i=0;i<6; i++)
+			{
+				cBitmap* pBmp = mpBitmapLoaderHandler->LoadBitmap(vPaths[i],0);
+				if(pBmp==NULL){
+					Error("Couldn't load bitmap '%s'!\n",cString::To8Char(vPaths[i]).c_str());
+					for(int j=0;j<(int)vBitmaps.size();j++) hplDelete(vBitmaps[j]);
+					EndLoad();
+					return NULL;
+				}
+
+				vBitmaps.push_back(pBmp);
+			}
+			BX_ASSERT(vBitmaps.size() == 6, "vBitmaps.size() == 6");
+
+			image = new Image();
+			ImageDescriptor desc;
+			Image::InitializeFromBitmap(*image, *vBitmaps[0], desc);
+			Image::InitializeCubemapFromBitmaps(*image, absl::MakeSpan(vBitmaps), desc);
+
+			for(int j=0;j<(int)vBitmaps.size();j++)	{
+				hplDelete(vBitmaps[j]);
+			}
+		}
+
+		if(image) {
+			image->IncUserCount();
+		}
+		
+		EndLoad();
 		return nullptr;
 	}
 

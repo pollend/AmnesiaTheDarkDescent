@@ -20,6 +20,7 @@
 #include "resources/WorldLoaderHplMap.h"
 
 #include "graphics/Image.h"
+#include "impl/VertexBufferBGFX.h"
 #include "system/String.h"
 #include "system/LowLevelSystem.h"
 #include "system/Platform.h"
@@ -60,7 +61,9 @@
 #include "math/Math.h"
 
 #include <algorithm>
+#include <cstddef>
 #include <cstring>
+#include <iterator>
 
 namespace hpl {
 
@@ -1355,23 +1358,25 @@ namespace hpl {
 																					eVertexBufferUsageType_Static,lTotalVtxAmount, lTotalIdxAmount);
 
 		//Set up what data arrays to use
-		const int lDataArrayNum = 5;
-		cVertexDataArray lDataArrayTypes[lDataArrayNum] =
-		{
-			{eVertexBufferElement_Position, 4},
-			{eVertexBufferElement_Normal, 3},
-			{eVertexBufferElement_Color0, 4},
-			{eVertexBufferElement_Texture0, 3},
-			{eVertexBufferElement_Texture1Tangent, 4}
+		struct VertexDataTable {
+			eVertexBufferElement mType;
+			int mlElementNum;
+			hpl::iVertexBufferBGFX::VertexElement* m_targetElement;
+			size_t offset;
+		} lDataArrayTypes[5] = {
+			{eVertexBufferElement_Position, 4, nullptr, 0},
+			{eVertexBufferElement_Normal, 3, nullptr, 0},
+			{eVertexBufferElement_Color0, 4, nullptr, 0},
+			{eVertexBufferElement_Texture0, 3, nullptr, 0},
+			{eVertexBufferElement_Texture1Tangent, 4, nullptr, 0}
 		};
-		float *pDataArray[lDataArrayNum];
-
 		//Set up the data arrays
-		for(int i=0;i<lDataArrayNum; ++i)
+		for(int i=0;i< std::size(lDataArrayTypes); ++i)
 		{
 			pVtxBuffer->CreateElementArray(lDataArrayTypes[i].mType,eVertexBufferElementFormat_Float, lDataArrayTypes[i].mlElementNum);
 			pVtxBuffer->ResizeArray(lDataArrayTypes[i].mType, lTotalVtxAmount * lDataArrayTypes[i].mlElementNum);
-			pDataArray[i] = pVtxBuffer->GetFloatArray(lDataArrayTypes[i].mType);
+			lDataArrayTypes[i].m_targetElement = static_cast<hpl::iVertexBufferBGFX*>(pVtxBuffer)->GetElement(lDataArrayTypes[i].mType);
+			BX_ASSERT(lDataArrayTypes[i].m_targetElement != nullptr, "Element not found");
 		}
 
 		//Set up and get indices
@@ -1381,7 +1386,7 @@ namespace hpl {
 		///////////////////////////////////////////
 		//Fill vertex buffer with data
 		int lIdxOffset =0;
-		for(int vtxbuffer=alFirstIdx; vtxbuffer<=alLastIdx; ++vtxbuffer)
+		for(int vtxbuffer = alFirstIdx; vtxbuffer <= alLastIdx; ++vtxbuffer)
 		{
 			//Check if the sub mesh is visible, else skip
 			cHplMapStaticUserData*pUserData = (cHplMapStaticUserData*)static_cast<cSubMeshEntity*>(avObjects[vtxbuffer])->GetUserData();
@@ -1394,20 +1399,24 @@ namespace hpl {
 			/////////////////////////////////////
 			// Create a copy of the vertex buffer and transform it according to object
 			iVertexBuffer *pSubVtxBuffer = pObject->GetVertexBuffer();
-			iVertexBuffer *pTransformedVtxBuffer = pSubVtxBuffer->CreateCopy(	eVertexBufferType_Software, eVertexBufferUsageType_Static,
-																				pSubVtxBuffer->GetVertexElementFlags());
+			auto* pTransformedVtxBuffer = static_cast<hpl::iVertexBufferBGFX*>(pSubVtxBuffer->CreateCopy(	eVertexBufferType_Software, eVertexBufferUsageType_Static,
+																				pSubVtxBuffer->GetVertexElementFlags()));
 			pTransformedVtxBuffer->Transform(pObject->GetWorldMatrix());
 
 			//////////////////////////////////////////////////
 			//Copy to each data array and increase the data pointer
-            for(int i=0; i<lDataArrayNum;++i)
+            for(int i=0; i< std::size(lDataArrayTypes);++i)
 			{
-				int lAmount = lDataArrayTypes[i].mlElementNum * pTransformedVtxBuffer->GetVertexNum();
-				if(gbLog) Log("    copy from data %d: %d elements\n", i, lAmount);
-
-				memcpy(pDataArray[i], pTransformedVtxBuffer->GetFloatArray(lDataArrayTypes[i].mType), lAmount * sizeof(float));
-
-				pDataArray[i] += lAmount;
+				auto* sourceElement = pTransformedVtxBuffer->GetElement(lDataArrayTypes[i].mType);
+				auto& targetElement = lDataArrayTypes[i].m_targetElement;
+				BX_ASSERT(targetElement != nullptr, "lDataArrayTypes[i].m_data != nullptr");
+				BX_ASSERT(sourceElement != nullptr, "sourceElement != nullptr");
+				BX_ASSERT(targetElement->m_type == sourceElement->m_type, "lDataArrayTypes[i].m_data->m_type == sourceElement->m_type");
+				BX_ASSERT(targetElement->m_num == sourceElement->m_num, "lDataArrayTypes[i].m_targetElement->m_num == sourceElement->m_num");
+				
+				auto targetElementStart = &(targetElement->m_buffer.data()[lDataArrayTypes[i].offset]);
+				std::copy(sourceElement->m_buffer.begin(), sourceElement->m_buffer.end(), targetElementStart);
+				lDataArrayTypes[i].offset += sourceElement->m_buffer.size();
 			}
 
 			//////////////////////////////////////////////
@@ -1503,20 +1512,22 @@ namespace hpl {
 
 		///////////////////////////////////////////
 		//Create the vertex buffer (skipping color!)
-		iVertexBuffer *pVtxBuffer = mpGraphics->GetLowLevel()->CreateVertexBuffer(	eVertexBufferType_Software, eVertexBufferDrawType_Tri,
-																					eVertexBufferUsageType_Dynamic,lTotalVtxAmount, lTotalIdxAmount);
+		auto* targetVertexBuffer = static_cast<iVertexBufferBGFX*>(mpGraphics->GetLowLevel()->CreateVertexBuffer(	eVertexBufferType_Software, eVertexBufferDrawType_Tri,
+																					eVertexBufferUsageType_Dynamic,lTotalVtxAmount, lTotalIdxAmount));
 
-		pVtxBuffer->CreateElementArray(eVertexBufferElement_Position,eVertexBufferElementFormat_Float, 4);
-		pVtxBuffer->ResizeArray(eVertexBufferElement_Position, lTotalVtxAmount * 4);
-		float *pDataArray = pVtxBuffer->GetFloatArray(eVertexBufferElement_Position);
+		targetVertexBuffer->CreateElementArray(eVertexBufferElement_Position,eVertexBufferElementFormat_Float, 4);
+		targetVertexBuffer->ResizeArray(eVertexBufferElement_Position, lTotalVtxAmount * 4);
+		auto* targetPositionElement = targetVertexBuffer->GetElement(eVertexBufferElement_Position);
+		BX_ASSERT(targetPositionElement != nullptr, "positionElement is null");
 
 		//Set up and get indices
-		pVtxBuffer->ResizeIndices(lTotalIdxAmount);
-		unsigned int* pIndexArray = pVtxBuffer->GetIndices();
+		targetVertexBuffer->ResizeIndices(lTotalIdxAmount);
+		unsigned int* pIndexArray = targetVertexBuffer->GetIndices();
 
 		///////////////////////////////////////////
 		//Fill vertex buffer with data
 		int lIdxOffset =0;
+		size_t targetPositionOffset = 0;
 		for(int vtxbuffer=alFirstIdx; vtxbuffer<=alLastIdx; ++vtxbuffer)
 		{
 			if(avObjects[vtxbuffer].mpUserData->mbCollides==false) continue;
@@ -1535,18 +1546,17 @@ namespace hpl {
 			////////////////////////
 			//Get vertex copy and transform
 			iVertexBuffer *pSubVtxBuffer = pObject->GetVertexBuffer();
-			iVertexBuffer *pTransformedVtxBuffer = pSubVtxBuffer->CreateCopy(	eVertexBufferType_Software, eVertexBufferUsageType_Static,
-																				eVertexElementFlag_Position);
+			auto* pTransformedVtxBuffer = static_cast<iVertexBufferBGFX*>(pSubVtxBuffer->CreateCopy(	eVertexBufferType_Software, eVertexBufferUsageType_Static,
+																				eVertexElementFlag_Position));
 			pTransformedVtxBuffer->Transform(pObject->GetWorldMatrix());
+			auto sourceElement = pTransformedVtxBuffer->GetElement(eVertexBufferElement_Position);
+			BX_ASSERT(targetPositionElement != nullptr, "targetPositionElement != nullptr");
+			BX_ASSERT(targetPositionElement->m_type == sourceElement->m_type, "targetPositionElement->m_type == sourceElement->m_type");
+			BX_ASSERT(targetPositionElement->m_num == sourceElement->m_num, "targetPositionElement->m_num == sourceElement->m_num");
 
-			////////////////////////
-			//Copy the data
-			int lAmount = pTransformedVtxBuffer->GetVertexNum() * 4;
-
-			if(gbLog) Log("    Amount: %d\n", lAmount);
-
-			memcpy(pDataArray, pTransformedVtxBuffer->GetFloatArray(eVertexBufferElement_Position), lAmount * sizeof(float));
-			pDataArray += lAmount;
+			auto elementStart = &(targetPositionElement->m_buffer.data()[targetPositionOffset]);
+			std::copy(sourceElement->m_buffer.begin(), sourceElement->m_buffer.end(), elementStart);
+			targetPositionOffset += sourceElement->m_buffer.size();
 
 			//Copy to index array and increase index pointer
 			unsigned int* pTransIdxArray = pTransformedVtxBuffer->GetIndices();
@@ -1561,15 +1571,15 @@ namespace hpl {
 			hplDelete(pTransformedVtxBuffer);
 		}
 
-		pVtxBuffer->Compile(0);
+		targetVertexBuffer->Compile(0);
 
 
 		///////////////////////////////////////////
 		//Create the mesh physics body
 		iRenderable *pFirstObject = avObjects[alFirstIdx].mpObject;
 
-		iCollideShape *pShape = mpCurrentPhysicsWorld->CreateMeshShape(pVtxBuffer);
-		hplDelete(pVtxBuffer);
+		iCollideShape *pShape = mpCurrentPhysicsWorld->CreateMeshShape(targetVertexBuffer);
+		hplDelete(targetVertexBuffer);
 
 		iPhysicsBody *pBody = mpCurrentPhysicsWorld->CreateBody(sName,pShape);
 		pBody->SetMass(0);

@@ -25,13 +25,8 @@
 #include <cstring>
 
 #include "math/CRC.h"
-
-// Include SDL Endian code
-#ifdef USE_SDL2
 #include <SDL2/SDL_endian.h>
-#else
-#include <SDL/SDL_endian.h>
-#endif
+
 
 #ifdef WIN32
 	#define ZLIB_WINAPI

@@ -17,9 +17,7 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef HPL_LOWLEVELINPUT_H
-#define HPL_LOWLEVELINPUT_H
-
+#pragma once
 namespace hpl {
 
 	class iMouse;
@@ -68,4 +66,3 @@ namespace hpl {
 		virtual iGamepad* CreateGamepad(int alIndex)=0;
 	};
 };
-#endif // HPL_LOWLEVELINPUT_H

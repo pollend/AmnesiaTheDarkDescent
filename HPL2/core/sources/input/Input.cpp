@@ -400,9 +400,6 @@ namespace hpl
 		RefreshGamepads();
 	}
 
-	//-----------------------------------------------------------------------
-
-
     bool cInput::isQuitMessagePosted()
     {
         return mpLowLevelInput->isQuitMessagePosted();

@@ -1,3 +1,4 @@
+#include <cstddef>
 #include <graphics/Image.h>
 #include "bgfx/bgfx.h"
 #include "bgfx/defines.h"
@@ -28,7 +29,6 @@ namespace hpl
 
     ImageDescriptor ImageDescriptor::CreateFromBitmap(const cBitmap& bitmap) {
         ImageDescriptor descriptor;
-        BX_ASSERT(bitmap.GetNumOfImages() == 1, "Only single image is supported at the moment");
         descriptor.format = Image::FromHPLTextureFormat(bitmap.GetPixelFormat());
         descriptor.m_width = bitmap.GetWidth();
         descriptor.m_height = bitmap.GetHeight();
@@ -134,8 +134,18 @@ namespace hpl
                 }
                 return 0;
             }();
+        if(descriptor.m_isCubeMap) {
+            
+            BX_ASSERT(descriptor.m_width == descriptor.m_height, "Cube map must be square");
+            m_handle = bgfx::createTextureCube(descriptor.m_width, 
+                descriptor.m_hasMipMaps,
+                 descriptor.m_arraySize,
+                 descriptor.format, 
+                    flags, 
+                    mem);
 
-        if (descriptor.m_depth > 1)
+        }
+        else if (descriptor.m_depth > 1)
         {
             m_handle = bgfx::createTexture3D(
                 descriptor.m_width,
@@ -189,8 +199,6 @@ namespace hpl
             return bgfx::TextureFormat::RGB8;
         case ePixelFormat_RGBA:
             return bgfx::TextureFormat::RGBA8;
-        case ePixelFormat_BGR:
-            break;
         case ePixelFormat_BGRA:
             return bgfx::TextureFormat::BGRA8;
         case ePixelFormat_DXT1:
@@ -213,14 +221,10 @@ namespace hpl
             return bgfx::TextureFormat::R16F;
         case ePixelFormat_LuminanceAlpha16:
             return bgfx::TextureFormat::RG16F;
-        case ePixelFormat_RGB16:
-            break;
         case ePixelFormat_RGBA16:
             return bgfx::TextureFormat::RGBA16F;
-            break;
         case ePixelFormat_Alpha32:
             return bgfx::TextureFormat::R32F;
-            break;
         case ePixelFormat_Luminance32:
             return bgfx::TextureFormat::R32F;
         case ePixelFormat_LuminanceAlpha32:
@@ -229,14 +233,89 @@ namespace hpl
             break;
         case ePixelFormat_RGBA32:
             return bgfx::TextureFormat::RGBA32F;
+        case ePixelFormat_RGB16:
+            return bgfx::TextureFormat::BC6H;
+        case ePixelFormat_BGR:
+            return bgfx::TextureFormat::RGB8;
         default:
+            BX_ASSERT(false, "Unsupported texture format: %d", format)
             break;
         }
         return bgfx::TextureFormat::Unknown;
     }
 
+
+    void Image::InitializeCubemapFromBitmaps(Image& image, const absl::Span<cBitmap*> bitmaps, const ImageDescriptor& desc) {
+        BX_ASSERT(bitmaps.size() == 6, "Cubemap must have 6 bitmaps");
+        size_t size = 0;
+        for(auto& bitmap : bitmaps) {
+            BX_ASSERT(bitmap->GetNumOfImages() == 1, "Only single image bitmaps are supported");
+            if(desc.m_hasMipMaps) {
+                for(auto mipIndex = 0; mipIndex < bitmap->GetNumOfMipMaps(); ++mipIndex) {
+                    size += bitmap->GetData(0, mipIndex)->mlSize;
+                }
+            } else {
+                size += bitmap->GetData(0, 0)->mlSize;
+            }
+        }
+        auto* memory = bgfx::alloc(size);
+        size_t offset = 0;
+        if(desc.m_hasMipMaps) {
+            for(auto& bitmap : bitmaps) {
+                for(auto mipIndex = 0; mipIndex < bitmap->GetNumOfMipMaps(); ++mipIndex) {
+                    auto data = bitmap->GetData(0, mipIndex);
+                    std::copy(data->mpData, data->mpData + data->mlSize, memory->data + offset);
+                    offset += data->mlSize;
+                }
+            }
+        } else {
+            for(auto& bitmap : bitmaps) {
+                auto data = bitmap->GetData(0, 0);
+                std::copy(data->mpData, data->mpData + data->mlSize, memory->data + offset);
+                offset += data->mlSize;
+            }
+        }
+
+        image.Initialize(desc, memory);
+    }
+
     void Image::InitializeFromBitmap(Image& image, cBitmap& bitmap, const ImageDescriptor& desc) {
-        if(bitmap.GetNumOfMipMaps() > 1 && desc.m_hasMipMaps) {
+        if(desc.m_isCubeMap) {
+            BX_ASSERT(bitmap.GetNumOfImages() == 6, "Cube map must have 6 images");
+            
+            auto* memory = bgfx::alloc([&]() {
+                if(desc.m_hasMipMaps) {
+                    size_t size = 0;
+                    for(size_t i = 0; i < bitmap.GetNumOfMipMaps(); ++i) {
+                        size += bitmap.GetData(0, i)->mlSize;
+                    }
+                    return size * static_cast<size_t>(bitmap.GetNumOfImages());
+                }
+                return static_cast<size_t>(bitmap.GetNumOfImages()) * static_cast<size_t>(bitmap.GetData(0, 0)->mlSize);
+            }());
+
+
+            size_t offset = 0;
+            if(desc.m_hasMipMaps) {
+                for(auto imageIdx = 0; imageIdx < bitmap.GetNumOfImages(); ++imageIdx) {
+                    for(auto mipIndex = 0; mipIndex < bitmap.GetNumOfMipMaps(); ++mipIndex) {
+                        auto data = bitmap.GetData(imageIdx, mipIndex);
+                        std::copy(data->mpData, data->mpData + data->mlSize, memory->data + offset);
+                        offset += data->mlSize;
+                    }
+                }
+            } else {
+                for(auto i = 0; i < bitmap.GetNumOfImages(); ++i) {
+                    auto data = bitmap.GetData(i, 0);
+                    std::copy(data->mpData, data->mpData + data->mlSize, memory->data + offset);
+                    offset += data->mlSize;
+                }
+            }
+            image.Initialize(desc, memory);
+            return;
+        }
+        
+        if(desc.m_hasMipMaps) {
             auto* memory = bgfx::alloc([&]() {
                 size_t size = 0;
                 for(size_t i = 0; i < bitmap.GetNumOfMipMaps(); ++i) {
@@ -245,7 +324,6 @@ namespace hpl
                 return size;
             }());
 
-            std::vector<char> data = {};
             size_t offset = 0;
             for(auto i = 0; i < bitmap.GetNumOfMipMaps(); ++i) {
                 auto data = bitmap.GetData(0, i);

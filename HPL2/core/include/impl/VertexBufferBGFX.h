@@ -21,9 +21,11 @@
 #include "absl/container/inlined_vector.h"
 #include "graphics/GraphicsContext.h"
 #include "graphics/VertexBuffer.h"
+#include <algorithm>
 #include <array>
 #include <bgfx/bgfx.h>
 #include <bx/debug.h>
+#include <cstddef>
 #include <cstdint>
 #include <vector>
 
@@ -56,6 +58,12 @@ namespace hpl
             {
                 BX_ASSERT(sizeof(TData) == Stride(), "Data must be same size as stride");
                 return absl::MakeSpan(reinterpret_cast<TData*>(m_buffer.data()), m_buffer.size() / Stride());
+            }
+
+            template<typename TData>
+            TData& GetElement(size_t index) {
+                BX_ASSERT(sizeof(TData) <= Stride(), "Date must be less than or equal to stride");
+                return *reinterpret_cast<TData*>(m_buffer.data() + index * Stride());
             }
         };
 
@@ -109,12 +117,28 @@ namespace hpl
 
         virtual void ResizeArray(eVertexBufferElement aElement, int alSize) override;
         virtual void ResizeIndices(int alSize) override;
+
+        VertexElement* GetElement(eVertexBufferElement elementType) {
+            auto element = std::find_if(
+                m_vertexElements.begin(),
+                m_vertexElements.end(),
+                [elementType](const auto& element)
+                {
+                    return element.m_type == elementType;
+                });
+            if (element != m_vertexElements.end())
+            {
+                return element;
+            }
+            return nullptr;
+        }
         
 
     protected:
         absl::InlinedVector<VertexElement, 10> m_vertexElements = {};
         std::vector<uint32_t> m_indices = {};
-        bgfx::DynamicIndexBufferHandle m_dynamicIndexHandle = BGFX_INVALID_HANDLE;
+        bgfx::IndexBufferHandle m_indexBufferHandle = BGFX_INVALID_HANDLE;
+        bgfx::DynamicIndexBufferHandle m_dynamicIndexBufferHandle = BGFX_INVALID_HANDLE;
     };
 
 }; // namespace hpl

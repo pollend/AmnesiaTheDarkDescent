@@ -502,7 +502,6 @@ namespace hpl {
 			}
 			vertexBuffer->GetLayoutStream(layoutStream);
 			materialType->GetShaderData(shaderProgram, mode, program, pMaterial, obj, this);
-			shaderProgram.m_modelTransform = *obj->GetModelMatrixPtr();
 			
 			handler(obj, layoutStream, shaderProgram);
 		}
@@ -1256,6 +1255,8 @@ namespace hpl {
 			if(bgfx::isValid(pNode->GetOcclusionQuery())) {
 				occlusionResult = bgfx::getResult(pNode->GetOcclusionQuery());
 			}
+			occlusionResult = bgfx::OcclusionQueryResult::Visible; // TODO: occlusion queries are broken
+			
 			//////////////////////////
 			//Render nodes and queue queries
 			// Only do this if:

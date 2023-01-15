@@ -28,52 +28,53 @@ void main()
     vec4 diffuseColor = vec4(0.0, 0.0, 0.0, 0.0);
     vec2 texCoord = v_texcoord0.xy;
 
-    if(0.0 < u_useParallax) {
-        vec3 eyeVec = normalize(v_view);
+    //TODO: need to fix this causes a GPU stall ...
+    // if(0.0 < u_useParallax) {
+    //     vec3 eyeVec = normalize(v_view);
         
-        //Get give eyevec the length so it reaches bottom.
-        eyeVec *= vec3(1.0 / eyeVec.z);	
+    //     //Get give eyevec the length so it reaches bottom.
+    //     eyeVec *= vec3(1.0 / eyeVec.z);	
         
-        //Apply scale and bias
-        eyeVec.xy *= u_heightMapScaleAndBias.x;
-        //vec2 vBiasPosOffset = eyeVec.xy * u_heightMapScaleAndBias.y; <- not working! because the ray casting buggers out when u are really close!
+    //     //Apply scale and bias
+    //     eyeVec.xy *= u_heightMapScaleAndBias.x;
+    //     //vec2 vBiasPosOffset = eyeVec.xy * u_heightMapScaleAndBias.y; <- not working! because the ray casting buggers out when u are really close!
         
-        //Get the postion to start the search from. 0 since we start at the top.
-        vec3 parallaxPosCoord = vec3(v_texcoord0.xy, 0.0); 
+    //     //Get the postion to start the search from. 0 since we start at the top.
+    //     vec3 parallaxPosCoord = vec3(v_texcoord0.xy, 0.0); 
         
-        //Determine number of steps based on angle between normal and eye
-        float fSteps = floor((1.0 - dot(eyeVec, normalize(v_normal)) ) * 18.0) + 2.0; 
+    //     //Determine number of steps based on angle between normal and eye
+    //     float fSteps = floor((1.0 - dot(eyeVec, normalize(v_normal)) ) * 18.0) + 2.0; 
         
-        {
-            eyeVec /= fSteps;
-            for(float i = 0.0; i < (fSteps - 1.0); i++) 
-            { 
-                float fDepth = texture2D(s_heightMap, parallaxPosCoord.xy).w; 
-                if(parallaxPosCoord.z < fDepth) {
-                    parallaxPosCoord += eyeVec;
-                } 
-            } 
-        }
+    //     {
+    //         eyeVec /= fSteps;
+    //         for(float i = 0.0; i < (fSteps - 1.0); i++) 
+    //         { 
+    //             float fDepth = texture2D(s_heightMap, parallaxPosCoord.xy).w; 
+    //             if(parallaxPosCoord.z < fDepth) {
+    //                 parallaxPosCoord += eyeVec;
+    //             } 
+    //         } 
+    //     }
 
-        {
-            const int lSearchSteps = 6; 
-            for(int i=0; i<lSearchSteps; i++) 
-            { 
-                float fDepth = texture2D(s_heightMap, parallaxPosCoord.xy).w;
-                if(parallaxPosCoord.z < fDepth) {
-                    parallaxPosCoord += eyeVec; 
-                }
+    //     {
+    //         const int lSearchSteps = 6; 
+    //         for(int i=0; i<lSearchSteps; i++) 
+    //         { 
+    //             float fDepth = texture2D(s_heightMap, parallaxPosCoord.xy).w;
+    //             if(parallaxPosCoord.z < fDepth) {
+    //                 parallaxPosCoord += eyeVec; 
+    //             }
                 
-                eyeVec *= 0.5; 
-                parallaxPosCoord -= eyeVec; 
-            } 
-        }
+    //             eyeVec *= 0.5; 
+    //             parallaxPosCoord -= eyeVec; 
+    //         } 
+    //     }
 
-        diffuseColor = texture2D(s_diffuseMap, parallaxPosCoord.xy);
-        texCoord = parallaxPosCoord.xy;
-    } else {
+    //     diffuseColor = texture2D(s_diffuseMap, parallaxPosCoord.xy);
+    //     texCoord = parallaxPosCoord.xy;
+    // } else {
         diffuseColor = texture2D(s_diffuseMap, texCoord.xy);
-    }
+    // }
     
     vec3 screenNormal = vec3(0, 0, 0);
     if (0.0 < u_useNormalMap) {

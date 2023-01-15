@@ -28,14 +28,11 @@
 #include "graphics/LowLevelGraphics.h"
 
 #include "engine/Engine.h"
+#include <graphics/EntrySDL.h>
 
-#if USE_SDL2
 #include "SDL2/SDL.h"
 #include "SDL2/SDL_syswm.h"
-#else
-#include "SDL/SDL.h"
-#include "SDL/SDL_syswm.h"
-#endif
+
 
 #if defined WIN32 && !SDL_VERSION_ATLEAST(2,0,0)
 #include <Windows.h>
@@ -55,15 +52,7 @@ namespace hpl {
 	{
 		LockInput(true);
 		RelativeMouse(false);
-#if SDL_VERSION_ATLEAST(2, 0, 0)
         SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER);
-#else
-//		mlConnectedDevices = 0;
-//		mlCheckDeviceChange = 0;
-//		mbDirtyGamepads = true;
-//
-		SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
-#endif
 	}
 
 	//-----------------------------------------------------------------------
@@ -94,62 +83,40 @@ namespace hpl {
 
 	void cLowLevelInputSDL::BeginInputUpdate()
 	{
-		SDL_Event sdlEvent;
 
 		mlstEvents.clear();
-		while(SDL_PollEvent(&sdlEvent)!=0)
-		{
-#if defined WIN32 && !SDL_VERSION_ATLEAST(2,0,0)
-			if(sdlEvent.type==SDL_SYSWMEVENT)
-			{
-				SDL_SysWMmsg* pMsg = sdlEvent.syswm.msg;
-
-				// This is bad, cos it is actually Windows specific code, should not be here. TODO: move it, obviously
-				if(pMsg->msg==WM_DEVICECHANGE)
-				{
-					if(pMsg->wParam==DBT_DEVICEARRIVAL)
-					{
-						cEngine::SetDeviceWasPlugged();
-					}
-					else if(pMsg->wParam==DBT_DEVICEREMOVECOMPLETE)
-					{
-						cEngine::SetDeviceWasRemoved();
-					}
-				}
-			}
-			else
-#endif //WIN32
-#if SDL_VERSION_ATLEAST(2, 0, 0)
-            // built-in SDL2 gamepad hotplug code
+		hpl::entry_sdl::fetchEvents([&](SDL_Event &event) {
+ 			// built-in SDL2 gamepad hotplug code
             // this whole contract should be rewritten to allow clean adding/removing
             // of controllers, instead of brute force rescanning
-            if (sdlEvent.type==SDL_CONTROLLERDEVICEADDED)
+            if (event.type==SDL_CONTROLLERDEVICEADDED)
             {
                 // sdlEvent.cdevice.which is the device #
                 cEngine::SetDeviceWasPlugged();
-            } else if (sdlEvent.type==SDL_CONTROLLERDEVICEREMOVED)
+            } else if (event.type==SDL_CONTROLLERDEVICEREMOVED)
             {
                 // sdlEvent.cdevice.which is the instance # (not device #).
                 // instance # increases as devices are plugged and unplugged.
                 cEngine::SetDeviceWasRemoved();
             }
-#endif
+
 #if defined (__APPLE__)
-            if (sdlEvent.type==SDL_KEYDOWN)
+            if (event.type==SDL_KEYDOWN)
             {
-                if (sdlEvent.key.keysym.sym == SDLK_q && sdlEvent.key.keysym.mod & KMOD_GUI) {
+                if (event.key.keysym.sym == SDLK_q && sdlEvent.key.keysym.mod & KMOD_GUI) {
                     mbQuitMessagePosted = true;
                 } else {
                     mlstEvents.push_back(sdlEvent);
                 }
             } else
 #endif
-            if (sdlEvent.type==SDL_QUIT)
+            if (event.type==SDL_QUIT)
             {
                 mbQuitMessagePosted = true;
-            } else
-				mlstEvents.push_back(sdlEvent);
-		}
+            } else {
+				mlstEvents.push_back(event);
+			}
+		});
 	}
 
 	//-----------------------------------------------------------------------

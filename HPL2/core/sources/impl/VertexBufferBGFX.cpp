@@ -133,11 +133,16 @@ namespace hpl
             element.m_dynamicHandle = BGFX_INVALID_HANDLE;
             element.m_handle = BGFX_INVALID_HANDLE;
         }
-        if (bgfx::isValid(m_dynamicIndexHandle))
+        if (bgfx::isValid(m_indexBufferHandle))
         {
-            bgfx::destroy(m_dynamicIndexHandle);
+            bgfx::destroy(m_indexBufferHandle);
         }
-        m_dynamicIndexHandle = BGFX_INVALID_HANDLE;
+        if (bgfx::isValid(m_dynamicIndexBufferHandle))
+        {
+            bgfx::destroy(m_dynamicIndexBufferHandle);
+        }
+        m_dynamicIndexBufferHandle = BGFX_INVALID_HANDLE;
+        m_indexBufferHandle = BGFX_INVALID_HANDLE;
     }
 
     static void PushVertexElements(
@@ -246,18 +251,17 @@ namespace hpl
         if (positionElement != m_vertexElements.end())
         {
             BX_ASSERT(positionElement->m_format == eVertexBufferElementFormat_Float, "Only float format supported");
-            BX_ASSERT(positionElement->m_num == 3, "Only 3 component format supported");
+            BX_ASSERT(positionElement->m_num >= 3, "Only 3 component format supported");
             struct PackedVec3
             {
                 float x;
                 float y;
                 float z;
             };
-            auto positionIt = positionElement->GetElements<PackedVec3>();
-            for (auto& position : positionIt)
-            {
-                cVector3f vPos = cMath::MatrixMul(mtxTransform, cVector3f(position.x, position.y, position.z));
-                position = { vPos.x, vPos.y, vPos.z };
+            for(size_t i = 0; i < positionElement->NumElements(); i++) {
+                auto& position = positionElement->GetElement<PackedVec3>(i);
+                cVector3f outputPos = cMath::MatrixMul(mtxTransform, cVector3f(position.x, position.y, position.z));
+                position = {outputPos.x, outputPos.y, outputPos.z};
             }
         }
 
@@ -271,18 +275,17 @@ namespace hpl
         if (normalElement != m_vertexElements.end())
         {
             BX_ASSERT(normalElement->m_format == eVertexBufferElementFormat_Float, "Only float format supported");
-            BX_ASSERT(normalElement->m_num == 3, "Only 3 component format supported");
+            BX_ASSERT(normalElement->m_num >= 3, "Only 3 component format supported");
             struct PackedVec3
             {
                 float x;
                 float y;
                 float z;
             };
-            auto normalIt = normalElement->GetElements<PackedVec3>();
-            for (auto& normal : normalIt)
-            {
-                cVector3f vNormal = cMath::MatrixMul(mtxNormalRot, cVector3f(normal.x, normal.y, normal.z));
-                normal = { vNormal.x, vNormal.y, vNormal.z };
+            for(size_t i = 0; i < normalElement->NumElements(); i++) {
+                auto& normal = normalElement->GetElement<PackedVec3>(i);
+                cVector3f outputNormal = cMath::MatrixMul(mtxNormalRot, cVector3f(normal.x, normal.y, normal.z));
+                normal = {outputNormal.x, outputNormal.y, outputNormal.z};
             }
         }
 
@@ -296,20 +299,17 @@ namespace hpl
         if (tangentElement != m_vertexElements.end())
         {
             BX_ASSERT(tangentElement->m_format == eVertexBufferElementFormat_Float, "Only float format supported");
-            BX_ASSERT(tangentElement->m_num == 4, "Only 4 component format supported");
-            struct PackedVec4
+            BX_ASSERT(tangentElement->m_num >= 3, "Only 4 component format supported");
+            struct PackedVec3
             {
                 float x;
                 float y;
                 float z;
-                float w;
             };
-            auto tangentIt = tangentElement->GetElements<PackedVec4>();
-            for (auto& tangent : tangentIt)
-            {
-                cVector3f vTangent = cMath::MatrixMul(mtxRot, cVector3f(tangent.x, tangent.y, tangent.z));
-                vTangent.Normalize();
-                tangent = { vTangent.x, vTangent.y, vTangent.z, tangent.w };
+            for(size_t i = 0; i < normalElement->NumElements(); i++) {
+                auto& tangent = tangentElement->GetElement<PackedVec3>(i);
+                cVector3f outputTangent = cMath::MatrixMul(mtxRot, cVector3f(tangent.x, tangent.y, tangent.z));
+                tangent = {outputTangent.x, outputTangent.y, outputTangent.z};
             }
         }
 
@@ -420,13 +420,15 @@ namespace hpl
             BX_ASSERT(normalElement->m_format == eVertexBufferElementFormat_Float, "Only float format supported");
             BX_ASSERT(textureElement->m_format == eVertexBufferElementFormat_Float, "Only float format supported");
             BX_ASSERT(tangentElement->m_format == eVertexBufferElementFormat_Float, "Only float format supported");
-            BX_ASSERT(positionElement->m_num == 3, "Only 3 component format supported");
-            BX_ASSERT(normalElement->m_num == 3, "Only 3 component format supported");
-            BX_ASSERT(textureElement->m_num == 2, "Only 2 component format supported");
-            BX_ASSERT(tangentElement->m_num == 4, "Only 4 component format supported");
+            BX_ASSERT(positionElement->m_num >= 3, "Only 3 component format supported");
+            BX_ASSERT(normalElement->m_num >= 3, "Only 3 component format supported");
+            BX_ASSERT(textureElement->m_num >= 2, "Only 2 component format supported");
+            BX_ASSERT(tangentElement->m_num >= 4, "Only 4 component format supported");
 
+            ResizeArray(eVertexBufferElement_Texture1Tangent, GetVertexNum() * 4);
+            
             cMath::CreateTriTangentVectors(
-                (float*)tangentElement->m_buffer.data(),
+                reinterpret_cast<float*>(tangentElement->m_buffer.data()),
                 m_indices.data(),
                 m_indices.size(),
                 reinterpret_cast<float*>(positionElement->m_buffer.data()),
@@ -443,10 +445,20 @@ namespace hpl
             switch (mUsageType)
             {
             case eVertexBufferUsageType_Static:
+                if (bgfx::isValid(element.m_handle))
+                {
+                    bgfx::destroy(element.m_handle);
+                }
                 element.m_handle = bgfx::createVertexBuffer(bgfx::copy(element.m_buffer.data(), element.m_buffer.size()), layout);
+                m_indexBufferHandle =
+                    bgfx::createIndexBuffer(bgfx::copy(m_indices.data(), m_indices.size() * sizeof(uint32_t)), BGFX_BUFFER_INDEX32);
                 break;
             case eVertexBufferUsageType_Dynamic:
             case eVertexBufferUsageType_Stream:
+                if (bgfx::isValid(element.m_dynamicHandle))
+                {
+                    bgfx::destroy(element.m_dynamicHandle);
+                }
                 element.m_dynamicHandle =
                     bgfx::createDynamicVertexBuffer(bgfx::copy(element.m_buffer.data(), element.m_buffer.size()), layout);
                 break;
@@ -455,7 +467,29 @@ namespace hpl
                 break;
             }
         }
-        m_dynamicIndexHandle = bgfx::createDynamicIndexBuffer(bgfx::copy(m_indices.data(), m_indices.size() * sizeof(uint32_t)), BGFX_BUFFER_INDEX32);
+        switch (mUsageType)
+            {
+            case eVertexBufferUsageType_Static:
+                if (bgfx::isValid(m_indexBufferHandle))
+                {
+                    bgfx::destroy(m_indexBufferHandle);
+                }
+                m_indexBufferHandle =
+                    bgfx::createIndexBuffer(bgfx::copy(m_indices.data(), m_indices.size() * sizeof(uint32_t)), BGFX_BUFFER_INDEX32);
+                break;
+            case eVertexBufferUsageType_Dynamic:
+            case eVertexBufferUsageType_Stream:
+                if (bgfx::isValid(m_dynamicIndexBufferHandle))
+                {
+                    bgfx::destroy(m_dynamicIndexBufferHandle);
+                }
+                m_dynamicIndexBufferHandle =
+                    bgfx::createDynamicIndexBuffer(bgfx::copy(m_indices.data(), m_indices.size() * sizeof(uint32_t)), BGFX_BUFFER_INDEX32);
+                break;
+            default:
+                BX_ASSERT(false, "Unknown usage type %d", mUsageType);
+                break;
+            }
         return true;
     }
 
@@ -488,7 +522,24 @@ namespace hpl
         }
         if (abIndices)
         {
-            bgfx::update(m_dynamicIndexHandle, 0, bgfx::copy(m_indices.data(), m_indices.size() * sizeof(uint32_t)));
+            switch (mUsageType)
+            {
+                case eVertexBufferUsageType_Static: {
+                    if(bgfx::isValid(m_indexBufferHandle)) {
+                        bgfx::destroy(m_indexBufferHandle);
+                    }
+                    m_indexBufferHandle = bgfx::createIndexBuffer(bgfx::copy(m_indices.data(), m_indices.size() * sizeof(uint32_t)), BGFX_BUFFER_INDEX32);
+                    break;
+                }
+                case eVertexBufferUsageType_Dynamic:
+                case eVertexBufferUsageType_Stream: {
+                    bgfx::update(m_dynamicIndexBufferHandle, 0, bgfx::copy(m_indices.data(), m_indices.size() * sizeof(uint32_t)));
+                    break;
+                default:
+                    BX_ASSERT(false, "Unknown usage type %d", mUsageType);
+                    break;
+                }
+            }
         }
     }
 
@@ -556,7 +607,7 @@ namespace hpl
             });
         if (element != m_vertexElements.end())
         {
-            element->m_buffer.resize(alSize * element->Stride());
+            element->m_buffer.resize(alSize * GetSizeFromHPL(element->m_format));
         }
     }
 
@@ -672,8 +723,8 @@ namespace hpl
             });
         }
         layoutStream.m_indexStream = {
-            .m_handle = BGFX_INVALID_HANDLE,
-            .m_dynamicHandle = m_dynamicIndexHandle,
+            .m_handle = m_indexBufferHandle,
+            .m_dynamicHandle = m_dynamicIndexBufferHandle,
         };
     }
 
@@ -693,7 +744,7 @@ namespace hpl
                 bgfx::setVertexBuffer(++stream, element.m_dynamicHandle);
             }
         }
-        bgfx::setIndexBuffer(m_dynamicIndexHandle);
+        bgfx::setIndexBuffer(m_indexBufferHandle);
     }
     void iVertexBufferBGFX::UnBind()
     {
@@ -715,7 +766,8 @@ namespace hpl
                 eleCopy.m_dynamicHandle = BGFX_INVALID_HANDLE;
             }
         }
-        vertexBuffer->m_dynamicIndexHandle = BGFX_INVALID_HANDLE;
+        vertexBuffer->m_indexBufferHandle = BGFX_INVALID_HANDLE;
+        vertexBuffer->m_dynamicIndexBufferHandle = BGFX_INVALID_HANDLE;
         vertexBuffer->Compile(0);
 
         return vertexBuffer;

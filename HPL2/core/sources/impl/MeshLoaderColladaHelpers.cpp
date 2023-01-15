@@ -669,7 +669,7 @@ namespace hpl {
 			eVertexBufferType_Hardware,
 			eVertexBufferDrawType_Tri, aUsageType,
 			(int)aGeometry.mvVertexVec.size(), (int)aGeometry.mvIndexVec.size());
-		pVtxBuff->CreateElementArray( eVertexBufferElement_Position,eVertexBufferElementFormat_Float, 3);
+		pVtxBuff->CreateElementArray( eVertexBufferElement_Position,eVertexBufferElementFormat_Float, 4);
 		pVtxBuff->CreateElementArray( eVertexBufferElement_Normal,eVertexBufferElementFormat_Float, 3);
 		pVtxBuff->CreateElementArray( eVertexBufferElement_Texture0,eVertexBufferElementFormat_Float, 3);
 		pVtxBuff->CreateElementArray( eVertexBufferElement_Color0,eVertexBufferElementFormat_Float, 4);
