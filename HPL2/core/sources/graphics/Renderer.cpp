@@ -495,15 +495,16 @@ namespace hpl {
 			
 			cMaterial *pMaterial = obj->GetMaterial();
 			iMaterialType* materialType = pMaterial->GetType();
-			iGpuProgram* program = pMaterial->GetProgram(0, mode);
+			// iGpuProgram* program = pMaterial->GetProgram(0, mode);
 			iVertexBuffer* vertexBuffer = obj->GetVertexBuffer();
-			if(vertexBuffer == nullptr || program == nullptr || materialType == nullptr) {
+			if(vertexBuffer == nullptr || materialType == nullptr) {
 				continue;
 			}
 			vertexBuffer->GetLayoutStream(layoutStream);
-			materialType->GetShaderData(shaderProgram, mode, program, pMaterial, obj, this);
+			materialType->ResolveShaderProgram(mode, pMaterial, obj, this, [&](GraphicsContext::ShaderProgram& program) {
+				handler(obj, layoutStream, program);
+			});
 			
-			handler(obj, layoutStream, shaderProgram);
 		}
 	}
 
@@ -803,13 +804,14 @@ namespace hpl {
 		GraphicsContext::LayoutStream layoutInput;
 		GraphicsContext::ShaderProgram shaderInput;
 		vertexBuffer->GetLayoutStream(layoutInput);
-		materialType->GetShaderData(shaderInput, renderMode, program, pMaterial, apObject, this);
+		// materialType->ResolveShaderProgram(renderMode, pMaterial, apObject, this, std::function<void (GraphicsContext::ShaderProgram &)> program)
+		// materialType->GetShaderData(shaderInput, renderMode, program, pMaterial, apObject, this);
 		
-		if(apCustomFrustum) {
-			shaderInput.m_modelTransform = *apObject->GetModelMatrix(apCustomFrustum);
-		} else {
-			shaderInput.m_modelTransform = *apObject->GetModelMatrixPtr();
-		}
+		// if(apCustomFrustum) {
+		// 	shaderInput.m_modelTransform = *apObject->GetModelMatrix(apCustomFrustum);
+		// } else {
+		// 	shaderInput.m_modelTransform = *apObject->GetModelMatrixPtr();
+		// }
 
 		////////////////////////
 		//Set up render modes

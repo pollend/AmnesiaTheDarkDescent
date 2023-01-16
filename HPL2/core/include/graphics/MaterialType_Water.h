@@ -20,10 +20,24 @@
 
 #include "graphics/MaterialType.h"
 #include "graphics/Material.h"
+#include "graphics/ShaderVariantCollection.h"
 #include <bgfx/bgfx.h>
 
 namespace hpl {
 
+
+  	namespace material::water
+    {
+		enum WaterVariant : uint32_t
+		{
+			None = 0,
+			UseReflection = 0x00001,
+			UseFog = 0x00002,
+			UseCubeMapReflection = 0x00004,
+			UseRefraction = 0x00008
+		};
+	}
+	
 	class cMaterialType_Water_Vars : public iMaterialVars
 	{
 	public:
@@ -62,17 +76,38 @@ namespace hpl {
 		void SetupMaterialSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial *apMaterial,iRenderer *apRenderer);
 		void SetupObjectSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderable *apObject,iRenderer *apRenderer);
 
-		virtual void GetShaderData(GraphicsContext::ShaderProgram& input, eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial* apMaterial, iRenderable *apObject,
-												iRenderer *apRenderer);
-
+	
 		iMaterialVars* CreateSpecificVariables();
 		void LoadVariables(cMaterial *apMaterial, cResourceVarsObject *apVars);
 		void GetVariableValues(cMaterial* apMaterial, cResourceVarsObject* apVars);
 
 		void CompileMaterialSpecifics(cMaterial *apMaterial);
 
+		virtual void ResolveShaderProgram(
+            eMaterialRenderMode aRenderMode,
+            cMaterial* apMaterial,
+            iRenderable* apObject,
+            iRenderer* apRenderer, 
+            std::function<void(GraphicsContext::ShaderProgram&)> handler) override;
+
+
 	private:
-		bgfx::ProgramHandle _waterProgram;
+		ShaderVariantCollection<
+			material::water::UseReflection|
+			material::water::UseFog|
+			material::water::UseCubeMapReflection|
+			material::water::UseRefraction
+		> m_waterVariant;
+
+		bgfx::UniformHandle m_u_param;
+		bgfx::UniformHandle m_u_mtxInvViewRotation;
+		bgfx::UniformHandle m_u_fogColor;
+
+		bgfx::UniformHandle m_s_diffuseMap;
+		bgfx::UniformHandle m_s_normalMap;
+		bgfx::UniformHandle m_s_refractionMap;
+		bgfx::UniformHandle m_s_reflectionMap;
+		bgfx::UniformHandle m_s_envMap;
 
 		void LoadData();
 		void DestroyData();

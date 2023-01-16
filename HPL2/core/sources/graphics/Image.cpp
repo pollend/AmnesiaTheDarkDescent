@@ -135,7 +135,6 @@ namespace hpl
                 return 0;
             }();
         if(descriptor.m_isCubeMap) {
-            
             BX_ASSERT(descriptor.m_width == descriptor.m_height, "Cube map must be square");
             m_handle = bgfx::createTextureCube(descriptor.m_width, 
                 descriptor.m_hasMipMaps,

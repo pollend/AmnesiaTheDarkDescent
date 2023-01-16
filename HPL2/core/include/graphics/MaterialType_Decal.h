@@ -55,18 +55,26 @@ namespace hpl {
 		void SetupTypeSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram,iRenderer *apRenderer);
 		void SetupMaterialSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial *apMaterial,iRenderer *apRenderer);
 		void SetupObjectSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderable *apObject,iRenderer *apRenderer);
-        virtual void GetShaderData(GraphicsContext::ShaderProgram& input, eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial* apMaterial, iRenderable *apObject,
-                                    iRenderer *apRenderer) override;
-
+ 
 		iMaterialVars* CreateSpecificVariables();
 		void LoadVariables(cMaterial *apMaterial, cResourceVarsObject *apVars);
 		void GetVariableValues(cMaterial* apMaterial, cResourceVarsObject* apVars);
 
 		void CompileMaterialSpecifics(cMaterial *apMaterial);
 
+		virtual void ResolveShaderProgram(
+            eMaterialRenderMode aRenderMode,
+            cMaterial* apMaterial,
+            iRenderable* apObject,
+            iRenderer* apRenderer, 
+            std::function<void(GraphicsContext::ShaderProgram&)> handler) override;
+
+
+
 	private:
-		bgfx::ProgramHandle _programHandler;
-		bgfx::UniformHandle _u_mtxUV;
+		bgfx::ProgramHandle m_programHandler;
+		bgfx::UniformHandle m_u_mtxUV;
+		bgfx::UniformHandle m_s_diffuseMap;
 
 		void LoadData();
 		void DestroyData();

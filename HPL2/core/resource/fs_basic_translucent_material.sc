@@ -12,33 +12,22 @@ SAMPLERCUBE(s_envMap, 4);
 uniform mat4 u_mtxInvViewRotation;
 uniform vec4 u_fogColor;
 
-uniform vec4 u_params[6];
-#define u_useBlendModeAdd (u_params[0].x)
-#define u_useBlendModeMul (u_params[0].y)
-#define u_useBlendModeMulX2 (u_params[0].z)
-#define u_useBlendModeAlpha (u_params[0].w)
+uniform vec4 u_param[6];
+#define u_useDiffuseMap (u_param[0].x)
+#define u_useCubeMapAlpha (u_param[0].y)
+#define u_useScreenNormal (u_param[0].z)
+#define u_fogStart (u_param[0].w)
 
-#define u_useBlendModePremulAlpha (u_params[1].x)
-#define u_useEvnMap (u_params[1].y)
-#define u_useDiffuseMap (u_params[1].z)
-#define u_useFog (u_params[1].w)
+#define u_fogLength (u_param[1].x)
+#define u_alpha (u_param[1].y)
+#define u_lightLevel (u_param[1].z)
+#define u_oneMinusFogAlpha (u_param[1].w)
 
-#define u_useScreenNormal (u_params[2].x)
-#define u_useNormalMap (u_params[2].y)
-#define u_useRefraction (u_params[2].z)
-#define u_fogStart (u_params[2].w)
+#define u_frenselBiasPow (u_param[4].xy)
+#define u_rimLightMulPow (u_param[4].zw)
 
-#define u_fogLength (u_params[3].x)
-#define u_alpha (u_params[3].y)
-#define u_lightLevel (u_params[3].z)
-#define u_oneMinusFogAlpha (u_params[3].w)
-
-#define u_frenselBiasPow (u_params[4].xy)
-#define u_rimLightMulPow (u_params[4].zw)
-
-#define u_falloffExp (u_params[5].x)
-#define u_refractionScale (u_params[5].y)
-#define u_useCubeMapAlpha (u_params[5].z)
+#define u_falloffExp (u_param[5].x)
+#define u_refractionScale (u_param[5].y)
 
 
 void main()
@@ -52,50 +41,53 @@ void main()
     //Fog
 
     float fFinalAlpha = u_alpha;
-    if(0.0 < u_useFog) { 
+    #ifdef USE_USE_FOG
         float fFogAmount = (-v_position.z - u_fogStart) / u_fogLength;
         fFogAmount = clamp(fFogAmount, 0.0, 1.0);
         fFogAmount = pow(fFogAmount, u_falloffExp);
         
         fFinalAlpha = u_oneMinusFogAlpha * fFogAmount + (1.0 - fFogAmount);
         fFinalAlpha *= u_alpha;
-    }
+    #endif
     
     
     ////////////////////
     //Calculate new color based on Alpha and Blend mode
-    if(0.0 < u_useBlendModeAdd) {
+    #ifdef USE_BLEND_MODE_ADD
         vFinalColor.xyz *= fFinalAlpha*u_lightLevel;
-    } else if(0.0 < u_useBlendModeMul) {
+    #endif
+    #ifdef USE_BLEND_MODE_MUL
         vFinalColor.xyz += (vec3(1.0) - vFinalColor.xyz) * (1.0-fFinalAlpha);
-    } else if(0.0 < u_useBlendModeMulX2) {
+    #endif
+    #ifdef USE_BLEND_MODE_MULX2
         float fBlendMulAlpha = u_lightLevel*fFinalAlpha;
         vFinalColor.xyz = vFinalColor.xyz*fBlendMulAlpha + vec3(0.5)*(1.0 - fBlendMulAlpha);
-    } else  if(0.0 < u_useBlendModeAlpha) {
-        vFinalColor.a *= fFinalAlpha;
+    #endif
+    #ifdef USE_BLEND_MODE_ALPHA
         vFinalColor.xyz *= u_lightLevel;
-    } else if(0.0 < u_useBlendModePremulAlpha) {
-        vFinalColor *= fFinalAlpha;
+    #endif
+    #ifdef USE_BLEND_MODE_PREMUL_ALPHA
+       vFinalColor *= fFinalAlpha;
         vFinalColor.xyz *= u_lightLevel;
-    }
+    #endif
+
     
     vec3 mapNormal = vec3(0);
     vec3 screenNormal = vec3(0);
-    if(0.0 < u_useNormalMap) { 
+    #ifdef USE_NORMAL_MAP
         mapNormal = texture2D(s_normalMap, v_texcoord0.xy).xyz*2.0 - 1.0; 	
         screenNormal = normalize(mapNormal.x * v_tangent + mapNormal.y * v_bitangent + mapNormal.z * v_normal);
-    }
+    #endif
 
     ////////////////////
     //Refraction
-    if(0.0 < u_useRefraction) {
+    #ifdef USE_REFRACTION
         float invDist = min(1.0/v_position.z, 10.0);
             
         ///////////////////////
         // Sample refaraction map (using distorted coords)
         vec2 vDistortedScreenPos = v_texcoord0.xy;
-        if(0.0 < u_useNormalMap) { 
-            
+        #ifdef USE_NORMAL_MAP
             //Should the screen normal or texture normal be used?
             vec2 vRefractOffset;
             if(0.0 < u_useScreenNormal) {
@@ -106,32 +98,35 @@ void main()
             
             vRefractOffset *= u_refractionScale * invDist;
             vDistortedScreenPos += vRefractOffset; 
-        } else {
+        #else
             vDistortedScreenPos += screenNormal.xy  * u_refractionScale * invDist;
-        }
+        #endif
         
         vec4 vRefractionColor = texture2D(s_refractionMap, vDistortedScreenPos);
         
         ///////////////////////
-        // Do blending in shader (blend mode is None with refraction)		
-        if(0.0 < u_useBlendModeAdd) {
+        // Do blending in shader (blend mode is None with refraction)
+        #ifdef USE_BLEND_MODE_ADD
             vFinalColor.xyz = vFinalColor.xyz + vRefractionColor.xyz;
-        } else if(0.0 < u_useBlendModeMul) {
+        #endif
+        #ifdef USE_BLEND_MODE_MUL
             vFinalColor.xyz = vFinalColor.xyz * vRefractionColor.xyz;
-        } else if(0.0 < u_useBlendModeMulX2) {
+        #endif
+        #ifdef USE_BLEND_MODE_MULX2
             vFinalColor.xyz = vFinalColor.xyz * vRefractionColor.xyz * 2.0;
-        } else  if(0.0 < u_useBlendModeAlpha) {
+        #endif
+        #ifdef USE_BLEND_MODE_ALPHA
             vFinalColor.xyz = vFinalColor.xyz * vFinalColor.a + vRefractionColor.xyz * (1.0 - vFinalColor.a);
-        } else if(0.0 < u_useBlendModePremulAlpha) {
+        #endif
+        #ifdef USE_BLEND_MODE_PREMUL_ALPHA
             vFinalColor.xyz = vFinalColor.xyz + vRefractionColor.xyz * (1.0 - vFinalColor.a);
-        }
-    }
+        #endif
+    #endif
     
     
     ////////////////////
     //Enviroment Map
-    if(0.0 < u_useEvnMap) {
-    
+    #ifdef USE_USE_CUBE_MAP     
         ///////////////////////////////
         //Calculate Reflection
         vec3 vEyeVec = normalize(v_position);
@@ -162,8 +157,7 @@ void main()
             
             vFinalColor.xyz += vReflectionColor.xyz * fRimLight * fFinalAlpha * u_lightLevel;
         }
-        
-    }
+    #endif
     
     gl_FragColor = vFinalColor;
 }

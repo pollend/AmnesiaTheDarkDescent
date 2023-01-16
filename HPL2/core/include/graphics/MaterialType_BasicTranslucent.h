@@ -83,9 +83,6 @@ namespace hpl
             eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial* apMaterial, iRenderer* apRenderer);
         void SetupObjectSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderable* apObject, iRenderer* apRenderer);
 
-        virtual void GetShaderData(GraphicsContext::ShaderProgram& input, eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial* apMaterial, iRenderable *apObject,
-                                    iRenderer *apRenderer) override;
-
         iMaterialVars* CreateSpecificVariables();
         void LoadVariables(cMaterial* apMaterial, cResourceVarsObject* apVars);
         void GetVariableValues(cMaterial* apMaterial, cResourceVarsObject* apVars);

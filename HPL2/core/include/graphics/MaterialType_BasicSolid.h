@@ -19,133 +19,187 @@
 
 #pragma once
 
+#include "graphics/GraphicsContext.h"
 #include "graphics/Image.h"
-#include "graphics/MaterialType.h"
 #include "graphics/Material.h"
+#include "graphics/MaterialType.h"
 #include <bgfx/bgfx.h>
+#include <cstdint>
+#include <graphics/ShaderVariantCollection.h>
 
-namespace hpl {
+namespace hpl
+{
 
-	//---------------------------------------------------
+    //---------------------------------------------------
 
-	class iMaterialVars;
+    class iMaterialVars;
 
-	//---------------------------------------------------
-	// SOLID BASE
-	//---------------------------------------------------
+    //---------------------------------------------------
+    // SOLID BASE
+    //---------------------------------------------------
 
-	class iMaterialType_SolidBase : public iMaterialType
-	{
-	public:
-		iMaterialType_SolidBase(cGraphics *apGraphics, cResources *apResources);
-		~iMaterialType_SolidBase();
+    namespace material::solid
+    {
+        enum DiffuseVariant : uint32_t
+        {
+            Diffuse_None = 0,
+            Diffuse_NormalMap = 0x00001,
+            Diffuse_SpecularMap = 0x00002,
+            Diffuse_ParallaxMap = 0x00004,
+            Diffuse_EnvMap = 0x00008
+        };
 
-		void DestroyProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, char alSkeleton);
+		enum ZVariant : uint32_t
+        {
+            Z_None = 0,
+            Z_UseAlphaMap = 0x00001,
+            Z_UseDissolveFilter = 0x00002,
+            Z_UseDissolveAlphaMap = 0x00004
+        };
+    }
 
-		bool SupportsHWSkinning(){ return true; }
+    class iMaterialType_SolidBase : public iMaterialType
+    {
+    public:
+        iMaterialType_SolidBase(cGraphics* apGraphics, cResources* apResources);
+        ~iMaterialType_SolidBase();
 
-		void CreateGlobalPrograms();
+        void DestroyProgram(cMaterial* apMaterial, eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, char alSkeleton);
 
-		iMaterialVars* CreateSpecificVariables() { return NULL; }
-		void LoadVariables(cMaterial *apMaterial, cResourceVarsObject *apVars);
-		void GetVariableValues(cMaterial *apMaterial, cResourceVarsObject* apVars);
+        bool SupportsHWSkinning()
+        {
+            return true;
+        }
 
-		void CompileMaterialSpecifics(cMaterial *apMaterial);
+        void CreateGlobalPrograms();
 
-	protected:
-		virtual void CompileSolidSpecifics(cMaterial *apMaterial){}
+        iMaterialVars* CreateSpecificVariables()
+        {
+            return NULL;
+        }
+        void LoadVariables(cMaterial* apMaterial, cResourceVarsObject* apVars);
+        void GetVariableValues(cMaterial* apMaterial, cResourceVarsObject* apVars);
 
-		virtual void LoadSpecificData()=0;
+        void CompileMaterialSpecifics(cMaterial* apMaterial);
 
-		void LoadData();
-		void DestroyData();
+    protected:
+        virtual void CompileSolidSpecifics(cMaterial* apMaterial)
+        {
+        }
 
-		bool mbIsGlobalDataCreator;
-		static bool mbGlobalDataCreated;
-		static cProgramComboManager* mpGlobalProgramManager;
-		//[skeleton][uv animation]
+        virtual void LoadSpecificData() = 0;
+
+        void LoadData();
+        void DestroyData();
+
+        bool mbIsGlobalDataCreator;
+        static bool mbGlobalDataCreated;
+        static cProgramComboManager* mpGlobalProgramManager;
+        //[skeleton][uv animation]
+
+        // ShaderVariantCollection<
+
+        ShaderVariantCollection<
+            material::solid::DiffuseVariant::Diffuse_NormalMap | 
+			material::solid::DiffuseVariant::Diffuse_SpecularMap |
+            material::solid::DiffuseVariant::Diffuse_ParallaxMap | 
+			material::solid::DiffuseVariant::Diffuse_EnvMap>
+            m_diffuseProgram;
 		
-		bgfx::ProgramHandle _basicSolidZProgram;
-		bgfx::ProgramHandle _basicSolidDiffuseProgram;
-		bgfx::ProgramHandle _illuminationProgram;
+        ShaderVariantCollection<
+			material::solid::ZVariant::Z_UseAlphaMap |
+			material::solid::ZVariant::Z_UseDissolveFilter |
+			material::solid::ZVariant::Z_UseDissolveAlphaMap 
+		> m_ZProgram;
+        bgfx::ProgramHandle m_illuminationProgram;
 
-		bgfx::UniformHandle m_s_normalMap;
-		bgfx::UniformHandle m_s_specularMap;
-		bgfx::UniformHandle m_s_heightMap;
-		bgfx::UniformHandle m_s_diffuseMap;
-		bgfx::UniformHandle m_s_envMapAlphaMap;
+        bgfx::UniformHandle m_s_normalMap;
+        bgfx::UniformHandle m_s_specularMap;
+        bgfx::UniformHandle m_s_heightMap;
+        bgfx::UniformHandle m_s_diffuseMap;
+        bgfx::UniformHandle m_s_envMapAlphaMap;
 
-		bgfx::UniformHandle m_s_dissolveMap;
-		bgfx::UniformHandle m_s_dissolveAlphaMap;
+        bgfx::UniformHandle m_s_dissolveMap;
+        bgfx::UniformHandle m_s_dissolveAlphaMap;
 
-		bgfx::UniformHandle m_s_envMap;
+        bgfx::UniformHandle m_s_envMap;
 
-		bgfx::UniformHandle _u_param;
-		bgfx::UniformHandle _u_mtxUv;
+        bgfx::UniformHandle m_u_param;
+        bgfx::UniformHandle m_u_mtxUv;
 
-		bgfx::UniformHandle _u_mtxInvViewRotation;
+        bgfx::UniformHandle m_u_mtxInvViewRotation;
 
-		bgfx::UniformHandle _s_diffuseMap;
-		bgfx::UniformHandle _s_dissolveMap;
+        Image* m_dissolveImage = nullptr;
 
-		Image *m_dissolveImage = nullptr;
+        iTexture* mpDissolveTexture;
 
-		iTexture *mpDissolveTexture;
+        static float mfVirtualPositionAddScale;
+    };
 
-		static float mfVirtualPositionAddScale;
-	};
+    //---------------------------------------------------
+    // SOLID DIFFUSE
+    //---------------------------------------------------
 
-	//---------------------------------------------------
-	// SOLID DIFFUSE
-	//---------------------------------------------------
+    class cMaterialType_SolidDiffuse_Vars : public iMaterialVars
+    {
+    public:
+        cMaterialType_SolidDiffuse_Vars()
+            : mfHeightMapScale(0.05f)
+            , mfHeightMapBias(0.0f)
+            , mbAlphaDissolveFilter(false)
+        {
+        }
+        ~cMaterialType_SolidDiffuse_Vars()
+        {
+        }
 
-	class cMaterialType_SolidDiffuse_Vars : public iMaterialVars
-	{
-	public:
-		cMaterialType_SolidDiffuse_Vars() : mfHeightMapScale(0.05f), mfHeightMapBias(0.0f), mbAlphaDissolveFilter(false) {}
-		~cMaterialType_SolidDiffuse_Vars(){}
+        float mfHeightMapScale;
+        float mfHeightMapBias;
+        float mfFrenselBias;
+        float mfFrenselPow;
+        bool mbAlphaDissolveFilter;
+    };
 
-		float mfHeightMapScale;
-		float mfHeightMapBias;
-		float mfFrenselBias;
-		float mfFrenselPow;
-		bool mbAlphaDissolveFilter;
-	};
+    //---------------------------------------------------
 
-	//---------------------------------------------------
+    class cMaterialType_SolidDiffuse : public iMaterialType_SolidBase
+    {
+    public:
+        cMaterialType_SolidDiffuse(cGraphics* apGraphics, cResources* apResources);
+        ~cMaterialType_SolidDiffuse();
 
-	class cMaterialType_SolidDiffuse : public iMaterialType_SolidBase
-	{
-	public:
-		cMaterialType_SolidDiffuse(cGraphics *apGraphics, cResources *apResources);
-		~cMaterialType_SolidDiffuse();
+        bool SupportsHWSkinning()
+        {
+            return true;
+        }
 
-		bool SupportsHWSkinning(){ return true; }
+        iTexture* GetTextureForUnit(cMaterial* apMaterial, eMaterialRenderMode aRenderMode, int alUnit);
+        iTexture* GetSpecialTexture(cMaterial* apMaterial, eMaterialRenderMode aRenderMode, iRenderer* apRenderer, int alUnit);
 
-		iTexture* GetTextureForUnit(cMaterial *apMaterial,eMaterialRenderMode aRenderMode, int alUnit);
-		iTexture* GetSpecialTexture(cMaterial *apMaterial, eMaterialRenderMode aRenderMode,iRenderer *apRenderer, int alUnit);
+        iGpuProgram* GetGpuProgram(cMaterial* apMaterial, eMaterialRenderMode aRenderMode, char alSkeleton);
 
-		iGpuProgram* GetGpuProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, char alSkeleton);
+        void SetupTypeSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderer* apRenderer);
+        void SetupMaterialSpecificData(
+            eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial* apMaterial, iRenderer* apRenderer);
+        void SetupObjectSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderable* apObject, iRenderer* apRenderer);
 
-		void SetupTypeSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderer *apRenderer);
-		void SetupMaterialSpecificData(	eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial *apMaterial,
-										iRenderer *apRenderer);
-		void SetupObjectSpecificData(	eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderable *apObject,
-										iRenderer *apRenderer);
-		
-		virtual void GetShaderData(GraphicsContext::ShaderProgram& input, eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial* apMaterial, iRenderable *apObject,
-												iRenderer *apRenderer) override;
+        virtual void ResolveShaderProgram(
+            eMaterialRenderMode aRenderMode,
+            cMaterial* apMaterial,
+            iRenderable* apObject,
+            iRenderer* apRenderer, 
+            std::function<void(GraphicsContext::ShaderProgram&)> handler) override;
 
-		iMaterialVars* CreateSpecificVariables();
-		void LoadVariables(cMaterial *apMaterial, cResourceVarsObject *apVars);
-		void GetVariableValues(cMaterial *apMaterial, cResourceVarsObject *apVars);
+        iMaterialVars* CreateSpecificVariables();
+        void LoadVariables(cMaterial* apMaterial, cResourceVarsObject* apVars);
+        void GetVariableValues(cMaterial* apMaterial, cResourceVarsObject* apVars);
 
-	private:
-		void CompileSolidSpecifics(cMaterial *apMaterial);
+    private:
+        void CompileSolidSpecifics(cMaterial* apMaterial);
 
-		void LoadSpecificData();
-	};
+        void LoadSpecificData();
+    };
 
-	//---------------------------------------------------
+    //---------------------------------------------------
 
-};
+}; // namespace hpl

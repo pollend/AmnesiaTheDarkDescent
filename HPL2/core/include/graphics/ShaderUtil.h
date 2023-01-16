@@ -8,7 +8,6 @@
 
 namespace hpl
 {
-
     bgfx::ShaderHandle CreateShaderHandleFromFile(const tWString& asFile);
     bgfx::ShaderHandle CreateShaderHandleFromString(const char* apStringData);
 

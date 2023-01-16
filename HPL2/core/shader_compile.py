@@ -14,6 +14,33 @@ class ShaderType(Enum):
     VS = 1
     CS = 2
 
+water_variants = [
+    {"bit": 1, "defines": ["USE_REFLECTION"]},
+    {"bit": 2, "defines": ["USE_FOG"]},
+    {"bit": 4, "defines": ["USE_CUBE_MAP_REFLECTION"]},
+    {"bit": 8, "defines": ["USE_REFRACTION"]}
+]
+
+basic_solid_diffuse_variants = [
+    {"bit": 1, "defines": ["USE_NORMAL_MAPS"]},
+    {"bit": 2, "defines": ["USE_SPECULAR_MAPS"]},
+    {"bit": 4, "defines": ["USE_PARALLAX_MAPS"]},
+    {"bit": 8, "defines": ["USE_ENVMAP"]}
+]
+
+basic_solid_z_variants = [
+    {"bit": 1, "defines": ["USE_ALPHA_MAP"]},
+    {"bit": 2, "defines": ["USE_DISSOLVE_FILTER"]},
+    {"bit": 4, "defines": ["USE_DISSOLVE_ALPHA_MAP"]},
+]
+
+translucent_variants = [
+    {"bit": 1, "defines": ["USE_NORMAL_MAP"]},
+    {"bit": 2, "defines": ["USE_REFRACTION"]},
+    {"bit": 4, "defines": ["USE_USE_CUBE_MAP"]},
+    {"bit": 8, "defines": ["USE_USE_FOG"]},
+]
+
 
 shaders = [
 # deferred
@@ -37,6 +64,7 @@ shaders = [
     { "type" : ShaderType.VS, "inout" : "resource/vs_null.io",                         "input": "resource/vs_null.sc" , "includes": ["resource"]},
     { "type" : ShaderType.FS, "inout" : "resource/vs_null.io",                         "input": "resource/fs_null.sc" , "includes": ["resource"]},
     { "type" : ShaderType.VS, "inout" : "resource/vs_basic_solid_diffuse.io",          "input": "resource/vs_basic_solid_diffuse.sc" , "includes": ["resource"]},
+    { "type" : ShaderType.FS, "inout" : "resource/vs_basic_solid_diffuse.io",          "input": "resource/fs_basic_solid_diffuse.sc", "includes": ["resource"], "variants": basic_solid_diffuse_variants},
     { "type" : ShaderType.VS, "inout" : "resource/vs_basic_solid_illumination.io",     "input": "resource/vs_basic_solid_illumination.sc", "includes": ["resource"]},
     { "type" : ShaderType.VS, "inout" : "resource/vs_basic_solid_z.io",                "input": "resource/vs_basic_solid_z.sc", "includes": ["resource"]},
     { "type" : ShaderType.VS, "inout" : "resource/vs_basic_translucent_material.io",   "input": "resource/vs_basic_translucent_material.sc", "includes": ["resource"]},
@@ -48,15 +76,18 @@ shaders = [
     { "type" : ShaderType.FS, "inout" : "resource/vs_simple_flat.io",                  "input": "resource/fs_simple_flat.sc" , "includes": ["resource"]},
     { "type" : ShaderType.VS, "inout" : "resource/vs_simple_diffuse.io",               "input": "resource/vs_simple_diffuse.sc" , "includes": ["resource"]},
     { "type" : ShaderType.FS, "inout" : "resource/vs_simple_diffuse.io",               "input": "resource/fs_simple_diffuse.sc" , "includes": ["resource"]},
-    { "type" : ShaderType.FS, "inout" : "resource/vs_basic_solid_diffuse.io",          "input": "resource/fs_basic_solid_diffuse.sc", "includes": ["resource"]},
     { "type" : ShaderType.FS, "inout" : "resource/vs_basic_solid_illumination.io",     "input": "resource/fs_basic_solid_illumination.sc", "includes": ["resource"]},
-    { "type" : ShaderType.FS, "inout" : "resource/vs_basic_solid_z.io",                "input": "resource/fs_basic_solid_z.sc", "includes": ["resource"]},
-    { "type" : ShaderType.FS, "inout" : "resource/vs_basic_translucent_material.io",   "input": "resource/fs_basic_translucent_material.sc", "includes": ["resource"]},
+    { "type" : ShaderType.FS, "inout" : "resource/vs_basic_solid_z.io",                "input": "resource/fs_basic_solid_z.sc", "includes": ["resource"], "variants":  basic_solid_z_variants},
+    { "type" : ShaderType.FS, "inout" : "resource/vs_basic_translucent_material.io",   "input": "resource/fs_basic_translucent_material.sc", "defines": ["USE_BLEND_MODE_ADD"], "name": "fs_basic_translucent_blendModeAdd", "includes": ["resource"], "variants": translucent_variants},
+    { "type" : ShaderType.FS, "inout" : "resource/vs_basic_translucent_material.io",   "input": "resource/fs_basic_translucent_material.sc", "defines": ["USE_BLEND_MODE_MUL"], "name": "fs_basic_translucent_blendModeMul", "includes": ["resource"], "variants": translucent_variants},
+    { "type" : ShaderType.FS, "inout" : "resource/vs_basic_translucent_material.io",   "input": "resource/fs_basic_translucent_material.sc", "defines": ["USE_BLEND_MODE_MULX2"], "name": "fs_basic_translucent_blendModeMulX2", "includes": ["resource"], "variants": translucent_variants},
+    { "type" : ShaderType.FS, "inout" : "resource/vs_basic_translucent_material.io",   "input": "resource/fs_basic_translucent_material.sc", "defines": ["USE_BLEND_MODE_ALPHA"], "name": "fs_basic_translucent_blendModeAlpha", "includes": ["resource"], "variants": translucent_variants},
+    { "type" : ShaderType.FS, "inout" : "resource/vs_basic_translucent_material.io",   "input": "resource/fs_basic_translucent_material.sc", "defines": ["USE_BLEND_MODE_PREMUL_ALPHA"], "name": "fs_basic_translucent_blendModePremulAlpha", "includes": ["resource"], "variants": translucent_variants},
     { "type" : ShaderType.FS, "inout" : "resource/vs_decal_material.io",               "input": "resource/fs_decal_material.sc", "includes": ["resource"]},
     { "type" : ShaderType.FS, "inout" : "resource/vs_deferred_fog.io",                 "input": "resource/fs_deferred_fog.sc", "includes": ["resource"]},
     { "type" : ShaderType.FS, "inout" : "resource/vs_simple_diffuse.io",               "input": "resource/fs_simple_diffuse.sc", "includes": ["resource"]},
     { "type" : ShaderType.FS, "inout" : "resource/vs_simple_flat.io",                  "input": "resource/fs_simple_flat.sc", "includes": ["resource"]},
-    { "type" : ShaderType.FS, "inout" : "resource/vs_water_material.io",               "input": "resource/fs_water_material.sc", "includes": ["resource"]},
+    { "type" : ShaderType.FS, "inout" : "resource/vs_water_material.io",               "input": "resource/fs_water_material.sc", "includes": ["resource"], "variants": water_variants},
 ]
 
 def toD3dPrefix(shaderType):
@@ -88,6 +119,8 @@ def wrap_subprocess(*args, **kwargs):
     else:
         print("Output: \n{}\n".format(output))
 
+def get_name(shader):
+    return shader["name"] if "name" in shader else os.path.splitext(os.path.basename(shader["input"]))[0]
 
 def main():
     args = parser.parse_args()
@@ -98,13 +131,15 @@ def main():
     os.makedirs(f'{args.output}/shaders/glsl/', exist_ok=True)
     os.makedirs(f'{args.output}/shaders/essl/', exist_ok=True)
     os.makedirs(f'{args.output}/shaders/spirv/', exist_ok=True)
-    
-    for shader in shaders:
-        input_file_path = os.path.abspath(shader["input"])
-        name = os.path.basename(input_file_path).split(".")[0]
-        varying_def_path = os.path.abspath(shader["inout"])
-        includes = [item for inc in shader["includes"] for item in ['-i', os.path.abspath(inc)]]
 
+
+    def create_shader(shader, options = {}):
+        input_file_path = os.path.abspath(shader["input"])
+        name = options["name"] if "name" in options else get_name(shader)
+        varying_def_path = os.path.abspath(shader["inout"])
+        defines = f'"{";".join((shader["defines"] if "defines" in shader else []) + (options["defines"] if "defines" in options else []))}"'
+        includes = [item for inc in shader["includes"] for item in ['-i', os.path.abspath(inc)]]
+        
         if sys.platform == 'win32':
             # dx9
             if not shader["type"] == ShaderType.CS:
@@ -116,6 +151,7 @@ def main():
                     '--platform', " windows",
                     '--varyingdef', f'{varying_def_path}',
                     '--profile', f'{toD3dPrefix(shader["type"])}_3_0',
+                    '--define', defines,
                     '-O', "3",
                     '-i', f'{args.bgfx}/src',
                     ] + includes)
@@ -129,6 +165,7 @@ def main():
                     '--platform', " windows",
                     '--varyingdef', f'{varying_def_path}',
                     '--profile', f'{toD3dPrefix(shader["type"])}_5_0',
+                    '--define', defines,
                     '-O', "3",
                     '-i', f'{args.bgfx}/src',
                     ] + includes)
@@ -141,6 +178,7 @@ def main():
                     '--platform', "windows",
                     '--varyingdef', f'{varying_def_path}',
                     f'--profile {toD3dPrefix(shader["type"])}_5_0',
+                    '--define', defines,
                     "-O 1",
                     '-i', f'{args.bgfx}/src',
                     ] + includes)
@@ -154,6 +192,7 @@ def main():
                 '--platform', "osx",
                 '--varyingdef', f'{varying_def_path}',
                 '--profile', f'metal',
+                '--define', defines,
                 '-O', "3",
                 '-i', f'{args.bgfx}/src',
                 ] + includes)
@@ -165,6 +204,7 @@ def main():
                 '-o', f'{args.output}/shaders/essl/{name}.bin',
                 '--type', f'{toType(shader["type"])}',
                 '--platform ', "android",
+                '--define', defines,
                 '--varyingdef', f'{varying_def_path}',
                 '-i', f'{args.bgfx}/src',
                 ] + includes)
@@ -177,6 +217,7 @@ def main():
                 '-o', f'{args.output}/shaders/glsl/{name}.bin',
                 '--type', f'{toType(shader["type"])}',
                 '--platform', "linux",
+                '--define', defines,
                 '--varyingdef', f'{varying_def_path}',
                 '--profile', f'430',
                 '-i', f'{args.bgfx}/src',
@@ -188,6 +229,7 @@ def main():
                 '-o', f'{args.output}/shaders/glsl/{name}.bin',
                 '--type', f'{toType(shader["type"])}',
                 '--platform', "linux",
+                '--define', defines,
                 '--varyingdef', f'{varying_def_path}',
                 '--profile', f'130',
                 '-i', f'{args.bgfx}/src',
@@ -200,8 +242,30 @@ def main():
                 '-o', f'{args.output}/shaders/spirv/{name}.bin',
                 '--type', f'{toType(shader["type"])}',
                 '--platform', "linux",
+                '--define', defines,
                 '--varyingdef', f'{varying_def_path}',
                 '--profile', f'spirv',
                 '-i', f'{args.bgfx}/src',
                 ] + includes)
+
+
+    for shader in shaders:
+        if("variants" in shader):
+            variants = shader["variants"]
+            num_variants = 0
+            for variant in variants:
+                num_variants |= variant["bit"]
+            for i in range(0, num_variants + 1):
+                defines = []
+                require_bit = 0
+                for variant in variants:
+                    if (variant["bit"] & i) > 0:
+                        defines += variant["defines"]
+                        require_bit |= variant["bit_required"] if "bit_required" in variant else 0
+                if((require_bit & i) == require_bit): # only create shader if all required bits are set
+                    create_shader(shader, {"defines": defines, "name": f'{get_name(shader)}_{i}'})
+                else:
+                    print(f'Not creating shader {get_name(shader)}_{i} because not all required bits are set')
+        else:
+            create_shader(shader)
 main()

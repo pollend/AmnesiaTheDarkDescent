@@ -3,6 +3,6 @@
 
 #define HPL_RTTI_CLASS(name, id) \
     public: \
-        static const char* GetRTTIName() { return #name; } \
-        static const UUid GetId() { return hpl::UUid::FromCString( #id ); } \ 
+        static constexpr const char* Name = "#name"; \
+        static constexpr const UUID ClassID = hpl::UUid::FromCString( "#id" ); \ 
     private:

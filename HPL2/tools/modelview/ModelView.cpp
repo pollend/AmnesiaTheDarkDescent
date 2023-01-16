@@ -19,6 +19,7 @@
 
 #include "graphics/Image.h"
 #include "hpl.h"
+#include <graphics/EntrySDL.h>
 
 #include "../../tests/Common/SimpleCamera.h"
 
@@ -2319,53 +2320,63 @@ int hplMain(const tString &asCommandline)
 
 	SetLogFile(sPersonalDir + PERSONAL_RELATIVEROOT _W("HPL2/modelview.log"));
 
-	//Init the game engine
-	cEngineInitVars vars;
-	vars.mGraphics.mvScreenSize.x = 1024;
-	vars.mGraphics.mvScreenSize.y = 768;
-	vars.mGraphics.mbFullscreen = false;
-	vars.mGraphics.msWindowCaption = "ModelView - Initalizing...";
-	//vars.mGraphics.mvWindowPosition = cVector2l(0,0);
-	gpEngine = CreateHPLEngine(eHplAPI_OpenGL, eHplSetup_All, &vars);
-	gpEngine->SetLimitFPS(false);
-	gpEngine->GetGraphics()->GetLowLevel()->SetVsyncActive(false);
-	gpEngine->SetWaitIfAppOutOfFocus(true);
+
+	hpl::entry_sdl::setThreadHandler([&]() {
+		//Init the game engine
+		cEngineInitVars vars;
+		vars.mGraphics.mvScreenSize.x = 1024;
+		vars.mGraphics.mvScreenSize.y = 768;
+		vars.mGraphics.mbFullscreen = false;
+		vars.mGraphics.msWindowCaption = "ModelView - Initalizing...";
+		//vars.mGraphics.mvWindowPosition = cVector2l(0,0);
+		gpEngine = CreateHPLEngine(eHplAPI_OpenGL, eHplSetup_All, &vars);
+		gpEngine->SetLimitFPS(false);
+		gpEngine->GetGraphics()->GetLowLevel()->SetVsyncActive(false);
+		gpEngine->SetWaitIfAppOutOfFocus(true);
 
 
-	if(asCommandline != "")
-	{
-		gsModelFile = asCommandline;
-		gsModelFile = cString::ReplaceCharTo(gsModelFile,"\"","");
+		if(asCommandline != "")
+		{
+			gsModelFile = asCommandline;
+			gsModelFile = cString::ReplaceCharTo(gsModelFile,"\"","");
 
-		tString sModelDir = cString::GetFilePath(gsModelFile);
-		tWString sDir = cString::To16Char(sModelDir);
-		if(sDir != _W(""))
-			gpEngine->GetResources()->AddResourceDir(sDir,false);
-	}
+			tString sModelDir = cString::GetFilePath(gsModelFile);
+			tWString sDir = cString::To16Char(sModelDir);
+			if(sDir != _W(""))
+				gpEngine->GetResources()->AddResourceDir(sDir,false);
+		}
 
-	//Add resources
-#ifdef USERDIR_RESOURCES
-	gpEngine->GetResources()->LoadResourceDirsFile("resources.cfg", sUserResourceDir);
-#else
-	gpEngine->GetResources()->LoadResourceDirsFile("resources.cfg");
-#endif
-#ifdef __APPLE__
-	gpEngine->GetResources()->AddResourceDir(sEditorDir + _W("viewer/"), true);
-#endif
+		//Add resources
+	#ifdef USERDIR_RESOURCES
+		gpEngine->GetResources()->LoadResourceDirsFile("resources.cfg", sUserResourceDir);
+	#else
+		gpEngine->GetResources()->LoadResourceDirsFile("resources.cfg");
+	#endif
+	#ifdef __APPLE__
+		gpEngine->GetResources()->AddResourceDir(sEditorDir + _W("viewer/"), true);
+	#endif
 
-	//Add updates
-	cSimpleUpdate Update;
-	gpEngine->GetUpdater()->AddUpdate("Default", &Update);
+		//Add updates
+		cSimpleUpdate Update;
+		gpEngine->GetUpdater()->AddUpdate("Default", &Update);
 
-	gpSimpleCamera = hplNew(cSimpleCamera, (Update.GetName(),gpEngine, Update.mpWorld, 10, cVector3f(0,0,9), true) );
+		gpSimpleCamera = hplNew(cSimpleCamera, (Update.GetName(),gpEngine, Update.mpWorld, 10, cVector3f(0,0,9), true) );
 
-	gpEngine->GetUpdater()->AddUpdate("Default", gpSimpleCamera);
+		gpEngine->GetUpdater()->AddUpdate("Default", gpSimpleCamera);
 
-	Update.SetupView();
+		Update.SetupView();
 
-	//Run the engine
-	gpEngine->Run();
+		//Run the engine
+		gpEngine->Run();
 
+		return 0;
+	});
+
+	hpl::entry_sdl::Configuration config = {};
+	config.m_name = "HPL2 ModelViewer";
+	config.m_width = 1024;
+	config.m_height = 768;
+	hpl::entry_sdl::run(config);
 
 	hplDelete (gpSimpleCamera);
 

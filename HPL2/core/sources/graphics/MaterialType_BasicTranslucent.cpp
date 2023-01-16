@@ -167,7 +167,7 @@ namespace hpl
         _s_envMapAlphaMap  = bgfx::createUniform("s_envMapAlphaMap", bgfx::UniformType::Sampler);
         _s_envMap  = bgfx::createUniform("s_envMap", bgfx::UniformType::Sampler);
 
-        _programHandle = hpl::loadProgram("vs_basic_translucent_material", "fs_basic_translucent_material");
+        // _programHandle = hpl::loadProgram("vs_basic_translucent_material", "fs_basic_translucent_material");
     }
 
     cMaterialType_Translucent::~cMaterialType_Translucent()
@@ -765,154 +765,154 @@ namespace hpl
         
     }
 
-    void cMaterialType_Translucent::GetShaderData(
-        GraphicsContext::ShaderProgram& input,
-        eMaterialRenderMode aRenderMode,
-        iGpuProgram* apProgram,
-        cMaterial* apMaterial,
-        iRenderable* apObject,
-        iRenderer* apRenderer)
-    {
-        cMaterialType_Translucent_Vars* pVars = (cMaterialType_Translucent_Vars*)apObject->GetMaterial()->GetVars();
+    // void cMaterialType_Translucent::GetShaderData(
+    //     GraphicsContext::ShaderProgram& input,
+    //     eMaterialRenderMode aRenderMode,
+    //     iGpuProgram* apProgram,
+    //     cMaterial* apMaterial,
+    //     iRenderable* apObject,
+    //     iRenderer* apRenderer)
+    // {
+    //     cMaterialType_Translucent_Vars* pVars = (cMaterialType_Translucent_Vars*)apObject->GetMaterial()->GetVars();
 
-        bool bIlluminationPass = (aRenderMode == eMaterialRenderMode_IlluminationFog || aRenderMode == eMaterialRenderMode_Illumination);
-        bool bRefractionEnabled = pVars->mbRefraction && iRenderer::GetRefractionEnabled();
+    //     bool bIlluminationPass = (aRenderMode == eMaterialRenderMode_IlluminationFog || aRenderMode == eMaterialRenderMode_Illumination);
+    //     bool bRefractionEnabled = pVars->mbRefraction && iRenderer::GetRefractionEnabled();
 
 
-        ////////////////////////////
-        // Diffuse
-        if (aRenderMode == eMaterialRenderMode_Diffuse || aRenderMode == eMaterialRenderMode_DiffuseFog)
-        {
-            apProgram->setImage(material::translucent::s_diffuseMap, apMaterial->GetImage(eMaterialTexture_Diffuse));
-            apProgram->setImage(material::translucent::s_normalMap, apMaterial->GetImage(eMaterialTexture_NMap));
-            apProgram->setImage(material::translucent::s_refractionMap,  nullptr);
-            apProgram->setImage(material::translucent::s_envMap, apMaterial->GetImage(eMaterialTexture_CubeMap));
-            apProgram->setImage(material::translucent::s_envMapAlphaMap, apMaterial->GetImage(eMaterialTexture_CubeMapAlpha));
+    //     ////////////////////////////
+    //     // Diffuse
+    //     if (aRenderMode == eMaterialRenderMode_Diffuse || aRenderMode == eMaterialRenderMode_DiffuseFog)
+    //     {
+    //         apProgram->setImage(material::translucent::s_diffuseMap, apMaterial->GetImage(eMaterialTexture_Diffuse));
+    //         apProgram->setImage(material::translucent::s_normalMap, apMaterial->GetImage(eMaterialTexture_NMap));
+    //         apProgram->setImage(material::translucent::s_refractionMap,  nullptr);
+    //         apProgram->setImage(material::translucent::s_envMap, apMaterial->GetImage(eMaterialTexture_CubeMap));
+    //         apProgram->setImage(material::translucent::s_envMapAlphaMap, apMaterial->GetImage(eMaterialTexture_CubeMapAlpha));
 
-            // switch (alUnit)
-            // {
-            // case 0:
-            //     return apMaterial->GetTexture(eMaterialTexture_Diffuse);
-            // case 1:
-            //     return apMaterial->GetTexture(eMaterialTexture_NMap);
-            // case 2:
-            //     if (bRefractionEnabled)
-            //         return mpGraphics->GetRenderer(eRenderer_Main)->GetRefractionTexture();
-            //     else
-            //         return NULL;
-            // case 3:
-            //     return apMaterial->GetTexture(eMaterialTexture_CubeMap);
-            // case 4:
-            //     return apMaterial->GetTexture(eMaterialTexture_CubeMapAlpha);
-            // }
-        }
-        ////////////////////////////
-        // Illumination
-        else if (aRenderMode == eMaterialRenderMode_Illumination || aRenderMode == eMaterialRenderMode_IlluminationFog)
-        {
+    //         // switch (alUnit)
+    //         // {
+    //         // case 0:
+    //         //     return apMaterial->GetTexture(eMaterialTexture_Diffuse);
+    //         // case 1:
+    //         //     return apMaterial->GetTexture(eMaterialTexture_NMap);
+    //         // case 2:
+    //         //     if (bRefractionEnabled)
+    //         //         return mpGraphics->GetRenderer(eRenderer_Main)->GetRefractionTexture();
+    //         //     else
+    //         //         return NULL;
+    //         // case 3:
+    //         //     return apMaterial->GetTexture(eMaterialTexture_CubeMap);
+    //         // case 4:
+    //         //     return apMaterial->GetTexture(eMaterialTexture_CubeMapAlpha);
+    //         // }
+    //     }
+    //     ////////////////////////////
+    //     // Illumination
+    //     else if (aRenderMode == eMaterialRenderMode_Illumination || aRenderMode == eMaterialRenderMode_IlluminationFog)
+    //     {
 
-            apProgram->setImage(material::translucent::s_normalMap, apMaterial->GetImage(eMaterialTexture_NMap));
-            apProgram->setImage(material::translucent::s_envMap, apMaterial->GetImage(eMaterialTexture_CubeMap));
-            apProgram->setImage(material::translucent::s_envMapAlphaMap, apMaterial->GetImage(eMaterialTexture_CubeMapAlpha));
+    //         apProgram->setImage(material::translucent::s_normalMap, apMaterial->GetImage(eMaterialTexture_NMap));
+    //         apProgram->setImage(material::translucent::s_envMap, apMaterial->GetImage(eMaterialTexture_CubeMap));
+    //         apProgram->setImage(material::translucent::s_envMapAlphaMap, apMaterial->GetImage(eMaterialTexture_CubeMapAlpha));
 
-            // switch (alUnit)
-            // {
-            // case 1:
-            //     return apMaterial->GetTexture(eMaterialTexture_NMap);
-            // case 3:
-            //     return apMaterial->GetTexture(eMaterialTexture_CubeMap);
-            // case 4:
-            //     return apMaterial->GetTexture(eMaterialTexture_CubeMapAlpha);
-            // }
-        }
+    //         // switch (alUnit)
+    //         // {
+    //         // case 1:
+    //         //     return apMaterial->GetTexture(eMaterialTexture_NMap);
+    //         // case 3:
+    //         //     return apMaterial->GetTexture(eMaterialTexture_CubeMap);
+    //         // case 4:
+    //         //     return apMaterial->GetTexture(eMaterialTexture_CubeMapAlpha);
+    //         // }
+    //     }
 
-        /////////////////////////
-        // UV Animation
-        if (apMaterial->HasUvAnimation())
-        {
-            apProgram->SetMatrixf(kVar_a_mtxUV, apMaterial->GetUvMatrix());
-        }
+    //     /////////////////////////
+    //     // UV Animation
+    //     if (apMaterial->HasUvAnimation())
+    //     {
+    //         apProgram->SetMatrixf(kVar_a_mtxUV, apMaterial->GetUvMatrix());
+    //     }
 
-        ////////////////////////////
-        // Reflection vars
-        if (apMaterial->GetTexture(eMaterialTexture_CubeMap) && (bRefractionEnabled && bIlluminationPass == false) ||
-            (bRefractionEnabled == false && bIlluminationPass))
-        {
-            cMatrixf mtxInvView = apRenderer->GetCurrentFrustum()->GetViewMatrix().GetTranspose();
-            apProgram->SetMatrixf(kVar_a_mtxInvViewRotation, mtxInvView.GetRotation());
+    //     ////////////////////////////
+    //     // Reflection vars
+    //     if (apMaterial->GetTexture(eMaterialTexture_CubeMap) && (bRefractionEnabled && bIlluminationPass == false) ||
+    //         (bRefractionEnabled == false && bIlluminationPass))
+    //     {
+    //         cMatrixf mtxInvView = apRenderer->GetCurrentFrustum()->GetViewMatrix().GetTranspose();
+    //         apProgram->SetMatrixf(kVar_a_mtxInvViewRotation, mtxInvView.GetRotation());
 
-            apProgram->SetVec2f(kVar_avFrenselBiasPow, cVector2f(pVars->mfFrenselBias, pVars->mfFrenselPow));
-            apProgram->SetVec2f(kVar_avRimLightMulPow, cVector2f(pVars->mfRimLightMul, pVars->mfRimLightPow));
-        }
+    //         apProgram->SetVec2f(kVar_avFrenselBiasPow, cVector2f(pVars->mfFrenselBias, pVars->mfFrenselPow));
+    //         apProgram->SetVec2f(kVar_avRimLightMulPow, cVector2f(pVars->mfRimLightMul, pVars->mfRimLightPow));
+    //     }
 
-        ////////////////////////////
-        // Refraction vars
-        if (bRefractionEnabled && (aRenderMode == eMaterialRenderMode_DiffuseFog || aRenderMode == eMaterialRenderMode_Diffuse))
-        {
-            apProgram->SetFloat(kVar_afRefractionScale, pVars->mfRefractionScale * (float)apRenderer->GetRenderTargetSize().x);
-        }
+    //     ////////////////////////////
+    //     // Refraction vars
+    //     if (bRefractionEnabled && (aRenderMode == eMaterialRenderMode_DiffuseFog || aRenderMode == eMaterialRenderMode_Diffuse))
+    //     {
+    //         apProgram->SetFloat(kVar_afRefractionScale, pVars->mfRefractionScale * (float)apRenderer->GetRenderTargetSize().x);
+    //     }
 
-        ////////////////////////////
-        // Fog
-        if (aRenderMode == eMaterialRenderMode_DiffuseFog || aRenderMode == eMaterialRenderMode_IlluminationFog)
-        {
-            cWorld* pWorld = apRenderer->GetCurrentWorld();
+    //     ////////////////////////////
+    //     // Fog
+    //     if (aRenderMode == eMaterialRenderMode_DiffuseFog || aRenderMode == eMaterialRenderMode_IlluminationFog)
+    //     {
+    //         cWorld* pWorld = apRenderer->GetCurrentWorld();
 
-            apProgram->SetVec2f(kVar_avFogStartAndLength, cVector2f(pWorld->GetFogStart(), pWorld->GetFogEnd() - pWorld->GetFogStart()));
-            apProgram->SetFloat(kVar_afOneMinusFogAlpha, 1 - pWorld->GetFogColor().a);
-            apProgram->SetFloat(kVar_afFalloffExp, pWorld->GetFogFalloffExp());
-        }
-        ////////////////////////////
-        // Light affects Alpha
-        if (pVars->mbAffectedByLightLevel)
-        {
-            cVector3f vCenterPos = apObject->GetBoundingVolume()->GetWorldCenter();
-            cRenderList* pRenderList = apRenderer->GetCurrentRenderList();
+    //         apProgram->SetVec2f(kVar_avFogStartAndLength, cVector2f(pWorld->GetFogStart(), pWorld->GetFogEnd() - pWorld->GetFogStart()));
+    //         apProgram->SetFloat(kVar_afOneMinusFogAlpha, 1 - pWorld->GetFogColor().a);
+    //         apProgram->SetFloat(kVar_afFalloffExp, pWorld->GetFogFalloffExp());
+    //     }
+    //     ////////////////////////////
+    //     // Light affects Alpha
+    //     if (pVars->mbAffectedByLightLevel)
+    //     {
+    //         cVector3f vCenterPos = apObject->GetBoundingVolume()->GetWorldCenter();
+    //         cRenderList* pRenderList = apRenderer->GetCurrentRenderList();
 
-            float fLightAmount = 0.0f;
+    //         float fLightAmount = 0.0f;
 
-            ////////////////////////////////////////
-            // Iterate lights and add light amount
-            for (int i = 0; i < pRenderList->GetLightNum(); ++i)
-            {
-                iLight* pLight = pRenderList->GetLight(i);
+    //         ////////////////////////////////////////
+    //         // Iterate lights and add light amount
+    //         for (int i = 0; i < pRenderList->GetLightNum(); ++i)
+    //         {
+    //             iLight* pLight = pRenderList->GetLight(i);
 
-                // Check if there is an intersection
-                if (pLight->CheckObjectIntersection(apObject))
-                {
-                    if (pLight->GetLightType() == eLightType_Box)
-                    {
-                        fLightAmount += GetMaxColorValue(pLight->GetDiffuseColor());
-                    }
-                    else
-                    {
-                        float fDist = cMath::Vector3Dist(pLight->GetWorldPosition(), vCenterPos);
+    //             // Check if there is an intersection
+    //             if (pLight->CheckObjectIntersection(apObject))
+    //             {
+    //                 if (pLight->GetLightType() == eLightType_Box)
+    //                 {
+    //                     fLightAmount += GetMaxColorValue(pLight->GetDiffuseColor());
+    //                 }
+    //                 else
+    //                 {
+    //                     float fDist = cMath::Vector3Dist(pLight->GetWorldPosition(), vCenterPos);
 
-                        fLightAmount +=
-                            GetMaxColorValue(pLight->GetDiffuseColor()) * cMath::Max(1.0f - (fDist / pLight->GetRadius()), 0.0f);
-                    }
+    //                     fLightAmount +=
+    //                         GetMaxColorValue(pLight->GetDiffuseColor()) * cMath::Max(1.0f - (fDist / pLight->GetRadius()), 0.0f);
+    //                 }
 
-                    if (fLightAmount >= 1.0f)
-                    {
-                        fLightAmount = 1.0f;
-                        break;
-                    }
-                }
-            }
+    //                 if (fLightAmount >= 1.0f)
+    //                 {
+    //                     fLightAmount = 1.0f;
+    //                     break;
+    //                 }
+    //             }
+    //         }
 
-            ////////////////////////////////////////
-            // Set up variable
-            apProgram->SetFloat(kVar_afAlpha, apRenderer->GetTempAlpha());
-            apProgram->SetFloat(kVar_afLightLevel, fLightAmount);
-        }
-        else
-        {
-            apProgram->SetFloat(kVar_afAlpha, apRenderer->GetTempAlpha());
-            apProgram->SetFloat(kVar_afLightLevel, 1.0f);
-        }
-        apProgram->GetProgram(input);
-        // apProgram->Submit(id, context);
-    }
+    //         ////////////////////////////////////////
+    //         // Set up variable
+    //         apProgram->SetFloat(kVar_afAlpha, apRenderer->GetTempAlpha());
+    //         apProgram->SetFloat(kVar_afLightLevel, fLightAmount);
+    //     }
+    //     else
+    //     {
+    //         apProgram->SetFloat(kVar_afAlpha, apRenderer->GetTempAlpha());
+    //         apProgram->SetFloat(kVar_afLightLevel, 1.0f);
+    //     }
+    //     apProgram->GetProgram(input);
+    //     // apProgram->Submit(id, context);
+    // }
 
     //--------------------------------------------------------------------------
 

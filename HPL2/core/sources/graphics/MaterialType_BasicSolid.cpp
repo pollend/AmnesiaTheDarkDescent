@@ -25,6 +25,7 @@
 #include "graphics/GraphicsTypes.h"
 #include "graphics/MemberID.h"
 #include "graphics/ShaderUtil.h"
+#include "graphics/ShaderVariantCollection.h"
 #include "math/MathTypes.h"
 #include "math/Matrix.h"
 #include "system/LowLevelSystem.h"
@@ -125,28 +126,6 @@ namespace hpl
                                             cProgramComboFeature("UseDissolveAlphaMap", kPC_FragmentBit),
                                             cProgramComboFeature("UseAlphaUseDissolveFilter", kPC_FragmentBit) };
 
-    namespace material::solid
-    {
-        static const auto afInvFarPlane = MemberID("afInvFarPlane", kVar_afInvFarPlane);
-        static const auto avHeightMapScaleAndBias = MemberID("avHeightMapScaleAndBias", kVar_avHeightMapScaleAndBias);
-        static const auto a_mtxUV = MemberID("a_mtxUV", kVar_a_mtxUV);
-        static const auto afColorMul = MemberID("afColorMul", kVar_afColorMul);
-        static const auto afDissolveAmount = MemberID("afDissolveAmount", kVar_afDissolveAmount);
-        static const auto avFrenselBiasPow = MemberID("avFrenselBiasPow", kVar_avFrenselBiasPow);
-        static const auto mtxInvViewRotation = MemberID("a_mtxInvViewRotation", kVar_a_mtxInvViewRotation);
-
-        static const auto s_normalMap = MemberID("s_normalMap");
-        static const auto s_specularMap = MemberID("s_specularMap");
-        static const auto s_heightMap = MemberID("s_heightMap");
-        static const auto s_diffuseMap = MemberID("s_diffuseMap");
-        static const auto s_envMapAlphaMap = MemberID("s_envMapAlphaMap");
-
-        static const auto s_dissolveMap = MemberID("s_dissolveMap");
-        static const auto s_dissolveAlphaMap = MemberID("s_dissolveAlphaMap");
-
-        static const auto s_envMap = MemberID("s_envMap");
-    } // namespace material::solid
-
     bool iMaterialType_SolidBase::mbGlobalDataCreated = false;
     cProgramComboManager* iMaterialType_SolidBase::mpGlobalProgramManager;
 
@@ -155,26 +134,27 @@ namespace hpl
     iMaterialType_SolidBase::iMaterialType_SolidBase(cGraphics* apGraphics, cResources* apResources)
         : iMaterialType(apGraphics, apResources)
     {
-        _basicSolidZProgram = hpl::loadProgram("vs_basic_solid_z", "fs_basic_solid_z");
-        _basicSolidDiffuseProgram = hpl::loadProgram("vs_basic_solid_diffuse", "fs_basic_solid_diffuse");
-        _illuminationProgram = hpl::loadProgram("vs_basic_solid_illumination", "fs_basic_solid_illumination");
+        m_diffuseProgram.Initialize(ShaderHelper::LoadProgramHandlerDefault(
+            "vs_basic_solid_diffuse",
+             "fs_basic_solid_diffuse", false, true));
+        m_ZProgram.Initialize(ShaderHelper::LoadProgramHandlerDefault("vs_basic_solid_z", "fs_basic_solid_z", false, true));
+
+        m_illuminationProgram = hpl::loadProgram("vs_basic_solid_illumination", "fs_basic_solid_illumination");
         
         m_s_normalMap = bgfx::createUniform("s_normalMap", bgfx::UniformType::Sampler);
         m_s_specularMap = bgfx::createUniform("s_specularMap", bgfx::UniformType::Sampler);
-        m_s_heightMap = bgfx::createUniform("s_heightMap", bgfx::UniformType::Sampler);
         m_s_diffuseMap = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
         m_s_envMapAlphaMap = bgfx::createUniform("s_envMapAlphaMap", bgfx::UniformType::Sampler);
+        m_s_heightMap = bgfx::createUniform("s_heightMap", bgfx::UniformType::Sampler);
 
         m_s_dissolveMap = bgfx::createUniform("s_dissolveMap", bgfx::UniformType::Sampler);
         m_s_dissolveAlphaMap = bgfx::createUniform("s_dissolveAlphaMap", bgfx::UniformType::Sampler);
 
         m_s_envMap = bgfx::createUniform("s_envMap", bgfx::UniformType::Sampler);
 
-        _u_param = bgfx::createUniform("u_params", bgfx::UniformType::Vec4);
-        _u_mtxUv = bgfx::createUniform("u_mtxUV", bgfx::UniformType::Mat4);
-        _u_mtxInvViewRotation = bgfx::createUniform("u_mtxInvViewRotation", bgfx::UniformType::Mat4);
-        _s_diffuseMap = bgfx::createUniform("diffuseMap", bgfx::UniformType::Sampler);
-        _s_dissolveMap = bgfx::createUniform("dissolveMap", bgfx::UniformType::Sampler);
+        m_u_param = bgfx::createUniform("u_param", bgfx::UniformType::Vec4);
+        m_u_mtxUv = bgfx::createUniform("u_mtxUV", bgfx::UniformType::Mat4);
+        m_u_mtxInvViewRotation = bgfx::createUniform("u_mtxInvViewRotation", bgfx::UniformType::Mat4);
 
         mbIsGlobalDataCreator = false;
     }
@@ -518,482 +498,130 @@ namespace hpl
 
     iGpuProgram* cMaterialType_SolidDiffuse::GetGpuProgram(cMaterial* apMaterial, eMaterialRenderMode aRenderMode, char alSkeleton)
     {
-        cMaterialType_SolidDiffuse_Vars* pVars = (cMaterialType_SolidDiffuse_Vars*)apMaterial->GetVars();
-                            
-        struct RenderZData
-        {
-            float mtxUv[16];
-            float heighScaleMapBias[2];
-            
-            bgfx::TextureHandle s_diffuseMap = BGFX_INVALID_HANDLE;
-            bgfx::TextureHandle s_dissolveMap = BGFX_INVALID_HANDLE;
-            bgfx::TextureHandle s_dissolveAlphaMap = BGFX_INVALID_HANDLE;
-
-            struct u_params
-            {
-                float u_useAlphaMap;
-                float u_useDissolveFilter;
-                float u_useDissolveAlphaMap;
-                float u_unused1;
-            } params;
-        };
-        using MaterialZProgram = BGFXProgram<RenderZData>;
-
-        struct RenderDiffuseData
-        {
-            float mtxUv[16];
-            float mtxInvViewRotation[16];
-
-            bgfx::TextureHandle s_normalMap = BGFX_INVALID_HANDLE;
-            bgfx::TextureHandle s_specularMap = BGFX_INVALID_HANDLE;
-            bgfx::TextureHandle s_heightMap = BGFX_INVALID_HANDLE;
-            bgfx::TextureHandle s_diffuseMap = BGFX_INVALID_HANDLE;
-            bgfx::TextureHandle s_envMapAlphaMap = BGFX_INVALID_HANDLE;
-
-            bgfx::TextureHandle s_envMap = BGFX_INVALID_HANDLE;
-
-            struct u_params
-            {
-                float heightMapScale[2];
-                float frenselBiasPow[2];
-
-                float u_useNormalMap;
-                float u_useSpecular;
-                float u_useEnvMap;
-                float u_useCubeMapAlpha;
-
-                float u_useParallax;
-                float u_dissolveAmount;
-                float u_unused3;
-                float u_unused4;
-            } params;
-        };
-        using MaterialDiffuseProgram = BGFXProgram<RenderDiffuseData>;
-
-        struct RenderIlluminationData
-        {
-            float mtxUv[16];
-            
-            bgfx::TextureHandle s_diffuseMap = BGFX_INVALID_HANDLE;
-
-            struct u_params
-            {
-                float u_colorMul;
-                float u_unused1;
-                float u_unused2;
-                float u_unused3;
-            } params;
-        };
-        using MaterialIlluminationProgram = BGFXProgram<RenderIlluminationData>;
-
-
-        if (aRenderMode == eMaterialRenderMode_Z)
-        {
-            const bool useAlpha = apMaterial->GetTexture(eMaterialTexture_Alpha);
-            const bool hasDissolveFilter = pVars->mbAlphaDissolveFilter;
-            tFlag lFlags = 
-                (useAlpha ? eFeature_Z_UseAlpha : 0) | 
-                (hasDissolveFilter ? eFeature_Z_UseAlphaDissolveFilter : 0) |
-                (apMaterial->HasUvAnimation() ? eFeature_Z_UvAnimation : 0);
-
-            return mpGlobalProgramManager->GenerateProgram(
-                eMaterialRenderMode_Z,
-                lFlags,
-                [useAlpha, 
-                hasDissolveFilter, 
-                programHandle = _basicSolidZProgram, 
-                u_param = _u_param, 
-                u_mtxUv = _u_mtxUv](
-                    const tString& name)
-                {
-                    auto program = (new MaterialZProgram(
-                        { MaterialZProgram::ParameterField(
-                            material::solid::a_mtxUV,
-                            MaterialZProgram::Matrix4fMapper(
-                                [](RenderZData& data, const cMatrixf& value)
-                                {
-                                    std::copy(std::begin(value.v), std::end(value.v), std::begin(data.mtxUv));
-                                })),
-                                MaterialZProgram::ParameterField(
-                            material::solid::s_diffuseMap,
-                            MaterialZProgram::ImageMapper(
-                                [](RenderZData& data, const Image* value)
-                                {
-                                    data.s_diffuseMap = value ? value->GetHandle() : bgfx::TextureHandle{BGFX_INVALID_HANDLE};
-                                })),
-                                MaterialZProgram::ParameterField(
-                            material::solid::s_dissolveMap,
-                            MaterialZProgram::ImageMapper(
-                                [](RenderZData& data, const Image* value)
-                                {
-                                    data.s_dissolveMap = value ? value->GetHandle() : bgfx::TextureHandle{BGFX_INVALID_HANDLE};
-                                })),
-                                MaterialZProgram::ParameterField(
-                            material::solid::s_dissolveAlphaMap,
-                            MaterialZProgram::ImageMapper(
-                                [](RenderZData& data, const Image* value)
-                                {
-                                    data.s_dissolveAlphaMap = value ? value->GetHandle() : bgfx::TextureHandle{BGFX_INVALID_HANDLE};
-                                }))},
-                        name,
-                        programHandle,
-                        false,
-                        eGpuProgramFormat_BGFX));
-                    program->SetSubmitHandler(
-                        [u_param, u_mtxUv](const RenderZData& data, GraphicsContext::ShaderProgram& program)
-                        {
-                            program.m_uniforms.push_back({u_param, &data.params});
-                            program.m_uniforms.push_back({u_mtxUv, &data.mtxUv});
-                        });
-
-                    program->data().params.u_useAlphaMap = useAlpha ? 1.0f : 0.0f;
-                    program->data().params.u_useDissolveFilter = hasDissolveFilter ? 1.0f : 0.0f;
-                    program->data().params.u_useDissolveAlphaMap = 0.0f;
-                    program->SetMatrixf(material::solid::a_mtxUV.id(), cMatrixf::Identity);
-                    return program;
-                });
-        }
-        else if (aRenderMode == eMaterialRenderMode_Z_Dissolve)
-        {
-            const bool useAlpha = apMaterial->GetTexture(eMaterialTexture_Alpha);
-            const bool hasDissolveAlphaMap = apMaterial->GetTexture(eMaterialTexture_DissolveAlpha);
-            const bool hasDissolveFilter = pVars->mbAlphaDissolveFilter;
-            const bool useUvAnimation = apMaterial->HasUvAnimation();
-
-            tFlag lFlags = eFeature_Z_Dissolve | 
-                (useAlpha ? eFeature_Z_UseAlpha : 0) |
-                (hasDissolveFilter ? eFeature_Z_UseAlphaDissolveFilter : 0) | 
-                (hasDissolveAlphaMap ? eFeature_Z_DissolveAlpha : 0) |
-                (useUvAnimation ? eFeature_Z_UvAnimation : 0);
-
-            return mpGlobalProgramManager->GenerateProgram(
-                eMaterialRenderMode_Z,
-                lFlags,
-                [useAlpha,
-                 hasDissolveFilter,
-                 hasDissolveAlphaMap,
-                 programHandle = _basicSolidZProgram,
-                 s_diffuseMap = m_s_diffuseMap,
-                 s_dissolveMap = m_s_dissolveMap,
-                 s_dissolveAlphaMap = m_s_dissolveAlphaMap,
-                 u_param = _u_param,
-                 u_mtxUv = _u_mtxUv](const tString& name)
-                {
-                    auto program = (new MaterialZProgram(
-                        { MaterialZProgram::ParameterField(
-                              material::solid::a_mtxUV,
-                              MaterialZProgram::Matrix4fMapper(
-                                  [](RenderZData& data, const cMatrixf& value)
-                                  {
-                                      std::copy(std::begin(value.v), std::end(value.v), std::begin(data.mtxUv));
-                                  })),
-                          MaterialZProgram::ParameterField(
-                              material::solid::afDissolveAmount,
-                              MaterialZProgram::FloatMapper(
-                                  [](RenderZData& data, float value)
-                                  {
-                                      // data.params.dis
-                                  })),
-                          MaterialZProgram::ParameterField(
-                              material::solid::s_diffuseMap,
-                              MaterialZProgram::ImageMapper(
-                                  [](RenderZData& data, const Image* value)
-                                  {
-                                      data.s_diffuseMap = value ? value->GetHandle() : bgfx::TextureHandle{BGFX_INVALID_HANDLE};
-                                  })),
-                          MaterialZProgram::ParameterField(
-                              material::solid::s_dissolveMap,
-                              MaterialZProgram::ImageMapper(
-                                  [](RenderZData& data, const Image* value)
-                                  {
-                                      data.s_dissolveMap = value ? value->GetHandle() : bgfx::TextureHandle{BGFX_INVALID_HANDLE};
-                                  })),
-                          MaterialZProgram::ParameterField(
-                              material::solid::s_dissolveAlphaMap,
-                              MaterialZProgram::ImageMapper(
-                                  [](RenderZData& data, const Image* value)
-                                  {
-                                      data.s_dissolveAlphaMap = value ? value->GetHandle() : bgfx::TextureHandle{BGFX_INVALID_HANDLE};
-                                  })) },
-                        name,
-                        programHandle,
-                        false,
-                        eGpuProgramFormat_BGFX));
-                    program->SetSubmitHandler(
-                        [u_param, u_mtxUv, s_diffuseMap, s_dissolveMap, s_dissolveAlphaMap](
-                            const RenderZData& data, GraphicsContext::ShaderProgram& program)
-                        {
-                            program.m_uniforms.push_back({u_param, &data.params});
-                            program.m_uniforms.push_back({u_mtxUv, &data.mtxUv});
-
-                            program.m_textures.push_back({s_diffuseMap, data.s_diffuseMap, 0});
-                            program.m_textures.push_back({s_dissolveMap, data.s_dissolveMap, 1});
-                            program.m_textures.push_back({s_dissolveAlphaMap, data.s_dissolveAlphaMap, 2});
-                        });
-
-                    program->data().params.u_useAlphaMap = useAlpha;
-                    program->data().params.u_useDissolveFilter = hasDissolveFilter;
-                    program->data().params.u_useDissolveAlphaMap = hasDissolveAlphaMap;
-                    program->SetMatrixf(material::solid::a_mtxUV.id(), cMatrixf::Identity);
-                    return program;
-                });
-        }
-        ////////////////////////////
-        // Diffuse
-        else if (aRenderMode == eMaterialRenderMode_Diffuse)
-        {
-            const bool useDiffuseNormalMap = apMaterial->GetImage(eMaterialTexture_NMap);
-            const bool useSpecularMap = apMaterial->GetImage(eMaterialTexture_Specular);
-            const bool useDiffuseParallaxMap = apMaterial->GetImage(eMaterialTexture_Height) && iRenderer::GetParallaxEnabled();
-            const bool useDiffuseEnvMap = apMaterial->GetImage(eMaterialTexture_CubeMap);
-            const bool useCubeAlpha = useDiffuseEnvMap && apMaterial->GetImage(eMaterialTexture_CubeMapAlpha);
-            const bool useUvAnimation = apMaterial->HasUvAnimation();
-
-            tFlag lFlags = (useDiffuseNormalMap ? eFeature_Diffuse_NormalMaps : 0) | 
-                        (useSpecularMap ? eFeature_Diffuse_Specular : 0) |
-                        (useDiffuseParallaxMap ? eFeature_Diffuse_Parallax : 0) | 
-                        (useDiffuseEnvMap ? eFeature_Diffuse_EnvMap : 0) |
-                        (useCubeAlpha ? eFeature_Diffuse_CubeMapAlpha : 0) | 
-                        (useUvAnimation ? eFeature_Diffuse_UvAnimation : 0);
-
-            return mpProgramManager->GenerateProgram(
-                aRenderMode,
-                lFlags,
-                [programHandle = _basicSolidDiffuseProgram,
-                 useDiffuseNormalMap,
-                 useSpecularMap,
-                 useDiffuseParallaxMap,
-                 useDiffuseEnvMap,
-                 useCubeAlpha,
-                 useUvAnimation,
-                 u_param = _u_param,
-                 u_mtxUv = _u_mtxUv,
-                 s_normalMap = m_s_normalMap,
-                 s_specularMap = m_s_specularMap,
-                 s_heightMap = m_s_heightMap,
-                 s_diffuseMap = m_s_diffuseMap,
-                 s_envMapAlphaMap = m_s_envMapAlphaMap,
-                 s_envMap = m_s_envMap,
-                 u_mtxInvViewRotation = _u_mtxInvViewRotation](const tString& name)
-                {
-                    auto program = (new MaterialDiffuseProgram(
-                        { MaterialDiffuseProgram::ParameterField(
-                              material::solid::a_mtxUV,
-                              MaterialDiffuseProgram::Matrix4fMapper(
-                                  [](RenderDiffuseData& data, const cMatrixf& value)
-                                  {
-                                      std::copy(std::begin(value.v), std::end(value.v), std::begin(data.mtxUv));
-                                  })),
-                          MaterialDiffuseProgram::ParameterField(
-                              material::solid::avFrenselBiasPow,
-                              MaterialDiffuseProgram::Vec2Mapper(
-                                  [](RenderDiffuseData& data, float afx, float afy)
-                                  {
-                                      data.params.frenselBiasPow[0] = afx;
-                                      data.params.frenselBiasPow[1] = afy;
-                                  })),
-                          MaterialDiffuseProgram::ParameterField(
-                              material::solid::avHeightMapScaleAndBias,
-                              MaterialDiffuseProgram::Vec2Mapper(
-                                  [](RenderDiffuseData& data, float afx, float afy)
-                                  {
-                                      data.params.heightMapScale[0] = afx;
-                                      data.params.heightMapScale[1] = afy;
-                                  })),
-                          MaterialDiffuseProgram::ParameterField(
-                              material::solid::mtxInvViewRotation,
-                              MaterialDiffuseProgram::Matrix4fMapper(
-                                  [](RenderDiffuseData& data, const cMatrixf& value)
-                                  {
-                                      std::copy(std::begin(value.v), std::end(value.v), std::begin(data.mtxInvViewRotation));
-                                  })),
-                          MaterialDiffuseProgram::ParameterField(
-                              material::solid::s_normalMap,
-                              MaterialDiffuseProgram::ImageMapper(
-                                  [](RenderDiffuseData& data, const Image* value)
-                                  {
-                                      data.s_normalMap = value ? value->GetHandle() : bgfx::TextureHandle{BGFX_INVALID_HANDLE};
-                                  })),
-                          MaterialDiffuseProgram::ParameterField(
-                              material::solid::s_specularMap,
-                              MaterialDiffuseProgram::ImageMapper(
-                                  [](RenderDiffuseData& data, const Image* value)
-                                  {
-                                      data.s_specularMap = value ? value->GetHandle() : bgfx::TextureHandle{BGFX_INVALID_HANDLE};
-                                  })),
-                          MaterialDiffuseProgram::ParameterField(
-                              material::solid::s_heightMap,
-                              MaterialDiffuseProgram::ImageMapper(
-                                  [](RenderDiffuseData& data, const Image* value)
-                                  {
-                                      data.s_heightMap = value ? value->GetHandle() : bgfx::TextureHandle{BGFX_INVALID_HANDLE};
-                                  })),
-                          MaterialDiffuseProgram::ParameterField(
-                              material::solid::s_diffuseMap,
-                              MaterialDiffuseProgram::ImageMapper(
-                                  [](RenderDiffuseData& data, const Image* value)
-                                  {
-                                      data.s_diffuseMap = value ? value->GetHandle() : bgfx::TextureHandle{BGFX_INVALID_HANDLE};
-                                  })),
-                          MaterialDiffuseProgram::ParameterField(
-                              material::solid::s_envMapAlphaMap,
-                              MaterialDiffuseProgram::ImageMapper(
-                                  [](RenderDiffuseData& data, const Image* value)
-                                  {
-                                      data.s_envMapAlphaMap = value ? value->GetHandle() : bgfx::TextureHandle{BGFX_INVALID_HANDLE};
-                                  })),
-                          MaterialDiffuseProgram::ParameterField(
-                              material::solid::s_envMap,
-                              MaterialDiffuseProgram::ImageMapper(
-                                  [](RenderDiffuseData& data, const Image* value)
-                                  {
-                                      data.s_envMap = value ? value->GetHandle() : bgfx::TextureHandle{BGFX_INVALID_HANDLE};
-                                  }))},
-                        name,
-                        programHandle,
-                        false,
-                        eGpuProgramFormat_BGFX));
-
-                    program->SetSubmitHandler(
-                        [
-                            u_param, 
-                            u_mtxUv, 
-                            u_mtxInvViewRotation, 
-                            s_normalMap, 
-                            s_specularMap, 
-                            s_heightMap, 
-                            s_diffuseMap, 
-                            s_envMapAlphaMap,
-                            s_envMap](
-                            const RenderDiffuseData& data, GraphicsContext::ShaderProgram& program)
-                        {
-                            program.m_uniforms.push_back({u_param, &data.params, 3});
-                            program.m_uniforms.push_back({u_mtxUv, &data.mtxUv});
-                            program.m_uniforms.push_back({u_mtxInvViewRotation, &data.mtxInvViewRotation});
-
-                            program.m_textures.push_back({s_normalMap, data.s_normalMap, 0});
-                            program.m_textures.push_back({s_specularMap, data.s_specularMap, 1});
-                            program.m_textures.push_back({s_heightMap, data.s_heightMap, 2});
-                            program.m_textures.push_back({s_diffuseMap, data.s_diffuseMap, 3});
-                            program.m_textures.push_back({s_envMapAlphaMap, data.s_envMapAlphaMap, 4});
-                            // program.m_textures.push_back({s_envMap, data.s_envMap, 5});
-                        });
-
-                    program->data().params.u_useNormalMap = useDiffuseNormalMap ? 1.0f : 0.0f;
-                    program->data().params.u_useSpecular = useSpecularMap ? 1.0f : 0.0f;
-                    program->data().params.u_useEnvMap = useDiffuseEnvMap ? 1.0f : 0.0f;
-                    program->data().params.u_useCubeMapAlpha = useCubeAlpha ? 1.0f : 0.0f;
-                    program->data().params.u_useParallax = useDiffuseParallaxMap ? 1.0f : 0.0f;
-
-                    program->SetMatrixf(material::solid::a_mtxUV.id(), cMatrixf::Identity);
-                    return program;
-                });
-        }
-        ////////////////////////////
-        // Illumination
-        else if (aRenderMode == eMaterialRenderMode_Illumination)
-        {
-            const bool hasUvAnimation = apMaterial->HasUvAnimation();
-            tFlag lFlags = (hasUvAnimation ? eFeature_Illum_UvAnimation : 0);
-
-            return mpProgramManager->GenerateProgram(
-                aRenderMode,
-                lFlags,
-                [programHandle = _illuminationProgram](const tString& name)
-                {
-                    auto program = (new MaterialIlluminationProgram(
-                        {
-
-                            MaterialIlluminationProgram::ParameterField(
-                                material::solid::s_diffuseMap,
-                                MaterialIlluminationProgram::ImageMapper(
-                                    [](RenderIlluminationData& data, const Image* value)
-                                    {
-                                        data.s_diffuseMap = value->GetHandle();
-                                    })),
-                        },
-                        name,
-                        programHandle,
-                        false,
-                        eGpuProgramFormat_BGFX));
-                    return program;
-                });
-        }
-
-        return NULL;
+        return nullptr;
     }
 
-    void cMaterialType_SolidDiffuse::GetShaderData(GraphicsContext::ShaderProgram& input, eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial* apMaterial, iRenderable *apObject,
-												iRenderer *apRenderer)
-    {
-        const auto tryUpdateUvAnimation = [&]() {
-            if (apMaterial->HasUvAnimation()) {
-                apProgram->SetMatrixf(kVar_a_mtxUV, apMaterial->GetUvMatrix());
-            }  else {
-                apProgram->SetMatrixf(kVar_a_mtxUV, cMatrixf::Identity);
-            }
-        };
-
+    void cMaterialType_SolidDiffuse::ResolveShaderProgram(
+            eMaterialRenderMode aRenderMode,
+            cMaterial* apMaterial,
+            iRenderable* apObject,
+            iRenderer* apRenderer, 
+			std::function<void(GraphicsContext::ShaderProgram&)> handler) {
+        GraphicsContext::ShaderProgram program;
+        if (apMaterial->HasUvAnimation()) {
+            cMatrixf mtx = apMaterial->GetUvMatrix().GetTranspose();
+            program.m_uniforms.push_back({m_u_mtxUv, &mtx.v});
+        }  else {
+            program.m_uniforms.push_back({m_u_mtxUv, &cMatrixf::Identity.v});
+        }
+        auto* pVars = static_cast<cMaterialType_SolidDiffuse_Vars*>(apMaterial->GetVars());
         switch(aRenderMode) {
             case eMaterialRenderMode_Diffuse: {
+                struct {
+                    float heightMapScale;
+                    float heightMapBias;
+                    float fresnelBias;
+                    float fresnelPow;
 
-                cMaterialType_SolidDiffuse_Vars* pVars = (cMaterialType_SolidDiffuse_Vars*)apMaterial->GetVars();
-                cFrustum* pFrustum = apRenderer->GetCurrentFrustum();
-                tryUpdateUvAnimation();
-                apProgram->SetFloat(kVar_afInvFarPlane, 1.0f / pFrustum->GetFarPlane());
-                
-                if (apMaterial->GetTexture(eMaterialTexture_Height) && iRenderer::GetParallaxEnabled())
-                {
-                    apProgram->SetVec2f(kVar_avHeightMapScaleAndBias, pVars->mfHeightMapScale, pVars->mfHeightMapBias);
+                    float useCubeMapAlpha;
+                    float padding[3];
+                } param = {};
+                auto diffuseMap = apMaterial->GetImage(eMaterialTexture_Diffuse);
+                auto normalImage = apMaterial->GetImage(eMaterialTexture_NMap);
+                auto specularMap = apMaterial->GetImage(eMaterialTexture_Specular);
+                auto heightMap = apMaterial->GetImage(eMaterialTexture_Height);
+                auto diffuseEnvMap = apMaterial->GetImage(eMaterialTexture_CubeMap);
+                auto cubemapAlphaMap = apMaterial->GetImage(eMaterialTexture_CubeMapAlpha);
+
+                uint32_t flags = 0;
+                if(normalImage) {
+                    flags |= material::solid::DiffuseVariant::Diffuse_NormalMap;
+                    program.m_textures.push_back({m_s_normalMap, normalImage->GetHandle(), 1});
+                }
+                if(specularMap) {
+                    flags |= material::solid::DiffuseVariant::Diffuse_SpecularMap;
+                    program.m_textures.push_back({m_s_specularMap, specularMap->GetHandle(), 2});
                 }
 
-                if (apMaterial->GetTexture(eMaterialTexture_CubeMap))
-                {
-                    apProgram->SetVec2f(kVar_avFrenselBiasPow, pVars->mfFrenselBias, pVars->mfFrenselPow);
-
-                    cMatrixf mtxInvView = apRenderer->GetCurrentFrustum()->GetViewMatrix().GetTranspose();
-                    apProgram->SetMatrixf(kVar_a_mtxInvViewRotation, mtxInvView.GetRotation().GetTranspose());
-                } else {
-                    apProgram->SetMatrixf(kVar_a_mtxInvViewRotation, cMatrixf::Identity);
+                if(diffuseMap) {
+                    program.m_textures.push_back({m_s_diffuseMap, diffuseMap->GetHandle(), 0});
                 }
 
-                apProgram->setImage(material::solid::s_diffuseMap, apMaterial->GetImage(eMaterialTexture_Diffuse));
-                apProgram->setImage(material::solid::s_normalMap, apMaterial->GetImage(eMaterialTexture_NMap));
-                apProgram->setImage(material::solid::s_specularMap, apMaterial->GetImage(eMaterialTexture_Specular));
-                apProgram->setImage(material::solid::s_heightMap, apMaterial->GetImage(eMaterialTexture_Height));
-                apProgram->setImage(material::solid::s_envMapAlphaMap, apMaterial->GetImage(eMaterialTexture_CubeMapAlpha));
-                apProgram->setImage(material::solid::s_envMap, apMaterial->GetImage(eMaterialTexture_CubeMap));
+                if(heightMap && iRenderer::GetParallaxEnabled()) {
+                    flags |= material::solid::DiffuseVariant::Diffuse_ParallaxMap;
+                    param.heightMapScale = pVars->mfHeightMapScale;
+                    param.heightMapBias = pVars->mfHeightMapBias;
+                    program.m_textures.push_back({m_s_heightMap, heightMap->GetHandle(), 3});
+                }
+
+                if(diffuseEnvMap) {
+                    param.fresnelPow = pVars->mfFrenselPow;
+                    param.fresnelBias = pVars->mfFrenselPow;
+
+                    flags |= material::solid::DiffuseVariant::Diffuse_EnvMap;
+                    program.m_textures.push_back({m_s_envMap, diffuseEnvMap->GetHandle(), 0});
+                    if(cubemapAlphaMap) {
+                        param.useCubeMapAlpha = 1.0f;
+                        program.m_textures.push_back({m_s_envMapAlphaMap, cubemapAlphaMap->GetHandle(), 5});
+                    }
+                }
+                program.m_uniforms.push_back({m_u_param, &param, 2});
+                program.m_handle = m_diffuseProgram.GetVariant(flags);
+                handler(program);
+                break;
             }
-            break;
             case eMaterialRenderMode_Z: {
-                tryUpdateUvAnimation();
-                apProgram->setImage(material::solid::s_diffuseMap, apMaterial->GetImage(eMaterialTexture_Alpha));
-                apProgram->setImage(material::solid::s_dissolveMap, m_dissolveImage);
-                
+                BX_ASSERT(m_dissolveImage, "Dissolve image is not set");
+
+                auto diffuseMap = apMaterial->GetImage(eMaterialTexture_Alpha);
+                uint32_t flags = pVars->mbAlphaDissolveFilter ? material::solid::Z_UseDissolveFilter : 0;
+                program.m_textures.push_back({m_s_dissolveMap, m_dissolveImage->GetHandle()});
+                if(diffuseMap) {
+                    flags |= material::solid::Z_UseAlphaMap;
+                    program.m_textures.push_back({m_s_diffuseMap, diffuseMap->GetHandle(), 0});
+                }
+                program.m_handle = m_ZProgram.GetVariant(flags);
+                handler(program);
+                break;
             }
-            break;
             case eMaterialRenderMode_Z_Dissolve: {
-                tryUpdateUvAnimation();
-                apProgram->SetFloat(kVar_afDissolveAmount, apObject->GetCoverageAmount());
-                apProgram->setImage(material::solid::s_diffuseMap, apMaterial->GetImage(eMaterialTexture_Alpha));
-                apProgram->setImage(material::solid::s_dissolveMap, m_dissolveImage);
-                apProgram->setImage(material::solid::s_dissolveAlphaMap, apMaterial->GetImage(eMaterialTexture_DissolveAlpha));
+                auto diffuseMap = apMaterial->GetImage(eMaterialTexture_Alpha);
+                auto alphaDissolveMap = apMaterial->GetImage(eMaterialTexture_DissolveAlpha);
+                uint32_t flags = pVars->mbAlphaDissolveFilter ? material::solid::Z_UseDissolveFilter : 0;
+                if(diffuseMap) {
+                    flags |= material::solid::Z_UseAlphaMap;
+                    program.m_textures.push_back({m_s_diffuseMap, diffuseMap->GetHandle()});
+                }
+                program.m_textures.push_back({m_s_dissolveMap, m_dissolveImage->GetHandle()});
+                if(alphaDissolveMap) {
+                    flags |= material::solid::Z_UseDissolveAlphaMap;
+                    program.m_textures.push_back({m_s_dissolveAlphaMap, alphaDissolveMap->GetHandle()});
+                }
+                program.m_handle = m_ZProgram.GetVariant(flags);
+                handler(program);
+                break;
             }
-            break;
             case eMaterialRenderMode_Illumination: {
-                tryUpdateUvAnimation();
-                apProgram->SetFloat(kVar_afColorMul, apObject->GetIlluminationAmount());
-                apProgram->setImage(material::solid::s_diffuseMap, apMaterial->GetImage(eMaterialTexture_Illumination));
+                auto illumination = apMaterial->GetImage(eMaterialTexture_Illumination);
+                struct {
+                    float colorMul;
+                    float padding[3];
+                } param = {};
+
+                if(illumination) {
+                    program.m_textures.push_back({m_s_diffuseMap, illumination->GetHandle()});
+                }
+                program.m_uniforms.push_back({m_u_param, &param});
+                program.m_handle = m_illuminationProgram;
+                 handler(program);
+                break;
             }
-            break;
+
             default:
                 break;
         }
-        apProgram->GetProgram(input);
-        
     }
 
-    //--------------------------------------------------------------------------
 
     void cMaterialType_SolidDiffuse::SetupTypeSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderer* apRenderer)
     {

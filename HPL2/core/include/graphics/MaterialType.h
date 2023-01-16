@@ -25,6 +25,7 @@
 #include "engine/EngineTypes.h"
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
+#include <functional>
 
 namespace hpl {
 
@@ -101,12 +102,12 @@ namespace hpl {
 		virtual void SetupObjectSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderable *apObject,
 												iRenderer *apRenderer)=0;
 
-		virtual void GetShaderData(GraphicsContext::ShaderProgram& input, 
-										eMaterialRenderMode aRenderMode, 
-										iGpuProgram* apProgram, 
-										cMaterial* apMaterial, 
-										iRenderable *apObject,
-										iRenderer *apRenderer){};
+		virtual void ResolveShaderProgram(
+            eMaterialRenderMode aRenderMode,
+            cMaterial* apMaterial,
+            iRenderable* apObject,
+            iRenderer* apRenderer, 
+			std::function<void(GraphicsContext::ShaderProgram&)> program) {}
 
 		int GetUsedTextureNum(){ return (int)mvUsedTextures.size(); }
 		cMaterialUsedTexture* GetUsedTexture(int alIdx){ return &mvUsedTextures[alIdx]; }

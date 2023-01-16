@@ -79,7 +79,6 @@ namespace hpl
             cMatrixf m_projection = cMatrixf(cMatrixf::Identity);
 
             absl::InlinedVector<TextureData, 10> m_textures;
-            // absl::InlinedVector<TextureData, 10> m_UAVImages;
             absl::InlinedVector<UniformData, 25> m_uniforms;
         };
         struct ClearRequest {

@@ -12,7 +12,6 @@
 #include <cstdio>
 #include <cstring>
 #include <string>
-#include <bx/debug.h>
 #include <system/bootstrap.h>
 
 #ifdef WIN32

@@ -9,6 +9,7 @@ uniform mat4 u_mtxUV;
 void main()
 {
     vec3 wpos = mul(u_model[0], vec4(a_position, 1.0)).xyz;
+    mat4 modelView = u_view * u_model[0];
     mat4 normalMtx = normalMatrix(u_view * u_model[0]);
 
     v_position = mul(u_view, vec4(wpos.xyz, 1.0)).xyz;
@@ -18,7 +19,7 @@ void main()
     v_bitangent = normalize(normalMtx * vec4(cross(a_normal, a_tangent), 1.0)).xyz;
     v_texcoord0 = (u_mtxUV * vec4(a_texcoord0, 0, 1.0)).xy;
 
-    vec3 viewEye =  (u_view *  vec4(wpos, 1.0)).xyz;
+    vec3 viewEye =  (modelView *  vec4(a_position, 1.0)).xyz;
     v_view = vec3(
         dot(viewEye, v_tangent), 
         dot(viewEye, v_bitangent), 

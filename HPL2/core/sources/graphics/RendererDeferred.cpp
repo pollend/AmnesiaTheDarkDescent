@@ -882,8 +882,33 @@ namespace hpl {
 		RenderableHelper(eRenderListType_Decal, eMaterialRenderMode_Diffuse, [&](iRenderable* obj, GraphicsContext::LayoutStream& layoutInput, GraphicsContext::ShaderProgram& shaderInput) {
 			shaderInput.m_configuration.m_depthTest = DepthTest::LessEqual;
 			shaderInput.m_configuration.m_write = Write::RGBA;
-			shaderInput.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
 
+			cMaterial *pMaterial = obj->GetMaterial();
+			switch(pMaterial->GetBlendMode()) {
+				case eMaterialBlendMode_Add:
+					shaderInput.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
+					shaderInput.m_configuration.m_alphaBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
+					break;
+				case eMaterialBlendMode_Mul:
+					shaderInput.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::Zero, BlendOperand::SrcColor);
+					shaderInput.m_configuration.m_alphaBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::Zero, BlendOperand::SrcColor);
+					break;
+				case eMaterialBlendMode_MulX2:
+					shaderInput.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::DstColor, BlendOperand::SrcColor);
+					shaderInput.m_configuration.m_alphaBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::DstColor, BlendOperand::SrcColor);
+					break;
+				case eMaterialBlendMode_Alpha:
+					shaderInput.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
+					shaderInput.m_configuration.m_alphaBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
+					break;
+				case eMaterialBlendMode_PremulAlpha:
+					shaderInput.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::InvSrcAlpha);
+					shaderInput.m_configuration.m_alphaBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::InvSrcAlpha);
+					break;
+				default:
+					break;
+			}
+			
 			shaderInput.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
 			shaderInput.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
 			shaderInput.m_modelTransform = obj->GetModelMatrixPtr() ?  obj->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity.GetTranspose();
@@ -903,28 +928,30 @@ namespace hpl {
 		eMaterialRenderMode renderMode = object->GetCoverageAmount() >= 1 ? eMaterialRenderMode_Z : eMaterialRenderMode_Z_Dissolve;
 		cMaterial *pMaterial = object->GetMaterial();
 		iMaterialType* materialType = pMaterial->GetType();
-		iGpuProgram* program = pMaterial->GetProgram(0, renderMode);
+		// iGpuProgram* program = pMaterial->GetProgram(0, renderMode);
 		iVertexBuffer* vertexBuffer = object->GetVertexBuffer();
-		if(vertexBuffer == nullptr || program == nullptr || materialType == nullptr) {
+		if(vertexBuffer == nullptr || materialType == nullptr) {
 			return;
 		}
 
 		GraphicsContext::LayoutStream layoutInput;
-		GraphicsContext::ShaderProgram shaderInput;
+		// GraphicsContext::ShaderProgram shaderInput;
 		vertexBuffer->GetLayoutStream(layoutInput);
-		materialType->GetShaderData(shaderInput, renderMode, program, pMaterial, object, renderer);
-		shaderInput.m_configuration.m_write = Write::Depth;
-		shaderInput.m_configuration.m_cull = input.m_cull;
-		shaderInput.m_configuration.m_depthTest = DepthTest::LessEqual;
-		
-		shaderInput.m_modelTransform = object->GetModelMatrixPtr() ? object->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity ;
-		shaderInput.m_view = input.m_view;
-		shaderInput.m_projection = input.m_projection;
+		materialType->ResolveShaderProgram(renderMode, pMaterial, object, renderer, [&](GraphicsContext::ShaderProgram& shaderInput) {
+			shaderInput.m_configuration.m_write = Write::Depth;
+			shaderInput.m_configuration.m_cull = input.m_cull;
+			shaderInput.m_configuration.m_depthTest = DepthTest::LessEqual;
+			
+			shaderInput.m_modelTransform = object->GetModelMatrixPtr() ? object->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity ;
+			shaderInput.m_view = input.m_view;
+			shaderInput.m_projection = input.m_projection;
 
-		GraphicsContext::DrawRequest drawRequest {rt, layoutInput, shaderInput};
-		drawRequest.m_width = input.m_width;
-		drawRequest.m_height = input.m_height;
-		context.Submit(view, drawRequest);
+			GraphicsContext::DrawRequest drawRequest {rt, layoutInput, shaderInput};
+			drawRequest.m_width = input.m_width;
+			drawRequest.m_height = input.m_height;
+			context.Submit(view, drawRequest);
+		});
+		
 	}
 
 	void cRendererDeferred::RenderZPass(GraphicsContext& context, RenderTarget& rt) {
