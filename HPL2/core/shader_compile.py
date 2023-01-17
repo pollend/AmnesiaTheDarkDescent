@@ -4,6 +4,8 @@ import subprocess
 import sys
 import os
 
+processes = []
+
 parser = argparse.ArgumentParser(description='generate core shaders.')
 parser.add_argument('--output', dest='output', action='store', default='core/shaders', help='output directory')
 parser.add_argument('--compiler', dest='compiler', action='store', help='shaderc compiler from bgfx')
@@ -41,12 +43,17 @@ translucent_variants = [
     {"bit": 8, "defines": ["USE_USE_FOG"]},
 ]
 
+spotlight_variants = [
+    {"bit": 1, "defines": ["USE_GOBO_MAP"]},
+    {"bit": 2, "defines": ["USE_SHADOWS"]},
+]
+
 
 shaders = [
 # deferred
     { "type" : ShaderType.VS, "inout" : "resource/vs_deferred_light.io",              "input": "resource/vs_deferred_light.sc", "includes": ["resource"]},
     { "type" : ShaderType.FS, "inout" : "resource/vs_deferred_light.io",              "input": "resource/fs_deferred_pointlight.sc", "includes": ["resource"]},
-    { "type" : ShaderType.FS, "inout" : "resource/vs_deferred_light.io",              "input": "resource/fs_deferred_spotlight.sc", "includes": ["resource"]},
+    { "type" : ShaderType.FS, "inout" : "resource/vs_deferred_light.io",              "input": "resource/fs_deferred_spotlight.sc", "includes": ["resource"], "variants": spotlight_variants},
     { "type" : ShaderType.VS, "inout" : "resource/vs_light_box.io",                   "input": "resource/vs_light_box.sc", "includes": ["resource"]},
     { "type" : ShaderType.FS, "inout" : "resource/vs_light_box.io",                   "input": "resource/fs_light_box.sc", "includes": ["resource"]},
 #gui
@@ -111,13 +118,19 @@ def toType(shaderType):
         raise Exception("Unknown shader type")
 
 def wrap_subprocess(*args, **kwargs):
-    print(f'cmd: {" ".join(args[0])}')
-    try:
-        output = subprocess.check_output(*args, **kwargs)
-    except subprocess.CalledProcessError as exc:
-        print(f'{exc.output.decode("utf-8")}')
-    else:
-        print("Output: \n{}\n".format(output))
+    # print(f'cmd: {" ".join(args[0])}')
+    # try:
+    process = subprocess.Popen(*args, **kwargs,
+                           stdout=subprocess.PIPE, 
+                           stderr=subprocess.PIPE);
+    processes.append({
+        "cmd": " ".join(args[0]),
+        "process": process
+    })
+    # except subprocess.CalledProcessError as exc:
+    #     print(f'{exc.output.decode("utf-8")}')
+    # else:
+    #     print("Output: \n{}\n".format(output))
 
 def get_name(shader):
     return shader["name"] if "name" in shader else os.path.splitext(os.path.basename(shader["input"]))[0]
@@ -137,7 +150,7 @@ def main():
         input_file_path = os.path.abspath(shader["input"])
         name = options["name"] if "name" in options else get_name(shader)
         varying_def_path = os.path.abspath(shader["inout"])
-        defines = f'"{";".join((shader["defines"] if "defines" in shader else []) + (options["defines"] if "defines" in options else []))}"'
+        defines = f'{";".join((shader["defines"] if "defines" in shader else []) + (options["defines"] if "defines" in options else []))}'
         includes = [item for inc in shader["includes"] for item in ['-i', os.path.abspath(inc)]]
         
         if sys.platform == 'win32':
@@ -269,3 +282,16 @@ def main():
         else:
             create_shader(shader)
 main()
+
+for p in processes:
+    proc = p["process"]
+    print("cmd:", p["cmd"])
+    out, err = proc.communicate()
+    print(out.decode())
+    if(err):
+         exit(1)
+    # if(p.stdout != None):
+    #     print(p.stdout)
+    # else:
+    #     print(p.stderr)
+    #     exit(1)

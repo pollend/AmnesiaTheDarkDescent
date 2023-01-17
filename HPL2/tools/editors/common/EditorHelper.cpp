@@ -23,6 +23,7 @@
 #include "EntityWrapper.h"
 #include "EditorWorld.h"
 #include "EditorWindowViewport.h"
+#include "graphics/GraphicsTypes.h"
 #include "graphics/Image.h"
 #include <bx/debug.h>
 
@@ -601,7 +602,7 @@ bool cEditorHelper::LoadEntityFile(int alID,
 	return pEntity!=NULL;
 }
 
-bool cEditorHelper::LoadTextureResource(eEditorTextureResourceType aTexType, const tString& asFile, Image** apTexture, const tString& asAnimMode, float afFrameTime)
+bool cEditorHelper::LoadTextureResource(eEditorTextureResourceType aTexType, const tString& asFile, Image** apTexture, const tString& asAnimMode, float afFrameTime, cTextureManager::ImageOptions options)
 {
 	if(asFile=="")
 		return false;
@@ -616,16 +617,16 @@ bool cEditorHelper::LoadTextureResource(eEditorTextureResourceType aTexType, con
 		switch(aTexType)
 		{
 		case eEditorTextureResourceType_1D:
-			pTexture = pManager->Create1DImage(asFile, true);
+			pTexture = pManager->Create1DImage(asFile, true, eTextureUsage_Normal, 0, options);
 			break;
 		case eEditorTextureResourceType_2D:
-			pTexture = pManager->Create2DImage(asFile,true);
+			pTexture = pManager->Create2DImage(asFile,true, eTextureType_2D, eTextureUsage_Normal,0, options);
 			break;
 		case eEditorTextureResourceType_3D:
-			pTexture = pManager->Create3DImage(asFile,true);
+			pTexture = pManager->Create3DImage(asFile,true, eTextureUsage_Normal, 0, options);
 			break;
 		case eEditorTextureResourceType_CubeMap:
-			pTexture = pManager->CreateCubeMapImage(asFile,true);
+			pTexture = pManager->CreateCubeMapImage(asFile,true, eTextureUsage_Normal, 0, options);
 			break;
 		}
 	}

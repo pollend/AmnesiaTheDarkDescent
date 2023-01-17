@@ -183,7 +183,7 @@ namespace hpl {
 			else
 			{
 				mvSolidObjects.push_back(apObject);
-				if(pMaterial->GetTexture(eMaterialTexture_Illumination) && apObject->GetIlluminationAmount()>0)
+				if(pMaterial->GetImage(eMaterialTexture_Illumination) && apObject->GetIlluminationAmount()>0)
 				{
 					mvIllumObjects.push_back(apObject);
 				}
@@ -317,9 +317,9 @@ namespace hpl {
 				return pMatA->GetProgram(0,eMaterialRenderMode_Z) < pMatB->GetProgram(0,eMaterialRenderMode_Z);
 			}
 
-			if(pMatA->GetTexture(eMaterialTexture_Diffuse) != pMatB->GetTexture(eMaterialTexture_Diffuse))
+			if(pMatA->GetImage(eMaterialTexture_Diffuse) != pMatB->GetImage(eMaterialTexture_Diffuse))
 			{
-				return pMatA->GetTexture(eMaterialTexture_Diffuse) < pMatB->GetTexture(eMaterialTexture_Diffuse);
+				return pMatA->GetImage(eMaterialTexture_Diffuse) < pMatB->GetImage(eMaterialTexture_Diffuse);
 			}
 		}
 
@@ -397,9 +397,9 @@ namespace hpl {
 
 		//////////////////////////
 		//Texture
-		if(pMatA->GetTexture(eMaterialTexture_Illumination) != pMatB->GetTexture(eMaterialTexture_Illumination))
+		if(pMatA->GetImage(eMaterialTexture_Illumination) != pMatB->GetImage(eMaterialTexture_Illumination))
 		{
-			return pMatA->GetTexture(eMaterialTexture_Illumination) < pMatB->GetTexture(eMaterialTexture_Illumination);
+			return pMatA->GetImage(eMaterialTexture_Illumination) < pMatB->GetImage(eMaterialTexture_Illumination);
 		}
 
 		//////////////////////////
@@ -430,9 +430,9 @@ namespace hpl {
 
 		//////////////////////////
 		//Texture
-		if(pMatA->GetTexture(eMaterialTexture_Illumination) != pMatB->GetTexture(eMaterialTexture_Illumination))
+		if(pMatA->GetImage(eMaterialTexture_Illumination) != pMatB->GetImage(eMaterialTexture_Illumination))
 		{
-			return pMatA->GetTexture(eMaterialTexture_Illumination) < pMatB->GetTexture(eMaterialTexture_Illumination);
+			return pMatA->GetImage(eMaterialTexture_Illumination) < pMatB->GetImage(eMaterialTexture_Illumination);
 		}
 
 		//////////////////////////

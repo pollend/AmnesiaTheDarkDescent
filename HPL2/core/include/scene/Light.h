@@ -234,8 +234,8 @@ namespace hpl {
 		cFileSearcher *mpFileSearcher;
 		cWorld *mpWorld;
 
-		Image *mpFalloffMap;
-		Image *mpGoboTexture;
+		Image *mpFalloffMap = nullptr;
+		Image *mpGoboTexture = nullptr;
 
 		eShadowMapResolution mShadowMapResolution;
 		float mfShadowMapBlurAmount;

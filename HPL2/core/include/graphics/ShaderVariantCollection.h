@@ -35,7 +35,7 @@ namespace hpl
         bgfx::ProgramHandle GetVariant(uint32_t flag) const;
 
     private:
-        std::array<ShaderVariant, TSize> m_variants = { { BGFX_INVALID_HANDLE } };
+        std::array<ShaderVariant, TSize + 1> m_variants = { { BGFX_INVALID_HANDLE } };
     };
 
 } // namespace hpl
@@ -51,7 +51,7 @@ namespace hpl
     template<uint32_t TSize>
     ShaderVariantCollection<TSize>::~ShaderVariantCollection()
     {
-        for (uint32_t i = 0; i < TSize; ++i)
+        for (uint32_t i = 0; i <= TSize; ++i)
         {
             m_variants[i].m_disposeHandler(m_variants[i]);
         }
@@ -60,13 +60,14 @@ namespace hpl
     template<uint32_t TSize>
     bgfx::ProgramHandle ShaderVariantCollection<TSize>::GetVariant(uint32_t flag) const
     {
+        BX_ASSERT(flag <= TSize, "Invalid flag %d", flag)
         return m_variants[flag].m_programHandle;
     }
 
     template<uint32_t TSize>
     void ShaderVariantCollection<TSize>::Initialize(std::function<ShaderVariant(uint32_t flags)> handler)
     {
-        for (uint32_t i = 0; i < TSize; ++i)
+        for (uint32_t i = 0; i <= TSize; ++i)
         {
             if (bgfx::isValid(m_variants[i].m_programHandle))
             {

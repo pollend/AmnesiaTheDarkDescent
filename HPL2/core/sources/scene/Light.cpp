@@ -104,9 +104,6 @@ namespace hpl {
 		// mpFalloffMap->SetWrapS(eTextureWrap_ClampToEdge);
 		// mpFalloffMap->SetWrapT(eTextureWrap_ClampToEdge);
 
-		mpGoboTexture = NULL;
-
-
         mpVisibleNodeTracker = hplNew( cVisibleRCNodeTracker, () );
 	}
 

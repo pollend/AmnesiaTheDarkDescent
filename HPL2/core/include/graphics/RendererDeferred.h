@@ -22,6 +22,7 @@
 #include "graphics/GraphicsContext.h"
 #include "graphics/Image.h"
 #include "graphics/Renderer.h"
+#include "graphics/ShaderVariantCollection.h"
 #include "math/MathTypes.h"
 #include <array>
 #include <graphics/RenderTarget.h>
@@ -128,6 +129,12 @@ namespace hpl {
 
 	//---------------------------------------------
 	namespace rendering::detail {
+		enum SpotlightVariant {
+			SpotlightVariant_None = 0,
+			SpotlightVariant_UseGoboMap = 0x1,
+			SpotlightVariant_UseShadowMap = 0x2
+		};
+
 		struct ZPassInput {
 			float m_width = 0;
 			float m_height = 0;
@@ -334,13 +341,16 @@ namespace hpl {
 		bgfx::UniformHandle m_s_attenuationLightMap;
 		bgfx::UniformHandle m_s_spotFalloffMap;
 		bgfx::UniformHandle m_s_shadowMap;
+		bgfx::UniformHandle m_s_goboMap;
 		
 		bgfx::ProgramHandle m_deferredFog;
 		bgfx::ProgramHandle m_fullscreenFog;
 		bgfx::ProgramHandle m_edgeSmooth_UnpackDepthProgram;
 		bgfx::ProgramHandle m_lightBoxProgram;
 		bgfx::ProgramHandle m_pointLightProgram;
-		bgfx::ProgramHandle m_spotLightProgram;
+		ShaderVariantCollection<
+			rendering::detail::SpotlightVariant_UseGoboMap |
+			rendering::detail::SpotlightVariant_UseShadowMap> m_spotlightVariants; 
 
 		std::vector<cDeferredLight*> mvTempDeferredLights;
 		std::vector<cDeferredLight*> mvSortedLights[eDeferredLightList_LastEnum];

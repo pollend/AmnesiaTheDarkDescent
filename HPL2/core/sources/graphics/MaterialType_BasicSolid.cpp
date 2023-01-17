@@ -154,6 +154,7 @@ namespace hpl
 
         m_u_param = bgfx::createUniform("u_param", bgfx::UniformType::Vec4);
         m_u_mtxUv = bgfx::createUniform("u_mtxUV", bgfx::UniformType::Mat4);
+        m_u_normalMtx = bgfx::createUniform("u_normalMtx", bgfx::UniformType::Mat4);
         m_u_mtxInvViewRotation = bgfx::createUniform("u_mtxInvViewRotation", bgfx::UniformType::Mat4);
 
         mbIsGlobalDataCreator = false;
@@ -254,7 +255,7 @@ namespace hpl
     {
         ////////////////////////
         // If there is an alpha texture, set alpha mode to trans, else solid.
-        if (apMaterial->GetTexture(eMaterialTexture_Alpha))
+        if (apMaterial->GetImage(eMaterialTexture_Alpha))
         {
             apMaterial->SetAlphaMode(eMaterialAlphaMode_Trans);
         }
@@ -389,9 +390,9 @@ namespace hpl
 
         //////////////////////////////////
         // Normal map and height specifics
-        if (apMaterial->GetTexture(eMaterialTexture_NMap))
+        if (apMaterial->GetImage(eMaterialTexture_NMap))
         {
-            if (apMaterial->GetTexture(eMaterialTexture_Height))
+            if (apMaterial->GetImage(eMaterialTexture_Height))
             {
                 apMaterial->SetHasSpecificSettings(eMaterialRenderMode_Diffuse, true);
             }
@@ -408,14 +409,14 @@ namespace hpl
 
         //////////////////////////////////
         // Cubemap
-        if (apMaterial->GetTexture(eMaterialTexture_CubeMap))
+        if (apMaterial->GetImage(eMaterialTexture_CubeMap))
         {
             apMaterial->SetHasSpecificSettings(eMaterialRenderMode_Diffuse, true);
         }
 
         //////////////////////////////////
         // Illuminations specifics
-        if (apMaterial->GetTexture(eMaterialTexture_Illumination))
+        if (apMaterial->GetImage(eMaterialTexture_Illumination))
         {
             apMaterial->SetHasObjectSpecificsSettings(eMaterialRenderMode_Illumination, true);
         }
@@ -425,64 +426,64 @@ namespace hpl
 
     iTexture* cMaterialType_SolidDiffuse::GetTextureForUnit(cMaterial* apMaterial, eMaterialRenderMode aRenderMode, int alUnit)
     {
-        cMaterialType_SolidDiffuse_Vars* pVars = (cMaterialType_SolidDiffuse_Vars*)apMaterial->GetVars();
+        // cMaterialType_SolidDiffuse_Vars* pVars = (cMaterialType_SolidDiffuse_Vars*)apMaterial->GetVars();
 
-        ////////////////////////////
-        // Z
-        if (aRenderMode == eMaterialRenderMode_Z)
-        {
-            switch (alUnit)
-            {
-            case 0:
-                return apMaterial->GetTexture(eMaterialTexture_Alpha);
-            case 1:
-                return mpDissolveTexture;
-            }
-        }
-        ////////////////////////////
-        // Z Dissolve
-        else if (aRenderMode == eMaterialRenderMode_Z_Dissolve)
-        {
-            switch (alUnit)
-            {
-            case 0:
-                return apMaterial->GetTexture(eMaterialTexture_Alpha);
-            case 1:
-                return mpDissolveTexture;
-            case 2:
-                return apMaterial->GetTexture(eMaterialTexture_DissolveAlpha);
-            }
-        }
-        ////////////////////////////
-        // Diffuse
-        else if (aRenderMode == eMaterialRenderMode_Diffuse)
-        {
-            switch (alUnit)
-            {
-            case 0:
-                return apMaterial->GetTexture(eMaterialTexture_Diffuse);
-            case 1:
-                return apMaterial->GetTexture(eMaterialTexture_NMap);
-            case 2:
-                return apMaterial->GetTexture(eMaterialTexture_Specular);
-            case 3:
-                return apMaterial->GetTexture(eMaterialTexture_Height);
-            case 4:
-                return apMaterial->GetTexture(eMaterialTexture_CubeMap);
-            case 5:
-                return apMaterial->GetTexture(eMaterialTexture_CubeMapAlpha);
-            }
-        }
-        ////////////////////////////
-        // Illumination
-        else if (aRenderMode == eMaterialRenderMode_Illumination)
-        {
-            switch (alUnit)
-            {
-            case 0:
-                return apMaterial->GetTexture(eMaterialTexture_Illumination);
-            }
-        }
+        // ////////////////////////////
+        // // Z
+        // if (aRenderMode == eMaterialRenderMode_Z)
+        // {
+        //     switch (alUnit)
+        //     {
+        //     case 0:
+        //         return apMaterial->GetTexture(eMaterialTexture_Alpha);
+        //     case 1:
+        //         return mpDissolveTexture;
+        //     }
+        // }
+        // ////////////////////////////
+        // // Z Dissolve
+        // else if (aRenderMode == eMaterialRenderMode_Z_Dissolve)
+        // {
+        //     switch (alUnit)
+        //     {
+        //     case 0:
+        //         return apMaterial->GetTexture(eMaterialTexture_Alpha);
+        //     case 1:
+        //         return mpDissolveTexture;
+        //     case 2:
+        //         return apMaterial->GetTexture(eMaterialTexture_DissolveAlpha);
+        //     }
+        // }
+        // ////////////////////////////
+        // // Diffuse
+        // else if (aRenderMode == eMaterialRenderMode_Diffuse)
+        // {
+        //     switch (alUnit)
+        //     {
+        //     case 0:
+        //         return apMaterial->GetTexture(eMaterialTexture_Diffuse);
+        //     case 1:
+        //         return apMaterial->GetTexture(eMaterialTexture_NMap);
+        //     case 2:
+        //         return apMaterial->GetTexture(eMaterialTexture_Specular);
+        //     case 3:
+        //         return apMaterial->GetTexture(eMaterialTexture_Height);
+        //     case 4:
+        //         return apMaterial->GetTexture(eMaterialTexture_CubeMap);
+        //     case 5:
+        //         return apMaterial->GetTexture(eMaterialTexture_CubeMapAlpha);
+        //     }
+        // }
+        // ////////////////////////////
+        // // Illumination
+        // else if (aRenderMode == eMaterialRenderMode_Illumination)
+        // {
+        //     switch (alUnit)
+        //     {
+        //     case 0:
+        //         return apMaterial->GetTexture(eMaterialTexture_Illumination);
+        //     }
+        // }
 
         return NULL;
     }
@@ -525,15 +526,19 @@ namespace hpl
 
                     float useCubeMapAlpha;
                     float padding[3];
-                } param = {};
+                } param = {0};
+                uint32_t flags = 0;
                 auto diffuseMap = apMaterial->GetImage(eMaterialTexture_Diffuse);
                 auto normalImage = apMaterial->GetImage(eMaterialTexture_NMap);
                 auto specularMap = apMaterial->GetImage(eMaterialTexture_Specular);
                 auto heightMap = apMaterial->GetImage(eMaterialTexture_Height);
                 auto diffuseEnvMap = apMaterial->GetImage(eMaterialTexture_CubeMap);
                 auto cubemapAlphaMap = apMaterial->GetImage(eMaterialTexture_CubeMapAlpha);
-
-                uint32_t flags = 0;
+                
+                if(diffuseMap) {
+                    program.m_textures.push_back({m_s_diffuseMap, diffuseMap->GetHandle(), 0});
+                }
+                
                 if(normalImage) {
                     flags |= material::solid::DiffuseVariant::Diffuse_NormalMap;
                     program.m_textures.push_back({m_s_normalMap, normalImage->GetHandle(), 1});
@@ -541,10 +546,6 @@ namespace hpl
                 if(specularMap) {
                     flags |= material::solid::DiffuseVariant::Diffuse_SpecularMap;
                     program.m_textures.push_back({m_s_specularMap, specularMap->GetHandle(), 2});
-                }
-
-                if(diffuseMap) {
-                    program.m_textures.push_back({m_s_diffuseMap, diffuseMap->GetHandle(), 0});
                 }
 
                 if(heightMap && iRenderer::GetParallaxEnabled()) {
@@ -607,6 +608,7 @@ namespace hpl
                     float colorMul;
                     float padding[3];
                 } param = {};
+                param.colorMul = apObject->GetIlluminationAmount();
 
                 if(illumination) {
                     program.m_textures.push_back({m_s_diffuseMap, illumination->GetHandle()});

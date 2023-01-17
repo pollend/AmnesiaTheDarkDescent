@@ -19,6 +19,7 @@
 
 #include "scene/World.h"
 
+#include "graphics/GraphicsTypes.h"
 #include "graphics/Image.h"
 #include "impl/tinyXML/tinyxml.h"
 
@@ -544,7 +545,11 @@ namespace hpl {
 
 		if(asGobo != "")
 		{
-			Image *pTexture = mpResources->GetTextureManager()->Create2DImage(asGobo,true);
+
+			cTextureManager::ImageOptions imageOptions;
+			imageOptions.m_uClamp = true;
+			imageOptions.m_vClamp = true;
+			Image *pTexture = mpResources->GetTextureManager()->Create2DImage(asGobo,true, eTextureType_2D, eTextureUsage_Normal, 0, imageOptions);
 			if(pTexture!=NULL) {
 				pLight->SetGoboTexture(pTexture);
 			}

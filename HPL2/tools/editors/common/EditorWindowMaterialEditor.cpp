@@ -2031,7 +2031,11 @@ bool cEditorWindowMaterialEditor::WindowSpecificInputCallback(iEditorInput* apIn
 		if(mpInpBGType->GetValue()==0)
 		{
 			Image* pTexture = NULL;
-			if(cEditorHelper::LoadTextureResource( eEditorTextureResourceType_CubeMap, cString::To8Char(mpInpBGCubeMap->GetValue()), &pTexture))
+
+			cTextureManager::ImageOptions imageOptions;
+			imageOptions.m_uClamp = true;
+			imageOptions.m_vClamp = true;
+			if(cEditorHelper::LoadTextureResource( eEditorTextureResourceType_CubeMap, cString::To8Char(mpInpBGCubeMap->GetValue()), &pTexture, "none", 0, imageOptions))
 			{
 				mpMatWorld->SetSkyBox(pTexture,true);
 				mpMatWorld->SetSkyBoxColor(cColor(1));

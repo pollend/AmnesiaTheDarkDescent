@@ -5,6 +5,7 @@ $output v_texcoord0, v_normal, v_tangent, v_bitangent, v_position, v_view
 #include <common.sh>
 
 uniform mat4 u_mtxUV;
+uniform mat4 u_normalMtx;
 
 void main()
 {
@@ -16,14 +17,14 @@ void main()
 
     v_normal = normalize(normalMtx * vec4(a_normal, 1.0)).xyz;
     v_tangent = normalize(normalMtx * vec4(a_tangent.xyz, 1.0)).xyz;
-    v_bitangent = normalize(normalMtx * vec4(cross(a_normal, a_tangent), 1.0)).xyz;
+    v_bitangent = normalize(normalMtx * vec4(cross(a_tangent, a_normal), 1.0)).xyz;
     v_texcoord0 = (u_mtxUV * vec4(a_texcoord0, 0, 1.0)).xy;
 
     vec3 viewEye =  (modelView *  vec4(a_position, 1.0)).xyz;
     v_view = vec3(
         dot(viewEye, v_tangent), 
         dot(viewEye, v_bitangent), 
-        dot(-viewEye, a_normal));
+        dot(-viewEye, v_normal));
     
     gl_Position = mul(u_viewProj, vec4(wpos, 1.0));
 }

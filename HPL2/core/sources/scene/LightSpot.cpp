@@ -213,13 +213,7 @@ namespace hpl {
 	void cLightSpot::SetSpotFalloffMap(Image* apTexture)
 	{
 		if(mpSpotFalloffMap) mpTextureManager->Destroy(mpSpotFalloffMap);
-
 		mpSpotFalloffMap = apTexture;
-		// if(mpSpotFalloffMap)
-		// {
-		// 	mpSpotFalloffMap->SetWrapS(eTextureWrap_ClampToEdge);
-		// 	mpSpotFalloffMap->SetWrapT(eTextureWrap_ClampToEdge);
-		// }
 	}
 
 	//-----------------------------------------------------------------------

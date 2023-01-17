@@ -353,8 +353,9 @@ namespace hpl
         }
     }
 
-    void ConfigureProgram(const GraphicsContext::ShaderProgram& program)
+    void GraphicsContext::ConfigureProgram(const GraphicsContext::ShaderProgram& program)
     {
+        bgfx::setUniform(m_u_normalMtx, &program.m_normalMtx.v);
         for (auto& uniform : program.m_uniforms)
         {
             if (bgfx::isValid(uniform.m_uniformHandle))
@@ -403,6 +404,7 @@ namespace hpl
         PositionTexCoord0::init();
         m_copyProgram = hpl::loadProgram("vs_post_effect", "fs_post_effect_copy");
         m_s_diffuseMap = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
+        m_u_normalMtx = bgfx::createUniform("u_normalMtx", bgfx::UniformType::Mat3);
     }
 
     void GraphicsContext::Frame()
@@ -471,6 +473,7 @@ namespace hpl
     {
         auto& layout = request.m_layout;
         auto& program = request.m_program;
+
         ConfigureLayoutStream(layout);
         ConfigureProgram(program);
         if (request.m_clear.has_value())

@@ -22,33 +22,31 @@ void main()
 {
     vec4 diffuseColor = vec4(0.0, 0.0, 0.0, 0.0);
     vec2 texCoord = v_texcoord0.xy;
-    vec3 normalizedView = normalize(v_view);
 
     #ifdef USE_PARALLAX_MAPS
-        
+        vec3 eyeVec = normalize(v_view);
+
         //Get give normalizedView the length so it reaches bottom.
-        normalizedView *= vec3(1.0 / normalizedView.z);	
+        eyeVec *= vec3(1.0 / eyeVec.z);	
         
         //Apply scale and bias
-        normalizedView.xy *= u_heightMapScale;
+        eyeVec.xy *= u_heightMapScale;
         //vec2 vBiasPosOffset = vEyeVec.xy * avHeightMapScaleAndBias.y; <- not working! because the ray casting buggers out when u are really close!
-			
-        float heightDepth = 0.0;
-
+		
         vec3 heightMapPos = vec3(texCoord.xy, 0.0);
 
         //Determine number of steps based on angle between normal and eye
-        float fSteps = floor((1.0 - dot(normalizedView, normalize(v_normal)) ) * 18.0) + 1.0; 
+        float fSteps = floor((1.0 - dot(eyeVec, normalize(v_normal)) ) * 18.0) + 2.0; 
         
         // Do a linear search to find the first intersection
         {
-            normalizedView /= fSteps;
-            int iterations = max(20, int(fSteps));
+            eyeVec /= fSteps;
+            int iterations = int(clamp(fSteps - 1.0, 0.0, 20.0));
             for(int i = 0; i < iterations; i++) 
             { 
                 float fDepth = texture2D(s_heightMap, texCoord.xy).w; 
-                if(heightDepth < fDepth) {
-                    heightMapPos += normalizedView;
+                if(heightMapPos.z < fDepth) {
+                    heightMapPos += eyeVec;
                 } 
             } 
         }
@@ -60,11 +58,11 @@ void main()
             { 
                 float fDepth = texture2D(s_heightMap, texCoord.xy).w;
                 if(heightMapPos.z < fDepth) {
-                    heightMapPos += normalizedView; 
+                    heightMapPos += eyeVec; 
                 }
                 
-                normalizedView *= 0.5; 
-                heightMapPos -= normalizedView; 
+                eyeVec *= 0.5; 
+                heightMapPos -= eyeVec; 
             } 
         }
         texCoord.xy = heightMapPos.xy;
@@ -82,12 +80,14 @@ void main()
     #endif
 
     #ifdef USE_ENVMAP
-        vec3 vEnvUv = reflect(normalizedView, screenNormal);
+        vec3 cameraEyeSpace = normalize(v_position);	
+
+        vec3 vEnvUv = reflect(cameraEyeSpace, screenNormal);
         vEnvUv = (u_mtxInvViewRotation * vec4(vEnvUv,1)).xyz;
                     
         vec4 reflectionColor = textureCube(s_envMap, vEnvUv);
         
-        float afEDotN = max(dot(-normalizedView, screenNormal),0.0);
+        float afEDotN = max(dot(-cameraEyeSpace, screenNormal),0.0);
         float fFresnel = Fresnel(afEDotN, u_fresnelBias, u_fresnelPow);
         
         if(0.0 < u_useCubeMapAlpha) {

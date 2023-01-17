@@ -453,7 +453,7 @@ namespace hpl
         // Set up reflection
         if (pVars->mbHasReflection && iRenderer::GetRefractionEnabled())
         {
-            if (apMaterial->GetTexture(eMaterialTexture_CubeMap) == NULL)
+            if (apMaterial->GetImage(eMaterialTexture_CubeMap) == NULL)
             {
                 apMaterial->SetHasWorldReflection(true);
             }

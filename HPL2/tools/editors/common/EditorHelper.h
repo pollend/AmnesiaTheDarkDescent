@@ -87,7 +87,7 @@ public:
 	// Misc helpers
 	static void GetIDsFromEntityList(const tEntityWrapperList &alstEntities, tIntList& alstEntityIDs, bool abClearList=true);
 
-	static bool LoadTextureResource(eEditorTextureResourceType aTexType, const tString& asFile, Image** apTexture, const tString& asAnimMode="none", float afFrameTime=0 );
+	static bool LoadTextureResource(eEditorTextureResourceType aTexType, const tString& asFile, Image** apTexture, const tString& asAnimMode="none", float afFrameTime=0, cTextureManager::ImageOptions options = cTextureManager::ImageOptions());
 
 	static bool LoadEntityFile(int alID, const tString& asName, const tString& asFilename, cMeshEntity** apEntity, bool abLoadAsTemp=false);
 

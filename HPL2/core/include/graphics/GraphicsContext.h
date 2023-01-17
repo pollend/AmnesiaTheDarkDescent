@@ -34,7 +34,6 @@ namespace hpl
                 uint32_t m_startIndex = 0;
                 uint32_t m_numIndices = std::numeric_limits<uint32_t>::max();
             };
-
             eVertexBufferDrawType m_drawType = eVertexBufferDrawType_Tri;
             absl::InlinedVector<LayoutVertexStream, eVertexBufferElement_LastEnum> m_vertexStreams;
             LayoutIndexStream m_indexStream;
@@ -77,6 +76,7 @@ namespace hpl
             cMatrixf m_modelTransform = cMatrixf(cMatrixf::Identity);
             cMatrixf m_view = cMatrixf(cMatrixf::Identity);
             cMatrixf m_projection = cMatrixf(cMatrixf::Identity);
+            cMatrixf m_normalMtx = cMatrixf(cMatrixf::Identity);
 
             absl::InlinedVector<TextureData, 10> m_textures;
             absl::InlinedVector<UniformData, 25> m_uniforms;
@@ -117,7 +117,8 @@ namespace hpl
 
         void Quad(GraphicsContext::LayoutStream& input, const cVector3f& pos, const cVector2f& size, const cVector2f& uv0 = cVector2f(0.0f, 0.0f), const cVector2f& uv1 = cVector2f(1.0f, 1.0f));
         void ScreenSpaceQuad(GraphicsContext::LayoutStream& input, cMatrixf& proj, float textureWidth, float textureHeight, float width = 1.0f, float height = 1.0f);
- 
+        void ConfigureProgram(const GraphicsContext::ShaderProgram& program);
+        
         uint16_t ScreenWidth() const;
         uint16_t ScreenHeight() const;
 
@@ -132,6 +133,7 @@ namespace hpl
         bgfx::ViewId _current;
         bgfx::ProgramHandle m_copyProgram = BGFX_INVALID_HANDLE;
         bgfx::UniformHandle m_s_diffuseMap = BGFX_INVALID_HANDLE;
+        bgfx::UniformHandle m_u_normalMtx = BGFX_INVALID_HANDLE;
     };
 
 

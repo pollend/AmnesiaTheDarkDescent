@@ -19,6 +19,7 @@
 
 #include "resources/EngineFileLoading.h"
 
+#include "graphics/GraphicsTypes.h"
 #include "graphics/Image.h"
 #include "resources/XmlDocument.h"
 #include "resources/Resources.h"
@@ -238,7 +239,11 @@ namespace hpl {
 			tString sSpotFalloffMap = apElement->GetAttributeString("SpotFalloffMap");
 			if(sSpotFalloffMap != "")
 			{
-				Image *pFalloff = apResources->GetTextureManager()->Create1DImage(sSpotFalloffMap,true);
+
+				cTextureManager::ImageOptions imageOptions;
+				imageOptions.m_uClamp = true;
+				imageOptions.m_vClamp = true;
+				Image *pFalloff = apResources->GetTextureManager()->Create1DImage(sSpotFalloffMap,true, eTextureUsage_Normal, 0, imageOptions);
 				if(pFalloff) pLightSpot->SetSpotFalloffMap(pFalloff);
 			}
 		}
