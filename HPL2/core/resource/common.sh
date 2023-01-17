@@ -419,8 +419,7 @@ mat3 cofactor(mat4 _m)
 
 mat4 normalMatrix(mat4 _m)
 {
-	mat4 inv = inverse(_m);
-	return transpose(inv);
+	return transpose(inverse(_m));
 }
 
 float toClipSpaceDepth(float _depthTextureZ)

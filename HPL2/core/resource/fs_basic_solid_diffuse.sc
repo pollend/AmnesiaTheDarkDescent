@@ -41,13 +41,13 @@ void main()
         // Do a linear search to find the first intersection
         {
             eyeVec /= fSteps;
-            int iterations = int(clamp(fSteps - 1.0, 0.0, 20.0));
+            int iterations = int(clamp(fSteps - 1.0, 0.0, 28.0));
             for(int i = 0; i < iterations; i++) 
             { 
                 float fDepth = texture2D(s_heightMap, texCoord.xy).w; 
                 if(heightMapPos.z < fDepth) {
                     heightMapPos += eyeVec;
-                } 
+                }
             } 
         }
 
