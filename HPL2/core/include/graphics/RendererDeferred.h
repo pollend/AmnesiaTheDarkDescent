@@ -135,6 +135,11 @@ namespace hpl {
 			SpotlightVariant_UseShadowMap = 0x2
 		};
 
+		enum PointlightVariant {
+			PointlightVariant_None = 0,
+			PointlightVariant_UseGoboMap = 0x1
+		};
+
 		struct ZPassInput {
 			float m_width = 0;
 			float m_height = 0;
@@ -332,6 +337,7 @@ namespace hpl {
 		bgfx::UniformHandle m_u_lightColor;
 		bgfx::UniformHandle m_u_spotViewProj;
 		bgfx::UniformHandle m_u_overrideColor;
+		bgfx::UniformHandle m_u_mtxInvViewRotation;
 
 		bgfx::UniformHandle m_s_depthMap;
 		bgfx::UniformHandle m_s_positionMap;
@@ -349,10 +355,12 @@ namespace hpl {
 		bgfx::ProgramHandle m_fullscreenFog;
 		bgfx::ProgramHandle m_edgeSmooth_UnpackDepthProgram;
 		bgfx::ProgramHandle m_lightBoxProgram;
-		bgfx::ProgramHandle m_pointLightProgram;
 		ShaderVariantCollection<
 			rendering::detail::SpotlightVariant_UseGoboMap |
 			rendering::detail::SpotlightVariant_UseShadowMap> m_spotlightVariants; 
+		ShaderVariantCollection<
+			rendering::detail::PointlightVariant_UseGoboMap> m_pointLightVariants; 
+
 
 		std::vector<cDeferredLight*> mvTempDeferredLights;
 		std::vector<cDeferredLight*> mvSortedLights[eDeferredLightList_LastEnum];

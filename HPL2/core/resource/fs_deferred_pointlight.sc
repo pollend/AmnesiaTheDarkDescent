@@ -3,18 +3,20 @@ $input v_clipPosition
 #include <common.sh>
 
 uniform vec4 u_param;
-#define u_hasGobo (u_param.x)
-#define u_hasSpecular (u_param.y)
-#define u_farPlaneDepth (u_param.z)
-#define u_lightRadius (u_param.w)
+#define u_lightRadius (u_param.x)
 
-uniform vec3 u_lightPos;
+uniform vec4 u_lightPos;
 uniform vec4 u_lightColor;
 
-SAMPLER2D(s_diffuseMap, 0);
-SAMPLER2D(s_normalMap, 1);
-SAMPLER2D(s_depthMap, 2);
+uniform mat4 u_mtxInvViewRotation;
+
+SAMPLERCUBE(s_goboMap, 0);
+
+SAMPLER2D(s_diffuseMap, 1);
+SAMPLER2D(s_normalMap, 2);
+SAMPLER2D(s_positionMap, 3);
 SAMPLER2D(s_specularMap, 4);
+SAMPLER2D(s_attenuationLightMap, 5);
 
 void main()
 {
@@ -22,16 +24,34 @@ void main()
 
     vec4 color =  texture2D(s_diffuseMap, ndc);
     vec4 normal = texture2D(s_normalMap, ndc);
-    vec4 depth =  texture2D(s_depthMap, ndc);
+    vec3 position =  texture2D(s_positionMap, ndc).xyz;
+    vec2 specular =  texture2D(s_specularMap, ndc).xy;
 
-    float deviceDepth = unpackRgbaToFloat(vec4(depth.xyz, 0));
-    vec3 position = vec3(ndc.x, ndc.y, u_farPlaneDepth) * deviceDepth;
-
-    vec3 lightDir = (u_lightPos -  position) * (1.0 / u_lightRadius);
-    float attenuation = dot(lightDir, lightDir);
+    vec3 lightDir = (u_lightPos.xyz -  position) * (1.0 / u_lightRadius);
+    float attenuation = texture2D(s_attenuationLightMap, vec2(dot(lightDir, lightDir), 0.0)).x;
     
-    float fLDotN = max(dot(lightDir, normal.xyz), 0.0);
-	vec3 vDiffuse = color.xyz * u_lightColor.xyz * fLDotN;
+    vec3 normalLightDir = normalize(lightDir);
+    vec3 normalizedNormal = normalize(normal.xyz);
 
-    gl_FragColor.xyz = vDiffuse * attenuation;
+    vec3 goboVal = vec3(1.0);
+#ifdef USE_GOBO_MAP
+    vec4 worldLightDir = u_mtxInvViewRotation * vec4(lightDir,1.0);
+    goboVal = textureCube(s_goboMap, worldLightDir.xyz).xyz;
+#endif
+
+	/////////////////////////////////
+	//Calculate diffuse color
+    float fLDotN = max(dot(normalizedNormal, normalLightDir), 0.0);
+	vec3 diffuseColor = color.xyz * u_lightColor.xyz * fLDotN;
+
+
+    vec3 specularColor = vec3(0.0);
+    if(u_lightColor.w > 0.0) {
+        vec3 halfVec = normalize(normalLightDir + normalize(-position));
+        float specIntensity = specular.x;
+        float specPower = specular.y;
+        specularColor = vec3(u_lightColor.w * specIntensity *  pow( clamp( dot( halfVec, normalizedNormal), 0.0, 1.0), specPower )) * u_lightColor.xyz;
+    }
+
+    gl_FragColor.xyz = (specularColor + diffuseColor) * goboVal * attenuation;
 }

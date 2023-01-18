@@ -1,4 +1,4 @@
-$input v_color0, v_texcoord0, v_normal, v_tangent, v_bitangent, v_position
+$input v_position, v_color, v_normal, v_tangent, v_bitangent, v_texcoord0
 
 #include <common.sh>
 
@@ -8,7 +8,6 @@ SAMPLER2D(s_diffuseMap, 1);
 SAMPLER2D(s_normalMap, 2);
 SAMPLER2D(s_refractionMap, 3);
 SAMPLER2D(s_envMapAlphaMap, 4);
-
 
 uniform mat4 u_mtxInvViewRotation;
 uniform vec4 u_fogColor;
@@ -34,8 +33,9 @@ void main()
     vec4 vFinalColor = vec4(0.0, 0.0 ,0.0, 1.0);
  
     #ifdef USE_DIFFUSE_MAP  
-        vFinalColor = texture2D(s_diffuseMap, v_texcoord0.xy) * v_color0;
+        vFinalColor = texture2D(s_diffuseMap, v_texcoord0.xy) * v_color;
     #endif
+
     ////////////////////
     //Fog
 
@@ -73,9 +73,13 @@ void main()
     
     vec3 mapNormal = vec3(0);
     vec3 screenNormal = vec3(0);
-    #ifdef USE_NORMAL_MAP
-        mapNormal = texture2D(s_normalMap, v_texcoord0.xy).xyz*2.0 - 1.0; 	
-        screenNormal = normalize(mapNormal.x * v_tangent + mapNormal.y * v_bitangent + mapNormal.z * v_normal);
+    #if defined(USE_REFRACTION) || defined(USE_CUBE_MAP)
+        #ifdef USE_NORMAL_MAP
+            mapNormal = texture2D(s_normalMap, v_texcoord0.xy).xyz*2.0 - 1.0; 	
+            screenNormal = normalize(mapNormal.x * v_tangent + mapNormal.y * v_bitangent + mapNormal.z * v_normal);
+        #else
+            screenNormal = normalize(v_normal);
+        #endif
     #endif
 
     ////////////////////
@@ -125,7 +129,7 @@ void main()
     
     ////////////////////
     //Enviroment Map
-    #ifdef USE_USE_CUBE_MAP     
+    #ifdef USE_CUBE_MAP     
         ///////////////////////////////
         //Calculate Reflection
         vec3 vEyeVec = normalize(v_position);

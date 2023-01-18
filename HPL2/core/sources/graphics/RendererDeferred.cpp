@@ -353,11 +353,11 @@ namespace hpl {
 		m_deferredFog = hpl::loadProgram("vs_deferred_fog", "fs_deferred_fog");
 		m_fullscreenFog = hpl::loadProgram("vs_post_effect", "fs_posteffect_fullscreen_fog");
 		m_lightBoxProgram = hpl::loadProgram("vs_light_box", "fs_light_box");
-		m_pointLightProgram = hpl::loadProgram("vs_deferred_light", "fs_deferred_pointlight");
 		// m_spotLightProgram = hpl::loadProgram("vs_deferred_light", "fs_deferred_spotlight");
 		m_spotlightVariants.Initialize(
 			ShaderHelper::LoadProgramHandlerDefault("vs_deferred_light", "fs_deferred_spotlight", false, true));
-		
+		m_pointLightVariants.Initialize(
+			ShaderHelper::LoadProgramHandlerDefault("vs_deferred_light", "fs_deferred_pointlight", false, true));
 		// uniforms
 		m_u_param = bgfx::createUniform("u_param", bgfx::UniformType::Vec4);
 		m_u_boxInvViewModelRotation  = bgfx::createUniform("u_boxInvViewModelRotation", bgfx::UniformType::Mat4);
@@ -365,6 +365,7 @@ namespace hpl {
 		m_u_lightPos = bgfx::createUniform("u_lightPos", bgfx::UniformType::Vec4);
 		m_u_fogColor = bgfx::createUniform("u_fogColor", bgfx::UniformType::Vec4);
 		m_u_spotViewProj = bgfx::createUniform("u_spotViewProj", bgfx::UniformType::Mat4);
+		m_u_mtxInvViewRotation = bgfx::createUniform("u_mtxInvViewRotation", bgfx::UniformType::Mat4);
 
 		// samplers
 		m_s_depthMap = bgfx::createUniform("s_depthMap", bgfx::UniformType::Sampler);
@@ -1012,9 +1013,8 @@ namespace hpl {
 				GraphicsContext::LayoutStream layoutInput;
 				vertexBuffer->GetLayoutStream(layoutInput);
 				
-				
 				shaderInput.m_configuration.m_depthTest = pMaterial->GetDepthTest() ? DepthTest::LessEqual: DepthTest::None;
-				shaderInput.m_configuration.m_write = Write::RGBA;
+				shaderInput.m_configuration.m_write = Write::RGB;
 				shaderInput.m_configuration.m_cull = Cull::None;
 				
 				// shaderInput.m_uniforms.push_back({m_u_overrideColor, overrideColor });
@@ -1042,7 +1042,7 @@ namespace hpl {
 					vertexBuffer->GetLayoutStream(layoutInput);
 
 					shaderInput.m_configuration.m_depthTest = pMaterial->GetDepthTest() ? DepthTest::LessEqual: DepthTest::None;
-					shaderInput.m_configuration.m_write = Write::RGBA;
+					shaderInput.m_configuration.m_write = Write::RGB;
 					shaderInput.m_configuration.m_cull = Cull::None;
 
 					shaderInput.m_configuration.m_rgbBlendFunc = CreateFromMaterialBlendMode(eMaterialBlendMode_Add);
@@ -1355,30 +1355,36 @@ namespace hpl {
 				switch(apLightData->mpLight->GetLightType()) {
 					case eLightType_Point: {
 						struct {
-							float hasGobo;
-							float hasSpecular;
-							float farPlaneDepth;
 							float lightRadius;
-						} param = {
-							0.0,
-							0.0,
-							-mpCurrentFrustum->GetFarPlane(),
-							apLightData->mpLight->GetRadius()
+							float pad[3];
+						} param = {0};
+						param.lightRadius = apLightData->mpLight->GetRadius();
+						auto attenuationImage = apLightData->mpLight->GetFalloffMap();
 
-						};
 						const auto modelViewMtx = cMath::MatrixMul(mpCurrentFrustum->GetViewMatrix(), apLightData->mpLight->GetWorldMatrix());
 						const auto color = apLightData->mpLight->GetDiffuseColor();
 						cVector3f lightViewPos = cMath::MatrixMul(modelViewMtx, apLightData->GetLightMtx()).GetTranslation();
 						float lightPosition[4] = {lightViewPos.x, lightViewPos.y, lightViewPos.z, 1.0f};
 						float lightColor[4] = {color.r, color.g, color.b, color.a};
-						shaderProgram.m_handle = m_pointLightProgram;
+						cMatrixf mtxInvViewRotation = cMath::MatrixMul(apLightData->mpLight->GetWorldMatrix(),m_mtxInvView).GetTranspose();
+
 						shaderProgram.m_uniforms.push_back({m_u_lightPos, lightPosition});
 						shaderProgram.m_uniforms.push_back({m_u_lightColor, lightColor});
 						shaderProgram.m_uniforms.push_back({m_u_param, &param});
+						shaderProgram.m_uniforms.push_back({m_u_mtxInvViewRotation, &mtxInvViewRotation.v});
 
-						shaderProgram.m_textures.push_back({m_s_normalMap, resolveRenderImage(m_gBufferNormalImage)->GetHandle(), 1});
-						shaderProgram.m_textures.push_back({m_s_diffuseMap, resolveRenderImage(m_gBufferColor)->GetHandle(), 0});
-						shaderProgram.m_textures.push_back({m_s_depthMap, resolveRenderImage(m_gBufferDepthStencil)->GetHandle(), 2});
+						shaderProgram.m_textures.push_back({m_s_diffuseMap, resolveRenderImage(m_gBufferColor)->GetHandle(), 1});
+						shaderProgram.m_textures.push_back({m_s_normalMap, resolveRenderImage(m_gBufferNormalImage)->GetHandle(), 2});
+						shaderProgram.m_textures.push_back({m_s_positionMap, resolveRenderImage(m_gBufferPositionImage)->GetHandle(), 3});
+						shaderProgram.m_textures.push_back({m_s_specularMap, resolveRenderImage(m_gBufferSpecular)->GetHandle(), 4});
+						shaderProgram.m_textures.push_back({m_s_attenuationLightMap, attenuationImage->GetHandle(), 5});
+
+						uint32_t flags = 0;
+						if(apLightData->mpLight->GetGoboTexture()) {
+							flags |= rendering::detail::PointlightVariant_UseGoboMap;
+							shaderProgram.m_textures.push_back({m_s_goboMap, apLightData->mpLight->GetGoboTexture()->GetHandle(), 0});
+						}
+						shaderProgram.m_handle = m_pointLightVariants.GetVariant(flags);
 
 						context.Submit(pass, drawRequest);
 						break;
@@ -1418,14 +1424,13 @@ namespace hpl {
 						shaderProgram.m_uniforms.push_back({m_u_lightColor, lightColor});
 						shaderProgram.m_uniforms.push_back({m_u_spotViewProj, spotViewProj.v});
 
-						shaderProgram.m_uniforms.push_back({m_u_param, &uParam, 2});
+						shaderProgram.m_uniforms.push_back({m_u_param, &uParam, 1});
 
 						shaderProgram.m_textures.push_back({m_s_diffuseMap, resolveRenderImage(m_gBufferColor)->GetHandle(), 0});
 						shaderProgram.m_textures.push_back({m_s_normalMap, resolveRenderImage(m_gBufferNormalImage)->GetHandle(), 1});
 						shaderProgram.m_textures.push_back({m_s_positionMap, resolveRenderImage(m_gBufferPositionImage)->GetHandle(), 2});
 						shaderProgram.m_textures.push_back({m_s_specularMap, resolveRenderImage(m_gBufferSpecular)->GetHandle(), 3});
-						// shaderProgram.m_textures.push_back({m_s_depthMap, resolveRenderImage(m_gBufferDepthStencil)->GetHandle(), 5});
-						
+					
 						shaderProgram.m_textures.push_back({m_s_attenuationLightMap, spotAttenuationImage->GetHandle(), 4});
 						if(goboImage) {
 							shaderProgram.m_textures.push_back({m_s_goboMap, goboImage->GetHandle(), 5});
@@ -1493,13 +1498,13 @@ namespace hpl {
 					GraphicsContext::ShaderProgram shaderProgram;
 					shaderProgram.m_configuration.m_cull = Cull::Clockwise;
 					shaderProgram.m_configuration.m_write = Write::RGBA;
+					shaderProgram.m_configuration.m_depthTest = DepthTest::GreaterEqual;
 					shaderProgram.m_configuration.m_frontStencilTest = CreateStencilTest(
 						StencilFunction::Equal,
 						StencilFail::Zero, 
 						StencilDepthFail::Zero, 
 						StencilDepthPass::Zero,
 						0xff, 0xff);
-					shaderProgram.m_configuration.m_depthTest = DepthTest::GreaterEqual;
 					shaderProgram.m_configuration.m_rgbBlendFunc = 
 						CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
 					shaderProgram.m_configuration.m_alphaBlendFunc = 

@@ -77,7 +77,7 @@ void main()
     
     vec3 screenNormal = vec3(0, 0, 0);
     
-    #ifdef USE_NORMAL_MAPS
+    #ifdef USE_NORMAL_MAP
         vec3 vNormal = texture2D(s_normalMap, texCoord).xyz - 0.5; //No need for full unpack x*2-1, becuase normal is normalized. (but now we do not normalize...)
         screenNormal = normalize(vNormal.x * v_tangent + vNormal.y * v_bitangent + vNormal.z * v_normal);
     #else

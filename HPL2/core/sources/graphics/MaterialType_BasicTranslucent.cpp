@@ -138,7 +138,7 @@ namespace hpl
         mbHasTypeSpecifics[eMaterialRenderMode_Illumination] = true;
         mbHasTypeSpecifics[eMaterialRenderMode_IlluminationFog] = true;
         
-        m_u_param = bgfx::createUniform("u_params", bgfx::UniformType::Vec4, 6);
+        m_u_param = bgfx::createUniform("u_param", bgfx::UniformType::Vec4, 6);
         m_u_mtxUv = bgfx::createUniform("u_mtxUV", bgfx::UniformType::Mat4);
         m_u_invViewRotation = bgfx::createUniform("mtxInvViewRotation", bgfx::UniformType::Mat4);
         
@@ -354,6 +354,7 @@ namespace hpl
                 flags |= material::translucent::Translucent_UseFog;
                 uniform.fogStart = pWorld->GetFogStart();
                 uniform.fogLength = pWorld->GetFogEnd() - pWorld->GetFogStart();
+                uniform.oneMinusFogAlpha = 1 - pWorld->GetFogColor().a;
                 uniform.falloffExp = pWorld->GetFogFalloffExp();
             }
             switch(aRenderMode) {
@@ -440,12 +441,13 @@ namespace hpl
                 }
                 uniform.lightLevel = fLightAmount;
                 uniform.alpha = apRenderer->GetTempAlpha();
+
             }
             else {
                 uniform.alpha = apRenderer->GetTempAlpha();
                 uniform.lightLevel = 1.0f;
             }
-            
+
             switch(blendMode) {
             case eMaterialBlendMode_Add:
                 program.m_handle = m_translucent_blendModeAdd.GetVariant(flags);

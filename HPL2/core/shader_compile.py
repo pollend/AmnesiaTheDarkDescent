@@ -24,7 +24,7 @@ water_variants = [
 ]
 
 basic_solid_diffuse_variants = [
-    {"bit": 1, "defines": ["USE_NORMAL_MAPS"]},
+    {"bit": 1, "defines": ["USE_NORMAL_MAP"]},
     {"bit": 2, "defines": ["USE_SPECULAR_MAPS"]},
     {"bit": 4, "defines": ["USE_PARALLAX_MAPS"]},
     {"bit": 8, "defines": ["USE_ENVMAP"]}
@@ -40,7 +40,7 @@ translucent_variants = [
     {"bit": 1, "defines": ["USE_DIFFUSE_MAP"]},
     {"bit": 2, "defines": ["USE_NORMAL_MAP"]},
     {"bit": 4, "defines": ["USE_REFRACTION"]},
-    {"bit": 8, "defines": ["USE_USE_CUBE_MAP"]},
+    {"bit": 8, "defines": ["USE_CUBE_MAP"]},
     {"bit": 16, "defines": ["USE_USE_FOG"]},
 ]
 
@@ -49,11 +49,16 @@ spotlight_variants = [
     {"bit": 2, "defines": ["USE_SHADOWS"]},
 ]
 
+pointlight_variants = [
+    {"bit": 1, "defines": ["USE_GOBO_MAP"]}
+]
+
+
 
 shaders = [
 # deferred
     { "type" : ShaderType.VS, "inout" : "resource/vs_deferred_light.io",              "input": "resource/vs_deferred_light.sc", "includes": ["resource"]},
-    { "type" : ShaderType.FS, "inout" : "resource/vs_deferred_light.io",              "input": "resource/fs_deferred_pointlight.sc", "includes": ["resource"]},
+    { "type" : ShaderType.FS, "inout" : "resource/vs_deferred_light.io",              "input": "resource/fs_deferred_pointlight.sc", "includes": ["resource"], "variants": pointlight_variants},
     { "type" : ShaderType.FS, "inout" : "resource/vs_deferred_light.io",              "input": "resource/fs_deferred_spotlight.sc", "includes": ["resource"], "variants": spotlight_variants},
     { "type" : ShaderType.VS, "inout" : "resource/vs_light_box.io",                   "input": "resource/vs_light_box.sc", "includes": ["resource"]},
     { "type" : ShaderType.FS, "inout" : "resource/vs_light_box.io",                   "input": "resource/fs_light_box.sc", "includes": ["resource"]},
@@ -75,7 +80,6 @@ shaders = [
     { "type" : ShaderType.FS, "inout" : "resource/vs_basic_solid_diffuse.io",          "input": "resource/fs_basic_solid_diffuse.sc", "includes": ["resource"], "variants": basic_solid_diffuse_variants},
     { "type" : ShaderType.VS, "inout" : "resource/vs_basic_solid_illumination.io",     "input": "resource/vs_basic_solid_illumination.sc", "includes": ["resource"]},
     { "type" : ShaderType.VS, "inout" : "resource/vs_basic_solid_z.io",                "input": "resource/vs_basic_solid_z.sc", "includes": ["resource"]},
-    { "type" : ShaderType.VS, "inout" : "resource/vs_basic_translucent_material.io",   "input": "resource/vs_basic_translucent_material.sc", "includes": ["resource"]},
     { "type" : ShaderType.VS, "inout" : "resource/vs_decal_material.io",               "input": "resource/vs_decal_material.sc", "includes": ["resource"]},
     { "type" : ShaderType.VS, "inout" : "resource/vs_deferred_fog.io",                 "input": "resource/vs_deferred_fog.sc", "includes": ["resource"]},
     { "type" : ShaderType.VS, "inout" : "resource/vs_post_effect.io",                  "input": "resource/vs_post_effect.sc", "includes": ["resource"]},
@@ -86,6 +90,7 @@ shaders = [
     { "type" : ShaderType.FS, "inout" : "resource/vs_simple_diffuse.io",               "input": "resource/fs_simple_diffuse.sc" , "includes": ["resource"]},
     { "type" : ShaderType.FS, "inout" : "resource/vs_basic_solid_illumination.io",     "input": "resource/fs_basic_solid_illumination.sc", "includes": ["resource"]},
     { "type" : ShaderType.FS, "inout" : "resource/vs_basic_solid_z.io",                "input": "resource/fs_basic_solid_z.sc", "includes": ["resource"], "variants":  basic_solid_z_variants},
+    { "type" : ShaderType.VS, "inout" : "resource/vs_basic_translucent_material.io",   "input": "resource/vs_basic_translucent_material.sc", "includes": ["resource"]},
     { "type" : ShaderType.FS, "inout" : "resource/vs_basic_translucent_material.io",   "input": "resource/fs_basic_translucent_material.sc", "defines": ["USE_BLEND_MODE_ADD"], "name": "fs_basic_translucent_blendModeAdd", "includes": ["resource"], "variants": translucent_variants},
     { "type" : ShaderType.FS, "inout" : "resource/vs_basic_translucent_material.io",   "input": "resource/fs_basic_translucent_material.sc", "defines": ["USE_BLEND_MODE_MUL"], "name": "fs_basic_translucent_blendModeMul", "includes": ["resource"], "variants": translucent_variants},
     { "type" : ShaderType.FS, "inout" : "resource/vs_basic_translucent_material.io",   "input": "resource/fs_basic_translucent_material.sc", "defines": ["USE_BLEND_MODE_MULX2"], "name": "fs_basic_translucent_blendModeMulX2", "includes": ["resource"], "variants": translucent_variants},
