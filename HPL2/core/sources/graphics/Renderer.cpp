@@ -264,20 +264,20 @@ namespace hpl {
 
 	void cRenderSettings::AssignOcclusionObject(iRenderer *apRenderer, void *apSource, int alCustomIndex, iVertexBuffer *apVtxBuffer, cMatrixf *apMatrix, bool abDepthTest)
 	{
-		// if(mlCurrentOcclusionObject == mvOcclusionObjectPool.size())
-		// {
-		// 	mvOcclusionObjectPool.push_back(hplNew(cOcclusionQueryObject, () ));
-		// }
+		if(mlCurrentOcclusionObject == mvOcclusionObjectPool.size())
+		{
+			mvOcclusionObjectPool.push_back(hplNew(cOcclusionQueryObject, () ));
+		}
 
-		// cOcclusionQueryObject *pObject = mvOcclusionObjectPool[mlCurrentOcclusionObject];
+		cOcclusionQueryObject *pObject = mvOcclusionObjectPool[mlCurrentOcclusionObject];
 
-		// pObject->mlCustomID = alCustomIndex;
-		// pObject->mpQuery = apRenderer->GetOcclusionQuery();
-		// pObject->mpVtxBuffer = apVtxBuffer;
-		// pObject->mpMatrix = apMatrix;
-		// pObject->mbDepthTest = abDepthTest;
+		pObject->mlCustomID = alCustomIndex;
+		pObject->m_occlusion = bgfx::createOcclusionQuery();
+		pObject->mpVtxBuffer = apVtxBuffer;
+		pObject->mpMatrix = apMatrix;
+		pObject->mbDepthTest = abDepthTest;
 
-		// m_setOcclusionObjects.insert(tOcclusionQueryObjectMap::value_type(apSource, pObject));
+		m_setOcclusionObjects.insert(tOcclusionQueryObjectMap::value_type(apSource, pObject));
 
 		++mlCurrentOcclusionObject;
 	}
@@ -287,45 +287,40 @@ namespace hpl {
 
 	int cRenderSettings::RetrieveOcclusionObjectSamples(iRenderer *apRenderer, void *apSource, int alCustomIndex)
 	{
-		// tOcclusionQueryObjectMapIt it = m_setOcclusionObjects.find(apSource);
-		// if(it == m_setOcclusionObjects.end()){
-		// 	if(mbLog) Log(" Could not find source %d custom index %d in occlusion objects set!\n", apSource, alCustomIndex);
-		// 	return 0;
-		// }
+		tOcclusionQueryObjectMapIt it = m_setOcclusionObjects.find(apSource);
+		if(it == m_setOcclusionObjects.end()){
+			if(mbLog) Log(" Could not find source %d custom index %d in occlusion objects set!\n", apSource, alCustomIndex);
+			return 0;
+		}
 
-		// //////////////////////////////////////
-		// //Get the number of objects with key and get the one with right custom ID
-		// size_t lCount = m_setOcclusionObjects.count(apSource);
-		// cOcclusionQueryObject* pObject = NULL;
-		// for(size_t i=0; i < lCount; ++i)
-		// {
-		// 	cOcclusionQueryObject* pTestObject = it->second;
-		// 	if(pTestObject->mlCustomID == alCustomIndex)
-		// 	{
-		// 		pObject = pTestObject;
-		// 		break;
-		// 	}
-		// 	it++;
-		// }
-		// if(pObject==NULL)
-		// {
-		// 	if(mbLog) Log(" Found source %d but could NOT find custom index %d in occlusion objects set!\n", apSource, alCustomIndex);
-		// 	return 0;
-		// }
+		//////////////////////////////////////
+		//Get the number of objects with key and get the one with right custom ID
+		size_t lCount = m_setOcclusionObjects.count(apSource);
+		cOcclusionQueryObject* pObject = NULL;
+		for(size_t i=0; i < lCount; ++i)
+		{
+			cOcclusionQueryObject* pTestObject = it->second;
+			if(pTestObject->mlCustomID == alCustomIndex)
+			{
+				pObject = pTestObject;
+				break;
+			}
+			it++;
+		}
+		if(pObject==NULL)
+		{
+			if(mbLog) Log(" Found source %d but could NOT find custom index %d in occlusion objects set!\n", apSource, alCustomIndex);
+			return 0;
+		}
 
-		// //////////////////////////////////////
-		// // Get the query and wait (if needed) for result to come in.
-		// iOcclusionQuery *pQuery = pObject->mpQuery;
-
-		// //If query is null, then samples have already been retrieved.
-		// if(pQuery==NULL) return pObject->mlSampleResults;
-
-		// while(pQuery->FetchResults()==false);
-
-		// pObject->mlSampleResults = pQuery->GetSampleCount();
-		// pObject->mpQuery = NULL;
-		// apRenderer->ReleaseOcclusionQuery(pQuery);
-
+		if(bgfx::isValid(pObject->m_occlusion)) {
+			int32_t numSamples = 0;
+			if(bgfx::getResult(pObject->m_occlusion, &numSamples) == bgfx::OcclusionQueryResult::Visible) {
+				pObject->mlSampleResults = numSamples;
+				bgfx::destroy(pObject->m_occlusion);
+				pObject->m_occlusion	=  BGFX_INVALID_HANDLE;
+			}
+		}
 		return 0;
 	}
 
@@ -2077,52 +2072,23 @@ namespace hpl {
 		while(objIt.HasNext())
 		{
 			iRenderable *pObject = objIt.Next();
-			pObject->AssignOcclusionQuery(this);
+			pObject->ResolveOcclusionPass(this, [&](bgfx::OcclusionQueryHandle handle, DepthTest depth, GraphicsContext::LayoutStream& layoutStream, const cMatrixf& transformMatrix) {
+				GraphicsContext::ShaderProgram shaderProgram;
+				shaderProgram.m_handle = m_nullShader;
+				shaderProgram.m_configuration.m_depthTest = depth;
+				shaderProgram.m_configuration.m_cull = Cull::CounterClockwise;
+				
+				shaderProgram.m_modelTransform = transformMatrix;
+				shaderProgram.m_view = mpCurrentFrustum->GetViewMatrix();
+				shaderProgram.m_projection = *mpCurrentProjectionMatrix;
+				
+				GraphicsContext::DrawRequest drawRequest {rt, layoutStream, shaderProgram};
+				drawRequest.m_width = mvScreenSize.x;
+				drawRequest.m_height = mvScreenSize.y;
+
+				context.Submit(view, drawRequest, handle);
+			});
 		}
-
-		/////////////////////////////////////
-		//If no queries added, then skip any rendering
-		if(mpCurrentSettings->mlCurrentOcclusionObject <=0) {
-			return;
-		}
-
-		START_RENDER_PASS(OcclusionObjects);
-
-		////////////////////////////////////
-		// Copying queries to new array
-		mvSortedOcclusionObjects.resize(mpCurrentSettings->mlCurrentOcclusionObject);
-		for(int i=0; i<mpCurrentSettings->mlCurrentOcclusionObject; ++i) {
-			mvSortedOcclusionObjects[i] = mpCurrentSettings->mvOcclusionObjectPool[i];
-		}
-
-		////////////////////////////////////
-		// Sort the queries
-		std::sort(mvSortedOcclusionObjects.begin(), mvSortedOcclusionObjects.end(), SortFunc_OcclusionObject);
-
-		///////////////////////////////////
-		// Render the queries
-		for(size_t i=0; i<mvSortedOcclusionObjects.size(); ++i)
-		{
-			cOcclusionQueryObject *pObject = mvSortedOcclusionObjects[i];
-			GraphicsContext::ShaderProgram shaderProgram;
-			GraphicsContext::LayoutStream layoutStream;
-			pObject->mpVtxBuffer->GetLayoutStream(layoutStream);
-
-			shaderProgram.m_handle = m_nullShader;
-			shaderProgram.m_configuration.m_depthTest = pObject->mbDepthTest ? DepthTest::LessEqual : DepthTest::Always;
-			shaderProgram.m_configuration.m_cull = Cull::CounterClockwise;
-			
-			shaderProgram.m_modelTransform = *pObject->mpMatrix;
-			shaderProgram.m_view = mpCurrentFrustum->GetViewMatrix();
-			shaderProgram.m_projection = *mpCurrentProjectionMatrix;
-			
-			GraphicsContext::DrawRequest drawRequest {rt, layoutStream, shaderProgram};
-			drawRequest.m_width = mvScreenSize.x;
-			drawRequest.m_height = mvScreenSize.y;
-
-			context.Submit(view, drawRequest, pObject->m_occlusion);
-		}
-		END_RENDER_PASS();
 	}
 
 	//-----------------------------------------------------------------------

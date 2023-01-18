@@ -21,16 +21,25 @@
 #include "bgfx/bgfx.h"
 #include "graphics/Material.h"
 #include "graphics/MaterialType.h"
+#include "graphics/ShaderVariantCollection.h"
+#include <cstdint>
 
 namespace hpl
 {
 
-    //---------------------------------------------------
-    // TRANSLUCENT
-    //---------------------------------------------------
 
-    //--------------------------------------------------
-
+    namespace material::translucent
+    {
+        enum TranslucentVariant: uint32_t
+        {
+            Translucent_None = 0,
+            Translucent_DiffuseMap = 0x00001,
+            Translucent_NormalMap = 0x00002,
+            Translucent_Refraction = 0x00004,
+            Translucent_UseCubeMap = 0x00008,
+            Translucent_UseFog = 0x00010,
+        };
+    }
     class cMaterialType_Translucent_Vars : public iMaterialVars
     {
     public:
@@ -62,6 +71,14 @@ namespace hpl
 
     class cMaterialType_Translucent : public iMaterialType
     {
+        using TranslucentShaderCollection = ShaderVariantCollection<
+			material::translucent::Translucent_DiffuseMap |
+			material::translucent::Translucent_NormalMap |
+			material::translucent::Translucent_Refraction |
+			material::translucent::Translucent_UseCubeMap |
+			material::translucent::Translucent_UseFog 
+		>;
+
     public:
         cMaterialType_Translucent(cGraphics* apGraphics, cResources* apResources);
         ~cMaterialType_Translucent();
@@ -75,6 +92,13 @@ namespace hpl
 
         iTexture* GetTextureForUnit(cMaterial* apMaterial, eMaterialRenderMode aRenderMode, int alUnit);
         iTexture* GetSpecialTexture(cMaterial* apMaterial, eMaterialRenderMode aRenderMode, iRenderer* apRenderer, int alUnit);
+
+        virtual void ResolveShaderProgram(
+            eMaterialRenderMode aRenderMode,
+            cMaterial* apMaterial,
+            iRenderable* apObject,
+            iRenderer* apRenderer, 
+            std::function<void(GraphicsContext::ShaderProgram&)> handler) override;
 
         iGpuProgram* GetGpuProgram(cMaterial* apMaterial, eMaterialRenderMode aRenderMode, char alSkeleton);
 
@@ -92,15 +116,21 @@ namespace hpl
     private:
         bgfx::ProgramHandle _programHandle;
 
-		bgfx::UniformHandle _u_param;
-		bgfx::UniformHandle _u_mtxUv;
-        bgfx::UniformHandle _u_invViewRotation;
+		bgfx::UniformHandle m_u_param;
+		bgfx::UniformHandle m_u_mtxUv;
+        bgfx::UniformHandle m_u_invViewRotation;
 
-		bgfx::UniformHandle _s_diffuseMap;
-		bgfx::UniformHandle _s_normalMap;
-		bgfx::UniformHandle _s_refractionMap;
-		bgfx::UniformHandle _s_envMapAlphaMap;
-		bgfx::UniformHandle _s_envMap;
+		bgfx::UniformHandle m_s_diffuseMap;
+		bgfx::UniformHandle m_s_normalMap;
+		bgfx::UniformHandle m_s_refractionMap;
+		bgfx::UniformHandle m_s_envMapAlphaMap;
+		bgfx::UniformHandle m_s_envMap;
+
+        TranslucentShaderCollection m_translucent_blendModeAdd;
+        TranslucentShaderCollection m_translucent_blendModeMul;
+        TranslucentShaderCollection m_translucent_blendModeMulX2;
+        TranslucentShaderCollection m_translucent_blendModeAlpha;
+        TranslucentShaderCollection m_translucent_blendModePremulAlpha;
 
         void LoadData();
         void DestroyData();

@@ -30,6 +30,7 @@
 #include "graphics/Image.h"
 #include "graphics/RenderTarget.h"
 #include <graphics/RenderViewport.h>
+#include "impl/VertexBufferBGFX.h"
 #include "math/Math.h"
 
 #include "math/MathTypes.h"
@@ -73,7 +74,9 @@
 #include <array>
 #include <cstddef>
 #include <functional>
+#include <iterator>
 #include <memory>
+#include <set>
 
 namespace hpl {
 
@@ -374,6 +377,7 @@ namespace hpl {
 		m_s_spotFalloffMap = bgfx::createUniform("s_spotFalloffMap", bgfx::UniformType::Sampler);
 		m_s_shadowMap = bgfx::createUniform("s_shadowMap", bgfx::UniformType::Sampler);
 		m_s_goboMap = bgfx::createUniform("s_goboMap", bgfx::UniformType::Sampler);
+		m_u_overrideColor = bgfx::createUniform("u_overrideColor", bgfx::UniformType::Vec4);
 		// ////////////////////////////////////
 		// //Create Light programs
 		// {
@@ -859,7 +863,6 @@ namespace hpl {
 			return;
 		}
 
-
 		auto& target = resolveRenderTarget(m_gBuffer_full);
 		auto view = context.StartPass("Diffuse");
 		RenderableHelper(eRenderListType_Diffuse, eMaterialRenderMode_Diffuse, [&](iRenderable* obj, GraphicsContext::LayoutStream& layoutInput, GraphicsContext::ShaderProgram& shaderInput) {
@@ -893,31 +896,9 @@ namespace hpl {
 			shaderInput.m_configuration.m_write = Write::RGBA;
 
 			cMaterial *pMaterial = obj->GetMaterial();
-			switch(pMaterial->GetBlendMode()) {
-				case eMaterialBlendMode_Add:
-					shaderInput.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
-					shaderInput.m_configuration.m_alphaBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
-					break;
-				case eMaterialBlendMode_Mul:
-					shaderInput.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::Zero, BlendOperand::SrcColor);
-					shaderInput.m_configuration.m_alphaBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::Zero, BlendOperand::SrcColor);
-					break;
-				case eMaterialBlendMode_MulX2:
-					shaderInput.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::DstColor, BlendOperand::SrcColor);
-					shaderInput.m_configuration.m_alphaBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::DstColor, BlendOperand::SrcColor);
-					break;
-				case eMaterialBlendMode_Alpha:
-					shaderInput.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
-					shaderInput.m_configuration.m_alphaBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
-					break;
-				case eMaterialBlendMode_PremulAlpha:
-					shaderInput.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::InvSrcAlpha);
-					shaderInput.m_configuration.m_alphaBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::InvSrcAlpha);
-					break;
-				default:
-					break;
-			}
-			
+			shaderInput.m_configuration.m_rgbBlendFunc = CreateFromMaterialBlendMode(pMaterial->GetBlendMode());
+			shaderInput.m_configuration.m_alphaBlendFunc = CreateFromMaterialBlendMode(pMaterial->GetBlendMode());
+
 			shaderInput.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
 			shaderInput.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
 			shaderInput.m_modelTransform = obj->GetModelMatrixPtr() ?  obj->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity.GetTranspose();
@@ -937,7 +918,6 @@ namespace hpl {
 		eMaterialRenderMode renderMode = object->GetCoverageAmount() >= 1 ? eMaterialRenderMode_Z : eMaterialRenderMode_Z_Dissolve;
 		cMaterial *pMaterial = object->GetMaterial();
 		iMaterialType* materialType = pMaterial->GetType();
-		// iGpuProgram* program = pMaterial->GetProgram(0, renderMode);
 		iVertexBuffer* vertexBuffer = object->GetVertexBuffer();
 		if(vertexBuffer == nullptr || materialType == nullptr) {
 			return;
@@ -981,70 +961,103 @@ namespace hpl {
 	}
 
 
-	void cRendererDeferred::RenderTranslucentPass(GraphicsContext& context, RenderTarget& rt) {
-		if(!mpCurrentRenderList->ArrayHasObjects(eRenderListType_Translucent)) {
-			return;
-		}
-
-		auto& target = resolveRenderTarget(m_gBuffer_color);
-		auto view = context.StartPass("RenderTranslucent");
+	void cRendererDeferred::RenderTranslucentPass(GraphicsContext& context, RenderTarget& target) {
+		auto view = context.StartPass("Translucent");
 		for(auto& obj: mpCurrentRenderList->GetRenderableItems(eRenderListType_Translucent))
 		{
-			cMaterial *pMaterial = obj->GetMaterial();
+			
+			auto* pMaterial = obj->GetMaterial();
+			auto* pMaterialType = pMaterial->GetType();
+			auto* vertexBuffer = obj->GetVertexBuffer();
+			// const bool hasColorAttribute = vertexBuffer->GetElement(eVertexBufferElement_Color0) != nullptr; // hack 
+			
+			cMatrixf *pMatrix = obj->GetModelMatrix(mpCurrentFrustum);
 
 			eMaterialRenderMode renderMode = mpCurrentWorld->GetFogActive() ? eMaterialRenderMode_DiffuseFog : eMaterialRenderMode_Diffuse;
 			if(!pMaterial->GetAffectedByFog()) {
 				renderMode = eMaterialRenderMode_Diffuse;
 			}
-			if((mpCurrentSettings->mbIsReflection && pMaterial->HasWorldReflection()) ||
-				!obj->UpdateGraphicsForViewport(mpCurrentFrustum, mfCurrentFrameTime)) {
+
+			////////////////////////////////////////
+			// Check the fog area alpha
+			mfTempAlpha = 1;
+			if(pMaterial->GetAffectedByFog())
+			{
+				for(size_t i=0; i<mpCurrentSettings->mvFogRenderData.size(); ++i)
+				{
+					mfTempAlpha *= GetFogAreaVisibilityForObject(&mpCurrentSettings->mvFogRenderData[i], obj);
+				}
+			}
+
+			if(!obj->UpdateGraphicsForViewport(mpCurrentFrustum, mfCurrentFrameTime)) 
+			{
 				continue;
+			}
+
+			if(obj->RetrieveOcculsionQuery(this)==false)
+			{
+				continue;
+			}
+			
+			if(pMaterial->HasRefraction())
+			{
+				// skipping refraction for now
 			}
 
 			if(pMaterial->HasWorldReflection() && obj->GetRenderType() == eRenderableType_SubMesh)
 			{
-				if(!CheckRenderablePlaneIsVisible(obj, mpCurrentFrustum)) {
-					continue;
-				}
-
-				cSubMeshEntity *subMeshEntity = static_cast<cSubMeshEntity*>(obj);
-				cMaterial *pRelfMaterial = subMeshEntity->GetMaterial();
-				bool bReflectionIsInRange=true;
-				if(pRelfMaterial->GetMaxReflectionDistance() > 0)
-				{
-					cVector3f vPoint = mpCurrentFrustum->GetOrigin() + mpCurrentFrustum->GetForward()*-1*pRelfMaterial->GetMaxReflectionDistance();
-					cVector3f vNormal = mpCurrentFrustum->GetForward();
-					cPlanef maxRelfctionDistPlane;
-					maxRelfctionDistPlane.FromNormalPoint(vNormal, vPoint);
-
-					if(cMath::CheckPlaneBVCollision(maxRelfctionDistPlane, *obj->GetBoundingVolume())==eCollision_Outside)
-					{
-						bReflectionIsInRange = false;
-					}
-				}
-
-				if(mpCurrentSettings->mbRenderWorldReflection && bReflectionIsInRange && obj->GetIsOneSided())
-				{
-				}
-				else
-				{
-					if(mbReflectionTextureCleared == false)
-					{
-						cRenderTarget renderTarget;
-						renderTarget.mpFrameBuffer = mpReflectionBuffer;
-						SetFrameBuffer(mpReflectionBuffer, false, false);
-						ClearFrameBuffer(eClearFrameBufferFlag_Color, false);
-						// SetAccumulationBuffer();
-						mbReflectionTextureCleared = true;
-					}
-				}
 			}
-			
-			//TODO: need to implement occlusion query for translucent objects
-			// if(obj->RetrieveOcculsionQuery(this)==false)
-			// {
-			// 	continue;
-			// }
+
+			pMaterialType->ResolveShaderProgram(renderMode, pMaterial, obj, this,[&](GraphicsContext::ShaderProgram& shaderInput) {
+				GraphicsContext::LayoutStream layoutInput;
+				vertexBuffer->GetLayoutStream(layoutInput);
+				
+				
+				shaderInput.m_configuration.m_depthTest = pMaterial->GetDepthTest() ? DepthTest::LessEqual: DepthTest::None;
+				shaderInput.m_configuration.m_write = Write::RGBA;
+				shaderInput.m_configuration.m_cull = Cull::None;
+				
+				// shaderInput.m_uniforms.push_back({m_u_overrideColor, overrideColor });
+
+				shaderInput.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
+				shaderInput.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+				shaderInput.m_modelTransform = pMatrix ?  pMatrix->GetTranspose() : cMatrixf::Identity;
+				
+				if(!pMaterial->HasRefraction()) {
+					shaderInput.m_configuration.m_rgbBlendFunc = CreateFromMaterialBlendMode(pMaterial->GetBlendMode());
+					shaderInput.m_configuration.m_alphaBlendFunc = CreateFromMaterialBlendMode(pMaterial->GetBlendMode());
+				}
+
+				GraphicsContext::DrawRequest drawRequest {target, layoutInput, shaderInput};
+				drawRequest.m_width = mvScreenSize.x;
+				drawRequest.m_height = mvScreenSize.y;
+				context.Submit(view, drawRequest);
+			});
+
+			if(pMaterial->HasTranslucentIllumination())
+			{
+				pMaterialType->ResolveShaderProgram(
+					(renderMode == eMaterialRenderMode_Diffuse ? eMaterialRenderMode_Illumination : eMaterialRenderMode_IlluminationFog), pMaterial, obj, this,[&](GraphicsContext::ShaderProgram& shaderInput) {
+					GraphicsContext::LayoutStream layoutInput;
+					vertexBuffer->GetLayoutStream(layoutInput);
+
+					shaderInput.m_configuration.m_depthTest = pMaterial->GetDepthTest() ? DepthTest::LessEqual: DepthTest::None;
+					shaderInput.m_configuration.m_write = Write::RGBA;
+					shaderInput.m_configuration.m_cull = Cull::None;
+
+					shaderInput.m_configuration.m_rgbBlendFunc = CreateFromMaterialBlendMode(eMaterialBlendMode_Add);
+					shaderInput.m_configuration.m_alphaBlendFunc = CreateFromMaterialBlendMode(eMaterialBlendMode_Add);
+
+					shaderInput.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
+					shaderInput.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+					shaderInput.m_modelTransform = pMatrix ?  pMatrix->GetTranspose() : cMatrixf::Identity;
+					
+					GraphicsContext::DrawRequest drawRequest {target, layoutInput, shaderInput};
+					drawRequest.m_width = mvScreenSize.x;
+					drawRequest.m_height = mvScreenSize.y;
+					context.Submit(view, drawRequest);
+				});
+			}
 		}
 	}
 
@@ -1110,12 +1123,12 @@ namespace hpl {
 			});
 
 			// this occlusion query logic is used for reflections just cut this for now
-			// AssignAndRenderOcclusionQueryObjects(
-			// 	context.StartPass("Render Occlusion"), 
-			// 	context, 
-			// 	false, 
-			// 	true,
-			// 	resolveRenderTarget(m_gBuffer_depth));
+			AssignAndRenderOcclusionQueryObjects(
+				context.StartPass("Render Occlusion"), 
+				context, 
+				false, 
+				true,
+				resolveRenderTarget(m_gBuffer_depth));
 
 			SetupLightsAndRenderQueries(context, resolveRenderTarget(m_gBuffer_depth));
 
@@ -1139,12 +1152,12 @@ namespace hpl {
 			RenderZPass(context, resolveRenderTarget(m_gBuffer_depth) );
 
 			// this occlusion query logic is used for reflections just cut this for now
-			// AssignAndRenderOcclusionQueryObjects(
-			// 	context.StartPass("Render Occlusion Pass"), 
-			// 	context, 
-			// 	false, 
-			// 	true,
-			// 	resolveRenderTarget(m_gBuffer_depth));
+			AssignAndRenderOcclusionQueryObjects(
+				context.StartPass("Render Occlusion Pass"), 
+				context, 
+				false, 
+				true,
+				resolveRenderTarget(m_gBuffer_depth));
 
 			SetupLightsAndRenderQueries(context, resolveRenderTarget(m_gBuffer_depth));
 		}
@@ -1173,8 +1186,7 @@ namespace hpl {
 
 		// not going to even try.
 		// calls back through RendererDeffered need to untangle all the complicated state ...
-		// RenderTranslucent()
-		// RenderTranslucentPass(context, RenderTarget &rt)
+		RenderTranslucentPass(context, resolveRenderTarget(m_output_target));
 
 		RunCallback(eRendererMessage_PostTranslucent);
 

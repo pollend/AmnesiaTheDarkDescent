@@ -1,42 +1,41 @@
-$input v_color0, v_texcoord0, v_normal, v_tangent, v_bitangent, v_view, v_position
+$input v_color0, v_texcoord0, v_normal, v_tangent, v_bitangent, v_position
 
 #include <common.sh>
 
-SAMPLER2D(s_diffuseMap, 0);
-SAMPLER2D(s_normalMap, 1);
-SAMPLER2D(s_refractionMap, 2);
-SAMPLER2D(s_envMapAlphaMap, 3);
+SAMPLERCUBE(s_envMap, 0);
 
-SAMPLERCUBE(s_envMap, 4);
+SAMPLER2D(s_diffuseMap, 1);
+SAMPLER2D(s_normalMap, 2);
+SAMPLER2D(s_refractionMap, 3);
+SAMPLER2D(s_envMapAlphaMap, 4);
+
 
 uniform mat4 u_mtxInvViewRotation;
 uniform vec4 u_fogColor;
 
-uniform vec4 u_param[6];
-#define u_useDiffuseMap (u_param[0].x)
-#define u_useCubeMapAlpha (u_param[0].y)
-#define u_useScreenNormal (u_param[0].z)
-#define u_fogStart (u_param[0].w)
+uniform vec4 u_param[4];
+#define u_useCubeMapAlpha (u_param[0].x)
+#define u_useScreenNormal (u_param[0].y)
+#define u_fogStart (u_param[0].z)
+#define u_fogLength (u_param[0].w)
 
-#define u_fogLength (u_param[1].x)
-#define u_alpha (u_param[1].y)
-#define u_lightLevel (u_param[1].z)
-#define u_oneMinusFogAlpha (u_param[1].w)
+#define u_alpha (u_param[1].x)
+#define u_lightLevel (u_param[1].y)
+#define u_oneMinusFogAlpha (u_param[1].z)
+#define u_falloffExp (u_param[1].w)
 
-#define u_frenselBiasPow (u_param[4].xy)
-#define u_rimLightMulPow (u_param[4].zw)
+#define u_refractionScale (u_param[2].x)
 
-#define u_falloffExp (u_param[5].x)
-#define u_refractionScale (u_param[5].y)
-
+#define u_frenselBiasPow (u_param[3].xy)
+#define u_rimLightMulPow (u_param[3].zw)
 
 void main()
 {
     vec4 vFinalColor = vec4(0.0, 0.0 ,0.0, 1.0);
  
-    if(0.0 < u_useDiffuseMap) { 
+    #ifdef USE_DIFFUSE_MAP  
         vFinalColor = texture2D(s_diffuseMap, v_texcoord0.xy) * v_color0;
-    }
+    #endif
     ////////////////////
     //Fog
 

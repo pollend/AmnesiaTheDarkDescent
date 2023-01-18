@@ -19,8 +19,10 @@
 
 #include "scene/BillBoard.h"
 
+#include "bgfx/bgfx.h"
 #include "impl/tinyXML/tinyxml.h"
 
+#include "math/MathTypes.h"
 #include "resources/Resources.h"
 #include "resources/MaterialManager.h"
 #include "resources/FileSearcher.h"
@@ -52,6 +54,9 @@ namespace hpl {
 	{
 		mpMaterialManager = apResources->GetMaterialManager();
 		mpLowLevelGraphics = apGraphics->GetLowLevel();
+
+		m_occlusionCurrent = bgfx::createOcclusionQuery();
+		m_occlusionMax = bgfx::createOcclusionQuery();
 
 		mvSize = avSize;
 		mvAxis = cVector3f(0,1,0);
@@ -119,6 +124,13 @@ namespace hpl {
 		if(mpMaterial) mpMaterialManager->Destroy(mpMaterial);
 		if(mpVtxBuffer) hplDelete(mpVtxBuffer);
 		if(mpHaloSourceBV) hplDelete(mpHaloSourceBV);
+
+		if(bgfx::isValid(m_occlusionCurrent)) {
+			bgfx::destroy(m_occlusionCurrent);
+		}
+		if(bgfx::isValid(m_occlusionMax)) {
+			bgfx::destroy(m_occlusionMax);
+		}
 	}
 
 	//-----------------------------------------------------------------------
@@ -337,6 +349,7 @@ namespace hpl {
 	{
 		mbIsHalo = abX;
 
+
 		if(mbIsHalo)
 		{
 			mfHaloAlpha = 1; //THis is to make sure that the new alpha is set to the mesh.
@@ -374,6 +387,21 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	void cBillboard::ResolveOcclusionPass(iRenderer *apRenderer, std::function<void(bgfx::OcclusionQueryHandle, DepthTest test, GraphicsContext::LayoutStream&, const cMatrixf& transform)> handler) {
+		if(mbIsHalo==false) return;
+
+		m_mtxHaloOcclusionMatrix = cMath::MatrixScale(mvHaloSourceSize);
+		m_mtxHaloOcclusionMatrix = cMath::MatrixMul(GetWorldMatrix(), m_mtxHaloOcclusionMatrix);
+
+		cMatrixf mtxTransform = m_mtxHaloOcclusionMatrix.GetTranspose();
+
+		iVertexBuffer *pShapeVtx = apRenderer->GetShapeBoxVertexBuffer();
+		GraphicsContext::LayoutStream layout;
+		pShapeVtx->GetLayoutStream(layout);
+		handler(m_occlusionCurrent, DepthTest::LessEqual, layout, mtxTransform);
+		handler(m_occlusionMax, DepthTest::Always, layout, mtxTransform);
+	}
+
 	void cBillboard::AssignOcclusionQuery(iRenderer *apRenderer)
 	{
 		if(mbIsHalo==false) return;
@@ -392,9 +420,16 @@ namespace hpl {
 	bool cBillboard::RetrieveOcculsionQuery(iRenderer *apRenderer)
 	{
 		if(mbIsHalo==false) return  true;
+		int lSamples = 0;
+		int lMaxSamples = 0;
 
-		int lSamples = apRenderer->RetrieveOcclusionObjectSamples(this, 0);
-		int lMaxSamples = apRenderer->RetrieveOcclusionObjectSamples(this, 1);
+		if(bgfx::isValid(m_occlusionCurrent) && bgfx::getResult(m_occlusionCurrent, &lSamples) != bgfx::OcclusionQueryResult::Enum::Visible) {
+			return false;
+		}
+	
+		if(bgfx::isValid(m_occlusionMax) &&  bgfx::getResult(m_occlusionMax, &lMaxSamples) != bgfx::OcclusionQueryResult::Enum::Visible) {
+			return false;
+		}
 
 		////////////////////////////
 		// Samples are visible

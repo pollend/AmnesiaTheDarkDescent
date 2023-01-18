@@ -404,7 +404,7 @@ namespace hpl
         PositionTexCoord0::init();
         m_copyProgram = hpl::loadProgram("vs_post_effect", "fs_post_effect_copy");
         m_s_diffuseMap = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
-        m_u_normalMtx = bgfx::createUniform("u_normalMtx", bgfx::UniformType::Mat3);
+        m_u_normalMtx = bgfx::createUniform("u_normalMtx", bgfx::UniformType::Mat4);
     }
 
     void GraphicsContext::Frame()

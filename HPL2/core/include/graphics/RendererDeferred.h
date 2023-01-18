@@ -331,7 +331,8 @@ namespace hpl {
 		bgfx::UniformHandle m_u_fogColor;
 		bgfx::UniformHandle m_u_lightColor;
 		bgfx::UniformHandle m_u_spotViewProj;
-		
+		bgfx::UniformHandle m_u_overrideColor;
+
 		bgfx::UniformHandle m_s_depthMap;
 		bgfx::UniformHandle m_s_positionMap;
 		bgfx::UniformHandle m_s_deferredColorMap; // TODO: combined with diffuseMap
@@ -342,6 +343,7 @@ namespace hpl {
 		bgfx::UniformHandle m_s_spotFalloffMap;
 		bgfx::UniformHandle m_s_shadowMap;
 		bgfx::UniformHandle m_s_goboMap;
+		
 		
 		bgfx::ProgramHandle m_deferredFog;
 		bgfx::ProgramHandle m_fullscreenFog;

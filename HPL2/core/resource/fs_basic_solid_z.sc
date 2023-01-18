@@ -6,6 +6,8 @@ SAMPLER2D(s_diffuseMap, 0);
 SAMPLER2D(s_dissolveMap, 1);
 SAMPLER2D(s_dissolveAlphaMap, 2);
 
+uniform vec4 u_param;
+#define u_alphaReject (u_param.x)
 
 void main()
 {
@@ -17,7 +19,7 @@ void main()
     #endif
 
     
-    #ifdef USE_DISSOLVE_FILTER 
+    #if defined(USE_DISSOLVE_FILTER) || defined(USE_DISSOLVE_ALPHA_MAP)
         vec2 vDissolveCoords = v_texcoord0.xy * (1.0/128.0); //128 = size of dissolve texture.
         float fDissolve = texture2D(s_dissolveMap, vDissolveCoords).w;
 
@@ -36,6 +38,9 @@ void main()
         fDissolve = fDissolve*0.5 + 0.5;
         vFinalColor.w = fDissolve - (1.0 - vFinalColor.w) * 0.5;
     #endif
+    if(vFinalColor.w < u_alphaReject) {
+        discard;
+    }
 		 
-	gl_FragColor = vFinalColor;
+	gl_FragColor = vec4(1.0);
 }

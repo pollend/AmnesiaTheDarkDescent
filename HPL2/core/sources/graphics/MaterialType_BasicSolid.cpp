@@ -137,7 +137,8 @@ namespace hpl
         m_diffuseProgram.Initialize(ShaderHelper::LoadProgramHandlerDefault(
             "vs_basic_solid_diffuse",
              "fs_basic_solid_diffuse", false, true));
-        m_ZProgram.Initialize(ShaderHelper::LoadProgramHandlerDefault("vs_basic_solid_z", "fs_basic_solid_z", false, true));
+        m_ZProgram.Initialize(
+            ShaderHelper::LoadProgramHandlerDefault("vs_basic_solid_z", "fs_basic_solid_z", false, true));
 
         m_illuminationProgram = hpl::loadProgram("vs_basic_solid_illumination", "fs_basic_solid_illumination");
         
@@ -426,65 +427,6 @@ namespace hpl
 
     iTexture* cMaterialType_SolidDiffuse::GetTextureForUnit(cMaterial* apMaterial, eMaterialRenderMode aRenderMode, int alUnit)
     {
-        // cMaterialType_SolidDiffuse_Vars* pVars = (cMaterialType_SolidDiffuse_Vars*)apMaterial->GetVars();
-
-        // ////////////////////////////
-        // // Z
-        // if (aRenderMode == eMaterialRenderMode_Z)
-        // {
-        //     switch (alUnit)
-        //     {
-        //     case 0:
-        //         return apMaterial->GetTexture(eMaterialTexture_Alpha);
-        //     case 1:
-        //         return mpDissolveTexture;
-        //     }
-        // }
-        // ////////////////////////////
-        // // Z Dissolve
-        // else if (aRenderMode == eMaterialRenderMode_Z_Dissolve)
-        // {
-        //     switch (alUnit)
-        //     {
-        //     case 0:
-        //         return apMaterial->GetTexture(eMaterialTexture_Alpha);
-        //     case 1:
-        //         return mpDissolveTexture;
-        //     case 2:
-        //         return apMaterial->GetTexture(eMaterialTexture_DissolveAlpha);
-        //     }
-        // }
-        // ////////////////////////////
-        // // Diffuse
-        // else if (aRenderMode == eMaterialRenderMode_Diffuse)
-        // {
-        //     switch (alUnit)
-        //     {
-        //     case 0:
-        //         return apMaterial->GetTexture(eMaterialTexture_Diffuse);
-        //     case 1:
-        //         return apMaterial->GetTexture(eMaterialTexture_NMap);
-        //     case 2:
-        //         return apMaterial->GetTexture(eMaterialTexture_Specular);
-        //     case 3:
-        //         return apMaterial->GetTexture(eMaterialTexture_Height);
-        //     case 4:
-        //         return apMaterial->GetTexture(eMaterialTexture_CubeMap);
-        //     case 5:
-        //         return apMaterial->GetTexture(eMaterialTexture_CubeMapAlpha);
-        //     }
-        // }
-        // ////////////////////////////
-        // // Illumination
-        // else if (aRenderMode == eMaterialRenderMode_Illumination)
-        // {
-        //     switch (alUnit)
-        //     {
-        //     case 0:
-        //         return apMaterial->GetTexture(eMaterialTexture_Illumination);
-        //     }
-        // }
-
         return NULL;
     }
     //--------------------------------------------------------------------------
@@ -499,6 +441,7 @@ namespace hpl
 
     iGpuProgram* cMaterialType_SolidDiffuse::GetGpuProgram(cMaterial* apMaterial, eMaterialRenderMode aRenderMode, char alSkeleton)
     {
+        // BX_ASSERT(false, "Remove");
         return nullptr;
     }
 
@@ -509,12 +452,9 @@ namespace hpl
             iRenderer* apRenderer, 
 			std::function<void(GraphicsContext::ShaderProgram&)> handler) {
         GraphicsContext::ShaderProgram program;
-        if (apMaterial->HasUvAnimation()) {
-            cMatrixf mtx = apMaterial->GetUvMatrix().GetTranspose();
-            program.m_uniforms.push_back({m_u_mtxUv, &mtx.v});
-        }  else {
-            program.m_uniforms.push_back({m_u_mtxUv, &cMatrixf::Identity.v});
-        }
+        cMatrixf mtxUv = apMaterial->HasUvAnimation() ? apMaterial->GetUvMatrix().GetTranspose() : cMatrixf::Identity;
+        program.m_uniforms.push_back({m_u_mtxUv, &mtxUv.v});
+
         auto* pVars = static_cast<cMaterialType_SolidDiffuse_Vars*>(apMaterial->GetVars());
         switch(aRenderMode) {
             case eMaterialRenderMode_Diffuse: {
@@ -525,8 +465,10 @@ namespace hpl
                     float fresnelPow;
 
                     float useCubeMapAlpha;
-                    float padding[3];
+                    float alphaReject;
+                    float padding[2];
                 } param = {0};
+                param.alphaReject = 0.5f;
                 uint32_t flags = 0;
                 auto diffuseMap = apMaterial->GetImage(eMaterialTexture_Diffuse);
                 auto normalImage = apMaterial->GetImage(eMaterialTexture_NMap);
@@ -573,7 +515,11 @@ namespace hpl
             }
             case eMaterialRenderMode_Z: {
                 BX_ASSERT(m_dissolveImage, "Dissolve image is not set");
-
+                struct {
+                    float alphaReject;
+                    float padding[3];
+                } param = {0};
+                param.alphaReject = 0.5f;
                 auto diffuseMap = apMaterial->GetImage(eMaterialTexture_Alpha);
                 uint32_t flags = pVars->mbAlphaDissolveFilter ? material::solid::Z_UseDissolveFilter : 0;
                 program.m_textures.push_back({m_s_dissolveMap, m_dissolveImage->GetHandle()});
@@ -581,11 +527,17 @@ namespace hpl
                     flags |= material::solid::Z_UseAlphaMap;
                     program.m_textures.push_back({m_s_diffuseMap, diffuseMap->GetHandle(), 0});
                 }
+                program.m_uniforms.push_back({m_u_param, &param});
                 program.m_handle = m_ZProgram.GetVariant(flags);
                 handler(program);
                 break;
             }
             case eMaterialRenderMode_Z_Dissolve: {
+                struct {
+                    float alphaReject;
+                    float padding[3];
+                } param = {0};
+                param.alphaReject = 0.5f;
                 auto diffuseMap = apMaterial->GetImage(eMaterialTexture_Alpha);
                 auto alphaDissolveMap = apMaterial->GetImage(eMaterialTexture_DissolveAlpha);
                 uint32_t flags = pVars->mbAlphaDissolveFilter ? material::solid::Z_UseDissolveFilter : 0;
@@ -598,6 +550,7 @@ namespace hpl
                     flags |= material::solid::Z_UseDissolveAlphaMap;
                     program.m_textures.push_back({m_s_dissolveAlphaMap, alphaDissolveMap->GetHandle()});
                 }
+                program.m_uniforms.push_back({m_u_param, &param});
                 program.m_handle = m_ZProgram.GetVariant(flags);
                 handler(program);
                 break;
@@ -615,7 +568,7 @@ namespace hpl
                 }
                 program.m_uniforms.push_back({m_u_param, &param});
                 program.m_handle = m_illuminationProgram;
-                 handler(program);
+                handler(program);
                 break;
             }
 

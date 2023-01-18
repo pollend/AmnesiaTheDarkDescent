@@ -17,6 +17,7 @@ uniform vec4 u_param[2];
 #define u_fresnelPow (u_param[0].w)
 
 #define u_useCubeMapAlpha (u_param[1].x)
+#define u_alphaReject (u_param[1].y)
 
 void main()
 {
@@ -69,6 +70,10 @@ void main()
     #endif
 
     diffuseColor = texture2D(s_diffuseMap, texCoord.xy);
+
+    if(diffuseColor.w < u_alphaReject ) {
+        discard;
+    }
     
     vec3 screenNormal = vec3(0, 0, 0);
     

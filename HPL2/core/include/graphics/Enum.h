@@ -1,5 +1,6 @@
 #pragma once
 
+#include "graphics/GraphicsTypes.h"
 #include <cstdint>
 namespace hpl
 {
@@ -122,6 +123,7 @@ namespace hpl
 
     enum class BlendFunc: uint32_t {
     };
+    BlendFunc CreateFromMaterialBlendMode(eMaterialBlendMode mode);
     BlendFunc CreateBlendFunction(BlendOperator type, BlendOperand src, BlendOperand dst);
     BlendOperand GetBlendOperandSrc(BlendFunc func);
     BlendOperand GetBlendOperandDst(BlendFunc func);
@@ -136,6 +138,7 @@ namespace hpl
         uint8_t m_mask;
 
     };
+
     bool IsValidStencilTest(const StencilTest& test);
     StencilTest CreateStencilTest(StencilFunction func, StencilFail sfail, StencilDepthFail dpfail, StencilDepthPass dppass, uint8_t ref, uint8_t mask);
 

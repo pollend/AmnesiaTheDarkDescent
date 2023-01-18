@@ -19,12 +19,37 @@ namespace hpl {
         return static_cast<uint32_t>(lhs) & static_cast<uint32_t>(rhs);
     }
 
+
     ClearOp operator|(ClearOp lhs, ClearOp rhs) {
         return static_cast<ClearOp>(static_cast<uint32_t>(lhs) | static_cast<uint32_t>(rhs));
     }
 
     bool operator&(ClearOp lhs, ClearOp rhs) {
         return static_cast<uint32_t>(lhs) & static_cast<uint32_t>(rhs);
+    }
+
+
+    BlendFunc CreateFromMaterialBlendMode(eMaterialBlendMode mode) {
+        switch(mode) {
+            case eMaterialBlendMode_Add:
+                return CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
+                break;
+            case eMaterialBlendMode_Mul:
+                return CreateBlendFunction(BlendOperator::Add, BlendOperand::Zero, BlendOperand::SrcColor);
+                break;
+            case eMaterialBlendMode_MulX2:
+                return CreateBlendFunction(BlendOperator::Add, BlendOperand::DstColor, BlendOperand::SrcColor);
+                break;
+            case eMaterialBlendMode_Alpha:
+                return CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
+                break;
+            case eMaterialBlendMode_PremulAlpha:
+                return CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::InvSrcAlpha);
+                break;
+            default:
+                break;
+        }
+        return BlendFunc(0); // empty
     }
 
     BlendFunc CreateBlendFunction(BlendOperator type, BlendOperand src, BlendOperand dst) {

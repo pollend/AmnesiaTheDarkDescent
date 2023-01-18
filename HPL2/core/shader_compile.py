@@ -37,10 +37,11 @@ basic_solid_z_variants = [
 ]
 
 translucent_variants = [
-    {"bit": 1, "defines": ["USE_NORMAL_MAP"]},
-    {"bit": 2, "defines": ["USE_REFRACTION"]},
-    {"bit": 4, "defines": ["USE_USE_CUBE_MAP"]},
-    {"bit": 8, "defines": ["USE_USE_FOG"]},
+    {"bit": 1, "defines": ["USE_DIFFUSE_MAP"]},
+    {"bit": 2, "defines": ["USE_NORMAL_MAP"]},
+    {"bit": 4, "defines": ["USE_REFRACTION"]},
+    {"bit": 8, "defines": ["USE_USE_CUBE_MAP"]},
+    {"bit": 16, "defines": ["USE_USE_FOG"]},
 ]
 
 spotlight_variants = [
@@ -117,7 +118,21 @@ def toType(shaderType):
     else:
         raise Exception("Unknown shader type")
 
+def wait_subprocesses():
+    global processes
+    for p in processes:
+        proc = p["process"]
+        print("cmd:", p["cmd"])
+        out, err = proc.communicate()
+        print(out.decode())
+        if(err):
+            exit(1)
+    processes = []
+
 def wrap_subprocess(*args, **kwargs):
+    global processes
+    if(len(processes) > 100):
+        wait_subprocesses()
     # print(f'cmd: {" ".join(args[0])}')
     # try:
     process = subprocess.Popen(*args, **kwargs,
@@ -282,16 +297,4 @@ def main():
         else:
             create_shader(shader)
 main()
-
-for p in processes:
-    proc = p["process"]
-    print("cmd:", p["cmd"])
-    out, err = proc.communicate()
-    print(out.decode())
-    if(err):
-         exit(1)
-    # if(p.stdout != None):
-    #     print(p.stdout)
-    # else:
-    #     print(p.stderr)
-    #     exit(1)
+wait_subprocesses()
