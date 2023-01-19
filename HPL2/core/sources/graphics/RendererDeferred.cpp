@@ -49,7 +49,6 @@
 #include "graphics/FrameBuffer.h"
 #include "graphics/Mesh.h"
 #include "graphics/SubMesh.h"
-#include "graphics/ProgramComboManager.h"
 #include "graphics/OcclusionQuery.h"
 #include "graphics/TextureCreator.h"
 #include "graphics/ShaderUtil.h"
@@ -379,84 +378,6 @@ namespace hpl {
 		m_s_shadowMap = bgfx::createUniform("s_shadowMap", bgfx::UniformType::Sampler);
 		m_s_goboMap = bgfx::createUniform("s_goboMap", bgfx::UniformType::Sampler);
 		m_u_overrideColor = bgfx::createUniform("u_overrideColor", bgfx::UniformType::Vec4);
-		// ////////////////////////////////////
-		// //Create Light programs
-		// {
-		// 	/////////////////////////////
-		// 	//Misc
-		// 	{
-		// 		cParserVarContainer vars;
-
-		// 		//////////////
-		// 		//Light Stencil
-		// 		mpLightStencilProgram = mpProgramManager->CreateProgramFromShaders("LightStencil",
-		// 																			"deferred_base_vtx.glsl",
-		// 																			"deferred_base_frag.glsl",
-		// 																			&vars,true);
-
-		// 		//////////////
-		// 		//Light box
-		// 		for(int i=0;i<2; ++i)
-		// 		{
-		// 			if(i==1) vars.Add("UseSSAO");
-		// 			mpLightBoxProgram[i] = mpProgramManager->CreateProgramFromShaders("LightBoxNormal",
-		// 																			"deferred_base_vtx.glsl",
-		// 																			"deferred_light_box_frag.glsl",
-		// 																			&vars,true);
-
-		// 			vars.Clear();
-		// 			if(mpLightBoxProgram[i])
-		// 			{
-		// 				mpLightBoxProgram[i]->GetVariableAsId("avLightColor",kVar_avLightColor);
-		// 			}
-		// 		}
-		// 	}
-
-		// 	/////////////////////////////
-		// 	//Lights
-		// 	{
-		// 		cParserVarContainer defaultVars;
-
-		// 		//Shadow variables
-		// 		defaultVars.Add("ShadowJitterLookupMul",1.0f / (float)mlShadowJitterSize);
-		// 		defaultVars.Add("ShadowJitterSamplesDiv2",mlShadowJitterSamples / 2);
-		// 		defaultVars.Add("ShadowJitterSamples", mlShadowJitterSamples);
-
-		// 		if(mShadowMapQuality == eShadowMapQuality_High)		defaultVars.Add("ShadowMapQuality_High");
-		// 		if(mShadowMapQuality == eShadowMapQuality_Medium)	defaultVars.Add("ShadowMapQuality_Medium");
-		// 		if(mShadowMapQuality == eShadowMapQuality_Low)		defaultVars.Add("ShadowMapQuality_Low");
-
-		// 		//Vertex shader will handles deferred lights
-		// 		defaultVars.Add("DeferredLight");
-
-		// 		//Deferred renderer type
-		// 		if(mGBufferType == eDeferredGBuffer_32Bit)	defaultVars.Add("Deferred_32bit","");
-		// 		else										defaultVars.Add("Deferred_64bit","");
-
-		// 		if(mlNumOfGBufferTextures == 4)				defaultVars.Add("RenderTargets_4","");
-		// 		else										defaultVars.Add("RenderTargets_3","");
-
-		// 		mpProgramManager->SetupGenerateProgramData(	eDefferredProgramMode_Lights,"Lights", "deferred_base_vtx.glsl", "deferred_light_frag.glsl",gvLightFeatureVec,
-		// 											kLightFeatureNum,defaultVars);
-		// 											//1, defaultVars);
-
-
-		// 		mpProgramManager->AddGenerateProgramVariableId("avLightPos",	kVar_avLightPos, eDefferredProgramMode_Lights);
-		// 		mpProgramManager->AddGenerateProgramVariableId("avLightColor",	kVar_avLightColor, eDefferredProgramMode_Lights);
-		// 		mpProgramManager->AddGenerateProgramVariableId("afInvLightRadius",	kVar_afInvLightRadius, eDefferredProgramMode_Lights);
-		// 		mpProgramManager->AddGenerateProgramVariableId("afNegFarPlane",	kVar_afNegFarPlane, eDefferredProgramMode_Lights);
-		// 		mpProgramManager->AddGenerateProgramVariableId("afOneMinusCosHalfSpotFOV",	kVar_afOneMinusCosHalfSpotFOV, eDefferredProgramMode_Lights);
-		// 		mpProgramManager->AddGenerateProgramVariableId("avLightForward", kVar_avLightForward, eDefferredProgramMode_Lights);
-		// 		mpProgramManager->AddGenerateProgramVariableId("a_mtxSpotViewProj", kVar_a_mtxSpotViewProj, eDefferredProgramMode_Lights);
-		// 		mpProgramManager->AddGenerateProgramVariableId("a_mtxInvViewRotation", kVar_a_mtxInvViewRotation, eDefferredProgramMode_Lights);
-		// 		mpProgramManager->AddGenerateProgramVariableId("avShadowMapOffsetMul", kVar_avShadowMapOffsetMul, eDefferredProgramMode_Lights);
-		// 	}
-
-		// 	//////////////////////////////
-		// 	// Generate some light programs
-		// 	//for(i=0; i<128; ++i)
-		// 	//	mpProgramManager->GenerateProgram(eDefferredProgramMode_Lights, i);
-		// }
 
 		////////////////////////////////////
 		//Create SSAO programs and textures
@@ -469,70 +390,6 @@ namespace hpl {
 		{
 			cVector2l vSSAOSize = mvScreenSize / mlSSAOBufferSizeDiv;
 
-			// /////////////////////////////////////
-			// // Textures and frame buffers
-
-			// // Textures
-			// mpSSAOTexture = CreateRenderTexture("SSAO", vSSAOSize,ePixelFormat_RGB);
-			// mpSSAOBlurTexture = CreateRenderTexture("SSAOBlur", vSSAOSize,ePixelFormat_RGB);
-
-			// // //Frame buffers
-
-			// mpSSAOBuffer = mpGraphics->CreateFrameBuffer("SSAO");
-			// mpSSAOBuffer->SetTexture2D(0,mpSSAOTexture);
-			// mpSSAOBuffer->CompileAndValidate();
-
-			// mpSSAOBlurBuffer = mpGraphics->CreateFrameBuffer("SSAOBlur");
-			// mpSSAOBlurBuffer->SetTexture2D(0,mpSSAOBlurTexture);
-			// mpSSAOBlurBuffer->CompileAndValidate();
-
-			// //Scatter disk
-			// mpSSAOScatterDisk = mpGraphics->CreateTexture("SSAOScatterDisk", eTextureType_2D,eTextureUsage_Normal);
-			// mpGraphics->GetTextureCreator()->GenerateScatterDiskMap2D(mpSSAOScatterDisk,4, mlSSAONumOfSamples, false);
-
-
-			// /////////////////////////////////////
-			// // Programs
-			// cParserVarContainer programVars;
-
-			// //Program for unpacking depth to a lower resolution texture
-			// if(mGBufferType == eDeferredGBuffer_32Bit)	programVars.Add("Deferred_32bit");
-			// else										programVars.Add("Deferred_64bit");
-			// programVars.Add("UseUv");
-			// mpUnpackDepthProgram = mpGraphics->CreateGpuProgramFromShaders("UnpackDepth","deferred_base_vtx.glsl", "deferred_unpack_depth_frag.glsl",&programVars);
-			// if(mpUnpackDepthProgram)
-			// {
-			// 	mpUnpackDepthProgram->GetVariableAsId("afNegInvFarPlane",kVar_afNegInvFarPlane);
-			// }
-			// programVars.Clear();
-
-			// //SSAO Blur programs (vertical and horizontal)
-			// programVars.Add("BlurHorisontal");
-			// mpSSAOBlurProgram[0] = mpGraphics->CreateGpuProgramFromShaders("SSAOBlurHori","deferred_ssao_blur_vtx.glsl", "deferred_ssao_blur_frag.glsl",&programVars);
-			// programVars.Clear();
-			// mpSSAOBlurProgram[1] = mpGraphics->CreateGpuProgramFromShaders("SSAOBlurVert","deferred_ssao_blur_vtx.glsl", "deferred_ssao_blur_frag.glsl",&programVars);
-
-			// for(int i=0; i<2; ++i)
-			// {
-			// 	if(mpSSAOBlurProgram[i])
-			// 	{
-			// 		mpSSAOBlurProgram[i]->GetVariableAsId("afFarPlane",kVar_afFarPlane);
-			// 	}
-			// }
-
-			// //SSAO Rendering
-			// programVars.Add("SampleNumDiv2", mlSSAONumOfSamples / 2);
-			// mpSSAORenderProgram = mpGraphics->CreateGpuProgramFromShaders(	"SSAORender","deferred_ssao_render_vtx.glsl",
-			// 																"deferred_ssao_render_frag.glsl",&programVars);
-			// if(mpSSAORenderProgram)
-			// {
-			// 	mpSSAORenderProgram->GetVariableAsId("afFarPlane",kVar_afFarPlane);
-			// 	mpSSAORenderProgram->GetVariableAsId("afScatterLengthMul", kVar_afScatterLengthMul);
-			// 	mpSSAORenderProgram->GetVariableAsId("avScatterLengthLimits", kVar_avScatterLengthLimits);
-			// 	mpSSAORenderProgram->GetVariableAsId("avScreenSize", kVar_avScreenSize);
-			// 	mpSSAORenderProgram->GetVariableAsId("afDepthDiffMul", kVar_afDepthDiffMul);
-			// 	mpSSAORenderProgram->GetVariableAsId("afSkipEdgeLimit", kVar_afSkipEdgeLimit);
-			// }
 		}
 
 		////////////////////////////////////
@@ -544,41 +401,7 @@ namespace hpl {
 		}
 		if(mbEdgeSmoothLoaded)
 		{
-			// /////////////////////////////////////
-			// // Textures and frame buffers
-
-			// // Textures
-			// mpEdgeSmooth_LinearDepthTexture = CreateRenderTexture("EdgeSmoothLinearDepth", mvScreenSize,ePixelFormat_RGB16);
-			// mpEdgeSmooth_TempAccum = mpGraphics->GetTempFrameBuffer(mvScreenSize,ePixelFormat_RGBA,0)->GetColorBuffer(0)->ToTexture();
-
-			// //Frame buffers
-			// mpEdgeSmooth_LinearDepthBuffer = mpGraphics->CreateFrameBuffer("EdgeSmoothLinearDepth");
-			// mpEdgeSmooth_LinearDepthBuffer->SetTexture2D(0,mpEdgeSmooth_LinearDepthTexture);
-			// mpEdgeSmooth_LinearDepthBuffer->CompileAndValidate();
-
-			// /////////////////////////////////////
-			// // Programs
-
-			// cParserVarContainer programVars;
-
-			// //Program for unpacking depth
-			// if(mGBufferType == eDeferredGBuffer_32Bit)	programVars.Add("Deferred_32bit");
-			// else										programVars.Add("Deferred_64bit");
-			// programVars.Add("UseUv");
-			// mpEdgeSmooth_UnpackDepthProgram = mpGraphics->CreateGpuProgramFromShaders("EdgeSmoothUnpackDepth","deferred_base_vtx.glsl", "deferred_unpack_depth_frag.glsl",&programVars);
-			// if(mpEdgeSmooth_UnpackDepthProgram)
-			// {
-			// 	mpEdgeSmooth_UnpackDepthProgram->GetVariableAsId("afNegInvFarPlane",kVar_afNegInvFarPlane);
-			// }
-			// programVars.Clear();
-
-			// //Program for edge smoothing
-			// programVars.Add("UseUv");
-			// mpEdgeSmooth_RenderProgram =  mpGraphics->CreateGpuProgramFromShaders("EdgeSmoothRender","deferred_base_vtx.glsl", "deferred_edge_smooth_frag.glsl",&programVars);
-			// if(mpEdgeSmooth_RenderProgram)
-			// {
-			// 	mpEdgeSmooth_RenderProgram->GetVariableAsId("afFarPlane",kVar_afFarPlane);
-			// }
+			
 		}
 
 		////////////////////////////////////
@@ -661,7 +484,6 @@ namespace hpl {
 			// mpGraphics->DestroyGpuProgram(mpEdgeSmooth_RenderProgram);
 		}
 
-		// mpProgramManager->DestroyShadersAndPrograms();
 	}
 
 	//-----------------------------------------------------------------------
@@ -674,10 +496,6 @@ namespace hpl {
 		return *m_output_target[0].GetImage();
 	}
 		
-	iTexture* cRendererDeferred::GetPostEffectTexture()
-	{
-		return nullptr;
-	}
 
 	// NOTE: this logic is incomplete
 	void cRendererDeferred::RenderFogPass(GraphicsContext& context, RenderTarget& rt) {
@@ -1173,11 +991,13 @@ namespace hpl {
 
 		// render illumination into gbuffer color RenderIllumination
 		RenderIlluminationPass(context, resolveRenderTarget(m_output_target));
+		// TODO: MP need to implement this
 		// RenderFogPass(context, resolveRenderTarget(m_output_target));
 		// if(mpCurrentWorld->GetFogActive()) {
 		// 	RenderFullScreenFogPass(context, resolveRenderTarget(m_output_target));
 		// }
 
+		// TODO: MP need to implement this
 		//  RenderEdgeSmooth();
 		// if(mbEdgeSmoothLoaded && mpCurrentSettings->mbUseEdgeSmooth) {
 		// 	RenderEdgeSmoothPass(context, m_edgeSmooth_LinearDepth);
@@ -1574,74 +1394,6 @@ namespace hpl {
 
 		END_RENDER_PASS();
 	}
-
-	void cRendererDeferred::RenderEdgeSmooth()
-	{
-		if(mbEdgeSmoothLoaded==false || mpCurrentSettings->mbUseEdgeSmooth==false) return;
-		//if(mbEdgeSmoothLoaded==false) return;
-
-		START_RENDER_PASS(EdgeSmooth);
-
-		//////////////////////////////
-		// Set up variables
-		cVector3f vQuadPos = cVector3f(mfFarLeft,mfFarBottom,-mfFarPlane);
-		cVector2f vQuadSize = cVector2f(mfFarRight*2,mfFarTop*2);
-
-		iTexture *pGBufferDepthTexture = GetBufferTexture(2);
-		iTexture *pGBufferNormalTexture = GetBufferTexture(1);
-
-		//////////////////////////////
-		// Set up render states
-		SetChannelMode(eMaterialChannelMode_RGBA);
-		SetTextureRange(NULL, 1);
-		SetAlphaMode(eMaterialAlphaMode_Solid);
-		SetBlendMode(eMaterialBlendMode_None);
-		SetDepthWrite(false);
-		SetDepthTest(false);
-
-		SetFlatProjectionMinMax(cVector3f(mfFarLeft,mfFarBottom,-mfFarPlane*1.5f),cVector3f(mfFarRight,mfFarTop,mfFarPlane*1.5f));
-
-		////////////////////////////////////////////
-		// Render linear depth to texture
-		// SetFrameBuffer(mpEdgeSmooth_LinearDepthBuffer);
-
-
-		// if(mGBufferType == eDeferredGBuffer_64Bit)
-		// {
-		// 	mpEdgeSmooth_UnpackDepthProgram->SetFloat(kVar_afNegInvFarPlane, -1.0f / mfFarPlane);
-		// }
-		// SetProgram(mpEdgeSmooth_UnpackDepthProgram);
-		SetTexture(0, pGBufferDepthTexture);	//Set G-buffer depth texture
-
-		DrawQuad(vQuadPos, vQuadSize,0, mvScreenSizeFloat,true);
-
-		////////////////////////////////////////////
-		// Copy the screen to temp texture
-		// SetAccumulationBuffer();
-		// CopyFrameBufferToTexure(mpEdgeSmooth_TempAccum,0,mvScreenSize,0, true);
-
-		//////////////////////////////
-		// Render Edge smoothing
-		// SetTexture(0,mpEdgeSmooth_TempAccum);
-		// SetTexture(1,mpEdgeSmooth_LinearDepthTexture);
-		// SetTexture(2,pGBufferNormalTexture);
-
-		// SetProgram(mpEdgeSmooth_RenderProgram);
-		// if(mpEdgeSmooth_RenderProgram)
-		// {
-		// 	mpEdgeSmooth_RenderProgram->SetFloat(kVar_afFarPlane, mfFarPlane);
-		// }
-
-		DrawQuad(vQuadPos, vQuadSize,0, mvScreenSizeFloat,true);
-
-		/////////////////////////////
-		// Set render states back to normal
-		SetNormalFrustumProjection();
-
-		END_RENDER_PASS();
-	}
-
-	//-----------------------------------------------------------------------
 
 	//Definitions used when rendering lights
 	#define kLightRadiusMul_High		1.08f
@@ -2162,190 +1914,6 @@ namespace hpl {
 
 	}
 
-	void cRendererDeferred::RenderTranslucent()
-	{
-		if(mpCurrentRenderList->ArrayHasObjects(eRenderListType_Translucent)==false) return;
-
-		START_RENDER_PASS(Translucent);
-
-		///////////////////////////////
-		//Set up rendering
-		SetDepthTest(true);
-		SetDepthWrite(false);
-
-		SetAlphaLimit(0.01f);
-		SetAlphaMode(eMaterialAlphaMode_Trans);
-
-		///////////////////////////////
-		//Set up variables
-		float fHalfFovTan=0;
-
-		///////////////////////////////
-		//Iterate transparent objects
-		cRenderableVecIterator transIt = mpCurrentRenderList->GetArrayIterator(eRenderListType_Translucent);
-		while(transIt.HasNext())
-		{
-			iRenderable *pObject = transIt.Next();
-			cMaterial *pMaterial = pObject->GetMaterial();
-
-			eMaterialRenderMode renderMode = mpCurrentWorld->GetFogActive() ? eMaterialRenderMode_DiffuseFog : eMaterialRenderMode_Diffuse;
-			if(pMaterial->GetAffectedByFog()==false) renderMode = eMaterialRenderMode_Diffuse;
-
-			//No world reflections in a reflection!
-			if(mpCurrentSettings->mbIsReflection && pMaterial->HasWorldReflection()) continue;
-
-			////////////////////////////////////////
-			// Check the fog area alpha
-			mfTempAlpha = 1;
-			if(pMaterial->GetAffectedByFog())
-			{
-				for(size_t i=0; i<mpCurrentSettings->mvFogRenderData.size(); ++i)
-				{
-					mfTempAlpha *= GetFogAreaVisibilityForObject(&mpCurrentSettings->mvFogRenderData[i], pObject);
-				}
-			}
-
-
-			////////////////////////////////////////
-			// Update object, need to do this here since otherwise the reflection rendering might reset it!
-
-			//Before viewport
-			if(pObject->UpdateGraphicsForViewport(mpCurrentFrustum, mfCurrentFrameTime)==false)
-			{
-				continue;
-			}
-
-			if(pObject->RetrieveOcculsionQuery(this)==false)
-			{
-				continue;
-			}
-
-			cMatrixf *pMatrix = pObject->GetModelMatrix(mpCurrentFrustum);
-
-			////////////////////////////////////////
-			// World reflection
-			if(pMaterial->HasWorldReflection() && pObject->GetRenderType() == eRenderableType_SubMesh)
-			{
-				if(CheckRenderablePlaneIsVisible(pObject, mpCurrentFrustum)==false) continue;
-
-				///////////////////////////////////
-				//Retrieve all occlusion queries before rendering new scene.
-				//  Otherwise it will lead to problems on some cards.
-				WaitAndRetrieveAllOcclusionQueries();	//Queires for halos and such
-				if(mbOcclusionTestLargeLights)
-					RetrieveAllLightOcclusionPair(false);	//Queries for light visibility (false = no stop and wait!)
-
-				///////////////////////////////////
-				//Render the reflection
-				cSubMeshEntity *pReflectSubMeshEnt = static_cast<cSubMeshEntity*>(pObject);
-				RenderReflection(pReflectSubMeshEnt);
-			}
-
-			////////////////////////////////////////
-			// Refraction set up
-			if(pMaterial->HasRefraction())
-			{
-				if(CheckRenderablePlaneIsVisible(pObject, mpCurrentFrustum)==false) continue;
-
-				////////////////////////////////////
-				// Get the clip rect needed by the refraction
-				cBoundingVolume *pBV = pObject->GetBoundingVolume();
-
-				if(fHalfFovTan ==0)
-					fHalfFovTan = tan(mpCurrentFrustum->GetFOV()*0.5f);
-				cRect2l clipRect = GetClipRectFromObject(pObject, 0.2f, mpCurrentFrustum, mvRenderTargetSize, fHalfFovTan);
-
-				////////////////////////////////////
-				// Add an extra check to make sure there is no bleeding. Draw outline of mesh to alpha!
-				if(pMaterial->UseRefractionEdgeCheck())
-				{
-					////////////////////////////////////
-					// Clear alpha
-					SetFlatProjection(cVector2f((float)mvRenderTargetSize.x, (float)mvRenderTargetSize.y));
-
-					//Set up new settings
-					SetDepthTest(false);
-					SetProgram(NULL);
-					SetBlendMode(eMaterialBlendMode_None);
-					SetAlphaMode(eMaterialAlphaMode_Solid);
-					SetChannelMode(eMaterialChannelMode_A);
-					SetTextureRange(NULL,0);
-
-					DrawQuad(	cVector2f((float)clipRect.x, (float)clipRect.y),
-								cVector2f((float)clipRect.w, (float)clipRect.h), 0, 1, false, cColor(1,0));
-
-					//Set Normal projection and depth test
-					SetNormalFrustumProjection();
-					SetDepthTest(true);
-
-					////////////////////////////////////
-					// Render alpha of object
-					SetMatrix(pMatrix);
-					SetVertexBuffer(pObject->GetVertexBuffer());
-
-					DrawCurrent();
-
-					//Set backs settings to normal.
-					SetChannelMode(eMaterialChannelMode_RGBA);
-					SetAlphaMode(eMaterialAlphaMode_Trans);
-				}
-
-				////////////////////////////////////
-				// Copy frame buffer to texture
-				CopyFrameBufferToTexure(mpRefractionTexture,
-										cVector2l(clipRect.x, clipRect.y),
-										cVector2l(clipRect.w, clipRect.h),
-										cVector2l(clipRect.x, clipRect.y),
-										true);
-
-			}
-
-			////////////////////////////////////////
-			// Set up and render
-			if(pMaterial->HasRefraction())	SetBlendMode(eMaterialBlendMode_None); //Blending shall take place in shader!
-			else							SetBlendMode(pMaterial->GetBlendMode());
-			SetDepthTest(pMaterial->GetDepthTest());
-
-			SetMaterialProgram(renderMode,pMaterial);
-			SetMaterialTextures(renderMode, pMaterial);
-
-			SetMatrix(pMatrix);
-
-			SetVertexBuffer(pObject->GetVertexBuffer());
-
-			DrawCurrentMaterial(renderMode, pObject);
-
-
-			////////////////////////////////////////
-			// Set up and render Illumination
-			if(pMaterial->HasTranslucentIllumination())
-			{
-				renderMode = renderMode == eMaterialRenderMode_Diffuse ? eMaterialRenderMode_Illumination : eMaterialRenderMode_IlluminationFog;
-
-				SetBlendMode(eMaterialBlendMode_Add);
-				SetDepthTest(pMaterial->GetDepthTest());
-
-				SetMaterialProgram(renderMode,pMaterial);
-				SetMaterialTextures(renderMode, pMaterial);
-
-				SetMatrix(pMatrix);
-
-				SetVertexBuffer(pObject->GetVertexBuffer());
-
-				DrawCurrentMaterial(renderMode, pObject);
-			}
-		}
-
-		SetAlphaMode(eMaterialAlphaMode_Solid);
-		SetAlphaLimit(mfDefaultAlphaLimit);
-
-
-
-		END_RENDER_PASS();
-	}
-
-    //-----------------------------------------------------------------------
-
 	void cRendererDeferred::RenderReflection(iRenderable *apObject)
 	{
 		////////////////////////////////////
@@ -2414,8 +1982,6 @@ namespace hpl {
 		RenderViewport pSaved_RenderTarget = m_currentRenderTarget;
 		bool bSaved_SendFrameBufferToPostEffects = mbSendFrameBufferToPostEffects;
 
-
-		EndRendering(false);
 
 		SetAlphaLimit(mfDefaultAlphaLimit);//Need to have the normal alpha limit!
 
@@ -2647,10 +2213,6 @@ namespace hpl {
 		SetAlphaMode(eMaterialAlphaMode_Trans);
 	}
 
-	[[deprecated("remove used of eGBufferComponents")]]
-	void cRendererDeferred::SetGBuffer(eGBufferComponents aComponents)
-	{
-	}
 
 	[[deprecated("remove used of eGBufferComponents")]]
 	iFrameBuffer* cRendererDeferred::GetGBufferFrameBuffer(eGBufferComponents aComponents)
@@ -2664,6 +2226,5 @@ namespace hpl {
 		// BX_ASSERT(false, "noop");
 		return nullptr;
 	}
-
 
 }

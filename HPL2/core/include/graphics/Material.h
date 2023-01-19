@@ -79,9 +79,6 @@ namespace hpl {
 		void SetImage(eMaterialTexture aType, Image *apTexture);
 		Image *GetImage(eMaterialTexture aType);
 
-		void SetTexture(eMaterialTexture aType, iTexture *apTexture);
-		iTexture *GetTexture(eMaterialTexture aType);
-
 		void SetVars(iMaterialVars *apVars){ mpVars = apVars;}
 		iMaterialVars* GetVars(){ return mpVars;}
 		cResourceVarsObject* GetVarsObject();
@@ -117,8 +114,6 @@ namespace hpl {
 		void SetAffectedByFog(bool abX){ mbAffectedByFog = abX;}
 		bool GetAffectedByFog(){ return mbAffectedByFog;}
 
-		inline iTexture* GetTextureInUnit(eMaterialRenderMode aRenderMode, int alUnit) const { return mvTextureInUnit[aRenderMode][alUnit];}
-		inline iGpuProgram* GetProgram(char alSkeleton,eMaterialRenderMode aRenderMode) const { return mvPrograms[alSkeleton][aRenderMode];}
 		inline eMaterialBlendMode GetBlendMode() const { return mBlendMode; }
 		inline eMaterialAlphaMode GetAlphaMode() const { return mAlphaMode; }
 		inline bool GetDepthTest() const { return mbDepthTest; }
@@ -193,12 +188,7 @@ namespace hpl {
 
 		bool mbUseAlphaDissolveFilter;
 
-		iGpuProgram *mvPrograms[2][eMaterialRenderMode_LastEnum]; //[2] == If it has skeleton or not.
-		Image* m_image[eMaterialTexture_LastEnum];
-		Image* m_imageInUnit[eMaterialRenderMode_LastEnum][kMaxTextureUnits];
-		
-		iTexture* mvTextures[eMaterialTexture_LastEnum];
-		iTexture* mvTextureInUnit[eMaterialRenderMode_LastEnum][kMaxTextureUnits];
+		std::array<Image*, eMaterialTexture_LastEnum> m_image = {nullptr};
 
 		std::vector<cMaterialUvAnimation> mvUvAnimations;
 		bool mbHasUvAnimation;

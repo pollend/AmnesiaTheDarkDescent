@@ -25,7 +25,6 @@
 #include "system/LowLevelSystem.h"
 #include "system/PreprocessParser.h"
 #include <algorithm>
-#include <graphics/BGFXProgram.h>
 #include <iterator>
 
 #include "resources/Resources.h"
@@ -40,7 +39,6 @@
 #include "graphics/Graphics.h"
 #include "graphics/LowLevelGraphics.h"
 #include "graphics/Material.h"
-#include "graphics/ProgramComboManager.h"
 #include "graphics/Renderable.h"
 #include "graphics/Renderer.h"
 
@@ -147,119 +145,12 @@ namespace hpl
     {
     }
 
-    //--------------------------------------------------------------------------
-
-    void cMaterialType_Water::DestroyProgram(
-        cMaterial* apMaterial, eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, char alSkeleton)
-    {
-        mpProgramManager->DestroyGeneratedProgram(eMaterialRenderMode_Diffuse, apProgram);
-    }
-
-    //--------------------------------------------------------------------------
-
     void cMaterialType_Water::LoadData()
     {
-        /////////////////////////////
-        // Load Diffuse programs
-        cParserVarContainer defaultVars;
-        defaultVars.Add("UseUv");
-        defaultVars.Add("UseNormals");
-        defaultVars.Add("UseVertexPosition");
-        defaultVars.Add("UseRefractionEdgeCheck");
-        defaultVars.Add("UseNormals");
-        defaultVars.Add("UseNormalMapping");
-        if (iRenderer::GetRefractionEnabled())
-            defaultVars.Add("UseRefraction");
 
-        mpProgramManager->SetupGenerateProgramData(
-            eMaterialRenderMode_Diffuse,
-            "Diffuse",
-            "deferred_base_vtx.glsl",
-            "water_surface_frag.glsl",
-            vDiffuseFeatureVec,
-            kDiffuseFeatureNum,
-            defaultVars);
-
-        ////////////////////////////////
-        // Set up variable ids
-        mpProgramManager->AddGenerateProgramVariableId("afT", kVar_afT, eMaterialRenderMode_Diffuse);
-        mpProgramManager->AddGenerateProgramVariableId("afRefractionScale", kVar_afRefractionScale, eMaterialRenderMode_Diffuse);
-        mpProgramManager->AddGenerateProgramVariableId("a_mtxInvViewRotation", kVar_a_mtxInvViewRotation, eMaterialRenderMode_Diffuse);
-        mpProgramManager->AddGenerateProgramVariableId("avReflectionMapSizeMul", kVar_avReflectionMapSizeMul, eMaterialRenderMode_Diffuse);
-        mpProgramManager->AddGenerateProgramVariableId("avFrenselBiasPow", kVar_avFrenselBiasPow, eMaterialRenderMode_Diffuse);
-        mpProgramManager->AddGenerateProgramVariableId(
-            "avReflectionFadeStartAndLength", kVar_avReflectionFadeStartAndLength, eMaterialRenderMode_Diffuse);
-        mpProgramManager->AddGenerateProgramVariableId("afWaveAmplitude", kVar_afWaveAmplitude, eMaterialRenderMode_Diffuse);
-        mpProgramManager->AddGenerateProgramVariableId("afWaveFreq", kVar_afWaveFreq, eMaterialRenderMode_Diffuse);
-
-        mpProgramManager->AddGenerateProgramVariableId("avFogStartAndLength", kVar_avFogStartAndLength, eMaterialRenderMode_Diffuse);
-        mpProgramManager->AddGenerateProgramVariableId("avFogColor", kVar_avFogColor, eMaterialRenderMode_Diffuse);
-        mpProgramManager->AddGenerateProgramVariableId("afFalloffExp", kVar_afFalloffExp, eMaterialRenderMode_Diffuse);
     }
     void cMaterialType_Water::DestroyData()
     {
-        mpProgramManager->DestroyShadersAndPrograms();
-    }
-
-
-    iTexture* cMaterialType_Water::GetTextureForUnit(cMaterial* apMaterial, eMaterialRenderMode aRenderMode, int alUnit)
-    {
-        ////////////////////////////
-        // Z
-        if (aRenderMode == eMaterialRenderMode_Z)
-        {
-            switch (alUnit)
-            {
-            case 0:
-                return apMaterial->GetTexture(eMaterialTexture_Diffuse);
-            }
-        }
-        ////////////////////////////
-        // Diffuse
-        else if (aRenderMode == eMaterialRenderMode_Diffuse || aRenderMode == eMaterialRenderMode_DiffuseFog)
-        {
-            cMaterialType_Water_Vars* pVars = static_cast<cMaterialType_Water_Vars*>(apMaterial->GetVars());
-
-            switch (alUnit)
-            {
-            case 0:
-                return apMaterial->GetTexture(eMaterialTexture_Diffuse);
-            case 1:
-                return apMaterial->GetTexture(eMaterialTexture_NMap);
-            case 2:
-                if (iRenderer::GetRefractionEnabled())
-                    return mpGraphics->GetRenderer(eRenderer_Main)->GetRefractionTexture();
-                else
-                    return NULL;
-            case 3:
-                if (iRenderer::GetRefractionEnabled())
-                {
-                    if (apMaterial->GetTexture(eMaterialTexture_CubeMap))
-                        return apMaterial->GetTexture(eMaterialTexture_CubeMap);
-                    else
-                        return mpGraphics->GetRenderer(eRenderer_Main)->GetReflectionTexture();
-                }
-                else
-                {
-                    return NULL;
-                }
-            }
-        }
-
-        return NULL;
-    }
-
-
-    iTexture* cMaterialType_Water::GetSpecialTexture(
-        cMaterial* apMaterial, eMaterialRenderMode aRenderMode, iRenderer* apRenderer, int alUnit)
-    {
-        return NULL;
-    }
-
-
-    iGpuProgram* cMaterialType_Water::GetGpuProgram(cMaterial* apMaterial, eMaterialRenderMode aRenderMode, char alSkeleton)
-    {
-        return nullptr;
     }
 
      void cMaterialType_Water::ResolveShaderProgram(
@@ -342,30 +233,7 @@ namespace hpl
             handler(program);
 
         }
-
-
-
     }
-
-    //--------------------------------------------------------------------------
-
-    void cMaterialType_Water::SetupTypeSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderer* apRenderer)
-    {
-    }
-
-    //--------------------------------------------------------------------------
-
-    void cMaterialType_Water::SetupMaterialSpecificData(
-        eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial* apMaterial, iRenderer* apRenderer)
-    {
-        
-    }
-
-    void cMaterialType_Water::SetupObjectSpecificData(
-        eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderable* apObject, iRenderer* apRenderer)
-    {
-    }
-
 
     iMaterialVars* cMaterialType_Water::CreateSpecificVariables()
     {

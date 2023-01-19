@@ -20,7 +20,6 @@
 #include "graphics/MaterialType_BasicTranslucent.h"
 
 #include "bgfx/bgfx.h"
-#include "graphics/BGFXProgram.h"
 #include "graphics/GraphicsContext.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Image.h"
@@ -43,7 +42,6 @@
 #include "graphics/Graphics.h"
 #include "graphics/LowLevelGraphics.h"
 #include "graphics/Material.h"
-#include "graphics/ProgramComboManager.h"
 #include "graphics/RenderList.h"
 #include "graphics/Renderable.h"
 #include "graphics/Renderer.h"
@@ -129,10 +127,6 @@ namespace hpl
         AddVarFloat("RimLightPow", 8.0f, "The sharpness of the rim lighting.");
         AddVarBool("AffectedByLightLevel", false, "The the material alpha is affected by the light level.");
 
-        for (int i = 0; i < 5; ++i)
-            mpBlendProgramManager[i] =
-                hplNew(cProgramComboManager, ("Blend" + cString::ToString(i), mpGraphics, mpResources, eMaterialRenderMode_LastEnum));
-
         mbHasTypeSpecifics[eMaterialRenderMode_Diffuse] = true;
         mbHasTypeSpecifics[eMaterialRenderMode_DiffuseFog] = true;
         mbHasTypeSpecifics[eMaterialRenderMode_Illumination] = true;
@@ -169,143 +163,14 @@ namespace hpl
 
     cMaterialType_Translucent::~cMaterialType_Translucent()
     {
-        for (int i = 0; i < 5; ++i)
-            hplDelete(mpBlendProgramManager[i]);
+
     }
-
-    //--------------------------------------------------------------------------
-
-    void cMaterialType_Translucent::DestroyProgram(
-        cMaterial* apMaterial, eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, char alSkeleton)
-    {
-        int lProgramNum = apMaterial->GetBlendMode() - 1;
-
-        // These render modes always use add!!
-        if (aRenderMode == eMaterialRenderMode_Illumination || aRenderMode == eMaterialRenderMode_IlluminationFog)
-        {
-            lProgramNum = eMaterialBlendMode_Add - 1;
-        }
-
-        // Log("Destroying mat '%s' program '%s' / %d manager num: %d\n", apMaterial->GetName().c_str(),
-        // apProgram->GetName().c_str(),apProgram, lProgramNum);
-        mpBlendProgramManager[lProgramNum]->DestroyGeneratedProgram(eMaterialRenderMode_Diffuse, apProgram);
-    }
-
-    //--------------------------------------------------------------------------
 
     void cMaterialType_Translucent::LoadData()
     {
-        for (int i = 0; i < 5; ++i)
-        {
-            cParserVarContainer defaultVars;
-            defaultVars.Add("UseUv");
-            defaultVars.Add("UseNormals");
-            defaultVars.Add("UseColor");
-
-            if (i == 0)
-                defaultVars.Add("BlendMode_Add");
-            if (i == 1)
-                defaultVars.Add("BlendMode_Mul");
-            if (i == 2)
-                defaultVars.Add("BlendMode_MulX2");
-            if (i == 3)
-                defaultVars.Add("BlendMode_Alpha");
-            if (i == 4)
-                defaultVars.Add("BlendMode_PremulAlpha");
-
-            mpBlendProgramManager[i]->SetupGenerateProgramData(
-                eMaterialRenderMode_Diffuse,
-                "Diffuse",
-                "deferred_base_vtx.glsl",
-                "deferred_transparent_frag.glsl",
-                vDiffuseFeatureVec,
-                kDiffuseFeatureNum,
-                defaultVars);
-
-            ////////////////////////////////
-            // Set up variable ids
-            mpBlendProgramManager[i]->AddGenerateProgramVariableId("afAlpha", kVar_afAlpha, eMaterialRenderMode_Diffuse);
-            mpBlendProgramManager[i]->AddGenerateProgramVariableId(
-                "avFogStartAndLength", kVar_avFogStartAndLength, eMaterialRenderMode_Diffuse);
-            mpBlendProgramManager[i]->AddGenerateProgramVariableId(
-                "afOneMinusFogAlpha", kVar_afOneMinusFogAlpha, eMaterialRenderMode_Diffuse);
-            mpBlendProgramManager[i]->AddGenerateProgramVariableId("afFalloffExp", kVar_afFalloffExp, eMaterialRenderMode_Diffuse);
-            mpBlendProgramManager[i]->AddGenerateProgramVariableId("a_mtxUV", kVar_a_mtxUV, eMaterialRenderMode_Diffuse);
-            mpBlendProgramManager[i]->AddGenerateProgramVariableId(
-                "afRefractionScale", kVar_afRefractionScale, eMaterialRenderMode_Diffuse);
-            mpBlendProgramManager[i]->AddGenerateProgramVariableId(
-                "a_mtxInvViewRotation", kVar_a_mtxInvViewRotation, eMaterialRenderMode_Diffuse);
-            mpBlendProgramManager[i]->AddGenerateProgramVariableId("avFrenselBiasPow", kVar_avFrenselBiasPow, eMaterialRenderMode_Diffuse);
-            mpBlendProgramManager[i]->AddGenerateProgramVariableId("avRimLightMulPow", kVar_avRimLightMulPow, eMaterialRenderMode_Diffuse);
-            mpBlendProgramManager[i]->AddGenerateProgramVariableId("afLightLevel", kVar_afLightLevel, eMaterialRenderMode_Diffuse);
-        }
     }
     void cMaterialType_Translucent::DestroyData()
     {
-        for (int i = 0; i < 5; ++i)
-            mpBlendProgramManager[i]->DestroyShadersAndPrograms();
-    }
-
-    //--------------------------------------------------------------------------
-
-    iTexture* cMaterialType_Translucent::GetTextureForUnit(cMaterial* apMaterial, eMaterialRenderMode aRenderMode, int alUnit)
-    {
-        cMaterialType_Translucent_Vars* pVars = (cMaterialType_Translucent_Vars*)apMaterial->GetVars();
-
-        bool bRefractionEnabled = pVars->mbRefraction && iRenderer::GetRefractionEnabled();
-
-        ////////////////////////////
-        // Diffuse
-        if (aRenderMode == eMaterialRenderMode_Diffuse || aRenderMode == eMaterialRenderMode_DiffuseFog)
-        {
-            switch (alUnit)
-            {
-            case 0:
-                return apMaterial->GetTexture(eMaterialTexture_Diffuse);
-            case 1:
-                return apMaterial->GetTexture(eMaterialTexture_NMap);
-            case 2:
-                if (bRefractionEnabled)
-                    return mpGraphics->GetRenderer(eRenderer_Main)->GetRefractionTexture();
-                else
-                    return NULL;
-            case 3:
-                return apMaterial->GetTexture(eMaterialTexture_CubeMap);
-            case 4:
-                return apMaterial->GetTexture(eMaterialTexture_CubeMapAlpha);
-            }
-        }
-        ////////////////////////////
-        // Illumination
-        else if (aRenderMode == eMaterialRenderMode_Illumination || aRenderMode == eMaterialRenderMode_IlluminationFog)
-        {
-            switch (alUnit)
-            {
-            case 1:
-                return apMaterial->GetTexture(eMaterialTexture_NMap);
-            case 3:
-                return apMaterial->GetTexture(eMaterialTexture_CubeMap);
-            case 4:
-                return apMaterial->GetTexture(eMaterialTexture_CubeMapAlpha);
-            }
-        }
-
-        return NULL;
-    }
-
-    //--------------------------------------------------------------------------
-
-    iTexture* cMaterialType_Translucent::GetSpecialTexture(
-        cMaterial* apMaterial, eMaterialRenderMode aRenderMode, iRenderer* apRenderer, int alUnit)
-    {
-        return NULL;
-    }
-
-    //--------------------------------------------------------------------------
-
-    iGpuProgram* cMaterialType_Translucent::GetGpuProgram(cMaterial* apMaterial, eMaterialRenderMode aRenderMode, char alSkeleton)
-    {
-        return nullptr;
     }
 
 
@@ -473,28 +338,6 @@ namespace hpl
 
         }
 
-
-    //--------------------------------------------------------------------------
-
-    void cMaterialType_Translucent::SetupTypeSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderer* apRenderer)
-    {
-    }
-
-    //--------------------------------------------------------------------------
-
-    void cMaterialType_Translucent::SetupMaterialSpecificData(
-        eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial* apMaterial, iRenderer* apRenderer)
-    {
-    }
-
-    //--------------------------------------------------------------------------
-
-    void cMaterialType_Translucent::SetupObjectSpecificData(
-        eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderable* apObject, iRenderer* apRenderer)
-    {
-        
-    }
-
     iMaterialVars* cMaterialType_Translucent::CreateSpecificVariables()
     {
         cMaterialType_Translucent_Vars* pVars = hplNew(cMaterialType_Translucent_Vars, ());
@@ -575,7 +418,7 @@ namespace hpl
 
         /////////////////////////////////////
         // Set up the reflections
-        if (apMaterial->GetTexture(eMaterialTexture_CubeMap))
+        if (apMaterial->GetImage(eMaterialTexture_CubeMap))
         {
             if (bRefractionEnabled == false)
                 apMaterial->SetHasTranslucentIllumination(true);

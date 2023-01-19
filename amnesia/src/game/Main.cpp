@@ -18,6 +18,7 @@
  */
 
 #include "LuxBase.h"
+#include "graphics/EntrySDL.h"
 
 //---------------------------------------
 #ifdef WIN32
@@ -40,25 +41,34 @@ int hplMain(const tString &asCommandline)
 	#endif
 
 
-	//////////////////////////
-	// Game creation and exit
-	gpBase = hplNew( cLuxBase, ());
+	hpl::entry_sdl::setThreadHandler([&]() {
+		//////////////////////////
+		// Game creation and exit
+		gpBase = hplNew( cLuxBase, ());
 
-	//Init and run if all okay
-	if(gpBase->Init(asCommandline))
-	{
-		gpBase->Run();
-		gpBase->Exit();
-	}
-	//Error occurred
-	else
-	{
-		if(gpBase->msErrorMessage==_W(""))
-			gpBase->msErrorMessage = _W("Error occured");
+		//Init and run if all okay
+		if(gpBase->Init(asCommandline))
+		{
+			gpBase->Run();
+			gpBase->Exit();
+		}
+		//Error occurred
+		else
+		{
+			if(gpBase->msErrorMessage==_W(""))
+				gpBase->msErrorMessage = _W("Error occured");
 
-		cPlatform::CreateMessageBox(_W("Error!"),gpBase->msErrorMessage.c_str());
-		//No Exit, since it was not sure everything was created as it should.
-	}
+			cPlatform::CreateMessageBox(_W("Error!"),gpBase->msErrorMessage.c_str());
+			//No Exit, since it was not sure everything was created as it should.
+		}
+		return 0;
+	});
+
+	hpl::entry_sdl::Configuration config = {};
+	config.m_name = "Amnesia";
+	config.m_width = 1024;
+	config.m_height = 768;
+	hpl::entry_sdl::run(config);
 
 	hplDelete(gpBase);
 

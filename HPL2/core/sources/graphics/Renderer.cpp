@@ -28,6 +28,7 @@
 #include "math/Math.h"
 #include "math/BoundingVolume.h"
 
+#include "math/MathTypes.h"
 #include "scene/SceneTypes.h"
 #include "system/LowLevelSystem.h"
 #include "system/PreprocessParser.h"
@@ -43,7 +44,6 @@
 #include "graphics/FrameBuffer.h"
 #include "graphics/Material.h"
 #include "graphics/MaterialType.h"
-#include "graphics/ProgramComboManager.h"
 #include "graphics/GPUProgram.h"
 #include "graphics/Mesh.h"
 #include "graphics/SubMesh.h"
@@ -409,9 +409,6 @@ namespace hpl {
 		mbOnlyRenderPrevVisibleOcclusionObjects = false;
 		mlOnlyRenderPrevVisibleOcclusionObjectsFrameCount =0;
 
-		//////////////
-		//Create data classes
-		// mpProgramManager  = hplNew(	cProgramComboManager, (msName, mpGraphics, mpResources, alNumOfProgramComboModes));
 
 		//////////////
 		//Init variables
@@ -432,13 +429,6 @@ namespace hpl {
 
 
 		m_nullShader = hpl::loadProgram("vs_null", "fs_null");
-		//////////////
-		// Create programs
-		// cParserVarContainer vars;
-		// mpDepthOnlyProgram = mpProgramManager->CreateProgramFromShaders("DepthOnly",
-		// 									"deferred_base_vtx.glsl",
-		// 									"deferred_depthonly_frag.glsl",
-		// 									&vars,false);
 
 
 		////////////
@@ -451,16 +441,16 @@ namespace hpl {
 
 	iRenderer::~iRenderer()
 	{
-		DestroyShadowMaps();
 
-		// STLDeleteAll(mvOcclusionQueryPool);
+		if(bgfx::isValid(m_nullShader)) {
+			bgfx::destroy(m_nullShader);
+		}
+
+		DestroyShadowMaps();
 
 		if(mpShapeBox) hplDelete(mpShapeBox);
 
 		hplDelete(mpCallbackFunctions);
-		// hplDelete(mpProgramManager);
-
-		// hplDelete(mpDepthOnlyProgram);
 	}
 
 	//-----------------------------------------------------------------------
@@ -479,7 +469,6 @@ namespace hpl {
 		SetupRenderList();
         RenderObjects();
 
-        EndRendering();
 	}
 
 	void iRenderer::RenderableHelper(eRenderListType type, eMaterialRenderMode mode, std::function<void(iRenderable* obj, GraphicsContext::LayoutStream&, GraphicsContext::ShaderProgram&)> handler) {
@@ -511,12 +500,6 @@ namespace hpl {
 		mfTimeCount += afTimeStep;
 	}
 
-	//-----------------------------------------------------------------------
-
-	iTexture* iRenderer::GetPostEffectTexture()
-	{
-		return nullptr;
-	}
 
 	//-----------------------------------------------------------------------
 
@@ -644,39 +627,6 @@ namespace hpl {
 			mpCurrentRenderList->Clear();
 	}
 
-        //-----------------------------------------------------------------------
-
-	void iRenderer::EndRendering(bool abAtEndOfRendering)
-	{
-		///////////////////////////////
-		//Clear all occlusion objects
-		if(abAtEndOfRendering)
-			mpCurrentSettings->ClearOcclusionObjects(this);
-
-		/////////////////////////////////////////////
-		// If no post effects, make sure rendering is copied to frame buffer.
-		if(abAtEndOfRendering && mbSendFrameBufferToPostEffects==false)
-		{
-			CopyToFrameBuffer();
-		}
-		/////////////////////////////////////////////
-		// Reset the cull mode setup
-		// mpLowLevelGraphics->SetCullMode(eCullMode_CounterClockwise);
-
-	
-		if(abAtEndOfRendering && mbLog)
-		{
-			Log("----------\n");
-			Log("Frame stats:\n");
-			Log("----------\n");
-			Log(" Number of Solid Objects: %d\n", mpCurrentRenderList->GetSolidObjectNum());
-			Log(" Number of Trans Objects: %d\n", mpCurrentRenderList->GetTransObjectNum());
-			Log(" Number of Lights: %d\n", mpCurrentRenderList->GetLightNum());
-			Log("-----------------  END -------------------------\n");
-		}
-
-	}
-
 	cShadowMapData* iRenderer::GetShadowMapData(eShadowMapResolution aResolution, iLight *apLight)
 	{
 		////////////////////////////
@@ -767,18 +717,6 @@ namespace hpl {
 
 	void iRenderer::DestroyShadowMaps()
 	{
-		for(int res=0; res < eShadowMapResolution_LastEnum; ++res)
-		{
-			// for(size_t i=0; i<mvShadowMapData[res].size(); ++i)
-			// {
-			// 	cShadowMapData *pData = mvShadowMapData[res][i];
-
-			// 	// mpGraphics->DestroyFrameBuffer(pData->mpBuffer);
-			// 	// mpGraphics->DestroyTexture(pData->mpTexture);
-			// 	// if(pData->mpTempDiffTexture) mpGraphics->DestroyTexture(pData->mpTempDiffTexture);
-			// }
-			// STLDeleteAll(mvShadowMapData[res]);
-		}
 
 	}
 
@@ -786,58 +724,6 @@ namespace hpl {
 
 	void iRenderer::RenderZObject(GraphicsContext& context, iRenderable *apObject, cFrustum *apCustomFrustum)
 	{
-		cMaterial *pMaterial = apObject->GetMaterial();
-
-		eMaterialRenderMode renderMode = apObject->GetCoverageAmount() >= 1 ? eMaterialRenderMode_Z : eMaterialRenderMode_Z_Dissolve;
-		iMaterialType* materialType = pMaterial->GetType();
-		iGpuProgram* program = pMaterial->GetProgram(0, renderMode);
-		iVertexBuffer* vertexBuffer = apObject->GetVertexBuffer();
-		if(vertexBuffer == nullptr || program == nullptr || materialType == nullptr) {
-			return;
-		}
-
-		GraphicsContext::LayoutStream layoutInput;
-		GraphicsContext::ShaderProgram shaderInput;
-		vertexBuffer->GetLayoutStream(layoutInput);
-		// materialType->ResolveShaderProgram(renderMode, pMaterial, apObject, this, std::function<void (GraphicsContext::ShaderProgram &)> program)
-		// materialType->GetShaderData(shaderInput, renderMode, program, pMaterial, apObject, this);
-		
-		// if(apCustomFrustum) {
-		// 	shaderInput.m_modelTransform = *apObject->GetModelMatrix(apCustomFrustum);
-		// } else {
-		// 	shaderInput.m_modelTransform = *apObject->GetModelMatrixPtr();
-		// }
-
-		////////////////////////
-		//Set up render modes
-		SetBlendMode(eMaterialBlendMode_None);
-		SetAlphaLimit(mfDefaultAlphaLimit);
-		SetAlphaMode( pMaterial->GetTexture(eMaterialTexture_Alpha) || renderMode==eMaterialRenderMode_Z_Dissolve ?
-						eMaterialAlphaMode_Trans : eMaterialAlphaMode_Solid);
-
-		////////////////////////
-		//Set up textures
-        SetMaterialTextures(renderMode, pMaterial);
-
-        ////////////////////////
-		//Set up program
-		SetMaterialProgram(renderMode,pMaterial);
-
-
-		////////////////////////
-		//Matrix
-		if(apCustomFrustum)
-			SetMatrix(apObject->GetModelMatrix(apCustomFrustum));
-		else
-			SetMatrix(apObject->GetModelMatrixPtr());
-
-		////////////////////////
-		//Vertex buffer
-		SetVertexBuffer(apObject->GetVertexBuffer());
-
-		////////////////////////
-		//Draw
-		DrawCurrentMaterial(renderMode, apObject);
 	}
 
 	//-----------------------------------------------------------------------
@@ -1227,7 +1113,6 @@ namespace hpl {
 		int lMinRenderedObjects = mpCurrentSettings->mlMinimumObjectsBeforeOcclusionTesting;
 
 		auto pass = context.StartPass("pre-zpass");
-
 		////////////////////////////
 		//Iterate the nodes on the stack.
 		while(!setNodeStack.empty())
@@ -1248,11 +1133,7 @@ namespace hpl {
 			// Check if node was visible
 			bool bWasVisible = apVisibleNodeTracker->WasNodeVisible(pNode);
 
-			auto occlusionResult = bgfx::OcclusionQueryResult::NoResult;
-			if(bgfx::isValid(pNode->GetOcclusionQuery())) {
-				occlusionResult = bgfx::getResult(pNode->GetOcclusionQuery());
-			}
-			occlusionResult = bgfx::OcclusionQueryResult::Visible; // TODO: occlusion queries are broken
+			auto occlusionResult = bgfx::OcclusionQueryResult::Visible; // TODO: occlusion queries are broken
 			
 			//////////////////////////
 			//Render nodes and queue queries
@@ -1271,12 +1152,6 @@ namespace hpl {
 					bRenderObjects = true;
 				}
 
-				// /////////////////////////////////////
-				// // Render AABB and add query to list
-				// AddAndRenderNodeOcclusionQuery(&lstNodeOcclusionPairs, pNode, bRenderObjects);
-				if(!bgfx::isValid(pNode->GetOcclusionQuery())) {
-					pNode->SetOcclusionQuery(bgfx::createOcclusionQuery());
-				}
 				/////////////////////////
 				//Matrix
 				cVector3f vSize = pNode->GetMax() - pNode->GetMin();
@@ -1818,11 +1693,6 @@ namespace hpl {
 		//If alpha, sort by texture (we know alpha is same for both materials, so can just test one)
 		if(	pMatA->GetAlphaMode() == eMaterialAlphaMode_Trans )
 		{
-			if(pMatA->GetProgram(0,eMaterialRenderMode_Z) != pMatB->GetProgram(0,eMaterialRenderMode_Z))
-			{
-				return pMatA->GetProgram(0,eMaterialRenderMode_Z) < pMatB->GetProgram(0,eMaterialRenderMode_Z);
-			}
-
 			if(pMatA->GetImage(eMaterialTexture_Diffuse) != pMatB->GetImage(eMaterialTexture_Diffuse))
 			{
 				return pMatA->GetImage(eMaterialTexture_Diffuse) < pMatB->GetImage(eMaterialTexture_Diffuse);
@@ -1934,7 +1804,7 @@ namespace hpl {
 		//mvShadowCasters.push_back(apObject); //Debug. Only to see what object are rendered.
 
 		//Render the object
-		RenderShadowCaster(apObject,gpTempLightFrustum);
+		// RenderShadowCaster(apObject,gpTempLightFrustum);
 
 		return true;
 	}
@@ -1959,88 +1829,7 @@ namespace hpl {
 			RenderShadowCaster(mvShadowCasters[i], apLightFrustum);
 		}
 	}
-	//-----------------------------------------------------------------------
-
-	void iRenderer::RenderShadowMap(iLight *apLight, iFrameBuffer *apShadowBuffer)
-	{
-		if(mbLog){
-			Log("---\nBegin Rendering Shadow Map for light '%s' / %d to buffer %d\n",apLight->GetName().c_str(), apLight, apShadowBuffer);
-		}
-		/////////////////////////
-		// Get light data
-		if(apLight->GetLightType() != eLightType_Spot) return; //Only support spot lights for now...
-
-        cLightSpot *pSpotLight = static_cast<cLightSpot*>(apLight);
-		cFrustum *pLightFrustum = pSpotLight->GetFrustum();
-
-
-		/////////////////////////
-		// Setup render states
-		SetDepthTest(true);
-		SetDepthWrite(true);
-		SetBlendMode(eMaterialBlendMode_None);
-		SetAlphaMode(eMaterialAlphaMode_Solid);
-		SetAlphaLimit(mfDefaultAlphaLimit);
-		SetChannelMode(eMaterialChannelMode_None);
-
-		SetTextureRange(NULL,0);
-
-		//Do not use any custom occlusion for shadows!
-		SetOcclusionPlanesActive(false);
-
-		mpLowLevelGraphics->SetPolygonOffsetActive(true);
-		mpLowLevelGraphics->SetPolygonOffset(mpCurrentSettings->mfShadowMapBias * apLight->GetShadowMapBiasMul(),
-											 mpCurrentSettings->mfShadowMapSlopeScaleBias * apLight->GetShadowMapSlopeScaleBiasMul());
-
-		/////////////////////////
-		// Setup render target
-		SetFrameBuffer(apShadowBuffer,false, false);
-
-		mpLowLevelGraphics->SetClearDepth(1);
-		ClearFrameBuffer(eClearFrameBufferFlag_Depth, false);
-
-		/////////////////////////
-		// Setup projection
-		cFrustum *pLastFrustum = mpCurrentFrustum;
-		mpCurrentFrustum = pLightFrustum;	//Is this a little too hackish? Not sure...
-		SetFrustumProjection(pLightFrustum);
-
-		/////////////////////////
-		// Render the shadow casters
-		if(apLight->GetOcclusionCullShadowCasters())
-		{
-			gpTempLightFrustum = pLightFrustum;
-			CheckForVisibleObjectsAddToListAndRenderZ(	apLight->GetVisibleNodeTracker(),
-														apLight->GetShadowCastersAffected(),
-														eRenderableFlag_ShadowCaster,
-														false,
-														RenderShadowCasterCHCStaticCallback);
-		}
-		else
-		{
-			RenderShadowCastersNormal(pLightFrustum);
-		}
-
-
-		/////////////////////////
-		// Reset states
-		SetTexture(0,NULL);
-
-		SetOcclusionPlanesActive(true);
-
-		// mpLowLevelGraphics->SetPolygonOffsetActive(false);
-
-		/////////////////////////
-		// Reset projection
-		mpCurrentFrustum = pLastFrustum;
-		SetNormalFrustumProjection();
-
-
-		if(mbLog) Log("End Rendering Shadow Map\n---\n");
-	}
-
-	//-----------------------------------------------------------------------
-
+	
 	static bool SortFunc_OcclusionObject(cOcclusionQueryObject* apObjectA, cOcclusionQueryObject *apObjectB)
 	{
 		//////////////////////////
@@ -2168,86 +1957,6 @@ namespace hpl {
 		return SetScissorRect(mTempClipRect, true);
 	}
 
-	//-----------------------------------------------------------------------
-
-
-	void iRenderer::SetMaterialProgram(eMaterialRenderMode aRenderMode, cMaterial *apMaterial)
-	{
-		iMaterialType *pMatType = apMaterial->GetType();
-		iGpuProgram *pProgram = apMaterial->GetProgram(0,aRenderMode);
-
-		///////////////////////////////////////
-		// Check if program is set
-		bool bNewProgramSet = false;
-		if(mpCurrentProgram != pProgram)
-		{
-			bNewProgramSet = true;
-			if(pProgram)
-			{
-				if(mbLog) Log("  Setting gpu program %d : '%s'\n", pProgram, pProgram->GetName().c_str());
-				pProgram->Bind();
-			}
-			else
-			{
-				if(mbLog) Log("  Setting gpu program NULL\n");
-				mpCurrentProgram->UnBind();
-			}
-
-			mpCurrentProgram = pProgram;
-		}
-
-		///////////////////////////////////////
-		// A program is currently set, check if variables need updating
-		if(mpCurrentProgram)
-		{
-			//////////////////////
-			//Check if Type specific changes are needed
-			if(pMatType->HasTypeSpecifics(aRenderMode) && (bNewProgramSet || mpCurrentMaterialType != pMatType) )
-			{
-				if(mbLog) Log("  Setting up type specific program vars for material type %d/'%s'\n",pMatType,pMatType->GetName().c_str());
-				pMatType->SetupTypeSpecificData(aRenderMode,pProgram,this);
-				mpCurrentMaterialType = pMatType;
-			}
-			//////////////////////
-			//Check if Material specific changes are needed
-			if(apMaterial->GetHasSpecificSettings(aRenderMode) && (bNewProgramSet || mpCurrentMaterial != apMaterial) )
-			{
-				if(mbLog) Log("  Setting up material specific program vars for material %d/'%s'\n",apMaterial,apMaterial->GetName().c_str());
-				pMatType->SetupMaterialSpecificData(aRenderMode,pProgram,apMaterial,this);
-				mpCurrentMaterial = apMaterial;
-			}
-		}
-
-
-
-		//TODO: If Cg is to be used, the worldviewproj matrix need to be setup!
-	}
-
-	//-----------------------------------------------------------------------
-
-	void iRenderer::SetMaterialTextures(eMaterialRenderMode aRenderMode, cMaterial *apMaterial)
-	{
-	}
-
-	//-----------------------------------------------------------------------
-
-	void iRenderer::DrawCurrentMaterial(eMaterialRenderMode aRenderMode, iRenderable *apObject)
-	{
-		if(apObject)
-		{
-			cMaterial *pMaterial = apObject->GetMaterial();
-			iMaterialType *pMatType = pMaterial->GetType();
-
-			if(pMaterial->HasObjectSpecificsSettings(aRenderMode))
-			{
-				pMatType->SetupObjectSpecificData(aRenderMode,mpCurrentProgram,apObject,this);
-			}
-		}
-
-		DrawCurrent();
-	}
-
-	//-----------------------------------------------------------------------
 
 	bool iRenderer::CheckRenderablePlaneIsVisible(iRenderable *apObject, cFrustum *apFrustum)
 	{

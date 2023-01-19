@@ -128,7 +128,7 @@ namespace hpl {
 		mvMax =0;
 		mfRadius =0;
 		mvCenter =0;
-
+		m_occlusionQuery = bgfx::createOcclusionQuery();
 		mbNeedPropertyUpdate = true;
 		mbNeedAABBUpdate = false;
 		mPrevFrustumCollision = eCollision_Outside;

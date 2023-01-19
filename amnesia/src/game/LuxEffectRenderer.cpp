@@ -221,6 +221,7 @@ void cLuxEffectRenderer::AddEnemyGlow(iRenderable *apObject, float afAlpha)
 
 void cLuxEffectRenderer::RenderFlashObjects(cRendererCallbackFunctions* apFunctions)
 {
+	BX_ASSERT(false, "TODO: Fix this!");
 	if(mvFlashObjects.empty()) return;
 	if(mpFlashProgram==NULL) return;
 
@@ -249,7 +250,7 @@ void cLuxEffectRenderer::RenderFlashObjects(cRendererCallbackFunctions* apFuncti
 		if(mpFlashProgram)
 			mpFlashProgram->SetFloat(kVar_afColorMul,mvFlashObjects[i].mfAlpha*fGlobalAlpha);
 
-		apFunctions->SetTexture(0, pObject->GetMaterial()->GetTexture(eMaterialTexture_Diffuse));
+		// apFunctions->SetTexture(0, pObject->GetMaterial()->GetTexture(eMaterialTexture_Diffuse));
 
 		apFunctions->SetVertexBuffer(pObject->GetVertexBuffer());
 		apFunctions->SetMatrix(pObject->GetModelMatrixPtr());
@@ -292,7 +293,7 @@ void cLuxEffectRenderer::RenderEnemyGlow(cRendererCallbackFunctions* apFunctions
 
 		mpEnemyGlowProgram->SetFloat(kVar_afColorMul,mvEnemyGlowObjects[i].mfAlpha);
 
-		apFunctions->SetTexture(0, pObject->GetMaterial()->GetTexture(eMaterialTexture_Diffuse));
+		// apFunctions->SetTexture(0, pObject->GetMaterial()->GetTexture(eMaterialTexture_Diffuse));
 
 		apFunctions->SetVertexBuffer(pObject->GetVertexBuffer());
 		apFunctions->SetMatrix(pObject->GetModelMatrixPtr());
@@ -379,7 +380,7 @@ void cLuxEffectRenderer::RenderOutline(cRendererCallbackFunctions* apFunctions)
 
 		/////////////////
 		// Solid
-		if(pObject->GetMaterial()->GetTexture(eMaterialTexture_Alpha)==NULL)
+		if(pObject->GetMaterial()->GetImage(eMaterialTexture_Alpha)==NULL)
 		{
 			apFunctions->SetAlphaMode(eMaterialAlphaMode_Solid);
 			apFunctions->SetProgram(mpOutlineStencilProgram);
@@ -391,7 +392,7 @@ void cLuxEffectRenderer::RenderOutline(cRendererCallbackFunctions* apFunctions)
 		{
 			apFunctions->SetAlphaMode(eMaterialAlphaMode_Trans);
 			apFunctions->SetProgram(mpOutlineStencilAlphaProgram);
-			apFunctions->SetTexture(0, pObject->GetMaterial()->GetTexture(eMaterialTexture_Alpha));
+			// apFunctions->SetTexture(0, pObject->GetMaterial()->GetTexture(eMaterialTexture_Alpha));
 		}
 
 		apFunctions->SetVertexBuffer(pObject->GetVertexBuffer());
@@ -418,18 +419,18 @@ void cLuxEffectRenderer::RenderOutline(cRendererCallbackFunctions* apFunctions)
 
 		cBoundingVolume* pBV = pObject->GetBoundingVolume();
 
-        if(pMat->GetTexture(eMaterialTexture_Alpha))
-		{
-			apFunctions->SetTexture(0, pMat->GetTexture(eMaterialTexture_Alpha));
-			apFunctions->SetProgram(mpOutlineColorProgram[1]);
-			mpOutlineColorProgram[1]->SetColor3f(mpOutlineColorProgram[1]->GetVariableId("gvColor"), cColor(0,0,0.5f,0));
-		}
-		else
-		{
-			apFunctions->SetTexture(0, NULL);
-			apFunctions->SetProgram(mpOutlineColorProgram[0]);
-			mpOutlineColorProgram[0]->SetColor3f(mpOutlineColorProgram[0]->GetVariableId("gvColor"), cColor(0,0,0.5f,0));
-		}
+        // if(pMat->GetTexture(eMaterialTexture_Alpha))
+		// {
+		// 	// apFunctions->SetTexture(0, pMat->GetTexture(eMaterialTexture_Alpha));
+		// 	apFunctions->SetProgram(mpOutlineColorProgram[1]);
+		// 	mpOutlineColorProgram[1]->SetColor3f(mpOutlineColorProgram[1]->GetVariableId("gvColor"), cColor(0,0,0.5f,0));
+		// }
+		// else
+		// {
+		// 	apFunctions->SetTexture(0, NULL);
+		// 	apFunctions->SetProgram(mpOutlineColorProgram[0]);
+		// 	mpOutlineColorProgram[0]->SetColor3f(mpOutlineColorProgram[0]->GetVariableId("gvColor"), cColor(0,0,0.5f,0));
+		// }
 
 		cVector3f vLocalSize = pBV->GetLocalMax() - pBV->GetLocalMin();
 		cVector3f vScale = (cVector3f(1.0f)/vLocalSize) * fScaleAdd  + cVector3f(1.0f);

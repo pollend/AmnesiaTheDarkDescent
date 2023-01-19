@@ -32,6 +32,7 @@
 #include "graphics/RenderFunctions.h"
 #include <cstdint>
 #include <functional>
+#include <vector>
 
 namespace hpl {
 	
@@ -48,7 +49,6 @@ namespace hpl {
 	class cWorld;
 	class cRenderSettings;
 	class cRenderList;
-	class cProgramComboManager;
 	class iLight;
 	class iOcclusionQuery;
 	class cBoundingVolume;
@@ -146,6 +146,8 @@ namespace hpl {
 		std::vector<cLightOcclusionPair> m_lightOcclusionPairs;
 
 		cRenderSettings *mpReflectionSettings;
+
+		std::vector<iRenderableContainerNode*> m_testNodes;
 
 		int mlCurrentOcclusionObject;
 		std::vector<cOcclusionQueryObject*> mvOcclusionObjectPool;
@@ -278,7 +280,6 @@ namespace hpl {
 		virtual void DestroyData()=0;
 
 		virtual Image& FetchOutputFromRenderer() = 0;
-		virtual iTexture* GetPostEffectTexture();
 
 		virtual iTexture* GetRefractionTexture(){ return NULL;}
 		virtual iTexture* GetReflectionTexture(){ return NULL;}
@@ -338,8 +339,6 @@ namespace hpl {
 
 		void BeginRendering(float afFrameTime,cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, const RenderViewport& apRenderTarget,
 							bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList, bool abAtStartOfRendering=true);
-		[[deprecated("just ensure the contents is transfer to the viewport")]]
-		void EndRendering(bool abAtEndOfRendering=true);
 
 		cShadowMapData* GetShadowMapData(eShadowMapResolution aResolution, iLight *apLight);
 		bool ShadowMapNeedsUpdate(iLight *apLight, cShadowMapData *apShadowData);
@@ -394,8 +393,7 @@ namespace hpl {
 		bool RenderShadowCasterCHC(iRenderable *apObject);
 		void RenderShadowCaster(iRenderable *apObject, cFrustum *apLightFrustum);
 		void RenderShadowCastersNormal(cFrustum *apLightFrustum);
-		void RenderShadowMap(iLight *apLight, iFrameBuffer *apShadowBuffer);
-
+	
 		/**
 		 * Only depth is needed for framebuffer. All objects needs to be added to renderlist!
 		 */
@@ -410,12 +408,6 @@ namespace hpl {
 		void RenderBasicSkyBox();
 
 		bool SetupLightScissorRect(iLight *apLight, cMatrixf *apViewSpaceMatrix);
-
-		void SetMaterialProgram(eMaterialRenderMode aRenderMode, cMaterial *apMaterial);
-		void SetMaterialTextures(eMaterialRenderMode aRenderMode, cMaterial *apMaterial);
-
-		void DrawCurrentMaterial(eMaterialRenderMode aRenderMode, iRenderable *apObject);
-
 
 		/**
 		 * Checks if the renderable object is 1) submeshentity 2) is onesided plane 3)is away from camera. If all are true, FALSE is returned.
@@ -461,8 +453,6 @@ namespace hpl {
 		cGpuShaderManager *mpShaderManager;
 
 		bgfx::ProgramHandle m_nullShader;
-
-		// cProgramComboManager* mpProgramManager;
 
 		tString msName;
 

@@ -53,8 +53,6 @@ namespace hpl {
 							eGpuProgramFormat aGpuProgramFormat, const tString& asWindowCaption,
 							const cVector2l &avWindowPos)=0;
 
-		virtual eGpuProgramFormat GetGpuProgramFormat()=0;
-
 		/**
 		 * Get the capabilities of the graphics. Th return value depends on the capability
 		 * \return

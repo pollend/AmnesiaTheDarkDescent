@@ -162,7 +162,6 @@ namespace hpl {
 		void DestroyData();
 
 		virtual Image& FetchOutputFromRenderer() override;
-		iTexture* GetPostEffectTexture();
 
 		iFrameBuffer* GetGBufferFrameBuffer(eGBufferComponents aComponents);
 
@@ -252,7 +251,6 @@ namespace hpl {
 		void RenderShadowLight(GraphicsContext& context, GraphicsContext::ShaderProgram& shaderProgram, RenderTarget& rt);
 
 		void RenderZ(GraphicsContext& context);
-		void RenderEdgeSmooth();
 
 		void SetupLightsAndRenderQueries(GraphicsContext& context, RenderTarget& rt);
 		void InitLightRendering();
@@ -260,9 +258,6 @@ namespace hpl {
 		void RenderReflection(iRenderable *apObject);
 		void RenderSubMeshEntityReflection(cSubMeshEntity *pReflectionObject);
 
-		void RenderTranslucent();
-
-		void SetGBuffer(eGBufferComponents aComponents);
 		iTexture* GetBufferTexture(int alIdx);
 		
 		iVertexBuffer* GetLightShape(iLight *apLight, eDeferredShapeQuality aQuality);

@@ -83,29 +83,12 @@ namespace hpl
         cMaterialType_Translucent(cGraphics* apGraphics, cResources* apResources);
         ~cMaterialType_Translucent();
 
-        void DestroyProgram(cMaterial* apMaterial, eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, char alSkeleton);
-
-        bool SupportsHWSkinning()
-        {
-            return false;
-        }
-
-        iTexture* GetTextureForUnit(cMaterial* apMaterial, eMaterialRenderMode aRenderMode, int alUnit);
-        iTexture* GetSpecialTexture(cMaterial* apMaterial, eMaterialRenderMode aRenderMode, iRenderer* apRenderer, int alUnit);
-
         virtual void ResolveShaderProgram(
             eMaterialRenderMode aRenderMode,
             cMaterial* apMaterial,
             iRenderable* apObject,
             iRenderer* apRenderer, 
             std::function<void(GraphicsContext::ShaderProgram&)> handler) override;
-
-        iGpuProgram* GetGpuProgram(cMaterial* apMaterial, eMaterialRenderMode aRenderMode, char alSkeleton);
-
-        void SetupTypeSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderer* apRenderer);
-        void SetupMaterialSpecificData(
-            eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial* apMaterial, iRenderer* apRenderer);
-        void SetupObjectSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderable* apObject, iRenderer* apRenderer);
 
         iMaterialVars* CreateSpecificVariables();
         void LoadVariables(cMaterial* apMaterial, cResourceVarsObject* apVars);
@@ -134,8 +117,6 @@ namespace hpl
 
         void LoadData();
         void DestroyData();
-
-        cProgramComboManager* mpBlendProgramManager[5];
     };
 
     //---------------------------------------------------

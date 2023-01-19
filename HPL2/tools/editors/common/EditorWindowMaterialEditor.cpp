@@ -548,8 +548,9 @@ void cMaterialWrapper::Load(const tWString& asFilename)
 
 	for(int i=0;i<eMaterialTexture_LastEnum;++i)
 	{
-		mvTextures[i]->CreateFromTexture(pMat->GetTexture((eMaterialTexture)i));
-		mvTextures[i]->Update();
+		BX_ASSERT(false, "TODO: Fix this!");
+		// mvTextures[i]->CreateFromTexture(pMat->GetTexture((eMaterialTexture)i));
+		// mvTextures[i]->Update();
 	}
 
 	//////////////////////////////////////////////////
@@ -670,8 +671,8 @@ void cMaterialWrapper::UpdateMaterialInMemory(const tString& asName)
 
 	for(int i=0;i<eMaterialTexture_LastEnum;++i)
 	{
-		iTexture* pOldTex = pMat->GetTexture((eMaterialTexture)i);
-		pMat->SetTexture((eMaterialTexture)i, NULL);
+		auto* pOldTex = pMat->GetImage((eMaterialTexture)i);
+		pMat->SetImage((eMaterialTexture)i, NULL);
 
 		if(pOldTex)
 			pTexMgr->Destroy(pOldTex);

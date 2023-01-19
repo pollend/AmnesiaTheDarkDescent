@@ -33,6 +33,8 @@
 #include "scene/MeshEntity.h"
 #include "math/Math.h"
 
+#include <bx/debug.h>
+
 namespace hpl {
 
 	//////////////////////////////////////////////////////////////////////////
@@ -395,6 +397,7 @@ namespace hpl {
 
 	void cDecalCreator::DrawDebug(cRendererCallbackFunctions* apFunctions, bool abDrawAxes, bool abDrawWireframe)
 	{
+		BX_ASSERT(false, "TODO: this does not work");
 		apFunctions->SetMatrix(NULL);
 
 		if(mpDecalVB)
@@ -410,8 +413,10 @@ namespace hpl {
 
 				for(int i=0; i<kMaxTextureUnits; ++i)
 				{
-					iTexture *pTexture = mpDecalMaterial->GetTextureInUnit(eMaterialRenderMode_Diffuse,i);
-					apFunctions->SetTexture(i, pTexture);
+
+					
+					// iTexture *pTexture = mpDecalMaterial->GetTextureInUnit(eMaterialRenderMode_Diffuse,i);
+					// apFunctions->SetTexture(i, pTexture);
 
 				}
 

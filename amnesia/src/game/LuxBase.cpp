@@ -454,7 +454,7 @@ bool cLuxBase::Init(const tString &asCommandline)
 
 	/////////////////////////////
 	// Check so all needed features are supported
-	if(CheckFeatureSupport()==false) return false;
+	// if(CheckFeatureSupport()==false) return false;
 
 	/////////////////////////////
 	// Init the game data and structures

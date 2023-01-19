@@ -64,13 +64,6 @@ namespace hpl
         iMaterialType_SolidBase(cGraphics* apGraphics, cResources* apResources);
         ~iMaterialType_SolidBase();
 
-        void DestroyProgram(cMaterial* apMaterial, eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, char alSkeleton);
-
-        bool SupportsHWSkinning()
-        {
-            return true;
-        }
-
         void CreateGlobalPrograms();
 
         iMaterialVars* CreateSpecificVariables()
@@ -91,13 +84,6 @@ namespace hpl
 
         void LoadData();
         void DestroyData();
-
-        bool mbIsGlobalDataCreator;
-        static bool mbGlobalDataCreated;
-        static cProgramComboManager* mpGlobalProgramManager;
-        //[skeleton][uv animation]
-
-        // ShaderVariantCollection<
 
         ShaderVariantCollection<
             material::solid::DiffuseVariant::Diffuse_NormalMap | 
@@ -168,21 +154,6 @@ namespace hpl
     public:
         cMaterialType_SolidDiffuse(cGraphics* apGraphics, cResources* apResources);
         ~cMaterialType_SolidDiffuse();
-
-        bool SupportsHWSkinning()
-        {
-            return true;
-        }
-
-        iTexture* GetTextureForUnit(cMaterial* apMaterial, eMaterialRenderMode aRenderMode, int alUnit);
-        iTexture* GetSpecialTexture(cMaterial* apMaterial, eMaterialRenderMode aRenderMode, iRenderer* apRenderer, int alUnit);
-
-        iGpuProgram* GetGpuProgram(cMaterial* apMaterial, eMaterialRenderMode aRenderMode, char alSkeleton);
-
-        void SetupTypeSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderer* apRenderer);
-        void SetupMaterialSpecificData(
-            eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial* apMaterial, iRenderer* apRenderer);
-        void SetupObjectSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderable* apObject, iRenderer* apRenderer);
 
         virtual void ResolveShaderProgram(
             eMaterialRenderMode aRenderMode,

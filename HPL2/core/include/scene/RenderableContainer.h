@@ -126,10 +126,6 @@ namespace hpl {
 		void CalculateMinMaxFromObjects();
 
 		bgfx::OcclusionQueryHandle GetOcclusionQuery() const { return m_occlusionQuery; }
-		void SetOcclusionQuery(bgfx::OcclusionQueryHandle handle) { 
-			BX_ASSERT(!bgfx::isValid(m_occlusionQuery), "Occlusion query already set");
-			m_occlusionQuery = handle; 
-		}
 
 	protected:
 		cVector3f mvMin;

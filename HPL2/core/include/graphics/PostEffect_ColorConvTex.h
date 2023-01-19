@@ -54,8 +54,6 @@ namespace hpl {
 		iPostEffect *CreatePostEffect(iPostEffectParams *apParams);
 
 	private:
-		iGpuProgram *mpProgram[2]; //0=no fade, 1=fade
-
 		bgfx::UniformHandle m_u_param;
 		bgfx::UniformHandle m_u_colorConvTex;
 		bgfx::UniformHandle m_u_diffuseTex;

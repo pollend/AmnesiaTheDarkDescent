@@ -618,14 +618,18 @@ void cLuxDebugHandler::OnDraw(float afFrameTime)
 
 		for(int i=0; i<eMaterialTexture_LastEnum; ++i)
 		{
-			iTexture *pTex = pMaterial->GetTexture((eMaterialTexture)i);
+
+			BX_ASSERT(false, "TODO: Fix this!");
+
+			auto* pTex = pMaterial->GetImage((eMaterialTexture)i);
 			if(pTex==NULL) continue;
 
-			float fMemSize = ((float)pTex->GetMemorySize()) / (1024*1024);
-
+			// float fMemSize = ((float)pTex->GetMemorySize()) / (1024*1024);
+			auto imageSize = pTex->GetImageSize();
 			pSet->DrawFont(gpBase->mpDefaultFont, cVector3f(5,fY,10),14,cColor(1,1),_W(" %d size: %d x %d x %d mem: %.2fmb type: %ls file: '%ls'"),
-				i, pTex->GetSize().x, pTex->GetSize().y, pTex->GetSize().z, fMemSize,
-				cString::To16Char(PixelFormatToString(pTex->GetPixelFormat())).c_str(),
+				i, imageSize.x, imageSize.y, -1, -1,
+				"TODO",
+				// cString::To16Char(PixelFormatToString(pTex->GetPixelFormat())).c_str(),
 				pTex->GetFullPath().c_str());
 			fY += 15;
 		}

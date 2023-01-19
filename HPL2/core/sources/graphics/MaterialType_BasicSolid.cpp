@@ -20,7 +20,6 @@
 #include "graphics/MaterialType_BasicSolid.h"
 
 #include "bgfx/bgfx.h"
-#include "graphics/BGFXProgram.h"
 #include "graphics/GraphicsContext.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/MemberID.h"
@@ -42,7 +41,6 @@
 #include "graphics/Graphics.h"
 #include "graphics/LowLevelGraphics.h"
 #include "graphics/Material.h"
-#include "graphics/ProgramComboManager.h"
 #include "graphics/Renderable.h"
 #include "graphics/Renderer.h"
 #include "graphics/RendererDeferred.h"
@@ -126,9 +124,6 @@ namespace hpl
                                             cProgramComboFeature("UseDissolveAlphaMap", kPC_FragmentBit),
                                             cProgramComboFeature("UseAlphaUseDissolveFilter", kPC_FragmentBit) };
 
-    bool iMaterialType_SolidBase::mbGlobalDataCreated = false;
-    cProgramComboManager* iMaterialType_SolidBase::mpGlobalProgramManager;
-
     float iMaterialType_SolidBase::mfVirtualPositionAddScale = 0.03f;
 
     iMaterialType_SolidBase::iMaterialType_SolidBase(cGraphics* apGraphics, cResources* apResources)
@@ -157,8 +152,6 @@ namespace hpl
         m_u_mtxUv = bgfx::createUniform("u_mtxUV", bgfx::UniformType::Mat4);
         m_u_normalMtx = bgfx::createUniform("u_normalMtx", bgfx::UniformType::Mat4);
         m_u_mtxInvViewRotation = bgfx::createUniform("u_mtxInvViewRotation", bgfx::UniformType::Mat4);
-
-        mbIsGlobalDataCreator = false;
     }
 
     //--------------------------------------------------------------------------
@@ -167,48 +160,8 @@ namespace hpl
     {
     }
 
-    //--------------------------------------------------------------------------
-
-    void iMaterialType_SolidBase::DestroyProgram(
-        cMaterial* apMaterial, eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, char alSkeleton)
-    {
-        /////////////////////////////
-        // Remove from global manager
-        if (aRenderMode == eMaterialRenderMode_Z || aRenderMode == eMaterialRenderMode_Z_Dissolve)
-        {
-            mpGlobalProgramManager->DestroyGeneratedProgram(eMaterialRenderMode_Z, apProgram);
-        }
-        /////////////////////////////
-        // Remove from normal manager
-        else
-        {
-            mpProgramManager->DestroyGeneratedProgram(aRenderMode, apProgram);
-        }
-    }
-
-    //--------------------------------------------------------------------------
-
     void iMaterialType_SolidBase::CreateGlobalPrograms()
     {
-        if (mbGlobalDataCreated)
-            return;
-
-        mbGlobalDataCreated = true;
-        mbIsGlobalDataCreator = true;
-
-        /////////////////////////////
-        // Load programs
-        // This makes this material's program manager responsible for managing the global programs!
-        cParserVarContainer defaultVars;
-        defaultVars.Add("UseUv");
-
-        mpProgramManager->SetupGenerateProgramData(
-            eMaterialRenderMode_Z, "Z", "vs_deferred_base", "fs_deferred_base", vZFeatureVec, kZFeatureNum, defaultVars);
-
-        mpProgramManager->AddGenerateProgramVariableId("a_mtxUV", kVar_a_mtxUV, eMaterialRenderMode_Z);
-        mpProgramManager->AddGenerateProgramVariableId("afDissolveAmount", kVar_afDissolveAmount, eMaterialRenderMode_Z);
-
-        mpGlobalProgramManager = mpProgramManager;
     }
 
     //--------------------------------------------------------------------------
@@ -231,13 +184,7 @@ namespace hpl
 
     void iMaterialType_SolidBase::DestroyData()
     {
-  
-        // If this instace was global data creator, then it needs to be recreated.
-        if (mbIsGlobalDataCreator)
-        {
-            mbGlobalDataCreated = false;
-        }
-        mpProgramManager->DestroyShadersAndPrograms();
+
     }
 
     //--------------------------------------------------------------------------
@@ -344,38 +291,6 @@ namespace hpl
         {
             defaultVars.Add("ParallaxMethod_Simple");
         }
-
-        mpProgramManager->SetupGenerateProgramData(
-            eMaterialRenderMode_Diffuse,
-            "Diffuse",
-            "deferred_base_vtx.glsl",
-            "deferred_gbuffer_solid_frag.glsl",
-            vDiffuseFeatureVec,
-            kDiffuseFeatureNum,
-            defaultVars);
-
-        /////////////////////////////
-        // Load Illumination programs
-        defaultVars.Clear();
-        defaultVars.Add("UseUv");
-        mpProgramManager->SetupGenerateProgramData(
-            eMaterialRenderMode_Illumination,
-            "Illum",
-            "deferred_base_vtx.glsl",
-            "deferred_illumination_frag.glsl",
-            vIllumFeatureVec,
-            kIllumFeatureNum,
-            defaultVars);
-
-        mpProgramManager->AddGenerateProgramVariableId("afInvFarPlane", kVar_afInvFarPlane, eMaterialRenderMode_Diffuse);
-        mpProgramManager->AddGenerateProgramVariableId(
-            "avHeightMapScaleAndBias", kVar_avHeightMapScaleAndBias, eMaterialRenderMode_Diffuse);
-        mpProgramManager->AddGenerateProgramVariableId("a_mtxUV", kVar_a_mtxUV, eMaterialRenderMode_Diffuse);
-        mpProgramManager->AddGenerateProgramVariableId("avFrenselBiasPow", kVar_avFrenselBiasPow, eMaterialRenderMode_Diffuse);
-        mpProgramManager->AddGenerateProgramVariableId("a_mtxInvViewRotation", kVar_a_mtxInvViewRotation, eMaterialRenderMode_Diffuse);
-
-        mpProgramManager->AddGenerateProgramVariableId("a_mtxUV", kVar_a_mtxUV, eMaterialRenderMode_Illumination);
-        mpProgramManager->AddGenerateProgramVariableId("afColorMul", kVar_afColorMul, eMaterialRenderMode_Illumination);
     }
 
     //--------------------------------------------------------------------------
@@ -423,27 +338,6 @@ namespace hpl
         }
     }
 
-    //--------------------------------------------------------------------------
-
-    iTexture* cMaterialType_SolidDiffuse::GetTextureForUnit(cMaterial* apMaterial, eMaterialRenderMode aRenderMode, int alUnit)
-    {
-        return NULL;
-    }
-    //--------------------------------------------------------------------------
-
-    iTexture* cMaterialType_SolidDiffuse::GetSpecialTexture(
-        cMaterial* apMaterial, eMaterialRenderMode aRenderMode, iRenderer* apRenderer, int alUnit)
-    {
-        return NULL;
-    }
-
-    //--------------------------------------------------------------------------
-
-    iGpuProgram* cMaterialType_SolidDiffuse::GetGpuProgram(cMaterial* apMaterial, eMaterialRenderMode aRenderMode, char alSkeleton)
-    {
-        // BX_ASSERT(false, "Remove");
-        return nullptr;
-    }
 
     void cMaterialType_SolidDiffuse::ResolveShaderProgram(
             eMaterialRenderMode aRenderMode,
@@ -575,28 +469,6 @@ namespace hpl
             default:
                 break;
         }
-    }
-
-
-    void cMaterialType_SolidDiffuse::SetupTypeSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderer* apRenderer)
-    {
-        
-    }
-
-    //--------------------------------------------------------------------------
-
-    void cMaterialType_SolidDiffuse::SetupMaterialSpecificData(
-        eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial* apMaterial, iRenderer* apRenderer)
-    {
-        
-    }
-
-    //--------------------------------------------------------------------------
-
-    void cMaterialType_SolidDiffuse::SetupObjectSpecificData(
-        eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderable* apObject, iRenderer* apRenderer)
-    {
-
     }
 
     iMaterialVars* cMaterialType_SolidDiffuse::CreateSpecificVariables()

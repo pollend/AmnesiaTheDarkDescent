@@ -40,7 +40,6 @@ namespace hpl {
 	class iRenderable;
 	class cParserVarContainer;
 	class iRenderer;
-	class cProgramComboManager;
 	class cResourceVarsObject;
 	class iMaterialVars;
 
@@ -83,24 +82,11 @@ namespace hpl {
 		iMaterialType(cGraphics *apGraphics, cResources *apResources);
 		virtual ~iMaterialType();
 
-		virtual void DestroyProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, char alSkeleton)=0;
-
 		void SetName(const tString& asName);
 		const tString& GetName(){ return msName;}
 
 		bool IsTranslucent(){ return mbIsTranslucent; }
 		bool IsDecal(){ return mbIsDecal;}
-
-		virtual bool SupportsHWSkinning()=0;
-
-		virtual iTexture* GetTextureForUnit(cMaterial *apMaterial,eMaterialRenderMode aRenderMode, int alUnit)=0;
-		virtual iGpuProgram* GetGpuProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, char alSkeleton)=0;
-
-		virtual void SetupTypeSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderer *apRenderer)=0;
-		virtual void SetupMaterialSpecificData(	eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial *apMaterial,
-												iRenderer *apRenderer)=0;
-		virtual void SetupObjectSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderable *apObject,
-												iRenderer *apRenderer)=0;
 
 		virtual void ResolveShaderProgram(
             eMaterialRenderMode aRenderMode,
@@ -158,8 +144,6 @@ namespace hpl {
 		tMaterialUsedTextureVec mvUsedTextures;
 
 		tMaterialUserVariableVec mvUserVariables;
-
-		cProgramComboManager *mpProgramManager;
 	};
 
 	//---------------------------------------------------

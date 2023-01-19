@@ -106,7 +106,6 @@ namespace hpl {
 					eGpuProgramFormat aGpuProgramFormat,const tString& asWindowCaption,
 					const cVector2l &avWindowPos);
 
-		eGpuProgramFormat GetGpuProgramFormat(){ return mGpuProgramFormat;}
 
 		int GetCaps(eGraphicCaps aType);
 

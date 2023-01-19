@@ -357,7 +357,7 @@ class cMaterialData
 {
 public:
 	tString msName;
-	iTexture *mvMaterialTextures[eMaterialTexture_LastEnum];
+	Image *mvMaterialTextures[eMaterialTexture_LastEnum];
 	cMaterial *mpMat;
 };
 
@@ -795,7 +795,7 @@ public:
 				pMatData->mpMat = pMat;
 				for(int j=0; j<eMaterialTexture_LastEnum; ++j)
 				{
-					pMatData->mvMaterialTextures[j] = pMat->GetTexture((eMaterialTexture)j);
+					pMatData->mvMaterialTextures[j] = pMat->GetImage((eMaterialTexture)j);
 				}
 			}
 			else
@@ -814,7 +814,7 @@ public:
 
 				for(int j=0; j<eMaterialTexture_LastEnum; ++j)
 				{
-					pMatData->mvMaterialTextures[j] = pMat->GetTexture((eMaterialTexture)j);
+					pMatData->mvMaterialTextures[j] = pMat->GetImage((eMaterialTexture)j);
 				}
 
 			}
@@ -1161,7 +1161,7 @@ public:
 
 			for(int j=0; j<eMaterialTexture_LastEnum; ++j)
 			{
-				pMat->SetTexture((eMaterialTexture)j, pMatData->mvMaterialTextures[j]);
+				pMat->SetImage((eMaterialTexture)j, pMatData->mvMaterialTextures[j]);
 			}
 		}
 	}
@@ -1796,7 +1796,7 @@ public:
 
 			if(aData.mlVal == 1)
 			{
-				pMat->SetTexture(texType, pMatData->mvMaterialTextures[texType]);
+				pMat->SetImage(texType, pMatData->mvMaterialTextures[texType]);
 			}
 			else
 			{

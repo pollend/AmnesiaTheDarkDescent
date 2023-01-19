@@ -26,7 +26,6 @@
 #include "graphics/GPUShader.h"
 #include "graphics/GPUProgram.h"
 #include "graphics/LowLevelGraphics.h"
-#include "graphics/ProgramComboManager.h"
 
 #include "resources/Resources.h"
 #include "resources/TextureManager.h"
@@ -50,23 +49,15 @@ namespace hpl {
 		{
 			mbHasTypeSpecifics[i] = false;
 		}
-
-		//Need to do this to support NULL materials (that do not use graphical stuff)
-		if(mpGraphics && mpResources)
-			mpProgramManager = hplNew( cProgramComboManager, ("",mpGraphics, mpResources,eMaterialRenderMode_LastEnum ));
-		else
-			mpProgramManager = NULL;
 	}
 
 	iMaterialType::~iMaterialType()
 	{
-		if(mpProgramManager) hplDelete( mpProgramManager );
 	}
 
 	void iMaterialType::SetName(const tString& asName)
 	{
 		msName = asName;
-		mpProgramManager->SetName(asName);
 	}
 
 	//-----------------------------------------------------------------------

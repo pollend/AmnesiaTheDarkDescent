@@ -312,11 +312,6 @@ namespace hpl {
 		//If alpha, sort by texture (we know alpha is same for both materials, so can just test one)
 		if(	pMatA->GetAlphaMode() == eMaterialAlphaMode_Trans )
 		{
-			if(pMatA->GetProgram(0,eMaterialRenderMode_Z) != pMatB->GetProgram(0,eMaterialRenderMode_Z))
-			{
-				return pMatA->GetProgram(0,eMaterialRenderMode_Z) < pMatB->GetProgram(0,eMaterialRenderMode_Z);
-			}
-
 			if(pMatA->GetImage(eMaterialTexture_Diffuse) != pMatB->GetImage(eMaterialTexture_Diffuse))
 			{
 				return pMatA->GetImage(eMaterialTexture_Diffuse) < pMatB->GetImage(eMaterialTexture_Diffuse);
@@ -336,22 +331,6 @@ namespace hpl {
 	{
 		cMaterial *pMatA = apObjectA->GetMaterial();
 		cMaterial *pMatB = apObjectB->GetMaterial();
-
-		//////////////////////////
-		//Program
-		if(pMatA->GetProgram(0,eMaterialRenderMode_Diffuse) != pMatB->GetProgram(0,eMaterialRenderMode_Diffuse))
-		{
-			return pMatA->GetProgram(0,eMaterialRenderMode_Diffuse) < pMatB->GetProgram(0,eMaterialRenderMode_Diffuse);
-		}
-
-		//////////////////////////
-		//Texture
-		for(int i=0;i<kMaxTextureUnits; ++i)
-		{
-			iTexture *pTexA = pMatA->GetTextureInUnit(eMaterialRenderMode_Diffuse,i);
-			iTexture *pTexB = pMatB->GetTextureInUnit(eMaterialRenderMode_Diffuse,i);
-			if(pTexA != pTexB) return pTexA < pTexB;
-		}
 
 		//////////////////////////
 		//Vertex buffer
