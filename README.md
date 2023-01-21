@@ -11,7 +11,11 @@ with this fork:
   pain (again, thanks to buzer2020 here on GitHub).
 * AngelScript. There is `lang/angelscript` port in FreeBSD ports collection, but
   that version is too new for this game.
-  
+
+# Branches
+- origin/master - contains a graphics backend rework using [BGFX](https://github.com/bkaradzic/bgfx)
+- origin/original - orignal running code should be as bug free as when the game was released
+
 ## Building
 
 Just run
