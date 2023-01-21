@@ -23,6 +23,8 @@
 //----------------------------------------------
 
 #include "LuxBase.h"
+#include "bgfx/bgfx.h"
+#include "graphics/Image.h"
 #include <bx/debug.h>
 
 class iLuxPostEffect : public iPostEffect
@@ -38,9 +40,6 @@ protected:
 	iPostEffectParams *GetTypeSpecificParams() { return NULL; }
 };
 
-
-//----------------------------------------
-//TODO: need to migrate this to GraphicsContext
 class cLuxPostEffect_Insanity : public iLuxPostEffect
 {
 public:
@@ -53,22 +52,28 @@ public:
 	void SetZoomAlpha(float afX){ mfZoomAlpha = afX;}
 	void SetWaveSpeed(float afX){ mfWaveSpeed = afX;}
 	
-	virtual void RenderEffect(cPostEffectComposite& compositor, GraphicsContext& context, Image& input, RenderTarget& target) override {
-		BX_ASSERT(false, "Not implemented");
-	}
+	virtual void RenderEffect(cPostEffectComposite& compositor, GraphicsContext& context, Image& input, RenderTarget& target) override;
 
 private:
-	// iTexture* RenderEffect(iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer);
+	// iGpuProgram *mpProgram;
+	// std::vector<iTexture*> mvAmpMaps;
+	// iTexture* mpZoomMap;
 
-	iGpuProgram *mpProgram;
-	std::vector<iTexture*> mvAmpMaps;
-	iTexture* mpZoomMap;
+	bgfx::ProgramHandle m_program;
+	std::array<Image*, 3> m_ampMaps;
+	Image* m_zoomImage;
 
-	float mfT;
-	float mfAnimCount;
-	float mfWaveAlpha;
-	float mfZoomAlpha;
-	float mfWaveSpeed;
+	bgfx::UniformHandle m_s_diffuseMap;
+	bgfx::UniformHandle m_s_ampMap0;
+	bgfx::UniformHandle m_s_ampMap1;
+	bgfx::UniformHandle m_s_zoomMap;
+	bgfx::UniformHandle m_u_param;
+
+	float mfT = 0.0f;
+	float mfAnimCount = 0.0f;
+	float mfWaveAlpha = 0.0f;
+	float mfZoomAlpha = 0.0f;
+	float mfWaveSpeed = 0.0f;
 };
 
 

@@ -313,17 +313,20 @@ private:
 	iWidget		 *mpWidgetReturn[eLuxJournalState_LastEnum];
 	cWidgetImage *mpImageBackward[eLuxJournalState_LastEnum];
 
-	iTexture *mpScreenTexture;
+	// iTexture *mpScreenTexture;
 	cGuiGfxElement *mpScreenGfx;
-	iTexture *mpScreenBgTexture;
 	cGuiGfxElement *mpScreenBgGfx;
-
 	cGuiGfxElement *mpWhiteGfx;
+
+	bgfx::ProgramHandle m_program;
+	bgfx::UniformHandle m_s_diffuseMap;
+
+	std::shared_ptr<Image> m_screenImage;
+	std::shared_ptr<Image> m_screenBgTexture;
+
 
 	iFontData *mpFontDefault;
 	iFontData *mpFontMenu;
-
-	iGpuProgram *mpEffectProgram;
 
 	cVector2f mvScreenSize;
 	cVector2f mvGuiSetCenterSize;//Size of the part that is inside a 4:3 ratio!

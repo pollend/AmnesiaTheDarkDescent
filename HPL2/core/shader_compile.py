@@ -56,6 +56,13 @@ pointlight_variants = [
 
 
 shaders = [
+# Amneisa Specific Shaders compiler can be moved to its own library
+    { "type" : ShaderType.VS, "inout" : "resource/vs_dds_enemy_glow.io",              "input": "resource/vs_dds_enemy_glow.sc" , "includes": ["resource"]},
+    { "type" : ShaderType.FS, "inout" : "resource/vs_dds_enemy_glow.io",              "input": "resource/fs_dds_enemy_glow.sc" , "includes": ["resource"]},
+    { "type" : ShaderType.VS, "inout" : "resource/vs_dds_flash.io",                   "input": "resource/vs_dds_flash.sc" , "includes": ["resource"]},
+    { "type" : ShaderType.FS, "inout" : "resource/vs_dds_flash.io",                   "input": "resource/fs_dds_flash.sc" , "includes": ["resource"]},
+    { "type" : ShaderType.VS, "inout" : "resource/vs_dds_outline.io",                 "input": "resource/vs_dds_outline.sc" , "includes": ["resource"]},
+    { "type" : ShaderType.FS, "inout" : "resource/vs_dds_outline.io",                 "input": "resource/fs_dds_outline.sc" , "includes": ["resource"]},
 # deferred
     { "type" : ShaderType.VS, "inout" : "resource/vs_deferred_light.io",              "input": "resource/vs_deferred_light.sc", "includes": ["resource"]},
     { "type" : ShaderType.FS, "inout" : "resource/vs_deferred_light.io",              "input": "resource/fs_deferred_pointlight.sc", "includes": ["resource"], "variants": pointlight_variants},
@@ -66,6 +73,8 @@ shaders = [
     { "type" : ShaderType.FS, "inout" : "resource/vs_gui.io",                          "input": "resource/fs_gui.sc", "includes": ["resource"]},
     { "type" : ShaderType.VS, "inout" : "resource/vs_gui.io",                          "input": "resource/vs_gui.sc", "includes": ["resource"]},
 #  post effects
+    { "type" : ShaderType.FS, "inout" : "resource/vs_post_effect.io",                  "input": "resource/fs_dds_posteffect_insanity.sc", "includes": ["resource"]},
+    { "type" : ShaderType.FS, "inout" : "resource/vs_post_effect.io",                  "input": "resource/fs_dds_inventory_screen_effect.sc", "includes": ["resource"]},
     { "type" : ShaderType.FS, "inout" : "resource/vs_post_effect.io",                  "input": "resource/fs_posteffect_fullscreen_fog.sc", "includes": ["resource"]},
     { "type" : ShaderType.FS, "inout" : "resource/vs_post_effect.io",                  "input": "resource/fs_posteffect_blur.sc", "includes": ["resource"]},
     { "type" : ShaderType.FS, "inout" : "resource/vs_post_effect.io",                  "input": "resource/fs_posteffect_bloom_add.sc", "includes": ["resource"]},
@@ -74,6 +83,8 @@ shaders = [
     { "type" : ShaderType.FS, "inout" : "resource/vs_post_effect.io",                  "input": "resource/fs_posteffect_color_conv.sc", "includes": ["resource"]},
     { "type" : ShaderType.FS, "inout" : "resource/vs_post_effect.io",                  "input": "resource/fs_post_effect_copy.sc", "includes": ["resource"]},
 # other
+    { "type" : ShaderType.VS, "inout" : "resource/vs_alpha_reject.io",                 "input": "resource/vs_alpha_reject.sc" , "includes": ["resource"]},
+    { "type" : ShaderType.FS, "inout" : "resource/vs_alpha_reject.io",                 "input": "resource/fs_alpha_reject.sc" , "includes": ["resource"]},
     { "type" : ShaderType.VS, "inout" : "resource/vs_null.io",                         "input": "resource/vs_null.sc" , "includes": ["resource"]},
     { "type" : ShaderType.FS, "inout" : "resource/vs_null.io",                         "input": "resource/fs_null.sc" , "includes": ["resource"]},
     { "type" : ShaderType.VS, "inout" : "resource/vs_basic_solid_diffuse.io",          "input": "resource/vs_basic_solid_diffuse.sc" , "includes": ["resource"]},

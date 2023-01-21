@@ -162,6 +162,8 @@ namespace hpl {
 		void DestroyData();
 
 		virtual Image& FetchOutputFromRenderer() override;
+		virtual std::shared_ptr<Image> GetDepthStencilImage() override;
+		virtual std::shared_ptr<Image> GetOutputImage() override;
 
 		iFrameBuffer* GetGBufferFrameBuffer(eGBufferComponents aComponents);
 
@@ -177,7 +179,6 @@ namespace hpl {
 		[[deprecated("removing this method")]]
 		iFrameBuffer *GetAccumBuffer(){ return mpAccumBuffer;}
 
-		
 		[[deprecated("removing this method")]]
 		iTexture* GetRefractionTexture(){ return mpRefractionTexture;}
 		[[deprecated("removing this method")]]
@@ -344,7 +345,6 @@ namespace hpl {
 		bgfx::UniformHandle m_s_spotFalloffMap;
 		bgfx::UniformHandle m_s_shadowMap;
 		bgfx::UniformHandle m_s_goboMap;
-		
 		
 		bgfx::ProgramHandle m_deferredFog;
 		bgfx::ProgramHandle m_fullscreenFog;

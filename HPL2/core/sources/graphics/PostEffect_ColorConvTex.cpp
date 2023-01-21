@@ -110,7 +110,7 @@ namespace hpl
             float pad1;
             float pad2;
         } uniform = { cMath::Min(1.0f, cMath::Max(mParams.mfFadeAlpha, 0.0f)), 0, 0, 0 };
-        shaderProgram.m_uniforms.push_back({ mpSpecificType->m_u_param, &uniform, sizeof(uniform) });
+        shaderProgram.m_uniforms.push_back({ mpSpecificType->m_u_param, &uniform, 1 });
         shaderProgram.m_textures.push_back({ mpSpecificType->m_u_colorConvTex, mpColorConvTex->GetHandle(), 0 });
         shaderProgram.m_textures.push_back({ mpSpecificType->m_u_diffuseTex, input.GetHandle(), 1 });
 

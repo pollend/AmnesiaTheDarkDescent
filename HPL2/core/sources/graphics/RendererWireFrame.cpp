@@ -169,7 +169,7 @@ namespace hpl {
 			DrawCurrent(eVertexBufferDrawType_LineStrip);
 		}
 
-		RunCallback(eRendererMessage_PostSolid);
+		// RunCallback(eRendererMessage_PostSolid);
 
 
 		////////////////////////////////////////////
@@ -195,7 +195,7 @@ namespace hpl {
 			DrawCurrent(eVertexBufferDrawType_LineStrip);
 		}
 
-		RunCallback(eRendererMessage_PostTranslucent);
+		// RunCallback(eRendererMessage_PostTranslucent);
 
 
 		END_RENDER_PASS();

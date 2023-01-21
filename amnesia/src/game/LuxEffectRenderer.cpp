@@ -18,7 +18,15 @@
  */
 
 #include "LuxEffectRenderer.h"
-
+#include "bgfx/bgfx.h"
+#include <absl/container/inlined_vector.h>
+#include <absl/types/span.h>
+#include <graphics/Enum.h>
+#include <graphics/GraphicsContext.h>
+#include <graphics/RenderTarget.h>
+#include <math/MathTypes.h>
+#include <memory>
+#include <vector>
 
 //-----------------------------------------------------------------------
 
@@ -28,8 +36,8 @@
 
 //-----------------------------------------------------------------------
 
-#define kVar_afBlurSize			0
-#define kVar_afColorMul			1
+#define kVar_afBlurSize 0
+#define kVar_afColorMul 1
 
 //-----------------------------------------------------------------------
 
@@ -39,480 +47,501 @@
 
 //-----------------------------------------------------------------------
 
-cLuxEffectRenderer::cLuxEffectRenderer() : iLuxUpdateable("LuxEffectRenderer")
+cLuxEffectRenderer::cLuxEffectRenderer()
+    : iLuxUpdateable("LuxEffectRenderer")
 {
-	/////////////////////////////
-	//Setup vars
-	cGraphics *pGraphics = gpBase->mpEngine->GetGraphics();
-	cVector2l vScreenSize = pGraphics->GetLowLevel()->GetScreenSizeInt();
+    /////////////////////////////
+    // Setup vars
+    cGraphics* pGraphics = gpBase->mpEngine->GetGraphics();
+    cVector2l vScreenSize = pGraphics->GetLowLevel()->GetScreenSizeInt();
 
-	/////////////////////////////
-	//Get deferred renderer stuff
-	cRendererDeferred *pRendererDeferred = static_cast<cRendererDeferred*>(pGraphics->GetRenderer(eRenderer_Main));
+    /////////////////////////////
+    // Get deferred renderer stuff
+    cRendererDeferred* pRendererDeferred = static_cast<cRendererDeferred*>(pGraphics->GetRenderer(eRenderer_Main));
 
-	mpDeferredAccumBuffer = pRendererDeferred->GetAccumBuffer();
+    // umm ... might want to use the output render target instead of the output image
+    m_outputTarget = RenderTarget(pRendererDeferred->GetOutputImage());
 
-	/////////////////////////////
-	//Create Outline color buffer
-	mpOutlineColorTexture = pGraphics->GetTempFrameBuffer(vScreenSize,ePixelFormat_RGBA,0)->GetColorBuffer(0)->ToTexture();
+    auto outlineImageDesc = ImageDescriptor::CreateTexture2D(vScreenSize.x, vScreenSize.y, false, bgfx::TextureFormat::RGBA8);
+    outlineImageDesc.m_configuration.m_rt = RTType::RT_Write;
+    auto outlineImage = std::make_shared<Image>();
+    outlineImage->Initialize(outlineImageDesc);
+    std::array<std::shared_ptr<Image>, 2> images = { outlineImage, pRendererDeferred->GetDepthStencilImage() };
+    m_outlineTarget = RenderTarget(absl::MakeSpan(images));
 
-	mpFrameBufferColor = pGraphics->CreateFrameBuffer("OutlineColor");
-	mpFrameBufferColor->SetDepthStencilBuffer(pRendererDeferred->GetDepthStencilBuffer());
-	mpFrameBufferColor->SetTexture2D(0,mpOutlineColorTexture);
+    m_alphaRejectProgram = hpl::loadProgram("vs_alpha_reject", "fs_alpha_reject");
+    m_blurProgram = hpl::loadProgram("vs_post_effect", "fs_posteffect_blur");
+    m_enemyGlowProgram = hpl::loadProgram("vs_dds_enemy_glow", "fs_dds_enemy_glow");
+    m_objectFlashProgram = hpl::loadProgram("vs_dds_flash", "fs_dds_flash");
+    m_copyProgram = hpl::loadProgram("vs_post_effect", "fs_post_effect_copy");
+    m_outlineProgram = hpl::loadProgram("vs_dds_outline", "fs_dds_outline");
 
-	mpFrameBufferColor->CompileAndValidate();
+    auto blurImageDesc = [&]
+    {
+        auto desc = ImageDescriptor::CreateTexture2D(
+            vScreenSize.x / cLuxEffectRenderer::BlurSize,
+            vScreenSize.y / cLuxEffectRenderer::BlurSize,
+            false,
+            bgfx::TextureFormat::Enum::RGBA8);
+        desc.m_configuration.m_rt = RTType::RT_Write;
+        auto image = std::make_shared<Image>();
+        image->Initialize(desc);
+        return image;
+    };
 
-	cParserVarContainer programVars;
+    m_blurTarget[0] = RenderTarget(blurImageDesc());
+    m_blurTarget[1] = RenderTarget(blurImageDesc());
 
-	/////////////////////////////
-	//Load Flash programs
+    m_s_diffuseMap = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
+    m_u_param = bgfx::createUniform("u_param", bgfx::UniformType::Vec4);
 
-	programVars.Add("UseUv");
-	programVars.Add("UseNormals");
-	mpFlashProgram = pGraphics->CreateGpuProgramFromShaders("GameOutline","deferred_base_vtx.glsl", "game_object_flash_frag.glsl",&programVars);
-	mpFlashProgram->GetVariableAsId("afColorMul",kVar_afColorMul);
-	programVars.Clear();
+    ///////////////////////////
+    // Reset variables
+    mFlashOscill.SetUp(0, 1, 0, 1, 1);
 
-	/////////////////////////////
-	//Load Enemy Glow programs
-
-	programVars.Add("UseUv");
-	programVars.Add("UseNormals");
-	mpEnemyGlowProgram = pGraphics->CreateGpuProgramFromShaders("EnemyGlow","deferred_base_vtx.glsl", "game_enemy_darkness_glow_frag.glsl",&programVars);
-	mpEnemyGlowProgram->GetVariableAsId("afColorMul",kVar_afColorMul);
-	programVars.Clear();
-
-	/////////////////////////////
-	//Load Outline programs
-
-	//TODO: Could perhaps use deferred_base_vtx for color? Since the scale can be done to matrix.
-	for(int i=0; i<2; ++i)
-	{
-		if(i==1) programVars.Add("UseAlpha");
-		mpOutlineColorProgram[i] = pGraphics->CreateGpuProgramFromShaders("GameOutline","game_outline_vtx.glsl", "game_outline_frag.glsl",&programVars);
-		programVars.Clear();
-	}
-
-	mpOutlineStencilProgram = pGraphics->CreateGpuProgramFromShaders("GameOutline","deferred_base_vtx.glsl", "deferred_base_frag.glsl",&programVars);
-
-	programVars.Add("UseUv");
-	programVars.Add("UseDiffuse");
-	mpOutlineStencilAlphaProgram = pGraphics->CreateGpuProgramFromShaders("GameOutline","deferred_base_vtx.glsl", "deferred_base_frag.glsl",&programVars);
-	programVars.Clear();
-
-
-
-	///////////////////////////
-	// Load Blur Programs
-	mlBlurSizeDiv = 4;
-	for(int i=0; i<2; ++i)
-	{
-		cParserVarContainer vars;
-		if(i==1) vars.Add("BlurHorisontal");
-		mpBlurProgram[i] = pGraphics->CreateGpuProgramFromShaders("BloomBlur","posteffect_bloom_blur_vtx.glsl", "posteffect_bloom_blur_frag.glsl", &vars);
-
-		if(mpBlurProgram[i])
-			mpBlurProgram[i]->GetVariableAsId("afBlurSize",kVar_afBlurSize);
-
-		mpBlurBuffer[i] = pGraphics->GetTempFrameBuffer(vScreenSize/mlBlurSizeDiv,ePixelFormat_RGBA,i);
-		if(mpBlurBuffer[i])
-			mpBlurTexture[i] = mpBlurBuffer[i]->GetColorBuffer(0)->ToTexture();
-	}
-
-
-	///////////////////////////
-	// Reset variables
-	mFlashOscill.SetUp(0,1,0,1,1);
-
-	///////////////////////////
-	// Reset variables
-	Reset();
+    ///////////////////////////
+    // Reset variables
+    Reset();
 }
 
 //-----------------------------------------------------------------------
 
 cLuxEffectRenderer::~cLuxEffectRenderer()
 {
+    if (bgfx::isValid(m_alphaRejectProgram))
+    {
+        bgfx::destroy(m_alphaRejectProgram);
+    }
+    if (bgfx::isValid(m_blurProgram))
+    {
+        bgfx::destroy(m_blurProgram);
+    }
+    if (bgfx::isValid(m_enemyGlowProgram))
+    {
+        bgfx::destroy(m_enemyGlowProgram);
+    }
+    if (bgfx::isValid(m_objectFlashProgram))
+    {
+        bgfx::destroy(m_objectFlashProgram);
+    }
+    if (bgfx::isValid(m_copyProgram))
+    {
+        bgfx::destroy(m_copyProgram);
+    }
+    if (bgfx::isValid(m_outlineProgram))
+    {
+        bgfx::destroy(m_outlineProgram);
+    }
+    if (bgfx::isValid(m_s_diffuseMap))
+    {
+        bgfx::destroy(m_s_diffuseMap);
+    }
+    if (bgfx::isValid(m_u_param))
+    {
+        bgfx::destroy(m_u_param);
+    }
 }
-
-//-----------------------------------------------------------------------
-
-//////////////////////////////////////////////////////////////////////////
-// PUBLIC METHODS
-//////////////////////////////////////////////////////////////////////////
-
-//-----------------------------------------------------------------------
 
 void cLuxEffectRenderer::Reset()
 {
-	mvOutlineObjects.clear();
-	ClearRenderLists();
+    mvOutlineObjects.clear();
+    ClearRenderLists();
 }
 
 void cLuxEffectRenderer::ClearRenderLists()
 {
-	mvFlashObjects.clear();
-	mvEnemyGlowObjects.clear();
+    mvFlashObjects.clear();
+    mvEnemyGlowObjects.clear();
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxEffectRenderer::Update(float afTimeStep)
 {
-	mFlashOscill.Update(afTimeStep);
+    mFlashOscill.Update(afTimeStep);
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxEffectRenderer::RenderSolid(cRendererCallbackFunctions* apFunctions)
 {
-	if(apFunctions->GetSettings()->mbIsReflection) return;
-
+    if (apFunctions->GetSettings()->mbIsReflection)
+        return;
 }
 
 void cLuxEffectRenderer::RenderTrans(cRendererCallbackFunctions* apFunctions)
 {
-	/////////////////////////////////////
-	// Normal and Reflection
-	RenderFlashObjects(apFunctions);
-	RenderEnemyGlow(apFunctions);
+    /////////////////////////////////////
+    // Normal and Reflection
+    RenderFlashObjects(apFunctions);
+    RenderEnemyGlow(apFunctions);
 
-
-	/////////////////////////////////////
-	// Only Normal
-	if(apFunctions->GetSettings()->mbIsReflection==false)
-	{
-		RenderOutline(apFunctions);
-	}
+    /////////////////////////////////////
+    // Only Normal
+    if (apFunctions->GetSettings()->mbIsReflection == false)
+    {
+        RenderOutline(apFunctions);
+    }
 }
 
 //-----------------------------------------------------------------------
 
-void cLuxEffectRenderer::AddOutlineObject(iRenderable *apObject)
+void cLuxEffectRenderer::AddOutlineObject(iRenderable* apObject)
 {
-	mvOutlineObjects.push_back(apObject);
+    mvOutlineObjects.push_back(apObject);
 }
 
 void cLuxEffectRenderer::ClearOutlineObjects()
 {
-	mvOutlineObjects.clear();
+    mvOutlineObjects.clear();
 }
 
 //-----------------------------------------------------------------------
 
-void cLuxEffectRenderer::AddFlashObject(iRenderable *apObject, float afAlpha)
+void cLuxEffectRenderer::AddFlashObject(iRenderable* apObject, float afAlpha)
 {
-	mvFlashObjects.push_back(cGlowObject(apObject, afAlpha) );
+    mvFlashObjects.push_back(cGlowObject(apObject, afAlpha));
 }
 
-void cLuxEffectRenderer::AddEnemyGlow(iRenderable *apObject, float afAlpha)
+void cLuxEffectRenderer::AddEnemyGlow(iRenderable* apObject, float afAlpha)
 {
-	mvEnemyGlowObjects.push_back(cGlowObject(apObject, afAlpha) );
+    mvEnemyGlowObjects.push_back(cGlowObject(apObject, afAlpha));
 }
-
-//-----------------------------------------------------------------------
-
-
-//////////////////////////////////////////////////////////////////////////
-// PRIVATE METHODS
-//////////////////////////////////////////////////////////////////////////
-
-//-----------------------------------------------------------------------
 
 void cLuxEffectRenderer::RenderFlashObjects(cRendererCallbackFunctions* apFunctions)
 {
-	BX_ASSERT(false, "TODO: Fix this!");
-	if(mvFlashObjects.empty()) return;
-	if(mpFlashProgram==NULL) return;
+    if (mvFlashObjects.empty())
+        return;
 
-	////////////////////////////////////
-	// Setup functions
-	apFunctions->SetDepthTestFunc(eDepthTestFunc_Equal);
-	apFunctions->SetDepthTest(true);
-	apFunctions->SetDepthWrite(false);
-	apFunctions->SetBlendMode(eMaterialBlendMode_Add);
-	apFunctions->SetAlphaMode(eMaterialAlphaMode_Solid);
-	apFunctions->SetChannelMode(eMaterialChannelMode_RGBA);
+    auto& graphicsContext = apFunctions->GetGraphicsContext();
+    auto currentFrustum = apFunctions->GetFrustum();
+    float fGlobalAlpha = (0.5f + mFlashOscill.val * 0.5f);
+    const auto size = m_outputTarget.GetImage()->GetImageSize();
 
-	apFunctions->SetProgram(mpFlashProgram);
+    const auto view = apFunctions->GetGraphicsContext().StartPass("Render Flash Object");
+    for (auto& flashObject : mvFlashObjects)
+    {
+        auto* pObject = flashObject.mpObject;
+        if (!pObject->CollidesWithFrustum(currentFrustum))
+        {
+            continue;
+        }
 
-	float fGlobalAlpha = (0.5f+mFlashOscill.val*0.5f);
+        GraphicsContext::LayoutStream layoutInput;
+        GraphicsContext::ShaderProgram shaderInput;
+        struct
+        {
+            float m_colorMul;
+            float pad[3];
+        } params = { 0 };
+        params.m_colorMul = flashObject.mfAlpha * fGlobalAlpha;
+        shaderInput.m_handle = m_objectFlashProgram;
 
-	////////////////////////////////////
-	// Render objects
-	cFrustum *pFrustum = apFunctions->GetFrustum();
-	for(size_t i=0; i<mvFlashObjects.size(); ++i)
-	{
-		iRenderable *pObject = mvFlashObjects[i].mpObject;
+        shaderInput.m_uniforms.push_back({ m_u_param, &params });
+        shaderInput.m_textures.push_back({ m_s_diffuseMap, pObject->GetMaterial()->GetImage(eMaterialTexture_Diffuse)->GetHandle(), 0 });
 
-		if(pObject->CollidesWithFrustum(pFrustum)==false) continue;
+        shaderInput.m_configuration.m_write = Write::RGBA;
+        shaderInput.m_configuration.m_depthTest = DepthTest::LessEqual;
+        shaderInput.m_configuration.m_alphaBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
+        shaderInput.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
 
-		if(mpFlashProgram)
-			mpFlashProgram->SetFloat(kVar_afColorMul,mvFlashObjects[i].mfAlpha*fGlobalAlpha);
+        shaderInput.m_projection = currentFrustum->GetProjectionMatrix().GetTranspose();
+        shaderInput.m_view = currentFrustum->GetViewMatrix().GetTranspose();
+        shaderInput.m_modelTransform = pObject->GetModelMatrixPtr() ? pObject->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity;
+        pObject->GetVertexBuffer()->GetLayoutStream(layoutInput);
 
-		// apFunctions->SetTexture(0, pObject->GetMaterial()->GetTexture(eMaterialTexture_Diffuse));
-
-		apFunctions->SetVertexBuffer(pObject->GetVertexBuffer());
-		apFunctions->SetMatrix(pObject->GetModelMatrixPtr());
-
-		for(int i=0; i<2; ++i)
-			apFunctions->DrawCurrent();
-	}
-
-	apFunctions->SetTexture(0,NULL);
-	apFunctions->SetProgram(NULL);
-	apFunctions->SetDepthTestFunc(eDepthTestFunc_LessOrEqual);
+        GraphicsContext::DrawRequest drawRequest{ m_outputTarget, layoutInput, shaderInput };
+        drawRequest.m_width = size.x;
+        drawRequest.m_height = size.y;
+        for (int i = 0; i < 2; ++i)
+        {
+            graphicsContext.Submit(view, drawRequest);
+        }
+    }
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxEffectRenderer::RenderEnemyGlow(cRendererCallbackFunctions* apFunctions)
 {
-	if(mvEnemyGlowObjects.empty()) return;
-	if(mpEnemyGlowProgram==NULL) return;
+    if (mvEnemyGlowObjects.empty())
+        return;
 
-	////////////////////////////////////
-	// Setup functions
-	apFunctions->SetDepthTestFunc(eDepthTestFunc_Equal);
-	apFunctions->SetDepthTest(true);
-	apFunctions->SetDepthWrite(false);
-	apFunctions->SetBlendMode(eMaterialBlendMode_Add);
-	apFunctions->SetAlphaMode(eMaterialAlphaMode_Solid);
-	apFunctions->SetChannelMode(eMaterialChannelMode_RGBA);
+    auto& graphicsContext = apFunctions->GetGraphicsContext();
+    auto currentFrustum = apFunctions->GetFrustum();
+    const auto size = m_outputTarget.GetImage()->GetImageSize();
 
-	apFunctions->SetProgram(mpEnemyGlowProgram);
+    const auto view = apFunctions->GetGraphicsContext().StartPass("Render Enemy Glow");
+    for (auto& enemyGlow : mvEnemyGlowObjects)
+    {
+        auto* pObject = enemyGlow.mpObject;
+        if (!pObject->CollidesWithFrustum(currentFrustum))
+        {
+            continue;
+        }
+        GraphicsContext::LayoutStream layoutInput;
+        GraphicsContext::ShaderProgram shaderInput;
+        struct
+        {
+            float m_colorMul;
+            float pad[3];
+        } params = { 0 };
+        params.m_colorMul = enemyGlow.mfAlpha;
 
-	////////////////////////////////////
-	// Render objects
-	cFrustum *pFrustum = apFunctions->GetFrustum();
-	for(size_t i=0; i<mvEnemyGlowObjects.size(); ++i)
-	{
-		iRenderable *pObject = mvEnemyGlowObjects[i].mpObject;
+        shaderInput.m_handle = m_enemyGlowProgram;
 
-		if(pObject->CollidesWithFrustum(pFrustum)==false) continue;
+        shaderInput.m_uniforms.push_back({ m_u_param, &params });
+        shaderInput.m_textures.push_back({ m_s_diffuseMap, pObject->GetMaterial()->GetImage(eMaterialTexture_Diffuse)->GetHandle(), 0 });
 
-		mpEnemyGlowProgram->SetFloat(kVar_afColorMul,mvEnemyGlowObjects[i].mfAlpha);
+        shaderInput.m_configuration.m_write = Write::RGBA;
+        shaderInput.m_configuration.m_depthTest = DepthTest::Equal;
+        shaderInput.m_configuration.m_alphaBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
+        shaderInput.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
 
-		// apFunctions->SetTexture(0, pObject->GetMaterial()->GetTexture(eMaterialTexture_Diffuse));
+        shaderInput.m_projection = currentFrustum->GetProjectionMatrix().GetTranspose();
+        shaderInput.m_view = currentFrustum->GetViewMatrix().GetTranspose();
+        shaderInput.m_modelTransform = pObject->GetModelMatrixPtr() ? pObject->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity;
+        pObject->GetVertexBuffer()->GetLayoutStream(layoutInput);
 
-		apFunctions->SetVertexBuffer(pObject->GetVertexBuffer());
-		apFunctions->SetMatrix(pObject->GetModelMatrixPtr());
-
-		apFunctions->DrawCurrent();
-	}
-
-	apFunctions->SetTexture(0,NULL);
-	apFunctions->SetProgram(NULL);
-	apFunctions->SetDepthTestFunc(eDepthTestFunc_LessOrEqual);
+        GraphicsContext::DrawRequest drawRequest{ m_outputTarget, layoutInput, shaderInput };
+        drawRequest.m_width = size.x;
+        drawRequest.m_height = size.y;
+        graphicsContext.Submit(view, drawRequest);
+    }
 }
-
-//-----------------------------------------------------------------------
 
 void cLuxEffectRenderer::RenderOutline(cRendererCallbackFunctions* apFunctions)
 {
-	if(mvOutlineObjects.empty()) return;
+    if (mvOutlineObjects.empty())
+        return;
 
-	/////////////////////////////
-	//Setup vars
-	cGraphics *pGraphics = gpBase->mpEngine->GetGraphics();
-	cVector2l vScreenSize = pGraphics->GetLowLevel()->GetScreenSizeInt();
+    auto& graphicsContext = apFunctions->GetGraphicsContext();
+    auto currentFrustum = apFunctions->GetFrustum();
 
-	float fScaleAdd = 0.02f;
+    /////////////////////////////
+    // Setup vars
+    cGraphics* pGraphics = gpBase->mpEngine->GetGraphics();
+    cVector2l vScreenSize = pGraphics->GetLowLevel()->GetScreenSizeInt();
 
-	////////////////////////////////////
-	// Get entities to be rendered
-	cFrustum *pFrustum = apFunctions->GetFrustum();
-	tRenderableList lstObjects;
-	for(size_t i=0; i<mvOutlineObjects.size(); ++i)
-	{
-		iRenderable *pObject = mvOutlineObjects[i];
+    float fScaleAdd = 0.02f;
 
-		if(pObject->CollidesWithFrustum(pFrustum))
-		{
-			lstObjects.push_back(pObject);
-		}
-	}
+    ////////////////////////////////////
+    // Get entities to be rendered
+    cFrustum* pFrustum = apFunctions->GetFrustum();
+    absl::InlinedVector<iRenderable*, 15> lstObjects;
+    for (size_t i = 0; i < mvOutlineObjects.size(); ++i)
+    {
+        iRenderable* pObject = mvOutlineObjects[i];
 
-	////////////////////////////////////
-	// Build AABB from all objects
-	cBoundingVolume totalBV;
-	cVector3f vTotalMin = 100000.0f;
-	cVector3f vTotalMax = -100000.0f;
-	for(tRenderableListIt it = lstObjects.begin(); it != lstObjects.end(); ++it)
-	{
-		iRenderable *pObject = *it;
-		cBoundingVolume *pBV = pObject->GetBoundingVolume();
+        if (pObject->CollidesWithFrustum(pFrustum))
+        {
+            lstObjects.push_back(pObject);
+        }
+    }
 
-		cMath::ExpandAABB(vTotalMin, vTotalMax, pBV->GetMin(), pBV->GetMax());
-	}
+    ////////////////////////////////////
+    // Build AABB from all objects
+    cBoundingVolume totalBV;
+    cVector3f vTotalMin = 100000.0f;
+    cVector3f vTotalMax = -100000.0f;
+    for (auto& object : lstObjects)
+    {
+        cBoundingVolume* pBV = object->GetBoundingVolume();
+        cMath::ExpandAABB(vTotalMin, vTotalMax, pBV->GetMin(), pBV->GetMax());
+    }
 
-	//Need to scale so the outline is contained.
-	cVector3f vTotalSize = vTotalMax - vTotalMin;
-	cVector3f vTotalAdd = vTotalSize * (cVector3f(1.0f)/vTotalSize) * (fScaleAdd*2);
+    // Need to scale so the outline is contained.
+    cVector3f vTotalSize = vTotalMax - vTotalMin;
+    cVector3f vTotalAdd = vTotalSize * (cVector3f(1.0f) / vTotalSize) * (fScaleAdd * 2);
 
-	totalBV.SetLocalMinMax(vTotalMin-vTotalAdd, vTotalMax+vTotalAdd);
+    totalBV.SetLocalMinMax(vTotalMin - vTotalAdd, vTotalMax + vTotalAdd);
 
-	cRect2l clipRect;
-	cMath::GetClipRectFromBV(clipRect,totalBV, apFunctions->GetFrustum(), vScreenSize,-1);
+    // TODO: use clip rect to avoid rendering to the entire framebuffer
+    cRect2l clipRect;
+    cMath::GetClipRectFromBV(clipRect, totalBV, apFunctions->GetFrustum(), vScreenSize, -1);
 
-	////////////////////////////////////
-	// General setup
-	apFunctions->SetFrameBuffer(mpFrameBufferColor);
+    {
+        const auto view = graphicsContext.StartPass("Clear Outline And Stencil");
+        const auto size = m_outlineTarget.GetImage()->GetImageSize();
+        GraphicsContext::DrawClear drawClear{ m_outlineTarget,
+                                              { 0, 1.0, 0, ClearOp::Stencil | ClearOp::Color },
+                                              0,
+                                              0,
+                                              static_cast<uint16_t>(size.x),
+                                              static_cast<uint16_t>(size.y) };
+        graphicsContext.ClearTarget(view, drawClear);
+    }
 
-	apFunctions->ClearFrameBuffer(eClearFrameBufferFlag_Stencil | eClearFrameBufferFlag_Color,true);
+    {
+        const auto view = graphicsContext.StartPass("Render Outline Stencil");
+        for (auto& object : lstObjects)
+        {
+            GraphicsContext::LayoutStream layoutInput;
+            GraphicsContext::ShaderProgram shaderInput;
+            struct
+            {
+                float m_alpha;
+                float pad[3];
+            } params = { 0 };
+            const auto size = m_outlineTarget.GetImage()->GetImageSize();
 
-	apFunctions->SetDepthTest(true);
-	apFunctions->SetDepthWrite(false);
-	apFunctions->SetStencilActive(true);
+            shaderInput.m_handle = m_alphaRejectProgram;
+            auto alphaImage = object->GetMaterial()->GetImage(eMaterialTexture_Alpha);
+            if (alphaImage)
+            {
+                shaderInput.m_textures.push_back({ m_s_diffuseMap, alphaImage->GetHandle(), 0 });
+                params.m_alpha = 0.5f;
+            }
+            shaderInput.m_configuration.m_depthTest = DepthTest::LessEqual;
+            shaderInput.m_uniforms.push_back({ m_u_param, &params });
+            shaderInput.m_handle = m_alphaRejectProgram;
+            shaderInput.m_configuration.m_frontStencilTest = CreateStencilTest(
+                StencilFunction::Always, StencilFail::Keep, StencilDepthFail::Keep, StencilDepthPass::Replace, 0xff, 0xff);
+            shaderInput.m_projection = currentFrustum->GetProjectionMatrix().GetTranspose();
+            shaderInput.m_view = currentFrustum->GetViewMatrix().GetTranspose();
+            shaderInput.m_modelTransform = object->GetModelMatrixPtr() ? object->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity;
+            object->GetVertexBuffer()->GetLayoutStream(layoutInput);
 
-	////////////////////////////////////
-	// Render stencil
+            GraphicsContext::DrawRequest drawRequest{ m_outlineTarget, layoutInput, shaderInput };
+            drawRequest.m_width = size.x;
+            drawRequest.m_height = size.y;
+            graphicsContext.Submit(view, drawRequest);
+        }
+    }
 
-	apFunctions->SetBlendMode(eMaterialBlendMode_None);
-	apFunctions->SetChannelMode(eMaterialChannelMode_None);
+    {
+        const auto view = graphicsContext.StartPass("Render Outline");
+        for (auto& object : lstObjects)
+        {
+            GraphicsContext::LayoutStream layoutInput;
+            GraphicsContext::ShaderProgram shaderInput;
+            struct
+            {
+                float color[3];
+                float useAlpha;
+            } params = { { 0, 0, 0.5f }, 0 };
+            const auto size = m_outlineTarget.GetImage()->GetImageSize();
 
-	apFunctions->GetLowLevelGfx()->SetStencil(eStencilFunc_Always,0xFF,0xFF,eStencilOp_Keep,eStencilOp_Keep,eStencilOp_Replace);
+            shaderInput.m_handle = m_outlineProgram;
+            auto alphaImage = object->GetMaterial()->GetImage(eMaterialTexture_Alpha);
+            if (alphaImage)
+            {
+                shaderInput.m_textures.push_back({ m_s_diffuseMap, alphaImage->GetHandle(), 0 });
+                params.useAlpha = 1.0f;
+            }
+            shaderInput.m_configuration.m_write = Write::RGBA;
+            shaderInput.m_configuration.m_depthTest = DepthTest::LessEqual;
+            shaderInput.m_uniforms.push_back({ m_u_param, &params });
+            shaderInput.m_configuration.m_frontStencilTest =
+                CreateStencilTest(StencilFunction::NotEqual, StencilFail::Keep, StencilDepthFail::Keep, StencilDepthPass::Keep, 0xff, 0xff);
 
+            cBoundingVolume* pBV = object->GetBoundingVolume();
+            cVector3f vLocalSize = pBV->GetLocalMax() - pBV->GetLocalMin();
+            cVector3f vScale = (cVector3f(1.0f) / vLocalSize) * fScaleAdd + cVector3f(1.0f);
 
-	for(tRenderableListIt it = lstObjects.begin(); it != lstObjects.end(); ++it)
-	{
-		iRenderable *pObject = *it;
+            cMatrixf mtxScale = cMath::MatrixMul(cMath::MatrixScale(vScale), cMath::MatrixTranslate(pBV->GetLocalCenter() * -1));
+            mtxScale.SetTranslation(mtxScale.GetTranslation() + pBV->GetLocalCenter());
 
-		/////////////////
-		// Solid
-		if(pObject->GetMaterial()->GetImage(eMaterialTexture_Alpha)==NULL)
-		{
-			apFunctions->SetAlphaMode(eMaterialAlphaMode_Solid);
-			apFunctions->SetProgram(mpOutlineStencilProgram);
-			apFunctions->SetTexture(0, NULL);
-		}
-		/////////////////
-		// Trans
-		else
-		{
-			apFunctions->SetAlphaMode(eMaterialAlphaMode_Trans);
-			apFunctions->SetProgram(mpOutlineStencilAlphaProgram);
-			// apFunctions->SetTexture(0, pObject->GetMaterial()->GetTexture(eMaterialTexture_Alpha));
-		}
+            shaderInput.m_projection = currentFrustum->GetProjectionMatrix().GetTranspose();
+            shaderInput.m_view = currentFrustum->GetViewMatrix().GetTranspose();
+            shaderInput.m_modelTransform = cMath::MatrixMul(object->GetWorldMatrix(), mtxScale).GetTranspose();
+            object->GetVertexBuffer()->GetLayoutStream(layoutInput);
 
-		apFunctions->SetVertexBuffer(pObject->GetVertexBuffer());
-		apFunctions->SetMatrix(pObject->GetModelMatrixPtr());
-		apFunctions->DrawCurrent();
-	}
+            GraphicsContext::DrawRequest drawRequest{ m_outlineTarget, layoutInput, shaderInput };
+            drawRequest.m_width = size.x;
+            drawRequest.m_height = size.y;
+            graphicsContext.Submit(view, drawRequest);
+        }
+    }
 
-	////////////////////////////////////
-	// Render out line
+    RenderBlurPass(graphicsContext, *m_outlineTarget.GetImage());
+    for (size_t i = 0; i < 2; ++i)
+    {
+        RenderBlurPass(graphicsContext, *m_blurTarget[1].GetImage());
+    }
 
-	apFunctions->SetAlphaMode(eMaterialAlphaMode_Solid);
-	apFunctions->SetBlendMode(eMaterialBlendMode_None);
-	apFunctions->SetChannelMode(eMaterialChannelMode_RGBA);
+    {
+        const auto view = apFunctions->GetGraphicsContext().StartPass("Additive Outline");
+        auto outlineOutputImage = m_blurTarget[1].GetImage();
+        auto imageSize = m_blurTarget[1].GetImage()->GetImageSize();
 
-	apFunctions->GetLowLevelGfx()->SetStencil(eStencilFunc_NotEqual,0xFF,0xFF,eStencilOp_Keep,eStencilOp_Keep,eStencilOp_Keep);
+        GraphicsContext::LayoutStream layoutStream;
+        GraphicsContext::ShaderProgram shaderProgram;
+        cMatrixf projMtx;
+        graphicsContext.ScreenSpaceQuad(layoutStream, projMtx, imageSize.x, imageSize.y);
+        GraphicsContext::ShaderProgram program;
+        program.m_handle = m_copyProgram;
+        program.m_configuration.m_write = Write::RGBA;
+        program.m_projection = projMtx;
+        program.m_configuration.m_alphaBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
+        program.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
 
-	apFunctions->SetTextureRange(NULL, 0);
+        program.m_textures.push_back({ m_s_diffuseMap, outlineOutputImage->GetHandle(), 0 });
 
-	//Iterate objects and render them
-	for(tRenderableListIt it = lstObjects.begin(); it != lstObjects.end(); ++it)
-	{
-		iRenderable *pObject = *it;
-		cMaterial *pMat = pObject->GetMaterial();
-
-		cBoundingVolume* pBV = pObject->GetBoundingVolume();
-
-        // if(pMat->GetTexture(eMaterialTexture_Alpha))
-		// {
-		// 	// apFunctions->SetTexture(0, pMat->GetTexture(eMaterialTexture_Alpha));
-		// 	apFunctions->SetProgram(mpOutlineColorProgram[1]);
-		// 	mpOutlineColorProgram[1]->SetColor3f(mpOutlineColorProgram[1]->GetVariableId("gvColor"), cColor(0,0,0.5f,0));
-		// }
-		// else
-		// {
-		// 	apFunctions->SetTexture(0, NULL);
-		// 	apFunctions->SetProgram(mpOutlineColorProgram[0]);
-		// 	mpOutlineColorProgram[0]->SetColor3f(mpOutlineColorProgram[0]->GetVariableId("gvColor"), cColor(0,0,0.5f,0));
-		// }
-
-		cVector3f vLocalSize = pBV->GetLocalMax() - pBV->GetLocalMin();
-		cVector3f vScale = (cVector3f(1.0f)/vLocalSize) * fScaleAdd  + cVector3f(1.0f);
-
-		cMatrixf mtxScale = cMath::MatrixMul(cMath::MatrixScale(vScale), cMath::MatrixTranslate(pBV->GetLocalCenter()*-1));
-		mtxScale.SetTranslation(mtxScale.GetTranslation() + pBV->GetLocalCenter());
-		m_mtxTemp = cMath::MatrixMul(pObject->GetWorldMatrix(), mtxScale);
-
-		apFunctions->SetVertexBuffer(pObject->GetVertexBuffer());
-		apFunctions->SetMatrix(NULL);
-		apFunctions->SetMatrix(&m_mtxTemp);
-		apFunctions->DrawCurrent();
-	}
-
-	////////////////////////////////////
-	// Blur the color buffer
-	apFunctions->SetFlatProjection();
-
-	apFunctions->SetStencilActive(false);
-	apFunctions->SetDepthTest(false);
-
-	for(int i=0; i<2; ++i)
-	{
-		//Reverse order so blur program is not set unneeded times
-		if(mpBlurProgram[1-i])
-			mpBlurProgram[1-i]->SetFloat(kVar_afBlurSize, 1.0f);
-	}
-
-	int lBlurIterations = 2;
-	RenderOutlineBlur(apFunctions, mpOutlineColorTexture);
-	for(int i=1; i<lBlurIterations;++i)
-	{
-		RenderOutlineBlur(apFunctions, mpBlurTexture[1]);
-	}
-
-
-	////////////////////////////////////
-	// Draw the color buffer
-	apFunctions->SetStencilActive(true);
-	apFunctions->SetBlendMode(eMaterialBlendMode_Add);
-
-	apFunctions->SetProgram(NULL);
-	apFunctions->SetFrameBuffer(mpDeferredAccumBuffer);
-
-	apFunctions->SetScissorActive(true);
-	apFunctions->SetScissorRect(clipRect,false);
-
-	apFunctions->SetTexture(0, mpBlurTexture[1]);
-	apFunctions->DrawQuad(0,1,0,mpBlurTexture[1]->GetSizeFloat2D(),true);
-	//apFunctions->SetTexture(0, mpOutlineColorTexture);
-	//apFunctions->DrawQuad(0,1,0,mpOutlineColorTexture->GetSizeFloat2D(),true);
-
-	////////////////////////////////////
-	// Reset
-	apFunctions->SetNormalFrustumProjection();
-	apFunctions->SetStencilActive(false);
-	apFunctions->SetScissorActive(false);
-
-	apFunctions->SetTextureRange(NULL, 0);
-
-	//Debug:
-	/*apFunctions->SetBlendMode(eMaterialBlendMode_None);
-	apFunctions->SetTexture(0, NULL);
-	apFunctions->SetMatrix(NULL);
-	apFunctions->GetLowLevelGfx()->DrawBoxMinMax(totalBV.GetMin(),totalBV.GetMax(),cColor(1,1));*/
+        GraphicsContext::DrawRequest request = { m_outputTarget, layoutStream, program };
+        graphicsContext.Submit(view, request);
+    }
 }
 
-void cLuxEffectRenderer::RenderOutlineBlur(cRendererCallbackFunctions* apFunctions, iTexture *apInputTex)
+void cLuxEffectRenderer::RenderBlurPass(GraphicsContext& context, Image& input)
 {
-	apFunctions->SetFrameBuffer(mpBlurBuffer[0]);
+    struct
+    {
+        float u_useHorizontal;
+        float u_blurSize;
+        float texelSize[2];
+    } blurParams = { 0 };
 
-	apFunctions->SetProgram(mpBlurProgram[0]);
-	apFunctions->SetTexture(0, apInputTex);
-	apFunctions->DrawQuad(0,1,apInputTex->GetSizeFloat2D(),true);
+    auto imageSize = input.GetImageSize();
 
-	apFunctions->SetFrameBuffer(mpBlurBuffer[1]);
-	apFunctions->SetProgram(mpBlurProgram[1]);
-	apFunctions->SetTexture(0, mpBlurTexture[0]);
-	apFunctions->DrawQuad(0,1,mpBlurTexture[0]->GetSizeFloat2D(),true);
+    auto image = m_blurTarget[1].GetImage(0);
+    {
+        bgfx::ViewId view = context.StartPass("Blur Pass 1");
+        blurParams.u_useHorizontal = 0;
+        blurParams.u_blurSize = BlurSize;
+        blurParams.texelSize[0] = image->GetWidth();
+        blurParams.texelSize[1] = image->GetHeight();
+
+        GraphicsContext::LayoutStream layoutStream;
+        GraphicsContext::ShaderProgram shaderProgram;
+        cMatrixf projMtx;
+        context.ScreenSpaceQuad(layoutStream, projMtx, imageSize.x, imageSize.y);
+        shaderProgram.m_configuration.m_write = Write::RGBA;
+        shaderProgram.m_handle = m_blurProgram;
+        shaderProgram.m_projection = projMtx;
+
+        shaderProgram.m_textures.push_back({ m_s_diffuseMap, input.GetHandle(), 1 });
+        shaderProgram.m_uniforms.push_back({ m_u_param, &blurParams, 1 });
+
+        GraphicsContext::DrawRequest request{ m_blurTarget[0], layoutStream, shaderProgram };
+        request.m_width = image->GetWidth();
+        request.m_height = image->GetHeight();
+        context.Submit(view, request);
+    }
+
+    {
+        bgfx::ViewId view = context.StartPass("Blur Pass 2");
+
+        blurParams.u_useHorizontal = 1.0;
+        blurParams.u_blurSize = BlurSize;
+        blurParams.texelSize[0] = image->GetWidth();
+        blurParams.texelSize[1] = image->GetHeight();
+
+        GraphicsContext::LayoutStream layoutStream;
+        GraphicsContext::ShaderProgram shaderProgram;
+        cMatrixf projMtx;
+        context.ScreenSpaceQuad(layoutStream, projMtx, imageSize.x, imageSize.y);
+        shaderProgram.m_configuration.m_write = Write::RGBA;
+        shaderProgram.m_handle = m_blurProgram;
+        shaderProgram.m_projection = projMtx;
+
+        shaderProgram.m_textures.push_back({ m_s_diffuseMap, m_blurTarget[0].GetImage()->GetHandle(), 1 });
+        shaderProgram.m_uniforms.push_back({ m_u_param, &blurParams, 1 });
+
+        GraphicsContext::DrawRequest request{ m_blurTarget[1], layoutStream, shaderProgram };
+        request.m_width = image->GetWidth();
+        request.m_height = image->GetHeight();
+
+        context.Submit(view, request);
+    }
 }
-
-//-----------------------------------------------------------------------
-
-
-

@@ -80,10 +80,8 @@ cGuiGfxElement* cLuxPreMenuSection::CreateBackground(cGui* apGui, cTextureManage
 	}
 	else
 	{
-	BX_ASSERT(false, "TODO: migrate to Image");
-		// TODO: MP migrate to Image
-		// iTexture* pTex = apTexMgr->Create2D(msBackgroundFile, false, eTextureType_Rect);
-		// if(pTex) pBG = apGui->CreateGfxTexture(pTex, true, eGuiMaterial_Alpha);
+		auto* pTex = apTexMgr->Create2DImage(msBackgroundFile, false, eTextureType_Rect);
+		if(pTex) pBG = apGui->CreateGfxTexture(pTex, true, eGuiMaterial_Alpha);
 	}
 
 	return pBG;

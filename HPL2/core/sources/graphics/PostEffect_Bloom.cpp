@@ -96,7 +96,6 @@ namespace hpl
     {
         cVector2l vRenderTargetSize = compositor.GetRenderTargetSize();
 
-        
         auto requestBlur = [&](Image& input){
             struct {
                 float u_useHorizontal;

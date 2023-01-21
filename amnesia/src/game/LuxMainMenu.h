@@ -23,6 +23,8 @@
 //----------------------------------------------
 
 #include "LuxBase.h"
+#include "graphics/Image.h"
+#include <memory>
 
 
 enum eLuxMainMenuWindow
@@ -148,7 +150,7 @@ private:
 	void CreateBackground();
 	void CreateScreenTextures();
 	void RenderBlurTexture();
-	void RenderBlur(iTexture *apInputTexture, iTexture *apTempTexture, iFrameBuffer **apBlurBuffers);
+	// void RenderBlur(iTexture *apInputTexture, iTexture *apTempTexture, iFrameBuffer **apBlurBuffers);
 
 	void DestroyBackground();
 
@@ -268,11 +270,15 @@ private:
 
 	cViewport *mpViewport;
 
-	iTexture *mpScreenTexture;
+	std::shared_ptr<Image> m_screenImage;
+	std::shared_ptr<Image> m_screenBlurImage;
+
 	cGuiGfxElement *mpScreenGfx;
-	iTexture *mpScreenBlurTexture;
 	cGuiGfxElement *mpScreenBlurGfx;
-	iGpuProgram *mpBlurProgram[2]; //0=Hori, 1=Vert
+	bgfx::ProgramHandle m_blurProgram = BGFX_INVALID_HANDLE;
+
+	bgfx::UniformHandle m_s_diffuseMap;
+	bgfx::UniformHandle m_u_param;
 
 	cGuiGfxElement *mpLogoGfx;
 

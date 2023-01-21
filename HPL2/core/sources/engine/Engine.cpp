@@ -19,7 +19,7 @@
 
 #include "engine/Engine.h"
 
-#include  <bgfx/bgfx.h>
+#include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
 
 #include <gui/GuiTypes.h>
@@ -55,6 +55,7 @@
 
 #include "system/LowLevelSystem.h"
 #include "engine/LowLevelEngineSetup.h"
+#include <engine/EngineContext.h>
 
 #include "impl/SDLEngineSetup.h"
 
@@ -366,9 +367,7 @@ namespace hpl {
 		Log("User Initialization\n");
 		Log("--------------------------------------------------------\n");
 
-		m_graphicsContext.Init();
-		cGuiSet::Init();
-		// bgfx::setDebug(BGFX_DEBUG_TEXT);
+		hpl::context::Init();
 	}
 
 	//-----------------------------------------------------------------------
@@ -517,7 +516,7 @@ namespace hpl {
 				bBufferSwap = false;
 
 				START_TIMING(SwapBuffers)
-				m_graphicsContext.Frame();
+				hpl::context::GraphicsContext().Frame();
 				STOP_TIMING(SwapBuffers)
 
 				//Log("Swap done: %d\n", cPlatform::GetApplicationTime());
@@ -543,7 +542,7 @@ namespace hpl {
 
 				//Render this frame
 				START_TIMING(RenderAll)
-				mpScene->Render(m_graphicsContext, mfFrameTime, tSceneRenderFlag_All);
+				mpScene->Render(hpl::context::GraphicsContext(), mfFrameTime, tSceneRenderFlag_All);
 				STOP_TIMING(RenderAll)
 
 				START_TIMING(PostRender)

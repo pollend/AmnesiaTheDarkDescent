@@ -32,6 +32,7 @@
 #include "graphics/RenderFunctions.h"
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <vector>
 
 namespace hpl {
@@ -55,6 +56,7 @@ namespace hpl {
 	class iRenderableContainer;
 	class iRenderableContainerNode;
 	class cVisibleRCNodeTracker;
+	class RenderCallbackMessage;
 
 	//---------------------------------------------
 
@@ -98,7 +100,6 @@ namespace hpl {
 		cMatrixf m_mtxInvBoxSpace;
 	};
 
-	//---------------------------------------------
 
 	class iRenderer;
 
@@ -256,6 +257,7 @@ namespace hpl {
 	{
 	friend class cRendererCallbackFunctions;
 	friend class cRenderSettings;
+
 	public:
 		iRenderer(const tString& asName, cGraphics *apGraphics,cResources* apResources, int alNumOfProgramComboModes);
 		virtual ~iRenderer();
@@ -283,6 +285,9 @@ namespace hpl {
 
 		virtual iTexture* GetRefractionTexture(){ return NULL;}
 		virtual iTexture* GetReflectionTexture(){ return NULL;}
+
+		virtual std::shared_ptr<Image> GetDepthStencilImage() { return std::shared_ptr<Image>(nullptr);}
+		virtual std::shared_ptr<Image> GetOutputImage() { return std::shared_ptr<Image>(nullptr);}
 
 		Image* GetRefractionImage(){ return nullptr;}
 		Image* GetReflectionImage(){ return nullptr;}
@@ -445,7 +450,7 @@ namespace hpl {
 		iVertexBuffer* LoadVertexBufferFromMesh(const tString& asMeshName, tVertexElementFlag alVtxToCopy);
 		void UpdateQuadVertexPostion(iVertexBuffer *apVtxBuffer,const cVector3f& avPos, const cVector2f& avSize, bool abCallUpdate);
 
-		void RunCallback(eRendererMessage aMessage);
+		void RunCallback(eRendererMessage aMessage, cRendererCallbackFunctions& handler);
 
 		eShadowMapResolution GetShadowMapResolution(eShadowMapResolution aWanted, eShadowMapResolution aMax);
 
@@ -514,7 +519,7 @@ namespace hpl {
 	class cRendererCallbackFunctions
 	{
 	public:
-		cRendererCallbackFunctions(iRenderer *apRenderer) : mpRenderer(apRenderer) {}
+		cRendererCallbackFunctions(GraphicsContext& context,iRenderer *apRenderer) : m_context(context), mpRenderer(apRenderer) {}
 
 		cRenderSettings* GetSettings(){ return mpRenderer->mpCurrentSettings;}
 		cFrustum* GetFrustum(){ return mpRenderer->mpCurrentFrustum;}
@@ -553,10 +558,13 @@ namespace hpl {
 
 		void DrawWireFrame(iVertexBuffer *apVtxBuffer, const cColor &aColor){ mpRenderer->DrawWireFrame(apVtxBuffer, aColor);}
 
+		inline GraphicsContext& GetGraphicsContext(){ return m_context; }
+
 		iLowLevelGraphics *GetLowLevelGfx(){ return mpRenderer->mpLowLevelGraphics;}
 
 	private:
 		iRenderer *mpRenderer;
+		GraphicsContext& m_context;
 	};
 
 	//---------------------------------------------

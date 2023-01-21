@@ -34,6 +34,7 @@
 #include "math/Math.h"
 
 #include "math/MathTypes.h"
+#include "scene/SceneTypes.h"
 #include "system/LowLevelSystem.h"
 #include "system/String.h"
 #include "system/PreprocessParser.h"
@@ -495,7 +496,14 @@ namespace hpl {
 		// }
 		return *m_output_target[0].GetImage();
 	}
-		
+
+	std::shared_ptr<Image> cRendererDeferred::GetDepthStencilImage() {
+		return m_gBuffer_depth[0].GetImage();
+	}
+
+	std::shared_ptr<Image> cRendererDeferred::GetOutputImage() {
+		return m_output_target[0].GetImage();
+	}
 
 	// NOTE: this logic is incomplete
 	void cRendererDeferred::RenderFogPass(GraphicsContext& context, RenderTarget& rt) {
@@ -893,6 +901,8 @@ namespace hpl {
 		mfFarRight = mfFarBottom * mpCurrentFrustum->GetAspect();
 		mfFarLeft = -mfFarRight;
 
+		cRendererCallbackFunctions handler(context, this);
+
 		[&]{
 			auto& target = resolveRenderTarget(m_gBuffer_full);
 			auto view = context.StartPass("Clear Depth");
@@ -985,7 +995,7 @@ namespace hpl {
 		RenderDiffusePass(context, resolveRenderTarget(m_gBuffer_full));
 		RenderDecalPass(context, resolveRenderTarget(m_gBuffer_colorAndDepth));
 
-		RunCallback(eRendererMessage_PostGBuffer);
+		RunCallback(eRendererMessage_PostGBuffer, handler);
 
 		RenderLightPass(context, resolveRenderTarget(m_output_target));
 
@@ -1002,13 +1012,13 @@ namespace hpl {
 		// if(mbEdgeSmoothLoaded && mpCurrentSettings->mbUseEdgeSmooth) {
 		// 	RenderEdgeSmoothPass(context, m_edgeSmooth_LinearDepth);
 		// }
-		RunCallback(eRendererMessage_PostSolid);
+		RunCallback(eRendererMessage_PostSolid, handler);
 
 		// not going to even try.
 		// calls back through RendererDeffered need to untangle all the complicated state ...
 		RenderTranslucentPass(context, resolveRenderTarget(m_output_target));
 
-		RunCallback(eRendererMessage_PostTranslucent);
+		RunCallback(eRendererMessage_PostTranslucent, handler);
 
 		if(mbOcclusionTestLargeLights) {
 			RetrieveAllLightOcclusionPair(false); //false = we do not stop and wait.

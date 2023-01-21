@@ -19,6 +19,7 @@
 
 #include "scene/Scene.h"
 
+#include "engine/EngineContext.h"
 #include "graphics/GraphicsContext.h"
 #include "graphics/RenderTarget.h"
 #include "scene/Viewport.h"
@@ -106,6 +107,9 @@ namespace hpl {
 		pViewport->SetWorld(apWorld);
 		pViewport->SetSize(-1);
 		pViewport->SetRenderer(mpGraphics->GetRenderer(eRenderer_Main));
+
+		hpl::context::SetPostRenderOutput(pViewport->GetRenderer()->GetOutputImage());
+
 
 		if (abPushFront) {
 			mlstViewports.push_front(pViewport);

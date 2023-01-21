@@ -237,8 +237,6 @@ namespace hpl {
 		cHaptic *mpHaptic;
 		cGui *mpGui;
 		cGenerate* mpGenerate;
-
-		GraphicsContext m_graphicsContext;
 	};
 
 };

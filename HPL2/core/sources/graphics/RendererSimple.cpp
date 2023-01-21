@@ -111,6 +111,9 @@ namespace hpl
         bool abSendFrameBufferToPostEffects,
         tRendererCallbackList* apCallbackList)
     {
+
+		cRendererCallbackFunctions handler(context, this);
+
         BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, apRenderTarget, abSendFrameBufferToPostEffects, apCallbackList);
         auto target = m_currentRenderTarget.GetRenderTarget();
         auto& outputTarget = (target && target->IsValid()) ? *target : RenderTarget::EmptyRenderTarget;
@@ -260,7 +263,7 @@ namespace hpl
             }
         }(mpCurrentRenderList->ArrayHasObjects(eRenderListType_Decal));
 
-        RunCallback(eRendererMessage_PostSolid);
+        RunCallback(eRendererMessage_PostSolid, handler);
 
         // Trans Objects
         [&](bool active)
@@ -306,7 +309,7 @@ namespace hpl
             }
         }(mpCurrentRenderList->ArrayHasObjects(eRenderListType_Translucent));
 
-        RunCallback(eRendererMessage_PostTranslucent);
+        RunCallback(eRendererMessage_PostTranslucent, handler);
     }
 
     void cRendererSimple::RenderObjects()

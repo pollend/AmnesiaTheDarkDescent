@@ -421,15 +421,13 @@ namespace hpl {
 		mfScissorLastFov =0;
 		mfScissorLastTanHalfFov =0;
 
-		mpCallbackFunctions = hplNew( cRendererCallbackFunctions, (this) );
+		// mpCallbackFunctions = hplNew( cRendererCallbackFunctions, (this) );
 
 		mfTimeCount =0;
 
 		mlActiveOcclusionQueryNum =0;
 
-
 		m_nullShader = hpl::loadProgram("vs_null", "fs_null");
-
 
 		////////////
 		// Create shapes
@@ -450,7 +448,7 @@ namespace hpl {
 
 		if(mpShapeBox) hplDelete(mpShapeBox);
 
-		hplDelete(mpCallbackFunctions);
+		// hplDelete(mpCallbackFunctions);
 	}
 
 	//-----------------------------------------------------------------------
@@ -2325,7 +2323,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void iRenderer::RunCallback(eRendererMessage aMessage)
+	void iRenderer::RunCallback(eRendererMessage aMessage, cRendererCallbackFunctions& handler)
 	{
 		if(mpCallbackList == NULL || mpCurrentSettings->mbUseCallbacks==false) return;
 
@@ -2334,7 +2332,7 @@ namespace hpl {
 		{
 			iRendererCallback *pCallback = *it;
 
-            pCallback->RunMessage(aMessage, mpCallbackFunctions);
+            pCallback->RunMessage(aMessage, &handler);
 		}
 	}
 
