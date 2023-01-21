@@ -75,6 +75,7 @@ namespace hpl {
 		cVector3f GetHaloSourceSize(){return mvHaloSourceSize;}
 
 		bool UsesOcclusionQuery();
+		virtual void ResolveOcclusionPass(iRenderer *apRenderer, std::function<void(bgfx::OcclusionQueryHandle, DepthTest test, GraphicsContext::LayoutStream&, const cMatrixf& transform)>) override;
 		void AssignOcclusionQuery(iRenderer *apRenderer);
 		bool RetrieveOcculsionQuery(iRenderer *apRenderer);
 
@@ -119,6 +120,8 @@ namespace hpl {
 		float mfForwardOffset;
 		cColor mColor;
 		float mfHaloAlpha;
+		bgfx::OcclusionQueryHandle m_occlusionMax = BGFX_INVALID_HANDLE;
+		bgfx::OcclusionQueryHandle m_occlusionCurrent = BGFX_INVALID_HANDLE;
 	};
 
 };

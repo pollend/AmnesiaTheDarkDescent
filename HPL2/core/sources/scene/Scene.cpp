@@ -19,6 +19,9 @@
 
 #include "scene/Scene.h"
 
+#include "engine/EngineContext.h"
+#include "graphics/GraphicsContext.h"
+#include "graphics/RenderTarget.h"
 #include "scene/Viewport.h"
 #include "scene/Camera.h"
 #include "scene/World.h"
@@ -37,6 +40,7 @@
 #include "graphics/Renderer.h"
 #include "graphics/PostEffectComposite.h"
 #include "graphics/LowLevelGraphics.h"
+#include <bx/debug.h>
 
 #include "sound/Sound.h"
 #include "sound/LowLevelSound.h"
@@ -103,6 +107,9 @@ namespace hpl {
 		pViewport->SetWorld(apWorld);
 		pViewport->SetSize(-1);
 		pViewport->SetRenderer(mpGraphics->GetRenderer(eRenderer_Main));
+
+		hpl::context::SetPostRenderOutput(pViewport->GetRenderer()->GetOutputImage());
+
 
 		if (abPushFront) {
 			mlstViewports.push_front(pViewport);
@@ -177,7 +184,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cScene::Render(float afFrameTime, tFlag alFlags)
+	void cScene::Render(GraphicsContext& context, float afFrameTime, tFlag alFlags)
 	{
 		//Increase the frame count (do this at top, so render count is valid until this Render is called again!)
 		iRenderer::IncRenderFrameCount();
@@ -213,9 +220,11 @@ namespace hpl {
 				if(pRenderer && pViewPort->GetWorld() && pFrustum)
 				{
 					START_TIMING(RenderWorld)
-					pRenderer->Render(	afFrameTime,pFrustum,
-										pViewPort->GetWorld(),pViewPort->GetRenderSettings(),
-										pViewPort->GetRenderTarget(),
+					pRenderer->Draw(context, 
+								afFrameTime,pFrustum,
+										pViewPort->GetWorld(),
+										pViewPort->GetRenderSettings(),
+										pViewPort->GetRenderViewport(),
 										bPostEffects,
 										pViewPort->GetRendererCallbackList());
 					STOP_TIMING(RenderWorld)
@@ -223,10 +232,11 @@ namespace hpl {
 				else
 				{
 					//If no renderer sets up viewport do that by our selves.
-					cRenderTarget* pRenderTarget = pViewPort->GetRenderTarget();
-					mpGraphics->GetLowLevel()->SetCurrentFrameBuffer(	pRenderTarget->mpFrameBuffer,
-																		pRenderTarget->mvPos,
-																		pRenderTarget->mvSize);
+					// cRenderTarget* pRenderTarget = pViewPort->GetRenderTarget();
+					// mpGraphics->GetLowLevel()->SetCurrentFrameBuffer(	pRenderTarget->mpFrameBuffer,
+					// 													pRenderTarget->mvPos,
+					// 													pRenderTarget->mvSize);
+					// umm need to workout how this framebuffer is used ...
 				}
 				pViewPort->RunViewportCallbackMessage(eViewportMessage_OnPostWorldDraw);
 
@@ -234,7 +244,7 @@ namespace hpl {
 				//Render 3D GuiSets
 				// Should this really be here? Or perhaps send in a frame buffer depending on the renderer.
 				START_TIMING(Render3DGui)
-				Render3DGui(pViewPort,pFrustum, afFrameTime);
+				Render3DGui(context, pViewPort,pFrustum, afFrameTime);
 				STOP_TIMING(Render3DGui)
 			}
 
@@ -242,13 +252,21 @@ namespace hpl {
 			//Render Post effects
 			if(bPostEffects)
 			{
-				//TODO: If renderer is null get texture from frame buffer and if frame buffer is NULL, then copy to a texture.
-				//		Or this is solved?
-				iTexture *pInputTexture = pRenderer->GetPostEffectTexture();
-
 				START_TIMING(RenderPostEffects)
-				pPostEffectComposite->Render(afFrameTime, pFrustum, pInputTexture,pViewPort->GetRenderTarget());
+				auto& viewport = pViewPort->GetRenderViewport();
+				RenderTarget emptyRenderTarget{};
+				pPostEffectComposite->Draw(context,
+					pRenderer->FetchOutputFromRenderer(),
+					viewport.GetRenderTarget() ? *viewport.GetRenderTarget() : emptyRenderTarget);
+
 				STOP_TIMING(RenderPostEffects)
+			} else {
+				auto& viewport = pViewPort->GetRenderViewport();
+				cVector2l vRenderTargetSize = viewport.GetSize();
+				RenderTarget emptyRenderTarget{};
+				cRect2l rect = cRect2l(0, 0, vRenderTargetSize.x, vRenderTargetSize.y);
+				context.CopyTextureToFrameBuffer(context.StartPass("Copy To Swap"),pRenderer->FetchOutputFromRenderer(), rect, viewport.GetRenderTarget() ? *viewport.GetRenderTarget() : emptyRenderTarget);
+				
 			}
 
 			//////////////////////////////////////////////
@@ -256,7 +274,7 @@ namespace hpl {
 			if(alFlags & tSceneRenderFlag_Gui)
 			{
 				START_TIMING(RenderGUI)
-				RenderScreenGui(pViewPort, afFrameTime);
+				RenderScreenGui(context, pViewPort, afFrameTime);
 				STOP_TIMING(RenderGUI)
 			}
 		}
@@ -359,7 +377,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cScene::Render3DGui(cViewport *apViewPort,cFrustum *apFrustum,float afTimeStep)
+	void cScene::Render3DGui(GraphicsContext& context, cViewport *apViewPort,cFrustum *apFrustum,float afTimeStep)
 	{
 		if(apViewPort->GetCamera()==NULL) return;
 
@@ -369,12 +387,12 @@ namespace hpl {
 			cGuiSet *pSet = it.Next();
 			if(pSet->Is3D())
 			{
-				pSet->Render(apFrustum);
+				pSet->Draw(context, apFrustum);
 			}
 		}
 	}
 
-	void cScene::RenderScreenGui(cViewport *apViewPort,float afTimeStep)
+	void cScene::RenderScreenGui(GraphicsContext& context, cViewport *apViewPort, float afTimeStep)
 	{
 		///////////////////////////////////////
 		//Put all of the non 3D sets in to a sorted map
@@ -400,7 +418,7 @@ namespace hpl {
 
 			//Log("Rendering gui '%s'\n", pSet->GetName().c_str());
 
-			pSet->Render(NULL);
+			pSet->Draw(context, NULL);
 		}
 	}
 

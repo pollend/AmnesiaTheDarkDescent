@@ -25,6 +25,7 @@
 #include "LuxConfigHandler.h"
 #include "LuxDebugHandler.h"
 #include "LuxLoadScreenHandler.h"
+#include <bx/debug.h>
 
 //-----------------------------------------------------------------------
 
@@ -79,7 +80,7 @@ cGuiGfxElement* cLuxPreMenuSection::CreateBackground(cGui* apGui, cTextureManage
 	}
 	else
 	{
-		iTexture* pTex = apTexMgr->Create2D(msBackgroundFile, false, eTextureType_Rect);
+		auto* pTex = apTexMgr->Create2DImage(msBackgroundFile, false, eTextureType_Rect);
 		if(pTex) pBG = apGui->CreateGfxTexture(pTex, true, eGuiMaterial_Alpha);
 	}
 

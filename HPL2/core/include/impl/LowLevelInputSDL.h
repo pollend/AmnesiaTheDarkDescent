@@ -21,13 +21,12 @@
 #define HPL_LOWLEVELINPUT_SDL_H
 
 #include <list>
+#include <mutex>
+#include <vector>
 #include "input/LowLevelInput.h"
 
-#if USE_SDL2
 #include "SDL2/SDL_events.h"
-#else
-#include "SDL/SDL_events.h"
-#endif
+
 
 namespace hpl {
 

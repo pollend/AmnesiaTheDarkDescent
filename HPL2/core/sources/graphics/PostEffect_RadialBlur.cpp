@@ -19,137 +19,97 @@
 
 #include "graphics/PostEffect_RadialBlur.h"
 
+#include "bgfx/bgfx.h"
 #include "graphics/Graphics.h"
 
-#include "graphics/LowLevelGraphics.h"
-#include "graphics/PostEffectComposite.h"
 #include "graphics/FrameBuffer.h"
-#include "graphics/Texture.h"
 #include "graphics/GPUProgram.h"
 #include "graphics/GPUShader.h"
+#include "graphics/GraphicsContext.h"
+#include "graphics/LowLevelGraphics.h"
+#include "graphics/PostEffectComposite.h"
+#include "graphics/ShaderUtil.h"
+#include "graphics/Texture.h"
 
+#include "math/MathTypes.h"
 #include "system/PreprocessParser.h"
 
-namespace hpl {
+namespace hpl
+{
 
-	//////////////////////////////////////////////////////////////////////////
-	// PROGRAM VARS
-	//////////////////////////////////////////////////////////////////////////
+    cPostEffectType_RadialBlur::cPostEffectType_RadialBlur(cGraphics* apGraphics, cResources* apResources)
+        : iPostEffectType("RadialBlur", apGraphics, apResources)
+    {
+        m_program = hpl::loadProgram("vs_post_effect", "fs_posteffect_radial_blur_frag");
+        m_u_uniform = bgfx::createUniform("u_params", bgfx::UniformType::Vec4);
+        m_s_diffuseMap = bgfx::createUniform("diffuseMap", bgfx::UniformType::Sampler);
+    }
 
-	#define kVar_afSize				0
-	#define kVar_avHalfScreenSize	1
-	#define kVar_afBlurStartDist	2
+    cPostEffectType_RadialBlur::~cPostEffectType_RadialBlur()
+    {
+    }
 
-	//////////////////////////////////////////////////////////////////////////
-	// POST EFFECT BASE
-	//////////////////////////////////////////////////////////////////////////
+    iPostEffect* cPostEffectType_RadialBlur::CreatePostEffect(iPostEffectParams* apParams)
+    {
+        cPostEffect_RadialBlur* pEffect = hplNew(cPostEffect_RadialBlur, (mpGraphics, mpResources, this));
+        cPostEffectParams_RadialBlur* pRadialBlurParams = static_cast<cPostEffectParams_RadialBlur*>(apParams);
+        return pEffect;
+    }
 
-	//-----------------------------------------------------------------------
+    cPostEffect_RadialBlur::cPostEffect_RadialBlur(cGraphics* apGraphics, cResources* apResources, iPostEffectType* apType)
+        : iPostEffect(apGraphics, apResources, apType)
+    {
+        cVector2l vSize = mpLowLevelGraphics->GetScreenSizeInt();
 
-	cPostEffectType_RadialBlur::cPostEffectType_RadialBlur(cGraphics *apGraphics, cResources *apResources) : iPostEffectType("RadialBlur",apGraphics,apResources)
-	{
-		cParserVarContainer vars;
-		mpProgram = mpGraphics->CreateGpuProgramFromShaders("RadialBlur","deferred_base_vtx.glsl", "posteffect_radial_blur_frag.glsl", &vars);
-		if(mpProgram)
-		{
-			mpProgram->GetVariableAsId("afSize",kVar_afSize);
-			mpProgram->GetVariableAsId("avHalfScreenSize",kVar_avHalfScreenSize);
-			mpProgram->GetVariableAsId("afBlurStartDist", kVar_afBlurStartDist);
-		}
-	}
+        mpRadialBlurType = static_cast<cPostEffectType_RadialBlur*>(mpType);
+    }
 
-	//-----------------------------------------------------------------------
+    cPostEffect_RadialBlur::~cPostEffect_RadialBlur()
+    {
+    }
 
-	cPostEffectType_RadialBlur::~cPostEffectType_RadialBlur()
-	{
+    void cPostEffect_RadialBlur::Reset()
+    {
+    }
 
-	}
+    void cPostEffect_RadialBlur::OnSetParams()
+    {
+    }
 
-	//-----------------------------------------------------------------------
+    void cPostEffect_RadialBlur::RenderEffect(cPostEffectComposite& compositor, GraphicsContext& context, Image& input, RenderTarget& target)
+    {
+        bgfx::ViewId view = context.StartPass("Radial Blur");
 
-	iPostEffect * cPostEffectType_RadialBlur::CreatePostEffect(iPostEffectParams *apParams)
-	{
-		cPostEffect_RadialBlur *pEffect = hplNew(cPostEffect_RadialBlur, (mpGraphics,mpResources,this));
-		cPostEffectParams_RadialBlur *pRadialBlurParams = static_cast<cPostEffectParams_RadialBlur*>(apParams);
+        cVector2l vRenderTargetSize = compositor.GetRenderTargetSize();
+        cVector2f vRenderTargetSizeFloat((float)vRenderTargetSize.x, (float)vRenderTargetSize.y);
 
-		return pEffect;
-	}
+        BX_ASSERT(mpRadialBlurType, "radial blur type is null");
+        BX_ASSERT(bgfx::isValid(mpRadialBlurType->m_program), "radial blur program is invalid");
 
-	//-----------------------------------------------------------------------
+        cVector2f blurStartDist = vRenderTargetSizeFloat * 0.5f;
 
-	//////////////////////////////////////////////////////////////////////////
-	// POST EFFECT
-	//////////////////////////////////////////////////////////////////////////
+        struct
+        {
+            float afSize;
+            float afBlurSartDist;
+            float avHalfScreenSize[2];
+        } u_params = { mParams.mfSize * vRenderTargetSizeFloat.x, mParams.mfBlurStartDist, { blurStartDist.x, blurStartDist.y } };
 
-	//-----------------------------------------------------------------------
+        GraphicsContext::LayoutStream layoutStream;
+        cMatrixf projMtx;
+        context.ScreenSpaceQuad(layoutStream, projMtx, vRenderTargetSize.x, vRenderTargetSize.y);
+        GraphicsContext::ShaderProgram shaderProgram;
+        shaderProgram.m_projection = projMtx;
+        shaderProgram.m_handle = mpRadialBlurType->m_program;
+        shaderProgram.m_uniforms.push_back({ mpRadialBlurType->m_u_uniform, &u_params });
+        shaderProgram.m_textures.push_back({ mpRadialBlurType->m_s_diffuseMap, input.GetHandle() });
+        shaderProgram.m_configuration.m_write = Write::RGBA | Write::Depth;
 
-	cPostEffect_RadialBlur::cPostEffect_RadialBlur(cGraphics *apGraphics, cResources *apResources, iPostEffectType *apType) : iPostEffect(apGraphics,apResources,apType)
-	{
-		cVector2l vSize = mpLowLevelGraphics->GetScreenSizeInt();
+        GraphicsContext::DrawRequest request{ target, layoutStream, shaderProgram };
+        request.m_width = vRenderTargetSize.x;
+        request.m_height = vRenderTargetSize.y;
 
-		mpRadialBlurType = static_cast<cPostEffectType_RadialBlur*>(mpType);
-	}
+        context.Submit(view, request);
+    }
 
-	//-----------------------------------------------------------------------
-
-	cPostEffect_RadialBlur::~cPostEffect_RadialBlur()
-	{
-
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cPostEffect_RadialBlur::Reset()
-	{
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cPostEffect_RadialBlur::OnSetParams()
-	{
-	}
-
-
-	//-----------------------------------------------------------------------
-
-
-	iTexture* cPostEffect_RadialBlur::RenderEffect(iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer)
-	{
-		/////////////////////////
-		// Init render states
-		mpCurrentComposite->SetFlatProjection();
-		mpCurrentComposite->SetBlendMode(eMaterialBlendMode_None);
-		mpCurrentComposite->SetChannelMode(eMaterialChannelMode_RGBA);
-		mpCurrentComposite->SetTextureRange(NULL,1);
-
-		cVector2l vRenderTargetSize = mpCurrentComposite->GetRenderTargetSize();
-		cVector2f vRenderTargetSizeFloat((float)vRenderTargetSize.x, (float)vRenderTargetSize.y);
-
-		/////////////////////////
-		// Render to accum buffer
-		// This function sets to frame buffer is post effect is last!
-		SetFinalFrameBuffer(apFinalTempBuffer);
-
-		mpCurrentComposite->SetProgram(mpRadialBlurType->mpProgram);
-
-		if(mpRadialBlurType->mpProgram)
-		{
-			mpRadialBlurType->mpProgram->SetFloat(kVar_afSize, mParams.mfSize*vRenderTargetSizeFloat.x);
-			mpRadialBlurType->mpProgram->SetFloat(kVar_afBlurStartDist, mParams.mfBlurStartDist);
-			mpRadialBlurType->mpProgram->SetVec2f(kVar_avHalfScreenSize,  vRenderTargetSizeFloat*0.5f);
-		}
-
-		mpCurrentComposite->SetTexture(0, apInputTexture);
-
-
-		DrawQuad(0, 1, apInputTexture, true);
-
-		mpCurrentComposite->SetProgram(NULL);
-		mpCurrentComposite->SetBlendMode(eMaterialBlendMode_None);
-
-		return apFinalTempBuffer->GetColorBuffer(0)->ToTexture();
-	}
-
-	//-----------------------------------------------------------------------
-
-}
+} // namespace hpl

@@ -20,10 +20,12 @@
 #ifndef HPL_MATERIAL_TYPE_H
 #define HPL_MATERIAL_TYPE_H
 
+#include "graphics/GraphicsContext.h"
 #include "system/SystemTypes.h"
 #include "engine/EngineTypes.h"
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
+#include <functional>
 
 namespace hpl {
 
@@ -38,7 +40,6 @@ namespace hpl {
 	class iRenderable;
 	class cParserVarContainer;
 	class iRenderer;
-	class cProgramComboManager;
 	class cResourceVarsObject;
 	class iMaterialVars;
 
@@ -81,24 +82,18 @@ namespace hpl {
 		iMaterialType(cGraphics *apGraphics, cResources *apResources);
 		virtual ~iMaterialType();
 
-		virtual void DestroyProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, char alSkeleton)=0;
-
 		void SetName(const tString& asName);
 		const tString& GetName(){ return msName;}
 
 		bool IsTranslucent(){ return mbIsTranslucent; }
 		bool IsDecal(){ return mbIsDecal;}
 
-		virtual bool SupportsHWSkinning()=0;
-
-		virtual iTexture* GetTextureForUnit(cMaterial *apMaterial,eMaterialRenderMode aRenderMode, int alUnit)=0;
-		virtual iGpuProgram* GetGpuProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, char alSkeleton)=0;
-
-		virtual void SetupTypeSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderer *apRenderer)=0;
-		virtual void SetupMaterialSpecificData(	eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial *apMaterial,
-												iRenderer *apRenderer)=0;
-		virtual void SetupObjectSpecificData(	eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderable *apObject,
-												iRenderer *apRenderer)=0;
+		virtual void ResolveShaderProgram(
+            eMaterialRenderMode aRenderMode,
+            cMaterial* apMaterial,
+            iRenderable* apObject,
+            iRenderer* apRenderer, 
+			std::function<void(GraphicsContext::ShaderProgram&)> program) {}
 
 		int GetUsedTextureNum(){ return (int)mvUsedTextures.size(); }
 		cMaterialUsedTexture* GetUsedTexture(int alIdx){ return &mvUsedTextures[alIdx]; }
@@ -149,8 +144,6 @@ namespace hpl {
 		tMaterialUsedTextureVec mvUsedTextures;
 
 		tMaterialUserVariableVec mvUserVariables;
-
-		cProgramComboManager *mpProgramManager;
 	};
 
 	//---------------------------------------------------

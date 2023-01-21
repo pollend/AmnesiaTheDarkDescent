@@ -19,207 +19,175 @@
 
 #include "graphics/PostEffectComposite.h"
 
+#include "graphics/GraphicsTypes.h"
+#include "graphics/Image.h"
+#include "graphics/RenderTarget.h"
+#include "math/MathTypes.h"
 #include "system/LowLevelSystem.h"
 
-#include "graphics/LowLevelGraphics.h"
-#include "graphics/Graphics.h"
-#include "graphics/Texture.h"
 #include "graphics/GPUProgram.h"
 #include "graphics/GPUShader.h"
+#include "graphics/Graphics.h"
+#include "graphics/LowLevelGraphics.h"
 #include "graphics/PostEffect.h"
+#include "graphics/Texture.h"
 #include "graphics/VertexBuffer.h"
 
-namespace hpl {
+#include <algorithm>
+#include <bx/debug.h>
+#include <cstddef>
+#include <functional>
 
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
+namespace hpl
+{
 
-	//-----------------------------------------------------------------------
+    cPostEffectComposite::cPostEffectComposite(cGraphics* apGraphics)
+        : _images(2)
+        , _renderTargets(2)
+    {
+        mpGraphics = apGraphics;
+        SetupRenderFunctions(mpGraphics->GetLowLevel());
 
-	cPostEffectComposite::cPostEffectComposite(cGraphics *apGraphics)
-	{
-		mpGraphics = apGraphics;
-		SetupRenderFunctions(mpGraphics->GetLowLevel());
+        cVector2l vSize = mpLowLevelGraphics->GetScreenSizeInt();
+        
+        ImageDescriptor desc;
+        desc.m_width = vSize.x;
+        desc.m_height = vSize.y;
+        desc.format = bgfx::TextureFormat::RGBA8;
+        desc.m_configuration.m_rt = RTType::RT_Write; 
 
-		cVector2l vSize = mpLowLevelGraphics->GetScreenSizeInt();
-		for(int i=0; i<2; ++i)
-		{
-			mpFinalTempBuffer[i] = mpGraphics->GetTempFrameBuffer(vSize,ePixelFormat_RGBA,i);
-		}
-	}
+        _images[0] = std::make_shared<Image>();
+        _images[1] = std::make_shared<Image>();
 
-	//-----------------------------------------------------------------------
+        _images[0]->Initialize(desc, nullptr);
+        _images[1]->Initialize(desc, nullptr);
 
-	cPostEffectComposite::~cPostEffectComposite()
-	{
-	}
+        _renderTargets[0] = RenderTarget(_images[0]);
+        _renderTargets[1] = RenderTarget(_images[1]);
 
-	//-----------------------------------------------------------------------
+        mvRenderTargetSize.x = vSize.x;
+        mvRenderTargetSize.y = vSize.y;
+    }
 
-	//////////////////////////////////////////////////////////////////////////
-	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
+    //-----------------------------------------------------------------------
 
-	//-----------------------------------------------------------------------
-
-	void cPostEffectComposite::Render(float afFrameTime, cFrustum *apFrustum, iTexture *apInputTexture, cRenderTarget *apRenderTarget)
-	{
-		////////////////////////////////
-		//Set up stuff needed for rendering
-		BeginRendering(afFrameTime, apFrustum, apInputTexture, apRenderTarget);
-
-		////////////////////////////////
-		//Iterate post effects and find the last one.
-		iPostEffect *pLastEffect = NULL;
-		tPostEffectMapIt it = m_mapPostEffects.begin();
-        for(; it!= m_mapPostEffects.end(); ++it)
-		{
-			iPostEffect *pPostEffect = it->second;
-			if(pPostEffect->IsActive()==false) continue;
-
-			pLastEffect = pPostEffect;
-		}
-
-		////////////////////////////////
-		//Iterate post effects and render them
-		int lCurrentTempBuffer =0;
-		iTexture *pInputTex = apInputTexture;
-		it = m_mapPostEffects.begin();
-		for(; it!= m_mapPostEffects.end(); ++it)
-		{
-			iPostEffect *pPostEffect =it->second;
-			if(pPostEffect->IsActive()==false) continue;
-
-			bool bLastEffect = pPostEffect == pLastEffect;
-
-			pInputTex = pPostEffect->Render(this,pInputTex,mpFinalTempBuffer[lCurrentTempBuffer] ,bLastEffect);
-
-			lCurrentTempBuffer = lCurrentTempBuffer==0 ? 1 : 0;
-		}
-
-		///////////////////////////////
-		// Reset rendering stuff
-		EndRendering();
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cPostEffectComposite::AddPostEffect(iPostEffect *apPostEffect, int alPrio)
-	{
-		if(apPostEffect==NULL) return;
-
-		m_mapPostEffects.insert(tPostEffectMap::value_type(alPrio, apPostEffect));
-		mvPostEffects.push_back(apPostEffect);
-	}
-
-	//-----------------------------------------------------------------------
-
-	bool  cPostEffectComposite::HasActiveEffects()
-	{
-		if(mvPostEffects.empty()) return false;
-
-		bool bActiveEffect = false;
-		for(size_t i=0; i<mvPostEffects.size(); ++i)
-		{
-			if(mvPostEffects[i]->IsActive())
-			{
-				bActiveEffect = true;
-				break;
-			}
-		}
-
-		return bActiveEffect;
-	}
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PRIVATE METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
-	void cPostEffectComposite::BeginRendering(float afFrameTime, cFrustum *apFrustum, iTexture *apInputTexture, cRenderTarget *apRenderTarget)
-	{
-		///////////////////////////////
-		//Init the render functions
-		mfCurrentFrameTime = afFrameTime;
-
-		InitAndResetRenderFunctions(apFrustum, apRenderTarget, false);
+    cPostEffectComposite::~cPostEffectComposite()
+    {
+    }
 
 
-		///////////////////////////////
-		//Init the render states
-		mpLowLevelGraphics->SetColorWriteActive(true, true, true, true);
 
-		mpLowLevelGraphics->SetCullActive(true);
-		mpLowLevelGraphics->SetCullMode(eCullMode_CounterClockwise);
+    bool cPostEffectComposite::Draw(GraphicsContext& context, Image& inputTexture, RenderTarget& renderTarget)
+    {
+        auto it = _postEffects.begin();
+        size_t currentIndex = 0;
+        bool isSavedToPrimaryRenderTarget = false;
+        bool hasEffect = false;
+        for (; it != _postEffects.end(); ++it)
+        {
+            if (!it->_effect->IsActive())
+            {
+                continue;
+            }
+            hasEffect = true;
+            it->_effect->RenderEffect(*this, context, inputTexture, _renderTargets[currentIndex]);
+        }
 
-		SetDepthTest(false);
-		SetDepthWrite(false);
-		mpLowLevelGraphics->SetDepthTestFunc(eDepthTestFunc_LessOrEqual);
+        // this happens when there are no post effects
+        if(!hasEffect) {
+            cVector2l vRenderTargetSize = GetRenderTargetSize();
 
-		mpLowLevelGraphics->SetColor(cColor(1,1,1,1));
+            cRect2l rect = cRect2l(0, 0, vRenderTargetSize.x, vRenderTargetSize.y);
+            context.CopyTextureToFrameBuffer(context.StartPass("Copy To Swap"),inputTexture, rect, renderTarget);
+            return false;
+        }
 
-		for(int i=0; i<kMaxTextureUnits; ++i)
-			mpLowLevelGraphics->SetTexture(i, NULL);
+        while (it != _postEffects.end())
+        {
+            if (!it->_effect->IsActive())
+            {
+                it++;
+                continue;
+            }
+            auto nextIt = ([&](){ 
+               for(;it != _postEffects.end(); ++it) {
+                   if(!it->_effect->IsActive()) {
+                       continue;
+                   }
+                   return it;
+               }
+             return _postEffects.end();
+            })();
+            size_t nextIndex = (currentIndex + 1) % 2;
+            if (nextIt == _postEffects.end())
+            {
+                isSavedToPrimaryRenderTarget = true;
+                it->_effect->RenderEffect(*this, context, *_images[currentIndex], renderTarget);
+            }
+            else
+            {
+                it->_effect->RenderEffect(*this, context, *_images[currentIndex], _renderTargets[nextIndex]);
+            }
+            currentIndex = nextIndex;
+            it = nextIt;
+        }
+        if(!isSavedToPrimaryRenderTarget) {
+            cVector2l vRenderTargetSize = GetRenderTargetSize();
 
-	}
+            cRect2l rect = cRect2l(0, 0, vRenderTargetSize.x, vRenderTargetSize.y);
+            context.CopyTextureToFrameBuffer(context.StartPass("Copy To Swap"),*_images[currentIndex], rect, renderTarget);
+        }
+        return true;
 
-	//-----------------------------------------------------------------------
+    }
 
-	void cPostEffectComposite::EndRendering()
-	{
-		/////////////////////////////////////////////
-		// Reset all rendering states
-		SetBlendMode(eMaterialBlendMode_None);
-		SetChannelMode(eMaterialChannelMode_RGBA);
+    void cPostEffectComposite::AddPostEffect(iPostEffect* apPostEffect, int alPrio)
+    {
+        BX_ASSERT(apPostEffect, "Post Effect is not defined");
+        if (!apPostEffect)
+        {
+            return;
+        }
+        const auto id = _postEffects.size();
+        _postEffects.push_back({ id ,alPrio, apPostEffect });
+        std::sort(
+            _postEffects.begin(),
+            _postEffects.end(),
+            [](const auto& a, const auto& b)
+            {
+                return a._index > b._index;
+            });
+    }
 
-		/////////////////////////////////////////////
-		// Unbind all rendering data
-		for(int i=0; i<kMaxTextureUnits; ++i)
-		{
-			if(mvCurrentTexture[i]) mpLowLevelGraphics->SetTexture(i, NULL);
-		}
+    //-----------------------------------------------------------------------
 
-		if(mpCurrentProgram)	mpCurrentProgram->UnBind();
-		if(mpCurrentVtxBuffer)	mpCurrentVtxBuffer->UnBind();
+    bool cPostEffectComposite::HasActiveEffects()
+    {
+        for (const auto& eff : _postEffects)
+        {
+            if (eff._effect->IsActive())
+            {
+                return true;
+            }
+        }
+        return false;
+    }
 
-		/////////////////////////////////////////////
-		// Clean up render functions
-		ExitAndCleanUpRenderFunctions();
-	}
+    void cPostEffectComposite::EndRendering()
+    {
+        /////////////////////////////////////////////
+        // Reset all rendering states
+        SetBlendMode(eMaterialBlendMode_None);
+        SetChannelMode(eMaterialChannelMode_RGBA);
 
-	//-----------------------------------------------------------------------
+        if (mpCurrentProgram)
+            mpCurrentProgram->UnBind();
+        if (mpCurrentVtxBuffer)
+            mpCurrentVtxBuffer->UnBind();
 
-	/*void cPostEffectComposite::CopyToFrameBuffer(iTexture *apOutputTexture)
-	{
-		SetDepthTest(false);
-		SetDepthWrite(false);
-		SetBlendMode(eMaterialBlendMode_None);
-		SetAlphaMode(eMaterialAlphaMode_Solid);
-		SetChannelMode(eMaterialChannelMode_RGBA);
+        /////////////////////////////////////////////
+        // Clean up render functions
+        ExitAndCleanUpRenderFunctions();
+    }
 
-		SetFrameBuffer(mpCurrentRenderTarget->mpFrameBuffer,true);
-
-		SetFlatProjection();
-
-		SetProgram(NULL);
-		SetTexture(0,apOutputTexture);
-		SetTextureRange(NULL, 1);
-
-		////////////////////////////////////
-		//Draw the accumulation buffer to the current frame buffer
-		//Since the texture v coordinate is reversed, need to do some math.
-		cVector2f vViewportPos((float)mpCurrentRenderTarget->mvPos.x, (float)mpCurrentRenderTarget->mvPos.y);
-		cVector2f vViewportSize((float)mvRenderTargetSize.x, (float)mvRenderTargetSize.y);
-		DrawQuad(	cVector2f(0,0),1,
-					cVector2f(vViewportPos.x, (mvScreenSizeFloat.y - vViewportSize.y)-vViewportPos.y ),
-					cVector2f(vViewportPos.x + vViewportSize.x,mvScreenSizeFloat.y - vViewportPos.y),
-					true);
-	}*/
-
-	//-----------------------------------------------------------------------
-
-}
+} // namespace hpl

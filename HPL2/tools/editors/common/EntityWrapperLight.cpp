@@ -29,6 +29,8 @@
 #include "EditorWindowEntityEditBoxLight.h"
 
 #include "EntityWrapperBillboard.h"
+#include "graphics/Image.h"
+#include "resources/TextureManager.h"
 
 #include <algorithm>
 
@@ -666,14 +668,17 @@ void iEntityWrapperLight::RemoveConnectedBillboard(cEntityWrapperBillboard* apBB
 
 void iEntityWrapperLight::SetFalloffMap(const tString& asFalloffMap)
 {
-	iTexture* pTex = NULL;
-
-	cEditorHelper::LoadTextureResource(eEditorTextureResourceType_1D, asFalloffMap, &pTex);
-	if(pTex)
+	Image* pTex = NULL;
+	cTextureManager::ImageOptions imageOptions;
+	imageOptions.m_uClamp = true;
+	imageOptions.m_vClamp = true;
+	cEditorHelper::LoadTextureResource(eEditorTextureResourceType_1D, asFalloffMap, &pTex, "none", 0, imageOptions);
+	if(pTex) {
 		msFalloffMap = cString::To8Char(GetEditorWorld()->GetEditor()->GetPathRelToWD(asFalloffMap));
+	}
 	else
 	{
-		cEditorHelper::LoadTextureResource(eEditorTextureResourceType_1D, "core_falloff_linear", &pTex);
+		cEditorHelper::LoadTextureResource(eEditorTextureResourceType_1D, "core_falloff_linear", &pTex, "none", 0, imageOptions);
 		msFalloffMap = "";
 	}
 
@@ -684,9 +689,12 @@ void iEntityWrapperLight::SetFalloffMap(const tString& asFalloffMap)
 
 void iEntityWrapperLight::SetGobo(const tString& asGoboFilename)
 {
-	iTexture* pTex = NULL;
+	Image* pTex = NULL;
 
-	cEditorHelper::LoadTextureResource(eEditorTextureResourceType_2D, asGoboFilename, &pTex, msGoboAnimMode, mfGoboAnimFrameTime);
+	cTextureManager::ImageOptions imageOptions;
+	imageOptions.m_uClamp = true;
+	imageOptions.m_vClamp = true;
+	cEditorHelper::LoadTextureResource(eEditorTextureResourceType_2D, asGoboFilename, &pTex, msGoboAnimMode, mfGoboAnimFrameTime, imageOptions);
 	if(pTex)
 		msGoboFilename = asGoboFilename;
 	else

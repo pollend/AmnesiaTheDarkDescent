@@ -384,7 +384,8 @@ void cEditorWindowViewport::SetEnlarged(bool abX)
 		vPos = mvEnlargedPosition;
 		vSize = mvEnlargedSize;
 		vFBPos = cVector2l(0);
-		vFBSize = mpFB->GetSize();
+		auto image = m_target->GetImage();
+		vFBSize = cVector2l(image->GetWidth(), image->GetHeight());
 	}
 	else
 	{
@@ -446,7 +447,7 @@ bool cEditorWindowViewport::MenuView_Rendering(iWidget *apWidget, const cGuiMess
 	// Set render mode
 	cWidgetMenuItem* pItem = (cWidgetMenuItem*) apWidget;
 
-	for(int i=0;i<eRenderer_LastEnum;++i)
+	for(int i=0;i<2;++i)
 	{
 		bool bSelected = (pItem==mpMainMenuRenderModes[i]);
 

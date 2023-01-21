@@ -190,12 +190,12 @@ namespace hpl {
 		pVtxBuffer->CreateElementArray(eVertexBufferElement_Color0,eVertexBufferElementFormat_Float,4);
 		pVtxBuffer->CreateElementArray(eVertexBufferElement_Texture0,eVertexBufferElementFormat_Float,3);
 
-		cVector3f vTexCoords[4] =
+		cVector2f vTexCoords[4] =
 		{
-			cVector3f(avCorner1UV.x, avCorner1UV.y,0),
-			cVector3f(avCorner2UV.x, avCorner2UV.y,0),			// Start Corner
-			cVector3f(avCorner3UV.x, avCorner3UV.y,0),
-			cVector3f(avCorner4UV.x, avCorner4UV.y,0)			// End Corner
+			cVector2f(avCorner1UV.x, avCorner1UV.y),
+			cVector2f(avCorner2UV.x, avCorner2UV.y),			// Start Corner
+			cVector2f(avCorner3UV.x, avCorner3UV.y),
+			cVector2f(avCorner4UV.x, avCorner4UV.y)			// End Corner
 		};
 
 		for(int i=0;i<4;i++)

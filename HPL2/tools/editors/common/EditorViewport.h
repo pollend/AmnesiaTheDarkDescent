@@ -23,6 +23,10 @@
 #include "../common/StdAfx.h"
 
 #include "EditorGrid.h"
+#include "graphics/Image.h"
+#include "graphics/RenderTarget.h"
+#include "graphics/RenderViewport.h"
+#include <memory>
 
 using namespace hpl;
 
@@ -246,10 +250,10 @@ public:
 
 	/////////////////////////////////////
 	// Engine specific funcs
-	iFrameBuffer* GetFrameBuffer() { return mpFB; }
+	// iFrameBuffer* GetFrameBuffer() { return mpFB; }
 	cViewport* GetEngineViewport() { return mpEngineViewport; }
 	void SetRenderMode(eRenderer aRenderMode);
-	void SetFrameBuffer(iFrameBuffer* apFB);
+	void SetFrameBuffer(std::shared_ptr<RenderTarget> apFB);
 	void SetEngineViewportPositionAndSize(const cVector2l& avPos, const cVector2l& avSize);
 	void SetEngineViewportSize(const cVector2l& avSize);
 	void UpdateViewport();
@@ -345,8 +349,10 @@ protected:
 
 	//////////////////////////////
 	// Render to texture stuff
-	iFrameBuffer* mpFB;
-	iTexture* mpRenderTarget;
+	// iFrameBuffer* mpFB;
+	// Image* mpRenderTarget;
+
+	std::shared_ptr<RenderTarget> m_target;
 	cVector2f mvUVStart;
 	cVector2f mvUVSize;
 	cVector2f mvUVEnd;

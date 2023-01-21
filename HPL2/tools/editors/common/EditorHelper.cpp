@@ -23,7 +23,9 @@
 #include "EntityWrapper.h"
 #include "EditorWorld.h"
 #include "EditorWindowViewport.h"
-
+#include "graphics/GraphicsTypes.h"
+#include "graphics/Image.h"
+#include <bx/debug.h>
 
 iEditorBase* cEditorHelper::mpEditor = NULL;
 
@@ -600,13 +602,13 @@ bool cEditorHelper::LoadEntityFile(int alID,
 	return pEntity!=NULL;
 }
 
-bool cEditorHelper::LoadTextureResource(eEditorTextureResourceType aTexType, const tString& asFile, iTexture** apTexture, const tString& asAnimMode, float afFrameTime)
+bool cEditorHelper::LoadTextureResource(eEditorTextureResourceType aTexType, const tString& asFile, Image** apTexture, const tString& asAnimMode, float afFrameTime, cTextureManager::ImageOptions options)
 {
 	if(asFile=="")
 		return false;
 
 	cTextureManager* pManager = mpEditor->GetEngine()->GetResources()->GetTextureManager();
-	iTexture* pTexture = NULL;
+	Image* pTexture = NULL;
 
 	tString sAnimMode = cString::ToLowerCase(asAnimMode);
 
@@ -615,16 +617,16 @@ bool cEditorHelper::LoadTextureResource(eEditorTextureResourceType aTexType, con
 		switch(aTexType)
 		{
 		case eEditorTextureResourceType_1D:
-			pTexture = pManager->Create1D(asFile, true);
+			pTexture = pManager->Create1DImage(asFile, true, eTextureUsage_Normal, 0, options);
 			break;
 		case eEditorTextureResourceType_2D:
-			pTexture = pManager->Create2D(asFile,true);
+			pTexture = pManager->Create2DImage(asFile,true, eTextureType_2D, eTextureUsage_Normal,0, options);
 			break;
 		case eEditorTextureResourceType_3D:
-			pTexture = pManager->Create3D(asFile,true);
+			pTexture = pManager->Create3DImage(asFile,true, eTextureUsage_Normal, 0, options);
 			break;
 		case eEditorTextureResourceType_CubeMap:
-			pTexture = pManager->CreateCubeMap(asFile,true);
+			pTexture = pManager->CreateCubeMapImage(asFile,true, eTextureUsage_Normal, 0, options);
 			break;
 		}
 	}
@@ -652,12 +654,14 @@ bool cEditorHelper::LoadTextureResource(eEditorTextureResourceType aTexType, con
 		else if(sAnimMode=="oscillate")
 			animMode = eTextureAnimMode_Oscillate;
 
-		pTexture = pManager->CreateAnim(asFile, true, texType);
-		if(pTexture)
-		{
-			pTexture->SetAnimMode(animMode);
-			pTexture->SetFrameTime(afFrameTime);
-		}
+
+		BX_ASSERT(animMode!=eTextureAnimMode_None, "Invalid anim mode not supported!");
+		// pTexture = pManager->CreateAnim(asFile, true, texType);
+		// if(pTexture)
+		// {
+		// 	pTexture->SetAnimMode(animMode);
+		// 	pTexture->SetFrameTime(afFrameTime);
+		// }
 	}
 
 	if(apTexture==NULL)

@@ -454,7 +454,7 @@ bool cLuxBase::Init(const tString &asCommandline)
 
 	/////////////////////////////
 	// Check so all needed features are supported
-	if(CheckFeatureSupport()==false) return false;
+	// if(CheckFeatureSupport()==false) return false;
 
 	/////////////////////////////
 	// Init the game data and structures
@@ -1157,7 +1157,6 @@ bool cLuxBase::InitEngine()
 	cRendererDeferred::SetSSAONumOfSamples(mpConfigHandler->mlSSAOSamples);
 	cRendererDeferred::SetSSAOLoaded(mpConfigHandler->mbSSAOActive);
 	cRendererDeferred::SetGBufferType((eDeferredGBuffer)mpMainConfig->GetInt("Graphics","GBufferType", eDeferredGBuffer_32Bit));
-	cRendererDeferred::SetNumOfGBufferTextures(mpMainConfig->GetInt("Graphics","NumOfGBufferTextures", 3));
 	cRendererDeferred::SetEdgeSmoothLoaded(mpConfigHandler->mbEdgeSmooth);
 
 	cRendererDeferred::SetOcclusionTestLargeLights(mpConfigHandler->mbOcclusionTestLights);

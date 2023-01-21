@@ -28,6 +28,14 @@
 
 namespace hpl {
 	//--------------------------------
+	enum GuiMaterialType {
+		Unknown,
+		Alpha,
+		FontNormal,
+		Additive,
+		Modulative,
+		PremulAlpha,
+	};
 
 	enum eGuiWindowZDest
 	{

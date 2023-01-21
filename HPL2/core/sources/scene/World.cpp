@@ -19,6 +19,8 @@
 
 #include "scene/World.h"
 
+#include "graphics/GraphicsTypes.h"
+#include "graphics/Image.h"
 #include "impl/tinyXML/tinyxml.h"
 
 #include "system/Script.h"
@@ -316,7 +318,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cWorld::SetSkyBox(iTexture *apTexture, bool abAutoDestroy)
+	void cWorld::SetSkyBox(Image *apTexture, bool abAutoDestroy)
 	{
 		if(mpSkyBoxTexture && mbAutoDestroySkybox)
 		{
@@ -325,11 +327,12 @@ namespace hpl {
 
 		mbAutoDestroySkybox = abAutoDestroy;
 		mpSkyBoxTexture = apTexture;
-		if(mpSkyBoxTexture)
-		{
-			mpSkyBoxTexture->SetWrapS(eTextureWrap_ClampToEdge);
-			mpSkyBoxTexture->SetWrapT(eTextureWrap_ClampToEdge);
-		}
+		//TODO: MP need to set wrap mode to clamp to edge!
+		// if(mpSkyBoxTexture)
+		// {
+		// 	mpSkyBoxTexture->SetWrapS(eTextureWrap_ClampToEdge);
+		// 	mpSkyBoxTexture->SetWrapT(eTextureWrap_ClampToEdge);
+		// }
 	}
 
 	void cWorld::SetSkyBoxActive(bool abX)
@@ -515,11 +518,13 @@ namespace hpl {
 
 		if(asGobo != "")
 		{
-			iTexture *pTexture = mpResources->GetTextureManager()->CreateCubeMap(asGobo,true);
-			if(pTexture!=NULL)
+			auto* pTexture = mpResources->GetTextureManager()->CreateCubeMapImage(asGobo,true);
+			if(pTexture!=NULL) {
 				pLight->SetGoboTexture(pTexture);
-			else
+			}
+			else {
 				Warning("Couldn't load gobo texture '%s' for light '%s'",asGobo.c_str(), asName.c_str());
+			}
 		}
 
 		pLight->SetStatic(abStatic);
@@ -540,11 +545,17 @@ namespace hpl {
 
 		if(asGobo != "")
 		{
-			iTexture *pTexture = mpResources->GetTextureManager()->Create2D(asGobo,true);
-			if(pTexture!=NULL)
+
+			cTextureManager::ImageOptions imageOptions;
+			imageOptions.m_uClamp = true;
+			imageOptions.m_vClamp = true;
+			Image *pTexture = mpResources->GetTextureManager()->Create2DImage(asGobo,true, eTextureType_2D, eTextureUsage_Normal, 0, imageOptions);
+			if(pTexture!=NULL) {
 				pLight->SetGoboTexture(pTexture);
-			else
+			}
+			else {
 				Warning("Couldn't load gobo texture '%s' for light '%s'",asGobo.c_str(), asName.c_str());
+			}
 		}
 
 		pLight->SetStatic(abStatic);

@@ -23,6 +23,8 @@
 #include "EditorWindow.h"
 #include "EditorViewport.h"
 #include "EditorVar.h"
+#include "graphics/Image.h"
+#include <memory>
 
 class cEditorWindowMaterialEditor;
 class cTextureUnitWrapper;
@@ -55,10 +57,11 @@ public:
 	cTextureWrapper(cMaterialWrapper* apMat, eMaterialTexture aUnit);
 	~cTextureWrapper();
 
-	iTexture* GetTexture() { return mpTexture; }
+	Image* GetTexture() { return mpTexture.get(); }
 
 	void Reset();
 
+	ImageDescriptor getDescriptor() const { return m_desc; }
 	void Load(cXmlElement* apElement);
 	void Save(cXmlElement* apElement);
 
@@ -111,7 +114,8 @@ protected:
 	tString msAnimMode;
 	float mfFrameTime;
 
-	iTexture* mpTexture;
+	std::unique_ptr<Image> mpTexture;
+	ImageDescriptor m_desc;
 	cDate mTimeStamp;
 };
 
@@ -179,7 +183,7 @@ protected:
 	tWString msBlendMode;
 
 	std::vector<cTextureWrapper*> mvTextures;
-	std::vector<iTexture*> mvDefaultTextures;
+	std::vector<Image*> mvDefaultTextures;
 
 	std::vector<cMaterialUvAnimation> mvUVAnimations;
 

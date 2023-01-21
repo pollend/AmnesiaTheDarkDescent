@@ -19,9 +19,17 @@
 
 #include "graphics/Renderer.h"
 
+#include "bgfx/bgfx.h"
+#include "graphics/Enum.h"
+#include "graphics/GraphicsContext.h"
+#include "graphics/RenderTarget.h"
+#include "graphics/RenderViewport.h"
+#include "graphics/ShaderUtil.h"
 #include "math/Math.h"
 #include "math/BoundingVolume.h"
 
+#include "math/MathTypes.h"
+#include "scene/SceneTypes.h"
 #include "system/LowLevelSystem.h"
 #include "system/PreprocessParser.h"
 #include "system/String.h"
@@ -36,7 +44,6 @@
 #include "graphics/FrameBuffer.h"
 #include "graphics/Material.h"
 #include "graphics/MaterialType.h"
-#include "graphics/ProgramComboManager.h"
 #include "graphics/GPUProgram.h"
 #include "graphics/Mesh.h"
 #include "graphics/SubMesh.h"
@@ -58,6 +65,7 @@
 #include "scene/FogArea.h"
 
 #include <algorithm>
+#include <memory>
 
 namespace hpl {
 
@@ -181,10 +189,11 @@ namespace hpl {
 
 		STLDeleteAll(mvOcclusionObjectPool);
 
-		for(size_t i=0; i<mvLightOcclusionPairs.size(); ++i)
+		for(size_t i=0; i<m_lightOcclusionPairs.size(); ++i)
 		{
-			if(mvLightOcclusionPairs[i].mpQuery)
-				hplDelete(mvLightOcclusionPairs[i].mpQuery);
+			if(bgfx::isValid(m_lightOcclusionPairs[i].m_occlusionQuery)) {
+				bgfx::destroy(m_lightOcclusionPairs[i].m_occlusionQuery);
+			}
 		}
 
 		if(mpReflectionSettings) hplDelete(mpReflectionSettings);
@@ -263,7 +272,7 @@ namespace hpl {
 		cOcclusionQueryObject *pObject = mvOcclusionObjectPool[mlCurrentOcclusionObject];
 
 		pObject->mlCustomID = alCustomIndex;
-		pObject->mpQuery = apRenderer->GetOcclusionQuery();
+		pObject->m_occlusion = bgfx::createOcclusionQuery();
 		pObject->mpVtxBuffer = apVtxBuffer;
 		pObject->mpMatrix = apMatrix;
 		pObject->mbDepthTest = abDepthTest;
@@ -304,55 +313,50 @@ namespace hpl {
 			return 0;
 		}
 
-		//////////////////////////////////////
-		// Get the query and wait (if needed) for result to come in.
-		iOcclusionQuery *pQuery = pObject->mpQuery;
-
-		//If query is null, then samples have already been retrieved.
-		if(pQuery==NULL) return pObject->mlSampleResults;
-
-		while(pQuery->FetchResults()==false);
-
-		pObject->mlSampleResults = pQuery->GetSampleCount();
-		pObject->mpQuery = NULL;
-		apRenderer->ReleaseOcclusionQuery(pQuery);
-
-		return pObject->mlSampleResults;
+		if(bgfx::isValid(pObject->m_occlusion)) {
+			int32_t numSamples = 0;
+			if(bgfx::getResult(pObject->m_occlusion, &numSamples) == bgfx::OcclusionQueryResult::Visible) {
+				pObject->mlSampleResults = numSamples;
+				bgfx::destroy(pObject->m_occlusion);
+				pObject->m_occlusion	=  BGFX_INVALID_HANDLE;
+			}
+		}
+		return 0;
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cRenderSettings::WaitAndRetrieveAllOcclusionQueries(iRenderer *apRenderer)
 	{
-		for(int i=0; i<mlCurrentOcclusionObject; ++i)
-		{
-			iOcclusionQuery *pQuery = mvOcclusionObjectPool[i]->mpQuery;
-			if(pQuery==NULL) continue;
+		// for(int i=0; i<mlCurrentOcclusionObject; ++i)
+		// {
+		// 	iOcclusionQuery *pQuery = mvOcclusionObjectPool[i]->mpQuery;
+		// 	if(pQuery==NULL) continue;
 
-            while(pQuery->FetchResults()==false);
+        //     while(pQuery->FetchResults()==false);
 
-			mvOcclusionObjectPool[i]->mlSampleResults = pQuery->GetSampleCount();
-			mvOcclusionObjectPool[i]->mpQuery = NULL;
-			apRenderer->ReleaseOcclusionQuery(pQuery);
-		}
+		// 	mvOcclusionObjectPool[i]->mlSampleResults = pQuery->GetSampleCount();
+		// 	mvOcclusionObjectPool[i]->mpQuery = NULL;
+		// 	apRenderer->ReleaseOcclusionQuery(pQuery);
+		// }
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cRenderSettings::ClearOcclusionObjects(iRenderer *apRenderer)
 	{
-		if(mbLog) Log(" Clearing occlusion queries i settings!\n");
-		m_setOcclusionObjects.clear();
-		for(int i=0; i<mlCurrentOcclusionObject; ++i)
-		{
-			iOcclusionQuery *pQuery = mvOcclusionObjectPool[i]->mpQuery;
-			if(pQuery==NULL) continue;
+		// if(mbLog) Log(" Clearing occlusion queries i settings!\n");
+		// m_setOcclusionObjects.clear();
+		// for(int i=0; i<mlCurrentOcclusionObject; ++i)
+		// {
+		// 	iOcclusionQuery *pQuery = mvOcclusionObjectPool[i]->mpQuery;
+		// 	if(pQuery==NULL) continue;
 
-			apRenderer->ReleaseOcclusionQuery(pQuery);
-			mvOcclusionObjectPool[i]->mpQuery = NULL;
-		}
+		// 	apRenderer->ReleaseOcclusionQuery(pQuery);
+		// 	mvOcclusionObjectPool[i]->mpQuery = NULL;
+		// }
 
-		mlCurrentOcclusionObject = 0;
+		// mlCurrentOcclusionObject = 0;
 	}
 
 	//-----------------------------------------------------------------------
@@ -405,9 +409,6 @@ namespace hpl {
 		mbOnlyRenderPrevVisibleOcclusionObjects = false;
 		mlOnlyRenderPrevVisibleOcclusionObjectsFrameCount =0;
 
-		//////////////
-		//Create data classes
-		mpProgramManager  = hplNew(	cProgramComboManager, (msName, mpGraphics, mpResources, alNumOfProgramComboModes));
 
 		//////////////
 		//Init variables
@@ -420,21 +421,13 @@ namespace hpl {
 		mfScissorLastFov =0;
 		mfScissorLastTanHalfFov =0;
 
-		mpCallbackFunctions = hplNew( cRendererCallbackFunctions, (this) );
+		// mpCallbackFunctions = hplNew( cRendererCallbackFunctions, (this) );
 
 		mfTimeCount =0;
 
 		mlActiveOcclusionQueryNum =0;
 
-		//////////////
-		// Create programs
-		cParserVarContainer vars;
-
-		mpDepthOnlyProgram = mpProgramManager->CreateProgramFromShaders("DepthOnly",
-											"deferred_base_vtx.glsl",
-											"deferred_depthonly_frag.glsl",
-											&vars,false);
-
+		m_nullShader = hpl::loadProgram("vs_null", "fs_null");
 
 		////////////
 		// Create shapes
@@ -446,16 +439,16 @@ namespace hpl {
 
 	iRenderer::~iRenderer()
 	{
-		DestroyShadowMaps();
 
-		STLDeleteAll(mvOcclusionQueryPool);
+		if(bgfx::isValid(m_nullShader)) {
+			bgfx::destroy(m_nullShader);
+		}
+
+		DestroyShadowMaps();
 
 		if(mpShapeBox) hplDelete(mpShapeBox);
 
-		hplDelete(mpCallbackFunctions);
-		hplDelete(mpProgramManager);
-
-		hplDelete(mpDepthOnlyProgram);
+		// hplDelete(mpCallbackFunctions);
 	}
 
 	//-----------------------------------------------------------------------
@@ -466,7 +459,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void iRenderer::Render(float afFrameTime,cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, cRenderTarget *apRenderTarget,
+	void iRenderer::Render(float afFrameTime,cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, const RenderViewport& apRenderTarget,
 							bool abSendFrameBufferToPostEffects,tRendererCallbackList *apCallbackList)
 	{
 		BeginRendering(afFrameTime,apFrustum, apWorld, apSettings,apRenderTarget,abSendFrameBufferToPostEffects,apCallbackList);
@@ -474,8 +467,29 @@ namespace hpl {
 		SetupRenderList();
         RenderObjects();
 
-        EndRendering();
 	}
+
+	void iRenderer::RenderableHelper(eRenderListType type, eMaterialRenderMode mode, std::function<void(iRenderable* obj, GraphicsContext::LayoutStream&, GraphicsContext::ShaderProgram&)> handler) {
+		for(auto& obj: mpCurrentRenderList->GetRenderableItems(type))
+		{
+			GraphicsContext::LayoutStream layoutStream;
+			GraphicsContext::ShaderProgram shaderProgram;
+			
+			cMaterial *pMaterial = obj->GetMaterial();
+			iMaterialType* materialType = pMaterial->GetType();
+			// iGpuProgram* program = pMaterial->GetProgram(0, mode);
+			iVertexBuffer* vertexBuffer = obj->GetVertexBuffer();
+			if(vertexBuffer == nullptr || materialType == nullptr) {
+				continue;
+			}
+			vertexBuffer->GetLayoutStream(layoutStream);
+			materialType->ResolveShaderProgram(mode, pMaterial, obj, this, [&](GraphicsContext::ShaderProgram& program) {
+				handler(obj, layoutStream, program);
+			});
+			
+		}
+	}
+
 
 	//-----------------------------------------------------------------------
 
@@ -484,23 +498,6 @@ namespace hpl {
 		mfTimeCount += afTimeStep;
 	}
 
-	//-----------------------------------------------------------------------
-
-	iTexture* iRenderer::GetPostEffectTexture()
-	{
-		if(mpCurrentRenderTarget->mpFrameBuffer)
-		{
-			iFrameBufferAttachment *pAttachement = mpCurrentRenderTarget->mpFrameBuffer->GetColorBuffer(0);
-            iTexture *pTexture = static_cast<iTexture*>(pAttachement);
-
-			return pTexture;
-		}
-		else
-		{
-			//TODO: Copy from frambuffer to texture. But what texture?
-			return NULL;
-		}
-	}
 
 	//-----------------------------------------------------------------------
 
@@ -535,17 +532,28 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void iRenderer::BeginRendering(	float afFrameTime,cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, cRenderTarget *apRenderTarget,
-									bool abSendFrameBufferToPostEffects,tRendererCallbackList *apCallbackList, bool abAtStartOfRendering)
+	void iRenderer::BeginRendering(
+		float afFrameTime,
+		cFrustum* apFrustum,
+		cWorld* apWorld,
+		cRenderSettings* apSettings,
+		const RenderViewport&  apRenderTarget,
+		bool abSendFrameBufferToPostEffects,
+		tRendererCallbackList* apCallbackList,
+		bool abAtStartOfRendering)
 	{
-		if(apSettings->mbLog)
+		if (apSettings->mbLog)
 		{
-			Log("Start Rendering Frustum: %d, World: '%s' TargetBuffer %d\n", apFrustum, apWorld->GetName().c_str(), apRenderTarget->mpFrameBuffer);
+			
+			// Log("Start Rendering Frustum: %d, World: '%s' TargetBuffer %d\n",
+			// 	apFrustum,
+			// 	apWorld->GetName().c_str(),
+			// 	apRenderTarget->mpFrameBuffer);
 			Log("-----------------  START -------------------------\n");
 		}
 
 		//////////////////////////////////////////
-		//Set up variables
+		// Set up variables
 		mfCurrentFrameTime = afFrameTime;
 		mpCurrentWorld = apWorld;
 		mpCurrentSettings = apSettings;
@@ -557,187 +565,73 @@ namespace hpl {
 		mbOcclusionPlanesActive = true;
 
 		////////////////////////////////
-		//Initialize render functions
-		InitAndResetRenderFunctions(apFrustum, apRenderTarget, apSettings->mbLog,
-									apSettings->mbUseScissorRect, apSettings->mvScissorRectPos, apSettings->mvScissorRectSize);
-
+		// Initialize render functions
+		InitAndResetRenderFunctions(
+			apFrustum,
+			apRenderTarget,
+			apSettings->mbLog,
+			apSettings->mbUseScissorRect,
+			apSettings->mvScissorRectPos,
+			apSettings->mvScissorRectSize);
 
 		////////////////////////////////
-		//Set up near plane variables
+		// Set up near plane variables
 
-		//Calculate radius for near plane so that it is always inside it.
-		float fTanHalfFOV = tan(mpCurrentFrustum->GetFOV()*0.5f);
+		// Calculate radius for near plane so that it is always inside it.
+		float fTanHalfFOV = tan(mpCurrentFrustum->GetFOV() * 0.5f);
 
 		float fNearPlane = mpCurrentFrustum->GetNearPlane();
-		mfCurrentNearPlaneTop =  fTanHalfFOV * fNearPlane;
+		mfCurrentNearPlaneTop = fTanHalfFOV * fNearPlane;
 		mfCurrentNearPlaneRight = mpCurrentFrustum->GetAspect() * mfCurrentNearPlaneTop;
-
 
 		/////////////////////////////////////////////
 		// Setup occlusion planes
 		mvCurrentOcclusionPlanes.resize(0);
 
-		//User clip planes
-		for(size_t i=0; i<apSettings->mvOcclusionPlanes.size(); ++i)
+		// User clip planes
+		for (size_t i = 0; i < apSettings->mvOcclusionPlanes.size(); ++i) {
 			mvCurrentOcclusionPlanes.push_back(apSettings->mvOcclusionPlanes[i]);
+		}
 
-        //Fog
-		if(mbSetupOcclusionPlaneForFog && apWorld->GetFogActive() && apWorld->GetFogColor().a >= 1.0f && apWorld->GetFogCulling())
+		// Fog
+		if (mbSetupOcclusionPlaneForFog && apWorld->GetFogActive() && apWorld->GetFogColor().a >= 1.0f && apWorld->GetFogCulling())
 		{
 			cPlanef fogPlane;
-			fogPlane.FromNormalPoint(	apFrustum->GetForward(),
-										apFrustum->GetOrigin() + apFrustum->GetForward()*-apWorld->GetFogEnd());
+			fogPlane.FromNormalPoint(apFrustum->GetForward(), apFrustum->GetOrigin() + apFrustum->GetForward() * -apWorld->GetFogEnd());
 			mvCurrentOcclusionPlanes.push_back(fogPlane);
 		}
+		
+		// if (mbSetFrameBufferAtBeginRendering && abAtStartOfRendering)
+		// {
+		// 	SetFrameBuffer(mpCurrentRenderTarget->mpFrameBuffer, true, true);
+		// }
+
+
+		// //////////////////////////////
+		// // Clear screen
+		// if (mbClearFrameBufferAtBeginRendering && abAtStartOfRendering)
+		// {
+		// 	// TODO: need to work out clearing framebuffer
+		// 	ClearFrameBuffer(eClearFrameBufferFlag_Depth | eClearFrameBufferFlag_Color, true);
+		// }
+
+		//////////////////////////////////////////////////
+		// Projection matrix
+		SetNormalFrustumProjection();
 
 		/////////////////////////////////////////////
-		// Init rendering
-
-			//////////////////////////////
-			//Render Target
-			if(mbSetFrameBufferAtBeginRendering && abAtStartOfRendering)
-			{
-				SetFrameBuffer(mpCurrentRenderTarget->mpFrameBuffer, true, true);
-			}
-
-			/////////////////////////
-			// General states
-			mpLowLevelGraphics->SetClearColor(mpCurrentSettings->mClearColor);
-			mpLowLevelGraphics->SetClearDepth(1);
-
-			/////////////////////////
-			// Render states
-			mpLowLevelGraphics->SetColorWriteActive(true, true, true, true);
-
-			mpLowLevelGraphics->SetCullActive(true);
-			mpLowLevelGraphics->SetCullMode(eCullMode_CounterClockwise);
-
-			mpLowLevelGraphics->SetDepthTestActive(true);
-			mpLowLevelGraphics->SetDepthWriteActive(true);
-			mpLowLevelGraphics->SetDepthTestFunc(eDepthTestFunc_LessOrEqual);
-
-			mpLowLevelGraphics->SetColor(cColor(1,1,1,1));
-
-			for(int i=0; i<kMaxTextureUnits; ++i)
-				mpLowLevelGraphics->SetTexture(i, NULL);
-
-			//////////////////////////////
-			//Clear screen
-			if(mbClearFrameBufferAtBeginRendering && abAtStartOfRendering)
-			{
-				ClearFrameBuffer(eClearFrameBufferFlag_Depth | eClearFrameBufferFlag_Color, true);
-			}
-
-
-			//////////////////////////////////////////////////
-			// Projection matrix
-			SetNormalFrustumProjection();
-
-			/////////////////////////////////////////////
-			// Clear Render list
-			if(abAtStartOfRendering)
-				mpCurrentRenderList->Clear();
+		// Clear Render list
+		if (abAtStartOfRendering)
+			mpCurrentRenderList->Clear();
 	}
-
-	//-----------------------------------------------------------------------
-
-	void iRenderer::EndRendering(bool abAtEndOfRendering)
-	{
-		///////////////////////////////
-		//Clear all occlusion objects
-		if(abAtEndOfRendering)
-			mpCurrentSettings->ClearOcclusionObjects(this);
-
-		/////////////////////////////////////////////
-		// If no post effects, make sure rendering is copied to frame buffer.
-		if(abAtEndOfRendering && mbSendFrameBufferToPostEffects==false)
-		{
-			CopyToFrameBuffer();
-		}
-
-		/////////////////////////////////////////////
-		// Reset all rendering states
-		SetBlendMode(eMaterialBlendMode_None);
-		SetChannelMode(eMaterialChannelMode_RGBA);
-		SetAlphaMode(eMaterialAlphaMode_Solid);
-
-		/////////////////////////////////////////////
-		// Reset the cull mode setup
-		mbInvertCullMode = false;
-		mpLowLevelGraphics->SetCullMode(eCullMode_CounterClockwise);
-
-		/////////////////////////////////////////////
-		// Unbind all rendering data
-		for(int i=0; i<kMaxTextureUnits; ++i)
-		{
-			if(mvCurrentTexture[i]) mpLowLevelGraphics->SetTexture(i, NULL);
-		}
-
-		if(mpCurrentProgram) mpCurrentProgram->UnBind();
-		if(mpCurrentVtxBuffer) mpCurrentVtxBuffer->UnBind();
-
-		/////////////////////////////////////////////
-		// Clean up render functions
-		ExitAndCleanUpRenderFunctions();
-
-		if(abAtEndOfRendering && mbLog)
-		{
-			Log("----------\n");
-			Log("Frame stats:\n");
-			Log("----------\n");
-			Log(" Number of Solid Objects: %d\n", mpCurrentRenderList->GetSolidObjectNum());
-			Log(" Number of Trans Objects: %d\n", mpCurrentRenderList->GetTransObjectNum());
-			Log(" Number of Lights: %d\n", mpCurrentRenderList->GetLightNum());
-			Log("-----------------  END -------------------------\n");
-		}
-
-	}
-
-	//-----------------------------------------------------------------------
-
-	void iRenderer::CreateAndAddShadowMap(eShadowMapResolution aResolution, const cVector3l &avSize, ePixelFormat aFormat)
-	{
-		tString sName = "ShadowMap"+cString::ToString(avSize.x)+"x"+cString::ToString(avSize.y)+"_"+
-						cString::ToString((int)mvShadowMapData[aResolution].size());
-		cShadowMapData *pData = hplNew(cShadowMapData, ());
-		pData->mlFrameCount = -1;
-
-		pData->mpTexture = mpGraphics->CreateTexture(sName+"_Texture",eTextureType_2D, eTextureUsage_RenderTarget);
-		pData->mpTexture->CreateFromRawData(avSize, aFormat, NULL);
-		pData->mpTexture->SetCompareMode(eTextureCompareMode_RToTexture);
-		pData->mpTexture->SetCompareFunc(eTextureCompareFunc_LessOrEqual);
-		pData->mpTexture->SetFilter(eTextureFilter_Nearest);
-		pData->mpTexture->SetWrapSTR(eTextureWrap_ClampToEdge);
-
-		//Hack to avoid ATI drier failure:
-		if(mpLowLevelGraphics->GetCaps(eGraphicCaps_OGL_ATIFragmentShader))
-		{
-			pData->mpTempDiffTexture = mpGraphics->CreateTexture(sName+"_TempDiff",eTextureType_2D, eTextureUsage_RenderTarget);
-			pData->mpTempDiffTexture->CreateFromRawData(avSize, ePixelFormat_Alpha, NULL);
-		}
-		else
-		{
-			pData->mpTempDiffTexture = NULL;
-		}
-
-		pData->mpBuffer = mpGraphics->CreateFrameBuffer(sName+"_Buffer");
-		if(pData->mpTempDiffTexture) pData->mpBuffer->SetTexture2D(0, pData->mpTempDiffTexture);
-		pData->mpBuffer->SetDepthTexture2D(pData->mpTexture);
-
-		pData->mpBuffer->CompileAndValidate();
-
-		mvShadowMapData[aResolution].push_back(pData);
-	}
-
-	//-----------------------------------------------------------------------
-
-
 
 	cShadowMapData* iRenderer::GetShadowMapData(eShadowMapResolution aResolution, iLight *apLight)
 	{
 		////////////////////////////
 		//If size is 1, then just return that one
-		if(mvShadowMapData[aResolution].size()==1) return mvShadowMapData[aResolution][0];
+		if(m_shadowMapData[aResolution].size()==1) {
+			return &m_shadowMapData[aResolution][0];
+		}
 
 		//////////////////////////
 		//Set up variables
@@ -747,22 +641,22 @@ namespace hpl {
 		////////////////////////////
 		//Iterate the shadow map array looking for shadow map already used by light
 		//Else find the one with the largest frame length.
-		for(size_t i=0; i<mvShadowMapData[aResolution].size(); ++i)
+		for(size_t i=0; i<m_shadowMapData[aResolution].size(); ++i)
 		{
-			cShadowMapData *pData = mvShadowMapData[aResolution][i];
+			cShadowMapData& pData = m_shadowMapData[aResolution][i];
 
-            if(pData->mCache.mpLight == apLight)
+            if(pData.mCache.mpLight == apLight)
 			{
-				pBestData = pData;
+				pBestData = &pData;
 				break;
 			}
 			else
 			{
-				int lFrameDist = cMath::Abs(pData->mlFrameCount- mlRenderFrameCount);
+				int lFrameDist = cMath::Abs(pData.mlFrameCount- mlRenderFrameCount);
 				if(lFrameDist > lMaxFrameDist)
 				{
 					lMaxFrameDist = lFrameDist;
-					pBestData = pData;
+					pBestData = &pData;
 				}
 			}
 		}
@@ -777,8 +671,6 @@ namespace hpl {
 
 		return pBestData;
 	}
-
-	//-----------------------------------------------------------------------
 
 
 	bool iRenderer::ShadowMapNeedsUpdate(iLight *apLight, cShadowMapData *apShadowData)
@@ -823,59 +715,13 @@ namespace hpl {
 
 	void iRenderer::DestroyShadowMaps()
 	{
-		for(int res=0; res < eShadowMapResolution_LastEnum; ++res)
-		{
-			for(size_t i=0; i<mvShadowMapData[res].size(); ++i)
-			{
-				cShadowMapData *pData = mvShadowMapData[res][i];
-
-				mpGraphics->DestroyFrameBuffer(pData->mpBuffer);
-				mpGraphics->DestroyTexture(pData->mpTexture);
-				if(pData->mpTempDiffTexture) mpGraphics->DestroyTexture(pData->mpTempDiffTexture);
-			}
-			STLDeleteAll(mvShadowMapData[res]);
-		}
 
 	}
 
 	//-----------------------------------------------------------------------
 
-	void iRenderer::RenderZObject(iRenderable *apObject, cFrustum *apCustomFrustum)
+	void iRenderer::RenderZObject(GraphicsContext& context, iRenderable *apObject, cFrustum *apCustomFrustum)
 	{
-		cMaterial *pMaterial = apObject->GetMaterial();
-
-		eMaterialRenderMode renderMode = apObject->GetCoverageAmount()>=1 ? eMaterialRenderMode_Z : eMaterialRenderMode_Z_Dissolve;
-
-		////////////////////////
-		//Set up render modes
-		SetBlendMode(eMaterialBlendMode_None);
-		SetAlphaLimit(mfDefaultAlphaLimit);
-		SetAlphaMode( pMaterial->GetTexture(eMaterialTexture_Alpha) || renderMode==eMaterialRenderMode_Z_Dissolve ?
-						eMaterialAlphaMode_Trans : eMaterialAlphaMode_Solid);
-
-		////////////////////////
-		//Set up textures
-        SetMaterialTextures(renderMode, pMaterial);
-
-        ////////////////////////
-		//Set up program
-		SetMaterialProgram(renderMode,pMaterial);
-
-
-		////////////////////////
-		//Matrix
-		if(apCustomFrustum)
-			SetMatrix(apObject->GetModelMatrix(apCustomFrustum));
-		else
-			SetMatrix(apObject->GetModelMatrixPtr());
-
-		////////////////////////
-		//Vertex buffer
-		SetVertexBuffer(apObject->GetVertexBuffer());
-
-		////////////////////////
-		//Draw
-		DrawCurrentMaterial(renderMode, apObject);
 	}
 
 	//-----------------------------------------------------------------------
@@ -945,7 +791,9 @@ namespace hpl {
 	*/
 	void iRenderer::PushNodeChildrenToStack(tRendererSortedNodeSet& a_setNodeStack, iRenderableContainerNode *apNode, int alNeededFlags)
 	{
-		if(apNode->HasChildNodes()==false) return;
+		if(apNode->HasChildNodes()==false)  {
+			return;
+		}
 
 		tRenderableContainerNodeListIt childIt = apNode->GetChildNodeList()->begin();
 		for(; childIt != apNode->GetChildNodeList()->end(); ++childIt)
@@ -1007,32 +855,32 @@ namespace hpl {
 
 	void iRenderer::AddAndRenderNodeOcclusionQuery(tNodeOcclusionPairList *apList, iRenderableContainerNode *apNode, bool abObjectsRendered)
 	{
-		//DEBUG
-		// Skip using a query and just render the node.
-		if(	mbOnlyRenderPrevVisibleOcclusionObjects &&
-			mlOnlyRenderPrevVisibleOcclusionObjectsFrameCount >= 1)
-		{
-			RenderNodeBoundingBox(apNode,NULL);
-			return;
-		}
+		// //DEBUG
+		// // Skip using a query and just render the node.
+		// if(	mbOnlyRenderPrevVisibleOcclusionObjects &&
+		// 	mlOnlyRenderPrevVisibleOcclusionObjectsFrameCount >= 1)
+		// {
+		// 	RenderNodeBoundingBox(apNode,NULL);
+		// 	return;
+		// }
 
-		//////////////////////
-		//Create the pair
-		cNodeOcclusionPair noPair;
-		noPair.mpNode = apNode;
-		noPair.mpQuery = GetOcclusionQuery();
-		noPair.mbObjectsRendered = abObjectsRendered;
+		// //////////////////////
+		// //Create the pair
+		// cNodeOcclusionPair noPair;
+		// noPair.mpNode = apNode;
+		// noPair.mpQuery = GetOcclusionQuery();
+		// noPair.mbObjectsRendered = abObjectsRendered;
 
-		if(mbLog)Log("CHC: Testing query %d on node: %d\n",noPair.mpQuery, apNode);
+		// if(mbLog)Log("CHC: Testing query %d on node: %d\n",noPair.mpQuery, apNode);
 
-		/////////////////////
-		// Render node AABB
-		RenderNodeBoundingBox(apNode, noPair.mpQuery);
+		// /////////////////////
+		// // Render node AABB
+		// RenderNodeBoundingBox(apNode, noPair.mpQuery);
 
 
-		/////////////////////
-		// Add to list
-		apList->push_back(noPair);
+		// /////////////////////
+		// // Add to list
+		// apList->push_back(noPair);
 	}
 
 	//-----------------------------------------------------------------------
@@ -1046,7 +894,7 @@ namespace hpl {
 
 		/////////////////////////
 		//Program
-		SetProgram(mpDepthOnlyProgram);
+		// SetProgram(mpDepthOnlyProgram);
 
 		/////////////////////////
 		//Texture
@@ -1103,7 +951,8 @@ namespace hpl {
 		//Set up states
 		SetDepthWrite(true);
 
-		RenderZObject(apObject, NULL);
+		GraphicsContext contx;
+		RenderZObject(contx, apObject, NULL);
 
 		return true;
 	}
@@ -1170,236 +1019,407 @@ namespace hpl {
 		}
 	}
 
-	//-----------------------------------------------------------------------
+	void iRenderer::OcclusionQueryBoundingBoxTest(bgfx::ViewId view, GraphicsContext& context, bgfx::OcclusionQueryHandle handle, const cFrustum& frustum, const cMatrixf& transform, RenderTarget& rt, Cull cull) {
+		GraphicsContext::ShaderProgram shaderProgram;
+		GraphicsContext::LayoutStream layoutStream;
+		mpShapeBox->GetLayoutStream(layoutStream);
 
+		shaderProgram.m_handle = m_nullShader;
+		shaderProgram.m_modelTransform = transform.GetTranspose();
+		shaderProgram.m_view = frustum.GetViewMatrix().GetTranspose();
+		shaderProgram.m_projection = frustum.GetProjectionMatrix().GetTranspose();
+		shaderProgram.m_configuration.m_depthTest = DepthTest::Less;
+		shaderProgram.m_configuration.m_cull = cull;
+		
+		GraphicsContext::DrawRequest drawRequest {rt, layoutStream, shaderProgram};
+			drawRequest.m_width = mvScreenSize.x;
+			drawRequest.m_height = mvScreenSize.y;
+		context.Submit(view, drawRequest);
+	}
 
-	void iRenderer::CheckForVisibleObjectsAddToListAndRenderZ(	cVisibleRCNodeTracker *apVisibleNodeTracker,
-																tObjectVariabilityFlag alObjectTypes, tRenderableFlag alNeededFlags,
-																bool abSetupRenderStates,
-																tRenderCHCObjectCallbackFunc apRenderObjectCallback)
-	{
-		START_RENDER_PASS(CHC_Culling);
+	void iRenderer::RenderZPassWithVisibilityCheck(GraphicsContext& context, cVisibleRCNodeTracker *apVisibleNodeTracker, tObjectVariabilityFlag objectTypes,  tRenderableFlag alNeededFlags,
+			RenderTarget& rt, std::function<bool(iRenderable* object)> renderHandler) {
 
-		////////////////////////////
-		//Set up rendering
-		if(abSetupRenderStates)
-		{
-			SetDepthTest(true);
-			SetDepthWrite(false);
-			SetBlendMode(eMaterialBlendMode_None);
-			SetAlphaMode(eMaterialAlphaMode_Solid);
-			SetChannelMode(eMaterialChannelMode_None);
+		auto renderNodeHandler = [&](iRenderableContainerNode *apNode, tRenderableFlag alNeededFlags) {
+			if(apNode->HasObjects()==false) return 0;
 
-			SetTextureRange(NULL,0);
-		}
+			int lRenderedObjects = 0;
 
-		////////////////////////////
-		//Set up stack and other variables
-		const tFlag vContainerFlags[2] = { eObjectVariabilityFlag_Static, eObjectVariabilityFlag_Dynamic};
+			////////////////////////////////////
+			//Iterate sorted objects and render
+			for(tRenderableListIt it = apNode->GetObjectList()->begin(); it != apNode->GetObjectList()->end(); ++it)
+			{
+				iRenderable *pObject = *it;
 
-		iRenderableContainer *pContainers[2];
-		pContainers[0] = mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static);
-		pContainers[1] = mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Dynamic);
+				//////////////////////
+				// Check if object is visible
+				if(CheckObjectIsVisible(pObject, alNeededFlags)==false) continue;
 
-		tNodeOcclusionPairList lstNodeOcclusionPairs;
+				/////////////////////////////
+				//Check if inside frustum, skip test node was inside
+				if(	apNode->GetPrevFrustumCollision() != eCollision_Inside &&
+					pObject->CollidesWithFrustum(mpCurrentFrustum)==false)
+				{
+					continue;
+				}
 
-		// Set up output variables
-		mpCurrentSettings->mlNumberOfOcclusionQueries =0;
+				if(renderHandler(pObject))
+				{
+					++lRenderedObjects;
+				}
+			}
+
+			return lRenderedObjects;
+		};
+		
+		struct {
+			iRenderableContainer* container;
+			tObjectVariabilityFlag flag;
+		} containers[] = {
+			{ mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static), eObjectVariabilityFlag_Static },
+			{ mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Dynamic), eObjectVariabilityFlag_Dynamic },
+		};
+
+		mpCurrentSettings->mlNumberOfOcclusionQueries = 0;
 
 		// Switch sets, so that the last frames set is not current.
 		apVisibleNodeTracker->SwitchAndClearVisibleNodeSet();
 
-		tRenderCHCObjectCallbackFunc pRenderCallback;
-		if(apRenderObjectCallback)	pRenderCallback = apRenderObjectCallback;
-		else						pRenderCallback = RenderObjectZAndAddToRenderListStaticCallback;
 
-
-		// Setup the container before rendering
-		for(int i=0;i<2; ++i)
-		{
-			if(vContainerFlags[i] & alObjectTypes)
-			{
-				pContainers[i]->UpdateBeforeRendering();
+		for(auto& it: containers) {
+			if(it.flag & objectTypes) {
+				it.container->UpdateBeforeRendering();
 			}
 		}
 
 		// Temp variable used when pushing visibility
 		gpCurrentVisibleNodeTracker = apVisibleNodeTracker;
 
-		//Debug:
-		//mpCurrentSettings->mlstRenderedNodes.clear();
-
 		//Add Root nodes to stack
 		tRendererSortedNodeSet setNodeStack;
-		for(int i=0;i<2; ++i)
-		{
-			if(vContainerFlags[i] & alObjectTypes)
-			{
-				iRenderableContainerNode *pNode = pContainers[i]->GetRoot();
+
+		for(auto& it: containers) {
+			if(it.flag & objectTypes) {
+				iRenderableContainerNode *pNode = it.container->GetRoot();
 				pNode->UpdateBeforeUse();	//Make sure node is updated.
 				pNode->SetInsideView(true);	//We never want to check root! Assume player is inside.
 				setNodeStack.insert(pNode);
 			}
 		}
 
-
 		//Render at least X objects without rendering nodes, to some occluders
 		int lMinRenderedObjects = mpCurrentSettings->mlMinimumObjectsBeforeOcclusionTesting;
 
+		auto pass = context.StartPass("pre-zpass");
 		////////////////////////////
 		//Iterate the nodes on the stack.
-		while(setNodeStack.empty()==false || lstNodeOcclusionPairs.empty()==false)
+		while(!setNodeStack.empty())
 		{
-			//if(mbLog) PrintNodeDebugContents(setNodeStack);
+			tRendererSortedNodeSetIt firstIt = setNodeStack.begin(); //Might be slow...
+			iRenderableContainerNode *pNode = *firstIt;
+			setNodeStack.erase(firstIt); //This is most likely very slow... use list?
 
-			///////////////////////////
-			//If node stack not empty, pop the first node on the stack
-			if(setNodeStack.empty()==false)
+			//////////////////////////
+			// Check if node is a leaf
+			bool bNodeIsLeaf = pNode->HasChildNodes() == false;
+
+			//////////////////////////
+			// Check if near plane is inside node AABB
+			bool bNearPlaneInsideNode = pNode->IsInsideView();
+
+			//////////////////////////
+			// Check if node was visible
+			bool bWasVisible = apVisibleNodeTracker->WasNodeVisible(pNode);
+
+			auto occlusionResult = bgfx::OcclusionQueryResult::Visible; // TODO: occlusion queries are broken
+			
+			//////////////////////////
+			//Render nodes and queue queries
+			// Only do this if:
+			// - Near plane is not inside node AABB
+			// - All of the closest objects have been rendered (so there are some blockers)
+			// - Node was not visible or node is leaf (always draw leaves!)
+			if(bNearPlaneInsideNode == false && lMinRenderedObjects <= 0 &&
+				(bWasVisible==false || bNodeIsLeaf || occlusionResult == bgfx::OcclusionQueryResult::Visible) )
 			{
-				tRendererSortedNodeSetIt firstIt = setNodeStack.begin(); //Might be slow...
-				iRenderableContainerNode *pNode = *firstIt;
-				setNodeStack.erase(firstIt); //This is most likely very slow... use list?
-
-				//////////////////////////
-				// Check if node is a leaf
-				bool bNodeIsLeaf = pNode->HasChildNodes()==false;
-
-				//////////////////////////
-				// Check if near plane is inside node AABB
-				bool bNearPlaneInsideNode = pNode->IsInsideView();
-
-				//////////////////////////
-				// Check if node was visible
-				bool bWasVisible = apVisibleNodeTracker->WasNodeVisible(pNode);
-
-				//////////////////////////
-				//Render nodes and queue queries
-				// Only do this if:
-				// - Near plane is not inside node AABB
-				// - All of the closest objects have been rendered (so there are some blockers)
-				// - Node was not visible or node is leaf (always draw leaves!)
-				if(	bNearPlaneInsideNode==false && lMinRenderedObjects<=0 &&
-					(bWasVisible==false || bNodeIsLeaf) )
-				{
-					////////////////
-					//If node is leaf and was visible render objects directly.
-					// Rendering directly can be good as it may result in extra blocker for next node test.
-					bool bRenderObjects = false;
-					if(bNodeIsLeaf && bWasVisible) bRenderObjects = true;
-
-					/////////////////////////////////////
-					// Render AABB and add query to list
-					AddAndRenderNodeOcclusionQuery(&lstNodeOcclusionPairs, pNode, bRenderObjects);
-
-					//////////////////////////
-					//Render node objects after AABB so that an object does not occlude its own node.
-					if(bRenderObjects) RenderAndAddNodeObjects(pNode,pRenderCallback, alNeededFlags);
-
-					//Debug:
-					// Skipping any queries, so must push up visible if this node was visible
-					if(mbOnlyRenderPrevVisibleOcclusionObjects &&
-						mlOnlyRenderPrevVisibleOcclusionObjectsFrameCount >= 1 &&
-						bRenderObjects && bWasVisible)
-					{
-						PushUpVisibility(pNode);
-					}
+				////////////////
+				//If node is leaf and was visible render objects directly.
+				// Rendering directly can be good as it may result in extra blocker for next node test.
+				bool bRenderObjects = false;
+				if(bNodeIsLeaf && bWasVisible) {
+					bRenderObjects = true;
 				}
-				//////////////////////////
-				//If previous test failed, push children to stack and render objects (if any) directly.
-				else
-				{
-					if(mbLog)
-					{
-						if(lMinRenderedObjects>0)
-							Log("CHC: Rendered objects left: %d node %d, pushing children and rendering nodes!\n",lMinRenderedObjects, pNode);
-						else
-							Log("CHC: Near plane inside node %d, pushing children and rendering nodes!\n",pNode);
-					}
 
-					////////////////
-					//Add child nodes to stack if any (also checks if they have needed flags are in frustum)
+				/////////////////////////
+				//Matrix
+				cVector3f vSize = pNode->GetMax() - pNode->GetMin();
+				cMatrixf mtxBox = cMath::MatrixScale(vSize);
+				mtxBox.SetTranslation(pNode->GetCenter());
+				// SetModelViewMatrix( cMath::MatrixMul(mpCurrentFrustum->GetViewMatrix(), mtxBox) );
+				OcclusionQueryBoundingBoxTest(pass, context, pNode->GetOcclusionQuery(), *mpCurrentFrustum, mtxBox, rt);
+
+				//////////////////////////
+				//Render node objects after AABB so that an object does not occlude its own node.
+				if(bRenderObjects || occlusionResult == bgfx::OcclusionQueryResult::Visible) {
+					renderNodeHandler(pNode, alNeededFlags);
+				}
+
+				//Debug:
+				// Skipping any queries, so must push up visible if this node was visible
+				if((mbOnlyRenderPrevVisibleOcclusionObjects &&
+					mlOnlyRenderPrevVisibleOcclusionObjectsFrameCount >= 1 &&
+					bRenderObjects && bWasVisible) || occlusionResult == bgfx::OcclusionQueryResult::Visible)
+				{
+					PushUpVisibility(pNode);
+				}
+
+				if(occlusionResult == bgfx::OcclusionQueryResult::Visible) {
 					PushNodeChildrenToStack(setNodeStack, pNode, alNeededFlags);
-
-					////////////////
-					//Render objects if any
-					int lObjectsRendered = RenderAndAddNodeObjects(pNode,pRenderCallback, alNeededFlags);
-					lMinRenderedObjects -= lObjectsRendered;
-				}
-
-				////////////////////
-				// If node stack is empty, it is a good time to flush!
-				if(setNodeStack.empty())
-				{
-					mpLowLevelGraphics->FlushRendering();
 				}
 			}
-
-			///////////////////////////
-			//If node-query list is not empty, check if the first query is ready
-			if(lstNodeOcclusionPairs.empty()==false)
+			//////////////////////////
+			//If previous test failed, push children to stack and render objects (if any) directly.
+			else
 			{
-				cNodeOcclusionPair& noPair = lstNodeOcclusionPairs.front();
-
-
-				//////////////////////////////////////
-				//Check if the query is done
-				if(noPair.mpQuery->FetchResults()==false)
+				if(mbLog)
 				{
-					//Do nothing for now....
-				}
-				///////////////////////
-				// Query is ready
-				else
-				{
-					////////////
-					//Get data, release query and pop front
-					bool bObjectsRendered = noPair.mbObjectsRendered;
-					iRenderableContainerNode *pNode = noPair.mpNode;
-
-					int lSampleCount = noPair.mpQuery->GetSampleCount();
-					ReleaseOcclusionQuery(noPair.mpQuery);
-
-					lstNodeOcclusionPairs.pop_front(); //Makes noPair invalid
-
-					if(mbLog)Log("CHC: Fetching query %d on node: %d, samples: %d\n",noPair.mpQuery, pNode, lSampleCount);
-
-					//////////
-					// Check if node is visible and if so handle children and objects
-					if(lSampleCount > mpCurrentSettings->mlSampleVisiblilityLimit)
-					{
-						if(mbLog)Log("CHC: Rendering objects in node %d\n", pNode);
-
-						////////////////
-						//Set node and all of its parents as visible.
-						PushUpVisibility(pNode);
-
-						////////////////
-						//Add child nodes to stack if any (also checks if they have needed flags are in frustum)
-						PushNodeChildrenToStack(setNodeStack, pNode, alNeededFlags);
-
-						////////////////
-						//Render objects if any and not already rendered.
-						if(bObjectsRendered==false){
-							RenderAndAddNodeObjects(pNode,pRenderCallback, alNeededFlags);
-						}
-					}
+					if(lMinRenderedObjects>0)
+						Log("CHC: Rendered objects left: %d node %d, pushing children and rendering nodes!\n",lMinRenderedObjects, pNode);
 					else
-					{
-						if(mbLog) Log("CHC: Skipping node %d\n", pNode);
-
-					}
+						Log("CHC: Near plane inside node %d, pushing children and rendering nodes!\n",pNode);
 				}
+
+				////////////////
+				//Add child nodes to stack if any (also checks if they have needed flags are in frustum)
+				PushNodeChildrenToStack(setNodeStack, pNode, alNeededFlags);
+
+				////////////////
+				//Render objects if any
+				int lObjectsRendered = renderNodeHandler(pNode, alNeededFlags);;
+				lMinRenderedObjects -= lObjectsRendered;
 			}
 
 		}
 
-		//Debug:
-		if(mbOnlyRenderPrevVisibleOcclusionObjects)
-		{
-			mlOnlyRenderPrevVisibleOcclusionObjectsFrameCount++;
-		}
+	}
 
-		END_RENDER_PASS();
+	void iRenderer::CheckForVisibleObjectsAddToListAndRenderZ(	cVisibleRCNodeTracker *apVisibleNodeTracker,
+																tObjectVariabilityFlag alObjectTypes, tRenderableFlag alNeededFlags,
+																bool abSetupRenderStates,
+																tRenderCHCObjectCallbackFunc apRenderObjectCallback)
+	{
+		// START_RENDER_PASS(CHC_Culling);
+
+		// ////////////////////////////
+		// //Set up rendering
+		// if(abSetupRenderStates)
+		// {
+		// 	SetDepthTest(true);
+		// 	SetDepthWrite(false);
+		// 	SetBlendMode(eMaterialBlendMode_None);
+		// 	SetAlphaMode(eMaterialAlphaMode_Solid);
+		// 	SetChannelMode(eMaterialChannelMode_None);
+
+		// 	SetTextureRange(NULL,0);
+		// }
+
+		// ////////////////////////////
+		// //Set up stack and other variables
+		// const tFlag vContainerFlags[2] = { eObjectVariabilityFlag_Static, eObjectVariabilityFlag_Dynamic};
+
+		// iRenderableContainer *pContainers[2];
+		// pContainers[0] = mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static);
+		// pContainers[1] = mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Dynamic);
+
+		// // tNodeOcclusionPairList lstNodeOcclusionPairs;
+
+		// // Set up output variables
+		// mpCurrentSettings->mlNumberOfOcclusionQueries =0;
+
+		// // Switch sets, so that the last frames set is not current.
+		// apVisibleNodeTracker->SwitchAndClearVisibleNodeSet();
+
+		// tRenderCHCObjectCallbackFunc pRenderCallback;
+		// if(apRenderObjectCallback)	pRenderCallback = apRenderObjectCallback;
+		// else						pRenderCallback = RenderObjectZAndAddToRenderListStaticCallback;
+
+
+		// // Setup the container before rendering
+		// for(int i=0;i<2; ++i)
+		// {
+		// 	if(vContainerFlags[i] & alObjectTypes)
+		// 	{
+		// 		pContainers[i]->UpdateBeforeRendering();
+		// 	}
+		// }
+
+		// // Temp variable used when pushing visibility
+		// gpCurrentVisibleNodeTracker = apVisibleNodeTracker;
+
+		// //Debug:
+		// //mpCurrentSettings->mlstRenderedNodes.clear();
+
+		// //Add Root nodes to stack
+		// tRendererSortedNodeSet setNodeStack;
+		// for(int i=0;i<2; ++i)
+		// {
+		// 	if(vContainerFlags[i] & alObjectTypes)
+		// 	{
+		// 		iRenderableContainerNode *pNode = pContainers[i]->GetRoot();
+		// 		pNode->UpdateBeforeUse();	//Make sure node is updated.
+		// 		pNode->SetInsideView(true);	//We never want to check root! Assume player is inside.
+		// 		setNodeStack.insert(pNode);
+		// 	}
+		// }
+
+
+		// //Render at least X objects without rendering nodes, to some occluders
+		// int lMinRenderedObjects = mpCurrentSettings->mlMinimumObjectsBeforeOcclusionTesting;
+
+		// ////////////////////////////
+		// //Iterate the nodes on the stack.
+		// while(setNodeStack.empty()==false)
+		// {
+		// 	tRendererSortedNodeSetIt firstIt = setNodeStack.begin(); //Might be slow...
+		// 	iRenderableContainerNode *pNode = *firstIt;
+		// 	setNodeStack.erase(firstIt); //This is most likely very slow... use list?
+
+		// 	//////////////////////////
+		// 	// Check if node is a leaf
+		// 	bool bNodeIsLeaf = pNode->HasChildNodes() == false;
+
+		// 	//////////////////////////
+		// 	// Check if near plane is inside node AABB
+		// 	bool bNearPlaneInsideNode = pNode->IsInsideView();
+
+		// 	//////////////////////////
+		// 	// Check if node was visible
+		// 	bool bWasVisible = apVisibleNodeTracker->WasNodeVisible(pNode);
+
+		// 	//////////////////////////
+		// 	//Render nodes and queue queries
+		// 	// Only do this if:
+		// 	// - Near plane is not inside node AABB
+		// 	// - All of the closest objects have been rendered (so there are some blockers)
+		// 	// - Node was not visible or node is leaf (always draw leaves!)
+		// 	if(bNearPlaneInsideNode == false && lMinRenderedObjects <= 0 &&
+		// 		(bWasVisible==false || bNodeIsLeaf) )
+		// 	{
+		// 		////////////////
+		// 		//If node is leaf and was visible render objects directly.
+		// 		// Rendering directly can be good as it may result in extra blocker for next node test.
+		// 		bool bRenderObjects = false;
+		// 		if(bNodeIsLeaf && bWasVisible) {
+		// 			bRenderObjects = true;
+		// 		}
+
+		// 		/////////////////////////////////////
+		// 		// Render AABB and add query to list
+		// 		AddAndRenderNodeOcclusionQuery(&lstNodeOcclusionPairs, pNode, bRenderObjects);
+
+		// 		//////////////////////////
+		// 		//Render node objects after AABB so that an object does not occlude its own node.
+		// 		if(bRenderObjects) {
+		// 			RenderAndAddNodeObjects(pNode,pRenderCallback, alNeededFlags);
+		// 		}
+
+		// 		//Debug:
+		// 		// Skipping any queries, so must push up visible if this node was visible
+		// 		if(mbOnlyRenderPrevVisibleOcclusionObjects &&
+		// 			mlOnlyRenderPrevVisibleOcclusionObjectsFrameCount >= 1 &&
+		// 			bRenderObjects && bWasVisible)
+		// 		{
+		// 			PushUpVisibility(pNode);
+		// 		}
+		// 	}
+		// 	//////////////////////////
+		// 	//If previous test failed, push children to stack and render objects (if any) directly.
+		// 	else
+		// 	{
+		// 		if(mbLog)
+		// 		{
+		// 			if(lMinRenderedObjects>0)
+		// 				Log("CHC: Rendered objects left: %d node %d, pushing children and rendering nodes!\n",lMinRenderedObjects, pNode);
+		// 			else
+		// 				Log("CHC: Near plane inside node %d, pushing children and rendering nodes!\n",pNode);
+		// 		}
+
+		// 		////////////////
+		// 		//Add child nodes to stack if any (also checks if they have needed flags are in frustum)
+		// 		PushNodeChildrenToStack(setNodeStack, pNode, alNeededFlags);
+
+		// 		////////////////
+		// 		//Render objects if any
+		// 		int lObjectsRendered = RenderAndAddNodeObjects(pNode,pRenderCallback, alNeededFlags);
+		// 		lMinRenderedObjects -= lObjectsRendered;
+		// 	}
+
+		// 	///////////////////////////
+		// 	//If node-query list is not empty, check if the first query is ready
+		// 	if(lstNodeOcclusionPairs.empty()==false)
+		// 	{
+		// 		cNodeOcclusionPair& noPair = lstNodeOcclusionPairs.front();
+
+
+		// 		//////////////////////////////////////
+		// 		//Check if the query is done
+		// 		if(noPair.mpQuery->FetchResults()==false)
+		// 		{
+		// 			//Do nothing for now....
+		// 		}
+		// 		///////////////////////
+		// 		// Query is ready
+		// 		else
+		// 		{
+		// 			////////////
+		// 			//Get data, release query and pop front
+		// 			bool bObjectsRendered = noPair.mbObjectsRendered;
+		// 			iRenderableContainerNode *pNode = noPair.mpNode;
+
+		// 			int lSampleCount = noPair.mpQuery->GetSampleCount();
+		// 			ReleaseOcclusionQuery(noPair.mpQuery);
+
+		// 			lstNodeOcclusionPairs.pop_front(); //Makes noPair invalid
+
+		// 			if(mbLog)Log("CHC: Fetching query %d on node: %d, samples: %d\n",noPair.mpQuery, pNode, lSampleCount);
+
+		// 			//////////
+		// 			// Check if node is visible and if so handle children and objects
+		// 			if(lSampleCount > mpCurrentSettings->mlSampleVisiblilityLimit)
+		// 			{
+		// 				if(mbLog)Log("CHC: Rendering objects in node %d\n", pNode);
+
+		// 				////////////////
+		// 				//Set node and all of its parents as visible.
+		// 				PushUpVisibility(pNode);
+
+		// 				////////////////
+		// 				//Add child nodes to stack if any (also checks if they have needed flags are in frustum)
+		// 				PushNodeChildrenToStack(setNodeStack, pNode, alNeededFlags);
+
+		// 				////////////////
+		// 				//Render objects if any and not already rendered.
+		// 				if(bObjectsRendered==false){
+		// 					RenderAndAddNodeObjects(pNode,pRenderCallback, alNeededFlags);
+		// 				}
+		// 			}
+		// 			else
+		// 			{
+		// 				if(mbLog) Log("CHC: Skipping node %d\n", pNode);
+
+		// 			}
+		// 		}
+		// 	}
+
+		// }
+
+		// //Debug:
+		// if(mbOnlyRenderPrevVisibleOcclusionObjects)
+		// {
+		// 	mlOnlyRenderPrevVisibleOcclusionObjectsFrameCount++;
+		// }
+
+		// END_RENDER_PASS();
 	}
 
 	//-----------------------------------------------------------------------
@@ -1671,14 +1691,9 @@ namespace hpl {
 		//If alpha, sort by texture (we know alpha is same for both materials, so can just test one)
 		if(	pMatA->GetAlphaMode() == eMaterialAlphaMode_Trans )
 		{
-			if(pMatA->GetProgram(0,eMaterialRenderMode_Z) != pMatB->GetProgram(0,eMaterialRenderMode_Z))
+			if(pMatA->GetImage(eMaterialTexture_Diffuse) != pMatB->GetImage(eMaterialTexture_Diffuse))
 			{
-				return pMatA->GetProgram(0,eMaterialRenderMode_Z) < pMatB->GetProgram(0,eMaterialRenderMode_Z);
-			}
-
-			if(pMatA->GetTexture(eMaterialTexture_Diffuse) != pMatB->GetTexture(eMaterialTexture_Diffuse))
-			{
-				return pMatA->GetTexture(eMaterialTexture_Diffuse) < pMatB->GetTexture(eMaterialTexture_Diffuse);
+				return pMatA->GetImage(eMaterialTexture_Diffuse) < pMatB->GetImage(eMaterialTexture_Diffuse);
 			}
 		}
 
@@ -1787,7 +1802,7 @@ namespace hpl {
 		//mvShadowCasters.push_back(apObject); //Debug. Only to see what object are rendered.
 
 		//Render the object
-		RenderShadowCaster(apObject,gpTempLightFrustum);
+		// RenderShadowCaster(apObject,gpTempLightFrustum);
 
 		return true;
 	}
@@ -1796,7 +1811,8 @@ namespace hpl {
 
 	void iRenderer::RenderShadowCaster(iRenderable *apObject, cFrustum *apLightFrustum)
 	{
-		RenderZObject(apObject, apLightFrustum);
+		GraphicsContext contx;
+		RenderZObject(contx, apObject, apLightFrustum);
 	}
 
 	//-----------------------------------------------------------------------
@@ -1811,88 +1827,7 @@ namespace hpl {
 			RenderShadowCaster(mvShadowCasters[i], apLightFrustum);
 		}
 	}
-	//-----------------------------------------------------------------------
-
-	void iRenderer::RenderShadowMap(iLight *apLight, iFrameBuffer *apShadowBuffer)
-	{
-		if(mbLog){
-			Log("---\nBegin Rendering Shadow Map for light '%s' / %d to buffer %d\n",apLight->GetName().c_str(), apLight, apShadowBuffer);
-		}
-		/////////////////////////
-		// Get light data
-		if(apLight->GetLightType() != eLightType_Spot) return; //Only support spot lights for now...
-
-        cLightSpot *pSpotLight = static_cast<cLightSpot*>(apLight);
-		cFrustum *pLightFrustum = pSpotLight->GetFrustum();
-
-
-		/////////////////////////
-		// Setup render states
-		SetDepthTest(true);
-		SetDepthWrite(true);
-		SetBlendMode(eMaterialBlendMode_None);
-		SetAlphaMode(eMaterialAlphaMode_Solid);
-		SetAlphaLimit(mfDefaultAlphaLimit);
-		SetChannelMode(eMaterialChannelMode_None);
-
-		SetTextureRange(NULL,0);
-
-		//Do not use any custom occlusion for shadows!
-		SetOcclusionPlanesActive(false);
-
-		mpLowLevelGraphics->SetPolygonOffsetActive(true);
-		mpLowLevelGraphics->SetPolygonOffset(mpCurrentSettings->mfShadowMapBias * apLight->GetShadowMapBiasMul(),
-											 mpCurrentSettings->mfShadowMapSlopeScaleBias * apLight->GetShadowMapSlopeScaleBiasMul());
-
-		/////////////////////////
-		// Setup render target
-		SetFrameBuffer(apShadowBuffer,false, false);
-
-		mpLowLevelGraphics->SetClearDepth(1);
-		ClearFrameBuffer(eClearFrameBufferFlag_Depth, false);
-
-		/////////////////////////
-		// Setup projection
-		cFrustum *pLastFrustum = mpCurrentFrustum;
-		mpCurrentFrustum = pLightFrustum;	//Is this a little too hackish? Not sure...
-		SetFrustumProjection(pLightFrustum);
-
-		/////////////////////////
-		// Render the shadow casters
-		if(apLight->GetOcclusionCullShadowCasters())
-		{
-			gpTempLightFrustum = pLightFrustum;
-			CheckForVisibleObjectsAddToListAndRenderZ(	apLight->GetVisibleNodeTracker(),
-														apLight->GetShadowCastersAffected(),
-														eRenderableFlag_ShadowCaster,
-														false,
-														RenderShadowCasterCHCStaticCallback);
-		}
-		else
-		{
-			RenderShadowCastersNormal(pLightFrustum);
-		}
-
-
-		/////////////////////////
-		// Reset states
-		SetTexture(0,NULL);
-
-		SetOcclusionPlanesActive(true);
-
-		mpLowLevelGraphics->SetPolygonOffsetActive(false);
-
-		/////////////////////////
-		// Reset projection
-		mpCurrentFrustum = pLastFrustum;
-		SetNormalFrustumProjection();
-
-
-		if(mbLog) Log("End Rendering Shadow Map\n---\n");
-	}
-
-	//-----------------------------------------------------------------------
-
+	
 	static bool SortFunc_OcclusionObject(cOcclusionQueryObject* apObjectA, cOcclusionQueryObject *apObjectB)
 	{
 		//////////////////////////
@@ -1914,7 +1849,7 @@ namespace hpl {
 		return apObjectA->mpMatrix < apObjectB->mpMatrix;
 	}
 
-	void iRenderer::AssignAndRenderOcclusionQueryObjects(bool abSetFrameBuffer, iFrameBuffer *apFrameBuffer, bool abUsePosAndSize)
+	void iRenderer::AssignAndRenderOcclusionQueryObjects(bgfx::ViewId view, GraphicsContext& context, bool abSetFrameBuffer, bool abUsePosAndSize, RenderTarget& rt)
 	{
 		cRenderList *pRenderList = mpCurrentSettings->mpRenderList;
 
@@ -1924,107 +1859,34 @@ namespace hpl {
 		while(objIt.HasNext())
 		{
 			iRenderable *pObject = objIt.Next();
-			pObject->AssignOcclusionQuery(this);
+			pObject->ResolveOcclusionPass(this, [&](bgfx::OcclusionQueryHandle handle, DepthTest depth, GraphicsContext::LayoutStream& layoutStream, const cMatrixf& transformMatrix) {
+				GraphicsContext::ShaderProgram shaderProgram;
+				shaderProgram.m_handle = m_nullShader;
+				shaderProgram.m_configuration.m_depthTest = depth;
+				shaderProgram.m_configuration.m_cull = Cull::CounterClockwise;
+				
+				shaderProgram.m_modelTransform = transformMatrix;
+				shaderProgram.m_view = mpCurrentFrustum->GetViewMatrix();
+				shaderProgram.m_projection = *mpCurrentProjectionMatrix;
+				
+				GraphicsContext::DrawRequest drawRequest {rt, layoutStream, shaderProgram};
+				drawRequest.m_width = mvScreenSize.x;
+				drawRequest.m_height = mvScreenSize.y;
+
+				context.Submit(view, drawRequest, handle);
+			});
 		}
-
-		/////////////////////////////////////
-		//If no queries added, then skip any rendering
-		if(mpCurrentSettings->mlCurrentOcclusionObject <=0) return;
-
-		START_RENDER_PASS(OcclusionObjects);
-
-		////////////////////////////////////
-		// Copying queries to new array
-		mvSortedOcclusionObjects.resize(mpCurrentSettings->mlCurrentOcclusionObject);
-		for(int i=0; i<mpCurrentSettings->mlCurrentOcclusionObject; ++i)
-			mvSortedOcclusionObjects[i] = mpCurrentSettings->mvOcclusionObjectPool[i];
-
-		////////////////////////////////////
-		// Sort the queries
-		std::sort(mvSortedOcclusionObjects.begin(), mvSortedOcclusionObjects.end(), SortFunc_OcclusionObject);
-
-		///////////////////////////////////
-		// Set up frame buffer
-		if(abSetFrameBuffer)
-		{
-			SetFrameBuffer(apFrameBuffer, abUsePosAndSize);
-		}
-
-		///////////////////////////////////
-		// Set up rendering
-		SetDepthTest(true);
-		SetDepthWrite(false);
-		SetDepthTestFunc(eDepthTestFunc_LessOrEqual);
-		SetBlendMode(eMaterialBlendMode_None);
-		SetAlphaMode(eMaterialAlphaMode_Solid);
-		SetChannelMode(eMaterialChannelMode_None);
-
-		SetTextureRange(NULL,0);
-		SetProgram(NULL);
-
-		///////////////////////////////////
-		// Render the queries
-		for(size_t i=0; i<mvSortedOcclusionObjects.size(); ++i)
-		{
-			cOcclusionQueryObject *pObject = mvSortedOcclusionObjects[i];
-
-			if(pObject->mbDepthTest)
-				SetDepthTestFunc(eDepthTestFunc_LessOrEqual);
-			else
-				SetDepthTestFunc(eDepthTestFunc_Always);
-
-			SetMatrix(pObject->mpMatrix);
-
-
-			SetVertexBuffer(pObject->mpVtxBuffer);
-
-			pObject->mpQuery->Begin();
-			DrawCurrent();
-			pObject->mpQuery->End();
-		}
-
-
-		//Make sure rendering is on its way!
-		mpLowLevelGraphics->FlushRendering();
-
-		///////////////////////////////////
-		// Reset some settings
-		SetDepthTestFunc(eDepthTestFunc_LessOrEqual);
-		SetChannelMode(eMaterialChannelMode_RGBA);
-
-
-		END_RENDER_PASS();
 	}
 
 	//-----------------------------------------------------------------------
 
 	void iRenderer::RetrieveAllLightOcclusionPair(bool abWaitForResult)
 	{
-		for(size_t i=0; i<mpCurrentSettings->mvLightOcclusionPairs.size(); ++i)
+		for(size_t i=0; i<mpCurrentSettings->m_lightOcclusionPairs.size(); ++i)
 		{
-			cLightOcclusionPair &loPair = mpCurrentSettings->mvLightOcclusionPairs[i];
-			iOcclusionQuery *pQuery = loPair.mpQuery;
-
-			if(pQuery == NULL) continue;
-
-			//Wait for results if specfied.
-			if(abWaitForResult)
-			{
-				while(pQuery->FetchResults());
-			}
-
-			//Get result and set resulting samples
-			if(pQuery->FetchResults())
-			{
-				loPair.mlSampleResults = pQuery->GetSampleCount();
-			}
-			else
-			{
-				loPair.mlSampleResults =0;
-			}
-
-			loPair.mpQuery = NULL;
-			ReleaseOcclusionQuery(pQuery);
+			cLightOcclusionPair &loPair = mpCurrentSettings->m_lightOcclusionPairs[i];
+			loPair.mlSampleResults = 0;
+			bgfx::getResult(loPair.m_occlusionQuery, &loPair.mlSampleResults);
 		}
 	}
 
@@ -2063,7 +1925,7 @@ namespace hpl {
 
 		/////////////////////////
 		//Texture and vertex buffer
-		SetTexture(0,mpCurrentWorld->GetSkyBoxTexture());
+		// SetTexture(0,mpCurrentWorld->GetSkyBoxTexture());
 		SetTextureRange(NULL,1);
 
 		SetVertexBuffer(mpCurrentWorld->GetSkyBoxVertexBuffer());
@@ -2093,106 +1955,6 @@ namespace hpl {
 		return SetScissorRect(mTempClipRect, true);
 	}
 
-	//-----------------------------------------------------------------------
-
-
-	void iRenderer::SetMaterialProgram(eMaterialRenderMode aRenderMode, cMaterial *apMaterial)
-	{
-		iMaterialType *pMatType = apMaterial->GetType();
-		iGpuProgram *pProgram = apMaterial->GetProgram(0,aRenderMode);
-
-		///////////////////////////////////////
-		// Check if program is set
-		bool bNewProgramSet = false;
-		if(mpCurrentProgram != pProgram)
-		{
-			bNewProgramSet = true;
-			if(pProgram)
-			{
-				if(mbLog) Log("  Setting gpu program %d : '%s'\n", pProgram, pProgram->GetName().c_str());
-				pProgram->Bind();
-			}
-			else
-			{
-				if(mbLog) Log("  Setting gpu program NULL\n");
-				mpCurrentProgram->UnBind();
-			}
-
-			mpCurrentProgram = pProgram;
-		}
-
-		///////////////////////////////////////
-		// A program is currently set, check if variables need updating
-		if(mpCurrentProgram)
-		{
-			//////////////////////
-			//Check if Type specific changes are needed
-			if(pMatType->HasTypeSpecifics(aRenderMode) && (bNewProgramSet || mpCurrentMaterialType != pMatType) )
-			{
-				if(mbLog) Log("  Setting up type specific program vars for material type %d/'%s'\n",pMatType,pMatType->GetName().c_str());
-				pMatType->SetupTypeSpecificData(aRenderMode,pProgram,this);
-				mpCurrentMaterialType = pMatType;
-			}
-			//////////////////////
-			//Check if Material specific changes are needed
-			if(apMaterial->GetHasSpecificSettings(aRenderMode) && (bNewProgramSet || mpCurrentMaterial != apMaterial) )
-			{
-				if(mbLog) Log("  Setting up material specific program vars for material %d/'%s'\n",apMaterial,apMaterial->GetName().c_str());
-				pMatType->SetupMaterialSpecificData(aRenderMode,pProgram,apMaterial,this);
-				mpCurrentMaterial = apMaterial;
-			}
-		}
-
-
-
-		//TODO: If Cg is to be used, the worldviewproj matrix need to be setup!
-	}
-
-	//-----------------------------------------------------------------------
-
-	void iRenderer::SetMaterialTextures(eMaterialRenderMode aRenderMode, cMaterial *apMaterial)
-	{
-		iMaterialType *pType = apMaterial->GetType();
-
-		for(int i=0; i<kMaxTextureUnits; ++i)
-		{
-			//Set texture, if special textures are used, check for those too!
-			iTexture *pTexture = apMaterial->GetTextureInUnit(aRenderMode,i);
-
-			if(mvCurrentTexture[i] != pTexture)
-			{
-				if(mbLog) {
-					if(pTexture)
-						Log("  Setting texture unit: %d, %d/'%s'\n",i,pTexture,pTexture->GetName().c_str());
-					else
-						Log("  Setting texture unit: %d, 'NULL\n",i);
-				}
-
-				mpLowLevelGraphics->SetTexture(i, pTexture);
-				mvCurrentTexture[i] = pTexture;
-			}
-		}
-	}
-
-	//-----------------------------------------------------------------------
-
-	void iRenderer::DrawCurrentMaterial(eMaterialRenderMode aRenderMode, iRenderable *apObject)
-	{
-		if(apObject)
-		{
-			cMaterial *pMaterial = apObject->GetMaterial();
-			iMaterialType *pMatType = pMaterial->GetType();
-
-			if(pMaterial->HasObjectSpecificsSettings(aRenderMode))
-			{
-				pMatType->SetupObjectSpecificData(aRenderMode,mpCurrentProgram,apObject,this);
-			}
-		}
-
-		DrawCurrent();
-	}
-
-	//-----------------------------------------------------------------------
 
 	bool iRenderer::CheckRenderablePlaneIsVisible(iRenderable *apObject, cFrustum *apFrustum)
 	{
@@ -2519,7 +2281,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void iRenderer::UpdateqQuadVertexPostion(iVertexBuffer *apVtxBuffer,const cVector3f& avPos, const cVector2f& avSize, bool abCallUpdate)
+	void iRenderer::UpdateQuadVertexPostion(iVertexBuffer *apVtxBuffer,const cVector3f& avPos, const cVector2f& avSize, bool abCallUpdate)
 	{
 		int lVtxStride = apVtxBuffer->GetElementNum(eVertexBufferElement_Position);
 		float *pPos = apVtxBuffer->GetFloatArray(eVertexBufferElement_Position);
@@ -2544,7 +2306,9 @@ namespace hpl {
 		pPos[3*lVtxStride +1] = avPos.y+avSize.y;
 		pPos[3*lVtxStride +2] = avPos.z;
 
-		if(abCallUpdate) apVtxBuffer->UpdateData(eVertexElementFlag_Position,false);
+		if(abCallUpdate) { 
+			apVtxBuffer->UpdateData(eVertexElementFlag_Position,false);
+		}
 	}
 
 	//-----------------------------------------------------------------------
@@ -2555,20 +2319,11 @@ namespace hpl {
 		if(pVtxBuffer==NULL) FatalError("Could not load vertex buffer from mesh '%s'\n",asMeshName.c_str());
 
 		return pVtxBuffer;
-
-		/*cMesh *pMesh = mpResources->GetMeshManager()->CreateMesh(asMeshName);
-		if(pMesh==NULL)FatalError("Could not load mesh '%s'\n",asMeshName.c_str());
-
-		iVertexBuffer *pVtxBuffer = pMesh->GetSubMesh(0)->GetVertexBuffer()->CreateCopy(eVertexBufferType_Hardware,
-																						eVertexBufferUsageType_Static,
-																						alVtxToCopy);
-		mpResources->GetMeshManager()->Destroy(pMesh);
-		return pVtxBuffer;*/
 	}
 
 	//-----------------------------------------------------------------------
 
-	void iRenderer::RunCallback(eRendererMessage aMessage)
+	void iRenderer::RunCallback(eRendererMessage aMessage, cRendererCallbackFunctions& handler)
 	{
 		if(mpCallbackList == NULL || mpCurrentSettings->mbUseCallbacks==false) return;
 
@@ -2577,7 +2332,7 @@ namespace hpl {
 		{
 			iRendererCallback *pCallback = *it;
 
-            pCallback->RunMessage(aMessage, mpCallbackFunctions);
+            pCallback->RunMessage(aMessage, &handler);
 		}
 	}
 
@@ -2598,36 +2353,5 @@ namespace hpl {
 			return eShadowMapResolution_Low;
 		}
 	}
-
-	//-----------------------------------------------------------------------
-
-	iOcclusionQuery *iRenderer::GetOcclusionQuery()
-	{
-		iOcclusionQuery *pOcclusionQuery = NULL;
-
-		if(mvOcclusionQueryPool.empty())
-		{
-			pOcclusionQuery = mpLowLevelGraphics->CreateOcclusionQuery();
-		}
-		else
-		{
-			pOcclusionQuery = mvOcclusionQueryPool.back();
-			mvOcclusionQueryPool.resize(mvOcclusionQueryPool.size()-1);
-		}
-
-		mlActiveOcclusionQueryNum++;
-
-		return pOcclusionQuery;
-	}
-
-	void iRenderer::ReleaseOcclusionQuery(iOcclusionQuery * apQuery)
-	{
-		mlActiveOcclusionQueryNum--;
-
-		mvOcclusionQueryPool.push_back(apQuery);
-	}
-
-	//-----------------------------------------------------------------------
-
 
 }

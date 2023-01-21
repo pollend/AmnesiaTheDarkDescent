@@ -32,6 +32,7 @@
 #include "graphics/Texture.h"
 
 #include "gui/Gui.h"
+#include <memory>
 
 namespace hpl {
 
@@ -113,7 +114,6 @@ namespace hpl {
 		mlActiveImage =0;
 		mbAnimationPaused = false;
 
-		mpMaterial = NULL;
 
 		mbFlipUvYAxis = false;
 
@@ -251,35 +251,37 @@ namespace hpl {
 
 	//---------------------------------------------------
 
-	void cGuiGfxElement::AddTexture(iTexture* apTexture, const cVector2f& avStartUV, const cVector2f& avEndUV)
+	void cGuiGfxElement::AddTexture(Image* apTexture, const cVector2f& avStartUV, const cVector2f& avEndUV)
 	{
 		mvTextures[mlTextureNum] = apTexture;
 
 		if(mlTextureNum==0)
 		{
+			// const auto& desc = apTexture->GetDescriptor();
+			
 			cVector2f vSize = cVector2f((float)apTexture->GetWidth(), (float)apTexture->GetHeight());
 
 			mvImageSize.x = vSize.x * (avEndUV.x - avStartUV.x);
 			mvImageSize.y = vSize.y * (avEndUV.y - avStartUV.y);
 
-			if(apTexture->GetType() == eTextureType_Rect)
-			{
-				//If a rect, give new texture coordinates
+			// if(apTexture->GetType() == eTextureType_Rect)
+			// {
+			// 	//If a rect, give new texture coordinates
 
-				mvVtx[0].tex.x = avStartUV.x * vSize.x;
-				mvVtx[0].tex.y = avStartUV.y * vSize.y;
+			// 	mvVtx[0].tex.x = avStartUV.x * vSize.x;
+			// 	mvVtx[0].tex.y = avStartUV.y * vSize.y;
 
-				mvVtx[1].tex.x = avEndUV.x * vSize.x;
-				mvVtx[1].tex.y = avStartUV.y * vSize.y;
+			// 	mvVtx[1].tex.x = avEndUV.x * vSize.x;
+			// 	mvVtx[1].tex.y = avStartUV.y * vSize.y;
 
-				mvVtx[2].tex.x = avEndUV.x * vSize.x;
-				mvVtx[2].tex.y = avEndUV.y * vSize.y;
+			// 	mvVtx[2].tex.x = avEndUV.x * vSize.x;
+			// 	mvVtx[2].tex.y = avEndUV.y * vSize.y;
 
-				mvVtx[3].tex.x = avStartUV.x * vSize.x;
-				mvVtx[3].tex.y = avEndUV.y * vSize.y;
-			}
-			else
-			{
+			// 	mvVtx[3].tex.x = avStartUV.x * vSize.x;
+			// 	mvVtx[3].tex.y = avEndUV.y * vSize.y;
+			// }
+			// else
+			// {
 				mvVtx[0].tex.x = avStartUV.x;
 				mvVtx[0].tex.y = avStartUV.y;
 
@@ -291,8 +293,7 @@ namespace hpl {
 
 				mvVtx[3].tex.x = avStartUV.x;
 				mvVtx[3].tex.y = avEndUV.y;
-
-			}
+			// }
 
 			if(mbFlipUvYAxis) SetFlipUvYAxis(mbFlipUvYAxis);
 		}
@@ -350,9 +351,9 @@ namespace hpl {
 
 	//---------------------------------------------------
 
-	void cGuiGfxElement::SetMaterial(iGuiMaterial *apMat)
+	void cGuiGfxElement::SetMaterial(eGuiMaterial apMat)
 	{
-		mpMaterial = apMat;
+		m_materialType = apMat;
 	}
 
 	//---------------------------------------------------

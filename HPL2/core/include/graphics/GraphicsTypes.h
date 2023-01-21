@@ -20,6 +20,7 @@
 #ifndef HPL_GRAPHICS_TYPES_H
 #define HPL_GRAPHICS_TYPES_H
 
+#include "bgfx/bgfx.h"
 #pragma warning( disable : 4996 ) //disable unsafe warning!
 
 #include <list>
@@ -458,8 +459,9 @@ namespace hpl {
 
 	enum eGpuProgramFormat
 	{
-		eGpuProgramFormat_CG,
-		eGpuProgramFormat_GLSL,
+		eGpuProgramFormat_CG, // DEPRECATED
+		eGpuProgramFormat_GLSL, // DEPRECATED
+		eGpuProgramFormat_BGFX,
 		eGpuProgramFormat_LastEnum
 	};
 
@@ -816,9 +818,10 @@ namespace hpl {
 	class cOcclusionQueryObject
 	{
 	public:
-		cOcclusionQueryObject() : mpQuery(NULL), mpVtxBuffer(NULL),mpMatrix(NULL), mbDepthTest(false), mlSampleResults(0) {}
+		cOcclusionQueryObject() : m_occlusion(BGFX_INVALID_HANDLE), mpQuery(NULL), mpVtxBuffer(NULL),mpMatrix(NULL), mbDepthTest(false), mlSampleResults(0) {}
 
 		int mlCustomID;
+		bgfx::OcclusionQueryHandle m_occlusion;
 		iOcclusionQuery *mpQuery;
 		iVertexBuffer *mpVtxBuffer;
 		cMatrixf *mpMatrix;

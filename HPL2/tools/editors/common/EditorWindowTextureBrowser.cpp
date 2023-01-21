@@ -22,6 +22,7 @@
 #include "EditorWindowLoaderStatus.h"
 
 #include "EditorThumbnailBuilder.h"
+#include "graphics/Image.h"
 
 #include <algorithm>
 
@@ -370,14 +371,18 @@ cTextureBrowserIcon::cTextureBrowserIcon(cEditorWindowTextureBrowser* apBrowser,
 
 	cEditorThumbnailBuilder* pThbBuilder = pEditor->GetThumbnailBuilder();
 	tWString sThumbFile = pThbBuilder->GetThumbnailNameFromFileW(cString::To16Char(apEntry->GetTextureFileFullPath()));
-	iTexture* pTex = pGfx->CreateTexture("", eTextureType_2D, eTextureUsage_Normal);
+	// iTexture* pTex = pGfx->CreateTexture("", eTextureType_2D, eTextureUsage_Normal);
+	auto* img = new Image();
 	cBitmap* pBmp = pRes->GetBitmapLoaderHandler()->LoadBitmap(sThumbFile, 0);
+	auto desc = ImageDescriptor::CreateFromBitmap(*pBmp);
+	desc.m_name = apEntry->GetTextureFileFullPath().c_str();
+	Image::InitializeFromBitmap(*img, *pBmp , desc);
 
-	if(pTex && pTex->CreateFromBitmap(pBmp))
-	{
-		cGuiGfxElement* pGfxElem = mpSet->GetGui()->CreateGfxTexture(pTex, false, eGuiMaterial_Diffuse);
-		mpTexture->SetImage(pGfxElem);
-	}
+	// if(pTex && pTex->CreateFromBitmap(pBmp))
+	// {
+	cGuiGfxElement* pGfxElem = mpSet->GetGui()->CreateGfxTexture(img, false, eGuiMaterial_Diffuse);
+	mpTexture->SetImage(pGfxElem);
+	// }
 
 	hplDelete(pBmp);
 
@@ -404,7 +409,7 @@ cTextureBrowserIcon::~cTextureBrowserIcon()
 		if(mpLabelType) mpSet->DestroyWidget(mpLabelType);
 		if(mpTexture)
 		{
-			mpBrowser->GetEditor()->GetEngine()->GetGraphics()->DestroyTexture(mpTexture->GetImage()->GetTexture(0));
+			// mpBrowser->GetEditor()->GetEngine()->GetGraphics()->DestroyTexture(mpTexture->GetImage()->GetTexture(0));
 			mpSet->DestroyWidget(mpTexture);
 		}
 

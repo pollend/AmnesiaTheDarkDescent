@@ -20,6 +20,8 @@
 #ifndef HPL_POSTEFFECT_COLOR_CONV_TEX_H
 #define HPL_POSTEFFECT_COLOR_CONV_TEX_H
 
+#include "bgfx/bgfx.h"
+#include "graphics/Image.h"
 #include "graphics/PostEffect.h"
 
 namespace hpl {
@@ -52,7 +54,11 @@ namespace hpl {
 		iPostEffect *CreatePostEffect(iPostEffectParams *apParams);
 
 	private:
-		iGpuProgram *mpProgram[2]; //0=no fade, 1=fade
+		bgfx::UniformHandle m_u_param;
+		bgfx::UniformHandle m_u_colorConvTex;
+		bgfx::UniformHandle m_u_diffuseTex;
+
+		bgfx::ProgramHandle m_colorConv;
 	};
 
 	//------------------------------------------
@@ -60,6 +66,7 @@ namespace hpl {
 	class cPostEffect_ColorConvTex : public iPostEffect
 	{
 	public:
+		virtual void RenderEffect(cPostEffectComposite& compositor, GraphicsContext& context, Image& input, RenderTarget& target) override;
 		cPostEffect_ColorConvTex(cGraphics *apGraphics, cResources *apResources, iPostEffectType *apType);
 		~cPostEffect_ColorConvTex();
 
@@ -67,9 +74,7 @@ namespace hpl {
 		void OnSetParams();
 		iPostEffectParams *GetTypeSpecificParams() { return &mParams; }
 
-		iTexture* RenderEffect(iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer);
-
-		iTexture *mpColorConvTex;
+		Image* mpColorConvTex;
 
 		cPostEffectType_ColorConvTex* mpSpecificType;
 

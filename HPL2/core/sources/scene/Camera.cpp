@@ -19,6 +19,7 @@
 
 #include "scene/Camera.h"
 
+#include "bx/math.h"
 #include "system/LowLevelSystem.h"
 
 #include "graphics/LowLevelGraphics.h"

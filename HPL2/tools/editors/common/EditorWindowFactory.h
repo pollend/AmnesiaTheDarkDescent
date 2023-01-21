@@ -59,13 +59,13 @@ class cEditorEditModeSelect;
 class cEditorWindowFactory
 {
 public:
-	static cEditorWindowViewport* CreateWindowViewport(iEditorBase* apEditor,
-													   iFrameBuffer* apFB,
-													   const cVector2l& avFBViewPos,
-													   const cVector2l& avFBViewSize,
-													   const cVector3f& avPosition,
-													   const cVector2f& avSize,
-													   bool abAddViewMenu=true);
+	// static cEditorWindowViewport* CreateWindowViewport(iEditorBase* apEditor,
+	// 												   iFrameBuffer* apFB,
+	// 												   const cVector2l& avFBViewPos,
+	// 												   const cVector2l& avFBViewSize,
+	// 												   const cVector3f& avPosition,
+	// 												   const cVector2f& avSize,
+	// 												   bool abAddViewMenu=true);
 
 	///////////////////////////////////////////////////////////////
 	// Edit Mode windows

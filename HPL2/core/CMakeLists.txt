@@ -74,6 +74,7 @@ file(GLOB impl_sources RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
     sources/impl/GLSL*
     sources/impl/OcclusionQueryOGL.cpp
     sources/impl/VertexBufferOGL_Array.cpp
+    sources/impl/VertexBufferBGFX.cpp
     sources/impl/VertexBufferOGL_VBO.cpp
     sources/impl/VertexBufferOpenGL.cpp
     # SDL
@@ -100,6 +101,8 @@ file(GLOB impl_sources RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
     sources/impl/MeshLoaderColladaLoader.cpp
     sources/impl/MeshLoaderMSH.cpp
     sources/impl/MeshLoaderFBX.cpp
+
+    sources/impl/ShaderUtil.cpp
 )
 
 IF(APPLE)
@@ -194,6 +197,8 @@ find_package(OpenGL REQUIRED)
 find_package(Theora REQUIRED)
 find_package(Devil REQUIRED)
 find_package(GLEW REQUIRED)
+find_package(PythonInterp)
+find_package(Python)
 
 # setup HPL2 compile target
 
@@ -228,6 +233,13 @@ target_link_libraries(HPL2
   OALWrapper # also pulls in ogg,vorbis,SDL
   AngelScript
   Newton
+  absl::base
+  absl::fixed_array
+  absl::strings
+  absl::str_format
+  bgfx
+  bx
+  bimg
   ${GLEW_LIBRARIES}
   ${OPENGL_gl_LIBRARY}
   ${OPENGL_glu_LIBRARY}
@@ -236,3 +248,31 @@ target_link_libraries(HPL2
   z
   ${PLATFORM_LIBS}
   )
+
+  file(GLOB shader_resources RELATIVE 
+    "${CMAKE_CURRENT_SOURCE_DIR}/resource/*.sc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/resource/*.io"
+    "${CMAKE_CURRENT_SOURCE_DIR}/resource/*.sh")
+
+add_custom_target(
+    HPL_SHADERS
+    )
+
+add_custom_command(
+    TARGET HPL_SHADERS
+    MAIN_DEPENDENCY
+    ${shader_resources}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    COMMAND "${PYTHON_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/shader_compile.py"
+    --output ${CMAKE_CURRENT_BINARY_DIR}
+    --bgfx "${BGFX_DIR}"
+    --compiler $<TARGET_FILE:shaderc>
+)
+
+install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/shaders"
+            DESTINATION  ${INSTALL_OUTPUT_PATH}/Amnesia
+            FILES_MATCHING
+            PATTERN "*"
+            )
+   
+add_dependencies(HPL2 HPL_SHADERS)

@@ -19,6 +19,12 @@
 
 #include "engine/Engine.h"
 
+#include <bgfx/bgfx.h>
+#include <bgfx/platform.h>
+
+#include <gui/GuiTypes.h>
+#include <impl/LowLevelInputSDL.h>
+#include <input/LowLevelInput.h>
 #include "system/System.h"
 #include "sound/Sound.h"
 #include "physics/Physics.h"
@@ -41,6 +47,7 @@
 
 #include "graphics/LowLevelGraphics.h"
 #include "graphics/Renderer.h"
+#include <gui/GuiSet.h>
 
 #include "engine/Updater.h"
 #include "engine/ScriptFuncs.h"
@@ -48,11 +55,11 @@
 
 #include "system/LowLevelSystem.h"
 #include "engine/LowLevelEngineSetup.h"
+#include <engine/EngineContext.h>
 
 #include "impl/SDLEngineSetup.h"
 
 namespace hpl {
-
 	//////////////////////////////////////////////////////////////////////////
 	// FPS COUNTER
 	//////////////////////////////////////////////////////////////////////////
@@ -213,6 +220,7 @@ namespace hpl {
 		mvEngineTypeStrings[eVariableType_String] =	"String";
 		mvEngineTypeStrings[eVariableType_Enum] =	"Enum";
 		mvEngineTypeStrings[eVariableType_Bool] =	"Bool";
+
 	}
 
 
@@ -358,6 +366,8 @@ namespace hpl {
 
 		Log("User Initialization\n");
 		Log("--------------------------------------------------------\n");
+
+		hpl::context::Init();
 	}
 
 	//-----------------------------------------------------------------------
@@ -504,12 +514,9 @@ namespace hpl {
 			if(bBufferSwap)
 			{
 				bBufferSwap = false;
-				START_TIMING(WaitAndFinishRendering)
-				//mpGraphics->GetLowLevel()->WaitAndFinishRendering();
-				STOP_TIMING(WaitAndFinishRendering)
 
 				START_TIMING(SwapBuffers)
-				mpGraphics->GetLowLevel()->SwapBuffers();
+				hpl::context::GraphicsContext().Frame();
 				STOP_TIMING(SwapBuffers)
 
 				//Log("Swap done: %d\n", cPlatform::GetApplicationTime());
@@ -522,7 +529,7 @@ namespace hpl {
 
 			////////////////////////////////////
 			// Render frame
-			if(mbLimitFPS==false || bIsUpdated)
+			if(!mbLimitFPS || bIsUpdated)
 			{
 				///////////////////////////////////////
            		//Get the the from the last frame.
@@ -535,16 +542,12 @@ namespace hpl {
 
 				//Render this frame
 				START_TIMING(RenderAll)
-				mpScene->Render(mfFrameTime, tSceneRenderFlag_All);
+				mpScene->Render(hpl::context::GraphicsContext(), mfFrameTime, tSceneRenderFlag_All);
 				STOP_TIMING(RenderAll)
 
 				START_TIMING(PostRender)
 				mpUpdater->RunMessage(eUpdateableMessage_OnPostRender, mfFrameTime);
 				STOP_TIMING(PostRender)
-
-				START_TIMING(FlushRender)
-				mpGraphics->GetLowLevel()->FlushRendering();
-				STOP_TIMING(FlushRender)
 
 				//Update fps counter.
 				mpFPSCounter->AddFrame();

@@ -48,72 +48,72 @@ void cThumbnailRenderCallback::OnPostTranslucentDraw(cRendererCallbackFunctions*
 
 cEdThumbnailBuilder::cEdThumbnailBuilder(iEditor* apEditor)
 {
-	mpEditor = apEditor;
+	// mpEditor = apEditor;
 
-	cEngine* pEngine = mpEditor->GetEngine();
-	cGraphics* pGfx = pEngine->GetGraphics();
-	cScene* pScene = pEngine->GetScene();
+	// cEngine* pEngine = mpEditor->GetEngine();
+	// cGraphics* pGfx = pEngine->GetGraphics();
+	// cScene* pScene = pEngine->GetScene();
 
-	cWorld* pWorld = pScene->CreateWorld("ThumbnailWorld");
-	pWorld->SetSkyBoxActive(true);
-	pWorld->SetSkyBoxColor(cColor(0.2f,1));
+	// cWorld* pWorld = pScene->CreateWorld("ThumbnailWorld");
+	// pWorld->SetSkyBoxActive(true);
+	// pWorld->SetSkyBoxColor(cColor(0.2f,1));
 
-	cCamera* pCamera = pScene->CreateCamera(eCameraMoveMode_Fly);
-	pCamera->SetPitchLimits(0,0);
+	// cCamera* pCamera = pScene->CreateCamera(eCameraMoveMode_Fly);
+	// pCamera->SetPitchLimits(0,0);
 
-	iLight* pLight = NULL;
+	// iLight* pLight = NULL;
 
-	///////////////////////////////////////////
-	// Set up Lights
-	pLight = pWorld->CreateLightPoint("ThumbCameraLight", "", false);
-	pLight->SetDiffuseColor(cColor(1,1,1,0));
-	pLight->SetCastShadows(false);
-	pLight->SetVisible(true);
+	// ///////////////////////////////////////////
+	// // Set up Lights
+	// pLight = pWorld->CreateLightPoint("ThumbCameraLight", "", false);
+	// pLight->SetDiffuseColor(cColor(1,1,1,0));
+	// pLight->SetCastShadows(false);
+	// pLight->SetVisible(true);
 
-	pLight = pWorld->CreateLightPoint("ThumbKeyLight","",false);
-	pLight->SetDiffuseColor(cColor(1,1,1,0));
-	pLight->SetVisible(false);
-	pLight->SetCastShadows(false);
-	pLight->SetRadius(50);
+	// pLight = pWorld->CreateLightPoint("ThumbKeyLight","",false);
+	// pLight->SetDiffuseColor(cColor(1,1,1,0));
+	// pLight->SetVisible(false);
+	// pLight->SetCastShadows(false);
+	// pLight->SetRadius(50);
 
-	pLight = pWorld->CreateLightPoint("ThumbFillLight","",false);
-	pLight->SetDiffuseColor(cColor(1,1,1,0));
-	pLight->SetVisible(false);
-	pLight->SetCastShadows(false);
-	pLight->SetRadius(50);
+	// pLight = pWorld->CreateLightPoint("ThumbFillLight","",false);
+	// pLight->SetDiffuseColor(cColor(1,1,1,0));
+	// pLight->SetVisible(false);
+	// pLight->SetCastShadows(false);
+	// pLight->SetRadius(50);
 
-	pLight = pWorld->CreateLightPoint("ThumbBackLight","",false);
-	pLight->SetDiffuseColor(cColor(1,1,1,0));
-	pLight->SetVisible(false);
-	pLight->SetCastShadows(false);
-	pLight->SetRadius(50);
+	// pLight = pWorld->CreateLightPoint("ThumbBackLight","",false);
+	// pLight->SetDiffuseColor(cColor(1,1,1,0));
+	// pLight->SetVisible(false);
+	// pLight->SetCastShadows(false);
+	// pLight->SetRadius(50);
 
-	//////////////////////////////////////////
-	// Set up render targets
-	iTexture* pRenderTarget64 = pGfx->CreateTexture("Thumbnail", eTextureType_2D, eTextureUsage_RenderTarget);
-	pRenderTarget64->SetWrapR(eTextureWrap_Clamp);
-	pRenderTarget64->SetWrapS(eTextureWrap_Clamp);
-	pRenderTarget64->CreateFromRawData(cVector3l(64,64,0), ePixelFormat_RGBA, NULL);
+	// //////////////////////////////////////////
+	// // Set up render targets
+	// iTexture* pRenderTarget64 = pGfx->CreateTexture("Thumbnail", eTextureType_2D, eTextureUsage_RenderTarget);
+	// pRenderTarget64->SetWrapR(eTextureWrap_Clamp);
+	// pRenderTarget64->SetWrapS(eTextureWrap_Clamp);
+	// pRenderTarget64->CreateFromRawData(cVector3l(64,64,0), ePixelFormat_RGBA, NULL);
 
-	mpFB64 = pGfx->CreateFrameBuffer("Thumbnail");
-	mpFB64->SetTexture2D(0, pRenderTarget64);
-	mpFB64->CompileAndValidate();
+	// mpFB64 = pGfx->CreateFrameBuffer("Thumbnail");
+	// mpFB64->SetTexture2D(0, pRenderTarget64);
+	// mpFB64->CompileAndValidate();
 
-	mpRenderTarget128 = pGfx->CreateTexture("ThumbnailDest",eTextureType_2D, eTextureUsage_RenderTarget);
-	mpRenderTarget128->SetWrapR(eTextureWrap_Clamp);
-	mpRenderTarget128->SetWrapS(eTextureWrap_Clamp);
-	mpRenderTarget128->CreateFromRawData(cVector3l(128,128,0), ePixelFormat_RGBA, NULL);
+	// mpRenderTarget128 = pGfx->CreateTexture("ThumbnailDest",eTextureType_2D, eTextureUsage_RenderTarget);
+	// mpRenderTarget128->SetWrapR(eTextureWrap_Clamp);
+	// mpRenderTarget128->SetWrapS(eTextureWrap_Clamp);
+	// mpRenderTarget128->CreateFromRawData(cVector3l(128,128,0), ePixelFormat_RGBA, NULL);
 
-	mpFB128 = pGfx->CreateFrameBuffer("ThumbnailDestination");
-	mpFB128->SetTexture2D(0,mpRenderTarget128);
-	mpFB128->CompileAndValidate();
+	// mpFB128 = pGfx->CreateFrameBuffer("ThumbnailDestination");
+	// mpFB128->SetTexture2D(0,mpRenderTarget128);
+	// mpFB128->CompileAndValidate();
 
-	mpViewport = pScene->CreateViewport(pCamera,pWorld);
-	mpViewport->SetSize(cVector2l(128));
-	mpViewport->SetFrameBuffer(mpFB128);
-	mpViewport->SetActive(false);
-	mpViewport->SetVisible(false);
-	mpViewport->GetRenderSettings()->mClearColor = cColor(0,1);
+	// mpViewport = pScene->CreateViewport(pCamera,pWorld);
+	// mpViewport->SetSize(cVector2l(128));
+	// mpViewport->SetFrameBuffer(mpFB128);
+	// mpViewport->SetActive(false);
+	// mpViewport->SetVisible(false);
+	// mpViewport->GetRenderSettings()->mClearColor = cColor(0,1);
 }
 
 //-------------------------------------------------------------------

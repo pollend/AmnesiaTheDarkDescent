@@ -20,8 +20,10 @@
 #ifndef HPL_IMAGEMANAGER_H
 #define HPL_IMAGEMANAGER_H
 
+#include "graphics/Image.h"
 #include "resources/ResourceManager.h"
 #include "math/MathTypes.h"
+#include <memory>
 
 namespace hpl {
 
@@ -65,7 +67,7 @@ namespace hpl {
 
 		cFrameSubImage* CreateFromBitmap(const tString &asName,cBitmap* apBmp, int alFrameHandle=-1);
 
-		cFrameTexture* CreateCustomFrame(iTexture *apTexture);
+		cFrameTexture* CreateCustomFrame(Image* apTexture);
 
 		cFrameTexture* GetFrameTexture(int alHandle);
 

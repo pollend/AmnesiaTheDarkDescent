@@ -21,7 +21,11 @@
 #define HPL_RENDER_FUNCTIONS_H
 
 #include "graphics/GraphicsTypes.h"
+#include "graphics/RenderTarget.h"
+#include "graphics/RenderViewport.h"
 #include "math/MathTypes.h"
+#include <cstdint>
+#include <memory>
 
 namespace hpl {
 
@@ -43,6 +47,8 @@ namespace hpl {
 	public:
 		virtual ~iRenderFunctions() { }
 
+		virtual void RebuildSwapChain(uint16_t width, uint16_t height) {};
+
 		/*
 		 * This function must be set before the render functions can be used!
 	     */
@@ -52,7 +58,7 @@ namespace hpl {
 		/**
 		 * This must be called every frame before any render function is called
 		 */
-		void InitAndResetRenderFunctions(	cFrustum *apFrustum, cRenderTarget *apRenderTarget, bool abLog,
+		void InitAndResetRenderFunctions(	cFrustum *apFrustum, const RenderViewport& apRenderTarget, bool abLog,
 											bool abUseGlobalScissorRect=false,
 											const cVector2l& avGlobalScissorRectPos=0, const cVector2l& avGlobalScissorRectSize=0);
 		void ExitAndCleanUpRenderFunctions();
@@ -72,10 +78,6 @@ namespace hpl {
 		void SetStencilWriteMask(unsigned int alMask);
 		void SetStencil(eStencilFunc aFunc,int alRef, unsigned int aMask,
 						eStencilOp aFailOp,eStencilOp aZFailOp,eStencilOp aZPassOp);
-		void SetStencilTwoSide(	eStencilFunc aFrontFunc,eStencilFunc aBackFunc,
-								int alRef, unsigned int aMask,
-								eStencilOp aFrontFailOp,eStencilOp aFrontZFailOp,eStencilOp aFrontZPassOp,
-								eStencilOp aBackFailOp,eStencilOp aBackZFailOp,eStencilOp aBackZPassOp);
 		bool SetScissorActive(bool abX);
 		/**
 		 * When abAutoEnabling is true, it will also set to false if size = render target and pos=0
@@ -117,7 +119,6 @@ namespace hpl {
 		void CopyFrameBufferToTexure(	iTexture *apTexture, const cVector2l& avPos, const cVector2l& avSize, const cVector2l& avTextureOffset,
 										bool abTextureOffsetUsesRenderTargetPos);
 
-		cRenderTarget* GetCurrentRenderTarget(){return mpCurrentRenderTarget;}
 		const cVector2l& GetCurrentFrameBufferSize(){ return mvCurrentFrameBufferSize;}
 		const cVector2l& GetRenderTargetSize(){ return mvRenderTargetSize;}
 
@@ -126,7 +127,7 @@ namespace hpl {
 		iLowLevelGraphics *mpLowLevelGraphics;
 
 		cFrustum *mpCurrentFrustum;
-		cRenderTarget *mpCurrentRenderTarget;
+		RenderViewport m_currentRenderTarget;
 		const cMatrixf *mpCurrentProjectionMatrix;
 
 		cVector2l mvRenderTargetSize;		//Use this when ever some calculations involving the size of rendertarget is involved!
@@ -136,16 +137,12 @@ namespace hpl {
 		cVector2f mvScreenSizeFloat;
 
 		bool mbLog;
-		bool mbInvertCullMode;
 
 		bool mbUseGlobalScissorRect;
 		bool mbGlobalScissorRectActive;
 		cVector2l mvGlobalScissorRectPos;
 		cVector2l mvGlobalScissorRectSize;
 
-		bool mbCurrentDepthTest;
-		bool mbCurrentDepthWrite;
-		bool mbCurrentStencilActive;
 		cVector2l mvCurrentScissorRectPos;
 		cVector2l mvCurrentScissorRectSize;
 		bool mbCurrentScissorActive;
@@ -156,7 +153,6 @@ namespace hpl {
 		eMaterialAlphaMode mCurrentAlphaMode;
 		float mfCurrentAlphaLimit;
 		eMaterialBlendMode mCurrentBlendMode;
-		iTexture *mvCurrentTexture[kMaxTextureUnits];
 		iGpuProgram* mpCurrentProgram;
 		iVertexBuffer *mpCurrentVtxBuffer;
 		cMatrixf *mpCurrentMatrix;

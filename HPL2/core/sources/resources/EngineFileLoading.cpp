@@ -19,6 +19,8 @@
 
 #include "resources/EngineFileLoading.h"
 
+#include "graphics/GraphicsTypes.h"
+#include "graphics/Image.h"
 #include "resources/XmlDocument.h"
 #include "resources/Resources.h"
 #include "resources/TextureManager.h"
@@ -47,6 +49,7 @@
 #include "graphics/VertexBuffer.h"
 #include "graphics/Mesh.h"
 #include "graphics/SubMesh.h"
+#include <bx/debug.h>
 
 
 namespace hpl {
@@ -236,7 +239,11 @@ namespace hpl {
 			tString sSpotFalloffMap = apElement->GetAttributeString("SpotFalloffMap");
 			if(sSpotFalloffMap != "")
 			{
-				iTexture *pFalloff = apResources->GetTextureManager()->Create1D(sSpotFalloffMap,true);
+
+				cTextureManager::ImageOptions imageOptions;
+				imageOptions.m_uClamp = true;
+				imageOptions.m_vClamp = true;
+				Image *pFalloff = apResources->GetTextureManager()->Create1DImage(sSpotFalloffMap,true, eTextureUsage_Normal, 0, imageOptions);
 				if(pFalloff) pLightSpot->SetSpotFalloffMap(pFalloff);
 			}
 		}
@@ -264,7 +271,7 @@ namespace hpl {
 			tString sFalloffMap = apElement->GetAttributeString("FalloffMap");
 			if(sFalloffMap != "")
 			{
-				iTexture *pFalloff = apResources->GetTextureManager()->Create1D(sFalloffMap,true);
+				Image *pFalloff = apResources->GetTextureManager()->Create1DImage(sFalloffMap,true);
 				if(pFalloff) pLight->SetFalloffMap(pFalloff);
 			}
 
@@ -275,26 +282,33 @@ namespace hpl {
 				eTextureAnimMode animMode = ToTextureAnimMode(apElement->GetAttributeString("GoboAnimMode",""));
 				float fAnimFrameTime = apElement->GetAttributeFloat("GoboAnimFrameTime", 1);
 
-				iTexture *pGoboTex=NULL;
+				Image *pGoboTex=NULL;
 				if(lightType  == eLightType_Spot)
 				{
-					if(animMode == eTextureAnimMode_None)
-						pGoboTex = apResources->GetTextureManager()->Create2D(sGobo,true);
-					else
-						pGoboTex = apResources->GetTextureManager()->CreateAnim(sGobo, true, eTextureType_2D);
+					//TODO: MP need to add CreateAnim to texture manager!
+					if(animMode == eTextureAnimMode_None) {
+						pGoboTex = apResources->GetTextureManager()->Create2DImage(sGobo,true);
+					} else {
+						BX_ASSERT(false, "TODO: MP need to add CreateAnim to texture manager!");
+						// 	pGoboTex = apResources->GetTextureManager()->CreateAnim(sGobo, true, eTextureType_2D);
+					}
 				}
 				else
 				{
-					if(animMode == eTextureAnimMode_None)
-						pGoboTex = apResources->GetTextureManager()->CreateCubeMap(sGobo,true);
-					else
-						pGoboTex = apResources->GetTextureManager()->CreateAnim(sGobo,true, eTextureType_CubeMap);
+					//TODO: MP need to add CreateAnim to texture manager!
+					if(animMode == eTextureAnimMode_None) {
+						pGoboTex = apResources->GetTextureManager()->CreateCubeMapImage(sGobo,true);
+					} else {
+
+						BX_ASSERT(false, "TODO: MP need to add CreateAnim to texture manager!");
+						// 	pGoboTex = apResources->GetTextureManager()->CreateAnim(sGobo,true, eTextureType_CubeMap);
+					}
 				}
 
 				if(pGoboTex)
 				{
 					pLight->SetGoboTexture(pGoboTex);
-					pGoboTex->SetFrameTime(fAnimFrameTime);
+					// pGoboTex->SetFrameTime(fAnimFrameTime);
 				}
 			}
 		}

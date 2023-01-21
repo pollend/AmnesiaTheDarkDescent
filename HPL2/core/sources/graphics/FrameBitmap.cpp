@@ -29,6 +29,7 @@
 #include "graphics/FrameSubImage.h"
 #include "graphics/Bitmap.h"
 #include "graphics/Texture.h"
+#include <graphics/Image.h>
 
 
 namespace hpl {
@@ -470,9 +471,16 @@ namespace hpl {
 	{
 		if(mbIsUpdated)
 		{
-			mpFrameTexture->GetTexture()->CreateFromBitmap(mpBitmap);
-			mpFrameTexture->GetTexture()->SetWrapS(eTextureWrap_ClampToEdge);
-			mpFrameTexture->GetTexture()->SetWrapT(eTextureWrap_ClampToEdge);
+			auto desc = ImageDescriptor::CreateFromBitmap(*mpBitmap);
+			desc.m_configuration.m_uClamp = true;
+			desc.m_configuration.m_vClamp = true;
+			mpFrameTexture->GetTexture()->Invalidate();
+			desc.m_name = mpFrameTexture->GetTexture()->GetName().c_str();
+			Image::InitializeFromBitmap(*mpFrameTexture->GetTexture(), *mpBitmap, desc);
+			
+			// mpFrameTexture->GetTexture()->CreateFromBitmap(mpBitmap);
+			// mpFrameTexture->GetTexture()->SetWrapS(eTextureWrap_ClampToEdge);
+			// mpFrameTexture->GetTexture()->SetWrapT(eTextureWrap_ClampToEdge);
 
 			//mpFrameTexture->SetPicCount(mlPicCount);
 			mbIsUpdated = false;

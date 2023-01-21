@@ -21,7 +21,9 @@
 #define HPLEDITOR_EDITOR_THUMBNAIL_BUILDER_H
 
 #include "../common/StdAfx.h"
+#include "graphics/RenderViewport.h"
 #include "system/SHA1.h"
+#include <memory>
 
 using namespace hpl;
 
@@ -75,10 +77,10 @@ protected:
 
 	cLightPoint* mpCamLight;
 
-	iTexture* mpRenderTarget128;
+	std::shared_ptr<Image> mpRenderTarget128;
 
 	iFrameBuffer* mpFB64;
-	iFrameBuffer* mpFB128;
+	RenderViewport mpFB128;
 
 	iEditorBase* mpEditor;
 

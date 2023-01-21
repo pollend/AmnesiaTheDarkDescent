@@ -20,6 +20,8 @@
 //#include <vld.h>
 //Use this to check for memory leaks!
 
+#include <system/bootstrap.h>
+
 #ifdef WIN32
 #pragma comment(lib, "angelscript.lib")
 #define UNICODE
@@ -41,11 +43,8 @@
 #include "impl/SqScript.h"
 #include "system/Platform.h"
 
-#if USE_SDL2
 #include "SDL2/SDL.h"
-#else
-#include "SDL/SDL.h"
-#endif
+
 
 #include "impl/scriptstring.h"
 
@@ -56,7 +55,6 @@
 #include <langinfo.h>
 #include <unistd.h>
 #endif
-
 
 // Include for using the versioning header
 //#include "BuildID_HPL2_0.h"
@@ -75,6 +73,8 @@ int WINAPI WinMain(	HINSTANCE hInstance,  HINSTANCE hPrevInstance,LPSTR	lpCmdLin
 #else
 int main(int argc, char *argv[])
 {
+	hpl::bootstrap::Init();
+
 #if defined(__linux__) || defined(__FreeBSD__)
 	if(!std::setlocale(LC_CTYPE, "")) {
 		fprintf(stderr, "Can't set the specified locale! Check LANG, LC_CTYPE, LC_ALL.\n");

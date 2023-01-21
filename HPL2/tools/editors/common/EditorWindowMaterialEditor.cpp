@@ -23,8 +23,10 @@
 #include "EditorInput.h"
 #include "EditorVar.h"
 #include "EditorHelper.h"
+#include "graphics/Image.h"
 
 #include <algorithm>
+#include <memory>
 
 //------------------------------------------------------------------------------------
 
@@ -143,8 +145,6 @@ cTextureWrapper::cTextureWrapper(cMaterialWrapper* apMat, eMaterialTexture aUnit
 	mpMat = apMat;
 	mUnit = aUnit;
 
-	mpTexture = NULL;
-
 	mTimeStamp.hours=0;
 	mTimeStamp.minutes=0;
 	mTimeStamp.seconds=0;
@@ -161,8 +161,8 @@ cTextureWrapper::cTextureWrapper(cMaterialWrapper* apMat, eMaterialTexture aUnit
 
 cTextureWrapper::~cTextureWrapper()
 {
-	if(mpTexture)
-		mpMat->mpMatEditor->GetEditor()->GetEngine()->GetGraphics()->DestroyTexture(mpTexture);
+	mpTexture.reset();
+		// mpMat->mpMatEditor->GetEditor()->GetEngine()->GetGraphics()->DestroyTexture(mpTexture);
 }
 
 //------------------------------------------------------------------------------------
@@ -241,21 +241,28 @@ void cTextureWrapper::Reload()
 
 		mTimeStamp = cPlatform::FileModifiedDate(sFullPath);
 		eTextureType type = GetTextureTypeFromBitmap(pBmp);
-		if(mpTexture==NULL || mpTexture && type!=mpTexture->GetType())
-		{
-			if(mpTexture) pGfx->DestroyTexture(mpTexture);
-			mpTexture = pGfx->CreateTexture(pMatMgr->GetTextureString(mUnit), type, eTextureUsage_Normal);
-		}
-		mpTexture->SetUseMipMaps(mbMipMaps);
+		// if(mpTexture || mpTexture && type!=mpTexture->GetType())
+		// {
+		
+			
+		// 	mpTexture = pGfx->CreateTexture(pMatMgr->GetTextureString(mUnit), type, eTextureUsage_Normal);
+		// }
+		auto desc = ImageDescriptor::CreateFromBitmap(*pBmp);
+		desc.m_hasMipMaps = mbMipMaps;
+		m_desc = desc;
+		mpTexture = std::make_unique<Image>();
+		Image::InitializeFromBitmap(*mpTexture.get(), *pBmp, desc);
+		
+		// mpTexture->SetUseMipMaps(mbMipMaps);
 
-		mbValid = (mpTexture!=NULL && mpTexture->CreateFromBitmap(pBmp));
-		if(mbValid)
-		{
-			Log("success\n");
-			mbNeedsReload = false;
-			msType = gsTextureTypeStrings[type];
-			mpTexture->SetFullPath(sFullPath);
-		}
+		// mbValid = (mpTexture!=NULL && mpTexture->CreateFromBitmap(pBmp));
+		// if(mbValid)
+		// {
+		Log("success\n");
+		mbNeedsReload = false;
+		msType = gsTextureTypeStrings[type];
+		mpTexture->SetFullPath(sFullPath);
+		// }
 
 		hplDelete(pBmp);
 	}
@@ -278,13 +285,14 @@ void cTextureWrapper::Update()
 		if(mbValid==false)
 			return;
 
+		// uuh
 		eTextureWrap wrap = pMatMgr->GetWrap(msWrap);
-		mpTexture->SetWrapR(wrap);
-		mpTexture->SetWrapS(wrap);
-		mpTexture->SetWrapT(wrap);
+		// mpTexture->SetWrapR(wrap);
+		// mpTexture->SetWrapS(wrap);
+		// mpTexture->SetWrapT(wrap);
 
-		mpTexture->SetAnimMode(pMatMgr->GetAnimMode(msAnimMode));
-		mpTexture->SetFrameTime(mfFrameTime);
+		// mpTexture->SetAnimMode(pMatMgr->GetAnimMode(msAnimMode));
+		// mpTexture->SetFrameTime(mfFrameTime);
 
 		mbUpdated = false;
 	}
@@ -452,8 +460,8 @@ cMaterialWrapper::cMaterialWrapper(cEditorWindowMaterialEditor* apEditor)
 		mvTextures.push_back(hplNew(cTextureWrapper,(this, (eMaterialTexture)i)));
 
 	mvDefaultTextures.resize(eMaterialTexture_LastEnum);
-	mvDefaultTextures[eMaterialTexture_Diffuse] = pTexMan->Create2D("editor_default_diffuse.jpg", false);
-	mvDefaultTextures[eMaterialTexture_NMap] = pTexMan->Create2D("editor_rect_nrm.jpg", false);
+	mvDefaultTextures[eMaterialTexture_Diffuse] = pTexMan->Create2DImage("editor_default_diffuse.jpg", false);
+	mvDefaultTextures[eMaterialTexture_NMap] = pTexMan->Create2DImage("editor_rect_nrm.jpg", false);
 	for(int i=eMaterialTexture_NMap+1;i<eMaterialTexture_LastEnum;++i)
 		mvDefaultTextures[i] = NULL;
 
@@ -540,8 +548,9 @@ void cMaterialWrapper::Load(const tWString& asFilename)
 
 	for(int i=0;i<eMaterialTexture_LastEnum;++i)
 	{
-		mvTextures[i]->CreateFromTexture(pMat->GetTexture((eMaterialTexture)i));
-		mvTextures[i]->Update();
+		BX_ASSERT(false, "TODO: Fix this!");
+		// mvTextures[i]->CreateFromTexture(pMat->GetTexture((eMaterialTexture)i));
+		// mvTextures[i]->Update();
 	}
 
 	//////////////////////////////////////////////////
@@ -662,44 +671,49 @@ void cMaterialWrapper::UpdateMaterialInMemory(const tString& asName)
 
 	for(int i=0;i<eMaterialTexture_LastEnum;++i)
 	{
-		iTexture* pOldTex = pMat->GetTexture((eMaterialTexture)i);
-		pMat->SetTexture((eMaterialTexture)i, NULL);
+		auto* pOldTex = pMat->GetImage((eMaterialTexture)i);
+		pMat->SetImage((eMaterialTexture)i, NULL);
 
 		if(pOldTex)
 			pTexMgr->Destroy(pOldTex);
 
-        iTexture* pEditingTex = mvTextures[i]->GetTexture();
+        Image* pEditingTex = mvTextures[i]->GetTexture();
+		auto descriptor = mvTextures[i]->getDescriptor();
+
         if(pEditingTex)
 		{
 			tString sName = cString::GetFileName(cString::To8Char(pEditingTex->GetFullPath()));
-			bool bMipMaps = pEditingTex->UsesMipMaps();
-			eTextureWrap wrap = pEditingTex->GetWrapR();
-			iTexture* pNewTex = NULL;
-			switch(pEditingTex->GetType())
-			{
-			case eTextureType_1D:
-				pNewTex = pTexMgr->Create1D(sName, bMipMaps);
-				break;
-			case eTextureType_2D:
-				pNewTex = pTexMgr->Create2D(sName, bMipMaps);
-				break;
-			case eTextureType_3D:
-				pNewTex = pTexMgr->Create3D(sName, bMipMaps);
-				break;
-			case eTextureType_CubeMap:
-				pNewTex = pTexMgr->CreateCubeMap(sName, bMipMaps);
-				break;
-			case eTextureType_Rect:
-				pNewTex = pTexMgr->Create2D(sName, bMipMaps, eTextureType_Rect);
-				break;
-			}
-			if(pNewTex)
-			{
-				pNewTex->SetWrapR(wrap);
-				pNewTex->SetWrapS(wrap);
-				pNewTex->SetWrapT(wrap);
-				pMat->SetTexture((eMaterialTexture)i, pNewTex);
-			}
+			bool bMipMaps = descriptor.m_hasMipMaps;
+			// TODO: need to implement updating texture in memory
+			// eTextureWrap wrap = pEditingTex->GetWrapR();
+			
+			// Image* pNewTex = NULL;
+			// switch(pEditingTex->GetType())
+			// {
+			// case eTextureType_1D:
+			// 	pNewTex = pTexMgr->Create1DImage(sName, bMipMaps);
+			// 	break;
+			// case eTextureType_2D:
+			// 	pNewTex = pTexMgr->Create2DImage(sName, bMipMaps);
+			// 	break;
+			// case eTextureType_3D:
+			// 	pNewTex = pTexMgr->Create3DImage(sName, bMipMaps);
+			// 	break;
+			// case eTextureType_CubeMap:
+			// 	// pNewTex = pTexMgr->CreateCubeMap(sName, bMipMaps); // TODO: MP add Cubmap
+			// 	break;
+			// case eTextureType_Rect:
+			// 	pNewTex = pTexMgr->Create2DImage(sName, bMipMaps, eTextureType_Rect);
+			// 	break;
+			// }
+			// if(pNewTex)
+			// {
+				
+			// 	pNewTex->SetWrapR(wrap);
+			// 	pNewTex->SetWrapS(wrap);
+			// 	pNewTex->SetWrapT(wrap);
+			// 	pMat->SetTexture((eMaterialTexture)i, pNewTex);
+			// }
 		}
 	}
 	pMat->ClearUvAnimations();
@@ -895,14 +909,14 @@ cMaterial* cMaterialWrapper::GetPreviewMaterial()
 
 		for(int i=0;i<eMaterialTexture_LastEnum;++i)
 		{
-			iTexture* pTex = NULL;
+			Image* pTex = NULL;
 			cTextureWrapper* pTexWrapper = mvTextures[i];
 			if(pTexWrapper->IsEnabled() && pTexWrapper->IsValid())
 				pTex = pTexWrapper->GetTexture();
 			else
 				pTex = mvDefaultTextures[i];
 
-			mpPreviewMat->SetTexture((eMaterialTexture)i, pTex);
+			mpPreviewMat->SetImage((eMaterialTexture)i, pTex);
 		}
 
 		mpPreviewMat->ClearUvAnimations();
@@ -1046,7 +1060,7 @@ void cTextureUnitPanel::Update()
 	{
 		const tWString& sTextureFile = mpTextureWrapper->GetFile();
 		mpInpFile->SetValue(mpTextureWrapper->GetFile(), false);
-		iTexture* pTex = mpTextureWrapper->GetTexture();
+		auto* pTex = mpTextureWrapper->GetTexture();
 		if(pTex)
 			pImg = pGui->CreateGfxTexture(pTex, false, eGuiMaterial_Alpha);
 	}
@@ -1554,15 +1568,19 @@ void cEditorWindowMaterialEditor::OnInitLayout()
 		SetGuiViewportPos(cVector3f(10,10,0.1f));
 		SetGuiViewportSize(cVector2f(430));
 
-		iTexture* pTex = mpEditor->GetEngine()->GetGraphics()->CreateTexture("", eTextureType_Rect, eTextureUsage_RenderTarget);
-		pTex->SetWrapR(eTextureWrap_ClampToEdge);
-		pTex->SetWrapS(eTextureWrap_ClampToEdge);
-		pTex->CreateFromRawData(cVector3l(512,512,0), ePixelFormat_RGB, 0);
+		// iTexture* pTex = mpEditor->GetEngine()->GetGraphics()->CreateTexture("", eTextureType_Rect, eTextureUsage_RenderTarget);
+		// pTex->SetWrapR(eTextureWrap_ClampToEdge);
+		// pTex->SetWrapS(eTextureWrap_ClampToEdge);
+		// pTex->CreateFromRawData(cVector3l(512,512,0), ePixelFormat_RGB, 0);
 
-		iFrameBuffer* pFB = mpEditor->GetEngine()->GetGraphics()->CreateFrameBuffer("MaterialEditor");
-		pFB->SetTexture2D(0, pTex);
-		pFB->CompileAndValidate();
-		SetFrameBuffer(pFB);
+		auto image = std::make_shared<Image>();
+		image->Initialize(ImageDescriptor::CreateTexture2D(512, 512, false, bgfx::TextureFormat::Enum::RGB8));
+		auto target = std::make_shared<RenderTarget>(image);
+
+		// iFrameBuffer* pFB = mpEditor->GetEngine()->GetGraphics()->CreateFrameBuffer("MaterialEditor");
+		// pFB->SetTexture2D(0, pTex);
+		// pFB->CompileAndValidate();
+		SetFrameBuffer(target);
 
 		SetEngineViewportPositionAndSize(0, 512);
 		UpdateViewport();
@@ -2013,8 +2031,12 @@ bool cEditorWindowMaterialEditor::WindowSpecificInputCallback(iEditorInput* apIn
 		// CubeMap
 		if(mpInpBGType->GetValue()==0)
 		{
-			iTexture* pTexture = NULL;
-			if(cEditorHelper::LoadTextureResource( eEditorTextureResourceType_CubeMap, cString::To8Char(mpInpBGCubeMap->GetValue()), &pTexture))
+			Image* pTexture = NULL;
+
+			cTextureManager::ImageOptions imageOptions;
+			imageOptions.m_uClamp = true;
+			imageOptions.m_vClamp = true;
+			if(cEditorHelper::LoadTextureResource( eEditorTextureResourceType_CubeMap, cString::To8Char(mpInpBGCubeMap->GetValue()), &pTexture, "none", 0, imageOptions))
 			{
 				mpMatWorld->SetSkyBox(pTexture,true);
 				mpMatWorld->SetSkyBoxColor(cColor(1));

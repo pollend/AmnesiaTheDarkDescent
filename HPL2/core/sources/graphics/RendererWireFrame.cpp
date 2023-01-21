@@ -138,7 +138,7 @@ namespace hpl {
 			iRenderable *pObject = diffIt.Next();
 			cMaterial *pMaterial = pObject->GetMaterial();
 
-			SetTexture(0,pMaterial->GetTexture(eMaterialTexture_Diffuse));
+			// SetTexture(0,pMaterial->GetTexture(eMaterialTexture_Diffuse));
 
 			SetMatrix(pObject->GetModelMatrixPtr());
 
@@ -160,7 +160,7 @@ namespace hpl {
 
 			SetBlendMode(pMaterial->GetBlendMode());
 
-			SetTexture(0,pMaterial->GetTexture(eMaterialTexture_Diffuse));
+			// SetTexture(0,pMaterial->GetTexture(eMaterialTexture_Diffuse));
 
 			SetMatrix(pObject->GetModelMatrixPtr());
 
@@ -169,7 +169,7 @@ namespace hpl {
 			DrawCurrent(eVertexBufferDrawType_LineStrip);
 		}
 
-		RunCallback(eRendererMessage_PostSolid);
+		// RunCallback(eRendererMessage_PostSolid);
 
 
 		////////////////////////////////////////////
@@ -186,7 +186,7 @@ namespace hpl {
 
 			SetBlendMode(pMaterial->GetBlendMode());
 
-			SetTexture(0,pMaterial->GetTexture(eMaterialTexture_Diffuse));
+			// SetTexture(0,pMaterial->GetTexture(eMaterialTexture_Diffuse));
 
 			SetMatrix(pObject->GetModelMatrix(mpCurrentFrustum));
 
@@ -195,7 +195,7 @@ namespace hpl {
 			DrawCurrent(eVertexBufferDrawType_LineStrip);
 		}
 
-		RunCallback(eRendererMessage_PostTranslucent);
+		// RunCallback(eRendererMessage_PostTranslucent);
 
 
 		END_RENDER_PASS();

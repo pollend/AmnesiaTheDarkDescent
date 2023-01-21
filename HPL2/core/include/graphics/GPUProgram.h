@@ -17,12 +17,15 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef HPL_GPU_PROGRAM_H
-#define HPL_GPU_PROGRAM_H
-
+#pragma once
+#include "graphics/GraphicsContext.h"
+#include "graphics/Image.h"
 #include "system/SystemTypes.h"
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
+
+#include <graphics/MemberID.h>
+#include <bgfx/bgfx.h>
 
 namespace hpl {
 
@@ -30,6 +33,7 @@ namespace hpl {
 
 	class iGpuShader;
 	class cResources;
+	class MemberID;
 
 	//---------------------------------------------------
 
@@ -49,17 +53,19 @@ namespace hpl {
 
 		void SetResources(cResources *apResources){ mpResources = apResources;}
 
-		virtual bool Link()=0;
+		virtual bool Link()=0; // DEPRECATE
+		virtual void Bind()=0; // DEPRECATE
+		virtual void UnBind()=0; // DEPRECATE
+		virtual void Submit(bgfx::ViewId view, GraphicsContext& context) {};
 
-		virtual void Bind()=0;
-		virtual void UnBind()=0;
-
-		virtual bool CanAccessAPIMatrix()=0;
+		virtual void GetProgram(GraphicsContext::ShaderProgram& program) {};
 
 		virtual bool SetSamplerToUnit(const tString& asSamplerName, int alUnit)=0;
 
 		virtual int GetVariableId(const tString& asName)=0;
 		virtual bool GetVariableAsId(const tString& asName, int alId)=0;
+
+		virtual bool setImage(const MemberID& id, const Image* image) { return false;}
 
 		virtual bool SetInt(int alVarId, int alX)=0;
 		virtual bool SetFloat(int alVarId, float afX)=0;
@@ -67,7 +73,6 @@ namespace hpl {
 		virtual bool SetVec3f(int alVarId, float afX,float afY,float afZ)=0;
 		virtual bool SetVec4f(int alVarId, float afX,float afY,float afZ, float afW)=0;
 		virtual bool SetMatrixf(int alVarId, const cMatrixf& mMtx)=0;
-		virtual bool SetMatrixf(int alVarId, eGpuShaderMatrix mType, eGpuShaderMatrixOp mOp)=0;
 
         bool SetVec2f(int alVarId, const cVector2f avVec){return SetVec2f(alVarId,avVec.x, avVec.y);}
 
@@ -87,8 +92,6 @@ namespace hpl {
 		unsigned int mlUserId;
 
 		eGpuProgramFormat mProgramFormat;
-
-
 		iGpuShader* mpShader[2];
 
 		bool mbAutoDestroyShaders;
@@ -97,6 +100,3 @@ namespace hpl {
 	//---------------------------------------------------
 
 };
-#endif // HPL_GPU_PROGRAM_H
-
-

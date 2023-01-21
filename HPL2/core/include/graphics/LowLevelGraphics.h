@@ -53,8 +53,6 @@ namespace hpl {
 							eGpuProgramFormat aGpuProgramFormat, const tString& asWindowCaption,
 							const cVector2l &avWindowPos)=0;
 
-		virtual eGpuProgramFormat GetGpuProgramFormat()=0;
-
 		/**
 		 * Get the capabilities of the graphics. Th return value depends on the capability
 		 * \return
@@ -84,7 +82,7 @@ namespace hpl {
 		 * Get Size of screen
 		 */
 		virtual cVector2f GetScreenSizeFloat()=0;
-		virtual const cVector2l& GetScreenSizeInt()=0;
+		virtual const cVector2l GetScreenSizeInt()=0;
 
 		/*
 		* Get fullscreen mode
@@ -165,18 +163,7 @@ namespace hpl {
 		*
 		*/
 		virtual iFrameBuffer* GetCurrentFrameBuffer()=0;
-
-		/**
-		 * Permanently sets a different setting of draw targets to current frame buffer.
-		 * \param *apTargets a vector of integers, each corresponding to a draw buffer in the current
-		 * \param alNumOfTargets
-		 */
-		virtual void SetFrameBufferDrawTargets(int *apTargets, int alNumOfTargets)=0;
-
-		/////////////////////////////////////////////////////
-		/////////// RENDER STATE ////////////////////////////
-		/////////////////////////////////////////////////////
-
+		
 		virtual void SetColorWriteActive(bool abR,bool abG,bool abB,bool abA)=0;
 		virtual void SetDepthWriteActive(bool abX)=0;
 
@@ -234,9 +221,6 @@ namespace hpl {
 		/////////////////////////////////////////////////////
 
 		virtual void SetTexture(unsigned int alUnit,iTexture* apTex)=0;
-		virtual void SetActiveTextureUnit(unsigned int alUnit)=0;
-		virtual void SetTextureEnv(eTextureParam aParam, int alVal)=0;
-		virtual void SetTextureConstantColor(const cColor &aColor)=0;
 
 
 		/////////////////////////////////////////////////////

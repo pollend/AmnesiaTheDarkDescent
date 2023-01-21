@@ -178,9 +178,10 @@ void cLuxDemoEnd::OnEnterContainer(const tString& asOldContainer)
 	cMusicHandler* pMusHandler = gpBase->mpEngine->GetSound()->GetMusicHandler();
 	pMusHandler->Stop(0.3f);
 
+	// TODO: MP migrate to Image
 	// Load background
-	iTexture* pTex = gpBase->mpEngine->GetResources()->GetTextureManager()->Create2D(msBackgroundFile, false, eTextureType_Rect);
-	if(pTex) mpGfxBackground = mpGui->CreateGfxTexture(pTex, true, eGuiMaterial_Alpha);
+	// iTexture* pTex = gpBase->mpEngine->GetResources()->GetTextureManager()->Create2D(msBackgroundFile, false, eTextureType_Rect);
+	// if(pTex) mpGfxBackground = mpGui->CreateGfxTexture(pTex, true, eGuiMaterial_Alpha);
 
 	// Set up message text
 	tWString sText = kTranslate("Demo", "EndMessage");

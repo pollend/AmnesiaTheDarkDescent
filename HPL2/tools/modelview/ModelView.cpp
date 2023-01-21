@@ -17,7 +17,9 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "graphics/Image.h"
 #include "hpl.h"
+#include <graphics/EntrySDL.h>
 
 #include "../../tests/Common/SimpleCamera.h"
 
@@ -355,7 +357,7 @@ class cMaterialData
 {
 public:
 	tString msName;
-	iTexture *mvMaterialTextures[eMaterialTexture_LastEnum];
+	Image *mvMaterialTextures[eMaterialTexture_LastEnum];
 	cMaterial *mpMat;
 };
 
@@ -423,7 +425,7 @@ public:
 		gpFloor = mpWorld->CreateMeshEntity("Floor",pMesh,true);
 		gpFloor->SetMatrix(cMath::MatrixScale(6));
 		gpFloor->SetRenderFlagBit(eRenderableFlag_ShadowCaster, true);
-		//gpFloor->SetVisible(true);
+		gpFloor->SetVisible(true);
 
 		/*std::vector<iCollideShape*> vShapes;
 		for(int i=0; i<1000; ++i)
@@ -512,9 +514,8 @@ public:
 
 		/////////////////////////////////
 		// Load extra
-
-		mpTexDiffuseNull = gpEngine->GetResources()->GetTextureManager()->Create2D("modelview_diffuse_null.jpg",true);
-		mpTexNMapNull = gpEngine->GetResources()->GetTextureManager()->Create2D("modelview_nmap_null.jpg",true);
+		m_diffuseNull = gpEngine->GetResources()->GetTextureManager()->Create2DImage("modelview_diffuse_null.jpg",true);
+		m_texNMapNull = gpEngine->GetResources()->GetTextureManager()->Create2DImage("modelview_nmap_null.jpg",true);
 
 		/////////////////////////////////
 		// Init variables
@@ -794,7 +795,7 @@ public:
 				pMatData->mpMat = pMat;
 				for(int j=0; j<eMaterialTexture_LastEnum; ++j)
 				{
-					pMatData->mvMaterialTextures[j] = pMat->GetTexture((eMaterialTexture)j);
+					pMatData->mvMaterialTextures[j] = pMat->GetImage((eMaterialTexture)j);
 				}
 			}
 			else
@@ -813,7 +814,7 @@ public:
 
 				for(int j=0; j<eMaterialTexture_LastEnum; ++j)
 				{
-					pMatData->mvMaterialTextures[j] = pMat->GetTexture((eMaterialTexture)j);
+					pMatData->mvMaterialTextures[j] = pMat->GetImage((eMaterialTexture)j);
 				}
 
 			}
@@ -1160,7 +1161,7 @@ public:
 
 			for(int j=0; j<eMaterialTexture_LastEnum; ++j)
 			{
-				pMat->SetTexture((eMaterialTexture)j, pMatData->mvMaterialTextures[j]);
+				pMat->SetImage((eMaterialTexture)j, pMatData->mvMaterialTextures[j]);
 			}
 		}
 	}
@@ -1795,13 +1796,22 @@ public:
 
 			if(aData.mlVal == 1)
 			{
-				pMat->SetTexture(texType, pMatData->mvMaterialTextures[texType]);
+				pMat->SetImage(texType, pMatData->mvMaterialTextures[texType]);
 			}
 			else
 			{
-				if(texType == eMaterialTexture_Diffuse)		pMat->SetTexture(texType,mpTexDiffuseNull);
-				else if(texType == eMaterialTexture_NMap)	pMat->SetTexture(texType,mpTexNMapNull);
-				else										pMat->SetTexture(texType,NULL);
+				switch (texType)
+				{
+				case eMaterialTexture_Diffuse:
+					pMat->SetImage(texType, m_diffuseNull);
+					break;
+				case eMaterialTexture_NMap:
+					pMat->SetImage(texType, m_texNMapNull);
+					break;
+				default:
+					pMat->SetImage(texType, NULL);
+					break;
+				}
 			}
 
 			pMat->Compile();
@@ -2246,8 +2256,8 @@ public:
 	cWidgetComboBox *mpCBAnimations;
 
 	std::vector<cMaterialData> mvMaterialData;
-	iTexture *mpTexDiffuseNull;
-	iTexture *mpTexNMapNull;
+	Image* m_diffuseNull;
+	Image* m_texNMapNull;
 };
 
 //-----------------------------------------------------------------------
@@ -2288,7 +2298,6 @@ int hplMain(const tString &asCommandline)
 	//iResourceBase::SetLogCreateAndDelete(true);
 	//iGpuProgram::SetLogDebugInformation(true);
 	cRendererDeferred::SetGBufferType(eDeferredGBuffer_32Bit);
-	cRendererDeferred::SetNumOfGBufferTextures(3);
 	cRendererDeferred::SetSSAOLoaded(true);
 	cRendererDeferred::SetEdgeSmoothLoaded(true);
 	cRendererDeferred::SetShadowMapQuality(eShadowMapQuality_Medium);
@@ -2311,53 +2320,63 @@ int hplMain(const tString &asCommandline)
 
 	SetLogFile(sPersonalDir + PERSONAL_RELATIVEROOT _W("HPL2/modelview.log"));
 
-	//Init the game engine
-	cEngineInitVars vars;
-	vars.mGraphics.mvScreenSize.x = 1024;
-	vars.mGraphics.mvScreenSize.y = 768;
-	vars.mGraphics.mbFullscreen = false;
-	vars.mGraphics.msWindowCaption = "ModelView - Initalizing...";
-	//vars.mGraphics.mvWindowPosition = cVector2l(0,0);
-	gpEngine = CreateHPLEngine(eHplAPI_OpenGL, eHplSetup_All, &vars);
-	gpEngine->SetLimitFPS(false);
-	gpEngine->GetGraphics()->GetLowLevel()->SetVsyncActive(false);
-	gpEngine->SetWaitIfAppOutOfFocus(true);
+
+	hpl::entry_sdl::setThreadHandler([&]() {
+		//Init the game engine
+		cEngineInitVars vars;
+		vars.mGraphics.mvScreenSize.x = 1024;
+		vars.mGraphics.mvScreenSize.y = 768;
+		vars.mGraphics.mbFullscreen = false;
+		vars.mGraphics.msWindowCaption = "ModelView - Initalizing...";
+		//vars.mGraphics.mvWindowPosition = cVector2l(0,0);
+		gpEngine = CreateHPLEngine(eHplAPI_OpenGL, eHplSetup_All, &vars);
+		gpEngine->SetLimitFPS(false);
+		gpEngine->GetGraphics()->GetLowLevel()->SetVsyncActive(false);
+		gpEngine->SetWaitIfAppOutOfFocus(true);
 
 
-	if(asCommandline != "")
-	{
-		gsModelFile = asCommandline;
-		gsModelFile = cString::ReplaceCharTo(gsModelFile,"\"","");
+		if(asCommandline != "")
+		{
+			gsModelFile = asCommandline;
+			gsModelFile = cString::ReplaceCharTo(gsModelFile,"\"","");
 
-		tString sModelDir = cString::GetFilePath(gsModelFile);
-		tWString sDir = cString::To16Char(sModelDir);
-		if(sDir != _W(""))
-			gpEngine->GetResources()->AddResourceDir(sDir,false);
-	}
+			tString sModelDir = cString::GetFilePath(gsModelFile);
+			tWString sDir = cString::To16Char(sModelDir);
+			if(sDir != _W(""))
+				gpEngine->GetResources()->AddResourceDir(sDir,false);
+		}
 
-	//Add resources
-#ifdef USERDIR_RESOURCES
-	gpEngine->GetResources()->LoadResourceDirsFile("resources.cfg", sUserResourceDir);
-#else
-	gpEngine->GetResources()->LoadResourceDirsFile("resources.cfg");
-#endif
-#ifdef __APPLE__
-	gpEngine->GetResources()->AddResourceDir(sEditorDir + _W("viewer/"), true);
-#endif
+		//Add resources
+	#ifdef USERDIR_RESOURCES
+		gpEngine->GetResources()->LoadResourceDirsFile("resources.cfg", sUserResourceDir);
+	#else
+		gpEngine->GetResources()->LoadResourceDirsFile("resources.cfg");
+	#endif
+	#ifdef __APPLE__
+		gpEngine->GetResources()->AddResourceDir(sEditorDir + _W("viewer/"), true);
+	#endif
 
-	//Add updates
-	cSimpleUpdate Update;
-	gpEngine->GetUpdater()->AddUpdate("Default", &Update);
+		//Add updates
+		cSimpleUpdate Update;
+		gpEngine->GetUpdater()->AddUpdate("Default", &Update);
 
-	gpSimpleCamera = hplNew(cSimpleCamera, (Update.GetName(),gpEngine, Update.mpWorld, 10, cVector3f(0,0,9), true) );
+		gpSimpleCamera = hplNew(cSimpleCamera, (Update.GetName(),gpEngine, Update.mpWorld, 10, cVector3f(0,0,9), true) );
 
-	gpEngine->GetUpdater()->AddUpdate("Default", gpSimpleCamera);
+		gpEngine->GetUpdater()->AddUpdate("Default", gpSimpleCamera);
 
-	Update.SetupView();
+		Update.SetupView();
 
-	//Run the engine
-	gpEngine->Run();
+		//Run the engine
+		gpEngine->Run();
 
+		return 0;
+	});
+
+	hpl::entry_sdl::Configuration config = {};
+	config.m_name = "HPL2 ModelViewer";
+	config.m_width = 1024;
+	config.m_height = 768;
+	hpl::entry_sdl::run(config);
 
 	hplDelete (gpSimpleCamera);
 

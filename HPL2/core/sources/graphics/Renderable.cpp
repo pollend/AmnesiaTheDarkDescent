@@ -154,5 +154,4 @@ namespace hpl {
 		return apFrustum->CollideBoundingVolume(GetBoundingVolume()) != eCollision_Outside;
 	}
 
-	//-----------------------------------------------------------------------
 }

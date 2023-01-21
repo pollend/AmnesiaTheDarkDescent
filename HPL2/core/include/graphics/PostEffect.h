@@ -20,8 +20,11 @@
 #ifndef HPL_POSTEFFECT_H
 #define HPL_POSTEFFECT_H
 
+#include "graphics/Image.h"
+#include "graphics/RenderTarget.h"
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
+#include <cstdint>
 
 namespace hpl {
 
@@ -37,8 +40,10 @@ namespace hpl {
 	class iPostEffect;
 
 
-	//------------------------------------------
-
+	class GraphicsContext;
+	class Image;
+	class RenderTarget;
+	
 	#define kPostEffectParamsClassInit(aClass)							\
 		void CopyTo(iPostEffectParams* apDestParams) {					\
 			aClass *pCastParams = static_cast< aClass *>(apDestParams);	\
@@ -48,9 +53,6 @@ namespace hpl {
 			aClass *pCastParams = static_cast< aClass *>(apSrcParams);	\
 			*this = *pCastParams;										\
 		}
-
-
-	//------------------------------------------
 
 	class iPostEffectParams
 	{
@@ -90,10 +92,11 @@ namespace hpl {
 	class iPostEffect
 	{
 	public:
+
 		iPostEffect(cGraphics *apGraphics, cResources *apResources, iPostEffectType *apType);
 		virtual ~iPostEffect();
 
-		iTexture* Render(cPostEffectComposite *apComposite, iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer, bool abLastEffect);
+		virtual void RenderEffect(cPostEffectComposite& compositor, GraphicsContext& context, Image& input, RenderTarget& target) {};
 
 		/** SetDisabled - Method to disable the Effect completely, meaning IsActive will always return false even
 		 * after a SetActive(true) call
@@ -115,20 +118,6 @@ namespace hpl {
 		virtual void OnSetActive(bool abX){}
 		virtual void OnSetParams()=0;
 		virtual iPostEffectParams *GetTypeSpecificParams()=0;
-		virtual iTexture* RenderEffect(iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer)=0;
-
-		/**
-		 * Very important! Only set this if the contents of the final buffer does not matter!
-		 * This function will set the frame buffer if the post effect is last!
-		 */
-		void SetFinalFrameBuffer(iFrameBuffer *apOutputBuffer);
-
-		void GetTextureUvPosAndSize(const cVector2f& avTexSize,cVector2f& avUvPos,  cVector2f& avUvSize);
-
-		void SetFrameBuffer(iFrameBuffer *apFrameBuffer);
-		void DrawQuad(	const cVector3f& avPos,  const cVector2f& avSize, iTexture *apTexture, bool abFlipY);
-		void DrawQuad(	const cVector3f& avPos,  const cVector2f& avSize, iTexture *apTexture0, iTexture *apTexture1,
-						bool abFlipY0,bool abFlipY1);
 
 		cGraphics *mpGraphics;
 		cResources *mpResources;
@@ -139,13 +128,10 @@ namespace hpl {
 		bool mbDisabled;
 		bool mbActive;
 
-		cPostEffectComposite *mpCurrentComposite;
 		bool mbIsLastEffect;
 
 		bool mbFinalFrameBufferUsed;
 	};
-
-	//------------------------------------------
 
 };
 #endif // HPL_POSTEFFECT_H

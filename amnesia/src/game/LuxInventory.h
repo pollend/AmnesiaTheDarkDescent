@@ -23,6 +23,7 @@
 //----------------------------------------------
 
 #include "LuxBase.h"
+#include "bgfx/bgfx.h"
 
 //----------------------------------------------
 
@@ -426,10 +427,14 @@ private:
 	cVector2f mvGuiSetOffset;
 	cVector3f mvGuiSetStartPos;
 
-	iTexture *mpScreenTexture;
 	cGuiGfxElement *mpScreenGfx;
-	iTexture *mpScreenBgTexture;
 	cGuiGfxElement *mpScreenBgGfx;
+	
+	bgfx::ProgramHandle m_program;
+	bgfx::UniformHandle m_s_diffuseMap;
+
+	std::shared_ptr<Image> m_screenImage;
+	std::shared_ptr<Image> m_screenBgTexture;
 
 	cGuiGfxElement* mpFrameHealthCorners[4];
 	cGuiGfxElement* mpFrameHealthBorders[4];
@@ -459,7 +464,7 @@ private:
 
 	cGuiGfxElement *mpWhiteGfx;
 
-	iGpuProgram *mpEffectProgram;
+	// iGpuProgram *mpEffectProgram;
 
 	iWidget * mpHealthWidget;
 	iWidget * mpSanityWidget;

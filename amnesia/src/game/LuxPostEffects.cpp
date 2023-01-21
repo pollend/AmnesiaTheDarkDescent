@@ -20,6 +20,8 @@
 #include "LuxPostEffects.h"
 
 #include "LuxMapHandler.h"
+#include "bgfx/bgfx.h"
+#include "graphics/ShaderUtil.h"
 
 //////////////////////////////////////////////////////////////////////////
 // VARIABLES
@@ -44,38 +46,17 @@
 
 cLuxPostEffect_Insanity::cLuxPostEffect_Insanity(cGraphics *apGraphics, cResources *apResources) : iLuxPostEffect(apGraphics, apResources)
 {
-	//////////////////////////////
-	// Create program
-	cParserVarContainer vars;
-	vars.Add("UseUv");
-	mpProgram = mpGraphics->CreateGpuProgramFromShaders("LuxInsanity","deferred_base_vtx.glsl", "posteffect_insanity_frag.glsl", &vars);
-	if(mpProgram)
-	{
-		mpProgram->GetVariableAsId("afAlpha",kVar_afAlpha);
-		mpProgram->GetVariableAsId("afT",kVar_afT);
-		mpProgram->GetVariableAsId("avScreenSize",kVar_avScreenSize);
-		mpProgram->GetVariableAsId("afAmpT",kVar_afAmpT);
-		mpProgram->GetVariableAsId("afWaveAlpha",kVar_afWaveAlpha);
-		mpProgram->GetVariableAsId("afZoomAlpha",kVar_afZoomAlpha);
+	m_program = hpl::loadProgram("vs_post_effect","fs_dds_posteffect_insanity");
+	m_s_diffuseMap = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
+	m_s_ampMap0  = bgfx::createUniform("s_ampMap0", bgfx::UniformType::Sampler);
+	m_s_ampMap1  = bgfx::createUniform("s_ampMap1", bgfx::UniformType::Sampler);
+	m_s_zoomMap  = bgfx::createUniform("s_zoomMap", bgfx::UniformType::Sampler);
+	m_u_param = bgfx::createUniform("u_param", bgfx::UniformType::Vec4);
+
+	for(size_t i = 0; i < m_ampMaps.size(); i++) {
+		m_ampMaps[i] = mpResources->GetTextureManager()->Create2DImage("posteffect_insanity_ampmap" + cString::ToString((int)i), false);
 	}
-
-
-	//////////////////////////////
-	// Textures
-	mvAmpMaps.resize(3);
-
-	for(size_t i=0; i<mvAmpMaps.size(); ++i)
-		mvAmpMaps[i] = mpResources->GetTextureManager()->Create2D("posteffect_insanity_ampmap"+cString::ToString((int)i), false);
-
-	mpZoomMap = mpResources->GetTextureManager()->Create2D("posteffect_insanity_zoom.jpg", false);
-
-	//////////////////////////////
-	// Init vars
-	mfT =0;
-	mfAnimCount =0;
-	mfWaveAlpha = 0.0f;
-	mfZoomAlpha = 0.0f;
-	mfWaveSpeed =0.0f;
+	m_zoomImage = mpResources->GetTextureManager()->Create2DImage("posteffect_insanity_zoom.jpg", false);
 }
 
 //-----------------------------------------------------------------------
@@ -93,78 +74,113 @@ void cLuxPostEffect_Insanity::Update(float afTimeStep)
 
 	mfAnimCount += afTimeStep * 0.15f;
 
-	float fMaxAnim = (float)mvAmpMaps.size();
-	if(mfAnimCount >= fMaxAnim) mfAnimCount = mfAnimCount-fMaxAnim;
-}
-
-//-----------------------------------------------------------------------
-
-
-iTexture* cLuxPostEffect_Insanity::RenderEffect(iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer)
-{
-	/////////////////////////
-	// Init render states
-	mpCurrentComposite->SetFlatProjection();
-	mpCurrentComposite->SetBlendMode(eMaterialBlendMode_None);
-	mpCurrentComposite->SetChannelMode(eMaterialChannelMode_RGBA);
-
-	/////////////////////////
-	// Render the to final buffer
-	// This function sets to frame buffer if post effect is last!
-	SetFinalFrameBuffer(apFinalTempBuffer);
-
-	mpCurrentComposite->SetTexture(0, apInputTexture);
-
-	int lAmp0 = (int)mfAnimCount;
-	int lAmp1 = (int)(mfAnimCount+1);
-	if(lAmp1 >= (int) mvAmpMaps.size()) lAmp1 = 0;
-	float fAmpT = cMath::GetFraction(mfAnimCount);
-
-	//Log("AnimCount: %f - %d %d - %f\n", mfAnimCount, lAmp0, lAmp1, fAmpT);
-
-	mpCurrentComposite->SetTexture(1, mvAmpMaps[lAmp0]);
-	mpCurrentComposite->SetTexture(2, mvAmpMaps[lAmp1]);
-	mpCurrentComposite->SetTexture(3, mpZoomMap);
-
-	mpCurrentComposite->SetProgram(mpProgram);
-	if(mpProgram)
-	{
-		mpProgram->SetFloat(kVar_afAlpha, 1.0f);
-		mpProgram->SetFloat(kVar_afT, mfT);
-		mpProgram->SetVec2f(kVar_avScreenSize, mpLowLevelGraphics->GetScreenSizeFloat());
-		mpProgram->SetFloat(kVar_afAmpT, fAmpT);
-		mpProgram->SetFloat(kVar_afWaveAlpha, mfWaveAlpha);
-		mpProgram->SetFloat(kVar_afZoomAlpha, mfZoomAlpha);
+	float fMaxAnim = static_cast<float>(m_ampMaps.size());
+	if(mfAnimCount >= fMaxAnim)  {
+		mfAnimCount = mfAnimCount-fMaxAnim;
 	}
-
-
-	DrawQuad(0,1,apInputTexture, true);
-
-	mpCurrentComposite->SetTextureRange(NULL, 1);
-
-	return apFinalTempBuffer->GetColorBuffer(0)->ToTexture();
 }
 
-
 //-----------------------------------------------------------------------
 
-//////////////////////////////////////////////////////////////////////////
-// POST EFFECT HANDLER
-//////////////////////////////////////////////////////////////////////////
 
-//-----------------------------------------------------------------------
+// iTexture* cLuxPostEffect_Insanity::RenderEffect(iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer)
+// {
+// 	/////////////////////////
+// 	// Init render states
+// 	mpCurrentComposite->SetFlatProjection();
+// 	mpCurrentComposite->SetBlendMode(eMaterialBlendMode_None);
+// 	mpCurrentComposite->SetChannelMode(eMaterialChannelMode_RGBA);
+
+// 	/////////////////////////
+// 	// Render the to final buffer
+// 	// This function sets to frame buffer if post effect is last!
+// 	SetFinalFrameBuffer(apFinalTempBuffer);
+
+// 	mpCurrentComposite->SetTexture(0, apInputTexture);
+
+// 	//Log("AnimCount: %f - %d %d - %f\n", mfAnimCount, lAmp0, lAmp1, fAmpT);
+
+// 	mpCurrentComposite->SetTexture(1, mvAmpMaps[lAmp0]);
+// 	mpCurrentComposite->SetTexture(2, mvAmpMaps[lAmp1]);
+// 	mpCurrentComposite->SetTexture(3, mpZoomMap);
+
+// 	mpCurrentComposite->SetProgram(mpProgram);
+// 	if(mpProgram)
+// 	{
+// 		mpProgram->SetFloat(kVar_afAlpha, 1.0f);
+// 		mpProgram->SetFloat(kVar_afT, mfT);
+// 		mpProgram->SetVec2f(kVar_avScreenSize, mpLowLevelGraphics->GetScreenSizeFloat());
+// 		mpProgram->SetFloat(kVar_afAmpT, fAmpT);
+// 		mpProgram->SetFloat(kVar_afWaveAlpha, mfWaveAlpha);
+// 		mpProgram->SetFloat(kVar_afZoomAlpha, mfZoomAlpha);
+// 	}
+
+
+// 	DrawQuad(0,1,apInputTexture, true);
+
+// 	mpCurrentComposite->SetTextureRange(NULL, 1);
+
+// 	return apFinalTempBuffer->GetColorBuffer(0)->ToTexture();
+// }
 
 cLuxPostEffectHandler::cLuxPostEffectHandler() : iLuxUpdateable("LuxPostEffectHandler")
 {
 	cGraphics *pGraphics = gpBase->mpEngine->GetGraphics();
 	cResources *pResources = gpBase->mpEngine->GetResources();
 
-	///////////////////////
-	// Create post effects
 	mpInsanity = hplNew(cLuxPostEffect_Insanity, (pGraphics, pResources) );
 	AddEffect(mpInsanity, 25);
 	mpInsanity->SetActive(true);
 }
+
+void cLuxPostEffect_Insanity::RenderEffect(cPostEffectComposite& compositor, GraphicsContext& context, Image& input, RenderTarget& target) {
+	bgfx::ViewId view = context.StartPass("Bloom Pass");
+	cVector2l vRenderTargetSize = compositor.GetRenderTargetSize();
+	
+	struct {
+		float alpha;
+		float fT;
+		float ampT;
+		float waveAlpha;
+		
+		float zoomAlpha;
+		float pad[3];
+	} param = {0};
+
+	int lAmp0 = static_cast<int>(mfAnimCount);
+	int lAmp1 = static_cast<int>(mfAnimCount+1);
+	if(lAmp1 >= static_cast<int>(m_ampMaps.size())) {
+		lAmp1 = 0;
+	}
+	float fAmpT = cMath::GetFraction(mfAnimCount);
+
+	cMatrixf projMtx;
+	GraphicsContext::ShaderProgram shaderProgram;
+	GraphicsContext::LayoutStream layoutStream;
+	context.ScreenSpaceQuad(layoutStream, projMtx, vRenderTargetSize.x, vRenderTargetSize.y);
+
+	shaderProgram.m_configuration.m_write = Write::RGBA;
+	shaderProgram.m_handle = m_program;
+	shaderProgram.m_projection = projMtx;
+
+	shaderProgram.m_textures.push_back({ m_s_diffuseMap, input.GetHandle(), 0 });
+	shaderProgram.m_textures.push_back({ m_s_ampMap0, m_ampMaps[lAmp0]->GetHandle(), 1 });
+	shaderProgram.m_textures.push_back({ m_s_ampMap1, m_ampMaps[lAmp1]->GetHandle(), 2 });
+	shaderProgram.m_textures.push_back({ m_s_zoomMap, m_zoomImage->GetHandle(), 3 });
+
+	param.zoomAlpha = mfZoomAlpha;
+	param.fT = mfT;
+	param.ampT = fAmpT;
+	param.waveAlpha = mfWaveAlpha;
+	param.alpha = 1.0f;
+
+	shaderProgram.m_uniforms.push_back({ m_u_param, &param, 1 });
+	GraphicsContext::DrawRequest request{ target, layoutStream, shaderProgram };
+	request.m_width = vRenderTargetSize.x;
+	request.m_height = vRenderTargetSize.y;
+	context.Submit(view, request);
+}
+
 
 //-----------------------------------------------------------------------
 

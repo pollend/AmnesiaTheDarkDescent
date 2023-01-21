@@ -17,9 +17,10 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef HPL_RENDERABLE_H
-#define HPL_RENDERABLE_H
+#pragma once
 
+#include "bgfx/bgfx.h"
+#include "graphics/GraphicsContext.h"
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
 #include "system/SystemTypes.h"
@@ -56,6 +57,9 @@ namespace hpl {
 		virtual cMaterial *GetMaterial()=0;
 		virtual iVertexBuffer* GetVertexBuffer()=0;
 
+
+		// virtual bool Submit(LayoutStream& input, GraphicsContext& context) { return false;}
+
 		virtual bool CollidesWithBV(cBoundingVolume *apBV);
 		virtual bool CollidesWithFrustum(cFrustum *apFrustum);
 
@@ -67,6 +71,8 @@ namespace hpl {
 		virtual bool UpdateGraphicsForViewport(cFrustum *apFrustum,float afFrameTime){ return true;}
 
 		virtual bool UsesOcclusionQuery(){ return false; }
+
+		virtual void ResolveOcclusionPass(iRenderer *apRenderer, std::function<void(bgfx::OcclusionQueryHandle, DepthTest test, GraphicsContext::LayoutStream&, const cMatrixf& transform)> handler){}
 		virtual void AssignOcclusionQuery(iRenderer *apRenderer){}
 		virtual bool RetrieveOcculsionQuery(iRenderer *apRenderer){ return true;}
 
@@ -126,7 +132,6 @@ namespace hpl {
 
 		void SetRenderableUserData(void* apData) { mpRenderableUserData = apData; }
 		void* GetRenderableUserData() { return mpRenderableUserData; }
-
 	protected:
 		cMatrixf m_mtxInvModel;
 		cMatrixf m_mtxPrevious;
@@ -162,6 +167,8 @@ namespace hpl {
 		iRenderableContainerNode *mpRenderContainerNode;
 
 		void* mpRenderableUserData;
+
+		// need to hack in this occlusion query to get this to work correctly
+		bgfx::OcclusionQueryHandle m_occlusionQuery;
 	};
 };
-#endif // HPL_RENDERABLE_H

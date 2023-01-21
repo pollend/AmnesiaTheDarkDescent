@@ -56,15 +56,23 @@ AddToolTarget(ModelViewer
 
 ### ParticleViewer
 
-#AddToolTarget(ParticleViewer
-#   particleview/ParticleView.cpp
-#   ${common_sources}
-#)
+AddToolTarget(ParticleViewer
+   particleview/ParticleView.cpp
+   ${common_sources}
+)
 
 ##  Mesh Converter
 
 add_executable(MshConverter
         mshconverter/MshConverter.cpp
         )
+
+# Hack to copy resources for tools
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/resources/"
+        DESTINATION  ${INSTALL_OUTPUT_PATH}/Amnesia
+        FILES_MATCHING
+        PATTERN "*"
+        )
+
 target_link_libraries(MshConverter HPL2)
 

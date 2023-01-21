@@ -66,6 +66,7 @@
 #include "LuxInteractConnections.h"
 
 #include "LuxAchievementHandler.h"
+#include "graphics/Image.h"
 
 
 
@@ -1070,11 +1071,12 @@ void __stdcall cLuxScriptHandler::SetSkyBoxTexture(string& asTexture)
 {
 	cWorld *pWorld = gpBase->mpMapHandler->GetCurrentMap()->GetWorld();
 
-    iTexture *pTexture;
-	if(asTexture != "")
-		pTexture = gpBase->mpEngine->GetResources()->GetTextureManager()->CreateCubeMap(asTexture,true);
-	else
+    Image *pTexture;
+	if(asTexture != "") {
+		pTexture = gpBase->mpEngine->GetResources()->GetTextureManager()->CreateCubeMapImage(asTexture,true);
+	} else {
 		pTexture = NULL;
+	}
 
 	pWorld->SetSkyBox(pTexture, true);
 }

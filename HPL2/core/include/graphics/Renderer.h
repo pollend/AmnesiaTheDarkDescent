@@ -16,17 +16,27 @@
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
+#pragma once
 
-#ifndef HPL_RENDERER_H
-#define HPL_RENDERER_H
-
+#include "bgfx/bgfx.h"
+#include "graphics/Enum.h"
+#include "graphics/GraphicsContext.h"
 #include "graphics/GraphicsTypes.h"
+#include "graphics/Image.h"
+#include "graphics/RenderTarget.h"
+#include "graphics/RenderViewport.h"
+#include "math/Frustum.h"
 #include "math/MathTypes.h"
 #include "scene/SceneTypes.h"
 
 #include "graphics/RenderFunctions.h"
+#include <cstdint>
+#include <functional>
+#include <memory>
+#include <vector>
 
 namespace hpl {
+	
 
 	//---------------------------------------------
 
@@ -40,13 +50,13 @@ namespace hpl {
 	class cWorld;
 	class cRenderSettings;
 	class cRenderList;
-	class cProgramComboManager;
 	class iLight;
 	class iOcclusionQuery;
 	class cBoundingVolume;
 	class iRenderableContainer;
 	class iRenderableContainerNode;
 	class cVisibleRCNodeTracker;
+	class RenderCallbackMessage;
 
 	//---------------------------------------------
 
@@ -75,7 +85,8 @@ namespace hpl {
 
 		iLight *mpLight;
 		iOcclusionQuery *mpQuery;
-		int mlSampleResults;
+		bgfx::OcclusionQueryHandle m_occlusionQuery;
+		int32_t mlSampleResults;
 	};
 
 	//---------------------------------------------
@@ -89,7 +100,6 @@ namespace hpl {
 		cMatrixf m_mtxInvBoxSpace;
 	};
 
-	//---------------------------------------------
 
 	class iRenderer;
 
@@ -134,9 +144,11 @@ namespace hpl {
 		cRenderList *mpRenderList;
 
 		cVisibleRCNodeTracker *mpVisibleNodeTracker;
-		std::vector<cLightOcclusionPair> mvLightOcclusionPairs;
+		std::vector<cLightOcclusionPair> m_lightOcclusionPairs;
 
 		cRenderSettings *mpReflectionSettings;
+
+		std::vector<iRenderableContainerNode*> m_testNodes;
 
 		int mlCurrentOcclusionObject;
 		std::vector<cOcclusionQueryObject*> mvOcclusionObjectPool;
@@ -229,11 +241,12 @@ namespace hpl {
 	class cShadowMapData
 	{
 	public:
-		iTexture *mpTempDiffTexture;
-		iTexture *mpTexture;
-		iFrameBuffer *mpBuffer;
+		// iTexture *mpTempDiffTexture;
+		// iTexture *mpTexture;
+		// iFrameBuffer *mpBuffer;
+		
 		int mlFrameCount;
-
+		RenderTarget m_target;
 		cShadowMapLightCache mCache;
 	};
 
@@ -244,11 +257,18 @@ namespace hpl {
 	{
 	friend class cRendererCallbackFunctions;
 	friend class cRenderSettings;
+
 	public:
 		iRenderer(const tString& asName, cGraphics *apGraphics,cResources* apResources, int alNumOfProgramComboModes);
 		virtual ~iRenderer();
 
-		void Render(float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, cRenderTarget *apRenderTarget,
+		// plan to just use the single draw call need to call BeginRendering to setup state
+		// ensure the contents is copied to the RenderViewport
+		virtual void Draw(GraphicsContext& context, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, RenderViewport& apRenderTarget,
+					bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList) {} ;
+
+		[[deprecated("Use Draw instead")]]
+		void Render(float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, const RenderViewport& apRenderTarget,
 					bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList);
 
 		void Update(float afTimeStep);
@@ -261,10 +281,16 @@ namespace hpl {
 		virtual bool LoadData()=0;
 		virtual void DestroyData()=0;
 
-		virtual iTexture* GetPostEffectTexture();
+		virtual Image& FetchOutputFromRenderer() = 0;
 
 		virtual iTexture* GetRefractionTexture(){ return NULL;}
 		virtual iTexture* GetReflectionTexture(){ return NULL;}
+
+		virtual std::shared_ptr<Image> GetDepthStencilImage() { return std::shared_ptr<Image>(nullptr);}
+		virtual std::shared_ptr<Image> GetOutputImage() { return std::shared_ptr<Image>(nullptr);}
+
+		Image* GetRefractionImage(){ return nullptr;}
+		Image* GetReflectionImage(){ return nullptr;}
 
 		cWorld *GetCurrentWorld(){ return mpCurrentWorld;}
 		cFrustum *GetCurrentFrustum(){ return mpCurrentFrustum;}
@@ -302,30 +328,29 @@ namespace hpl {
 		static void SetRefractionEnabled(bool abX) { mbRefractionEnabled = abX;}
 		static bool GetRefractionEnabled(){ return mbRefractionEnabled;}
 
-
 		//Debug
 		tRenderableVec *GetShadowCasterVec(){ return &mvShadowCasters;}
 
 	protected:
-		/**
-		* In case some intermediate format is used then make sure it is at the correct buffer before ending rendering.
-		* When sending to a frame buffer at the end, then this method is never called and the intermediate can be returned with GetPostEffectFrameBuffer
-		*/
+		// a utility to collect renderable objects from the current render list
+		void RenderableHelper(eRenderListType type, eMaterialRenderMode mode, std::function<void(iRenderable* obj, GraphicsContext::LayoutStream&, GraphicsContext::ShaderProgram&)> handler);
+
+		[[deprecated("This is apart of the GraphicsContext")]]
 		virtual void CopyToFrameBuffer()=0;
+		[[deprecated("Moved into Draw")]]
 		virtual void SetupRenderList()=0;
+		[[deprecated("Moved into Draw")]]
 		virtual void RenderObjects()=0;
 
-		void BeginRendering(float afFrameTime,cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, cRenderTarget *apRenderTarget,
+		void BeginRendering(float afFrameTime,cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, const RenderViewport& apRenderTarget,
 							bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList, bool abAtStartOfRendering=true);
-		void EndRendering(bool abAtEndOfRendering=true);
 
-		void CreateAndAddShadowMap(eShadowMapResolution aResolution, const cVector3l &avSize, ePixelFormat aFormat);
 		cShadowMapData* GetShadowMapData(eShadowMapResolution aResolution, iLight *apLight);
 		bool ShadowMapNeedsUpdate(iLight *apLight, cShadowMapData *apShadowData);
 		void DestroyShadowMaps();
 
 
-        void RenderZObject(iRenderable *apObject, cFrustum *apCustomFrustum);
+        void RenderZObject(GraphicsContext& context, iRenderable *apObject, cFrustum *apCustomFrustum);
 
 		/**
 		 * Brute force adding of visible objects. Nothing is rendered.
@@ -335,15 +360,26 @@ namespace hpl {
 		void CheckNodesAndAddToListIterative(iRenderableContainerNode *apNode, tRenderableFlag alNeededFlags);
 
 
-		/**
-		 * Uses a Coherent occlusion culling to get visible objects. No early Z needed after calling this
-		 */
+		[[deprecated("Replaced with RenderZPassWithVisibilityCheck")]]
 		void CheckForVisibleObjectsAddToListAndRenderZ(	cVisibleRCNodeTracker *apVisibleNodeTracker,
 														tObjectVariabilityFlag alObjectTypes, tRenderableFlag alNeededFlags,
 														bool abSetupRenderStates,
 														tRenderCHCObjectCallbackFunc apRenderObjectCallback);
 
 		static bool RenderObjectZAndAddToRenderListStaticCallback(iRenderer *apRenderer, iRenderable *apObject);
+		
+		void OcclusionQueryBoundingBoxTest(bgfx::ViewId view, 
+			GraphicsContext& context, 
+			bgfx::OcclusionQueryHandle handle, 
+			const cFrustum& frustum,
+			const cMatrixf& transform, 
+			RenderTarget& rt,Cull cull = Cull::CounterClockwise);
+		/**
+		 * Uses a Coherent occlusion culling to get visible objects. No early Z needed after calling this
+		 */
+		void RenderZPassWithVisibilityCheck(GraphicsContext& context, cVisibleRCNodeTracker *apVisibleNodeTracker, tRenderableFlag alNeededFlags, tObjectVariabilityFlag variabilityFlag,
+			RenderTarget& rt, std::function<bool(iRenderable* object)> renderHandler);
+
 		bool RenderObjectZAndAddToRenderList(iRenderable *apObject);
 
 		void PushUpVisibility(iRenderableContainerNode *apNode);
@@ -362,12 +398,11 @@ namespace hpl {
 		bool RenderShadowCasterCHC(iRenderable *apObject);
 		void RenderShadowCaster(iRenderable *apObject, cFrustum *apLightFrustum);
 		void RenderShadowCastersNormal(cFrustum *apLightFrustum);
-		void RenderShadowMap(iLight *apLight, iFrameBuffer *apShadowBuffer);
-
+	
 		/**
 		 * Only depth is needed for framebuffer. All objects needs to be added to renderlist!
 		 */
-		void AssignAndRenderOcclusionQueryObjects(bool abSetFrameBuffer, iFrameBuffer *apFrameBuffer, bool abUsePosAndSize);
+		void AssignAndRenderOcclusionQueryObjects(bgfx::ViewId view, GraphicsContext& context, bool abSetFrameBuffer, bool abUsePosAndSize, RenderTarget& rt);
 
 		/**
 		 * This retrieves all occlusion information for light pair queries and release occlusion queries. If specified, this is a waiting operation.
@@ -378,12 +413,6 @@ namespace hpl {
 		void RenderBasicSkyBox();
 
 		bool SetupLightScissorRect(iLight *apLight, cMatrixf *apViewSpaceMatrix);
-
-		void SetMaterialProgram(eMaterialRenderMode aRenderMode, cMaterial *apMaterial);
-		void SetMaterialTextures(eMaterialRenderMode aRenderMode, cMaterial *apMaterial);
-
-		void DrawCurrentMaterial(eMaterialRenderMode aRenderMode, iRenderable *apObject);
-
 
 		/**
 		 * Checks if the renderable object is 1) submeshentity 2) is onesided plane 3)is away from camera. If all are true, FALSE is returned.
@@ -419,19 +448,16 @@ namespace hpl {
 												const cVector2f& avMinUV=0, const cVector2f& avMaxUV=1,
 												bool abInvertY=false);
 		iVertexBuffer* LoadVertexBufferFromMesh(const tString& asMeshName, tVertexElementFlag alVtxToCopy);
-		void UpdateqQuadVertexPostion(iVertexBuffer *apVtxBuffer,const cVector3f& avPos, const cVector2f& avSize, bool abCallUpdate);
+		void UpdateQuadVertexPostion(iVertexBuffer *apVtxBuffer,const cVector3f& avPos, const cVector2f& avSize, bool abCallUpdate);
 
-		void RunCallback(eRendererMessage aMessage);
+		void RunCallback(eRendererMessage aMessage, cRendererCallbackFunctions& handler);
 
 		eShadowMapResolution GetShadowMapResolution(eShadowMapResolution aWanted, eShadowMapResolution aMax);
-
-		iOcclusionQuery *GetOcclusionQuery();
-		void ReleaseOcclusionQuery(iOcclusionQuery * apQuery);
 
         cResources* mpResources;
 		cGpuShaderManager *mpShaderManager;
 
-		cProgramComboManager* mpProgramManager;
+		bgfx::ProgramHandle m_nullShader;
 
 		tString msName;
 
@@ -457,8 +483,6 @@ namespace hpl {
 
 		iVertexBuffer *mpShapeBox;
 
-		iGpuProgram *mpDepthOnlyProgram;
-
 		cMatrixf m_mtxSkyBox;
 
 		cRect2l mTempClipRect;
@@ -476,10 +500,8 @@ namespace hpl {
 		cRendererCallbackFunctions *mpCallbackFunctions;
 
 		int mlActiveOcclusionQueryNum;
-		std::vector<iOcclusionQuery*> mvOcclusionQueryPool;
 		std::vector<cOcclusionQueryObject*> mvSortedOcclusionObjects;
-
-		std::vector<cShadowMapData*> mvShadowMapData[eShadowMapResolution_LastEnum];
+		std::array<absl::InlinedVector<cShadowMapData, 10>, eShadowMapResolution_LastEnum> m_shadowMapData;
 
 		float mfTempAlpha;
 
@@ -497,7 +519,7 @@ namespace hpl {
 	class cRendererCallbackFunctions
 	{
 	public:
-		cRendererCallbackFunctions(iRenderer *apRenderer) : mpRenderer(apRenderer) {}
+		cRendererCallbackFunctions(GraphicsContext& context,iRenderer *apRenderer) : m_context(context), mpRenderer(apRenderer) {}
 
 		cRenderSettings* GetSettings(){ return mpRenderer->mpCurrentSettings;}
 		cFrustum* GetFrustum(){ return mpRenderer->mpCurrentFrustum;}
@@ -536,13 +558,15 @@ namespace hpl {
 
 		void DrawWireFrame(iVertexBuffer *apVtxBuffer, const cColor &aColor){ mpRenderer->DrawWireFrame(apVtxBuffer, aColor);}
 
+		inline GraphicsContext& GetGraphicsContext(){ return m_context; }
+
 		iLowLevelGraphics *GetLowLevelGfx(){ return mpRenderer->mpLowLevelGraphics;}
 
 	private:
 		iRenderer *mpRenderer;
+		GraphicsContext& m_context;
 	};
 
 	//---------------------------------------------
 
 };
-#endif // HPL_RENDERER_H

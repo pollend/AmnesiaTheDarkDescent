@@ -20,10 +20,12 @@
 #ifndef HPL_RENDERABLE_CONTAINER_H
 #define HPL_RENDERABLE_CONTAINER_H
 
+#include "bgfx/bgfx.h"
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
 #include "system/SystemTypes.h"
 #include "scene/SceneTypes.h"
+#include <bx/debug.h>
 
 namespace hpl {
 
@@ -72,7 +74,12 @@ namespace hpl {
 	friend class iRenderableContainer;
 	public:
 		iRenderableContainerNode();
-		virtual ~iRenderableContainerNode(){}
+		virtual ~iRenderableContainerNode(){
+			if(bgfx::isValid(m_occlusionQuery)) {
+				bgfx::destroy(m_occlusionQuery);
+			}
+			m_occlusionQuery = BGFX_INVALID_HANDLE;
+		}
 
 		virtual void UpdateBeforeUse(){}
 
@@ -118,6 +125,8 @@ namespace hpl {
 
 		void CalculateMinMaxFromObjects();
 
+		bgfx::OcclusionQueryHandle GetOcclusionQuery() const { return m_occlusionQuery; }
+
 	protected:
 		cVector3f mvMin;
 		cVector3f mvMax;
@@ -140,6 +149,7 @@ namespace hpl {
 		iRenderableContainerNode *mpParent;
 		tRenderableContainerNodeList mlstChildNodes;
 		tRenderableList mlstObjects;
+		bgfx::OcclusionQueryHandle m_occlusionQuery = BGFX_INVALID_HANDLE;
 	};
 
 	//-------------------------------------------

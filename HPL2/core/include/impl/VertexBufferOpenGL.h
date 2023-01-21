@@ -85,8 +85,6 @@ namespace hpl {
 
 		bool Compile(tVertexCompileFlag aFlags);
 
-		void CreateShadowDouble(bool abUpdateData);
-
 		void Transform(const cMatrixf &mtxTransform);
 
 		iVertexBuffer* CreateCopy(	eVertexBufferType aType, eVertexBufferUsageType aUsageType,
@@ -128,7 +126,7 @@ namespace hpl {
 
 		tUIntVec mvIndexArray;
 
-		bool mbHasShadowDouble;
+
 	};
 
 };

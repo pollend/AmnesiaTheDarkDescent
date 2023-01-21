@@ -275,7 +275,7 @@ void cLevelEditorWorld::CopyDataToEntityCallback(iEntityWrapperData* apData, iEn
 {
 	if(alCopyStep == ePropCopyStep_PostDeployAll)
 	{
-		void* pData = apEnt->GetEntityExtData();
+		cLevelEditorEntityExtData* pData = (cLevelEditorEntityExtData*)apEnt->GetEntityExtData();
 		if(pData)
 		{
 			hplDelete(pData);

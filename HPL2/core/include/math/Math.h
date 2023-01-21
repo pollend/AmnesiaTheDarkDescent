@@ -480,6 +480,13 @@ namespace hpl {
 			return true;
 		}
 
+		static inline bool Vector3EqualEpsilon(const cVector3f &a, const cVector3f &b, float epsilon = 0.0001f)
+		{
+			return (Abs(a.x - b.x) < epsilon 
+				&& Abs(a.y - b.y) < epsilon && 
+				Abs(a.z - b.z) < epsilon);
+		}
+
 		static inline bool Vector2LessEqual(const cVector2f &avVec, const cVector2f &avCompareVec)
 		{
 			if(avVec.x > avCompareVec.x) return false;

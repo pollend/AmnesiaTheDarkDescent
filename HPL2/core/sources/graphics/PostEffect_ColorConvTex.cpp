@@ -19,15 +19,19 @@
 
 #include "graphics/PostEffect_ColorConvTex.h"
 
+#include "graphics/Enum.h"
 #include "graphics/Graphics.h"
+#include "graphics/GraphicsContext.h"
+#include "graphics/ShaderUtil.h"
+#include "math/MathTypes.h"
 #include "resources/Resources.h"
 
-#include "graphics/LowLevelGraphics.h"
-#include "graphics/PostEffectComposite.h"
 #include "graphics/FrameBuffer.h"
-#include "graphics/Texture.h"
 #include "graphics/GPUProgram.h"
 #include "graphics/GPUShader.h"
+#include "graphics/LowLevelGraphics.h"
+#include "graphics/PostEffectComposite.h"
+#include "graphics/Texture.h"
 
 #include "resources/TextureManager.h"
 
@@ -36,135 +40,87 @@
 
 #include "math/Math.h"
 
-namespace hpl {
+namespace hpl
+{
 
-	//////////////////////////////////////////////////////////////////////////
-	// PROGRAM VARS
-	//////////////////////////////////////////////////////////////////////////
+    cPostEffectType_ColorConvTex::cPostEffectType_ColorConvTex(cGraphics* apGraphics, cResources* apResources)
+        : iPostEffectType("ColorConvTex", apGraphics, apResources)
+    {
+        m_colorConv = hpl::loadProgram("vs_post_effect", "fs_posteffect_color_conv");
+        m_u_param = bgfx::createUniform("u_param", bgfx::UniformType::Vec4);
+        m_u_colorConvTex = bgfx::createUniform("s_convMap", bgfx::UniformType::Sampler);
+        m_u_diffuseTex = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
+    }
 
-	#define kVar_afFadeAlpha	0
-
-	//////////////////////////////////////////////////////////////////////////
-	// POST EFFECT BASE
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
-	cPostEffectType_ColorConvTex::cPostEffectType_ColorConvTex(cGraphics *apGraphics, cResources *apResources) : iPostEffectType("ColorConvTex",apGraphics,apResources)
-	{
-		///////////////////////////
-		// Load programs
-		for(int i=0; i<2; ++i)
-		{
-			cParserVarContainer vars;
-			vars.Add("UseUv");
-			if(i==1) vars.Add("UseFadeAlpha");
-
-			mpProgram[i] = mpGraphics->CreateGpuProgramFromShaders("BloomBlur"+cString::ToString(i),"deferred_base_vtx.glsl",
-																	"posteffect_color_conv_tex_frag.glsl", &vars);
-			if(i==1)
-			{
-				if(mpProgram[i])
-				{
-					mpProgram[i]->GetVariableAsId("afFadeAlpha",kVar_afFadeAlpha);
-				}
-			}
-		}
-	}
-
-	//-----------------------------------------------------------------------
-
-	cPostEffectType_ColorConvTex::~cPostEffectType_ColorConvTex()
-	{
-
-	}
-
-	//-----------------------------------------------------------------------
-
-	iPostEffect * cPostEffectType_ColorConvTex::CreatePostEffect(iPostEffectParams *apParams)
-	{
-		cPostEffect_ColorConvTex *pEffect = hplNew(cPostEffect_ColorConvTex, (mpGraphics,mpResources,this));
-		cPostEffectParams_ColorConvTex *pBloomParams = static_cast<cPostEffectParams_ColorConvTex*>(apParams);
-
-		return pEffect;
-	}
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// POST EFFECT
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
-	cPostEffect_ColorConvTex::cPostEffect_ColorConvTex(cGraphics *apGraphics,cResources *apResources, iPostEffectType *apType) : iPostEffect(apGraphics,apResources,apType)
-	{
-		mpSpecificType = static_cast<cPostEffectType_ColorConvTex*>(mpType);
-
-		mpColorConvTex = NULL;
-	}
-
-	//-----------------------------------------------------------------------
-
-	cPostEffect_ColorConvTex::~cPostEffect_ColorConvTex()
-	{
-
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cPostEffect_ColorConvTex::OnSetParams()
-	{
-		if(mParams.msTextureFile == "") return;
-
-		if(mpColorConvTex)
-		{
-			mpResources->GetTextureManager()->Destroy(mpColorConvTex);
-		}
-
-		mpColorConvTex = mpResources->GetTextureManager()->Create1D(mParams.msTextureFile,false);
-		mpColorConvTex->SetWrapSTR(eTextureWrap_ClampToEdge);
-	}
-
-	//-----------------------------------------------------------------------
+    cPostEffectType_ColorConvTex::~cPostEffectType_ColorConvTex()
+    {
+    }
 
 
-	iTexture* cPostEffect_ColorConvTex::RenderEffect(iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer)
-	{
-		/////////////////////////
-		// Init render states
-		mpCurrentComposite->SetFlatProjection();
-		mpCurrentComposite->SetBlendMode(eMaterialBlendMode_None);
-		mpCurrentComposite->SetChannelMode(eMaterialChannelMode_RGBA);
+    iPostEffect* cPostEffectType_ColorConvTex::CreatePostEffect(iPostEffectParams* apParams)
+    {
+        cPostEffect_ColorConvTex* pEffect = hplNew(cPostEffect_ColorConvTex, (mpGraphics, mpResources, this));
+        cPostEffectParams_ColorConvTex* pBloomParams = static_cast<cPostEffectParams_ColorConvTex*>(apParams);
 
-		/////////////////////////
-		// Render the to final buffer
-		// This function sets to frame buffer is post effect is last!
-        SetFinalFrameBuffer(apFinalTempBuffer);
+        return pEffect;
+    }
 
-		mpCurrentComposite->SetTexture(0, apInputTexture);
-		mpCurrentComposite->SetTexture(1, mpColorConvTex);
+    cPostEffect_ColorConvTex::cPostEffect_ColorConvTex(cGraphics* apGraphics, cResources* apResources, iPostEffectType* apType)
+        : iPostEffect(apGraphics, apResources, apType)
+    {
+        mpSpecificType = static_cast<cPostEffectType_ColorConvTex*>(mpType);
 
-		if(mParams.mfFadeAlpha >= 1)
-		{
-			mpCurrentComposite->SetProgram(mpSpecificType->mpProgram[0]);
-		}
-		else
-		{
-			float fAlpha = cMath::Max(mParams.mfFadeAlpha,0.0f);
-			mpCurrentComposite->SetProgram(mpSpecificType->mpProgram[1]);
-			if(mpSpecificType->mpProgram[1])
-			{
-				mpSpecificType->mpProgram[1]->SetFloat(kVar_afFadeAlpha,fAlpha);
-			}
-		}
+        mpColorConvTex = NULL;
+    }
+
+    cPostEffect_ColorConvTex::~cPostEffect_ColorConvTex()
+    {
+    }
 
 
-		DrawQuad(0,1,apInputTexture, true);
+    void cPostEffect_ColorConvTex::OnSetParams()
+    {
+        if (mParams.msTextureFile == "")
+            return;
 
-		return apFinalTempBuffer->GetColorBuffer(0)->ToTexture();
-	}
+        if (mpColorConvTex)
+        {
+            mpResources->GetTextureManager()->Destroy(mpColorConvTex);
+        }
+        mpColorConvTex = mpResources->GetTextureManager()->Create1DImage(mParams.msTextureFile, false);
+    }
 
-	//-----------------------------------------------------------------------
+    void cPostEffect_ColorConvTex::RenderEffect(cPostEffectComposite& compositor, GraphicsContext& context, Image& input, RenderTarget& target)
+    {
+		BX_ASSERT(mpColorConvTex, "ColorConvTex is null");
+	
+        auto view = context.StartPass("Color Conv effect");
+        cVector2l vRenderTargetSize = compositor.GetRenderTargetSize();
 
-}
+        GraphicsContext::LayoutStream layoutStream;
+        cMatrixf projMtx;
+        context.ScreenSpaceQuad(layoutStream, projMtx, vRenderTargetSize.x, vRenderTargetSize.y);
+        GraphicsContext::ShaderProgram shaderProgram;
+        shaderProgram.m_projection = projMtx;
+        shaderProgram.m_handle = mpSpecificType->m_colorConv;
+        struct
+        {
+            float u_alphaFade;
+            float pad;
+            float pad1;
+            float pad2;
+        } uniform = { cMath::Min(1.0f, cMath::Max(mParams.mfFadeAlpha, 0.0f)), 0, 0, 0 };
+        shaderProgram.m_uniforms.push_back({ mpSpecificType->m_u_param, &uniform, 1 });
+        shaderProgram.m_textures.push_back({ mpSpecificType->m_u_colorConvTex, mpColorConvTex->GetHandle(), 0 });
+        shaderProgram.m_textures.push_back({ mpSpecificType->m_u_diffuseTex, input.GetHandle(), 1 });
+
+        shaderProgram.m_configuration.m_write = Write::RGBA;
+        shaderProgram.m_configuration.m_depthTest = DepthTest::None;
+
+        GraphicsContext::DrawRequest request{ target, layoutStream, shaderProgram };
+        request.m_width = vRenderTargetSize.x;
+        request.m_height = vRenderTargetSize.y;
+        context.Submit(view, request);
+    }
+
+} // namespace hpl

@@ -101,17 +101,29 @@ namespace hpl {
 		iFrameBuffer* CreateFrameBuffer(const tString& asName);
 		void DestroyFrameBuffer(iFrameBuffer* apFrameBuffer);
 
+		[[deprecated("replaced with RenderTarget")]]
 		iFrameBuffer* GetTempFrameBuffer(const cVector2l& avSize, ePixelFormat aPixelFormat, int alIndex);
 
+		[[deprecated("replaced with RenderTarget")]]
 		iDepthStencilBuffer* CreateDepthStencilBuffer(	const cVector2l& avSize, int alDepthBits, int alStencilBits,
 														bool abLookForMatchingFirst);
+														
+		[[deprecated("replaced with RenderTarget")]]
 		iDepthStencilBuffer* FindDepthStencilBuffer(const cVector2l& avSize, int alMinDepthBits, int alMinStencilBits);
+		
+		[[deprecated("replaced with RenderTarget")]]
 		void DestoroyDepthStencilBuffer(iDepthStencilBuffer* apBuffer);
 
+		[[deprecated("replaced with RenderTarget")]]
 		iTexture* CreateTexture(const tString &asName,eTextureType aType,   eTextureUsage aUsage);
+		
+		[[deprecated("replaced with RenderTarget")]]
 		void DestroyTexture(iTexture *apTexture);
 
+		[[deprecated("replaced with RenderTarget")]]
 		cPostEffectComposite* CreatePostEffectComposite();
+		
+		[[deprecated("replaced with RenderTarget")]]
 		void DestroyPostEffectComposite(cPostEffectComposite* apComposite);
 
         void AddPostEffectType(iPostEffectType *apPostEffectBase);

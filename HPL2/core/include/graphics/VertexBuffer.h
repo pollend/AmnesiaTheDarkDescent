@@ -20,6 +20,7 @@
 #ifndef HPL_VERTEXBUFFER_H
 #define HPL_VERTEXBUFFER_H
 
+#include "graphics/GraphicsContext.h"
 #include "graphics/GraphicsTypes.h"
 #include "math/MathTypes.h"
 #include "system/SystemTypes.h"
@@ -60,11 +61,6 @@ namespace hpl {
 		virtual bool Compile(tVertexCompileFlag aFlags)=0;
 		virtual void UpdateData(tVertexElementFlag aTypes, bool abIndices)=0;
 
-		/**
-		* This creates a double of the vertex array with w=0.
-		* \param abUpdateData if the hardware buffer should be updated as well.
-		*/
-		virtual void CreateShadowDouble(bool abUpdateData)=0;
 
 		/**
 		 * Transform the entire buffer with transform.
@@ -77,6 +73,10 @@ namespace hpl {
 
 		virtual void Bind()=0;
 		virtual void UnBind()=0;
+
+		// virtual void Submit(GraphicsContext& context, eVertexBufferDrawType aDrawType = eVertexBufferDrawType_LastEnum) {}
+    	virtual void GetLayoutStream(GraphicsContext::LayoutStream& layoutStream, eVertexBufferDrawType aDrawType = eVertexBufferDrawType_LastEnum) {}; 
+
 
         virtual iVertexBuffer* CreateCopy(	eVertexBufferType aType,eVertexBufferUsageType aUsageType,
 											tVertexElementFlag alVtxToCopy)=0;

@@ -20,6 +20,9 @@
 #include "EditorThumbnailBuilder.h"
 
 #include "EditorBaseClasses.h"
+#include "graphics/Image.h"
+#include "graphics/RenderViewport.h"
+#include <memory>
 
 //-------------------------------------------------------------------
 
@@ -99,18 +102,24 @@ cEditorThumbnailBuilder::cEditorThumbnailBuilder(iEditorBase* apEditor)
 	mpFB64->SetTexture2D(0, pRenderTarget64);
 	mpFB64->CompileAndValidate();
 
-	mpRenderTarget128 = pGfx->CreateTexture("ThumbnailDest",eTextureType_2D, eTextureUsage_RenderTarget);
-	mpRenderTarget128->SetWrapR(eTextureWrap_Clamp);
-	mpRenderTarget128->SetWrapS(eTextureWrap_Clamp);
-	mpRenderTarget128->CreateFromRawData(cVector3l(128,128,0), ePixelFormat_RGBA, NULL);
+	// mpRenderTarget128 = pGfx->CreateTexture("ThumbnailDest",eTextureType_2D, eTextureUsage_RenderTarget);
+	// mpRenderTarget128->SetWrapR(eTextureWrap_Clamp);
+	// mpRenderTarget128->SetWrapS(eTextureWrap_Clamp);
+	// mpRenderTarget128->CreateFromRawData(cVector3l(128,128,0), ePixelFormat_RGBA, NULL);
+	auto desc = ImageDescriptor::CreateTexture2D(128, 128, false, bgfx::TextureFormat::Enum::RGBA8);
+	mpRenderTarget128 = std::make_shared<Image>();
+	mpRenderTarget128->Initialize(desc);
+	mpFB128 = RenderViewport(
+		std::make_shared<RenderTarget>(mpRenderTarget128), cVector2l(0,0)
+	);
+	// mpFB128 = pGfx->CreateFrameBuffer("ThumbnailDestination");
+	// mpFB128->SetTexture2D(0,mpRenderTarget128);
+	// mpFB128->CompileAndValidate();
 
-	mpFB128 = pGfx->CreateFrameBuffer("ThumbnailDestination");
-	mpFB128->SetTexture2D(0,mpRenderTarget128);
-	mpFB128->CompileAndValidate();
 
 	mpViewport = pScene->CreateViewport(pCamera,pWorld,true);
 	mpViewport->SetSize(cVector2l(128));
-	mpViewport->SetFrameBuffer(mpFB128);
+	mpViewport->setRenderViewport(mpFB128);
 	mpViewport->SetActive(false);
 	mpViewport->SetVisible(false);
 	mpViewport->GetRenderSettings()->mClearColor = cColor(0,1);
@@ -152,7 +161,7 @@ void cEditorThumbnailBuilder::BuildThumbnailFromMeshEntity(cMeshEntity* apEntity
 										pCamera->GetFrustum(),
 										pWorld,
 										mpViewport->GetRenderSettings(),
-										mpViewport->GetRenderTarget(),
+										mpViewport->GetRenderViewport(),
 										false,
 										mpViewport->GetRendererCallbackList() );
 	pGfx->WaitAndFinishRendering();
@@ -165,7 +174,7 @@ void cEditorThumbnailBuilder::BuildThumbnailFromMeshEntity(cMeshEntity* apEntity
 	pGfx->SetDepthWriteActive(false);
 	pGfx->SetBlendActive(false);
 
-	pGfx->SetTexture(0, mpRenderTarget128);
+	// pGfx->SetTexture(0, mpRenderTarget128);
 	pGfx->SetOrthoProjection(128,-1000,1000);
 	pGfx->SetIdentityMatrix(eMatrix_ModelView);
 	pGfx->DrawQuad(0,128,cVector2f(0,1),cVector2f(1,0));
@@ -236,7 +245,7 @@ void cEditorThumbnailBuilder::BuildThumbnailFromMesh(const tWString& asMeshFilen
 										pCamera->GetFrustum(),
 										pWorld,
 										mpViewport->GetRenderSettings(),
-										mpViewport->GetRenderTarget(),
+										mpViewport->GetRenderViewport(),
 										false,
 										mpViewport->GetRendererCallbackList() );
 	pGfx->WaitAndFinishRendering();
@@ -249,12 +258,12 @@ void cEditorThumbnailBuilder::BuildThumbnailFromMesh(const tWString& asMeshFilen
 	pGfx->SetDepthWriteActive(false);
 	pGfx->SetBlendActive(false);
 
-	pGfx->SetTexture(0, mpRenderTarget128);
-	pGfx->SetOrthoProjection(128,-1000,1000);
-	pGfx->SetIdentityMatrix(eMatrix_ModelView);
-	pGfx->DrawQuad(0,128,cVector2f(0,1),cVector2f(1,0));
-	pGfx->WaitAndFinishRendering();
-	pGfx->SetTexture(0,NULL);
+	// pGfx->SetTexture(0, mpRenderTarget128);
+	// pGfx->SetOrthoProjection(128,-1000,1000);
+	// pGfx->SetIdentityMatrix(eMatrix_ModelView);
+	// pGfx->DrawQuad(0,128,cVector2f(0,1),cVector2f(1,0));
+	// pGfx->WaitAndFinishRendering();
+	// pGfx->SetTexture(0,NULL);
 
 	/////////////////////////////////
 	// Save to file
@@ -505,7 +514,8 @@ void cEditorThumbnailBuilder::PreBuild()
 {
 	iLowLevelGraphics* pGfx = mpEditor->GetEngine()->GetGraphics()->GetLowLevel();
 
-	pGfx->SetCurrentFrameBuffer(mpFB128);
+	// TODO: need to replace with RendTarget
+	// pGfx->SetCurrentFrameBuffer(mpFB128); 
 }
 
 //-------------------------------------------------------------------

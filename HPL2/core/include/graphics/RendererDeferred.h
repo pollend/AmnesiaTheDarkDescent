@@ -16,11 +16,17 @@
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
+#pragma once
 
-#ifndef HPL_RENDERER_DEFERRED_H
-#define HPL_RENDERER_DEFERRED_H
-
+#include "bgfx/bgfx.h"
+#include "graphics/GraphicsContext.h"
+#include "graphics/Image.h"
 #include "graphics/Renderer.h"
+#include "graphics/ShaderVariantCollection.h"
+#include "math/MathTypes.h"
+#include <array>
+#include <graphics/RenderTarget.h>
+#include <memory>
 
 namespace hpl {
 
@@ -104,7 +110,7 @@ namespace hpl {
 	class cDeferredLight
 	{
 	public:
-		cDeferredLight() : mpShadowTexture(NULL), mbCastShadows(false){}
+		cDeferredLight() : m_occlusionQuery(BGFX_INVALID_HANDLE), mbCastShadows(false){}
 
 		iLight *mpLight;
 		cRect2l mClipRect;
@@ -112,14 +118,39 @@ namespace hpl {
 		cMatrixf m_mtxViewSpaceRender;
 		cMatrixf m_mtxViewSpaceTransform;
 		bool mbInsideNearPlane;
-		iOcclusionQuery *mpQuery;
+		bgfx::OcclusionQueryHandle m_occlusionQuery;
 
-		iTexture *mpShadowTexture;
+		// iTexture *mpShadowTexture;
 		bool mbCastShadows;
 		eShadowMapResolution mShadowResolution;
+
+		cMatrixf GetLightMtx();
 	};
 
 	//---------------------------------------------
+	namespace rendering::detail {
+		enum SpotlightVariant {
+			SpotlightVariant_None = 0,
+			SpotlightVariant_UseGoboMap = 0x1,
+			SpotlightVariant_UseShadowMap = 0x2
+		};
+
+		enum PointlightVariant {
+			PointlightVariant_None = 0,
+			PointlightVariant_UseGoboMap = 0x1
+		};
+
+		struct ZPassInput {
+			float m_width = 0;
+			float m_height = 0;
+			
+			Cull m_cull = Cull::CounterClockwise;
+            cMatrixf m_view = cMatrixf(cMatrixf::Identity);
+            cMatrixf m_projection = cMatrixf(cMatrixf::Identity);
+		};
+
+		void RenderZPassObject(bgfx::ViewId view,const ZPassInput& input, GraphicsContext& context, iRenderer* renderer, iRenderable* object, RenderTarget& rt);
+	};
 
 	class cRendererDeferred : public  iRenderer
 	{
@@ -130,18 +161,31 @@ namespace hpl {
 		bool LoadData();
 		void DestroyData();
 
-		iTexture* GetPostEffectTexture();
+		virtual Image& FetchOutputFromRenderer() override;
+		virtual std::shared_ptr<Image> GetDepthStencilImage() override;
+		virtual std::shared_ptr<Image> GetOutputImage() override;
 
-		iTexture* GetGbufferTexture(int alIdx);
 		iFrameBuffer* GetGBufferFrameBuffer(eGBufferComponents aComponents);
-		//iTexture *GetShadowTexture(eShadowMapResolution aQuality){ return mpShadowTexture[aQuality]; }
 
-		iDepthStencilBuffer* GetDepthStencilBuffer(){ return mpDepthStencil[0];}
+		virtual void Draw(GraphicsContext& context, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, RenderViewport& apRenderTarget,
+					bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList) override;
 
+
+		[[deprecated("removing this method")]]
+		iDepthStencilBuffer* GetDepthStencilBuffer() { 
+			return nullptr;
+		}
+
+		[[deprecated("removing this method")]]
 		iFrameBuffer *GetAccumBuffer(){ return mpAccumBuffer;}
 
+		[[deprecated("removing this method")]]
 		iTexture* GetRefractionTexture(){ return mpRefractionTexture;}
+		[[deprecated("removing this method")]]
 		iTexture* GetReflectionTexture(){ return mpReflectionTexture;}
+
+		Image* GetRefractionImage(){ return m_refractionImage;}
+		Image* GetReflectionImage(){ return m_reflectionImage;}
 
 		//Static properties. Must be set before renderer data load.
 		static void SetGBufferType(eDeferredGBuffer aType){ mGBufferType = aType; }
@@ -183,65 +227,45 @@ namespace hpl {
 		static bool GetDebugRenderFrameBuffers(){ return mbDebugRenderFrameBuffers;}
 
 	private:
+		RenderTarget& resolveRenderTarget(std::array<RenderTarget, 2>& rt);
+		std::shared_ptr<Image>& resolveRenderImage(std::array<std::shared_ptr<Image>, 2>& img);
+		
+		[[deprecated("apart of the Graphics Context")]]
 		void CopyToFrameBuffer();
+		[[deprecated("just moved into the Draw")]]
 		void SetupRenderList();
+		[[deprecated("Remove from the engine")]]
 		void RenderObjects();
 
-		void SetupGBuffer();
+		// takes the contents of the gbuffer and renders the lights
+		void RenderLightPass(GraphicsContext& context, RenderTarget& rt);  
+		void RenderDiffusePass(GraphicsContext& context, RenderTarget& rt);
+		void RenderDecalPass(GraphicsContext& context, RenderTarget& rt);
+		void RenderIlluminationPass(GraphicsContext& context, RenderTarget& rt);
+		void RenderFogPass(GraphicsContext& context, RenderTarget& rt);
+		void RenderFullScreenFogPass(GraphicsContext& context, RenderTarget& rt);
+		void RenderEdgeSmoothPass(GraphicsContext& context, RenderTarget& rt);
+		void RenderTranslucentPass(GraphicsContext& context, RenderTarget& rt);
+		void RenderZPass(GraphicsContext& context, RenderTarget& rt);
+		void RenderShadowPass(GraphicsContext& context, const cDeferredLight& apLightData, RenderTarget& rt);
+		
+		void RenderShadowLight(GraphicsContext& context, GraphicsContext::ShaderProgram& shaderProgram, RenderTarget& rt);
 
-		void SetupRenderVariables();
+		void RenderZ(GraphicsContext& context);
 
-		void RenderZ();
-		void RenderDynamicZTemp();
-		void RenderGbuffer();
-		void RenderSSAO();
-		void RenderEdgeSmooth();
-		void RenderDeferredSkyBox();
-
-		void SetupLightsAndRenderQueries();
+		void SetupLightsAndRenderQueries(GraphicsContext& context, RenderTarget& rt);
 		void InitLightRendering();
-		void RenderLights();
-		void RenderLights_StencilBack_ScreenQuad();
-		void RenderLights_StencilFront_RenderBack();
-		void RenderLights_RenderBack();
-		void RenderLights_Batches();
-		void RenderLights_Box_StencilFront_RenderBack();
-		void RenderLights_Box_RenderBack();
-
-		void RenderIllumination();
 
 		void RenderReflection(iRenderable *apObject);
 		void RenderSubMeshEntityReflection(cSubMeshEntity *pReflectionObject);
 
-		void RenderDecals();
-		void RenderFullScreenFog();
-		void RenderFog();
-		void RenderTranslucent();
-
-		void SetAccumulationBuffer();
-		void SetGBuffer(eGBufferComponents aComponents);
 		iTexture* GetBufferTexture(int alIdx);
-
-
-		void RenderGbufferContent();
-		void RenderReflectionContent();
-
-		////////////////
-		//Draw helpers
-		void RenderBoxLight(cDeferredLight* apLightData);
-
-		////////////////
-		//Misc Helpers
-		void RenderLightShadowMap(cDeferredLight* apLightData);
-		void SetupLightProgramVariables(iGpuProgram *apProgram, cDeferredLight* apLightData);
-		iGpuProgram* SetupProgramAndTextures(cDeferredLight* apLightData, tFlag alExtraFlags);
+		
 		iVertexBuffer* GetLightShape(iLight *apLight, eDeferredShapeQuality aQuality);
-
 
 		iVertexBuffer *mpShapeSphere[eDeferredShapeQuality_LastEnum];
 		iVertexBuffer *mpShapePyramid;
 
-		iVertexBuffer *mpBatchBuffer;
 		int mlMaxBatchLights;
 		int mlMaxBatchVertices;
 		int mlMaxBatchIndices;
@@ -270,54 +294,73 @@ namespace hpl {
 		bool mbStencilNeedClearing;
 		cRect2l mStencilDirtyRect;
 
-		iFrameBuffer *mpGBuffer[2][eGBufferComponents_LastEnum]; //[2] = reflection or not
+		std::array<RenderTarget, 2> m_gBuffer_full;
+		std::array<RenderTarget, 2> m_gBuffer_colorAndDepth;
+		std::array<RenderTarget, 2> m_gBuffer_color;
+		std::array<RenderTarget, 2> m_gBuffer_depth;
+		std::array<RenderTarget, 2> m_gBuffer_normals;
+		std::array<RenderTarget, 2> m_gBuffer_linearDepth;
+		std::array<RenderTarget, 2> m_output_target; // used for rendering to the screen 
+		
+		std::array<std::shared_ptr<Image>, 2> m_gBufferColor;
+		std::array<std::shared_ptr<Image>, 2> m_gBufferNormalImage;
+		std::array<std::shared_ptr<Image>, 2> m_gBufferPositionImage;
+		std::array<std::shared_ptr<Image>, 2> m_gBufferSpecular;
+		std::array<std::shared_ptr<Image>, 2> m_gBufferDepthStencil;
+		std::array<std::shared_ptr<Image>, 2> m_outputImage;
+
+		RenderTarget m_edgeSmooth_LinearDepth;
 
 		iFrameBuffer *mpAccumBuffer;
 		iFrameBuffer *mpReflectionBuffer;
 
-		iTexture *mpGBufferTexture[2][4];	//[2] = reflection or not
-		iTexture *mpAccumBufferTexture;
 		iTexture *mpRefractionTexture;
 		iTexture *mpReflectionTexture;
-		iDepthStencilBuffer* mpDepthStencil[2];	//[2] = reflection or not
 
+		Image *m_refractionImage;
+		Image *m_reflectionImage;
 
 		bool mbReflectionTextureCleared;
 
-		/*iTexture *mpShadowTempDiffTexture[eShadowMapResolution_LastEnum];
-		iTexture *mpShadowTexture[eShadowMapResolution_LastEnum];
-		iFrameBuffer *mpShadowBuffer[eShadowMapResolution_LastEnum];
-		cShadowMapLightCache mShadowMapCacheData[eShadowMapResolution_LastEnum];*/
 		iTexture *mpShadowJitterTexture;
 		int mlShadowJitterSize;
 		int mlShadowJitterSamples;
 
-		iTexture *mpLinearDepthTexture;
-		iTexture *mpSSAOTexture;
-		iTexture *mpSSAOBlurTexture;
-		iTexture *mpSSAOScatterDisk;
-		iTexture *mpEdgeSmooth_LinearDepthTexture;
-		iTexture *mpEdgeSmooth_TempAccum;
+		bgfx::UniformHandle m_u_param;
+		bgfx::UniformHandle m_u_boxInvViewModelRotation;
+		bgfx::UniformHandle m_u_lightPos;
+		bgfx::UniformHandle m_u_fogColor;
+		bgfx::UniformHandle m_u_lightColor;
+		bgfx::UniformHandle m_u_spotViewProj;
+		bgfx::UniformHandle m_u_overrideColor;
+		bgfx::UniformHandle m_u_mtxInvViewRotation;
 
-		iFrameBuffer *mpLinearDepthBuffer;
-		iFrameBuffer *mpSSAOBuffer;
-		iFrameBuffer *mpSSAOBlurBuffer;
-		iFrameBuffer *mpEdgeSmooth_LinearDepthBuffer;
+		bgfx::UniformHandle m_s_depthMap;
+		bgfx::UniformHandle m_s_positionMap;
+		bgfx::UniformHandle m_s_deferredColorMap; // TODO: combined with diffuseMap
+		bgfx::UniformHandle m_s_diffuseMap;
+		bgfx::UniformHandle m_s_normalMap;
+		bgfx::UniformHandle m_s_specularMap;
+		bgfx::UniformHandle m_s_attenuationLightMap;
+		bgfx::UniformHandle m_s_spotFalloffMap;
+		bgfx::UniformHandle m_s_shadowMap;
+		bgfx::UniformHandle m_s_goboMap;
+		
+		bgfx::ProgramHandle m_deferredFog;
+		bgfx::ProgramHandle m_fullscreenFog;
+		bgfx::ProgramHandle m_edgeSmooth_UnpackDepthProgram;
+		bgfx::ProgramHandle m_lightBoxProgram;
+		ShaderVariantCollection<
+			rendering::detail::SpotlightVariant_UseGoboMap |
+			rendering::detail::SpotlightVariant_UseShadowMap> m_spotlightVariants; 
+		ShaderVariantCollection<
+			rendering::detail::PointlightVariant_UseGoboMap> m_pointLightVariants; 
 
-		iGpuProgram *mpUnpackDepthProgram;
-		iGpuProgram *mpSSAOBlurProgram[2];
-		iGpuProgram *mpSSAORenderProgram;
-		iGpuProgram *mpEdgeSmooth_UnpackDepthProgram;
-		iGpuProgram *mpEdgeSmooth_RenderProgram;
 
 		std::vector<cDeferredLight*> mvTempDeferredLights;
 		std::vector<cDeferredLight*> mvSortedLights[eDeferredLightList_LastEnum];
 
-		iGpuProgram *mpSkyBoxProgram;
 		iGpuProgram *mpLightStencilProgram;
-		iGpuProgram *mpLightBoxProgram[2];//1=SSAO used, 0=no SSAO
-
-		cProgramComboManager* mpFogProgramManager;
 
 		cMatrixf m_mtxTempLight;
 
@@ -347,4 +390,3 @@ namespace hpl {
 	//---------------------------------------------
 
 };
-#endif // HPL_RENDERER_DEFERRED_H

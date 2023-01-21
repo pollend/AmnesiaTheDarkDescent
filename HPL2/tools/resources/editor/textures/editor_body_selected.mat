@@ -1,0 +1,6 @@
+<Material>
+    <Main BlendMode="Alpha" DepthTest="true" HeightMapBias="0.000000" HeightMapScale="0.100000" PhysicsMaterial="Default" Type="translucent" UseAlpha="false" />
+    <TextureUnits>
+        <Diffuse AnimFrameTime="0.000000" AnimMode="None" Compress="false" File="editor/textures/editor_body_shape_body_selected.tga" MipMaps="true" Type="2D" Wrap="Repeat" />
+    </TextureUnits>
+</Material>

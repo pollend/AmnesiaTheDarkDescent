@@ -19,6 +19,7 @@
 
 #include "graphics/Material.h"
 
+#include "graphics/Image.h"
 #include "system/LowLevelSystem.h"
 #include "system/String.h"
 
@@ -85,22 +86,7 @@ namespace hpl {
 		m_mtxUV = cMatrixf::Identity;
 		mbHasUvAnimation = false;
 
-		////////////////////////
-		// Set up variables
-		for(int i=0;i<eMaterialTexture_LastEnum; ++i)
-		{
-			mvTextures[i] = NULL;
-		}
-		for(int j=0; j<2; ++j)
-		for(int i=0;i<eMaterialRenderMode_LastEnum; ++i)
-		{
-			mvPrograms[j][i] = NULL;
-		}
-		for(int i=0; i<eMaterialRenderMode_LastEnum;++i)
-		for(int j=0; j<kMaxTextureUnits; ++j)
-		{
-			mvTextureInUnit[i][j] = NULL;
-		}
+
 
 
 		///////////////////////
@@ -124,26 +110,13 @@ namespace hpl {
 	{
 		if(mpVars) hplDelete(mpVars);
 
-		if(mbDestroyTypeSpecifics && mpType)
-		{
-			// Destroy all programs
-			for(int i=0;i<eMaterialRenderMode_LastEnum; ++i)
-			for(int j=0;j<2; ++j)
-			{
-				if(mvPrograms[j][i])
-				{
-					mpType->DestroyProgram(this, (eMaterialRenderMode)i,mvPrograms[j][i], j);
-				}
-			}
-		}
-
 		////////////////////////
 		// Destroy all textures
 		if(mbAutoDestroyTextures)
 		{
 			for(int i=0;i<eMaterialTexture_LastEnum; ++i)
 			{
-				if(mvTextures[i]) mpResources->GetTextureManager()->Destroy(mvTextures[i]);
+				if(m_image[i]) mpResources->GetTextureManager()->Destroy(m_image[i]);
 			}
 		}
 	}
@@ -178,25 +151,6 @@ namespace hpl {
 			mbHasObjectSpecificsSettings[i] = false;
 		}
 
-		///////////////////
-		// Get the programs
-		for(int i=0;i<eMaterialRenderMode_LastEnum; ++i)
-		for(int j=0;j<2; ++j)
-		{
-			iGpuProgram *pPrevProg = mvPrograms[j][i];
-			mvPrograms[j][i] = mpType->GetGpuProgram(this, (eMaterialRenderMode)i, j);
-
-			//Destroy any previous program (this is so recompilations work with program count!)
-			if(pPrevProg) mpType->DestroyProgram(this, (eMaterialRenderMode)i,pPrevProg, j);
-		}
-
-		///////////////////
-		// Compile texture lookup
-		for(int i=0;i<eMaterialRenderMode_LastEnum; ++i)
-			for(int j=0; j<kMaxTextureUnits; ++j)
-			{
-				mvTextureInUnit[i][j] = mpType->GetTextureForUnit(this, (eMaterialRenderMode)i, j);
-			}
 
 		///////////////////
 		// Type specifics
@@ -205,17 +159,18 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cMaterial::SetTexture(eMaterialTexture aType, iTexture *apTexture)
+
+	void cMaterial::SetImage(eMaterialTexture aType, Image *apTexture) 
 	{
-		mvTextures[aType] = apTexture;
+		m_image[aType] = apTexture;
 	}
 
-	//-----------------------------------------------------------------------
-
-	iTexture *cMaterial::GetTexture(eMaterialTexture aType)
+	Image* cMaterial::GetImage(eMaterialTexture aType)
 	{
-		return mvTextures[aType];
+		return m_image[aType];
 	}
+
+
 
 	//-----------------------------------------------------------------------
 

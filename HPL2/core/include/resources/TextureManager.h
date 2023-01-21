@@ -17,11 +17,12 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef HPL_TEXTURE_MANAGER_H
-#define HPL_TEXTURE_MANAGER_H
+#pragma once
 
+#include <graphics/Image.h>
 #include "resources/ResourceManager.h"
 #include "graphics/Texture.h"
+#include <functional>
 
 namespace hpl {
 
@@ -29,7 +30,6 @@ namespace hpl {
 	class cResources;
 	class iTexture;
 	class cBitmapLoaderHandler;
-
 	//------------------------------------------------------
 
 	typedef std::map<tString, iTexture*> tTextureAttenuationMap;
@@ -43,12 +43,36 @@ namespace hpl {
 		cTextureManager(cGraphics* apGraphics,cResources *apResources);
 		~cTextureManager();
 
+		struct ImageOptions {
+			ImageOptions(): m_uClamp(false), m_vClamp(false) {
+			};
+
+			bool m_uClamp = false;
+			bool m_vClamp = false;
+		};
+		// static ImageOptions DefaultOptions = ImageOptions();
+
+
+		Image* Create1DImage(const tString& asName,bool abUseMipMaps, eTextureUsage aUsage=eTextureUsage_Normal,
+							unsigned int alTextureSizeLevel=0, ImageOptions options = ImageOptions());
+
+		Image* Create2DImage(const tString& asName,bool abUseMipMaps,eTextureType aType= eTextureType_2D,
+							eTextureUsage aUsage=eTextureUsage_Normal,unsigned int alTextureSizeLevel=0, ImageOptions options = ImageOptions());
+
+		Image* Create3DImage(const tString& asName,bool abUseMipMaps, eTextureUsage aUsage=eTextureUsage_Normal,
+							unsigned int alTextureSizeLevel=0, ImageOptions options = ImageOptions());
+		
+		Image* CreateCubeMapImage(const tString& asName,bool abUseMipMaps, eTextureUsage aUsage=eTextureUsage_Normal,
+					unsigned int alTextureSizeLevel=0, ImageOptions options = ImageOptions());
+
+
+		[[deprecated("Use Create1DImage instead")]]
 		iTexture* Create1D(	const tString& asName,bool abUseMipMaps, eTextureUsage aUsage=eTextureUsage_Normal,
 							unsigned int alTextureSizeLevel=0);
-
+		[[deprecated("Use Create2DImage instead")]]
 		iTexture* Create2D(	const tString& asName,bool abUseMipMaps,eTextureType aType= eTextureType_2D,
 							eTextureUsage aUsage=eTextureUsage_Normal,unsigned int alTextureSizeLevel=0);
-
+		[[deprecated("Use Create3DImage instead")]]
 		iTexture* Create3D(	const tString& asName,bool abUseMipMaps, eTextureUsage aUsage=eTextureUsage_Normal,
 							unsigned int alTextureSizeLevel=0);
 
@@ -72,11 +96,11 @@ namespace hpl {
 		int GetMemoryUsage(){ return mlMemoryUsage;}
 
 	private:
-		iTexture* CreateSimpleTexture(const tString& asName,bool abUseMipMaps,
-									eTextureUsage aUsage, eTextureType aType,
-									unsigned int alTextureSizeLevel);
+
+		Image* _wrapperImageResource(const tString& asName, std::function<Image*(const tString& asName, const tWString& path, cBitmap* bitmap)> createImageHandler);
 
 		iTexture* FindTexture2D(const tString &asName, tWString &asFilePath);
+		Image* FindImageResource(const tString &asName, tWString &asFilePath);
 
 		tTextureAttenuationMap m_mapAttenuationTextures;
 
@@ -90,4 +114,3 @@ namespace hpl {
 	};
 
 };
-#endif // HPL_TEXTURE_MANAGER_H

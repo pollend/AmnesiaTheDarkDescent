@@ -251,7 +251,7 @@ void cLuxSavedMap::ToMap(cLuxMap *apMap)
 	}
 	else
 	{
-		iTexture *pTexture = gpBase->mpEngine->GetResources()->GetTextureManager()->CreateCubeMap(msSkyboxTexture, true);
+		Image* pTexture = gpBase->mpEngine->GetResources()->GetTextureManager()->CreateCubeMapImage(msSkyboxTexture, true);
 		pWorld->SetSkyBox(pTexture, true);
 	}
 

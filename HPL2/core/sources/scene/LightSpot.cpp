@@ -19,6 +19,7 @@
 
 #include "scene/LightSpot.h"
 
+#include "graphics/Image.h"
 #include "impl/tinyXML/tinyxml.h"
 #include "math/Math.h"
 #include "math/Frustum.h"
@@ -26,6 +27,7 @@
 #include "resources/Resources.h"
 #include "graphics/LowLevelGraphics.h"
 #include "scene/Camera.h"
+#include <bx/debug.h>
 
 #include "scene/World.h"
 #include "scene/Scene.h"
@@ -75,9 +77,10 @@ namespace hpl {
 		m_mtxViewProj = cMatrixf::Identity;
 		m_mtxProjection = cMatrixf::Identity;
 
-		mpSpotFalloffMap = mpTextureManager->Create1D("core_falloff_linear",false);
-		mpSpotFalloffMap->SetWrapS(eTextureWrap_ClampToEdge);
-		mpSpotFalloffMap->SetWrapT(eTextureWrap_ClampToEdge);
+		mpSpotFalloffMap = mpTextureManager->Create1DImage("core_falloff_linear",false);
+		// TODO: need to add configuration into TextureManager to set this
+		// mpSpotFalloffMap->SetWrapS(eTextureWrap_ClampToEdge);
+		// mpSpotFalloffMap->SetWrapT(eTextureWrap_ClampToEdge);
 
 		UpdateBoundingVolume();
 	}
@@ -202,21 +205,15 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	iTexture *cLightSpot::GetSpotFalloffMap()
+	Image *cLightSpot::GetSpotFalloffMap()
 	{
 		return mpSpotFalloffMap;
 	}
 
-	void cLightSpot::SetSpotFalloffMap(iTexture* apTexture)
+	void cLightSpot::SetSpotFalloffMap(Image* apTexture)
 	{
 		if(mpSpotFalloffMap) mpTextureManager->Destroy(mpSpotFalloffMap);
-
 		mpSpotFalloffMap = apTexture;
-		if(mpSpotFalloffMap)
-		{
-			mpSpotFalloffMap->SetWrapS(eTextureWrap_ClampToEdge);
-			mpSpotFalloffMap->SetWrapT(eTextureWrap_ClampToEdge);
-		}
 	}
 
 	//-----------------------------------------------------------------------
@@ -260,17 +257,18 @@ namespace hpl {
 
 		eTextureAnimMode animMode = GetAnimMode(cString::ToString(apMainElem->Attribute("ProjectionAnimMode"),"None"));
 		float fFrameTime = cString::ToFloat(apMainElem->Attribute("ProjectionFrameTime"),1.0f);
-		iTexture *pTex = NULL;
+		Image *pTex = NULL;
 
         if(animMode != eTextureAnimMode_None)
 		{
-			pTex = mpTextureManager->CreateAnim(sTexture,true,eTextureType_2D);
-			pTex->SetAnimMode(animMode);
-			pTex->SetFrameTime(fFrameTime);
+			BX_ASSERT(false, "Animation not supported yet!");
+			// pTex = mpTextureManager->CreateAnim(sTexture,true,eTextureType_2D);
+			// pTex->SetAnimMode(animMode);
+			// pTex->SetFrameTime(fFrameTime);
 		}
 		else
 		{
-			pTex = mpTextureManager->Create2D(sTexture,true);
+			pTex = mpTextureManager->Create2DImage(sTexture,true);
 		}
 
 

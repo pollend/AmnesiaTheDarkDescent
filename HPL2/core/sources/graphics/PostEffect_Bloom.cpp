@@ -19,179 +19,169 @@
 
 #include "graphics/PostEffect_Bloom.h"
 
+#include "bgfx/bgfx.h"
 #include "graphics/Graphics.h"
 
-#include "graphics/LowLevelGraphics.h"
-#include "graphics/PostEffectComposite.h"
 #include "graphics/FrameBuffer.h"
-#include "graphics/Texture.h"
 #include "graphics/GPUProgram.h"
 #include "graphics/GPUShader.h"
+#include "graphics/Image.h"
+#include "graphics/LowLevelGraphics.h"
+#include "graphics/PostEffectComposite.h"
+#include "graphics/RenderTarget.h"
+#include "graphics/ShaderUtil.h"
+#include "graphics/Texture.h"
 
+#include "math/MathTypes.h"
 #include "system/PreprocessParser.h"
+#include <memory>
 
-namespace hpl {
+namespace hpl
+{
 
-	//////////////////////////////////////////////////////////////////////////
-	// PROGRAM VARS
-	//////////////////////////////////////////////////////////////////////////
+    cPostEffectType_Bloom::cPostEffectType_Bloom(cGraphics* apGraphics, cResources* apResources)
+        : iPostEffectType("Bloom", apGraphics, apResources)
+    {
+        m_blurProgram = hpl::loadProgram("vs_post_effect", "fs_posteffect_blur");
+        m_bloomProgram = hpl::loadProgram("vs_post_effect", "fs_posteffect_bloom_add");
 
-	#define kVar_avRgbToIntensity	0
+        m_u_blurMap = bgfx::createUniform("s_blurMap", bgfx::UniformType::Sampler);
+        m_u_diffuseMap = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
 
-	#define kVar_afBlurSize			2
+        m_u_rgbToIntensity = bgfx::createUniform("u_rgbToIntensity", bgfx::UniformType::Vec4);
+        m_u_param = bgfx::createUniform("u_param", bgfx::UniformType::Vec4);
+    }
 
+    cPostEffectType_Bloom::~cPostEffectType_Bloom()
+    {
+    }
 
+    iPostEffect* cPostEffectType_Bloom::CreatePostEffect(iPostEffectParams* apParams)
+    {
+        cPostEffect_Bloom* pEffect = hplNew(cPostEffect_Bloom, (mpGraphics, mpResources, this));
+        cPostEffectParams_Bloom* pBloomParams = static_cast<cPostEffectParams_Bloom*>(apParams);
 
-	//////////////////////////////////////////////////////////////////////////
-	// POST EFFECT BASE
-	//////////////////////////////////////////////////////////////////////////
+        return pEffect;
+    }
 
-	//-----------------------------------------------------------------------
+    cPostEffect_Bloom::cPostEffect_Bloom(cGraphics* apGraphics, cResources* apResources, iPostEffectType* apType)
+        : iPostEffect(apGraphics, apResources, apType)
+    {
+        cVector2l vSize = mpLowLevelGraphics->GetScreenSizeInt();
 
-	cPostEffectType_Bloom::cPostEffectType_Bloom(cGraphics *apGraphics, cResources *apResources) : iPostEffectType("Bloom",apGraphics,apResources)
-	{
-		///////////////////////////
-		// Load programs
-		for(int i=0; i<2; ++i)
-		{
-			cParserVarContainer vars;
-			if(i==1) vars.Add("BlurHorisontal");
-			mpBlurProgram[i] = mpGraphics->CreateGpuProgramFromShaders("BloomBlur",	"posteffect_bloom_blur_vtx.glsl",
-																					"posteffect_bloom_blur_frag.glsl", &vars);
+        auto ColorImage = [&]
+        {
+            auto desc = ImageDescriptor::CreateTexture2D(vSize.x / 4.0f, vSize.y/ 4.0f , false, bgfx::TextureFormat::Enum::RGBA8);
+            desc.m_configuration.m_rt = RTType::RT_Write;
+            auto image = std::make_shared<Image>();
+            image->Initialize(desc);
+            return image;
+        };
 
-			if(mpBlurProgram[i])
-			{
-				mpBlurProgram[i]->GetVariableAsId("afBlurSize",kVar_afBlurSize);
-			}
-		}
+        m_blurTarget[0] = RenderTarget(ColorImage());
+        m_blurTarget[1] = RenderTarget(ColorImage());
 
-		cParserVarContainer vars;
-		vars.Add("UseUv");
-		vars.Add("UseUvCoord1");
-		mpBloomProgram = mpGraphics->CreateGpuProgramFromShaders(	"BloomBlur",	"deferred_base_vtx.glsl",
-																					"posteffect_bloom_add_frag.glsl", &vars);
-		if(mpBloomProgram)
-		{
-			mpBloomProgram->GetVariableAsId("avRgbToIntensity",kVar_avRgbToIntensity);
-		}
-	}
+        mpBloomType = static_cast<cPostEffectType_Bloom*>(mpType);
+    }
 
-	//-----------------------------------------------------------------------
+    cPostEffect_Bloom::~cPostEffect_Bloom()
+    {
+    }
 
-	cPostEffectType_Bloom::~cPostEffectType_Bloom()
-	{
+    void cPostEffect_Bloom::OnSetParams()
+    {
+    }
 
-	}
+    void cPostEffect_Bloom::RenderEffect(cPostEffectComposite& compositor, GraphicsContext& context, Image& input, RenderTarget& target)
+    {
+        cVector2l vRenderTargetSize = compositor.GetRenderTargetSize();
 
-	//-----------------------------------------------------------------------
+        auto requestBlur = [&](Image& input){
+            struct {
+                float u_useHorizontal;
+                float u_blurSize;
+                float texelSize[2];
+            } blurParams = {0};
+            
+            auto image = m_blurTarget[1].GetImage(0);
+            {
+                bgfx::ViewId view = context.StartPass("Blur Pass 1");
+                blurParams.u_useHorizontal = 0;
+                blurParams.u_blurSize = mParams.mfBlurSize;
+                blurParams.texelSize[0] = image->GetWidth();
+                blurParams.texelSize[1] = image->GetHeight();
 
-	iPostEffect * cPostEffectType_Bloom::CreatePostEffect(iPostEffectParams *apParams)
-	{
-		cPostEffect_Bloom *pEffect = hplNew(cPostEffect_Bloom, (mpGraphics,mpResources,this));
-		cPostEffectParams_Bloom *pBloomParams = static_cast<cPostEffectParams_Bloom*>(apParams);
+                GraphicsContext::LayoutStream layoutStream;
+                GraphicsContext::ShaderProgram shaderProgram;
+                cMatrixf projMtx;
+                context.ScreenSpaceQuad(layoutStream, projMtx, vRenderTargetSize.x, vRenderTargetSize.y);
+                shaderProgram.m_configuration.m_write = Write::RGBA;
+                shaderProgram.m_handle = mpBloomType->m_blurProgram;
+                shaderProgram.m_projection = projMtx;
+                
+                shaderProgram.m_textures.push_back({ mpBloomType->m_u_diffuseMap, input.GetHandle(), 1 });
+               
+                shaderProgram.m_uniforms.push_back({ mpBloomType->m_u_param, &blurParams, 1 });
+                
+                GraphicsContext::DrawRequest request{ m_blurTarget[0], layoutStream, shaderProgram };
+                request.m_width = image->GetWidth();
+                request.m_height = image->GetHeight();
+                context.Submit(view, request);
+            }
 
-		return pEffect;
-	}
+            {
 
-	//-----------------------------------------------------------------------
+                bgfx::ViewId view = context.StartPass("Blur Pass 2");
 
-	//////////////////////////////////////////////////////////////////////////
-	// POST EFFECT
-	//////////////////////////////////////////////////////////////////////////
+                blurParams.u_useHorizontal = 1.0;
+                blurParams.u_blurSize = mParams.mfBlurSize;
+                blurParams.texelSize[0] = image->GetWidth();
+                blurParams.texelSize[1] = image->GetHeight();
 
-	//-----------------------------------------------------------------------
+                GraphicsContext::LayoutStream layoutStream;
+                GraphicsContext::ShaderProgram shaderProgram;
+                cMatrixf projMtx;
+                context.ScreenSpaceQuad(layoutStream, projMtx, vRenderTargetSize.x, vRenderTargetSize.y);
+                shaderProgram.m_configuration.m_write = Write::RGBA;
+                shaderProgram.m_handle = mpBloomType->m_blurProgram;
+                shaderProgram.m_projection = projMtx;
+                
+                shaderProgram.m_textures.push_back({ mpBloomType->m_u_diffuseMap, m_blurTarget[0].GetImage()->GetHandle(), 1 });
+                shaderProgram.m_uniforms.push_back({ mpBloomType->m_u_param, &blurParams, 1 });
+                
+                GraphicsContext::DrawRequest request{ m_blurTarget[1], layoutStream, shaderProgram };
+                request.m_width = image->GetWidth();
+                request.m_height = image->GetHeight();
 
-	cPostEffect_Bloom::cPostEffect_Bloom(cGraphics *apGraphics, cResources *apResources, iPostEffectType *apType) : iPostEffect(apGraphics,apResources,apType)
-	{
-		cVector2l vSize = mpLowLevelGraphics->GetScreenSizeInt();
+                context.Submit(view, request);
+            }
+        };
 
-		for(int i=0;i<2; ++i)
-		{
-			mpBlurBuffer[i] = mpGraphics->GetTempFrameBuffer(vSize/4,ePixelFormat_RGBA,i);
-			if(mpBlurBuffer[i])
-				mpBlurTexture[i] = mpBlurBuffer[i]->GetColorBuffer(0)->ToTexture();
-		}
+        requestBlur(input);
+        for (int i = 1; i < mParams.mlBlurIterations; ++i)
+        {
+            requestBlur(*m_blurTarget[1].GetImage());
+        }
 
-		mpBloomType = static_cast<cPostEffectType_Bloom*>(mpType);
-	}
+        {
+            GraphicsContext::LayoutStream layoutStream;
+            cMatrixf projMtx;
+            context.ScreenSpaceQuad(layoutStream, projMtx, vRenderTargetSize.x, vRenderTargetSize.y);
 
-	//-----------------------------------------------------------------------
+            GraphicsContext::ShaderProgram shaderProgram;
+            shaderProgram.m_configuration.m_write = Write::RGBA;
+            shaderProgram.m_handle = mpBloomType->m_bloomProgram;
+            shaderProgram.m_projection = projMtx;
 
-	cPostEffect_Bloom::~cPostEffect_Bloom()
-	{
-
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cPostEffect_Bloom::OnSetParams()
-	{
-
-	}
-
-	//-----------------------------------------------------------------------
-
-
-	iTexture* cPostEffect_Bloom::RenderEffect(iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer)
-	{
-		/////////////////////////
-		// Init render states
-		mpCurrentComposite->SetFlatProjection();
-		mpCurrentComposite->SetBlendMode(eMaterialBlendMode_None);
-		mpCurrentComposite->SetChannelMode(eMaterialChannelMode_RGBA);
-
-		for(int i=0; i<2; ++i)
-		{
-			//Reverse order so blur program is not set unneeded times
-			if(mpBloomType->mpBlurProgram[1-i])
-			{
-				mpBloomType->mpBlurProgram[1-i]->SetFloat(kVar_afBlurSize, mParams.mfBlurSize);
-			}
-		}
-
-		/////////////////////////
-		// Render blur
-		RenderBlur(apInputTexture);
-		for(int i=1; i<mParams.mlBlurIterations;++i)
-		{
-			RenderBlur(mpBlurTexture[1]);
-		}
-
-
-		/////////////////////////
-		// Render the input and blur as bloom onto the final buffer.
-		// This function sets to frame buffer is post effect is last!
-        SetFinalFrameBuffer(apFinalTempBuffer);
-
-		mpCurrentComposite->SetTexture(0, mpBlurTexture[1]);
-		mpCurrentComposite->SetTexture(1, apInputTexture);
-
-		mpCurrentComposite->SetProgram(mpBloomType->mpBloomProgram);
-		if(mpBloomType->mpBloomProgram)
-		{
-			mpBloomType->mpBloomProgram->SetVec3f(kVar_avRgbToIntensity, mParams.mvRgbToIntensity);
-		}
-
-		DrawQuad(0,1,mpBlurTexture[1], apInputTexture, true, true);
-
-		return apFinalTempBuffer->GetColorBuffer(0)->ToTexture();
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cPostEffect_Bloom::RenderBlur(iTexture *apInputTex)
-	{
-		SetFrameBuffer(mpBlurBuffer[0]);
-		mpCurrentComposite->SetProgram(mpBloomType->mpBlurProgram[0]);
-		mpCurrentComposite->SetTexture(0, apInputTex);
-		DrawQuad(0,1,apInputTex,true);
-
-		SetFrameBuffer(mpBlurBuffer[1]);
-		mpCurrentComposite->SetProgram(mpBloomType->mpBlurProgram[1]);
-		mpCurrentComposite->SetTexture(0, mpBlurTexture[0]);
-		DrawQuad(0,1,mpBlurTexture[0],true);
-	}
-
-	//-----------------------------------------------------------------------
-
-}
+            float rgbToIntensity[4] = { mParams.mvRgbToIntensity.x, mParams.mvRgbToIntensity.y, mParams.mvRgbToIntensity.z, 0.0f };
+            shaderProgram.m_textures.push_back({ mpBloomType->m_u_diffuseMap, input.GetHandle(), 0 });
+            shaderProgram.m_textures.push_back({ mpBloomType->m_u_blurMap, m_blurTarget[1].GetImage()->GetHandle(), 1 });
+            shaderProgram.m_uniforms.push_back({ mpBloomType->m_u_rgbToIntensity, &rgbToIntensity, 1 });
+            bgfx::ViewId view = context.StartPass("Bloom Pass");
+            GraphicsContext::DrawRequest request{ target, layoutStream, shaderProgram };
+            request.m_width = vRenderTargetSize.x;
+            request.m_height = vRenderTargetSize.y;
+            context.Submit(view, request);
+        }
+    }
+} // namespace hpl

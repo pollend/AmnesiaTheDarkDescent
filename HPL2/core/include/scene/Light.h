@@ -20,6 +20,7 @@
 #ifndef HPL_LIGHT_H
 #define HPL_LIGHT_H
 
+#include "graphics/Image.h"
 #include "scene/Entity3D.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Renderable.h"
@@ -35,7 +36,6 @@ namespace hpl {
 	class cCamera;
 	class cFrustum;
 	class iGpuProgram;
-	class iTexture;
 	class cTextureManager;
 	class cResources;
 	class cFileSearcher;
@@ -43,6 +43,7 @@ namespace hpl {
 	class cSectorVisibilityContainer;
 	class cWorld;
 	class cVisibleRCNodeTracker;
+	class Image;
 
 	//------------------------------------------
 
@@ -93,11 +94,11 @@ namespace hpl {
 
 		eLightType GetLightType(){ return mLightType;}
 
-		iTexture *GetFalloffMap();
-		void SetFalloffMap(iTexture* apTexture);
+		Image *GetFalloffMap();
+		void SetFalloffMap(Image* apTexture);
 
-		void SetGoboTexture(iTexture *apTexture);
-		iTexture* GetGoboTexture();
+		void SetGoboTexture(Image* apTexture);
+		Image* GetGoboTexture();
 
 		///////////////////////////////
 		//iEntity implementation
@@ -233,9 +234,8 @@ namespace hpl {
 		cFileSearcher *mpFileSearcher;
 		cWorld *mpWorld;
 
-		iTexture *mpFalloffMap;
-
-		iTexture *mpGoboTexture;
+		Image *mpFalloffMap = nullptr;
+		Image *mpGoboTexture = nullptr;
 
 		eShadowMapResolution mShadowMapResolution;
 		float mfShadowMapBlurAmount;

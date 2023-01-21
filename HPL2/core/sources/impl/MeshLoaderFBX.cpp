@@ -1311,7 +1311,7 @@ namespace hpl {
 				usageType,
 				(int)mvVertexes.size(), (int)mvIndexes.size());
 
-			subMeshData.mpVtxBuffer->CreateElementArray( eVertexBufferElement_Position,eVertexBufferElementFormat_Float, 4);
+			subMeshData.mpVtxBuffer->CreateElementArray( eVertexBufferElement_Position,eVertexBufferElementFormat_Float, 3);
 			subMeshData.mpVtxBuffer->CreateElementArray( eVertexBufferElement_Normal,eVertexBufferElementFormat_Float, 3);
 			//if(pTextureLayer)
 			//{

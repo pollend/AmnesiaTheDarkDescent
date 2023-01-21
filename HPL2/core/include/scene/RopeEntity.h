@@ -94,7 +94,6 @@ namespace hpl {
 
 		int GetMatrixUpdateCount();
 
-
 		eRenderableType GetRenderType(){ return eRenderableType_Rope;}
 	private:
 		cMaterialManager* mpMaterialManager;

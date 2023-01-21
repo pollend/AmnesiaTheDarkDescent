@@ -25,6 +25,7 @@
 #include "EditorHelper.h"
 
 #include "EditorWindowViewport.h"
+#include "graphics/Image.h"
 
 //---------------------------------------------------------------------------
 
@@ -245,14 +246,17 @@ void cEntityWrapperLightSpot::SetNearClipPlane(float afX)
 
 void cEntityWrapperLightSpot::SetSpotFalloffMap(const tString& asFalloffMap)
 {
-	iTexture* pTex = NULL;
+	Image* pTex = NULL;
 	if(cEditorHelper::LoadTextureResource(eEditorTextureResourceType_1D, asFalloffMap, &pTex))
 	{
 		msSpotFalloffMap = cString::To8Char(GetEditorWorld()->GetEditor()->GetPathRelToWD(asFalloffMap));
 	}
 	else
 	{
-		cEditorHelper::LoadTextureResource(eEditorTextureResourceType_1D, "core_falloff_linear", &pTex);
+		cTextureManager::ImageOptions imageOptions;
+		imageOptions.m_uClamp = true;
+		imageOptions.m_vClamp = true;
+		cEditorHelper::LoadTextureResource(eEditorTextureResourceType_1D, "core_falloff_linear", &pTex, "none", 0, imageOptions);
 		msSpotFalloffMap = "";
 	}
 

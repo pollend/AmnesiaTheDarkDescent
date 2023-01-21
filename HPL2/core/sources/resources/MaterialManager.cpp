@@ -19,6 +19,7 @@
 
 #include "resources/MaterialManager.h"
 
+#include "graphics/Image.h"
 #include "system/LowLevelSystem.h"
 #include "system/String.h"
 #include "system/System.h"
@@ -35,6 +36,8 @@
 #include "resources/XmlDocument.h"
 
 #include "impl/tinyXML/tinyxml.h"
+
+#include <bx/debug.h>
 
 
 
@@ -57,19 +60,6 @@ namespace hpl {
 
 		void LoadData(){}
 		void DestroyData(){}
-
-		void DestroyProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, char alSkeleton){}
-
-		bool SupportsHWSkinning(){ return false; }
-
-		iTexture* GetTextureForUnit(cMaterial *apMaterial,eMaterialRenderMode aRenderMode, int alUnit){ return NULL;}
-		iTexture* GetSpecialTexture(cMaterial *apMaterial, eMaterialRenderMode aRenderMode,iRenderer *apRenderer, int alUnit){ return NULL; }
-
-		iGpuProgram* GetGpuProgram(cMaterial *apMaterial, eMaterialRenderMode aRenderMode, char alSkeleton){return NULL;}
-
-		void SetupTypeSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram,iRenderer *apRenderer){ }
-		void SetupMaterialSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, cMaterial *apMaterial,iRenderer *apRenderer){ }
-		void SetupObjectSpecificData(eMaterialRenderMode aRenderMode, iGpuProgram* apProgram, iRenderable *apObject,iRenderer *apRenderer){ }
 
 		iMaterialVars* CreateSpecificVariables(){ return hplNew(cMaterialManagerBlankMaterialType_Vars,());}
 		void LoadVariables(cMaterial *apMaterial, cResourceVarsObject *apVars){ }
@@ -194,8 +184,8 @@ namespace hpl {
 
             for(int i=0; i<eMaterialTexture_LastEnum; ++i)
 			{
-				iTexture *pTex = pMat->GetTexture((eMaterialTexture)i);
-				if(pTex)pTex->SetFilter(aFilter);
+				// iTexture *pTex = pMat->GetTexture((eMaterialTexture)i);
+				// if(pTex)pTex->SetFilter(aFilter);
 			}
 		}
 	}
@@ -223,8 +213,8 @@ namespace hpl {
 
 			for(int i=0; i<eMaterialTexture_LastEnum; ++i)
 			{
-				iTexture *pTex = pMat->GetTexture((eMaterialTexture)i);
-				if(pTex)pTex->SetAnisotropyDegree(mfTextureAnisotropy);
+				// iTexture *pTex = pMat->GetTexture((eMaterialTexture)i);
+				// if(pTex)pTex->SetAnisotropyDegree(mfTextureAnisotropy);
 			}
 		}
 	}
@@ -369,7 +359,9 @@ namespace hpl {
 		for(int i=0; i< pMatType->GetUsedTextureNum(); ++i)
 		{
 			cMaterialUsedTexture* pUsedTexture = pMatType->GetUsedTexture(i);
-			iTexture *pTex = NULL;
+			// iTexture *pTex = NULL;
+
+			Image* pImageResource = nullptr;
 
 			tString sTextureType = GetTextureString(pUsedTexture->mType);
 			//Log("Trying to load type: %s\n",sTextureType.c_str());
@@ -402,54 +394,53 @@ namespace hpl {
 
 			if(animMode != eTextureAnimMode_None)
 			{
-				pTex = mpResources->GetTextureManager()->CreateAnim(sFile,bMipMaps,type,eTextureUsage_Normal,mlTextureSizeDownScaleLevel);
+				// pTex = mpResources->GetTextureManager()->CreateAnim(sFile,bMipMaps,type,eTextureUsage_Normal,mlTextureSizeDownScaleLevel);
 			}
 			else
 			{
 
 				if(type == eTextureType_1D)
 				{
-					pTex = mpResources->GetTextureManager()->Create1D(sFile,bMipMaps,
+					pImageResource = mpResources->GetTextureManager()->Create1DImage(sFile,bMipMaps,
 																			eTextureUsage_Normal,
 																			mlTextureSizeDownScaleLevel);
 				}
 				else if(type == eTextureType_2D)
 				{
-					pTex = mpResources->GetTextureManager()->Create2D(sFile,bMipMaps, eTextureType_2D,
+					pImageResource = mpResources->GetTextureManager()->Create2DImage(sFile,bMipMaps, eTextureType_2D,
 																		eTextureUsage_Normal,
 																		mlTextureSizeDownScaleLevel);
 				}
 				else if(type == eTextureType_3D)
 				{
-					pTex = mpResources->GetTextureManager()->Create3D(sFile,bMipMaps,
+					pImageResource = mpResources->GetTextureManager()->Create3DImage(sFile,bMipMaps,
 																		eTextureUsage_Normal,
 																		mlTextureSizeDownScaleLevel);
 				}
 				else if(type == eTextureType_CubeMap)
 				{
-					//Check for DDS ending and load cubemap as file.
-					pTex = mpResources->GetTextureManager()->CreateCubeMap(sFile,bMipMaps,
+					pImageResource = mpResources->GetTextureManager()->CreateCubeMapImage(sFile,bMipMaps,
 																			eTextureUsage_Normal,
 																			mlTextureSizeDownScaleLevel);
 				}
 			}
 
-			if(pTex==NULL)
+			if(!pImageResource)
 			{
 				mpResources->DestroyXmlDocument(pDoc);
 				hplDelete(pMat);
-				return NULL;
+				return nullptr;
 			}
 
-			pTex->SetFrameTime(fFrameTime);
-			pTex->SetAnimMode(animMode);
+			// pTex->SetFrameTime(fFrameTime);
+			// pTex->SetAnimMode(animMode);
 
-			pTex->SetWrapSTR(wrap);
+			// pTex->SetWrapSTR(wrap);
 
-			pTex->SetFilter(mTextureFilter);
-			pTex->SetAnisotropyDegree(mfTextureAnisotropy);
+			// pTex->SetFilter(mTextureFilter);
+			// pTex->SetAnisotropyDegree(mfTextureAnisotropy);
 
-			pMat->SetTexture(pUsedTexture->mType, pTex);
+			pMat->SetImage(pUsedTexture->mType, pImageResource);
 		}
 
 		///////////////////////////
