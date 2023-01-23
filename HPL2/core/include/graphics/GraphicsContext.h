@@ -129,6 +129,7 @@ namespace hpl
         void ClearTarget(bgfx::ViewId view, const DrawClear& request);
         void Submit(bgfx::ViewId view, const DrawRequest& request);
         void Submit(bgfx::ViewId view, const DrawRequest& request, bgfx::OcclusionQueryHandle query);
+        
     private:
         bgfx::ViewId _current;
         bgfx::ProgramHandle m_copyProgram = BGFX_INVALID_HANDLE;

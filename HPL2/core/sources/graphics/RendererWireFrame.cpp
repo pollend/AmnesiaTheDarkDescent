@@ -100,10 +100,10 @@ namespace hpl {
 	}
 
 
-	//-----------------------------------------------------------------------
 
-	void cRendererWireFrame::SetupRenderList()
-	{
+	void cRendererWireFrame::Draw(GraphicsContext& context, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, RenderViewport& apRenderTarget, bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList) {
+		BX_ASSERT(false, "Not implemented yet");
+		
 		mpCurrentRenderList->Setup(mfCurrentFrameTime,mpCurrentFrustum);
 
 		CheckForVisibleAndAddToList(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static),0);
@@ -113,13 +113,7 @@ namespace hpl {
 										eRenderListCompileFlag_Decal |
 										eRenderListCompileFlag_Translucent);
 
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cRendererWireFrame::RenderObjects()
-	{
-		START_RENDER_PASS(WireFrame);
+		// START_RENDER_PASS(WireFrame);
 
 		////////////////////////////////////////////
 		// Diffuse Objects
@@ -132,10 +126,9 @@ namespace hpl {
 		SetTextureRange(NULL,0);
 
 		int lCount =0;
-		cRenderableVecIterator diffIt = mpCurrentRenderList->GetArrayIterator(eRenderListType_Diffuse);
-		while(diffIt.HasNext())
+		for(auto& pObject: mpCurrentRenderList->GetRenderableItems(eRenderListType_Diffuse))
 		{
-			iRenderable *pObject = diffIt.Next();
+			// iRenderable *pObject = diffIt.Next();
 			cMaterial *pMaterial = pObject->GetMaterial();
 
 			// SetTexture(0,pMaterial->GetTexture(eMaterialTexture_Diffuse));
@@ -152,10 +145,8 @@ namespace hpl {
 		// Decal Objects
 		SetDepthWrite(false);
 
-		cRenderableVecIterator decalIt = mpCurrentRenderList->GetArrayIterator(eRenderListType_Decal);
-		while(decalIt.HasNext())
+		for(auto& pObject: mpCurrentRenderList->GetRenderableItems(eRenderListType_Decal))
 		{
-			iRenderable *pObject = decalIt.Next();
 			cMaterial *pMaterial = pObject->GetMaterial();
 
 			SetBlendMode(pMaterial->GetBlendMode());
@@ -176,10 +167,8 @@ namespace hpl {
 		// Trans Objects
 		SetDepthWrite(false);
 
-		cRenderableVecIterator transIt = mpCurrentRenderList->GetArrayIterator(eRenderListType_Translucent);
-		while(transIt.HasNext())
+		for(auto& pObject: mpCurrentRenderList->GetRenderableItems(eRenderListType_Translucent))
 		{
-			iRenderable *pObject = transIt.Next();
 			cMaterial *pMaterial = pObject->GetMaterial();
 
 			pObject->UpdateGraphicsForViewport(mpCurrentFrustum, mfCurrentFrameTime);
@@ -198,7 +187,7 @@ namespace hpl {
 		// RunCallback(eRendererMessage_PostTranslucent);
 
 
-		END_RENDER_PASS();
+		// END_RENDER_PASS();
 	}
 
 	//-----------------------------------------------------------------------

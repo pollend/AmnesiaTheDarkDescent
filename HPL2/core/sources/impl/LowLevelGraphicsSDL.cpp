@@ -492,23 +492,6 @@ namespace hpl {
 		return hplNew(cDepthStencilBufferGL,(avSize, alDepthBits,alStencilBits));
 	}
 
-	//-----------------------------------------------------------------------
-
-	iOcclusionQuery* cLowLevelGraphicsSDL::CreateOcclusionQuery()
-	{
-		;
-
-		return hplNew(cOcclusionQueryOGL, () );
-	}
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// FRAME BUFFER OPERATIONS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
 	void cLowLevelGraphicsSDL::ClearFrameBuffer(tClearFrameBufferFlag aFlags)
 	{
 		;
@@ -554,19 +537,22 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SetCurrentFrameBuffer(iFrameBuffer* apFrameBuffer, const cVector2l &avPos, const cVector2l& avSize)
 	{
+		BX_ASSERT(false, "Deprecated");
 	}
 
 	void cLowLevelGraphicsSDL::WaitAndFinishRendering()
-	{
+	{	
+		BX_ASSERT(false, "Deprecated");
 	}
 
 	void cLowLevelGraphicsSDL::FlushRendering()
 	{
+		BX_ASSERT(false, "Deprecated");
 	}
 
 	void cLowLevelGraphicsSDL::SwapBuffers()
 	{
-
+		BX_ASSERT(false, "Deprecated");
 	}
 
 	//-----------------------------------------------------------------------

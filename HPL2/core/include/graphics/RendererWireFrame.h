@@ -45,13 +45,11 @@ namespace hpl {
 
 	private:
 
-		virtual Image& FetchOutputFromRenderer() override {
-			static Image img{};
-			return img;
-		}
+		virtual void Draw(GraphicsContext& context, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, RenderViewport& apRenderTarget,
+			bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList) override;
+
 
 		void CopyToFrameBuffer();
-		void SetupRenderList();
 		void RenderObjects();
 	};
 

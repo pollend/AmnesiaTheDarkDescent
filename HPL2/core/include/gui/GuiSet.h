@@ -191,8 +191,6 @@ namespace hpl {
 		void Draw(GraphicsContext& context, cFrustum* apFrustum);
 		////////////////////////////////////
 		// Rendering
-		void Render(cFrustum *apFrustum);
-
 		void ClearRenderObjects();
 
 		void SetDrawOffset(const cVector3f& avOffset){ mvDrawOffset = avOffset;}

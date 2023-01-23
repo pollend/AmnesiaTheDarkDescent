@@ -19,6 +19,7 @@
 
 #include "LuxEffectRenderer.h"
 #include "bgfx/bgfx.h"
+#include "engine/Interface.h"
 #include <absl/container/inlined_vector.h>
 #include <absl/types/span.h>
 #include <graphics/Enum.h>
@@ -59,15 +60,18 @@ cLuxEffectRenderer::cLuxEffectRenderer()
     // Get deferred renderer stuff
     cRendererDeferred* pRendererDeferred = static_cast<cRendererDeferred*>(pGraphics->GetRenderer(eRenderer_Main));
 
-    // umm ... might want to use the output render target instead of the output image
-    m_outputTarget = RenderTarget(pRendererDeferred->GetOutputImage());
+    // // umm ... might want to use the output render target instead of the output image
+	EngineInterface* engine = Interface<EngineInterface>::Get();
+    std::array<std::shared_ptr<Image>, 2> outputImages = {pRendererDeferred->GetOutputImage(), pRendererDeferred->GetDepthStencilImage()};
+
+    m_outputTarget = RenderTarget(absl::MakeSpan(outputImages));
 
     auto outlineImageDesc = ImageDescriptor::CreateTexture2D(vScreenSize.x, vScreenSize.y, false, bgfx::TextureFormat::RGBA8);
     outlineImageDesc.m_configuration.m_rt = RTType::RT_Write;
     auto outlineImage = std::make_shared<Image>();
     outlineImage->Initialize(outlineImageDesc);
-    std::array<std::shared_ptr<Image>, 2> images = { outlineImage, pRendererDeferred->GetDepthStencilImage() };
-    m_outlineTarget = RenderTarget(absl::MakeSpan(images));
+    std::array<std::shared_ptr<Image>, 2> outlineImages = { outlineImage, pRendererDeferred->GetDepthStencilImage() };
+    m_outlineTarget = RenderTarget(absl::MakeSpan(outlineImages));
 
     m_alphaRejectProgram = hpl::loadProgram("vs_alpha_reject", "fs_alpha_reject");
     m_blurProgram = hpl::loadProgram("vs_post_effect", "fs_posteffect_blur");
@@ -212,6 +216,7 @@ void cLuxEffectRenderer::RenderFlashObjects(cRendererCallbackFunctions* apFuncti
 {
     if (mvFlashObjects.empty())
         return;
+
 
     auto& graphicsContext = apFunctions->GetGraphicsContext();
     auto currentFrustum = apFunctions->GetFrustum();

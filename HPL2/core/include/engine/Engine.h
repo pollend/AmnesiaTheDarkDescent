@@ -17,12 +17,14 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef HPL_ENGINE_H
-#define HPL_ENGINE_H
+#pragma once
 
 #include <graphics/GraphicsContext.h>
 #include "system/SystemTypes.h"
 #include "engine/EngineTypes.h"
+#include <engine/RTTI.h>
+#include <engine/EngineInterface.h>
+#include <memory>
 
 namespace hpl {
 
@@ -95,9 +97,11 @@ namespace hpl {
 
 	//---------------------------------------------------
 
-	class cEngine
+	class cEngine : public EngineInterface
 	{
+		HPL_RTTI_CLASS(cEngine, "{a7b5b5a0-1b9f-11df-8c4e-0800200c9a66}")
 	public:
+
 		cEngine(iLowLevelEngineSetup *apGameSetup,tFlag alHplSetupFlags, cEngineInitVars *apVars);
 		~cEngine();
 	private:
@@ -116,18 +120,19 @@ namespace hpl {
 		void Exit();
 		bool GetGameIsDone();
 
-		cScene* GetScene(){ return mpScene;}
-		cResources* GetResources(){ return mpResources;}
-		cUpdater* GetUpdater(){ return mpUpdater;}
-		cSystem* GetSystem(){ return mpSystem;}
-		cInput* GetInput(){ return mpInput;}
-		cGraphics* GetGraphics(){ return mpGraphics;}
-		cSound* GetSound(){ return mpSound;}
-		cPhysics* GetPhysics(){ return mpPhysics;}
-		cAI* GetAI(){ return mpAI;}
-		cGui* GetGui(){ return mpGui;}
-		cHaptic* GetHaptic(){ return mpHaptic;}
-		cGenerate* GetGenerate(){ return mpGenerate;}
+		virtual cScene* GetScene() override { return mpScene;}
+		virtual cResources* GetResources() override { return mpResources;}
+		virtual cUpdater* GetUpdater() override { return mpUpdater;}
+		virtual cSystem* GetSystem() override { return mpSystem;}
+		virtual cInput* GetInput() override { return mpInput;}
+		virtual cGraphics* GetGraphics() override { return mpGraphics;}
+		virtual cSound* GetSound() override { return mpSound;}
+		virtual cPhysics* GetPhysics() override { return mpPhysics;}
+		virtual cAI* GetAI() override { return mpAI;}
+		virtual cGui* GetGui() override { return mpGui;}
+		virtual cHaptic* GetHaptic() override { return mpHaptic;}
+		virtual cGenerate* GetGenerate() override { return mpGenerate;}
+		virtual GraphicsContext& GetGraphicsContext() override { return m_graphicsContext; }
 
 		void ResetLogicTimer();
 		void SetUpdatesPerSec(int alUpdatesPerSec);
@@ -237,7 +242,7 @@ namespace hpl {
 		cHaptic *mpHaptic;
 		cGui *mpGui;
 		cGenerate* mpGenerate;
+		hpl::GraphicsContext m_graphicsContext;
 	};
 
 };
-#endif // HPL_ENGINE_H

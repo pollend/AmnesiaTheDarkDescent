@@ -275,26 +275,9 @@ namespace hpl {
 		return absl::MakeSpan(mvSortedArrays[aType]);
 	}
 
-
-	cRenderableVecIterator cRenderList::GetArrayIterator(eRenderListType aType)
-	{
-		return cRenderableVecIterator(&mvSortedArrays[aType]);
+	absl::Span<iRenderable*> cRenderList::GetOcclusionQueryItems() {
+		return absl::MakeSpan(mvOcclusionQueryObjects);
 	}
-
-	//-----------------------------------------------------------------------
-
-	cRenderableVecIterator cRenderList::GetOcclusionQueryObjectIterator()
-	{
-		return cRenderableVecIterator(&mvOcclusionQueryObjects);
-	}
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PRIVATE METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	static bool SortFunc_Z(iRenderable* apObjectA, iRenderable *apObjectB)
 	{

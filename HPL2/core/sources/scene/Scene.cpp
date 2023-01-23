@@ -19,7 +19,6 @@
 
 #include "scene/Scene.h"
 
-#include "engine/EngineContext.h"
 #include "graphics/GraphicsContext.h"
 #include "graphics/RenderTarget.h"
 #include "scene/Viewport.h"
@@ -40,6 +39,7 @@
 #include "graphics/Renderer.h"
 #include "graphics/PostEffectComposite.h"
 #include "graphics/LowLevelGraphics.h"
+#include <algorithm>
 #include <bx/debug.h>
 
 #include "sound/Sound.h"
@@ -83,7 +83,7 @@ namespace hpl {
 		Log("Exiting Scene Module\n");
 		Log("--------------------------------------------------------\n");
 
-		STLDeleteAll(mlstViewports);
+		STLDeleteAll(m_viewports);
 		STLDeleteAll(mlstWorlds);
 		STLDeleteAll(mlstCameras);
 
@@ -99,6 +99,16 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	cViewport* cScene::PrimaryViewport() {
+		for(auto& viewport: m_viewports) {
+			if(!viewport->IsVisible()) {
+				continue;
+			}
+			return viewport;
+		}
+		return nullptr;
+	}
+
 	cViewport* cScene::CreateViewport(cCamera *apCamera, cWorld *apWorld, bool abPushFront)
 	{
 		cViewport *pViewport = hplNew ( cViewport, (this) );
@@ -108,13 +118,10 @@ namespace hpl {
 		pViewport->SetSize(-1);
 		pViewport->SetRenderer(mpGraphics->GetRenderer(eRenderer_Main));
 
-		hpl::context::SetPostRenderOutput(pViewport->GetRenderer()->GetOutputImage());
-
-
 		if (abPushFront) {
-			mlstViewports.push_front(pViewport);
+			m_viewports.insert(m_viewports.begin(), 1, pViewport);
 		} else {
-			mlstViewports.push_back(pViewport);
+			m_viewports.push_back(pViewport);
 		}
 
 		return pViewport;
@@ -124,19 +131,16 @@ namespace hpl {
 
 	void cScene::DestroyViewport(cViewport* apViewPort)
 	{
-		STLFindAndDelete(mlstViewports, apViewPort);
+		auto it = std::find(m_viewports.begin(), m_viewports.end(), apViewPort);
+		if(it != m_viewports.end()) {
+			delete *it;
+			m_viewports.erase(it);
+		}
 	}
-
-	//-----------------------------------------------------------------------
-
 	bool cScene::ViewportExists(cViewport* apViewPort)
 	{
-		for(tViewportListIt it = mlstViewports.begin(); it != mlstViewports.end(); ++it)
-		{
-			if(apViewPort == *it) return true;
-		}
-
-		return false;
+		auto it = std::find(m_viewports.begin(), m_viewports.end(), apViewPort);
+		return it != m_viewports.end();
 	}
 
 	//-----------------------------------------------------------------------
@@ -179,7 +183,12 @@ namespace hpl {
 
 	void cScene::DestroyCamera(cCamera* apCam)
 	{
-		STLFindAndDelete(mlstCameras, apCam);
+		auto it = std::find(mlstCameras.begin(), mlstCameras.end(), apCam);
+		if(it != mlstCameras.end()) {
+			delete *it;
+			mlstCameras.erase(it);
+		}
+		// STLFindAndDelete(mlstCameras, apCam);
 	}
 
 	//-----------------------------------------------------------------------
@@ -192,11 +201,10 @@ namespace hpl {
 
 		///////////////////////////////////////////
 		// Iterate all viewports and render
-		tViewportListIt viewIt = mlstViewports.begin();
-		for(; viewIt != mlstViewports.end(); ++viewIt)
-		{
-			cViewport *pViewPort = *viewIt;
-			if(pViewPort->IsVisible()==false) continue;
+		for(auto& pViewPort: m_viewports) {
+			if(!pViewPort->IsVisible()) {
+				continue;
+			}
 
 			//////////////////////////////////////////////
 			//Init vars
@@ -256,7 +264,7 @@ namespace hpl {
 				auto& viewport = pViewPort->GetRenderViewport();
 				RenderTarget emptyRenderTarget{};
 				pPostEffectComposite->Draw(context,
-					pRenderer->FetchOutputFromRenderer(),
+					*pRenderer->GetOutputImage(),
 					viewport.GetRenderTarget() ? *viewport.GetRenderTarget() : emptyRenderTarget);
 
 				STOP_TIMING(RenderPostEffects)
@@ -265,8 +273,7 @@ namespace hpl {
 				cVector2l vRenderTargetSize = viewport.GetSize();
 				RenderTarget emptyRenderTarget{};
 				cRect2l rect = cRect2l(0, 0, vRenderTargetSize.x, vRenderTargetSize.y);
-				context.CopyTextureToFrameBuffer(context.StartPass("Copy To Swap"),pRenderer->FetchOutputFromRenderer(), rect, viewport.GetRenderTarget() ? *viewport.GetRenderTarget() : emptyRenderTarget);
-				
+				context.CopyTextureToFrameBuffer(context.StartPass("Copy To Swap"),*pRenderer->GetOutputImage(), rect, viewport.GetRenderTarget() ? *viewport.GetRenderTarget() : emptyRenderTarget);
 			}
 
 			//////////////////////////////////////////////
@@ -286,14 +293,12 @@ namespace hpl {
 	{
 		//////////////////////////////////////
 		//Update worlds
-		tWorldListIt it = mlstWorlds.begin();
-		for(; it != mlstWorlds.end(); ++it)
-		{
-			cWorld *pWorld = *it;
-            if(pWorld->IsActive()) pWorld->Update(afTimeStep);
+		for(auto& world: mlstWorlds) {
+			if(world->IsActive()) {
+				world->Update(afTimeStep);
+			}
 		}
-
-
+		
 		//////////////////////////////////////
 		//Update listener position with current listener, if there is one.
 		if(mpCurrentListener && mpCurrentListener->GetCamera())
@@ -354,19 +359,19 @@ namespace hpl {
 
 	void cScene::DestroyWorld(cWorld* apWorld)
 	{
-		STLFindAndDelete(mlstWorlds,apWorld);
+		auto it = std::find(mlstWorlds.begin(), mlstWorlds.end(), apWorld);
+		if(it != mlstWorlds.end()) {
+			delete *it;
+			mlstWorlds.erase(it);
+		}
 	}
 
 	//-----------------------------------------------------------------------
 
 	bool cScene::WorldExists(cWorld* apWorld)
 	{
-		for(tWorldListIt it = mlstWorlds.begin(); it != mlstWorlds.end(); ++it)
-		{
-			if(apWorld == *it) return true;
-		}
-
-		return false;
+		auto it = std::find(mlstWorlds.begin(), mlstWorlds.end(), apWorld);
+		return it != mlstWorlds.end();
 	}
 
 	//-----------------------------------------------------------------------

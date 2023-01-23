@@ -237,6 +237,7 @@ target_link_libraries(HPL2
   absl::fixed_array
   absl::strings
   absl::str_format
+  absl::flat_hash_map
   bgfx
   bx
   bimg

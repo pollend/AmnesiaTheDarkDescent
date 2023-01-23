@@ -161,28 +161,14 @@ namespace hpl {
 		bool LoadData();
 		void DestroyData();
 
-		virtual Image& FetchOutputFromRenderer() override;
 		virtual std::shared_ptr<Image> GetDepthStencilImage() override;
 		virtual std::shared_ptr<Image> GetOutputImage() override;
 
-		iFrameBuffer* GetGBufferFrameBuffer(eGBufferComponents aComponents);
 
 		virtual void Draw(GraphicsContext& context, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, RenderViewport& apRenderTarget,
 					bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList) override;
 
 
-		[[deprecated("removing this method")]]
-		iDepthStencilBuffer* GetDepthStencilBuffer() { 
-			return nullptr;
-		}
-
-		[[deprecated("removing this method")]]
-		iFrameBuffer *GetAccumBuffer(){ return mpAccumBuffer;}
-
-		[[deprecated("removing this method")]]
-		iTexture* GetRefractionTexture(){ return mpRefractionTexture;}
-		[[deprecated("removing this method")]]
-		iTexture* GetReflectionTexture(){ return mpReflectionTexture;}
 
 		Image* GetRefractionImage(){ return m_refractionImage;}
 		Image* GetReflectionImage(){ return m_reflectionImage;}
@@ -229,13 +215,6 @@ namespace hpl {
 	private:
 		RenderTarget& resolveRenderTarget(std::array<RenderTarget, 2>& rt);
 		std::shared_ptr<Image>& resolveRenderImage(std::array<std::shared_ptr<Image>, 2>& img);
-		
-		[[deprecated("apart of the Graphics Context")]]
-		void CopyToFrameBuffer();
-		[[deprecated("just moved into the Draw")]]
-		void SetupRenderList();
-		[[deprecated("Remove from the engine")]]
-		void RenderObjects();
 
 		// takes the contents of the gbuffer and renders the lights
 		void RenderLightPass(GraphicsContext& context, RenderTarget& rt);  
@@ -251,16 +230,12 @@ namespace hpl {
 		
 		void RenderShadowLight(GraphicsContext& context, GraphicsContext::ShaderProgram& shaderProgram, RenderTarget& rt);
 
-		void RenderZ(GraphicsContext& context);
-
 		void SetupLightsAndRenderQueries(GraphicsContext& context, RenderTarget& rt);
 		void InitLightRendering();
 
 		void RenderReflection(iRenderable *apObject);
 		void RenderSubMeshEntityReflection(cSubMeshEntity *pReflectionObject);
 
-		iTexture* GetBufferTexture(int alIdx);
-		
 		iVertexBuffer* GetLightShape(iLight *apLight, eDeferredShapeQuality aQuality);
 
 		iVertexBuffer *mpShapeSphere[eDeferredShapeQuality_LastEnum];
@@ -270,7 +245,6 @@ namespace hpl {
 		int mlMaxBatchVertices;
 		int mlMaxBatchIndices;
 
-		iVertexBuffer *mpFullscreenLightQuad;
 		float mfLastFrustumFOV;
 		float mfLastFrustumFarPlane;
 

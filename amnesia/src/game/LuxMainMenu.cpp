@@ -42,11 +42,13 @@
 #include <sstream>
 #include "LuxAchievementHandler.h"
 #include "bgfx/bgfx.h"
-#include "engine/EngineContext.h"
 #include "graphics/Image.h"
 #include "graphics/RenderTarget.h"
 #include "math/MathTypes.h"
 #include <bx/debug.h>
+#include <scene/Scene.h>
+
+#include <engine/Interface.h>
 
 //--------------------------------------------------------------------------------
 
@@ -1325,8 +1327,8 @@ void cLuxMainMenu::CreateScreenTextures()
         return image;
     }();
 
-	mpScreenGfx = mpGui->CreateGfxTexture(m_screenImage.get(),false,eGuiMaterial_Diffuse);
-	mpScreenBlurGfx = mpGui->CreateGfxTexture(m_screenBlurImage.get(),false,eGuiMaterial_Alpha);
+	mpScreenGfx = mpGui->CreateGfxTexture(m_screenImage.get(),false,eGuiMaterial_Diffuse, cColor(1,1), true, 0, 1, true);
+	mpScreenBlurGfx = mpGui->CreateGfxTexture(m_screenBlurImage.get(),false,eGuiMaterial_Alpha, cColor(1,1), true, 0, 1, true);
 }
 
 //-----------------------------------------------------------------------
@@ -1357,7 +1359,11 @@ void cLuxMainMenu::CreateScreenTextures()
 void cLuxMainMenu::RenderBlurTexture()
 {
 	iLowLevelGraphics *pLowGfx = mpGraphics->GetLowLevel();
-	auto& graphicsContext = hpl::context::GraphicsContext();
+	EngineInterface* engine = Interface<EngineInterface>::Get();
+
+	auto* scene = engine->GetScene();
+	auto& graphicsContext = engine->GetGraphicsContext();
+	auto* renderer = gpBase->mpMapHandler->GetViewport()->GetRenderer();
 	
 	auto tempBlurImage = [&]{
         auto desc = ImageDescriptor::CreateTexture2D(
@@ -1439,7 +1445,7 @@ void cLuxMainMenu::RenderBlurTexture()
 	
 	RenderTarget tempTarget = RenderTarget(m_screenImage);
 	cRect2l rect = cRect2l(0,0,mvScreenSize.x,mvScreenSize.y);
-	graphicsContext.CopyTextureToFrameBuffer(graphicsContext.StartPass("CopyTextureToFrameBuffer"), *hpl::context::postRenderOutput().GetImage(), rect, tempTarget);
+	graphicsContext.CopyTextureToFrameBuffer(graphicsContext.StartPass("CopyTextureToFrameBuffer"), *renderer->GetOutputImage(), rect, tempTarget);
 	
 	requestBlur(*m_screenImage);
 

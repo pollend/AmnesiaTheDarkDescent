@@ -25,6 +25,7 @@
 #include "LuxMap.h"
 #include "LuxEntity.h"
 #include "LuxInputHandler.h"
+#include "engine/Interface.h"
 
 //-----------------------------------------------------------------------
 
@@ -184,13 +185,17 @@ bool cLuxHelpFuncs::PlayGuiSoundData(const tString& asName,eSoundEntryType aDest
 
 void cLuxHelpFuncs::DrawSetToScreen(bool abClearScreen, const cColor& aCol, cGuiSet* apSet)
 {
-	///////////////////////////
-	// Clear screen
-	if(abClearScreen)
-	{
-		mpLowLevelGfx->SetClearColor(aCol);
-        mpLowLevelGfx->ClearFrameBuffer(eClearFrameBufferFlag_Color);
-	}
+	auto engine = hpl::Interface<EngineInterface>::Get();
+	auto& graphicsContext = engine->GetGraphicsContext();
+
+	
+	// ///////////////////////////
+	// // Clear screen
+	// if(abClearScreen)
+	// {
+	// 	mpLowLevelGfx->SetClearColor(aCol);
+    //     mpLowLevelGfx->ClearFrameBuffer(eClearFrameBufferFlag_Color);
+	// }
 
 	///////////////////////////
 	// Draw set
@@ -198,11 +203,9 @@ void cLuxHelpFuncs::DrawSetToScreen(bool abClearScreen, const cColor& aCol, cGui
 	if(apSet!=NULL)
 		pSet = apSet;
 
-	pSet->Render(NULL);
+	pSet->Draw(graphicsContext, nullptr);
 	pSet->ClearRenderObjects();
 
-	mpLowLevelGfx->FlushRendering();
-	mpLowLevelGfx->SwapBuffers();
 }
 
 //-----------------------------------------------------------------------
@@ -277,6 +280,9 @@ float cLuxHelpFuncs::GetStringDuration(const tWString& asStr)
 
 void cLuxHelpFuncs::RenderBackgroundScreen(bool abDrawFullHUD)
 {
+	auto engine = hpl::Interface<EngineInterface>::Get();
+	auto& graphicsContext = engine->GetGraphicsContext();
+
 	gpBase->mpMapHandler->GetViewport()->SetVisible(true);
 	gpBase->mpGameHudSet->ClearRenderObjects();
 
@@ -296,7 +302,7 @@ void cLuxHelpFuncs::RenderBackgroundScreen(bool abDrawFullHUD)
 	gpBase->mpEngine->GetScene()->Render(0.0001f, lFlags);
 
 	if(abDrawFullHUD==false)
-		gpBase->mpGameHudSet->Render(NULL);
+		gpBase->mpGameHudSet->Draw(graphicsContext, NULL);
 
 	gpBase->mpGameHudSet->ClearRenderObjects();
 	gpBase->mpMapHandler->GetViewport()->SetVisible(false);

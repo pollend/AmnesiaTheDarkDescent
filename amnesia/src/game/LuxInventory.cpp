@@ -33,7 +33,8 @@
 #include "LuxGlobalDataHandler.h"
 #include "LuxAchievementHandler.h"
 #include "bgfx/bgfx.h"
-#include "engine/EngineContext.h"
+#include "engine/Interface.h"
+#include "graphics/Color.h"
 #include "graphics/ShaderUtil.h"
 #include "math/MathTypes.h"
 #include <bx/debug.h>
@@ -1568,8 +1569,8 @@ void cLuxInventory::CreateScreenTextures()
         return image;
     }();
 
-	mpScreenGfx = mpGui->CreateGfxTexture(m_screenImage.get(),false,eGuiMaterial_Diffuse);
-	mpScreenBgGfx = mpGui->CreateGfxTexture(m_screenBgTexture.get(),false,eGuiMaterial_Alpha);
+	mpScreenGfx = mpGui->CreateGfxTexture(m_screenImage.get(),false,eGuiMaterial_Diffuse, cColor(1,1), true, 0, 1, true);
+	mpScreenBgGfx = mpGui->CreateGfxTexture(m_screenBgTexture.get(),false,eGuiMaterial_Alpha, cColor(1,1), true, 0, 1, true);
 }
 
 //-----------------------------------------------------------------------
@@ -1577,7 +1578,11 @@ void cLuxInventory::CreateScreenTextures()
 void cLuxInventory::RenderBackgroundImage()
 {
 	iLowLevelGraphics *pLowGfx = mpGraphics->GetLowLevel();
-	auto& graphicsContext = hpl::context::GraphicsContext();
+	
+
+	EngineInterface* engine = Interface<EngineInterface>::Get();
+	auto& graphicsContext = engine->GetGraphicsContext();
+	auto* renderer = gpBase->mpMapHandler->GetViewport()->GetRenderer();
 	
 	auto effectTarget = RenderTarget(m_screenBgTexture);
 	auto screenTarget = RenderTarget(m_screenImage);
@@ -1587,7 +1592,7 @@ void cLuxInventory::RenderBackgroundImage()
 
 	graphicsContext.CopyTextureToFrameBuffer(
 		graphicsContext.StartPass("Copy Screen"), 
-		*hpl::context::postRenderOutput().GetImage(), screenRect, screenTarget);
+		*renderer->GetOutputImage(), screenRect, screenTarget);
 
 	{
 		bgfx::ViewId view = graphicsContext.StartPass("Blur Pass 1");

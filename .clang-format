@@ -15,7 +15,7 @@ AlwaysBreakAfterReturnType: None
 AlwaysBreakTemplateDeclarations: true
 BinPackArguments: false
 BinPackParameters: false
-BreakBeforeBraces: Custom
+BreakBeforeBraces: Attach
 BraceWrapping:
     AfterClass: true
     AfterControlStatement: true

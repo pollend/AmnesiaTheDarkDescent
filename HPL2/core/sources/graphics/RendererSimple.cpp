@@ -84,23 +84,7 @@ namespace hpl
         }
     }
 
-    void cRendererSimple::CopyToFrameBuffer()
-    {
-    }
-
-    void cRendererSimple::SetupRenderList()
-    {
-        mpCurrentRenderList->Setup(mfCurrentFrameTime, mpCurrentFrustum);
-
-        CheckForVisibleAndAddToList(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static), 0);
-        CheckForVisibleAndAddToList(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Dynamic), 0);
-
-        mpCurrentRenderList->Compile(
-            eRenderListCompileFlag_Z | eRenderListCompileFlag_Diffuse | eRenderListCompileFlag_Decal | eRenderListCompileFlag_Translucent);
-    }
-
-    //-----------------------------------------------------------------------
-
+    
     void cRendererSimple::Draw(
         GraphicsContext& context,
         float afFrameTime,
@@ -111,6 +95,13 @@ namespace hpl
         bool abSendFrameBufferToPostEffects,
         tRendererCallbackList* apCallbackList)
     {
+        mpCurrentRenderList->Setup(mfCurrentFrameTime, mpCurrentFrustum);
+
+        CheckForVisibleAndAddToList(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static), 0);
+        CheckForVisibleAndAddToList(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Dynamic), 0);
+
+        mpCurrentRenderList->Compile(
+            eRenderListCompileFlag_Z | eRenderListCompileFlag_Diffuse | eRenderListCompileFlag_Decal | eRenderListCompileFlag_Translucent);
 
 		cRendererCallbackFunctions handler(context, this);
 
@@ -310,10 +301,6 @@ namespace hpl
         }(mpCurrentRenderList->ArrayHasObjects(eRenderListType_Translucent));
 
         RunCallback(eRendererMessage_PostTranslucent, handler);
-    }
-
-    void cRendererSimple::RenderObjects()
-    {
     }
 
 } // namespace hpl

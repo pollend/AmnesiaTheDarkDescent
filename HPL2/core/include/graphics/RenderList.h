@@ -16,9 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
-
-#ifndef HPL_RENDER_LIST_H
-#define HPL_RENDER_LIST_H
+#pragma once
 
 #include <absl/types/span.h>
 #include "graphics/GraphicsTypes.h"
@@ -33,12 +31,6 @@ namespace hpl {
 	class iLight;
 	class cFrustum;
 	class cFogArea;
-
-	//---------------------------------------------
-
-	typedef cSTLIterator<iRenderable*, tRenderableVec, tRenderableVecIt> cRenderableVecIterator;
-
-	//---------------------------------------------
 
 	class cRenderList
 	{
@@ -55,10 +47,7 @@ namespace hpl {
 		bool ArrayHasObjects(eRenderListType aType);
 		
 		absl::Span<iRenderable*> GetRenderableItems(eRenderListType aType);
-
-		cRenderableVecIterator GetArrayIterator(eRenderListType aType);
-
-		cRenderableVecIterator GetOcclusionQueryObjectIterator();
+		absl::Span<iRenderable*> GetOcclusionQueryItems();
 
 		void Clear();
 
@@ -99,4 +88,3 @@ namespace hpl {
 	//---------------------------------------------
 
 };
-#endif // HPL_RENDER_LIST_H

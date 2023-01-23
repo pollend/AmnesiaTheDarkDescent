@@ -156,12 +156,6 @@ namespace hpl {
 		iFrameBuffer* CreateFrameBuffer(const tString& asName);
 		iDepthStencilBuffer* CreateDepthStencilBuffer(const cVector2l& avSize, int alDepthBits, int alStencilBits);
 
-		iOcclusionQuery* CreateOcclusionQuery();
-
-		/////////////////////////////////////////////////////
-		/////////// FRAME BUFFER OPERATIONS ///////
-		/////////////////////////////////////////////////////
-
 		[[deprecated("replaced with BGFX")]]
 		void ClearFrameBuffer(tClearFrameBufferFlag aFlags);
 

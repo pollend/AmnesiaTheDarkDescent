@@ -424,11 +424,14 @@ namespace hpl {
 											const cColor& aColor,
 											bool abAddToList,
 											const cVector2f& avStartUV,
-											const cVector2f& avEndUV)
+											const cVector2f& avEndUV,
+											bool flipUVY)
 	{
 		cGuiGfxElement *pGfxElem = hplNew( cGuiGfxElement, (this) );
-
-		// if(apTexture->GetUsage() == eTextureUsage_RenderTarget) pGfxElem->SetFlipUvYAxis(true);
+		
+		if(flipUVY) {
+			pGfxElem->SetFlipUvYAxis(true);
+		}
 
 		pGfxElem->SetColor(aColor);
 		pGfxElem->SetMaterial(aMaterial);

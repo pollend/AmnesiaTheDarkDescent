@@ -19,9 +19,10 @@
 
 #include "graphics/RendererDeferred.h"
 
-#include "absl/types/span.h"
 #include "bgfx/bgfx.h"
 #include <bx/debug.h>
+
+#include "absl/types/span.h"
 #include <cstdint>
 #include <graphics/Enum.h>
 #include "bx/math.h"
@@ -415,10 +416,6 @@ namespace hpl {
 		mpShapePyramid = LoadVertexBufferFromMesh("core_pyramid.dae",lVtxFlag);
 
 		////////////////////////////////////
-		//Quad used when rendering light.
-		mpFullscreenLightQuad = CreateQuadVertexBuffer(eVertexBufferType_Software,0,1,0,mvScreenSizeFloat, true);
-
-		////////////////////////////////////
 		//Batch vertex buffer
 		mlMaxBatchVertices = mpShapeSphere[eDeferredShapeQuality_Low]->GetVertexNum() * mlMaxBatchLights;
 		mlMaxBatchIndices = mpShapeSphere[eDeferredShapeQuality_Low]->GetIndexNum() * mlMaxBatchLights;
@@ -431,11 +428,6 @@ namespace hpl {
 
 	void cRendererDeferred::DestroyData()
 	{
-		/////////////////////////
-		//Vertex buffers
-
-		if(mpFullscreenLightQuad) hplDelete(mpFullscreenLightQuad);
-
 		for(int i=0;i< eDeferredShapeQuality_LastEnum; ++i)
 		{
 			if(mpShapeSphere[i]) hplDelete(mpShapeSphere[i]);
@@ -485,16 +477,6 @@ namespace hpl {
 			// mpGraphics->DestroyGpuProgram(mpEdgeSmooth_RenderProgram);
 		}
 
-	}
-
-	//-----------------------------------------------------------------------
-
-	Image& cRendererDeferred::FetchOutputFromRenderer() {
-		// not going to bother with RenderViewport for the moment ...
-		// if(m_currentRenderTarget.GetRenderTarget()) {
-		// 	return *m_currentRenderTarget.GetRenderTarget()->GetImage();
-		// }
-		return *m_output_target[0].GetImage();
 	}
 
 	std::shared_ptr<Image> cRendererDeferred::GetDepthStencilImage() {
@@ -656,11 +638,6 @@ namespace hpl {
 			drawRequest.m_height = mvScreenSize.y;
 			context.Submit(view, drawRequest);
 		});
-	}
-
-	void cRendererDeferred::CopyToFrameBuffer()
-	{
-		BX_ASSERT(false, "Noop");
 	}
 
 	void cRendererDeferred::RenderEdgeSmoothPass(GraphicsContext& context, RenderTarget& rt) {
@@ -1373,38 +1350,6 @@ namespace hpl {
 
 	}
 	
-	void cRendererDeferred::SetupRenderList()
-	{
-		mpCurrentRenderList->Setup(mfCurrentFrameTime,mpCurrentFrustum);
-	}
-
-	void cRendererDeferred::RenderObjects()
-	{
-		
-	}
-
-	void cRendererDeferred::RenderZ(GraphicsContext& context)
-	{
-		START_RENDER_PASS(EarlyZ);
-
-		SetDepthTest(true);
-		SetDepthWrite(true);
-		SetBlendMode(eMaterialBlendMode_None);
-		SetAlphaMode(eMaterialAlphaMode_Solid);
-		SetChannelMode(eMaterialChannelMode_None);
-
-		SetTextureRange(NULL,0);
-
-		cRenderableVecIterator zIt = mpCurrentRenderList->GetArrayIterator(eRenderListType_Z);
-		while(zIt.HasNext())
-		{
-			iRenderable *pObject = zIt.Next();
-			RenderZObject(context, pObject, NULL);
-		}
-
-		END_RENDER_PASS();
-	}
-
 	//Definitions used when rendering lights
 	#define kLightRadiusMul_High		1.08f
 	#define kLightRadiusMul_Medium		1.12f
@@ -1412,7 +1357,6 @@ namespace hpl {
 	#define kMaxStencilBitsUsed			8
 	#define kStartStencilBit			0
 
-	//-----------------------------------------------------------------------
 
 	/**
 	 * Calculates matrices for both rendering shape and the transformation
@@ -1686,10 +1630,9 @@ namespace hpl {
 				if(pLightData->mbInsideNearPlane)
 				{
 					pLightData->mbCastShadows = true;
-					pLightData->mShadowResolution = GetShadowMapResolution(pLight->GetShadowMapResolution(), mpCurrentSettings->mMaxShadowMapResolution);
+					
+					pLightData->mShadowResolution = rendering::detail::GetShadowMapResolution(pLight->GetShadowMapResolution(), mpCurrentSettings->mMaxShadowMapResolution);
 				}
-				////////////////////////
-				//Outside near plane, calculate distance and chose resolution
 				else
 				{
 					cVector3f vIntersection = pLightSpot->GetFrustum()->GetOrigin();
@@ -1698,7 +1641,7 @@ namespace hpl {
 					float fDistToLight = cMath::Vector3Dist(mpCurrentFrustum->GetOrigin(), vIntersection);
 
 					pLightData->mbCastShadows = true;
-					pLightData->mShadowResolution = GetShadowMapResolution(pLight->GetShadowMapResolution(), mpCurrentSettings->mMaxShadowMapResolution);
+					pLightData->mShadowResolution = rendering::detail::GetShadowMapResolution(pLight->GetShadowMapResolution(), mpCurrentSettings->mMaxShadowMapResolution);
 
 					///////////////////////
 					//Skip shadow
@@ -1782,16 +1725,6 @@ namespace hpl {
 		/////////////////////////////////
 		// Get the inverse view matrix
 		m_mtxInvView = cMath::MatrixInverse(mpCurrentFrustum->GetViewMatrix());
-
-
-		//////////////////////////////
-		//Setup quad vertex buffers
-		if(mfLastFrustumFOV != mpCurrentFrustum->GetFOV() || mfLastFrustumFarPlane != mfFarPlane)
-		{
-			UpdateQuadVertexPostion(	mpFullscreenLightQuad,
-										cVector3f(mfFarLeft,mfFarBottom,-mfFarPlane),cVector2f(mfFarRight*2,mfFarTop*2),
-										true);
-		}
 
 		//////////////////////////////
 		//Setup misc variables
@@ -2221,20 +2154,6 @@ namespace hpl {
 
 		SetAlphaLimit(0.01f);
 		SetAlphaMode(eMaterialAlphaMode_Trans);
-	}
-
-
-	[[deprecated("remove used of eGBufferComponents")]]
-	iFrameBuffer* cRendererDeferred::GetGBufferFrameBuffer(eGBufferComponents aComponents)
-	{
-		return nullptr;
-	}
-
-
-	iTexture* cRendererDeferred::GetBufferTexture(int alIdx)
-	{
-		// BX_ASSERT(false, "noop");
-		return nullptr;
 	}
 
 }

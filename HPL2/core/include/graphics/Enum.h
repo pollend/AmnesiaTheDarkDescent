@@ -2,6 +2,7 @@
 
 #include "graphics/GraphicsTypes.h"
 #include <cstdint>
+
 namespace hpl
 {
     enum class DepthTest: uint8_t {

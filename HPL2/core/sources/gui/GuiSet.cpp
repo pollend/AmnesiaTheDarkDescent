@@ -560,7 +560,7 @@ namespace hpl {
 		cMatrixf projectionMtx(cMatrixf::Identity);
 		cMatrixf viewMtx(cMatrixf::Identity);
 		cMatrixf modelMtx(cMatrixf::Identity);
-		if(mbIs3D)
+		if(mbIs3D && apFrustum)
 		{
 			//Invert the y coordinate: = -y, this also get the gui into the correct position.
 			//Also scale to size
@@ -815,68 +815,6 @@ namespace hpl {
 
 		mBaseClipRegion.Clear();
 	}
-
-	//TODO: Support multi textures
-	void cGuiSet::Render(cFrustum *apFrustum)
-	{
-		iLowLevelGraphics *pLowLevelGraphics = mpGraphics->GetLowLevel();
-
-		///////////////////////////////////
-		// Init rendering
-
-		//3D projection
-		if(mbIs3D)
-		{
-			pLowLevelGraphics->SetDepthTestActive(true);
-			pLowLevelGraphics->SetDepthWriteActive(false);
-
-			//Invert the y coordinate: = -y, this also get the gui into the correct position.
-			//Also scale to size
-			cVector3f vPreScale = cVector3f(mv3DSize.x / mvVirtualSize.x,
-											-mv3DSize.y / mvVirtualSize.y,
-											mv3DSize.z / (mfVirtualMaxZ - mfVirtualMinZ));
-			cMatrixf mtxPreMul = cMath::MatrixScale(vPreScale);
-			//note: Offset needs to be converted to shape coords (done by multiplying with pre scale)
-			mtxPreMul.SetTranslation(cVector3f(mvVirtualSizeOffset.x*vPreScale.x, mvVirtualSizeOffset.y*vPreScale.y, 0));
-
-			//Create the final model matrix
-			cMatrixf mtxModel = cMath::MatrixMul(m_mtx3DTransform, mtxPreMul);
-			mtxModel = cMath::MatrixMul(apFrustum->GetViewMatrix(), mtxModel);
-
-			pLowLevelGraphics->SetMatrix(eMatrix_ModelView, mtxModel);
-
-			//No need for projection matrix, should be setup, right? :)
-
-			pLowLevelGraphics->SetCullActive(mbCullBackface);
-		}
-		//Screen projection
-		else
-		{
-			pLowLevelGraphics->SetDepthTestActive(false);
-			pLowLevelGraphics->SetDepthWriteActive(false);
-			pLowLevelGraphics->SetIdentityMatrix(eMatrix_ModelView);
-
-			//Set up min and max for orth projection
-			cVector3f vProjMin(-mvVirtualSizeOffset.x, -mvVirtualSizeOffset.y, mfVirtualMinZ);
-			cVector3f vProjMax(mvVirtualSize.x-mvVirtualSizeOffset.x, mvVirtualSize.y-mvVirtualSizeOffset.y, mfVirtualMaxZ);
-
-			pLowLevelGraphics->SetOrthoProjection(vProjMin,vProjMax);
-		}
-
-		///////////////////////////////
-		// Render all clip regions
-
-		///////////////////////////////
-		//Clear the render object set
-		mBaseClipRegion.Clear();
-
-		if(mbIs3D)
-		{
-			if(mbCullBackface==false) pLowLevelGraphics->SetCullActive(true);
-		}
-	}
-
-	//-----------------------------------------------------------------------
 
 	void cGuiSet::ClearRenderObjects()
 	{

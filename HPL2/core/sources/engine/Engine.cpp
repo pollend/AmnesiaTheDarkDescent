@@ -25,6 +25,9 @@
 #include <gui/GuiTypes.h>
 #include <impl/LowLevelInputSDL.h>
 #include <input/LowLevelInput.h>
+#include "engine/EngineInterface.h"
+#include "engine/Interface.h"
+#include "graphics/GraphicsContext.h"
 #include "system/System.h"
 #include "sound/Sound.h"
 #include "physics/Physics.h"
@@ -55,7 +58,7 @@
 
 #include "system/LowLevelSystem.h"
 #include "engine/LowLevelEngineSetup.h"
-#include <engine/EngineContext.h>
+#include <memory>
 
 #include "impl/SDLEngineSetup.h"
 
@@ -202,6 +205,7 @@ namespace hpl {
 
 	cEngine::cEngine(iLowLevelEngineSetup *apGameSetup,tFlag alHplSetupFlags, cEngineInitVars *apVars)
 	{
+		hpl::Interface<EngineInterface>::Register(this);
 		GameInit(apGameSetup,alHplSetupFlags, apVars);
 
 		//Set up variables
@@ -229,6 +233,9 @@ namespace hpl {
 	void cEngine::GameInit(iLowLevelEngineSetup *apGameSetup,tFlag alHplSetupFlags, cEngineInitVars *apVars)
 	{
 		mpGameSetup = apGameSetup;
+
+		m_graphicsContext.Init();
+		cGuiSet::Init();
 
 		Log("Creating Engine Modules\n");
 		Log("--------------------------------------------------------\n");
@@ -366,14 +373,14 @@ namespace hpl {
 
 		Log("User Initialization\n");
 		Log("--------------------------------------------------------\n");
-
-		hpl::context::Init();
 	}
 
 	//-----------------------------------------------------------------------
 
 	cEngine::~cEngine()
 	{
+		Interface<EngineInterface>::UnRegister(this);
+
 		Log("--------------------------------------------------------\n\n");
 
 		hplDelete(mpLogicTimer);
@@ -516,7 +523,7 @@ namespace hpl {
 				bBufferSwap = false;
 
 				START_TIMING(SwapBuffers)
-				hpl::context::GraphicsContext().Frame();
+				m_graphicsContext.Frame();
 				STOP_TIMING(SwapBuffers)
 
 				//Log("Swap done: %d\n", cPlatform::GetApplicationTime());
@@ -524,8 +531,6 @@ namespace hpl {
 				bSwappedOnce =true;
 				if(mbRenderOnce) continue;
 			}
-
-			//if(GetGameIsDone()) Log("3\n");
 
 			////////////////////////////////////
 			// Render frame
@@ -542,7 +547,7 @@ namespace hpl {
 
 				//Render this frame
 				START_TIMING(RenderAll)
-				mpScene->Render(hpl::context::GraphicsContext(), mfFrameTime, tSceneRenderFlag_All);
+				mpScene->Render(m_graphicsContext, mfFrameTime, tSceneRenderFlag_All);
 				STOP_TIMING(RenderAll)
 
 				START_TIMING(PostRender)

@@ -21,6 +21,7 @@
 
 #include "LuxHelpFuncs.h"
 #include "LuxInputHandler.h"
+#include "engine/Interface.h"
 
 //-----------------------------------------------------------------------
 
@@ -234,6 +235,7 @@ void cLuxLoadScreenHandler::DrawGameScreen()
 	mfLoadingAlpha = 1.0f;
 	DrawGameScreen(gpBase->mpHelpFuncs->GetSet());
 
+
 	gpBase->mpHelpFuncs->DrawSetToScreen();
 
 }
@@ -242,6 +244,7 @@ void cLuxLoadScreenHandler::DrawGameScreen()
 
 void cLuxLoadScreenHandler::DrawMenuScreen()
 {
+	
 	tWString sLoading = kTranslate("General", "Loading");
 
 	cGuiSet *pSet = gpBase->mpHelpFuncs->GetSet();

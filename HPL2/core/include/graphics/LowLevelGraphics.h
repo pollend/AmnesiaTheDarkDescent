@@ -118,12 +118,6 @@ namespace hpl {
 		virtual iFrameBuffer* CreateFrameBuffer(const tString& asName)=0;
 		virtual iDepthStencilBuffer* CreateDepthStencilBuffer(const cVector2l& avSize, int alDepthBits, int alStencilBits)=0;
 
-		virtual iOcclusionQuery* CreateOcclusionQuery()=0;
-
-		/////////////////////////////////////////////////////
-		/////////// FRAME BUFFER OPERATIONS ///////
-		/////////////////////////////////////////////////////
-
 		virtual void ClearFrameBuffer(tClearFrameBufferFlag aFlags)=0;
 
 		virtual void SetClearColor(const cColor& aCol)=0;

@@ -18,6 +18,7 @@
  */
 #pragma once
 
+#include "absl/types/span.h"
 #include "bgfx/bgfx.h"
 #include "graphics/Enum.h"
 #include "graphics/GraphicsContext.h"
@@ -58,7 +59,16 @@ namespace hpl {
 	class cVisibleRCNodeTracker;
 	class RenderCallbackMessage;
 
-	//---------------------------------------------
+	namespace rendering::detail {
+		eShadowMapResolution GetShadowMapResolution(eShadowMapResolution aWanted, eShadowMapResolution aMax);
+		/**
+		* @brief Checks if the given object is occluded by the given planes.
+		* @param apObject The object to check.
+		* @param alNeededFlags The flags that the object must have to be considered.
+		* @param occlusionPlanes The planes to check against.
+		*/
+		bool IsObjectVisible(iRenderable *apObject, tRenderableFlag alNeededFlags, absl::Span<cPlanef> occlusionPlanes);
+	}
 
 	class cNodeOcclusionPair
 	{
@@ -102,23 +112,6 @@ namespace hpl {
 
 
 	class iRenderer;
-
-	typedef bool (*tRenderCHCObjectCallbackFunc)(iRenderer *,iRenderable *apObject);
-
-	//---------------------------------------------
-
-#define START_RENDER_PASS(asName) \
-			if(mbLog){ \
-				Log("----------\n -- Start Rendering %s:\n----------\n",#asName);\
-			}
-
-#define END_RENDER_PASS() \
-			if(mbLog){ \
-			Log("----------\n"); \
-			}
-
-	//---------------------------------------------
-
 	class cRenderSettings
 	{
 	public:
@@ -281,16 +274,8 @@ namespace hpl {
 		virtual bool LoadData()=0;
 		virtual void DestroyData()=0;
 
-		virtual Image& FetchOutputFromRenderer() = 0;
-
-		virtual iTexture* GetRefractionTexture(){ return NULL;}
-		virtual iTexture* GetReflectionTexture(){ return NULL;}
-
 		virtual std::shared_ptr<Image> GetDepthStencilImage() { return std::shared_ptr<Image>(nullptr);}
 		virtual std::shared_ptr<Image> GetOutputImage() { return std::shared_ptr<Image>(nullptr);}
-
-		Image* GetRefractionImage(){ return nullptr;}
-		Image* GetReflectionImage(){ return nullptr;}
 
 		cWorld *GetCurrentWorld(){ return mpCurrentWorld;}
 		cFrustum *GetCurrentFrustum(){ return mpCurrentFrustum;}
@@ -335,13 +320,6 @@ namespace hpl {
 		// a utility to collect renderable objects from the current render list
 		void RenderableHelper(eRenderListType type, eMaterialRenderMode mode, std::function<void(iRenderable* obj, GraphicsContext::LayoutStream&, GraphicsContext::ShaderProgram&)> handler);
 
-		[[deprecated("This is apart of the GraphicsContext")]]
-		virtual void CopyToFrameBuffer()=0;
-		[[deprecated("Moved into Draw")]]
-		virtual void SetupRenderList()=0;
-		[[deprecated("Moved into Draw")]]
-		virtual void RenderObjects()=0;
-
 		void BeginRendering(float afFrameTime,cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, const RenderViewport& apRenderTarget,
 							bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList, bool abAtStartOfRendering=true);
 
@@ -360,14 +338,6 @@ namespace hpl {
 		void CheckNodesAndAddToListIterative(iRenderableContainerNode *apNode, tRenderableFlag alNeededFlags);
 
 
-		[[deprecated("Replaced with RenderZPassWithVisibilityCheck")]]
-		void CheckForVisibleObjectsAddToListAndRenderZ(	cVisibleRCNodeTracker *apVisibleNodeTracker,
-														tObjectVariabilityFlag alObjectTypes, tRenderableFlag alNeededFlags,
-														bool abSetupRenderStates,
-														tRenderCHCObjectCallbackFunc apRenderObjectCallback);
-
-		static bool RenderObjectZAndAddToRenderListStaticCallback(iRenderer *apRenderer, iRenderable *apObject);
-		
 		void OcclusionQueryBoundingBoxTest(bgfx::ViewId view, 
 			GraphicsContext& context, 
 			bgfx::OcclusionQueryHandle handle, 
@@ -380,12 +350,9 @@ namespace hpl {
 		void RenderZPassWithVisibilityCheck(GraphicsContext& context, cVisibleRCNodeTracker *apVisibleNodeTracker, tRenderableFlag alNeededFlags, tObjectVariabilityFlag variabilityFlag,
 			RenderTarget& rt, std::function<bool(iRenderable* object)> renderHandler);
 
-		bool RenderObjectZAndAddToRenderList(iRenderable *apObject);
-
 		void PushUpVisibility(iRenderableContainerNode *apNode);
 		void RenderNodeBoundingBox(iRenderableContainerNode *apNode, iOcclusionQuery *apQuery);
-		int RenderAndAddNodeObjects(iRenderableContainerNode *apNode, tRenderCHCObjectCallbackFunc apRenderCallback, tRenderableFlag alNeededFlags);
-
+		
 		void PushNodeChildrenToStack(tRendererSortedNodeSet& a_setNodeStack, iRenderableContainerNode *apNode, int alNeededFlags);
 		void AddAndRenderNodeOcclusionQuery(tNodeOcclusionPairList *apList, iRenderableContainerNode *apNode, bool abObjectsRendered);
 
@@ -394,10 +361,8 @@ namespace hpl {
 		void GetShadowCasters(iRenderableContainer *apContainer, tRenderableVec& avObjectVec, cFrustum *apLightFrustum);
 		bool SetupShadowMapRendering(iLight *apLight);
 
-		static bool RenderShadowCasterCHCStaticCallback(iRenderer *apRenderer, iRenderable *apObject);
 		bool RenderShadowCasterCHC(iRenderable *apObject);
 		void RenderShadowCaster(iRenderable *apObject, cFrustum *apLightFrustum);
-		void RenderShadowCastersNormal(cFrustum *apLightFrustum);
 	
 		/**
 		 * Only depth is needed for framebuffer. All objects needs to be added to renderlist!
@@ -408,11 +373,6 @@ namespace hpl {
 		 * This retrieves all occlusion information for light pair queries and release occlusion queries. If specified, this is a waiting operation.
 		 */
 		void RetrieveAllLightOcclusionPair(bool abWaitForResult);
-
-
-		void RenderBasicSkyBox();
-
-		bool SetupLightScissorRect(iLight *apLight, cMatrixf *apViewSpaceMatrix);
 
 		/**
 		 * Checks if the renderable object is 1) submeshentity 2) is onesided plane 3)is away from camera. If all are true, FALSE is returned.
@@ -432,6 +392,7 @@ namespace hpl {
 		/**
 		 * Checks custom clip planes (in setttings) and more to determine if a node is viisible. No frustum check!
 		 */
+		[[deprecated("use free method rendering::detail::IsObjectVisible")]]
 		bool CheckNodeIsVisible(iRenderableContainerNode *apNode);
 
 		bool CheckFogAreaInsideNearPlane(cMatrixf &a_mtxInvBoxModelMatrix);
@@ -442,21 +403,11 @@ namespace hpl {
 
 		void SetOcclusionPlanesActive(bool abX);
 
-
-		iVertexBuffer* CreateQuadVertexBuffer(	eVertexBufferType aType,
-												const cVector3f& avPos, const cVector2f& avSize,
-												const cVector2f& avMinUV=0, const cVector2f& avMaxUV=1,
-												bool abInvertY=false);
 		iVertexBuffer* LoadVertexBufferFromMesh(const tString& asMeshName, tVertexElementFlag alVtxToCopy);
-		void UpdateQuadVertexPostion(iVertexBuffer *apVtxBuffer,const cVector3f& avPos, const cVector2f& avSize, bool abCallUpdate);
-
+	
 		void RunCallback(eRendererMessage aMessage, cRendererCallbackFunctions& handler);
 
-		eShadowMapResolution GetShadowMapResolution(eShadowMapResolution aWanted, eShadowMapResolution aMax);
-
         cResources* mpResources;
-		cGpuShaderManager *mpShaderManager;
-
 		bgfx::ProgramHandle m_nullShader;
 
 		tString msName;
@@ -489,15 +440,13 @@ namespace hpl {
 		float mfScissorLastFov;
 		float mfScissorLastTanHalfFov;
 
-		tRenderableVec mvShadowCasters;
+		std::vector<iRenderable*> mvShadowCasters;
 
 		static int mlRenderFrameCount;
 		float mfTimeCount;
 
 		bool mbOcclusionPlanesActive;
-		tPlanefVec mvCurrentOcclusionPlanes;
-
-		cRendererCallbackFunctions *mpCallbackFunctions;
+		std::vector<cPlanef> mvCurrentOcclusionPlanes;
 
 		int mlActiveOcclusionQueryNum;
 		std::vector<cOcclusionQueryObject*> mvSortedOcclusionObjects;
@@ -505,7 +454,6 @@ namespace hpl {
 
 		float mfTempAlpha;
 
-        //Static variables
 		static eShadowMapQuality mShadowMapQuality;
 		static eShadowMapResolution mShadowMapResolution;
 		static eParallaxQuality mParallaxQuality;
@@ -527,9 +475,6 @@ namespace hpl {
 		inline void SetFlatProjection(const cVector2f &avSize=1,float afMin=-100,float afMax=100) { mpRenderer->SetFlatProjection(avSize, afMin,afMax); }
 		inline void SetFlatProjectionMinMax(const cVector3f &avMin,const cVector3f &avMax) { mpRenderer->SetFlatProjectionMinMax(avMin,avMax);}
 		inline void SetNormalFrustumProjection() { mpRenderer->SetNormalFrustumProjection(); }
-
-		inline void SetFrameBuffer(iFrameBuffer *apFrameBuffer, bool abUsePosAndSize=false){ mpRenderer->SetFrameBuffer(apFrameBuffer,abUsePosAndSize); }
-		inline void ClearFrameBuffer(tClearFrameBufferFlag aFlags, bool abUsePosAndSize){ mpRenderer->ClearFrameBuffer(aFlags, abUsePosAndSize); }
 
 		inline void DrawQuad(	const cVector3f& aPos, const cVector2f& avSize, const cVector2f& avMinUV=0, const cVector2f& avMaxUV=1,
 								bool abInvertY=false, const cColor& aColor=cColor(1,1) )
