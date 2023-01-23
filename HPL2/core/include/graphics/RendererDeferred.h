@@ -140,6 +140,11 @@ namespace hpl {
 			PointlightVariant_UseGoboMap = 0x1
 		};
 
+		enum FogVariant {
+			FogVariant_None = 0,
+			FogVariant_UseOutsideBox = 0x1,
+			FogVariant_UseBackSide = 0x2
+		};
 		struct ZPassInput {
 			float m_width = 0;
 			float m_height = 0;
@@ -167,8 +172,6 @@ namespace hpl {
 
 		virtual void Draw(GraphicsContext& context, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, RenderViewport& apRenderTarget,
 					bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList) override;
-
-
 
 		Image* GetRefractionImage(){ return m_refractionImage;}
 		Image* GetReflectionImage(){ return m_reflectionImage;}
@@ -297,6 +300,7 @@ namespace hpl {
 		bool mbReflectionTextureCleared;
 
 		iTexture *mpShadowJitterTexture;
+		std::shared_ptr<Image> m_shadowJitterImage;
 		int mlShadowJitterSize;
 		int mlShadowJitterSamples;
 
@@ -320,10 +324,13 @@ namespace hpl {
 		bgfx::UniformHandle m_s_shadowMap;
 		bgfx::UniformHandle m_s_goboMap;
 		
-		bgfx::ProgramHandle m_deferredFog;
-		bgfx::ProgramHandle m_fullscreenFog;
+		// bgfx::ProgramHandle m_deferredFog;
+		// bgfx::ProgramHandle m_fullscreenFog;
 		bgfx::ProgramHandle m_edgeSmooth_UnpackDepthProgram;
 		bgfx::ProgramHandle m_lightBoxProgram;
+		ShaderVariantCollection<
+			rendering::detail::FogVariant_UseOutsideBox |
+			rendering::detail::FogVariant_UseBackSide> m_forVariant; 
 		ShaderVariantCollection<
 			rendering::detail::SpotlightVariant_UseGoboMap |
 			rendering::detail::SpotlightVariant_UseShadowMap> m_spotlightVariants; 

@@ -344,17 +344,18 @@ namespace hpl {
 
 		if(mShadowMapQuality != eShadowMapQuality_Low)
 		{
-			mpShadowJitterTexture = mpGraphics->CreateTexture("ShadowOffset", eTextureType_2D, eTextureUsage_Normal);
-			mpGraphics->GetTextureCreator()->GenerateScatterDiskMap2D(mpShadowJitterTexture,mlShadowJitterSize,mlShadowJitterSamples, true);
+			m_shadowJitterImage = std::make_shared<Image>();
+			TextureCreator::GenerateScatterDiskMap2D(*m_shadowJitterImage, mlShadowJitterSize,mlShadowJitterSamples, true);
+			// mpShadowJitterTexture = mpGraphics->CreateTexture("ShadowOffset", eTextureType_2D, eTextureUsage_Normal);
+			// mpGraphics->GetTextureCreator()->GenerateScatterDiskMap2D(mpShadowJitterTexture,mlShadowJitterSize,mlShadowJitterSamples, true);
 		}
-		else
-		{
-			mpShadowJitterTexture = NULL;
-		}
-		m_deferredFog = hpl::loadProgram("vs_deferred_fog", "fs_deferred_fog");
-		m_fullscreenFog = hpl::loadProgram("vs_post_effect", "fs_posteffect_fullscreen_fog");
+
+		// m_fullscreenFog = hpl::loadProgram("vs_post_effect", "fs_posteffect_fullscreen_fog");
+
 		m_lightBoxProgram = hpl::loadProgram("vs_light_box", "fs_light_box");
 		// m_spotLightProgram = hpl::loadProgram("vs_deferred_light", "fs_deferred_spotlight");
+		m_forVariant.Initialize(
+			ShaderHelper::LoadProgramHandlerDefault("vs_deferred_fog", "fs_deferred_fog", false, true));
 		m_spotlightVariants.Initialize(
 			ShaderHelper::LoadProgramHandlerDefault("vs_deferred_light", "fs_deferred_spotlight", false, true));
 		m_pointLightVariants.Initialize(
@@ -437,14 +438,14 @@ namespace hpl {
 		mpGraphics->DestroyFrameBuffer(mpAccumBuffer);
 		mpGraphics->DestroyFrameBuffer(mpReflectionBuffer);
 
-		mpGraphics->DestroyTexture(mpReflectionTexture);
+		// mpGraphics->DestroyTexture(mpReflectionTexture);
 
 
 		/////////////////////////
 		//Shadow textures
 		DestroyShadowMaps();
 
-		if(mpShadowJitterTexture) mpGraphics->DestroyTexture(mpShadowJitterTexture);
+		// if(mpShadowJitterTexture) mpGraphics->DestroyTexture(mpShadowJitterTexture);
 
 		/////////////////////////
 		//Fog stuff
@@ -494,7 +495,7 @@ namespace hpl {
 			mpCurrentSettings->mvFogRenderData.resize(0); //Make sure render data array is empty!
 			return;
 		}
-
+		const auto view = context.StartPass("Fog Pass");
 		for(auto& fogData: mpCurrentSettings->mvFogRenderData)
 		{
 			cFogArea* pFogArea = fogData.mpFogArea;
@@ -507,15 +508,11 @@ namespace hpl {
 				float u_fogRayCastStart[3];
 				float u_fogNegPlaneDistNeg[3];
 				float u_fogNegPlaneDistPos[3];
-
-				float u_useBackside;
-				float u_useOutsideBox;
-				float u_unused1;
-				float u_unused2;
 			} uniforms = {0};
 
 			//Outside of box setup
 			cMatrixf rotationMatrix = cMatrixf::Identity;
+			uint32_t flags =  rendering::detail::FogVariant_None;
 			if(!fogData.mbInsideNearFrustum)
 			{
 				cMatrixf mtxInvModelView = cMath::MatrixInverse( cMath::MatrixMul(mpCurrentFrustum->GetViewMatrix(), *pFogArea->GetModelMatrixPtr()) );
@@ -525,7 +522,7 @@ namespace hpl {
 				uniforms.u_fogRayCastStart[1] = vRayCastStart.y;
 				uniforms.u_fogRayCastStart[2] = vRayCastStart.z;
 
-				rotationMatrix = mtxInvModelView.GetRotation();
+				rotationMatrix = mtxInvModelView.GetRotation().GetTranspose();
 
 				cVector3f vNegPlaneDistNeg( cMath::PlaneToPointDist(cPlanef(-1,0,0,0.5f),vRayCastStart), cMath::PlaneToPointDist(cPlanef(0,-1,0,0.5f),vRayCastStart),
 											cMath::PlaneToPointDist(cPlanef(0,0,-1,0.5f),vRayCastStart));
@@ -542,12 +539,12 @@ namespace hpl {
 			}
 			if(fogData.mbInsideNearFrustum)
 			{
-				uniforms.u_useBackside = pFogArea->GetShowBacksideWhenInside() ? 1.0 : 0.0;
+				flags |=  pFogArea->GetShowBacksideWhenInside() ? rendering::detail::FogVariant_UseBackSide : rendering::detail::FogVariant_None;
 			} 
 			else 
 			{
-				uniforms.u_useBackside = pFogArea->GetShowBacksideWhenOutside() ? 1.0 : 0.0;
-				uniforms.u_useOutsideBox = 1.0;
+				flags |= rendering::detail::FogVariant_UseOutsideBox;
+				flags |=  pFogArea->GetShowBacksideWhenOutside() ? rendering::detail::FogVariant_UseBackSide : rendering::detail::FogVariant_None;
 			}
 			
 			const auto fogColor = mpCurrentWorld->GetFogColor();
@@ -555,11 +552,11 @@ namespace hpl {
 
 			GraphicsContext::LayoutStream layoutStream;
 			GraphicsContext::ShaderProgram shaderProgram;
-			shaderProgram.m_handle = m_deferredFog;
+			shaderProgram.m_handle = m_forVariant.GetVariant(flags);
 			shaderProgram.m_uniforms.push_back(
 				{m_u_param, &uniforms, 3});
 			shaderProgram.m_uniforms.push_back(
-				{m_u_boxInvViewModelRotation, rotationMatrix.v, 1});
+				{m_u_boxInvViewModelRotation, rotationMatrix.v});
 			shaderProgram.m_uniforms.push_back(
 				{m_u_fogColor, uniformFogColor, 1});
 			
@@ -572,12 +569,17 @@ namespace hpl {
 			shaderProgram.m_modelTransform = *pFogArea->GetModelMatrixPtr();
 
 			mpShapeBox->GetLayoutStream(layoutStream);
+
+			GraphicsContext::DrawRequest drawRequest {rt, layoutStream, shaderProgram};
+			drawRequest.m_width = mvScreenSize.x;
+			drawRequest.m_height = mvScreenSize.y;
+			context.Submit(view, drawRequest);
 		}
 	}
 
 
 	void cRendererDeferred::RenderFullScreenFogPass(GraphicsContext& context, RenderTarget& rt) {
-		const auto& view = context.StartPass("FullScreenFog");
+		const auto view = context.StartPass("Full Screen Fog");
 		
 		struct {
 			float u_fogStart;
@@ -601,18 +603,23 @@ namespace hpl {
 		shaderProgram.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
 		shaderProgram.m_configuration.m_write = Write::RGB;
 
+		cMatrixf rotationMatrix = cMatrixf::Identity;
 		const auto fogColor = mpCurrentWorld->GetFogColor();
 		float uniformFogColor[4] = {fogColor.r, fogColor.g, fogColor.b, fogColor.a};
 
-		shaderProgram.m_handle = m_fullscreenFog;
+		shaderProgram.m_handle = m_forVariant.GetVariant(rendering::detail::FogVariant_None);
 		shaderProgram.m_textures.push_back(
 			{m_s_depthMap, resolveRenderImage(m_gBufferPositionImage)->GetHandle(), 0});
 		shaderProgram.m_uniforms.push_back(
 			{m_u_param, &uniforms, 3});
 		shaderProgram.m_uniforms.push_back(
+				{m_u_boxInvViewModelRotation, rotationMatrix.v});
+		shaderProgram.m_uniforms.push_back(
 				{m_u_fogColor, uniformFogColor, 1});
 		
-		GraphicsContext::DrawRequest drawRequest {m_edgeSmooth_LinearDepth, layout, shaderProgram};
+		GraphicsContext::DrawRequest drawRequest {rt, layout, shaderProgram};
+		drawRequest.m_width = mvScreenSize.x;
+		drawRequest.m_height = mvScreenSize.y;
 		context.Submit(view, drawRequest);
 	}
 
@@ -979,10 +986,10 @@ namespace hpl {
 		// render illumination into gbuffer color RenderIllumination
 		RenderIlluminationPass(context, resolveRenderTarget(m_output_target));
 		// TODO: MP need to implement this
-		// RenderFogPass(context, resolveRenderTarget(m_output_target));
-		// if(mpCurrentWorld->GetFogActive()) {
-		// 	RenderFullScreenFogPass(context, resolveRenderTarget(m_output_target));
-		// }
+		RenderFogPass(context, resolveRenderTarget(m_output_target));
+		if(mpCurrentWorld->GetFogActive()) {
+			RenderFullScreenFogPass(context, resolveRenderTarget(m_output_target));
+		}
 
 		// TODO: MP need to implement this
 		//  RenderEdgeSmooth();

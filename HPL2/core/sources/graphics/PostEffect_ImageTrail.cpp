@@ -44,8 +44,8 @@ namespace hpl
         : iPostEffectType("ImageTrail", apGraphics, apResources)
     {
         m_program = hpl::loadProgram("vs_post_effect", "fs_posteffect_image_trail_frag");
-        m_u_param = bgfx::createUniform("u_params", bgfx::UniformType::Vec4);
-        m_s_diffuseMap = bgfx::createUniform("diffuseMap", bgfx::UniformType::Sampler);
+        m_u_param = bgfx::createUniform("u_param", bgfx::UniformType::Vec4);
+        m_s_diffuseMap = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
     }
 
     cPostEffectType_ImageTrail::~cPostEffectType_ImageTrail()
@@ -122,7 +122,7 @@ namespace hpl
         GraphicsContext::ShaderProgram shaderProgram;
         shaderProgram.m_handle = mpImageTrailType->m_program;
         shaderProgram.m_projection = projMtx;
-
+        
         struct
         {
             float u_alpha;
@@ -131,16 +131,10 @@ namespace hpl
         if (mbClearFrameBuffer)
         {
             u_params.u_alpha = 1.0f;
-            shaderProgram.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::Zero);
-            shaderProgram.m_configuration.m_alphaBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::Zero);
             mbClearFrameBuffer = false;
         }
         else
         {
-            shaderProgram.m_configuration.m_rgbBlendFunc =
-                CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
-            shaderProgram.m_configuration.m_alphaBlendFunc =
-                CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
 
             // Get the amount of blur depending frame time.
             //*30 is just so that good amount values are still between 0 - 1
@@ -149,9 +143,18 @@ namespace hpl
             float fAmount = exp(-fPow * 0.015f);
             u_params.u_alpha = fAmount;
         }
+
+        shaderProgram.m_configuration.m_rgbBlendFunc =
+            CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
+        shaderProgram.m_configuration.m_alphaBlendFunc =
+            CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
+
+        shaderProgram.m_textures.push_back({ mpImageTrailType->m_s_diffuseMap, input.GetHandle(), 0});
+        shaderProgram.m_uniforms.push_back({ mpImageTrailType->m_u_param, &u_params, 1 });
+       
         shaderProgram.m_configuration.m_depthTest = DepthTest::None;
         shaderProgram.m_configuration.m_write = Write::RGBA;
-        GraphicsContext::DrawRequest request{ target, layoutStream, shaderProgram };
+        GraphicsContext::DrawRequest request{ m_accumulationBuffer, layoutStream, shaderProgram };
         request.m_width = vRenderTargetSize.x;
         request.m_height = vRenderTargetSize.y;
         context.Submit(view, request);

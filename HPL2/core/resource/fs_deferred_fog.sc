@@ -1,4 +1,3 @@
-
 $input v_position, v_ray
 
 #include <common.sh>
@@ -6,18 +5,15 @@ $input v_position, v_ray
 SAMPLER2D(s_positionMap, 0);
 
 uniform vec4 u_fogColor;
-uniform vec4 u_params[4];
+uniform vec4 u_param[3];
 
-#define u_fogStart u_params[0].x
-#define u_fogLength u_params[0].y
-#define u_fogFalloffExp u_params[0].z
+#define u_fogStart u_param[0].x
+#define u_fogLength u_param[0].y
+#define u_fogFalloffExp u_param[0].z
 
-#define u_fogRayCastStart (vec3(u_params[0].w, u_params[1].x, u_params[1].y))
-#define u_fogNegPlaneDistNeg (vec3(u_params[1].z, u_params[1].w, u_params[2].x))
-#define u_fogNegPlaneDistPos (vec3(u_params[2].y, u_params[2].z, u_params[2].w))
-
-#define u_useBacksize (u_params[3].x)
-#define u_useOutsideBox (u_params[3].y)
+#define u_fogRayCastStart (vec3(u_param[0].w, u_param[1].x, u_param[1].y))
+#define u_fogNegPlaneDistNeg (vec3(u_param[1].z, u_param[1].w, u_param[2].x))
+#define u_fogNegPlaneDistPos (vec3(u_param[2].y, u_param[2].z, u_param[2].w))
 
 float GetPlaneIntersection(vec3 ray, vec3 avPlaneNormal, float afNegPlaneDist, float afFinalT)
 {
@@ -36,15 +32,14 @@ float GetPlaneIntersection(vec3 ray, vec3 avPlaneNormal, float afNegPlaneDist, f
 
 void main()
 {
-
     vec2 ndc = gl_FragCoord.xy * u_viewTexel.xy;
-    float fDepth = texture2D(s_positionMap, ndc).z;
+    float fDepth = -texture2D(s_positionMap, ndc).z;
 
-    if(0.0 < u_useOutsideBox) {
+   #ifdef USE_OUTSIDE_BOX
         fDepth = fDepth +  v_position.z; //VertexPos is negative!
     
         float fFinalT = 0.0;
-        if(0.0 < u_useBacksize) {
+        #ifdef USE_BACK_SIDE
             fFinalT = GetPlaneIntersection(v_ray, vec3(-1.0, 0.0, 0.0),	u_fogNegPlaneDistNeg.x,	fFinalT);//Left
             fFinalT = GetPlaneIntersection(v_ray, vec3(1.0, 0.0, 0.0), 	u_fogNegPlaneDistPos.x,	fFinalT);//Right
             fFinalT = GetPlaneIntersection(v_ray, vec3(0.0, -1.0, 0.0),	u_fogNegPlaneDistNeg.y, fFinalT);//Bottom
@@ -54,13 +49,13 @@ void main()
             
             float fLocalBackZ = fFinalT * v_position.z -  v_position.z;
             fDepth = min(-fLocalBackZ, fDepth);
-        }
+        #endif
         
-    } else {
-        if(0.0 < u_useBacksize) {
+    #else
+        #ifdef USE_BACK_SIDE
             fDepth = min(-v_position.z, fDepth);
-        }
-    }
+        #endif
+    #endif
 
     fDepth = min(- v_position.z, fDepth);
     float fAmount = max(fDepth / u_fogLength,0.0);

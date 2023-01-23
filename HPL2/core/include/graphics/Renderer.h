@@ -193,11 +193,6 @@ namespace hpl {
 		int mlNumberOfLightsRendered;
 		int mlNumberOfOcclusionQueries;
 
-		////////////////////////////
-		//Debug
-		//tRenderableContainerNodeList mlstRenderedNodes;
-
-	private:
 
 	};
 
@@ -252,6 +247,7 @@ namespace hpl {
 	friend class cRenderSettings;
 
 	public:
+
 		iRenderer(const tString& asName, cGraphics *apGraphics,cResources* apResources, int alNumOfProgramComboModes);
 		virtual ~iRenderer();
 

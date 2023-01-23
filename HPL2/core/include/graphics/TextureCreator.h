@@ -20,6 +20,7 @@
 #ifndef HPL_TEXTURE_CREATOR_H
 #define HPL_TEXTURE_CREATOR_H
 
+#include "graphics/Image.h"
 #include "math/MathTypes.h"
 #include "system/SystemTypes.h"
 #include "graphics/GraphicsTypes.h"
@@ -29,6 +30,11 @@ namespace hpl {
 	class iLowLevelGraphics;
 	class cResources;
 	class iTexture;
+
+	namespace TextureCreator {
+		void GenerateScatterDiskMap3D(Image& inputImage, int alSize, int alSamples, bool abSortSamples);
+		void GenerateScatterDiskMap2D(Image& inputImage, int alSize, int alSamples, bool abSortSamples);
+	}
 
 	class cTextureCreator
 	{
