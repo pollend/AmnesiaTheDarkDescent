@@ -13,7 +13,7 @@ include(FetchContent)
 
 FetchContent_Declare(  
   bgfx_cmake
-  GIT_REPOSITORY git@github.com:bkaradzic/bgfx.cmake.git
+  GIT_REPOSITORY https://github.com/bkaradzic/bgfx.cmake.git
 )
 
 set(BGFX_OPENGL_VERSION 33)
