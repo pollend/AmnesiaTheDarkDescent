@@ -78,6 +78,8 @@
 #include <iterator>
 #include <memory>
 #include <set>
+#include <unordered_map>
+#include <utility>
 
 namespace hpl {
 
@@ -564,9 +566,9 @@ namespace hpl {
 				CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
 			shaderProgram.m_configuration.m_write = Write::RGB;
 			
-			shaderProgram.m_projection = *mpCurrentProjectionMatrix;
-			shaderProgram.m_view = mpCurrentFrustum->GetViewMatrix();
-			shaderProgram.m_modelTransform = *pFogArea->GetModelMatrixPtr();
+			shaderProgram.m_projection = mpCurrentProjectionMatrix->GetTranspose();
+			shaderProgram.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+			shaderProgram.m_modelTransform = pFogArea->GetModelMatrixPtr() ? cMatrixf::Identity : pFogArea->GetModelMatrixPtr()->GetTranspose();
 
 			mpShapeBox->GetLayoutStream(layoutStream);
 
@@ -1004,10 +1006,6 @@ namespace hpl {
 
 		RunCallback(eRendererMessage_PostTranslucent, handler);
 
-		if(mbOcclusionTestLargeLights) {
-			RetrieveAllLightOcclusionPair(false); //false = we do not stop and wait.
-		}
-
 	}
 
 
@@ -1092,6 +1090,9 @@ namespace hpl {
 				GraphicsContext::DrawRequest drawRequest {rt, layoutStream, shaderProgram};
 				drawRequest.m_width = mvScreenSize.x;
 				drawRequest.m_height = mvScreenSize.y;
+				// if(bgfx::isValid(light->m_occlusionQuery)) {
+				// 	bgfx::setCondition(light->m_occlusionQuery, true);
+				// }
 				context.Submit(view, drawRequest);
 			};
 
@@ -1125,6 +1126,9 @@ namespace hpl {
 					drawRequest.m_clear =  GraphicsContext::ClearRequest{0, 0, 0, ClearOp::Stencil};
 					drawRequest.m_width = mvScreenSize.x;
 					drawRequest.m_height = mvScreenSize.y;
+					// if(bgfx::isValid(light->m_occlusionQuery)) {
+					// 	bgfx::setCondition(light->m_occlusionQuery, true);
+					// }
 					context.Submit(boxStencilPass, drawRequest);
 				}
 				
@@ -1161,6 +1165,10 @@ namespace hpl {
 		// render light
 		{
 			auto drawLight = [&](bgfx::ViewId pass, GraphicsContext::ShaderProgram& shaderProgram, cDeferredLight* apLightData) {
+				// if(bgfx::isValid(apLightData->m_occlusionQuery)) {
+				// 	bgfx::setCondition(apLightData->m_occlusionQuery, true);
+				// }
+				
 				GraphicsContext::LayoutStream layoutStream;
 				GetLightShape(apLightData->mpLight, eDeferredShapeQuality_High)->GetLayoutStream(layoutStream);
 				GraphicsContext::DrawRequest drawRequest {rt, layoutStream, shaderProgram};
@@ -1199,7 +1207,6 @@ namespace hpl {
 							shaderProgram.m_textures.push_back({m_s_goboMap, apLightData->mpLight->GetGoboTexture()->GetHandle(), 0});
 						}
 						shaderProgram.m_handle = m_pointLightVariants.GetVariant(flags);
-
 						context.Submit(pass, drawRequest);
 						break;
 					}
@@ -1306,6 +1313,9 @@ namespace hpl {
 					drawRequest.m_clear =  GraphicsContext::ClearRequest{0, 0, 0, ClearOp::Stencil};
 					drawRequest.m_width = mvScreenSize.x;
 					drawRequest.m_height = mvScreenSize.y;
+					// if(bgfx::isValid(light->m_occlusionQuery)) {
+					// 	bgfx::setCondition(light->m_occlusionQuery, true);
+					// }
 					context.Submit(lightStencilBackPass, drawRequest);
 				}
 				{
@@ -1327,7 +1337,7 @@ namespace hpl {
 					shaderProgram.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
 					shaderProgram.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
 					shaderProgram.m_modelTransform = cMath::MatrixMul(light->mpLight->GetWorldMatrix(),light->GetLightMtx()).GetTranspose();
-
+					
 					drawLight(lightStencilBackPass, shaderProgram, light);
 				}
 			}
@@ -1539,27 +1549,15 @@ namespace hpl {
 
 	void cRendererDeferred::SetupLightsAndRenderQueries(GraphicsContext& context, RenderTarget& rt)
 	{
-		//////////////////////////
-		// Check query results from last frame and clear list.
-		tLightSet setPrevVisibleLights;
-		if(mbOcclusionTestLargeLights)
-		{
-			for(auto& occlusionPair: mpCurrentSettings->m_lightOcclusionPairs) {
-				if(occlusionPair.mlSampleResults > mpCurrentSettings->mlSampleVisiblilityLimit) {
-					setPrevVisibleLights.insert(occlusionPair.mpLight);
-				}
-				if(bgfx::isValid(occlusionPair.m_occlusionQuery)) {
-					bgfx::destroy(occlusionPair.m_occlusionQuery);
-				}
-			}
-
-			mpCurrentSettings->m_lightOcclusionPairs.resize(0);
-		}
-
 
 		//////////////////////////
 		// Clear light list
-		STLDeleteAll_NoClear(mvTempDeferredLights);
+		for(auto& light: mvTempDeferredLights) {
+			// if(bgfx::isValid(light->m_occlusionQuery)) {
+			// 	bgfx::destroy(light->m_occlusionQuery);
+			// }
+			delete light;
+		}
 		mvTempDeferredLights.resize(0);
 
 		////////////////////////////////
@@ -1677,24 +1675,8 @@ namespace hpl {
 
 			}
 
-
-			///////////////////////////
-			// Render Query
-
-			//If not doing occlusion testing on large light, might as well just skip here
-			if(mbOcclusionTestLargeLights==false || mpCurrentSettings->mbUseOcclusionCulling==false) {
-				continue;
-			}
-
 			// If inside near plane or too small on screen skip queries
 			if(pLightData->mbInsideNearPlane || pLightData->mlArea < mlMinLargeLightArea) {
-				continue;
-			}
-
-			///////////////////////////
-			// Only check if light was invisible last frame
-			
-			if(std::find(setPrevVisibleLights.begin(), setPrevVisibleLights.end(), pLight) != setPrevVisibleLights.end()) {
 				continue;
 			}
 
@@ -1706,23 +1688,25 @@ namespace hpl {
 			GraphicsContext::ShaderProgram shaderProgram;
 			GraphicsContext::LayoutStream layoutStream;
 		
-			////////////////////////////////
-			//Render light shape and make a query
-			BX_ASSERT(!bgfx::isValid(pLightData->m_occlusionQuery), "Occlusion query already exists!");
-			pLightData->m_occlusionQuery = bgfx::createOcclusionQuery();
+			// ////////////////////////////////
+			// //Render light shape and make a query
+			// BX_ASSERT(!bgfx::isValid(pLightData->m_occlusionQuery), "Occlusion query already exists!");
+			// pLightData->m_occlusionQuery = bgfx::createOcclusionQuery();
 
-			lightVertex->GetLayoutStream(layoutStream);
+			// lightVertex->GetLayoutStream(layoutStream);
 
-			shaderProgram.m_handle = m_nullShader;
-			shaderProgram.m_configuration.m_cull = Cull::CounterClockwise;
-			shaderProgram.m_configuration.m_depthTest = DepthTest::LessEqual;
+			// shaderProgram.m_handle = m_nullShader;
+			// shaderProgram.m_configuration.m_cull = Cull::CounterClockwise;
+			// shaderProgram.m_configuration.m_depthTest = DepthTest::LessEqual;
 
-			shaderProgram.m_modelTransform = pLightData->m_mtxViewSpaceRender;
+			// shaderProgram.m_modelTransform = pLightData->m_mtxViewSpaceRender.GetTranspose();
+			// shaderProgram.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
 
-			GraphicsContext::DrawRequest drawRequest = {rt, layoutStream, shaderProgram};
-			drawRequest.m_width = mvScreenSize.x;
-			drawRequest.m_height = mvScreenSize.y;
-			context.Submit(view, drawRequest, pLightData->m_occlusionQuery);
+
+			// GraphicsContext::DrawRequest drawRequest = {rt, layoutStream, shaderProgram};
+			// drawRequest.m_width = mvScreenSize.x;
+			// drawRequest.m_height = mvScreenSize.y;
+			// context.Submit(view, drawRequest, pLightData->m_occlusionQuery);
 			
 		}
 	}
@@ -1780,31 +1764,27 @@ namespace hpl {
 				continue;
 			}
 
-			////////////////////////
-			// Test if query has any samples.
-			//  Only check if the query is done, else skip so we do not have a stop-and-wait.
-			// iOcclusionQuery *pQuery = pLightData->mpQuery;
-			// if(pQuery)
+			// ////////////////////////
+			// // Test if query has any samples.
+			// //  Only check if the query is done, else skip so we do not have a stop-and-wait.
+			// auto& prevResult = pLightData->m_occlusionResult;
+			// bool bLightVisible = true;
+			// if(prevResult.second == bgfx::OcclusionQueryResult::Enum::Visible ||
+			// 	prevResult.second == bgfx::OcclusionQueryResult::Enum::Invisible)
 			// {
-			if(bgfx::isValid(pLightData->m_occlusionQuery)) {
-				int32_t numSamples = 0;
-				const auto result = bgfx::getResult(pLightData->m_occlusionQuery, &numSamples);
-				bool bLightInvisible = false;
-				if(result != bgfx::OcclusionQueryResult::Enum::NoResult)
-				{
-					if(numSamples <= mpCurrentSettings->mlSampleVisiblilityLimit)
-					{
-						bLightInvisible = true;
-					}
+			// 	if(prevResult.first <= mpCurrentSettings->mlSampleVisiblilityLimit)
+			// 	{
+			// 		bLightVisible = false;
+			// 	}
 
-					bx::debugPrintf("Fetching query for light '%s'/%d. Have %d samples. Visible: %d\n", pLight->GetName().c_str(), pLight, numSamples, !bLightInvisible);
-				}
+			// 	// bx::debugPrintf("Fetching query for light '%s'/%d. Have %d samples. Visible: %d\n", pLight->GetName().c_str(), pLight, numSamples, !bLightInvisible);
+			// }
 
-				if(bLightInvisible)
-				{
-					continue;
-				}
-			}
+			// if(!bLightVisible)
+			// {
+			// 	continue;
+			// }
+		
 
 			mpCurrentSettings->mlNumberOfLightsRendered++;
 

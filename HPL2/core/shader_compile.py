@@ -58,7 +58,6 @@ deferred_fog_variants = [
     {"bit": 2, "defines": ["USE_BACK_SIDE"]}
 ]
 
-
 shaders = [
 # Amneisa Specific Shaders compiler can be moved to its own library
     { "type" : ShaderType.VS, "inout" : "resource/vs_dds_enemy_glow.io",              "input": "resource/vs_dds_enemy_glow.sc" , "includes": ["resource"]},

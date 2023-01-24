@@ -137,7 +137,6 @@ namespace hpl {
 		cRenderList *mpRenderList;
 
 		cVisibleRCNodeTracker *mpVisibleNodeTracker;
-		std::vector<cLightOcclusionPair> m_lightOcclusionPairs;
 
 		cRenderSettings *mpReflectionSettings;
 
@@ -364,11 +363,6 @@ namespace hpl {
 		 * Only depth is needed for framebuffer. All objects needs to be added to renderlist!
 		 */
 		void AssignAndRenderOcclusionQueryObjects(bgfx::ViewId view, GraphicsContext& context, bool abSetFrameBuffer, bool abUsePosAndSize, RenderTarget& rt);
-
-		/**
-		 * This retrieves all occlusion information for light pair queries and release occlusion queries. If specified, this is a waiting operation.
-		 */
-		void RetrieveAllLightOcclusionPair(bool abWaitForResult);
 
 		/**
 		 * Checks if the renderable object is 1) submeshentity 2) is onesided plane 3)is away from camera. If all are true, FALSE is returned.

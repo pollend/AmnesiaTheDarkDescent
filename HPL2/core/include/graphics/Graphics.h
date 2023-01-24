@@ -142,7 +142,6 @@ namespace hpl {
 		void ReloadMaterials();
 
 		cMeshCreator* GetMeshCreator(){return mpMeshCreator;}
-		cTextureCreator* GetTextureCreator(){ return mpTextureCreator;}
 		cDecalCreator* GetDecalCreator() {return mpDecalCreator;}
 
 		bool GetScreenIsSetUp(){ return mbScreenIsSetup;}
@@ -151,7 +150,6 @@ namespace hpl {
 		iLowLevelGraphics *mpLowLevelGraphics;
 		iLowLevelResources *mpLowLevelResources;
 		cMeshCreator *mpMeshCreator;
-		cTextureCreator* mpTextureCreator;
 		cDecalCreator* mpDecalCreator;
 		cResources *mpResources;
 

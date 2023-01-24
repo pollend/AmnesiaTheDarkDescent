@@ -25,23 +25,14 @@
 #include "graphics/ShaderVariantCollection.h"
 #include "math/MathTypes.h"
 #include <array>
+#include <cstdint>
 #include <graphics/RenderTarget.h>
 #include <memory>
+#include <vector>
 
 namespace hpl {
 
-	//---------------------------------------------
 
-	//////////////////////////////////////////////////////////////////////////////
-	// GENERAL RENDERER INFO - DEFERRRED RENDERER
-	//
-	// Important to note is that this renderer does not require depth or stencil buffer
-	// for the render target, but always use internal stuff for rendering.
-	//
-	//
-	//////////////////////////////////////////////////////////////////////////////
-
-    //---------------------------------------------
 
 	class iFrameBuffer;
 	class iDepthStencilBuffer;
@@ -107,23 +98,22 @@ namespace hpl {
 
 	//---------------------------------------------
 
-	class cDeferredLight
+	class cDeferredLight final 
 	{
 	public:
-		cDeferredLight() : m_occlusionQuery(BGFX_INVALID_HANDLE), mbCastShadows(false){}
+		cDeferredLight(){}
 
-		iLight *mpLight;
 		cRect2l mClipRect;
-		int mlArea;
 		cMatrixf m_mtxViewSpaceRender;
 		cMatrixf m_mtxViewSpaceTransform;
-		bool mbInsideNearPlane;
-		bgfx::OcclusionQueryHandle m_occlusionQuery;
 
-		// iTexture *mpShadowTexture;
-		bool mbCastShadows;
-		eShadowMapResolution mShadowResolution;
-
+		int mlArea = 0;
+		// bgfx::OcclusionQueryHandle m_occlusionQuery = BGFX_INVALID_HANDLE;
+		bool mbInsideNearPlane = false;
+		bool mbCastShadows = false;
+		eShadowMapResolution mShadowResolution = eShadowMapResolution_Low;
+		iLight *mpLight = nullptr;
+		
 		cMatrixf GetLightMtx();
 	};
 
@@ -160,6 +150,7 @@ namespace hpl {
 	class cRendererDeferred : public  iRenderer
 	{
 	public:
+
 		cRendererDeferred(cGraphics *apGraphics,cResources* apResources);
 		~cRendererDeferred();
 
@@ -324,8 +315,6 @@ namespace hpl {
 		bgfx::UniformHandle m_s_shadowMap;
 		bgfx::UniformHandle m_s_goboMap;
 		
-		// bgfx::ProgramHandle m_deferredFog;
-		// bgfx::ProgramHandle m_fullscreenFog;
 		bgfx::ProgramHandle m_edgeSmooth_UnpackDepthProgram;
 		bgfx::ProgramHandle m_lightBoxProgram;
 		ShaderVariantCollection<
@@ -341,9 +330,6 @@ namespace hpl {
 		std::vector<cDeferredLight*> mvTempDeferredLights;
 		std::vector<cDeferredLight*> mvSortedLights[eDeferredLightList_LastEnum];
 
-		iGpuProgram *mpLightStencilProgram;
-
-		cMatrixf m_mtxTempLight;
 
 		//Static setting variables
 		static eDeferredGBuffer mGBufferType;
@@ -368,6 +354,5 @@ namespace hpl {
 
 	};
 
-	//---------------------------------------------
 
 };

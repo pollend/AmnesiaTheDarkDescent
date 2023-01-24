@@ -573,8 +573,8 @@ namespace hpl {
 
 			//Create the final model matrix
 			modelMtx = cMath::MatrixMul(m_mtx3DTransform, mtxPreMul);
-			projectionMtx = apFrustum->GetProjectionMatrix();
-			viewMtx = apFrustum->GetViewMatrix();
+			projectionMtx = apFrustum->GetProjectionMatrix().GetTranspose();
+			viewMtx = apFrustum->GetViewMatrix().GetTranspose();
 		}
 		//Screen projection
 		else

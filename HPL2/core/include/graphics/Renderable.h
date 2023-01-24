@@ -167,8 +167,5 @@ namespace hpl {
 		iRenderableContainerNode *mpRenderContainerNode;
 
 		void* mpRenderableUserData;
-
-		// need to hack in this occlusion query to get this to work correctly
-		bgfx::OcclusionQueryHandle m_occlusionQuery;
 	};
 };

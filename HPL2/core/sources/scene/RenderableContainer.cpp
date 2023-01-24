@@ -133,6 +133,14 @@ namespace hpl {
 		mbNeedAABBUpdate = false;
 		mPrevFrustumCollision = eCollision_Outside;
 	}
+	
+	iRenderableContainerNode::~iRenderableContainerNode(){
+		if(bgfx::isValid(m_occlusionQuery)) {
+			bgfx::destroy(m_occlusionQuery);
+		}
+		m_occlusionQuery = BGFX_INVALID_HANDLE;
+	}
+
 
 	//-----------------------------------------------------------------------
 

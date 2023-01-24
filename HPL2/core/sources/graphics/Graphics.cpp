@@ -69,7 +69,6 @@ namespace hpl {
 		mpLowLevelResources = apLowLevelResources;
 
 		mpMeshCreator = NULL;
-		mpTextureCreator = NULL;
 		mpDecalCreator = NULL;
 	}
 
@@ -109,7 +108,6 @@ namespace hpl {
 		STLDeleteAll(mlstTextures);
 
 		hplDelete(mpMeshCreator);
-		hplDelete(mpTextureCreator);
 		hplDelete(mpDecalCreator);
 
 		Log("--------------------------------------------------------\n\n");
@@ -158,7 +156,6 @@ namespace hpl {
 		////////////////////////////////////////////////
 		// Create systems
 		mpMeshCreator = hplNew( cMeshCreator,(mpLowLevelGraphics, apResources));
-		mpTextureCreator  = hplNew( cTextureCreator,(mpLowLevelGraphics, apResources));
 		mpDecalCreator = hplNew( cDecalCreator,(mpLowLevelGraphics, apResources));
 
 		////////////////////////////////////////////////

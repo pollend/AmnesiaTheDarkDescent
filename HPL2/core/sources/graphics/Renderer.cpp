@@ -206,14 +206,6 @@ namespace hpl
 
         STLDeleteAll(mvOcclusionObjectPool);
 
-        for (size_t i = 0; i < m_lightOcclusionPairs.size(); ++i)
-        {
-            if (bgfx::isValid(m_lightOcclusionPairs[i].m_occlusionQuery))
-            {
-                bgfx::destroy(m_lightOcclusionPairs[i].m_occlusionQuery);
-            }
-        }
-
         if (mpReflectionSettings)
             hplDelete(mpReflectionSettings);
     }
@@ -1623,8 +1615,8 @@ namespace hpl
                     shaderProgram.m_configuration.m_cull = Cull::CounterClockwise;
 
                     shaderProgram.m_modelTransform = transformMatrix;
-                    shaderProgram.m_view = mpCurrentFrustum->GetViewMatrix();
-                    shaderProgram.m_projection = *mpCurrentProjectionMatrix;
+                    shaderProgram.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+                    shaderProgram.m_projection = mpCurrentProjectionMatrix->GetTranspose();
 
                     GraphicsContext::DrawRequest drawRequest{ rt, layoutStream, shaderProgram };
                     drawRequest.m_width = mvScreenSize.x;
@@ -1632,18 +1624,6 @@ namespace hpl
 
                     context.Submit(view, drawRequest, handle);
                 });
-        }
-    }
-
-    //-----------------------------------------------------------------------
-
-    void iRenderer::RetrieveAllLightOcclusionPair(bool abWaitForResult)
-    {
-        for (size_t i = 0; i < mpCurrentSettings->m_lightOcclusionPairs.size(); ++i)
-        {
-            cLightOcclusionPair& loPair = mpCurrentSettings->m_lightOcclusionPairs[i];
-            loPair.mlSampleResults = 0;
-            bgfx::getResult(loPair.m_occlusionQuery, &loPair.mlSampleResults);
         }
     }
 
