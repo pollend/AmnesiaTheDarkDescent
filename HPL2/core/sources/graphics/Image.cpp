@@ -18,6 +18,7 @@ namespace hpl
         , format(desc.format)
     {
     }
+    
     ImageDescriptor::ImageDescriptor()
         : m_width(0)
         , m_height(0)

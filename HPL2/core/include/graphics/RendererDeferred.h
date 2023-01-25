@@ -227,13 +227,10 @@ namespace hpl {
 		void SetupLightsAndRenderQueries(GraphicsContext& context, RenderTarget& rt);
 		void InitLightRendering();
 
-		void RenderReflection(iRenderable *apObject);
-		void RenderSubMeshEntityReflection(cSubMeshEntity *pReflectionObject);
-
 		iVertexBuffer* GetLightShape(iLight *apLight, eDeferredShapeQuality aQuality);
 
-		iVertexBuffer *mpShapeSphere[eDeferredShapeQuality_LastEnum];
-		iVertexBuffer *mpShapePyramid;
+		std::array<iVertexBuffer*, eDeferredShapeQuality_LastEnum> mpShapeSphere;
+		iVertexBuffer* mpShapePyramid;
 
 		int mlMaxBatchLights;
 		int mlMaxBatchVertices;
@@ -278,9 +275,6 @@ namespace hpl {
 		std::array<std::shared_ptr<Image>, 2> m_outputImage;
 
 		RenderTarget m_edgeSmooth_LinearDepth;
-
-		iFrameBuffer *mpAccumBuffer;
-		iFrameBuffer *mpReflectionBuffer;
 
 		iTexture *mpRefractionTexture;
 		iTexture *mpReflectionTexture;
@@ -328,8 +322,7 @@ namespace hpl {
 
 
 		std::vector<cDeferredLight*> mvTempDeferredLights;
-		std::vector<cDeferredLight*> mvSortedLights[eDeferredLightList_LastEnum];
-
+		std::array<std::vector<cDeferredLight*>, eDeferredLightList_LastEnum> mvSortedLights;
 
 		//Static setting variables
 		static eDeferredGBuffer mGBufferType;

@@ -20,7 +20,9 @@
 #ifndef HPL_LIGHT_H
 #define HPL_LIGHT_H
 
+#include "graphics/AnimatedImage.h"
 #include "graphics/Image.h"
+#include "graphics/ImageResourceWrapper.h"
 #include "scene/Entity3D.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Renderable.h"
@@ -98,6 +100,7 @@ namespace hpl {
 		void SetFalloffMap(Image* apTexture);
 
 		void SetGoboTexture(Image* apTexture);
+		void SetGoboTexture(AnimatedImage* apTexture);
 		Image* GetGoboTexture();
 
 		///////////////////////////////
@@ -235,7 +238,9 @@ namespace hpl {
 		cWorld *mpWorld;
 
 		Image *mpFalloffMap = nullptr;
-		Image *mpGoboTexture = nullptr;
+		// Image *mpGoboTexture = nullptr;
+		// AnimatedImage* m_animatedGoboImage = nullptr;
+		ImageResourceWrapper m_goboImageWrapper;
 
 		eShadowMapResolution mShadowMapResolution;
 		float mfShadowMapBlurAmount;

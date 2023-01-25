@@ -12,6 +12,7 @@
 #include <bgfx/bgfx.h>
 #include <memory>
 #include <string>
+#include <engine/RTTI.h>
 
 namespace hpl
 {
@@ -51,6 +52,8 @@ namespace hpl
 
     class Image : public iResourceBase
     {
+        HPL_RTTI_IMPL_CLASS(iResourceBase, Image, "{d9cd842a-c76b-4261-879f-53f1baa5ff7c}")
+
     public:
         Image();
         Image(const tString& asName, const tWString& asFullPath);

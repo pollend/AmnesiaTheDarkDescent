@@ -20,6 +20,7 @@
 #pragma once
 
 #include <graphics/Image.h>
+#include "graphics/AnimatedImage.h"
 #include "resources/ResourceManager.h"
 #include "graphics/Texture.h"
 #include <functional>
@@ -63,6 +64,9 @@ namespace hpl {
 							unsigned int alTextureSizeLevel=0, ImageOptions options = ImageOptions());
 		
 		Image* CreateCubeMapImage(const tString& asName,bool abUseMipMaps, eTextureUsage aUsage=eTextureUsage_Normal,
+					unsigned int alTextureSizeLevel=0, ImageOptions options = ImageOptions());
+		
+		AnimatedImage* CreateAnimImage(const tString& asName,bool abUseMipMaps, eTextureType aType, eTextureUsage aUsage=eTextureUsage_Normal,
 					unsigned int alTextureSizeLevel=0, ImageOptions options = ImageOptions());
 
 

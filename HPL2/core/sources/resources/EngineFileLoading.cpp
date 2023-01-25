@@ -281,34 +281,46 @@ namespace hpl {
 			{
 				eTextureAnimMode animMode = ToTextureAnimMode(apElement->GetAttributeString("GoboAnimMode",""));
 				float fAnimFrameTime = apElement->GetAttributeFloat("GoboAnimFrameTime", 1);
+				cTextureManager::ImageOptions options= cTextureManager::ImageOptions();
+				options.m_uClamp = true;
+				options.m_vClamp = true;
 
-				Image *pGoboTex=NULL;
-				if(lightType  == eLightType_Spot)
-				{
-					//TODO: MP need to add CreateAnim to texture manager!
-					if(animMode == eTextureAnimMode_None) {
-						pGoboTex = apResources->GetTextureManager()->Create2DImage(sGobo,true);
-					} else {
-						BX_ASSERT(false, "TODO: MP need to add CreateAnim to texture manager!");
-						// 	pGoboTex = apResources->GetTextureManager()->CreateAnim(sGobo, true, eTextureType_2D);
+				if(animMode == eTextureAnimMode_None) {
+					switch(lightType) {
+						case eLightType_Point: {
+							auto* image = apResources->GetTextureManager()->CreateCubeMapImage(sGobo,true, eTextureUsage_Normal, 0, options);
+							if(image) {
+								pLight->SetGoboTexture(image);
+							} 
+							break;
+						}
+						default: {
+							auto* image = apResources->GetTextureManager()->Create2DImage(sGobo,true, eTextureType_2D, eTextureUsage_Normal, 0, options);
+							if(image) {
+								pLight->SetGoboTexture(image);
+							}
+							break;
+						}
 					}
-				}
-				else
-				{
-					//TODO: MP need to add CreateAnim to texture manager!
-					if(animMode == eTextureAnimMode_None) {
-						pGoboTex = apResources->GetTextureManager()->CreateCubeMapImage(sGobo,true);
-					} else {
-
-						BX_ASSERT(false, "TODO: MP need to add CreateAnim to texture manager!");
-						// 	pGoboTex = apResources->GetTextureManager()->CreateAnim(sGobo,true, eTextureType_CubeMap);
+				} else {
+					switch(lightType) {
+						case eLightType_Point: {
+							auto* image = apResources->GetTextureManager()->CreateAnimImage(sGobo,true, eTextureType_CubeMap, eTextureUsage_Normal, 0, options);
+							if(image) {
+								pLight->SetGoboTexture(image);
+								image->SetFrameTime(fAnimFrameTime);
+							} 
+							break;
+						}
+						default: {
+							auto* image = apResources->GetTextureManager()->CreateAnimImage(sGobo,true, eTextureType_2D, eTextureUsage_Normal, 0, options);
+							if(image) {
+								pLight->SetGoboTexture(image);
+								image->SetFrameTime(fAnimFrameTime);
+							}
+							break;
+						}
 					}
-				}
-
-				if(pGoboTex)
-				{
-					pLight->SetGoboTexture(pGoboTex);
-					// pGoboTex->SetFrameTime(fAnimFrameTime);
 				}
 			}
 		}

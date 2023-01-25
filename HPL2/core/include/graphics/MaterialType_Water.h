@@ -85,15 +85,15 @@ namespace hpl {
 			material::water::UseRefraction
 		> m_waterVariant;
 
-		bgfx::UniformHandle m_u_param;
-		bgfx::UniformHandle m_u_mtxInvViewRotation;
-		bgfx::UniformHandle m_u_fogColor;
+		bgfx::UniformHandle m_u_param = BGFX_INVALID_HANDLE;
+		bgfx::UniformHandle m_u_mtxInvViewRotation = BGFX_INVALID_HANDLE;
+		bgfx::UniformHandle m_u_fogColor = BGFX_INVALID_HANDLE;
 
-		bgfx::UniformHandle m_s_diffuseMap;
-		bgfx::UniformHandle m_s_normalMap;
-		bgfx::UniformHandle m_s_refractionMap;
-		bgfx::UniformHandle m_s_reflectionMap;
-		bgfx::UniformHandle m_s_envMap;
+		bgfx::UniformHandle m_s_diffuseMap = BGFX_INVALID_HANDLE;
+		bgfx::UniformHandle m_s_normalMap = BGFX_INVALID_HANDLE;
+		bgfx::UniformHandle m_s_refractionMap = BGFX_INVALID_HANDLE;
+		bgfx::UniformHandle m_s_reflectionMap = BGFX_INVALID_HANDLE;
+		bgfx::UniformHandle m_s_envMap = BGFX_INVALID_HANDLE;
 
 		void LoadData();
 		void DestroyData();

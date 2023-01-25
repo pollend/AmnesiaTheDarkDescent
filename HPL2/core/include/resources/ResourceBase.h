@@ -23,11 +23,13 @@
 #include <time.h>
 #include "system/SystemTypes.h"
 #include "system/LowLevelSystem.h"
+#include <engine/RTTI.h>
 
 namespace hpl {
 
 	class iResourceBase
 	{
+		HPL_RTTI_CLASS(iResourceBase, "{d9cd842a-c76b-4261-879f-53f1baa5ff7c}")
 	public:
 
 		iResourceBase(const tString& asName, const tWString& asFullPath,unsigned long alPrio);

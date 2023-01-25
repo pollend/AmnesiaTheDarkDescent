@@ -348,14 +348,9 @@ namespace hpl {
 		{
 			m_shadowJitterImage = std::make_shared<Image>();
 			TextureCreator::GenerateScatterDiskMap2D(*m_shadowJitterImage, mlShadowJitterSize,mlShadowJitterSamples, true);
-			// mpShadowJitterTexture = mpGraphics->CreateTexture("ShadowOffset", eTextureType_2D, eTextureUsage_Normal);
-			// mpGraphics->GetTextureCreator()->GenerateScatterDiskMap2D(mpShadowJitterTexture,mlShadowJitterSize,mlShadowJitterSamples, true);
 		}
 
-		// m_fullscreenFog = hpl::loadProgram("vs_post_effect", "fs_posteffect_fullscreen_fog");
-
 		m_lightBoxProgram = hpl::loadProgram("vs_light_box", "fs_light_box");
-		// m_spotLightProgram = hpl::loadProgram("vs_deferred_light", "fs_deferred_spotlight");
 		m_forVariant.Initialize(
 			ShaderHelper::LoadProgramHandlerDefault("vs_deferred_fog", "fs_deferred_fog", false, true));
 		m_spotlightVariants.Initialize(
@@ -431,14 +426,13 @@ namespace hpl {
 
 	void cRendererDeferred::DestroyData()
 	{
-		for(int i=0;i< eDeferredShapeQuality_LastEnum; ++i)
-		{
-			if(mpShapeSphere[i]) hplDelete(mpShapeSphere[i]);
+		for(auto& shape: mpShapeSphere) {
+			if(shape) {
+				delete shape;
+			}
 		}
 		if(mpShapePyramid) hplDelete(mpShapePyramid);
 
-		mpGraphics->DestroyFrameBuffer(mpAccumBuffer);
-		mpGraphics->DestroyFrameBuffer(mpReflectionBuffer);
 
 		// mpGraphics->DestroyTexture(mpReflectionTexture);
 
@@ -1723,11 +1717,9 @@ namespace hpl {
 
 		//////////////////////////////
 		//Clear lists
-		for(int i=0;i<eDeferredLightList_LastEnum; ++i)
-		{
-			mvSortedLights[i].resize(0); //No clear, keep array size data, no need to delete, same pointer in temp list
+		for(auto& lights: mvSortedLights) {
+			lights.clear();
 		}
-
 
 		//////////////////////////////
 		//Fill lists
@@ -1842,305 +1834,6 @@ namespace hpl {
 			}
 		}
 
-	}
-
-	void cRendererDeferred::RenderReflection(iRenderable *apObject)
-	{
-		////////////////////////////////////
-		//Set up variables
-		cSubMeshEntity *pReflectionObject = static_cast<cSubMeshEntity*>(apObject);
-		cMaterial *pRelfMaterial = pReflectionObject->GetMaterial();
-
-
-		///////////////////////////
-		//Check if surface is close enough for reflection!
-		bool bReflectionIsInRange=true;
-		if(pRelfMaterial->GetMaxReflectionDistance() > 0)
-		{
-			cVector3f vPoint = mpCurrentFrustum->GetOrigin() + mpCurrentFrustum->GetForward()*-1*pRelfMaterial->GetMaxReflectionDistance();
-			cVector3f vNormal = mpCurrentFrustum->GetForward();
-
-			cPlanef maxRelfctionDistPlane;
-			maxRelfctionDistPlane.FromNormalPoint(vNormal, vPoint);
-
-			if(cMath::CheckPlaneBVCollision(maxRelfctionDistPlane, *pReflectionObject->GetBoundingVolume())==eCollision_Outside)
-			{
-				bReflectionIsInRange = false;
-			}
-		}
-
-		//////////////////////////////////////////////
-		// Render the reflection!
-		if(mpCurrentSettings->mbRenderWorldReflection && bReflectionIsInRange && pReflectionObject->GetIsOneSided())
-		{
-			RenderSubMeshEntityReflection(pReflectionObject);
-		}
-		//////////////////////////////////////////////
-		// No reflection, just clear!
-		else
-		{
-			if(mbReflectionTextureCleared == false)
-			{
-				if(mpCurrentSettings->mbLog) Log("- Clear reflection Begin!\n");
-
-				cRenderTarget renderTarget;
-				renderTarget.mpFrameBuffer = mpReflectionBuffer;
-
-				SetFrameBuffer(mpReflectionBuffer, false, false);
-
-				ClearFrameBuffer(eClearFrameBufferFlag_Color, false);
-
-				// SetAccumulationBuffer();
-
-				mbReflectionTextureCleared = true;
-
-				if(mpCurrentSettings->mbLog) Log("- Clear reflection End!\n");
-			}
-		}
-	}
-
-	void cRendererDeferred::RenderSubMeshEntityReflection(cSubMeshEntity *pReflectionObject)
-	{
-		cMaterial *pRelfMaterial = pReflectionObject->GetMaterial();
-
-		if(mbLog) Log("------------- Setting up Reflection rendering -----------\n");
-
-		////////////////////////
-		//Reset settings from normal rendering
-		cFrustum *pSaved_Frustum = mpCurrentFrustum;
-		cRenderSettings *pSaved_Settings = mpCurrentSettings;
-		RenderViewport pSaved_RenderTarget = m_currentRenderTarget;
-		bool bSaved_SendFrameBufferToPostEffects = mbSendFrameBufferToPostEffects;
-
-
-		SetAlphaLimit(mfDefaultAlphaLimit);//Need to have the normal alpha limit!
-
-		////////////////////////
-		//Setup settings
-		mpCurrentSettings->SetupReflectionSettings();
-
-		mpCurrentSettings->mpReflectionSettings->mbUseOcclusionCulling = pRelfMaterial->GetWorldReflectionOcclusionTest();
-
-		///////////////////////////////////
-		//Reflection texture is not cleared!
-		mbReflectionTextureCleared = false;
-
-		///////////////////////////////////
-		//Make render target
-		RenderViewport renderTarget;
-		// cVector2l vCurrentFrameBufferSize = mpCurrentRenderTarget->mpFrameBuffer ? mpCurrentRenderTarget->mpFrameBuffer->GetSize() : mvScreenSize;
-		// renderTarget.mpFrameBuffer = mpReflectionBuffer;
-		// renderTarget.mvPos = mpCurrentRenderTarget->mvPos / mlReflectionSizeDiv;
-		// renderTarget.mvSize.x = mpCurrentRenderTarget->mvSize.x == -1 ? vCurrentFrameBufferSize.x/mlReflectionSizeDiv : mpCurrentRenderTarget->mvSize.x/mlReflectionSizeDiv;
-		// renderTarget.mvSize.y = mpCurrentRenderTarget->mvSize.y == -1 ? vCurrentFrameBufferSize.y/mlReflectionSizeDiv : mpCurrentRenderTarget->mvSize.y/mlReflectionSizeDiv;
-
-		///////////////////////////
-		//Make a frustum, mirrored along the plane
-		cSubMesh *pSubMesh = pReflectionObject->GetSubMesh();
-		cVector3f vSurfaceNormal = cMath::Vector3Normalize(cMath::MatrixMul3x3(pReflectionObject->GetWorldMatrix(), pSubMesh->GetOneSidedNormal()));
-		cVector3f vSurfacePos = cMath::MatrixMul(pReflectionObject->GetWorldMatrix(), pSubMesh->GetOneSidedPoint());
-
-		cPlanef reflectPlane;
-		reflectPlane.FromNormalPoint(vSurfaceNormal, vSurfacePos);
-
-		cMatrixf mtxReflection = cMath::MatrixPlaneMirror(reflectPlane);
-		cMatrixf mtxReflView = cMath::MatrixMul(mpCurrentFrustum->GetViewMatrix(), mtxReflection);
-		cVector3f vReflOrigin = cMath::MatrixMul(mtxReflection, mpCurrentFrustum->GetOrigin());
-
-
-		cMatrixf mtxProj = mpCurrentFrustum->GetProjectionMatrix();
-
-		cPlanef cameraSpaceReflPlane = cMath::TransformPlane(mtxReflView, reflectPlane);
-		cMatrixf mtxReflProj = cMath::ProjectionMatrixObliqueNearClipPlane(mtxProj, cameraSpaceReflPlane);
-
-		cFrustum reflectFrustum;
-		reflectFrustum.SetupPerspectiveProj(mtxReflProj, mtxReflView,
-			mpCurrentFrustum->GetFarPlane(),mpCurrentFrustum->GetNearPlane(),
-			mpCurrentFrustum->GetFOV(), mpCurrentFrustum->GetAspect(),
-			vReflOrigin,false, &mtxProj, true);
-		reflectFrustum.SetInvertsCullMode(true);
-
-		///////////////////////////
-		//Reset clip planes
-		mpCurrentSettings->mpReflectionSettings->ResetOcclusionPlanes();
-
-		///////////////////////////
-		//End of reflection clip plane
-		if(pRelfMaterial->GetMaxReflectionDistance() > 0)
-		{
-			cVector3f vForward = mpCurrentFrustum->GetForward()*-1;
-			float fMaxReflDist = pRelfMaterial->GetMaxReflectionDistance();
-			cPlanef maxRelfctionDistPlane;
-
-			///////////////////////////////
-			//Forward and normal is aligned, the normal of plane becomes inverse forward
-			float fFDotN = cMath::Vector3Dot(vForward, vSurfaceNormal);
-			if(fFDotN <-0.99999f)
-			{
-				cVector3f vClipNormal, vClipPoint;
-				vClipNormal = vForward*-1;
-				vClipPoint = mpCurrentFrustum->GetOrigin() + vForward*pRelfMaterial->GetMaxReflectionDistance();
-
-				maxRelfctionDistPlane.FromNormalPoint(vClipNormal, vClipPoint);
-			}
-			///////////////////////////////
-			//Get the plane into camera space and then get a point where z=max reflection distance.
-			//Note: Because of test above a and b in plane cannot be 0!
-			else
-			{
-				cPlanef cameraSpacePlane = cMath::TransformPlane(mpCurrentFrustum->GetViewMatrix(), reflectPlane);
-
-				cVector3f vPoint1 = cVector3f(0,0, -fMaxReflDist);
-				cVector3f vPoint2 = cVector3f(0,0, -fMaxReflDist);
-
-				//Vertical row (x always same)
-				if(fabs(cameraSpacePlane.b) < 0.0001f)
-				{
-					vPoint1.x = (-cameraSpacePlane.c*-fMaxReflDist - cameraSpacePlane.d) / cameraSpacePlane.a;
-					vPoint2 = vPoint1;
-					vPoint2.y+=1;
-				}
-				//Horizontal row (y always same)
-				else if(fabs(cameraSpacePlane.a) < 0.0001f)
-				{
-					vPoint1.y = (-cameraSpacePlane.c*-fMaxReflDist - cameraSpacePlane.d) / cameraSpacePlane.b;
-					vPoint2 = vPoint1;
-					vPoint2.x+=1;
-				}
-				//Oblique row (x and y changes)
-				else
-				{
-					vPoint1.x = (-cameraSpacePlane.c*-fMaxReflDist - cameraSpacePlane.d) / cameraSpacePlane.a;
-					vPoint2.y = (-cameraSpacePlane.c*-fMaxReflDist - cameraSpacePlane.d) / cameraSpacePlane.b;
-				}
-
-				cMatrixf mtxInvCamera = cMath::MatrixInverse(mpCurrentFrustum->GetViewMatrix());
-				vPoint1 = cMath::MatrixMul(mtxInvCamera, vPoint1);
-				vPoint2 = cMath::MatrixMul(mtxInvCamera, vPoint2);
-
-				cVector3f vNormal = cMath::Vector3Cross(vPoint1-vReflOrigin, vPoint2-vReflOrigin);
-				vNormal.Normalize();
-				//make sure normal has correct sign!
-				if(cMath::Vector3Dot(vSurfaceNormal, vNormal)<0) vNormal = vNormal*-1;
-
-				maxRelfctionDistPlane.FromNormalPoint(vNormal, vPoint1);
-			}
-
-
-			mpCurrentSettings->mpReflectionSettings->AddOcclusionPlane(maxRelfctionDistPlane);
-		}
-
-		//////////////////////////
-		// Add screen rect Occlusion planes!
-		if(mpCurrentSettings->mbClipReflectionScreenRect)
-		{
-			cVector3f vUp = reflectFrustum.GetViewMatrix().GetUp();
-			cVector3f vRight = reflectFrustum.GetViewMatrix().GetRight();
-			cVector3f vForward = reflectFrustum.GetViewMatrix().GetForward();
-			cVector3f vOrigin = reflectFrustum.GetOrigin();
-
-			float fNearPlane = reflectFrustum.GetNearPlane();
-			float fHalfFovTan = tan(reflectFrustum.GetFOV()*0.5f);
-			float fNearTop =  fHalfFovTan * fNearPlane;
-			float fNearRight = reflectFrustum.GetAspect() * fNearTop;
-
-			cVector3f vMin,vMax;
-			bool bNeedsClipRect = false;
-			bool bVisible = cMath::GetNormalizedClipRectFromBV(vMin, vMax, *pReflectionObject->GetBoundingVolume(), &reflectFrustum, fHalfFovTan);
-			if(bVisible)
-			{
-				if(mbLog) Log("  Normalized Clip limits: (%s) -> (%s)\n", vMin.ToString().c_str(), vMax.ToString().c_str());
-				////////////////////////////
-				// Right
-				if(vMax.x <1)
-				{
-					cVector3f vNearPlanePos = vOrigin + vRight*(vMax.x*fNearRight) + vForward*-fNearPlane;
-					cPlanef rightPlane;
-					rightPlane.FromPoints(vOrigin, vNearPlanePos, vNearPlanePos+vUp);
-					mpCurrentSettings->mpReflectionSettings->AddOcclusionPlane(rightPlane);
-					bNeedsClipRect =true;
-				}
-
-				////////////////////////////
-				// Left
-				if(vMin.x >-1)
-				{
-					cVector3f vNearPlanePos = vOrigin + vRight*(vMin.x*fNearRight) + vForward*-fNearPlane;
-					cPlanef leftPlane;
-					leftPlane.FromPoints(vOrigin, vNearPlanePos+vUp, vNearPlanePos);
-					mpCurrentSettings->mpReflectionSettings->AddOcclusionPlane(leftPlane);
-					bNeedsClipRect =true;
-				}
-
-				////////////////////////////
-				// Top
-				if(vMax.y <1)
-				{
-					cVector3f vNearPlanePos = vOrigin + vUp*(vMax.y*fNearTop) + vForward*-fNearPlane;
-					cPlanef topPlane;
-					topPlane.FromPoints(vOrigin, vNearPlanePos+vRight, vNearPlanePos);
-					mpCurrentSettings->mpReflectionSettings->AddOcclusionPlane(topPlane);
-					bNeedsClipRect = true;
-				}
-
-				////////////////////////////
-				// Bottom
-				if(vMin.y >-1)
-				{
-					cVector3f vNearPlanePos = vOrigin + vUp*(vMin.y*fNearTop) + vForward*-fNearPlane;
-					cPlanef bottomPlane;
-					bottomPlane.FromPoints(vOrigin, vNearPlanePos, vNearPlanePos+vRight);
-					mpCurrentSettings->mpReflectionSettings->AddOcclusionPlane(bottomPlane);
-					bNeedsClipRect =true;
-				}
-
-				////////////////////////////
-				// Add a stencil rect!
-				if(bNeedsClipRect)
-				{
-					// auto definition = renderTarget.GetSize();
-					cVector2l vFrameBufferSize = renderTarget.GetSize();
-					cVector2l vRenderTargetSize;
-					vRenderTargetSize.x = vFrameBufferSize.x;
-					vRenderTargetSize.y = vFrameBufferSize.y;
-
-					cRect2l clipRect;
-					cMath::GetClipRectFromBV(clipRect, *pReflectionObject->GetBoundingVolume(), mpCurrentFrustum, vRenderTargetSize, fHalfFovTan);
-
-					if(mbLog) Log("  Setting up scissor rect. pos: (%d, %d)  %d x %d\n", clipRect.x, clipRect.y,clipRect.w, clipRect.h);
-
-					mpCurrentSettings->mpReflectionSettings->mbUseScissorRect = true;
-					mpCurrentSettings->mpReflectionSettings->mvScissorRectPos = cVector2l(clipRect.x, clipRect.y);
-					mpCurrentSettings->mpReflectionSettings->mvScissorRectSize = cVector2l(clipRect.w, clipRect.h);
-				}
-			}
-		}
-
-		///////////////////////////
-		//Render
-		if(mpCurrentSettings->mbLog)
-			Log("\n==============================\n= BEGIN RENDER REFLECTION\n==============================\n\n");
-
-		Render(mfCurrentFrameTime, &reflectFrustum, mpCurrentWorld, mpCurrentSettings->mpReflectionSettings, renderTarget, false, mpCallbackList);
-
-		if(mpCurrentSettings->mbLog)
-			Log("\n==============================\n= END RENDER REFLECTION\n==============================\n\n");
-
-
-		///////////////////////////
-		//Set back to order!
-		BeginRendering(	mfCurrentFrameTime, pSaved_Frustum, mpCurrentWorld, pSaved_Settings, pSaved_RenderTarget,
-						bSaved_SendFrameBufferToPostEffects,mpCallbackList, false);
-
-
-		// SetAccumulationBuffer();
-
-		//Set trans stuff
-		SetDepthTest(true);
-		SetDepthWrite(false);
-
-		SetAlphaLimit(0.01f);
-		SetAlphaMode(eMaterialAlphaMode_Trans);
 	}
 
 }

@@ -21,6 +21,7 @@
 
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Image.h"
+#include "graphics/ImageResourceWrapper.h"
 #include "system/String.h"
 
 #include "impl/tinyXML/tinyxml.h"
@@ -113,7 +114,8 @@ namespace hpl {
 	{
 		if(mpVisibleNodeTracker) hplDelete(mpVisibleNodeTracker);
 		if(mpFalloffMap) mpTextureManager->Destroy(mpFalloffMap);
-		if(mpGoboTexture) mpTextureManager->Destroy(mpGoboTexture);
+		// if(mpGoboTexture) mpTextureManager->Destroy(mpGoboTexture);
+		m_goboImageWrapper = ImageResourceWrapper();
 	}
 
 	//-----------------------------------------------------------------------
@@ -434,21 +436,45 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	void iLight::SetGoboTexture(AnimatedImage* apTexture) {
+		// if(mpGoboTexture) {
+		// 	mpTextureManager->Destroy(mpGoboTexture);
+		// }
+		// if(m_animatedGoboImage) {
+		// 	mpTextureManager->Destroy(m_animatedGoboImage);
+		// }
+		m_goboImageWrapper = std::move(ImageResourceWrapper(mpTextureManager, apTexture));
+
+		// m_animatedGoboImage = apTexture;
+		// mpGoboTexture = nullptr;
+
+	}
+
 	void iLight::SetGoboTexture(Image *apTexture)
 	{
-		//Destroy any old texture.
-		if(mpGoboTexture) mpTextureManager->Destroy(mpGoboTexture);
+		m_goboImageWrapper = std::move(ImageResourceWrapper(mpTextureManager, apTexture));
 
-		mpGoboTexture = apTexture;
-		//TODO: MP need to configure clamp to edge
-		// if(mpGoboTexture) mpGoboTexture->SetWrapSTR(eTextureWrap_ClampToEdge);
+
+		// //Destroy any old texture.
+		// if(mpGoboTexture) {
+		// 	mpTextureManager->Destroy(mpGoboTexture);
+		// }
+		// if(m_animatedGoboImage) {
+		// 	mpTextureManager->Destroy(m_animatedGoboImage);
+		// }
+
+
+		// mpGoboTexture = apTexture;
+		// m_animatedGoboImage = nullptr;
+		// //TODO: MP need to configure clamp to edge
+		// // if(mpGoboTexture) mpGoboTexture->SetWrapSTR(eTextureWrap_ClampToEdge);
 	}
 
 	//-----------------------------------------------------------------------
 
 	Image* iLight::GetGoboTexture()
 	{
-		return mpGoboTexture;
+		return m_goboImageWrapper.GetImage();
 	}
 
 	//-----------------------------------------------------------------------

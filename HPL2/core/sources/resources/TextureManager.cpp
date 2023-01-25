@@ -20,6 +20,8 @@
 #include "resources/TextureManager.h"
 #include "absl/types/span.h"
 #include "bgfx/bgfx.h"
+#include "engine/RTTI.h"
+#include "graphics/AnimatedImage.h"
 #include "graphics/Bitmap.h"
 #include "graphics/Graphics.h"
 #include "graphics/Image.h"
@@ -32,6 +34,8 @@
 #include "system/LowLevelSystem.h"
 #include "system/String.h"
 #include <bx/debug.h>
+#include <memory>
+#include <vector>
 
 namespace hpl {
 
@@ -212,7 +216,6 @@ namespace hpl {
 			}
 			BX_ASSERT(vBitmaps.size() == 6, "vBitmaps.size() == 6");
 
-			image = new Image();
 			ImageDescriptor desc;
 			Image::InitializeFromBitmap(*image, *vBitmaps[0], desc);
 			Image::InitializeCubemapFromBitmaps(*image, absl::MakeSpan(vBitmaps), desc);
@@ -227,7 +230,7 @@ namespace hpl {
 		}
 		
 		EndLoad();
-		return nullptr;
+		return image;
 	}
 
 	Image* cTextureManager::Create3DImage(
@@ -251,6 +254,131 @@ namespace hpl {
 				return resource;
 			});
 	}
+
+	AnimatedImage* cTextureManager::CreateAnimImage(const tString& asName,bool abUseMipMaps, eTextureType aType, eTextureUsage aUsage,
+					unsigned int alTextureSizeLevel, ImageOptions options) {
+		BeginLoad(asName);
+
+		///////////////////////////
+		//Check the base name
+		int lPos = cString::GetFirstStringPos(asName, "01");
+		if(lPos <0)
+		{
+			Error("First frame of animation '%s' must contain '01'!\n", asName.c_str());
+			return NULL;
+		}
+
+		//Remove 01 in the string
+		tString sSub1 = cString::Sub(asName, 0,lPos);
+		tString sSub2 = cString::Sub(asName, lPos+2);
+		tString sBaseName = sSub1 + sSub2;
+
+		if(sSub2.size()==0 || sSub2[0]!='.')
+		{
+			Error("First frame of animation '%s' must contain '01' before extension!\n", asName.c_str());
+			return NULL;
+		}
+
+		///////////////////////////
+		//Check if texture exists
+
+		//Create a fake full path.
+		tWString sFirstFramePath = mpFileSearcher->GetFilePath(asName);
+		if(sFirstFramePath == _W(""))
+		{
+			Error("First frame of animation '%s' could not be found!\n", asName.c_str());
+			return NULL;
+		}
+		tWString sFakeFullPath = cString::GetFilePathW(sFirstFramePath) + cString::To16Char(cString::GetFileName(sBaseName));
+
+       	AnimatedImage* animatedImage = static_cast<AnimatedImage*>(GetResource(sFakeFullPath));
+
+		///////////////////////////
+		//Check if texture exists
+		if(!animatedImage)
+		{
+			tString sFileExt = cString::GetFileExt(sBaseName);
+			tString sFileName = cString::SetFileExt(cString::GetFileName(sBaseName),"");
+
+			tStringVec mvFileNames;
+
+			tString sTest = sFileName + "01."+sFileExt;
+			int lNum = 2;
+			tWStringVec vPaths;
+
+			while(true)
+			{
+				tWString sPath = mpFileSearcher->GetFilePath(sTest);
+
+				if(sPath == _W(""))
+				{
+					break;
+				}
+				else
+				{
+					vPaths.push_back(sPath);
+					if(lNum<10)
+						sTest = sFileName + "0"+cString::ToString(lNum)+"."+sFileExt;
+					else
+						sTest = sFileName + cString::ToString(lNum)+"."+sFileExt;
+
+					++lNum;
+				}
+			}
+
+			if(vPaths.empty())
+			{
+				Error("No textures found for animation %s\n",sBaseName.c_str());
+				EndLoad();
+				return NULL;
+			}
+
+		
+
+			std::vector<cBitmap*> vBitmaps;
+			for(size_t i =0; i< vPaths.size(); ++i)
+			{
+				cBitmap* pBmp = mpBitmapLoaderHandler->LoadBitmap(vPaths[i],0);
+				if(pBmp==NULL){
+					Error("Couldn't load bitmap '%s'!\n",cString::To8Char(vPaths[i]).c_str());
+
+					for(int j=0;j<(int)vBitmaps.size();j++) hplDelete(vBitmaps[j]);
+
+					EndLoad();
+					return NULL;
+				}
+
+				vBitmaps.push_back(pBmp);
+			}
+
+			//Create the animated texture
+			
+			animatedImage = new AnimatedImage(sBaseName, sFakeFullPath);
+			std::vector<std::unique_ptr<Image>> images;
+			for(auto& bitmap: vBitmaps) {
+				ImageDescriptor desc =  ImageDescriptor::CreateFromBitmap(*bitmap);
+				desc.m_configuration.m_uClamp = options.m_uClamp;
+				desc.m_configuration.m_vClamp = options.m_vClamp;
+				desc.m_isCubeMap = (aType == eTextureType_CubeMap);
+				std::unique_ptr<Image> image = std::make_unique<Image>();
+				Image::InitializeFromBitmap(*image, *bitmap, desc);
+				images.push_back(std::move(image));
+			}
+			animatedImage->Initialize(absl::MakeSpan(images));
+				
+			AddResource(animatedImage);
+
+			if(animatedImage){
+				animatedImage->IncUserCount();
+			} else {
+				Error("Couldn't texture '%s'\n",asName.c_str());
+			}
+		}
+
+		EndLoad();
+		return animatedImage;
+	}
+
 
 	
 	iTexture* cTextureManager::Create1D(const tString& asName,bool abUseMipMaps,
@@ -525,14 +653,12 @@ namespace hpl {
 
 	void cTextureManager::Update(float afTimeStep)
 	{
-		// tResourceBaseMapIt it = m_mapResources.begin();
-		// for(; it != m_mapResources.end(); ++it)
-		// {
-		// 	iResourceBase *pBase = it->second;
-		// 	iTexture *pTexture = static_cast<iTexture*>(pBase);
-
-		// 	pTexture->Update(afTimeStep);
-		// }
+		for(auto& res: m_mapResources) {
+			if (hpl::TypeInfo<hpl::AnimatedImage>::isType(*res.second)) {
+				auto* animatedImage = static_cast<hpl::AnimatedImage*>(res.second);
+				animatedImage->Update(afTimeStep);
+			}
+		}
 	}
 
 	//-----------------------------------------------------------------------
