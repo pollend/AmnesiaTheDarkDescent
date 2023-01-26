@@ -69,7 +69,10 @@ shaders = [
 # deferred
     { "type" : ShaderType.VS, "inout" : "resource/vs_deferred_light.io",              "input": "resource/vs_deferred_light.sc", "includes": ["resource"]},
     { "type" : ShaderType.FS, "inout" : "resource/vs_deferred_light.io",              "input": "resource/fs_deferred_pointlight.sc", "includes": ["resource"], "variants": pointlight_variants},
-    { "type" : ShaderType.FS, "inout" : "resource/vs_deferred_light.io",              "input": "resource/fs_deferred_spotlight.sc", "includes": ["resource"], "variants": spotlight_variants},
+    { "type" : ShaderType.FS, "inout" : "resource/vs_deferred_light.io",              "input": "resource/fs_deferred_spotlight.sc", "name": "fs_deferred_spotlight_low", "includes": ["resource"], "variants": spotlight_variants},
+    { "type" : ShaderType.FS, "inout" : "resource/vs_deferred_light.io",              "input": "resource/fs_deferred_spotlight.sc", "name": "fs_deferred_spotlight_medium", "includes": ["resource"], "defines": ["SHADOW_JITTER_SIZE=32", "SHADOW_JITTER_SAMPLES=16"], "variants": spotlight_variants},
+    { "type" : ShaderType.FS, "inout" : "resource/vs_deferred_light.io",              "input": "resource/fs_deferred_spotlight.sc", "name": "fs_deferred_spotlight_high", "includes": ["resource"], "defines": ["SHADOW_JITTER_SIZE=64", "SHADOW_JITTER_SAMPLES=32"], "variants": spotlight_variants},
+    
     { "type" : ShaderType.VS, "inout" : "resource/vs_light_box.io",                   "input": "resource/vs_light_box.sc", "includes": ["resource"]},
     { "type" : ShaderType.FS, "inout" : "resource/vs_light_box.io",                   "input": "resource/fs_light_box.sc", "includes": ["resource"]},
 #gui

@@ -15,6 +15,8 @@ namespace hpl {
         ImageResourceWrapper(ImageResourceWrapper&& other);
         ~ImageResourceWrapper();
 
+        void SetAutoDestroyResource(bool autoDestroyTextures);
+
         void operator=(const ImageResourceWrapper&& other) = delete;
         void operator=(ImageResourceWrapper&& other);
 
@@ -23,5 +25,6 @@ namespace hpl {
     private:
         hpl::iResourceBase* m_imageResource = nullptr;
         cTextureManager* m_textureManager = nullptr;
+        bool m_autoDestroyResource = true;
     };
 } // namespace hpl

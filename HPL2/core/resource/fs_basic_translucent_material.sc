@@ -3,7 +3,6 @@ $input v_position, v_color, v_normal, v_tangent, v_bitangent, v_texcoord0
 #include <common.sh>
 
 SAMPLERCUBE(s_envMap, 0);
-
 SAMPLER2D(s_diffuseMap, 1);
 SAMPLER2D(s_normalMap, 2);
 SAMPLER2D(s_refractionMap, 3);

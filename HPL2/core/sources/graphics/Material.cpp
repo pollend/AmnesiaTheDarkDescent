@@ -33,6 +33,8 @@
 #include "graphics/MaterialType.h"
 
 #include "math/Math.h"
+#include <utility>
+#include <bx/debug.h>
 
 
 namespace hpl {
@@ -108,26 +110,13 @@ namespace hpl {
 
 	cMaterial::~cMaterial()
 	{
-		if(mpVars) hplDelete(mpVars);
-
-		////////////////////////
-		// Destroy all textures
-		if(mbAutoDestroyTextures)
-		{
-			for(int i=0;i<eMaterialTexture_LastEnum; ++i)
-			{
-				if(m_image[i]) mpResources->GetTextureManager()->Destroy(m_image[i]);
-			}
+		if(mpVars) {
+			hplDelete(mpVars);
+		}
+		for(auto& image: m_image) {
+			image.SetAutoDestroyResource(mbAutoDestroyTextures);
 		}
 	}
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	void cMaterial::SetType(iMaterialType* apType)
 	{
@@ -160,14 +149,16 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 
 
-	void cMaterial::SetImage(eMaterialTexture aType, Image *apTexture) 
+	void cMaterial::SetImage(eMaterialTexture aType, iResourceBase *apTexture) 
 	{
-		m_image[aType] = apTexture;
+		BX_ASSERT(TypeInfo<Image>().isType(*apTexture) || TypeInfo<AnimatedImage>().isType(*apTexture), "cMaterial::SetImage: apTexture is not an Image")
+
+		m_image[aType] = std::move(ImageResourceWrapper(mpResources->GetTextureManager(), apTexture));
 	}
 
 	Image* cMaterial::GetImage(eMaterialTexture aType)
 	{
-		return m_image[aType];
+		return m_image[aType].GetImage();
 	}
 
 

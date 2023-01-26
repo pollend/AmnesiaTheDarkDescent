@@ -242,7 +242,9 @@ namespace hpl
                                 program.m_textures.push_back({m_s_envMapAlphaMap, cubemapAlphaImage->GetHandle(), 4});
                             }
                         }
-                        flags |= material::translucent::Translucent_Refraction;
+                        // mpGraphics->GetRenderer(eRenderer_Main)->GetRefractionTexture();
+                        // program.m_textures.push_back({m_s_refractionMap, apRenderer->getRef()->GetHandle(), 3});
+                        // flags |= material::translucent::Translucent_Refraction;
                     }
                     if(pVars->mbRefractionNormals && bRefractionEnabled) {
                         uniform.useScreenNormal = 1.0f;
@@ -255,7 +257,7 @@ namespace hpl
                     if(bRefractionEnabled == false && cubemapImage) {
                         if(normalImage) {
                             flags |= material::translucent::Translucent_NormalMap;
-                            program.m_textures.push_back({m_s_normalMap, normalImage->GetHandle(), 1});
+                            program.m_textures.push_back({m_s_normalMap, normalImage->GetHandle(), 2});
                         }
                         flags |= material::translucent::Translucent_UseCubeMap;
                         program.m_textures.push_back({m_s_envMap, cubemapImage->GetHandle(), 0});

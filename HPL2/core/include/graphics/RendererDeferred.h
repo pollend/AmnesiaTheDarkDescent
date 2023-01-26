@@ -154,8 +154,8 @@ namespace hpl {
 		cRendererDeferred(cGraphics *apGraphics,cResources* apResources);
 		~cRendererDeferred();
 
-		bool LoadData();
-		void DestroyData();
+		virtual bool LoadData() override;
+		virtual void DestroyData() override;
 
 		virtual std::shared_ptr<Image> GetDepthStencilImage() override;
 		virtual std::shared_ptr<Image> GetOutputImage() override;
@@ -300,7 +300,6 @@ namespace hpl {
 
 		bgfx::UniformHandle m_s_depthMap;
 		bgfx::UniformHandle m_s_positionMap;
-		bgfx::UniformHandle m_s_deferredColorMap; // TODO: combined with diffuseMap
 		bgfx::UniformHandle m_s_diffuseMap;
 		bgfx::UniformHandle m_s_normalMap;
 		bgfx::UniformHandle m_s_specularMap;
@@ -308,6 +307,7 @@ namespace hpl {
 		bgfx::UniformHandle m_s_spotFalloffMap;
 		bgfx::UniformHandle m_s_shadowMap;
 		bgfx::UniformHandle m_s_goboMap;
+		bgfx::UniformHandle m_s_shadowOffsetMap;
 		
 		bgfx::ProgramHandle m_edgeSmooth_UnpackDepthProgram;
 		bgfx::ProgramHandle m_lightBoxProgram;

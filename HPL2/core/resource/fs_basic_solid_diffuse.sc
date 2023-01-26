@@ -2,6 +2,7 @@ $input v_texcoord0, v_normal, v_tangent, v_bitangent, v_view, v_position
 
 #include <common.sh>
 
+
 SAMPLERCUBE(s_envMap, 0);
 SAMPLER2D(s_normalMap, 1);
 SAMPLER2D(s_specularMap, 2);

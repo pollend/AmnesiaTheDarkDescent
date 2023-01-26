@@ -28,9 +28,13 @@ namespace hpl {
     }
 
     ImageResourceWrapper::~ImageResourceWrapper() {
-        if (m_textureManager && m_imageResource) {
+        if (m_textureManager && m_imageResource && m_autoDestroyResource) {
             m_textureManager->Destroy(m_imageResource);
         }
+    }
+
+    void ImageResourceWrapper::SetAutoDestroyResource(bool autoDestroyResource) {
+        m_autoDestroyResource = autoDestroyResource;
     }
 
     void ImageResourceWrapper::operator=(ImageResourceWrapper&& other) {

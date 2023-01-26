@@ -306,43 +306,28 @@ namespace hpl {
 				createShadowMap(vShadowSize[lStartSize + eShadowMapResolution_Low]));
 		}
 
-		// Select samples depending quality and shader model (if dynamic branching is supported)
-        if(mpLowLevelGraphics->GetCaps(eGraphicCaps_ShaderModel_4))
-		{
-			//High
-			if(mShadowMapQuality == eShadowMapQuality_High)	{
-				mlShadowJitterSize = 32;
-				mlShadowJitterSamples = 32;	//64 here instead? I mean, ATI has to deal with medium has max? or different max for ATI?
-			}
-			//Medium
-			else if(mShadowMapQuality == eShadowMapQuality_Medium) {
-				mlShadowJitterSize = 32;
-				mlShadowJitterSamples = 16;
-			}
-			//Low
-			else {
-				mlShadowJitterSize = 0;
-				mlShadowJitterSamples = 0;
-			}
+		//High
+		if(mShadowMapQuality == eShadowMapQuality_High)	{
+			mlShadowJitterSize = 64;
+			mlShadowJitterSamples = 32;	//64 here instead? I mean, ATI has to deal with medium has max? or different max for ATI?
+			m_spotlightVariants.Initialize(
+				ShaderHelper::LoadProgramHandlerDefault("vs_deferred_light", "fs_deferred_spotlight_high", false, true));
 		}
-		else
-		{
-			//High
-			if(mShadowMapQuality == eShadowMapQuality_High)	{
-				mlShadowJitterSize = 32;
-				mlShadowJitterSamples = 16;
-			}
-			//Medium
-			else if(mShadowMapQuality == eShadowMapQuality_Medium)	{
-				mlShadowJitterSize = 32;
-				mlShadowJitterSamples = 4;
-			}
-			//Low
-			else {
-				mlShadowJitterSize = 0;
-				mlShadowJitterSamples = 0;
-			}
+		//Medium
+		else if(mShadowMapQuality == eShadowMapQuality_Medium) {
+			mlShadowJitterSize = 32;
+			mlShadowJitterSamples = 16;
+			m_spotlightVariants.Initialize(
+				ShaderHelper::LoadProgramHandlerDefault("vs_deferred_light", "fs_deferred_spotlight_medium", false, true));
 		}
+		//Low
+		else {
+			mlShadowJitterSize = 0;
+			mlShadowJitterSamples = 0;
+			m_spotlightVariants.Initialize(
+				ShaderHelper::LoadProgramHandlerDefault("vs_deferred_light", "fs_deferred_spotlight_low", false, true));
+		}
+
 
 		if(mShadowMapQuality != eShadowMapQuality_Low)
 		{
@@ -353,8 +338,6 @@ namespace hpl {
 		m_lightBoxProgram = hpl::loadProgram("vs_light_box", "fs_light_box");
 		m_forVariant.Initialize(
 			ShaderHelper::LoadProgramHandlerDefault("vs_deferred_fog", "fs_deferred_fog", false, true));
-		m_spotlightVariants.Initialize(
-			ShaderHelper::LoadProgramHandlerDefault("vs_deferred_light", "fs_deferred_spotlight", false, true));
 		m_pointLightVariants.Initialize(
 			ShaderHelper::LoadProgramHandlerDefault("vs_deferred_light", "fs_deferred_pointlight", false, true));
 		// uniforms
@@ -365,10 +348,10 @@ namespace hpl {
 		m_u_fogColor = bgfx::createUniform("u_fogColor", bgfx::UniformType::Vec4);
 		m_u_spotViewProj = bgfx::createUniform("u_spotViewProj", bgfx::UniformType::Mat4);
 		m_u_mtxInvViewRotation = bgfx::createUniform("u_mtxInvViewRotation", bgfx::UniformType::Mat4);
+		m_u_overrideColor = bgfx::createUniform("u_overrideColor", bgfx::UniformType::Vec4);
 
 		// samplers
 		m_s_depthMap = bgfx::createUniform("s_depthMap", bgfx::UniformType::Sampler);
-		m_s_deferredColorMap = bgfx::createUniform("s_deferredColorMap", bgfx::UniformType::Sampler);
 		m_s_diffuseMap = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
 		m_s_normalMap = bgfx::createUniform("s_normalMap", bgfx::UniformType::Sampler);
 		m_s_specularMap = bgfx::createUniform("s_specularMap", bgfx::UniformType::Sampler);
@@ -377,8 +360,8 @@ namespace hpl {
 		m_s_spotFalloffMap = bgfx::createUniform("s_spotFalloffMap", bgfx::UniformType::Sampler);
 		m_s_shadowMap = bgfx::createUniform("s_shadowMap", bgfx::UniformType::Sampler);
 		m_s_goboMap = bgfx::createUniform("s_goboMap", bgfx::UniformType::Sampler);
-		m_u_overrideColor = bgfx::createUniform("u_overrideColor", bgfx::UniformType::Vec4);
-
+		m_s_shadowOffsetMap = bgfx::createUniform("s_shadowOffsetMap", bgfx::UniformType::Sampler);
+		
 		////////////////////////////////////
 		//Create SSAO programs and textures
 		if(mbSSAOLoaded && mpLowLevelGraphics->GetCaps(eGraphicCaps_TextureFloat)==0)
@@ -1020,7 +1003,7 @@ namespace hpl {
 		context.ClearTarget(context.StartPass("Shadow Pass Clear"), depthClear);
 		
 		bgfx::ViewId view = context.StartPass("Shadow Pass");
-		for(size_t i=0; i<mvShadowCasters.size(); ++i)
+		for(auto& shadowCaster: mvShadowCasters)
 		{
 			rendering::detail::ZPassInput options;
 			options.m_height = size.y;
@@ -1028,7 +1011,7 @@ namespace hpl {
 			options.m_cull = pLightFrustum->GetInvertsCullMode() ? Cull::Clockwise : Cull::CounterClockwise;
 			options.m_view = pLightFrustum->GetViewMatrix().GetTranspose();
 			options.m_projection = pLightFrustum->GetProjectionMatrix().GetTranspose();
-			rendering::detail::RenderZPassObject(view, options, context, this, mvShadowCasters[i], rt);
+			rendering::detail::RenderZPassObject(view, options, context, this, shadowCaster, rt);
 		}
 	}
 
@@ -1059,7 +1042,7 @@ namespace hpl {
 				const auto& color = light->mpLight->GetDiffuseColor();
 				float lightColor[4] = {color.r, color.g, color.b, color.a};
 				shaderProgram.m_handle = m_lightBoxProgram;
-				shaderProgram.m_textures.push_back({m_s_deferredColorMap, resolveRenderImage(m_gBufferColor)->GetHandle(), 0});
+				shaderProgram.m_textures.push_back({m_s_diffuseMap, resolveRenderImage(m_gBufferColor)->GetHandle(), 0});
 				shaderProgram.m_uniforms.push_back({m_u_lightColor, lightColor});
 
 				shaderProgram.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
@@ -1084,9 +1067,6 @@ namespace hpl {
 				GraphicsContext::DrawRequest drawRequest {rt, layoutStream, shaderProgram};
 				drawRequest.m_width = mvScreenSize.x;
 				drawRequest.m_height = mvScreenSize.y;
-				// if(bgfx::isValid(light->m_occlusionQuery)) {
-				// 	bgfx::setCondition(light->m_occlusionQuery, true);
-				// }
 				context.Submit(view, drawRequest);
 			};
 
@@ -1094,8 +1074,6 @@ namespace hpl {
 			const auto boxStencilPass = context.StartPass("eDeferredLightList_Box_StencilFront_RenderBack");
 			bgfx::setViewMode(boxStencilPass, bgfx::ViewMode::Sequential);
 
-			// auto& renderStencilFront = mvSortedLights[eDeferredLightList_Box_StencilFront_RenderBack];
-			// auto lightIt = renderStencilFront.begin();
 			for(auto& light : mvSortedLights[eDeferredLightList_Box_StencilFront_RenderBack]) {
 				{
 					GraphicsContext::ShaderProgram shaderProgram;
@@ -1117,12 +1095,9 @@ namespace hpl {
 					shaderProgram.m_modelTransform = cMath::MatrixMul(light->mpLight->GetWorldMatrix(), light->GetLightMtx()).GetTranspose();
 
 					GraphicsContext::DrawRequest drawRequest {rt, layoutStream, shaderProgram};
-					drawRequest.m_clear =  GraphicsContext::ClearRequest{0, 0, 0, ClearOp::Stencil};
+					// drawRequest.m_clear =  GraphicsContext::ClearRequest{0, 0, 0, ClearOp::Stencil};
 					drawRequest.m_width = mvScreenSize.x;
 					drawRequest.m_height = mvScreenSize.y;
-					// if(bgfx::isValid(light->m_occlusionQuery)) {
-					// 	bgfx::setCondition(light->m_occlusionQuery, true);
-					// }
 					context.Submit(boxStencilPass, drawRequest);
 				}
 				
@@ -1215,12 +1190,14 @@ namespace hpl {
 							float lightForward[3];
 
 							float oneMinusCosHalfSpotFOV;
-							float pad[3];
+							float shadowMapOffset[2];
+							float pad;
 						} uParam = {
 							apLightData->mpLight->GetRadius(),
 							{vForward.x, vForward.y, vForward.z},
 							1 - pLightSpot->GetCosHalfFOV(),
-							{0,0,0}
+							{0 , 0},
+							0
 
 						};
 						auto goboImage = apLightData->mpLight->GetGoboTexture();
@@ -1239,8 +1216,7 @@ namespace hpl {
 						shaderProgram.m_uniforms.push_back({m_u_lightColor, lightColor});
 						shaderProgram.m_uniforms.push_back({m_u_spotViewProj, spotViewProj.v});
 
-						shaderProgram.m_uniforms.push_back({m_u_param, &uParam, 1});
-
+						
 						shaderProgram.m_textures.push_back({m_s_diffuseMap, resolveRenderImage(m_gBufferColor)->GetHandle(), 0});
 						shaderProgram.m_textures.push_back({m_s_normalMap, resolveRenderImage(m_gBufferNormalImage)->GetHandle(), 1});
 						shaderProgram.m_textures.push_back({m_s_positionMap, resolveRenderImage(m_gBufferPositionImage)->GetHandle(), 2});
@@ -1263,8 +1239,15 @@ namespace hpl {
 							{
 								RenderShadowPass(context, *apLightData, pShadowData->m_target);
 							}
+							const auto imageSize = pShadowData->m_target.GetImage()->GetImageSize();
+							uParam.shadowMapOffset[0] = 1.0f / imageSize.x ;
+							uParam.shadowMapOffset[1] = 1.0f / imageSize.y ;
+							if(m_shadowJitterImage) {
+								shaderProgram.m_textures.push_back({m_s_shadowOffsetMap, m_shadowJitterImage->GetHandle(), 7});
+							}
 							shaderProgram.m_textures.push_back({m_s_shadowMap, pShadowData->m_target.GetImage()->GetHandle(), 6});
 						}
+						shaderProgram.m_uniforms.push_back({m_u_param, &uParam, 2});
 						shaderProgram.m_handle = m_spotlightVariants.GetVariant(flags);
 						
 						context.Submit(pass, drawRequest);

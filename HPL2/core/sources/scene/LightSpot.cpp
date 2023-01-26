@@ -19,276 +19,241 @@
 
 #include "scene/LightSpot.h"
 
+#include "graphics/GraphicsTypes.h"
 #include "graphics/Image.h"
-#include "impl/tinyXML/tinyxml.h"
-#include "math/Math.h"
-#include "math/Frustum.h"
-#include "resources/TextureManager.h"
-#include "resources/Resources.h"
 #include "graphics/LowLevelGraphics.h"
+#include "impl/tinyXML/tinyxml.h"
+#include "math/Frustum.h"
+#include "math/Math.h"
+#include "resources/Resources.h"
+#include "resources/TextureManager.h"
 #include "scene/Camera.h"
 #include <bx/debug.h>
 
-#include "scene/World.h"
-#include "scene/Scene.h"
 #include "engine/Engine.h"
+#include "scene/Scene.h"
+#include "scene/World.h"
 
 #include "system/String.h"
 
 namespace hpl {
 
-	static const cMatrixf g_mtxTextureUnitFix(	0.5f,0,   0,   0.5f,
-												0,   0.5f,0,   0.5f,
-												0,   0,   0.5f,0.5f,
-												0,   0,   0,   1.0f
-												);
+    static const cMatrixf g_mtxTextureUnitFix(0.5f, 0, 0, 0.5f, 0, 0.5f, 0, 0.5f, 0, 0, 0.5f, 0.5f, 0, 0, 0, 1.0f);
 
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////
+    // CONSTRUCTORS
+    //////////////////////////////////////////////////////////////////////////
 
-	//-----------------------------------------------------------------------
+    //-----------------------------------------------------------------------
 
-	cLightSpot::cLightSpot(tString asName, cResources *apResources) : iLight(asName,apResources)
-	{
-		mbProjectionUpdated = true;
-		mbViewProjUpdated = true;
-		mbFrustumUpdated = true;
+    cLightSpot::cLightSpot(tString asName, cResources* apResources)
+        : iLight(asName, apResources) {
+        mbProjectionUpdated = true;
+        mbViewProjUpdated = true;
+        mbFrustumUpdated = true;
 
         mLightType = eLightType_Spot;
 
-		mpFrustum = hplNew( cFrustum, () );
+        mpFrustum = hplNew(cFrustum, ());
 
-		mlViewProjMatrixCount =-1;
-		mlViewMatrixCount =-1;
-		mlFrustumMatrixCount =-1;
+        mlViewProjMatrixCount = -1;
+        mlViewMatrixCount = -1;
+        mlFrustumMatrixCount = -1;
 
-		mfFOV = cMath::ToRad(60.0f);
-		mfAspect = 1.0f;
-		mfNearClipPlane = 0.1f;
-		mfRadius = 100.0f;
+        mfFOV = cMath::ToRad(60.0f);
+        mfAspect = 1.0f;
+        mfNearClipPlane = 0.1f;
+        mfRadius = 100.0f;
 
-		mfTanHalfFOV = tan(mfFOV*0.5f);
-		mfCosHalfFOV = cos(mfFOV*0.5f);
+        mfTanHalfFOV = tan(mfFOV * 0.5f);
+        mfCosHalfFOV = cos(mfFOV * 0.5f);
 
-		mbFovUpdated = true;
+        mbFovUpdated = true;
 
-		m_mtxView = cMatrixf::Identity;
-		m_mtxViewProj = cMatrixf::Identity;
-		m_mtxProjection = cMatrixf::Identity;
+        m_mtxView = cMatrixf::Identity;
+        m_mtxViewProj = cMatrixf::Identity;
+        m_mtxProjection = cMatrixf::Identity;
 
-		mpSpotFalloffMap = mpTextureManager->Create1DImage("core_falloff_linear",false);
-		// TODO: need to add configuration into TextureManager to set this
-		// mpSpotFalloffMap->SetWrapS(eTextureWrap_ClampToEdge);
-		// mpSpotFalloffMap->SetWrapT(eTextureWrap_ClampToEdge);
+        cTextureManager::ImageOptions options;
+        options.m_uClamp = true;
+        options.m_vClamp = true;
+        mpSpotFalloffMap = mpTextureManager->Create1DImage("core_falloff_linear", false, eTextureUsage_Normal, 0, options);
 
-		UpdateBoundingVolume();
-	}
+        UpdateBoundingVolume();
+    }
 
-	cLightSpot::~cLightSpot()
-	{
-		if(mpSpotFalloffMap) mpTextureManager->Destroy(mpSpotFalloffMap);
+    cLightSpot::~cLightSpot() {
+        if (mpSpotFalloffMap)
+            mpTextureManager->Destroy(mpSpotFalloffMap);
 
-		hplDelete(mpFrustum);
-	}
+        hplDelete(mpFrustum);
+    }
 
-	//-----------------------------------------------------------------------
+    //-----------------------------------------------------------------------
 
-	//////////////////////////////////////////////////////////////////////////
-	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////
+    // PUBLIC METHODS
+    //////////////////////////////////////////////////////////////////////////
 
-	//-----------------------------------------------------------------------
+    //-----------------------------------------------------------------------
 
-	void cLightSpot::SetRadius(float afX)
-	{
-		mfRadius = afX;
+    void cLightSpot::SetRadius(float afX) {
+        mfRadius = afX;
 
-		UpdateBoundingVolume();
+        UpdateBoundingVolume();
 
-		//This is so that the render container is updated.
-		SetTransformUpdated();
-		mbProjectionUpdated = true;
-	}
+        // This is so that the render container is updated.
+        SetTransformUpdated();
+        mbProjectionUpdated = true;
+    }
 
-	void cLightSpot::SetFOV(float afAngle)
-	{
-		mfFOV = afAngle;
-		mbProjectionUpdated = true;
+    void cLightSpot::SetFOV(float afAngle) {
+        mfFOV = afAngle;
+        mbProjectionUpdated = true;
 
-		mfTanHalfFOV = tan(mfFOV*0.5f);
-		mfCosHalfFOV = cos(mfFOV*0.5f);
-	}
+        mfTanHalfFOV = tan(mfFOV * 0.5f);
+        mfCosHalfFOV = cos(mfFOV * 0.5f);
+    }
 
-	//-----------------------------------------------------------------------
+    //-----------------------------------------------------------------------
 
-	const cMatrixf& cLightSpot::GetViewMatrix()
-	{
-		if(mlViewMatrixCount != GetTransformUpdateCount())
-		{
-			mlViewMatrixCount = GetTransformUpdateCount();
-			m_mtxView = cMath::MatrixInverse(GetWorldMatrix());
-		}
+    const cMatrixf& cLightSpot::GetViewMatrix() {
+        if (mlViewMatrixCount != GetTransformUpdateCount()) {
+            mlViewMatrixCount = GetTransformUpdateCount();
+            m_mtxView = cMath::MatrixInverse(GetWorldMatrix());
+        }
 
-		return m_mtxView;
-	}
+        return m_mtxView;
+    }
 
-	//-----------------------------------------------------------------------
+    //-----------------------------------------------------------------------
 
+    const cMatrixf& cLightSpot::GetProjectionMatrix() {
+        if (mbProjectionUpdated) {
+            float fFar = mfRadius;
+            float fNear = mfNearClipPlane;
+            float fTop = tan(mfFOV * 0.5f) * fNear;
+            float fBottom = -fTop;
+            float fRight = mfAspect * fTop;
+            float fLeft = mfAspect * fBottom;
 
-	const cMatrixf& cLightSpot::GetProjectionMatrix()
-	{
-		if(mbProjectionUpdated)
-		{
-			float fFar = mfRadius;
-			float fNear = mfNearClipPlane;
-			float fTop = tan(mfFOV*0.5f) * fNear;
-			float fBottom = -fTop;
-			float fRight = mfAspect * fTop;
-			float fLeft = mfAspect * fBottom;
+            float A = (2.0f * fNear) / (fRight - fLeft);
+            float B = (2.0f * fNear) / (fTop - fBottom);
+            float D = -1.0f;
+            float C = -(2.0f * fFar * fNear) / (fFar - fNear);
+            float Z = -(fFar + fNear) / (fFar - fNear);
 
-			float A = (2.0f*fNear) / (fRight - fLeft);
-			float B = (2.0f*fNear) / (fTop - fBottom);
-			float D = -1.0f;
-			float C = -(2.0f*fFar*fNear) / (fFar - fNear);
-			float Z = -(fFar + fNear)/(fFar - fNear);
+            float X = 0;
+            float Y = 0;
 
-			float X = 0;
-			float Y = 0;
+            m_mtxProjection = cMatrixf(A, 0, X, 0, 0, B, Y, 0, 0, 0, Z, C, 0, 0, D, 0);
 
-			m_mtxProjection = cMatrixf(
-				A,0,X,0,
-				0,B,Y,0,
-				0,0,Z,C,
-				0,0,D,0);
+            mbProjectionUpdated = false;
+            mbViewProjUpdated = true;
+            mbFrustumUpdated = true;
+        }
 
-			mbProjectionUpdated = false;
-			mbViewProjUpdated = true;
-			mbFrustumUpdated = true;
-		}
+        return m_mtxProjection;
+    }
 
-		return m_mtxProjection;
-	}
+    //-----------------------------------------------------------------------
 
-	//-----------------------------------------------------------------------
+    const cMatrixf& cLightSpot::GetViewProjMatrix() {
+        if (mlViewProjMatrixCount != GetTransformUpdateCount() || mbViewProjUpdated || mbProjectionUpdated) {
+            m_mtxViewProj = cMath::MatrixMul(GetProjectionMatrix(), GetViewMatrix());
+            m_mtxViewProj = cMath::MatrixMul(g_mtxTextureUnitFix, m_mtxViewProj);
 
-	const cMatrixf& cLightSpot::GetViewProjMatrix()
-	{
-		if(mlViewProjMatrixCount != GetTransformUpdateCount() || mbViewProjUpdated || mbProjectionUpdated)
-		{
-			m_mtxViewProj = cMath::MatrixMul(GetProjectionMatrix(),GetViewMatrix());
-			m_mtxViewProj = cMath::MatrixMul(g_mtxTextureUnitFix, m_mtxViewProj);
+            mlViewProjMatrixCount = GetTransformUpdateCount();
+            mbViewProjUpdated = false;
+        }
 
-			mlViewProjMatrixCount = GetTransformUpdateCount();
-			mbViewProjUpdated = false;
-		}
+        return m_mtxViewProj;
+    }
 
-		return m_mtxViewProj;
-	}
+    //-----------------------------------------------------------------------
 
-	//-----------------------------------------------------------------------
+    cFrustum* cLightSpot::GetFrustum() {
+        if (mlFrustumMatrixCount != GetTransformUpdateCount() || mbFrustumUpdated || mbProjectionUpdated) {
+            mpFrustum->SetupPerspectiveProj(
+                GetProjectionMatrix(), GetViewMatrix(), mfRadius, mfNearClipPlane, mfFOV, mfAspect, GetWorldPosition(), false);
+            mbFrustumUpdated = false;
+            mlFrustumMatrixCount = GetTransformUpdateCount();
+        }
 
-	cFrustum* cLightSpot::GetFrustum()
-	{
-		if(mlFrustumMatrixCount != GetTransformUpdateCount() || mbFrustumUpdated || mbProjectionUpdated)
-		{
-			mpFrustum->SetupPerspectiveProj(GetProjectionMatrix(),
-											GetViewMatrix(),
-											mfRadius,mfNearClipPlane,
-											mfFOV,mfAspect,GetWorldPosition(),false);
-			mbFrustumUpdated = false;
-			mlFrustumMatrixCount = GetTransformUpdateCount();
-		}
+        return mpFrustum;
+    }
 
-		return mpFrustum;
-	}
+    //-----------------------------------------------------------------------
 
-	//-----------------------------------------------------------------------
+    Image* cLightSpot::GetSpotFalloffMap() {
+        return mpSpotFalloffMap;
+    }
 
-	Image *cLightSpot::GetSpotFalloffMap()
-	{
-		return mpSpotFalloffMap;
-	}
+    void cLightSpot::SetSpotFalloffMap(Image* apTexture) {
+        if (mpSpotFalloffMap)
+            mpTextureManager->Destroy(mpSpotFalloffMap);
+        mpSpotFalloffMap = apTexture;
+    }
 
-	void cLightSpot::SetSpotFalloffMap(Image* apTexture)
-	{
-		if(mpSpotFalloffMap) mpTextureManager->Destroy(mpSpotFalloffMap);
-		mpSpotFalloffMap = apTexture;
-	}
+    //-----------------------------------------------------------------------
 
-	//-----------------------------------------------------------------------
+    bool cLightSpot::CollidesWithBV(cBoundingVolume* apBV) {
+        if (cMath::CheckBVIntersection(*GetBoundingVolume(), *apBV) == false)
+            return false;
 
+        return GetFrustum()->CollideBoundingVolume(apBV) != eCollision_Outside;
+    }
 
-	bool cLightSpot::CollidesWithBV(cBoundingVolume *apBV)
-	{
-		if(cMath::CheckBVIntersection(*GetBoundingVolume(), *apBV)==false) return false;
+    //-----------------------------------------------------------------------
 
-		return GetFrustum()->CollideBoundingVolume(apBV)!= eCollision_Outside;
-	}
+    bool cLightSpot::CollidesWithFrustum(cFrustum* apFrustum) {
+        return apFrustum->CollideFrustum(GetFrustum()) != eCollision_Outside;
+    }
 
-	//-----------------------------------------------------------------------
+    //-----------------------------------------------------------------------
 
-	bool cLightSpot::CollidesWithFrustum(cFrustum *apFrustum)
-	{
-		return apFrustum->CollideFrustum(GetFrustum())!=eCollision_Outside;
-	}
+    //////////////////////////////////////////////////////////////////////////
+    // PRIVATE METHODS
+    //////////////////////////////////////////////////////////////////////////
 
-	//-----------------------------------------------------------------------
+    //-----------------------------------------------------------------------
 
-	//////////////////////////////////////////////////////////////////////////
-	// PRIVATE METHODS
-	//////////////////////////////////////////////////////////////////////////
+    static eTextureAnimMode GetAnimMode(const tString& asType) {
+        if (cString::ToLowerCase(asType) == "none")
+            return eTextureAnimMode_None;
+        else if (cString::ToLowerCase(asType) == "loop")
+            return eTextureAnimMode_Loop;
+        else if (cString::ToLowerCase(asType) == "oscillate")
+            return eTextureAnimMode_Oscillate;
 
-	//-----------------------------------------------------------------------
+        return eTextureAnimMode_None;
+    }
 
+    void cLightSpot::ExtraXMLProperties(TiXmlElement* apMainElem) {
+        tString sTexture = cString::ToString(apMainElem->Attribute("ProjectionImage"), "");
 
-	static eTextureAnimMode GetAnimMode(const tString& asType)
-	{
-		if(cString::ToLowerCase(asType) == "none") return eTextureAnimMode_None;
-		else if(cString::ToLowerCase(asType) == "loop") return eTextureAnimMode_Loop;
-		else if(cString::ToLowerCase(asType) == "oscillate") return eTextureAnimMode_Oscillate;
+        eTextureAnimMode animMode = GetAnimMode(cString::ToString(apMainElem->Attribute("ProjectionAnimMode"), "None"));
+        float fFrameTime = cString::ToFloat(apMainElem->Attribute("ProjectionFrameTime"), 1.0f);
+        // Image *pTex = NULL;
 
-		return eTextureAnimMode_None;
-	}
+        if (animMode != eTextureAnimMode_None) {
+            auto animatedImage = mpTextureManager->CreateAnimImage(sTexture, true, eTextureType_2D);
+            animatedImage->SetAnimMode(animMode);
+            animatedImage->SetFrameTime(fFrameTime);
+            SetGoboTexture(animatedImage);
+        } else {
+            SetGoboTexture(mpTextureManager->Create2DImage(sTexture, true));
+        }
 
-	void cLightSpot::ExtraXMLProperties(TiXmlElement *apMainElem)
-	{
-		tString sTexture = cString::ToString(apMainElem->Attribute("ProjectionImage"),"");
+        mfAspect = cString::ToFloat(apMainElem->Attribute("Aspect"), mfAspect);
 
-		eTextureAnimMode animMode = GetAnimMode(cString::ToString(apMainElem->Attribute("ProjectionAnimMode"),"None"));
-		float fFrameTime = cString::ToFloat(apMainElem->Attribute("ProjectionFrameTime"),1.0f);
-		Image *pTex = NULL;
+        mfNearClipPlane = cString::ToFloat(apMainElem->Attribute("NearClipPlane"), mfNearClipPlane);
+    }
 
-        if(animMode != eTextureAnimMode_None)
-		{
-			BX_ASSERT(false, "Animation not supported yet!");
-			// pTex = mpTextureManager->CreateAnim(sTexture,true,eTextureType_2D);
-			// pTex->SetAnimMode(animMode);
-			// pTex->SetFrameTime(fFrameTime);
-		}
-		else
-		{
-			pTex = mpTextureManager->Create2DImage(sTexture,true);
-		}
+    //-----------------------------------------------------------------------
 
+    void cLightSpot::UpdateBoundingVolume() {
+        mBoundingVolume = GetFrustum()->GetBoundingVolume();
+    }
 
-		if(pTex)
-		{
-			SetGoboTexture(pTex);
-		}
-
-		mfAspect = cString::ToFloat(apMainElem->Attribute("Aspect"),mfAspect);
-
-		mfNearClipPlane = cString::ToFloat(apMainElem->Attribute("NearClipPlane"),mfNearClipPlane);
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cLightSpot::UpdateBoundingVolume()
-	{
-		mBoundingVolume = GetFrustum()->GetBoundingVolume();
-	}
-
-	//-----------------------------------------------------------------------
-
-}
+} // namespace hpl

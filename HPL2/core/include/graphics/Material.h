@@ -20,11 +20,13 @@
 #ifndef HPL_MATERIAL_H
 #define HPL_MATERIAL_H
 
-#include "graphics/Image.h"
-#include "system/SystemTypes.h"
-#include "math/MathTypes.h"
-#include "graphics/GraphicsTypes.h"
-#include "resources/ResourceBase.h"
+#include "graphics/AnimatedImage.h"
+#include <graphics/Image.h>
+#include <graphics/ImageResourceWrapper.h>
+#include <system/SystemTypes.h>
+#include <math/MathTypes.h>
+#include <graphics/GraphicsTypes.h>
+#include <resources/ResourceBase.h>
 
 namespace hpl {
 
@@ -76,7 +78,7 @@ namespace hpl {
 		void Compile();
 
 
-		void SetImage(eMaterialTexture aType, Image *apTexture);
+		void SetImage(eMaterialTexture aType, iResourceBase *apTexture);
 		Image *GetImage(eMaterialTexture aType);
 
 		void SetVars(iMaterialVars *apVars){ mpVars = apVars;}
@@ -188,7 +190,7 @@ namespace hpl {
 
 		bool mbUseAlphaDissolveFilter;
 
-		std::array<Image*, eMaterialTexture_LastEnum> m_image = {nullptr};
+		std::array<ImageResourceWrapper, eMaterialTexture_LastEnum> m_image = {ImageResourceWrapper()};
 
 		std::vector<cMaterialUvAnimation> mvUvAnimations;
 		bool mbHasUvAnimation;

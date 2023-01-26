@@ -372,7 +372,7 @@ namespace hpl
                 auto cubemapAlphaMap = apMaterial->GetImage(eMaterialTexture_CubeMapAlpha);
                 
                 if(diffuseMap) {
-                    program.m_textures.push_back({m_s_diffuseMap, diffuseMap->GetHandle(), 0});
+                    program.m_textures.push_back({m_s_diffuseMap, diffuseMap->GetHandle(), 4});
                 }
                 
                 if(normalImage) {

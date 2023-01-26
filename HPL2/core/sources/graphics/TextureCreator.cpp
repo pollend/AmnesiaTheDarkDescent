@@ -170,6 +170,7 @@ namespace hpl {
             inputImage.Initialize(desc, bgfx::copy(vTextureData.data(), vTextureData.size()));
 
         }
+
         void GenerateScatterDiskMap2D(Image& inputImage, int alSize, int alSamples, bool abSortSamples) {
             // ////////////////////
             // //Test so sizes are correct
@@ -265,7 +266,7 @@ namespace hpl {
                 }
             }
             ImageDescriptor desc =
-                ImageDescriptor::CreateTexture2D(vTextureSize.x, vTextureSize.y * vTextureSize.z, false, bgfx::TextureFormat::RGBA8U);
+                ImageDescriptor::CreateTexture2D(vTextureSize.x, vTextureSize.y * vTextureSize.z, false, bgfx::TextureFormat::RGBA8);
             inputImage.Initialize(desc, bgfx::copy(vTextureData.data(), vTextureData.size()));
         }
 
