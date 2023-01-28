@@ -164,7 +164,7 @@ void cLevelEditor::AppSpecificReset()
     mmapGroups.clear();
 	cLevelEditorGroup group(this,0,"None");
 	group.SetVisibility(true);
-	mmapGroups.insert(pair<unsigned int, cLevelEditorGroup>(0,group));
+	mmapGroups.insert(std::pair<unsigned int, cLevelEditorGroup>(0,group));
 }
 
 //--------------------------------------------------------------------
@@ -210,7 +210,7 @@ void cLevelEditor::AddGroup(unsigned int alID, const tString& asName)
 	cLevelEditorGroup group(this,alID,asName);
 	group.SetVisibility(true);
 
-	mmapGroups.insert(pair<unsigned int, cLevelEditorGroup>(alID,group));
+	mmapGroups.insert(std::pair<unsigned int, cLevelEditorGroup>(alID,group));
 }
 
 //--------------------------------------------------------------------

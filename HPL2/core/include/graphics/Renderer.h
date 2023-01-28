@@ -18,7 +18,6 @@
  */
 #pragma once
 
-#include "absl/types/span.h"
 #include "bgfx/bgfx.h"
 #include "graphics/Enum.h"
 #include "graphics/GraphicsContext.h"
@@ -67,7 +66,7 @@ namespace hpl {
 		* @param alNeededFlags The flags that the object must have to be considered.
 		* @param occlusionPlanes The planes to check against.
 		*/
-		bool IsObjectVisible(iRenderable *apObject, tRenderableFlag alNeededFlags, absl::Span<cPlanef> occlusionPlanes);
+		bool IsObjectVisible(iRenderable *apObject, tRenderableFlag alNeededFlags, std::span<cPlanef> occlusionPlanes);
 	}
 
 	class cNodeOcclusionPair

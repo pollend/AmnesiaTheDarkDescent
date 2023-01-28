@@ -245,7 +245,7 @@ namespace hpl
     }
 
 
-    void Image::InitializeCubemapFromBitmaps(Image& image, const absl::Span<cBitmap*> bitmaps, const ImageDescriptor& desc) {
+    void Image::InitializeCubemapFromBitmaps(Image& image, const std::span<cBitmap*> bitmaps, const ImageDescriptor& desc) {
         BX_ASSERT(bitmaps.size() == 6, "Cubemap must have 6 bitmaps");
         size_t size = 0;
         for(auto& bitmap : bitmaps) {

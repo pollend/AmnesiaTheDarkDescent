@@ -18,7 +18,6 @@
  */
 
 #include "resources/TextureManager.h"
-#include "absl/types/span.h"
 #include "bgfx/bgfx.h"
 #include "engine/RTTI.h"
 #include "graphics/AnimatedImage.h"
@@ -218,7 +217,7 @@ namespace hpl {
 
 			ImageDescriptor desc;
 			Image::InitializeFromBitmap(*image, *vBitmaps[0], desc);
-			Image::InitializeCubemapFromBitmaps(*image, absl::MakeSpan(vBitmaps), desc);
+			Image::InitializeCubemapFromBitmaps(*image, std::span(vBitmaps), desc);
 
 			for(int j=0;j<(int)vBitmaps.size();j++)	{
 				hplDelete(vBitmaps[j]);
@@ -364,7 +363,7 @@ namespace hpl {
 				Image::InitializeFromBitmap(*image, *bitmap, desc);
 				images.push_back(std::move(image));
 			}
-			animatedImage->Initialize(absl::MakeSpan(images));
+			animatedImage->Initialize(std::span(images));
 				
 			AddResource(animatedImage);
 

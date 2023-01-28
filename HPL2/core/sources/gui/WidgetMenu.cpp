@@ -92,8 +92,9 @@ namespace hpl
 	 */
 	void iWidgetMenu::ClearMenuItems()
 	{
-		for (tWidgetMenuItemVectorIt it= mvMenuItems.begin(); it != mvMenuItems.end(); ++it)
-			mpSet->DestroyWidget(*it);
+		for (auto& menuItem: mvMenuItems) {
+			mpSet->DestroyWidget(menuItem);
+		}
 
 		mvMenuItems.clear();
 	}

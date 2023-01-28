@@ -455,7 +455,7 @@ public:
 	bool GetDisableTriggers(){ return mbDisableTriggers;}
 
 	eLuxEnemyState GetCurrentEnemyState(){ return mCurrentState;}
-	string& GetCurrentEnemyStateName();
+	std::string& GetCurrentEnemyStateName();
 
 	bool CanSeePlayer(){ return mbCanSeePlayer;}
 	bool GetPlayerDetected(){ return mbPlayerDetected;}
@@ -777,7 +777,7 @@ protected:
 
 	cMatrixf m_mtxCharMeshOffset;
 
-	string msPolledEnemyStateName;
+	std::string msPolledEnemyStateName;
 
 	tString msIdleAnimationName[eLuxEnemyMoveType_LastEnum][eLuxEnemyPoseType_LastEnum];
 	tString msWalkAnimationName[eLuxEnemyMoveType_LastEnum][eLuxEnemyPoseType_LastEnum];

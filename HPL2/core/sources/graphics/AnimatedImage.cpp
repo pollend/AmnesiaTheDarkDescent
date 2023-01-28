@@ -74,7 +74,7 @@ namespace hpl {
         }
     }
 
-    void AnimatedImage::Initialize(absl::Span<std::unique_ptr<hpl::Image>> images) {
+    void AnimatedImage::Initialize(std::span<std::unique_ptr<hpl::Image>> images) {
         m_images.clear();
         for (auto& image : images) {
             m_images.push_back(std::move(image));

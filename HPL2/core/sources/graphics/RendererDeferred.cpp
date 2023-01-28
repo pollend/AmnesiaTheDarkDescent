@@ -22,7 +22,6 @@
 #include "bgfx/bgfx.h"
 #include <bx/debug.h>
 
-#include "absl/types/span.h"
 #include <cstdint>
 #include <graphics/Enum.h>
 #include "bx/math.h"
@@ -212,17 +211,17 @@ namespace hpl {
 			{
 				std::array<std::shared_ptr<Image>, 5> images = {m_gBufferColor[0], m_gBufferNormalImage[0], m_gBufferPositionImage[0], m_gBufferSpecular[0], m_gBufferDepthStencil[0]};
 				std::array<std::shared_ptr<Image>, 5> reflectionImages = {m_gBufferColor[1], m_gBufferNormalImage[1], m_gBufferPositionImage[1], m_gBufferSpecular[1], m_gBufferDepthStencil[1]};
-				m_gBuffer_full = {RenderTarget(absl::MakeSpan(images)), RenderTarget(absl::MakeSpan(reflectionImages)) };
+				m_gBuffer_full = {RenderTarget(std::span(images)), RenderTarget(std::span(reflectionImages)) };
 			}
 			{
 				std::array<std::shared_ptr<Image>, 2> images = {m_gBufferColor[0], m_gBufferDepthStencil[0]};
 				std::array<std::shared_ptr<Image>, 2> reflectionImages = {m_gBufferColor[1], m_gBufferDepthStencil[1]};
-				m_gBuffer_colorAndDepth = {RenderTarget(absl::MakeSpan(images)), RenderTarget(absl::MakeSpan(reflectionImages))};
+				m_gBuffer_colorAndDepth = {RenderTarget(std::span(images)), RenderTarget(std::span(reflectionImages))};
 			}
 			{
 				std::array<std::shared_ptr<Image>, 2> images = {m_outputImage[0], m_gBufferDepthStencil[0] };
 				std::array<std::shared_ptr<Image>, 2> reflectionImages = {m_outputImage[1], m_gBufferDepthStencil[0]};
-				m_output_target = {RenderTarget(absl::MakeSpan(images)), RenderTarget(absl::MakeSpan(reflectionImages))};
+				m_output_target = {RenderTarget(std::span(images)), RenderTarget(std::span(reflectionImages))};
 			}
 
 			m_gBuffer_color = {RenderTarget(m_gBufferColor[0]), RenderTarget(m_gBufferColor[1])};

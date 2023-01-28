@@ -119,15 +119,6 @@ namespace hpl {
 		return it->second;
 	}
 
-	//------------------------------------------------------------------------
-
-	cSaveObjectIterator cSaveObjectHandler::GetIterator()
-	{
-		return cSaveObjectIterator(&m_mapSaveObjects);
-	}
-
-	//------------------------------------------------------------------------
-
 	void cSaveObjectHandler::SetUpAll(cEngine *apGame)
 	{
 		int lMaxId =0;

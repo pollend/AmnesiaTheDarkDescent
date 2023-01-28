@@ -193,9 +193,10 @@ source_group("Platform" REGULAR_EXPRESSION "\\/impl\\/Platform.+")
 # setup libs
 
 set(OpenGL_GL_PREFERENCE LEGACY)
+find_package(DevIL REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(Theora REQUIRED)
-find_package(Devil REQUIRED)
+# find_package(Devil REQUIRED)
 find_package(GLEW REQUIRED)
 find_package(PythonInterp)
 find_package(Python)
@@ -213,7 +214,7 @@ set(HPL2_INCLUDES
     #Important that this is before dependencies so the correct OpenAL headers are used
     PRIVATE ${OALWRAPPER_INCLUDE_DIR}
     PRIVATE ${THEORA_INCLUDE_DIR}
-    PRIVATE ${DEVIL_INCLUDE_DIR}
+    PRIVATE ${IL_INCLUDE_DIR}
     PRIVATE ${GLEW_INCLUDE_DIRS}
     PRIVATE ${OPENGL_INCLUDE_DIR}
 )
@@ -245,7 +246,7 @@ target_link_libraries(HPL2
   ${OPENGL_gl_LIBRARY}
   ${OPENGL_glu_LIBRARY}
   ${THEORA_LIBRARY}
-  ${DEVIL_LIBRARY}
+  ${IL_LIBRARIES}
   z
   ${PLATFORM_LIBS}
   )

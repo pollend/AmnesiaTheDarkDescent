@@ -23,18 +23,13 @@
 #include "gui/Widget.h"
 
 #include "system/SystemTypes.h"
-
-using namespace std;
+#include <vector>
 
 namespace hpl {
 
 	class cGuiSet;
 	class cGuiSkin;
 	class cWidgetMenuItem;
-
-	typedef vector<cWidgetMenuItem*>		tWidgetMenuItemVector;
-	typedef tWidgetMenuItemVector::iterator	tWidgetMenuItemVectorIt;
-
 
 	class iWidgetMenu : public iWidget
 	{
@@ -100,7 +95,7 @@ namespace hpl {
 
 		////////////////////////////
 		// Data
-        tWidgetMenuItemVector mvMenuItems;
+        std::vector<cWidgetMenuItem*> mvMenuItems;
 		cWidgetMenuItem* mpHighlightedItem;
 
 		cVector3f mvTextPos;

@@ -18,12 +18,12 @@
  */
 #pragma once
 
-#include "bgfx/bgfx.h"
-#include "graphics/GraphicsContext.h"
-#include "graphics/Image.h"
-#include "graphics/Renderer.h"
-#include "graphics/ShaderVariantCollection.h"
-#include "math/MathTypes.h"
+#include <bgfx/bgfx.h>
+#include <graphics/GraphicsContext.h>
+#include <graphics/Image.h>
+#include <graphics/Renderer.h>
+#include <graphics/ShaderVariantCollection.h>
+#include <math/MathTypes.h>
 #include <array>
 #include <cstdint>
 #include <graphics/RenderTarget.h>
@@ -108,7 +108,6 @@ namespace hpl {
 		cMatrixf m_mtxViewSpaceTransform;
 
 		int mlArea = 0;
-		// bgfx::OcclusionQueryHandle m_occlusionQuery = BGFX_INVALID_HANDLE;
 		bool mbInsideNearPlane = false;
 		bool mbCastShadows = false;
 		eShadowMapResolution mShadowResolution = eShadowMapResolution_Low;

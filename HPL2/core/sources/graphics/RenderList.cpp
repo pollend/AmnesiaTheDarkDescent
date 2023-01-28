@@ -34,6 +34,7 @@
 #include "math/Frustum.h"
 
 #include <algorithm>
+#include <span>
 
 namespace hpl {
 
@@ -268,15 +269,15 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 	
-	absl::Span<iRenderable*> cRenderList::GetRenderableItems(eRenderListType aType) {
+	std::span<iRenderable*> cRenderList::GetRenderableItems(eRenderListType aType) {
 		if(mvSortedArrays[aType].empty()) {
-			return absl::Span<iRenderable*>();
+			return std::span<iRenderable*>();
 		}
-		return absl::MakeSpan(mvSortedArrays[aType]);
+		return std::span<iRenderable*>(mvSortedArrays[aType]);
 	}
 
-	absl::Span<iRenderable*> cRenderList::GetOcclusionQueryItems() {
-		return absl::MakeSpan(mvOcclusionQueryObjects);
+	std::span<iRenderable*> cRenderList::GetOcclusionQueryItems() {
+		return std::span<iRenderable*>(mvOcclusionQueryObjects);
 	}
 
 	static bool SortFunc_Z(iRenderable* apObjectA, iRenderable *apObjectB)

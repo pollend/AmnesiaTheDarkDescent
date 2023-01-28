@@ -96,7 +96,7 @@ namespace hpl
             return eShadowMapResolution_Low;
         }
 
-        bool IsObjectVisible(iRenderable* apObject, tRenderableFlag alNeededFlags, absl::Span<cPlanef> occlusionPlanes)
+        bool IsObjectVisible(iRenderable* apObject, tRenderableFlag alNeededFlags, std::span<cPlanef> occlusionPlanes)
         {
             if (!apObject->IsVisible())
             {

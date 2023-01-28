@@ -18,14 +18,10 @@
  */
 #pragma once
 
-#include <absl/types/span.h>
-#include "graphics/GraphicsTypes.h"
-#include "math/MathTypes.h"
-#include "system/SystemTypes.h"
+#include <graphics/GraphicsTypes.h>
+#include <span>
 
 namespace hpl {
-
-	//---------------------------------------------
 
 	class iRenderable;
 	class iLight;
@@ -46,8 +42,8 @@ namespace hpl {
 
 		bool ArrayHasObjects(eRenderListType aType);
 		
-		absl::Span<iRenderable*> GetRenderableItems(eRenderListType aType);
-		absl::Span<iRenderable*> GetOcclusionQueryItems();
+		std::span<iRenderable*> GetRenderableItems(eRenderListType aType);
+		std::span<iRenderable*> GetOcclusionQueryItems();
 
 		void Clear();
 
@@ -74,11 +70,11 @@ namespace hpl {
 		float mfFrameTime;
 		cFrustum *mpFrustum;
 
-		tRenderableVec mvOcclusionQueryObjects;
-		tRenderableVec mvSolidObjects;
-		tRenderableVec mvTransObjects;
-		tRenderableVec mvDecalObjects;
-		tRenderableVec mvIllumObjects;
+		std::vector<iRenderable*> mvOcclusionQueryObjects;
+		std::vector<iRenderable*> mvSolidObjects;
+		std::vector<iRenderable*> mvTransObjects;
+		std::vector<iRenderable*> mvDecalObjects;
+		std::vector<iRenderable*> mvIllumObjects;
 		std::vector<iLight*> mvLights;
 		std::vector<cFogArea*> mvFogAreas;
 

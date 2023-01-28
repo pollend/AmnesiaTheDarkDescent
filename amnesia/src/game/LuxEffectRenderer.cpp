@@ -21,7 +21,6 @@
 #include "bgfx/bgfx.h"
 #include "engine/Interface.h"
 #include <absl/container/inlined_vector.h>
-#include <absl/types/span.h>
 #include <graphics/Enum.h>
 #include <graphics/GraphicsContext.h>
 #include <graphics/RenderTarget.h>
@@ -64,14 +63,14 @@ cLuxEffectRenderer::cLuxEffectRenderer()
 	EngineInterface* engine = Interface<EngineInterface>::Get();
     std::array<std::shared_ptr<Image>, 2> outputImages = {pRendererDeferred->GetOutputImage(), pRendererDeferred->GetDepthStencilImage()};
 
-    m_outputTarget = RenderTarget(absl::MakeSpan(outputImages));
+    m_outputTarget = RenderTarget(std::span(outputImages));
 
     auto outlineImageDesc = ImageDescriptor::CreateTexture2D(vScreenSize.x, vScreenSize.y, false, bgfx::TextureFormat::RGBA8);
     outlineImageDesc.m_configuration.m_rt = RTType::RT_Write;
     auto outlineImage = std::make_shared<Image>();
     outlineImage->Initialize(outlineImageDesc);
     std::array<std::shared_ptr<Image>, 2> outlineImages = { outlineImage, pRendererDeferred->GetDepthStencilImage() };
-    m_outlineTarget = RenderTarget(absl::MakeSpan(outlineImages));
+    m_outlineTarget = RenderTarget(std::span(outlineImages));
 
     m_alphaRejectProgram = hpl::loadProgram("vs_alpha_reject", "fs_alpha_reject");
     m_blurProgram = hpl::loadProgram("vs_post_effect", "fs_posteffect_blur");

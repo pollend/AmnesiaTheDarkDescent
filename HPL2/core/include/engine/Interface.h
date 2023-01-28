@@ -14,7 +14,7 @@ namespace hpl {
         static T* Get();
 
         static uint32_t GetClassID() {
-            return UUID::ToGUID(T::RTTI_ClassID).m_data1;
+            return hpl::detail::ToGUID(T::RTTI_ClassID).m_data1;
         }
 
     private:

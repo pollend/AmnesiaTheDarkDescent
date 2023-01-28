@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <engine/UUID.h>
 
-namespace hpl::UUID {
+namespace hpl {
 
     bool operator==(const UUID& lhs, const UUID& rhs) {
         for(size_t i = 0; i < 16; i++) {

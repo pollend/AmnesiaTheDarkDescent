@@ -7,9 +7,8 @@
 #include <string>
 #include <vector>
 
-
-#include <SDL2/SDL_events.h>
-#include <SDL2/SDL_video.h>
+class SDL_Window;
+union SDL_Event;
 
 namespace hpl::entry_sdl {
     struct Configuration {

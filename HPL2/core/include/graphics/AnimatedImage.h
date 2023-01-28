@@ -1,8 +1,9 @@
 #pragma once
 
-#include <absl/types/span.h>
 #include <graphics/Image.h>
 #include <vector>
+
+#include <span>
 
 namespace hpl {
     class cTextureManager;
@@ -13,7 +14,7 @@ namespace hpl {
         AnimatedImage();
         AnimatedImage(const tString& asName, const tWString& asFullPath);
         virtual ~AnimatedImage();
-        void Initialize(absl::Span<std::unique_ptr<hpl::Image>> images);
+        void Initialize(std::span<std::unique_ptr<hpl::Image>> images);
 
         bgfx::TextureHandle GetHandle() const;
         Image* GetImage() const;

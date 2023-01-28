@@ -18,15 +18,16 @@
  */
 #pragma once
 
-#include "absl/container/inlined_vector.h"
-#include "graphics/GraphicsContext.h"
-#include "graphics/VertexBuffer.h"
+#include <graphics/GraphicsContext.h>
+#include <graphics/VertexBuffer.h>
+
+#include <absl/container/inlined_vector.h>
+
 #include <algorithm>
 #include <array>
 #include <bgfx/bgfx.h>
 #include <bx/debug.h>
-#include <cstddef>
-#include <cstdint>
+#include <span>
 #include <vector>
 
 namespace hpl
@@ -54,10 +55,10 @@ namespace hpl
             size_t NumElements() const;
 
             template<typename TData>
-            absl::Span<TData> GetElements()
+            std::span<TData> GetElements()
             {
                 BX_ASSERT(sizeof(TData) == Stride(), "Data must be same size as stride");
-                return absl::MakeSpan(reinterpret_cast<TData*>(m_buffer.data()), m_buffer.size() / Stride());
+                return std::span<TData*>(reinterpret_cast<TData*>(m_buffer.data()), m_buffer.size() / Stride());
             }
 
             template<typename TData>

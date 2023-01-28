@@ -224,7 +224,7 @@ namespace hpl {
 
     template<class T, class... TArgs>
     EnvironmentVariableContainer<T> Environment::CreateVariable(const std::string_view& name, TArgs&&... args) {
-        return CreateVariable<T>(UUID::From(name), std::forward<TArgs>(args)...);
+        return CreateVariable<T>(hpl::detail::From(name), std::forward<TArgs>(args)...);
     }
 
     template<class T>

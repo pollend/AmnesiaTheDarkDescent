@@ -1153,7 +1153,7 @@ bool iLuxEnemy::InRangeOfFood(iPhysicsBody *apFoodBody)
 
 //-----------------------------------------------------------------------
 
-string& iLuxEnemy::GetCurrentEnemyStateName()
+std::string& iLuxEnemy::GetCurrentEnemyStateName()
 {
 	msPolledEnemyStateName = cString::To8Char(gsLuxEnemyStates[mCurrentState]);
 	return msPolledEnemyStateName;

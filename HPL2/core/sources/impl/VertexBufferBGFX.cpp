@@ -19,7 +19,6 @@
 
 #include "impl/VertexBufferBGFX.h"
 
-#include "absl/types/span.h"
 #include "bgfx/bgfx.h"
 #include "bgfx/defines.h"
 #include "graphics/GraphicsContext.h"
@@ -146,7 +145,7 @@ namespace hpl
     }
 
     static void PushVertexElements(
-        absl::Span<const float> values, eVertexBufferElement elementType, absl::Span<iVertexBufferBGFX::VertexElement> elements)
+        std::span<const float> values, eVertexBufferElement elementType, std::span<iVertexBufferBGFX::VertexElement> elements)
     {
         for (auto& element : elements)
         {
@@ -208,25 +207,25 @@ namespace hpl
     void iVertexBufferBGFX::AddVertexVec3f(eVertexBufferElement aElement, const cVector3f& avVtx)
     {
         PushVertexElements(
-            absl::MakeSpan(std::begin(avVtx.v), std::end(avVtx.v)),
+            std::span(std::begin(avVtx.v), std::end(avVtx.v)),
             aElement,
-            absl::MakeSpan(m_vertexElements.begin(), m_vertexElements.end()));
+            std::span(m_vertexElements.begin(), m_vertexElements.end()));
     }
 
     void iVertexBufferBGFX::AddVertexVec4f(eVertexBufferElement aElement, const cVector3f& avVtx, float afW)
     {
         PushVertexElements(
-            absl::MakeSpan(std::begin(avVtx.v), std::end(avVtx.v)),
+            std::span(std::begin(avVtx.v), std::end(avVtx.v)),
             aElement,
-            absl::MakeSpan(m_vertexElements.begin(), m_vertexElements.end()));
+            std::span(m_vertexElements.begin(), m_vertexElements.end()));
     }
 
     void iVertexBufferBGFX::AddVertexColor(eVertexBufferElement aElement, const cColor& aColor)
     {
         PushVertexElements(
-            absl::MakeSpan(std::begin(aColor.v), std::end(aColor.v)),
+            std::span(std::begin(aColor.v), std::end(aColor.v)),
             aElement,
-            absl::MakeSpan(m_vertexElements.begin(), m_vertexElements.end()));
+            std::span(m_vertexElements.begin(), m_vertexElements.end()));
     }
 
     void iVertexBufferBGFX::AddIndex(unsigned int alIndex)

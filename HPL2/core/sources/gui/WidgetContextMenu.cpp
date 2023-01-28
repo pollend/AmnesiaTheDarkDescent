@@ -177,10 +177,8 @@ namespace hpl {
 		{
 			fItemWidth = afItemTextWidth + fNonTextWidth;
 
-			for(tWidgetMenuItemVectorIt it = mvMenuItems.begin(); it != mvMenuItems.end(); ++it)
+			for(auto& pItem: mvMenuItems)
 			{
-				cWidgetMenuItem* pItem = *it;
-
                	pItem->SetSize(cVector2f(fItemWidth, pItem->GetSize().y) );
 			}
 		}

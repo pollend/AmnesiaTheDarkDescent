@@ -193,8 +193,6 @@ namespace hpl {
 
 		iSaveObject* Get(int alId);
 
-		cSaveObjectIterator GetIterator();
-
 		void SetUpAll(cEngine *apGame);
 
 		void Clear();

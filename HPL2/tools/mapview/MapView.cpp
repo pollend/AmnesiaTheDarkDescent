@@ -17,7 +17,6 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "absl/types/span.h"
 #include "graphics/Enum.h"
 #include "graphics/Image.h"
 #include "graphics/RenderTarget.h"
@@ -635,7 +634,7 @@ public:
 		depthDesc.m_configuration.m_rt = RTType::RT_Write;
 		images[0]->Initialize(colorDesc);
 		images[1]->Initialize(depthDesc);
-		mpTestFrameBuffer = RenderViewport(std::make_shared<RenderTarget>(absl::MakeSpan(images)), cVector2l(0,0));
+		mpTestFrameBuffer = RenderViewport(std::make_shared<RenderTarget>(std::span(images)), cVector2l(0,0));
 
 		// todo need to work with CreateGfxTexture
 		// mpTestRenderTexture = gpEngine->GetGraphics()->CreateTexture("TestTarget",eTextureType_Rect,eTextureUsage_RenderTarget);

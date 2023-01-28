@@ -24,10 +24,6 @@
 
 #include "../common/StdAfx.h"
 
-using namespace hpl;
-using namespace std;
-
-//-----------------------------------------------
 
 class iEditor;
 

@@ -1,10 +1,10 @@
-#include "absl/types/span.h"
 #include "bgfx/bgfx.h"
 #include "graphics/Image.h"
 #include <array>
 #include <graphics/RenderTarget.h>
 #include <memory>
 #include <bx/debug.h>
+#include <span>
 
 namespace hpl
 {
@@ -13,10 +13,10 @@ namespace hpl
     RenderTarget::RenderTarget(std::shared_ptr<Image> image)
     {
         std::array<std::shared_ptr<Image>, 1> images = { image };
-        Initialize(absl::MakeSpan(images));
+        Initialize(std::span(images));
     }
 
-    RenderTarget::RenderTarget(absl::Span<std::shared_ptr<Image>> images)
+    RenderTarget::RenderTarget(std::span<std::shared_ptr<Image>> images)
     {
         Initialize(images);
     }
@@ -48,7 +48,7 @@ namespace hpl
         }
     }
 
-    void RenderTarget::Initialize(absl::Span<std::shared_ptr<Image>> images) {
+    void RenderTarget::Initialize(std::span<std::shared_ptr<Image>> images) {
         BX_ASSERT(!bgfx::isValid(m_buffer), "RenderTarget already initialized");
         
         absl::InlinedVector<bgfx::TextureHandle, 7> handles = {};
@@ -80,18 +80,18 @@ namespace hpl
         return m_images[index];
     }
 
-    absl::Span<std::shared_ptr<Image>> RenderTarget::GetImages()
+    std::span<std::shared_ptr<Image>> RenderTarget::GetImages()
     {
-        return absl::MakeSpan(m_images.begin(), m_images.end());
+        return std::span(m_images.begin(), m_images.end());
     }
     
     const std::shared_ptr<Image> RenderTarget::GetImage(size_t index) const {
         return m_images[index];
     }
 
-    const absl::Span<const std::shared_ptr<Image>> RenderTarget::GetImages() const 
+    const std::span<const std::shared_ptr<Image>> RenderTarget::GetImages() const 
     {
-        return absl::MakeSpan(m_images.begin(), m_images.end());
+        return std::span(m_images.begin(), m_images.end());
     }
 
     const bgfx::FrameBufferHandle RenderTarget::GetHandle() const
