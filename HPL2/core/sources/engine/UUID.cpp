@@ -3,7 +3,7 @@
 
 namespace hpl {
 
-    bool operator==(const UUID& lhs, const UUID& rhs) {
+    bool operator==(const Uuid& lhs, const Uuid& rhs) {
         for(size_t i = 0; i < 16; i++) {
             if(lhs.m_data[i] != rhs.m_data[i]) {
                 return false;

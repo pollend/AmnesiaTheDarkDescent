@@ -16,12 +16,12 @@
 #ifndef _OAL_FUNCS_H
 #define _OAL_FUNCS_H
 
-#ifdef WIN32
-#pragma comment(lib, "libvorbis.lib")
-#pragma comment(lib, "libvorbisfile.lib")
-#pragma comment(lib, "openal32.lib")
-#pragma comment(lib, "SDL.lib")
-#endif
+//#ifdef WIN32
+//#pragma comment(lib, "libvorbis.lib")
+//#pragma comment(lib, "libvorbisfile.lib")
+//#pragma comment(lib, "openal32.lib")
+//#pragma comment(lib, "SDL.lib")
+//#endif
 
 #include "OAL_Types.h"
 

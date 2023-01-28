@@ -8,26 +8,26 @@
 
 namespace hpl {
     static constexpr size_t UUIDSize = 16;
-    struct UUID {
+    struct Uuid {
         uint8_t m_data[UUIDSize];
     };
 
-    struct GUID {
+    struct Guid {
         uint32_t m_data1;
         uint16_t m_data2;
         uint16_t m_data3;
         uint8_t m_data4[8];
     };
-    bool operator==(const UUID& lhs, const UUID& rhs);
-    static constexpr const UUID NullUUID = UUID{ 0 };
+    bool operator==(const Uuid& lhs, const Uuid& rhs);
+    static constexpr const Uuid NullUUID = Uuid{ 0 };
 
     namespace detail {
 
         // {C4F5C3C1-1B5C-4F5C-9F5C-1B5C4F5C9F5C}
         // C4F5C3C1-1B5C-4F5C-9F5C-1B5C4F5C9F5C
         // C4F5C3C11B5C4F5C9F5C1B5C4F5C9F5C
-        constexpr UUID From(const std::string_view str);
-        constexpr GUID ToGUID(const UUID& uuid);
+        constexpr Uuid From(const std::string_view str);
+        constexpr Guid ToGUID(const Uuid& uuid);
         namespace Internal {
             constexpr char InvalidValue = 255;
 
@@ -52,9 +52,9 @@ namespace hpl {
             }
         } // namespace Internal
 
-        constexpr hpl::UUID From(const std::string_view str) {
+        constexpr hpl::Uuid From(const std::string_view str) {
             auto current = str.begin();
-            hpl::UUID id;
+            hpl::Uuid id;
             char c = *current;
             for (size_t i = 0; i < 16; i++) {
                 if (c == '{' || c == '-' || c == '}') {
@@ -73,7 +73,7 @@ namespace hpl {
             return id;
         }
 
-        constexpr hpl::GUID ToGUID(const hpl::UUID& uuid) {
+        constexpr hpl::Guid ToGUID(const hpl::Uuid& uuid) {
             union {
                 uint32_t value;
                 uint8_t cr[sizeof(uint32_t)];

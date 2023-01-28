@@ -198,7 +198,7 @@ set(OpenGL_GL_PREFERENCE LEGACY)
 find_package(DevIL REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(Theora REQUIRED)
-# find_package(Devil REQUIRED)
+find_package(ZLIB REQUIRED)
 find_package(GLEW REQUIRED)
 find_package(SDL2 REQUIRED)
 # find_package(Python3 COMPONENTS Interpreter)
@@ -216,6 +216,7 @@ set(HPL2_INCLUDES
     PUBLIC ${SDL2_INCLUDE_DIR}
     #Important that this is before dependencies so the correct OpenAL headers are used
     PRIVATE ${OALWRAPPER_INCLUDE_DIR}
+    PRIVATE ${ZLIB_INCLUDE_DIRS}
     PRIVATE ${THEORA_INCLUDE_DIR}
     PRIVATE ${IL_INCLUDE_DIR}
     PRIVATE ${GLEW_INCLUDE_DIRS}
@@ -250,7 +251,7 @@ target_link_libraries(HPL2
   ${OPENGL_glu_LIBRARY}
   ${THEORA_LIBRARY}
   ${IL_LIBRARIES}
-  z
+  ${ZLIB_LIBRARIES}
   ${PLATFORM_LIBS}
   )
  
