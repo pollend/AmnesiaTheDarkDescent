@@ -1171,7 +1171,6 @@ namespace hpl
                 ////////////////
                 // Render objects if any
                 int lObjectsRendered = renderNodeHandler(pNode, alNeededFlags);
-                ;
                 lMinRenderedObjects -= lObjectsRendered;
             }
         }

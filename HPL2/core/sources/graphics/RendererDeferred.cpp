@@ -87,7 +87,6 @@ namespace hpl {
 	// STATIC VARIABLES
 	//////////////////////////////////////////////////////////////////////////
 
-	eDeferredGBuffer cRendererDeferred::mGBufferType = eDeferredGBuffer_32Bit;
 	int cRendererDeferred::mlNumOfGBufferTextures = 4;
 	bool cRendererDeferred::mbDepthCullLights = true;
 
@@ -160,7 +159,6 @@ namespace hpl {
 	{
 		cVector2l vRelfectionSize = cVector2l(mvScreenSize.x/mlReflectionSizeDiv, mvScreenSize.y/mlReflectionSizeDiv);
 
-		Log("Setting up G-Bugger: type: %d texturenum: %d\n", mGBufferType, mlNumOfGBufferTextures);
 		
 		// initialize frame buffers;
 		{
@@ -231,6 +229,17 @@ namespace hpl {
 			m_gBuffer_linearDepth = {RenderTarget(m_gBufferPositionImage[0]), RenderTarget(m_gBufferPositionImage[1])};
 
 		}
+
+		auto hiZBufferImage = [&] {
+			auto desc = ImageDescriptor::CreateTexture2D(mvScreenSize.x, mvScreenSize.y, true, bgfx::TextureFormat::Enum::R32F);
+			desc.m_configuration.m_rt = RTType::RT_Write;
+			desc.m_configuration.m_computeWrite = true;
+			auto image = std::make_shared<Image>();
+			image->Initialize(desc);
+			return image;
+		};
+		m_hiZDepthBuffer = hiZBufferImage();
+		m_numberOfHiZMips = static_cast<uint8_t>(std::floor(std::log2(std::max(mvScreenSize.x, mvScreenSize.y))) + 1);
 
 		// ////////////////////////////////////
 		// //Create Accumulation texture
@@ -334,7 +343,7 @@ namespace hpl {
 			m_shadowJitterImage = std::make_shared<Image>();
 			TextureCreator::GenerateScatterDiskMap2D(*m_shadowJitterImage, mlShadowJitterSize,mlShadowJitterSamples, true);
 		}
-
+		
 		m_lightBoxProgram = hpl::loadProgram("vs_light_box", "fs_light_box");
 		m_forVariant.Initialize(
 			ShaderHelper::LoadProgramHandlerDefault("vs_deferred_fog", "fs_deferred_fog", false, true));
@@ -349,6 +358,7 @@ namespace hpl {
 		m_u_spotViewProj = bgfx::createUniform("u_spotViewProj", bgfx::UniformType::Mat4);
 		m_u_mtxInvViewRotation = bgfx::createUniform("u_mtxInvViewRotation", bgfx::UniformType::Mat4);
 		m_u_overrideColor = bgfx::createUniform("u_overrideColor", bgfx::UniformType::Vec4);
+		m_u_inputRTSize = bgfx::createUniform("u_inputRTSize", bgfx::UniformType::Vec4);
 
 		// samplers
 		m_s_depthMap = bgfx::createUniform("s_depthMap", bgfx::UniformType::Sampler);
@@ -361,7 +371,10 @@ namespace hpl {
 		m_s_shadowMap = bgfx::createUniform("s_shadowMap", bgfx::UniformType::Sampler);
 		m_s_goboMap = bgfx::createUniform("s_goboMap", bgfx::UniformType::Sampler);
 		m_s_shadowOffsetMap = bgfx::createUniform("s_shadowOffsetMap", bgfx::UniformType::Sampler);
-		
+
+		m_programDownscaleHiZ = hpl::loadProgram("cs_gdr_downscale_hi_z", nullptr);
+		m_programCopyHiZ = hpl::loadProgram("cs_gdr_copy_z", nullptr);
+
 		////////////////////////////////////
 		//Create SSAO programs and textures
 		if(mbSSAOLoaded && mpLowLevelGraphics->GetCaps(eGraphicCaps_TextureFloat)==0)
@@ -849,6 +862,42 @@ namespace hpl {
 			}
 		}
 	}
+	void cRendererDeferred::RenderHiZPass(GraphicsContext& context) {
+		uint32_t width = mvScreenSize.x;
+		uint32_t height = mvScreenSize.y;
+		{
+			auto view = context.StartPass("Copy HI Z Downsampled Depth Buffer");
+			GraphicsContext::ShaderProgram shaderInput;
+			shaderInput.m_textures.push_back({m_s_depthMap, resolveRenderImage(m_gBufferDepthStencil)->GetHandle(), 0 });
+			shaderInput.m_uavImage.push_back({m_hiZDepthBuffer->GetHandle(), 1, 0, bgfx::Access::Write, bgfx::TextureFormat::R32F});
+			
+			float inputRendertargetSize[4] = { static_cast<float>(width), static_cast<float>(height), 0.0f, 0.0f };
+			shaderInput.m_uniforms.push_back({m_u_inputRTSize, inputRendertargetSize});
+
+			shaderInput.m_handle = m_programCopyHiZ;
+			GraphicsContext::ComputeRequest computeRequest {shaderInput, width/16, height/16, 1};
+			context.Submit(view, computeRequest);
+		}
+
+		auto view = context.StartPass("Hi Z Mip Map");
+		for(uint8_t lod = 1; lod < m_numberOfHiZMips; ++lod) {
+			GraphicsContext::ShaderProgram shaderInput;
+
+			float inputRendertargetSize[4] = { static_cast<float>(width), static_cast<float>(height), 2.0f, 2.0f };
+			shaderInput.m_uniforms.push_back({m_u_inputRTSize, inputRendertargetSize});
+
+			// down scale mip 1 onwards
+			width /= 2;
+			height /= 2;
+
+			shaderInput.m_uavImage.push_back({m_hiZDepthBuffer->GetHandle(), 0, static_cast<uint8_t>(lod - 1), bgfx::Access::Read, bgfx::TextureFormat::R32F});
+			shaderInput.m_uavImage.push_back({m_hiZDepthBuffer->GetHandle(), 1, lod, bgfx::Access::Write, bgfx::TextureFormat::R32F});
+
+			shaderInput.m_handle = m_programDownscaleHiZ;
+			GraphicsContext::ComputeRequest computeRequest {shaderInput, width/16, height/16, 1};
+			context.Submit(view, computeRequest);
+		}
+	}
 
 	void cRendererDeferred::Draw(GraphicsContext& context, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, RenderViewport& apRenderTarget,
 					bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList)  {
@@ -953,6 +1002,7 @@ namespace hpl {
 			SetupLightsAndRenderQueries(context, resolveRenderTarget(m_gBuffer_depth));
 		}
 
+		RenderHiZPass(context);
 
 		// Render GBuffer to m_gBuffer_full old method is RenderGbuffer(context);
 		RenderDiffusePass(context, resolveRenderTarget(m_gBuffer_full));
@@ -1240,8 +1290,8 @@ namespace hpl {
 								RenderShadowPass(context, *apLightData, pShadowData->m_target);
 							}
 							const auto imageSize = pShadowData->m_target.GetImage()->GetImageSize();
-							uParam.shadowMapOffset[0] = 1.0f / imageSize.x ;
-							uParam.shadowMapOffset[1] = 1.0f / imageSize.y ;
+							uParam.shadowMapOffset[0] = 1.0f / imageSize.x;
+							uParam.shadowMapOffset[1] = 1.0f / imageSize.y;
 							if(m_shadowJitterImage) {
 								shaderProgram.m_textures.push_back({m_s_shadowOffsetMap, m_shadowJitterImage->GetHandle(), 7});
 							}

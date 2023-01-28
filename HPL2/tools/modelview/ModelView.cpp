@@ -2297,7 +2297,7 @@ int hplMain(const tString &asCommandline)
 
 	//iResourceBase::SetLogCreateAndDelete(true);
 	//iGpuProgram::SetLogDebugInformation(true);
-	cRendererDeferred::SetGBufferType(eDeferredGBuffer_32Bit);
+	// cRendererDeferred::SetGBufferType(eDeferredGBuffer_32Bit);
 	cRendererDeferred::SetSSAOLoaded(true);
 	cRendererDeferred::SetEdgeSmoothLoaded(true);
 	cRendererDeferred::SetShadowMapQuality(eShadowMapQuality_Medium);

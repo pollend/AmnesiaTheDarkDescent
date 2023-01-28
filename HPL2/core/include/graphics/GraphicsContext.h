@@ -55,8 +55,8 @@ namespace hpl
                 bgfx::TextureHandle m_textureHandle = BGFX_INVALID_HANDLE;
                 uint8_t m_stage = 0;
                 uint8_t m_mip = 0;
-                bgfx::Access::Enum m_access;
-                bgfx::TextureFormat::Enum m_format;
+                bgfx::Access::Enum m_access = bgfx::Access::Write;
+                bgfx::TextureFormat::Enum m_format = bgfx::TextureFormat::Count;
             };
 
             union {
@@ -79,6 +79,7 @@ namespace hpl
             cMatrixf m_normalMtx = cMatrixf(cMatrixf::Identity);
 
             absl::InlinedVector<TextureData, 10> m_textures;
+            absl::InlinedVector<UAVImage, 10> m_uavImage;
             absl::InlinedVector<UniformData, 25> m_uniforms;
         };
         struct ClearRequest {
@@ -111,6 +112,14 @@ namespace hpl
             uint16_t m_height = 0;
         };
 
+        struct ComputeRequest {
+            const ShaderProgram& m_program;
+
+            uint32_t m_numX = 0;
+            uint32_t m_numY = 0;
+            uint32_t m_numZ = 0;
+        };
+
         GraphicsContext();
         void Init();
         void UpdateScreenSize(uint16_t width, uint16_t height);
@@ -129,6 +138,7 @@ namespace hpl
         void ClearTarget(bgfx::ViewId view, const DrawClear& request);
         void Submit(bgfx::ViewId view, const DrawRequest& request);
         void Submit(bgfx::ViewId view, const DrawRequest& request, bgfx::OcclusionQueryHandle query);
+        void Submit(bgfx::ViewId view, const ComputeRequest& request);
         
     private:
         bgfx::ViewId _current;

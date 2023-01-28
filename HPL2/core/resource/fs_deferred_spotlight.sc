@@ -11,6 +11,8 @@ uniform vec4 u_param[2];
 #define u_oneMinusCosHalfSpotFov (u_param[1].x)
 #define u_shadowMapOffsetMul (u_param[1].yz)
 
+#define SHADOW_JITTER_SAMPLES_DIV_2 (SHADOW_JITTER_SAMPLES/2)
+
 uniform vec4 u_lightPos;
 uniform vec4 u_lightColor;
 uniform mat4 u_spotViewProj;
@@ -58,49 +60,31 @@ void main()
 	//Calculate diffuse color
     float fLDotN = max(dot(normalizedNormal, normalLightDir), 0.0);
 	vec3 diffuseColor = color.xyz * u_lightColor.xyz * fLDotN;
+    float bias = max(SHADOW_MAP_BIAS * (1.0 - dot(normalizedNormal, normalLightDir)), SHADOW_MAP_BIAS);
 
     #ifdef USE_SHADOWS
         #ifdef SHADOW_JITTER_SIZE
             float fShadowSum = 0.0;
             float fJitterZ = 0.0;
             vec2 vScreenJitterCoord = gl_FragCoord.xy * (1.0 / float(SHADOW_JITTER_SIZE));
+
             vScreenJitterCoord.y = fract(vScreenJitterCoord.y);	 //Make sure the coord is in 0 - 1 range
-            vScreenJitterCoord.y *= 1.0 / (float(SHADOW_JITTER_SAMPLES)/2.0);	 //Access only first texture piece
+            vScreenJitterCoord.y *= 1.0 / float(SHADOW_JITTER_SAMPLES_DIV_2);	 //Access only first texture piece
             
-            for(int i=0; i < 2; i++)
+            for(int i=0; i< SHADOW_JITTER_SAMPLES_DIV_2; i++)
             {
-                vec2 vJitterLookupCoord = vec2(vScreenJitterCoord.x, vScreenJitterCoord.y + fJitterZ);
-                vec4 vOffset = texture2D(s_shadowOffsetMap, vJitterLookupCoord) * 2.0 - 1.0;
-                fShadowSum += shadow2DProj(s_shadowMap, vec4(projectionUV.xy + (vec2(vOffset.xy) * u_shadowMapOffsetMul), projectionUV.z, projectionUV.w)) / 4.0;
-                fShadowSum += shadow2DProj(s_shadowMap, vec4(projectionUV.xy + (vec2(vOffset.zw) * u_shadowMapOffsetMul), projectionUV.z, projectionUV.w)) / 4.0;
+                vec2 jitterLookupCoord = vec2(vScreenJitterCoord.x, vScreenJitterCoord.y + fJitterZ);
+                
+                vec4 offset = texture2D(s_shadowOffsetMap, jitterLookupCoord) *10.0 - 5.0;
+                fShadowSum += shadow2DProj(s_shadowMap, vec4(projectionUV.xy + (vec2(offset.xy) * u_shadowMapOffsetMul), projectionUV.z - bias, projectionUV.w) );
+                fShadowSum += shadow2DProj(s_shadowMap, vec4(projectionUV.xy + (vec2(offset.zw) * u_shadowMapOffsetMul), projectionUV.z - bias, projectionUV.w) );
                             
-                fJitterZ += 1.0 /  (float(SHADOW_JITTER_SAMPLES)/2.0);
+                fJitterZ += 1.0 / float(SHADOW_JITTER_SAMPLES_DIV_2);
             }
             
-            ////////////////
-            // Check if in penumbra
-            if( (fShadowSum-1.0) * fShadowSum * fLDotN != 0.0)
-            {
-                //Multiply, so the X presamples only affect their part (X/all_samples) of samples taken.
-                fShadowSum *= 4.0 / float(SHADOW_JITTER_SAMPLES); 
-                            
-                ////////////////
-                // Fullscale filtering
-                for(int i=0; i< (SHADOW_JITTER_SAMPLES/2)-2; i++)
-                {
-                    vec2 vJitterLookupCoord = vec2(vScreenJitterCoord.x, vScreenJitterCoord.y + fJitterZ); //Not that coords are 0-1!
-                
-                    vec4 vOffset = texture2D(s_shadowOffsetMap, vJitterLookupCoord) * 2.0 - 1.0;
-                    fShadowSum += shadow2DProj(s_shadowMap, vec4(projectionUV.xy + (vec2(vOffset.xy) * u_shadowMapOffsetMul), projectionUV.z, projectionUV.w)) / float(SHADOW_JITTER_SAMPLES);
-                    fShadowSum += shadow2DProj(s_shadowMap, vec4(projectionUV.xy + (vec2(vOffset.zw) * u_shadowMapOffsetMul), projectionUV.z, projectionUV.w)) / float(SHADOW_JITTER_SAMPLES);
-                    
-                    fJitterZ += 1.0 /  (float(SHADOW_JITTER_SAMPLES)/2.0);
-                }
-                
-            }
+            fShadowSum /= float(SHADOW_JITTER_SAMPLES);
             attenuation *= fShadowSum;
         #else
-            float bias = max(SHADOW_MAP_BIAS * (1.0 - dot(normalizedNormal, normalLightDir)), SHADOW_MAP_BIAS);
             attenuation *= shadow2DProj(s_shadowMap, vec4(projectionUV.xy, projectionUV.z - bias, projectionUV.w));
         #endif
     #endif

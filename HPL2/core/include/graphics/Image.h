@@ -35,6 +35,7 @@ namespace hpl
                 bool m_uClamp : 1;
                 bool m_vClamp : 1;
                 bool m_wClamp : 1;
+                bool m_computeWrite: 1;
                 RTType m_rt: 3;
             };
             uint64_t m_settings = 0;

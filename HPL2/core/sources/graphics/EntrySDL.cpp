@@ -120,7 +120,7 @@ namespace hpl::entry_sdl {
 		init.platformData.ndt  = getNativeDisplayHandle(g_context.m_window);
 		init.resolution.width  = g_context.m_size.x;
 		init.resolution.height = g_context.m_size.y;
-		init.resolution.reset  = BGFX_RESET_VSYNC;
+		init.resolution.reset  = 0;
 		bgfx::init(init);
 
         return g_context.m_threadHandler();

@@ -72,9 +72,10 @@ shaders = [
     { "type" : ShaderType.FS, "inout" : "resource/vs_deferred_light.io",              "input": "resource/fs_deferred_spotlight.sc", "name": "fs_deferred_spotlight_low", "includes": ["resource"], "variants": spotlight_variants},
     { "type" : ShaderType.FS, "inout" : "resource/vs_deferred_light.io",              "input": "resource/fs_deferred_spotlight.sc", "name": "fs_deferred_spotlight_medium", "includes": ["resource"], "defines": ["SHADOW_JITTER_SIZE=32", "SHADOW_JITTER_SAMPLES=16"], "variants": spotlight_variants},
     { "type" : ShaderType.FS, "inout" : "resource/vs_deferred_light.io",              "input": "resource/fs_deferred_spotlight.sc", "name": "fs_deferred_spotlight_high", "includes": ["resource"], "defines": ["SHADOW_JITTER_SIZE=64", "SHADOW_JITTER_SAMPLES=32"], "variants": spotlight_variants},
-    
     { "type" : ShaderType.VS, "inout" : "resource/vs_light_box.io",                   "input": "resource/vs_light_box.sc", "includes": ["resource"]},
     { "type" : ShaderType.FS, "inout" : "resource/vs_light_box.io",                   "input": "resource/fs_light_box.sc", "includes": ["resource"]},
+    { "type" : ShaderType.CS,                                                         "input": "resource/cs_gdr_downscale_hi_z.sc", "includes": ["resource"]},
+    { "type" : ShaderType.CS,                                                         "input": "resource/cs_gdr_copy_z.sc", "includes": ["resource"]},
 #gui
     { "type" : ShaderType.FS, "inout" : "resource/vs_gui.io",                          "input": "resource/fs_gui.sc", "includes": ["resource"]},
     { "type" : ShaderType.VS, "inout" : "resource/vs_gui.io",                          "input": "resource/vs_gui.sc", "includes": ["resource"]},
@@ -186,7 +187,7 @@ def main():
     def create_shader(shader, options = {}):
         input_file_path = os.path.abspath(shader["input"])
         name = options["name"] if "name" in options else get_name(shader)
-        varying_def_path = os.path.abspath(shader["inout"])
+        varying_def_path = (os.path.abspath(shader["inout"]) if "inout" in shader else "")
         defines = f'{";".join((shader["defines"] if "defines" in shader else []) + (options["defines"] if "defines" in options else []))}'
         includes = [item for inc in shader["includes"] for item in ['-i', os.path.abspath(inc)]]
         
@@ -199,7 +200,7 @@ def main():
                     '-o', f'{args.output}/shaders/dx9/{name}.bin',
                     '--type', f'{toType(shader["type"])}',
                     '--platform', " windows",
-                    '--varyingdef', f'{varying_def_path}',
+                    # '--varyingdef', f'{varying_def_path}',
                     '--profile', f'{toD3dPrefix(shader["type"])}_3_0',
                     '--define', defines,
                     '-O', "3",
@@ -268,7 +269,7 @@ def main():
                 '--type', f'{toType(shader["type"])}',
                 '--platform', "linux",
                 '--define', defines,
-                '--varyingdef', f'{varying_def_path}',
+                # '--varyingdef', f'{varying_def_path}',
                 '--profile', f'430',
                 '-i', f'{args.bgfx}/src',
                 ] + includes)

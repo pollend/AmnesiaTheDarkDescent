@@ -116,6 +116,7 @@ namespace hpl
         uint64_t flags = (descriptor.m_configuration.m_uClamp ? BGFX_SAMPLER_U_CLAMP : 0) |
             (descriptor.m_configuration.m_vClamp ? BGFX_SAMPLER_V_CLAMP : 0) |
             (descriptor.m_configuration.m_wClamp ? BGFX_SAMPLER_W_CLAMP : 0) |
+            (descriptor.m_configuration.m_computeWrite ? BGFX_TEXTURE_COMPUTE_WRITE : 0) |
             [&] () -> uint64_t {
                 switch(descriptor.m_configuration.m_rt) {
                     case RTType::RT_Write:

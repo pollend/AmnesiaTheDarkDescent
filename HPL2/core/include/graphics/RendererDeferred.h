@@ -167,9 +167,6 @@ namespace hpl {
 		Image* GetRefractionImage(){ return m_refractionImage;}
 		Image* GetReflectionImage(){ return m_reflectionImage;}
 
-		//Static properties. Must be set before renderer data load.
-		static void SetGBufferType(eDeferredGBuffer aType){ mGBufferType = aType; }
-		static eDeferredGBuffer GetGBufferType(){ return mGBufferType; }
 
 		static void SetNumOfGBufferTextures(int alNum){ mlNumOfGBufferTextures = alNum;}
 		static int GetNumOfGBufferTextures(){ return mlNumOfGBufferTextures;}
@@ -210,6 +207,12 @@ namespace hpl {
 		RenderTarget& resolveRenderTarget(std::array<RenderTarget, 2>& rt);
 		std::shared_ptr<Image>& resolveRenderImage(std::array<std::shared_ptr<Image>, 2>& img);
 
+		void RenderPreZWithOcclusionTest(GraphicsContext& context,
+			tObjectVariabilityFlag objectTypes,
+			tRenderableFlag alNeededFlags,
+			RenderTarget& rt,
+			std::function<bool(iRenderable* object)> renderHandler);
+
 		// takes the contents of the gbuffer and renders the lights
 		void RenderLightPass(GraphicsContext& context, RenderTarget& rt);  
 		void RenderDiffusePass(GraphicsContext& context, RenderTarget& rt);
@@ -221,7 +224,8 @@ namespace hpl {
 		void RenderTranslucentPass(GraphicsContext& context, RenderTarget& rt);
 		void RenderZPass(GraphicsContext& context, RenderTarget& rt);
 		void RenderShadowPass(GraphicsContext& context, const cDeferredLight& apLightData, RenderTarget& rt);
-		
+		void RenderHiZPass(GraphicsContext& context);
+
 		void RenderShadowLight(GraphicsContext& context, GraphicsContext::ShaderProgram& shaderProgram, RenderTarget& rt);
 
 		void SetupLightsAndRenderQueries(GraphicsContext& context, RenderTarget& rt);
@@ -274,6 +278,9 @@ namespace hpl {
 		std::array<std::shared_ptr<Image>, 2> m_gBufferDepthStencil;
 		std::array<std::shared_ptr<Image>, 2> m_outputImage;
 
+		std::shared_ptr<Image> m_hiZDepthBuffer;
+		uint8_t m_numberOfHiZMips;
+
 		RenderTarget m_edgeSmooth_LinearDepth;
 
 		iTexture *mpRefractionTexture;
@@ -297,6 +304,7 @@ namespace hpl {
 		bgfx::UniformHandle m_u_spotViewProj;
 		bgfx::UniformHandle m_u_overrideColor;
 		bgfx::UniformHandle m_u_mtxInvViewRotation;
+		bgfx::UniformHandle m_u_inputRTSize;
 
 		bgfx::UniformHandle m_s_depthMap;
 		bgfx::UniformHandle m_s_positionMap;
@@ -319,6 +327,8 @@ namespace hpl {
 			rendering::detail::SpotlightVariant_UseShadowMap> m_spotlightVariants; 
 		ShaderVariantCollection<
 			rendering::detail::PointlightVariant_UseGoboMap> m_pointLightVariants; 
+		bgfx::ProgramHandle m_programDownscaleHiZ;
+		bgfx::ProgramHandle m_programCopyHiZ;
 
 
 		std::vector<cDeferredLight*> mvTempDeferredLights;

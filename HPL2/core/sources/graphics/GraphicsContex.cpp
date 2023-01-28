@@ -371,6 +371,13 @@ namespace hpl
                 bgfx::setTexture(texture.m_stage, texture.m_uniformHandle, texture.m_textureHandle);
             }
         }
+
+        for(auto& uavImage: program.m_uavImage) {
+            if (bgfx::isValid(uavImage.m_textureHandle))
+            {
+                bgfx::setImage(uavImage.m_stage, uavImage.m_textureHandle, uavImage.m_mip, uavImage.m_access, uavImage.m_format);
+            }
+        }
     }
 
     GraphicsContext::GraphicsContext()
@@ -505,6 +512,12 @@ namespace hpl
         bgfx::setState(convertToState(request));
         bgfx::submit(view, request.m_program.m_handle, query);
     }
+
+    void GraphicsContext::Submit(bgfx::ViewId view, const ComputeRequest& request) {
+        ConfigureProgram(request.m_program);
+        bgfx::dispatch(view, request.m_program.m_handle, request.m_numX, request.m_numY, request.m_numZ);
+    }
+        
 
     bgfx::ViewId GraphicsContext::StartPass(absl::string_view name)
     {
