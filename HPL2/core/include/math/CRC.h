@@ -20,7 +20,6 @@
 #ifndef HPL_CRC_H
 #define HPL_CRC_H
 
-#include <cstddef>
 
 namespace hpl {
 	//----------------------------------------

@@ -187,7 +187,7 @@ dgConvexHull4d::dgConvexHull4d (dgMemoryAllocator* const allocator, const dgBigV
 	:dgList<dgConvexHull4dTetraherum>(allocator), m_mark(0), m_count (0), m_diag(), m_points(count, allocator)
 {
 /*
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER))
+#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32))
 	dgUnsigned32 controlWorld = dgControlFP (0xffffffff, 0);
 	dgControlFP (_PC_53, _MCW_PC);
 #endif
@@ -211,7 +211,7 @@ dgConvexHull4d::dgConvexHull4d (dgMemoryAllocator* const allocator, const dgBigV
 //		CalculateConvexHull (distTol);
 	}
 
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER))
+#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32))
 	dgControlFP (controlWorld, _MCW_PC);
 #endif
 */
@@ -225,7 +225,7 @@ dgConvexHull4d::~dgConvexHull4d(void)
 
 void dgConvexHull4d::BuildHull (dgMemoryAllocator* const allocator, const dgBigVector* const vertexCloud, dgInt32 count, dgFloat32 distTol)
 {
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER))
+#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32))
 	dgUnsigned32 controlWorld = dgControlFP (0xffffffff, 0);
 	dgControlFP (_PC_53, _MCW_PC);
 #endif
@@ -246,7 +246,7 @@ void dgConvexHull4d::BuildHull (dgMemoryAllocator* const allocator, const dgBigV
 		CalculateConvexHull (&treePool[0], &points[0], count, distTol);
 	}
 
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER))
+#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32))
 	dgControlFP (controlWorld, _MCW_PC);
 #endif
 }
@@ -1025,7 +1025,7 @@ dgConvexHull4d::dgListNode* dgConvexHull4d::FindFacingNode(const dgBigVector& ve
 
 dgInt32 dgConvexHull4d::AddVertex (const dgBigVector& vertex)
 {
-	#if (defined (_WIN_32_VER) || defined (_WIN_64_VER))
+	#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32))
 		dgUnsigned32 controlWorld = dgControlFP (0xffffffff, 0);
 		dgControlFP (_PC_53, _MCW_PC);
 	#endif
@@ -1049,7 +1049,7 @@ dgInt32 dgConvexHull4d::AddVertex (const dgBigVector& vertex)
 		}
 	}
 
-	#if (defined (_WIN_32_VER) || defined (_WIN_64_VER))
+	#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32))
 		dgControlFP (controlWorld, _MCW_PC);
 	#endif
 

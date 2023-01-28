@@ -29,7 +29,7 @@
 dgDelaunayTetrahedralization::dgDelaunayTetrahedralization(dgMemoryAllocator* const allocator, const dgFloat32* const vertexCloud, dgInt32 count, dgInt32 strideInByte, dgFloat32 distTol)
 	:dgConvexHull4d(allocator)
 {
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER))
+#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32))
 	dgUnsigned32 controlWorld = dgControlFP (0xffffffff, 0);
 	dgControlFP (_PC_53, _MCW_PC);
 #endif
@@ -81,7 +81,7 @@ dgDelaunayTetrahedralization::dgDelaunayTetrahedralization(dgMemoryAllocator* co
 	SortVertexArray ();
 #endif
 
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER))
+#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32))
 	dgControlFP (controlWorld, _MCW_PC);
 #endif
 }
@@ -93,7 +93,7 @@ dgDelaunayTetrahedralization::~dgDelaunayTetrahedralization()
 
 dgInt32 dgDelaunayTetrahedralization::AddVertex (const dgBigVector& vertex)
 {
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER))
+#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32))
 	dgUnsigned32 controlWorld = dgControlFP (0xffffffff, 0);
 	dgControlFP (_PC_53, _MCW_PC);
 #endif
@@ -102,7 +102,7 @@ dgInt32 dgDelaunayTetrahedralization::AddVertex (const dgBigVector& vertex)
 	p.m_w = p % p;
 	dgInt32 index = dgConvexHull4d::AddVertex(p);
 
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER))
+#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32))
 	dgControlFP (controlWorld, _MCW_PC);
 #endif
 	return index;
@@ -145,7 +145,7 @@ void dgDelaunayTetrahedralization::SortVertexArray ()
 
 void dgDelaunayTetrahedralization::RemoveUpperHull ()
 {
-	#if (defined (_WIN_32_VER) || defined (_WIN_64_VER))
+	#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32))
 	dgUnsigned32 controlWorld = dgControlFP (0xffffffff, 0);
 	dgControlFP (_PC_53, _MCW_PC);
 	#endif
@@ -181,7 +181,7 @@ void dgDelaunayTetrahedralization::RemoveUpperHull ()
 		}
 	}
 
-	#if (defined (_WIN_32_VER) || defined (_WIN_64_VER))
+	#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32))
 	dgControlFP (controlWorld, _MCW_PC);
 	#endif
 }

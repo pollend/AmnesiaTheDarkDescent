@@ -16,9 +16,8 @@ namespace hpl {
 
     }
 
-    EnvironmentResult AddVariable(uint32_t id, void* variable) {
-
-    }
+    //EnvironmentResult AddVariable(uint32_t id, void* variable) {
+    //}
 
     EnvironmentResult EnvironmentStore::AddOrAllocateVariable(uint32_t id, size_t size) {
         EnvironmentResult result;

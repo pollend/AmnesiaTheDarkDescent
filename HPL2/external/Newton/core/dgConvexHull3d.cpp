@@ -115,7 +115,7 @@ dgConvexHull3d::dgConvexHull3d (dgMemoryAllocator* const allocator)
 dgConvexHull3d::dgConvexHull3d(dgMemoryAllocator* const allocator, const dgFloat32* const vertexCloud, dgInt32 strideInByte, dgInt32 count, dgFloat32 distTol)
 	:dgList<dgConvexHull3DFace>(allocator),  m_count (0), m_diag(), m_points(count, allocator)
 {
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER))
+#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32))
 	dgUnsigned32 controlWorld = dgControlFP (0xffffffff, 0);
 	dgControlFP (_PC_53, _MCW_PC);
 #endif
@@ -145,7 +145,7 @@ dgConvexHull3d::dgConvexHull3d(dgMemoryAllocator* const allocator, const dgFloat
 
 	}
 
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER))
+#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32))
 	dgControlFP (controlWorld, _MCW_PC);
 #endif
 

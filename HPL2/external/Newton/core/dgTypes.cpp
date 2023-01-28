@@ -188,7 +188,7 @@ void dgApi GetMinMax (dgVector &minOut, dgVector &maxOut, const dgFloat32* const
 }
 
 
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER))
+#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32))
 
 	#if (_MSC_VER >= 1400) && defined (DG_BUILD_SIMD_CODE)
 		static bool DetectSSE_3 ()
@@ -662,7 +662,7 @@ namespace InternalGeoUtil
 
 dgInt32 dgApi dgVertexListToIndexList (dgFloat32* const vertList, dgInt32 strideInBytes, dgInt32 floatSizeInBytes,  dgInt32 unsignedSizeInBytes, dgInt32 vertexCount, dgInt32* const indexList, dgFloat32 tolerance)
 {
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER))
+#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32))
 	dgUnsigned32 controlWorld = dgControlFP (0xffffffff, 0);
 	dgControlFP (_PC_53, _MCW_PC);
 #endif
@@ -723,7 +723,7 @@ dgInt32 dgApi dgVertexListToIndexList (dgFloat32* const vertList, dgInt32 stride
 		m += stride2;
 	}
 
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER))
+#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32))
 	dgControlFP (controlWorld, _MCW_PC);
 #endif
 

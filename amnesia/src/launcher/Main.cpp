@@ -24,6 +24,7 @@
 #include "FL/fl_ask.H"
 
 #ifdef WIN32
+    #define NOMINMAX
 	#include <Windows.h>
 #endif
 #include <GL/gl.h>

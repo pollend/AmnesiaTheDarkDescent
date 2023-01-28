@@ -1,8 +1,6 @@
-#include <cstddef>
 #include <graphics/Image.h>
 #include "bgfx/bgfx.h"
 #include "bgfx/defines.h"
-#include <cstdint>
 #include <bx/debug.h>
 #include <graphics/Bitmap.h>
 #include <vector>

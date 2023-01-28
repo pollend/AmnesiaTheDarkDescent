@@ -23,6 +23,7 @@
 #include "system/Timer.h"
 
 #ifdef WIN32   // Windows system specific
+    #define NOMINMAX
 	#include <windows.h>
 #else          // Unix based system specific
 	#include <sys/time.h>

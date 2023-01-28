@@ -20,7 +20,6 @@
 
 #include "graphics/Image.h"
 #include "graphics/RenderFunctions.h"
-#include <cstddef>
 #include <graphics/GraphicsContext.h>
 #include <absl/container/fixed_array.h>
 #include <graphics/RenderTarget.h>

@@ -24,7 +24,12 @@
 
 #include <cstdint>
 #include <graphics/Enum.h>
+// hack to fix include of <windows.h>
+#undef min
+#undef max
+
 #include "bx/math.h"
+
 #include "graphics/GraphicsContext.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Image.h"
@@ -72,7 +77,6 @@
 
 #include <algorithm>
 #include <array>
-#include <cstddef>
 #include <functional>
 #include <iterator>
 #include <memory>

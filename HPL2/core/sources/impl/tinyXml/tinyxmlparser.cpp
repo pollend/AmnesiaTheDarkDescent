@@ -28,6 +28,7 @@ distribution.
 #include "impl/tinyXML/tinyxml.h"
 
 //#define DEBUG_PARSER
+#define NOMINMAX
 #if defined( DEBUG_PARSER )
 #	if defined( DEBUG ) && defined( _MSC_VER )
 #		include <windows.h>

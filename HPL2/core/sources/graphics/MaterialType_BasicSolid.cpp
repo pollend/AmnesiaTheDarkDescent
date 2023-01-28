@@ -46,7 +46,6 @@
 #include "graphics/RendererDeferred.h"
 #include "system/SystemTypes.h"
 #include <algorithm>
-#include <cstddef>
 #include <cstdint>
 #include <graphics/Image.h>
 #include <iterator>

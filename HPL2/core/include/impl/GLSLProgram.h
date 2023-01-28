@@ -20,7 +20,6 @@
 #ifndef HPL_GLSL_PROGRAM_H
 #define HPL_GLSL_PROGRAM_H
 
-//#include <windows.h>
 
 #include "system/SystemTypes.h"
 #include "math/MathTypes.h"
