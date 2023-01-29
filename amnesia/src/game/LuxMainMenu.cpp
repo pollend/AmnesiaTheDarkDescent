@@ -70,7 +70,7 @@ std::wstring LongToWString(const long long &l)
 
 const tWString gsHardMode_SaveCostString = tWString(LongToWString((static_cast<long long>(glHardMode_SaveCost))));
 #else
-const tWString gsHardMode_SaveCostString = tWString(to_wstring(static_cast<long long>(glHardMode_SaveCost)));
+const tWString gsHardMode_SaveCostString = tWString(std::to_wstring(static_cast<long long>(glHardMode_SaveCost)));
 #endif
 //--------------------------------------------------------------------------------
 

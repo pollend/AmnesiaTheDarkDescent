@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.9.6)
+cmake_minimum_required(VERSION 3.20.0)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 set(INSTALL_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/bin)
@@ -7,6 +7,8 @@ set(INSTALL_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/bin)
 if(NOT APPLE AND UNIX)
     set(LINUX TRUE)
 ENDIF()
+
+# Hack to correctly compile on windows ...
 if(WIN32)
     add_compile_definitions("NOMINMAX=1")
 endif()

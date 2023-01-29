@@ -12,8 +12,13 @@
       "variables": [
         {
           "name": "CMAKE_TOOLCHAIN_FILE",
-          "value": "C:/projects/vcpkg/scripts/buildsystems/vcpkg.cmake",
+          "value": "C:\\projects\\vcpkg\\scripts\\buildsystems\\vcpkg.cmake",
           "type": "STRING"
+        },
+        {
+          "name": "AMNESIA_GAME_DIRECTORY",
+          "value": "C:/Program Files (x86)/Steam/steamapps/common/Amnesia The Dark Descent",
+          "type": "PATH"
         }
       ]
     }

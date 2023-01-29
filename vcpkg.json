@@ -1,13 +1,13 @@
 {
     "name": "amnesia",
-    "dependencies": [
-      "libvorbis",
-      "sdl2",
-      "glew",
-      "libtheora",
-      "devil",
-      "libogg",
-      "openal-soft",
-      "zlib"
-    ]
+  "dependencies": [
+    "libvorbis",
+    "sdl2",
+    "glew",
+    "libtheora",
+    "devil",
+    "libogg",
+    "openal-soft",
+    "zlib"
+  ]
   }

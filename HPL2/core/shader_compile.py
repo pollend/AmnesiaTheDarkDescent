@@ -3,6 +3,7 @@ from enum import Enum
 import subprocess
 import sys
 import os
+import platform
 
 processes = []
 
@@ -140,6 +141,14 @@ def toType(shaderType):
     else:
         raise Exception("Unknown shader type")
 
+def get_platform():
+    platform_system = platform.system();
+    if(platform_system  == 'Linux'):
+        return 'linux'
+    elif(platform_system  == 'Windows'):
+        return 'windows'
+    return 'osx'
+
 def wait_subprocesses():
     global processes
     for p in processes:
@@ -200,7 +209,7 @@ def main():
                     '--type', f'{toType(shader["type"])}',
                     '--platform', " windows",
                     '--varyingdef', f'{varying_def_path}',
-                    '--profile', f'{toD3dPrefix(shader["type"])}_3_0',
+                    '--p', f'{toD3dPrefix(shader["type"])}_3_0',
                     '--define', defines,
                     '-O', "3",
                     '-i', f'{args.bgfx}/src',
@@ -214,7 +223,7 @@ def main():
                     '--type', f' {toType(shader["type"])}',
                     '--platform', " windows",
                     '--varyingdef', f'{varying_def_path}',
-                    '--profile', f'{toD3dPrefix(shader["type"])}_5_0',
+                    '--p', f'{toD3dPrefix(shader["type"])}_5_0',
                     '--define', defines,
                     '-O', "3",
                     '-i', f'{args.bgfx}/src',
@@ -227,7 +236,7 @@ def main():
                     '--type', f'{toType(shader["type"])}',
                     '--platform', "windows",
                     '--varyingdef', f'{varying_def_path}',
-                    f'--profile {toD3dPrefix(shader["type"])}_5_0',
+                    '--p', f'{toD3dPrefix(shader["type"])}_5_0',
                     '--define', defines,
                     "-O 1",
                     '-i', f'{args.bgfx}/src',
@@ -266,7 +275,7 @@ def main():
                 '-f', f'{input_file_path}',
                 '-o', f'{args.output}/shaders/glsl/{name}.bin',
                 '--type', f'{toType(shader["type"])}',
-                '--platform', "linux",
+                '--platform', get_platform(),
                 '--define', defines,
                 '--varyingdef', f'{varying_def_path}',
                 '--profile', f'430',
@@ -278,7 +287,7 @@ def main():
                 '-f', f'{input_file_path}',
                 '-o', f'{args.output}/shaders/glsl/{name}.bin',
                 '--type', f'{toType(shader["type"])}',
-                '--platform', "linux",
+                '--platform', get_platform(),
                 '--define', defines,
                 '--varyingdef', f'{varying_def_path}',
                 '--profile', f'130',
@@ -291,7 +300,7 @@ def main():
                 '-f', f'{input_file_path}',
                 '-o', f'{args.output}/shaders/spirv/{name}.bin',
                 '--type', f'{toType(shader["type"])}',
-                '--platform', "linux",
+                '--platform', get_platform(),
                 '--define', defines,
                 '--varyingdef', f'{varying_def_path}',
                 '--profile', f'spirv',

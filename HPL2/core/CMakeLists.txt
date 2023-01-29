@@ -117,6 +117,12 @@ IF(APPLE)
             SDLMain.h
         )
     ENDIF()
+ELSEIF(WIN32)
+    LIST(APPEND impl_sources
+        sources/impl/PlatformWin32.cpp
+        sources/impl/ThreadWin32.cpp
+        sources/impl/MutexWin32.cpp
+    )
 ELSEIF(LINUX)
     LIST(APPEND impl_sources
         sources/impl/PlatformUnix.cpp
@@ -130,8 +136,8 @@ IF(APPLE)
     SET(BUILDID_SUFFIX MacOSX)
 ELSEIF(LINUX)
     SET(BUILDID_SUFFIX Linux)
-elseif(WIN32)
-    SET(BUILDID_SUFFIX Windows)
+ELSEIF(WIN32)
+    SET(BUILDID_SUFFIX Win32)
 ELSE()
     message(FATAL_ERROR "Unknown platform")
 ENDIF()
@@ -148,7 +154,7 @@ function(GenerateBuildID outvar idname includedir sourcedir)
             ${sourcedir}/BuildID_${idname}_${BUILDID_SUFFIX}.cpp
             ${includedir}/BuildID_${idname}.h
         COMMAND
-            ${BUILDID_BIN}
+            perl ${BUILDID_BIN}
         ARGS
             ${idname} ${includedir} ${sourcedir}
     )
@@ -197,10 +203,11 @@ source_group("Platform" REGULAR_EXPRESSION "\\/impl\\/Platform.+")
 set(OpenGL_GL_PREFERENCE LEGACY)
 find_package(DevIL REQUIRED)
 find_package(OpenGL REQUIRED)
-find_package(Theora REQUIRED)
+find_package(unofficial-theora CONFIG REQUIRED)
 find_package(ZLIB REQUIRED)
-find_package(GLEW REQUIRED)
-find_package(SDL2 REQUIRED)
+find_package(GLEW CONFIG REQUIRED)
+find_package(SDL2 CONFIG REQUIRED)
+# find_package (Python COMPONENTS Interpreter)
 # find_package(Python3 COMPONENTS Interpreter)
 
 # setup HPL2 compile target
@@ -243,14 +250,19 @@ target_link_libraries(HPL2
   absl::strings
   absl::str_format
   absl::flat_hash_map
+  unofficial::theora::theora
   bgfx
   bx
   bimg
+  GLEW::GLEW
+  DevIL::IL
+  $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
+  $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
   ${GLEW_LIBRARIES}
   ${OPENGL_gl_LIBRARY}
   ${OPENGL_glu_LIBRARY}
-  ${THEORA_LIBRARY}
-  ${IL_LIBRARIES}
+  # ${THEORA_LIBRARY}
+  # ${IL_LIBRARIES}
   ${ZLIB_LIBRARIES}
   ${PLATFORM_LIBS}
   )
@@ -261,20 +273,29 @@ target_link_libraries(HPL2
     "${CMAKE_CURRENT_SOURCE_DIR}/resource/*.io"
     "${CMAKE_CURRENT_SOURCE_DIR}/resource/*.sh")
 
-# add_custom_target(
-#     HPL_SHADERS
-#     )
+ add_custom_target(
+     HPL_SHADERS
+     )
 
-# add_custom_command(
-#     TARGET HPL_SHADERS
-#     MAIN_DEPENDENCY
-#     ${shader_resources}
-#     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-#     COMMAND "${PYTHON_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/shader_compile.py"
-#     --output ${CMAKE_CURRENT_BINARY_DIR}
-#     --bgfx "${BGFX_DIR}"
-#     --compiler $<TARGET_FILE:shaderc>
-# )
+find_file(SHADER_COMPILER_BIN shader_compile.py
+    PATHS ${CMAKE_CURRENT_SOURCE_DIR}
+    NO_DEFAULT_PATH
+)
+ add_custom_command(
+     TARGET HPL_SHADERS
+     MAIN_DEPENDENCY
+     ${shader_resources}
+     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+     COMMAND "python3" "${SHADER_COMPILER_BIN}"
+     --output ${CMAKE_CURRENT_BINARY_DIR}
+     --bgfx "${BGFX_DIR}"
+     --compiler $<TARGET_FILE:shaderc>
+ )
+
+install(FILES 
+    ${IL_LIBRARIES}
+    DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Amnesia)
+
 
 install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/shaders"
             DESTINATION  ${INSTALL_OUTPUT_PATH}/Amnesia
@@ -282,4 +303,4 @@ install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/shaders"
             PATTERN "*"
             )
    
-# add_dependencies(HPL2 HPL_SHADERS)
+ add_dependencies(HPL2 HPL_SHADERS)

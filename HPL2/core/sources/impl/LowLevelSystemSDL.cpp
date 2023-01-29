@@ -65,15 +65,16 @@
 #ifndef IGNORE_HPL_MAIN
 extern int hplMain(const hpl::tString &asCommandLine);
 
-#ifdef WIN32
-#define NOMINMAX
-#include <windows.h>
+//#ifdef WIN32
+//#define NOMINMAX
+//#include <windows.h>
 
-int WINAPI WinMain(	HINSTANCE hInstance,  HINSTANCE hPrevInstance,LPSTR	lpCmdLine, int nCmdShow)
-{
-	return hplMain(lpCmdLine);
-}
-#else
+//int WINAPI WinMain(	HINSTANCE hInstance,  HINSTANCE hPrevInstance,LPSTR	lpCmdLine, int nCmdShow)
+//{
+//	hpl::bootstrap::Init();
+//	return hplMain(lpCmdLine);
+//}
+//#else
 int main(int argc, char *argv[])
 {
 	hpl::bootstrap::Init();
@@ -108,16 +109,18 @@ int main(int argc, char *argv[])
 		}
 	}
 
+#ifndef WIN32
 	if (!cwd) {
         hpl::tString dataDir = hpl::cPlatform::GetDataDir();
 
         chdir(dataDir.c_str());
 	}
+#endif
 
 	return hplMain(cmdline);
 }
 #endif
-#endif
+//#endif
 
 
 
