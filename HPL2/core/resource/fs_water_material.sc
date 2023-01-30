@@ -60,8 +60,8 @@ void main()
 	//Get the diffuse color
 	vec4 surfaceColor = texture2D(s_diffuseMap, vUv1);
 	
-	vec4 vRefractionColor = vec4(1);
-	vec2 vDistortedScreenPos = vec2(0);
+	vec4 vRefractionColor = vec4(1,1,1,1);
+	vec2 vDistortedScreenPos = vec2(0, 0);
 	#ifdef USE_REFRACTION
 		float fInvDist = min(1.0 / v_position.z, 10.0);
 		vDistortedScreenPos = ndc.xy + vFinalNormal.xy * u_afRefractionScale * fInvDist;
@@ -72,7 +72,7 @@ void main()
 	#endif
 	
 	
-	vec4 vReflectionColor = vec4(0);
+	vec4 vReflectionColor = vec4(0,0,0,0);
 	float fFresnel = 1.0;
 	#ifdef USE_REFLECTION
 		//////////////////
@@ -91,7 +91,7 @@ void main()
 		//Cubemap
 		#ifdef USE_CUBE_MAP_REFLECTION
 			vec3 vEnvUv = reflect(vEyeVec, vScreenNormal);
-			vEnvUv = (u_mtxInvViewRotation * vec4(vEnvUv,1)).xyz;
+			vEnvUv = mul(u_mtxInvViewRotation, vec4(vEnvUv.x, vEnvUv.y, vEnvUv.z,1)).xyz;
 			
 			vReflectionColor = textureCube(s_envMap,vEnvUv);
 		#else
@@ -117,7 +117,7 @@ void main()
 		gl_FragColor.xyz = (surfaceColor.xyz * vRefractionColor.xyz + vReflectionColor.xyz * fFresnel) * (1.0-fFogAmount) + u_fogColor.xyz*fFogAmount;
 		gl_FragColor.w = 1.0;
 	#else
-		gl_FragColor.xyz = (surfaceColor.xyz * vRefractionColor.xyz * fDiffuse + vec3(fSpecular)) * (1.0-fFogAmount) + u_fogColor.xyz*fFogAmount;
+		gl_FragColor.xyz = (surfaceColor.xyz * vRefractionColor.xyz * fDiffuse + vec3(fSpecular, fSpecular, fSpecular)) * (1.0-fFogAmount) + u_fogColor.xyz*fFogAmount;
 		gl_FragColor.w = 1.0;
 	#endif
 
@@ -133,11 +133,11 @@ void main()
 	// 			gl_FragColor.xyz = (surfaceColor.xyz * vRefractionColor.xyz + vReflectionColor.xyz * fFresnel) * (1.0-fFogAmount) + u_fogColor.xyz*fFogAmount;
 	// 			gl_FragColor.w = 1.0;
 	// 		} else {
-	// 			gl_FragColor.xyz = (surfaceColor.xyz * vRefractionColor.xyz * fDiffuse + vec3(fSpecular)) * (1.0-fFogAmount) + u_fogColor.xyz*fFogAmount;
+	// 			gl_FragColor.xyz = (surfaceColor.xyz * vRefractionColor.xyz * fDiffuse + vec3(fSpecular, fSpecular, fSpecular)) * (1.0-fFogAmount) + u_fogColor.xyz*fFogAmount;
 	// 			gl_FragColor.w = 1.0;
 	// 		}
 	// 	} else {
-	// 		gl_FragColor.xyz = (surfaceColor.xyz * vRefractionColor.xyz *fDiffuse + vec3(fSpecular)) * (1.0-fFogAmount) + vec3(fFogAmount);
+	// 		gl_FragColor.xyz = (surfaceColor.xyz * vRefractionColor.xyz *fDiffuse + vec3(fSpecular, fSpecular, fSpecular)) * (1.0-fFogAmount) + vec3(fFogAmount);
 	// 		gl_FragColor.w = 1.0;
 	// 	}
 	// } else {
@@ -145,7 +145,7 @@ void main()
 	// 		gl_FragColor.xyz = vRefractionColor.xyz*surfaceColor.xyz + vReflectionColor.xyz * fFresnel;
 	// 		gl_FragColor.w = 1.0;
 	// 	} else {
-	// 		gl_FragColor.xyz = surfaceColor.xyz * vRefractionColor.xyz *fDiffuse + vec3(fSpecular);
+	// 		gl_FragColor.xyz = surfaceColor.xyz * vRefractionColor.xyz *fDiffuse + vec3(fSpecular, fSpecular, fSpecular);
 	// 		gl_FragColor.w = 1.0;
 	// 	}
 	// }

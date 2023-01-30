@@ -23,7 +23,7 @@ float GetPlaneIntersection(vec3 ray, vec3 avPlaneNormal, float afNegPlaneDist, f
     
     //Get the intersection and see if inside box
     vec3 vIntersection = abs(ray * fT + u_fogRayCastStart);
-    if( all( lessThan(vIntersection, vec3(0.5001)) ) )
+    if( all( lessThan(vIntersection, vec3(0.5001,0.5001,0.5001)) ) )
     {
         return max(afFinalT, fT);	
     }

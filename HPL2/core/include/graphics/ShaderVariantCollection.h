@@ -35,7 +35,7 @@ namespace hpl
         bgfx::ProgramHandle GetVariant(uint32_t flag) const;
 
     private:
-        std::array<ShaderVariant, TSize + 1> m_variants = { { BGFX_INVALID_HANDLE } };
+        std::array<ShaderVariant, TSize + 1> m_variants;
     };
 
 } // namespace hpl
@@ -44,8 +44,10 @@ namespace hpl
 {
 
     template<uint32_t TSize>
-    ShaderVariantCollection<TSize>::ShaderVariantCollection()
-    {
+    ShaderVariantCollection<TSize>::ShaderVariantCollection() {
+        ShaderVariant defaultShader = { BGFX_INVALID_HANDLE, [](ShaderVariant& variant) {
+                                       } };
+        m_variants.fill(defaultShader);
     }
 
     template<uint32_t TSize>

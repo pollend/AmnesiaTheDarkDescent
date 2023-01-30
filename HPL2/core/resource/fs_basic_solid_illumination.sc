@@ -9,5 +9,5 @@ uniform vec4 u_param;
 
 void main()
 {
-	gl_FragColor = texture2D(s_diffuseMap, v_texcoord0.xy) * u_colorMul;
+	gl_FragColor = mul(texture2D(s_diffuseMap, v_texcoord0.xy), u_colorMul);
 }

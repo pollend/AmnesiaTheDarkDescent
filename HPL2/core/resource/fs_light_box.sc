@@ -15,6 +15,7 @@ void main()
 	//	color *= texture2D(aSSAOMap, ndc * 0.5);	//SSAO should be half the size of the screen.
 	
 	// Multiply with light color and AO (w).
-	gl_FragColor.xyz = color.xyz * u_lightColor.xyz; 
+	gl_FragColor.xyz = color.xyz * u_lightColor.xyz;
+	gl_FragColor.w = 0.0;
 
 }

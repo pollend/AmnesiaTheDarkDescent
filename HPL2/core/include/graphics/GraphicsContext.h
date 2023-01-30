@@ -41,6 +41,8 @@ namespace hpl
         };
 
         struct ShaderProgram {
+            ShaderProgram();
+
             bgfx::ProgramHandle m_handle = BGFX_INVALID_HANDLE;
             struct UniformData {
                 bgfx::UniformHandle m_uniformHandle = BGFX_INVALID_HANDLE;
@@ -64,15 +66,16 @@ namespace hpl
                 struct {
                     StencilTest m_backStencilTest;
                     StencilTest m_frontStencilTest;
-                    Write m_write: 5;
-                    DepthTest m_depthTest: 3;
-                    Cull m_cull: 2;
-                    bool m_blendAlpha: 1;
-                    BlendFunc m_rgbBlendFunc: 16;
-                    BlendFunc m_alphaBlendFunc: 16;
+                    Write m_write : 5;
+                    DepthTest m_depthTest : 3;
+                    Cull m_cull : 2;
+                    bool m_blendAlpha : 1;
+                    BlendFunc m_rgbBlendFunc : 16;
+                    BlendFunc m_alphaBlendFunc : 16;
                 };
-                uint64_t m_state[2] = {0};
+                uint64_t m_state[2] = { 0 };
             } m_configuration;
+
 
             cMatrixf m_modelTransform = cMatrixf(cMatrixf::Identity);
             cMatrixf m_view = cMatrixf(cMatrixf::Identity);
@@ -82,6 +85,7 @@ namespace hpl
             absl::InlinedVector<TextureData, 10> m_textures;
             absl::InlinedVector<UniformData, 25> m_uniforms;
         };
+
         struct ClearRequest {
             uint32_t m_rgba = 0;
             float m_depth = 1.0f;

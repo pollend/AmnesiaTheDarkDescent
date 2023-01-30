@@ -17,7 +17,7 @@ void main()
 	vMul[0] = 0.25; vMul[1] = 0.3; vMul[2] = 0.5; vMul[3] = 0.3; vMul[4] = 0.25;
 	fOffset[0] = -2.5; fOffset[1] = -0.75; fOffset[2] = 0.0; fOffset[3] = 0.75; fOffset[4] = 2.5;
 
-	vec3 vAmount =vec3(0);
+	vec3 vAmount =vec3(0.0, 0.0, 0.0);
 	
     vec2 vOffsetMul;
 	if(0.0 < u_useHorizontal) {
@@ -28,7 +28,7 @@ void main()
 
 	for(int i=0; i < 5; i++)
 	{
-		vec2 vOffset = (vec2(fOffset[i]) / u_imageSize)*vOffsetMul;
+		vec2 vOffset = (vec2(fOffset[i], fOffset[i]) / u_imageSize)*vOffsetMul;
 		vec3 vColor = texture2D(s_diffuseMap, v_texcoord0.xy + vOffset).xyz;
 		vAmount += vColor * vMul[i];
 	}

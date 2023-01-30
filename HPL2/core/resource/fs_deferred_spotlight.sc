@@ -44,9 +44,9 @@ void main()
     vec3 normalLightDir = normalize(lightDir);
     vec3 normalizedNormal = normalize(normal.xyz);
 
-    vec4 projectionUV = u_spotViewProj * vec4(position,1.0);
+    vec4 projectionUV = mul(u_spotViewProj, vec4(position,1.0));
         
-    vec3 goboVal = vec3(1.0);
+    vec3 goboVal = vec3(1.0, 1.0, 1.0);
 #ifdef USE_GOBO_MAP
     goboVal = texture2DProj(s_goboMap, projectionUV).xyz;
 #else 
@@ -105,13 +105,15 @@ void main()
         #endif
     #endif
 
-    vec3 specularColor = vec3(0.0);
+    vec3 specularColor = vec3(0.0, 0.0, 0.0);
     if(u_lightColor.w > 0.0) {
         vec3 halfVec = normalize(normalLightDir + normalize(-position));
         float specIntensity = specular.x;
         float specPower = specular.y;
-        specularColor = vec3(u_lightColor.w * specIntensity *  pow( clamp( dot( halfVec, normalizedNormal), 0.0, 1.0), specPower )) * u_lightColor.xyz;
+        float specularValue = u_lightColor.w * specIntensity *  pow(clamp(dot(halfVec,normalizedNormal), 0.0, 1.0), specPower);
+        specularColor = mul(vec3(specularValue,specularValue, specularValue), u_lightColor.xyz);
     }
 
     gl_FragColor.xyz = (specularColor + diffuseColor) * goboVal * attenuation;
+    gl_FragColor.w = 0.0;
 }

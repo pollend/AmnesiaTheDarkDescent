@@ -7,7 +7,7 @@
 float Fresnel(float afEDotN, float afFresnelBias, float afFresnelPow)
 {
     float fFacing = 1.0 - afEDotN;
-    return max(afFresnelBias+ (1.0-afFresnelBias)* pow(fFacing,afFresnelPow), 0.0); 
+    return max(afFresnelBias+ (1.0-afFresnelBias)* pow(abs(fFacing),afFresnelPow), 0.0); 
 }
 
 vec4 encodeRE8(float _r)
@@ -417,9 +417,23 @@ mat3 cofactor(mat4 _m)
 		);
 }
 
-mat4 normalMatrix(mat4 _m)
+mat3 normalMatrix3x3(mat4 _m)
 {
-	return transpose(inverse(_m));
+	mat4 value = transpose(inverse(_m));
+	mat3 result;
+	result[0][0] = value[0][0];
+	result[0][1] = value[0][1];
+	result[0][2] = value[0][2];
+	
+	result[1][0] = value[1][0];
+	result[1][1] = value[1][1];
+	result[1][2] = value[1][2];
+	
+	result[2][0] = value[2][0];
+	result[2][1] = value[2][1];
+	result[2][2] = value[2][2];
+	
+	return result;
 }
 
 float toClipSpaceDepth(float _depthTextureZ)

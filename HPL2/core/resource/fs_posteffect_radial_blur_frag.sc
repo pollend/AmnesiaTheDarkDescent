@@ -35,7 +35,7 @@ void main()
 	
 	vDir *= fDist * afSize;
 			
-	vec3 vDiffuseColor = vec3(0.0);
+	vec3 vDiffuseColor = vec3(0.0, 0.0, 0.0);
 	
 	for(int i=0; i<5; ++i)
 	{

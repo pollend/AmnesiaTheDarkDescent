@@ -1,4 +1,3 @@
-
 $input v_texcoord0
 
 #include <common.sh>
@@ -22,7 +21,7 @@ void main()
 	vec3 vZoom = texture2D(s_zoomMap, v_texcoord0).xyz;
 	
 	vec2 vUV = v_texcoord0;
-	vUV += (vZoom.xy-vec2(0.5))*2.0* 0.6 * vZoom.z * u_zoomAlpha;
+	vUV += (vZoom.xy-vec2(0.5, 0.5))*2.0* 0.6 * vZoom.z * u_zoomAlpha;
 	
 	vec2 vSinUv = vUV * 0.6;
 	vUV.x += sin(u_fT + vSinUv.y) * vAmp.x;
@@ -30,4 +29,5 @@ void main()
 	
 	vec3 vDiffuseColor = texture2D(s_diffuseMap, vUV).xyz;
 	gl_FragColor.xyz = vDiffuseColor;
+	gl_FragColor.w = 0.0;
 }

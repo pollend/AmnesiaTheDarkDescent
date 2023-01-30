@@ -123,11 +123,11 @@ shaders = [
 
 def toD3dPrefix(shaderType):
     if shaderType == ShaderType.FS:
-        return "ps"
+        return "s"
     elif shaderType == ShaderType.VS:
-        return "vs"
+        return "s"
     elif shaderType == ShaderType.CS:
-        return "cs"
+        return "s"
     else:
         raise Exception("Unknown shader type")
 
@@ -207,11 +207,11 @@ def main():
                     '-f', f'{input_file_path}',
                     '-o', f'{args.output}/shaders/dx9/{name}.bin',
                     '--type', f'{toType(shader["type"])}',
-                    '--platform', " windows",
+                    '--platform', "windows",
                     '--varyingdef', f'{varying_def_path}',
-                    '--p', f'{toD3dPrefix(shader["type"])}_3_0',
+                    '-p', f'{toD3dPrefix(shader["type"])}_3_0',
                     '--define', defines,
-                    '-O', "3",
+                    '-O', "1",
                     '-i', f'{args.bgfx}/src',
                     ] + includes)
             
@@ -220,12 +220,12 @@ def main():
                     args.compiler,
                     '-f', f'{input_file_path}',
                     '-o', f'{args.output}/shaders/dx11/{name}.bin',
-                    '--type', f' {toType(shader["type"])}',
-                    '--platform', " windows",
+                    '--type', f'{toType(shader["type"])}',
+                    '--platform', "windows",
                     '--varyingdef', f'{varying_def_path}',
-                    '--p', f'{toD3dPrefix(shader["type"])}_5_0',
+                    '-p', f'{toD3dPrefix(shader["type"])}_5_0',
                     '--define', defines,
-                    '-O', "3",
+                    '-O', "1",
                     '-i', f'{args.bgfx}/src',
                     ] + includes)
             else:
@@ -236,9 +236,9 @@ def main():
                     '--type', f'{toType(shader["type"])}',
                     '--platform', "windows",
                     '--varyingdef', f'{varying_def_path}',
-                    '--p', f'{toD3dPrefix(shader["type"])}_5_0',
+                    '-p', f'{toD3dPrefix(shader["type"])}_5_0',
                     '--define', defines,
-                    "-O 1",
+                    '-O', "3",
                     '-i', f'{args.bgfx}/src',
                     ] + includes)
 
