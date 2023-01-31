@@ -20,49 +20,49 @@ int SlotUpdaterThread(void* alUnusedArg);
 
 extern cOAL_Device* gpDevice;
 
-// Set EFX func pointers to null (maybe this should be in OAL_Device.cpp? )
+//  Set EFX func pointers to null (maybe this should be in OAL_Device.cpp? )
 
-// Effect Slots
+// // Effect Slots
 
-LPALGENAUXILIARYEFFECTSLOTS alGenAuxiliaryEffectSlots = NULL;
-LPALDELETEAUXILIARYEFFECTSLOTS alDeleteAuxiliaryEffectSlots = NULL;
-LPALISAUXILIARYEFFECTSLOT alIsAuxiliaryEffectSlot = NULL;
-LPALAUXILIARYEFFECTSLOTI alAuxiliaryEffectSloti = NULL;
-LPALAUXILIARYEFFECTSLOTIV alAuxiliaryEffectSlotiv = NULL;
-LPALAUXILIARYEFFECTSLOTF alAuxiliaryEffectSlotf = NULL;
-LPALAUXILIARYEFFECTSLOTFV alAuxiliaryEffectSlotfv = NULL;
-LPALGETAUXILIARYEFFECTSLOTI alGetAuxiliaryEffectSloti = NULL;
-LPALGETAUXILIARYEFFECTSLOTIV alGetAuxiliaryEffectSlotiv = NULL;
-LPALGETAUXILIARYEFFECTSLOTF alGetAuxiliaryEffectSlotf = NULL;
-LPALGETAUXILIARYEFFECTSLOTFV alGetAuxiliaryEffectSlotfv = NULL;
+// LPALGENAUXILIARYEFFECTSLOTS alGenAuxiliaryEffectSlots = NULL;
+// LPALDELETEAUXILIARYEFFECTSLOTS alDeleteAuxiliaryEffectSlots = NULL;
+// LPALISAUXILIARYEFFECTSLOT alIsAuxiliaryEffectSlot = NULL;
+// LPALAUXILIARYEFFECTSLOTI alAuxiliaryEffectSloti = NULL;
+// LPALAUXILIARYEFFECTSLOTIV alAuxiliaryEffectSlotiv = NULL;
+// LPALAUXILIARYEFFECTSLOTF alAuxiliaryEffectSlotf = NULL;
+// LPALAUXILIARYEFFECTSLOTFV alAuxiliaryEffectSlotfv = NULL;
+// LPALGETAUXILIARYEFFECTSLOTI alGetAuxiliaryEffectSloti = NULL;
+// LPALGETAUXILIARYEFFECTSLOTIV alGetAuxiliaryEffectSlotiv = NULL;
+// LPALGETAUXILIARYEFFECTSLOTF alGetAuxiliaryEffectSlotf = NULL;
+// LPALGETAUXILIARYEFFECTSLOTFV alGetAuxiliaryEffectSlotfv = NULL;
 
-// Effects
+// // Effects
 
-LPALGENEFFECTS alGenEffects = NULL;
-LPALDELETEEFFECTS alDeleteEffects = NULL;
-LPALISEFFECT alIsEffect = NULL;
-LPALEFFECTI alEffecti = NULL;
-LPALEFFECTIV alEffectiv = NULL;
-LPALEFFECTF alEffectf = NULL;
-LPALEFFECTFV alEffectfv = NULL;
-LPALGETEFFECTI alGetEffecti = NULL;
-LPALGETEFFECTIV alGetEffectiv = NULL;
-LPALGETEFFECTF alGetEffectf = NULL;
-LPALGETEFFECTFV alGetEffectfv = NULL;
+// LPALGENEFFECTS alGenEffects = NULL;
+// LPALDELETEEFFECTS alDeleteEffects = NULL;
+// LPALISEFFECT alIsEffect = NULL;
+// LPALEFFECTI alEffecti = NULL;
+// LPALEFFECTIV alEffectiv = NULL;
+// LPALEFFECTF alEffectf = NULL;
+// LPALEFFECTFV alEffectfv = NULL;
+// LPALGETEFFECTI alGetEffecti = NULL;
+// LPALGETEFFECTIV alGetEffectiv = NULL;
+// LPALGETEFFECTF alGetEffectf = NULL;
+// LPALGETEFFECTFV alGetEffectfv = NULL;
 
-// Filters
+// // Filters
 
-LPALGENFILTERS alGenFilters = NULL;
-LPALDELETEFILTERS alDeleteFilters = NULL;
-LPALISFILTER alIsFilter = NULL;
-LPALFILTERI alFilteri = NULL;
-LPALFILTERIV alFilteriv = NULL;
-LPALFILTERF alFilterf = NULL;
-LPALFILTERFV alFilterfv = NULL;
-LPALGETFILTERI alGetFilteri = NULL;
-LPALGETFILTERIV alGetFilteriv = NULL;
-LPALGETFILTERF alGetFilterf = NULL;
-LPALGETFILTERFV alGetFilterfv = NULL;
+// LPALGENFILTERS alGenFilters = NULL;
+// LPALDELETEFILTERS alDeleteFilters = NULL;
+// LPALISFILTER alIsFilter = NULL;
+// LPALFILTERI alFilteri = NULL;
+// LPALFILTERIV alFilteriv = NULL;
+// LPALFILTERF alFilterf = NULL;
+// LPALFILTERFV alFilterfv = NULL;
+// LPALGETFILTERI alGetFilteri = NULL;
+// LPALGETFILTERIV alGetFilteriv = NULL;
+// LPALGETFILTERF alGetFilterf = NULL;
+// LPALGETFILTERFV alGetFilterfv = NULL;
 
 cOAL_EFXManager::cOAL_EFXManager() : mlNumSlots(0), mpvSlots(NULL), mplstEffectList(NULL), mplstFilterList(NULL)
 {

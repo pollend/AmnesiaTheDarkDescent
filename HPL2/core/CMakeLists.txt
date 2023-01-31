@@ -207,6 +207,7 @@ find_package(unofficial-theora CONFIG REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(GLEW CONFIG REQUIRED)
 find_package(SDL2 CONFIG REQUIRED)
+# find_package(PNG REQUIRED)
 # find_package (Python COMPONENTS Interpreter)
 # find_package(Python3 COMPONENTS Interpreter)
 
@@ -255,15 +256,18 @@ target_link_libraries(HPL2
   bx
   bimg
   GLEW::GLEW
-  DevIL::IL
   $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
   $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
-  ${GLEW_LIBRARIES}
-  ${OPENGL_gl_LIBRARY}
-  ${OPENGL_glu_LIBRARY}
+  #   DevIL::IL
+  ZLIB::ZLIB
+  ${IL_LIBRARIES}
+#   PNG::PNG
+#   ${GLEW_LIBRARIES}
+#   ${OPENGL_gl_LIBRARY}
+#   ${OPENGL_glu_LIBRARY}
   # ${THEORA_LIBRARY}
   # ${IL_LIBRARIES}
-  ${ZLIB_LIBRARIES}
+#   ${ZLIB_LIBRARIES}
   ${PLATFORM_LIBS}
   )
  
