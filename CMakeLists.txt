@@ -2,9 +2,10 @@ cmake_minimum_required(VERSION 3.9.6)
 set(CMAKE_CXX_STANDARD 20)
 set(INSTALL_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/bin)
 
-set(VCPKG_CMAKE_SYSTEM_NAME Linux)
+if(UNIX)
+    set(VCPKG_CMAKE_SYSTEM_NAME Linux)
+endif()
 include("${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake")
-
 
 # HACK to correctly set Linux property for newer cmake
 if(NOT APPLE AND UNIX)

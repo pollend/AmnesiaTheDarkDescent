@@ -59,7 +59,8 @@ void main()
     float fLDotN = max(dot(normalizedNormal, normalLightDir), 0.0);
 	vec3 diffuseColor = color.xyz * u_lightColor.xyz * fLDotN;
     
-    // shadows are broken always failing
+    // shadows are broken on windows 
+    // TODO: need to work out whats is wrong here. 
     #ifndef BX_PLATFORM_WINDOWS    
         #ifdef USE_SHADOWS
             #ifdef SHADOW_JITTER_SIZE
