@@ -21,6 +21,7 @@
 #define HPL_CRC_H
 
 
+#include <cstddef>
 namespace hpl {
 	//----------------------------------------
 

@@ -18,7 +18,7 @@
  */
 
 #include "math/CRC.h"
-
+#include <cstddef>
 //----------------------------------------
 
 namespace hpl {
