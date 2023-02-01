@@ -21,7 +21,6 @@
 #define HPL_THREAD_WIN32_H
 
 #include "system/Thread.h"
-
 #include <windows.h>
 
 namespace hpl {

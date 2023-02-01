@@ -15,7 +15,7 @@ void main()
     #ifdef USE_ALPHA_MAP
         vFinalColor = texture2D(s_diffuseMap, v_texcoord0);
     #else
-        vFinalColor = vec4(1.0);
+        vFinalColor = vec4(1.0, 1.0, 1.0, 1.0);
     #endif
 
     
@@ -42,5 +42,5 @@ void main()
         discard;
     }
 		 
-	gl_FragColor = vec4(1.0);
+	gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
 }

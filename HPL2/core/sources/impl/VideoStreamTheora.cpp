@@ -28,10 +28,10 @@
 #include <cstdio>
 #include <cstring>
 
-#ifdef _WIN32
-#pragma comment(lib, "libogg.lib")
-#pragma comment(lib, "libtheora.lib")
-#endif
+//#ifdef _WIN32
+//#pragma comment(lib, "libogg.lib")
+//#pragma comment(lib, "libtheora.lib")
+//#endif
 
 namespace hpl {
 

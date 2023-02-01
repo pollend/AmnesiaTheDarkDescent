@@ -1,6 +1,5 @@
 #include "bgfx/bgfx.h"
 #include <bx/debug.h>
-#include <cstddef>
 #include <graphics/AnimatedImage.h>
 
 namespace hpl {

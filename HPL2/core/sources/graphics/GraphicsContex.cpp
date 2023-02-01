@@ -15,6 +15,11 @@
 namespace hpl
 {
 
+    GraphicsContext::ShaderProgram::ShaderProgram() {
+        m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::Zero);
+        m_configuration.m_alphaBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::Zero);
+    }
+
     struct PositionTexCoord0
     {
         float m_x;

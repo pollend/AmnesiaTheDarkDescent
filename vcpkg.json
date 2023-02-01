@@ -1,0 +1,16 @@
+{
+    "name": "amnesia",
+    "dependencies": [
+      "libvorbis",
+      "sdl2",
+      "glew",
+      "libtheora",
+      "libogg",
+      "openal-soft",
+      "zlib",
+      {
+        "name": "devil",
+        "platform": "windows"
+      }
+    ]
+}

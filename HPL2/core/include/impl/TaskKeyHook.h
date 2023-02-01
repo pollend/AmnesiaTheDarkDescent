@@ -23,8 +23,8 @@
 // If not, I don't know who wrote it.
 // Compiles with Visual Studio 6.0 and Visual Studio .NET on Windows XP.
 //
-#define DLLIMPORT __declspec(dllimport)
+#define HPL_DLLIMPORT __declspec(dllimport)
 
-DLLIMPORT BOOL DisableTaskKeys(BOOL bEnable, BOOL bBeep);
-DLLIMPORT BOOL AreTaskKeysDisabled();
+HPL_DLLIMPORT BOOL DisableTaskKeys(BOOL bEnable, BOOL bBeep);
+HPL_DLLIMPORT BOOL AreTaskKeysDisabled();
 

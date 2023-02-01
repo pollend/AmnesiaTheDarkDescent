@@ -8,7 +8,9 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/core)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/physics)
 
-set(CMAKE_CXX_FLAGS "-Wno-extern-c-compat")
+if(UNIX)
+	set(CMAKE_CXX_FLAGS "-Wno-extern-c-compat")
+endif()
 
 add_library(Newton STATIC
   core/dg.cpp
@@ -84,5 +86,9 @@ add_library(Newton STATIC
   newton/Newton.cpp
   newton/NewtonClass.cpp
   )
+
+if(WIN32)
+	target_compile_definitions(Newton PRIVATE "_NEWTON_USE_LIB=1")
+endif()
 
 target_include_directories(Newton PUBLIC include)

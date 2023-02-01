@@ -114,8 +114,13 @@ namespace hpl::entry_sdl {
     int32_t threadHandler(bx::Thread* self, void* _userData) {
         
         bgfx::Init init;
-		init.type = bgfx::RendererType::OpenGL;
-		// init.vendorId = args.m_pciId;
+        #if defined(WIN32)
+            // DirectX11 is even more broken then opengl something to consider later ...
+		    init.type = bgfx::RendererType::OpenGL;
+		#else
+		    init.type = bgfx::RendererType::OpenGL;
+        #endif
+        // init.vendorId = args.m_pciId;
 		init.platformData.nwh  = sdlNativeWindowHandle(g_context.m_window);
 		init.platformData.ndt  = getNativeDisplayHandle(g_context.m_window);
 		init.resolution.width  = g_context.m_size.x;

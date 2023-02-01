@@ -588,7 +588,7 @@ void dgWorld::UpdateCollision ()
 	m_inUpdate ++;
 	_ASSERTE (m_numberOfTheads  >= 1);
 
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER))
+#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32))
 	#ifndef __USE_DOUBLE_PRECISION__
 		dgUnsigned32 controlWorld = dgControlFP (0xffffffff, 0);
 		dgControlFP (_PC_24, _MCW_PC);
@@ -612,7 +612,7 @@ void dgWorld::UpdateCollision ()
 	}
 	m_inUpdate --;
 
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER))
+#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32))
 	#ifndef __USE_DOUBLE_PRECISION__
 		dgControlFP (controlWorld, _MCW_PC);
 	#endif
@@ -661,7 +661,7 @@ void dgWorld::Update (dgFloat32 timestep)
 	m_inUpdate ++;
 	_ASSERTE (m_numberOfTheads  >= 1);
 
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER))
+#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32))
 	#ifndef __USE_DOUBLE_PRECISION__
 		dgUnsigned32 controlWorld = dgControlFP (0xffffffff, 0);
 		dgControlFP (_PC_24, _MCW_PC);
@@ -686,7 +686,7 @@ void dgWorld::Update (dgFloat32 timestep)
 	m_inUpdate --;
 
 
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER))
+#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32))
 	#ifndef __USE_DOUBLE_PRECISION__
 		dgControlFP (controlWorld, _MCW_PC);
 	#endif

@@ -20,7 +20,6 @@
 #ifndef HPL_GLSL_SHADER_H
 #define HPL_GLSL_SHADER_H
 
-//#include <windows.h>
 #include <GL/glew.h>
 
 #include "system/SystemTypes.h"

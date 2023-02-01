@@ -13,5 +13,5 @@ void main()
     if(color.w < u_alphaReject) {
         discard;
     }
-    gl_FragColor = vec4(1.0);
+    gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
 }

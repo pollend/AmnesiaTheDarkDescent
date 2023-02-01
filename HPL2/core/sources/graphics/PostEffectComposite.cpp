@@ -35,7 +35,6 @@
 
 #include <algorithm>
 #include <bx/debug.h>
-#include <cstddef>
 #include <functional>
 
 namespace hpl

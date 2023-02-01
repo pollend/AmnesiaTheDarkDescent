@@ -57,8 +57,6 @@ namespace hpl {
 		iPostEffect *CreatePostEffect(iPostEffectParams *apParams);
 
 	private:
-		iGpuProgram *mpProgram;
-
 		bgfx::ProgramHandle m_program = BGFX_INVALID_HANDLE;
 		bgfx::UniformHandle m_u_uniform = BGFX_INVALID_HANDLE;
 		bgfx::UniformHandle m_s_diffuseMap = BGFX_INVALID_HANDLE;

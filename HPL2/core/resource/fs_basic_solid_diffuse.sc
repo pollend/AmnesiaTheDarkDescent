@@ -2,7 +2,6 @@ $input v_texcoord0, v_normal, v_tangent, v_bitangent, v_view, v_position
 
 #include <common.sh>
 
-
 SAMPLERCUBE(s_envMap, 0);
 SAMPLER2D(s_normalMap, 1);
 SAMPLER2D(s_specularMap, 2);
@@ -29,7 +28,8 @@ void main()
         vec3 eyeVec = normalize(v_view);
 
         //Get give normalizedView the length so it reaches bottom.
-        eyeVec *= vec3(1.0 / eyeVec.z);	
+        float normalLength = 1.0 / eyeVec.z;
+        eyeVec *= vec3(normalLength, normalLength, normalLength);	
         
         //Apply scale and bias
         eyeVec.xy *= u_heightMapScale;
@@ -89,7 +89,7 @@ void main()
         vec3 cameraEyeSpace = normalize(v_position);	
 
         vec3 vEnvUv = reflect(cameraEyeSpace, screenNormal);
-        vEnvUv = (u_mtxInvViewRotation * vec4(vEnvUv,1)).xyz;
+        vEnvUv = mul(u_mtxInvViewRotation, vec4(vEnvUv.xyz, 1.0)).xyz;
                     
         vec4 reflectionColor = textureCube(s_envMap, vEnvUv);
         
@@ -106,10 +106,14 @@ void main()
     #endif
     
     gl_FragData[1].xyz = screenNormal; 
+    gl_FragData[1].w = 0.0;
     gl_FragData[2].xyz = v_position;
+    gl_FragData[2].w = 0.0;
     #ifdef USE_SPECULAR_MAPS
         gl_FragData[3].xy = texture2D(s_specularMap, texCoord).xy;
     #else
-        gl_FragData[3].xy = vec2(0.0);
+        gl_FragData[3].xy = vec2(0.0, 0.0);
     #endif
+    gl_FragData[3].z = 0.0;
+    gl_FragData[3].w = 0.0;
 }

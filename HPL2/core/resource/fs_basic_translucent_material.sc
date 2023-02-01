@@ -55,11 +55,11 @@ void main()
         vFinalColor.xyz *= fFinalAlpha*u_lightLevel;
     #endif
     #ifdef USE_BLEND_MODE_MUL
-        vFinalColor.xyz += (vec3(1.0) - vFinalColor.xyz) * (1.0-fFinalAlpha);
+        vFinalColor.xyz += (vec3(1.0,1.0, 1.0) - vFinalColor.xyz) * (1.0-fFinalAlpha);
     #endif
     #ifdef USE_BLEND_MODE_MULX2
         float fBlendMulAlpha = u_lightLevel*fFinalAlpha;
-        vFinalColor.xyz = vFinalColor.xyz*fBlendMulAlpha + vec3(0.5)*(1.0 - fBlendMulAlpha);
+        vFinalColor.xyz = mul(vFinalColor.xyz, fBlendMulAlpha) + mul(vec3(0.5,0.5,0.5), (1.0 - fBlendMulAlpha));
     #endif
     #ifdef USE_BLEND_MODE_ALPHA
         vFinalColor.xyz *= u_lightLevel;
@@ -70,8 +70,8 @@ void main()
     #endif
 
     
-    vec3 mapNormal = vec3(0);
-    vec3 screenNormal = vec3(0);
+    vec3 mapNormal = vec3(0,0,0);
+    vec3 screenNormal = vec3(0,0,0);
     #if defined(USE_REFRACTION) || defined(USE_CUBE_MAP)
         #ifdef USE_NORMAL_MAP
             mapNormal = texture2D(s_normalMap, v_texcoord0.xy).xyz*2.0 - 1.0; 	
@@ -137,7 +137,7 @@ void main()
         float fFresnel = Fresnel(afEDotN, u_frenselBiasPow.x, u_frenselBiasPow.y);
         
         vec3 vEnvUv = reflect(vEyeVec, screenNormal);
-        vEnvUv = (u_mtxInvViewRotation * vec4(vEnvUv,1)).xyz;
+        vEnvUv = mul(u_mtxInvViewRotation, vec4(vEnvUv,1)).xyz;
                     
         vec4 vReflectionColor = textureCube(s_envMap,vEnvUv);
         

@@ -2,7 +2,7 @@ $input v_clipPosition
 
 #include <common.sh>
 
-#define SHADOW_MAP_BIAS  0.01
+#define SHADOW_MAP_BIAS  0.001
 
 uniform vec4 u_param[2];
 #define u_lightRadius (u_param[0].x)
@@ -44,9 +44,9 @@ void main()
     vec3 normalLightDir = normalize(lightDir);
     vec3 normalizedNormal = normalize(normal.xyz);
 
-    vec4 projectionUV = u_spotViewProj * vec4(position,1.0);
+    vec4 projectionUV = mul(u_spotViewProj, vec4(position,1.0));
         
-    vec3 goboVal = vec3(1.0);
+    vec3 goboVal = vec3(1.0, 1.0, 1.0);
 #ifdef USE_GOBO_MAP
     goboVal = texture2DProj(s_goboMap, projectionUV).xyz;
 #else 
@@ -58,8 +58,11 @@ void main()
 	//Calculate diffuse color
     float fLDotN = max(dot(normalizedNormal, normalLightDir), 0.0);
 	vec3 diffuseColor = color.xyz * u_lightColor.xyz * fLDotN;
-
+    
+    
     #ifdef USE_SHADOWS
+        float bias = max(SHADOW_MAP_BIAS * (1.0 - dot(normalizedNormal, normalLightDir)), SHADOW_MAP_BIAS);
+   
         #ifdef SHADOW_JITTER_SIZE
             float fShadowSum = 0.0;
             float fJitterZ = 0.0;
@@ -71,8 +74,8 @@ void main()
             {
                 vec2 vJitterLookupCoord = vec2(vScreenJitterCoord.x, vScreenJitterCoord.y + fJitterZ);
                 vec4 vOffset = texture2D(s_shadowOffsetMap, vJitterLookupCoord) * 2.0 - 1.0;
-                fShadowSum += shadow2DProj(s_shadowMap, vec4(projectionUV.xy + (vec2(vOffset.xy) * u_shadowMapOffsetMul), projectionUV.z, projectionUV.w)) / 4.0;
-                fShadowSum += shadow2DProj(s_shadowMap, vec4(projectionUV.xy + (vec2(vOffset.zw) * u_shadowMapOffsetMul), projectionUV.z, projectionUV.w)) / 4.0;
+                fShadowSum += shadow2DProj(s_shadowMap, vec4(projectionUV.xy + (vec2(vOffset.xy) * u_shadowMapOffsetMul), projectionUV.z  - bias, projectionUV.w)) / 4.0;
+                fShadowSum += shadow2DProj(s_shadowMap, vec4(projectionUV.xy + (vec2(vOffset.zw) * u_shadowMapOffsetMul), projectionUV.z  - bias, projectionUV.w)) / 4.0;
                             
                 fJitterZ += 1.0 /  (float(SHADOW_JITTER_SAMPLES)/2.0);
             }
@@ -91,8 +94,8 @@ void main()
                     vec2 vJitterLookupCoord = vec2(vScreenJitterCoord.x, vScreenJitterCoord.y + fJitterZ); //Not that coords are 0-1!
                 
                     vec4 vOffset = texture2D(s_shadowOffsetMap, vJitterLookupCoord) * 2.0 - 1.0;
-                    fShadowSum += shadow2DProj(s_shadowMap, vec4(projectionUV.xy + (vec2(vOffset.xy) * u_shadowMapOffsetMul), projectionUV.z, projectionUV.w)) / float(SHADOW_JITTER_SAMPLES);
-                    fShadowSum += shadow2DProj(s_shadowMap, vec4(projectionUV.xy + (vec2(vOffset.zw) * u_shadowMapOffsetMul), projectionUV.z, projectionUV.w)) / float(SHADOW_JITTER_SAMPLES);
+                    fShadowSum += shadow2DProj(s_shadowMap, vec4(projectionUV.xy + (vec2(vOffset.xy) * u_shadowMapOffsetMul), projectionUV.z  - bias, projectionUV.w)) / float(SHADOW_JITTER_SAMPLES);
+                    fShadowSum += shadow2DProj(s_shadowMap, vec4(projectionUV.xy + (vec2(vOffset.zw) * u_shadowMapOffsetMul), projectionUV.z  - bias, projectionUV.w)) / float(SHADOW_JITTER_SAMPLES);
                     
                     fJitterZ += 1.0 /  (float(SHADOW_JITTER_SAMPLES)/2.0);
                 }
@@ -100,18 +103,18 @@ void main()
             }
             attenuation *= fShadowSum;
         #else
-            float bias = max(SHADOW_MAP_BIAS * (1.0 - dot(normalizedNormal, normalLightDir)), SHADOW_MAP_BIAS);
-            attenuation *= shadow2DProj(s_shadowMap, vec4(projectionUV.xy, projectionUV.z - bias, projectionUV.w));
+             attenuation *= shadow2DProj(s_shadowMap, vec4(projectionUV.xy, projectionUV.z - bias, projectionUV.w));
         #endif
     #endif
 
-    vec3 specularColor = vec3(0.0);
+    vec3 specularColor = vec3(0.0, 0.0, 0.0);
     if(u_lightColor.w > 0.0) {
         vec3 halfVec = normalize(normalLightDir + normalize(-position));
         float specIntensity = specular.x;
         float specPower = specular.y;
-        specularColor = vec3(u_lightColor.w * specIntensity *  pow( clamp( dot( halfVec, normalizedNormal), 0.0, 1.0), specPower )) * u_lightColor.xyz;
+        float specularValue = u_lightColor.w * specIntensity *  pow(clamp(dot(halfVec,normalizedNormal), 0.0, 1.0), specPower);
+        specularColor = mul(vec3(specularValue,specularValue, specularValue), u_lightColor.xyz);
     }
-
     gl_FragColor.xyz = (specularColor + diffuseColor) * goboVal * attenuation;
+    gl_FragColor.w = 0.0;
 }

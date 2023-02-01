@@ -1,16 +1,17 @@
 cmake_minimum_required (VERSION 3.0)
 project(Lux)
 
-# Well, first of all, disable some harmless warnings, which are really
-# hard to get rid off (they are overall in the code).
-set(CMAKE_CXX_FLAGS
-  "${CMAKE_CXX_FLAGS} -Wno-switch -Wno-undefined-var-template -Wno-extern-c-compat")
-set(CMAKE_CXX_FLAGS_RELEASE "-fno-strict-aliasing")
 
 if(LINUX)
+    # Well, first of all, disable some harmless warnings, which are really
+    # hard to get rid off (they are overall in the code).
+    set(CMAKE_CXX_FLAGS
+      "${CMAKE_CXX_FLAGS} -Wno-switch -Wno-undefined-var-template -Wno-extern-c-compat")
+    set(CMAKE_CXX_FLAGS_RELEASE "-fno-strict-aliasing")
+
     set(AMNESIA_GAME_DIRECTORY "$ENV{HOME}/.local/share/Steam/steamapps/common/Amnesia The Dark Descent" CACHE PATH "game path")
 else()
-    set(AMNESIA_GAME_DIRECTORY "" CACHE PATH)
+    set(AMNESIA_GAME_DIRECTORY "" CACHE PATH "")
 endif()
 
 
@@ -48,7 +49,12 @@ if(WITH_TOOLS)
     install (TARGETS MshConverter RUNTIME
             DESTINATION ${AMNESIA_EXECUTABLE_OUTPUT_PATH})
 endif()
-install (TARGETS Amnesia RUNTIME
+install (TARGETS Amnesia 
+    RUNTIME DESTINATION ${AMNESIA_EXECUTABLE_OUTPUT_PATH}
+    LIBRARY DESTINATION ${AMNESIA_EXECUTABLE_OUTPUT_PATH})
+ 
+install(FILES 
+    $<TARGET_RUNTIME_DLLS:Amnesia>
     DESTINATION ${AMNESIA_EXECUTABLE_OUTPUT_PATH})
 
 if((NOT ${AMNESIA_GAME_DIRECTORY} STREQUAL "") AND COPY_GAME_ASSETS)
@@ -60,6 +66,8 @@ if((NOT ${AMNESIA_GAME_DIRECTORY} STREQUAL "") AND COPY_GAME_ASSETS)
             PATTERN "Launcher.*" EXCLUDE
             PATTERN "*.rar" EXCLUDE
             PATTERN "*.pdf" EXCLUDE
+            PATTERN "*.dll" EXCLUDE
+            PATTERN "*.exe" EXCLUDE
             PATTERN "*"
             )
 endif()

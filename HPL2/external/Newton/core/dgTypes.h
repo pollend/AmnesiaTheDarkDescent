@@ -32,10 +32,11 @@
 
 #define _DEBUG
 #if !(defined (__ppc__) || defined (__USE_DOUBLE_PRECISION__) || defined (_SCALAR_ARITHMETIC_ONLY))
-	#define DG_BUILD_SIMD_CODE
+// disable using SIMD can't build in windows
+// #define DG_BUILD_SIMD_CODE
 #endif
 
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER))
+#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32))
 
 	#pragma warning (disable: 4324) //structure was padded due to __declspec(align())
 	#pragma warning (disable: 4100) //unreferenced formal parameter
@@ -94,7 +95,7 @@
 
 #ifdef DG_BUILD_SIMD_CODE
 
-	#if (defined (_WIN_32_VER) || defined (_WIN_64_VER))
+	#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32))
 		#if (_MSC_VER >= 1400)
 			#include <intrin.h>
 		#else
@@ -159,14 +160,14 @@
 #undef DLL_DECLSPEC
 #endif
 
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER))
+#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32))
 	#define DG_INLINE __forceinline
 #else
 	#define DG_INLINE inline
 #endif
 
 
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER))
+#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32))
 	#define	DG_MSC_VECTOR_ALIGMENT	__declspec(align(16))
 	#define	DG_GCC_VECTOR_ALIGMENT
 #else
@@ -226,7 +227,7 @@ class dgTriplex
 
 class dgVector;
 
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER))
+#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32))
 	#define dgApi __cdecl 
 
 	#ifdef _WIN_64_VER
@@ -240,7 +241,7 @@ class dgVector;
 #endif
 
 
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER))
+#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32))
 	#ifdef _DEBUG
 		#define dgCheckFloat(x) _finite(x)
 	#else
@@ -646,7 +647,7 @@ dgCpuClass dgApi dgGetCpuType ();
 
 inline dgInt32 dgAtomicAdd (dgInt32* const addend, dgInt32 amount)
 {
-	#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined (_MINGW_32_VER) || defined (_MINGW_64_VER))
+	#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32) || defined (_MINGW_32_VER) || defined (_MINGW_64_VER))
 		return InterlockedExchangeAdd((long*) addend, long (amount));
 	#endif
 

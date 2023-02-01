@@ -17,4 +17,5 @@ void main()
                     texture2D(s_convMap, vec2(diffuseColor.y, 0)).y,
                     texture2D(s_convMap, vec2(diffuseColor.z, 0)).z);
     gl_FragColor.xyz = (outputColor * u_alphaFade) + (diffuseColor * (1.0 - u_alphaFade));
+    gl_FragColor.w = 0.0;
 }

@@ -227,7 +227,7 @@ public:
 	{
 		if (GetCount()) {
 
-			#if (defined (_WIN_32_VER) || defined (_WIN_64_VER))
+			#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32))
 			dgUnsigned32 controlWorld = dgControlFP (0xffffffff, 0);
 			dgControlFP (_PC_53, _MCW_PC);
 			#endif
@@ -244,7 +244,7 @@ public:
 			// Recover the solid mesh from the delaunay tetrahedron
 			RecoverFaces ();
 
-			#if (defined (_WIN_32_VER) || defined (_WIN_64_VER))
+			#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32))
 			dgControlFP (controlWorld, _MCW_PC);
 			#endif
 		}

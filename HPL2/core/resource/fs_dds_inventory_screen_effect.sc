@@ -19,6 +19,6 @@ void main()
 	vFinalCol.y = dot(color, colorToG) * fIntensity;
 	vFinalCol.z = dot(color, colorToB) * fIntensity;
 	
-	gl_FragColor.xyz = pow(vFinalCol.xyz, vec3(1.5));
+	gl_FragColor.xyz = pow(vFinalCol.xyz, vec3(1.5, 1.5, 1.5));
 	gl_FragColor.w = 1.0;
 }

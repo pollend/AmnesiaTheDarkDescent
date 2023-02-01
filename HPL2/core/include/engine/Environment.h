@@ -179,7 +179,7 @@ namespace hpl {
         EnvironmentStore();
         ~EnvironmentStore();
 
-        EnvironmentResult AddVariable(uint32_t id, void* variable);
+        //EnvironmentResult AddVariable(uint32_t id, void* variable);
         EnvironmentResult AddOrAllocateVariable(uint32_t id, size_t size);
         EnvironmentResult RemoveVariable(uint32_t id);
         EnvironmentResult RemoveAndDeallocateVariable(uint32_t id);

@@ -288,20 +288,18 @@ bool cLuxMap::LoadFromFile(const tString & asFile, bool abLoadEntities)
 
 		//////////////////////////
 		// Print what i've done
-		#if not MAC_OS && not LINUX
-		sDebugMsg += L" of ";
-		sDebugMsg += std::to_wstring(static_cast<long long>(lNumTotalTinderboxes));
-		sDebugMsg += L" tinderboxes removed, ";
-		sDebugMsg += std::to_wstring(static_cast<long double>(fTinderBoxRemoveEvery));
-		gpBase->mpDebugHandler->AddMessage(sDebugMsg, false);
-
-		sDebugMsg = std::to_wstring(static_cast<long long>(lNumRemovedOil));
-		sDebugMsg += L" of ";
-		sDebugMsg += std::to_wstring(static_cast<long long>(lNumTotalOil));
-		sDebugMsg += L" oil removed";
-
-		gpBase->mpDebugHandler->AddMessage(sDebugMsg, false);
-        #endif
+		//#if not MAC_OS && not LINUX
+		//sDebugMsg += L" of ";
+		//sDebugMsg += std::to_wstring(static_cast<long long>(lNumTotalTinderboxes));
+		//sDebugMsg += L" tinderboxes removed, ";
+		//sDebugMsg += std::to_wstring(static_cast<long double>(fTinderBoxRemoveEvery));
+		//gpBase->mpDebugHandler->AddMessage(sDebugMsg, false);
+		//sDebugMsg = std::to_wstring(static_cast<long long>(lNumRemovedOil));
+		//sDebugMsg += L" of ";
+		//sDebugMsg += std::to_wstring(static_cast<long long>(lNumTotalOil));
+		//sDebugMsg += L" oil removed";
+		//gpBase->mpDebugHandler->AddMessage(sDebugMsg, false);
+        //#endif
 
 		//////////////////////////
 		// Remove the entities from above

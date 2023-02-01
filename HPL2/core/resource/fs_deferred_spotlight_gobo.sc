@@ -45,12 +45,13 @@ void main()
     float fLDotN = max(dot(normalizedNormal, normalLightDir), 0.0);
 	vec3 diffuseColor = color.xyz * u_lightColor.xyz * fLDotN;
 
-    vec3 specularColor = vec3(0.0);
+    vec3 specularColor = vec3(0.0, 0.0, 0.0);
     if(u_lightColor.w > 0.0) {
         vec3 halfVec = normalize(normalLightDir + normalize(-position));
         float specIntensity = specular.x;
         float specPower = specular.y;
-        specularColor = vec3(u_lightColor.w * specIntensity *  pow( clamp( dot( halfVec, normalizedNormal), 0.0, 1.0), specPower )) * u_lightColor.xyz;
+        float specularValue = u_lightColor.w * specIntensity *  pow(clamp(dot(halfVec, normalizedNormal), 0.0, 1.0), specPower);
+        specularColor = vec3(specularValue, specularValue, specularValue) * u_lightColor.xyz;
     }
 
     gl_FragColor.xyz = (specularColor + diffuseColor) * attenuation;

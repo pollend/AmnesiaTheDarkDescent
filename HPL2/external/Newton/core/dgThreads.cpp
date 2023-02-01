@@ -26,7 +26,7 @@
 
 static inline void dgThreadYield()
 {
-#if defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined (_MINGW_32_VER) || defined (_MINGW_64_VER)
+#if defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32) || defined (_MINGW_32_VER) || defined (_MINGW_64_VER)
 		Sleep(0);
 #endif
 
@@ -40,7 +40,7 @@ static inline void dgThreadYield()
 
 static inline void dgSpinLock (dgInt32 *spin)
 {
-	#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined (_MINGW_32_VER) || defined (_MINGW_64_VER))
+	#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32) || defined (_MINGW_32_VER) || defined (_MINGW_64_VER))
 		while (InterlockedExchange((long*) spin, 1)) {
 			Sleep(0);
 		}
@@ -70,7 +70,7 @@ inline void dgSpinUnlock (dgInt32 *spin)
 
 static inline void dgInterlockedIncrement (dgInt32* Addend )
 {
-	#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined (_MINGW_32_VER) || defined (_MINGW_64_VER))
+	#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32) || defined (_MINGW_32_VER) || defined (_MINGW_64_VER))
 		InterlockedIncrement((long*) Addend);
 	#endif
 
@@ -87,7 +87,7 @@ static inline void dgInterlockedIncrement (dgInt32* Addend )
 
 static inline void dgInterlockedDecrement(dgInt32* Addend)
 {
-	#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined (_MINGW_32_VER) || defined (_MINGW_64_VER))
+	#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32) || defined (_MINGW_32_VER) || defined (_MINGW_64_VER))
 		InterlockedDecrement((long*) Addend);
 	#endif
 
@@ -104,7 +104,7 @@ static inline void dgInterlockedDecrement(dgInt32* Addend)
 
 dgThreads::dgThreads()
 {
-	#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined (_MINGW_32_VER) || defined (_MINGW_64_VER))
+	#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32) || defined (_MINGW_32_VER) || defined (_MINGW_64_VER))
 		SYSTEM_INFO sysInfo;
 		GetSystemInfo(&sysInfo);
 		m_numberOfCPUCores = dgInt32 (sysInfo.dwNumberOfProcessors);
@@ -210,7 +210,7 @@ void dgThreads::CreateThreaded (dgInt32 threads)
 		DestroydgThreads();
 	}
 
-	#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined (_MINGW_32_VER) || defined (_MINGW_64_VER))
+	#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32) || defined (_MINGW_32_VER) || defined (_MINGW_64_VER))
 		if ((threads > 1) && (m_numberOfCPUCores > 1)) {
 			m_numOfThreads = GetMin (threads, m_numberOfCPUCores);
 
@@ -260,7 +260,7 @@ void dgThreads::CreateThreaded (dgInt32 threads)
 
 void dgThreads::DestroydgThreads()
 {
-	#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined (_MINGW_32_VER) || defined (_MINGW_64_VER))
+	#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32) || defined (_MINGW_32_VER) || defined (_MINGW_64_VER))
 		_ASSERTE (m_workInProgress == 0);
 
 		while(m_workInProgress > 0){
@@ -330,7 +330,7 @@ dgInt32 dgThreads::SubmitJob(dgWorkerThread* const job)
 		job->ThreadExecute();
 	} else {
 
-		#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined (_MINGW_32_VER) || defined (_MINGW_64_VER))
+		#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32) || defined (_MINGW_32_VER) || defined (_MINGW_64_VER))
 			dgInterlockedIncrement(&m_workInProgress);
 			if(WaitForSingleObject(m_emptySlot,INFINITE) != WAIT_OBJECT_0){
 				return(0);
@@ -362,7 +362,7 @@ dgInt32 dgThreads::SubmitJob(dgWorkerThread* const job)
 
 
 
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined (_MINGW_32_VER) || defined (_MINGW_64_VER))
+#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32) || defined (_MINGW_32_VER) || defined (_MINGW_64_VER))
 	dgUnsigned32 _stdcall dgThreads::ThreadExecute(void *param)
 #endif
 #if defined (__linux__) || defined (_MAC_VER) || defined (__FreeBSD__)
@@ -377,7 +377,7 @@ dgInt32 dgThreads::SubmitJob(dgWorkerThread* const job)
 
 dgInt32  dgThreads::GetWork(dgWorkerThread** job)
 {
-	#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined (_MINGW_32_VER) || defined (_MINGW_64_VER))
+	#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32) || defined (_MINGW_32_VER) || defined (_MINGW_64_VER))
 		HANDLE hWaitHandles[2];
 		hWaitHandles[0] = m_workToDo;
 		hWaitHandles[1] = m_exit;
@@ -428,7 +428,7 @@ void dgThreads::DoWork(dgInt32 mythreadIndex)
 	dgWorkerThread* job;
 
 
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER))
+#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32))
 	#ifndef __USE_DOUBLE_PRECISION__
 		dgUnsigned32 controlWorld;
 		controlWorld = dgControlFP (0xffffffff, 0);
@@ -452,7 +452,7 @@ void dgThreads::DoWork(dgInt32 mythreadIndex)
 		}
 	}
 
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER))
+#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32))
 	#ifndef __USE_DOUBLE_PRECISION__
 		dgControlFP (controlWorld, _MCW_PC);
 	#endif

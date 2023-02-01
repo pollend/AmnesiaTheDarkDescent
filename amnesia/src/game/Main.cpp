@@ -26,6 +26,8 @@
 #include <windows.h>
 #endif
 
+
+
 //---------------------------------------
 
 cLuxBase* gpBase = NULL;
@@ -36,9 +38,9 @@ int hplMain(const tString &asCommandline)
 {
 	//////////////////////////
 	// Init BlackBox
-	#ifdef WIN32
-		HINSTANCE hBlackBoxLib = LoadLibrary( "BlackBox.dll" );
-	#endif
+//	#ifdef WIN32
+//		HINSTANCE hBlackBoxLib = LoadLibrary( "BlackBox.dll" );
+//	#endif
 
 
 	hpl::entry_sdl::setThreadHandler([&]() {
@@ -76,9 +78,9 @@ int hplMain(const tString &asCommandline)
 
 	//////////////////////////
 	// Exit BlackBox
-	#ifdef WIN32
-			if(hBlackBoxLib) FreeLibrary(hBlackBoxLib);
-	#endif
+//	#ifdef WIN32
+//			if(hBlackBoxLib) FreeLibrary(hBlackBoxLib);
+//	#endif
 
 	return 0;
 }

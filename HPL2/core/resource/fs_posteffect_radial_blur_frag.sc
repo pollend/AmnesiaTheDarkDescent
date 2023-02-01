@@ -1,3 +1,5 @@
+$input v_texcoord0
+
 #include <common.sh>
 
 SAMPLER2D(s_diffuseMap, 0);
@@ -25,7 +27,7 @@ void main()
 	vSizeMul[3] = 0.5;
 	vSizeMul[4] = 1.0;
 
-	vec2 vScreenCoord = gl_FragCoord.xy;
+	vec2 vScreenCoord = mul(gl_FragCoord.xy, u_viewTexel.xy);
 	
 	vec2 vDir = avHalfScreenSize - vScreenCoord;
 	float fDist = length(vDir) / avHalfScreenSize.x;
@@ -35,11 +37,11 @@ void main()
 	
 	vDir *= fDist * afSize;
 			
-	vec3 vDiffuseColor = vec3(0.0);
+	vec3 vDiffuseColor = vec3(0.0, 0.0, 0.0);
 	
 	for(int i=0; i<5; ++i)
 	{
-		vDiffuseColor += texture2D(s_diffuseMap, vScreenCoord + vDir * vSizeMul[i]).xyz * vColorMul[i];
+		vDiffuseColor += mul(texture2D(s_diffuseMap, vScreenCoord + vDir * vSizeMul[i]).xyz, vColorMul[i]);
 	}
 	
 	vDiffuseColor /= fTotalMul;

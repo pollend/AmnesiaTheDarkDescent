@@ -61,7 +61,6 @@
 #include "math/Math.h"
 
 #include <algorithm>
-#include <cstddef>
 #include <cstring>
 #include <iterator>
 

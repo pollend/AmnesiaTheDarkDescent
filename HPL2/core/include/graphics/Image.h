@@ -35,6 +35,10 @@ namespace hpl {
                 bool m_vClamp : 1;
                 bool m_wClamp : 1;
                 RTType m_rt : 3;
+                DepthTest m_comparsion;
+                FilterType m_minFilter;
+                FilterType m_magFilter;
+                FilterType m_mipFilter;
             };
             uint64_t m_settings = 0;
         } m_configuration;

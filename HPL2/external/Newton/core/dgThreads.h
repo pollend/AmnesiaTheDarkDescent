@@ -71,7 +71,7 @@ private:
 	void DoWork(dgInt32 threadIndex);
 	dgInt32 GetWork(dgWorkerThread** cWork);
 
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined (_MINGW_32_VER) || defined (_MINGW_64_VER))
+#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32) || defined (_MINGW_32_VER) || defined (_MINGW_64_VER))
 	static dgUnsigned32 _stdcall ThreadExecute(void *Param);
 #endif
 
@@ -86,7 +86,7 @@ private:
 	dgInt32 m_workInProgress;
 	mutable dgInt32 m_globalSpinLock;
 
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined (_MINGW_32_VER) || defined (_MINGW_64_VER))
+#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32) || defined (_MINGW_32_VER) || defined (_MINGW_64_VER))
 	HANDLE m_exit;
 	HANDLE m_workToDo;
 	HANDLE m_emptySlot;

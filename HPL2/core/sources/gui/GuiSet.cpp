@@ -79,8 +79,6 @@
 #include "gui/WidgetGroup.h"
 #include "gui/WidgetDummy.h"
 
-#include <cstddef>
-#include <cstdint>
 #include <memory>
 #include <stdarg.h>
 #include <stdlib.h>

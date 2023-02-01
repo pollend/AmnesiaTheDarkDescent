@@ -21,13 +21,13 @@
 #include "impl/VertexBufferBGFX.h"
 #include "math/MathTypes.h"
 #ifdef WIN32
-#pragma comment(lib, "OpenGL32.lib")
-#pragma comment(lib, "GLu32.lib")
+//#pragma comment(lib, "OpenGL32.lib")
+//#pragma comment(lib, "GLu32.lib")
 //#pragma comment(lib, "GLaux.lib")
-#pragma comment(lib, "Cg.lib")
-#pragma comment(lib, "CgGL.lib")
+//#pragma comment(lib, "Cg.lib")
+//#pragma comment(lib, "CgGL.lib")
 //#pragma comment(lib, "SDL_ttf.lib")
-#pragma comment(lib, "TaskKeyHook.lib")
+//#pragma comment(lib, "TaskKeyHook.lib")
 #endif
 
 #include <assert.h>
