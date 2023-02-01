@@ -61,7 +61,7 @@ void main()
     
     // shadows are broken on windows 
     // TODO: need to work out whats is wrong here. 
-    #ifndef BX_PLATFORM_WINDOWS    
+    #if(BX_PLATFORM_LINUX || BX_PLATFORM_OSX)    
         #ifdef USE_SHADOWS
             #ifdef SHADOW_JITTER_SIZE
                 float fShadowSum = 0.0;
