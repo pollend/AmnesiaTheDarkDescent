@@ -21,7 +21,6 @@
 #define HPL_MUTEX_WIN32_H
 
 #include "system/Mutex.h"
-#define NOMINMAX
 #include <windows.h>
 
 namespace hpl {

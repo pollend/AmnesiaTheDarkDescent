@@ -21,7 +21,6 @@
 #define HPL_THREAD_WIN32_H
 
 #include "system/Thread.h"
-#define NOMINMAX
 #include <windows.h>
 
 namespace hpl {

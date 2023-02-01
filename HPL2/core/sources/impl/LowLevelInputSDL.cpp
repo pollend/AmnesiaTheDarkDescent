@@ -35,7 +35,6 @@
 
 
 #if defined WIN32 && !SDL_VERSION_ATLEAST(2,0,0)
-#define NOMINMAX
 #include <Windows.h>
 #include <Dbt.h>
 #endif

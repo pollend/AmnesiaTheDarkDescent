@@ -24,7 +24,6 @@
 
 #if USE_XINPUT
 
-#define NOMINMAX
 #include <windows.h>
 #include <XInput.h>
 

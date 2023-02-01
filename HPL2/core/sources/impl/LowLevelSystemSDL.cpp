@@ -25,7 +25,6 @@
 #ifdef WIN32
 #pragma comment(lib, "angelscript.lib")
 #define UNICODE
-#define NOMINMAX
 #include <windows.h>
 #include <shlobj.h>
 #endif
@@ -66,7 +65,6 @@
 extern int hplMain(const hpl::tString &asCommandLine);
 
 //#ifdef WIN32
-//#define NOMINMAX
 //#include <windows.h>
 
 //int WINAPI WinMain(	HINSTANCE hInstance,  HINSTANCE hPrevInstance,LPSTR	lpCmdLine, int nCmdShow)

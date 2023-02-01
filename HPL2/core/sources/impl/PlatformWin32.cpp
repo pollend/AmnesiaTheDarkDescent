@@ -24,7 +24,6 @@
 #include "system/LowLevelSystem.h"
 
 #define UNICODE
-#define NOMINMAX
 #include <windows.h>
 #include <shlobj.h>
 

@@ -1,5 +1,4 @@
 #pragma once
-#define NOMINMAX
 
 #include "absl/container/inlined_vector.h"
 #include "graphics/Enum.h"

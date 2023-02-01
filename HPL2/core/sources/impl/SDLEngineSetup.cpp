@@ -46,7 +46,6 @@
 #include "SDL2/SDL.h"
 #include "SDL2/SDL_syswm.h"
 #ifdef WIN32
-#define NOMINMAX
 #include "Windows.h"
 #include "Dbt.h"
 #endif
