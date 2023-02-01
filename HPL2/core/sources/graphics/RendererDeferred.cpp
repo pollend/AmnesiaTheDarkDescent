@@ -194,6 +194,10 @@ namespace hpl {
 			auto depthImage = [&] {
 				auto desc = ImageDescriptor::CreateTexture2D(mvScreenSize.x, mvScreenSize.y, false, bgfx::TextureFormat::Enum::D24S8);
 				desc.m_configuration.m_rt = RTType::RT_Write;
+                desc.m_configuration.m_minFilter = FilterType::Point;
+                desc.m_configuration.m_magFilter = FilterType::Point;
+                desc.m_configuration.m_mipFilter = FilterType::Point;
+                desc.m_configuration.m_comparsion = DepthTest::LessEqual;
 				auto image = std::make_shared<Image>();
 				image->Initialize(desc);
 				return image;
@@ -285,6 +289,10 @@ namespace hpl {
 		auto createShadowMap = [](const cVector3l &avSize) -> cShadowMapData {
 			auto desc = ImageDescriptor::CreateTexture2D(avSize.x, avSize.y, false, bgfx::TextureFormat::D16F);
 			desc.m_configuration.m_rt = RTType::RT_Write;
+            desc.m_configuration.m_minFilter = FilterType::Point;
+            desc.m_configuration.m_magFilter = FilterType::Point;
+            desc.m_configuration.m_mipFilter = FilterType::Point;
+            desc.m_configuration.m_comparsion = DepthTest::LessEqual;
 			auto image = std::make_shared<Image>();
 			image->Initialize(desc);
 			return {-1,

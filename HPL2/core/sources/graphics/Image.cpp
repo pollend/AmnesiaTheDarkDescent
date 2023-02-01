@@ -132,7 +132,61 @@ namespace hpl
                         break;
                 }
                 return 0;
-            }();
+        }() | [&]() -> uint64_t {
+            switch (descriptor.m_configuration.m_comparsion) {
+            case DepthTest::Less:
+                return BGFX_SAMPLER_COMPARE_LESS;
+            case DepthTest::LessEqual:
+                return BGFX_SAMPLER_COMPARE_LEQUAL;
+            case DepthTest::Equal:
+                return BGFX_SAMPLER_COMPARE_EQUAL;
+            case DepthTest::GreaterEqual:
+                return BGFX_SAMPLER_COMPARE_GEQUAL;
+            case DepthTest::Greater:
+                return BGFX_SAMPLER_COMPARE_GREATER;
+            case DepthTest::NotEqual:
+                return BGFX_SAMPLER_COMPARE_NOTEQUAL;
+            case DepthTest::Always:
+                return BGFX_SAMPLER_COMPARE_ALWAYS;
+            default:
+                break;
+            }
+            return 0;
+        }() |
+            [&]() -> uint64_t {
+            switch (descriptor.m_configuration.m_minFilter) {
+            case FilterType::Point:
+                return BGFX_SAMPLER_MIN_POINT;
+            case FilterType::Anisotropic:
+                return BGFX_SAMPLER_MIN_ANISOTROPIC;
+            default:
+                break;
+            }
+            return 0;
+        }() |
+            [&]() -> uint64_t {
+            switch (descriptor.m_configuration.m_magFilter) {
+            case FilterType::Point:
+                return BGFX_SAMPLER_MAG_POINT;
+            case FilterType::Anisotropic:
+                return BGFX_SAMPLER_MAG_ANISOTROPIC;
+            default:
+                break;
+            }
+            return 0;
+        }() |
+            [&]() -> uint64_t {
+            switch (descriptor.m_configuration.m_mipFilter) {
+            case FilterType::Point:
+                return BGFX_SAMPLER_MIP_POINT;
+            case FilterType::Anisotropic:
+                BX_ASSERT(false, "MIP filter does not support Anisotropic");
+            default:
+                break;
+            }
+            return 0;
+        }();
+
         if(descriptor.m_isCubeMap) {
             BX_ASSERT(descriptor.m_width == descriptor.m_height, "Cube map must be square");
             m_handle = bgfx::createTextureCube(descriptor.m_width, 

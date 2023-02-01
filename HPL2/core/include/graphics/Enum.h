@@ -5,6 +5,7 @@
 
 namespace hpl
 {
+
     enum class DepthTest: uint8_t {
         None,
         Less,
@@ -122,6 +123,12 @@ namespace hpl
         RT_MSAA_X16,
     };
 
+    enum class FilterType : uint8_t {
+        None,
+        Point,
+        Anisotropic
+    };
+
     enum class BlendFunc: uint32_t {
     };
     BlendFunc CreateFromMaterialBlendMode(eMaterialBlendMode mode);
@@ -137,7 +144,6 @@ namespace hpl
         StencilDepthPass m_dppass: 4;
         uint8_t m_ref;
         uint8_t m_mask;
-
     };
 
     bool IsValidStencilTest(const StencilTest& test);
