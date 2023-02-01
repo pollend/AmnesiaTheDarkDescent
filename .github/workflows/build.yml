@@ -12,7 +12,7 @@ jobs:
           submodules: recursive
       - name: Install dependencies
         run: |
-          sudo apt-get install cmake libdevil-dev
+          sudo apt-get install cmake libdevil-dev mesa-common-dev
       - name: Configure
         run: |
           mkdir $GITHUB_WORKSPACE/build && cd $GITHUB_WORKSPACE/build
