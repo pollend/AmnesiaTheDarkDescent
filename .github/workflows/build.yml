@@ -12,8 +12,7 @@ jobs:
           submodules: recursive
       - name: Install dependencies
         run: |
-          sudo apt-get install cmake libdevil-dev mesa-common-dev libtheora-dev
-          sudo apt-get install libvorbis-dev libopenal-dev libsdl2-dev libglew-dev
+          sudo apt-get install cmake libdevil-dev
       - name: Configure
         run: |
           mkdir $GITHUB_WORKSPACE/build && cd $GITHUB_WORKSPACE/build
