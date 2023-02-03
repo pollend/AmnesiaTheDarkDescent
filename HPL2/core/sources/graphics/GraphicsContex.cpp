@@ -418,57 +418,19 @@ namespace hpl
         bgfx::frame();
     }
 
-    void GraphicsContext::ClearTarget(bgfx::ViewId view, const DrawClear& request)
-    {
-        bgfx::setViewClear(
-            view,
-            convertBGFXClearOp(request.m_clear.m_clearOp),
-            request.m_clear.m_rgba,
-            request.m_clear.m_depth,
-            request.m_clear.m_stencil);
-        bgfx::setViewRect(view, request.m_x, request.m_y, request.m_width, request.m_height);
-        if (request.m_target.IsValid())
-        {
-            bgfx::setViewFrameBuffer(view, request.m_target.GetHandle());
-        }
-        else
-        {
-            bgfx::setViewFrameBuffer(view, BGFX_INVALID_HANDLE);
-        }
-        bgfx::touch(view);
-    }
-
     void GraphicsContext::Submit(bgfx::ViewId view, const DrawRequest& request)
     {
         auto& layout = request.m_layout;
         auto& program = request.m_program;
         ConfigureLayoutStream(layout);
         ConfigureProgram(program);
-        if (request.m_clear.has_value())
-        {
-            auto& clear = request.m_clear.value();
-            bgfx::setViewClear(view, convertBGFXClearOp(clear.m_clearOp), clear.m_rgba, clear.m_depth, clear.m_stencil);
-        }
-        else
-        {
-            bgfx::setViewClear(view, BGFX_CLEAR_NONE);
-        }
-        bgfx::setViewRect(view, request.m_x, request.m_y, request.m_width, request.m_height);
-        if (request.m_target.IsValid())
-        {
-            bgfx::setViewFrameBuffer(view, request.m_target.GetHandle());
-        }
-        else
-        {
-            bgfx::setViewFrameBuffer(view, BGFX_INVALID_HANDLE);
-        }
         if (IsValidStencilTest(program.m_configuration.m_backStencilTest) || IsValidStencilTest(program.m_configuration.m_frontStencilTest))
         {
             bgfx::setStencil(
                 convertBGFXStencil(program.m_configuration.m_frontStencilTest),
                 convertBGFXStencil(program.m_configuration.m_backStencilTest));
         }
-        bgfx::setViewTransform(view, program.m_view.v, program.m_projection.v);
+        // bgfx::setViewTransform(view, program.m_view.v, program.m_projection.v);
         bgfx::setTransform(program.m_modelTransform.v);
         bgfx::setState(convertToState(request));
         bgfx::submit(view, request.m_program.m_handle);
@@ -481,40 +443,39 @@ namespace hpl
 
         ConfigureLayoutStream(layout);
         ConfigureProgram(program);
-        if (request.m_clear.has_value())
-        {
-            auto& clear = request.m_clear.value();
-            bgfx::setViewClear(view, convertBGFXClearOp(clear.m_clearOp), clear.m_rgba, clear.m_depth, clear.m_stencil);
-        }
-        else
-        {
-            bgfx::setViewClear(view, BGFX_CLEAR_NONE);
-        }
-        bgfx::setViewRect(view, request.m_x, request.m_y, request.m_width, request.m_height);
-        if (request.m_target.IsValid())
-        {
-            bgfx::setViewFrameBuffer(view, request.m_target.GetHandle());
-        }
-        else
-        {
-            bgfx::setViewFrameBuffer(view, BGFX_INVALID_HANDLE);
-        }
+
         if (IsValidStencilTest(program.m_configuration.m_backStencilTest) || IsValidStencilTest(program.m_configuration.m_frontStencilTest))
         {
             bgfx::setStencil(
                 convertBGFXStencil(program.m_configuration.m_frontStencilTest),
                 convertBGFXStencil(program.m_configuration.m_backStencilTest));
         }
-        bgfx::setViewTransform(view, program.m_view.v, program.m_projection.v);
         bgfx::setTransform(program.m_modelTransform.v);
         bgfx::setState(convertToState(request));
         bgfx::submit(view, request.m_program.m_handle, query);
     }
 
-    bgfx::ViewId GraphicsContext::StartPass(absl::string_view name)
-    {
+    bgfx::ViewId GraphicsContext::StartPass(absl::string_view name, const ViewConfiguration& config) {
         bgfx::ViewId view = _current++;
         bgfx::setViewName(view, name.data());
+        if (config.m_clear.has_value())
+        {
+            auto& clear = config.m_clear.value();
+            bgfx::setViewClear(view, convertBGFXClearOp(clear.m_clearOp), clear.m_rgba, clear.m_depth, clear.m_stencil);
+        } else {
+            bgfx::setViewClear(view, BGFX_CLEAR_NONE);
+        }
+        bgfx::setViewTransform(view, config.m_view.v, config.m_projection.v);
+        auto& rect = config.m_viewRect;
+        bgfx::setViewRect(view, rect.x, rect.y, rect.w, rect.h);
+        if (config.m_target.IsValid())
+        {
+            bgfx::setViewFrameBuffer(view, config.m_target.GetHandle());
+        }
+        else
+        {
+            bgfx::setViewFrameBuffer(view, BGFX_INVALID_HANDLE);
+        }
         return view;
     }
 
@@ -524,22 +485,23 @@ namespace hpl
         return bgfx::getCaps()->originBottomLeft;
     }
 
-    void GraphicsContext::CopyTextureToFrameBuffer(bgfx::ViewId view, Image& image, cRect2l dstRect, RenderTarget& target)
-    {
+    void GraphicsContext::CopyTextureToFrameBuffer(Image& image, cRect2l dstRect, RenderTarget& target, Write write) {
         GraphicsContext::LayoutStream layout;
         cMatrixf projMtx;
         ScreenSpaceQuad(layout, projMtx, dstRect.w, dstRect.h);
+
+        GraphicsContext::ViewConfiguration viewConfig {target};
+        viewConfig.m_viewRect = dstRect;
+        viewConfig.m_projection = projMtx;
+        auto view = StartPass("Copy To Target", viewConfig);
+
         GraphicsContext::ShaderProgram program;
         program.m_handle = m_copyProgram;
-        program.m_configuration.m_write = Write::RGBA;
-        program.m_projection = projMtx;
-
+        program.m_configuration.m_write = write;
+        // program.m_projection = projMtx;
         program.m_textures.push_back({ m_s_diffuseMap, image.GetHandle(), 0 });
-        DrawRequest request = { target, layout, program };
-        request.m_x = dstRect.x;
-        request.m_y = dstRect.y;
-        request.m_width = dstRect.w;
-        request.m_height = dstRect.h;
+
+        DrawRequest request = { layout, program };
         Submit(view, request);
     }
 

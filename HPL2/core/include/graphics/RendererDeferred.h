@@ -134,16 +134,16 @@ namespace hpl {
 			FogVariant_UseOutsideBox = 0x1,
 			FogVariant_UseBackSide = 0x2
 		};
-		struct ZPassInput {
-			float m_width = 0;
-			float m_height = 0;
+		// struct ZPassInput {
+		// 	float m_width = 0;
+		// 	float m_height = 0;
 			
-			Cull m_cull = Cull::CounterClockwise;
-            cMatrixf m_view = cMatrixf(cMatrixf::Identity);
-            cMatrixf m_projection = cMatrixf(cMatrixf::Identity);
-		};
+		// 	Cull m_cull = Cull::CounterClockwise;
+        //     cMatrixf m_view = cMatrixf(cMatrixf::Identity);
+        //     cMatrixf m_projection = cMatrixf(cMatrixf::Identity);
+		// };
 
-		void RenderZPassObject(bgfx::ViewId view,const ZPassInput& input, GraphicsContext& context, iRenderer* renderer, iRenderable* object, RenderTarget& rt);
+		void RenderZPassObject(bgfx::ViewId view, GraphicsContext& context, iRenderer* renderer, iRenderable* object, Cull cull = Cull::CounterClockwise);
 	};
 
 	class cRendererDeferred : public  iRenderer

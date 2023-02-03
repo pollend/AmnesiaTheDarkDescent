@@ -93,15 +93,18 @@ namespace hpl
     void cPostEffect_ColorConvTex::RenderEffect(cPostEffectComposite& compositor, GraphicsContext& context, Image& input, RenderTarget& target)
     {
 		BX_ASSERT(mpColorConvTex, "ColorConvTex is null");
-	
-        auto view = context.StartPass("Color Conv effect");
-        cVector2l vRenderTargetSize = compositor.GetRenderTargetSize();
-
+	    cVector2l vRenderTargetSize = compositor.GetRenderTargetSize();
         GraphicsContext::LayoutStream layoutStream;
         cMatrixf projMtx;
         context.ScreenSpaceQuad(layoutStream, projMtx, vRenderTargetSize.x, vRenderTargetSize.y);
+        
+        GraphicsContext::ViewConfiguration viewConfig {target};
+        viewConfig.m_viewRect ={0, 0, vRenderTargetSize.x, vRenderTargetSize.y};
+        viewConfig.m_projection = projMtx;
+        auto view = context.StartPass("Color Conv effect", viewConfig);
+        
         GraphicsContext::ShaderProgram shaderProgram;
-        shaderProgram.m_projection = projMtx;
+        // shaderProgram.m_projection = projMtx;
         shaderProgram.m_handle = mpSpecificType->m_colorConv;
         struct
         {
@@ -117,9 +120,7 @@ namespace hpl
         shaderProgram.m_configuration.m_write = Write::RGBA;
         shaderProgram.m_configuration.m_depthTest = DepthTest::None;
 
-        GraphicsContext::DrawRequest request{ target, layoutStream, shaderProgram };
-        request.m_width = vRenderTargetSize.x;
-        request.m_height = vRenderTargetSize.y;
+        GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
         context.Submit(view, request);
     }
 

@@ -1392,60 +1392,64 @@ void cLuxMainMenu::RenderBlurTexture()
 		
 		auto image = blurTargets[1].GetImage(0);
 		{
-			bgfx::ViewId view = graphicsContext.StartPass("Blur Pass 1");
+        	GraphicsContext::LayoutStream layoutStream;
+			cMatrixf projMtx;
+			graphicsContext.ScreenSpaceQuad(layoutStream, projMtx, mvScreenSize.x, mvScreenSize.y);
+			
+			GraphicsContext::ViewConfiguration viewConfiguration {blurTargets[0]};
+			viewConfiguration.m_projection = projMtx;
+			viewConfiguration.m_viewRect = cRect2l(0, 0, image->GetWidth(), image->GetHeight());
+
+			bgfx::ViewId view = graphicsContext.StartPass("Blur Pass 1", viewConfiguration);
 			blurParams.u_useHorizontal = 0;
 			blurParams.u_blurSize = 1.0;
 			blurParams.texelSize[0] = image->GetWidth();
 			blurParams.texelSize[1] = image->GetHeight();
 
-			GraphicsContext::LayoutStream layoutStream;
 			GraphicsContext::ShaderProgram shaderProgram;
-			cMatrixf projMtx;
-			graphicsContext.ScreenSpaceQuad(layoutStream, projMtx, mvScreenSize.x, mvScreenSize.y);
 			shaderProgram.m_configuration.m_write = Write::RGBA;
 			shaderProgram.m_handle = m_blurProgram;
-			shaderProgram.m_projection = projMtx;
+			// shaderProgram.m_projection = projMtx;
 			
 			shaderProgram.m_textures.push_back({ m_s_diffuseMap, input.GetHandle(), 1 });
 			shaderProgram.m_uniforms.push_back({ m_u_param, &blurParams, 1 });
 			
-			GraphicsContext::DrawRequest request{ blurTargets[0], layoutStream, shaderProgram };
-			request.m_width = image->GetWidth();
-			request.m_height = image->GetHeight();
+			GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
 			graphicsContext.Submit(view, request);
 		}
 
 		{
 
-			bgfx::ViewId view = graphicsContext.StartPass("Blur Pass 2");
+        	GraphicsContext::LayoutStream layoutStream;
+			GraphicsContext::ShaderProgram shaderProgram;
+			cMatrixf projMtx;
+			graphicsContext.ScreenSpaceQuad(layoutStream, projMtx, mvScreenSize.x, mvScreenSize.y);
+			
+			GraphicsContext::ViewConfiguration viewConfiguration {blurTargets[1]};
+			viewConfiguration.m_projection = projMtx;
+			viewConfiguration.m_viewRect = cRect2l(0, 0, image->GetWidth(), image->GetHeight());
+			bgfx::ViewId view = graphicsContext.StartPass("Blur Pass 2", viewConfiguration);
 
 			blurParams.u_useHorizontal = 1.0;
 			blurParams.u_blurSize = 1.0f;
 			blurParams.texelSize[0] = image->GetWidth();
 			blurParams.texelSize[1] = image->GetHeight();
 
-			GraphicsContext::LayoutStream layoutStream;
-			GraphicsContext::ShaderProgram shaderProgram;
-			cMatrixf projMtx;
-			graphicsContext.ScreenSpaceQuad(layoutStream, projMtx, mvScreenSize.x, mvScreenSize.y);
 			shaderProgram.m_configuration.m_write = Write::RGBA;
 			shaderProgram.m_handle = m_blurProgram;
-			shaderProgram.m_projection = projMtx;
+			// shaderProgram.m_projection = projMtx;
 			
 			shaderProgram.m_textures.push_back({ m_s_diffuseMap, blurTargets[0].GetImage()->GetHandle(), 1 });
 			shaderProgram.m_uniforms.push_back({ m_u_param, &blurParams, 1 });
 			
-			GraphicsContext::DrawRequest request{ blurTargets[1], layoutStream, shaderProgram };
-			request.m_width = image->GetWidth();
-			request.m_height = image->GetHeight();
-
+			GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
 			graphicsContext.Submit(view, request);
 		}
 	};
 	
 	RenderTarget tempTarget = RenderTarget(m_screenImage);
 	cRect2l rect = cRect2l(0,0,mvScreenSize.x,mvScreenSize.y);
-	graphicsContext.CopyTextureToFrameBuffer(graphicsContext.StartPass("CopyTextureToFrameBuffer"), *renderer->GetOutputImage(), rect, tempTarget);
+	graphicsContext.CopyTextureToFrameBuffer(*renderer->GetOutputImage(), rect, tempTarget);
 	
 	requestBlur(*m_screenImage);
 

@@ -485,7 +485,11 @@ namespace hpl {
 			mpCurrentSettings->mvFogRenderData.resize(0); //Make sure render data array is empty!
 			return;
 		}
-		const auto view = context.StartPass("Fog Pass");
+		GraphicsContext::ViewConfiguration viewConfig {rt};
+		viewConfig.m_viewRect = {0, 0, mvScreenSize.x, mvScreenSize.y};
+		viewConfig.m_projection = mpCurrentProjectionMatrix->GetTranspose();
+		viewConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+		const auto view = context.StartPass("Fog Pass", viewConfig);
 		for(auto& fogData: mpCurrentSettings->mvFogRenderData)
 		{
 			cFogArea* pFogArea = fogData.mpFogArea;
@@ -554,22 +558,27 @@ namespace hpl {
 				CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
 			shaderProgram.m_configuration.m_write = Write::RGB;
 			
-			shaderProgram.m_projection = mpCurrentProjectionMatrix->GetTranspose();
-			shaderProgram.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+			// shaderProgram.m_projection = mpCurrentProjectionMatrix->GetTranspose();
+			// shaderProgram.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
 			shaderProgram.m_modelTransform = pFogArea->GetModelMatrixPtr() ? cMatrixf::Identity : pFogArea->GetModelMatrixPtr()->GetTranspose();
 
 			mpShapeBox->GetLayoutStream(layoutStream);
 
-			GraphicsContext::DrawRequest drawRequest {rt, layoutStream, shaderProgram};
-			drawRequest.m_width = mvScreenSize.x;
-			drawRequest.m_height = mvScreenSize.y;
+			GraphicsContext::DrawRequest drawRequest {layoutStream, shaderProgram};
 			context.Submit(view, drawRequest);
 		}
 	}
 
 
 	void cRendererDeferred::RenderFullScreenFogPass(GraphicsContext& context, RenderTarget& rt) {
-		const auto view = context.StartPass("Full Screen Fog");
+		GraphicsContext::LayoutStream layout;
+		cMatrixf projMtx;
+		context.ScreenSpaceQuad(layout, projMtx, mvScreenSize.x, mvScreenSize.y);
+		
+		GraphicsContext::ViewConfiguration viewConfig {rt};
+		viewConfig.m_projection = projMtx;
+		viewConfig.m_viewRect = cRect2l(0, 0, mvScreenSize.x, mvScreenSize.y);
+		const auto view = context.StartPass("Full Screen Fog", viewConfig);
 		
 		struct {
 			float u_fogStart;
@@ -581,14 +590,11 @@ namespace hpl {
 		uniforms.u_fogLength = mpCurrentWorld->GetFogEnd() - mpCurrentWorld->GetFogStart();
 		uniforms.u_fogFalloffExp = mpCurrentWorld->GetFogFalloffExp();
 		
-		GraphicsContext::LayoutStream layout;
-		cMatrixf projMtx;
-		context.ScreenSpaceQuad(layout, projMtx, mvScreenSize.x, mvScreenSize.y);
 		
 		GraphicsContext::ShaderProgram shaderProgram;
 		shaderProgram.m_configuration.m_write = Write::RGBA;
 		shaderProgram.m_configuration.m_depthTest = DepthTest::LessEqual;
-		shaderProgram.m_projection = projMtx;
+		// shaderProgram.m_projection = projMtx;
 
 		shaderProgram.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
 		shaderProgram.m_configuration.m_write = Write::RGB;
@@ -607,9 +613,7 @@ namespace hpl {
 		shaderProgram.m_uniforms.push_back(
 				{m_u_fogColor, uniformFogColor, 1});
 		
-		GraphicsContext::DrawRequest drawRequest {rt, layout, shaderProgram};
-		drawRequest.m_width = mvScreenSize.x;
-		drawRequest.m_height = mvScreenSize.y;
+		GraphicsContext::DrawRequest drawRequest {layout, shaderProgram};
 		context.Submit(view, drawRequest);
 	}
 
@@ -618,7 +622,11 @@ namespace hpl {
 			return;
 		}
 
-		bgfx::ViewId view = context.StartPass("RenderIllumination");
+		GraphicsContext::ViewConfiguration viewConfig {rt};
+		viewConfig.m_projection = mpCurrentProjectionMatrix->GetTranspose();
+		viewConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+		viewConfig.m_viewRect = cRect2l(0, 0, mvScreenSize.x, mvScreenSize.y);
+		bgfx::ViewId view = context.StartPass("RenderIllumination", viewConfig);
 		RenderableHelper(eRenderListType_Illumination, eMaterialRenderMode_Illumination, [&](iRenderable* obj, GraphicsContext::LayoutStream& layoutInput, GraphicsContext::ShaderProgram& shaderInput) {
 			shaderInput.m_configuration.m_depthTest = DepthTest::Equal;
 			shaderInput.m_configuration.m_write = Write::RGBA;
@@ -626,20 +634,19 @@ namespace hpl {
 			shaderInput.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
 			shaderInput.m_configuration.m_alphaBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
 
-			shaderInput.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
-			shaderInput.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+			// shaderInput.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
+			// shaderInput.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
 			shaderInput.m_modelTransform = obj->GetModelMatrixPtr() ?  obj->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity.GetTranspose();
 
-			GraphicsContext::DrawRequest drawRequest {rt, layoutInput, shaderInput};
-			drawRequest.m_width = mvScreenSize.x;
-			drawRequest.m_height = mvScreenSize.y;
+			GraphicsContext::DrawRequest drawRequest {layoutInput, shaderInput};
 			context.Submit(view, drawRequest);
 		});
 	}
 
 	void cRendererDeferred::RenderEdgeSmoothPass(GraphicsContext& context, RenderTarget& rt) {
 
-		auto edgeSmoothView = context.StartPass("EdgeSmooth");
+		GraphicsContext::ViewConfiguration viewConfig {m_edgeSmooth_LinearDepth};
+		auto edgeSmoothView = context.StartPass("EdgeSmooth", viewConfig);
 		cVector3f vQuadPos = cVector3f(mfFarLeft,mfFarBottom,-mfFarPlane);
 		cVector2f vQuadSize = cVector2f(mfFarRight*2,mfFarTop*2);
 
@@ -651,7 +658,7 @@ namespace hpl {
 		GraphicsContext::LayoutStream layout;
 		context.Quad(layout, vQuadPos, cVector2f(1,1), cVector2f(0,0), cVector2f(1,1));
 
-		GraphicsContext::DrawRequest drawRequest {m_edgeSmooth_LinearDepth, layout, shaderProgram};
+		GraphicsContext::DrawRequest drawRequest {layout, shaderProgram};
 		context.Submit(edgeSmoothView, drawRequest);
 	}
 
@@ -664,21 +671,24 @@ namespace hpl {
 			return;
 		}
 
-		auto& target = resolveRenderTarget(m_gBuffer_full);
-		auto view = context.StartPass("Diffuse");
+		GraphicsContext::ViewConfiguration viewConfig {rt};
+		viewConfig.m_projection = mpCurrentProjectionMatrix->GetTranspose();
+		viewConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+		viewConfig.m_viewRect = {0, 0, mvScreenSize.x, mvScreenSize.y};
+		auto view = context.StartPass("Diffuse", viewConfig);
 		RenderableHelper(eRenderListType_Diffuse, eMaterialRenderMode_Diffuse, [&](iRenderable* obj, GraphicsContext::LayoutStream& layoutInput, GraphicsContext::ShaderProgram& shaderInput) {
 			shaderInput.m_configuration.m_depthTest = DepthTest::LessEqual;
 			shaderInput.m_configuration.m_write = Write::RGBA;
 			shaderInput.m_configuration.m_cull = Cull::CounterClockwise;
 
-			shaderInput.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
-			shaderInput.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+			// shaderInput.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
+			// shaderInput.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
 			shaderInput.m_modelTransform = obj->GetModelMatrixPtr() ?  obj->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity.GetTranspose();
-			shaderInput.m_normalMtx = cMath::MatrixInverse(cMath::MatrixMul(shaderInput.m_modelTransform, shaderInput.m_view)); // matrix is already transposed
+			shaderInput.m_normalMtx = cMath::MatrixInverse(cMath::MatrixMul(shaderInput.m_modelTransform, viewConfig.m_view)); // matrix is already transposed
 
-			GraphicsContext::DrawRequest drawRequest {target, layoutInput, shaderInput};
-			drawRequest.m_width = mvScreenSize.x;
-			drawRequest.m_height = mvScreenSize.y;
+			GraphicsContext::DrawRequest drawRequest {layoutInput, shaderInput};
+			// drawRequest.m_width = mvScreenSize.x;
+			// drawRequest.m_height = mvScreenSize.y;
 			context.Submit(view, drawRequest);
 		});
 	}
@@ -690,8 +700,11 @@ namespace hpl {
 			return;
 		}
 
-		auto& target = resolveRenderTarget(m_gBuffer_colorAndDepth);
-		auto view = context.StartPass("RenderDecals");
+		GraphicsContext::ViewConfiguration viewConfig {rt};
+		viewConfig.m_projection = mpCurrentProjectionMatrix->GetTranspose();
+		viewConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+		viewConfig.m_viewRect = {0, 0, mvScreenSize.x, mvScreenSize.y};
+		auto view = context.StartPass("RenderDecals", viewConfig);
 		RenderableHelper(eRenderListType_Decal, eMaterialRenderMode_Diffuse, [&](iRenderable* obj, GraphicsContext::LayoutStream& layoutInput, GraphicsContext::ShaderProgram& shaderInput) {
 			shaderInput.m_configuration.m_depthTest = DepthTest::LessEqual;
 			shaderInput.m_configuration.m_write = Write::RGBA;
@@ -700,22 +713,22 @@ namespace hpl {
 			shaderInput.m_configuration.m_rgbBlendFunc = CreateFromMaterialBlendMode(pMaterial->GetBlendMode());
 			shaderInput.m_configuration.m_alphaBlendFunc = CreateFromMaterialBlendMode(pMaterial->GetBlendMode());
 
-			shaderInput.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
-			shaderInput.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+			// shaderInput.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
+			// shaderInput.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
 			shaderInput.m_modelTransform = obj->GetModelMatrixPtr() ?  obj->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity.GetTranspose();
 
 			// shaderInput.m_configuration.m_alphaBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
 			
-			GraphicsContext::DrawRequest drawRequest {target, layoutInput, shaderInput};
-			drawRequest.m_width = mvScreenSize.x;
-			drawRequest.m_height = mvScreenSize.y;
+			GraphicsContext::DrawRequest drawRequest {layoutInput, shaderInput};
+			// drawRequest.m_width = mvScreenSize.x;
+			// drawRequest.m_height = mvScreenSize.y;
 
 			context.Submit(view, drawRequest);
 		});
 	}
 
 
-	void rendering::detail::RenderZPassObject(bgfx::ViewId view, const ZPassInput& input, GraphicsContext& context, iRenderer* renderer, iRenderable* object, RenderTarget& rt) {
+	void rendering::detail::RenderZPassObject(bgfx::ViewId view, GraphicsContext& context, iRenderer* renderer, iRenderable* object, Cull cull) {
 		eMaterialRenderMode renderMode = object->GetCoverageAmount() >= 1 ? eMaterialRenderMode_Z : eMaterialRenderMode_Z_Dissolve;
 		cMaterial *pMaterial = object->GetMaterial();
 		iMaterialType* materialType = pMaterial->GetType();
@@ -729,16 +742,16 @@ namespace hpl {
 		vertexBuffer->GetLayoutStream(layoutInput);
 		materialType->ResolveShaderProgram(renderMode, pMaterial, object, renderer, [&](GraphicsContext::ShaderProgram& shaderInput) {
 			shaderInput.m_configuration.m_write = Write::Depth;
-			shaderInput.m_configuration.m_cull = input.m_cull;
+			shaderInput.m_configuration.m_cull = cull;
 			shaderInput.m_configuration.m_depthTest = DepthTest::LessEqual;
 			
 			shaderInput.m_modelTransform = object->GetModelMatrixPtr() ? object->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity ;
-			shaderInput.m_view = input.m_view;
-			shaderInput.m_projection = input.m_projection;
+			// shaderInput.m_view = input.m_view;
+			// shaderInput.m_projection = input.m_projection;
 
-			GraphicsContext::DrawRequest drawRequest {rt, layoutInput, shaderInput};
-			drawRequest.m_width = input.m_width;
-			drawRequest.m_height = input.m_height;
+			GraphicsContext::DrawRequest drawRequest {layoutInput, shaderInput};
+			// drawRequest.m_width = input.m_width;
+			// drawRequest.m_height = input.m_height;
 			context.Submit(view, drawRequest);
 		});
 		
@@ -749,21 +762,25 @@ namespace hpl {
 			return;
 		}
 
-		auto view = context.StartPass("RenderZ");
+		GraphicsContext::ViewConfiguration viewConfig {rt};
+		viewConfig.m_viewRect = {0, 0, mvScreenSize.x, mvScreenSize.y};
+		viewConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
+		viewConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+
+		auto view = context.StartPass("RenderZ", viewConfig);
 		for(auto& obj: mpCurrentRenderList->GetRenderableItems(eRenderListType_Z)) {
-			rendering::detail::ZPassInput options;
-			options.m_height = mvScreenSize.y;
-			options.m_width = mvScreenSize.x;
-			
-			options.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
-			options.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
-			rendering::detail::RenderZPassObject(view, options, context, this, obj, rt);
+			rendering::detail::RenderZPassObject(view, context, this, obj);
 		}
 	}
 
 
 	void cRendererDeferred::RenderTranslucentPass(GraphicsContext& context, RenderTarget& target) {
-		auto view = context.StartPass("Translucent");
+		
+		GraphicsContext::ViewConfiguration viewConfig {target};
+		viewConfig.m_projection = mpCurrentProjectionMatrix->GetTranspose();
+		viewConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+		viewConfig.m_viewRect = {0, 0, mvScreenSize.x, mvScreenSize.y};
+		auto view = context.StartPass("Translucent", viewConfig);
 		for(auto& obj: mpCurrentRenderList->GetRenderableItems(eRenderListType_Translucent))
 		{
 			
@@ -819,8 +836,8 @@ namespace hpl {
 				
 				// shaderInput.m_uniforms.push_back({m_u_overrideColor, overrideColor });
 
-				shaderInput.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
-				shaderInput.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+				// shaderInput.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
+				// shaderInput.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
 				shaderInput.m_modelTransform = pMatrix ?  pMatrix->GetTranspose() : cMatrixf::Identity;
 				
 				if(!pMaterial->HasRefraction()) {
@@ -828,9 +845,9 @@ namespace hpl {
 					shaderInput.m_configuration.m_alphaBlendFunc = CreateFromMaterialBlendMode(pMaterial->GetBlendMode());
 				}
 
-				GraphicsContext::DrawRequest drawRequest {target, layoutInput, shaderInput};
-				drawRequest.m_width = mvScreenSize.x;
-				drawRequest.m_height = mvScreenSize.y;
+				GraphicsContext::DrawRequest drawRequest {layoutInput, shaderInput};
+				// drawRequest.m_width = mvScreenSize.x;
+				// drawRequest.m_height = mvScreenSize.y;
 				context.Submit(view, drawRequest);
 			});
 
@@ -848,13 +865,13 @@ namespace hpl {
 					shaderInput.m_configuration.m_rgbBlendFunc = CreateFromMaterialBlendMode(eMaterialBlendMode_Add);
 					shaderInput.m_configuration.m_alphaBlendFunc = CreateFromMaterialBlendMode(eMaterialBlendMode_Add);
 
-					shaderInput.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
-					shaderInput.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+					// shaderInput.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
+					// shaderInput.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
 					shaderInput.m_modelTransform = pMatrix ?  pMatrix->GetTranspose() : cMatrixf::Identity;
 					
-					GraphicsContext::DrawRequest drawRequest {target, layoutInput, shaderInput};
-					drawRequest.m_width = mvScreenSize.x;
-					drawRequest.m_height = mvScreenSize.y;
+					GraphicsContext::DrawRequest drawRequest {layoutInput, shaderInput};
+					// drawRequest.m_width = mvScreenSize.x;
+					// drawRequest.m_height = mvScreenSize.y;
 					context.Submit(view, drawRequest);
 				});
 			}
@@ -878,17 +895,10 @@ namespace hpl {
 		cRendererCallbackFunctions handler(context, this);
 
 		[&]{
-			auto& target = resolveRenderTarget(m_gBuffer_full);
-			auto view = context.StartPass("Clear Depth");
-			GraphicsContext::DrawClear clear {
-				target,
-				{0, 1, 0, ClearOp::Depth | ClearOp::Stencil | ClearOp::Color},
-				0,
-				0,
-				static_cast<uint16_t>(mvScreenSize.x),
- 				static_cast<uint16_t>(mvScreenSize.y)
-			};
-			context.ClearTarget(view, clear);	
+			GraphicsContext::ViewConfiguration viewConfig {resolveRenderTarget(m_gBuffer_full)};
+			viewConfig.m_viewRect = {0, 0, mvScreenSize.x, mvScreenSize.y};
+			viewConfig.m_clear = {0, 1, 0, ClearOp::Depth | ClearOp::Stencil | ClearOp::Color};
+			bgfx::touch(context.StartPass("Clear Depth", viewConfig));
 		}();
 
 		tRenderableFlag lVisibleFlags= (mpCurrentSettings->mbIsReflection) ?
@@ -897,15 +907,16 @@ namespace hpl {
 		///////////////////////////
 		//Occlusion testing
 		if(mpCurrentSettings->mbUseOcclusionCulling)
-		{ 
-			auto view = context.StartPass("Render Z");
+		{
+			// GraphicsContext::ViewConfiguration viewConfig {resolveRenderTarget(m_gBuffer_depth)};
+			// auto view = context.StartPass("Render Z", viewConfig);
 			RenderZPassWithVisibilityCheck(	
 				context, 
 				mpCurrentSettings->mpVisibleNodeTracker,
 				eObjectVariabilityFlag_All,
 				lVisibleFlags,
 				resolveRenderTarget(m_gBuffer_depth),
-			[&](iRenderable* object) {
+			[&](bgfx::ViewId view, iRenderable* object) {
 				cMaterial *pMaterial = object->GetMaterial();
 
 				mpCurrentRenderList->AddObject(object);
@@ -913,24 +924,27 @@ namespace hpl {
 				if(!pMaterial || pMaterial->GetType()->IsTranslucent()) {
 					return false;
 				}
-				rendering::detail::ZPassInput options;
-				options.m_width = mvScreenSize.x;
-				options.m_height = mvScreenSize.y;
+				// rendering::detail::ZPassInput options;
+				// options.m_width = mvScreenSize.x;
+				// options.m_height = mvScreenSize.y;
 
-				options.m_view =  mpCurrentFrustum->GetViewMatrix().GetTranspose();
-				options.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
-				rendering::detail::RenderZPassObject(view, options, context, this, object, resolveRenderTarget(m_gBuffer_depth));
+				// options.m_view =  mpCurrentFrustum->GetViewMatrix().GetTranspose();
+				// options.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
+				rendering::detail::RenderZPassObject(view, context, this, object);
 
 				return true;
 			});
 
 			// this occlusion query logic is used for reflections just cut this for now
+			GraphicsContext::ViewConfiguration occlusionPassConfig {resolveRenderTarget(m_gBuffer_depth)};
+			occlusionPassConfig.m_viewRect = {0, 0, mvScreenSize.x, mvScreenSize.y};
+			occlusionPassConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+			occlusionPassConfig.m_projection = mpCurrentProjectionMatrix->GetTranspose();
 			AssignAndRenderOcclusionQueryObjects(
-				context.StartPass("Render Occlusion"), 
+				context.StartPass("Render Occlusion", occlusionPassConfig), 
 				context, 
 				false, 
-				true,
-				resolveRenderTarget(m_gBuffer_depth));
+				true);
 
 			SetupLightsAndRenderQueries(context, resolveRenderTarget(m_gBuffer_depth));
 
@@ -954,12 +968,16 @@ namespace hpl {
 			RenderZPass(context, resolveRenderTarget(m_gBuffer_depth) );
 
 			// this occlusion query logic is used for reflections just cut this for now
+
+			GraphicsContext::ViewConfiguration occlusionPassConfig {resolveRenderTarget(m_gBuffer_depth)};
+			occlusionPassConfig.m_viewRect = {0, 0, mvScreenSize.x, mvScreenSize.y};
+			occlusionPassConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+			occlusionPassConfig.m_projection = mpCurrentProjectionMatrix->GetTranspose();
 			AssignAndRenderOcclusionQueryObjects(
-				context.StartPass("Render Occlusion Pass"), 
+				context.StartPass("Render Occlusion Pass", occlusionPassConfig), 
 				context, 
 				false, 
-				true,
-				resolveRenderTarget(m_gBuffer_depth));
+				true);
 
 			SetupLightsAndRenderQueries(context, resolveRenderTarget(m_gBuffer_depth));
 		}
@@ -1003,26 +1021,21 @@ namespace hpl {
 		cLightSpot *pSpotLight = static_cast<cLightSpot*>(apLightData.mpLight);
 		cFrustum *pLightFrustum = pSpotLight->GetFrustum();
 
-		GraphicsContext::DrawClear depthClear {
-			rt,
-			{0, 1.0, 0, ClearOp::Depth},
-			0,
-			0,
-			static_cast<uint16_t>(size.x),
-			static_cast<uint16_t>(size.y)
-		};
-		context.ClearTarget(context.StartPass("Shadow Pass Clear"), depthClear);
-		
-		bgfx::ViewId view = context.StartPass("Shadow Pass");
+		GraphicsContext::ViewConfiguration shadowPassViewConfig {rt};
+		shadowPassViewConfig.m_clear = {0, 1.0, 0, ClearOp::Depth};
+		shadowPassViewConfig.m_view = pLightFrustum->GetViewMatrix().GetTranspose();
+		shadowPassViewConfig.m_projection = pLightFrustum->GetProjectionMatrix().GetTranspose();
+		shadowPassViewConfig.m_viewRect = {0, 0, static_cast<uint16_t>(size.x), static_cast<uint16_t>(size.y)};
+		bgfx::ViewId view = context.StartPass("Shadow Pass", shadowPassViewConfig);
 		for(auto& shadowCaster: mvShadowCasters)
 		{
-			rendering::detail::ZPassInput options;
-			options.m_height = size.y;
-			options.m_width = size.x;
-			options.m_cull = pLightFrustum->GetInvertsCullMode() ? Cull::Clockwise : Cull::CounterClockwise;
-			options.m_view = pLightFrustum->GetViewMatrix().GetTranspose();
-			options.m_projection = pLightFrustum->GetProjectionMatrix().GetTranspose();
-			rendering::detail::RenderZPassObject(view, options, context, this, shadowCaster, rt);
+			// rendering::detail::ZPassInput options;
+			// options.m_height = size.y;
+			// options.m_width = size.x;
+			// options.m_cull = pLightFrustum->GetInvertsCullMode() ? Cull::Clockwise : Cull::CounterClockwise;
+			// options.m_view = pLightFrustum->GetViewMatrix().GetTranspose();
+			// options.m_projection = pLightFrustum->GetProjectionMatrix().GetTranspose();
+			rendering::detail::RenderZPassObject(view, context, this, shadowCaster, pLightFrustum->GetInvertsCullMode() ? Cull::Clockwise : Cull::CounterClockwise);
 		}
 	}
 
@@ -1030,18 +1043,11 @@ namespace hpl {
 		InitLightRendering();
 		
 		{
-			const auto pass = context.StartPass("Clear Backbuffer");
-			GraphicsContext::DrawClear clear {
-				rt,
-				{0, 1, 0, ClearOp::Color},
-				0,
-				0,
-				static_cast<uint16_t>(mvScreenSize.x),
-				static_cast<uint16_t>(mvScreenSize.y)
-			};
-			context.ClearTarget(pass, clear);	
+			GraphicsContext::ViewConfiguration clearBackBufferView {rt};
+			clearBackBufferView.m_clear = {0, 1, 0, ClearOp::Color};
+			clearBackBufferView.m_viewRect = {0, 0, static_cast<uint16_t>(mvScreenSize.x), static_cast<uint16_t>(mvScreenSize.y)};
+			bgfx::touch(context.StartPass("Clear Backbuffer", clearBackBufferView));
 		}
-
 
 		// Drawing Box Lights
 		{
@@ -1056,8 +1062,8 @@ namespace hpl {
 				shaderProgram.m_textures.push_back({m_s_diffuseMap, resolveRenderImage(m_gBufferColor)->GetHandle(), 0});
 				shaderProgram.m_uniforms.push_back({m_u_lightColor, lightColor});
 
-				shaderProgram.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
-				shaderProgram.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+				// shaderProgram.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
+				// shaderProgram.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
 				shaderProgram.m_modelTransform = cMath::MatrixMul(light->mpLight->GetWorldMatrix(), light->GetLightMtx()).GetTranspose();
 
 				switch(pLightBox->GetBlendFunc())
@@ -1075,14 +1081,17 @@ namespace hpl {
 					break;
 				}
 
-				GraphicsContext::DrawRequest drawRequest {rt, layoutStream, shaderProgram};
-				drawRequest.m_width = mvScreenSize.x;
-				drawRequest.m_height = mvScreenSize.y;
+				GraphicsContext::DrawRequest drawRequest {layoutStream, shaderProgram};
 				context.Submit(view, drawRequest);
 			};
 
 
-			const auto boxStencilPass = context.StartPass("eDeferredLightList_Box_StencilFront_RenderBack");
+			GraphicsContext::ViewConfiguration stencilFrontBackViewConfig {rt};
+			stencilFrontBackViewConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
+			stencilFrontBackViewConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+			stencilFrontBackViewConfig.m_clear = {0, 1.0, 0, ClearOp::Stencil};
+			stencilFrontBackViewConfig.m_viewRect = {0, 0, static_cast<uint16_t>(mvScreenSize.x), static_cast<uint16_t>(mvScreenSize.y)};
+			const auto boxStencilPass = context.StartPass("eDeferredLightList_Box_StencilFront_RenderBack", stencilFrontBackViewConfig);
 			bgfx::setViewMode(boxStencilPass, bgfx::ViewMode::Sequential);
 
 			for(auto& light : mvSortedLights[eDeferredLightList_Box_StencilFront_RenderBack]) {
@@ -1100,15 +1109,11 @@ namespace hpl {
 						StencilDepthFail::Replace, 
 						StencilDepthPass::Keep,
 						0xff, 0xff);
-				
-					shaderProgram.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
-					shaderProgram.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+		
 					shaderProgram.m_modelTransform = cMath::MatrixMul(light->mpLight->GetWorldMatrix(), light->GetLightMtx()).GetTranspose();
 
-					GraphicsContext::DrawRequest drawRequest {rt, layoutStream, shaderProgram};
+					GraphicsContext::DrawRequest drawRequest {layoutStream, shaderProgram};
 					// drawRequest.m_clear =  GraphicsContext::ClearRequest{0, 0, 0, ClearOp::Stencil};
-					drawRequest.m_width = mvScreenSize.x;
-					drawRequest.m_height = mvScreenSize.y;
 					context.Submit(boxStencilPass, drawRequest);
 				}
 				
@@ -1128,7 +1133,11 @@ namespace hpl {
 				}
 			}
 
-			const auto boxLightBackPass = context.StartPass("eDeferredLightList_Box_RenderBack");
+			GraphicsContext::ViewConfiguration boxLightConfig {rt};
+			boxLightConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
+			boxLightConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+			boxLightConfig.m_viewRect = {0, 0, static_cast<uint16_t>(mvScreenSize.x), static_cast<uint16_t>(mvScreenSize.y)};
+			const auto boxLightBackPass = context.StartPass("eDeferredLightList_Box_RenderBack", boxLightConfig);
 			for(auto& light: mvSortedLights[eDeferredLightList_Box_RenderBack])
 			{
 				GraphicsContext::ShaderProgram shaderProgram;
@@ -1151,9 +1160,7 @@ namespace hpl {
 				
 				GraphicsContext::LayoutStream layoutStream;
 				GetLightShape(apLightData->mpLight, eDeferredShapeQuality_High)->GetLayoutStream(layoutStream);
-				GraphicsContext::DrawRequest drawRequest {rt, layoutStream, shaderProgram};
-				drawRequest.m_width = mvScreenSize.x;
-				drawRequest.m_height = mvScreenSize.y;
+				GraphicsContext::DrawRequest drawRequest {layoutStream, shaderProgram};
 				switch(apLightData->mpLight->GetLightType()) {
 					case eLightType_Point: {
 						struct {
@@ -1272,7 +1279,11 @@ namespace hpl {
 			// auto& renderStencilFrontRenderBack = mvSortedLights[eDeferredLightList_StencilFront_RenderBack];
 			// auto lightIt = renderStencilFrontRenderBack.begin();\
 
-			const auto lightStencilBackPass = context.StartPass("eDeferredLightList_StencilFront_RenderBack");
+			GraphicsContext::ViewConfiguration viewConfig {rt};
+			viewConfig.m_viewRect = {0, 0, mvScreenSize.x, mvScreenSize.y};
+			viewConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
+			viewConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+			const auto lightStencilBackPass = context.StartPass("eDeferredLightList_StencilFront_RenderBack", viewConfig);
 			bgfx::setViewMode(lightStencilBackPass, bgfx::ViewMode::Sequential);
 			for(auto& light: mvSortedLights[eDeferredLightList_StencilFront_RenderBack]) 
 			{
@@ -1286,8 +1297,8 @@ namespace hpl {
 					shaderProgram.m_configuration.m_cull = Cull::CounterClockwise;
 					shaderProgram.m_configuration.m_depthTest = DepthTest::GreaterEqual;
 					
-					shaderProgram.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
-					shaderProgram.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+					// shaderProgram.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
+					// shaderProgram.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
 					shaderProgram.m_modelTransform = cMath::MatrixMul(light->mpLight->GetWorldMatrix(), light->GetLightMtx()).GetTranspose();
 					
 					shaderProgram.m_configuration.m_frontStencilTest = CreateStencilTest(
@@ -1297,10 +1308,10 @@ namespace hpl {
 						StencilDepthPass::Keep,
 						0xff, 0xff);
 				
-					GraphicsContext::DrawRequest drawRequest {rt, layoutStream, shaderProgram};
-					drawRequest.m_clear =  GraphicsContext::ClearRequest{0, 0, 0, ClearOp::Stencil};
-					drawRequest.m_width = mvScreenSize.x;
-					drawRequest.m_height = mvScreenSize.y;
+					GraphicsContext::DrawRequest drawRequest {layoutStream, shaderProgram};
+					// drawRequest.m_clear =  GraphicsContext::ClearRequest{0, 0, 0, ClearOp::Stencil};
+					// drawRequest.m_width = mvScreenSize.x;
+					// drawRequest.m_height = mvScreenSize.y;
 					// if(bgfx::isValid(light->m_occlusionQuery)) {
 					// 	bgfx::setCondition(light->m_occlusionQuery, true);
 					// }
@@ -1322,15 +1333,17 @@ namespace hpl {
 					shaderProgram.m_configuration.m_alphaBlendFunc = 
 						CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
 					
-					shaderProgram.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
-					shaderProgram.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
 					shaderProgram.m_modelTransform = cMath::MatrixMul(light->mpLight->GetWorldMatrix(),light->GetLightMtx()).GetTranspose();
 					
 					drawLight(lightStencilBackPass, shaderProgram, light);
 				}
 			}
 
-			const auto lightBackPass = context.StartPass("eDeferredLightList_RenderBack");
+			GraphicsContext::ViewConfiguration lightBackPassConfig {rt};
+			lightBackPassConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
+			lightBackPassConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+			lightBackPassConfig.m_viewRect = {0, 0, mvScreenSize.x, mvScreenSize.y};
+			const auto lightBackPass = context.StartPass("eDeferredLightList_RenderBack", lightBackPassConfig);
 			for(auto& light: mvSortedLights[eDeferredLightList_RenderBack])
 			{
 				GraphicsContext::ShaderProgram shaderProgram;
@@ -1342,8 +1355,8 @@ namespace hpl {
 				shaderProgram.m_configuration.m_alphaBlendFunc = 
 					CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
 				
-				shaderProgram.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
-				shaderProgram.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+				// shaderProgram.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
+				// shaderProgram.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
 				shaderProgram.m_modelTransform = cMath::MatrixMul(light->mpLight->GetWorldMatrix(), light->GetLightMtx()).GetTranspose();
 
 				drawLight(lightBackPass, shaderProgram, light);
@@ -1553,7 +1566,8 @@ namespace hpl {
 		float fScreenArea = (float)(mvRenderTargetSize.x*mvRenderTargetSize.y);
 
 		mlMinLargeLightArea =	(int)(mfMinLargeLightNormalizedArea * fScreenArea);
-		auto view = context.StartPass("Light Render Queries");
+		// GraphicsContext::ViewConfiguration lightBackPassConfig {rt};
+		// auto view = context.StartPass("Light Render Queries");
 
 		///////////////////////////////
 		//Iterate all lights in render list

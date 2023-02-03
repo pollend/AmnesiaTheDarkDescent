@@ -987,14 +987,10 @@ namespace hpl
 
         shaderProgram.m_handle = m_nullShader;
         shaderProgram.m_modelTransform = transform.GetTranspose();
-        shaderProgram.m_view = frustum.GetViewMatrix().GetTranspose();
-        shaderProgram.m_projection = frustum.GetProjectionMatrix().GetTranspose();
         shaderProgram.m_configuration.m_depthTest = DepthTest::Less;
         shaderProgram.m_configuration.m_cull = cull;
 
-        GraphicsContext::DrawRequest drawRequest{ rt, layoutStream, shaderProgram };
-        drawRequest.m_width = mvScreenSize.x;
-        drawRequest.m_height = mvScreenSize.y;
+        GraphicsContext::DrawRequest drawRequest{ layoutStream, shaderProgram };
         context.Submit(view, drawRequest);
     }
 
@@ -1004,8 +1000,14 @@ namespace hpl
         tObjectVariabilityFlag objectTypes,
         tRenderableFlag alNeededFlags,
         RenderTarget& rt,
-        std::function<bool(iRenderable* object)> renderHandler)
+        std::function<bool(bgfx::ViewId view, iRenderable* object)> renderHandler)
     {
+        GraphicsContext::ViewConfiguration viewConfiguration {rt};
+        viewConfiguration.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
+        viewConfiguration.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+        viewConfiguration.m_viewRect = {0, 0, static_cast<uint16_t>(mvScreenSize.x), static_cast<uint16_t>(mvScreenSize.y)};
+        auto pass = context.StartPass("z pass", viewConfiguration);
+        
         auto renderNodeHandler = [&](iRenderableContainerNode* apNode, tRenderableFlag alNeededFlags)
         {
             if (apNode->HasObjects() == false)
@@ -1031,7 +1033,7 @@ namespace hpl
                     continue;
                 }
 
-                if (renderHandler(pObject))
+                if (renderHandler(pass, pObject))
                 {
                     ++lRenderedObjects;
                 }
@@ -1082,7 +1084,6 @@ namespace hpl
         // Render at least X objects without rendering nodes, to some occluders
         int lMinRenderedObjects = mpCurrentSettings->mlMinimumObjectsBeforeOcclusionTesting;
 
-        auto pass = context.StartPass("pre-zpass");
         ////////////////////////////
         // Iterate the nodes on the stack.
         while (!setNodeStack.empty())
@@ -1171,7 +1172,6 @@ namespace hpl
                 ////////////////
                 // Render objects if any
                 int lObjectsRendered = renderNodeHandler(pNode, alNeededFlags);
-                ;
                 lMinRenderedObjects -= lObjectsRendered;
             }
         }
@@ -1593,8 +1593,7 @@ namespace hpl
         return apObjectA->mpMatrix < apObjectB->mpMatrix;
     }
 
-    void iRenderer::AssignAndRenderOcclusionQueryObjects(
-        bgfx::ViewId view, GraphicsContext& context, bool abSetFrameBuffer, bool abUsePosAndSize, RenderTarget& rt)
+    void iRenderer::AssignAndRenderOcclusionQueryObjects(bgfx::ViewId view, GraphicsContext& context, bool abSetFrameBuffer, bool abUsePosAndSize)
     {
         cRenderList* pRenderList = mpCurrentSettings->mpRenderList;
 
@@ -1615,13 +1614,10 @@ namespace hpl
                     shaderProgram.m_configuration.m_cull = Cull::CounterClockwise;
 
                     shaderProgram.m_modelTransform = transformMatrix;
-                    shaderProgram.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
-                    shaderProgram.m_projection = mpCurrentProjectionMatrix->GetTranspose();
+                    // shaderProgram.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+                    // shaderProgram.m_projection = mpCurrentProjectionMatrix->GetTranspose();
 
-                    GraphicsContext::DrawRequest drawRequest{ rt, layoutStream, shaderProgram };
-                    drawRequest.m_width = mvScreenSize.x;
-                    drawRequest.m_height = mvScreenSize.y;
-
+                    GraphicsContext::DrawRequest drawRequest{ layoutStream, shaderProgram };
                     context.Submit(view, drawRequest, handle);
                 });
         }

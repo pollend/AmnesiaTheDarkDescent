@@ -5,6 +5,12 @@
 
 namespace hpl
 {
+    enum class WrapMode : uint8_t {
+        None,
+        Mirror,
+        Clamp,
+        Border
+    };
 
     enum class DepthTest: uint8_t {
         None,

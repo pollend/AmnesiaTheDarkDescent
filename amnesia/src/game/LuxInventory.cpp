@@ -1591,25 +1591,26 @@ void cLuxInventory::RenderBackgroundImage()
 	cRect2l screenRect(0, 0, mvScreenSize.x, mvScreenSize.y);
 
 	graphicsContext.CopyTextureToFrameBuffer(
-		graphicsContext.StartPass("Copy Screen"), 
 		*renderer->GetOutputImage(), screenRect, screenTarget);
 
 	{
-		bgfx::ViewId view = graphicsContext.StartPass("Blur Pass 1");
-
-		GraphicsContext::LayoutStream layoutStream;
+        GraphicsContext::LayoutStream layoutStream;
 		GraphicsContext::ShaderProgram shaderProgram;
 		cMatrixf projMtx;
 		graphicsContext.ScreenSpaceQuad(layoutStream, projMtx, screenSize.x, screenSize.y);
+		
+		GraphicsContext::ViewConfiguration viewConfiguration {effectTarget};
+		viewConfiguration.m_projection = projMtx;
+		viewConfiguration.m_viewRect = cRect2l(0, 0, screenSize.x, screenSize.y);
+		bgfx::ViewId view = graphicsContext.StartPass("Blur Pass 1", viewConfiguration);
+
 		shaderProgram.m_configuration.m_write = Write::RGBA;
 		shaderProgram.m_handle = m_program;
-		shaderProgram.m_projection = projMtx;
+		// shaderProgram.m_projection = projMtx;
 		
 		shaderProgram.m_textures.push_back({ m_s_diffuseMap, m_screenBgTexture->GetHandle(), 1 });
 		
-		GraphicsContext::DrawRequest request{ effectTarget, layoutStream, shaderProgram };
-		request.m_width = screenSize.x;
-		request.m_height = screenSize.y;
+		GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
 		graphicsContext.Submit(view, request);
 	}
 

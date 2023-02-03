@@ -342,7 +342,7 @@ namespace hpl {
 		 * Uses a Coherent occlusion culling to get visible objects. No early Z needed after calling this
 		 */
 		void RenderZPassWithVisibilityCheck(GraphicsContext& context, cVisibleRCNodeTracker *apVisibleNodeTracker, tRenderableFlag alNeededFlags, tObjectVariabilityFlag variabilityFlag,
-			RenderTarget& rt, std::function<bool(iRenderable* object)> renderHandler);
+			RenderTarget& rt, std::function<bool(bgfx::ViewId view, iRenderable* object)> renderHandler);
 
 		void PushUpVisibility(iRenderableContainerNode *apNode);
 		void RenderNodeBoundingBox(iRenderableContainerNode *apNode, iOcclusionQuery *apQuery);
@@ -361,7 +361,7 @@ namespace hpl {
 		/**
 		 * Only depth is needed for framebuffer. All objects needs to be added to renderlist!
 		 */
-		void AssignAndRenderOcclusionQueryObjects(bgfx::ViewId view, GraphicsContext& context, bool abSetFrameBuffer, bool abUsePosAndSize, RenderTarget& rt);
+		void AssignAndRenderOcclusionQueryObjects(bgfx::ViewId view, GraphicsContext& context, bool abSetFrameBuffer, bool abUsePosAndSize);
 
 		/**
 		 * Checks if the renderable object is 1) submeshentity 2) is onesided plane 3)is away from camera. If all are true, FALSE is returned.
