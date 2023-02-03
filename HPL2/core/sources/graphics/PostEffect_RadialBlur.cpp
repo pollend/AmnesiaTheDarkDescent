@@ -78,11 +78,18 @@ namespace hpl
 
     void cPostEffect_RadialBlur::RenderEffect(cPostEffectComposite& compositor, GraphicsContext& context, Image& input, RenderTarget& target)
     {
-        bgfx::ViewId view = context.StartPass("Radial Blur");
-
         cVector2l vRenderTargetSize = compositor.GetRenderTargetSize();
         cVector2f vRenderTargetSizeFloat((float)vRenderTargetSize.x, (float)vRenderTargetSize.y);
+        GraphicsContext::LayoutStream layoutStream;
+        cMatrixf projMtx;
+        context.ScreenSpaceQuad(layoutStream, projMtx, vRenderTargetSize.x, vRenderTargetSize.y);
+        
+        GraphicsContext::ViewConfiguration viewConfig {target};
+        viewConfig.m_projection = projMtx;
+        viewConfig.m_viewRect = {0, 0, vRenderTargetSize.x, vRenderTargetSize.y};
+        bgfx::ViewId view = context.StartPass("Radial Blur", viewConfig);
 
+        
         BX_ASSERT(mpRadialBlurType, "radial blur type is null");
         BX_ASSERT(bgfx::isValid(mpRadialBlurType->m_program), "radial blur program is invalid");
 
@@ -95,20 +102,13 @@ namespace hpl
             float avHalfScreenSize[2];
         } u_params = { mParams.mfSize * vRenderTargetSizeFloat.x, mParams.mfBlurStartDist, { blurStartDist.x, blurStartDist.y } };
 
-        GraphicsContext::LayoutStream layoutStream;
-        cMatrixf projMtx;
-        context.ScreenSpaceQuad(layoutStream, projMtx, vRenderTargetSize.x, vRenderTargetSize.y);
         GraphicsContext::ShaderProgram shaderProgram;
-        shaderProgram.m_projection = projMtx;
         shaderProgram.m_handle = mpRadialBlurType->m_program;
         shaderProgram.m_uniforms.push_back({ mpRadialBlurType->m_u_uniform, &u_params });
         shaderProgram.m_textures.push_back({ mpRadialBlurType->m_s_diffuseMap, input.GetHandle() });
         shaderProgram.m_configuration.m_write = Write::RGBA | Write::Depth;
 
-        GraphicsContext::DrawRequest request{ target, layoutStream, shaderProgram };
-        request.m_width = vRenderTargetSize.x;
-        request.m_height = vRenderTargetSize.y;
-
+        GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
         context.Submit(view, request);
     }
 

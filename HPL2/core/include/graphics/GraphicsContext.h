@@ -10,6 +10,7 @@
 #include <bgfx/bgfx.h>
 #include <cstdint>
 #include <optional>
+#include <string_view>
 #include <vector>
 #include <optional>
 
@@ -77,8 +78,8 @@ namespace hpl
 
 
             cMatrixf m_modelTransform = cMatrixf(cMatrixf::Identity);
-            cMatrixf m_view = cMatrixf(cMatrixf::Identity);
-            cMatrixf m_projection = cMatrixf(cMatrixf::Identity);
+            // cMatrixf m_view = cMatrixf(cMatrixf::Identity);
+            // cMatrixf m_projection = cMatrixf(cMatrixf::Identity);
             cMatrixf m_normalMtx = cMatrixf(cMatrixf::Identity);
 
             absl::InlinedVector<TextureData, 10> m_textures;
@@ -92,6 +93,16 @@ namespace hpl
             ClearOp m_clearOp = ClearOp::Color | ClearOp::Depth;
         };
 
+        struct ViewConfiguration {
+            const RenderTarget& m_target;
+
+            std::optional<ClearRequest> m_clear;
+
+            cMatrixf m_view = cMatrixf(cMatrixf::Identity);
+            cMatrixf m_projection = cMatrixf(cMatrixf::Identity);
+            cRect2l m_viewRect = cRect2l(0, 0, 0, 0);
+        };
+
         struct DrawClear {
             const RenderTarget& m_target;
             ClearRequest m_clear;
@@ -103,16 +114,8 @@ namespace hpl
         };
 
         struct DrawRequest {
-            const RenderTarget& m_target;
             const GraphicsContext::LayoutStream& m_layout;
             const ShaderProgram& m_program;
-
-            std::optional<ClearRequest> m_clear;
-
-            uint16_t m_x = 0;
-            uint16_t m_y = 0;
-            uint16_t m_width = 0;
-            uint16_t m_height = 0;
         };
 
         GraphicsContext();
@@ -127,9 +130,10 @@ namespace hpl
         uint16_t ScreenHeight() const;
 
         void Frame();
-        bgfx::ViewId StartPass(absl::string_view name);
+        bgfx::ViewId StartPass(absl::string_view name, ViewConfiguration& config);
+        void TouchPass(bgfx::ViewId view);
         bool isOriginBottomLeft() const;
-        void CopyTextureToFrameBuffer(bgfx::ViewId view,Image& image, cRect2l dstRect, RenderTarget& target);
+        void CopyTextureToFrameBuffer(Image& image, cRect2l dstRect, RenderTarget& target, Write write = Write::RGBA);
         void ClearTarget(bgfx::ViewId view, const DrawClear& request);
         void Submit(bgfx::ViewId view, const DrawRequest& request);
         void Submit(bgfx::ViewId view, const DrawRequest& request, bgfx::OcclusionQueryHandle query);

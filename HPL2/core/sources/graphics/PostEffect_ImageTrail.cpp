@@ -113,15 +113,20 @@ namespace hpl
 
     void cPostEffect_ImageTrail::RenderEffect(cPostEffectComposite& compositor, GraphicsContext& context, Image& input, RenderTarget& target)
     {
-        auto view = context.StartPass("Image Trail");
         cVector2l vRenderTargetSize = compositor.GetRenderTargetSize();
 
         GraphicsContext::LayoutStream layoutStream;
         cMatrixf projMtx;
         context.ScreenSpaceQuad(layoutStream, projMtx, vRenderTargetSize.x, vRenderTargetSize.y);
+        
+        GraphicsContext::ViewConfiguration viewConfig {m_accumulationBuffer};
+        viewConfig.m_projection = projMtx;
+        viewConfig.m_viewRect = {0, 0, vRenderTargetSize.x, vRenderTargetSize.y};
+        auto view = context.StartPass("Image Trail", viewConfig);
+        
         GraphicsContext::ShaderProgram shaderProgram;
         shaderProgram.m_handle = mpImageTrailType->m_program;
-        shaderProgram.m_projection = projMtx;
+        // shaderProgram.m_projection = projMtx;
         
         struct
         {
@@ -154,13 +159,11 @@ namespace hpl
        
         shaderProgram.m_configuration.m_depthTest = DepthTest::None;
         shaderProgram.m_configuration.m_write = Write::RGBA;
-        GraphicsContext::DrawRequest request{ m_accumulationBuffer, layoutStream, shaderProgram };
-        request.m_width = vRenderTargetSize.x;
-        request.m_height = vRenderTargetSize.y;
+        GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
         context.Submit(view, request);
 
         cRect2l rect = cRect2l(0, 0, vRenderTargetSize.x, vRenderTargetSize.y);
-        context.CopyTextureToFrameBuffer(context.StartPass("Copy Image Trail"),*m_accumulationBuffer.GetImage(), rect, target);
+        context.CopyTextureToFrameBuffer(*m_accumulationBuffer.GetImage(), rect, target);
     }
 
 } // namespace hpl

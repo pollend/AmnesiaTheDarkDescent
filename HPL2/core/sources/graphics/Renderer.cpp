@@ -976,7 +976,6 @@ namespace hpl
         bgfx::ViewId view,
         GraphicsContext& context,
         bgfx::OcclusionQueryHandle handle,
-        const cFrustum& frustum,
         const cMatrixf& transform,
         RenderTarget& rt,
         Cull cull)
@@ -987,14 +986,10 @@ namespace hpl
 
         shaderProgram.m_handle = m_nullShader;
         shaderProgram.m_modelTransform = transform.GetTranspose();
-        shaderProgram.m_view = frustum.GetViewMatrix().GetTranspose();
-        shaderProgram.m_projection = frustum.GetProjectionMatrix().GetTranspose();
         shaderProgram.m_configuration.m_depthTest = DepthTest::Less;
         shaderProgram.m_configuration.m_cull = cull;
 
-        GraphicsContext::DrawRequest drawRequest{ rt, layoutStream, shaderProgram };
-        drawRequest.m_width = mvScreenSize.x;
-        drawRequest.m_height = mvScreenSize.y;
+        GraphicsContext::DrawRequest drawRequest{ layoutStream, shaderProgram };
         context.Submit(view, drawRequest);
     }
 
@@ -1082,7 +1077,11 @@ namespace hpl
         // Render at least X objects without rendering nodes, to some occluders
         int lMinRenderedObjects = mpCurrentSettings->mlMinimumObjectsBeforeOcclusionTesting;
 
-        auto pass = context.StartPass("pre-zpass");
+        GraphicsContext::ViewConfiguration viewConfiguration = {rt};
+        viewConfiguration.m_projection =  mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
+        viewConfiguration.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+        viewConfiguration.m_viewRect = cRect2l(0, 0, mvScreenSize.x, mvScreenSize.y);
+        auto pass = context.StartPass("pre-zpass", viewConfiguration);
         ////////////////////////////
         // Iterate the nodes on the stack.
         while (!setNodeStack.empty())
@@ -1129,7 +1128,7 @@ namespace hpl
                 cMatrixf mtxBox = cMath::MatrixScale(vSize);
                 mtxBox.SetTranslation(pNode->GetCenter());
                 // SetModelViewMatrix( cMath::MatrixMul(mpCurrentFrustum->GetViewMatrix(), mtxBox) );
-                OcclusionQueryBoundingBoxTest(pass, context, pNode->GetOcclusionQuery(), *mpCurrentFrustum, mtxBox, rt);
+                OcclusionQueryBoundingBoxTest(pass, context, pNode->GetOcclusionQuery(), mtxBox, rt);
 
                 //////////////////////////
                 // Render node objects after AABB so that an object does not occlude its own node.
@@ -1593,10 +1592,15 @@ namespace hpl
         return apObjectA->mpMatrix < apObjectB->mpMatrix;
     }
 
-    void iRenderer::AssignAndRenderOcclusionQueryObjects(
-        bgfx::ViewId view, GraphicsContext& context, bool abSetFrameBuffer, bool abUsePosAndSize, RenderTarget& rt)
+    void iRenderer::AssignAndRenderOcclusionQueryObjects( GraphicsContext& context, bool abSetFrameBuffer, bool abUsePosAndSize, RenderTarget& rt)
     {
         cRenderList* pRenderList = mpCurrentSettings->mpRenderList;
+
+        GraphicsContext::ViewConfiguration viewConfiguration = {rt};
+        viewConfiguration.m_projection =  mpCurrentProjectionMatrix->GetTranspose();
+        viewConfiguration.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+        viewConfiguration.m_viewRect = cRect2l(0, 0, mvScreenSize.x, mvScreenSize.y);
+        auto view = context.StartPass("AssignAndRenderOcclusionQueryObjects", viewConfiguration);
 
         ///////////////////////////////////
         // Get and use any previous occlusion queries
@@ -1615,13 +1619,7 @@ namespace hpl
                     shaderProgram.m_configuration.m_cull = Cull::CounterClockwise;
 
                     shaderProgram.m_modelTransform = transformMatrix;
-                    shaderProgram.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
-                    shaderProgram.m_projection = mpCurrentProjectionMatrix->GetTranspose();
-
-                    GraphicsContext::DrawRequest drawRequest{ rt, layoutStream, shaderProgram };
-                    drawRequest.m_width = mvScreenSize.x;
-                    drawRequest.m_height = mvScreenSize.y;
-
+                    GraphicsContext::DrawRequest drawRequest{ layoutStream, shaderProgram };
                     context.Submit(view, drawRequest, handle);
                 });
         }

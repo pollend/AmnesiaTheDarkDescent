@@ -18,6 +18,7 @@
  */
 #pragma once
 
+#include "engine/RTTI.h"
 #include <bgfx/bgfx.h>
 #include <graphics/GraphicsContext.h>
 #include <graphics/Image.h>
@@ -134,22 +135,15 @@ namespace hpl {
 			FogVariant_UseOutsideBox = 0x1,
 			FogVariant_UseBackSide = 0x2
 		};
-		struct ZPassInput {
-			float m_width = 0;
-			float m_height = 0;
-			
-			Cull m_cull = Cull::CounterClockwise;
-            cMatrixf m_view = cMatrixf(cMatrixf::Identity);
-            cMatrixf m_projection = cMatrixf(cMatrixf::Identity);
-		};
 
-		void RenderZPassObject(bgfx::ViewId view,const ZPassInput& input, GraphicsContext& context, iRenderer* renderer, iRenderable* object, RenderTarget& rt);
+		void RenderZPassObject(bgfx::ViewId view, GraphicsContext& context, iRenderer* renderer, iRenderable* object, Cull m_cull = Cull::CounterClockwise);
 	};
 
 	class cRendererDeferred : public  iRenderer
 	{
+		HPL_RTTI_IMPL_CLASS(cRendererDeferred, iRenderer, "{A3E5E5A1-1F9C-4F5C-9B9B-5B9B9B5B9B9B}")
 	public:
-
+		
 		cRendererDeferred(cGraphics *apGraphics,cResources* apResources);
 		~cRendererDeferred();
 
@@ -163,8 +157,8 @@ namespace hpl {
 		virtual void Draw(GraphicsContext& context, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, RenderViewport& apRenderTarget,
 					bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList) override;
 
-		Image* GetRefractionImage(){ return m_refractionImage;}
-		Image* GetReflectionImage(){ return m_reflectionImage;}
+		Image* GetRefractionImage(){ return m_refractionImage.get();}
+		Image* GetReflectionImage(){ return m_reflectionImage.get();}
 
 		//Static properties. Must be set before renderer data load.
 		static void SetGBufferType(eDeferredGBuffer aType){ mGBufferType = aType; }
@@ -264,7 +258,8 @@ namespace hpl {
 		std::array<RenderTarget, 2> m_gBuffer_depth;
 		std::array<RenderTarget, 2> m_gBuffer_normals;
 		std::array<RenderTarget, 2> m_gBuffer_linearDepth;
-		std::array<RenderTarget, 2> m_output_target; // used for rendering to the screen 
+		std::array<RenderTarget, 2> m_output_target; // used for rendering to the screen
+		RenderTarget m_refractionTarget; 
 		
 		std::array<std::shared_ptr<Image>, 2> m_gBufferColor;
 		std::array<std::shared_ptr<Image>, 2> m_gBufferNormalImage;
@@ -274,12 +269,9 @@ namespace hpl {
 		std::array<std::shared_ptr<Image>, 2> m_outputImage;
 
 		RenderTarget m_edgeSmooth_LinearDepth;
-
-		iTexture *mpRefractionTexture;
-		iTexture *mpReflectionTexture;
-
-		Image *m_refractionImage;
-		Image *m_reflectionImage;
+		
+		std::shared_ptr<Image> m_refractionImage = nullptr;
+		std::shared_ptr<Image> m_reflectionImage = nullptr;
 
 		bool mbReflectionTextureCleared;
 

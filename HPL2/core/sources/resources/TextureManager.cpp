@@ -115,8 +115,9 @@ namespace hpl {
 				ImageDescriptor desc =  ImageDescriptor::CreateFromBitmap(*pBmp);
 				auto* image = new Image();
 
-				desc.m_configuration.m_uClamp = options.m_uClamp;
-				desc.m_configuration.m_vClamp = options.m_vClamp;
+				desc.m_configuration.m_UWrap = options.m_UWrap;
+				desc.m_configuration.m_VWrap = options.m_VWrap;
+				desc.m_configuration.m_WWrap = options.m_WWrap;
 
 				auto data = pBmp->GetData(0, 0);
 				resource->Initialize(desc, bgfx::copy(data->mpData, data->mlSize));
@@ -136,8 +137,9 @@ namespace hpl {
 				desc.m_name = asName.c_str();
 				auto* image = new Image();
 
-				desc.m_configuration.m_uClamp = options.m_uClamp;
-				desc.m_configuration.m_vClamp = options.m_vClamp;
+				desc.m_configuration.m_UWrap = options.m_UWrap;
+				desc.m_configuration.m_VWrap = options.m_VWrap;
+				desc.m_configuration.m_WWrap = options.m_WWrap;
 
 				auto data = pBmp->GetData(0, 0);
 				Image::InitializeFromBitmap(*resource, *pBmp, desc);
@@ -159,8 +161,9 @@ namespace hpl {
 					desc.m_name = asName.c_str();
 					auto* image = new Image();
 
-					desc.m_configuration.m_uClamp = options.m_uClamp;
-					desc.m_configuration.m_vClamp = options.m_vClamp;
+					desc.m_configuration.m_UWrap = options.m_UWrap;
+					desc.m_configuration.m_VWrap = options.m_VWrap;
+					desc.m_configuration.m_WWrap = options.m_WWrap;
 					desc.m_isCubeMap = true;
 
 					auto data = pBmp->GetData(0, 0);
@@ -356,8 +359,8 @@ namespace hpl {
 			std::vector<std::unique_ptr<Image>> images;
 			for(auto& bitmap: vBitmaps) {
 				ImageDescriptor desc =  ImageDescriptor::CreateFromBitmap(*bitmap);
-				desc.m_configuration.m_uClamp = options.m_uClamp;
-				desc.m_configuration.m_vClamp = options.m_vClamp;
+				desc.m_configuration.m_UWrap = options.m_UWrap;
+				desc.m_configuration.m_VWrap = options.m_VWrap;
 				desc.m_isCubeMap = (aType == eTextureType_CubeMap);
 				std::unique_ptr<Image> image = std::make_unique<Image>();
 				Image::InitializeFromBitmap(*image, *bitmap, desc);

@@ -25,6 +25,7 @@
 #include "graphics/FrameBuffer.h"
 #include "graphics/GPUProgram.h"
 #include "graphics/GPUShader.h"
+#include "graphics/GraphicsContext.h"
 #include "graphics/Image.h"
 #include "graphics/LowLevelGraphics.h"
 #include "graphics/PostEffectComposite.h"
@@ -105,54 +106,56 @@ namespace hpl
             
             auto image = m_blurTarget[1].GetImage(0);
             {
-                bgfx::ViewId view = context.StartPass("Blur Pass 1");
+                GraphicsContext::LayoutStream layoutStream;
+                cMatrixf projMtx;
+                context.ScreenSpaceQuad(layoutStream, projMtx, vRenderTargetSize.x, vRenderTargetSize.y);
+                GraphicsContext::ViewConfiguration viewConfig {m_blurTarget[0]};
+                viewConfig.m_projection = projMtx;
+                viewConfig.m_viewRect = {0, 0, image->GetWidth(), image->GetHeight()};
+
+                bgfx::ViewId view = context.StartPass("Blur Pass 1", viewConfig);
                 blurParams.u_useHorizontal = 0;
                 blurParams.u_blurSize = mParams.mfBlurSize;
                 blurParams.texelSize[0] = image->GetWidth();
                 blurParams.texelSize[1] = image->GetHeight();
 
-                GraphicsContext::LayoutStream layoutStream;
                 GraphicsContext::ShaderProgram shaderProgram;
-                cMatrixf projMtx;
-                context.ScreenSpaceQuad(layoutStream, projMtx, vRenderTargetSize.x, vRenderTargetSize.y);
                 shaderProgram.m_configuration.m_write = Write::RGBA;
                 shaderProgram.m_handle = mpBloomType->m_blurProgram;
-                shaderProgram.m_projection = projMtx;
                 
                 shaderProgram.m_textures.push_back({ mpBloomType->m_u_diffuseMap, input.GetHandle(), 1 });
                
                 shaderProgram.m_uniforms.push_back({ mpBloomType->m_u_param, &blurParams, 1 });
                 
-                GraphicsContext::DrawRequest request{ m_blurTarget[0], layoutStream, shaderProgram };
-                request.m_width = image->GetWidth();
-                request.m_height = image->GetHeight();
+                GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
+                // request.m_width = image->GetWidth();
+                // request.m_height = image->GetHeight();
                 context.Submit(view, request);
             }
 
             {
+                GraphicsContext::LayoutStream layoutStream;
+                cMatrixf projMtx;
+                context.ScreenSpaceQuad(layoutStream, projMtx, vRenderTargetSize.x, vRenderTargetSize.y);
+                GraphicsContext::ViewConfiguration viewConfig {m_blurTarget[1]};
+                viewConfig.m_projection = projMtx;
+                viewConfig.m_viewRect = {0, 0, image->GetWidth(), image->GetHeight()};
 
-                bgfx::ViewId view = context.StartPass("Blur Pass 2");
+                bgfx::ViewId view = context.StartPass("Blur Pass 2", viewConfig);
 
                 blurParams.u_useHorizontal = 1.0;
                 blurParams.u_blurSize = mParams.mfBlurSize;
                 blurParams.texelSize[0] = image->GetWidth();
                 blurParams.texelSize[1] = image->GetHeight();
 
-                GraphicsContext::LayoutStream layoutStream;
                 GraphicsContext::ShaderProgram shaderProgram;
-                cMatrixf projMtx;
-                context.ScreenSpaceQuad(layoutStream, projMtx, vRenderTargetSize.x, vRenderTargetSize.y);
                 shaderProgram.m_configuration.m_write = Write::RGBA;
                 shaderProgram.m_handle = mpBloomType->m_blurProgram;
-                shaderProgram.m_projection = projMtx;
                 
                 shaderProgram.m_textures.push_back({ mpBloomType->m_u_diffuseMap, m_blurTarget[0].GetImage()->GetHandle(), 1 });
                 shaderProgram.m_uniforms.push_back({ mpBloomType->m_u_param, &blurParams, 1 });
                 
-                GraphicsContext::DrawRequest request{ m_blurTarget[1], layoutStream, shaderProgram };
-                request.m_width = image->GetWidth();
-                request.m_height = image->GetHeight();
-
+                GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
                 context.Submit(view, request);
             }
         };
@@ -167,20 +170,21 @@ namespace hpl
             GraphicsContext::LayoutStream layoutStream;
             cMatrixf projMtx;
             context.ScreenSpaceQuad(layoutStream, projMtx, vRenderTargetSize.x, vRenderTargetSize.y);
-
+            GraphicsContext::ViewConfiguration viewConfig {target};
+            viewConfig.m_projection = projMtx;
+            viewConfig.m_viewRect = {0, 0, vRenderTargetSize.x, vRenderTargetSize.y};
+            bgfx::ViewId view = context.StartPass("Bloom Pass", viewConfig);
+            
             GraphicsContext::ShaderProgram shaderProgram;
             shaderProgram.m_configuration.m_write = Write::RGBA;
             shaderProgram.m_handle = mpBloomType->m_bloomProgram;
-            shaderProgram.m_projection = projMtx;
 
             float rgbToIntensity[4] = { mParams.mvRgbToIntensity.x, mParams.mvRgbToIntensity.y, mParams.mvRgbToIntensity.z, 0.0f };
             shaderProgram.m_textures.push_back({ mpBloomType->m_u_diffuseMap, input.GetHandle(), 0 });
             shaderProgram.m_textures.push_back({ mpBloomType->m_u_blurMap, m_blurTarget[1].GetImage()->GetHandle(), 1 });
             shaderProgram.m_uniforms.push_back({ mpBloomType->m_u_rgbToIntensity, &rgbToIntensity, 1 });
-            bgfx::ViewId view = context.StartPass("Bloom Pass");
-            GraphicsContext::DrawRequest request{ target, layoutStream, shaderProgram };
-            request.m_width = vRenderTargetSize.x;
-            request.m_height = vRenderTargetSize.y;
+            GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
+
             context.Submit(view, request);
         }
     }

@@ -21,6 +21,7 @@
 
 #include <graphics/Image.h>
 #include "graphics/AnimatedImage.h"
+#include "graphics/Enum.h"
 #include "resources/ResourceManager.h"
 #include "graphics/Texture.h"
 #include <functional>
@@ -45,11 +46,12 @@ namespace hpl {
 		~cTextureManager();
 
 		struct ImageOptions {
-			ImageOptions(): m_uClamp(false), m_vClamp(false) {
+			ImageOptions() {
 			};
 
-			bool m_uClamp = false;
-			bool m_vClamp = false;
+			WrapMode m_UWrap = WrapMode::None;
+			WrapMode m_VWrap = WrapMode::None;
+			WrapMode m_WWrap = WrapMode::None;
 		};
 		// static ImageOptions DefaultOptions = ImageOptions();
 

@@ -111,9 +111,44 @@ namespace hpl
         m_width = descriptor.m_width;
         m_height = descriptor.m_height;
 
-        uint64_t flags = (descriptor.m_configuration.m_uClamp ? BGFX_SAMPLER_U_CLAMP : 0) |
-            (descriptor.m_configuration.m_vClamp ? BGFX_SAMPLER_V_CLAMP : 0) |
-            (descriptor.m_configuration.m_wClamp ? BGFX_SAMPLER_W_CLAMP : 0) |
+        uint64_t flags = 
+            [&]() -> uint64_t {
+                switch(descriptor.m_configuration.m_UWrap) {
+                    case WrapMode::Mirror:
+                        return BGFX_SAMPLER_U_MIRROR;
+                    case WrapMode::Clamp:
+                        return BGFX_SAMPLER_U_CLAMP;
+                    case WrapMode::Border:
+                        return BGFX_SAMPLER_U_BORDER;
+                    default:
+                        break;
+                }
+                return 0;
+            }() | [&]() -> uint64_t {
+                switch(descriptor.m_configuration.m_VWrap) {
+                    case WrapMode::Mirror:
+                        return BGFX_SAMPLER_V_MIRROR;
+                    case WrapMode::Clamp:
+                        return BGFX_SAMPLER_V_CLAMP;
+                    case WrapMode::Border:
+                        return BGFX_SAMPLER_V_BORDER;
+                    default:
+                        break;
+                }
+                return 0;
+            }() | [&]() -> uint64_t {
+                switch(descriptor.m_configuration.m_WWrap) {
+                    case WrapMode::Mirror:
+                        return BGFX_SAMPLER_W_MIRROR;
+                    case WrapMode::Clamp:
+                        return BGFX_SAMPLER_W_CLAMP;
+                    case WrapMode::Border:
+                        return BGFX_SAMPLER_W_BORDER;
+                    default:
+                        break;
+                }
+                return 0;
+            }() |
             [&] () -> uint64_t {
                 switch(descriptor.m_configuration.m_rt) {
                     case RTType::RT_Write:

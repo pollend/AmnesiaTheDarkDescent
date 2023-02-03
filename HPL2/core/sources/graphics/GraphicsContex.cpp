@@ -11,6 +11,7 @@
 #include <graphics/GraphicsTypes.h>
 
 #include <bx/debug.h>
+#include <utility>
 
 namespace hpl
 {
@@ -444,31 +445,31 @@ namespace hpl
         auto& program = request.m_program;
         ConfigureLayoutStream(layout);
         ConfigureProgram(program);
-        if (request.m_clear.has_value())
-        {
-            auto& clear = request.m_clear.value();
-            bgfx::setViewClear(view, convertBGFXClearOp(clear.m_clearOp), clear.m_rgba, clear.m_depth, clear.m_stencil);
-        }
-        else
-        {
-            bgfx::setViewClear(view, BGFX_CLEAR_NONE);
-        }
-        bgfx::setViewRect(view, request.m_x, request.m_y, request.m_width, request.m_height);
-        if (request.m_target.IsValid())
-        {
-            bgfx::setViewFrameBuffer(view, request.m_target.GetHandle());
-        }
-        else
-        {
-            bgfx::setViewFrameBuffer(view, BGFX_INVALID_HANDLE);
-        }
+        // if (request.m_clear.has_value())
+        // {
+        //     auto& clear = request.m_clear.value();
+        //     bgfx::setViewClear(view, convertBGFXClearOp(clear.m_clearOp), clear.m_rgba, clear.m_depth, clear.m_stencil);
+        // }
+        // else
+        // {
+        //     bgfx::setViewClear(view, BGFX_CLEAR_NONE);
+        // }
+        // bgfx::setViewRect(view, request.m_x, request.m_y, request.m_width, request.m_height);
+        // if (request.m_target.IsValid())
+        // {
+        //     bgfx::setViewFrameBuffer(view, request.m_target.GetHandle());
+        // }
+        // else
+        // {
+        //     bgfx::setViewFrameBuffer(view, BGFX_INVALID_HANDLE);
+        // }
         if (IsValidStencilTest(program.m_configuration.m_backStencilTest) || IsValidStencilTest(program.m_configuration.m_frontStencilTest))
         {
             bgfx::setStencil(
                 convertBGFXStencil(program.m_configuration.m_frontStencilTest),
                 convertBGFXStencil(program.m_configuration.m_backStencilTest));
         }
-        bgfx::setViewTransform(view, program.m_view.v, program.m_projection.v);
+        // bgfx::setViewTransform(view, program.m_view.v, program.m_projection.v);
         bgfx::setTransform(program.m_modelTransform.v);
         bgfx::setState(convertToState(request));
         bgfx::submit(view, request.m_program.m_handle);
@@ -481,39 +482,49 @@ namespace hpl
 
         ConfigureLayoutStream(layout);
         ConfigureProgram(program);
-        if (request.m_clear.has_value())
-        {
-            auto& clear = request.m_clear.value();
-            bgfx::setViewClear(view, convertBGFXClearOp(clear.m_clearOp), clear.m_rgba, clear.m_depth, clear.m_stencil);
-        }
-        else
-        {
-            bgfx::setViewClear(view, BGFX_CLEAR_NONE);
-        }
-        bgfx::setViewRect(view, request.m_x, request.m_y, request.m_width, request.m_height);
-        if (request.m_target.IsValid())
-        {
-            bgfx::setViewFrameBuffer(view, request.m_target.GetHandle());
-        }
-        else
-        {
-            bgfx::setViewFrameBuffer(view, BGFX_INVALID_HANDLE);
-        }
+        // if (request.m_clear.has_value())
+        // {
+        //     auto& clear = request.m_clear.value();
+        //     bgfx::setViewClear(view, convertBGFXClearOp(clear.m_clearOp), clear.m_rgba, clear.m_depth, clear.m_stencil);
+        // }
+        // else
+        // {
+        //     bgfx::setViewClear(view, BGFX_CLEAR_NONE);
+        // }
+        // bgfx::setViewRect(view, request.m_x, request.m_y, request.m_width, request.m_height);
+        // if (request.m_target.IsValid())
+        // {
+        //     bgfx::setViewFrameBuffer(view, request.m_target.GetHandle());
+        // }
+        // else
+        // {
+        //     bgfx::setViewFrameBuffer(view, BGFX_INVALID_HANDLE);
+        // }
         if (IsValidStencilTest(program.m_configuration.m_backStencilTest) || IsValidStencilTest(program.m_configuration.m_frontStencilTest))
         {
             bgfx::setStencil(
                 convertBGFXStencil(program.m_configuration.m_frontStencilTest),
                 convertBGFXStencil(program.m_configuration.m_backStencilTest));
         }
-        bgfx::setViewTransform(view, program.m_view.v, program.m_projection.v);
+        // bgfx::setViewTransform(view, program.m_view.v, program.m_projection.v);
         bgfx::setTransform(program.m_modelTransform.v);
         bgfx::setState(convertToState(request));
         bgfx::submit(view, request.m_program.m_handle, query);
     }
 
-    bgfx::ViewId GraphicsContext::StartPass(absl::string_view name)
+    bgfx::ViewId GraphicsContext::StartPass(absl::string_view name, ViewConfiguration& config)
     {
         bgfx::ViewId view = _current++;
+        if (config.m_clear.has_value())
+        {
+            auto& clear = config.m_clear.value();
+            bgfx::setViewClear(view, convertBGFXClearOp(clear.m_clearOp), clear.m_rgba, clear.m_depth, clear.m_stencil);
+        }
+         if (config.m_target.IsValid())
+        {
+            bgfx::setViewFrameBuffer(view, config.m_target.GetHandle());
+        }
+        bgfx::setViewTransform(view, config.m_view.v, config.m_projection.v);
         bgfx::setViewName(view, name.data());
         return view;
     }
@@ -524,22 +535,25 @@ namespace hpl
         return bgfx::getCaps()->originBottomLeft;
     }
 
-    void GraphicsContext::CopyTextureToFrameBuffer(bgfx::ViewId view, Image& image, cRect2l dstRect, RenderTarget& target)
+    
+
+    void GraphicsContext::CopyTextureToFrameBuffer(Image& image, cRect2l dstRect, RenderTarget& target, Write write)
     {
         GraphicsContext::LayoutStream layout;
         cMatrixf projMtx;
         ScreenSpaceQuad(layout, projMtx, dstRect.w, dstRect.h);
+
+        GraphicsContext::ViewConfiguration viewConfig {target};
+        viewConfig.m_projection = projMtx;
+        viewConfig.m_viewRect = dstRect;
+        auto view = StartPass("Copy To Target", viewConfig);
+
         GraphicsContext::ShaderProgram program;
         program.m_handle = m_copyProgram;
-        program.m_configuration.m_write = Write::RGBA;
-        program.m_projection = projMtx;
-
+        program.m_configuration.m_write = write;
         program.m_textures.push_back({ m_s_diffuseMap, image.GetHandle(), 0 });
-        DrawRequest request = { target, layout, program };
-        request.m_x = dstRect.x;
-        request.m_y = dstRect.y;
-        request.m_width = dstRect.w;
-        request.m_height = dstRect.h;
+        
+        DrawRequest request = { layout, program };
         Submit(view, request);
     }
 

@@ -19,6 +19,7 @@
 
 #include "resources/MaterialManager.h"
 
+#include "graphics/Enum.h"
 #include "graphics/Image.h"
 #include "system/LowLevelSystem.h"
 #include "system/String.h"
@@ -397,12 +398,13 @@ namespace hpl {
 				case eTextureWrap_Repeat:
 					break;
 				case eTextureWrap_Clamp:
-					break;
 				case eTextureWrap_ClampToEdge:
+					options.m_UWrap = WrapMode::Clamp;
+					options.m_VWrap = WrapMode::Clamp;
 					break;
 				case eTextureWrap_ClampToBorder:
-					options.m_uClamp = true;
-					options.m_vClamp = true;
+					options.m_UWrap = WrapMode::Border;
+					options.m_VWrap = WrapMode::Border;
 					break;
 				default:
 					BX_ASSERT(false, "Invalid wrap mode: %d", wrap)

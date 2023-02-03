@@ -222,7 +222,13 @@ void cLuxEffectRenderer::RenderFlashObjects(cRendererCallbackFunctions* apFuncti
     float fGlobalAlpha = (0.5f + mFlashOscill.val * 0.5f);
     const auto size = m_outputTarget.GetImage()->GetImageSize();
 
-    const auto view = apFunctions->GetGraphicsContext().StartPass("Render Flash Object");
+    GraphicsContext::ViewConfiguration viewConfiguration = {m_outputTarget};
+    viewConfiguration.m_view = currentFrustum->GetViewMatrix().GetTranspose();
+    viewConfiguration.m_projection = currentFrustum->GetProjectionMatrix().GetTranspose();
+    viewConfiguration.m_clear = {0, 1.0, 0, ClearOp::Depth};
+    viewConfiguration.m_viewRect = {0, 0, static_cast<uint16_t>(size.x), static_cast<uint16_t>(size.y)};
+
+    const auto view = apFunctions->GetGraphicsContext().StartPass("Render Flash Object", viewConfiguration);
     for (auto& flashObject : mvFlashObjects)
     {
         auto* pObject = flashObject.mpObject;
@@ -249,14 +255,14 @@ void cLuxEffectRenderer::RenderFlashObjects(cRendererCallbackFunctions* apFuncti
         shaderInput.m_configuration.m_alphaBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
         shaderInput.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
 
-        shaderInput.m_projection = currentFrustum->GetProjectionMatrix().GetTranspose();
-        shaderInput.m_view = currentFrustum->GetViewMatrix().GetTranspose();
+        // shaderInput.m_projection = currentFrustum->GetProjectionMatrix().GetTranspose();
+        // shaderInput.m_view = currentFrustum->GetViewMatrix().GetTranspose();
         shaderInput.m_modelTransform = pObject->GetModelMatrixPtr() ? pObject->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity;
         pObject->GetVertexBuffer()->GetLayoutStream(layoutInput);
 
-        GraphicsContext::DrawRequest drawRequest{ m_outputTarget, layoutInput, shaderInput };
-        drawRequest.m_width = size.x;
-        drawRequest.m_height = size.y;
+        GraphicsContext::DrawRequest drawRequest{ layoutInput, shaderInput };
+        // drawRequest.m_width = size.x;
+        // drawRequest.m_height = size.y;
         for (int i = 0; i < 2; ++i)
         {
             graphicsContext.Submit(view, drawRequest);
@@ -274,8 +280,13 @@ void cLuxEffectRenderer::RenderEnemyGlow(cRendererCallbackFunctions* apFunctions
     auto& graphicsContext = apFunctions->GetGraphicsContext();
     auto currentFrustum = apFunctions->GetFrustum();
     const auto size = m_outputTarget.GetImage()->GetImageSize();
-
-    const auto view = apFunctions->GetGraphicsContext().StartPass("Render Enemy Glow");
+    
+    GraphicsContext::ViewConfiguration viewConfig {m_outputTarget};
+    viewConfig.m_projection = currentFrustum->GetProjectionMatrix().GetTranspose();
+    viewConfig.m_view = currentFrustum->GetViewMatrix().GetTranspose();
+    viewConfig.m_viewRect = {0, 0, size.x, size.y};
+       
+    const auto view = apFunctions->GetGraphicsContext().StartPass("Render Enemy Glow", viewConfig);
     for (auto& enemyGlow : mvEnemyGlowObjects)
     {
         auto* pObject = enemyGlow.mpObject;
@@ -302,14 +313,14 @@ void cLuxEffectRenderer::RenderEnemyGlow(cRendererCallbackFunctions* apFunctions
         shaderInput.m_configuration.m_alphaBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
         shaderInput.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
 
-        shaderInput.m_projection = currentFrustum->GetProjectionMatrix().GetTranspose();
-        shaderInput.m_view = currentFrustum->GetViewMatrix().GetTranspose();
+        // shaderInput.m_projection = currentFrustum->GetProjectionMatrix().GetTranspose();
+        // shaderInput.m_view = currentFrustum->GetViewMatrix().GetTranspose();
         shaderInput.m_modelTransform = pObject->GetModelMatrixPtr() ? pObject->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity;
         pObject->GetVertexBuffer()->GetLayoutStream(layoutInput);
 
-        GraphicsContext::DrawRequest drawRequest{ m_outputTarget, layoutInput, shaderInput };
-        drawRequest.m_width = size.x;
-        drawRequest.m_height = size.y;
+        GraphicsContext::DrawRequest drawRequest{ layoutInput, shaderInput };
+        // drawRequest.m_width = size.x;
+        // drawRequest.m_height = size.y;
         graphicsContext.Submit(view, drawRequest);
     }
 }
@@ -365,19 +376,20 @@ void cLuxEffectRenderer::RenderOutline(cRendererCallbackFunctions* apFunctions)
     cMath::GetClipRectFromBV(clipRect, totalBV, apFunctions->GetFrustum(), vScreenSize, -1);
 
     {
-        const auto view = graphicsContext.StartPass("Clear Outline And Stencil");
         const auto size = m_outlineTarget.GetImage()->GetImageSize();
-        GraphicsContext::DrawClear drawClear{ m_outlineTarget,
-                                              { 0, 1.0, 0, ClearOp::Stencil | ClearOp::Color },
-                                              0,
-                                              0,
-                                              static_cast<uint16_t>(size.x),
-                                              static_cast<uint16_t>(size.y) };
-        graphicsContext.ClearTarget(view, drawClear);
+        GraphicsContext::ViewConfiguration viewConfig {m_outlineTarget};
+        viewConfig.m_clear = { 0, 1.0, 0, ClearOp::Stencil | ClearOp::Color };
+        viewConfig.m_viewRect = {0, 0, size.x, size.y};
+        bgfx::touch(graphicsContext.StartPass("Clear Outline And Stencil", viewConfig));
     }
 
     {
-        const auto view = graphicsContext.StartPass("Render Outline Stencil");
+        const auto size = m_outlineTarget.GetImage()->GetImageSize();
+        GraphicsContext::ViewConfiguration viewConfig {m_outlineTarget};
+        viewConfig.m_projection = currentFrustum->GetProjectionMatrix().GetTranspose();
+        viewConfig.m_view = currentFrustum->GetViewMatrix().GetTranspose();
+        viewConfig.m_viewRect = {0, 0, size.x, size.y};
+        const auto view = graphicsContext.StartPass("Render Outline Stencil", viewConfig);
         for (auto& object : lstObjects)
         {
             GraphicsContext::LayoutStream layoutInput;
@@ -387,8 +399,7 @@ void cLuxEffectRenderer::RenderOutline(cRendererCallbackFunctions* apFunctions)
                 float m_alpha;
                 float pad[3];
             } params = { 0 };
-            const auto size = m_outlineTarget.GetImage()->GetImageSize();
-
+            
             shaderInput.m_handle = m_alphaRejectProgram;
             auto alphaImage = object->GetMaterial()->GetImage(eMaterialTexture_Alpha);
             if (alphaImage)
@@ -401,20 +412,25 @@ void cLuxEffectRenderer::RenderOutline(cRendererCallbackFunctions* apFunctions)
             shaderInput.m_handle = m_alphaRejectProgram;
             shaderInput.m_configuration.m_frontStencilTest = CreateStencilTest(
                 StencilFunction::Always, StencilFail::Keep, StencilDepthFail::Keep, StencilDepthPass::Replace, 0xff, 0xff);
-            shaderInput.m_projection = currentFrustum->GetProjectionMatrix().GetTranspose();
-            shaderInput.m_view = currentFrustum->GetViewMatrix().GetTranspose();
+            // shaderInput.m_projection = currentFrustum->GetProjectionMatrix().GetTranspose();
+            // shaderInput.m_view = currentFrustum->GetViewMatrix().GetTranspose();
             shaderInput.m_modelTransform = object->GetModelMatrixPtr() ? object->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity;
             object->GetVertexBuffer()->GetLayoutStream(layoutInput);
 
-            GraphicsContext::DrawRequest drawRequest{ m_outlineTarget, layoutInput, shaderInput };
-            drawRequest.m_width = size.x;
-            drawRequest.m_height = size.y;
+            GraphicsContext::DrawRequest drawRequest{ layoutInput, shaderInput };
+            // drawRequest.m_width = size.x;
+            // drawRequest.m_height = size.y;
             graphicsContext.Submit(view, drawRequest);
         }
     }
 
     {
-        const auto view = graphicsContext.StartPass("Render Outline");
+        const auto size = m_outlineTarget.GetImage()->GetImageSize();
+        GraphicsContext::ViewConfiguration viewConfig {m_outlineTarget};
+        viewConfig.m_projection = currentFrustum->GetProjectionMatrix().GetTranspose();
+        viewConfig.m_view = currentFrustum->GetViewMatrix().GetTranspose();
+        viewConfig.m_viewRect = {0, 0, size.x, size.y};
+        const auto view = graphicsContext.StartPass("Render Outline", viewConfig);
         for (auto& object : lstObjects)
         {
             GraphicsContext::LayoutStream layoutInput;
@@ -424,7 +440,6 @@ void cLuxEffectRenderer::RenderOutline(cRendererCallbackFunctions* apFunctions)
                 float color[3];
                 float useAlpha;
             } params = { { 0, 0, 0.5f }, 0 };
-            const auto size = m_outlineTarget.GetImage()->GetImageSize();
 
             shaderInput.m_handle = m_outlineProgram;
             auto alphaImage = object->GetMaterial()->GetImage(eMaterialTexture_Alpha);
@@ -446,14 +461,14 @@ void cLuxEffectRenderer::RenderOutline(cRendererCallbackFunctions* apFunctions)
             cMatrixf mtxScale = cMath::MatrixMul(cMath::MatrixScale(vScale), cMath::MatrixTranslate(pBV->GetLocalCenter() * -1));
             mtxScale.SetTranslation(mtxScale.GetTranslation() + pBV->GetLocalCenter());
 
-            shaderInput.m_projection = currentFrustum->GetProjectionMatrix().GetTranspose();
-            shaderInput.m_view = currentFrustum->GetViewMatrix().GetTranspose();
+            // shaderInput.m_projection = currentFrustum->GetProjectionMatrix().GetTranspose();
+            // shaderInput.m_view = currentFrustum->GetViewMatrix().GetTranspose();
             shaderInput.m_modelTransform = cMath::MatrixMul(object->GetWorldMatrix(), mtxScale).GetTranspose();
             object->GetVertexBuffer()->GetLayoutStream(layoutInput);
 
-            GraphicsContext::DrawRequest drawRequest{ m_outlineTarget, layoutInput, shaderInput };
-            drawRequest.m_width = size.x;
-            drawRequest.m_height = size.y;
+            GraphicsContext::DrawRequest drawRequest{ layoutInput, shaderInput };
+            // drawRequest.m_width = size.x;
+            // drawRequest.m_height = size.y;
             graphicsContext.Submit(view, drawRequest);
         }
     }
@@ -465,24 +480,28 @@ void cLuxEffectRenderer::RenderOutline(cRendererCallbackFunctions* apFunctions)
     }
 
     {
-        const auto view = apFunctions->GetGraphicsContext().StartPass("Additive Outline");
-        auto outlineOutputImage = m_blurTarget[1].GetImage();
-        auto imageSize = m_blurTarget[1].GetImage()->GetImageSize();
-
-        GraphicsContext::LayoutStream layoutStream;
-        GraphicsContext::ShaderProgram shaderProgram;
         cMatrixf projMtx;
+        auto imageSize = m_blurTarget[1].GetImage()->GetImageSize();
+        GraphicsContext::LayoutStream layoutStream;
         graphicsContext.ScreenSpaceQuad(layoutStream, projMtx, imageSize.x, imageSize.y);
+        
+        GraphicsContext::ViewConfiguration viewConfig {m_outputTarget};
+        viewConfig.m_projection = projMtx;
+        viewConfig.m_viewRect = {0, 0, imageSize.x, imageSize.y};
+        const auto view = apFunctions->GetGraphicsContext().StartPass("Additive Outline", viewConfig);
+        auto outlineOutputImage = m_blurTarget[1].GetImage();
+
+        GraphicsContext::ShaderProgram shaderProgram;
         GraphicsContext::ShaderProgram program;
         program.m_handle = m_copyProgram;
         program.m_configuration.m_write = Write::RGBA;
-        program.m_projection = projMtx;
+        // program.m_projection = projMtx;
         program.m_configuration.m_alphaBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
         program.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
 
         program.m_textures.push_back({ m_s_diffuseMap, outlineOutputImage->GetHandle(), 0 });
 
-        GraphicsContext::DrawRequest request = { m_outputTarget, layoutStream, program };
+        GraphicsContext::DrawRequest request = { layoutStream, program };
         graphicsContext.Submit(view, request);
     }
 }
@@ -500,51 +519,62 @@ void cLuxEffectRenderer::RenderBlurPass(GraphicsContext& context, Image& input)
 
     auto image = m_blurTarget[1].GetImage(0);
     {
-        bgfx::ViewId view = context.StartPass("Blur Pass 1");
+        cMatrixf projMtx;
+        GraphicsContext::LayoutStream layoutStream;
+        context.ScreenSpaceQuad(layoutStream, projMtx, imageSize.x, imageSize.y);
+        
+        GraphicsContext::ViewConfiguration viewConfig {m_blurTarget[0]};
+        viewConfig.m_projection = projMtx;
+        viewConfig.m_viewRect = {0, 0, image->GetWidth(), image->GetHeight()};
+        
+        bgfx::ViewId view = context.StartPass("Blur Pass 1", viewConfig);
         blurParams.u_useHorizontal = 0;
         blurParams.u_blurSize = BlurSize;
         blurParams.texelSize[0] = image->GetWidth();
         blurParams.texelSize[1] = image->GetHeight();
 
-        GraphicsContext::LayoutStream layoutStream;
         GraphicsContext::ShaderProgram shaderProgram;
-        cMatrixf projMtx;
-        context.ScreenSpaceQuad(layoutStream, projMtx, imageSize.x, imageSize.y);
         shaderProgram.m_configuration.m_write = Write::RGBA;
         shaderProgram.m_handle = m_blurProgram;
-        shaderProgram.m_projection = projMtx;
+        // shaderProgram.m_projection = projMtx;
 
         shaderProgram.m_textures.push_back({ m_s_diffuseMap, input.GetHandle(), 1 });
         shaderProgram.m_uniforms.push_back({ m_u_param, &blurParams, 1 });
 
-        GraphicsContext::DrawRequest request{ m_blurTarget[0], layoutStream, shaderProgram };
-        request.m_width = image->GetWidth();
-        request.m_height = image->GetHeight();
+        GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
+        // request.m_width = image->GetWidth();
+        // request.m_height = image->GetHeight();
         context.Submit(view, request);
     }
 
     {
-        bgfx::ViewId view = context.StartPass("Blur Pass 2");
+        
+        GraphicsContext::LayoutStream layoutStream;
+        cMatrixf projMtx;
+        context.ScreenSpaceQuad(layoutStream, projMtx, imageSize.x, imageSize.y);
+
+        GraphicsContext::ViewConfiguration viewConfig {m_blurTarget[1]};
+        viewConfig.m_projection = projMtx;
+        viewConfig.m_viewRect = {0, 0, image->GetWidth(), image->GetHeight()};
+        bgfx::ViewId view = context.StartPass("Blur Pass 2", viewConfig);
+
 
         blurParams.u_useHorizontal = 1.0;
         blurParams.u_blurSize = BlurSize;
         blurParams.texelSize[0] = image->GetWidth();
         blurParams.texelSize[1] = image->GetHeight();
 
-        GraphicsContext::LayoutStream layoutStream;
         GraphicsContext::ShaderProgram shaderProgram;
-        cMatrixf projMtx;
-        context.ScreenSpaceQuad(layoutStream, projMtx, imageSize.x, imageSize.y);
         shaderProgram.m_configuration.m_write = Write::RGBA;
         shaderProgram.m_handle = m_blurProgram;
-        shaderProgram.m_projection = projMtx;
+        // shaderProgram.m_projection = projMtx;
 
         shaderProgram.m_textures.push_back({ m_s_diffuseMap, m_blurTarget[0].GetImage()->GetHandle(), 1 });
         shaderProgram.m_uniforms.push_back({ m_u_param, &blurParams, 1 });
 
-        GraphicsContext::DrawRequest request{ m_blurTarget[1], layoutStream, shaderProgram };
-        request.m_width = image->GetWidth();
-        request.m_height = image->GetHeight();
+        GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
+        // request.m_width = image->GetWidth();
+        // request.m_height = image->GetHeight();
 
         context.Submit(view, request);
     }

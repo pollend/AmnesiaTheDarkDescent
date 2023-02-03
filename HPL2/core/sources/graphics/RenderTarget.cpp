@@ -58,6 +58,7 @@ namespace hpl
         {
             // auto& descriptor = image->GetDescriptor();
             // BX_ASSERT(descriptor.m_configuration.m_rt != RTType::None, "Image is not a render target");
+            BX_ASSERT(bgfx::isValid(image->GetHandle()), "Image is not initialized")
             handles.push_back(image->GetHandle());
         }
         m_buffer = bgfx::createFrameBuffer(handles.size(), handles.data(), false);

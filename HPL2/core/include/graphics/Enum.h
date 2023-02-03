@@ -129,6 +129,13 @@ namespace hpl
         Anisotropic
     };
 
+    enum class WrapMode : uint8_t {
+        None,
+        Mirror,
+        Clamp,
+        Border
+    };
+
     enum class BlendFunc: uint32_t {
     };
     BlendFunc CreateFromMaterialBlendMode(eMaterialBlendMode mode);

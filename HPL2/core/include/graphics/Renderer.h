@@ -19,6 +19,7 @@
 #pragma once
 
 #include "bgfx/bgfx.h"
+#include "engine/RTTI.h"
 #include "graphics/Enum.h"
 #include "graphics/GraphicsContext.h"
 #include "graphics/GraphicsTypes.h"
@@ -243,6 +244,7 @@ namespace hpl {
 	{
 	friend class cRendererCallbackFunctions;
 	friend class cRenderSettings;
+	HPL_RTTI_CLASS(iRenderer, "{A3E0F5A0-0F9B-4F5C-9B9E-0F9B4F5C9B9E}")
 
 	public:
 
@@ -334,8 +336,7 @@ namespace hpl {
 
 		void OcclusionQueryBoundingBoxTest(bgfx::ViewId view, 
 			GraphicsContext& context, 
-			bgfx::OcclusionQueryHandle handle, 
-			const cFrustum& frustum,
+			bgfx::OcclusionQueryHandle handle,
 			const cMatrixf& transform, 
 			RenderTarget& rt,Cull cull = Cull::CounterClockwise);
 		/**
@@ -361,7 +362,7 @@ namespace hpl {
 		/**
 		 * Only depth is needed for framebuffer. All objects needs to be added to renderlist!
 		 */
-		void AssignAndRenderOcclusionQueryObjects(bgfx::ViewId view, GraphicsContext& context, bool abSetFrameBuffer, bool abUsePosAndSize, RenderTarget& rt);
+		void AssignAndRenderOcclusionQueryObjects(GraphicsContext& context, bool abSetFrameBuffer, bool abUsePosAndSize, RenderTarget& rt);
 
 		/**
 		 * Checks if the renderable object is 1) submeshentity 2) is onesided plane 3)is away from camera. If all are true, FALSE is returned.

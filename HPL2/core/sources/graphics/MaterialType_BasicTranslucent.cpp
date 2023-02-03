@@ -20,9 +20,11 @@
 #include "graphics/MaterialType_BasicTranslucent.h"
 
 #include "bgfx/bgfx.h"
+#include "engine/RTTI.h"
 #include "graphics/GraphicsContext.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Image.h"
+#include "graphics/RendererDeferred.h"
 #include "graphics/ShaderUtil.h"
 #include "math/MathTypes.h"
 #include "system/LowLevelSystem.h"
@@ -242,9 +244,15 @@ namespace hpl
                                 program.m_textures.push_back({m_s_envMapAlphaMap, cubemapAlphaImage->GetHandle(), 4});
                             }
                         }
-                        // mpGraphics->GetRenderer(eRenderer_Main)->GetRefractionTexture();
-                        // program.m_textures.push_back({m_s_refractionMap, apRenderer->getRef()->GetHandle(), 3});
-                        // flags |= material::translucent::Translucent_Refraction;
+                        auto* renderer = mpGraphics->GetRenderer(eRenderer_Main);
+                        if( renderer && TypeInfo<cRendererDeferred>::isType(*renderer)) {
+                            auto* deferredRenderer = static_cast<cRendererDeferred*>(renderer);
+                            flags |= material::translucent::Translucent_Refraction;
+                            if(auto* refractionImage = deferredRenderer->GetRefractionImage()) {
+                                program.m_textures.push_back({m_s_refractionMap, refractionImage->GetHandle(), 3});
+                            }
+                        }
+                        
                     }
                     if(pVars->mbRefractionNormals && bRefractionEnabled) {
                         uniform.useScreenNormal = 1.0f;

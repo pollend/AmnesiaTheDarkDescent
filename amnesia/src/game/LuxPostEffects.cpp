@@ -125,8 +125,16 @@ cLuxPostEffectHandler::cLuxPostEffectHandler()
 }
 
 void cLuxPostEffect_Insanity::RenderEffect(cPostEffectComposite& compositor, GraphicsContext& context, Image& input, RenderTarget& target) {
-    bgfx::ViewId view = context.StartPass("Bloom Pass");
     cVector2l vRenderTargetSize = compositor.GetRenderTargetSize();
+    
+    GraphicsContext::LayoutStream layoutStream;
+    cMatrixf projMtx;
+    context.ScreenSpaceQuad(layoutStream, projMtx, vRenderTargetSize.x, vRenderTargetSize.y);
+    GraphicsContext::ViewConfiguration viewConfig {target};
+    viewConfig.m_projection = projMtx;
+    viewConfig.m_viewRect = {0, 0, vRenderTargetSize.x, vRenderTargetSize.y};
+
+    bgfx::ViewId view = context.StartPass("Bloom Pass", viewConfig);
 
     struct {
         float alpha;
@@ -145,14 +153,14 @@ void cLuxPostEffect_Insanity::RenderEffect(cPostEffectComposite& compositor, Gra
     }
     float fAmpT = cMath::GetFraction(mfAnimCount);
 
-    cMatrixf projMtx;
+    // cMatrixf projMtx;
     GraphicsContext::ShaderProgram shaderProgram;
-    GraphicsContext::LayoutStream layoutStream;
-    context.ScreenSpaceQuad(layoutStream, projMtx, vRenderTargetSize.x, vRenderTargetSize.y);
+    // GraphicsContext::LayoutStream layoutStream;
+    // context.ScreenSpaceQuad(layoutStream, projMtx, vRenderTargetSize.x, vRenderTargetSize.y);
 
     shaderProgram.m_configuration.m_write = Write::RGBA;
     shaderProgram.m_handle = m_program;
-    shaderProgram.m_projection = projMtx;
+    // shaderProgram.m_projection = projMtx;
 
     shaderProgram.m_textures.push_back({ m_s_diffuseMap, input.GetHandle(), 0 });
     shaderProgram.m_textures.push_back({ m_s_ampMap0, m_ampMaps[lAmp0]->GetHandle(), 1 });
@@ -166,9 +174,9 @@ void cLuxPostEffect_Insanity::RenderEffect(cPostEffectComposite& compositor, Gra
     param.alpha = 1.0f;
 
     shaderProgram.m_uniforms.push_back({ m_u_param, &param, 1 });
-    GraphicsContext::DrawRequest request{ target, layoutStream, shaderProgram };
-    request.m_width = vRenderTargetSize.x;
-    request.m_height = vRenderTargetSize.y;
+    GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
+    // request.m_width = vRenderTargetSize.x;
+    // request.m_height = vRenderTargetSize.y;
     context.Submit(view, request);
 }
 

@@ -1870,8 +1870,8 @@ void cLuxJournal::CreateScreenTextures()
             false,
             bgfx::TextureFormat::Enum::RGBA8);
         desc.m_configuration.m_rt = RTType::RT_Write;
-		desc.m_configuration.m_uClamp = true;
-		desc.m_configuration.m_vClamp = true;
+		desc.m_configuration.m_UWrap = WrapMode::Clamp;
+		desc.m_configuration.m_VWrap = WrapMode::Clamp;
         auto image = std::make_shared<Image>();
         image->Initialize(desc);
         return image;
@@ -1897,26 +1897,27 @@ void cLuxJournal::RenderBackgroundImage()
 	auto screenSize = pLowGfx->GetScreenSizeInt();
 	cRect2l screenRect(0, 0, mvScreenSize.x, mvScreenSize.y);
 
-	graphicsContext.CopyTextureToFrameBuffer(
-		graphicsContext.StartPass("Copy Screen"), 
-		*renderer->GetOutputImage(), screenRect, screenTarget);
+	graphicsContext.CopyTextureToFrameBuffer(*renderer->GetOutputImage(), screenRect, screenTarget);
 
 	{
-		bgfx::ViewId view = graphicsContext.StartPass("Blur Pass 1");
-
 		GraphicsContext::LayoutStream layoutStream;
-		GraphicsContext::ShaderProgram shaderProgram;
 		cMatrixf projMtx;
 		graphicsContext.ScreenSpaceQuad(layoutStream, projMtx, screenSize.x, screenSize.y);
+		
+		GraphicsContext::ViewConfiguration viewConfig {effectTarget};
+        viewConfig.m_projection = projMtx;
+        viewConfig.m_viewRect = {0, 0, screenSize.x, screenSize.y};
+		bgfx::ViewId view = graphicsContext.StartPass("Blur Pass 1", viewConfig);
+
+		GraphicsContext::ShaderProgram shaderProgram;
 		shaderProgram.m_configuration.m_write = Write::RGBA;
 		shaderProgram.m_handle = m_program;
-		shaderProgram.m_projection = projMtx;
 		
 		shaderProgram.m_textures.push_back({ m_s_diffuseMap, m_screenBgTexture->GetHandle(), 1 });
 		
-		GraphicsContext::DrawRequest request{ effectTarget, layoutStream, shaderProgram };
-		request.m_width = screenSize.x;
-		request.m_height = screenSize.y;
+		GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
+		// request.m_width = screenSize.x;
+		// request.m_height = screenSize.y;
 		graphicsContext.Submit(view, request);
 	}
 }

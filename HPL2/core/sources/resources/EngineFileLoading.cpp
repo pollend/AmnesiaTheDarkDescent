@@ -19,6 +19,7 @@
 
 #include "resources/EngineFileLoading.h"
 
+#include "graphics/Enum.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Image.h"
 #include "resources/XmlDocument.h"
@@ -241,8 +242,8 @@ namespace hpl {
 			{
 
 				cTextureManager::ImageOptions imageOptions;
-				imageOptions.m_uClamp = true;
-				imageOptions.m_vClamp = true;
+				imageOptions.m_UWrap = WrapMode::Clamp;
+				imageOptions.m_VWrap = WrapMode::Clamp;
 				Image *pFalloff = apResources->GetTextureManager()->Create1DImage(sSpotFalloffMap,true, eTextureUsage_Normal, 0, imageOptions);
 				if(pFalloff) pLightSpot->SetSpotFalloffMap(pFalloff);
 			}
@@ -271,7 +272,10 @@ namespace hpl {
 			tString sFalloffMap = apElement->GetAttributeString("FalloffMap");
 			if(sFalloffMap != "")
 			{
-				Image *pFalloff = apResources->GetTextureManager()->Create1DImage(sFalloffMap,true);
+				cTextureManager::ImageOptions options;
+				options.m_UWrap = WrapMode::Clamp;
+				options.m_VWrap = WrapMode::Clamp;
+				Image *pFalloff = apResources->GetTextureManager()->Create1DImage(sFalloffMap,true, eTextureUsage_Normal, 0, options);
 				if(pFalloff) pLight->SetFalloffMap(pFalloff);
 			}
 
@@ -282,8 +286,8 @@ namespace hpl {
 				eTextureAnimMode animMode = ToTextureAnimMode(apElement->GetAttributeString("GoboAnimMode",""));
 				float fAnimFrameTime = apElement->GetAttributeFloat("GoboAnimFrameTime", 1);
 				cTextureManager::ImageOptions options= cTextureManager::ImageOptions();
-				options.m_uClamp = true;
-				options.m_vClamp = true;
+				options.m_WWrap = WrapMode::Clamp;
+				options.m_VWrap = WrapMode::Clamp;
 
 				if(animMode == eTextureAnimMode_None) {
 					switch(lightType) {

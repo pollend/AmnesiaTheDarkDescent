@@ -273,7 +273,7 @@ namespace hpl {
 				cVector2l vRenderTargetSize = viewport.GetSize();
 				RenderTarget emptyRenderTarget{};
 				cRect2l rect = cRect2l(0, 0, vRenderTargetSize.x, vRenderTargetSize.y);
-				context.CopyTextureToFrameBuffer(context.StartPass("Copy To Swap"),*pRenderer->GetOutputImage(), rect, viewport.GetRenderTarget() ? *viewport.GetRenderTarget() : emptyRenderTarget);
+				context.CopyTextureToFrameBuffer(*pRenderer->GetOutputImage(), rect, viewport.GetRenderTarget() ? *viewport.GetRenderTarget() : emptyRenderTarget);
 			}
 
 			//////////////////////////////////////////////

@@ -97,7 +97,7 @@ namespace hpl
             cVector2l vRenderTargetSize = GetRenderTargetSize();
 
             cRect2l rect = cRect2l(0, 0, vRenderTargetSize.x, vRenderTargetSize.y);
-            context.CopyTextureToFrameBuffer(context.StartPass("Copy To Swap"),inputTexture, rect, renderTarget);
+            context.CopyTextureToFrameBuffer(inputTexture, rect, renderTarget);
             return false;
         }
 
@@ -134,7 +134,7 @@ namespace hpl
             cVector2l vRenderTargetSize = GetRenderTargetSize();
 
             cRect2l rect = cRect2l(0, 0, vRenderTargetSize.x, vRenderTargetSize.y);
-            context.CopyTextureToFrameBuffer(context.StartPass("Copy To Swap"),*_images[currentIndex], rect, renderTarget);
+            context.CopyTextureToFrameBuffer(*_images[currentIndex], rect, renderTarget);
         }
         return true;
 

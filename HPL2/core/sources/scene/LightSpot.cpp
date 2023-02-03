@@ -19,6 +19,7 @@
 
 #include "scene/LightSpot.h"
 
+#include "graphics/Enum.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Image.h"
 #include "graphics/LowLevelGraphics.h"
@@ -75,8 +76,8 @@ namespace hpl {
         m_mtxProjection = cMatrixf::Identity;
 
         cTextureManager::ImageOptions options;
-        options.m_uClamp = true;
-        options.m_vClamp = true;
+        options.m_UWrap = WrapMode::Clamp;
+        options.m_VWrap = WrapMode::Clamp;
         mpSpotFalloffMap = mpTextureManager->Create1DImage("core_falloff_linear", false, eTextureUsage_Normal, 0, options);
 
         UpdateBoundingVolume();

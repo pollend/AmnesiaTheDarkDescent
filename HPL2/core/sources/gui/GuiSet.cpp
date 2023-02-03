@@ -586,9 +586,14 @@ namespace hpl {
 
 			// modelview is identity
 		}
-
-
-		auto view = graphicsContext.StartPass("Draw GUI");
+		
+		const cVector2l vSize = pLowLevelGraphics->GetScreenSizeInt();
+		// RenderTarget emptyTarget = RenderTarget();
+		GraphicsContext::ViewConfiguration viewConfiguration = {RenderTarget::EmptyRenderTarget};
+		viewConfiguration.m_view = viewMtx;
+		viewConfiguration.m_projection = projectionMtx;
+		viewConfiguration.m_viewRect = {0, 0, static_cast<uint16_t>(vSize.x), static_cast<uint16_t>(vSize.y)};
+		auto view = graphicsContext.StartPass("Draw GUI", viewConfiguration);
 		auto it = m_setRenderObjects.begin();
 
 		eGuiMaterial pLastMaterial = eGuiMaterial::eGuiMaterial_LastEnum;
@@ -789,8 +794,8 @@ namespace hpl {
 			vertexBufferOffset += vertexBufferIndex;
 			indexBufferOffset += indexBufferIndex;
 
-			shaderProgram.m_projection = projectionMtx;
-			shaderProgram.m_view = viewMtx;
+			// shaderProgram.m_projection = projectionMtx;
+			// shaderProgram.m_view = viewMtx;
 			shaderProgram.m_modelTransform = modelMtx;
 
 			shaderProgram.m_configuration.m_write = Write::RGBA;
@@ -800,14 +805,12 @@ namespace hpl {
 			}
 
 			GraphicsContext::DrawRequest request = {
-				RenderTarget::EmptyRenderTarget,
 				layout,
 				shaderProgram,
 			};
 
-			cVector2l vSize = pLowLevelGraphics->GetScreenSizeInt();
-			request.m_width = vSize.x;
-			request.m_height = vSize.y;
+			// request.m_width = vSize.x;
+			// request.m_height = vSize.y;
 			graphicsContext.Submit(view, request);
 		}
 

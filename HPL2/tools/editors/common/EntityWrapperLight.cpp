@@ -670,8 +670,8 @@ void iEntityWrapperLight::SetFalloffMap(const tString& asFalloffMap)
 {
 	Image* pTex = NULL;
 	cTextureManager::ImageOptions imageOptions;
-	imageOptions.m_uClamp = true;
-	imageOptions.m_vClamp = true;
+	imageOptions.m_UWrap = WrapMode::Clamp;
+	imageOptions.m_VWrap = WrapMode::Clamp;
 	cEditorHelper::LoadTextureResource(eEditorTextureResourceType_1D, asFalloffMap, &pTex, "none", 0, imageOptions);
 	if(pTex) {
 		msFalloffMap = cString::To8Char(GetEditorWorld()->GetEditor()->GetPathRelToWD(asFalloffMap));
@@ -692,8 +692,8 @@ void iEntityWrapperLight::SetGobo(const tString& asGoboFilename)
 	Image* pTex = NULL;
 
 	cTextureManager::ImageOptions imageOptions;
-	imageOptions.m_uClamp = true;
-	imageOptions.m_vClamp = true;
+	imageOptions.m_UWrap = WrapMode::Clamp;
+	imageOptions.m_VWrap = WrapMode::Clamp;
 	cEditorHelper::LoadTextureResource(eEditorTextureResourceType_2D, asGoboFilename, &pTex, msGoboAnimMode, mfGoboAnimFrameTime, imageOptions);
 	if(pTex)
 		msGoboFilename = asGoboFilename;
