@@ -22,7 +22,7 @@ jobs:
       - name: Configure
         run: |
           mkdir $GITHUB_WORKSPACE/build && cd $GITHUB_WORKSPACE/build
-          cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE:STRING=Release -G Ninja
+          cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE:STRING=Release -DAMNESIA_GAME_DIRECTORY:STRING='' -G Ninja
       - name: Build
         run: |
           cd $GITHUB_WORKSPACE/build
