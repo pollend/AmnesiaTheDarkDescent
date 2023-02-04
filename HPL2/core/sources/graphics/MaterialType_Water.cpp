@@ -43,74 +43,10 @@
 #include "graphics/Renderable.h"
 #include "graphics/Renderer.h"
 
-namespace hpl
-{
-
-//////////////////////////////////////////////////////////////////////////
-// DEFINES
-//////////////////////////////////////////////////////////////////////////
-
-//------------------------------
-// Variables
-//------------------------------
-#define kVar_afT 0
-#define kVar_afRefractionScale 1
-#define kVar_a_mtxInvViewRotation 2
-#define kVar_avReflectionMapSizeMul 3
-#define kVar_avFrenselBiasPow 4
-#define kVar_avReflectionFadeStartAndLength 5
-#define kVar_afWaveAmplitude 6
-#define kVar_afWaveFreq 7
-#define kVar_avFogStartAndLength 8
-#define kVar_avFogColor 9
-#define kVar_afFalloffExp 10
-
-//------------------------------
-// Diffuse Features and data
-//------------------------------
-#define eFeature_Diffuse_Reflection eFlagBit_0
-#define eFeature_Diffuse_CubeMapReflection eFlagBit_1
-#define eFeature_Diffuse_ReflectionFading eFlagBit_2
-#define eFeature_Diffuse_Fog eFlagBit_3
-
-#define kDiffuseFeatureNum 4
-
-    namespace material::water
-    {
-        static const auto afT = MemberID("afT", kVar_afT);
-        static const auto afRefractionScale = MemberID("afRefractionScale", kVar_afRefractionScale);
-        static const auto a_mtxInvViewRotation = MemberID("a_mtxInvViewRotation", kVar_a_mtxInvViewRotation);
-        static const auto avReflectionMapSizeMul = MemberID("avReflectionMapSizeMul", kVar_avReflectionMapSizeMul);
-        static const auto avFrenselBiasPow = MemberID("avFrenselBiasPow", kVar_avFrenselBiasPow);
-        static const auto avReflectionFadeStartAndLength = MemberID("avReflectionFadeStartAndLength", kVar_avReflectionFadeStartAndLength);
-        static const auto afWaveAmplitude = MemberID("afWaveAmplitude", kVar_afWaveAmplitude);
-        static const auto afWaveFreq = MemberID("afWaveFreq", kVar_afWaveFreq);
-        static const auto avFogStartAndLength = MemberID("avFogStartAndLength", kVar_avFogStartAndLength);
-        static const auto avFogColor = MemberID("avFogColor", kVar_avFogColor);
-        static const auto afFalloffExp = MemberID("afFalloffExp", kVar_afFalloffExp);
-    
-        static const auto s_diffuseMap = MemberID("s_diffuseMap");
-        static const auto s_normalMap = MemberID("s_normalMap");
-        static const auto s_refractionMap = MemberID("s_refractionMap");
-        static const auto s_reflectionMap = MemberID("s_reflectionMap");
-        static const auto s_envMap = MemberID("s_envMap");
-    
-    } // namespace material::water
-
-    static cProgramComboFeature vDiffuseFeatureVec[] = {
-        cProgramComboFeature("UseReflection", kPC_FragmentBit),
-        cProgramComboFeature("UseCubeMapReflection", kPC_FragmentBit, eFeature_Diffuse_Reflection),
-        cProgramComboFeature("UseReflectionFading", kPC_FragmentBit, eFeature_Diffuse_Reflection),
-        cProgramComboFeature("UseFog", kPC_FragmentBit | kPC_VertexBit),
-    };
-
+namespace hpl {
     cMaterialType_Water::cMaterialType_Water(cGraphics* apGraphics, cResources* apResources)
-        : iMaterialType(apGraphics, apResources)
-    {
-        m_waterVariant.Initialize(ShaderHelper::LoadProgramHandlerDefault(
-            "vs_water_material",
-             "fs_water_material", false, true));
-
+        : iMaterialType(apGraphics, apResources) {
+        m_waterVariant.Initialize(ShaderHelper::LoadProgramHandlerDefault("vs_water_material", "fs_water_material", false, true));
 
         mbIsTranslucent = true;
 
@@ -152,33 +88,26 @@ namespace hpl
         m_s_envMap = bgfx::createUniform("s_envMap", bgfx::UniformType::Sampler);
     }
 
-    cMaterialType_Water::~cMaterialType_Water()
-    {
+    cMaterialType_Water::~cMaterialType_Water() {
     }
 
-    void cMaterialType_Water::LoadData()
-    {
-
+    void cMaterialType_Water::LoadData() {
     }
-    void cMaterialType_Water::DestroyData()
-    {
+    void cMaterialType_Water::DestroyData() {
     }
 
-     void cMaterialType_Water::ResolveShaderProgram(
-            eMaterialRenderMode aRenderMode,
-            cMaterial* apMaterial,
-            iRenderable* apObject,
-            iRenderer* apRenderer, 
-            std::function<void(GraphicsContext::ShaderProgram&)> handler) {
+    void cMaterialType_Water::ResolveShaderProgram(
+        eMaterialRenderMode aRenderMode,
+        cMaterial* apMaterial,
+        iRenderable* apObject,
+        iRenderer* apRenderer,
+        std::function<void(GraphicsContext::ShaderProgram&)> handler) {
         GraphicsContext::ShaderProgram program;
         cVector2f reflectionMapSizeMul = cVector2f(1.0f / (float)iRenderer::GetReflectionSizeDiv());
 
-
-        if(aRenderMode == eMaterialRenderMode_Diffuse || aRenderMode == eMaterialRenderMode_DiffuseFog)
-       {
+        if (aRenderMode == eMaterialRenderMode_Diffuse || aRenderMode == eMaterialRenderMode_DiffuseFog) {
             cWorld* pWorld = apRenderer->GetCurrentWorld();
-            struct u_params
-            {
+            struct u_params {
                 float u_frenselBiasPow[2];
                 float u_fogStart;
                 float u_fogEnd;
@@ -195,23 +124,21 @@ namespace hpl
                 float afRefractionScale;
                 float useRefractionFading;
                 float padding[2];
-            } params = {0};
+            } params = { 0 };
             auto diffuseMap = apMaterial->GetImage(eMaterialTexture_Diffuse);
             auto normalMap = apMaterial->GetImage(eMaterialTexture_NMap);
-            
+
             auto cubeMap = apMaterial->GetImage(eMaterialTexture_CubeMap);
-            
+
             cMaterialType_Water_Vars* pVars = static_cast<cMaterialType_Water_Vars*>(apMaterial->GetVars());
             const bool refractionEnabled = iRenderer::GetRefractionEnabled();
             const bool hasReflection = refractionEnabled && pVars->mbHasReflection;
             const bool hasCubeMap = refractionEnabled && cubeMap;
             const bool hasDiffuseFog = (aRenderMode == eMaterialRenderMode_DiffuseFog);
 
-            tFlag lFlags = (hasReflection ? material::water::UseReflection : 0) | 
-                (hasCubeMap ? material::water::UseCubeMapReflection : 0) |
-                (hasDiffuseFog ? material::water::UseFog : 0) |
-                (iRenderer::GetRefractionEnabled() ? material::water::UseRefraction : 0);
-            
+            tFlag lFlags = (hasReflection ? material::water::UseReflection : 0) | (hasCubeMap ? material::water::UseCubeMapReflection : 0) |
+                (hasDiffuseFog ? material::water::UseFog : 0) | (iRenderer::GetRefractionEnabled() ? material::water::UseRefraction : 0);
+
             params.u_frenselBiasPow[0] = pVars->mfFrenselBias;
             params.u_frenselBiasPow[1] = pVars->mfFrenselPow;
             params.u_fogStart = pWorld->GetFogStart();
@@ -226,31 +153,30 @@ namespace hpl
             params.afWaveFreq = pVars->mfWaveFreq;
             params.afRefractionScale = pVars->mfRefractionScale;
             params.useRefractionFading = pVars->mfReflectionFadeEnd > 0.0f ? 1.0f : 0.0f;
-            
+
             cColor fogColor = pWorld->GetFogColor();
-            if(cubeMap) {
-                program.m_textures.push_back({m_s_envMap, cubeMap->GetHandle(), 0});
+            if (cubeMap) {
+                program.m_textures.push_back({ m_s_envMap, cubeMap->GetHandle(), 0 });
             }
-            program.m_textures.push_back({m_s_diffuseMap, diffuseMap->GetHandle(), 1});
-            if(normalMap) {
-                program.m_textures.push_back({m_s_normalMap, normalMap->GetHandle(), 2});
+            program.m_textures.push_back({ m_s_diffuseMap, diffuseMap->GetHandle(), 1 });
+            if (normalMap) {
+                program.m_textures.push_back({ m_s_normalMap, normalMap->GetHandle(), 2 });
             }
 
-            program.m_uniforms.push_back({m_u_param, &params, 4});
+            program.m_uniforms.push_back({ m_u_param, &params, 4 });
             cMatrixf mtxInvView = hasCubeMap ? ([&] {
                 cMatrixf mtxInvView = apRenderer->GetCurrentFrustum()->GetViewMatrix().GetTranspose();
                 return mtxInvView.GetRotation().GetTranspose();
-            }) (): cMatrixf::Identity;
-            program.m_uniforms.push_back({m_u_mtxInvViewRotation, &mtxInvView.v});
-            program.m_uniforms.push_back({m_u_fogColor, &fogColor.v});
+            })()
+                                             : cMatrixf::Identity;
+            program.m_uniforms.push_back({ m_u_mtxInvViewRotation, &mtxInvView.v });
+            program.m_uniforms.push_back({ m_u_fogColor, &fogColor.v });
             program.m_handle = m_waterVariant.GetVariant(lFlags);
             handler(program);
-
         }
     }
 
-    iMaterialVars* cMaterialType_Water::CreateSpecificVariables()
-    {
+    iMaterialVars* cMaterialType_Water::CreateSpecificVariables() {
         cMaterialType_Water_Vars* pVars = hplNew(cMaterialType_Water_Vars, ());
 
         pVars->mbHasReflection = true;
@@ -261,12 +187,9 @@ namespace hpl
         return pVars;
     }
 
-
-    void cMaterialType_Water::LoadVariables(cMaterial* apMaterial, cResourceVarsObject* apVars)
-    {
+    void cMaterialType_Water::LoadVariables(cMaterial* apMaterial, cResourceVarsObject* apVars) {
         cMaterialType_Water_Vars* pVars = (cMaterialType_Water_Vars*)apMaterial->GetVars();
-        if (pVars == NULL)
-        {
+        if (pVars == NULL) {
             pVars = (cMaterialType_Water_Vars*)CreateSpecificVariables();
             apMaterial->SetVars(pVars);
         }
@@ -286,9 +209,7 @@ namespace hpl
         apMaterial->SetLargeTransperantSurface(apVars->GetVarBool("LargeSurface", false));
     }
 
-
-    void cMaterialType_Water::GetVariableValues(cMaterial* apMaterial, cResourceVarsObject* apVars)
-    {
+    void cMaterialType_Water::GetVariableValues(cMaterial* apMaterial, cResourceVarsObject* apVars) {
         cMaterialType_Water_Vars* pVars = (cMaterialType_Water_Vars*)apMaterial->GetVars();
 
         apVars->AddVarBool("HasReflection", pVars->mbHasReflection);
@@ -305,9 +226,7 @@ namespace hpl
         apVars->AddVarBool("LargeSurface", apMaterial->GetLargeTransperantSurface());
     }
 
-
-    void cMaterialType_Water::CompileMaterialSpecifics(cMaterial* apMaterial)
-    {
+    void cMaterialType_Water::CompileMaterialSpecifics(cMaterial* apMaterial) {
         cMaterialType_Water_Vars* pVars = static_cast<cMaterialType_Water_Vars*>(apMaterial->GetVars());
 
         /////////////////////////////////////
@@ -325,22 +244,18 @@ namespace hpl
 
         /////////////////////////////////////
         // Set up the refraction
-        if (iRenderer::GetRefractionEnabled())
-        {
+        if (iRenderer::GetRefractionEnabled()) {
             apMaterial->SetHasRefraction(true);
             apMaterial->SetUseRefractionEdgeCheck(true);
         }
 
         ///////////////////////////
         // Set up reflection
-        if (pVars->mbHasReflection && iRenderer::GetRefractionEnabled())
-        {
-            if (apMaterial->GetImage(eMaterialTexture_CubeMap) == NULL)
-            {
+        if (pVars->mbHasReflection && iRenderer::GetRefractionEnabled()) {
+            if (apMaterial->GetImage(eMaterialTexture_CubeMap) == NULL) {
                 apMaterial->SetHasWorldReflection(true);
             }
         }
     }
-
 
 } // namespace hpl

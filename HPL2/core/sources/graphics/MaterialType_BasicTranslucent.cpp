@@ -52,48 +52,6 @@
 
 namespace hpl
 {
-
-    //------------------------------
-    // Variables
-    //------------------------------
-    #define kVar_afAlpha 0
-    #define kVar_avFogStartAndLength 1
-    #define kVar_afOneMinusFogAlpha 2
-    #define kVar_afFalloffExp 3
-    #define kVar_a_mtxUV 4
-    #define kVar_afRefractionScale 5
-    #define kVar_a_mtxInvViewRotation 6
-    #define kVar_avFrenselBiasPow 7
-    #define kVar_avRimLightMulPow 8
-    #define kVar_afLightLevel 9
-
-    //------------------------------
-    // Diffuse Features and data
-    //------------------------------
-    #define eFeature_Diffuse_Fog eFlagBit_0
-    #define eFeature_Diffuse_UvAnimation eFlagBit_1
-    #define eFeature_Diffuse_UseRefraction eFlagBit_2
-    #define eFeature_Diffuse_NormalMap eFlagBit_3
-    #define eFeature_Diffuse_EnvMap eFlagBit_4
-    #define eFeature_Diffuse_DiffuseMap eFlagBit_5
-    #define eFeature_Diffuse_CubeMapAlpha eFlagBit_6
-    #define eFeature_Diffuse_UseScreenNormal eFlagBit_7
-
-    #define kDiffuseFeatureNum 8
-
-
-    static cProgramComboFeature vDiffuseFeatureVec[] = {
-        cProgramComboFeature("UseFog", kPC_FragmentBit | kPC_VertexBit),
-        cProgramComboFeature("UseUvAnimation", kPC_VertexBit),
-        cProgramComboFeature("UseRefraction", kPC_FragmentBit | kPC_VertexBit),
-        cProgramComboFeature("UseNormalMapping", kPC_FragmentBit | kPC_VertexBit),
-        cProgramComboFeature("UseEnvMap", kPC_FragmentBit | kPC_VertexBit),
-        cProgramComboFeature("UseDiffuseMap", kPC_FragmentBit),
-        cProgramComboFeature("UseCubeMapAlpha", kPC_FragmentBit),
-        cProgramComboFeature("UseScreenNormal", kPC_FragmentBit),
-    };
-
-
     static inline float GetMaxColorValue(const cColor& aCol)
     {
         return cMath::Max(cMath::Max(aCol.r, aCol.g), aCol.b);

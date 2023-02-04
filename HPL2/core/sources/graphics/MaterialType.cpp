@@ -34,6 +34,7 @@
 #include "math/Math.h"
 
 #include "system/String.h"
+#include <span>
 
 namespace hpl {
 
@@ -60,12 +61,18 @@ namespace hpl {
 		msName = asName;
 	}
 
-	//-----------------------------------------------------------------------
+	std::span<cMaterialUserVariable> iMaterialType::GetUserVariables() {
+		return std::span<cMaterialUserVariable>(m_userVariables);
+	}
+
+	std::span<cMaterialUsedTexture> iMaterialType::GetUsedTextures() {
+		return std::span<cMaterialUsedTexture>(m_usedTextures);
+	}
 
 	cMaterialUserVariable* iMaterialType::GetUserVariable(int alIdx)
 	{
 		if(alIdx>=0 && alIdx<GetUserVariableNum())
-			return &mvUserVariables[alIdx];
+			return &m_userVariables[alIdx];
 
 		return NULL;
 	}
@@ -74,15 +81,13 @@ namespace hpl {
 	{
 		for(int i=0;i<GetUserVariableNum();++i)
 		{
-			cMaterialUserVariable* pVar = &mvUserVariables[i];
+			cMaterialUserVariable* pVar = &m_userVariables[i];
 			if(pVar->msName==asName)
 				return pVar;
 		}
 
 		return NULL;
 	}
-
-	//-----------------------------------------------------------------------
 
 	void iMaterialType::Reload()
 	{
@@ -94,7 +99,7 @@ namespace hpl {
 	{
 		cMaterialUsedTexture usedTexture;
 		usedTexture.mType = aType;
-		mvUsedTextures.push_back( usedTexture );
+		m_usedTextures.push_back( usedTexture );
 	}
 
 	//-----------------------------------------------------------------------
@@ -108,7 +113,7 @@ namespace hpl {
 		userVariable.msValue = asDefaultValue;
 		userVariable.msDescription = asDesc;
 		userVariable.mvEnumValues = avEnumValues;
-		mvUserVariables.push_back(userVariable);
+		m_userVariables.push_back(userVariable);
 	}
 
 	void iMaterialType::AddVarBool(const tString& asName, bool abDefaultValue, const tString& asDesc)

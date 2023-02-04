@@ -40,6 +40,7 @@ namespace hpl
             Translucent_UseFog = 0x00010,
         };
     }
+
     class cMaterialType_Translucent_Vars : public iMaterialVars
     {
     public:
@@ -90,11 +91,11 @@ namespace hpl
             iRenderer* apRenderer, 
             std::function<void(GraphicsContext::ShaderProgram&)> handler) override;
 
-        iMaterialVars* CreateSpecificVariables();
-        void LoadVariables(cMaterial* apMaterial, cResourceVarsObject* apVars);
-        void GetVariableValues(cMaterial* apMaterial, cResourceVarsObject* apVars);
+        virtual iMaterialVars* CreateSpecificVariables() override;
+        virtual void LoadVariables(cMaterial* apMaterial, cResourceVarsObject* apVars) override;
+        virtual void GetVariableValues(cMaterial* apMaterial, cResourceVarsObject* apVars) override;
 
-        void CompileMaterialSpecifics(cMaterial* apMaterial);
+        virtual void CompileMaterialSpecifics(cMaterial* apMaterial) override;
 
     private:
         bgfx::ProgramHandle _programHandle;

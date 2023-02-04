@@ -90,13 +90,13 @@ namespace hpl
 			material::solid::DiffuseVariant::Diffuse_SpecularMap |
             material::solid::DiffuseVariant::Diffuse_ParallaxMap | 
 			material::solid::DiffuseVariant::Diffuse_EnvMap>
-            m_diffuseProgram;
+            m_diffuseProgramVariant;
 		
         ShaderVariantCollection<
 			material::solid::ZVariant::Z_UseAlphaMap |
 			material::solid::ZVariant::Z_UseDissolveFilter |
 			material::solid::ZVariant::Z_UseDissolveAlphaMap 
-		> m_ZProgram;
+		> m_ZProgramVariant;
         bgfx::ProgramHandle m_illuminationProgram;
 
         bgfx::UniformHandle m_s_normalMap;

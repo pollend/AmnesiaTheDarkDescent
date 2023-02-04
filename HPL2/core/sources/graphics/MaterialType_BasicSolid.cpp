@@ -22,7 +22,6 @@
 #include "bgfx/bgfx.h"
 #include "graphics/GraphicsContext.h"
 #include "graphics/GraphicsTypes.h"
-#include "graphics/MemberID.h"
 #include "graphics/ShaderUtil.h"
 #include "graphics/ShaderVariantCollection.h"
 #include "math/MathTypes.h"
@@ -53,85 +52,15 @@
 
 namespace hpl
 {
-
-//////////////////////////////////////////////////////////////////////////
-// DEFINES
-//////////////////////////////////////////////////////////////////////////
-
-//------------------------------
-// Variables
-//------------------------------
-#define kVar_afInvFarPlane 0
-#define kVar_avHeightMapScaleAndBias 1
-#define kVar_a_mtxUV 2
-#define kVar_afColorMul 3
-#define kVar_afDissolveAmount 4
-#define kVar_avFrenselBiasPow 5
-#define kVar_a_mtxInvViewRotation 6
-#define kVar_a_Flag 7
-
-//------------------------------
-// Diffuse Features and data
-//------------------------------
-#define eFeature_Diffuse_NormalMaps eFlagBit_0
-#define eFeature_Diffuse_Specular eFlagBit_1
-#define eFeature_Diffuse_Parallax eFlagBit_2
-#define eFeature_Diffuse_UvAnimation eFlagBit_3
-#define eFeature_Diffuse_Skeleton eFlagBit_4
-#define eFeature_Diffuse_EnvMap eFlagBit_5
-#define eFeature_Diffuse_CubeMapAlpha eFlagBit_6
-
-#define kDiffuseFeatureNum 7
-
-    static cProgramComboFeature vDiffuseFeatureVec[] = {
-        cProgramComboFeature("UseNormalMapping", kPC_VertexBit | kPC_FragmentBit),
-        cProgramComboFeature("UseSpecular", kPC_FragmentBit),
-        cProgramComboFeature("UseParallax", kPC_VertexBit | kPC_FragmentBit, eFeature_Diffuse_NormalMaps),
-        cProgramComboFeature("UseUvAnimation", kPC_VertexBit),
-        cProgramComboFeature("UseSkeleton", kPC_VertexBit),
-        cProgramComboFeature("UseEnvMap", kPC_VertexBit | kPC_FragmentBit),
-        cProgramComboFeature("UseCubeMapAlpha", kPC_FragmentBit),
-    };
-
-//------------------------------
-// Illumination Features and data
-//------------------------------
-#define eFeature_Illum_UvAnimation eFlagBit_0
-#define eFeature_Illum_Skeleton eFlagBit_1
-
-#define kIllumFeatureNum 2
-
-    cProgramComboFeature vIllumFeatureVec[] = {
-        cProgramComboFeature("UseUvAnimation", kPC_VertexBit),
-        cProgramComboFeature("UseSkeleton", kPC_VertexBit),
-    };
-
-//------------------------------
-// Z Features and data
-//------------------------------
-#define eFeature_Z_UseAlpha eFlagBit_0
-#define eFeature_Z_UvAnimation eFlagBit_1
-#define eFeature_Z_Dissolve eFlagBit_2
-#define eFeature_Z_DissolveAlpha eFlagBit_3
-#define eFeature_Z_UseAlphaDissolveFilter eFlagBit_4
-
-#define kZFeatureNum 5
-
-    cProgramComboFeature vZFeatureVec[] = { cProgramComboFeature("UseAlphaMap", kPC_FragmentBit),
-                                            cProgramComboFeature("UseUvAnimation", kPC_VertexBit),
-                                            cProgramComboFeature("UseDissolve", kPC_FragmentBit),
-                                            cProgramComboFeature("UseDissolveAlphaMap", kPC_FragmentBit),
-                                            cProgramComboFeature("UseAlphaUseDissolveFilter", kPC_FragmentBit) };
-
     float iMaterialType_SolidBase::mfVirtualPositionAddScale = 0.03f;
 
     iMaterialType_SolidBase::iMaterialType_SolidBase(cGraphics* apGraphics, cResources* apResources)
         : iMaterialType(apGraphics, apResources)
     {
-        m_diffuseProgram.Initialize(ShaderHelper::LoadProgramHandlerDefault(
+        m_diffuseProgramVariant.Initialize(ShaderHelper::LoadProgramHandlerDefault(
             "vs_basic_solid_diffuse",
              "fs_basic_solid_diffuse", false, true));
-        m_ZProgram.Initialize(
+        m_ZProgramVariant.Initialize(
             ShaderHelper::LoadProgramHandlerDefault("vs_basic_solid_z", "fs_basic_solid_z", false, true));
 
         m_illuminationProgram = hpl::loadProgram("vs_basic_solid_illumination", "fs_basic_solid_illumination");
@@ -157,36 +86,24 @@ namespace hpl
 
     iMaterialType_SolidBase::~iMaterialType_SolidBase()
     {
+        mpResources->GetTextureManager()->Destroy(m_dissolveImage);
     }
 
     void iMaterialType_SolidBase::CreateGlobalPrograms()
     {
     }
 
-    //--------------------------------------------------------------------------
-
     void iMaterialType_SolidBase::LoadData()
     {
-        /////////////////////////////
-        // Global data init (that is shared between Solid materials)
         CreateGlobalPrograms();
-
-        //////////////
-        // Create textures
         m_dissolveImage = mpResources->GetTextureManager()->Create2DImage("core_dissolve.tga", true);
-
-
         LoadSpecificData();
     }
-
-    //--------------------------------------------------------------------------
 
     void iMaterialType_SolidBase::DestroyData()
     {
 
     }
-
-    //--------------------------------------------------------------------------
 
     void iMaterialType_SolidBase::LoadVariables(cMaterial* apMaterial, cResourceVarsObject* apVars)
     {
@@ -196,12 +113,8 @@ namespace hpl
     {
     }
 
-    //--------------------------------------------------------------------------
-
     void iMaterialType_SolidBase::CompileMaterialSpecifics(cMaterial* apMaterial)
     {
-        ////////////////////////
-        // If there is an alpha texture, set alpha mode to trans, else solid.
         if (apMaterial->GetImage(eMaterialTexture_Alpha))
         {
             apMaterial->SetAlphaMode(eMaterialAlphaMode_Trans);
@@ -213,14 +126,6 @@ namespace hpl
 
         CompileSolidSpecifics(apMaterial);
     }
-
-    //--------------------------------------------------------------------------
-
-    //////////////////////////////////////////////////////////////////////////
-    // SOLID DIFFUSE
-    //////////////////////////////////////////////////////////////////////////
-
-    //--------------------------------------------------------------------------
 
     cMaterialType_SolidDiffuse::cMaterialType_SolidDiffuse(cGraphics* apGraphics, cResources* apResources)
         : iMaterialType_SolidBase(apGraphics, apResources)
@@ -251,48 +156,13 @@ namespace hpl
             "If alpha values between 0 and 1 should be used and dissolve the texture. This can be useful for things like hair.");
     }
 
-    //--------------------------------------------------------------------------
-
     cMaterialType_SolidDiffuse::~cMaterialType_SolidDiffuse()
     {
     }
 
-    //--------------------------------------------------------------------------
-
     void cMaterialType_SolidDiffuse::LoadSpecificData()
     {
-        /////////////////////////////
-        // Load Diffuse programs
-        cParserVarContainer defaultVars;
-        defaultVars.Add("UseUv");
-        defaultVars.Add("UseNormals");
-        defaultVars.Add("UseDepth");
-        defaultVars.Add("VirtualPositionAddScale", mfVirtualPositionAddScale);
-
-        // Get the G-buffer type
-        if (cRendererDeferred::GetGBufferType() == eDeferredGBuffer_32Bit)
-            defaultVars.Add("Deferred_32bit");
-        else
-            defaultVars.Add("Deferred_64bit");
-
-        // Set up number of gbuffer textures used
-        if (cRendererDeferred::GetNumOfGBufferTextures() == 4)
-            defaultVars.Add("RenderTargets_4");
-        else
-            defaultVars.Add("RenderTargets_3");
-
-        // Set up relief mapping method
-        if (iRenderer::GetParallaxQuality() != eParallaxQuality_Low && mpGraphics->GetLowLevel()->GetCaps(eGraphicCaps_ShaderModel_3) != 0)
-        {
-            defaultVars.Add("ParallaxMethod_Relief");
-        }
-        else
-        {
-            defaultVars.Add("ParallaxMethod_Simple");
-        }
     }
-
-    //--------------------------------------------------------------------------
 
     void cMaterialType_SolidDiffuse::CompileSolidSpecifics(cMaterial* apMaterial)
     {
@@ -402,7 +272,7 @@ namespace hpl
                     }
                 }
                 program.m_uniforms.push_back({m_u_param, &param, 2});
-                program.m_handle = m_diffuseProgram.GetVariant(flags);
+                program.m_handle = m_diffuseProgramVariant.GetVariant(flags);
                 handler(program);
                 break;
             }
@@ -421,7 +291,7 @@ namespace hpl
                     program.m_textures.push_back({m_s_diffuseMap, diffuseMap->GetHandle(), 0});
                 }
                 program.m_uniforms.push_back({m_u_param, &param});
-                program.m_handle = m_ZProgram.GetVariant(flags);
+                program.m_handle = m_ZProgramVariant.GetVariant(flags);
                 handler(program);
                 break;
             }
@@ -444,7 +314,7 @@ namespace hpl
                     program.m_textures.push_back({m_s_dissolveAlphaMap, alphaDissolveMap->GetHandle()});
                 }
                 program.m_uniforms.push_back({m_u_param, &param});
-                program.m_handle = m_ZProgram.GetVariant(flags);
+                program.m_handle = m_ZProgramVariant.GetVariant(flags);
                 handler(program);
                 break;
             }

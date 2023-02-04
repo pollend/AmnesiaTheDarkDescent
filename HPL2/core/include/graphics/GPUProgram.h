@@ -24,18 +24,13 @@
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
 
-#include <graphics/MemberID.h>
 #include <bgfx/bgfx.h>
 
 namespace hpl {
 
-	//---------------------------------------------------
-
 	class iGpuShader;
 	class cResources;
 	class MemberID;
-
-	//---------------------------------------------------
 
 	class iGpuProgram
 	{

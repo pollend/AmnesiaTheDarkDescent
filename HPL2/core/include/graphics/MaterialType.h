@@ -26,6 +26,7 @@
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
 #include <functional>
+#include <span>
 
 namespace hpl {
 
@@ -74,8 +75,6 @@ namespace hpl {
 	typedef std::vector<cMaterialUserVariable> tMaterialUserVariableVec;
 	typedef tMaterialUserVariableVec::iterator tMaterialUserVariableVecIt;
 
-	//---------------------------------------------------
-
 	class iMaterialType
 	{
 	public:
@@ -95,13 +94,20 @@ namespace hpl {
             iRenderer* apRenderer, 
 			std::function<void(GraphicsContext::ShaderProgram&)> program) {}
 
-		int GetUsedTextureNum(){ return (int)mvUsedTextures.size(); }
-		cMaterialUsedTexture* GetUsedTexture(int alIdx){ return &mvUsedTextures[alIdx]; }
+		[[deprecated("use span GetUsedTextures")]]
+		int GetUsedTextureNum(){ return (int)m_usedTextures.size(); }
+		[[deprecated("use span GetUsedTextures")]]
+		cMaterialUsedTexture* GetUsedTexture(int alIdx){ return &m_usedTextures[alIdx]; }
 
-
-		int GetUserVariableNum() { return (int)mvUserVariables.size(); }
+		[[deprecated("use span GetUserVariables")]]
+		int GetUserVariableNum() { return (int)m_userVariables.size(); }
+		[[deprecated("use span GetUserVariables")]]
 		cMaterialUserVariable* GetUserVariable(int alIdx);
+		[[deprecated("use GetUserVariables")]]
 		cMaterialUserVariable* GetUserVariable(const tString& asName);
+
+		std::span<cMaterialUserVariable> GetUserVariables();
+		std::span<cMaterialUsedTexture> GetUsedTextures();
 
 		void Reload();
 
@@ -115,7 +121,6 @@ namespace hpl {
 		virtual void CompileMaterialSpecifics(cMaterial *apMaterial)=0;
 
 		inline bool HasTypeSpecifics(eMaterialRenderMode aMode) const { return mbHasTypeSpecifics[aMode];}
-
 
 	protected:
 		void AddUsedTexture(eMaterialTexture aType);
@@ -141,12 +146,9 @@ namespace hpl {
 
 		bool mbHasTypeSpecifics[eMaterialRenderMode_LastEnum];
 
-		tMaterialUsedTextureVec mvUsedTextures;
-
-		tMaterialUserVariableVec mvUserVariables;
+		std::vector<cMaterialUsedTexture> m_usedTextures;
+		std::vector<cMaterialUserVariable> m_userVariables;
 	};
-
-	//---------------------------------------------------
 
 };
 #endif // HPL_MATERIAL_H
