@@ -1320,8 +1320,8 @@ void cLuxMainMenu::CreateScreenTextures()
             false,
             bgfx::TextureFormat::Enum::RGBA8);
         desc.m_configuration.m_rt = RTType::RT_Write;
-		desc.m_configuration.m_uClamp = true;
-		desc.m_configuration.m_vClamp = true;
+		desc.m_configuration.m_UWrap = WrapMode::Clamp;
+		desc.m_configuration.m_VWrap = WrapMode::Clamp;
         auto image = std::make_shared<Image>();
         image->Initialize(desc);
         return image;

@@ -90,6 +90,7 @@ shaders = [
     { "type" : ShaderType.FS, "inout" : "resource/vs_post_effect.io",                  "input": "resource/fs_posteffect_color_conv.sc", "includes": ["resource"]},
     { "type" : ShaderType.FS, "inout" : "resource/vs_post_effect.io",                  "input": "resource/fs_post_effect_copy.sc", "includes": ["resource"]},
 # other
+    { "type" : ShaderType.CS,                                                          "input": "resource/cs_copy_region.sc", "includes": ["resource"]},
     { "type" : ShaderType.VS, "inout" : "resource/vs_alpha_reject.io",                 "input": "resource/vs_alpha_reject.sc" , "includes": ["resource"]},
     { "type" : ShaderType.FS, "inout" : "resource/vs_alpha_reject.io",                 "input": "resource/fs_alpha_reject.sc" , "includes": ["resource"]},
     { "type" : ShaderType.VS, "inout" : "resource/vs_null.io",                         "input": "resource/vs_null.sc" , "includes": ["resource"]},
@@ -195,7 +196,7 @@ def main():
     def create_shader(shader, options = {}):
         input_file_path = os.path.abspath(shader["input"])
         name = options["name"] if "name" in options else get_name(shader)
-        varying_def_path = os.path.abspath(shader["inout"])
+        varying_def_path = (os.path.abspath(shader["inout"]) if "inout" in shader else "")
         defines = f'{";".join((shader["defines"] if "defines" in shader else []) + (options["defines"] if "defines" in options else []))}'
         includes = [item for inc in shader["includes"] for item in ['-i', os.path.abspath(inc)]]
         
@@ -235,7 +236,7 @@ def main():
                     '-o', f'{args.output}/shaders/dx11/{name}.bin',
                     '--type', f'{toType(shader["type"])}',
                     '--platform', "windows",
-                    '--varyingdef', f'{varying_def_path}',
+                    # '--varyingdef', f'{varying_def_path}',
                     '-p', f'{toD3dPrefix(shader["type"])}_5_0',
                     '--define', defines,
                     '-O', "3",
@@ -277,7 +278,7 @@ def main():
                 '--type', f'{toType(shader["type"])}',
                 '--platform', get_platform(),
                 '--define', defines,
-                '--varyingdef', f'{varying_def_path}',
+                # '--varyingdef', f'{varying_def_path}',
                 '--profile', f'430',
                 '-i', f'{args.bgfx}/src',
                 ] + includes)

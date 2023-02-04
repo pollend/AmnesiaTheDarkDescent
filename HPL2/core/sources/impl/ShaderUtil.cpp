@@ -75,7 +75,13 @@ namespace hpl
     
     bgfx::ProgramHandle loadProgram(bx::FileReaderI* reader, const char* vsName, const char* fsName)
     {
-        return bgfx::createProgram(loadShader(reader, vsName), loadShader(reader, fsName), true);   
+        bgfx::ShaderHandle vsh = loadShader(reader, vsName);
+        bgfx::ShaderHandle fsh = BGFX_INVALID_HANDLE;
+        if (NULL != fsName)
+        {
+            fsh = loadShader(reader, fsName);
+        }
+        return bgfx::createProgram(vsh, fsh, true);
     }
 
     bgfx::ShaderHandle loadShader(bx::FileReaderI* reader, const char* name)

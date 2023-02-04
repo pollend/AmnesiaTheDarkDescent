@@ -57,8 +57,8 @@ namespace hpl
                 bgfx::TextureHandle m_textureHandle = BGFX_INVALID_HANDLE;
                 uint8_t m_stage = 0;
                 uint8_t m_mip = 0;
-                bgfx::Access::Enum m_access;
-                bgfx::TextureFormat::Enum m_format;
+                bgfx::Access::Enum m_access = bgfx::Access::Write;
+                bgfx::TextureFormat::Enum m_format = bgfx::TextureFormat::Count;
             };
 
             union {
@@ -80,6 +80,7 @@ namespace hpl
             cMatrixf m_normalMtx = cMatrixf(cMatrixf::Identity);
 
             absl::InlinedVector<TextureData, 10> m_textures;
+            absl::InlinedVector<UAVImage, 10> m_uavImage;
             absl::InlinedVector<UniformData, 25> m_uniforms;
         };
 
@@ -101,11 +102,8 @@ namespace hpl
         };
 
         struct DrawRequest {
-            // const RenderTarget& m_target;
             const GraphicsContext::LayoutStream& m_layout;
             const ShaderProgram& m_program;
-
-            std::optional<ClearRequest> m_clear;
         };
 
          struct ViewConfiguration {
@@ -116,6 +114,14 @@ namespace hpl
             cMatrixf m_view = cMatrixf(cMatrixf::Identity);
             cMatrixf m_projection = cMatrixf(cMatrixf::Identity);
             cRect2l m_viewRect = cRect2l(0, 0, 0, 0);
+        };
+
+        struct ComputeRequest {
+            const ShaderProgram& m_program;
+
+            uint32_t m_numX = 0;
+            uint32_t m_numY = 0;
+            uint32_t m_numZ = 0;
         };
 
         GraphicsContext();
@@ -130,16 +136,13 @@ namespace hpl
         uint16_t ScreenHeight() const;
 
         void Frame();
-        [[deprecated("use Start pass that accepts a ViewConfiguration")]]
-        bgfx::ViewId StartPass(absl::string_view name);
         bgfx::ViewId StartPass(absl::string_view name, const ViewConfiguration& config);
-
 
         bool isOriginBottomLeft() const;
         void CopyTextureToFrameBuffer(Image& image, cRect2l dstRect, RenderTarget& target, Write write = Write::RGBA);
-        void ClearTarget(bgfx::ViewId view, const DrawClear& request);
         void Submit(bgfx::ViewId view, const DrawRequest& request);
         void Submit(bgfx::ViewId view, const DrawRequest& request, bgfx::OcclusionQueryHandle query);
+        void Submit(bgfx::ViewId view, const ComputeRequest& request);
         
     private:
         bgfx::ViewId _current;

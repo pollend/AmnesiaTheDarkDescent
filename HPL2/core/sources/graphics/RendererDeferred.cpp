@@ -165,6 +165,30 @@ namespace hpl {
 
 		Log("Setting up G-Bugger: type: %d texturenum: %d\n", mGBufferType, mlNumOfGBufferTextures);
 		
+		// uniforms
+		m_u_param = bgfx::createUniform("u_param", bgfx::UniformType::Vec4);
+		m_u_boxInvViewModelRotation  = bgfx::createUniform("u_boxInvViewModelRotation", bgfx::UniformType::Mat4);
+		m_u_lightColor = bgfx::createUniform("u_lightColor", bgfx::UniformType::Vec4);
+		m_u_lightPos = bgfx::createUniform("u_lightPos", bgfx::UniformType::Vec4);
+		m_u_fogColor = bgfx::createUniform("u_fogColor", bgfx::UniformType::Vec4);
+		m_u_spotViewProj = bgfx::createUniform("u_spotViewProj", bgfx::UniformType::Mat4);
+		m_u_mtxInvViewRotation = bgfx::createUniform("u_mtxInvViewRotation", bgfx::UniformType::Mat4);
+		m_u_overrideColor = bgfx::createUniform("u_overrideColor", bgfx::UniformType::Vec4);
+		m_u_copyRegion = bgfx::createUniform("u_copyRegion", bgfx::UniformType::Vec4);
+
+		// samplers
+		m_s_depthMap = bgfx::createUniform("s_depthMap", bgfx::UniformType::Sampler);
+		m_s_diffuseMap = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
+		m_s_normalMap = bgfx::createUniform("s_normalMap", bgfx::UniformType::Sampler);
+		m_s_specularMap = bgfx::createUniform("s_specularMap", bgfx::UniformType::Sampler);
+		m_s_positionMap = bgfx::createUniform("s_positionMap", bgfx::UniformType::Sampler);
+		m_s_attenuationLightMap = bgfx::createUniform("s_attenuationLightMap", bgfx::UniformType::Sampler);
+		m_s_spotFalloffMap = bgfx::createUniform("s_spotFalloffMap", bgfx::UniformType::Sampler);
+		m_s_shadowMap = bgfx::createUniform("s_shadowMap", bgfx::UniformType::Sampler);
+		m_s_goboMap = bgfx::createUniform("s_goboMap", bgfx::UniformType::Sampler);
+		m_s_shadowOffsetMap = bgfx::createUniform("s_shadowOffsetMap", bgfx::UniformType::Sampler);
+		// m_s_diffuseMapOut = bgfx::createUniform("s_diffuseMapOut", bgfx::UniformType::Sampler);
+
 		// initialize frame buffers;
 		{
 			auto colorImage = [&] {
@@ -214,6 +238,14 @@ namespace hpl {
 			m_outputImage = {
 				colorImage(), colorImage()
 			};
+			m_refractionImage = [&] {
+				auto desc = ImageDescriptor::CreateTexture2D(mvScreenSize.x, mvScreenSize.y, false, bgfx::TextureFormat::Enum::RGBA8);
+				desc.m_configuration.m_computeWrite = true;
+				desc.m_configuration.m_rt = RTType::RT_Write;
+				auto image = std::make_shared<Image>();
+				image->Initialize(desc);
+				return image;
+			}();
 
 			m_gBufferDepthStencil = { depthImage(),depthImage()};
 			{
@@ -345,33 +377,13 @@ namespace hpl {
 			m_shadowJitterImage = std::make_shared<Image>();
 			TextureCreator::GenerateScatterDiskMap2D(*m_shadowJitterImage, mlShadowJitterSize,mlShadowJitterSamples, true);
 		}
-
+		
+		m_copyRegionProgram = hpl::loadProgram("cs_copy_region");
 		m_lightBoxProgram = hpl::loadProgram("vs_light_box", "fs_light_box");
 		m_forVariant.Initialize(
 			ShaderHelper::LoadProgramHandlerDefault("vs_deferred_fog", "fs_deferred_fog", false, true));
 		m_pointLightVariants.Initialize(
 			ShaderHelper::LoadProgramHandlerDefault("vs_deferred_light", "fs_deferred_pointlight", false, true));
-		// uniforms
-		m_u_param = bgfx::createUniform("u_param", bgfx::UniformType::Vec4);
-		m_u_boxInvViewModelRotation  = bgfx::createUniform("u_boxInvViewModelRotation", bgfx::UniformType::Mat4);
-		m_u_lightColor = bgfx::createUniform("u_lightColor", bgfx::UniformType::Vec4);
-		m_u_lightPos = bgfx::createUniform("u_lightPos", bgfx::UniformType::Vec4);
-		m_u_fogColor = bgfx::createUniform("u_fogColor", bgfx::UniformType::Vec4);
-		m_u_spotViewProj = bgfx::createUniform("u_spotViewProj", bgfx::UniformType::Mat4);
-		m_u_mtxInvViewRotation = bgfx::createUniform("u_mtxInvViewRotation", bgfx::UniformType::Mat4);
-		m_u_overrideColor = bgfx::createUniform("u_overrideColor", bgfx::UniformType::Vec4);
-
-		// samplers
-		m_s_depthMap = bgfx::createUniform("s_depthMap", bgfx::UniformType::Sampler);
-		m_s_diffuseMap = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
-		m_s_normalMap = bgfx::createUniform("s_normalMap", bgfx::UniformType::Sampler);
-		m_s_specularMap = bgfx::createUniform("s_specularMap", bgfx::UniformType::Sampler);
-		m_s_positionMap = bgfx::createUniform("s_positionMap", bgfx::UniformType::Sampler);
-		m_s_attenuationLightMap = bgfx::createUniform("s_attenuationLightMap", bgfx::UniformType::Sampler);
-		m_s_spotFalloffMap = bgfx::createUniform("s_spotFalloffMap", bgfx::UniformType::Sampler);
-		m_s_shadowMap = bgfx::createUniform("s_shadowMap", bgfx::UniformType::Sampler);
-		m_s_goboMap = bgfx::createUniform("s_goboMap", bgfx::UniformType::Sampler);
-		m_s_shadowOffsetMap = bgfx::createUniform("s_shadowOffsetMap", bgfx::UniformType::Sampler);
 		
 		////////////////////////////////////
 		//Create SSAO programs and textures
@@ -781,6 +793,8 @@ namespace hpl {
 		viewConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
 		viewConfig.m_viewRect = {0, 0, mvScreenSize.x, mvScreenSize.y};
 		auto view = context.StartPass("Translucent", viewConfig);
+		bgfx::setViewMode(view, bgfx::ViewMode::Sequential);
+		const float fHalfFovTan = tan(mpCurrentFrustum->GetFOV()*0.5f);
 		for(auto& obj: mpCurrentRenderList->GetRenderableItems(eRenderListType_Translucent))
 		{
 			
@@ -812,18 +826,48 @@ namespace hpl {
 				continue;
 			}
 
-			if(obj->RetrieveOcculsionQuery(this)==false)
+			if(!obj->RetrieveOcculsionQuery(this))
 			{
 				continue;
 			}
 			
 			if(pMaterial->HasRefraction())
 			{
-				// skipping refraction for now
+				if(!CheckRenderablePlaneIsVisible(obj, mpCurrentFrustum)) {
+					continue;
+				}
+
+				cBoundingVolume *pBV = obj->GetBoundingVolume();
+
+				cRect2l clipRect = GetClipRectFromObject(obj, 0.2f, mpCurrentFrustum, mvRenderTargetSize, fHalfFovTan);
+				if(clipRect.w <= 0 || clipRect.h <= 0) {
+					continue;
+				}
+
+				GraphicsContext::ShaderProgram shaderInput;
+				shaderInput.m_handle = m_copyRegionProgram;
+				shaderInput.m_textures.push_back({m_s_diffuseMap, resolveRenderImage(m_outputImage)->GetHandle(), 0});
+				shaderInput.m_uavImage.push_back({m_refractionImage->GetHandle(), 1, 0, bgfx::Access::Write, bgfx::TextureFormat::Enum::RGBA8});
+
+				float copyRegion[4] = {static_cast<float>(clipRect.x), static_cast<float>(mvRenderTargetSize.y - (clipRect.h + clipRect.y)), static_cast<float>(clipRect.w), static_cast<float>(clipRect.h)};
+				shaderInput.m_uniforms.push_back({m_u_copyRegion, &copyRegion, 1});
+				
+				GraphicsContext::ComputeRequest computeRequest {shaderInput,  static_cast<uint32_t>((clipRect.w/16) + 1), static_cast<uint32_t>((clipRect.h/16) + 1), 1};
+				context.Submit(view, computeRequest);
 			}
 
 			if(pMaterial->HasWorldReflection() && obj->GetRenderType() == eRenderableType_SubMesh)
 			{
+				// cBoundingVolume *pBV = obj->GetBoundingVolume();
+
+				// cRect2l clipRect = GetClipRectFromObject(obj, 0.2f, mpCurrentFrustum, mvRenderTargetSize, fHalfFovTan);
+				// if(!CheckRenderablePlaneIsVisible(obj, mpCurrentFrustum)) {
+				// 	continue;
+				// }
+
+        		// cRect2l rect = cRect2l(0, 0, mvRenderTargetSize.x, mvRenderTargetSize.y);
+				// auto copyImage = resolveRenderImage(m_gBufferColor);
+				// context.CopyTextureToFrameBuffer( *copyImage, rect, m_refractionTarget);
 			}
 
 			pMaterialType->ResolveShaderProgram(renderMode, pMaterial, obj, this,[&](GraphicsContext::ShaderProgram& shaderInput) {

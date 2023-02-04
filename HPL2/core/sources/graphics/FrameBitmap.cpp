@@ -19,6 +19,7 @@
 
 #include "graphics/FrameBitmap.h"
 
+#include <graphics/Enum.h>
 #include "math/Math.h"
 
 #include "system/LowLevelSystem.h"
@@ -472,17 +473,13 @@ namespace hpl {
 		if(mbIsUpdated)
 		{
 			auto desc = ImageDescriptor::CreateFromBitmap(*mpBitmap);
-			desc.m_configuration.m_uClamp = true;
-			desc.m_configuration.m_vClamp = true;
+			desc.m_configuration.m_UWrap = WrapMode::Clamp;
+			desc.m_configuration.m_VWrap = WrapMode::Clamp;
 			mpFrameTexture->GetTexture()->Invalidate();
 			desc.m_name = mpFrameTexture->GetTexture()->GetName().c_str();
 			Image::InitializeFromBitmap(*mpFrameTexture->GetTexture(), *mpBitmap, desc);
 			
-			// mpFrameTexture->GetTexture()->CreateFromBitmap(mpBitmap);
-			// mpFrameTexture->GetTexture()->SetWrapS(eTextureWrap_ClampToEdge);
-			// mpFrameTexture->GetTexture()->SetWrapT(eTextureWrap_ClampToEdge);
 
-			//mpFrameTexture->SetPicCount(mlPicCount);
 			mbIsUpdated = false;
 			return true;
 		}

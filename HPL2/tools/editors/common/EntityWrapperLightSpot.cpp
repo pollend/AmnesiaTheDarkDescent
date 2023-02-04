@@ -254,8 +254,8 @@ void cEntityWrapperLightSpot::SetSpotFalloffMap(const tString& asFalloffMap)
 	else
 	{
 		cTextureManager::ImageOptions imageOptions;
-		imageOptions.m_uClamp = true;
-		imageOptions.m_vClamp = true;
+		imageOptions.m_UWrap = WrapMode::Clamp;
+		imageOptions.m_VWrap = WrapMode::Clamp;
 		cEditorHelper::LoadTextureResource(eEditorTextureResourceType_1D, "core_falloff_linear", &pTex, "none", 0, imageOptions);
 		msSpotFalloffMap = "";
 	}

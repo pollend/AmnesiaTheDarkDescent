@@ -23,6 +23,7 @@
 #include "graphics/GraphicsContext.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Image.h"
+#include "graphics/RendererDeferred.h"
 #include "graphics/ShaderUtil.h"
 #include "math/MathTypes.h"
 #include "system/LowLevelSystem.h"
@@ -190,11 +191,12 @@ namespace hpl
             auto* cubemapImage = apMaterial->GetImage(eMaterialTexture_CubeMap);
             auto* cubemapAlphaImage = apMaterial->GetImage(eMaterialTexture_CubeMapAlpha);
             cWorld *pWorld = apRenderer->GetCurrentWorld();
-                    
+            
             cMatrixf mtxInvView = apRenderer->GetCurrentFrustum()->GetViewMatrix().GetTranspose();
+            cMatrixf mtxInvViewRotation = mtxInvView.GetRotation().GetTranspose();
             cMatrixf mtxUv = apMaterial->HasUvAnimation() ? apMaterial->GetUvMatrix().GetTranspose() : cMatrixf::Identity;
             program.m_uniforms.push_back({m_u_mtxUv, &mtxUv.v});
-            program.m_uniforms.push_back({m_u_invViewRotation, &mtxInvView.v});
+            program.m_uniforms.push_back({m_u_invViewRotation, &mtxInvViewRotation.v});
   
             struct {
                 float useCubeMapAlpha;
@@ -213,6 +215,11 @@ namespace hpl
                 float frenselBiasPow[2];
                 float rimLightMulPow[2];
             } uniform = {0};
+
+            uniform.frenselBiasPow[0] = pVars->mfFrenselBias;
+            uniform.frenselBiasPow[1] = pVars->mfFrenselPow;
+            uniform.rimLightMulPow[0] = pVars->mfRimLightMul;
+            uniform.rimLightMulPow[1] = pVars->mfRimLightPow;
             
             uint32_t flags = 0;
             if(aRenderMode == eMaterialRenderMode_DiffuseFog || aRenderMode == eMaterialRenderMode_IlluminationFog) {
@@ -242,9 +249,14 @@ namespace hpl
                                 program.m_textures.push_back({m_s_envMapAlphaMap, cubemapAlphaImage->GetHandle(), 4});
                             }
                         }
-                        // mpGraphics->GetRenderer(eRenderer_Main)->GetRefractionTexture();
-                        // program.m_textures.push_back({m_s_refractionMap, apRenderer->getRef()->GetHandle(), 3});
-                        // flags |= material::translucent::Translucent_Refraction;
+                        auto* renderer = mpGraphics->GetRenderer(eRenderer_Main);
+                        if( renderer && TypeInfo<cRendererDeferred>::isType(*renderer)) {
+                            auto* deferredRenderer = static_cast<cRendererDeferred*>(renderer);
+                            flags |= material::translucent::Translucent_Refraction;
+                            if(auto* refractionImage = deferredRenderer->GetRefractionImage()) {
+                                program.m_textures.push_back({m_s_refractionMap, refractionImage->GetHandle(), 3});
+                            }
+                        }
                     }
                     if(pVars->mbRefractionNormals && bRefractionEnabled) {
                         uniform.useScreenNormal = 1.0f;

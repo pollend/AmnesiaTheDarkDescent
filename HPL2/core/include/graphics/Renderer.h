@@ -19,6 +19,7 @@
 #pragma once
 
 #include "bgfx/bgfx.h"
+#include "engine/RTTI.h"
 #include "graphics/Enum.h"
 #include "graphics/GraphicsContext.h"
 #include "graphics/GraphicsTypes.h"
@@ -241,8 +242,10 @@ namespace hpl {
 
 	class iRenderer : public iRenderFunctions
 	{
-	friend class cRendererCallbackFunctions;
-	friend class cRenderSettings;
+		HPL_RTTI_CLASS(iRenderer, "{A3E0F5A0-0F9B-4F5C-9B9E-0F9B4F5C9B9E}")
+
+		friend class cRendererCallbackFunctions;
+		friend class cRenderSettings;
 
 	public:
 
