@@ -11,6 +11,7 @@ void main()
     mat3 normalMtx = normalMatrix3x3(mul(u_view, u_model[0]));
     
     v_position = mul(u_view, vec4(wpos.xyz, 1.0)).xyz;
+    
     v_normal = normalize(mul(normalMtx, a_normal)).xyz;
     v_tangent = normalize(mul(normalMtx, a_tangent.xyz)).xyz;
     v_bitangent = normalize(mul(normalMtx, cross(a_normal, a_tangent))).xyz;

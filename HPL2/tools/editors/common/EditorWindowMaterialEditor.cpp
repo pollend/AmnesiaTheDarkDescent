@@ -2034,8 +2034,8 @@ bool cEditorWindowMaterialEditor::WindowSpecificInputCallback(iEditorInput* apIn
 			Image* pTexture = NULL;
 
 			cTextureManager::ImageOptions imageOptions;
-			imageOptions.m_uClamp = true;
-			imageOptions.m_vClamp = true;
+			imageOptions.m_UWrap = WrapMode::Clamp;
+			imageOptions.m_VWrap = WrapMode::Clamp;
 			if(cEditorHelper::LoadTextureResource( eEditorTextureResourceType_CubeMap, cString::To8Char(mpInpBGCubeMap->GetValue()), &pTexture, "none", 0, imageOptions))
 			{
 				mpMatWorld->SetSkyBox(pTexture,true);

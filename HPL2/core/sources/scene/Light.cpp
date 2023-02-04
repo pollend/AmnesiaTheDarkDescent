@@ -19,6 +19,7 @@
 
 #include "scene/Light.h"
 
+#include "graphics/Enum.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Image.h"
 #include "graphics/ImageResourceWrapper.h"
@@ -98,8 +99,8 @@ namespace hpl {
 		///////////////////////////////
 		//Data init
 		cTextureManager::ImageOptions options = {};
-		options.m_uClamp = true;
-		options.m_vClamp = true;
+		options.m_UWrap = WrapMode::Clamp;
+		options.m_VWrap = WrapMode::Clamp;
 		mpFalloffMap = mpTextureManager->Create1DImage("core_falloff_linear",false, eTextureUsage_Normal, 0, options);
 		// TODO: MP need to configure clamp to edge
 		// mpFalloffMap->SetWrapS(eTextureWrap_ClampToEdge);

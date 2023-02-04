@@ -18,6 +18,7 @@
  */
 #pragma once
 
+#include "engine/RTTI.h"
 #include <bgfx/bgfx.h>
 #include <graphics/GraphicsContext.h>
 #include <graphics/Image.h>
@@ -134,20 +135,13 @@ namespace hpl {
 			FogVariant_UseOutsideBox = 0x1,
 			FogVariant_UseBackSide = 0x2
 		};
-		struct ZPassInput {
-			float m_width = 0;
-			float m_height = 0;
-			
-			Cull m_cull = Cull::CounterClockwise;
-            cMatrixf m_view = cMatrixf(cMatrixf::Identity);
-            cMatrixf m_projection = cMatrixf(cMatrixf::Identity);
-		};
 
-		void RenderZPassObject(bgfx::ViewId view,const ZPassInput& input, GraphicsContext& context, iRenderer* renderer, iRenderable* object, RenderTarget& rt);
+		void RenderZPassObject(bgfx::ViewId view, GraphicsContext& context, iRenderer* renderer, iRenderable* object, Cull cull = Cull::CounterClockwise);
 	};
 
 	class cRendererDeferred : public  iRenderer
 	{
+		HPL_RTTI_IMPL_CLASS(cRendererDeferred, iRenderer, "{A3E5E5A1-1F9C-4F5C-9B9B-5B9B9B5B9B9B}")
 	public:
 
 		cRendererDeferred(cGraphics *apGraphics,cResources* apResources);
@@ -163,8 +157,8 @@ namespace hpl {
 		virtual void Draw(GraphicsContext& context, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, RenderViewport& apRenderTarget,
 					bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList) override;
 
-		Image* GetRefractionImage(){ return m_refractionImage;}
-		Image* GetReflectionImage(){ return m_reflectionImage;}
+		Image* GetRefractionImage(){ return m_refractionImage.get();}
+		Image* GetReflectionImage(){ return m_reflectionImage.get();}
 
 		//Static properties. Must be set before renderer data load.
 		static void SetGBufferType(eDeferredGBuffer aType){ mGBufferType = aType; }
@@ -274,12 +268,11 @@ namespace hpl {
 		std::array<std::shared_ptr<Image>, 2> m_outputImage;
 
 		RenderTarget m_edgeSmooth_LinearDepth;
+		std::shared_ptr<Image> m_refractionImage = nullptr;
+		std::shared_ptr<Image> m_reflectionImage = nullptr;
 
 		iTexture *mpRefractionTexture;
 		iTexture *mpReflectionTexture;
-
-		Image *m_refractionImage;
-		Image *m_reflectionImage;
 
 		bool mbReflectionTextureCleared;
 
@@ -296,6 +289,7 @@ namespace hpl {
 		bgfx::UniformHandle m_u_spotViewProj;
 		bgfx::UniformHandle m_u_overrideColor;
 		bgfx::UniformHandle m_u_mtxInvViewRotation;
+		bgfx::UniformHandle m_u_copyRegion;
 
 		bgfx::UniformHandle m_s_depthMap;
 		bgfx::UniformHandle m_s_positionMap;
@@ -307,7 +301,9 @@ namespace hpl {
 		bgfx::UniformHandle m_s_shadowMap;
 		bgfx::UniformHandle m_s_goboMap;
 		bgfx::UniformHandle m_s_shadowOffsetMap;
+		bgfx::UniformHandle m_s_diffuseMapOut;
 		
+		bgfx::ProgramHandle m_copyRegionProgram;
 		bgfx::ProgramHandle m_edgeSmooth_UnpackDepthProgram;
 		bgfx::ProgramHandle m_lightBoxProgram;
 		ShaderVariantCollection<
@@ -318,7 +314,6 @@ namespace hpl {
 			rendering::detail::SpotlightVariant_UseShadowMap> m_spotlightVariants; 
 		ShaderVariantCollection<
 			rendering::detail::PointlightVariant_UseGoboMap> m_pointLightVariants; 
-
 
 		std::vector<cDeferredLight*> mvTempDeferredLights;
 		std::array<std::vector<cDeferredLight*>, eDeferredLightList_LastEnum> mvSortedLights;

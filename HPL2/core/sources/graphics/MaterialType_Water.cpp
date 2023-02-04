@@ -227,7 +227,6 @@ namespace hpl
             params.afRefractionScale = pVars->mfRefractionScale;
             params.useRefractionFading = pVars->mfReflectionFadeEnd > 0.0f ? 1.0f : 0.0f;
             
-            cMatrixf mtxInvView = hasCubeMap ? cMatrixf::Identity: apRenderer->GetCurrentFrustum()->GetViewMatrix().GetTranspose();
             cColor fogColor = pWorld->GetFogColor();
             if(cubeMap) {
                 program.m_textures.push_back({m_s_envMap, cubeMap->GetHandle(), 0});
@@ -238,6 +237,10 @@ namespace hpl
             }
 
             program.m_uniforms.push_back({m_u_param, &params, 4});
+            cMatrixf mtxInvView = hasCubeMap ? ([&] {
+                cMatrixf mtxInvView = apRenderer->GetCurrentFrustum()->GetViewMatrix().GetTranspose();
+                return mtxInvView.GetRotation().GetTranspose();
+            }) (): cMatrixf::Identity;
             program.m_uniforms.push_back({m_u_mtxInvViewRotation, &mtxInvView.v});
             program.m_uniforms.push_back({m_u_fogColor, &fogColor.v});
             program.m_handle = m_waterVariant.GetVariant(lFlags);

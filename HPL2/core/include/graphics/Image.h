@@ -31,14 +31,15 @@ namespace hpl {
 
         union {
             struct {
-                bool m_uClamp : 1;
-                bool m_vClamp : 1;
-                bool m_wClamp : 1;
+                bool m_computeWrite: 1;
+                WrapMode m_UWrap : 3;
+                WrapMode m_VWrap : 3;
+                WrapMode m_WWrap : 3;
                 RTType m_rt : 3;
-                DepthTest m_comparsion;
-                FilterType m_minFilter;
-                FilterType m_magFilter;
-                FilterType m_mipFilter;
+                DepthTest m_comparsion : 3;
+                FilterType m_minFilter : 2;
+                FilterType m_magFilter : 2;
+                FilterType m_mipFilter : 2;
             };
             uint64_t m_settings = 0;
         } m_configuration;

@@ -88,7 +88,7 @@ void main()
             
         ///////////////////////
         // Sample refaraction map (using distorted coords)
-        vec2 vDistortedScreenPos = v_texcoord0.xy;
+        vec2 vDistortedScreenPos = gl_FragCoord.xy * u_viewTexel.xy;
         #ifdef USE_NORMAL_MAP
             //Should the screen normal or texture normal be used?
             vec2 vRefractOffset;
@@ -99,9 +99,9 @@ void main()
             }
             
             vRefractOffset *= u_refractionScale * invDist;
-            vDistortedScreenPos += vRefractOffset; 
+            vDistortedScreenPos += (vRefractOffset * u_viewTexel.xy); 
         #else
-            vDistortedScreenPos += screenNormal.xy  * u_refractionScale * invDist;
+            vDistortedScreenPos += (screenNormal.xy  * u_refractionScale * invDist) * u_viewTexel.xy;
         #endif
         
         vec4 vRefractionColor = texture2D(s_refractionMap, vDistortedScreenPos);
@@ -139,7 +139,7 @@ void main()
         vec3 vEnvUv = reflect(vEyeVec, screenNormal);
         vEnvUv = mul(u_mtxInvViewRotation, vec4(vEnvUv,1)).xyz;
                     
-        vec4 vReflectionColor = textureCube(s_envMap,vEnvUv);
+        vec4 vReflectionColor = textureCube(s_envMap, vEnvUv);
         
         //Alpha for environment map
         if(0.0 < u_useCubeMapAlpha) {

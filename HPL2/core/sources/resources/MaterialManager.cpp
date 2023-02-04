@@ -388,21 +388,19 @@ namespace hpl {
 			{
 				sFile = cString::SetFilePath(sFile, cString::To8Char(cString::GetFilePathW(asPath)));
 			}
-			//Log("Texture: '%s'\n",sFile.c_str());
-			//Log(" Loading!\n");
 
-			
 			cTextureManager::ImageOptions options;
 			switch(wrap) {
 				case eTextureWrap_Repeat:
 					break;
 				case eTextureWrap_Clamp:
-					break;
 				case eTextureWrap_ClampToEdge:
+					options.m_UWrap = WrapMode::Clamp;
+					options.m_VWrap = WrapMode::Clamp;
 					break;
 				case eTextureWrap_ClampToBorder:
-					options.m_uClamp = true;
-					options.m_vClamp = true;
+					options.m_UWrap = WrapMode::Border;
+					options.m_VWrap = WrapMode::Border;
 					break;
 				default:
 					BX_ASSERT(false, "Invalid wrap mode: %d", wrap)
