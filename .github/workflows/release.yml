@@ -31,26 +31,12 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE/build
           zip -r Amnesia_linux_x68_64.zip bin/Amnesia
-      - name: Create Draft Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: "marvinpinto/action-automatic-releases@latest"
         with:
-          tag_name: ${{ github.event.inputs.tag }}
-          release_name: ${{ github.event.inputs.tag }}
-          draft: true
-          prerelease: false
-      - uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{GITHUB_WORKSPACE}}/build/Amnesia_linux_x68_64.zip
-          asset_name: Amnesia_linux_x68_64.zip
-          asset_content_type: application/zip
-      - uses: eregon/publish-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          release_id: ${{ steps.create_release.outputs.id }}
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "latest"
+          prerelease: true
+          title: "Release:  ${{ github.event.inputs.tag }}"
+          files: |
+            LICENSE.txt
+            $GITHUB_WORKSPACE/build/*.zip
