@@ -1367,11 +1367,11 @@ public:
 			pCheckBox->AddCallback(eGuiMessage_CheckChange,this, kGuiCallback(ChangeReflectWorld));
 			vGroupPos.y += 22;
 
-			//Large light test
-			pCheckBox = pSet->CreateWidgetCheckBox(vGroupPos,vSize,_W("Large light test"),pGroup);
-			pCheckBox->SetChecked(cRendererDeferred::GetOcclusionTestLargeLights());
-			pCheckBox->AddCallback(eGuiMessage_CheckChange,this, kGuiCallback(ChangeLargeLightTest));
-			vGroupPos.y += 22;
+			// //Large light test
+			// pCheckBox = pSet->CreateWidgetCheckBox(vGroupPos,vSize,_W("Large light test"),pGroup);
+			// pCheckBox->SetChecked(cRendererDeferred::GetOcclusionTestLargeLights());
+			// pCheckBox->AddCallback(eGuiMessage_CheckChange,this, kGuiCallback(ChangeLargeLightTest));
+			// vGroupPos.y += 22;
 
 
 			//Group end
@@ -1647,12 +1647,12 @@ public:
 	}
 	kGuiCallbackFuncEnd(cSimpleUpdate,ChangeReflectWorld)
 
-	bool ChangeLargeLightTest(iWidget* apWidget,const cGuiMessageData& aData)
-	{
-		cRendererDeferred::SetOcclusionTestLargeLights(aData.mlVal==1 ? true : false);
-		return true;
-	}
-	kGuiCallbackFuncEnd(cSimpleUpdate,ChangeLargeLightTest)
+	// bool ChangeLargeLightTest(iWidget* apWidget,const cGuiMessageData& aData)
+	// {
+	// 	cRendererDeferred::SetOcclusionTestLargeLights(aData.mlVal==1 ? true : false);
+	// 	return true;
+	// }
+	// kGuiCallbackFuncEnd(cSimpleUpdate,ChangeLargeLightTest)
 
 	//--------------------------------------------------------------
 
@@ -2034,7 +2034,7 @@ int hplMain(const tString &asCommandline)
 
 	//iResourceBase::SetLogCreateAndDelete(true);
 	//iGpuProgram::SetLogDebugInformation(true);
-	cRendererDeferred::SetGBufferType(eDeferredGBuffer_32Bit);
+	// cRendererDeferred::SetGBufferType(eDeferredGBuffer_32Bit);
 	cRendererDeferred::SetSSAOLoaded(true);
 	cRendererDeferred::SetSSAOType(eDeferredSSAO_OnColorBuffer);
 

@@ -86,12 +86,6 @@
 
 namespace hpl {
 
-	//////////////////////////////////////////////////////////////////////////
-	// STATIC VARIABLES
-	//////////////////////////////////////////////////////////////////////////
-
-	eDeferredGBuffer cRendererDeferred::mGBufferType = eDeferredGBuffer_32Bit;
-	int cRendererDeferred::mlNumOfGBufferTextures = 4;
 	bool cRendererDeferred::mbDepthCullLights = true;
 
 	bool cRendererDeferred::mbSSAOLoaded = false;
@@ -105,9 +99,6 @@ namespace hpl {
 	eDeferredSSAO cRendererDeferred::mSSAOType = eDeferredSSAO_OnColorBuffer;
 	bool cRendererDeferred::mbEdgeSmoothLoaded = false;
 
-	//debug
-	bool cRendererDeferred::mbOcclusionTestLargeLights = true;
-	bool cRendererDeferred::mbDebugRenderFrameBuffers = false;
 
 	enum eDefferredProgramMode
 	{
@@ -163,8 +154,7 @@ namespace hpl {
 	{
 		cVector2l vRelfectionSize = cVector2l(mvScreenSize.x/mlReflectionSizeDiv, mvScreenSize.y/mlReflectionSizeDiv);
 
-		Log("Setting up G-Bugger: type: %d texturenum: %d\n", mGBufferType, mlNumOfGBufferTextures);
-		
+	
 		// uniforms
 		m_u_param = bgfx::createUniform("u_param", bgfx::UniformType::Vec4);
 		m_u_boxInvViewModelRotation  = bgfx::createUniform("u_boxInvViewModelRotation", bgfx::UniformType::Mat4);
@@ -758,12 +748,8 @@ namespace hpl {
 			shaderInput.m_configuration.m_depthTest = DepthTest::LessEqual;
 			
 			shaderInput.m_modelTransform = object->GetModelMatrixPtr() ? object->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity ;
-			// shaderInput.m_view = input.m_view;
-			// shaderInput.m_projection = input.m_projection;
 
 			GraphicsContext::DrawRequest drawRequest {layoutInput, shaderInput};
-			// drawRequest.m_width = input.m_width;
-			// drawRequest.m_height = input.m_height;
 			context.Submit(view, drawRequest);
 		});
 		
@@ -968,14 +954,7 @@ namespace hpl {
 				if(!pMaterial || pMaterial->GetType()->IsTranslucent()) {
 					return false;
 				}
-				// rendering::detail::ZPassInput options;
-				// options.m_width = mvScreenSize.x;
-				// options.m_height = mvScreenSize.y;
-
-				// options.m_view =  mpCurrentFrustum->GetViewMatrix().GetTranspose();
-				// options.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
 				rendering::detail::RenderZPassObject(view, context, this, object);
-
 				return true;
 			});
 
