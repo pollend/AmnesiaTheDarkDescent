@@ -14,9 +14,6 @@ namespace hpl
         RenderViewport();
         ~RenderViewport();
 
-        // void operator=(const RenderViewport& viewport) = delete;
-        // void operator=(RenderViewport&& viewport);
-
         std::shared_ptr<RenderTarget>& GetRenderTarget();
         const cVector2l GetPosition() const;
         const cVector2l GetSize() const;

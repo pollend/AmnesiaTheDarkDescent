@@ -66,17 +66,6 @@ namespace hpl {
 		eDeferredShapeQuality_LastEnum,
 	};
 
-	//---------------------------------------------
-
-	enum eDeferredGBuffer
-	{
-		eDeferredGBuffer_32Bit,
-		eDeferredGBuffer_64Bit,
-		eDeferredGBuffer_LastEnum,
-	};
-
-	//---------------------------------------------
-
 	enum eDeferredSSAO
 	{
 		eDeferredSSAO_InBoxLight,
@@ -153,19 +142,11 @@ namespace hpl {
 		virtual std::shared_ptr<Image> GetDepthStencilImage() override;
 		virtual std::shared_ptr<Image> GetOutputImage() override;
 
-
 		virtual void Draw(GraphicsContext& context, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, RenderViewport& apRenderTarget,
 					bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList) override;
 
 		Image* GetRefractionImage(){ return m_refractionImage.get();}
 		Image* GetReflectionImage(){ return m_reflectionImage.get();}
-
-		//Static properties. Must be set before renderer data load.
-		static void SetGBufferType(eDeferredGBuffer aType){ mGBufferType = aType; }
-		static eDeferredGBuffer GetGBufferType(){ return mGBufferType; }
-
-		static void SetNumOfGBufferTextures(int alNum){ mlNumOfGBufferTextures = alNum;}
-		static int GetNumOfGBufferTextures(){ return mlNumOfGBufferTextures;}
 
 		static void SetDepthCullLights(bool abX){ mbDepthCullLights = abX;}
 		static int GetDepthCullLights(){ return mbDepthCullLights;}
@@ -193,11 +174,8 @@ namespace hpl {
 		static void SetEdgeSmoothLoaded(bool abX){ mbEdgeSmoothLoaded = abX;}
 		static bool GetEdgeSmoothLoaded(){ return mbEdgeSmoothLoaded;}
 
-		static void SetOcclusionTestLargeLights(bool abX){ mbOcclusionTestLargeLights = abX;}
-		static bool GetOcclusionTestLargeLights(){ return mbOcclusionTestLargeLights;}
-
-		static void SetDebugRenderFrameBuffers(bool abX){ mbDebugRenderFrameBuffers = abX;}
-		static bool GetDebugRenderFrameBuffers(){ return mbDebugRenderFrameBuffers;}
+		// static void SetOcclusionTestLargeLights(bool abX){ mbOcclusionTestLargeLights = abX;}
+		// static bool GetOcclusionTestLargeLights(){ return mbOcclusionTestLargeLights;}
 
 	private:
 		RenderTarget& resolveRenderTarget(std::array<RenderTarget, 2>& rt);
@@ -318,11 +296,7 @@ namespace hpl {
 		std::vector<cDeferredLight*> mvTempDeferredLights;
 		std::array<std::vector<cDeferredLight*>, eDeferredLightList_LastEnum> mvSortedLights;
 
-		//Static setting variables
-		static eDeferredGBuffer mGBufferType;
-		static int mlNumOfGBufferTextures;
 		static bool mbDepthCullLights;
-
 		static bool mbSSAOLoaded;
 		static int mlSSAONumOfSamples;
 		static float mfSSAOScatterLengthMul;
@@ -336,10 +310,5 @@ namespace hpl {
 		static bool mbEdgeSmoothLoaded;
 		static bool mbEnableParallax;
 
-		static bool mbDebugRenderFrameBuffers;
-		static bool mbOcclusionTestLargeLights;
-
 	};
-
-
 };

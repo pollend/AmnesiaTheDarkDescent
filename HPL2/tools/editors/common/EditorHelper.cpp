@@ -696,11 +696,11 @@ bool cEditorHelper::LoadResourceFile(eEditorResourceType aResType, const tString
 		break;
 	case eEditorResourceType_Texture:
 		pManager = pResources->GetTextureManager();
-		pResource = ((cTextureManager*)pManager)->Create1D(asFile, true);
+		pResource = ((cTextureManager*)pManager)->Create1DImage(asFile, true);
 		if(pResource==NULL)
-			pResource = ((cTextureManager*)pManager)->Create2D(asFile,true);
+			pResource = ((cTextureManager*)pManager)->Create2DImage(asFile,true);
 		if(pResource==NULL)
-			pResource = ((cTextureManager*)pManager)->Create3D(asFile,true);
+			pResource = ((cTextureManager*)pManager)->Create3DImage(asFile,true);
 		break;
 	case eEditorResourceType_Sound:
 		pManager = pResources->GetSoundEntityManager();

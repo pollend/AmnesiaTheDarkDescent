@@ -171,8 +171,6 @@ namespace hpl {
 		cCamera *pCamera = hplNew( cCamera, () );
 		pCamera->SetAspect(mpGraphics->GetLowLevel()->GetScreenSizeFloat().x /
 							mpGraphics->GetLowLevel()->GetScreenSizeFloat().y);
-
-		//Add Camera to list
 		mlstCameras.push_back(pCamera);
 
 		return pCamera;
@@ -188,7 +186,6 @@ namespace hpl {
 			delete *it;
 			mlstCameras.erase(it);
 		}
-		// STLFindAndDelete(mlstCameras, apCam);
 	}
 
 	//-----------------------------------------------------------------------

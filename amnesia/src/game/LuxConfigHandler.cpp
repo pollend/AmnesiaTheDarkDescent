@@ -134,13 +134,9 @@ void cLuxConfigHandler::SaveMainConfig()
 	// Main
 	gpBase->mpMainConfig->SetBool("Main","LoadDebugMenu", mbLoadDebugMenu);
 	if(mbFirstStart) gpBase->RaiseFirstStartFlag();
-	//gpBase->mpMainConfig->SetBool("Main","FirstStart", false);
-
 
 	gpBase->mpMainConfig->SetString("Main", "StartLanguage", msLangFile);
-
 	gpBase->mpMainConfig->SetString("Main","ScreenShotExt", msScreenShotExt);
-
 	gpBase->mpMainConfig->SetBool("Main","ForceCacheLoadingAndSkipSaving", mbForceCacheLoadingAndSkipSaving);
 
 	/////////////////////
@@ -160,8 +156,6 @@ void cLuxConfigHandler::SaveMainConfig()
 	cRenderSettings* pRenderSettings = gpBase->mpMapHandler->GetViewport()->GetRenderSettings();
 
 	gpBase->mpMainConfig->SetFloat("Graphics","Gamma",gpBase->mpEngine->GetGraphics()->GetLowLevel()->GetGammaCorrection());
-	gpBase->mpMainConfig->SetInt("Graphics","GBufferType", cRendererDeferred::GetGBufferType());
-	gpBase->mpMainConfig->SetInt("Graphics","NumOfGBufferTextures", cRendererDeferred::GetNumOfGBufferTextures());
 
 	gpBase->mpMainConfig->SetBool("Graphics", "OcclusionTestLights", mbOcclusionTestLights);
 
