@@ -38,5 +38,5 @@ jobs:
           prerelease: true
           title: "Release:  ${{ github.event.inputs.tag }}"
           files: |
-            LICENSE.txt
-            $GITHUB_WORKSPACE/build/*.zip
+            LICENSE
+            ${{ github.workspace }}/build/*.zip
