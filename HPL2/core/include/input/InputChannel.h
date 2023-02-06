@@ -14,9 +14,9 @@ namespace hpl::input {
         HPL_RTTI_CLASS(InputChannel, "{9e04fa77-3045-4693-ba5d-be7d117a9122}")
 
     public:
-        InputChannel(DeviceType deviceType, hpl::Guid deviceUID)
+        InputChannel(DeviceType deviceType, hpl::Uuid uuid)
             : m_deviceType(deviceType)
-            , m_deviceUID(deviceUID) {
+            , m_deviceUID(uuid) {
         }
         virtual ~InputChannel() = default;
 
@@ -24,7 +24,7 @@ namespace hpl::input {
             return m_deviceType;
         }
 
-        hpl::Guid GetDeviceUID() const {
+        hpl::Uuid GetDeviceUID() const {
             return m_deviceUID;
         }
 

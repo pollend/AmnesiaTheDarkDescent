@@ -93,6 +93,8 @@ file(GLOB impl_sources RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
     sources/impl/SDLEngineSetup.cpp
     sources/impl/SDLFontData.cpp
     sources/impl/SDLTexture.cpp
+
+    sources/platform/sdl2/*.cpp
     # OpenAL
     sources/impl/LowLevelSoundOpenAL.cpp
     sources/impl/OpenAL*
