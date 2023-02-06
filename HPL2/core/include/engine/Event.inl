@@ -10,10 +10,10 @@
 
 namespace hpl
 {
-    template <typename... Params>
-    EventHandler<Params...>::EventHandler(nullptr)
-    {
-    }
+    // template <typename... Params>
+    // EventHandler<Params...>::EventHandler(nullptr)
+    // {
+    // }
 
 
     template <typename... Params>
@@ -280,6 +280,7 @@ namespace hpl
     template <typename... Params>
     void Event<Params...>::Signal(const Params&... params) const
     {
+        std::lock_guard<std::recursive_mutex> lk(m_mutex);
         m_updating = true;
 
         // Trigger all added handler callbacks
@@ -344,6 +345,7 @@ namespace hpl
     template <typename... Params>
     inline void Event<Params...>::Connect(Handler& handler) const
     {
+        std::lock_guard<std::recursive_mutex> lk(m_mutex);
         if (m_updating)
         {
             handler.m_index = -static_cast<int32_t>(m_addList.size() + 1);

@@ -11,13 +11,14 @@
 
 #include <functional>
 #include <stack>
+#include <mutex>
+#include <bx/debug.h>
 
 namespace hpl
 {
     //! A specialized type of EBus useful for eventing on a specific event type
     //! Whereas with EBus you would have to define a bus, implement the bus, and manage connecting and disconnecting from the bus
     //! Event only requires you declare an Event<>, and then connect Event<>::Handlers
-    //! Note that this system does not provide *any* thread safety, Handler Connect and Disconnect must happen on the same thread dispatching Events
     //! It is safe to connect or disconnect handlers during a signal, in this case we don't guarantee the signal will be dispatched to the disconnected handler
     //! Example Usage:
     //! @code{.cpp}
@@ -66,6 +67,7 @@ namespace hpl
         void DisconnectAllHandlers();
 
         //! Signal an event.
+        //! signals are mutually exclusive, if a signal is already in progress, this call will block until the signal is complete
         //! @param params variadic set of event parameters
         void Signal(const Params&... params) const;
 
@@ -85,6 +87,7 @@ namespace hpl
         mutable std::stack<size_t> m_freeList; //< Set of unused handler indices
 
         mutable bool m_updating = false; //< Raised during a Signal, false otherwise, used to guard m_handlers during handler iteration
+        mutable std::recursive_mutex m_mutex; //< Mutex used to guard m_handlers during handler iteration
     };
 
     //! A handler class that can connect to an Event
@@ -131,6 +134,7 @@ namespace hpl
         const Event<Params...>* m_event = nullptr; //< The connected event
         int32_t m_index = 0; //< Index into the add or handler vectors (negative means pending add)
         Callback m_callback; //< The lambda to invoke during events
+        
     };
 
 }

@@ -18,7 +18,6 @@ namespace hpl::entry_sdl {
         std::string m_name;
     };
 
-    // void setSetupHandler(std::function<void()> handler);
     void setThreadHandler(std::function<int32_t()> handler);
 
     cVector2l getSize();

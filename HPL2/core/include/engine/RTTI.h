@@ -1,6 +1,6 @@
 #pragma once 
 
-#include <engine/UUID.h>
+#include <math/Uuid.h>
 
 #define HPL_RTTI_CLASS(name, id) \
     public: \

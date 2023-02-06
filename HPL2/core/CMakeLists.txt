@@ -30,6 +30,7 @@ file(GLOB common_sources RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
     sources/scene/*
     sources/sound/*
     sources/system/*
+    source/platform/sdl2/*
 
     include/ai/*
     include/engine/*
