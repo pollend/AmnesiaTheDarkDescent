@@ -4,7 +4,7 @@
 #include <input/InputChannel.h>
 #include <math/Uuid.h>
 #include <engine/RTTI.h>
-#include <input/InputChannel.h>
+#include <input/InputDevice.h>
 #include <memory>
 
 namespace hpl::input {
@@ -21,16 +21,12 @@ namespace hpl::input {
 		Button9
 	};
 
-	// opaque handle to the internal mouse state
-	struct InternalMouseHandle {
-    };
-
-    class InputMouseDevice : public InputChannel {
-        HPL_RTTI_IMPL_CLASS(InputChannel, InputMouseDevice, "{ac1b28f3-7a0f-4442-96bb-99b64adb5be6}")
+    class InputMouseDevice : public InputDevice {
+        HPL_RTTI_IMPL_CLASS(InputDevice, InputMouseDevice, "{ac1b28f3-7a0f-4442-96bb-99b64adb5be6}")
     public:
 
         InputMouseDevice(hpl::Guid deviceUID)
-            : InputChannel(DeviceType::Mouse, deviceUID) {
+            : InputDevice() {
         }
         
 		class Implementation {
@@ -43,7 +39,6 @@ namespace hpl::input {
         static Implementation* CreateInputDevice(void* handle); 
 
 		~InputMouseDevice() = default;
-		
 	    
         /**
 		 * Check if a mouse button is down

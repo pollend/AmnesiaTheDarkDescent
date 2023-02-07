@@ -155,7 +155,6 @@ namespace hpl {
         }
     }
 
-
     void SDLWindow::internalProcessMessagePayload(const WindowMessagePayload& event) {
         switch (event.m_type) {
         case WindowMessagePayloadType::WindowMessage_SetTitle:

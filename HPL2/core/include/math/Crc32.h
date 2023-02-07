@@ -11,11 +11,21 @@ namespace hpl::math {
         constexpr Crc32(uint32_t value)
             : m_value(value) {
         }
+        constexpr Crc32()
+            : m_value(0) {
+        }
+        constexpr Crc32(const Crc32& other)
+            : m_value(other.m_value) {
+        }
         constexpr Crc32(const std::string_view value);
 
         constexpr void Update(const std::string_view value);
         constexpr void Update(const uint32_t value);
         constexpr void Update(const Uuid& value);
+
+        constexpr bool operator==(const Crc32& other) const {
+            return m_value == other.m_value;
+        }
 
     private:
         uint32_t m_value;

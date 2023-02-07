@@ -76,6 +76,8 @@ namespace hpl {
         static Implementation* CreateWindow(); 
 
         ~NativeWindow() = default;
+        NativeWindow(NativeWindow&&) = delete;
+        NativeWindow& operator=(NativeWindow&&) = delete;
         NativeWindow();
 
         void* NativeWindowHandle();

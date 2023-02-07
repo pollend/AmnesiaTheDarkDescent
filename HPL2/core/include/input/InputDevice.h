@@ -20,10 +20,30 @@
 #ifndef HPL_INPUTDEVICE_H
 #define HPL_INPUTDEVICE_H
 
+#include "math/Crc32.h"
 #include "system/SystemTypes.h"
 #include "input/InputTypes.h"
+#include <string>
+
+#include <math/Uuid.h>
+#include <engine/RTTI.h>
 
 namespace hpl {
+
+	enum class DeviceType { 
+        Keyboard, 
+        Mouse, 
+        Joystick
+    };
+
+	class InputDevice {
+		HPL_RTTI_CLASS(InputDevice, "{9e04fa77-3045-4693-ba5d-be7d117a9122}")
+	public:
+		InputDevice() {}
+
+		virtual ~InputDevice() {}
+	private:
+	};
 
 	class iInputDevice
 	{
