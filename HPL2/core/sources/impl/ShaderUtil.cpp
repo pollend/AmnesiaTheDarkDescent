@@ -2,9 +2,12 @@
 
 #include "bgfx/bgfx.h"
 #include <bx/debug.h>
+#include "bx/readerwriter.h"
+#include "engine/Interface.h"
 #include "impl/LowLevelGraphicsSDL.h"
 #include "impl/SDLTexture.h"
-#include "system/LowLevelSystem.h"
+#include <system/LowLevelSystem.h>
+#include <system/Filesystem.h>
 
 #include "system/Platform.h"
 #include "system/String.h"
@@ -12,7 +15,6 @@
 #include <cstdio>
 #include <cstring>
 #include <string>
-#include <system/bootstrap.h>
 
 #ifdef WIN32
 #include <io.h>
@@ -70,7 +72,8 @@ namespace hpl
 
     bgfx::ProgramHandle loadProgram(const char* vsName, const char* fsName)
     {
-        return loadProgram(hpl::bootstrap::GetFileReader(), vsName, fsName);
+        auto* reader = Interface<hpl::FileReader>::Get();
+        return loadProgram(reader, vsName, fsName);
     }
     
     bgfx::ProgramHandle loadProgram(bx::FileReaderI* reader, const char* vsName, const char* fsName)
@@ -136,7 +139,8 @@ namespace hpl
 
     bgfx::ShaderHandle loadShader(const char* name)
     {
-        return loadShader(hpl::bootstrap::GetFileReader(), name);
+        auto* reader = Interface<hpl::FileReader>::Get();
+        return loadShader(reader, name);
     }
 
 } // namespace hpl

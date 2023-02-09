@@ -1,8 +1,14 @@
+#include <cstddef>
+#include <memory>
+#include <windowing/NativeWindow.h>
+
 #include <algorithm>
 #include <cstdint>
 #include <cstring>
 #include <string>
-#include <windowing/NativeWindow.h>
+#include <mutex>
+#include <queue>
+#include <thread>
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_events.h>
@@ -10,11 +16,8 @@
 #include <SDL2/SDL_video.h>
 #include <math/MathTypes.h>
 
-#include <mutex>
-#include <queue>
-#include <thread>
 
-namespace hpl {
+namespace hpl::window::internal {
     enum WindowMessagePayloadType { 
         WindowMessage_None = 0,
         WindowMessage_Resize = 1,
@@ -33,42 +36,68 @@ namespace hpl {
         } m_payload;
     };
 
-    class SDLWindow final : public NativeWindow::Implementation {
-    public:
-        SDLWindow();
-        ~SDLWindow() override;
-
-        virtual void* NativeWindowHandle() override;
-        virtual void* NativeDisplayHandle() override;
-
-        virtual void SetWindowInternalEventHandler(NativeWindow::WindowInternalEvent::Handler& handler) override;
-        virtual void SetWindowEventHandler(NativeWindow::WindowEvent::Handler& handler) override;
-        virtual void SetWindowTitle(const std::string_view title) override;
-        virtual void SetWindowSize(const cVector2l& size) override;
-
-        virtual void Process() override;
-
-    private:
-        void internalProcessMessagePayload(const WindowMessagePayload& event);
-        void internalPushMessagePayload(const WindowMessagePayload& event);
-
+    struct NativeWindowImpl {
         SDL_Window* m_window = nullptr;
         std::thread::id m_owningThread;
         std::mutex m_mutex;
         std::queue<WindowMessagePayload> m_processQueue;
-        NativeWindow::WindowInternalEvent m_internalWindowEvent;
-        NativeWindow::WindowEvent m_windowEvent;
+        internal::WindowInternalEvent m_internalWindowEvent;
+        hpl::window::WindowEvent m_windowEvent;
     };
 
-    SDLWindow::SDLWindow() {
-        m_window = SDL_CreateWindow("HPL2", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 600, SDL_WINDOW_SHOWN);
-        m_owningThread = std::this_thread::get_id();
+    void internalProcessMessagePayload(NativeWindowImpl& impl,const WindowMessagePayload& event) {
+        switch (event.m_type) {
+        case WindowMessagePayloadType::WindowMessage_SetTitle:
+            SDL_SetWindowTitle(impl.m_window, event.m_payload.m_setTitle.m_title);
+            break;
+        case WindowMessagePayloadType::WindowMessage_Resize:
+            SDL_SetWindowSize(impl.m_window, event.m_payload.m_resizeWindow.width, event.m_payload.m_resizeWindow.height);
+            break;
+        default:
+            break;
+        }
+    }
+    void internalPushMessagePayload(NativeWindowImpl& impl, const WindowMessagePayload& event) {
+        if(impl.m_owningThread == std::this_thread::get_id()) { // same thread, just process it
+            internalProcessMessagePayload(impl, event);
+            return;
+        }
+        std::lock_guard<std::mutex> lk(impl.m_mutex);
+        impl.m_processQueue.push(event);
     }
 
-    void* SDLWindow::NativeWindowHandle() {
+
+    NativeWindowHandler Initialize() {
+        NativeWindowHandler handle = { NativeWindowHandler::Ptr(new NativeWindowImpl(), [](void* ptr) {
+            auto* impl = static_cast<NativeWindowImpl*>(ptr);
+            impl->m_internalWindowEvent.DisconnectAllHandlers();
+            impl->m_windowEvent.DisconnectAllHandlers();
+            SDL_DestroyWindow(impl->m_window);
+            delete impl;
+        }) };
+
+        auto impl = static_cast<NativeWindowImpl*>(handle.Get());
+        impl->m_owningThread = std::this_thread::get_id();
+        impl->m_window = SDL_CreateWindow("HPL2", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 600, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
+        
+
+        return handle;
+    }
+    void SetWindowInternalEventHandler(NativeWindowHandler& handler, WindowInternalEvent::Handler& eventHandle) {
+        auto impl = static_cast<NativeWindowImpl*>(handler.Get());
+        eventHandle.Connect(impl->m_internalWindowEvent);
+    }
+    void SetWindowEventHandler(NativeWindowHandler& handler, WindowEvent::Handler& eventHandle) {
+        auto impl = static_cast<NativeWindowImpl*>(handler.Get());
+        eventHandle.Connect(impl->m_windowEvent);
+    }
+            
+    void* NativeWindowHandle(NativeWindowHandler& handler) {
+        auto impl = static_cast<NativeWindowImpl*>(handler.Get());
+        
         SDL_SysWMinfo wmi;
         SDL_VERSION(&wmi.version);
-        if (!SDL_GetWindowWMInfo(m_window, &wmi)) {
+        if (!SDL_GetWindowWMInfo(impl->m_window, &wmi)) {
             return NULL;
         }
 
@@ -97,10 +126,12 @@ namespace hpl {
 #endif // BX_PLATFORM_
     }
 
-    void* SDLWindow::NativeDisplayHandle() {
+    void* NativeDisplayHandle(NativeWindowHandler& handler) {
+        auto impl = static_cast<NativeWindowImpl*>(handler.Get());
+        
         SDL_SysWMinfo wmi;
         SDL_VERSION(&wmi.version);
-        if (!SDL_GetWindowWMInfo(m_window, &wmi)) {
+        if (!SDL_GetWindowWMInfo(impl->m_window, &wmi)) {
             return NULL;
         }
 
@@ -115,21 +146,34 @@ namespace hpl {
 #endif // BX_PLATFORM_*
     }
 
-    void SDLWindow::SetWindowInternalEventHandler(NativeWindow::WindowInternalEvent::Handler& handler) {
-        handler.Connect(m_internalWindowEvent);
+
+    void SetWindowTitle(NativeWindowHandler& handler, const std::string_view title) {
+        auto impl = static_cast<NativeWindowImpl*>(handler.Get());
+        WindowMessagePayload message;
+        BX_ASSERT(title.size() < sizeof(message.m_payload.m_setTitle.m_title), "Title too long");
+        std::memset(&message, 0, sizeof(WindowMessagePayload));
+        message.m_type = WindowMessagePayloadType::WindowMessage_SetTitle;
+        std::copy(title.begin(), title.end(), message.m_payload.m_setTitle.m_title);
+        internalPushMessagePayload(*impl, message);
+    }
+    void SetWindowSize(NativeWindowHandler& handler, const cVector2l& size) {
+        auto impl = static_cast<NativeWindowImpl*>(handler.Get());
+        WindowMessagePayload message;
+        std::memset(&message, 0, sizeof(WindowMessagePayload));
+        message.m_type = WindowMessagePayloadType::WindowMessage_Resize;
+        message.m_payload.m_resizeWindow.width = size.x;
+        message.m_payload.m_resizeWindow.height = size.y;
+        internalPushMessagePayload(*impl, message);
     }
 
-    void SDLWindow::SetWindowEventHandler(NativeWindow::WindowEvent::Handler& handler) {
-        handler.Connect(m_windowEvent);
-    }
-
-    void SDLWindow::Process() {
+    void Process(NativeWindowHandler& handler) {
+        auto impl = static_cast<NativeWindowImpl*>(handler.Get());
         {
-            std::lock_guard<std::mutex> lk(m_mutex);
-            while (!m_processQueue.empty()) {
-                auto& message = m_processQueue.front();
-                internalProcessMessagePayload(message);
-                m_processQueue.pop();
+            std::lock_guard<std::mutex> lk(impl->m_mutex);
+            while (!impl->m_processQueue.empty()) {
+                auto& message = impl->m_processQueue.front();
+                internalProcessMessagePayload(*impl, message);
+                impl->m_processQueue.pop();
             }
         
         }
@@ -139,65 +183,19 @@ namespace hpl {
         WindowEventPayload windowEventPayload;
         while (SDL_PollEvent(&event)) {
             internalEvent.m_sdlEvent = &event;
-            m_internalWindowEvent.Signal(internalEvent);
+            impl->m_internalWindowEvent.Signal(internalEvent);
             switch (event.type) {
             case SDL_QUIT:
                 windowEventPayload.m_type = WindowEventType::QuitEvent;
-                m_windowEvent.Signal(windowEventPayload);
+                impl->m_windowEvent.Signal(windowEventPayload);
                 break;
             case SDL_WINDOWEVENT_SIZE_CHANGED:
                 windowEventPayload.m_type = WindowEventType::ResizeWindowEvent;
                 windowEventPayload.payload.m_resizeWindow.m_width = event.window.data1;
                 windowEventPayload.payload.m_resizeWindow.m_height = event.window.data2;
-                m_windowEvent.Signal(windowEventPayload);
+                impl->m_windowEvent.Signal(windowEventPayload);
                 break;
             }
         }
     }
-
-    void SDLWindow::internalProcessMessagePayload(const WindowMessagePayload& event) {
-        switch (event.m_type) {
-        case WindowMessagePayloadType::WindowMessage_SetTitle:
-            SDL_SetWindowTitle(m_window, event.m_payload.m_setTitle.m_title);
-            break;
-        case WindowMessagePayloadType::WindowMessage_Resize:
-            SDL_SetWindowSize(m_window, event.m_payload.m_resizeWindow.width, event.m_payload.m_resizeWindow.height);
-            break;
-        default:
-            break;
-        }
-    }
-    void SDLWindow::internalPushMessagePayload(const WindowMessagePayload& event) {
-        if(m_owningThread == std::this_thread::get_id()) { // same thread, just process it
-            internalProcessMessagePayload(event);
-            return;
-        }
-        std::lock_guard<std::mutex> lk(m_mutex);
-        m_processQueue.push(event);
-    }
-
-  void SDLWindow::SetWindowTitle(const std::string_view title) {
-        WindowMessagePayload message;
-        BX_ASSERT(title.size() < sizeof(message.m_payload.m_setTitle.m_title), "Title too long");
-        std::memset(&message, 0, sizeof(WindowMessagePayload));
-        message.m_type = WindowMessagePayloadType::WindowMessage_SetTitle;
-        std::copy(title.begin(), title.end(), message.m_payload.m_setTitle.m_title);
-        internalPushMessagePayload(message);
-    }
-
-    void SDLWindow::SetWindowSize(const cVector2l& size) {
-        WindowMessagePayload message;
-        std::memset(&message, 0, sizeof(WindowMessagePayload));
-        message.m_type = WindowMessagePayloadType::WindowMessage_Resize;
-        message.m_payload.m_resizeWindow.width = size.x;
-        message.m_payload.m_resizeWindow.height = size.y;
-        m_processQueue.push(message);
-        internalPushMessagePayload(message);
-    }
-
-
-    // creates the implementation
-    NativeWindow::Implementation* NativeWindow::CreateWindow() {
-        return new SDLWindow();
-    }
-} // namespace hpl
+}

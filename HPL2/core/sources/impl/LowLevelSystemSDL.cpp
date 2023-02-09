@@ -20,8 +20,6 @@
 //#include <vld.h>
 //Use this to check for memory leaks!
 
-#include <system/bootstrap.h>
-
 #ifdef WIN32
 #pragma comment(lib, "angelscript.lib")
 #define UNICODE
@@ -75,7 +73,6 @@ extern int hplMain(const hpl::tString &asCommandLine);
 //#else
 int main(int argc, char *argv[])
 {
-	hpl::bootstrap::Init();
 
 #if defined(__linux__) || defined(__FreeBSD__)
 	if(!std::setlocale(LC_CTYPE, "")) {

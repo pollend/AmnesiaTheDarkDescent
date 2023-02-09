@@ -1,31 +1,31 @@
 #pragma once
 
-#include "engine/Event.h"
 #include <cstdint>
-#include <math/MathTypes.h>
-#include <engine/RTTI.h>
 #include <memory>
 #include <string_view>
 
+#include <engine/Event.h>
+#include <engine/RTTI.h>
+#include <math/MathTypes.h>
+#include <system/HandleWrapper.h>
+
 union SDL_Event;
 
-namespace hpl {
-    // class WindowInterface;
+namespace hpl::window {
 
-    enum class WindowEventType : uint16_t{
+    enum class WindowEventType : uint16_t {
         ResizeWindowEvent,
         MoveWindowEvent,
         QuitEvent,
         // Mouse can move to a separate interface
         MouseMoveEvent,
-
         // keyboard can move to a separate interface
-        
+
     };
 
     struct InternalEvent {
         union {
-            SDL_Event* m_sdlEvent;
+            SDL_Event* m_sdlEvent; // SDL_Event when compiling for SDL2
         };
     };
 
@@ -46,52 +46,72 @@ namespace hpl {
             } m_mouseEvent;
         } payload;
     };
+    using WindowEvent = hpl::Event<WindowEventPayload&>;
 
-    enum class WindowType : uint8_t {
-        Window,
-        Fullscreen,
-        Borderless
-    };
+    enum class WindowType : uint8_t { Window, Fullscreen, Borderless };
+    namespace internal {
 
-    class NativeWindow final {
+        using WindowInternalEvent = hpl::Event<InternalEvent&>;
+        class NativeWindowHandler final : public HandleWrapper {};
+
+        void SetNativeWindowHandle(NativeWindowHandler& handler, WindowInternalEvent::Handler& eventHandle);
+        void SetNativeDisplayHandle(NativeWindowHandler& handler, WindowEvent::Handler& eventHandle);
+
+        NativeWindowHandler Initialize();
+        void SetWindowTitle(NativeWindowHandler& handler, const std::string_view title);
+        void SetWindowSize(NativeWindowHandler& handler, const cVector2l& size);
+
+        void* NativeWindowHandle(NativeWindowHandler& handler);
+        void* NativeDisplayHandle(NativeWindowHandler& handler);
+
+        void Process(NativeWindowHandler& handler);
+    } // namespace internal
+
+    // wrapper over an opaque pointer to a windowing system
+    // this is the only way to interact with the windowing system
+    class NativeWindowWrapper final {
         HPL_RTTI_CLASS(NativeWindow, "{d17ea5c7-30f1-4d5d-b38e-1a7e88e137fc}")
     public:
-        using WindowInternalEvent = hpl::Event<InternalEvent&>;
-        using WindowEvent = hpl::Event<WindowEventPayload&>;
-        
-        class Implementation {
-            public:
-                virtual ~Implementation() = default;
 
-                virtual void* NativeWindowHandle() = 0;
-                virtual void* NativeDisplayHandle() = 0;
+        ~NativeWindowWrapper() = default;
+        NativeWindowWrapper() = default;
+        NativeWindowWrapper(internal::NativeWindowHandler&& handle)
+            : m_impl(std::move(handle)) {
+        }
+        NativeWindowWrapper(NativeWindowWrapper&& other)
+            : m_impl(std::move(other.m_impl)) {
+        }
+        NativeWindowWrapper(const NativeWindowWrapper& other) = delete;
 
-                virtual void SetWindowInternalEventHandler(WindowInternalEvent::Handler& handler) = 0;
-                virtual void SetWindowEventHandler(WindowEvent::Handler& handler) = 0;
-                virtual void SetWindowTitle(const std::string_view title) = 0;
-                virtual void SetWindowSize(const cVector2l& size) = 0;
+        NativeWindowWrapper& operator=(NativeWindowWrapper& other) = delete;
+        void operator=(NativeWindowWrapper&& other) {
+            m_impl = std::move(other.m_impl);
+        }
 
-                virtual void Process() = 0;
-        };
-        static Implementation* CreateWindow(); 
+        void* NativeWindowHandle() {
+            return internal::NativeWindowHandle(m_impl);
+        }
 
-        ~NativeWindow() = default;
-        NativeWindow(NativeWindow&&) = delete;
-        NativeWindow& operator=(NativeWindow&&) = delete;
-        NativeWindow();
+        void* NativeDisplayHandle() {
+            return internal::NativeDisplayHandle(m_impl);
+        }
 
-        void* NativeWindowHandle();
-        void* NativeDisplayHandle();
+        void SetWindowSize(cVector2l size) {
+            internal::SetWindowSize(m_impl, size);
+        }
 
-        void SetWindowSize(cVector2l size);
- 
-        void SetWindowInternalEventHandler(WindowInternalEvent::Handler& handler);
-        void SetWindowEventHandler(WindowEvent::Handler& handler);
-        void Process();
+        void SetWindowEventHandler(WindowEvent::Handler& handler) {
+            internal::SetNativeDisplayHandle(m_impl, handler);
+        }
+
+        void Process() {
+            internal::Process(m_impl);
+        }
 
         WindowType GetWindowType();
         cVector2l GetWindowSize();
+
     private:
-        std::unique_ptr<NativeWindow::Implementation> m_impl;
+        internal::NativeWindowHandler m_impl;
     };
-}
+} // namespace hpl::window

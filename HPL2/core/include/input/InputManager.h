@@ -10,11 +10,10 @@ namespace hpl::input {
     class InputDevice;
     class InputManager;
 
-
     class InputManager : public InputManagerInterface {
     public:
 
-        static constexpr InputDeviceID MouseDevice = InputDeviceID("Mouse");
+        static constexpr InputDeviceID MouseDeviceID = InputDeviceID("Mouse");
 
         struct InputEntry {
             InputDeviceID m_id;

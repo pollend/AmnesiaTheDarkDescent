@@ -3,38 +3,35 @@
 
 namespace hpl {
 
-    NativeWindow::NativeWindow()
-        : m_impl(NativeWindow::CreateWindow()) {
-    }
 
-    void* NativeWindow::NativeWindowHandle() {
-        return nullptr;
-    }
-    
-    void* NativeWindow::NativeDisplayHandle() {
-        return nullptr;
-    }
+    // void* NativeWindowWrapper::NativeWindowHandle() {
+    //     return nullptr;
+    // }
 
-    void NativeWindow::SetWindowSize(cVector2l size) {
-    }
+    // void* NativeWindowWrapper::NativeDisplayHandle() {
+    //     return nullptr;
+    // }
 
-    void NativeWindow::SetWindowInternalEventHandler(WindowInternalEvent::Handler& handler) {
-        m_impl->SetWindowInternalEventHandler(handler);
-    }
+    // void NativeWindowWrapper::SetWindowSize(cVector2l size) {
+    // }
 
-    void NativeWindow::SetWindowEventHandler(WindowEvent::Handler& handler) {
-        m_impl->SetWindowEventHandler(handler);
-    }
+    // void NativeWindowWrapper::SetWindowInternalEventHandler(WindowInternalEvent::Handler& handler) {
+    //     m_impl->SetWindowInternalEventHandler(handler);
+    // }
 
-    void NativeWindow::Process() {
-        m_impl->Process();
-    }
+    // void NativeWindowWrapper::SetWindowEventHandler(WindowEvent::Handler& handler) {
+    //     m_impl->SetWindowEventHandler(handler);
+    // }
 
-    WindowType NativeWindow::GetWindowType() {
-        return WindowType::Window;
-    }
+    // void NativeWindowWrapper::Process() {
+    //     m_impl->Process();
+    // }
 
-    cVector2l NativeWindow::GetWindowSize() {
-        return cVector2l(0, 0);
-    }
+    // WindowType NativeWindowWrapper::GetWindowType() {
+    //     return WindowType::Window;
+    // }
+
+    // cVector2l NativeWindowWrapper::GetWindowSize() {
+    //     return cVector2l(0, 0);
+    // }
 } // namespace hpl
