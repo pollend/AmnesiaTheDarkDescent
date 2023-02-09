@@ -30,18 +30,21 @@
 
 namespace hpl {
 
-	enum class DeviceType { 
-        Keyboard, 
-        Mouse, 
-        Joystick
-    };
-
+	namespace input {
 	class InputDevice {
 		HPL_RTTI_CLASS(InputDevice, "{9e04fa77-3045-4693-ba5d-be7d117a9122}")
 	public:
 		InputDevice() {}
 		virtual ~InputDevice() {}
 	};
+	}
+
+	enum class DeviceType { 
+        Keyboard, 
+        Mouse, 
+        Joystick
+    };
+
 
 	class iInputDevice
 	{

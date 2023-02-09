@@ -151,7 +151,7 @@ namespace hpl {
 
 	void cMaterial::SetImage(eMaterialTexture aType, iResourceBase *apTexture) 
 	{
-		BX_ASSERT(TypeInfo<Image>().isType(*apTexture) || TypeInfo<AnimatedImage>().isType(*apTexture), "cMaterial::SetImage: apTexture is not an Image")
+		BX_ASSERT(TypeInfo<Image>().IsType(*apTexture) || TypeInfo<AnimatedImage>().IsType(*apTexture), "cMaterial::SetImage: apTexture is not an Image")
 
 		m_image[aType] = std::move(ImageResourceWrapper(mpResources->GetTextureManager(), apTexture));
 	}

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <string_view>
@@ -8,6 +9,7 @@
 #include <engine/RTTI.h>
 #include <math/MathTypes.h>
 #include <system/HandleWrapper.h>
+#include <bx/debug.h>
 
 union SDL_Event;
 
@@ -73,7 +75,8 @@ namespace hpl::window {
         HPL_RTTI_CLASS(NativeWindow, "{d17ea5c7-30f1-4d5d-b38e-1a7e88e137fc}")
     public:
 
-        ~NativeWindowWrapper() = default;
+        ~NativeWindowWrapper() {
+        }
         NativeWindowWrapper() = default;
         NativeWindowWrapper(internal::NativeWindowHandler&& handle)
             : m_impl(std::move(handle)) {
@@ -87,20 +90,24 @@ namespace hpl::window {
         void operator=(NativeWindowWrapper&& other) {
             m_impl = std::move(other.m_impl);
         }
-
+        
         void* NativeWindowHandle() {
+            BX_ASSERT(m_impl, "NativeWindowHandle is null")
             return internal::NativeWindowHandle(m_impl);
         }
 
         void* NativeDisplayHandle() {
+            BX_ASSERT(m_impl, "NativeDisplayHandle is null")
             return internal::NativeDisplayHandle(m_impl);
         }
 
         void SetWindowSize(cVector2l size) {
+            BX_ASSERT(m_impl, "NativeWindowHandle is null")
             internal::SetWindowSize(m_impl, size);
         }
 
         void SetWindowEventHandler(WindowEvent::Handler& handler) {
+            BX_ASSERT(m_impl, "NativeWindowHandle is null")
             internal::SetNativeDisplayHandle(m_impl, handler);
         }
 

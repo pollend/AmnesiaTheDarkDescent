@@ -1,36 +1,57 @@
 #pragma once
 
+#include <input/InputManager.h>
+#include <input/InputDevice.h>
+#include "system/HandleWrapper.h"
+#include <cstdint>
 #include <engine/RTTI.h>
 #include <math/MathTypes.h>
 #include <math/Uuid.h>
 #include <memory>
 
 #include <input/InputDevice.h>
+#include <string_view>
 #include <windowing/NativeWindow.h>
 
 namespace hpl::input {
 
-    enum class MouseButton { Unknown, Left, Middle, Right, WheelUp, WheelDown, Button6, Button7, Button8, Button9 };
+    enum class MouseButton : uint8_t { Left, Middle, Right, WheelUp, WheelDown, Button6, Button7, Button8, Button9, LastEnum };
+    namespace details {
+        static const std::string_view MouseButtonToString(MouseButton button);
+        static const MouseButton StringToMouseButton(const std::string_view& button);
+    }
 
     namespace internal {
-        class InputMouseHandle final : public HandleWrapper {};
+        class InternalInputMouseHandle final : public HandleSharedWrapper {};
 
-        InputMouseHandle Initialize();
-        cVector2l GetAbsPosition(InputMouseHandle& handle);
-        cVector2l GetRelPosition(InputMouseHandle& handle);
-		
-		window::internal::WindowInternalEvent::Handler& GetWindowEventHandle(InputMouseHandle& handle); // internal use only
+        InternalInputMouseHandle Initialize();
+        cVector2l GetAbsPosition(InternalInputMouseHandle& handle);
+        cVector2l GetRelPosition(InternalInputMouseHandle& handle);
+
+        bool IsButtonPressed(InternalInputMouseHandle& handle, MouseButton button);
+
+        window::internal::WindowInternalEvent::Handler& GetWindowEventHandle(InternalInputMouseHandle& handle); // internal use only
 
     } // namespace internal
 
-    class InputMouseDevice final {
-        HPL_RTTI_CLASS(InputMouseDevice, "{ac1b28f3-7a0f-4442-96bb-99b64adb5be6}")
+    // wrapper over the internal implementation
+    // this class is copyable and movable
+    class InputMouseDevice final : public InputDevice{
+        HPL_RTTI_IMPL_CLASS(InputDevice, InputMouseDevice, "{ac1b28f3-7a0f-4442-96bb-99b64adb5be6}")
     public:
-        InputMouseDevice(internal::InputMouseHandle&& handle)
-            : m_impl(std::move(handle)) {
+        InputMouseDevice(internal::InternalInputMouseHandle&& handle) :
+            m_impl(std::move(handle)) {
+        }
+        InputMouseDevice(const InputMouseDevice& other)
+            : m_impl(other.m_impl) {
         }
 
-        // static Implementation* CreateInputDevice();
+        void operator=(InputMouseDevice& other) {
+            m_impl = other.m_impl;
+        }
+        void operator=(InputMouseDevice&& other) {
+            m_impl = std::move(other.m_impl);
+        }
 
         ~InputMouseDevice() = default;
 
@@ -39,34 +60,25 @@ namespace hpl::input {
          * \param eMouseButton the button to check
          * \return
          */
-        bool ButtonIsDown(MouseButton) {
-            return false;
+        bool ButtonIsDown(MouseButton button) {
+            return internal::IsButtonPressed(m_impl, button);
         }
         /**
          * Get the absolute pos of the mouse.
          * \return
          */
         cVector2l GetAbsPosition() {
-            return cVector2l(0, 0);
+            return internal::GetAbsPosition(m_impl);
         }
         /**
          * Get the relative movement.
          * \return
          */
         cVector2l GetRelPosition() {
-            return cVector2l(0, 0);
+            return internal::GetRelPosition(m_impl);
         }
-        // /**
-        //  * \param eMouseButton The button to change to string.
-        //  * \return The name of the button as a string.
-        //  */
-        // tString ButtonToString(MouseButton);
-        // /**
-        //  * \param tString Name of the button
-        //  * \return enum of the button.
-        //  */
-        // MouseButton StringToButton(const tString&);
+
     private:
-        internal::InputMouseHandle m_impl;
+        internal::InternalInputMouseHandle m_impl;
     };
 } // namespace hpl::input

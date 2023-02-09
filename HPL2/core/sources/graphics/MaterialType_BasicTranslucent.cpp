@@ -208,7 +208,7 @@ namespace hpl
                             }
                         }
                         auto* renderer = mpGraphics->GetRenderer(eRenderer_Main);
-                        if( renderer && TypeInfo<cRendererDeferred>::isType(*renderer)) {
+                        if( renderer && TypeInfo<cRendererDeferred>::IsType(*renderer)) {
                             auto* deferredRenderer = static_cast<cRendererDeferred*>(renderer);
                             flags |= material::translucent::Translucent_Refraction;
                             if(auto* refractionImage = deferredRenderer->GetRefractionImage()) {

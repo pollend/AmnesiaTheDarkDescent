@@ -20,7 +20,7 @@ namespace hpl {
         void Shutdown();
         void Run();
     private:
-        hpl::window::NativeWindowWrapper m_window;
+        window::NativeWindowWrapper m_window;
         FileReader m_fileReader;
         FileWriter m_fileWriter;
         input::InputManager m_inputManager;

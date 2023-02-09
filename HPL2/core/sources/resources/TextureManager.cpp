@@ -679,7 +679,7 @@ namespace hpl {
 	void cTextureManager::Update(float afTimeStep)
 	{
 		for(auto& res: m_mapResources) {
-			if (hpl::TypeInfo<hpl::AnimatedImage>::isType(*res.second)) {
+			if (hpl::TypeInfo<hpl::AnimatedImage>::IsType(*res.second)) {
 				auto* animatedImage = static_cast<hpl::AnimatedImage*>(res.second);
 				animatedImage->Update(afTimeStep);
 			}

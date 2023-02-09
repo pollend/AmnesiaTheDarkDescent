@@ -7,10 +7,6 @@
 #include <windowing/NativeWindow.h>
 
 
-#include <platform/sdl2/SDL2InputMouseDevice.h>
-#include <platform/sdl2/SDL2NativeWindow.h>
-
-
 namespace hpl {
     Bootstrap::Bootstrap() {
     }
@@ -29,14 +25,14 @@ namespace hpl {
         
         Interface<FileReader>::Register(&m_fileReader);
         Interface<FileWriter>::Register(&m_fileWriter);
-        Interface<NativeWindowWrapper>::Register(&m_window);
+        Interface<window::NativeWindowWrapper>::Register(&m_window);
     }
 
     void Bootstrap::Shutdown() {
 
         Interface<FileReader>::UnRegister(&m_fileReader);
         Interface<FileWriter>::UnRegister(&m_fileWriter);
-        Interface<NativeWindowWrapper>::UnRegister(&m_window);
+        Interface<window::NativeWindowWrapper>::UnRegister(&m_window);
     }
 
     void Bootstrap::Run() {
