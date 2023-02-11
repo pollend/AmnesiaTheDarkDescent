@@ -2,7 +2,7 @@
 
 #include <input/InputManager.h>
 #include <input/InputDevice.h>
-#include "system/HandleWrapper.h"
+#include <system/HandleWrapper.h>
 #include <cstdint>
 #include <engine/RTTI.h>
 #include <math/MathTypes.h>
@@ -21,7 +21,7 @@ namespace hpl::input {
         static const MouseButton StringToMouseButton(const std::string_view& button);
     }
 
-    namespace internal {
+    namespace internal::mouse {
         class InternalInputMouseHandle final : public HandleSharedWrapper {};
 
         InternalInputMouseHandle Initialize();
@@ -31,7 +31,6 @@ namespace hpl::input {
         bool IsButtonPressed(InternalInputMouseHandle& handle, MouseButton button);
 
         window::internal::WindowInternalEvent::Handler& GetWindowEventHandle(InternalInputMouseHandle& handle); // internal use only
-
     } // namespace internal
 
     // wrapper over the internal implementation
@@ -39,7 +38,7 @@ namespace hpl::input {
     class InputMouseDevice final : public InputDevice{
         HPL_RTTI_IMPL_CLASS(InputDevice, InputMouseDevice, "{ac1b28f3-7a0f-4442-96bb-99b64adb5be6}")
     public:
-        InputMouseDevice(internal::InternalInputMouseHandle&& handle) :
+        InputMouseDevice(internal::mouse::InternalInputMouseHandle&& handle) :
             m_impl(std::move(handle)) {
         }
         InputMouseDevice(const InputMouseDevice& other)
@@ -61,24 +60,24 @@ namespace hpl::input {
          * \return
          */
         bool ButtonIsDown(MouseButton button) {
-            return internal::IsButtonPressed(m_impl, button);
+            return internal::mouse::IsButtonPressed(m_impl, button);
         }
         /**
          * Get the absolute pos of the mouse.
          * \return
          */
         cVector2l GetAbsPosition() {
-            return internal::GetAbsPosition(m_impl);
+            return internal::mouse::GetAbsPosition(m_impl);
         }
         /**
          * Get the relative movement.
          * \return
          */
         cVector2l GetRelPosition() {
-            return internal::GetRelPosition(m_impl);
+            return internal::mouse::GetRelPosition(m_impl);
         }
 
     private:
-        internal::InternalInputMouseHandle m_impl;
+        internal::mouse::InternalInputMouseHandle m_impl;
     };
 } // namespace hpl::input
