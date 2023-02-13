@@ -26,6 +26,9 @@ namespace hpl::math {
         constexpr bool operator==(const Crc32& other) const {
             return m_value == other.m_value;
         }
+        constexpr void operator=(const Crc32& other) {
+            m_value = other.m_value;
+        }
 
     private:
         uint32_t m_value;

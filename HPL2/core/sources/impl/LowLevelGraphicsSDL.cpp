@@ -18,6 +18,7 @@
  */
 
 #include "bgfx/bgfx.h"
+#include "engine/Interface.h"
 #include "impl/VertexBufferBGFX.h"
 #include "math/MathTypes.h"
 #ifdef WIN32
@@ -51,6 +52,7 @@
 
 #include <graphics/EntrySDL.h>
 #include "graphics/Bitmap.h"
+#include <windowing/NativeWindow.h>
 
 #ifdef __APPLE__
 #include <OpenGL/OpenGL.h>
@@ -91,7 +93,6 @@ namespace hpl {
 		mlVertexCount = 0;
 		mlIndexCount =0;
 		mlMultisampling =0;
-        mbGrab = false;
 
 		mbDoubleSidedStencilIsSet = false;
 
@@ -145,11 +146,8 @@ namespace hpl {
 		mGpuProgramFormat = aGpuProgramFormat;
 		if(mGpuProgramFormat == eGpuProgramFormat_LastEnum) mGpuProgramFormat = eGpuProgramFormat_GLSL;
 
-        if (mbGrab) {
             SetWindowGrab(true);
-        }
-
-
+     
 		// Log(" Init Glew...");
 		// if(glewInit() == GLEW_OK)
 		// {
@@ -313,45 +311,68 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::ShowCursor(bool abX)
 	{
-		if(abX)
-			SDL_ShowCursor(SDL_ENABLE);
-		else
-			SDL_ShowCursor(SDL_DISABLE);
+		if(auto* window = Interface<window::NativeWindowWrapper>::Get()) {
+			if(abX) {
+				window->ShowHardwareCursor();
+			} else {
+				window->HideHardwareCursor();
+			}
+		}
 	}
 
 	//-----------------------------------------------------------------------
 
     void cLowLevelGraphicsSDL::SetWindowGrab(bool abX)
     {
-        mbGrab = abX;
-        if (hpl::entry_sdl::getWindow()) {
-            SDL_SetWindowGrab(hpl::entry_sdl::getWindow(), abX ? SDL_TRUE : SDL_FALSE);
-        }
+        if(auto* window = Interface<window::NativeWindowWrapper>::Get()) {
+			if(abX) {
+				window->WindowGrabCursor();
+			} else {
+				window->WindowReleaseCursor();
+			}
+		}
     }
 
 	void cLowLevelGraphicsSDL::SetRelativeMouse(bool abX)
 	{
-		SDL_SetRelativeMouseMode(abX ? SDL_TRUE : SDL_FALSE);
+		if(auto* window = Interface<window::NativeWindowWrapper>::Get()) {
+			if(abX) {
+				window->ConstrainCursor();
+			} else {
+				window->UnconstrainCursor();
+			}
+		}
 	}
 
     void cLowLevelGraphicsSDL::SetWindowCaption(const tString &asName)
     {
-        SDL_SetWindowTitle(hpl::entry_sdl::getWindow(), asName.c_str());
+		if(auto* window = Interface<window::NativeWindowWrapper>::Get()) {
+			window->SetWindowTitle(asName);
+		}
     }
 
     bool cLowLevelGraphicsSDL::GetWindowMouseFocus()
     {
-		return (hpl::entry_sdl::getWindowFlags()  & SDL_WINDOW_MOUSE_FOCUS) > 0;
+		if(auto* window = Interface<window::NativeWindowWrapper>::Get()) {
+			return any(window->GetWindowStatus() & window::WindowStatus::WindowStatusInputMouseFocus);
+		}
+		return false;
     }
 
     bool cLowLevelGraphicsSDL::GetWindowInputFocus()
     {
-		return (hpl::entry_sdl::getWindowFlags()  & SDL_WINDOW_INPUT_FOCUS) > 0;
+		if(auto* window = Interface<window::NativeWindowWrapper>::Get()) {
+			return any(window->GetWindowStatus() & window::WindowStatus::WindowStatusInputFocus);
+		}
+		return false;
     }
 
     bool cLowLevelGraphicsSDL::GetWindowIsVisible()
     {
-		return (hpl::entry_sdl::getWindowFlags()  & SDL_WINDOW_SHOWN) > 0;
+		if(auto* window = Interface<window::NativeWindowWrapper>::Get()) {
+			return any(window->GetWindowStatus() & window::WindowStatus::WindowStatusVisible);
+		}
+		return false;
     }
 
 	//-----------------------------------------------------------------------
@@ -395,7 +416,7 @@ namespace hpl {
 	void cLowLevelGraphicsSDL::SetGammaCorrection(float afX)
 	{
 		mfGammaCorrection = afX;
-        SDL_SetWindowBrightness(hpl::entry_sdl::getWindow(), mfGammaCorrection);
+        // SDL_SetWindowBrightness(hpl::entry_sdl::getWindow(), mfGammaCorrection);
 	}
 
 	float cLowLevelGraphicsSDL::GetGammaCorrection()
@@ -407,13 +428,19 @@ namespace hpl {
 
 	cVector2f cLowLevelGraphicsSDL::GetScreenSizeFloat()
 	{
-		const auto size = hpl::entry_sdl::getSize();
-		return cVector2f(static_cast<float>(size.x), static_cast<float>(size.y));
+		if(auto* window = Interface<window::NativeWindowWrapper>::Get()) {
+			auto size = window->GetWindowSize();
+			return cVector2f(static_cast<float>(size.x), static_cast<float>(size.y));
+		}
+		return cVector2f(0,0);
 	}
 
 	const cVector2l cLowLevelGraphicsSDL::GetScreenSizeInt()
 	{
-		return hpl::entry_sdl::getSize();
+		if(auto* window = Interface<window::NativeWindowWrapper>::Get()) {
+			return window->GetWindowSize();
+		}
+		return cVector2l(0,0);
 	}
 
 	//-----------------------------------------------------------------------

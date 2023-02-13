@@ -323,24 +323,24 @@ namespace hpl
 
 	//-----------------------------------------------------------------------
 
-	bool cInput::CheckForInput()
-	{
-		//////////////////////
-		//Keyboard
-		for(int i=0; i< eKey_LastEnum; ++i)
-		{
-			if(mpKeyboard->KeyIsDown((eKey)i)) return true;
-		}
+	// bool cInput::CheckForInput()
+	// {
+	// 	//////////////////////
+	// 	//Keyboard
+	// 	for(int i=0; i< eKey_LastEnum; ++i)
+	// 	{
+	// 		if(mpKeyboard->KeyIsDown((eKey)i)) return true;
+	// 	}
 
-		//////////////////////
-		//Mouse
-		for(int i=0; i< eMouseButton_LastEnum; ++i)
-		{
-			if(mpMouse->ButtonIsDown((eMouseButton)i)) return true;
-		}
+	// 	//////////////////////
+	// 	//Mouse
+	// 	for(int i=0; i< eMouseButton_LastEnum; ++i)
+	// 	{
+	// 		if(mpMouse->ButtonIsDown((eMouseButton)i)) return true;
+	// 	}
 
-		return false;
-	}
+	// 	return false;
+	// }
 
 	//-----------------------------------------------------------------------
 
@@ -354,41 +354,6 @@ namespace hpl
 
 	}
 
-	//-----------------------------------------------------------------------
-
-	iSubAction* cInput::InputToSubAction()
-	{
-		iSubAction *pSubAction=NULL;
-
-		//////////////////////
-		//Keyboard
-		for(int i=0; i< eKey_LastEnum; ++i)
-		{
-			if(mpKeyboard->KeyIsDown((eKey)i))
-			{
-				pSubAction = hplNew( cActionKeyboard, (this,(eKey)i));
-				break;
-			}
-		}
-
-		//////////////////////
-		//Mouse
-		if(pSubAction==NULL)
-		{
-			for(int i=0; i< eMouseButton_LastEnum; ++i)
-			{
-				if(mpMouse->ButtonIsDown((eMouseButton)i))
-				{
-					pSubAction = hplNew( cActionMouseButton, (this,(eMouseButton)i));
-					break;
-				}
-			}
-		}
-
-		return pSubAction;
-	}
-
-	//-----------------------------------------------------------------------
 
 	void cInput::AppDeviceWasPlugged()
 	{

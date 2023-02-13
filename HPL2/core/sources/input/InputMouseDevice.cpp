@@ -1,26 +1,26 @@
 #include <input/InputMouseDevice.h>
 
 namespace hpl::input {
-    namespace details {
-        const std::string_view MouseButtonToString(MouseButton button) {
+    namespace detail {
+        std::string_view MouseButtonToString(eMouseButton button) {
             switch (button) {
-            case MouseButton::Left:
+            case eMouseButton_Left:
                 return "LeftMouse";
-            case MouseButton::Middle:
+            case eMouseButton_Middle:
                 return "MiddleMouse";
-            case MouseButton::Right:
+            case eMouseButton_Right:
                 return "RightMouse";
-            case MouseButton::WheelUp:
+            case eMouseButton_WheelUp:
                 return "WheelUp";
-            case MouseButton::WheelDown:
+            case eMouseButton_WheelDown:
                 return "WheelDown";
-            case MouseButton::Button6:
+            case eMouseButton_Button6:
                 return "Mouse6";
-            case MouseButton::Button7:
+            case eMouseButton_Button7:
                 return "Mouse7";
-            case MouseButton::Button8:
+            case eMouseButton_Button8:
                 return "Mouse8";
-            case MouseButton::Button9:
+            case eMouseButton_Button9:
                 return "Mouse9";
             default:
                 break;
@@ -28,35 +28,35 @@ namespace hpl::input {
             return "Unknown";
         }
 
-        const MouseButton StringToMouseButton(const std::string_view& button) {
+        eMouseButton StringToMouseButton(const std::string_view& button) {
             if (button == "LeftMouse") {
-                return MouseButton::Left;
+                return eMouseButton_Left;
             }
             if (button == "MiddleMouse") {
-                return MouseButton::Middle;
+                return eMouseButton_Middle;
             }
             if (button == "RightMouse") {
-                return MouseButton::Right;
+                return eMouseButton_Right;
             }
             if (button == "WheelUp") {
-                return MouseButton::WheelUp;
+                return eMouseButton_WheelUp;
             }
             if (button == "WheelDown") {
-                return MouseButton::WheelDown;
+                return eMouseButton_WheelDown;
             }
             if (button == "Mouse6") {
-                return MouseButton::Button6;
+                return eMouseButton_Button6;
             }
             if (button == "Mouse7") {
-                return MouseButton::Button7;
+                return eMouseButton_Button7;
             }
             if (button == "Mouse8") {
-                return MouseButton::Button8;
+                return eMouseButton_Button8;
             }
             if (button == "Mouse9") {
-                return MouseButton::Button9;
+                return eMouseButton_Button9;
             }
-            return MouseButton::LastEnum;
+            return eMouseButton_LastEnum;
         }
 
     } // namespace details

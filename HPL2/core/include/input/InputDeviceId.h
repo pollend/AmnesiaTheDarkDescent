@@ -15,8 +15,7 @@ namespace hpl::input {
         static constexpr size_t MaxNameLength = 95;
 
         constexpr InputDeviceID(const std::string_view name, uint8_t index = 0): 
-            m_index(index),
-            m_name(name) {
+            m_index(index) {
             math::Crc32 value;
             value.Update(name);
             value.Update(index);
@@ -27,9 +26,9 @@ namespace hpl::input {
             return m_id;
         }
 
-        const std::string_view GetName() const {
-            return m_name;
-        }
+        // const std::string_view GetName() const {
+        //     return m_name;
+        // }
 
         uint8_t GetIndex() const {
             return m_index;
@@ -40,7 +39,7 @@ namespace hpl::input {
         }
     private: 
         uint8_t m_index;
-        std::string m_name;
+        // std::string m_name;
         math::Crc32 m_id;
     };
 

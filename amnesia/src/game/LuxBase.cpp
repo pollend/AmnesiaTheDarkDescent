@@ -1271,6 +1271,17 @@ bool cLuxBase::InitGame()
 	else
 		mpDefaultFont = mpEngine->GetResources()->GetFontManager()->CreateFontData("font_default.fnt");
 
+	// TODO: need to look into implementing this to replace updater
+	// auto* eventLoop = Interface<IUpdateEventLoop>::Get();
+	// BX_ASSERT(eventLoop, "Update event loop is not initialized");
+
+	// eventLoop->CreateEventGroup("PreMenu");
+	// eventLoop->CreateEventGroup("MainMenu");
+	// eventLoop->CreateEventGroup("Inventory");
+	// eventLoop->CreateEventGroup("Journal");
+	// eventLoop->CreateEventGroup("Credits");
+	// eventLoop->CreateEventGroup("LoadScreen");
+
 	///////////////////////////////////////
 	// Create updater containers
 	mpEngine->GetUpdater()->AddContainer("PreMenu");

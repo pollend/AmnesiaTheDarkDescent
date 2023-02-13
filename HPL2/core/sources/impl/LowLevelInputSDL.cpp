@@ -33,6 +33,7 @@
 #include "SDL2/SDL.h"
 #include "SDL2/SDL_syswm.h"
 
+#include <SDL2/SDL_events.h>
 
 #if defined WIN32 && !SDL_VERSION_ATLEAST(2,0,0)
 #include <Windows.h>
@@ -71,6 +72,7 @@ namespace hpl {
 
 	void cLowLevelInputSDL::LockInput(bool abX)
 	{
+
 		mpLowLevelGraphics->SetWindowGrab(abX);
 	}
 
@@ -83,40 +85,44 @@ namespace hpl {
 
 	void cLowLevelInputSDL::BeginInputUpdate()
 	{
-
 		mlstEvents.clear();
-		hpl::entry_sdl::fetchEvents([&](SDL_Event &event) {
- 			// built-in SDL2 gamepad hotplug code
-            // this whole contract should be rewritten to allow clean adding/removing
-            // of controllers, instead of brute force rescanning
-            if (event.type==SDL_CONTROLLERDEVICEADDED)
-            {
-                // sdlEvent.cdevice.which is the device #
-                cEngine::SetDeviceWasPlugged();
-            } else if (event.type==SDL_CONTROLLERDEVICEREMOVED)
-            {
-                // sdlEvent.cdevice.which is the instance # (not device #).
-                // instance # increases as devices are plugged and unplugged.
-                cEngine::SetDeviceWasRemoved();
-            }
+		if(auto* window = Interface<window::NativeWindowWrapper>::Get()) {
+			window->fetchQueuedEvents([&](auto& internalEvent ) {
+				auto& sdlEvent = *internalEvent.m_sdlEvent;
+				// built-in SDL2 gamepad hotplug code
+				// this whole contract should be rewritten to allow clean adding/removing
+				// of controllers, instead of brute force rescanning
+				if (sdlEvent.type==SDL_CONTROLLERDEVICEADDED)
+				{
+					// sdlEvent.cdevice.which is the device #
+					cEngine::SetDeviceWasPlugged();
+				} else if (sdlEvent.type==SDL_CONTROLLERDEVICEREMOVED)
+				{
+					// sdlEvent.cdevice.which is the instance # (not device #).
+					// instance # increases as devices are plugged and unplugged.
+					cEngine::SetDeviceWasRemoved();
+				}
 
-#if defined (__APPLE__)
-            if (event.type==SDL_KEYDOWN)
-            {
-                if (event.key.keysym.sym == SDLK_q && sdlEvent.key.keysym.mod & KMOD_GUI) {
-                    mbQuitMessagePosted = true;
-                } else {
-                    mlstEvents.push_back(sdlEvent);
-                }
-            } else
-#endif
-            if (event.type==SDL_QUIT)
-            {
-                mbQuitMessagePosted = true;
-            } else {
-				mlstEvents.push_back(event);
-			}
-		});
+	#if defined (__APPLE__)
+				if (event.type==SDL_KEYDOWN)
+				{
+					if (event.key.keysym.sym == SDLK_q && sdlEvent.key.keysym.mod & KMOD_GUI) {
+						mbQuitMessagePosted = true;
+					} else {
+						mlstEvents.push_back(sdlEvent);
+					}
+				} else
+	#endif
+				if (sdlEvent.type==SDL_QUIT)
+				{
+					mbQuitMessagePosted = true;
+				} else {
+					mlstEvents.push_back(sdlEvent);
+				}
+
+			});
+			
+		};
 	}
 
 	//-----------------------------------------------------------------------

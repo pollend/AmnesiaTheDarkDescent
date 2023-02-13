@@ -28,6 +28,7 @@ namespace hpl
 
     RenderTarget::RenderTarget(RenderTarget&& target)
     {
+        Invalidate();
         m_images = std::move(target.m_images);
         m_buffer = target.m_buffer;
         target.m_buffer = BGFX_INVALID_HANDLE;
@@ -35,6 +36,7 @@ namespace hpl
 
     void RenderTarget::operator=(RenderTarget&& target)
     {
+        Invalidate();
         m_images = std::move(target.m_images);
         m_buffer = target.m_buffer;
         target.m_buffer = BGFX_INVALID_HANDLE;

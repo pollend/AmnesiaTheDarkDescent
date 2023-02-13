@@ -17,35 +17,36 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef HPL_ACTIONKEYBOARD_H
-#define HPL_ACTIONKEYBOARD_H
+#pragma once
 
-
-#include "input/InputTypes.h"
 #include "input/Action.h"
+#include "input/InputTypes.h"
+#include <input/InputKeyboardDevice.h>
 
 namespace hpl {
 
-	class cInput;
+    class cInput;
 
-	class cActionKeyboard : public iSubAction
-	{
-	public:
-		cActionKeyboard(cInput* apInput, eKey mKey);
+    class cActionKeyboard : public iSubAction {
+    public:
+        cActionKeyboard(cInput* apInput, eKey mKey);
 
-		bool IsTriggerd();
-		float GetValue();
+        bool IsTriggerd();
+        float GetValue();
 
-		tString GetInputName();
+        tString GetInputName();
 
-		tString GetInputType(){return "Keyboard";}
+        tString GetInputType() {
+            return "Keyboard";
+        }
 
-		eKey GetKey(){ return mKey;}
+        eKey GetKey() {
+            return mKey;
+        }
 
-	private:
-		eKey mKey;
-		cInput *mpInput;
-	};
+    private:
+        eKey mKey;
+        cInput* mpInput;
+    };
 
-};
-#endif // HPL_ACTIONKEYBOARD_H
+}; // namespace hpl

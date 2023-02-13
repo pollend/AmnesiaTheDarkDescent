@@ -1,37 +1,18 @@
-#include "math/MathTypes.h"
+
 #include <windowing/NativeWindow.h>
+#include <math/MathTypes.h>
 
-namespace hpl {
 
+namespace hpl::window {
 
-    // void* NativeWindowWrapper::NativeWindowHandle() {
-    //     return nullptr;
+    // WindowStatus operator&(WindowStatus lhs, WindowStatus rhs) {
+    //     return static_cast<WindowStatus>(static_cast<uint32_t>(lhs) & static_cast<uint32_t>(rhs));
     // }
-
-    // void* NativeWindowWrapper::NativeDisplayHandle() {
-    //     return nullptr;
+    // WindowStatus operator|(WindowStatus lhs, WindowStatus rhs) {
+    //     return static_cast<WindowStatus>(static_cast<uint32_t>(lhs) | static_cast<uint32_t>(rhs));
     // }
-
-    // void NativeWindowWrapper::SetWindowSize(cVector2l size) {
+    // bool any(WindowStatus lhs) {
+    //     return static_cast<uint32_t>(lhs) != 0;
     // }
-
-    // void NativeWindowWrapper::SetWindowInternalEventHandler(WindowInternalEvent::Handler& handler) {
-    //     m_impl->SetWindowInternalEventHandler(handler);
-    // }
-
-    // void NativeWindowWrapper::SetWindowEventHandler(WindowEvent::Handler& handler) {
-    //     m_impl->SetWindowEventHandler(handler);
-    // }
-
-    // void NativeWindowWrapper::Process() {
-    //     m_impl->Process();
-    // }
-
-    // WindowType NativeWindowWrapper::GetWindowType() {
-    //     return WindowType::Window;
-    // }
-
-    // cVector2l NativeWindowWrapper::GetWindowSize() {
-    //     return cVector2l(0, 0);
-    // }
+    
 } // namespace hpl

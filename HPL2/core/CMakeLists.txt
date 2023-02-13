@@ -28,6 +28,7 @@ file(GLOB common_sources RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
     sources/physics/*
     sources/resources/*
     sources/scene/*
+    source/windowing/*
     sources/sound/*
     sources/system/*
     source/platform/sdl2/*

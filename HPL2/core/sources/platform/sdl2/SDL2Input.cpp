@@ -16,6 +16,7 @@
 #include <SDL2/SDL_mouse.h>
 #include <mutex>
 #include <queue>
+#include <utility>
 #include <vector>
 
 namespace hpl::input::internal {
@@ -25,16 +26,23 @@ namespace hpl::input::internal {
             window::internal::WindowInternalEvent::Handler m_windowEventHandle;
             cVector2l m_mousePosition;
             cVector2l m_mouseRelPosition;
-            std::array<bool, static_cast<size_t>(MouseButton::LastEnum)> m_mouseButton;
+            std::array<bool, static_cast<size_t>(eMouseButton::eMouseButton_LastEnum)> m_mouseButton;
         };
 
+
+        bool IsButtonPressed(InternalInputMouseHandle& handle, eMouseButton button) {
+            auto* impl = static_cast<InternalInputMouseImpl*>(handle.Get());
+            BX_ASSERT(button < impl->m_mouseButton.size(), "Invalid mouse button");
+            return impl->m_mouseButton[static_cast<size_t>(button)];
+        }
+
         InternalInputMouseHandle Initialize() {
-            InternalInputMouseHandle handle =
-                InternalInputMouseHandle{ InternalInputMouseHandle::Ptr(new InternalInputMouseImpl(), [](void* ptr) {
-                    auto impl = static_cast<InternalInputMouseImpl*>(ptr);
-                    impl->m_windowEventHandle.Disconnect();
-                    delete impl;
-                }) };
+            auto ptr = InternalInputMouseHandle::Ptr(new InternalInputMouseImpl(), [](void* ptr) {
+                auto impl = static_cast<InternalInputMouseImpl*>(ptr);
+                impl->m_windowEventHandle.Disconnect();
+                delete impl;
+            });
+            InternalInputMouseHandle handle = InternalInputMouseHandle(std::move(ptr));
 
             auto* impl = static_cast<InternalInputMouseImpl*>(handle.Get());
             impl->m_windowEventHandle = window::internal::WindowInternalEvent::Handler([impl](hpl::window::InternalEvent& event) {
@@ -51,30 +59,30 @@ namespace hpl::input::internal {
                         const bool isPressed = sdlEvent.button.state == SDL_PRESSED;
                         switch (sdlEvent.button.button) {
                         case SDL_BUTTON_LEFT:
-                            impl->m_mouseButton[static_cast<size_t>(MouseButton::Left)] = isPressed;
+                            impl->m_mouseButton[static_cast<size_t>(eMouseButton_Left)] = isPressed;
                             break;
                         case SDL_BUTTON_MIDDLE:
-                            impl->m_mouseButton[static_cast<size_t>(MouseButton::Middle)] = isPressed;
+                            impl->m_mouseButton[static_cast<size_t>(eMouseButton_Middle)] = isPressed;
                             break;
                         case SDL_BUTTON_RIGHT:
-                            impl->m_mouseButton[static_cast<size_t>(MouseButton::Right)] = isPressed;
+                            impl->m_mouseButton[static_cast<size_t>(eMouseButton_Right)] = isPressed;
                             break;
                         case SDL_BUTTON_X1:
-                            impl->m_mouseButton[static_cast<size_t>(MouseButton::Button6)] = isPressed;
+                            impl->m_mouseButton[static_cast<size_t>(eMouseButton_Button6)] = isPressed;
                             break;
                         case SDL_BUTTON_X2:
-                            impl->m_mouseButton[static_cast<size_t>(MouseButton::Button7)] = isPressed;
+                            impl->m_mouseButton[static_cast<size_t>(eMouseButton_Button7)] = isPressed;
                             break;
                         }
                         break;
                     }
                 case SDL_EventType::SDL_MOUSEWHEEL:
                     if (sdlEvent.wheel.y > 0) {
-                        impl->m_mouseButton[static_cast<size_t>(MouseButton::WheelUp)] = true;
-                        impl->m_mouseButton[static_cast<size_t>(MouseButton::WheelDown)] = false;
+                        impl->m_mouseButton[static_cast<size_t>(eMouseButton_WheelUp)] = true;
+                        impl->m_mouseButton[static_cast<size_t>(eMouseButton_WheelDown)] = false;
                     } else if (sdlEvent.wheel.y < 0) {
-                        impl->m_mouseButton[static_cast<size_t>(MouseButton::WheelUp)] = false;
-                        impl->m_mouseButton[static_cast<size_t>(MouseButton::WheelDown)] = true;
+                        impl->m_mouseButton[static_cast<size_t>(eMouseButton_WheelUp)] = false;
+                        impl->m_mouseButton[static_cast<size_t>(eMouseButton_WheelDown)] = true;
                     }
                     break;
                 default:
@@ -106,298 +114,310 @@ namespace hpl::input::internal {
             IUpdateEventLoop::UpdateEvent::Handler m_postUpdate;
             IUpdateEventLoop::UpdateEvent::Handler m_preUpdate;
             std::mutex m_mutex;
-            absl::InlinedVector<char, 256> m_queuedCharacter;
-            absl::InlinedVector<char, 256> m_stagingCharacter;
+            absl::InlinedVector<TextPress, 256> m_queuedCharacter;
+            absl::InlinedVector<TextPress, 256> m_stagingCharacter;
             absl::InlinedVector<KeyPress, 256> m_queuedPresses;
             absl::InlinedVector<KeyPress, 256> m_stagingPresses;
-            std::array<bool, static_cast<size_t>(Key::LastEnum)> m_keyPressState = {{0}};
+            std::array<bool, static_cast<size_t>(eKey::eKey_LastEnum)> m_keyPressState = { { 0 } };
         };
 
-        static Key SDLToKey(uint32_t key) {
+        static eKey SDLToKey(uint32_t key) {
             switch (key) {
             case SDLK_BACKSPACE:
-                return Key::KeyBackSpace;
+                return eKey_BackSpace;
             case SDLK_TAB:
-                return Key::KeyTab;
+                return eKey_Tab;
             case SDLK_CLEAR:
-                return Key::KeyClear;
+                return eKey_Clear;
             case SDLK_RETURN:
-                return Key::KeyReturn;
+                return eKey_Return;
             case SDLK_PAUSE:
-                return Key::KeyPause;
+                return eKey_Pause;
             case SDLK_ESCAPE:
-                return Key::KeyEscape;
+                return eKey_Escape;
             case SDLK_SPACE:
-                return Key::KeySpace;
+                return eKey_Space;
             case SDLK_EXCLAIM:
-                return Key::KeyExclaim;
+                return eKey_Exclaim;
             case SDLK_QUOTEDBL:
-                return Key::KeyQuoteDouble;
+                return eKey_QuoteDouble;
             case SDLK_HASH:
-                return Key::KeyHash;
+                return eKey_Hash;
             case SDLK_DOLLAR:
-                return Key::KeyDollar;
+                return eKey_Dollar;
             case SDLK_AMPERSAND:
-                return Key::KeyAmpersand;
+                return eKey_Ampersand;
             case SDLK_QUOTE:
-                return Key::KeyQuote;
+                return eKey_Quote;
             case SDLK_LEFTPAREN:
-                return Key::KeyLeftParen;
+                return eKey_LeftParen;
             case SDLK_RIGHTPAREN:
-                return Key::KeyRightParen;
+                return eKey_RightParen;
             case SDLK_ASTERISK:
-                return Key::KeyAsterisk;
+                return eKey_Asterisk;
             case SDLK_PLUS:
-                return Key::KeyPlus;
+                return eKey_Plus;
             case SDLK_COMMA:
-                return Key::KeyComma;
+                return eKey_Comma;
             case SDLK_MINUS:
-                return Key::KeyMinus;
+                return eKey_Minus;
             case SDLK_PERIOD:
-                return Key::KeyPeriod;
+                return eKey_Period;
             case SDLK_SLASH:
-                return Key::KeySlash;
+                return eKey_Slash;
             case SDLK_0:
-                return Key::Key0;
+                return eKey_0;
             case SDLK_1:
-                return Key::Key1;
+                return eKey_1;
             case SDLK_2:
-                return Key::Key2;
+                return eKey_2;
             case SDLK_3:
-                return Key::Key3;
+                return eKey_3;
             case SDLK_4:
-                return Key::Key4;
+                return eKey_4;
             case SDLK_5:
-                return Key::Key5;
+                return eKey_5;
             case SDLK_6:
-                return Key::Key6;
+                return eKey_6;
             case SDLK_7:
-                return Key::Key7;
+                return eKey_7;
             case SDLK_8:
-                return Key::Key8;
+                return eKey_8;
             case SDLK_9:
-                return Key::Key9;
+                return eKey_9;
             case SDLK_COLON:
-                return Key::KeyColon;
+                return eKey_Colon;
             case SDLK_SEMICOLON:
-                return Key::KeySemiColon;
+                return eKey_SemiColon;
             case SDLK_LESS:
-                return Key::KeyLess;
+                return eKey_Less;
             case SDLK_EQUALS:
-                return Key::KeyEquals;
+                return eKey_Equals;
             case SDLK_GREATER:
-                return Key::KeyGreater;
+                return eKey_Greater;
             case SDLK_QUESTION:
-                return Key::KeyQuestion;
+                return eKey_Question;
             case SDLK_AT:
-                return Key::KeyAt;
+                return eKey_At;
             case SDLK_LEFTBRACKET:
-                return Key::KeyLeftBracket;
+                return eKey_LeftBracket;
             case SDLK_BACKSLASH:
-                return Key::KeyBackSlash;
+                return eKey_BackSlash;
             case SDLK_RIGHTBRACKET:
-                return Key::KeyRightBracket;
+                return eKey_RightBracket;
             case SDLK_CARET:
-                return Key::KeyCaret;
+                return eKey_Caret;
             case SDLK_UNDERSCORE:
-                return Key::KeyUnderscore;
+                return eKey_Underscore;
             case SDLK_BACKQUOTE:
-                return Key::KeyBackSlash;
+                return eKey_BackSlash;
             case SDLK_a:
-                return Key::KeyA;
+                return eKey_A;
             case SDLK_b:
-                return Key::KeyB;
+                return eKey_B;
             case SDLK_c:
-                return Key::KeyC;
+                return eKey_C;
             case SDLK_d:
-                return Key::KeyD;
+                return eKey_D;
             case SDLK_e:
-                return Key::KeyE;
+                return eKey_E;
             case SDLK_f:
-                return Key::KeyF;
+                return eKey_F;
             case SDLK_g:
-                return Key::KeyG;
+                return eKey_G;
             case SDLK_h:
-                return Key::KeyH;
+                return eKey_H;
             case SDLK_i:
-                return Key::KeyI;
+                return eKey_I;
             case SDLK_j:
-                return Key::KeyJ;
+                return eKey_J;
             case SDLK_k:
-                return Key::KeyK;
+                return eKey_K;
             case SDLK_l:
-                return Key::KeyL;
+                return eKey_L;
             case SDLK_m:
-                return Key::KeyM;
+                return eKey_M;
             case SDLK_n:
-                return Key::KeyN;
+                return eKey_N;
             case SDLK_o:
-                return Key::KeyO;
+                return eKey_O;
             case SDLK_p:
-                return Key::KeyP;
+                return eKey_P;
             case SDLK_q:
-                return Key::KeyQ;
+                return eKey_Q;
             case SDLK_r:
-                return Key::KeyR;
+                return eKey_R;
             case SDLK_s:
-                return Key::KeyS;
+                return eKey_S;
             case SDLK_t:
-                return Key::KeyT;
+                return eKey_T;
             case SDLK_u:
-                return Key::KeyU;
+                return eKey_U;
             case SDLK_v:
-                return Key::KeyV;
+                return eKey_V;
             case SDLK_w:
-                return Key::KeyW;
+                return eKey_W;
             case SDLK_x:
-                return Key::KeyX;
+                return eKey_X;
             case SDLK_y:
-                return Key::KeyY;
+                return eKey_Y;
             case SDLK_z:
-                return Key::KeyZ;
+                return eKey_Z;
             case SDLK_DELETE:
-                return Key::KeyDelete;
+                return eKey_Delete;
             case SDLK_KP_0:
-                return Key::KeyKP_0;
+                return eKey_KP_0;
             case SDLK_KP_1:
-                return Key::KeyKP_1;
+                return eKey_KP_1;
             case SDLK_KP_2:
-                return Key::KeyKP_2;
+                return eKey_KP_2;
             case SDLK_KP_3:
-                return Key::KeyKP_3;
+                return eKey_KP_3;
             case SDLK_KP_4:
-                return Key::KeyKP_4;
+                return eKey_KP_4;
             case SDLK_KP_5:
-                return Key::KeyKP_5;
+                return eKey_KP_5;
             case SDLK_KP_6:
-                return Key::KeyKP_6;
+                return eKey_KP_6;
             case SDLK_KP_7:
-                return Key::KeyKP_7;
+                return eKey_KP_7;
             case SDLK_KP_8:
-                return Key::KeyKP_8;
+                return eKey_KP_8;
             case SDLK_KP_9:
-                return Key::KeyKP_9;
+                return eKey_KP_9;
             case SDLK_KP_PERIOD:
-                return Key::KeyKP_Period;
+                return eKey_KP_Period;
             case SDLK_KP_DIVIDE:
-                return Key::KeyKP_Divide;
+                return eKey_KP_Divide;
             case SDLK_KP_MULTIPLY:
-                return Key::KeyKP_Multiply;
+                return eKey_KP_Multiply;
             case SDLK_KP_MINUS:
-                return Key::KeyKP_Minus;
+                return eKey_KP_Minus;
             case SDLK_KP_PLUS:
-                return Key::KeyKP_Plus;
+                return eKey_KP_Plus;
             case SDLK_KP_ENTER:
-                return Key::KeyKP_Enter;
+                return eKey_KP_Enter;
             case SDLK_KP_EQUALS:
-                return Key::KeyKP_Equals;
+                return eKey_KP_Equals;
             case SDLK_UP:
-                return Key::KeyUp;
+                return eKey_Up;
             case SDLK_DOWN:
-                return Key::KeyDown;
+                return eKey_Down;
             case SDLK_RIGHT:
-                return Key::KeyRight;
+                return eKey_Right;
             case SDLK_LEFT:
-                return Key::KeyLeft;
+                return eKey_Left;
             case SDLK_INSERT:
-                return Key::KeyInsert;
+                return eKey_Insert;
             case SDLK_HOME:
-                return Key::KeyHome;
+                return eKey_Home;
             case SDLK_END:
-                return Key::KeyEnd;
+                return eKey_End;
             case SDLK_PAGEUP:
-                return Key::KeyPageUp;
+                return eKey_PageUp;
             case SDLK_PAGEDOWN:
-                return Key::KeyPageDown;
+                return eKey_PageDown;
             case SDLK_F1:
-                return Key::KeyF1;
+                return eKey_F1;
             case SDLK_F2:
-                return Key::KeyF2;
+                return eKey_F2;
             case SDLK_F3:
-                return Key::KeyF3;
+                return eKey_F3;
             case SDLK_F4:
-                return Key::KeyF4;
+                return eKey_F4;
             case SDLK_F5:
-                return Key::KeyF5;
+                return eKey_F5;
             case SDLK_F6:
-                return Key::KeyF6;
+                return eKey_F6;
             case SDLK_F7:
-                return Key::KeyF7;
+                return eKey_F7;
             case SDLK_F8:
-                return Key::KeyF8;
+                return eKey_F8;
             case SDLK_F9:
-                return Key::KeyF9;
+                return eKey_F9;
             case SDLK_F10:
-                return Key::KeyF10;
+                return eKey_F10;
             case SDLK_F11:
-                return Key::KeyF11;
+                return eKey_F11;
             case SDLK_F12:
-                return Key::KeyF12;
+                return eKey_F12;
             case SDLK_F13:
-                return Key::KeyF13;
+                return eKey_F13;
             case SDLK_F14:
-                return Key::KeyF14;
+                return eKey_F14;
             case SDLK_F15:
-                return Key::KeyF15;
+                return eKey_F15;
             case SDLK_NUMLOCKCLEAR:
-                return Key::KeyNumLock;
+                return eKey_NumLock;
             case SDLK_SCROLLLOCK:
-                return Key::KeyScrollLock;
+                return eKey_ScrollLock;
             case SDLK_LGUI:
-                return Key::KeyLeftSuper;
+                return eKey_LeftSuper;
             case SDLK_RGUI:
-                return Key::KeyRightSuper;
+                return eKey_RightSuper;
             case SDLK_PRINTSCREEN:
-                return Key::KeyPrint;
+                return eKey_Print;
             case SDLK_CAPSLOCK:
-                return Key::KeyCapsLock;
+                return eKey_CapsLock;
             case SDLK_RSHIFT:
-                return Key::KeyRightShift;
+                return eKey_RightShift;
             case SDLK_LSHIFT:
-                return Key::KeyLeftShift;
+                return eKey_LeftShift;
             case SDLK_RCTRL:
-                return Key::KeyRightCtrl;
+                return eKey_RightCtrl;
             case SDLK_LCTRL:
-                return Key::KeyLeftCtrl;
+                return eKey_LeftCtrl;
             case SDLK_RALT:
-                return Key::KeyRightAlt;
+                return eKey_RightAlt;
             case SDLK_LALT:
-                return Key::KeyLeftAlt;
+                return eKey_LeftAlt;
             case SDLK_MODE:
-                return Key::KeyMode;
+                return eKey_Mode;
             case SDLK_HELP:
-                return Key::KeyHelp;
+                return eKey_Help;
             case SDLK_SYSREQ:
-                return Key::KeySysReq;
+                return eKey_SysReq;
             case SDLK_MENU:
-                return Key::KeyMenu;
+                return eKey_Menu;
             case SDLK_POWER:
-                return Key::KeyPower;
+                return eKey_Power;
             }
-            return Key::KeyEmpty;
+            return eKey_LastEnum;
         };
+        const std::span<TextPress> Characters(const InternalInputKeyboardHandle& handle) {
+            auto* impl = static_cast<InternalInputKeyboardImpl*>(handle.Get());
+            return impl->m_stagingCharacter;
+        }
+        const std::span<KeyPress> KeyPresses(const InternalInputKeyboardHandle& handle) {
+            auto* impl = static_cast<InternalInputKeyboardImpl*>(handle.Get());
+            return impl->m_stagingPresses;
+        }
+        bool IsKeyPressed(const InternalInputKeyboardHandle& handle, eKey key) {
+            auto* impl = static_cast<InternalInputKeyboardImpl*>(handle.Get());
+            return impl->m_keyPressState[static_cast<size_t>(key)];
+        }
 
         InternalInputKeyboardHandle Initialize() {
-            InternalInputKeyboardHandle handle =
-                InternalInputKeyboardHandle{ InternalInputKeyboardHandle::Ptr(new InternalInputKeyboardImpl(), [](void* ptr) {
-                    auto impl = static_cast<InternalInputKeyboardImpl*>(ptr);
-                    impl->m_windowEventHandle.Disconnect();
-                    delete impl;
-                }) };
+            auto ptr = InternalInputKeyboardHandle::Ptr(new InternalInputKeyboardImpl(), [](void* ptr) {
+                auto impl = static_cast<InternalInputKeyboardImpl*>(ptr);
+                impl->m_windowEventHandle.Disconnect();
+                delete impl;
+            });
+            InternalInputKeyboardHandle handle = InternalInputKeyboardHandle(std::move(ptr));
             auto* impl = static_cast<InternalInputKeyboardImpl*>(handle.Get());
 
-            impl->m_postUpdate = IUpdateEventLoop::UpdateEvent::Handler([impl]() {
+            impl->m_postUpdate = IUpdateEventLoop::UpdateEvent::Handler([impl](float afx) {
                 // we've processed the presses, so clear them
                 impl->m_stagingPresses.clear();
                 impl->m_stagingCharacter.clear();
             });
-            impl->m_preUpdate = IUpdateEventLoop::UpdateEvent::Handler([impl]() {
+            impl->m_preUpdate = IUpdateEventLoop::UpdateEvent::Handler([impl](float afx) {
                 // move queued presses to staging for processing by the main thread
                 std::lock_guard<std::mutex> lock(impl->m_mutex);
-                for(auto itKey = impl->m_queuedPresses.rbegin(); itKey != impl->m_queuedPresses.rend(); ++itKey) {
+                for (auto itKey = impl->m_queuedPresses.rbegin(); itKey != impl->m_queuedPresses.rend(); ++itKey) {
                     impl->m_stagingPresses.push_back(*itKey);
                 }
-                for(auto itKey = impl->m_queuedCharacter.rbegin(); itKey != impl->m_queuedCharacter.rend(); ++itKey) {
+                for (auto itKey = impl->m_queuedCharacter.rbegin(); itKey != impl->m_queuedCharacter.rend(); ++itKey) {
                     impl->m_stagingCharacter.push_back(*itKey);
                 }
                 impl->m_queuedCharacter.clear();
@@ -405,36 +425,39 @@ namespace hpl::input::internal {
             });
 
             if (auto updateLoop = Interface<IUpdateEventLoop>::Get()) {
-                updateLoop->Subscribe(BrodcastEvent::PostUpdate, impl->m_postUpdate);
-                updateLoop->Subscribe(BrodcastEvent::PreUpdate, impl->m_preUpdate);
+                updateLoop->Subscribe(BroadcastEvent::PostUpdate, impl->m_postUpdate);
+                updateLoop->Subscribe(BroadcastEvent::PreUpdate, impl->m_preUpdate);
             } else {
                 BX_ASSERT(false, "No update loop found")
             }
 
             impl->m_windowEventHandle = window::internal::WindowInternalEvent::Handler([impl](hpl::window::InternalEvent& event) {
                 auto& sdlEvent = *event.m_sdlEvent;
-                switch(sdlEvent.type) {
-                    case SDL_PRESSED:
-                    case SDL_RELEASED: {
-                        const bool isPressed = sdlEvent.type == SDL_PRESSED;
-                        Modifier modifier = 
-                            ((sdlEvent.key.keysym.mod & KMOD_SHIFT) ? Modifier::Shift : Modifier::None) |
-                            ((sdlEvent.key.keysym.mod & KMOD_CTRL) ? Modifier::Ctrl : Modifier::None) |
-                            ((sdlEvent.key.keysym.mod & KMOD_ALT) ? Modifier::Alt : Modifier::None);
+                switch (sdlEvent.type) {
+                case SDL_KEYDOWN:
+                case SDL_KEYUP:
+                    {
+                        const bool isPressed = sdlEvent.key.state == SDL_PRESSED;
+                        eKeyModifier modifier = static_cast<eKeyModifier>(((sdlEvent.key.keysym.mod & KMOD_SHIFT) ? eKeyModifier_Shift : eKeyModifier_None) |
+                            ((sdlEvent.key.keysym.mod & KMOD_CTRL) ? eKeyModifier_Ctrl : eKeyModifier_None) |
+                            ((sdlEvent.key.keysym.mod & KMOD_ALT) ? eKeyModifier_Alt : eKeyModifier_None));
                         auto key = SDLToKey(sdlEvent.key.keysym.sym);
-                        if(key != Key::KeyEmpty) {
+                        if (key != eKey_LastEnum) {
                             std::lock_guard<std::mutex> lock(impl->m_mutex);
-                            impl->m_queuedPresses.push_back({ key, modifier, isPressed});
+                            impl->m_queuedPresses.push_back({ key, modifier, isPressed });
                             impl->m_keyPressState[static_cast<size_t>(key)] = isPressed;
                         }
                         break;
-                    } 
-                    case SDL_TEXTINPUT: {
+                    }
+                case SDL_TEXTINPUT:
+                    {
                         std::lock_guard<std::mutex> lock(impl->m_mutex);
-                        impl->m_queuedCharacter.push_back({ sdlEvent.text.text[0] });
+                        eKeyModifier modifier = static_cast<eKeyModifier>(((sdlEvent.key.keysym.mod & KMOD_SHIFT) ? eKeyModifier_Shift : eKeyModifier_None) |
+                            ((sdlEvent.key.keysym.mod & KMOD_CTRL) ? eKeyModifier_Ctrl : eKeyModifier_None) |
+                            ((sdlEvent.key.keysym.mod & KMOD_ALT) ? eKeyModifier_Alt : eKeyModifier_None));
+                        impl->m_queuedCharacter.push_back({sdlEvent.text.text[0],modifier  });
                         break;
                     }
-                    
                 }
             });
             return handle;

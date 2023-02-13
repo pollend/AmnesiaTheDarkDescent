@@ -142,24 +142,17 @@ namespace hpl {
 		 */
 		void DestroyAction(cAction *apAction);
 
-		/**
-		 * Checks if any input is given.
-		 * \return true if any input is given, else false.
-		 */
-		bool CheckForInput();
+		// /**
+		//  * Checks if any input is given.
+		//  * \return true if any input is given, else false.
+		//  */
+		// bool CheckForInput();
 
 
 		/**
 		 * This resets all actions to the current way that
 		 */
 		void ResetActionsToCurrentState();
-
-		/**
-		 * Creates an action from the latest input made. Any action with the same name is destroyed.
-		 * \param &asName Name of action be be created.
-		 * \return NULL if no input was given.
-		 */
-		iSubAction* InputToSubAction();
 
         bool isQuitMessagePosted();
         void resetQuitMessagePosted();

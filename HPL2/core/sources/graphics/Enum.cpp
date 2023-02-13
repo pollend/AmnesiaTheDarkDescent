@@ -10,13 +10,19 @@ namespace hpl {
     static const uint32_t BlendDstShift = 4;
     static const uint32_t BlendOpShift = 0;
 
-    
+    bool any(ClearOp write) {
+        return static_cast<uint32_t>(write) != 0;
+    }
+
+    bool any(Write write) {
+        return static_cast<uint32_t>(write) != 0;
+    }
     Write operator|(Write lhs, Write rhs) {
         return static_cast<Write>(static_cast<uint32_t>(lhs) | static_cast<uint32_t>(rhs));
     } 
 
-    bool operator&(Write lhs, Write rhs) {
-        return static_cast<uint32_t>(lhs) & static_cast<uint32_t>(rhs);
+    Write operator&(Write lhs, Write rhs) {
+        return static_cast<Write>(static_cast<uint32_t>(lhs) & static_cast<uint32_t>(rhs));
     }
 
 
@@ -24,8 +30,8 @@ namespace hpl {
         return static_cast<ClearOp>(static_cast<uint32_t>(lhs) | static_cast<uint32_t>(rhs));
     }
 
-    bool operator&(ClearOp lhs, ClearOp rhs) {
-        return static_cast<uint32_t>(lhs) & static_cast<uint32_t>(rhs);
+    ClearOp operator&(ClearOp lhs, ClearOp rhs) {
+        return static_cast<ClearOp>(static_cast<uint32_t>(lhs) & static_cast<uint32_t>(rhs));
     }
 
 

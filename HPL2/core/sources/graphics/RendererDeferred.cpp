@@ -20,6 +20,9 @@
 #include "graphics/RendererDeferred.h"
 
 #include "bgfx/bgfx.h"
+#include "engine/Event.h"
+#include "engine/Interface.h"
+#include "windowing/NativeWindow.h"
 #include <bx/debug.h>
 
 #include <cstdint>
@@ -154,7 +157,6 @@ namespace hpl {
 	{
 		cVector2l vRelfectionSize = cVector2l(mvScreenSize.x/mlReflectionSizeDiv, mvScreenSize.y/mlReflectionSizeDiv);
 
-	
 		// uniforms
 		m_u_param = bgfx::createUniform("u_param", bgfx::UniformType::Vec4);
 		m_u_boxInvViewModelRotation  = bgfx::createUniform("u_boxInvViewModelRotation", bgfx::UniformType::Mat4);
@@ -177,89 +179,24 @@ namespace hpl {
 		m_s_shadowMap = bgfx::createUniform("s_shadowMap", bgfx::UniformType::Sampler);
 		m_s_goboMap = bgfx::createUniform("s_goboMap", bgfx::UniformType::Sampler);
 		m_s_shadowOffsetMap = bgfx::createUniform("s_shadowOffsetMap", bgfx::UniformType::Sampler);
-		// m_s_diffuseMapOut = bgfx::createUniform("s_diffuseMapOut", bgfx::UniformType::Sampler);
 
-		// initialize frame buffers;
-		{
-			auto colorImage = [&] {
-				auto desc = ImageDescriptor::CreateTexture2D(mvScreenSize.x, mvScreenSize.y, false, bgfx::TextureFormat::Enum::RGBA8);
-				desc.m_configuration.m_rt = RTType::RT_Write;
-				auto image = std::make_shared<Image>();
-				image->Initialize(desc);
-				return image;
-			};
-
-			auto positionImage = [&] {
-				auto desc = ImageDescriptor::CreateTexture2D(mvScreenSize.x, mvScreenSize.y, false, bgfx::TextureFormat::Enum::RGBA32F);
-				desc.m_configuration.m_rt = RTType::RT_Write;
-				auto image = std::make_shared<Image>();
-				image->Initialize(desc);
-				return image;
-			};
-
-			auto normalImage = [&] {
-				auto desc = ImageDescriptor::CreateTexture2D(mvScreenSize.x, mvScreenSize.y, false, bgfx::TextureFormat::Enum::RGBA16F);
-				desc.m_configuration.m_rt = RTType::RT_Write;
-				auto image = std::make_shared<Image>();
-				image->Initialize(desc);
-				return image;
-			};
-
-			auto depthImage = [&] {
-				auto desc = ImageDescriptor::CreateTexture2D(mvScreenSize.x, mvScreenSize.y, false, bgfx::TextureFormat::Enum::D24S8);
-				desc.m_configuration.m_rt = RTType::RT_Write;
-                desc.m_configuration.m_minFilter = FilterType::Point;
-                desc.m_configuration.m_magFilter = FilterType::Point;
-                desc.m_configuration.m_mipFilter = FilterType::Point;
-                desc.m_configuration.m_comparsion = DepthTest::LessEqual;
-				auto image = std::make_shared<Image>();
-				image->Initialize(desc);
-				return image;
-			};
-
-			m_gBufferColor = 
-				{ colorImage(),colorImage()};
-			m_gBufferNormalImage = 
-				{ normalImage(), normalImage()};
-			m_gBufferPositionImage = 
-				{ positionImage(),positionImage()};
-			m_gBufferSpecular = 
-				{ colorImage(),colorImage()};
-			m_outputImage = {
-				colorImage(), colorImage()
-			};
-			m_refractionImage = [&] {
-				auto desc = ImageDescriptor::CreateTexture2D(mvScreenSize.x, mvScreenSize.y, false, bgfx::TextureFormat::Enum::RGBA8);
-				desc.m_configuration.m_computeWrite = true;
-				desc.m_configuration.m_rt = RTType::RT_Write;
-				auto image = std::make_shared<Image>();
-				image->Initialize(desc);
-				return image;
-			}();
-
-			m_gBufferDepthStencil = { depthImage(),depthImage()};
-			{
-				std::array<std::shared_ptr<Image>, 5> images = {m_gBufferColor[0], m_gBufferNormalImage[0], m_gBufferPositionImage[0], m_gBufferSpecular[0], m_gBufferDepthStencil[0]};
-				std::array<std::shared_ptr<Image>, 5> reflectionImages = {m_gBufferColor[1], m_gBufferNormalImage[1], m_gBufferPositionImage[1], m_gBufferSpecular[1], m_gBufferDepthStencil[1]};
-				m_gBuffer_full = {RenderTarget(std::span(images)), RenderTarget(std::span(reflectionImages)) };
+		RebuildBuffers();
+		m_windowEvent = window::WindowEvent::Handler([&](window::WindowEventPayload& payload) {
+			switch(payload.m_type) {
+				case hpl::window::WindowEventType::ResizeWindowEvent: {
+					mvScreenSize = cVector2l(payload.payload.m_resizeWindow.m_width, payload.payload.m_resizeWindow.m_height);
+					RebuildBuffers();
+					break;
+				}
+				default:
+					break;
 			}
-			{
-				std::array<std::shared_ptr<Image>, 2> images = {m_gBufferColor[0], m_gBufferDepthStencil[0]};
-				std::array<std::shared_ptr<Image>, 2> reflectionImages = {m_gBufferColor[1], m_gBufferDepthStencil[1]};
-				m_gBuffer_colorAndDepth = {RenderTarget(std::span(images)), RenderTarget(std::span(reflectionImages))};
-			}
-			{
-				std::array<std::shared_ptr<Image>, 2> images = {m_outputImage[0], m_gBufferDepthStencil[0] };
-				std::array<std::shared_ptr<Image>, 2> reflectionImages = {m_outputImage[1], m_gBufferDepthStencil[0]};
-				m_output_target = {RenderTarget(std::span(images)), RenderTarget(std::span(reflectionImages))};
-			}
-
-			m_gBuffer_color = {RenderTarget(m_gBufferColor[0]), RenderTarget(m_gBufferColor[1])};
-			m_gBuffer_depth = {RenderTarget(m_gBufferDepthStencil[0]), RenderTarget(m_gBufferDepthStencil[1])};
-			m_gBuffer_normals = {RenderTarget(m_gBufferNormalImage[0]), RenderTarget(m_gBufferNormalImage[1])};
-			m_gBuffer_linearDepth = {RenderTarget(m_gBufferPositionImage[0]), RenderTarget(m_gBufferPositionImage[1])};
-
+			
+		}, ConnectionType::QueueConnection);
+		if(auto* window = Interface<window::NativeWindowWrapper>::Get()) {
+			window->SetWindowEventHandler(m_windowEvent);
 		}
+
 
 		// ////////////////////////////////////
 		// //Create Accumulation texture
@@ -415,6 +352,87 @@ namespace hpl {
 		mlMaxBatchIndices = mpShapeSphere[eDeferredShapeQuality_Low]->GetIndexNum() * mlMaxBatchLights;
 
 		return true;
+	}
+
+
+	void cRendererDeferred::RebuildBuffers() {
+		auto colorImage = [&] {
+			auto desc = ImageDescriptor::CreateTexture2D(mvScreenSize.x, mvScreenSize.y, false, bgfx::TextureFormat::Enum::RGBA8);
+			desc.m_configuration.m_rt = RTType::RT_Write;
+			auto image = std::make_shared<Image>();
+			image->Initialize(desc);
+			return image;
+		};
+
+		auto positionImage = [&] {
+			auto desc = ImageDescriptor::CreateTexture2D(mvScreenSize.x, mvScreenSize.y, false, bgfx::TextureFormat::Enum::RGBA32F);
+			desc.m_configuration.m_rt = RTType::RT_Write;
+			auto image = std::make_shared<Image>();
+			image->Initialize(desc);
+			return image;
+		};
+
+		auto normalImage = [&] {
+			auto desc = ImageDescriptor::CreateTexture2D(mvScreenSize.x, mvScreenSize.y, false, bgfx::TextureFormat::Enum::RGBA16F);
+			desc.m_configuration.m_rt = RTType::RT_Write;
+			auto image = std::make_shared<Image>();
+			image->Initialize(desc);
+			return image;
+		};
+
+		auto depthImage = [&] {
+			auto desc = ImageDescriptor::CreateTexture2D(mvScreenSize.x, mvScreenSize.y, false, bgfx::TextureFormat::Enum::D24S8);
+			desc.m_configuration.m_rt = RTType::RT_Write;
+			desc.m_configuration.m_minFilter = FilterType::Point;
+			desc.m_configuration.m_magFilter = FilterType::Point;
+			desc.m_configuration.m_mipFilter = FilterType::Point;
+			desc.m_configuration.m_comparsion = DepthTest::LessEqual;
+			auto image = std::make_shared<Image>();
+			image->Initialize(desc);
+			return image;
+		};
+
+		m_gBufferColor = 
+			{ colorImage(),colorImage()};
+		m_gBufferNormalImage = 
+			{ normalImage(), normalImage()};
+		m_gBufferPositionImage = 
+			{ positionImage(),positionImage()};
+		m_gBufferSpecular = 
+			{ colorImage(),colorImage()};
+		m_outputImage = {
+			colorImage(), colorImage()
+		};
+		m_refractionImage = [&] {
+			auto desc = ImageDescriptor::CreateTexture2D(mvScreenSize.x, mvScreenSize.y, false, bgfx::TextureFormat::Enum::RGBA8);
+			desc.m_configuration.m_computeWrite = true;
+			desc.m_configuration.m_rt = RTType::RT_Write;
+			auto image = std::make_shared<Image>();
+			image->Initialize(desc);
+			return image;
+		}();
+
+		m_gBufferDepthStencil = { depthImage(),depthImage()};
+		{
+			std::array<std::shared_ptr<Image>, 5> images = {m_gBufferColor[0], m_gBufferNormalImage[0], m_gBufferPositionImage[0], m_gBufferSpecular[0], m_gBufferDepthStencil[0]};
+			std::array<std::shared_ptr<Image>, 5> reflectionImages = {m_gBufferColor[1], m_gBufferNormalImage[1], m_gBufferPositionImage[1], m_gBufferSpecular[1], m_gBufferDepthStencil[1]};
+			m_gBuffer_full = {RenderTarget(std::span(images)), RenderTarget(std::span(reflectionImages)) };
+		}
+		{
+			std::array<std::shared_ptr<Image>, 2> images = {m_gBufferColor[0], m_gBufferDepthStencil[0]};
+			std::array<std::shared_ptr<Image>, 2> reflectionImages = {m_gBufferColor[1], m_gBufferDepthStencil[1]};
+			m_gBuffer_colorAndDepth = {RenderTarget(std::span(images)), RenderTarget(std::span(reflectionImages))};
+		}
+		{
+			std::array<std::shared_ptr<Image>, 2> images = {m_outputImage[0], m_gBufferDepthStencil[0] };
+			std::array<std::shared_ptr<Image>, 2> reflectionImages = {m_outputImage[1], m_gBufferDepthStencil[0]};
+			m_output_target = {RenderTarget(std::span(images)), RenderTarget(std::span(reflectionImages))};
+		}
+
+		m_gBuffer_color = {RenderTarget(m_gBufferColor[0]), RenderTarget(m_gBufferColor[1])};
+		m_gBuffer_depth = {RenderTarget(m_gBufferDepthStencil[0]), RenderTarget(m_gBufferDepthStencil[1])};
+		m_gBuffer_normals = {RenderTarget(m_gBufferNormalImage[0]), RenderTarget(m_gBufferNormalImage[1])};
+		m_gBuffer_linearDepth = {RenderTarget(m_gBufferPositionImage[0]), RenderTarget(m_gBufferPositionImage[1])};
 	}
 
 	//-----------------------------------------------------------------------
@@ -913,6 +931,9 @@ namespace hpl {
 		// keep around for the moment ...
 		BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, apRenderTarget, abSendFrameBufferToPostEffects, apCallbackList);
 		
+		// process window effects mainly resizing buffers
+		m_windowEvent.Process();
+
 		mpCurrentRenderList->Setup(mfCurrentFrameTime,mpCurrentFrustum);
 		
 		//Setup far plane coordinates

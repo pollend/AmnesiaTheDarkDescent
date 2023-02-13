@@ -19,6 +19,7 @@
 #pragma once
 
 #include "engine/RTTI.h"
+#include "windowing/NativeWindow.h"
 #include <bgfx/bgfx.h>
 #include <graphics/GraphicsContext.h>
 #include <graphics/Image.h>
@@ -181,6 +182,8 @@ namespace hpl {
 		RenderTarget& resolveRenderTarget(std::array<RenderTarget, 2>& rt);
 		std::shared_ptr<Image>& resolveRenderImage(std::array<std::shared_ptr<Image>, 2>& img);
 
+		void RebuildBuffers();
+
 		// takes the contents of the gbuffer and renders the lights
 		void RenderLightPass(GraphicsContext& context, RenderTarget& rt);  
 		void RenderDiffusePass(GraphicsContext& context, RenderTarget& rt);
@@ -309,6 +312,8 @@ namespace hpl {
 
 		static bool mbEdgeSmoothLoaded;
 		static bool mbEnableParallax;
+
+		window::WindowEvent::Handler m_windowEvent;
 
 	};
 };

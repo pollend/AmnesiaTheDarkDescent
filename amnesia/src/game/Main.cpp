@@ -18,6 +18,7 @@
  */
 
 #include "LuxBase.h"
+#include "bx/thread.h"
 #include "graphics/EntrySDL.h"
 
 //---------------------------------------
@@ -26,7 +27,7 @@
 #include <windows.h>
 #endif
 
-
+#include <system/Bootstrap.h>
 
 //---------------------------------------
 
@@ -36,14 +37,9 @@ cLuxBase* gpBase = NULL;
 
 int hplMain(const tString &asCommandline)
 {
-	//////////////////////////
-	// Init BlackBox
-//	#ifdef WIN32
-//		HINSTANCE hBlackBoxLib = LoadLibrary( "BlackBox.dll" );
-//	#endif
-
-
-	hpl::entry_sdl::setThreadHandler([&]() {
+	Bootstrap bootstrap;
+	bootstrap.Initialize();
+	bootstrap.Run([&](bx::Thread* self) {
 		//////////////////////////
 		// Game creation and exit
 		gpBase = hplNew( cLuxBase, ());
@@ -65,22 +61,10 @@ int hplMain(const tString &asCommandline)
 		}
 		return 0;
 	});
-
-	hpl::entry_sdl::Configuration config = {};
-	config.m_name = "Amnesia";
-	config.m_width = 1024;
-	config.m_height = 768;
-	hpl::entry_sdl::run(config);
-
+	bootstrap.Shutdown();
 	hplDelete(gpBase);
 
 	cMemoryManager::LogResults();
-
-	//////////////////////////
-	// Exit BlackBox
-//	#ifdef WIN32
-//			if(hBlackBoxLib) FreeLibrary(hBlackBoxLib);
-//	#endif
 
 	return 0;
 }

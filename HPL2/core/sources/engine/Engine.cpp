@@ -448,7 +448,7 @@ namespace hpl {
 		{
 			//////////////////////////
 			//Check if application is in focus.
-			if(mbWaitIfAppOutOfFocus) CheckIfAppInFocusElseWait();
+			// if(mbWaitIfAppOutOfFocus) CheckIfAppInFocusElseWait();
 
 			//////////////////////////
 			//Check if paused

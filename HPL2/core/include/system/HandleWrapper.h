@@ -2,6 +2,32 @@
 
 #include <memory>
 
+#define HPL_HANDLER_IMPL(NAME) \
+        public: \
+            using Ptr = std::unique_ptr<void, void(*)(void*)>; \
+            NAME(): m_ptr(nullptr, [](void*){}) { \
+            } \
+            NAME(Ptr&& ptr) \
+                : m_ptr(std::move(ptr)) { \
+            } \
+            NAME(NAME&& other):  \
+                m_ptr(std::move(other.m_ptr)) { \
+            } \
+            NAME(const NAME& other) = delete; \
+            void operator=(NAME& other) = delete; \
+            void operator=(NAME&& other) { \
+                m_ptr = std::move(other.m_ptr); \
+            } \
+            operator bool() const { \
+                return m_ptr != nullptr; \
+            } \
+            void* Get() const { \
+                return m_ptr.get(); \
+            } \
+        private: \
+            Ptr m_ptr;
+
+
 namespace hpl {
 
     class HandleWrapper {
@@ -12,6 +38,7 @@ namespace hpl {
             HandleWrapper(Ptr&& ptr)
                 : m_ptr(std::move(ptr)) {
             }
+
             HandleWrapper(HandleWrapper&& other): 
                 m_ptr(std::move(other.m_ptr)) {
             }
@@ -24,7 +51,7 @@ namespace hpl {
                 return m_ptr != nullptr;
             }
             
-            void* Get() {
+            void* Get() const {
                 return m_ptr.get();
             }
         private:
@@ -56,7 +83,7 @@ namespace hpl {
                 return m_ptr != nullptr;
             }
 
-            void* Get() {
+            void* Get() const {
                 return m_ptr.get();
             }
         private:

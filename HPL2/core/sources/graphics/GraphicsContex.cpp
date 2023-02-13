@@ -143,15 +143,15 @@ namespace hpl
     uint64_t convertBGFXClearOp(const ClearOp& op)
     {
         uint64_t result = 0;
-        if (op & ClearOp::Color)
+        if (any(op & ClearOp::Color))
         {
             result |= BGFX_CLEAR_COLOR;
         }
-        if (op & ClearOp::Depth)
+        if (any(op & ClearOp::Depth))
         {
             result |= BGFX_CLEAR_DEPTH;
         }
-        if (op & ClearOp::Stencil)
+        if (any(op & ClearOp::Stencil))
         {
             result |= BGFX_CLEAR_STENCIL;
         }
@@ -163,11 +163,11 @@ namespace hpl
         auto& layout = request.m_layout;
         auto& program = request.m_program;
 
-        return (((program.m_configuration.m_write & Write::Depth) > 0)  ? BGFX_STATE_WRITE_Z : 0) |
-            (((program.m_configuration.m_write & Write::R) > 0) ? BGFX_STATE_WRITE_R : 0) |
-            (((program.m_configuration.m_write & Write::G) > 0) ? BGFX_STATE_WRITE_G : 0) |
-            (((program.m_configuration.m_write & Write::B) > 0) ? BGFX_STATE_WRITE_B : 0) |
-            (((program.m_configuration.m_write & Write::A) > 0) ? BGFX_STATE_WRITE_A : 0) |
+        return (any(program.m_configuration.m_write & Write::Depth)  ? BGFX_STATE_WRITE_Z : 0) |
+            (any(program.m_configuration.m_write & Write::R) ? BGFX_STATE_WRITE_R : 0) |
+            (any(program.m_configuration.m_write & Write::G) ? BGFX_STATE_WRITE_G : 0) |
+            (any(program.m_configuration.m_write & Write::B) ? BGFX_STATE_WRITE_B : 0) |
+            (any(program.m_configuration.m_write & Write::A) ? BGFX_STATE_WRITE_A : 0) |
             ([&]() -> uint64_t {
                 switch(program.m_configuration.m_depthTest) {
                     case DepthTest::Always:
@@ -395,6 +395,10 @@ namespace hpl
         if (bgfx::isValid(m_s_diffuseMap))
         {
             bgfx::destroy(m_s_diffuseMap);
+        }
+
+        if(bgfx::isValid(m_u_normalMtx)) {
+            bgfx::destroy(m_u_normalMtx);
         }
     }
 
