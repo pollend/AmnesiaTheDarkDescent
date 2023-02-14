@@ -19,181 +19,156 @@
 
 #include "impl/LowLevelInputSDL.h"
 
-#include "impl/MouseSDL.h"
-#include "impl/KeyboardSDL.h"
+#include "engine/Interface.h"
 #include "impl/GamepadSDL.h"
 #include "impl/GamepadSDL2.h"
+#include "impl/KeyboardSDL.h"
+#include "impl/MouseSDL.h"
 
-#include "system/LowLevelSystem.h"
 #include "graphics/LowLevelGraphics.h"
+#include "system/LowLevelSystem.h"
 
 #include "engine/Engine.h"
-#include <graphics/EntrySDL.h>
 
 #include "SDL2/SDL.h"
 #include "SDL2/SDL_syswm.h"
 
 #include <SDL2/SDL_events.h>
-
-#if defined WIN32 && !SDL_VERSION_ATLEAST(2,0,0)
-#include <Windows.h>
-#include <Dbt.h>
-#endif
+#include <windowing/NativeWindow.h>
 
 namespace hpl {
 
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////
+    // CONSTRUCTORS
+    //////////////////////////////////////////////////////////////////////////
 
-	//-----------------------------------------------------------------------
+    //-----------------------------------------------------------------------
 
-	cLowLevelInputSDL::cLowLevelInputSDL(iLowLevelGraphics *apLowLevelGraphics)
-        : mpLowLevelGraphics(apLowLevelGraphics), mbQuitMessagePosted(false)
-	{
-		LockInput(true);
-		RelativeMouse(false);
+    cLowLevelInputSDL::cLowLevelInputSDL(iLowLevelGraphics* apLowLevelGraphics)
+        : mpLowLevelGraphics(apLowLevelGraphics)
+        , mbQuitMessagePosted(false) {
+        LockInput(true);
+        RelativeMouse(false);
         SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER);
-	}
+    }
 
-	//-----------------------------------------------------------------------
+    //-----------------------------------------------------------------------
 
-	cLowLevelInputSDL::~cLowLevelInputSDL()
-	{
-	}
+    cLowLevelInputSDL::~cLowLevelInputSDL() {
+    }
 
-	//-----------------------------------------------------------------------
+    //-----------------------------------------------------------------------
 
-	//////////////////////////////////////////////////////////////////////////
-	// PUBLIC METHOD
-	//////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////
+    // PUBLIC METHOD
+    //////////////////////////////////////////////////////////////////////////
 
-	//-----------------------------------------------------------------------
+    //-----------------------------------------------------------------------
 
-	void cLowLevelInputSDL::LockInput(bool abX)
-	{
+    void cLowLevelInputSDL::LockInput(bool abX) {
+        mpLowLevelGraphics->SetWindowGrab(abX);
+    }
 
-		mpLowLevelGraphics->SetWindowGrab(abX);
-	}
+    void cLowLevelInputSDL::RelativeMouse(bool abX) {
+        mpLowLevelGraphics->SetRelativeMouse(abX);
+    }
 
-	void cLowLevelInputSDL::RelativeMouse(bool abX)
-	{
-		mpLowLevelGraphics->SetRelativeMouse(abX);
-	}
+    //-----------------------------------------------------------------------
 
-	//-----------------------------------------------------------------------
+    void cLowLevelInputSDL::BeginInputUpdate() {
+        mlstEvents.clear();
+        if (auto* window = Interface<window::NativeWindowWrapper>::Get()) {
+            window->fetchQueuedEvents([&](auto& internalEvent) {
+                auto& sdlEvent = *internalEvent.m_sdlEvent;
+                // built-in SDL2 gamepad hotplug code
+                // this whole contract should be rewritten to allow clean adding/removing
+                // of controllers, instead of brute force rescanning
+                if (sdlEvent.type == SDL_CONTROLLERDEVICEADDED) {
+                    // sdlEvent.cdevice.which is the device #
+                    cEngine::SetDeviceWasPlugged();
+                } else if (sdlEvent.type == SDL_CONTROLLERDEVICEREMOVED) {
+                    // sdlEvent.cdevice.which is the instance # (not device #).
+                    // instance # increases as devices are plugged and unplugged.
+                    cEngine::SetDeviceWasRemoved();
+                }
 
-	void cLowLevelInputSDL::BeginInputUpdate()
-	{
-		mlstEvents.clear();
-		if(auto* window = Interface<window::NativeWindowWrapper>::Get()) {
-			window->fetchQueuedEvents([&](auto& internalEvent ) {
-				auto& sdlEvent = *internalEvent.m_sdlEvent;
-				// built-in SDL2 gamepad hotplug code
-				// this whole contract should be rewritten to allow clean adding/removing
-				// of controllers, instead of brute force rescanning
-				if (sdlEvent.type==SDL_CONTROLLERDEVICEADDED)
-				{
-					// sdlEvent.cdevice.which is the device #
-					cEngine::SetDeviceWasPlugged();
-				} else if (sdlEvent.type==SDL_CONTROLLERDEVICEREMOVED)
-				{
-					// sdlEvent.cdevice.which is the instance # (not device #).
-					// instance # increases as devices are plugged and unplugged.
-					cEngine::SetDeviceWasRemoved();
-				}
-
-	#if defined (__APPLE__)
-				if (event.type==SDL_KEYDOWN)
-				{
-					if (event.key.keysym.sym == SDLK_q && sdlEvent.key.keysym.mod & KMOD_GUI) {
-						mbQuitMessagePosted = true;
-					} else {
-						mlstEvents.push_back(sdlEvent);
-					}
-				} else
-	#endif
-				if (sdlEvent.type==SDL_QUIT)
-				{
-					mbQuitMessagePosted = true;
-				} else {
-					mlstEvents.push_back(sdlEvent);
-				}
-
-			});
-			
-		};
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cLowLevelInputSDL::EndInputUpdate()
-	{
-
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cLowLevelInputSDL::InitGamepadSupport()
-	{
-#if !SDL_VERSION_ATLEAST(2, 0, 0)
-		SDL_InitSubSystem(SDL_INIT_JOYSTICK);
+#if defined(__APPLE__)
+                if (event.type == SDL_KEYDOWN) {
+                    if (event.key.keysym.sym == SDLK_q && sdlEvent.key.keysym.mod & KMOD_GUI) {
+                        mbQuitMessagePosted = true;
+                    } else {
+                        mlstEvents.push_back(sdlEvent);
+                    }
+                } else
 #endif
-	}
+                    if (sdlEvent.type == SDL_QUIT) {
+                    mbQuitMessagePosted = true;
+                } else {
+                    mlstEvents.push_back(sdlEvent);
+                }
+            });
+        };
+    }
 
-	void cLowLevelInputSDL::DropGamepadSupport()
-	{
+    //-----------------------------------------------------------------------
+
+    void cLowLevelInputSDL::EndInputUpdate() {
+    }
+
+    //-----------------------------------------------------------------------
+
+    void cLowLevelInputSDL::InitGamepadSupport() {
 #if !SDL_VERSION_ATLEAST(2, 0, 0)
-		SDL_QuitSubSystem(SDL_INIT_JOYSTICK);
+        SDL_InitSubSystem(SDL_INIT_JOYSTICK);
 #endif
-	}
+    }
 
-	int cLowLevelInputSDL::GetPluggedGamepadNum()
-	{
+    void cLowLevelInputSDL::DropGamepadSupport() {
+#if !SDL_VERSION_ATLEAST(2, 0, 0)
+        SDL_QuitSubSystem(SDL_INIT_JOYSTICK);
+#endif
+    }
+
+    int cLowLevelInputSDL::GetPluggedGamepadNum() {
 #if USE_XINPUT
-		return cGamepadXInput::GetNumConnected();
+        return cGamepadXInput::GetNumConnected();
 #else
-		return SDL_NumJoysticks();
+        return SDL_NumJoysticks();
 #endif
-	}
+    }
 
-	//-----------------------------------------------------------------------
+    //-----------------------------------------------------------------------
 
-	iMouse* cLowLevelInputSDL::CreateMouse()
-	{
-		return hplNew( cMouseSDL,(this));
-	}
+    iMouse* cLowLevelInputSDL::CreateMouse() {
+        return hplNew(cMouseSDL, (this));
+    }
 
-	//-----------------------------------------------------------------------
+    //-----------------------------------------------------------------------
 
-	iKeyboard* cLowLevelInputSDL::CreateKeyboard()
-	{
-		return hplNew( cKeyboardSDL,(this) );
-	}
+    iKeyboard* cLowLevelInputSDL::CreateKeyboard() {
+        return hplNew(cKeyboardSDL, (this));
+    }
 
-	//-----------------------------------------------------------------------
+    //-----------------------------------------------------------------------
 
-	iGamepad* cLowLevelInputSDL::CreateGamepad(int alIndex)
-	{
+    iGamepad* cLowLevelInputSDL::CreateGamepad(int alIndex) {
 #if USE_SDL2
-		return hplNew( cGamepadSDL2, (this, alIndex) );
+        return hplNew(cGamepadSDL2, (this, alIndex));
 #else
-		return hplNew( cGamepadSDL, (this, alIndex) );
+        return hplNew(cGamepadSDL, (this, alIndex));
 #endif
-	}
+    }
 
-	//-----------------------------------------------------------------------
+    //-----------------------------------------------------------------------
 
-    bool cLowLevelInputSDL::isQuitMessagePosted()
-    {
+    bool cLowLevelInputSDL::isQuitMessagePosted() {
         return mbQuitMessagePosted;
     }
 
-    void cLowLevelInputSDL::resetQuitMessagePosted()
-    {
+    void cLowLevelInputSDL::resetQuitMessagePosted() {
         mbQuitMessagePosted = false;
     }
 
-	//-----------------------------------------------------------------------
+    //-----------------------------------------------------------------------
 
-}
+} // namespace hpl

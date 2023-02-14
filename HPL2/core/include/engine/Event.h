@@ -165,6 +165,7 @@ namespace hpl
     template <typename... Params>
     EventHandler<Params...>::EventHandler(const EventHandler& rhs)
         : m_callback(rhs.m_callback)
+        , m_connectionType(rhs.m_connectionType)
         , m_event(rhs.m_event)
     {
         // Copy the callback and event, then perform a Connect to the event
@@ -184,6 +185,7 @@ namespace hpl
     EventHandler<Params...>::EventHandler(EventHandler&& rhs)
         : m_event(rhs.m_event)
         , m_index(rhs.m_index)
+        , m_connectionType(rhs.m_connectionType)
         , m_callback(std::move(rhs.m_callback))
     {
         // Moves all of the data of the r-value handle, fixup the event to point to them, and revert the r-value handle to it's original construction state
@@ -209,6 +211,7 @@ namespace hpl
         {
             Disconnect();
             m_callback = rhs.m_callback;
+            m_connectionType = rhs.m_connectionType;
             m_event = rhs.m_event;
             // Copy the callback and event, then perform a Connect to the event
             if (m_callback && m_event)
@@ -235,6 +238,7 @@ namespace hpl
             // Moves all of the data of the r-value handle, fixup the event to point to them, and revert the r-value handle to it's original construction state
             m_event = rhs.m_event;
             m_index = rhs.m_index;
+            m_connectionType = rhs.m_connectionType;
             m_callback = std::move(rhs.m_callback);
 
             rhs.m_event = nullptr;
@@ -284,7 +288,7 @@ namespace hpl
     void EventHandler<Params...>::Process()
     {
         std::lock_guard<std::mutex> lock(m_mutex);
-        while(m_queuedEvents.empty()) {
+        while(!m_queuedEvents.empty()) {
             auto& data = m_queuedEvents.front();
             std::apply(m_callback, data);
             m_queuedEvents.pop();

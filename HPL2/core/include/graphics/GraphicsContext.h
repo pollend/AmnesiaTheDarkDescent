@@ -6,6 +6,7 @@
 #include "graphics/Image.h"
 #include "graphics/RenderTarget.h"
 #include "math/MathTypes.h"
+#include "windowing/NativeWindow.h"
 #include <absl/strings/string_view.h>
 #include <bgfx/bgfx.h>
 #include <cstdint>
@@ -149,6 +150,8 @@ namespace hpl
         bgfx::ProgramHandle m_copyProgram = BGFX_INVALID_HANDLE;
         bgfx::UniformHandle m_s_diffuseMap = BGFX_INVALID_HANDLE;
         bgfx::UniformHandle m_u_normalMtx = BGFX_INVALID_HANDLE;
+        window::WindowEvent::Handler m_windowEvent;
+
     };
 
 

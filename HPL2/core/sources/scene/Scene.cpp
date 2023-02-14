@@ -19,6 +19,7 @@
 
 #include "scene/Scene.h"
 
+#include "engine/Interface.h"
 #include "graphics/GraphicsContext.h"
 #include "graphics/RenderTarget.h"
 #include "scene/Viewport.h"
@@ -260,7 +261,7 @@ namespace hpl {
 				START_TIMING(RenderPostEffects)
 				auto& viewport = pViewPort->GetRenderViewport();
 				RenderTarget emptyRenderTarget{};
-				pPostEffectComposite->Draw(context,
+				pPostEffectComposite->Draw(context, afFrameTime,
 					*pRenderer->GetOutputImage(),
 					viewport.GetRenderTarget() ? *viewport.GetRenderTarget() : emptyRenderTarget);
 
@@ -269,6 +270,11 @@ namespace hpl {
 				auto& viewport = pViewPort->GetRenderViewport();
 				cVector2l vRenderTargetSize = viewport.GetSize();
 				RenderTarget emptyRenderTarget{};
+				if(vRenderTargetSize.y == -1 || vRenderTargetSize.x == -1) {
+					if(auto* window = Interface<window::NativeWindowWrapper>::Get()) {
+						vRenderTargetSize = window->GetWindowSize();
+					}
+				}
 				cRect2l rect = cRect2l(0, 0, vRenderTargetSize.x, vRenderTargetSize.y);
 				context.CopyTextureToFrameBuffer(*pRenderer->GetOutputImage(), rect, viewport.GetRenderTarget() ? *viewport.GetRenderTarget() : emptyRenderTarget);
 			}

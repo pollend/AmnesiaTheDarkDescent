@@ -19,7 +19,7 @@ namespace hpl {
     Bootstrap::~Bootstrap() {
     }
 
-     int32_t Bootstrap::BootstrapThreadHandler(bx::Thread* self, void* _userData) {
+    int32_t Bootstrap::BootstrapThreadHandler(bx::Thread* self, void* _userData) {
         auto bootstrap = reinterpret_cast<Bootstrap*>(_userData);
         
         bgfx::Init init;
@@ -29,10 +29,11 @@ namespace hpl {
 		#else
 		    init.type = bgfx::RendererType::OpenGL;
         #endif
-		init.platformData.nwh  = bootstrap->m_window.NativeWindowHandle();
+		auto windowSize = bootstrap->m_window.GetWindowSize();
+        init.platformData.nwh  = bootstrap->m_window.NativeWindowHandle();
 		init.platformData.ndt  = bootstrap->m_window.NativeDisplayHandle();
-		init.resolution.width  = 1280;
-		init.resolution.height = 800;
+		init.resolution.width  = windowSize.x;
+		init.resolution.height = windowSize.y;
 		init.resolution.reset  = BGFX_RESET_VSYNC;
         bgfx::init(init);
         return bootstrap->m_handler(self);

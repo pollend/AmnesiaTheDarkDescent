@@ -97,8 +97,8 @@ namespace hpl::window::internal {
 
         auto impl = static_cast<NativeWindowImpl*>(handle.Get());
         impl->m_owningThread = std::this_thread::get_id();
-        impl->m_window = SDL_CreateWindow("HPL2", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 600, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
-        impl->m_windowSize = cVector2l(800, 600);
+        impl->m_window = SDL_CreateWindow("HPL2", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, SDL_WINDOW_SHOWN);
+        impl->m_windowSize = cVector2l(1280, 720);
         
         return handle;
     }

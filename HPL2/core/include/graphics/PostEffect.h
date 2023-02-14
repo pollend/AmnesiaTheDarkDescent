@@ -80,6 +80,8 @@ namespace hpl {
 
 		virtual iPostEffect *CreatePostEffect(iPostEffectParams *apParams)=0;
 
+		virtual void onScreenSizeChange(const cVector2l& size) {}
+
 	protected:
 		cGraphics *mpGraphics;
 		cResources *mpResources;
@@ -111,6 +113,8 @@ namespace hpl {
 
 		void SetParams(iPostEffectParams *apSrcParams);
 		void GetParams(iPostEffectParams *apDestParams);
+
+		virtual void OnViewportChanged(const cVector2l& avSize) {}
 
 		virtual void Reset(){}
 

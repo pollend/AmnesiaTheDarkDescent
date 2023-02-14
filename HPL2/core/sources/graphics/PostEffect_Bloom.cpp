@@ -68,10 +68,15 @@ namespace hpl
         : iPostEffect(apGraphics, apResources, apType)
     {
         cVector2l vSize = mpLowLevelGraphics->GetScreenSizeInt();
+        OnViewportChanged(vSize);
+        
+        mpBloomType = static_cast<cPostEffectType_Bloom*>(mpType);
+    }
 
+    void cPostEffect_Bloom::OnViewportChanged(const cVector2l& avSize) {
         auto ColorImage = [&]
         {
-            auto desc = ImageDescriptor::CreateTexture2D(vSize.x / 4.0f, vSize.y/ 4.0f , false, bgfx::TextureFormat::Enum::RGBA8);
+            auto desc = ImageDescriptor::CreateTexture2D(avSize.x / 4.0f, avSize.y/ 4.0f , false, bgfx::TextureFormat::Enum::RGBA8);
             desc.m_configuration.m_rt = RTType::RT_Write;
             auto image = std::make_shared<Image>();
             image->Initialize(desc);
@@ -81,8 +86,8 @@ namespace hpl
         m_blurTarget[0] = RenderTarget(ColorImage());
         m_blurTarget[1] = RenderTarget(ColorImage());
 
-        mpBloomType = static_cast<cPostEffectType_Bloom*>(mpType);
     }
+
 
     cPostEffect_Bloom::~cPostEffect_Bloom()
     {

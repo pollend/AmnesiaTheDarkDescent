@@ -53,6 +53,7 @@ namespace hpl {
 		virtual ~cPostEffectType_Bloom();
 
 		iPostEffect *CreatePostEffect(iPostEffectParams *apParams);
+		
 
 	private:
 		bgfx::ProgramHandle m_blurProgram;
@@ -72,6 +73,8 @@ namespace hpl {
 	public:
 		cPostEffect_Bloom(cGraphics *apGraphics,cResources *apResources, iPostEffectType *apType);
 		~cPostEffect_Bloom();
+
+		virtual void OnViewportChanged(const cVector2l& avSize) override;
 
 	private:
 		virtual void OnSetParams() override;

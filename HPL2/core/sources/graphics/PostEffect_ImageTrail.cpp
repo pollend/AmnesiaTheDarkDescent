@@ -38,34 +38,27 @@
 #include "system/PreprocessParser.h"
 #include <memory>
 
-namespace hpl
-{
+namespace hpl {
     cPostEffectType_ImageTrail::cPostEffectType_ImageTrail(cGraphics* apGraphics, cResources* apResources)
-        : iPostEffectType("ImageTrail", apGraphics, apResources)
-    {
+        : iPostEffectType("ImageTrail", apGraphics, apResources) {
         m_program = hpl::loadProgram("vs_post_effect", "fs_posteffect_image_trail_frag");
         m_u_param = bgfx::createUniform("u_param", bgfx::UniformType::Vec4);
         m_s_diffuseMap = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
     }
 
-    cPostEffectType_ImageTrail::~cPostEffectType_ImageTrail()
-    {
-        if (bgfx::isValid(m_program))
-        {
+    cPostEffectType_ImageTrail::~cPostEffectType_ImageTrail() {
+        if (bgfx::isValid(m_program)) {
             bgfx::destroy(m_program);
         }
-        if (bgfx::isValid(m_u_param))
-        {
+        if (bgfx::isValid(m_u_param)) {
             bgfx::destroy(m_u_param);
         }
-        if (bgfx::isValid(m_s_diffuseMap))
-        {
+        if (bgfx::isValid(m_s_diffuseMap)) {
             bgfx::destroy(m_s_diffuseMap);
         }
     }
 
-    iPostEffect* cPostEffectType_ImageTrail::CreatePostEffect(iPostEffectParams* apParams)
-    {
+    iPostEffect* cPostEffectType_ImageTrail::CreatePostEffect(iPostEffectParams* apParams) {
         cPostEffect_ImageTrail* pEffect = hplNew(cPostEffect_ImageTrail, (mpGraphics, mpResources, this));
         cPostEffectParams_ImageTrail* pImageTrailParams = static_cast<cPostEffectParams_ImageTrail*>(apParams);
 
@@ -73,74 +66,65 @@ namespace hpl
     }
 
     cPostEffect_ImageTrail::cPostEffect_ImageTrail(cGraphics* apGraphics, cResources* apResources, iPostEffectType* apType)
-        : iPostEffect(apGraphics, apResources, apType)
-    {
+        : iPostEffect(apGraphics, apResources, apType) {
         cVector2l vSize = mpLowLevelGraphics->GetScreenSizeInt();
-        m_accumulationBuffer = RenderTarget([&]
-        {
-            auto desc = ImageDescriptor::CreateTexture2D(vSize.x, vSize.y, false, bgfx::TextureFormat::Enum::RGBA32F);
+        OnViewportChanged(vSize);
+
+        mpImageTrailType = static_cast<cPostEffectType_ImageTrail*>(mpType);
+    }
+
+    void cPostEffect_ImageTrail::OnViewportChanged(const cVector2l& avSize) {
+        m_accumulationBuffer = RenderTarget([&] {
+            auto desc = ImageDescriptor::CreateTexture2D(avSize.x, avSize.y, false, bgfx::TextureFormat::Enum::RGBA32F);
             desc.m_configuration.m_rt = RTType::RT_Write;
             auto image = std::make_shared<Image>();
             image->Initialize(desc);
             return image;
         }());
-
-        mpImageTrailType = static_cast<cPostEffectType_ImageTrail*>(mpType);
-
         mbClearFrameBuffer = true;
     }
 
-    cPostEffect_ImageTrail::~cPostEffect_ImageTrail()
-    {
+    cPostEffect_ImageTrail::~cPostEffect_ImageTrail() {
     }
 
-    void cPostEffect_ImageTrail::Reset()
-    {
+    void cPostEffect_ImageTrail::Reset() {
         mbClearFrameBuffer = true;
     }
 
-    void cPostEffect_ImageTrail::OnSetParams()
-    {
+    void cPostEffect_ImageTrail::OnSetParams() {
     }
 
-    void cPostEffect_ImageTrail::OnSetActive(bool abX)
-    {
-        if (abX == false)
-        {
+    void cPostEffect_ImageTrail::OnSetActive(bool abX) {
+        if (abX == false) {
             Reset();
         }
     }
 
-    void cPostEffect_ImageTrail::RenderEffect(cPostEffectComposite& compositor, GraphicsContext& context, Image& input, RenderTarget& target)
-    {
+    void cPostEffect_ImageTrail::RenderEffect(
+        cPostEffectComposite& compositor, GraphicsContext& context, Image& input, RenderTarget& target) {
         cVector2l vRenderTargetSize = compositor.GetRenderTargetSize();
-	    
+
         GraphicsContext::LayoutStream layoutStream;
         cMatrixf projMtx;
         context.ScreenSpaceQuad(layoutStream, projMtx, vRenderTargetSize.x, vRenderTargetSize.y);
-        
-        GraphicsContext::ViewConfiguration viewConfig {m_accumulationBuffer};
-        viewConfig.m_viewRect ={0, 0, vRenderTargetSize.x, vRenderTargetSize.y};
+
+        GraphicsContext::ViewConfiguration viewConfig{ m_accumulationBuffer };
+        viewConfig.m_viewRect = { 0, 0, vRenderTargetSize.x, vRenderTargetSize.y };
         viewConfig.m_projection = projMtx;
         auto view = context.StartPass("Image Trail", viewConfig);
 
         GraphicsContext::ShaderProgram shaderProgram;
         shaderProgram.m_handle = mpImageTrailType->m_program;
         // shaderProgram.m_projection = projMtx;
-        
-        struct
-        {
+
+        struct {
             float u_alpha;
             float u_padding[3];
         } u_params = { 0 };
-        if (mbClearFrameBuffer)
-        {
+        if (mbClearFrameBuffer) {
             u_params.u_alpha = 1.0f;
             mbClearFrameBuffer = false;
-        }
-        else
-        {
-
+        } else {
             // Get the amount of blur depending frame time.
             //*30 is just so that good amount values are still between 0 - 1
             float fFrameTime = compositor.GetCurrentFrameTime();
@@ -154,9 +138,9 @@ namespace hpl
         shaderProgram.m_configuration.m_alphaBlendFunc =
             CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
 
-        shaderProgram.m_textures.push_back({ mpImageTrailType->m_s_diffuseMap, input.GetHandle(), 0});
+        shaderProgram.m_textures.push_back({ mpImageTrailType->m_s_diffuseMap, input.GetHandle(), 0 });
         shaderProgram.m_uniforms.push_back({ mpImageTrailType->m_u_param, &u_params, 1 });
-       
+
         shaderProgram.m_configuration.m_depthTest = DepthTest::None;
         shaderProgram.m_configuration.m_write = Write::RGBA;
         GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };

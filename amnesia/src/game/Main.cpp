@@ -19,7 +19,6 @@
 
 #include "LuxBase.h"
 #include "bx/thread.h"
-#include "graphics/EntrySDL.h"
 
 //---------------------------------------
 #ifdef WIN32

@@ -50,7 +50,6 @@
 #include "impl/FrameBufferGL.h"
 #include "impl/OcclusionQueryOGL.h"
 
-#include <graphics/EntrySDL.h>
 #include "graphics/Bitmap.h"
 #include <windowing/NativeWindow.h>
 

@@ -180,6 +180,7 @@ namespace hpl {
 		m_s_goboMap = bgfx::createUniform("s_goboMap", bgfx::UniformType::Sampler);
 		m_s_shadowOffsetMap = bgfx::createUniform("s_shadowOffsetMap", bgfx::UniformType::Sampler);
 
+		// probably  want to consider moving this to somewhere else
 		RebuildBuffers();
 		m_windowEvent = window::WindowEvent::Handler([&](window::WindowEventPayload& payload) {
 			switch(payload.m_type) {
@@ -931,7 +932,7 @@ namespace hpl {
 		// keep around for the moment ...
 		BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, apRenderTarget, abSendFrameBufferToPostEffects, apCallbackList);
 		
-		// process window effects mainly resizing buffers
+		// process window events
 		m_windowEvent.Process();
 
 		mpCurrentRenderList->Setup(mfCurrentFrameTime,mpCurrentFrustum);
