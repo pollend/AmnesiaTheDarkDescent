@@ -92,7 +92,7 @@ namespace hpl {
 
     bool cPostEffectComposite::Draw(GraphicsContext& context, float frameTime, Image& inputTexture, RenderTarget& renderTarget) {
         mfCurrentFrameTime = frameTime;
-        
+
         auto it = m_postEffects.begin();
         size_t currentIndex = 0;
         bool isSavedToPrimaryRenderTarget = false;
@@ -168,22 +168,6 @@ namespace hpl {
             }
         }
         return false;
-    }
-
-    void cPostEffectComposite::EndRendering() {
-        /////////////////////////////////////////////
-        // Reset all rendering states
-        SetBlendMode(eMaterialBlendMode_None);
-        SetChannelMode(eMaterialChannelMode_RGBA);
-
-        if (mpCurrentProgram)
-            mpCurrentProgram->UnBind();
-        if (mpCurrentVtxBuffer)
-            mpCurrentVtxBuffer->UnBind();
-
-        /////////////////////////////////////////////
-        // Clean up render functions
-        ExitAndCleanUpRenderFunctions();
     }
 
 } // namespace hpl

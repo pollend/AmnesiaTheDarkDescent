@@ -348,8 +348,7 @@ namespace hpl {
 			RenderTarget& rt, std::function<bool(bgfx::ViewId view, iRenderable* object)> renderHandler);
 
 		void PushUpVisibility(iRenderableContainerNode *apNode);
-		void RenderNodeBoundingBox(iRenderableContainerNode *apNode, iOcclusionQuery *apQuery);
-		
+
 		void PushNodeChildrenToStack(tRendererSortedNodeSet& a_setNodeStack, iRenderableContainerNode *apNode, int alNeededFlags);
 		void AddAndRenderNodeOcclusionQuery(tNodeOcclusionPairList *apList, iRenderableContainerNode *apNode, bool abObjectsRendered);
 
@@ -464,36 +463,89 @@ namespace hpl {
 		cRenderSettings* GetSettings(){ return mpRenderer->mpCurrentSettings;}
 		cFrustum* GetFrustum(){ return mpRenderer->mpCurrentFrustum;}
 
-		inline void SetFlatProjection(const cVector2f &avSize=1,float afMin=-100,float afMax=100) { mpRenderer->SetFlatProjection(avSize, afMin,afMax); }
-		inline void SetFlatProjectionMinMax(const cVector3f &avMin,const cVector3f &avMax) { mpRenderer->SetFlatProjectionMinMax(avMin,avMax);}
-		inline void SetNormalFrustumProjection() { mpRenderer->SetNormalFrustumProjection(); }
+		[[deprecated("SetOrthoProjection is deprecated")]]
+		inline void SetFlatProjection(const cVector2f &avSize=1,float afMin=-100,float afMax=100) { }
+		[[deprecated("SetFlatProjectionMinMax is deprecated")]]
+		inline void SetFlatProjectionMinMax(const cVector3f &avMin,const cVector3f &avMax) { }
+		[[deprecated("SetNormalFrustumProjection is deprecated")]]
+		inline void SetNormalFrustumProjection() { 
+		}
 
+		[[deprecated("SetOrthoProjection is deprecated")]]
 		inline void DrawQuad(	const cVector3f& aPos, const cVector2f& avSize, const cVector2f& avMinUV=0, const cVector2f& avMaxUV=1,
 								bool abInvertY=false, const cColor& aColor=cColor(1,1) )
-							{ mpRenderer->DrawQuad(aPos,avSize,avMinUV,avMaxUV,abInvertY,aColor); }
+							{ 
+								
+							 }
+		[[deprecated("SetDepthTest is deprecated")]]
+		inline bool SetDepthTest(bool abX){ 
+			return false;
+		 }
+		[[deprecated("SetDepthWrite is deprecated")]]
+		inline bool SetDepthWrite(bool abX){ 
+			return false;
+		}
+		[[deprecated("SetDepthTestFunc is deprecated")]]
+		inline bool SetDepthTestFunc(eDepthTestFunc aFunc){
+			return false;
+		 }
+		 [[deprecated("SetCullActive is deprecated")]]
+		inline bool SetCullActive(bool abX){ 
+			return false; 
+		}
+		[[deprecated("SetCullMode is deprecated")]]
+		inline bool SetCullMode(eCullMode aMode){ 
+			return false;
+		}
+		[[deprecated("SetStencilActive is deprecated")]]
+		inline bool SetStencilActive(bool abX){ 
+			return true;
+		}
+		[[deprecated("SetStencilFunc is deprecated")]]
+		inline bool SetScissorActive(bool abX){ 
+			return false;
+		}
+		[[deprecated("SetStencilFunc is deprecated")]]
+		inline bool SetScissorRect(const cVector2l& avPos, const cVector2l& avSize, bool abAutoEnabling){
+			return false;}
+		[[deprecated("SetStencilFunc is deprecated")]]
+		inline bool SetScissorRect(const cRect2l& aClipRect, bool abAutoEnabling){return false;}
+		[[deprecated("SetStencilFunc is deprecated")]]
+		inline bool SetChannelMode(eMaterialChannelMode aMode){ return false; }
+		[[deprecated("SetStencilFunc is deprecated")]]
+		inline bool SetAlphaMode(eMaterialAlphaMode aMode){ return false; }
+		[[deprecated("SetBlendMode is deprecated")]]
+		inline bool SetBlendMode(eMaterialBlendMode aMode){ 
+			return false;
+		 }
+		[[deprecated("SetProgram is deprecated")]]
+		inline bool SetProgram(iGpuProgram *apProgram){ 
+			return true; 
+		}
+		[[deprecated("SetTexture is deprecated")]]
+		inline void SetTexture(int alUnit, iTexture *apTexture){
 
-		inline bool SetDepthTest(bool abX){ return mpRenderer->SetDepthTest(abX); }
-		inline bool SetDepthWrite(bool abX){ return mpRenderer->SetDepthWrite(abX); }
-		inline bool SetDepthTestFunc(eDepthTestFunc aFunc){ return mpRenderer->SetDepthTestFunc(aFunc); }
-		inline bool SetCullActive(bool abX){ return mpRenderer->SetCullActive(abX); }
-		inline bool SetCullMode(eCullMode aMode){ return mpRenderer->SetCullMode(aMode); }
-		inline bool SetStencilActive(bool abX){ return mpRenderer->SetStencilActive(abX); }
-		inline bool SetScissorActive(bool abX){ return mpRenderer->SetScissorActive(abX); }
-		inline bool SetScissorRect(const cVector2l& avPos, const cVector2l& avSize, bool abAutoEnabling){return mpRenderer->SetScissorRect(avPos, avSize, abAutoEnabling);}
-		inline bool SetScissorRect(const cRect2l& aClipRect, bool abAutoEnabling){return mpRenderer->SetScissorRect(aClipRect,abAutoEnabling);}
-		inline bool SetChannelMode(eMaterialChannelMode aMode){ return mpRenderer->SetChannelMode(aMode); }
-		inline bool SetAlphaMode(eMaterialAlphaMode aMode){ return mpRenderer->SetAlphaMode(aMode); }
-		inline bool SetBlendMode(eMaterialBlendMode aMode){ return mpRenderer->SetBlendMode(aMode); }
-		inline bool SetProgram(iGpuProgram *apProgram){ return mpRenderer->SetProgram(apProgram); }
-		inline void SetTexture(int alUnit, iTexture *apTexture){ mpRenderer->SetTexture(alUnit, apTexture); }
-		inline void SetTextureRange(iTexture *apTexture, int alFirstUnit, int alLastUnit = kMaxTextureUnits-1){ mpRenderer->SetTextureRange(apTexture,alFirstUnit,alLastUnit); }
-		inline void SetVertexBuffer(iVertexBuffer *apVtxBuffer){ mpRenderer->SetVertexBuffer(apVtxBuffer); }
-		inline void SetMatrix(cMatrixf *apMatrix){ mpRenderer->SetMatrix(apMatrix); }
-		inline void SetModelViewMatrix(const cMatrixf& a_mtxModelView){ mpRenderer->SetModelViewMatrix(a_mtxModelView); }
+		}
+		[[deprecated("SetTextureRange is deprecated")]]
+		inline void SetTextureRange(iTexture *apTexture, int alFirstUnit, int alLastUnit = kMaxTextureUnits-1){ 
+		}
+		[[deprecated("SetTexture is deprecated")]]
+		inline void SetVertexBuffer(iVertexBuffer *apVtxBuffer){
 
-		inline void DrawCurrent(eVertexBufferDrawType aDrawType = eVertexBufferDrawType_LastEnum){ mpRenderer->DrawCurrent(aDrawType); }
+		}
+		[[deprecated("SetMatrix is deprecated")]]
+		inline void SetMatrix(cMatrixf *apMatrix){
+		}
+		[[deprecated("SetModelViewMatrix is deprecated")]]
+		inline void SetModelViewMatrix(const cMatrixf& a_mtxModelView){ 
+			
+		}
 
-		void DrawWireFrame(iVertexBuffer *apVtxBuffer, const cColor &aColor){ mpRenderer->DrawWireFrame(apVtxBuffer, aColor);}
+		[[deprecated("SetProjectionMatrix is deprecated")]]
+		inline void DrawCurrent(eVertexBufferDrawType aDrawType = eVertexBufferDrawType_LastEnum){ }
+
+		[[deprecated("DrawWireFrame is deprecated")]]
+		void DrawWireFrame(iVertexBuffer *apVtxBuffer, const cColor &aColor){ }
 
 		inline GraphicsContext& GetGraphicsContext(){ return m_context; }
 

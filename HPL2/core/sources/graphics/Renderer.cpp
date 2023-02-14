@@ -647,7 +647,7 @@ namespace hpl
 
         //////////////////////////////////////////////////
         // Projection matrix
-        SetNormalFrustumProjection();
+        // SetNormalFrustumProjection();
 
         /////////////////////////////////////////////
         // Clear Render list
@@ -919,49 +919,6 @@ namespace hpl
         // apList->push_back(noPair);
     }
 
-    //-----------------------------------------------------------------------
-
-    void iRenderer::RenderNodeBoundingBox(iRenderableContainerNode* apNode, iOcclusionQuery* apQuery)
-    {
-        ////////////////////////
-        // States
-        SetDepthWrite(false);
-        SetAlphaMode(eMaterialAlphaMode_Solid);
-
-        /////////////////////////
-        // Program
-        //  SetProgram(mpDepthOnlyProgram);
-
-        /////////////////////////
-        // Texture
-        SetTexture(0, NULL);
-
-        /////////////////////////
-        // Matrix
-        cVector3f vSize = apNode->GetMax() - apNode->GetMin();
-        cMatrixf mtxBox = cMath::MatrixScale(vSize);
-        mtxBox.SetTranslation(apNode->GetCenter());
-        SetModelViewMatrix(cMath::MatrixMul(mpCurrentFrustum->GetViewMatrix(), mtxBox));
-
-        /////////////////////////
-        // Vertex buffer
-        SetVertexBuffer(mpShapeBox);
-
-        /////////////////////////
-        // Draw
-        if (apQuery)
-            apQuery->Begin();
-        DrawCurrent();
-        if (apQuery)
-            apQuery->End();
-
-        mpCurrentSettings->mlNumberOfOcclusionQueries++;
-
-        // Debug:
-        // mpCurrentSettings->mlstRenderedNodes.push_back(apNode);
-    }
-
-    static std::vector<iRenderable*> gvSortedObjects;
 
     cVisibleRCNodeTracker* gpCurrentVisibleNodeTracker = NULL;
     void iRenderer::PushUpVisibility(iRenderableContainerNode* apNode)

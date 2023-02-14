@@ -508,7 +508,7 @@ namespace hpl {
 		}
 		GraphicsContext::ViewConfiguration viewConfig {rt};
 		viewConfig.m_viewRect = {0, 0, mvScreenSize.x, mvScreenSize.y};
-		viewConfig.m_projection = mpCurrentProjectionMatrix->GetTranspose();
+		viewConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
 		viewConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
 		const auto view = context.StartPass("Fog Pass", viewConfig);
 		for(auto& fogData: mpCurrentSettings->mvFogRenderData)
@@ -644,7 +644,7 @@ namespace hpl {
 		}
 
 		GraphicsContext::ViewConfiguration viewConfig {rt};
-		viewConfig.m_projection = mpCurrentProjectionMatrix->GetTranspose();
+		viewConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
 		viewConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
 		viewConfig.m_viewRect = cRect2l(0, 0, mvScreenSize.x, mvScreenSize.y);
 		bgfx::ViewId view = context.StartPass("RenderIllumination", viewConfig);
@@ -693,7 +693,7 @@ namespace hpl {
 		}
 
 		GraphicsContext::ViewConfiguration viewConfig {rt};
-		viewConfig.m_projection = mpCurrentProjectionMatrix->GetTranspose();
+		viewConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
 		viewConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
 		viewConfig.m_viewRect = {0, 0, mvScreenSize.x, mvScreenSize.y};
 		auto view = context.StartPass("Diffuse", viewConfig);
@@ -722,7 +722,7 @@ namespace hpl {
 		}
 
 		GraphicsContext::ViewConfiguration viewConfig {rt};
-		viewConfig.m_projection = mpCurrentProjectionMatrix->GetTranspose();
+		viewConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
 		viewConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
 		viewConfig.m_viewRect = {0, 0, mvScreenSize.x, mvScreenSize.y};
 		auto view = context.StartPass("RenderDecals", viewConfig);
@@ -794,7 +794,7 @@ namespace hpl {
 	void cRendererDeferred::RenderTranslucentPass(GraphicsContext& context, RenderTarget& target) {
 		
 		GraphicsContext::ViewConfiguration viewConfig {target};
-		viewConfig.m_projection = mpCurrentProjectionMatrix->GetTranspose();
+		viewConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
 		viewConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
 		viewConfig.m_viewRect = {0, 0, mvScreenSize.x, mvScreenSize.y};
 		auto view = context.StartPass("Translucent", viewConfig);
@@ -935,6 +935,7 @@ namespace hpl {
 		// process window events
 		m_windowEvent.Process();
 
+
 		mpCurrentRenderList->Setup(mfCurrentFrameTime,mpCurrentFrustum);
 		
 		//Setup far plane coordinates
@@ -984,7 +985,7 @@ namespace hpl {
 			GraphicsContext::ViewConfiguration occlusionPassConfig {resolveRenderTarget(m_gBuffer_depth)};
 			occlusionPassConfig.m_viewRect = {0, 0, mvScreenSize.x, mvScreenSize.y};
 			occlusionPassConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
-			occlusionPassConfig.m_projection = mpCurrentProjectionMatrix->GetTranspose();
+			occlusionPassConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
 			AssignAndRenderOcclusionQueryObjects(
 				context.StartPass("Render Occlusion", occlusionPassConfig), 
 				context, 
@@ -1017,7 +1018,7 @@ namespace hpl {
 			GraphicsContext::ViewConfiguration occlusionPassConfig {resolveRenderTarget(m_gBuffer_depth)};
 			occlusionPassConfig.m_viewRect = {0, 0, mvScreenSize.x, mvScreenSize.y};
 			occlusionPassConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
-			occlusionPassConfig.m_projection = mpCurrentProjectionMatrix->GetTranspose();
+			occlusionPassConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
 			AssignAndRenderOcclusionQueryObjects(
 				context.StartPass("Render Occlusion Pass", occlusionPassConfig), 
 				context, 

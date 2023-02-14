@@ -47,9 +47,11 @@ namespace hpl {
          * Highest prio is first!
          */
         void AddPostEffect(iPostEffect* apPostEffect, int alPrio);
+
         inline int GetPostEffectNum() const {
             return m_postEffects.size();
         }
+
         inline iPostEffect* GetPostEffect(int alIdx) const {
             for (auto& it : m_postEffects) {
                 if (it._id == alIdx) {
@@ -73,17 +75,14 @@ namespace hpl {
         };
 
         void RebuildBuffers();
-        void EndRendering();
         void CopyToFrameBuffer(iTexture* apOutputTexture);
 
-		window::WindowEvent::Handler m_windowEvent;
+        window::WindowEvent::Handler m_windowEvent;
         std::vector<PostEffectEntry> m_postEffects;
         absl::FixedArray<std::shared_ptr<Image>, 2> m_images;
         absl::FixedArray<RenderTarget, 2> m_renderTargets;
 
         float mfCurrentFrameTime;
     };
-
-    //------------------------------------------
 
 }; // namespace hpl
