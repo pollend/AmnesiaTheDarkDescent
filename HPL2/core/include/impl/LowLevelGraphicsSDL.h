@@ -38,58 +38,82 @@ namespace hpl {
 		/////////////// GENERAL SETUP ///////////////////////
 		/////////////////////////////////////////////////////
 
+		[[deprecated("replaced with BGFX")]]
 		bool Init(	int alWidth, int alHeight, int alDisplay, int alBpp, int abFullscreen, int alMultisampling,
 					eGpuProgramFormat aGpuProgramFormat,const tString& asWindowCaption,
 					const cVector2l &avWindowPos);
 
 
+		[[deprecated("replaced with BGFX")]]
 		int GetCaps(eGraphicCaps aType);
 
+		[[deprecated("replaced with BGFX")]]
 		void ShowCursor(bool abX);
 
+		[[deprecated("replaced with BGFX")]]
         void SetWindowGrab(bool abX);
 
+		[[deprecated("replaced with BGFX")]]
         void SetRelativeMouse(bool abX);
 
+		[[deprecated("replaced with BGFX")]]
         void SetWindowCaption(const tString &asName);
 
+		[[deprecated("replaced with BGFX")]]
         bool GetWindowMouseFocus();
 
+		[[deprecated("replaced with BGFX")]]
         bool GetWindowInputFocus();
 
+		[[deprecated("replaced with BGFX")]]
         bool GetWindowIsVisible();
 
+		[[deprecated("replaced with BGFX")]]
 		bool GetFullscreenModeActive() { return mbFullscreen; }
 
+		[[deprecated("replaced with BGFX")]]
 		void SetVsyncActive(bool abX, bool abAdaptive);
 
+		[[deprecated("replaced with BGFX")]]
 		void SetMultisamplingActive(bool abX);
 
+		[[deprecated("replaced with BGFX")]]
 		void SetGammaCorrection(float afX);
+		[[deprecated("replaced with BGFX")]]
 		float GetGammaCorrection();
 
+		[[deprecated("replaced with BGFX")]]
 		int GetMultisampling(){ return mlMultisampling;}
 
+		[[deprecated("replaced with BGFX")]]
 		cVector2f GetScreenSizeFloat();
+		[[deprecated("replaced with BGFX")]]
 		const cVector2l GetScreenSizeInt();
 
 		/////////////////////////////////////////////////////
 		/////////////// DATA CREATION //////////////////////
 		/////////////////////////////////////////////////////
 
+		[[deprecated("replaced with BGFX")]]
 		iFontData* CreateFontData(const tString &asName);
 
+		[[deprecated("replaced with BGFX")]]
 		iTexture* CreateTexture(const tString &asName, eTextureType aType, eTextureUsage aUsage);
 
+		[[deprecated("replaced with BGFX")]]
 		iVertexBuffer* CreateVertexBuffer(	eVertexBufferType aType,
 											eVertexBufferDrawType aDrawType,
 											eVertexBufferUsageType aUsageType,
 											int alReserveVtxSize=0,int alReserveIdxSize=0);
 
+		[[deprecated("replaced with BGFX")]]
 		iGpuProgram* CreateGpuProgram(const tString& asName);
+		[[deprecated("replaced with BGFX")]]
 		iGpuShader* CreateGpuShader(const tString& asName, eGpuShaderType aType);
 
+		[[deprecated("replaced with BGFX")]]
 		iFrameBuffer* CreateFrameBuffer(const tString& asName);
+		[[deprecated("replaced with BGFX")]]
 		iDepthStencilBuffer* CreateDepthStencilBuffer(const cVector2l& avSize, int alDepthBits, int alStencilBits);
 
 		[[deprecated("replaced with BGFX")]]
