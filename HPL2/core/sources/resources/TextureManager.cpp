@@ -409,7 +409,7 @@ namespace hpl {
 	iTexture* cTextureManager::Create1D(const tString& asName,bool abUseMipMaps,
 										eTextureUsage aUsage, unsigned int alTextureSizeLevel)
 	{
-		BX_ASSERT(false, "Not implemented");
+		BX_ASSERT(false, "Deprecated and not implemented");
 		return nullptr;
 	}
 
@@ -418,7 +418,7 @@ namespace hpl {
 	iTexture* cTextureManager::Create2D(const tString& asName,bool abUseMipMaps, eTextureType aType,
 										eTextureUsage aUsage, unsigned int alTextureSizeLevel)
 	{
-		BX_ASSERT(false, "Not implemented");
+		BX_ASSERT(false, "Deprecated and not implemented");
 		return nullptr;
 	}
 
@@ -426,7 +426,7 @@ namespace hpl {
 	iTexture* cTextureManager::Create3D(const tString& asName,bool abUseMipMaps, eTextureUsage aUsage,
 										unsigned int alTextureSizeLevel)
 	{
-		BX_ASSERT(false, "Not implemented");
+		BX_ASSERT(false, "Deprecated and not implemented");
 		return nullptr;
 	}
 
@@ -435,125 +435,8 @@ namespace hpl {
 	iTexture* cTextureManager::CreateAnim(const tString& asFirstFrameName,bool abUseMipMaps,eTextureType aType,
 											eTextureUsage aUsage, unsigned int alTextureSizeLevel)
 	{
-		BeginLoad(asFirstFrameName);
-
-		///////////////////////////
-		//Check the base name
-		int lPos = cString::GetFirstStringPos(asFirstFrameName, "01");
-		if(lPos <0)
-		{
-			Error("First frame of animation '%s' must contain '01'!\n", asFirstFrameName.c_str());
-			return NULL;
-		}
-
-		//Remove 01 in the string
-		tString sSub1 = cString::Sub(asFirstFrameName, 0,lPos);
-		tString sSub2 = cString::Sub(asFirstFrameName, lPos+2);
-		tString sBaseName = sSub1 + sSub2;
-
-		if(sSub2.size()==0 || sSub2[0]!='.')
-		{
-			Error("First frame of animation '%s' must contain '01' before extension!\n", asFirstFrameName.c_str());
-			return NULL;
-		}
-
-		///////////////////////////
-		//Check if texture exists
-
-		//Create a fake full path.
-		tWString sFirstFramePath = mpFileSearcher->GetFilePath(asFirstFrameName);
-		if(sFirstFramePath == _W(""))
-		{
-			Error("First frame of animation '%s' could not be found!\n", asFirstFrameName.c_str());
-			return NULL;
-		}
-		tWString sFakeFullPath = cString::GetFilePathW(sFirstFramePath) + cString::To16Char(cString::GetFileName(sBaseName));
-
-        iTexture* pTexture = static_cast<iTexture*>(GetResource(sFakeFullPath));
-
-		///////////////////////////
-		//Check if texture exists
-		if(pTexture==NULL)
-		{
-			tString sFileExt = cString::GetFileExt(sBaseName);
-			tString sFileName = cString::SetFileExt(cString::GetFileName(sBaseName),"");
-
-			tStringVec mvFileNames;
-
-			tString sTest = sFileName + "01."+sFileExt;
-			int lNum = 2;
-			tWStringVec vPaths;
-
-			while(true)
-			{
-				tWString sPath = mpFileSearcher->GetFilePath(sTest);
-
-				if(sPath == _W(""))
-				{
-					break;
-				}
-				else
-				{
-					vPaths.push_back(sPath);
-					if(lNum<10)
-						sTest = sFileName + "0"+cString::ToString(lNum)+"."+sFileExt;
-					else
-						sTest = sFileName + cString::ToString(lNum)+"."+sFileExt;
-
-					++lNum;
-				}
-			}
-
-			if(vPaths.empty())
-			{
-				Error("No textures found for animation %s\n",sBaseName.c_str());
-				EndLoad();
-				return NULL;
-			}
-
-			std::vector<cBitmap*> vBitmaps;
-			for(size_t i =0; i< vPaths.size(); ++i)
-			{
-				cBitmap* pBmp = mpBitmapLoaderHandler->LoadBitmap(vPaths[i],0);
-				if(pBmp==NULL){
-					Error("Couldn't load bitmap '%s'!\n",cString::To8Char(vPaths[i]).c_str());
-
-					for(int j=0;j<(int)vBitmaps.size();j++) hplDelete(vBitmaps[j]);
-
-					EndLoad();
-					return NULL;
-				}
-
-				vBitmaps.push_back(pBmp);
-			}
-
-			//Create the animated texture
-			pTexture = mpGraphics->GetLowLevel()->CreateTexture(sBaseName, aType, aUsage);
-			pTexture->SetFullPath(sFakeFullPath);
-
-			pTexture->SetSizeDownScaleLevel(alTextureSizeLevel);
-
-			if(pTexture->CreateAnimFromBitmapVec(&vBitmaps)==false)
-			{
-				Error("Couldn't create animated texture '%s'!\n", sBaseName.c_str());
-				hplDelete(pTexture);
-				for(int j=0;j<(int)vBitmaps.size();j++) hplDelete(vBitmaps[j]);
-				EndLoad();
-				return NULL;
-			}
-
-			//Bitmaps no longer needed.
-			for(int j=0;j<(int)vBitmaps.size();j++) hplDelete(vBitmaps[j]);
-
-			mlMemoryUsage += pTexture->GetMemorySize();
-			AddResource(pTexture);
-		}
-
-		if(pTexture)pTexture->IncUserCount();
-		else Error("Couldn't texture '%s'\n",asFirstFrameName.c_str());
-
-		EndLoad();
-		return pTexture;
+		BX_ASSERT(false, "Deprecated and not implemented");
+		return nullptr;
 	}
 
 	//-----------------------------------------------------------------------
@@ -562,95 +445,8 @@ namespace hpl {
 											eTextureUsage aUsage,
 											unsigned int alTextureSizeLevel)
 	{
-		tString sExt = cString::ToLowerCase(cString::GetFileExt(asPathName));
-
-		/////////////////////////////////////////////////////////
-		// Load Cubemap from single file
-		if(sExt == "dds")
-		{
-			// return CreateSimpleTexture(asPathName,abUseMipMaps,aUsage,eTextureType_CubeMap,alTextureSizeLevel);
-		}
-		/////////////////////////////////////////////////////////
-		// Load Cubemap from multiple files
-		else
-		{
-			tString sName = cString::SetFileExt(asPathName,"");
-
-			tWString sFakeFullPath = cString::To16Char(sName);
-			iTexture* pTexture = static_cast<iTexture*>(GetResource(sFakeFullPath));
-
-			BeginLoad(asPathName);
-
-			if(pTexture==NULL)
-			{
-				//See if files for all faces exist
-				tWStringVec vPaths;
-				tWString sPath=_W("");
-				for(int i=0;i <6 ;i++)
-				{
-					tStringVec *apFileFormatsVec = mpBitmapLoaderHandler->GetSupportedTypes();
-					for(tStringVecIt it = apFileFormatsVec->begin();it!=apFileFormatsVec->end();++it)
-					{
-						tString sNewName = sName + mvCubeSideSuffixes[i] + "." + *it;
-						sPath = mpFileSearcher->GetFilePath(sNewName);
-		
-						if(sPath!=_W(""))break;
-					}
-
-					if(sPath==_W(""))
-					{
-						tString sNewName = sName + mvCubeSideSuffixes[i];
-						Error("Couldn't find %d-face '%s', for cubemap '%s' in path: '%s'\n",i,sNewName.c_str(),sName.c_str(), asPathName.c_str());
-						return NULL;
-					}
-
-					vPaths.push_back(sPath);
-				}
-
-				//Load bitmaps for all faces
-				std::vector<cBitmap*> vBitmaps;
-				for(int i=0;i<6; i++)
-				{
-					cBitmap* pBmp = mpBitmapLoaderHandler->LoadBitmap(vPaths[i],0);
-					if(pBmp==NULL){
-						Error("Couldn't load bitmap '%s'!\n",cString::To8Char(vPaths[i]).c_str());
-						for(int j=0;j<(int)vBitmaps.size();j++) hplDelete(vBitmaps[j]);
-						EndLoad();
-						return NULL;
-					}
-
-					vBitmaps.push_back(pBmp);
-				}
-
-				//Create the cubemap
-				pTexture = mpGraphics->GetLowLevel()->CreateTexture(sName,eTextureType_CubeMap, aUsage);
-				pTexture->SetFullPath(sFakeFullPath);
-
-				pTexture->SetUseMipMaps(abUseMipMaps);
-				pTexture->SetSizeDownScaleLevel(alTextureSizeLevel);
-
-				if(pTexture->CreateCubeFromBitmapVec(&vBitmaps)==false)
-				{
-					Error("Couldn't create cubemap '%s'!\n", sName.c_str());
-					hplDelete(pTexture);
-					for(int j=0;j<(int)vBitmaps.size();j++) hplDelete(vBitmaps[j]);
-					EndLoad();
-					return NULL;
-				}
-
-				//Bitmaps no longer needed.
-				for(int j=0;j<(int)vBitmaps.size();j++)	hplDelete(vBitmaps[j]);
-
-				mlMemoryUsage += pTexture->GetMemorySize();
-				AddResource(pTexture);
-			}
-
-			if(pTexture)pTexture->IncUserCount();
-			else Error("Couldn't texture '%s'\n",sName.c_str());
-
-			EndLoad();
-			return pTexture;
-		}
+		BX_ASSERT(false, "Deprecated and not implemented");
+		return nullptr;
 	}
 
 	//-----------------------------------------------------------------------
@@ -679,7 +475,7 @@ namespace hpl {
 	void cTextureManager::Update(float afTimeStep)
 	{
 		for(auto& res: m_mapResources) {
-			if (hpl::TypeInfo<hpl::AnimatedImage>::isType(*res.second)) {
+			if (hpl::TypeInfo<hpl::AnimatedImage>::IsType(*res.second)) {
 				auto* animatedImage = static_cast<hpl::AnimatedImage*>(res.second);
 				animatedImage->Update(afTimeStep);
 			}

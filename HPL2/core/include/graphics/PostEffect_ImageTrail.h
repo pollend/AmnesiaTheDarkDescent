@@ -68,6 +68,8 @@ namespace hpl {
 
 		virtual void RenderEffect(cPostEffectComposite& compositor, GraphicsContext& context, Image& input, RenderTarget& target) override;
 		
+		virtual void OnViewportChanged(const cVector2l& avSize) override;
+
 		virtual void Reset() override;
 
 	private:

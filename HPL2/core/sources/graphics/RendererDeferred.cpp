@@ -20,6 +20,9 @@
 #include "graphics/RendererDeferred.h"
 
 #include "bgfx/bgfx.h"
+#include "engine/Event.h"
+#include "engine/Interface.h"
+#include "windowing/NativeWindow.h"
 #include <bx/debug.h>
 
 #include <cstdint>
@@ -55,16 +58,13 @@
 #include "graphics/FrameBuffer.h"
 #include "graphics/Mesh.h"
 #include "graphics/SubMesh.h"
-#include "graphics/OcclusionQuery.h"
 #include "graphics/TextureCreator.h"
 #include "graphics/ShaderUtil.h"
 
 #include "resources/Resources.h"
 #include "resources/TextureManager.h"
-#include "resources/GpuShaderManager.h"
 #include "resources/MeshManager.h"
 #include "graphics/GPUShader.h"
-#include "graphics/GPUProgram.h"
 
 #include "scene/Camera.h"
 #include "scene/World.h"
@@ -154,7 +154,6 @@ namespace hpl {
 	{
 		cVector2l vRelfectionSize = cVector2l(mvScreenSize.x/mlReflectionSizeDiv, mvScreenSize.y/mlReflectionSizeDiv);
 
-	
 		// uniforms
 		m_u_param = bgfx::createUniform("u_param", bgfx::UniformType::Vec4);
 		m_u_boxInvViewModelRotation  = bgfx::createUniform("u_boxInvViewModelRotation", bgfx::UniformType::Mat4);
@@ -177,89 +176,25 @@ namespace hpl {
 		m_s_shadowMap = bgfx::createUniform("s_shadowMap", bgfx::UniformType::Sampler);
 		m_s_goboMap = bgfx::createUniform("s_goboMap", bgfx::UniformType::Sampler);
 		m_s_shadowOffsetMap = bgfx::createUniform("s_shadowOffsetMap", bgfx::UniformType::Sampler);
-		// m_s_diffuseMapOut = bgfx::createUniform("s_diffuseMapOut", bgfx::UniformType::Sampler);
 
-		// initialize frame buffers;
-		{
-			auto colorImage = [&] {
-				auto desc = ImageDescriptor::CreateTexture2D(mvScreenSize.x, mvScreenSize.y, false, bgfx::TextureFormat::Enum::RGBA8);
-				desc.m_configuration.m_rt = RTType::RT_Write;
-				auto image = std::make_shared<Image>();
-				image->Initialize(desc);
-				return image;
-			};
-
-			auto positionImage = [&] {
-				auto desc = ImageDescriptor::CreateTexture2D(mvScreenSize.x, mvScreenSize.y, false, bgfx::TextureFormat::Enum::RGBA32F);
-				desc.m_configuration.m_rt = RTType::RT_Write;
-				auto image = std::make_shared<Image>();
-				image->Initialize(desc);
-				return image;
-			};
-
-			auto normalImage = [&] {
-				auto desc = ImageDescriptor::CreateTexture2D(mvScreenSize.x, mvScreenSize.y, false, bgfx::TextureFormat::Enum::RGBA16F);
-				desc.m_configuration.m_rt = RTType::RT_Write;
-				auto image = std::make_shared<Image>();
-				image->Initialize(desc);
-				return image;
-			};
-
-			auto depthImage = [&] {
-				auto desc = ImageDescriptor::CreateTexture2D(mvScreenSize.x, mvScreenSize.y, false, bgfx::TextureFormat::Enum::D24S8);
-				desc.m_configuration.m_rt = RTType::RT_Write;
-                desc.m_configuration.m_minFilter = FilterType::Point;
-                desc.m_configuration.m_magFilter = FilterType::Point;
-                desc.m_configuration.m_mipFilter = FilterType::Point;
-                desc.m_configuration.m_comparsion = DepthTest::LessEqual;
-				auto image = std::make_shared<Image>();
-				image->Initialize(desc);
-				return image;
-			};
-
-			m_gBufferColor = 
-				{ colorImage(),colorImage()};
-			m_gBufferNormalImage = 
-				{ normalImage(), normalImage()};
-			m_gBufferPositionImage = 
-				{ positionImage(),positionImage()};
-			m_gBufferSpecular = 
-				{ colorImage(),colorImage()};
-			m_outputImage = {
-				colorImage(), colorImage()
-			};
-			m_refractionImage = [&] {
-				auto desc = ImageDescriptor::CreateTexture2D(mvScreenSize.x, mvScreenSize.y, false, bgfx::TextureFormat::Enum::RGBA8);
-				desc.m_configuration.m_computeWrite = true;
-				desc.m_configuration.m_rt = RTType::RT_Write;
-				auto image = std::make_shared<Image>();
-				image->Initialize(desc);
-				return image;
-			}();
-
-			m_gBufferDepthStencil = { depthImage(),depthImage()};
-			{
-				std::array<std::shared_ptr<Image>, 5> images = {m_gBufferColor[0], m_gBufferNormalImage[0], m_gBufferPositionImage[0], m_gBufferSpecular[0], m_gBufferDepthStencil[0]};
-				std::array<std::shared_ptr<Image>, 5> reflectionImages = {m_gBufferColor[1], m_gBufferNormalImage[1], m_gBufferPositionImage[1], m_gBufferSpecular[1], m_gBufferDepthStencil[1]};
-				m_gBuffer_full = {RenderTarget(std::span(images)), RenderTarget(std::span(reflectionImages)) };
+		// probably  want to consider moving this to somewhere else
+		RebuildBuffers();
+		m_windowEvent = window::WindowEvent::Handler([&](window::WindowEventPayload& payload) {
+			switch(payload.m_type) {
+				case hpl::window::WindowEventType::ResizeWindowEvent: {
+					mvScreenSize = cVector2l(payload.payload.m_resizeWindow.m_width, payload.payload.m_resizeWindow.m_height);
+					RebuildBuffers();
+					break;
+				}
+				default:
+					break;
 			}
-			{
-				std::array<std::shared_ptr<Image>, 2> images = {m_gBufferColor[0], m_gBufferDepthStencil[0]};
-				std::array<std::shared_ptr<Image>, 2> reflectionImages = {m_gBufferColor[1], m_gBufferDepthStencil[1]};
-				m_gBuffer_colorAndDepth = {RenderTarget(std::span(images)), RenderTarget(std::span(reflectionImages))};
-			}
-			{
-				std::array<std::shared_ptr<Image>, 2> images = {m_outputImage[0], m_gBufferDepthStencil[0] };
-				std::array<std::shared_ptr<Image>, 2> reflectionImages = {m_outputImage[1], m_gBufferDepthStencil[0]};
-				m_output_target = {RenderTarget(std::span(images)), RenderTarget(std::span(reflectionImages))};
-			}
-
-			m_gBuffer_color = {RenderTarget(m_gBufferColor[0]), RenderTarget(m_gBufferColor[1])};
-			m_gBuffer_depth = {RenderTarget(m_gBufferDepthStencil[0]), RenderTarget(m_gBufferDepthStencil[1])};
-			m_gBuffer_normals = {RenderTarget(m_gBufferNormalImage[0]), RenderTarget(m_gBufferNormalImage[1])};
-			m_gBuffer_linearDepth = {RenderTarget(m_gBufferPositionImage[0]), RenderTarget(m_gBufferPositionImage[1])};
-
+			
+		}, ConnectionType::QueueConnection);
+		if(auto* window = Interface<window::NativeWindowWrapper>::Get()) {
+			window->SetWindowEventHandler(m_windowEvent);
 		}
+
 
 		// ////////////////////////////////////
 		// //Create Accumulation texture
@@ -377,28 +312,28 @@ namespace hpl {
 		
 		////////////////////////////////////
 		//Create SSAO programs and textures
-		if(mbSSAOLoaded && mpLowLevelGraphics->GetCaps(eGraphicCaps_TextureFloat)==0)
-		{
-			mbSSAOLoaded = false;
-			Warning("System does not support float textures! SSAO is disabled.\n");
-		}
-		if(mbSSAOLoaded)
-		{
-			cVector2l vSSAOSize = mvScreenSize / mlSSAOBufferSizeDiv;
+		// if(mbSSAOLoaded && mpLowLevelGraphics->GetCaps(eGraphicCaps_TextureFloat)==0)
+		// {
+		// 	mbSSAOLoaded = false;
+		// 	Warning("System does not support float textures! SSAO is disabled.\n");
+		// }
+		// if(mbSSAOLoaded)
+		// {
+		// 	cVector2l vSSAOSize = mvScreenSize / mlSSAOBufferSizeDiv;
 
-		}
+		// }
 
-		////////////////////////////////////
-		//Create Smooth Edge and textures
-		if(mbEdgeSmoothLoaded && mpLowLevelGraphics->GetCaps(eGraphicCaps_TextureFloat)==0)
-		{
-			mbEdgeSmoothLoaded = false;
-			Warning("System does not support float textures! Edge smooth is disabled.\n");
-		}
-		if(mbEdgeSmoothLoaded)
-		{
+		// ////////////////////////////////////
+		// //Create Smooth Edge and textures
+		// if(mbEdgeSmoothLoaded && mpLowLevelGraphics->GetCaps(eGraphicCaps_TextureFloat)==0)
+		// {
+		// 	mbEdgeSmoothLoaded = false;
+		// 	Warning("System does not support float textures! Edge smooth is disabled.\n");
+		// }
+		// if(mbEdgeSmoothLoaded)
+		// {
 			
-		}
+		// }
 
 		////////////////////////////////////
 		//Create light shapes
@@ -415,6 +350,87 @@ namespace hpl {
 		mlMaxBatchIndices = mpShapeSphere[eDeferredShapeQuality_Low]->GetIndexNum() * mlMaxBatchLights;
 
 		return true;
+	}
+
+
+	void cRendererDeferred::RebuildBuffers() {
+		auto colorImage = [&] {
+			auto desc = ImageDescriptor::CreateTexture2D(mvScreenSize.x, mvScreenSize.y, false, bgfx::TextureFormat::Enum::RGBA8);
+			desc.m_configuration.m_rt = RTType::RT_Write;
+			auto image = std::make_shared<Image>();
+			image->Initialize(desc);
+			return image;
+		};
+
+		auto positionImage = [&] {
+			auto desc = ImageDescriptor::CreateTexture2D(mvScreenSize.x, mvScreenSize.y, false, bgfx::TextureFormat::Enum::RGBA32F);
+			desc.m_configuration.m_rt = RTType::RT_Write;
+			auto image = std::make_shared<Image>();
+			image->Initialize(desc);
+			return image;
+		};
+
+		auto normalImage = [&] {
+			auto desc = ImageDescriptor::CreateTexture2D(mvScreenSize.x, mvScreenSize.y, false, bgfx::TextureFormat::Enum::RGBA16F);
+			desc.m_configuration.m_rt = RTType::RT_Write;
+			auto image = std::make_shared<Image>();
+			image->Initialize(desc);
+			return image;
+		};
+
+		auto depthImage = [&] {
+			auto desc = ImageDescriptor::CreateTexture2D(mvScreenSize.x, mvScreenSize.y, false, bgfx::TextureFormat::Enum::D24S8);
+			desc.m_configuration.m_rt = RTType::RT_Write;
+			desc.m_configuration.m_minFilter = FilterType::Point;
+			desc.m_configuration.m_magFilter = FilterType::Point;
+			desc.m_configuration.m_mipFilter = FilterType::Point;
+			desc.m_configuration.m_comparsion = DepthTest::LessEqual;
+			auto image = std::make_shared<Image>();
+			image->Initialize(desc);
+			return image;
+		};
+
+		m_gBufferColor = 
+			{ colorImage(),colorImage()};
+		m_gBufferNormalImage = 
+			{ normalImage(), normalImage()};
+		m_gBufferPositionImage = 
+			{ positionImage(),positionImage()};
+		m_gBufferSpecular = 
+			{ colorImage(),colorImage()};
+		m_outputImage = {
+			colorImage(), colorImage()
+		};
+		m_refractionImage = [&] {
+			auto desc = ImageDescriptor::CreateTexture2D(mvScreenSize.x, mvScreenSize.y, false, bgfx::TextureFormat::Enum::RGBA8);
+			desc.m_configuration.m_computeWrite = true;
+			desc.m_configuration.m_rt = RTType::RT_Write;
+			auto image = std::make_shared<Image>();
+			image->Initialize(desc);
+			return image;
+		}();
+
+		m_gBufferDepthStencil = { depthImage(),depthImage()};
+		{
+			std::array<std::shared_ptr<Image>, 5> images = {m_gBufferColor[0], m_gBufferNormalImage[0], m_gBufferPositionImage[0], m_gBufferSpecular[0], m_gBufferDepthStencil[0]};
+			std::array<std::shared_ptr<Image>, 5> reflectionImages = {m_gBufferColor[1], m_gBufferNormalImage[1], m_gBufferPositionImage[1], m_gBufferSpecular[1], m_gBufferDepthStencil[1]};
+			m_gBuffer_full = {RenderTarget(std::span(images)), RenderTarget(std::span(reflectionImages)) };
+		}
+		{
+			std::array<std::shared_ptr<Image>, 2> images = {m_gBufferColor[0], m_gBufferDepthStencil[0]};
+			std::array<std::shared_ptr<Image>, 2> reflectionImages = {m_gBufferColor[1], m_gBufferDepthStencil[1]};
+			m_gBuffer_colorAndDepth = {RenderTarget(std::span(images)), RenderTarget(std::span(reflectionImages))};
+		}
+		{
+			std::array<std::shared_ptr<Image>, 2> images = {m_outputImage[0], m_gBufferDepthStencil[0] };
+			std::array<std::shared_ptr<Image>, 2> reflectionImages = {m_outputImage[1], m_gBufferDepthStencil[0]};
+			m_output_target = {RenderTarget(std::span(images)), RenderTarget(std::span(reflectionImages))};
+		}
+
+		m_gBuffer_color = {RenderTarget(m_gBufferColor[0]), RenderTarget(m_gBufferColor[1])};
+		m_gBuffer_depth = {RenderTarget(m_gBufferDepthStencil[0]), RenderTarget(m_gBufferDepthStencil[1])};
+		m_gBuffer_normals = {RenderTarget(m_gBufferNormalImage[0]), RenderTarget(m_gBufferNormalImage[1])};
+		m_gBuffer_linearDepth = {RenderTarget(m_gBufferPositionImage[0]), RenderTarget(m_gBufferPositionImage[1])};
 	}
 
 	//-----------------------------------------------------------------------
@@ -489,7 +505,7 @@ namespace hpl {
 		}
 		GraphicsContext::ViewConfiguration viewConfig {rt};
 		viewConfig.m_viewRect = {0, 0, mvScreenSize.x, mvScreenSize.y};
-		viewConfig.m_projection = mpCurrentProjectionMatrix->GetTranspose();
+		viewConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
 		viewConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
 		const auto view = context.StartPass("Fog Pass", viewConfig);
 		for(auto& fogData: mpCurrentSettings->mvFogRenderData)
@@ -625,7 +641,7 @@ namespace hpl {
 		}
 
 		GraphicsContext::ViewConfiguration viewConfig {rt};
-		viewConfig.m_projection = mpCurrentProjectionMatrix->GetTranspose();
+		viewConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
 		viewConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
 		viewConfig.m_viewRect = cRect2l(0, 0, mvScreenSize.x, mvScreenSize.y);
 		bgfx::ViewId view = context.StartPass("RenderIllumination", viewConfig);
@@ -674,7 +690,7 @@ namespace hpl {
 		}
 
 		GraphicsContext::ViewConfiguration viewConfig {rt};
-		viewConfig.m_projection = mpCurrentProjectionMatrix->GetTranspose();
+		viewConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
 		viewConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
 		viewConfig.m_viewRect = {0, 0, mvScreenSize.x, mvScreenSize.y};
 		auto view = context.StartPass("Diffuse", viewConfig);
@@ -703,7 +719,7 @@ namespace hpl {
 		}
 
 		GraphicsContext::ViewConfiguration viewConfig {rt};
-		viewConfig.m_projection = mpCurrentProjectionMatrix->GetTranspose();
+		viewConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
 		viewConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
 		viewConfig.m_viewRect = {0, 0, mvScreenSize.x, mvScreenSize.y};
 		auto view = context.StartPass("RenderDecals", viewConfig);
@@ -775,7 +791,7 @@ namespace hpl {
 	void cRendererDeferred::RenderTranslucentPass(GraphicsContext& context, RenderTarget& target) {
 		
 		GraphicsContext::ViewConfiguration viewConfig {target};
-		viewConfig.m_projection = mpCurrentProjectionMatrix->GetTranspose();
+		viewConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
 		viewConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
 		viewConfig.m_viewRect = {0, 0, mvScreenSize.x, mvScreenSize.y};
 		auto view = context.StartPass("Translucent", viewConfig);
@@ -913,6 +929,10 @@ namespace hpl {
 		// keep around for the moment ...
 		BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, apRenderTarget, abSendFrameBufferToPostEffects, apCallbackList);
 		
+		// process window events
+		m_windowEvent.Process();
+
+
 		mpCurrentRenderList->Setup(mfCurrentFrameTime,mpCurrentFrustum);
 		
 		//Setup far plane coordinates
@@ -962,7 +982,7 @@ namespace hpl {
 			GraphicsContext::ViewConfiguration occlusionPassConfig {resolveRenderTarget(m_gBuffer_depth)};
 			occlusionPassConfig.m_viewRect = {0, 0, mvScreenSize.x, mvScreenSize.y};
 			occlusionPassConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
-			occlusionPassConfig.m_projection = mpCurrentProjectionMatrix->GetTranspose();
+			occlusionPassConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
 			AssignAndRenderOcclusionQueryObjects(
 				context.StartPass("Render Occlusion", occlusionPassConfig), 
 				context, 
@@ -995,7 +1015,7 @@ namespace hpl {
 			GraphicsContext::ViewConfiguration occlusionPassConfig {resolveRenderTarget(m_gBuffer_depth)};
 			occlusionPassConfig.m_viewRect = {0, 0, mvScreenSize.x, mvScreenSize.y};
 			occlusionPassConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
-			occlusionPassConfig.m_projection = mpCurrentProjectionMatrix->GetTranspose();
+			occlusionPassConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
 			AssignAndRenderOcclusionQueryObjects(
 				context.StartPass("Render Occlusion Pass", occlusionPassConfig), 
 				context, 

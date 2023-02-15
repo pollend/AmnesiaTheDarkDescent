@@ -20,13 +20,13 @@
 
 #include "graphics/Image.h"
 #include "graphics/RenderFunctions.h"
-#include <graphics/GraphicsContext.h>
 #include <absl/container/fixed_array.h>
+#include <graphics/GraphicsContext.h>
 #include <graphics/RenderTarget.h>
 #include <memory>
 #include <vector>
-namespace hpl
-{
+#include <windowing/NativeWindow.h>
+namespace hpl {
 
     //------------------------------------------
 
@@ -34,66 +34,55 @@ namespace hpl
     class iLowLevelGraphics;
     class iPostEffect;
 
-    //------------------------------------------
-
-    typedef std::multimap<int, iPostEffect*, std::greater<int>> tPostEffectMap;
-    typedef tPostEffectMap::iterator tPostEffectMapIt;
-
-    //------------------------------------------
-
-    class cPostEffectComposite : public iRenderFunctions
-    {
+    class cPostEffectComposite : public iRenderFunctions {
     public:
         cPostEffectComposite(cGraphics* apGraphics);
         ~cPostEffectComposite();
 
         // void Render(float afFrameTime, cFrustum* apFrustum, iTexture* apInputTexture, cRenderTarget* apRenderTarget);
 
-		bool Draw(GraphicsContext& context, Image& inputTexture, RenderTarget& renderTarget);
+        bool Draw(GraphicsContext& context, float frameTime, Image& inputTexture, RenderTarget& renderTarget);
 
         /**
          * Highest prio is first!
          */
         void AddPostEffect(iPostEffect* apPostEffect, int alPrio);
-        inline int GetPostEffectNum() const
-        {
-            return _postEffects.size();
+
+        inline int GetPostEffectNum() const {
+            return m_postEffects.size();
         }
-        inline iPostEffect* GetPostEffect(int alIdx) const
-        {
-			for(auto& it: _postEffects) {
-				if(it._id == alIdx) {
-					return it._effect;
-				}
-			}
-			return nullptr;
+
+        inline iPostEffect* GetPostEffect(int alIdx) const {
+            for (auto& it : m_postEffects) {
+                if (it._id == alIdx) {
+                    return it._effect;
+                }
+            }
+            return nullptr;
         }
 
         bool HasActiveEffects();
 
-        float GetCurrentFrameTime()
-        {
+        float GetCurrentFrameTime() {
             return mfCurrentFrameTime;
         }
 
     private:
-        struct PostEffectEntry
-        {
+        struct PostEffectEntry {
             size_t _id;
             int _index;
             iPostEffect* _effect;
         };
 
-        void EndRendering();
+        void RebuildBuffers();
         void CopyToFrameBuffer(iTexture* apOutputTexture);
-        
-        std::vector<PostEffectEntry> _postEffects;
-        absl::FixedArray<std::shared_ptr<Image>, 2> _images;
-        absl::FixedArray<RenderTarget, 2> _renderTargets;
+
+        window::WindowEvent::Handler m_windowEvent;
+        std::vector<PostEffectEntry> m_postEffects;
+        absl::FixedArray<std::shared_ptr<Image>, 2> m_images;
+        absl::FixedArray<RenderTarget, 2> m_renderTargets;
 
         float mfCurrentFrameTime;
     };
-
-    //------------------------------------------
 
 }; // namespace hpl

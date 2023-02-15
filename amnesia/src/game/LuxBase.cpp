@@ -870,30 +870,6 @@ bool cLuxBase::InitApp()
 
 bool cLuxBase::CheckFeatureSupport()
 {
-	iLowLevelGraphics *pLowLevelGfx = mpEngine->GetGraphics()->GetLowLevel();
-
-	///////////////////////////////
-	// Features
-	{
-		if(pLowLevelGfx->GetCaps(eGraphicCaps_ShaderModel_2)==0)
-		{
-			msErrorMessage = _W("Shader model 2 not supported! Make sure your graphic card drivers are up to date!\n");
-			return false;
-		}
-
-		if(pLowLevelGfx->GetCaps(eGraphicCaps_MaxDrawBuffers)<4)
-		{
-			msErrorMessage = _W("Not enough drawbuffers supported! Make sure your graphic card drivers are up to date!\n");
-			return false;
-		}
-
-		if(pLowLevelGfx->GetCaps(eGraphicCaps_PackedDepthStencil)==0)
-		{
-			msErrorMessage = _W("Packed Depth and Stencil not supported! Make sure your graphic card drivers are up to date!\n");
-			return false;
-		}
-	}
-
 	return true;
 }
 
@@ -1270,6 +1246,17 @@ bool cLuxBase::InitGame()
 		mpDefaultFont = mpEngine->GetResources()->GetFontManager()->CreateFontData("game_default.fnt");
 	else
 		mpDefaultFont = mpEngine->GetResources()->GetFontManager()->CreateFontData("font_default.fnt");
+
+	// TODO: need to look into implementing this to replace updater
+	// auto* eventLoop = Interface<IUpdateEventLoop>::Get();
+	// BX_ASSERT(eventLoop, "Update event loop is not initialized");
+
+	// eventLoop->CreateEventGroup("PreMenu");
+	// eventLoop->CreateEventGroup("MainMenu");
+	// eventLoop->CreateEventGroup("Inventory");
+	// eventLoop->CreateEventGroup("Journal");
+	// eventLoop->CreateEventGroup("Credits");
+	// eventLoop->CreateEventGroup("LoadScreen");
 
 	///////////////////////////////////////
 	// Create updater containers

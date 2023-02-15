@@ -38,7 +38,6 @@
 #include "math/Frustum.h"
 #include "math/Math.h"
 
-#include "graphics/GPUProgram.h"
 #include "graphics/GPUShader.h"
 #include "graphics/Graphics.h"
 #include "graphics/LowLevelGraphics.h"
@@ -208,7 +207,7 @@ namespace hpl
                             }
                         }
                         auto* renderer = mpGraphics->GetRenderer(eRenderer_Main);
-                        if( renderer && TypeInfo<cRendererDeferred>::isType(*renderer)) {
+                        if( renderer && TypeInfo<cRendererDeferred>::IsType(*renderer)) {
                             auto* deferredRenderer = static_cast<cRendererDeferred*>(renderer);
                             flags |= material::translucent::Translucent_Refraction;
                             if(auto* refractionImage = deferredRenderer->GetRefractionImage()) {

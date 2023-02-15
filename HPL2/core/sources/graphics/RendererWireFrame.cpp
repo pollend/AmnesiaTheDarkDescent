@@ -37,7 +37,6 @@
 
 #include "resources/Resources.h"
 #include "graphics/GPUShader.h"
-#include "graphics/GPUProgram.h"
 
 #include "scene/Camera.h"
 #include "scene/World.h"
@@ -117,13 +116,13 @@ namespace hpl {
 
 		////////////////////////////////////////////
 		// Diffuse Objects
-		SetDepthTest(true);
-		SetDepthWrite(true);
-		SetBlendMode(eMaterialBlendMode_None);
-		SetAlphaMode(eMaterialAlphaMode_Solid);
-		SetChannelMode(eMaterialChannelMode_RGBA);
+		// SetDepthTest(true);
+		// SetDepthWrite(true);
+		// SetBlendMode(eMaterialBlendMode_None);
+		// SetAlphaMode(eMaterialAlphaMode_Solid);
+		// SetChannelMode(eMaterialChannelMode_RGBA);
 
-		SetTextureRange(NULL,0);
+		// SetTextureRange(NULL,0);
 
 		int lCount =0;
 		for(auto& pObject: mpCurrentRenderList->GetRenderableItems(eRenderListType_Diffuse))
@@ -133,31 +132,31 @@ namespace hpl {
 
 			// SetTexture(0,pMaterial->GetTexture(eMaterialTexture_Diffuse));
 
-			SetMatrix(pObject->GetModelMatrixPtr());
+			// SetMatrix(pObject->GetModelMatrixPtr());
 
-			SetVertexBuffer(pObject->GetVertexBuffer());
+			// SetVertexBuffer(pObject->GetVertexBuffer());
 
-			DrawCurrent(eVertexBufferDrawType_LineStrip);
+			// DrawCurrent(eVertexBufferDrawType_LineStrip);
 			lCount++;
 		}
 
 		////////////////////////////////////////////
 		// Decal Objects
-		SetDepthWrite(false);
+		// SetDepthWrite(false);
 
 		for(auto& pObject: mpCurrentRenderList->GetRenderableItems(eRenderListType_Decal))
 		{
 			cMaterial *pMaterial = pObject->GetMaterial();
 
-			SetBlendMode(pMaterial->GetBlendMode());
+			// SetBlendMode(pMaterial->GetBlendMode());
 
 			// SetTexture(0,pMaterial->GetTexture(eMaterialTexture_Diffuse));
 
-			SetMatrix(pObject->GetModelMatrixPtr());
+			// SetMatrix(pObject->GetModelMatrixPtr());
 
-			SetVertexBuffer(pObject->GetVertexBuffer());
+			// SetVertexBuffer(pObject->GetVertexBuffer());
 
-			DrawCurrent(eVertexBufferDrawType_LineStrip);
+			// DrawCurrent(eVertexBufferDrawType_LineStrip);
 		}
 
 		// RunCallback(eRendererMessage_PostSolid);
@@ -165,7 +164,7 @@ namespace hpl {
 
 		////////////////////////////////////////////
 		// Trans Objects
-		SetDepthWrite(false);
+		// SetDepthWrite(false);
 
 		for(auto& pObject: mpCurrentRenderList->GetRenderableItems(eRenderListType_Translucent))
 		{
@@ -173,15 +172,15 @@ namespace hpl {
 
 			pObject->UpdateGraphicsForViewport(mpCurrentFrustum, mfCurrentFrameTime);
 
-			SetBlendMode(pMaterial->GetBlendMode());
+			// SetBlendMode(pMaterial->GetBlendMode());
 
 			// SetTexture(0,pMaterial->GetTexture(eMaterialTexture_Diffuse));
 
-			SetMatrix(pObject->GetModelMatrix(mpCurrentFrustum));
+			// SetMatrix(pObject->GetModelMatrix(mpCurrentFrustum));
 
-			SetVertexBuffer(pObject->GetVertexBuffer());
+			// SetVertexBuffer(pObject->GetVertexBuffer());
 
-			DrawCurrent(eVertexBufferDrawType_LineStrip);
+			// DrawCurrent(eVertexBufferDrawType_LineStrip);
 		}
 
 		// RunCallback(eRendererMessage_PostTranslucent);

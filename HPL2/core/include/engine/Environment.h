@@ -20,7 +20,7 @@
 #include <type_traits>
 
 #include <bx/debug.h>
-#include <engine/UUID.h>
+#include <math/Uuid.h>
 
 namespace hpl {
 

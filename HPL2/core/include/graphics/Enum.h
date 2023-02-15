@@ -156,9 +156,12 @@ namespace hpl
     StencilTest CreateStencilTest(StencilFunction func, StencilFail sfail, StencilDepthFail dpfail, StencilDepthPass dppass, uint8_t ref, uint8_t mask);
 
     Write operator|(Write lhs, Write rhs);
-    bool operator&(Write lhs, Write rhs);
+    Write operator&(Write lhs, Write rhs);
+    bool any(Write write);
 
     ClearOp operator|(ClearOp lhs, ClearOp rhs);
-    bool operator&(ClearOp lhs, ClearOp rhs);
+    ClearOp operator&(ClearOp lhs, ClearOp rhs);
+    bool any(ClearOp write);
+ 
 
 } // namespace hpl

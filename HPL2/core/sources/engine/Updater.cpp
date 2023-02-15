@@ -19,6 +19,8 @@
 
 #include "engine/Updater.h"
 
+#include "engine/IUpdateEventLoop.h"
+#include "engine/Interface.h"
 #include "engine/Updateable.h"
 #include "system/LowLevelSystem.h"
 #include "system/Platform.h"
@@ -44,6 +46,52 @@ namespace hpl {
 	cUpdater::~cUpdater()
 	{
 	}
+
+	static BroadcastEvent ToBroadcastEvent(eUpdateableMessage message) {
+		switch(message) {
+			case eUpdateableMessage_OnPostBufferSwap:
+				return BroadcastEvent::OnPostBufferSwap;
+			case eUpdateableMessage_OnStart:
+				return BroadcastEvent::OnStart;
+			case eUpdateableMessage_OnDraw:
+				return BroadcastEvent::OnDraw;
+			case eUpdateableMessage_OnPostRender:
+				return BroadcastEvent::OnPostRender;
+			case eUpdateableMessage_PreUpdate:
+				return BroadcastEvent::PreUpdate;
+			case eUpdateableMessage_Update:
+				return BroadcastEvent::Update;
+			case eUpdateableMessage_PostUpdate:
+				return BroadcastEvent::PostUpdate;
+			case eUpdateableMessage_OnQuit:
+				return BroadcastEvent::OnQuit;
+			case eUpdateableMessage_OnExit:
+				return BroadcastEvent::OnExit;
+			case eUpdateableMessage_Reset:
+				return BroadcastEvent::Reset;
+			case eUpdateableMessage_OnPauseUpdate:
+				return BroadcastEvent::OnPauseUpdate;
+			case eUpdateableMessage_AppGotInputFocus:
+				return BroadcastEvent::AppGotInputFocus;
+			case eUpdateableMessage_AppGotMouseFocus:
+				return BroadcastEvent::AppGotMouseFocus;
+			case eUpdateableMessage_AppGotVisibility:
+				return BroadcastEvent::AppGotVisibility;
+			case eUpdateableMessage_AppLostInputFocus:
+				return BroadcastEvent::AppLostInputFocus;
+			case eUpdateableMessage_AppLostMouseFocus:
+				return BroadcastEvent::AppLostMouseFocus;
+			case eUpdateableMessage_AppLostVisibility:
+				return BroadcastEvent::AppLostVisibility;
+			case eUpdateableMessage_AppDeviceWasPlugged:
+				return BroadcastEvent::AppDeviceWasPlugged;
+			case eUpdateableMessage_AppDeviceWasRemoved:
+				return BroadcastEvent::AppDeviceWasRemoved;
+			default:
+				break;
+		}
+		return BroadcastEvent::LastEnum;
+	}	
 
 	//-----------------------------------------------------------------------
 
@@ -71,6 +119,10 @@ namespace hpl {
 				iUpdateable *pUpdateable = *it;
 				pUpdateable->RunMessage(aMessage, afX);
 			}
+		}
+
+		if(auto* eventLoop = Interface<IUpdateEventLoop>::Get()) {
+			eventLoop->BroadcastToAll(ToBroadcastEvent(aMessage), afX);
 		}
 	}
 
@@ -130,6 +182,10 @@ namespace hpl {
 				}
 			}
 		}
+
+		if(auto* eventLoop = Interface<IUpdateEventLoop>::Get()) {
+			eventLoop->Broadcast(ToBroadcastEvent(aMessage), afX);
+		}
 	}
 
 	//-----------------------------------------------------------------------
@@ -176,6 +232,10 @@ namespace hpl {
 		{
 			iUpdateable *pUpdateable = *it;
 			pUpdateable->OnEnterContainer(sOldContainer);
+		}
+
+		if(auto* eventLoop = Interface<IUpdateEventLoop>::Get()) {
+			eventLoop->ChangeEventGroup(asContainer);
 		}
 
 		return true;

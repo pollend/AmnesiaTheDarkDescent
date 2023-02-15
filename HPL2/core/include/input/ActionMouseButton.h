@@ -16,10 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
-
-#ifndef HPL_ACTIONMOUSEBUTTON_H
-#define HPL_ACTIONMOUSEBUTTON_H
-
+#pragma once 
 
 #include "input/InputTypes.h"
 #include "input/Action.h"
@@ -27,7 +24,6 @@
 namespace hpl {
 
 	class cInput;
-
 	class cActionMouseButton : public iSubAction
 	{
 	public:
@@ -47,4 +43,3 @@ namespace hpl {
 	};
 
 };
-#endif // HPL_ACTIONMOUSEBUTTON_H

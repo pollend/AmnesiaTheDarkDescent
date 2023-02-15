@@ -194,14 +194,6 @@ namespace hpl {
 
 	void cMaterialManager::SetTextureAnisotropy(float afX)
 	{
-		if(afX <1.0 || mpGraphics->GetLowLevel()->GetCaps(eGraphicCaps_AnisotropicFiltering)==0)
-		{
-			return;
-		}
-		if(afX > (float) mpGraphics->GetLowLevel()->GetCaps(eGraphicCaps_MaxAnisotropicFiltering))
-		{
-			return;
-		}
 
 		if(mfTextureAnisotropy == afX) return;
 		mfTextureAnisotropy = afX;

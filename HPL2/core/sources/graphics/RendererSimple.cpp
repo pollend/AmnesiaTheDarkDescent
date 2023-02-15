@@ -44,7 +44,6 @@
 #include <graphics/RenderViewport.h>
 #include <graphics/GraphicsContext.h>
 
-#include "graphics/GPUProgram.h"
 #include "graphics/GPUShader.h"
 #include "resources/Resources.h"
 
@@ -146,7 +145,7 @@ namespace hpl
             }
             GraphicsContext::ViewConfiguration viewConfiguration {outputTarget};
 		    viewConfiguration.m_viewRect = cRect2l(0, 0, mvScreenSize.x, mvScreenSize.y);
-            viewConfiguration.m_projection = *mpCurrentProjectionMatrix;
+            viewConfiguration.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
             viewConfiguration.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
             auto view = context.StartPass("z pre pass, render to z buffer", viewConfiguration );
             for (auto& obj : mpCurrentRenderList->GetRenderableItems(eRenderListType_Z))
@@ -163,7 +162,7 @@ namespace hpl
                 shaderInput.m_configuration.m_write = Write::Depth;
                 shaderInput.m_configuration.m_depthTest = DepthTest::LessEqual;
 
-                // shaderInput.m_projection = *mpCurrentProjectionMatrix;
+                // shaderInput.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
                 shaderInput.m_modelTransform = obj->GetModelMatrixPtr() ? obj->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity;
                 // shaderInput.m_view = mpCurrentFrustum->GetViewMatrix();
 
@@ -186,7 +185,7 @@ namespace hpl
 
             GraphicsContext::ViewConfiguration viewConfiguration {outputTarget};
 		    viewConfiguration.m_viewRect = cRect2l(0, 0, mvScreenSize.x, mvScreenSize.y);
-            viewConfiguration.m_projection = *mpCurrentProjectionMatrix;
+            viewConfiguration.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
             viewConfiguration.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
             auto view = context.StartPass("diffuse pass, render to color buffer", viewConfiguration);
             for (auto& obj : mpCurrentRenderList->GetRenderableItems(eRenderListType_Diffuse))
@@ -206,7 +205,7 @@ namespace hpl
                 shaderInput.m_configuration.m_write = Write::RGBA;
                 shaderInput.m_configuration.m_depthTest = DepthTest::Equal;
 
-                // shaderInput.m_projection = *mpCurrentProjectionMatrix;
+                // shaderInput.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
                 shaderInput.m_modelTransform = obj->GetModelMatrixPtr() ? obj->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity;
                 // shaderInput.m_view = mpCurrentFrustum->GetViewMatrix();
                 if (const auto* image = pMaterial->GetImage(eMaterialTexture_Diffuse))
@@ -230,7 +229,7 @@ namespace hpl
 
             GraphicsContext::ViewConfiguration viewConfiguration {outputTarget};
 		    viewConfiguration.m_viewRect = cRect2l(0, 0, mvScreenSize.x, mvScreenSize.y);
-            viewConfiguration.m_projection = *mpCurrentProjectionMatrix;
+            viewConfiguration.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
             viewConfiguration.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
             auto view = context.StartPass("decal pass, render to color buffer", viewConfiguration);
             for (auto& obj : mpCurrentRenderList->GetRenderableItems(eRenderListType_Decal))
@@ -253,7 +252,7 @@ namespace hpl
                 shaderInput.m_configuration.m_rgbBlendFunc =
                     CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
 
-                // shaderInput.m_projection = *mpCurrentProjectionMatrix;
+                // shaderInput.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
                 shaderInput.m_modelTransform = obj->GetModelMatrixPtr() ? obj->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity;
                 // shaderInput.m_view = mpCurrentFrustum->GetViewMatrix();
 
@@ -278,7 +277,7 @@ namespace hpl
 
             GraphicsContext::ViewConfiguration viewConfiguration {outputTarget};
 		    viewConfiguration.m_viewRect = cRect2l(0, 0, mvScreenSize.x, mvScreenSize.y);
-            viewConfiguration.m_projection = *mpCurrentProjectionMatrix;
+            viewConfiguration.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
             viewConfiguration.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
             auto view = context.StartPass("translucence pass, render to color buffer", viewConfiguration);
             for (auto& obj : mpCurrentRenderList->GetRenderableItems(eRenderListType_Translucent))
@@ -301,7 +300,7 @@ namespace hpl
                 shaderInput.m_configuration.m_rgbBlendFunc =
                     CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
 
-                // shaderInput.m_projection = *mpCurrentProjectionMatrix;
+                // shaderInput.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
                 shaderInput.m_modelTransform = obj->GetModelMatrixPtr() ? obj->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity;
                 // shaderInput.m_view = mpCurrentFrustum->GetViewMatrix();
 

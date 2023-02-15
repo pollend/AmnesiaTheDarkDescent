@@ -18,6 +18,7 @@
  */
 
 #include "bgfx/bgfx.h"
+#include "engine/Interface.h"
 #include "impl/VertexBufferBGFX.h"
 #include "math/MathTypes.h"
 #ifdef WIN32
@@ -39,18 +40,9 @@
 
 #include "impl/LowLevelGraphicsSDL.h"
 #include "impl/SDLFontData.h"
-#include "impl/SDLTexture.h"
-//#include "impl/CGShader.h"
-//#include "impl/CGProgram.h"
-#include "impl/GLSLShader.h"
-#include "impl/GLSLProgram.h"
-#include "impl/VertexBufferOGL_Array.h"
-#include "impl/VertexBufferOGL_VBO.h"
-#include "impl/FrameBufferGL.h"
-#include "impl/OcclusionQueryOGL.h"
 
-#include <graphics/EntrySDL.h>
 #include "graphics/Bitmap.h"
+#include <windowing/NativeWindow.h>
 
 #ifdef __APPLE__
 #include <OpenGL/OpenGL.h>
@@ -72,13 +64,6 @@
 
 namespace hpl {
 
-	#ifdef HPL_OGL_THREADSAFE
-		iMutex *gpLowlevelGfxMutex=NULL;
-
-		cLowlevelGfxMutex::cLowlevelGfxMutex(){ if(gpLowlevelGfxMutex) gpLowlevelGfxMutex->Lock(); }
-		cLowlevelGfxMutex::~cLowlevelGfxMutex(){ if(gpLowlevelGfxMutex) gpLowlevelGfxMutex->Unlock(); }
-	#endif
-
 	//////////////////////////////////////////////////////////////////////////
 	// CONSTRUCTORS
 	//////////////////////////////////////////////////////////////////////////
@@ -91,7 +76,6 @@ namespace hpl {
 		mlVertexCount = 0;
 		mlIndexCount =0;
 		mlMultisampling =0;
-        mbGrab = false;
 
 		mbDoubleSidedStencilIsSet = false;
 
@@ -110,27 +94,8 @@ namespace hpl {
 	cLowLevelGraphicsSDL::~cLowLevelGraphicsSDL()
 	{
 
-		//Exit extra stuff
-#ifdef WITH_CG
-		ExitCG();
-#endif
 
 	}
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// GENERAL SETUP
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
-	void CALLBACK OGLDebugOutputCallback(GLenum alSource, GLenum alType, GLuint alID, GLenum alSeverity, GLsizei alLength, const GLchar* apMessage, GLvoid* apUserParam)
-	{
-		Log("Source: %d Type: %d Id: %d Severity: %d '%s'\n", alSource, alType, alID, alSeverity, apMessage);
-	}
-
-	//-----------------------------------------------------------------------
 
 	bool cLowLevelGraphicsSDL::Init(int alWidth, int alHeight, int alDisplay, int alBpp, int abFullscreen,
 		int alMultisampling, eGpuProgramFormat aGpuProgramFormat,const tString& asWindowCaption,
@@ -145,11 +110,8 @@ namespace hpl {
 		mGpuProgramFormat = aGpuProgramFormat;
 		if(mGpuProgramFormat == eGpuProgramFormat_LastEnum) mGpuProgramFormat = eGpuProgramFormat_GLSL;
 
-        if (mbGrab) {
             SetWindowGrab(true);
-        }
-
-
+     
 		// Log(" Init Glew...");
 		// if(glewInit() == GLEW_OK)
 		// {
@@ -171,10 +133,7 @@ namespace hpl {
 
 		mbInitHasBeenRun = true;
 
-		///////////////////////////////
-		// Setup variables
-		mColorWrite.r = true; mColorWrite.g = true;
-		mColorWrite.b = true; mColorWrite.a = true;
+
 		mbDepthWrite = true;
 
 		mbCullActive = true;
@@ -211,101 +170,7 @@ namespace hpl {
 
 	int cLowLevelGraphicsSDL::GetCaps(eGraphicCaps aType)
 	{
-		;
 
-		switch(aType)
-		{
-		case eGraphicCaps_TextureTargetRectangle:	return 1;//GLEW_ARB_texture_rectangle?1:0;
-
-		case eGraphicCaps_VertexBufferObject:		return GLEW_ARB_vertex_buffer_object?1:0;
-		case eGraphicCaps_TwoSideStencil:
-			{
-				if(GLEW_EXT_stencil_two_side) return 1;
-				else if(GLEW_ATI_separate_stencil) return 1;
-				else return 0;
-			}
-
-		case eGraphicCaps_MaxTextureImageUnits:
-			{
-				int lUnits;
-				glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS_ARB,(GLint *)&lUnits);
-				return lUnits;
-			}
-
-		case eGraphicCaps_MaxTextureCoordUnits:
-			{
-				int lUnits;
-				glGetIntegerv(GL_MAX_TEXTURE_COORDS_ARB,(GLint *)&lUnits);
-				return lUnits;
-			}
-		case eGraphicCaps_MaxUserClipPlanes:
-			{
-				int lClipPlanes;
-				glGetIntegerv( GL_MAX_CLIP_PLANES,(GLint *)&lClipPlanes);
-				return lClipPlanes;
-			}
-
-		case eGraphicCaps_AnisotropicFiltering:		return GLEW_EXT_texture_filter_anisotropic ? 1 : 0;
-
-		case eGraphicCaps_MaxAnisotropicFiltering:
-			{
-				if(!GLEW_EXT_texture_filter_anisotropic) return 0;
-
-				float fMax;
-				glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT,&fMax);
-				return (int)fMax;
-			}
-
-		case eGraphicCaps_Multisampling: return GLEW_ARB_multisample ? 1: 0;
-
-		case eGraphicCaps_TextureCompression:		return GLEW_ARB_texture_compression  ? 1 : 0;
-		case eGraphicCaps_TextureCompression_DXTC:	return GLEW_EXT_texture_compression_s3tc ? 1 : 0;
-
-		case eGraphicCaps_AutoGenerateMipMaps:		return GLEW_SGIS_generate_mipmap ? 1 : 0;
-
-		case eGraphicCaps_RenderToTexture:			return GLEW_EXT_framebuffer_object ? 1: 0;
-
-		case eGraphicCaps_MaxDrawBuffers:
-			{
-				GLint lMaxbuffers;
-				glGetIntegerv(GL_MAX_DRAW_BUFFERS, &lMaxbuffers);
-				return lMaxbuffers;
-			}
-		case eGraphicCaps_PackedDepthStencil:	return GLEW_EXT_packed_depth_stencil ? 1: 0;
-		case eGraphicCaps_TextureFloat:			return GLEW_ARB_texture_float ? 1: 0;
-
-		case eGraphicCaps_PolygonOffset:		return 1;	//OpenGL always support it!
-
-		case eGraphicCaps_ShaderModel_2:		return (GLEW_ARB_fragment_program || GLEW_ARB_fragment_shader) ? 1 : 0;	//Mac always support this, so not a good test.
-#ifdef __APPLE__
-		case eGraphicCaps_ShaderModel_3:		return 0; // Force return false for OS X as dynamic branching doesn't work well (it's slow)
-		case eGraphicCaps_ShaderModel_4:		return 0;
-#else
-		case eGraphicCaps_ShaderModel_3:
-			{
-				if(mbForceShaderModel3And4Off)
-					return 0;
-				else
-					return  (GLEW_NV_vertex_program3 || GLEW_ATI_shader_texture_lod) ? 1 : 0;
-			}
-		case eGraphicCaps_ShaderModel_4:
-			{
-				if(mbForceShaderModel3And4Off)
-					return 0;
-				else
-					return  GLEW_EXT_gpu_shader4 ? 1 : 0;
-			}
-#endif
-
-		case eGraphicCaps_OGL_ATIFragmentShader: return  GLEW_ATI_fragment_shader ? 1 : 0;
-
-		case eGraphicCaps_MaxColorRenderTargets:
-			{
-				GLint lMax;
-				glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS_EXT, &lMax);
-				return lMax;
-			}
-		}
 		return 0;
 	}
 
@@ -313,45 +178,68 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::ShowCursor(bool abX)
 	{
-		if(abX)
-			SDL_ShowCursor(SDL_ENABLE);
-		else
-			SDL_ShowCursor(SDL_DISABLE);
+		if(auto* window = Interface<window::NativeWindowWrapper>::Get()) {
+			if(abX) {
+				window->ShowHardwareCursor();
+			} else {
+				window->HideHardwareCursor();
+			}
+		}
 	}
 
 	//-----------------------------------------------------------------------
 
     void cLowLevelGraphicsSDL::SetWindowGrab(bool abX)
     {
-        mbGrab = abX;
-        if (hpl::entry_sdl::getWindow()) {
-            SDL_SetWindowGrab(hpl::entry_sdl::getWindow(), abX ? SDL_TRUE : SDL_FALSE);
-        }
+        if(auto* window = Interface<window::NativeWindowWrapper>::Get()) {
+			if(abX) {
+				window->WindowGrabCursor();
+			} else {
+				window->WindowReleaseCursor();
+			}
+		}
     }
 
 	void cLowLevelGraphicsSDL::SetRelativeMouse(bool abX)
 	{
-		SDL_SetRelativeMouseMode(abX ? SDL_TRUE : SDL_FALSE);
+		if(auto* window = Interface<window::NativeWindowWrapper>::Get()) {
+			if(abX) {
+				window->ConstrainCursor();
+			} else {
+				window->UnconstrainCursor();
+			}
+		}
 	}
 
     void cLowLevelGraphicsSDL::SetWindowCaption(const tString &asName)
     {
-        SDL_SetWindowTitle(hpl::entry_sdl::getWindow(), asName.c_str());
+		if(auto* window = Interface<window::NativeWindowWrapper>::Get()) {
+			window->SetWindowTitle(asName);
+		}
     }
 
     bool cLowLevelGraphicsSDL::GetWindowMouseFocus()
     {
-		return (hpl::entry_sdl::getWindowFlags()  & SDL_WINDOW_MOUSE_FOCUS) > 0;
+		if(auto* window = Interface<window::NativeWindowWrapper>::Get()) {
+			return any(window->GetWindowStatus() & window::WindowStatus::WindowStatusInputMouseFocus);
+		}
+		return false;
     }
 
     bool cLowLevelGraphicsSDL::GetWindowInputFocus()
     {
-		return (hpl::entry_sdl::getWindowFlags()  & SDL_WINDOW_INPUT_FOCUS) > 0;
+		if(auto* window = Interface<window::NativeWindowWrapper>::Get()) {
+			return any(window->GetWindowStatus() & window::WindowStatus::WindowStatusInputFocus);
+		}
+		return false;
     }
 
     bool cLowLevelGraphicsSDL::GetWindowIsVisible()
     {
-		return (hpl::entry_sdl::getWindowFlags()  & SDL_WINDOW_SHOWN) > 0;
+		if(auto* window = Interface<window::NativeWindowWrapper>::Get()) {
+			return any(window->GetWindowStatus() & window::WindowStatus::WindowStatusVisible);
+		}
+		return false;
     }
 
 	//-----------------------------------------------------------------------
@@ -395,7 +283,7 @@ namespace hpl {
 	void cLowLevelGraphicsSDL::SetGammaCorrection(float afX)
 	{
 		mfGammaCorrection = afX;
-        SDL_SetWindowBrightness(hpl::entry_sdl::getWindow(), mfGammaCorrection);
+        // SDL_SetWindowBrightness(hpl::entry_sdl::getWindow(), mfGammaCorrection);
 	}
 
 	float cLowLevelGraphicsSDL::GetGammaCorrection()
@@ -407,13 +295,19 @@ namespace hpl {
 
 	cVector2f cLowLevelGraphicsSDL::GetScreenSizeFloat()
 	{
-		const auto size = hpl::entry_sdl::getSize();
-		return cVector2f(static_cast<float>(size.x), static_cast<float>(size.y));
+		if(auto* window = Interface<window::NativeWindowWrapper>::Get()) {
+			auto size = window->GetWindowSize();
+			return cVector2f(static_cast<float>(size.x), static_cast<float>(size.y));
+		}
+		return cVector2f(0,0);
 	}
 
 	const cVector2l cLowLevelGraphicsSDL::GetScreenSizeInt()
 	{
-		return hpl::entry_sdl::getSize();
+		if(auto* window = Interface<window::NativeWindowWrapper>::Get()) {
+			return window->GetWindowSize();
+		}
+		return cVector2l(0,0);
 	}
 
 	//-----------------------------------------------------------------------
@@ -431,33 +325,25 @@ namespace hpl {
 		return hplNew( cSDLFontData, (asName, this) );
 	}
 
-	//-----------------------------------------------------------------------
-
+	// //-----------------------------------------------------------------------
 	iGpuProgram* cLowLevelGraphicsSDL::CreateGpuProgram(const tString& asName)
 	{
-		;
-
-		return hplNew( cGLSLProgram, (asName) );
-		//return hplNew( cCGProgram, () );
+		BX_ASSERT(false, "deprecated CreateGpuProgram");
+		return nullptr;
 	}
 
 	iGpuShader* cLowLevelGraphicsSDL::CreateGpuShader(const tString& asName, eGpuShaderType aType)
 	{
-		;
-
-		return hplNew( cGLSLShader, (asName,aType, this) );
-		//return hplNew( cCGShader, (asName,mCG_Context, aType) );
+		BX_ASSERT(false, "deprecated CreateGpuProgram");
+		return nullptr;
 	}
 
 	//-----------------------------------------------------------------------
 
 	iTexture* cLowLevelGraphicsSDL::CreateTexture(const tString &asName,eTextureType aType,   eTextureUsage aUsage)
 	{
-		;
-
-		cSDLTexture *pTexture = hplNew( cSDLTexture, (asName,aType, aUsage, this) );
-
-		return pTexture;
+		BX_ASSERT(false, "deprecated CreateTexture");
+		return nullptr;
 	}
 
 	//-----------------------------------------------------------------------
@@ -474,46 +360,34 @@ namespace hpl {
 
 	iFrameBuffer* cLowLevelGraphicsSDL::CreateFrameBuffer(const tString& asName)
 	{
-		;
-
-		if(GetCaps(eGraphicCaps_RenderToTexture)==0) return NULL;
-
-		return hplNew(cFrameBufferGL,(asName, this));
+		BX_ASSERT(false, "interface is deprecated");
+		return nullptr;
 	}
 
 	//-----------------------------------------------------------------------
 
 	iDepthStencilBuffer* cLowLevelGraphicsSDL::CreateDepthStencilBuffer(const cVector2l& avSize, int alDepthBits, int alStencilBits)
 	{
-		;
-
-		if(GetCaps(eGraphicCaps_RenderToTexture)==0) return NULL;
-
-		return hplNew(cDepthStencilBufferGL,(avSize, alDepthBits,alStencilBits));
+		BX_ASSERT(false, "interface is deprecated");
+		return nullptr;
 	}
 
 	void cLowLevelGraphicsSDL::ClearFrameBuffer(tClearFrameBufferFlag aFlags)
 	{
-		;
-
-		GLbitfield bitmask=0;
-
-		if(aFlags & eClearFrameBufferFlag_Color)	bitmask |= GL_COLOR_BUFFER_BIT;
-		if(aFlags & eClearFrameBufferFlag_Depth)	bitmask |= GL_DEPTH_BUFFER_BIT;
-		if(aFlags & eClearFrameBufferFlag_Stencil)	bitmask |= GL_STENCIL_BUFFER_BIT;
-
-		glClear(bitmask);
+		BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetClearColor(const cColor& aCol){
-
+		BX_ASSERT(false, "interface is deprecated");
 	}
 	void cLowLevelGraphicsSDL::SetClearDepth(float afDepth){
+		BX_ASSERT(false, "interface is deprecated");
 
 	}
 	void cLowLevelGraphicsSDL::SetClearStencil(int alVal){
+		BX_ASSERT(false, "interface is deprecated");
 
 	}
 
@@ -522,6 +396,7 @@ namespace hpl {
 	void cLowLevelGraphicsSDL::CopyFrameBufferToTexure(iTexture* apTex, const cVector2l &avPos,
 		const cVector2l &avSize, const cVector2l &avTexOffset)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
@@ -565,11 +440,12 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SetColorWriteActive(bool abR,bool abG,bool abB,bool abA)
 	{
-
+		BX_ASSERT(false, "interface is deprecated");
 	}
 
 	void cLowLevelGraphicsSDL::SetDepthWriteActive(bool abX)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 	}
 
 	void cLowLevelGraphicsSDL::SetDepthTestActive(bool abX)
@@ -578,36 +454,42 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SetDepthTestFunc(eDepthTestFunc aFunc)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetAlphaTestActive(bool abX)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetAlphaTestFunc(eAlphaTestFunc aFunc,float afRef)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetStencilActive(bool abX)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetStencilWriteMask(unsigned int alMask)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 	}
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetStencil(eStencilFunc aFunc,int alRef, unsigned int aMask,
 		eStencilOp aFailOp,eStencilOp aZFailOp,eStencilOp aZPassOp)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
@@ -617,28 +499,33 @@ namespace hpl {
 		eStencilOp aFrontFailOp,eStencilOp aFrontZFailOp,eStencilOp aFrontZPassOp,
 		eStencilOp aBackFailOp,eStencilOp aBackZFailOp,eStencilOp aBackZPassOp)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetCullActive(bool abX)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 	}
 
 	void cLowLevelGraphicsSDL::SetCullMode(eCullMode aMode)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetScissorActive(bool abX)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetScissorRect(const cVector2l& avPos, const cVector2l& avSize)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
@@ -646,14 +533,16 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SetClipPlane(int alIdx, const cPlanef& aPlane)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 	}
 	cPlanef cLowLevelGraphicsSDL::GetClipPlane(int alIdx)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 		return cPlanef();
-
 	}
 	void cLowLevelGraphicsSDL::SetClipPlaneActive(int alIdx, bool abX)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 	}
 
 
@@ -661,12 +550,14 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SetBlendActive(bool abX)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetBlendFunc(eBlendFunc aSrcFactor, eBlendFunc aDestFactor)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
@@ -675,18 +566,21 @@ namespace hpl {
 	void cLowLevelGraphicsSDL::SetBlendFuncSeparate(eBlendFunc aSrcFactorColor, eBlendFunc aDestFactorColor,
 		eBlendFunc aSrcFactorAlpha, eBlendFunc aDestFactorAlpha)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetPolygonOffsetActive(bool abX)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 
 	}
 
 
 	void cLowLevelGraphicsSDL::SetPolygonOffset(float afBias, float afSlopeScaleBias)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
@@ -701,6 +595,7 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::PushMatrix(eMatrix aMtxType)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
@@ -708,11 +603,13 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::PopMatrix(eMatrix aMtxType)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 	}
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetMatrix(eMatrix aMtxType, const cMatrixf& a_mtxA)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
@@ -720,16 +617,19 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SetIdentityMatrix(eMatrix aMtxType)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetOrthoProjection(const cVector2f& avSize, float afMin, float afMax)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 	}
 
 	void cLowLevelGraphicsSDL::SetOrthoProjection(const cVector3f& avMin, const cVector3f& avMax)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
@@ -743,12 +643,14 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SetTexture(unsigned int alUnit,iTexture* apTex)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetColor(const cColor &aColor)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
@@ -763,6 +665,7 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::DrawTriangle(tVertexVec& avVtx)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 
 	}
 
@@ -770,6 +673,7 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::DrawQuad(const cVector3f &avPos,const cVector2f &avSize,const cColor& aColor)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 
 	}
 
@@ -777,6 +681,7 @@ namespace hpl {
 		const cVector2f &avMinTexCoord,const cVector2f &avMaxTexCoord,
 		const cColor& aColor)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 
 	}
 
@@ -785,6 +690,7 @@ namespace hpl {
 		const cVector2f &avMinTexCoord1,const cVector2f &avMaxTexCoord1,
 		const cColor& aColor)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 
 	}
 
@@ -792,6 +698,7 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::DrawQuad(const tVertexVec &avVtx)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 
 	}
 
@@ -800,6 +707,7 @@ namespace hpl {
 	void cLowLevelGraphicsSDL::DrawQuadMultiTex(const tVertexVec &avVtx,const tVector3fVec &avExtraUvs)
 	{
 
+		BX_ASSERT(false, "interface is deprecated");
 	}
 
 
@@ -807,6 +715,7 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::DrawQuad(const tVertexVec &avVtx, const cColor aCol)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 
 	}
 
@@ -814,6 +723,7 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::DrawQuad(const tVertexVec &avVtx,const float afZ)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 
 	}
 
@@ -821,6 +731,7 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::DrawQuad(const tVertexVec &avVtx,const float afZ,const cColor &aCol)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 
 	}
 
@@ -828,16 +739,19 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::DrawLine(const cVector3f& avBegin, const cVector3f& avEnd, cColor aCol)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 
 	}
 
 	void cLowLevelGraphicsSDL::DrawLine(const cVector3f& avBegin, const cColor& aBeginCol, const cVector3f& avEnd, const cColor& aEndCol)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 
 	}
 
 	void cLowLevelGraphicsSDL::DrawBoxMinMax(const cVector3f& avMin, const cVector3f& avMax, cColor aCol)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 
 	}
 
@@ -845,6 +759,7 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::DrawSphere(const cVector3f& avPos, float afRadius, cColor aCol)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 
 	}
 
@@ -852,6 +767,7 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::DrawSphere(const cVector3f& avPos, float afRadius, cColor aColX, cColor aColY, cColor aColZ)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 
 	}
 
@@ -859,10 +775,12 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::DrawLineQuad(const cRect2f& aRect, float afZ, cColor aCol)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 	}
 
 	void cLowLevelGraphicsSDL::DrawLineQuad(const cVector3f &avPos,const cVector2f &avSize, cColor aCol)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 	}
 
 
@@ -877,19 +795,21 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::AddVertexToBatch(const cVertex *apVtx)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::AddVertexToBatch(const cVertex *apVtx, const cVector3f* avTransform)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::AddVertexToBatch(const cVertex *apVtx, const cMatrixf* aMtx)
 	{
-		;
+		BX_ASSERT(false, "interface is deprecated");
 
 	}
 
@@ -898,6 +818,7 @@ namespace hpl {
 	void cLowLevelGraphicsSDL::AddVertexToBatch_Size2D(const cVertex *apVtx, const cVector3f* avTransform,
 		const cColor* apCol,const float& mfW, const float& mfH)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
@@ -905,6 +826,7 @@ namespace hpl {
 	void cLowLevelGraphicsSDL::AddVertexToBatch_Raw(	const cVector3f& avPos, const cColor &aColor,
 		const cVector3f& avTex)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 	}
 
 
@@ -912,6 +834,7 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::AddIndexToBatch(int alIndex)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 
 	}
 
@@ -919,6 +842,7 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::AddTexCoordToBatch(unsigned int alUnit,const cVector3f *apCoord)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 
 	}
 
@@ -926,6 +850,7 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SetBatchTextureUnitActive(unsigned int alUnit,bool abActive)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 
 	}
 
@@ -933,399 +858,40 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::FlushTriBatch(tVtxBatchFlag aTypeFlags, bool abAutoClear)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::FlushQuadBatch(tVtxBatchFlag aTypeFlags, bool abAutoClear)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::ClearBatch()
 	{
+		BX_ASSERT(false, "interface is deprecated");
 	}
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// IMPLEMENTAION SPECIFICS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PRIVATE METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetUpBatchArrays()
 	{
+		BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetVtxBatchStates(tVtxBatchFlag aFlags)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetMatrixMode(eMatrix mType)
 	{
+		BX_ASSERT(false, "interface is deprecated");
 	}
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// GLOBAL FUNCTIONS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
-	GLenum GetGLWrapEnum(eTextureWrap aMode)
-	{
-		;
-
-		switch(aMode)
-		{
-		case eTextureWrap_Clamp: return GL_CLAMP;
-		case eTextureWrap_Repeat: return GL_REPEAT;
-		case eTextureWrap_ClampToEdge: return GL_CLAMP_TO_EDGE;
-		case eTextureWrap_ClampToBorder: return GL_CLAMP_TO_BORDER;
-		}
-
-		return GL_REPEAT;
-	}
-
-
-	//-----------------------------------------------------------------------
-
-	GLenum PixelFormatToGLFormat(ePixelFormat aFormat)
-	{
-		;
-
-		switch(aFormat)
-		{
-		case ePixelFormat_Alpha:			return GL_ALPHA;
-		case ePixelFormat_Luminance:		return GL_LUMINANCE;
-		case ePixelFormat_LuminanceAlpha:	return GL_LUMINANCE_ALPHA;
-		case ePixelFormat_RGB:				return GL_RGB;
-		case ePixelFormat_RGBA:				return GL_RGBA;
-		case ePixelFormat_BGR:				return GL_BGR_EXT;
-		case ePixelFormat_BGRA:				return GL_BGRA_EXT;
-		case ePixelFormat_Depth16:			return GL_DEPTH_COMPONENT;
-		case ePixelFormat_Depth24:			return GL_DEPTH_COMPONENT;
-		case ePixelFormat_Depth32:			return GL_DEPTH_COMPONENT;
-		case ePixelFormat_Alpha16:			return GL_ALPHA;
-		case ePixelFormat_Luminance16:		return GL_LUMINANCE;
-		case ePixelFormat_LuminanceAlpha16:	return GL_LUMINANCE_ALPHA;
-		case ePixelFormat_RGB16:			return GL_RGB;
-		case ePixelFormat_RGBA16:			return GL_RGBA;
-		case ePixelFormat_Alpha32:			return GL_ALPHA;
-		case ePixelFormat_Luminance32:		return GL_LUMINANCE;
-		case ePixelFormat_LuminanceAlpha32: return GL_LUMINANCE_ALPHA;
-		case ePixelFormat_RGB32:			return GL_RGB;
-		case ePixelFormat_RGBA32:			return GL_RGBA;
-		};
-
-		return 0;
-	}
-
-	//-------------------------------------------------
-
-	GLenum PixelFormatToGLInternalFormat(ePixelFormat aFormat)
-	{
-		;
-
-		switch(aFormat)
-		{
-		case ePixelFormat_Alpha:			return GL_ALPHA;
-		case ePixelFormat_Luminance:		return GL_LUMINANCE;
-		case ePixelFormat_LuminanceAlpha:	return GL_LUMINANCE_ALPHA;
-		case ePixelFormat_RGB:				return GL_RGB;
-		case ePixelFormat_RGBA:				return GL_RGBA;
-		case ePixelFormat_BGR:				return GL_RGB;
-		case ePixelFormat_BGRA:				return GL_RGBA;
-		case ePixelFormat_Depth16:			return GL_DEPTH_COMPONENT16;
-		case ePixelFormat_Depth24:			return GL_DEPTH_COMPONENT24;
-		case ePixelFormat_Depth32:			return GL_DEPTH_COMPONENT32;
-		case ePixelFormat_Alpha16:			return GL_ALPHA16F_ARB;
-		case ePixelFormat_Luminance16:		return GL_LUMINANCE16F_ARB;
-		case ePixelFormat_LuminanceAlpha16:	return GL_LUMINANCE_ALPHA16F_ARB;
-		case ePixelFormat_RGB16:			return GL_RGB16F_ARB;
-		case ePixelFormat_RGBA16:			return GL_RGBA16F_ARB;
-		case ePixelFormat_Alpha32:			return GL_ALPHA32F_ARB;
-		case ePixelFormat_Luminance32:		return GL_LUMINANCE32F_ARB;
-		case ePixelFormat_LuminanceAlpha32: return GL_LUMINANCE_ALPHA32F_ARB;
-		case ePixelFormat_RGB32:			return GL_RGB32F_ARB;
-		case ePixelFormat_RGBA32:			return GL_RGBA32F_ARB;
-		};
-
-		return 0;
-	}
-
-	//-------------------------------------------------
-
-	GLenum GetGLCompressionFormatFromPixelFormat(ePixelFormat aFormat)
-	{
-		;
-
-		switch(aFormat)
-		{
-		case ePixelFormat_DXT1:				return GL_COMPRESSED_RGBA_S3TC_DXT1_EXT;
-		case ePixelFormat_DXT3:				return GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
-		case ePixelFormat_DXT5:				return GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
-		}
-		return 0;
-	}
-
-	//-------------------------------------------------
-
-	GLenum TextureTypeToGLTarget(eTextureType aType)
-	{
-		switch(aType)
-		{
-		case eTextureType_1D:		return GL_TEXTURE_1D;
-		case eTextureType_2D:		return GL_TEXTURE_2D;
-		case eTextureType_Rect:		return GL_TEXTURE_RECTANGLE_NV;
-		case eTextureType_CubeMap:	return GL_TEXTURE_CUBE_MAP_ARB;
-		case eTextureType_3D:		return GL_TEXTURE_3D;
-		}
-		return 0;
-	}
-
-	//-----------------------------------------------------------------------
-
-	GLenum GetGLBlendEnum(eBlendFunc aType)
-	{
-		;
-
-		switch(aType)
-		{
-		case eBlendFunc_Zero:					return GL_ZERO;
-		case eBlendFunc_One:					return GL_ONE;
-		case eBlendFunc_SrcColor:				return GL_SRC_COLOR;
-		case eBlendFunc_OneMinusSrcColor:		return GL_ONE_MINUS_SRC_COLOR;
-		case eBlendFunc_DestColor:				return GL_DST_COLOR;
-		case eBlendFunc_OneMinusDestColor:		return GL_ONE_MINUS_DST_COLOR;
-		case eBlendFunc_SrcAlpha:				return GL_SRC_ALPHA;
-		case eBlendFunc_OneMinusSrcAlpha:		return GL_ONE_MINUS_SRC_ALPHA;
-		case eBlendFunc_DestAlpha:				return GL_DST_ALPHA;
-		case eBlendFunc_OneMinusDestAlpha:		return GL_ONE_MINUS_DST_ALPHA;
-		case eBlendFunc_SrcAlphaSaturate:		return GL_SRC_ALPHA_SATURATE;
-		}
-		return 0;
-	}
-
-	//-----------------------------------------------------------------------
-
-	GLenum GetGLTextureParamEnum(eTextureParam aType)
-	{
-		;
-
-		switch(aType)
-		{
-		case eTextureParam_ColorFunc:		return GL_COMBINE_RGB_ARB;
-		case eTextureParam_AlphaFunc:		return GL_COMBINE_ALPHA_ARB;
-		case eTextureParam_ColorSource0:	return GL_SOURCE0_RGB_ARB;
-		case eTextureParam_ColorSource1:	return GL_SOURCE1_RGB_ARB;
-		case eTextureParam_ColorSource2:	return GL_SOURCE2_RGB_ARB;
-		case eTextureParam_AlphaSource0:	return GL_SOURCE0_ALPHA_ARB;
-		case eTextureParam_AlphaSource1:	return GL_SOURCE1_ALPHA_ARB;
-		case eTextureParam_AlphaSource2:	return GL_SOURCE2_ALPHA_ARB;
-		case eTextureParam_ColorOp0:		return GL_OPERAND0_RGB_ARB;
-		case eTextureParam_ColorOp1:		return GL_OPERAND1_RGB_ARB;
-		case eTextureParam_ColorOp2:		return GL_OPERAND2_RGB_ARB;
-		case eTextureParam_AlphaOp0:		return GL_OPERAND0_ALPHA_ARB;
-		case eTextureParam_AlphaOp1:		return GL_OPERAND1_ALPHA_ARB;
-		case eTextureParam_AlphaOp2:		return GL_OPERAND2_ALPHA_ARB;
-		case eTextureParam_ColorScale:		return GL_RGB_SCALE_ARB;
-		case eTextureParam_AlphaScale:		return GL_ALPHA_SCALE;
-		}
-		return 0;
-	}
-
-	//-----------------------------------------------------------------------
-
-	GLenum GetGLTextureOpEnum(eTextureOp aType)
-	{
-		;
-
-		switch(aType)
-		{
-		case eTextureOp_Color:			return GL_SRC_COLOR;
-		case eTextureOp_OneMinusColor:	return GL_ONE_MINUS_SRC_COLOR;
-		case eTextureOp_Alpha:			return GL_SRC_ALPHA;
-		case eTextureOp_OneMinusAlpha:	return GL_ONE_MINUS_SRC_ALPHA;
-		}
-		return 0;
-	}
-
-	//-----------------------------------------------------------------------
-
-	GLenum GetGLTextureSourceEnum(eTextureSource aType)
-	{
-		;
-
-		switch(aType)
-		{
-		case eTextureSource_Texture:	return GL_TEXTURE;
-		case eTextureSource_Constant:	return GL_CONSTANT_ARB;
-		case eTextureSource_Primary:	return GL_PRIMARY_COLOR_ARB;
-		case eTextureSource_Previous:	return GL_PREVIOUS_ARB;
-		}
-		return 0;
-	}
-	//-----------------------------------------------------------------------
-
-	GLenum GetGLTextureTargetEnum(eTextureType aType)
-	{
-		;
-
-		switch(aType)
-		{
-		case eTextureType_1D:		return GL_TEXTURE_1D;
-		case eTextureType_2D:		return GL_TEXTURE_2D;
-		case eTextureType_Rect:
-			{
-				return GL_TEXTURE_RECTANGLE_NV;
-			}
-		case eTextureType_CubeMap:	return GL_TEXTURE_CUBE_MAP_ARB;
-		case eTextureType_3D:		return GL_TEXTURE_3D;
-		}
-		return 0;
-	}
-
-	//-----------------------------------------------------------------------
-
-	GLenum GetGLTextureCompareMode(eTextureCompareMode aMode)
-	{
-		;
-
-		switch(aMode)
-		{
-		case eTextureCompareMode_None:			return GL_NONE;
-		case eTextureCompareMode_RToTexture:	return GL_COMPARE_R_TO_TEXTURE;
-		}
-		return 0;
-	}
-
-	GLenum GetGLTextureCompareFunc(eTextureCompareFunc aFunc)
-	{
-		switch(aFunc)
-		{
-		case eTextureCompareFunc_LessOrEqual:		return GL_LEQUAL;
-		case eTextureCompareFunc_GreaterOrEqual:	return GL_GEQUAL;
-		}
-		return 0;
-	}
-
-	//-----------------------------------------------------------------------
-
-	GLenum GetGLTextureFuncEnum(eTextureFunc aType)
-	{
-		;
-
-		switch(aType)
-		{
-		case eTextureFunc_Modulate:		return GL_MODULATE;
-		case eTextureFunc_Replace:		return GL_REPLACE;
-		case eTextureFunc_Add:			return GL_ADD;
-		case eTextureFunc_Substract:	return GL_SUBTRACT_ARB;
-		case eTextureFunc_AddSigned:	return GL_ADD_SIGNED_ARB;
-		case eTextureFunc_Interpolate:	return GL_INTERPOLATE_ARB;
-		case eTextureFunc_Dot3RGB:		return GL_DOT3_RGB_ARB;
-		case eTextureFunc_Dot3RGBA:		return GL_DOT3_RGBA_ARB;
-		}
-		return 0;
-	}
-
-	//-----------------------------------------------------------------------
-	GLenum GetGLDepthTestFuncEnum(eDepthTestFunc aType)
-	{
-		;
-
-		switch(aType)
-		{
-		case eDepthTestFunc_Never:			return GL_NEVER;
-		case eDepthTestFunc_Less:				return GL_LESS;
-		case eDepthTestFunc_LessOrEqual:		return GL_LEQUAL;
-		case eDepthTestFunc_Greater:			return GL_GREATER;
-		case eDepthTestFunc_GreaterOrEqual:	return GL_GEQUAL;
-		case eDepthTestFunc_Equal:			return GL_EQUAL;
-		case eDepthTestFunc_NotEqual:			return GL_NOTEQUAL;
-		case eDepthTestFunc_Always:			return GL_ALWAYS;
-		}
-		return 0;
-	}
-
-	//-----------------------------------------------------------------------
-
-	GLenum GetGLAlphaTestFuncEnum(eAlphaTestFunc aType)
-	{
-		;
-
-		switch(aType)
-		{
-		case eAlphaTestFunc_Never:			return GL_NEVER;
-		case eAlphaTestFunc_Less:				return GL_LESS;
-		case eAlphaTestFunc_LessOrEqual:		return GL_LEQUAL;
-		case eAlphaTestFunc_Greater:			return GL_GREATER;
-		case eAlphaTestFunc_GreaterOrEqual:	return GL_GEQUAL;
-		case eAlphaTestFunc_Equal:			return GL_EQUAL;
-		case eAlphaTestFunc_NotEqual:			return GL_NOTEQUAL;
-		case eAlphaTestFunc_Always:			return GL_ALWAYS;
-		}
-		return 0;
-	}
-
-	//-----------------------------------------------------------------------
-
-	GLenum GetGLStencilFuncEnum(eStencilFunc aType)
-	{
-		;
-
-		switch(aType)
-		{
-		case eStencilFunc_Never:			return GL_NEVER;
-		case eStencilFunc_Less:				return GL_LESS;
-		case eStencilFunc_LessOrEqual:		return GL_LEQUAL;
-		case eStencilFunc_Greater:			return GL_GREATER;
-		case eStencilFunc_GreaterOrEqual:	return GL_GEQUAL;
-		case eStencilFunc_Equal:			return GL_EQUAL;
-		case eStencilFunc_NotEqual:			return GL_NOTEQUAL;
-		case eStencilFunc_Always:			return GL_ALWAYS;
-		}
-		return 0;
-	}
-
-	//-----------------------------------------------------------------------
-
-	GLenum GetGLStencilOpEnum(eStencilOp aType)
-	{
-		;
-
-		switch(aType)
-		{
-		case eStencilOp_Keep:			return GL_KEEP;
-		case eStencilOp_Zero:			return GL_ZERO;
-		case eStencilOp_Replace:		return GL_REPLACE;
-		case eStencilOp_Increment:		return GL_INCR;
-		case eStencilOp_Decrement:		return GL_DECR;
-		case eStencilOp_Invert:			return GL_INVERT;
-		case eStencilOp_IncrementWrap:	return GL_INCR_WRAP_EXT;
-		case eStencilOp_DecrementWrap:	return GL_DECR_WRAP_EXT;
-		}
-		return 0;
-	}
-
-	//-----------------------------------------------------------------------
-
-
 
 }

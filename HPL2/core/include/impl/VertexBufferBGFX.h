@@ -22,7 +22,6 @@
 #include <graphics/VertexBuffer.h>
 
 #include <absl/container/inlined_vector.h>
-
 #include <algorithm>
 #include <array>
 #include <bgfx/bgfx.h>
@@ -119,20 +118,7 @@ namespace hpl
         virtual void ResizeArray(eVertexBufferElement aElement, int alSize) override;
         virtual void ResizeIndices(int alSize) override;
 
-        VertexElement* GetElement(eVertexBufferElement elementType) {
-            auto element = std::find_if(
-                m_vertexElements.begin(),
-                m_vertexElements.end(),
-                [elementType](const auto& element)
-                {
-                    return element.m_type == elementType;
-                });
-            if (element != m_vertexElements.end())
-            {
-                return element;
-            }
-            return nullptr;
-        }
+        VertexElement* GetElement(eVertexBufferElement elementType);
         
 
     protected:

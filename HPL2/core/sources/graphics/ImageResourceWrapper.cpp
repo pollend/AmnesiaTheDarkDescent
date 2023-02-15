@@ -51,9 +51,9 @@ namespace hpl {
             return nullptr;
         }
 
-        if (TypeInfo<Image>().isType(*m_imageResource)) {
+        if (TypeInfo<Image>().IsType(*m_imageResource)) {
             return static_cast<Image*>(m_imageResource);
-        } else if (TypeInfo<AnimatedImage>().isType(*m_imageResource)) {
+        } else if (TypeInfo<AnimatedImage>().IsType(*m_imageResource)) {
             return static_cast<AnimatedImage*>(m_imageResource)->GetImage();
         }
         return nullptr;

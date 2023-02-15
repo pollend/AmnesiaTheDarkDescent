@@ -99,10 +99,11 @@ namespace hpl {
 		 * Creates an animated texture. The name must be [name]01.[ext]. And then the textures in the animation must
 		 * be named [name]01.[ext], [name]02.[ext], etc
 		 */
+		[[deprecated("Use CreateAnimImage instead")]]
 		iTexture* CreateAnim(	const tString& asFirstFrameName,bool abUseMipMaps, eTextureType aType,
 								eTextureUsage aUsage=eTextureUsage_Normal,
 								unsigned int alTextureSizeLevel=0);
-
+		[[deprecated("Use CreateCubeMapImage instead")]]
 		iTexture* CreateCubeMap(const tString& asName,bool abUseMipMaps, eTextureUsage aUsage=eTextureUsage_Normal,
 								unsigned int alTextureSizeLevel=0);
 

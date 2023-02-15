@@ -25,9 +25,9 @@
 #include "math/MathTypes.h"
 #include "scene/RenderableContainer_DynBoxTree.h"
 
-#include <graphics/EntrySDL.h>
 
 #include "../../tests/Common/SimpleCamera.h"
+#include "system/Bootstrap.h"
 #include <array>
 #include <memory>
 
@@ -2066,10 +2066,10 @@ int hplMain(const tString &asCommandline)
 	//Init the game engine
 	cEngineInitVars vars;
 
-	hpl::entry_sdl::Configuration config = {};
-	config.m_name = "HPL2 MapView";
-	config.m_width = gpConfig->GetInt("Screen","Width",1024);
-	config.m_height = gpConfig->GetInt("Screen","Height",768);
+	// hpl::entry_sdl::Configuration config = {};
+	// config.m_name = "HPL2 MapView";
+	// config.m_width = gpConfig->GetInt("Screen","Width",1024);
+	// config.m_height = gpConfig->GetInt("Screen","Height",768);
 
 
 	// vars.mGraphics.mvScreenSize.x = gpConfig->GetInt("Screen","Width",1024);
@@ -2084,8 +2084,9 @@ int hplMain(const tString &asCommandline)
 	gfNodeCont_MaxEdgeDistance = gpConfig->GetFloat("NodeCont_","MaxEdgeDistance", 5.0f);
 	gfNodeCont_MaxHeight = gpConfig->GetFloat("NodeCont","MaxHeight", 0.41f);
 
-	
-	hpl::entry_sdl::setThreadHandler([&]() {
+	Bootstrap bootstrap;
+	bootstrap.Initialize();
+	bootstrap.Run([&](bx::Thread* self) {
 		gpEngine = CreateHPLEngine(eHplAPI_OpenGL, eHplSetup_All, &vars);
 		gpEngine->SetLimitFPS(false);
 		gpEngine->GetGraphics()->GetLowLevel()->SetVsyncActive(false);
@@ -2126,9 +2127,8 @@ int hplMain(const tString &asCommandline)
 		gpEngine->Run();
 		return 0;
 	});
-
-	hpl::entry_sdl::run(config);
-
+	bootstrap.Shutdown();
+	
 	hplDelete (gpSimpleCamera);
 
 	//Delete the engine

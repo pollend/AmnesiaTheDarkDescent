@@ -19,9 +19,9 @@
 
 #include "graphics/Image.h"
 #include "hpl.h"
-#include <graphics/EntrySDL.h>
 
 #include "../../tests/Common/SimpleCamera.h"
+#include "system/Bootstrap.h"
 
 using namespace hpl;
 
@@ -2320,8 +2320,9 @@ int hplMain(const tString &asCommandline)
 
 	SetLogFile(sPersonalDir + PERSONAL_RELATIVEROOT _W("HPL2/modelview.log"));
 
-
-	hpl::entry_sdl::setThreadHandler([&]() {
+	Bootstrap bootstrap;
+	bootstrap.Initialize();
+	bootstrap.Run([&](bx::Thread* self) {
 		//Init the game engine
 		cEngineInitVars vars;
 		vars.mGraphics.mvScreenSize.x = 1024;
@@ -2371,13 +2372,8 @@ int hplMain(const tString &asCommandline)
 
 		return 0;
 	});
-
-	hpl::entry_sdl::Configuration config = {};
-	config.m_name = "HPL2 ModelViewer";
-	config.m_width = 1024;
-	config.m_height = 768;
-	hpl::entry_sdl::run(config);
-
+	bootstrap.Shutdown();
+	
 	hplDelete (gpSimpleCamera);
 
 	//Delete the engine

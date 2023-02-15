@@ -20,6 +20,7 @@
 #ifndef HPL_INPUT_TYPES_H
 #define HPL_INPUT_TYPES_H
 
+#include <cstdint>
 namespace hpl {
 
 	//-------------------------------------------------
@@ -284,7 +285,7 @@ namespace hpl {
 
 	//-------------------------------------------------
 
-	enum eKeyModifier {
+	enum eKeyModifier: uint16_t {
 		eKeyModifier_None	= 0x00000,
 		eKeyModifier_Ctrl	= 0x00001,
 		eKeyModifier_Shift	= 0x00002,
