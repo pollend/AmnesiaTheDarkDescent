@@ -131,7 +131,9 @@ namespace hpl {
 		iPostEffect* CreatePostEffect(iPostEffectParams *apParams);
 		void DestroyPostEffect(iPostEffect* apPostEffect);
 
+		[[deprecated("replaced with bgfx")]]
 		iGpuProgram* CreateGpuProgram(const tString& asName);
+		[[deprecated("replaced with bgfx")]]
 		iGpuProgram* CreateGpuProgramFromShaders(	const tString& asName, const tString& asVtxShader,const tString& asFragShader,
 													cParserVarContainer *apVarContainer);
 		void DestroyGpuProgram(iGpuProgram* apProgram);

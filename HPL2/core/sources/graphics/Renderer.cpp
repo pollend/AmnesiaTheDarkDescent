@@ -35,21 +35,18 @@
 #include "system/String.h"
 
 #include "graphics/FrameBuffer.h"
-#include "graphics/GPUProgram.h"
 #include "graphics/Graphics.h"
 #include "graphics/LowLevelGraphics.h"
 #include "graphics/Material.h"
 #include "graphics/MaterialType.h"
 #include "graphics/Mesh.h"
 #include "graphics/MeshCreator.h"
-#include "graphics/OcclusionQuery.h"
 #include "graphics/RenderList.h"
 #include "graphics/Renderable.h"
 #include "graphics/SubMesh.h"
 #include "graphics/Texture.h"
 #include "graphics/VertexBuffer.h"
 
-#include "resources/GpuShaderManager.h"
 #include "resources/LowLevelResources.h"
 #include "resources/MeshManager.h"
 #include "resources/Resources.h"
@@ -530,13 +527,6 @@ namespace hpl
     void iRenderer::AssignOcclusionObject(
         void* apSource, int alCustomIndex, iVertexBuffer* apVtxBuffer, cMatrixf* apMatrix, bool abDepthTest)
     {
-        if (mbLog)
-            Log("  Creating occlusion object from source %d with custom ID: %d . VtxBuffer: %d Matrix: %d Depthtest: %d\n",
-                apSource,
-                alCustomIndex,
-                apVtxBuffer,
-                apMatrix,
-                abDepthTest);
 
         mpCurrentSettings->AssignOcclusionObject(this, apSource, alCustomIndex, apVtxBuffer, apMatrix, abDepthTest);
     }
@@ -545,17 +535,11 @@ namespace hpl
     {
         int lSamples = mpCurrentSettings->RetrieveOcclusionObjectSamples(this, apSource, alCustomIndex);
 
-        if (mbLog)
-            Log("  Retrieved %d samples from occlusion object with source %d and custom ID: %d.\n", lSamples, apSource, alCustomIndex);
-
         return lSamples;
     }
 
     void iRenderer::WaitAndRetrieveAllOcclusionQueries()
     {
-        if (mbLog)
-            Log("  Retrieving sample count for all active occlusion queries.\n");
-
         mpCurrentSettings->WaitAndRetrieveAllOcclusionQueries(this);
     }
 
@@ -1114,14 +1098,6 @@ namespace hpl
             // If previous test failed, push children to stack and render objects (if any) directly.
             else
             {
-                if (mbLog)
-                {
-                    if (lMinRenderedObjects > 0)
-                        Log("CHC: Rendered objects left: %d node %d, pushing children and rendering nodes!\n", lMinRenderedObjects, pNode);
-                    else
-                        Log("CHC: Near plane inside node %d, pushing children and rendering nodes!\n", pNode);
-                }
-
                 ////////////////
                 // Add child nodes to stack if any (also checks if they have needed flags are in frustum)
                 PushNodeChildrenToStack(setNodeStack, pNode, alNeededFlags);

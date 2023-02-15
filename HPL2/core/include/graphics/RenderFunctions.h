@@ -75,8 +75,6 @@ namespace hpl {
 
 		cVector2l mvScreenSize;
 		cVector2f mvScreenSizeFloat;
-
-		bool mbLog;
 	};
 
 	//---------------------------------------------

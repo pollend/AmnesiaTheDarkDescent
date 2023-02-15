@@ -162,10 +162,7 @@ namespace hpl {
 		// Create Renderers
 		if(alHplSetupFlags & eHplSetup_Screen)
 		{
-            ////////////////////////////////////////////////
-            // Check feature support
-            apResources->GetGpuShaderManager()->CheckFeatureSupport();
-
+    
 			mvRenderers.resize(eRenderer_LastEnum, NULL);
 
 			mvRenderers[eRenderer_Main] = hplNew(cRendererDeferred, (this, apResources));
@@ -445,30 +442,32 @@ namespace hpl {
 
 	iGpuProgram* cGraphics::CreateGpuProgram(const tString& asName)
 	{
-		iGpuProgram *pProgram = mpLowLevelGraphics->CreateGpuProgram(asName);
-		pProgram->SetResources(mpResources);
-		mlstGpuPrograms.push_back(pProgram);
-
-		return pProgram;
+		// iGpuProgram *pProgram = mpLowLevelGraphics->CreateGpuProgram(asName);
+		// pProgram->SetResources(mpResources);
+		// mlstGpuPrograms.push_back(pProgram);
+		BX_ASSERT(false, "Not implemented");
+		return nullptr;
 	}
 
 	iGpuProgram* cGraphics::CreateGpuProgramFromShaders(const tString& asName, const tString& asVtxShader,const tString& asFragShader,
 														cParserVarContainer *apVarContainer)
 	{
-		iGpuShader *pVtxShader = mpResources->GetGpuShaderManager()->CreateShader(asVtxShader,eGpuShaderType_Vertex,apVarContainer);
-		if(pVtxShader==NULL) return NULL;
-		iGpuShader *pFragShader = mpResources->GetGpuShaderManager()->CreateShader(asFragShader,eGpuShaderType_Fragment,apVarContainer);
-		if(pFragShader==NULL){
-			mpResources->GetGpuShaderManager()->Destroy(pVtxShader);
-			return NULL;
-		}
+		BX_ASSERT(false, "Not implemented");
+		return nullptr;
+		// iGpuShader *pVtxShader = mpResources->GetGpuShaderManager()->CreateShader(asVtxShader,eGpuShaderType_Vertex,apVarContainer);
+		// if(pVtxShader==NULL) return NULL;
+		// iGpuShader *pFragShader = mpResources->GetGpuShaderManager()->CreateShader(asFragShader,eGpuShaderType_Fragment,apVarContainer);
+		// if(pFragShader==NULL){
+		// 	mpResources->GetGpuShaderManager()->Destroy(pVtxShader);
+		// 	return NULL;
+		// }
 
-		iGpuProgram *pProgram = CreateGpuProgram(asName);
-		pProgram->SetShader(eGpuShaderType_Vertex, pVtxShader);
-		pProgram->SetShader(eGpuShaderType_Fragment, pFragShader);
-		pProgram->Link();
+		// iGpuProgram *pProgram = CreateGpuProgram(asName);
+		// pProgram->SetShader(eGpuShaderType_Vertex, pVtxShader);
+		// pProgram->SetShader(eGpuShaderType_Fragment, pFragShader);
+		// pProgram->Link();
 
-        return pProgram;
+        // return pProgram;
 	}
 
 	void cGraphics::DestroyGpuProgram(iGpuProgram* apProgram)

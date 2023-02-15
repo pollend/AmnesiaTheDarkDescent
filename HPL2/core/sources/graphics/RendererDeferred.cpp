@@ -58,16 +58,13 @@
 #include "graphics/FrameBuffer.h"
 #include "graphics/Mesh.h"
 #include "graphics/SubMesh.h"
-#include "graphics/OcclusionQuery.h"
 #include "graphics/TextureCreator.h"
 #include "graphics/ShaderUtil.h"
 
 #include "resources/Resources.h"
 #include "resources/TextureManager.h"
-#include "resources/GpuShaderManager.h"
 #include "resources/MeshManager.h"
 #include "graphics/GPUShader.h"
-#include "graphics/GPUProgram.h"
 
 #include "scene/Camera.h"
 #include "scene/World.h"
@@ -315,28 +312,28 @@ namespace hpl {
 		
 		////////////////////////////////////
 		//Create SSAO programs and textures
-		if(mbSSAOLoaded && mpLowLevelGraphics->GetCaps(eGraphicCaps_TextureFloat)==0)
-		{
-			mbSSAOLoaded = false;
-			Warning("System does not support float textures! SSAO is disabled.\n");
-		}
-		if(mbSSAOLoaded)
-		{
-			cVector2l vSSAOSize = mvScreenSize / mlSSAOBufferSizeDiv;
+		// if(mbSSAOLoaded && mpLowLevelGraphics->GetCaps(eGraphicCaps_TextureFloat)==0)
+		// {
+		// 	mbSSAOLoaded = false;
+		// 	Warning("System does not support float textures! SSAO is disabled.\n");
+		// }
+		// if(mbSSAOLoaded)
+		// {
+		// 	cVector2l vSSAOSize = mvScreenSize / mlSSAOBufferSizeDiv;
 
-		}
+		// }
 
-		////////////////////////////////////
-		//Create Smooth Edge and textures
-		if(mbEdgeSmoothLoaded && mpLowLevelGraphics->GetCaps(eGraphicCaps_TextureFloat)==0)
-		{
-			mbEdgeSmoothLoaded = false;
-			Warning("System does not support float textures! Edge smooth is disabled.\n");
-		}
-		if(mbEdgeSmoothLoaded)
-		{
+		// ////////////////////////////////////
+		// //Create Smooth Edge and textures
+		// if(mbEdgeSmoothLoaded && mpLowLevelGraphics->GetCaps(eGraphicCaps_TextureFloat)==0)
+		// {
+		// 	mbEdgeSmoothLoaded = false;
+		// 	Warning("System does not support float textures! Edge smooth is disabled.\n");
+		// }
+		// if(mbEdgeSmoothLoaded)
+		// {
 			
-		}
+		// }
 
 		////////////////////////////////////
 		//Create light shapes

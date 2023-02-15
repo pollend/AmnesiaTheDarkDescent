@@ -44,7 +44,6 @@
 #include <graphics/RenderViewport.h>
 #include <graphics/GraphicsContext.h>
 
-#include "graphics/GPUProgram.h"
 #include "graphics/GPUShader.h"
 #include "resources/Resources.h"
 

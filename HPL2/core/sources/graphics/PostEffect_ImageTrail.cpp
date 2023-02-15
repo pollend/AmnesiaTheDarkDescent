@@ -24,8 +24,6 @@
 #include "graphics/Graphics.h"
 
 #include "graphics/FrameBuffer.h"
-#include "graphics/GPUProgram.h"
-#include "graphics/GPUShader.h"
 #include "graphics/GraphicsContext.h"
 #include "graphics/Image.h"
 #include "graphics/LowLevelGraphics.h"

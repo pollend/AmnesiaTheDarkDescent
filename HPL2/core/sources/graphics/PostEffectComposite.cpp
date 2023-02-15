@@ -26,8 +26,6 @@
 #include "math/MathTypes.h"
 #include "system/LowLevelSystem.h"
 
-#include "graphics/GPUProgram.h"
-#include "graphics/GPUShader.h"
 #include "graphics/Graphics.h"
 #include "graphics/LowLevelGraphics.h"
 #include "graphics/PostEffect.h"

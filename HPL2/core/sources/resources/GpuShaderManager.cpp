@@ -84,9 +84,9 @@ namespace hpl {
 	{
 		////////////////////////////
 		//Shader model variables
-		if(mpLowLevelGraphics->GetCaps(eGraphicCaps_ShaderModel_2))		mpPreprocessParser->GetEnvVarContainer()->Add("ShaderModel_2");
-		if(mpLowLevelGraphics->GetCaps(eGraphicCaps_ShaderModel_3))		mpPreprocessParser->GetEnvVarContainer()->Add("ShaderModel_3");
-		if(mpLowLevelGraphics->GetCaps(eGraphicCaps_ShaderModel_4))		mpPreprocessParser->GetEnvVarContainer()->Add("ShaderModel_4");
+		mpPreprocessParser->GetEnvVarContainer()->Add("ShaderModel_2");
+		mpPreprocessParser->GetEnvVarContainer()->Add("ShaderModel_3");
+		mpPreprocessParser->GetEnvVarContainer()->Add("ShaderModel_4");
 	}
 
 	//-----------------------------------------------------------------------

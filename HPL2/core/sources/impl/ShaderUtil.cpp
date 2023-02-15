@@ -5,7 +5,6 @@
 #include "bx/readerwriter.h"
 #include "engine/Interface.h"
 #include "impl/LowLevelGraphicsSDL.h"
-#include "impl/SDLTexture.h"
 #include <system/LowLevelSystem.h>
 #include <system/Filesystem.h>
 

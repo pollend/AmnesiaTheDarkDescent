@@ -37,7 +37,6 @@
 
 #include "resources/Resources.h"
 #include "graphics/GPUShader.h"
-#include "graphics/GPUProgram.h"
 
 #include "scene/Camera.h"
 #include "scene/World.h"

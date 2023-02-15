@@ -310,7 +310,7 @@ void cEditorThumbnailBuilder::BuildThumbnailFromImage(const tWString& asImageFil
 	mpEditor->GetEngine()->GetResources()->GetBitmapLoaderHandler()->SaveBitmap(pBmp,sDestinationFile,0);
 	hplDelete(pBmp);
 
-	pGfx->ClearFrameBuffer(eClearFrameBufferFlag_Color);
+	// pGfx->ClearFrameBuffer(eClearFrameBufferFlag_Color);
 }
 
 //-------------------------------------------------------------------

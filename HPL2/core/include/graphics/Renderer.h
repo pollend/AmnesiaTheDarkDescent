@@ -228,10 +228,6 @@ namespace hpl {
 	class cShadowMapData
 	{
 	public:
-		// iTexture *mpTempDiffTexture;
-		// iTexture *mpTexture;
-		// iFrameBuffer *mpBuffer;
-		
 		int mlFrameCount;
 		RenderTarget m_target;
 		cShadowMapLightCache mCache;
