@@ -43,7 +43,7 @@ namespace hpl
 
     enum class ConnectionType: uint8_t {
         Direct, // handler will be connected directly to the event
-        QueueConnection, // handler will be queued to be connected to the event
+        QueueConnection, // handler will be queued to be connected to the event need to call Process() to process the queue
     };
 
     template <typename... Params>

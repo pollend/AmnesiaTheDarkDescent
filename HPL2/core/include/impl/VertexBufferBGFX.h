@@ -68,8 +68,6 @@ namespace hpl
         };
 
         iVertexBufferBGFX(
-            iLowLevelGraphics* apLowLevelGraphics,
-            eVertexBufferType aType,
             eVertexBufferDrawType aDrawType,
             eVertexBufferUsageType aUsageType,
             int alReserveVtxSize,

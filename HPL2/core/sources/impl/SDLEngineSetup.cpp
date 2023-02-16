@@ -114,7 +114,7 @@ namespace hpl {
 
 		//////////////////////////
 		// Input
-		mpLowLevelInput = hplNew( cLowLevelInputSDL,(mpLowLevelGraphics) );
+		mpLowLevelInput = hplNew( cLowLevelInputSDL,() );
 
 		//////////////////////////
 		// Resources

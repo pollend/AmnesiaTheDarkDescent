@@ -192,7 +192,7 @@ namespace hpl {
 			
 		}, ConnectionType::QueueConnection);
 		if(auto* window = Interface<window::NativeWindowWrapper>::Get()) {
-			window->SetWindowEventHandler(m_windowEvent);
+			window->ConnectWindowEventHandler(m_windowEvent);
 		}
 
 

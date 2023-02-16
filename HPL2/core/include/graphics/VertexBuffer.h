@@ -36,19 +36,14 @@ namespace hpl {
 	class iVertexBuffer
 	{
 	public:
-		iVertexBuffer(iLowLevelGraphics* apLowLevelGraphics,
-			eVertexBufferType aType,
-			eVertexBufferDrawType aDrawType,eVertexBufferUsageType aUsageType,
-			int alReserveVtxSize,int alReserveIdxSize) :
-			mType(aType), mVertexFlags(0),
-			mpLowLevelGraphics(apLowLevelGraphics),
+		iVertexBuffer(eVertexBufferDrawType aDrawType,eVertexBufferUsageType aUsageType,
+			int alReserveVtxSize,int alReserveIdxSize) : mVertexFlags(0),
 			mDrawType(aDrawType), mUsageType(aUsageType),
 			mlReservedVtxSize(alReserveVtxSize), mlReservedIdxSize(alReserveIdxSize),
 			mlElementNum(-1) {}
 
 		virtual ~iVertexBuffer(){}
 
-		inline eVertexBufferType GetType() const { return mType; }
 
 		virtual void CreateElementArray(	eVertexBufferElement aType, eVertexBufferElementFormat aFormat,
 											int alElementNum, int alProgramVarIndex=0)=0;
@@ -111,9 +106,7 @@ namespace hpl {
 		tVertexElementFlag GetVertexElementFlags(){ return mVertexFlags;}
 
 	protected:
-		iLowLevelGraphics* mpLowLevelGraphics;
 
-		eVertexBufferType mType;
 		tVertexElementFlag mVertexFlags;
 		eVertexBufferDrawType mDrawType;
 		eVertexBufferUsageType mUsageType;

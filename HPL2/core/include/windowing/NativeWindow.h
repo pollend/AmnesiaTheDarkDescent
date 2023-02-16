@@ -11,7 +11,7 @@
 #include <system/HandleWrapper.h>
 #include <bx/debug.h>
 
-union SDL_Event;
+#include <SDL2/SDL_events.h>
 
 namespace hpl::window {
 
@@ -48,7 +48,7 @@ namespace hpl::window {
 
     struct InternalEvent {
         union {
-            SDL_Event* m_sdlEvent; // SDL_Event when compiling for SDL2
+            SDL_Event m_sdlEvent; // SDL_Event when compiling for SDL2
         };
     };
 
@@ -79,6 +79,7 @@ namespace hpl::window {
             HPL_HANDLER_IMPL(NativeWindowHandler)
         };
 
+        // this is internal to the windowing system and should not be used by the user ...
         void ConnectInternalEventHandler(NativeWindowHandler& handler, WindowInternalEvent::Handler& eventHandle);
         void ConnectionWindowEventHandler(NativeWindowHandler& handler, WindowEvent::Handler& eventHandle);
 
@@ -97,8 +98,6 @@ namespace hpl::window {
         void HideHardwareCursor(NativeWindowHandler& handler);
         void ConstrainCursor(NativeWindowHandler& handler);
         void UnconstrainCursor(NativeWindowHandler& handler);
-        
-        void fetchQueuedEvents(NativeWindowHandler& handler, std::function<void(InternalEvent&)>);
 
         void Process(NativeWindowHandler& handler);
     } // namespace internal
@@ -125,78 +124,77 @@ namespace hpl::window {
             m_impl = std::move(other.m_impl);
         }
         
-        void* NativeWindowHandle() {
+        inline void* NativeWindowHandle() {
             BX_ASSERT(m_impl, "NativeWindowHandle is null")
             return internal::NativeWindowHandle(m_impl);
         }
 
-        void* NativeDisplayHandle() {
+        inline void* NativeDisplayHandle() {
             BX_ASSERT(m_impl, "NativeDisplayHandle is null")
             return internal::NativeDisplayHandle(m_impl);
         }
 
-        void SetWindowSize(cVector2l size) {
+        inline void SetWindowSize(cVector2l size) {
             BX_ASSERT(m_impl, "NativeWindowHandle is null")
             internal::SetWindowSize(m_impl, size);
         }
 
-        void SetWindowTitle(const std::string_view title) {
+        inline void SetWindowTitle(const std::string_view title) {
             BX_ASSERT(m_impl, "NativeWindowHandle is null")
             internal::SetWindowTitle(m_impl, title);
         }
 
-        cVector2l GetWindowSize() {
+        inline cVector2l GetWindowSize() {
             BX_ASSERT(m_impl, "NativeWindowHandle is null")
             return internal::GetWindowSize(m_impl);
         }
 
-        void SetWindowEventHandler(WindowEvent::Handler& handler) {
+        inline void ConnectWindowEventHandler(WindowEvent::Handler& handler) {
             BX_ASSERT(m_impl, "NativeWindowHandle is null")
             internal::ConnectionWindowEventHandler(m_impl, handler);
         }
 
-        WindowStatus GetWindowStatus() {
+        inline void ConnectInternalEventHandler(internal::WindowInternalEvent::Handler& handler) {
+            BX_ASSERT(m_impl, "NativeWindowHandle is null")
+            internal::ConnectInternalEventHandler(m_impl, handler);
+        }
+
+        inline WindowStatus GetWindowStatus() {
             BX_ASSERT(m_impl, "NativeWindowHandle is null")
             return internal::GetWindowStatus(m_impl);
         }
 
-        void Process() {
+        inline void Process() {
             BX_ASSERT(m_impl, "NativeWindowHandle is null")
             internal::Process(m_impl);
         }
 
-        void WindowGrabCursor() {
+        inline void GrabCursor() {
             BX_ASSERT(m_impl, "NativeWindowHandle is null")
             internal::WindowGrabCursor(m_impl);
         }
-        void WindowReleaseCursor() {
+        inline void ReleaseCursor() {
             BX_ASSERT(m_impl, "NativeWindowHandle is null")
             internal::WindowReleaseCursor(m_impl);
         }
-        void ShowHardwareCursor() {
+        inline void ShowHardwareCursor() {
             BX_ASSERT(m_impl, "NativeWindowHandle is null")
             internal::ShowHardwareCursor(m_impl);
         }
-        void HideHardwareCursor() {
+        inline void HideHardwareCursor() {
             BX_ASSERT(m_impl, "NativeWindowHandle is null")
             internal::HideHardwareCursor(m_impl);
         }
-        void ConstrainCursor() {
+        inline void ConstrainCursor() {
             BX_ASSERT(m_impl, "NativeWindowHandle is null")
             internal::ConstrainCursor(m_impl);
         }
-        void UnconstrainCursor() {
+        inline void UnconstrainCursor() {
             BX_ASSERT(m_impl, "NativeWindowHandle is null")
             internal::UnconstrainCursor(m_impl);
         }
 
-        void fetchQueuedEvents(std::function<void(InternalEvent&)> handler) {
-            BX_ASSERT(m_impl, "NativeWindowHandle is null")
-            internal::fetchQueuedEvents(m_impl, handler);
-        }
-
-
-        WindowType GetWindowType() {
+        inline WindowType GetWindowType() {
             return WindowType::Window;
         }
 

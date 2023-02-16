@@ -69,7 +69,7 @@ namespace hpl {
         bool GetWindowIsVisible();
 
 		[[deprecated("replaced with BGFX")]]
-		bool GetFullscreenModeActive() { return mbFullscreen; }
+		bool GetFullscreenModeActive() { return false; }
 
 		[[deprecated("replaced with BGFX")]]
 		void SetVsyncActive(bool abX, bool abAdaptive);
@@ -322,69 +322,10 @@ namespace hpl {
 
 
 	private:
-        int mlDisplay;
 		int mlMultisampling;
-		int mlBpp;
-		bool mbFullscreen;
-		eGpuProgramFormat mGpuProgramFormat;
-
-
-		bool mbInitHasBeenRun;
-
-		bool mbDepthWrite;
-
-		bool mbCullActive;
-		eCullMode mCullMode;
-
-		bool mbDepthTestActive;
-		eDepthTestFunc mDepthTestFunc;
-
-		bool mbAlphaTestActive;
-		eAlphaTestFunc mAlphaTestFunc;
-		float mfAlphaTestFuncRef;
-
-		bool mbScissorActive;
-		cVector2l mvScissorPos;
-		cVector2l mvScissorSize;
-
-		bool mbBlendActive;
-
-		iFrameBuffer* mpFrameBuffer;
-		// cVector2l mvFrameBufferPos;
-		// cVector2l mvFrameBufferSize;
-		// cVector2l mvFrameBufferTotalSize;
 
 		float mfGammaCorrection;
-        bool mbGrab;
 
-		//////////////////////////////////////
-		//Vertex Array variables
-		//The vertex arrays used:
-		// float* mpVertexArray;
-		unsigned int mlVertexCount;
-		// unsigned int* mpIndexArray;
-		unsigned int mlIndexCount;
-
-		// unsigned int mlBatchStride;
-
-		// float *mpTexCoordArray[kMaxTextureUnits];
-		// bool mbTexCoordArrayActive[kMaxTextureUnits];
-		// unsigned int mlTexCoordArrayCount[kMaxTextureUnits];
-
-		unsigned int mlBatchArraySize;
-
-		//////////////////////////////////////
-		//Texture
-		// GLenum mvCurrentTextureTarget[kMaxTextureUnits];
-
-
-		//////////////////////////////////////
-		//Multisample
-		void CheckMultisampleCaps();
-
-		//////////////////////////////////////
-		//Double sided stencil
-		bool mbDoubleSidedStencilIsSet;
 
 		//////////////////////////////////////
 		//Matrix helper

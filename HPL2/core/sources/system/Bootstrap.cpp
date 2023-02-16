@@ -51,7 +51,7 @@ namespace hpl {
                     break;
             }
         });
-        m_window.SetWindowEventHandler(windowEventHandler);
+        m_window.ConnectWindowEventHandler(windowEventHandler);
 
         m_thread.init(BootstrapThreadHandler, this);
         while(isRunning) {
@@ -83,7 +83,7 @@ namespace hpl {
         Interface<input::InputManager>::Register(&m_inputManager);
         Interface<FileReader>::Register(&m_fileReader);
         Interface<FileWriter>::Register(&m_fileWriter);
-        Interface<window::NativeWindowWrapper>::Register(&m_window);
+        Interface<window::NativeWindowWrapper>::Register(&m_window); // storing as a singleton means we can only have one window ...
     }
 
     void Bootstrap::Shutdown() {

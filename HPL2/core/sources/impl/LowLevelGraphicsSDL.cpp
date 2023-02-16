@@ -21,15 +21,6 @@
 #include "engine/Interface.h"
 #include "impl/VertexBufferBGFX.h"
 #include "math/MathTypes.h"
-#ifdef WIN32
-//#pragma comment(lib, "OpenGL32.lib")
-//#pragma comment(lib, "GLu32.lib")
-//#pragma comment(lib, "GLaux.lib")
-//#pragma comment(lib, "Cg.lib")
-//#pragma comment(lib, "CgGL.lib")
-//#pragma comment(lib, "SDL_ttf.lib")
-//#pragma comment(lib, "TaskKeyHook.lib")
-#endif
 
 #include <assert.h>
 #include <stdlib.h>
@@ -50,9 +41,6 @@
 
 #include "SDL2/SDL_syswm.h"
 
-#ifdef WIN32
-#include "impl/TaskKeyHook.h"
-#endif
 
 #ifndef WIN32
 	#if defined __ppc__ || defined(__LP64__)
@@ -72,21 +60,7 @@ namespace hpl {
 
 	cLowLevelGraphicsSDL::cLowLevelGraphicsSDL()
 	{
-		mlBatchArraySize = 20000;
-		mlVertexCount = 0;
-		mlIndexCount =0;
 		mlMultisampling =0;
-
-		mbDoubleSidedStencilIsSet = false;
-
-#if defined(WIN32) && !SDL_VERSION_ATLEAST(2,0,0)
-		mhKeyTrapper = NULL;
-#endif
-
-		mbInitHasBeenRun = false;
-
-
-		//TTF_Init();
 	}
 
 	//-----------------------------------------------------------------------
@@ -101,72 +75,18 @@ namespace hpl {
 		int alMultisampling, eGpuProgramFormat aGpuProgramFormat,const tString& asWindowCaption,
 		const cVector2l &avWindowPos)
 	{
-        mlDisplay = alDisplay;
-		mlBpp = alBpp;
-		mbFullscreen = abFullscreen;
-
 		mlMultisampling = alMultisampling;
 
-		mGpuProgramFormat = aGpuProgramFormat;
-		if(mGpuProgramFormat == eGpuProgramFormat_LastEnum) mGpuProgramFormat = eGpuProgramFormat_GLSL;
-
-            SetWindowGrab(true);
+	
+        SetWindowGrab(true);
      
-		// Log(" Init Glew...");
-		// if(glewInit() == GLEW_OK)
-		// {
-		// 	Log("OK\n");
-		// }
-		// else
-		// {
-		// 	Error(" Couldn't init glew!\n");
-		// }
-
-		///Setup up windows specifc context:
-		//Check Multisample properties
-		CheckMultisampleCaps();
 
 		//Turn off cursor as default
 		ShowCursor(false);
 
-        // SDL_SetWindowBrightness(mpScreen, mfGammaCorrection);
-
-		mbInitHasBeenRun = true;
-
-
-		mbDepthWrite = true;
-
-		mbCullActive = true;
-		mCullMode = eCullMode_CounterClockwise;
-
-		mbDepthTestActive = true;
-		mDepthTestFunc = eDepthTestFunc_LessOrEqual;
-
-		mbAlphaTestActive = false;
-		mAlphaTestFunc = eAlphaTestFunc_GreaterOrEqual;
-		mfAlphaTestFuncRef = 0.6f;
-
-		mbScissorActive = false;
-		mvScissorPos =0;
-		// mvScissorSize = mvScreenSize;
-
-		mbBlendActive = false;
-
-		// mvFrameBufferPos =0;
-		// mvFrameBufferSize = mvScreenSize;
-		// mvFrameBufferTotalSize = mvScreenSize;
-
 		return true;
 	}
 
-	//-----------------------------------------------------------------------
-
-	void cLowLevelGraphicsSDL::CheckMultisampleCaps()
-	{
-
-	}
-	
-	//-----------------------------------------------------------------------
 
 	int cLowLevelGraphicsSDL::GetCaps(eGraphicCaps aType)
 	{
@@ -193,9 +113,9 @@ namespace hpl {
     {
         if(auto* window = Interface<window::NativeWindowWrapper>::Get()) {
 			if(abX) {
-				window->WindowGrabCursor();
+				window->GrabCursor();
 			} else {
-				window->WindowReleaseCursor();
+				window->ReleaseCursor();
 			}
 		}
     }
@@ -353,7 +273,7 @@ namespace hpl {
 															eVertexBufferUsageType aUsageType,
 															int alReserveVtxSize,int alReserveIdxSize)
 	{
-		return new iVertexBufferBGFX(this,eVertexBufferType_Hardware, aDrawType, aUsageType, alReserveVtxSize, alReserveIdxSize);
+		return new iVertexBufferBGFX(aDrawType, aUsageType, alReserveVtxSize, alReserveIdxSize);
 	}
 
 	//-----------------------------------------------------------------------
@@ -388,7 +308,6 @@ namespace hpl {
 	}
 	void cLowLevelGraphicsSDL::SetClearStencil(int alVal){
 		BX_ASSERT(false, "interface is deprecated");
-
 	}
 
 	//-----------------------------------------------------------------------

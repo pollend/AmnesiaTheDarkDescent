@@ -99,13 +99,11 @@ namespace hpl {
     }
 
     iVertexBufferBGFX::iVertexBufferBGFX(
-        iLowLevelGraphics* apLowLevelGraphics,
-        eVertexBufferType aType,
         eVertexBufferDrawType aDrawType,
         eVertexBufferUsageType aUsageType,
         int alReserveVtxSize,
         int alReserveIdxSize)
-        : iVertexBuffer(apLowLevelGraphics, aType, aDrawType, aUsageType, alReserveVtxSize, alReserveIdxSize) {
+        : iVertexBuffer(aDrawType, aUsageType, alReserveVtxSize, alReserveIdxSize) {
     }
 
     iVertexBufferBGFX::~iVertexBufferBGFX() {
@@ -610,7 +608,7 @@ namespace hpl {
     iVertexBuffer* iVertexBufferBGFX::CreateCopy(
         eVertexBufferType aType, eVertexBufferUsageType aUsageType, tVertexElementFlag alVtxToCopy) {
         auto* vertexBuffer =
-            new iVertexBufferBGFX(mpLowLevelGraphics, eVertexBufferType_Hardware, mDrawType, aUsageType, GetIndexNum(), GetVertexNum());
+            new iVertexBufferBGFX(mDrawType, aUsageType, GetIndexNum(), GetVertexNum());
         vertexBuffer->m_indices = m_indices;
 
         for (auto element : m_vertexElements) {

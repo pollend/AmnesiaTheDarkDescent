@@ -20,6 +20,7 @@
 
 #include <list>
 
+#include "engine/IUpdateEventLoop.h"
 #include "graphics/GraphicsContext.h"
 #include "system/SystemTypes.h"
 #include "engine/EngineTypes.h"
@@ -53,7 +54,7 @@ namespace hpl {
 
 	//--------------------------------------------------------------------
 
-	class cScene : public iUpdateable
+	class cScene
 	{
 	public:
 		cScene(cGraphics *apGraphics,cResources *apResources, cSound* apSound, cPhysics *apPhysics,
@@ -67,8 +68,6 @@ namespace hpl {
 		 */
 		void Render(float afFrameTime, tFlag alFlags) {} //TODO MP: this needs to be replaced
 		void Render(GraphicsContext& context, float afFrameTime, tFlag alFlags);
-
-		void PostUpdate(float afTimeStep);
 
 		///// VIEW PORT METHODS ////////////////////
 
@@ -109,6 +108,8 @@ namespace hpl {
         std::vector<cViewport*> m_viewports;
 		std::vector<cWorld*> mlstWorlds;
 		std::vector<cCamera*> mlstCameras;
+
+		IUpdateEventLoop::UpdateEvent::Handler m_postUpdateHandle;
 	};
 
 };

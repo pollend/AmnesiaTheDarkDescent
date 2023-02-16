@@ -19,6 +19,7 @@
 
 #include "scene/Scene.h"
 
+#include "engine/IUpdateEventLoop.h"
 #include "engine/Interface.h"
 #include "graphics/GraphicsContext.h"
 #include "graphics/RenderTarget.h"
@@ -63,7 +64,6 @@ namespace hpl {
 
 	cScene::cScene(cGraphics *apGraphics,cResources *apResources, cSound* apSound,cPhysics *apPhysics,
 					cSystem *apSystem, cAI *apAI,cGui *apGui, cHaptic *apHaptic)
-		: iUpdateable("HPL_Scene")
 	{
 		mpGraphics = apGraphics;
 		mpResources = apResources;
@@ -75,6 +75,23 @@ namespace hpl {
 		mpHaptic = apHaptic;
 
 		mpCurrentListener = NULL;
+
+		m_postUpdateHandle = IUpdateEventLoop::UpdateEvent::Handler([&](float timeStep) {
+				for(auto& world: mlstWorlds) {
+					if(world->IsActive()) {
+						world->Update(timeStep);
+					}
+				}
+			
+				if(mpCurrentListener && mpCurrentListener->GetCamera())
+				{
+					cCamera* pCamera3D = mpCurrentListener->GetCamera();
+					mpSound->GetLowLevel()->SetListenerAttributes(	pCamera3D->GetPosition(), cVector3f(0,0,0),
+																	pCamera3D->GetForward()*-1.0f, pCamera3D->GetUp());
+				}
+		});
+		Interface<IUpdateEventLoop>::Get()
+			->Subscribe(BroadcastEvent::PostUpdate, m_postUpdateHandle);
 	}
 
 	//-----------------------------------------------------------------------
@@ -289,30 +306,6 @@ namespace hpl {
 			}
 		}
 	}
-
-	//-----------------------------------------------------------------------
-
-	void cScene::PostUpdate(float afTimeStep)
-	{
-		//////////////////////////////////////
-		//Update worlds
-		for(auto& world: mlstWorlds) {
-			if(world->IsActive()) {
-				world->Update(afTimeStep);
-			}
-		}
-		
-		//////////////////////////////////////
-		//Update listener position with current listener, if there is one.
-		if(mpCurrentListener && mpCurrentListener->GetCamera())
-		{
-			cCamera* pCamera3D = mpCurrentListener->GetCamera();
-			mpSound->GetLowLevel()->SetListenerAttributes(	pCamera3D->GetPosition(), cVector3f(0,0,0),
-															pCamera3D->GetForward()*-1.0f, pCamera3D->GetUp());
-		}
-	}
-
-	//-----------------------------------------------------------------------
 
 	void cScene::Reset()
 	{

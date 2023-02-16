@@ -46,7 +46,7 @@ namespace hpl::input::internal {
 
             auto* impl = static_cast<InternalInputMouseImpl*>(handle.Get());
             impl->m_windowEventHandle = window::internal::WindowInternalEvent::Handler([impl](hpl::window::InternalEvent& event) {
-                auto& sdlEvent = *event.m_sdlEvent;
+                auto& sdlEvent = event.m_sdlEvent;
 
                 switch (sdlEvent.type) {
                 case SDL_EventType::SDL_MOUSEMOTION:
@@ -431,17 +431,17 @@ namespace hpl::input::internal {
                 BX_ASSERT(false, "No update loop found")
             }
 
-            impl->m_windowEventHandle = window::internal::WindowInternalEvent::Handler([impl](hpl::window::InternalEvent& event) {
-                auto& sdlEvent = *event.m_sdlEvent;
-                switch (sdlEvent.type) {
+            impl->m_windowEventHandle = window::internal::WindowInternalEvent::Handler([impl](hpl::window::InternalEvent& internalEvent) {
+                auto& event = internalEvent.m_sdlEvent;
+                switch (event.type) {
                 case SDL_KEYDOWN:
                 case SDL_KEYUP:
                     {
-                        const bool isPressed = sdlEvent.key.state == SDL_PRESSED;
-                        eKeyModifier modifier = static_cast<eKeyModifier>(((sdlEvent.key.keysym.mod & KMOD_SHIFT) ? eKeyModifier_Shift : eKeyModifier_None) |
-                            ((sdlEvent.key.keysym.mod & KMOD_CTRL) ? eKeyModifier_Ctrl : eKeyModifier_None) |
-                            ((sdlEvent.key.keysym.mod & KMOD_ALT) ? eKeyModifier_Alt : eKeyModifier_None));
-                        auto key = SDLToKey(sdlEvent.key.keysym.sym);
+                        const bool isPressed = event.key.state == SDL_PRESSED;
+                        eKeyModifier modifier = static_cast<eKeyModifier>(((event.key.keysym.mod & KMOD_SHIFT) ? eKeyModifier_Shift : eKeyModifier_None) |
+                            ((event.key.keysym.mod & KMOD_CTRL) ? eKeyModifier_Ctrl : eKeyModifier_None) |
+                            ((event.key.keysym.mod & KMOD_ALT) ? eKeyModifier_Alt : eKeyModifier_None));
+                        auto key = SDLToKey(event.key.keysym.sym);
                         if (key != eKey_LastEnum) {
                             std::lock_guard<std::mutex> lock(impl->m_mutex);
                             impl->m_queuedPresses.push_back({ key, modifier, isPressed });
@@ -452,10 +452,10 @@ namespace hpl::input::internal {
                 case SDL_TEXTINPUT:
                     {
                         std::lock_guard<std::mutex> lock(impl->m_mutex);
-                        eKeyModifier modifier = static_cast<eKeyModifier>(((sdlEvent.key.keysym.mod & KMOD_SHIFT) ? eKeyModifier_Shift : eKeyModifier_None) |
-                            ((sdlEvent.key.keysym.mod & KMOD_CTRL) ? eKeyModifier_Ctrl : eKeyModifier_None) |
-                            ((sdlEvent.key.keysym.mod & KMOD_ALT) ? eKeyModifier_Alt : eKeyModifier_None));
-                        impl->m_queuedCharacter.push_back({sdlEvent.text.text[0],modifier  });
+                        eKeyModifier modifier = static_cast<eKeyModifier>(((event.key.keysym.mod & KMOD_SHIFT) ? eKeyModifier_Shift : eKeyModifier_None) |
+                            ((event.key.keysym.mod & KMOD_CTRL) ? eKeyModifier_Ctrl : eKeyModifier_None) |
+                            ((event.key.keysym.mod & KMOD_ALT) ? eKeyModifier_Alt : eKeyModifier_None));
+                        impl->m_queuedCharacter.push_back({event.text.text[0],modifier  });
                         break;
                     }
                 }

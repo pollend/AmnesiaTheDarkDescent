@@ -16,16 +16,15 @@
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
-
-#ifndef HPL_LOWLEVELINPUT_SDL_H
-#define HPL_LOWLEVELINPUT_SDL_H
+#pragma once 
 
 #include <list>
 #include <mutex>
 #include <vector>
-#include "input/LowLevelInput.h"
+#include <input/LowLevelInput.h>
 
-#include "SDL2/SDL_events.h"
+#include <SDL2/SDL_events.h>
+#include <windowing/NativeWindow.h>
 
 
 namespace hpl {
@@ -35,7 +34,7 @@ namespace hpl {
 	class cLowLevelInputSDL : public iLowLevelInput
 	{
 	public:
-		cLowLevelInputSDL(iLowLevelGraphics *apLowLevelGraphics);
+		cLowLevelInputSDL();
 		~cLowLevelInputSDL();
 
 		void LockInput(bool abX);
@@ -53,16 +52,13 @@ namespace hpl {
 		iKeyboard* CreateKeyboard();
 		iGamepad* CreateGamepad(int alIndex);
 
-		iLowLevelGraphics* GetLowLevelGraphics() { return mpLowLevelGraphics; }
-
 		bool isQuitMessagePosted();
 		void resetQuitMessagePosted();
 	public:
 		std::list<SDL_Event> mlstEvents;
 
 	private:
-		iLowLevelGraphics *mpLowLevelGraphics;
 		bool mbQuitMessagePosted;
+		window::internal::WindowInternalEvent::Handler m_windowHandler;
 	};
 };
-#endif // HPL_LOWLEVELINPUT_SDL_H

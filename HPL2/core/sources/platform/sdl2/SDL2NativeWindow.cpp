@@ -58,19 +58,7 @@ namespace hpl::window::internal {
         hpl::window::WindowEvent m_windowEvent;
         cVector2l m_windowSize;
         uint32_t m_windowFlags = 0;
-        std::queue<SDL_Event> m_events;
     };
-
-    void fetchQueuedEvents(NativeWindowHandler& handler, std::function<void(InternalEvent&)> internalEvent) {
-        auto impl = static_cast<NativeWindowImpl*>(handler.Get());
-        std::lock_guard<std::recursive_mutex>(impl->m_mutex);
-        InternalEvent event;
-        while(!impl->m_events.empty()) {
-            event.m_sdlEvent = &impl->m_events.front();
-            internalEvent(event);
-            impl->m_events.pop();
-        }
-    }
 
     void InternalHandleCmd(NativeWindowImpl& impl, std::function<void(NativeWindowImpl&)> handle) {
         if(impl.m_owningThread == std::this_thread::get_id()) { // same thread, just process it
@@ -177,6 +165,7 @@ namespace hpl::window::internal {
         auto impl = static_cast<NativeWindowImpl*>(handler.Get());
         eventHandle.Connect(impl->m_internalWindowEvent);
     }
+
     void ConnectionWindowEventHandler(NativeWindowHandler& handler, WindowEvent::Handler& eventHandle) {
         auto impl = static_cast<NativeWindowImpl*>(handler.Get());
         eventHandle.Connect(impl->m_windowEvent);
@@ -256,14 +245,10 @@ namespace hpl::window::internal {
         impl->m_processCmd.clear();
     
         impl->m_windowFlags = SDL_GetWindowFlags(impl->m_window);
-        SDL_Event event;
         InternalEvent internalEvent;
         WindowEventPayload windowEventPayload;
-        while (SDL_PollEvent(&event)) {
-            if(impl->m_events.size() < 100) {
-                impl->m_events.push(event);
-            }
-            internalEvent.m_sdlEvent = &event;
+        while (SDL_PollEvent(&internalEvent.m_sdlEvent)) {
+            auto& event = internalEvent.m_sdlEvent;
             impl->m_internalWindowEvent.Signal(internalEvent);
             switch (event.type) {
             case SDL_QUIT:

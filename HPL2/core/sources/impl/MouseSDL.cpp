@@ -77,7 +77,7 @@ namespace hpl {
 			mbFirstTime = false;
 		}
 
-		iLowLevelGraphics *pLowLevelGfx = mpLowLevelInputSDL->GetLowLevelGraphics();
+		// iLowLevelGraphics *pLowLevelGfx = mpLowLevelInputSDL->GetLowLevelGraphics();
 		//mvMouseRelPos = cVector2f(0,0);
 		mbWheelUpMoved = false;
 		mbWheelDownMoved = false;

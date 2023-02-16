@@ -335,7 +335,7 @@ namespace hpl {
 		//Add some loaded modules to the updater
 		mpUpdater->AddGlobalUpdate(mpInput);
 		mpUpdater->AddGlobalUpdate(mpPhysics);
-		mpUpdater->AddGlobalUpdate(mpScene);
+		// mpUpdater->AddGlobalUpdate(mpScene);
 		mpUpdater->AddGlobalUpdate(mpGraphics);
 		mpUpdater->AddGlobalUpdate(mpSound);
 		mpUpdater->AddGlobalUpdate(mpAI);
