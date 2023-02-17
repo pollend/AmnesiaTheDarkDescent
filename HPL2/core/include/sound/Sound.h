@@ -17,9 +17,9 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef HPL_SOUND_H
-#define HPL_SOUND_H
+#pragma once
 
+#include "engine/IUpdateEventLoop.h"
 #include "engine/Updateable.h"
 
 namespace hpl {
@@ -29,7 +29,7 @@ namespace hpl {
 	class cSoundHandler;
 	class cMusicHandler;
 
-	class cSound : public iUpdateable
+	class cSound
 	{
 	public:
 		cSound(iLowLevelSound *apLowLevelSound);
@@ -47,11 +47,12 @@ namespace hpl {
 		cMusicHandler* GetMusicHandler(){ return mpMusicHandler; }
 
 	private:
-		iLowLevelSound *mpLowLevelSound;
-		cResources* mpResources;
-		cSoundHandler* mpSoundHandler;
-		cMusicHandler* mpMusicHandler;
+		iLowLevelSound *mpLowLevelSound = nullptr;
+		cResources* mpResources = nullptr;
+		cSoundHandler* mpSoundHandler = nullptr;
+		cMusicHandler* mpMusicHandler = nullptr;
+
+		IUpdateEventLoop::UpdateEvent::Handler m_updateEventHandler;
 	};
 
 };
-#endif // HPL_SOUND_H

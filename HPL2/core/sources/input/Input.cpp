@@ -41,7 +41,7 @@ namespace hpl
 
 	//-----------------------------------------------------------------------
 
-	cInput::cInput(iLowLevelInput *apLowLevelInput) : iUpdateable("HPL_Input")
+	cInput::cInput(iLowLevelInput *apLowLevelInput)
 	{
 		mpLowLevelInput = apLowLevelInput;
 

@@ -27,6 +27,7 @@
 
 #include "gui/GuiTypes.h"
 #include "system/SystemTypes.h"
+#include <engine/IUpdateEventLoop.h>
 
 namespace hpl {
 
@@ -63,7 +64,7 @@ namespace hpl {
 
 	//------------------------------------------------
 
-	class cGui : public iUpdateable
+	class cGui
 	{
 	public:
 		cGui();
@@ -76,11 +77,6 @@ namespace hpl {
 					cSound *apSound, cScene *apScene, cInput *apInput);
 
 		void Update(float afTimeStep);
-		void OnDraw(float afFrameTime);
-		void OnPostBufferSwap();
-
-		iGuiMaterial* GetMaterial(eGuiMaterial aType);
-
 		///////////////////////////////
 		// Skins
 		cGuiSkin* CreateSkin(const tString& asFile);
@@ -175,8 +171,6 @@ namespace hpl {
 		tGuiSetMap m_mapSets;
 		tGuiSkinMap m_mapSkins;
 
-		iGuiMaterial *mvMaterials[eGuiMaterial_LastEnum];
-
 		tGuiGfxElementList mlstGfxElements;
 		tGuiGfxElementList mlstToBeDestroyedGfxElements;
 
@@ -185,6 +179,9 @@ namespace hpl {
 		tGuiSkinAttributeMap m_mapSkinAttributeStrings;
 
 		unsigned long mlLastRenderTime;
+
+		IUpdateEventLoop::UpdateEvent::Handler m_guiDraw;
+		IUpdateEventLoop::UpdateEvent::Handler m_postBufferSwap;
 	};
 
 };

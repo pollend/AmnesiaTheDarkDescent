@@ -39,7 +39,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	cPhysics::cPhysics(iLowLevelPhysics *apLowLevelPhysics)  : iUpdateable("HPL_Physics")
+	cPhysics::cPhysics(iLowLevelPhysics *apLowLevelPhysics)
 	{
 		mpLowLevelPhysics = apLowLevelPhysics;
 

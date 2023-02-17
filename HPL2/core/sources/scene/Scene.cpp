@@ -23,29 +23,29 @@
 #include "engine/Interface.h"
 #include "graphics/GraphicsContext.h"
 #include "graphics/RenderTarget.h"
-#include "scene/Viewport.h"
 #include "scene/Camera.h"
+#include "scene/Viewport.h"
 #include "scene/World.h"
 
 #include "system/LowLevelSystem.h"
-#include "system/String.h"
-#include "system/Script.h"
 #include "system/Platform.h"
+#include "system/Script.h"
+#include "system/String.h"
 
+#include "resources/FileSearcher.h"
 #include "resources/Resources.h"
 #include "resources/ScriptManager.h"
-#include "resources/FileSearcher.h"
 #include "resources/WorldLoaderHandler.h"
 
 #include "graphics/Graphics.h"
-#include "graphics/Renderer.h"
-#include "graphics/PostEffectComposite.h"
 #include "graphics/LowLevelGraphics.h"
+#include "graphics/PostEffectComposite.h"
+#include "graphics/Renderer.h"
 #include <algorithm>
 #include <bx/debug.h>
 
-#include "sound/Sound.h"
 #include "sound/LowLevelSound.h"
+#include "sound/Sound.h"
 #include "sound/SoundHandler.h"
 
 #include "gui/Gui.h"
@@ -53,375 +53,323 @@
 
 #include "physics/Physics.h"
 
-
 namespace hpl {
 
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
+    cScene::cScene(
+        cGraphics* apGraphics,
+        cResources* apResources,
+        cSound* apSound,
+        cPhysics* apPhysics,
+        cSystem* apSystem,
+        cAI* apAI,
+        cGui* apGui,
+        cHaptic* apHaptic)
+        : mpGraphics(apGraphics)
+        , mpResources(apResources)
+        , mpSound(apSound)
+        , mpPhysics(apPhysics)
+        , mpSystem(apSystem)
+        , mpAI(apAI)
+        , mpGui(apGui)
+        , mpHaptic(apHaptic)
+        , mpCurrentListener(nullptr) {
+    }
 
-	//-----------------------------------------------------------------------
+    cScene::~cScene() {
+        Log("Exiting Scene Module\n");
+        Log("--------------------------------------------------------\n");
 
-	cScene::cScene(cGraphics *apGraphics,cResources *apResources, cSound* apSound,cPhysics *apPhysics,
-					cSystem *apSystem, cAI *apAI,cGui *apGui, cHaptic *apHaptic)
-	{
-		mpGraphics = apGraphics;
-		mpResources = apResources;
-		mpSound = apSound;
-		mpPhysics = apPhysics;
-		mpSystem = apSystem;
-		mpAI = apAI;
-		mpGui = apGui;
-		mpHaptic = apHaptic;
+        STLDeleteAll(m_viewports);
+        STLDeleteAll(mlstWorlds);
+        STLDeleteAll(mlstCameras);
 
-		mpCurrentListener = NULL;
+        Log("--------------------------------------------------------\n\n");
+    }
 
-		m_postUpdateHandle = IUpdateEventLoop::UpdateEvent::Handler([&](float timeStep) {
-				for(auto& world: mlstWorlds) {
-					if(world->IsActive()) {
-						world->Update(timeStep);
-					}
-				}
-			
-				if(mpCurrentListener && mpCurrentListener->GetCamera())
-				{
-					cCamera* pCamera3D = mpCurrentListener->GetCamera();
-					mpSound->GetLowLevel()->SetListenerAttributes(	pCamera3D->GetPosition(), cVector3f(0,0,0),
-																	pCamera3D->GetForward()*-1.0f, pCamera3D->GetUp());
-				}
-		});
-		Interface<IUpdateEventLoop>::Get()
-			->Subscribe(BroadcastEvent::PostUpdate, m_postUpdateHandle);
-	}
+    cViewport* cScene::PrimaryViewport() {
+        for (auto& viewport : m_viewports) {
+            if (!viewport->IsVisible()) {
+                continue;
+            }
+            return viewport;
+        }
+        return nullptr;
+    }
 
-	//-----------------------------------------------------------------------
+    cViewport* cScene::CreateViewport(cCamera* apCamera, cWorld* apWorld, bool abPushFront) {
+        cViewport* pViewport = hplNew(cViewport, (this));
 
-	cScene::~cScene()
-	{
-		Log("Exiting Scene Module\n");
-		Log("--------------------------------------------------------\n");
+        pViewport->SetCamera(apCamera);
+        pViewport->SetWorld(apWorld);
+        pViewport->SetSize(-1);
+        pViewport->SetRenderer(mpGraphics->GetRenderer(eRenderer_Main));
 
-		STLDeleteAll(m_viewports);
-		STLDeleteAll(mlstWorlds);
-		STLDeleteAll(mlstCameras);
+        if (abPushFront) {
+            m_viewports.insert(m_viewports.begin(), 1, pViewport);
+        } else {
+            m_viewports.push_back(pViewport);
+        }
 
-		Log("--------------------------------------------------------\n\n");
+        return pViewport;
+    }
 
-	}
+    void cScene::DestroyViewport(cViewport* apViewPort) {
+        auto it = std::find(m_viewports.begin(), m_viewports.end(), apViewPort);
+        if (it != m_viewports.end()) {
+            delete *it;
+            m_viewports.erase(it);
+        }
+    }
+    bool cScene::ViewportExists(cViewport* apViewPort) {
+        auto it = std::find(m_viewports.begin(), m_viewports.end(), apViewPort);
+        return it != m_viewports.end();
+    }
 
-	//-----------------------------------------------------------------------
+    void cScene::SetCurrentListener(cViewport* apViewPort) {
+        // If there was a previous listener make sure that world is not a listener.
+        if (mpCurrentListener != NULL && ViewportExists(mpCurrentListener)) {
+            mpCurrentListener->SetIsListener(false);
+            cWorld* pWorld = mpCurrentListener->GetWorld();
+            if (pWorld && WorldExists(pWorld))
+                pWorld->SetIsSoundEmitter(false);
+        }
 
-	//////////////////////////////////////////////////////////////////////////
-	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
+        mpCurrentListener = apViewPort;
+        if (mpCurrentListener) {
+            mpCurrentListener->SetIsListener(true);
+            cWorld* pWorld = mpCurrentListener->GetWorld();
+            if (pWorld)
+                pWorld->SetIsSoundEmitter(true);
+        }
+    }
 
-	//-----------------------------------------------------------------------
+    void cScene::Update(float timeStep) {
+        for (auto& world : mlstWorlds) {
+            if (world->IsActive()) {
+                world->Update(timeStep);
+            }
+        }
 
-	cViewport* cScene::PrimaryViewport() {
-		for(auto& viewport: m_viewports) {
-			if(!viewport->IsVisible()) {
-				continue;
-			}
-			return viewport;
-		}
-		return nullptr;
-	}
+        if (mpCurrentListener && mpCurrentListener->GetCamera()) {
+            cCamera* pCamera3D = mpCurrentListener->GetCamera();
+            mpSound->GetLowLevel()->SetListenerAttributes(
+                pCamera3D->GetPosition(), cVector3f(0, 0, 0), pCamera3D->GetForward() * -1.0f, pCamera3D->GetUp());
+        }
+    }
 
-	cViewport* cScene::CreateViewport(cCamera *apCamera, cWorld *apWorld, bool abPushFront)
-	{
-		cViewport *pViewport = hplNew ( cViewport, (this) );
+    cCamera* cScene::CreateCamera(eCameraMoveMode aMoveMode) {
+        cCamera* pCamera = hplNew(cCamera, ());
+        pCamera->SetAspect(mpGraphics->GetLowLevel()->GetScreenSizeFloat().x / mpGraphics->GetLowLevel()->GetScreenSizeFloat().y);
+        mlstCameras.push_back(pCamera);
 
-		pViewport->SetCamera(apCamera);
-		pViewport->SetWorld(apWorld);
-		pViewport->SetSize(-1);
-		pViewport->SetRenderer(mpGraphics->GetRenderer(eRenderer_Main));
+        return pCamera;
+    }
 
-		if (abPushFront) {
-			m_viewports.insert(m_viewports.begin(), 1, pViewport);
-		} else {
-			m_viewports.push_back(pViewport);
-		}
+    //-----------------------------------------------------------------------
 
-		return pViewport;
-	}
+    void cScene::DestroyCamera(cCamera* apCam) {
+        auto it = std::find(mlstCameras.begin(), mlstCameras.end(), apCam);
+        if (it != mlstCameras.end()) {
+            delete *it;
+            mlstCameras.erase(it);
+        }
+    }
 
-	//-----------------------------------------------------------------------
+    //-----------------------------------------------------------------------
 
-	void cScene::DestroyViewport(cViewport* apViewPort)
-	{
-		auto it = std::find(m_viewports.begin(), m_viewports.end(), apViewPort);
-		if(it != m_viewports.end()) {
-			delete *it;
-			m_viewports.erase(it);
-		}
-	}
-	bool cScene::ViewportExists(cViewport* apViewPort)
-	{
-		auto it = std::find(m_viewports.begin(), m_viewports.end(), apViewPort);
-		return it != m_viewports.end();
-	}
+    void cScene::Render(GraphicsContext& context, float afFrameTime, tFlag alFlags) {
+        // Increase the frame count (do this at top, so render count is valid until this Render is called again!)
+        iRenderer::IncRenderFrameCount();
 
-	//-----------------------------------------------------------------------
+        ///////////////////////////////////////////
+        // Iterate all viewports and render
+        for (auto& pViewPort : m_viewports) {
+            if (!pViewPort->IsVisible()) {
+                continue;
+            }
 
-	void cScene::SetCurrentListener(cViewport* apViewPort)
-	{
-		//If there was a previous listener make sure that world is not a listener.
-		if(mpCurrentListener != NULL && ViewportExists(mpCurrentListener))
-		{
-			mpCurrentListener->SetIsListener(false);
-			cWorld *pWorld = mpCurrentListener->GetWorld();
-			if(pWorld && WorldExists(pWorld)) pWorld->SetIsSoundEmitter(false);
-		}
+            //////////////////////////////////////////////
+            // Init vars
+            cPostEffectComposite* pPostEffectComposite = pViewPort->GetPostEffectComposite();
+            bool bPostEffects = false;
+            iRenderer* pRenderer = pViewPort->GetRenderer();
+            cCamera* pCamera = pViewPort->GetCamera();
+            cFrustum* pFrustum = pCamera ? pCamera->GetFrustum() : NULL;
 
-		mpCurrentListener = apViewPort;
-		if(mpCurrentListener)
-		{
-			mpCurrentListener->SetIsListener(true);
-			cWorld *pWorld = mpCurrentListener->GetWorld();
-			if(pWorld) pWorld->SetIsSoundEmitter(true);
-		}
-	}
+            //////////////////////////////////////////////
+            // Render world and call callbacks
+            if (alFlags & tSceneRenderFlag_World) {
+                pViewPort->RunViewportCallbackMessage(eViewportMessage_OnPreWorldDraw);
 
-	//-----------------------------------------------------------------------
+                if (pPostEffectComposite && (alFlags & tSceneRenderFlag_PostEffects)) {
+                    bPostEffects = pPostEffectComposite->HasActiveEffects();
+                }
 
-	cCamera* cScene::CreateCamera(eCameraMoveMode aMoveMode)
-	{
-		cCamera *pCamera = hplNew( cCamera, () );
-		pCamera->SetAspect(mpGraphics->GetLowLevel()->GetScreenSizeFloat().x /
-							mpGraphics->GetLowLevel()->GetScreenSizeFloat().y);
-		mlstCameras.push_back(pCamera);
+                if (pRenderer && pViewPort->GetWorld() && pFrustum) {
+                    START_TIMING(RenderWorld)
+                    pRenderer->Draw(
+                        context,
+                        afFrameTime,
+                        pFrustum,
+                        pViewPort->GetWorld(),
+                        pViewPort->GetRenderSettings(),
+                        pViewPort->GetRenderViewport(),
+                        bPostEffects,
+                        pViewPort->GetRendererCallbackList());
+                    STOP_TIMING(RenderWorld)
+                } else {
+                    // If no renderer sets up viewport do that by our selves.
+                    //  cRenderTarget* pRenderTarget = pViewPort->GetRenderTarget();
+                    //  mpGraphics->GetLowLevel()->SetCurrentFrameBuffer(	pRenderTarget->mpFrameBuffer,
+                    //  													pRenderTarget->mvPos,
+                    //  													pRenderTarget->mvSize);
+                    //  umm need to workout how this framebuffer is used ...
+                }
+                pViewPort->RunViewportCallbackMessage(eViewportMessage_OnPostWorldDraw);
 
-		return pCamera;
-	}
+                //////////////////////////////////////////////
+                // Render 3D GuiSets
+                //  Should this really be here? Or perhaps send in a frame buffer depending on the renderer.
+                START_TIMING(Render3DGui)
+                Render3DGui(context, pViewPort, pFrustum, afFrameTime);
+                STOP_TIMING(Render3DGui)
+            }
+
+            //////////////////////////////////////////////
+            // Render Post effects
+            if (bPostEffects) {
+                START_TIMING(RenderPostEffects)
+                auto& viewport = pViewPort->GetRenderViewport();
+                RenderTarget emptyRenderTarget{};
+                pPostEffectComposite->Draw(
+                    context,
+                    afFrameTime,
+                    *pRenderer->GetOutputImage(),
+                    viewport.GetRenderTarget() ? *viewport.GetRenderTarget() : emptyRenderTarget);
+
+                STOP_TIMING(RenderPostEffects)
+            } else {
+                auto& viewport = pViewPort->GetRenderViewport();
+                cVector2l vRenderTargetSize = viewport.GetSize();
+                RenderTarget emptyRenderTarget{};
+                if (vRenderTargetSize.y == -1 || vRenderTargetSize.x == -1) {
+                    if (auto* window = Interface<window::NativeWindowWrapper>::Get()) {
+                        vRenderTargetSize = window->GetWindowSize();
+                    }
+                }
+                cRect2l rect = cRect2l(0, 0, vRenderTargetSize.x, vRenderTargetSize.y);
+                context.CopyTextureToFrameBuffer(
+                    *pRenderer->GetOutputImage(), rect, viewport.GetRenderTarget() ? *viewport.GetRenderTarget() : emptyRenderTarget);
+            }
+
+            //////////////////////////////////////////////
+            // Render Screen GUI
+            if (alFlags & tSceneRenderFlag_Gui) {
+                START_TIMING(RenderGUI)
+                RenderScreenGui(context, pViewPort, afFrameTime);
+                STOP_TIMING(RenderGUI)
+            }
+        }
+    }
 
 
-	//-----------------------------------------------------------------------
+    cWorld* cScene::LoadWorld(const tString& asFile, tWorldLoadFlag aFlags) {
+        ///////////////////////////////////
+        // Load the map file
+        tWString asPath = mpResources->GetFileSearcher()->GetFilePath(asFile);
+        if (asPath == _W("")) {
+            if (cResources::GetCreateAndLoadCompressedMaps())
+                asPath = mpResources->GetFileSearcher()->GetFilePath(cString::SetFileExt(asFile, "cmap"));
 
-	void cScene::DestroyCamera(cCamera* apCam)
-	{
-		auto it = std::find(mlstCameras.begin(), mlstCameras.end(), apCam);
-		if(it != mlstCameras.end()) {
-			delete *it;
-			mlstCameras.erase(it);
-		}
-	}
+            if (asPath == _W("")) {
+                Error("World '%s' doesn't exist\n", asFile.c_str());
+                return NULL;
+            }
+        }
 
-	//-----------------------------------------------------------------------
+        cWorld* pWorld = mpResources->GetWorldLoaderHandler()->LoadWorld(asPath, aFlags);
+        if (pWorld == NULL) {
+            Error("Couldn't load world from '%s'\n", cString::To8Char(asPath).c_str());
+            return NULL;
+        }
 
-	void cScene::Render(GraphicsContext& context, float afFrameTime, tFlag alFlags)
-	{
-		//Increase the frame count (do this at top, so render count is valid until this Render is called again!)
-		iRenderer::IncRenderFrameCount();
+        return pWorld;
+    }
 
+    //-----------------------------------------------------------------------
 
-		///////////////////////////////////////////
-		// Iterate all viewports and render
-		for(auto& pViewPort: m_viewports) {
-			if(!pViewPort->IsVisible()) {
-				continue;
-			}
+    cWorld* cScene::CreateWorld(const tString& asName) {
+        cWorld* pWorld = hplNew(cWorld, (asName, mpGraphics, mpResources, mpSound, mpPhysics, this, mpSystem, mpAI, mpHaptic));
 
-			//////////////////////////////////////////////
-			//Init vars
-			cPostEffectComposite *pPostEffectComposite = pViewPort->GetPostEffectComposite();
-			bool bPostEffects = false;
-			iRenderer *pRenderer = pViewPort->GetRenderer();
-			cCamera *pCamera = pViewPort->GetCamera();
-			cFrustum *pFrustum = pCamera ? pCamera->GetFrustum() : NULL;
+        mlstWorlds.push_back(pWorld);
 
-			//////////////////////////////////////////////
-			//Render world and call callbacks
-			if(alFlags & tSceneRenderFlag_World)
-			{
-				pViewPort->RunViewportCallbackMessage(eViewportMessage_OnPreWorldDraw);
+        return pWorld;
+    }
 
-				if(pPostEffectComposite && (alFlags & tSceneRenderFlag_PostEffects))
-				{
-					bPostEffects = pPostEffectComposite->HasActiveEffects();
-				}
+    //-----------------------------------------------------------------------
 
-				if(pRenderer && pViewPort->GetWorld() && pFrustum)
-				{
-					START_TIMING(RenderWorld)
-					pRenderer->Draw(context, 
-								afFrameTime,pFrustum,
-										pViewPort->GetWorld(),
-										pViewPort->GetRenderSettings(),
-										pViewPort->GetRenderViewport(),
-										bPostEffects,
-										pViewPort->GetRendererCallbackList());
-					STOP_TIMING(RenderWorld)
-				}
-				else
-				{
-					//If no renderer sets up viewport do that by our selves.
-					// cRenderTarget* pRenderTarget = pViewPort->GetRenderTarget();
-					// mpGraphics->GetLowLevel()->SetCurrentFrameBuffer(	pRenderTarget->mpFrameBuffer,
-					// 													pRenderTarget->mvPos,
-					// 													pRenderTarget->mvSize);
-					// umm need to workout how this framebuffer is used ...
-				}
-				pViewPort->RunViewportCallbackMessage(eViewportMessage_OnPostWorldDraw);
+    void cScene::DestroyWorld(cWorld* apWorld) {
+        auto it = std::find(mlstWorlds.begin(), mlstWorlds.end(), apWorld);
+        if (it != mlstWorlds.end()) {
+            delete *it;
+            mlstWorlds.erase(it);
+        }
+    }
 
-				//////////////////////////////////////////////
-				//Render 3D GuiSets
-				// Should this really be here? Or perhaps send in a frame buffer depending on the renderer.
-				START_TIMING(Render3DGui)
-				Render3DGui(context, pViewPort,pFrustum, afFrameTime);
-				STOP_TIMING(Render3DGui)
-			}
+    //-----------------------------------------------------------------------
 
-			//////////////////////////////////////////////
-			//Render Post effects
-			if(bPostEffects)
-			{
-				START_TIMING(RenderPostEffects)
-				auto& viewport = pViewPort->GetRenderViewport();
-				RenderTarget emptyRenderTarget{};
-				pPostEffectComposite->Draw(context, afFrameTime,
-					*pRenderer->GetOutputImage(),
-					viewport.GetRenderTarget() ? *viewport.GetRenderTarget() : emptyRenderTarget);
+    bool cScene::WorldExists(cWorld* apWorld) {
+        auto it = std::find(mlstWorlds.begin(), mlstWorlds.end(), apWorld);
+        return it != mlstWorlds.end();
+    }
 
-				STOP_TIMING(RenderPostEffects)
-			} else {
-				auto& viewport = pViewPort->GetRenderViewport();
-				cVector2l vRenderTargetSize = viewport.GetSize();
-				RenderTarget emptyRenderTarget{};
-				if(vRenderTargetSize.y == -1 || vRenderTargetSize.x == -1) {
-					if(auto* window = Interface<window::NativeWindowWrapper>::Get()) {
-						vRenderTargetSize = window->GetWindowSize();
-					}
-				}
-				cRect2l rect = cRect2l(0, 0, vRenderTargetSize.x, vRenderTargetSize.y);
-				context.CopyTextureToFrameBuffer(*pRenderer->GetOutputImage(), rect, viewport.GetRenderTarget() ? *viewport.GetRenderTarget() : emptyRenderTarget);
-			}
+    //-----------------------------------------------------------------------
 
-			//////////////////////////////////////////////
-			//Render Screen GUI
-			if(alFlags & tSceneRenderFlag_Gui)
-			{
-				START_TIMING(RenderGUI)
-				RenderScreenGui(context, pViewPort, afFrameTime);
-				STOP_TIMING(RenderGUI)
-			}
-		}
-	}
+    //////////////////////////////////////////////////////////////////////////
+    // PUBLIC METHODS
+    //////////////////////////////////////////////////////////////////////////
 
-	void cScene::Reset()
-	{
-	}
+    //-----------------------------------------------------------------------
 
-	//-----------------------------------------------------------------------
-
-	cWorld* cScene::LoadWorld(const tString& asFile, tWorldLoadFlag aFlags)
-	{
-		///////////////////////////////////
-		// Load the map file
-		tWString asPath = mpResources->GetFileSearcher()->GetFilePath(asFile);
-		if(asPath == _W(""))
-		{
-			if(cResources::GetCreateAndLoadCompressedMaps())
-				asPath = mpResources->GetFileSearcher()->GetFilePath(cString::SetFileExt(asFile,"cmap"));
-
-			if(asPath == _W(""))
-			{
-				Error("World '%s' doesn't exist\n",asFile.c_str());
-				return NULL;
-			}
-		}
-
-		cWorld* pWorld = mpResources->GetWorldLoaderHandler()->LoadWorld(asPath, aFlags);
-		if(pWorld==NULL){
-			Error("Couldn't load world from '%s'\n",cString::To8Char(asPath).c_str());
-			return NULL;
-		}
-
-		return pWorld;
-	}
-
-	//-----------------------------------------------------------------------
-
-	cWorld* cScene::CreateWorld(const tString& asName)
-	{
-		cWorld* pWorld = hplNew( cWorld, (asName,mpGraphics,mpResources,mpSound,mpPhysics,this,
-										mpSystem,mpAI,mpHaptic) );
-
-		mlstWorlds.push_back(pWorld);
-
-		return pWorld;
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cScene::DestroyWorld(cWorld* apWorld)
-	{
-		auto it = std::find(mlstWorlds.begin(), mlstWorlds.end(), apWorld);
-		if(it != mlstWorlds.end()) {
-			delete *it;
-			mlstWorlds.erase(it);
-		}
-	}
-
-	//-----------------------------------------------------------------------
-
-	bool cScene::WorldExists(cWorld* apWorld)
-	{
-		auto it = std::find(mlstWorlds.begin(), mlstWorlds.end(), apWorld);
-		return it != mlstWorlds.end();
-	}
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
-	void cScene::Render3DGui(GraphicsContext& context, cViewport *apViewPort,cFrustum *apFrustum,float afTimeStep)
-	{
-		if(apViewPort->GetCamera()==NULL) return;
-
-		cGuiSetListIterator it = apViewPort->GetGuiSetIterator();
-		while(it.HasNext())
-		{
-			cGuiSet *pSet = it.Next();
-			if(pSet->Is3D())
-			{
-				pSet->Draw(context, apFrustum);
-			}
-		}
-	}
-
-	void cScene::RenderScreenGui(GraphicsContext& context, cViewport *apViewPort, float afTimeStep)
-	{
-		///////////////////////////////////////
-		//Put all of the non 3D sets in to a sorted map
-		typedef std::multimap<int, cGuiSet*> tPrioMap;
-		tPrioMap mapSortedSets;
+    void cScene::Render3DGui(GraphicsContext& context, cViewport* apViewPort, cFrustum* apFrustum, float afTimeStep) {
+        if (apViewPort->GetCamera() == NULL)
+            return;
 
         cGuiSetListIterator it = apViewPort->GetGuiSetIterator();
-		while(it.HasNext())
-		{
-			cGuiSet *pSet = it.Next();
+        while (it.HasNext()) {
+            cGuiSet* pSet = it.Next();
+            if (pSet->Is3D()) {
+                pSet->Draw(context, apFrustum);
+            }
+        }
+    }
 
-			if(pSet->Is3D()==false)
-				mapSortedSets.insert(tPrioMap::value_type(pSet->GetDrawPriority(),pSet));
-		}
+    void cScene::RenderScreenGui(GraphicsContext& context, cViewport* apViewPort, float afTimeStep) {
+        ///////////////////////////////////////
+        // Put all of the non 3D sets in to a sorted map
+        typedef std::multimap<int, cGuiSet*> tPrioMap;
+        tPrioMap mapSortedSets;
 
-		///////////////////////////////////////
-		//Iterate and render all sets
-		if(mapSortedSets.empty()) return;
-		tPrioMap::iterator SortIt = mapSortedSets.begin();
-		for(; SortIt != mapSortedSets.end(); ++SortIt)
-		{
-			cGuiSet *pSet = SortIt->second;
+        cGuiSetListIterator it = apViewPort->GetGuiSetIterator();
+        while (it.HasNext()) {
+            cGuiSet* pSet = it.Next();
 
-			//Log("Rendering gui '%s'\n", pSet->GetName().c_str());
+            if (pSet->Is3D() == false)
+                mapSortedSets.insert(tPrioMap::value_type(pSet->GetDrawPriority(), pSet));
+        }
 
-			pSet->Draw(context, NULL);
-		}
-	}
+        ///////////////////////////////////////
+        // Iterate and render all sets
+        if (mapSortedSets.empty())
+            return;
+        tPrioMap::iterator SortIt = mapSortedSets.begin();
+        for (; SortIt != mapSortedSets.end(); ++SortIt) {
+            cGuiSet* pSet = SortIt->second;
 
-	//-----------------------------------------------------------------------
-}
+            // Log("Rendering gui '%s'\n", pSet->GetName().c_str());
+
+            pSet->Draw(context, NULL);
+        }
+    }
+
+} // namespace hpl

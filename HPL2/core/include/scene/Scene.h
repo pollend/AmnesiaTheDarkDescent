@@ -61,13 +61,13 @@ namespace hpl {
 				cSystem *apSystem, cAI *apAI,cGui *apGui, cHaptic *apHaptic);
 		~cScene();
 
-		void Reset();
-
 		/**
 		 * Called by cEngine
 		 */
 		void Render(float afFrameTime, tFlag alFlags) {} //TODO MP: this needs to be replaced
 		void Render(GraphicsContext& context, float afFrameTime, tFlag alFlags);
+
+		void Update(float timeStep);
 
 		///// VIEW PORT METHODS ////////////////////
 
@@ -109,7 +109,6 @@ namespace hpl {
 		std::vector<cWorld*> mlstWorlds;
 		std::vector<cCamera*> mlstCameras;
 
-		IUpdateEventLoop::UpdateEvent::Handler m_postUpdateHandle;
 	};
 
 };

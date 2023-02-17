@@ -29,16 +29,11 @@ namespace hpl {
 
 	class cAINodeGenerator;
 
-	class cAI : public iUpdateable
+	class cAI
 	{
 	public:
 		cAI();
 		~cAI();
-
-		void Reset();
-		void Update(float afTimeStep);
-
-		void Init();
 
 		cAINodeGenerator *GetNodeGenerator(){ return mpAINodeGenerator;}
 

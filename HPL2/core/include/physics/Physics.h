@@ -61,7 +61,7 @@ namespace hpl {
 
 	//------------------------------------------------
 
-	class cPhysics : public iUpdateable
+	class cPhysics
 	{
 	public:
 		cPhysics(iLowLevelPhysics *apLowLevelPhysics);

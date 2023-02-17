@@ -20,6 +20,7 @@
 #pragma once
 
 #include <graphics/GraphicsContext.h>
+#include <engine/IUpdateEventLoop.h>
 #include "system/SystemTypes.h"
 #include "engine/EngineTypes.h"
 #include <engine/RTTI.h>
@@ -243,6 +244,15 @@ namespace hpl {
 		cGui *mpGui;
 		cGenerate* mpGenerate;
 		hpl::GraphicsContext m_graphicsContext;
+		
+		IUpdateEventLoop::UpdateEvent::Handler m_soundUpdateHandler;
+		IUpdateEventLoop::UpdateEvent::Handler m_sceneUpdateHandler;
+		IUpdateEventLoop::UpdateEvent::Handler m_physicsUpdateHandler;
+		IUpdateEventLoop::UpdateEvent::Handler m_graphicsUpdateHandler;
+		IUpdateEventLoop::UpdateEvent::Handler m_inputUpdateHandler;
+		IUpdateEventLoop::UpdateEvent::Handler m_guiUpdateHandler;
+		IUpdateEventLoop::UpdateEvent::Handler m_resourcesUpdateHandler;
+		
 	};
 
 };

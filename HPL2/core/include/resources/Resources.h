@@ -174,7 +174,7 @@ namespace hpl {
 	//-------------------------------------------------------
 
 
-	class cResources : public iUpdateable
+	class cResources
 	{
 	public:
 		cResources(iLowLevelResources *apLowLevelResources,iLowLevelGraphics *apLowLevelGraphics);

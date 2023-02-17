@@ -22,10 +22,12 @@
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
 
+#include <functional>
 #include <gui/GuiTypes.h>
 #include <impl/LowLevelInputSDL.h>
 #include <input/LowLevelInput.h>
 #include "engine/EngineInterface.h"
+#include <engine/IUpdateEventLoop.h>
 #include "engine/Interface.h"
 #include "graphics/GraphicsContext.h"
 #include "system/System.h"
@@ -313,9 +315,6 @@ namespace hpl {
 		//Init physics
 		mpPhysics->Init(mpResources);
 
-		//Init AI
-		mpAI->Init();
-
 		//Init Gui
 		mpGui->Init(mpResources,mpGraphics,mpSound,mpScene, mpInput);
 
@@ -332,15 +331,27 @@ namespace hpl {
 		Log(" Adding engine updates\n");
 		mpUpdater = hplNew( cUpdater,(mpSystem->GetLowLevel()));
 
+		m_soundUpdateHandler = IUpdateEventLoop::UpdateEvent::Handler(std::bind(&cSound::Update, mpSound, std::placeholders::_1));
+		m_sceneUpdateHandler = IUpdateEventLoop::UpdateEvent::Handler(std::bind(&cScene::Update, mpScene, std::placeholders::_1));
+		m_physicsUpdateHandler = IUpdateEventLoop::UpdateEvent::Handler(std::bind(&cPhysics::Update, mpPhysics, std::placeholders::_1));
+		m_graphicsUpdateHandler = IUpdateEventLoop::UpdateEvent::Handler(std::bind(&cGraphics::Update, mpGraphics, std::placeholders::_1));
+		m_inputUpdateHandler = IUpdateEventLoop::UpdateEvent::Handler(std::bind(&cInput::Update, mpInput, std::placeholders::_1));
+		m_guiUpdateHandler = IUpdateEventLoop::UpdateEvent::Handler(std::bind(&cGui::Update, mpGui, std::placeholders::_1));
+		m_resourcesUpdateHandler = IUpdateEventLoop::UpdateEvent::Handler(std::bind(&cResources::Update, mpResources, std::placeholders::_1));
+
+		auto* updateEventLoop = Interface<IUpdateEventLoop>::Get();
+		updateEventLoop->Subscribe(BroadcastEvent::Update, m_soundUpdateHandler);
+		updateEventLoop->Subscribe(BroadcastEvent::Update, m_sceneUpdateHandler);
+		updateEventLoop->Subscribe(BroadcastEvent::Update, m_physicsUpdateHandler);
+		updateEventLoop->Subscribe(BroadcastEvent::Update, m_graphicsUpdateHandler);
+		updateEventLoop->Subscribe(BroadcastEvent::Update, m_inputUpdateHandler);
+		updateEventLoop->Subscribe(BroadcastEvent::Update, m_guiUpdateHandler);
+		updateEventLoop->Subscribe(BroadcastEvent::Update, m_resourcesUpdateHandler);
+
+		updateEventLoop->CreateEventGroup("Default");
+		updateEventLoop->ChangeEventGroup("Default");
+
 		//Add some loaded modules to the updater
-		mpUpdater->AddGlobalUpdate(mpInput);
-		mpUpdater->AddGlobalUpdate(mpPhysics);
-		// mpUpdater->AddGlobalUpdate(mpScene);
-		mpUpdater->AddGlobalUpdate(mpGraphics);
-		mpUpdater->AddGlobalUpdate(mpSound);
-		mpUpdater->AddGlobalUpdate(mpAI);
-		mpUpdater->AddGlobalUpdate(mpGui);
-		mpUpdater->AddGlobalUpdate(mpResources);
 		if(mpHaptic) mpUpdater->AddGlobalUpdate(mpHaptic);
 
 		//Setup the "default" updater container
@@ -381,7 +392,7 @@ namespace hpl {
 	{
 		Interface<EngineInterface>::UnRegister(this);
 
-		Log("--------------------------------------------------------\n\n");
+		m_soundUpdateHandler.Disconnect();
 
 		hplDelete(mpLogicTimer);
 		hplDelete(mpFPSCounter);

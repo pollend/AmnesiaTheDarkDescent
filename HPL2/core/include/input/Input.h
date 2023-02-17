@@ -52,7 +52,7 @@ namespace hpl {
 	typedef std::list<iGamepad*> tGamepadList;
 	typedef tGamepadList::iterator tGamepadListIt;
 
-	class cInput : public iUpdateable
+	class cInput
 	{
 	public:
 		cInput(iLowLevelInput *apLowLevelInput);

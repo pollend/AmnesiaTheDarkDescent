@@ -18,6 +18,8 @@
  */
 
 #include "sound/Sound.h"
+#include "engine/IUpdateEventLoop.h"
+#include "engine/Interface.h"
 #include "system/LowLevelSystem.h"
 #include "sound/LowLevelSound.h"
 #include "resources/Resources.h"
@@ -27,15 +29,9 @@
 
 namespace hpl {
 
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
-	cSound::cSound(iLowLevelSound *apLowLevelSound) : iUpdateable("HPL_Sound")
+	cSound::cSound(iLowLevelSound *apLowLevelSound) :
+		mpLowLevelSound(apLowLevelSound)
 	{
-		mpLowLevelSound = apLowLevelSound;
 	}
 
 	//-----------------------------------------------------------------------
@@ -51,14 +47,6 @@ namespace hpl {
 		Log("--------------------------------------------------------\n\n");
 	}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
 	void cSound::Update(float afTimeStep)
 	{
 		mpSoundHandler->Update(afTimeStep);
@@ -66,9 +54,7 @@ namespace hpl {
 
 		mpLowLevelSound->UpdateSound(afTimeStep);
 	}
-
-	//-----------------------------------------------------------------------
-
+	
 	void cSound::Init(	cResources *apResources, int alSoundDeviceID, bool abUseEnvAudio, int alMaxChannels,
 						int alStreamUpdateFreq, bool abUseThreading, bool abUseVoiceManagement,
 						int alMaxMonoSourceHint, int alMaxStereoSourceHint,
@@ -88,7 +74,5 @@ namespace hpl {
 
 		Log("--------------------------------------------------------\n\n");
 	}
-
-	//-----------------------------------------------------------------------
 
 }

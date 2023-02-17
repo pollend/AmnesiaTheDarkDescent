@@ -63,7 +63,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	cGraphics::cGraphics(iLowLevelGraphics *apLowLevelGraphics, iLowLevelResources *apLowLevelResources) : iUpdateable("HPL_Graphics")
+	cGraphics::cGraphics(iLowLevelGraphics *apLowLevelGraphics, iLowLevelResources *apLowLevelResources)
 	{
 		mpLowLevelGraphics = apLowLevelGraphics;
 		mpLowLevelResources = apLowLevelResources;

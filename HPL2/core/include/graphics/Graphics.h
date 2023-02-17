@@ -79,7 +79,7 @@ namespace hpl {
 
 	//------------------------------------------------------
 
-	class cGraphics : public iUpdateable
+	class cGraphics
 	{
 	public:
 		cGraphics(iLowLevelGraphics *apLowLevelGraphics,iLowLevelResources *apLowLevelResources);

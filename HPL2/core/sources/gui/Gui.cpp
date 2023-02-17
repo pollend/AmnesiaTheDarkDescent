@@ -19,6 +19,8 @@
 
 #include "gui/Gui.h"
 
+#include "engine/IUpdateEventLoop.h"
+#include "engine/Interface.h"
 #include "graphics/Graphics.h"
 #include "graphics/LowLevelGraphics.h"
 
@@ -33,6 +35,7 @@
 #include "resources/ImageManager.h"
 #include "graphics/FrameSubImage.h"
 #include "graphics/FrameBitmap.h"
+#include <functional>
 #include <graphics/Image.h>
 #include "resources/FileSearcher.h"
 
@@ -54,14 +57,38 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	cGui::cGui()  : iUpdateable("HPL_Gui")
+	cGui::cGui() 
 	{
 		mpSetInFocus = NULL;
 
 		mlLastRenderTime = 0;
-	}
+		
+		m_guiDraw = IUpdateEventLoop::UpdateEvent::Handler([&](float afTimeStep) { 
 
-	//-----------------------------------------------------------------------
+			tGuiSetMapIt setIt = m_mapSets.begin();
+			for(; setIt != m_mapSets.end(); ++setIt)
+			{
+				cGuiSet *pSet = setIt->second;
+				pSet->DrawAll(afTimeStep);
+			}
+		});
+		m_postBufferSwap = IUpdateEventLoop::UpdateEvent::Handler([&](float afTimeStep) { 
+			//////////////////////////////////
+			// Clear render sets in all sets
+			tGuiSetMapIt setIt = m_mapSets.begin();
+			for(; setIt != m_mapSets.end(); ++setIt)
+			{
+				cGuiSet *pSet = setIt->second;
+				pSet->ClearRenderObjects();
+			}
+
+			//Delete all gfx elements to be deleted (this way, all pointers in set stay valid!)
+			STLDeleteAll(mlstToBeDestroyedGfxElements);
+		});
+
+		Interface<IUpdateEventLoop>::Get()->Subscribe(BroadcastEvent::OnDraw, m_guiDraw);
+		Interface<IUpdateEventLoop>::Get()->Subscribe(BroadcastEvent::OnPostBufferSwap, m_postBufferSwap);
+	}
 
 	cGui::~cGui()
 	{
@@ -82,23 +109,7 @@ namespace hpl {
 			hplDelete(pGfx);
 		}
 		STLDeleteAll(mlstToBeDestroyedGfxElements);
-
-		Log(" Deleting all materials\n");
-		for(int i=0; i< eGuiMaterial_LastEnum; ++i)
-		{
-			if(mvMaterials[i]) hplDelete(mvMaterials[i]);
-		}
-
-		Log("--------------------------------------------------------\n\n");
 	}
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	void cGui::Init(cResources *apResources, cGraphics* apGraphics,
 						cSound *apSound, cScene *apScene, cInput* apInput)
@@ -108,17 +119,6 @@ namespace hpl {
 		mpSound = apSound;
 		mpScene = apScene;
 		mpInput = apInput;
-
-		//////////////////////////////
-		// Create materials
-		for(int i=0; i< eGuiMaterial_LastEnum; ++i) mvMaterials[i] = NULL;
-
-		mvMaterials[eGuiMaterial_Diffuse] = hplNew( cGuiMaterial_Diffuse,(mpGraphics->GetLowLevel()) );
-		mvMaterials[eGuiMaterial_Alpha] = hplNew( cGuiMaterial_Alpha,(mpGraphics->GetLowLevel()) );
-		mvMaterials[eGuiMaterial_FontNormal] = hplNew( cGuiMaterial_FontNormal,(mpGraphics->GetLowLevel()) );
-		mvMaterials[eGuiMaterial_Additive] = hplNew( cGuiMaterial_Additive,(mpGraphics->GetLowLevel()) );
-		mvMaterials[eGuiMaterial_Modulative] = hplNew( cGuiMaterial_Modulative,(mpGraphics->GetLowLevel()) );
-		mvMaterials[eGuiMaterial_PremulAlpha] = hplNew( cGuiMaterial_PremulAlpha,(mpGraphics->GetLowLevel()) );
 
 
 		//////////////////////////////
@@ -154,46 +154,6 @@ namespace hpl {
 			pGfx->Update(afTimeStep);
 		}
 	}
-
-	//-----------------------------------------------------------------------
-
-	void cGui::OnDraw(float afFrameTime)
-	{
-		tGuiSetMapIt setIt = m_mapSets.begin();
-		for(; setIt != m_mapSets.end(); ++setIt)
-		{
-			cGuiSet *pSet = setIt->second;
-			pSet->DrawAll(afFrameTime);
-		}
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cGui::OnPostBufferSwap()
-	{
-		//Log("Bug:Clearing render objects\n");
-
-		//////////////////////////////////
-		// Clear render sets in all sets
-		tGuiSetMapIt setIt = m_mapSets.begin();
-		for(; setIt != m_mapSets.end(); ++setIt)
-		{
-			cGuiSet *pSet = setIt->second;
-			pSet->ClearRenderObjects();
-		}
-
-		//Delete all gfx elements to be deleted (this way, all pointers in set stay valid!)
-		STLDeleteAll(mlstToBeDestroyedGfxElements);
-	}
-
-	//-----------------------------------------------------------------------
-
-	iGuiMaterial* cGui::GetMaterial(eGuiMaterial aType)
-	{
-		return mvMaterials[aType];
-	}
-
-	//-----------------------------------------------------------------------
 
 	cGuiSkin* cGui::CreateSkin(const tString& asFile)
 	{
