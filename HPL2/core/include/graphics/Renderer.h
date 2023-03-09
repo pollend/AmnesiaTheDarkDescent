@@ -31,527 +31,544 @@
 #include "scene/SceneTypes.h"
 
 #include "graphics/RenderFunctions.h"
+#include "scene/Viewport.h"
 #include <cstdint>
 #include <functional>
 #include <memory>
 #include <vector>
 
 namespace hpl {
-	
+    
 
-	//---------------------------------------------
+    //---------------------------------------------
 
-	class cGraphics;
-	class cResources;
-	class cEngine;
-	class iLowLevelResources;
-	class cMeshCreator;
-	class cGpuShaderManager;
-	class iRenderable;
-	class cWorld;
-	class cRenderSettings;
-	class cRenderList;
-	class iLight;
-	class iOcclusionQuery;
-	class cBoundingVolume;
-	class iRenderableContainer;
-	class iRenderableContainerNode;
-	class cVisibleRCNodeTracker;
-	class RenderCallbackMessage;
+    class cGraphics;
+    class cResources;
+    class cEngine;
+    class iLowLevelResources;
+    class cMeshCreator;
+    class cGpuShaderManager;
+    class iRenderable;
+    class cWorld;
+    class cRenderSettings;
+    class cRenderList;
+    class iLight;
+    class iOcclusionQuery;
+    class cBoundingVolume;
+    class iRenderableContainer;
+    class iRenderableContainerNode;
+    class cVisibleRCNodeTracker;
+    class RenderCallbackMessage;
 
-	namespace rendering::detail {
-		eShadowMapResolution GetShadowMapResolution(eShadowMapResolution aWanted, eShadowMapResolution aMax);
-		/**
-		* @brief Checks if the given object is occluded by the given planes.
-		* @param apObject The object to check.
-		* @param alNeededFlags The flags that the object must have to be considered.
-		* @param occlusionPlanes The planes to check against.
-		*/
-		bool IsObjectVisible(iRenderable *apObject, tRenderableFlag alNeededFlags, std::span<cPlanef> occlusionPlanes);
-	}
+    namespace rendering::detail {
+        eShadowMapResolution GetShadowMapResolution(eShadowMapResolution aWanted, eShadowMapResolution aMax);
+        /**
+        * @brief Checks if the given object is occluded by the given planes.
+        * @param apObject The object to check.
+        * @param alNeededFlags The flags that the object must have to be considered.
+        * @param occlusionPlanes The planes to check against.
+        */
+        bool IsObjectVisible(iRenderable *apObject, tRenderableFlag alNeededFlags, std::span<cPlanef> occlusionPlanes);
+    }
 
-	class cNodeOcclusionPair
-	{
-	public:
-		iRenderableContainerNode *mpNode;
-		iOcclusionQuery *mpQuery;
-		bool mbObjectsRendered;
-	};
+    class cNodeOcclusionPair
+    {
+    public:
+        iRenderableContainerNode *mpNode;
+        iOcclusionQuery *mpQuery;
+        bool mbObjectsRendered;
+    };
 
-	typedef std::list<cNodeOcclusionPair> tNodeOcclusionPairList;
-	typedef tNodeOcclusionPairList::iterator tNodeOcclusionPairListIt;
+    typedef std::list<cNodeOcclusionPair> tNodeOcclusionPairList;
+    typedef tNodeOcclusionPairList::iterator tNodeOcclusionPairListIt;
 
-	//---------------------------------------------
+    //---------------------------------------------
 
-	typedef std::multimap<void*, cOcclusionQueryObject*> tOcclusionQueryObjectMap;
-	typedef tOcclusionQueryObjectMap::iterator tOcclusionQueryObjectMapIt;
+    typedef std::multimap<void*, cOcclusionQueryObject*> tOcclusionQueryObjectMap;
+    typedef tOcclusionQueryObjectMap::iterator tOcclusionQueryObjectMapIt;
 
-	//---------------------------------------------
+    //---------------------------------------------
 
-	class cLightOcclusionPair
-	{
-	public:
-		cLightOcclusionPair() : mlSampleResults(0) {}
+    class cLightOcclusionPair
+    {
+    public:
+        cLightOcclusionPair() : mlSampleResults(0) {}
 
-		iLight *mpLight;
-		iOcclusionQuery *mpQuery;
-		bgfx::OcclusionQueryHandle m_occlusionQuery;
-		int32_t mlSampleResults;
-	};
+        iLight *mpLight;
+        iOcclusionQuery *mpQuery;
+        bgfx::OcclusionQueryHandle m_occlusionQuery;
+        int32_t mlSampleResults;
+    };
 
-	//---------------------------------------------
+    //---------------------------------------------
 
-	class cFogAreaRenderData
-	{
-	public:
-		cFogArea *mpFogArea;
-		bool mbInsideNearFrustum;
-		cVector3f mvBoxSpaceFrustumOrigin;
-		cMatrixf m_mtxInvBoxSpace;
-	};
+    class cFogAreaRenderData
+    {
+    public:
+        cFogArea *mpFogArea;
+        bool mbInsideNearFrustum;
+        cVector3f mvBoxSpaceFrustumOrigin;
+        cMatrixf m_mtxInvBoxSpace;
+    };
 
 
-	class iRenderer;
-	class cRenderSettings
-	{
-	public:
-		cRenderSettings(bool abIsReflection = false);
-		~cRenderSettings();
-
-		////////////////////////////
-		//Helper methods
-		void ResetVariables();
-
-		void SetupReflectionSettings();
-
-		void AddOcclusionPlane(const cPlanef &aPlane);
-		void ResetOcclusionPlanes();
-
-		void AssignOcclusionObject(iRenderer *apRenderer, void *apSource, int alCustomIndex, iVertexBuffer *apVtxBuffer, cMatrixf *apMatrix, bool abDepthTest);
-		int RetrieveOcclusionObjectSamples(iRenderer *apRenderer, void *apSource, int alCustomIndex);
-		void ClearOcclusionObjects(iRenderer *apRenderer);
-		void WaitAndRetrieveAllOcclusionQueries(iRenderer *apRenderer);
-
-		////////////////////////////
-		//Data
-		cRenderList *mpRenderList;
-
-		cVisibleRCNodeTracker *mpVisibleNodeTracker;
-
-		cRenderSettings *mpReflectionSettings;
-
-		std::vector<iRenderableContainerNode*> m_testNodes;
-
-		int mlCurrentOcclusionObject;
-		std::vector<cOcclusionQueryObject*> mvOcclusionObjectPool;
-		tOcclusionQueryObjectMap m_setOcclusionObjects;
-
-		std::vector<cFogAreaRenderData> mvFogRenderData;
+    class iRenderer;
+    class cRenderSettings
+    {
+    public:
+        cRenderSettings(bool abIsReflection = false);
+        ~cRenderSettings();
 
         ////////////////////////////
-		//General settings
-		bool mbLog;
+        //Helper methods
+        void ResetVariables();
 
-		cColor mClearColor;
+        void SetupReflectionSettings();
 
-		////////////////////////////
-		//Render settings
-		int mlMinimumObjectsBeforeOcclusionTesting;
-		int mlSampleVisiblilityLimit;
-		bool mbIsReflection;
-		bool mbClipReflectionScreenRect;
+        void AddOcclusionPlane(const cPlanef &aPlane);
+        void ResetOcclusionPlanes();
 
-		bool mbUseOcclusionCulling;
+        void AssignOcclusionObject(iRenderer *apRenderer, void *apSource, int alCustomIndex, iVertexBuffer *apVtxBuffer, cMatrixf *apMatrix, bool abDepthTest);
+        int RetrieveOcclusionObjectSamples(iRenderer *apRenderer, void *apSource, int alCustomIndex);
+        void ClearOcclusionObjects(iRenderer *apRenderer);
+        void WaitAndRetrieveAllOcclusionQueries(iRenderer *apRenderer);
 
-		bool mbUseEdgeSmooth;
+        ////////////////////////////
+        //Data
+        cRenderList *mpRenderList;
 
-		tPlanefVec mvOcclusionPlanes;
+        cVisibleRCNodeTracker *mpVisibleNodeTracker;
 
-		bool mbUseCallbacks;
+        cRenderSettings *mpReflectionSettings;
 
-		eShadowMapResolution mMaxShadowMapResolution;
+        std::vector<iRenderableContainerNode*> m_testNodes;
 
-		bool mbUseScissorRect;
-		cVector2l mvScissorRectPos;
-		cVector2l mvScissorRectSize;
+        int mlCurrentOcclusionObject;
+        std::vector<cOcclusionQueryObject*> mvOcclusionObjectPool;
+        tOcclusionQueryObjectMap m_setOcclusionObjects;
 
-		bool mbRenderWorldReflection;
+        std::vector<cFogAreaRenderData> mvFogRenderData;
 
-		////////////////////////////
-		//Shadow settings
-		bool mbRenderShadows;
-		float mfShadowMapBias;
-		float mfShadowMapSlopeScaleBias;
+        ////////////////////////////
+        //General settings
+        bool mbLog;
 
-		////////////////////////////
-		//Light settings
-		bool mbSSAOActive;
+        cColor mClearColor;
 
-		////////////////////////////
-		//Output
-		int mlNumberOfLightsRendered;
-		int mlNumberOfOcclusionQueries;
+        ////////////////////////////
+        //Render settings
+        int mlMinimumObjectsBeforeOcclusionTesting;
+        int mlSampleVisiblilityLimit;
+        bool mbIsReflection;
+        bool mbClipReflectionScreenRect;
 
+        bool mbUseOcclusionCulling;
 
-	};
+        bool mbUseEdgeSmooth;
 
-	//---------------------------------------------
+        tPlanefVec mvOcclusionPlanes;
 
-	class cRendererNodeSortFunc
-	{
-	public:
-		bool operator()(const iRenderableContainerNode* apNodeA, const iRenderableContainerNode* apNodeB) const;
-	};
+        bool mbUseCallbacks;
 
+        eShadowMapResolution mMaxShadowMapResolution;
 
-	typedef std::multiset<iRenderableContainerNode*, cRendererNodeSortFunc> tRendererSortedNodeSet;
-	typedef tRendererSortedNodeSet::iterator tRendererSortedNodeSetIt;
+        bool mbUseScissorRect;
+        cVector2l mvScissorRectPos;
+        cVector2l mvScissorRectSize;
 
-	//---------------------------------------------
+        bool mbRenderWorldReflection;
 
-	class cShadowMapLightCache
-	{
-	public:
-		cShadowMapLightCache() : mpLight(NULL), mlTransformCount(-1), mfRadius(0),mfFOV(0), mfAspect(0) {}
+        ////////////////////////////
+        //Shadow settings
+        bool mbRenderShadows;
+        float mfShadowMapBias;
+        float mfShadowMapSlopeScaleBias;
 
-		void SetFromLight(iLight* apLight);
+        ////////////////////////////
+        //Light settings
+        bool mbSSAOActive;
 
-		iLight *mpLight;
-		int mlTransformCount;
-		float mfRadius;
-		float mfFOV;
-		float mfAspect;
-	};
-
-	//---------------------------------------------
-
-	class cShadowMapData
-	{
-	public:
-		int mlFrameCount;
-		RenderTarget m_target;
-		cShadowMapLightCache mCache;
-	};
-
-	//---------------------------------------------
+        ////////////////////////////
+        //Output
+        int mlNumberOfLightsRendered;
+        int mlNumberOfOcclusionQueries;
 
 
-	class iRenderer : public iRenderFunctions
-	{
-		HPL_RTTI_CLASS(iRenderer, "{A3E0F5A0-0F9B-4F5C-9B9E-0F9B4F5C9B9E}")
+    };
 
-		friend class cRendererCallbackFunctions;
-		friend class cRenderSettings;
+    //---------------------------------------------
 
-	public:
-
-		iRenderer(const tString& asName, cGraphics *apGraphics,cResources* apResources, int alNumOfProgramComboModes);
-		virtual ~iRenderer();
-
-		// plan to just use the single draw call need to call BeginRendering to setup state
-		// ensure the contents is copied to the RenderViewport
-		virtual void Draw(GraphicsContext& context, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, RenderViewport& apRenderTarget,
-					bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList) {} ;
-
-		[[deprecated("Use Draw instead")]]
-		void Render(float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, const RenderViewport& apRenderTarget,
-					bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList);
-
-		void Update(float afTimeStep);
-
-		inline static int GetRenderFrameCount()  { return mlRenderFrameCount;}
-		inline static void IncRenderFrameCount() { ++mlRenderFrameCount;}
-
-		float GetTimeCount(){ return mfTimeCount;}
-
-		virtual bool LoadData()=0;
-		virtual void DestroyData()=0;
-
-		virtual std::shared_ptr<Image> GetDepthStencilImage() { return std::shared_ptr<Image>(nullptr);}
-		virtual std::shared_ptr<Image> GetOutputImage() { return std::shared_ptr<Image>(nullptr);}
-
-		cWorld *GetCurrentWorld(){ return mpCurrentWorld;}
-		cFrustum *GetCurrentFrustum(){ return mpCurrentFrustum;}
-		cRenderList *GetCurrentRenderList(){ return mpCurrentRenderList;}
-
-		iVertexBuffer* GetShapeBoxVertexBuffer(){ return mpShapeBox; }
-
-		void AssignOcclusionObject(void *apSource, int alCustomIndex, iVertexBuffer *apVtxBuffer, cMatrixf *apMatrix, bool abDepthTest);
-		int RetrieveOcclusionObjectSamples(void *apSource, int alCustomIndex);
-		/**
-		* Retrieves number of samples for all active occlusion queries. It does not release the queries, but the values are gotten and stored in query.
-		*/
-		void WaitAndRetrieveAllOcclusionQueries();
+    class cRendererNodeSortFunc
+    {
+    public:
+        bool operator()(const iRenderableContainerNode* apNodeA, const iRenderableContainerNode* apNodeB) const;
+    };
 
 
-		//Temp variables used by material.
-		float GetTempAlpha(){ return mfTempAlpha; }
+    typedef std::multiset<iRenderableContainerNode*, cRendererNodeSortFunc> tRendererSortedNodeSet;
+    typedef tRendererSortedNodeSet::iterator tRendererSortedNodeSetIt;
 
-		//Static settings. Must be set before renderer data load.
-		static void SetShadowMapQuality(eShadowMapQuality aQuality) { mShadowMapQuality = aQuality;}
-		static eShadowMapQuality GetShadowMapQuality(){ return mShadowMapQuality;}
+    //---------------------------------------------
 
-		static void SetShadowMapResolution(eShadowMapResolution aResolution) { mShadowMapResolution = aResolution;}
-		static eShadowMapResolution GetShadowMapResolution(){ return mShadowMapResolution;}
+    class cShadowMapLightCache
+    {
+    public:
+        cShadowMapLightCache() : mpLight(NULL), mlTransformCount(-1), mfRadius(0),mfFOV(0), mfAspect(0) {}
 
-		static void SetParallaxQuality(eParallaxQuality aQuality) { mParallaxQuality = aQuality;}
-		static eParallaxQuality GetParallaxQuality(){ return mParallaxQuality;}
+        void SetFromLight(iLight* apLight);
 
-		static void SetParallaxEnabled(bool abX) { mbParallaxEnabled = abX;}
-		static bool GetParallaxEnabled(){ return mbParallaxEnabled;}
+        iLight *mpLight;
+        int mlTransformCount;
+        float mfRadius;
+        float mfFOV;
+        float mfAspect;
+    };
 
-		static void SetReflectionSizeDiv(int alX) { mlReflectionSizeDiv = alX;}
-		static int GetReflectionSizeDiv(){ return mlReflectionSizeDiv;}
+    //---------------------------------------------
 
-		static void SetRefractionEnabled(bool abX) { mbRefractionEnabled = abX;}
-		static bool GetRefractionEnabled(){ return mbRefractionEnabled;}
+    class cShadowMapData
+    {
+    public:
+        int mlFrameCount;
+        RenderTarget m_target;
+        cShadowMapLightCache mCache;
+    };
 
-		//Debug
-		tRenderableVec *GetShadowCasterVec(){ return &mvShadowCasters;}
 
-	protected:
-		// a utility to collect renderable objects from the current render list
-		void RenderableHelper(eRenderListType type, eMaterialRenderMode mode, std::function<void(iRenderable* obj, GraphicsContext::LayoutStream&, GraphicsContext::ShaderProgram&)> handler);
+    class iRenderer : public iRenderFunctions
+    {
+        HPL_RTTI_CLASS(iRenderer, "{A3E0F5A0-0F9B-4F5C-9B9E-0F9B4F5C9B9E}")
 
-		void BeginRendering(float afFrameTime,cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, const RenderViewport& apRenderTarget,
-							bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList, bool abAtStartOfRendering=true);
+        friend class cRendererCallbackFunctions;
+        friend class cRenderSettings;
 
-		cShadowMapData* GetShadowMapData(eShadowMapResolution aResolution, iLight *apLight);
-		bool ShadowMapNeedsUpdate(iLight *apLight, cShadowMapData *apShadowData);
-		void DestroyShadowMaps();
+    public:
+
+        iRenderer(const tString& asName, cGraphics *apGraphics,cResources* apResources, int alNumOfProgramComboModes);
+        virtual ~iRenderer();
+
+        // plan to just use the single draw call need to call BeginRendering to setup state
+        // ensure the contents is copied to the RenderViewport
+        virtual void Draw(
+            GraphicsContext& context,
+            cViewport& viewport,
+            float afFrameTime,
+            cFrustum* apFrustum,
+            cWorld* apWorld,
+            cRenderSettings* apSettings,
+            RenderViewport& apRenderTarget,
+            bool abSendFrameBufferToPostEffects,
+            tRendererCallbackList* apCallbackList){};
+
+        [[deprecated("Use Draw instead")]] void Render(
+            float afFrameTime,
+            cFrustum* apFrustum,
+            cWorld* apWorld,
+            cRenderSettings* apSettings,
+            const RenderViewport& apRenderTarget,
+            bool abSendFrameBufferToPostEffects,
+            tRendererCallbackList* apCallbackList);
+
+        void Update(float afTimeStep);
+
+        inline static int GetRenderFrameCount()  { return mlRenderFrameCount;}
+        inline static void IncRenderFrameCount() { ++mlRenderFrameCount;}
+
+        float GetTimeCount(){ return mfTimeCount;}
+
+        virtual bool LoadData()=0;
+        virtual void DestroyData()=0;
+
+        virtual std::shared_ptr<Image> GetOutputImage(cViewport& viewport) { return std::shared_ptr<Image>(nullptr);}
+
+        cWorld *GetCurrentWorld(){ return mpCurrentWorld;}
+        cFrustum *GetCurrentFrustum(){ return mpCurrentFrustum;}
+        cRenderList *GetCurrentRenderList(){ return mpCurrentRenderList;}
+
+        iVertexBuffer* GetShapeBoxVertexBuffer(){ return mpShapeBox; }
+
+        void AssignOcclusionObject(void *apSource, int alCustomIndex, iVertexBuffer *apVtxBuffer, cMatrixf *apMatrix, bool abDepthTest);
+        int RetrieveOcclusionObjectSamples(void *apSource, int alCustomIndex);
+        /**
+        * Retrieves number of samples for all active occlusion queries. It does not release the queries, but the values are gotten and stored in query.
+        */
+        void WaitAndRetrieveAllOcclusionQueries();
+
+
+        //Temp variables used by material.
+        float GetTempAlpha(){ return mfTempAlpha; }
+
+        //Static settings. Must be set before renderer data load.
+        static void SetShadowMapQuality(eShadowMapQuality aQuality) { mShadowMapQuality = aQuality;}
+        static eShadowMapQuality GetShadowMapQuality(){ return mShadowMapQuality;}
+
+        static void SetShadowMapResolution(eShadowMapResolution aResolution) { mShadowMapResolution = aResolution;}
+        static eShadowMapResolution GetShadowMapResolution(){ return mShadowMapResolution;}
+
+        static void SetParallaxQuality(eParallaxQuality aQuality) { mParallaxQuality = aQuality;}
+        static eParallaxQuality GetParallaxQuality(){ return mParallaxQuality;}
+
+        static void SetParallaxEnabled(bool abX) { mbParallaxEnabled = abX;}
+        static bool GetParallaxEnabled(){ return mbParallaxEnabled;}
+
+        static void SetReflectionSizeDiv(int alX) { mlReflectionSizeDiv = alX;}
+        static int GetReflectionSizeDiv(){ return mlReflectionSizeDiv;}
+
+        static void SetRefractionEnabled(bool abX) { mbRefractionEnabled = abX;}
+        static bool GetRefractionEnabled(){ return mbRefractionEnabled;}
+
+        //Debug
+        tRenderableVec *GetShadowCasterVec(){ return &mvShadowCasters;}
+
+    protected:
+        // a utility to collect renderable objects from the current render list
+        void RenderableHelper(eRenderListType type, cViewport& viewport, eMaterialRenderMode mode, std::function<void(iRenderable* obj, GraphicsContext::LayoutStream&, GraphicsContext::ShaderProgram&)> handler);
+
+        void BeginRendering(float afFrameTime,cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, const RenderViewport& apRenderTarget,
+                            bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList, bool abAtStartOfRendering=true);
+
+        cShadowMapData* GetShadowMapData(eShadowMapResolution aResolution, iLight *apLight);
+        bool ShadowMapNeedsUpdate(iLight *apLight, cShadowMapData *apShadowData);
+        void DestroyShadowMaps();
 
 
         void RenderZObject(GraphicsContext& context, iRenderable *apObject, cFrustum *apCustomFrustum);
 
-		/**
-		 * Brute force adding of visible objects. Nothing is rendered.
-		 */
-		void CheckForVisibleAndAddToList(iRenderableContainer *apContainer, tRenderableFlag alNeededFlags);
+        /**
+         * Brute force adding of visible objects. Nothing is rendered.
+         */
+        void CheckForVisibleAndAddToList(iRenderableContainer *apContainer, tRenderableFlag alNeededFlags);
 
-		void CheckNodesAndAddToListIterative(iRenderableContainerNode *apNode, tRenderableFlag alNeededFlags);
-
-
-		void OcclusionQueryBoundingBoxTest(bgfx::ViewId view, 
-			GraphicsContext& context, 
-			bgfx::OcclusionQueryHandle handle, 
-			const cFrustum& frustum,
-			const cMatrixf& transform, 
-			RenderTarget& rt,Cull cull = Cull::CounterClockwise);
-		/**
-		 * Uses a Coherent occlusion culling to get visible objects. No early Z needed after calling this
-		 */
-		void RenderZPassWithVisibilityCheck(GraphicsContext& context, cVisibleRCNodeTracker *apVisibleNodeTracker, tRenderableFlag alNeededFlags, tObjectVariabilityFlag variabilityFlag,
-			RenderTarget& rt, std::function<bool(bgfx::ViewId view, iRenderable* object)> renderHandler);
-
-		void PushUpVisibility(iRenderableContainerNode *apNode);
-
-		void PushNodeChildrenToStack(tRendererSortedNodeSet& a_setNodeStack, iRenderableContainerNode *apNode, int alNeededFlags);
-		void AddAndRenderNodeOcclusionQuery(tNodeOcclusionPairList *apList, iRenderableContainerNode *apNode, bool abObjectsRendered);
-
-		bool CheckShadowCasterContributesToView(iRenderable *apObject);
-		void GetShadowCastersIterative(iRenderableContainerNode *apNode, eCollision aPrevCollision);
-		void GetShadowCasters(iRenderableContainer *apContainer, tRenderableVec& avObjectVec, cFrustum *apLightFrustum);
-		bool SetupShadowMapRendering(iLight *apLight);
-
-		bool RenderShadowCasterCHC(iRenderable *apObject);
-		void RenderShadowCaster(iRenderable *apObject, cFrustum *apLightFrustum);
-	
-		/**
-		 * Only depth is needed for framebuffer. All objects needs to be added to renderlist!
-		 */
-		void AssignAndRenderOcclusionQueryObjects(bgfx::ViewId view, GraphicsContext& context, bool abSetFrameBuffer, bool abUsePosAndSize);
-
-		/**
-		 * Checks if the renderable object is 1) submeshentity 2) is onesided plane 3)is away from camera. If all are true, FALSE is returned.
-		 */
-		bool CheckRenderablePlaneIsVisible(iRenderable *apObject, cFrustum *apFrustum);
-		/**
-		 * afHalfFovTan == 0 means that the function calculates tan.
-		 */
-		cRect2l GetClipRectFromObject(iRenderable *apObject, float afPaddingPercent, cFrustum *apFrustum, const cVector2l &avScreenSize, float afHalfFovTan);
+        void CheckNodesAndAddToListIterative(iRenderableContainerNode *apNode, tRenderableFlag alNeededFlags);
 
 
-		/**
-		* Checks the IsVisible and also clip planes (in setttings), if visible in reflection and other stuff . No frustum check!
-		*/
-		bool CheckObjectIsVisible(iRenderable *apObject, tRenderableFlag alNeededFlags);
+        void OcclusionQueryBoundingBoxTest(bgfx::ViewId view, 
+            GraphicsContext& context, 
+            bgfx::OcclusionQueryHandle handle, 
+            const cFrustum& frustum,
+            const cMatrixf& transform, 
+            RenderTarget& rt,Cull cull = Cull::CounterClockwise);
+        /**
+         * Uses a Coherent occlusion culling to get visible objects. No early Z needed after calling this
+         */
+        void RenderZPassWithVisibilityCheck(GraphicsContext& context, cVisibleRCNodeTracker *apVisibleNodeTracker, tRenderableFlag alNeededFlags, tObjectVariabilityFlag variabilityFlag,
+            RenderTarget& rt, std::function<bool(bgfx::ViewId view, iRenderable* object)> renderHandler);
 
-		/**
-		 * Checks custom clip planes (in setttings) and more to determine if a node is viisible. No frustum check!
-		 */
-		[[deprecated("use free method rendering::detail::IsObjectVisible")]]
-		bool CheckNodeIsVisible(iRenderableContainerNode *apNode);
+        void PushUpVisibility(iRenderableContainerNode *apNode);
 
-		bool CheckFogAreaInsideNearPlane(cMatrixf &a_mtxInvBoxModelMatrix);
-		void SetupFogRenderDataArray(bool abSort);
-		bool CheckFogAreaRayIntersection(	cMatrixf &a_mtxInvBoxModelMatrix, const cVector3f &avBoxSpaceRayStart, const cVector3f& avRayDir,
-											float &afEntryDist, float &afExitDist);
-		float GetFogAreaVisibilityForObject(cFogAreaRenderData *apFogData, iRenderable *apObject);
+        void PushNodeChildrenToStack(tRendererSortedNodeSet& a_setNodeStack, iRenderableContainerNode *apNode, int alNeededFlags);
+        void AddAndRenderNodeOcclusionQuery(tNodeOcclusionPairList *apList, iRenderableContainerNode *apNode, bool abObjectsRendered);
 
-		void SetOcclusionPlanesActive(bool abX);
+        bool CheckShadowCasterContributesToView(iRenderable *apObject);
+        void GetShadowCastersIterative(iRenderableContainerNode *apNode, eCollision aPrevCollision);
+        void GetShadowCasters(iRenderableContainer *apContainer, tRenderableVec& avObjectVec, cFrustum *apLightFrustum);
+        bool SetupShadowMapRendering(iLight *apLight);
 
-		iVertexBuffer* LoadVertexBufferFromMesh(const tString& asMeshName, tVertexElementFlag alVtxToCopy);
-	
-		void RunCallback(eRendererMessage aMessage, cRendererCallbackFunctions& handler);
+        bool RenderShadowCasterCHC(iRenderable *apObject);
+        void RenderShadowCaster(iRenderable *apObject, cFrustum *apLightFrustum);
+    
+        /**
+         * Only depth is needed for framebuffer. All objects needs to be added to renderlist!
+         */
+        void AssignAndRenderOcclusionQueryObjects(bgfx::ViewId view, GraphicsContext& context, bool abSetFrameBuffer, bool abUsePosAndSize);
+
+        /**
+         * Checks if the renderable object is 1) submeshentity 2) is onesided plane 3)is away from camera. If all are true, FALSE is returned.
+         */
+        bool CheckRenderablePlaneIsVisible(iRenderable *apObject, cFrustum *apFrustum);
+        /**
+         * afHalfFovTan == 0 means that the function calculates tan.
+         */
+        cRect2l GetClipRectFromObject(iRenderable *apObject, float afPaddingPercent, cFrustum *apFrustum, const cVector2l &avScreenSize, float afHalfFovTan);
+
+
+        /**
+        * Checks the IsVisible and also clip planes (in setttings), if visible in reflection and other stuff . No frustum check!
+        */
+        bool CheckObjectIsVisible(iRenderable *apObject, tRenderableFlag alNeededFlags);
+
+        /**
+         * Checks custom clip planes (in setttings) and more to determine if a node is viisible. No frustum check!
+         */
+        [[deprecated("use free method rendering::detail::IsObjectVisible")]]
+        bool CheckNodeIsVisible(iRenderableContainerNode *apNode);
+
+        bool CheckFogAreaInsideNearPlane(cMatrixf &a_mtxInvBoxModelMatrix);
+        void SetupFogRenderDataArray(bool abSort);
+        bool CheckFogAreaRayIntersection(	cMatrixf &a_mtxInvBoxModelMatrix, const cVector3f &avBoxSpaceRayStart, const cVector3f& avRayDir,
+                                            float &afEntryDist, float &afExitDist);
+        float GetFogAreaVisibilityForObject(cFogAreaRenderData *apFogData, iRenderable *apObject);
+
+        void SetOcclusionPlanesActive(bool abX);
+
+        iVertexBuffer* LoadVertexBufferFromMesh(const tString& asMeshName, tVertexElementFlag alVtxToCopy);
+    
+        void RunCallback(eRendererMessage aMessage, cRendererCallbackFunctions& handler);
 
         cResources* mpResources;
-		bgfx::ProgramHandle m_nullShader;
+        bgfx::ProgramHandle m_nullShader;
 
-		tString msName;
+        tString msName;
 
-		float mfDefaultAlphaLimit;
+        float mfDefaultAlphaLimit;
 
-		bool mbSetFrameBufferAtBeginRendering;
-		bool mbClearFrameBufferAtBeginRendering;
-		bool mbSetupOcclusionPlaneForFog;
+        bool mbSetFrameBufferAtBeginRendering;
+        bool mbClearFrameBufferAtBeginRendering;
+        bool mbSetupOcclusionPlaneForFog;
 
-		bool mbOnlyRenderPrevVisibleOcclusionObjects;
-		int mlOnlyRenderPrevVisibleOcclusionObjectsFrameCount;
+        bool mbOnlyRenderPrevVisibleOcclusionObjects;
+        int mlOnlyRenderPrevVisibleOcclusionObjectsFrameCount;
 
-		float mfCurrentFrameTime;
-		cWorld *mpCurrentWorld;
-		cRenderSettings *mpCurrentSettings;
-		cRenderList *mpCurrentRenderList;
+        float mfCurrentFrameTime;
+        cWorld *mpCurrentWorld;
+        cRenderSettings *mpCurrentSettings;
+        cRenderList *mpCurrentRenderList;
 
-		bool mbSendFrameBufferToPostEffects;
-		tRendererCallbackList *mpCallbackList;
+        bool mbSendFrameBufferToPostEffects;
+        tRendererCallbackList *mpCallbackList;
 
-		float mfCurrentNearPlaneTop;
-		float mfCurrentNearPlaneRight;
+        float mfCurrentNearPlaneTop;
+        float mfCurrentNearPlaneRight;
 
-		iVertexBuffer *mpShapeBox;
+        iVertexBuffer *mpShapeBox;
 
-		cMatrixf m_mtxSkyBox;
+        cMatrixf m_mtxSkyBox;
 
-		cRect2l mTempClipRect;
-		float mfScissorLastFov;
-		float mfScissorLastTanHalfFov;
+        cRect2l mTempClipRect;
+        float mfScissorLastFov;
+        float mfScissorLastTanHalfFov;
 
-		std::vector<iRenderable*> mvShadowCasters;
+        std::vector<iRenderable*> mvShadowCasters;
 
-		static int mlRenderFrameCount;
-		float mfTimeCount;
+        static int mlRenderFrameCount;
+        float mfTimeCount;
 
-		bool mbOcclusionPlanesActive;
-		std::vector<cPlanef> mvCurrentOcclusionPlanes;
+        bool mbOcclusionPlanesActive;
+        std::vector<cPlanef> mvCurrentOcclusionPlanes;
 
-		int mlActiveOcclusionQueryNum;
-		std::vector<cOcclusionQueryObject*> mvSortedOcclusionObjects;
-		std::array<absl::InlinedVector<cShadowMapData, 10>, eShadowMapResolution_LastEnum> m_shadowMapData;
+        int mlActiveOcclusionQueryNum;
+        std::vector<cOcclusionQueryObject*> mvSortedOcclusionObjects;
+        std::array<absl::InlinedVector<cShadowMapData, 10>, eShadowMapResolution_LastEnum> m_shadowMapData;
 
-		float mfTempAlpha;
+        float mfTempAlpha;
 
-		static eShadowMapQuality mShadowMapQuality;
-		static eShadowMapResolution mShadowMapResolution;
-		static eParallaxQuality mParallaxQuality;
-		static bool mbParallaxEnabled;
-		static int mlReflectionSizeDiv;
-		static bool mbRefractionEnabled;
-	};
+        static eShadowMapQuality mShadowMapQuality;
+        static eShadowMapResolution mShadowMapResolution;
+        static eParallaxQuality mParallaxQuality;
+        static bool mbParallaxEnabled;
+        static int mlReflectionSizeDiv;
+        static bool mbRefractionEnabled;
+    };
 
-	//---------------------------------------------
+    //---------------------------------------------
 
-	class cRendererCallbackFunctions
-	{
-	public:
-		cRendererCallbackFunctions(GraphicsContext& context,iRenderer *apRenderer) : m_context(context), mpRenderer(apRenderer) {}
+    class cRendererCallbackFunctions
+    {
+    public:
+        cRendererCallbackFunctions(GraphicsContext& context, cViewport& viewport,iRenderer *apRenderer) : 
+            m_context(context),
+            m_viewport(viewport),
+            mpRenderer(apRenderer) {}
 
-		cRenderSettings* GetSettings(){ return mpRenderer->mpCurrentSettings;}
-		cFrustum* GetFrustum(){ return mpRenderer->mpCurrentFrustum;}
+        cRenderSettings* GetSettings(){ return mpRenderer->mpCurrentSettings;}
+        cFrustum* GetFrustum(){ return mpRenderer->mpCurrentFrustum;}
+        inline GraphicsContext& GetGraphicsContext(){ return m_context; }
+        inline cViewport& GetViewport(){ return m_viewport; }
 
-		[[deprecated("SetOrthoProjection is deprecated")]]
-		inline void SetFlatProjection(const cVector2f &avSize=1,float afMin=-100,float afMax=100) { }
-		[[deprecated("SetFlatProjectionMinMax is deprecated")]]
-		inline void SetFlatProjectionMinMax(const cVector3f &avMin,const cVector3f &avMax) { }
-		[[deprecated("SetNormalFrustumProjection is deprecated")]]
-		inline void SetNormalFrustumProjection() { 
-		}
 
-		[[deprecated("SetOrthoProjection is deprecated")]]
-		inline void DrawQuad(	const cVector3f& aPos, const cVector2f& avSize, const cVector2f& avMinUV=0, const cVector2f& avMaxUV=1,
-								bool abInvertY=false, const cColor& aColor=cColor(1,1) )
-							{ 
-								
-							 }
-		[[deprecated("SetDepthTest is deprecated")]]
-		inline bool SetDepthTest(bool abX){ 
-			return false;
-		 }
-		[[deprecated("SetDepthWrite is deprecated")]]
-		inline bool SetDepthWrite(bool abX){ 
-			return false;
-		}
-		[[deprecated("SetDepthTestFunc is deprecated")]]
-		inline bool SetDepthTestFunc(eDepthTestFunc aFunc){
-			return false;
-		 }
-		 [[deprecated("SetCullActive is deprecated")]]
-		inline bool SetCullActive(bool abX){ 
-			return false; 
-		}
-		[[deprecated("SetCullMode is deprecated")]]
-		inline bool SetCullMode(eCullMode aMode){ 
-			return false;
-		}
-		[[deprecated("SetStencilActive is deprecated")]]
-		inline bool SetStencilActive(bool abX){ 
-			return true;
-		}
-		[[deprecated("SetStencilFunc is deprecated")]]
-		inline bool SetScissorActive(bool abX){ 
-			return false;
-		}
-		[[deprecated("SetStencilFunc is deprecated")]]
-		inline bool SetScissorRect(const cVector2l& avPos, const cVector2l& avSize, bool abAutoEnabling){
-			return false;}
-		[[deprecated("SetStencilFunc is deprecated")]]
-		inline bool SetScissorRect(const cRect2l& aClipRect, bool abAutoEnabling){return false;}
-		[[deprecated("SetStencilFunc is deprecated")]]
-		inline bool SetChannelMode(eMaterialChannelMode aMode){ return false; }
-		[[deprecated("SetStencilFunc is deprecated")]]
-		inline bool SetAlphaMode(eMaterialAlphaMode aMode){ return false; }
-		[[deprecated("SetBlendMode is deprecated")]]
-		inline bool SetBlendMode(eMaterialBlendMode aMode){ 
-			return false;
-		 }
-		[[deprecated("SetProgram is deprecated")]]
-		inline bool SetProgram(iGpuProgram *apProgram){ 
-			return true; 
-		}
-		[[deprecated("SetTexture is deprecated")]]
-		inline void SetTexture(int alUnit, iTexture *apTexture){
+        [[deprecated("SetOrthoProjection is deprecated")]]
+        inline void SetFlatProjection(const cVector2f &avSize=1,float afMin=-100,float afMax=100) { }
+        [[deprecated("SetFlatProjectionMinMax is deprecated")]]
+        inline void SetFlatProjectionMinMax(const cVector3f &avMin,const cVector3f &avMax) { }
+        [[deprecated("SetNormalFrustumProjection is deprecated")]]
+        inline void SetNormalFrustumProjection() { 
+        }
 
-		}
-		[[deprecated("SetTextureRange is deprecated")]]
-		inline void SetTextureRange(iTexture *apTexture, int alFirstUnit, int alLastUnit = kMaxTextureUnits-1){ 
-		}
-		[[deprecated("SetTexture is deprecated")]]
-		inline void SetVertexBuffer(iVertexBuffer *apVtxBuffer){
+        [[deprecated("SetOrthoProjection is deprecated")]]
+        inline void DrawQuad(	const cVector3f& aPos, const cVector2f& avSize, const cVector2f& avMinUV=0, const cVector2f& avMaxUV=1,
+                                bool abInvertY=false, const cColor& aColor=cColor(1,1) )
+                            { 
+                                
+                             }
+        [[deprecated("SetDepthTest is deprecated")]]
+        inline bool SetDepthTest(bool abX){ 
+            return false;
+         }
+        [[deprecated("SetDepthWrite is deprecated")]]
+        inline bool SetDepthWrite(bool abX){ 
+            return false;
+        }
+        [[deprecated("SetDepthTestFunc is deprecated")]]
+        inline bool SetDepthTestFunc(eDepthTestFunc aFunc){
+            return false;
+         }
+         [[deprecated("SetCullActive is deprecated")]]
+        inline bool SetCullActive(bool abX){ 
+            return false; 
+        }
+        [[deprecated("SetCullMode is deprecated")]]
+        inline bool SetCullMode(eCullMode aMode){ 
+            return false;
+        }
+        [[deprecated("SetStencilActive is deprecated")]]
+        inline bool SetStencilActive(bool abX){ 
+            return true;
+        }
+        [[deprecated("SetStencilFunc is deprecated")]]
+        inline bool SetScissorActive(bool abX){ 
+            return false;
+        }
+        [[deprecated("SetStencilFunc is deprecated")]]
+        inline bool SetScissorRect(const cVector2l& avPos, const cVector2l& avSize, bool abAutoEnabling){
+            return false;}
+        [[deprecated("SetStencilFunc is deprecated")]]
+        inline bool SetScissorRect(const cRect2l& aClipRect, bool abAutoEnabling){return false;}
+        [[deprecated("SetStencilFunc is deprecated")]]
+        inline bool SetChannelMode(eMaterialChannelMode aMode){ return false; }
+        [[deprecated("SetStencilFunc is deprecated")]]
+        inline bool SetAlphaMode(eMaterialAlphaMode aMode){ return false; }
+        [[deprecated("SetBlendMode is deprecated")]]
+        inline bool SetBlendMode(eMaterialBlendMode aMode){ 
+            return false;
+         }
+        [[deprecated("SetProgram is deprecated")]]
+        inline bool SetProgram(iGpuProgram *apProgram){ 
+            return true; 
+        }
+        [[deprecated("SetTexture is deprecated")]]
+        inline void SetTexture(int alUnit, iTexture *apTexture){
 
-		}
-		[[deprecated("SetMatrix is deprecated")]]
-		inline void SetMatrix(cMatrixf *apMatrix){
-		}
-		[[deprecated("SetModelViewMatrix is deprecated")]]
-		inline void SetModelViewMatrix(const cMatrixf& a_mtxModelView){ 
-			
-		}
+        }
+        [[deprecated("SetTextureRange is deprecated")]]
+        inline void SetTextureRange(iTexture *apTexture, int alFirstUnit, int alLastUnit = kMaxTextureUnits-1){ 
+        }
+        [[deprecated("SetTexture is deprecated")]]
+        inline void SetVertexBuffer(iVertexBuffer *apVtxBuffer){
 
-		[[deprecated("SetProjectionMatrix is deprecated")]]
-		inline void DrawCurrent(eVertexBufferDrawType aDrawType = eVertexBufferDrawType_LastEnum){ }
+        }
+        [[deprecated("SetMatrix is deprecated")]]
+        inline void SetMatrix(cMatrixf *apMatrix){
+        }
+        [[deprecated("SetModelViewMatrix is deprecated")]]
+        inline void SetModelViewMatrix(const cMatrixf& a_mtxModelView){ 
+            
+        }
 
-		[[deprecated("DrawWireFrame is deprecated")]]
-		void DrawWireFrame(iVertexBuffer *apVtxBuffer, const cColor &aColor){ }
+        [[deprecated("SetProjectionMatrix is deprecated")]]
+        inline void DrawCurrent(eVertexBufferDrawType aDrawType = eVertexBufferDrawType_LastEnum){ }
 
-		inline GraphicsContext& GetGraphicsContext(){ return m_context; }
+        [[deprecated("DrawWireFrame is deprecated")]]
+        void DrawWireFrame(iVertexBuffer *apVtxBuffer, const cColor &aColor){ }
 
-		iLowLevelGraphics *GetLowLevelGfx(){ return mpRenderer->mpLowLevelGraphics;}
+     
+        iLowLevelGraphics *GetLowLevelGfx(){ return mpRenderer->mpLowLevelGraphics;}
 
-	private:
-		iRenderer *mpRenderer;
-		GraphicsContext& m_context;
-	};
+    private:
+        iRenderer *mpRenderer;
+        GraphicsContext& m_context;
+        cViewport& m_viewport;
+    };
 
-	//---------------------------------------------
+    //---------------------------------------------
 
 };

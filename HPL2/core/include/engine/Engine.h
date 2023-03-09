@@ -26,6 +26,7 @@
 #include <engine/RTTI.h>
 #include <engine/EngineInterface.h>
 #include <memory>
+#include <mutex>
 
 namespace hpl {
 
@@ -100,7 +101,7 @@ namespace hpl {
 
 	class cEngine : public EngineInterface
 	{
-		HPL_RTTI_CLASS(cEngine, "{a7b5b5a0-1b9f-11df-8c4e-0800200c9a66}")
+		HPL_RTTI_IMPL_CLASS(EngineInterface, cEngine, "{a7b5b5a0-1b9f-11df-8c4e-0800200c9a66}")
 	public:
 
 		cEngine(iLowLevelEngineSetup *apGameSetup,tFlag alHplSetupFlags, cEngineInitVars *apVars);
@@ -208,8 +209,8 @@ namespace hpl {
 		iLowLevelEngineSetup *mpGameSetup;
 		cUpdater *mpUpdater;
 		cLogicTimer *mpLogicTimer;
-
-		iMutex *mpMutex;
+		
+		std::mutex m_mutex;
 
 		cFPSCounter* mpFPSCounter;
 

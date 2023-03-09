@@ -118,6 +118,7 @@ namespace hpl::input::internal {
             absl::InlinedVector<TextPress, 256> m_stagingCharacter;
             absl::InlinedVector<KeyPress, 256> m_queuedPresses;
             absl::InlinedVector<KeyPress, 256> m_stagingPresses;
+            KeyPressEvent m_keyPressEvent;
             std::array<bool, static_cast<size_t>(eKey::eKey_LastEnum)> m_keyPressState = { { 0 } };
         };
 
@@ -397,6 +398,11 @@ namespace hpl::input::internal {
             return impl->m_keyPressState[static_cast<size_t>(key)];
         }
 
+        void ConnectKeyPressEvent(const InternalInputKeyboardHandle& handle, KeyPressEvent::Handler& handler) {
+            auto* impl = static_cast<InternalInputKeyboardImpl*>(handle.Get());
+            handler.Connect(impl->m_keyPressEvent);
+        }
+
         InternalInputKeyboardHandle Initialize() {
             auto ptr = InternalInputKeyboardHandle::Ptr(new InternalInputKeyboardImpl(), [](void* ptr) {
                 auto impl = static_cast<InternalInputKeyboardImpl*>(ptr);
@@ -444,7 +450,9 @@ namespace hpl::input::internal {
                         auto key = SDLToKey(event.key.keysym.sym);
                         if (key != eKey_LastEnum) {
                             std::lock_guard<std::mutex> lock(impl->m_mutex);
-                            impl->m_queuedPresses.push_back({ key, modifier, isPressed });
+                            KeyPress press = { key, modifier, isPressed };
+                            impl->m_keyPressEvent.Signal(press);
+                            impl->m_queuedPresses.push_back(press);
                             impl->m_keyPressState[static_cast<size_t>(key)] = isPressed;
                         }
                         break;

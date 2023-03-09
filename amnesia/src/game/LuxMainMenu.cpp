@@ -141,6 +141,7 @@ cLuxMainMenu::cLuxMainMenu() : iLuxUpdateable("LuxDebugHandler")
 	///////////////////////////////
 	//Create Viewport
 	mpViewport = mpScene->CreateViewport();
+	mpViewport->bindToWindow(*Interface<window::NativeWindowWrapper>::Get());
 	mpViewport->SetActive(false);
 	mpViewport->SetVisible(false);
 	mpGuiSet->SetActive(false);
@@ -1363,12 +1364,15 @@ void cLuxMainMenu::RenderBlurTexture()
 
 	auto* scene = engine->GetScene();
 	auto& graphicsContext = engine->GetGraphicsContext();
-	auto* renderer = gpBase->mpMapHandler->GetViewport()->GetRenderer();
-	
+	auto viewport = gpBase->mpMapHandler->GetViewport();
+	auto* renderer = viewport->GetRenderer();
+	// auto outputImage = boundViewport->GetRenderTarget().GetImage();
+	auto viewportSize = viewport->GetSize();
+
 	auto tempBlurImage = [&]{
         auto desc = ImageDescriptor::CreateTexture2D(
-            mvScreenSize.x,
-            mvScreenSize.y,
+            viewportSize.x,
+            viewportSize.y,
             false,
             bgfx::TextureFormat::Enum::RGBA8);
         desc.m_configuration.m_rt = RTType::RT_Write;
@@ -1394,7 +1398,7 @@ void cLuxMainMenu::RenderBlurTexture()
 		{
         	GraphicsContext::LayoutStream layoutStream;
 			cMatrixf projMtx;
-			graphicsContext.ScreenSpaceQuad(layoutStream, projMtx, mvScreenSize.x, mvScreenSize.y);
+			graphicsContext.ScreenSpaceQuad(layoutStream, projMtx, viewportSize.x, viewportSize.y);
 			
 			GraphicsContext::ViewConfiguration viewConfiguration {blurTargets[0]};
 			viewConfiguration.m_projection = projMtx;
@@ -1423,7 +1427,7 @@ void cLuxMainMenu::RenderBlurTexture()
         	GraphicsContext::LayoutStream layoutStream;
 			GraphicsContext::ShaderProgram shaderProgram;
 			cMatrixf projMtx;
-			graphicsContext.ScreenSpaceQuad(layoutStream, projMtx, mvScreenSize.x, mvScreenSize.y);
+			graphicsContext.ScreenSpaceQuad(layoutStream, projMtx, viewportSize.x, viewportSize.y);
 			
 			GraphicsContext::ViewConfiguration viewConfiguration {blurTargets[1]};
 			viewConfiguration.m_projection = projMtx;
@@ -1448,8 +1452,8 @@ void cLuxMainMenu::RenderBlurTexture()
 	};
 	
 	RenderTarget tempTarget = RenderTarget(m_screenImage);
-	cRect2l rect = cRect2l(0,0,mvScreenSize.x,mvScreenSize.y);
-	graphicsContext.CopyTextureToFrameBuffer(*renderer->GetOutputImage(), rect, tempTarget);
+	cRect2l rect = cRect2l(0,0,viewportSize.x,viewportSize.y);
+	graphicsContext.CopyTextureToFrameBuffer(*renderer->GetOutputImage(*viewport), rect, tempTarget);
 	
 	requestBlur(*m_screenImage);
 

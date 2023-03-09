@@ -167,11 +167,5 @@ namespace hpl {
 		return pThread;
 	}
 
-	//-----------------------------------------------------------------------
-
-	iMutex* cPlatform::CreateMutEx()
-	{
-		return hplNew(cMutexSDL, ());
-	}
 #endif
 }

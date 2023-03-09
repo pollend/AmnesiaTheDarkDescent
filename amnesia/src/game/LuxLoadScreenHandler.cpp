@@ -19,6 +19,7 @@
 
 #include "LuxLoadScreenHandler.h"
 
+#include "LuxBase.h"
 #include "LuxHelpFuncs.h"
 #include "LuxInputHandler.h"
 #include "engine/Interface.h"
@@ -54,6 +55,7 @@ cLuxLoadScreenHandler::cLuxLoadScreenHandler() : iLuxUpdateable("LuxLoadScreenHa
 	///////////////////////////////
 	//Create Viewport
 	mpViewport = mpScene->CreateViewport();
+	mpViewport->bindToWindow(*Interface<window::NativeWindowWrapper>::Get());
 	mpViewport->SetActive(false);
 	mpViewport->SetVisible(false);
 

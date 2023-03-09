@@ -1928,7 +1928,6 @@ namespace hpl {
 																	 vUVCorners[0],vUVCorners[1], vUVCorners[2], vUVCorners[3],
 																	 sMaterial);
 
-
 			//////////////////////
 			//RENDER_DEBUG
 			/*cMeshEntity* pDebugMeshEntity = mpCurrentWorld->CreateMeshEntity(sName, pMesh);

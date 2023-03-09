@@ -21,6 +21,7 @@
 #define HPL_MATERIAL_TYPE_H
 
 #include "graphics/GraphicsContext.h"
+#include "scene/Viewport.h"
 #include "system/SystemTypes.h"
 #include "engine/EngineTypes.h"
 #include "math/MathTypes.h"
@@ -89,9 +90,10 @@ namespace hpl {
 
 		virtual void ResolveShaderProgram(
             eMaterialRenderMode aRenderMode,
+            cViewport& viewport,
             cMaterial* apMaterial,
             iRenderable* apObject,
-            iRenderer* apRenderer, 
+            iRenderer* apRenderer,
 			std::function<void(GraphicsContext::ShaderProgram&)> program) {}
 
 		[[deprecated("use span GetUsedTextures")]]

@@ -19,31 +19,37 @@ namespace hpl {
         BX_ASSERT(m_textureManager, "ImageResourceWrapper: Texture manager is null");
     }
     ImageResourceWrapper::ImageResourceWrapper(ImageResourceWrapper&& other) {
-        if (m_imageResource) {
+        if (m_imageResource && m_autoDestroyResource) {
             m_textureManager->Destroy(m_imageResource);
         }
         m_imageResource = other.m_imageResource;
         m_textureManager = other.m_textureManager;
-        other.m_imageResource = nullptr;
-    }
+        m_autoDestroyResource = other.m_autoDestroyResource;
 
+        other.m_imageResource = nullptr;
+        other.m_textureManager = nullptr;
+    }
+    
     ImageResourceWrapper::~ImageResourceWrapper() {
-        if (m_textureManager && m_imageResource && m_autoDestroyResource) {
+        if (m_imageResource && m_autoDestroyResource) {
             m_textureManager->Destroy(m_imageResource);
         }
+    }
+
+    void ImageResourceWrapper::operator=(ImageResourceWrapper&& other) {
+        if (m_imageResource && m_autoDestroyResource) {
+            m_textureManager->Destroy(m_imageResource);
+        }
+        m_imageResource = other.m_imageResource;
+        m_textureManager = other.m_textureManager;
+        m_autoDestroyResource = other.m_autoDestroyResource;
+
+        other.m_imageResource = nullptr;
+        other.m_textureManager = nullptr;
     }
 
     void ImageResourceWrapper::SetAutoDestroyResource(bool autoDestroyResource) {
         m_autoDestroyResource = autoDestroyResource;
-    }
-
-    void ImageResourceWrapper::operator=(ImageResourceWrapper&& other) {
-        if (m_imageResource) {
-            m_textureManager->Destroy(m_imageResource);
-        }
-        m_imageResource = other.m_imageResource;
-        m_textureManager = other.m_textureManager;
-        other.m_imageResource = nullptr;
     }
 
     Image* ImageResourceWrapper::GetImage() const {

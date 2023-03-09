@@ -37,7 +37,7 @@ namespace hpl::input {
 
     // wrapper over the internal implementation
     // this class is copyable and movable
-    class InputMouseDevice final : public BaseInputDevice{
+    class InputMouseDevice final : public BaseInputDevice {
         HPL_RTTI_IMPL_CLASS(BaseInputDevice, InputMouseDevice, "{ac1b28f3-7a0f-4442-96bb-99b64adb5be6}")
     public:
         InputMouseDevice() = default;

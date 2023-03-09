@@ -210,6 +210,7 @@ namespace hpl
 
     void cMaterialType_SolidDiffuse::ResolveShaderProgram(
             eMaterialRenderMode aRenderMode,
+            cViewport& viewport,
             cMaterial* apMaterial,
             iRenderable* apObject,
             iRenderer* apRenderer, 

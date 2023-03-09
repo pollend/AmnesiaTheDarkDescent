@@ -19,7 +19,7 @@ namespace hpl {
         uint8_t m_data4[8];
     };
     bool operator==(const Uuid& lhs, const Uuid& rhs);
-    static constexpr const Uuid NullUUID = Uuid{ 0 };
+    static constexpr const Uuid NullUUID = Uuid{ {0} };
 
     namespace detail {
 
@@ -101,6 +101,9 @@ namespace hpl {
                                   uuid.m_data[14],
                                   uuid.m_data[15] } };
         }
+
+        
+
     } // namespace detail
 
 } // namespace hpl

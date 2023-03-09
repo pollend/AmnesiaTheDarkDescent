@@ -29,6 +29,7 @@
 #include "engine/EngineInterface.h"
 #include <engine/IUpdateEventLoop.h>
 #include "engine/Interface.h"
+#include "graphics/Enum.h"
 #include "graphics/GraphicsContext.h"
 #include "system/System.h"
 #include "sound/Sound.h"
@@ -61,6 +62,7 @@
 #include "system/LowLevelSystem.h"
 #include "engine/LowLevelEngineSetup.h"
 #include <memory>
+#include <mutex>
 
 #include "impl/SDLEngineSetup.h"
 
@@ -365,8 +367,6 @@ namespace hpl {
 		Log(" Initializing script functions\n");
 		cScriptFuncs::Init(mpGraphics,mpResources,mpSystem,mpInput,mpScene,mpSound,this);
 
-		mpMutex = cPlatform::CreateMutEx();
-
 		//Since game is not done:
 		mbGameIsDone=false;
 
@@ -397,7 +397,6 @@ namespace hpl {
 		hplDelete(mpLogicTimer);
 		hplDelete(mpFPSCounter);
 		hplDelete(mpFrameTimer);
-		hplDelete(mpMutex);
 
 		hplDelete(mpUpdater);
 
@@ -595,21 +594,14 @@ namespace hpl {
 
 	void cEngine::Exit()
 	{
-		mpMutex->Lock();
-
+		std::lock_guard<std::mutex> lk(m_mutex);
 		mbGameIsDone = true;
-		//Log("Exit!\n");
-
-		mpMutex->Unlock();
 	}
 
 	bool cEngine::GetGameIsDone()
 	{
-		mpMutex->Lock();
-
+		std::lock_guard<std::mutex> lk(m_mutex);
 		bool bDone = mbGameIsDone;
-
-		mpMutex->Unlock();
 
 		return bDone;
 	}
@@ -694,14 +686,10 @@ namespace hpl {
 		return &it->second;
 	}
 
-	//-----------------------------------------------------------------------
-
 	tScriptVarMap* cEngine::GetLocalVarMap()
 	{
 		return &m_mapLocalVars;
 	}
-
-	//-----------------------------------------------------------------------
 
 	cScriptVar* cEngine::CreateGlobalVar(const tString& asName)
 	{
@@ -765,28 +753,20 @@ namespace hpl {
 
 	void cEngine::SetPaused(bool abPaused)
 	{
-		mpMutex->Lock();
-
+		std::lock_guard<std::mutex> lk(m_mutex);
 		if(mbPaused != abPaused)
 		{
 			mbPaused = abPaused;
 			if(mbPaused==false) mpLogicTimer->Reset();
 		}
-
-		mpMutex->Unlock();
 	}
 
 	//-----------------------------------------------------------------------
 
 	bool cEngine::GetPaused()
 	{
-		mpMutex->Lock();
-
-		bool bRet = mbPaused;
-
-		mpMutex->Unlock();
-
-		return bRet;
+		std::lock_guard<std::mutex> lk(m_mutex);
+		return mbPaused;
 	}
 
 	//-----------------------------------------------------------------------
@@ -826,9 +806,12 @@ namespace hpl {
 		bool bHadVisibility = mbApplicationIsVisible;
 
         iLowLevelGraphics *pllGfx = mpGraphics->GetLowLevel();
-		mbApplicationHasInputFocus = pllGfx->GetWindowInputFocus();
-		mbApplicationHasMouseFocus = pllGfx->GetWindowMouseFocus();
-		mbApplicationIsVisible = pllGfx->GetWindowIsVisible();
+
+		auto* window = Interface<window::NativeWindowWrapper>::Get();
+	
+		mbApplicationHasInputFocus = any(window->GetWindowStatus() & window::WindowStatus::WindowStatusInputFocus);
+		mbApplicationHasMouseFocus = any(window->GetWindowStatus() & window::WindowStatus::WindowStatusInputMouseFocus);
+		mbApplicationIsVisible = any(window->GetWindowStatus() & window::WindowStatus::WindowStatusVisible);
 
 		if(bHadInputFocus && !mbApplicationHasInputFocus) mpUpdater->RunMessage(eUpdateableMessage_AppLostInputFocus);
 		if(!bHadInputFocus && mbApplicationHasInputFocus) mpUpdater->RunMessage(eUpdateableMessage_AppGotInputFocus);
@@ -845,7 +828,8 @@ namespace hpl {
 	void cEngine::CheckIfAppInFocusElseWait()
 	{
 		iLowLevelGraphics *pllGfx = mpGraphics->GetLowLevel();
-		while(	pllGfx->GetWindowInputFocus()==false)
+		auto* window = Interface<window::NativeWindowWrapper>::Get();
+		while(!any(window->GetWindowStatus() & window::WindowStatus::WindowStatusInputFocus))
 		{
 			cPlatform::Sleep(100);
 			mpInput->Update(1.0f/10.0f);
@@ -868,6 +852,4 @@ namespace hpl {
 			mpUpdater->RunMessage(eUpdateableMessage_AppDeviceWasRemoved);
 		}
 	}
-
-	//-----------------------------------------------------------------------
 }

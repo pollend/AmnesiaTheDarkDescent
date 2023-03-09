@@ -24,6 +24,7 @@
 #include "LuxLoadScreenHandler.h"
 #include "LuxMusicHandler.h"
 #include "LuxInputHandler.h"
+#include "engine/Interface.h"
 
 //-----------------------------------------------------------------------
 
@@ -55,6 +56,7 @@ cLuxCredits::cLuxCredits() : iLuxUpdateable("LuxCredits")
 	///////////////////////////////
 	//Create Viewport
 	mpViewport = gpBase->mpEngine->GetScene()->CreateViewport();
+	mpViewport->bindToWindow(*Interface<window::NativeWindowWrapper>::Get());
 	mpViewport->SetActive(false);
 	mpViewport->SetVisible(false);
 	mpGuiSet->SetActive(false);

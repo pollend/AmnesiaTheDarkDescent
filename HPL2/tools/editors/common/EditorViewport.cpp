@@ -900,7 +900,7 @@ void iEditorViewport::SetEngineViewportPositionAndSize(const cVector2l& avPos, c
 {
 	if(mvEngineViewportPos==avPos && mvEngineViewportSize==avSize) return;
 	mvEngineViewportPos = avPos;
-	mpEngineViewport->SetPosition(mvEngineViewportPos);
+	// mpEngineViewport->SetPosition(mvEngineViewportPos);
 	mvEngineViewportSize = avSize;
 	mpEngineViewport->SetSize(mvEngineViewportSize);
 

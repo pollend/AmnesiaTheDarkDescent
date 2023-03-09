@@ -143,8 +143,6 @@ namespace hpl {
 
 		static iThread* CreateThread(iThreadClass* apThreadClass);
 
-		static iMutex* CreateMutEx(); // If you name this method CreateMutex strange stuff will happen :S
-
 	private:
         static void CreateMessageBoxBase(eMsgBoxType eType, const wchar_t* asCaption, const wchar_t* fmt, va_list ap);
 

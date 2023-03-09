@@ -96,6 +96,7 @@ namespace hpl {
 
     void cMaterialType_Water::ResolveShaderProgram(
         eMaterialRenderMode aRenderMode,
+        cViewport& viewport,
         cMaterial* apMaterial,
         iRenderable* apObject,
         iRenderer* apRenderer,

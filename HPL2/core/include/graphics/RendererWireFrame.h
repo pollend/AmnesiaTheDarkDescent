@@ -45,7 +45,7 @@ namespace hpl {
 
 	private:
 
-		virtual void Draw(GraphicsContext& context, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, RenderViewport& apRenderTarget,
+		virtual void Draw(GraphicsContext& context, cViewport& viewport, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, RenderViewport& apRenderTarget,
 			bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList) override;
 
 

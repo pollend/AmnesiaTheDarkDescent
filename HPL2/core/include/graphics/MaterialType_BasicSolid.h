@@ -23,6 +23,7 @@
 #include "graphics/Image.h"
 #include "graphics/Material.h"
 #include "graphics/MaterialType.h"
+#include "scene/Viewport.h"
 #include <bgfx/bgfx.h>
 #include <cstdint>
 #include <graphics/ShaderVariantCollection.h>
@@ -157,6 +158,7 @@ namespace hpl
 
         virtual void ResolveShaderProgram(
             eMaterialRenderMode aRenderMode,
+            cViewport& viewport,
             cMaterial* apMaterial,
             iRenderable* apObject,
             iRenderer* apRenderer, 

@@ -76,6 +76,7 @@ namespace hpl {
 
     void cMaterialType_Decal::ResolveShaderProgram(
         eMaterialRenderMode aRenderMode,
+        cViewport& viewport,
         cMaterial* apMaterial,
         iRenderable* apObject,
         iRenderer* apRenderer,

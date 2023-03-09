@@ -25,6 +25,7 @@
 #include "LuxConfigHandler.h"
 #include "LuxDebugHandler.h"
 #include "LuxLoadScreenHandler.h"
+#include "engine/Interface.h"
 #include <bx/debug.h>
 
 //-----------------------------------------------------------------------
@@ -181,7 +182,7 @@ cLuxPreMenu::cLuxPreMenu() : iLuxUpdateable("LuxPreMenu")
 
 	///////////////////////
 	// Load settings
-	mvScreenSize = gpBase->mpEngine->GetGraphics()->GetLowLevel()->GetScreenSizeFloat();
+	// mvScreenSize = gpBase->mpEngine->GetGraphics()->GetLowLevel()->GetScreenSizeFloat();
 
 	mvGuiSetCenterSize = cVector2f(800, 600);
 
@@ -197,6 +198,7 @@ cLuxPreMenu::cLuxPreMenu() : iLuxUpdateable("LuxPreMenu")
 	mpViewport->SetVisible(false);
 	mpGuiSet->SetActive(false);
 	mpGuiSet->SetDrawMouse(false);//Init
+	mpViewport->bindToWindow(*Interface<window::NativeWindowWrapper>::Get());
 
 	mpViewport->AddGuiSet(mpGuiSet);
 

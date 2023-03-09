@@ -14,7 +14,7 @@ namespace hpl
         RenderViewport();
         ~RenderViewport();
 
-        std::shared_ptr<RenderTarget>& GetRenderTarget();
+        RenderTarget& GetRenderTarget();
         const cVector2l GetPosition() const;
         const cVector2l GetSize() const;
 

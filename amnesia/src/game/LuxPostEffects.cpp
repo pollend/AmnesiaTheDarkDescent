@@ -124,16 +124,16 @@ cLuxPostEffectHandler::cLuxPostEffectHandler()
     mpInsanity->SetActive(true);
 }
 
-void cLuxPostEffect_Insanity::RenderEffect(cPostEffectComposite& compositor, GraphicsContext& context, Image& input, RenderTarget& target) {
+void cLuxPostEffect_Insanity::RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, RenderTarget& target) {
     
-    cVector2l vRenderTargetSize = compositor.GetRenderTargetSize();
+    auto viewportSize = viewport.GetSize();
     cMatrixf projMtx;
     GraphicsContext::ShaderProgram shaderProgram;
     GraphicsContext::LayoutStream layoutStream;
-    context.ScreenSpaceQuad(layoutStream, projMtx, vRenderTargetSize.x, vRenderTargetSize.y);
+    context.ScreenSpaceQuad(layoutStream, projMtx, viewportSize.x, viewportSize.y);
     
     GraphicsContext::ViewConfiguration viewConfiguration {target};
-    viewConfiguration.m_viewRect = cRect2l(0, 0, vRenderTargetSize.x, vRenderTargetSize.y);
+    viewConfiguration.m_viewRect = cRect2l(0, 0, viewportSize.x, viewportSize.y);
     viewConfiguration.m_projection = projMtx;
     bgfx::ViewId view = context.StartPass("Bloom Pass", viewConfiguration);
 

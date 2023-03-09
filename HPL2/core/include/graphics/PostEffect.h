@@ -24,6 +24,7 @@
 #include "graphics/RenderTarget.h"
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
+#include "scene/Viewport.h"
 #include <cstdint>
 
 namespace hpl {
@@ -98,7 +99,7 @@ namespace hpl {
 		iPostEffect(cGraphics *apGraphics, cResources *apResources, iPostEffectType *apType);
 		virtual ~iPostEffect();
 
-		virtual void RenderEffect(cPostEffectComposite& compositor, GraphicsContext& context, Image& input, RenderTarget& target) {};
+		virtual void RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, RenderTarget& target) {};
 
 		/** SetDisabled - Method to disable the Effect completely, meaning IsActive will always return false even
 		 * after a SetActive(true) call
@@ -114,7 +115,7 @@ namespace hpl {
 		void SetParams(iPostEffectParams *apSrcParams);
 		void GetParams(iPostEffectParams *apDestParams);
 
-		virtual void OnViewportChanged(const cVector2l& avSize) {}
+		// virtual void OnViewportChanged(const cVector2l& avSize) {}
 
 		virtual void Reset(){}
 

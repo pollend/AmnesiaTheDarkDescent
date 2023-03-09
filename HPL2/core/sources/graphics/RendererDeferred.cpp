@@ -22,14 +22,12 @@
 #include "bgfx/bgfx.h"
 #include "engine/Event.h"
 #include "engine/Interface.h"
+#include "scene/Viewport.h"
 #include "windowing/NativeWindow.h"
 #include <bx/debug.h>
 
 #include <cstdint>
 #include <graphics/Enum.h>
-// hack to fix include of <windows.h>
-#undef min
-#undef max
 
 #include "bx/math.h"
 
@@ -152,7 +150,7 @@ namespace hpl {
 
 	bool cRendererDeferred::LoadData()
 	{
-		cVector2l vRelfectionSize = cVector2l(mvScreenSize.x/mlReflectionSizeDiv, mvScreenSize.y/mlReflectionSizeDiv);
+		// cVector2l vRelfectionSize = cVector2l(mvScreenSize.x/mlReflectionSizeDiv, mvScreenSize.y/mlReflectionSizeDiv);
 
 		// uniforms
 		m_u_param = bgfx::createUniform("u_param", bgfx::UniformType::Vec4);
@@ -177,58 +175,83 @@ namespace hpl {
 		m_s_goboMap = bgfx::createUniform("s_goboMap", bgfx::UniformType::Sampler);
 		m_s_shadowOffsetMap = bgfx::createUniform("s_shadowOffsetMap", bgfx::UniformType::Sampler);
 
-		// probably  want to consider moving this to somewhere else
-		RebuildBuffers();
-		m_windowEvent = window::WindowEvent::Handler([&](window::WindowEventPayload& payload) {
-			switch(payload.m_type) {
-				case hpl::window::WindowEventType::ResizeWindowEvent: {
-					mvScreenSize = cVector2l(payload.payload.m_resizeWindow.m_width, payload.payload.m_resizeWindow.m_height);
-					RebuildBuffers();
-					break;
-				}
-				default:
-					break;
+		m_boundViewportData = std::move(UniqueViewportData<SharedViewportData>([](cViewport& viewport) {
+			auto sharedData = std::make_unique<SharedViewportData>();
+			sharedData->m_size = viewport.GetSize();
+
+			auto colorImage = [&] {
+				auto desc = ImageDescriptor::CreateTexture2D(sharedData->m_size.x, sharedData->m_size.y, false, bgfx::TextureFormat::Enum::RGBA8);
+				desc.m_configuration.m_rt = RTType::RT_Write;
+				auto image = std::make_shared<Image>();
+				image->Initialize(desc);
+				return image;
+			};
+
+			auto positionImage = [&] {
+				auto desc = ImageDescriptor::CreateTexture2D(sharedData->m_size.x, sharedData->m_size.y, false, bgfx::TextureFormat::Enum::RGBA32F);
+				desc.m_configuration.m_rt = RTType::RT_Write;
+				auto image = std::make_shared<Image>();
+				image->Initialize(desc);
+				return image;
+			};
+
+			auto normalImage = [&] {
+				auto desc = ImageDescriptor::CreateTexture2D(sharedData->m_size.x, sharedData->m_size.y, false, bgfx::TextureFormat::Enum::RGBA16F);
+				desc.m_configuration.m_rt = RTType::RT_Write;
+				auto image = std::make_shared<Image>();
+				image->Initialize(desc);
+				return image;
+			};
+
+			auto depthImage = [&] {
+				auto desc = ImageDescriptor::CreateTexture2D(sharedData->m_size.x, sharedData->m_size.y, false, bgfx::TextureFormat::Enum::D24S8);
+				desc.m_configuration.m_rt = RTType::RT_Write;
+				desc.m_configuration.m_minFilter = FilterType::Point;
+				desc.m_configuration.m_magFilter = FilterType::Point;
+				desc.m_configuration.m_mipFilter = FilterType::Point;
+				desc.m_configuration.m_comparsion = DepthTest::LessEqual;
+				auto image = std::make_shared<Image>();
+				image->Initialize(desc);
+				return image;
+			};
+			sharedData->m_gBufferColor = colorImage();
+			sharedData->m_gBufferNormalImage = normalImage();
+			sharedData->m_gBufferPositionImage = positionImage();
+			sharedData->m_gBufferSpecular = colorImage();
+			sharedData->m_gBufferDepthStencil = depthImage();
+			sharedData->m_outputImage = colorImage();
+			sharedData->m_refractionImage = [&] {
+				auto desc = ImageDescriptor::CreateTexture2D(viewport.GetSize().x, viewport.GetSize().y, false, bgfx::TextureFormat::Enum::RGBA8);
+				desc.m_configuration.m_computeWrite = true;
+				desc.m_configuration.m_rt = RTType::RT_Write;
+				auto image = std::make_shared<Image>();
+				image->Initialize(desc);
+				return image;
+			}();
+			{
+				std::array<std::shared_ptr<Image>, 5> images = {sharedData->m_gBufferColor, sharedData->m_gBufferNormalImage, sharedData->m_gBufferPositionImage, sharedData->m_gBufferSpecular, sharedData->m_gBufferDepthStencil};
+				sharedData->m_gBuffer_full = RenderTarget(std::span(images));
 			}
-			
-		}, ConnectionType::QueueConnection);
-		if(auto* window = Interface<window::NativeWindowWrapper>::Get()) {
-			window->ConnectWindowEventHandler(m_windowEvent);
-		}
+			{
+				std::array<std::shared_ptr<Image>, 2> images = {sharedData->m_gBufferColor, sharedData->m_gBufferDepthStencil};
+				sharedData->m_gBuffer_colorAndDepth = RenderTarget(std::span(images));
+			}
+			{
+				std::array<std::shared_ptr<Image>, 2> images = {sharedData->m_outputImage, sharedData->m_gBufferDepthStencil };
+				sharedData->m_output_target = RenderTarget(std::span(images));
+			}
 
-
-		// ////////////////////////////////////
-		// //Create Accumulation texture
-		// mpAccumBufferTexture = mpGraphics->CreateTexture("AccumBiffer",eTextureType_Rect,eTextureUsage_RenderTarget);
-		// mpAccumBufferTexture->CreateFromRawData(cVector3l(mvScreenSize.x, mvScreenSize.y,0),ePixelFormat_RGBA, NULL);
-		// mpAccumBufferTexture->SetWrapSTR(eTextureWrap_ClampToEdge);
-
-		// ////////////////////////////////////
-		// //Create Accumulation buffer
-		// mpAccumBuffer = mpGraphics->CreateFrameBuffer("Deferred_Accumulation");
-		// mpAccumBuffer->SetTexture2D(0,mpAccumBufferTexture);
-		// mpAccumBuffer->SetDepthStencilBuffer(mpDepthStencil[0]);
-
-		// mpAccumBuffer->CompileAndValidate();
-
-		// ////////////////////////////////////
-		// //Create Refraction texture
-		// mpRefractionTexture = mpGraphics->GetTempFrameBuffer(mvScreenSize,ePixelFormat_RGBA,0)->GetColorBuffer(0)->ToTexture();
-		// mpRefractionTexture->SetWrapSTR(eTextureWrap_ClampToEdge);
-
-		// ////////////////////////////////////
-		// //Create Reflection texture
-		// mpReflectionTexture = CreateRenderTexture("ReflectionTexture",vRelfectionSize,ePixelFormat_RGBA);
-
-		// ////////////////////////////////////
-		// //Create Reflection buffer
-		// mpReflectionBuffer = mpGraphics->CreateFrameBuffer("Deferred_Reflection");
-		// mpReflectionBuffer->SetTexture2D(0,mpReflectionTexture);
-		// mpReflectionBuffer->SetDepthStencilBuffer(mpDepthStencil[1]);
-		// mpReflectionBuffer->CompileAndValidate();
-
+			sharedData->m_gBuffer_color = RenderTarget(sharedData->m_gBufferColor);
+			sharedData->m_gBuffer_depth = RenderTarget(sharedData->m_gBufferDepthStencil);
+			sharedData->m_gBuffer_normals = RenderTarget(sharedData->m_gBufferNormalImage);
+			sharedData->m_gBuffer_linearDepth = RenderTarget(sharedData->m_gBufferPositionImage);
+			return sharedData;
+		}, [](cViewport& viewport, SharedViewportData& target) {
+			return target.m_size == viewport.GetSize();
+		}));
 
 		////////////////////////////////////
-	//Create Shadow Textures
+		//Create Shadow Textures
 		cVector3l vShadowSize[] = {
 				cVector3l(2*128, 2*128,1),
 				cVector3l(2*256, 2*256,1),
@@ -353,89 +376,6 @@ namespace hpl {
 	}
 
 
-	void cRendererDeferred::RebuildBuffers() {
-		auto colorImage = [&] {
-			auto desc = ImageDescriptor::CreateTexture2D(mvScreenSize.x, mvScreenSize.y, false, bgfx::TextureFormat::Enum::RGBA8);
-			desc.m_configuration.m_rt = RTType::RT_Write;
-			auto image = std::make_shared<Image>();
-			image->Initialize(desc);
-			return image;
-		};
-
-		auto positionImage = [&] {
-			auto desc = ImageDescriptor::CreateTexture2D(mvScreenSize.x, mvScreenSize.y, false, bgfx::TextureFormat::Enum::RGBA32F);
-			desc.m_configuration.m_rt = RTType::RT_Write;
-			auto image = std::make_shared<Image>();
-			image->Initialize(desc);
-			return image;
-		};
-
-		auto normalImage = [&] {
-			auto desc = ImageDescriptor::CreateTexture2D(mvScreenSize.x, mvScreenSize.y, false, bgfx::TextureFormat::Enum::RGBA16F);
-			desc.m_configuration.m_rt = RTType::RT_Write;
-			auto image = std::make_shared<Image>();
-			image->Initialize(desc);
-			return image;
-		};
-
-		auto depthImage = [&] {
-			auto desc = ImageDescriptor::CreateTexture2D(mvScreenSize.x, mvScreenSize.y, false, bgfx::TextureFormat::Enum::D24S8);
-			desc.m_configuration.m_rt = RTType::RT_Write;
-			desc.m_configuration.m_minFilter = FilterType::Point;
-			desc.m_configuration.m_magFilter = FilterType::Point;
-			desc.m_configuration.m_mipFilter = FilterType::Point;
-			desc.m_configuration.m_comparsion = DepthTest::LessEqual;
-			auto image = std::make_shared<Image>();
-			image->Initialize(desc);
-			return image;
-		};
-
-		m_gBufferColor = 
-			{ colorImage(),colorImage()};
-		m_gBufferNormalImage = 
-			{ normalImage(), normalImage()};
-		m_gBufferPositionImage = 
-			{ positionImage(),positionImage()};
-		m_gBufferSpecular = 
-			{ colorImage(),colorImage()};
-		m_outputImage = {
-			colorImage(), colorImage()
-		};
-		m_refractionImage = [&] {
-			auto desc = ImageDescriptor::CreateTexture2D(mvScreenSize.x, mvScreenSize.y, false, bgfx::TextureFormat::Enum::RGBA8);
-			desc.m_configuration.m_computeWrite = true;
-			desc.m_configuration.m_rt = RTType::RT_Write;
-			auto image = std::make_shared<Image>();
-			image->Initialize(desc);
-			return image;
-		}();
-
-		m_gBufferDepthStencil = { depthImage(),depthImage()};
-		{
-			std::array<std::shared_ptr<Image>, 5> images = {m_gBufferColor[0], m_gBufferNormalImage[0], m_gBufferPositionImage[0], m_gBufferSpecular[0], m_gBufferDepthStencil[0]};
-			std::array<std::shared_ptr<Image>, 5> reflectionImages = {m_gBufferColor[1], m_gBufferNormalImage[1], m_gBufferPositionImage[1], m_gBufferSpecular[1], m_gBufferDepthStencil[1]};
-			m_gBuffer_full = {RenderTarget(std::span(images)), RenderTarget(std::span(reflectionImages)) };
-		}
-		{
-			std::array<std::shared_ptr<Image>, 2> images = {m_gBufferColor[0], m_gBufferDepthStencil[0]};
-			std::array<std::shared_ptr<Image>, 2> reflectionImages = {m_gBufferColor[1], m_gBufferDepthStencil[1]};
-			m_gBuffer_colorAndDepth = {RenderTarget(std::span(images)), RenderTarget(std::span(reflectionImages))};
-		}
-		{
-			std::array<std::shared_ptr<Image>, 2> images = {m_outputImage[0], m_gBufferDepthStencil[0] };
-			std::array<std::shared_ptr<Image>, 2> reflectionImages = {m_outputImage[1], m_gBufferDepthStencil[0]};
-			m_output_target = {RenderTarget(std::span(images)), RenderTarget(std::span(reflectionImages))};
-		}
-
-		m_gBuffer_color = {RenderTarget(m_gBufferColor[0]), RenderTarget(m_gBufferColor[1])};
-		m_gBuffer_depth = {RenderTarget(m_gBufferDepthStencil[0]), RenderTarget(m_gBufferDepthStencil[1])};
-		m_gBuffer_normals = {RenderTarget(m_gBufferNormalImage[0]), RenderTarget(m_gBufferNormalImage[1])};
-		m_gBuffer_linearDepth = {RenderTarget(m_gBufferPositionImage[0]), RenderTarget(m_gBufferPositionImage[1])};
-	}
-
-	//-----------------------------------------------------------------------
-
-
 	void cRendererDeferred::DestroyData()
 	{
 		for(auto& shape: mpShapeSphere) {
@@ -488,23 +428,21 @@ namespace hpl {
 
 	}
 
-	std::shared_ptr<Image> cRendererDeferred::GetDepthStencilImage() {
-		return m_gBuffer_depth[0].GetImage();
-	}
-
-	std::shared_ptr<Image> cRendererDeferred::GetOutputImage() {
-		return m_output_target[0].GetImage();
+	std::shared_ptr<Image> cRendererDeferred::GetOutputImage(cViewport& viewport) {
+		return m_boundViewportData.resolve(viewport).m_outputImage;
 	}
 
 	// NOTE: this logic is incomplete
-	void cRendererDeferred::RenderFogPass(GraphicsContext& context, RenderTarget& rt) {
+	void cRendererDeferred::RenderFogPass(GraphicsContext& context, cViewport& viewport, RenderTarget& rt) {
 		if(mpCurrentRenderList->GetFogAreaNum() == 0)
 		{
 			mpCurrentSettings->mvFogRenderData.resize(0); //Make sure render data array is empty!
 			return;
 		}
+		auto& sharedData = m_boundViewportData.resolve(viewport);
+
 		GraphicsContext::ViewConfiguration viewConfig {rt};
-		viewConfig.m_viewRect = {0, 0, mvScreenSize.x, mvScreenSize.y};
+		viewConfig.m_viewRect = {0, 0, sharedData.m_size.x, sharedData.m_size.y};
 		viewConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
 		viewConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
 		const auto view = context.StartPass("Fog Pass", viewConfig);
@@ -588,14 +526,16 @@ namespace hpl {
 	}
 
 
-	void cRendererDeferred::RenderFullScreenFogPass(GraphicsContext& context, RenderTarget& rt) {
+	void cRendererDeferred::RenderFullScreenFogPass(GraphicsContext& context, cViewport& viewport, RenderTarget& rt) {
+		auto& sharedData = m_boundViewportData.resolve(viewport);
+
 		GraphicsContext::LayoutStream layout;
 		cMatrixf projMtx;
-		context.ScreenSpaceQuad(layout, projMtx, mvScreenSize.x, mvScreenSize.y);
+		context.ScreenSpaceQuad(layout, projMtx, sharedData.m_size.x, sharedData.m_size.y);
 		
 		GraphicsContext::ViewConfiguration viewConfig {rt};
 		viewConfig.m_projection = projMtx;
-		viewConfig.m_viewRect = cRect2l(0, 0, mvScreenSize.x, mvScreenSize.y);
+		viewConfig.m_viewRect = cRect2l(0, 0, sharedData.m_size.x, sharedData.m_size.y);
 		const auto view = context.StartPass("Full Screen Fog", viewConfig);
 		
 		struct {
@@ -623,7 +563,7 @@ namespace hpl {
 
 		shaderProgram.m_handle = m_forVariant.GetVariant(rendering::detail::FogVariant_None);
 		shaderProgram.m_textures.push_back(
-			{m_s_depthMap, resolveRenderImage(m_gBufferPositionImage)->GetHandle(), 0});
+			{m_s_depthMap, sharedData.m_gBufferPositionImage->GetHandle(), 0});
 		shaderProgram.m_uniforms.push_back(
 			{m_u_param, &uniforms, 3});
 		shaderProgram.m_uniforms.push_back(
@@ -635,17 +575,18 @@ namespace hpl {
 		context.Submit(view, drawRequest);
 	}
 
-	void cRendererDeferred::RenderIlluminationPass(GraphicsContext& context, RenderTarget& rt) {
+	void cRendererDeferred::RenderIlluminationPass(GraphicsContext& context, cViewport& viewport, RenderTarget& rt) {
 		if(!mpCurrentRenderList->ArrayHasObjects(eRenderListType_Illumination)) {
 			return;
 		}
+		auto& sharedData = m_boundViewportData.resolve(viewport);
 
 		GraphicsContext::ViewConfiguration viewConfig {rt};
 		viewConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
 		viewConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
-		viewConfig.m_viewRect = cRect2l(0, 0, mvScreenSize.x, mvScreenSize.y);
+		viewConfig.m_viewRect = cRect2l(0, 0, sharedData.m_size.x, sharedData.m_size.y);
 		bgfx::ViewId view = context.StartPass("RenderIllumination", viewConfig);
-		RenderableHelper(eRenderListType_Illumination, eMaterialRenderMode_Illumination, [&](iRenderable* obj, GraphicsContext::LayoutStream& layoutInput, GraphicsContext::ShaderProgram& shaderInput) {
+		RenderableHelper(eRenderListType_Illumination, viewport, eMaterialRenderMode_Illumination, [&](iRenderable* obj, GraphicsContext::LayoutStream& layoutInput, GraphicsContext::ShaderProgram& shaderInput) {
 			shaderInput.m_configuration.m_depthTest = DepthTest::Equal;
 			shaderInput.m_configuration.m_write = Write::RGBA;
 
@@ -661,7 +602,7 @@ namespace hpl {
 		});
 	}
 
-	void cRendererDeferred::RenderEdgeSmoothPass(GraphicsContext& context, RenderTarget& rt) {
+	void cRendererDeferred::RenderEdgeSmoothPass(GraphicsContext& context, cViewport& viewport, RenderTarget& rt) {
 
 		GraphicsContext::ViewConfiguration viewConfig {m_edgeSmooth_LinearDepth};
 		auto edgeSmoothView = context.StartPass("EdgeSmooth", viewConfig);
@@ -670,8 +611,8 @@ namespace hpl {
 
 		GraphicsContext::ShaderProgram shaderProgram;
 		shaderProgram.m_handle = m_edgeSmooth_UnpackDepthProgram;
-		shaderProgram.m_textures.push_back({BGFX_INVALID_HANDLE,resolveRenderImage(m_gBufferPositionImage)->GetHandle(), 0});
-		shaderProgram.m_textures.push_back({BGFX_INVALID_HANDLE,resolveRenderImage(m_gBufferNormalImage)->GetHandle(), 0});
+		// shaderProgram.m_textures.push_back({BGFX_INVALID_HANDLE,resolveRenderImage(m_gBufferPositionImage)->GetHandle(), 0});
+		// shaderProgram.m_textures.push_back({BGFX_INVALID_HANDLE,resolveRenderImage(m_gBufferNormalImage)->GetHandle(), 0});
 
 		GraphicsContext::LayoutStream layout;
 		context.Quad(layout, vQuadPos, cVector2f(1,1), cVector2f(0,0), cVector2f(1,1));
@@ -681,20 +622,21 @@ namespace hpl {
 	}
 
 
-	void cRendererDeferred::RenderDiffusePass(GraphicsContext& context, RenderTarget& rt) {
+	void cRendererDeferred::RenderDiffusePass(GraphicsContext& context, cViewport& viewport, RenderTarget& rt) {
 		BX_ASSERT(rt.GetImages().size() >= 4, "expected 4 images Diffuse(0), Normal(1), Position(2), Specular(3), Depth(4)");
 		BX_ASSERT(rt.IsValid(), "Invalid render target");
 		
 		if(!mpCurrentRenderList->ArrayHasObjects(eRenderListType_Diffuse)) {
 			return;
 		}
+		auto& sharedData = m_boundViewportData.resolve(viewport);
 
 		GraphicsContext::ViewConfiguration viewConfig {rt};
 		viewConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
 		viewConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
-		viewConfig.m_viewRect = {0, 0, mvScreenSize.x, mvScreenSize.y};
+		viewConfig.m_viewRect = {0, 0, sharedData.m_size.x, sharedData.m_size.y};
 		auto view = context.StartPass("Diffuse", viewConfig);
-		RenderableHelper(eRenderListType_Diffuse, eMaterialRenderMode_Diffuse, [&](iRenderable* obj, GraphicsContext::LayoutStream& layoutInput, GraphicsContext::ShaderProgram& shaderInput) {
+		RenderableHelper(eRenderListType_Diffuse, viewport, eMaterialRenderMode_Diffuse, [&](iRenderable* obj, GraphicsContext::LayoutStream& layoutInput, GraphicsContext::ShaderProgram& shaderInput) {
 			shaderInput.m_configuration.m_depthTest = DepthTest::LessEqual;
 			shaderInput.m_configuration.m_write = Write::RGBA;
 			shaderInput.m_configuration.m_cull = Cull::CounterClockwise;
@@ -711,19 +653,20 @@ namespace hpl {
 		});
 	}
 
-	void cRendererDeferred::RenderDecalPass(GraphicsContext& context, RenderTarget& rt) {
+	void cRendererDeferred::RenderDecalPass(GraphicsContext& context, cViewport& viewport, RenderTarget& rt) {
 		BX_ASSERT(rt.IsValid(), "Invalid render target");
 		BX_ASSERT(rt.GetImages().size() >= 1, "expected atleast 1 image Color(0)");
 		if(!mpCurrentRenderList->ArrayHasObjects(eRenderListType_Decal)) {
 			return;
 		}
+		auto& sharedData = m_boundViewportData.resolve(viewport);
 
 		GraphicsContext::ViewConfiguration viewConfig {rt};
 		viewConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
 		viewConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
-		viewConfig.m_viewRect = {0, 0, mvScreenSize.x, mvScreenSize.y};
+		viewConfig.m_viewRect = {0, 0, sharedData.m_size.x, sharedData.m_size.y};
 		auto view = context.StartPass("RenderDecals", viewConfig);
-		RenderableHelper(eRenderListType_Decal, eMaterialRenderMode_Diffuse, [&](iRenderable* obj, GraphicsContext::LayoutStream& layoutInput, GraphicsContext::ShaderProgram& shaderInput) {
+		RenderableHelper(eRenderListType_Decal, viewport, eMaterialRenderMode_Diffuse, [&](iRenderable* obj, GraphicsContext::LayoutStream& layoutInput, GraphicsContext::ShaderProgram& shaderInput) {
 			shaderInput.m_configuration.m_depthTest = DepthTest::LessEqual;
 			shaderInput.m_configuration.m_write = Write::RGBA;
 
@@ -746,7 +689,7 @@ namespace hpl {
 	}
 
 
-	void rendering::detail::RenderZPassObject(bgfx::ViewId view, GraphicsContext& context, iRenderer* renderer, iRenderable* object, Cull cull) {
+	void rendering::detail::RenderZPassObject(bgfx::ViewId view, GraphicsContext& context, cViewport& viewport, iRenderer* renderer, iRenderable* object, Cull cull) {
 		eMaterialRenderMode renderMode = object->GetCoverageAmount() >= 1 ? eMaterialRenderMode_Z : eMaterialRenderMode_Z_Dissolve;
 		cMaterial *pMaterial = object->GetMaterial();
 		iMaterialType* materialType = pMaterial->GetType();
@@ -758,7 +701,7 @@ namespace hpl {
 		GraphicsContext::LayoutStream layoutInput;
 		// GraphicsContext::ShaderProgram shaderInput;
 		vertexBuffer->GetLayoutStream(layoutInput);
-		materialType->ResolveShaderProgram(renderMode, pMaterial, object, renderer, [&](GraphicsContext::ShaderProgram& shaderInput) {
+		materialType->ResolveShaderProgram(renderMode, viewport, pMaterial, object, renderer, [&](GraphicsContext::ShaderProgram& shaderInput) {
 			shaderInput.m_configuration.m_write = Write::Depth;
 			shaderInput.m_configuration.m_cull = cull;
 			shaderInput.m_configuration.m_depthTest = DepthTest::LessEqual;
@@ -771,29 +714,30 @@ namespace hpl {
 		
 	}
 
-	void cRendererDeferred::RenderZPass(GraphicsContext& context, RenderTarget& rt) {
+	void cRendererDeferred::RenderZPass(GraphicsContext& context, cViewport& viewport, RenderTarget& rt) {
 		if(!mpCurrentRenderList->ArrayHasObjects(eRenderListType_Z)) {
 			return;
 		}
-
+		auto& sharedData = m_boundViewportData.resolve(viewport);
 		GraphicsContext::ViewConfiguration viewConfig {rt};
-		viewConfig.m_viewRect = {0, 0, mvScreenSize.x, mvScreenSize.y};
+		viewConfig.m_viewRect = {0, 0, sharedData.m_size.x, sharedData.m_size.y};
 		viewConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
 		viewConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
 
 		auto view = context.StartPass("RenderZ", viewConfig);
 		for(auto& obj: mpCurrentRenderList->GetRenderableItems(eRenderListType_Z)) {
-			rendering::detail::RenderZPassObject(view, context, this, obj);
+			rendering::detail::RenderZPassObject(view, context, viewport, this, obj);
 		}
 	}
 
 
-	void cRendererDeferred::RenderTranslucentPass(GraphicsContext& context, RenderTarget& target) {
-		
+	void cRendererDeferred::RenderTranslucentPass(GraphicsContext& context, cViewport& viewport, RenderTarget& target) {
+		auto& sharedData = m_boundViewportData.resolve(viewport);
+
 		GraphicsContext::ViewConfiguration viewConfig {target};
 		viewConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
 		viewConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
-		viewConfig.m_viewRect = {0, 0, mvScreenSize.x, mvScreenSize.y};
+		viewConfig.m_viewRect = {0, 0, sharedData.m_size.x, sharedData.m_size.y};
 		auto view = context.StartPass("Translucent", viewConfig);
 		bgfx::setViewMode(view, bgfx::ViewMode::Sequential);
 		const float fHalfFovTan = tan(mpCurrentFrustum->GetFOV()*0.5f);
@@ -841,17 +785,18 @@ namespace hpl {
 
 				cBoundingVolume *pBV = obj->GetBoundingVolume();
 
-				cRect2l clipRect = GetClipRectFromObject(obj, 0.2f, mpCurrentFrustum, mvRenderTargetSize, fHalfFovTan);
+				auto imageSize = target.GetImage()->GetImageSize();
+				cRect2l clipRect = GetClipRectFromObject(obj, 0.2f, mpCurrentFrustum, imageSize, fHalfFovTan);
 				if(clipRect.w <= 0 || clipRect.h <= 0) {
 					continue;
 				}
 
 				GraphicsContext::ShaderProgram shaderInput;
 				shaderInput.m_handle = m_copyRegionProgram;
-				shaderInput.m_textures.push_back({m_s_diffuseMap, resolveRenderImage(m_outputImage)->GetHandle(), 0});
-				shaderInput.m_uavImage.push_back({m_refractionImage->GetHandle(), 1, 0, bgfx::Access::Write, bgfx::TextureFormat::Enum::RGBA8});
+				shaderInput.m_textures.push_back({m_s_diffuseMap, sharedData.m_outputImage->GetHandle(), 0});
+				shaderInput.m_uavImage.push_back({sharedData.m_refractionImage->GetHandle(), 1, 0, bgfx::Access::Write, bgfx::TextureFormat::Enum::RGBA8});
 
-				float copyRegion[4] = {static_cast<float>(clipRect.x), static_cast<float>(mvRenderTargetSize.y - (clipRect.h + clipRect.y)), static_cast<float>(clipRect.w), static_cast<float>(clipRect.h)};
+				float copyRegion[4] = {static_cast<float>(clipRect.x), static_cast<float>(imageSize.y - (clipRect.h + clipRect.y)), static_cast<float>(clipRect.w), static_cast<float>(clipRect.h)};
 				shaderInput.m_uniforms.push_back({m_u_copyRegion, &copyRegion, 1});
 				
 				GraphicsContext::ComputeRequest computeRequest {shaderInput,  static_cast<uint32_t>((clipRect.w/16) + 1), static_cast<uint32_t>((clipRect.h/16) + 1), 1};
@@ -872,7 +817,7 @@ namespace hpl {
 				// context.CopyTextureToFrameBuffer( *copyImage, rect, m_refractionTarget);
 			}
 
-			pMaterialType->ResolveShaderProgram(renderMode, pMaterial, obj, this,[&](GraphicsContext::ShaderProgram& shaderInput) {
+			pMaterialType->ResolveShaderProgram(renderMode, viewport, pMaterial, obj, this,[&](GraphicsContext::ShaderProgram& shaderInput) {
 				GraphicsContext::LayoutStream layoutInput;
 				vertexBuffer->GetLayoutStream(layoutInput);
 				
@@ -900,7 +845,7 @@ namespace hpl {
 			if(pMaterial->HasTranslucentIllumination())
 			{
 				pMaterialType->ResolveShaderProgram(
-					(renderMode == eMaterialRenderMode_Diffuse ? eMaterialRenderMode_Illumination : eMaterialRenderMode_IlluminationFog), pMaterial, obj, this,[&](GraphicsContext::ShaderProgram& shaderInput) {
+					(renderMode == eMaterialRenderMode_Diffuse ? eMaterialRenderMode_Illumination : eMaterialRenderMode_IlluminationFog), viewport, pMaterial, obj, this,[&](GraphicsContext::ShaderProgram& shaderInput) {
 					GraphicsContext::LayoutStream layoutInput;
 					vertexBuffer->GetLayoutStream(layoutInput);
 
@@ -924,14 +869,10 @@ namespace hpl {
 		}
 	}
 
-	void cRendererDeferred::Draw(GraphicsContext& context, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, RenderViewport& apRenderTarget,
+	void cRendererDeferred::Draw(GraphicsContext& context, cViewport& viewport, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, RenderViewport& apRenderTarget,
 					bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList)  {
 		// keep around for the moment ...
 		BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, apRenderTarget, abSendFrameBufferToPostEffects, apCallbackList);
-		
-		// process window events
-		m_windowEvent.Process();
-
 
 		mpCurrentRenderList->Setup(mfCurrentFrameTime,mpCurrentFrustum);
 		
@@ -942,11 +883,13 @@ namespace hpl {
 		mfFarRight = mfFarBottom * mpCurrentFrustum->GetAspect();
 		mfFarLeft = -mfFarRight;
 
-		cRendererCallbackFunctions handler(context, this);
+		cRendererCallbackFunctions handler(context, viewport, this);
+
+		auto& sharedData = m_boundViewportData.resolve(viewport);
 
 		[&]{
-			GraphicsContext::ViewConfiguration viewConfig {resolveRenderTarget(m_gBuffer_full)};
-			viewConfig.m_viewRect = {0, 0, mvScreenSize.x, mvScreenSize.y};
+			GraphicsContext::ViewConfiguration viewConfig {sharedData.m_gBuffer_full};
+			viewConfig.m_viewRect = {0, 0, sharedData.m_size.x, sharedData.m_size.y};
 			viewConfig.m_clear = {0, 1, 0, ClearOp::Depth | ClearOp::Stencil | ClearOp::Color};
 			bgfx::touch(context.StartPass("Clear Depth", viewConfig));
 		}();
@@ -961,11 +904,11 @@ namespace hpl {
 			// GraphicsContext::ViewConfiguration viewConfig {resolveRenderTarget(m_gBuffer_depth)};
 			// auto view = context.StartPass("Render Z", viewConfig);
 			RenderZPassWithVisibilityCheck(	
-				context, 
+				context,
 				mpCurrentSettings->mpVisibleNodeTracker,
 				eObjectVariabilityFlag_All,
 				lVisibleFlags,
-				resolveRenderTarget(m_gBuffer_depth),
+				sharedData.m_gBuffer_depth,
 			[&](bgfx::ViewId view, iRenderable* object) {
 				cMaterial *pMaterial = object->GetMaterial();
 
@@ -974,13 +917,13 @@ namespace hpl {
 				if(!pMaterial || pMaterial->GetType()->IsTranslucent()) {
 					return false;
 				}
-				rendering::detail::RenderZPassObject(view, context, this, object);
+				rendering::detail::RenderZPassObject(view, context, viewport, this, object);
 				return true;
 			});
 
 			// this occlusion query logic is used for reflections just cut this for now
-			GraphicsContext::ViewConfiguration occlusionPassConfig {resolveRenderTarget(m_gBuffer_depth)};
-			occlusionPassConfig.m_viewRect = {0, 0, mvScreenSize.x, mvScreenSize.y};
+			GraphicsContext::ViewConfiguration occlusionPassConfig {sharedData.m_gBuffer_depth};
+			occlusionPassConfig.m_viewRect = {0, 0, sharedData.m_size.x, sharedData.m_size.y};
 			occlusionPassConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
 			occlusionPassConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
 			AssignAndRenderOcclusionQueryObjects(
@@ -989,7 +932,7 @@ namespace hpl {
 				false, 
 				true);
 
-			SetupLightsAndRenderQueries(context, resolveRenderTarget(m_gBuffer_depth));
+			SetupLightsAndRenderQueries(context, sharedData.m_gBuffer_depth);
 
 			mpCurrentRenderList->Compile(	eRenderListCompileFlag_Diffuse |
 											eRenderListCompileFlag_Translucent |
@@ -1008,12 +951,12 @@ namespace hpl {
 											eRenderListCompileFlag_Translucent |
 											eRenderListCompileFlag_Decal |
 											eRenderListCompileFlag_Illumination);
-			RenderZPass(context, resolveRenderTarget(m_gBuffer_depth) );
+			RenderZPass(context, viewport, sharedData.m_gBuffer_depth );
 
 			// this occlusion query logic is used for reflections just cut this for now
 
-			GraphicsContext::ViewConfiguration occlusionPassConfig {resolveRenderTarget(m_gBuffer_depth)};
-			occlusionPassConfig.m_viewRect = {0, 0, mvScreenSize.x, mvScreenSize.y};
+			GraphicsContext::ViewConfiguration occlusionPassConfig {sharedData.m_gBuffer_depth};
+			occlusionPassConfig.m_viewRect = {0, 0, sharedData.m_size.x, sharedData.m_size.y};
 			occlusionPassConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
 			occlusionPassConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
 			AssignAndRenderOcclusionQueryObjects(
@@ -1022,24 +965,24 @@ namespace hpl {
 				false, 
 				true);
 
-			SetupLightsAndRenderQueries(context, resolveRenderTarget(m_gBuffer_depth));
+			SetupLightsAndRenderQueries(context, sharedData.m_gBuffer_depth);
 		}
 
 
 		// Render GBuffer to m_gBuffer_full old method is RenderGbuffer(context);
-		RenderDiffusePass(context, resolveRenderTarget(m_gBuffer_full));
-		RenderDecalPass(context, resolveRenderTarget(m_gBuffer_colorAndDepth));
+		RenderDiffusePass(context, viewport, sharedData.m_gBuffer_full);
+		RenderDecalPass(context, viewport, sharedData.m_gBuffer_colorAndDepth);
 
 		RunCallback(eRendererMessage_PostGBuffer, handler);
 
-		RenderLightPass(context, resolveRenderTarget(m_output_target));
+		RenderLightPass(context, viewport, sharedData.m_output_target);
 
 		// render illumination into gbuffer color RenderIllumination
-		RenderIlluminationPass(context, resolveRenderTarget(m_output_target));
+		RenderIlluminationPass(context, viewport, sharedData.m_output_target);
 		// TODO: MP need to implement this
-		RenderFogPass(context, resolveRenderTarget(m_output_target));
+		RenderFogPass(context, viewport, sharedData.m_output_target);
 		if(mpCurrentWorld->GetFogActive()) {
-			RenderFullScreenFogPass(context, resolveRenderTarget(m_output_target));
+			RenderFullScreenFogPass(context, viewport, sharedData.m_output_target);
 		}
 
 		// TODO: MP need to implement this
@@ -1051,14 +994,14 @@ namespace hpl {
 
 		// not going to even try.
 		// calls back through RendererDeffered need to untangle all the complicated state ...
-		RenderTranslucentPass(context, resolveRenderTarget(m_output_target));
+		RenderTranslucentPass(context, viewport, sharedData.m_output_target);
 
 		RunCallback(eRendererMessage_PostTranslucent, handler);
 
 	}
 
 
-	void cRendererDeferred::RenderShadowPass(GraphicsContext& context, const cDeferredLight& apLightData, RenderTarget& rt) {
+	void cRendererDeferred::RenderShadowPass(GraphicsContext& context, cViewport& viewport, const cDeferredLight& apLightData, RenderTarget& rt) {
  		BX_ASSERT(apLightData.mpLight->GetLightType() == eLightType_Spot, "Only spot lights are supported for shadow rendering")
 		cVector2l size = rt.GetImage()->GetImageSize();
 		cLightSpot *pSpotLight = static_cast<cLightSpot*>(apLightData.mpLight);
@@ -1078,17 +1021,18 @@ namespace hpl {
 			// options.m_cull = pLightFrustum->GetInvertsCullMode() ? Cull::Clockwise : Cull::CounterClockwise;
 			// options.m_view = pLightFrustum->GetViewMatrix().GetTranspose();
 			// options.m_projection = pLightFrustum->GetProjectionMatrix().GetTranspose();
-			rendering::detail::RenderZPassObject(view, context, this, shadowCaster, pLightFrustum->GetInvertsCullMode() ? Cull::Clockwise : Cull::CounterClockwise);
+			rendering::detail::RenderZPassObject(view, context, viewport, this, shadowCaster, pLightFrustum->GetInvertsCullMode() ? Cull::Clockwise : Cull::CounterClockwise);
 		}
 	}
 
-	void cRendererDeferred::RenderLightPass(GraphicsContext& context, RenderTarget& rt) {
+	void cRendererDeferred::RenderLightPass(GraphicsContext& context, cViewport& viewport, RenderTarget& rt) {
 		InitLightRendering();
-		
+		auto& sharedData = m_boundViewportData.resolve(viewport);
+
 		{
 			GraphicsContext::ViewConfiguration clearBackBufferView {rt};
 			clearBackBufferView.m_clear = {0, 1, 0, ClearOp::Color};
-			clearBackBufferView.m_viewRect = {0, 0, static_cast<uint16_t>(mvScreenSize.x), static_cast<uint16_t>(mvScreenSize.y)};
+			clearBackBufferView.m_viewRect = {0, 0, static_cast<uint16_t>(sharedData.m_size.x), static_cast<uint16_t>(sharedData.m_size.y)};
 			bgfx::touch(context.StartPass("Clear Backbuffer", clearBackBufferView));
 		}
 
@@ -1102,7 +1046,7 @@ namespace hpl {
 				const auto& color = light->mpLight->GetDiffuseColor();
 				float lightColor[4] = {color.r, color.g, color.b, color.a};
 				shaderProgram.m_handle = m_lightBoxProgram;
-				shaderProgram.m_textures.push_back({m_s_diffuseMap, resolveRenderImage(m_gBufferColor)->GetHandle(), 0});
+				shaderProgram.m_textures.push_back({m_s_diffuseMap, sharedData.m_gBufferColor->GetHandle(), 0});
 				shaderProgram.m_uniforms.push_back({m_u_lightColor, lightColor});
 
 				// shaderProgram.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
@@ -1133,7 +1077,7 @@ namespace hpl {
 			stencilFrontBackViewConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
 			stencilFrontBackViewConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
 			stencilFrontBackViewConfig.m_clear = {0, 1.0, 0, ClearOp::Stencil};
-			stencilFrontBackViewConfig.m_viewRect = {0, 0, static_cast<uint16_t>(mvScreenSize.x), static_cast<uint16_t>(mvScreenSize.y)};
+			stencilFrontBackViewConfig.m_viewRect = {0, 0, static_cast<uint16_t>(sharedData.m_size.x), static_cast<uint16_t>(sharedData.m_size.y)};
 			const auto boxStencilPass = context.StartPass("eDeferredLightList_Box_StencilFront_RenderBack", stencilFrontBackViewConfig);
 			bgfx::setViewMode(boxStencilPass, bgfx::ViewMode::Sequential);
 
@@ -1179,7 +1123,7 @@ namespace hpl {
 			GraphicsContext::ViewConfiguration boxLightConfig {rt};
 			boxLightConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
 			boxLightConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
-			boxLightConfig.m_viewRect = {0, 0, static_cast<uint16_t>(mvScreenSize.x), static_cast<uint16_t>(mvScreenSize.y)};
+			boxLightConfig.m_viewRect = {0, 0, static_cast<uint16_t>(sharedData.m_size.x), static_cast<uint16_t>(sharedData.m_size.y)};
 			const auto boxLightBackPass = context.StartPass("eDeferredLightList_Box_RenderBack", boxLightConfig);
 			for(auto& light: mvSortedLights[eDeferredLightList_Box_RenderBack])
 			{
@@ -1225,10 +1169,10 @@ namespace hpl {
 						shaderProgram.m_uniforms.push_back({m_u_param, &param});
 						shaderProgram.m_uniforms.push_back({m_u_mtxInvViewRotation, &mtxInvViewRotation.v});
 
-						shaderProgram.m_textures.push_back({m_s_diffuseMap, resolveRenderImage(m_gBufferColor)->GetHandle(), 1});
-						shaderProgram.m_textures.push_back({m_s_normalMap, resolveRenderImage(m_gBufferNormalImage)->GetHandle(), 2});
-						shaderProgram.m_textures.push_back({m_s_positionMap, resolveRenderImage(m_gBufferPositionImage)->GetHandle(), 3});
-						shaderProgram.m_textures.push_back({m_s_specularMap, resolveRenderImage(m_gBufferSpecular)->GetHandle(), 4});
+						shaderProgram.m_textures.push_back({m_s_diffuseMap, sharedData.m_gBufferColor->GetHandle(), 1});
+						shaderProgram.m_textures.push_back({m_s_normalMap, sharedData.m_gBufferNormalImage->GetHandle(), 2});
+						shaderProgram.m_textures.push_back({m_s_positionMap, sharedData.m_gBufferPositionImage->GetHandle(), 3});
+						shaderProgram.m_textures.push_back({m_s_specularMap, sharedData.m_gBufferSpecular->GetHandle(), 4});
 						shaderProgram.m_textures.push_back({m_s_attenuationLightMap, attenuationImage->GetHandle(), 5});
 
 						uint32_t flags = 0;
@@ -1278,10 +1222,10 @@ namespace hpl {
 						shaderProgram.m_uniforms.push_back({m_u_spotViewProj, spotViewProj.v});
 
 						
-						shaderProgram.m_textures.push_back({m_s_diffuseMap, resolveRenderImage(m_gBufferColor)->GetHandle(), 0});
-						shaderProgram.m_textures.push_back({m_s_normalMap, resolveRenderImage(m_gBufferNormalImage)->GetHandle(), 1});
-						shaderProgram.m_textures.push_back({m_s_positionMap, resolveRenderImage(m_gBufferPositionImage)->GetHandle(), 2});
-						shaderProgram.m_textures.push_back({m_s_specularMap, resolveRenderImage(m_gBufferSpecular)->GetHandle(), 3});
+						shaderProgram.m_textures.push_back({m_s_diffuseMap, sharedData.m_gBufferColor->GetHandle(), 0});
+						shaderProgram.m_textures.push_back({m_s_normalMap, sharedData.m_gBufferNormalImage->GetHandle(), 1});
+						shaderProgram.m_textures.push_back({m_s_positionMap, sharedData.m_gBufferPositionImage->GetHandle(), 2});
+						shaderProgram.m_textures.push_back({m_s_specularMap, sharedData.m_gBufferSpecular->GetHandle(), 3});
 					
 						shaderProgram.m_textures.push_back({m_s_attenuationLightMap, spotAttenuationImage->GetHandle(), 4});
 						if(goboImage) {
@@ -1298,7 +1242,7 @@ namespace hpl {
 							cShadowMapData *pShadowData = GetShadowMapData(shadowMapRes, apLightData->mpLight);
 							if(ShadowMapNeedsUpdate(apLightData->mpLight, pShadowData))
 							{
-								RenderShadowPass(context, *apLightData, pShadowData->m_target);
+								RenderShadowPass(context, viewport, *apLightData, pShadowData->m_target);
 							}
 							const auto imageSize = pShadowData->m_target.GetImage()->GetImageSize();
 							uParam.shadowMapOffset[0] = 1.0f / imageSize.x ;
@@ -1323,7 +1267,7 @@ namespace hpl {
 			// auto lightIt = renderStencilFrontRenderBack.begin();\
 
 			GraphicsContext::ViewConfiguration viewConfig {rt};
-			viewConfig.m_viewRect = {0, 0, mvScreenSize.x, mvScreenSize.y};
+			viewConfig.m_viewRect = {0, 0, sharedData.m_size.x, sharedData.m_size.y};
 			viewConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
 			viewConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
 			const auto lightStencilBackPass = context.StartPass("eDeferredLightList_StencilFront_RenderBack", viewConfig);
@@ -1385,7 +1329,7 @@ namespace hpl {
 			GraphicsContext::ViewConfiguration lightBackPassConfig {rt};
 			lightBackPassConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
 			lightBackPassConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
-			lightBackPassConfig.m_viewRect = {0, 0, mvScreenSize.x, mvScreenSize.y};
+			lightBackPassConfig.m_viewRect = {0, 0, sharedData.m_size.x, sharedData.m_size.y};
 			const auto lightBackPass = context.StartPass("eDeferredLightList_RenderBack", lightBackPassConfig);
 			for(auto& light: mvSortedLights[eDeferredLightList_RenderBack])
 			{
@@ -1593,6 +1537,7 @@ namespace hpl {
 
 	void cRendererDeferred::SetupLightsAndRenderQueries(GraphicsContext& context, RenderTarget& rt)
 	{
+		auto rtSize = rt.GetImage()->GetImageSize();
 
 		//////////////////////////
 		// Clear light list
@@ -1606,7 +1551,7 @@ namespace hpl {
 
 		////////////////////////////////
 		// Set up variables
-		float fScreenArea = (float)(mvRenderTargetSize.x*mvRenderTargetSize.y);
+		float fScreenArea = (float)(rtSize.x*rtSize.y);
 
 		mlMinLargeLightArea =	(int)(mfMinLargeLightNormalizedArea * fScreenArea);
 		// GraphicsContext::ViewConfiguration lightBackPassConfig {rt};
@@ -1658,14 +1603,14 @@ namespace hpl {
 			if(lightType == eLightType_Point)
 			{
 				pLightData->mClipRect = cMath::GetClipRectFromSphere(pLightData->m_mtxViewSpaceRender.GetTranslation(), pLight->GetRadius(),
-																	mpCurrentFrustum,mvRenderTargetSize,
+																	mpCurrentFrustum,rtSize,
 																	true,mfScissorLastTanHalfFov);
 			}
 			//Spot
 			else if(lightType == eLightType_Spot)
 			{
 				cMath::GetClipRectFromBV(	pLightData->mClipRect, *pLight->GetBoundingVolume(), mpCurrentFrustum,
-											mvScreenSize, mfScissorLastTanHalfFov);
+											rtSize, mfScissorLastTanHalfFov);
 			}
 			pLightData->mlArea = pLightData->mClipRect.w * pLightData->mClipRect.h;
 

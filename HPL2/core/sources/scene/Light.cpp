@@ -116,7 +116,7 @@ namespace hpl {
 		if(mpVisibleNodeTracker) hplDelete(mpVisibleNodeTracker);
 		if(mpFalloffMap) mpTextureManager->Destroy(mpFalloffMap);
 		// if(mpGoboTexture) mpTextureManager->Destroy(mpGoboTexture);
-		m_goboImageWrapper = ImageResourceWrapper();
+		// m_goboImageWrapper = ImageResourceWrapper();
 	}
 
 	//-----------------------------------------------------------------------
@@ -429,46 +429,17 @@ namespace hpl {
 		if(mpFalloffMap) mpTextureManager->Destroy(mpFalloffMap);
 
 		mpFalloffMap = apTexture;
-		// TODO: MP need to configure clamp to edge
-		// mpFalloffMap->SetWrapS(eTextureWrap_ClampToEdge);
-		// mpFalloffMap->SetWrapT(eTextureWrap_ClampToEdge);
-
 	}
 
 	//-----------------------------------------------------------------------
 
 	void iLight::SetGoboTexture(AnimatedImage* apTexture) {
-		// if(mpGoboTexture) {
-		// 	mpTextureManager->Destroy(mpGoboTexture);
-		// }
-		// if(m_animatedGoboImage) {
-		// 	mpTextureManager->Destroy(m_animatedGoboImage);
-		// }
-		m_goboImageWrapper = std::move(ImageResourceWrapper(mpTextureManager, apTexture));
-
-		// m_animatedGoboImage = apTexture;
-		// mpGoboTexture = nullptr;
-
+		m_goboImageWrapper = ImageResourceWrapper(mpTextureManager, apTexture);
 	}
 
 	void iLight::SetGoboTexture(Image *apTexture)
 	{
-		m_goboImageWrapper = std::move(ImageResourceWrapper(mpTextureManager, apTexture));
-
-
-		// //Destroy any old texture.
-		// if(mpGoboTexture) {
-		// 	mpTextureManager->Destroy(mpGoboTexture);
-		// }
-		// if(m_animatedGoboImage) {
-		// 	mpTextureManager->Destroy(m_animatedGoboImage);
-		// }
-
-
-		// mpGoboTexture = apTexture;
-		// m_animatedGoboImage = nullptr;
-		// //TODO: MP need to configure clamp to edge
-		// // if(mpGoboTexture) mpGoboTexture->SetWrapSTR(eTextureWrap_ClampToEdge);
+		m_goboImageWrapper = ImageResourceWrapper(mpTextureManager, apTexture);
 	}
 
 	//-----------------------------------------------------------------------

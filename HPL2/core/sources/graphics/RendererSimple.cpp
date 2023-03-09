@@ -86,6 +86,7 @@ namespace hpl
     
     void cRendererSimple::Draw(
         GraphicsContext& context,
+        cViewport& viewport,
         float afFrameTime,
         cFrustum* apFrustum,
         cWorld* apWorld,
@@ -102,11 +103,11 @@ namespace hpl
         mpCurrentRenderList->Compile(
             eRenderListCompileFlag_Z | eRenderListCompileFlag_Diffuse | eRenderListCompileFlag_Decal | eRenderListCompileFlag_Translucent);
 
-		cRendererCallbackFunctions handler(context, this);
+		cRendererCallbackFunctions handler(context, viewport, this);
 
         BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, apRenderTarget, abSendFrameBufferToPostEffects, apCallbackList);
-        auto target = m_currentRenderTarget.GetRenderTarget();
-        auto& outputTarget = (target && target->IsValid()) ? *target : RenderTarget::EmptyRenderTarget;
+        // auto target = m_currentRenderTarget.GetRenderTarget();
+        // auto& outputTarget = (target && target->IsValid()) ? *target : RenderTarget::EmptyRenderTarget;
 
         mpCurrentRenderList->Setup(mfCurrentFrameTime, mpCurrentFrustum);
         CheckForVisibleAndAddToList(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static), 0);
@@ -121,7 +122,7 @@ namespace hpl
             {
                 return;
             }
-            GraphicsContext::ViewConfiguration viewConfig {outputTarget};
+            GraphicsContext::ViewConfiguration viewConfig {viewport.GetRenderTarget()};
 			viewConfig.m_viewRect = {0, 0, mvScreenSize.x, mvScreenSize.y};
 			viewConfig.m_clear = {0, 1, 0, ClearOp::Color | ClearOp::Depth};
 			bgfx::touch(context.StartPass("clear target", viewConfig));
@@ -143,7 +144,7 @@ namespace hpl
             {
                 return;
             }
-            GraphicsContext::ViewConfiguration viewConfiguration {outputTarget};
+            GraphicsContext::ViewConfiguration viewConfiguration {viewport.GetRenderTarget()};
 		    viewConfiguration.m_viewRect = cRect2l(0, 0, mvScreenSize.x, mvScreenSize.y);
             viewConfiguration.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
             viewConfiguration.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
@@ -183,7 +184,7 @@ namespace hpl
                 return;
             }
 
-            GraphicsContext::ViewConfiguration viewConfiguration {outputTarget};
+            GraphicsContext::ViewConfiguration viewConfiguration {viewport.GetRenderTarget()};
 		    viewConfiguration.m_viewRect = cRect2l(0, 0, mvScreenSize.x, mvScreenSize.y);
             viewConfiguration.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
             viewConfiguration.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
@@ -227,7 +228,7 @@ namespace hpl
                 return;
             }
 
-            GraphicsContext::ViewConfiguration viewConfiguration {outputTarget};
+            GraphicsContext::ViewConfiguration viewConfiguration {viewport.GetRenderTarget()};
 		    viewConfiguration.m_viewRect = cRect2l(0, 0, mvScreenSize.x, mvScreenSize.y);
             viewConfiguration.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
             viewConfiguration.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
@@ -275,7 +276,7 @@ namespace hpl
                 return;
             }
 
-            GraphicsContext::ViewConfiguration viewConfiguration {outputTarget};
+            GraphicsContext::ViewConfiguration viewConfiguration {viewport.GetRenderTarget()};
 		    viewConfiguration.m_viewRect = cRect2l(0, 0, mvScreenSize.x, mvScreenSize.y);
             viewConfiguration.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
             viewConfiguration.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();

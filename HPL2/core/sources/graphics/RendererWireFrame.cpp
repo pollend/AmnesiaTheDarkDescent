@@ -100,7 +100,7 @@ namespace hpl {
 
 
 
-	void cRendererWireFrame::Draw(GraphicsContext& context, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, RenderViewport& apRenderTarget, bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList) {
+	void cRendererWireFrame::Draw(GraphicsContext& context, cViewport& viewport, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, RenderViewport& apRenderTarget, bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList) {
 		BX_ASSERT(false, "Not implemented yet");
 		
 		mpCurrentRenderList->Setup(mfCurrentFrameTime,mpCurrentFrustum);

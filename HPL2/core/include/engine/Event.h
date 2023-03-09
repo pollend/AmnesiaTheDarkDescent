@@ -213,6 +213,7 @@ namespace hpl
             m_callback = rhs.m_callback;
             m_connectionType = rhs.m_connectionType;
             m_event = rhs.m_event;
+            m_connectionType = rhs.m_connectionType;
             // Copy the callback and event, then perform a Connect to the event
             if (m_callback && m_event)
             {
@@ -287,6 +288,11 @@ namespace hpl
     template <typename... Params>
     void EventHandler<Params...>::Process()
     {
+        if (!m_callback)
+        {
+            return;
+        }
+
         std::lock_guard<std::mutex> lock(m_mutex);
         while(!m_queuedEvents.empty()) {
             auto& data = m_queuedEvents.front();
@@ -301,6 +307,7 @@ namespace hpl
         // Find the pointer to the 'from' handler and point it to this handler
         if (m_event)
         {
+            std::lock_guard<std::recursive_mutex> lk(m_event->m_mutex);
             // The index is negative if the handle is in the pending add list
             // The index can then be converted to the add list index in which it lives
             if (m_index < 0)
@@ -531,6 +538,7 @@ namespace hpl
     template <typename... Params>
     inline void Event<Params...>::Disconnect(Handler& eventHandle) const
     {
+        std::lock_guard<std::recursive_mutex> lk(m_mutex);
         BX_ASSERT(eventHandle.m_event == this, "Trying to remove a handler bound to a different event");
 
         int32_t index = eventHandle.m_index;

@@ -134,10 +134,12 @@ namespace hpl
 
     void cMaterialType_Translucent::ResolveShaderProgram(
             eMaterialRenderMode aRenderMode,
+            cViewport& viewport,
             cMaterial* apMaterial,
             iRenderable* apObject,
-            iRenderer* apRenderer, 
+            iRenderer* apRenderer,
             std::function<void(GraphicsContext::ShaderProgram&)> handler) {
+
             GraphicsContext::ShaderProgram program;
             eMaterialBlendMode blendMode = apMaterial->GetBlendMode();
             auto* pVars = static_cast<cMaterialType_Translucent_Vars*>(apMaterial->GetVars());
@@ -209,16 +211,15 @@ namespace hpl
                         auto* renderer = mpGraphics->GetRenderer(eRenderer_Main);
                         if( renderer && TypeInfo<cRendererDeferred>::IsType(*renderer)) {
                             auto* deferredRenderer = static_cast<cRendererDeferred*>(renderer);
+                            auto& sharedData = deferredRenderer->GetSharedData(viewport);
                             flags |= material::translucent::Translucent_Refraction;
-                            if(auto* refractionImage = deferredRenderer->GetRefractionImage()) {
-                                program.m_textures.push_back({m_s_refractionMap, refractionImage->GetHandle(), 3});
-                            }
+                            program.m_textures.push_back({m_s_refractionMap, sharedData.m_refractionImage->GetHandle(), 3});
                         }
                     }
                     if(pVars->mbRefractionNormals && bRefractionEnabled) {
                         uniform.useScreenNormal = 1.0f;
                     }
-                    uniform.refractionScale = pVars->mfRefractionScale * (float)apRenderer->GetRenderTargetSize().x;
+                    uniform.refractionScale = pVars->mfRefractionScale * (float)viewport.GetSize().x;
                     break;
                 }
                 case eMaterialRenderMode_Illumination:
