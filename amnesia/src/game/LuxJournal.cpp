@@ -292,6 +292,7 @@ cLuxJournal::cLuxJournal() : iLuxUpdateable("LuxJournal")
 	///////////////////////////////
 	//Create Viewport
 	mpViewport = mpScene->CreateViewport();
+	mpViewport->bindToWindow(*Interface<window::NativeWindowWrapper>::Get());
 	mpViewport->SetActive(false);
 	mpViewport->SetVisible(false);
 
@@ -1889,16 +1890,17 @@ void cLuxJournal::RenderBackgroundImage()
 	iLowLevelGraphics *pLowGfx = mpGraphics->GetLowLevel();
 	EngineInterface* engine = Interface<EngineInterface>::Get();
 	auto& graphicsContext = engine->GetGraphicsContext();
-	auto* renderer = gpBase->mpMapHandler->GetViewport()->GetRenderer();
+	auto* viewport = gpBase->mpMapHandler->GetViewport();
+	auto* renderer = viewport->GetRenderer();
 	
 	auto effectTarget = RenderTarget(m_screenBgTexture);
 	auto screenTarget = RenderTarget(m_screenImage);
 
-	auto screenSize = pLowGfx->GetScreenSizeInt();
+	auto screenSize = viewport->GetSize();
 	cRect2l screenRect(0, 0, mvScreenSize.x, mvScreenSize.y);
 
 	graphicsContext.CopyTextureToFrameBuffer(
-		*renderer->GetOutputImage(), screenRect, screenTarget);
+		*renderer->GetOutputImage(*viewport), screenRect, screenTarget);
 
 	{
         cMatrixf projMtx;

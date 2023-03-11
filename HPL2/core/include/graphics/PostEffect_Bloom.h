@@ -21,6 +21,7 @@
 #include "bgfx/bgfx.h"
 #include "graphics/PostEffect.h"
 #include "graphics/RenderTarget.h"
+#include "math/MathTypes.h"
 
 namespace hpl {
 
@@ -74,14 +75,32 @@ namespace hpl {
 		cPostEffect_Bloom(cGraphics *apGraphics,cResources *apResources, iPostEffectType *apType);
 		~cPostEffect_Bloom();
 
-		virtual void OnViewportChanged(const cVector2l& avSize) override;
+		struct BloomData {
+		public:
+			BloomData() = default;
+			BloomData(const BloomData&) = delete;
+			BloomData(BloomData&& buffer):
+				m_size(buffer.m_size),
+				m_blurTarget(std::move(buffer.m_blurTarget))
+			{}
 
+			BloomData& operator=(const BloomData&) = delete;
+			BloomData& operator=(BloomData&& buffer) {
+				m_blurTarget = std::move(buffer.m_blurTarget);
+				m_size = buffer.m_size;
+				return *this;
+			}
+			cVector2l m_size;
+			std::array<RenderTarget, 2> m_blurTarget;
+		};
 	private:
 		virtual void OnSetParams() override;
 		virtual iPostEffectParams *GetTypeSpecificParams() override { return &mParams; }
-		virtual void RenderEffect(cPostEffectComposite& compositor, GraphicsContext& context, Image& input, RenderTarget& target) override;
+		virtual void RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, RenderTarget& target) override;
 
-		std::array<RenderTarget, 2> m_blurTarget;
+		UniqueViewportData<BloomData> m_boundBloomData;
+
+		// std::array<RenderTarget, 2> m_blurTarget;
 
 		cPostEffectType_Bloom *mpBloomType;
 		cPostEffectParams_Bloom mParams;

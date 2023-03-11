@@ -61,12 +61,13 @@ namespace hpl {
         m_thread.shutdown();
     }
 
-    void Bootstrap::Initialize() {
+    void Bootstrap::Initialize(BootstrapConfiguration configuration) {
         Interface<IUpdateEventLoop>::Register(&m_updateEventLoop);
-        
+        // BootstrapConfiguration config = std::move(configuration);
+
         auto keyboardHandle = hpl::input::internal::keyboard::Initialize();
         auto mouseHandle = hpl::input::internal::mouse::Initialize();
-        auto windowHandle = hpl::window::internal::Initialize();
+        auto windowHandle = hpl::window::internal::Initialize(configuration.m_windowStyle);
 
         // set internal event handlers
         hpl::window::internal::ConnectInternalEventHandler(windowHandle,

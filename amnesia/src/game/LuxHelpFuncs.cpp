@@ -19,6 +19,7 @@
 
 #include "LuxHelpFuncs.h"
 
+#include "LuxBase.h"
 #include "LuxMapHandler.h"
 #include "LuxPlayer.h"
 #include "LuxEffectHandler.h"

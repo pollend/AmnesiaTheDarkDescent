@@ -93,33 +93,23 @@ cEditorThumbnailBuilder::cEditorThumbnailBuilder(iEditorBase* apEditor)
 
 	//////////////////////////////////////////
 	// Set up render targets
-	iTexture* pRenderTarget64 = pGfx->CreateTexture("Thumbnail", eTextureType_2D, eTextureUsage_RenderTarget);
-	pRenderTarget64->SetWrapR(eTextureWrap_Clamp);
-	pRenderTarget64->SetWrapS(eTextureWrap_Clamp);
-	pRenderTarget64->CreateFromRawData(cVector3l(64,64,0), ePixelFormat_RGBA, NULL);
+	// auto desc = ImageDescriptor::CreateTexture2D(64, 64, false, bgfx::TextureFormat::Enum::RGBA8);
+	// desc.m_configuration.m_rt = RTType::RT_Write;
+	// auto thumbnailImage = std::make_shared<Image>();
+	// thumbnailImage->Initialize(desc);
+	// mpFB64 = std::make_shared<RenderTarget>(thumbnailImage);
+	
 
-	mpFB64 = pGfx->CreateFrameBuffer("Thumbnail");
-	mpFB64->SetTexture2D(0, pRenderTarget64);
-	mpFB64->CompileAndValidate();
-
-	// mpRenderTarget128 = pGfx->CreateTexture("ThumbnailDest",eTextureType_2D, eTextureUsage_RenderTarget);
-	// mpRenderTarget128->SetWrapR(eTextureWrap_Clamp);
-	// mpRenderTarget128->SetWrapS(eTextureWrap_Clamp);
-	// mpRenderTarget128->CreateFromRawData(cVector3l(128,128,0), ePixelFormat_RGBA, NULL);
-	auto desc = ImageDescriptor::CreateTexture2D(128, 128, false, bgfx::TextureFormat::Enum::RGBA8);
-	mpRenderTarget128 = std::make_shared<Image>();
-	mpRenderTarget128->Initialize(desc);
-	mpFB128 = RenderViewport(
-		std::make_shared<RenderTarget>(mpRenderTarget128), cVector2l(0,0)
-	);
-	// mpFB128 = pGfx->CreateFrameBuffer("ThumbnailDestination");
-	// mpFB128->SetTexture2D(0,mpRenderTarget128);
-	// mpFB128->CompileAndValidate();
-
+	auto desc128 = ImageDescriptor::CreateTexture2D(128, 128, false, bgfx::TextureFormat::Enum::RGBA8);
+	desc128.m_configuration.m_rt = RTType::RT_Write;
+	auto image128 = std::make_shared<Image>();
+	image128->Initialize(desc128);
+	mpRenderTarget128 = std::make_shared<RenderTarget>(image128);
 
 	mpViewport = pScene->CreateViewport(pCamera,pWorld,true);
 	mpViewport->SetSize(cVector2l(128));
-	mpViewport->setRenderViewport(mpFB128);
+	mpViewport->setRenderTarget(mpRenderTarget128);
+	mpViewport->setImageDescriptor(desc128);
 	mpViewport->SetActive(false);
 	mpViewport->SetVisible(false);
 	mpViewport->GetRenderSettings()->mClearColor = cColor(0,1);
@@ -161,7 +151,6 @@ void cEditorThumbnailBuilder::BuildThumbnailFromMeshEntity(cMeshEntity* apEntity
 										pCamera->GetFrustum(),
 										pWorld,
 										mpViewport->GetRenderSettings(),
-										mpViewport->GetRenderViewport(),
 										false,
 										mpViewport->GetRendererCallbackList() );
 	pGfx->WaitAndFinishRendering();
@@ -245,7 +234,6 @@ void cEditorThumbnailBuilder::BuildThumbnailFromMesh(const tWString& asMeshFilen
 										pCamera->GetFrustum(),
 										pWorld,
 										mpViewport->GetRenderSettings(),
-										mpViewport->GetRenderViewport(),
 										false,
 										mpViewport->GetRendererCallbackList() );
 	pGfx->WaitAndFinishRendering();

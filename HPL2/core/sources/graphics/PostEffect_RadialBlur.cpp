@@ -57,8 +57,6 @@ namespace hpl
     cPostEffect_RadialBlur::cPostEffect_RadialBlur(cGraphics* apGraphics, cResources* apResources, iPostEffectType* apType)
         : iPostEffect(apGraphics, apResources, apType)
     {
-        cVector2l vSize = mpLowLevelGraphics->GetScreenSizeInt();
-
         mpRadialBlurType = static_cast<cPostEffectType_RadialBlur*>(mpType);
     }
 
@@ -74,9 +72,9 @@ namespace hpl
     {
     }
 
-    void cPostEffect_RadialBlur::RenderEffect(cPostEffectComposite& compositor, GraphicsContext& context, Image& input, RenderTarget& target)
+    void cPostEffect_RadialBlur::RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, RenderTarget& target)
     {
-        cVector2l vRenderTargetSize = compositor.GetRenderTargetSize();
+        cVector2l vRenderTargetSize = viewport.GetSize();
         cVector2f vRenderTargetSizeFloat((float)vRenderTargetSize.x, (float)vRenderTargetSize.y);
 
         GraphicsContext::LayoutStream layoutStream;

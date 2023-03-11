@@ -25,6 +25,8 @@
 #include "system/LowLevelSystem.h"
 #include <engine/RTTI.h>
 
+#include <bx/debug.h>
+
 namespace hpl {
 
 	class iResourceBase

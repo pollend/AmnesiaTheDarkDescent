@@ -89,8 +89,6 @@ namespace hpl {
 		mbHasUvAnimation = false;
 
 
-
-
 		///////////////////////
 		//Set up depending in type
 		if(mpType->IsTranslucent())
@@ -112,9 +110,6 @@ namespace hpl {
 	{
 		if(mpVars) {
 			hplDelete(mpVars);
-		}
-		for(auto& image: m_image) {
-			image.SetAutoDestroyResource(mbAutoDestroyTextures);
 		}
 	}
 
@@ -146,24 +141,21 @@ namespace hpl {
 		mpType->CompileMaterialSpecifics(this);
 	}
 
-	//-----------------------------------------------------------------------
-
-
 	void cMaterial::SetImage(eMaterialTexture aType, iResourceBase *apTexture) 
 	{
-		BX_ASSERT(TypeInfo<Image>().IsType(*apTexture) || TypeInfo<AnimatedImage>().IsType(*apTexture), "cMaterial::SetImage: apTexture is not an Image")
-
-		m_image[aType] = std::move(ImageResourceWrapper(mpResources->GetTextureManager(), apTexture));
+		m_image[aType].SetAutoDestroyResource(false);
+		if(apTexture) {
+			BX_ASSERT(TypeInfo<Image>().IsType(*apTexture) || TypeInfo<AnimatedImage>().IsType(*apTexture), "cMaterial::SetImage: apTexture is not an Image")
+			m_image[aType] = std::move(ImageResourceWrapper(mpResources->GetTextureManager(), apTexture, mbAutoDestroyTextures));
+		} else {
+			m_image[aType] = ImageResourceWrapper();
+		}
 	}
 
 	Image* cMaterial::GetImage(eMaterialTexture aType)
 	{
 		return m_image[aType].GetImage();
 	}
-
-
-
-	//-----------------------------------------------------------------------
 
 	cResourceVarsObject* cMaterial::GetVarsObject()
 	{
@@ -173,14 +165,10 @@ namespace hpl {
 		return pVarsObject;
 	}
 
-	//-----------------------------------------------------------------------
-
 	void cMaterial::LoadVariablesFromVarsObject(cResourceVarsObject* apVarsObject)
 	{
 		mpType->LoadVariables(this, apVarsObject);
 	}
-
-	//-----------------------------------------------------------------------
 
 	void cMaterial::SetBlendMode(eMaterialBlendMode aBlendMode)
 	{

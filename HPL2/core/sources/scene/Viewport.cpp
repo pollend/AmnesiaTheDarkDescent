@@ -17,38 +17,72 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "engine/Interface.h"
+
 #include "scene/Viewport.h"
 
 #include "graphics/Renderer.h"
 
 #include "scene/Scene.h"
 #include "scene/World.h"
+#include <array>
 #include <memory>
 
 namespace hpl {
 
-	cViewport::cViewport(cScene *apScene)
+	namespace internal {
+        static size_t m_id = 0;
+        static absl::InlinedVector<size_t, cViewport::MaxViewportHandles> m_freelist;
+        static std::mutex m_mutex;
+    } // namespace internal
+	
+
+	cViewport::cViewport(cScene *apScene):
+		mpRenderSettings(std::make_unique<cRenderSettings>()),
+		mpScene(apScene),
+		mbActive(true),
+		mbVisible(true),
+		mpWorld(nullptr),
+		mpCamera(nullptr),
+		mpRenderer(nullptr),
+		mpPostEffectComposite(nullptr),
+		mbIsListener(false)
 	{
-		mpScene = apScene;
+		m_imageDescriptor = ImageDescriptor::CreateTexture2D(0, 0, false, bgfx::TextureFormat::Enum::RGBA8);
+		m_imageDescriptor.m_configuration.m_rt = RTType::RT_Write;
 
-		mbActive = true;
-		mbVisible = true;
+		std::lock_guard<std::mutex> lock(internal::m_mutex);
+        if (internal::m_freelist.empty()) {
+            BX_ASSERT(internal::m_id < MaxViewportHandles, "MaxViewportHandles exceeded");
+            m_handle = ++internal::m_id;
+        } else {
+            m_handle = internal::m_freelist.back();
+            internal::m_freelist.pop_back();
+        }
 
-		mpRenderSettings = hplNew( cRenderSettings, () );
-
-		mpWorld = NULL;
-		mpCamera = NULL;
-		mpRenderer = NULL;
-		mpPostEffectComposite = NULL;
-
-		mbIsListener = false;
+		m_updateEventHandler = IUpdateEventLoop::UpdateEvent::Handler([&](float dt) {
+			if(m_dirtyViewport) {
+				if(m_size.x > 0 && m_size.y > 0 && m_renderTarget) {
+					m_dirtyViewport = false;
+					m_renderTarget->Invalidate();
+					m_imageDescriptor.m_width = m_size.x;
+					m_imageDescriptor.m_height = m_size.y;
+					auto image = std::make_shared<Image>();
+					image->Initialize(m_imageDescriptor);
+					std::array<std::shared_ptr<Image>, 1> images = {image};
+					m_renderTarget->Initialize(images);
+				}
+				m_viewportChanged.Signal();
+			}
+		});
+		Interface<IUpdateEventLoop>::Get()->Subscribe(BroadcastEvent::PreUpdate, m_updateEventHandler);
+            
 	}
 
-	//-----------------------------------------------------------------------
-
+	
 	cViewport::~cViewport()
 	{
-		hplDelete( mpRenderSettings );
+		m_disposeEvent.Signal();
 	}
 
 	void cViewport::SetWorld(cWorld *apWorld)
@@ -71,16 +105,39 @@ namespace hpl {
 	{
 		mlstGuiSets.push_back(apSet);
 	}
+	
 	void cViewport::RemoveGuiSet(cGuiSet *apSet)
 	{
 		STLFindAndRemove(mlstGuiSets, apSet);
 	}
+
 	cGuiSetListIterator cViewport::GetGuiSetIterator()
 	{
 		return cGuiSetListIterator(&mlstGuiSets);
 	}
 
-	//-----------------------------------------------------------------------
+	bool cViewport::IsValid() {
+		if(m_size.x == 0 || m_size.y == 0) {
+			return false;
+		}
+		return true;
+	}
+
+
+	void cViewport::bindToWindow(window::NativeWindowWrapper& window) {
+  			m_windowEventHandler = window::WindowEvent::Handler([&](window::WindowEventPayload& event) {
+                switch(event.m_type) {
+                    case window::WindowEventType::ResizeWindowEvent:
+                        SetSize(cVector2l(event.payload.m_resizeWindow.m_width, event.payload.m_resizeWindow.m_height));
+                        break;
+                    default:
+                        break;
+                }
+            });
+            
+            window.ConnectWindowEventHandler(m_windowEventHandler);
+            SetSize(window.GetWindowSize());
+	}
 
 	void cViewport::AddViewportCallback(iViewportCallback *apCallback)
 	{

@@ -51,7 +51,7 @@ public:
 	void SetVisible(bool abX) { mbVisible = abX; }
 protected:
 	iEntityWrapper* mpParent;
-	iTexture* mvIconGfx[2];
+	std::array<Image*, 2> mvIconGfx;
 
 	cBoundingVolume mIconBV;
 	bool mbVisible;

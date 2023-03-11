@@ -18,14 +18,11 @@
  */
 
 #include "../common/StdAfx.h"
+#include "system/Bootstrap.h"
 using namespace hpl;
 
 #include "LevelEditor.h"
 #include "BuildID_LevelEditor.h"
-
-#ifdef WITH_BINRELOC
-#include "binreloc.h"
-#endif
 
 #ifdef WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -39,31 +36,24 @@ using namespace hpl;
 
 int hplMain(const tString& asCommandLine)
 {
-	//////////////////////////
-	// Init BlackBox
-	#ifdef WIN32
-		HINSTANCE hBlackBoxLib = LoadLibrary( "BlackBox.dll" );
-	#endif
+	cLevelEditor* pEditor;
+	cEngine* pEngine;
 
-	//cMemoryManager::SetLogCreation(true);
+	Bootstrap bootstrap;
+	Bootstrap::BootstrapConfiguration config;
+	config.m_windowStyle = hpl::window::WindowStyle::WindowStyleResizable;
+	bootstrap.Initialize(config);
+	bootstrap.Run([&](bx::Thread* self) {
+		pEditor = hplNew(cLevelEditor, ());
+		pEngine = pEditor->Init(NULL, "LevelEditor", GetBuildID_LevelEditor(), false);
 
-	cLevelEditor* pEditor = hplNew(cLevelEditor, ());
-
-
-	cEngine* pEngine = pEditor->Init(NULL, "LevelEditor", GetBuildID_LevelEditor(), false);
-
-	pEngine->Run();
+		pEngine->Run();
+		return 0;
+	});
 
 	hplDelete(pEditor);
 	DestroyHPLEngine(pEngine);
 	cMemoryManager::LogResults();
-
-	//////////////////////////
-	// Exit BlackBox
-	#ifdef WIN32
-			if(hBlackBoxLib) FreeLibrary(hBlackBoxLib);
-	#endif
-
 	return 0;
 }
 

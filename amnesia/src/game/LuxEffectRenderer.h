@@ -21,8 +21,13 @@
 
 #include "LuxBase.h"
 #include "bgfx/bgfx.h"
+
+#include "graphics/Image.h"
 #include "graphics/RenderTarget.h"
+
 #include <array>
+#include <memory>
+#include <span>
 
 class cGlowObject
 {
@@ -45,6 +50,36 @@ public:
 class cLuxEffectRenderer : public iLuxUpdateable
 {
 public:
+    struct LuxPostEffectData {
+    public:
+        LuxPostEffectData() = default;
+        LuxPostEffectData(const LuxPostEffectData&) = delete;
+        LuxPostEffectData(LuxPostEffectData&& other)
+            : m_outputTarget(std::move(other.m_outputTarget))
+            , m_outlineTarget(std::move(other.m_outlineTarget))
+            , m_outputImage(std::move(other.m_outputImage))
+            , m_gBufferDepthStencil(std::move(other.m_gBufferDepthStencil))
+            , m_blurTarget(std::move(other.m_blurTarget)){
+        }
+        LuxPostEffectData& operator=(const LuxPostEffectData&) = delete;
+        void operator=(LuxPostEffectData&& other) {
+            m_outputTarget = std::move(other.m_outputTarget);
+            m_outlineTarget = std::move(other.m_outlineTarget);
+            m_outputImage = std::move(other.m_outputImage);
+            m_gBufferDepthStencil = std::move(other.m_gBufferDepthStencil);
+            m_blurTarget = std::move(other.m_blurTarget);
+
+        }
+
+        // images from the gbuffer we need this to determine if we need to rebuild the render targets
+        std::shared_ptr<Image> m_outputImage;
+        std::shared_ptr<Image> m_gBufferDepthStencil;
+
+        std::array<RenderTarget, 2> m_blurTarget;
+        RenderTarget m_outputTarget;
+        RenderTarget m_outlineTarget;
+    };
+
     static constexpr uint16_t BlurSize = 4;
     cLuxEffectRenderer();
     ~cLuxEffectRenderer();
@@ -71,16 +106,18 @@ private:
     void RenderOutline(cRendererCallbackFunctions* apFunctions);
 
     // this is reused code from PostEffect_Bloom. I think the passes can be separated out into handlers of some kind :?
-    void RenderBlurPass(GraphicsContext& context, Image& input);
+    void RenderBlurPass(GraphicsContext& context, std::span<RenderTarget> blurTargets, Image& input);
 
     std::vector<cGlowObject> mvFlashObjects;
     std::vector<cGlowObject> mvEnemyGlowObjects;
 
     std::vector<iRenderable*> mvOutlineObjects;
 
-    RenderTarget m_outputTarget;
-    RenderTarget m_outlineTarget;
-    std::array<RenderTarget, 2> m_blurTarget;
+    // RenderTarget m_outputTarget;
+    // RenderTarget m_outlineTarget;
+    // std::array<RenderTarget, 2> m_blurTarget;
+    
+    UniqueViewportData<LuxPostEffectData> m_boundPostEffectData;
 
     bgfx::ProgramHandle m_blurProgram = BGFX_INVALID_HANDLE;
     bgfx::ProgramHandle m_enemyGlowProgram = BGFX_INVALID_HANDLE;

@@ -70,7 +70,7 @@ private:
 	tEntityWrapperList mlstEntities;
 
 	cColor mColor;
-	iGpuProgram* mpDrawProg;
+	// iGpuProgram* mpDrawProg;
 };
 
 //------------------------------------------------------

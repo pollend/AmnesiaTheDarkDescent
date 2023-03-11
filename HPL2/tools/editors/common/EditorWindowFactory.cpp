@@ -359,7 +359,7 @@ cEditorWindowLoaderStatus* cEditorWindowFactory::CreateLoaderStatusWindow(iEdito
 
 cEditorWindowMaterialEditor* cEditorWindowFactory::CreateMaterialEditor(iEditorBase* apEditor, iFrameBuffer* apFB)
 {
-	cEditorWindowMaterialEditor* pWindow = hplNew(cEditorWindowMaterialEditor,(apEditor,apFB));
+	cEditorWindowMaterialEditor* pWindow = new cEditorWindowMaterialEditor(apEditor);
 	pWindow->Init();
 	apEditor->AddWindow(pWindow);
 	return pWindow;

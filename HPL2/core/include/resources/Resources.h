@@ -17,8 +17,7 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef HPL_RESOURCES_H
-#define HPL_RESOURCES_H
+#pragma once
 
 #include <map>
 #include "system/SystemTypes.h"
@@ -280,4 +279,3 @@ namespace hpl {
 	};
 
 };
-#endif // HPL_RESOURCES_H

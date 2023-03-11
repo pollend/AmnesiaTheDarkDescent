@@ -392,14 +392,10 @@ namespace hpl {
 			animatedImage->Initialize(std::span(images));
 				
 			AddResource(animatedImage);
-
-			if(animatedImage){
-				animatedImage->IncUserCount();
-			} else {
-				Error("Couldn't texture '%s'\n",asName.c_str());
-			}
 		}
-
+		if(animatedImage){
+			animatedImage->IncUserCount();
+		}
 		EndLoad();
 		return animatedImage;
 	}
@@ -463,10 +459,8 @@ namespace hpl {
 
 		if(apResource->HasUsers()==false)
 		{
-			// mlMemoryUsage -= static_cast<Image*>(apResource)->GetMemorySize();
-
 			RemoveResource(apResource);
-			hplDelete(apResource);
+			delete apResource;
 		}
 	}
 

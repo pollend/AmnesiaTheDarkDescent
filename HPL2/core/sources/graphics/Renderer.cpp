@@ -477,15 +477,15 @@ namespace hpl
         cFrustum* apFrustum,
         cWorld* apWorld,
         cRenderSettings* apSettings,
-        const RenderViewport& apRenderTarget,
         bool abSendFrameBufferToPostEffects,
         tRendererCallbackList* apCallbackList)
     {
-        BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, apRenderTarget, abSendFrameBufferToPostEffects, apCallbackList);
+        BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects, apCallbackList);
     }
 
     void iRenderer::RenderableHelper(
         eRenderListType type,
+        cViewport& viewport,
         eMaterialRenderMode mode,
         std::function<void(iRenderable* obj, GraphicsContext::LayoutStream&, GraphicsContext::ShaderProgram&)> handler)
     {
@@ -505,6 +505,7 @@ namespace hpl
             vertexBuffer->GetLayoutStream(layoutStream);
             materialType->ResolveShaderProgram(
                 mode,
+                viewport,
                 pMaterial,
                 obj,
                 this,
@@ -556,7 +557,6 @@ namespace hpl
         cFrustum* apFrustum,
         cWorld* apWorld,
         cRenderSettings* apSettings,
-        const RenderViewport& apRenderTarget,
         bool abSendFrameBufferToPostEffects,
         tRendererCallbackList* apCallbackList,
         bool abAtStartOfRendering)
@@ -582,7 +582,6 @@ namespace hpl
         // Initialize render functions
         InitAndResetRenderFunctions(
             apFrustum,
-            apRenderTarget,
             apSettings->mbLog,
             apSettings->mbUseScissorRect,
             apSettings->mvScissorRectPos,
@@ -943,10 +942,11 @@ namespace hpl
         RenderTarget& rt,
         std::function<bool(bgfx::ViewId view, iRenderable* object)> renderHandler)
     {
+        auto imageSize = rt.GetImage()->GetImageSize();
         GraphicsContext::ViewConfiguration viewConfiguration {rt};
         viewConfiguration.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
         viewConfiguration.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
-        viewConfiguration.m_viewRect = {0, 0, static_cast<uint16_t>(mvScreenSize.x), static_cast<uint16_t>(mvScreenSize.y)};
+        viewConfiguration.m_viewRect = {0, 0, static_cast<uint16_t>(imageSize.x), static_cast<uint16_t>(imageSize.y)};
         auto pass = context.StartPass("z pass", viewConfiguration);
         
         auto renderNodeHandler = [&](iRenderableContainerNode* apNode, tRenderableFlag alNeededFlags)

@@ -267,6 +267,8 @@ namespace hpl::input {
         eKeyModifier modifier;
     };
 
+    using KeyPressEvent = hpl::Event<KeyPress&>;
+
     namespace internal::keyboard {
         class InternalInputKeyboardHandle final {
             HPL_HANDLER_IMPL(InternalInputKeyboardHandle)
@@ -276,6 +278,9 @@ namespace hpl::input {
 
         const std::span<TextPress> Characters(const InternalInputKeyboardHandle& handle);
         const std::span<KeyPress> KeyPresses(const InternalInputKeyboardHandle& handle);
+        
+        void ConnectKeyPressEvent(const InternalInputKeyboardHandle& handle, KeyPressEvent::Handler& handler);
+
         bool IsKeyPressed(const InternalInputKeyboardHandle& handle, eKey key);
 
         window::internal::WindowInternalEvent::Handler& GetWindowEventHandle(InternalInputKeyboardHandle& handle); // internal use only
@@ -296,16 +301,20 @@ namespace hpl::input {
             m_impl = std::move(other.m_impl);
         }
 
-        const std::span<TextPress> Characters() const {
+        inline const std::span<TextPress> Characters() const {
             return internal::keyboard::Characters(m_impl);
         }
 
-        const std::span<KeyPress> KeyPresses() const {
+        inline const std::span<KeyPress> KeyPresses() const {
             return internal::keyboard::KeyPresses(m_impl);
         }
 
-        const bool IsKeyPressed(eKey key) const {
+        inline const bool IsKeyPressed(eKey key) const {
             return internal::keyboard::IsKeyPressed(m_impl, key);
+        }
+
+        inline void ConnectKeyPressEvent(KeyPressEvent::Handler& handler) {
+            internal::keyboard::ConnectKeyPressEvent(m_impl, handler);
         }
 
         window::internal::WindowInternalEvent::Handler& GetWindowEventHandle() {

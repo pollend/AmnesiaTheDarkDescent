@@ -1,4 +1,5 @@
 
+#include "graphics/RenderTarget.h"
 #include "math/MathTypes.h"
 #include <cinttypes>
 #include <graphics/RenderViewport.h>
@@ -22,8 +23,12 @@ namespace hpl {
     RenderViewport::~RenderViewport() {
     }
 
-    std::shared_ptr<RenderTarget>& RenderViewport::GetRenderTarget() {
-        return m_renderTarget;
+    RenderTarget& RenderViewport::GetRenderTarget() {
+        static RenderTarget emptyTarget = RenderTarget();
+        if(m_renderTarget) {
+            return emptyTarget;
+        }
+        return *m_renderTarget;
     }
 
     const cVector2l RenderViewport::GetPosition() const {

@@ -18,7 +18,6 @@
  */
 
 #include "LuxEffectRenderer.h"
-#include "bgfx/bgfx.h"
 #include "engine/Interface.h"
 #include <absl/container/inlined_vector.h>
 #include <graphics/Enum.h>
@@ -28,30 +27,64 @@
 #include <memory>
 #include <vector>
 
+
+#include "bgfx/bgfx.h"
+#include <bx/debug.h>
+
 cLuxEffectRenderer::cLuxEffectRenderer()
     : iLuxUpdateable("LuxEffectRenderer")
 {
-    /////////////////////////////
-    // Setup vars
-    cGraphics* pGraphics = gpBase->mpEngine->GetGraphics();
-    cVector2l vScreenSize = pGraphics->GetLowLevel()->GetScreenSizeInt();
 
-    /////////////////////////////
-    // Get deferred renderer stuff
-    cRendererDeferred* pRendererDeferred = static_cast<cRendererDeferred*>(pGraphics->GetRenderer(eRenderer_Main));
+     m_boundPostEffectData = std::move(UniqueViewportData<LuxPostEffectData>([](cViewport& viewport) {
+        cGraphics* pGraphics = gpBase->mpEngine->GetGraphics();
+        cRendererDeferred* pRendererDeferred = static_cast<cRendererDeferred*>(pGraphics->GetRenderer(eRenderer_Main));
+        auto& gbuffer = pRendererDeferred->GetSharedData(viewport);
 
-    // // umm ... might want to use the output render target instead of the output image
-	EngineInterface* engine = Interface<EngineInterface>::Get();
-    std::array<std::shared_ptr<Image>, 2> outputImages = {pRendererDeferred->GetOutputImage(), pRendererDeferred->GetDepthStencilImage()};
+        auto blurImageDesc = [&]
+        {
+            auto desc = ImageDescriptor::CreateTexture2D(
+                gbuffer.m_size.x / cLuxEffectRenderer::BlurSize,
+                gbuffer.m_size.y / cLuxEffectRenderer::BlurSize,
+                false,
+                bgfx::TextureFormat::Enum::RGBA8);
+            desc.m_configuration.m_rt = RTType::RT_Write;
+            auto image = std::make_shared<Image>();
+            image->Initialize(desc);
+            return image;
+        };
+        
+        auto postEffect = std::make_unique<LuxPostEffectData>();
+        postEffect->m_outputImage = gbuffer.m_outputImage;
+        postEffect->m_gBufferDepthStencil = gbuffer.m_gBufferDepthStencil;
 
-    m_outputTarget = RenderTarget(std::span(outputImages));
+        postEffect->m_blurTarget[0] = RenderTarget(blurImageDesc());
+        postEffect->m_blurTarget[1] = RenderTarget(blurImageDesc());
+        
+        {
+            std::array<std::shared_ptr<Image>, 2> image = {postEffect->m_outputImage, postEffect->m_gBufferDepthStencil};
+            postEffect->m_outputTarget = RenderTarget(image);
+        }
+    
+        auto outlineImageDesc = ImageDescriptor::CreateTexture2D(gbuffer.m_size.x, gbuffer.m_size.y, false, bgfx::TextureFormat::RGBA8);
+        outlineImageDesc.m_configuration.m_rt = RTType::RT_Write;
+        auto outlineImage = std::make_shared<Image>();
+        outlineImage->Initialize(outlineImageDesc);
 
-    auto outlineImageDesc = ImageDescriptor::CreateTexture2D(vScreenSize.x, vScreenSize.y, false, bgfx::TextureFormat::RGBA8);
-    outlineImageDesc.m_configuration.m_rt = RTType::RT_Write;
-    auto outlineImage = std::make_shared<Image>();
-    outlineImage->Initialize(outlineImageDesc);
-    std::array<std::shared_ptr<Image>, 2> outlineImages = { outlineImage, pRendererDeferred->GetDepthStencilImage() };
-    m_outlineTarget = RenderTarget(std::span(outlineImages));
+        std::array<std::shared_ptr<Image>, 2> outlineImages = { outlineImage, postEffect->m_gBufferDepthStencil };
+        postEffect->m_outlineTarget = RenderTarget(std::span(outlineImages));
+
+        return postEffect;
+    }, [&](cViewport& viewport, LuxPostEffectData& target) {
+        cGraphics* pGraphics = gpBase->mpEngine->GetGraphics();
+        cRendererDeferred* pRendererDeferred = static_cast<cRendererDeferred*>(pGraphics->GetRenderer(eRenderer_Main));
+        auto& gbuffer = pRendererDeferred->GetSharedData(viewport);
+
+        // as long as the output image and depth stencil image are the same, we can use the same render target 
+            // else we need to create a new one
+        return viewport.GetRenderTarget().IsValid() 
+            && gbuffer.m_outputImage == target.m_outputImage
+            && gbuffer.m_gBufferDepthStencil == target.m_gBufferDepthStencil;
+    }));
 
     m_alphaRejectProgram = hpl::loadProgram("vs_alpha_reject", "fs_alpha_reject");
     m_blurProgram = hpl::loadProgram("vs_post_effect", "fs_posteffect_blur");
@@ -60,21 +93,6 @@ cLuxEffectRenderer::cLuxEffectRenderer()
     m_copyProgram = hpl::loadProgram("vs_post_effect", "fs_post_effect_copy");
     m_outlineProgram = hpl::loadProgram("vs_dds_outline", "fs_dds_outline");
 
-    auto blurImageDesc = [&]
-    {
-        auto desc = ImageDescriptor::CreateTexture2D(
-            vScreenSize.x / cLuxEffectRenderer::BlurSize,
-            vScreenSize.y / cLuxEffectRenderer::BlurSize,
-            false,
-            bgfx::TextureFormat::Enum::RGBA8);
-        desc.m_configuration.m_rt = RTType::RT_Write;
-        auto image = std::make_shared<Image>();
-        image->Initialize(desc);
-        return image;
-    };
-
-    m_blurTarget[0] = RenderTarget(blurImageDesc());
-    m_blurTarget[1] = RenderTarget(blurImageDesc());
 
     m_s_diffuseMap = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
     m_u_param = bgfx::createUniform("u_param", bgfx::UniformType::Vec4);
@@ -198,13 +216,19 @@ void cLuxEffectRenderer::RenderFlashObjects(cRendererCallbackFunctions* apFuncti
         return;
 
 
+    auto& postEffectData = m_boundPostEffectData.resolve(apFunctions->GetViewport());
     auto& graphicsContext = apFunctions->GetGraphicsContext();
+    if(!postEffectData.m_outputImage || 
+        !postEffectData.m_gBufferDepthStencil) {
+        return;
+    }
+    
     auto currentFrustum = apFunctions->GetFrustum();
     float fGlobalAlpha = (0.5f + mFlashOscill.val * 0.5f);
-    const auto size = m_outputTarget.GetImage()->GetImageSize();
-
-    GraphicsContext::ViewConfiguration viewConfiguration {m_outputTarget};
-    viewConfiguration.m_viewRect = cRect2l(0, 0, size.x, size.y);
+    auto imageSize = postEffectData.m_outputImage->GetImageSize();
+    
+    GraphicsContext::ViewConfiguration viewConfiguration {postEffectData.m_outputTarget};
+    viewConfiguration.m_viewRect = cRect2l(0, 0, imageSize.x, imageSize.y);
     viewConfiguration.m_projection = currentFrustum->GetProjectionMatrix().GetTranspose();
     viewConfiguration.m_view = currentFrustum->GetViewMatrix().GetTranspose();
     const auto view = apFunctions->GetGraphicsContext().StartPass("Render Flash Object", viewConfiguration);
@@ -251,15 +275,21 @@ void cLuxEffectRenderer::RenderFlashObjects(cRendererCallbackFunctions* apFuncti
 
 void cLuxEffectRenderer::RenderEnemyGlow(cRendererCallbackFunctions* apFunctions)
 {
+    
     if (mvEnemyGlowObjects.empty())
         return;
-
+    
+    auto& postEffectData = m_boundPostEffectData.resolve(apFunctions->GetViewport());
     auto& graphicsContext = apFunctions->GetGraphicsContext();
+    if(!postEffectData.m_outputImage || 
+        !postEffectData.m_gBufferDepthStencil) {
+        return;
+    }
+    auto imageSize = postEffectData.m_outputImage->GetImageSize();
     auto currentFrustum = apFunctions->GetFrustum();
-    const auto size = m_outputTarget.GetImage()->GetImageSize();
 
-    GraphicsContext::ViewConfiguration viewConfiguration {m_outputTarget};
-    viewConfiguration.m_viewRect = cRect2l(0, 0, size.x, size.y);
+    GraphicsContext::ViewConfiguration viewConfiguration {postEffectData.m_outputTarget};
+    viewConfiguration.m_viewRect = cRect2l(0, 0, imageSize.x, imageSize.y);
     viewConfiguration.m_projection = currentFrustum->GetProjectionMatrix().GetTranspose();
     viewConfiguration.m_view = currentFrustum->GetViewMatrix().GetTranspose();
         
@@ -306,12 +336,18 @@ void cLuxEffectRenderer::RenderOutline(cRendererCallbackFunctions* apFunctions)
         return;
 
     auto& graphicsContext = apFunctions->GetGraphicsContext();
+    auto& postEffectData = m_boundPostEffectData.resolve(apFunctions->GetViewport());
     auto currentFrustum = apFunctions->GetFrustum();
-
+    if(!postEffectData.m_outputImage || 
+        !postEffectData.m_gBufferDepthStencil) {
+        return;
+    }
+    auto imageSize = postEffectData.m_outputImage->GetImageSize();
+    
     /////////////////////////////
     // Setup vars
     cGraphics* pGraphics = gpBase->mpEngine->GetGraphics();
-    cVector2l vScreenSize = pGraphics->GetLowLevel()->GetScreenSizeInt();
+    // cVector2l vScreenSize = pGraphics->GetLowLevel()->GetScreenSizeInt();
 
     float fScaleAdd = 0.02f;
 
@@ -348,31 +384,21 @@ void cLuxEffectRenderer::RenderOutline(cRendererCallbackFunctions* apFunctions)
 
     // TODO: use clip rect to avoid rendering to the entire framebuffer
     cRect2l clipRect;
-    cMath::GetClipRectFromBV(clipRect, totalBV, apFunctions->GetFrustum(), vScreenSize, -1);
+    cMath::GetClipRectFromBV(clipRect, totalBV, apFunctions->GetFrustum(), imageSize, -1);
 
     {
-        // const auto view = graphicsContext.StartPass("Clear Outline And Stencil");
-        const auto size = m_outlineTarget.GetImage()->GetImageSize();
-        GraphicsContext::ViewConfiguration viewConfiguration {m_outlineTarget};
-        viewConfiguration.m_viewRect = { 0, 0, static_cast<uint16_t>(size.x), static_cast<uint16_t>(size.y) };
+        GraphicsContext::ViewConfiguration viewConfiguration {postEffectData.m_outlineTarget};
+        viewConfiguration.m_viewRect = { 0, 0, static_cast<uint16_t>(imageSize.x), static_cast<uint16_t>(imageSize.y) };
         viewConfiguration.m_clear = { 0, 1.0, 0, ClearOp::Stencil | ClearOp::Color };
         bgfx::touch(graphicsContext.StartPass("Clear Outline And Stencil", viewConfiguration));
-        // GraphicsContext::DrawClear drawClear{ m_outlineTarget,
-        //                                       { 0, 1.0, 0, ClearOp::Stencil | ClearOp::Color },
-        //                                       0,
-        //                                       0,
-        //                                       static_cast<uint16_t>(size.x),
-        //                                       static_cast<uint16_t>(size.y) };
-        // graphicsContext.ClearTarget(view, drawClear);
     }
 
     {
 
-        GraphicsContext::ViewConfiguration viewConfiguration {m_outlineTarget};
-        const auto size = m_outlineTarget.GetImage()->GetImageSize();
+        GraphicsContext::ViewConfiguration viewConfiguration {postEffectData.m_outlineTarget};
         viewConfiguration.m_projection = currentFrustum->GetProjectionMatrix().GetTranspose();
         viewConfiguration.m_view = currentFrustum->GetViewMatrix().GetTranspose();
-        viewConfiguration.m_viewRect = { 0, 0, static_cast<uint16_t>(size.x), static_cast<uint16_t>(size.y) };
+        viewConfiguration.m_viewRect = { 0, 0, static_cast<uint16_t>(imageSize.x), static_cast<uint16_t>(imageSize.y) };
         const auto view = graphicsContext.StartPass("Render Outline Stencil", viewConfiguration);
         for (auto& object : lstObjects)
         {
@@ -408,9 +434,8 @@ void cLuxEffectRenderer::RenderOutline(cRendererCallbackFunctions* apFunctions)
 
     {
 
-        GraphicsContext::ViewConfiguration viewConfiguration {m_outlineTarget};
-        const auto size = m_outlineTarget.GetImage()->GetImageSize();
-        viewConfiguration.m_viewRect = {0, 0, size.x, size.y};
+        GraphicsContext::ViewConfiguration viewConfiguration {postEffectData.m_outlineTarget};
+        viewConfiguration.m_viewRect = {0, 0, imageSize.x, imageSize.y};
         viewConfiguration.m_projection = currentFrustum->GetProjectionMatrix().GetTranspose();
         viewConfiguration.m_view = currentFrustum->GetViewMatrix().GetTranspose();
         const auto view = graphicsContext.StartPass("Render Outline", viewConfiguration);
@@ -454,23 +479,23 @@ void cLuxEffectRenderer::RenderOutline(cRendererCallbackFunctions* apFunctions)
         }
     }
 
-    RenderBlurPass(graphicsContext, *m_outlineTarget.GetImage());
+    RenderBlurPass(graphicsContext, postEffectData.m_blurTarget, *postEffectData.m_outlineTarget.GetImage());
     for (size_t i = 0; i < 2; ++i)
     {
-        RenderBlurPass(graphicsContext, *m_blurTarget[1].GetImage());
+        RenderBlurPass(graphicsContext, postEffectData.m_blurTarget, *postEffectData.m_blurTarget[1].GetImage());
     }
 
     {
 
-        auto imageSize = m_blurTarget[1].GetImage()->GetImageSize();
+        auto imageSize = postEffectData.m_blurTarget[1].GetImage()->GetImageSize();
         GraphicsContext::LayoutStream layoutStream;
         cMatrixf projMtx;
         graphicsContext.ScreenSpaceQuad(layoutStream, projMtx, imageSize.x, imageSize.y);
         
-        GraphicsContext::ViewConfiguration viewConfiguration {m_outputTarget};
+        GraphicsContext::ViewConfiguration viewConfiguration {postEffectData.m_outputTarget};
         viewConfiguration.m_projection = projMtx;
         const auto view = apFunctions->GetGraphicsContext().StartPass("Additive Outline", viewConfiguration);
-        auto outlineOutputImage = m_blurTarget[1].GetImage();
+        auto outlineOutputImage = postEffectData.m_blurTarget[1].GetImage();
         
         GraphicsContext::ShaderProgram shaderProgram;
         GraphicsContext::ShaderProgram program;
@@ -487,8 +512,10 @@ void cLuxEffectRenderer::RenderOutline(cRendererCallbackFunctions* apFunctions)
     }
 }
 
-void cLuxEffectRenderer::RenderBlurPass(GraphicsContext& context, Image& input)
+void cLuxEffectRenderer::RenderBlurPass(GraphicsContext& context, std::span<RenderTarget> blurTargets, Image& input)
 {
+    BX_ASSERT(blurTargets.size() == 2, "Invalid blur target count");
+
     struct
     {
         float u_useHorizontal;
@@ -498,13 +525,13 @@ void cLuxEffectRenderer::RenderBlurPass(GraphicsContext& context, Image& input)
 
     auto imageSize = input.GetImageSize();
 
-    auto image = m_blurTarget[1].GetImage(0);
+    auto image = blurTargets[1].GetImage(0);
     {
         GraphicsContext::LayoutStream layoutStream;
         cMatrixf projMtx;
         context.ScreenSpaceQuad(layoutStream, projMtx, imageSize.x, imageSize.y);
         
-        GraphicsContext::ViewConfiguration viewConfiguration {m_blurTarget[0]};
+        GraphicsContext::ViewConfiguration viewConfiguration {blurTargets[0]};
 
 		viewConfiguration.m_viewRect = cRect2l(0, 0, imageSize.x, imageSize.y);
         viewConfiguration.m_projection = projMtx;
@@ -531,7 +558,7 @@ void cLuxEffectRenderer::RenderBlurPass(GraphicsContext& context, Image& input)
         cMatrixf projMtx;
         context.ScreenSpaceQuad(layoutStream, projMtx, imageSize.x, imageSize.y);
 
-        GraphicsContext::ViewConfiguration viewConfiguration {m_blurTarget[1]};
+        GraphicsContext::ViewConfiguration viewConfiguration {blurTargets[1]};
 		viewConfiguration.m_viewRect = cRect2l(0, 0, image->GetWidth(), image->GetHeight());
         viewConfiguration.m_projection = projMtx;
         bgfx::ViewId view = context.StartPass("Blur Pass 2", viewConfiguration);
@@ -546,7 +573,7 @@ void cLuxEffectRenderer::RenderBlurPass(GraphicsContext& context, Image& input)
         shaderProgram.m_handle = m_blurProgram;
         // shaderProgram.m_projection = projMtx;
 
-        shaderProgram.m_textures.push_back({ m_s_diffuseMap, m_blurTarget[0].GetImage()->GetHandle(), 1 });
+        shaderProgram.m_textures.push_back({ m_s_diffuseMap, blurTargets[0].GetImage()->GetHandle(), 1 });
         shaderProgram.m_uniforms.push_back({ m_u_param, &blurParams, 1 });
 
         GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };

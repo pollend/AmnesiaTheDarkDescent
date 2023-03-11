@@ -52,7 +52,7 @@ public:
 	void SetZoomAlpha(float afX){ mfZoomAlpha = afX;}
 	void SetWaveSpeed(float afX){ mfWaveSpeed = afX;}
 	
-	virtual void RenderEffect(cPostEffectComposite& compositor, GraphicsContext& context, Image& input, RenderTarget& target) override;
+	virtual void RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, RenderTarget& target) override;
 
 private:
 	// iGpuProgram *mpProgram;

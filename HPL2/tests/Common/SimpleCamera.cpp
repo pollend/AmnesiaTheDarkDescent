@@ -17,6 +17,8 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "engine/Interface.h"
+#include "math/MathTypes.h"
 #include "stdafx.h"
 #include "SimpleCamera.h"
 
@@ -77,6 +79,8 @@ cSimpleCamera::cSimpleCamera(const tString& asAppName,cEngine *apGame, cWorld *a
 	// Create Viewport
 
 	mpViewport = mpEngine->GetScene()->CreateViewport(mpCamera, apWorld);
+	auto* window = Interface<window::NativeWindowWrapper>::Get();
+	mpViewport->bindToWindow(*window);
 	//mpViewport = mpEngine->GetScene()->CreateViewport(NULL, NULL);
 
 	//mpViewport->SetRenderer(mpEngine->GetGraphics()->GetRenderer(eRenderer_WireFrame));
@@ -115,10 +119,11 @@ cSimpleCamera::cSimpleCamera(const tString& asAppName,cEngine *apGame, cWorld *a
 
 	/////////////////////////////////
 	// Font setup
-	if(abShowFPS)
+	if(abShowFPS) {
 		mpFont = mpEngine->GetResources()->GetFontManager()->CreateFontData("viewer.fnt",12,32,128);
-	else
+	} else {
 		mpFont = NULL;
+	}
 
 	/////////////////////////////////
 	// Var setup
@@ -193,6 +198,9 @@ void cSimpleCamera::ListContainerNodeData(iRenderableContainerNode *apNode, int 
 void cSimpleCamera::Update(float afFrameTime)
 {
 	m_mtxLastView = mpCamera->GetViewMatrix();
+	cVector2f viewportSize = cVector2f(mpViewport->GetSize().x,mpViewport->GetSize().y);
+	mpGuiSet->SetVirtualSize(viewportSize, -1000, 1000);
+	mpCamera->SetAspect(viewportSize.x / viewportSize.y);
 
 	if(mpEngine->GetInput()->BecameTriggerd("Escape"))
 	{
@@ -273,7 +281,7 @@ void cSimpleCamera::Update(float afFrameTime)
 		bool bAltDown = mpEngine->GetInput()->IsTriggerd("Alt");
 
 		cVector2l vAbsRel = mpEngine->GetInput()->GetMouse()->GetRelPosition();
-		cVector2f vRel = cVector2f((float)vAbsRel.x,(float)vAbsRel.y) / mpEngine->GetGraphics()->GetLowLevel()->GetScreenSizeFloat();
+		cVector2f vRel = cVector2f((float)vAbsRel.x,(float)vAbsRel.y) / viewportSize;
 
 		if(mbCameraInMouseMode)
 		{
@@ -297,14 +305,13 @@ void cSimpleCamera::Update(float afFrameTime)
 				if(mpEngine->GetInput()->BecameTriggerd("WheelUp"))		mfMouseCameraDistance -= mfMouseCameraDistance *0.2f;
 				if(mpEngine->GetInput()->BecameTriggerd("WheelDown"))	mfMouseCameraDistance += mfMouseCameraDistance *0.2f;
 			}
+			
 
 			if( (bAltDown && mpEngine->GetInput()->IsTriggerd("RightMouse")) ||
 				(!bAltDown && mpEngine->GetInput()->IsTriggerd("MiddleMouse")) )
 			{
 				mfMouseCameraDistance += vRel.y * mfMouseCameraDistance * 3.2f;
 			}
-
-
 
 			if(mfMouseCameraDistance > 100) mfMouseCameraDistance = 100;
 			if(mfMouseCameraDistance < 0.01f) mfMouseCameraDistance = 0.01f;
@@ -400,7 +407,7 @@ void cSimpleCamera::Update(float afFrameTime)
 			if(mpEngine->GetInput()->IsTriggerd(8)) vRot.z += -1.2 * fMul;
 
 			cVector2l vAbsRel = mpEngine->GetInput()->GetMouse()->GetRelPosition();
-			cVector2f vRel = cVector2f((float)vAbsRel.x,(float)vAbsRel.y) / mpEngine->GetGraphics()->GetLowLevel()->GetScreenSizeFloat();
+			cVector2f vRel = cVector2f((float)vAbsRel.x,(float)vAbsRel.y) / viewportSize;
 			vRot.y += vRel.x * 1.7f;
 			vRot.x += vRel.y * 1.7f;
 
@@ -429,7 +436,7 @@ void cSimpleCamera::Update(float afFrameTime)
 			if(mpEngine->GetInput()->IsTriggerd(8)) mpCamera->AddRoll(-1.2 * fMul);
 
 			cVector2l vAbsRel = mpEngine->GetInput()->GetMouse()->GetRelPosition();
-			cVector2f vRel = cVector2f((float)vAbsRel.x,(float)vAbsRel.y) / mpEngine->GetGraphics()->GetLowLevel()->GetScreenSizeFloat();
+			cVector2f vRel = cVector2f((float)vAbsRel.x,(float)vAbsRel.y) / viewportSize;
 			mpCamera->AddYaw(-vRel.x * 1.7f);
 			mpCamera->AddPitch(-vRel.y * 1.7f);
 		}

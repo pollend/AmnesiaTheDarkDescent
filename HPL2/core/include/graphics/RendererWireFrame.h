@@ -21,6 +21,7 @@
 #define HPL_RENDERER_WIRE_FRAME_H
 
 #include "graphics/Image.h"
+#include "graphics/RenderTarget.h"
 #include "graphics/Renderer.h"
 
 namespace hpl {
@@ -40,14 +41,16 @@ namespace hpl {
 		cRendererWireFrame(cGraphics *apGraphics,cResources* apResources);
 		~cRendererWireFrame();
 
-		bool LoadData();
-		void DestroyData();
+		bool LoadData() override;
+		void DestroyData() override;
 
+		virtual std::shared_ptr<Image> GetOutputImage(cViewport& viewport) override;
 	private:
 
-		virtual void Draw(GraphicsContext& context, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, RenderViewport& apRenderTarget,
+		virtual void Draw(GraphicsContext& context, cViewport& viewport, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings,
 			bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList) override;
 
+        UniqueViewportData<RenderTarget> m_boundOutputBuffer;
 
 		void CopyToFrameBuffer();
 		void RenderObjects();

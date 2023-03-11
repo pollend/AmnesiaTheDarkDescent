@@ -20,7 +20,10 @@
 
 #include "graphics/Image.h"
 #include "graphics/RenderFunctions.h"
+#include "math/MathTypes.h"
+#include "scene/Viewport.h"
 #include <absl/container/fixed_array.h>
+#include <array>
 #include <graphics/GraphicsContext.h>
 #include <graphics/RenderTarget.h>
 #include <memory>
@@ -39,9 +42,32 @@ namespace hpl {
         cPostEffectComposite(cGraphics* apGraphics);
         ~cPostEffectComposite();
 
+        struct PostEffectCompositorData {
+        public:
+        	PostEffectCompositorData() = default;
+			PostEffectCompositorData(const PostEffectCompositorData&) = delete;
+			PostEffectCompositorData(PostEffectCompositorData&& other):
+				m_size(other.m_size),
+                m_images(std::move(other.m_images)),
+                m_renderTargets(std::move(other.m_renderTargets))
+			{}
+
+			PostEffectCompositorData& operator=(const PostEffectCompositorData&) = delete;
+			void operator=(PostEffectCompositorData&& other) {
+				// m_accumulationBuffer = std::move(buffer.m_accumulationBuffer);
+                m_images = std::move(other.m_images);
+                m_renderTargets = std::move(other.m_renderTargets);
+				m_size = other.m_size;
+			}
+
+			cVector2l m_size = cVector2l(0, 0);
+            std::array<std::shared_ptr<Image>, 2> m_images;
+            std::array<RenderTarget, 2> m_renderTargets;
+        };
+
         // void Render(float afFrameTime, cFrustum* apFrustum, iTexture* apInputTexture, cRenderTarget* apRenderTarget);
 
-        bool Draw(GraphicsContext& context, float frameTime, Image& inputTexture, RenderTarget& renderTarget);
+        bool Draw(GraphicsContext& context, cViewport& viewport, float frameTime, Image& inputTexture, RenderTarget& renderTarget);
 
         /**
          * Highest prio is first!
@@ -73,14 +99,12 @@ namespace hpl {
             int _index;
             iPostEffect* _effect;
         };
+        
+		UniqueViewportData<PostEffectCompositorData> m_boundCompositorData;
 
-        void RebuildBuffers();
         void CopyToFrameBuffer(iTexture* apOutputTexture);
-
         window::WindowEvent::Handler m_windowEvent;
         std::vector<PostEffectEntry> m_postEffects;
-        absl::FixedArray<std::shared_ptr<Image>, 2> m_images;
-        absl::FixedArray<RenderTarget, 2> m_renderTargets;
 
         float mfCurrentFrameTime;
     };

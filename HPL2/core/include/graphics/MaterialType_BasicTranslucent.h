@@ -22,6 +22,7 @@
 #include "graphics/Material.h"
 #include "graphics/MaterialType.h"
 #include "graphics/ShaderVariantCollection.h"
+#include "scene/Viewport.h"
 #include <cstdint>
 
 namespace hpl
@@ -86,9 +87,10 @@ namespace hpl
 
         virtual void ResolveShaderProgram(
             eMaterialRenderMode aRenderMode,
+            cViewport& viewport,
             cMaterial* apMaterial,
             iRenderable* apObject,
-            iRenderer* apRenderer, 
+            iRenderer* apRenderer,
             std::function<void(GraphicsContext::ShaderProgram&)> handler) override;
 
         virtual iMaterialVars* CreateSpecificVariables() override;

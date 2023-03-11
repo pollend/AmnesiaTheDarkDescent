@@ -37,6 +37,7 @@
 #include "LuxProgressLogHandler.h"
 #include "LuxLoadScreenHandler.h"
 #include "LuxSavedGame.h"
+#include <mutex>
 
 //-----------------------------------------------------------------------
 
@@ -49,7 +50,6 @@
 cLuxSaveHandlerThreadClass::cLuxSaveHandlerThreadClass()
 {
 	mpThread = NULL;
-	mpSaveMutex = cPlatform::CreateMutEx();
 }
 
 cLuxSaveHandlerThreadClass::~cLuxSaveHandlerThreadClass()
@@ -59,7 +59,6 @@ cLuxSaveHandlerThreadClass::~cLuxSaveHandlerThreadClass()
 		mpThread->Stop();
 		hplDelete(mpThread);
 	}
-	hplDelete(mpSaveMutex);
 }
 
 //-----------------------------------------------------------------------
@@ -92,12 +91,9 @@ void cLuxSaveHandlerThreadClass::Save(cLuxSaveGame_SaveData* apSaveData, const t
 	if(apSaveData==NULL)
 		return;
 
-	mpSaveMutex->Lock();
-
+	std::lock_guard<std::mutex> lk(m_saveMutex);
 	mvSaveData.push_back(apSaveData);
 	mvSaveFileNames.push_back(asFile);
-
-	mpSaveMutex->Unlock();
 }
 
 //-----------------------------------------------------------------------
@@ -106,36 +102,32 @@ void cLuxSaveHandlerThreadClass::ProcessPendingSaves()
 {
 	std::vector<cLuxSaveGame_SaveData*> vSaveDataCopy;
 	std::vector<tWString> vSaveFileNamesCopy;
-
-	mpSaveMutex->Lock();
-	if(mvSaveData.empty()==false)
 	{
-		vSaveDataCopy = mvSaveData;
-		vSaveFileNamesCopy = mvSaveFileNames;
-
-		mvSaveData.clear();
-		mvSaveFileNames.clear();
-	}
-	mpSaveMutex->Unlock();
-
-	// Force a wait until all saves are processed
-	iMutex* pMutex = gpBase->mpMapHandler->mpSavedGameMutex;
-	pMutex->Lock();
-	{
-		for(int i=0;i<(int)vSaveDataCopy.size();++i)
+		std::lock_guard<std::mutex> lk(m_saveMutex);
+		if(mvSaveData.empty()==false)
 		{
-			cLuxSaveGame_SaveData* pData = vSaveDataCopy[i];
-			const tWString& sFile = vSaveFileNamesCopy[i];
+			vSaveDataCopy = mvSaveData;
+			vSaveFileNamesCopy = mvSaveFileNames;
 
-			//Need to set saved maps before saving!
-			pData->mpSavedMaps = gpBase->mpMapHandler->GetSavedMapCollection();
-
-			cSerializeClass::SaveToFile(pData,sFile,"SaveGame");
-
-			hplDelete(pData);
+			mvSaveData.clear();
+			mvSaveFileNames.clear();
 		}
 	}
-	pMutex->Unlock();
+
+	// Force a wait until all saves are processed
+	std::lock_guard<std::mutex>(gpBase->mpMapHandler->m_saveGameMutex);
+	for(int i=0;i<(int)vSaveDataCopy.size();++i)
+	{
+		cLuxSaveGame_SaveData* pData = vSaveDataCopy[i];
+		const tWString& sFile = vSaveFileNamesCopy[i];
+
+		//Need to set saved maps before saving!
+		pData->mpSavedMaps = gpBase->mpMapHandler->GetSavedMapCollection();
+
+		cSerializeClass::SaveToFile(pData,sFile,"SaveGame");
+
+		hplDelete(pData);
+	}
 }
 
 //-----------------------------------------------------------------------

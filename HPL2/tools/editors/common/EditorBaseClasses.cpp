@@ -48,31 +48,14 @@
 #include "../common/DirectoryHandler.h"
 
 #include "../common/StdAfx.h"
+#include "engine/Interface.h"
+#include "math/MathTypes.h"
+#include "windowing/NativeWindow.h"
 
 using namespace hpl;
 
 static cVector3f gvZeroVec3f = cVector3f(0,0,0);
 static cVector2f gvZeroVec2f = cVector2f(0,0);
-
-//-----------------------------------------------------------------------
-//-----------------------------------------------------------------------
-//-----------------------------------------------------------------------
-
-/////////////////////////////////////////////////////////////////////////
-// ENTITY LOADER CLASS
-/////////////////////////////////////////////////////////////////////////
-
-//-----------------------------------------------------------------------
-//-----------------------------------------------------------------------
-//-----------------------------------------------------------------------
-
-//-----------------------------------------------------------------------
-
-/////////////////////////////////////////////////////////////////////////
-// CONSTRUCTORS
-/////////////////////////////////////////////////////////////////////////
-
-//-----------------------------------------------------------------------
 
 cEditorEntityLoader::cEditorEntityLoader(iEditorBase* apEditor) : cEntityLoader_Object("EditorEntityLoader")
 {
@@ -80,13 +63,6 @@ cEditorEntityLoader::cEditorEntityLoader(iEditorBase* apEditor) : cEntityLoader_
 	mpEditor = apEditor;
 }
 
-//-----------------------------------------------------------------------
-
-/////////////////////////////////////////////////////////////////////////
-// PUBLIC METHODS
-/////////////////////////////////////////////////////////////////////////
-
-//-----------------------------------------------------------------------
 
 cMeshEntity* cEditorEntityLoader::LoadEntFile(int alID, const tString& asName, const tString& asFilename,
 											  cWorld* apWorld, bool abLoadAnims, bool abLoadParticles, bool abLoadBillboards, bool abLoadSounds, bool abLoadLights)
@@ -145,25 +121,6 @@ cMeshEntity* cEditorEntityLoader::LoadEntityFromElement(int alID, const tString&
 	return pEntity;
 }
 
-//-----------------------------------------------------------------------
-//-----------------------------------------------------------------------
-//-----------------------------------------------------------------------
-
-/////////////////////////////////////////////////////////////////////////
-// EDITOR BASE CLASS
-/////////////////////////////////////////////////////////////////////////
-
-//-----------------------------------------------------------------------
-//-----------------------------------------------------------------------
-//-----------------------------------------------------------------------
-
-//-----------------------------------------------------------------------
-
-/////////////////////////////////////////////////////////////////////////
-// CONSTRUCTORS
-/////////////////////////////////////////////////////////////////////////
-
-//-----------------------------------------------------------------------
 
 iEditorBase::iEditorBase(const tWString& asFileCategoryName, const tWString& asFileCategoryString) : iUpdateable("EditorUpdate")
 {
@@ -767,8 +724,9 @@ cEngine* iEditorBase::Init(cEngine* apEngine, const char* asName, const char* as
 	mpSet->SetMouseZ(1000);
 
 	//If the engine was already created, we are inside another app and to not want to set focus
-	if(bEngineWasCreated==false)
+	if(bEngineWasCreated==false) {
 		mpEngine->GetGui()->SetFocus(mpSet);
+	}
 
 	////////////////////////////////////
 	// FIXME: this is the weirdest thing ever... trying to build this in my comp in the ModelEditor
@@ -778,6 +736,21 @@ cEngine* iEditorBase::Init(cEngine* apEngine, const char* asName, const char* as
 	mpEntityLoader = hplNew(cEditorEntityLoader,(this));
 	mpEngine->GetResources()->AddEntityLoader(mpEntityLoader, true);
 	mpViewport->AddGuiSet(mpSet);
+	mpViewport->bindToWindow(*Interface<window::NativeWindowWrapper>::Get());
+
+	m_viewportChanged = std::move(cViewport::ViewportChange::Handler([&]() {
+		mbLayoutNeedsUpdate = true;
+
+		auto viewportSize = mpViewport->GetSize();
+		mvScreenSize = cVector2f(viewportSize.x, viewportSize.y);
+		
+		mpSet->SetVirtualSize(cVector2f(viewportSize.x,viewportSize.y), -1000, 1000);
+		mpBGFrame->SetSize(mvScreenSize);
+
+		OnViewportChanged(mpViewport);
+	}));
+	mpViewport->ConnectViewportChanged(m_viewportChanged);
+
 
 	/////////////////////////
 	//Create/Set up helper classes
@@ -1176,6 +1149,7 @@ cVector2l iEditorBase::GetLayoutVec2l(int alIdx)
 
 void iEditorBase::UpdateLayout()
 {
+	
 	if(mbLayoutNeedsUpdate==false)
 		return;
 	mbLayoutNeedsUpdate = false;
@@ -1356,7 +1330,7 @@ cEditorWindowMaterialEditor* iEditorBase::ShowMaterialEditor(cEditorInputFile* a
 	if(apInput)
 		sMatFile=apInput->GetValue();
 
-	mpMaterialEditor = hplNew( cEditorWindowMaterialEditor,(this, NULL, sMatFile, apInput));
+	mpMaterialEditor = new cEditorWindowMaterialEditor(this, sMatFile, apInput);
 	mpMaterialEditor->Init();
 	mpMaterialEditor->SetActive(true);
 
@@ -1501,26 +1475,26 @@ void iEditorBase::InitLayout()
 
 void iEditorBase::InitRenderTarget(const cVector2f& avSize)
 {
-	//////////////////////////////////////////////
-	// Creates a render target and framebuffer with size avSize
-	cGraphics* pGfx = mpEngine->GetGraphics();
+	// //////////////////////////////////////////////
+	// // Creates a render target and framebuffer with size avSize
+	// cGraphics* pGfx = mpEngine->GetGraphics();
 
-	int lTexW, lTexH;
-	lTexW = (int) avSize.x;
-	lTexH = (int) avSize.y;
+	// int lTexW, lTexH;
+	// lTexW = (int) avSize.x;
+	// lTexH = (int) avSize.y;
 
-	iTexture* pRenderTexture = pGfx->CreateTexture("RenderTexture",eTextureType_Rect, eTextureUsage_RenderTarget);
-	pRenderTexture->SetWrapR(eTextureWrap_ClampToEdge);
-	pRenderTexture->SetWrapS(eTextureWrap_ClampToEdge);
-	pRenderTexture->CreateFromRawData(cVector3l(lTexW, lTexH, 0), ePixelFormat_RGBA, 0);
+	// iTexture* pRenderTexture = pGfx->CreateTexture("RenderTexture",eTextureType_Rect, eTextureUsage_RenderTarget);
+	// pRenderTexture->SetWrapR(eTextureWrap_ClampToEdge);
+	// pRenderTexture->SetWrapS(eTextureWrap_ClampToEdge);
+	// pRenderTexture->CreateFromRawData(cVector3l(lTexW, lTexH, 0), ePixelFormat_RGBA, 0);
 
-	mpFrameBuffer = pGfx->CreateFrameBuffer("MainRenderTarget");
-	mpFrameBuffer->SetTexture2D(0, pRenderTexture);
+	// mpFrameBuffer = pGfx->CreateFrameBuffer("MainRenderTarget");
+	// mpFrameBuffer->SetTexture2D(0, pRenderTexture);
 
-	iDepthStencilBuffer *pDepthBuffer = pGfx->CreateDepthStencilBuffer(mpFrameBuffer->GetSize(),24,8,false);
+	// iDepthStencilBuffer *pDepthBuffer = pGfx->CreateDepthStencilBuffer(mpFrameBuffer->GetSize(),24,8,false);
 
-	mpFrameBuffer->SetDepthStencilBuffer(pDepthBuffer);
-	mpFrameBuffer->CompileAndValidate();
+	// mpFrameBuffer->SetDepthStencilBuffer(pDepthBuffer);
+	// mpFrameBuffer->CompileAndValidate();
 }
 
 //----------------------------------------------------------------------------
@@ -1541,7 +1515,7 @@ void iEditorBase::SetUpViewports()
 	// Create 4 viewports
 	for(int i=0; i<4; ++i)
 	{
-		cEditorWindowViewport* pViewport = hplNew(cEditorWindowViewport,(this, mpFrameBuffer, true));
+		cEditorWindowViewport* pViewport = new cEditorWindowViewport(this, true);
 		pViewport->Init();
 		AddWindow(pViewport);
 

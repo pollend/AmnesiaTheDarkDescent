@@ -17,8 +17,7 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef HPL_FRAMETEXTURE_H
-#define HPL_FRAMETEXTURE_H
+#pragma once 
 
 #include "graphics/FrameBase.h"
 #include "graphics/Image.h"
@@ -58,4 +57,3 @@ namespace hpl {
 	};
 
 };
-#endif // HPL_FRAMETEXTURE_H

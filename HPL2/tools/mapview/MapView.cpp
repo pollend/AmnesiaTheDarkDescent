@@ -24,7 +24,8 @@
 #include "hpl.h"
 #include "math/MathTypes.h"
 #include "scene/RenderableContainer_DynBoxTree.h"
-
+#include "engine/Interface.h"
+#include "windowing/NativeWindow.h"
 
 #include "../../tests/Common/SimpleCamera.h"
 #include "system/Bootstrap.h"
@@ -622,19 +623,19 @@ public:
 	{
 		/////////////////////////////////
 		// Setup test window
-		cVector2l vTestWindowSize(400,300);
-		// mpTestFrameBuffer = gpEngine->GetGraphics()->CreateFrameBuffer("");
-		std::array<std::shared_ptr<Image>, 2> images= {
-			std::make_shared<Image>(),
-			std::make_shared<Image>()
-		};
-		auto colorDesc = ImageDescriptor::CreateTexture2D(vTestWindowSize.x, vTestWindowSize.y, false, bgfx::TextureFormat::Enum::RGBA8);
-		colorDesc.m_configuration.m_rt = RTType::RT_Write;
-		auto depthDesc = ImageDescriptor::CreateTexture2D(vTestWindowSize.x, vTestWindowSize.y, false, bgfx::TextureFormat::Enum::D24S8);
-		depthDesc.m_configuration.m_rt = RTType::RT_Write;
-		images[0]->Initialize(colorDesc);
-		images[1]->Initialize(depthDesc);
-		mpTestFrameBuffer = RenderViewport(std::make_shared<RenderTarget>(std::span(images)), cVector2l(0,0));
+		// cVector2l vTestWindowSize(400,300);
+		// // mpTestFrameBuffer = gpEngine->GetGraphics()->CreateFrameBuffer("");
+		// std::array<std::shared_ptr<Image>, 2> images= {
+		// 	std::make_shared<Image>(),
+		// 	std::make_shared<Image>()
+		// };
+		// auto colorDesc = ImageDescriptor::CreateTexture2D(vTestWindowSize.x, vTestWindowSize.y, false, bgfx::TextureFormat::Enum::RGBA8);
+		// colorDesc.m_configuration.m_rt = RTType::RT_Write;
+		// auto depthDesc = ImageDescriptor::CreateTexture2D(vTestWindowSize.x, vTestWindowSize.y, false, bgfx::TextureFormat::Enum::D24S8);
+		// depthDesc.m_configuration.m_rt = RTType::RT_Write;
+		// images[0]->Initialize(colorDesc);
+		// images[1]->Initialize(depthDesc);
+		// mpTestFrameBuffer = RenderViewport(std::make_shared<RenderTarget>(std::span(images)), cVector2l(0,0));
 
 		// todo need to work with CreateGfxTexture
 		// mpTestRenderTexture = gpEngine->GetGraphics()->CreateTexture("TestTarget",eTextureType_Rect,eTextureUsage_RenderTarget);
@@ -651,9 +652,8 @@ public:
 
 		mpTestViewPort = gpEngine->GetScene()->CreateViewport(gpSimpleCamera->GetCamera(),mpTestWorld);
 		mpTestViewPort->SetRenderer(gpEngine->GetGraphics()->GetRenderer(eRenderer_WireFrame));
-
-		mpTestViewPort->setRenderViewport(mpTestFrameBuffer);
-		mpTestViewPort->SetSize(images[0]->GetImageSize());
+		mpTestViewPort->bindToWindow(*Interface<window::NativeWindowWrapper>::Get());
+		// mpTestViewPort->SetSize(images[0]->GetImageSize());
 
 		//mpTestViewPort->SetVisible(gbDrawOcclusionGfxInfo);
 		//mpTestViewPort->SetActive(gbDrawOcclusionGfxInfo);
@@ -1112,7 +1112,6 @@ public:
 		cGuiSet *pSet = gpSimpleCamera->GetSet();
 
 		cRenderSettings *pSettings = gpSimpleCamera->GetViewport()->GetRenderSettings();
-
 
 		cVector3f vGroupPos =0;
 		cVector2f vGroupSize =0;
@@ -1982,7 +1981,7 @@ public:
 	cWorld *mpTestWorld;
 	iPhysicsWorld *mpPhysicsWorld;
 	cViewport *mpTestViewPort;
-	RenderViewport mpTestFrameBuffer;
+	// RenderViewport mpTestFrameBuffer;
 	cGuiGfxElement *mpTestRenderGfx;
 
 	tWStringVec mvPickedFiles;
@@ -2085,8 +2084,10 @@ int hplMain(const tString &asCommandline)
 	gfNodeCont_MaxHeight = gpConfig->GetFloat("NodeCont","MaxHeight", 0.41f);
 
 	Bootstrap bootstrap;
-	bootstrap.Initialize();
-	bootstrap.Run([&](bx::Thread* self) {
+	Bootstrap::BootstrapConfiguration config;
+	config.m_windowStyle = hpl::window::WindowStyle::WindowStyleResizable;
+	bootstrap.Initialize(config);
+	bootstrap.Run([&](bx::Thread* self) {	
 		gpEngine = CreateHPLEngine(eHplAPI_OpenGL, eHplSetup_All, &vars);
 		gpEngine->SetLimitFPS(false);
 		gpEngine->GetGraphics()->GetLowLevel()->SetVsyncActive(false);

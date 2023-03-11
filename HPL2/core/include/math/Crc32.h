@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdlib>
 #include <math/Uuid.h>
 #include <cstddef>
 #include <string_view>
@@ -8,6 +9,11 @@
 namespace hpl::math {
     class Crc32 {
     public:
+
+        static Crc32 random() {
+            return Crc32(rand());
+        }
+
         constexpr Crc32(uint32_t value)
             : m_value(value) {
         }
@@ -17,6 +23,7 @@ namespace hpl::math {
         constexpr Crc32(const Crc32& other)
             : m_value(other.m_value) {
         }
+
         constexpr Crc32(const std::string_view value);
 
         constexpr void Update(const std::string_view value);
@@ -26,8 +33,9 @@ namespace hpl::math {
         constexpr bool operator==(const Crc32& other) const {
             return m_value == other.m_value;
         }
-        constexpr void operator=(const Crc32& other) {
+        constexpr Crc32& operator=(const Crc32& other) {
             m_value = other.m_value;
+            return *this;
         }
 
     private:

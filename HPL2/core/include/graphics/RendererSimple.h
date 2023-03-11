@@ -17,22 +17,17 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef HPL_RENDERER_SIMPLE_H
-#define HPL_RENDERER_SIMPLE_H
+#pragma once
 
 #include "bgfx/bgfx.h"
 #include "graphics/Renderer.h"
 
 namespace hpl {
 
-    //---------------------------------------------
-
 	class iFrameBuffer;
 	class iDepthStencilBuffer;
 	class iTexture;
 	class iLight;
-
-	//---------------------------------------------
 
 	class cRendererSimple : public  iRenderer
 	{
@@ -40,10 +35,10 @@ namespace hpl {
 		cRendererSimple(cGraphics *apGraphics,cResources* apResources);
 		~cRendererSimple();
 
-		bool LoadData();
-		void DestroyData();
+		virtual bool LoadData() override;
+		virtual void DestroyData() override;
 
-		virtual void Draw(GraphicsContext& context, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, RenderViewport& apRenderTarget,
+		virtual void Draw(GraphicsContext& context, cViewport& viewport, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings,
 					bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList) override;
 
 	private:
@@ -59,7 +54,4 @@ namespace hpl {
 		bgfx::UniformHandle m_s_diffuseMap;
 	};
 
-	//---------------------------------------------
-
 };
-#endif // HPL_RENDERER_WIRE_FRAME_H

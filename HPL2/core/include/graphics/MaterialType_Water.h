@@ -71,6 +71,7 @@ namespace hpl {
 
 		virtual void ResolveShaderProgram(
             eMaterialRenderMode aRenderMode,
+            cViewport& viewport,
             cMaterial* apMaterial,
             iRenderable* apObject,
             iRenderer* apRenderer, 

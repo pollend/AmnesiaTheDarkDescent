@@ -23,6 +23,7 @@
 //----------------------------------------------
 
 #include "LuxBase.h"
+#include <mutex>
 
 //----------------------------------------------
 
@@ -139,9 +140,7 @@ public:
 	void AppLostInputFocus();
 	void AppGotInputFocus();
 
-	//////////////////////////////////
-	// Used to lock the SavedMapCollection
-    iMutex *mpSavedGameMutex;
+	std::mutex m_saveGameMutex;
 private:
 	void LoadMainConfig();
 	void SaveMainConfig();

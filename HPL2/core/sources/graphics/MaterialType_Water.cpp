@@ -91,11 +91,13 @@ namespace hpl {
 
     void cMaterialType_Water::LoadData() {
     }
+    
     void cMaterialType_Water::DestroyData() {
     }
 
     void cMaterialType_Water::ResolveShaderProgram(
         eMaterialRenderMode aRenderMode,
+        cViewport& viewport,
         cMaterial* apMaterial,
         iRenderable* apObject,
         iRenderer* apRenderer,

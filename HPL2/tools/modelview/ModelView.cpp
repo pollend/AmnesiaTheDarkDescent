@@ -2321,7 +2321,9 @@ int hplMain(const tString &asCommandline)
 	SetLogFile(sPersonalDir + PERSONAL_RELATIVEROOT _W("HPL2/modelview.log"));
 
 	Bootstrap bootstrap;
-	bootstrap.Initialize();
+	Bootstrap::BootstrapConfiguration config;
+	config.m_windowStyle = hpl::window::WindowStyle::WindowStyleResizable;
+	bootstrap.Initialize(config);
 	bootstrap.Run([&](bx::Thread* self) {
 		//Init the game engine
 		cEngineInitVars vars;

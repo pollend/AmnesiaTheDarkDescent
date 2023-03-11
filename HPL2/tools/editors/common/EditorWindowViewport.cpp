@@ -191,12 +191,10 @@ void cViewportCallback::OnPostTranslucentDraw(cRendererCallbackFunctions* apFunc
 //----------------------------------------------------------------
 
 cEditorWindowViewport::cEditorWindowViewport(iEditorBase* apEditor,
-											 iFrameBuffer* apFB,
 											 bool abAddViewMenu):	iEditorWindow(apEditor,
 																				  "Viewport Window"),
 																	iEditorViewport(apEditor,
-																					apEditor->GetEditorWorld()->GetWorld(),
-																					apFB)
+																					apEditor->GetEditorWorld()->GetWorld())
 {
 	mbDrawGrid = true;
 	mbDrawDebug = false;

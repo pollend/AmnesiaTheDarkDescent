@@ -23,6 +23,7 @@
 //----------------------------------------------
 
 #include "LuxBase.h"
+#include <mutex>
 
 //----------------------------------------------
 
@@ -46,7 +47,7 @@ public:
 	void UpdateThread();
 
 protected:
-	iMutex* mpSaveMutex;
+	std::mutex m_saveMutex;
 	iThread* mpThread;
 	std::vector<cLuxSaveGame_SaveData*> mvSaveData;
 	tWStringVec mvSaveFileNames;

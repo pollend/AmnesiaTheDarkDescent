@@ -23,6 +23,7 @@
 #include "engine/Interface.h"
 #include "graphics/GraphicsContext.h"
 #include "graphics/RenderTarget.h"
+#include "math/MathTypes.h"
 #include "scene/Camera.h"
 #include "scene/Viewport.h"
 #include "scene/World.h"
@@ -80,7 +81,7 @@ namespace hpl {
         Log("--------------------------------------------------------\n");
 
         STLDeleteAll(m_viewports);
-        STLDeleteAll(mlstWorlds);
+        STLDeleteAll(m_worlds);
         STLDeleteAll(mlstCameras);
 
         Log("--------------------------------------------------------\n\n");
@@ -101,7 +102,7 @@ namespace hpl {
 
         pViewport->SetCamera(apCamera);
         pViewport->SetWorld(apWorld);
-        pViewport->SetSize(-1);
+        // pViewport->SetSize(-1);
         pViewport->SetRenderer(mpGraphics->GetRenderer(eRenderer_Main));
 
         if (abPushFront) {
@@ -144,7 +145,7 @@ namespace hpl {
     }
 
     void cScene::Update(float timeStep) {
-        for (auto& world : mlstWorlds) {
+        for (auto& world : m_worlds) {
             if (world->IsActive()) {
                 world->Update(timeStep);
             }
@@ -188,6 +189,10 @@ namespace hpl {
                 continue;
             }
 
+            if(!pViewPort->IsValid()) {
+                continue;
+            }
+
             //////////////////////////////////////////////
             // Init vars
             cPostEffectComposite* pPostEffectComposite = pViewPort->GetPostEffectComposite();
@@ -195,7 +200,6 @@ namespace hpl {
             iRenderer* pRenderer = pViewPort->GetRenderer();
             cCamera* pCamera = pViewPort->GetCamera();
             cFrustum* pFrustum = pCamera ? pCamera->GetFrustum() : NULL;
-
             //////////////////////////////////////////////
             // Render world and call callbacks
             if (alFlags & tSceneRenderFlag_World) {
@@ -209,11 +213,11 @@ namespace hpl {
                     START_TIMING(RenderWorld)
                     pRenderer->Draw(
                         context,
+                        *pViewPort,
                         afFrameTime,
                         pFrustum,
                         pViewPort->GetWorld(),
                         pViewPort->GetRenderSettings(),
-                        pViewPort->GetRenderViewport(),
                         bPostEffects,
                         pViewPort->GetRendererCallbackList());
                     STOP_TIMING(RenderWorld)
@@ -237,29 +241,22 @@ namespace hpl {
 
             //////////////////////////////////////////////
             // Render Post effects
+            auto outputImage = pRenderer->GetOutputImage(*pViewPort);
             if (bPostEffects) {
                 START_TIMING(RenderPostEffects)
-                auto& viewport = pViewPort->GetRenderViewport();
-                RenderTarget emptyRenderTarget{};
                 pPostEffectComposite->Draw(
                     context,
+                    *pViewPort,
                     afFrameTime,
-                    *pRenderer->GetOutputImage(),
-                    viewport.GetRenderTarget() ? *viewport.GetRenderTarget() : emptyRenderTarget);
+                    *outputImage,
+                    pViewPort->GetRenderTarget());
 
                 STOP_TIMING(RenderPostEffects)
             } else {
-                auto& viewport = pViewPort->GetRenderViewport();
-                cVector2l vRenderTargetSize = viewport.GetSize();
-                RenderTarget emptyRenderTarget{};
-                if (vRenderTargetSize.y == -1 || vRenderTargetSize.x == -1) {
-                    if (auto* window = Interface<window::NativeWindowWrapper>::Get()) {
-                        vRenderTargetSize = window->GetWindowSize();
-                    }
-                }
-                cRect2l rect = cRect2l(0, 0, vRenderTargetSize.x, vRenderTargetSize.y);
+                auto size = pViewPort->GetSize();
+                cRect2l rect = cRect2l(0, 0, size.x, size.y);
                 context.CopyTextureToFrameBuffer(
-                    *pRenderer->GetOutputImage(), rect, viewport.GetRenderTarget() ? *viewport.GetRenderTarget() : emptyRenderTarget);
+                    *outputImage, rect, pViewPort->GetRenderTarget());
             }
 
             //////////////////////////////////////////////
@@ -301,7 +298,7 @@ namespace hpl {
     cWorld* cScene::CreateWorld(const tString& asName) {
         cWorld* pWorld = hplNew(cWorld, (asName, mpGraphics, mpResources, mpSound, mpPhysics, this, mpSystem, mpAI, mpHaptic));
 
-        mlstWorlds.push_back(pWorld);
+        m_worlds.push_back(pWorld);
 
         return pWorld;
     }
@@ -309,27 +306,19 @@ namespace hpl {
     //-----------------------------------------------------------------------
 
     void cScene::DestroyWorld(cWorld* apWorld) {
-        auto it = std::find(mlstWorlds.begin(), mlstWorlds.end(), apWorld);
-        if (it != mlstWorlds.end()) {
+        auto it = std::find(m_worlds.begin(), m_worlds.end(), apWorld);
+        if (it != m_worlds.end()) {
             delete *it;
-            mlstWorlds.erase(it);
+            m_worlds.erase(it);
         }
     }
 
     //-----------------------------------------------------------------------
 
     bool cScene::WorldExists(cWorld* apWorld) {
-        auto it = std::find(mlstWorlds.begin(), mlstWorlds.end(), apWorld);
-        return it != mlstWorlds.end();
+        auto it = std::find(m_worlds.begin(), m_worlds.end(), apWorld);
+        return it != m_worlds.end();
     }
-
-    //-----------------------------------------------------------------------
-
-    //////////////////////////////////////////////////////////////////////////
-    // PUBLIC METHODS
-    //////////////////////////////////////////////////////////////////////////
-
-    //-----------------------------------------------------------------------
 
     void cScene::Render3DGui(GraphicsContext& context, cViewport* apViewPort, cFrustum* apFrustum, float afTimeStep) {
         if (apViewPort->GetCamera() == NULL)

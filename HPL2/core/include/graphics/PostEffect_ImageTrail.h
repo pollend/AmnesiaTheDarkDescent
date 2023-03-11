@@ -22,6 +22,7 @@
 
 #include "bgfx/bgfx.h"
 #include "graphics/PostEffect.h"
+#include "scene/Viewport.h"
 
 namespace hpl {
 
@@ -63,13 +64,29 @@ namespace hpl {
 	class cPostEffect_ImageTrail : public iPostEffect
 	{
 	public:
+		struct ImageTrailData {
+		public:
+			ImageTrailData() = default;
+			ImageTrailData(const ImageTrailData&) = delete;
+			ImageTrailData(ImageTrailData&& buffer):
+				m_size(buffer.m_size),
+				m_accumulationBuffer(std::move(buffer.m_accumulationBuffer))
+			{}
+
+			ImageTrailData& operator=(const ImageTrailData&) = delete;
+			void operator=(ImageTrailData&& buffer) {
+				m_accumulationBuffer = std::move(buffer.m_accumulationBuffer);
+				m_size = buffer.m_size;
+			}
+			cVector2l m_size;
+			RenderTarget m_accumulationBuffer;
+		};
+
 		cPostEffect_ImageTrail(cGraphics *apGraphics,cResources *apResources, iPostEffectType *apType);
 		~cPostEffect_ImageTrail();
 
-		virtual void RenderEffect(cPostEffectComposite& compositor, GraphicsContext& context, Image& input, RenderTarget& target) override;
+		virtual void RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, RenderTarget& target) override;
 		
-		virtual void OnViewportChanged(const cVector2l& avSize) override;
-
 		virtual void Reset() override;
 
 	private:
@@ -77,7 +94,8 @@ namespace hpl {
 		virtual void OnSetParams() override;
 		iPostEffectParams *GetTypeSpecificParams() { return &mParams; }
 
-		RenderTarget m_accumulationBuffer;
+		UniqueViewportData<ImageTrailData> m_boundImageTrailData;
+		// RenderTarget m_accumulationBuffer;
 
 		cPostEffectType_ImageTrail *mpImageTrailType;
 		cPostEffectParams_ImageTrail mParams;

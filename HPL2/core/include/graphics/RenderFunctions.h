@@ -55,26 +55,15 @@ namespace hpl {
 		/**
 		 * This must be called every frame before any render function is called
 		 */
-		void InitAndResetRenderFunctions(	cFrustum *apFrustum, const RenderViewport& apRenderTarget, bool abLog,
+		void InitAndResetRenderFunctions(	cFrustum *apFrustum, bool abLog,
 											bool abUseGlobalScissorRect=false,
 											const cVector2l& avGlobalScissorRectPos=0, const cVector2l& avGlobalScissorRectSize=0);
 
 
-		const cVector2l& GetCurrentFrameBufferSize(){ return mvCurrentFrameBufferSize;}
-		const cVector2l& GetRenderTargetSize(){ return mvRenderTargetSize;}
-
 	protected:
 		cGraphics *mpGraphics;
 		iLowLevelGraphics *mpLowLevelGraphics;
-
 		cFrustum *mpCurrentFrustum;
-		RenderViewport m_currentRenderTarget;
-
-		cVector2l mvRenderTargetSize;		//Use this when ever some calculations involving the size of rendertarget is involved!
-		cVector2l mvCurrentFrameBufferSize;	//This shall NOT be used in calculations and is simply as a helper
-
-		cVector2l mvScreenSize;
-		cVector2f mvScreenSizeFloat;
 	};
 
 	//---------------------------------------------

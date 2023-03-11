@@ -19,6 +19,7 @@
 #pragma once
 
 #include <list>
+#include <memory>
 
 #include "engine/IUpdateEventLoop.h"
 #include "graphics/GraphicsContext.h"
@@ -82,8 +83,6 @@ namespace hpl {
 		cCamera* CreateCamera(eCameraMoveMode aMoveMode);
 		void DestroyCamera(cCamera* apCam);
 
-		///// WORLD METHODS ////////////////////
-
 		cWorld* LoadWorld(const tString& asFile, tWorldLoadFlag aFlags);
 		cWorld* CreateWorld(const tString& asName);
 		void DestroyWorld(cWorld* apWorld);
@@ -106,7 +105,7 @@ namespace hpl {
 		cViewport *mpCurrentListener;
 
         std::vector<cViewport*> m_viewports;
-		std::vector<cWorld*> mlstWorlds;
+		std::vector<cWorld*> m_worlds;
 		std::vector<cCamera*> mlstCameras;
 
 	};

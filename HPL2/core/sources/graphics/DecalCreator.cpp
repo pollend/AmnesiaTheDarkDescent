@@ -341,27 +341,28 @@ namespace hpl {
 			float fInvW = 1.0f/mvDecalSize.x;
 			float fInvH = 1.0f/mvDecalSize.z;
 			float *pVertexPositions = mpDecalVB->GetFloatArray(eVertexBufferElement_Position);
+			if(pVertexPositions) {
+				//////////////////////////////////////////////////////////
+				// Set up subdivisions
+				cVector2f vInvSubDivSize = cVector2f(1.0f/mvSubDiv.x,1.0f/mvSubDiv.y);
+				float fStartU = (float)(mlCurrentSubDiv%mvSubDiv.x);
+				float fStartV = (float)(mlCurrentSubDiv/mvSubDiv.x);
 
-			//////////////////////////////////////////////////////////
-			// Set up subdivisions
-			cVector2f vInvSubDivSize = cVector2f(1.0f/mvSubDiv.x,1.0f/mvSubDiv.y);
-			float fStartU = (float)(mlCurrentSubDiv%mvSubDiv.x);
-			float fStartV = (float)(mlCurrentSubDiv/mvSubDiv.x);
+				for(int i=0;i<mpDecalVB->GetVertexNum();++i)
+				{
+					int lBaseIdx = i*mpDecalVB->GetElementNum(eVertexBufferElement_Position);
+					cVector3f vPointRelToCenter = cVector3f(pVertexPositions[lBaseIdx],
+															pVertexPositions[lBaseIdx+1],
+															pVertexPositions[lBaseIdx+2])-mvDecalPosition;
 
-			for(int i=0;i<mpDecalVB->GetVertexNum();++i)
-			{
-				int lBaseIdx = i*mpDecalVB->GetElementNum(eVertexBufferElement_Position);
-				cVector3f vPointRelToCenter = cVector3f(pVertexPositions[lBaseIdx],
-														pVertexPositions[lBaseIdx+1],
-														pVertexPositions[lBaseIdx+2])-mvDecalPosition;
-
-				float u = vInvSubDivSize.x*(fStartU+cMath::Vector3Dot(vPointRelToCenter, mvDecalRight)*fInvW+0.5f);
-				float v = vInvSubDivSize.y*(fStartV+cMath::Vector3Dot(vPointRelToCenter, mvDecalForward)*fInvH+0.5f);
-				u = cMath::Clamp(u, 0.0f, 1.0f);
-				v = 1.0f-cMath::Clamp(v, 0.0f, 1.0f);
-				mpDecalVB->AddVertexVec3f(eVertexBufferElement_Texture0, cVector3f(u,v,0));
+					float u = vInvSubDivSize.x*(fStartU+cMath::Vector3Dot(vPointRelToCenter, mvDecalRight)*fInvW+0.5f);
+					float v = vInvSubDivSize.y*(fStartV+cMath::Vector3Dot(vPointRelToCenter, mvDecalForward)*fInvH+0.5f);
+					u = cMath::Clamp(u, 0.0f, 1.0f);
+					v = 1.0f-cMath::Clamp(v, 0.0f, 1.0f);
+					mpDecalVB->AddVertexVec3f(eVertexBufferElement_Texture0, cVector3f(u,v,0));
+				}
+				mbCompiled = mpDecalVB->Compile(eVertexCompileFlag_CreateTangents);
 			}
-			mbCompiled = mpDecalVB->Compile(eVertexCompileFlag_CreateTangents);
 		}
 
 		return mbCompiled;

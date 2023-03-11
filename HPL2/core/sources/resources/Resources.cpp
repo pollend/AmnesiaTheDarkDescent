@@ -54,16 +54,10 @@
 
 namespace hpl {
 
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	bool cResources::mbForceCacheLoadingAndSkipSaving = false;
 	bool cResources::mbCreateAndLoadCompressedMaps= false;
 
-	//-----------------------------------------------------------------------
 
 	cResources::cResources(iLowLevelResources *apLowLevelResources,iLowLevelGraphics *apLowLevelGraphics)
 	{
@@ -119,14 +113,6 @@ namespace hpl {
 		mlstManagers.clear();
 		Log("--------------------------------------------------------\n\n");
 	}
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// MAP DATA VARS OBJECT
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 
 	void cResourceVarsObject::LoadVariables(cXmlElement *apRootElem)

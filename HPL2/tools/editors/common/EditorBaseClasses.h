@@ -21,6 +21,7 @@
 #define HPLEDITOR_EDITOR_BASE_CLASSES_H
 
 #include "../common/StdAfx.h"
+#include "scene/Viewport.h"
 using namespace hpl;
 
 #include "EditorTypes.h"
@@ -306,12 +307,6 @@ public:
 
 	virtual bool OnChangeFlags(int alFlags);
 
-	///////////////////////////////////////////////
-	// Hotkeys
-
-
-	///////////////////////////////////////////////
-	// Viewport Management
 	virtual void CreateViewports();
 	void SetFocusedViewport(cEditorWindowViewport* apViewport);
 	cEditorWindowViewport* GetFocusedViewport() { return mpFocusedViewport; }
@@ -329,11 +324,8 @@ public:
 	const cColor& GetColor();
 
 	tEditorViewportVec& GetViewports() { return mvViewports; }
-
 	iEditorAction* CreateFocusOnSelectionAction();
 
-	///////////////////////////////////////////////
-	// Viewport Interaction event control
 	virtual void ViewportMouseDown(cEditorWindowViewport* apViewport, int alButtons);
 	virtual void ViewportMouseUp(cEditorWindowViewport* apViewport, int alButtons);
 
@@ -388,8 +380,6 @@ public:
 	tMeshEntityList mlstTempMeshEntities;
 
 
-	////////////////////////////////////
-	// iUpdateable implementation
 	void Update(float afTimeStep);
 
 	void OnDraw(float afFrameTime){}
@@ -423,6 +413,7 @@ protected:
 	virtual void OnInit(){}
 	virtual void OnInitInput(){}
 	virtual void OnInitLayout(){}
+	virtual void OnViewportChanged(cViewport* viewport) {}
 
 	virtual void OnSetFocusedViewport(){}
 
@@ -559,6 +550,8 @@ protected:
 	tWString msLastSavePath;
 
 	tWString msFilename;
+
+	cViewport::ViewportChange::Handler m_viewportChanged;
 };
 
 //---------------------------------------------------------------

@@ -83,7 +83,7 @@ namespace hpl::window {
         void ConnectInternalEventHandler(NativeWindowHandler& handler, WindowInternalEvent::Handler& eventHandle);
         void ConnectionWindowEventHandler(NativeWindowHandler& handler, WindowEvent::Handler& eventHandle);
 
-        NativeWindowHandler Initialize();
+        NativeWindowHandler Initialize(const WindowStyle& style);
         void SetWindowTitle(NativeWindowHandler& handler, const std::string_view title);
         void SetWindowSize(NativeWindowHandler& handler, const cVector2l& size);
 
@@ -91,6 +91,9 @@ namespace hpl::window {
         void* NativeDisplayHandle(NativeWindowHandler& handler);
         cVector2l GetWindowSize(NativeWindowHandler& handler);
         WindowStatus GetWindowStatus(NativeWindowHandler& handler);
+
+        // WindowStyle GetWindowStyle(NativeWindowHandler& handler);
+        // void SetWindowStyle(NativeWindowHandler& handler, WindowStyle style);
 
         void WindowGrabCursor(NativeWindowHandler& handler);
         void WindowReleaseCursor(NativeWindowHandler& handler);
@@ -202,6 +205,17 @@ namespace hpl::window {
         internal::NativeWindowHandler m_impl = internal::NativeWindowHandler();
     };
     
+
+    inline hpl::window::WindowStyle operator&(hpl::window::WindowStyle lhs, hpl::window::WindowStyle rhs) {
+        return static_cast<hpl::window::WindowStyle>(static_cast<uint32_t>(lhs) & static_cast<uint32_t>(rhs));
+    }
+    inline hpl::window::WindowStyle operator|(hpl::window::WindowStyle lhs, hpl::window::WindowStyle rhs) {
+        return static_cast<hpl::window::WindowStyle>(static_cast<uint32_t>(lhs) | static_cast<uint32_t>(rhs));
+    }
+    inline  bool any(hpl::window::WindowStyle lhs) {
+        return static_cast<uint32_t>(lhs) != 0;
+    }
+
     inline hpl::window::WindowStatus operator&(hpl::window::WindowStatus lhs, hpl::window::WindowStatus rhs) {
         return static_cast<hpl::window::WindowStatus>(static_cast<uint32_t>(lhs) & static_cast<uint32_t>(rhs));
     }

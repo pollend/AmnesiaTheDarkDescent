@@ -133,6 +133,8 @@ public:
 	const tWStringVec& GetStaticObjectExtraDirs() { return mvExtraSODirs; }
 	const tWStringVec& GetEntityExtraDirs() { return mvExtraEntDirs; }
 
+	virtual void OnViewportChanged(cViewport* viewport) override;
+
 protected:
 	///////////////////////////
 	// Own functions

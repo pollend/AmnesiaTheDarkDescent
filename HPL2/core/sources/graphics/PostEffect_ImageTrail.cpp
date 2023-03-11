@@ -65,21 +65,24 @@ namespace hpl {
 
     cPostEffect_ImageTrail::cPostEffect_ImageTrail(cGraphics* apGraphics, cResources* apResources, iPostEffectType* apType)
         : iPostEffect(apGraphics, apResources, apType) {
-        cVector2l vSize = mpLowLevelGraphics->GetScreenSizeInt();
-        OnViewportChanged(vSize);
-
-        mpImageTrailType = static_cast<cPostEffectType_ImageTrail*>(mpType);
-    }
-
-    void cPostEffect_ImageTrail::OnViewportChanged(const cVector2l& avSize) {
-        m_accumulationBuffer = RenderTarget([&] {
-            auto desc = ImageDescriptor::CreateTexture2D(avSize.x, avSize.y, false, bgfx::TextureFormat::Enum::RGBA32F);
+        m_boundImageTrailData = UniqueViewportData<ImageTrailData>([&](cViewport& viewport) {
+            auto desc = ImageDescriptor::CreateTexture2D(viewport.GetSize().x / 4.0f, viewport.GetSize().y/ 4.0f , false, bgfx::TextureFormat::Enum::RGBA8);
             desc.m_configuration.m_rt = RTType::RT_Write;
             auto image = std::make_shared<Image>();
             image->Initialize(desc);
-            return image;
-        }());
-        mbClearFrameBuffer = true;
+                
+            auto trailData = std::make_unique<ImageTrailData>();
+            trailData->m_accumulationBuffer = image;
+            trailData->m_size = viewport.GetSize();
+
+            mbClearFrameBuffer = true;
+
+            return trailData;
+        }, [&](cViewport& viewport, ImageTrailData& data) {
+            return viewport.GetSize() == data.m_size && 
+                data.m_accumulationBuffer.IsValid();
+        });
+        mpImageTrailType = static_cast<cPostEffectType_ImageTrail*>(mpType);
     }
 
     cPostEffect_ImageTrail::~cPostEffect_ImageTrail() {
@@ -97,16 +100,17 @@ namespace hpl {
             Reset();
         }
     }
-
     void cPostEffect_ImageTrail::RenderEffect(
-        cPostEffectComposite& compositor, GraphicsContext& context, Image& input, RenderTarget& target) {
-        cVector2l vRenderTargetSize = compositor.GetRenderTargetSize();
+        cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, RenderTarget& target) {
+        cVector2l vRenderTargetSize = viewport.GetSize();
+          auto& imageTrailData = m_boundImageTrailData.resolve(viewport);
+
 
         GraphicsContext::LayoutStream layoutStream;
         cMatrixf projMtx;
         context.ScreenSpaceQuad(layoutStream, projMtx, vRenderTargetSize.x, vRenderTargetSize.y);
 
-        GraphicsContext::ViewConfiguration viewConfig{ m_accumulationBuffer };
+        GraphicsContext::ViewConfiguration viewConfig{ imageTrailData.m_accumulationBuffer };
         viewConfig.m_viewRect = { 0, 0, vRenderTargetSize.x, vRenderTargetSize.y };
         viewConfig.m_projection = projMtx;
         auto view = context.StartPass("Image Trail", viewConfig);
@@ -145,7 +149,7 @@ namespace hpl {
         context.Submit(view, request);
 
         cRect2l rect = cRect2l(0, 0, vRenderTargetSize.x, vRenderTargetSize.y);
-        context.CopyTextureToFrameBuffer(*m_accumulationBuffer.GetImage(), rect, target);
+        context.CopyTextureToFrameBuffer(*imageTrailData.m_accumulationBuffer.GetImage(), rect, target);
     }
 
 } // namespace hpl

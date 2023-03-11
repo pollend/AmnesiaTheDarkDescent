@@ -33,6 +33,8 @@
 
 #include "LuxEnemy.h"
 #include "LuxAchievementHandler.h"
+#include "engine/Interface.h"
+#include <mutex>
 
 //////////////////////////////////////////////////////////////////////////
 // SOUND ENTITY CALLBACK
@@ -143,7 +145,7 @@ void cLuxDebugRenderCallback::OnPostTranslucentDraw(cRendererCallbackFunctions* 
 	gpBase->mpEffectRenderer->RenderTrans(apFunctions);
 }
 
-//-----------------------------------------------------------------------
+//------------------------m_fitViewportToWindow-----------------------------------------------
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -157,6 +159,7 @@ cLuxMapHandler::cLuxMapHandler() : iLuxUpdateable("LuxMapHandler")
 	//////////////////////////
 	//Create and setup view port
 	mpViewport = gpBase->mpEngine->GetScene()->CreateViewport();
+	mpViewport->bindToWindow(*Interface<window::NativeWindowWrapper>::Get());
 	gpBase->mpEngine->GetScene()->SetCurrentListener(mpViewport);
 
 	//////////////////////////
@@ -204,10 +207,6 @@ cLuxMapHandler::cLuxMapHandler() : iLuxUpdateable("LuxMapHandler")
 	cSoundEntity::AddGlobalCallback(mpSoundCallback);
 
 	//////////////////////////
-	//Threading
-	mpSavedGameMutex = cPlatform::CreateMutEx();
-
-	//////////////////////////
 	//Variables
 	mbPausedSoundsAndMusic = false;
 	mpDataCache =NULL;
@@ -220,18 +219,9 @@ cLuxMapHandler::cLuxMapHandler() : iLuxUpdateable("LuxMapHandler")
 cLuxMapHandler::~cLuxMapHandler()
 {
 	hplDelete(mpSavedGame);
-	hplDelete(mpSavedGameMutex);
 	hplDelete(mpSoundCallback);
 	STLDeleteAll(mlstMaps);
 }
-
-//-----------------------------------------------------------------------
-
-//////////////////////////////////////////////////////////////////////////
-// PUBLIC METHODS
-//////////////////////////////////////////////////////////////////////////
-
-//-----------------------------------------------------------------------
 
 void cLuxMapHandler::OnStart()
 {
@@ -505,22 +495,17 @@ void cLuxMapHandler::ResumeSoundsAndMusic()
 
 void cLuxMapHandler::ClearSaveMapCollection()
 {
-	mpSavedGameMutex->Lock();
-		mpSavedGame->Reset();
-	mpSavedGameMutex->Unlock();
+	std::lock_guard<std::mutex> lk(m_saveGameMutex);
+	mpSavedGame->Reset();
 }
 
 //-----------------------------------------------------------------------
 
 void cLuxMapHandler::SetSavedMapCollection(cLuxSavedGameMapCollection *apMaps)
 {
-	mpSavedGameMutex->Lock();
-	{
-		hplDelete(mpSavedGame);
-
-		mpSavedGame = apMaps;
-	}
-	mpSavedGameMutex->Unlock();
+	std::lock_guard<std::mutex> lk(m_saveGameMutex);
+	hplDelete(mpSavedGame);
+	mpSavedGame = apMaps;
 }
 
 //-----------------------------------------------------------------------
@@ -616,74 +601,74 @@ void cLuxMapHandler::CheckMapChange(float afTimeStep)
 	tString sNewMapName = FileToMapName(mMapChangeData.msMapFile);
 	if(mpCurrentMap->GetName() != sNewMapName)
 	{
-		mpSavedGameMutex->Lock();
-
-		//////////////////////
-		// Run onleave before saving!
-		mpCurrentMap->RunScript("OnLeave()");//since script is not run in SetCurrenMap
-
-		///////////////////////////////////////
-		// Draw loading screen
-		unsigned long lLoadStartTime = cPlatform::GetApplicationTime();
-		gpBase->mpLoadScreenHandler->DrawGameScreen();
-
-		//////////////////////
-		// Save old map
-		mpSavedGame->SaveMap(mpCurrentMap);
-
-		//////////////////////
-		// Fadeout sounds and disable stop (meaning they will fade even when sound entities are destroyed)
-		gpBase->mpEngine->GetSound()->GetSoundHandler()->FadeOutAll(eSoundEntryType_World, 0.5f, true);
-
-		//////////////////////
-		// Load new map
-		cLuxMap *pLastMap = mpCurrentMap;
-		cLuxMap *pMap = LoadMap(mMapChangeData.msMapFile,true);
-		if(pMap == NULL)
+		unsigned long lLoadStartTime = 0;
 		{
-			Error("Could not load map '%s'!\n", mMapChangeData.msMapFile.c_str());
-			return;
+			std::lock_guard<std::mutex> lk(m_saveGameMutex);
+
+			//////////////////////
+			// Run onleave before saving!
+			mpCurrentMap->RunScript("OnLeave()");//since script is not run in SetCurrenMap
+
+			///////////////////////////////////////
+			// Draw loading screen
+			lLoadStartTime = cPlatform::GetApplicationTime();
+			gpBase->mpLoadScreenHandler->DrawGameScreen();
+
+			//////////////////////
+			// Save old map
+			mpSavedGame->SaveMap(mpCurrentMap);
+
+			//////////////////////
+			// Fadeout sounds and disable stop (meaning they will fade even when sound entities are destroyed)
+			gpBase->mpEngine->GetSound()->GetSoundHandler()->FadeOutAll(eSoundEntryType_World, 0.5f, true);
+
+			//////////////////////
+			// Load new map
+			cLuxMap *pLastMap = mpCurrentMap;
+			cLuxMap *pMap = LoadMap(mMapChangeData.msMapFile,true);
+			if(pMap == NULL)
+			{
+				Error("Could not load map '%s'!\n", mMapChangeData.msMapFile.c_str());
+				return;
+			}
+
+			if(pLastMap)
+			{
+				if (pLastMap->GetName() == "08_cellar_maze" && pMap->GetName() == "09_back_hall")
+				{
+					gpBase->mpAchievementHandler->UnlockAchievement(eLuxAchievement_EscapeArtist);
+				}
+
+				if (pLastMap->GetName() == "14_elevator" && pMap->GetName() == "15_prison_south")
+				{
+					gpBase->mpAchievementHandler->UnlockAchievement(eLuxAchievement_Descendant);
+				}
+
+				//////////////
+				// HARDMODE
+				if (gpBase->mbHardMode &&
+					pLastMap->GetName() == "27_torture_chancel_redux" && pMap->GetName() == "28_inner_sanctum")
+				{
+					gpBase->mpPlayer->AddSanity(100.f, true);
+				}
+			}
+
+			//////////////////////
+			// Set new and destroy old
+			bool bFirstTime = mpSavedGame->MapExists(sNewMapName)==false;
+
+			SetCurrentMap(pMap, false, bFirstTime, mMapChangeData.msStartPos);
+			DestroyMap(pLastMap, false);
+
+			//////////////////////
+			// Load new map data
+			mpSavedGame->LoadMap(mpCurrentMap);
+
+			//////////////////////
+			// Run enter script! (otherwise a save in oneter will not be correct!)
+			if(bFirstTime) mpCurrentMap->RunScript("OnStart()");
+			mpCurrentMap->RunScript("OnEnter()");
 		}
-
-		if(pLastMap)
-		{
-			if (pLastMap->GetName() == "08_cellar_maze" && pMap->GetName() == "09_back_hall")
-			{
-				gpBase->mpAchievementHandler->UnlockAchievement(eLuxAchievement_EscapeArtist);
-			}
-
-			if (pLastMap->GetName() == "14_elevator" && pMap->GetName() == "15_prison_south")
-			{
-				gpBase->mpAchievementHandler->UnlockAchievement(eLuxAchievement_Descendant);
-			}
-
-			//////////////
-			// HARDMODE
-			if (gpBase->mbHardMode &&
-				pLastMap->GetName() == "27_torture_chancel_redux" && pMap->GetName() == "28_inner_sanctum")
-			{
-				gpBase->mpPlayer->AddSanity(100.f, true);
-			}
-		}
-
-		//////////////////////
-		// Set new and destroy old
-		bool bFirstTime = mpSavedGame->MapExists(sNewMapName)==false;
-
-		SetCurrentMap(pMap, false, bFirstTime, mMapChangeData.msStartPos);
-		DestroyMap(pLastMap, false);
-
-		//////////////////////
-		// Load new map data
-		mpSavedGame->LoadMap(mpCurrentMap);
-
-		//////////////////////
-		// Run enter script! (otherwise a save in oneter will not be correct!)
-		if(bFirstTime) mpCurrentMap->RunScript("OnStart()");
-		mpCurrentMap->RunScript("OnEnter()");
-
-
-		mpSavedGameMutex->Unlock();
 
 		//////////////////////////////////
 		//Check if any more load time needed
