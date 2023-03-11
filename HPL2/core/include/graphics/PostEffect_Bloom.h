@@ -75,8 +75,6 @@ namespace hpl {
 		cPostEffect_Bloom(cGraphics *apGraphics,cResources *apResources, iPostEffectType *apType);
 		~cPostEffect_Bloom();
 
-		// virtual void OnViewportChanged(const cVector2l& avSize) override;
-
 		struct BloomData {
 		public:
 			BloomData() = default;

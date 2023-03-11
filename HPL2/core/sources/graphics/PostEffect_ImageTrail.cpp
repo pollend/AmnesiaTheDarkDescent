@@ -65,8 +65,6 @@ namespace hpl {
 
     cPostEffect_ImageTrail::cPostEffect_ImageTrail(cGraphics* apGraphics, cResources* apResources, iPostEffectType* apType)
         : iPostEffect(apGraphics, apResources, apType) {
-        // cVector2l vSize = mpLowLevelGraphics->GetScreenSizeInt();
-        // OnViewportChanged(vSize);
         m_boundImageTrailData = UniqueViewportData<ImageTrailData>([&](cViewport& viewport) {
             auto desc = ImageDescriptor::CreateTexture2D(viewport.GetSize().x / 4.0f, viewport.GetSize().y/ 4.0f , false, bgfx::TextureFormat::Enum::RGBA8);
             desc.m_configuration.m_rt = RTType::RT_Write;
@@ -86,10 +84,6 @@ namespace hpl {
         });
         mpImageTrailType = static_cast<cPostEffectType_ImageTrail*>(mpType);
     }
-
-    // void cPostEffect_ImageTrail::OnViewportChanged(const cVector2l& avSize) {
-
-    // }
 
     cPostEffect_ImageTrail::~cPostEffect_ImageTrail() {
     }

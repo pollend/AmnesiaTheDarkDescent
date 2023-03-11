@@ -154,11 +154,10 @@ void cPhysicsTestRenderCallback::DrawSkeletonRec(cRendererCallbackFunctions* apF
 
 //------------------------------------------------------------------------------------
 
-cModelEditorWindowPhysicsTest::cModelEditorWindowPhysicsTest(iEditorBase* apEditor, iFrameBuffer* apFB): iEditorWindow(apEditor,
+cModelEditorWindowPhysicsTest::cModelEditorWindowPhysicsTest(iEditorBase* apEditor): iEditorWindow(apEditor,
 																													   "Physics Test Window"),
 																										 iEditorViewport(apEditor,
-																														 apEditor->GetEngine()->GetScene()->CreateWorld("PhysicsTestWorld"),
-																														 apFB)
+																														 apEditor->GetEngine()->GetScene()->CreateWorld("PhysicsTestWorld"))
 {
 	mpTestWorld = mpEngineViewport->GetWorld();
 	mpTestEntity = NULL;

@@ -38,16 +38,16 @@ cLevelEditorStaticObjectCombo::cLevelEditorStaticObjectCombo(cLevelEditorWorld* 
 	mpWorld = apWorld;
 	mlComboID = alComboID;
 
-	cParserVarContainer vars;
-	mpDrawProg = mpWorld->GetEditor()->GetEngine()->GetGraphics()->CreateGpuProgramFromShaders("ComboDrawProg", "flat_color_vtx.glsl", "flat_color_frag.glsl", &vars);
-	mpDrawProg->GetVariableId("gvColor");
+	// cParserVarContainer vars;
+	// mpDrawProg = mpWorld->GetEditor()->GetEngine()->GetGraphics()->CreateGpuProgramFromShaders("ComboDrawProg", "flat_color_vtx.glsl", "flat_color_frag.glsl", &vars);
+	// mpDrawProg->GetVariableId("gvColor");
 
 	SetColor(cMath::RandRectColor(cColor(0,1), cColor(1,1)));
 }
 
 cLevelEditorStaticObjectCombo::~cLevelEditorStaticObjectCombo()
 {
-	mpWorld->GetEditor()->GetEngine()->GetGraphics()->DestroyGpuProgram(mpDrawProg);
+	// mpWorld->GetEditor()->GetEngine()->GetGraphics()->DestroyGpuProgram(mpDrawProg);
 }
 
 //-----------------------------------------------------------------------
@@ -102,8 +102,8 @@ void cLevelEditorStaticObjectCombo::SetColor(const cColor& aCol)
 		return;
 
 	mColor = aCol;
-	mpDrawProg->SetColor4f(0, mColor);
-	mpDrawProg->UnBind();
+	// mpDrawProg->SetColor4f(0, mColor);
+	// mpDrawProg->UnBind();
 }
 
 //-----------------------------------------------------------------------
@@ -113,8 +113,8 @@ void cLevelEditorStaticObjectCombo::Draw(cEditorWindowViewport* apViewport, cRen
 	tEntityWrapperListIt it = mlstEntities.begin();
 	for(;it!=mlstEntities.end();++it)
 	{
-		iEntityWrapper* pEnt = *it;
-		pEnt->DrawProgram(apViewport, apFunctions, mpDrawProg, mColor);
+		// iEntityWrapper* pEnt = *it;
+		// pEnt->DrawProgram(apViewport, apFunctions, mpDrawProg, mColor);
 	}
 }
 

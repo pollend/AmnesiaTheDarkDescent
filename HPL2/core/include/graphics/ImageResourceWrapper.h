@@ -10,7 +10,7 @@ namespace hpl {
     struct ImageResourceWrapper {
     public:
         ImageResourceWrapper();
-        ImageResourceWrapper(cTextureManager* m_textureManager, hpl::iResourceBase* resource);
+        ImageResourceWrapper(cTextureManager* m_textureManager, hpl::iResourceBase* resource, bool autoDestroyTextures = true);
         ImageResourceWrapper(const ImageResourceWrapper& other) = delete;
         ImageResourceWrapper(ImageResourceWrapper&& other);
         ~ImageResourceWrapper();

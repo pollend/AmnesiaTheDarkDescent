@@ -256,7 +256,6 @@ namespace hpl {
             cFrustum* apFrustum,
             cWorld* apWorld,
             cRenderSettings* apSettings,
-            RenderViewport& apRenderTarget,
             bool abSendFrameBufferToPostEffects,
             tRendererCallbackList* apCallbackList){};
 
@@ -265,7 +264,6 @@ namespace hpl {
             cFrustum* apFrustum,
             cWorld* apWorld,
             cRenderSettings* apSettings,
-            const RenderViewport& apRenderTarget,
             bool abSendFrameBufferToPostEffects,
             tRendererCallbackList* apCallbackList);
 
@@ -324,7 +322,7 @@ namespace hpl {
         // a utility to collect renderable objects from the current render list
         void RenderableHelper(eRenderListType type, cViewport& viewport, eMaterialRenderMode mode, std::function<void(iRenderable* obj, GraphicsContext::LayoutStream&, GraphicsContext::ShaderProgram&)> handler);
 
-        void BeginRendering(float afFrameTime,cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, const RenderViewport& apRenderTarget,
+        void BeginRendering(float afFrameTime,cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings,
                             bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList, bool abAtStartOfRendering=true);
 
         cShadowMapData* GetShadowMapData(eShadowMapResolution aResolution, iLight *apLight);
@@ -501,8 +499,8 @@ namespace hpl {
         [[deprecated("SetDepthTestFunc is deprecated")]]
         inline bool SetDepthTestFunc(eDepthTestFunc aFunc){
             return false;
-         }
-         [[deprecated("SetCullActive is deprecated")]]
+        }
+        [[deprecated("SetCullActive is deprecated")]]
         inline bool SetCullActive(bool abX){ 
             return false; 
         }

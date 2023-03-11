@@ -26,6 +26,7 @@
 #include "graphics/Image.h"
 #include "graphics/RenderTarget.h"
 #include "graphics/RenderViewport.h"
+#include "scene/Viewport.h"
 #include <memory>
 
 using namespace hpl;
@@ -230,7 +231,7 @@ class iEditorViewport
 {
 	friend class cEditorViewportCamera;
 public:
-	iEditorViewport(iEditorBase* apEditor, cWorld* apWorld, iFrameBuffer* apFB=NULL, bool abDestroyFBOnExit=false);
+	iEditorViewport(iEditorBase* apEditor, cWorld* apWorld, bool abDestroyFBOnExit=false);
 	virtual ~iEditorViewport();
 
 	/////////////////////////////////////
@@ -340,6 +341,7 @@ protected:
 	cGraphics* mpGfx;
 	cGuiSet* mpGuiSet;
 	cViewport* mpEngineViewport;
+	cViewport::ViewportChange::Handler m_viewportChanged;
 	cEditorViewportCamera mCamera;
 
 	bool mbViewportNeedsUpdate;

@@ -17,8 +17,7 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef LEVEL_EDITOR_WINDOW_H
-#define LEVEL_EDITOR_WINDOW_H
+#pragma once
 
 #include "../common/StdAfx.h"
 
@@ -46,7 +45,3 @@ protected:
 	// Data
 	cLevelEditor* mpEditor;
 };
-
-//-------------------------------------------------------
-
-#endif // LEVEL_EDITOR_WINDOW_H

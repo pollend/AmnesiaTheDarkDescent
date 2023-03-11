@@ -17,9 +17,10 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "engine/Interface.h"
+
 #include "scene/Viewport.h"
 
-#include "engine/Interface.h"
 #include "graphics/Renderer.h"
 
 #include "scene/Scene.h"
@@ -50,7 +51,6 @@ namespace hpl {
 		m_imageDescriptor = ImageDescriptor::CreateTexture2D(0, 0, false, bgfx::TextureFormat::Enum::RGBA8);
 		m_imageDescriptor.m_configuration.m_rt = RTType::RT_Write;
 
-
 		std::lock_guard<std::mutex> lock(internal::m_mutex);
         if (internal::m_freelist.empty()) {
             BX_ASSERT(internal::m_id < MaxViewportHandles, "MaxViewportHandles exceeded");
@@ -61,27 +61,25 @@ namespace hpl {
         }
 
 		m_updateEventHandler = IUpdateEventLoop::UpdateEvent::Handler([&](float dt) {
-			if(m_dirtyViewport && m_size.x > 0 && m_size.y > 0 && m_renderTarget) {
-				m_dirtyViewport = false;
-				m_renderTarget->Invalidate();
-				m_imageDescriptor.m_width = m_size.x;
-				m_imageDescriptor.m_height = m_size.y;
-				auto image = std::make_shared<Image>();
-				image->Initialize(m_imageDescriptor);
-				std::array<std::shared_ptr<Image>, 1> images = {image};
-				m_renderTarget->Initialize(images);
+			if(m_dirtyViewport) {
+				if(m_size.x > 0 && m_size.y > 0 && m_renderTarget) {
+					m_dirtyViewport = false;
+					m_renderTarget->Invalidate();
+					m_imageDescriptor.m_width = m_size.x;
+					m_imageDescriptor.m_height = m_size.y;
+					auto image = std::make_shared<Image>();
+					image->Initialize(m_imageDescriptor);
+					std::array<std::shared_ptr<Image>, 1> images = {image};
+					m_renderTarget->Initialize(images);
+				}
+				m_viewportChanged.Signal();
 			}
 		});
+		Interface<IUpdateEventLoop>::Get()->Subscribe(BroadcastEvent::PreUpdate, m_updateEventHandler);
+            
 	}
 
-	cViewport::cViewport(cViewport&& viewport) {
-
-	}
-
-	void cViewport::operator=(cViewport&& other) {
-
-	}
-
+	
 	cViewport::~cViewport()
 	{
 		m_disposeEvent.Signal();
@@ -118,6 +116,14 @@ namespace hpl {
 		return cGuiSetListIterator(&mlstGuiSets);
 	}
 
+	bool cViewport::IsValid() {
+		if(m_size.x == 0 || m_size.y == 0) {
+			return false;
+		}
+		return true;
+	}
+
+
 	void cViewport::bindToWindow(window::NativeWindowWrapper& window) {
   			m_windowEventHandler = window::WindowEvent::Handler([&](window::WindowEventPayload& event) {
                 switch(event.m_type) {
@@ -130,7 +136,6 @@ namespace hpl {
             });
             
             window.ConnectWindowEventHandler(m_windowEventHandler);
-            Interface<IUpdateEventLoop>::Get()->Subscribe(BroadcastEvent::PreUpdate, m_updateEventHandler);
             SetSize(window.GetWindowSize());
 	}
 

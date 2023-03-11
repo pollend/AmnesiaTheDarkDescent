@@ -19,8 +19,11 @@
 
 #include "graphics/RendererWireFrame.h"
 
+#include "graphics/RenderTarget.h"
+#include "graphics/VertexBuffer.h"
 #include "math/Math.h"
 
+#include "math/MathTypes.h"
 #include "system/LowLevelSystem.h"
 #include "system/String.h"
 #include "system/PreprocessParser.h"
@@ -41,6 +44,7 @@
 #include "scene/Camera.h"
 #include "scene/World.h"
 #include "scene/RenderableContainer.h"
+#include <memory>
 
 namespace hpl {
 
@@ -57,6 +61,20 @@ namespace hpl {
 		// Set up render specific things
 		mbSetFrameBufferAtBeginRendering = true;
 		mbClearFrameBufferAtBeginRendering = true;
+
+		m_boundOutputBuffer = std::move(UniqueViewportData<RenderTarget>([](cViewport& viewport) {
+				auto colorImage = [&] {
+				auto desc = ImageDescriptor::CreateTexture2D(viewport.GetSize().x, viewport.GetSize().y, false, bgfx::TextureFormat::Enum::RGBA8);
+				desc.m_configuration.m_rt = RTType::RT_Write;
+				auto image = std::make_shared<Image>();
+				image->Initialize(desc);
+				return image;
+			};
+			return std::make_unique<RenderTarget>(colorImage());
+			// return std::make_unique<RenderTarget>(colorImage());
+		}, [](cViewport& viewport, RenderTarget& target) {
+			return target.IsValid() ;
+		}));
 	}
 
 	//-----------------------------------------------------------------------
@@ -100,8 +118,18 @@ namespace hpl {
 
 
 
-	void cRendererWireFrame::Draw(GraphicsContext& context, cViewport& viewport, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, RenderViewport& apRenderTarget, bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList) {
+
+	std::shared_ptr<Image> cRendererWireFrame::GetOutputImage(cViewport& viewport) {
+		return m_boundOutputBuffer.resolve(viewport).GetImage();
+	}
+
+
+	void cRendererWireFrame::Draw(GraphicsContext& context, cViewport& viewport, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList) {
+		return;
 		BX_ASSERT(false, "Not implemented yet");
+
+		auto& rt = m_boundOutputBuffer.resolve(viewport);
+		
 		
 		mpCurrentRenderList->Setup(mfCurrentFrameTime,mpCurrentFrustum);
 
@@ -125,18 +153,37 @@ namespace hpl {
 		// SetTextureRange(NULL,0);
 
 		int lCount =0;
+
+		GraphicsContext::ViewConfiguration viewConfig {rt};
+		viewConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
+		viewConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+		viewConfig.m_viewRect = {0, 0, viewport.GetSize().x, viewport.GetSize().y};
+		auto view = context.StartPass("Diffuse", viewConfig);
 		for(auto& pObject: mpCurrentRenderList->GetRenderableItems(eRenderListType_Diffuse))
 		{
-			// iRenderable *pObject = diffIt.Next();
-			cMaterial *pMaterial = pObject->GetMaterial();
+			GraphicsContext::LayoutStream layoutStream;
+            GraphicsContext::ShaderProgram shaderProgram;
 
-			// SetTexture(0,pMaterial->GetTexture(eMaterialTexture_Diffuse));
+			if(pObject == nullptr)
+			{
+				continue;
+			}
 
-			// SetMatrix(pObject->GetModelMatrixPtr());
+			iVertexBuffer* vertexBuffer = pObject->GetVertexBuffer();
+			if(vertexBuffer == nullptr) {
+				continue;
+			}
+			shaderProgram.m_configuration.m_depthTest = DepthTest::LessEqual;
+			shaderProgram.m_configuration.m_write = Write::RGBA;
+			shaderProgram.m_configuration.m_cull = Cull::None;
 
-			// SetVertexBuffer(pObject->GetVertexBuffer());
+			shaderProgram.m_modelTransform = pObject->GetModelMatrixPtr() ?  pObject->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity.GetTranspose();
 
-			// DrawCurrent(eVertexBufferDrawType_LineStrip);
+			layoutStream.m_drawType = eVertexBufferDrawType_LineStrip;
+			vertexBuffer->GetLayoutStream(layoutStream);
+			GraphicsContext::DrawRequest drawRequest {layoutStream, shaderProgram};
+			context.Submit(view, drawRequest);
+
 			lCount++;
 		}
 

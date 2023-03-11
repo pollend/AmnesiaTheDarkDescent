@@ -82,7 +82,7 @@ public:
 class cEditorWindowViewport : public iEditorWindow, public iEditorViewport
 {
 public:
-	cEditorWindowViewport(iEditorBase* apEditor, iFrameBuffer* apFB, bool abAddViewMenu=true);
+	cEditorWindowViewport(iEditorBase* apEditor, bool abAddViewMenu=true);
 	~cEditorWindowViewport();
 
 	void SetFocused(bool abX);

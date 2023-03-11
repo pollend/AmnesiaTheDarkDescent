@@ -434,12 +434,20 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 
 	void iLight::SetGoboTexture(AnimatedImage* apTexture) {
-		m_goboImageWrapper = ImageResourceWrapper(mpTextureManager, apTexture);
+		if(apTexture) {
+			m_goboImageWrapper = ImageResourceWrapper(mpTextureManager, apTexture);
+		} else {
+			m_goboImageWrapper = ImageResourceWrapper();
+		}
 	}
 
 	void iLight::SetGoboTexture(Image *apTexture)
 	{
-		m_goboImageWrapper = ImageResourceWrapper(mpTextureManager, apTexture);
+		if(apTexture) {
+			m_goboImageWrapper = ImageResourceWrapper(mpTextureManager, apTexture);
+		} else {
+			m_goboImageWrapper = ImageResourceWrapper();
+		}
 	}
 
 	//-----------------------------------------------------------------------

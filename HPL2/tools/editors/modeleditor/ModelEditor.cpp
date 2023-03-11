@@ -236,7 +236,7 @@ bool cModelEditor::OnChangeFlags(int alFlags)
 
 		if(bActive)
 		{
-			mpTestWindow = hplNew(cModelEditorWindowPhysicsTest,(this, GetViewportsFrameBuffer()));
+			mpTestWindow = new cModelEditorWindowPhysicsTest(this);
 			mpTestWindow->Init();
 			AddWindow(mpTestWindow);
 			mpTestWindow->SetPosition(GetLayoutVec3f(eLayoutVec3_ViewportAreaPos));

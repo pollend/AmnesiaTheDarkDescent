@@ -1127,12 +1127,12 @@ bool cTextureUnitPanel::PanelSpecificInputCallback(iEditorInput* apInput)
 //------------------------------------------------------------------------------------
 
 
-cEditorWindowMaterialEditor::cEditorWindowMaterialEditor(iEditorBase* apEditor, iFrameBuffer* apFB,
+cEditorWindowMaterialEditor::cEditorWindowMaterialEditor(iEditorBase* apEditor,
 														 const tWString& asMatFile, cEditorInputFile* apInput,
 														 bool abStandAlone) : iEditorWindowPopUp(apEditor,"Material Editor Window",
 																								 abStandAlone==false, abStandAlone==false, abStandAlone==false,
 																								 cVector2f(900,725)),
-																			  iEditorViewport(apEditor, NULL, NULL, true)
+																			  iEditorViewport(apEditor, NULL,  true)
 {
 	///////////////////////////////////////////////////////////////
 	// Set up world

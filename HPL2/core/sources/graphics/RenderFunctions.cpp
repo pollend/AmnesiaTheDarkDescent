@@ -38,23 +38,17 @@ namespace hpl {
 
     void iRenderFunctions::SetupRenderFunctions(iLowLevelGraphics* apLowLevelGraphics) {
         mpLowLevelGraphics = apLowLevelGraphics;
-
-        mvScreenSize = mpLowLevelGraphics->GetScreenSizeInt();
-        mvScreenSizeFloat = mpLowLevelGraphics->GetScreenSizeFloat();
     }
 
     //-----------------------------------------------------------------------
 
     void iRenderFunctions::InitAndResetRenderFunctions(
         cFrustum* apFrustum,
-        const RenderViewport& apRenderTarget,
         bool abLog,
         bool abUseGlobalScissorRect,
         const cVector2l& avGlobalScissorRectPos,
         const cVector2l& avGlobalScissorRectSize) {
         mpCurrentFrustum = apFrustum;
-        m_currentRenderTarget = apRenderTarget;
-
     }
 
 } // namespace hpl

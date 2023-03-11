@@ -203,7 +203,6 @@ namespace hpl {
             cFrustum* apFrustum,
             cWorld* apWorld,
             cRenderSettings* apSettings,
-            RenderViewport& apRenderTarget,
             bool abSendFrameBufferToPostEffects,
             tRendererCallbackList* apCallbackList) override;
 

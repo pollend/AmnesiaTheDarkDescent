@@ -477,11 +477,10 @@ namespace hpl
         cFrustum* apFrustum,
         cWorld* apWorld,
         cRenderSettings* apSettings,
-        const RenderViewport& apRenderTarget,
         bool abSendFrameBufferToPostEffects,
         tRendererCallbackList* apCallbackList)
     {
-        BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, apRenderTarget, abSendFrameBufferToPostEffects, apCallbackList);
+        BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects, apCallbackList);
     }
 
     void iRenderer::RenderableHelper(
@@ -558,7 +557,6 @@ namespace hpl
         cFrustum* apFrustum,
         cWorld* apWorld,
         cRenderSettings* apSettings,
-        const RenderViewport& apRenderTarget,
         bool abSendFrameBufferToPostEffects,
         tRendererCallbackList* apCallbackList,
         bool abAtStartOfRendering)
@@ -584,7 +582,6 @@ namespace hpl
         // Initialize render functions
         InitAndResetRenderFunctions(
             apFrustum,
-            apRenderTarget,
             apSettings->mbLog,
             apSettings->mbUseScissorRect,
             apSettings->mvScissorRectPos,

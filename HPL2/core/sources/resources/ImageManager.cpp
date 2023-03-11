@@ -114,8 +114,11 @@ namespace hpl {
 			//Log("Found '%s' in stock!\n",asName.c_str());
 		}
 
-		if(pImage)pImage->IncUserCount();
-		else Error("Couldn't load image '%s'\n",asName.c_str());
+		if(pImage) {
+			pImage->IncUserCount();
+		} else {
+			Error("Couldn't load image '%s'\n",asName.c_str());
+		}
 
 		//Log("Loaded image %s, it has %d users!\n", pImage->GetName().c_str(),pImage->GetUserCount());
 		//Log(" frame has %d pics\n", pImage->GetFrameTexture()->GetPicCount());

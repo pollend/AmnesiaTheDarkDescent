@@ -23,6 +23,7 @@
 #include "LuxHelpFuncs.h"
 #include "LuxInputHandler.h"
 #include "engine/Interface.h"
+#include "math/MathTypes.h"
 
 //-----------------------------------------------------------------------
 

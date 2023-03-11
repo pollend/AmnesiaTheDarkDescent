@@ -56,12 +56,13 @@ namespace hpl {
 
     	static constexpr size_t MaxViewportHandles = 32;
 		using ResizeEvent = hpl::Event<hpl::cVector2l&>;
-		using ViewportDisposeHandle = hpl::Event<>;
+		using ViewportDispose = hpl::Event<>;
+		using ViewportChange = hpl::Event<>;
 
 		cViewport(cScene *apScene);
 
-		cViewport(cViewport&&);
-		void operator=(cViewport&&);
+		cViewport(cViewport&&) = delete;
+		void operator=(cViewport&&) = delete;
 
 		cViewport(const cViewport&) = delete;
 		cViewport& operator=(const cViewport&) = delete;
@@ -72,6 +73,8 @@ namespace hpl {
 		void SetVisible(bool abX) { mbVisible = abX;}
 		bool IsActive(){ return mbActive;}
 		bool IsVisible(){ return mbVisible;}
+
+		bool IsValid();
 
 		inline size_t GetHandle() { return m_handle; }
 
@@ -107,21 +110,23 @@ namespace hpl {
 		// const cVector2l GetPosition(){ return mRenderTarget.GetPosition();}
 		const cVector2l GetSize(){ return m_size;}
 
-		void setImageDescriptor(const ImageDescriptor& imageDescriptor) { m_imageDescriptor = imageDescriptor; }
-		
-		void setRenderTarget(std::shared_ptr<RenderTarget> renderTarget) { m_renderTarget = renderTarget; }
+		void setImageDescriptor(const ImageDescriptor& imageDescriptor) { 
+			m_imageDescriptor = imageDescriptor; 
+			m_dirtyViewport = true;
+		}
+		void setRenderTarget(std::shared_ptr<RenderTarget> renderTarget) { 
+			m_renderTarget = renderTarget; 
+			m_dirtyViewport = true;
+		}
 		// if a render target is not set then return an empty render target
 		// bgfx will draw to the back buffer in this case
-		RenderTarget& GetRenderTarget() { 
+		RenderTarget& GetRenderTarget() {
 			if(m_renderTarget) {
 				return *m_renderTarget;
 			}
 			static RenderTarget emptyTarget = RenderTarget();
 			return emptyTarget;
 		}
-
-		void setRenderViewport(RenderViewport renderTarget) { mRenderTarget = renderTarget; }
-		RenderViewport& GetRenderViewport() { return mRenderTarget; }
 
 		void bindToWindow(window::NativeWindowWrapper& window);
 		void AddViewportCallback(iViewportCallback *apCallback);
@@ -133,6 +138,10 @@ namespace hpl {
 		tRendererCallbackList* GetRendererCallbackList(){ return &mlstRendererCallbacks;}
 
 
+		inline void ConnectViewportChanged(ViewportChange::Handler& handler) {
+			handler.Connect(m_viewportChanged);
+		}
+
 	private:
 		bool m_dirtyViewport = false;
 		ImageDescriptor m_imageDescriptor;
@@ -142,7 +151,8 @@ namespace hpl {
 		std::shared_ptr<RenderTarget> m_renderTarget;
         IUpdateEventLoop::UpdateEvent::Handler m_updateEventHandler;
         window::WindowEvent::Handler m_windowEventHandler;
-		ViewportDisposeHandle m_disposeEvent;
+		ViewportDispose m_disposeEvent;
+		ViewportChange m_viewportChanged;
 
 		cScene *mpScene;
 		cCamera *mpCamera;
@@ -155,7 +165,7 @@ namespace hpl {
 		iRenderer *mpRenderer;
 		cPostEffectComposite *mpPostEffectComposite;
 
-		RenderViewport mRenderTarget;
+
 
 		tViewportCallbackList mlstCallbacks;
 		tRendererCallbackList mlstRendererCallbacks;
@@ -212,7 +222,7 @@ namespace hpl {
                 target = m_createData(viewport);
 				auto& disposeHandle = m_disposeHandlers[handle];
 				if(!disposeHandle.IsConnected()) {
-					disposeHandle = std::move(cViewport::ViewportDisposeHandle::Handler([&, handle]() {
+					disposeHandle = std::move(cViewport::ViewportDispose::Handler([&, handle]() {
 						m_targets[handle] = nullptr;
 					}));
 					disposeHandle.Connect(viewport.m_disposeEvent);
@@ -225,7 +235,7 @@ namespace hpl {
 	
 		std::function<std::unique_ptr<TData>(cViewport&)> m_createData;
         std::function<bool(cViewport&, TData& target)> m_dataValid;
-        std::array<cViewport::ViewportDisposeHandle::Handler, cViewport::MaxViewportHandles> m_disposeHandlers;
+        std::array<cViewport::ViewportDispose::Handler, cViewport::MaxViewportHandles> m_disposeHandlers;
         std::array<std::unique_ptr<TData>, cViewport::MaxViewportHandles> m_targets;
 
     };

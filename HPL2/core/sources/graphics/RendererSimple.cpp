@@ -91,10 +91,10 @@ namespace hpl
         cFrustum* apFrustum,
         cWorld* apWorld,
         cRenderSettings* apSettings,
-        RenderViewport& apRenderTarget,
         bool abSendFrameBufferToPostEffects,
         tRendererCallbackList* apCallbackList)
     {
+        auto screenSize = viewport.GetSize();
         mpCurrentRenderList->Setup(mfCurrentFrameTime, mpCurrentFrustum);
 
         CheckForVisibleAndAddToList(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static), 0);
@@ -105,7 +105,7 @@ namespace hpl
 
 		cRendererCallbackFunctions handler(context, viewport, this);
 
-        BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, apRenderTarget, abSendFrameBufferToPostEffects, apCallbackList);
+        BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects, apCallbackList);
         // auto target = m_currentRenderTarget.GetRenderTarget();
         // auto& outputTarget = (target && target->IsValid()) ? *target : RenderTarget::EmptyRenderTarget;
 
@@ -123,7 +123,7 @@ namespace hpl
                 return;
             }
             GraphicsContext::ViewConfiguration viewConfig {viewport.GetRenderTarget()};
-			viewConfig.m_viewRect = {0, 0, mvScreenSize.x, mvScreenSize.y};
+			viewConfig.m_viewRect = {0, 0, screenSize.x, screenSize.y};
 			viewConfig.m_clear = {0, 1, 0, ClearOp::Color | ClearOp::Depth};
 			bgfx::touch(context.StartPass("clear target", viewConfig));
 		
@@ -131,7 +131,7 @@ namespace hpl
             
             // GraphicsContext::DrawClear clear{
             //     outputTarget, { 0, 1.0f, 0, ClearOp::Color | ClearOp::Depth }, 0,
-            //     0,      static_cast<uint16_t>(mvScreenSize.x),           static_cast<uint16_t>(mvScreenSize.y)
+            //     0,      static_cast<uint16_t>(screenSize.x),           static_cast<uint16_t>(screenSize.y)
             // };
             // context.ClearTarget(view, clear);
         }(true);
@@ -145,7 +145,7 @@ namespace hpl
                 return;
             }
             GraphicsContext::ViewConfiguration viewConfiguration {viewport.GetRenderTarget()};
-		    viewConfiguration.m_viewRect = cRect2l(0, 0, mvScreenSize.x, mvScreenSize.y);
+		    viewConfiguration.m_viewRect = cRect2l(0, 0, screenSize.x, screenSize.y);
             viewConfiguration.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
             viewConfiguration.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
             auto view = context.StartPass("z pre pass, render to z buffer", viewConfiguration );
@@ -185,7 +185,7 @@ namespace hpl
             }
 
             GraphicsContext::ViewConfiguration viewConfiguration {viewport.GetRenderTarget()};
-		    viewConfiguration.m_viewRect = cRect2l(0, 0, mvScreenSize.x, mvScreenSize.y);
+		    viewConfiguration.m_viewRect = cRect2l(0, 0, screenSize.x, screenSize.y);
             viewConfiguration.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
             viewConfiguration.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
             auto view = context.StartPass("diffuse pass, render to color buffer", viewConfiguration);
@@ -229,7 +229,7 @@ namespace hpl
             }
 
             GraphicsContext::ViewConfiguration viewConfiguration {viewport.GetRenderTarget()};
-		    viewConfiguration.m_viewRect = cRect2l(0, 0, mvScreenSize.x, mvScreenSize.y);
+		    viewConfiguration.m_viewRect = cRect2l(0, 0, screenSize.x, screenSize.y);
             viewConfiguration.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
             viewConfiguration.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
             auto view = context.StartPass("decal pass, render to color buffer", viewConfiguration);
@@ -277,7 +277,7 @@ namespace hpl
             }
 
             GraphicsContext::ViewConfiguration viewConfiguration {viewport.GetRenderTarget()};
-		    viewConfiguration.m_viewRect = cRect2l(0, 0, mvScreenSize.x, mvScreenSize.y);
+		    viewConfiguration.m_viewRect = cRect2l(0, 0, screenSize.x, screenSize.y);
             viewConfiguration.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
             viewConfiguration.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
             auto view = context.StartPass("translucence pass, render to color buffer", viewConfiguration);

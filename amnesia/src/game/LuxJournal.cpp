@@ -1896,7 +1896,7 @@ void cLuxJournal::RenderBackgroundImage()
 	auto effectTarget = RenderTarget(m_screenBgTexture);
 	auto screenTarget = RenderTarget(m_screenImage);
 
-	auto screenSize = pLowGfx->GetScreenSizeInt();
+	auto screenSize = viewport->GetSize();
 	cRect2l screenRect(0, 0, mvScreenSize.x, mvScreenSize.y);
 
 	graphicsContext.CopyTextureToFrameBuffer(

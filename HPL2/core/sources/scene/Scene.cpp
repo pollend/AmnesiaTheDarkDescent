@@ -102,7 +102,7 @@ namespace hpl {
 
         pViewport->SetCamera(apCamera);
         pViewport->SetWorld(apWorld);
-        pViewport->SetSize(-1);
+        // pViewport->SetSize(-1);
         pViewport->SetRenderer(mpGraphics->GetRenderer(eRenderer_Main));
 
         if (abPushFront) {
@@ -189,6 +189,10 @@ namespace hpl {
                 continue;
             }
 
+            if(!pViewPort->IsValid()) {
+                continue;
+            }
+
             //////////////////////////////////////////////
             // Init vars
             cPostEffectComposite* pPostEffectComposite = pViewPort->GetPostEffectComposite();
@@ -214,7 +218,6 @@ namespace hpl {
                         pFrustum,
                         pViewPort->GetWorld(),
                         pViewPort->GetRenderSettings(),
-                        pViewPort->GetRenderViewport(),
                         bPostEffects,
                         pViewPort->GetRendererCallbackList());
                     STOP_TIMING(RenderWorld)

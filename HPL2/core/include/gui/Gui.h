@@ -26,6 +26,7 @@
 #include "engine/Updateable.h"
 
 #include "gui/GuiTypes.h"
+#include "math/MathTypes.h"
 #include "system/SystemTypes.h"
 #include <engine/IUpdateEventLoop.h>
 

@@ -17,11 +17,17 @@ namespace hpl {
     // Bootstrap the engine and provide access to the core systems
     class Bootstrap {
     public:
+        struct BootstrapConfiguration final {
+        public:
+            BootstrapConfiguration() {}
+
+            window::WindowStyle m_windowStyle = window::WindowStyle::WindowStyleNone;
+        };
 
         Bootstrap();
         ~Bootstrap();
 
-        void Initialize();
+        void Initialize(BootstrapConfiguration configuration = BootstrapConfiguration{ } );
         void Run(std::function<int32_t(bx::Thread*)> handler);
         void Shutdown();
     private:

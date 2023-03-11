@@ -52,23 +52,13 @@
 
 namespace hpl {
 
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
 	cLowLevelGraphicsSDL::cLowLevelGraphicsSDL()
 	{
 		mlMultisampling =0;
 	}
 
-	//-----------------------------------------------------------------------
-
 	cLowLevelGraphicsSDL::~cLowLevelGraphicsSDL()
 	{
-
-
 	}
 
 	bool cLowLevelGraphicsSDL::Init(int alWidth, int alHeight, int alDisplay, int alBpp, int abFullscreen,
@@ -248,13 +238,13 @@ namespace hpl {
 	// //-----------------------------------------------------------------------
 	iGpuProgram* cLowLevelGraphicsSDL::CreateGpuProgram(const tString& asName)
 	{
-		BX_ASSERT(false, "deprecated CreateGpuProgram");
+		// BX_ASSERT(false, "deprecated CreateGpuProgram");
 		return nullptr;
 	}
 
 	iGpuShader* cLowLevelGraphicsSDL::CreateGpuShader(const tString& asName, eGpuShaderType aType)
 	{
-		BX_ASSERT(false, "deprecated CreateGpuProgram");
+		// BX_ASSERT(false, "deprecated CreateGpuProgram");
 		return nullptr;
 	}
 
@@ -262,7 +252,7 @@ namespace hpl {
 
 	iTexture* cLowLevelGraphicsSDL::CreateTexture(const tString &asName,eTextureType aType,   eTextureUsage aUsage)
 	{
-		BX_ASSERT(false, "deprecated CreateTexture");
+		// BX_ASSERT(false, "deprecated CreateTexture");
 		return nullptr;
 	}
 
@@ -280,7 +270,7 @@ namespace hpl {
 
 	iFrameBuffer* cLowLevelGraphicsSDL::CreateFrameBuffer(const tString& asName)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 		return nullptr;
 	}
 
@@ -288,26 +278,26 @@ namespace hpl {
 
 	iDepthStencilBuffer* cLowLevelGraphicsSDL::CreateDepthStencilBuffer(const cVector2l& avSize, int alDepthBits, int alStencilBits)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 		return nullptr;
 	}
 
 	void cLowLevelGraphicsSDL::ClearFrameBuffer(tClearFrameBufferFlag aFlags)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetClearColor(const cColor& aCol){
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 	}
 	void cLowLevelGraphicsSDL::SetClearDepth(float afDepth){
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 
 	}
 	void cLowLevelGraphicsSDL::SetClearStencil(int alVal){
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
@@ -315,14 +305,14 @@ namespace hpl {
 	void cLowLevelGraphicsSDL::CopyFrameBufferToTexure(iTexture* apTex, const cVector2l &avPos,
 		const cVector2l &avSize, const cVector2l &avTexOffset)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
 
 	cBitmap* cLowLevelGraphicsSDL::CopyFrameBufferToBitmap(	const cVector2l &avScreenPos,const cVector2l &avScreenSize)
 	{
-		BX_ASSERT(false, "TODO: need to replace this with a helper method no need to couple this");
+		// BX_ASSERT(false, "TODO: need to replace this with a helper method no need to couple this");
 
 		return nullptr;
 	}
@@ -331,22 +321,22 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SetCurrentFrameBuffer(iFrameBuffer* apFrameBuffer, const cVector2l &avPos, const cVector2l& avSize)
 	{
-		BX_ASSERT(false, "Deprecated");
+		// BX_ASSERT(false, "Deprecated");
 	}
 
 	void cLowLevelGraphicsSDL::WaitAndFinishRendering()
 	{	
-		BX_ASSERT(false, "Deprecated");
+		// BX_ASSERT(false, "Deprecated");
 	}
 
 	void cLowLevelGraphicsSDL::FlushRendering()
 	{
-		BX_ASSERT(false, "Deprecated");
+		// BX_ASSERT(false, "Deprecated");
 	}
 
 	void cLowLevelGraphicsSDL::SwapBuffers()
 	{
-		BX_ASSERT(false, "Deprecated");
+		// BX_ASSERT(false, "Deprecated");
 	}
 
 	//-----------------------------------------------------------------------
@@ -359,12 +349,12 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SetColorWriteActive(bool abR,bool abG,bool abB,bool abA)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 	}
 
 	void cLowLevelGraphicsSDL::SetDepthWriteActive(bool abX)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 	}
 
 	void cLowLevelGraphicsSDL::SetDepthTestActive(bool abX)
@@ -373,42 +363,42 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SetDepthTestFunc(eDepthTestFunc aFunc)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetAlphaTestActive(bool abX)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetAlphaTestFunc(eAlphaTestFunc aFunc,float afRef)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetStencilActive(bool abX)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetStencilWriteMask(unsigned int alMask)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 	}
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetStencil(eStencilFunc aFunc,int alRef, unsigned int aMask,
 		eStencilOp aFailOp,eStencilOp aZFailOp,eStencilOp aZPassOp)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
@@ -418,33 +408,33 @@ namespace hpl {
 		eStencilOp aFrontFailOp,eStencilOp aFrontZFailOp,eStencilOp aFrontZPassOp,
 		eStencilOp aBackFailOp,eStencilOp aBackZFailOp,eStencilOp aBackZPassOp)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetCullActive(bool abX)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 	}
 
 	void cLowLevelGraphicsSDL::SetCullMode(eCullMode aMode)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetScissorActive(bool abX)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetScissorRect(const cVector2l& avPos, const cVector2l& avSize)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
@@ -452,16 +442,16 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SetClipPlane(int alIdx, const cPlanef& aPlane)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 	}
 	cPlanef cLowLevelGraphicsSDL::GetClipPlane(int alIdx)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 		return cPlanef();
 	}
 	void cLowLevelGraphicsSDL::SetClipPlaneActive(int alIdx, bool abX)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 	}
 
 
@@ -469,14 +459,14 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SetBlendActive(bool abX)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetBlendFunc(eBlendFunc aSrcFactor, eBlendFunc aDestFactor)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
@@ -485,21 +475,21 @@ namespace hpl {
 	void cLowLevelGraphicsSDL::SetBlendFuncSeparate(eBlendFunc aSrcFactorColor, eBlendFunc aDestFactorColor,
 		eBlendFunc aSrcFactorAlpha, eBlendFunc aDestFactorAlpha)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetPolygonOffsetActive(bool abX)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 
 	}
 
 
 	void cLowLevelGraphicsSDL::SetPolygonOffset(float afBias, float afSlopeScaleBias)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
@@ -514,7 +504,7 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::PushMatrix(eMatrix aMtxType)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
@@ -522,13 +512,13 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::PopMatrix(eMatrix aMtxType)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 	}
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetMatrix(eMatrix aMtxType, const cMatrixf& a_mtxA)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
@@ -536,19 +526,19 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SetIdentityMatrix(eMatrix aMtxType)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetOrthoProjection(const cVector2f& avSize, float afMin, float afMax)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 	}
 
 	void cLowLevelGraphicsSDL::SetOrthoProjection(const cVector3f& avMin, const cVector3f& avMax)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
@@ -562,14 +552,14 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SetTexture(unsigned int alUnit,iTexture* apTex)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetColor(const cColor &aColor)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
@@ -584,7 +574,7 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::DrawTriangle(tVertexVec& avVtx)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 
 	}
 
@@ -592,7 +582,7 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::DrawQuad(const cVector3f &avPos,const cVector2f &avSize,const cColor& aColor)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 
 	}
 
@@ -600,7 +590,7 @@ namespace hpl {
 		const cVector2f &avMinTexCoord,const cVector2f &avMaxTexCoord,
 		const cColor& aColor)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 
 	}
 
@@ -609,7 +599,7 @@ namespace hpl {
 		const cVector2f &avMinTexCoord1,const cVector2f &avMaxTexCoord1,
 		const cColor& aColor)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 
 	}
 
@@ -617,7 +607,7 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::DrawQuad(const tVertexVec &avVtx)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 
 	}
 
@@ -626,7 +616,7 @@ namespace hpl {
 	void cLowLevelGraphicsSDL::DrawQuadMultiTex(const tVertexVec &avVtx,const tVector3fVec &avExtraUvs)
 	{
 
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 	}
 
 
@@ -634,7 +624,7 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::DrawQuad(const tVertexVec &avVtx, const cColor aCol)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 
 	}
 
@@ -642,7 +632,7 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::DrawQuad(const tVertexVec &avVtx,const float afZ)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 
 	}
 
@@ -650,7 +640,7 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::DrawQuad(const tVertexVec &avVtx,const float afZ,const cColor &aCol)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 
 	}
 
@@ -658,19 +648,19 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::DrawLine(const cVector3f& avBegin, const cVector3f& avEnd, cColor aCol)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 
 	}
 
 	void cLowLevelGraphicsSDL::DrawLine(const cVector3f& avBegin, const cColor& aBeginCol, const cVector3f& avEnd, const cColor& aEndCol)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 
 	}
 
 	void cLowLevelGraphicsSDL::DrawBoxMinMax(const cVector3f& avMin, const cVector3f& avMax, cColor aCol)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 
 	}
 
@@ -678,7 +668,7 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::DrawSphere(const cVector3f& avPos, float afRadius, cColor aCol)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 
 	}
 
@@ -686,7 +676,7 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::DrawSphere(const cVector3f& avPos, float afRadius, cColor aColX, cColor aColY, cColor aColZ)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 
 	}
 
@@ -694,12 +684,12 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::DrawLineQuad(const cRect2f& aRect, float afZ, cColor aCol)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 	}
 
 	void cLowLevelGraphicsSDL::DrawLineQuad(const cVector3f &avPos,const cVector2f &avSize, cColor aCol)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 	}
 
 
@@ -714,21 +704,21 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::AddVertexToBatch(const cVertex *apVtx)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::AddVertexToBatch(const cVertex *apVtx, const cVector3f* avTransform)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::AddVertexToBatch(const cVertex *apVtx, const cMatrixf* aMtx)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 
 	}
 
@@ -737,7 +727,7 @@ namespace hpl {
 	void cLowLevelGraphicsSDL::AddVertexToBatch_Size2D(const cVertex *apVtx, const cVector3f* avTransform,
 		const cColor* apCol,const float& mfW, const float& mfH)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
@@ -745,7 +735,7 @@ namespace hpl {
 	void cLowLevelGraphicsSDL::AddVertexToBatch_Raw(	const cVector3f& avPos, const cColor &aColor,
 		const cVector3f& avTex)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 	}
 
 
@@ -753,7 +743,7 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::AddIndexToBatch(int alIndex)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 
 	}
 
@@ -761,7 +751,7 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::AddTexCoordToBatch(unsigned int alUnit,const cVector3f *apCoord)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 
 	}
 
@@ -769,7 +759,7 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::SetBatchTextureUnitActive(unsigned int alUnit,bool abActive)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 
 	}
 
@@ -777,40 +767,40 @@ namespace hpl {
 
 	void cLowLevelGraphicsSDL::FlushTriBatch(tVtxBatchFlag aTypeFlags, bool abAutoClear)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::FlushQuadBatch(tVtxBatchFlag aTypeFlags, bool abAutoClear)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::ClearBatch()
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 	}
 
 	void cLowLevelGraphicsSDL::SetUpBatchArrays()
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetVtxBatchStates(tVtxBatchFlag aFlags)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cLowLevelGraphicsSDL::SetMatrixMode(eMatrix mType)
 	{
-		BX_ASSERT(false, "interface is deprecated");
+		// BX_ASSERT(false, "interface is deprecated");
 	}
 
 }

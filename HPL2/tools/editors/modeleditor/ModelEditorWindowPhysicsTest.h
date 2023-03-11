@@ -78,7 +78,7 @@ class cModelEditorWindowPhysicsTest : public iEditorWindow, public iEditorViewpo
 {
 	friend class cPhysicsTestRenderCallback;
 public:
-	cModelEditorWindowPhysicsTest(iEditorBase* apEditor, iFrameBuffer* apFB);
+	cModelEditorWindowPhysicsTest(iEditorBase* apEditor);
 	~cModelEditorWindowPhysicsTest();
 
 	int GetSelectedAnimation();

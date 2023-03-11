@@ -87,9 +87,6 @@ namespace hpl
 
         mpBloomType = static_cast<cPostEffectType_Bloom*>(mpType);
         
-        // cVector2l vSize = mpLowLevelGraphics->GetScreenSizeInt();
-        // OnViewportChanged(vSize);
-        
     }
 
 

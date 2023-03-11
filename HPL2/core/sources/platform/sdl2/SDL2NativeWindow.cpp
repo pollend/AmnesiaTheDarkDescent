@@ -10,9 +10,9 @@
 #include <algorithm>
 #include <cstdint>
 #include <cstring>
-#include <string>
 #include <mutex>
 #include <queue>
+#include <string>
 #include <thread>
 
 #include <SDL2/SDL.h>
@@ -23,31 +23,7 @@
 
 #include <engine/IUpdateEventLoop.h>
 
-
 namespace hpl::window::internal {
-    // enum WindowMessagePayloadType { 
-    //     WindowMessage_None,
-    //     WindowMessage_Resize,
-    //     WindowMessage_SetTitle,
-    //     WindowMessage_WindowGrabCursor,
-    //     WindowMessage_WindowReleaseCursor,
-    //     WindowMessage_ShowHardwareCursor,
-    //     WindowMessage_HideHardwareCursor,
-    //     WindowMessage_ConstrainCursor,
-    //     WindowMessage_UnconstrainCursor
-    // };
-    // struct WindowMessagePayload {
-    //     WindowMessagePayloadType m_type;
-    //     union {
-    //         struct {
-    //             uint32_t width;
-    //             uint32_t height;
-    //         } m_resizeWindow;
-    //         struct {
-    //             char m_title[256];
-    //         } m_setTitle;
-    //     } m_payload;
-    // };
 
     struct NativeWindowImpl {
         SDL_Window* m_window = nullptr;
@@ -61,7 +37,7 @@ namespace hpl::window::internal {
     };
 
     void InternalHandleCmd(NativeWindowImpl& impl, std::function<void(NativeWindowImpl&)> handle) {
-        if(impl.m_owningThread == std::this_thread::get_id()) { // same thread, just process it
+        if (impl.m_owningThread == std::this_thread::get_id()) { // same thread, just process it
             handle(impl);
             return;
         }
@@ -69,8 +45,7 @@ namespace hpl::window::internal {
         impl.m_processCmd.push_back(handle);
     }
 
-
-    NativeWindowHandler Initialize() {
+    NativeWindowHandler Initialize(const WindowStyle& style) {
         auto ptr = NativeWindowHandler::Ptr(new NativeWindowImpl(), [](void* ptr) {
             BX_ASSERT(false, "Destroying !!")
             auto* impl = static_cast<NativeWindowImpl*>(ptr);
@@ -80,14 +55,24 @@ namespace hpl::window::internal {
             SDL_Quit();
             delete impl;
         });
+        uint32_t flags = 
+            (any(style & WindowStyle::WindowStyleTitleBar) ? SDL_WINDOW_BORDERLESS : 0) |
+            (any(style & WindowStyle::WindowStyleResizable) ? SDL_WINDOW_RESIZABLE : 0) |
+            (any(style & WindowStyle::WindowStyleBorderless) ? SDL_WINDOW_BORDERLESS : 0) |
+            (any(style & WindowStyle::WindowStyleFullscreen) ? SDL_WINDOW_FULLSCREEN : 0) |
+            (any(style & WindowStyle::WindowStyleFullscreenDesktop) ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0) |
+            (any(style & WindowStyle::WindowStyleClosable) ? SDL_WINDOW_ALLOW_HIGHDPI : 0) |
+            (any(style & WindowStyle::WindowStyleMinimizable) ? SDL_WINDOW_MINIMIZED : 0) |
+            (any(style & WindowStyle::WindowStyleMaximizable) ? SDL_WINDOW_MAXIMIZED : 0) |
+            SDL_WINDOW_SHOWN;
 
         NativeWindowHandler handle = NativeWindowHandler(std::move(ptr));
 
         auto impl = static_cast<NativeWindowImpl*>(handle.Get());
         impl->m_owningThread = std::this_thread::get_id();
-        impl->m_window = SDL_CreateWindow("HPL2", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, SDL_WINDOW_SHOWN);
+        impl->m_window = SDL_CreateWindow("HPL2", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, flags);
         impl->m_windowSize = cVector2l(1280, 720);
-        
+
         return handle;
     }
     void SetWindowInternalEventHandler(NativeWindowHandler& handler, WindowInternalEvent::Handler& eventHandle) {
@@ -98,11 +83,11 @@ namespace hpl::window::internal {
         auto impl = static_cast<NativeWindowImpl*>(handler.Get());
         eventHandle.Connect(impl->m_windowEvent);
     }
-            
+
     void* NativeWindowHandle(NativeWindowHandler& handler) {
         auto impl = static_cast<NativeWindowImpl*>(handler.Get());
         BX_ASSERT(impl->m_window, "Window is not initialized");
-            
+
         SDL_SysWMinfo wmi;
         SDL_VERSION(&wmi.version);
         if (!SDL_GetWindowWMInfo(impl->m_window, &wmi)) {
@@ -137,7 +122,7 @@ namespace hpl::window::internal {
     void* NativeDisplayHandle(NativeWindowHandler& handler) {
         auto impl = static_cast<NativeWindowImpl*>(handler.Get());
         BX_ASSERT(impl->m_window, "Window is not initialized");
-        
+
         SDL_SysWMinfo wmi;
         SDL_VERSION(&wmi.version);
         if (!SDL_GetWindowWMInfo(impl->m_window, &wmi)) {
@@ -224,26 +209,40 @@ namespace hpl::window::internal {
         });
     }
 
+
+    // WindowStyle GetWindowStyle(NativeWindowHandler& handler) {
+        
+    // }
+    // void SetWindowStyle(NativeWindowHandler& handler, WindowStyle style) {
+    //     auto impl = static_cast<NativeWindowImpl*>(handler.Get());
+    //     InternalHandleCmd(*impl, [style](NativeWindowImpl& impl) {
+    //         SDL_SetWindowResizable(impl.m_window, any(style & WindowStyle::WindowStyleResizable) ? SDL_TRUE : SDL_FALSE);
+    //         SDL_SetWindowBordered(impl.m_window, any(style & WindowStyle::WindowStyleBorderless) ? SDL_FALSE : SDL_TRUE);
+    //     });
+    // }
+
+
     WindowStatus GetWindowStatus(NativeWindowHandler& handler) {
         auto impl = static_cast<NativeWindowImpl*>(handler.Get());
-        WindowStatus status =  (
-            ((impl->m_windowFlags & SDL_WINDOW_INPUT_FOCUS) > 0 ? WindowStatus::WindowStatusInputFocus : WindowStatus::WindowStatusNone) |
-            ((impl->m_windowFlags & SDL_WINDOW_MOUSE_FOCUS) > 0 ? WindowStatus::WindowStatusInputMouseFocus : WindowStatus::WindowStatusNone) |
-            ((impl->m_windowFlags & SDL_WINDOW_MINIMIZED) > 0 ? WindowStatus::WindowStatusWindowMinimized : WindowStatus::WindowStatusNone) |
-            ((impl->m_windowFlags & SDL_WINDOW_SHOWN) > 0 ? WindowStatus::WindowStatusVisible : WindowStatus::WindowStatusNone)
-        );
+        WindowStatus status =
+            (((impl->m_windowFlags & SDL_WINDOW_INPUT_FOCUS) > 0 ? WindowStatus::WindowStatusInputFocus : WindowStatus::WindowStatusNone) |
+             ((impl->m_windowFlags & SDL_WINDOW_MOUSE_FOCUS) > 0 ? WindowStatus::WindowStatusInputMouseFocus
+                                                                 : WindowStatus::WindowStatusNone) |
+             ((impl->m_windowFlags & SDL_WINDOW_MINIMIZED) > 0 ? WindowStatus::WindowStatusWindowMinimized
+                                                               : WindowStatus::WindowStatusNone) |
+             ((impl->m_windowFlags & SDL_WINDOW_SHOWN) > 0 ? WindowStatus::WindowStatusVisible : WindowStatus::WindowStatusNone));
         return status;
     }
 
     void Process(NativeWindowHandler& handler) {
         auto impl = static_cast<NativeWindowImpl*>(handler.Get());
-        
+
         std::lock_guard<std::recursive_mutex> lk(impl->m_mutex);
-        for(auto& handler: impl->m_processCmd) {
+        for (auto& handler : impl->m_processCmd) {
             handler(*impl);
         }
         impl->m_processCmd.clear();
-    
+
         impl->m_windowFlags = SDL_GetWindowFlags(impl->m_window);
         InternalEvent internalEvent;
         WindowEventPayload windowEventPayload;
@@ -255,8 +254,9 @@ namespace hpl::window::internal {
                 windowEventPayload.m_type = WindowEventType::QuitEvent;
                 impl->m_windowEvent.Signal(windowEventPayload);
                 break;
-            case SDL_WINDOWEVENT: {
-                switch(event.window.event) {
+            case SDL_WINDOWEVENT:
+                {
+                    switch (event.window.event) {
                     case SDL_WINDOWEVENT_SIZE_CHANGED:
                         windowEventPayload.m_type = WindowEventType::ResizeWindowEvent;
                         windowEventPayload.payload.m_resizeWindow.m_width = event.window.data1;
@@ -266,10 +266,9 @@ namespace hpl::window::internal {
                         break;
                     default:
                         break;
+                    }
                 }
-            }
-                
             }
         }
     }
-}
+} // namespace hpl::window::internal

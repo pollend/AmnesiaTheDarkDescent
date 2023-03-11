@@ -12,9 +12,10 @@ namespace hpl {
         : m_imageResource(nullptr)
         , m_textureManager(nullptr) {
     }
-    ImageResourceWrapper::ImageResourceWrapper(cTextureManager* m_textureManager, hpl::iResourceBase* resource)
+    ImageResourceWrapper::ImageResourceWrapper(cTextureManager* m_textureManager, hpl::iResourceBase* resource, bool autoDestroyTextures)
         : m_imageResource(resource)
-        , m_textureManager(m_textureManager) {
+        , m_textureManager(m_textureManager)
+        , m_autoDestroyResource(autoDestroyTextures) {
         BX_ASSERT(m_imageResource, "ImageResourceWrapper: Image resource is null");
         BX_ASSERT(m_textureManager, "ImageResourceWrapper: Texture manager is null");
     }

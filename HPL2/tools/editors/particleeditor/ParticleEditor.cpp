@@ -363,7 +363,7 @@ void cParticleEditor::CreateViewports()
 {
 	///////////////////////////////////
 	// Viewport Setup
-	cEditorWindowViewport* pViewport = hplNew(cEditorWindowViewport,(this, mpFrameBuffer, false));
+	cEditorWindowViewport* pViewport = new cEditorWindowViewport(this, false);
 	pViewport->Init();
 
 	pViewport->SetEngineViewportPositionAndSize(0, GetLayoutVec2l(eLayoutVec2_ViewportAreaSize));

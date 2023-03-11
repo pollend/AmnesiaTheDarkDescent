@@ -108,7 +108,7 @@ void cMaterialEditor::OnInit()
 
 void cMaterialEditor::OnInitLayout()
 {
-	mpMaterialEditor = hplNew( cEditorWindowMaterialEditor,(this, NULL, cString::To16Char(msCommandLineFile), NULL, true));
+	mpMaterialEditor = new cEditorWindowMaterialEditor(this, cString::To16Char(msCommandLineFile), NULL, true);
 	mpMaterialEditor->Init();
 	mpMaterialEditor->SetActive(true);
 

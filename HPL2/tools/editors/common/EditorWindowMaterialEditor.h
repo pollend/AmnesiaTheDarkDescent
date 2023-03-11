@@ -243,7 +243,7 @@ class cEditorWindowMaterialEditor : public iEditorWindowPopUp, public iEditorVie
 {
 	friend class cTextureUnitPanel;
 public:
-	cEditorWindowMaterialEditor(iEditorBase* apEditor, iFrameBuffer* apFB, const tWString& asMatFile=_W(""), cEditorInputFile* apInput=NULL, bool abStandAlone=false);
+	cEditorWindowMaterialEditor(iEditorBase* apEditor, const tWString& asMatFile=_W(""), cEditorInputFile* apInput=NULL, bool abStandAlone=false);
 	~cEditorWindowMaterialEditor();
 
 	cWidgetFrame* GetFrameUnits() { return mpFUnits; }

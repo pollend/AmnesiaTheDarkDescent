@@ -55,7 +55,7 @@ namespace hpl {
 		/**
 		 * This must be called every frame before any render function is called
 		 */
-		void InitAndResetRenderFunctions(	cFrustum *apFrustum, const RenderViewport& apRenderTarget, bool abLog,
+		void InitAndResetRenderFunctions(	cFrustum *apFrustum, bool abLog,
 											bool abUseGlobalScissorRect=false,
 											const cVector2l& avGlobalScissorRectPos=0, const cVector2l& avGlobalScissorRectSize=0);
 
@@ -63,12 +63,7 @@ namespace hpl {
 	protected:
 		cGraphics *mpGraphics;
 		iLowLevelGraphics *mpLowLevelGraphics;
-
 		cFrustum *mpCurrentFrustum;
-		RenderViewport m_currentRenderTarget;
-
-		cVector2l mvScreenSize;
-		cVector2f mvScreenSizeFloat;
 	};
 
 	//---------------------------------------------

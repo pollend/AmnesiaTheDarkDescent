@@ -23,7 +23,10 @@
 #include "EditorGrid.h"
 #include "EditorSelection.h"
 #include "EditorWorld.h"
+#include "graphics/Image.h"
 #include "graphics/RenderTarget.h"
+#include <memory>
+#include <utility>
 
 int iEditorViewport::mlViewportCount = 0;
 bool iEditorViewport::mbCamPlanesUpdated = true;
@@ -81,6 +84,7 @@ cEditorViewportCamera::cEditorViewportCamera(iEditorViewport* apViewport)
 	mbLockToGrid=true;
 
 	FetchSettings();
+
 
 	//mpCurrentZoomFunc = hplNew(iViewportCameraZoomFunc,(mfMinZoom, mfMaxZoom));
 }
@@ -728,12 +732,7 @@ bool cEditorViewportCamera::BoundingVolumeFitsInView(const cBoundingVolume &aBV)
 	return false;
 }
 
-//-------------------------------------------------------------
-//-------------------------------------------------------------
-//-------------------------------------------------------------
-//-------------------------------------------------------------
-
-iEditorViewport::iEditorViewport(iEditorBase* apEditor, cWorld* apWorld, iFrameBuffer* apFB, bool abDestroyFBOnExit)
+iEditorViewport::iEditorViewport(iEditorBase* apEditor, cWorld* apWorld, bool abDestroyFBOnExit)
 {
 	++mlViewportCount;
 	tString sViewportCount = "Viewport" + cString::ToString(mlViewportCount) + "_";
@@ -745,6 +744,12 @@ iEditorViewport::iEditorViewport(iEditorBase* apEditor, cWorld* apWorld, iFrameB
 
 	mCamera = cEditorViewportCamera(this);
 	mpEngineViewport = mpEngine->GetScene()->CreateViewport(mCamera.GetEngineCamera(), apWorld, true);
+
+	m_viewportChanged = std::move(cViewport::ViewportChange::Handler([&]() {
+		mbViewportNeedsUpdate = true;
+		UpdateViewport();
+	}));
+	mpEngineViewport->ConnectViewportChanged(m_viewportChanged);
 	SetViewportActive(false);
 
 	mpImgViewport = NULL;
@@ -765,7 +770,12 @@ iEditorViewport::iEditorViewport(iEditorBase* apEditor, cWorld* apWorld, iFrameB
 
 	mpGrid = hplNew(cEditorGrid, (this));
 
-	// SetFrameBuffer(apFB);
+	m_target = std::make_shared<RenderTarget>();
+	mpEngineViewport->setRenderTarget(m_target);
+	auto desc = ImageDescriptor::CreateTexture2D(0, 0, false, bgfx::TextureFormat::Enum::RGBA8);
+	desc.m_configuration.m_rt = RTType::RT_Write;
+	mpEngineViewport->setImageDescriptor(desc);
+	mbViewportNeedsUpdate = true;
 }
 
 //-------------------------------------------------------------
@@ -846,14 +856,19 @@ void iEditorViewport::SetFrameBuffer(std::shared_ptr<RenderTarget> target)
 	m_target = target;
 	mpEngineViewport->setRenderTarget(target);
 	mbViewportNeedsUpdate = true;
+	UpdateViewport();
 }
 
 //-------------------------------------------------------------
 
 void iEditorViewport::UpdateViewport()
 {
-	if(mpImgViewport==NULL || mbViewportNeedsUpdate==false)
+	if(mpImgViewport==NULL || mbViewportNeedsUpdate==false )
 		return;
+
+	if(!m_target->IsValid()) {
+		return;
+	}
 
 	cGui* pGui = mpGuiSet->GetGui();
 
@@ -864,7 +879,7 @@ void iEditorViewport::UpdateViewport()
 
 	////////////////////////////////////////////
 	// Set updated one
-	pImg = pGui->CreateGfxTexture(m_target->GetImage().get(), false, eGuiMaterial_Diffuse, cColor(1,1), true, mvUVStart, mvUVEnd);
+	pImg = pGui->CreateGfxTexture(m_target->GetImage().get(), false, eGuiMaterial_Diffuse, cColor(1,1), true, mvUVStart, mvUVEnd, true);
 	mpImgViewport->SetImage(pImg);
 
 	mbViewportNeedsUpdate = false;
@@ -904,7 +919,7 @@ void iEditorViewport::SetEngineViewportPositionAndSize(const cVector2l& avPos, c
 	mvEngineViewportSize = avSize;
 	mpEngineViewport->SetSize(mvEngineViewportSize);
 
-	const cVector2l vFBSize = cVector2l(m_target->GetImage(0)->GetWidth(), m_target->GetImage(0)->GetHeight());
+	const cVector2l vFBSize = cVector2l(mvEngineViewportSize.x, mvEngineViewportSize.y);
 	cVector2f vFBSizeFloat = cVector2f((float)vFBSize.x, (float)vFBSize.y);
 
 	cVector2f vPosFloat = cVector2f((float)mvEngineViewportPos.x, (float)mvEngineViewportPos.y);

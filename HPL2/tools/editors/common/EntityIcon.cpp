@@ -34,12 +34,13 @@ cEntityIcon::cEntityIcon(iEntityWrapper* apParent, const tString& asIconGfxName)
 	mbVisible = true;
 
 	mpParent = apParent;
-	for(int i=0;i<2;++i)
-		mvIconGfx[i] = NULL;
+	for(auto& img: mvIconGfx) {
+		img = nullptr;
+	}
 
 	cTextureManager* pTexMgr = apParent->GetEditorWorld()->GetEditor()->GetEngine()->GetResources()->GetTextureManager();
-	mvIconGfx[0] = pTexMgr->Create2D("Billboard" + asIconGfxName + ".tga", true);
-	mvIconGfx[1] = pTexMgr->Create2D("Billboard" + asIconGfxName + "Selected.tga", true);
+	mvIconGfx[0] = pTexMgr->Create2DImage("Billboard" + asIconGfxName + ".tga", true);
+	mvIconGfx[1] = pTexMgr->Create2DImage("Billboard" + asIconGfxName + "Selected.tga", true);
 }
 
 //------------------------------------------------------------------
@@ -48,8 +49,11 @@ cEntityIcon::~cEntityIcon()
 {
 	cTextureManager* pTexMgr = mpParent->GetEditorWorld()->GetEditor()->GetEngine()->GetResources()->GetTextureManager();
 
-	for(int i=0; i<2; ++i)
-		if(mvIconGfx[i]) pTexMgr->Destroy(mvIconGfx[i]);
+	for(auto& img: mvIconGfx) {
+		if(img) {
+			pTexMgr->Destroy(img);
+		}
+	}
 }
 
 //------------------------------------------------------------------
@@ -92,8 +96,8 @@ void cEntityIcon::DrawIcon(cEditorWindowViewport* apViewport,
 	if(mvIconGfx[abIsSelected])
 	{
 		cColor bbColor = abIsSelected ? cColor(1,1) : (abIsActive ? cColor(0.5f,1) : aDisabledCol);
-
-		cEditorHelper::DrawBillboard(mvIconGfx[abIsSelected], avPos, 0.1f,bbColor, apViewport, apFunctions);
+		
+		// cEditorHelper::DrawBillboard(mvIconGfx[abIsSelected], avPos, 0.1f,bbColor, apViewport, apFunctions);
 	}
 }
 

@@ -17,8 +17,10 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "hpl.h"
 using namespace hpl;
+
+#include "hpl.h"
+#include "math/MathTypes.h"
 
 #include "LevelEditor.h"
 
@@ -536,6 +538,12 @@ void cLevelEditor::OnInit()
 }
 
 //--------------------------------------------------------------------
+
+void cLevelEditor::OnViewportChanged(cViewport* viewport) {
+	// mpLowerToolbar->SetPosition(cVector3f(GetLayoutVec3f(eLayoutVec3_ViewportAreaPos).x, mvScreenSize.y-50,1));
+	// mpLowerToolbar->SetSize(cVector2f(viewport->GetSize().x, 50));
+}
+
 
 void cLevelEditor::OnInitLayout()
 {

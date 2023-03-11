@@ -86,7 +86,12 @@ namespace hpl {
 		cResourceVarsObject* GetVarsObject();
 		void LoadVariablesFromVarsObject(cResourceVarsObject* apVarsObject);
 
-		void SetAutoDestroyTextures(bool abX){ mbAutoDestroyTextures = abX;}
+		void SetAutoDestroyTextures(bool abX) { 
+			mbAutoDestroyTextures = abX;
+			for(auto& image: m_image) {
+				image.SetAutoDestroyResource(abX);
+			}
+		}
 
 		void SetBlendMode(eMaterialBlendMode aBlendMode);
 		void SetAlphaMode(eMaterialAlphaMode aAlphaMode);
