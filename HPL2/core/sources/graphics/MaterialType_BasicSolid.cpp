@@ -97,7 +97,6 @@ namespace hpl
     {
         CreateGlobalPrograms();
         m_dissolveImage = mpResources->GetTextureManager()->Create2DImage("core_dissolve.tga", true);
-        LoadSpecificData();
     }
 
     void iMaterialType_SolidBase::DestroyData()
@@ -157,10 +156,6 @@ namespace hpl
     }
 
     cMaterialType_SolidDiffuse::~cMaterialType_SolidDiffuse()
-    {
-    }
-
-    void cMaterialType_SolidDiffuse::LoadSpecificData()
     {
     }
 

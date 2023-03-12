@@ -17,8 +17,7 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef HPL_LOWLEVELGRAPHICS_H
-#define HPL_LOWLEVELGRAPHICS_H
+#pragma once
 
 #include "math/MathTypes.h"
 #include "system/SystemTypes.h"
@@ -423,4 +422,3 @@ namespace hpl {
 		static bool mbForceShaderModel3And4Off;
 	};
 };
-#endif // HPL_LOWLEVELGRAPHICS_H

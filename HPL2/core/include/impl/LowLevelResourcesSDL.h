@@ -16,20 +16,14 @@
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
-
-#ifndef HPL_LOWLEVELRESOURCES_SDL_H
-#define HPL_LOWLEVELRESOURCES_SDL_H
+#pragma once
 
 #include "resources/LowLevelResources.h"
 #include "system/SystemTypes.h"
 
 namespace hpl {
 
-	//----------------------------------------
-
 	class iLowLevelGraphics;
-
-	//----------------------------------------
 
 	class cLowLevelResourcesSDL : public iLowLevelResources
 	{
@@ -39,7 +33,6 @@ namespace hpl {
 
 		void AddBitmapLoaders(cBitmapLoaderHandler* apHandler);
 		void AddMeshLoaders(cMeshLoaderHandler* apHandler);
-		void AddVideoLoaders(cVideoLoaderHandler* apHandler);
 
 		iXmlDocument* CreateXmlDocument(const tString& asName="");
 
@@ -47,4 +40,3 @@ namespace hpl {
 		iLowLevelGraphics *mpLowLevelGraphics;
 	};
 };
-#endif // HPL_LOWLEVELRESOURCES_SDL_H

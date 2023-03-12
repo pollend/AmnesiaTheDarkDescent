@@ -4,7 +4,6 @@
       "libvorbis",
       "sdl2",
       "glew",
-      "libtheora",
       "libogg",
       "openal-soft",
       "zlib",

@@ -22,7 +22,6 @@
 
 #include "../common/StdAfx.h"
 #include "graphics/RenderTarget.h"
-#include "graphics/RenderViewport.h"
 #include "system/SHA1.h"
 #include <memory>
 
@@ -80,7 +79,7 @@ protected:
 
 	std::shared_ptr<RenderTarget> mpRenderTarget128;
 	// std::shared_ptr<RenderTarget> mpFB64;
-	RenderViewport mpFB128;
+	// RenderViewport mpFB128;
 
 	iEditorBase* mpEditor;
 

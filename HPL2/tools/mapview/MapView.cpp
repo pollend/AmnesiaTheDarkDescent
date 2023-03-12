@@ -20,7 +20,6 @@
 #include "graphics/Enum.h"
 #include "graphics/Image.h"
 #include "graphics/RenderTarget.h"
-#include "graphics/RenderViewport.h"
 #include "hpl.h"
 #include "math/MathTypes.h"
 #include "scene/RenderableContainer_DynBoxTree.h"

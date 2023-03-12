@@ -21,7 +21,6 @@
 
 #include "EditorBaseClasses.h"
 #include "graphics/Image.h"
-#include "graphics/RenderViewport.h"
 #include <memory>
 
 //-------------------------------------------------------------------

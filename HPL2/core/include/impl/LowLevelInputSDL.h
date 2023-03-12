@@ -26,7 +26,6 @@
 #include <SDL2/SDL_events.h>
 #include <windowing/NativeWindow.h>
 
-
 namespace hpl {
 
 	class iLowLevelGraphics;

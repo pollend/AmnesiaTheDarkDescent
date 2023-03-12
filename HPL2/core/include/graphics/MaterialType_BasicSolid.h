@@ -28,21 +28,12 @@
 #include <cstdint>
 #include <graphics/ShaderVariantCollection.h>
 
-namespace hpl
-{
-
-    //---------------------------------------------------
+namespace hpl {
 
     class iMaterialVars;
 
-    //---------------------------------------------------
-    // SOLID BASE
-    //---------------------------------------------------
-
-    namespace material::solid
-    {
-        enum DiffuseVariant : uint32_t
-        {
+    namespace material::solid {
+        enum DiffuseVariant : uint32_t {
             Diffuse_None = 0,
             Diffuse_NormalMap = 0x00001,
             Diffuse_SpecularMap = 0x00002,
@@ -50,25 +41,17 @@ namespace hpl
             Diffuse_EnvMap = 0x00008
         };
 
-		enum ZVariant : uint32_t
-        {
-            Z_None = 0,
-            Z_UseAlphaMap = 0x00001,
-            Z_UseDissolveFilter = 0x00002,
-            Z_UseDissolveAlphaMap = 0x00004
-        };
-    }
+        enum ZVariant : uint32_t { Z_None = 0, Z_UseAlphaMap = 0x00001, Z_UseDissolveFilter = 0x00002, Z_UseDissolveAlphaMap = 0x00004 };
+    } // namespace material::solid
 
-    class iMaterialType_SolidBase : public iMaterialType
-    {
+    class iMaterialType_SolidBase : public iMaterialType {
     public:
         iMaterialType_SolidBase(cGraphics* apGraphics, cResources* apResources);
         ~iMaterialType_SolidBase();
 
         void CreateGlobalPrograms();
 
-        iMaterialVars* CreateSpecificVariables()
-        {
+        iMaterialVars* CreateSpecificVariables() {
             return NULL;
         }
         void LoadVariables(cMaterial* apMaterial, cResourceVarsObject* apVars);
@@ -77,27 +60,21 @@ namespace hpl
         void CompileMaterialSpecifics(cMaterial* apMaterial);
 
     protected:
-        virtual void CompileSolidSpecifics(cMaterial* apMaterial)
-        {
+        virtual void CompileSolidSpecifics(cMaterial* apMaterial) {
         }
-
-        virtual void LoadSpecificData() = 0;
 
         void LoadData();
         void DestroyData();
 
         ShaderVariantCollection<
-            material::solid::DiffuseVariant::Diffuse_NormalMap | 
-			material::solid::DiffuseVariant::Diffuse_SpecularMap |
-            material::solid::DiffuseVariant::Diffuse_ParallaxMap | 
-			material::solid::DiffuseVariant::Diffuse_EnvMap>
+            material::solid::DiffuseVariant::Diffuse_NormalMap | material::solid::DiffuseVariant::Diffuse_SpecularMap |
+            material::solid::DiffuseVariant::Diffuse_ParallaxMap | material::solid::DiffuseVariant::Diffuse_EnvMap>
             m_diffuseProgramVariant;
-		
+
         ShaderVariantCollection<
-			material::solid::ZVariant::Z_UseAlphaMap |
-			material::solid::ZVariant::Z_UseDissolveFilter |
-			material::solid::ZVariant::Z_UseDissolveAlphaMap 
-		> m_ZProgramVariant;
+            material::solid::ZVariant::Z_UseAlphaMap | material::solid::ZVariant::Z_UseDissolveFilter |
+            material::solid::ZVariant::Z_UseDissolveAlphaMap>
+            m_ZProgramVariant;
         bgfx::ProgramHandle m_illuminationProgram;
 
         bgfx::UniformHandle m_s_normalMap;
@@ -124,21 +101,14 @@ namespace hpl
         static float mfVirtualPositionAddScale;
     };
 
-    //---------------------------------------------------
-    // SOLID DIFFUSE
-    //---------------------------------------------------
-
-    class cMaterialType_SolidDiffuse_Vars : public iMaterialVars
-    {
+    class cMaterialType_SolidDiffuse_Vars : public iMaterialVars {
     public:
         cMaterialType_SolidDiffuse_Vars()
             : mfHeightMapScale(0.05f)
             , mfHeightMapBias(0.0f)
-            , mbAlphaDissolveFilter(false)
-        {
+            , mbAlphaDissolveFilter(false) {
         }
-        ~cMaterialType_SolidDiffuse_Vars()
-        {
+        ~cMaterialType_SolidDiffuse_Vars() {
         }
 
         float mfHeightMapScale;
@@ -148,10 +118,7 @@ namespace hpl
         bool mbAlphaDissolveFilter;
     };
 
-    //---------------------------------------------------
-
-    class cMaterialType_SolidDiffuse : public iMaterialType_SolidBase
-    {
+    class cMaterialType_SolidDiffuse : public iMaterialType_SolidBase {
     public:
         cMaterialType_SolidDiffuse(cGraphics* apGraphics, cResources* apResources);
         ~cMaterialType_SolidDiffuse();
@@ -161,17 +128,15 @@ namespace hpl
             cViewport& viewport,
             cMaterial* apMaterial,
             iRenderable* apObject,
-            iRenderer* apRenderer, 
+            iRenderer* apRenderer,
             std::function<void(GraphicsContext::ShaderProgram&)> handler) override;
 
-        iMaterialVars* CreateSpecificVariables();
-        void LoadVariables(cMaterial* apMaterial, cResourceVarsObject* apVars);
-        void GetVariableValues(cMaterial* apMaterial, cResourceVarsObject* apVars);
+        iMaterialVars* CreateSpecificVariables() override;
+        void LoadVariables(cMaterial* apMaterial, cResourceVarsObject* apVars) override;
+        void GetVariableValues(cMaterial* apMaterial, cResourceVarsObject* apVars) override;
 
     private:
         void CompileSolidSpecifics(cMaterial* apMaterial);
-
-        void LoadSpecificData();
     };
 
     //---------------------------------------------------

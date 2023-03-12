@@ -67,8 +67,6 @@ file(GLOB impl_sources RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
     sources/impl/scriptstring_utils.cpp
     # Image loading
     sources/impl/BitmapLoader*
-    # theora video
-    sources/impl/VideoStreamTheora.cpp
     # Newton
     sources/impl/*Newton.cpp
     # GL
@@ -207,7 +205,6 @@ source_group("Platform" REGULAR_EXPRESSION "\\/impl\\/Platform.+")
 set(OpenGL_GL_PREFERENCE LEGACY)
 find_package(DevIL REQUIRED)
 find_package(OpenGL REQUIRED)
-find_package(unofficial-theora CONFIG REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(GLEW CONFIG REQUIRED)
 find_package(SDL2 CONFIG REQUIRED)
@@ -229,7 +226,6 @@ set(HPL2_INCLUDES
     #Important that this is before dependencies so the correct OpenAL headers are used
     PRIVATE ${OALWRAPPER_INCLUDE_DIR}
     PRIVATE ${ZLIB_INCLUDE_DIRS}
-    PRIVATE ${THEORA_INCLUDE_DIR}
     PRIVATE ${IL_INCLUDE_DIR}
     PRIVATE ${GLEW_INCLUDE_DIRS}
     PRIVATE ${OPENGL_INCLUDE_DIR}
@@ -255,23 +251,14 @@ target_link_libraries(HPL2
   absl::strings
   absl::str_format
   absl::flat_hash_map
-  unofficial::theora::theora
   bgfx
   bx
   bimg
   GLEW::GLEW
   $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
   $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
-  #   DevIL::IL
   ZLIB::ZLIB
   ${IL_LIBRARIES}
-#   PNG::PNG
-#   ${GLEW_LIBRARIES}
-#   ${OPENGL_gl_LIBRARY}
-#   ${OPENGL_glu_LIBRARY}
-  # ${THEORA_LIBRARY}
-  # ${IL_LIBRARIES}
-#   ${ZLIB_LIBRARIES}
   ${PLATFORM_LIBS}
   )
  

@@ -35,7 +35,6 @@
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Image.h"
 #include "graphics/RenderTarget.h"
-#include <graphics/RenderViewport.h>
 #include "impl/VertexBufferBGFX.h"
 #include "math/Math.h"
 

@@ -25,7 +25,6 @@
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Image.h"
 #include "graphics/RenderTarget.h"
-#include "graphics/RenderViewport.h"
 #include "math/Frustum.h"
 #include "math/MathTypes.h"
 #include "scene/SceneTypes.h"
@@ -47,7 +46,6 @@ namespace hpl {
     class cEngine;
     class iLowLevelResources;
     class cMeshCreator;
-    class cGpuShaderManager;
     class iRenderable;
     class cWorld;
     class cRenderSettings;
@@ -338,7 +336,6 @@ namespace hpl {
         void CheckForVisibleAndAddToList(iRenderableContainer *apContainer, tRenderableFlag alNeededFlags);
 
         void CheckNodesAndAddToListIterative(iRenderableContainerNode *apNode, tRenderableFlag alNeededFlags);
-
 
         void OcclusionQueryBoundingBoxTest(bgfx::ViewId view, 
             GraphicsContext& context, 

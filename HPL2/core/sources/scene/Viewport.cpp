@@ -103,17 +103,17 @@ namespace hpl {
 
 	void cViewport::AddGuiSet(cGuiSet *apSet)
 	{
-		mlstGuiSets.push_back(apSet);
+		m_guiSets.push_back(apSet);
 	}
 	
 	void cViewport::RemoveGuiSet(cGuiSet *apSet)
 	{
-		STLFindAndRemove(mlstGuiSets, apSet);
+		STLFindAndRemove(m_guiSets, apSet);
 	}
 
 	cGuiSetListIterator cViewport::GetGuiSetIterator()
 	{
-		return cGuiSetListIterator(&mlstGuiSets);
+		return cGuiSetListIterator(&m_guiSets);
 	}
 
 	bool cViewport::IsValid() {

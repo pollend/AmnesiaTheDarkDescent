@@ -39,7 +39,6 @@
 
 #include "resources/LowLevelResources.h"
 #include "resources/Resources.h"
-#include "resources/GpuShaderManager.h"
 
 #include "graphics/MaterialType_BasicSolid.h"
 #include "graphics/MaterialType_BasicTranslucent.h"

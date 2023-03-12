@@ -41,7 +41,6 @@
 #include "graphics/Renderable.h"
 #include "graphics/SubMesh.h"
 #include "graphics/Texture.h"
-#include <graphics/RenderViewport.h>
 #include <graphics/GraphicsContext.h>
 
 #include "graphics/GPUShader.h"

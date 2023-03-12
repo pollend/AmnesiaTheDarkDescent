@@ -35,8 +35,6 @@ namespace hpl {
 		~cMaterialType_Decal_Vars(){}
    	};
 
-	//-----------------------------------------------------
-
 	class cMaterialType_Decal : public iMaterialType
 	{
 	public:

@@ -1,12 +1,28 @@
+/**
+* Copyright 2023 Michael Pollind
+* 
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+* 
+*     http://www.apache.org/licenses/LICENSE-2.0
+* 
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
+
 #include <graphics/Image.h>
 #include "bgfx/bgfx.h"
 #include "bgfx/defines.h"
 #include <bx/debug.h>
 #include <graphics/Bitmap.h>
 #include <vector>
+
 namespace hpl
 {
-
 
     ImageDescriptor::ImageDescriptor(const ImageDescriptor& desc)
         : m_width(desc.m_width)
@@ -266,11 +282,6 @@ namespace hpl
         }
         m_handle = BGFX_INVALID_HANDLE;
     }
-
-    // const ImageDescriptor& Image::GetDescriptor() const
-    // {
-    //     return m_descriptor;
-    // }
 
     bgfx::TextureFormat::Enum Image::FromHPLTextureFormat(ePixelFormat format)
     {

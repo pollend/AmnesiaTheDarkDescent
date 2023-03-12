@@ -69,21 +69,6 @@ namespace hpl {
         eDeferredSSAO_OnColorBuffer,
         eDeferredSSAO_LastEnum,
     };
-
-    //---------------------------------------------
-
-    enum eGBufferComponents {
-        eGBufferComponents_Full,
-        eGBufferComponents_ColorAndDepth,
-        eGBufferComponents_Color,
-        eGBufferComponents_Depth,
-        eGBufferComponents_Normals,
-        eGBufferComponents_LinearDepth,
-        eGBufferComponents_LastEnum,
-    };
-
-    //---------------------------------------------
-
     class cDeferredLight final {
     public:
         cDeferredLight() {
@@ -104,11 +89,22 @@ namespace hpl {
 
     //---------------------------------------------
     namespace rendering::detail {
-        enum SpotlightVariant { SpotlightVariant_None = 0, SpotlightVariant_UseGoboMap = 0x1, SpotlightVariant_UseShadowMap = 0x2 };
+        enum SpotlightVariant { 
+            SpotlightVariant_None = 0, 
+            SpotlightVariant_UseGoboMap = 0x1, 
+            SpotlightVariant_UseShadowMap = 0x2 
+        };
 
-        enum PointlightVariant { PointlightVariant_None = 0, PointlightVariant_UseGoboMap = 0x1 };
+        enum PointlightVariant { 
+            PointlightVariant_None = 0, 
+            PointlightVariant_UseGoboMap = 0x1 
+        };
 
-        enum FogVariant { FogVariant_None = 0, FogVariant_UseOutsideBox = 0x1, FogVariant_UseBackSide = 0x2 };
+        enum FogVariant { 
+            FogVariant_None = 0, 
+            FogVariant_UseOutsideBox = 0x1, 
+            FogVariant_UseBackSide = 0x2 
+        };
 
         void RenderZPassObject(
             bgfx::ViewId view,

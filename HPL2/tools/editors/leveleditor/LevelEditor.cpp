@@ -17,8 +17,6 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using namespace hpl;
-
 #include "hpl.h"
 #include "math/MathTypes.h"
 
@@ -71,22 +69,13 @@ using namespace hpl;
 
 #include <algorithm>
 
+using namespace hpl;
 
 unsigned int cLevelEditorGroup::mlGroupCounter = 1;
-
-//--------------------------------------------------------------------
-
-///////////////////////////////////////////////////////////////////////
-// GROUP
-///////////////////////////////////////////////////////////////////////
-
-//--------------------------------------------------------------------
 
 cLevelEditorGroup::cLevelEditorGroup()
 {
 }
-
-//--------------------------------------------------------------------
 
 cLevelEditorGroup::cLevelEditorGroup(cLevelEditor* apEditor, unsigned int alID,const tString& asName)
 {
@@ -94,8 +83,6 @@ cLevelEditorGroup::cLevelEditorGroup(cLevelEditor* apEditor, unsigned int alID,c
 	mlID = alID;
 	msName = asName;
 }
-
-//--------------------------------------------------------------------
 
 void cLevelEditorGroup::SetVisibility(bool abX)
 {
@@ -114,20 +101,6 @@ void cLevelEditorGroup::SetVisibility(bool abX)
 	}
 }
 
-//--------------------------------------------------------------------
-//--------------------------------------------------------------------
-///////////////////////////////////////////////////////////////////////
-// LEVEL EDITOR
-///////////////////////////////////////////////////////////////////////
-//--------------------------------------------------------------------
-//--------------------------------------------------------------------
-
-///////////////////////////////////////////////////////////////////////
-// CONSTRUCTORS
-///////////////////////////////////////////////////////////////////////
-
-//--------------------------------------------------------------------
-
 cLevelEditor::cLevelEditor() : iEditorBase(_W("Maps"), _W("*.map"))
 {
 }
@@ -136,14 +109,6 @@ cLevelEditor::~cLevelEditor()
 {
 	OnSaveConfig();
 }
-
-//--------------------------------------------------------------------
-
-///////////////////////////////////////////////////////////////////////
-// PUBLIC METHODS
-///////////////////////////////////////////////////////////////////////
-
-//--------------------------------------------------------------------
 
 void cLevelEditor::AppSpecificReset()
 {
@@ -414,8 +379,6 @@ void cLevelEditor::LoadEditorSession(iXmlDocument* apDoc, cXmlElement** apElemen
 	}
 }
 
-//--------------------------------------------------------------------
-
 bool cLevelEditor::ImportFileCallback(iWidget* apWidget, const cGuiMessageData& aData)
 {
 	if(aData.mlVal==1)
@@ -433,7 +396,6 @@ bool cLevelEditor::ImportFileCallback(iWidget* apWidget, const cGuiMessageData& 
 }
 kGuiCallbackDeclaredFuncEnd(cLevelEditor, ImportFileCallback);
 
-//--------------------------------------------------------------------
 
 bool cLevelEditor::ExportFileCallback(iWidget* apWidget, const cGuiMessageData& aData)
 {
@@ -445,9 +407,6 @@ bool cLevelEditor::ExportFileCallback(iWidget* apWidget, const cGuiMessageData& 
 	return true;
 }
 kGuiCallbackDeclaredFuncEnd(cLevelEditor, ExportFileCallback);
-
-//--------------------------------------------------------------------
-
 
 void cLevelEditor::SaveEditorSession(iXmlDocument* apDoc, cXmlElement** apElement)
 {
@@ -484,8 +443,6 @@ void cLevelEditor::SaveEditorSession(iXmlDocument* apDoc, cXmlElement** apElemen
 	}
 }
 
-//--------------------------------------------------------------------
-
 void cLevelEditor::UpdateEditMenu()
 {
 	mpMainMenuUndo->SetEnabled( !mpActionHandler->IsDoneActionsListEmpty());
@@ -497,11 +454,6 @@ void cLevelEditor::UpdateEditMenu()
 	mpMainMenuClone->SetEnabled(bHasSelectedObjects && mpSelection->IsCloneable());
 	mpMainMenuCompound->SetEnabled(mpSelection->GetNumEntities()>0);
 }
-
-//--------------------------------------------------------------------
-
-
-//--------------------------------------------------------------------
 
 void cLevelEditor::OnInit()
 {
@@ -536,8 +488,6 @@ void cLevelEditor::OnInit()
 	AddEditMode(hplNew(cEditorEditModeFogAreas,(this, mpEditorWorld)));
 	AddEditMode(hplNew(cEditorEditModeCombine, (this)));
 }
-
-//--------------------------------------------------------------------
 
 void cLevelEditor::OnViewportChanged(cViewport* viewport) {
 	// mpLowerToolbar->SetPosition(cVector3f(GetLayoutVec3f(eLayoutVec3_ViewportAreaPos).x, mvScreenSize.y-50,1));
@@ -575,8 +525,6 @@ void cLevelEditor::OnInitLayout()
 	mpWindowSearch = cEditorWindowFactory::CreateSearchWindow(this, (cEditorEditModeSelect*)GetEditMode("Select"));
 }
 
-//--------------------------------------------------------------------
-
 void cLevelEditor::OnSetUpDirectories()
 {
 	const tWString& sWorkingDir = GetWorkingDir();
@@ -587,8 +535,6 @@ void cLevelEditor::OnSetUpDirectories()
 	mpDirHandler->AddLookUpDir(eDir_Decals, sWorkingDir + mpMainConfig->GetStringW("Directories", "DecalsDir", _W("textures/decals")), true);
 }
 
-//--------------------------------------------------------------------
-
 void cLevelEditor::OnUpdate(float afTimeStep)
 {
 	/*iWidget* pWidget = mpSet->GetAttentionWidget();
@@ -597,8 +543,6 @@ void cLevelEditor::OnUpdate(float afTimeStep)
 																	pWidgetParent, pWidgetParent?pWidgetParent->GetTypeString().c_str():"NULL");
 																	*/
 }
-
-//--------------------------------------------------------------------
 
 void cLevelEditor::OnPostUpdateLayout()
 {
@@ -635,15 +579,11 @@ void cLevelEditor::OnPostUpdateLayout()
 	UpdateEditMenu();
 }
 
-//--------------------------------------------------------------------
-
 void cLevelEditor::OnInitInput()
 {
 	/////////////////////////////////////////////////////////
 	// Set up Special input keys
 }
-
-//--------------------------------------------------------------------
 
 void cLevelEditor::OnLoadConfig()
 {

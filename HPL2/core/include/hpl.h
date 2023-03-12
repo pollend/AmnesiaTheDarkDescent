@@ -108,7 +108,6 @@
 #include "resources/SoundEntityManager.h"
 #include "resources/AnimationManager.h"
 #include "resources/EntFileManager.h"
-#include "resources/VideoManager.h"
 #include "resources/MeshLoader.h"
 #include "resources/MeshLoaderHandler.h"
 #include "resources/BitmapLoader.h"

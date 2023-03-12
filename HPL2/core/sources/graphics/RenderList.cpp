@@ -38,40 +38,22 @@
 
 namespace hpl {
 
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
 	cRenderList::cRenderList()
 	{
 		mfFrameTime =0;
 		mpFrustum = NULL;
 	}
 
-	//-----------------------------------------------------------------------
-
 	cRenderList::~cRenderList()
 	{
 
 	}
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	void cRenderList::Setup(float afFrameTime, cFrustum *apFrustum)
 	{
 		mfFrameTime = afFrameTime;
 		mpFrustum = apFrustum;
 	}
-
-	//-----------------------------------------------------------------------
 
 	void cRenderList::AddObject(iRenderable *apObject)
 	{
@@ -208,8 +190,6 @@ namespace hpl {
 
 	}
 
-	//-----------------------------------------------------------------------
-
 	void cRenderList::Clear()
 	{
 		// Use resize instead of clear, because that way capacity is preserved and allocation is never
@@ -228,8 +208,6 @@ namespace hpl {
 			mvSortedArrays[i].resize(0);
 		}
 	}
-
-	//-----------------------------------------------------------------------
 
 	void cRenderList::PrintAllObjects()
 	{
@@ -260,15 +238,11 @@ namespace hpl {
 		Log("---------------------------------\n");
 	}
 
-	//-----------------------------------------------------------------------
-
 	bool cRenderList::ArrayHasObjects(eRenderListType aType)
 	{
 		return mvSortedArrays[aType].empty()==false;
 	}
 
-	//-----------------------------------------------------------------------
-	
 	std::span<iRenderable*> cRenderList::GetRenderableItems(eRenderListType aType) {
 		if(mvSortedArrays[aType].empty()) {
 			return std::span<iRenderable*>();
@@ -335,8 +309,6 @@ namespace hpl {
         return apObjectA < apObjectB;
 	}
 
-	//-----------------------------------------------------------------------
-
 	static bool SortFunc_Translucent(iRenderable* apObjectA, iRenderable *apObjectB)
 	{
 		////////////////////////
@@ -350,8 +322,6 @@ namespace hpl {
 		//View space depth, no need to test further since Z should almost never be the same for two objects.
 		return apObjectA->GetViewSpaceZ() < apObjectB->GetViewSpaceZ();
 	}
-
-	//-----------------------------------------------------------------------
 
 	static bool SortFunc_Decal(iRenderable* apObjectA, iRenderable *apObjectB)
 	{
@@ -384,8 +354,6 @@ namespace hpl {
         return apObjectA->GetWorldPosition()  < apObjectB->GetWorldPosition();
 	}
 
-	//-----------------------------------------------------------------------
-
 	static bool SortFunc_Illumination(iRenderable* apObjectA, iRenderable *apObjectB)
 	{
 		cMaterial *pMatA = apObjectA->GetMaterial();
@@ -417,14 +385,9 @@ namespace hpl {
 		return apObjectA->GetIlluminationAmount() < apObjectB->GetIlluminationAmount();
 	}
 
-	//-----------------------------------------------------------------------
-
 	typedef bool (*tSortRenderableFunc)(iRenderable*,iRenderable*);
 
 	static tSortRenderableFunc vSortFunctions[eRenderListType_LastEnum] = {SortFunc_Z,SortFunc_Diffuse,SortFunc_Translucent,SortFunc_Decal,SortFunc_Illumination};
-
-	//-----------------------------------------------------------------------
-
 
 	void cRenderList::CompileArray(eRenderListType aType)
 	{
@@ -438,8 +401,6 @@ namespace hpl {
 
 		std::sort(mvSortedArrays[aType].begin(), mvSortedArrays[aType].end(), vSortFunctions[aType]);
 	}
-
-	//-----------------------------------------------------------------------
 
 	void cRenderList::FindNearestLargeSurfacePlane()
 	{
@@ -525,7 +486,4 @@ namespace hpl {
 		}
 
 	}
-
-	//-----------------------------------------------------------------------
-
 }
