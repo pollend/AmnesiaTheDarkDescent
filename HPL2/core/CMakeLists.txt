@@ -69,14 +69,7 @@ file(GLOB impl_sources RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
     sources/impl/BitmapLoader*
     # Newton
     sources/impl/*Newton.cpp
-    # GL
-    sources/impl/FrameBufferGL.cpp
-    sources/impl/GLSL*
-    sources/impl/OcclusionQueryOGL.cpp
-    sources/impl/VertexBufferOGL_Array.cpp
     sources/impl/VertexBufferBGFX.cpp
-    sources/impl/VertexBufferOGL_VBO.cpp
-    sources/impl/VertexBufferOpenGL.cpp
     # SDL
     sources/impl/GamepadSDL.cpp
     sources/impl/GamepadSDL2.cpp
@@ -206,7 +199,6 @@ set(OpenGL_GL_PREFERENCE LEGACY)
 find_package(DevIL REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(ZLIB REQUIRED)
-find_package(GLEW CONFIG REQUIRED)
 find_package(SDL2 CONFIG REQUIRED)
 # find_package(PNG REQUIRED)
 # find_package (Python COMPONENTS Interpreter)
@@ -227,8 +219,6 @@ set(HPL2_INCLUDES
     PRIVATE ${OALWRAPPER_INCLUDE_DIR}
     PRIVATE ${ZLIB_INCLUDE_DIRS}
     PRIVATE ${IL_INCLUDE_DIR}
-    PRIVATE ${GLEW_INCLUDE_DIRS}
-    PRIVATE ${OPENGL_INCLUDE_DIR}
 )
 
 target_include_directories(HPL2
@@ -254,7 +244,6 @@ target_link_libraries(HPL2
   bgfx
   bx
   bimg
-  GLEW::GLEW
   $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
   $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
   ZLIB::ZLIB
