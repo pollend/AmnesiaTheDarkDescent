@@ -1,18 +1,22 @@
 #include <system/Bootstrap.h>
 
+#include <cstdint>
+#include <memory>
+
 #include "engine/IUpdateEventLoop.h"
 #include "engine/Interface.h"
 #include "input/InputKeyboardDevice.h"
 #include "input/InputManager.h"
-// #include "platform/sdl2/SDL2Mouse.h"
-#include <cstdint>
-#include <memory>
+
+#include "scene/Viewport.h"
+
 
 #include <input/InputMouseDevice.h>
 #include <windowing/NativeWindow.h>
 
 #include "bgfx/bgfx.h"
 #include "bgfx/platform.h"
+
 namespace hpl {
     Bootstrap::Bootstrap() {
     }
@@ -63,8 +67,7 @@ namespace hpl {
 
     void Bootstrap::Initialize(BootstrapConfiguration configuration) {
         Interface<IUpdateEventLoop>::Register(&m_updateEventLoop);
-        // BootstrapConfiguration config = std::move(configuration);
-
+        
         auto keyboardHandle = hpl::input::internal::keyboard::Initialize();
         auto mouseHandle = hpl::input::internal::mouse::Initialize();
         auto windowHandle = hpl::window::internal::Initialize(configuration.m_windowStyle);
@@ -76,6 +79,9 @@ namespace hpl {
             hpl::input::internal::mouse::GetWindowEventHandle(mouseHandle));
 
         m_window = hpl::window::NativeWindowWrapper(std::move(windowHandle));
+
+        // this is safe because the render target is scheduled on the api thread
+        m_primaryViewport = std::make_unique<hpl::PrimaryViewport>(m_window);
         
         // register input devices
         m_inputManager.Register(input::InputManager::KeyboardDeviceID, std::make_shared<input::InputKeyboardDevice>(std::move(keyboardHandle)));

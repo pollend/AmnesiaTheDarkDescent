@@ -34,7 +34,6 @@ namespace hpl {
 	class cBitmap;
 	class iFrameBuffer;
 	class iDepthStencilBuffer;
-	class iMutex;
 
 	//----------------------------------------
 

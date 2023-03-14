@@ -86,6 +86,7 @@ namespace hpl
         if(bgfx::isValid(m_buffer)) {
             bgfx::destroy(m_buffer);
         }
+        m_images = {};
         m_buffer = BGFX_INVALID_HANDLE;
     }
 

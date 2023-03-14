@@ -39,117 +39,9 @@
 #include "LuxSavedGame.h"
 #include <mutex>
 
-//-----------------------------------------------------------------------
-
-//////////////////////////////////////////////////////////////////////////
-// CONSTRUCTORS
-//////////////////////////////////////////////////////////////////////////
-
-//-----------------------------------------------------------------------
-
-cLuxSaveHandlerThreadClass::cLuxSaveHandlerThreadClass()
-{
-	mpThread = NULL;
-}
-
-cLuxSaveHandlerThreadClass::~cLuxSaveHandlerThreadClass()
-{
-	if(IsRunning())
-	{
-		mpThread->Stop();
-		hplDelete(mpThread);
-	}
-}
-
-//-----------------------------------------------------------------------
-
-//////////////////////////////////////////////////////////////////////////
-// PUBLIC METHODS
-//////////////////////////////////////////////////////////////////////////
-
-//-----------------------------------------------------------------------
-
-bool cLuxSaveHandlerThreadClass::IsRunning()
-{
-	return mpThread!=NULL;
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxSaveHandlerThreadClass::SetUpThread()
-{
-	mpThread = cPlatform::CreateThread(this);
-	mpThread->SetPriority(eThreadPrio_Low);
-	mpThread->SetUpdateRate(1.0f);
-	mpThread->Start();
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxSaveHandlerThreadClass::Save(cLuxSaveGame_SaveData* apSaveData, const tWString& asFile)
-{
-	if(apSaveData==NULL)
-		return;
-
-	std::lock_guard<std::mutex> lk(m_saveMutex);
-	mvSaveData.push_back(apSaveData);
-	mvSaveFileNames.push_back(asFile);
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxSaveHandlerThreadClass::ProcessPendingSaves()
-{
-	std::vector<cLuxSaveGame_SaveData*> vSaveDataCopy;
-	std::vector<tWString> vSaveFileNamesCopy;
-	{
-		std::lock_guard<std::mutex> lk(m_saveMutex);
-		if(mvSaveData.empty()==false)
-		{
-			vSaveDataCopy = mvSaveData;
-			vSaveFileNamesCopy = mvSaveFileNames;
-
-			mvSaveData.clear();
-			mvSaveFileNames.clear();
-		}
-	}
-
-	// Force a wait until all saves are processed
-	std::lock_guard<std::mutex>(gpBase->mpMapHandler->m_saveGameMutex);
-	for(int i=0;i<(int)vSaveDataCopy.size();++i)
-	{
-		cLuxSaveGame_SaveData* pData = vSaveDataCopy[i];
-		const tWString& sFile = vSaveFileNamesCopy[i];
-
-		//Need to set saved maps before saving!
-		pData->mpSavedMaps = gpBase->mpMapHandler->GetSavedMapCollection();
-
-		cSerializeClass::SaveToFile(pData,sFile,"SaveGame");
-
-		hplDelete(pData);
-	}
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxSaveHandlerThreadClass::UpdateThread()
-{
-	ProcessPendingSaves();
-}
-
-//-----------------------------------------------------------------------
-
-//////////////////////////////////////////////////////////////////////////
-// CONSTRUCTORS
-//////////////////////////////////////////////////////////////////////////
-
-//-----------------------------------------------------------------------
 
 cLuxSaveHandler::cLuxSaveHandler() : iLuxUpdateable("LuxSaveHandler")
 {
-	mbInitialized = false;
-	mbStartThread = false;
-
 	mlMaxAutoSaves =  gpBase->mpGameCfg->GetInt("Saving","MaxAutoSaves",20);
 	mlSaveNameCount =0;
 }
@@ -160,37 +52,20 @@ cLuxSaveHandler::~cLuxSaveHandler()
 {
 }
 
-//-----------------------------------------------------------------------
-
-//////////////////////////////////////////////////////////////////////////
-// PUBLIC METHODS
-//////////////////////////////////////////////////////////////////////////
-
-//-----------------------------------------------------------------------
 
 void cLuxSaveHandler::OnStart()
 {
 
 }
 
-//-----------------------------------------------------------------------
-
 void cLuxSaveHandler::Update(float afTimeStep)
 {
 }
 
-//-----------------------------------------------------------------------
-
 void cLuxSaveHandler::Reset()
 {
-	if(mbInitialized==false)
-	{
-		mbInitialized = true;
-		if(mbStartThread) mSaveHandlerThreadClass.SetUpThread();
-	}
-}
 
-//-----------------------------------------------------------------------
+}
 
 void cLuxSaveHandler::SaveGameToFile(const tWString& asFile, bool abSaveSnapshot)
 {
@@ -198,16 +73,9 @@ void cLuxSaveHandler::SaveGameToFile(const tWString& asFile, bool abSaveSnapshot
 
 	cLuxSaveGame_SaveData* pData = CreateSaveGameData();
 
-	if(mSaveHandlerThreadClass.IsRunning())
-		mSaveHandlerThreadClass.Save(pData, asFile);
-	else
-	{
-		pData->mpSavedMaps = gpBase->mpMapHandler->GetSavedMapCollection();
-		cSerializeClass::SaveToFile(pData,asFile,"SaveGame");
-		hplDelete(pData);
-	}
-
-
+	pData->mpSavedMaps = gpBase->mpMapHandler->GetSavedMapCollection();
+	cSerializeClass::SaveToFile(pData,asFile,"SaveGame");
+	hplDelete(pData);
 	// Save snapshot?
 	if(abSaveSnapshot)
 	{
@@ -224,8 +92,6 @@ void cLuxSaveHandler::SaveGameToFile(const tWString& asFile, bool abSaveSnapshot
 	Log("-------- END SAVE ---------\n");
 
 }
-
-//-----------------------------------------------------------------------
 
 void cLuxSaveHandler::LoadGameFromFile(const tWString& asFile)
 {
@@ -266,10 +132,6 @@ bool cLuxSaveHandler::AutoSave()
 
 bool cLuxSaveHandler::AutoLoad(bool abResetProgressLogger)
 {
-	// Wait until any pending save is done.
-	if(mSaveHandlerThreadClass.IsRunning())
-		mSaveHandlerThreadClass.ProcessPendingSaves();
-
 	//Get newest file (if any!)
 	tWString sFile = GetNewestSaveFile(gpBase->msProfileSavePath);
 	if(sFile == _W(""))

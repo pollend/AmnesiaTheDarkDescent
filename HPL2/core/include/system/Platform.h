@@ -28,9 +28,6 @@ namespace hpl {
 
 	class iTimer;
 	class iThread;
-	class iThreadClass;
-	class iMutex;
-
 	//-----------------------------------------
 
     struct VideoComp
@@ -137,11 +134,6 @@ namespace hpl {
 
 		static bool OpenFileOnShell(const tWString& asPath);
 
-		//////////////////////////////////////////////////////
-		////////// THREADING /////////////////////////////////
-		//////////////////////////////////////////////////////
-
-		static iThread* CreateThread(iThreadClass* apThreadClass);
 
 	private:
         static void CreateMessageBoxBase(eMsgBoxType eType, const wchar_t* asCaption, const wchar_t* fmt, va_list ap);

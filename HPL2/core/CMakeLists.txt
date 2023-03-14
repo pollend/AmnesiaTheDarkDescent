@@ -75,8 +75,6 @@ file(GLOB impl_sources RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
     sources/impl/GamepadSDL2.cpp
     sources/impl/KeyboardSDL.cpp
     sources/impl/MouseSDL.cpp
-    sources/impl/MutexSDL.cpp
-    sources/impl/ThreadSDL.cpp
     sources/impl/TimerSDL.cpp
     sources/impl/LowLevelGraphicsSDL.cpp
     sources/impl/LowLevelInputSDL.cpp
@@ -115,8 +113,6 @@ IF(APPLE)
 ELSEIF(WIN32)
     LIST(APPEND impl_sources
         sources/impl/PlatformWin32.cpp
-        sources/impl/ThreadWin32.cpp
-        sources/impl/MutexWin32.cpp
     )
 ELSEIF(LINUX)
     LIST(APPEND impl_sources

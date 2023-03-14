@@ -20,8 +20,10 @@
 
 #include "engine/Event.h"
 #include "engine/IUpdateEventLoop.h"
+#include "engine/Interface.h"
 #include "engine/RTTI.h"
 
+#include "graphics/GraphicsContext.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Image.h"
 #include "graphics/RenderTarget.h"
@@ -48,18 +50,24 @@ namespace hpl {
     class iRendererCallback;
     class cGuiSet;
 
-    class cViewport {
+    class cViewport final {
+        HPL_RTTI_CLASS(cViewport, "{f5d42b52-6e84-4486-afa0-a5888f3513a0}")
     public:
         static constexpr size_t MaxViewportHandles = 32;
         using ResizeEvent = hpl::Event<hpl::cVector2l&>;
         using ViewportDispose = hpl::Event<>;
         using ViewportChange = hpl::Event<>;
 
+        struct PostDrawPayload {
+            GraphicsContext& m_context;
+            std::shared_ptr<RenderTarget> m_target;
+        };
+        using PostSceneDraw = hpl::Event<PostDrawPayload>;
+
         cViewport(cScene* apScene);
 
         cViewport(cViewport&&) = delete;
         void operator=(cViewport&&) = delete;
-
         cViewport(const cViewport&) = delete;
         cViewport& operator=(const cViewport&) = delete;
 
@@ -68,12 +76,15 @@ namespace hpl {
         void SetActive(bool abX) {
             mbActive = abX;
         }
+
         void SetVisible(bool abX) {
             mbVisible = abX;
         }
+        
         bool IsActive() {
             return mbActive;
         }
+        
         bool IsVisible() {
             return mbVisible;
         }
@@ -87,6 +98,7 @@ namespace hpl {
         void SetIsListener(bool abX) {
             mbIsListener = abX;
         }
+        
         bool IsListener() {
             return mbIsListener;
         }
@@ -125,13 +137,10 @@ namespace hpl {
         void RemoveGuiSet(cGuiSet* apSet);
         cGuiSetListIterator GetGuiSetIterator();
 
-        // void SetPosition(const cVector2l& avPos){ mRenderTarget.setPosition(avPos);}
         inline void SetSize(const cVector2l& avSize) {
             m_size = avSize;
             m_dirtyViewport = true;
         }
-
-        // const cVector2l GetPosition(){ return mRenderTarget.GetPosition();}
         const cVector2l GetSize() {
             return m_size;
         }
@@ -180,6 +189,8 @@ namespace hpl {
         window::WindowEvent::Handler m_windowEventHandler;
         ViewportDispose m_disposeEvent;
         ViewportChange m_viewportChanged;
+
+        PostSceneDraw m_postSceneDraw;
 
         cScene* mpScene;
         cCamera* mpCamera;
@@ -263,6 +274,43 @@ namespace hpl {
         std::function<bool(cViewport&, TData& target)> m_dataValid;
         std::array<cViewport::ViewportDispose::Handler, cViewport::MaxViewportHandles> m_disposeHandlers;
         std::array<std::unique_ptr<TData>, cViewport::MaxViewportHandles> m_targets;
+    };
+
+    class PrimaryViewport final {
+        HPL_RTTI_CLASS(PrimaryViewport, "{98010986-a128-44ec-b0f8-45e69e5a7786}")
+    public:
+        using ViewportChange = hpl::Event<>;
+
+        PrimaryViewport();
+        PrimaryViewport(window::NativeWindowWrapper& window);
+        PrimaryViewport(const PrimaryViewport& other) = delete;
+        PrimaryViewport(PrimaryViewport&& other) = delete;
+        PrimaryViewport& operator=(const PrimaryViewport& other) = delete;
+        PrimaryViewport& operator=(PrimaryViewport&& other) = delete;
+
+        inline RenderTarget& GetRenderTarget() {
+            return m_renderTarget;
+        }
+
+        inline void ConnectViewportChanged(ViewportChange::Handler& handler) {
+            handler.Connect(m_viewportChanged);
+        }
+
+        inline void SetSize(const cVector2l& size) {
+            m_size = size;
+            m_dirtyViewport = true;
+        }
+    private:
+
+        void CreateEventHandler();
+
+        cVector2l m_size = { 0, 0 };
+        RenderTarget m_renderTarget;
+        bool m_dirtyViewport = false;
+
+        IUpdateEventLoop::UpdateEvent::Handler m_updateEventHandler;
+        window::WindowEvent::Handler m_windowEventHandler;
+        ViewportChange m_viewportChanged;
     };
 
 }; // namespace hpl

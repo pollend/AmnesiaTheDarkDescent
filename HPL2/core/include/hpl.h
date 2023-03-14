@@ -29,8 +29,6 @@
 #include "system/SerializeClass.h"
 #include "system/Container.h"
 #include "system/PreprocessParser.h"
-#include "system/Thread.h"
-#include "system/Mutex.h"
 #include "system/Platform.h"
 #include "system/SHA1.h"
 

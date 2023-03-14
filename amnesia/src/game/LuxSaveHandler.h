@@ -17,43 +17,14 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef LUX_SAVE_HANDLER_H
-#define LUX_SAVE_HANDLER_H
-
-//----------------------------------------------
+#pragma once
 
 #include "LuxBase.h"
 #include <mutex>
 
-//----------------------------------------------
 
 class cLuxSaveGame_SaveData;
 
-//----------------------------------------------
-
-class cLuxSaveHandlerThreadClass : public iThreadClass
-{
-public:
-	cLuxSaveHandlerThreadClass();
-	~cLuxSaveHandlerThreadClass();
-
-	bool IsRunning();
-
-	void SetUpThread();
-	void Save(cLuxSaveGame_SaveData* apSaveData, const tWString& asFile);
-
-	void ProcessPendingSaves();
-
-	void UpdateThread();
-
-protected:
-	std::mutex m_saveMutex;
-	iThread* mpThread;
-	std::vector<cLuxSaveGame_SaveData*> mvSaveData;
-	tWStringVec mvSaveFileNames;
-};
-
-//----------------------------------------------
 
 class cLuxSaveHandler : public iLuxUpdateable
 {
@@ -73,36 +44,20 @@ public:
 
 	bool SaveFileExists();
 
-	//////////////////////
-	// HARDMODE
-
 	bool HardModeSave();
-
-	//////////////////////
 
 	cLuxSaveGame_SaveData *CreateSaveGameData();
 	void LoadSaveGameData(cLuxSaveGame_SaveData *apSave);
 
 	tWString GetProperSaveName(const tWString& asFile);
 
-	cLuxSaveHandlerThreadClass* GetThreadClass() { return &mSaveHandlerThreadClass; }
 private:
 	tWString GetSaveName(const tWString &asPrefix);
 	void DeleteOldestSaveFiles(const tWString &asFolder, int alMax);
 	tWString GetNewestSaveFile(const tWString &asFolder);
 
-	bool mbInitialized;
-	bool mbStartThread;
-
 	cDate mLatestSaveDate;
 	int mlMaxAutoSaves;
 	int mlSaveNameCount;
-
-	cLuxSaveHandlerThreadClass mSaveHandlerThreadClass;
 };
 
-
-//----------------------------------------------
-
-
-#endif // #ifndef LUX_SAVE_HANDLER_H

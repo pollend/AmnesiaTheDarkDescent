@@ -27,7 +27,6 @@
 
 #include "system/LowLevelSystem.h"
 #include "system/Platform.h"
-#include "system/Mutex.h"
 
 #include "impl/LowLevelGraphicsSDL.h"
 #include "impl/SDLFontData.h"

@@ -133,9 +133,8 @@ namespace hpl {
 
 		[[deprecated("replaced with bgfx")]]
 		iGpuProgram* CreateGpuProgram(const tString& asName);
-		[[deprecated("replaced with bgfx")]]
-		iGpuProgram* CreateGpuProgramFromShaders(	const tString& asName, const tString& asVtxShader,const tString& asFragShader,
-													cParserVarContainer *apVarContainer);
+
+
 		void DestroyGpuProgram(iGpuProgram* apProgram);
 
 		void AddMaterialType(iMaterialType *apType, const tString& asName);

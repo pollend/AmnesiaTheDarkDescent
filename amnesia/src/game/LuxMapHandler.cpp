@@ -495,7 +495,7 @@ void cLuxMapHandler::ResumeSoundsAndMusic()
 
 void cLuxMapHandler::ClearSaveMapCollection()
 {
-	std::lock_guard<std::mutex> lk(m_saveGameMutex);
+	std::lock_guard<std::recursive_mutex> lk(m_saveGameMutex);
 	mpSavedGame->Reset();
 }
 
@@ -503,7 +503,7 @@ void cLuxMapHandler::ClearSaveMapCollection()
 
 void cLuxMapHandler::SetSavedMapCollection(cLuxSavedGameMapCollection *apMaps)
 {
-	std::lock_guard<std::mutex> lk(m_saveGameMutex);
+	std::lock_guard<std::recursive_mutex> lk(m_saveGameMutex);
 	hplDelete(mpSavedGame);
 	mpSavedGame = apMaps;
 }
@@ -585,12 +585,6 @@ void cLuxMapHandler::CheckMapChange(float afTimeStep)
 	gpBase->mpEffectHandler->GetFade()->FadeIn(2.0f);
 	gpBase->mpPlayer->SetActive(true);
 
-	///////////////////////////////////////
-	// Write pending savegame queries
-	cLuxSaveHandlerThreadClass* pThreadClass = gpBase->mpSaveHandler->GetThreadClass();
-	if(pThreadClass->IsRunning())
-		pThreadClass->ProcessPendingSaves();
-
 	//////////////////////////////////
 	//Clean up
 	// Must do this before OnEnter!
@@ -603,7 +597,7 @@ void cLuxMapHandler::CheckMapChange(float afTimeStep)
 	{
 		unsigned long lLoadStartTime = 0;
 		{
-			std::lock_guard<std::mutex> lk(m_saveGameMutex);
+			std::lock_guard<std::recursive_mutex> lk(m_saveGameMutex);
 
 			//////////////////////
 			// Run onleave before saving!

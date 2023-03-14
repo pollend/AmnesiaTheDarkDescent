@@ -24,11 +24,12 @@
 #include <cstdint>
 #include <engine/RTTI.h>
 #include <functional>
+#include <memory>
 #include <system/Filesystem.h>
 #include <input/InputManager.h>
 
 namespace hpl {
-
+    class PrimaryViewport;
     // Bootstrap the engine and provide access to the core systems
     class Bootstrap {
     public:
@@ -48,6 +49,7 @@ namespace hpl {
     private:
         static int32_t BootstrapThreadHandler(bx::Thread* self, void* _userData);
 
+        std::unique_ptr<PrimaryViewport> m_primaryViewport;
         UpdateEventLoop m_updateEventLoop;
         input::InputManager m_inputManager;
         window::NativeWindowWrapper m_window;

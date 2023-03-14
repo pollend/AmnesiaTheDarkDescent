@@ -448,27 +448,6 @@ namespace hpl {
 		return nullptr;
 	}
 
-	iGpuProgram* cGraphics::CreateGpuProgramFromShaders(const tString& asName, const tString& asVtxShader,const tString& asFragShader,
-														cParserVarContainer *apVarContainer)
-	{
-		BX_ASSERT(false, "Not implemented");
-		return nullptr;
-		// iGpuShader *pVtxShader = mpResources->GetGpuShaderManager()->CreateShader(asVtxShader,eGpuShaderType_Vertex,apVarContainer);
-		// if(pVtxShader==NULL) return NULL;
-		// iGpuShader *pFragShader = mpResources->GetGpuShaderManager()->CreateShader(asFragShader,eGpuShaderType_Fragment,apVarContainer);
-		// if(pFragShader==NULL){
-		// 	mpResources->GetGpuShaderManager()->Destroy(pVtxShader);
-		// 	return NULL;
-		// }
-
-		// iGpuProgram *pProgram = CreateGpuProgram(asName);
-		// pProgram->SetShader(eGpuShaderType_Vertex, pVtxShader);
-		// pProgram->SetShader(eGpuShaderType_Fragment, pFragShader);
-		// pProgram->Link();
-
-        // return pProgram;
-	}
-
 	void cGraphics::DestroyGpuProgram(iGpuProgram* apProgram)
 	{
 		STLFindAndDelete(mlstGpuPrograms, apProgram);

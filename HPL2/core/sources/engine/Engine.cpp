@@ -46,7 +46,6 @@
 #include "system/String.h"
 #include "system/Platform.h"
 #include "system/Timer.h"
-#include "system/Mutex.h"
 
 #include "input/Input.h"
 #include "input/Mouse.h"

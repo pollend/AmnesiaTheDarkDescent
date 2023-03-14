@@ -17,15 +17,10 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef LUX_MAP_HANDLER_H
-#define LUX_MAP_HANDLER_H
-
-//----------------------------------------------
+#pragma once
 
 #include "LuxBase.h"
 #include <mutex>
-
-//----------------------------------------------
 
 class cLuxMap;
 class cLuxSavedGameMapCollection;
@@ -140,7 +135,9 @@ public:
 	void AppLostInputFocus();
 	void AppGotInputFocus();
 
-	std::mutex m_saveGameMutex;
+	void ProcessPendingSaved();
+
+	std::recursive_mutex m_saveGameMutex;
 private:
 	void LoadMainConfig();
 	void SaveMainConfig();
@@ -175,8 +172,3 @@ private:
 
 	cLuxSavedGameMapCollection *mpSavedGame;
 };
-
-//----------------------------------------------
-
-
-#endif // LUX_MAP_HANDLER_H

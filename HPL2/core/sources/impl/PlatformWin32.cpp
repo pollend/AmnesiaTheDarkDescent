@@ -41,8 +41,6 @@
 
 
 #include "impl/TimerSDL.h"
-#include "impl/ThreadWin32.h"
-#include "impl/MutexWin32.h"
 
 #include <algorithm>
 
@@ -662,33 +660,4 @@ namespace hpl {
 
 		return bRet;
 	}
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// THREADING
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
-	iThread* cPlatform::CreateThread(iThreadClass* apThreadClass)
-	{
-		iThread* pThread = hplNew(cThreadWin32, ());
-		pThread->SetThreadClass(apThreadClass);
-
-		return pThread;
-	}
-
-	//-----------------------------------------------------------------------
-
-	iMutex* cPlatform::CreateMutEx()
-	{
-		return hplNew(cMutexWin32, ());
-	}
-
-
-	//-----------------------------------------------------------------------
-
-
-
 }

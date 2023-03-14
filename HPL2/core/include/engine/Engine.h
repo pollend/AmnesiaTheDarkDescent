@@ -49,7 +49,6 @@ namespace hpl {
 	class cEngine;
 	class cEngineInitVars;
 	class iTimer;
-	class iMutex;
 
 	//------------------------------------------------------
 

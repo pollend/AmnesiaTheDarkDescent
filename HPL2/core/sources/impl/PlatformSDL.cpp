@@ -26,8 +26,6 @@
 #include "SDL2/SDL.h"
 
 #include "impl/TimerSDL.h"
-#include "impl/ThreadSDL.h"
-#include "impl/MutexSDL.h"
 
 #include <set>
 #include <algorithm>
@@ -151,20 +149,6 @@ namespace hpl {
 	iTimer * cPlatform::CreateTimer()
 	{
 		return hplNew(cTimerSDL, () );
-	}
-
-
-	//////////////////////////////////////////////////////////////////////////
-	// THREADING
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-	iThread* cPlatform::CreateThread(iThreadClass* apThreadClass)
-	{
-		iThread* pThread = hplNew(cThreadSDL, ());
-		pThread->SetThreadClass(apThreadClass);
-
-		return pThread;
 	}
 
 #endif
