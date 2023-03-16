@@ -21,6 +21,7 @@
 #define HPLEDITOR_EDITOR_WINDOW_VIEWPORT_H
 
 #include "../common/StdAfx.h"
+#include "scene/Viewport.h"
 
 using namespace hpl;
 
@@ -166,6 +167,9 @@ protected:
 	eEditorWindowViewportPreset mPreset;
 	iWidget* mpPrevAttention;
 	cViewportCallback mViewportCallback;
+
+	cViewport::PostSolidDraw::Handler m_postSolidDraw;
+	cViewport::PostTranslucenceDraw::Handler m_postTranslucenceDraw;
 
 	bool mbDrawGrid;
 	bool mbDrawDebug;

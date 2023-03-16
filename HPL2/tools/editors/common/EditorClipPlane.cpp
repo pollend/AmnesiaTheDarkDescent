@@ -59,7 +59,7 @@ void cEditorClipPlane::SetCullingOnPositiveSide(bool abX)
 
 //------------------------------------------------------------------
 
-void cEditorClipPlane::Draw(cRendererCallbackFunctions* apFunctions, const cVector3f& avPos)
+void cEditorClipPlane::Draw(ImmediateDrawBatch* apFunctions, const cVector3f& avPos)
 {
 	if(IsActive()==false) return;
 
@@ -67,9 +67,9 @@ void cEditorClipPlane::Draw(cRendererCallbackFunctions* apFunctions, const cVect
 	cVector3f vCenter = vPlaneNormal*GetHeight();
 	float fSign[] = { -1, 1 };
 	//vCenter + vPlaneNormal*3*fSign[mbCullingOnPositiveSide]
-	apFunctions->GetLowLevelGfx()->DrawBoxMinMax(GetProjectedPosOnPlane(vCenter-20), GetProjectedPosOnPlane(vCenter+20), cColor(1,1));
+	apFunctions->DebugDrawBoxMinMax(GetProjectedPosOnPlane(vCenter-20), GetProjectedPosOnPlane(vCenter+20), cColor(1,1));
 	//cEditorHelper::DrawPyramid(apFunctions, vCenter, vCenter + vPlaneNormal*fSign[mbCullingOnPositiveSide]*5, 1, cColor(1,0,0,1));
-	apFunctions->GetLowLevelGfx()->DrawLine(vCenter, vCenter + vPlaneNormal*fSign[mbCullingOnPositiveSide]*5, cColor(1,1));
+	apFunctions->DebugDrawLine(vCenter, vCenter + vPlaneNormal*fSign[mbCullingOnPositiveSide]*5, cColor(1,1));
 }
 
 //------------------------------------------------------------------

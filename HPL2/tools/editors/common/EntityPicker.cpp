@@ -57,13 +57,14 @@ void cEntityPicker::SetPickMethod(iPickMethod* apMethod)
 
 //-----------------------------------------------------------------------------
 
-void cEntityPicker::DrawDebug(cRendererCallbackFunctions* apFunctions)
+void cEntityPicker::DrawDebug(ImmediateDrawBatch* batch)
 {
-	apFunctions->SetMatrix(NULL);
+	// apFunctions->SetMatrix(NULL);
 	for(int i=0;i<GetNumPicks();++i)
 	{
 		cPickData* pData = GetPick(i);
-		apFunctions->GetLowLevelGfx()->DrawSphere(pData->mvIntersection, 0.1f, cColor(0,1,0,1));
+		batch->DebugDrawSphere(pData->mvIntersection, 0.1f, cColor(0,1,0,1));
+		// apFunctions->GetLowLevelGfx()->DrawSphere(pData->mvIntersection, 0.1f, cColor(0,1,0,1));
 	}
 
 	cPickData* pData = GetPick(0);
@@ -72,13 +73,13 @@ void cEntityPicker::DrawDebug(cRendererCallbackFunctions* apFunctions)
 		tVector3fVec& vTri = pData->mvTriangle;
 		if(vTri.empty()==false)
 		{
-			apFunctions->GetLowLevelGfx()->DrawLine(vTri[0], vTri[1],cColor(0,1,0,1));
-			apFunctions->GetLowLevelGfx()->DrawLine(vTri[1], vTri[2],cColor(0,1,0,1));
-			apFunctions->GetLowLevelGfx()->DrawLine(vTri[2], vTri[0],cColor(0,1,0,1));
+			batch->DebugDrawLine(vTri[0], vTri[1],cColor(0,1,0,1));
+			batch->DebugDrawLine(vTri[1], vTri[2],cColor(0,1,0,1));
+			batch->DebugDrawLine(vTri[2], vTri[0],cColor(0,1,0,1));
 		}
 	}
 
-	OnDraw(apFunctions);
+	// OnDraw(apFunctions);
 }
 
 //-----------------------------------------------------------------------------

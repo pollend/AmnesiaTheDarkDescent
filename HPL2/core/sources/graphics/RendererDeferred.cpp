@@ -989,6 +989,19 @@ namespace hpl {
 		// if(mbEdgeSmoothLoaded && mpCurrentSettings->mbUseEdgeSmooth) {
 		// 	RenderEdgeSmoothPass(context, m_edgeSmooth_LinearDepth);
 		// }
+		{
+			cViewport::PostSolidDrawPayload event;
+			cMatrixf view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+			cMatrixf proj = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
+			ImmediateDrawBatch batch = context.startImmediateBatch(sharedData.m_output_target,
+				view,
+				proj);
+			event.m_drawBatch = &batch;
+			event.m_context = &context;
+			event.m_outputTarget = &sharedData.m_output_target;
+			viewport.SignalDraw(event);
+			context.flush(batch); // flush the batch
+		}
 		RunCallback(eRendererMessage_PostSolid, handler);
 
 		// not going to even try.

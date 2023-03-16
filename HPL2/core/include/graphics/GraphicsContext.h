@@ -1,6 +1,7 @@
 #pragma once
 
 #include "absl/container/inlined_vector.h"
+#include "graphics/Color.h"
 #include "graphics/Enum.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Image.h"
@@ -16,10 +17,51 @@
 
 namespace hpl
 {
+    class GraphicsContext;
+    class cCamera;
+
+    class ImmediateDrawBatch {
+    public:
+        ImmediateDrawBatch(GraphicsContext& context, RenderTarget& target, const cMatrixf& view, const cMatrixf& projection);
+
+        void DrawBillboard(cCamera* camera, const cVector3f& aPos, const cVector2f& avSize, const cVector2f& avMinUV, const cVector2f& avMaxUV,
+                    bool abInvertY, const cColor& aColor);
+
+        void DebugDrawBoxMinMax(const cVector3f& start, const cVector3f& end, const cColor& color);
+        void DebugDrawLine(const cVector3f& start, const cVector3f& end, const cColor& color);
+        void DebugDrawSphere(const cVector3f& pos, float radius, const cColor& color);
+
+    private:
+        struct Billboard{
+            float m_x, m_y, m_z;
+            float m_width, m_height;
+            float m_uvx1, m_uvy1, m_uvx2, m_uvy2;
+        };
+
+        void flush();
+
+        size_t m_vertexIndex = 0;
+        size_t m_indexIndex = 0;
+        bgfx::TransientVertexBuffer m_vb;
+		bgfx::TransientIndexBuffer m_ib;
+
+        // bool m_isSetup = false;
+
+        std::vector<Billboard> m_billboards;
+        // bgfx::ViewId m_viewId = 0;
+        cMatrixf m_view;
+        cMatrixf m_projection;
+
+        RenderTarget& m_target;
+        GraphicsContext& m_context;
+
+        friend class GraphicsContext;
+    };
 
     class GraphicsContext final
     {
     public:
+
         struct LayoutStream {
             struct LayoutVertexStream {
                 bgfx::TransientVertexBuffer m_transient = {nullptr, 0, 0, 0, BGFX_INVALID_HANDLE, BGFX_INVALID_HANDLE};
@@ -126,6 +168,7 @@ namespace hpl
         };
 
         GraphicsContext();
+        ~GraphicsContext();
         void Init();
         void UpdateScreenSize(uint16_t width, uint16_t height);
 
@@ -144,14 +187,30 @@ namespace hpl
         void Submit(bgfx::ViewId view, const DrawRequest& request);
         void Submit(bgfx::ViewId view, const DrawRequest& request, bgfx::OcclusionQueryHandle query);
         void Submit(bgfx::ViewId view, const ComputeRequest& request);
-        
+
+        ImmediateDrawBatch startImmediateBatch(
+            RenderTarget& target,
+            cMatrixf& view,
+            cMatrixf& projection) {
+            return ImmediateDrawBatch(*this, target, view, projection);
+        }
+
+        void flush(ImmediateDrawBatch& batch) {
+            batch.flush();
+        }
+
     private:
         bgfx::ViewId _current;
         bgfx::ProgramHandle m_copyProgram = BGFX_INVALID_HANDLE;
+        
+        bgfx::ProgramHandle m_colorProgram = BGFX_INVALID_HANDLE;
+
         bgfx::UniformHandle m_s_diffuseMap = BGFX_INVALID_HANDLE;
         bgfx::UniformHandle m_u_normalMtx = BGFX_INVALID_HANDLE;
+        
         window::WindowEvent::Handler m_windowEvent;
-
+        
+        friend class ImmediateDrawBatch;
     };
 
 

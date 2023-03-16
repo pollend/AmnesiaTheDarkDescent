@@ -3,7 +3,9 @@
 #include "engine/Interface.h"
 #include "graphics/Enum.h"
 #include "graphics/ShaderUtil.h"
+#include "math/Math.h"
 #include "math/MathTypes.h"
+#include "scene/Camera.h"
 #include <absl/container/inlined_vector.h>
 #include <absl/strings/string_view.h>
 #include <bgfx/bgfx.h>
@@ -21,6 +23,21 @@ namespace hpl {
         m_configuration.m_alphaBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::Zero);
     }
 
+    struct PositionColor {
+        float m_pos[3];
+        float m_color[4];
+
+        static void Init() {
+            m_layout.begin()
+                .add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float)
+                .add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Float)
+                .end();
+        }
+
+        static bgfx::VertexLayout m_layout;
+    };
+    bgfx::VertexLayout PositionColor::m_layout;
+    
     struct PositionTexCoord0 {
         float m_x;
         float m_y;
@@ -359,14 +376,17 @@ namespace hpl {
         if(auto* window = Interface<window::NativeWindowWrapper>::Get()) {
 			window->ConnectWindowEventHandler(m_windowEvent);
 		}
-        
+
+    }
+
+    GraphicsContext::~GraphicsContext() {
+
         if (bgfx::isValid(m_copyProgram)) {
             bgfx::destroy(m_copyProgram);
         }
         if (bgfx::isValid(m_s_diffuseMap)) {
             bgfx::destroy(m_s_diffuseMap);
         }
-
         if (bgfx::isValid(m_u_normalMtx)) {
             bgfx::destroy(m_u_normalMtx);
         }
@@ -384,7 +404,9 @@ namespace hpl {
 
     void GraphicsContext::Init() {
         PositionTexCoord0::init();
+        PositionColor::Init();
         m_copyProgram = hpl::loadProgram("vs_post_effect", "fs_post_effect_copy");
+        m_colorProgram = hpl::loadProgram("vs_color", "fs_color");
         m_s_diffuseMap = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
         m_u_normalMtx = bgfx::createUniform("u_normalMtx", bgfx::UniformType::Mat4);
     }
@@ -579,5 +601,176 @@ namespace hpl {
             .m_transient = vb,
         });
     }
+
+    ImmediateDrawBatch::ImmediateDrawBatch(GraphicsContext& context, RenderTarget& target, const cMatrixf& view, const cMatrixf& projection):
+        m_context(context),
+        m_target(target),
+        m_view(view),
+        m_projection(projection) {
+
+		bgfx::allocTransientVertexBuffer(&m_vb, 20000, PositionColor::m_layout);
+		bgfx::allocTransientIndexBuffer(&m_ib, 20000);
+    }
+
+    void ImmediateDrawBatch::DebugDrawBoxMinMax(const cVector3f& avMin, const cVector3f& avMax, const cColor& color) {
+        DebugDrawLine(cVector3f(avMax.x, avMax.y, avMax.z), cVector3f(avMin.x, avMax.y, avMax.z), color);
+
+        DebugDrawLine(cVector3f(avMax.x, avMax.y, avMax.z), cVector3f(avMax.x, avMin.y, avMax.z), color);
+
+        DebugDrawLine(cVector3f(avMin.x, avMax.y, avMax.z), cVector3f(avMin.x, avMin.y, avMax.z), color);
+
+        DebugDrawLine(cVector3f(avMin.x, avMin.y, avMax.z), cVector3f(avMax.x, avMin.y, avMax.z), color);
+
+        // Neg Z Quad
+        DebugDrawLine(cVector3f(avMax.x, avMax.y, avMin.z), cVector3f(avMin.x, avMax.y, avMin.z), color);
+
+        DebugDrawLine(cVector3f(avMax.x, avMax.y, avMin.z), cVector3f(avMax.x, avMin.y, avMin.z), color);
+
+        DebugDrawLine(cVector3f(avMin.x, avMax.y, avMin.z), cVector3f(avMin.x, avMin.y, avMin.z), color);
+
+        DebugDrawLine(cVector3f(avMin.x, avMin.y, avMin.z), cVector3f(avMax.x, avMin.y, avMin.z), color);
+
+        // Lines between
+        DebugDrawLine(cVector3f(avMax.x, avMax.y, avMax.z), cVector3f(avMax.x, avMax.y, avMin.z), color);
+
+        DebugDrawLine(cVector3f(avMin.x, avMax.y, avMax.z), cVector3f(avMin.x, avMax.y, avMin.z), color);
+
+        DebugDrawLine(cVector3f(avMin.x, avMin.y, avMax.z), cVector3f(avMin.x, avMin.y, avMin.z), color);
+
+        DebugDrawLine(cVector3f(avMax.x, avMin.y, avMax.z), cVector3f(avMax.x, avMin.y, avMin.z), color);
+    }
+
+    void ImmediateDrawBatch::DebugDrawLine(const cVector3f& start, const cVector3f& end, const cColor& color) {
+	    PositionColor* vertexBuffer = reinterpret_cast<PositionColor*>(m_vb.data);
+		uint16_t* indexBuffer = reinterpret_cast<uint16_t*>(m_ib.data);
+
+        auto& p1 = vertexBuffer[m_vertexIndex++];
+        p1.m_pos[0] = start.x;
+        p1.m_pos[1] = start.y;
+        p1.m_pos[2] = start.z;
+
+        p1.m_color[0] = color.r;
+        p1.m_color[1] = color.g;
+        p1.m_color[2] = color.b;
+        p1.m_color[3] = color.a;
+
+        indexBuffer[m_indexIndex++] = m_vertexIndex;
+
+        auto& p2 = vertexBuffer[++m_vertexIndex];
+        p2.m_pos[0] = end.x;
+        p2.m_pos[1] = end.y;
+        p2.m_pos[2] = end.z;
+
+        p2.m_color[0] = color.r;
+        p2.m_color[1] = color.g;
+        p2.m_color[2] = color.b;
+        p2.m_color[3] = color.a;
+
+        indexBuffer[m_indexIndex++] = m_vertexIndex;
+    }
+
+    void ImmediateDrawBatch::DrawBillboard(cCamera* camera, const cVector3f& aPos, const cVector2f& avSize, const cVector2f& avMinUV, const cVector2f& avMaxUV,
+                    bool abInvertY, const cColor& aColor) {
+        cVector3f vViewSpacePos = aPos;
+        cVector3f vViewSpaceSize = avSize;
+        Billboard& billboard = m_billboards.emplace_back();
+        if(camera)
+        {
+            vViewSpacePos = cMath::MatrixMul(camera->GetViewMatrix(), aPos);
+            switch(camera->GetProjectionType())
+            {
+            case eProjectionType_Orthographic:
+                vViewSpaceSize = avSize * camera->GetOrthoViewSize().x * 0.25f;
+                break;
+            case eProjectionType_Perspective:
+                vViewSpaceSize = avSize * cMath::Abs(aPos.z);
+                break;
+            default:
+                break;
+            }
+        }
+
+        billboard.m_width = vViewSpaceSize.x;
+        billboard.m_height = vViewSpaceSize.y;
+        billboard.m_x = vViewSpacePos.x - vViewSpaceSize.x * 0.5f;
+        billboard.m_y = vViewSpacePos.y - vViewSpaceSize.y * 0.5f;
+        billboard.m_z = vViewSpacePos.z;
+
+        billboard.m_uvx1 = avMinUV.x;
+        billboard.m_uvy1 = avMinUV.y;
+        billboard.m_uvx2 = avMaxUV.x;
+        billboard.m_uvy2 = avMaxUV.y;
+    }
+
+
+    void ImmediateDrawBatch::DebugDrawSphere(const cVector3f& pos, float radius, const cColor& color) {
+        
+		constexpr int alSegments = 32;
+		constexpr float afAngleStep = k2Pif /static_cast<float>(alSegments);
+        //X Circle:
+        for(float a=0; a< k2Pif; a+= afAngleStep)
+        {
+            DebugDrawLine(cVector3f(pos.x, pos.y + sin(a)*radius,
+                pos.z + cos(a)*radius), cVector3f(pos.x, pos.y + sin(a+afAngleStep)*radius,
+                pos.z + cos(a+afAngleStep)*radius), color);
+        }
+
+        //Y Circle:
+        for(float a=0; a< k2Pif; a+= afAngleStep)
+        {
+            DebugDrawLine(
+                cVector3f(pos.x + cos(a)*radius, pos.y, pos.z + sin(a)*radius), 
+                cVector3f(pos.x + cos(a+afAngleStep)*radius, pos.y,pos.z+ sin(a+afAngleStep)*radius), color);
+        }
+
+        //Z Circle:
+        for(float a=0; a< k2Pif; a+= afAngleStep)
+        {
+            DebugDrawLine(
+                cVector3f(pos.x + cos(a)*radius, pos.y + sin(a)*radius, pos.z), 
+                cVector3f(pos.x + cos(a+afAngleStep)*radius, pos.y + sin(a+afAngleStep)*radius, pos.z), color);
+        }
+    }
+
+    void ImmediateDrawBatch::flush() {
+        cVector2l imageSize = m_target.GetImage()->GetImageSize();
+        GraphicsContext::ViewConfiguration viewConfiguration {m_target};
+        viewConfiguration.m_viewRect = { 0, 0, static_cast<uint16_t>(imageSize.x), static_cast<uint16_t>(imageSize.y) };
+        viewConfiguration.m_projection = m_projection;
+		viewConfiguration.m_view = m_view;
+        // draw lines
+        {
+            auto view = m_context.StartPass("Immediate - Lines", viewConfiguration);
+            GraphicsContext::LayoutStream layout;
+            layout.m_vertexStreams.push_back({
+                .m_transient = m_vb,
+                .m_startVertex = static_cast<uint32_t>(0),
+                .m_numVertices = static_cast<uint32_t>(m_vertexIndex)
+            });
+            layout.m_indexStream = {
+                .m_transient = m_ib,
+                .m_startIndex = static_cast<uint32_t>(0),
+                .m_numIndices = static_cast<uint32_t>(m_indexIndex)
+            };
+            layout.m_drawType = eVertexBufferDrawType_Line;
+            GraphicsContext::ShaderProgram shaderProgram;
+            shaderProgram.m_handle = m_context.m_colorProgram;
+            shaderProgram.m_configuration.m_rgbBlendFunc = 
+                CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
+            shaderProgram.m_configuration.m_alphaBlendFunc = 
+                CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
+            shaderProgram.m_configuration.m_write = Write::RGB;
+            shaderProgram.m_configuration.m_depthTest = DepthTest::LessEqual;
+
+            GraphicsContext::DrawRequest request = {
+				layout,
+				shaderProgram,
+			};
+            m_context.Submit(view, request);
+        }
+
+    }
+
+
 
 } // namespace hpl

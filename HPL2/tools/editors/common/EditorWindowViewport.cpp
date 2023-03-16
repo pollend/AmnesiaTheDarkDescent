@@ -28,6 +28,7 @@
 #include "SurfacePicker.h"
 
 #include "EntityWrapper.h"
+#include <utility>
 
 //--------------------------------------------------------------------
 //--------------------------------------------------------------------
@@ -72,12 +73,12 @@ void cViewportCallback::OnPostSolidDraw(cRendererCallbackFunctions* apFunctions)
 	apFunctions->SetDepthTest(true);
 	apFunctions->SetDepthWrite(false);
 
-	this->mpEditor->GetEditorWorld()->GetSurfacePicker()->DrawDebug(apFunctions);
+	// this->mpEditor->GetEditorWorld()->GetSurfacePicker()->DrawDebug(apFunctions);
 
 	if(mpViewport->GetDrawGrid())
 	{
 		cEditorGrid* pGrid = mpViewport->GetGrid();
-		if(pGrid) pGrid->Draw(apFunctions,mpViewport->GetGridCenter());
+		// if(pGrid) pGrid->Draw(apFunctions,mpViewport->GetGridCenter());
 	}
 	if(mpViewport->GetDrawAxes())
 	{
@@ -97,7 +98,7 @@ void cViewportCallback::OnPostSolidDraw(cRendererCallbackFunctions* apFunctions)
 	tEditorClipPlaneVec& vClipPlanes = mpEditor->GetEditorWorld()->GetClipPlanes();
 	for(int i=0;i<(int)vClipPlanes.size();++i)
 	{
-		vClipPlanes[i]->Draw(apFunctions, 0);
+		// vClipPlanes[i]->Draw(apFunctions, 0);
 	}
 
 	apFunctions->GetLowLevelGfx()->DrawSphere(mpViewport->GetVCamera()->GetTargetPosition(),0.1f, cColor(0,1,1,1));
@@ -196,6 +197,68 @@ cEditorWindowViewport::cEditorWindowViewport(iEditorBase* apEditor,
 																	iEditorViewport(apEditor,
 																					apEditor->GetEditorWorld()->GetWorld())
 {
+	
+	m_postSolidDraw = cViewport::PostSolidDraw::Handler([&](cViewport::PostSolidDrawPayload& payload) {
+		if(mpEditor == nullptr) return;
+		
+		this->mpEditor->GetEditorWorld()->GetSurfacePicker()->DrawDebug(payload.m_drawBatch);
+		if(GetDrawGrid())
+		{
+			cEditorGrid* pGrid = GetGrid();
+			if(pGrid) pGrid->Draw(payload.m_drawBatch, GetGridCenter());
+		}
+		if(GetDrawAxes())
+		{
+			const cVector3f& vCenter = GetGridCenter();
+			for(int i=0;i<3;++i)
+			{
+				cColor col = cColor(0,1);
+				col.v[i] = 1;
+
+				cVector3f vAxisStart = 0;
+				cVector3f vAxisEnd = 0;
+				vAxisStart.v[i] = vCenter.v[i] -1000.0f;
+				vAxisEnd.v[i] = vCenter.v[i] +1000.0f;
+				payload.m_drawBatch->DebugDrawLine(vAxisStart, vAxisEnd, col);
+			}
+		}
+		tEditorClipPlaneVec& vClipPlanes = mpEditor->GetEditorWorld()->GetClipPlanes();
+		for(int i=0;i<(int)vClipPlanes.size();++i)
+		{
+			vClipPlanes[i]->Draw(payload.m_drawBatch, 0);
+		}
+
+		payload.m_drawBatch->DebugDrawSphere(GetVCamera()->GetTargetPosition(),0.1f, cColor(0,1,1,1));
+
+		const cVector3f& vRefMousePos = GetVCamera()->GetTrackRefMousePos();
+		const cVector3f& vMouseNewPos = GetVCamera()->GetTrackNewMousePos();
+		cVector3f vMousePos = GetMouseWorldPosition();
+
+		if(GetDrawDebug())
+		{
+			// apFunctions->SetBlendMode(eMaterialBlendMode_Add);
+
+			// Quick temp debug code btw
+			cVector3f& vPos1 = vDebugLineStart;
+			cVector3f& vPos2 = vDebugLineEnd;
+			cVector3f& vGridPos = vDebugGridPos;
+			cVector3f& vSnapPos = vDebugSnappedGridPos;
+
+			payload.m_drawBatch->DebugDrawLine(vPos1,vPos2,cColor(0,0,1,1));
+			payload.m_drawBatch->DebugDrawSphere(vPos1, 0.01f, cColor(0,1,0,1));
+			payload.m_drawBatch->DebugDrawSphere(vPos2, 0.2f, cColor(0,1,0,1));
+			payload.m_drawBatch->DebugDrawSphere(vGridPos, 0.3f, cColor(1,0,0,1));
+			payload.m_drawBatch->DebugDrawSphere(vSnapPos, 0.3f, cColor(1,1,0,1));
+
+			//apFunctions->GetLowLevelGfx()->DrawSphere(m->GetTarget(),0.1f, cColor(0,1,1,1));
+		}
+	});
+	m_postTranslucenceDraw= cViewport::PostTranslucenceDraw::Handler([](cViewport::PostTranslucenceDrawPayload& payload) {
+	});
+
+	mpEngineViewport->ConnectDraw(m_postTranslucenceDraw);
+	mpEngineViewport->ConnectDraw(m_postSolidDraw);
+
 	mbDrawGrid = true;
 	mbDrawDebug = false;
 	mbDrawAxes = true;
@@ -206,6 +269,8 @@ cEditorWindowViewport::cEditorWindowViewport(iEditorBase* apEditor,
 	mViewportCallback.mpEditor = apEditor;
 	mViewportCallback.mpViewport = this;
 	AddViewportCallback(&mViewportCallback);
+
+	// 
 
 	vDebugGridPos = 0;
 	vDebugLineEnd = 0;
