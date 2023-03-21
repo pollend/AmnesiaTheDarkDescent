@@ -61,7 +61,10 @@ deferred_fog_variants = [
 
 shaders = [
 # generic
+    { "type" : ShaderType.VS, "inout" : "resource/vs_basic_uv.io",                       "input": "resource/vs_basic_uv.sc", "includes": ["resource"]},
+    { "type" : ShaderType.FS, "inout" : "resource/vs_basic_uv.io",                       "input": "resource/fs_basic_uv.sc", "includes": ["resource"]},
     { "type" : ShaderType.FS, "inout" : "resource/vs_color.io",                          "input": "resource/fs_color.sc", "includes": ["resource"]},
+    { "type" : ShaderType.FS, "inout" : "resource/vs_color.io",                          "input": "resource/fs_color_1.sc", "includes": ["resource"]},
     { "type" : ShaderType.VS, "inout" : "resource/vs_color.io",                          "input": "resource/vs_color.sc", "includes": ["resource"]},
 # Amneisa Specific Shaders compiler can be moved to its own library
     { "type" : ShaderType.VS, "inout" : "resource/vs_dds_enemy_glow.io",              "input": "resource/vs_dds_enemy_glow.sc" , "includes": ["resource"]},

@@ -1,17 +1,26 @@
 #pragma once
 
-#include "absl/container/inlined_vector.h"
+#include "math/MathTypes.h"
+
+#include <Eigen/Dense>
+
 #include "graphics/Color.h"
 #include "graphics/Enum.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Image.h"
 #include "graphics/RenderTarget.h"
-#include "math/MathTypes.h"
+
 #include "windowing/NativeWindow.h"
-#include <absl/strings/string_view.h>
 #include <bgfx/bgfx.h>
+
+
+#include <absl/container/inlined_vector.h>
+#include <absl/strings/string_view.h>
+
 #include <cstdint>
 #include <optional>
+#include <queue>
+#include <variant>
 #include <vector>
 #include <optional>
 
@@ -20,43 +29,6 @@ namespace hpl
     class GraphicsContext;
     class cCamera;
 
-    class ImmediateDrawBatch {
-    public:
-        ImmediateDrawBatch(GraphicsContext& context, RenderTarget& target, const cMatrixf& view, const cMatrixf& projection);
-
-        void DrawBillboard(cCamera* camera, const cVector3f& aPos, const cVector2f& avSize, const cVector2f& avMinUV, const cVector2f& avMaxUV,
-                    bool abInvertY, const cColor& aColor);
-
-        void DebugDrawBoxMinMax(const cVector3f& start, const cVector3f& end, const cColor& color);
-        void DebugDrawLine(const cVector3f& start, const cVector3f& end, const cColor& color);
-        void DebugDrawSphere(const cVector3f& pos, float radius, const cColor& color);
-
-    private:
-        struct Billboard{
-            float m_x, m_y, m_z;
-            float m_width, m_height;
-            float m_uvx1, m_uvy1, m_uvx2, m_uvy2;
-        };
-
-        void flush();
-
-        size_t m_vertexIndex = 0;
-        size_t m_indexIndex = 0;
-        bgfx::TransientVertexBuffer m_vb;
-		bgfx::TransientIndexBuffer m_ib;
-
-        // bool m_isSetup = false;
-
-        std::vector<Billboard> m_billboards;
-        // bgfx::ViewId m_viewId = 0;
-        cMatrixf m_view;
-        cMatrixf m_projection;
-
-        RenderTarget& m_target;
-        GraphicsContext& m_context;
-
-        friend class GraphicsContext;
-    };
 
     class GraphicsContext final
     {
@@ -78,7 +50,7 @@ namespace hpl
                 uint32_t m_numIndices = std::numeric_limits<uint32_t>::max();
             };
             eVertexBufferDrawType m_drawType = eVertexBufferDrawType_Tri;
-            absl::InlinedVector<LayoutVertexStream, eVertexBufferElement_LastEnum> m_vertexStreams;
+            absl::InlinedVector<LayoutVertexStream, 4> m_vertexStreams;
             LayoutIndexStream m_indexStream;
         };
 
@@ -188,30 +160,107 @@ namespace hpl
         void Submit(bgfx::ViewId view, const DrawRequest& request, bgfx::OcclusionQueryHandle query);
         void Submit(bgfx::ViewId view, const ComputeRequest& request);
 
-        ImmediateDrawBatch startImmediateBatch(
-            RenderTarget& target,
-            cMatrixf& view,
-            cMatrixf& projection) {
-            return ImmediateDrawBatch(*this, target, view, projection);
-        }
-
-        void flush(ImmediateDrawBatch& batch) {
-            batch.flush();
-        }
-
     private:
-        bgfx::ViewId _current;
+        bgfx::ViewId m_current;
         bgfx::ProgramHandle m_copyProgram = BGFX_INVALID_HANDLE;
-        
+
+        bgfx::ProgramHandle m_uvProgram = BGFX_INVALID_HANDLE; // basic uv shader with tint
         bgfx::ProgramHandle m_colorProgram = BGFX_INVALID_HANDLE;
+        bgfx::ProgramHandle m_meshColorProgram = BGFX_INVALID_HANDLE;
 
         bgfx::UniformHandle m_s_diffuseMap = BGFX_INVALID_HANDLE;
         bgfx::UniformHandle m_u_normalMtx = BGFX_INVALID_HANDLE;
+        bgfx::UniformHandle m_u_color = BGFX_INVALID_HANDLE;
         
         window::WindowEvent::Handler m_windowEvent;
         
         friend class ImmediateDrawBatch;
     };
 
+
+ class ImmediateDrawBatch {
+    public:
+        struct DebugDrawOptions {
+        public:
+            DebugDrawOptions() {}
+            DepthTest m_depthTest = DepthTest::LessEqual;
+            cMatrixf m_transform = cMatrixf(cMatrixf::Identity);
+        };
+
+        ImmediateDrawBatch(GraphicsContext& context, RenderTarget& target, const cMatrixf& view, const cMatrixf& projection);
+        
+        inline GraphicsContext& GetContext() const { return m_context; }
+
+        // takes 3 points and the other 1 is calculated
+        void DrawQuad(const cVector3f& v1, const cVector3f& v2, const cVector3f& v3, const cVector2f& uv0,const cVector2f& uv1, hpl::Image* image , const cColor& aTint, const DebugDrawOptions& options = DebugDrawOptions());
+        void DrawQuad(const Eigen::Vector3f& v1, const Eigen::Vector3f& v2, const Eigen::Vector3f& v3, const Eigen::Vector2f& uv0, const Eigen::Vector2f& uv1, hpl::Image* image, const Eigen::Vector4f& aTint, const DebugDrawOptions& options = DebugDrawOptions());
+
+        [[deprecated("Use DrawQuad with uv")]]
+        void DrawQuad(const cVector3f& v1, const cVector3f& v2, const cVector3f& v3, const cColor& aColor, const DebugDrawOptions& options = DebugDrawOptions());
+        void DrawQuad(const Eigen::Vector3f& v1, const Eigen::Vector3f& v2, const Eigen::Vector3f& v3, const Eigen::Vector4f& color, const DebugDrawOptions& options = DebugDrawOptions());
+        
+
+        [[deprecated("Use Drawbillboard with Eigen")]]
+        void DrawBillboard(const cVector3f& pos, const cVector2f& size, const cVector2f& uv0, const cVector2f& uv1, hpl::Image* image, const cColor& aTint, const DebugDrawOptions& options = DebugDrawOptions());
+        void DrawBillboard(const Eigen::Vector3f& pos, const Eigen::Vector2f& size, const Eigen::Vector2f& uv0, const Eigen::Vector2f& uv1, hpl::Image* image, const Eigen::Vector4f& aTint, const DebugDrawOptions& options = DebugDrawOptions());
+
+         // scale based on distance from camera
+        static float BillboardScale(cCamera* apCamera, const Eigen::Vector3f& pos); 
+
+        // draws line 
+        void DebugDrawLine(const cVector3f& start, const cVector3f& end, const cColor& color, const DebugDrawOptions& options = DebugDrawOptions());
+        void DebugDrawBoxMinMax(const cVector3f& start, const cVector3f& end, const cColor& color, const DebugDrawOptions& options = DebugDrawOptions());
+        void DebugDrawSphere(const cVector3f& pos, float radius, const cColor& color, const DebugDrawOptions& options = DebugDrawOptions());
+        void DebugDrawMesh(const GraphicsContext::LayoutStream& layout, const cColor& color, const DebugDrawOptions& options = DebugDrawOptions());
+        void flush();
+
+    private:
+
+        struct ColorQuadRequest {
+            DepthTest m_depthTest = DepthTest::LessEqual;
+            Eigen::Vector3f m_v1;
+            Eigen::Vector3f m_v2;
+            Eigen::Vector3f m_v3;
+            Eigen::Vector4f m_color;
+        };
+
+        struct UVQuadRequest {
+            DepthTest m_depthTest = DepthTest::LessEqual;
+            bool m_billboard;
+            Eigen::Vector3f m_v1;
+            Eigen::Vector3f m_v2;
+            Eigen::Vector3f m_v3;
+            Eigen::Vector2f m_uv0;
+            Eigen::Vector2f m_uv1;
+            hpl::Image* m_uvImage;
+            cColor m_color;
+        };
+
+        struct DebugMeshRequest {
+            GraphicsContext::LayoutStream m_layout;
+            DepthTest m_depthTest;
+            cMatrixf m_transform;
+            cColor m_color;
+        };
+
+        struct LineSegmentRequest {
+            DepthTest m_depthTest = DepthTest::LessEqual;
+            Eigen::Vector3f m_start;
+            Eigen::Vector3f m_end;
+            Eigen::Vector4f m_color;
+        };
+
+        std::vector<UVQuadRequest> m_uvQuads;
+        std::vector<ColorQuadRequest> m_colorQuads;
+        std::vector<LineSegmentRequest> m_lineSegments;
+        std::vector<DebugMeshRequest> m_debugMeshes;
+        cMatrixf m_view;
+        cMatrixf m_projection;
+
+        RenderTarget& m_target;
+        GraphicsContext& m_context;
+
+        friend class GraphicsContext;
+    };
 
 } // namespace hpl

@@ -491,7 +491,7 @@ cEditorWindowEntityEditBox* iEntityWrapperJoint::CreateEditBox(cEditorEditModeSe
 
 //------------------------------------------------------------------------------
 
-void iEntityWrapperJoint::Draw(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions, iEditorEditMode* apEditMode, bool abIsSelected, const cColor& aHighlightCol, const cColor& aDisabledCol)
+void iEntityWrapperJoint::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, iEditorEditMode* apEditMode, bool abIsSelected, const cColor& aHighlightCol, const cColor& aDisabledCol)
 {
 	iEntityWrapper::Draw(apViewport, apFunctions, apEditMode, abIsSelected);
 	//DrawIcon(apViewport, apFunctions, apEditMode, abIsSelected, mvPosition);
@@ -504,14 +504,14 @@ void iEntityWrapperJoint::Draw(cEditorWindowViewport* apViewport, cRendererCallb
 
 	DrawArrow(apViewport, apFunctions, mtxTransRot, 1, true, cVector2f(0.05f, 0.2f), cColor(1));
 
-	apFunctions->SetDepthTest(false);
-	apFunctions->GetLowLevelGfx()->DrawSphere(mvPosition, 0.01f, cColor(1,1,0,1));
-	apFunctions->SetDepthTest(true);
+	// apFunctions->SetDepthTest(false);
+	apFunctions->DebugDrawSphere(mvPosition, 0.01f, cColor(1,1,0,1));
+	// apFunctions->SetDepthTest(true);
 
 	if(mpParentBody)
-		apFunctions->GetLowLevelGfx()->DrawLine(mvPosition, mpParentBody->GetPosition(), cColor(0,1,0,1));
+		apFunctions->DebugDrawLine(mvPosition, mpParentBody->GetPosition(), cColor(0,1,0,1));
 	if(mpChildBody)
-		apFunctions->GetLowLevelGfx()->DrawLine(mvPosition, mpChildBody->GetPosition(), cColor(0,0,1,1));
+		apFunctions->DebugDrawLine(mvPosition, mpChildBody->GetPosition(), cColor(0,0,1,1));
 }
 
 //-------------------------------------------------------------------

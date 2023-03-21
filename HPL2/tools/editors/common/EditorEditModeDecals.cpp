@@ -109,11 +109,11 @@ void cEditorEditModeDecals::OnEditorUpdate(float afTimeStep)
 
 //-----------------------------------------------------------------------------------
 
-void cEditorEditModeDecals::DrawPostGrid(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions, const cVector3f& avPos)
+void cEditorEditModeDecals::DrawPostGrid(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, const cVector3f& avPos)
 {
 	iEditorEditModeObjectCreator::DrawPostGrid(apViewport, apFunctions, avPos);
-	apFunctions->SetTextureRange(NULL,0);
-	apFunctions->SetMatrix(NULL);
+	// apFunctions->SetTextureRange(NULL,0);
+	// apFunctions->SetMatrix(NULL);
 
 	cDecalCreator* pCreator = mpEditor->GetEngine()->GetGraphics()->GetDecalCreator();
 	pCreator->DrawDebug(apFunctions, false, false);

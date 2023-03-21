@@ -294,7 +294,7 @@ void cEntityWrapperArea::SetMeshFile(const tString& asX)
 
 //------------------------------------------------------------------------------
 
-void cEntityWrapperArea::Draw(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions, iEditorEditMode* apEditMode,
+void cEntityWrapperArea::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, iEditorEditMode* apEditMode,
 								bool abIsSelected, const cColor& aHighlightCol, const cColor& aDisabledCol)
 {
 	iEntityWrapper::Draw(apViewport, apFunctions, apEditMode, abIsSelected, aHighlightCol, cColor(1,0,0,1));
@@ -308,11 +308,11 @@ void cEntityWrapperArea::Draw(cEditorWindowViewport* apViewport, cRendererCallba
 
 	cMatrixf mtxRT = cMath::MatrixMul(cMath::MatrixTranslate(mvPosition), cMath::MatrixRotate(mvRotation, eEulerRotationOrder_XYZ));
 
-	apFunctions->SetMatrix(&mtxRT);
+	// apFunctions->SetMatrix(&mtxRT);
 
-	apFunctions->GetLowLevelGfx()->DrawLine(cVector3f(-0.05f,0,0), cVector3f(0.05f,0,0), col);
-	apFunctions->GetLowLevelGfx()->DrawLine(cVector3f(0,-0.05f,0), cVector3f(0,0.05f,0), col);
-	apFunctions->GetLowLevelGfx()->DrawLine(cVector3f(0,0,-0.05f), cVector3f(0,0,0.05f), col);
+	apFunctions->DebugDrawLine(cVector3f(-0.05f,0,0), cVector3f(0.05f,0,0), col);
+	apFunctions->DebugDrawLine(cVector3f(0,-0.05f,0), cVector3f(0,0.05f,0), col);
+	apFunctions->DebugDrawLine(cVector3f(0,0,-0.05f), cVector3f(0,0,0.05f), col);
 
 	cVector3f vHalfScale;
 	if(pType->IsScalable())
@@ -324,11 +324,11 @@ void cEntityWrapperArea::Draw(cEditorWindowViewport* apViewport, cRendererCallba
 	if(pType->GetDrawAsSphere())
 	{
 		vHalfScale = vHalfScale*0.5f;
-		apFunctions->GetLowLevelGfx()->DrawSphere(0, vHalfScale.x, col);
+		apFunctions->DebugDrawSphere(0, vHalfScale.x, col);
 	}
 	else
 	{
-		apFunctions->GetLowLevelGfx()->DrawBoxMinMax(vHalfScale*-1, vHalfScale, col);
+		apFunctions->DebugDrawBoxMinMax(vHalfScale*-1, vHalfScale, col);
 	}
 
 	if(pType->GetShowOrientation())
@@ -341,15 +341,15 @@ void cEntityWrapperArea::Draw(cEditorWindowViewport* apViewport, cRendererCallba
 			vDir.v[i] = 1;
 			vDir = vDir*vLength;
 			col.v[i] = 1;
-			apFunctions->GetLowLevelGfx()->DrawLine(0 , vDir, col);
-			cEditorHelper::DrawPyramid(apFunctions, vDir, vDir+vDir*0.1f, 0.025f, col);
+			apFunctions->DebugDrawLine(0 , vDir, col);
+			// cEditorHelper::DrawPyramid(apFunctions, vDir, vDir+vDir*0.1f, 0.025f, col);
 		}
 	}
 
 	if(mpMesh)
 		mpMesh->SetVisible(mbSelected);
 
-	apFunctions->SetMatrix(NULL);
+	// apFunctions->SetMatrix(NULL);
 }
 
 //------------------------------------------------------------------------------

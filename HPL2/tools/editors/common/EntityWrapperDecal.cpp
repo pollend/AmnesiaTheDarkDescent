@@ -521,15 +521,15 @@ void cEntityWrapperDecal::OnPostDeployAll(bool abX)
 
 //-----------------------------------------------------------------------------------------
 
-void cEntityWrapperDecal::Draw(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions,iEditorEditMode* apEditMode,
+void cEntityWrapperDecal::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions,iEditorEditMode* apEditMode,
 						bool abIsSelected, const cColor& aHighlightCol, const cColor& aDisabledCol)
 {
 	iEntityWrapper::Draw(apViewport, apFunctions, apEditMode, abIsSelected);
 	if(mbSelected)
 	{
 		//cDecalCreator* pCreator = GetEditorWorld()->GetEditor()->GetEngine()->GetGraphics()->GetDecalCreator();
-		//pCreator->DrawDebug(apFunctions, true, true);
-		//cMatrixf mtxOrientation = mmtxRotate.GetTranspose();
+		// pCreator->DrawDebug(apFunctions, true, true);
+		// cMatrixf mtxOrientation = mmtxRotate.GetTranspose();
 		//apFunctions->SetTextureRange(NULL,0);
 		//apFunctions->SetDepthTest(true);
 		//apFunctions->SetMatrix(&mmtxTranslate);

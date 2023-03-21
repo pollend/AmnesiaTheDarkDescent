@@ -117,12 +117,12 @@ void cEntityWrapperLightPoint::SetGobo(const tString& asGoboFilename)
 
 //---------------------------------------------------------------------------
 
-void cEntityWrapperLightPoint::DrawLightTypeSpecific(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions,
+void cEntityWrapperLightPoint::DrawLightTypeSpecific(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions,
 													 iEditorEditMode* apEditMode, bool abIsSelected)
 {
 	if(abIsSelected==false) return;
 
-	apFunctions->GetLowLevelGfx()->DrawSphere(mvPosition, mfRadius, mcolDiffuseColor);
+	apFunctions->DebugDrawSphere(mvPosition, mfRadius, mcolDiffuseColor);
 }
 
 //---------------------------------------------------------------------------

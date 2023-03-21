@@ -8,13 +8,16 @@
 #include "scene/Camera.h"
 #include <absl/container/inlined_vector.h>
 #include <absl/strings/string_view.h>
+#include <algorithm>
 #include <bgfx/bgfx.h>
 #include <bgfx/defines.h>
+#include <cstddef>
 #include <cstdint>
 #include <graphics/GraphicsContext.h>
 #include <graphics/GraphicsTypes.h>
 
 #include <bx/debug.h>
+#include <variant>
 
 namespace hpl {
 
@@ -33,7 +36,6 @@ namespace hpl {
                 .add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Float)
                 .end();
         }
-
         static bgfx::VertexLayout m_layout;
     };
     bgfx::VertexLayout PositionColor::m_layout;
@@ -42,19 +44,20 @@ namespace hpl {
         float m_x;
         float m_y;
         float m_z;
+
         float m_u;
         float m_v;
 
         static void init() {
-            _layout.begin()
+            m_layout.begin()
                 .add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float)
                 .add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Float)
                 .end();
         }
 
-        static bgfx::VertexLayout _layout;
+        static bgfx::VertexLayout m_layout;
     };
-    bgfx::VertexLayout PositionTexCoord0::_layout;
+    bgfx::VertexLayout PositionTexCoord0::m_layout;
 
     uint64_t convertBGFXStencil(const StencilTest& stencilTest) {
         if (!IsValidStencilTest(stencilTest)) {
@@ -361,7 +364,7 @@ namespace hpl {
     }
 
     GraphicsContext::GraphicsContext()
-        : _current(0) {
+        : m_current(0) {
 
         m_windowEvent = window::WindowEvent::Handler([&](window::WindowEventPayload& payload) {
             switch(payload.m_type) {
@@ -390,6 +393,12 @@ namespace hpl {
         if (bgfx::isValid(m_u_normalMtx)) {
             bgfx::destroy(m_u_normalMtx);
         }
+        if (bgfx::isValid(m_colorProgram)) {
+            bgfx::destroy(m_colorProgram);
+        }
+        if (bgfx::isValid(m_uvProgram)) {
+            bgfx::destroy(m_uvProgram);
+        }
     }
 
     uint16_t GraphicsContext::ScreenWidth() const {
@@ -407,12 +416,15 @@ namespace hpl {
         PositionColor::Init();
         m_copyProgram = hpl::loadProgram("vs_post_effect", "fs_post_effect_copy");
         m_colorProgram = hpl::loadProgram("vs_color", "fs_color");
+        m_uvProgram = hpl::loadProgram("vs_basic_uv", "fs_basic_uv");
+        m_meshColorProgram = hpl::loadProgram("vs_color", "fs_color_1");
         m_s_diffuseMap = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
         m_u_normalMtx = bgfx::createUniform("u_normalMtx", bgfx::UniformType::Mat4);
+        m_u_color = bgfx::createUniform("u_color", bgfx::UniformType::Vec4);
     }
 
     void GraphicsContext::Frame() {
-        _current = 0;
+        m_current = 0;
         m_windowEvent.Process();
         bgfx::frame();
     }
@@ -457,7 +469,7 @@ namespace hpl {
     }
 
     bgfx::ViewId GraphicsContext::StartPass(absl::string_view name, const ViewConfiguration& config) {
-        bgfx::ViewId view = _current++;
+        bgfx::ViewId view = m_current++;
         bgfx::setViewName(view, name.data());
         if (config.m_clear.has_value()) {
             auto& clear = config.m_clear.value();
@@ -506,7 +518,7 @@ namespace hpl {
         BX_ASSERT(bgfx::getCaps(), "GraphicsContext::Init() must be called before ScreenSpaceQuad()");
 
         bgfx::TransientVertexBuffer vb;
-        bgfx::allocTransientVertexBuffer(&vb, 4, PositionTexCoord0::_layout);
+        bgfx::allocTransientVertexBuffer(&vb, 4, PositionTexCoord0::m_layout);
         PositionTexCoord0* vertex = (PositionTexCoord0*)vb.data;
 
         const float minx = pos.x;
@@ -547,7 +559,7 @@ namespace hpl {
         BX_ASSERT(bgfx::getCaps(), "GraphicsContext::Init() must be called before ScreenSpaceQuad()");
 
         bgfx::TransientVertexBuffer vb;
-        bgfx::allocTransientVertexBuffer(&vb, 3, PositionTexCoord0::_layout);
+        bgfx::allocTransientVertexBuffer(&vb, 3, PositionTexCoord0::m_layout);
         PositionTexCoord0* vertex = (PositionTexCoord0*)vb.data;
 
         bx::mtxOrtho(proj.v, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 100.0f, 0.0f, bgfx::getCaps()->homogeneousDepth);
@@ -607,103 +619,150 @@ namespace hpl {
         m_target(target),
         m_view(view),
         m_projection(projection) {
-
-		bgfx::allocTransientVertexBuffer(&m_vb, 20000, PositionColor::m_layout);
-		bgfx::allocTransientIndexBuffer(&m_ib, 20000);
     }
 
-    void ImmediateDrawBatch::DebugDrawBoxMinMax(const cVector3f& avMin, const cVector3f& avMax, const cColor& color) {
-        DebugDrawLine(cVector3f(avMax.x, avMax.y, avMax.z), cVector3f(avMin.x, avMax.y, avMax.z), color);
+    void ImmediateDrawBatch::DebugDrawBoxMinMax(const cVector3f& avMin, const cVector3f& avMax, const cColor& color, const DebugDrawOptions& options) {
+        DebugDrawLine(cVector3f(avMax.x, avMax.y, avMax.z), cVector3f(avMin.x, avMax.y, avMax.z), color, options);
 
-        DebugDrawLine(cVector3f(avMax.x, avMax.y, avMax.z), cVector3f(avMax.x, avMin.y, avMax.z), color);
+        DebugDrawLine(cVector3f(avMax.x, avMax.y, avMax.z), cVector3f(avMax.x, avMin.y, avMax.z), color, options);
 
-        DebugDrawLine(cVector3f(avMin.x, avMax.y, avMax.z), cVector3f(avMin.x, avMin.y, avMax.z), color);
+        DebugDrawLine(cVector3f(avMin.x, avMax.y, avMax.z), cVector3f(avMin.x, avMin.y, avMax.z), color, options);
 
-        DebugDrawLine(cVector3f(avMin.x, avMin.y, avMax.z), cVector3f(avMax.x, avMin.y, avMax.z), color);
+        DebugDrawLine(cVector3f(avMin.x, avMin.y, avMax.z), cVector3f(avMax.x, avMin.y, avMax.z), color, options);
 
         // Neg Z Quad
-        DebugDrawLine(cVector3f(avMax.x, avMax.y, avMin.z), cVector3f(avMin.x, avMax.y, avMin.z), color);
+        DebugDrawLine(cVector3f(avMax.x, avMax.y, avMin.z), cVector3f(avMin.x, avMax.y, avMin.z), color, options);
 
-        DebugDrawLine(cVector3f(avMax.x, avMax.y, avMin.z), cVector3f(avMax.x, avMin.y, avMin.z), color);
+        DebugDrawLine(cVector3f(avMax.x, avMax.y, avMin.z), cVector3f(avMax.x, avMin.y, avMin.z), color, options);
 
-        DebugDrawLine(cVector3f(avMin.x, avMax.y, avMin.z), cVector3f(avMin.x, avMin.y, avMin.z), color);
+        DebugDrawLine(cVector3f(avMin.x, avMax.y, avMin.z), cVector3f(avMin.x, avMin.y, avMin.z), color, options);
 
-        DebugDrawLine(cVector3f(avMin.x, avMin.y, avMin.z), cVector3f(avMax.x, avMin.y, avMin.z), color);
+        DebugDrawLine(cVector3f(avMin.x, avMin.y, avMin.z), cVector3f(avMax.x, avMin.y, avMin.z), color, options);
 
         // Lines between
-        DebugDrawLine(cVector3f(avMax.x, avMax.y, avMax.z), cVector3f(avMax.x, avMax.y, avMin.z), color);
+        DebugDrawLine(cVector3f(avMax.x, avMax.y, avMax.z), cVector3f(avMax.x, avMax.y, avMin.z), color, options);
 
-        DebugDrawLine(cVector3f(avMin.x, avMax.y, avMax.z), cVector3f(avMin.x, avMax.y, avMin.z), color);
+        DebugDrawLine(cVector3f(avMin.x, avMax.y, avMax.z), cVector3f(avMin.x, avMax.y, avMin.z), color, options);
 
-        DebugDrawLine(cVector3f(avMin.x, avMin.y, avMax.z), cVector3f(avMin.x, avMin.y, avMin.z), color);
+        DebugDrawLine(cVector3f(avMin.x, avMin.y, avMax.z), cVector3f(avMin.x, avMin.y, avMin.z), color, options);
 
-        DebugDrawLine(cVector3f(avMax.x, avMin.y, avMax.z), cVector3f(avMax.x, avMin.y, avMin.z), color);
+        DebugDrawLine(cVector3f(avMax.x, avMin.y, avMax.z), cVector3f(avMax.x, avMin.y, avMin.z), color, options);
     }
 
-    void ImmediateDrawBatch::DebugDrawLine(const cVector3f& start, const cVector3f& end, const cColor& color) {
-	    PositionColor* vertexBuffer = reinterpret_cast<PositionColor*>(m_vb.data);
-		uint16_t* indexBuffer = reinterpret_cast<uint16_t*>(m_ib.data);
-
-        auto& p1 = vertexBuffer[m_vertexIndex++];
-        p1.m_pos[0] = start.x;
-        p1.m_pos[1] = start.y;
-        p1.m_pos[2] = start.z;
-
-        p1.m_color[0] = color.r;
-        p1.m_color[1] = color.g;
-        p1.m_color[2] = color.b;
-        p1.m_color[3] = color.a;
-
-        indexBuffer[m_indexIndex++] = m_vertexIndex;
-
-        auto& p2 = vertexBuffer[++m_vertexIndex];
-        p2.m_pos[0] = end.x;
-        p2.m_pos[1] = end.y;
-        p2.m_pos[2] = end.z;
-
-        p2.m_color[0] = color.r;
-        p2.m_color[1] = color.g;
-        p2.m_color[2] = color.b;
-        p2.m_color[3] = color.a;
-
-        indexBuffer[m_indexIndex++] = m_vertexIndex;
+    void ImmediateDrawBatch::DebugDrawLine(const cVector3f& start, const cVector3f& end, const cColor& color, const DebugDrawOptions& options) {
+        cVector3f transformStart =  cMath::MatrixMul(options.m_transform, start);
+        cVector3f transformEnd =  cMath::MatrixMul(options.m_transform, end);
+        m_lineSegments.push_back(LineSegmentRequest {
+            .m_depthTest = options.m_depthTest,
+            .m_start = {transformStart.x, transformStart.y, transformStart.z},
+            .m_end = {transformEnd.x, transformEnd.y, transformEnd.z},
+            .m_color = {color.r, color.g, color.b, color.a},
+        });
+    }
+    void ImmediateDrawBatch::DebugDrawMesh(const GraphicsContext::LayoutStream& layout, const cColor& color, const DebugDrawOptions& options) {
+        m_debugMeshes.push_back({
+            .m_layout = layout,
+            .m_depthTest = options.m_depthTest,
+            .m_transform = options.m_transform,
+            .m_color = {color.r, color.g, color.b, color.a},
+        });
     }
 
-    void ImmediateDrawBatch::DrawBillboard(cCamera* camera, const cVector3f& aPos, const cVector2f& avSize, const cVector2f& avMinUV, const cVector2f& avMaxUV,
-                    bool abInvertY, const cColor& aColor) {
-        cVector3f vViewSpacePos = aPos;
-        cVector3f vViewSpaceSize = avSize;
-        Billboard& billboard = m_billboards.emplace_back();
-        if(camera)
-        {
-            vViewSpacePos = cMath::MatrixMul(camera->GetViewMatrix(), aPos);
-            switch(camera->GetProjectionType())
-            {
-            case eProjectionType_Orthographic:
-                vViewSpaceSize = avSize * camera->GetOrthoViewSize().x * 0.25f;
-                break;
-            case eProjectionType_Perspective:
-                vViewSpaceSize = avSize * cMath::Abs(aPos.z);
-                break;
-            default:
-                break;
-            }
-        }
-
-        billboard.m_width = vViewSpaceSize.x;
-        billboard.m_height = vViewSpaceSize.y;
-        billboard.m_x = vViewSpacePos.x - vViewSpaceSize.x * 0.5f;
-        billboard.m_y = vViewSpacePos.y - vViewSpaceSize.y * 0.5f;
-        billboard.m_z = vViewSpacePos.z;
-
-        billboard.m_uvx1 = avMinUV.x;
-        billboard.m_uvy1 = avMinUV.y;
-        billboard.m_uvx2 = avMaxUV.x;
-        billboard.m_uvy2 = avMaxUV.y;
+    void ImmediateDrawBatch::DrawQuad(const cVector3f& v1, const cVector3f& v2, const cVector3f& v3, const cVector2f& uv0,const cVector2f& uv1, hpl::Image* image , const cColor& aTint, const DebugDrawOptions& options) {
+        DrawQuad(
+            Eigen::Vector3f(v1.x, v1.y, v1.z), 
+            Eigen::Vector3f(v2.x, v2.y, v2.z), 
+            Eigen::Vector3f(v3.x, v3.y, v3.z), 
+            Eigen::Vector2f(uv0.x,uv0.y), 
+            Eigen::Vector2f(uv1.x,uv1.y), 
+            image, {aTint.r, aTint.g, aTint.b, aTint.a}, options);
     }
 
 
-    void ImmediateDrawBatch::DebugDrawSphere(const cVector3f& pos, float radius, const cColor& color) {
+    void ImmediateDrawBatch::DrawQuad(const Eigen::Vector3f& v1, const Eigen::Vector3f& v2, const Eigen::Vector3f& v3, const Eigen::Vector2f& uv0, const Eigen::Vector2f& uv1, hpl::Image* image, const Eigen::Vector4f& aTint, const DebugDrawOptions& options) {
+        m_uvQuads.push_back(UVQuadRequest {
+            .m_depthTest = options.m_depthTest,
+            .m_v1 = {v1.x(), v1.y(), v1.z()},
+            .m_v2 = {v2.x(), v2.y(), v2.z()},
+            .m_v3 = {v3.x(), v3.y(), v3.z()},
+            .m_uv0 = {uv0.x(), uv0.y()},
+            .m_uv1 = {uv1.x(), uv1.y()},
+            .m_uvImage = image,
+            .m_color = {aTint.x(), aTint.y(), aTint.z(), aTint.w()},
+        });
+    }
+    void ImmediateDrawBatch::DrawQuad(const cVector3f& v1, const cVector3f& v2, const cVector3f& v3, const cColor& aColor, const DebugDrawOptions& options) {
+        m_colorQuads.push_back(ColorQuadRequest {
+            .m_depthTest = options.m_depthTest,
+            .m_v1 = {v1.x, v1.y, v1.z},
+            .m_v2 = {v2.x, v2.y, v2.z},
+            .m_v3 = {v3.x, v3.y, v3.z},
+            .m_color = {aColor.r, aColor.g, aColor.b, aColor.a},
+        });
+    }
+
+    void ImmediateDrawBatch::DrawQuad(const Eigen::Vector3f& v1, const Eigen::Vector3f& v2, const Eigen::Vector3f& v3, const Eigen::Vector4f& color, const DebugDrawOptions& options) {
+        m_colorQuads.push_back(ColorQuadRequest {
+            .m_depthTest = options.m_depthTest,
+            .m_v1 = {v1.x(), v1.y(), v1.z()},
+            .m_v2 = {v2.x(), v2.y(), v2.z()},
+            .m_v3 = {v3.x(), v3.y(), v3.z()},
+            .m_color = {color.x(), color.y(), color.z(), color.w()},
+        });
+    }
+
+    void ImmediateDrawBatch::DrawBillboard(const cVector3f& pos, const cVector2f& size, const cVector2f& uv0, const cVector2f& uv1, hpl::Image* image, const cColor& aTint, const DebugDrawOptions& options){
+        DrawBillboard(
+            Eigen::Vector3f(pos.x, pos.y, pos.z), 
+            Eigen::Vector2f(size.x, size.y), 
+            Eigen::Vector2f(uv0.x, uv0.y), 
+            Eigen::Vector2f(uv1.x, uv1.y),
+            image,
+            Eigen::Vector4f(aTint.r, aTint.g, aTint.b, aTint.a), options);
+    }
+
+    // scale based on distance from camera
+    float ImmediateDrawBatch::BillboardScale(cCamera* apCamera, const Eigen::Vector3f& pos) {
+        const auto avViewSpacePosition = cMath::MatrixMul(apCamera->GetViewMatrix(), cVector3f(pos.x(), pos.y(), pos.z()));
+        switch(apCamera->GetProjectionType())
+		{
+		case eProjectionType_Orthographic:
+			return apCamera->GetOrthoViewSize().x * 0.25f;
+		case eProjectionType_Perspective:
+			return cMath::Abs(avViewSpacePosition.z);
+		default:
+			break;
+		}
+        BX_ASSERT(false, "invalid projection type");
+        return 0.0f;
+		
+    } 
+
+
+
+    void ImmediateDrawBatch::DrawBillboard(const Eigen::Vector3f& pos, const Eigen::Vector2f& size, const Eigen::Vector2f& uv0, const Eigen::Vector2f& uv1, hpl::Image* image, const Eigen::Vector4f& aTint, const DebugDrawOptions& options) {
+        Eigen::Matrix4f rotation = Eigen::Matrix4f::Identity();
+        rotation.block<3,3>(0,0) = Eigen::Matrix3f({
+            {m_view.m[0][0], m_view.m[0][1], m_view.m[0][2]},
+            {m_view.m[1][0], m_view.m[1][1], m_view.m[1][2]},
+            {m_view.m[2][0], m_view.m[2][1], m_view.m[2][2]}
+        });
+
+        Eigen::Matrix4f billboard = Eigen::Matrix4f::Identity();
+        billboard.block<3,1>(0,3) = pos;
+        Eigen::Matrix4f transform = billboard * rotation;
+
+        Eigen::Vector2f halfSize = Eigen::Vector2f(size.x()/2.0f, size.y()/2.0f);
+        Eigen::Vector4f v1 = (transform * Eigen::Vector4f(halfSize.x(), halfSize.y(), 0, 1));
+        Eigen::Vector4f v2 = (transform * Eigen::Vector4f(-halfSize.x(), halfSize.y(), 0, 1));
+        Eigen::Vector4f v3 = (transform * Eigen::Vector4f(halfSize.x(), -halfSize.y(), 0, 1));
+        DrawQuad(v1.head<3>(), v2.head<3>(), v3.head<3>(), uv0, uv1, image, aTint, options);
+
+
+        // DrawQuad(Eigen::Vector3f(pos.x(), pos.y(), pos.z()), Eigen::Vector3f(pos.x() + 10, pos.y(), pos.z()), Eigen::Vector3f(pos.x(), pos.y() + 10, pos.z()), uv0, uv1, image, aTint, options);
+    }
+
+    void ImmediateDrawBatch::DebugDrawSphere(const cVector3f& pos, float radius, const cColor& color, const DebugDrawOptions& options) {
         
 		constexpr int alSegments = 32;
 		constexpr float afAngleStep = k2Pif /static_cast<float>(alSegments);
@@ -712,7 +771,7 @@ namespace hpl {
         {
             DebugDrawLine(cVector3f(pos.x, pos.y + sin(a)*radius,
                 pos.z + cos(a)*radius), cVector3f(pos.x, pos.y + sin(a+afAngleStep)*radius,
-                pos.z + cos(a+afAngleStep)*radius), color);
+                pos.z + cos(a+afAngleStep)*radius), color, options);
         }
 
         //Y Circle:
@@ -720,7 +779,7 @@ namespace hpl {
         {
             DebugDrawLine(
                 cVector3f(pos.x + cos(a)*radius, pos.y, pos.z + sin(a)*radius), 
-                cVector3f(pos.x + cos(a+afAngleStep)*radius, pos.y,pos.z+ sin(a+afAngleStep)*radius), color);
+                cVector3f(pos.x + cos(a+afAngleStep)*radius, pos.y,pos.z+ sin(a+afAngleStep)*radius), color, options);
         }
 
         //Z Circle:
@@ -728,49 +787,335 @@ namespace hpl {
         {
             DebugDrawLine(
                 cVector3f(pos.x + cos(a)*radius, pos.y + sin(a)*radius, pos.z), 
-                cVector3f(pos.x + cos(a+afAngleStep)*radius, pos.y + sin(a+afAngleStep)*radius, pos.z), color);
+                cVector3f(pos.x + cos(a+afAngleStep)*radius, pos.y + sin(a+afAngleStep)*radius, pos.z), color, options);
         }
     }
 
     void ImmediateDrawBatch::flush() {
+        if(m_lineSegments.empty() && m_colorQuads.empty() && m_uvQuads.empty()) {
+            return;
+        }
+
         cVector2l imageSize = m_target.GetImage()->GetImageSize();
         GraphicsContext::ViewConfiguration viewConfiguration {m_target};
         viewConfiguration.m_viewRect = { 0, 0, static_cast<uint16_t>(imageSize.x), static_cast<uint16_t>(imageSize.y) };
         viewConfiguration.m_projection = m_projection;
-		viewConfiguration.m_view = m_view;
-        // draw lines
-        {
-            auto view = m_context.StartPass("Immediate - Lines", viewConfiguration);
-            GraphicsContext::LayoutStream layout;
-            layout.m_vertexStreams.push_back({
-                .m_transient = m_vb,
-                .m_startVertex = static_cast<uint32_t>(0),
-                .m_numVertices = static_cast<uint32_t>(m_vertexIndex)
-            });
-            layout.m_indexStream = {
-                .m_transient = m_ib,
-                .m_startIndex = static_cast<uint32_t>(0),
-                .m_numIndices = static_cast<uint32_t>(m_indexIndex)
-            };
-            layout.m_drawType = eVertexBufferDrawType_Line;
-            GraphicsContext::ShaderProgram shaderProgram;
-            shaderProgram.m_handle = m_context.m_colorProgram;
-            shaderProgram.m_configuration.m_rgbBlendFunc = 
-                CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
-            shaderProgram.m_configuration.m_alphaBlendFunc = 
-                CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
-            shaderProgram.m_configuration.m_write = Write::RGB;
-            shaderProgram.m_configuration.m_depthTest = DepthTest::LessEqual;
+        viewConfiguration.m_view = m_view;
+        const auto view = m_context.StartPass("Immediate - Lines", viewConfiguration);
+        
 
-            GraphicsContext::DrawRequest request = {
-				layout,
-				shaderProgram,
-			};
-            m_context.Submit(view, request);
+        if(!m_lineSegments.empty())
+        {
+            std::sort(m_lineSegments.begin(), m_lineSegments.end(), [](const LineSegmentRequest& a, const LineSegmentRequest& b) {
+                return a.m_depthTest < b.m_depthTest;
+            });
+
+            const size_t numVertices = m_lineSegments.size() * 2;
+
+            bgfx::TransientVertexBuffer vb;
+            bgfx::TransientIndexBuffer ib;
+            bgfx::allocTransientVertexBuffer(&vb, numVertices, PositionColor::m_layout);
+            bgfx::allocTransientIndexBuffer(&ib, numVertices);
+            
+            auto it = m_lineSegments.begin();
+            auto lastIt = m_lineSegments.begin();
+            size_t vertexBufferOffset = 0;
+            size_t indexBufferOffset = 0;
+            while(it != m_lineSegments.end()) {
+                
+                size_t vertexBufferIndex = 0;
+                size_t indexBufferIndex = 0;
+                do
+                {
+                    {
+                        reinterpret_cast<uint16_t*>(ib.data)[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex;
+                        auto& posColor = reinterpret_cast<PositionColor*>(vb.data)[vertexBufferOffset + (vertexBufferIndex++)];
+                        posColor.m_pos[0] = it->m_start.x();
+                        posColor.m_pos[1] = it->m_start.y();
+                        posColor.m_pos[2] = it->m_start.z();
+
+                        posColor.m_color[0] = it->m_color.x();
+                        posColor.m_color[1] = it->m_color.y();
+                        posColor.m_color[2] = it->m_color.z();
+                        posColor.m_color[3] = it->m_color.w();
+                    }
+
+                    {
+                        reinterpret_cast<uint16_t*>(ib.data)[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex;
+                        auto& posColor = reinterpret_cast<PositionColor*>(vb.data)[vertexBufferOffset + (vertexBufferIndex++)];
+                        posColor.m_pos[0] = it->m_end.x();
+                        posColor.m_pos[1] = it->m_end.y();
+                        posColor.m_pos[2] = it->m_end.z();
+
+                        posColor.m_color[0] = it->m_color.x();
+                        posColor.m_color[1] = it->m_color.y();
+                        posColor.m_color[2] = it->m_color.z();
+                        posColor.m_color[3] = it->m_color.w();
+                    }
+
+                    lastIt = it;
+                    it++;
+                } while(it != m_lineSegments.end() && 
+                    it->m_depthTest == lastIt->m_depthTest);
+                
+                GraphicsContext::LayoutStream layout;
+                layout.m_vertexStreams.push_back({
+                    .m_transient = vb,
+                    .m_startVertex = static_cast<uint32_t>(vertexBufferOffset),
+                    .m_numVertices = static_cast<uint32_t>(vertexBufferIndex)
+                });
+                layout.m_indexStream = {
+                    .m_transient = ib,
+                    .m_startIndex = static_cast<uint32_t>(indexBufferOffset),
+                    .m_numIndices = static_cast<uint32_t>(indexBufferIndex)
+                };
+                indexBufferOffset += indexBufferIndex;
+                vertexBufferOffset += vertexBufferIndex;
+
+                layout.m_drawType = eVertexBufferDrawType_Line;
+                
+                GraphicsContext::ShaderProgram shaderProgram;
+                shaderProgram.m_handle = m_context.m_colorProgram;
+                shaderProgram.m_configuration.m_depthTest = lastIt->m_depthTest;
+                shaderProgram.m_configuration.m_rgbBlendFunc = 
+                    CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
+                shaderProgram.m_configuration.m_alphaBlendFunc = 
+                    CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
+                shaderProgram.m_configuration.m_write = Write::RGB;
+                // shaderProgram.m_configuration.m_depthTest = DepthTest::LessEqual;
+
+                GraphicsContext::DrawRequest request = {
+                    layout,
+                    shaderProgram,
+                };
+                m_context.Submit(view, request);   
+            }
+        }
+        if(m_debugMeshes.size() > 0) {
+            for(auto& mesh: m_debugMeshes) {
+               
+                GraphicsContext::ShaderProgram shaderProgram;
+                shaderProgram.m_handle = m_context.m_meshColorProgram;
+                shaderProgram.m_configuration.m_depthTest = mesh.m_depthTest;
+                shaderProgram.m_configuration.m_rgbBlendFunc = 
+                    CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
+                shaderProgram.m_configuration.m_alphaBlendFunc = 
+                    CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
+                struct {
+                    float m_r;
+                    float m_g;
+                    float m_b;
+                    float m_a;
+                } color = {
+                    mesh.m_color.r,
+                    mesh.m_color.g,
+                    mesh.m_color.b,
+                    mesh.m_color.a
+                };
+                shaderProgram.m_uniforms.push_back({m_context.m_u_color, &color});
+                shaderProgram.m_configuration.m_write = Write::RGB;
+                shaderProgram.m_configuration.m_depthTest = DepthTest::LessEqual;
+                GraphicsContext::DrawRequest request = {
+                    mesh.m_layout,
+                    shaderProgram,
+                };
+                m_context.Submit(view, request);   
+            }
+        }
+
+        if(!m_uvQuads.empty()) {
+            size_t vertexBufferOffset = 0;
+            size_t indexBufferOffset = 0;
+            cVector2l imageSize = m_target.GetImage()->GetImageSize();
+            GraphicsContext::ViewConfiguration viewConfiguration {m_target};
+            viewConfiguration.m_viewRect = { 0, 0, static_cast<uint16_t>(imageSize.x), static_cast<uint16_t>(imageSize.y) };
+            viewConfiguration.m_projection = m_projection;
+            viewConfiguration.m_view = m_view;
+            const auto view = m_context.StartPass("Immediate - Quad", viewConfiguration);
+            const size_t numVertices = m_colorQuads.size() * 4;
+
+            bgfx::TransientIndexBuffer ib;
+            bgfx::allocTransientIndexBuffer(&ib, 6);
+		    uint16_t* indexBuffer = reinterpret_cast<uint16_t*>(ib.data);
+            indexBuffer[0] = 0;
+            indexBuffer[1] = 1;
+            indexBuffer[2] = 2;
+            indexBuffer[3] = 1;
+            indexBuffer[4] = 2;
+            indexBuffer[5] = 3;
+
+            for(auto& quad: m_uvQuads) {
+                bgfx::TransientVertexBuffer vb;
+                bgfx::allocTransientVertexBuffer(&vb, 4, PositionTexCoord0::m_layout);
+                PositionTexCoord0* vertexBuffer = reinterpret_cast<PositionTexCoord0*>(vb.data);
+
+                Eigen::Vector3f v1v2 = quad.m_v2 - quad.m_v1;
+                Eigen::Vector3f v1v3 = quad.m_v3 - quad.m_v1;
+                Eigen::Vector3f v4 = quad.m_v1 + v1v2 + v1v3;
+                vertexBuffer[0] = {
+                    .m_x = quad.m_v1.x(),
+                    .m_y = quad.m_v1.y(),
+                    .m_z = quad.m_v1.z(),
+                    .m_u = quad.m_uv0.x(),
+                    .m_v = quad.m_uv0.y()
+                };
+                vertexBuffer[1] = {
+                    .m_x = quad.m_v2.x(),
+                    .m_y = quad.m_v2.y(),
+                    .m_z = quad.m_v2.z(),
+                    .m_u = quad.m_uv1.x(),
+                    .m_v = quad.m_uv0.y()
+                };
+                vertexBuffer[2] = {
+                    .m_x = quad.m_v3.x(),
+                    .m_y = quad.m_v3.y(),
+                    .m_z = quad.m_v3.z(),
+                    .m_u = quad.m_uv0.x(),
+                    .m_v = quad.m_uv1.y()
+                };
+                vertexBuffer[3] = {
+                    .m_x = v4.x(),
+                    .m_y = v4.y(),
+                    .m_z = v4.z(),
+                    .m_u = quad.m_uv1.x(),
+                    .m_v = quad.m_uv1.y()
+                };
+            
+                struct {
+                    float m_r;
+                    float m_g;
+                    float m_b;
+                    float m_a;
+                } color = {
+                    quad.m_color.r,
+                    quad.m_color.g,
+                    quad.m_color.b,
+                    quad.m_color.a
+                };
+
+                GraphicsContext::ShaderProgram shaderProgram;
+                shaderProgram.m_handle = m_context.m_uvProgram;
+                shaderProgram.m_configuration.m_depthTest = quad.m_depthTest;
+                
+                // shaderProgram.m_configuration.m_cull = Cull::None;
+                shaderProgram.m_configuration.m_rgbBlendFunc = 
+                    CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
+                shaderProgram.m_configuration.m_alphaBlendFunc = 
+                    CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
+                shaderProgram.m_uniforms.push_back({m_context.m_u_color, &color});
+                shaderProgram.m_textures.push_back({m_context.m_s_diffuseMap, quad.m_uvImage->GetHandle(), 0});
+                shaderProgram.m_configuration.m_write = Write::RGB;
+                // shaderProgram.m_configuration.m_depthTest = DepthTest::LessEqual;
+                
+                GraphicsContext::LayoutStream layout;
+                layout.m_vertexStreams.push_back({
+                    .m_transient = vb,
+                    // .m_startVertex = static_cast<uint32_t>(0),
+                    // .m_numVertices = static_cast<uint32_t>(4)
+                });
+                layout.m_indexStream = {
+                    .m_transient = ib,
+                    // .m_startIndex = static_cast<uint32_t>(0),
+                    // .m_numIndices = static_cast<uint32_t>(4)
+                };
+
+                GraphicsContext::DrawRequest request = {
+                    layout,
+                    shaderProgram,
+                };
+                m_context.Submit(view, request); 
+            }
+        }
+
+        if(!m_colorQuads.empty()) {
+            size_t vertexBufferOffset = 0;
+            size_t indexBufferOffset = 0;
+            cVector2l imageSize = m_target.GetImage()->GetImageSize();
+            GraphicsContext::ViewConfiguration viewConfiguration {m_target};
+            viewConfiguration.m_viewRect = { 0, 0, static_cast<uint16_t>(imageSize.x), static_cast<uint16_t>(imageSize.y) };
+            viewConfiguration.m_projection = m_projection;
+            viewConfiguration.m_view = m_view;
+            const auto view = m_context.StartPass("Immediate - Color Quad", viewConfiguration);
+            const size_t numVertices = m_colorQuads.size() * 4;
+
+            bgfx::TransientVertexBuffer vb;
+            bgfx::TransientIndexBuffer ib;
+            bgfx::allocTransientVertexBuffer(&vb, numVertices, PositionColor::m_layout);
+            bgfx::allocTransientIndexBuffer(&ib, 4);
+
+            for(auto& quad: m_colorQuads) {
+                Eigen::Vector3f v1v2 = quad.m_v2 - quad.m_v1;
+                Eigen::Vector3f v1v3 = quad.m_v3 - quad.m_v1;
+                Eigen::Vector3f v4 = quad.m_v1 + v1v2 + v1v3;
+                {
+                    auto& posTex = reinterpret_cast<PositionColor*>(vb.data)[vertexBufferOffset++];
+                    posTex.m_pos[0] = quad.m_v1.x();
+                    posTex.m_pos[1] = quad.m_v1.y();
+                    posTex.m_pos[2] = quad.m_v1.z();
+
+                    posTex.m_color[0] = quad.m_color.x();
+                    posTex.m_color[1] = quad.m_color.y();
+                    posTex.m_color[2] = quad.m_color.z();
+                    posTex.m_color[3] = quad.m_color.w();
+                }
+                {
+                    auto& posTex = reinterpret_cast<PositionColor*>(vb.data)[vertexBufferOffset++];
+                    posTex.m_pos[0] = quad.m_v2.x();
+                    posTex.m_pos[1] = quad.m_v2.y();
+                    posTex.m_pos[2] = quad.m_v2.z();
+
+                    posTex.m_color[0] = quad.m_color.x();
+                    posTex.m_color[1] = quad.m_color.y();
+                    posTex.m_color[2] = quad.m_color.z();
+                    posTex.m_color[3] = quad.m_color.w();
+                }
+                {
+                    auto& posTex = reinterpret_cast<PositionColor*>(vb.data)[vertexBufferOffset++];
+                    posTex.m_pos[0] = quad.m_v3.x();
+                    posTex.m_pos[1] = quad.m_v3.y();
+                    posTex.m_pos[2] = quad.m_v3.z();
+
+                    posTex.m_color[0] = quad.m_color.x();
+                    posTex.m_color[1] = quad.m_color.y();
+                    posTex.m_color[2] = quad.m_color.z();
+                    posTex.m_color[3] = quad.m_color.w();
+                }
+                {
+                    auto& posTex = reinterpret_cast<PositionColor*>(vb.data)[vertexBufferOffset++];
+                    posTex.m_pos[0] = v4.x();
+                    posTex.m_pos[1] = v4.y();
+                    posTex.m_pos[2] = v4.z();
+
+                    posTex.m_color[0] = quad.m_color.x();
+                    posTex.m_color[1] = quad.m_color.y();
+                    posTex.m_color[2] = quad.m_color.z();
+                    posTex.m_color[3] = quad.m_color.w();
+                }
+
+                GraphicsContext::ShaderProgram shaderProgram;
+                shaderProgram.m_handle = m_context.m_colorProgram;
+                shaderProgram.m_configuration.m_depthTest = quad.m_depthTest;
+                shaderProgram.m_configuration.m_rgbBlendFunc = 
+                    CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
+                shaderProgram.m_configuration.m_alphaBlendFunc = 
+                    CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
+                // shaderProgram.m_uniforms.push_back({m_context.m_u_color, &color});
+
+                GraphicsContext::LayoutStream layout;
+                layout.m_vertexStreams.push_back({
+                    .m_transient = vb,
+                    .m_startVertex = static_cast<uint32_t>(vertexBufferOffset),
+                    .m_numVertices = static_cast<uint32_t>(4)
+                });
+
+                GraphicsContext::DrawRequest request = {
+                    layout,
+                    shaderProgram,
+                };
+                m_context.Submit(view, request); 
+            }
         }
 
     }
-
-
 
 } // namespace hpl

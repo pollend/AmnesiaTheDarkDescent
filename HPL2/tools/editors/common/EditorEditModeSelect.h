@@ -90,7 +90,7 @@ public:
 
 	virtual void OnEditorUpdate() {}
 
-	virtual void Draw(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions) {}
+	virtual void Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions) {}
 
 	virtual void OnSetCurrent(bool abX) {}
 
@@ -132,7 +132,7 @@ public:
 	void OnViewportMouseDown(int alButtons);
 	void OnViewportMouseUp(int alButtons);
 
-	void DrawPostGrid(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions, const cVector3f& avPos);
+	void DrawPostGrid(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, const cVector3f& avPos);
 
 	//////////////////////////////////////////////////////////////////
 	// EditBox stuff

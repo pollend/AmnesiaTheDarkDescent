@@ -59,17 +59,17 @@ cEditorEditModeStaticObjects::cEditorEditModeStaticObjects(iEditorBase* apEditor
 
 //-----------------------------------------------------------------
 
-void cEditorEditModeStaticObjects::DrawObjectPreview(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions, const cMatrixf& amtxTransform, bool abPreCreationActive)
+void cEditorEditModeStaticObjects::DrawObjectPreview(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, const cMatrixf& amtxTransform, bool abPreCreationActive)
 {
-	apFunctions->SetMatrix(NULL);
-	apFunctions->SetBlendMode(eMaterialBlendMode_Alpha);
-	apFunctions->SetTextureRange(NULL,0);
-	apFunctions->SetProgram(NULL);
+	// apFunctions->SetMatrix(NULL);
+	// apFunctions->SetBlendMode(eMaterialBlendMode_Alpha);
+	// apFunctions->SetTextureRange(NULL,0);
+	// apFunctions->SetProgram(NULL);
 
-	apFunctions->SetDepthTest(true);
-	apFunctions->SetDepthWrite(false);
+	// apFunctions->SetDepthTest(true);
+	// apFunctions->SetDepthWrite(false);
 
-	apFunctions->GetLowLevelGfx()->DrawSphere(mpEditor->GetPosOnGridFromMousePos(),0.1f,cColor(1,0,0,1));
+	apFunctions->DebugDrawSphere(mpEditor->GetPosOnGridFromMousePos(),0.1f,cColor(1,0,0,1));
 
 	cEditorWindowStaticObjects* pWin = (cEditorWindowStaticObjects*)mpWindow;
 	iEditorObjectIndexEntryMeshObject* pObj = pWin->GetSelectedObject();
@@ -79,17 +79,20 @@ void cEditorEditModeStaticObjects::DrawObjectPreview(cEditorWindowViewport* apVi
 		const cVector3f& vBVMin = pObj->GetBVMin();
 		const cVector3f& vBVMax = pObj->GetBVMax();
 
-		apFunctions->SetMatrix((cMatrixf*)&amtxTransform);
+		// apFunctions->SetMatrix((cMatrixf*)&amtxTransform);
 		cMeshEntity* pEnt = pWin->GetPreviewEntity();
 		if(pEnt)
 			pEnt->SetVisible(abPreCreationActive);
 
 		if(abPreCreationActive)
 		{
-			apFunctions->SetDepthTestFunc(eDepthTestFunc_Greater);
-			apFunctions->GetLowLevelGfx()->DrawBoxMinMax(vBVMin,vBVMax, cColor(1,0,0,0.6f));
-			apFunctions->SetDepthTestFunc(eDepthTestFunc_Less);
-			apFunctions->GetLowLevelGfx()->DrawBoxMinMax(vBVMin,vBVMax, cColor(0,1,0,0.6f));
+			ImmediateDrawBatch::DebugDrawOptions options;
+			options.m_depthTest = DepthTest::Greater;
+			// apFunctions->SetDepthTestFunc(eDepthTestFunc_Greater);
+			apFunctions->DebugDrawBoxMinMax(vBVMin,vBVMax, cColor(1,0,0,0.6f), options);
+			options.m_depthTest = DepthTest::Less;
+			// apFunctions->SetDepthTestFunc(eDepthTestFunc_Less);
+			apFunctions->DebugDrawBoxMinMax(vBVMin,vBVMax, cColor(0,1,0,0.6f), options);
 
 			/////////////////////////////////////////
 			// Draw Textured Mesh
@@ -100,12 +103,12 @@ void cEditorEditModeStaticObjects::DrawObjectPreview(cEditorWindowViewport* apVi
 		}
 		else
 		{
-			apFunctions->GetLowLevelGfx()->DrawBoxMinMax(vBVMin,vBVMax, cColor(1,0.5f));
+			apFunctions->DebugDrawBoxMinMax(vBVMin,vBVMax, cColor(1,0.5f));
 		}
 	}
 
-	apFunctions->SetBlendMode(eMaterialBlendMode_None);
-	apFunctions->SetMatrix(NULL);
+	// apFunctions->SetBlendMode(eMaterialBlendMode_None);
+	// apFunctions->SetMatrix(NULL);
 }
 
 //-----------------------------------------------------------------

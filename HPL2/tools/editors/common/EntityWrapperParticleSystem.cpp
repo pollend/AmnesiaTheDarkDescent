@@ -331,17 +331,19 @@ bool cEntityWrapperParticleSystem::EntitySpecificCheckCulled(cEditorClipPlane* a
 //------------------------------------------------------------------------------
 
 
-void cEntityWrapperParticleSystem::Draw(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions,iEditorEditMode* apEditMode,
+void cEntityWrapperParticleSystem::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions,iEditorEditMode* apEditMode,
 						bool abIsSelected, const cColor& aHighlightCol, const cColor& aDisabledCol)
 {
 	iEntityWrapper::Draw(apViewport,apFunctions,apEditMode,abIsSelected, aHighlightCol);
 
-	apFunctions->SetDepthTest(true);
-	apFunctions->SetDepthWrite(false);
+	// apFunctions->SetDepthTest(true);
+	// apFunctions->SetDepthWrite(false);
 
-	if(abIsSelected) DrawArrow(apViewport, apFunctions, GetWorldMatrix(), 1, true, cVector2f(0.05f, 0.4f), cColor(1,1));
+	if(abIsSelected) {
+		DrawArrow(apViewport, apFunctions, GetWorldMatrix(), 1, true, cVector2f(0.05f, 0.4f), cColor(1,1));
+	}
 
-	apFunctions->SetMatrix(NULL);
+	// apFunctions->SetMatrix(NULL);
 }
 
 

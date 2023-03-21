@@ -50,7 +50,7 @@ public:
 	/**
 	 * Draws the creator
 	 */
-	void Draw(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions);
+	void Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions);
 
 	/**
 	 * To be called by Update in the editor base, updates the current state

@@ -87,7 +87,7 @@ public:
 	bool SetProperty(int, const int&);
 	bool GetProperty(int, int&);
 
-	void Draw(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions,
+	void Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions,
 				iEditorEditMode* apEditMode, bool abIsSelected, const cColor& aHighlightCol, const cColor& aDisabledCol);
 
 	bool CheckRayIntersect(cEditorWindowViewport*, cVector3f* , tVector3fVec*, float*);
@@ -98,7 +98,7 @@ public:
 
 	cEditorWindowEntityEditBox* CreateEditBox(cEditorEditModeSelect* apEditMode);
 
-	void DrawBone(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions, iEditorEditMode* apEditMode, bool abIsSelected);
+	void DrawBone(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, iEditorEditMode* apEditMode, bool abIsSelected);
 
 	void SetParentBone(cEntityWrapperBone* apBone);
 	void AddChildBone(cEntityWrapperBone* apBone);

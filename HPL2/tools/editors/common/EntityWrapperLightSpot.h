@@ -108,7 +108,7 @@ public:
 
 	// iEntityWrapperLight Implementation
 
-	void DrawLightTypeSpecific(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions, iEditorEditMode* apEditMode, bool abIsSelected);
+	void DrawLightTypeSpecific(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, iEditorEditMode* apEditMode, bool abIsSelected);
 
 protected:
 	iEngineEntity* CreateSpecificEngineEntity();

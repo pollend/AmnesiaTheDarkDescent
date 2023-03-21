@@ -38,6 +38,9 @@
 
 #include "EntityIcon.h"
 #include "EngineEntity.h"
+#include "graphics/Color.h"
+#include "graphics/GraphicsContext.h"
+#include "math/MathTypes.h"
 
 #include <algorithm>
 
@@ -1354,12 +1357,12 @@ void iEntityWrapper::SetWorldMatrix(const cMatrixf& amtxX)
 
 //------------------------------------------------------------------
 
-void iEntityWrapper::Draw(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions, iEditorEditMode* apEditMode, bool abIsSelected, const cColor& aHighlightCol, const cColor& aDisabledCol)
+void iEntityWrapper::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, iEditorEditMode* apEditMode, bool abIsSelected, const cColor& aHighlightCol, const cColor& aDisabledCol)
 {
-	if(mpIcon)
+	if(mpIcon) 
 		mpIcon->DrawIcon(apViewport, apFunctions, apEditMode, mbSelected, mvPosition, mbActive && mpType->IsActive(), aDisabledCol);
-	if(mpEngineEntity)
-		mpEngineEntity->Draw(apViewport, apFunctions, abIsSelected, mbActive && mpType->IsActive(), aHighlightCol);
+	// if(mpEngineEntity)
+	// 	mpEngineEntity->Draw(apViewport, apFunctions, abIsSelected, mbActive && mpType->IsActive(), aHighlightCol);
 
 	if(mbSelected==false)
 		return;
@@ -1371,20 +1374,20 @@ void iEntityWrapper::Draw(cEditorWindowViewport* apViewport, cRendererCallbackFu
 		//cVector3f vHalfSize = pBV->GetSize()*0.5f;
 
 		//apFunctions->GetLowLevelGfx()->DrawBoxMinMax(vPos-vHalfSize, vPos+vHalfSize, cColor(1,0,0,1));
-		apFunctions->GetLowLevelGfx()->DrawLine(mvPosition, mpParent->GetPosition(), cColor(1,0,0,1));
+		apFunctions->DebugDrawLine(mvPosition, mpParent->GetPosition(), cColor(1,0,0,1));
 	}
 
 	tEntityWrapperListIt itChildren = mlstChildren.begin();
 	for(;itChildren!=mlstChildren.end();++itChildren)
 	{
 		iEntityWrapper* pEnt = *itChildren;
-		apFunctions->GetLowLevelGfx()->DrawLine(mvPosition, pEnt->GetPosition(), cColor(0,1,0,1));
+		apFunctions->DebugDrawLine(mvPosition, pEnt->GetPosition(), cColor(0,1,0,1));
 	}
 }
 
 //------------------------------------------------------------------
 
-void iEntityWrapper::DrawProgram(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions, iGpuProgram* apProg, const cColor& aCol)
+void iEntityWrapper::DrawProgram(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, iGpuProgram* apProg, const cColor& aCol)
 {
 	if(mpEngineEntity)
 		mpEngineEntity->DrawProgram(apViewport, apFunctions, apProg, aCol);
@@ -2027,7 +2030,7 @@ iEditorAction* iEntityWrapper::SetUpAction(iEditorAction* apAction)
 
 //------------------------------------------------------------------
 
-void iEntityWrapper::DrawArrow(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions, const cMatrixf& amtxTransform, float afLength, bool abKeepConstantSize, const cVector2f& avHeadSizeRatio, const cColor& aCol,float afOrthoConstant, float afPerspConstant)
+void iEntityWrapper::DrawArrow(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, const cMatrixf& amtxTransform, float afLength, bool abKeepConstantSize, const cVector2f& avHeadSizeRatio, const cColor& aCol,float afOrthoConstant, float afPerspConstant)
 {
 	if(abKeepConstantSize)
 	{
@@ -2050,6 +2053,8 @@ void iEntityWrapper::DrawArrow(cEditorWindowViewport* apViewport, cRendererCallb
 	float fY = avHeadSizeRatio.y * afLength;
 	float fXZ = avHeadSizeRatio.x * afLength;
 
+	// apFunctions->DrawQuad(cVector3f)
+
 	mvArrowQuads[0][0].pos = cVector3f(fXZ,-fY,fXZ);
 	mvArrowQuads[0][2].pos = 0;
 	mvArrowQuads[0][3].pos = 0;
@@ -2071,13 +2076,21 @@ void iEntityWrapper::DrawArrow(cEditorWindowViewport* apViewport, cRendererCallb
 	mvArrowQuads[3][3].pos = cVector3f(-fXZ,-fY,fXZ);
 
 	cMatrixf mtxWorld = cMath::MatrixMul(amtxTransform, cMath::MatrixTranslate(cVector3f(0,afLength,0)));;
-	apFunctions->SetMatrix(&mtxWorld);
+	// apFunctions->SetMatrix(&mtxWorld);
 
-	apFunctions->GetLowLevelGfx()->DrawLine(cVector3f(0,-afLength,0), 0, aCol);
-	for(int i=0; i<4;++i)
-		apFunctions->GetLowLevelGfx()->DrawQuad(mvArrowQuads[i],aCol);
+	ImmediateDrawBatch::DebugDrawOptions options;
+	options.m_transform = mtxWorld.GetTranspose();
 
-	apFunctions->SetMatrix(NULL);
+	apFunctions->DebugDrawLine(cVector3f(0,-afLength,0), 0, aCol);
+	apFunctions->DrawQuad(cVector3f(0,0,0), cVector3f(fXZ,-fY,fXZ),cVector3f(-fXZ,-fY,fXZ),
+	 cColor(), options);
+	apFunctions->DrawQuad(cVector3f(0,0,0), cVector3f(fXZ,-fY,-fXZ), cVector3f(fXZ,-fY,fXZ), 
+		cColor(), options);
+	apFunctions->DrawQuad(cVector3f(0,0,0), cVector3f(-fXZ,-fY,-fXZ), cVector3f(-fXZ,-fY,fXZ), 
+		cColor(), options);
+
+
+	// apFunctions->SetMatrix(NULL);
 }
 
 //------------------------------------------------------------------

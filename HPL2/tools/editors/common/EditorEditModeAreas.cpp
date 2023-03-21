@@ -92,7 +92,7 @@ void cEditorEditModeAreas::OnEditorUpdate(float afTimeStep)
 
 //-----------------------------------------------------------------
 
-void cEditorEditModeAreas::DrawPostGrid(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions, const cVector3f& avPos)
+void cEditorEditModeAreas::DrawPostGrid(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, const cVector3f& avPos)
 {
 	iEditorEditModeObjectCreator::DrawPostGrid(apViewport, apFunctions, avPos);
 	mpBoxCreator->Draw(apViewport, apFunctions);

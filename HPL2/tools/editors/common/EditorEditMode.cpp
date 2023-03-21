@@ -72,7 +72,7 @@ void iEditorEditMode::SetCurrent(bool abX)
 }
 //---------------------------------------------------------------------
 
-void iEditorEditMode::DrawPreGrid(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions, const cVector3f& avPos)
+void iEditorEditMode::DrawPreGrid(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, const cVector3f& avPos)
 {
 /*	apFunctions->SetMatrix(NULL);
 	apFunctions->SetBlendMode(eMaterialBlendMode_None);
@@ -87,16 +87,11 @@ void iEditorEditMode::DrawPreGrid(cEditorWindowViewport* apViewport, cRendererCa
 
 //---------------------------------------------------------------------
 
-void iEditorEditMode::DrawPostGrid(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions, const cVector3f& avPos)
+void iEditorEditMode::DrawPostGrid(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, const cVector3f& avPos)
 {
-	apFunctions->SetMatrix(NULL);
-	apFunctions->SetBlendMode(eMaterialBlendMode_None);
-	apFunctions->SetTextureRange(NULL,0);
-	apFunctions->SetProgram(NULL);
 
 	iEditorWorld* pEditorWorld = mpEditor->GetEditorWorld();
 
-	//pEditorWorld->GetPicker()->DrawDebug(apFunctions);
 
 	tEntityWrapperMap& mapEntities = pEditorWorld->GetEntities();
 	tEntityWrapperMapIt it = mapEntities.begin();
@@ -258,28 +253,19 @@ iEditorAction* iEditorEditModeObjectCreator::CreateObject(iEntityWrapperData* ap
 
 //-----------------------------------------------------------------
 
-void iEditorEditModeObjectCreator::DrawPostGrid(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions, const cVector3f& avPos)
+void iEditorEditModeObjectCreator::DrawPostGrid(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, const cVector3f& avPos)
 {
 	iEditorEditMode::DrawPostGrid(apViewport,apFunctions,avPos);
-
-	apFunctions->SetMatrix(NULL);
-	apFunctions->SetBlendMode(eMaterialBlendMode_None);
-	apFunctions->SetTextureRange(NULL,0);
-	apFunctions->SetProgram(NULL);
-
-	apFunctions->SetDepthTest(true);
-	apFunctions->SetDepthWrite(false);
 
 	cMatrixf mtxTransform = cMath::MatrixMul(cMath::MatrixTranslate(GetCreatorPosition()),
 			cMath::MatrixMul( cMath::MatrixRotate(GetCreatorRotation(), eEulerRotationOrder_XYZ),
 			cMath::MatrixScale(GetCreatorScale())));
 
-	cColor col = mbPreCreationActive?cColor(0,1,0,1):cColor(1,0,0,1);
-	apFunctions->GetLowLevelGfx()->DrawSphere(mtxTransform.GetTranslation(),0.1f,col);
+	cColor col = mbPreCreationActive? cColor(0,1,0,1):cColor(1,0,0,1);
+	apFunctions->DebugDrawSphere(mtxTransform.GetTranslation(),0.1f,col);
 
 	DrawObjectPreview(apViewport, apFunctions, mtxTransform, mbPreCreationActive);
 
-	apFunctions->SetBlendMode(eMaterialBlendMode_None);
 }
 
 //-----------------------------------------------------------------

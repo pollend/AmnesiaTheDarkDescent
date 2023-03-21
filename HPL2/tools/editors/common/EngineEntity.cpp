@@ -483,7 +483,7 @@ bool iIconEntity::CheckRayIntersect(cEditorWindowViewport* apViewport, cVector3f
 }
 
 void iIconEntity::Draw(cEditorWindowViewport* apViewport,
-					  cRendererCallbackFunctions* apFunctions,
+					  ImmediateDrawBatch* apFunctions,
 					  bool abIsSelected,
 					  bool abIsActive,
 					  const cColor& aHighlightCol)

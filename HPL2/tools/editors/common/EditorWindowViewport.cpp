@@ -28,6 +28,7 @@
 #include "SurfacePicker.h"
 
 #include "EntityWrapper.h"
+#include "graphics/GraphicsContext.h"
 #include <utility>
 
 //--------------------------------------------------------------------
@@ -164,13 +165,13 @@ void cViewportCallback::OnPostTranslucentDraw(cRendererCallbackFunctions* apFunc
 
 	iEditorEditMode* pEditMode = mpEditor->GetCurrentEditMode();
 
-	if(pEditMode)
-		pEditMode->DrawPreGrid(mpViewport, apFunctions, vMousePos);
+	// if(pEditMode)
+	// 	pEditMode->DrawPreGrid(mpViewport, apFunctions, vMousePos);
 
-	apFunctions->SetBlendMode(eMaterialBlendMode_None);
+	// apFunctions->SetBlendMode(eMaterialBlendMode_None);
 
-	if(pEditMode)
-		pEditMode->DrawPostGrid(mpViewport, apFunctions, vMousePos);
+	// if(pEditMode)
+	// 	pEditMode->DrawPostGrid(mpViewport, apFunctions, vMousePos);
 }
 
 //--------------------------------------------------------------------
@@ -201,11 +202,16 @@ cEditorWindowViewport::cEditorWindowViewport(iEditorBase* apEditor,
 	m_postSolidDraw = cViewport::PostSolidDraw::Handler([&](cViewport::PostSolidDrawPayload& payload) {
 		if(mpEditor == nullptr) return;
 		
-		this->mpEditor->GetEditorWorld()->GetSurfacePicker()->DrawDebug(payload.m_drawBatch);
+		cMatrixf view = payload.m_frustum->GetViewMatrix().GetTranspose();
+		cMatrixf proj = payload.m_frustum->GetProjectionMatrix().GetTranspose();
+		ImmediateDrawBatch batch(*payload.m_context, *payload.m_outputTarget,view, proj);
+
+
+		this->mpEditor->GetEditorWorld()->GetSurfacePicker()->DrawDebug(&batch);
 		if(GetDrawGrid())
 		{
 			cEditorGrid* pGrid = GetGrid();
-			if(pGrid) pGrid->Draw(payload.m_drawBatch, GetGridCenter());
+			if(pGrid) pGrid->Draw(&batch, GetGridCenter());
 		}
 		if(GetDrawAxes())
 		{
@@ -219,16 +225,16 @@ cEditorWindowViewport::cEditorWindowViewport(iEditorBase* apEditor,
 				cVector3f vAxisEnd = 0;
 				vAxisStart.v[i] = vCenter.v[i] -1000.0f;
 				vAxisEnd.v[i] = vCenter.v[i] +1000.0f;
-				payload.m_drawBatch->DebugDrawLine(vAxisStart, vAxisEnd, col);
+				batch.DebugDrawLine(vAxisStart, vAxisEnd, col);
 			}
 		}
 		tEditorClipPlaneVec& vClipPlanes = mpEditor->GetEditorWorld()->GetClipPlanes();
 		for(int i=0;i<(int)vClipPlanes.size();++i)
 		{
-			vClipPlanes[i]->Draw(payload.m_drawBatch, 0);
+			vClipPlanes[i]->Draw(&batch, 0);
 		}
 
-		payload.m_drawBatch->DebugDrawSphere(GetVCamera()->GetTargetPosition(),0.1f, cColor(0,1,1,1));
+		batch.DebugDrawSphere(GetVCamera()->GetTargetPosition(),0.1f, cColor(0,1,1,1));
 
 		const cVector3f& vRefMousePos = GetVCamera()->GetTrackRefMousePos();
 		const cVector3f& vMouseNewPos = GetVCamera()->GetTrackNewMousePos();
@@ -236,24 +242,40 @@ cEditorWindowViewport::cEditorWindowViewport(iEditorBase* apEditor,
 
 		if(GetDrawDebug())
 		{
-			// apFunctions->SetBlendMode(eMaterialBlendMode_Add);
-
 			// Quick temp debug code btw
 			cVector3f& vPos1 = vDebugLineStart;
 			cVector3f& vPos2 = vDebugLineEnd;
 			cVector3f& vGridPos = vDebugGridPos;
 			cVector3f& vSnapPos = vDebugSnappedGridPos;
 
-			payload.m_drawBatch->DebugDrawLine(vPos1,vPos2,cColor(0,0,1,1));
-			payload.m_drawBatch->DebugDrawSphere(vPos1, 0.01f, cColor(0,1,0,1));
-			payload.m_drawBatch->DebugDrawSphere(vPos2, 0.2f, cColor(0,1,0,1));
-			payload.m_drawBatch->DebugDrawSphere(vGridPos, 0.3f, cColor(1,0,0,1));
-			payload.m_drawBatch->DebugDrawSphere(vSnapPos, 0.3f, cColor(1,1,0,1));
-
-			//apFunctions->GetLowLevelGfx()->DrawSphere(m->GetTarget(),0.1f, cColor(0,1,1,1));
+			batch.DebugDrawLine(vPos1,vPos2,cColor(0,0,1,1));
+			batch.DebugDrawSphere(vPos1, 0.01f, cColor(0,1,0,1));
+			batch.DebugDrawSphere(vPos2, 0.2f, cColor(0,1,0,1));
+			batch.DebugDrawSphere(vGridPos, 0.3f, cColor(1,0,0,1));
 		}
+
+		batch.flush();
 	});
-	m_postTranslucenceDraw= cViewport::PostTranslucenceDraw::Handler([](cViewport::PostTranslucenceDrawPayload& payload) {
+	m_postTranslucenceDraw = cViewport::PostTranslucenceDraw::Handler([&](cViewport::PostTranslucenceDrawPayload& payload) {
+		if(mpEditor == nullptr) return;
+
+		cMatrixf view = payload.m_frustum->GetViewMatrix().GetTranspose();
+		cMatrixf proj = payload.m_frustum->GetProjectionMatrix().GetTranspose();
+		ImmediateDrawBatch batch(*payload.m_context, *payload.m_outputTarget,view, proj);
+
+		cVector3f& vMousePos = mpEditor->GetPosOnGridFromMousePos();
+		iEditorEditMode* pEditMode = mpEditor->GetCurrentEditMode();
+
+		if(pEditMode)
+			pEditMode->DrawPreGrid(this, &batch, vMousePos);
+
+		// apFunctions->SetBlendMode(eMaterialBlendMode_None);
+
+		if(pEditMode)
+			pEditMode->DrawPostGrid(this, &batch, vMousePos);
+
+
+		batch.flush();
 	});
 
 	mpEngineViewport->ConnectDraw(m_postTranslucenceDraw);
@@ -269,8 +291,6 @@ cEditorWindowViewport::cEditorWindowViewport(iEditorBase* apEditor,
 	mViewportCallback.mpEditor = apEditor;
 	mViewportCallback.mpViewport = this;
 	AddViewportCallback(&mViewportCallback);
-
-	// 
 
 	vDebugGridPos = 0;
 	vDebugLineEnd = 0;

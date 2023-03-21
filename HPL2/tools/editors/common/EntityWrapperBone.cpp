@@ -26,6 +26,8 @@
 #include "EngineEntity.h"
 
 #include "EditorWindowEntityEditBoxBone.h"
+#include "graphics/Color.h"
+#include "graphics/GraphicsContext.h"
 
 #include <algorithm>
 
@@ -272,32 +274,25 @@ void cEntityWrapperBone::RemoveChildBone(cEntityWrapperBone* apBone)
 
 //----------------------------------------------------------------------
 
-void cEntityWrapperBone::Draw(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions,
+void cEntityWrapperBone::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions,
 							  iEditorEditMode* apEditMode, bool abIsSelected, const cColor& aHighlightCol, const cColor& aDisabledCol)
 {
 	iEntityWrapper::Draw(apViewport, apFunctions, apEditMode, abIsSelected);
 	cColor colJoint = abIsSelected?cColor(0,1,0,1):cColor(1,0,0,1);
 
-	apFunctions->SetDepthTest(false);
-	apFunctions->SetDepthWrite(false);
-	apFunctions->GetLowLevelGfx()->DrawSphere(mvPosition, 0.01f, colJoint);
+	apFunctions->DebugDrawSphere(mvPosition, 0.01f, colJoint);
 	DrawBone(apViewport, apFunctions, apEditMode, abIsSelected);
 	for(int i=0;i<(int)mvChildBones.size();++i)
 		mvChildBones[i]->DrawBone(apViewport, apFunctions, apEditMode, abIsSelected);
 }
 
-void cEntityWrapperBone::DrawBone(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions, iEditorEditMode* apEditMode, bool abIsSelected)
+void cEntityWrapperBone::DrawBone(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, iEditorEditMode* apEditMode, bool abIsSelected)
 {
 	if(mpVBBone)
 	{
-		apFunctions->SetProgram(NULL);
-		apFunctions->SetTextureRange(NULL,0);
-		apFunctions->SetMatrix(NULL);
-
-		apFunctions->SetTexture(0, NULL);
-
-		apFunctions->SetVertexBuffer(mpVBBone);
-		apFunctions->DrawCurrent();
+		GraphicsContext::LayoutStream layoutStream;
+		mpVBBone->GetLayoutStream(layoutStream);
+		apFunctions->DebugDrawMesh(layoutStream, cColor(0,1,0,1));
 	}
 }
 

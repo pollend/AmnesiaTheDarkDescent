@@ -910,9 +910,9 @@ public:
 	// Drawing
 	//virtual void AddToDrawingList();
 
-	virtual void Draw(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions,iEditorEditMode* apEditMode,
+	virtual void Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions,iEditorEditMode* apEditMode,
 						bool abIsSelected, const cColor& aHighlightCol=cColor(1,1), const cColor& aDisabledCol=cColor(0.5f,1));
-	virtual void DrawProgram(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions, iGpuProgram* apProg, const cColor& aCol);
+	virtual void DrawProgram(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, iGpuProgram* apProg, const cColor& aCol);
 
 	virtual bool IsCulledByFrustum(cCamera* apCamera);
 	bool IsCulledByClipPlanes() { return mbCulledByPlane; }
@@ -1012,7 +1012,7 @@ protected:
 	 * \param afPerspConstant
 	 */
 	void DrawArrow(cEditorWindowViewport* apViewport,
-				   cRendererCallbackFunctions* apFunctions,
+				   ImmediateDrawBatch* apFunctions,
 				   const cMatrixf& amtxTransform,
 				   float afLength,
 				   bool abKeepConstantSize,

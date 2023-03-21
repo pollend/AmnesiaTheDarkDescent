@@ -156,12 +156,12 @@ bool cEntityWrapperLightBox::GetProperty(int alPropID, cVector3f& avX)
 
 //---------------------------------------------------------------------------
 
-void cEntityWrapperLightBox::DrawLightTypeSpecific(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions,
+void cEntityWrapperLightBox::DrawLightTypeSpecific(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions,
 												   iEditorEditMode* apEditMode, bool abIsSelected)
 {
 	if(abIsSelected==false) return;
 
-	apFunctions->GetLowLevelGfx()->DrawBoxMinMax(mvPosition-(mvSize*0.5f), mvPosition+(mvSize*0.5f),mcolDiffuseColor);
+	apFunctions->DebugDrawBoxMinMax(mvPosition-(mvSize*0.5f), mvPosition+(mvSize*0.5f),mcolDiffuseColor);
 }
 
 

@@ -265,10 +265,10 @@ void cEntityWrapperLightSpot::SetSpotFalloffMap(const tString& asFalloffMap)
 
 //---------------------------------------------------------------------------
 
-void cEntityWrapperLightSpot::DrawLightTypeSpecific(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions,
+void cEntityWrapperLightSpot::DrawLightTypeSpecific(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions,
 													iEditorEditMode* apEditMode, bool abIsSelected)
 {
-	((cLightSpot*)mpEngineEntity->GetEntity())->GetFrustum()->Draw(apFunctions->GetLowLevelGfx(), cColor(1,1));
+	((cLightSpot*)mpEngineEntity->GetEntity())->GetFrustum()->Draw(apFunctions, cColor(1,1));
 }
 
 //---------------------------------------------------------------------------

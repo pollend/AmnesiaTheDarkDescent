@@ -442,14 +442,14 @@ void cEditorEditModeSelect::OnViewportMouseUp(int alButtons)
 
 //----------------------------------------------------------------------
 
-void cEditorEditModeSelect::DrawPostGrid(cEditorWindowViewport* apViewport, cRendererCallbackFunctions *apFunctions, const cVector3f &avPos)
+void cEditorEditModeSelect::DrawPostGrid(cEditorWindowViewport* apViewport, ImmediateDrawBatch *apFunctions, const cVector3f &avPos)
 {
 	iEditorEditMode::DrawPostGrid(apViewport,apFunctions,avPos);
 
-	apFunctions->SetProgram(NULL);
-	apFunctions->SetTextureRange(NULL,0);
+	// apFunctions->SetProgram(NULL);
+	// apFunctions->SetTextureRange(NULL,0);
 
-	apFunctions->SetMatrix(NULL);
+	// apFunctions->SetMatrix(NULL);
 
 	if(mpCurrentSelector)
 		mpCurrentSelector->Draw(apViewport, apFunctions);
@@ -457,8 +457,8 @@ void cEditorEditModeSelect::DrawPostGrid(cEditorWindowViewport* apViewport, cRen
 	if(mpCurrentTool && mbAllowTransform)
 		mpCurrentTool->Draw(apViewport,apFunctions);
 
-	apFunctions->SetBlendMode(eMaterialBlendMode_None);
-	apFunctions->SetMatrix(NULL);
+	// apFunctions->SetBlendMode(eMaterialBlendMode_None);
+	// apFunctions->SetMatrix(NULL);
 
 	//Debug
 	/*
@@ -988,8 +988,8 @@ void cEntitySelectorNormal::Draw(cEditorWindowViewport* apViewport, cRendererCal
 	{
 		iEntityWrapper* pEnt = *selectionIt;
 
-		if(pEnt->IsVisible())
-			pEnt->Draw(apViewport,apFunctions, mpEditMode, true);
+		// if(pEnt->IsVisible())
+		// 	pEnt->Draw(apViewport,apFunctions, mpEditMode, true);
 	}
 
 	if(apViewport->IsFocused()==false || mbIsSelecting==false)
@@ -1137,14 +1137,14 @@ void cEntitySelectorHighlighter::Draw(cEditorWindowViewport* apViewport, cRender
 	if(mpEntityUnderPointer)
 	{
 		//cBoundingVolume* pBV = mpEntityUnderPointer->GetPickBV(apViewport);
-		mpEntityUnderPointer->Draw(apViewport, apFunctions, NULL, true, cColor(0,0.5f,1,1));
-		apFunctions->GetLowLevelGfx()->DrawSphere(mpEntityUnderPointer->GetPosition(), 0.1f, cColor(0,0.5f,1,1));
+		// mpEntityUnderPointer->Draw(apViewport, apFunctions, NULL, true, cColor(0,0.5f,1,1));
+		// apFunctions->GetLowLevelGfx()->DrawSphere(mpEntityUnderPointer->GetPosition(), 0.1f, cColor(0,0.5f,1,1));
 	}
 	tEntityWrapperListIt it = mlstHighlightedEntities.begin();
 	for(;it!=mlstHighlightedEntities.end();++it)
 	{
 		iEntityWrapper* pEnt = *it;
-		pEnt->Draw(apViewport, apFunctions, NULL, true, cColor(0,0.5f,1,1));
+		// pEnt->Draw(apViewport, apFunctions, NULL, true, cColor(0,0.5f,1,1));
 		//cBoundingVolume* pBV = pEnt->GetPickBV(apViewport);
 		//apFunctions->GetLowLevelGfx()->DrawBoxMinMax(pBV->GetMin(), pBV->GetMax(), cColor(0,0.5f,1,1));
 	}

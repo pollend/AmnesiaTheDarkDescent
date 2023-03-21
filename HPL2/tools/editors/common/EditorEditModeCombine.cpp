@@ -164,7 +164,7 @@ void cEditorEditModeCombine::OnEditorUpdate(float afTimeStep)
 
 //-------------------------------------------------------------
 
-void cEditorEditModeCombine::DrawPostGrid(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions, const cVector3f& avPos)
+void cEditorEditModeCombine::DrawPostGrid(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, const cVector3f& avPos)
 {
 	iEditorEditMode::DrawPostGrid(apViewport,apFunctions,avPos);
 
@@ -177,16 +177,16 @@ void cEditorEditModeCombine::DrawPostGrid(cEditorWindowViewport* apViewport, cRe
 		for(;itCombos!=lstCombos.end();++itCombos)
 		{
 			cLevelEditorStaticObjectCombo* pCombo = *itCombos;
-			pCombo->Draw(apViewport, apFunctions);
+			// pCombo->Draw(apViewport, apFunctions);
 		}
 	}
 	else
 	{
 		cLevelEditorStaticObjectCombo* pCombo = pWin->GetCurrentCombo();
-		if(pCombo) pCombo->Draw(apViewport, apFunctions);
+		// if(pCombo) pCombo->Draw(apViewport, apFunctions);
 	}
 
-	apFunctions->SetProgram(NULL);
+	// apFunctions->SetProgram(NULL);
 
 	///////////////////////////////////////////////////////
 	// highlight candidates
@@ -195,7 +195,7 @@ void cEditorEditModeCombine::DrawPostGrid(cEditorWindowViewport* apViewport, cRe
 		for(;it!=mlstEntsToBePicked.end();++it)
 		{
 			iEntityWrapper* pEnt = *it;
-			pEnt->Draw(apViewport, apFunctions, NULL, true);
+			// pEnt->Draw(apViewport, apFunctions, NULL, true);
 		}
 	}
 
@@ -203,14 +203,14 @@ void cEditorEditModeCombine::DrawPostGrid(cEditorWindowViewport* apViewport, cRe
 	// Show picking rect
 	if(mbPressed && apViewport->IsFocused() && IsRayPickingActive()==false)
 	{
-		apFunctions->SetDepthTest(false);
-		apFunctions->GetLowLevelGfx()->SetOrthoProjection(apViewport->GetGuiViewportSize(),-1000,1000);
-		apFunctions->GetLowLevelGfx()->SetIdentityMatrix(eMatrix_ModelView);
-		apFunctions->GetLowLevelGfx()->DrawLineQuad(cRect2f((float)mMouseRect.x,(float)mMouseRect.y,
-															(float)mMouseRect.w,(float)mMouseRect.h),
-															0,
-															cColor(1,1));
-		apFunctions->SetNormalFrustumProjection();
+		// apFunctions->SetDepthTest(false);
+		// apFunctions->GetLowLevelGfx()->SetOrthoProjection(apViewport->GetGuiViewportSize(),-1000,1000);
+		// apFunctions->GetLowLevelGfx()->SetIdentityMatrix(eMatrix_ModelView);
+		// apFunctions->GetLowLevelGfx()->DrawLineQuad(cRect2f((float)mMouseRect.x,(float)mMouseRect.y,
+		// 													(float)mMouseRect.w,(float)mMouseRect.h),
+		// 													0,
+		// 													cColor(1,1));
+		// apFunctions->SetNormalFrustumProjection();
 	}
 }
 

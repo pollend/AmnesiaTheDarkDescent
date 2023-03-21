@@ -991,16 +991,16 @@ namespace hpl {
 		// }
 		{
 			cViewport::PostSolidDrawPayload event;
-			cMatrixf view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
-			cMatrixf proj = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
-			ImmediateDrawBatch batch = context.startImmediateBatch(sharedData.m_output_target,
-				view,
-				proj);
-			event.m_drawBatch = &batch;
+			// cMatrixf view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+			// cMatrixf proj = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
+			// ImmediateDrawBatch batch = context.startImmediateBatch(sharedData.m_output_target,
+			// 	view,
+			// 	proj);
+			event.m_frustum = mpCurrentFrustum;
 			event.m_context = &context;
 			event.m_outputTarget = &sharedData.m_output_target;
 			viewport.SignalDraw(event);
-			context.flush(batch); // flush the batch
+			// context.flush(batch); // flush the batch
 		}
 		RunCallback(eRendererMessage_PostSolid, handler);
 
@@ -1009,6 +1009,19 @@ namespace hpl {
 		RenderTranslucentPass(context, viewport, sharedData.m_output_target);
 
 		RunCallback(eRendererMessage_PostTranslucent, handler);
+		{
+			cViewport::PostTranslucenceDrawPayload event;
+			cMatrixf view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+			cMatrixf proj = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
+			// ImmediateDrawBatch batch = context.startImmediateBatch(sharedData.m_output_target,
+			// 	view,
+			// 	proj);
+			event.m_frustum = mpCurrentFrustum;
+			event.m_context = &context;
+			event.m_outputTarget = &sharedData.m_output_target;
+			viewport.SignalDraw(event);
+			// context.flush(b atch); // flush the batch
+		}
 
 	}
 

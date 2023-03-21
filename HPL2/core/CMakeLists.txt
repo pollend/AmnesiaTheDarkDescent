@@ -238,6 +238,7 @@ target_link_libraries(HPL2
   absl::str_format
   absl::flat_hash_map
   bgfx
+  Eigen3::Eigen
   bx
   bimg
   $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>

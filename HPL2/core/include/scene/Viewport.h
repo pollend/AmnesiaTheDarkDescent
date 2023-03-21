@@ -29,6 +29,7 @@
 #include "graphics/RenderTarget.h"
 
 #include "gui/GuiTypes.h"
+#include "math/Frustum.h"
 #include "math/MathTypes.h"
 #include "scene/SceneTypes.h"
 #include "windowing/NativeWindow.h"
@@ -59,9 +60,9 @@ namespace hpl {
         using ViewportChange = hpl::Event<>;
 
         struct DrawPayloadCommon {
+            cFrustum* m_frustum;
             GraphicsContext* m_context;
             RenderTarget* m_outputTarget;
-            ImmediateDrawBatch* m_drawBatch;
         };
         struct PostSolidDrawPayload : public DrawPayloadCommon {
         };

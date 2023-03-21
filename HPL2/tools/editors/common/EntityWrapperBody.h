@@ -115,7 +115,7 @@ public:
 	bool GetProperty(int, bool&);
 	bool GetProperty(int, tString&);
 
-	void Draw(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions,iEditorEditMode* apEditMode,
+	void Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions,iEditorEditMode* apEditMode,
 				bool abIsSelected, const cColor& aHighlightCol, const cColor& aDisabledCol);
 
 	cEditorWindowEntityEditBox* CreateEditBox(cEditorEditModeSelect* apEditMode);

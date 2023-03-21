@@ -47,7 +47,7 @@ public:
 						  iEditorWorld* apEditorWorld);
 	~cEditorEditModeLights();
 
-	void DrawObjectPreview(cEditorWindowViewport* apViewport, cRendererCallbackFunctions *apFunctions, const cMatrixf& amtxTransform, bool abPreCreationActive);
+	void DrawObjectPreview(cEditorWindowViewport* apViewport, ImmediateDrawBatch *apFunctions, const cMatrixf& amtxTransform, bool abPreCreationActive);
 	void OnViewportMouseDown(int alButtons);
 	void OnViewportMouseUp(int alButtons);
 	void OnEditorUpdate(float afTimeStep);

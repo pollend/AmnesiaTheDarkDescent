@@ -39,7 +39,7 @@ public:
 
 	void Update();
 
-	void Draw(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions, bool abIsSelected, bool abIsActive);
+	void Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, bool abIsSelected, bool abIsActive);
 
 protected:
 	bool ReCreateBB();
@@ -144,7 +144,7 @@ public:
 	bool SetProperty(int, const tString&);
 	bool SetProperty(int, const cColor&);
 
-	void Draw(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions, iEditorEditMode* apEditMode, bool abIsSelected, const cColor& aHighlightCol, const cColor& aDisabledCol);
+	void Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, iEditorEditMode* apEditMode, bool abIsSelected, const cColor& aHighlightCol, const cColor& aDisabledCol);
 
 	void OnSetCulled(bool abX);
 

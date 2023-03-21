@@ -18,6 +18,8 @@
  */
 
 #include "graphics/DecalCreator.h"
+#include "graphics/GraphicsContext.h"
+#include "graphics/GraphicsTypes.h"
 #include "system/String.h"
 #include "system/LowLevelSystem.h"
 #include "graphics/LowLevelGraphics.h"
@@ -396,21 +398,18 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cDecalCreator::DrawDebug(cRendererCallbackFunctions* apFunctions, bool abDrawAxes, bool abDrawWireframe)
+	void cDecalCreator::DrawDebug(ImmediateDrawBatch* apFunctions, bool abDrawAxes, bool abDrawWireframe)
 	{
-		BX_ASSERT(false, "TODO: this does not work");
-		apFunctions->SetMatrix(NULL);
-
 		if(mpDecalVB)
 		{
 			if(mpDecalMaterial)
 			{
-				apFunctions->SetDepthTest(true);
-				apFunctions->SetDepthWrite(false);
-				apFunctions->SetBlendMode(eMaterialBlendMode_Alpha);
-				apFunctions->SetAlphaMode(eMaterialAlphaMode_Solid);
+				// apFunctions->SetDepthTest(true);
+				// apFunctions->SetDepthWrite(false);
+				// apFunctions->SetBlendMode(eMaterialBlendMode_Alpha);
+				// apFunctions->SetAlphaMode(eMaterialAlphaMode_Solid);
 
-				apFunctions->SetProgram(NULL);
+				// apFunctions->SetProgram(NULL);
 
 				for(int i=0; i<kMaxTextureUnits; ++i)
 				{
@@ -421,14 +420,18 @@ namespace hpl {
 
 				}
 
-				apFunctions->SetVertexBuffer(mpDecalVB);
+				// apFunctions->SetVertexBuffer(mpDecalVB);
 
-				apFunctions->DrawCurrent();
+				// apFunctions->DrawCurrent();
 
-				apFunctions->SetTextureRange(NULL,0);
-				apFunctions->SetBlendMode(eMaterialBlendMode_None);
+				// apFunctions->SetTextureRange(NULL,0);
+				// apFunctions->SetBlendMode(eMaterialBlendMode_None);
 			}
-			if(abDrawWireframe)	apFunctions->DrawWireFrame(mpDecalVB, cColor(1));
+			if(abDrawWireframe) {
+				GraphicsContext::LayoutStream m_stream;
+				mpDecalVB->GetLayoutStream(m_stream, eVertexBufferDrawType_Line);
+			}
+			// if(abDrawWireframe)	apFunctions->DrawWireFrame(mpDecalVB, cColor(1));
 		}
 
 		if(abDrawAxes)
@@ -438,12 +441,12 @@ namespace hpl {
 			//cMatrixf mtxTransform = cMatrixf::Identity;
 			mtxTransform.SetTranslation(mvDecalPosition);
 
-			apFunctions->SetMatrix(&mtxTransform);
+			// apFunctions->SetMatrix(&mtxTransform);
 			//apFunctions->GetLowLevelGfx()->DrawSphere(0, 0.01f, 1);
-			apFunctions->GetLowLevelGfx()->DrawLine(0,cVector3f(vHalfDecalSize.x,0,0), cColor(1,0,0,1));
-			apFunctions->GetLowLevelGfx()->DrawLine(0,cVector3f(0,vHalfDecalSize.y,0), cColor(0,1,0,1));
-			apFunctions->GetLowLevelGfx()->DrawLine(0,cVector3f(0,0,vHalfDecalSize.z), cColor(0,0,1,1));
-			apFunctions->GetLowLevelGfx()->DrawBoxMinMax(vHalfDecalSize*-1, vHalfDecalSize, 1);
+			apFunctions->DebugDrawLine(0,cVector3f(vHalfDecalSize.x,0,0), cColor(1,0,0,1));
+			apFunctions->DebugDrawLine(0,cVector3f(0,vHalfDecalSize.y,0), cColor(0,1,0,1));
+			apFunctions->DebugDrawLine(0,cVector3f(0,0,vHalfDecalSize.z), cColor(0,0,1,1));
+			apFunctions->DebugDrawBoxMinMax(vHalfDecalSize*-1, vHalfDecalSize, 1);
 
 			for(size_t i=0;i<mvTransformedBases.size();i+=4)
 			{
@@ -452,11 +455,11 @@ namespace hpl {
 				const cVector3f& vFwd = mvTransformedBases[i+3];
 
 				cMatrixf mtxBasis = cMath::MatrixUnitVectors(vRight, vUp, vFwd, mvTransformedBases[i]);
-				apFunctions->SetMatrix(&mtxBasis);
-				apFunctions->GetLowLevelGfx()->DrawLine(0,cVector3f(vHalfDecalSize.x,0,0), cColor(1,0,0,1));
-				apFunctions->GetLowLevelGfx()->DrawLine(0,cVector3f(0,vHalfDecalSize.y,0), cColor(0,1,0,1));
-				apFunctions->GetLowLevelGfx()->DrawLine(0,cVector3f(0,0,vHalfDecalSize.z), cColor(0,0,1,1));
-				apFunctions->GetLowLevelGfx()->DrawBoxMinMax(vHalfDecalSize*-1, vHalfDecalSize, 1);
+				// apFunctions->SetMatrix(&mtxBasis);
+				apFunctions->DebugDrawLine(0,cVector3f(vHalfDecalSize.x,0,0), cColor(1,0,0,1));
+				apFunctions->DebugDrawLine(0,cVector3f(0,vHalfDecalSize.y,0), cColor(0,1,0,1));
+				apFunctions->DebugDrawLine(0,cVector3f(0,0,vHalfDecalSize.z), cColor(0,0,1,1));
+				apFunctions->DebugDrawBoxMinMax(vHalfDecalSize*-1, vHalfDecalSize, 1);
 			}
 
 			//for(int i=0;i<(int)mvMatrices.size();++i)
@@ -469,11 +472,11 @@ namespace hpl {
 			//	apFunctions->GetLowLevelGfx()->DrawLine(0,cVector3f(0,0,1), cColor(0,0,1,1));
 			//}
 
-			apFunctions->SetMatrix(NULL);
+			// apFunctions->SetMatrix(NULL);
 		}
 
-		apFunctions->SetBlendMode(eMaterialBlendMode_None);
-		apFunctions->SetDepthTest(false);
+		// apFunctions->SetBlendMode(eMaterialBlendMode_None);
+		// apFunctions->SetDepthTest(false);
 	}
 
 	cBoundingVolume* cDecalCreator::GetDecalBoundingVolume()
