@@ -22,12 +22,12 @@
 #include "EditorBaseClasses.h"
 #include "EditorViewport.h"
 
-//--------------------------------------------------------
+
+#include "graphics/ImmediateDrawBatch.h"
+
 
 bool cEditorGrid::mbSnapToGrid = true;
 float cEditorGrid::mfSnapSeparation = 0.25f;
-
-//--------------------------------------------------------
 
 cEditorGrid::cEditorGrid(iEditorViewport* apViewport)
 {

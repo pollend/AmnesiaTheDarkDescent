@@ -156,6 +156,26 @@ void cLuxDebugRenderCallback::OnPostTranslucentDraw(cRendererCallbackFunctions* 
 
 cLuxMapHandler::cLuxMapHandler() : iLuxUpdateable("LuxMapHandler")
 {
+	m_postDebugSolidDrawHandler = cViewport::PostSolidDraw::Handler([&](cViewport::PostSolidDrawPayload& payload) {
+		cMatrixf view = payload.m_frustum->GetViewMatrix().GetTranspose();
+		cMatrixf proj = payload.m_frustum->GetProjectionMatrix().GetTranspose();
+		ImmediateDrawBatch batch(*payload.m_context, *payload.m_outputTarget,view, proj);
+
+		if(mpCurrentMap && mpCurrentMap->GetPhysicsWorld())
+		{
+			mpCurrentMap->GetPhysicsWorld()->RenderDebugGeometry(&batch, cColor(1,1,1,1));
+		}
+		// gpBase->mpDebugHandler->RenderSolid(apFunctions);
+		// gpBase->mpMapHandler->RenderSolid(apFunctions);
+		// gpBase->mpPlayer->RenderSolid(apFunctions);
+		// gpBase->mpEffectRenderer->RenderSolid(apFunctions);
+	});
+	m_postDebugTranslucentDrawHandler = cViewport::PostTranslucenceDraw::Handler([&](cViewport::PostTranslucenceDrawPayload& payload) {
+	
+		// gpBase->mpPlayer->RenderTrans(apFunctions);
+		// gpBase->mpEffectRenderer->RenderTrans(apFunctions);
+	});
+
 	//////////////////////////
 	//Create and setup view port
 	mpViewport = gpBase->mpEngine->GetScene()->CreateViewport();

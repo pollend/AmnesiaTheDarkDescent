@@ -49,14 +49,6 @@ namespace hpl {
 	{
 	}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
 	iVertexBuffer* cMeshCreator::CreateWireframeVertexBuffer(iVertexBuffer *apSrc)
 	{
 		iVertexBuffer *pDest = apSrc->CreateCopy(eVertexBufferType_Hardware, eVertexBufferUsageType_Static, apSrc->GetVertexElementFlags());
@@ -84,7 +76,6 @@ namespace hpl {
 		return pDest;
 	}
 
-	//-----------------------------------------------------------------------
 
 	cMesh* cMeshCreator::CreateBox(const tString &asName,cVector3f avSize, const tString &asMaterial)
 	{
@@ -100,7 +91,6 @@ namespace hpl {
 		return pMesh;
 	}
 
-	//-----------------------------------------------------------------------
 
 	cMesh* cMeshCreator::CreatePlane(const tString& asName, const cVector3f& avCorner1, const cVector3f& avCorner2,
 									 const cVector2f& avCorner1UV, const cVector2f& avCorner2UV, const cVector2f& avCorner3UV, const cVector2f& avCorner4UV,
@@ -612,7 +602,6 @@ namespace hpl {
 
 
 		float fSize = afSize;
-
 		for(int x=-1; x<=1;x++)
 			for(int y=-1; y<=1;y++)
 				for(int z=-1; z<=1;z++)

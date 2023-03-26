@@ -26,6 +26,8 @@
 
 #include "EntityWrapperBodyShape.h"
 
+#include "graphics/ImmediateDrawBatch.h"
+
 #include <algorithm>
 
 //------------------------------------------------------------------------

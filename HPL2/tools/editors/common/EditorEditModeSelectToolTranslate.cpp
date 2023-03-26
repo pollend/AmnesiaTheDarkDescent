@@ -28,18 +28,10 @@
 #include "EditorActionSelection.h"
 #include "EditorSelection.h"
 
-//----------------------------------------------------------------------
-
-//////////////////////////////////////////////////////////////////
-// TOOL TRANSLATE
-//////////////////////////////////////////////////////////////////
-
-//----------------------------------------------------------------
+#include "graphics/ImmediateDrawBatch.h"
 
 cEditorEditModeSelectToolTranslate::cEditorEditModeSelectToolTranslate(cEditorEditModeSelect* apParent, cEditorSelection* apSelection) : cEditorEditModeSelectTool(eSelectToolMode_Translate,apParent, apSelection)
 {
-	for(int i=0;i<4;++i)
-		mvArrowQuads[i].resize(4);
 }
 
 //----------------------------------------------------------------
@@ -229,7 +221,7 @@ void cEditorEditModeSelectToolTranslate::UpdateToolBoundingVolume()
 
 //----------------------------------------------------------------
 
-void cEditorEditModeSelectToolTranslate::DrawAxes(cEditorWindowViewport* apViewport, cRendererCallbackFunctions *apFunctions, float afAxisLength)
+void cEditorEditModeSelectToolTranslate::DrawAxes(cEditorWindowViewport* apViewport, ImmediateDrawBatch *apFunctions, float afAxisLength)
 {
 	cVector3f vAxes[3];
 	cColor col[3];
@@ -237,29 +229,10 @@ void cEditorEditModeSelectToolTranslate::DrawAxes(cEditorWindowViewport* apViewp
 	float fX = 0.2f*afAxisLength;
 	float fYZ = 0.05f*afAxisLength;
 
-	mvArrowQuads[0][0].pos = cVector3f(-fX,fYZ,fYZ);
-	mvArrowQuads[0][1].pos = cVector3f(0,0,0);
-	mvArrowQuads[0][2].pos = cVector3f(0,0,0);
-	mvArrowQuads[0][3].pos = cVector3f(-fX,-fYZ,fYZ);
-
-	mvArrowQuads[1][0].pos = cVector3f(-fX,-fYZ,-fYZ);
-	mvArrowQuads[1][1].pos = cVector3f(0,0,0);
-	mvArrowQuads[1][2].pos = cVector3f(0,0,0);
-	mvArrowQuads[1][3].pos = cVector3f(-fX,fYZ,-fYZ);
-
-	mvArrowQuads[2][0].pos = cVector3f(-fX,fYZ,-fYZ);
-	mvArrowQuads[2][1].pos = cVector3f(0,0,0);
-	mvArrowQuads[2][2].pos = cVector3f(0,0,0);
-	mvArrowQuads[2][3].pos = cVector3f(-fX,fYZ,fYZ);
-
-	mvArrowQuads[3][0].pos = cVector3f(-fX,-fYZ,fYZ);
-	mvArrowQuads[3][1].pos = cVector3f(0,0,0);
-	mvArrowQuads[3][2].pos = cVector3f(0,0,0);
-	mvArrowQuads[3][3].pos = cVector3f(-fX,-fYZ,-fYZ);
-
-
 	cMatrixf mtxTransform = cMath::MatrixTranslate(mpSelection->GetCenterTranslation());
-	apFunctions->SetMatrix(&mtxTransform);
+	ImmediateDrawBatch::DebugDrawOptions options;
+	options.m_transform = mtxTransform;
+	options.m_depthTest = DepthTest::Always;
 
 	for(int i=eSelectToolAxis_X; i<eSelectToolAxis_LastEnum; ++i)
 	{
@@ -267,16 +240,49 @@ void cEditorEditModeSelectToolTranslate::DrawAxes(cEditorWindowViewport* apViewp
 		vAxes[i] = 0;
 		vAxes[i].v[i] = afAxisLength;
 
-		apFunctions->GetLowLevelGfx()->DrawLine(0, vAxes[i], col[i]);
+		apFunctions->DebugDrawLine(0, vAxes[i], col[i], options);
 
 		// DEBUG: Draw axes bounding boxes
 		//apFunctions->GetLowLevelGfx()->DrawBoxMinMax(mvAxisMin[i], mvAxisMax[i], cColor(1,1));
 		//apFunctions->GetLowLevelGfx()->DrawBoxMinMax(mvHeadMin[i], mvHeadMax[i], cColor(1,1));
 	}
 
-	apFunctions->GetLowLevelGfx()->DrawBoxMinMax(0, (vAxes[0]+vAxes[1])*.2f, col[0] + col[1]);
-	apFunctions->GetLowLevelGfx()->DrawBoxMinMax(0, (vAxes[0]+vAxes[2])*.2f, col[0] + col[2]);
-	apFunctions->GetLowLevelGfx()->DrawBoxMinMax(0, (vAxes[1]+vAxes[2])*.2f, col[1] + col[2]);
+	auto drawArrowGeometry = [&](const cColor& c, const ImmediateDrawBatch::DebugDrawOptions& options) {
+		apFunctions->DrawQuad(
+			cVector3f(0,0,0),
+			cVector3f(-fX,fYZ,fYZ),
+			cVector3f(0,0,0),
+			cVector3f(-fX,-fYZ,fYZ),
+			c,options
+		);
+		apFunctions->DrawQuad(
+			cVector3f(0,0,0),
+			cVector3f(-fX,-fYZ,-fYZ),
+			cVector3f(0,0,0),
+			cVector3f(-fX,fYZ,-fYZ),
+			c,options
+		);
+		apFunctions->DrawQuad(
+			cVector3f(0,0,0),
+			cVector3f(-fX,fYZ,-fYZ),
+			cVector3f(0,0,0),
+			cVector3f(-fX,fYZ,fYZ),
+			c,options
+		);
+		apFunctions->DrawQuad(
+			cVector3f(0,0,0),
+			cVector3f(-fX,-fYZ,fYZ),
+			cVector3f(0,0,0),
+			cVector3f(-fX,-fYZ,-fYZ),
+			c,options
+		);
+	};
+	ImmediateDrawBatch::DebugDrawOptions oo;
+	drawArrowGeometry(col[0], oo);
+
+	apFunctions->DebugDrawBoxMinMax(0, (vAxes[0]+vAxes[1])*.2f, col[0] + col[1], options);
+	apFunctions->DebugDrawBoxMinMax(0, (vAxes[0]+vAxes[2])*.2f, col[0] + col[2], options);
+	apFunctions->DebugDrawBoxMinMax(0, (vAxes[1]+vAxes[2])*.2f, col[1] + col[2], options);
 
 	cMatrixf mtxXAxisHeadTransform = cMath::MatrixMul(cMath::MatrixTranslate(cVector3f(afAxisLength,0,0)),mtxTransform);
 	cMatrixf mtxYAxisHeadTransform = cMath::MatrixMul(cMath::MatrixTranslate(cVector3f(0,afAxisLength,0)),
@@ -284,19 +290,14 @@ void cEditorEditModeSelectToolTranslate::DrawAxes(cEditorWindowViewport* apViewp
 	cMatrixf mtxZAxisHeadTransform = cMath::MatrixMul(cMath::MatrixTranslate(cVector3f(0,0,afAxisLength)),
 													  cMath::MatrixMul(mtxTransform, cMath::MatrixRotate(cVector3f(0,-kPi2f,0),eEulerRotationOrder_XYZ)));
 
-	// TODO: Fixed
-	apFunctions->SetMatrix(&mtxXAxisHeadTransform);
-	for(int i=0; i<4;++i)
-		apFunctions->GetLowLevelGfx()->DrawQuad(mvArrowQuads[i],col[0]);
-
-	apFunctions->SetMatrix(&mtxYAxisHeadTransform);
-	for(int i=0; i<4;++i)
-		apFunctions->GetLowLevelGfx()->DrawQuad(mvArrowQuads[i],col[1]);
-
-	apFunctions->SetMatrix(&mtxZAxisHeadTransform);
-	for(int i=0; i<4;++i)
-		apFunctions->GetLowLevelGfx()->DrawQuad(mvArrowQuads[i],col[2]);
-
+	options.m_transform = mtxXAxisHeadTransform;
+	drawArrowGeometry(col[0], options);
+	
+	options.m_transform = mtxYAxisHeadTransform;
+	drawArrowGeometry(col[1], options);
+	
+	options.m_transform = mtxZAxisHeadTransform;
+	drawArrowGeometry(col[2], options);
 }
 
 //-----------------------------------------------------------------------------------

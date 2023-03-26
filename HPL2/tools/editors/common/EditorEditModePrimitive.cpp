@@ -27,8 +27,7 @@
 #include "EntityWrapperPrimitivePlane.h"
 
 
-
-//---------------------------------------------------------------------------
+#include "graphics/ImmediateDrawBatch.h"
 
 iPrimitiveMeshCreator::iPrimitiveMeshCreator(cEditorEditModePrimitives* apEditMode)
 {

@@ -33,6 +33,7 @@
 #include "EntityWrapperBody.h"
 #include "graphics/Enum.h"
 
+#include "graphics/ImmediateDrawBatch.h"
 //-----------------------------------------------------------------
 
 ///////////////////////////////////////////////////////////////////

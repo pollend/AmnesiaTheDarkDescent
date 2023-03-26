@@ -108,7 +108,7 @@ void cLevelEditorStaticObjectCombo::SetColor(const cColor& aCol)
 
 //-----------------------------------------------------------------------
 
-void cLevelEditorStaticObjectCombo::Draw(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions)
+void cLevelEditorStaticObjectCombo::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions)
 {
 	tEntityWrapperListIt it = mlstEntities.begin();
 	for(;it!=mlstEntities.end();++it)

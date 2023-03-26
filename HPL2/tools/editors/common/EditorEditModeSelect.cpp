@@ -43,6 +43,7 @@
 
 #include "EntityWrapper.h"
 #include "EntityWrapperCompoundObject.h"
+#include "graphics/ImmediateDrawBatch.h"
 
 #include <algorithm>
 
@@ -1131,20 +1132,20 @@ void cEntitySelectorHighlighter::OnEditorUpdate()
 
 //----------------------------------------------------------------------------
 
-void cEntitySelectorHighlighter::Draw(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions)
+void cEntitySelectorHighlighter::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions)
 {
 	cCamera* pCam = apViewport->GetCamera();
 	if(mpEntityUnderPointer)
 	{
 		//cBoundingVolume* pBV = mpEntityUnderPointer->GetPickBV(apViewport);
-		// mpEntityUnderPointer->Draw(apViewport, apFunctions, NULL, true, cColor(0,0.5f,1,1));
-		// apFunctions->GetLowLevelGfx()->DrawSphere(mpEntityUnderPointer->GetPosition(), 0.1f, cColor(0,0.5f,1,1));
+		mpEntityUnderPointer->Draw(apViewport, apFunctions, NULL, true, cColor(0,0.5f,1,1));
+		apFunctions->DebugDrawSphere(mpEntityUnderPointer->GetPosition(), 0.1f, cColor(0,0.5f,1,1));
 	}
 	tEntityWrapperListIt it = mlstHighlightedEntities.begin();
 	for(;it!=mlstHighlightedEntities.end();++it)
 	{
 		iEntityWrapper* pEnt = *it;
-		// pEnt->Draw(apViewport, apFunctions, NULL, true, cColor(0,0.5f,1,1));
+		pEnt->Draw(apViewport, apFunctions, NULL, true, cColor(0,0.5f,1,1));
 		//cBoundingVolume* pBV = pEnt->GetPickBV(apViewport);
 		//apFunctions->GetLowLevelGfx()->DrawBoxMinMax(pBV->GetMin(), pBV->GetMax(), cColor(0,0.5f,1,1));
 	}

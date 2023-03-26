@@ -27,7 +27,8 @@
 #include "EditorActionSelection.h"
 #include "EditorGrid.h"
 
-//----------------------------------------------------------------
+#include "graphics/ImmediateDrawBatch.h"
+
 
 cEditorEditModeSelectToolRotate::cEditorEditModeSelectToolRotate(cEditorEditModeSelect* apParent, cEditorSelection* apSelection) : cEditorEditModeSelectTool(eSelectToolMode_Rotate, apParent, apSelection)
 {
@@ -178,17 +179,17 @@ bool cEditorEditModeSelectToolRotate::PointIntersectsAxis(eSelectToolAxis aAxis,
 
 //----------------------------------------------------------------
 
-void cEditorEditModeSelectToolRotate::DrawAxes(cEditorWindowViewport* apViewport, cRendererCallbackFunctions *apFunctions, float afAxisLength)
+void cEditorEditModeSelectToolRotate::DrawAxes(cEditorWindowViewport* apViewport, ImmediateDrawBatch *apFunctions, float afAxisLength)
 {
-	apFunctions->SetDepthTest(false);
-	apFunctions->SetTextureRange(NULL,0);
+	// apFunctions->SetDepthTest(false);
+	// apFunctions->SetTextureRange(NULL,0);
 
 	cCamera *pCam = apViewport->GetCamera();
 	cMatrixf mtxCam = pCam->GetViewMatrix();
 	cVector3f vNormal = pCam->GetForward()*-1;
 	mClipPlane.FromNormalPoint(vNormal, mpSelection->GetCenterTranslation()-vNormal*0.1f);
 
-	apFunctions->GetLowLevelGfx()->SetClipPlane(0,mClipPlane);
+	// apFunctions->GetLowLevelGfx()->SetClipPlane(0,mClipPlane);
 
 	cColor col[3];
 
@@ -200,20 +201,22 @@ void cEditorEditModeSelectToolRotate::DrawAxes(cEditorWindowViewport* apViewport
 											 cMath::MatrixRotate(mpSelection->GetCenterRotation(),eEulerRotationOrder_XYZ));
 
 
-	apFunctions->SetMatrix(&mtxTransform);
+	ImmediateDrawBatch::DebugDrawOptions options;
+	options.m_transform = mtxTransform;
+	// apFunctions->SetMatrix(&mtxTransform);
 
 
-	apFunctions->GetLowLevelGfx()->SetClipPlaneActive(0,true);
-
-	apFunctions->GetLowLevelGfx()->DrawSphere(0, afAxisLength,
+	// apFunctions->GetLowLevelGfx()->SetClipPlaneActive(0,true);
+	cColor color = cColor(1,1,1,1);
+	apFunctions->DebugDrawSphere(0, afAxisLength,
 											  col[0],
 											  col[1],
-											  col[2]);
+											  col[2], options);
 
-	apFunctions->GetLowLevelGfx()->SetClipPlaneActive(0,false);
+	// apFunctions->GetLowLevelGfx()->SetClipPlaneActive(0,false);
 
 
-	apFunctions->SetMatrix(NULL);
+	// apFunctions->SetMatrix(NULL);
 }
 
 //----------------------------------------------------------------

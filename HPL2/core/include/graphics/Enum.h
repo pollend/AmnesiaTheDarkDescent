@@ -20,7 +20,7 @@ namespace hpl
         GreaterEqual,
         Greater,
         NotEqual,
-        Always,
+        Always, // Always pass
     };
 
     enum class Write: uint32_t {

@@ -18,6 +18,7 @@
  */
 
 #include "../common/StdAfx.h"
+#include "system/Bootstrap.h"
 using namespace hpl;
 
 #include "ModelEditor.h"
@@ -30,31 +31,26 @@ using namespace hpl;
 
 int hplMain(const tString& asCommandLine)
 {
-	//////////////////////////
-	// Init BlackBox
-	#ifdef WIN32
-		HINSTANCE hBlackBoxLib = LoadLibrary( "BlackBox.dll" );
-	#endif
 
-	//cMemoryManager::SetLogCreation(true);
+	cEngine* pEngine = nullptr;
+	cModelEditor* pEditor = nullptr;
 
-	cModelEditor* pEditor = hplNew(cModelEditor, ());
-
-	cEngine* pEngine = pEditor->Init(NULL, "ModelEditor", GetBuildID_ModelEditor(), false);
-
-    pEngine->Run();
+	Bootstrap bootstrap;
+	Bootstrap::BootstrapConfiguration config;
+	config.m_windowStyle = hpl::window::WindowStyle::WindowStyleResizable;
+	bootstrap.Initialize(config);
+	bootstrap.Run([&](bx::Thread* self) {
+		pEditor = new cModelEditor();
+		pEngine = pEditor->Init(NULL, "ModelEditor", GetBuildID_ModelEditor(), false);
+		pEngine->Run();
+		return 0;
+	});
 
 	hplDelete(pEditor);
 
 	DestroyHPLEngine(pEngine);
 
 	cMemoryManager::LogResults();
-
-	//////////////////////////
-	// Exit BlackBox
-	#ifdef WIN32
-			if(hBlackBoxLib) FreeLibrary(hBlackBoxLib);
-	#endif
 
 	return 0;
 }

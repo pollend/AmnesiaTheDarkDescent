@@ -28,6 +28,7 @@
 #include "EditorHelper.h"
 #include "graphics/Image.h"
 
+#include "graphics/ImmediateDrawBatch.h"
 //---------------------------------------------------------------------------
 
 cIconEntityLightPoint::cIconEntityLightPoint(iEntityWrapper* apParent) : iIconEntityLight(apParent, "Point")

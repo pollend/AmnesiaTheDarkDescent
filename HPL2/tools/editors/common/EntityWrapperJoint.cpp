@@ -32,6 +32,8 @@
 
 #include "EntityIcon.h"
 
+#include "graphics/ImmediateDrawBatch.h"
+
 //-------------------------------------------------------------------
 
 iEntityWrapperTypeJoint::iEntityWrapperTypeJoint(eEditorEntityJointType aSubType, const tString& asElementName) : iEntityWrapperType(eEditorEntityType_Joint, _W("Joint"), asElementName)

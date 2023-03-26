@@ -22,6 +22,8 @@
 #include "EditorEditMode.h"
 #include "EditorWindowViewport.h"
 
+#include "graphics/ImmediateDrawBatch.h"
+
 cSphereCreator::cSphereCreator(iEditorEditMode* apEditMode) : iShapeCreator(apEditMode)
 {
 	mfDefaultRadius = 1;

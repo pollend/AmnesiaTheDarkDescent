@@ -20,6 +20,7 @@
 #include "EntityWrapperFogArea.h"
 #include "EditorWorld.h"
 #include "EditorWindowEntityEditBoxFogArea.h"
+#include "graphics/ImmediateDrawBatch.h"
 
 //------------------------------------------------------------------------------
 
@@ -315,8 +316,9 @@ void cEntityWrapperFogArea::Draw(cEditorWindowViewport* apViewport, ImmediateDra
 	iEntityWrapper::Draw(apViewport, apFunctions, apEditMode, abIsSelected);
 	if(mbSelected)
 	{
-		// apFunctions->SetMatrix(&mmtxTransform);
-		// apFunctions->GetLowLevelGfx()->DrawBoxMinMax(-0.5f, 0.5f, cColor(1,1));
+		ImmediateDrawBatch::DebugDrawOptions options;
+		options.m_transform = mmtxTransform;
+		apFunctions->DebugDrawBoxMinMax(-0.5f, 0.5f, cColor(1,1), options);
 	}
 }
 

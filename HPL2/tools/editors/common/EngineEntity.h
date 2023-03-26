@@ -109,7 +109,7 @@ public:
 	void UpdateVisibility();
 
 	void Draw(cEditorWindowViewport* apViewport,
-				cRendererCallbackFunctions* apFunctions,
+				ImmediateDrawBatch* apFunctions,
 				bool abIsSelected,
 				bool abIsActive, const cColor& aHighlightCol);
 	void DrawProgram(cEditorWindowViewport* apViewport,

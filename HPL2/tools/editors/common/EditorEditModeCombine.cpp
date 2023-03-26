@@ -177,13 +177,13 @@ void cEditorEditModeCombine::DrawPostGrid(cEditorWindowViewport* apViewport, Imm
 		for(;itCombos!=lstCombos.end();++itCombos)
 		{
 			cLevelEditorStaticObjectCombo* pCombo = *itCombos;
-			// pCombo->Draw(apViewport, apFunctions);
+			pCombo->Draw(apViewport, apFunctions);
 		}
 	}
 	else
 	{
 		cLevelEditorStaticObjectCombo* pCombo = pWin->GetCurrentCombo();
-		// if(pCombo) pCombo->Draw(apViewport, apFunctions);
+		if(pCombo) pCombo->Draw(apViewport, apFunctions);
 	}
 
 	// apFunctions->SetProgram(NULL);

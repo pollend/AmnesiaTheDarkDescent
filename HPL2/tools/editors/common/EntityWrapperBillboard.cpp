@@ -28,6 +28,7 @@
 
 #include "EntityWrapperLight.h"
 #include "graphics/GraphicsContext.h"
+#include "graphics/ImmediateDrawBatch.h"
 
 //------------------------------------------------------------------------------
 
@@ -432,7 +433,7 @@ void cEntityWrapperBillboard::Draw(cEditorWindowViewport* apViewport, ImmediateD
 		mtxTransform.SetTranslation(mvPosition);
 		cVector3f vHalfHaloSourceSize = mvHaloSourceSize*0.5f;
 		ImmediateDrawBatch::DebugDrawOptions options;
-		options.m_transform = mtxTransform.GetTranspose();
+		options.m_transform = mtxTransform;
 		apFunctions->DebugDrawBoxMinMax(vHalfHaloSourceSize*-1, vHalfHaloSourceSize, cColor(0,1,0,1), options);
 	}
 }

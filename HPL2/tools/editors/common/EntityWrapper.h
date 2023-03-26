@@ -984,20 +984,6 @@ protected:
 	virtual void OnSetVisible(bool abX);
 	virtual void OnSetCulled(bool abX);
 	virtual void OnSetSelected(bool abX) {}
-	///////////////////////////
-	// Helper
-	/**
-	 * Draws the texture in apGfx in a billboard style, ie always facing to the camera
-	 * \param *apGfx
-	 * \param avWorldPosition
-	 * \param avSize
-	 * \param aColor
-	 * \param apViewport
-	 * \param apFunctions
-	 */
-	void DrawBillboard(iTexture *apGfx, const cVector3f& avWorldPosition,const cVector2f& avSize,const cColor& aColor,
-						cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions);
-
 
 	/**
 	 * Draws an arrow pointing upwards using the amtxTransform reference system

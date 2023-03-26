@@ -28,6 +28,7 @@
 
 #include "EditorWindowEntityEditBoxSound.h"
 
+#include "graphics/ImmediateDrawBatch.h"
 //---------------------------------------------------------------------------
 
 cEntityWrapperTypeSound::cEntityWrapperTypeSound() : iEntityWrapperType(eEditorEntityType_Sound, _W("Sound"), "Sound")

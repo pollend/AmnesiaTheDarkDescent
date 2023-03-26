@@ -31,6 +31,7 @@
 
 #include "EditorWindowEntityEditBoxArea.h"
 
+#include "graphics/ImmediateDrawBatch.h"
 //------------------------------------------------------------------------------
 
 cEntityWrapperTypeArea::cEntityWrapperTypeArea(cEditorUserClassSubType* apType) : iEntityWrapperTypeUserDefinedEntity(eEditorEntityType_Area,
@@ -308,8 +309,6 @@ void cEntityWrapperArea::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBa
 
 	cMatrixf mtxRT = cMath::MatrixMul(cMath::MatrixTranslate(mvPosition), cMath::MatrixRotate(mvRotation, eEulerRotationOrder_XYZ));
 
-	// apFunctions->SetMatrix(&mtxRT);
-
 	apFunctions->DebugDrawLine(cVector3f(-0.05f,0,0), cVector3f(0.05f,0,0), col);
 	apFunctions->DebugDrawLine(cVector3f(0,-0.05f,0), cVector3f(0,0.05f,0), col);
 	apFunctions->DebugDrawLine(cVector3f(0,0,-0.05f), cVector3f(0,0,0.05f), col);
@@ -342,14 +341,12 @@ void cEntityWrapperArea::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBa
 			vDir = vDir*vLength;
 			col.v[i] = 1;
 			apFunctions->DebugDrawLine(0 , vDir, col);
-			// cEditorHelper::DrawPyramid(apFunctions, vDir, vDir+vDir*0.1f, 0.025f, col);
+			apFunctions->DrawPyramid(vDir, vDir+ vDir*0.1f, 0.025f, col);
 		}
 	}
 
 	if(mpMesh)
 		mpMesh->SetVisible(mbSelected);
-
-	// apFunctions->SetMatrix(NULL);
 }
 
 //------------------------------------------------------------------------------

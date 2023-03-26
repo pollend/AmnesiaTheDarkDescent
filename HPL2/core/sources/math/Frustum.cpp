@@ -20,6 +20,7 @@
 #include "math/Frustum.h"
 
 #include "graphics/GraphicsContext.h"
+#include "graphics/ImmediateDrawBatch.h"
 #include "math/Math.h"
 #include "system/LowLevelSystem.h"
 #include "graphics/LowLevelGraphics.h"

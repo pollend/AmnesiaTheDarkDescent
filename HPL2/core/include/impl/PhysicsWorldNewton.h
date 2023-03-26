@@ -101,8 +101,8 @@ namespace hpl {
 						bool abCorrectNormalDirection);
 
 		void RenderShapeDebugGeometry(	iCollideShape *apShape, const cMatrixf& a_mtxTransform,
-										iLowLevelGraphics *apLowLevel, const cColor& aColor);
-		void RenderDebugGeometry(iLowLevelGraphics *apLowLevel, const cColor& aColor);
+										ImmediateDrawBatch *apLowLevel, const cColor& aColor);
+		void RenderDebugGeometry(ImmediateDrawBatch *apLowLevel, const cColor& aColor);
 
 		NewtonWorld* GetNewtonWorld(){ return mpNewtonWorld;}
 	private:

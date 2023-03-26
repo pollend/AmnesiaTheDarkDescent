@@ -29,6 +29,7 @@
 #include "EntityWrapperBody.h"
 
 #include "EditorActionsBodies.h"
+#include "graphics/ImmediateDrawBatch.h"
 
 //---------------------------------------------------------------------------
 
@@ -197,24 +198,31 @@ bool cEntityWrapperBodyShape::GetProperty(int alPropID, tString& asX)
 
 //---------------------------------------------------------------------------
 
-void cEntityWrapperBodyShape::Draw(	cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions,
+void cEntityWrapperBodyShape::Draw(	cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions,
 									iEditorEditMode* apEditMode,bool abIsSelected, const cColor& aHighlightCol, const cColor& aDisabledCol )
 {
-	apFunctions->SetProgram(NULL);
-	apFunctions->SetTextureRange(NULL,0);
+	// apFunctions->SetProgram(NULL);
+	// apFunctions->SetTextureRange(NULL,0);
 
-	apFunctions->SetDepthTest(true);
-	apFunctions->SetDepthWrite(false);
-
+	// apFunctions->SetDepthTest(true);
+	// apFunctions->SetDepthWrite(false);
 	cEngineEntityGeneratedMesh* pMesh = (cEngineEntityGeneratedMesh*)mpEngineEntity;
-	apFunctions->SetMatrix(pMesh->GetMeshEntity()->GetSubMeshEntity(0)->GetModelMatrix(NULL));
+	ImmediateDrawBatch::DebugDrawOptions options;
+	options.m_transform = *pMesh->GetMeshEntity()->GetSubMeshEntity(0)->GetModelMatrix(NULL);
 
+	GraphicsContext::LayoutStream layoutStream;
+	pMesh->GetVertexBuffer()->GetLayoutStream(layoutStream);
 	cColor col = abIsSelected?cColor(1) : cColor(1,1,1,0.1f);
-	apFunctions->SetBlendMode(eMaterialBlendMode_Alpha);
-	apFunctions->DrawWireFrame(pMesh->GetVertexBuffer(), col);
+	apFunctions->DebugDrawMesh(layoutStream, col);
 
-	apFunctions->SetMatrix(NULL);
-	apFunctions->SetBlendMode(eMaterialBlendMode_None);
+
+	// apFunctions->SetMatrix(pMesh->GetMeshEntity()->GetSubMeshEntity(0)->GetModelMatrix(NULL));
+
+	// apFunctions->SetBlendMode(eMaterialBlendMode_Alpha);
+	// apFunctions->DrawWireFrame(pMesh->GetVertexBuffer(), col);
+
+	// apFunctions->SetMatrix(NULL);
+	// apFunctions->SetBlendMode(eMaterialBlendMode_None);
 
 //	apFunctions->SetMatrix(&mmtxTransform);
 

@@ -50,7 +50,7 @@ public:
 	iEditorAction* CreateAction();
 
 
-	void DrawAxes(cEditorWindowViewport* apViewport, cRendererCallbackFunctions *apFunctions, float afAxisLength);
+	void DrawAxes(cEditorWindowViewport* apViewport, ImmediateDrawBatch *apFunctions, float afAxisLength);
 
 	void UpdateToolBoundingVolume();
 
@@ -61,9 +61,7 @@ public:
 
 	cVector3f mvAxesPlaneBoxMin;
 	cVector3f mvAxesPlaneBoxMax[3];
-
-	tVertexVec mvArrowQuads[4];
-
+	
 	cPlanef mTranslationPlane;
 
 };

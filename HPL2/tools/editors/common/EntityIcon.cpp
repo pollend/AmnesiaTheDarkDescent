@@ -23,11 +23,7 @@
 #include "EditorHelper.h"
 #include "EditorWindowViewport.h"
 
-///////////////////////////////////////////////////////////////////
-// ENTITY ICON
-///////////////////////////////////////////////////////////////////
-
-//------------------------------------------------------------------
+#include "graphics/ImmediateDrawBatch.h"
 
 cEntityIcon::cEntityIcon(iEntityWrapper* apParent, const tString& asIconGfxName)
 {
@@ -99,7 +95,7 @@ void cEntityIcon::DrawIcon(cEditorWindowViewport* apViewport,
 
 		float scale = ImmediateDrawBatch::BillboardScale(apViewport->GetCamera(), Eigen::Vector3f(avPos.x, avPos.y, avPos.z));
 		apFunctions->DrawBillboard(avPos, 
-			cVector2f(0.1f,0.1f) * scale, cVector2f(0.f, 0.f), cVector2f(1.f, 1.f),  mvIconGfx[abIsSelected], bbColor);
+			cVector2f(0.1f,0.1f) * scale, cVector2f(1.f, 0.f), cVector2f(0.f, 1.f),  mvIconGfx[abIsSelected], bbColor);
 	}
 }
 

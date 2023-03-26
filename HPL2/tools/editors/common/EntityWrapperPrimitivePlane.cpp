@@ -25,6 +25,7 @@
 #include "EditorHelper.h"
 
 #include "EngineEntity.h"
+#include "graphics/ImmediateDrawBatch.h"
 
 
 //---------------------------------------------------------------------------
@@ -323,19 +324,19 @@ bool cEntityWrapperPrimitivePlane::SetProperty(int alPropID, const float& afX)
 }
 
 
-void cEntityWrapperPrimitivePlane::Draw(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions, iEditorEditMode* apEditMode, bool abIsSelected,
+void cEntityWrapperPrimitivePlane::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, iEditorEditMode* apEditMode, bool abIsSelected,
 										const cColor& aHighlightCol, const cColor& aDisabledCol)
 {
 	if(abIsSelected==false) return;
 
-	apFunctions->SetProgram(NULL);
-	apFunctions->SetMatrix(NULL);
-	apFunctions->SetTextureRange(NULL,0);
-	apFunctions->SetBlendMode(eMaterialBlendMode_None);
+	// apFunctions->SetProgram(NULL);
+	// apFunctions->SetMatrix(NULL);
+	// apFunctions->SetTextureRange(NULL,0);
+	// apFunctions->SetBlendMode(eMaterialBlendMode_None);
 
 	cBoundingVolume* pBV = mpEngineEntity->GetRenderBV();
 
-	apFunctions->GetLowLevelGfx()->DrawBoxMinMax(pBV->GetMin(), pBV->GetMax(), cColor(1));
+	apFunctions->DebugDrawBoxMinMax(pBV->GetMin(), pBV->GetMax(), cColor(1));
 }
 
 //------------------------------------------------------------------------

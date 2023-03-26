@@ -29,168 +29,8 @@
 
 #include "EntityWrapper.h"
 #include "graphics/GraphicsContext.h"
+#include "graphics/ImmediateDrawBatch.h"
 #include <utility>
-
-//--------------------------------------------------------------------
-//--------------------------------------------------------------------
-///////////////////////////////////////////////////////////////////////
-// VIEWPORT CALLBACK
-///////////////////////////////////////////////////////////////////////
-//--------------------------------------------------------------------
-//--------------------------------------------------------------------
-
-//--------------------------------------------------------------------
-
-///////////////////////////////////////////////////////////////////////
-// CONSTRUCTORS
-///////////////////////////////////////////////////////////////////////
-
-//--------------------------------------------------------------------
-
-cViewportCallback::cViewportCallback()
-{
-	mpEditor = NULL;
-	mpViewport = NULL;
-}
-
-//--------------------------------------------------------------------
-
-///////////////////////////////////////////////////////////////////////
-// PROTECTED METHODS
-///////////////////////////////////////////////////////////////////////
-
-//--------------------------------------------------------------------
-
-void cViewportCallback::OnPostSolidDraw(cRendererCallbackFunctions* apFunctions)
-{
-	if(mpEditor==NULL)
-		return;
-
-	apFunctions->SetMatrix(NULL);
-	apFunctions->SetBlendMode(eMaterialBlendMode_Alpha);
-	apFunctions->SetTextureRange(NULL,0);
-	apFunctions->SetProgram(NULL);
-
-	apFunctions->SetDepthTest(true);
-	apFunctions->SetDepthWrite(false);
-
-	// this->mpEditor->GetEditorWorld()->GetSurfacePicker()->DrawDebug(apFunctions);
-
-	if(mpViewport->GetDrawGrid())
-	{
-		cEditorGrid* pGrid = mpViewport->GetGrid();
-		// if(pGrid) pGrid->Draw(apFunctions,mpViewport->GetGridCenter());
-	}
-	if(mpViewport->GetDrawAxes())
-	{
-		const cVector3f& vCenter = mpViewport->GetGridCenter();
-		for(int i=0;i<3;++i)
-		{
-			cColor col = cColor(0,1);
-			col.v[i] = 1;
-
-			cVector3f vAxisStart = 0;
-			cVector3f vAxisEnd = 0;
-			vAxisStart.v[i] = vCenter.v[i] -1000.0f;
-			vAxisEnd.v[i] = vCenter.v[i] +1000.0f;
-			apFunctions->GetLowLevelGfx()->DrawLine(vAxisStart, vAxisEnd, col);
-		}
-	}
-	tEditorClipPlaneVec& vClipPlanes = mpEditor->GetEditorWorld()->GetClipPlanes();
-	for(int i=0;i<(int)vClipPlanes.size();++i)
-	{
-		// vClipPlanes[i]->Draw(apFunctions, 0);
-	}
-
-	apFunctions->GetLowLevelGfx()->DrawSphere(mpViewport->GetVCamera()->GetTargetPosition(),0.1f, cColor(0,1,1,1));
-
-	apFunctions->SetMatrix(NULL);
-	apFunctions->SetBlendMode(eMaterialBlendMode_None);
-	apFunctions->SetTextureRange(NULL,0);
-	apFunctions->SetProgram(NULL);
-
-	apFunctions->SetDepthTest(false);
-	apFunctions->SetDepthWrite(false);
-
-	//apFunctions->GetLowLevelGfx()->DrawSphere(mpEditor->,0.1f, cColor(0,1,0,1));
-	const cVector3f& vRefMousePos = mpViewport->GetVCamera()->GetTrackRefMousePos();
-	const cVector3f& vMouseNewPos = mpViewport->GetVCamera()->GetTrackNewMousePos();
-	cVector3f vMousePos = mpViewport->GetMouseWorldPosition();
-	//mpViewport->GetVCamera()->ClampDistanceFromRefTarget(vMousePos, 40);
-
-	//apFunctions->GetLowLevelGfx()->DrawSphere(vMousePos, 0.1f, cColor(0,1,0,1));
-
-	//apFunctions->GetLowLevelGfx()->DrawLine(vRefMousePos, vMouseNewPos, cColor(1,0,0,1));
-	//apFunctions->GetLowLevelGfx()->DrawLine(vRefMousePos, 0, cColor(0,0,1,1));
-	//apFunctions->GetLowLevelGfx()->DrawLine(mpViewport->GetVCamera()->GetTrackRefMousePos(), mpViewport->GetVCamera()->GetTrackRefTargetPos()-mpViewport->GetVCamera()->GetTrackRefMousePos(), cColor(1,0,0,1));
-	//apFunctions->GetLowLevelGfx()->DrawLine(mpViewport->GetVCamera()->GetTrackRefTargetPos(), mpViewport->GetVCamera()->GetTrackNewMousePos(), cColor(1,0,0,1));
-	//apFunctions->GetLowLevelGfx()->DrawLine(mpViewport->GetVCamera()->GetTrackRefTargetPos(), vMousePos, cColor(0,1,0,1));
-
-	if(mpViewport->GetDrawDebug())
-	{
-		apFunctions->SetBlendMode(eMaterialBlendMode_Add);
-
-		// Quick temp debug code btw
-		cVector3f& vPos1 = mpViewport->vDebugLineStart;
-		cVector3f& vPos2 = mpViewport->vDebugLineEnd;
-		cVector3f& vGridPos = mpViewport->vDebugGridPos;
-		cVector3f& vSnapPos = mpViewport->vDebugSnappedGridPos;
-
-		apFunctions->GetLowLevelGfx()->DrawLine(vPos1,vPos2,cColor(0,0,1,1));
-		apFunctions->GetLowLevelGfx()->DrawSphere(vPos1, 0.01f, cColor(0,1,0,1));
-		apFunctions->GetLowLevelGfx()->DrawSphere(vPos2, 0.2f, cColor(0,1,0,1));
-		apFunctions->GetLowLevelGfx()->DrawSphere(vGridPos, 0.3f, cColor(1,0,0,1));
-		apFunctions->GetLowLevelGfx()->DrawSphere(vSnapPos, 0.3f, cColor(1,1,0,1));
-
-		//apFunctions->GetLowLevelGfx()->DrawSphere(m->GetTarget(),0.1f, cColor(0,1,1,1));
-	}
-	apFunctions->SetBlendMode(eMaterialBlendMode_None);
-}
-
-//--------------------------------------------------------------------
-
-void cViewportCallback::OnPostTranslucentDraw(cRendererCallbackFunctions* apFunctions)
-{
-	if(mpViewport==NULL)
-		return;
-
-	cVector3f& vMousePos = mpEditor->GetPosOnGridFromMousePos();
-
-	apFunctions->SetMatrix(NULL);
-	apFunctions->SetTextureRange(NULL,0);
-	apFunctions->SetProgram(NULL);
-
-	apFunctions->SetDepthTest(true);
-	apFunctions->SetDepthWrite(false);
-
-	iEditorEditMode* pEditMode = mpEditor->GetCurrentEditMode();
-
-	// if(pEditMode)
-	// 	pEditMode->DrawPreGrid(mpViewport, apFunctions, vMousePos);
-
-	// apFunctions->SetBlendMode(eMaterialBlendMode_None);
-
-	// if(pEditMode)
-	// 	pEditMode->DrawPostGrid(mpViewport, apFunctions, vMousePos);
-}
-
-//--------------------------------------------------------------------
-
-//--------------------------------------------------------------------
-//--------------------------------------------------------------------
-///////////////////////////////////////////////////////////////////
-// VIEWPORT WINDOW
-///////////////////////////////////////////////////////////////////
-//--------------------------------------------------------------------
-//--------------------------------------------------------------------
-
-//----------------------------------------------------------------
-
-///////////////////////////////////////////////////////////////////
-// CONSTRUCTORS
-///////////////////////////////////////////////////////////////////
-
-//----------------------------------------------------------------
 
 cEditorWindowViewport::cEditorWindowViewport(iEditorBase* apEditor,
 											 bool abAddViewMenu):	iEditorWindow(apEditor,
@@ -205,7 +45,6 @@ cEditorWindowViewport::cEditorWindowViewport(iEditorBase* apEditor,
 		cMatrixf view = payload.m_frustum->GetViewMatrix().GetTranspose();
 		cMatrixf proj = payload.m_frustum->GetProjectionMatrix().GetTranspose();
 		ImmediateDrawBatch batch(*payload.m_context, *payload.m_outputTarget,view, proj);
-
 
 		this->mpEditor->GetEditorWorld()->GetSurfacePicker()->DrawDebug(&batch);
 		if(GetDrawGrid())
@@ -285,12 +124,6 @@ cEditorWindowViewport::cEditorWindowViewport(iEditorBase* apEditor,
 	mbDrawDebug = false;
 	mbDrawAxes = true;
 	mbAddViewMenu = abAddViewMenu;
-
-	////////////////////////////////////
-	// Init renderer callback (grid,...)
-	mViewportCallback.mpEditor = apEditor;
-	mViewportCallback.mpViewport = this;
-	AddViewportCallback(&mViewportCallback);
 
 	vDebugGridPos = 0;
 	vDebugLineEnd = 0;

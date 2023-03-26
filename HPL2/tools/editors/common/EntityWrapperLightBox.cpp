@@ -24,6 +24,8 @@
 
 #include "EditorWindowViewport.h"
 
+
+#include "graphics/ImmediateDrawBatch.h"
 //---------------------------------------------------------------------------
 
 cIconEntityLightBox::cIconEntityLightBox(iEntityWrapper* apParent) : iIconEntityLight(apParent, "Box")

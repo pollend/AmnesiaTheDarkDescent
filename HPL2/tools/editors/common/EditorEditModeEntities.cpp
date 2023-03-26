@@ -30,6 +30,7 @@
 
 #include "../leveleditor/LevelEditor.h"
 
+#include "graphics/ImmediateDrawBatch.h"
 //-----------------------------------------------------------------
 
 ///////////////////////////////////////////////////////////////////
@@ -89,6 +90,7 @@ void cEditorEditModeEntities::DrawObjectPreview(cEditorWindowViewport* apViewpor
 		{
 			ImmediateDrawBatch::DebugDrawOptions options;
 			options.m_depthTest = DepthTest::Greater;
+			options.m_transform = amtxTransform;
 			apFunctions->DebugDrawBoxMinMax(vBVMin,vBVMax, cColor(1,0,0,0.6f), options);
 			options.m_depthTest = DepthTest::Less;
 			apFunctions->DebugDrawBoxMinMax(vBVMin,vBVMax, cColor(0,1,0,0.6f), options);

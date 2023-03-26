@@ -551,13 +551,14 @@ bool cLuxEnemy_WaterLurker::InRangeOfFood(iPhysicsBody *apFoodBody)
 void cLuxEnemy_WaterLurker::OnRenderSolidImplemented(cRendererCallbackFunctions* apFunctions)
 {
 	iPhysicsWorld *pPhysicsWorld = mpMap->GetPhysicsWorld();
-
-	mpCharBody->GetCurrentBody()->RenderDebugGeometry(apFunctions->GetLowLevelGfx(), cColor(1,1));
+	BX_ASSERT(false);  // TODO: Fix this
+	// mpCharBody->GetCurrentBody()->RenderDebugGeometry(apFunctions->GetLowLevelGfx(), cColor(1,1));
 
 	if(mCurrentState == eLuxEnemyState_AttackMeleeShort || mCurrentState== eLuxEnemyState_BreakDoor)
 	{
-		pPhysicsWorld->RenderShapeDebugGeometry(GetAttackShape(0), GetDamageShapeMatrix(cVector3f(0,0,1)), apFunctions->GetLowLevelGfx(),
-												cColor(1,0,0,1));
+		BX_ASSERT(false); // TODO add back this line
+		// pPhysicsWorld->RenderShapeDebugGeometry(GetAttackShape(0), GetDamageShapeMatrix(cVector3f(0,0,1)), apFunctions->GetLowLevelGfx(),
+		// 										cColor(1,0,0,1));
 	}
 }
 

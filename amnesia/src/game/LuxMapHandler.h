@@ -144,6 +144,8 @@ private:
 
 	void CheckMapChange(float afTimeStep);
 
+	cViewport::PostSolidDraw::Handler m_postDebugSolidDrawHandler;
+	cViewport::PostTranslucenceDraw::Handler m_postDebugTranslucentDrawHandler;
 	cLuxDebugRenderCallback mRenderCallback;
 
 	tString msMapFolder;

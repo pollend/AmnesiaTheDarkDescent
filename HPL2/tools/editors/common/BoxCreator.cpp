@@ -21,6 +21,7 @@
 #include "EditorBaseClasses.h"
 #include "EditorEditMode.h"
 #include "EditorWindowViewport.h"
+#include "graphics/ImmediateDrawBatch.h"
 
 //-----------------------------------------------------------
 

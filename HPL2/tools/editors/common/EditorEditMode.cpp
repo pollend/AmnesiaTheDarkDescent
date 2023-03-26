@@ -32,6 +32,7 @@
 #include "EditorEditModeSelect.h"
 
 #include "SurfacePicker.h"
+#include "graphics/ImmediateDrawBatch.h"
 
 //---------------------------------------------------------------------
 

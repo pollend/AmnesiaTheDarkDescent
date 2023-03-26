@@ -255,7 +255,7 @@ public:
 	bool OnViewportMouseUp();
 	void OnEditorUpdate();
 
-	void Draw(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions);
+	void Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions);
 
 	void OnSetCurrent(bool abX);
 

@@ -20,6 +20,8 @@
 #include "EntityPicker.h"
 #include "EditorWorld.h"
 
+#include "graphics/ImmediateDrawBatch.h"
+
 #include <algorithm>
 
 //-----------------------------------------------------------------------------

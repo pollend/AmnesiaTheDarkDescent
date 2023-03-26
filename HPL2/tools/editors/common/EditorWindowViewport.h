@@ -49,37 +49,6 @@ enum eEditorWindowViewportPreset
 	eEditorWindowViewportPreset_LastEnum,
 };
 
-//--------------------------------------------------------------------
-
-////////////////////////////////////////////////
-// VIEWPORT RENDERER CALLBACK
-////////////////////////////////////////////////
-
-//--------------------------------------------------------------------
-
-class cViewportCallback : public iRendererCallback
-{
-public:
-	cViewportCallback();
-
-	void OnPostSolidDraw(cRendererCallbackFunctions* apFunctions);
-	void OnPostTranslucentDraw(cRendererCallbackFunctions* apFunctions);
-
-	iEditorBase* mpEditor;
-	cEditorWindowViewport* mpViewport;
-
-	bool mbDrawDebug;
-	bool mbDrawGrid;
-};
-
-//--------------------------------------------------------------------
-
-////////////////////////////////////////////////
-// VIEWPORT WINDOW
-////////////////////////////////////////////////
-
-//--------------------------------------------------------------------
-
 class cEditorWindowViewport : public iEditorWindow, public iEditorViewport
 {
 public:
@@ -166,7 +135,6 @@ protected:
 	// Data
 	eEditorWindowViewportPreset mPreset;
 	iWidget* mpPrevAttention;
-	cViewportCallback mViewportCallback;
 
 	cViewport::PostSolidDraw::Handler m_postSolidDraw;
 	cViewport::PostTranslucenceDraw::Handler m_postTranslucenceDraw;

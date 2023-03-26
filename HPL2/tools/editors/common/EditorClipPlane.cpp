@@ -21,6 +21,7 @@
 #include "EntityWrapper.h"
 #include "EditorWorld.h"
 #include "EditorHelper.h"
+#include "graphics/ImmediateDrawBatch.h"
 
 //------------------------------------------------------------------
 

@@ -18,6 +18,7 @@
  */
 
 #include "graphics/Image.h"
+#include "graphics/ImmediateDrawBatch.h"
 #include "hpl.h"
 
 #include "../../tests/Common/SimpleCamera.h"
@@ -314,7 +315,7 @@ public:
 
 		if(gbPhysicsActive && gbDrawPhysicsDebug)
 		{
-			mpPhysicsWorld->RenderDebugGeometry(apFunctions->GetLowLevelGfx(),cColor(1,1,1,1));
+			// mpPhysicsWorld->RenderDebugGeometry(apFunctions->GetLowLevelGfx(),cColor(1,1,1,1));
 
 			apFunctions->SetDepthTest(false);
 			for(size_t i=0;i<gvJoints.size(); ++i)
@@ -408,11 +409,196 @@ public:
 		mpWorld->SetSkyBoxColor(cColor(0.0f, 1.0f));
 		mpWorld->SetSkyBoxActive(true);
 
+		m_postSolidDraw = cViewport::PostSolidDraw::Handler([&](cViewport::PostSolidDrawPayload& payload) {
+			
+			cMatrixf view = payload.m_frustum->GetViewMatrix().GetTranspose();
+			cMatrixf proj = payload.m_frustum->GetProjectionMatrix().GetTranspose();
+			ImmediateDrawBatch batch(*payload.m_context, *payload.m_outputTarget,view, proj);
+
+			std::function<void(cNode3D* node)> drawSkeletonRec;
+			drawSkeletonRec = [&](cNode3D* node) {
+				cVector3f vCameraSpacePos = cMath::MatrixMul(payload.m_frustum->GetViewMatrix(), node->GetWorldPosition());
+				float fSize = cMath::Min(-0.01f * vCameraSpacePos.z, 0.03f);
+				batch.DebugDrawSphere(node->GetWorldPosition(),fSize,cColor(1,0,0,1));
+
+				//Draw bone bounding radii
+				/*int lBoneIdx = gpEntity->GetBoneStateIndexFromPtr(static_cast<cBoneState*>(apBoneState));
+				if(lBoneIdx >0)
+				{
+					float fRadius = gpEntity->GetMesh()->GetBoneBoundingRadius(lBoneIdx);
+					apFunctions->GetLowLevelGfx()->DrawSphere(apBoneState->GetWorldPosition(),fRadius,cColor(0,1,0,1));
+				}*/
+
+
+				cNode3DIterator it = node->GetChildIterator();
+				while(it.HasNext())
+				{
+					cNode3D *pChild = static_cast<cNode3D*>(it.Next());
+					batch.DebugDrawLine(node->GetWorldPosition(), pChild->GetWorldPosition(), cColor(1,1));
+					drawSkeletonRec(pChild);
+				}
+			};
+
+			if(gbShowInvalidVertices)
+			{
+				for(int i=0; i<gpEntity->GetSubMeshEntityNum(); ++i)
+				{
+					cSubMeshEntity *pSubEnt = gpEntity->GetSubMeshEntity(i);
+					cSubMesh *pSubMesh = pSubEnt->GetSubMesh();
+					iVertexBuffer *pVtxBuff = pSubMesh->GetVertexBuffer();
+
+					tIntVec vVtxBindCount;
+					vVtxBindCount.resize(pVtxBuff->GetVertexNum(), 0);
+
+					for(int i=0; i<pSubMesh->GetVertexBonePairNum(); ++i)
+					{
+						cVertexBonePair *pPair = &pSubMesh->GetVertexBonePair(i);
+
+						vVtxBindCount[pPair->vtxIdx]++;
+					}
+
+					float *pPosArray = pVtxBuff->GetFloatArray(eVertexBufferElement_Position);
+					float *pNrmArray = pVtxBuff->GetFloatArray(eVertexBufferElement_Normal);
+					for(size_t i=0; i<vVtxBindCount.size(); ++i)
+					{
+						int lCount = vVtxBindCount[i];
+						if(lCount>0 && lCount<=4) continue;
+
+						float *pPos = &pPosArray[i * pVtxBuff->GetElementNum(eVertexBufferElement_Position)];
+						cVector3f vPos(pPos[0],pPos[1],pPos[2]);
+
+						float *pNrm = &pNrmArray[i * pVtxBuff->GetElementNum(eVertexBufferElement_Normal)];
+						cVector3f vNrm(pNrm[0],pNrm[1],pNrm[2]);
+
+						vPos = cMath::MatrixMul(pSubEnt->GetWorldMatrix(), vPos);
+						cVector3f vCamPos = cMath::MatrixMul(gpSimpleCamera->GetCamera()->GetViewMatrix(), vPos);
+
+						// Check if bad
+						bool bTooManyBinds = lCount > 4;
+
+						float fSqrLen = vNrm.SqrLength();
+						bool bBadNormal = fSqrLen < 0.97f || fSqrLen > 1.03;
+
+						float fRadius = vCamPos.z * 0.02f;
+
+						if(bTooManyBinds && bBadNormal) {
+							batch.DebugDrawSphere(vPos,fRadius, cColor(1,1,0));
+						}
+						else if(bTooManyBinds) {
+							batch.DebugDrawSphere(vPos,fRadius, cColor(1,0,0));
+						}
+						else if(bBadNormal) {
+							batch.DebugDrawSphere(vPos,fRadius, cColor(0,1,0));
+						}
+					}
+				}
+			}
+
+			if(gbDrawBoundingBox)
+			{
+				//cBoundingVolume *pBV = gpEntity->GetBoundingVolume();
+				//apFunctions->GetLowLevelGfx()->DrawBoxMinMax(pBV->GetMin(),pBV->GetMax(), cColor(1,1));
+				for(int i=0; i<gpEntity->GetSubMeshEntityNum(); ++i)
+				{
+					cSubMeshEntity *pSubEnt = gpEntity->GetSubMeshEntity(i);
+
+					cBoundingVolume *pBV = pSubEnt->GetBoundingVolume();
+					batch.DebugDrawBoxMinMax(pBV->GetMin(),pBV->GetMax(), cColor(1,1));
+
+					cVector3f vLocalCenter = (pBV->GetLocalMin() + pBV->GetLocalMax())/2.0f;
+
+					cVector3f  vWorldCenter;
+					/*vWorldCenter = cMath::MatrixMul(pSubEnt->GetWorldMatrix(), vLocalCenter);//pBV->GetLocalCenter());
+					apFunctions->GetLowLevelGfx()->DrawSphere(vWorldCenter,0.01f, cColor(0,1,1));*/
+
+					vWorldCenter = cMath::MatrixMul(pSubEnt->GetWorldMatrix(), pBV->GetLocalCenter());
+					batch.DebugDrawSphere(vWorldCenter,0.01f, cColor(1,1,0));
+				}
+			}
+
+			if(gbDrawSkeleton && gpEntity)
+			{
+				// apFunctions->SetDepthTest(false);
+				if(gpEntity->GetMesh()->GetSkeleton())
+				{
+					cNode3DIterator it = gpEntity->GetBoneStateRoot()->GetChildIterator();
+					while(it.HasNext())
+					{
+						cNode3D *pChild = static_cast<cNode3D*>(it.Next());
+						drawSkeletonRec(pChild);
+					}
+				}
+				// apFunctions->SetDepthTest(true);
+			}
+
+
+			if(gbPhysicsActive && mBodyPicker.mpPickedBody)
+			{
+				//cBoundingVolume *pBV = mBodyPicker.mpPickedBody->GetBV();
+				//mpLowLevelGraphics->DrawBoxMaxMin(pBV->GetMax(), pBV->GetMin(),cColor(1,0,1,1));
+
+				batch.DebugDrawSphere(mBodyPicker.mvPos,0.1f, cColor(1,0,0,1));
+				batch.DebugDrawSphere(m_dragPos,0.1f, cColor(1,0,0,1));
+
+				batch.DebugDrawLine(mBodyPicker.mvPos, m_dragPos, cColor(1,1,1,1));
+			}
+
+			if(gbDrawGrid)
+			{
+				int lNum = 32;
+				float fSize = 0.25f;
+				float fStart = fSize *0.5f * (float)lNum + fSize;
+				float fEnd = fSize *0.5f* (float)-lNum - fSize;
+				float fY = 0;//gpFloor->GetWorldPosition().y + 0.05f;
+
+				for(int i=-lNum/2; i<lNum/2+1;++i)
+				{
+					float fPos = fSize * (float)i;
+					batch.DebugDrawLine(cVector3f(fPos,fY,fStart),cVector3f(fPos,fY,fEnd),cColor(0.5f,1));
+					batch.DebugDrawLine(cVector3f(fStart,fY,fPos),cVector3f(fEnd,fY,fPos),cColor(0.5f,1));
+				}
+
+			}
+
+			//apFunctions->GetLowLevelGfx()->DrawBoxMinMax(gpEntity->GetBoundingVolume()->GetMin(),gpEntity->GetBoundingVolume()->GetMax(),cColor(1,1,1,1));
+
+			if(gbPhysicsActive && gbDrawPhysicsDebug)
+			{
+				mpPhysicsWorld->RenderDebugGeometry(&batch,cColor(1,1,1,1));
+
+				// apFunctions->SetDepthTest(false);
+				for(size_t i=0;i<gvJoints.size(); ++i)
+				{
+					iPhysicsJoint *pJoint = gvJoints[i];
+					if(mpPhysicsWorld->JointExists(pJoint)==false) continue;
+
+					cVector3f vPivot = pJoint->GetPivotPoint();
+					batch.DebugDrawSphere(vPivot,0.2f,cColor(1,0,0,1));
+					batch.DebugDrawLine(vPivot,vPivot + pJoint->GetPinDir()*0.25 ,cColor(0,1,0,1));
+				}
+				// apFunctions->SetDepthTest(true);
+			}
+
+			if(gbDrawAxes)
+			{
+				// apFunctions->SetDepthTest(false);
+				ImmediateDrawBatch::DebugDrawOptions options;
+				options.m_depthTest = DepthTest::Always;
+				batch.DebugDrawLine(0,cVector3f(1,0,0),cColor(1,0,0,1), options);
+				batch.DebugDrawLine(0,cVector3f(0,1,0),cColor(0,1,0,1), options);
+				batch.DebugDrawLine(0,cVector3f(0,0,1),cColor(0,0,1,1), options);
+				// apFunctions->SetDepthTest(true);
+			}
+
+			batch.flush();
+		
+		});
+
 		////////////////////////////////
 		// Render callback
-		renderCallback.mpWorld = mpWorld;
-		renderCallback.mpPhysicsWorld = mpPhysicsWorld;
-		renderCallback.mpBodyPicker = &mBodyPicker;
+		// renderCallback.mpWorld = mpWorld;
+		// renderCallback.mpPhysicsWorld = mpPhysicsWorld;
+		// renderCallback.mpBodyPicker = &mBodyPicker;
 
 		////////////////////////////////
 		// Create meshes
@@ -531,7 +717,8 @@ public:
 		gpEngine->GetInput()->GetLowLevel()->RelativeMouse(false);
 
 		cRenderSettings *pSettings = gpSimpleCamera->GetViewport()->GetRenderSettings();
-		gpSimpleCamera->GetViewport()->AddRendererCallback(&renderCallback);
+		gpSimpleCamera->GetViewport()->ConnectDraw(m_postSolidDraw);
+
 
 		gpSimpleCamera->SetMouseMode(true);
 
@@ -2181,10 +2368,10 @@ public:
 				//Get Drag pos
 				cVector3f vDir;
 				pCam->UnProject(NULL,&vDir,vMousePos, mpLowLevelGraphics->GetScreenSizeFloat());
-				renderCallback.mvDragPos = pCam->GetPosition() + vDir*mBodyPicker.mfDist;
+				m_dragPos = pCam->GetPosition() + vDir*mBodyPicker.mfDist;
 
 				//Spring testing:
-				cVector3f vForce = (renderCallback.mvDragPos - mBodyPicker.mvPos)*20 -
+				cVector3f vForce = (m_dragPos - mBodyPicker.mvPos)*20 -
 					(mBodyPicker.mpPickedBody->GetLinearVelocity()*0.4f);
 
 
@@ -2206,7 +2393,7 @@ public:
 				{
 					mBodyPicker.mpPickedBody->SetAutoDisable(false);
 
-					renderCallback.mvDragPos = mBodyPicker.mvPos;
+					m_dragPos = mBodyPicker.mvPos;
 
 					cMatrixf mtxInvWorld = cMath::MatrixInverse(mBodyPicker.mpPickedBody->GetLocalMatrix());
 					mBodyPicker.mvLocalPos = cMath::MatrixMul(mtxInvWorld, mBodyPicker.mvPos);
@@ -2235,9 +2422,11 @@ public:
 	cWorld* mpWorld;
 	iPhysicsWorld *mpPhysicsWorld;
 
-	cSimpleRenderCallback renderCallback;
-	cBodyPicker mBodyPicker;
+	cVector3f m_dragPos;
 
+	// cSimpleRenderCallback renderCallback;
+	cViewport::PostSolidDraw::Handler  m_postSolidDraw;
+	cBodyPicker mBodyPicker;
 
 	cWidgetWindow *mpOptionWindow;
 

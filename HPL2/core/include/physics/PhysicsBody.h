@@ -20,6 +20,7 @@
 #ifndef HPL_PHYSICS_BODY_H
 #define HPL_PHYSICS_BODY_H
 
+#include "graphics/ImmediateDrawBatch.h"
 #include "scene/Entity3D.h"
 #include "graphics/GraphicsTypes.h"
 #include "physics/PhysicsTypes.h"
@@ -135,7 +136,7 @@ namespace hpl {
 		virtual void SetGravity(bool abEnabled)=0;
 		virtual bool GetGravity() const=0;
 
-		virtual void RenderDebugGeometry(iLowLevelGraphics *apLowLevel,const cColor &aColor)=0;
+		virtual void RenderDebugGeometry(ImmediateDrawBatch *apLowLevel,const cColor &aColor)=0;
 
 		bool UpdateBeforeSimulate(float afTimeStep);
 		void UpdateAfterSimulate(float afTimeStep);

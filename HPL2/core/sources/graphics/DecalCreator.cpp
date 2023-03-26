@@ -17,21 +17,25 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "system/String.h"
+#include "system/LowLevelSystem.h"
+
+#include "resources/Resources.h"
+#include "resources/MaterialManager.h"
+#include "resources/MeshManager.h"
+#include "resources/AnimationManager.h"
+
+#include "graphics/ImmediateDrawBatch.h"
 #include "graphics/DecalCreator.h"
 #include "graphics/GraphicsContext.h"
 #include "graphics/GraphicsTypes.h"
-#include "system/String.h"
-#include "system/LowLevelSystem.h"
 #include "graphics/LowLevelGraphics.h"
 #include "graphics/VertexBuffer.h"
-#include "resources/Resources.h"
 #include "graphics/Mesh.h"
 #include "graphics/SubMesh.h"
 #include "graphics/Renderer.h"
 #include "graphics/LowLevelGraphics.h"
-#include "resources/MaterialManager.h"
-#include "resources/MeshManager.h"
-#include "resources/AnimationManager.h"
+
 #include "scene/MeshEntity.h"
 #include "math/Math.h"
 
@@ -404,6 +408,7 @@ namespace hpl {
 		{
 			if(mpDecalMaterial)
 			{
+				BX_ASSERT(false); // TODO: fix this
 				// apFunctions->SetDepthTest(true);
 				// apFunctions->SetDepthWrite(false);
 				// apFunctions->SetBlendMode(eMaterialBlendMode_Alpha);
@@ -430,6 +435,7 @@ namespace hpl {
 			if(abDrawWireframe) {
 				GraphicsContext::LayoutStream m_stream;
 				mpDecalVB->GetLayoutStream(m_stream, eVertexBufferDrawType_Line);
+				apFunctions->DebugDrawMesh(m_stream, cColor(1));
 			}
 			// if(abDrawWireframe)	apFunctions->DrawWireFrame(mpDecalVB, cColor(1));
 		}

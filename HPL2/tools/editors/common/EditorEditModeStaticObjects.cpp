@@ -33,14 +33,7 @@
 
 #include "../leveleditor/LevelEditor.h"
 
-
-//-----------------------------------------------------------------
-
-///////////////////////////////////////////////////////////////////
-// CONSTRUCTORS
-///////////////////////////////////////////////////////////////////
-
-//-----------------------------------------------------------------
+#include "graphics/ImmediateDrawBatch.h"
 
 cEditorEditModeStaticObjects::cEditorEditModeStaticObjects(iEditorBase* apEditor,
 														   iEditorWorld* apEditorWorld) : iEditorEditModeObjectCreator(apEditor,
@@ -48,16 +41,6 @@ cEditorEditModeStaticObjects::cEditorEditModeStaticObjects(iEditorBase* apEditor
 																													   apEditorWorld)
 {
 }
-
-//-----------------------------------------------------------------
-
-//-----------------------------------------------------------------
-
-///////////////////////////////////////////////////////////////////
-// PUBLIC METHODS
-///////////////////////////////////////////////////////////////////
-
-//-----------------------------------------------------------------
 
 void cEditorEditModeStaticObjects::DrawObjectPreview(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, const cMatrixf& amtxTransform, bool abPreCreationActive)
 {

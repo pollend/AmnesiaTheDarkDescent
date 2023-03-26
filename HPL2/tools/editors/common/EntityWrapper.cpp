@@ -40,7 +40,11 @@
 #include "EngineEntity.h"
 #include "graphics/Color.h"
 #include "graphics/GraphicsContext.h"
+#include "graphics/ImmediateDrawBatch.h"
+
 #include "math/MathTypes.h"
+
+
 
 #include <algorithm>
 
@@ -1361,8 +1365,8 @@ void iEntityWrapper::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch*
 {
 	if(mpIcon) 
 		mpIcon->DrawIcon(apViewport, apFunctions, apEditMode, mbSelected, mvPosition, mbActive && mpType->IsActive(), aDisabledCol);
-	// if(mpEngineEntity)
-	// 	mpEngineEntity->Draw(apViewport, apFunctions, abIsSelected, mbActive && mpType->IsActive(), aHighlightCol);
+	if(mpEngineEntity)
+		mpEngineEntity->Draw(apViewport, apFunctions, abIsSelected, mbActive && mpType->IsActive(), aHighlightCol);
 
 	if(mbSelected==false)
 		return;
@@ -2076,21 +2080,35 @@ void iEntityWrapper::DrawArrow(cEditorWindowViewport* apViewport, ImmediateDrawB
 	mvArrowQuads[3][3].pos = cVector3f(-fXZ,-fY,fXZ);
 
 	cMatrixf mtxWorld = cMath::MatrixMul(amtxTransform, cMath::MatrixTranslate(cVector3f(0,afLength,0)));;
-	// apFunctions->SetMatrix(&mtxWorld);
 
 	ImmediateDrawBatch::DebugDrawOptions options;
-	options.m_transform = mtxWorld.GetTranspose();
+	options.m_transform = mtxWorld;
 
 	apFunctions->DebugDrawLine(cVector3f(0,-afLength,0), 0, aCol);
-	apFunctions->DrawQuad(cVector3f(0,0,0), cVector3f(fXZ,-fY,fXZ),cVector3f(-fXZ,-fY,fXZ),
+	apFunctions->DrawQuad(
+		cVector3f(fXZ,-fY,fXZ), 
+		cVector3f(0,0,0),
+		cVector3f(0,0,0),
+		cVector3f(-fXZ,-fY,fXZ),
 	 cColor(), options);
-	apFunctions->DrawQuad(cVector3f(0,0,0), cVector3f(fXZ,-fY,-fXZ), cVector3f(fXZ,-fY,fXZ), 
+	apFunctions->DrawQuad(
+		cVector3f(fXZ,-fY,-fXZ), 
+		cVector3f(0,0,0),
+		cVector3f(0,0,0),
+		cVector3f(fXZ,-fY,fXZ),
+	 cColor(), options);
+	apFunctions->DrawQuad(
+			cVector3f(fXZ,-fY,-fXZ), 
+			cVector3f(0,0,0),
+			cVector3f(0,0,0),
+			cVector3f(fXZ,-fY,fXZ),
 		cColor(), options);
-	apFunctions->DrawQuad(cVector3f(0,0,0), cVector3f(-fXZ,-fY,-fXZ), cVector3f(-fXZ,-fY,fXZ), 
+	apFunctions->DrawQuad(
+			cVector3f(-fXZ,-fY,-fXZ), 
+			cVector3f(0,0,0),
+			cVector3f(0,0,0),
+			cVector3f(-fXZ,-fY,fXZ),
 		cColor(), options);
-
-
-	// apFunctions->SetMatrix(NULL);
 }
 
 //------------------------------------------------------------------
