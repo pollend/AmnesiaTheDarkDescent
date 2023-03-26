@@ -39,7 +39,7 @@ namespace hpl {
 		TiXmlDocument *pXmlDoc = hplNew( TiXmlDocument, () );
 
 		pXmlDoc->InsertEndChild(TiXmlElement(""));
-		SaveToTinyXMLData(pXmlDoc->FirstChildElement(), this);
+		SaveToTinyXMLData(pXmlDoc->FirstChildElement(), &Root());
 
 		*apDestData = "";
 		*apDestData << *pXmlDoc;
@@ -66,8 +66,8 @@ namespace hpl {
 			return false;
 		}
 
-		DestroyChildren();
-		LoadFromTinyXMLData(pXmlDoc->FirstChildElement(), this);
+		// DestroyChildren();
+		LoadFromTinyXMLData(pXmlDoc->FirstChildElement(), &Root());
 
 		hplDelete( pXmlDoc );
 		return true;
@@ -96,8 +96,8 @@ namespace hpl {
 			return false;
 		}
 
-		DestroyChildren();
-		LoadFromTinyXMLData(pXmlDoc->FirstChildElement(), this);
+		// DestroyChildren();
+		LoadFromTinyXMLData(pXmlDoc->FirstChildElement(), &Root());
 
         hplDelete( pXmlDoc );
 		return true;
@@ -111,7 +111,7 @@ namespace hpl {
 
 
 		pXmlDoc->InsertEndChild(TiXmlElement(""));
-		SaveToTinyXMLData(pXmlDoc->FirstChildElement(), this);
+		SaveToTinyXMLData(pXmlDoc->FirstChildElement(), &Root());
 
 		bool bRet = SaveTinyXMLToFile(pXmlDoc,asPath);
 		hplDelete( pXmlDoc );
@@ -121,55 +121,52 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cXmlDocumentTiny::LoadFromTinyXMLData(TiXmlElement* apTinyElem, cXmlElement *apDestElem)
+	void cXmlDocumentTiny::LoadFromTinyXMLData(TiXmlElement* apTinyElem, XMLChild* rootNode)
 	{
 		/////////////////////////////
 		//Load the attributes
-		apDestElem->SetValue(apTinyElem->Value());
-
+		rootNode->setName(apTinyElem->Value());
         TiXmlAttribute *pAttrib = apTinyElem->FirstAttribute();
 		for(; pAttrib != NULL; pAttrib = pAttrib->Next())
 		{
-			apDestElem->SetAttribute(pAttrib->Name(), pAttrib->Value());
+			rootNode->Content().SetAttribute(pAttrib->Name(), pAttrib->Value());
 		}
 
 		/////////////////////////////
 		//Load the elements
 		TiXmlElement *pChildElem = apTinyElem->FirstChildElement();
-		for(; pChildElem != NULL; pChildElem = pChildElem->NextSiblingElement())
-		{
-			cXmlElement *pDestChild = apDestElem->CreateChildElement();
-
-            LoadFromTinyXMLData(pChildElem, pDestChild);
+		for(; pChildElem != NULL; pChildElem = pChildElem->NextSiblingElement()) {
+            LoadFromTinyXMLData(pChildElem, &rootNode->Content().AddChild());
 		}
 	}
 
 	//-----------------------------------------------------------------------
 
-	void cXmlDocumentTiny::SaveToTinyXMLData(TiXmlElement* apTinyElem, cXmlElement *apSrcElem)
+	void cXmlDocumentTiny::SaveToTinyXMLData(TiXmlElement* apTinyElem, XMLChild* apSrcElem)
 	{
 		/////////////////////////////
 		//Save the attributes
-		apTinyElem->SetValue(apSrcElem->GetValue().c_str());
+		apTinyElem->SetValue(apSrcElem->name().c_str());
 
-		tAttributeMap *pAttributeMap = apSrcElem->GetAttributeMap();
-		tAttributeMapIt attrIt = pAttributeMap->begin();
-		for(; attrIt != pAttributeMap->end(); ++attrIt)
-		{
-			apTinyElem->SetAttribute(attrIt->first.c_str(), attrIt->second.c_str());
+		// tAttributeMap *pAttributeMap = apSrcElem->GetAttributeMap();
+		// tAttributeMapIt attrIt = pAttributeMap->begin();
+		// for(; attrIt != pAttributeMap->end(); ++attrIt)
+		// {
+		// 	apTinyElem->SetAttribute(attrIt->first.c_str(), attrIt->second.c_str());
+		// }
+
+
+		for(auto& attr: apSrcElem->Content().Attributes()) {
+			apTinyElem->SetAttribute(attr.key(), attr.value());
 		}
 
-		/////////////////////////////
-		//Save the elements
-		cXmlNodeListIterator it = apSrcElem->GetChildIterator();
-		while(it.HasNext())
-		{
-			cXmlElement *pChild = it.Next()->ToElement();
 
-			TiXmlElement tempElem(pChild->GetValue().c_str());
+		for(auto& child: apSrcElem->Content().Children()) {
+
+			TiXmlElement tempElem(child.name().c_str());
 			TiXmlElement* pTinyChild = static_cast<TiXmlElement*>(apTinyElem->InsertEndChild(tempElem));
 
-			SaveToTinyXMLData(pTinyChild, pChild);
+			SaveToTinyXMLData(pTinyChild, &child);
 		}
 
 	}

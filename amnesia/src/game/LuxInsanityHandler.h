@@ -37,8 +37,8 @@ public:
 	virtual void Update(float afTimeStep){}
 	virtual void OnDraw(float afFrameTime){}
 
-	void LoadData(cXmlElement * apVarElem);
-	virtual void OnLoadData(cXmlElement * apVarElem)=0;
+	void LoadData(XMLChild* apVarElem);
+	virtual void OnLoadData(XMLChild* apVarElem)=0;
 
 	void Start();
 	virtual void OnStart()=0;
@@ -88,7 +88,7 @@ public:
 	cLuxInstanityEvent_Bugs();
 	~cLuxInstanityEvent_Bugs();
 
-	void OnLoadData(cXmlElement * apVarElem);
+	void OnLoadData(XMLChild* apVarElem);
 
 	void OnStart();
 	void OnExit();
@@ -132,7 +132,7 @@ public:
 	cLuxInstanityEvent_Particles();
 	~cLuxInstanityEvent_Particles();
 
-	void OnLoadData(cXmlElement * apVarElem);
+	void OnLoadData(XMLChild* apVarElem);
 
 	void OnStart();
 	void OnExit();
@@ -171,7 +171,7 @@ public:
 	cLuxInstanityEvent_SoundStream();
 	~cLuxInstanityEvent_SoundStream();
 
-	void OnLoadData(cXmlElement * apVarElem);
+	void OnLoadData(XMLChild* apVarElem);
 
 	void OnStart();
 	void OnExit();
@@ -212,7 +212,7 @@ public:
 	cLuxInstanityEvent_Steps();
 	~cLuxInstanityEvent_Steps();
 
-	void OnLoadData(cXmlElement * apVarElem);
+	void OnLoadData(XMLChild* apVarElem);
 
 	void OnStart();
 	void OnExit();

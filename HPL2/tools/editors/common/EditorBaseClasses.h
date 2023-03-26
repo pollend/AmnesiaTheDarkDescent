@@ -126,9 +126,8 @@ class cEditorEntityLoader : public cEntityLoader_Object
 public:
 	cEditorEntityLoader(iEditorBase* apEditor);
 
-	void BeforeLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTransform,cWorld *apWorld, cResourceVarsObject *apInstanceVars){}
-
-	void AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTransform,cWorld *apWorld, cResourceVarsObject *apInstanceVars){}
+	void BeforeLoad(XMLChild* apRootElem, const cMatrixf &a_mtxTransform,cWorld *apWorld, cResourceVarsObject *apInstanceVars){}
+	void AfterLoad(XMLChild* apRootElem, const cMatrixf &a_mtxTransform,cWorld *apWorld, cResourceVarsObject *apInstanceVars){}
 
 	cMeshEntity* LoadEntFile(int alID, const tString& asName, const tString& asFilename,
 							 cWorld* apWorld,

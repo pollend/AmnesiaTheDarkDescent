@@ -36,14 +36,14 @@ cLuxCommentaryIconLoader::cLuxCommentaryIconLoader(const tString& asName) : cEnt
 
 //-----------------------------------------------------------------------
 
-void cLuxCommentaryIconLoader::BeforeLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTransform,cWorld *apWorld, cResourceVarsObject *apInstanceVars)
+void cLuxCommentaryIconLoader::BeforeLoad(XMLChild* apRootElem, const cMatrixf &a_mtxTransform,cWorld *apWorld, cResourceVarsObject *apInstanceVars)
 {
 
 }
 
 //-----------------------------------------------------------------------
 
-void cLuxCommentaryIconLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTransform,cWorld *apWorld, cResourceVarsObject *apInstanceVars)
+void cLuxCommentaryIconLoader::AfterLoad(XMLChild* apRootElem, const cMatrixf &a_mtxTransform,cWorld *apWorld, cResourceVarsObject *apInstanceVars)
 {
 	cLuxMap *pMap = gpBase->mpCurrentMapLoading;
 	if(pMap==NULL)	return;

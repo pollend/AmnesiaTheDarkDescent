@@ -500,11 +500,11 @@ public:
 	iLuxPropLoader(const tString& asName);
 	virtual ~iLuxPropLoader(){}
 
-	void BeforeLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTransform,cWorld *apWorld, cResourceVarsObject *apInstanceVars);
-	void AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTransform,cWorld *apWorld, cResourceVarsObject *apInstanceVars);
+	void BeforeLoad(XMLChild* apRootElem, const cMatrixf &a_mtxTransform,cWorld *apWorld, cResourceVarsObject *apInstanceVars);
+	void AfterLoad(XMLChild* apRootElem, const cMatrixf &a_mtxTransform,cWorld *apWorld, cResourceVarsObject *apInstanceVars);
 
 	virtual iLuxProp *CreateProp(const tString& asName, int alID, cLuxMap *apMap)=0;
-	virtual void LoadVariables(iLuxProp *apProp, cXmlElement *apRootElem)=0;
+	virtual void LoadVariables(iLuxProp *apProp, XMLChild* apRootElem)=0;
 	virtual void LoadInstanceVariables(iLuxProp *apProp, cResourceVarsObject *apInstanceVars)=0;
 
 protected:

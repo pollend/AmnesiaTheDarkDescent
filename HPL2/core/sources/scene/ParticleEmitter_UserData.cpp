@@ -190,46 +190,46 @@ namespace hpl {
 
 	/////////////////////////
 
-	void cParticleEmitterData_UserData::LoadFromElement(cXmlElement *apElement)
+	void cParticleEmitterData_UserData::LoadFromElement(XMLChild* apElement)
 	{
 		///////// GENERAL /////////////
-		msName =  cString::ToString(apElement->GetAttribute("Name"),"");
+		msName =  cString::ToString(apElement->Content()->GetAttribute("Name"),"");
 
 		// NEW
 
-		mPEType = GetPEType (apElement->GetAttribute("PEType"));
+		mPEType = GetPEType (apElement->Content()->GetAttribute("PEType"));
 
 		// ---
 
-		mlMaxParticleNum = cString::ToInt(apElement->GetAttribute("MaxParticleNum"),1);
+		mlMaxParticleNum = cString::ToInt(apElement->Content()->GetAttribute("MaxParticleNum"),1);
 
-		mbRespawn = cString::ToBool(apElement->GetAttribute("Respawn"),false);
+		mbRespawn = cString::ToBool(apElement->Content()->GetAttribute("Respawn"),false);
 
-		mfParticlesPerSecond = cString::ToFloat(apElement->GetAttribute("ParticlesPerSecond"),1);
-		mfStartTimeOffset = cString::ToFloat(apElement->GetAttribute("StartTimeOffset"),0);
+		mfParticlesPerSecond = cString::ToFloat(apElement->Content()->GetAttribute("ParticlesPerSecond"),1);
+		mfStartTimeOffset = cString::ToFloat(apElement->Content()->GetAttribute("StartTimeOffset"),0);
 
-		mfWarmUpTime = cString::ToFloat(apElement->GetAttribute("WarmUpTime"),0);
-		mfWarmUpStepsPerSec = cString::ToFloat(apElement->GetAttribute("WarmUpStepsPerSec"),60);
+		mfWarmUpTime = cString::ToFloat(apElement->Content()->GetAttribute("WarmUpTime"),0);
+		mfWarmUpStepsPerSec = cString::ToFloat(apElement->Content()->GetAttribute("WarmUpStepsPerSec"),60);
 
-		mfMinPauseLength = cString::ToFloat(apElement->GetAttribute("MinPauseLength"),0);
-		mfMaxPauseLength = cString::ToFloat(apElement->GetAttribute("MaxPauseLength"),0);
+		mfMinPauseLength = cString::ToFloat(apElement->Content()->GetAttribute("MinPauseLength"),0);
+		mfMaxPauseLength = cString::ToFloat(apElement->Content()->GetAttribute("MaxPauseLength"),0);
 
-		mfMinPauseInterval = cString::ToFloat(apElement->GetAttribute("MinPauseInterval"),0);
-		mfMaxPauseInterval = cString::ToFloat(apElement->GetAttribute("MaxPauseInterval"),0);
+		mfMinPauseInterval = cString::ToFloat(apElement->Content()->GetAttribute("MinPauseInterval"),0);
+		mfMaxPauseInterval = cString::ToFloat(apElement->Content()->GetAttribute("MaxPauseInterval"),0);
 
-		mvPosOffset = cString::ToVector3f(apElement->GetAttribute("PosOffset"),0);
-		mvAngleOffset = cString::ToVector3f(apElement->GetAttribute("AngleOffset"),0);
+		mvPosOffset = cString::ToVector3f(apElement->Content()->GetAttribute("PosOffset"),0);
+		mvAngleOffset = cString::ToVector3f(apElement->Content()->GetAttribute("AngleOffset"),0);
 		mvAngleOffset.x = cMath::ToRad(mvAngleOffset.x);
 		mvAngleOffset.y = cMath::ToRad(mvAngleOffset.y);
 		mvAngleOffset.z = cMath::ToRad(mvAngleOffset.z);
 
 		/////////// MATERIAL  ////////
-		int lMaterialNum = cString::ToInt(apElement->GetAttribute("MaterialNum"),1);
-		float fAnimationLength = cString::ToFloat(apElement->GetAttribute("AnimationLength"),1);
-		tString sMaterial = cString::ToString(apElement->GetAttribute("Material"),"");
+		int lMaterialNum = cString::ToInt(apElement->Content()->GetAttribute("MaterialNum"),1);
+		float fAnimationLength = cString::ToFloat(apElement->Content()->GetAttribute("AnimationLength"),1);
+		tString sMaterial = cString::ToString(apElement->Content()->GetAttribute("Material"),"");
 
-		mvSubDiv = cString::ToVector2l(apElement->GetAttribute("SubDiv"),1);
-		mSubDivType = GetSubDivType(apElement->GetAttribute("SubDivType"));
+		mvSubDiv = cString::ToVector2l(apElement->Content()->GetAttribute("SubDiv"),1);
+		mSubDivType = GetSubDivType(apElement->Content()->GetAttribute("SubDivType"));
 
 		if(lMaterialNum <= 1)
 		{
@@ -257,20 +257,20 @@ namespace hpl {
 		mfMaxFrameTime = ((float)mvMaterials.size())-0.0001f;
 
 		///////// START POS //////////
-		mStartPosType = GetStartPosType(apElement->GetAttribute("StartPosType"));
+		mStartPosType = GetStartPosType(apElement->Content()->GetAttribute("StartPosType"));
 
-		mvMinStartPos = cString::ToVector3f(apElement->GetAttribute("MinStartPos"),0);
-		mvMaxStartPos = cString::ToVector3f(apElement->GetAttribute("MaxStartPos"),0);
+		mvMinStartPos = cString::ToVector3f(apElement->Content()->GetAttribute("MinStartPos"),0);
+		mvMaxStartPos = cString::ToVector3f(apElement->Content()->GetAttribute("MaxStartPos"),0);
 
-		mvMinStartAngles = cString::ToVector2f(apElement->GetAttribute("MinStartAngles"),0);
-		mvMaxStartAngles = cString::ToVector2f(apElement->GetAttribute("MaxStartAngles"),0);
+		mvMinStartAngles = cString::ToVector2f(apElement->Content()->GetAttribute("MinStartAngles"),0);
+		mvMaxStartAngles = cString::ToVector2f(apElement->Content()->GetAttribute("MaxStartAngles"),0);
 		mvMinStartAngles.x = cMath::ToRad(mvMinStartAngles.x);
 		mvMinStartAngles.y = cMath::ToRad(mvMinStartAngles.y);
 		mvMaxStartAngles.x = cMath::ToRad(mvMaxStartAngles.x);
 		mvMaxStartAngles.y = cMath::ToRad(mvMaxStartAngles.y);
 
-		mfMinStartRadius = cString::ToFloat(apElement->GetAttribute("MinStartRadius"),0);
-		mfMaxStartRadius = cString::ToFloat(apElement->GetAttribute("MaxStartRadius"),0);
+		mfMinStartRadius = cString::ToFloat(apElement->Content()->GetAttribute("MinStartRadius"),0);
+		mfMaxStartRadius = cString::ToFloat(apElement->Content()->GetAttribute("MaxStartRadius"),0);
 
 // NEW
 //		cMesh *mshTempMesh = mpResources->GetMeshManager()->CreateMesh("character_roach.dae");
@@ -282,113 +282,113 @@ namespace hpl {
 
 
 		/////////// MOVEMENT ////////
-		mStartVelType = GetStartPosType(apElement->GetAttribute("StartVelType"));
+		mStartVelType = GetStartPosType(apElement->Content()->GetAttribute("StartVelType"));
 
-		mvMinStartVel = cString::ToVector3f(apElement->GetAttribute("MinStartVel"),0);
-		mvMaxStartVel = cString::ToVector3f(apElement->GetAttribute("MaxStartVel"),0);
+		mvMinStartVel = cString::ToVector3f(apElement->Content()->GetAttribute("MinStartVel"),0);
+		mvMaxStartVel = cString::ToVector3f(apElement->Content()->GetAttribute("MaxStartVel"),0);
 
-		mvMinStartVelAngles = cString::ToVector2f(apElement->GetAttribute("MinStartVelAngles"),0);
-		mvMaxStartVelAngles = cString::ToVector2f(apElement->GetAttribute("MaxStartVelAngles"),0);
+		mvMinStartVelAngles = cString::ToVector2f(apElement->Content()->GetAttribute("MinStartVelAngles"),0);
+		mvMaxStartVelAngles = cString::ToVector2f(apElement->Content()->GetAttribute("MaxStartVelAngles"),0);
 		mvMinStartVelAngles.x = cMath::ToRad(mvMinStartVelAngles.x);
 		mvMinStartVelAngles.y = cMath::ToRad(mvMinStartVelAngles.y);
 		mvMaxStartVelAngles.x = cMath::ToRad(mvMaxStartVelAngles.x);
 		mvMaxStartVelAngles.y = cMath::ToRad(mvMaxStartVelAngles.y);
 
-		mfMinStartVelSpeed = cString::ToFloat(apElement->GetAttribute("MinStartVelSpeed"),0);
-		mfMaxStartVelSpeed = cString::ToFloat(apElement->GetAttribute("MaxStartVelSpeed"),0);
+		mfMinStartVelSpeed = cString::ToFloat(apElement->Content()->GetAttribute("MinStartVelSpeed"),0);
+		mfMaxStartVelSpeed = cString::ToFloat(apElement->Content()->GetAttribute("MaxStartVelSpeed"),0);
 
-		mfMinSpeedMultiply = cString::ToFloat(apElement->GetAttribute("MinSpeedMultiply"),0);
-		mfMaxSpeedMultiply = cString::ToFloat(apElement->GetAttribute("MaxSpeedMultiply"),0);
+		mfMinSpeedMultiply = cString::ToFloat(apElement->Content()->GetAttribute("MinSpeedMultiply"),0);
+		mfMaxSpeedMultiply = cString::ToFloat(apElement->Content()->GetAttribute("MaxSpeedMultiply"),0);
 
-		mvMinStartAcc = cString::ToVector3f(apElement->GetAttribute("MinStartAcc"),0);
-		mvMaxStartAcc = cString::ToVector3f(apElement->GetAttribute("MaxStartAcc"),0);
+		mvMinStartAcc = cString::ToVector3f(apElement->Content()->GetAttribute("MinStartAcc"),0);
+		mvMaxStartAcc = cString::ToVector3f(apElement->Content()->GetAttribute("MaxStartAcc"),0);
 
-		mfMinVelMaximum = cString::ToFloat(apElement->GetAttribute("MinVelMaximum"),0);
-		mfMaxVelMaximum = cString::ToFloat(apElement->GetAttribute("MaxVelMaximum"),0);
+		mfMinVelMaximum = cString::ToFloat(apElement->Content()->GetAttribute("MinVelMaximum"),0);
+		mfMaxVelMaximum = cString::ToFloat(apElement->Content()->GetAttribute("MaxVelMaximum"),0);
 
-		mbUsesDirection = cString::ToBool(apElement->GetAttribute("UsesDirection"),false);
+		mbUsesDirection = cString::ToBool(apElement->Content()->GetAttribute("UsesDirection"),false);
 
-		mGravityType = GetGravityType(apElement->GetAttribute("GravityType"));
+		mGravityType = GetGravityType(apElement->Content()->GetAttribute("GravityType"));
 
-		mvGravityAcc = cString::ToVector3f(apElement->GetAttribute("GravityAcc"),0);
+		mvGravityAcc = cString::ToVector3f(apElement->Content()->GetAttribute("GravityAcc"),0);
 
-		mCoordSystem = GetCoordSystem(apElement->GetAttribute("CoordSystem"));
+		mCoordSystem = GetCoordSystem(apElement->Content()->GetAttribute("CoordSystem"));
 
 		// NEW
 
-		mbUsePartSpin = cString::ToBool(apElement->GetAttribute("UsePartSpin"),false);
-		mPartSpinType = GetPartSpinType(apElement->GetAttribute("PartSpinType"));
-		mfMinSpinRange = cString::ToFloat(apElement->GetAttribute("MinSpinRange"),0);
-		mfMaxSpinRange = cString::ToFloat(apElement->GetAttribute("MaxSpinRange"),0);
+		mbUsePartSpin = cString::ToBool(apElement->Content()->GetAttribute("UsePartSpin"),false);
+		mPartSpinType = GetPartSpinType(apElement->Content()->GetAttribute("PartSpinType"));
+		mfMinSpinRange = cString::ToFloat(apElement->Content()->GetAttribute("MinSpinRange"),0);
+		mfMaxSpinRange = cString::ToFloat(apElement->Content()->GetAttribute("MaxSpinRange"),0);
 
-		mbUseRevolution = cString::ToBool(apElement->GetAttribute("UseRevolution"),false);
-		mvMinRevVel = cString::ToVector3f(apElement->GetAttribute("MinRevVel"),0);
-		mvMaxRevVel = cString::ToVector3f(apElement->GetAttribute("MaxRevVel"),0);
+		mbUseRevolution = cString::ToBool(apElement->Content()->GetAttribute("UseRevolution"),false);
+		mvMinRevVel = cString::ToVector3f(apElement->Content()->GetAttribute("MinRevVel"),0);
+		mvMaxRevVel = cString::ToVector3f(apElement->Content()->GetAttribute("MaxRevVel"),0);
 
 		// ---
 
 
 		/////////// LIFESPAN ////////
-		mfMinLifeSpan = cString::ToFloat(apElement->GetAttribute("MinLifeSpan"),0);
-		mfMaxLifeSpan = cString::ToFloat(apElement->GetAttribute("MaxLifeSpan"),0);
+		mfMinLifeSpan = cString::ToFloat(apElement->Content()->GetAttribute("MinLifeSpan"),0);
+		mfMaxLifeSpan = cString::ToFloat(apElement->Content()->GetAttribute("MaxLifeSpan"),0);
 
-		mDeathType = GetDeathType(apElement->GetAttribute("DeathType"));
+		mDeathType = GetDeathType(apElement->Content()->GetAttribute("DeathType"));
 
-		msDeathPS = cString::ToString(apElement->GetAttribute("DeathPS"),"");
+		msDeathPS = cString::ToString(apElement->Content()->GetAttribute("DeathPS"),"");
 
 		/////////// RENDERING ////////
-		mDrawType = GetDrawType(apElement->GetAttribute("DrawType"));
+		mDrawType = GetDrawType(apElement->Content()->GetAttribute("DrawType"));
 
 		//eParticleEmitterType Heading
 		//cVector2l subdivisions.
 
-		mvMinStartSize = cString::ToVector2f(apElement->GetAttribute("MinStartSize"),1);
-		mvMaxStartSize = cString::ToVector2f(apElement->GetAttribute("MaxStartSize"),1);
+		mvMinStartSize = cString::ToVector2f(apElement->Content()->GetAttribute("MinStartSize"),1);
+		mvMaxStartSize = cString::ToVector2f(apElement->Content()->GetAttribute("MaxStartSize"),1);
 
-		mfStartRelSize = cString::ToFloat(apElement->GetAttribute("StartRelSize"),0);
-		mfMiddleRelSize = cString::ToFloat(apElement->GetAttribute("MiddleRelSize"),0);
-		mfMiddleRelSizeTime = cString::ToFloat(apElement->GetAttribute("MiddleRelSizeTime"),0);
-		mfMiddleRelSizeLength = cString::ToFloat(apElement->GetAttribute("MiddleRelSizeLength"),0);
-		mfEndRelSize = cString::ToFloat(apElement->GetAttribute("EndRelSize"),0);
+		mfStartRelSize = cString::ToFloat(apElement->Content()->GetAttribute("StartRelSize"),0);
+		mfMiddleRelSize = cString::ToFloat(apElement->Content()->GetAttribute("MiddleRelSize"),0);
+		mfMiddleRelSizeTime = cString::ToFloat(apElement->Content()->GetAttribute("MiddleRelSizeTime"),0);
+		mfMiddleRelSizeLength = cString::ToFloat(apElement->Content()->GetAttribute("MiddleRelSizeLength"),0);
+		mfEndRelSize = cString::ToFloat(apElement->Content()->GetAttribute("EndRelSize"),0);
 
-		mbMultiplyRGBWithAlpha = cString::ToBool(apElement->GetAttribute("MultiplyRGBWithAlpha"),false);
+		mbMultiplyRGBWithAlpha = cString::ToBool(apElement->Content()->GetAttribute("MultiplyRGBWithAlpha"),false);
 
 		/////////// COLOR  ////////
 
-		mMinStartColor = cString::ToColor(apElement->GetAttribute("MinStartColor"),cColor(1,1));
-		mMaxStartColor = cString::ToColor(apElement->GetAttribute("MaxStartColor"),cColor(1,1));
+		mMinStartColor = cString::ToColor(apElement->Content()->GetAttribute("MinStartColor"),cColor(1,1));
+		mMaxStartColor = cString::ToColor(apElement->Content()->GetAttribute("MaxStartColor"),cColor(1,1));
 
-		mStartRelColor = cString::ToColor(apElement->GetAttribute("StartRelColor"),cColor(1,1));
-		mMiddleRelColor = cString::ToColor(apElement->GetAttribute("MiddleRelColor"),cColor(1,1));
-		mfMiddleRelColorTime = cString::ToFloat(apElement->GetAttribute("MiddleRelColorTime"),0);
-		mfMiddleRelColorLength = cString::ToFloat(apElement->GetAttribute("MiddleRelColorLength"),0);
-		mEndRelColor = cString::ToColor(apElement->GetAttribute("EndRelColor"),cColor(1,1));
+		mStartRelColor = cString::ToColor(apElement->Content()->GetAttribute("StartRelColor"),cColor(1,1));
+		mMiddleRelColor = cString::ToColor(apElement->Content()->GetAttribute("MiddleRelColor"),cColor(1,1));
+		mfMiddleRelColorTime = cString::ToFloat(apElement->Content()->GetAttribute("MiddleRelColorTime"),0);
+		mfMiddleRelColorLength = cString::ToFloat(apElement->Content()->GetAttribute("MiddleRelColorLength"),0);
+		mEndRelColor = cString::ToColor(apElement->Content()->GetAttribute("EndRelColor"),cColor(1,1));
 
 		/////////// COLLISION  ////////
-		mbCollides = cString::ToBool(apElement->GetAttribute("Collides"),false);
+		mbCollides = cString::ToBool(apElement->Content()->GetAttribute("Collides"),false);
 
-		mfMinBounceAmount = cString::ToFloat(apElement->GetAttribute("MinBounceAmount"),0);
-		mfMaxBounceAmount = cString::ToFloat(apElement->GetAttribute("MaxBounceAmount"),0);
+		mfMinBounceAmount = cString::ToFloat(apElement->Content()->GetAttribute("MinBounceAmount"),0);
+		mfMaxBounceAmount = cString::ToFloat(apElement->Content()->GetAttribute("MaxBounceAmount"),0);
 
-		mlMinCollisionMax = cString::ToInt(apElement->GetAttribute("MinCollisionMax"),0);
-		mlMaxCollisionMax = cString::ToInt(apElement->GetAttribute("MaxCollisionMax"),0);
+		mlMinCollisionMax = cString::ToInt(apElement->Content()->GetAttribute("MinCollisionMax"),0);
+		mlMaxCollisionMax = cString::ToInt(apElement->Content()->GetAttribute("MaxCollisionMax"),0);
 
-		mlCollisionUpdateRate = cString::ToInt(apElement->GetAttribute("CollisionUpdateRate"),0);
+		mlCollisionUpdateRate = cString::ToInt(apElement->Content()->GetAttribute("CollisionUpdateRate"),0);
 
 
 		// NEW
 		////////// BEAM SPECIFIC //////////
 
-		mbUseBeamNoise = cString::ToBool(apElement->GetAttribute("UseBeamNoise"),false);
+		mbUseBeamNoise = cString::ToBool(apElement->Content()->GetAttribute("UseBeamNoise"),false);
 
-		mlLowFreqPoints = cString::ToInt(apElement->GetAttribute("LowFreqPoints"),4);
-		mlHighFreqPoints = cString::ToInt(apElement->GetAttribute("HighFreqPoints"),5);
+		mlLowFreqPoints = cString::ToInt(apElement->Content()->GetAttribute("LowFreqPoints"),4);
+		mlHighFreqPoints = cString::ToInt(apElement->Content()->GetAttribute("HighFreqPoints"),5);
 
-		mvMinLowFreqNoise = cString::ToVector3f(apElement->GetAttribute("MinLowFreqNoise"),0);
-		mvMaxLowFreqNoise = cString::ToVector3f(apElement->GetAttribute("MaxLowFreqNoise"),0);
+		mvMinLowFreqNoise = cString::ToVector3f(apElement->Content()->GetAttribute("MinLowFreqNoise"),0);
+		mvMaxLowFreqNoise = cString::ToVector3f(apElement->Content()->GetAttribute("MaxLowFreqNoise"),0);
 
-		mvMinHighFreqNoise = cString::ToVector3f(apElement->GetAttribute("MinHighFreqNoise"),0);
-		mvMaxHighFreqNoise = cString::ToVector3f(apElement->GetAttribute("MaxHighFreqNoise"),0);
+		mvMinHighFreqNoise = cString::ToVector3f(apElement->Content()->GetAttribute("MinHighFreqNoise"),0);
+		mvMaxHighFreqNoise = cString::ToVector3f(apElement->Content()->GetAttribute("MaxHighFreqNoise"),0);
 
 		// ---
 	}

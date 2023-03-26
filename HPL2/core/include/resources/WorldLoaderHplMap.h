@@ -30,7 +30,7 @@
 namespace hpl {
 
 	class iEntity3D;
-	class cXmlElement;
+	class XMLChild;
 	class iPhysicsWorld;
 	class cRenderableContainer_BoxTree;
 	class cSubMeshEntity;
@@ -125,17 +125,17 @@ namespace hpl {
 		void LoadCacheFile(const tWString& asFile);
 		void SaveCacheFile(const tWString& asFile);
 
-		void LoadFileIndicies(cXmlElement* apXmlContents);
+		void LoadFileIndicies(XMLChild* apXmlContents);
 
-		void LoadStaticObjects(cXmlElement* apXmlContents);
+		void LoadStaticObjects(XMLChild* apXmlContents);
 		void BuildCombinedStaticMeshes(cRenderableContainer_BoxTree *apContainer);
-		void CreateStaticObjectEntity(	cXmlElement* apElement, tMeshEntityList& alstMeshEntities,
+		void CreateStaticObjectEntity(	XMLChild* apElement, tMeshEntityList& alstMeshEntities,
 										cRenderableContainer_BoxTree *apContainer);
-		void CreatePrimitive(cXmlElement* apElement, tMeshEntityList& alstMeshEntities,
+		void CreatePrimitive(XMLChild* apElement, tMeshEntityList& alstMeshEntities,
 							cRenderableContainer_BoxTree *apContainer);
-		void CreateDecal(	cXmlElement* apElement, tMeshEntityList& alstMeshEntities,
+		void CreateDecal(	XMLChild* apElement, tMeshEntityList& alstMeshEntities,
 							cRenderableContainer_BoxTree *apDecalContainer);
-		void CreateStaticObjectCombo(cXmlElement* apElement, tMeshEntityList& alstMeshEntities,
+		void CreateStaticObjectCombo(XMLChild* apElement, tMeshEntityList& alstMeshEntities,
 									cRenderableContainer_BoxTree *apDecalContainer);
 
 		void IterateLeafNodesAndBuildMeshes(iRenderableContainerNode *apNode);
@@ -143,13 +143,13 @@ namespace hpl {
 		void CombineObjectsAndCreateMeshEntity(tRenderableVec &avObjects, int alFirstIdx, int alLastIdx);
 		void CombineObjectsAndCreatePhysics(std::vector<cHplMapPhysicsObject> &avObjects, int alFirstIdx, int alLastIdx);
 
-		void LoadEntities(cXmlElement* apXmlContents);
-		void CreateLoadedEntity(cXmlElement* apElement, tEFL_LightBillboardConnectionList *apLightBillboardList);
+		void LoadEntities(XMLChild* apXmlContents);
+		void CreateLoadedEntity(XMLChild* apElement, tEFL_LightBillboardConnectionList *apLightBillboardList);
 		void CreateSubMeshShapeBodies(cSubMeshEntity *apSubEnt, const cMatrixf &a_mtxTransform, const cVector3f& avScale);
 		void CreateShapeBody(cHplMapShapeBody* apShapeBody);
 
-		void LoadEntity(const tString& asName, int alID, bool abActive,const cVector3f& avPos, const cVector3f& avRot, const cVector3f& avScale, cXmlElement* apElement);
-		void LoadArea(const tString& asName, int alID, bool abActive,const cVector3f& avPos, const cVector3f& avRot,const cVector3f& avScale, cXmlElement* apElement);
+		void LoadEntity(const tString& asName, int alID, bool abActive,const cVector3f& avPos, const cVector3f& avRot, const cVector3f& avScale, XMLChild* apElement);
+		void LoadArea(const tString& asName, int alID, bool abActive,const cVector3f& avPos, const cVector3f& avRot,const cVector3f& avScale, XMLChild* apElement);
 
 		bool CheckTransformValidity(const tString& asName, const cVector3f& avPos, const cVector3f& avRot, const cVector3f& avScale);
 

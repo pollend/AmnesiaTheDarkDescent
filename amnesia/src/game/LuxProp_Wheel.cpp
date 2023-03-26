@@ -53,7 +53,7 @@ static int ToSpinDir(const tString& asType)
 	return 0;
 }
 
-void cLuxPropLoader_Wheel::LoadVariables(iLuxProp *apProp, cXmlElement *apRootElem)
+void cLuxPropLoader_Wheel::LoadVariables(iLuxProp *apProp, XMLChild* apRootElem)
 {
 	cLuxProp_Wheel  *pWheel = static_cast<cLuxProp_Wheel*>(apProp);
 

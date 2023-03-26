@@ -185,7 +185,7 @@ public:
 	virtual ~cLuxPropLoader_Wheel(){}
 
 	iLuxProp *CreateProp(const tString& asName, int alID, cLuxMap *apMap);
-	void LoadVariables(iLuxProp *apProp, cXmlElement *apRootElem);
+	void LoadVariables(iLuxProp *apProp, XMLChild* apRootElem);
 	void LoadInstanceVariables(iLuxProp *apProp, cResourceVarsObject *apInstanceVars);
 
 private:

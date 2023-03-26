@@ -199,10 +199,10 @@ class iLuxPropLoader_Critter : public iLuxPropLoader
 public:
 	iLuxPropLoader_Critter(const tString asName);
 
-	void LoadVariables(iLuxProp *apProp, cXmlElement *apRootElem);
+	void LoadVariables(iLuxProp *apProp, XMLChild* apRootElem);
 	void LoadInstanceVariables(iLuxProp *apProp, cResourceVarsObject *apInstanceVars);
 
-	virtual void LoadCritterVariables(iLuxProp *apProp, cXmlElement *apRootElem)=0;
+	virtual void LoadCritterVariables(iLuxProp *apProp, XMLChild* apRootElem)=0;
 	virtual void LoadCritterInstanceVariables(iLuxProp *apProp, cResourceVarsObject *apInstanceVars)=0;
 };
 

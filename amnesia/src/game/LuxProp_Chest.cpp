@@ -46,7 +46,7 @@ iLuxProp *cLuxPropLoader_Chest::CreateProp(const tString& asName, int alID, cLux
 
 //-----------------------------------------------------------------------
 
-void cLuxPropLoader_Chest::LoadVariables(iLuxProp *apProp, cXmlElement *apRootElem)
+void cLuxPropLoader_Chest::LoadVariables(iLuxProp *apProp, XMLChild* apRootElem)
 {
 	cLuxProp_Chest  *pChest = static_cast<cLuxProp_Chest*>(apProp);
 

@@ -29,6 +29,7 @@ namespace hpl {
 	class cResources;
 	class cXmlElement;
 	class cSound;
+	class XMLChild;
 
 	class cSoundEntityData : public iResourceBase
 	{
@@ -86,7 +87,7 @@ namespace hpl {
 		void Destroy(){}
 
 	protected:
-		void LoadSoundsInElement(cXmlElement *apElement, tStringVec *apStringVec);
+		void LoadSoundsInElement(XMLChild *apElement, tStringVec *apStringVec);
 		void PreloadSoundsOfType(eSoundEntityType aType);
 
 		cResources *mpResources;

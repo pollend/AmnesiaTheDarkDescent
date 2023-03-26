@@ -90,11 +90,8 @@ namespace hpl {
 		////////////////////////////////////////
 		// Get shapes for body
 		tCollideShapeVec vShapes;
-		cXmlNodeListIterator boundShapeIt = apBodyElem->GetChildIterator();
-		while(boundShapeIt.HasNext())
-		{
-			cXmlElement *pShapeElem = boundShapeIt.Next()->ToElement();
-			int lShapeID = pShapeElem->GetAttributeInt("ID");
+		for(auto& pShapeElem: apBodyElem->Children()) {
+			int lShapeID = pShapeElem.Content()->GetAttributeInt("ID");
 
 			tLoaderCollideShapeMapIt it = a_setShapes.find(lShapeID);
 			if(it != a_setShapes.end())
@@ -181,7 +178,7 @@ namespace hpl {
 	}
 
 	static iPhysicsJoint* CreateJoint(	const tString& asEntityName,
-										cXmlElement *apJointElem, iPhysicsWorld *apPhysicsWorld,
+										XMLChild* apJointElem, iPhysicsWorld *apPhysicsWorld,
 										tLoaderPhysicsBodyMap &a_setBodies,
 										const cMatrixf& a_mtxTransform,
 										const cVector3f& avScale)
@@ -189,23 +186,23 @@ namespace hpl {
 
 		/////////////////////////////
 		//Get pin direction and pivot and transform according to entity
-		cVector3f vPivot = apJointElem->GetAttributeVector3f("WorldPos") * avScale;
-		cVector3f vPinDir = apJointElem->GetAttributeVector3f("PinDir");
+		cVector3f vPivot = apJointElem->Content()->GetAttributeVector3f("WorldPos") * avScale;
+		cVector3f vPinDir = apJointElem->Content()->GetAttributeVector3f("PinDir");
 
 		vPivot = cMath::MatrixMul(a_mtxTransform, vPivot);
 		vPinDir = cMath::MatrixMul3x3(a_mtxTransform, vPinDir);
 
 		/////////////////////////////
 		//Name and type
-		tString sJointName = asEntityName + "_" + apJointElem->GetAttributeString("Name");
+		tString sJointName = asEntityName + "_" + apJointElem->Content()->GetAttributeString("Name");
 
-		ePhysicsJointType jointType = ToJointType(apJointElem->GetValue());
+		ePhysicsJointType jointType = ToJointType(apJointElem->name());
 
 
 		/////////////////////////////
 		//Get the bodies
-		int lParentID = apJointElem->GetAttributeInt("ConnectedParentBodyID");
-		int lChildID = apJointElem->GetAttributeInt("ConnectedChildBodyID");
+		int lParentID = apJointElem->Content()->GetAttributeInt("ConnectedParentBodyID");
+		int lChildID = apJointElem->Content()->GetAttributeInt("ConnectedChildBodyID");
 
 		iPhysicsBody *pParentBody = lParentID > 0 ? FindBody(lParentID,a_setBodies) : NULL;
 		iPhysicsBody *pChildBody = FindBody(lChildID,a_setBodies);
@@ -222,8 +219,8 @@ namespace hpl {
 		{
 			iPhysicsJointHinge *pJoint = apPhysicsWorld->CreateJointHinge(sJointName,vPivot,vPinDir,pParentBody,pChildBody);
 
-			pJoint->SetMinAngle(cMath::ToRad(apJointElem->GetAttributeFloat("MinAngle")));
-			pJoint->SetMaxAngle(cMath::ToRad(apJointElem->GetAttributeFloat("MaxAngle")));
+			pJoint->SetMinAngle(cMath::ToRad(apJointElem->Content()->GetAttributeFloat("MinAngle")));
+			pJoint->SetMaxAngle(cMath::ToRad(apJointElem->Content()->GetAttributeFloat("MaxAngle")));
 
 			return pJoint;
 		}
@@ -233,8 +230,8 @@ namespace hpl {
 		{
 			iPhysicsJointBall *pJoint = apPhysicsWorld->CreateJointBall(sJointName,vPivot,vPinDir,pParentBody,pChildBody);
 
-			pJoint->SetConeLimits(	cMath::ToRad(apJointElem->GetAttributeFloat("MaxConeAngle")),
-									cMath::ToRad(apJointElem->GetAttributeFloat("MaxTwistAngle")));
+			pJoint->SetConeLimits(	cMath::ToRad(apJointElem->Content()->GetAttributeFloat("MaxConeAngle")),
+									cMath::ToRad(apJointElem->Content()->GetAttributeFloat("MaxTwistAngle")));
 
 			return pJoint;
 		}
@@ -244,8 +241,8 @@ namespace hpl {
 		{
 			iPhysicsJointSlider *pJoint = apPhysicsWorld->CreateJointSlider(sJointName, vPivot,vPinDir,pParentBody,pChildBody);
 
-			pJoint->SetMinDistance(apJointElem->GetAttributeFloat("MinDistance"));
-			pJoint->SetMaxDistance(apJointElem->GetAttributeFloat("MaxDistance"));
+			pJoint->SetMinDistance(apJointElem->Content()->GetAttributeFloat("MinDistance"));
+			pJoint->SetMaxDistance(apJointElem->Content()->GetAttributeFloat("MaxDistance"));
 
 			return pJoint;
 		}
@@ -255,8 +252,8 @@ namespace hpl {
 		{
 			iPhysicsJointScrew *pJoint = apPhysicsWorld->CreateJointScrew(sJointName,vPivot,vPinDir,pParentBody,pChildBody);
 
-			pJoint->SetMinDistance(apJointElem->GetAttributeFloat("MinDistance"));
-			pJoint->SetMaxDistance(apJointElem->GetAttributeFloat("MaxDistance"));
+			pJoint->SetMinDistance(apJointElem->Content()->GetAttributeFloat("MinDistance"));
+			pJoint->SetMaxDistance(apJointElem->Content()->GetAttributeFloat("MaxDistance"));
 
 			return pJoint;
 		}
@@ -294,7 +291,7 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 
 
-	iEntity3D* cEntityLoader_Object::Load(	const tString &asName, int alID, bool abActive, cXmlElement *apRootElem,
+	iEntity3D* cEntityLoader_Object::Load(	const tString &asName, int alID, bool abActive, XMLChild* apRootElem,
 											const cMatrixf &a_mtxTransform, const cVector3f &avScale,
 											cWorld *apWorld, const tString &asFileName, const tWString &asFullPath, cResourceVarsObject *apInstanceVars)
 	{
@@ -329,7 +326,7 @@ namespace hpl {
 
 		////////////////////////////////////////
 		// Load ModelData
-		cXmlElement* pModelDataElem = apRootElem->GetFirstElement("ModelData");
+		auto* pModelDataElem = apRootElem->Content()->Find("ModelData");
 		if(pModelDataElem==NULL){
 			Error("Couldn't load element ModelData"); return NULL;
 		}
@@ -344,15 +341,15 @@ namespace hpl {
 
 		////////////////////////////////////////
 		// Load Mesh and create entity
-		cXmlElement *pMeshElem =NULL;
+		XMLChild* pMeshElem =NULL;
 		{
-			pMeshElem  = pModelDataElem->GetFirstElement("Mesh");
+			pMeshElem  = pModelDataElem->Content()->Find("Mesh");
 			if(pMeshElem==NULL){
 				Error("Couldn't load element Mesh"); return NULL;
 			}
 
 			// Create mesh
-			tString sMeshFile = pMeshElem->GetAttributeString("Filename");
+			tString sMeshFile = pMeshElem->Content()->GetAttributeString("Filename");
 			if(cString::GetFilePath(sMeshFile).size() < 1)
 			{
 				sMeshFile = cString::SetFilePath(sMeshFile, cString::To8Char(cString::GetFilePathW(asFullPath) ) );
@@ -376,14 +373,11 @@ namespace hpl {
 		// Load sub meshes
 		{
 			bool bHasSkeleton = mpMesh->GetSkeleton()!=NULL;
-			cXmlNodeListIterator submeshIt = pMeshElem->GetChildIterator();
-			while(submeshIt.HasNext())
+			for(auto& pSubMeshElem: pMeshElem->Content()->Children())
 			{
-				cXmlElement *pSubMeshElem = submeshIt.Next()->ToElement();
-
 				//////////////////////////
 				// Load the sub entity
-				tString sName = pSubMeshElem->GetAttributeString("Name");
+				tString sName = pSubMeshElem.Content()->GetAttributeString("Name");
 				//tString sMaterialFile = cString::ToString(pSubMeshElem->Attribute("MaterialFile"),"");
 
 				cSubMeshEntity *pSubEntity = mpEntity->GetSubMeshEntityName(sName);
@@ -400,9 +394,9 @@ namespace hpl {
 				// Get transform matrix
 				if(bHasSkeleton==false)
 				{
-					cMatrixf mtxLocalTransform = GetMatrixFromVectors(	pSubMeshElem->GetAttributeVector3f("WorldPos")*mvScale,
-																		pSubMeshElem->GetAttributeVector3f("Rotation"),
-																		pSubMeshElem->GetAttributeVector3f("Scale")*mvScale);
+					cMatrixf mtxLocalTransform = GetMatrixFromVectors(	pSubMeshElem.Content()->GetAttributeVector3f("WorldPos")*mvScale,
+																		pSubMeshElem.Content()->GetAttributeVector3f("Rotation"),
+																		pSubMeshElem.Content()->GetAttributeVector3f("Scale")*mvScale);
 
 					//mtxLocalTransform = cMath::MatrixMul(mtxLocalTransform, cMath::MatrixScale(mvScale));
 
@@ -411,8 +405,8 @@ namespace hpl {
 
 				//////////////////////////
 				// Set the variables
-				int lID = pSubMeshElem->GetAttributeInt("ID",-1);
-				if(lID < 0) lID = pSubMeshElem->GetAttributeInt("SubMeshID"); //To support older files!
+				int lID = pSubMeshElem.Content()->GetAttributeInt("ID",-1);
+				if(lID < 0) lID = pSubMeshElem.Content()->GetAttributeInt("SubMeshID"); //To support older files!
 
 				pSubEntity->SetUniqueID(lID);
 
@@ -433,18 +427,16 @@ namespace hpl {
 
 		////////////////////////////////////////
 		// Animations
-		cXmlElement *pAnimationsElem  = pModelDataElem->GetFirstElement("Animations");
+		auto* pAnimationsElem  = pModelDataElem->Content()->Find("Animations");
 		if(mbLoadAnimations && mpEntity && pAnimationsElem)
 		{
-			cXmlNodeListIterator animElemIt = pAnimationsElem->GetChildIterator();
-			while(animElemIt.HasNext())
+			for(auto& pAnimElem: pAnimationsElem->Content()->Children())
 			{
-				cXmlElement *pAnimElem = animElemIt.Next()->ToElement();
-
-				tString sFile = pAnimElem->GetAttributeString("File");
-				tString sName = pAnimElem->GetAttributeString("Name");
-				float fSpeed = pAnimElem->GetAttributeFloat("Speed",1.0f);
-				float fSpecialEventTime = pAnimElem->GetAttributeFloat("SpecialEventTime",0.0f);
+				
+				tString sFile = pAnimElem.Content()->GetAttributeString("File");
+				tString sName = pAnimElem.Content()->GetAttributeString("Name");
+				float fSpeed = pAnimElem.Content()->GetAttributeFloat("Speed",1.0f);
+				float fSpecialEventTime = pAnimElem.Content()->GetAttributeFloat("SpecialEventTime",0.0f);
 
 				if(cString::GetFilePath(sFile).length() <= 1)
 					sFile = cString::SetFilePath(sFile, cString::To8Char(cString::GetFilePathW(asFullPath) ) );
@@ -458,15 +450,13 @@ namespace hpl {
 
 					///////////////////////////////
 					// Load events
-					cXmlNodeListIterator eventElemIt = pAnimElem->GetChildIterator();
-					while(eventElemIt.HasNext())
+					for(auto& pEventElem: pAnimElem.Content()->Children())
 					{
-						cXmlElement *pEventElem = eventElemIt.Next()->ToElement();
-
+						
                         cAnimationEvent *pEvent = pState->CreateEvent();
-						pEvent->mfTime = pEventElem->GetAttributeFloat("Time");
-						pEvent->mType = ToAnimEventType(pEventElem->GetAttributeString("Type"));
-						pEvent->msValue = pEventElem->GetAttributeString("Value");
+						pEvent->mfTime = pEventElem.Content()->GetAttributeFloat("Time");
+						pEvent->mType = ToAnimEventType(pEventElem.Content()->GetAttributeString("Type"));
+						pEvent->msValue = pEventElem.Content()->GetAttributeString("Value");
 					}
 
 				}
@@ -480,16 +470,14 @@ namespace hpl {
 			//List that contain light and billboard connections
 			tEFL_LightBillboardConnectionList lstLightBillboardListConnections;
 
-            cXmlElement *pEntitiesElem  = pModelDataElem->GetFirstElement("Entities");
+            auto* pEntitiesElem  = pModelDataElem->Content()->Find("Entities");
 			if(pEntitiesElem)
 			{
 				////////////////////////
 				//Iterate entities
-				cXmlNodeListIterator entityIt = pEntitiesElem->GetChildIterator();
-				while(entityIt.HasNext())
+				for(auto& pEntityElem: pEntitiesElem->Content()->Children())
 				{
-					cXmlElement *pEntityElem = entityIt.Next()->ToElement();
-					const tString& sEntityType = pEntityElem->GetValue();
+					const tString& sEntityType = pEntitiesElem->name();
 					iEntity3D *pEntity = NULL;
 
 					/////////////////////////
@@ -498,7 +486,7 @@ namespace hpl {
 					{
 						if(mbLoadParticleSystems)
 						{
-							cParticleSystem *pPS = cEngineFileLoading::LoadParticleSystem(pEntityElem,asName +"_", apWorld);
+							cParticleSystem *pPS = cEngineFileLoading::LoadParticleSystem(&pEntityElem,asName +"_", apWorld);
 							if(pPS)	mvParticleSystems.push_back(pPS);
 							pEntity = pPS;
 						}
@@ -509,7 +497,7 @@ namespace hpl {
 					{
 						if(mbLoadBillboards)
 						{
-							cBillboard *pBillboard = cEngineFileLoading::LoadBillboard(pEntityElem,asName +"_", apWorld, apWorld->GetResources(), mbLoadAsStatic,
+							cBillboard *pBillboard = cEngineFileLoading::LoadBillboard(&pEntityElem,asName +"_", apWorld, apWorld->GetResources(), mbLoadAsStatic,
 																						&lstLightBillboardListConnections);
 							if(pBillboard)	mvBillboards.push_back(pBillboard);
 							pEntity = pBillboard;
@@ -521,7 +509,7 @@ namespace hpl {
 					{
 						if(mbLoadSounds)
 						{
-							cSoundEntity *pSound = cEngineFileLoading::LoadSound(pEntityElem,asName +"_", apWorld);
+							cSoundEntity *pSound = cEngineFileLoading::LoadSound(&pEntityElem,asName +"_", apWorld);
 							if(pSound)	mvSoundEntities.push_back(pSound);
 							pEntity = pSound;
 						}
@@ -532,7 +520,7 @@ namespace hpl {
 					{
 						if(mbLoadLights)
 						{
-							iLight *pLight = cEngineFileLoading::LoadLight(pEntityElem,asName +"_", apWorld, apWorld->GetResources(),mbLoadAsStatic);
+							iLight *pLight = cEngineFileLoading::LoadLight(&pEntityElem,asName +"_", apWorld, apWorld->GetResources(),mbLoadAsStatic);
 							if(pLight)	mvLights.push_back(pLight);
 							pEntity = pLight;
 						}
@@ -597,10 +585,10 @@ namespace hpl {
 			{
 				//////////////////////////
 				// Iterate bones
-				cXmlNodeListIterator boneIt = pBonesElem->GetChildIterator();
-				while(boneIt.HasNext())
+				// cXmlNodeListIterator boneIt = pBonesElem->GetChildIterator();
+				for(auto& pBoneElem: pBonesElem->Children())
 				{
-					cXmlElement *pBoneElem = boneIt.Next()->ToElement();
+					// cXmlElement *pBoneElem = boneIt.Next()->ToElement();
 
 					int lID = pBoneElem->GetAttributeInt("ID");
 					tString sName = pBoneElem->GetAttributeString("Name");
@@ -633,10 +621,11 @@ namespace hpl {
 			cXmlElement *pShapesElem  = pModelDataElem->GetFirstElement("Shapes");
 			if(pShapesElem)
 			{
-				cXmlNodeListIterator shapeIt = pShapesElem->GetChildIterator();
-				while(shapeIt.HasNext())
+				// cXmlNodeListIterator shapeIt = pShapesElem->GetChildIterator();
+				// while(shapeIt.HasNext())
+				for(auto& pBodyShapeElem: pShapesElem->Children())
 				{
-					cXmlElement *pBodyShapeElem = shapeIt.Next()->ToElement();
+					// cXmlElement *pBodyShapeElem = shapeIt.Next()->ToElement();
 
 					iCollideShape *pCollideShape = CreateCollideShape(pBodyShapeElem, pPhysicsWorld, mvScale);
 					if(pCollideShape == NULL) continue;
@@ -659,12 +648,11 @@ namespace hpl {
 			cXmlElement *pBodiesElem  = pModelDataElem->GetFirstElement("Bodies");
 			if(pBodiesElem)
 			{
-				cXmlNodeListIterator bodyIt = pBodiesElem->GetChildIterator();
-				while(bodyIt.HasNext())
+				for(auto& pBodyElem: pBodiesElem->Children())
 				{
 					/////////////////////
 					// Init
-					cXmlElement *pBodyElem = bodyIt.Next()->ToElement();
+					// cXmlElement *pBodyElem = bodyIt.Next()->ToElement();
 					int lID = pBodyElem->GetAttributeInt("ID");
 					tString sBodyName = pBodyElem->GetAttributeString("Name");
 
@@ -785,12 +773,10 @@ namespace hpl {
 			cXmlElement *JointsElem  = pModelDataElem->GetFirstElement("Joints");
 			if(JointsElem)
 			{
-				cXmlNodeListIterator jointIt = JointsElem->GetChildIterator();
-				while(jointIt.HasNext())
+				// cXmlNodeListIterator jointIt = JointsElem->GetChildIterator();
+				for(auto& pJointElem: JointsElem->Children())
 				{
-					cXmlElement *pJointElem = jointIt.Next()->ToElement();
-
-
+					// cXmlElement *pJointElem = jointIt.Next()->ToElement();
 					iPhysicsJoint *pJoint = CreateJoint(asName,pJointElem,pPhysicsWorld,setBodies, a_mtxTransform, mvScale);
 					if(pJoint)
 					{
@@ -913,10 +899,10 @@ namespace hpl {
 
 		///////////////////////////////
 		//Iterate the children elements
-		cXmlNodeListIterator childIt = pChildrenElem->GetChildIterator();
-		while(childIt.HasNext())
+		// cXmlNodeListIterator childIt = pChildrenElem->GetChildIterator();
+		for(auto& pChildElem: pChildrenElem->Children())
 		{
-			cXmlElement *pChildElem = childIt.Next()->ToElement();
+			// cXmlElement *pChildElem = childIt.Next()->ToElement();
 
 			int lID = pChildElem->GetAttributeInt("ID");
 

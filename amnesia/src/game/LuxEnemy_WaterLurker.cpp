@@ -51,7 +51,7 @@ iLuxEnemy *cLuxEnemyLoader_WaterLurker::CreateEnemy(const tString& asName, int a
 
 //-----------------------------------------------------------------------
 
-void cLuxEnemyLoader_WaterLurker::LoadVariables(iLuxEnemy *apEnemy, cXmlElement *apRootElem)
+void cLuxEnemyLoader_WaterLurker::LoadVariables(iLuxEnemy *apEnemy, XMLChild*apRootElem)
 {
 	cLuxEnemy_WaterLurker *pWaterLurker = static_cast<cLuxEnemy_WaterLurker*>(apEnemy);
 

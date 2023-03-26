@@ -286,7 +286,7 @@ namespace hpl {
 
 		////////////////////////////////////
 		// Read map data (name for now)
-		cXmlElement* pXmlMapData = (cXmlElement*) pDoc->GetFirstElement("MapData");
+		XMLChild* pXmlMapData = (cXmlElementXMLChild pDoc->GetFirstElement("MapData");
 
 		////////////////////////////////////
 		// Load fog
@@ -312,7 +312,7 @@ namespace hpl {
 
 		//////////////////////////////////////////////
 		// Load map contents
-		cXmlElement* pXmlContents = pXmlMapData->GetFirstElement("MapContents");
+		XMLChild* pXmlContents = pXmlMapData->GetFirstElement("MapContents");
 		if(pXmlContents==NULL)
 		{
 			hplDelete(pDoc);
@@ -890,12 +890,12 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cWorldLoaderHplMap::LoadFileIndicies(cXmlElement* apXmlContents)
+	void cWorldLoaderHplMap::LoadFileIndicies(XMLChild* apXmlContents)
 	{
 
 		/////////////////////////////
 		// Decals
-		cXmlElement* pXmlDecals = apXmlContents->GetFirstElement("FileIndex_Decals");
+		XMLChild* pXmlDecals = apXmlContents->GetFirstElement("FileIndex_Decals");
 		if(pXmlDecals)
 		{
 			mvFileIndices_Decals.resize(pXmlDecals->GetAttributeInt("NumOfFiles",0));
@@ -903,7 +903,7 @@ namespace hpl {
 			cXmlNodeListIterator it= pXmlDecals->GetChildIterator();
 			while(it.HasNext())
 			{
-				cXmlElement* pXmlFileIdx = it.Next()->ToElement();
+				XMLChild* pXmlFileIdx = it.Next()->ToElement();
 
 				int lIdx = pXmlFileIdx->GetAttributeInt("Id", 0);
 
@@ -913,7 +913,7 @@ namespace hpl {
 
 		/////////////////////////////
 		// Entities
-		cXmlElement* pXmlEntities = apXmlContents->GetFirstElement("FileIndex_Entities");
+		XMLChild* pXmlEntities = apXmlContents->GetFirstElement("FileIndex_Entities");
 		if(pXmlEntities)
 		{
 			mvFileIndices_Entities.resize(pXmlEntities->GetAttributeInt("NumOfFiles",0));
@@ -921,7 +921,7 @@ namespace hpl {
 			cXmlNodeListIterator it= pXmlEntities->GetChildIterator();
 			while(it.HasNext())
 			{
-				cXmlElement* pXmlFileIdx = it.Next()->ToElement();
+				XMLChild* pXmlFileIdx = it.Next()->ToElement();
 
 				int lIdx = pXmlFileIdx->GetAttributeInt("Id", 0);
 
@@ -931,7 +931,7 @@ namespace hpl {
 
 		/////////////////////////////
 		// Static Objects
-		cXmlElement* pXmlStaticObjects = apXmlContents->GetFirstElement("FileIndex_StaticObjects");
+		XMLChild* pXmlStaticObjects = apXmlContents->GetFirstElement("FileIndex_StaticObjects");
 		if(pXmlStaticObjects)
 		{
 			mvFileIndices_StaticObjects.resize(pXmlStaticObjects->GetAttributeInt("NumOfFiles",0));
@@ -939,7 +939,7 @@ namespace hpl {
 			cXmlNodeListIterator it= pXmlStaticObjects->GetChildIterator();
 			while(it.HasNext())
 			{
-				cXmlElement* pXmlFileIdx = it.Next()->ToElement();
+				XMLChild* pXmlFileIdx = it.Next()->ToElement();
 
 				int lIdx = pXmlFileIdx->GetAttributeInt("Id", 0);
 
@@ -953,7 +953,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cWorldLoaderHplMap::LoadStaticObjects(cXmlElement* apXmlContents)
+	void cWorldLoaderHplMap::LoadStaticObjects(XMLChild* apXmlContents)
 	{
 		unsigned long lStartTime;
 		unsigned long lDeltaTime;
@@ -984,11 +984,11 @@ namespace hpl {
 		/////////////////////////////////
 		//Iterate and load static objects to a container
 		lStartTime = cPlatform::GetApplicationTime();
-		cXmlElement* pXmlStaticObjects = apXmlContents->GetFirstElement("StaticObjects");
+		XMLChild* pXmlStaticObjects = apXmlContents->GetFirstElement("StaticObjects");
 		cXmlNodeListIterator it= pXmlStaticObjects->GetChildIterator();
 		while(it.HasNext())
 		{
-			cXmlElement* pXmlEntity = it.Next()->ToElement();
+			XMLChild* pXmlEntity = it.Next()->ToElement();
 
 			CreateStaticObjectEntity(pXmlEntity, lstMeshEntities, pTempContainer);
 		}
@@ -997,14 +997,14 @@ namespace hpl {
 
 		///////////////////////////////////////
 		//Iterate and load primitives
-		cXmlElement* pXmlPrimitives = apXmlContents->GetFirstElement("Primitives");
+		XMLChild* pXmlPrimitives = apXmlContents->GetFirstElement("Primitives");
 		if(pXmlPrimitives)
 		{
 			lStartTime = cPlatform::GetApplicationTime();
 			cXmlNodeListIterator primIt = pXmlPrimitives->GetChildIterator();
 			while(primIt.HasNext())
 			{
-				cXmlElement* pXmlEntity = primIt.Next()->ToElement();
+				XMLChild* pXmlEntity = primIt.Next()->ToElement();
 
 				CreatePrimitive(pXmlEntity, lstMeshEntities, pTempContainer);
 			}
@@ -1014,14 +1014,14 @@ namespace hpl {
 
 		///////////////////////////////////////
 		//Iterate and load decals (skip when fast loading!)
-		cXmlElement* pXmlDecals = apXmlContents->GetFirstElement("Decals");
+		XMLChild* pXmlDecals = apXmlContents->GetFirstElement("Decals");
 		if(pXmlDecals && !(mlCurrentFlags & eWorldLoadFlag_FastStaticLoad))
 		{
 			lStartTime = cPlatform::GetApplicationTime();
 			cXmlNodeListIterator decalIt = pXmlDecals->GetChildIterator();
 			while(decalIt.HasNext())
 			{
-				cXmlElement* pXmlEntity = decalIt.Next()->ToElement();
+				XMLChild* pXmlEntity = decalIt.Next()->ToElement();
 
 				CreateDecal(pXmlEntity, lstMeshEntities, pTempContainer);
 			}
@@ -1035,14 +1035,14 @@ namespace hpl {
 
 		///////////////////////////////////////
 		//Iterate and combine groups
-		cXmlElement* pXmlObjectCombos = apXmlContents->GetFirstElement("StaticObjectCombos");
+		XMLChild* pXmlObjectCombos = apXmlContents->GetFirstElement("StaticObjectCombos");
 		if(pXmlObjectCombos)
 		{
 			lStartTime = cPlatform::GetApplicationTime();
 			cXmlNodeListIterator comboIt = pXmlObjectCombos->GetChildIterator();
 			while(comboIt.HasNext())
 			{
-				cXmlElement* pXmlCombo = comboIt.Next()->ToElement();
+				XMLChild* pXmlCombo = comboIt.Next()->ToElement();
 
 				CreateStaticObjectCombo(pXmlCombo, lstMeshEntities, pTempContainer);
 			}
@@ -1597,7 +1597,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cWorldLoaderHplMap::CreateStaticObjectEntity(cXmlElement* apElement, tMeshEntityList& alstMeshEntities,
+	void cWorldLoaderHplMap::CreateStaticObjectEntity(XMLChild* apElement, tMeshEntityList& alstMeshEntities,
 														cRenderableContainer_BoxTree *apContainer)
 	{
 		////////////////////////////////
@@ -1885,7 +1885,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cWorldLoaderHplMap::CreatePrimitive(	cXmlElement* apElement, tMeshEntityList& alstMeshEntities,
+	void cWorldLoaderHplMap::CreatePrimitive(	XMLChild* apElement, tMeshEntityList& alstMeshEntities,
 												cRenderableContainer_BoxTree *apContainer)
 	{
 		////////////////////////////////
@@ -1989,7 +1989,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cWorldLoaderHplMap::CreateDecal(	cXmlElement* apElement, tMeshEntityList& alstMeshEntities,
+	void cWorldLoaderHplMap::CreateDecal(XMLChild* apElement, tMeshEntityList& alstMeshEntities,
 											cRenderableContainer_BoxTree *apDecalContainer)
 	{
 		////////////////////////////////
@@ -2024,7 +2024,7 @@ namespace hpl {
 
 		////////////////////////////////
 		//Load Vertex data
-		cXmlElement* pDecalMeshElem = apElement->GetFirstElement("DecalMesh");
+		XMLChild* pDecalMeshElem = apElement->Content().Find("DecalMesh");
 		cMesh* pMesh = cEngineFileLoading::LoadDecalMeshHelper(pDecalMeshElem, mpGraphics, mpResources, sName, sMaterial, decalColor);
 		if(pMesh==NULL)	return;
 
@@ -2086,7 +2086,7 @@ namespace hpl {
 		return NULL;
 	}
 
-	void cWorldLoaderHplMap::CreateStaticObjectCombo(	cXmlElement* apElement, tMeshEntityList& alstMeshEntities,
+	void cWorldLoaderHplMap::CreateStaticObjectCombo(	XMLChild* apElement, tMeshEntityList& alstMeshEntities,
 														cRenderableContainer_BoxTree *apContainer)
 	{
 		tMeshEntityList lstCombineMeshes;
@@ -2143,7 +2143,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cWorldLoaderHplMap::LoadEntities(cXmlElement* apXmlContents)
+	void cWorldLoaderHplMap::LoadEntities(XMLChild* apXmlContents)
 	{
 		if(mlCurrentFlags & eWorldLoadFlag_FastEntityLoad)
 			mpResources->GetMeshManager()->SetUseFastloadMaterial(true);
@@ -2153,11 +2153,11 @@ namespace hpl {
 
 		/////////////////////////////////////
 		//Iterate all entities in contents
-		cXmlElement* pXmlEntities = apXmlContents->GetFirstElement("Entities");
+		XMLChild* pXmlEntities = apXmlContents->GetFirstElement("Entities");
 		cXmlNodeListIterator it = pXmlEntities->GetChildIterator();
 		while(it.HasNext())
 		{
-			cXmlElement* pXmlEntity = it.Next()->ToElement();
+			XMLChild* pXmlEntity = it.Next()->ToElement();
 
 			CreateLoadedEntity(pXmlEntity, &lstLightBillboardListConnections);
 		}
@@ -2194,7 +2194,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cWorldLoaderHplMap::CreateLoadedEntity(cXmlElement* apElement, tEFL_LightBillboardConnectionList *apLightBillboardList)
+	void cWorldLoaderHplMap::CreateLoadedEntity(XMLChild* apElement, tEFL_LightBillboardConnectionList *apLightBillboardList)
 	{
 		tString sObjectType = apElement->GetValue();
 
@@ -2276,7 +2276,7 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 
 
-	void cWorldLoaderHplMap::LoadEntity(const tString& asName, int alID, bool abActive, const cVector3f& avPos, const cVector3f& avRot, const cVector3f& avScale, cXmlElement* apElement)
+	void cWorldLoaderHplMap::LoadEntity(const tString& asName, int alID, bool abActive, const cVector3f& avPos, const cVector3f& avRot, const cVector3f& avScale, XMLChild* apElement)
 	{
 		cMatrixf mtxTransform = cMath::MatrixRotate(avRot,eEulerRotationOrder_XYZ);
 		mtxTransform.SetTranslation(avPos);
@@ -2314,7 +2314,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cWorldLoaderHplMap::LoadArea(const tString& asName, int alID, bool abActive,const cVector3f& avPos, const cVector3f& avRot,const cVector3f& avScale, cXmlElement* apElement)
+	void cWorldLoaderHplMap::LoadArea(const tString& asName, int alID, bool abActive,const cVector3f& avPos, const cVector3f& avRot,const cVector3f& avScale, XMLChild* apElement)
 	{
 		cMatrixf mtxTransform = cMath::MatrixRotate(avRot,eEulerRotationOrder_XYZ);
 		mtxTransform.SetTranslation(avPos);

@@ -802,11 +802,11 @@ public:
 	iLuxEnemyLoader(const tString& asName);
 	virtual ~iLuxEnemyLoader(){}
 
-	void BeforeLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTransform,cWorld *apWorld, cResourceVarsObject *apInstanceVars);
-	void AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTransform,cWorld *apWorld, cResourceVarsObject *apInstanceVars);
+	void BeforeLoad(XMLChild* apRootElem, const cMatrixf &a_mtxTransform,cWorld *apWorld, cResourceVarsObject *apInstanceVars);
+	void AfterLoad(XMLChild* apRootElem, const cMatrixf &a_mtxTransform,cWorld *apWorld, cResourceVarsObject *apInstanceVars);
 
 	virtual iLuxEnemy *CreateEnemy(const tString& asName, int alID, cLuxMap *apMap)=0;
-	virtual void LoadVariables(iLuxEnemy *apEnemy, cXmlElement *apRootElem)=0;
+	virtual void LoadVariables(iLuxEnemy *apEnemy, XMLChild* apRootElem)=0;
 	virtual void LoadInstanceVariables(iLuxEnemy *apEnemy, cResourceVarsObject *apInstanceVars)=0;
 
 protected:

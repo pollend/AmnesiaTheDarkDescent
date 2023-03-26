@@ -102,7 +102,7 @@ namespace hpl {
 			return false;
 		}
 
-		bool bRet = LoadFromElement(pXmlDoc);
+		bool bRet = LoadFromElement(&pXmlDoc->Root());
 
 		hplDelete(pXmlDoc);
 		return bRet;
@@ -132,20 +132,21 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	bool cParticleSystemData::LoadFromElement(cXmlElement* apElement)
+	bool cParticleSystemData::LoadFromElement(XMLChild* child)
 	{
-		if(apElement->GetValue()!="ParticleSystem")
+		if(child->name() != "ParticleSystem") {
 			return false;
+		}
 
-		cXmlNodeListIterator it = apElement->GetChildIterator();
-		while(it.HasNext())
+		// cXmlNodeListIterator it = apElement->GetChildIterator();
+		for(auto& pElem: child->Content()->Children())
 		{
-			cXmlElement* pElem = it.Next()->ToElement();
-			if(pElem->GetValue()!="ParticleEmitter")
+			// cXmlElement* pElem = it.Next()->ToElement();
+			if(pElem.name() != "ParticleEmitter")
 				continue;
 
 			cParticleEmitterData_UserData *pPE = hplNew( cParticleEmitterData_UserData,("",	mpResources,mpGraphics) );
-			pPE->LoadFromElement(pElem);
+			pPE->LoadFromElement(&pElem);
 
 			mvEmitterData.push_back(pPE);
 		}

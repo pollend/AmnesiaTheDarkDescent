@@ -360,10 +360,12 @@ void iLuxEntity::PreloadEntityModel(const tString &asFile)
 
 	//////////////////////
 	// Get Model File name
-	cXmlElement *pModelDataElem = pEntityDoc->GetFirstElement("ModelData");
-	cXmlElement *pMeshElem = pModelDataElem->GetFirstElement("Mesh");
+	
+	
+	auto* pModelDataElem = pEntityDoc->Root().Content()->Find("ModelData");
+	auto* pMeshElem = pModelDataElem->Content()->Find("Mesh");
 
-	tString sModelFile = pMeshElem->GetAttributeString("Filename","");
+	tString sModelFile = pMeshElem->Content()->GetAttributeString("Filename","");
 
 	//////////////////////
 	// Load Mesh

@@ -21,117 +21,80 @@
 
 #include "system/LowLevelSystem.h"
 #include "system/String.h"
+#include <algorithm>
 
 namespace hpl {
 
-	//////////////////////////////////////////////////////////////////////////
-	// NODE
-	//////////////////////////////////////////////////////////////////////////
+	// //////////////////////////////////////////////////////////////////////////
+	// // NODE
+	// //////////////////////////////////////////////////////////////////////////
 
-	//-----------------------------------------------------------------------
+	// //-----------------------------------------------------------------------
 
-	iXmlNode::iXmlNode(eXmlNodeType aType, iXmlNode *apParent, const tString& asValue)
-	{
-		mType = aType;
-		msValue = asValue;
-		mpParent = apParent;
-	}
-	//-----------------------------------------------------------------------
+	// IXMLNode::IXMLNode(eXmlNodeType aType, cXmlElement *apParent, const tString& asValue):
+	// 	m_value(asValue),
+	// 	m_parent(apParent)
+	// {
+	// }
+	// //-----------------------------------------------------------------------
 
-	iXmlNode::~iXmlNode()
-	{
-		DestroyChildren();
-	}
+	// IXMLNode::~IXMLNode()
+	// {
+	// 	DestroyChildren();
+	// }
 
-	//-----------------------------------------------------------------------
+	// cXmlElement* IXMLNode::GetFirstElement(const tString& asName)
+	// {
+	// 	return  FindChild(asName);
+	// }
 
-	cXmlElement* iXmlNode::ToElement()
-	{
-		if(mType == eXmlNodeType_Element)	return static_cast<cXmlElement*> ( this );
-		else								return NULL;
-	}
+	// cXmlElement * IXMLNode::CreateChildElement(const tString& asName)
+	// {
+	// 	cXmlElement *pElement = hplNew(cXmlElement, (asName,this));
 
-	cXmlElement* iXmlNode::GetFirstElement()
-	{
-		return static_cast<cXmlElement*>(GetFirstOfType(eXmlNodeType_Element));
-	}
+	// 	AddChild(pElement);
 
-	cXmlElement* iXmlNode::GetFirstElement(const tString& asName)
-	{
-		return static_cast<cXmlElement*>(GetFirstOfType(eXmlNodeType_Element, asName));
-	}
+	// 	return pElement;
+	// }
 
-	cXmlElement * iXmlNode::CreateChildElement(const tString& asName)
-	{
-		cXmlElement *pElement = hplNew(cXmlElement, (asName,this));
+	// //-----------------------------------------------------------------------
 
-		AddChild(pElement);
+	// void IXMLNode::AddChild(cXmlElement* apNode)
+	// {
+	// 	m_children.push_back(apNode);
+	// }
 
-		return pElement;
-	}
+	// void IXMLNode::DestroyChild(cXmlElement* apNode)
+	// {
+	// 	auto it = std::find_if(m_children.begin(), m_children.end(), [apNode](auto &p) { return p == apNode; });
+	// 	if(it != m_children.end())
+	// 	{
+	// 		delete apNode;
+	// 		m_children.erase(it);
+	// 	}
+	// }
 
-	//-----------------------------------------------------------------------
+	// cXmlElement* IXMLNode::FindChild(const std::string& name) {
+	// 	for(auto& child: m_children) {
+	// 		if(child->GetValue() == name) {
+	// 			return child;
+	// 		}
+	// 	}
+	// 	return nullptr;
+	// }
 
-	void iXmlNode::AddChild(iXmlNode* apNode)
-	{
-		mlstChildren.push_back(apNode);
-	}
+	// cXmlElement::ChildCollection::iterator cXmlElement::Find(const std::string& name) {
+	// 	return std::find_if(m_children.begin(), m_children.end(), [&name](auto &p) { return p.name() == name; });
+	// }
 
-	void iXmlNode::DestroyChild(iXmlNode* apNode)
-	{
-		STLFindAndDelete(mlstChildren, apNode);
-	}
+	// //-----------------------------------------------------------------------
 
-	//-----------------------------------------------------------------------
-
-	iXmlNode* iXmlNode::GetFirstOfType(eXmlNodeType aType)
-	{
-		if(mlstChildren.empty()) return NULL;
-
-		tXmlNodeListIt it = mlstChildren.begin();
-		iXmlNode *pNode = *it;
-		while(pNode->GetType() != eXmlNodeType_Element)
-		{
-			++it;
-			if(it == mlstChildren.end()) return NULL;
-			pNode = *it;
-		}
-
-		return pNode;
-	}
-
-	//-----------------------------------------------------------------------
-
-	iXmlNode* iXmlNode::GetFirstOfType(eXmlNodeType aType, const tString& asName)
-	{
-		if(mlstChildren.empty()) return NULL;
-
-		tXmlNodeListIt it = mlstChildren.begin();
-		iXmlNode *pNode = *it;
-		while(	pNode->GetType() != eXmlNodeType_Element ||
-				pNode->GetValue() != asName )
-		{
-			++it;
-			if(it == mlstChildren.end()) return NULL;
-			pNode = *it;
-		}
-
-		return pNode;
-	}
-
-	//-----------------------------------------------------------------------
-
-	cXmlNodeListIterator iXmlNode::GetChildIterator()
-	{
-		return cXmlNodeListIterator(&mlstChildren);
-	}
-
-	//-----------------------------------------------------------------------
-
-	void iXmlNode::DestroyChildren()
-	{
-		STLDeleteAll(mlstChildren);
-	}
+	// void IXMLNode::DestroyChildren()
+	// {
+	// 	for(auto& child: m_children) {
+	// 		delete child;
+	// 	}
+	// }
 
 	//-----------------------------------------------------------------------
 
@@ -141,8 +104,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	cXmlElement::cXmlElement(const tString& asName, iXmlNode* apParent) : iXmlNode(eXmlNodeType_Element,apParent,asName)
-	{
+	cXmlElement::cXmlElement() {
 	}
 
 	cXmlElement::~cXmlElement()
@@ -153,15 +115,29 @@ namespace hpl {
 
 	const char* cXmlElement::GetAttribute(const tString& asName)
 	{
-		tAttributeMapIt it = m_mapAttributes.find(asName);
-		if(it != m_mapAttributes.end())
+
+		auto it = std::find_if(m_attributes.begin(), m_attributes.end(),[&](const auto& a) { return a.key() == asName;});
+		if(it != m_attributes.end())
 		{
-			return it->second.c_str();
+			return it->value().c_str();
 		}
-		return NULL;
+		return nullptr;
 	}
 
 	//-----------------------------------------------------------------------
+
+
+	XMLChild& cXmlElement::AddChild(const std::string_view& name) {
+		return m_children.emplace_back(XMLChild(name, std::make_unique<cXmlElement>()));
+	}
+
+	XMLChild* cXmlElement::Find(const std::string& name) {
+		auto it = std::find_if(m_children.begin(), m_children.end(), [&name](auto &p) { return p.name() == name; });
+		if(it != m_children.end()) {
+			return &*it;
+		}
+		return nullptr;
+	}
 
 	tString cXmlElement::GetAttributeString(const tString& asName, const tString& asDefault)
 	{
@@ -206,14 +182,14 @@ namespace hpl {
 
 	void cXmlElement::SetAttribute(const tString& asName, const char* asVal)
 	{
-		tAttributeMapIt it = m_mapAttributes.find(asName);
-		if(it != m_mapAttributes.end())
+		auto it = std::find_if(m_attributes.begin(), m_attributes.end(),[&](const auto& a) { return a.key() == asName;});
+		if(it != m_attributes.end())
 		{
-			it->second = asVal;
+			it->m_value = asVal;
 		}
 		else
 		{
-			m_mapAttributes.insert(tAttributeMap::value_type(asName, asVal));
+			m_attributes.push_back({asName,asVal});
 		}
 	}
 
@@ -252,31 +228,15 @@ namespace hpl {
 		SetAttribute(asName, aVal.ToFileString().c_str());
 	}
 
-	//-----------------------------------------------------------------------
-
-
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
-	iXmlDocument::iXmlDocument(const tString& asName) : cXmlElement(asName, NULL)
+	iXmlDocument::iXmlDocument(const tString& asName):
+		m_root(asName, std::make_unique<cXmlElement>()),
+		msFile(_W(""))
 	{
-		msFile = _W("");
 	}
 
 	iXmlDocument::~iXmlDocument()
 	{
 	}
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	bool iXmlDocument::CreateFromFile(const tWString& asPath)
 	{
@@ -304,14 +264,4 @@ namespace hpl {
 		return SaveDataToFile(asPath);
 	}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PRIVATE METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
-
-	//-----------------------------------------------------------------------
 }

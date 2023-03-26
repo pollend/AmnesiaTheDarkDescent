@@ -61,12 +61,12 @@ cLuxHandObjectLoader::cLuxHandObjectLoader(const tString& asName) : cEntityLoade
 
 //-----------------------------------------------------------------------
 
-void cLuxHandObjectLoader::BeforeLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTransform,cWorld *apWorld, cResourceVarsObject *apInstanceVars)
+void cLuxHandObjectLoader::BeforeLoad(XMLChild* apRootElem, const cMatrixf &a_mtxTransform,cWorld *apWorld, cResourceVarsObject *apInstanceVars)
 {
 
 }
 
-void cLuxHandObjectLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTransform,cWorld *apWorld, cResourceVarsObject *apInstanceVars)
+void cLuxHandObjectLoader::AfterLoad(XMLChild* apRootElem, const cMatrixf &a_mtxTransform,cWorld *apWorld, cResourceVarsObject *apInstanceVars)
 {
 	///////////////////////////////
 	// Load mesh

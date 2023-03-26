@@ -78,12 +78,12 @@ public:
 	{
 	}
 
-	void BeforeLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTransform,cWorld *apWorld, cResourceVarsObject *apInstanceVars)
+	void BeforeLoad(XMLChild* apRootElem, const cMatrixf &a_mtxTransform,cWorld *apWorld, cResourceVarsObject *apInstanceVars)
 	{
 
 	}
 
-	void AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTransform,cWorld *apWorld, cResourceVarsObject *apInstanceVars)
+	void AfterLoad(XMLChild* apRootElem, const cMatrixf &a_mtxTransform,cWorld *apWorld, cResourceVarsObject *apInstanceVars)
 	{
 		gvBodies = mvBodies;
 
@@ -814,14 +814,14 @@ public:
 
 		/////////////////////////
 		// Main
-		cXmlElement *pMainElem = pXmlDoc->CreateChildElement("Main");
+		auto* pMainElem = pXmlDoc->Root().Content()->AddChild("Main");
 		pMainElem->SetAttributeString("Type","SolidDiffuse");
 		pMainElem->SetAttributeString("PhysicsMaterial","Default");
 		pMainElem->SetAttributeString("DepthTest", "True");
 
 		/////////////////////////
 		// TextureUnits
-		cXmlElement *pTexUnitsElem = pXmlDoc->CreateChildElement("TextureUnits");
+		auto* pTexUnitsElem = pXmlDoc->Root().Content()->AddChild("TextureUnits");
 
 		//Iterate the texture types
 		for(int i=0; i<eMaterialTexture_LastEnum; ++i)
@@ -877,7 +877,7 @@ public:
 
 		/////////////////////////
 		// Variables
-		cXmlElement *pSpecificVariablesElem = pXmlDoc->CreateChildElement("SpecificVariables");
+		auto* pSpecificVariablesElem = pXmlDoc->Root().Content()->AddChild("SpecificVariables");
 		iMaterialType *pMatType = gpEngine->GetGraphics()->GetMaterialType("SolidDiffuse");
 		if(pMatType)
 		{

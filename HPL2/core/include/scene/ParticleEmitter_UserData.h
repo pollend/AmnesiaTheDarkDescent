@@ -20,6 +20,7 @@
 #ifndef HPL_PARTICLE_EMITTER_USER_DATA_H
 #define HPL_PARTICLE_EMITTER_USER_DATA_H
 
+#include "resources/XmlDocument.h"
 #include "scene/ParticleEmitter.h"
 #include "physics/PhysicsTypes.h"
 
@@ -28,7 +29,8 @@ class TiXmlElement;
 namespace hpl {
 
 	class cXmlElement;
-
+	class XMLChild;
+	
 	enum ePEStartPosType
 	{
 		ePEStartPosType_Box,
@@ -80,7 +82,7 @@ namespace hpl {
 
 		iParticleEmitter* Create(tString asName, cVector3f avSize);
 
-		void LoadFromElement(cXmlElement *apElement);
+		void LoadFromElement(XMLChild* apElement);
 
 		bool CheckCollision(const cVector3f& avStart, const cVector3f &avEnd,
 									iPhysicsWorld *apPhysicsWorld,

@@ -42,6 +42,7 @@ namespace hpl {
 	class iLight;
 	class iHapticShape;
 	class cBoneState;
+	class XMLChild;
 
 	//--------------------------------------------
 
@@ -73,8 +74,8 @@ namespace hpl {
 						cWorld *apWorld, const tString &asFileName, const tWString &asFullPath, cResourceVarsObject *apInstanceVars);
 
 	protected:
-		virtual void BeforeLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTransform,cWorld *apWorld, cResourceVarsObject *apInstanceVars)=0;
-		virtual void AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTransform,cWorld *apWorld, cResourceVarsObject *apInstanceVars)=0;
+		virtual void BeforeLoad(XMLChild* apRootElem, const cMatrixf &a_mtxTransform,cWorld *apWorld, cResourceVarsObject *apInstanceVars)=0;
+		virtual void AfterLoad(XMLChild* apRootElem, const cMatrixf &a_mtxTransform,cWorld *apWorld, cResourceVarsObject *apInstanceVars)=0;
 
 		void AttachEntityChild(iEntity3D *apParent, const cMatrixf& a_mtxInvParent, iEntity3D *apChild);
 		void AttachBoneChild(cBoneState *apBoneState, const cMatrixf& a_mtxInvParent, iEntity3D *apChild);
@@ -86,8 +87,8 @@ namespace hpl {
 		cBillboard* GetBillboardFromID(int alID);
 		iLight* GetLightFromName(const tString& asName);
 
-		void SetBodyProperties(iPhysicsBody *apBody, cXmlElement *apPhysicsElem);
-		void SetJointProperties(iPhysicsJoint *apJoint, cXmlElement *apJointElem,cWorld *apWorld);
+		void SetBodyProperties(iPhysicsBody *apBody, XMLChild *apPhysicsElem);
+		void SetJointProperties(iPhysicsJoint *apJoint, XMLChild* apJointElem,cWorld *apWorld);
 
 		void LoadController(iPhysicsJoint *apJoint,iPhysicsWorld *apPhysicsWorld, TiXmlElement *apElem);
 

@@ -51,7 +51,7 @@ iLuxEnemy *cLuxEnemyLoader_ManPig::CreateEnemy(const tString& asName, int alID, 
 
 //-----------------------------------------------------------------------
 
-void cLuxEnemyLoader_ManPig::LoadVariables(iLuxEnemy *apEnemy, cXmlElement *apRootElem)
+void cLuxEnemyLoader_ManPig::LoadVariables(iLuxEnemy *apEnemy, XMLChild* apRootElem)
 {
 	cLuxEnemy_ManPig *pManPig = static_cast<cLuxEnemy_ManPig*>(apEnemy);
 

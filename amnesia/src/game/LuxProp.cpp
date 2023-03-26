@@ -40,14 +40,14 @@ iLuxPropLoader::iLuxPropLoader(const tString& asName) : cEntityLoader_Object(asN
 
 //-----------------------------------------------------------------------
 
-void iLuxPropLoader::BeforeLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTransform,cWorld *apWorld, cResourceVarsObject *apInstanceVars)
+void iLuxPropLoader::BeforeLoad(XMLChild* apRootElem, const cMatrixf &a_mtxTransform,cWorld *apWorld, cResourceVarsObject *apInstanceVars)
 {
 
 }
 
 //-----------------------------------------------------------------------
 
-void iLuxPropLoader::AfterLoad(cXmlElement *apRootElem, const cMatrixf &a_mtxTransform,cWorld *apWorld, cResourceVarsObject *apInstanceVars)
+void iLuxPropLoader::AfterLoad(XMLChild* apRootElem, const cMatrixf &a_mtxTransform,cWorld *apWorld, cResourceVarsObject *apInstanceVars)
 {
 	cLuxMap *pMap = gpBase->mpCurrentMapLoading;
 	if(pMap==NULL)	return;

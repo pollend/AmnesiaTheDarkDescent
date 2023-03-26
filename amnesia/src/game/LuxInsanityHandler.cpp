@@ -953,11 +953,8 @@ void cLuxInsanityHandler::LoadEvents(const tString& asFile)
 
 	///////////////////////
 	// Iterate children and create events
-    cXmlNodeListIterator it = pXmlDoc->GetChildIterator();
-	while(it.HasNext())
+    for(auto& pChildElem: pXmlDoc->Children())
 	{
-		cXmlElement *pChildElem = it.Next()->ToElement();
-
 		tString sType = pChildElem->GetValue();
 		iLuxInstanityEvent* pEvent = EventTypeToData(sType);
 		if(pEvent)

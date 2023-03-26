@@ -159,16 +159,15 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cSoundEntityData::LoadSoundsInElement(cXmlElement *apElement, tStringVec *apStringVec)
+	void cSoundEntityData::LoadSoundsInElement(XMLChild *apElement, tStringVec *apStringVec)
 	{
 		if(apElement == NULL) return;
 
-		cXmlNodeListIterator it = apElement->GetChildIterator();
-		while(it.HasNext())
+		// cXmlNodeListIterator it = apElement->GetChildIterator();
+		for(auto& pChild: apElement->Content()->Children())
 		{
-			cXmlElement *pChild = it.Next()->ToElement();
-
-            apStringVec->push_back(pChild->GetAttributeString("File"));
+			// cXmlElement *pChild = it.Next()->ToElement();
+            apStringVec->push_back(pChild.Content()->GetAttributeString("File"));
 		}
 	}
 
@@ -186,45 +185,45 @@ namespace hpl {
 
 		////////////////////////////////////////////////
 		// SOUNDS
-		cXmlElement *pSoundsElem = pDoc->GetFirstElement("SOUNDS");
+		auto* pSoundsElem = pDoc->Root().Content()->Find("SOUNDS");
 		if(pSoundsElem==NULL){
 			Error("Couldn't find SOUNDS element in '%s'!\n",asFile.c_str());
 			hplDelete( pDoc );
 			return false;
 		}
 
-		LoadSoundsInElement(pSoundsElem->GetFirstElement("Main"), &mvSoundNameVecs[eSoundEntityType_Main]);
-		LoadSoundsInElement(pSoundsElem->GetFirstElement("Start"), &mvSoundNameVecs[eSoundEntityType_Start]);
-		LoadSoundsInElement(pSoundsElem->GetFirstElement("Stop"), &mvSoundNameVecs[eSoundEntityType_Stop]);
+		LoadSoundsInElement(pSoundsElem->Content()->Find("Main"), &mvSoundNameVecs[eSoundEntityType_Main]);
+		LoadSoundsInElement(pSoundsElem->Content()->Find("Start"), &mvSoundNameVecs[eSoundEntityType_Start]);
+		LoadSoundsInElement(pSoundsElem->Content()->Find("Stop"), &mvSoundNameVecs[eSoundEntityType_Stop]);
 
 
 		////////////////////////////////////////////////
 		// PROPERTIES
-		cXmlElement *pPropElem = pDoc->GetFirstElement("PROPERTIES");
+		auto* pPropElem = pDoc->Root().Content()->Find("PROPERTIES");
 		if(pPropElem==NULL){
 			Error("Couldn't find PROPERTIES element in '%s'!\n",asFile.c_str());
 			hplDelete( pDoc );
 			return false;
 		}
 
-		mbUse3D = pPropElem->GetAttributeBool("Use3D",true);
-		mbLoop = pPropElem->GetAttributeBool("Loop",true);
-		mbStream = pPropElem->GetAttributeBool("Stream",true);
+		mbUse3D = pPropElem->Content()->GetAttributeBool("Use3D",true);
+		mbLoop = pPropElem->Content()->GetAttributeBool("Loop",true);
+		mbStream = pPropElem->Content()->GetAttributeBool("Stream",true);
 
-		mbBlockable = pPropElem->GetAttributeBool("Blockable",false);
-		mfBlockVolumeMul = pPropElem->GetAttributeFloat("BlockVolumeMul",0.6f);
+		mbBlockable = pPropElem->Content()->GetAttributeBool("Blockable",false);
+		mfBlockVolumeMul = pPropElem->Content()->GetAttributeFloat("BlockVolumeMul",0.6f);
 
-		mfVolume = pPropElem->GetAttributeFloat("Volume",1);
-		mfMaxDistance = pPropElem->GetAttributeFloat("MaxDistance",1);
-		mfMinDistance = pPropElem->GetAttributeFloat("MinDistance",1);
+		mfVolume = pPropElem->Content()->GetAttributeFloat("Volume",1);
+		mfMaxDistance = pPropElem->Content()->GetAttributeFloat("MaxDistance",1);
+		mfMinDistance = pPropElem->Content()->GetAttributeFloat("MinDistance",1);
 
-		mbFadeStart = pPropElem->GetAttributeBool("FadeStart",true);
-		mbFadeStop = pPropElem->GetAttributeBool("FadeStop",true);
+		mbFadeStart = pPropElem->Content()->GetAttributeBool("FadeStart",true);
+		mbFadeStop = pPropElem->Content()->GetAttributeBool("FadeStop",true);
 
-		mfRandom = pPropElem->GetAttributeFloat("Random",1);
-		mfInterval = pPropElem->GetAttributeFloat("Interval",0);
+		mfRandom = pPropElem->Content()->GetAttributeFloat("Random",1);
+		mfInterval = pPropElem->Content()->GetAttributeFloat("Interval",0);
 
-		mlPriority = pPropElem->GetAttributeInt("Priority",0);
+		mlPriority = pPropElem->Content()->GetAttributeInt("Priority",0);
 
 		hplDelete( pDoc );
 

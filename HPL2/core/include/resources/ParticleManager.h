@@ -33,6 +33,7 @@ namespace hpl {
 	class cParticleSystem;
 	class cParticleSystemData;
 	class cXmlElement;
+	class XMLChild;
 
 	//----------------------------------------------------
 
@@ -52,7 +53,7 @@ namespace hpl {
 
 		/////////////////////////////////////////////////
 		// This method is a hack, just so everyone knows
-		cParticleSystem* CreatePS(const tString& asName, const tString& asDataName, cXmlElement* apElement,cVector3f avSize);
+		cParticleSystem* CreatePS(const tString& asName, const tString& asDataName, XMLChild* apElement,cVector3f avSize);
 
 		void AddData(cParticleSystemData *apData);
 

@@ -50,7 +50,7 @@ iLuxEnemy *cLuxEnemyLoader_Grunt::CreateEnemy(const tString& asName, int alID, c
 
 //-----------------------------------------------------------------------
 
-void cLuxEnemyLoader_Grunt::LoadVariables(iLuxEnemy *apEnemy, cXmlElement *apRootElem)
+void cLuxEnemyLoader_Grunt::LoadVariables(iLuxEnemy *apEnemy, XMLChild* apRootElem)
 {
 	cLuxEnemy_Grunt *pGrunt = static_cast<cLuxEnemy_Grunt*>(apEnemy);
 

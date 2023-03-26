@@ -117,13 +117,10 @@ namespace hpl {
 
 		////////////////////
 		//Iterate variables and add them to map.
-		cXmlNodeListIterator varIt = apRootElem->GetChildIterator();
-		while(varIt.HasNext())
+		for(auto& pVarElem: apRootElem->Children())
 		{
-			cXmlElement *pVarElem = varIt.Next()->ToElement();
-
-			tString sName = pVarElem->GetAttributeString("Name");
-			tString sValue = pVarElem->GetAttributeString("Value");
+			tString sName = pVarElem.Content()->GetAttributeString("Name");
+			tString sValue = pVarElem.Content()->GetAttributeString("Value");
 
 			m_mapVars.insert(tResourceVarMap::value_type(sName, sValue));
 		}
@@ -441,17 +438,16 @@ namespace hpl {
 		}
 
 		//Get the root.
-		cXmlNodeListIterator it = pDoc->GetChildIterator();
-		while(it.HasNext())
-		{
-			cXmlElement *pChildElem = it.Next()->ToElement();
+		// cXmlNodeListIterator it = pDoc->GetChildIterator();
+		for(auto& pChildElem: pDoc->Root().Content()->Children()) {
+			// cXmlElement *pChildElem = it.Next()->ToElement();
 
-			tString sPath = pChildElem->GetAttributeString("Path");
+			tString sPath = pChildElem.Content()->GetAttributeString("Path");
 			if(sPath==""){
 				continue;
 			}
 
-			bool bAddSubDirs = pChildElem->GetAttributeBool("AddSubDirs",false);
+			bool bAddSubDirs = pChildElem.Content().GetAttributeBool("AddSubDirs",false);
 
 			if(sPath[0]=='/' || sPath[0]=='\\') sPath = cString::Sub(sPath, 1);
 

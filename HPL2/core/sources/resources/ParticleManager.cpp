@@ -116,7 +116,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	cParticleSystem* cParticleManager::CreatePS(const tString& asName, const tString& asDataName, cXmlElement* apElement, cVector3f avSize)
+	cParticleSystem* cParticleManager::CreatePS(const tString& asName, const tString& asDataName, XMLChild* apElement, cVector3f avSize)
 	{
 		cParticleSystemData *pPSData = NULL;
 

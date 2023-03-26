@@ -346,7 +346,7 @@ void cParticleEditorWorld::OnEditorUpdate()
 	if(mbPSDataUpdated || mpTestPS!=NULL && mpWorld->GetParticleSystem("TestPS")==NULL)
 	{
 		mbPSDataUpdated = false;
-   		mpTestPS = mpWorld->CreateParticleSystem("TestPS", "TestPSData", mpTestData, 1);
+   		mpTestPS = mpWorld->CreateParticleSystem("TestPS", "TestPSData", mpTestData->Root(), 1);
 	}
 }
 

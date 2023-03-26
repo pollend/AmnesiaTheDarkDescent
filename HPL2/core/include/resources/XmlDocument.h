@@ -20,9 +20,17 @@
 #ifndef HPL_XML_DOCUMENT_H
 #define HPL_XML_DOCUMENT_H
 
+#include "absl/container/inlined_vector.h"
+#include "math/Crc32.h"
 #include "system/SystemTypes.h"
 #include "graphics/GraphicsTypes.h"
 #include "math/MathTypes.h"
+#include "engine/RTTI.h"
+
+#include <memory>
+#include <span>
+#include <variant>
+
 
 namespace hpl {
 
@@ -37,60 +45,43 @@ namespace hpl {
 
 	//-------------------------------------
 
-	class iXmlNode;
+	class IXMLNode;
 	class cXmlElement;
 
-	typedef std::list<iXmlNode*> tXmlNodeList;
-	typedef tXmlNodeList::iterator tXmlNodeListIt;
-
-	typedef cSTLIterator<iXmlNode*, tXmlNodeList, tXmlNodeListIt> cXmlNodeListIterator;
-
-	class iXmlNode
-	{
+	class XMLAttribute {
 	public:
-		iXmlNode(eXmlNodeType aType, iXmlNode *apParent, const tString& asValue);
-		virtual ~iXmlNode();
-
-		const tString& GetValue(){ return msValue;}
-		void SetValue(const tString& asValue){ msValue = asValue;}
-
-		eXmlNodeType GetType() { return mType;}
-
-		iXmlNode* GetParent(){ return mpParent;}
-
-		cXmlElement* ToElement();
-		cXmlElement* GetFirstElement();
-		cXmlElement* GetFirstElement(const tString& asName);
-		cXmlElement* CreateChildElement(const tString& asName="");
-
-		void AddChild(iXmlNode* apNode);
-		void DestroyChild(iXmlNode* apNode);
-
-		iXmlNode* GetFirstOfType(eXmlNodeType aType);
-		iXmlNode* GetFirstOfType(eXmlNodeType aType, const tString& asName);
-
-		cXmlNodeListIterator GetChildIterator();
-
-		void DestroyChildren();
+		XMLAttribute(const std::string& key, const std::string& value) : m_key(key), m_value(value) {}
+		const std::string& key() const { return m_key; }
+		const std::string& value() const { return m_value; }
 	private:
-		eXmlNodeType mType;
-		tString msValue;
+		std::string m_key;
+		std::string m_value;
 
-		iXmlNode *mpParent;
-
-		tXmlNodeList mlstChildren;
+		friend class cXmlElement;
 	};
 
-	//-------------------------------------
-
-	typedef std::map<tString, tString> tAttributeMap;
-	typedef tAttributeMap::iterator tAttributeMapIt;
-
-	class cXmlElement : public iXmlNode
-	{
+	class XMLChild final {
 	public:
-		cXmlElement(const tString& asName, iXmlNode* apParent);
-		virtual ~cXmlElement();
+		XMLChild(const std::string_view& name, std::unique_ptr<cXmlElement>&& node) : 
+			m_name(name), 
+			m_node(std::move(node)) {}
+		const std::string& name() const { return m_name; }
+		inline cXmlElement* Content() { return m_node.get(); }
+		void setName(const std::string_view name) { m_name = name; }
+	private:
+		std::string m_name;
+		std::unique_ptr<cXmlElement> m_node;
+	};
+
+	class cXmlElement final
+	{
+		HPL_RTTI_CLASS(cXmlElement, "{46e8168a-271d-41bc-b109-01fa325d0c1a}")
+	public:
+		using AttributeCollection = absl::InlinedVector<XMLAttribute, 4>;
+		using ChildCollection = absl::InlinedVector<XMLChild, 4>;
+
+		cXmlElement();
+		~cXmlElement();
 
 		const char* GetAttribute(const tString& asName);
 
@@ -112,17 +103,20 @@ namespace hpl {
 		void SetAttributeVector3f(const tString& asName, const cVector3f& avVal);
 		void SetAttributeColor(const tString& asName, const cColor& aVal);
 
-
-		tAttributeMap* GetAttributeMap(){ return &m_mapAttributes;}
-
+		XMLChild& AddChild(const std::string_view& name = "");
+		XMLChild* Find(const std::string& name);
+		inline ChildCollection& Children() { return m_children; }
+		inline AttributeCollection& Attributes() { return m_attributes; }
 	private:
-		tAttributeMap m_mapAttributes;
+		AttributeCollection m_attributes;
+		ChildCollection m_children;
 	};
 
 	//-------------------------------------
 
-	class iXmlDocument : public cXmlElement
+	class iXmlDocument
 	{
+		HPL_RTTI_CLASS(iXmlDocument, "{46e8168a-271d-41bc-b109-01fa325d0c1a}")
 	public:
 		iXmlDocument(const tString& asName);
 		virtual ~iXmlDocument();
@@ -141,15 +135,17 @@ namespace hpl {
 		virtual void SaveToString(tString *apDestData)=0;
 		virtual bool CreateFromString(const tString& asData)=0;
 
+		XMLChild& Root() { return m_root; }
+
 	protected:
 		void SaveErrorInfo(const tString& asDesc, int alRow, int alCol) { msErrorDesc = asDesc; mlErrorRow = alRow; mlErrorCol = alCol; }
 
 	private:
 		virtual bool LoadDataFromFile(const tWString& asPath)=0;
 		virtual bool SaveDataToFile(const tWString& asPath)=0;
-
+		
+		XMLChild m_root;
 		tWString msFile;
-
 		tString msErrorDesc;
 		int		mlErrorRow;
 		int		mlErrorCol;

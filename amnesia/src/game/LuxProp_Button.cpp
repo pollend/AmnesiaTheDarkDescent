@@ -42,7 +42,7 @@ iLuxProp *cLuxPropLoader_Button::CreateProp(const tString& asName, int alID, cLu
 
 //-----------------------------------------------------------------------
 
-void cLuxPropLoader_Button::LoadVariables(iLuxProp *apProp, cXmlElement *apRootElem)
+void cLuxPropLoader_Button::LoadVariables(iLuxProp *apProp, XMLChild* apRootElem)
 {
 	cLuxProp_Button  *pButton = static_cast<cLuxProp_Button*>(apProp);
 

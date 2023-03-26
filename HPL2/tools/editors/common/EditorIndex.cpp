@@ -317,12 +317,10 @@ bool iEditorObjectIndexDir::Refresh(cXmlElement* apElement, bool abAddSubDirs)
 
 	if(pEntries)
 	{
-		cXmlNodeListIterator itEntries = pEntries->GetChildIterator();
-		while(itEntries.HasNext())
+		for(auto& pXmlEntry: pEntries->Children())
 		{
 			iEditorObjectIndexEntry* pEntry = CreateEntry();
-			cXmlElement* pXmlEntry = itEntries.Next()->ToElement();
-
+		
 			if(pEntry->CreateFromXmlElement(pXmlEntry))
 			{
 				tString sEntryName = pEntry->GetEntryName();
@@ -382,12 +380,10 @@ bool iEditorObjectIndexDir::Refresh(cXmlElement* apElement, bool abAddSubDirs)
 		cPlatform::FindFoldersInDir(lstDirs, sFullPath, false, false);
 		if(pDirs)
 		{
-			cXmlNodeListIterator itDirs = pDirs->GetChildIterator();
-			while(itDirs.HasNext())
+			for(auto& pXmlDir: pDirs->Children())
 			{
 				iEditorObjectIndexDir* pDir = mpIndex->CreateDir(this);
-				cXmlElement* pXmlDir = itDirs.Next()->ToElement();
-
+			
 				if(pDir->Refresh(pXmlDir, abAddSubDirs))
 				{
 					const tWString& sRelPath = pDir->GetDirName();

@@ -39,8 +39,8 @@ namespace hpl {
 		bool LoadDataFromFile(const tWString& asPath);
 		bool SaveDataToFile(const tWString& asPath);
 
-		void LoadFromTinyXMLData(TiXmlElement* apTinyElem, cXmlElement *apDestElem);
-		void SaveToTinyXMLData(TiXmlElement* apTinyElem, cXmlElement *apSrcElem);
+		void LoadFromTinyXMLData(TiXmlElement* apTinyElem, XMLChild* root);
+		void SaveToTinyXMLData(TiXmlElement* apTinyElem, XMLChild* apSrcElem);
 
 		bool CreateTinyXMLFromFile(TiXmlDocument* pDoc,const tWString& asPath);
 		bool SaveTinyXMLToFile(TiXmlDocument* pDoc,const tWString& asPath);

@@ -383,14 +383,14 @@ namespace hpl {
 													eVertexBufferElement_Normal,
 													eVertexBufferElement_Texture0,
 													eVertexBufferElement_Texture1Tangent};
-	cMesh* cEngineFileLoading::LoadDecalMeshHelper(cXmlElement* apElement, cGraphics* apGraphics, cResources* apResources, const tString& asName, const tString& asMaterial, const cColor& aColor)
+	cMesh* cEngineFileLoading::LoadDecalMeshHelper(XMLChild* apElement, cGraphics* apGraphics, cResources* apResources, const tString& asName, const tString& asMaterial, const cColor& aColor)
 	{
 		////////////////////////////////
 		//Load Vertex data
 		if(apElement==NULL)return NULL;
 
-		int lNumOfVtx = apElement->GetAttributeInt("NumVerts", 0);
-		int lNumOfIdx = apElement->GetAttributeInt("NumInds", 0);
+		int lNumOfVtx = apElement->Content()->GetAttributeInt("NumVerts", 0);
+		int lNumOfIdx = apElement->Content()->GetAttributeInt("NumInds", 0);
 
 		if(lNumOfIdx <=0 || lNumOfVtx<=0)
 		{
@@ -398,12 +398,12 @@ namespace hpl {
 			return NULL;
 		}
 
-		cXmlElement *pDataArrayElem[4];
-		pDataArrayElem[0] = apElement->GetFirstElement("Positions");
-		pDataArrayElem[1] = apElement->GetFirstElement("Normals");
-		pDataArrayElem[2] = apElement->GetFirstElement("TexCoords");
-		pDataArrayElem[3] = apElement->GetFirstElement("Tangents");
-		cXmlElement *pIndicesElem = apElement->GetFirstElement("Indices");
+		XMLChild *pDataArrayElem[4];
+		pDataArrayElem[0] = apElement->Content()->Find("Positions");
+		pDataArrayElem[1] = apElement->Content()->Find("Normals");
+		pDataArrayElem[2] = apElement->Content()->Find("TexCoords");
+		pDataArrayElem[3] = apElement->Content()->Find("Tangents");
+		auto* pIndicesElem = apElement->Content()->Find("Indices");
 
 		tFloatVec vDataArrays[4];
 		tIntVec vIdxArray;
@@ -411,10 +411,10 @@ namespace hpl {
 		for(int i=0; i<4; ++i)
 		{
 			vDataArrays->reserve(lNumOfVtx * glDecalNumOfElements[i]);
-			cString::GetFloatVec(pDataArrayElem[i]->GetAttributeString("Array"), vDataArrays[i],&sSepp);
+			cString::GetFloatVec(pDataArrayElem[i]->Content()->GetAttributeString("Array"), vDataArrays[i],&sSepp);
 		}
 		vIdxArray.reserve(lNumOfIdx);
-		cString::GetIntVec(pIndicesElem->GetAttributeString("Array"), vIdxArray,&sSepp);
+		cString::GetIntVec(pIndicesElem->Content()->GetAttributeString("Array"), vIdxArray,&sSepp);
 
 		//////////////////////////////////
 		// Create vertex buffer
@@ -472,14 +472,14 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cEngineFileLoading::SetupWorldEntity(iEntity3D *apEntity, cXmlElement* apElement)
+	void cEngineFileLoading::SetupWorldEntity(iEntity3D *apEntity, XMLChild* apElement)
 	{
 		if(apEntity==NULL) return;
 
-		int lID = apElement->GetAttributeInt("ID");
-		cVector3f vPosition = apElement->GetAttributeVector3f("WorldPos",0);
-		cVector3f vScale = apElement->GetAttributeVector3f("Scale",1);
-		cVector3f vRotation = apElement->GetAttributeVector3f("Rotation",0);
+		int lID = apElement->Content()->GetAttributeInt("ID");
+		cVector3f vPosition = apElement->Content()->GetAttributeVector3f("WorldPos",0);
+		cVector3f vScale = apElement->Content()->GetAttributeVector3f("Scale",1);
+		cVector3f vRotation = apElement->Content()->GetAttributeVector3f("Rotation",0);
 
 		cMatrixf mtxTransform = cMath::MatrixMul(cMath::MatrixRotate(vRotation, eEulerRotationOrder_XYZ),cMath::MatrixScale(vScale));
 		mtxTransform.SetTranslation(vPosition);

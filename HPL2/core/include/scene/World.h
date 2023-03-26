@@ -74,6 +74,7 @@ namespace hpl {
 	class cFogArea;
 	class cXmlElement;
 	class cEntFile;
+	class XMLChild;
 	class cDummyRenderable;
 
 
@@ -275,7 +276,7 @@ namespace hpl {
 		///// PARTICLE METHODS ////////////////////
 
 		cParticleSystem* CreateParticleSystem(	const tString& asName,const tString& asType, const cVector3f& avSize, bool abRemoveWhenDead=true);
-		cParticleSystem* CreateParticleSystem(	const tString& asName,const tString& asDataName, cXmlElement* apElement, const cVector3f& avSize);
+		cParticleSystem* CreateParticleSystem(	const tString& asName,const tString& asDataName, XMLChild* apElement, const cVector3f& avSize);
 		void DestroyParticleSystem(cParticleSystem* apPS);
 		cParticleSystem* GetParticleSystem(const tString& asName);
 		cParticleSystem* GetParticleSystemFromUniqueID(int alID);

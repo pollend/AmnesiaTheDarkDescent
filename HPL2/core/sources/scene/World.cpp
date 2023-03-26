@@ -759,7 +759,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	cParticleSystem* cWorld::CreateParticleSystem(const tString& asName, const tString& asDataName, cXmlElement* apElement, const cVector3f& avSize)
+	cParticleSystem* cWorld::CreateParticleSystem(const tString& asName, const tString& asDataName, XMLChild* apElement, const cVector3f& avSize)
 	{
 		cParticleSystem* pPS = mpResources->GetParticleManager()->CreatePS(asName,asDataName, apElement, avSize);
 		if(pPS == NULL){

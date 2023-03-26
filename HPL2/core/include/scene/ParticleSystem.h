@@ -20,6 +20,7 @@
 #ifndef HPL_PARTICLE_SYSTEM_H
 #define HPL_PARTICLE_SYSTEM_H
 
+#include "resources/XmlDocument.h"
 #include "system/SystemTypes.h"
 
 #include "scene/Entity3D.h"
@@ -36,6 +37,7 @@ namespace hpl {
 	class iParticleEmitterData;
 	class cParticleManager;
 	class cXmlElement;
+	class XMLChild;
 
 	//----------------------------------------------------
 
@@ -50,7 +52,7 @@ namespace hpl {
 		cParticleSystem* Create(tString asName, cVector3f avSize);
 
 		bool LoadFromFile(const tWString &asFile);
-		bool LoadFromElement(cXmlElement* apElement);
+		bool LoadFromElement(XMLChild* apElement);
 
 		void AddEmitterData(iParticleEmitterData *apData);
 
