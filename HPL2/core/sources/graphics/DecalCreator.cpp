@@ -449,10 +449,12 @@ namespace hpl {
 
 			// apFunctions->SetMatrix(&mtxTransform);
 			//apFunctions->GetLowLevelGfx()->DrawSphere(0, 0.01f, 1);
-			apFunctions->DebugDrawLine(0,cVector3f(vHalfDecalSize.x,0,0), cColor(1,0,0,1));
-			apFunctions->DebugDrawLine(0,cVector3f(0,vHalfDecalSize.y,0), cColor(0,1,0,1));
-			apFunctions->DebugDrawLine(0,cVector3f(0,0,vHalfDecalSize.z), cColor(0,0,1,1));
-			apFunctions->DebugDrawBoxMinMax(vHalfDecalSize*-1, vHalfDecalSize, 1);
+			ImmediateDrawBatch::DebugDrawOptions options;
+			options.m_transform = mtxTransform;
+			apFunctions->DebugDrawLine(0,cVector3f(vHalfDecalSize.x,0,0), cColor(1,0,0,1), options);
+			apFunctions->DebugDrawLine(0,cVector3f(0,vHalfDecalSize.y,0), cColor(0,1,0,1), options);
+			apFunctions->DebugDrawLine(0,cVector3f(0,0,vHalfDecalSize.z), cColor(0,0,1,1), options);
+			apFunctions->DebugDrawBoxMinMax(vHalfDecalSize*-1, vHalfDecalSize, 1, options);
 
 			for(size_t i=0;i<mvTransformedBases.size();i+=4)
 			{
@@ -462,10 +464,10 @@ namespace hpl {
 
 				cMatrixf mtxBasis = cMath::MatrixUnitVectors(vRight, vUp, vFwd, mvTransformedBases[i]);
 				// apFunctions->SetMatrix(&mtxBasis);
-				apFunctions->DebugDrawLine(0,cVector3f(vHalfDecalSize.x,0,0), cColor(1,0,0,1));
-				apFunctions->DebugDrawLine(0,cVector3f(0,vHalfDecalSize.y,0), cColor(0,1,0,1));
-				apFunctions->DebugDrawLine(0,cVector3f(0,0,vHalfDecalSize.z), cColor(0,0,1,1));
-				apFunctions->DebugDrawBoxMinMax(vHalfDecalSize*-1, vHalfDecalSize, 1);
+				apFunctions->DebugDrawLine(0,cVector3f(vHalfDecalSize.x,0,0), cColor(1,0,0,1), options);
+				apFunctions->DebugDrawLine(0,cVector3f(0,vHalfDecalSize.y,0), cColor(0,1,0,1), options);
+				apFunctions->DebugDrawLine(0,cVector3f(0,0,vHalfDecalSize.z), cColor(0,0,1,1), options);
+				apFunctions->DebugDrawBoxMinMax(vHalfDecalSize*-1, vHalfDecalSize, 1, options);
 			}
 
 			//for(int i=0;i<(int)mvMatrices.size();++i)
