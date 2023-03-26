@@ -203,6 +203,7 @@ void cEditorEditModeCombine::DrawPostGrid(cEditorWindowViewport* apViewport, Imm
 	// Show picking rect
 	if(mbPressed && apViewport->IsFocused() && IsRayPickingActive()==false)
 	{
+		BX_ASSERT(false); // TODO: Fix this
 		// apFunctions->SetDepthTest(false);
 		// apFunctions->GetLowLevelGfx()->SetOrthoProjection(apViewport->GetGuiViewportSize(),-1000,1000);
 		// apFunctions->GetLowLevelGfx()->SetIdentityMatrix(eMatrix_ModelView);

@@ -989,6 +989,7 @@ void cEntitySelectorNormal::Draw(cEditorWindowViewport* apViewport, cRendererCal
 	{
 		iEntityWrapper* pEnt = *selectionIt;
 
+		// TODO: MP this code below is used
 		// if(pEnt->IsVisible())
 		// 	pEnt->Draw(apViewport,apFunctions, mpEditMode, true);
 	}
