@@ -24,6 +24,7 @@
 #include "EditorWindowViewport.h"
 #include "EntityWrapper.h"
 #include "EditorHelper.h"
+#include "graphics/ImmediateDrawBatch.h"
 
 cSurfacePicker::cSurfacePicker(iEditorWorld* apWorld) : cEntityPicker(apWorld)
 {
@@ -72,15 +73,15 @@ int cSurfacePicker::ToSurfaceTypeID(int alTypeID)
 
 //----------------------------------------------------------------------
 
-void cSurfacePicker::OnDraw(cRendererCallbackFunctions* apFunctions)
+void cSurfacePicker::OnDraw(ImmediateDrawBatch* apFunctions)
 {
-	apFunctions->SetMatrix(NULL);
-	apFunctions->SetDepthTest(false);
+	// apFunctions->SetMatrix(NULL);
+	// apFunctions->SetDepthTest(false);
 
 
 	if(HasPickedSurface())
 	{
-		apFunctions->GetLowLevelGfx()->DrawSphere(mvIntersection, 0.005f, cColor(0,0,1,1));
+		apFunctions->DebugDrawSphere(mvIntersection, 0.005f, cColor(0,0,1,1));
 		//apFunctions->GetLowLevelGfx()->DrawLine(mvIntersection, mvIntersection+mvTriangleNormal, cColor(0,1,0,1));
 		//apFunctions->GetLowLevelGfx()->DrawLine(mvIntersection, mvIntersection+mvAverageUp, cColor(0,1,1,1));
 		//apFunctions->GetLowLevelGfx()->DrawLine(mvIntersection, mvIntersection+mvRight, cColor(1,0,0,1));

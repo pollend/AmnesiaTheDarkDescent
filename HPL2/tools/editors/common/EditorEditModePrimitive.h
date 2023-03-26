@@ -38,7 +38,7 @@ public:
 	virtual void OnViewportMouseDown(int alButtons){}
 	virtual void OnViewportMouseUp(int alButtons){}
 
-	virtual void Draw(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions, const cVector3f& avPos)=0;
+	virtual void Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, const cVector3f& avPos)=0;
 
 	virtual iEntityWrapperData* CreateData();
 	virtual void SetUpData(iEntityWrapperData*);
@@ -61,7 +61,7 @@ public:
     void OnViewportMouseDown(int alButtons);
 	void OnViewportMouseUp(int alButtons);
 
-	void Draw(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions, const cVector3f& avPos);
+	void Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, const cVector3f& avPos);
 
 	void SetUpData(iEntityWrapperData* apData);
 
@@ -87,7 +87,7 @@ public:
     void OnViewportMouseDown(int alButtons);
 	void OnViewportMouseUp(int alButtons);
 
-	void DrawPostGrid(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions, const cVector3f& avPos);
+	void DrawPostGrid(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, const cVector3f& avPos);
 
 	iEntityWrapperData* CreateObjectData();
 

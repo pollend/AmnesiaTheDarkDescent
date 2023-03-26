@@ -27,8 +27,7 @@
 #include "EntityWrapperPrimitivePlane.h"
 
 
-
-//---------------------------------------------------------------------------
+#include "graphics/ImmediateDrawBatch.h"
 
 iPrimitiveMeshCreator::iPrimitiveMeshCreator(cEditorEditModePrimitives* apEditMode)
 {
@@ -85,21 +84,21 @@ void cPrimitiveMeshCreatorPlane::StoreMousePosition()
 
 //---------------------------------------------------------------------------
 
-void cPrimitiveMeshCreatorPlane::Draw(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions, const cVector3f& avPos)
+void cPrimitiveMeshCreatorPlane::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, const cVector3f& avPos)
 {
 	if(mvCorners.size()==1)
 	{
-		apFunctions->SetProgram(NULL);
-		apFunctions->SetTextureRange(NULL,0);
+		// apFunctions->SetProgram(NULL);
+		// apFunctions->SetTextureRange(NULL,0);
 
-		apFunctions->SetMatrix(NULL);
+		// apFunctions->SetMatrix(NULL);
 
 		cVector3f vFirstCorner = mvCorners[0];
 		cVector3f vMousePos = mpEditMode->GetEditor()->GetPosOnGridFromMousePos();
 
-		apFunctions->GetLowLevelGfx()->DrawBoxMinMax(vFirstCorner, vMousePos,cColor(1,1));
+		apFunctions->DebugDrawBoxMinMax(vFirstCorner, vMousePos,cColor(1,1));
 
-		apFunctions->GetLowLevelGfx()->DrawSphere((vFirstCorner + vMousePos)*0.5f, 0.1f, cColor(1,0,0,1));
+		apFunctions->DebugDrawSphere((vFirstCorner + vMousePos)*0.5f, 0.1f, cColor(1,0,0,1));
 	}
 }
 
@@ -283,7 +282,7 @@ void cEditorEditModePrimitives::OnViewportMouseUp(int alButtons)
 
 //---------------------------------------------------------------------------
 
-void cEditorEditModePrimitives::DrawPostGrid(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions, const cVector3f& avPos)
+void cEditorEditModePrimitives::DrawPostGrid(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, const cVector3f& avPos)
 {
 	iEditorEditMode::DrawPostGrid(apViewport, apFunctions, avPos);
 

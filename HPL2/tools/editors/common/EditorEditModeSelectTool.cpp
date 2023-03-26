@@ -159,18 +159,18 @@ void cEditorEditModeSelectTool::UpdateMouseRay()
 
 //----------------------------------------------------------------------
 
-void cEditorEditModeSelectTool::Draw(cEditorWindowViewport* apViewport,cRendererCallbackFunctions *apFunctions)
+void cEditorEditModeSelectTool::Draw(cEditorWindowViewport* apViewport,ImmediateDrawBatch *apFunctions)
 {
 	if(mpSelection->IsEmpty()) return;
 
-    apFunctions->SetDepthTest(false);
-	apFunctions->SetTextureRange(NULL,0);
+    // apFunctions->SetDepthTest(false);
+	// apFunctions->SetTextureRange(NULL,0);
 
 	cCamera *pCam = apViewport->GetCamera();
 
 	float fAxisLength;
 
-	apFunctions->SetMatrix(NULL);
+	// apFunctions->SetMatrix(NULL);
 
 	cVector3f vViewPos;
 	switch(pCam->GetProjectionType())
@@ -197,7 +197,7 @@ void cEditorEditModeSelectTool::Draw(cEditorWindowViewport* apViewport,cRenderer
 
 	DrawAxes(apViewport, apFunctions, fAxisLength);
 
-	apFunctions->SetMatrix(NULL);
+	// apFunctions->SetMatrix(NULL);
 }
 
 //----------------------------------------------------------------------

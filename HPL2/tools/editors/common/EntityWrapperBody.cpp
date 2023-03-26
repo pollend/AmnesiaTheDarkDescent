@@ -26,6 +26,8 @@
 
 #include "EntityWrapperBodyShape.h"
 
+#include "graphics/ImmediateDrawBatch.h"
+
 #include <algorithm>
 
 //------------------------------------------------------------------------
@@ -322,30 +324,22 @@ bool cEntityWrapperBody::GetProperty(int alPropID, tString& asX)
 
 //---------------------------------------------------------------------------
 
-void cEntityWrapperBody::Draw(	cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions,
+void cEntityWrapperBody::Draw(	cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions,
 									iEditorEditMode* apEditMode,bool abIsSelected, const cColor& aHighlightCol, const cColor& aDisabledCol)
 {
 	iEntityWrapper::Draw(apViewport, apFunctions, apEditMode, abIsSelected);
 	if(abIsSelected)
 	{
-		apFunctions->SetBlendMode(eMaterialBlendMode_None);
-		apFunctions->SetProgram(NULL);
-		apFunctions->SetTextureRange(NULL,0);
-		apFunctions->SetDepthTest(true);
-		apFunctions->SetDepthWrite(true);
-
-		apFunctions->SetMatrix(NULL);
-
 		tEntityWrapperListIt itShapes = mlstComponents.begin();
 		for(;itShapes!=mlstComponents.end();++itShapes)
 		{
 			iEntityWrapper* pShape = *itShapes;
+			
 			//apFunctions->GetLowLevelGfx()->DrawBoxMinMax(pShape->GetPickBV()->GetMin(), pShape->GetPickBV()->GetMax(), cColor(1));
 			pShape->Draw(apViewport, apFunctions, apEditMode, true, cColor(1,1,1,1));
 		}
 
-		apFunctions->SetMatrix(NULL);
-		apFunctions->GetLowLevelGfx()->DrawSphere(mvPosition, 0.2f, cColor(1,0,0,1));
+		apFunctions->DebugDrawSphere(mvPosition, 0.2f, cColor(1,0,0,1));
 	}
 }
 

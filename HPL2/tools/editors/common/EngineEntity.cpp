@@ -25,6 +25,7 @@
 
 #include "EditorWindowViewport.h"
 #include "EditorHelper.h"
+#include "graphics/ImmediateDrawBatch.h"
 
 //-----------------------------------------------------------------------
 
@@ -183,25 +184,31 @@ void iEngineEntityMesh::UpdateVisibility()
 
 //-----------------------------------------------------------------------
 
-void iEngineEntityMesh::Draw(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions, bool abIsSelected,	bool abIsActive, const cColor& aHighlightCol)
+void iEngineEntityMesh::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, bool abIsSelected,	bool abIsActive, const cColor& aHighlightCol)
 {
 	if(abIsSelected==false)
 		return;
 
-	apFunctions->SetBlendMode(eMaterialBlendMode_Alpha);
-	apFunctions->SetDepthTest(true);
-	apFunctions->SetDepthWrite(false);
+	// apFunctions->SetBlendMode(eMaterialBlendMode_Alpha);
+	// apFunctions->SetDepthTest(true);
+	// apFunctions->SetDepthWrite(false);
 
 	cMeshEntity* pMeshEntity = GetMeshEntity();
 	for(int i=0;i<pMeshEntity->GetSubMeshEntityNum();++i)
 	{
 		cSubMeshEntity* pSubMeshEntity = pMeshEntity->GetSubMeshEntity(i);
-		apFunctions->SetMatrix(pSubMeshEntity->GetModelMatrix(NULL));
-		apFunctions->DrawWireFrame(pSubMeshEntity->GetVertexBuffer(), aHighlightCol);
+
+		GraphicsContext::LayoutStream layoutStream;
+		pSubMeshEntity->GetVertexBuffer()->GetLayoutStream(layoutStream);
+		ImmediateDrawBatch::DebugDrawOptions options;
+		options.m_transform = *pSubMeshEntity->GetModelMatrix(NULL);
+		apFunctions->DebugDrawMesh(layoutStream, aHighlightCol);
+		// apFunctions->SetMatrix(pSubMeshEntity->GetModelMatrix(NULL));
+		// apFunctions->DrawWireFrame(pSubMeshEntity->GetVertexBuffer(), aHighlightCol);
 	}
-	apFunctions->SetMatrix(NULL);
-	apFunctions->SetBlendMode(eMaterialBlendMode_None);
-	apFunctions->SetDepthTest(false);
+	// apFunctions->SetMatrix(NULL);
+	// apFunctions->SetBlendMode(eMaterialBlendMode_None);
+	// apFunctions->SetDepthTest(false);
 }
 
 //-----------------------------------------------------------------------
@@ -483,7 +490,7 @@ bool iIconEntity::CheckRayIntersect(cEditorWindowViewport* apViewport, cVector3f
 }
 
 void iIconEntity::Draw(cEditorWindowViewport* apViewport,
-					  cRendererCallbackFunctions* apFunctions,
+					  ImmediateDrawBatch* apFunctions,
 					  bool abIsSelected,
 					  bool abIsActive,
 					  const cColor& aHighlightCol)

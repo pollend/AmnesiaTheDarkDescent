@@ -63,10 +63,10 @@ public:
 
 	virtual bool IsActive()=0;
 
-	eSelectToolMode GetToolMode() { return mToolMode; }
+eSelectToolMode GetToolMode() { return mToolMode; }
 
-	void Draw(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions);
-	virtual void DrawAxes(cEditorWindowViewport* apViewport, cRendererCallbackFunctions *apFunctions, float afAxisLength){}
+	void Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions);
+	virtual void DrawAxes(cEditorWindowViewport* apViewport, ImmediateDrawBatch *apFunctions, float afAxisLength){}
 
 	void OnEditorUpdate();
 	virtual void UpdateTransformation(){}

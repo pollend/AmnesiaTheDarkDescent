@@ -28,6 +28,7 @@
 
 #include "EditorWindowEntityEditBoxSound.h"
 
+#include "graphics/ImmediateDrawBatch.h"
 //---------------------------------------------------------------------------
 
 cEntityWrapperTypeSound::cEntityWrapperTypeSound() : iEntityWrapperType(eEditorEntityType_Sound, _W("Sound"), "Sound")
@@ -214,7 +215,7 @@ bool cEntityWrapperSound::SetProperty(int alPropID, const tString& asX)
 
 //---------------------------------------------------------------------------
 
-void cEntityWrapperSound::Draw(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions, iEditorEditMode* apEditMode,
+void cEntityWrapperSound::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, iEditorEditMode* apEditMode,
 								bool abIsSelected, const cColor& aHighlightCol, const cColor& aDisabledCol)
 {
 	iEntityWrapper::Draw(apViewport, apFunctions, apEditMode, abIsSelected);
@@ -230,11 +231,11 @@ void cEntityWrapperSound::Draw(cEditorWindowViewport* apViewport, cRendererCallb
 			fMax = mpSoundEntityData->GetMaxDistance();
 		}
 
-		apFunctions->GetLowLevelGfx()->DrawSphere(mvPosition, fMin, cColor(0.6f, 1));
-		apFunctions->GetLowLevelGfx()->DrawSphere(mvPosition, fMax, cColor(0.4f, 1));
+		apFunctions->DebugDrawSphere(mvPosition, fMin, cColor(0.6f, 1));
+		apFunctions->DebugDrawSphere(mvPosition, fMax, cColor(0.4f, 1));
 	}
 
-	apFunctions->SetMatrix(NULL);
+	// apFunctions->SetMatrix(NULL);
 }
 
 

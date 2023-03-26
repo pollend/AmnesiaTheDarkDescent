@@ -68,12 +68,12 @@ public:
 	virtual void UpdateVisibility()=0;
 
 	virtual void Draw(cEditorWindowViewport* apViewport,
-					  cRendererCallbackFunctions* apFunctions,
+					  ImmediateDrawBatch* apFunctions,
 					  bool abIsSelected,
 					  bool abIsActive,
 					  const cColor& aHighlightCol=cColor(1,1)) {};
 	virtual void DrawProgram(cEditorWindowViewport* apViewport,
-							 cRendererCallbackFunctions* apFunctions,
+							 ImmediateDrawBatch* apFunctions,
 							 iGpuProgram* apProg,
 							 const cColor& aCol) {}
 
@@ -109,7 +109,7 @@ public:
 	void UpdateVisibility();
 
 	void Draw(cEditorWindowViewport* apViewport,
-				cRendererCallbackFunctions* apFunctions,
+				ImmediateDrawBatch* apFunctions,
 				bool abIsSelected,
 				bool abIsActive, const cColor& aHighlightCol);
 	void DrawProgram(cEditorWindowViewport* apViewport,
@@ -208,7 +208,7 @@ public:
 	void UpdateVisibility() { Update(); }
 
 	void Draw(cEditorWindowViewport* apViewport,
-					  cRendererCallbackFunctions* apFunctions,
+					  ImmediateDrawBatch* apFunctions,
 					  bool abIsSelected,
 					  bool abIsActive,
 					  const cColor& aHighlightCol=cColor(1,1));

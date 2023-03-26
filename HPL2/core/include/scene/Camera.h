@@ -25,7 +25,7 @@
 #include "scene/Node3D.h"
 
 namespace hpl {
-
+	class cCamera;
 	//--------------------------------------------
 
 	enum eCameraMoveMode

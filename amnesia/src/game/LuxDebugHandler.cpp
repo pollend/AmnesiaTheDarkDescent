@@ -654,7 +654,8 @@ void cLuxDebugHandler::RenderSolid(cRendererCallbackFunctions* apFunctions)
 
 	if(mbDrawPhysics)
 	{
-		gpBase->mpMapHandler->GetCurrentMap()->GetPhysicsWorld()->RenderDebugGeometry(apFunctions->GetLowLevelGfx(), cColor(0.5f));
+		BX_ASSERT(false); // TODO: Fix this!
+		// gpBase->mpMapHandler->GetCurrentMap()->GetPhysicsWorld()->RenderDebugGeometry(apFunctions->GetLowLevelGfx(), cColor(0.5f));
 	}
 }
 

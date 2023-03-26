@@ -26,8 +26,6 @@ iEditor::iEditor(const tWString& asName, const tWString& asCaption) : iUpdateabl
 }
 
 
-
-
 iEditor::~iEditor(void)
 {
 }

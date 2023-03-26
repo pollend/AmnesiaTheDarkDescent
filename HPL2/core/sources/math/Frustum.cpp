@@ -19,6 +19,8 @@
 
 #include "math/Frustum.h"
 
+#include "graphics/GraphicsContext.h"
+#include "graphics/ImmediateDrawBatch.h"
 #include "math/Math.h"
 #include "system/LowLevelSystem.h"
 #include "graphics/LowLevelGraphics.h"
@@ -686,7 +688,7 @@ namespace hpl {
 	}
 	//-----------------------------------------------------------------------
 
-	void cFrustum::Draw(iLowLevelGraphics *apLowLevelGraphics, const cColor &aColor)
+	void cFrustum::Draw(ImmediateDrawBatch *drawBatch, const cColor &aColor)
 	{
 		if(mbObliqueNearPlane)
 		{
@@ -697,14 +699,17 @@ namespace hpl {
 			//	apLowLevelGraphics->DrawSphere(mvVertices[i],0.05f, cColor(0,1,0));
 		}
 
-		for(int i=0; i<4; ++i)
-			apLowLevelGraphics->DrawLine(mvVertices[i==0?3:i-1], mvVertices[i],aColor);
+		for(int i=0; i<4; ++i) {
+			drawBatch->DebugDrawLine(mvVertices[i==0?3:i-1], mvVertices[i],aColor);
+		}
 
-		for(int i=4; i<8; ++i)
-			apLowLevelGraphics->DrawLine(mvVertices[i==4?7:i-1], mvVertices[i],aColor);
+		for(int i=4; i<8; ++i) {
+			drawBatch->DebugDrawLine(mvVertices[i==4?7:i-1], mvVertices[i],aColor);
+		}
 
-		for(int i=0; i<4; ++i)
-			apLowLevelGraphics->DrawLine(mvVertices[i], mvVertices[i+4],aColor);
+		for(int i=0; i<4; ++i) {
+			drawBatch->DebugDrawLine(mvVertices[i], mvVertices[i+4],aColor);
+		}
 
 		if(mbInvertsCullMode==false) return;
 

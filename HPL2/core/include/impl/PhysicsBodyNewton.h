@@ -86,7 +86,7 @@ namespace hpl {
 		void SetGravity(bool abEnabled);
 		bool GetGravity() const;
 
-		void RenderDebugGeometry(iLowLevelGraphics *apLowLevel,const cColor &aColor);
+		void RenderDebugGeometry(ImmediateDrawBatch *apLowLevel,const cColor &aColor);
 
 		NewtonBody *GetNewtonBody(){ return mpNewtonBody;}
 

@@ -21,6 +21,7 @@
 #include "EditorBaseClasses.h"
 #include "EditorEditMode.h"
 #include "EditorWindowViewport.h"
+#include "graphics/ImmediateDrawBatch.h"
 
 //-----------------------------------------------------------
 
@@ -49,19 +50,12 @@ void cBoxCreator::OnViewportMouseUp(int alButtons)
 
 //-----------------------------------------------------------
 
-void cBoxCreator::Draw(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions)
+void cBoxCreator::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions)
 {
-	apFunctions->SetProgram(NULL);
-	apFunctions->SetTextureRange(NULL,0);
-	apFunctions->SetMatrix(NULL);
 
-	/*apFunctions->GetLowLevelGfx()->DrawSphere(vDebugPos, 0.1f, cColor(0,0,1,1));
-	apFunctions->GetLowLevelGfx()->DrawLine(vDebugPos, vDebugPos-cVector3f(vDebugPos.x,0,0), cColor(1,0,0,1));
-	apFunctions->GetLowLevelGfx()->DrawLine(vDebugPos, vDebugPos-cVector3f(0,vDebugPos.y,0), cColor(0,1,0,1));
-	apFunctions->GetLowLevelGfx()->DrawLine(vDebugPos, vDebugPos-cVector3f(0,0,vDebugPos.z), cColor(0,0,1,1));
-	*/
-	if(mvPoints.empty()==false && mbDragging==true)
-		apFunctions->GetLowLevelGfx()->DrawBoxMinMax(mvPoints[0], mvTempPoint, cColor(1,1));
+	if(mvPoints.empty()==false && mbDragging==true) {
+		apFunctions->DebugDrawBoxMinMax(mvPoints[0], mvTempPoint, cColor(1,1));
+	}
 }
 
 //-----------------------------------------------------------

@@ -1,42 +1,56 @@
 #pragma once
 
-#include "absl/container/inlined_vector.h"
+#include "graphics/ShaderUtil.h"
+#include "graphics/UniformWrapper.h"
+#include "math/Crc32.h"
+#include "math/MathTypes.h"
+
+#include <Eigen/Dense>
+
+#include "graphics/Color.h"
 #include "graphics/Enum.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Image.h"
 #include "graphics/RenderTarget.h"
-#include "math/MathTypes.h"
+
+#include "resources/StringLiteral.h"
 #include "windowing/NativeWindow.h"
-#include <absl/strings/string_view.h>
 #include <bgfx/bgfx.h>
+
+#include <absl/container/flat_hash_map.h>
+#include <absl/container/inlined_vector.h>
+#include <absl/strings/string_view.h>
+
 #include <cstdint>
 #include <optional>
+#include <queue>
+#include <variant>
 #include <vector>
-#include <optional>
 
-namespace hpl
-{
+namespace hpl {
+    class GraphicsContext;
+    class cCamera;
 
-    class GraphicsContext final
-    {
+    class GraphicsContext final {
     public:
+
         struct LayoutStream {
             struct LayoutVertexStream {
-                bgfx::TransientVertexBuffer m_transient = {nullptr, 0, 0, 0, BGFX_INVALID_HANDLE, BGFX_INVALID_HANDLE};
+                bgfx::TransientVertexBuffer m_transient = { nullptr, 0, 0, 0, BGFX_INVALID_HANDLE, BGFX_INVALID_HANDLE };
                 bgfx::VertexBufferHandle m_handle = BGFX_INVALID_HANDLE;
                 bgfx::DynamicVertexBufferHandle m_dynamicHandle = BGFX_INVALID_HANDLE;
                 uint32_t m_startVertex = 0;
                 uint32_t m_numVertices = std::numeric_limits<uint32_t>::max();
             };
             struct LayoutIndexStream {
-                bgfx::TransientIndexBuffer m_transient = {nullptr, 0, 0, BGFX_INVALID_HANDLE, false};
+                bgfx::TransientIndexBuffer m_transient = { nullptr, 0, 0, BGFX_INVALID_HANDLE, false };
                 bgfx::IndexBufferHandle m_handle = BGFX_INVALID_HANDLE;
                 bgfx::DynamicIndexBufferHandle m_dynamicHandle = BGFX_INVALID_HANDLE;
                 uint32_t m_startIndex = 0;
                 uint32_t m_numIndices = std::numeric_limits<uint32_t>::max();
             };
             eVertexBufferDrawType m_drawType = eVertexBufferDrawType_Tri;
-            absl::InlinedVector<LayoutVertexStream, eVertexBufferElement_LastEnum> m_vertexStreams;
+            absl::InlinedVector<LayoutVertexStream, 4> m_vertexStreams;
             LayoutIndexStream m_indexStream;
         };
 
@@ -76,7 +90,6 @@ namespace hpl
                 uint64_t m_state[2] = { 0 };
             } m_configuration;
 
-
             cMatrixf m_modelTransform = cMatrixf(cMatrixf::Identity);
             cMatrixf m_normalMtx = cMatrixf(cMatrixf::Identity);
 
@@ -107,7 +120,7 @@ namespace hpl
             const ShaderProgram& m_program;
         };
 
-         struct ViewConfiguration {
+        struct ViewConfiguration {
             const RenderTarget& m_target;
 
             std::optional<ClearRequest> m_clear;
@@ -126,15 +139,24 @@ namespace hpl
         };
 
         GraphicsContext();
+        ~GraphicsContext();
         void Init();
         void UpdateScreenSize(uint16_t width, uint16_t height);
 
-        void Quad(GraphicsContext::LayoutStream& input, const cVector3f& pos, const cVector2f& size, const cVector2f& uv0 = cVector2f(0.0f, 0.0f), const cVector2f& uv1 = cVector2f(1.0f, 1.0f));
-        void ScreenSpaceQuad(GraphicsContext::LayoutStream& input, cMatrixf& proj, float textureWidth, float textureHeight, float width = 1.0f, float height = 1.0f);
+        void Quad(
+            GraphicsContext::LayoutStream& input,
+            const cVector3f& pos,
+            const cVector2f& size,
+            const cVector2f& uv0 = cVector2f(0.0f, 0.0f),
+            const cVector2f& uv1 = cVector2f(1.0f, 1.0f));
+        void ScreenSpaceQuad(
+            GraphicsContext::LayoutStream& input,
+            cMatrixf& proj,
+            float textureWidth,
+            float textureHeight,
+            float width = 1.0f,
+            float height = 1.0f);
         void ConfigureProgram(const GraphicsContext::ShaderProgram& program);
-        
-        uint16_t ScreenWidth() const;
-        uint16_t ScreenHeight() const;
 
         void Frame();
         bgfx::ViewId StartPass(absl::string_view name, const ViewConfiguration& config);
@@ -144,15 +166,40 @@ namespace hpl
         void Submit(bgfx::ViewId view, const DrawRequest& request);
         void Submit(bgfx::ViewId view, const DrawRequest& request, bgfx::OcclusionQueryHandle query);
         void Submit(bgfx::ViewId view, const ComputeRequest& request);
-        
+
+        // eeeh ... not going to bother cleaning up for the moment
+        template<StringLiteral VertexShader, StringLiteral FragmentShader>
+        bgfx::ProgramHandle resolveProgramCache() {
+            constexpr math::Crc32 id = ([]() {
+                math::Crc32 crc;
+                crc.Update(VertexShader.m_str);
+                crc.Update(FragmentShader.m_str);
+                return crc;
+            })();
+           
+            auto it = m_programCache.find(id.value());
+            if(it != m_programCache.end()) {
+                return it->second;
+            }
+            bgfx::ProgramHandle handle = hpl::loadProgram(VertexShader.m_str, FragmentShader.m_str);
+            m_programCache[id.value()] = handle;
+            return handle;
+        } 
+
     private:
-        bgfx::ViewId _current;
+        absl::flat_hash_map<uint32_t, bgfx::ProgramHandle> m_programCache;
+
+        bgfx::ViewId m_current;
         bgfx::ProgramHandle m_copyProgram = BGFX_INVALID_HANDLE;
-        bgfx::UniformHandle m_s_diffuseMap = BGFX_INVALID_HANDLE;
-        bgfx::UniformHandle m_u_normalMtx = BGFX_INVALID_HANDLE;
+
+        bgfx::ProgramHandle m_uvProgram = BGFX_INVALID_HANDLE; // basic uv shader with tint
+        bgfx::ProgramHandle m_colorProgram = BGFX_INVALID_HANDLE;
+        bgfx::ProgramHandle m_meshColorProgram = BGFX_INVALID_HANDLE;
+
+        UniformWrapper<StringLiteral("s_diffuseMap"), bgfx::UniformType::Sampler> m_s_diffuseMap;
+        UniformWrapper<StringLiteral("u_normalMtx"),  bgfx::UniformType::Mat4> m_u_normalMtx;
+        UniformWrapper<StringLiteral("u_color"),      bgfx::UniformType::Vec4> m_u_color;
+
         window::WindowEvent::Handler m_windowEvent;
-
     };
-
-
 } // namespace hpl

@@ -22,6 +22,8 @@
 #include "EditorEditMode.h"
 #include "EditorWindowViewport.h"
 
+#include "graphics/ImmediateDrawBatch.h"
+
 cSphereCreator::cSphereCreator(iEditorEditMode* apEditMode) : iShapeCreator(apEditMode)
 {
 	mfDefaultRadius = 1;
@@ -41,11 +43,11 @@ void cSphereCreator::OnViewportMouseUp(int alButtons)
 		StoreMousePosition(mvTempPoint);
 }
 
-void cSphereCreator::Draw(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions)
+void cSphereCreator::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions)
 {
-	apFunctions->SetProgram(NULL);
-	apFunctions->SetTextureRange(NULL,0);
-	apFunctions->SetMatrix(NULL);
+	// apFunctions->SetProgram(NULL);
+	// apFunctions->SetTextureRange(NULL,0);
+	// apFunctions->SetMatrix(NULL);
 
 	/*apFunctions->GetLowLevelGfx()->DrawSphere(vDebugPos, 0.1f, cColor(0,0,1,1));
 	apFunctions->GetLowLevelGfx()->DrawLine(vDebugPos, vDebugPos-cVector3f(vDebugPos.x,0,0), cColor(1,0,0,1));
@@ -54,11 +56,11 @@ void cSphereCreator::Draw(cEditorWindowViewport* apViewport, cRendererCallbackFu
 	*/
 	if(mvPoints.empty()==false && mbDragging==true)
 	{
-		apFunctions->GetLowLevelGfx()->DrawLine(mvPoints[0]-cVector3f(0.05f,0,0), mvPoints[0]+cVector3f(0.05f,0,0), cColor(1,1));
-		apFunctions->GetLowLevelGfx()->DrawLine(mvPoints[0]-cVector3f(0,0.05f,0), mvPoints[0]+cVector3f(0,0.05f,0), cColor(1,1));
-		apFunctions->GetLowLevelGfx()->DrawLine(mvPoints[0]-cVector3f(0,0,0.05f), mvPoints[0]+cVector3f(0,0,0.05f), cColor(1,1));
-		apFunctions->GetLowLevelGfx()->DrawLine(mvPoints[0], mvTempPoint, cColor(1,1));
-		apFunctions->GetLowLevelGfx()->DrawSphere(mvPoints[0], mfRadius, cColor(1,1));
+		apFunctions->DebugDrawLine(mvPoints[0]-cVector3f(0.05f,0,0), mvPoints[0]+cVector3f(0.05f,0,0), cColor(1,1));
+		apFunctions->DebugDrawLine(mvPoints[0]-cVector3f(0,0.05f,0), mvPoints[0]+cVector3f(0,0.05f,0), cColor(1,1));
+		apFunctions->DebugDrawLine(mvPoints[0]-cVector3f(0,0,0.05f), mvPoints[0]+cVector3f(0,0,0.05f), cColor(1,1));
+		apFunctions->DebugDrawLine(mvPoints[0], mvTempPoint, cColor(1,1));
+		apFunctions->DebugDrawSphere(mvPoints[0], mfRadius, cColor(1,1));
 	}
 }
 

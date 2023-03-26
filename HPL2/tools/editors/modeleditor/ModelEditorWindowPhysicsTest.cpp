@@ -92,7 +92,8 @@ void cPhysicsTestRenderCallback::OnPostSolidDraw(cRendererCallbackFunctions* apF
 
 	if(mbDrawDebug)
 	{
-		mpWindow->mpTestPhysicsWorld->RenderDebugGeometry(apFunctions->GetLowLevelGfx(), cColor(1,1,1,1));
+		BX_ASSERT(false);
+		// mpWindow->mpTestPhysicsWorld->RenderDebugGeometry(apFunctions->GetLowLevelGfx(), cColor(1,1,1,1));
 		std::vector<iPhysicsJoint*>& vJoints = mpWindow->mvJoints;
 
 		for(size_t i=0;i<vJoints.size(); ++i)

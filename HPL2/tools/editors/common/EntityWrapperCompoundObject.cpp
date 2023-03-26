@@ -303,7 +303,7 @@ void cEntityWrapperCompoundObject::OnRemoveComponent(iEntityWrapper* apEntity)
 //------------------------------------------------------------------------
 
 
-void cEntityWrapperCompoundObject::Draw(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions, iEditorEditMode* apEditMode, bool abIsSelected,const cColor& aHighlightCol, const cColor& aDisabledCol)
+void cEntityWrapperCompoundObject::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, iEditorEditMode* apEditMode, bool abIsSelected,const cColor& aHighlightCol, const cColor& aDisabledCol)
 {
 	if(abIsSelected==false)
 		return;

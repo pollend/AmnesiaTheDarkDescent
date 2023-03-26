@@ -1137,8 +1137,6 @@ bool cLuxBase::InitEngine()
 
 	// cRendererDeferred::SetOcclusionTestLargeLights(mpConfigHandler->mbOcclusionTestLights);
 
-	iLowLevelGraphics::SetForceShaderModel3And4Off(mpConfigHandler->mbForceShaderModel3And4Off);
-
 	//Other vars
 	cResources::SetForceCacheLoadingAndSkipSaving(mpConfigHandler->mbForceCacheLoadingAndSkipSaving);
 	cResources::SetCreateAndLoadCompressedMaps(false);

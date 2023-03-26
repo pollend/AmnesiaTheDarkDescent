@@ -29,6 +29,7 @@
 #include "graphics/RenderTarget.h"
 
 #include "gui/GuiTypes.h"
+#include "math/Frustum.h"
 #include "math/MathTypes.h"
 #include "scene/SceneTypes.h"
 #include "windowing/NativeWindow.h"
@@ -58,11 +59,17 @@ namespace hpl {
         using ViewportDispose = hpl::Event<>;
         using ViewportChange = hpl::Event<>;
 
-        struct PostDrawPayload {
-            GraphicsContext& m_context;
-            std::shared_ptr<RenderTarget> m_target;
+        struct DrawPayloadCommon {
+            cFrustum* m_frustum;
+            GraphicsContext* m_context;
+            RenderTarget* m_outputTarget;
         };
-        using PostSceneDraw = hpl::Event<PostDrawPayload>;
+        struct PostSolidDrawPayload : public DrawPayloadCommon {
+        };
+        struct PostTranslucenceDrawPayload : public DrawPayloadCommon {
+        };
+        using PostSolidDraw = hpl::Event<PostSolidDrawPayload&>;
+        using PostTranslucenceDraw = hpl::Event<PostTranslucenceDrawPayload&>;
 
         cViewport(cScene* apScene);
 
@@ -73,54 +80,27 @@ namespace hpl {
 
         ~cViewport();
 
-        void SetActive(bool abX) {
-            mbActive = abX;
-        }
-
-        void SetVisible(bool abX) {
-            mbVisible = abX;
-        }
+        inline void SetActive(bool abX) { mbActive = abX;}
+        inline void SetVisible(bool abX) { mbVisible = abX;}
         
-        bool IsActive() {
-            return mbActive;
-        }
-        
-        bool IsVisible() {
-            return mbVisible;
-        }
+        inline bool IsActive() { return mbActive;}
+        inline bool IsVisible() { return mbVisible; }
 
         bool IsValid();
 
-        inline size_t GetHandle() {
-            return m_handle;
-        }
-
-        void SetIsListener(bool abX) {
-            mbIsListener = abX;
-        }
+        inline size_t GetHandle() { return m_handle; }
+        inline void SetIsListener(bool abX) { mbIsListener = abX;}
         
-        bool IsListener() {
-            return mbIsListener;
-        }
+        inline bool IsListener() { return mbIsListener; }
 
-        inline void SetCamera(cCamera* apCamera) {
-            mpCamera = apCamera;
-        }
-        inline cCamera* GetCamera() {
-            return mpCamera;
-        }
+        inline void SetCamera(cCamera* apCamera) { mpCamera = apCamera; }
+        inline cCamera* GetCamera() { return mpCamera; }
 
         void SetWorld(cWorld* apWorld);
-        inline cWorld* GetWorld() {
-            return mpWorld;
-        }
+        inline cWorld* GetWorld() { return mpWorld; }
 
-        void SetRenderer(iRenderer* apRenderer) {
-            mpRenderer = apRenderer;
-        }
-        iRenderer* GetRenderer() {
-            return mpRenderer;
-        }
+        inline void SetRenderer(iRenderer* apRenderer) { mpRenderer = apRenderer; }
+        inline iRenderer* GetRenderer() { return mpRenderer; }
 
         cRenderSettings* GetRenderSettings() {
             return mpRenderSettings.get();
@@ -174,34 +154,42 @@ namespace hpl {
             return &mlstRendererCallbacks;
         }
 
-        inline void ConnectViewportChanged(ViewportChange::Handler& handler) {
-            handler.Connect(m_viewportChanged);
-        }
+        inline void ConnectViewportChanged(ViewportChange::Handler& handler) { handler.Connect(m_viewportChanged);}
+
+        inline void ConnectDraw(PostSolidDraw::Handler& handler) { handler.Connect(m_postSolidDraw); }
+        inline void ConnectDraw(PostTranslucenceDraw::Handler& handler) { handler.Connect(m_postTranslucenceDraw); }
+
+        inline void SignalDraw(PostSolidDrawPayload& payload) { m_postSolidDraw.Signal(payload);}
+        inline void SignalDraw(PostTranslucenceDrawPayload& payload) { m_postTranslucenceDraw.Signal(payload);}
+
 
     private:
+        bool mbActive;
+        bool mbVisible;
+        bool mbIsListener;
         bool m_dirtyViewport = false;
-        ImageDescriptor m_imageDescriptor;
-
-        cVector2l m_size = { 0, 0 };
         size_t m_handle = 0;
-        std::shared_ptr<RenderTarget> m_renderTarget;
-        IUpdateEventLoop::UpdateEvent::Handler m_updateEventHandler;
-        window::WindowEvent::Handler m_windowEventHandler;
-        ViewportDispose m_disposeEvent;
-        ViewportChange m_viewportChanged;
-
-        PostSceneDraw m_postSceneDraw;
 
         cScene* mpScene;
         cCamera* mpCamera;
         cWorld* mpWorld;
-
-        bool mbActive;
-        bool mbVisible;
-        bool mbIsListener;
-
         iRenderer* mpRenderer;
         cPostEffectComposite* mpPostEffectComposite;
+
+        ImageDescriptor m_imageDescriptor;
+
+        std::shared_ptr<RenderTarget> m_renderTarget;
+        
+        cVector2l m_size = { 0, 0 };
+        
+        IUpdateEventLoop::UpdateEvent::Handler m_updateEventHandler;
+        
+        ViewportDispose m_disposeEvent;
+        ViewportChange m_viewportChanged;
+        window::WindowEvent::Handler m_windowEventHandler;
+        
+        PostSolidDraw m_postSolidDraw;
+        PostTranslucenceDraw m_postTranslucenceDraw;
 
         tViewportCallbackList mlstCallbacks;
         tRendererCallbackList mlstRendererCallbacks;

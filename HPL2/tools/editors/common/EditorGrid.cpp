@@ -22,12 +22,12 @@
 #include "EditorBaseClasses.h"
 #include "EditorViewport.h"
 
-//--------------------------------------------------------
+
+#include "graphics/ImmediateDrawBatch.h"
+
 
 bool cEditorGrid::mbSnapToGrid = true;
 float cEditorGrid::mfSnapSeparation = 0.25f;
-
-//--------------------------------------------------------
 
 cEditorGrid::cEditorGrid(iEditorViewport* apViewport)
 {
@@ -66,7 +66,7 @@ cVector3f cEditorGrid::GetSnappedPosInSpace(const cVector3f& avWorldPos)
 
 //--------------------------------------------------------
 
-void cEditorGrid::Draw(cRendererCallbackFunctions *apFunctions, const cVector3f& avPos)
+void cEditorGrid::Draw(ImmediateDrawBatch *batch, const cVector3f& avPos)
 {
 	if(mbVisible==false || mfSnapSeparation<=0)
 		return;
@@ -157,19 +157,19 @@ void cEditorGrid::Draw(cRendererCallbackFunctions *apFunctions, const cVector3f&
 	vLineStart2 = vLineStart1;
 
 
-	apFunctions->SetDepthTest(true);
-	apFunctions->SetDepthWrite(false);
+	// apFunctions->SetDepthTest(true);
+	// apFunctions->SetDepthWrite(false);
 
 	//apFunctions->SetBlendMode(eMaterialBlendMode_Alpha);
 
-	apFunctions->SetProgram(NULL);
-	apFunctions->SetTextureRange(NULL,0);
-	apFunctions->SetMatrix(NULL);
+	// apFunctions->SetProgram(NULL);
+	// apFunctions->SetTextureRange(NULL,0);
+	// apFunctions->SetMatrix(NULL);
 
 	while(fCount <= mfSize)
 	{
-		apFunctions->GetLowLevelGfx()->DrawLine(vLineStart1, vLineStart1+vLineEnd1, mColor);
-		apFunctions->GetLowLevelGfx()->DrawLine(vLineStart2, vLineStart2+vLineEnd2, mColor);
+		batch->DebugDrawLine(vLineStart1, vLineStart1+vLineEnd1, mColor);
+		batch->DebugDrawLine(vLineStart2, vLineStart2+vLineEnd2, mColor);
 
 		vLineStart1 += vAdd1;
 		vLineStart2 += vAdd2;
@@ -180,7 +180,7 @@ void cEditorGrid::Draw(cRendererCallbackFunctions *apFunctions, const cVector3f&
 	//apFunctions->GetLowLevelGfx()->DrawLine(vAxisStart1, vAxisEnd1, axisColor1);
 	//apFunctions->GetLowLevelGfx()->DrawLine(vAxisStart2, vAxisEnd2, axisColor2);
 
-	apFunctions->SetBlendMode(eMaterialBlendMode_None);
+	// apFunctions->SetBlendMode(eMaterialBlendMode_None);
 }
 //--------------------------------------------------------
 

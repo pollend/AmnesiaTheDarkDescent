@@ -897,8 +897,9 @@ void cLuxEnemy_Grunt::OnRenderSolidImplemented(cRendererCallbackFunctions* apFun
 
 	if(mCurrentState == eLuxEnemyState_AttackMeleeShort)
 	{
-		pPhysicsWorld->RenderShapeDebugGeometry(GetAttackShape(0), GetDamageShapeMatrix(cVector3f(0,0,1)), apFunctions->GetLowLevelGfx(),
-												cColor(1,0,0,1));
+		BX_ASSERT(false); // TODO: Fix this
+		// pPhysicsWorld->RenderShapeDebugGeometry(GetAttackShape(0), GetDamageShapeMatrix(cVector3f(0,0,1)), apFunctions->GetLowLevelGfx(),
+		// 										cColor(1,0,0,1));
 	}
 }
 

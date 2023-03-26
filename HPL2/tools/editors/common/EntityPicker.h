@@ -83,7 +83,7 @@ public:
 	void SetPickFilter(iPickFilter* apFilter);
 	void SetPickMethod(iPickMethod* apMethod);
 
-	void DrawDebug(cRendererCallbackFunctions* apFunctions);
+	void DrawDebug(ImmediateDrawBatch* apFunctions);
 
 	int GetNumPicks();
 	cPickData* GetPick(int alX);

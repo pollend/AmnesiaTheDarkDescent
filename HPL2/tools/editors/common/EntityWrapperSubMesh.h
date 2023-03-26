@@ -44,7 +44,7 @@ public:
 
 	bool CheckRayIntersect(cEditorWindowViewport*, cVector3f*, tVector3fVec*, float*);
 
-	void Draw(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions,
+	void Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions,
 				bool abIsSelected, bool abIsActive, const cColor& aHighlightCol);
 
 	cBoundingVolume* GetPickBV(cEditorWindowViewport* apViewport);

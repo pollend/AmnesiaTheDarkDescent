@@ -30,6 +30,7 @@
 
 #include "../leveleditor/LevelEditor.h"
 
+#include "graphics/ImmediateDrawBatch.h"
 //-----------------------------------------------------------------
 
 ///////////////////////////////////////////////////////////////////
@@ -55,19 +56,19 @@ cEditorEditModeEntities::cEditorEditModeEntities(iEditorBase* apEditor,
 
 //-----------------------------------------------------------------
 
-void cEditorEditModeEntities::DrawObjectPreview(cEditorWindowViewport* apViewport, cRendererCallbackFunctions *apFunctions, const cMatrixf& amtxTransform, bool abPreCreationActive)
+void cEditorEditModeEntities::DrawObjectPreview(cEditorWindowViewport* apViewport, ImmediateDrawBatch *apFunctions, const cMatrixf& amtxTransform, bool abPreCreationActive)
 {
 	cEditorWindowEntities* pWin = (cEditorWindowEntities*)mpWindow;
 
-	apFunctions->SetMatrix(NULL);
-	apFunctions->SetBlendMode(eMaterialBlendMode_Alpha);
-	apFunctions->SetTextureRange(NULL,0);
-	apFunctions->SetProgram(NULL);
+	// apFunctions->SetMatrix(NULL);
+	// apFunctions->SetBlendMode(eMaterialBlendMode_Alpha);
+	// apFunctions->SetTextureRange(NULL,0);
+	// apFunctions->SetProgram(NULL);
 
-	apFunctions->SetDepthTest(true);
-	apFunctions->SetDepthWrite(false);
+	// apFunctions->SetDepthTest(true);
+	// apFunctions->SetDepthWrite(false);
 
-	apFunctions->GetLowLevelGfx()->DrawSphere(mpEditor->GetPosOnGridFromMousePos(),0.1f,cColor(1,0,0,1));
+	apFunctions->DebugDrawSphere(mpEditor->GetPosOnGridFromMousePos(),0.1f,cColor(1,0,0,1));
 
 	iEditorObjectIndexEntryMeshObject* pObj = pWin->GetSelectedObject();
 
@@ -76,7 +77,7 @@ void cEditorEditModeEntities::DrawObjectPreview(cEditorWindowViewport* apViewpor
 		const cVector3f& vBVMin = pObj->GetBVMin();
 		const cVector3f& vBVMax = pObj->GetBVMax();
 
-		apFunctions->SetMatrix((cMatrixf*)&amtxTransform);
+		// apFunctions->SetMatrix((cMatrixf*)&amtxTransform);
 		cMeshEntity* pEnt = pWin->GetPreviewEntity();
 		if(pEnt)
 		{
@@ -87,19 +88,18 @@ void cEditorEditModeEntities::DrawObjectPreview(cEditorWindowViewport* apViewpor
 
 		if(abPreCreationActive)
 		{
-			apFunctions->SetDepthTestFunc(eDepthTestFunc_Greater);
-			apFunctions->GetLowLevelGfx()->DrawBoxMinMax(vBVMin,vBVMax, cColor(1,0,0,0.6f));
-			apFunctions->SetDepthTestFunc(eDepthTestFunc_Less);
-			apFunctions->GetLowLevelGfx()->DrawBoxMinMax(vBVMin,vBVMax, cColor(0,1,0,0.6f));
+			ImmediateDrawBatch::DebugDrawOptions options;
+			options.m_depthTest = DepthTest::Greater;
+			options.m_transform = amtxTransform;
+			apFunctions->DebugDrawBoxMinMax(vBVMin,vBVMax, cColor(1,0,0,0.6f), options);
+			options.m_depthTest = DepthTest::Less;
+			apFunctions->DebugDrawBoxMinMax(vBVMin,vBVMax, cColor(0,1,0,0.6f), options);
 		}
 		else
 		{
-			apFunctions->GetLowLevelGfx()->DrawBoxMinMax(vBVMin,vBVMax, cColor(1,0.5f));
+			apFunctions->DebugDrawBoxMinMax(vBVMin, vBVMax, cColor(1,0,0,0.5f));
 		}
 	}
-
-	apFunctions->SetBlendMode(eMaterialBlendMode_None);
-	apFunctions->SetMatrix(NULL);
 }
 
 //-----------------------------------------------------------------

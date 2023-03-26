@@ -37,7 +37,7 @@ public:
 	bool CheckRayIntersect(cEditorWindowViewport* , cVector3f* , tVector3fVec*, float* apT=NULL);
 
 	void DrawIcon(cEditorWindowViewport* apViewport,
-				  cRendererCallbackFunctions* apFunctions,
+				  ImmediateDrawBatch* apFunctions,
 				  iEditorEditMode* apEditMode,
 				  bool abIsSelected,
 				  const cVector3f& avPos,

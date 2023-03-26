@@ -1,18 +1,31 @@
-#include "bx/math.h"
+
+#include <graphics/GraphicsContext.h>
+
 #include "engine/Event.h"
 #include "engine/Interface.h"
+
+#include "math/Math.h"
+#include "math/MathTypes.h"
+
+#include "scene/Camera.h"
+
 #include "graphics/Enum.h"
 #include "graphics/ShaderUtil.h"
-#include "math/MathTypes.h"
-#include <absl/container/inlined_vector.h>
-#include <absl/strings/string_view.h>
-#include <bgfx/bgfx.h>
-#include <bgfx/defines.h>
-#include <cstdint>
-#include <graphics/GraphicsContext.h>
 #include <graphics/GraphicsTypes.h>
 
+#include "bx/math.h"
+#include <bgfx/bgfx.h>
+#include <bgfx/defines.h>
+
 #include <bx/debug.h>
+#include <algorithm>
+#include <variant>
+#include <cstddef>
+#include <cstdint>
+#include <absl/container/inlined_vector.h>
+#include <absl/strings/string_view.h>
+
+#include "graphics/Layouts.h"
 
 namespace hpl {
 
@@ -20,24 +33,6 @@ namespace hpl {
         m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::Zero);
         m_configuration.m_alphaBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::Zero);
     }
-
-    struct PositionTexCoord0 {
-        float m_x;
-        float m_y;
-        float m_z;
-        float m_u;
-        float m_v;
-
-        static void init() {
-            _layout.begin()
-                .add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float)
-                .add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Float)
-                .end();
-        }
-
-        static bgfx::VertexLayout _layout;
-    };
-    bgfx::VertexLayout PositionTexCoord0::_layout;
 
     uint64_t convertBGFXStencil(const StencilTest& stencilTest) {
         if (!IsValidStencilTest(stencilTest)) {
@@ -344,7 +339,7 @@ namespace hpl {
     }
 
     GraphicsContext::GraphicsContext()
-        : _current(0) {
+        : m_current(0) {
 
         m_windowEvent = window::WindowEvent::Handler([&](window::WindowEventPayload& payload) {
             switch(payload.m_type) {
@@ -359,38 +354,28 @@ namespace hpl {
         if(auto* window = Interface<window::NativeWindowWrapper>::Get()) {
 			window->ConnectWindowEventHandler(m_windowEvent);
 		}
-        
-        if (bgfx::isValid(m_copyProgram)) {
-            bgfx::destroy(m_copyProgram);
-        }
-        if (bgfx::isValid(m_s_diffuseMap)) {
-            bgfx::destroy(m_s_diffuseMap);
-        }
 
-        if (bgfx::isValid(m_u_normalMtx)) {
-            bgfx::destroy(m_u_normalMtx);
-        }
     }
 
-    uint16_t GraphicsContext::ScreenWidth() const {
-        return 0;
-    }
-    uint16_t GraphicsContext::ScreenHeight() const {
-        return 0;
+    GraphicsContext::~GraphicsContext() {
+        for(auto& it: m_programCache) {
+            bgfx::destroy(it.second);
+        }
     }
 
     void GraphicsContext::UpdateScreenSize(uint16_t width, uint16_t height) {
     }
 
     void GraphicsContext::Init() {
-        PositionTexCoord0::init();
-        m_copyProgram = hpl::loadProgram("vs_post_effect", "fs_post_effect_copy");
-        m_s_diffuseMap = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
-        m_u_normalMtx = bgfx::createUniform("u_normalMtx", bgfx::UniformType::Mat4);
+
+        m_copyProgram = resolveProgramCache<StringLiteral("vs_post_effect"), StringLiteral("fs_post_effect_copy")>();
+        m_colorProgram = resolveProgramCache<StringLiteral("vs_color"), StringLiteral("fs_color")>();
+        m_uvProgram = resolveProgramCache<StringLiteral("vs_basic_uv"), StringLiteral("fs_basic_uv")>();
+        m_meshColorProgram = resolveProgramCache<StringLiteral("vs_color"), StringLiteral("fs_color_1")>();
     }
 
     void GraphicsContext::Frame() {
-        _current = 0;
+        m_current = 0;
         m_windowEvent.Process();
         bgfx::frame();
     }
@@ -435,7 +420,7 @@ namespace hpl {
     }
 
     bgfx::ViewId GraphicsContext::StartPass(absl::string_view name, const ViewConfiguration& config) {
-        bgfx::ViewId view = _current++;
+        bgfx::ViewId view = m_current++;
         bgfx::setViewName(view, name.data());
         if (config.m_clear.has_value()) {
             auto& clear = config.m_clear.value();
@@ -484,8 +469,8 @@ namespace hpl {
         BX_ASSERT(bgfx::getCaps(), "GraphicsContext::Init() must be called before ScreenSpaceQuad()");
 
         bgfx::TransientVertexBuffer vb;
-        bgfx::allocTransientVertexBuffer(&vb, 4, PositionTexCoord0::_layout);
-        PositionTexCoord0* vertex = (PositionTexCoord0*)vb.data;
+        bgfx::allocTransientVertexBuffer(&vb, 4, layout::PositionTexCoord0::layout());
+        auto* vertex = reinterpret_cast<layout::PositionTexCoord0*>(vb.data);
 
         const float minx = pos.x;
         const float maxx = pos.x + size.x;
@@ -525,8 +510,8 @@ namespace hpl {
         BX_ASSERT(bgfx::getCaps(), "GraphicsContext::Init() must be called before ScreenSpaceQuad()");
 
         bgfx::TransientVertexBuffer vb;
-        bgfx::allocTransientVertexBuffer(&vb, 3, PositionTexCoord0::_layout);
-        PositionTexCoord0* vertex = (PositionTexCoord0*)vb.data;
+        bgfx::allocTransientVertexBuffer(&vb, 3, layout::PositionTexCoord0::layout());
+        auto* vertex = reinterpret_cast<layout::PositionTexCoord0*>(vb.data);
 
         bx::mtxOrtho(proj.v, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 100.0f, 0.0f, bgfx::getCaps()->homogeneousDepth);
 

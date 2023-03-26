@@ -38,7 +38,7 @@ public:
 	void OnViewportMouseDown(int alButtons);
 	void OnViewportMouseUp(int alButtons);
 
-	void Draw(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions);
+	void Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions);
 
 	void OnEditorUpdate();
 

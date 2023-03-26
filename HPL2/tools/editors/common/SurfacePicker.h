@@ -57,7 +57,7 @@ protected:
 	int ToSurfaceTypeID(int);
 	int ToEntityTypeID(int);
 
-	void OnDraw(cRendererCallbackFunctions* apFunctions);
+	void OnDraw(ImmediateDrawBatch* apFunctions);
 
 	void Iterate();
 	void IterateRenderableNode(iRenderableContainerNode *apNode, const cVector3f& avStart, const cVector3f& avEnd, cBoundingVolume *apBV, int* apTriIndex, bool abAveragingNormal=false);

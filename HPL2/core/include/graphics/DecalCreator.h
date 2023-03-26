@@ -35,6 +35,7 @@ namespace hpl {
 	class cSubMeshEntity;
 	class cRendererCallbackFunctions;
 	class cBoundingVolume;
+	class ImmediateDrawBatch;
 
 	class cDecalCreator
 	{
@@ -78,7 +79,7 @@ namespace hpl {
 		iVertexBuffer* GetVB() { return mpDecalVB; }
 		cMaterial* GetMaterial() { return mpDecalMaterial; }
 
-		void DrawDebug(cRendererCallbackFunctions* apFunctions, bool abDrawAxes, bool abDrawWireframe);
+		void DrawDebug(ImmediateDrawBatch* apFunctions, bool abDrawAxes, bool abDrawWireframe);
 
 		cBoundingVolume* GetDecalBoundingVolume();
 

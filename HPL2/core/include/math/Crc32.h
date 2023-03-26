@@ -38,6 +38,10 @@ namespace hpl::math {
             return *this;
         }
 
+        constexpr uint32_t value() const {
+            return m_value;
+        }
+
     private:
         uint32_t m_value;
     };

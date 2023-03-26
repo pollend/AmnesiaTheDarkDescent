@@ -247,7 +247,8 @@ void iLuxProp_CritterBase::OnRenderSolid(cRendererCallbackFunctions* apFunctions
 	return;
 	iPhysicsWorld *pPhysicsWorld = mpWorld->GetPhysicsWorld();
 
-	pPhysicsWorld->RenderShapeDebugGeometry(mpBody->GetShape(), mpBody->GetLocalMatrix(), apFunctions->GetLowLevelGfx(), cColor(1,1));
+	BX_ASSERT(false); // TODO add back this line
+	// pPhysicsWorld->RenderShapeDebugGeometry(mpBody->GetShape(), mpBody->GetLocalMatrix(), apFunctions->GetLowLevelGfx(), cColor(1,1));
 
 	apFunctions->GetLowLevelGfx()->DrawLine(mpBody->GetLocalPosition(), mpBody->GetLocalPosition()+mvGroundNormal*0.5f,cColor(1,0,0,1));
 	cVector3f vFwdDir = cMath::Vector3Normalize(mvVel==0 ? mlstFwdDirs.back() : mvVel);

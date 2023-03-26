@@ -16,6 +16,13 @@ FetchContent_Declare(
   GIT_REPOSITORY https://github.com/bkaradzic/bgfx.cmake.git
 )
 
+FetchContent_Declare(
+  Eigen
+  GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
+  GIT_TAG master
+  GIT_SHALLOW TRUE
+  GIT_PROGRESS TRUE)
+
 set(BGFX_OPENGL_VERSION 33 CACHE INTERNAL "")
 set(BGFX_INSTALL OFF CACHE INTERNAL "")
 set(BGFX_INSTALL_EXAMPLES OFF CACHE INTERNAL "")
@@ -25,6 +32,11 @@ set(BGFX_CONFIG_MAX_INDEX_BUFFERS 65535 CACHE INTERNAL "")
 set(BGFX_CONFIG_MAX_OCCLUSION_QUERIES 65535 CACHE INTERNAL "")
 add_compile_definitions(BGFX_CONFIG_MAX_VERTEX_STREAMS=16)
 FetchContent_MakeAvailable(bgfx_cmake) 
+
+set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
+set(EIGEN_BUILD_DOC OFF)
+set(EIGEN_BUILD_PKGCONFIG OFF)
+FetchContent_MakeAvailable(Eigen)
 
 add_subdirectory(abseil-cpp)
 add_subdirectory(OALWrapper)

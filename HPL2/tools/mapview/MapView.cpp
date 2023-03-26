@@ -83,7 +83,17 @@ int glNodeCont_MaxEdges = 0;
 float gfNodeCont_MaxEdgeDistance = 0;
 float gfNodeCont_MaxHeight = 0;
 
-//--------------------------------------------------------------------------------
+cColor CalcDistColorForRenderable(iRenderable *apObject)
+{
+	cVector3f vPos = gpSimpleCamera->GetCamera()->GetPosition();
+
+	float fDist = cMath::Vector3Dist(vPos, apObject->GetBoundingVolume()->GetWorldCenter());
+	float fVal = 1.0f - (fDist / 30.0f);
+	if(fVal <0.2f) fVal =0.2f;
+
+	return cColor(fVal, 1);
+}
+
 
 class cSimpleObjectLoader : public cEntityLoader_Object
 {
@@ -453,7 +463,7 @@ public:
 
 				cColor col = pBody->GetCollide() ? cColor(1,1) : cColor(1,0,1,1);
 
-				pBody->RenderDebugGeometry(apFunctions->GetLowLevelGfx(),col);
+				// pBody->RenderDebugGeometry(apFunctions->GetLowLevelGfx(),col);
 			}
 		}
 
@@ -602,10 +612,326 @@ public:
 			mpAmbientBox = NULL;
 		}
 
+		m_postSolidDraw = cViewport::PostSolidDraw::Handler([&](cViewport::PostSolidDrawPayload& payload) {
+			
+			// apFunctions->SetDepthTest(false);
+			// apFunctions->SetDepthWrite(false);
+			// apFunctions->SetBlendMode(eMaterialBlendMode_None);
+
+			// apFunctions->SetProgram(NULL);
+			// apFunctions->SetTextureRange(NULL, 0);
+			// apFunctions->SetMatrix(NULL);
+			cMatrixf view = payload.m_frustum->GetViewMatrix().GetTranspose();
+			cMatrixf proj = payload.m_frustum->GetProjectionMatrix().GetTranspose();
+			ImmediateDrawBatch batch(*payload.m_context, *payload.m_outputTarget,view, proj);
+
+			std::function<void(iRenderableContainerNode *apNode, int alLevel)> nodeDebug;
+			nodeDebug = [&](iRenderableContainerNode *apNode, int alLevel) {
+				///////////////////////////////////////
+				//Make sure node is updated
+				//apNode->UpdateBeforeUse();
+
+				cVector3f vBoxMin = 9999999.f;
+				cVector3f vBoxMax = -9999999.f;
+
+				bool bObjectIsOutSide = false;
+
+				/////////////////////////////
+				//Iterate objects
+				if(apNode->HasObjects())
+				{
+					tRenderableListIt it = apNode->GetObjectList()->begin();
+					for(; it != apNode->GetObjectList()->end(); ++it)
+					{
+						iRenderable *pObject = *it;
+						cBoundingVolume *pBV = pObject->GetBoundingVolume();
+
+						cMath::ExpandAABB(vBoxMin, vBoxMax, pBV->GetMin(), pBV->GetMax());
+
+						iRenderableContainerNode *pCheckNode = apNode;
+						while(pCheckNode && pCheckNode->GetParent())
+						{
+							if(CheckEntityInsideBox(pObject, pCheckNode->GetMin(), pCheckNode->GetMax())==false)
+							{
+								batch.DebugDrawBoxMinMax(pBV->GetMin(), pBV->GetMax(),cColor(1,0,0,1));
+								bObjectIsOutSide = true;
+							}
+							pCheckNode = pCheckNode->GetParent();
+						}
+					}
+				}
+
+				if(bObjectIsOutSide)
+				{
+					batch.DebugDrawBoxMinMax(apNode->GetMin(), apNode->GetMax(),cColor(0,1,0,1));
+					batch.DebugDrawBoxMinMax(vBoxMin, vBoxMin,cColor(0,1,0,1));
+				}
+
+				////////////////////////
+				//Iterate children
+				if(apNode->HasChildNodes())
+				{
+					tRenderableContainerNodeListIt childIt = apNode->GetChildNodeList()->begin();
+					for(; childIt != apNode->GetChildNodeList()->end(); ++childIt)
+					{
+						iRenderableContainerNode *pChildNode = *childIt;
+						nodeDebug(pChildNode, alLevel+1);
+					}
+				}
+			};
+			
+
+			cRenderSettings *pSettings = gpSimpleCamera->GetViewport()->GetRenderSettings();
+			cRenderList *pRenderList = pSettings->mpRenderList;
+
+			/////////////////////////////////////
+			//Draw outlines on objects, so you can see what mesh each belongs to (after having been combined)
+			if(gbDrawSepperateObjects)
+			{
+				///////////////////////////////////
+				// Iterate the static mesh any draw the
+				int lCount = 0;
+				cMeshEntityIterator meshIt = mpWorld->GetStaticMeshEntityIterator();
+				while(meshIt.HasNext())
+				{
+					cMeshEntity *pEntity = meshIt.Next();
+
+					for(int i=0; i<pEntity->GetSubMeshEntityNum(); ++i)
+					{
+						cSubMeshEntity *pSubEnt = pEntity->GetSubMeshEntity(i);
+						//if(pSubEnt->GetName() != "CombinedObjects131_SubMesh") continue;
+
+						int lColNum = lCount % glObjectDebugColorNum;
+						const cColor &currentColor = gObjectDebugColor[lColNum];
+
+						GraphicsContext::LayoutStream layoutStream;
+						ImmediateDrawBatch::DebugDrawOptions options;
+						options.m_transform = *pSubEnt->GetModelMatrix(NULL);
+						batch.DebugDrawMesh(layoutStream, currentColor, options);
+
+						// batch.DebugDrawMesh(const GraphicsContext::LayoutStream &layout, const cColor &color)
+						// apFunctions->SetMatrix(pSubEnt->GetModelMatrix(NULL));
+						// apFunctions->DrawWireFrame(pSubEnt->GetVertexBuffer(), currentColor);
+
+						//cBoundingVolume *pBV = pObject->GetBoundingVolume();
+						//apFunctions->GetLowLevelGfx()->DrawBoxMinMax(pBV->GetMin(), pBV->GetMax(),);
+						lCount++;
+					}
+				}
+			}
+
+			/////////////////////////////////////////
+			//Sounds
+			if(gbRenderSoundsPlaying)
+			{
+				// apFunctions->SetDepthTest(false);
+				// apFunctions->SetMatrix(NULL);
+				cSoundHandler *pSoundHandler = gpEngine->GetSound()->GetSoundHandler();
+
+				//////////////////////////////
+				//Sounds
+
+				//Get names and entrys
+				tSoundEntryList *pEntryList = pSoundHandler->GetEntryList();
+				for(tSoundEntryListIt it = pEntryList->begin(); it != pEntryList->end();++it)
+				{
+					cSoundEntry *pEntry = *it;
+					iSoundChannel *pSound = pEntry->GetChannel();
+
+					if(pSound->Get3D() && pSound->GetPositionIsRelative() ==false)
+					{
+						ImmediateDrawBatch::DebugDrawOptions options;
+						options.m_depthTest = DepthTest::Always;
+						batch.DebugDrawSphere(pSound->GetPosition(), 0.1f, cColor(1,1,1,1), options);
+
+						batch.DebugDrawSphere(pSound->GetPosition(), pSound->GetMinDistance(), cColor(0.75,1), options);
+						batch.DebugDrawSphere(pSound->GetPosition(), pSound->GetMaxDistance(), cColor(0.5,1), options);
+					}
+				}
+
+				// apFunctions->SetDepthTest(true);
+			}
+
+			/////////////////////////////////////////
+			//Picked object
+			if(mBodyPicker.mpPickedBody)
+			{
+				//cBoundingVolume *pBV = mBodyPicker.mpPickedBody->GetBV();
+				//mpLowLevelGraphics->DrawBoxMaxMin(pBV->GetMax(), pBV->GetMin(),cColor(1,0,1,1));
+
+				batch.DebugDrawSphere(mBodyPicker.mvPos,0.1f, cColor(1,0,0,1));
+				batch.DebugDrawSphere(m_dragPos,0.1f, cColor(1,0,0,1));
+
+				batch.DebugDrawLine(mBodyPicker.mvPos, m_dragPos, cColor(1,1,1,1));
+			}
+
+			/////////////////////////////////////////
+			//Draws how the level have been grouped
+			if(gbDrawContainerDebug)
+			{
+				BX_ASSERT(false); // TODO: Fix this
+				// mpWorld->GetRenderableContainer(eWorldContainerType_Static)->RenderDebug(apFunctions);
+			}
+
+			if(gbDrawDynContainerDebug)
+			{
+				nodeDebug(mpWorld->GetRenderableContainer(eWorldContainerType_Dynamic)->GetRoot(),0);
+			}
+
+			/////////////////////////////////////////
+			//Draws what is current rendered
+			if(gbDrawOcclusionGfxInfo)
+			{
+				// apFunctions->SetDepthTest(false);
+
+
+				/////////////////////////
+				//Solid objects (reverse order = back to front)
+				int lNum = pRenderList->GetSolidObjectNum();
+				for(int i=lNum-1; i>=0; --i)
+				{
+					iRenderable *pObject = pRenderList->GetSolidObject(i);
+					if(gbDrawStaticOcclusionGfxInfo==false && pObject->IsStatic())continue;
+
+					cColor col = CalcDistColorForRenderable(pObject);//cColor(1,1);//gObjectDebugColor[(size_t)pObject % glObjectDebugColorNum];
+					
+					ImmediateDrawBatch::DebugDrawOptions options;
+					GraphicsContext::LayoutStream layoutStream;
+					options.m_transform = *pObject->GetModelMatrix(payload.m_frustum);
+					pObject->GetVertexBuffer()->GetLayoutStream(layoutStream);
+					batch.DebugDrawMesh(layoutStream, col, options);
+
+				}
+
+				/////////////////////////
+				//Trans (reverse order = back to front)
+				lNum = pRenderList->GetTransObjectNum();
+				for(int i=lNum-1; i>=0; --i)
+				{
+					iRenderable *pObject = pRenderList->GetTransObject(i);
+					if(gbDrawStaticOcclusionGfxInfo==false && pObject->IsStatic())continue;
+
+					cColor col = CalcDistColorForRenderable(pObject);//cColor(1,1);//gObjectDebugColor[(size_t)pObject % glObjectDebugColorNum];
+					
+					ImmediateDrawBatch::DebugDrawOptions options;
+					GraphicsContext::LayoutStream layoutStream;
+					options.m_transform = *pObject->GetModelMatrix(payload.m_frustum);
+					pObject->GetVertexBuffer()->GetLayoutStream(layoutStream);
+					batch.DebugDrawMesh(layoutStream, col, options);
+
+
+					// cColor col = CalcDistColor(pObject);//cColor(1,1);//gObjectDebugColor[(size_t)pObject % glObjectDebugColorNum];
+
+					// apFunctions->SetMatrix(pObject->GetModelMatrix(apFunctions->GetFrustum()));
+					// apFunctions->DrawWireFrame(pObject->GetVertexBuffer(), col);
+				}
+
+				// apFunctions->SetDepthTest(true);
+			}
+
+			/////////////////////////////////////////
+			//Draws physics debug
+			if(gbDrawPhysicsDebug && mpWorld)
+			{
+				iPhysicsWorld *pPhysicsWorld = mpWorld->GetPhysicsWorld();
+
+				cPhysicsBodyIterator bodyIt = pPhysicsWorld->GetBodyIterator();
+
+				cCamera *pCam = gpSimpleCamera->GetCamera();
+
+				while(bodyIt.HasNext())
+				{
+					iPhysicsBody *pBody = bodyIt.Next();
+					if(pCam->GetFrustum()->CollideBoundingVolume(pBody->GetBoundingVolume())== eCollision_Outside) continue; //Frustum test for some extra speed!
+
+					cColor col = pBody->GetCollide() ? cColor(1,1) : cColor(1,0,1,1);
+
+					pBody->RenderDebugGeometry(&batch,col);
+				}
+			}
+
+			///////////////////////////////////////
+			//Draw path nodes and connections
+			if(gbRenderPathNodes && gpNodeContainer)
+			{
+				///////////////////////
+				//Render all nodes
+				for(int i=0; i<gpNodeContainer->GetNodeNum(); ++i)
+				{
+					cAINode *pNode = gpNodeContainer->GetNode(i);
+
+					batch.DebugDrawSphere(pNode->GetPosition(), 0.3f,cColor(0.4f,1));
+					// apFunctions->GetLowLevelGfx()->DrawSphere(pNode->GetPosition(), 0.3f,cColor(0.4f,1));
+
+					for(int j=0; j < pNode->GetEdgeNum(); ++j)
+					{
+						cAINodeEdge *pEdge = pNode->GetEdge(j);
+						batch.DebugDrawLine(pNode->GetPosition(),pEdge->mpNode->GetPosition(),cColor(0.4f,0.4f,0.4f,1));
+						// apFunctions->GetLowLevelGfx()->DrawLine(pNode->GetPosition(),pEdge->mpNode->GetPosition(),cColor(0.4f,0.4f,0.4f,1));
+					}
+				}
+			}
+			batch.flush(); // flush the batch
+
+		});
+
+		m_postTestSolidDraw = cViewport::PostSolidDraw::Handler([&](cViewport::PostSolidDrawPayload& payload) {
+			cMatrixf view = payload.m_frustum->GetViewMatrix().GetTranspose();
+			cMatrixf proj = payload.m_frustum->GetProjectionMatrix().GetTranspose();
+			ImmediateDrawBatch batch(*payload.m_context, *payload.m_outputTarget,view, proj);
+
+			
+			cRenderSettings *pSettings = gpSimpleCamera->GetViewport()->GetRenderSettings();
+			cRenderList *pRenderList = pSettings->mpRenderList;
+
+			/////////////////////////
+			//Solid objects
+			int lCount =0;
+			int lNum = pRenderList->GetSolidObjectNum();
+			for(int i=0; i<lNum; ++i)
+			{
+				iRenderable *pObject = pRenderList->GetSolidObject(i);
+
+				cColor col = gObjectDebugColor[(size_t)pObject % glObjectDebugColorNum];
+				ImmediateDrawBatch::DebugDrawOptions options;
+				options.m_transform = *pObject->GetModelMatrix(nullptr);
+				GraphicsContext::LayoutStream layoutStream;
+				pObject->GetVertexBuffer()->GetLayoutStream(layoutStream);
+				batch.DebugDrawMesh(layoutStream, col, options);
+
+				// apFunctions->SetMatrix(pObject->GetModelMatrix(NULL));
+				// apFunctions->DrawWireFrame(pObject->GetVertexBuffer(), col);
+
+				lCount++;
+			}
+
+			/////////////////////////
+			//Trans
+			lNum = pRenderList->GetTransObjectNum();
+			for(int i=0; i<lNum; ++i)
+			{
+				iRenderable *pObject = pRenderList->GetTransObject(i);
+
+				cColor col = gObjectDebugColor[(size_t)pObject % glObjectDebugColorNum];
+
+
+				ImmediateDrawBatch::DebugDrawOptions options;
+				options.m_transform = *pObject->GetModelMatrix(payload.m_frustum);
+				GraphicsContext::LayoutStream layoutStream;
+				pObject->GetVertexBuffer()->GetLayoutStream(layoutStream);
+				batch.DebugDrawMesh(layoutStream, col, options);
+
+				// apFunctions->SetMatrix(pObject->GetModelMatrix(NULL));
+				// apFunctions->DrawWireFrame(pObject->GetVertexBuffer(), col);
+
+				lCount++;
+			}
+		});
+
 		////////////////////////////////
 		// Render callback
-		renderCallback.mpWorld = mpWorld;
-		renderCallback.mpBodyPicker = &mBodyPicker;
+		// renderCallback.mpWorld = mpWorld;
+		// renderCallback.mpBodyPicker = &mBodyPicker;
 
 
 		/////////////////////////////////
@@ -617,6 +943,7 @@ public:
 	}
 
 	//--------------------------------------------------------------
+
 
 	void SetupView()
 	{
@@ -662,14 +989,14 @@ public:
 
 		mpTestViewPort->GetRenderSettings()->mClearColor = cColor(0.3f,1);
 
-		testRenderCallback.mpWorld = mpWorld;
-		mpTestViewPort->AddRendererCallback(&testRenderCallback);
+		// testRenderCallback.mpWorld = mpWorld;
+		mpTestViewPort->ConnectDraw(m_postTestSolidDraw);
 
 
 		/////////////////////////////////
 		//Set up normal view port camera
 		cRenderSettings *pSettings = gpSimpleCamera->GetViewport()->GetRenderSettings();
-		gpSimpleCamera->GetViewport()->AddRendererCallback(&renderCallback);
+		gpSimpleCamera->GetViewport()->ConnectDraw(m_postSolidDraw);
 
 		gpSimpleCamera->SetMouseMode(true);
 
@@ -847,8 +1174,8 @@ public:
 		if(abSetToViewport)
 		{
 			gpSimpleCamera->GetViewport()->SetWorld(mpWorld);
-			renderCallback.mpWorld = mpWorld;
-			testRenderCallback.mpWorld = mpWorld;
+			// renderCallback.mpWorld = mpWorld;
+			// testRenderCallback.mpWorld = mpWorld;
 
 			mpCheckAmbientActive->SetChecked(mpAmbientBox->IsVisible());
 			mpSliderAmbientColor->SetValue( (int)(mpAmbientBox->GetDiffuseColor().r * 255.0 + 0.5f));
@@ -1918,10 +2245,10 @@ public:
 				//Get Drag pos
 				cVector3f vDir;
 				pCam->UnProject(NULL,&vDir,vMousePos, mpLowLevelGraphics->GetScreenSizeFloat());
-				renderCallback.mvDragPos = pCam->GetPosition() + vDir*mBodyPicker.mfDist;
+				m_dragPos = pCam->GetPosition() + vDir*mBodyPicker.mfDist;
 
 				//Spring testing:
-				cVector3f vForce = (renderCallback.mvDragPos - mBodyPicker.mvPos)*20 -
+				cVector3f vForce = (m_dragPos - mBodyPicker.mvPos)*20 -
 					(mBodyPicker.mpPickedBody->GetLinearVelocity()*0.4f);
 
 
@@ -1943,7 +2270,7 @@ public:
 				{
 					mBodyPicker.mpPickedBody->SetAutoDisable(false);
 
-					renderCallback.mvDragPos = mBodyPicker.mvPos;
+					m_dragPos = mBodyPicker.mvPos;
 
 					cMatrixf mtxInvWorld = cMath::MatrixInverse(mBodyPicker.mpPickedBody->GetLocalMatrix());
 					mBodyPicker.mvLocalPos = cMath::MatrixMul(mtxInvWorld, mBodyPicker.mvPos);
@@ -1970,8 +2297,12 @@ public:
 	iLowLevelGraphics* mpLowLevelGraphics;
 	cWorld* mpWorld;
 
-	cSimpleRenderCallback renderCallback;
-	cTestRenderCallback testRenderCallback;
+	cVector3f m_dragPos;
+	cViewport::PostSolidDraw::Handler  m_postSolidDraw;
+	cViewport::PostSolidDraw::Handler  m_postTestSolidDraw;
+
+	// cSimpleRenderCallback renderCallback;
+	// cTestRenderCallback testRenderCallback;
 
 	cWidgetWindow *mpOptionWindow;
 
