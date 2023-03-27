@@ -30,7 +30,7 @@
 #include "resources/LowLevelResources.h"
 #include "resources/XmlDocument.h"
 #include "resources/MaterialManager.h"
-//#include "resources/MeshManager.h"
+#include "resources/rapidXMLUtility.h"
 
 #include "physics/PhysicsWorld.h"
 #include "physics/PhysicsBody.h"
@@ -186,9 +186,190 @@ namespace hpl {
 		return ePEPartSpinType_Constant;
 	}
 
-	/// ---
+	
+	void cParticleEmitterData_UserData::LoadFromElement(::rapidxml::xml_node<char>* apElement)
+	{
+		msName = hpl::rapidxml::GetAttributeString(apElement, "Name", "");
+		
+		mPEType = GetPEType(hpl::rapidxml::GetAttributeString(apElement, "PEType", ""));
+	
+		mlMaxParticleNum = hpl::rapidxml::GetAttributeInt(apElement, "MaxParticleNum", 1);
 
-	/////////////////////////
+		mbRespawn = hpl::rapidxml::GetAttributeBool(apElement, "Respawn", false);
+
+		mfParticlesPerSecond = hpl::rapidxml::GetAttributeFloat(apElement, "ParticlesPerSecond",1);
+		mfStartTimeOffset = hpl::rapidxml::GetAttributeFloat(apElement, "StartTimeOffset",0);
+
+		mfWarmUpTime = hpl::rapidxml::GetAttributeFloat(apElement, "WarmUpTime",0);
+		mfWarmUpStepsPerSec = hpl::rapidxml::GetAttributeFloat(apElement, "WarmUpStepsPerSec",60);
+
+		mfMinPauseLength = hpl::rapidxml::GetAttributeFloat(apElement, "MinPauseLength",0);
+		mfMaxPauseLength = hpl::rapidxml::GetAttributeFloat(apElement, "MaxPauseLength",0);
+
+		mfMinPauseInterval = hpl::rapidxml::GetAttributeFloat(apElement, "MinPauseInterval",0);
+		mfMaxPauseInterval = hpl::rapidxml::GetAttributeFloat(apElement, "MaxPauseInterval",0);
+
+		mvPosOffset = hpl::rapidxml::GetAttributeVector3f(apElement, "PosOffset",0);
+		mvAngleOffset = hpl::rapidxml::GetAttributeVector3f(apElement, "AngleOffset",0);
+		mvAngleOffset.x = cMath::ToRad(mvAngleOffset.x);
+		mvAngleOffset.y = cMath::ToRad(mvAngleOffset.y);
+		mvAngleOffset.z = cMath::ToRad(mvAngleOffset.z);
+		
+		/////////// MATERIAL  ////////
+		int lMaterialNum = hpl::rapidxml::GetAttributeInt(apElement, "MaterialNum", 1);
+		float fAnimationLength = hpl::rapidxml::GetAttributeFloat(apElement, "AnimationLength",1);
+		tString sMaterial = hpl::rapidxml::GetAttributeString(apElement, "Material","");
+
+
+		mvSubDiv = hpl::rapidxml::GetAttributeVector2l(apElement, "SubDiv", 1);
+		mSubDivType = GetSubDivType(hpl::rapidxml::GetAttributeString(apElement, "SubDivType"));
+
+		if(lMaterialNum <= 1)
+		{
+			sMaterial = cString::SetFileExt(sMaterial,"mat");
+			cMaterial *pMaterial = mpResources->GetMaterialManager()->CreateMaterial(sMaterial);
+
+			if(pMaterial) mvMaterials.push_back(pMaterial);
+		}
+		else
+		{
+			for(int i=1; i<lMaterialNum+1; ++i)
+			{
+				tString sFileName;
+				if(i>9)		sFileName = sMaterial + cString::ToString(i);
+				else		sFileName = sMaterial + "0"+cString::ToString(i);
+
+				sFileName = cString::SetFileExt(sFileName,"mat");
+
+				cMaterial *pMaterial = mpResources->GetMaterialManager()->CreateMaterial(sFileName);
+				if(pMaterial) mvMaterials.push_back(pMaterial);
+			}
+		}
+
+		mfFrameStep = 1/(fAnimationLength/(float)mvMaterials.size());
+		mfMaxFrameTime = ((float)mvMaterials.size())-0.0001f;
+
+		///////// START POS //////////
+		mStartPosType = GetStartPosType(hpl::rapidxml::GetAttributeString(apElement, "StartPosType"));
+
+		mvMinStartPos = hpl::rapidxml::GetAttributeVector3f(apElement, "MinStartPos",0);
+		mvMaxStartPos = hpl::rapidxml::GetAttributeVector3f(apElement, "MaxStartPos",0);
+
+		mvMinStartAngles = hpl::rapidxml::GetAttributeVector2f(apElement, "MinStartAngles",0);
+		mvMaxStartAngles = hpl::rapidxml::GetAttributeVector2f(apElement, "MaxStartAngles",0);
+		mvMinStartAngles.x = cMath::ToRad(mvMinStartAngles.x);
+		mvMinStartAngles.y = cMath::ToRad(mvMinStartAngles.y);
+		mvMaxStartAngles.x = cMath::ToRad(mvMaxStartAngles.x);
+		mvMaxStartAngles.y = cMath::ToRad(mvMaxStartAngles.y);
+
+		mfMinStartRadius = hpl::rapidxml::GetAttributeFloat(apElement, "MinStartRadius",0);
+		mfMaxStartRadius = hpl::rapidxml::GetAttributeFloat(apElement, "MaxStartRadius",0);
+
+		/////////// MOVEMENT ////////
+		mStartVelType = GetStartPosType(hpl::rapidxml::GetAttributeString(apElement, "StartVelType"));
+
+		mvMinStartVel = hpl::rapidxml::GetAttributeVector3f(apElement, "MinStartVel",0);
+		mvMaxStartVel = hpl::rapidxml::GetAttributeVector3f(apElement, "MaxStartVel",0);
+
+		mvMinStartVelAngles = cString::ToVector2f(hpl::rapidxml::GetAttributeString(apElement, "MinStartVelAngles"),0);
+		mvMaxStartVelAngles = cString::ToVector2f(hpl::rapidxml::GetAttributeString(apElement, "MaxStartVelAngles"),0);
+		mvMinStartVelAngles.x = cMath::ToRad(mvMinStartVelAngles.x);
+		mvMinStartVelAngles.y = cMath::ToRad(mvMinStartVelAngles.y);
+		mvMaxStartVelAngles.x = cMath::ToRad(mvMaxStartVelAngles.x);
+		mvMaxStartVelAngles.y = cMath::ToRad(mvMaxStartVelAngles.y);
+
+		mfMinStartVelSpeed = hpl::rapidxml::GetAttributeFloat(apElement, "MinStartVelSpeed",0);
+		mfMaxStartVelSpeed = hpl::rapidxml::GetAttributeFloat(apElement, "MaxStartVelSpeed",0);
+
+		mfMinSpeedMultiply = hpl::rapidxml::GetAttributeFloat(apElement, "MinSpeedMultiply",0);
+		mfMaxSpeedMultiply = hpl::rapidxml::GetAttributeFloat(apElement, "MaxSpeedMultiply",0);
+
+		mvMinStartAcc = hpl::rapidxml::GetAttributeVector3f(apElement, "MinStartAcc",0);
+		mvMaxStartAcc = hpl::rapidxml::GetAttributeVector3f(apElement, "MaxStartAcc",0);
+
+		mfMinVelMaximum = hpl::rapidxml::GetAttributeFloat(apElement, "MinVelMaximum",0);
+		mfMaxVelMaximum = hpl::rapidxml::GetAttributeFloat(apElement, "MaxVelMaximum",0);
+
+		mbUsesDirection = hpl::rapidxml::GetAttributeBool(apElement, "UsesDirection",false);
+
+		mGravityType = GetGravityType(hpl::rapidxml::GetAttributeString(apElement, "GravityType"));
+
+		mvGravityAcc = hpl::rapidxml::GetAttributeVector3f(apElement, "GravityAcc",0);
+
+		mCoordSystem = GetCoordSystem(hpl::rapidxml::GetAttributeString(apElement, "CoordSystem"));
+
+		// NEW
+
+		mbUsePartSpin = hpl::rapidxml::GetAttributeBool(apElement, "UsePartSpin",false);
+		mPartSpinType = GetPartSpinType(hpl::rapidxml::GetAttributeString(apElement, "PartSpinType"));
+		mfMinSpinRange = hpl::rapidxml::GetAttributeFloat(apElement, "MinSpinRange",0);
+		mfMaxSpinRange = hpl::rapidxml::GetAttributeFloat(apElement, "MaxSpinRange",0);
+
+		mbUseRevolution = hpl::rapidxml::GetAttributeBool(apElement, "UseRevolution",false);
+		mvMinRevVel = hpl::rapidxml::GetAttributeVector3f(apElement, "MinRevVel",0);
+		mvMaxRevVel = hpl::rapidxml::GetAttributeVector3f(apElement, "MaxRevVel",0);
+
+		/////////// LIFESPAN ////////
+		mfMinLifeSpan = hpl::rapidxml::GetAttributeFloat(apElement, "MinLifeSpan",0);
+		mfMaxLifeSpan = hpl::rapidxml::GetAttributeFloat(apElement, "MaxLifeSpan",0);
+
+		mDeathType = GetDeathType(hpl::rapidxml::GetAttributeString(apElement, "DeathType"));
+
+		msDeathPS = cString::ToString(hpl::rapidxml::GetAttributeString(apElement, "DeathPS"),"");
+
+		/////////// RENDERING ////////
+		mDrawType = GetDrawType(hpl::rapidxml::GetAttributeString(apElement, "DrawType"));
+
+		//eParticleEmitterType Heading
+		//cVector2l subdivisions.
+
+		mvMinStartSize = hpl::rapidxml::GetAttributeVector2f(apElement, "MinStartSize",1);
+		mvMaxStartSize = hpl::rapidxml::GetAttributeVector2f(apElement, "MaxStartSize",1);
+
+		mfStartRelSize = hpl::rapidxml::GetAttributeFloat(apElement, "StartRelSize",0);
+		mfMiddleRelSize = hpl::rapidxml::GetAttributeFloat(apElement, "MiddleRelSize",0);
+		mfMiddleRelSizeTime = hpl::rapidxml::GetAttributeFloat(apElement, "MiddleRelSizeTime",0);
+		mfMiddleRelSizeLength = hpl::rapidxml::GetAttributeFloat(apElement, "MiddleRelSizeLength",0);
+		mfEndRelSize = hpl::rapidxml::GetAttributeFloat(apElement, "EndRelSize",0);
+
+		mbMultiplyRGBWithAlpha = hpl::rapidxml::GetAttributeBool(apElement, "MultiplyRGBWithAlpha",false);
+
+		/////////// COLOR  ////////
+
+		mMinStartColor = hpl::rapidxml::GetAttributeColor(apElement, "MinStartColor", cColor(1,1));
+		mMaxStartColor = hpl::rapidxml::GetAttributeColor(apElement, "MaxStartColor", cColor(1,1));
+
+		mStartRelColor = hpl::rapidxml::GetAttributeColor(apElement, "StartRelColor",cColor(1,1));
+		mMiddleRelColor = hpl::rapidxml::GetAttributeColor(apElement, "MiddleRelColor",cColor(1,1));
+		mfMiddleRelColorTime = hpl::rapidxml::GetAttributeFloat(apElement, "MiddleRelColorTime",0);
+		mfMiddleRelColorLength = hpl::rapidxml::GetAttributeFloat(apElement, "MiddleRelColorLength",0);
+		mEndRelColor = hpl::rapidxml::GetAttributeColor(apElement, "EndRelColor",cColor(1,1));
+
+		/////////// COLLISION  ////////
+		mbCollides = hpl::rapidxml::GetAttributeBool(apElement, "Collides",false);
+
+		mfMinBounceAmount = hpl::rapidxml::GetAttributeFloat(apElement, "MinBounceAmount",0);
+		mfMaxBounceAmount = hpl::rapidxml::GetAttributeFloat(apElement, "MaxBounceAmount",0);
+
+		mlMinCollisionMax = hpl::rapidxml::GetAttributeInt(apElement, "MinCollisionMax",0);
+		mlMaxCollisionMax = hpl::rapidxml::GetAttributeInt(apElement, "MaxCollisionMax",0);
+
+		mlCollisionUpdateRate = hpl::rapidxml::GetAttributeInt(apElement, "CollisionUpdateRate",0);
+
+		// NEW
+		////////// BEAM SPECIFIC //////////
+
+		mbUseBeamNoise = hpl::rapidxml::GetAttributeBool(apElement, "UseBeamNoise",false);
+
+		mlLowFreqPoints = hpl::rapidxml::GetAttributeInt(apElement, "LowFreqPoints",4);
+		mlHighFreqPoints = hpl::rapidxml::GetAttributeInt(apElement, "HighFreqPoints",5);
+
+		mvMinLowFreqNoise = hpl::rapidxml::GetAttributeVector3f(apElement, "MinLowFreqNoise",0);
+		mvMaxLowFreqNoise = hpl::rapidxml::GetAttributeVector3f(apElement, "MaxLowFreqNoise",0);
+
+		mvMinHighFreqNoise = hpl::rapidxml::GetAttributeVector3f(apElement, "MinHighFreqNoise",0);
+		mvMaxHighFreqNoise = hpl::rapidxml::GetAttributeVector3f(apElement, "MaxHighFreqNoise",0);
+	}
 
 	void cParticleEmitterData_UserData::LoadFromElement(cXmlElement *apElement)
 	{

@@ -112,7 +112,6 @@ namespace hpl {
 		void SetAttributeVector3f(const tString& asName, const cVector3f& avVal);
 		void SetAttributeColor(const tString& asName, const cColor& aVal);
 
-
 		tAttributeMap* GetAttributeMap(){ return &m_mapAttributes;}
 
 	private:

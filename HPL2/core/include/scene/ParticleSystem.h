@@ -25,6 +25,8 @@
 #include "scene/Entity3D.h"
 #include "resources/ResourceBase.h"
 
+#include "resources/rapidXML/rapidxml.hpp"
+
 
 namespace hpl {
 
@@ -51,7 +53,8 @@ namespace hpl {
 
 		bool LoadFromFile(const tWString &asFile);
 		bool LoadFromElement(cXmlElement* apElement);
-
+		bool LoadFromElement(rapidxml::xml_node<char>* apElement); // planning on replacing the above with this
+		
 		void AddEmitterData(iParticleEmitterData *apData);
 
 		bool Reload(){ return false;}

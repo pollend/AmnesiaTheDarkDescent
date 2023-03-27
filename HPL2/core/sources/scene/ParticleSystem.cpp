@@ -132,6 +132,25 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
+	bool cParticleSystemData::LoadFromElement(rapidxml::xml_node<char>* apElement)
+	{
+		if(std::strcmp(apElement->name(), "ParticleSystem")) {
+			return false;
+		}
+
+		for(rapidxml::xml_node<char>* it = apElement->first_node(); it; it = it->next_sibling()) {
+			if(!std::strcmp(it->name(), "ParticleEmitter")) {
+				continue;
+			}
+
+			cParticleEmitterData_UserData *pPE = new cParticleEmitterData_UserData("",	mpResources,mpGraphics);
+			pPE->LoadFromElement(it);
+			
+			mvEmitterData.push_back(pPE);
+		}
+		return (mvEmitterData.empty()==false);
+	}
+
 	bool cParticleSystemData::LoadFromElement(cXmlElement* apElement)
 	{
 		if(apElement->GetValue()!="ParticleSystem")

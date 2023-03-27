@@ -20,6 +20,7 @@
 #ifndef HPL_PARTICLE_EMITTER_USER_DATA_H
 #define HPL_PARTICLE_EMITTER_USER_DATA_H
 
+#include "resources/rapidXML/rapidxml.hpp"
 #include "scene/ParticleEmitter.h"
 #include "physics/PhysicsTypes.h"
 
@@ -81,6 +82,8 @@ namespace hpl {
 		iParticleEmitter* Create(tString asName, cVector3f avSize);
 
 		void LoadFromElement(cXmlElement *apElement);
+		void LoadFromElement(::rapidxml::xml_node<char>*apElement);
+
 
 		bool CheckCollision(const cVector3f& avStart, const cVector3f &avEnd,
 									iPhysicsWorld *apPhysicsWorld,
