@@ -100,7 +100,7 @@ void cEngineEntitySubMesh::Draw(cEditorWindowViewport* apViewport, ImmediateDraw
 	GraphicsContext::LayoutStream layoutStream;
 	pSubMeshEntity->GetVertexBuffer()->GetLayoutStream(layoutStream);
 	
-	apFunctions->DebugDrawMesh(layoutStream, cColor(1,1,1,0.25f));
+	apFunctions->DebugWireFrameFromVertexBuffer(pSubMeshEntity->GetVertexBuffer(), cColor(1,1,1,0.25f));
 	// apFunctions->SetMatrix(NULL);
 	// apFunctions->SetBlendMode(eMaterialBlendMode_None);
 	// apFunctions->SetDepthTest(false);

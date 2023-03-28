@@ -57,7 +57,7 @@ public:
 
 	//////////////////////
 	//General
-	virtual void OnRenderSolid(cRendererCallbackFunctions* apFunctions);
+	void OnRenderSolid(hpl::ImmediateDrawBatch* apFunctions);
 
 	virtual bool CanInteract(iPhysicsBody *apBody);
 	virtual bool OnInteract(iPhysicsBody *apBody, const cVector3f &avPos);

@@ -24,6 +24,8 @@
 
 #include "LuxEnemy.h"
 
+
+
 //----------------------------------------------
 
 class cLuxEnemy_WaterLurker_SaveData : public iLuxEnemy_SaveData
@@ -71,7 +73,7 @@ public:
 
 	//////////////////////
 	//Debug
-	void OnRenderSolidImplemented(cRendererCallbackFunctions* apFunctions);
+	virtual void OnRenderSolidImplemented(hpl::ImmediateDrawBatch* apFunctions) override;
 
 
 	//////////////////////

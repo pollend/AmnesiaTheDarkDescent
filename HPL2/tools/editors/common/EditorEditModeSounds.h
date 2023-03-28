@@ -48,8 +48,6 @@ public:
 	cEditorEditModeSounds(iEditorBase* apEditor,
 						  iEditorWorld* apEditorWorld);
 
-	//void DrawObjectPreview(cEditorWindowViewport* apViewport, cRendererCallbackFunctions *apFunctions, const cVector3f& avPos){}
-
 	bool SetUpCreationData(iEntityWrapperData* apData);
 
 protected:

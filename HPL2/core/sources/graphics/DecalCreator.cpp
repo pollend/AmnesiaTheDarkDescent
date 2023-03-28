@@ -433,9 +433,7 @@ namespace hpl {
 				// apFunctions->SetBlendMode(eMaterialBlendMode_None);
 			}
 			if(abDrawWireframe) {
-				GraphicsContext::LayoutStream m_stream;
-				mpDecalVB->GetLayoutStream(m_stream, eVertexBufferDrawType_Line);
-				apFunctions->DebugDrawMesh(m_stream, cColor(1));
+				apFunctions->DebugWireFrameFromVertexBuffer(mpDecalVB, cColor(1));
 			}
 			// if(abDrawWireframe)	apFunctions->DrawWireFrame(mpDecalVB, cColor(1));
 		}

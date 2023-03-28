@@ -95,7 +95,7 @@ public:
 
 	void SetUpdateActive(bool abX);
 
-	void RenderSolid(cRendererCallbackFunctions* apFunctions);
+	void RenderSolid(hpl::ImmediateDrawBatch* apFunctions);
 
 	void OnEnterContainer(const tString& asOldContainer);
 	void OnLeaveContainer(const tString& asNewContainer);

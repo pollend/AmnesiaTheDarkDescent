@@ -58,7 +58,7 @@ public:
 
 	//////////////////////
 	//Debug
-	void OnRenderSolidImplemented(cRendererCallbackFunctions* apFunctions);
+	virtual void OnRenderSolidImplemented(hpl::ImmediateDrawBatch* apFunctions) override;
 
 
 	//////////////////////

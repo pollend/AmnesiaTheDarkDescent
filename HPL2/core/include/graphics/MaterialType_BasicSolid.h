@@ -96,8 +96,6 @@ namespace hpl {
 
         Image* m_dissolveImage = nullptr;
 
-        iTexture* mpDissolveTexture;
-
         static float mfVirtualPositionAddScale;
     };
 

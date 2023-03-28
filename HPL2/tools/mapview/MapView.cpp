@@ -704,10 +704,9 @@ public:
 						int lColNum = lCount % glObjectDebugColorNum;
 						const cColor &currentColor = gObjectDebugColor[lColNum];
 
-						GraphicsContext::LayoutStream layoutStream;
 						ImmediateDrawBatch::DebugDrawOptions options;
 						options.m_transform = *pSubEnt->GetModelMatrix(NULL);
-						batch.DebugDrawMesh(layoutStream, currentColor, options);
+						batch.DebugWireFrameFromVertexBuffer(pSubEnt->GetVertexBuffer(), currentColor, options);
 
 						// batch.DebugDrawMesh(const GraphicsContext::LayoutStream &layout, const cColor &color)
 						// apFunctions->SetMatrix(pSubEnt->GetModelMatrix(NULL));
@@ -796,10 +795,8 @@ public:
 					cColor col = CalcDistColorForRenderable(pObject);//cColor(1,1);//gObjectDebugColor[(size_t)pObject % glObjectDebugColorNum];
 					
 					ImmediateDrawBatch::DebugDrawOptions options;
-					GraphicsContext::LayoutStream layoutStream;
 					options.m_transform = *pObject->GetModelMatrix(payload.m_frustum);
-					pObject->GetVertexBuffer()->GetLayoutStream(layoutStream);
-					batch.DebugDrawMesh(layoutStream, col, options);
+					batch.DebugWireFrameFromVertexBuffer(pObject->GetVertexBuffer(), col, options);
 
 				}
 
@@ -814,10 +811,8 @@ public:
 					cColor col = CalcDistColorForRenderable(pObject);//cColor(1,1);//gObjectDebugColor[(size_t)pObject % glObjectDebugColorNum];
 					
 					ImmediateDrawBatch::DebugDrawOptions options;
-					GraphicsContext::LayoutStream layoutStream;
 					options.m_transform = *pObject->GetModelMatrix(payload.m_frustum);
-					pObject->GetVertexBuffer()->GetLayoutStream(layoutStream);
-					batch.DebugDrawMesh(layoutStream, col, options);
+					batch.DebugWireFrameFromVertexBuffer(pObject->GetVertexBuffer(), col, options);
 
 
 					// cColor col = CalcDistColor(pObject);//cColor(1,1);//gObjectDebugColor[(size_t)pObject % glObjectDebugColorNum];
@@ -895,9 +890,9 @@ public:
 				cColor col = gObjectDebugColor[(size_t)pObject % glObjectDebugColorNum];
 				ImmediateDrawBatch::DebugDrawOptions options;
 				options.m_transform = *pObject->GetModelMatrix(nullptr);
-				GraphicsContext::LayoutStream layoutStream;
-				pObject->GetVertexBuffer()->GetLayoutStream(layoutStream);
-				batch.DebugDrawMesh(layoutStream, col, options);
+				// GraphicsContext::LayoutStream layoutStream;
+				// pObject->GetVertexBuffer()->GetLayoutStream(layoutStream);
+				batch.DebugWireFrameFromVertexBuffer(pObject->GetVertexBuffer(), col, options);
 
 				// apFunctions->SetMatrix(pObject->GetModelMatrix(NULL));
 				// apFunctions->DrawWireFrame(pObject->GetVertexBuffer(), col);
@@ -917,9 +912,7 @@ public:
 
 				ImmediateDrawBatch::DebugDrawOptions options;
 				options.m_transform = *pObject->GetModelMatrix(payload.m_frustum);
-				GraphicsContext::LayoutStream layoutStream;
-				pObject->GetVertexBuffer()->GetLayoutStream(layoutStream);
-				batch.DebugDrawMesh(layoutStream, col, options);
+				batch.DebugWireFrameFromVertexBuffer(pObject->GetVertexBuffer(), col, options);
 
 				// apFunctions->SetMatrix(pObject->GetModelMatrix(NULL));
 				// apFunctions->DrawWireFrame(pObject->GetVertexBuffer(), col);

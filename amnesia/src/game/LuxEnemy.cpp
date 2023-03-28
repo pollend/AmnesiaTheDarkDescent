@@ -710,7 +710,7 @@ void iLuxEnemy::OnUpdate(float afTimeStep)
 
 //-----------------------------------------------------------------------
 
-void iLuxEnemy::OnRenderSolid(cRendererCallbackFunctions* apFunctions)
+void iLuxEnemy::OnRenderSolid(hpl::ImmediateDrawBatch* apFunctions)
 {
 	//return;
 	iPhysicsWorld *pPhysicsWorld = mpMap->GetPhysicsWorld();
@@ -719,7 +719,7 @@ void iLuxEnemy::OnRenderSolid(cRendererCallbackFunctions* apFunctions)
 
 	mpPathfinder->OnRenderSolid(apFunctions);
 
-	apFunctions->GetLowLevelGfx()->DrawSphere(mvLastKnownPlayerPos, 0.3f, cColor(1,0,0));
+	apFunctions->DebugDrawSphere(mvLastKnownPlayerPos, 0.3f, cColor(1,0,0));
 
 
 	////////////////////////////////////////
@@ -750,7 +750,7 @@ void iLuxEnemy::OnRenderSolid(cRendererCallbackFunctions* apFunctions)
 	if(bCrouching)
 		fMaxRange = fMaxRange * mfCrouchVisibleRangeMul;
 
-	apFunctions->GetLowLevelGfx()->DrawSphere(mpCharBody->GetPosition(), fMaxRange, cColor(0,1,1));
+	apFunctions->DebugDrawSphere(mpCharBody->GetPosition(), fMaxRange, cColor(0,1,1));
 
 	OnRenderSolidImplemented(apFunctions);
 }
@@ -2411,7 +2411,7 @@ void iLuxEnemy::SaveToSaveData(iLuxEntity_SaveData* apSaveData)
 {
 	///////////////////////
 	// Init
-	super_class::SaveToSaveData(apSaveData);
+	iLuxEntity::SaveToSaveData(apSaveData);
 	iLuxEnemy_SaveData *pData = static_cast<iLuxEnemy_SaveData*>(apSaveData);
 
     cWorld *pWorld = mpMap->GetWorld();
@@ -2566,7 +2566,7 @@ void iLuxEnemy::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 {
 	///////////////////////
 	// Init
-	super_class::LoadFromSaveData(apSaveData);
+	iLuxEntity::LoadFromSaveData(apSaveData);
 	iLuxEnemy_SaveData *pData = static_cast<iLuxEnemy_SaveData*>(apSaveData);
 
 	cWorld *pWorld = mpMap->GetWorld();
@@ -2726,7 +2726,7 @@ void iLuxEnemy::LoadFromSaveData(iLuxEntity_SaveData* apSaveData)
 
 void iLuxEnemy::SetupSaveData(iLuxEntity_SaveData *apSaveData)
 {
-	super_class::SetupSaveData(apSaveData);
+	iLuxEntity::SetupSaveData(apSaveData);
 	iLuxEnemy_SaveData *pData = static_cast<iLuxEnemy_SaveData*>(apSaveData);
 
 	cAINodeContainer *pNodeContainer =  mpPathfinder->GetNodeContainer();

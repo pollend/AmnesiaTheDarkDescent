@@ -118,23 +118,23 @@ cLuxDebugRenderCallback::cLuxDebugRenderCallback()
 
 void cLuxDebugRenderCallback::OnPostSolidDraw(cRendererCallbackFunctions* apFunctions)
 {
-	if(mpPhysicsWorld)
-	{
-		apFunctions->SetMatrix(NULL);
-		apFunctions->SetBlendMode(eMaterialBlendMode_Alpha);
-		apFunctions->SetTextureRange(NULL,0);
-		apFunctions->SetProgram(NULL);
+	// if(mpPhysicsWorld)
+	// {
+	// 	apFunctions->SetMatrix(NULL);
+	// 	apFunctions->SetBlendMode(eMaterialBlendMode_Alpha);
+	// 	apFunctions->SetTextureRange(NULL,0);
+	// 	apFunctions->SetProgram(NULL);
 
-		apFunctions->SetDepthTest(true);
-		apFunctions->SetDepthWrite(false);
+	// 	apFunctions->SetDepthTest(true);
+	// 	apFunctions->SetDepthWrite(false);
 
-		//mpPhysicsWorld->RenderDebugGeometry(apFunctions->GetLowLevelGfx(), cColor(1,1,1,1));
-	}
+	// 	//mpPhysicsWorld->RenderDebugGeometry(apFunctions->GetLowLevelGfx(), cColor(1,1,1,1));
+	// }
 
-	gpBase->mpDebugHandler->RenderSolid(apFunctions);
-	gpBase->mpMapHandler->RenderSolid(apFunctions);
-	gpBase->mpPlayer->RenderSolid(apFunctions);
-	gpBase->mpEffectRenderer->RenderSolid(apFunctions);
+	// gpBase->mpDebugHandler->RenderSolid(apFunctions);
+	// gpBase->mpMapHandler->RenderSolid(apFunctions);
+	// gpBase->mpPlayer->RenderSolid(apFunctions);
+	// gpBase->mpEffectRenderer->RenderSolid(apFunctions);
 }
 
 //-----------------------------------------------------------------------
@@ -159,7 +159,7 @@ cLuxMapHandler::cLuxMapHandler() : iLuxUpdateable("LuxMapHandler")
 	m_postDebugSolidDrawHandler = cViewport::PostSolidDraw::Handler([&](cViewport::PostSolidDrawPayload& payload) {
 		cMatrixf view = payload.m_frustum->GetViewMatrix().GetTranspose();
 		cMatrixf proj = payload.m_frustum->GetProjectionMatrix().GetTranspose();
-		ImmediateDrawBatch batch(*payload.m_context, *payload.m_outputTarget,view, proj);
+		hpl::ImmediateDrawBatch batch(*payload.m_context, *payload.m_outputTarget,view, proj);
 
 		if(mpCurrentMap && mpCurrentMap->GetPhysicsWorld())
 		{
@@ -373,7 +373,7 @@ void cLuxMapHandler::SetUpdateActive(bool abX)
 
 //-----------------------------------------------------------------------
 
-void cLuxMapHandler::RenderSolid(cRendererCallbackFunctions* apFunctions)
+void cLuxMapHandler::RenderSolid(hpl::ImmediateDrawBatch* apFunctions)
 {
 	//mpViewport->GetRenderSettings()->mbLog = false;
 	if(mpCurrentMap) mpCurrentMap->OnRenderSolid(apFunctions);

@@ -972,15 +972,15 @@ void cEntitySelectorNormal::OnEditorUpdate()
 
 //----------------------------------------------------------------------
 
-void cEntitySelectorNormal::Draw(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions)
+void cEntitySelectorNormal::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions)
 {
 
 	///////////////////////////////////////////////////
 	// Highlight current selection
-	apFunctions->SetBlendMode(eMaterialBlendMode_None);
+	// apFunctions->SetBlendMode(eMaterialBlendMode_None);
 
-	apFunctions->SetDepthTest(true);
-	apFunctions->SetDepthWrite(false);
+	// apFunctions->SetDepthTest(true);
+	// apFunctions->SetDepthWrite(false);
 
 	// Iterate through entities and draw them selected
 	cEditorSelection* pSelection = mpEditMode->GetEditor()->GetSelection();
@@ -988,10 +988,8 @@ void cEntitySelectorNormal::Draw(cEditorWindowViewport* apViewport, cRendererCal
 	for(;selectionIt!=pSelection->GetEntities().end();++selectionIt)
 	{
 		iEntityWrapper* pEnt = *selectionIt;
-
-		// TODO: MP this code below is used
-		// if(pEnt->IsVisible())
-		// 	pEnt->Draw(apViewport,apFunctions, mpEditMode, true);
+		if(pEnt->IsVisible())
+			pEnt->Draw(apViewport,apFunctions, mpEditMode, true);
 	}
 
 	if(apViewport->IsFocused()==false || mbIsSelecting==false)
@@ -1001,14 +999,9 @@ void cEntitySelectorNormal::Draw(cEditorWindowViewport* apViewport, cRendererCal
 	// If selecting, show the selection rectangle
 	if(IsRayPickingActive()==false)
 	{
-		apFunctions->SetDepthTest(false);
-		apFunctions->GetLowLevelGfx()->SetOrthoProjection(apViewport->GetGuiViewportSize(),-1000,1000);
-		apFunctions->GetLowLevelGfx()->SetIdentityMatrix(eMatrix_ModelView);
-		apFunctions->GetLowLevelGfx()->DrawLineQuad(cRect2f((float)mMouseRect.x,(float)mMouseRect.y,
+		apFunctions->DebugDraw2DLineQuad(cRect2f((float)mMouseRect.x,(float)mMouseRect.y,
 															(float)mMouseRect.w,(float)mMouseRect.h),
-															0,
 															cColor(1,1));
-		apFunctions->SetNormalFrustumProjection();
 	}
 }
 

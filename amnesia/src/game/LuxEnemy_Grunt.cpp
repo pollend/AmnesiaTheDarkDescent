@@ -891,25 +891,16 @@ bool cLuxEnemy_Grunt::StateEventImplement(int alState, eLuxEnemyStateEvent aEven
 
 //-----------------------------------------------------------------------
 
-void cLuxEnemy_Grunt::OnRenderSolidImplemented(cRendererCallbackFunctions* apFunctions)
+void cLuxEnemy_Grunt::OnRenderSolidImplemented(hpl::ImmediateDrawBatch* apFunctions)
 {
 	iPhysicsWorld *pPhysicsWorld = mpMap->GetPhysicsWorld();
 
 	if(mCurrentState == eLuxEnemyState_AttackMeleeShort)
 	{
-		BX_ASSERT(false); // TODO: Fix this
-		// pPhysicsWorld->RenderShapeDebugGeometry(GetAttackShape(0), GetDamageShapeMatrix(cVector3f(0,0,1)), apFunctions->GetLowLevelGfx(),
-		// 										cColor(1,0,0,1));
+		pPhysicsWorld->RenderShapeDebugGeometry(GetAttackShape(0), GetDamageShapeMatrix(cVector3f(0,0,1)), apFunctions,
+												cColor(1,0,0,1));
 	}
 }
-
-//-----------------------------------------------------------------------
-
-//////////////////////////////////////////////////////////////////////////
-// PRIVATE METHODS
-//////////////////////////////////////////////////////////////////////////
-
-//-----------------------------------------------------------------------
 
 bool cLuxEnemy_Grunt::PlayerIsDetected()
 {
@@ -1005,13 +996,6 @@ void cLuxEnemy_Grunt::PatrolEndOfPath()
 	IncCurrentPatrolNode(true);
 }
 
-//-----------------------------------------------------------------------
-
-//////////////////////////////////////////////////////////////////////////
-// SAVE DATA STUFF
-//////////////////////////////////////////////////////////////////////////
-
-//-----------------------------------------------------------------------
 
 kBeginSerialize(cLuxEnemy_Grunt_SaveData, iLuxEnemy_SaveData)
 

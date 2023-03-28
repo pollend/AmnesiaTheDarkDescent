@@ -195,7 +195,7 @@ void cEditorEditModeCombine::DrawPostGrid(cEditorWindowViewport* apViewport, Imm
 		for(;it!=mlstEntsToBePicked.end();++it)
 		{
 			iEntityWrapper* pEnt = *it;
-			// pEnt->Draw(apViewport, apFunctions, NULL, true);
+			pEnt->Draw(apViewport, apFunctions, NULL, true);
 		}
 	}
 
@@ -203,15 +203,9 @@ void cEditorEditModeCombine::DrawPostGrid(cEditorWindowViewport* apViewport, Imm
 	// Show picking rect
 	if(mbPressed && apViewport->IsFocused() && IsRayPickingActive()==false)
 	{
-		BX_ASSERT(false); // TODO: Fix this
-		// apFunctions->SetDepthTest(false);
-		// apFunctions->GetLowLevelGfx()->SetOrthoProjection(apViewport->GetGuiViewportSize(),-1000,1000);
-		// apFunctions->GetLowLevelGfx()->SetIdentityMatrix(eMatrix_ModelView);
-		// apFunctions->GetLowLevelGfx()->DrawLineQuad(cRect2f((float)mMouseRect.x,(float)mMouseRect.y,
-		// 													(float)mMouseRect.w,(float)mMouseRect.h),
-		// 													0,
-		// 													cColor(1,1));
-		// apFunctions->SetNormalFrustumProjection();
+		apFunctions->DebugDraw2DLineQuad(cRect2f((float)mMouseRect.x,(float)mMouseRect.y,
+															(float)mMouseRect.w,(float)mMouseRect.h),
+															cColor(1,1));
 	}
 }
 

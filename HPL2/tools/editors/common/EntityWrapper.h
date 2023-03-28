@@ -912,7 +912,7 @@ public:
 
 	virtual void Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions,iEditorEditMode* apEditMode,
 						bool abIsSelected, const cColor& aHighlightCol=cColor(1,1), const cColor& aDisabledCol=cColor(0.5f,1));
-	virtual void DrawProgram(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, iGpuProgram* apProg, const cColor& aCol);
+	virtual void DrawProgram(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, const cColor& aCol);
 
 	virtual bool IsCulledByFrustum(cCamera* apCamera);
 	bool IsCulledByClipPlanes() { return mbCulledByPlane; }

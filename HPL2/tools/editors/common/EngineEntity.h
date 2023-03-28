@@ -72,9 +72,8 @@ public:
 					  bool abIsSelected,
 					  bool abIsActive,
 					  const cColor& aHighlightCol=cColor(1,1)) {};
-	virtual void DrawProgram(cEditorWindowViewport* apViewport,
+	virtual void DrawSolid(cEditorWindowViewport* apViewport,
 							 ImmediateDrawBatch* apFunctions,
-							 iGpuProgram* apProg,
 							 const cColor& aCol) {}
 
 protected:
@@ -108,14 +107,13 @@ public:
 	void Update();
 	void UpdateVisibility();
 
-	void Draw(cEditorWindowViewport* apViewport,
+	virtual void Draw(cEditorWindowViewport* apViewport,
 				ImmediateDrawBatch* apFunctions,
 				bool abIsSelected,
-				bool abIsActive, const cColor& aHighlightCol);
-	void DrawProgram(cEditorWindowViewport* apViewport,
-					 cRendererCallbackFunctions* apFunctions,
-					 iGpuProgram* apProg,
-					 const cColor& aCol);
+				bool abIsActive, const cColor& aHighlightCol) override;
+	virtual void DrawSolid(cEditorWindowViewport* apViewport,
+					 ImmediateDrawBatch* apFunctions,
+					 const cColor& aCol) override;
 
 	// Own funcs
 	void SetCastShadows(bool abX);

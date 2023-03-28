@@ -1808,16 +1808,15 @@ bool cLuxEnemy_ManPig::StateEventImplement(int alState, eLuxEnemyStateEvent aEve
 
 //-----------------------------------------------------------------------
 
-void cLuxEnemy_ManPig::OnRenderSolidImplemented(cRendererCallbackFunctions* apFunctions)
+void cLuxEnemy_ManPig::OnRenderSolidImplemented(hpl::ImmediateDrawBatch* apFunctions)
 {
 	iPhysicsWorld *pPhysicsWorld = mpMap->GetPhysicsWorld();
 
 	if(mCurrentState == eLuxEnemyState_AttackMeleeShort)
 	{
 
-		BX_ASSERT(false); // TODO add back this line
-		// pPhysicsWorld->RenderShapeDebugGeometry(GetAttackShape(0), GetDamageShapeMatrix(cVector3f(0,0,1)), apFunctions->GetLowLevelGfx(),
-		// 										cColor(1,0,0,1));
+		pPhysicsWorld->RenderShapeDebugGeometry(GetAttackShape(0), GetDamageShapeMatrix(cVector3f(0,0,1)), apFunctions,
+												cColor(1,0,0,1));
 	}
 }
 

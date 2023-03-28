@@ -292,9 +292,7 @@ void cEntityWrapperBone::DrawBone(cEditorWindowViewport* apViewport, ImmediateDr
 {
 	if(mpVBBone)
 	{
-		GraphicsContext::LayoutStream layoutStream;
-		mpVBBone->GetLayoutStream(layoutStream);
-		apFunctions->DebugDrawMesh(layoutStream, cColor(0,1,0,1));
+		apFunctions->DebugWireFrameFromVertexBuffer(mpVBBone, cColor(0,1,0,1));
 	}
 }
 

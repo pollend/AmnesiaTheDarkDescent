@@ -1391,10 +1391,10 @@ void iEntityWrapper::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch*
 
 //------------------------------------------------------------------
 
-void iEntityWrapper::DrawProgram(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, iGpuProgram* apProg, const cColor& aCol)
+void iEntityWrapper::DrawProgram(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, const cColor& aCol)
 {
 	if(mpEngineEntity)
-		mpEngineEntity->DrawProgram(apViewport, apFunctions, apProg, aCol);
+		mpEngineEntity->DrawSolid(apViewport, apFunctions, aCol);
 }
 
 //------------------------------------------------------------------

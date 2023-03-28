@@ -242,7 +242,7 @@ eLuxFocusCrosshair iLuxProp_CritterBase::GetFocusCrosshair(iPhysicsBody *apBody,
 
 //-----------------------------------------------------------------------
 
-void iLuxProp_CritterBase::OnRenderSolid(cRendererCallbackFunctions* apFunctions)
+void iLuxProp_CritterBase::OnRenderSolid(hpl::ImmediateDrawBatch* apFunctions)
 {
 	return;
 	iPhysicsWorld *pPhysicsWorld = mpWorld->GetPhysicsWorld();
@@ -250,9 +250,9 @@ void iLuxProp_CritterBase::OnRenderSolid(cRendererCallbackFunctions* apFunctions
 	BX_ASSERT(false); // TODO add back this line
 	// pPhysicsWorld->RenderShapeDebugGeometry(mpBody->GetShape(), mpBody->GetLocalMatrix(), apFunctions->GetLowLevelGfx(), cColor(1,1));
 
-	apFunctions->GetLowLevelGfx()->DrawLine(mpBody->GetLocalPosition(), mpBody->GetLocalPosition()+mvGroundNormal*0.5f,cColor(1,0,0,1));
+	apFunctions->DebugDrawLine(mpBody->GetLocalPosition(), mpBody->GetLocalPosition()+mvGroundNormal*0.5f,cColor(1,0,0,1));
 	cVector3f vFwdDir = cMath::Vector3Normalize(mvVel==0 ? mlstFwdDirs.back() : mvVel);
-	apFunctions->GetLowLevelGfx()->DrawLine(mpBody->GetLocalPosition(), mpBody->GetLocalPosition()+vFwdDir*0.5f,cColor(0,1,0,1));
+	apFunctions->DebugDrawLine(mpBody->GetLocalPosition(), mpBody->GetLocalPosition()+vFwdDir*0.5f,cColor(0,1,0,1));
 
 	if(mpDamageShape)
 	{

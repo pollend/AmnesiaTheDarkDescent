@@ -239,7 +239,7 @@ void cLuxEnemyPathfinder::OnUpdate(float afTimeStep)
 
 //-----------------------------------------------------------------------
 
-void cLuxEnemyPathfinder::OnRenderSolid(cRendererCallbackFunctions* apFunctions)
+void cLuxEnemyPathfinder::OnRenderSolid(hpl::ImmediateDrawBatch* apFunctions)
 {
 	if(mpNodeContainer==NULL) return;
 
@@ -249,13 +249,13 @@ void cLuxEnemyPathfinder::OnRenderSolid(cRendererCallbackFunctions* apFunctions)
 	{
 		cAINode *pNode = mpNodeContainer->GetNode(i);
 
-		apFunctions->GetLowLevelGfx()->DrawSphere(pNode->GetPosition(), 0.3f,cColor(0.4f,1));
+		apFunctions->DebugDrawSphere(pNode->GetPosition(), 0.3f,cColor(0.4f,1));
 
 		for(int j=0; j < pNode->GetEdgeNum(); ++j)
 		{
 			cAINodeEdge *pEdge = pNode->GetEdge(j);
 
-			apFunctions->GetLowLevelGfx()->DrawLine(pNode->GetPosition(),pEdge->mpNode->GetPosition(),cColor(0.4f,0.4f,0.4f,1));
+			apFunctions->DebugDrawLine(pNode->GetPosition(),pEdge->mpNode->GetPosition(),cColor(0.4f,0.4f,0.4f,1));
 		}
 	}
 
@@ -271,7 +271,7 @@ void cLuxEnemyPathfinder::OnRenderSolid(cRendererCallbackFunctions* apFunctions)
 		vGoalPos += cVector3f(0,mpNodeContainer->GetCollideSize().y/2, 0);
 	}
 
-	apFunctions->GetLowLevelGfx()->DrawSphere(vGoalPos,0.2f, cColor(1,0,1));
+	apFunctions->DebugDrawSphere(vGoalPos,0.2f, cColor(1,0,1));
 	cVector3f vLastVec = vGoalPos;
 
 	//////////////////////////////
@@ -287,8 +287,8 @@ void cLuxEnemyPathfinder::OnRenderSolid(cRendererCallbackFunctions* apFunctions)
 			vNodePos += cVector3f(0,mpNodeContainer->GetCollideSize().y/2, 0);
 		}
 
-		apFunctions->GetLowLevelGfx()->DrawSphere(vNodePos,0.2f, cColor(1,0,1));
-		apFunctions->GetLowLevelGfx()->DrawLine(vLastVec, vNodePos,cColor(1,0,1));
+		apFunctions->DebugDrawSphere(vNodePos,0.2f, cColor(1,0,1));
+		apFunctions->DebugDrawLine(vLastVec, vNodePos,cColor(1,0,1));
 
 		vLastVec = vNodePos;
 	}
@@ -299,8 +299,8 @@ void cLuxEnemyPathfinder::OnRenderSolid(cRendererCallbackFunctions* apFunctions)
 	//if(mpContainer->GetNodeIsAtCenter()==false){
 	//vStartPos += cVector3f(0,mpContainer->GetCollideSize().y/2, 0);
 	//}
-	apFunctions->GetLowLevelGfx()->DrawSphere(vStartPos,0.2f,cColor(1,0,1));
-	apFunctions->GetLowLevelGfx()->DrawLine(vLastVec, vStartPos,cColor(1,0,1));
+	apFunctions->DebugDrawSphere(vStartPos,0.2f,cColor(1,0,1));
+	apFunctions->DebugDrawLine(vLastVec, vStartPos,cColor(1,0,1));
 
 
 }

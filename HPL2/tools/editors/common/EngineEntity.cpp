@@ -186,54 +186,32 @@ void iEngineEntityMesh::UpdateVisibility()
 
 void iEngineEntityMesh::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, bool abIsSelected,	bool abIsActive, const cColor& aHighlightCol)
 {
-	if(abIsSelected==false)
+	if(!abIsSelected) {
 		return;
-
-	// apFunctions->SetBlendMode(eMaterialBlendMode_Alpha);
-	// apFunctions->SetDepthTest(true);
-	// apFunctions->SetDepthWrite(false);
+	}
 
 	cMeshEntity* pMeshEntity = GetMeshEntity();
 	for(int i=0;i<pMeshEntity->GetSubMeshEntityNum();++i)
 	{
 		cSubMeshEntity* pSubMeshEntity = pMeshEntity->GetSubMeshEntity(i);
-
-		GraphicsContext::LayoutStream layoutStream;
-		pSubMeshEntity->GetVertexBuffer()->GetLayoutStream(layoutStream);
 		ImmediateDrawBatch::DebugDrawOptions options;
 		options.m_transform = *pSubMeshEntity->GetModelMatrix(NULL);
-		apFunctions->DebugDrawMesh(layoutStream, aHighlightCol);
-		// apFunctions->SetMatrix(pSubMeshEntity->GetModelMatrix(NULL));
-		// apFunctions->DrawWireFrame(pSubMeshEntity->GetVertexBuffer(), aHighlightCol);
+		apFunctions->DebugWireFrameFromVertexBuffer(pSubMeshEntity->GetVertexBuffer(), aHighlightCol, options);
 	}
-	// apFunctions->SetMatrix(NULL);
-	// apFunctions->SetBlendMode(eMaterialBlendMode_None);
-	// apFunctions->SetDepthTest(false);
 }
 
 //-----------------------------------------------------------------------
 
-void iEngineEntityMesh::DrawProgram(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions, iGpuProgram* apProg, const cColor& aCol)
+void iEngineEntityMesh::DrawSolid(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, const cColor& aCol)
 {
-	apFunctions->SetBlendMode(eMaterialBlendMode_Alpha);
-	apFunctions->SetDepthTest(true);
-	apFunctions->SetDepthWrite(false);
-	apFunctions->SetProgram(apProg);
-	apFunctions->SetTextureRange(NULL, 0);
-
 	cMeshEntity* pMeshEntity = GetMeshEntity();
 	for(int i=0;i<pMeshEntity->GetSubMeshEntityNum();++i)
 	{
 		cSubMeshEntity* pSubMeshEntity = pMeshEntity->GetSubMeshEntity(i);
-		apFunctions->SetMatrix(pSubMeshEntity->GetModelMatrix(NULL));
-		apFunctions->SetVertexBuffer(pSubMeshEntity->GetVertexBuffer());
-		apFunctions->GetLowLevelGfx()->SetColor(aCol);
-
-		apFunctions->DrawCurrent();
+		ImmediateDrawBatch::DebugDrawOptions options;
+		options.m_transform = *pSubMeshEntity->GetModelMatrix(NULL);
+		apFunctions->DebugSolidFromVertexBuffer(pSubMeshEntity->GetVertexBuffer(), aCol, options);
 	}
-	apFunctions->SetMatrix(NULL);
-	apFunctions->SetBlendMode(eMaterialBlendMode_None);
-	apFunctions->SetDepthTest(false);
 }
 
 //-----------------------------------------------------------------------

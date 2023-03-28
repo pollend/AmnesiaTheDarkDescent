@@ -226,7 +226,7 @@ public:
 	bool OnViewportMouseUp();
 	void OnEditorUpdate();
 
-	void Draw(cEditorWindowViewport* apViewport, cRendererCallbackFunctions* apFunctions);
+	virtual void Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions) override;
 
 	void OnSetCurrent(bool abX);
 
@@ -251,13 +251,12 @@ public:
 	cEntitySelectorHighlighter(cEditorEditModeSelect* apEditMode);
 	~cEntitySelectorHighlighter();
 
-	bool OnViewportMouseDown();
-	bool OnViewportMouseUp();
-	void OnEditorUpdate();
+	virtual bool OnViewportMouseDown() override;
+	virtual bool OnViewportMouseUp() override;
+	virtual void OnEditorUpdate() override;
 
-	void Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions);
-
-	void OnSetCurrent(bool abX);
+	virtual void Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions) override;
+	virtual void OnSetCurrent(bool abX) override;
 
 	cUIPickFilter* GetFilter() { return mpFilter; }
 	bool IsAtLeastOneFilterActive();

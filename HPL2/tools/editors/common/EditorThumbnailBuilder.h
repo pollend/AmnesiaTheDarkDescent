@@ -30,22 +30,6 @@ using namespace hpl;
 //-------------------------------------------------------------------
 
 class iEditorBase;
-
-//-------------------------------------------------------------------
-
-class cThumbnailRenderCallback : public iRendererCallback
-{
-public:
-	cThumbnailRenderCallback();
-
-	void OnPostSolidDraw(cRendererCallbackFunctions* apFunctions);
-	void OnPostTranslucentDraw(cRendererCallbackFunctions* apFunctions);
-
-	cMeshEntity* mpObject;
-};
-
-//-------------------------------------------------------------------
-
 class cEditorThumbnailBuilder
 {
 public:
@@ -82,8 +66,6 @@ protected:
 	// RenderViewport mpFB128;
 
 	iEditorBase* mpEditor;
-
-	cThumbnailRenderCallback mThumbnailCallback;
 
 	tMeshEntityList mlstThumbnailEntities;
 

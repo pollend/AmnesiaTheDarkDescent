@@ -23,30 +23,6 @@
 #include "graphics/Image.h"
 #include <memory>
 
-//-------------------------------------------------------------------
-
-cThumbnailRenderCallback::cThumbnailRenderCallback()
-{
-	mpObject = NULL;
-}
-
-void cThumbnailRenderCallback::OnPostSolidDraw(cRendererCallbackFunctions* apFunctions)
-{
-}
-
-//-------------------------------------------------------------------
-
-void cThumbnailRenderCallback::OnPostTranslucentDraw(cRendererCallbackFunctions* apFunctions)
-{
-}
-
-//-------------------------------------------------------------------
-
-/////////////////////////////////////////////////////////////////////
-// CONSTRUCTORS
-/////////////////////////////////////////////////////////////////////
-
-//-------------------------------------------------------------------
 
 cEditorThumbnailBuilder::cEditorThumbnailBuilder(iEditorBase* apEditor)
 {
@@ -112,7 +88,6 @@ cEditorThumbnailBuilder::cEditorThumbnailBuilder(iEditorBase* apEditor)
 	mpViewport->SetActive(false);
 	mpViewport->SetVisible(false);
 	mpViewport->GetRenderSettings()->mClearColor = cColor(0,1);
-	mpViewport->AddRendererCallback(&mThumbnailCallback);
 }
 
 //-------------------------------------------------------------------
@@ -153,8 +128,6 @@ void cEditorThumbnailBuilder::BuildThumbnailFromMeshEntity(cMeshEntity* apEntity
 										false,
 										mpViewport->GetRendererCallbackList() );
 	pGfx->WaitAndFinishRendering();
-
-	mThumbnailCallback.mpObject = NULL;
 
 	//////////////////////////////////
 	// Now scale to 64x64
@@ -225,7 +198,6 @@ void cEditorThumbnailBuilder::BuildThumbnailFromMesh(const tWString& asMeshFilen
 	pFillLight->SetPosition(cVector3f(10,10,0));
 	pBackLight->SetPosition(cVector3f(0,10,10));
 
-	mThumbnailCallback.mpObject = pEnt;
 
 	//////////////////////////////////////
 	// Render 128x128 thumbnail
@@ -236,8 +208,6 @@ void cEditorThumbnailBuilder::BuildThumbnailFromMesh(const tWString& asMeshFilen
 										false,
 										mpViewport->GetRendererCallbackList() );
 	pGfx->WaitAndFinishRendering();
-
-	mThumbnailCallback.mpObject = NULL;
 
 	//////////////////////////////////
 	// Now scale to 64x64

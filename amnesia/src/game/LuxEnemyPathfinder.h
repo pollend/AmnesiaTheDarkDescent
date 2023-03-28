@@ -66,16 +66,7 @@ public:
 
 	cAINodeContainer* GetNodeContainer(){ return mpNodeContainer;}
 
-	//////////////////////
-	//Data
-
-
-	//////////////////////
-	//Debug
-	void OnRenderSolid(cRendererCallbackFunctions* apFunctions);
-
-	//////////////////////
-	//Save data stuff
+	void OnRenderSolid(hpl::ImmediateDrawBatch* apFunctions);
 
 private:
 	void UpdateMoving(float afTimeStep);

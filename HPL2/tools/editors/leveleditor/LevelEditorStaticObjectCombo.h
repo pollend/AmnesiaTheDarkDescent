@@ -49,7 +49,7 @@ public:
 	bool HasObject(iEntityWrapper* apObj);
 	const tEntityWrapperList& GetObjects() { return mlstEntities; }
 
-	const cColor& GetColor() { return mColor; }
+	const cColor& GetColor() { return m_color; }
 	void SetColor(const cColor& aCol);
 
 	void Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions);
@@ -69,8 +69,7 @@ private:
 
 	tEntityWrapperList mlstEntities;
 
-	cColor mColor;
-	// iGpuProgram* mpDrawProg;
+	cColor m_color;
 };
 
 //------------------------------------------------------

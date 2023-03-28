@@ -38,25 +38,12 @@ cLevelEditorStaticObjectCombo::cLevelEditorStaticObjectCombo(cLevelEditorWorld* 
 	mpWorld = apWorld;
 	mlComboID = alComboID;
 
-	// cParserVarContainer vars;
-	// mpDrawProg = mpWorld->GetEditor()->GetEngine()->GetGraphics()->CreateGpuProgramFromShaders("ComboDrawProg", "flat_color_vtx.glsl", "flat_color_frag.glsl", &vars);
-	// mpDrawProg->GetVariableId("gvColor");
-
 	SetColor(cMath::RandRectColor(cColor(0,1), cColor(1,1)));
 }
 
 cLevelEditorStaticObjectCombo::~cLevelEditorStaticObjectCombo()
 {
-	// mpWorld->GetEditor()->GetEngine()->GetGraphics()->DestroyGpuProgram(mpDrawProg);
 }
-
-//-----------------------------------------------------------------------
-
-/////////////////////////////////////////////////////////////////////////
-// PUBLIC METHODS
-/////////////////////////////////////////////////////////////////////////
-
-//-----------------------------------------------------------------------
 
 bool cLevelEditorStaticObjectCombo::AddObject(iEntityWrapper* apObj)
 {
@@ -98,12 +85,7 @@ bool cLevelEditorStaticObjectCombo::HasObject(iEntityWrapper* apObj)
 
 void cLevelEditorStaticObjectCombo::SetColor(const cColor& aCol)
 {
-	if(mColor==aCol)
-		return;
-
-	mColor = aCol;
-	// mpDrawProg->SetColor4f(0, mColor);
-	// mpDrawProg->UnBind();
+	m_color = aCol;
 }
 
 //-----------------------------------------------------------------------
@@ -113,8 +95,8 @@ void cLevelEditorStaticObjectCombo::Draw(cEditorWindowViewport* apViewport, Imme
 	tEntityWrapperListIt it = mlstEntities.begin();
 	for(;it!=mlstEntities.end();++it)
 	{
-		// iEntityWrapper* pEnt = *it;
-		// pEnt->DrawProgram(apViewport, apFunctions, mpDrawProg, mColor);
+		iEntityWrapper* pEnt = *it;
+		pEnt->DrawProgram(apViewport, apFunctions, m_color);
 	}
 }
 
@@ -123,7 +105,7 @@ void cLevelEditorStaticObjectCombo::Draw(cEditorWindowViewport* apViewport, Imme
 bool cLevelEditorStaticObjectCombo::Load(cXmlElement* apElement)
 {
 	mlComboID = apElement->GetAttributeInt("ID", mlComboID);
-	mColor = apElement->GetAttributeColor("Color", mColor);
+	m_color = apElement->GetAttributeColor("Color", m_color);
 
 	//////////////////////////////////////////
 	// Load combined object ids
@@ -146,7 +128,7 @@ bool cLevelEditorStaticObjectCombo::Save(cXmlElement* apElement)
 {
 	cXmlElement* pData = apElement->CreateChildElement("Combo");
 	pData->SetAttributeInt("ID", mlComboID);
-	pData->SetAttributeColor("Color", mColor);
+	pData->SetAttributeColor("Color", m_color);
 
 	//////////////////////////////////////////
 	// Save combined object ids
@@ -220,15 +202,6 @@ iEditorAction* cLevelEditorStaticObjectCombo::CreateActionSetColor(const cColor&
 	return pAction;
 }
 
-//-----------------------------------------------------------------------
-
-//-----------------------------------------------------------------------
-
-/////////////////////////////////////////////////////////////////////////
-// PROTECTED METHODS
-/////////////////////////////////////////////////////////////////////////
-
-//-----------------------------------------------------------------------
 
 bool cLevelEditorStaticObjectCombo::IsValidObject(iEntityWrapper* apObj)
 {
@@ -236,8 +209,3 @@ bool cLevelEditorStaticObjectCombo::IsValidObject(iEntityWrapper* apObj)
 			(apObj->GetTypeID()==eEditorEntityType_StaticObject ||
 			apObj->GetTypeID()==eEditorEntityType_Primitive);
 }
-
-
-//-----------------------------------------------------------------------
-
-

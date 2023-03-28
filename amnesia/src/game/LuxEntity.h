@@ -124,7 +124,7 @@ public:
 	// General
 	void UpdateLogic(float afTimeStep);
 
-	virtual void OnRenderSolid(cRendererCallbackFunctions* apFunctions){}
+	virtual void OnRenderSolid(hpl::ImmediateDrawBatch* apFunctions){}
 
 	virtual bool CanInteract(iPhysicsBody *apBody)=0;
 	virtual bool OnInteract(iPhysicsBody *apBody, const cVector3f &avPos)=0;

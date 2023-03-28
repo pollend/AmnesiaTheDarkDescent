@@ -31,7 +31,6 @@ using namespace hpl;
 //------------------------------------------------------
 
 class iEditorBase;
-class iEditMode;
 class iWidgetContainer;
 class iEditorInput;
 class cEditorInputBool;

@@ -94,7 +94,7 @@ public:
 	void Update();
 protected:
 	virtual void Iterate();
-	virtual void OnDraw(cRendererCallbackFunctions* apFunctions){}
+	virtual void OnDraw(ImmediateDrawBatch* apFunctions){}
 
 	iEditorWorld* mpWorld;
 

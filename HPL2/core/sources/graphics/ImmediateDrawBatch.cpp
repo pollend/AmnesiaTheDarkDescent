@@ -2,6 +2,7 @@
 
 #include "graphics/GraphicsContext.h"
 #include "graphics/Layouts.h"
+#include "graphics/VertexBuffer.h"
 
 #include "scene/Camera.h"
 
@@ -18,6 +19,24 @@ namespace hpl {
         m_colorProgram = context.resolveProgramCache<StringLiteral("vs_color"), StringLiteral("fs_color")>();
         m_uvProgram = context.resolveProgramCache<StringLiteral("vs_basic_uv"), StringLiteral("fs_basic_uv")>();
         m_meshColorProgram = context.resolveProgramCache<StringLiteral("vs_color"), StringLiteral("fs_color_1")>();
+
+        cVector2l imageSize = m_target.GetImage()->GetImageSize();
+        {
+            GraphicsContext::ViewConfiguration viewConfiguration{ m_target };
+            viewConfiguration.m_viewRect = { 0, 0, static_cast<uint16_t>(imageSize.x), static_cast<uint16_t>(imageSize.y) };
+            viewConfiguration.m_projection = m_projection;
+            viewConfiguration.m_view = m_view;
+            m_perspectiveView = m_context.StartPass("Immediate - Perspective", viewConfiguration);
+        }
+
+        {
+            GraphicsContext::ViewConfiguration viewConfiguration{ m_target };
+            viewConfiguration.m_viewRect = { 0, 0, static_cast<uint16_t>(imageSize.x), static_cast<uint16_t>(imageSize.y) };
+            viewConfiguration.m_projection = m_projection;
+            viewConfiguration.m_view = m_view;
+            m_orthographicView = m_context.StartPass("Immediate - Ortho", viewConfiguration);
+        }
+
     }
 
     void ImmediateDrawBatch::DebugDrawBoxMinMax(
@@ -67,26 +86,40 @@ namespace hpl {
             options);
     }
 
-    void ImmediateDrawBatch::DrawPyramid(const cVector3f& baseCenter, const cVector3f& top, float halfWidth, const cColor& color, const DebugDrawOptions& options) {
+    void ImmediateDrawBatch::DrawPyramid(
+        const cVector3f& baseCenter, const cVector3f& top, float halfWidth, const cColor& color, const DebugDrawOptions& options) {
+        cVector3f vNormal = top - baseCenter;
+        cVector3f vPoint = baseCenter + 1;
+        cVector3f vRight = cMath::Vector3Cross(vNormal, vPoint);
+        vRight.Normalize();
+        cVector3f vForward = cMath::Vector3Cross(vNormal, vRight);
+        vForward.Normalize();
 
-        	cVector3f vNormal = top - baseCenter;
-            cVector3f vPoint = baseCenter + 1;
-            cVector3f vRight = cMath::Vector3Cross(vNormal, vPoint);
-            vRight.Normalize();
-            cVector3f vForward = cMath::Vector3Cross(vNormal, vRight);
-            vForward.Normalize();
+        cVector3f topRight = baseCenter + (vRight + vForward) * halfWidth;
+        cVector3f topLeft = baseCenter + (vRight - vForward) * halfWidth;
+        cVector3f bottomLeft = baseCenter + (vRight * (-1) - vForward) * halfWidth;
+        cVector3f bottomRight = baseCenter + (vRight * (-1) + vForward) * halfWidth;
 
-            cVector3f topRight = baseCenter + (vRight+vForward)*halfWidth;
-            cVector3f topLeft = baseCenter + (vRight-vForward)*halfWidth;
-            cVector3f bottomLeft = baseCenter + (vRight*(-1)-vForward)*halfWidth;
-            cVector3f bottomRight = baseCenter + (vRight*(-1)+vForward)*halfWidth;
-
-            DrawTri(top, topRight, topLeft, color, options);
-            DrawTri(top, topLeft, bottomLeft, color, options);
-            DrawTri(top, bottomLeft, bottomRight, color, options);
-            DrawTri(top, bottomRight, topRight, color, options);
+        DrawTri(top, topRight, topLeft, color, options);
+        DrawTri(top, topLeft, bottomLeft, color, options);
+        DrawTri(top, bottomLeft, bottomRight, color, options);
+        DrawTri(top, bottomRight, topRight, color, options);
     }
 
+    void ImmediateDrawBatch::DebugDraw2DLine(const cVector2f& start, const cVector2f& end, const cColor& color) {
+        m_line2DSegments.push_back(Line2DSegmentRequest{
+            .m_start = { start.x, start.y },
+            .m_end = { end.x, end.y },
+            .m_color = { color.r, color.g, color.b, color.a },
+        });
+    }
+
+    void ImmediateDrawBatch::DebugDraw2DLineQuad(cRect2f rect, const cColor& color) {
+        DebugDraw2DLine(cVector2f(rect.x, rect.y), cVector2f(rect.x + rect.w, rect.y), color);
+        DebugDraw2DLine(cVector2f(rect.x + rect.w, rect.y), cVector2f(rect.x + rect.w, rect.y + rect.h), color);
+        DebugDraw2DLine(cVector2f(rect.x + rect.w, rect.y + rect.h), cVector2f(rect.x, rect.y + rect.h), color);
+        DebugDraw2DLine(cVector2f(rect.x, rect.y + rect.h), cVector2f(rect.x, rect.y), color);
+    }
 
     void ImmediateDrawBatch::DebugDrawLine(
         const cVector3f& start, const cVector3f& end, const cColor& color, const DebugDrawOptions& options) {
@@ -96,15 +129,6 @@ namespace hpl {
             .m_depthTest = options.m_depthTest,
             .m_start = { transformStart.x, transformStart.y, transformStart.z },
             .m_end = { transformEnd.x, transformEnd.y, transformEnd.z },
-            .m_color = { color.r, color.g, color.b, color.a },
-        });
-    }
-    void ImmediateDrawBatch::DebugDrawMesh(
-        const GraphicsContext::LayoutStream& layout, const cColor& color, const DebugDrawOptions& options) {
-        m_debugMeshes.push_back({
-            .m_layout = layout,
-            .m_depthTest = options.m_depthTest,
-            .m_transform = options.m_transform,
             .m_color = { color.r, color.g, color.b, color.a },
         });
     }
@@ -290,8 +314,74 @@ namespace hpl {
         }
     }
 
+
+    void ImmediateDrawBatch::DebugSolidFromVertexBuffer(iVertexBuffer* vertexBuffer, const cColor& color, const DebugDrawOptions& options) {
+        ///////////////////////////////////////
+        // Set up variables
+        int lIndexNum = vertexBuffer->GetElementNum();
+        if (lIndexNum < 0)
+            lIndexNum = vertexBuffer->GetIndexNum();
+        unsigned int* pIndexArray = vertexBuffer->GetIndices();
+
+        float* pVertexArray = vertexBuffer->GetFloatArray(eVertexBufferElement_Position);
+        int lVertexStride = vertexBuffer->GetElementNum(eVertexBufferElement_Position);
+
+        cVector3f vTriPos[3];
+
+        ///////////////////////////////////////
+        // Iterate through each triangle and draw it as 3 lines
+        for (int tri = 0; tri < lIndexNum; tri += 3) {
+			////////////////////////
+            // Set the vector with positions of the lines
+            for (int idx = 0; idx < 3; idx++) {
+                int lVtx = pIndexArray[tri + 2 - idx] * lVertexStride;
+
+                vTriPos[idx].x = pVertexArray[lVtx + 0];
+                vTriPos[idx].y = pVertexArray[lVtx + 1];
+                vTriPos[idx].z = pVertexArray[lVtx + 2];
+            }
+
+			DrawTri(vTriPos[0], vTriPos[1], vTriPos[2], color, options);
+        }
+    }
+    void ImmediateDrawBatch::DebugWireFrameFromVertexBuffer(iVertexBuffer* vertexBuffer, const cColor& color, const DebugDrawOptions& options) {
+ 	    ///////////////////////////////////////
+        // Set up variables
+        int lIndexNum = vertexBuffer->GetElementNum();
+        if (lIndexNum < 0)
+            lIndexNum = vertexBuffer->GetIndexNum();
+        unsigned int* pIndexArray = vertexBuffer->GetIndices();
+
+        float* pVertexArray = vertexBuffer->GetFloatArray(eVertexBufferElement_Position);
+        int lVertexStride = vertexBuffer->GetElementNum(eVertexBufferElement_Position);
+
+        cVector3f vTriPos[3];
+
+        ///////////////////////////////////////
+        // Iterate through each triangle and draw it as 3 lines
+        for (int tri = 0; tri < lIndexNum; tri += 3) {
+            ////////////////////////
+            // Set the vector with positions of the lines
+            for (int idx = 0; idx < 3; idx++) {
+                int lVtx = pIndexArray[tri + 2 - idx] * lVertexStride;
+
+                vTriPos[idx].x = pVertexArray[lVtx + 0];
+                vTriPos[idx].y = pVertexArray[lVtx + 1];
+                vTriPos[idx].z = pVertexArray[lVtx + 2];
+            }
+
+            ////////////////////////
+            // Draw the three lines
+            for (int i = 0; i < 3; ++i) {
+                int lNext = i == 2 ? 0 : i + 1;
+                DebugDrawLine(vTriPos[i], vTriPos[lNext], color, options);
+            }
+        }
+    }
+
+
     void ImmediateDrawBatch::flush() {
-        if (m_lineSegments.empty() && m_colorQuads.empty() && m_uvQuads.empty()) {
+        if (m_lineSegments.empty() && m_colorQuads.empty() && m_uvQuads.empty() && m_colorTriangles.empty() && m_line2DSegments.empty()) {
             return;
         }
 
@@ -299,11 +389,6 @@ namespace hpl {
         if (!m_colorTriangles.empty()) {
             size_t vertexBufferOffset = 0;
             size_t indexBufferOffset = 0;
-            GraphicsContext::ViewConfiguration viewConfiguration{ m_target };
-            viewConfiguration.m_viewRect = { 0, 0, static_cast<uint16_t>(imageSize.x), static_cast<uint16_t>(imageSize.y) };
-            viewConfiguration.m_projection = m_projection;
-            viewConfiguration.m_view = m_view;
-            const auto view = m_context.StartPass("Immediate - Tries", viewConfiguration);
 
             std::sort(m_colorTriangles.begin(), m_colorTriangles.end(), [](const ColorTriRequest& a, const ColorTriRequest& b) {
                 return a.m_depthTest < b.m_depthTest;
@@ -364,19 +449,14 @@ namespace hpl {
                     layout,
                     shaderProgram,
                 };
-                m_context.Submit(view, request);
+                m_context.Submit(m_perspectiveView, request);
             }
         }
 
         if (!m_colorQuads.empty()) {
             size_t vertexBufferOffset = 0;
             size_t indexBufferOffset = 0;
-            GraphicsContext::ViewConfiguration viewConfiguration{ m_target };
-            viewConfiguration.m_viewRect = { 0, 0, static_cast<uint16_t>(imageSize.x), static_cast<uint16_t>(imageSize.y) };
-            viewConfiguration.m_projection = m_projection;
-            viewConfiguration.m_view = m_view;
-            const auto view = m_context.StartPass("Immediate - Quads", viewConfiguration);
-
+       
             std::sort(m_colorQuads.begin(), m_colorQuads.end(), [](const ColorQuadRequest& a, const ColorQuadRequest& b) {
                 return a.m_depthTest < b.m_depthTest;
             });
@@ -450,23 +530,72 @@ namespace hpl {
                     layout,
                     shaderProgram,
                 };
-                m_context.Submit(view, request);
+                m_context.Submit(m_perspectiveView, request);
             }
         }
+        if (!m_line2DSegments.empty()) {
+            cMatrixf projectionMtx(cMatrixf::Identity);
+            cVector3f vProjMin(0, 0, -1000);
+            cVector3f vProjMax(imageSize.x, imageSize.y, 1000);
+            bx::mtxOrtho(
+                projectionMtx.v,
+                vProjMin.x,
+                vProjMax.x,
+                vProjMax.y,
+                vProjMin.y,
+                vProjMin.z,
+                vProjMax.z,
+                0.0f,
+                bgfx::getCaps()->homogeneousDepth);
 
+            const size_t numVertices = m_line2DSegments.size() * 2;
+
+            bgfx::TransientVertexBuffer vb;
+            bgfx::TransientIndexBuffer ib;
+            bgfx::allocTransientVertexBuffer(&vb, numVertices, layout::PositionColor::layout());
+            bgfx::allocTransientIndexBuffer(&ib, numVertices);
+
+            size_t vertexBufferOffset = 0;
+            size_t indexBufferOffset = 0;
+            for (auto& segment : m_line2DSegments) {
+                reinterpret_cast<uint16_t*>(ib.data)[indexBufferOffset++] = vertexBufferOffset;
+                reinterpret_cast<hpl::layout::PositionColor*>(vb.data)[vertexBufferOffset++] = {
+                    { segment.m_start.x(), segment.m_start.y(), 0 },
+                    { segment.m_color.x(), segment.m_color.y(), segment.m_color.z(), segment.m_color.w() }
+                };
+                reinterpret_cast<uint16_t*>(ib.data)[indexBufferOffset++] = vertexBufferOffset;
+                reinterpret_cast<hpl::layout::PositionColor*>(vb.data)[vertexBufferOffset++] = {
+                    { segment.m_end.x(), segment.m_end.y(), 0 },
+                    { segment.m_color.x(), segment.m_color.y(), segment.m_color.z(), segment.m_color.w() }
+                };
+            }
+
+            GraphicsContext::LayoutStream layout;
+            layout.m_vertexStreams.push_back({ .m_transient = vb });
+            layout.m_indexStream = { .m_transient = ib };
+            layout.m_drawType = eVertexBufferDrawType_Line;
+
+            GraphicsContext::ShaderProgram shaderProgram;
+            shaderProgram.m_handle = m_colorProgram;
+            shaderProgram.m_configuration.m_depthTest = DepthTest::Always;
+
+            shaderProgram.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
+            shaderProgram.m_configuration.m_alphaBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
+            shaderProgram.m_configuration.m_write = Write::RGB;
+
+            GraphicsContext::DrawRequest request = {
+                layout,
+                shaderProgram,
+            };
+            m_context.Submit(m_orthographicView, request);
+        }
         if (!m_lineSegments.empty()) {
-            GraphicsContext::ViewConfiguration viewConfiguration{ m_target };
-            viewConfiguration.m_viewRect = { 0, 0, static_cast<uint16_t>(imageSize.x), static_cast<uint16_t>(imageSize.y) };
-            viewConfiguration.m_projection = m_projection;
-            viewConfiguration.m_view = m_view;
-            const auto view = m_context.StartPass("Immediate - Lines", viewConfiguration);
-
+            
             std::sort(m_lineSegments.begin(), m_lineSegments.end(), [](const LineSegmentRequest& a, const LineSegmentRequest& b) {
                 return a.m_depthTest < b.m_depthTest;
             });
 
             const size_t numVertices = m_lineSegments.size() * 2;
-
             bgfx::TransientVertexBuffer vb;
             bgfx::TransientIndexBuffer ib;
             bgfx::allocTransientVertexBuffer(&vb, numVertices, layout::PositionColor::layout());
@@ -480,31 +609,17 @@ namespace hpl {
                 size_t vertexBufferIndex = 0;
                 size_t indexBufferIndex = 0;
                 do {
-                    {
-                        reinterpret_cast<uint16_t*>(ib.data)[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex;
-                        auto& posColor = reinterpret_cast<hpl::layout::PositionColor*>(vb.data)[vertexBufferOffset + (vertexBufferIndex++)];
-                        posColor.m_pos[0] = it->m_start.x();
-                        posColor.m_pos[1] = it->m_start.y();
-                        posColor.m_pos[2] = it->m_start.z();
+                    reinterpret_cast<uint16_t*>(ib.data)[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex;
+                    reinterpret_cast<hpl::layout::PositionColor*>(vb.data)[vertexBufferOffset + (vertexBufferIndex++)] = {
+                        { it->m_start.x(), it->m_start.y(), it->m_start.z() },
+                        { it->m_color.x(), it->m_color.y(), it->m_color.z(), it->m_color.w() }
+                    };
 
-                        posColor.m_color[0] = it->m_color.x();
-                        posColor.m_color[1] = it->m_color.y();
-                        posColor.m_color[2] = it->m_color.z();
-                        posColor.m_color[3] = it->m_color.w();
-                    }
-
-                    {
-                        reinterpret_cast<uint16_t*>(ib.data)[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex;
-                        auto& posColor = reinterpret_cast<hpl::layout::PositionColor*>(vb.data)[vertexBufferOffset + (vertexBufferIndex++)];
-                        posColor.m_pos[0] = it->m_end.x();
-                        posColor.m_pos[1] = it->m_end.y();
-                        posColor.m_pos[2] = it->m_end.z();
-
-                        posColor.m_color[0] = it->m_color.x();
-                        posColor.m_color[1] = it->m_color.y();
-                        posColor.m_color[2] = it->m_color.z();
-                        posColor.m_color[3] = it->m_color.w();
-                    }
+                    reinterpret_cast<uint16_t*>(ib.data)[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex;
+                    reinterpret_cast<hpl::layout::PositionColor*>(vb.data)[vertexBufferOffset + (vertexBufferIndex++)] = {
+                        { it->m_end.x(), it->m_end.y(), it->m_end.z() },
+                        { it->m_color.x(), it->m_color.y(), it->m_color.z(), it->m_color.w() }
+                    };
 
                     lastIt = it;
                     it++;
@@ -535,49 +650,13 @@ namespace hpl {
                     layout,
                     shaderProgram,
                 };
-                m_context.Submit(view, request);
-            }
-        }
-        if (m_debugMeshes.size() > 0) {
-            GraphicsContext::ViewConfiguration viewConfiguration{ m_target };
-            viewConfiguration.m_viewRect = { 0, 0, static_cast<uint16_t>(imageSize.x), static_cast<uint16_t>(imageSize.y) };
-            viewConfiguration.m_projection = m_projection;
-            viewConfiguration.m_view = m_view;
-            const auto view = m_context.StartPass("Immediate - Lines", viewConfiguration);
-
-            for (auto& mesh : m_debugMeshes) {
-                GraphicsContext::ShaderProgram shaderProgram;
-                shaderProgram.m_handle = m_meshColorProgram;
-                shaderProgram.m_configuration.m_depthTest = mesh.m_depthTest;
-                shaderProgram.m_configuration.m_rgbBlendFunc =
-                    CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
-                shaderProgram.m_configuration.m_alphaBlendFunc =
-                    CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
-                struct {
-                    float m_r;
-                    float m_g;
-                    float m_b;
-                    float m_a;
-                } color = { mesh.m_color.r, mesh.m_color.g, mesh.m_color.b, mesh.m_color.a };
-                shaderProgram.m_uniforms.push_back({ m_u_color, &color });
-                shaderProgram.m_configuration.m_write = Write::RGB;
-                shaderProgram.m_configuration.m_depthTest = DepthTest::LessEqual;
-                GraphicsContext::DrawRequest request = {
-                    mesh.m_layout,
-                    shaderProgram,
-                };
-                m_context.Submit(view, request);
+                m_context.Submit(m_perspectiveView, request);
             }
         }
 
         if (!m_uvQuads.empty()) {
             size_t vertexBufferOffset = 0;
             size_t indexBufferOffset = 0;
-            GraphicsContext::ViewConfiguration viewConfiguration{ m_target };
-            viewConfiguration.m_viewRect = { 0, 0, static_cast<uint16_t>(imageSize.x), static_cast<uint16_t>(imageSize.y) };
-            viewConfiguration.m_projection = m_projection;
-            viewConfiguration.m_view = m_view;
-            const auto view = m_context.StartPass("Immediate - Quad", viewConfiguration);
             const size_t numVertices = m_colorQuads.size() * 4;
 
             bgfx::TransientIndexBuffer ib;
@@ -617,9 +696,7 @@ namespace hpl {
 
                 GraphicsContext::ShaderProgram shaderProgram;
                 shaderProgram.m_handle = m_uvProgram;
-                shaderProgram.m_configuration.m_depthTest = quad.m_depthTest;
 
-                // shaderProgram.m_configuration.m_cull = Cull::None;
                 shaderProgram.m_configuration.m_rgbBlendFunc =
                     CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
                 shaderProgram.m_configuration.m_alphaBlendFunc =
@@ -627,6 +704,7 @@ namespace hpl {
                 shaderProgram.m_uniforms.push_back({ m_u_color, &color });
                 shaderProgram.m_textures.push_back({ m_s_diffuseMap, quad.m_uvImage->GetHandle(), 0 });
                 shaderProgram.m_configuration.m_write = Write::RGB;
+                shaderProgram.m_configuration.m_depthTest = quad.m_depthTest;
 
                 GraphicsContext::LayoutStream layout;
                 layout.m_vertexStreams.push_back({
@@ -638,7 +716,7 @@ namespace hpl {
                     layout,
                     shaderProgram,
                 };
-                m_context.Submit(view, request);
+                m_context.Submit(m_perspectiveView, request);
             }
         }
         m_colorTriangles.clear();

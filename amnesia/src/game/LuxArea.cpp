@@ -103,7 +103,7 @@ iLuxArea::~iLuxArea()
 
 //-----------------------------------------------------------------------
 
-void iLuxArea::OnRenderSolid(cRendererCallbackFunctions* apFunctions)
+void iLuxArea::OnRenderSolid(hpl::ImmediateDrawBatch* apFunctions)
 {
     /*if(mpBody==NULL) return;
 
