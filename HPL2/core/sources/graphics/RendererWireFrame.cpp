@@ -71,10 +71,11 @@ namespace hpl {
 				return image;
 			};
 			return std::make_unique<RenderTarget>(colorImage());
-			// return std::make_unique<RenderTarget>(colorImage());
 		}, [](cViewport& viewport, RenderTarget& target) {
-			return target.IsValid() ;
+			return target.GetImage()->GetImageSize() == viewport.GetSize();
 		}));
+
+		m_colorProgram = hpl::loadProgram("vs_color", "fs_color");
 	}
 
 	//-----------------------------------------------------------------------
@@ -125,12 +126,18 @@ namespace hpl {
 
 
 	void cRendererWireFrame::Draw(GraphicsContext& context, cViewport& viewport, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList) {
-		return;
-		BX_ASSERT(false, "Not implemented yet");
+		BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects, apCallbackList);
+		
+		auto& rt = m_boundOutputBuffer.resolve(viewport);	
+		
+		[&]{
+			GraphicsContext::ViewConfiguration viewConfig {rt};
+			viewConfig.m_viewRect = {0, 0, viewport.GetSize().x, viewport.GetSize().y};
+			viewConfig.m_clear = {0, 1, 0, ClearOp::Depth | ClearOp::Stencil | ClearOp::Color};
+			bgfx::touch(context.StartPass("Clear", viewConfig));
+		}();
 
-		auto& rt = m_boundOutputBuffer.resolve(viewport);
-		
-		
+
 		mpCurrentRenderList->Setup(mfCurrentFrameTime,mpCurrentFrustum);
 
 		CheckForVisibleAndAddToList(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static),0);
@@ -158,7 +165,7 @@ namespace hpl {
 		viewConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
 		viewConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
 		viewConfig.m_viewRect = {0, 0, viewport.GetSize().x, viewport.GetSize().y};
-		auto view = context.StartPass("Diffuse", viewConfig);
+		auto view = context.StartPass("Wireframe", viewConfig);
 		for(auto& pObject: mpCurrentRenderList->GetRenderableItems(eRenderListType_Diffuse))
 		{
 			GraphicsContext::LayoutStream layoutStream;
@@ -173,14 +180,24 @@ namespace hpl {
 			if(vertexBuffer == nullptr) {
 				continue;
 			}
+
+			struct {
+				float m_r;
+				float m_g;
+				float m_b;
+				float m_a;
+			} color = { 1.0f, 1.0f,1.0f ,1.0f };
+
+
 			shaderProgram.m_configuration.m_depthTest = DepthTest::LessEqual;
 			shaderProgram.m_configuration.m_write = Write::RGBA;
 			shaderProgram.m_configuration.m_cull = Cull::None;
+			shaderProgram.m_handle = m_colorProgram;
 
+			shaderProgram.m_uniforms.push_back({ m_u_color, &color });
 			shaderProgram.m_modelTransform = pObject->GetModelMatrixPtr() ?  pObject->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity.GetTranspose();
 
-			layoutStream.m_drawType = eVertexBufferDrawType_LineStrip;
-			vertexBuffer->GetLayoutStream(layoutStream);
+			vertexBuffer->GetLayoutStream(layoutStream, eVertexBufferDrawType_LineStrip);
 			GraphicsContext::DrawRequest drawRequest {layoutStream, shaderProgram};
 			context.Submit(view, drawRequest);
 

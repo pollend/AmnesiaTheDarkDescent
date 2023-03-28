@@ -42,24 +42,6 @@ private:
 	tStringVec mvEnemyHearableSounds;
 };
 
-//----------------------------------------------
-
-class cLuxDebugRenderCallback : public iRendererCallback
-{
-public:
-	cLuxDebugRenderCallback();
-
-	void OnPostSolidDraw(cRendererCallbackFunctions* apFunctions);
-
-	void OnPostTranslucentDraw(cRendererCallbackFunctions* apFunctions);
-
-	iPhysicsWorld* mpPhysicsWorld;
-	iLowLevelGraphics* mpLowLevelGfx;
-};
-
-
-//----------------------------------------------
-
 class cLuxMapHandler_ChangeMap
 {
 public:
@@ -146,7 +128,7 @@ private:
 
 	cViewport::PostSolidDraw::Handler m_postDebugSolidDrawHandler;
 	cViewport::PostTranslucenceDraw::Handler m_postDebugTranslucentDrawHandler;
-	cLuxDebugRenderCallback mRenderCallback;
+	// cLuxDebugRenderCallback mRenderCallback;
 
 	tString msMapFolder;
 

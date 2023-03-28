@@ -457,7 +457,7 @@ void iLuxPlayerState_InteractRotateBase::SaveToSaveData(iLuxPlayerState_SaveData
 {
 	///////////////////////
 	// Init
-	super_class::SaveToSaveData(apSaveData);
+	iLuxPlayerState_Interact::SaveToSaveData(apSaveData);
 	iLuxPlayerState_InteractRotateBase_SaveData *pData = static_cast<iLuxPlayerState_InteractRotateBase_SaveData*>(apSaveData);
 
 
@@ -471,7 +471,7 @@ void iLuxPlayerState_InteractRotateBase::LoadFromSaveDataBeforeEnter(cLuxMap *ap
 {
 	///////////////////////
 	// Init
-	super_class::LoadFromSaveDataBeforeEnter(apMap,apSaveData);
+	iLuxPlayerState_Interact::LoadFromSaveDataBeforeEnter(apMap,apSaveData);
 	iLuxPlayerState_InteractRotateBase_SaveData *pData = static_cast<iLuxPlayerState_InteractRotateBase_SaveData*>(apSaveData);
 
 	///////////////////////
@@ -484,7 +484,7 @@ void iLuxPlayerState_InteractRotateBase::LoadFromSaveDataAfterEnter(cLuxMap *apM
 {
 	///////////////////////
 	// Init
-	super_class::LoadFromSaveDataAfterEnter(apMap,apSaveData);
+	iLuxPlayerState_Interact::LoadFromSaveDataAfterEnter(apMap,apSaveData);
 	iLuxPlayerState_InteractRotateBase_SaveData *pData = static_cast<iLuxPlayerState_InteractRotateBase_SaveData*>(apSaveData);
 
 	///////////////////////

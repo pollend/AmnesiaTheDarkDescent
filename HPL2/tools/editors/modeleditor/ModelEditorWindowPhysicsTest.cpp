@@ -70,91 +70,6 @@ bool cBodyPicker::OnIntersect(iPhysicsBody *pBody,cPhysicsRayParams *apParams)
 	return true;
 }
 
-//------------------------------------------------------------------------------------
-
-/////////////////////////////////////////////////////////////////////////
-// RENDER CALLBACK
-/////////////////////////////////////////////////////////////////////////
-
-//------------------------------------------------------------------------------------
-
-void cPhysicsTestRenderCallback::OnPostSolidDraw(cRendererCallbackFunctions* apFunctions)
-{
-	cMeshEntity* pEntity = mpWindow->mpTestEntity;
-
-	apFunctions->SetDepthTest(true);
-	apFunctions->SetDepthWrite(false);
-	apFunctions->SetBlendMode(eMaterialBlendMode_None);
-
-	apFunctions->SetProgram(NULL);
-	apFunctions->SetTextureRange(NULL, 0);
-	apFunctions->SetMatrix(NULL);
-
-	if(mbDrawDebug)
-	{
-		BX_ASSERT(false);
-		// mpWindow->mpTestPhysicsWorld->RenderDebugGeometry(apFunctions->GetLowLevelGfx(), cColor(1,1,1,1));
-		std::vector<iPhysicsJoint*>& vJoints = mpWindow->mvJoints;
-
-		for(size_t i=0;i<vJoints.size(); ++i)
-		{
-			iPhysicsJoint *pJoint = vJoints[i];
-
-			cVector3f vPivot = pJoint->GetPivotPoint();
-			apFunctions->GetLowLevelGfx()->DrawSphere(vPivot,0.2f,cColor(1,0,0,1));
-			apFunctions->GetLowLevelGfx()->DrawLine(vPivot,vPivot + pJoint->GetPinDir()*0.25 ,cColor(0,1,0,1));
-		}
-	}
-
-	if(mbDrawSkeleton && pEntity && pEntity->GetMesh()->GetSkeleton())
-	{
-		apFunctions->SetDepthTest(false);
-
-		cNode3DIterator it = mpWindow->mpTestEntity->GetBoneStateRoot()->GetChildIterator();
-
-		while(it.HasNext())
-		{
-			cNode3D *pChild = static_cast<cNode3D*>(it.Next());
-			DrawSkeletonRec(apFunctions ,pChild);
-		}
-	}
-
-	apFunctions->SetDepthTest(true);
-
-	if(mpBodyPicker->mpPickedBody==NULL) return;
-
-	apFunctions->GetLowLevelGfx()->DrawSphere(mpBodyPicker->mvPos,0.1f, cColor(1,0,0,1));
-	apFunctions->GetLowLevelGfx()->DrawSphere(mvDragPos,0.1f, cColor(1,0,0,1));
-
-	apFunctions->GetLowLevelGfx()->DrawLine(mpBodyPicker->mvPos, mvDragPos, cColor(1,1,1,1));
-}
-
-//------------------------------------------------------------------------------------
-
-void cPhysicsTestRenderCallback::DrawSkeletonRec(cRendererCallbackFunctions* apFunctions, cNode3D* apBoneState)
-{
-	cVector3f vCameraSpacePos = cMath::MatrixMul(apFunctions->GetFrustum()->GetViewMatrix(), apBoneState->GetWorldPosition());
-	float fSize = cMath::Min(-0.01f * vCameraSpacePos.z, 0.03f);
-	apFunctions->GetLowLevelGfx()->DrawSphere(apBoneState->GetWorldPosition(),fSize,cColor(1,0,0,1));
-
-
-	cNode3DIterator it = apBoneState->GetChildIterator();
-	while(it.HasNext())
-	{
-		cNode3D *pChild = static_cast<cNode3D*>(it.Next());
-		apFunctions->GetLowLevelGfx()->DrawLine(apBoneState->GetWorldPosition(), pChild->GetWorldPosition(), cColor(1,1));
-		DrawSkeletonRec(apFunctions, pChild);
-	}
-}
-
-//------------------------------------------------------------------------------------
-
-/////////////////////////////////////////////////////////////////////////
-// CONSTRUCTORS
-/////////////////////////////////////////////////////////////////////////
-
-//------------------------------------------------------------------------------------
-
 cModelEditorWindowPhysicsTest::cModelEditorWindowPhysicsTest(iEditorBase* apEditor): iEditorWindow(apEditor,
 																													   "Physics Test Window"),
 																										 iEditorViewport(apEditor,
@@ -169,8 +84,64 @@ cModelEditorWindowPhysicsTest::cModelEditorWindowPhysicsTest(iEditorBase* apEdit
 
 	mbViewMode = false;
 
-	mRenderCallback.mpBodyPicker = &mBodyPicker;
-	mRenderCallback.mpWindow = this;
+	m_postSolidDraw = cViewport::PostSolidDraw::Handler([&](cViewport::PostSolidDrawPayload& payload) {
+		cMatrixf view = payload.m_frustum->GetViewMatrix().GetTranspose();
+		cMatrixf proj = payload.m_frustum->GetProjectionMatrix().GetTranspose();
+		hpl::ImmediateDrawBatch batch(*payload.m_context, *payload.m_outputTarget,view, proj);
+
+		std::function<void(cNode3D* bone)> drawSkeletonRec;
+		drawSkeletonRec = [&](cNode3D* bone) {
+			cVector3f vCameraSpacePos = cMath::MatrixMul(payload.m_frustum->GetViewMatrix(), bone->GetWorldPosition());
+			float fSize = cMath::Min(-0.01f * vCameraSpacePos.z, 0.03f);
+			batch.DebugDrawSphere(bone->GetWorldPosition(), fSize, cColor(1, 0, 0, 1));
+
+			cNode3DIterator it = bone->GetChildIterator();
+			while (it.HasNext()) {
+				cNode3D* pChild = static_cast<cNode3D*>(it.Next());
+				ImmediateDrawBatch::DebugDrawOptions options;
+				options.m_depthTest = DepthTest::Always;
+				batch.DebugDrawLine(bone->GetWorldPosition(), pChild->GetWorldPosition(), cColor(1, 1), options);
+				drawSkeletonRec(pChild);
+			}
+		};
+
+		if(m_drawDebug)
+		{
+			mpTestPhysicsWorld->RenderDebugGeometry(&batch, cColor(1,1,1,1));
+			
+			for(auto& pJoint: mvJoints)
+			{
+				cVector3f vPivot = pJoint->GetPivotPoint();
+				batch.DebugDrawSphere(vPivot,0.2f,cColor(1,0,0,1));
+				batch.DebugDrawLine(vPivot,vPivot + pJoint->GetPinDir()*0.25 ,cColor(0,1,0,1));
+			}
+		}
+
+		if(m_drawSkeleton && mpTestEntity && mpTestEntity->GetMesh()->GetSkeleton())
+		{
+			// apFunctions->SetDepthTest(false);
+
+			cNode3DIterator it = mpTestEntity->GetBoneStateRoot()->GetChildIterator();
+			while(it.HasNext())
+			{
+				cNode3D *pChild = static_cast<cNode3D*>(it.Next());
+				drawSkeletonRec(pChild);
+			}
+		}
+
+		if(mBodyPicker.mpPickedBody!=NULL) {
+
+			batch.DebugDrawSphere(mBodyPicker.mvPos,0.1f, cColor(1,0,0,1));
+			batch.DebugDrawSphere(m_dragPos, 0.1f, cColor(1,0,0,1));
+
+			batch.DebugDrawLine(mBodyPicker.mvPos, m_dragPos, cColor(1,1,1,1));
+		}
+
+		batch.flush();
+	});
+
+	// mRenderCallback.mpBodyPicker = &mBodyPicker;
+	// mRenderCallback.mpWindow = this;
 }
 
 //------------------------------------------------------------------------------------
@@ -238,9 +209,9 @@ bool cModelEditorWindowPhysicsTest::WindowSpecificInputCallback(iEditorInput* ap
 		}
 	}
 	else if(apInput==mpInpShowDebug)
-		mRenderCallback.mbDrawDebug = mpInpShowDebug->GetValue();
+		m_drawDebug = mpInpShowDebug->GetValue();
 	else if(apInput==mpInpShowSkeleton)
-		mRenderCallback.mbDrawSkeleton = mpInpShowSkeleton->GetValue();
+		m_drawSkeleton = mpInpShowSkeleton->GetValue();
 	else if(apInput==mpInpMainLight)
 		mpMainLight->SetVisible(mpInpMainLight->GetValue());
 	else if(apInput==mpInpBackLight)
@@ -282,7 +253,7 @@ bool cModelEditorWindowPhysicsTest::WindowSpecificInputCallback(iEditorInput* ap
 
 void cModelEditorWindowPhysicsTest::SetUpRender()
 {
-	AddViewportCallback(&mRenderCallback);
+	mpEngineViewport->ConnectDraw(m_postSolidDraw);
 
 	cScene* pScene = mpEngine->GetScene();
 	cPhysics* pPhysics = mpEngine->GetPhysics();
@@ -556,7 +527,7 @@ bool cModelEditorWindowPhysicsTest::OnViewportUpdate(const cGuiMessageData& aDat
 		const cVector3f& vStart = GetUnprojectedStart();
 		const cVector3f& vDir = GetUnprojectedDir();
 		cVector3f vDragPos =  vStart + vDir*mBodyPicker.mfDist;
-		mRenderCallback.mvDragPos = vStart + vDir*mBodyPicker.mfDist;
+		m_dragPos = vStart + vDir*mBodyPicker.mfDist;
 
 		//Spring testing:
 		cVector3f vForce = (vDragPos - mBodyPicker.mvPos)*20 -
@@ -605,7 +576,7 @@ bool cModelEditorWindowPhysicsTest::OnViewportMouseDown(const cGuiMessageData& a
 			{
 				mBodyPicker.mpPickedBody->SetAutoDisable(false);
 
-				mRenderCallback.mvDragPos = mBodyPicker.mvPos;
+				m_dragPos = mBodyPicker.mvPos;
 
 				cMatrixf mtxInvWorld = cMath::MatrixInverse(mBodyPicker.mpPickedBody->GetLocalMatrix());
 				mBodyPicker.mvLocalPos = cMath::MatrixMul(mtxInvWorld, mBodyPicker.mvPos);

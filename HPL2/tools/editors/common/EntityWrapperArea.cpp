@@ -308,10 +308,11 @@ void cEntityWrapperArea::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBa
 		col = pType->GetColor();
 
 	cMatrixf mtxRT = cMath::MatrixMul(cMath::MatrixTranslate(mvPosition), cMath::MatrixRotate(mvRotation, eEulerRotationOrder_XYZ));
-
-	apFunctions->DebugDrawLine(cVector3f(-0.05f,0,0), cVector3f(0.05f,0,0), col);
-	apFunctions->DebugDrawLine(cVector3f(0,-0.05f,0), cVector3f(0,0.05f,0), col);
-	apFunctions->DebugDrawLine(cVector3f(0,0,-0.05f), cVector3f(0,0,0.05f), col);
+	ImmediateDrawBatch::DebugDrawOptions options;
+	options.m_transform = mtxRT;
+	apFunctions->DebugDrawLine(cVector3f(-0.05f,0,0), cVector3f(0.05f,0,0), col, options);
+	apFunctions->DebugDrawLine(cVector3f(0,-0.05f,0), cVector3f(0,0.05f,0), col, options);
+	apFunctions->DebugDrawLine(cVector3f(0,0,-0.05f), cVector3f(0,0,0.05f), col, options);
 
 	cVector3f vHalfScale;
 	if(pType->IsScalable())
@@ -323,11 +324,11 @@ void cEntityWrapperArea::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBa
 	if(pType->GetDrawAsSphere())
 	{
 		vHalfScale = vHalfScale*0.5f;
-		apFunctions->DebugDrawSphere(0, vHalfScale.x, col);
+		apFunctions->DebugDrawSphere(0, vHalfScale.x, col, options);
 	}
 	else
 	{
-		apFunctions->DebugDrawBoxMinMax(vHalfScale*-1, vHalfScale, col);
+		apFunctions->DebugDrawBoxMinMax(vHalfScale*-1, vHalfScale, col, options);
 	}
 
 	if(pType->GetShowOrientation())
@@ -340,8 +341,8 @@ void cEntityWrapperArea::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBa
 			vDir.v[i] = 1;
 			vDir = vDir*vLength;
 			col.v[i] = 1;
-			apFunctions->DebugDrawLine(0 , vDir, col);
-			apFunctions->DrawPyramid(vDir, vDir+ vDir*0.1f, 0.025f, col);
+			apFunctions->DebugDrawLine(0 , vDir, col, options);
+			apFunctions->DrawPyramid(vDir, vDir+ vDir*0.1f, 0.025f, col, options);
 		}
 	}
 

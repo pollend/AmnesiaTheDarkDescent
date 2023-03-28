@@ -40,7 +40,6 @@ public:
 
 class iLuxPlayerState_InteractRotateBase : public iLuxPlayerState_Interact
 {
-typedef iLuxPlayerState_Interact super_class;
 public:
 	iLuxPlayerState_InteractRotateBase(cLuxPlayer *apPlayer, eLuxPlayerState aState);
 	virtual ~iLuxPlayerState_InteractRotateBase();
@@ -71,8 +70,6 @@ public:
 
 	virtual void RenderSolid(cRendererCallbackFunctions* apFunctions);
 
-	/////////////////////////////////
-	//Save data stuff
 	virtual bool IsSaved(){ return false; }
 
 	virtual void SaveToSaveData(iLuxPlayerState_SaveData* apSaveData);

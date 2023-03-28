@@ -51,9 +51,13 @@ namespace hpl {
 			bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList) override;
 
         UniqueViewportData<RenderTarget> m_boundOutputBuffer;
+        bgfx::ProgramHandle m_colorProgram;
+        UniformWrapper<StringLiteral("u_color"),      bgfx::UniformType::Vec4> m_u_color;
 
 		void CopyToFrameBuffer();
 		void RenderObjects();
+
+
 	};
 
 	//---------------------------------------------

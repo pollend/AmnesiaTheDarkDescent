@@ -101,59 +101,6 @@ void cMapHandlerSoundCallback::OnStart(cSoundEntity *apSoundEntity)
 	pMap->BroadcastEnemySoundMessage(vPos, fVolume, fMinDist, fMaxDist);
 }
 
-//-----------------------------------------------------------------------
-
-
-//////////////////////////////////////////////////////////////////////////
-// RENDER CALLBACK
-//////////////////////////////////////////////////////////////////////////
-
-//-----------------------------------------------------------------------
-
-cLuxDebugRenderCallback::cLuxDebugRenderCallback()
-{
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxDebugRenderCallback::OnPostSolidDraw(cRendererCallbackFunctions* apFunctions)
-{
-	// if(mpPhysicsWorld)
-	// {
-	// 	apFunctions->SetMatrix(NULL);
-	// 	apFunctions->SetBlendMode(eMaterialBlendMode_Alpha);
-	// 	apFunctions->SetTextureRange(NULL,0);
-	// 	apFunctions->SetProgram(NULL);
-
-	// 	apFunctions->SetDepthTest(true);
-	// 	apFunctions->SetDepthWrite(false);
-
-	// 	//mpPhysicsWorld->RenderDebugGeometry(apFunctions->GetLowLevelGfx(), cColor(1,1,1,1));
-	// }
-
-	// gpBase->mpDebugHandler->RenderSolid(apFunctions);
-	// gpBase->mpMapHandler->RenderSolid(apFunctions);
-	// gpBase->mpPlayer->RenderSolid(apFunctions);
-	// gpBase->mpEffectRenderer->RenderSolid(apFunctions);
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxDebugRenderCallback::OnPostTranslucentDraw(cRendererCallbackFunctions* apFunctions)
-{
-	gpBase->mpPlayer->RenderTrans(apFunctions);
-	gpBase->mpEffectRenderer->RenderTrans(apFunctions);
-}
-
-//------------------------m_fitViewportToWindow-----------------------------------------------
-
-
-//////////////////////////////////////////////////////////////////////////
-// CONSTRUCTORS
-//////////////////////////////////////////////////////////////////////////
-
-//-----------------------------------------------------------------------
-
 cLuxMapHandler::cLuxMapHandler() : iLuxUpdateable("LuxMapHandler")
 {
 	m_postDebugSolidDrawHandler = cViewport::PostSolidDraw::Handler([&](cViewport::PostSolidDrawPayload& payload) {
@@ -165,10 +112,12 @@ cLuxMapHandler::cLuxMapHandler() : iLuxUpdateable("LuxMapHandler")
 		{
 			mpCurrentMap->GetPhysicsWorld()->RenderDebugGeometry(&batch, cColor(1,1,1,1));
 		}
-		// gpBase->mpDebugHandler->RenderSolid(apFunctions);
-		// gpBase->mpMapHandler->RenderSolid(apFunctions);
-		// gpBase->mpPlayer->RenderSolid(apFunctions);
-		// gpBase->mpEffectRenderer->RenderSolid(apFunctions);
+
+		// gpBase->mpDebugHandler->RenderSolid(&batch);
+		// gpBase->mpMapHandler->RenderSolid(&batch);
+		// gpBase->mpPlayer->RenderSolid(&batch);
+		// gpBase->mpEffectRenderer->RenderSolid(&batch);
+		batch.flush();
 	});
 	m_postDebugTranslucentDrawHandler = cViewport::PostTranslucenceDraw::Handler([&](cViewport::PostTranslucenceDrawPayload& payload) {
 	
@@ -253,7 +202,9 @@ void cLuxMapHandler::OnStart()
 	mpViewport->AddGuiSet(gpBase->mpGameHudSet);
 
 
-	mpViewport->AddRendererCallback(&mRenderCallback);
+	// mpViewport->AddRendererCallback(&mRenderCallback);
+	mpViewport->ConnectDraw(m_postDebugSolidDrawHandler);
+	mpViewport->ConnectDraw(m_postDebugTranslucentDrawHandler);
 	UpdateViewportRenderProperties();
 }
 
@@ -478,8 +429,6 @@ void cLuxMapHandler::SetCurrentMap(cLuxMap* apMap, bool abRunScript, bool abFirs
 		//Set this as world in viewport
 		mpViewport->SetWorld(mpCurrentMap->GetWorld());
 
-		mRenderCallback.mpPhysicsWorld = mpCurrentMap->GetPhysicsWorld();
-		mRenderCallback.mpLowLevelGfx = gpBase->mpEngine->GetGraphics()->GetLowLevel();
 	}
 	else
 	{

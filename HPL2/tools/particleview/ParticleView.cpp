@@ -50,80 +50,6 @@ std::vector<iPhysicsBody*> gvFloorBodies;
 cPostEffectComposite *gpPostEffectComp=NULL;
 
 
-//--------------------------------------------------------------------------------
-
-class cSimpleRenderCallback : public iRendererCallback
-{
-public:
-	cSimpleRenderCallback()
-	{
-
-	};
-
-	void OnPostSolidDraw(cRendererCallbackFunctions *apFunctions)
-	{
-		apFunctions->SetDepthTest(true);
-		apFunctions->SetDepthWrite(false);
-		apFunctions->SetBlendMode(eMaterialBlendMode_None);
-
-		apFunctions->SetProgram(NULL);
-		apFunctions->SetTextureRange(NULL, 0);
-		apFunctions->SetMatrix(NULL);
-
-		/*for(size_t i=0; i<gvLights.size(); ++i)
-		{
-			cLightSpot *pLight = gvLights[i];
-
-            pLight->GetFrustum()->Draw(apFunctions->GetLowLevelGfx());
-		}*/
-
-		if(gbDrawBoundingBox && gpParticleSystem)
-		{
-			cBoundingVolume *pBV = gpParticleSystem->GetBoundingVolume();
-			apFunctions->GetLowLevelGfx()->DrawBoxMinMax(pBV->GetMin(),pBV->GetMax(), cColor(1,1));
-		}
-
-		if(gbDrawGrid)
-		{
-			int lNum = 32;
-			float fSize = 0.25f;
-			float fStart = fSize *0.5f * (float)lNum + fSize;
-			float fEnd = fSize *0.5f* (float)-lNum - fSize;
-			float fY = -0.1;//gpFloor->GetWorldPosition().y + 0.05f;
-
-			for(int i=-lNum/2; i<lNum/2+1;++i)
-			{
-				float fPos = fSize * (float)i;
-				apFunctions->GetLowLevelGfx()->DrawLine(cVector3f(fPos,fY,fStart),cVector3f(fPos,fY,fEnd),cColor(0.5f,1));
-				apFunctions->GetLowLevelGfx()->DrawLine(cVector3f(fStart,fY,fPos),cVector3f(fEnd,fY,fPos),cColor(0.5f,1));
-			}
-
-		}
-
-		if(gbDrawAxes)
-		{
-			cVector3f vPosAdd = cVector3f(0, 0.01f, 0);
-			apFunctions->SetDepthTest(false);
-			apFunctions->GetLowLevelGfx()->DrawLine(0,cVector3f(1,0,0)+vPosAdd,cColor(1,0,0,1));
-			apFunctions->GetLowLevelGfx()->DrawLine(0,cVector3f(0,1,0)+vPosAdd,cColor(0,1,0,1));
-			apFunctions->GetLowLevelGfx()->DrawLine(0,cVector3f(0,0,1)+vPosAdd,cColor(0,0,1,1));
-			apFunctions->SetDepthTest(true);
-		}
-   	}
-
-	void OnPostTranslucentDraw(cRendererCallbackFunctions *apFunctions)
-	{
-
-	}
-
-	cWorld *mpWorld;
-	iPhysicsWorld *mpPhysicsWorld;
-	cVector3f mvDragPos;
-};
-
-//--------------------------------------------------------------------------------
-
-
 class cMaterialData
 {
 public:
@@ -169,8 +95,47 @@ public:
 
 		////////////////////////////////
 		// Render callback
-		renderCallback.mpWorld = mpWorld;
-		renderCallback.mpPhysicsWorld = mpPhysicsWorld;
+		m_postSolidDraw = cViewport::PostSolidDraw::Handler([&](hpl::cViewport::PostSolidDrawPayload& payload) {
+			cMatrixf view = payload.m_frustum->GetViewMatrix().GetTranspose();
+			cMatrixf proj = payload.m_frustum->GetProjectionMatrix().GetTranspose();
+			ImmediateDrawBatch batch(*payload.m_context, *payload.m_outputTarget,view, proj);
+
+			if(gbDrawBoundingBox && gpParticleSystem)
+			{
+				cBoundingVolume *pBV = gpParticleSystem->GetBoundingVolume();
+				batch.DebugDrawBoxMinMax(pBV->GetMin(),pBV->GetMax(), cColor(1,1));
+			}
+
+			if(gbDrawGrid)
+			{
+				int lNum = 32;
+				float fSize = 0.25f;
+				float fStart = fSize *0.5f * (float)lNum + fSize;
+				float fEnd = fSize *0.5f* (float)-lNum - fSize;
+				float fY = -0.1;//gpFloor->GetWorldPosition().y + 0.05f;
+
+				for(int i=-lNum/2; i<lNum/2+1;++i)
+				{
+					float fPos = fSize * (float)i;
+					batch.DebugDrawLine(cVector3f(fPos,fY,fStart),cVector3f(fPos,fY,fEnd),cColor(0.5f,1));
+					batch.DebugDrawLine(cVector3f(fStart,fY,fPos),cVector3f(fEnd,fY,fPos),cColor(0.5f,1));
+				}
+
+			}
+
+			if(gbDrawAxes)
+			{
+				cVector3f vPosAdd = cVector3f(0, 0.01f, 0);
+				// apFunctions->SetDepthTest(false);
+				ImmediateDrawBatch::DebugDrawOptions options;
+				options.m_depthTest = DepthTest::Always;
+				batch.DebugDrawLine(0,cVector3f(1,0,0)+vPosAdd,cColor(1,0,0,1), options);
+				batch.DebugDrawLine(0,cVector3f(0,1,0)+vPosAdd,cColor(0,1,0,1), options);
+				batch.DebugDrawLine(0,cVector3f(0,0,1)+vPosAdd,cColor(0,0,1,1), options);
+				// apFunctions->SetDepthTest(true);
+			}
+			batch.flush();
+		});
 
 		////////////////////////////////
 		// Create meshes
@@ -304,7 +269,8 @@ public:
 		gpEngine->GetInput()->GetLowLevel()->LockInput(false);
 
 		cRenderSettings *pSettings = gpSimpleCamera->GetViewport()->GetRenderSettings();
-		gpSimpleCamera->GetViewport()->AddRendererCallback(&renderCallback);
+		// gpSimpleCamera->GetViewport()->AddRendererCallback(&renderCallback);
+		gpSimpleCamera->GetViewport()->ConnectDraw(m_postSolidDraw);
 
 		gpSimpleCamera->SetMouseMode(true);
 
@@ -671,7 +637,9 @@ public:
 	cWorld* mpWorld;
 	iPhysicsWorld *mpPhysicsWorld;
 
-	cSimpleRenderCallback renderCallback;
+	cViewport::PostSolidDraw::Handler m_postSolidDraw;
+
+	// cSimpleRenderCallback renderCallback;
 
 	cWidgetWindow *mpOptionWindow;
 

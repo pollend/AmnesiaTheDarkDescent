@@ -45,35 +45,6 @@ public:
 	float mfDist;
 };
 
-class cPhysicsTestRenderCallback : public iRendererCallback
-{
-public:
-	cPhysicsTestRenderCallback()
-	{
-		mbDrawDebug=false;
-		mbDrawSkeleton=false;
-	}
-
-	void OnPostSolidDraw(cRendererCallbackFunctions *apFunctions);
-
-	void OnPostTranslucentDraw(cRendererCallbackFunctions *apFunctions){}
-
-	void DrawSkeletonRec(cRendererCallbackFunctions* apFunctions, cNode3D* apBoneState);
-
-	cModelEditorWindowPhysicsTest* mpWindow;
-	cBodyPicker* mpBodyPicker;
-
-	cVector3f mvDragPos;
-
-	bool mbDrawDebug;
-	bool mbDrawSkeleton;
-
-protected:
-
-};
-
-//--------------------------------------------------------------------
-
 class cModelEditorWindowPhysicsTest : public iEditorWindow, public iEditorViewport
 {
 	friend class cPhysicsTestRenderCallback;
@@ -125,7 +96,7 @@ protected:
 	iPhysicsWorld *mpTestPhysicsWorld;
 	std::vector<iPhysicsJoint*> mvJoints;
 	cBodyPicker mBodyPicker;
-	cPhysicsTestRenderCallback mRenderCallback;
+	cViewport::PostSolidDraw::Handler m_postSolidDraw;
 	iPhysicsBody* mpFloorBody;
 
 	iLight* mpMainLight;
@@ -133,6 +104,11 @@ protected:
 	cMeshEntity* mpFloor;
 	cMeshEntity* mpWater;
 	cMeshEntity* mpTestEntity;
+
+
+	bool m_drawDebug=false;
+	bool m_drawSkeleton=false;
+	cVector3f m_dragPos;
 
 	//////////////
 	// Water data
