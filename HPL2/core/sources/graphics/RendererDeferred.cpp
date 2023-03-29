@@ -114,65 +114,14 @@ namespace hpl {
 		mbClearFrameBufferAtBeginRendering = false;
 		mbSetupOcclusionPlaneForFog = true;
 
-		////////////////////////////////////
-		// Set up variables
-		mfLastFrustumFOV = -1;
-		mfLastFrustumFarPlane = -1;
-
 		mfMinLargeLightNormalizedArea = 0.2f*0.2f;
 		mfMinRenderReflectionNormilzedLength = 0.15f;
 
-		mfShadowDistanceMedium = 10;
-		mfShadowDistanceLow = 20;
-		mfShadowDistanceNone = 40;
+		m_shadowDistanceMedium = 10;
+		m_shadowDistanceLow = 20;
+		m_shadowDistanceNone = 40;
 
 		mlMaxBatchLights = 100;
-
-		mbReflectionTextureCleared = false;
-	}
-
-	//-----------------------------------------------------------------------
-	RenderTarget& cRendererDeferred::resolveRenderTarget(std::array<RenderTarget, 2>& rt) {
-		return rt[ mpCurrentSettings->mbIsReflection ? 1 : 0];
-	}
-
-	std::shared_ptr<Image>& cRendererDeferred::resolveRenderImage(std::array<std::shared_ptr<Image>, 2>& img) {
-		return img[ mpCurrentSettings->mbIsReflection ? 1 : 0];
-	}
-
-	cRendererDeferred::~cRendererDeferred()
-	{
-		for(auto& it: mvTempDeferredLights) {
-			delete it;
-		}
-	}
-
-	bool cRendererDeferred::LoadData()
-	{
-		// cVector2l vRelfectionSize = cVector2l(mvScreenSize.x/mlReflectionSizeDiv, mvScreenSize.y/mlReflectionSizeDiv);
-
-		// uniforms
-		m_u_param = bgfx::createUniform("u_param", bgfx::UniformType::Vec4);
-		m_u_boxInvViewModelRotation  = bgfx::createUniform("u_boxInvViewModelRotation", bgfx::UniformType::Mat4);
-		m_u_lightColor = bgfx::createUniform("u_lightColor", bgfx::UniformType::Vec4);
-		m_u_lightPos = bgfx::createUniform("u_lightPos", bgfx::UniformType::Vec4);
-		m_u_fogColor = bgfx::createUniform("u_fogColor", bgfx::UniformType::Vec4);
-		m_u_spotViewProj = bgfx::createUniform("u_spotViewProj", bgfx::UniformType::Mat4);
-		m_u_mtxInvViewRotation = bgfx::createUniform("u_mtxInvViewRotation", bgfx::UniformType::Mat4);
-		m_u_overrideColor = bgfx::createUniform("u_overrideColor", bgfx::UniformType::Vec4);
-		m_u_copyRegion = bgfx::createUniform("u_copyRegion", bgfx::UniformType::Vec4);
-
-		// samplers
-		m_s_depthMap = bgfx::createUniform("s_depthMap", bgfx::UniformType::Sampler);
-		m_s_diffuseMap = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
-		m_s_normalMap = bgfx::createUniform("s_normalMap", bgfx::UniformType::Sampler);
-		m_s_specularMap = bgfx::createUniform("s_specularMap", bgfx::UniformType::Sampler);
-		m_s_positionMap = bgfx::createUniform("s_positionMap", bgfx::UniformType::Sampler);
-		m_s_attenuationLightMap = bgfx::createUniform("s_attenuationLightMap", bgfx::UniformType::Sampler);
-		m_s_spotFalloffMap = bgfx::createUniform("s_spotFalloffMap", bgfx::UniformType::Sampler);
-		m_s_shadowMap = bgfx::createUniform("s_shadowMap", bgfx::UniformType::Sampler);
-		m_s_goboMap = bgfx::createUniform("s_goboMap", bgfx::UniformType::Sampler);
-		m_s_shadowOffsetMap = bgfx::createUniform("s_shadowOffsetMap", bgfx::UniformType::Sampler);
 
 		m_boundViewportData = std::move(UniqueViewportData<SharedViewportData>([](cViewport& viewport) {
 			auto sharedData = std::make_unique<SharedViewportData>();
@@ -298,22 +247,22 @@ namespace hpl {
 
 		//High
 		if(mShadowMapQuality == eShadowMapQuality_High)	{
-			mlShadowJitterSize = 64;
-			mlShadowJitterSamples = 32;	//64 here instead? I mean, ATI has to deal with medium has max? or different max for ATI?
+			m_shadowJitterSize = 64;
+			m_shadowJitterSamples = 32;	//64 here instead? I mean, ATI has to deal with medium has max? or different max for ATI?
 			m_spotlightVariants.Initialize(
 				ShaderHelper::LoadProgramHandlerDefault("vs_deferred_light", "fs_deferred_spotlight_high", false, true));
 		}
 		//Medium
 		else if(mShadowMapQuality == eShadowMapQuality_Medium) {
-			mlShadowJitterSize = 32;
-			mlShadowJitterSamples = 16;
+			m_shadowJitterSize = 32;
+			m_shadowJitterSamples = 16;
 			m_spotlightVariants.Initialize(
 				ShaderHelper::LoadProgramHandlerDefault("vs_deferred_light", "fs_deferred_spotlight_medium", false, true));
 		}
 		//Low
 		else {
-			mlShadowJitterSize = 0;
-			mlShadowJitterSamples = 0;
+			m_shadowJitterSize = 0;
+			m_shadowJitterSamples = 0;
 			m_spotlightVariants.Initialize(
 				ShaderHelper::LoadProgramHandlerDefault("vs_deferred_light", "fs_deferred_spotlight_low", false, true));
 		}
@@ -322,7 +271,7 @@ namespace hpl {
 		if(mShadowMapQuality != eShadowMapQuality_Low)
 		{
 			m_shadowJitterImage = std::make_shared<Image>();
-			TextureCreator::GenerateScatterDiskMap2D(*m_shadowJitterImage, mlShadowJitterSize,mlShadowJitterSamples, true);
+			TextureCreator::GenerateScatterDiskMap2D(*m_shadowJitterImage, m_shadowJitterSize,m_shadowJitterSamples, true);
 		}
 		
 		m_copyRegionProgram = hpl::loadProgram("cs_copy_region");
@@ -360,29 +309,49 @@ namespace hpl {
 		////////////////////////////////////
 		//Create light shapes
 		tFlag lVtxFlag = eVertexElementFlag_Position | eVertexElementFlag_Color0 | eVertexElementFlag_Texture0;
-		mpShapeSphere[eDeferredShapeQuality_High] = LoadVertexBufferFromMesh("core_12_12_sphere.dae",lVtxFlag);
-		mpShapeSphere[eDeferredShapeQuality_Medium] = LoadVertexBufferFromMesh("core_7_7_sphere.dae",lVtxFlag);
-		mpShapeSphere[eDeferredShapeQuality_Low] = LoadVertexBufferFromMesh("core_5_5_sphere.dae",lVtxFlag);
+		m_shapeSphere[eDeferredShapeQuality_High] = std::unique_ptr<iVertexBuffer>(LoadVertexBufferFromMesh("core_12_12_sphere.dae",lVtxFlag));
+		m_shapeSphere[eDeferredShapeQuality_Medium] = std::unique_ptr<iVertexBuffer>(LoadVertexBufferFromMesh("core_7_7_sphere.dae",lVtxFlag));
+		m_shapeSphere[eDeferredShapeQuality_Low] = std::unique_ptr<iVertexBuffer>(LoadVertexBufferFromMesh("core_5_5_sphere.dae",lVtxFlag));
 
-		mpShapePyramid = LoadVertexBufferFromMesh("core_pyramid.dae",lVtxFlag);
+		m_shapePyramid = std::unique_ptr<iVertexBuffer>(LoadVertexBufferFromMesh("core_pyramid.dae",lVtxFlag));
 
 		////////////////////////////////////
 		//Batch vertex buffer
-		mlMaxBatchVertices = mpShapeSphere[eDeferredShapeQuality_Low]->GetVertexNum() * mlMaxBatchLights;
-		mlMaxBatchIndices = mpShapeSphere[eDeferredShapeQuality_Low]->GetIndexNum() * mlMaxBatchLights;
+		mlMaxBatchVertices = m_shapeSphere[eDeferredShapeQuality_Low]->GetVertexNum() * mlMaxBatchLights;
+		mlMaxBatchIndices = m_shapeSphere[eDeferredShapeQuality_Low]->GetIndexNum() * mlMaxBatchLights;
 
+	}
+
+	//-----------------------------------------------------------------------
+	RenderTarget& cRendererDeferred::resolveRenderTarget(std::array<RenderTarget, 2>& rt) {
+		return rt[ mpCurrentSettings->mbIsReflection ? 1 : 0];
+	}
+
+	std::shared_ptr<Image>& cRendererDeferred::resolveRenderImage(std::array<std::shared_ptr<Image>, 2>& img) {
+		return img[ mpCurrentSettings->mbIsReflection ? 1 : 0];
+	}
+
+	cRendererDeferred::~cRendererDeferred()
+	{
+		for(auto& it: mvTempDeferredLights) {
+			delete it;
+		}
+	}
+
+	bool cRendererDeferred::LoadData()
+	{
 		return true;
 	}
 
 
 	void cRendererDeferred::DestroyData()
 	{
-		for(auto& shape: mpShapeSphere) {
-			if(shape) {
-				delete shape;
-			}
-		}
-		if(mpShapePyramid) hplDelete(mpShapePyramid);
+		// for(auto& shape: m_shapeSphere) {
+		// 	if(shape) {
+		// 		delete shape;
+		// 	}
+		// }
+		// if(m_shapePyramid) hplDelete(m_shapePyramid);
 
 
 		// mpGraphics->DestroyTexture(mpReflectionTexture);
@@ -605,8 +574,8 @@ namespace hpl {
 
 		GraphicsContext::ViewConfiguration viewConfig {m_edgeSmooth_LinearDepth};
 		auto edgeSmoothView = context.StartPass("EdgeSmooth", viewConfig);
-		cVector3f vQuadPos = cVector3f(mfFarLeft,mfFarBottom,-mfFarPlane);
-		cVector2f vQuadSize = cVector2f(mfFarRight*2,mfFarTop*2);
+		cVector3f vQuadPos = cVector3f(m_farLeft,m_farBottom,-m_farPlane);
+		cVector2f vQuadSize = cVector2f(m_farRight*2,m_farTop*2);
 
 		GraphicsContext::ShaderProgram shaderProgram;
 		shaderProgram.m_handle = m_edgeSmooth_UnpackDepthProgram;
@@ -876,11 +845,11 @@ namespace hpl {
 		mpCurrentRenderList->Setup(mfCurrentFrameTime,mpCurrentFrustum);
 		
 		//Setup far plane coordinates
-		mfFarPlane = mpCurrentFrustum->GetFarPlane();
-		mfFarTop = -tan(mpCurrentFrustum->GetFOV()*0.5f) * mfFarPlane;
-		mfFarBottom = -mfFarTop;
-		mfFarRight = mfFarBottom * mpCurrentFrustum->GetAspect();
-		mfFarLeft = -mfFarRight;
+		m_farPlane = mpCurrentFrustum->GetFarPlane();
+		m_farTop = -tan(mpCurrentFrustum->GetFOV()*0.5f) * m_farPlane;
+		m_farBottom = -m_farTop;
+		m_farRight = m_farBottom * mpCurrentFrustum->GetAspect();
+		m_farLeft = -m_farRight;
 
 		cRendererCallbackFunctions handler(context, viewport, this);
 
@@ -1454,13 +1423,13 @@ namespace hpl {
 		//Point Light
 		if(apLight->GetLightType() == eLightType_Point)
 		{
-			return mpShapeSphere[aQuality];
+			return m_shapeSphere[aQuality].get();
 		}
 		///////////////////
 		// Spot Light
 		else if(apLight->GetLightType() == eLightType_Spot)
 		{
-			return mpShapePyramid;
+			return m_shapePyramid.get();
 		}
 
 		return NULL;
@@ -1665,13 +1634,13 @@ namespace hpl {
 
 					///////////////////////
 					//Skip shadow
-					if(fDistToLight > mfShadowDistanceNone)
+					if(fDistToLight > m_shadowDistanceNone)
 					{
 						pLightData->mbCastShadows = false;
 					}
 					///////////////////////
 					//Use Low
-					else if(fDistToLight > mfShadowDistanceLow)
+					else if(fDistToLight > m_shadowDistanceLow)
 					{
 						if(pLightData->mShadowResolution == eShadowMapResolution_Low)
 							pLightData->mbCastShadows = false;
@@ -1679,7 +1648,7 @@ namespace hpl {
 					}
 					///////////////////////
 					//Use Medium
-					else if(fDistToLight > mfShadowDistanceMedium)
+					else if(fDistToLight > m_shadowDistanceMedium)
 					{
 						if(pLightData->mShadowResolution == eShadowMapResolution_High)
 							pLightData->mShadowResolution = eShadowMapResolution_Medium;
@@ -1732,9 +1701,6 @@ namespace hpl {
 		// Get the inverse view matrix
 		m_mtxInvView = cMath::MatrixInverse(mpCurrentFrustum->GetViewMatrix());
 
-		//////////////////////////////
-		//Setup misc variables
-		mbStencilNeedClearing = false;
 
 		//////////////////////////////
 		//Clear lists

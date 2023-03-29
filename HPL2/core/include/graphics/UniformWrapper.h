@@ -16,6 +16,7 @@ namespace hpl {
         ~UniformWrapper() {
             if(bgfx::isValid(m_handle)) {
                 bgfx::destroy(m_handle);
+                m_handle = BGFX_INVALID_HANDLE;
             }
         }
 

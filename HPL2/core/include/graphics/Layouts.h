@@ -30,7 +30,7 @@ namespace hpl::layout {
         float m_v;
 
         static bgfx::VertexLayout& layout() {
-             static bgfx::VertexLayout layout = ([]() {
+            static bgfx::VertexLayout layout = ([]() {
                 bgfx::VertexLayout inst;
                 inst.begin()
                     .add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float)

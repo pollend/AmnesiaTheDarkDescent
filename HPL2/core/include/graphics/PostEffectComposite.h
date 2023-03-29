@@ -101,11 +101,8 @@ namespace hpl {
         };
         
 		UniqueViewportData<PostEffectCompositorData> m_boundCompositorData;
-
-        void CopyToFrameBuffer(iTexture* apOutputTexture);
         window::WindowEvent::Handler m_windowEvent;
         std::vector<PostEffectEntry> m_postEffects;
-
         float mfCurrentFrameTime;
     };
 

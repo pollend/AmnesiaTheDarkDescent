@@ -68,7 +68,6 @@
 #include "graphics/BoneState.h"
 #include "graphics/Animation.h"
 #include "graphics/AnimationTrack.h"
-#include "graphics/VideoStream.h"
 #include "graphics/Bitmap.h"
 #include "graphics/FrameTexture.h"
 #include "graphics/FrameBitmap.h"
@@ -199,10 +198,6 @@
 #include "gui/GuiPopUpMessageBox.h"
 #include "gui/GuiPopUpColorPicker.h"
 #include "gui/WidgetDummy.h"
-
-#include "generate/Generate.h"
-#include "generate/GenerateTypes.h"
-#include "generate/VoxelMap.h"
 
 #include "haptic/Haptic.h"
 #include "haptic/LowLevelHaptic.h"

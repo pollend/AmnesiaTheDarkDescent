@@ -550,8 +550,8 @@ namespace hpl {
 
 		bgfx::TransientVertexBuffer vb;
 		bgfx::TransientIndexBuffer ib;
-		bgfx::allocTransientVertexBuffer(&vb, 20000, PositionTexCoordColor::m_layout);
-		bgfx::allocTransientIndexBuffer(&ib, 20000);
+		bgfx::allocTransientVertexBuffer(&vb, m_setRenderObjects.size() * 4, PositionTexCoordColor::m_layout);
+		bgfx::allocTransientIndexBuffer(&ib, m_setRenderObjects.size() * 6);
 		PositionTexCoordColor* vertexBuffer = reinterpret_cast<PositionTexCoordColor*>(vb.data);
 		uint16_t* indexBuffer = reinterpret_cast<uint16_t*>(ib.data);
 
@@ -602,8 +602,6 @@ namespace hpl {
 		Image* pTexture = pGfx->mvTextures[0];
 		cGuiClipRegion *pClipRegion = it->mpClipRegion;
 
-		// size_t vertexBufferLastIndex = 0;
-		// size_t indexBufferLastIndex = 0;
 		size_t vertexBufferOffset = 0;
 		size_t indexBufferOffset = 0;
 		while(it != m_setRenderObjects.end()) {

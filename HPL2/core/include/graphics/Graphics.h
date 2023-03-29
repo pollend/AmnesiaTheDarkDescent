@@ -96,29 +96,6 @@ namespace hpl {
 		iLowLevelGraphics* GetLowLevel(){ return mpLowLevelGraphics;}
 
 		iRenderer* GetRenderer(eRenderer aType);
-		void ReloadRendererData();
-
-		iFrameBuffer* CreateFrameBuffer(const tString& asName);
-		void DestroyFrameBuffer(iFrameBuffer* apFrameBuffer);
-
-		[[deprecated("replaced with RenderTarget")]]
-		iFrameBuffer* GetTempFrameBuffer(const cVector2l& avSize, ePixelFormat aPixelFormat, int alIndex);
-
-		[[deprecated("replaced with RenderTarget")]]
-		iDepthStencilBuffer* CreateDepthStencilBuffer(	const cVector2l& avSize, int alDepthBits, int alStencilBits,
-														bool abLookForMatchingFirst);
-														
-		[[deprecated("replaced with RenderTarget")]]
-		iDepthStencilBuffer* FindDepthStencilBuffer(const cVector2l& avSize, int alMinDepthBits, int alMinStencilBits);
-		
-		[[deprecated("replaced with RenderTarget")]]
-		void DestoroyDepthStencilBuffer(iDepthStencilBuffer* apBuffer);
-
-		[[deprecated("replaced with RenderTarget")]]
-		iTexture* CreateTexture(const tString &asName,eTextureType aType,   eTextureUsage aUsage);
-		
-		[[deprecated("replaced with RenderTarget")]]
-		void DestroyTexture(iTexture *apTexture);
 
 		[[deprecated("replaced with RenderTarget")]]
 		cPostEffectComposite* CreatePostEffectComposite();
@@ -131,12 +108,6 @@ namespace hpl {
 		iPostEffect* CreatePostEffect(iPostEffectParams *apParams);
 		void DestroyPostEffect(iPostEffect* apPostEffect);
 
-		[[deprecated("replaced with bgfx")]]
-		iGpuProgram* CreateGpuProgram(const tString& asName);
-
-
-		void DestroyGpuProgram(iGpuProgram* apProgram);
-
 		void AddMaterialType(iMaterialType *apType, const tString& asName);
 		iMaterialType *GetMaterialType(const tString& asName);
 		tStringVec GetMaterialTypeNames();
@@ -145,7 +116,6 @@ namespace hpl {
 		cMeshCreator* GetMeshCreator(){return mpMeshCreator;}
 		cDecalCreator* GetDecalCreator() {return mpDecalCreator;}
 
-		bool GetScreenIsSetUp(){ return mbScreenIsSetup;}
 
 	private:
 		iLowLevelGraphics *mpLowLevelGraphics;
@@ -163,7 +133,6 @@ namespace hpl {
 		tDepthStencilBufferList mlstDepthStencilBuffers;
 		tTextureList mlstTextures;
 		tPostEffectCompositeList mlstPostEffectComposites;
-		tGpuProgramList mlstGpuPrograms;
 		tMaterialTypeMap m_mapMaterialTypes;
 		tPostEffectList mlstPostEffects;
 

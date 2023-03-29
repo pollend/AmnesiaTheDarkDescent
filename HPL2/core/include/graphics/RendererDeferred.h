@@ -276,7 +276,6 @@ namespace hpl {
         RenderTarget& resolveRenderTarget(std::array<RenderTarget, 2>& rt);
         std::shared_ptr<Image>& resolveRenderImage(std::array<std::shared_ptr<Image>, 2>& img);
 
-
         // takes the contents of the gbuffer and renders the lights
         void RenderLightPass(GraphicsContext& context, cViewport& viewport, RenderTarget& rt);
         void RenderDiffusePass(GraphicsContext& context, cViewport& viewport, RenderTarget& rt);
@@ -296,21 +295,18 @@ namespace hpl {
 
         iVertexBuffer* GetLightShape(iLight* apLight, eDeferredShapeQuality aQuality);
 
-        std::array<iVertexBuffer*, eDeferredShapeQuality_LastEnum> mpShapeSphere;
-        iVertexBuffer* mpShapePyramid;
+        std::array<std::unique_ptr<iVertexBuffer>, eDeferredShapeQuality_LastEnum> m_shapeSphere;
+        std::unique_ptr<iVertexBuffer> m_shapePyramid;
 
         int mlMaxBatchLights;
         int mlMaxBatchVertices;
         int mlMaxBatchIndices;
 
-        float mfLastFrustumFOV;
-        float mfLastFrustumFarPlane;
-
-        float mfFarPlane;
-        float mfFarBottom;
-        float mfFarTop;
-        float mfFarLeft;
-        float mfFarRight;
+        float m_farPlane;
+        float m_farBottom;
+        float m_farTop;
+        float m_farLeft;
+        float m_farRight;
 
         cMatrixf m_mtxInvView;
 
@@ -319,48 +315,44 @@ namespace hpl {
 
         float mfMinRenderReflectionNormilzedLength;
 
-        float mfShadowDistanceMedium;
-        float mfShadowDistanceLow;
-        float mfShadowDistanceNone;
-
-        bool mbStencilNeedClearing;
-        cRect2l mStencilDirtyRect;
+        float m_shadowDistanceMedium;
+        float m_shadowDistanceLow;
+        float m_shadowDistanceNone;
 
         RenderTarget m_edgeSmooth_LinearDepth;
         UniqueViewportData<SharedViewportData> m_boundViewportData;
 
-        bool mbReflectionTextureCleared;
-
         iTexture* mpShadowJitterTexture;
         std::shared_ptr<Image> m_shadowJitterImage;
-        int mlShadowJitterSize;
-        int mlShadowJitterSamples;
+        int m_shadowJitterSize;
+        int m_shadowJitterSamples;
 
-        bgfx::UniformHandle m_u_param;
-        bgfx::UniformHandle m_u_boxInvViewModelRotation;
-        bgfx::UniformHandle m_u_lightPos;
-        bgfx::UniformHandle m_u_fogColor;
-        bgfx::UniformHandle m_u_lightColor;
-        bgfx::UniformHandle m_u_spotViewProj;
-        bgfx::UniformHandle m_u_overrideColor;
-        bgfx::UniformHandle m_u_mtxInvViewRotation;
-        bgfx::UniformHandle m_u_copyRegion;
+        UniformWrapper<StringLiteral("u_param"), bgfx::UniformType::Vec4> m_u_param;
+        UniformWrapper<StringLiteral("u_boxInvViewModelRotation"), bgfx::UniformType::Mat4> m_u_boxInvViewModelRotation;
+        UniformWrapper<StringLiteral("u_lightPos"), bgfx::UniformType::Vec4>  m_u_lightPos;
+        UniformWrapper<StringLiteral("u_fogColor"), bgfx::UniformType::Vec4> m_u_fogColor;
+        UniformWrapper<StringLiteral("u_lightColor"), bgfx::UniformType::Vec4> m_u_lightColor;
+        UniformWrapper<StringLiteral("u_spotViewProj"), bgfx::UniformType::Mat4> m_u_spotViewProj;
+        UniformWrapper<StringLiteral("u_overrideColor"), bgfx::UniformType::Vec4> m_u_overrideColor;
+        UniformWrapper<StringLiteral("u_mtxInvViewRotation"), bgfx::UniformType::Mat4> m_u_mtxInvViewRotation;
+        UniformWrapper<StringLiteral("u_copyRegion"), bgfx::UniformType::Vec4> m_u_copyRegion;
 
-        bgfx::UniformHandle m_s_depthMap;
-        bgfx::UniformHandle m_s_positionMap;
-        bgfx::UniformHandle m_s_diffuseMap;
-        bgfx::UniformHandle m_s_normalMap;
-        bgfx::UniformHandle m_s_specularMap;
-        bgfx::UniformHandle m_s_attenuationLightMap;
-        bgfx::UniformHandle m_s_spotFalloffMap;
-        bgfx::UniformHandle m_s_shadowMap;
-        bgfx::UniformHandle m_s_goboMap;
-        bgfx::UniformHandle m_s_shadowOffsetMap;
-        bgfx::UniformHandle m_s_diffuseMapOut;
+        UniformWrapper<StringLiteral("s_depthMap"), bgfx::UniformType::Sampler> m_s_depthMap;
+        UniformWrapper<StringLiteral("s_positionMap"), bgfx::UniformType::Sampler> m_s_positionMap;
+        UniformWrapper<StringLiteral("s_diffuseMap"), bgfx::UniformType::Sampler> m_s_diffuseMap;
+        UniformWrapper<StringLiteral("s_normalMap"), bgfx::UniformType::Sampler> m_s_normalMap;
+        UniformWrapper<StringLiteral("s_specularMap"), bgfx::UniformType::Sampler> m_s_specularMap;
+        UniformWrapper<StringLiteral("s_attenuationLightMap"), bgfx::UniformType::Sampler> m_s_attenuationLightMap;
+        UniformWrapper<StringLiteral("s_spotFalloffMap"), bgfx::UniformType::Sampler> m_s_spotFalloffMap;
+        UniformWrapper<StringLiteral("s_shadowMap"), bgfx::UniformType::Sampler> m_s_shadowMap;
+        UniformWrapper<StringLiteral("s_goboMap"), bgfx::UniformType::Sampler> m_s_goboMap;
+        UniformWrapper<StringLiteral("s_shadowOffsetMap"), bgfx::UniformType::Sampler> m_s_shadowOffsetMap;
+        UniformWrapper<StringLiteral("s_diffuseMapOut"), bgfx::UniformType::Sampler> m_s_diffuseMapOut;
 
         bgfx::ProgramHandle m_copyRegionProgram;
         bgfx::ProgramHandle m_edgeSmooth_UnpackDepthProgram;
         bgfx::ProgramHandle m_lightBoxProgram;
+
         ShaderVariantCollection<rendering::detail::FogVariant_UseOutsideBox | rendering::detail::FogVariant_UseBackSide> m_forVariant;
         ShaderVariantCollection<rendering::detail::SpotlightVariant_UseGoboMap | rendering::detail::SpotlightVariant_UseShadowMap>
             m_spotlightVariants;
