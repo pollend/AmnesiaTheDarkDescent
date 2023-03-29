@@ -654,7 +654,7 @@ void cLuxDebugHandler::RenderSolid(cRendererCallbackFunctions* apFunctions)
 
 	if(mbDrawPhysics)
 	{
-		BX_ASSERT(false); // TODO: Fix this!
+		BX_ASSERT(false, "bottom line is needed"); // TODO: Fix this!
 		// gpBase->mpMapHandler->GetCurrentMap()->GetPhysicsWorld()->RenderDebugGeometry(apFunctions->GetLowLevelGfx(), cColor(0.5f));
 	}
 }

@@ -445,7 +445,7 @@ public:
 			//Draws how the level have been grouped
 			if(gbDrawContainerDebug)
 			{
-				BX_ASSERT(false); // TODO: Fix this
+				BX_ASSERT(false, "TODO need to fix this"); // TODO: Fix this
 				// mpWorld->GetRenderableContainer(eWorldContainerType_Static)->RenderDebug(apFunctions);
 			}
 

@@ -408,7 +408,7 @@ namespace hpl {
 		{
 			if(mpDecalMaterial)
 			{
-				BX_ASSERT(false); // TODO: fix this
+				BX_ASSERT(false, ""); // TODO: fix this
 				// apFunctions->SetDepthTest(true);
 				// apFunctions->SetDepthWrite(false);
 				// apFunctions->SetBlendMode(eMaterialBlendMode_Alpha);
