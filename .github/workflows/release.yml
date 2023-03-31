@@ -9,28 +9,43 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
     steps:
       - name: Checkout
         uses: actions/checkout@v3
         with:
           submodules: recursive
-      - name: Install dependencies
+      - name: Install dependencies (Ubuntu)
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install cmake libdevil-dev mesa-common-dev libxmu-dev libxi-dev libgl-dev libx11-dev libxft-dev libxext-dev libwayland-dev libxkbcommon-dev libegl1-mesa-dev libglu1-mesa-dev ninja-build
+      - name: Install dependencies (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System'
+          choco install ninja
       - name: Configure
         run: |
-          mkdir $GITHUB_WORKSPACE/build && cd $GITHUB_WORKSPACE/build
-          cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE:STRING=Release -DAMNESIA_GAME_DIRECTORY:STRING='' -G Ninja
+          mkdir ${{ github.workspace }}/build && cd ${{ github.workspace }}/build
+          cmake ${{ github.workspace }} -DCMAKE_BUILD_TYPE:STRING=Release -DAMNESIA_GAME_DIRECTORY:STRING='' -G Ninja
       - name: Build
         run: |
-          cd $GITHUB_WORKSPACE/build
+          cd ${{ github.workspace }}/build
           ninja install
-      - name: Zipping
+      - name: Zipping (Ubuntu)
+        if: runner.os == 'Linux'
         run: |
-          cd $GITHUB_WORKSPACE/build
+          cd ${{ github.workspace }}/build
           zip -r Amnesia_linux_x68_64.zip bin/Amnesia
+      - name: Zipping (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          cd ${{ github.workspace }}/build
+          7z a Amnesia_windows_x68_64.zip bin/Amnesia.exe
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
