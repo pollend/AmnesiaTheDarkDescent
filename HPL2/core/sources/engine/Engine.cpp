@@ -268,9 +268,6 @@ namespace hpl {
 		Log(" Creating gui module\n");
 		mpGui = hplNew(cGui,());
 
-		Log(" Creating generate module\n");
-		mpGenerate = hplNew(cGenerate,());
-
 		Log(" Creating haptic module\n");
 #ifdef INCLUDE_HAPTIC
 		mpHaptic = mpGameSetup->CreateHaptic();
@@ -318,10 +315,6 @@ namespace hpl {
 
 		//Init Gui
 		mpGui->Init(mpResources,mpGraphics,mpSound,mpScene, mpInput);
-
-		//Init Generate
-		mpGenerate->Init(mpResources,mpGraphics);
-
 
 		//Init haptic
 		if(mpHaptic) mpHaptic->Init(mpResources);
@@ -400,7 +393,6 @@ namespace hpl {
 		hplDelete(mpUpdater);
 
 		hplDelete(mpGui);
-		hplDelete(mpGenerate);
 		hplDelete(mpScene);
 		if(mpHaptic) hplDelete(mpHaptic);
 		hplDelete(mpInput);

@@ -34,7 +34,6 @@ namespace hpl {
         virtual cAI* GetAI() = 0;
         virtual cGui* GetGui() = 0;
         virtual cHaptic* GetHaptic() = 0;
-        virtual cGenerate* GetGenerate() = 0;
         virtual GraphicsContext& GetGraphicsContext() = 0;
     };
 } // namespace hpl

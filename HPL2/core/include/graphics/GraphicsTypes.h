@@ -854,31 +854,6 @@ namespace hpl {
 	//---------------------------------------
 
 	class iFrameBuffer;
-
-	class cRenderTarget
-	{
-	public:
-		cRenderTarget() : mpFrameBuffer(NULL), mvPos(0), mvSize(-1){}
-
-		iFrameBuffer *mpFrameBuffer;
-		cVector2l mvPos;
-		cVector2l mvSize;
-	};
-
-	//---------------------------------------
-
-	class iGpuShader;
-	class iGpuProgram;
-
-	typedef std::list<iGpuShader*> tGpuShaderList;
-	typedef tGpuShaderList::iterator tGpuShaderListIt;
-
-	typedef std::list<iGpuProgram*> tGpuProgramList;
-	typedef tGpuProgramList::iterator tGpuProgramListIt;
-
-	//---------------------------------------
-
-
 	class cBoneState;
 
 	typedef std::vector<cBoneState*> tNodeStateVec;

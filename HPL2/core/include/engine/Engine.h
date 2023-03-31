@@ -132,7 +132,6 @@ namespace hpl {
 		virtual cAI* GetAI() override { return mpAI;}
 		virtual cGui* GetGui() override { return mpGui;}
 		virtual cHaptic* GetHaptic() override { return mpHaptic;}
-		virtual cGenerate* GetGenerate() override { return mpGenerate;}
 		virtual GraphicsContext& GetGraphicsContext() override { return m_graphicsContext; }
 
 		void ResetLogicTimer();
@@ -242,7 +241,6 @@ namespace hpl {
 		cAI *mpAI;
 		cHaptic *mpHaptic;
 		cGui *mpGui;
-		cGenerate* mpGenerate;
 		hpl::GraphicsContext m_graphicsContext;
 		
 		IUpdateEventLoop::UpdateEvent::Handler m_soundUpdateHandler;
