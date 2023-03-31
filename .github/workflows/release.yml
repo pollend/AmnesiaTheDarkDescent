@@ -8,55 +8,58 @@ on:
         required: true
 
 jobs:
-  build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest]
+  windows:
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        submodules: recursive
+    - name: Install dependencies
+      run: |
+        choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System'
+    - name: Configure
+        run: |
+          mkdir ${{ github.workspace }}\build && cd ${{ github.workspace }}\build
+          cmake ${{ github.workspace }} -DCMAKE_BUILD_TYPE:STRING=Release -DAMNESIA_GAME_DIRECTORY:STRING='' -G "Visual Studio 17 2022" -A x64
+    - name: Build
+        run: |
+          cd ${{ github.workspace }}\build
+          cmake --build . --config Release --target INSTALL
+    - name: Zipping (Windows)
+        run: |
+          cd ${{ github.workspace }}/build
+          7z a Amnesia_windows_x68_64.zip bin/Amnesia.exe
+    - uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "latest"
+          prerelease: true
+          title: "Release:  ${{ github.event.inputs.tag }}"
+          files: |
+            LICENSE
+            ${{ github.workspace }}/build/*.zip
+  linux:
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v3
         with:
           submodules: recursive
-      - name: Install dependencies (Ubuntu)
-        if: runner.os == 'Linux'
+      - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install cmake libdevil-dev mesa-common-dev libxmu-dev libxi-dev libgl-dev libx11-dev libxft-dev libxext-dev libwayland-dev libxkbcommon-dev libegl1-mesa-dev libglu1-mesa-dev ninja-build
-      - name: Install dependencies (Windows)
-        if: runner.os == 'Windows'
+      - name: Configure
         run: |
-          choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System'
-      - name: Configure (Ubuntu)
-        if: runner.os == 'Linux'
+          mkdir $GITHUB_WORKSPACE/build && cd $GITHUB_WORKSPACE/build
+          cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE:STRING=Release -DAMNESIA_GAME_DIRECTORY:STRING='' -G Ninja
+      - name: Build
         run: |
-          mkdir ${{ github.workspace }}/build && cd ${{ github.workspace }}/build
-          cmake ${{ github.workspace }} -DCMAKE_BUILD_TYPE:STRING=Release -DAMNESIA_GAME_DIRECTORY:STRING='' -G Ninja
-      - name: Configure (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          mkdir ${{ github.workspace }}\build && cd ${{ github.workspace }}\build
-          cmake ${{ github.workspace }} -DCMAKE_BUILD_TYPE:STRING=Release -DAMNESIA_GAME_DIRECTORY:STRING='' -G "Visual Studio 16 2019" -A x64
-      - name: Build (Ubuntu)
-        if: runner.os == 'Linux'
-        run: |
-          cd ${{ github.workspace }}/build
+          cd $GITHUB_WORKSPACE/build
           ninja install
-      - name: Build (Windows)
-        if: runner.os == 'Windows'
+      - name: Zipping
         run: |
-          cd ${{ github.workspace }}\build
-          cmake --build . --config Release --target INSTALL
-      - name: Zipping (Ubuntu)
-        if: runner.os == 'Linux'
-        run: |
-          cd ${{ github.workspace }}/build
+          cd $GITHUB_WORKSPACE/build
           zip -r Amnesia_linux_x68_64.zip bin/Amnesia
-      - name: Zipping (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          cd ${{ github.workspace }}/build
-          7z a Amnesia_windows_x68_64.zip bin/Amnesia.exe
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
