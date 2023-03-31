@@ -313,8 +313,6 @@ namespace hpl {
         float mfMinLargeLightNormalizedArea;
         int mlMinLargeLightArea;
 
-        float mfMinRenderReflectionNormilzedLength;
-
         float m_shadowDistanceMedium;
         float m_shadowDistanceLow;
         float m_shadowDistanceNone;

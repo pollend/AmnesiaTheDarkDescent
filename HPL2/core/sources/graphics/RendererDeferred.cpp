@@ -115,7 +115,7 @@ namespace hpl {
 		mbSetupOcclusionPlaneForFog = true;
 
 		mfMinLargeLightNormalizedArea = 0.2f*0.2f;
-		mfMinRenderReflectionNormilzedLength = 0.15f;
+		// mfMinRenderReflectionNormilzedLength = 0.15f;
 
 		m_shadowDistanceMedium = 10;
 		m_shadowDistanceLow = 20;
