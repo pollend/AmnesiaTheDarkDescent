@@ -91,7 +91,7 @@ static inline void dgInterlockedDecrement(dgInt32* Addend)
 		InterlockedDecrement((long*) Addend);
 	#endif
 
-	#if (defined (__linux__))
+	#if (defined (__linux__) || defined (__FreeBSD__))
 		__sync_fetch_and_sub ((int32_t*)Addend, 1 );
 	#endif
 
@@ -122,7 +122,7 @@ dgThreads::dgThreads()
 		memset (m_threadhandles, 0, sizeof (m_threadhandles));
 	#endif	
 
-	#if (defined (__linux__))
+	#if  defined (__linux__) || defined (__FreeBSD__)
 		m_numberOfCPUCores = sysconf(_SC_NPROCESSORS_ONLN);
 
 		m_numOfThreads = 0;
@@ -393,14 +393,14 @@ dgInt32  dgThreads::GetWork(dgWorkerThread** job)
 		LeaveCriticalSection(&m_criticalSection);
 	#endif
 
-	#if (defined (__linux__) || defined (__APPLE__))
+	#if (defined (__linux__) || defined (__APPLE__) || defined (__FreeBSD__))
 		for (;;) { 
 			while ( m_workToDo == 0 ) {
 				dgThreadYield();
 			}
 			dgSpinLock( &m_workToDoSpinLock );
 			if ( m_workToDo > 0 ) {
-				break;
+			break;
 			}
 			dgSpinUnlock( &m_workToDoSpinLock );
 		}

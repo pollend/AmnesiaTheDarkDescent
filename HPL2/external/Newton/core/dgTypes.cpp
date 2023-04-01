@@ -297,10 +297,10 @@ void dgApi GetMinMax (dgVector &minOut, dgVector &maxOut, const dgFloat32* const
 
 #endif
 
-#if (defined (__linux__) || defined (__MINGW32__) || defined (__MINGW64__))
+#if (defined (__linux__) || defined (__MINGW32__) || defined (__MINGW64__) || defined (__FreeBSD__))
 /*	#define cpuid(func,ax,bx,cx,dx)	__asm__ __volatile__ ("cpuid": "=a" (ax), "=b" (bx), "=c" (cx), "=d" (dx) : "a" (func)); */
 
-#ifndef __linux___64
+#ifndef __x86_64__
 	void cpuid(dgUnsigned32 op, dgUnsigned32 reg[4])
 	{
 		asm volatile(
@@ -327,7 +327,7 @@ void dgApi GetMinMax (dgVector &minOut, dgVector &maxOut, const dgFloat32* const
 
 	dgCpuClass dgApi dgGetCpuType ()
 	{
-#ifndef __linux___64
+#ifndef __x86_64__
 		#define bit_MMX (1 << 23) 
 		#define bit_SSE (1 << 25) 
 		#define bit_SSE2 (1 << 26) 

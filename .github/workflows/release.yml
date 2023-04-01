@@ -31,7 +31,7 @@ jobs:
       - name: Zipping (Windows)
         run: |
           cd ${{ github.workspace }}/build
-          7z a Amnesia_windows_x68_64.zip bin/Amnesia.exe
+          7z a Amnesia_windows_x68_64.zip bin/Amnesia
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"

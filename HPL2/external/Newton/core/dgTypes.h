@@ -645,7 +645,7 @@ inline dgInt32 dgAtomicAdd (dgInt32* const addend, dgInt32 amount)
 		return InterlockedExchangeAdd((long*) addend, long (amount));
 	#endif
 
-	#if (defined (__linux__))
+	#if (defined (__linux__) || defined(__FreeBSD__))
 		return __sync_fetch_and_add ((int32_t*)addend, amount );
 	#endif
 

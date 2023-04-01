@@ -75,7 +75,7 @@ private:
 	static dgUnsigned32 _stdcall ThreadExecute(void *Param);
 #endif
 
-#if (defined (__linux__) || defined (__APPLE__))
+#if (defined (__linux__) || defined (__APPLE__)  || defined (__FreeBSD__))
 	static void* ThreadExecute(void *Param);
 #endif
 
@@ -95,7 +95,7 @@ private:
 	HANDLE m_threadhandles[DG_MAXIMUN_THREADS];
 #endif
 
-#if (defined (__linux__) || defined (__APPLE__))
+#if (defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__))
 	bool m_exit;
 	dgInt32 m_emptySlot;
 	dgInt32 m_workToDo;
