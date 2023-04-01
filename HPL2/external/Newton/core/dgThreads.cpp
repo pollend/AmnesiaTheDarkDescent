@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -26,33 +26,33 @@
 
 static inline void dgThreadYield()
 {
-#if defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32) || defined (_MINGW_32_VER) || defined (_MINGW_64_VER)
+	#if (defined (WIN32) || defined(_WIN32) || defined (__MINGW32__) || defined (__MINGW64__))
 		Sleep(0);
-#endif
+	#endif
 
-#if defined (__linux__) || defined (_MAC_VER) || defined (__FreeBSD__)
-#ifndef _MAC_IPHONE
-        sched_yield();
-#endif
-#endif
+	#if (defined (__linux__) || defined (__APPLE__))
+		#ifndef _MAC_IPHONE
+			sched_yield();
+		#endif
+	#endif
 }
 
 
 static inline void dgSpinLock (dgInt32 *spin)
 {
-	#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32) || defined (_MINGW_32_VER) || defined (_MINGW_64_VER))
+	#if (defined (WIN32) || defined(_WIN32) || defined (__MINGW32__) || defined (__MINGW64__))
 		while (InterlockedExchange((long*) spin, 1)) {
 			Sleep(0);
 		}
 	#endif
 
-#if defined (__linux__) || defined (__FreeBSD__)
+	#if (defined (__linux__))
 		while(! __sync_bool_compare_and_swap((int32_t*)spin, 0, 1) ) {
 			sched_yield();
 		}
-#endif
+	#endif
 
-	#if (defined (_MAC_VER))
+	#if (defined (__APPLE__))
 		#ifndef _MAC_IPHONE
 			while( ! OSAtomicCompareAndSwap32(0, 1, (int32_t*) spin) ) {
 				sched_yield();
@@ -70,15 +70,15 @@ inline void dgSpinUnlock (dgInt32 *spin)
 
 static inline void dgInterlockedIncrement (dgInt32* Addend )
 {
-	#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32) || defined (_MINGW_32_VER) || defined (_MINGW_64_VER))
+	#if (defined (WIN32) || defined(_WIN32) || defined (__MINGW32__) || defined (__MINGW64__))
 		InterlockedIncrement((long*) Addend);
 	#endif
 
-#if defined (__linux__) || defined (__FreeBSD__)
+	#if (defined (__linux__))
 		__sync_fetch_and_add ((int32_t*)Addend, 1 );
-#endif
+	#endif
 
-	#if (defined (_MAC_VER))
+	#if (defined (__APPLE__))
 		OSAtomicAdd32 (1, (int32_t*)Addend);
 	#endif
 }
@@ -87,15 +87,15 @@ static inline void dgInterlockedIncrement (dgInt32* Addend )
 
 static inline void dgInterlockedDecrement(dgInt32* Addend)
 {
-	#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32) || defined (_MINGW_32_VER) || defined (_MINGW_64_VER))
+	#if (defined (WIN32) || defined(_WIN32) || defined (__MINGW32__) || defined (__MINGW64__))
 		InterlockedDecrement((long*) Addend);
 	#endif
 
-#if defined (__linux__) || defined (__FreeBSD__)
+	#if (defined (__linux__))
 		__sync_fetch_and_sub ((int32_t*)Addend, 1 );
-#endif
+	#endif
 
-	#if (defined (_MAC_VER))
+	#if (defined (__APPLE__))
 		OSAtomicAdd32 (-1, (int32_t*)Addend);
 	#endif
 }
@@ -104,7 +104,7 @@ static inline void dgInterlockedDecrement(dgInt32* Addend)
 
 dgThreads::dgThreads()
 {
-	#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32) || defined (_MINGW_32_VER) || defined (_MINGW_64_VER))
+	#if (defined (WIN32) || defined(_WIN32) || defined (__MINGW32__) || defined (__MINGW64__))
 		SYSTEM_INFO sysInfo;
 		GetSystemInfo(&sysInfo);
 		m_numberOfCPUCores = dgInt32 (sysInfo.dwNumberOfProcessors);
@@ -113,16 +113,16 @@ dgThreads::dgThreads()
 		m_exit = NULL;
 		m_workToDo = NULL;
 		m_emptySlot = NULL;
-
+		
 		m_topIndex = 0;
 		m_bottomIndex = 0;
 		m_workInProgress = 0;
 		m_globalSpinLock = 0;
 
 		memset (m_threadhandles, 0, sizeof (m_threadhandles));
-	#endif
+	#endif	
 
-#if defined (__linux__) || defined (__FreeBSD__)
+	#if (defined (__linux__))
 		m_numberOfCPUCores = sysconf(_SC_NPROCESSORS_ONLN);
 
 		m_numOfThreads = 0;
@@ -136,7 +136,7 @@ dgThreads::dgThreads()
 		m_workToDoSpinLock = 0;
 	#endif
 
-	#if (defined (_MAC_VER))
+	#if (defined (__APPLE__))
 		int mib[2];
 		size_t len;
 		int procesorcount;
@@ -145,7 +145,7 @@ dgThreads::dgThreads()
 		mib[1] = HW_NCPU;
 		len = sizeof (procesorcount);
 		procesorcount = 0;
-		m_numberOfCPUCores = sysctl(mib, 2, &procesorcount, &len, NULL, 0);
+		m_numberOfCPUCores = sysctl(mib, 2, &procesorcount, &len, NULL, 0); 
 		m_numberOfCPUCores =  procesorcount;
 
 		m_numOfThreads = 0;
@@ -210,7 +210,7 @@ void dgThreads::CreateThreaded (dgInt32 threads)
 		DestroydgThreads();
 	}
 
-	#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32) || defined (_MINGW_32_VER) || defined (_MINGW_64_VER))
+	#if (defined (WIN32) || defined(_WIN32) || defined (__MINGW32__) || defined (__MINGW64__))
 		if ((threads > 1) && (m_numberOfCPUCores > 1)) {
 			m_numOfThreads = GetMin (threads, m_numberOfCPUCores);
 
@@ -218,7 +218,7 @@ void dgThreads::CreateThreaded (dgInt32 threads)
 			m_workToDo = CreateSemaphoreA(NULL,0, DG_MAXQUEUE, NULL);
 			m_exit = CreateEventA(NULL, TRUE, FALSE, NULL);
 
-			InitializeCriticalSection(&m_criticalSection);
+			InitializeCriticalSection(&m_criticalSection); 
 
 			m_topIndex = 0;
 			m_bottomIndex = 0;
@@ -230,7 +230,7 @@ void dgThreads::CreateThreaded (dgInt32 threads)
 	#endif
 
 
-#if defined (__linux__) || defined (__FreeBSD__)
+	#if (defined (__linux__) || defined (__APPLE__))
 		if ((threads > 1) && (m_numberOfCPUCores > 1)) {
 			#ifdef _MAC_IPHONE
 				m_numOfThreads = 0;
@@ -254,13 +254,13 @@ void dgThreads::CreateThreaded (dgInt32 threads)
 				}
 			#endif
 		}
-	#endif
+	#endif	
 }
 
 
 void dgThreads::DestroydgThreads()
 {
-	#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32) || defined (_MINGW_32_VER) || defined (_MINGW_64_VER))
+	#if (defined (WIN32) || defined(_WIN32) || defined (__MINGW32__) || defined (__MINGW64__))
 		_ASSERTE (m_workInProgress == 0);
 
 		while(m_workInProgress > 0){
@@ -281,7 +281,7 @@ void dgThreads::DestroydgThreads()
 		m_exit = NULL;
 		m_emptySlot = NULL;
 		m_workToDo = NULL;
-		memset (&m_criticalSection, 0, sizeof (CRITICAL_SECTION));
+		memset (&m_criticalSection, 0, sizeof (CRITICAL_SECTION)); 
 		for(dgInt32 i=0; i < m_numOfThreads; i++) {
 			m_threadhandles[i] = NULL;
 		}
@@ -292,7 +292,7 @@ void dgThreads::DestroydgThreads()
 		m_numOfThreads = 0;
 	#endif
 
-#if defined (__linux__) || defined (_MAC_VER) || defined(__FreeBSD__)
+	#if (defined (__linux__) || defined (__APPLE__))
 
 		while(m_workInProgress > 0){
 			usleep(100000);
@@ -330,20 +330,20 @@ dgInt32 dgThreads::SubmitJob(dgWorkerThread* const job)
 		job->ThreadExecute();
 	} else {
 
-		#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32) || defined (_MINGW_32_VER) || defined (_MINGW_64_VER))
+		#if (defined (WIN32) || defined(_WIN32) || defined (__MINGW32__) || defined (__MINGW64__))
 			dgInterlockedIncrement(&m_workInProgress);
 			if(WaitForSingleObject(m_emptySlot,INFINITE) != WAIT_OBJECT_0){
 				return(0);
 			}
 
-			EnterCriticalSection(&m_criticalSection);
+			EnterCriticalSection(&m_criticalSection); 
 			m_queue[m_topIndex] = job;
 			m_topIndex = (m_topIndex + 1) % DG_MAXQUEUE;
 			ReleaseSemaphore(m_workToDo,1,NULL);
 			LeaveCriticalSection(&m_criticalSection);
 		#endif
 
-#if defined (__linux__) || defined (_MAC_VER) || defined (__FreeBSD__)
+		#if (defined (__linux__) || defined (__APPLE__))
 			dgInterlockedIncrement(&m_workInProgress);
 			while ( m_emptySlot == 0 ) {
 				dgThreadYield();
@@ -362,10 +362,10 @@ dgInt32 dgThreads::SubmitJob(dgWorkerThread* const job)
 
 
 
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32) || defined (_MINGW_32_VER) || defined (_MINGW_64_VER))
+#if (defined (WIN32) || defined(_WIN32) || defined (__MINGW32__) || defined (__MINGW64__))
 	dgUnsigned32 _stdcall dgThreads::ThreadExecute(void *param)
 #endif
-#if defined (__linux__) || defined (_MAC_VER) || defined (__FreeBSD__)
+#if (defined (__linux__) || defined (__APPLE__))
 	void* dgThreads::ThreadExecute(void *param)
 #endif
 {
@@ -377,7 +377,7 @@ dgInt32 dgThreads::SubmitJob(dgWorkerThread* const job)
 
 dgInt32  dgThreads::GetWork(dgWorkerThread** job)
 {
-	#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32) || defined (_MINGW_32_VER) || defined (_MINGW_64_VER))
+	#if (defined (WIN32) || defined(_WIN32) || defined (__MINGW32__) || defined (__MINGW64__))
 		HANDLE hWaitHandles[2];
 		hWaitHandles[0] = m_workToDo;
 		hWaitHandles[1] = m_exit;
@@ -386,15 +386,15 @@ dgInt32  dgThreads::GetWork(dgWorkerThread** job)
 			return 0;
 		}
 
-		EnterCriticalSection(&m_criticalSection);
+		EnterCriticalSection(&m_criticalSection); 
 		*job = m_queue[m_bottomIndex];
 		m_bottomIndex = (m_bottomIndex + 1) % DG_MAXQUEUE;
 		ReleaseSemaphore(m_emptySlot,1,NULL);
 		LeaveCriticalSection(&m_criticalSection);
 	#endif
 
-#if defined (__linux__) || defined (_MAC_VER) || defined (__FreeBSD__)
-		for (;;) {
+	#if (defined (__linux__) || defined (__APPLE__))
+		for (;;) { 
 			while ( m_workToDo == 0 ) {
 				dgThreadYield();
 			}
@@ -419,7 +419,7 @@ dgInt32  dgThreads::GetWork(dgWorkerThread** job)
 		dgSpinUnlock( &m_criticalSection );
 	#endif
 
-	return 1;
+	return 1;	
 }
 
 
@@ -428,7 +428,7 @@ void dgThreads::DoWork(dgInt32 mythreadIndex)
 	dgWorkerThread* job;
 
 
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32))
+#if (defined (WIN32) || defined(_WIN32))
 	#ifndef __USE_DOUBLE_PRECISION__
 		dgUnsigned32 controlWorld;
 		controlWorld = dgControlFP (0xffffffff, 0);
@@ -447,12 +447,12 @@ void dgThreads::DoWork(dgInt32 mythreadIndex)
 
 			job->ThreadExecute();
 			dgInterlockedDecrement(&m_workInProgress);
-
+			
 			m_localData[mythreadIndex].m_ticks += (m_getPerformanceCount() - ticks);
 		}
 	}
 
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32))
+#if (defined (WIN32) || defined(_WIN32))
 	#ifndef __USE_DOUBLE_PRECISION__
 		dgControlFP (controlWorld, _MCW_PC);
 	#endif
@@ -483,7 +483,7 @@ void dgThreads::CalculateChunkSizes (dgInt32 elements, dgInt32* const chunkSizes
 		}
 	} else {
 		chunkSizes[0] = elements;
-	}
+	} 
 }
 
 

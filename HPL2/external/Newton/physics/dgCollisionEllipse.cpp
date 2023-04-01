@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -30,7 +30,7 @@
 
 
 dgCollisionEllipse::dgCollisionEllipse(dgMemoryAllocator* const allocator, dgUnsigned32 signature, dgFloat32 rx, dgFloat32 ry, dgFloat32 rz, const dgMatrix& offsetMatrix)
-	:dgCollisionSphere(allocator, signature, dgFloat32 (1.0f), offsetMatrix),
+	:dgCollisionSphere(allocator, signature, dgFloat32 (1.0f), offsetMatrix), 
 	m_scale (rx, ry, rz, dgFloat32 (0.0f)),
 	m_invScale (dgFloat32 (1.0f) / rx, dgFloat32 (1.0f) / ry, dgFloat32 (1.0f) / rz, dgFloat32 (0.0f))
 {
@@ -39,16 +39,16 @@ dgCollisionEllipse::dgCollisionEllipse(dgMemoryAllocator* const allocator, dgUns
 }
 
 dgCollisionEllipse::dgCollisionEllipse(dgWorld* const world, dgDeserialize deserialization, void* const userData)
-	:dgCollisionSphere(world, deserialization, userData)
+	:dgCollisionSphere(world, deserialization, userData) 
 {
 	dgVector size;
 
 	m_rtti |= dgCollisionEllipse_RTTI;
 	deserialization (userData, &m_scale, sizeof (dgVector));
-	m_invScale.m_x = dgFloat32 (1.0f) / m_scale.m_x;
-	m_invScale.m_y = dgFloat32 (1.0f) / m_scale.m_y;
-	m_invScale.m_z = dgFloat32 (1.0f) / m_scale.m_z;
-	m_invScale.m_w = dgFloat32 (0.0f);
+	m_invScale.m_x = dgFloat32 (1.0f) / m_scale.m_x; 
+	m_invScale.m_y = dgFloat32 (1.0f) / m_scale.m_y; 
+	m_invScale.m_z = dgFloat32 (1.0f) / m_scale.m_z; 
+	m_invScale.m_w = dgFloat32 (0.0f); 
 }
 
 dgCollisionEllipse::~dgCollisionEllipse()
@@ -113,7 +113,7 @@ dgVector dgCollisionEllipse::SupportVertex (const dgVector& dir) const
 	dir1 = dir1.Scale (dgRsqrt (dir1 % dir1));
 
 	dgVector p (dgCollisionSphere::SupportVertex (dir1));
-	return dgVector (p.m_x * m_scale.m_x, p.m_y * m_scale.m_y, p.m_z * m_scale.m_z, dgFloat32 (0.0f));
+	return dgVector (p.m_x * m_scale.m_x, p.m_y * m_scale.m_y, p.m_z * m_scale.m_z, dgFloat32 (0.0f)); 
 }
 
 dgVector dgCollisionEllipse::SupportVertexSimd (const dgVector& dir) const
@@ -129,7 +129,7 @@ dgVector dgCollisionEllipse::SupportVertexSimd (const dgVector& dir) const
 	simd_type mag2;
 
 //	dir1 = dgVector (dir.m_x * m_scale.m_x, dir.m_y * m_scale.m_y, dir.m_z * m_scale.m_z, dgFloat32 (0.0f));
-	n = simd_mul_v (*(simd_type*)&dir, *(simd_type*)&m_scale);
+	n = simd_mul_v (*(simd_type*)&dir, *(simd_type*)&m_scale); 
 
 //	dir1 = dir1.Scale (dgRsqrt (dir1 % dir1));
 	mag2 = simd_mul_v (n, n);
@@ -139,7 +139,7 @@ dgVector dgCollisionEllipse::SupportVertexSimd (const dgVector& dir) const
 	(*(simd_type*)&dir1) = simd_mul_v (n, simd_permut_v (mag2, mag2, PURMUT_MASK (3,0,0,0)));
 
 	dgVector p (dgCollisionSphere::SupportVertexSimd (dir1));
-	return dgVector (p.m_x * m_scale.m_x, p.m_y * m_scale.m_y, p.m_z * m_scale.m_z, dgFloat32 (0.0f));
+	return dgVector (p.m_x * m_scale.m_x, p.m_y * m_scale.m_y, p.m_z * m_scale.m_z, dgFloat32 (0.0f)); 
 
 
 #else
@@ -155,17 +155,17 @@ dgInt32 dgCollisionEllipse::CalculatePlaneIntersection (const dgVector& normal, 
 
 	dgVector n (normal.m_x * m_scale.m_x, normal.m_y * m_scale.m_y, normal.m_z * m_scale.m_z, dgFloat32 (0.0f));
 	n = n.Scale ((normal % point) / (n % n));
-	contactsOut[0] = dgVector (n.m_x * m_scale.m_x, n.m_y * m_scale.m_y, n.m_z * m_scale.m_z, dgFloat32 (0.0f));
+	contactsOut[0] = dgVector (n.m_x * m_scale.m_x, n.m_y * m_scale.m_y, n.m_z * m_scale.m_z, dgFloat32 (0.0f)); 
 	return 1;
 }
 
 dgInt32 dgCollisionEllipse::CalculatePlaneIntersectionSimd (const dgVector& normal, const dgVector& point, dgVector* const contactsOut) const
 {
-#ifdef DG_BUILD_SIMD_CODE
+#ifdef DG_BUILD_SIMD_CODE	
 	_ASSERTE ((normal % normal) > dgFloat32 (0.999f));
 	dgVector n (normal.m_x * m_scale.m_x, normal.m_y * m_scale.m_y, normal.m_z * m_scale.m_z, dgFloat32 (0.0f));
 	n = n.Scale ((normal % point) / (n % n));
-	contactsOut[0] = dgVector (n.m_x * m_scale.m_x, n.m_y * m_scale.m_y, n.m_z * m_scale.m_z, dgFloat32 (0.0f));
+	contactsOut[0] = dgVector (n.m_x * m_scale.m_x, n.m_y * m_scale.m_y, n.m_z * m_scale.m_z, dgFloat32 (0.0f)); 
 	return 1;
 
 #else
@@ -176,7 +176,7 @@ dgInt32 dgCollisionEllipse::CalculatePlaneIntersectionSimd (const dgVector& norm
 
 void dgCollisionEllipse::DebugCollision (const dgMatrix& matrixPtr, OnDebugCollisionMeshCallback callback, void* const userData) const
 {
-	dgMatrix mat (GetOffsetMatrix() * matrixPtr);
+	dgMatrix mat (GetOffsetMatrix() * matrixPtr);  
 	mat.m_front = mat.m_front.Scale (m_scale.m_x);
 	mat.m_up = mat.m_up.Scale (m_scale.m_y);
 	mat.m_right = mat.m_right.Scale (m_scale.m_z);
@@ -193,7 +193,7 @@ dgFloat32 dgCollisionEllipse::RayCast (const dgVector& p0, const dgVector& p1, d
 		return dgFloat32 (1.2f);
 	}
 
-	dgVector q0 (p0.m_x * m_invScale.m_x, p0.m_y * m_invScale.m_y, p0.m_z * m_invScale.m_z, dgFloat32 (0.0f));
+	dgVector q0 (p0.m_x * m_invScale.m_x, p0.m_y * m_invScale.m_y, p0.m_z * m_invScale.m_z, dgFloat32 (0.0f)); 
 	dgVector q1 (p1.m_x * m_invScale.m_x, p1.m_y * m_invScale.m_y, p1.m_z * m_invScale.m_z, dgFloat32 (0.0f));
 	t = dgCollisionSphere::RayCast (q0, q1, contactOut, NULL, NULL, NULL);
 	return t;
@@ -207,7 +207,7 @@ dgFloat32 dgCollisionEllipse::RayCastSimd (const dgVector& p0, const dgVector& p
 		return dgFloat32 (1.2f);
 	}
 
-	dgVector q0 (p0.m_x * m_invScale.m_x, p0.m_y * m_invScale.m_y, p0.m_z * m_invScale.m_z, dgFloat32 (0.0f));
+	dgVector q0 (p0.m_x * m_invScale.m_x, p0.m_y * m_invScale.m_y, p0.m_z * m_invScale.m_z, dgFloat32 (0.0f)); 
 	dgVector q1 (p1.m_x * m_invScale.m_x, p1.m_y * m_invScale.m_y, p1.m_z * m_invScale.m_z, dgFloat32 (0.0f));
 	t = dgCollisionSphere::RayCastSimd (q0, q1, contactOut, NULL, NULL, NULL);
 	return t;

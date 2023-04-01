@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -56,8 +56,8 @@ class dgGeneralMatrix
 	void Clear (T val);
 	void Identity ();
 
-	void SwapRows (dgInt32 i, dgInt32 j);
-	void SwapColumns (dgInt32 i, dgInt32 j);
+	void SwapRows (dgInt32 i, dgInt32 j); 
+	void SwapColumns (dgInt32 i, dgInt32 j); 
 
 //	dgGeneralMatrix Transpose ();
 //	void Inverse (dgGeneralMatrix& inverseOut);
@@ -147,9 +147,9 @@ dgGeneralMatrix<T>::dgGeneralMatrix (const dgGeneralMatrix<T>& src)
 
 template<class T>
 dgGeneralMatrix<T>::dgGeneralMatrix (
-	dgInt32 row,
+	dgInt32 row, 
 	dgInt32 column,
-	T *elemBuffer)
+	T *elemBuffer) 
 {
 	dgInt32 i;
 	dgInt32 columnPad;
@@ -172,8 +172,8 @@ dgGeneralMatrix<T>::dgGeneralMatrix (
 
 template<class T>
 dgGeneralMatrix<T>::dgGeneralMatrix (
-	const dgGeneralMatrix<T>& src,
-	T *elemBuffer)
+	const dgGeneralMatrix<T>& src, 
+	T *elemBuffer) 
 {
 	dgInt32 i;
 	dgInt32 columnPad;
@@ -194,7 +194,7 @@ dgGeneralMatrix<T>::dgGeneralMatrix (
 
 
 
-template<class T>
+template<class T>  
 dgGeneralMatrix<T>::~dgGeneralMatrix ()
 {
 	if (m_ownMemory) {
@@ -204,13 +204,13 @@ dgGeneralMatrix<T>::~dgGeneralMatrix ()
 }
 
 
-template<class T>
+template<class T>  
 dgInt32 dgGeneralMatrix<T>::GetRowCount() const
 {
 	return m_rowCount;
 }
 
-template<class T>
+template<class T>  
 dgInt32 dgGeneralMatrix<T>::GetColCount() const
 {
 	return m_colCount;
@@ -235,7 +235,7 @@ dgGeneralVector<T>& dgGeneralMatrix<T>::operator[] (dgInt32 i)
 	_ASSERTE (i < m_rowCount);
 	_ASSERTE (i >= 0);
 	return m_rows[i];
-}
+}	
 
 template<class T>
 const dgGeneralVector<T>& dgGeneralMatrix<T>::operator[] (dgInt32 i) const
@@ -272,7 +272,7 @@ void dgGeneralMatrix<T>::Identity ()
 //	dgInt32 i;
 //	dgInt32 j;
 //
-//	_ASSERTE (m_rowCount	==
+//	_ASSERTE (m_rowCount	== 
 //	dgGeneralMatrix<T>& me = *this;
 //	for (i = 0; i < m_rowCount; i ++) {
 //		for (j = i + 1; j < m_rowCount; j ++) {
@@ -290,8 +290,8 @@ void dgGeneralMatrix<T>::Identity ()
 
 template<class T>
 void dgGeneralMatrix<T>::GaussianPivotStep (
-	dgInt32 srcRow,
-	dgInt32 pivotRow,
+	dgInt32 srcRow, 
+	dgInt32 pivotRow, 
 	dgInt32 pivotCol,
 	T tol)
 {
@@ -305,7 +305,7 @@ void dgGeneralMatrix<T>::GaussianPivotStep (
 		#ifdef DG_COUNT_FLOAT_OPS
 		dgGeneralVector<T>::m_floatsOp += 2;
 		#endif
-
+	
 		den = - num / den;
 		me[pivotRow].LinearCombine (den, me[srcRow], me[pivotRow]);
 	}
@@ -389,7 +389,7 @@ void dgGeneralMatrix<T>::MatrixTimeMatrix (const dgGeneralMatrix<T>& A, const dg
 		for (j = 0; j < m_colCount; j ++) {
 			T acc (0.0f);
 			for (k = 0; k < count; k ++) {
-				acc = acc + rowA[k] * B.m_rows[k][j];
+				acc = acc + rowA[k] * B.m_rows[k][j]; 
 
 				#ifdef DG_COUNT_FLOAT_OPS
 				dgGeneralVector<T>::m_floatsOp += 2;
@@ -431,7 +431,7 @@ void dgGeneralMatrix<T>::MatrixTimeMatrixTranspose (const dgGeneralMatrix<T>& A,
 			T acc (0.0f);
 			rowB = &Bt.m_rows[j][0];
 			for (k = 0; k < count; k ++) {
-				acc = acc + rowA[k] * rowB[k];
+				acc = acc + rowA[k] * rowB[k]; 
 
 				#ifdef DG_COUNT_FLOAT_OPS
 				dgGeneralVector<T>::m_floatsOp += 2;
@@ -520,7 +520,7 @@ bool dgGeneralMatrix<T>::Solve (dgGeneralVector<T> &b, T tol)
 	dgGeneralVector<T>::m_floatsOp += 1;
 	dgGeneralVector<T>::m_memoryWrite += 1;
 	#endif
-
+		
 	return true;
 }
 
@@ -649,8 +649,8 @@ bool dgGeneralMatrix<T>::CholeskyDecomposition()
 	}
 
 	#ifdef DG_COUNT_FLOAT_OPS
-	dgGeneralVector<T>::SetMemWrites(memCount);
-	dgGeneralVector<T>::SetFloatOps(floatCount);
+	dgGeneralVector<T>::SetMemWrites(memCount); 
+	dgGeneralVector<T>::SetFloatOps(floatCount); 
 	#endif
 
 	return true;

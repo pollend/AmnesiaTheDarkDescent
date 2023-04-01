@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -26,8 +26,8 @@
 #include "dgBodyMasterList.h"
 
 class dgLink;
-class dgBody;
-class dgWorld;
+class dgBody;  
+class dgWorld;  
 class dgCollision;
 class dgBroadPhaseCell;
 
@@ -55,7 +55,7 @@ class dgConvexCastReturnInfo
 	public:
 	dgFloat32 m_point[4];					// collision point in global space
 	dgFloat32 m_normal[4];					// surface normal at collision point in global space
-	dgFloat32 m_normalOnHitPoint[4];		// surface normal at the surface of the hit body,
+	dgFloat32 m_normalOnHitPoint[4];		// surface normal at the surface of the hit body, 
 	                                        // is the same as the normal calculate by a raycast passing by the hit point in the direction of the cast
 	dgFloat32 m_penetration;                // contact penetration at collision point
 	dgInt32   m_contaID;	                // collision ID at contact point
@@ -83,7 +83,7 @@ class dgBroadPhaseList
 
 
 DG_MSC_VECTOR_ALIGMENT
-class dgBody
+class dgBody  
 {
 	public:
 	DG_CLASS_ALLOCATOR(allocator)
@@ -154,7 +154,7 @@ class dgBody
 	dgVector GetCentreOfMass () const;
 	bool IsInEquelibrium () const;
 
-	void GetAABB (dgVector &p0, dgVector &p1) const;
+	void GetAABB (dgVector &p0, dgVector &p1) const;	
 
 	bool GetSleepState () const;
 	bool GetAutoSleep () const;
@@ -171,16 +171,16 @@ class dgBody
 	bool GetCollisionWithLinkedBodies () const;
 	bool GetContinuesCollisionMode () const;
 
-	void AddBuoyancyForce (dgFloat32 fluidDensity, dgFloat32 fluidLinearViscousity, dgFloat32 fluidAngularViscousity,
+	void AddBuoyancyForce (dgFloat32 fluidDensity, dgFloat32 fluidLinearViscousity, dgFloat32 fluidAngularViscousity, 
 						   const dgVector& gravityVector, GetBuoyancyPlane buoyancyPlane, void* const context);
 
 
 	dgVector CalculateInverseDynamicForce (const dgVector& desiredVeloc, dgFloat32 timestep) const;
 
-//	dgFloat32 RayCast (const dgVector& globalP0, const dgVector& globalP1,
+//	dgFloat32 RayCast (const dgVector& globalP0, const dgVector& globalP1, 
 	dgFloat32 RayCast (const dgLineBox& line,
 					   OnRayCastAction filter, OnRayPrecastAction preFilter, void* const userData, dgFloat32 minT) const;
-//	dgFloat32 RayCastSimd (const dgVector& globalP0, const dgVector& globalP1,
+//	dgFloat32 RayCastSimd (const dgVector& globalP0, const dgVector& globalP1, 
 //					   OnRayCastAction filter, OnRayPrecastAction preFilter, void* userData, dgFloat32 minT) const;
 
 
@@ -195,7 +195,7 @@ class dgBody
 
 	private:
 	void SetMatrixOriginAndRotation(const dgMatrix& matrix);
-
+	
 	void CalculateContinueVelocity (dgFloat32 timestep, dgVector& veloc, dgVector& omega) const;
 	void CalculateContinueVelocitySimd (dgFloat32 timestep,	dgVector& veloc, dgVector& omega) const;
 
@@ -217,7 +217,7 @@ class dgBody
 	dgMatrix m_collisionWorldMatrix;
 	dgMatrix m_invWorldInertiaMatrix;
 	dgQuaternion m_rotation;
-
+	
 	dgVector m_veloc;
 	dgVector m_omega;
 	dgVector m_accel;
@@ -230,8 +230,8 @@ class dgBody
 	dgVector m_mass;
 	dgVector m_invMass;
 	dgVector m_aparentMass;
-	dgVector m_localCentreOfMass;
-	dgVector m_globalCentreOfMass;
+	dgVector m_localCentreOfMass;	
+	dgVector m_globalCentreOfMass;	
 	dgVector m_minAABB;
 	dgVector m_maxAABB;
 	dgVector m_dampCoef;
@@ -242,7 +242,7 @@ class dgBody
 	dgInt32 m_bodyGroupId;
 	dgInt32 m_genericLRUMark;
 	dgInt32 m_sleepingCounter;
-	dgUnsigned32 m_dynamicsLru;
+	dgUnsigned32 m_dynamicsLru;	
 	dgUnsigned32 m_isInDerstruionArrayLRU;
 
 	dgUnsigned32 m_freeze					: 1;
@@ -255,7 +255,7 @@ class dgBody
 	dgUnsigned32 m_collideWithLinkedBodies  : 1;
 	dgUnsigned32 m_solverInContinueCollision: 1;
 	dgUnsigned32 m_inCallback				: 1;
-
+		
 	void* m_userData;
 	dgWorld* m_world;
 	dgCollision* m_collision;
@@ -292,7 +292,7 @@ class dgBody
 	friend class dgCollisionConvexModifier;
 	friend class dgCollidingPairCollector;
 	friend class dgAABBOverlapPairList;
-	friend class dgParallelSolverClear;
+	friend class dgParallelSolverClear;	
 	friend class dgParallelSolverUpdateForce;
 	friend class dgParallelSolverUpdateVeloc;
 	friend class dgParallelSolverBodyInertia;
@@ -302,9 +302,9 @@ class dgBody
 }DG_GCC_VECTOR_ALIGMENT;
 
 // *****************************************************************************
-//
-//	 Implementation
-//
+// 
+//	 Implementation	
+// 
 // *****************************************************************************
 
 inline void dgBody::SetAutoSleep (bool state)
@@ -478,12 +478,12 @@ inline const dgVector& dgBody::GetOmega() const
 
 inline const dgVector& dgBody::GetVelocity() const
 {
-	return m_veloc;
+	return m_veloc; 
 }
 
 inline const dgVector& dgBody::GetForce() const
 {
-	return m_accel;
+	return m_accel; 
 }
 
 inline const dgVector& dgBody::GetTorque() const
@@ -493,7 +493,7 @@ inline const dgVector& dgBody::GetTorque() const
 
 inline const dgVector& dgBody::GetNetForce() const
 {
-	return m_netForce;
+	return m_netForce; 
 }
 
 inline const dgVector& dgBody::GetNetTorque() const
@@ -665,7 +665,7 @@ inline void dgBody::SetTorque (const dgVector& torque)
 
 //inline int dgBody::GetApplicationFreezeState() const
 //{
-//	return m_aplycationFreeze ? 1 : 0;
+//	return m_aplycationFreeze ? 1 : 0; 
 //}
 //inline void dgBody::SetApplicationFreezeState(dgInt32 state)
 //{
@@ -682,7 +682,7 @@ inline bool dgBody::GetFreeze () const
 	return m_freeze;
 }
 
-inline dgInt32 dgBody::GetUniqueID () const
+inline dgInt32 dgBody::GetUniqueID () const 
 {
 	return m_uniqueID;
 }
@@ -692,7 +692,7 @@ inline bool dgBody::IsInEquelibrium () const
 	dgFloat32 errMag2;
 	dgFloat32 invMassMag2;
 	dgVector error;
-
+	
 	invMassMag2 = m_invMass[3] * m_invMass[3];
 	if (m_equilibrium) {
 		error = m_accel - m_prevExternalForce;

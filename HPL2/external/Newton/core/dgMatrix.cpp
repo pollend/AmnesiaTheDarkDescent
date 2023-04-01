@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -46,7 +46,7 @@ const dgMatrix& dgGetZeroMatrix ()
 
 
 dgMatrix::dgMatrix (
-	const dgQuaternion &rotation,
+	const dgQuaternion &rotation, 
 	const dgVector &position)
 {
 	dgFloat32 x2;
@@ -108,10 +108,10 @@ dgMatrix dgMatrix::operator* (const dgMatrix &B) const
 
 
 void dgMatrix::TransformTriplex (
-	void* const dstPtr,
+	void* const dstPtr, 
 	dgInt32 dstStrideInBytes,
-	const void* const srcPtr,
-	dgInt32 srcStrideInBytes,
+	const void* const srcPtr, 
+	dgInt32 srcStrideInBytes, 
 	dgInt32 count) const
 {
    dgInt32 i;
@@ -141,9 +141,9 @@ void dgMatrix::TransformTriplex (
 
 
 void dgMatrix::TransformBBox (
-	const dgVector& p0local,
-	const dgVector& p1local,
-	dgVector& p0,
+	const dgVector& p0local, 
+	const dgVector& p1local, 
+	dgVector& p0, 
 	dgVector& p1) const
 {
 	dgInt32 i;
@@ -217,7 +217,7 @@ dgMatrix dgMatrix::Symetric3by3Inverse () const
 	dgFloat64 det;
 
 	const dgMatrix& mat = *this;
-	det = mat[0][0] * mat[1][1] * mat[2][2] +
+	det = mat[0][0] * mat[1][1] * mat[2][2] + 
 			mat[0][1] * mat[1][2] * mat[0][2] * dgFloat32 (2.0f) -
 			mat[0][2] * mat[1][1] * mat[0][2] -
 			mat[0][1] * mat[0][1] * mat[2][2] -
@@ -225,13 +225,13 @@ dgMatrix dgMatrix::Symetric3by3Inverse () const
 
 	det = dgFloat32 (1.0f) / det;
 
-	x11 = (dgFloat32)(det * (mat[1][1] * mat[2][2] - mat[1][2] * mat[1][2]));
-	x22 = (dgFloat32)(det * (mat[0][0] * mat[2][2] - mat[0][2] * mat[0][2]));
-	x33 = (dgFloat32)(det * (mat[0][0] * mat[1][1] - mat[0][1] * mat[0][1]));
+	x11 = (dgFloat32)(det * (mat[1][1] * mat[2][2] - mat[1][2] * mat[1][2]));  
+	x22 = (dgFloat32)(det * (mat[0][0] * mat[2][2] - mat[0][2] * mat[0][2]));  
+	x33 = (dgFloat32)(det * (mat[0][0] * mat[1][1] - mat[0][1] * mat[0][1]));  
 
-	x12 = (dgFloat32)(det * (mat[1][2] * mat[2][0] - mat[1][0] * mat[2][2]));
-	x13 = (dgFloat32)(det * (mat[1][0] * mat[2][1] - mat[1][1] * mat[2][0]));
-	x23 = (dgFloat32)(det * (mat[0][1] * mat[2][0] - mat[0][0] * mat[2][1]));
+	x12 = (dgFloat32)(det * (mat[1][2] * mat[2][0] - mat[1][0] * mat[2][2]));  
+	x13 = (dgFloat32)(det * (mat[1][0] * mat[2][1] - mat[1][1] * mat[2][0]));  
+	x23 = (dgFloat32)(det * (mat[0][1] * mat[2][0] - mat[0][0] * mat[2][1]));  
 
 
 #ifdef _DEBUG
@@ -258,15 +258,15 @@ static inline void ROT(
 	dgInt32 i,
 	dgInt32 j,
 	dgInt32 k,
-	dgInt32 l,
+	dgInt32 l, 
 	dgFloat32 s,
-	dgFloat32 tau)
+	dgFloat32 tau) 
 {
 	dgFloat32 g;
 	dgFloat32 h;
-	g = a[i][j];
-	h = a[k][l];
-	a[i][j] = g - s * (h + g * tau);
+	g = a[i][j]; 
+	h = a[k][l]; 
+	a[i][j] = g - s * (h + g * tau); 
 	a[k][l] = h + s * (g - h * tau);
 }
 
@@ -292,13 +292,13 @@ void dgMatrix::EigenVectors (dgVector &eigenValues)
 	dgMatrix eigenVectors (dgGetIdentityMatrix());
 	dgMatrix &mat = *this;
 
-	b[0] = mat[0][0];
+	b[0] = mat[0][0]; 
 	b[1] = mat[1][1];
 	b[2] = mat[2][2];
 
-	d[0] = mat[0][0];
-	d[1] = mat[1][1];
-	d[2] = mat[2][2];
+	d[0] = mat[0][0]; 
+	d[1] = mat[1][1]; 
+	d[2] = mat[2][2]; 
 
 	z[0] = dgFloat32 (0.0f);
 	z[1] = dgFloat32 (0.0f);
@@ -313,7 +313,7 @@ void dgMatrix::EigenVectors (dgVector &eigenValues)
 			_ASSERTE (dgAbsf((eigenVectors.m_up % eigenVectors.m_up) - dgFloat32(1.0f)) < dgEPSILON);
 			_ASSERTE (dgAbsf((eigenVectors.m_right % eigenVectors.m_right) - dgFloat32(1.0f)) < dgEPSILON);
 
-			// order the eigenvalue vectors
+			// order the eigenvalue vectors	
 			dgVector tmp (eigenVectors.m_front * eigenVectors.m_up);
 			if (tmp % eigenVectors.m_right < dgFloat32(0.0f)) {
 				eigenVectors.m_right = eigenVectors.m_right.Scale (-dgFloat32(1.0f));
@@ -346,19 +346,19 @@ void dgMatrix::EigenVectors (dgVector &eigenValues)
 					t = -t;
 				}
 			}
-			c = dgFloat32(1.0f) / dgSqrt (dgFloat32 (1.0f) + t * t);
-			s = t * c;
-			tau = s / (dgFloat32(1.0f) + c);
+			c = dgFloat32(1.0f) / dgSqrt (dgFloat32 (1.0f) + t * t); 
+			s = t * c; 
+			tau = s / (dgFloat32(1.0f) + c); 
 			h = t * mat[0][1];
-			z[0] -= h;
-			z[1] += h;
-			d[0] -= h;
+			z[0] -= h; 
+			z[1] += h; 
+			d[0] -= h; 
 			d[1] += h;
 			mat[0][1] = dgFloat32(0.0f);
-			ROT (mat, 0, 2, 1, 2, s, tau);
-			ROT (eigenVectors, 0, 0, 0, 1, s, tau);
-			ROT (eigenVectors, 1, 0, 1, 1, s, tau);
-			ROT (eigenVectors, 2, 0, 2, 1, s, tau);
+			ROT (mat, 0, 2, 1, 2, s, tau); 
+			ROT (eigenVectors, 0, 0, 0, 1, s, tau); 
+			ROT (eigenVectors, 1, 0, 1, 1, s, tau); 
+			ROT (eigenVectors, 2, 0, 2, 1, s, tau); 
 
 			nrot++;
 		}
@@ -379,19 +379,19 @@ void dgMatrix::EigenVectors (dgVector &eigenValues)
 					t = -t;
 				}
 			}
-			c = dgFloat32(1.0f) / dgSqrt(dgFloat32 (1.0f) + t * t);
-			s = t * c;
-			tau = s / (dgFloat32(1.0f) + c);
+			c = dgFloat32(1.0f) / dgSqrt(dgFloat32 (1.0f) + t * t); 
+			s = t * c; 
+			tau = s / (dgFloat32(1.0f) + c); 
 			h = t * mat[0][2];
-			z[0] -= h;
-			z[2] += h;
-			d[0] -= h;
+			z[0] -= h; 
+			z[2] += h; 
+			d[0] -= h; 
 			d[2] += h;
 			mat[0][2]=dgFloat32 (0.0f);
-			ROT (mat, 0, 1, 1, 2, s, tau);
-			ROT (eigenVectors, 0, 0, 0, 2, s, tau);
-			ROT (eigenVectors, 1, 0, 1, 2, s, tau);
-			ROT (eigenVectors, 2, 0, 2, 2, s, tau);
+			ROT (mat, 0, 1, 1, 2, s, tau); 
+			ROT (eigenVectors, 0, 0, 0, 2, s, tau); 
+			ROT (eigenVectors, 1, 0, 1, 2, s, tau); 
+			ROT (eigenVectors, 2, 0, 2, 2, s, tau); 
 		}
 
 		// third row
@@ -409,20 +409,20 @@ void dgMatrix::EigenVectors (dgVector &eigenValues)
 					t = -t;
 				}
 			}
-			c = dgFloat32(1.0f) / dgSqrt(dgFloat32 (1.0f) + t*t);
-			s = t * c;
-			tau = s / (dgFloat32(1.0f) + c);
+			c = dgFloat32(1.0f) / dgSqrt(dgFloat32 (1.0f) + t*t); 
+			s = t * c; 
+			tau = s / (dgFloat32(1.0f) + c); 
 
 			h = t * mat[1][2];
-			z[1] -= h;
-			z[2] += h;
-			d[1] -= h;
+			z[1] -= h; 
+			z[2] += h; 
+			d[1] -= h; 
 			d[2] += h;
 			mat[1][2] = dgFloat32 (0.0f);
-			ROT (mat, 0, 1, 0, 2, s, tau);
-			ROT (eigenVectors, 0, 1, 0, 2, s, tau);
-			ROT (eigenVectors, 1, 1, 1, 2, s, tau);
-			ROT (eigenVectors, 2, 1, 2, 2, s, tau);
+			ROT (mat, 0, 1, 0, 2, s, tau); 
+			ROT (eigenVectors, 0, 1, 0, 2, s, tau); 
+			ROT (eigenVectors, 1, 1, 1, 2, s, tau); 
+			ROT (eigenVectors, 2, 1, 2, 2, s, tau); 
 			nrot++;
 		}
 
@@ -433,7 +433,7 @@ void dgMatrix::EigenVectors (dgVector &eigenValues)
 
 	eigenValues = dgVector (d[0], d[1], d[2], dgFloat32 (0.0f));
 	*this = dgGetIdentityMatrix();
-}
+} 	
 
 
 

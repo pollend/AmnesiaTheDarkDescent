@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -107,13 +107,13 @@ class dgCollisionCompound: public dgCollision
 	protected:
 	void Init (dgInt32 count, dgCollisionConvex* const shapeArray[]);
 	virtual dgFloat32 GetVolume () const;
-	virtual dgFloat32 GetBoxMinRadius () const;
+	virtual dgFloat32 GetBoxMinRadius () const; 
 	virtual dgFloat32 GetBoxMaxRadius () const;
-
+	
 	virtual dgVector SupportVertex (const dgVector& dir) const;
 	virtual void CalcAABB (const dgMatrix &matrix, dgVector& p0, dgVector& p1) const;
 	virtual void CalcAABBSimd (const dgMatrix &matrix, dgVector& p0, dgVector& p1) const;
-	virtual bool OOBBTest (const dgMatrix& matrix, const dgCollisionConvex* const shape, void* const cacheOrder) const;
+	virtual bool OOBBTest (const dgMatrix& matrix, const dgCollisionConvex* const shape, void* const cacheOrder) const; 
 
 	virtual void DebugCollision (const dgMatrix& matrix, OnDebugCollisionMeshCallback callback, void* const userData) const;
 	virtual void CalculateInertia (dgVector& inertia, dgVector& origin) const;
@@ -131,7 +131,7 @@ class dgCollisionCompound: public dgCollision
 	void LinkParentNodes();
 
 
-
+	
 	dgInt32 CalculateContacts (dgCollidingPairCollector::dgPair* const pair, dgCollisionParamProxi& proxi, dgInt32 useSimd) const;
 	dgInt32 CalculateContactsToSingle (dgCollidingPairCollector::dgPair* const pair, dgCollisionParamProxi& proxi, dgInt32 useSimd) const;
 	dgInt32 CalculateContactsToCompound (dgCollidingPairCollector::dgPair* const pair, dgCollisionParamProxi& proxi, dgInt32 useSimd) const;
@@ -146,7 +146,7 @@ class dgCollisionCompound: public dgCollision
 #ifdef _DEBUG
 	dgVector IntenalSupportVertex (const dgVector& dir) const;
 #endif
-
+	
 	protected:
 //	dgInt32 GetAxis (dgNodeBase** const proxiArray, dgInt32 boxCount) const;
 //	static dgInt32 CompareBox (const dgNodeBase* const boxA, const dgNodeBase* const boxB, void* const context);
@@ -160,7 +160,7 @@ class dgCollisionCompound: public dgCollision
 	dgInt32 m_count;
 	dgFloat32 m_boxMinRadius;
 	dgFloat32 m_boxMaxRadius;
-	dgWorld* m_world;
+	dgWorld* m_world;	
 	dgNodeBase* m_root;
 	dgCollisionConvex** m_array;
 	OnCompoundCollisionPrefilter* m_preCollisionFilter;
@@ -168,5 +168,5 @@ class dgCollisionCompound: public dgCollision
 	friend class dgWorld;
 };
 
-#endif
+#endif 
 

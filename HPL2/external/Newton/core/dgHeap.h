@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -37,7 +37,7 @@ template <class OBJECT, class KEY>
 class dgHeapBase
 {
 	protected:
-	struct RECORD
+	struct RECORD 
 	{
 		KEY m_key;
 		OBJECT m_obj;
@@ -51,12 +51,12 @@ class dgHeapBase
 	dgHeapBase (dgInt32 maxElements, dgMemoryAllocator* const allocator);
 	dgHeapBase (const void * const buffer, dgInt32 sizeInBytes);
 	~dgHeapBase ();
-
+	
 	public:
 	DG_CLASS_ALLOCATOR(allocator)
 
-	void Flush ();
-	KEY MaxValue() const;
+	void Flush (); 
+	KEY MaxValue() const; 
 	KEY Value(dgInt32 i = 0) const;
 	dgInt32 GetCount() const;
 	dgInt32 GetMaxCount() const;
@@ -130,7 +130,7 @@ dgHeapBase<OBJECT,KEY>::dgHeapBase (const void * const buffer, dgInt32 sizeInByt
 
 template <class OBJECT, class KEY>
 dgHeapBase<OBJECT,KEY>::~dgHeapBase ()
-{
+{   
 	if (m_allocator) {
 		m_allocator->Free (m_pool);
 	}
@@ -146,13 +146,13 @@ KEY dgHeapBase<OBJECT,KEY>::Value(dgInt32 i) const
 
 template <class OBJECT, class KEY>
 dgInt32 dgHeapBase<OBJECT,KEY>::GetCount() const
-{
+{ 
 	return m_curCount;
 }
 
 
 template <class OBJECT, class KEY>
-void dgHeapBase<OBJECT,KEY>::Flush ()
+void dgHeapBase<OBJECT,KEY>::Flush () 
 {
 	m_curCount = 0;
 
@@ -163,7 +163,7 @@ void dgHeapBase<OBJECT,KEY>::Flush ()
 
 
 template <class OBJECT, class KEY>
-KEY dgHeapBase<OBJECT,KEY>::MaxValue() const
+KEY dgHeapBase<OBJECT,KEY>::MaxValue() const 
 {
 	return m_pool[0].m_key;
 }
@@ -171,7 +171,7 @@ KEY dgHeapBase<OBJECT,KEY>::MaxValue() const
 
 template <class OBJECT, class KEY>
 dgInt32 dgHeapBase<OBJECT,KEY>::GetMaxCount() const
-{
+{ 
 	return m_maxCount;
 }
 
@@ -182,7 +182,7 @@ dgInt32 dgHeapBase<OBJECT,KEY>::Find (OBJECT &obj)
 	// For now let perform a linear search
 	// this is efficient if the size of the heap is small
 	// ex: m_curCount < 32
-	// this will be change to a binary search in the heap should the
+	// this will be change to a binary search in the heap should the 
 	// the size of the heap get larger than 32
 	//	_ASSERTE (m_curCount <= 32);
 	for (dgInt32 i = 0; i < m_curCount; i ++) {
@@ -198,7 +198,7 @@ template <class OBJECT, class KEY>
 dgInt32 dgHeapBase<OBJECT,KEY>::Find (KEY key)
 {
 	// ex: m_curCount < 32
-	// this will be change to a binary search in the heap shoud the
+	// this will be change to a binary search in the heap shoud the 
 	// the size of the heap get larger than 32
 	_ASSERTE (m_curCount <= 32);
 	for (dgInt32 i = 0; i < m_curCount; i ++)	{
@@ -212,7 +212,7 @@ dgInt32 dgHeapBase<OBJECT,KEY>::Find (KEY key)
 
 template <class OBJECT, class KEY>
 const OBJECT& dgHeapBase<OBJECT,KEY>::operator[] (dgInt32 i) const
-{
+{ 
 	_ASSERTE (i<= m_curCount);
 	return m_pool[i].m_obj;
 }
@@ -272,7 +272,7 @@ void dgDownHeap<OBJECT,KEY>::Remove (dgInt32 index)
 	KEY key (dgHeapBase<OBJECT,KEY>::m_pool[dgHeapBase<OBJECT,KEY>::m_curCount].m_key);
 	for (k = index + 1; k <= (dgHeapBase<OBJECT,KEY>::m_curCount>>1); k = j) {
 		j = k + k;
-		if ((j < dgHeapBase<OBJECT,KEY>::m_curCount) &&
+		if ((j < dgHeapBase<OBJECT,KEY>::m_curCount) && 
 			(dgHeapBase<OBJECT,KEY>::m_pool[j - 1].m_key < dgHeapBase<OBJECT,KEY>::m_pool[j].m_key)) {
 				j ++;
 		}
@@ -300,7 +300,7 @@ void dgDownHeap<OBJECT,KEY>::Pop ()
 	KEY key (dgHeapBase<OBJECT,KEY>::m_pool[dgHeapBase<OBJECT,KEY>::m_curCount].m_key);
 	for (k = 1; k <= (dgHeapBase<OBJECT,KEY>::m_curCount>>1); k = j) {
 		j = k + k;
-		if ((j < dgHeapBase<OBJECT,KEY>::m_curCount) &&
+		if ((j < dgHeapBase<OBJECT,KEY>::m_curCount) && 
 			(dgHeapBase<OBJECT,KEY>::m_pool[j - 1].m_key < dgHeapBase<OBJECT,KEY>::m_pool[j].m_key)) {
 			j ++;
 		}
@@ -475,7 +475,7 @@ void dgUpHeap<OBJECT,KEY>::Remove (dgInt32 index)
 	KEY key (dgHeapBase<OBJECT,KEY>::m_pool[dgHeapBase<OBJECT,KEY>::m_curCount].m_key);
 	for (k = index + 1; k <= (dgHeapBase<OBJECT,KEY>::m_curCount>>1); k = j) {
 		j = k + k;
-		if ((j < dgHeapBase<OBJECT,KEY>::m_curCount) &&
+		if ((j < dgHeapBase<OBJECT,KEY>::m_curCount) && 
 			(dgHeapBase<OBJECT,KEY>::m_pool[j - 1].m_key > dgHeapBase<OBJECT,KEY>::m_pool[j].m_key)) {
 				j ++;
 		}
@@ -503,7 +503,7 @@ void dgUpHeap<OBJECT,KEY>::Pop ()
 	KEY key (dgHeapBase<OBJECT,KEY>::m_pool[dgHeapBase<OBJECT,KEY>::m_curCount].m_key);
 	for (k = 1; k <= (dgHeapBase<OBJECT,KEY>::m_curCount>>1); k = j) {
 		j = k + k;
-		if ((j < dgHeapBase<OBJECT,KEY>::m_curCount) &&
+		if ((j < dgHeapBase<OBJECT,KEY>::m_curCount) && 
 			(dgHeapBase<OBJECT,KEY>::m_pool[j - 1].m_key > dgHeapBase<OBJECT,KEY>::m_pool[j].m_key)) {
 				j ++;
 		}

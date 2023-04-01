@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -73,10 +73,10 @@ void dgCollisionMesh::dgCollisionConvexPolygon::Serialize(dgSerialize callback, 
 }
 
 dgFloat32 dgCollisionMesh::dgCollisionConvexPolygon::RayCast (
-	const dgVector& localP0,
-	const dgVector& localP1,
+	const dgVector& localP0, 
+	const dgVector& localP1, 
 	dgContactPoint& contactOut,
-	OnRayPrecastAction preFilter,
+	OnRayPrecastAction preFilter, 
 	const dgBody* const body,
 	void* userData) const
 {
@@ -87,19 +87,19 @@ dgFloat32 dgCollisionMesh::dgCollisionConvexPolygon::RayCast (
 dgFloat32 dgCollisionMesh::dgCollisionConvexPolygon::GetVolume () const
 {
 	_ASSERTE (0);
-	return dgFloat32 (0.0f);
+	return dgFloat32 (0.0f); 
 }
 
 dgFloat32 dgCollisionMesh::dgCollisionConvexPolygon::GetBoxMinRadius () const
 {
 	_ASSERTE (0);
-	return dgFloat32 (0.0f);
+	return dgFloat32 (0.0f);  
 }
 
 dgFloat32 dgCollisionMesh::dgCollisionConvexPolygon::GetBoxMaxRadius () const
 {
 	_ASSERTE (0);
-	return dgFloat32 (0.0f);
+	return dgFloat32 (0.0f);  
 }
 
 bool dgCollisionMesh::dgCollisionConvexPolygon::OOBBTest (const dgMatrix& matrix, const dgCollisionConvex* const shape, void* chache) const
@@ -120,7 +120,7 @@ void dgCollisionMesh::dgCollisionConvexPolygon::CalculateInertia (dgVector& iner
 	origin.m_z = dgFloat32 (0.0f);
 }
 
-
+	
 dgVector dgCollisionMesh::dgCollisionConvexPolygon::SupportVertex (const dgVector& dir) const
 {
 	dgInt32 i;
@@ -135,7 +135,7 @@ dgVector dgCollisionMesh::dgCollisionConvexPolygon::SupportVertex (const dgVecto
 	for (i = 1; i < m_count; i ++) {
 		val1 = m_localPoly[i] % dir;
 		if (val1 > val) {
-			val = val1;
+			val = val1; 
 			index = i;
 		}
 	}
@@ -144,7 +144,7 @@ dgVector dgCollisionMesh::dgCollisionConvexPolygon::SupportVertex (const dgVecto
 
 dgVector dgCollisionMesh::dgCollisionConvexPolygon::SupportVertexSimd (const dgVector& dir) const
 {
-#ifdef DG_BUILD_SIMD_CODE
+#ifdef DG_BUILD_SIMD_CODE	
 //	dgInt32 i;
 //	dgFloat32 fIndex;
 //	simd_type dot;
@@ -155,7 +155,7 @@ dgVector dgCollisionMesh::dgCollisionConvexPolygon::SupportVertexSimd (const dgV
 //	simd_type index;
 //	simd_type indexAcc;
 //	simd_type mask;
-
+	
 
 	_ASSERTE (dgAbsf (dir % dir - 1.0f) < dgFloat32 (1.0e-3f));
 
@@ -163,14 +163,14 @@ dgVector dgCollisionMesh::dgCollisionConvexPolygon::SupportVertexSimd (const dgV
 	simd_type dirY = simd_permut_v (*(simd_type*)&dir, *(simd_type*)&dir, PURMUT_MASK(1, 1, 1, 1));
 	simd_type dirZ = simd_permut_v (*(simd_type*)&dir, *(simd_type*)&dir, PURMUT_MASK(2, 2, 2, 2));
 
-	simd_type dot = simd_mul_add_v  (simd_mul_add_v (simd_mul_v (dirX, *(simd_type*)&m_localPolySimd[0]),
+	simd_type dot = simd_mul_add_v  (simd_mul_add_v (simd_mul_v (dirX, *(simd_type*)&m_localPolySimd[0]), 
 													             dirY, *(simd_type*)&m_localPolySimd[1]),
 													             dirZ, *(simd_type*)&m_localPolySimd[2]);
 	simd_type index = *(simd_type*)&m_index_0123;
-	simd_type indexAcc = index;
+	simd_type indexAcc = index; 
 	for (dgInt32 i = 3; i < m_paddedCount; i += 3) {
 		indexAcc = simd_add_v (indexAcc, *(simd_type*)&m_indexStep);
-		simd_type dot1 = simd_mul_add_v  (simd_mul_add_v (simd_mul_v (dirX, *(simd_type*)&m_localPolySimd[i + 0]),
+		simd_type dot1 = simd_mul_add_v  (simd_mul_add_v (simd_mul_v (dirX, *(simd_type*)&m_localPolySimd[i + 0]), 
 														              dirY, *(simd_type*)&m_localPolySimd[i + 1]),
 														              dirZ, *(simd_type*)&m_localPolySimd[i + 2]);
 		simd_type mask = simd_cmpgt_v(dot1, dot);
@@ -189,7 +189,7 @@ dgVector dgCollisionMesh::dgCollisionConvexPolygon::SupportVertexSimd (const dgV
 //	dgFloat32 fIndex;
 //	simd_store_s (simd_or_v (simd_and_v(index, mask), simd_andnot_v (simd_permut_v (index, index, PURMUT_MASK(0, 0, 0, 1)), mask)), &fIndex);
 //	dgInt32 i = dgFastInt (fIndex);
-	return m_localPoly[i];
+	return m_localPoly[i]; 
 
 #else
 	return dgVector (dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f));
@@ -200,7 +200,7 @@ dgVector dgCollisionMesh::dgCollisionConvexPolygon::SupportVertexSimd (const dgV
 void dgCollisionMesh::dgCollisionConvexPolygon::CalculateNormalSimd()
 {
 	//	CalculateNormal();
-#ifdef DG_BUILD_SIMD_CODE
+#ifdef DG_BUILD_SIMD_CODE	
 	if (m_normalIndex) {
 		m_normal = dgVector (&m_vertex[m_normalIndex * m_stride]);
 	} else {
@@ -210,9 +210,9 @@ void dgCollisionMesh::dgCollisionConvexPolygon::CalculateNormalSimd()
 		simd_type mag2;
 		simd_type normal;
 
-		e10 = simd_sub_v (*(simd_type*)&m_localPoly[1], *(simd_type*)&m_localPoly[0]);
-		e21 = simd_sub_v (*(simd_type*)&m_localPoly[2], *(simd_type*)&m_localPoly[1]);
-		normal = simd_mul_sub_v (simd_mul_v (simd_permut_v(e10, e10, PURMUT_MASK(3, 0, 2, 1)), simd_permut_v(e21, e21, PURMUT_MASK(3, 1, 0, 2))),
+		e10 = simd_sub_v (*(simd_type*)&m_localPoly[1], *(simd_type*)&m_localPoly[0]); 
+		e21 = simd_sub_v (*(simd_type*)&m_localPoly[2], *(simd_type*)&m_localPoly[1]); 
+		normal = simd_mul_sub_v (simd_mul_v (simd_permut_v(e10, e10, PURMUT_MASK(3, 0, 2, 1)), simd_permut_v(e21, e21, PURMUT_MASK(3, 1, 0, 2))), 
 			simd_permut_v(e10, e10, PURMUT_MASK(3, 1, 0, 2)), simd_permut_v(e21, e21, PURMUT_MASK(3, 0, 2, 1)));
 
 		_ASSERTE (((dgFloat32*)&normal)[3] == dgFloat32 (0.0f));
@@ -246,7 +246,7 @@ void dgCollisionMesh::dgCollisionConvexPolygon::CalculateNormal()
 
 
 dgInt32 dgCollisionMesh::dgCollisionConvexPolygon::QuickTestContinueSimd (
-	const dgCollisionConvex* hull,
+	const dgCollisionConvex* hull, 
 	const dgMatrix& matrix)
 {
 
@@ -265,7 +265,7 @@ dgInt32 dgCollisionMesh::dgCollisionConvexPolygon::QuickTestContinueSimd (
 
 	if (ret) {
 		dgInt32 i1;
-		dgInt32 i0;
+		dgInt32 i0; 
 		for (i1 = 3; i1 < m_count; i1 ++) {
 			m_localPoly[i1] = dgVector (&m_vertex[m_index[i1] * m_stride]);
 		}
@@ -277,9 +277,9 @@ dgInt32 dgCollisionMesh::dgCollisionConvexPolygon::QuickTestContinueSimd (
 
 		i1 = 0;
 		for (dgInt32 i = 0; i < i0; i += 4) {
-			m_localPolySimd[i1 + 0] = dgVector (m_localPoly[i + 0].m_x, m_localPoly[i + 1].m_x, m_localPoly[i + 2].m_x, m_localPoly[i + 3].m_x);
-			m_localPolySimd[i1 + 1] = dgVector (m_localPoly[i + 0].m_y, m_localPoly[i + 1].m_y, m_localPoly[i + 2].m_y, m_localPoly[i + 3].m_y);
-			m_localPolySimd[i1 + 2] = dgVector (m_localPoly[i + 0].m_z, m_localPoly[i + 1].m_z, m_localPoly[i + 2].m_z, m_localPoly[i + 3].m_z);
+			m_localPolySimd[i1 + 0] = dgVector (m_localPoly[i + 0].m_x, m_localPoly[i + 1].m_x, m_localPoly[i + 2].m_x, m_localPoly[i + 3].m_x); 
+			m_localPolySimd[i1 + 1] = dgVector (m_localPoly[i + 0].m_y, m_localPoly[i + 1].m_y, m_localPoly[i + 2].m_y, m_localPoly[i + 3].m_y); 
+			m_localPolySimd[i1 + 2] = dgVector (m_localPoly[i + 0].m_z, m_localPoly[i + 1].m_z, m_localPoly[i + 2].m_z, m_localPoly[i + 3].m_z); 
 			i1 += 3;
 		}
 		m_paddedCount = i1;
@@ -293,7 +293,7 @@ dgInt32 dgCollisionMesh::dgCollisionConvexPolygon::QuickTestContinueSimd (
 
 
 dgInt32 dgCollisionMesh::dgCollisionConvexPolygon::QuickTestContinue (
-	const dgCollisionConvex* hull,
+	const dgCollisionConvex* hull, 
 	const dgMatrix& matrix)
 {
 	dgInt32 ret;
@@ -322,13 +322,13 @@ dgInt32 dgCollisionMesh::dgCollisionConvexPolygon::QuickTestContinue (
 
 
 dgInt32 dgCollisionMesh::dgCollisionConvexPolygon::QuickTestSimd (
-	const dgCollisionConvex* hull,
+	const dgCollisionConvex* hull, 
 	const dgMatrix& matrix)
 {
-#ifdef DG_BUILD_SIMD_CODE
-	dgInt32 i;
-//	dgInt32 i0;
-//	dgInt32 i1;
+#ifdef DG_BUILD_SIMD_CODE	
+	dgInt32 i; 
+//	dgInt32 i0; 
+//	dgInt32 i1; 
 	dgFloat32 val0;
 	dgFloat32 val1;
 	simd_type normal;
@@ -344,8 +344,8 @@ dgInt32 dgCollisionMesh::dgCollisionConvexPolygon::QuickTestSimd (
 
 	//	rotatedNormal = matrix.RotateVector (normal__);
 	normal  = simd_mul_v (*(simd_type*)&m_normal, *(simd_type*)&m_negOne);
-	normal1 = simd_mul_add_v (simd_mul_add_v (simd_mul_v (*(simd_type*)&matrix[0], simd_permut_v(normal, normal, PURMUT_MASK(3, 0, 0, 0))),
-		*(simd_type*)&matrix[1], simd_permut_v(normal, normal, PURMUT_MASK(3, 1, 1, 1))),
+	normal1 = simd_mul_add_v (simd_mul_add_v (simd_mul_v (*(simd_type*)&matrix[0], simd_permut_v(normal, normal, PURMUT_MASK(3, 0, 0, 0))), 
+		*(simd_type*)&matrix[1], simd_permut_v(normal, normal, PURMUT_MASK(3, 1, 1, 1))), 
 		*(simd_type*)&matrix[2], simd_permut_v(normal, normal, PURMUT_MASK(3, 2, 2, 2)));
 	(*(simd_type*)&rotatedNormal) = normal1;
 	dgVector p0 (matrix.UntransformVector (hull->SupportVertexSimd(rotatedNormal)));
@@ -370,9 +370,9 @@ dgInt32 dgCollisionMesh::dgCollisionConvexPolygon::QuickTestSimd (
 
 	dgInt32 i1 = 0;
 	for (dgInt32 i = 0; i < i0; i += 4) {
-		m_localPolySimd[i1 + 0] = dgVector (m_localPoly[i + 0].m_x, m_localPoly[i + 1].m_x, m_localPoly[i + 2].m_x, m_localPoly[i + 3].m_x);
-		m_localPolySimd[i1 + 1] = dgVector (m_localPoly[i + 0].m_y, m_localPoly[i + 1].m_y, m_localPoly[i + 2].m_y, m_localPoly[i + 3].m_y);
-		m_localPolySimd[i1 + 2] = dgVector (m_localPoly[i + 0].m_z, m_localPoly[i + 1].m_z, m_localPoly[i + 2].m_z, m_localPoly[i + 3].m_z);
+		m_localPolySimd[i1 + 0] = dgVector (m_localPoly[i + 0].m_x, m_localPoly[i + 1].m_x, m_localPoly[i + 2].m_x, m_localPoly[i + 3].m_x); 
+		m_localPolySimd[i1 + 1] = dgVector (m_localPoly[i + 0].m_y, m_localPoly[i + 1].m_y, m_localPoly[i + 2].m_y, m_localPoly[i + 3].m_y); 
+		m_localPolySimd[i1 + 2] = dgVector (m_localPoly[i + 0].m_z, m_localPoly[i + 1].m_z, m_localPoly[i + 2].m_z, m_localPoly[i + 3].m_z); 
 		i1 += 3;
 	}
 
@@ -418,7 +418,7 @@ dgInt32 dgCollisionMesh::dgCollisionConvexPolygon::QuickTest (const dgCollisionC
 
 
 dgInt32 dgCollisionMesh::dgCollisionConvexPolygon::ClipContacts (
-	dgInt32 count,
+	dgInt32 count, 
 	dgContactPoint* const contactOut,
 	const dgMatrix& globalMatrix) const
 {
@@ -476,7 +476,7 @@ dgInt32 dgCollisionMesh::dgCollisionConvexPolygon::ClipContacts (
 		for (dgInt32 i = 0; i < count; i ++) {
 			dgFloat32 dist;
 			dist = contactOut[i].m_normal % normal;
-			contactOut[i].m_isEdgeContact = (dist < dgFloat32 (0.999f));
+			contactOut[i].m_isEdgeContact = (dist < dgFloat32 (0.999f));	
 			if (dist < dgFloat32 (0.1f)) {
 				contactOut[i] = contactOut[count - 1];
 				count --;
@@ -499,9 +499,9 @@ void dgCollisionMesh::dgCollisionConvexPolygon::BeamClippingSimd (const dgCollis
 
 	dgInt32 i1 = 0;
 	for (dgInt32 i = 0; i < i0; i += 4) {
-		m_localPolySimd[i1 + 0] = dgVector (m_localPoly[i + 0].m_x, m_localPoly[i + 1].m_x, m_localPoly[i + 2].m_x, m_localPoly[i + 3].m_x);
-		m_localPolySimd[i1 + 1] = dgVector (m_localPoly[i + 0].m_y, m_localPoly[i + 1].m_y, m_localPoly[i + 2].m_y, m_localPoly[i + 3].m_y);
-		m_localPolySimd[i1 + 2] = dgVector (m_localPoly[i + 0].m_z, m_localPoly[i + 1].m_z, m_localPoly[i + 2].m_z, m_localPoly[i + 3].m_z);
+		m_localPolySimd[i1 + 0] = dgVector (m_localPoly[i + 0].m_x, m_localPoly[i + 1].m_x, m_localPoly[i + 2].m_x, m_localPoly[i + 3].m_x); 
+		m_localPolySimd[i1 + 1] = dgVector (m_localPoly[i + 0].m_y, m_localPoly[i + 1].m_y, m_localPoly[i + 2].m_y, m_localPoly[i + 3].m_y); 
+		m_localPolySimd[i1 + 2] = dgVector (m_localPoly[i + 0].m_z, m_localPoly[i + 1].m_z, m_localPoly[i + 2].m_z, m_localPoly[i + 3].m_z); 
 		i1 += 3;
 	}
 
@@ -515,7 +515,7 @@ void dgCollisionMesh::dgCollisionConvexPolygon::BeamClipping (const dgCollisionC
 	dgVector points[sizeof (m_localPoly) / sizeof (m_localPoly[0]) + 8];
 	DG_CLIPPED_FACE_EDGE clippedFace [sizeof (m_localPoly) / sizeof (m_localPoly[0]) + 8];
 
-	dgVector origin (matrix.UnrotateVector (matrix.m_posit.Scale (dgFloat32 (-1.0f))));	
+	dgVector origin (matrix.UnrotateVector (matrix.m_posit.Scale (dgFloat32 (-1.0f))));	 
 	dgVector dir (m_localPoly[1] - m_localPoly[0]);
 
 	_ASSERTE ((dir % dir) > dgFloat32 (1.0e-8f));
@@ -534,7 +534,7 @@ void dgCollisionMesh::dgCollisionConvexPolygon::BeamClipping (const dgCollisionC
 	for (dgInt32 i = 0; i < m_count; i ++) {
 		dgInt32 j = i << 1;
 		points[i] = m_localPoly[i];
-
+		
 		clippedFace[j + 0].m_twin = &clippedFace[j + 1];
 		clippedFace[j + 0].m_next = &clippedFace[j + 2];
 		clippedFace[j + 0].m_incidentVertex = i;
@@ -570,7 +570,7 @@ void dgCollisionMesh::dgCollisionConvexPolygon::BeamClipping (const dgCollisionC
 				if (test1 <= dgFloat32 (0.0f)) {
 					const dgVector& p0 = points[ptr->m_incidentVertex];
 					const dgVector& p1 = points[ptr->m_next->m_incidentVertex];
-					dgVector dp (p1 - p0);
+					dgVector dp (p1 - p0); 
 					points[indexCount] = p0 - dp.Scale (test0  / (dp % plane));
 
 					DG_CLIPPED_FACE_EDGE* const newEdge = &clippedFace[edgeCount];
@@ -601,7 +601,7 @@ void dgCollisionMesh::dgCollisionConvexPolygon::BeamClipping (const dgCollisionC
 
 					const dgVector& p0 = points[ptr->m_incidentVertex];
 					const dgVector& p1 = points[ptr->m_next->m_incidentVertex];
-					dgVector dp (p1 - p0);
+					dgVector dp (p1 - p0); 
 					points[indexCount] = p0 - dp.Scale (test0  / (dp % plane));
 
 					DG_CLIPPED_FACE_EDGE* const newEdge = &clippedFace[edgeCount];
@@ -669,7 +669,7 @@ void dgCollisionMesh::dgCollisionConvexPolygon::BeamClipping (const dgCollisionC
 			ptr = ptr->m_next;
 		} while (ptr != first);
 
-	} else {
+	} else { 
 		do {
 			m_localPoly[count] = points[ptr->m_incidentVertex];
 			count ++;
@@ -683,8 +683,8 @@ void dgCollisionMesh::dgCollisionConvexPolygon::BeamClipping (const dgCollisionC
 
 dgVector dgCollisionMesh::dgCollisionConvexPolygon::ClosestDistanceToTriangle (
 	const dgVector& point,
-	const dgVector& p0,
-	const dgVector& p1,
+	const dgVector& p0, 
+	const dgVector& p1, 
 	const dgVector& p2) const
 {
 	dgFloat32 t;
@@ -763,7 +763,7 @@ dgVector dgCollisionMesh::dgCollisionConvexPolygon::ClosestDistanceToTriangle (
 }
 
 bool dgCollisionMesh::dgCollisionConvexPolygon::PointToPolygonDistance (
-	const dgVector& p,
+	const dgVector& p, 
 	dgFloat32 radius,
 	dgVector& out)
 {
@@ -839,8 +839,8 @@ bool dgCollisionMesh::dgCollisionConvexPolygon::DistanceToOrigen (const dgMatrix
 }
 
 dgFloat32 dgCollisionMesh::dgCollisionConvexPolygon::MovingPointToPolygonContact (
-	const dgVector& p,
-	const dgVector& veloc,
+	const dgVector& p, 
+	const dgVector& veloc, 
 	dgFloat32 radius,
 	dgContactPoint& contact)
 {
@@ -901,7 +901,7 @@ dgFloat32 dgCollisionMesh::dgCollisionConvexPolygon::MovingPointToPolygonContact
 			dgFloat32 timeToImpact;
 			dgVector supportPoint (p - m_normal.Scale (radius));
 
-			timeToImpact = -(m_normal % (supportPoint - m_localPoly[0])) / (m_normal % veloc);
+			timeToImpact = -(m_normal % (supportPoint - m_localPoly[0])) / (m_normal % veloc); 
 			dgVector point (supportPoint + veloc.Scale (timeToImpact));
 			dgVector closestPoint (point);
 			minDist = dgFloat32 (1.0e20f);
@@ -956,8 +956,8 @@ dgFloat32 dgCollisionMesh::dgCollisionConvexPolygon::MovingPointToPolygonContact
 
 
 dgInt32 dgCollisionMesh::dgCollisionConvexPolygon::CalculatePlaneIntersection (
-	const dgVector& normalIn,
-	const dgVector& origin,
+	const dgVector& normalIn, 
+	const dgVector& origin, 
 	dgVector contactsOut[]) const
 {
 	dgInt32 i;
@@ -972,7 +972,7 @@ dgInt32 dgCollisionMesh::dgCollisionConvexPolygon::CalculatePlaneIntersection (
 
 	count = 0;
 	maxDist = dgFloat32 (1.0f);
-
+	
 	projectFactor = m_normal % normal;
 	if (projectFactor < dgFloat32 (0.0f)) {
 		projectFactor *= dgFloat32 (-1.0f);
@@ -998,7 +998,7 @@ dgInt32 dgCollisionMesh::dgCollisionConvexPolygon::CalculatePlaneIntersection (
 	} else if (projectFactor > dgFloat32 (0.1736f)) {
 		maxDist = dgFloat32 (0.0f);
 		dgPlane plane (normal, - (normal % origin));
-
+		
 		dgVector p0 (m_localPoly[m_count - 1]);
 		side0 = plane.Evalue (p0);
 		for (i = 0; i < m_count; i ++) {
@@ -1022,7 +1022,7 @@ dgInt32 dgCollisionMesh::dgCollisionConvexPolygon::CalculatePlaneIntersection (
 					t = plane % dp;
 					_ASSERTE (dgAbsf (t) >= dgFloat32 (0.0f));
 					if (dgAbsf (t) < dgFloat32 (1.0e-8f)) {
-						t = GetSign(t) * dgFloat32 (1.0e-8f);
+						t = GetSign(t) * dgFloat32 (1.0e-8f);	
 					}
 					contactsOut[count] = p0 - dp.Scale (side0 / t);
 					count ++;
@@ -1033,13 +1033,13 @@ dgInt32 dgCollisionMesh::dgCollisionConvexPolygon::CalculatePlaneIntersection (
 							count --;
 						}
 					}
-				}
+				} 
 			} else if (side1 > dgFloat32 (0.0f)) {
 				dgVector dp (p1 - p0);
 				t = plane % dp;
 				_ASSERTE (dgAbsf (t) >= dgFloat32 (0.0f));
 				if (dgAbsf (t) < dgFloat32 (1.0e-8f)) {
-					t = GetSign(t) * dgFloat32 (1.0e-8f);
+					t = GetSign(t) * dgFloat32 (1.0e-8f);	
 				}
 				contactsOut[count] = p0 - dp.Scale (side0 / t);
 				count ++;
@@ -1080,7 +1080,7 @@ dgInt32 dgCollisionMesh::dgCollisionConvexPolygon::CalculatePlaneIntersection (
 					minProjection = proj;
 					minPoint = contactsOut[i];
 				}
-			}
+			}	
 
 			contactsOut[0] = maxPoint;
 			contactsOut[1] = minPoint;
@@ -1111,7 +1111,7 @@ dgInt32 dgCollisionMesh::dgCollisionConvexPolygon::CalculatePlaneIntersection (
 				dgVector e1 (contactsOut[i] - contactsOut[0]);
 				n += e0 * e1;
 				e0 = e1;
-			}
+			} 
 			n = n.Scale (dgFloat32 (1.0f) / dgSqrt(n % n));
 			dgFloat32 val = n % normal;
 			_ASSERTE (val > dgFloat32 (0.9f));
@@ -1123,8 +1123,8 @@ dgInt32 dgCollisionMesh::dgCollisionConvexPolygon::CalculatePlaneIntersection (
 }
 
 dgInt32 dgCollisionMesh::dgCollisionConvexPolygon::CalculatePlaneIntersectionSimd (
-	const dgVector& normal,
-	const dgVector& origin,
+	const dgVector& normal, 
+	const dgVector& origin, 
 	dgVector contactsOut[]) const
 {
 #ifdef DG_BUILD_SIMD_CODE
@@ -1167,7 +1167,7 @@ dgInt32 dgCollisionMesh::dgCollisionConvexPolygon::CalculatePlaneIntersectionSim
 
 	} else if (projectFactor > dgFloat32 (0.1736f)) {
 		dgPlane plane (normal, - (normal % origin));
-
+		
 		dgVector p0 (m_localPoly[m_count - 1]);
 		side0 = plane.Evalue (p0);
 		for (i = 0; i < m_count; i ++) {
@@ -1190,7 +1190,7 @@ dgInt32 dgCollisionMesh::dgCollisionConvexPolygon::CalculatePlaneIntersectionSim
 					t = plane % dp;
 					_ASSERTE (dgAbsf (t) >= dgFloat32 (0.0f));
 					if (dgAbsf (t) < dgFloat32 (1.0e-8f)) {
-						t = GetSign(t) * dgFloat32 (1.0e-8f);
+						t = GetSign(t) * dgFloat32 (1.0e-8f);	
 					}
 					contactsOut[count] = p0 - dp.Scale (side0 / t);
 					count ++;
@@ -1201,13 +1201,13 @@ dgInt32 dgCollisionMesh::dgCollisionConvexPolygon::CalculatePlaneIntersectionSim
 							count --;
 						}
 					}
-				}
+				} 
 			} else if (side1 > dgFloat32 (0.0f)) {
 				dgVector dp (p1 - p0);
 				t = plane % dp;
 				_ASSERTE (dgAbsf (t) >= dgFloat32 (0.0f));
 				if (dgAbsf (t) < dgFloat32 (1.0e-8f)) {
-					t = GetSign(t) * dgFloat32 (1.0e-8f);
+					t = GetSign(t) * dgFloat32 (1.0e-8f);	
 				}
 				contactsOut[count] = p0 - dp.Scale (side0 / t);
 				count ++;
@@ -1248,7 +1248,7 @@ dgInt32 dgCollisionMesh::dgCollisionConvexPolygon::CalculatePlaneIntersectionSim
 				dgVector e1 (contactsOut[i] - contactsOut[0]);
 				n += e0 * e1;
 				e0 = e1;
-			}
+			} 
 			n = n.Scale (dgFloat32 (1.0f) / dgSqrt(n % n));
 			dgFloat32 test = n % normal;
 			_ASSERTE (test > dgFloat32 (0.9f));
@@ -1274,7 +1274,7 @@ dgCollisionMesh::dgCollisionMesh(dgMemoryAllocator* const allocator, dgCollision
 	m_allocator = allocator;
 	m_rtti |= dgCollisionMesh_RTTI;
 	for (dgInt32 i = 0; i < DG_MAXIMUN_THREADS; i ++) {
-		m_polygon[i] = new (allocator) dgCollisionConvexPolygon (allocator);
+		m_polygon[i] = new (allocator) dgCollisionConvexPolygon (allocator);			
 	}
 
 	m_debugCallback = NULL;
@@ -1290,7 +1290,7 @@ dgCollisionMesh::dgCollisionMesh (dgWorld* const world, dgDeserialize deserializ
 	m_rtti |= dgCollisionMesh_RTTI;
 
 	for (dgInt32 i = 0; i < DG_MAXIMUN_THREADS; i ++) {
-		m_polygon[i] = new (world->GetAllocator()) dgCollisionConvexPolygon (world->GetAllocator());
+		m_polygon[i] = new (world->GetAllocator()) dgCollisionConvexPolygon (world->GetAllocator());			
 	}
 
 	m_debugCallback = NULL;
@@ -1313,8 +1313,8 @@ void dgCollisionMesh::SetCollisionBBox (const dgVector& p0, const dgVector& p1)
 	_ASSERTE (p0.m_y <= p1.m_y);
 	_ASSERTE (p0.m_z <= p1.m_z);
 
-	m_boxSize = (p1 - p0).Scale (dgFloat32 (0.5f));
-	m_boxOrigin = (p1 + p0).Scale (dgFloat32 (0.5f));
+	m_boxSize = (p1 - p0).Scale (dgFloat32 (0.5f)); 
+	m_boxOrigin = (p1 + p0).Scale (dgFloat32 (0.5f)); 
 }
 
 dgInt32 dgCollisionMesh::CalculateSignature () const
@@ -1353,8 +1353,8 @@ void dgCollisionMesh::SetCollisionCallback (dgCollisionMeshCollisionCallback deb
 #ifdef DG_DEBUG_AABB
 dgVector dgCollisionMesh::BoxSupportMapping  (const dgVector& dir) const
 {
-	return dgVector (dir.m_x < dgFloat32 (0.0f) ? m_p0.m_x : m_p1.m_x,
-					 dir.m_y < dgFloat32 (0.0f) ? m_p0.m_y : m_p1.m_y,
+	return dgVector (dir.m_x < dgFloat32 (0.0f) ? m_p0.m_x : m_p1.m_x, 
+					 dir.m_y < dgFloat32 (0.0f) ? m_p0.m_y : m_p1.m_y, 
 					 dir.m_z < dgFloat32 (0.0f) ? m_p0.m_z : m_p1.m_z, dgFloat32 (0.0f));
 }
 #endif
@@ -1362,12 +1362,12 @@ dgVector dgCollisionMesh::BoxSupportMapping  (const dgVector& dir) const
 
 void dgCollisionMesh::CalcAABB(
 	const dgMatrix &matrix,
-	dgVector &p0,
+	dgVector &p0, 
 	dgVector &p1) const
 {
 	dgVector origin (matrix.TransformVector(m_boxOrigin));
-	dgVector size (m_boxSize.m_x * dgAbsf(matrix[0][0]) + m_boxSize.m_y * dgAbsf(matrix[1][0]) + m_boxSize.m_z * dgAbsf(matrix[2][0]) + DG_MAX_COLLISION_PADDING,
-				   m_boxSize.m_x * dgAbsf(matrix[0][1]) + m_boxSize.m_y * dgAbsf(matrix[1][1]) + m_boxSize.m_z * dgAbsf(matrix[2][1]) + DG_MAX_COLLISION_PADDING,
+	dgVector size (m_boxSize.m_x * dgAbsf(matrix[0][0]) + m_boxSize.m_y * dgAbsf(matrix[1][0]) + m_boxSize.m_z * dgAbsf(matrix[2][0]) + DG_MAX_COLLISION_PADDING,  
+				   m_boxSize.m_x * dgAbsf(matrix[0][1]) + m_boxSize.m_y * dgAbsf(matrix[1][1]) + m_boxSize.m_z * dgAbsf(matrix[2][1]) + DG_MAX_COLLISION_PADDING,  
 				   m_boxSize.m_x * dgAbsf(matrix[0][2]) + m_boxSize.m_y * dgAbsf(matrix[1][2]) + m_boxSize.m_z * dgAbsf(matrix[2][2]) + DG_MAX_COLLISION_PADDING,
 				   dgFloat32 (0.0f));
 
@@ -1386,8 +1386,8 @@ void dgCollisionMesh::CalcAABB(
 
 	dgVector err0 (p0 - q0);
 	dgVector err1 (p1 - q1);
-	dgFloat32 err;
-	err = GetMax (size.m_x, size.m_y, size.m_z) * 0.5f;
+	dgFloat32 err; 
+	err = GetMax (size.m_x, size.m_y, size.m_z) * 0.5f; 
 	_ASSERTE ((err0 % err0) < err);
 	_ASSERTE ((err1 % err1) < err);
 #endif
@@ -1402,11 +1402,11 @@ void dgCollisionMesh::CalcAABBSimd(const dgMatrix &matrix,	dgVector &p0, dgVecto
 
 
 dgInt32 dgCollisionMesh::CalculatePlaneIntersection (
-	const dgFloat32* vertex,
-	const dgInt32* index,
-	dgInt32 indexCount,
-	dgInt32 stride,
-	const dgPlane& localPlane,
+	const dgFloat32* vertex, 
+	const dgInt32* index, 
+	dgInt32 indexCount, 
+	dgInt32 stride, 
+	const dgPlane& localPlane, 
 	dgVector contactsOut[]) const
 {
 	dgInt32 i;
@@ -1431,19 +1431,19 @@ dgInt32 dgCollisionMesh::CalculatePlaneIntersection (
 				t = localPlane % dp;
 				_ASSERTE (dgAbsf (t) >= dgFloat32 (0.0f));
 				if (dgAbsf (t) < dgFloat32 (1.0e-8f)) {
-					t = GetSign(t) * dgFloat32 (1.0e-8f);
+					t = GetSign(t) * dgFloat32 (1.0e-8f);	
 				}
 _ASSERTE (0);
 				contactsOut[count] = p0 - dp.Scale (side0 / t);
 				count ++;
-
-			}
+			
+			} 
 		} else if (side1 <= dgFloat32 (0.0f)) {
 			dgVector dp (p1 - p0);
 			t = localPlane % dp;
 			_ASSERTE (dgAbsf (t) >= dgFloat32 (0.0f));
 			if (dgAbsf (t) < dgFloat32 (1.0e-8f)) {
-				t = GetSign(t) * dgFloat32 (1.0e-8f);
+				t = GetSign(t) * dgFloat32 (1.0e-8f);	
 			}
 _ASSERTE (0);
 			contactsOut[count] = p0 - dp.Scale (side0 / t);
@@ -1474,17 +1474,17 @@ void dgCollisionMesh::DebugCollision (const dgMatrix& matrixPtr, OnDebugCollisio
 dgFloat32 dgCollisionMesh::GetVolume () const
 {
 //	_ASSERTE (0);
-	return dgFloat32 (0.0f);
+	return dgFloat32 (0.0f); 
 }
 
 dgFloat32 dgCollisionMesh::GetBoxMinRadius () const
 {
-	return dgFloat32 (0.0f);
+	return dgFloat32 (0.0f);  
 }
 
 dgFloat32 dgCollisionMesh::GetBoxMaxRadius () const
 {
-	return dgFloat32 (0.0f);
+	return dgFloat32 (0.0f);  
 }
 
 
@@ -1499,7 +1499,7 @@ void dgCollisionMesh::CalculateInertia (dgVector& inertia, dgVector& origin) con
 	origin.m_y = dgFloat32 (0.0f);
 	origin.m_z = dgFloat32 (0.0f);
 }
-
+	
 
 void dgCollisionMesh::GetCollisionInfo(dgCollisionInfo* info) const
 {

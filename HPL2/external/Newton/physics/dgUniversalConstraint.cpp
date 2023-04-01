@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -31,7 +31,7 @@
 //////////////////////////////////////////////////////////////////////
 
 dgUniversalConstraint::dgUniversalConstraint ()
-	:dgBilateralConstraint()
+	:dgBilateralConstraint() 
 {
 	_ASSERTE ((((dgUnsigned64) &m_localMatrix0) & 15) == 0);
 	m_maxDOF = 6;
@@ -120,13 +120,13 @@ dgFloat32 dgUniversalConstraint::GetJointOmega1 () const
 	const dgVector& omega0 = m_body0->GetOmega();
 	const dgVector& omega1 = m_body1->GetOmega();
 
-//	dgMatrix matrix (dgGetIdentityMatrix());
+//	dgMatrix matrix (dgGetIdentityMatrix()); 
 //	if (m_body1) {
-//		matrix = m_body1->GetMatrix();
+//		matrix = m_body1->GetMatrix(); 
 //		omega1 = m_body1->GetOmega();
 //	}
 //	dgVector dir (matrix.RotateVector (m_localMatrix1[1]));
-
+	
 	return (omega0 - omega1) % dir;
 }
 
@@ -143,7 +143,7 @@ dgFloat32 dgUniversalConstraint::CalculateStopAlpha0 (dgFloat32 angle, const dgJ
 		if (omega < dgFloat32 (0.0f)) {
 			omega = dgFloat32 (0.0f);
 		}
-		penetrationErr = angle - m_angle0;
+		penetrationErr = angle - m_angle0; 
 		alpha = 100.0f * penetrationErr - omega * 1.01f / param->m_timestep;
 
 	} else if (m_angle0 < angle) {
@@ -152,9 +152,9 @@ dgFloat32 dgUniversalConstraint::CalculateStopAlpha0 (dgFloat32 angle, const dgJ
 			omega = dgFloat32 (0.0f);
 		}
 
-		penetrationErr = angle - m_angle0;
+		penetrationErr = angle - m_angle0; 
 		alpha = 100.0f * penetrationErr - omega * 1.01f / param->m_timestep;
-	}
+	} 
 	return alpha;
 
 }
@@ -171,7 +171,7 @@ dgFloat32 dgUniversalConstraint::CalculateStopAlpha1 (dgFloat32 angle, const dgJ
 		if (omega > dgFloat32 (0.0f)) {
 			omega = dgFloat32 (0.0f);
 		}
-		penetrationErr = m_angle1 - angle;
+		penetrationErr = m_angle1 - angle; 
 //		alpha = (penetrationErr + omega * 1.01f) / param->m_timestep;
 		alpha = penetrationErr * 100.0f - omega * 1.01f / param->m_timestep;
 	} else if (m_angle1 < angle) {
@@ -180,10 +180,10 @@ dgFloat32 dgUniversalConstraint::CalculateStopAlpha1 (dgFloat32 angle, const dgJ
 			omega = dgFloat32 (0.0f);
 		}
 
-		penetrationErr = m_angle1 - angle;
+		penetrationErr = m_angle1 - angle; 
 //		alpha = (penetrationErr + omega * 1.01f) / param->m_timestep;
 		alpha = penetrationErr * 100.0f - omega * 1.01f / param->m_timestep;
-	}
+	} 
 	return alpha;
 }
 
@@ -195,8 +195,8 @@ dgVector dgUniversalConstraint::GetJointForce () const
 
 	CalculateGlobalMatrixAndAngle (matrix0, matrix1);
 
-	return dgVector (matrix0.m_up.Scale (m_jointForce[0]) +
-		             matrix0.m_right.Scale (m_jointForce[1]) +
+	return dgVector (matrix0.m_up.Scale (m_jointForce[0]) + 
+		             matrix0.m_right.Scale (m_jointForce[1]) + 
 					 matrix0.m_up.Scale (m_jointForce[2]) +
 					 matrix0.m_right.Scale (m_jointForce[3]));
 }
@@ -229,10 +229,10 @@ dgUnsigned32 dgUniversalConstraint::JacobianDerivative (dgContraintDescritor& pa
 	InitPointParam (pointDataP, m_stiffness, p0, p1);
 	InitPointParam (pointDataQ, m_stiffness, q0, q1);
 
-	CalculatePointDerivative (0, params, dir0, pointDataP, &m_jointForce[0]);
-	CalculatePointDerivative (1, params, dir1, pointDataP, &m_jointForce[1]);
-	CalculatePointDerivative (2, params, dir2, pointDataP, &m_jointForce[2]);
-	CalculatePointDerivative (3, params, dir0, pointDataQ, &m_jointForce[3]);
+	CalculatePointDerivative (0, params, dir0, pointDataP, &m_jointForce[0]); 
+	CalculatePointDerivative (1, params, dir1, pointDataP, &m_jointForce[1]); 
+	CalculatePointDerivative (2, params, dir2, pointDataP, &m_jointForce[2]); 
+	CalculatePointDerivative (3, params, dir0, pointDataQ, &m_jointForce[3]); 
 	ret = 4;
 
 
@@ -282,7 +282,7 @@ dgUnsigned32 dgUniversalConstraint::JacobianDerivative (dgContraintDescritor& pa
 				params.m_forceBounds[ret].m_normalIndex = DG_BILATERAL_FRICTION_CONSTRAINT;
 			}
 
-//			CalculatePointDerivative (ret, params, dir0, pointDataP, &m_jointForce[ret]);
+//			CalculatePointDerivative (ret, params, dir0, pointDataP, &m_jointForce[ret]); 
 			CalculateAngularDerivative (ret, params, dir0, m_stiffness, dgFloat32 (0.0f), &m_jointForce[ret]);
 			//params.m_jointAccel[ret] = axisParam[0].m_accel;
 			SetMotorAcceleration (ret, axisParam[0].m_accel, params);

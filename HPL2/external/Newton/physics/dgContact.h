@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -28,9 +28,9 @@
 
 class dgBody;
 class dgWorld;
-class dgContact;
+class dgContact; 
 class dgCollision;
-class dgContactPoint;
+class dgContactPoint; 
 class dgContactMaterial;
 class dgPolygonMeshDesc;
 
@@ -53,8 +53,8 @@ class dgActiveContacts: public dgList<dgContact*>
 
 class dgCollidingPairCollector
 {
-	public:
-	struct dgPair
+	public: 
+	struct dgPair 
 	{
 		dgBody* m_body0;
 		dgBody* m_body1;
@@ -70,7 +70,7 @@ class dgCollidingPairCollector
 		dgInt32 m_count;
 		dgPair m_chacheBuffer[DG_CACHE_PAIR_BUFFER];
 	};
-	dgThreadPairCache* m_chacheBuffers[DG_MAXIMUN_THREADS];
+	dgThreadPairCache* m_chacheBuffers[DG_MAXIMUN_THREADS];	
 
 
 	dgCollidingPairCollector ();
@@ -80,7 +80,7 @@ class dgCollidingPairCollector
 	void SetCaches (dgThreadPairCache* const chaches);
 	void FlushChache (dgThreadPairCache* const chache);
 	void AddPair (dgBody* const body0, dgBody* const body1, dgInt32 threadIndex);
-
+	
 
 	dgPair* m_pairs;
 	dgInt32 m_count;
@@ -91,7 +91,7 @@ class dgCollidingPairCollector
 
 
 DG_MSC_VECTOR_ALIGMENT
-class dgContactPoint
+class dgContactPoint 
 {
 	public:
 	dgVector m_point;
@@ -109,7 +109,7 @@ class dgContactPoint
 
 DG_MSC_VECTOR_ALIGMENT
 class dgCollisionParamProxi
-{
+{	
 	public:
 	dgBody* m_floatingBody;
 	dgBody* m_referenceBody;
@@ -118,14 +118,14 @@ class dgCollisionParamProxi
 	dgMatrix m_floatingMatrix;
 	dgMatrix m_referenceMatrix;
 	dgFloat32 m_timestep;
-	dgFloat32 m_penetrationPadding;
+	dgFloat32 m_penetrationPadding; 
 	dgInt32 m_continueCollision;
 	dgInt32 m_unconditionalCast;
 	dgInt32 m_threadIndex;
 	dgInt32 m_maxContacts;
 	dgContactPoint* m_contacts;
 
-	// used but Mink solver
+	// used but Mink solver	
 	const dgMatrix* m_localMatrixInv;
 	const dgPolygonMeshDesc* m_polyMeshData;
 
@@ -145,7 +145,7 @@ class dgCollisionParamProxi
 
 
 
-DG_MSC_VECTOR_ALIGMENT
+DG_MSC_VECTOR_ALIGMENT 
 class dgContactMaterial: public dgContactPoint
 {
 	public:
@@ -161,10 +161,10 @@ class dgContactMaterial: public dgContactPoint
 	};
 
 	dgContactMaterial();
-	void* GetUserData () const;
-	void SetUserData (void* const userData);
-	void SetCollisionCallback (OnAABBOverlap abbOvelap, OnContactCallback callback);
-	void SetCompoundCollisionCallback (OnAABBOverlap abbOvelap);
+	void* GetUserData () const; 
+	void SetUserData (void* const userData); 
+	void SetCollisionCallback (OnAABBOverlap abbOvelap, OnContactCallback callback); 
+	void SetCompoundCollisionCallback (OnAABBOverlap abbOvelap); 
 
 	dgVector m_dir0;
 	dgVector m_dir1;
@@ -204,34 +204,34 @@ class dgContactMaterial: public dgContactPoint
 	friend class dgSolverWorlkerThreads;
 	friend class dgCollidingPairCollector;
 	friend class dgBroadPhaseMaterialCallbackWorkerThread;
-
+	
 }DG_GCC_VECTOR_ALIGMENT;
 
 
 
-DG_MSC_VECTOR_ALIGMENT
-class dgContact:
-	public dgConstraint,
+DG_MSC_VECTOR_ALIGMENT 
+class dgContact: 
+	public dgConstraint, 
 	public dgList<dgContactMaterial>
 {
-
+	
 	dgContact(dgWorld* world);
 	virtual ~dgContact();
 
 	DG_CLASS_ALLOCATOR(allocator)
 
 	virtual void GetInfo (dgConstraintInfo* const info) const;
-	virtual dgUnsigned32 JacobianDerivative (dgContraintDescritor& params);
-	virtual void JointAccelerations(const dgJointAccelerationDecriptor& params);
-	virtual void JointAccelerationsSimd(const dgJointAccelerationDecriptor& params);
-	virtual void JointVelocityCorrection(const dgJointAccelerationDecriptor& params);
-
+	virtual dgUnsigned32 JacobianDerivative (dgContraintDescritor& params); 
+	virtual void JointAccelerations(const dgJointAccelerationDecriptor& params); 
+	virtual void JointAccelerationsSimd(const dgJointAccelerationDecriptor& params); 
+	virtual void JointVelocityCorrection(const dgJointAccelerationDecriptor& params); 
+	
 	virtual void SetDestructorCallback (OnConstraintDestroy destructor);
 
-	void JacobianContactDerivative (dgContraintDescritor& params, const dgContactMaterial& contact, dgInt32 normalIndex, dgInt32& frictionIndex);
+	void JacobianContactDerivative (dgContraintDescritor& params, const dgContactMaterial& contact, dgInt32 normalIndex, dgInt32& frictionIndex); 
 	void CalculatePointDerivative (dgInt32 index, dgContraintDescritor& desc, const dgVector& dir, const dgPointParam& param) const;
 
-
+	
 	dgVector m_prevPosit0;
 	dgVector m_prevPosit1;
 	dgQuaternion m_prevRotation0;
@@ -250,7 +250,7 @@ class dgContact:
 	friend class dgCollidingPairCollector;
 }DG_GCC_VECTOR_ALIGMENT;
 
-inline void dgContactMaterial::SetCollisionCallback (OnAABBOverlap aabbOverlap, OnContactCallback contact)
+inline void dgContactMaterial::SetCollisionCallback (OnAABBOverlap aabbOverlap, OnContactCallback contact) 
 {
 	m_aabbOverlap = aabbOverlap;
 	m_contactPoint = contact;
@@ -277,5 +277,5 @@ inline void dgContact::SetDestructorCallback (OnConstraintDestroy destructor)
 {
 }
 
-#endif
+#endif 
 

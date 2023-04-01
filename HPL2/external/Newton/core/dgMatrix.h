@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -46,7 +46,7 @@ class dgMatrix
 	dgMatrix (const dgVector &front);
 
 
-
+	
 
 	dgVector& operator[] (dgInt32 i);
 	const dgVector& operator[] (dgInt32 i) const;
@@ -61,14 +61,14 @@ class dgMatrix
 	dgVector UntransformVector (const dgVector &v) const;
 	dgPlane TransformPlane (const dgPlane &localPlane) const;
 	dgPlane UntransformPlane (const dgPlane &globalPlane) const;
-	void TransformBBox (const dgVector& p0local, const dgVector& p1local, dgVector& p0, dgVector& p1) const;
+	void TransformBBox (const dgVector& p0local, const dgVector& p1local, dgVector& p0, dgVector& p1) const; 
 
 	dgVector CalcPitchYawRoll () const;
 	void TransformTriplex (void* const dst, dgInt32 dstStrideInBytes,
 						   const void* const src, dgInt32 srcStrideInBytes, dgInt32 count) const;
 
 	dgMatrix operator* (const dgMatrix &B) const;
-
+	
 
 	// this function can not be a member of dgMatrix, because
 	// dgMatrix a define to handle only orthogonal matrices
@@ -102,7 +102,7 @@ DG_INLINE dgMatrix::dgMatrix ()
 }
 
 DG_INLINE dgMatrix::dgMatrix (
-	const dgVector &front,
+	const dgVector &front, 
 	const dgVector &up,
 	const dgVector &right,
 	const dgVector &posit)
@@ -112,7 +112,7 @@ DG_INLINE dgMatrix::dgMatrix (
 
 DG_INLINE dgMatrix::dgMatrix (const dgVector& front)
 {
-	m_front = front;
+	m_front = front; 
 	if (dgAbsf (front.m_z) > dgFloat32 (0.577f)) {
 		m_right = front * dgVector (-front.m_y, front.m_z, dgFloat32(0.0f), dgFloat32(0.0f));
 	} else {
@@ -126,10 +126,10 @@ DG_INLINE dgMatrix::dgMatrix (const dgVector& front)
 	m_right.m_w = dgFloat32(0.0f);
 	m_posit = dgVector (dgFloat32(0.0f), dgFloat32(0.0f), dgFloat32(0.0f), dgFloat32(1.0f));
 
-	_ASSERTE ((dgAbsf (m_front % m_front) - dgFloat32(1.0f)) < dgFloat32(1.0e-5f));
-	_ASSERTE ((dgAbsf (m_up % m_up) - dgFloat32(1.0f)) < dgFloat32(1.0e-5f));
-	_ASSERTE ((dgAbsf (m_right % m_right) - dgFloat32(1.0f)) < dgFloat32(1.0e-5f));
-	_ASSERTE ((dgAbsf (m_right % (m_front * m_up)) - dgFloat32(1.0f)) < dgFloat32(1.0e-5f));
+	_ASSERTE ((dgAbsf (m_front % m_front) - dgFloat32(1.0f)) < dgFloat32(1.0e-5f)); 
+	_ASSERTE ((dgAbsf (m_up % m_up) - dgFloat32(1.0f)) < dgFloat32(1.0e-5f)); 
+	_ASSERTE ((dgAbsf (m_right % m_right) - dgFloat32(1.0f)) < dgFloat32(1.0e-5f)); 
+	_ASSERTE ((dgAbsf (m_right % (m_front * m_up)) - dgFloat32(1.0f)) < dgFloat32(1.0e-5f)); 
 }
 
 
@@ -162,7 +162,7 @@ DG_INLINE dgMatrix dgMatrix::Transpose4X4 () const
 					 dgVector (m_front.m_y, m_up.m_y, m_right.m_y, m_posit.m_y),
 					 dgVector (m_front.m_z, m_up.m_z, m_right.m_z, m_posit.m_z),
 					 dgVector (m_front.m_w, m_up.m_w, m_right.m_w, m_posit.m_w));
-
+							
 }
 
 DG_INLINE dgVector dgMatrix::RotateVector (const dgVector &v) const
@@ -195,7 +195,7 @@ DG_INLINE dgVector dgMatrix::UntransformVector (const dgVector &v) const
 
 DG_INLINE dgPlane dgMatrix::TransformPlane (const dgPlane &localPlane) const
 {
-	return dgPlane (RotateVector (localPlane), localPlane.m_w - (localPlane % UnrotateVector (m_posit)));
+	return dgPlane (RotateVector (localPlane), localPlane.m_w - (localPlane % UnrotateVector (m_posit)));  
 }
 
 DG_INLINE dgPlane dgMatrix::UntransformPlane (const dgPlane &globalPlane) const
@@ -231,7 +231,7 @@ DG_INLINE dgMatrix dgMatrix::operator* (const dgMatrix &B) const
 							   A[3][0] * B[0][2] + A[3][1] * B[1][2] + A[3][2] * B[2][2] + A[3][3] * B[3][2],
 							   A[3][0] * B[0][3] + A[3][1] * B[1][3] + A[3][2] * B[2][3] + A[3][3] * B[3][3]));
 
-
+	
 }
 */
 
@@ -242,10 +242,10 @@ DG_INLINE dgMatrix dgPitchMatrix(dgFloat32 ang)
 	dgFloat32 sinAng;
 	sinAng = dgSin (ang);
 	cosAng = dgCos (ang);
-	return dgMatrix (dgVector (dgFloat32(1.0f),  dgFloat32(0.0f), dgFloat32(0.0f), dgFloat32(0.0f)),
+	return dgMatrix (dgVector (dgFloat32(1.0f),  dgFloat32(0.0f), dgFloat32(0.0f), dgFloat32(0.0f)), 
 					 dgVector (dgFloat32(0.0f),  cosAng,          sinAng,          dgFloat32(0.0f)),
-					 dgVector (dgFloat32(0.0f), -sinAng,          cosAng,          dgFloat32(0.0f)),
-					 dgVector (dgFloat32(0.0f),  dgFloat32(0.0f), dgFloat32(0.0f), dgFloat32(1.0f)));
+					 dgVector (dgFloat32(0.0f), -sinAng,          cosAng,          dgFloat32(0.0f)), 
+					 dgVector (dgFloat32(0.0f),  dgFloat32(0.0f), dgFloat32(0.0f), dgFloat32(1.0f))); 
 
 }
 
@@ -255,10 +255,10 @@ DG_INLINE dgMatrix dgYawMatrix(dgFloat32 ang)
 	dgFloat32 sinAng;
 	sinAng = dgSin (ang);
 	cosAng = dgCos (ang);
-	return dgMatrix (dgVector (cosAng,          dgFloat32(0.0f), -sinAng,          dgFloat32(0.0f)),
-					 dgVector (dgFloat32(0.0f), dgFloat32(1.0f),  dgFloat32(0.0f), dgFloat32(0.0f)),
-					 dgVector (sinAng,          dgFloat32(0.0f),  cosAng,          dgFloat32(0.0f)),
-					 dgVector (dgFloat32(0.0f), dgFloat32(0.0f),  dgFloat32(0.0f), dgFloat32(1.0f)));
+	return dgMatrix (dgVector (cosAng,          dgFloat32(0.0f), -sinAng,          dgFloat32(0.0f)), 
+					 dgVector (dgFloat32(0.0f), dgFloat32(1.0f),  dgFloat32(0.0f), dgFloat32(0.0f)), 
+					 dgVector (sinAng,          dgFloat32(0.0f),  cosAng,          dgFloat32(0.0f)), 
+					 dgVector (dgFloat32(0.0f), dgFloat32(0.0f),  dgFloat32(0.0f), dgFloat32(1.0f))); 
 }
 
 DG_INLINE dgMatrix dgRollMatrix(dgFloat32 ang)
@@ -267,11 +267,11 @@ DG_INLINE dgMatrix dgRollMatrix(dgFloat32 ang)
 	dgFloat32 sinAng;
 	sinAng = dgSin (ang);
 	cosAng = dgCos (ang);
-	return dgMatrix (dgVector ( cosAng,          sinAng,          dgFloat32(0.0f), dgFloat32(0.0f)),
+	return dgMatrix (dgVector ( cosAng,          sinAng,          dgFloat32(0.0f), dgFloat32(0.0f)), 
 					 dgVector (-sinAng,          cosAng,          dgFloat32(0.0f), dgFloat32(0.0f)),
-					 dgVector ( dgFloat32(0.0f), dgFloat32(0.0f), dgFloat32(1.0f), dgFloat32(0.0f)),
-					 dgVector ( dgFloat32(0.0f), dgFloat32(0.0f), dgFloat32(0.0f), dgFloat32(1.0f)));
-}
+					 dgVector ( dgFloat32(0.0f), dgFloat32(0.0f), dgFloat32(1.0f), dgFloat32(0.0f)), 
+					 dgVector ( dgFloat32(0.0f), dgFloat32(0.0f), dgFloat32(0.0f), dgFloat32(1.0f))); 
+}																		 
 
 
 DG_INLINE dgMatrix dgMatrix::Inverse () const
@@ -291,8 +291,8 @@ DG_INLINE dgVector dgMatrix::TransformVectorSimd (const dgVector &v) const
 	const dgMatrix& source = *this;
 	return dgVector (simd_mul_add_v (
 						simd_mul_add_v (
-							simd_mul_add_v ((simd_type&) source[3], (simd_type&) source[0], simd_permut_v ((simd_type&) v, (simd_type&) v, PURMUT_MASK(0, 0, 0, 0))),
-																	(simd_type&) source[1], simd_permut_v ((simd_type&) v, (simd_type&) v, PURMUT_MASK(1, 1, 1, 1))),
+							simd_mul_add_v ((simd_type&) source[3], (simd_type&) source[0], simd_permut_v ((simd_type&) v, (simd_type&) v, PURMUT_MASK(0, 0, 0, 0))), 
+																	(simd_type&) source[1], simd_permut_v ((simd_type&) v, (simd_type&) v, PURMUT_MASK(1, 1, 1, 1))), 
 																	(simd_type&) source[2], simd_permut_v ((simd_type&) v, (simd_type&) v, PURMUT_MASK(2, 2, 2, 2))));
 #else
 	return dgVector (dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f));
@@ -306,9 +306,9 @@ DG_INLINE void dgMatrix::TransformVectorsSimd (dgVector* const dst, const dgVect
 	for (dgInt32 i = 0; i < count; i ++) {
 		(simd_type&)dst[i] = simd_mul_add_v (
 								simd_mul_add_v (
-									simd_mul_add_v ((simd_type&) source[3],
-													(simd_type&) source[0], simd_permut_v ((simd_type&) src[i], (simd_type&) src[i], PURMUT_MASK(0, 0, 0, 0))),
-													(simd_type&) source[1], simd_permut_v ((simd_type&) src[i], (simd_type&) src[i], PURMUT_MASK(1, 1, 1, 1))),
+									simd_mul_add_v ((simd_type&) source[3], 
+													(simd_type&) source[0], simd_permut_v ((simd_type&) src[i], (simd_type&) src[i], PURMUT_MASK(0, 0, 0, 0))), 
+													(simd_type&) source[1], simd_permut_v ((simd_type&) src[i], (simd_type&) src[i], PURMUT_MASK(1, 1, 1, 1))), 
 													(simd_type&) source[2], simd_permut_v ((simd_type&) src[i], (simd_type&) src[i], PURMUT_MASK(2, 2, 2, 2)));
 	}
 #endif
@@ -321,8 +321,8 @@ DG_INLINE dgVector dgMatrix::RotateVectorSimd (const dgVector &v) const
 	const dgMatrix& source = *this;
 	return dgVector (simd_mul_add_v (
 						simd_mul_add_v (
-							simd_mul_v ((simd_type&) source[0], simd_permut_v ((simd_type&) v, (simd_type&) v, PURMUT_MASK(0, 0, 0, 0))),
-									    (simd_type&) source[1], simd_permut_v ((simd_type&) v, (simd_type&) v, PURMUT_MASK(1, 1, 1, 1))),
+							simd_mul_v ((simd_type&) source[0], simd_permut_v ((simd_type&) v, (simd_type&) v, PURMUT_MASK(0, 0, 0, 0))), 
+									    (simd_type&) source[1], simd_permut_v ((simd_type&) v, (simd_type&) v, PURMUT_MASK(1, 1, 1, 1))), 
 										(simd_type&) source[2], simd_permut_v ((simd_type&) v, (simd_type&) v, PURMUT_MASK(2, 2, 2, 2))));
 
 #else
@@ -341,7 +341,7 @@ DG_INLINE dgVector dgMatrix::UnrotateVectorSimd (const dgVector &v) const
 
 DG_INLINE dgMatrix dgMatrix::InverseSimd () const
 {
-#ifdef DG_BUILD_SIMD_CODE
+#ifdef DG_BUILD_SIMD_CODE	
 	simd_type r0;
 	simd_type r1;
 	simd_type r2;
@@ -359,7 +359,7 @@ DG_INLINE dgMatrix dgMatrix::InverseSimd () const
 	r1 = simd_pack_hi_v ((simd_type&) source[2], r2);
 	(simd_type&) matrix[2] = simd_move_lh_v (r0, r1);
 
-	(simd_type&) matrix[3] = simd_sub_v (r2,
+	(simd_type&) matrix[3] = simd_sub_v (r2, 
 									simd_mul_add_v (
 													simd_mul_add_v(simd_mul_v((simd_type&) matrix[0], simd_permut_v ((simd_type&) source[3], (simd_type&) source[3], PURMUT_MASK(3, 0, 0, 0))),
 																			  (simd_type&) matrix[1], simd_permut_v ((simd_type&) source[3], (simd_type&) source[3], PURMUT_MASK(3, 1, 1, 1))),
@@ -375,23 +375,23 @@ DG_INLINE dgMatrix dgMatrix::InverseSimd () const
 
 DG_INLINE dgMatrix dgMatrix::MultiplySimd (const dgMatrix& B) const
 {
-#ifdef DG_BUILD_SIMD_CODE
+#ifdef DG_BUILD_SIMD_CODE	
 	const dgMatrix& A = *this;
-	return dgMatrix (dgVector (simd_mul_add_v(
+	return dgMatrix (dgVector (simd_mul_add_v( 
 								simd_mul_add_v(
 									simd_mul_add_v(simd_mul_v ((simd_type&) B[0], simd_permut_v ((simd_type&) A[0], (simd_type&) A[0], PURMUT_MASK(0, 0, 0, 0))),
 															   (simd_type&) B[1], simd_permut_v ((simd_type&) A[0], (simd_type&) A[0], PURMUT_MASK(1, 1, 1, 1))),
 															   (simd_type&) B[2], simd_permut_v ((simd_type&) A[0], (simd_type&) A[0], PURMUT_MASK(2, 2, 2, 2))),
 															   (simd_type&) B[3], simd_permut_v ((simd_type&) A[0], (simd_type&) A[0], PURMUT_MASK(3, 3, 3, 3)))),
 
-					 dgVector (simd_mul_add_v(
+					 dgVector (simd_mul_add_v( 
 								simd_mul_add_v(
 									simd_mul_add_v(simd_mul_v ((simd_type&) B[0], simd_permut_v ((simd_type&) A[1], (simd_type&) A[1], PURMUT_MASK(0, 0, 0, 0))),
 															   (simd_type&) B[1], simd_permut_v ((simd_type&) A[1], (simd_type&) A[1], PURMUT_MASK(1, 1, 1, 1))),
 															   (simd_type&) B[2], simd_permut_v ((simd_type&) A[1], (simd_type&) A[1], PURMUT_MASK(2, 2, 2, 2))),
 															   (simd_type&) B[3], simd_permut_v ((simd_type&) A[1], (simd_type&) A[1], PURMUT_MASK(3, 3, 3, 3)))),
 
-					dgVector (simd_mul_add_v(
+					dgVector (simd_mul_add_v( 
 								simd_mul_add_v(
 									simd_mul_add_v(simd_mul_v ((simd_type&) B[0], simd_permut_v ((simd_type&) A[2], (simd_type&) A[2], PURMUT_MASK(0, 0, 0, 0))),
 															   (simd_type&) B[1], simd_permut_v ((simd_type&) A[2], (simd_type&) A[2], PURMUT_MASK(1, 1, 1, 1))),
@@ -399,7 +399,7 @@ DG_INLINE dgMatrix dgMatrix::MultiplySimd (const dgMatrix& B) const
 															   (simd_type&) B[3], simd_permut_v ((simd_type&) A[2], (simd_type&) A[2], PURMUT_MASK(3, 3, 3, 3)))),
 
 
-					dgVector (simd_mul_add_v(
+					dgVector (simd_mul_add_v( 
 							   simd_mul_add_v(
 								   simd_mul_add_v(simd_mul_v ((simd_type&) B[0], simd_permut_v ((simd_type&) A[3], (simd_type&) A[3], PURMUT_MASK(0, 0, 0, 0))),
 															  (simd_type&) B[1], simd_permut_v ((simd_type&) A[3], (simd_type&) A[3], PURMUT_MASK(1, 1, 1, 1))),

@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -105,7 +105,7 @@ void dgBody::SetMassMatrix(dgFloat32 mass, dgFloat32 Ix, dgFloat32 Iy, dgFloat32
 //		if (m_applyGyroscopic) {
 //			m_omega = m_matrix.UnrotateVector (omega.CompProduct(m_invMass));
 //		}
-
+		
 		dgBodyMasterList& masterList (*m_world);
 		masterList.RotateToEnd (m_masterNode);
 	}
@@ -193,7 +193,7 @@ void dgBody::SetMatrixIgnoreSleep(const dgMatrix& matrix)
 			collisionSystem.Add(this);
 		}
 	}
-
+		
 	m_sleeping = false;
 	SetMatrix(matrix);
 }
@@ -218,14 +218,14 @@ void dgBody::UpdateCollisionMatrixSimd (dgFloat32 timestep, dgInt32 threadIndex)
 		step.m_x += (step.m_x > 0.0f) ? padding : -padding;
 		step.m_y += (step.m_y > 0.0f) ? padding : -padding;
 		step.m_z += (step.m_z > 0.0f) ? padding : -padding;
-
+		
 		dgVector boxSize ((m_maxAABB - m_minAABB).Scale (dgFloat32 (0.25f)));
 		for (dgInt32 j = 0; j < 3; j ++) {
 			if (dgAbsf (step[j]) > boxSize[j]) {
 				if (step[j] > dgFloat32 (0.0f)) {
-					m_maxAABB[j] += step[j];
+					m_maxAABB[j] += step[j]; 
 				} else {
-					m_minAABB[j] += step[j];
+					m_minAABB[j] += step[j]; 
 				}
 			}
 		}
@@ -243,9 +243,9 @@ void dgBody::UpdateCollisionMatrixSimd (dgFloat32 timestep, dgInt32 threadIndex)
 				for (dgInt32 j = 0; j < 3; j ++) {
 					if (dgAbsf (step[j]) > boxSize[j]) {
 						if (step[j] > dgFloat32 (0.0f)) {
-							box1Max[j] += step[j];
+							box1Max[j] += step[j]; 
 						} else {
-							box1Min[j] += step[j];
+							box1Min[j] += step[j]; 
 						}
 					}
 				}
@@ -257,7 +257,7 @@ void dgBody::UpdateCollisionMatrixSimd (dgFloat32 timestep, dgInt32 threadIndex)
 		_ASSERTE (m_world);
 		if (!m_sleeping) {
 			if ((dgAbsf (oldP0.m_x - m_minAABB.m_x) > DG_AABB_ERROR) || (dgAbsf (oldP0.m_y - m_minAABB.m_y) > DG_AABB_ERROR) ||
-				(dgAbsf (oldP0.m_z - m_minAABB.m_z) > DG_AABB_ERROR) || (dgAbsf (oldP1.m_x - m_maxAABB.m_x) > DG_AABB_ERROR) ||
+				(dgAbsf (oldP0.m_z - m_minAABB.m_z) > DG_AABB_ERROR) || (dgAbsf (oldP1.m_x - m_maxAABB.m_x) > DG_AABB_ERROR) || 
 				(dgAbsf (oldP1.m_y - m_maxAABB.m_y) > DG_AABB_ERROR) || (dgAbsf (oldP1.m_z - m_maxAABB.m_z) > DG_AABB_ERROR)) {
 				m_world->UpdateBodyBroadphase (this, threadIndex);
 			} else {
@@ -290,9 +290,9 @@ void dgBody::UpdateCollisionMatrix (dgFloat32 timestep, dgInt32 threadIndex)
 		for (dgInt32 j = 0; j < 3; j ++) {
 			if (dgAbsf (step[j]) > boxSize[j]) {
 				if (step[j] > dgFloat32 (0.0f)) {
-					m_maxAABB[j] += step[j];
+					m_maxAABB[j] += step[j]; 
 				} else {
-					m_minAABB[j] += step[j];
+					m_minAABB[j] += step[j]; 
 				}
 			}
 		}
@@ -313,9 +313,9 @@ void dgBody::UpdateCollisionMatrix (dgFloat32 timestep, dgInt32 threadIndex)
 				for (dgInt32 j = 0; j < 3; j ++) {
 					if (dgAbsf (step[j]) > boxSize[j]) {
 						if (step[j] > dgFloat32 (0.0f)) {
-							box1Max[j] += step[j];
+							box1Max[j] += step[j]; 
 						} else {
-							box1Min[j] += step[j];
+							box1Min[j] += step[j]; 
 						}
 					}
 				}
@@ -325,10 +325,10 @@ void dgBody::UpdateCollisionMatrix (dgFloat32 timestep, dgInt32 threadIndex)
 
 	if (m_collisionCell.m_cell) {
 		_ASSERTE (m_world);
-
+		
 		if (!m_sleeping) {
 			if ((dgAbsf (oldP0.m_x - m_minAABB.m_x) > DG_AABB_ERROR) || (dgAbsf (oldP0.m_y - m_minAABB.m_y) > DG_AABB_ERROR) ||
-				(dgAbsf (oldP0.m_z - m_minAABB.m_z) > DG_AABB_ERROR) || (dgAbsf (oldP1.m_x - m_maxAABB.m_x) > DG_AABB_ERROR) ||
+				(dgAbsf (oldP0.m_z - m_minAABB.m_z) > DG_AABB_ERROR) || (dgAbsf (oldP1.m_x - m_maxAABB.m_x) > DG_AABB_ERROR) || 
 				(dgAbsf (oldP1.m_y - m_maxAABB.m_y) > DG_AABB_ERROR) || (dgAbsf (oldP1.m_z - m_maxAABB.m_z) > DG_AABB_ERROR)) {
 					m_world->UpdateBodyBroadphase (this, threadIndex);
 			} else {
@@ -341,9 +341,9 @@ void dgBody::UpdateCollisionMatrix (dgFloat32 timestep, dgInt32 threadIndex)
 
 dgFloat32 dgBody::RayCast (
 	const dgLineBox& line,
-	OnRayCastAction filter,
+	OnRayCastAction filter, 
 	OnRayPrecastAction preFilter,
-	void* const userData,
+	void* const userData, 
 	dgFloat32 minT) const
 {
 	dgContactPoint contactOut;
@@ -380,10 +380,10 @@ dgFloat32 dgBody::RayCast (
 
 
 void dgBody::AddBuoyancyForce (
-	dgFloat32 fluidDensity,
-	dgFloat32 fluidLinearViscousity,
-	dgFloat32 fluidAngularViscousity,
-	const dgVector& gravityVector,
+	dgFloat32 fluidDensity, 
+	dgFloat32 fluidLinearViscousity, 
+	dgFloat32 fluidAngularViscousity, 
+	const dgVector& gravityVector, 
 	GetBuoyancyPlane buoyancuPlane,
 	void* const context)
 {
@@ -518,7 +518,7 @@ void dgBody::IntegrateVelocity (dgFloat32 timestep, bool update)
 
 //	IntegrateNotUpdate (timestep);
 
-	m_globalCentreOfMass += m_veloc.Scale (timestep);
+	m_globalCentreOfMass += m_veloc.Scale (timestep); 
 	while (((m_omega % m_omega) * timestep * timestep) > (DG_MAX_ANGLE_STEP * DG_MAX_ANGLE_STEP)) {
 		m_omega = m_omega.Scale (dgFloat32 (0.8f));
 	}
@@ -563,7 +563,7 @@ void dgBody::IntegrateVelocity (dgFloat32 timestep)
 
 	//	IntegrateNotUpdate (timestep);
 
-	m_globalCentreOfMass += m_veloc.Scale (timestep);
+	m_globalCentreOfMass += m_veloc.Scale (timestep); 
 	while (((m_omega % m_omega) * timestep * timestep) > (DG_MAX_ANGLE_STEP * DG_MAX_ANGLE_STEP)) {
 		m_omega = m_omega.Scale (dgFloat32 (0.8f));
 	}
@@ -610,7 +610,7 @@ void dgBody::IntegrateVelocity (dgFloat32 timestep)
 void dgBody::CalculateContinueVelocity (dgFloat32 timestep, dgVector& veloc, dgVector& omega) const
 {
 //	timestep = m_world->m_currTimestep;
-	veloc = m_veloc + m_accel.Scale (timestep * m_invMass.m_w);
+	veloc = m_veloc + m_accel.Scale (timestep * m_invMass.m_w); 
 
 	dgVector localAlpha (m_matrix.UnrotateVector (m_alpha));
 	dgVector alpha (m_matrix.RotateVector (localAlpha.CompProduct (m_invMass)));
@@ -619,12 +619,12 @@ void dgBody::CalculateContinueVelocity (dgFloat32 timestep, dgVector& veloc, dgV
 
 void dgBody::CalculateContinueVelocitySimd (
 	dgFloat32 timestep,
-	dgVector& veloc,
+	dgVector& veloc, 
 	dgVector& omega) const
 {
 #ifdef DG_BUILD_SIMD_CODE
 	//	timestep = m_world->m_currTimestep;
-	veloc = m_veloc + m_accel.Scale (timestep * m_invMass.m_w);
+	veloc = m_veloc + m_accel.Scale (timestep * m_invMass.m_w); 
 
 	dgVector localAlpha (m_matrix.UnrotateVectorSimd (m_alpha));
 	dgVector alpha (m_matrix.RotateVectorSimd (localAlpha.CompProductSimd (m_invMass)));
@@ -679,7 +679,7 @@ void dgBody::IntegrateNotUpdate (dgFloat32 timestep)
 	m_veloc += m_accel.Scale (timestep);
 	m_omega += m_alpha.Scale (timestep);
 
-	m_globalCentreOfMass += m_veloc.Scale (timestep);
+	m_globalCentreOfMass += m_veloc.Scale (timestep); 
 	while (((m_omega % m_omega) * timestep * timestep) > (DG_MAX_ANGLE_STEP * DG_MAX_ANGLE_STEP)) {
 		m_omega = m_omega.Scale (dgFloat32 (0.8f));
 	}
@@ -703,14 +703,14 @@ void dgBody::IntegrateNotUpdate (dgFloat32 timestep)
 
 dgVector dgBody::CalculateInverseDynamicForce (const dgVector& desiredVeloc, dgFloat32 timestep) const
 {
-	//dgWord* world;
+	//dgWord* world; 
 	dgFloat32 massAccel;
 	massAccel = m_mass.m_w / timestep;
 
 	if (m_world->m_solverMode){
 		if (m_masterNode->GetInfo().GetCount() >= 2){
 			massAccel *= (dgFloat32 (2.0f) * dgFloat32 (LINEAR_SOLVER_SUB_STEPS) / dgFloat32 (LINEAR_SOLVER_SUB_STEPS + 1));
-		}
+		} 
 	}
 	return (desiredVeloc - m_veloc).Scale (massAccel);
 }
@@ -718,7 +718,7 @@ dgVector dgBody::CalculateInverseDynamicForce (const dgVector& desiredVeloc, dgF
 
 dgConstraint* dgBody::GetFirstJoint() const
 {
-	dgBodyMasterListRow::dgListNode* node;
+	dgBodyMasterListRow::dgListNode* node; 	
 
 	for (node = m_masterNode->GetInfo().GetFirst(); node; node = node->GetNext()) {
 		dgConstraint* joint;
@@ -732,7 +732,7 @@ dgConstraint* dgBody::GetFirstJoint() const
 
 dgConstraint* dgBody::GetNextJoint(dgConstraint* joint) const
 {
-	dgBodyMasterListRow::dgListNode* node;
+	dgBodyMasterListRow::dgListNode* node; 	
 
 	node = joint->GetLink0();
 	if (joint->GetBody0() != this) {
@@ -755,7 +755,7 @@ dgConstraint* dgBody::GetNextJoint(dgConstraint* joint) const
 
 dgConstraint* dgBody::GetFirstContact() const
 {
-	dgBodyMasterListRow::dgListNode* node;
+	dgBodyMasterListRow::dgListNode* node; 	
 
 	for (node = m_masterNode->GetInfo().GetFirst(); node; node = node->GetNext()) {
 		dgConstraint* joint;
@@ -769,7 +769,7 @@ dgConstraint* dgBody::GetFirstContact() const
 
 dgConstraint* dgBody::GetNextContact(dgConstraint* joint) const
 {
-	dgBodyMasterListRow::dgListNode* node;
+	dgBodyMasterListRow::dgListNode* node; 	
 
 	node = joint->GetLink0();
 	if (joint->GetBody0() != this) {
@@ -797,7 +797,7 @@ void dgBody::SetFreeze (bool state)
 	if (state){
 		Freeze();
 	} else {
-		Unfreeze();
+		Unfreeze();	
 	}
 }
 
@@ -807,7 +807,7 @@ void dgBody::Freeze ()
 	if (m_invMass.m_w > dgFloat32 (0.0f)) {
 		if (!m_freeze) {
 			m_freeze = true;
-			dgBodyMasterListRow::dgListNode* node;
+			dgBodyMasterListRow::dgListNode* node; 	
 
 			for (node = m_masterNode->GetInfo().GetFirst(); node; node = node->GetNext()) {
 				dgBody* body;
@@ -821,10 +821,10 @@ void dgBody::Freeze ()
 void dgBody::Unfreeze ()
 {
 	if (m_invMass.m_w > dgFloat32 (0.0f)) {
-		m_equilibrium = false;
+		m_equilibrium = false;			
 		if (m_freeze) {
 			m_freeze = false;
-			dgBodyMasterListRow::dgListNode* node;
+			dgBodyMasterListRow::dgListNode* node; 	
 
 			for (node = m_masterNode->GetInfo().GetFirst(); node; node = node->GetNext()) {
 				dgBody* body;
@@ -899,9 +899,9 @@ void dgBody::AddImpulse (const dgVector& pointDeltaVeloc, const dgVector& pointP
 			contactMatrix[i][j] *= -dgFloat32 (1.0f);
 		}
 	}
-	contactMatrix[0][0] += m_invMass.m_w;
-	contactMatrix[1][1] += m_invMass.m_w;
-	contactMatrix[2][2] += m_invMass.m_w;
+	contactMatrix[0][0] += m_invMass.m_w;	
+	contactMatrix[1][1] += m_invMass.m_w;	
+	contactMatrix[2][2] += m_invMass.m_w;	
 
 	contactMatrix = contactMatrix.Symetric3by3Inverse ();
 

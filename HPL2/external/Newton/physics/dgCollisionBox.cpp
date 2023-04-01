@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -28,45 +28,45 @@
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
 
-dgConvexSimplexEdge dgCollisionBox::m_edgeArray[24] =
+dgConvexSimplexEdge dgCollisionBox::m_edgeArray[24] = 
 {
-	{1, &m_edgeArray[3], &m_edgeArray[12], &m_edgeArray[5]},
-	{2, &m_edgeArray[6], &m_edgeArray[3], &m_edgeArray[7]},
-	{7, &m_edgeArray[12], &m_edgeArray[6], &m_edgeArray[14]},
-	{0, &m_edgeArray[0], &m_edgeArray[9], &m_edgeArray[1]},
-	{3, &m_edgeArray[9], &m_edgeArray[15], &m_edgeArray[11]},
-	{6, &m_edgeArray[15], &m_edgeArray[0], &m_edgeArray[16]},
-	{0, &m_edgeArray[1], &m_edgeArray[18], &m_edgeArray[2]},
-	{3, &m_edgeArray[10], &m_edgeArray[1], &m_edgeArray[9]},
-	{5, &m_edgeArray[18], &m_edgeArray[10], &m_edgeArray[20]},
-	{1, &m_edgeArray[4], &m_edgeArray[7], &m_edgeArray[3]},
-	{2, &m_edgeArray[7], &m_edgeArray[21], &m_edgeArray[8]},
-	{4, &m_edgeArray[21], &m_edgeArray[4], &m_edgeArray[22]},
-	{0, &m_edgeArray[2], &m_edgeArray[16], &m_edgeArray[0]},
-	{6, &m_edgeArray[16], &m_edgeArray[19], &m_edgeArray[17]},
-	{5, &m_edgeArray[19], &m_edgeArray[2], &m_edgeArray[18]},
-	{1, &m_edgeArray[5], &m_edgeArray[22], &m_edgeArray[4]},
-	{7, &m_edgeArray[13], &m_edgeArray[5], &m_edgeArray[12]},
-	{4, &m_edgeArray[22], &m_edgeArray[13], &m_edgeArray[23]},
-	{2, &m_edgeArray[8], &m_edgeArray[14], &m_edgeArray[6]},
-	{7, &m_edgeArray[14], &m_edgeArray[23], &m_edgeArray[13]},
-	{4, &m_edgeArray[23], &m_edgeArray[8], &m_edgeArray[21]},
-	{3, &m_edgeArray[11], &m_edgeArray[20], &m_edgeArray[10]},
-	{6, &m_edgeArray[17], &m_edgeArray[11], &m_edgeArray[15]},
-	{5, &m_edgeArray[20], &m_edgeArray[17], &m_edgeArray[19]},
+	{1, &m_edgeArray[3], &m_edgeArray[12], &m_edgeArray[5]}, 
+	{2, &m_edgeArray[6], &m_edgeArray[3], &m_edgeArray[7]}, 
+	{7, &m_edgeArray[12], &m_edgeArray[6], &m_edgeArray[14]}, 
+	{0, &m_edgeArray[0], &m_edgeArray[9], &m_edgeArray[1]}, 
+	{3, &m_edgeArray[9], &m_edgeArray[15], &m_edgeArray[11]}, 
+	{6, &m_edgeArray[15], &m_edgeArray[0], &m_edgeArray[16]}, 
+	{0, &m_edgeArray[1], &m_edgeArray[18], &m_edgeArray[2]}, 
+	{3, &m_edgeArray[10], &m_edgeArray[1], &m_edgeArray[9]}, 
+	{5, &m_edgeArray[18], &m_edgeArray[10], &m_edgeArray[20]}, 
+	{1, &m_edgeArray[4], &m_edgeArray[7], &m_edgeArray[3]}, 
+	{2, &m_edgeArray[7], &m_edgeArray[21], &m_edgeArray[8]}, 
+	{4, &m_edgeArray[21], &m_edgeArray[4], &m_edgeArray[22]}, 
+	{0, &m_edgeArray[2], &m_edgeArray[16], &m_edgeArray[0]}, 
+	{6, &m_edgeArray[16], &m_edgeArray[19], &m_edgeArray[17]}, 
+	{5, &m_edgeArray[19], &m_edgeArray[2], &m_edgeArray[18]}, 
+	{1, &m_edgeArray[5], &m_edgeArray[22], &m_edgeArray[4]}, 
+	{7, &m_edgeArray[13], &m_edgeArray[5], &m_edgeArray[12]}, 
+	{4, &m_edgeArray[22], &m_edgeArray[13], &m_edgeArray[23]}, 
+	{2, &m_edgeArray[8], &m_edgeArray[14], &m_edgeArray[6]}, 
+	{7, &m_edgeArray[14], &m_edgeArray[23], &m_edgeArray[13]}, 
+	{4, &m_edgeArray[23], &m_edgeArray[8], &m_edgeArray[21]}, 
+	{3, &m_edgeArray[11], &m_edgeArray[20], &m_edgeArray[10]}, 
+	{6, &m_edgeArray[17], &m_edgeArray[11], &m_edgeArray[15]}, 
+	{5, &m_edgeArray[20], &m_edgeArray[17], &m_edgeArray[19]}, 
 };
 
 
 dgCollisionBox::dgCollisionBox(
-	dgMemoryAllocator* allocator,
-	dgUnsigned32 signature,
-	dgFloat32 size_x,
-	dgFloat32 size_y,
-	dgFloat32 size_z,
+	dgMemoryAllocator* allocator, 
+	dgUnsigned32 signature, 
+	dgFloat32 size_x, 
+	dgFloat32 size_y, 
+	dgFloat32 size_z, 
 	const dgMatrix& matrix)
 	:dgCollisionConvex(allocator, signature, matrix, m_boxCollision)
 {
-	m_destructionImpulse = dgFloat32 (1.0e20f);
+	m_destructionImpulse = dgFloat32 (1.0e20f); 
 	Init (size_x, size_y, size_z);
 }
 
@@ -151,7 +151,7 @@ dgVector dgCollisionBox::SupportVertexSimd (const dgVector& dir) const
 	dgInt32 x;
 	dgInt32 y;
 	dgInt32 z;
-	dgFloatSign *ptr =  (dgFloatSign*) &dir;
+	dgFloatSign *ptr =  (dgFloatSign*) &dir; 
 
 	x = -(ptr[0].m_integer.m_iVal >> 31);
 	y = -(ptr[1].m_integer.m_iVal >> 31);
@@ -171,7 +171,7 @@ dgVector dgCollisionBox::SupportVertex (const dgVector& dir) const
 	dgInt32 x;
 	dgInt32 y;
 	dgInt32 z;
-	dgFloatSign *ptr =  (dgFloatSign*) &dir;
+	dgFloatSign *ptr =  (dgFloatSign*) &dir; 
 
 	x = -(ptr[0].m_integer.m_iVal >> 31);
 	y = -(ptr[1].m_integer.m_iVal >> 31);
@@ -179,8 +179,8 @@ dgVector dgCollisionBox::SupportVertex (const dgVector& dir) const
 	return dgVector (m_size[x].m_x, m_size[y].m_y, m_size[z].m_z, dgFloat32 (0.0f));
 
 #else
-	return dgVector (dir.m_x < dgFloat32 (0.0f) ? -m_size[0].m_x : m_size[0].m_x,
-					 dir.m_y < dgFloat32 (0.0f) ? -m_size[0].m_y : m_size[0].m_y,
+	return dgVector (dir.m_x < dgFloat32 (0.0f) ? -m_size[0].m_x : m_size[0].m_x, 
+					 dir.m_y < dgFloat32 (0.0f) ? -m_size[0].m_y : m_size[0].m_y, 
 					 dir.m_z < dgFloat32 (0.0f) ? -m_size[0].m_z : m_size[0].m_z, dgFloat32 (0.0f));
 #endif
 
@@ -193,9 +193,9 @@ void dgCollisionBox::CalcAABB (const dgMatrix &matrix, dgVector &p0, dgVector &p
 	dgFloat32 y;
 	dgFloat32 z;
 
-	x = m_size[0].m_x * dgAbsf(matrix[0][0]) + m_size[0].m_y * dgAbsf(matrix[1][0]) + m_size[0].m_z * dgAbsf(matrix[2][0]) + DG_MAX_COLLISION_PADDING;
-	y = m_size[0].m_x * dgAbsf(matrix[0][1]) + m_size[0].m_y * dgAbsf(matrix[1][1]) + m_size[0].m_z * dgAbsf(matrix[2][1]) + DG_MAX_COLLISION_PADDING;
-	z = m_size[0].m_x * dgAbsf(matrix[0][2]) + m_size[0].m_y * dgAbsf(matrix[1][2]) + m_size[0].m_z * dgAbsf(matrix[2][2]) + DG_MAX_COLLISION_PADDING;
+	x = m_size[0].m_x * dgAbsf(matrix[0][0]) + m_size[0].m_y * dgAbsf(matrix[1][0]) + m_size[0].m_z * dgAbsf(matrix[2][0]) + DG_MAX_COLLISION_PADDING;  
+	y = m_size[0].m_x * dgAbsf(matrix[0][1]) + m_size[0].m_y * dgAbsf(matrix[1][1]) + m_size[0].m_z * dgAbsf(matrix[2][1]) + DG_MAX_COLLISION_PADDING;  
+	z = m_size[0].m_x * dgAbsf(matrix[0][2]) + m_size[0].m_y * dgAbsf(matrix[1][2]) + m_size[0].m_z * dgAbsf(matrix[2][2]) + DG_MAX_COLLISION_PADDING;  
 
 	p0.m_x = matrix[3][0] - x;
 	p1.m_x = matrix[3][0] + x;
@@ -219,13 +219,13 @@ void dgCollisionBox::CalcAABBSimd (const dgMatrix &matrix, dgVector &p0, dgVecto
 //	dgFloat32 z;
 	simd_type tmp;
 
-//	x = m_size[0].m_x * dgAbsf(matrix[0][0]) + m_size[0].m_y * dgAbsf(matrix[1][0]) + m_size[0].m_z * dgAbsf(matrix[2][0]) + DG_MAX_COLLISION_PADDING;
-//	y = m_size[0].m_x * dgAbsf(matrix[0][1]) + m_size[0].m_y * dgAbsf(matrix[1][1]) + m_size[0].m_z * dgAbsf(matrix[2][1]) + DG_MAX_COLLISION_PADDING;
-//	z = m_size[0].m_x * dgAbsf(matrix[0][2]) + m_size[0].m_y * dgAbsf(matrix[1][2]) + m_size[0].m_z * dgAbsf(matrix[2][2]) + DG_MAX_COLLISION_PADDING;
+//	x = m_size[0].m_x * dgAbsf(matrix[0][0]) + m_size[0].m_y * dgAbsf(matrix[1][0]) + m_size[0].m_z * dgAbsf(matrix[2][0]) + DG_MAX_COLLISION_PADDING;  
+//	y = m_size[0].m_x * dgAbsf(matrix[0][1]) + m_size[0].m_y * dgAbsf(matrix[1][1]) + m_size[0].m_z * dgAbsf(matrix[2][1]) + DG_MAX_COLLISION_PADDING;  
+//	z = m_size[0].m_x * dgAbsf(matrix[0][2]) + m_size[0].m_y * dgAbsf(matrix[1][2]) + m_size[0].m_z * dgAbsf(matrix[2][2]) + DG_MAX_COLLISION_PADDING;  
 	tmp = simd_mul_add_v (
 			simd_mul_add_v (
 				simd_mul_add_v ((simd_type&) m_aabb_padd, (simd_type&) m_size_x, simd_and_v((simd_type&) m_signMask, (simd_type&) matrix[0])),
-														  (simd_type&) m_size_y, simd_and_v((simd_type&) m_signMask, (simd_type&) matrix[1])),		
+														  (simd_type&) m_size_y, simd_and_v((simd_type&) m_signMask, (simd_type&) matrix[1])),		   
 														  (simd_type&) m_size_z, simd_and_v((simd_type&) m_signMask, (simd_type&) matrix[2]));
 
 
@@ -248,11 +248,11 @@ void dgCollisionBox::CalcAABBSimd (const dgMatrix &matrix, dgVector &p0, dgVecto
 
 
 dgFloat32 dgCollisionBox::RayCast (
-	const dgVector& localP0,
-	const dgVector& localP1,
-	dgContactPoint& contactOut,
+	const dgVector& localP0, 
+	const dgVector& localP1, 
+	dgContactPoint& contactOut, 
 	OnRayPrecastAction preFilter,
-	const dgBody* const body,
+	const dgBody* const body,	
 	void* const userData) const
 {
 
@@ -269,8 +269,8 @@ dgFloat32 dgCollisionBox::RayCast (
 	cut = false;
 	s = dgFloat32 (0.0f);
 
-	dgVector p0 (localP0);
-	dgVector p1 (localP1);
+	dgVector p0 (localP0); 
+	dgVector p1 (localP1); 
 	for (int i = 0; i < 3; i ++) {
 		dgFloatSign tmp0;
 		dgFloatSign tmp1;
@@ -300,7 +300,7 @@ dgFloat32 dgCollisionBox::RayCast (
 				return dgFloat32 (1.2f);
 			}
 		}
-
+		
 		tmp0.m_fVal = -m_size[0][i] - p0[i];
 		if (tmp0.m_integer.m_iVal < 0) {
 			tmp1.m_fVal = -m_size[0][i] - p1[i];
@@ -341,7 +341,7 @@ dgFloat32 dgCollisionBox::RayCast (
 				return dgFloat32 (1.2f);
 			}
 		} else {
-			dp = dgFloat32 (1.0f) / dp;
+			dp = dgFloat32 (1.0f) / dp; 
 			dgFloat32 t1 = (m_size[1][i] - localP0[i]) * dp;
 			dgFloat32 t2 = (m_size[0][i] - localP0[i]) * dp;
 
@@ -378,11 +378,11 @@ dgFloat32 dgCollisionBox::RayCast (
 }
 
 dgFloat32 dgCollisionBox::RayCastSimd (
-	const dgVector& localP0,
-	const dgVector& localP1,
-	dgContactPoint& contactOut,
+	const dgVector& localP0, 
+	const dgVector& localP1, 
+	dgContactPoint& contactOut, 
 	OnRayPrecastAction preFilter,
-	const dgBody* const body,
+	const dgBody* const body,	
 	void* const userData) const
 {
 	return RayCast (localP0, localP1, contactOut, preFilter, body, userData);
@@ -396,7 +396,7 @@ dgFloat32 dgCollisionBox::CalculateMassProperties (dgVector& inertia, dgVector& 
 //	volume = dgCollisionConvex::CalculateMassProperties (inertia, crossInertia, centerOfMass);
 
 	centerOfMass = GetOffsetMatrix().m_posit;
-	volume = dgFloat32 (8.0f) * m_size[0].m_x * m_size[0].m_y * m_size[0].m_z;
+	volume = dgFloat32 (8.0f) * m_size[0].m_x * m_size[0].m_y * m_size[0].m_z; 
 
 	dgVector II (dgFloat32 (1.0f / 3.0f) * volume * (m_size[0].m_y * m_size[0].m_y + m_size[0].m_z * m_size[0].m_z),
 				 dgFloat32 (1.0f / 3.0f) * volume * (m_size[0].m_x * m_size[0].m_x + m_size[0].m_z * m_size[0].m_z),
@@ -451,7 +451,7 @@ dgInt32 dgCollisionBox::CalculatePlaneIntersection (const dgVector& normal, cons
 	dgConvexSimplexEdge *ptr1;
 	dgConvexSimplexEdge *edge;
 	dgConvexSimplexEdge *firstEdge;
-
+	
 	dgFloat32 test[8];
 
 	dgPlane plane (normal, - (normal % point));
@@ -636,7 +636,7 @@ dgInt32 dgCollisionBox::CalculatePlaneIntersectionSimd (const dgVector& normal, 
 
 				_ASSERTE (m_vertex[index0].m_w == dgFloat32 (1.0f));
 				_ASSERTE (m_vertex[index1].m_w == dgFloat32 (1.0f));
-				p1p0 = simd_sub_v (*(simd_type*) &m_vertex[index1], *(simd_type*) &m_vertex[index0]);
+				p1p0 = simd_sub_v (*(simd_type*) &m_vertex[index1], *(simd_type*) &m_vertex[index0]);		
 				dot = simd_mul_v (p1p0, *(simd_type*) &plane);
 				dot = simd_add_s(simd_add_v (dot, simd_move_hl_v (dot, dot)), simd_permut_v (dot, dot, PURMUT_MASK (3,3,3,1)));
 				den = simd_rcp_s(dot);

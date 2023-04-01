@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -65,7 +65,7 @@ class dgTireCollision: public dgCollisionChamferCylinder
 		m_scale.m_x = tire->m_width;
 		m_scale.m_y = tire->m_radius;
 		m_scale.m_z = tire->m_radius;
-
+		
 		m_offsetY = dgFloat32 (0.0f);
 
 		m_invScale.m_x = dgFloat32 (1.0f) / m_scale.m_x;
@@ -77,11 +77,11 @@ class dgTireCollision: public dgCollisionChamferCylinder
 
 		m_activeContactsCount = 0;
 		m_masterContactCount = 0;
-		tire->m_collision = this;
+		tire->m_collision = this; 
 		SetUserData (tire->m_collisionID);
 
 		// make sure the transform will be active
-		SetMatrix (matrix, updir);
+		SetMatrix (matrix, updir); 
 		m_offsetActive = true;
 
 		m_world = world;
@@ -104,7 +104,7 @@ class dgTireCollision: public dgCollisionChamferCylinder
 		dgVector normals[64];
 		dgContact* contact[64];
 		dgList<dgContactMaterial>::dgListNode *array[64];
-
+		
 		contactCount = 1;
 		normals[0].m_w = dgFloat32 (1.0e10f);
 		const dgMatrix& localMatrix = GetOffsetMatrix();
@@ -165,7 +165,7 @@ class dgTireCollision: public dgCollisionChamferCylinder
 				}
 			}
 			contact[i]->RotateToEnd (array[i]);
-			contact[i]->m_activeContacts --;
+			contact[i]->m_activeContacts --; 
 			_ASSERTE (contact[i]->m_activeContacts >= 0);
 		}
 
@@ -190,7 +190,7 @@ class dgTireCollision: public dgCollisionChamferCylinder
 	}
 
 
-	void SetMatrix (const dgMatrix& matrix, const dgVector& dir)
+	void SetMatrix (const dgMatrix& matrix, const dgVector& dir) 
 	{
 		m_offset = matrix;
 		m_offset.m_posit += dir.Scale (m_offsetY);
@@ -201,7 +201,7 @@ class dgTireCollision: public dgCollisionChamferCylinder
 		dgVector dir1 (dir.CompProduct (m_scale));
 		dir1 = dir1.Scale (dgRsqrt (dir1 % dir1 + dgFloat32 (1.0e-12f)));
 		dgVector p (dgCollisionChamferCylinder::SupportVertex (dir1));
-		return dgVector (p.CompProduct (m_scale));
+		return dgVector (p.CompProduct (m_scale)); 
 	}
 
 	dgVector SupportVertexSimd (const dgVector& dir) const
@@ -228,12 +228,12 @@ class dgTireCollision: public dgCollisionChamferCylinder
 	}
 
 	dgInt32 CalculatePlaneIntersectionSimd (
-		const dgVector& normal,
-		const dgVector& origin,
+		const dgVector& normal, 
+		const dgVector& origin, 
 		dgVector contactsOut[]) const
 	{
 		_ASSERTE (0);
-		return 0;
+		return 0; 
 	}
 
 
@@ -250,8 +250,8 @@ class dgTireCollision: public dgCollisionChamferCylinder
 
 	dgFloat32 RayCast (const dgVector& p0, const dgVector& p1, dgContactPoint& contactOut, OnRayPrecastAction preFilter, const dgBody* const body, void* const userData) const
 	{
-		dgVector q0 (p0.CompProduct (m_invScale));
-		dgVector q1 (p1.CompProduct (m_invScale));
+		dgVector q0 (p0.CompProduct (m_invScale)); 
+		dgVector q1 (p1.CompProduct (m_invScale));  
 		return dgCollisionChamferCylinder::RayCast (q0, q1, contactOut, preFilter, body, userData);
 	}
 
@@ -260,7 +260,7 @@ class dgTireCollision: public dgCollisionChamferCylinder
 	{
 		_ASSERTE (0);
 		dgMatrix saveMatrix (m_offset);
-		dgMatrix& mat = ((dgTireCollision*) this)->m_offset;
+		dgMatrix& mat = ((dgTireCollision*) this)->m_offset;  
 		mat.m_front = mat.m_front.Scale (m_scale.m_x);
 		mat.m_up = mat.m_up.Scale (m_scale.m_y);
 		mat.m_right = mat.m_right.Scale (m_scale.m_z);
@@ -297,7 +297,7 @@ class dgTireCollision: public dgCollisionChamferCylinder
 	dgWorld* m_world;
 	dgFloat32 m_offsetY;
 	dgFloat32 m_criticalRadius2;
-
+	
 	dgInt32 m_activeContactsCount;
 	dgInt32 m_masterContactCount;
 	dgInt32 m_collidingPairsCount;
@@ -309,12 +309,12 @@ class dgTireCollision: public dgCollisionChamferCylinder
 
 
 
-DG_MSC_VECTOR_ALIGMENT
+DG_MSC_VECTOR_ALIGMENT 
 class dgVehicleForceMiniSolver
 {
 	public:
 	dgVehicleForceMiniSolver ()
-	{
+	{	
 
 	}
 
@@ -341,7 +341,7 @@ class dgVehicleForceMiniSolver
 		}
 
 		for (i0 = 0; i0 < rowsCount; i0 ++) {
-			val = x[i0];
+			val = x[i0]; 
 			j0 = m_jacobianIndexArray[i0].m_m0;
 			m_y[j0].m_linear += m_Jt[i0].m_jacobian_IM0.m_linear.Scale (val);
 			m_y[j0].m_angular += m_Jt[i0].m_jacobian_IM0.m_angular.Scale (val);
@@ -353,7 +353,7 @@ class dgVehicleForceMiniSolver
 
 		for (i0 = 0; i0 < rowsCount; i0 ++) {
 			j0 = m_jacobianIndexArray[i0].m_m0;
-			acc  = ((m_JMinv[i0].m_jacobian_IM0.m_linear % m_y[j0].m_linear) +
+			acc  = ((m_JMinv[i0].m_jacobian_IM0.m_linear % m_y[j0].m_linear) + 
 				(m_JMinv[i0].m_jacobian_IM0.m_angular % m_y[j0].m_angular));
 
 			j0 = m_jacobianIndexArray[i0].m_m1;
@@ -485,7 +485,7 @@ class dgVehicleForceMiniSolver
 /*
 	dgFloat32 IncrementalDotProduct (
 		dgInt32 rowIndex,
-		dgInt32 colIndex,
+		dgInt32 colIndex, 
 		dgFloat32 deltaValue)
 	{
 		dgInt32 j0;
@@ -596,7 +596,7 @@ class dgVehicleForceMiniSolver
 			bk = m_accel[i] * m_invDJMinvJt[i] * m_activeRow[i];
 			akNum += m_accel[i] * bk;
 			m_deltaForce[i] = bk;
-			accNorm = GetMax (dgAbsf (m_accel[i] * m_activeRow[i]), accNorm);
+			accNorm = GetMax (dgAbsf (m_accel[i] * m_activeRow[i]), accNorm);                                              
 		}
 	 	clipVal = dgFloat32 (0.0f);
 
@@ -697,14 +697,14 @@ class dgVehicleForceMiniSolver
 
 	void CalculateTireLinearJacobians (
 		dgInt32 tireIndex,
-		dgInt32 jacobialIndex,
-		const dgConstraint::dgPointParam& param,
+		dgInt32 jacobialIndex, 
+		const dgConstraint::dgPointParam& param, 
 		const dgVector& dir)
 	{
 		m_jacobianIndexArray[jacobialIndex].m_m0 = 1;
 		m_jacobianIndexArray[jacobialIndex].m_m1 = tireIndex;
 
-		dgJacobian &jacobian0 = m_Jt[jacobialIndex].m_jacobian_IM0;
+		dgJacobian &jacobian0 = m_Jt[jacobialIndex].m_jacobian_IM0; 
 		dgVector r0CrossDir (param.m_r0 * dir);
 		jacobian0.m_linear[0] = dir.m_x;
 		jacobian0.m_linear[1] = dir.m_y;
@@ -715,7 +715,7 @@ class dgVehicleForceMiniSolver
 		jacobian0.m_angular[2] = r0CrossDir.m_z;
 		jacobian0.m_angular[3] = dgFloat32 (0.0f);
 
-		dgJacobian &jacobian1 = m_Jt[jacobialIndex].m_jacobian_IM1;
+		dgJacobian &jacobian1 = m_Jt[jacobialIndex].m_jacobian_IM1; 
 		dgVector r1CrossDir (dir * param.m_r1);
 		jacobian1.m_linear[0] = -dir.m_x;
 		jacobian1.m_linear[1] = -dir.m_y;
@@ -729,7 +729,7 @@ class dgVehicleForceMiniSolver
 		dgVector centrError (param.m_centripetal1 - param.m_centripetal0);
 
 		m_diagDamp[jacobialIndex] = dgFloat32 (0.0f);
-		m_accel[jacobialIndex] = centrError % dir;
+		m_accel[jacobialIndex] = centrError % dir; 
 		m_bilateralForceBounds[jacobialIndex].m_low = DG_MIN_BOUND;
 		m_bilateralForceBounds[jacobialIndex].m_upper = DG_MAX_BOUND;
 	}
@@ -739,7 +739,7 @@ class dgVehicleForceMiniSolver
 		m_jacobianIndexArray[jacobialIndex].m_m0 = 1;
 		m_jacobianIndexArray[jacobialIndex].m_m1 = tireIndex;
 
-		dgJacobian &jacobian0 = m_Jt[jacobialIndex].m_jacobian_IM0;
+		dgJacobian &jacobian0 = m_Jt[jacobialIndex].m_jacobian_IM0; 
 
 		jacobian0.m_linear[0] = dgFloat32 (0.0f);
 		jacobian0.m_linear[1] = dgFloat32 (0.0f);
@@ -750,7 +750,7 @@ class dgVehicleForceMiniSolver
 		jacobian0.m_angular[2] = dir.m_z;
 		jacobian0.m_angular[3] = dgFloat32 (0.0f);
 
-		dgJacobian &jacobian1 = m_Jt[jacobialIndex].m_jacobian_IM1;
+		dgJacobian &jacobian1 = m_Jt[jacobialIndex].m_jacobian_IM1; 
 
 		jacobian1.m_linear[0] = dgFloat32 (0.0f);
 		jacobian1.m_linear[1] = dgFloat32 (0.0f);
@@ -762,15 +762,15 @@ class dgVehicleForceMiniSolver
 		jacobian1.m_angular[3] = dgFloat32 (0.0f);
 
 		m_diagDamp[jacobialIndex] = dgFloat32 (0.0f);
-		m_accel[jacobialIndex] = dgFloat32 (0.0f);
+		m_accel[jacobialIndex] = dgFloat32 (0.0f);  
 		m_bilateralForceBounds[jacobialIndex].m_low = DG_MIN_BOUND;
 		m_bilateralForceBounds[jacobialIndex].m_upper = DG_MAX_BOUND;
 	}
 
 	void CalculateConstraintForces (dgVehicleConstraint& vehicle, dgFloat32 timestep);
 
-	class dgJacobianIndex
-	{
+	class dgJacobianIndex 
+	{	
 		public:
 		dgInt32 m_m0;
 		dgInt32 m_m1;
@@ -781,7 +781,7 @@ class dgVehicleForceMiniSolver
 	dgJacobian m_y[DG_MAX_VEHICLE_WHEELS * 2];
 	dgJacobianPair m_Jt[DG_MAX_VEHICLE_DOF * 2];
 	dgJacobianPair m_JMinv[DG_MAX_VEHICLE_DOF * 2];
-
+	
 
 	dgFloat32 m_force[DG_MAX_VEHICLE_DOF * 2];
 	dgFloat32 m_accel[DG_MAX_VEHICLE_DOF * 2];
@@ -807,7 +807,7 @@ class dgVehicleForceMiniSolver
 	dgBody *m_bodyArray[DG_MAX_VEHICLE_WHEELS * 2];
 	dgVehicleConstraint::dgTire* m_tires[DG_MAX_VEHICLE_WHEELS];
 
-	dgJacobianIndex m_jacobianIndexArray[DG_MAX_VEHICLE_DOF * 2];
+	dgJacobianIndex m_jacobianIndexArray[DG_MAX_VEHICLE_DOF * 2]; 
 
 	dgInt32 m_rows;
 	dgInt32 m_bodies;
@@ -842,7 +842,7 @@ dgVehicleList::~dgVehicleList()
 
 
 dgVehicleConstraint::dgVehicleConstraint(dgWorld* world)
-	:dgConstraint(), m_wheels()
+	:dgConstraint(), m_wheels() 
 {
 	_ASSERTE ((sizeof (dgVehicleConstraint) & 15) == 0);
 
@@ -855,7 +855,7 @@ dgVehicleConstraint::dgVehicleConstraint(dgWorld* world)
 
 	_ASSERTE ((sizeof(dgVehicleConstraint) & 15) == 0);
 	//	constraint->Init ();
-
+	
 	m_maxDOF = 0;
 	m_updateLRU = 0;
 	m_destructor = NULL;
@@ -864,7 +864,7 @@ dgVehicleConstraint::dgVehicleConstraint(dgWorld* world)
 	m_tireCount = 0;
 	m_vehicleUpdate = NULL;
 
-	dgVehicleList& vehicleList = array;
+	dgVehicleList& vehicleList = array; 
 	vehicleList.Insert(this, this);
 }
 
@@ -874,7 +874,7 @@ dgVehicleConstraint::~dgVehicleConstraint()
 /*
 	dgVehicleConstraintArray& array = *m_world;
 
-	dgVehicleList& vehicleList = array;
+	dgVehicleList& vehicleList = array; 
 	vehicleList.Remove(this);
 
 	if (m_destructor) {
@@ -918,7 +918,7 @@ dgVehicleConstraint* dgVehicleConstraint::Create(dgWorld* world)
 	constraint->m_tireCount = 0;
 	constraint->m_vehicleUpdate = NULL;
 
-	dgVehicleList& vehicleList = array;
+	dgVehicleList& vehicleList = array; 
 	vehicleList.Insert(constraint, constraint);
 
 	return constraint;
@@ -929,7 +929,7 @@ void dgVehicleConstraint::Remove(dgWorld* world)
 {
 	dgVehicleConstraintArray& array = * world;
 
-	dgVehicleList& vehicleList = array;
+	dgVehicleList& vehicleList = array; 
 	vehicleList.Remove(this);
 
 	if (m_destructor) {
@@ -969,7 +969,7 @@ void dgVehicleConstraint::Reset ()
 
 
 
-void dgVehicleConstraint::SetTireCallback (OnVehicleUpdate update)
+void dgVehicleConstraint::SetTireCallback (OnVehicleUpdate update) 
 {
 	m_vehicleUpdate = update;
 }
@@ -987,7 +987,7 @@ void dgVehicleConstraint::SetSteerAngle (void* index, dgFloat32 angle)
 	dgMatrix steerMatrix (dgQuaternion (m_upPin, angle), tire.m_localMatrix.m_posit);
 	dgMatrix baseMatrix (tire.m_baseRotation, dgVector (dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (1.0f)));
 
-	tire.m_localMatrix = baseMatrix * steerMatrix;
+	tire.m_localMatrix = baseMatrix * steerMatrix;		
 }
 
 
@@ -1002,9 +1002,9 @@ void dgVehicleCache::UpdateVehicleContacts ()
 {
 	dgBody* body;
 //	dgLink* link;
-
+	
 	dgVehicleConstraint *vehicle;
-	dgBodyMasterListRow::dgListNode* link;
+	dgBodyMasterListRow::dgListNode* link; 
 
 	while (GetRoot()) {
 		_ASSERTE (0);
@@ -1105,12 +1105,12 @@ _ASSERTE (0);
 	dgInt32 activeContacts;
 	dgLink* ptr;
 	dgLink* link;
-
+	
 	dgBody* body0;
 	dgBody* body1;
 	dgContact* contact;
 	dgCollision *collision;
-	dgList<dgContactMaterial>::dgListNode* node;
+	dgList<dgContactMaterial>::dgListNode* node; 
 	TiresContacts contacts[DG_MAX_VEHICLE_WHEELS * 8];
 
 	count = 0;
@@ -1122,7 +1122,7 @@ _ASSERTE (0);
 			activeContacts = contact->m_activeContacts;
 			node = contact->GetFirst();
 			for ( i = 0; i < activeContacts; i ++) {
-				dgContactMaterial& contactPoint = node->GetInfo();;
+				dgContactMaterial& contactPoint = node->GetInfo();; 
 				body0 = contactPoint.m_body0;
 				body1 = contactPoint.m_body1;
 				collision = contactPoint.m_collision0;
@@ -1168,15 +1168,15 @@ _ASSERTE (0);
 
 
 void* dgVehicleConstraint::AddTire (
-	const dgMatrix& matrix,
-	const dgVector& pin,
-	dgFloat32 mass,
-	dgFloat32 width,
-	dgFloat32 radius,
-	dgFloat32 suspesionShock,
-	dgFloat32 suspesionSpring,
+	const dgMatrix& matrix, 
+	const dgVector& pin, 
+	dgFloat32 mass, 
+	dgFloat32 width, 
+	dgFloat32 radius, 
+	dgFloat32 suspesionShock, 
+	dgFloat32 suspesionSpring, 
 	dgFloat32 suspesionLength,
-	void* collisionID,
+	void* collisionID, 
 	void* usedData)
 {
 	dgBody *body;
@@ -1212,7 +1212,7 @@ void* dgVehicleConstraint::AddTire (
 	tire.m_width = dgAbsf (width);
 	tire.m_radius = dgAbsf (radius);
 
-	tire.m_steerAngle = dgFloat32 (0.0f);
+	tire.m_steerAngle = dgFloat32 (0.0f);	
 	tire.m_steerAngle = dgFloat32 (0.0f);
 	tire.m_tireNormalLoad = dgVector (dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f));
 
@@ -1235,9 +1235,9 @@ void* dgVehicleConstraint::AddTire (
 	tire.m_lostSideGrip = false;
 	tire.m_lostTraction = false;
 
-	// add tire at max decompression
+	// add tire at max decompression 
 	collision = (dgCompoundCollision*) body->GetCollision();
-	GetTireLocalMatrix(wheel, tireMatrix);
+	GetTireLocalMatrix(wheel, tireMatrix); 
 	tireCollision = new dgTireCollision (world, &tire, tireMatrix, m_upPin);
 	collision->AddCollision(tireCollision);
 
@@ -1259,7 +1259,7 @@ void dgVehicleConstraint::RemoveTire (void* index)
 		vehicelCollision = (dgCompoundCollision*) m_body0->GetCollision();
 		dgTire& tire = node->GetInfo();
 
-		tireCollision = tire.m_collision;
+		tireCollision = tire.m_collision; 
 		vehicelCollision->RemoveCollision (tireCollision);
 		m_wheels.Remove (node);
 		tireCollision->ReleaseTire();
@@ -1388,7 +1388,7 @@ _ASSERTE (0);
 		if (tire.m_brakeFrictionTorque > dgFloat32 (1.0e-10f)) {
 			CalculateTireAngularJacobians (m_bodies, rows, rightDir);
 			m_diagDamp[rows] = dgFloat32 (0.0f);
-			m_accel[rows] = tire.m_brakeAcceleration;
+			m_accel[rows] = tire.m_brakeAcceleration;  
 			m_bilateralForceBounds[rows].m_low = -tire.m_brakeFrictionTorque;
 			m_bilateralForceBounds[rows].m_upper = tire.m_brakeFrictionTorque;
 			rows++;
@@ -1419,20 +1419,20 @@ _ASSERTE (0);
 			lateralKineticFriction = collision->m_activeContactsContacts[k].m_dynamicFriction1 * DG_TIRES_LATERAL_FRICTION_MULTIPLIER;
 
 			body2Index = 0;
-			body2 = (collision->m_activeContactsContacts[k].m_pair0.m_body == body) ?
-				     collision->m_activeContactsContacts[k].m_pair1.m_body :
+			body2 = (collision->m_activeContactsContacts[k].m_pair0.m_body == body) ? 
+				     collision->m_activeContactsContacts[k].m_pair1.m_body : 
 					 collision->m_activeContactsContacts[k].m_pair0.m_body;
 
 			slip = dgFloat32 (0.0f);
 			if (body2->m_invMass.m_w != dgFloat32 (0.0f)) {
-				slip = GetMin (tire.m_mass * body2->m_invMass.m_w, dgFloat32 (0.5f));
+				slip = GetMin (tire.m_mass * body2->m_invMass.m_w, dgFloat32 (0.5f));  
 				for (body2Index = m_vehicleBodiesCount; body2Index < m_bodies; body2Index ++) {
 					if (body2 == m_bodyArray[body2Index]) {
 						break;
 					}
 				}
 
-
+				
 				if (body2Index == m_bodies) {
 					m_bodyArray[m_bodies] = body2;
 
@@ -1442,7 +1442,7 @@ _ASSERTE (0);
 //					body->CalcInvInertiaMatrix (m_invInertiaMatrixArray[m_bodies]);
 					m_bodies ++;
 				}
-			}
+			} 
 
 			pointDataP.m_r0 = contactPosit - body2->m_globalCentreOfMass;
 			pointDataP.m_veloc0 = body2->m_omega * pointDataP.m_r0;
@@ -1463,7 +1463,7 @@ _ASSERTE (0);
 				m_jacobianIndexArray[rows].m_m0 = body2Index;
 				m_jacobianIndexArray[rows].m_m1 = i;
 
-				dgJacobian &jacobian0 = m_Jt[rows].m_jacobian_IM0;
+				dgJacobian &jacobian0 = m_Jt[rows].m_jacobian_IM0; 
 				dgVector r0CrossDir (pointDataP.m_r0 * contactNormal);
 				jacobian0.m_linear[0] = contactNormal.m_x;
 				jacobian0.m_linear[1] = contactNormal.m_y;
@@ -1474,7 +1474,7 @@ _ASSERTE (0);
 				jacobian0.m_angular[2] = r0CrossDir.m_z;
 				jacobian0.m_angular[3] = dgFloat32 (0.0f);
 
-				dgJacobian &jacobian1 = m_Jt[rows].m_jacobian_IM1;
+				dgJacobian &jacobian1 = m_Jt[rows].m_jacobian_IM1; 
 				dgVector r1CrossDir (contactNormal * pointDataP.m_r1);
 				jacobian1.m_linear[0] = -contactNormal.m_x;
 				jacobian1.m_linear[1] = -contactNormal.m_y;
@@ -1492,7 +1492,7 @@ _ASSERTE (0);
 				m_bilateralForceBounds[rows].m_low = dgFloat32 (0.0f);
 				m_bilateralForceBounds[rows].m_upper = DG_MAX_BOUND;
 				//m_diagDamp[rows] = dgFloat32 (0.0f);
-				m_diagDamp[rows] = slip;
+				m_diagDamp[rows] = slip; 
 				m_accel[rows] = (penetrationVeloc + relVelocErr) * invdt;
 				rows ++;
 			}
@@ -1515,7 +1515,7 @@ _ASSERTE (0);
 						m_jacobianIndexArray[rows].m_m0 = body2Index;
 						m_jacobianIndexArray[rows].m_m1 = i;
 
-						dgJacobian &jacobian0 = m_Jt[rows].m_jacobian_IM0;
+						dgJacobian &jacobian0 = m_Jt[rows].m_jacobian_IM0; 
 
 						dgVector r0CrossDir (pointDataP.m_r0 * frontDir);
 						jacobian0.m_linear[0] = frontDir.m_x;
@@ -1528,7 +1528,7 @@ _ASSERTE (0);
 						jacobian0.m_angular[3] = dgFloat32 (0.0f);
 
 
-						dgJacobian &jacobian1 = m_Jt[rows].m_jacobian_IM1;
+						dgJacobian &jacobian1 = m_Jt[rows].m_jacobian_IM1; 
 						dgVector r1CrossDir (frontDir * pointDataP.m_r1);
 						jacobian1.m_linear[0] = -frontDir.m_x;
 						jacobian1.m_linear[1] = -frontDir.m_y;
@@ -1559,7 +1559,7 @@ _ASSERTE (0);
 						m_jacobianIndexArray[rows].m_m0 = body2Index;
 						m_jacobianIndexArray[rows].m_m1 = i;
 
-						dgJacobian &jacobian0 = m_Jt[rows].m_jacobian_IM0;
+						dgJacobian &jacobian0 = m_Jt[rows].m_jacobian_IM0; 
 						dgVector r0CrossDir (pointDataP.m_r0 * rightDir);
 						jacobian0.m_linear[0] = rightDir.m_x;
 						jacobian0.m_linear[1] = rightDir.m_y;
@@ -1570,7 +1570,7 @@ _ASSERTE (0);
 						jacobian0.m_angular[2] = r0CrossDir.m_z;
 						jacobian0.m_angular[3] = dgFloat32 (0.0f);
 
-						dgJacobian &jacobian1 = m_Jt[rows].m_jacobian_IM1;
+						dgJacobian &jacobian1 = m_Jt[rows].m_jacobian_IM1; 
 						dgVector r1CrossDir (rightDir * pointDataP.m_r1);
 						jacobian1.m_linear[0] = -rightDir.m_x;
 						jacobian1.m_linear[1] = -rightDir.m_y;
@@ -1614,8 +1614,8 @@ _ASSERTE (0);
 		accel = dgFloat32 (0.0f);
 
 		j = m_jacobianIndexArray[i].m_m0;
-		_ASSERTE (j < m_bodies);
-		_ASSERTE ((j == 0) || (j == 1) || (j >= m_vehicleBodiesCount));
+		_ASSERTE (j < m_bodies); 
+		_ASSERTE ((j == 0) || (j == 1) || (j >= m_vehicleBodiesCount)); 
 //		body = m_bodyArray[j];
 //		invMass = body->m_invMass[3];
 //		dgMatrix* invInertia0;
@@ -1677,7 +1677,7 @@ _ASSERTE (0);
 	// apply reaction forces to chassis and tires
 	body2 = vehicle.GetBody0();
 	for (i = 0; i < m_rows; i ++) {
-		force = m_force[i];
+		force = m_force[i]; 
 
 #ifdef _MSC_VER
 		_ASSERTE (dgCheckFloat(force));
@@ -1713,7 +1713,7 @@ _ASSERTE (0);
 	for (iter.Begin(); iter; iter ++) {
 		dgVehicleConstraint::dgTire& tire = *iter;
 
-		j = tire.m_bodyIndex;
+		j = tire.m_bodyIndex; 
 
 		dgVector tirePosit (matrix.RotateVector(tire.m_localMatrix.m_posit + localUpDir.Scale (tire.m_parametricPosit)));
 		dgVector tireAccel (m_tireForce[j].Scale (tire.m_invMass));
@@ -1758,7 +1758,7 @@ dgUnsigned32 dgVehicleConstraint::JacobianDerivative (dgContraintDescritor& para
 	dgCompoundCollision *compound;
 	dgMatrix tireMatrix;
 	dgVehicleForceMiniSolver systemSolver;
-
+	
 
 	body = m_body0;
 	world = body->m_world;
@@ -1772,7 +1772,7 @@ dgUnsigned32 dgVehicleConstraint::JacobianDerivative (dgContraintDescritor& para
 	//	dgVector bodyOrigin (body->GetCentreOfMass());
 	//	const dgVector& bodyOrigin = body->m_globalCentreOfMass;
 		gravity = body->GetForce().Scale (body->GetInvMass().m_w) % upDir;
-
+		
 		for (iter.Begin(); iter; iter ++) {
 			dgTire& tire = *iter;
 
@@ -1825,7 +1825,7 @@ dgUnsigned32 dgVehicleConstraint::JacobianDerivative (dgContraintDescritor& para
 
 		for (iter.Begin(); iter; iter ++) {
 			dgTire& tire = *iter;
-			GetTireLocalMatrix(iter.GetNode(), tireMatrix);
+			GetTireLocalMatrix(iter.GetNode(), tireMatrix); 
 			tire.m_collision->SetMatrix (tireMatrix, m_upPin);
 	//		tire.m_collision->CalculateNewContacts (body->m_matrix);
 		}

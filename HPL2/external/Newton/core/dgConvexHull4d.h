@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -36,7 +36,7 @@ class dgAABBPointTree4d;
 class dgHullVector: public dgBigVector
 {
 	public:
-	void operator = (const dgBigVector& a)
+	void operator = (const dgBigVector& a) 
 	{
 		m_x = a.m_x;
 		m_y = a.m_y;
@@ -54,7 +54,7 @@ class dgHullVector: public dgBigVector
 class dgConvexHull4dTetraherum
 {
 	public:
-	class dgTetrahedrumFace
+	class dgTetrahedrumFace 
 	{
 		public:
 		dgInt32 m_index[3];
@@ -65,7 +65,7 @@ class dgConvexHull4dTetraherum
 
 	class dgTetrahedrumPlane: public dgBigVector
 	{
-		public:
+		public: 
 		dgTetrahedrumPlane (const dgBigVector& p0, const dgBigVector& p1, const dgBigVector& p2, const dgBigVector& p3);
 		dgFloat64 Evalue (const dgBigVector& point) const;
 		dgFloat64 m_dist;
@@ -77,7 +77,7 @@ class dgConvexHull4dTetraherum
 
 	dgInt32 GetMark() const { return m_mark; }
 	void SetMark(dgInt32 mark) { m_mark = mark; }
-
+	
 	dgTetrahedrumFace m_faces[4];
 #ifdef _DEBUG
 	dgInt32 m_debugID;
@@ -85,7 +85,7 @@ class dgConvexHull4dTetraherum
 
 	private:
 	void Init (const dgHullVector* const points, dgInt32 v0, dgInt32 v1, dgInt32 v2, dgInt32 v3);
-
+	
 	dgInt32 m_mark;
 	friend class dgConvexHull4d;
 	friend class dgDelaunayTetrahedralization;
@@ -102,9 +102,9 @@ class dgConvexHull4d: public dgList<dgConvexHull4dTetraherum>
 	dgInt32 GetVertexIndex(dgInt32 i) const;
 	const dgBigVector& GetVertex(dgInt32 i) const;
 
+	
 
-
-	dgInt32 IncMark ();
+	dgInt32 IncMark (); 
 
 	protected:
 	dgConvexHull4d(dgMemoryAllocator* const allocator);
@@ -117,7 +117,7 @@ class dgConvexHull4d: public dgList<dgConvexHull4dTetraherum>
 	virtual void DeleteFace (dgListNode* const node) ;
 
 	dgListNode* FindFacingNode(const dgBigVector& vertex);
-
+	
 	dgInt32 BuildNormalList (dgBigVector* const normalArray) const;
 	void InsertNewVertex(dgInt32 vertexIndex, dgListNode* const frontFace, dgList<dgListNode*>& deletedFaces, dgList<dgListNode*>& newFaces);
 	dgInt32 SupportVertex (dgAABBPointTree4d** const tree, const dgHullVector* const points, const dgBigVector& dir) const;

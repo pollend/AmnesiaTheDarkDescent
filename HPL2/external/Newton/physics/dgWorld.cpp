@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -68,7 +68,7 @@ static  char *xxx[10] = {"bbbbbbbbbb",
 						 "baaaaaaaab",
 						 "bbbbbbbbbb"};
 
-struct myPath: public dgPathFinder<dgInt32, float>
+struct myPath: public dgPathFinder<dgInt32, float> 
 {
 	dgInt32 goalx;
 	dgInt32 goaly;
@@ -103,7 +103,7 @@ struct myPath: public dgPathFinder<dgInt32, float>
 		y = id / 10;
 
 		const dgPathNode<dgInt32, float>* parent = node.GetParent();
-		id = parent->GetId();
+		id = parent->GetId(); 
 		x0 = id % 10;
 		y0 = id / 10;
 
@@ -111,7 +111,7 @@ struct myPath: public dgPathFinder<dgInt32, float>
 		x1 = 2 * x0 - x;
 		y1 = 2 * y0 - y;
 		if (grandParent) {
-			id = grandParent->GetId();
+			id = grandParent->GetId(); 
 			x1 = id % 10;
 			y1 = id / 10;
 		}
@@ -171,7 +171,7 @@ struct myPath: public dgPathFinder<dgInt32, float>
 
 void xxxxx()
 {
-	myPath path;
+	myPath path; 
 	const dgPathNode<dgInt32, float>* firtNode;
 	for (firtNode = path.CalCulatePath (5 * 10 + 3, 4 * 10 + 8); firtNode; firtNode= firtNode->GetNext()) {
 		dgInt32 id;
@@ -199,7 +199,7 @@ dgWorld::dgWorld(dgMemoryAllocator* allocator):
 	dgBroadPhaseCollision(allocator),
 	dgBodyMaterialList(allocator),
 	dgBodyCollisionList(allocator),
-	dgActiveContacts(allocator),
+	dgActiveContacts(allocator), 
 	dgCollidingPairCollector(),
 	m_perInstanceData(allocator),
 	m_threadsManager(),
@@ -223,7 +223,7 @@ dgWorld::dgWorld(dgMemoryAllocator* allocator):
 	m_inUpdate = 0;
 	m_bodyGroupID = 0;
 //	m_activeBodiesCount = 0;
-
+	
 	m_defualtBodyGroupID = CreateBodyGroupID();
 	m_islandMemorySizeInBytes = DG_INITIAL_ISLAND_SIZE;
 	m_bodiesMemorySizeInBytes = DG_INITIAL_BODIES_SIZE;
@@ -231,18 +231,18 @@ dgWorld::dgWorld(dgMemoryAllocator* allocator):
 
 	m_pairMemoryBufferSizeInBytes = 1024 * 64 * sizeof (void*);
 	m_pairMemoryBuffer = m_allocator->MallocLow (m_pairMemoryBufferSizeInBytes);
-	m_islandMemory = m_allocator->MallocLow (m_islandMemorySizeInBytes);
-	m_jointsMemory = m_allocator->MallocLow (m_jointsMemorySizeInBytes);
-	m_bodiesMemory = m_allocator->MallocLow (m_bodiesMemorySizeInBytes);
+	m_islandMemory = m_allocator->MallocLow (m_islandMemorySizeInBytes); 
+	m_jointsMemory = m_allocator->MallocLow (m_jointsMemorySizeInBytes); 
+	m_bodiesMemory = m_allocator->MallocLow (m_bodiesMemorySizeInBytes); 
 	for (dgInt32 i = 0; i < DG_MAXIMUN_THREADS; i ++) {
 		m_jacobiansMemorySizeInBytes[i] = DG_INITIAL_JACOBIAN_SIZE;
-		m_jacobiansMemory[i] = m_allocator->MallocLow (m_jacobiansMemorySizeInBytes[i]);
+		m_jacobiansMemory[i] = m_allocator->MallocLow (m_jacobiansMemorySizeInBytes[i]);  
 
 		m_internalForcesMemorySizeInBytes[i] = DG_INITIAL_BODIES_SIZE;
-		m_internalForcesMemory[i] = m_allocator->MallocLow (m_internalForcesMemorySizeInBytes[i]);
+		m_internalForcesMemory[i] = m_allocator->MallocLow (m_internalForcesMemorySizeInBytes[i]);  
 
 		m_contactBuffersSizeInBytes[i] = DG_INITIAL_CONTATCT_SIZE;
-		m_contactBuffers[i] = m_allocator->MallocLow (m_contactBuffersSizeInBytes[i]);
+		m_contactBuffers[i] = m_allocator->MallocLow (m_contactBuffersSizeInBytes[i]);  
 	}
 
 	m_genericLRUMark = 0;
@@ -252,7 +252,7 @@ dgWorld::dgWorld(dgMemoryAllocator* allocator):
 	m_frictionMode = 0;
 	m_dynamicsLru = 0;
 	m_broadPhaseLru = 0;
-
+		
 	m_bodiesUniqueID = 0;
 //	m_bodiesCount = 0;
 	m_frictiomTheshold = dgFloat32 (0.25f);
@@ -306,28 +306,28 @@ dgWorld::dgWorld(dgMemoryAllocator* allocator):
 
 	dgBroadPhaseCollision::Init ();
 	dgCollidingPairCollector::Init ();
-
+	
 	m_pointCollision = new (m_allocator) dgCollisionPoint(m_allocator);
 	AddSentinelBody();
 	SetPerfomanceCounter(NULL);
 }
 
 dgWorld::~dgWorld()
-{
+{	
 	DestroyAllBodies();
 	RemoveAllGroupID();
 	m_destroyCollision = NULL;
 	ReleaseCollision(m_pointCollision);
 	DestroyBody (m_sentionelBody);
 
-	m_allocator->FreeLow (m_jointsMemory);
-	m_allocator->FreeLow (m_bodiesMemory);
+	m_allocator->FreeLow (m_jointsMemory); 
+	m_allocator->FreeLow (m_bodiesMemory);  
 	m_allocator->FreeLow (m_islandMemory);
 	m_allocator->FreeLow (m_pairMemoryBuffer);
 	for (dgInt32 i = 0; i < DG_MAXIMUN_THREADS; i ++) {
-		m_allocator->FreeLow (m_jacobiansMemory[i]);
-		m_allocator->FreeLow (m_internalForcesMemory[i]);
-		m_allocator->FreeLow (m_contactBuffers[i]);
+		m_allocator->FreeLow (m_jacobiansMemory[i]);  
+		m_allocator->FreeLow (m_internalForcesMemory[i]);  
+		m_allocator->FreeLow (m_contactBuffers[i]);  
 	}
 }
 
@@ -403,7 +403,7 @@ void dgWorld::SetThreadsCount (dgInt32 count)
 
 	m_threadsManager.CreateThreaded (count);
 	m_numberOfTheads = dgUnsigned32 (m_threadsManager.GetThreadCount());
-
+	
 }
 
 dgInt32 dgWorld::GetThreadsCount () const
@@ -506,7 +506,7 @@ dgBody* dgWorld::CreateBody(dgCollision* const collision/*, const dgMatrix& matr
 //	body->m_freezeSpeed2 = m_freezeSpeed2;
 //	body->m_freezeOmega2 = m_freezeOmega2;
 
-	body->SetCentreOfMass (dgVector (dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (1.0f)));
+	body->SetCentreOfMass (dgVector (dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (1.0f))); 
 	body->SetLinearDamping (dgFloat32 (0.1045f)) ;
 	body->SetAngularDamping (dgVector (dgFloat32 (0.1045f), dgFloat32 (0.1045f), dgFloat32 (0.1045f), dgFloat32 (0.0f)));
 
@@ -579,7 +579,7 @@ void dgWorld::UpdateCollision ()
 	dgFloat32 timestep;
 	_ASSERTE (m_inUpdate == 0);
 
-
+	
 	m_threadsManager.ClearTimers();
 	memset (m_perfomanceCounters, 0, sizeof (m_perfomanceCounters));
 	dgUnsigned32 ticks = m_getPerformanceCount();
@@ -588,7 +588,7 @@ void dgWorld::UpdateCollision ()
 	m_inUpdate ++;
 	_ASSERTE (m_numberOfTheads  >= 1);
 
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32))
+#if (defined (WIN32) || defined(_WIN32))
 	#ifndef __USE_DOUBLE_PRECISION__
 		dgUnsigned32 controlWorld = dgControlFP (0xffffffff, 0);
 		dgControlFP (_PC_24, _MCW_PC);
@@ -598,7 +598,7 @@ void dgWorld::UpdateCollision ()
 	timestep = dgFloat32 (0.0f);
 
 	if (m_cpu == dgSimdPresent) {
-#ifdef DG_BUILD_SIMD_CODE
+#ifdef DG_BUILD_SIMD_CODE	
 		simd_env rounding;
 		rounding = simd_get_ctrl();
 		simd_set_FZ_mode();
@@ -612,7 +612,7 @@ void dgWorld::UpdateCollision ()
 	}
 	m_inUpdate --;
 
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32))
+#if (defined (WIN32) || defined(_WIN32))
 	#ifndef __USE_DOUBLE_PRECISION__
 		dgControlFP (controlWorld, _MCW_PC);
 	#endif
@@ -645,7 +645,7 @@ void dgWorld::Update (dgFloat32 timestep)
 //xxx ++;
 
 //m_cpu = dgNoSimdPresent;
-	#ifdef _LINUX_VER
+	#ifdef __linux__
 //		m_cpu = dgNoSimdPresent;
 	#endif
 
@@ -657,11 +657,11 @@ void dgWorld::Update (dgFloat32 timestep)
 	ticks = m_getPerformanceCount();
 
 	m_destroyeddBodiesPool.m_count = 0;
-
+	
 	m_inUpdate ++;
 	_ASSERTE (m_numberOfTheads  >= 1);
 
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32))
+#if (defined (WIN32) || defined(_WIN32))
 	#ifndef __USE_DOUBLE_PRECISION__
 		dgUnsigned32 controlWorld = dgControlFP (0xffffffff, 0);
 		dgControlFP (_PC_24, _MCW_PC);
@@ -669,7 +669,7 @@ void dgWorld::Update (dgFloat32 timestep)
 #endif
 
 	if (m_cpu == dgSimdPresent) {
-#ifdef DG_BUILD_SIMD_CODE
+#ifdef DG_BUILD_SIMD_CODE	
 			simd_env rounding = simd_get_ctrl();
 			simd_set_FZ_mode();
 
@@ -686,7 +686,7 @@ void dgWorld::Update (dgFloat32 timestep)
 	m_inUpdate --;
 
 
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32))
+#if (defined (WIN32) || defined(_WIN32))
 	#ifndef __USE_DOUBLE_PRECISION__
 		dgControlFP (controlWorld, _MCW_PC);
 	#endif
@@ -752,13 +752,13 @@ void dgWorld::SetDestroyCollisionCallback (OnDestroyCollision callback)
 	m_destroyCollision = callback;
 }
 
-void dgWorld::SetLeavingWorldCallback (OnLeavingWorldAction callback)
+void dgWorld::SetLeavingWorldCallback (OnLeavingWorldAction callback) 
 {
 	m_leavingWorldNotify = callback;
 }
 
 
-void dgWorld::SetBodyDestructionByExeciveForce (OnBodyDestructionByExeciveForce callback)
+void dgWorld::SetBodyDestructionByExeciveForce (OnBodyDestructionByExeciveForce callback) 
 {
 	m_destroyBodyByExeciveForce = callback;
 }
@@ -766,12 +766,12 @@ void dgWorld::SetBodyDestructionByExeciveForce (OnBodyDestructionByExeciveForce 
 
 
 dgBallConstraint* dgWorld::CreateBallConstraint (
-	const dgVector& pivot,
-	dgBody* const body0,
+	const dgVector& pivot, 
+	dgBody* const body0, 
 	dgBody* const body1)
 {
 	dgBallConstraint *constraint;
-
+	
 	_ASSERTE (body0);
 	_ASSERTE (body0 != body1);
 //	constraint = dgBallConstraint::Create(this);
@@ -784,9 +784,9 @@ dgBallConstraint* dgWorld::CreateBallConstraint (
 
 
 dgHingeConstraint* dgWorld::CreateHingeConstraint (
-	const dgVector& pivot,
-	const dgVector& pinDir,
-	dgBody* const body0,
+	const dgVector& pivot, 
+	const dgVector& pinDir, 
+	dgBody* const body0, 
 	dgBody* const body1)
 {
 	dgHingeConstraint *constraint;
@@ -805,7 +805,7 @@ dgHingeConstraint* dgWorld::CreateHingeConstraint (
 dgUpVectorConstraint* dgWorld::CreateUpVectorConstraint (const dgVector& pin, dgBody *body)
 {
 	dgUpVectorConstraint *constraint;
-
+	
 	_ASSERTE (body);
 //	constraint = dgUpVectorConstraint::Create(this);
 	constraint = new (m_allocator) dgUpVectorConstraint;
@@ -818,9 +818,9 @@ dgUpVectorConstraint* dgWorld::CreateUpVectorConstraint (const dgVector& pin, dg
 
 
 dgSlidingConstraint* dgWorld::CreateSlidingConstraint (
-	const dgVector& pivot,
-	const dgVector& pinDir,
-	dgBody* const body0,
+	const dgVector& pivot, 
+	const dgVector& pinDir, 
+	dgBody* const body0, 
 	dgBody* const body1)
 {
 	dgSlidingConstraint *constraint;
@@ -837,9 +837,9 @@ dgSlidingConstraint* dgWorld::CreateSlidingConstraint (
 
 
 dgCorkscrewConstraint* dgWorld::CreateCorkscrewConstraint (
-	const dgVector& pivot,
-	const dgVector& pinDir,
-	dgBody* const body0,
+	const dgVector& pivot, 
+	const dgVector& pinDir, 
+	dgBody* const body0, 
 	dgBody* const body1)
 {
 	dgCorkscrewConstraint *constraint;
@@ -856,10 +856,10 @@ dgCorkscrewConstraint* dgWorld::CreateCorkscrewConstraint (
 
 
 dgUniversalConstraint* dgWorld::CreateUniversalConstraint (
-	const dgVector& pivot,
-	const dgVector& pin0,
-	const dgVector& pin1,
-	dgBody* const body0,
+	const dgVector& pivot, 
+	const dgVector& pin0, 
+	const dgVector& pin1, 
+	dgBody* const body0, 
 	dgBody* const body1)
 {
 	dgUniversalConstraint *constraint;
@@ -876,8 +876,8 @@ dgUniversalConstraint* dgWorld::CreateUniversalConstraint (
 
 /*
 dgPointToCurveConstraint* dgWorld::AttachPointToCurveConstraint (
-	const dgVector& pivot,
-	dgBody* const body0,
+	const dgVector& pivot, 
+	dgBody* const body0, 
 	OnPointToCurveCallback funt,
 	void *curveContext)
 {
@@ -954,7 +954,7 @@ dgLink* dgWorld::FindConstraintLink (const dgBody* const body0, const dgBody* co
 				if (ptr->m_twin->m_body == body1) {
 					return ptr;
 				}
-
+			
 				ptr = ptr->m_twin->m_next;
 			} while (ptr != link);
 		}
@@ -986,7 +986,7 @@ void dgWorld::BodySetMatrix (dgBody* body, const dgMatrix& matrix)
 	dgMatrix relMatrix (body->GetMatrix().Inverse() * matrix);
 	while (index) {
 		dgBody* body;
-
+		
 		index --;
 		body = queue[index];
 		_ASSERTE (body != m_sentionelBody);
@@ -995,8 +995,8 @@ void dgWorld::BodySetMatrix (dgBody* body, const dgMatrix& matrix)
 		dgBroadPhaseCollision::Add (body);
 
 		dgMatrix matrix (body->GetMatrix() * relMatrix);
-		body->SetVelocity (dgVector (dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f)));
-		body->SetOmega (dgVector (dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f)));
+		body->SetVelocity (dgVector (dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f)));    
+		body->SetOmega (dgVector (dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f)));    
 		body->SetMatrix (matrix);
 		body->m_isInWorld = true;
 
@@ -1044,7 +1044,7 @@ dgInt32 dgWorld::GetBodyArray (dgBody* root, dgBody** array, dgInt32 maxSize) co
 	const dgInt64 mask = dgInt64 (65536) * dgInt64 (65536) * dgInt64 (65536) * dgInt64 (4096);
 
 	count = 0;
-	link = root->m_firstConstraintLink;
+	link = root->m_firstConstraintLink; 
 	if (link) {
 		root->m_lru |= mask;
 		stack[0] = link;
@@ -1061,7 +1061,7 @@ dgInt32 dgWorld::GetBodyArray (dgBody* root, dgBody** array, dgInt32 maxSize) co
 						constraint = ptr->m_constraint;
 						if (constraint->IsBilateral()) {
 							if (count <	maxSize) {
-								array[count] = body;
+								array[count] = body; 
 								count ++;
 							}
 							stack[i] = ptr->m_twin;
@@ -1075,7 +1075,7 @@ dgInt32 dgWorld::GetBodyArray (dgBody* root, dgBody** array, dgInt32 maxSize) co
 			} while (ptr != link);
 		}
 
-		link = root->m_firstConstraintLink;
+		link = root->m_firstConstraintLink; 
 		root->m_lru &= ~ mask;
 		stack[0] = link;
 		i = 1;
@@ -1134,7 +1134,7 @@ return 0;
 
 		body = constraint->m_body0;
 		if (body && (body->m_invMass.m_w != dgFloat32 (0.0f))) {
-			link = body->m_firstConstraintLink;
+			link = body->m_firstConstraintLink; 
 			_ASSERTE (link);
 			ptr = link;
 			do {
@@ -1144,14 +1144,14 @@ return 0;
 					stackPool[stack] = constraintPtr;
 					stack ++;
 				}
-
+			
 				ptr = ptr->m_twin->m_next;
-			} while (ptr != link);
+			} while (ptr != link); 
 		}
 
 		body = constraint->m_body1;
 		if (body && (body->m_invMass.m_w != dgFloat32 (0.0f))) {
-			link = body->m_firstConstraintLink;
+			link = body->m_firstConstraintLink; 
 			_ASSERTE (link);
 			ptr = link;
 			do {
@@ -1163,9 +1163,9 @@ return 0;
 				}
 
 				ptr = ptr->m_twin->m_next;
-			} while (ptr != link);
+			} while (ptr != link); 
 		}
-	}
+	} 
 
 	for (i = 0; i < stack; i ++) {
 		constraint = stackPool[i];
@@ -1177,10 +1177,10 @@ return 0;
 		constraint->m_lru &= ~mask;
 
 		#ifdef _DEBUG
-		for (stack = i + 1; stack < count; stack ++) {
+		for (stack = i + 1; stack < count; stack ++) {                                                                 
 			_ASSERTE (constraint != constraintArray[stack]);
 		}
-		#endif
+		#endif                             
 	}
 
 	return count;
@@ -1213,7 +1213,7 @@ bool dgWorld::AreBodyConnectedByJoints (dgBody* const originSrc, dgBody* const t
 		dgBody* const origin = queue[start];
 		start ++;
 		start &= (DG_QEUEU_SIZE - 1);
-
+		
 		for (dgBodyMasterListRow::dgListNode* jointNode = origin->m_masterNode->GetInfo().GetFirst(); jointNode; jointNode = jointNode->GetNext()) {
 			dgBodyMasterListCell& cell = jointNode->GetInfo();
 

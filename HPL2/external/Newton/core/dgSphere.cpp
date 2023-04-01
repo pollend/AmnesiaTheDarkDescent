@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -35,7 +35,7 @@ const dgSphere& GetIdentitySphere()
 
 namespace InternalSphere
 {
-	const dgFloat32 SPHERE_TOL = 0.002f;
+	const dgFloat32 SPHERE_TOL = 0.002f;	
 
 	static dgFloat32 AspectRatio (dgFloat32 x, dgFloat32 y)
 	{
@@ -53,15 +53,15 @@ namespace InternalSphere
 		}
 		return x / y;
 	}
-
+	
 
 	static void BoundingBox (
 		const dgMatrix &matrix,
-		const dgFloat32 vertex[],
-		dgInt32 stride,
+		const dgFloat32 vertex[], 
+		dgInt32 stride, 
 		const dgInt32 index[],
-		dgInt32 indexCount,
-		dgVector &min,
+		dgInt32 indexCount, 
+		dgVector &min, 
 		dgVector &max)
 	{
 		dgInt32 i;
@@ -73,7 +73,7 @@ namespace InternalSphere
 		dgFloat32 ymax;
 		dgFloat32 zmin;
 		dgFloat32 zmax;
-
+		
 	   xmin = dgFloat32 (1.0e10f);
 	   ymin = dgFloat32 (1.0e10f);
 	   zmin = dgFloat32 (1.0e10f);
@@ -95,7 +95,7 @@ namespace InternalSphere
 			if (tmp.m_y > ymax) ymax = tmp.m_y;
 			if (tmp.m_z > zmax) zmax = tmp.m_z;
 	   }
-
+		
 	   min = dgVector (xmin, ymin, zmin, dgFloat32 (0.0f));
 	   max = dgVector (xmax, ymax, zmax, dgFloat32 (0.0f));
 	}
@@ -103,10 +103,10 @@ namespace InternalSphere
 	// Compute axis aligned box
 	static void BoundingBox (
 		const dgMatrix &Mat,
-		const dgFloat32 vertex[],
-		dgInt32 vertexCount,
+		const dgFloat32 vertex[], 
+		dgInt32 vertexCount, 
 		dgInt32 stride,
-		dgVector &min,
+		dgVector &min, 
 		dgVector &max)
 	{
 		dgInt32 i;
@@ -148,7 +148,7 @@ namespace InternalSphere
 		dgSphere &sphere,
 		dgVector &eigenValues,
 		dgVector &scaleVector,
-		const dgFloat32 vertex[],
+		const dgFloat32 vertex[], 
 		const dgInt32 faceIndex[],
 		dgInt32 indexCount,
 		dgInt32 stride)
@@ -167,11 +167,11 @@ namespace InternalSphere
 		dgFloat64 Ixy;
 		dgFloat64 Ixz;
 		dgFloat64 Iyz;
-
+		
 		dgBigVector massCenter (0, 0, 0, 0);
 		dgBigVector var (0, 0, 0, 0);
 		dgBigVector cov (0, 0, 0, 0);
-
+	
 		ptr = (dgFloat32*)vertex;
 		for (i = 0; i < indexCount; i ++) {
 			j = index[i] * stride;
@@ -182,20 +182,20 @@ namespace InternalSphere
 			var += dgBigVector (x * x, y * y, z * z, 0);
 			cov += dgBigVector (x * y, x * z, y * z, 0);
 		}
-
+	
 		k = 1.0 / indexCount;
 		var = var.Scale (k);
 		cov = cov.Scale (k);
 		massCenter = massCenter.Scale (k);
-
+	
 		Ixx = var.m_x - massCenter.m_x * massCenter.m_x;
 		Iyy = var.m_y - massCenter.m_y * massCenter.m_y;
 		Izz = var.m_z - massCenter.m_z * massCenter.m_z;
-
+	
 		Ixy = cov.m_x - massCenter.m_x * massCenter.m_y;
 		Ixz = cov.m_y - massCenter.m_x * massCenter.m_z;
 		Iyz = cov.m_z - massCenter.m_y * massCenter.m_z;
-
+	
 		sphere.m_front = dgVector (dgFloat32(Ixx), dgFloat32(Ixy), dgFloat32(Ixz), dgFloat32 (0.0f));
 		sphere.m_up	   = dgVector (dgFloat32(Ixy), dgFloat32(Iyy), dgFloat32(Iyz), dgFloat32 (0.0f));
 		sphere.m_right = dgVector (dgFloat32(Ixz), dgFloat32(Iyz), dgFloat32(Izz), dgFloat32 (0.0f));
@@ -245,13 +245,13 @@ namespace InternalSphere
 			centre = centre.Scale (dgFloat32  (1.0f / 3.0f));
 
 			// Inertia of each point in the triangle
-			Ixx = p0.m_x * p0.m_x + p1.m_x * p1.m_x + p2.m_x * p2.m_x;
-			Iyy = p0.m_y * p0.m_y + p1.m_y * p1.m_y + p2.m_y * p2.m_y;
-			Izz = p0.m_z * p0.m_z + p1.m_z * p1.m_z + p2.m_z * p2.m_z;
+			Ixx = p0.m_x * p0.m_x + p1.m_x * p1.m_x + p2.m_x * p2.m_x;	
+			Iyy = p0.m_y * p0.m_y + p1.m_y * p1.m_y + p2.m_y * p2.m_y;	
+			Izz = p0.m_z * p0.m_z + p1.m_z * p1.m_z + p2.m_z * p2.m_z;	
 
-			Ixy = p0.m_x * p0.m_y + p1.m_x * p1.m_y + p2.m_x * p2.m_y;
-			Iyz = p0.m_y * p0.m_z + p1.m_y * p1.m_z + p2.m_y * p2.m_z;
-			Ixz = p0.m_x * p0.m_z + p1.m_x * p1.m_z + p2.m_x * p2.m_z;
+			Ixy = p0.m_x * p0.m_y + p1.m_x * p1.m_y + p2.m_x * p2.m_y;	
+			Iyz = p0.m_y * p0.m_z + p1.m_y * p1.m_z + p2.m_y * p2.m_z;	
+			Ixz = p0.m_x * p0.m_z + p1.m_x * p1.m_z + p2.m_x * p2.m_z;	
 
 			if (area > dgEPSILON * 10.0) {
 				K = area / 12.0;
@@ -264,7 +264,7 @@ namespace InternalSphere
 				Ixz = K * (Ixz + 9.0 * centre.m_x * centre.m_z);
 				Iyz = K * (Iyz + 9.0 * centre.m_y * centre.m_z);
 				centre = centre.Scale ((dgFloat32)area);
-			}
+			} 
 
 			totalArea += area;
 			massCenter += centre;
@@ -273,7 +273,7 @@ namespace InternalSphere
 		}
 
 		if (totalArea > dgEPSILON * 10.0) {
-			K = 1.0 / totalArea;
+			K = 1.0 / totalArea; 
 			var = var.Scale ((dgFloat32)K);
 			cov = cov.Scale ((dgFloat32)K);
 			massCenter = massCenter.Scale ((dgFloat32)K);
@@ -293,7 +293,7 @@ namespace InternalSphere
 		sphere.EigenVectors(eigenValues);
 	}
 
-
+	
 	static void Statistics (
 		dgSphere &sphere,
 		dgVector &eigenValues,
@@ -314,11 +314,11 @@ namespace InternalSphere
 		dgFloat64 Ixy;
 		dgFloat64 Ixz;
 		dgFloat64 Iyz;
-
+		
 		dgBigVector var (0.0f, 0.0f, 0.0f, 0.0f);
 		dgBigVector cov (0.0f, 0.0f, 0.0f, 0.0f);
 		dgBigVector massCenter (0.0f, 0.0f, 0.0f, 0.0f);
-
+	
 		ptr = vertex;
 		for (i = 0; i < vertexCount; i ++) {
 			x = ptr[0] * scaleVector.m_x;
@@ -329,20 +329,20 @@ namespace InternalSphere
 			var += dgBigVector (x * x, y * y, z * z, 0.0f);
 			cov += dgBigVector (x * y, x * z, y * z, 0.0f);
 		}
-
+	
 		k = 1.0 / vertexCount;
 		var = var.Scale (k);
 		cov = cov.Scale (k);
 		massCenter = massCenter.Scale (k);
-
+	
 		Ixx = var.m_x - massCenter.m_x * massCenter.m_x;
 		Iyy = var.m_y - massCenter.m_y * massCenter.m_y;
 		Izz = var.m_z - massCenter.m_z * massCenter.m_z;
-
+	
 		Ixy = cov.m_x - massCenter.m_x * massCenter.m_y;
 		Ixz = cov.m_y - massCenter.m_x * massCenter.m_z;
 		Iyz = cov.m_z - massCenter.m_y * massCenter.m_z;
-
+	
 		sphere.m_front = dgVector (dgFloat32(Ixx), dgFloat32(Ixy), dgFloat32(Ixz), dgFloat32 (0.0f));
 		sphere.m_up    = dgVector (dgFloat32(Ixy), dgFloat32(Iyy), dgFloat32(Iyz), dgFloat32 (0.0f));
 		sphere.m_right = dgVector (dgFloat32(Ixz), dgFloat32(Iyz), dgFloat32(Izz), dgFloat32 (0.0f));
@@ -374,79 +374,79 @@ namespace InternalSphere
 		dgFloat64 area;
 		dgFloat64 totalArea;
 		const dgFace *Face;
-
+	
 		dgVector var (0.0f, 0.0f, 0.0f);
 		dgVector cov (0.0f, 0.0f, 0.0f);
 		dgVector centre (0.0f, 0.0f, 0.0f);
 		dgVector massCenter (0.0f, 0.0f, 0.0f);
-
+		
 		totalArea = 0.0;
 		ptr = vertex;
 		for (i = 0; i < faceCount; i ++) {
 			 Face = &face[i];
-
+		
 			 index = Face->m_wireFrame[0] * stride;
 			 dgVector p0 (&ptr[index]);
 			 p0 = p0.CompProduct (scaleVector);
-
+	
 			 index = Face->m_wireFrame[1] * stride;
 			 dgVector p1 (&ptr[index]);
 			 p1 = p1.CompProduct (scaleVector);
-
+		
 			 index = Face->m_wireFrame[2] * stride;
 			 dgVector p2 (&ptr[index]);
 			 p2 = p2.CompProduct (scaleVector);
-
+		
 			 dgVector normal ((p1 - p0) * (p2 - p0));
-
+		
 			 area = 0.5 * sqrt (normal % normal);
-
+		
 			 centre = p0 + p1 + p2;
 			 centre = centre.Scale (1.0f / 3.0f);
-
+		
 			 // Inercia of each point in the triangle
-			 Ixx = p0.m_x * p0.m_x + p1.m_x * p1.m_x + p2.m_x * p2.m_x;
-			 Iyy = p0.m_y * p0.m_y + p1.m_y * p1.m_y + p2.m_y * p2.m_y;
-			 Izz = p0.m_z * p0.m_z + p1.m_z * p1.m_z + p2.m_z * p2.m_z;
-
-			 Ixy = p0.m_x * p0.m_y + p1.m_x * p1.m_y + p2.m_x * p2.m_y;
-			 Iyz = p0.m_y * p0.m_z + p1.m_y * p1.m_z + p2.m_y * p2.m_z;
-			 Ixz = p0.m_x * p0.m_z + p1.m_x * p1.m_z + p2.m_x * p2.m_z;
-
+			 Ixx = p0.m_x * p0.m_x + p1.m_x * p1.m_x + p2.m_x * p2.m_x;	
+			 Iyy = p0.m_y * p0.m_y + p1.m_y * p1.m_y + p2.m_y * p2.m_y;	
+			 Izz = p0.m_z * p0.m_z + p1.m_z * p1.m_z + p2.m_z * p2.m_z;	
+		
+			 Ixy = p0.m_x * p0.m_y + p1.m_x * p1.m_y + p2.m_x * p2.m_y;	
+			 Iyz = p0.m_y * p0.m_z + p1.m_y * p1.m_z + p2.m_y * p2.m_z;	
+			 Ixz = p0.m_x * p0.m_z + p1.m_x * p1.m_z + p2.m_x * p2.m_z;	
+		
 			 if (area > dgEPSILON * 10.0) {
 			     K = area / 12.0;
 			     //Coriollis teorem for Inercia of a triangle in an arbitrary orientation
 			     Ixx = K * (Ixx + 9.0 * centre.m_x * centre.m_x);
 			     Iyy = K * (Iyy + 9.0 * centre.m_y * centre.m_y);
 			     Izz = K * (Izz + 9.0 * centre.m_z * centre.m_z);
-
+		
 			     Ixy = K * (Ixy + 9.0 * centre.m_x * centre.m_y);
 			     Ixz = K * (Ixz + 9.0 * centre.m_x * centre.m_z);
 			     Iyz = K * (Iyz + 9.0 * centre.m_y * centre.m_z);
 			     centre = centre.Scale ((dgFloat32)area);
-			 }
-
+			 } 
+		
 			 totalArea += area;
 			 massCenter += centre;
 			 var += dgVector ((dgFloat32)Ixx, (dgFloat32)Iyy, (dgFloat32)Izz);
 			 cov += dgVector ((dgFloat32)Ixy, (dgFloat32)Ixz, (dgFloat32)Iyz);
 		}
-
+		
 		if (totalArea > dgEPSILON * 10.0) {
-			K = 1.0 / totalArea;
+			K = 1.0 / totalArea; 
 			var = var.Scale ((dgFloat32)K);
 			cov = cov.Scale ((dgFloat32)K);
 			massCenter = massCenter.Scale ((dgFloat32)K);
 		}
-
+	
 		Ixx = var.m_x - massCenter.m_x * massCenter.m_x;
 		Iyy = var.m_y - massCenter.m_y * massCenter.m_y;
 		Izz = var.m_z - massCenter.m_z * massCenter.m_z;
-
+		
 		Ixy = cov.m_x - massCenter.m_x * massCenter.m_y;
 		Ixz = cov.m_y - massCenter.m_x * massCenter.m_z;
 		Iyz = cov.m_z - massCenter.m_y * massCenter.m_z;
-
+	
 		sphere.m_front = dgVector ((dgFloat32)Ixx, (dgFloat32)Ixy, (dgFloat32)Ixz);
 		sphere.m_up    = dgVector ((dgFloat32)Ixy, (dgFloat32)Iyy, (dgFloat32)Iyz);
 		sphere.m_right = dgVector ((dgFloat32)Ixz, (dgFloat32)Iyz, (dgFloat32)Izz);
@@ -464,8 +464,8 @@ dgSphere::dgSphere ()
 }
 
 dgSphere::dgSphere (
-	const dgQuaternion &quat,
-	const dgVector &position,
+	const dgQuaternion &quat, 
+	const dgVector &position, 
 	const dgVector& dim)
 	:dgMatrix(quat, position)
 {
@@ -475,7 +475,7 @@ dgSphere::dgSphere (
 }
 
 dgSphere::dgSphere(
-	const dgMatrix &matrix,
+	const dgMatrix &matrix, 
 	const dgVector& dim)
 	:dgMatrix(matrix)
 {
@@ -487,10 +487,10 @@ dgSphere::dgSphere(
 
 
 void dgSphere::SetDimensions (
-	const dgFloat32 vertex[],
-	dgInt32 strideInBytes,
-	const dgInt32 triangles[],
-	dgInt32 indexCount,
+	const dgFloat32 vertex[], 
+	dgInt32 strideInBytes, 
+	const dgInt32 triangles[], 
+	dgInt32 indexCount, 
 	const dgMatrix *basis)
 {
 	dgInt32 i;
@@ -518,7 +518,7 @@ void dgSphere::SetDimensions (
 			for (j = i + 1; j < 3; j ++) {
 				aspect = InternalSphere::AspectRatio (eigen[i], eigen[j]);
 				if (aspect > 0.9) {
-					scaleVector[i] *= 2.0f;
+					scaleVector[i] *= 2.0f; 
 					InternalSphere::Statistics (*this, eigen, scaleVector, vertex, triangles, indexCount, stride);
 					k ++;
 					i = -1;
@@ -530,7 +530,7 @@ void dgSphere::SetDimensions (
 		*this = *basis;
 	}
 
-	dgVector min;
+	dgVector min; 
 	dgVector max;
 
 	InternalSphere::BoundingBox (*this, vertex, stride, triangles, indexCount, min, max);
@@ -546,10 +546,10 @@ void dgSphere::SetDimensions (
 
 
 void dgSphere::SetDimensions (
-	const dgFloat32 vertex[],
+	const dgFloat32 vertex[], 
 	dgInt32 strideInBytes,
 	dgInt32 count,
-	const dgMatrix *basis)
+	const dgMatrix *basis) 
 {
 	dgInt32 i;
 	dgInt32 j;
@@ -571,7 +571,7 @@ void dgSphere::SetDimensions (
 			for (j = i + 1; j < 3; j ++) {
 				aspect = InternalSphere::AspectRatio (eigen[i], eigen[j]);
 				if (aspect > 0.9) {
-					scaleVector[i] *= 2.0f;
+					scaleVector[i] *= 2.0f; 
 					InternalSphere::Statistics (*this, eigen, scaleVector, vertex, count, stride);
 					k ++;
 					i = -1;
@@ -582,8 +582,8 @@ void dgSphere::SetDimensions (
 	} else {
 		*this = *basis;
 	}
-
-   dgVector min;
+		
+   dgVector min; 
    dgVector max;
    InternalSphere::BoundingBox (*this, vertex, count, stride, min, max);
 
@@ -593,15 +593,15 @@ void dgSphere::SetDimensions (
 
 	dgVector dim (max - min);
 	dim = dim.Scale (0.5f);
-	SetDimensions (dim.m_x + InternalSphere::SPHERE_TOL,
-				   dim.m_y + InternalSphere::SPHERE_TOL,
+	SetDimensions (dim.m_x + InternalSphere::SPHERE_TOL, 
+				   dim.m_y + InternalSphere::SPHERE_TOL, 
 				   dim.m_z + InternalSphere::SPHERE_TOL);
 
 }
 
 /*
 void dgSphere::SetDimensions (
-	const dgFloat32 vertex[],
+	const dgFloat32 vertex[],  
 	dgInt32 strideInBytes,
 	const dgInt32 index[],
 	dgInt32 indexCount,
@@ -627,7 +627,7 @@ void dgSphere::SetDimensions (
 			for (j = i + 1; j < 3; j ++) {
 				aspect = InternalSphere::AspectRatio (eigen[i], eigen[j]);
 				if (aspect > 0.9) {
-					scaleVector[i] *= 2.0f;
+					scaleVector[i] *= 2.0f; 
 					InternalSphere::Statistics (*this, eigen, scaleVector, vertex, index, indexCount, stride);
 					i = -1;
 					k ++;
@@ -638,8 +638,8 @@ void dgSphere::SetDimensions (
 	} else {
 		*this = *basis;
 	}
-
-   dgVector min;
+		
+   dgVector min; 
    dgVector max;
    InternalSphere::BoundingBox (*this, vertex, stride, index, indexCount, min, max);
 
@@ -649,8 +649,8 @@ void dgSphere::SetDimensions (
 
 	dgVector dim (max - min);
 	dim = dim.Scale (0.5f);
-	SetDimensions (dim.m_x + InternalSphere::SPHERE_TOL,
-				   dim.m_y + InternalSphere::SPHERE_TOL,
+	SetDimensions (dim.m_x + InternalSphere::SPHERE_TOL, 
+				   dim.m_y + InternalSphere::SPHERE_TOL, 
 				   dim.m_z + InternalSphere::SPHERE_TOL);
 }
 */
@@ -659,7 +659,7 @@ void dgSphere::SetDimensions (
 
 /*
 dgSphere::dgSphere (
-	const dgSphere &dgSphere,
+	const dgSphere &dgSphere, 
 	const dgVector &Dir)
 {
 	if ((Dir % Dir) < EPSILON * 0.01f) {
@@ -668,11 +668,11 @@ dgSphere::dgSphere (
 	}
 
 	front = Dir;
-	front.Fast_Normalize();
+	front.Fast_Normalize(); 
 
 	if (dgAbsf (front % dgSphere.right) < 0.995) {
 		up = front * dgSphere.right;
-		up.Fast_Normalize();
+		up.Fast_Normalize(); 
 	} else {
 		up	= dgSphere.up;
 	}
@@ -702,50 +702,50 @@ bool dgSphere::dgSphere_Overlap_Test (const dgSphere &dgSphere)
 	dgFloat64 R;
 	dgVector Dir (dgSphere.posit - posit);
 
-  	R = size.m_x * dgAbsf (right % Dir) + dgSphere.size.m_x * dgAbsf (dgSphere.right % Dir) +
-	    size.m_y * dgAbsf (up % Dir) + dgSphere.size.m_y * dgAbsf (dgSphere.up % Dir) +
+  	R = size.m_x * dgAbsf (right % Dir) + dgSphere.size.m_x * dgAbsf (dgSphere.right % Dir) + 
+	    size.m_y * dgAbsf (up % Dir) + dgSphere.size.m_y * dgAbsf (dgSphere.up % Dir) + 
 		 size.m_z * dgAbsf (front %Dir) + dgSphere.size.m_z * dgAbsf (dgSphere.front % Dir);
 	if (R	< (Dir % Dir)) {
 		return false;
 	}
 
-	R = size.m_x * dgAbsf (right % dgSphere.right) +
-	    size.m_y * dgAbsf (up % dgSphere.right) +
+	R = size.m_x * dgAbsf (right % dgSphere.right) + 
+	    size.m_y * dgAbsf (up % dgSphere.right) + 
 		 size.m_z * dgAbsf (front % dgSphere.right) + dgSphere.size.m_x;
 	if (R	< dgAbsf (Dir % dgSphere.right)) {
 		return false;
 	}
 
-	R = size.m_x * dgAbsf (right % dgSphere.up) +
-	    size.m_y * dgAbsf (up % dgSphere.up) +
+	R = size.m_x * dgAbsf (right % dgSphere.up) + 
+	    size.m_y * dgAbsf (up % dgSphere.up) + 
 		 size.m_z * dgAbsf (front % dgSphere.up) + dgSphere.size.m_y;
 	if (R	< dgAbsf (Dir % dgSphere.up)) {
 		return false;
 	}
 
-	R = size.m_x * dgAbsf (right % dgSphere.front) +
-	    size.m_y * dgAbsf (up % dgSphere.front) +
-		 size.m_z * dgAbsf (front % dgSphere.front) + dgSphere.size.m_z;
+	R = size.m_x * dgAbsf (right % dgSphere.front) + 
+	    size.m_y * dgAbsf (up % dgSphere.front) + 
+		 size.m_z * dgAbsf (front % dgSphere.front) + dgSphere.size.m_z; 
 	if (R	< dgAbsf (Dir % dgSphere.front)) {
 		return false;
 	}
 
-	R = dgSphere.size.m_x * dgAbsf (dgSphere.right % right) +
-	    dgSphere.size.m_y * dgAbsf (dgSphere.up % right) +
+	R = dgSphere.size.m_x * dgAbsf (dgSphere.right % right) + 
+	    dgSphere.size.m_y * dgAbsf (dgSphere.up % right) + 
 		 dgSphere.size.m_z * dgAbsf (dgSphere.front % right) + size.m_x;
 	if (R	< dgAbsf (Dir % right)) {
 		return false;
 	}
 
-	R = dgSphere.size.m_x * dgAbsf (dgSphere.right % up) +
-	    dgSphere.size.m_y * dgAbsf (dgSphere.up % up) +
+	R = dgSphere.size.m_x * dgAbsf (dgSphere.right % up) + 
+	    dgSphere.size.m_y * dgAbsf (dgSphere.up % up) + 
 		 dgSphere.size.m_z * dgAbsf (dgSphere.front % up) + size.m_y;
 	if (R	< dgAbsf (Dir % up)) {
 		return false;
 	}
 
-	R = dgSphere.size.m_x * dgAbsf (dgSphere.right % front) +
-	    dgSphere.size.m_y * dgAbsf (dgSphere.up % front) +
+	R = dgSphere.size.m_x * dgAbsf (dgSphere.right % front) + 
+	    dgSphere.size.m_y * dgAbsf (dgSphere.up % front) + 
 		 dgSphere.size.m_z * dgAbsf (dgSphere.front % front) + size.m_z;
 	if (R	< dgAbsf (Dir % front)) {
 		return false;
@@ -756,16 +756,16 @@ bool dgSphere::dgSphere_Overlap_Test (const dgSphere &dgSphere)
 
 
 void dgSphere::Swept_Volume (
-	dgVector &min,
+	dgVector &min, 
 	dgVector &max)
 {
 	dgFloat32 w;
 	dgFloat32 h;
 	dgFloat32 b;
 
-	w = (dgFloat32)(size.m_x * dgAbsf(right.m_x) + size.m_y * dgAbsf(up.m_x) + size.m_z * dgAbsf(front.m_x));
-	h = (dgFloat32)(size.m_x * dgAbsf(right.m_y) + size.m_y * dgAbsf(up.m_y) + size.m_z * dgAbsf(front.m_y));
-	b = (dgFloat32)(size.m_x * dgAbsf(right.m_z) + size.m_y * dgAbsf(up.m_z) + size.m_z * dgAbsf(front.m_z));
+	w = (dgFloat32)(size.m_x * dgAbsf(right.m_x) + size.m_y * dgAbsf(up.m_x) + size.m_z * dgAbsf(front.m_x));  
+	h = (dgFloat32)(size.m_x * dgAbsf(right.m_y) + size.m_y * dgAbsf(up.m_y) + size.m_z * dgAbsf(front.m_y));  
+	b = (dgFloat32)(size.m_x * dgAbsf(right.m_z) + size.m_y * dgAbsf(up.m_z) + size.m_z * dgAbsf(front.m_z));  
 
 	min.m_x = posit.m_x - w;
 	min.m_y = posit.m_y - h;
@@ -780,7 +780,7 @@ void dgSphere::Swept_Volume (
 
 /*
 dgInt32 dgSphere::FrontTest (
-	const dgMatrix &matrix,
+	const dgMatrix &matrix, 
 	const dgPlane* plane) const
 {
 	dgFloat32 R;
@@ -789,7 +789,7 @@ dgInt32 dgSphere::FrontTest (
 	InternalSphere::dgFloatSign flag1;
 
 	dR = m_size.m_x * dgAbsf (matrix.m_front.m_x) + m_size.m_y * dgAbsf (matrix.m_up.m_x) + m_size.m_z * dgAbsf (matrix.m_right.m_x);
-	R = plane[5].m_x * matrix.m_posit.m_x + plane[5].m_w;
+	R = plane[5].m_x * matrix.m_posit.m_x + plane[5].m_w; 
 
 	flag0.f = R + dR;
 	flag1.f = R - dR;
@@ -806,7 +806,7 @@ dgInt32 dgSphere::RearTest (const dgMatrix &matrix, const dgPlane* plane) const
 	InternalSphere::dgFloatSign flag1;
 
 	dR = m_size.m_x * dgAbsf (matrix.m_front.m_x) + m_size.m_y * dgAbsf (matrix.m_up.m_x) + m_size.m_z * dgAbsf (matrix.m_right.m_x);
-	R = plane[4].m_x * matrix.m_posit.m_x + plane[4].m_w;
+	R = plane[4].m_x * matrix.m_posit.m_x + plane[4].m_w; 
 
 	flag0.f = R + dR;
 	flag1.f = R - dR;
@@ -823,10 +823,10 @@ dgInt32 dgSphere::LeftTest (const dgMatrix &matrix, const dgPlane* plane) const
 	InternalSphere::dgFloatSign flag0;
 	InternalSphere::dgFloatSign flag1;
 
-	dR = m_size.m_x * dgAbsf (matrix.m_front.m_x * plane[0].m_x + matrix.m_front.m_z * plane[0].m_z) +
+	dR = m_size.m_x * dgAbsf (matrix.m_front.m_x * plane[0].m_x + matrix.m_front.m_z * plane[0].m_z) + 
 		 m_size.m_y * dgAbsf (matrix.m_up.m_x    * plane[0].m_x + matrix.m_up.m_z    * plane[0].m_z) +
 		 m_size.m_z * dgAbsf (matrix.m_right.m_x * plane[0].m_x + matrix.m_right.m_z * plane[0].m_z);
-	R = plane[0].m_x * matrix.m_posit.m_x + plane[0].m_z * matrix.m_posit.m_z;
+	R = plane[0].m_x * matrix.m_posit.m_x + plane[0].m_z * matrix.m_posit.m_z; 
 
 	flag0.f = R + dR;
 	flag1.f = R - dR;
@@ -842,10 +842,10 @@ dgInt32 dgSphere::RightTest (const dgMatrix &matrix, const dgPlane* plane) const
 	InternalSphere::dgFloatSign flag0;
 	InternalSphere::dgFloatSign flag1;
 
-	dR = m_size.m_x * dgAbsf (matrix.m_front.m_x * plane[1].m_x + matrix.m_front.m_z * plane[1].m_z) +
+	dR = m_size.m_x * dgAbsf (matrix.m_front.m_x * plane[1].m_x + matrix.m_front.m_z * plane[1].m_z) + 
 		 m_size.m_y * dgAbsf (matrix.m_up.m_x    * plane[1].m_x + matrix.m_up.m_z    * plane[1].m_z) +
 		 m_size.m_z * dgAbsf (matrix.m_right.m_x * plane[1].m_x + matrix.m_right.m_z * plane[1].m_z);
-	R = plane[1].m_x * matrix.m_posit.m_x + plane[1].m_z * matrix.m_posit.m_z;
+	R = plane[1].m_x * matrix.m_posit.m_x + plane[1].m_z * matrix.m_posit.m_z; 
 
 	flag0.f = R + dR;
 	flag1.f = R - dR;
@@ -861,11 +861,11 @@ dgInt32 dgSphere::BottomTest (const dgMatrix &matrix, const dgPlane* plane) cons
 	InternalSphere::dgFloatSign flag0;
 	InternalSphere::dgFloatSign flag1;
 
-	dR = m_size.m_x * dgAbsf (matrix.m_front.m_x * plane[2].m_x + matrix.m_front.m_y * plane[2].m_y) +
+	dR = m_size.m_x * dgAbsf (matrix.m_front.m_x * plane[2].m_x + matrix.m_front.m_y * plane[2].m_y) + 
 		 m_size.m_y * dgAbsf (matrix.m_up.m_x    * plane[2].m_x + matrix.m_up.m_y    * plane[2].m_y) +
 		 m_size.m_z * dgAbsf (matrix.m_right.m_x * plane[2].m_x + matrix.m_right.m_y * plane[2].m_y);
 
-	R = plane[2].m_x * matrix.m_posit.m_x + plane[2].m_y * matrix.m_posit.m_y;
+	R = plane[2].m_x * matrix.m_posit.m_x + plane[2].m_y * matrix.m_posit.m_y; 
 
 	flag0.f = R + dR;
 	flag1.f = R - dR;
@@ -882,11 +882,11 @@ dgInt32 dgSphere::TopTest (const dgMatrix &matrix, const dgPlane* plane) const
 	InternalSphere::dgFloatSign flag0;
 	InternalSphere::dgFloatSign flag1;
 
-	dR = m_size.m_x * dgAbsf (matrix.m_front.m_x * plane[3].m_x + matrix.m_front.m_y * plane[3].m_y) +
+	dR = m_size.m_x * dgAbsf (matrix.m_front.m_x * plane[3].m_x + matrix.m_front.m_y * plane[3].m_y) + 
 		 m_size.m_y * dgAbsf (matrix.m_up.m_x    * plane[3].m_x + matrix.m_up.m_y    * plane[3].m_y) +
 		 m_size.m_z * dgAbsf (matrix.m_right.m_x * plane[3].m_x + matrix.m_right.m_y * plane[3].m_y);
 
-	R = plane[3].m_x * matrix.m_posit.m_x + plane[3].m_y * matrix.m_posit.m_y;
+	R = plane[3].m_x * matrix.m_posit.m_x + plane[3].m_y * matrix.m_posit.m_y; 
 
 	flag0.f = R + dR;
 	flag1.f = R - dR;
@@ -943,15 +943,15 @@ dgInt32 dgSphere::VisibilityTest (const dgCamera* camera) const
 	return VisibilityTestLow (camera, viewMatrix);
 }
 
-dgInt32 dgSphere::VisibilityTest (const dgCamera* camera, const dgMatrix &worldMatrix) const
+dgInt32 dgSphere::VisibilityTest (const dgCamera* camera, const dgMatrix &worldMatrix) const 
 {
 	dgMatrix viewMatrix (*this * worldMatrix * camera->GetViewMatrix());
 	return VisibilityTestLow (camera, viewMatrix);
 }
 
 void dgSphere::Render (
-	const dgCamera* camera,
-	const dgMatrix &worldMatrix,
+	const dgCamera* camera, 
+	const dgMatrix &worldMatrix, 
 	dgUnsigned32 rgb) const
 {
 	dgInt32 i;
@@ -1014,7 +1014,7 @@ void dgSphere::Render (
 
 	dgRenderDescriptorParams param;
 	param.m_indexCount = 0;
-	param.m_vertexCount = sizeof (index) / sizeof (dgInt32);
+	param.m_vertexCount = sizeof (index) / sizeof (dgInt32); 
 	param.m_descType = dgDynamicVertex;
 	param.m_primitiveType = RENDER_LINELIST;
 	param.m_vertexFlags = VERTEX_ENABLE_XYZ | COLOR_ENABLE;
@@ -1029,8 +1029,8 @@ void dgSphere::Render (
   	dgVertexRecord vertexRecord (desc.LockVertex());
 	ptr = (ColorVertex*) vertexRecord.vertex.ptr;
 	for (i = 0; i < (sizeof (index) / (2 * sizeof (dgUnsigned32))); i ++) {
-		 ptr[0] = box[index[i][0]];
-		 ptr[1] = box[index[i][1]];
+		 ptr[0] = box[index[i][0]]; 
+		 ptr[1] = box[index[i][1]]; 
 		 ptr += 2;
 	}
 	desc.UnlockVertex();

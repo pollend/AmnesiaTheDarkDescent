@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -68,19 +68,19 @@ dgRedBackNode *dgRedBackNode::Next () const
 	return ptr;
 }
 
-// rotate node me to left
-void dgRedBackNode::RotateLeft(dgRedBackNode** const head)
+// rotate node me to left 
+void dgRedBackNode::RotateLeft(dgRedBackNode** const head) 
 {
 	dgRedBackNode* const me = this;
 	dgRedBackNode* const child = me->m_right;
-
-	//establish me->m_right link
+	
+	//establish me->m_right link 
 	me->m_right = child->m_left;
 	if (child->m_left != NULL) {
 		child->m_left->m_parent = me;
 	}
-
-	// establish child->m_parent link
+	
+	// establish child->m_parent link 
 	if (child != NULL) {
 		child->m_parent = me->m_parent;
 	}
@@ -93,8 +93,8 @@ void dgRedBackNode::RotateLeft(dgRedBackNode** const head)
 	} else {
 		*head = child;
 	}
-
-	// link child and me
+	
+	// link child and me 
 	child->m_left = me;
 	if (me != NULL) {
 		me->m_parent = child;
@@ -103,18 +103,18 @@ void dgRedBackNode::RotateLeft(dgRedBackNode** const head)
 
 
 // rotate node me to right  *
-void dgRedBackNode::RotateRight(dgRedBackNode ** const head)
+void dgRedBackNode::RotateRight(dgRedBackNode ** const head) 
 {
 	dgRedBackNode* const me = this;
 	dgRedBackNode* const child = me->m_left;
 
-	// establish me->m_left link
+	// establish me->m_left link 
 	me->m_left = child->m_right;
 	if (child->m_right != NULL) {
 		child->m_right->m_parent = me;
 	}
 
-	// establish child->m_parent link
+	// establish child->m_parent link 
 	if (child != NULL) {
 		child->m_parent = me->m_parent;
 	}
@@ -128,7 +128,7 @@ void dgRedBackNode::RotateRight(dgRedBackNode ** const head)
 		*head = child;
 	}
 
-	// link me and child
+	// link me and child 
 	child->m_right = me;
 	if (me != NULL) {
 		me->m_parent = child;
@@ -136,25 +136,25 @@ void dgRedBackNode::RotateRight(dgRedBackNode ** const head)
 }
 
 
-// maintain Red-Black tree balance after inserting node ptr
-void dgRedBackNode::InsertFixup(dgRedBackNode ** const head)
+// maintain Red-Black tree balance after inserting node ptr   
+void dgRedBackNode::InsertFixup(dgRedBackNode ** const head) 
 {
 	dgRedBackNode* ptr = this;
-	// check Red-Black properties
+	// check Red-Black properties 
 	while ((ptr != *head) && (ptr->m_parent->GetColor() == RED)) {
-		// we have a violation
+		// we have a violation 
 		if (ptr->m_parent == ptr->m_parent->m_parent->m_left) {
 			dgRedBackNode* const tmp = ptr->m_parent->m_parent->m_right;
 			if (tmp && (tmp->GetColor() == RED)) {
-				// uncle is RED
+				// uncle is RED 
 				ptr->m_parent->SetColor(BLACK);
 				tmp->SetColor(BLACK) ;
 				ptr->m_parent->m_parent->SetColor(RED) ;
 				ptr = ptr->m_parent->m_parent;
 			} else {
-				// uncle is BLACK
+				// uncle is BLACK 
 				if (ptr == ptr->m_parent->m_right) {
-					// make ptr a left child
+					// make ptr a left child 
 					ptr = ptr->m_parent;
 					ptr->RotateLeft(head);
 				}
@@ -167,16 +167,16 @@ void dgRedBackNode::InsertFixup(dgRedBackNode ** const head)
 			}
 		} else {
 			_ASSERTE (ptr->m_parent == ptr->m_parent->m_parent->m_right);
-			// mirror image of above code
+			// mirror image of above code 
 			dgRedBackNode* const tmp = ptr->m_parent->m_parent->m_left;
 			if (tmp && (tmp->GetColor() == RED)) {
-				//uncle is RED
+				//uncle is RED 
 				ptr->m_parent->SetColor(BLACK);
 				tmp->SetColor(BLACK) ;
 				ptr->m_parent->m_parent->SetColor(RED) ;
 				ptr = ptr->m_parent->m_parent;
 			} else {
-				// uncle is BLACK
+				// uncle is BLACK 
 				if (ptr == ptr->m_parent->m_left) {
 					ptr = ptr->m_parent;
 					ptr->RotateRight(head);
@@ -184,7 +184,7 @@ void dgRedBackNode::InsertFixup(dgRedBackNode ** const head)
 				ptr->m_parent->SetColor(BLACK);
 				if (ptr->m_parent->m_parent->GetColor() == BLACK) {
 					ptr->m_parent->m_parent->SetColor(RED) ;
-				   ptr->m_parent->m_parent->RotateLeft (head);
+				   ptr->m_parent->m_parent->RotateLeft (head); 
 				}
 			}
 		}
@@ -193,8 +193,8 @@ void dgRedBackNode::InsertFixup(dgRedBackNode ** const head)
 }
 
 
-//maintain Red-Black tree balance after deleting node x
-void dgRedBackNode::RemoveFixup (dgRedBackNode* const thisNode, dgRedBackNode ** const head)
+//maintain Red-Black tree balance after deleting node x 
+void dgRedBackNode::RemoveFixup (dgRedBackNode* const thisNode, dgRedBackNode ** const head) 
 {
 	dgRedBackNode* ptr = this;
 	dgRedBackNode* node = thisNode;
@@ -216,7 +216,7 @@ void dgRedBackNode::RemoveFixup (dgRedBackNode* const thisNode, dgRedBackNode **
 					return;
 				}
 			}
-			if ((!tmp->m_left  || (tmp->m_left->GetColor() == BLACK)) &&
+			if ((!tmp->m_left  || (tmp->m_left->GetColor() == BLACK)) && 
 				 (!tmp->m_right || (tmp->m_right->GetColor() == BLACK))) {
 				tmp->SetColor(RED);
 				node = ptr;
@@ -259,7 +259,7 @@ void dgRedBackNode::RemoveFixup (dgRedBackNode* const thisNode, dgRedBackNode **
 				}
 			}
 
-			if ((!tmp->m_right || (tmp->m_right->GetColor() == BLACK)) &&
+			if ((!tmp->m_right || (tmp->m_right->GetColor() == BLACK)) && 
 				 (!tmp->m_left  || (tmp->m_left->GetColor() == BLACK))) {
 				tmp->SetColor(RED) ;
 				node = ptr;
@@ -290,7 +290,7 @@ void dgRedBackNode::RemoveFixup (dgRedBackNode* const thisNode, dgRedBackNode **
 	}
 }
 
-void dgRedBackNode::Unlink (dgRedBackNode ** const head)
+void dgRedBackNode::Unlink (dgRedBackNode ** const head) 
 {
 //	dgRedBackNode *child;
 //	dgRedBackNode *endNode;
@@ -302,16 +302,16 @@ void dgRedBackNode::Unlink (dgRedBackNode ** const head)
 	node->SetInTreeFlag(false);
 
 	if (!node->m_left || !node->m_right) {
-		// y has a NULL node as a child
+		// y has a NULL node as a child 
 		dgRedBackNode* const endNode = node;
 
-		// x is y's only child
+		// x is y's only child 
 		dgRedBackNode* child = endNode->m_right;
 		if (endNode->m_left) {
 			child = endNode->m_left;
 		}
 
-		// remove y from the parent chain
+		// remove y from the parent chain 
 		if (child) {
 			child->m_parent = endNode->m_parent;
 		}
@@ -334,7 +334,7 @@ void dgRedBackNode::Unlink (dgRedBackNode ** const head)
 
 	} else {
 
-		// find tree successor with a NULL node as a child
+		// find tree successor with a NULL node as a child 
 		dgRedBackNode* endNode = node->m_right;
 		while (endNode->m_left != NULL) {
 			endNode = endNode->m_left;
@@ -344,7 +344,7 @@ void dgRedBackNode::Unlink (dgRedBackNode ** const head)
 		_ASSERTE (endNode->m_parent);
 		_ASSERTE (!endNode->m_left);
 
-		// x is y's only child
+		// x is y's only child 
 		dgRedBackNode* const child = endNode->m_right;
 
 		_ASSERTE ((endNode != node->m_right) || !child || (child->m_parent == endNode));
@@ -385,10 +385,10 @@ void dgRedBackNode::Unlink (dgRedBackNode ** const head)
 	}
 }
 
-void dgRedBackNode::Remove (dgRedBackNode ** const head)
+void dgRedBackNode::Remove (dgRedBackNode ** const head) 
 {
 	Unlink (head);
-	delete this;
+	delete this;	
 }
 
 void dgRedBackNode::RemoveAllLow ()

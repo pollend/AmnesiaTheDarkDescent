@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -87,7 +87,7 @@ class dgBroadPhaseCell
 
 	void Sort ();
 	void UpdateAutoPair(dgWorld* const world, dgInt32 threadIndex);
-
+	
 	dgSortArray m_sort[3];
 	dgSortArray* m_lastSortArray;
 
@@ -110,15 +110,15 @@ class dgBroadPhaseLayer: public dgTree<dgBroadPhaseCell, dgUnsigned32>
 	private:
 	void Init (dgWorld* const world, dgFloat32 cellSize, dgInt32 layerIndex);
 
-	inline dgUnsigned32 GetKey (dgInt32 x, dgInt32 z) const
+	inline dgUnsigned32 GetKey (dgInt32 x, dgInt32 z) const 
 	{
 		dgUnsigned32 key = dgUnsigned32((z << DG_OCTREE_MAX_DEPTH) + x);
 		return key;
 	}
 
-	inline void KeyToIndex (dgInt32 key, dgInt32& x, dgInt32& z) const
-	{
-		x = key & ((1 << DG_OCTREE_MAX_DEPTH) - 1);
+	inline void KeyToIndex (dgInt32 key, dgInt32& x, dgInt32& z) const 
+	{ 
+		x = key & ((1 << DG_OCTREE_MAX_DEPTH) - 1); 
 		z = key >> DG_OCTREE_MAX_DEPTH;
 	}
 
@@ -133,7 +133,7 @@ class dgBroadPhaseLayer: public dgTree<dgBroadPhaseCell, dgUnsigned32>
 	dgFloat32 m_cellSize;
 	dgFloat32 m_invCellSize;
 	dgInt16 m_layerIndex;
-
+	
 
 	friend class dgBroadPhaseCollision;
 };
@@ -141,10 +141,10 @@ class dgBroadPhaseLayer: public dgTree<dgBroadPhaseCell, dgUnsigned32>
 
 class dgBroadPhaseApplyExternalForce: public dgWorkerThread
 {
-	public:
+	public: 
 	virtual void ThreadExecute();
 
-	dgInt32 m_step;
+	dgInt32 m_step;		
 	dgInt32 m_count;
 	dgInt32 m_skipForceUpdate;
 	dgFloat32 m_timeStep;
@@ -154,10 +154,10 @@ class dgBroadPhaseApplyExternalForce: public dgWorkerThread
 
 class dgBroadPhaseCellPairsWorkerThread: public dgWorkerThread
 {
-	public:
+	public: 
 	virtual void ThreadExecute();
 
-	dgInt32 m_step;
+	dgInt32 m_step;		
 	dgInt32 m_count;
 	dgWorld* m_world;
 	dgCellPair *m_pairs;
@@ -165,28 +165,28 @@ class dgBroadPhaseCellPairsWorkerThread: public dgWorkerThread
 
 class dgBroadPhaseCalculateContactsWorkerThread: public dgWorkerThread
 {
-	public:
+	public: 
 	void Realloc (dgInt32 jointsCount, dgInt32 contactCount, dgInt32 threadIndex);
 	virtual void ThreadExecute();
 
-	dgInt32 m_step;
+	dgInt32 m_step;		
 	dgInt32 m_count;
 	dgInt32 m_useSimd;
-	dgFloat32 m_timestep;
+	dgFloat32 m_timestep;		
 	dgWorld* m_world;
 };
 
 
 class dgBroadPhaseMaterialCallbackWorkerThread: public dgWorkerThread
 {
-	public:
+	public: 
 
 	virtual void ThreadExecute();
 
-	dgInt32 m_step;
+	dgInt32 m_step;		
 	dgInt32 m_count;
 	dgInt32 m_useSimd;
-	dgFloat32 m_timestep;
+	dgFloat32 m_timestep;		
 	dgWorld* m_world;
 	dgCollidingPairCollector::dgPair *m_pairs;
 };
@@ -234,7 +234,7 @@ class dgBroadPhaseCollision
 	dgBroadPhaseCellPairsWorkerThread m_cellPairsWorkerThreads[DG_MAXIMUN_THREADS];
 	dgBroadPhaseMaterialCallbackWorkerThread m_materialCallbackWorkerThreads[DG_MAXIMUN_THREADS];
 	dgBroadPhaseCalculateContactsWorkerThread m_calculateContactsWorkerThreads[DG_MAXIMUN_THREADS];
-
+	
 //	static void ForceAndtorque (void** const m_userParamArray, dgInt32 threadID);
 //	dgWorld* m_me;
 	dgFloat32 m_worlSize;

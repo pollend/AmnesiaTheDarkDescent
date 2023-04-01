@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -41,16 +41,16 @@ class dgBaseNode: public dgRef
 
 	void Detach ();
 	void Attach (dgBaseNode *parent, bool addFirst = false);
-
+	
 	dgBaseNode *GetRoot () const;
 	dgBaseNode *GetFirst() const;
 	dgBaseNode *GetLast() const;
 	dgBaseNode *GetNext() const;
 	dgBaseNode *GetPrev() const;
 
-	dgBaseNode *Find (dgUnsigned32 nameCRC) const;
+	dgBaseNode *Find (dgUnsigned32 nameCRC) const; 
 	dgBaseNode *Find (const char *name) const;
-	void DebugPrint (const char *fileName);
+	void DebugPrint (const char *fileName); 
 	bool SanityCheck();
 
 
@@ -60,9 +60,9 @@ class dgBaseNode: public dgRef
 	dgBaseNode (const dgBaseNode &clone);
 	~dgBaseNode ();
 
-//	virtual void Save (dgFile &file, dgSaveType saveType, void* const context) const;
+//	virtual void Save (dgFile &file, dgSaveType saveType, void* const context) const; 
 	virtual void CloneFixUp (const dgBaseNode &clone);
-	virtual void PrintHierarchy (dgFile &file, char *indentation) const;
+	virtual void PrintHierarchy (dgFile &file, char *indentation) const; 
 
 	private:
 	inline void Clear();
@@ -143,8 +143,8 @@ inline dgBaseNode *dgBaseNode::GetParent () const
 
 inline dgBaseNode *dgBaseNode::Find (const char *name) const
 {
-	return Find (dgCRC (name));
-}
+	return Find (dgCRC (name)); 
+} 
 
 
 
@@ -168,7 +168,7 @@ dgNode<T>::dgNode (const char *name)
 }
 
 template<class T>
-dgNode<T>::~dgNode ()
+dgNode<T>::~dgNode () 
 {
 }
 
@@ -244,7 +244,7 @@ T *dgNode<T>::GetPrev() const
 
 
 template<class T>
-T *dgNode<T>::Find (dgUnsigned32 nameCRC) const
+T *dgNode<T>::Find (dgUnsigned32 nameCRC) const 
 {
 	return (T*) dgBaseNode::Find (nameCRC);
 }
@@ -253,7 +253,7 @@ template<class T>
 T *dgNode<T>::Find (const char *name) const
 {
 	return (T*) dgBaseNode::Find (name);
-}
+} 
 
 
 

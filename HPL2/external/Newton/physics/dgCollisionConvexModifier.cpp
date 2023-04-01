@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -32,7 +32,7 @@
 
 
 dgCollisionConvexModifier::dgCollisionConvexModifier(dgCollisionConvex* convexChild, dgWorld* world)
-	:dgCollisionConvex(world->GetAllocator() ,0, dgGetIdentityMatrix(), m_convexCollisionModifier),
+	:dgCollisionConvex(world->GetAllocator() ,0, dgGetIdentityMatrix(), m_convexCollisionModifier), 
 	 m_modifierMatrix(dgGetIdentityMatrix()), m_modifierInvMatrix (dgGetIdentityMatrix())
 {
 	m_world = world;
@@ -51,7 +51,7 @@ dgCollisionConvexModifier::dgCollisionConvexModifier(dgCollisionConvex* convexCh
 
 
 dgCollisionConvexModifier::dgCollisionConvexModifier (dgWorld* const world, dgDeserialize deserialization, void* const userData)
-	:dgCollisionConvex (world, deserialization, userData)
+	:dgCollisionConvex (world, deserialization, userData) 
 {
 	dgMatrix matrix;
 
@@ -59,7 +59,7 @@ dgCollisionConvexModifier::dgCollisionConvexModifier (dgWorld* const world, dgDe
 
 	m_world = world;
 	deserialization (userData, &matrix, sizeof (dgMatrix));
-	m_convexCollision = (dgCollisionConvex*)world->CreateFromSerialization (deserialization, userData);
+	m_convexCollision = (dgCollisionConvex*)world->CreateFromSerialization (deserialization, userData); 
 
 	m_det = dgFloat32 (1.0f);
 	SetUserData (m_convexCollision->GetUserData());
@@ -114,7 +114,7 @@ void dgCollisionConvexModifier::ModifierSetMatrix (const dgMatrix& matrix)
 		mat[i][i + 4] = dgFloat32 (1.0f);
 	}
 
-	// calculate the inverse matrix of the modifier using full
+	// calculate the inverse matrix of the modifier using full 
 	// Gauss Jordan pivoting method
 	m_det = dgFloat32 (1.0f);
 	for (i = 0; i < 4; i ++) {
@@ -181,7 +181,7 @@ void dgCollisionConvexModifier::CalcAABB (const dgMatrix &matrix, dgVector &p0, 
 {
 	dgInt32 i;
 	dgMatrix trans (matrix.Transpose());
-
+	
 	for (i = 0; i < 3; i ++) {
 		p0[i] = matrix.m_posit[i] + matrix.RotateVector (SupportVertex(trans[i].Scale (-dgFloat32 (1.0f))))[i] - dgFloat32 (5.0e-2f);
 		p1[i] = matrix.m_posit[i] + matrix.RotateVector (SupportVertex(trans[i]))[i] +  dgFloat32 (5.0e-2f);
@@ -218,7 +218,7 @@ dgVector dgCollisionConvexModifier::SupportVertexSimd (const dgVector& dir) cons
 #ifdef DG_BUILD_SIMD_CODE
 	simd_type tmp1;
 	simd_type tmp0;
-	dgVector localDir;
+	dgVector localDir; 
 	dgVector dir1 (m_modifierMatrix.UnrotateVectorSimd(dir));
 
 	_ASSERTE (dgAbsf(dir % dir - dgFloat32 (1.0f)) < dgFloat32 (1.0e-2f));
@@ -232,7 +232,7 @@ dgVector dgCollisionConvexModifier::SupportVertexSimd (const dgVector& dir) cons
 	(simd_type&)localDir = simd_mul_v ((simd_type&)dir1, simd_permut_v (tmp0, tmp0, PURMUT_MASK(3, 0, 0, 0)));
 
 	_ASSERTE (dgAbsf(localDir % localDir - dgFloat32 (1.0f)) < dgFloat32 (1.0e-2f));
-	return m_modifierMatrix.TransformVectorSimd (m_convexCollision->SupportVertexSimd(localDir));
+	return m_modifierMatrix.TransformVectorSimd (m_convexCollision->SupportVertexSimd(localDir)); 
 
 
 #else
@@ -259,8 +259,8 @@ dgInt32 dgCollisionConvexModifier::CalculatePlaneIntersection (const dgVector& n
 }
 
 dgInt32 dgCollisionConvexModifier::CalculatePlaneIntersectionSimd (
-	const dgVector& normal,
-	const dgVector& point,
+	const dgVector& normal, 
+	const dgVector& point, 
 	dgVector contactsOut[]) const
 {
 	return CalculatePlaneIntersection (normal, point, contactsOut);
@@ -282,9 +282,9 @@ dgFloat32 dgCollisionConvexModifier::RayCast (const dgVector& p0, const dgVector
 		return dgFloat32 (1.2f);
 	}
 
-	dgVector q0 (m_modifierInvMatrix.TransformVector (p0));
-	dgVector q1 (m_modifierInvMatrix.TransformVector (p1));
-
+	dgVector q0 (m_modifierInvMatrix.TransformVector (p0)); 
+	dgVector q1 (m_modifierInvMatrix.TransformVector (p1)); 
+	
 
 	t = m_convexCollision->RayCast (q0, q1, contactOut, NULL, NULL, NULL);
 	if ((t >= dgFloat32 (0.0f)) && (t <= dgFloat32 (1.0f))) {
@@ -301,8 +301,8 @@ dgFloat32 dgCollisionConvexModifier::RayCastSimd (const dgVector& p0, const dgVe
 		return dgFloat32 (1.2f);
 	}
 
-	dgVector q0 (m_modifierInvMatrix.TransformVectorSimd (p0));
-	dgVector q1 (m_modifierInvMatrix.TransformVectorSimd (p1));
+	dgVector q0 (m_modifierInvMatrix.TransformVectorSimd (p0)); 
+	dgVector q1 (m_modifierInvMatrix.TransformVectorSimd (p1)); 
 
 	t = m_convexCollision->RayCastSimd (q0, q1, contactOut, NULL, NULL, NULL);
 	if ((t >= dgFloat32 (0.0f)) && (t <= dgFloat32 (1.0f))) {
@@ -350,7 +350,7 @@ dgVector dgCollisionConvexModifier::CalculateVolumeIntegral (const dgMatrix& glo
 
 	cg = globalMatrix.TransformVector (m_modifierMatrix.TransformVector (cg));
 	cg.m_w = volume * m_det;
-
+	
 	return cg;
 }
 

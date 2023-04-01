@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -46,7 +46,7 @@ class dgMeshEffect: public dgPolyhedra, public dgRefCounter
 {
 	public:
 
-	struct dgVertexAtribute
+	struct dgVertexAtribute 
 	{
 		dgVector m_vertex;
 		dgTriplex m_normal;
@@ -57,7 +57,7 @@ class dgMeshEffect: public dgPolyhedra, public dgRefCounter
 		dgInt32 m_material;
 	};
 
-	struct dgIndexArray
+	struct dgIndexArray 
 	{
 		dgInt32 m_materialCount;
 		dgInt32 m_indexCount;
@@ -71,7 +71,7 @@ class dgMeshEffect: public dgPolyhedra, public dgRefCounter
 	dgMeshEffect(dgCollision* const collision);
 	dgMeshEffect(const dgMeshEffect& source);
 	dgMeshEffect(dgPolyhedra& mesh, const dgMeshEffect& source);
-
+	
 	// Create a convex hull Mesh form point cloud
 	dgMeshEffect (dgMemoryAllocator* const allocator, const dgFloat32* const vertexCloud, dgInt32 count, dgInt32 strideInByte, dgFloat32 distTol);
 
@@ -104,14 +104,14 @@ class dgMeshEffect: public dgPolyhedra, public dgRefCounter
 	void ConvertToPolygons ();
 
 	void RemoveUnusedVertices(dgInt32* const vertexRemapTable);
-
+	
 	void BeginPolygon ();
 	void AddPolygon (dgInt32 count, const dgFloat32* vertexList, dgInt32 stride, dgInt32 material);
 	void EndPolygon ();
 
 	void PackVertexArrays ();
 
-	void BuildFromVertexListIndexList(dgInt32 faceCount, const dgInt32 * const faceIndexCount, const dgInt32 * const faceMaterialIndex,
+	void BuildFromVertexListIndexList(dgInt32 faceCount, const dgInt32 * const faceIndexCount, const dgInt32 * const faceMaterialIndex, 
 		const dgFloat32* const vertex, dgInt32  vertexStrideInBytes, const dgInt32 * const vertexIndex,
 		const dgFloat32* const normal, dgInt32  normalStrideInBytes, const dgInt32 * const normalIndex,
 		const dgFloat32* const uv0, dgInt32  uv0StrideInBytes, const dgInt32 * const uv0Index,
@@ -146,7 +146,7 @@ class dgMeshEffect: public dgPolyhedra, public dgRefCounter
 								  dgInt32 uvStrideInByte0, dgFloat32* uv0, dgInt32* uvIndices0, dgInt32* uvCount0,
 								  dgInt32 uvStrideInByte1, dgFloat32* uv1, dgInt32* uvIndices1, dgInt32* uvCount1);
 
-
+	
 
 	dgIndexArray* MaterialGeomteryBegin();
 	void MaterialGeomteryEnd(dgIndexArray* handle);
@@ -159,8 +159,8 @@ class dgMeshEffect: public dgPolyhedra, public dgRefCounter
 
 	dgCollision* CreateConvexApproximationCollision(dgWorld* const world, dgInt32 maxCount, dgInt32 shapeId, dgInt32 childrenID) const;
 	dgCollision* CreateConvexCollision(dgFloat32 tolerance, dgInt32 shapeID, const dgMatrix& matrix = dgGetIdentityMatrix()) const;
-
-
+	
+	
 
 	void PlaneClipMesh (const dgPlane& plane, dgMeshEffect** leftMeshSource, dgMeshEffect** rightMeshSource);
 
@@ -208,7 +208,7 @@ class dgMeshEffect: public dgPolyhedra, public dgRefCounter
 	void ReverseMergeFaces (dgMeshEffect* source);
 	dgVertexAtribute InterpolateEdge (dgEdge* const edge, dgFloat32 param) const;
 	dgVertexAtribute InterpolateVertex (const dgVector& point, dgEdge* const face) const;
-
+	
 	void ClipMesh (const dgMeshEffect* clipMesh, dgMeshEffect** leftMeshSource, dgMeshEffect** rightMeshSource) const;
 	dgInt32 PlaneApplyCap (const dgMeshEffect* planeMesh, const dgPlane& normal);
 	void PlaneClipMesh (const dgMeshEffect* planeMesh, dgMeshEffect** leftMeshSource, dgMeshEffect** rightMeshSource) const;
@@ -217,8 +217,8 @@ class dgMeshEffect: public dgPolyhedra, public dgRefCounter
 	void AddCGSFace (const dgMeshEffect& reference, dgEdge* const refFace, dgInt32 count, dgMeshTreeCSGFace** const faces, const dgMeshTreeCSGPointsPool& points);
 	void ClipFace (const dgBigPlane& plane, dgMeshTreeCSGFace* src, dgMeshTreeCSGFace** left, dgMeshTreeCSGFace** right,	dgMeshTreeCSGPointsPool& pointPool) const;
 
-
-
+	
+	
 
 	bool CheckSingleMesh() const;
 
@@ -233,7 +233,7 @@ class dgMeshEffect: public dgPolyhedra, public dgRefCounter
 	dgVector* m_points;
 	dgVertexAtribute* m_attib;
 
-
+	
 	friend class dgConvexHull3d;
 	friend class dgConvexHull4d;
 	friend class dgMeshEffectSolidTree;
@@ -259,7 +259,7 @@ inline dgInt32 dgMeshEffect::GetMaterialIndexCount (dgIndexArray* handle, dgInt3
 	return handle->m_materialsIndexCount[materialHandle];
 }
 
-inline dgMeshEffect::dgVertexAtribute& dgMeshEffect::GetAttribute (dgInt32 index) const
+inline dgMeshEffect::dgVertexAtribute& dgMeshEffect::GetAttribute (dgInt32 index) const 
 {
 	return m_attib[index];
 }

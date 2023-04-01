@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -65,7 +65,7 @@ class dgQueue
 		m_firstIndex = 0;
 	}
 
-	void Insert (T info)
+	void Insert (T info) 
 	{
 		m_pool[m_firstIndex] = info;
 		m_firstIndex ++;
@@ -75,7 +75,7 @@ class dgQueue
 		_ASSERTE (m_firstIndex != m_lastIndex);
 	}
 
-	T Remove ()
+	T Remove () 
 	{
 		_ASSERTE (m_firstIndex != m_lastIndex);
 
@@ -84,7 +84,7 @@ class dgQueue
 		if (m_lastIndex >= m_mod) {
 			m_lastIndex = 0;
 		}
-
+		
 		return element;
 	}
 
@@ -93,7 +93,7 @@ class dgQueue
 		m_lastIndex = m_firstIndex;
 	}
 
-	bool IsEmpty () const
+	bool IsEmpty () const 
 	{
 		return (m_firstIndex == m_lastIndex);
 	}
@@ -103,11 +103,11 @@ class dgQueue
 	dgInt32 m_lastIndex;
 	T* m_pool;
 };
-
+ 
 
 class dgSolverWorlkerThreads: public dgWorkerThread
 {
-	public:
+	public: 
 	virtual void ThreadExecute();
 
 	dgInt32 m_count;
@@ -124,7 +124,7 @@ class dgSolverWorlkerThreads: public dgWorkerThread
 
 class dgParallelSolverClear: public dgWorkerThread
 {
-	public:
+	public: 
 	virtual void ThreadExecute();
 
 	dgInt32 m_count;
@@ -137,7 +137,7 @@ class dgParallelSolverClear: public dgWorkerThread
 
 class dgParallelSolverInitInternalForces: public dgWorkerThread
 {
-	public:
+	public: 
 	virtual void ThreadExecute();
 
 	dgInt32 m_count;
@@ -152,7 +152,7 @@ class dgParallelSolverInitInternalForces: public dgWorkerThread
 
 class dgParallelSolverInitFeedbackUpdate: public dgWorkerThread
 {
-	public:
+	public: 
 	virtual void ThreadExecute();
 
 	dgInt32 m_count;
@@ -168,7 +168,7 @@ class dgParallelSolverInitFeedbackUpdate: public dgWorkerThread
 
 class dgParallelSolverBodyInertia: public dgWorkerThread
 {
-	public:
+	public: 
 	virtual void ThreadExecute();
 
 	dgInt32 m_count;
@@ -179,7 +179,7 @@ class dgParallelSolverBodyInertia: public dgWorkerThread
 
 class dgParallelSolverBuildJacobianRows: public dgWorkerThread
 {
-	public:
+	public: 
 	virtual void ThreadExecute();
 
 	dgInt32 m_count;
@@ -200,7 +200,7 @@ class dgParallelSolverBuildJacobianRows: public dgWorkerThread
 
 class dgParallelSolverBuildJacobianMatrix: public dgWorkerThread
 {
-	public:
+	public: 
 	virtual void ThreadExecute();
 
 	bool m_bitMode;
@@ -216,7 +216,7 @@ class dgParallelSolverBuildJacobianMatrix: public dgWorkerThread
 
 class dgParallelSolverJointAcceleration: public dgWorkerThread
 {
-	public:
+	public: 
 	virtual void ThreadExecute();
 
 	dgInt32 m_count;
@@ -240,7 +240,7 @@ class dgParallelSolverJointAcceleration: public dgWorkerThread
 
 class dgParallelSolverUpdateVeloc: public dgWorkerThread
 {
-	public:
+	public: 
 	virtual void ThreadExecute();
 
 	dgInt32 m_count;
@@ -254,7 +254,7 @@ class dgParallelSolverUpdateVeloc: public dgWorkerThread
 
 class dgParallelSolverUpdateForce: public dgWorkerThread
 {
-	public:
+	public: 
 	virtual void ThreadExecute();
 
 	dgInt32 m_count;
@@ -273,7 +273,7 @@ class dgParallelSolverUpdateForce: public dgWorkerThread
 
 class dgParallelSolverCalculateForces: public dgWorkerThread
 {
-	public:
+	public: 
 	virtual void ThreadExecute();
 
 	dgInt32 m_count;
@@ -328,7 +328,7 @@ class dgJacobianMemory
 	dgFloat32* m_lowerBoundFrictionCoefficent;
 	dgFloat32* m_upperBoundFrictionCoefficent;
 	dgFloat32** m_jointFeebackForce;
-	dgBodyInfo* m_bodyArray;
+	dgBodyInfo* m_bodyArray; 
 	dgInt32* m_normalForceIndex;
 	dgInt32* m_accelIsMotor;
 
@@ -372,14 +372,14 @@ class dgWorldDynamicUpdate
 	void ReallocBodyMemory (dgInt32 count);
 	void ReallocJointsMemory (dgInt32 count);
 	void ReallocIslandMemory (dgInt32 count);
-
+	
 
 	// multi-cores functions
 	void BuildJacobianMatrix (const dgIsland& island, dgInt32 threadIndex, dgFloat32 timestep);
 	void BuildJacobianMatrixSimd (const dgIsland& island, dgInt32 threadIndex, dgFloat32 timestep);
 	dgInt32 GetJacobialDerivatives (const dgIsland& island, dgInt32 threadIndex, bool bitMode, dgInt32 rowCount, dgFloat32 timestep);
 
-
+	
 	void BuildJacobianMatrixParallel (const dgIsland& island, dgFloat32 timestep, dgInt32 archModel);
 	dgInt32 GetJacobialDerivativesParallel (const dgIsland& island, bool bitMode, dgInt32 rowCount, dgFloat32 timestep);
 
@@ -400,7 +400,7 @@ class dgWorldDynamicUpdate
 
 	dgIsland* m_islandArray;
 	dgBodyInfo* m_bodyArray;
-	dgJointInfo* m_constraintArray;
+	dgJointInfo* m_constraintArray; 
 
 
 	dgJacobianMemory m_solverMemory [DG_MAXIMUN_THREADS];
@@ -415,7 +415,7 @@ class dgWorldDynamicUpdate
 	dgParallelSolverJointAcceleration m_parallelSolverJointAcceleration[DG_MAXIMUN_THREADS];
 	dgParallelSolverInitFeedbackUpdate m_parallelSolverInitFeedbackUpdate[DG_MAXIMUN_THREADS];
 	dgParallelSolverBuildJacobianMatrix m_parallelSolverBuildJacobianMatrix[DG_MAXIMUN_THREADS];
-
+	
 
 	dgBody* m_sentinelBody;
 	dgWorld* m_world;

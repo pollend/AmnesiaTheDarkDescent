@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -32,8 +32,8 @@ typedef dgFloat32 (*dgCollisionBVHUserRayCastCallback) (const dgBody* const body
 class dgCollisionBVH: public dgCollisionMesh, public dgAABBPolygonSoup
 {
 	public:
-	DG_MSC_VECTOR_ALIGMENT
-	struct dgBVHRay: public FastRayTest
+	DG_MSC_VECTOR_ALIGMENT 
+	struct dgBVHRay: public FastRayTest 
 	{
 		dgBVHRay(const dgVector& l0, const dgVector& l1)
 			: FastRayTest (l0, l1)
@@ -58,13 +58,13 @@ class dgCollisionBVH: public dgCollisionMesh, public dgAABBPolygonSoup
 	void EndBuild(dgInt32 optimize);
 
 	void SetCollisionRayCastCallback (dgCollisionBVHUserRayCastCallback rayCastCallback);
-	dgCollisionBVHUserRayCastCallback GetDebugRayCastCallback() const { return m_userRayCastCallback;}
+	dgCollisionBVHUserRayCastCallback GetDebugRayCastCallback() const { return m_userRayCastCallback;} 
 
 	void GetVertexListIndexList (const dgVector& p0, const dgVector& p1, dgGetVertexListIndexList &data) const;
 
 
 	private:
-
+	
 
 	static dgFloat32 RayHit (void *context, const dgFloat32* const polygon, dgInt32 strideInBytes, const dgInt32* const indexArray, dgInt32 indexCount);
 	static dgFloat32 RayHitSimd (void *context, const dgFloat32* const polygon, dgInt32 strideInBytes, const dgInt32* const indexArray, dgInt32 indexCount);

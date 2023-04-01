@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -24,7 +24,7 @@
 
 // based of the paper of: Jonathan Richard Shewchuk October 1, 1997
 // "Adaptive Precision Floating-Point Arithmetic and Fast Robust Geometric Predicates"
-// only using the exact arithmetic
+// only using the exact arithmetic 
 // more than a million time better than my previews exact arithmetic base on integers
 
 // this class is by far faster an much more complete than n my old Googol big number base in integers
@@ -97,11 +97,11 @@ void dgGoogol::InitFloatFloat (dgFloat64 value)
 
 inline void dgGoogol::AddFloat (dgFloat64 a, dgFloat64 b, dgFloat64& x, dgFloat64& y) const
 {
-	x = a + b;
-	dgFloat64 bvirt = x - a;
-	dgFloat64 avirt = x - bvirt;
-	dgFloat64 bround = b - bvirt;
-	dgFloat64 around = a - avirt;
+	x = a + b; 
+	dgFloat64 bvirt = x - a; 
+	dgFloat64 avirt = x - bvirt; 
+	dgFloat64 bround = b - bvirt; 
+	dgFloat64 around = a - avirt; 
 	y = around + bround;
 }
 
@@ -148,8 +148,8 @@ inline void dgGoogol::PackFloat ()
 inline void dgGoogol::SplitFloat (dgFloat64 a, dgFloat64& ahi, dgFloat64& alo) const
 {
 	dgFloat64 c = m_splitter * a;
-	dgFloat64 abig = c - a;
-	ahi = c - abig;
+	dgFloat64 abig = c - a; 
+	ahi = c - abig; 
 	alo = a - ahi;
 }
 
@@ -162,12 +162,12 @@ inline void dgGoogol::MulFloat (dgFloat64 a, dgFloat64 b, dgFloat64& x, dgFloat6
 
 	x = a * b;
 
-	SplitFloat (a, ahi, alo);
-	SplitFloat (b, bhi, blo);
+	SplitFloat (a, ahi, alo); 
+	SplitFloat (b, bhi, blo); 
 
-	dgFloat64 err1 = x - ahi * bhi;
-	dgFloat64 err2 = err1 - (alo * bhi);
-	dgFloat64 err3 = err2 - (ahi * blo);
+	dgFloat64 err1 = x - ahi * bhi; 
+	dgFloat64 err2 = err1 - (alo * bhi); 
+	dgFloat64 err3 = err2 - (ahi * blo); 
 	y = alo * blo - err3;
 }
 
@@ -215,7 +215,7 @@ dgGoogol dgGoogol::operator+ (const dgGoogol &A) const
 		q = Qnew;
 	}
 	tmp.m_elements[m_significantCount] = q;
-
+	
 	dgInt32	significantCount = m_significantCount + 1;
 	for (dgInt32 i = 1; i < A.m_significantCount; i++) {
 		dgFloat64 q = A.m_elements[i];
@@ -247,7 +247,7 @@ dgGoogol dgGoogol::operator- (const dgGoogol &A) const
 
 dgGoogol dgGoogol::operator* (const dgGoogol &A) const
 {
-	dgGoogol tmp (ScaleFloat(A.m_elements[0]));
+	dgGoogol tmp (ScaleFloat(A.m_elements[0]));	
 	for (dgInt32 i = 1; i < A.m_significantCount; i ++) {
 		tmp = tmp + ScaleFloat(A.m_elements[i]);
 	}

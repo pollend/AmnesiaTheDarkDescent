@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -82,7 +82,7 @@ namespace InternalPolyhedra
 			:dgList<dgEdge*>(allocator)
 		{
 			size   = t;
-		}
+		} 
 
 
 		dgInt32 IsInCache (dgEdge *edge)   const
@@ -102,7 +102,7 @@ namespace InternalPolyhedra
 			return 0;
 		}
 
-		dgInt32 AddEdge (dgEdge *edge)
+		dgInt32 AddEdge (dgEdge *edge) 
 		{
 			if (IsInCache (edge) == 0)	{
 				Addtop (edge);
@@ -115,7 +115,7 @@ namespace InternalPolyhedra
 		}
 
 
-		dgEdge *GetEdge (dgInt32 mark) const
+		dgEdge *GetEdge (dgInt32 mark) const 
 		{
 			dgEdge *ptr;
 			dgEdge *edge;
@@ -143,18 +143,18 @@ namespace InternalPolyhedra
 	{
 		dgFloat64 elem[10];
 
-		VERTEX_METRIC_STRUCT (const dgBigPlane &plane)
+		VERTEX_METRIC_STRUCT (const dgBigPlane &plane) 
 		{
-			elem[0] = plane.m_x * plane.m_x;
-			elem[1] = plane.m_y * plane.m_y;
-			elem[2] = plane.m_z * plane.m_z;
-			elem[3] = plane.m_w * plane.m_w;
-			elem[4] = 2.0 * plane.m_x * plane.m_y;
-			elem[5] = 2.0 * plane.m_x * plane.m_z;
-			elem[6] = 2.0 * plane.m_x * plane.m_w;
-			elem[7] = 2.0 * plane.m_y * plane.m_z;
-			elem[8] = 2.0 * plane.m_y * plane.m_w;
-			elem[9] = 2.0 * plane.m_z * plane.m_w;
+			elem[0] = plane.m_x * plane.m_x;  
+			elem[1] = plane.m_y * plane.m_y;  
+			elem[2] = plane.m_z * plane.m_z;  
+			elem[3] = plane.m_w * plane.m_w;  
+			elem[4] = 2.0 * plane.m_x * plane.m_y;  
+			elem[5] = 2.0 * plane.m_x * plane.m_z;  
+			elem[6] = 2.0 * plane.m_x * plane.m_w;  
+			elem[7] = 2.0 * plane.m_y * plane.m_z;  
+			elem[8] = 2.0 * plane.m_y * plane.m_w;  
+			elem[9] = 2.0 * plane.m_z * plane.m_w;  
 		}
 
 		void Clear ()
@@ -162,52 +162,52 @@ namespace InternalPolyhedra
 			memset (elem, 0, 10 * sizeof (dgFloat64));
 		}
 
-		void Accumulate (VERTEX_METRIC_STRUCT &p)
+		void Accumulate (VERTEX_METRIC_STRUCT &p) 
 		{
-			elem[0] += p.elem[0];
-			elem[1] += p.elem[1];
-			elem[2] += p.elem[2];
-			elem[3] += p.elem[3];
-			elem[4] += p.elem[4];
-			elem[5] += p.elem[5];
-			elem[6] += p.elem[6];
-			elem[7] += p.elem[7];
-			elem[8] += p.elem[8];
-			elem[9] += p.elem[9];
+			elem[0] += p.elem[0]; 
+			elem[1] += p.elem[1]; 
+			elem[2] += p.elem[2]; 
+			elem[3] += p.elem[3]; 
+			elem[4] += p.elem[4]; 
+			elem[5] += p.elem[5]; 
+			elem[6] += p.elem[6]; 
+			elem[7] += p.elem[7]; 
+			elem[8] += p.elem[8]; 
+			elem[9] += p.elem[9]; 
 		}
 
-		void Accumulate (dgBigPlane &plane)
+		void Accumulate (dgBigPlane &plane) 
 		{
-			elem[0] += plane.m_x * plane.m_x;
-			elem[1] += plane.m_y * plane.m_y;
-			elem[2] += plane.m_z * plane.m_z;
-			elem[3] += plane.m_w * plane.m_w;
+			elem[0] += plane.m_x * plane.m_x;  
+			elem[1] += plane.m_y * plane.m_y;  
+			elem[2] += plane.m_z * plane.m_z;  
+			elem[3] += plane.m_w * plane.m_w;  
 
-			elem[4] += dgFloat64 (2.0f) * plane.m_x * plane.m_y;
-			elem[5] += dgFloat64 (2.0f) * plane.m_x * plane.m_z;
-			elem[7] += dgFloat64 (2.0f) * plane.m_y * plane.m_z;
+			elem[4] += dgFloat64 (2.0f) * plane.m_x * plane.m_y;  
+			elem[5] += dgFloat64 (2.0f) * plane.m_x * plane.m_z;  
+			elem[7] += dgFloat64 (2.0f) * plane.m_y * plane.m_z;  
 
-			elem[6] += dgFloat64 (2.0f) * plane.m_x * plane.m_w;
-			elem[8] += dgFloat64 (2.0f) * plane.m_y * plane.m_w;
-			elem[9] += dgFloat64 (2.0f) * plane.m_z * plane.m_w;
+			elem[6] += dgFloat64 (2.0f) * plane.m_x * plane.m_w;  
+			elem[8] += dgFloat64 (2.0f) * plane.m_y * plane.m_w;  
+			elem[9] += dgFloat64 (2.0f) * plane.m_z * plane.m_w;  
 		}
 
 
-		dgFloat64 Evalue (dgVector &p)
+		dgFloat64 Evalue (dgVector &p) 
 		{
 			dgFloat64 Acc;
-			Acc = elem[0] * p.m_x * p.m_x +
-				elem[1] * p.m_y * p.m_y +
-				elem[2] * p.m_z * p.m_z +
+			Acc = elem[0] * p.m_x * p.m_x + 
+				elem[1] * p.m_y * p.m_y + 
+				elem[2] * p.m_z * p.m_z + 
 
-				elem[4] * p.m_x * p.m_y +
-				elem[5] * p.m_x * p.m_z +
-				elem[7] * p.m_y * p.m_z +
+				elem[4] * p.m_x * p.m_y + 
+				elem[5] * p.m_x * p.m_z + 
+				elem[7] * p.m_y * p.m_z + 
 
-				elem[6] * p.m_x +
-				elem[8] * p.m_y +
-				elem[9] * p.m_z +
-				elem[3];
+				elem[6] * p.m_x + 
+				elem[8] * p.m_y + 
+				elem[9] * p.m_z + 
+				elem[3];  
 
 			//		   _ASSERTE (Acc >= -1.0e-1);
 			//		   _ASSERTE (Acc >= -0.0);
@@ -224,7 +224,7 @@ namespace InternalPolyhedra
 		dgPolyhedra::dgTreeNode *node;
 
 		handle = (EDGE_HANDLE *) IntToPointer (edge->m_userData);
-		if (handle) {
+		if (handle) { 
 			handle->edge = NULL;
 		}
 
@@ -233,7 +233,7 @@ namespace InternalPolyhedra
 		polyhedra->Remove (node);
 	}
 
-	static bool MatchTwins (dgPolyhedra *polyhedra)
+	static bool MatchTwins (dgPolyhedra *polyhedra) 
 	{
 		bool ret;
 		dgEdge *edge;
@@ -247,13 +247,13 @@ namespace InternalPolyhedra
 			if (!edge->m_twin) {
 				edge->m_twin = polyhedra->FindEdge (edge->m_next->m_incidentVertex, edge->m_incidentVertex);
 				if (edge->m_twin) {
-					edge->m_twin->m_twin = edge;
+					edge->m_twin->m_twin = edge; 
 				}
 				ret &= (edge->m_twin != NULL);
 			}
 		}
 
-#ifdef __ENABLE_SANITY_CHECK
+#ifdef __ENABLE_SANITY_CHECK 
 		_ASSERTE (!ret || polyhedra->SanityCheck());
 #endif
 		return ret;
@@ -279,11 +279,11 @@ namespace InternalPolyhedra
 			if (!edge->m_twin) {
 				dgPolyhedra::dgPairKey code (edge->m_next->m_incidentVertex, edge->m_incidentVertex);
 				dgEdge tmpEdge (edge->m_next->m_incidentVertex, -1);
-				tmpEdge.m_incidentFace = -1;
-				node = polyhedra->Insert (tmpEdge, code.GetVal(), state);
+				tmpEdge.m_incidentFace = -1; 
+				node = polyhedra->Insert (tmpEdge, code.GetVal(), state); 
 				_ASSERTE (!state);
 				edge->m_twin = &node->GetInfo();
-				edge->m_twin->m_twin = edge;
+				edge->m_twin->m_twin = edge; 
 				edgeArray[edgeCount] = edge->m_twin;
 				edgeCount ++;
 			}
@@ -300,7 +300,7 @@ namespace InternalPolyhedra
 			edge->m_prev = ptr;
 		}
 
-#ifdef __ENABLE_SANITY_CHECK
+#ifdef __ENABLE_SANITY_CHECK 
 		_ASSERTE (polyhedra->SanityCheck ());
 #endif
 	}
@@ -344,9 +344,9 @@ namespace InternalPolyhedra
 
 
 	static dgBigPlane UnboundedLoopPlane (
-		dgInt32 i0,
-		dgInt32 i1,
-		dgInt32 i2,
+		dgInt32 i0, 
+		dgInt32 i1, 
+		dgInt32 i2, 
 		const dgTriplex pool[])
 	{
 		dgFloat64 mag;
@@ -355,10 +355,10 @@ namespace InternalPolyhedra
 		dgBigVector p0 (&pool[i0].m_x);
 		dgBigVector p1 (&pool[i1].m_x);
 		dgBigVector p2 (&pool[i2].m_x);
-		dgBigVector E0 (p1 - p0);
-		dgBigVector E1 (p2 - p0);
+		dgBigVector E0 (p1 - p0); 
+		dgBigVector E1 (p2 - p0); 
 
-		dgBigVector N ((E0 * E1) * E0);
+		dgBigVector N ((E0 * E1) * E0); 
 		dist = - (N % p0);
 		dgBigPlane plane (N, dist);
 
@@ -384,7 +384,7 @@ namespace InternalPolyhedra
 		dgInt32 i0;
 		dgInt32 i1;
 		dgInt32 i2;
-		dgInt32 edgeMark;
+		dgInt32 edgeMark; 
 		dgEdge *ptr;
 		dgEdge *edge;
 		dgBigPlane constrainPlane;
@@ -437,9 +437,9 @@ namespace InternalPolyhedra
 	}
 
 	static dgBigVector BigFaceNormal (
-		dgEdge *face,
-		const dgFloat32* const pool,
-		dgInt32 stride)
+		dgEdge *face, 
+		const dgFloat32* const pool, 
+		dgInt32 stride) 
 	{
 		dgEdge *edge;
 		dgBigVector normal (0, 0, 0, 0);
@@ -454,7 +454,7 @@ namespace InternalPolyhedra
 			dgBigVector e2 (p2 - p0);
 			normal += e1 * e2;
 			e1 = e2;
-		}
+		} 
 
 		return normal;
 	}
@@ -463,7 +463,7 @@ namespace InternalPolyhedra
 	static dgFloat32 EdgePenalty (
 		const dgPolyhedra& polyhedra,
 		const dgTriplex pool[],
-		dgEdge *edge)
+		dgEdge *edge) 
 	{
 		dgInt32 i0;
 		dgInt32 i1;
@@ -617,7 +617,7 @@ namespace InternalPolyhedra
 	}
 
 
-	static void CalculateVertexMetrics (
+	static void CalculateVertexMetrics ( 
 		VERTEX_METRIC_STRUCT table[],
 		const dgTriplex pool[],
 		dgEdge *edge)
@@ -886,10 +886,10 @@ namespace InternalPolyhedra
 	}
 	/*
 	static bool CheckIfCoplanar (
-	const dgBigPlane& plane,
-	dgEdge *face,
-	const dgFloat32* const pool,
-	dgInt32 stride)
+	const dgBigPlane& plane, 
+	dgEdge *face, 
+	const dgFloat32* const pool, 
+	dgInt32 stride) 
 	{
 	dgEdge* ptr;
 	dgFloat64 dist;
@@ -929,7 +929,7 @@ namespace InternalPolyhedra
 		}
 		e2 = e2.Scale (dgFloat64 (1.0f) / sqrt(dot));
 
-		dgBigVector n1 (e1 * e2);
+		dgBigVector n1 (e1 * e2); 
 
 		dot = normal % n1;
 		//		if (dot > dgFloat64 (dgFloat32 (0.1f)f)) {
@@ -943,7 +943,7 @@ namespace InternalPolyhedra
 
 	static bool IsEssensialDiagonal (dgEdge* const diagonal, const dgBigVector& normal, const dgFloat32* const pool,  dgInt32 stride)
 	{
-		return IsEssensialPointDiagonal (diagonal, normal, pool, stride) || IsEssensialPointDiagonal (diagonal->m_twin, normal, pool, stride);
+		return IsEssensialPointDiagonal (diagonal, normal, pool, stride) || IsEssensialPointDiagonal (diagonal->m_twin, normal, pool, stride); 
 	}
 
 	static dgInt32 GetInteriorDiagonals (dgPolyhedra& polyhedra, dgEdge** const diagonals, dgInt32 maxCount)
@@ -953,7 +953,7 @@ namespace InternalPolyhedra
 		dgPolyhedra::Iterator iter (polyhedra);
 		for (iter.Begin(); iter; iter++) {
 			dgEdge* const edge = &(*iter);
-			if (edge->m_mark != mark) {
+			if (edge->m_mark != mark) { 
 				if (edge->m_incidentFace > 0) {
 					if (edge->m_twin->m_incidentFace > 0) {
 						edge->m_twin->m_mark = mark;
@@ -1123,7 +1123,7 @@ namespace InternalPolyhedra
 
 					for (dgEdge* interiorEdge = ptr->m_next->m_twin->m_next; interiorEdge != ptr->m_twin; interiorEdge = ptr->m_next->m_twin->m_next) {
 						flatFace.DeleteEdge (interiorEdge);
-					}
+					} 
 
 					if (ptr->m_twin->m_next->m_next->m_next == ptr->m_twin) {
 						_ASSERTE (ptr->m_twin->m_next->m_incidentFace > 0);
@@ -1133,7 +1133,7 @@ namespace InternalPolyhedra
 					_ASSERTE (ptr->m_next->m_twin->m_next->m_twin == ptr);
 					edge = ptr->m_next;
 
-					if (!flatFace.FindEdge (ptr->m_incidentVertex, edge->m_twin->m_incidentVertex) &&
+					if (!flatFace.FindEdge (ptr->m_incidentVertex, edge->m_twin->m_incidentVertex) && 
 						!flatFace.FindEdge (edge->m_twin->m_incidentVertex, ptr->m_incidentVertex)) {
 						ptr->m_twin->m_prev = edge->m_twin->m_prev;
 						edge->m_twin->m_prev->m_next = ptr->m_twin;
@@ -1145,7 +1145,7 @@ namespace InternalPolyhedra
 						edge->m_prev = edge->m_twin;
 						edge->m_twin->m_next = edge;
 						edge->m_twin->m_prev = edge;
-						flatFace.DeleteEdge (edge);
+						flatFace.DeleteEdge (edge);								
 						flatFace.ChangeEdgeIncidentVertex (ptr->m_twin, ptr->m_next->m_incidentVertex);
 
 						e1 = e0;
@@ -1186,7 +1186,7 @@ namespace InternalPolyhedra
 		_ASSERTE (perimeterCount);
 		_ASSERTE (perimeterCount < sizeof (edgePerimeters) / sizeof (edgePerimeters[0]));
 		edgePerimeters[perimeterCount] = edgePerimeters[0];
-
+		
 		dgVector normal (flatFace.FaceNormal(edgePerimeters[0], vertex, dgInt32 (stride * sizeof (dgFloat32))));
 		if ((normal % normal) > dgFloat32 (1.0e-12f)) {
 			RefineTriangulation (flatFace, vertex, stride, &normal, perimeterCount, edgePerimeters);
@@ -1195,7 +1195,7 @@ namespace InternalPolyhedra
 
 	static dgEdge* TriangulateFace (dgPolyhedra& polyhedra,	dgEdge* face, const dgFloat32* const pool, dgInt32 stride, dgDownHeap<dgEdge*, dgFloat32>& heap, dgVector* const faceNormalOut)
 	{
-		dgEdge* perimeter [1024 * 16];
+		dgEdge* perimeter [1024 * 16]; 
 		dgEdge* ptr = face;
 		dgInt32 perimeterCount = 0;
 		do {
@@ -1212,7 +1212,7 @@ namespace InternalPolyhedra
 		dgFloat32 dot = normal % normal;
 		if (dot < dgFloat32 (1.0e-12f)) {
 			if (faceNormalOut) {
-				*faceNormalOut = dgVector (dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f));
+				*faceNormalOut = dgVector (dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f)); 
 			}
 			return face;
 		}
@@ -1223,7 +1223,7 @@ namespace InternalPolyhedra
 
 
 		while (face->m_next->m_next->m_next != face) {
-			dgEdge* const ear = FindEarTip (polyhedra, face, pool, stride, heap, normal);
+			dgEdge* const ear = FindEarTip (polyhedra, face, pool, stride, heap, normal); 
 			if (!ear) {
 				return face;
 			}
@@ -1301,7 +1301,7 @@ namespace InternalPolyhedra
 								dgEdge* ptr = edge;
 								dgInt32 vertexCount = 0;
 								do {
-									polygon[vertexCount] = ptr->m_incidentVertex;
+									polygon[vertexCount] = ptr->m_incidentVertex;				
 									vertexCount ++;
 									_ASSERTE (vertexCount < sizeof (polygon) / sizeof (polygon[0]));
 									ptr->m_mark = mark;
@@ -1327,8 +1327,8 @@ namespace InternalPolyhedra
 	static void GetAdjacentCoplanarFacesPerimeter (
 		dgPolyhedra& perimeter,
 		const dgPolyhedra& polyhedra,
-		dgEdge* const face,
-		const dgFloat32* const pool,
+		dgEdge* const face, 
+		const dgFloat32* const pool,  
 		dgInt32 strideInBytes,
 		dgEdge** const stack,
 		dgInt32* const faceIndex)
@@ -1408,7 +1408,7 @@ namespace InternalPolyhedra
 		}
 	}
 
-	static bool ConvexPartition (dgPolyhedra& polyhedra, const dgFloat32* const vertex,	dgInt32 strideInBytes)
+	static bool ConvexPartition (dgPolyhedra& polyhedra, const dgFloat32* const vertex,	dgInt32 strideInBytes) 
 	{
 		dgInt32 removeCount = 0;
 		dgInt32 stride = dgInt32 (strideInBytes / sizeof (dgFloat32));
@@ -1494,7 +1494,7 @@ namespace InternalPolyhedra
 								dgInt32 count = 0;
 								ptr = edge;
 								do {
-									polygon[count] = ptr->m_incidentVertex;
+									polygon[count] = ptr->m_incidentVertex;				
 									count ++;
 									_ASSERTE (count < sizeof (polygon) / sizeof (polygon[0]));
 									ptr = ptr->m_next;
@@ -1538,7 +1538,7 @@ namespace InternalPolyhedra
 								dgEdge* ptr = edge;
 								dgInt32 diagonalCount = 0;
 								do {
-									polygon[diagonalCount] = ptr->m_incidentVertex;
+									polygon[diagonalCount] = ptr->m_incidentVertex;				
 									diagonalCount ++;
 									_ASSERTE (diagonalCount < sizeof (polygon) / sizeof (polygon[0]));
 									ptr->m_mark = mark;
@@ -1584,7 +1584,7 @@ void dgPolyhedraDescriptor::Update (const dgPolyhedra& srcPolyhedra)
 	dgEdge *edge;
 	dgPolyhedra* polyhedra;
 
-	polyhedra = (dgPolyhedra*) &srcPolyhedra;
+	polyhedra = (dgPolyhedra*) &srcPolyhedra; 
 
 	faceCountLocal = 0;
 	edgeCountLocal = 0;
@@ -1619,10 +1619,10 @@ void dgPolyhedraDescriptor::Update (const dgPolyhedra& srcPolyhedra)
 					ptr = ptr->m_next;
 				} while (ptr != edge);
 			}
-		}
+		} 
 
 		if (~edge->m_mark & 2) {
-			vertexCountLocal ++;
+			vertexCountLocal ++; 
 			ptr = edge;
 			do {
 				ptr->m_mark |= 2;
@@ -1632,7 +1632,7 @@ void dgPolyhedraDescriptor::Update (const dgPolyhedra& srcPolyhedra)
 
 		if (~edge->m_mark & 4) {
 			ptr = edge;
-			faceCountLocal ++;
+			faceCountLocal ++; 
 			do {
 				ptr->m_mark |= 4;
 				ptr = ptr->m_next;
@@ -1700,7 +1700,7 @@ dgPolyhedra::dgPolyhedra (const dgPolyhedra &polyhedra)
 
 	m_faceSecuence = polyhedra.m_faceSecuence;
 
-#ifdef __ENABLE_SANITY_CHECK
+#ifdef __ENABLE_SANITY_CHECK 
 	_ASSERTE (SanityCheck());
 #endif
 }
@@ -1848,7 +1848,7 @@ dgEdge* dgPolyhedra::AddFace ( dgInt32 count, const dgInt32* const index, const 
 
 		bool Insert (dgInt32 dummy, dgInt64 value)
 		{
-			dgInt32 i;
+			dgInt32 i;				
 			for (i = 0 ; i < m_count; i ++) {
 				if (m_array[i] == value) {
 					return false;
@@ -1899,12 +1899,12 @@ dgEdge* dgPolyhedra::AddFace ( dgInt32 count, const dgInt32* const index, const 
 	if (userdata) {
 		udata0 = dgUnsigned64 (userdata[count-1]);
 		udata1 = dgUnsigned64 (userdata[0]);
-	}
+	} 
 
 	bool state;
 	dgPairKey code (i0, i1);
 	dgEdge tmpEdge (i0, m_faceSecuence, udata0);
-	dgTreeNode* node = Insert (tmpEdge, code.GetVal(), state);
+	dgTreeNode* node = Insert (tmpEdge, code.GetVal(), state); 
 	_ASSERTE (!state);
 	dgEdge* edge0 = &node->GetInfo();
 	dgEdge* const first = edge0;
@@ -1917,7 +1917,7 @@ dgEdge* dgPolyhedra::AddFace ( dgInt32 count, const dgInt32* const index, const 
 
 		dgPairKey code (i0, i1);
 		dgEdge tmpEdge (i0, m_faceSecuence, udata0);
-		node = Insert (tmpEdge, code.GetVal(), state);
+		node = Insert (tmpEdge, code.GetVal(), state); 
 		_ASSERTE (!state);
 
 		dgEdge* const edge1 = &node->GetInfo();
@@ -2004,7 +2004,7 @@ dgEdge* dgPolyhedra::AddHalfEdge (dgInt32 v0, dgInt32 v1)
 	dgPairKey  pairKey (v0, v1);
 	dgEdge tmpEdge (v0, -1);
 
-	node = Insert (tmpEdge, pairKey.GetVal());
+	node = Insert (tmpEdge, pairKey.GetVal()); 
 	return node ? &node->GetInfo() : NULL;
 }
 
@@ -2047,7 +2047,7 @@ dgEdge *dgPolyhedra::CollapseEdge(dgEdge* const edge)
 	dgInt32 v0 = edge->m_incidentVertex;
 	dgInt32 v1 = edge->m_twin->m_incidentVertex;
 
-#ifdef __ENABLE_SANITY_CHECK
+#ifdef __ENABLE_SANITY_CHECK 
 	dgPairKey TwinKey (v1, v0);
 	node = Find (TwinKey.GetVal());
 	twin = node ? &node->GetInfo() : NULL;
@@ -2078,7 +2078,7 @@ dgEdge *dgPolyhedra::CollapseEdge(dgEdge* const edge)
 
 	dgEdge* lastEdge = NULL;
 	dgEdge* firstEdge = NULL;
-	if ((edge->m_incidentFace >= 0)	&& (edge->m_twin->m_incidentFace >= 0)) {
+	if ((edge->m_incidentFace >= 0)	&& (edge->m_twin->m_incidentFace >= 0)) {	
 		lastEdge = edge->m_prev->m_twin;
 		firstEdge = edge->m_twin->m_next->m_twin->m_next;
 	} else if (edge->m_twin->m_incidentFace >= 0) {
@@ -2094,7 +2094,7 @@ dgEdge *dgPolyhedra::CollapseEdge(dgEdge* const edge)
 		if (badEdge) {
 			return NULL;
 		}
-	}
+	} 
 
 	dgEdge* const twin = edge->m_twin;
 	if (twin->m_next == twin->m_prev->m_prev) {
@@ -2134,7 +2134,7 @@ dgEdge *dgPolyhedra::CollapseEdge(dgEdge* const edge)
 				ptr->m_incidentVertex = v1;
 				node = ReplaceKey (node, key.GetVal());
 				_ASSERTE (node);
-			}
+			} 
 		}
 
 		dgPairKey TwinKey (ptr->m_twin->m_incidentVertex, v0);
@@ -2229,7 +2229,7 @@ bool dgPolyhedra::FlipEdge (dgEdge* const edge)
 	edge->m_twin->m_prev->m_incidentFace = edge->m_twin->m_incidentFace;
 
 
-#ifdef __ENABLE_SANITY_CHECK
+#ifdef __ENABLE_SANITY_CHECK 
 	_ASSERTE (SanityCheck ());
 #endif
 
@@ -2306,7 +2306,7 @@ dgEdge* dgPolyhedra::SpliteEdge (dgInt32 newIndex,	dgEdge* const edge)
 	twin0->m_incidentFace = f1;
 	twin1->m_incidentFace = f1;
 
-#ifdef __ENABLE_SANITY_CHECK
+#ifdef __ENABLE_SANITY_CHECK 
 	//	_ASSERTE (SanityCheck ());
 #endif
 
@@ -2355,7 +2355,7 @@ dgEdge *dgPolyhedra::SpliteEdgeAndTriangulate (dgInt32 newIndex, dgEdge* srcEdge
 		edge = edge->m_twin->m_next;
 	} while (edge != ankle);
 
-#ifdef __ENABLE_SANITY_CHECK
+#ifdef __ENABLE_SANITY_CHECK 
 	_ASSERTE (SanityCheck ());
 #endif
 
@@ -2364,8 +2364,8 @@ dgEdge *dgPolyhedra::SpliteEdgeAndTriangulate (dgInt32 newIndex, dgEdge* srcEdge
 
 dgSphere dgPolyhedra::CalculateSphere (const dgFloat32* const vertex, dgInt32 strideInBytes, const dgMatrix* const basis) const
 {
-	dgStack<dgInt32> pool (GetCount() * 3 + 6);
-	dgInt32* const indexList = &pool[0];
+	dgStack<dgInt32> pool (GetCount() * 3 + 6); 
+	dgInt32* const indexList = &pool[0]; 
 
 	dgMatrix axis (dgGetIdentityMatrix());
 	dgVector p0 (dgFloat32 ( 1.0e10f), dgFloat32 ( 1.0e10f), dgFloat32 ( 1.0e10f), dgFloat32 (0.0f));
@@ -2592,7 +2592,7 @@ dgInt32 dgPolyhedra::PackVertex (dgFloat32* const destArray, const dgFloat32* co
 	dgInt32 index;
 	ptr = edge;
 	index = edge->m_incidentVertex;
-	memcpy (&destArray[vertexCount * stride], &unpackArray[index * stride], stride * sizeof (dgFloat32));
+	memcpy (&destArray[vertexCount * stride], &unpackArray[index * stride], stride * sizeof (dgFloat32)); 
 	do {
 	ptr->m_mark = mark;
 	ptr->m_incidentVertex = vertexCount;
@@ -2600,7 +2600,7 @@ dgInt32 dgPolyhedra::PackVertex (dgFloat32* const destArray, const dgFloat32* co
 
 	} while (ptr != edge);
 	vertexCount ++;
-	}
+	}	
 	}
 
 	RemoveAll ();
@@ -2621,9 +2621,9 @@ dgInt32 dgPolyhedra::PackVertex (dgFloat32* const destArray, const dgFloat32* co
 
 
 
-void dgPolyhedra::GetBadEdges (dgList<dgEdge*>& faceList, const dgFloat32* const pool, dgInt32 strideInBytes) const
+void dgPolyhedra::GetBadEdges (dgList<dgEdge*>& faceList, const dgFloat32* const pool, dgInt32 strideInBytes) const 
 {
-	dgStack<char> memPool ((4096 + 256) * (sizeof (dgFloat32) + sizeof(dgEdge)));
+	dgStack<char> memPool ((4096 + 256) * (sizeof (dgFloat32) + sizeof(dgEdge))); 
 	dgDownHeap<dgEdge*, dgFloat32> heap(&memPool[0], memPool.GetSizeInBytes());
 
 	dgPolyhedra tmp (*this);
@@ -2675,7 +2675,7 @@ void dgPolyhedra::DeleteDegenerateFaces (const dgFloat32* const pool, dgInt32 st
 		return;
 	}
 
-#ifdef __ENABLE_SANITY_CHECK
+#ifdef __ENABLE_SANITY_CHECK 
 	_ASSERTE (SanityCheck ());
 #endif
 	dgStack <dgPolyhedra::dgTreeNode*> faceArrayPool(GetCount() / 2 + 100);
@@ -2714,7 +2714,7 @@ void dgPolyhedra::DeleteDegenerateFaces (const dgFloat32* const pool, dgInt32 st
 		}
 	}
 
-#ifdef __ENABLE_SANITY_CHECK
+#ifdef __ENABLE_SANITY_CHECK 
 	mark = IncLRU();
 	for (iter.Begin(); iter; iter ++) {
 		edge = &(*iter);
@@ -2738,9 +2738,9 @@ void dgPolyhedra::DeleteDegenerateFaces (const dgFloat32* const pool, dgInt32 st
 
 /*
 void dgPolyhedra::CollapseDegenerateFaces (
-dgPolyhedraDescriptor &desc,
-const dgFloat32* const pool,
-dgInt32 strideInBytes,
+dgPolyhedraDescriptor &desc, 
+const dgFloat32* const pool, 
+dgInt32 strideInBytes, 
 dgFloat32 area)
 {
 dgInt32 i0;
@@ -2760,13 +2760,13 @@ dgEdge *face;
 dgEdge *edge;
 
 
-#ifdef __ENABLE_SANITY_CHECK
+#ifdef __ENABLE_SANITY_CHECK 
 _ASSERTE (SanityCheck ());
 #endif
 
 stride = strideInBytes / sizeof (dgFloat32);
 area2 = area * area;
-dgStack<char> heapPool (desc.m_faceCount * (sizeof (dgFloat32) + sizeof (dgPairKey) + sizeof (dgInt32)));
+dgStack<char> heapPool (desc.m_faceCount * (sizeof (dgFloat32) + sizeof (dgPairKey) + sizeof (dgInt32))); 
 _ASSERTE (0);
 dgDownHeap<dgPairKey, dgFloat32> bigHeapArray(&heapPool[0], heapPool.GetSizeInBytes());
 
@@ -2855,7 +2855,7 @@ DeleteFace (edge);
 }
 }
 
-#ifdef __ENABLE_SANITY_CHECK
+#ifdef __ENABLE_SANITY_CHECK 
 _ASSERTE (SanityCheck ());
 #endif
 
@@ -2896,7 +2896,7 @@ bool dgPolyhedra::GetConectedSurface (dgPolyhedra &polyhedra) const
 
 	dgInt32 faceIndex[4096];
 	dgInt64 faceDataIndex[4096];
-	dgStack<dgEdge*> stackPool (GetCount());
+	dgStack<dgEdge*> stackPool (GetCount()); 
 	dgEdge** const stack = &stackPool[0];
 
 	dgInt32 mark = IncLRU();
@@ -2941,10 +2941,10 @@ bool dgPolyhedra::GetConectedSurface (dgPolyhedra &polyhedra) const
 /*
 void dgPolyhedra::Merge (
 dgPolyhedraDescriptor &myDesc,
-dgFloat32 myPool[],
+dgFloat32 myPool[], 
 dgInt32 myStrideInBytes,
-const dgPolyhedra& he,
-const dgFloat32 hisPool[],
+const dgPolyhedra& he, 
+const dgFloat32 hisPool[], 
 dgInt32 hisStrideInBytes)
 {
 dgInt32 i;
@@ -2969,7 +2969,7 @@ dgEdge *borderEdge;
 myStride = myStrideInBytes / sizeof (dgFloat32);
 hisStride = hisStrideInBytes / sizeof (dgFloat32);
 
-dgPolyhedraDescriptor hisDesc (he);
+dgPolyhedraDescriptor hisDesc (he); 
 dgStack<dgInt32> indexMapArray(hisDesc.m_maxVertexIndex);
 indexMapPtr = &indexMapArray[0];
 
@@ -2977,7 +2977,7 @@ vertexCount = 0;
 vertexIndexCount = myDesc.m_maxVertexIndex;
 
 
-#ifdef __ENABLE_SANITY_CHECK
+#ifdef __ENABLE_SANITY_CHECK 
 _ASSERTE (SanityCheck());
 _ASSERTE (he.SanityCheck());
 #endif
@@ -2987,7 +2987,7 @@ mark = he.IncLRU();
 for (iter.Begin(); iter; iter ++) {
 edge = &(*iter);
 if (edge->m_mark != mark) {
-memcpy (&myPool[vertexIndexCount * myStride],
+memcpy (&myPool[vertexIndexCount * myStride], 
 &hisPool[edge->m_incidentVertex * hisStride], sizeof (dgTriplex));
 
 _ASSERTE (edge->m_incidentVertex < hisDesc.m_maxVertexIndex);
@@ -3039,7 +3039,7 @@ do	{
 if (!edge->m_twin) {
 edge->m_twin = FindEdge (edge->m_next->m_incidentVertex, edge->m_incidentVertex);
 if (edge->m_twin) {
-edge->m_twin->m_twin = edge;
+edge->m_twin->m_twin = edge; 
 }
 }
 edge = edge->m_next;
@@ -3062,12 +3062,12 @@ _ASSERTE (!borderEdge->m_twin);
 
 dgPairKey code (i1, i0);
 dgEdge tmpEdge (i1, -1);
-node = Insert (tmpEdge, code.GetVal());
+node = Insert (tmpEdge, code.GetVal()); 
 borderEdge->m_twin = &node->GetInfo();
-borderEdge->m_twin->m_twin = borderEdge;
+borderEdge->m_twin->m_twin = borderEdge; 
 
 edgeCount ++;
-ptr = ptr->m_next;
+ptr = ptr->m_next;  
 } while (ptr != edge);
 }
 
@@ -3087,7 +3087,7 @@ for (ptr1 = borderEdge->m_twin; ptr1->m_next; ptr1 = ptr1->m_next->m_twin)
 ptr1->m_next = borderEdge;
 borderEdge->m_prev = ptr1;
 }
-ptr = ptr->m_next;
+ptr = ptr->m_next;  
 } while (ptr != edge);
 
 _ASSERTE (0);
@@ -3099,20 +3099,20 @@ myDesc.m_faceCount += faceCount;
 myDesc.m_vertexCount += vertexCount;
 myDesc.m_maxVertexIndex += vertexCount;
 
-#ifdef __ENABLE_SANITY_CHECK
+#ifdef __ENABLE_SANITY_CHECK 
 dgPolyhedraDescriptor desc (*this);
-_ASSERTE (myDesc.vertexCount == desc.vertexCount);
-_ASSERTE (myDesc.m_faceCount == desc.m_faceCount);
-_ASSERTE (myDesc.edgeCount == desc.edgeCount);
-_ASSERTE (myDesc.unboundedLoops.GetCount() == desc.unboundedLoops.GetCount());
+_ASSERTE (myDesc.vertexCount == desc.vertexCount); 
+_ASSERTE (myDesc.m_faceCount == desc.m_faceCount); 
+_ASSERTE (myDesc.edgeCount == desc.edgeCount); 
+_ASSERTE (myDesc.unboundedLoops.GetCount() == desc.unboundedLoops.GetCount()); 
 _ASSERTE (SanityCheck ());
 #endif
 }
 
 
 void dgPolyhedra::CombineOpenFaces (
-const dgFloat32* const pool,
-dgInt32 strideInBytes,
+const dgFloat32* const pool, 
+dgInt32 strideInBytes, 
 dgFloat32 tol)
 {
 dgInt32 i;
@@ -3179,7 +3179,7 @@ xc += x;
 yc += y;
 zc += z;
 x2c += x * x;
-y2c += y * y;
+y2c += y * y; 
 z2c += z * z;
 count	++;
 }
@@ -3196,8 +3196,8 @@ if ((z2c > x2c) && (z2c > y2c)) {
 index = 2;
 }
 
-dgStack<char> bigHeapPool ((count + 1024) * (sizeof (dgFloat64) + sizeof (dgEdge*) + sizeof (dgInt32)));
-dgStack<char> smallHeapPool((count + 1024) * (sizeof (dgFloat64) + sizeof (dgEdge*) + sizeof (dgInt32)));
+dgStack<char> bigHeapPool ((count + 1024) * (sizeof (dgFloat64) + sizeof (dgEdge*) + sizeof (dgInt32))); 
+dgStack<char> smallHeapPool((count + 1024) * (sizeof (dgFloat64) + sizeof (dgEdge*) + sizeof (dgInt32))); 
 
 _ASSERTE (0);
 dgDownHeap<dgTreeNode*, dgFloat64> bigHeap (&bigHeapPool[0], bigHeapPool.GetSizeInBytes());
@@ -3293,7 +3293,7 @@ Remove (nodeB);
 break;
 }
 }
-}
+} 
 }
 
 if (i == smallHeap.GetCount()) {
@@ -3306,7 +3306,7 @@ nodeA->AddRef();
 
 bigHeap.Pop();
 nodeA->Release();
-}
+}		
 
 while (smallHeap.GetCount()) {
 nodeB = smallHeap[0];
@@ -3338,15 +3338,15 @@ edgeA = &nodeA->GetInfo();
 
 dgPairKey newKey (edgeA->m_incidentVertex, edgeA->m_twin->m_incidentVertex);
 nodeB = Find (newKey.GetVal());
-if (nodeB) {
+if (nodeB) { 
 edgeB = &nodeB->GetInfo();
 DeleteEdge (edgeB);
 conflictEdge = true;
-}
+} 
 if (nodeA->IsAlive()){
 ReplaceKey (nodeA, newKey.GetVal());
 }
-}
+} 
 nodeA->Release();
 }
 
@@ -3383,7 +3383,7 @@ DeleteEdge (edgeA);
 }
 
 
-#ifdef __ENABLE_SANITY_CHECK
+#ifdef __ENABLE_SANITY_CHECK 
 _ASSERTE (SanityCheck ());
 #endif
 }
@@ -3399,7 +3399,7 @@ void dgPolyhedra::GetCoplanarFaces (dgList<dgEdge*>& faceList, dgEdge *startFace
 		return;
 	}
 
-	dgStack<dgEdge*> stackPool (GetCount() / 2);
+	dgStack<dgEdge*> stackPool (GetCount() / 2); 
 	dgEdge **const stack = &stackPool[0];
 
 	if (startFace->m_incidentFace < 0) {
@@ -3466,8 +3466,8 @@ void dgPolyhedra::GetCoplanarFaces (dgList<dgEdge*>& faceList, dgEdge *startFace
 
 
 void dgPolyhedra::DeleteOverlapingFaces (
-	const dgFloat32* const pool,
-	dgInt32 strideInBytes,
+	const dgFloat32* const pool, 
+	dgInt32 strideInBytes, 
 	dgFloat32 distTol__)
 {
 	dgInt32 i;
@@ -3560,10 +3560,10 @@ void dgPolyhedra::InvertWinding ()
 
 /*
 void dgPolyhedra::Render (
-const dgCamera* camera,
-const dgFloat32 vertexTable[],
+const dgCamera* camera, 
+const dgFloat32 vertexTable[], 
 dgInt32 strideInBytes,
-const dgMatrix &worldMatrix,
+const dgMatrix &worldMatrix, 
 dgColor faceEdgeColor,
 dgColor openEdgeColor) const
 {
@@ -3577,14 +3577,14 @@ dgInt32 stride;
 dgEdge *edge;
 InternalPolyhedra::ColorVertex* vertexPtr;
 
-dgStack<InternalPolyhedra::ColorVertex> vertexPool (2 * 1024);
+dgStack<InternalPolyhedra::ColorVertex> vertexPool (2 * 1024); 
 vertexPtr = &vertexPool[0];
 
 
 
 dgRenderDescriptorParams param;				   s
 param.m_indexCount = 0;
-param.m_vertexCount = 1024 * 2;
+param.m_vertexCount = 1024 * 2; 
 param.m_descType = dgDynamicVertex;
 param.m_primitiveType = RENDER_LINELIST;
 param.m_vertexFlags = VERTEX_ENABLE_XYZ | COLOR_ENABLE;
@@ -3609,7 +3609,7 @@ if (edge->m_mark == mark) {
 continue;
 }
 i0 = edge->m_incidentVertex * stride;
-i1 = edge->m_twin->m_incidentVertex * stride;
+i1 = edge->m_twin->m_incidentVertex * stride; 
 
 edge->m_mark = mark;
 edge->m_twin->m_mark = mark;
@@ -3629,7 +3629,7 @@ vertexPtr[0].color = faceEdgeColor.m_val;
 }
 
 vertexPtr += 2;
-count	+= 2;
+count	+= 2; 
 if (count >= 1024) {
 desc.UnlockVertex();
 desc.RenderPrimitives(camera, count / 2);
@@ -3930,15 +3930,15 @@ _ASSERTE (edge->m_next->m_next->m_next == edge);
 
 
 dgInt32 dgPolyhedra::TriangleStrips (
-dgUnsigned32 outputBuffer[],
-dgInt32 maxBufferSize,
+dgUnsigned32 outputBuffer[], 
+dgInt32 maxBufferSize, 
 dgInt32 vertexCacheSize) const
 {
 dgInt32 setMark;
 dgInt32 indexCount;
 dgInt32 stripsIndex;
 dgInt32 faceColorMark;
-dgInt32 debugFaceCount;
+dgInt32 debugFaceCount; 
 dgInt32 debugIndexCount;
 
 dgEdge *edge;
@@ -3979,7 +3979,7 @@ return indexCount;
 
 /*
 dgInt32 dgPolyhedra::TriangleList (
-dgUnsigned32 outputBuffer[],
+dgUnsigned32 outputBuffer[], 
 dgInt32 maxSize,
 dgInt32 vertexCacheSize) const
 {
@@ -4018,7 +4018,7 @@ while (edgeList) {
 
 node = edgeList.Minimum();
 edge = node->GetInfo();
-ptr = edge;
+ptr = edge; 
 do {
 ptr->m_mark = mark;
 
@@ -4117,8 +4117,8 @@ ptr = ptr->m_next;
 
 vertexIter.Begin();
 }
-}
-}
+}		
+}	
 
 //	dgTrace ("cacheHit = %d, cacheMiss = %d, total = %d\n", cacheHit, cacheMiss, cacheMiss + cacheHit);
 
@@ -4183,7 +4183,7 @@ newEdge:
 			do {
 				if (ptr->m_incidentFace > 0) {
 					if (ptr->m_mark != mark) {
-						score =  vertexCache.IsInCache (ptr->m_next) + vertexCache.IsInCache(ptr->m_prev);
+						score =  vertexCache.IsInCache (ptr->m_next) + vertexCache.IsInCache(ptr->m_prev); 
 						if (score > bestScore) {
 							bestScore = score;
 							face = ptr;
@@ -4225,7 +4225,7 @@ newEdge:
 
 	dgTrace (("fifo efficiency %f\n", dgFloat32 (cacheMiss) * 3.0f / dgFloat32 (count)));
 
-	return count;
+	return count; 
 }
 
 
@@ -4265,19 +4265,19 @@ void dgPolyhedra::Optimize (const dgFloat32* const array, dgInt32 strideInBytes,
 
 	dgInt32 stride = dgInt32 (strideInBytes / sizeof (dgFloat32));
 
-#ifdef __ENABLE_SANITY_CHECK
+#ifdef __ENABLE_SANITY_CHECK 
 	_ASSERTE (SanityCheck ());
 #endif
 
-	dgPolyhedraDescriptor desc (*this);
+	dgPolyhedraDescriptor desc (*this); 
 	dgInt32 edgeCount = desc.m_edgeCount * 4 + 1024 * 16;
 	dgInt32 maxVertexIndex = desc.m_maxVertexIndex;
 
-	dgStack<dgTriplex> vertexPool (maxVertexIndex);
-	dgStack<InternalPolyhedra::VERTEX_METRIC_STRUCT> vertexMetrics (maxVertexIndex + 512);
+	dgStack<dgTriplex> vertexPool (maxVertexIndex); 
+	dgStack<InternalPolyhedra::VERTEX_METRIC_STRUCT> vertexMetrics (maxVertexIndex + 512); 
 
 	dgList <InternalPolyhedra::EDGE_HANDLE> edgeHandleList(GetAllocator());
-	dgStack<char> heapPool (2 * edgeCount * dgInt32 (sizeof (dgFloat64) + sizeof (InternalPolyhedra::EDGE_HANDLE*) + sizeof (dgInt32)));
+	dgStack<char> heapPool (2 * edgeCount * dgInt32 (sizeof (dgFloat64) + sizeof (InternalPolyhedra::EDGE_HANDLE*) + sizeof (dgInt32))); 
 	dgDownHeap<dgList <InternalPolyhedra::EDGE_HANDLE>::dgListNode* , dgFloat64> bigHeapArray(&heapPool[0], heapPool.GetSizeInBytes());
 
 	InternalPolyhedra::NormalizeVertex (maxVertexIndex, &vertexPool[0], array, stride);
@@ -4298,7 +4298,7 @@ void dgPolyhedra::Optimize (const dgFloat32* const array, dgInt32 strideInBytes,
 
 		InternalPolyhedra::VERTEX_METRIC_STRUCT &metric = vertexMetrics[index0];
 		dgVector p	(&vertexPool[index1].m_x);
-		dgFloat64 cost = metric.Evalue (p);
+		dgFloat64 cost = metric.Evalue (p); 
 		if (cost < tol2) {
 			//_ASSERTE (cost > dgFloat64 (-1.0e-5f));
 			cost = InternalPolyhedra::EdgePenalty (*this, &vertexPool[0], edge);
@@ -4328,13 +4328,13 @@ void dgPolyhedra::Optimize (const dgFloat32* const array, dgInt32 strideInBytes,
 
 			if ((metric.Evalue (p) < tol2) && (InternalPolyhedra::EdgePenalty (*this, &vertexPool[0], edge) > InternalPolyhedra::DG_MIN_EDGE_ASPECT_RATIO)) {
 
-#ifdef __ENABLE_SANITY_CHECK
+#ifdef __ENABLE_SANITY_CHECK 
 				_ASSERTE (SanityCheck ());
 #endif
 
 				edge = CollapseEdge(edge);
 
-#ifdef __ENABLE_SANITY_CHECK
+#ifdef __ENABLE_SANITY_CHECK 
 				_ASSERTE (SanityCheck ());
 #endif
 				if (edge) {
@@ -4375,7 +4375,7 @@ void dgPolyhedra::Optimize (const dgFloat32* const array, dgInt32 strideInBytes,
 							if (handle) {
 								handle->edge = NULL;
 							}
-							ptr->m_userData = dgUnsigned32 (0);
+							ptr->m_userData = dgUnsigned32 (NULL);
 
 						}
 
@@ -4386,7 +4386,7 @@ void dgPolyhedra::Optimize (const dgFloat32* const array, dgInt32 strideInBytes,
 					// calculate edge cost of all incident edges to a surrounding vertex
 					ptr = edge;
 					do {
-						dgEdge* const incidentEdge = ptr->m_twin;
+						dgEdge* const incidentEdge = ptr->m_twin;		
 
 						dgEdge* ptr1 = incidentEdge;
 						do {
@@ -4414,7 +4414,7 @@ void dgPolyhedra::Optimize (const dgFloat32* const array, dgInt32 strideInBytes,
 									if (handle) {
 										handle->edge = NULL;
 									}
-									ptr1->m_userData = dgUnsigned32 (0);
+									ptr1->m_userData = dgUnsigned32 (NULL);
 
 								}
 							}
@@ -4440,7 +4440,7 @@ void dgPolyhedra::Optimize (const dgFloat32* const array, dgInt32 strideInBytes,
 									if (handle) {
 										handle->edge = NULL;
 									}
-									ptr1->m_twin->m_userData = dgUnsigned32 (0);
+									ptr1->m_twin->m_userData = dgUnsigned32 (NULL);
 
 								}
 							}
@@ -4460,7 +4460,7 @@ void dgPolyhedra::Optimize (const dgFloat32* const array, dgInt32 strideInBytes,
 /*
 bool dgPolyhedra::TriangulateFace (dgEdge* face, const dgFloat32* const vertex, dgInt32 strideInBytes, dgVector& normal)
 {
-	dgInt32 memPool [2048];
+	dgInt32 memPool [2048]; 
 	dgDownHeap<dgEdge*, dgFloat32> heap(&memPool[0], sizeof (memPool));
 
 
@@ -4475,7 +4475,7 @@ void dgPolyhedra::Triangulate (const dgFloat32* const vertex, dgInt32 strideInBy
 	dgInt32 stride = dgInt32 (strideInBytes / sizeof (dgFloat32));
 
 	dgInt32 count = GetCount() / 2;
-	dgStack<char> memPool (dgInt32 ((count + 512) * (sizeof (dgFloat32) + sizeof(dgEdge*))));
+	dgStack<char> memPool (dgInt32 ((count + 512) * (sizeof (dgFloat32) + sizeof(dgEdge*)))); 
 	dgDownHeap<dgEdge*, dgFloat32> heap(&memPool[0], memPool.GetSizeInBytes());
 
 	dgInt32 mark = IncLRU();
@@ -4519,12 +4519,12 @@ void dgPolyhedra::Triangulate (const dgFloat32* const vertex, dgInt32 strideInBy
 					leftOver->AddFace(i, index, data);
 
 				} else {
-					dgTrace (("Deleting face:"));
+					dgTrace (("Deleting face:"));					
 					ptr = edge;
 					do {
 						dgTrace (("%d ", ptr->m_incidentVertex));
 					} while (ptr != edge);
-					dgTrace (("\n"));
+					dgTrace (("\n"));					
 				}
 
 				DeleteFace (edge);
@@ -4547,8 +4547,8 @@ void dgPolyhedra::Triangulate (const dgFloat32* const vertex, dgInt32 strideInBy
 		}
 		_ASSERTE (edge == edge->m_next->m_next->m_next);
 
-		for (dgInt32 i = 0; i < 3; i ++) {
-			edge->m_incidentFace = m_faceSecuence;
+		for (dgInt32 i = 0; i < 3; i ++) { 
+			edge->m_incidentFace = m_faceSecuence; 
 			edge->m_mark = mark;
 			edge = edge->m_next;
 		}

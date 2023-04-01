@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -108,19 +108,19 @@ class dgPolyhedra: public dgTree <dgEdge, dgEdgeKey>
 				m_key = dgUnsigned64 ((dgInt64 (v0) << 32) | v1);
 			}
 
-			dgInt64 GetVal () const
+			dgInt64 GetVal () const 
 			{
 	//			return (((dgInt64)i1) << 32) + i0;
 				return dgInt64 (m_key);
 			}
 
-			dgInt32 GetLowKey () const
+			dgInt32 GetLowKey () const 
 			{
 	//			return i0 & 0x0xffffffff;
 				return dgInt32 (m_key>>32);
 			}
 
-			dgInt32 GetHighKey () const
+			dgInt32 GetHighKey () const 
 			{
 	//			return i1;
 				return dgInt32 (m_key & 0xffffffff);
@@ -150,7 +150,7 @@ class dgPolyhedra: public dgTree <dgEdge, dgEdgeKey>
 	}
 
 	dgInt32 IncLRU() const
-	{
+	{	
 		m_edgeMark ++;
 		_ASSERTE (m_edgeMark < 0x7fffffff);
 		return m_edgeMark;
@@ -163,7 +163,7 @@ class dgPolyhedra: public dgTree <dgEdge, dgEdgeKey>
 
 	void EndFace ();
 
-	// create an edge and add it to the tree.
+	// create an edge and add it to the tree. 
 	// the edge is not linked to the existing edge list
 	dgEdge* AddHalfEdge (dgInt32 v0, dgInt32 v1);
 
@@ -192,12 +192,12 @@ class dgPolyhedra: public dgTree <dgEdge, dgEdgeKey>
 	dgEdge* FindVertexNode (dgInt32 v0) const;
 	dgEdge* FindEdge (dgInt32 v0, dgInt32 v1) const;
 	dgTreeNode* FindEdgeNode (dgInt32 v0, dgInt32 v1) const;
-
+	
 //	bool TriangulateFace (dgEdge* const face, const dgFloat32* const vertex, dgInt32 strideInBytes, dgVector& normalOut);
 //	void OptimizeTriangulation (const dgFloat32* const vertex, dgInt32 strideInBytes);
-
+	
 	//void Quadrangulate (const dgFloat32* const vertex, dgInt32 strideInBytes);
-
+	
 	void Triangulate (const dgFloat32* const vertex, dgInt32 strideInBytes, dgPolyhedra* const leftOversOut);
 	void ConvexPartition (const dgFloat32* const vertex, dgInt32 strideInBytes, dgPolyhedra* const leftOversOut);
 	dgSphere CalculateSphere (const dgFloat32* const vertex, dgInt32 strideInBytes, const dgMatrix* const basis = NULL) const;
@@ -221,14 +221,14 @@ class dgPolyhedra: public dgTree <dgEdge, dgEdgeKey>
 
 	void InvertWinding ();
 
-//	dgEdge* GetBadEdge (dgList<dgEdge*>& faceList  const dgFloat32* const pool, dgInt32 strideInBytes) const;
+//	dgEdge* GetBadEdge (dgList<dgEdge*>& faceList  const dgFloat32* const pool, dgInt32 strideInBytes) const; 
 
 	// find edges edge shared by two or more non adjacent faces
 	// this make impossible to triangulate the polyhedra
-	void GetBadEdges (dgList<dgEdge*>& faceList, const dgFloat32* const pool, dgInt32 strideInBytes) const;
+	void GetBadEdges (dgList<dgEdge*>& faceList, const dgFloat32* const pool, dgInt32 strideInBytes) const; 
 
 	void ChangeEdgeIncidentVertex (dgEdge* const edge, dgInt32 newIndex);
-	void GetCoplanarFaces (dgList<dgEdge*>& faceList, dgEdge* startFace,
+	void GetCoplanarFaces (dgList<dgEdge*>& faceList, dgEdge* startFace, 
 						   const dgFloat32* const pool, dgInt32 hisStrideInBytes,
 						   dgFloat32 normalDeviation) const;
 
@@ -240,26 +240,26 @@ class dgPolyhedra: public dgTree <dgEdge, dgEdgeKey>
 	// reduce number of unnecessary edges in a polyhedra
 	// note: the polyhedra must be a triangular polyhedra
 	void Optimize (const dgFloat32* const pool, dgInt32 strideInBytes, dgFloat32 tol);
-
+	
 
 	void CollapseDegenerateFaces (dgPolyhedraDescriptor &desc, const dgFloat32* const pool, dgInt32 strideInBytes, dgFloat32 area);
 	dgEdge* CollapseEdge(dgEdge* const edge);
 
 
 	// this function ayend to create a better triangulation of a mesh
-	// by first calling the calling quadrangular and then triangulate
+	// by first calling the calling quadrangular and then triangulate 
 	// all quad strips.
 	//void OptimalTriangulation (const dgFloat32* const vertex, dgInt32 strideInBytes);
 
 
 	// this function assume the mesh is a legal mesh;
-	// note: recommend a call to Triangulate, or OptimalTriangulation
+	// note: recommend a call to Triangulate, or OptimalTriangulation 
 	//			before using this function.
 	// return index count
 	dgInt32 TriangleList (dgUnsigned32 outputBuffer[], dgInt32 maxBufferSize, dgInt32 vertexCacheSize = 12) const;
 
 	// this function assume the mesh is a legal mesh;
-	// note1: recommend a call to Triangulate or OptimalTriangulation
+	// note1: recommend a call to Triangulate or OptimalTriangulation 
 	//			 before using this function
 	// note2: a index set to 0xffffffff indicate a run start
 	// return index count
@@ -273,7 +273,7 @@ class dgPolyhedra: public dgTree <dgEdge, dgEdgeKey>
 	mutable dgInt32 m_faceSecuence;
 
 	friend class dgPolyhedraDescriptor;
-
+	
 };
 
 #endif

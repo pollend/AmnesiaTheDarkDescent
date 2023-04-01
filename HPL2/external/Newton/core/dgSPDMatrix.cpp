@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -30,7 +30,7 @@
 
 /*
 bool _CholeskyDecomposition (
-	void *rowPointers,
+	void *rowPointers, 
 	dgInt32 rowStrideInBytes,
 	dgInt32 typeSizeInBytes,
 	dgInt32 size)
@@ -60,9 +60,9 @@ bool _CholeskyDecomposition (
 /*
 void _BackAndForwardSustitition (
 	void *rightsideVector,
-	void *rowPointers,
-	dgInt32 rowStrideInBytes,
-	dgInt32 typeSizeInBytes,
+	void *rowPointers, 
+	dgInt32 rowStrideInBytes, 
+	dgInt32 typeSizeInBytes, 
 	dgInt32 size)
 {
 	dgUnsigned8 *rowArray;
@@ -88,9 +88,9 @@ void _BackAndForwardSustitition (
 /*
 bool _SolveByCholeskyDecomposition (
 	void *rightsideVector,
-	void *rowPointers,
-	dgInt32 rowStrideInBytes,
-	dgInt32 typeSizeInBytes,
+	void *rowPointers, 
+	dgInt32 rowStrideInBytes, 
+	dgInt32 typeSizeInBytes, 
 	dgInt32 size)
 {
 	dgUnsigned8 *rowArray;
@@ -122,8 +122,8 @@ bool _SolveByCholeskyDecomposition (
 
 /*
 void BackAndForwardSustitition (
-	dgFloat32 **rows,
-	dgInt32 size,
+	dgFloat32 **rows, 
+	dgInt32 size, 
 	dgFloat32 *B)
 {
 	dgInt32 i;
@@ -161,7 +161,7 @@ void BackAndForwardSustitition (
 	B[size-1] = B[size-1] / rows[size-1][size-1];
 	for (i =	size - 2; i >= 0; i --) {
 		acc = 0.0f;
-		dgFloat32 *row;
+		dgFloat32 *row; 
 
 		row = rows[i];
 		for (j = i + 1; j < size; j ++) {
@@ -180,8 +180,8 @@ void BackAndForwardSustitition (
 	}
 
 	#ifdef DG_COUNT_FLOAT_OPS
-	dgGeneralVector<dgFloat32>::SetMemWrites(memCount);
-	dgGeneralVector<dgFloat32>::SetFloatOps(floatCount);
+	dgGeneralVector<dgFloat32>::SetMemWrites(memCount); 
+	dgGeneralVector<dgFloat32>::SetFloatOps(floatCount); 
 	#endif
 }
 
@@ -243,8 +243,8 @@ bool CholeskyDecomposition (dgFloat32 **rows, dgInt32 size)
 	}
 
 	#ifdef DG_COUNT_FLOAT_OPS
-	dgGeneralVector<dgFloat32>::SetMemWrites(memCount);
-	dgGeneralVector<dgFloat32>::SetFloatOps(floatCount);
+	dgGeneralVector<dgFloat32>::SetMemWrites(memCount); 
+	dgGeneralVector<dgFloat32>::SetFloatOps(floatCount); 
 	#endif
 
 	return true;

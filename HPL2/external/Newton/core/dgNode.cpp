@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -41,7 +41,7 @@ dgBaseNode::dgBaseNode (const dgBaseNode &clone)
 }
 
 
-dgBaseNode::~dgBaseNode ()
+dgBaseNode::~dgBaseNode () 
 {
 	dgBaseNode *ptr;
 	dgBaseNode *tmp;
@@ -54,7 +54,7 @@ dgBaseNode::~dgBaseNode ()
 			ptr->sibling = NULL;
 		}
 	}
-
+	
 	for (ptr = sibling; ptr && ptr->Release(); ptr = tmp) {
 		ptr->Kill();
 		tmp = ptr->sibling;
@@ -79,7 +79,7 @@ void dgBaseNode::CloneFixUp (const dgBaseNode &clone)
 
 /*
 void dgBaseNode::Save (
-	dgFile &file,
+	dgFile &file, 
 	dgSaveType saveType,
 	void* context) const
 {
@@ -98,7 +98,7 @@ void dgBaseNode::Attach (dgBaseNode *parentArg, bool addFirst)
 	_ASSERTE (!sibling);
 	_ASSERTE (parentArg);
 
-
+	
 	parent = parentArg;
 	if (parent->child) {
 		if (addFirst) {
@@ -107,7 +107,7 @@ void dgBaseNode::Attach (dgBaseNode *parentArg, bool addFirst)
 		} else {
 			for (obj = parent->child; obj->sibling; obj = obj->sibling)
 			{
-
+				
 			}
 			obj->sibling = this;
 		}
@@ -128,7 +128,7 @@ void dgBaseNode::Detach ()
 			dgBaseNode *ptr;
 			for (ptr = parent->child; ptr->sibling != this; ptr = ptr->sibling)
 			{
-
+				
 			}
 			ptr->sibling = sibling;
 		}
@@ -137,14 +137,14 @@ void dgBaseNode::Detach ()
 		Release();
 	}
 }
-
+	
 
 dgBaseNode* dgBaseNode::GetRoot() const
 {
 	const dgBaseNode *root;
 	for (root = this; root->parent; root = root->parent)
 	{
-
+		
 	}
 	return (dgBaseNode*)root;
 }
@@ -156,7 +156,7 @@ dgBaseNode* dgBaseNode::GetFirst() const
 
 	for (ptr = (dgBaseNode *)this; ptr->child; ptr = ptr->child)
 	{
-
+		
 	}
 	return ptr;
 }
@@ -182,10 +182,10 @@ dgBaseNode* dgBaseNode::GetNext() const
 dgBaseNode* dgBaseNode::GetLast() const
 {
 	dgBaseNode *ptr;
-
+		
 	for (ptr = (dgBaseNode *)this; ptr->sibling; ptr = ptr->sibling)
 	{
-
+		
 	}
 	return ptr;
 }
@@ -209,7 +209,7 @@ dgBaseNode* dgBaseNode::GetPrev() const
 
 
 
-dgBaseNode* dgBaseNode::Find (dgUnsigned32 nameCRC) const
+dgBaseNode* dgBaseNode::Find (dgUnsigned32 nameCRC) const 
 {
 	dgBaseNode *ptr;
 
@@ -227,8 +227,8 @@ bool dgBaseNode::SanityCheck()
 }
 
 void dgBaseNode::PrintHierarchy (
-	dgFile &file,
-	char *indent) const
+	dgFile &file, 
+	char *indent) const 
 {
 	dgBaseNode *node;
 	char newIndent[1024];
@@ -236,7 +236,7 @@ void dgBaseNode::PrintHierarchy (
 	sprintf (newIndent, "%s   ", indent);
 	for (node = child; node; node = node->sibling) {
 		node->PrintHierarchy (file, newIndent);
-	}
+	} 
 }
 
 
@@ -247,7 +247,7 @@ void dgBaseNode::DebugPrint (const char *fileName)
 
 	indent[0] = '\0';
 	dgFile file (fileName, "w");
-	PrintHierarchy (file, indent);
+	PrintHierarchy (file, indent); 
 */
 }
 

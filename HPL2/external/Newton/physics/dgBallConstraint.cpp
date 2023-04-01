@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -29,9 +29,9 @@
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
 dgBallConstraint::dgBallConstraint ()
-	:dgBilateralConstraint()
+	:dgBilateralConstraint() 
 {
-
+	
 //	dgBallConstraint* constraint;
 
 //	dgBallConstraintArray& array = * world;
@@ -130,12 +130,12 @@ bool dgBallConstraint::GetTwistLimitState () const
 
 bool dgBallConstraint::GetConeLimitState () const
 {
-	return m_coneLimit;
+	return m_coneLimit;	
 }
 
 bool dgBallConstraint::GetLatealLimitState () const
 {
-	return m_lateralLimit;
+	return m_lateralLimit;	
 }
 
 void dgBallConstraint::SetTwistLimitState (bool state)
@@ -145,12 +145,12 @@ void dgBallConstraint::SetTwistLimitState (bool state)
 
 void dgBallConstraint::SetConeLimitState (bool state)
 {
-	m_coneLimit = dgUnsigned32 (state);
+	m_coneLimit = dgUnsigned32 (state);	
 }
 
 void dgBallConstraint::SetLatealLimitState (bool state)
 {
-	m_lateralLimit = dgUnsigned32 (state);
+	m_lateralLimit = dgUnsigned32 (state);	
 }
 
 void dgBallConstraint::SetPivotPoint(const dgVector &pivot)
@@ -159,7 +159,7 @@ void dgBallConstraint::SetPivotPoint(const dgVector &pivot)
 	_ASSERTE (m_body1);
 	const dgMatrix& matrix = m_body0->GetMatrix();
 
-	dgVector pin (pivot - matrix.m_posit);
+	dgVector pin (pivot - matrix.m_posit); 
 	if ((pin % pin) < dgFloat32 (1.0e-3f)) {
 		pin = matrix.m_front;
 	}
@@ -173,13 +173,13 @@ void dgBallConstraint::SetPivotPoint(const dgVector &pivot)
 }
 
 void dgBallConstraint::SetLimits (
-	const dgVector& coneDir,
-	dgFloat32 minConeAngle,
+	const dgVector& coneDir, 
+	dgFloat32 minConeAngle, 
 	dgFloat32 maxConeAngle,
 	dgFloat32 maxTwistAngle,
-	const dgVector& bilateralDir,
+	const dgVector& bilateralDir, 
 	dgFloat32 negativeBilateralConeAngle__,
-	dgFloat32 positiveBilateralConeAngle__)
+	dgFloat32 positiveBilateralConeAngle__) 
 {
 	dgMatrix matrix0;
 	dgMatrix matrix1;
@@ -194,7 +194,7 @@ void dgBallConstraint::SetLimits (
 		dgMatrix tmp (coneDir);
 		lateralDir = tmp.m_up;
 	}
-
+	
 
 	m_localMatrix0.m_front = body0_Matrix.UnrotateVector (coneDir);
 	m_localMatrix0.m_up = body0_Matrix.UnrotateVector (lateralDir);
@@ -254,9 +254,9 @@ dgUnsigned32 dgBallConstraint::JacobianDerivative (dgContraintDescritor& params)
 
 	dgPointParam pointData;
     InitPointParam (pointData, m_stiffness, p0, p1);
-	CalculatePointDerivative (0, params, dir0, pointData, &m_jointForce[0]);
-	CalculatePointDerivative (1, params, dir1, pointData, &m_jointForce[1]);
-	CalculatePointDerivative (2, params, dir2, pointData, &m_jointForce[2]);
+	CalculatePointDerivative (0, params, dir0, pointData, &m_jointForce[0]); 
+	CalculatePointDerivative (1, params, dir1, pointData, &m_jointForce[1]); 
+	CalculatePointDerivative (2, params, dir2, pointData, &m_jointForce[2]); 
 	ret = 3;
 
 	if (m_twistLimit) {
@@ -265,7 +265,7 @@ dgUnsigned32 dgBallConstraint::JacobianDerivative (dgContraintDescritor& params)
 			InitPointParam (pointData, m_stiffness, p0, p0);
 
 			const dgVector& dir = matrix0.m_right;
-			CalculatePointDerivative (ret, params, dir, pointData, &m_jointForce[ret]);
+			CalculatePointDerivative (ret, params, dir, pointData, &m_jointForce[ret]); 
 
 			dgVector velocError (pointData.m_veloc1 - pointData.m_veloc0);
 			relVelocErr = velocError % dir;
@@ -273,9 +273,9 @@ dgUnsigned32 dgBallConstraint::JacobianDerivative (dgContraintDescritor& params)
 				relVelocErr *= dgFloat32 (1.1f);
 			}
 
-			penetrationErr = MIN_JOINT_PIN_LENGTH * (angle.m_x - m_twistAngle);
+			penetrationErr = MIN_JOINT_PIN_LENGTH * (angle.m_x - m_twistAngle); 
 			_ASSERTE (penetrationErr >= dgFloat32 (0.0f));
-
+		
 			params.m_forceBounds[ret].m_low = dgFloat32 (0.0f);
 			params.m_forceBounds[ret].m_normalIndex = DG_NORMAL_CONSTRAINT;
 			params.m_forceBounds[ret].m_jointForce = &m_jointForce[ret];
@@ -286,7 +286,7 @@ dgUnsigned32 dgBallConstraint::JacobianDerivative (dgContraintDescritor& params)
 			dgVector p0 (matrix0.m_posit + matrix0.m_up.Scale(MIN_JOINT_PIN_LENGTH));
 			InitPointParam (pointData, m_stiffness, p0, p0);
 			dgVector dir (matrix0.m_right.Scale (-dgFloat32 (1.0f)));
-			CalculatePointDerivative (ret, params, dir, pointData, &m_jointForce[ret]);
+			CalculatePointDerivative (ret, params, dir, pointData, &m_jointForce[ret]); 
 
 			dgVector velocError (pointData.m_veloc1 - pointData.m_veloc0);
 			relVelocErr = velocError % dir;
@@ -294,9 +294,9 @@ dgUnsigned32 dgBallConstraint::JacobianDerivative (dgContraintDescritor& params)
 				relVelocErr *= dgFloat32 (1.1f);
 			}
 
-			penetrationErr = MIN_JOINT_PIN_LENGTH * (- m_twistAngle - angle.m_x);
+			penetrationErr = MIN_JOINT_PIN_LENGTH * (- m_twistAngle - angle.m_x); 
 			_ASSERTE (penetrationErr >= dgFloat32 (0.0f));
-
+		
 			params.m_forceBounds[ret].m_low = dgFloat32 (0.0f);
 			params.m_forceBounds[ret].m_normalIndex = DG_NORMAL_CONSTRAINT;
 			params.m_forceBounds[ret].m_jointForce = &m_jointForce[ret];
@@ -316,7 +316,7 @@ dgUnsigned32 dgBallConstraint::JacobianDerivative (dgContraintDescritor& params)
 
 			dgVector tangentDir (matrix0.m_front * matrix1.m_front);
 			tangentDir = tangentDir.Scale (dgRsqrt ((tangentDir % tangentDir) + 1.0e-8f));
-			CalculatePointDerivative (ret, params, tangentDir, pointData, &m_jointForce[ret]);
+			CalculatePointDerivative (ret, params, tangentDir, pointData, &m_jointForce[ret]); 
 			ret ++;
 
 			dgVector normalDir (tangentDir * matrix0.m_front);
@@ -328,10 +328,10 @@ dgUnsigned32 dgBallConstraint::JacobianDerivative (dgContraintDescritor& params)
 				relVelocErr *= dgFloat32 (1.1f);
 			}
 
-			penetrationErr = MIN_JOINT_PIN_LENGTH * (dgAcos (GetMax (coneCos, dgFloat32(-0.9999f))) - m_coneAngle);
+			penetrationErr = MIN_JOINT_PIN_LENGTH * (dgAcos (GetMax (coneCos, dgFloat32(-0.9999f))) - m_coneAngle); 
 			_ASSERTE (penetrationErr >= dgFloat32 (0.0f));
 
-			CalculatePointDerivative (ret, params, normalDir, pointData, &m_jointForce[ret]);
+			CalculatePointDerivative (ret, params, normalDir, pointData, &m_jointForce[ret]); 
 			params.m_forceBounds[ret].m_low = dgFloat32 (0.0f);
 			params.m_forceBounds[ret].m_normalIndex = DG_NORMAL_CONSTRAINT;
 			params.m_forceBounds[ret].m_jointForce = &m_jointForce[ret];

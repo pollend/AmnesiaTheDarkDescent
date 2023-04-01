@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -29,14 +29,14 @@
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
 
-#define DG_JOINT_STIFFNESS_RANGE (dgFloat32 (5.0f))
+#define DG_JOINT_STIFFNESS_RANGE (dgFloat32 (5.0f)) 
 
 #define DG_VEL_DAMP				 (dgFloat32(100.0f))
 #define DG_POS_DAMP				 (dgFloat32(1500.0f))
 
 
 dgBilateralConstraint::dgBilateralConstraint ()
-	:dgConstraint ()
+	:dgConstraint () 
 {
 	_ASSERTE ((sizeof (dgBilateralConstraint) & 15) == 0);
 	_ASSERTE ((((dgUnsigned64) &m_localMatrix0) & 15) == 0);
@@ -81,7 +81,7 @@ dgFloat32 dgBilateralConstraint::GetStiffness() const
 void dgBilateralConstraint::SetStiffness(dgFloat32 stiffness)
 {
 	stiffness = ClampValue (stiffness, dgFloat32(0.0f), dgFloat32(1.0f));
-	m_stiffness = DG_JOINT_STIFFNESS_RANGE - stiffness * (DG_JOINT_STIFFNESS_RANGE - dgFloat32 (1.0f));
+	m_stiffness = DG_JOINT_STIFFNESS_RANGE - stiffness * (DG_JOINT_STIFFNESS_RANGE - dgFloat32 (1.0f)); 
 }
 
 
@@ -92,7 +92,7 @@ void dgBilateralConstraint::SetDestructorCallback (OnConstraintDestroy destructo
 
 void dgBilateralConstraint::CalculateMatrixOffset (const dgVector& pivot, const dgVector& dir, dgMatrix& matrix0, dgMatrix& matrix1)
 {
-	dgFloat32 length;
+	dgFloat32 length; 
 	_ASSERTE (m_body0);
 	_ASSERTE (m_body1);
 
@@ -111,14 +111,14 @@ void dgBilateralConstraint::CalculateMatrixOffset (const dgVector& pivot, const 
 	matrix0.m_right.m_w = dgFloat32 (0.0f);
 	matrix0.m_posit.m_w = dgFloat32 (1.0f);
 
-
+ 
 //	dgMatrix body1_Matrix (dgGetIdentityMatrix());
 //	if (m_body1) {
 //		body1_Matrix = m_body1->GetMatrix();
 //	}
 	const dgMatrix& body1_Matrix = m_body1->GetMatrix();
 
-	matrix1 = matrix0 * body0_Matrix * body1_Matrix.Inverse();
+	matrix1 = matrix0 * body0_Matrix * body1_Matrix.Inverse(); 
 
 }
 
@@ -136,12 +136,12 @@ void dgBilateralConstraint::SetPivotAndPinDir (const dgVector& pivot, const dgVe
 
 	const dgMatrix& body0_Matrix = m_body0->GetMatrix();
 
-
+	
 	_ASSERTE ((pinDirection0 % pinDirection0) > dgFloat32 (0.0f));
 	m_localMatrix0.m_front = pinDirection0.Scale (dgFloat32 (1.0f) / dgSqrt (pinDirection0 % pinDirection0));
 	m_localMatrix0.m_right = m_localMatrix0.m_front * pinDirection1;
 	m_localMatrix0.m_right = m_localMatrix0.m_right.Scale (dgFloat32 (1.0f) / dgSqrt (m_localMatrix0.m_right % m_localMatrix0.m_right));
-	m_localMatrix0.m_up = m_localMatrix0.m_right * m_localMatrix0.m_front;
+	m_localMatrix0.m_up = m_localMatrix0.m_right * m_localMatrix0.m_front; 
 	m_localMatrix0.m_posit = pivot;
 
 	m_localMatrix0.m_front.m_w = dgFloat32 (0.0f);
@@ -149,14 +149,14 @@ void dgBilateralConstraint::SetPivotAndPinDir (const dgVector& pivot, const dgVe
 	m_localMatrix0.m_right.m_w = dgFloat32 (0.0f);
 	m_localMatrix0.m_posit.m_w = dgFloat32 (1.0f);
 
-	
+	 
 //	dgMatrix body1_Matrix (dgGetIdentityMatrix());
 //	if (m_body1) {
 //		body1_Matrix = m_body1->GetMatrix();
 //	}
 	const dgMatrix& body1_Matrix = m_body1->GetMatrix();
 
-	m_localMatrix1 = m_localMatrix0 * body1_Matrix.Inverse();
+	m_localMatrix1 = m_localMatrix0 * body1_Matrix.Inverse(); 
 	m_localMatrix0 = m_localMatrix0 * body0_Matrix.Inverse();
 
 }
@@ -177,9 +177,9 @@ dgVector dgBilateralConstraint::CalculateGlobalMatrixAndAngle (dgMatrix& globalM
 
 	dgMatrix relMatrix (globalMatrix1 * globalMatrix0.Inverse());
 
-	_ASSERTE (dgAbsf (dgFloat32 (1.0f) - (relMatrix.m_front % relMatrix.m_front)) < 1.0e-5f);
-	_ASSERTE (dgAbsf (dgFloat32 (1.0f) - (relMatrix.m_up % relMatrix.m_up)) < 1.0e-5f);
-	_ASSERTE (dgAbsf (dgFloat32 (1.0f) - (relMatrix.m_right % relMatrix.m_right)) < 1.0e-5f);
+	_ASSERTE (dgAbsf (dgFloat32 (1.0f) - (relMatrix.m_front % relMatrix.m_front)) < 1.0e-5f); 
+	_ASSERTE (dgAbsf (dgFloat32 (1.0f) - (relMatrix.m_up % relMatrix.m_up)) < 1.0e-5f); 
+	_ASSERTE (dgAbsf (dgFloat32 (1.0f) - (relMatrix.m_right % relMatrix.m_right)) < 1.0e-5f); 
 //	_ASSERTE ((relMatrix.m_posit % relMatrix.m_posit) < 1.0e-3f);
 
 	return relMatrix.CalcPitchYawRoll ();
@@ -195,14 +195,14 @@ void dgBilateralConstraint::SetMotorAcceleration (dgInt32 index, dgFloat32 accel
 
 
 void dgBilateralConstraint::SetJacobianDerivative (
-	dgInt32 index,
-	dgContraintDescritor& desc,
-	const dgFloat32* jacobianA,
-	const dgFloat32* jacobianB,
+	dgInt32 index, 
+	dgContraintDescritor& desc, 
+	const dgFloat32* jacobianA, 
+	const dgFloat32* jacobianB, 
 	dgFloat32* jointForce)
 {
-	dgJacobian &jacobian0 = desc.m_jacobian[index].m_jacobian_IM0;
-	dgJacobian &jacobian1 = desc.m_jacobian[index].m_jacobian_IM1;
+	dgJacobian &jacobian0 = desc.m_jacobian[index].m_jacobian_IM0; 
+	dgJacobian &jacobian1 = desc.m_jacobian[index].m_jacobian_IM1; 
 
 	jacobian0.m_linear[0] = jacobianA[0];
 	jacobian0.m_linear[1] = jacobianA[1];
@@ -236,19 +236,19 @@ void dgBilateralConstraint::SetJacobianDerivative (
 
 
 dgFloat32 dgBilateralConstraint::CalculateSpringDamperAcceleration (
-	dgInt32 index,
-	const dgContraintDescritor& desc,
+	dgInt32 index, 
+	const dgContraintDescritor& desc, 
 	dgFloat32 jointAngle,
-	const dgVector& p0Global,
+	const dgVector& p0Global, 
 	const dgVector& p1Global,
-	dgFloat32 springK,
+	dgFloat32 springK, 
 	dgFloat32 springD)
 {
 	dgFloat32 relPosit;
 	dgFloat32 relVeloc;
 
-	const dgJacobian &jacobian0 = desc.m_jacobian[index].m_jacobian_IM0;
-	const dgJacobian &jacobian1 = desc.m_jacobian[index].m_jacobian_IM1;
+	const dgJacobian &jacobian0 = desc.m_jacobian[index].m_jacobian_IM0; 
+	const dgJacobian &jacobian1 = desc.m_jacobian[index].m_jacobian_IM1; 
 
 	dgVector veloc0 (m_body0->m_veloc);
 	dgVector omega0 (m_body0->m_omega);
@@ -263,7 +263,7 @@ dgFloat32 dgBilateralConstraint::CalculateSpringDamperAcceleration (
 	relVeloc = - (veloc0 % jacobian0.m_linear + veloc1 % jacobian1.m_linear +
 	omega0 % jacobian0.m_angular + omega1 % jacobian1.m_angular);
 
-	//at =  [- ks (x2 - x1) - kd * (v2 - v1) - dt * ks * (v2 - v1)] / [1 + dt * kd + dt * dt * ks]
+	//at =  [- ks (x2 - x1) - kd * (v2 - v1) - dt * ks * (v2 - v1)] / [1 + dt * kd + dt * dt * ks] 
 	dgFloat32 dt = desc.m_timestep;
 	dgFloat32 ks = springK;
 	dgFloat32 kd = springD;
@@ -277,8 +277,8 @@ dgFloat32 dgBilateralConstraint::CalculateSpringDamperAcceleration (
 
 void dgBilateralConstraint::CalculateAngularDerivative (
 	dgInt32 index,
-	dgContraintDescritor& desc,
-	const dgVector& dir,
+	dgContraintDescritor& desc, 
+	const dgVector& dir,	
 	dgFloat32 stiffness,
 	dgFloat32 jointAngle,
 	dgFloat32* jointForce)
@@ -291,7 +291,7 @@ void dgBilateralConstraint::CalculateAngularDerivative (
 	dgVector omega1;
 	_ASSERTE (m_body0);
 	dgVector omega0 (m_body0->GetOmega());
-	dgJacobian &jacobian0 = desc.m_jacobian[index].m_jacobian_IM0;
+	dgJacobian &jacobian0 = desc.m_jacobian[index].m_jacobian_IM0; 
 	jacobian0.m_linear[0] = dgFloat32 (0.0f);
 	jacobian0.m_linear[1] = dgFloat32 (0.0f);
 	jacobian0.m_linear[2] = dgFloat32 (0.0f);
@@ -301,7 +301,7 @@ void dgBilateralConstraint::CalculateAngularDerivative (
 	jacobian0.m_angular[2] = dir.m_z;
 	jacobian0.m_angular[3] = dgFloat32 (0.0f);
 
-	dgJacobian &jacobian1 = desc.m_jacobian[index].m_jacobian_IM1;
+	dgJacobian &jacobian1 = desc.m_jacobian[index].m_jacobian_IM1; 
 	_ASSERTE (m_body1);
 	omega1 = m_body1->GetOmega();
 	jacobian1.m_linear[0] = dgFloat32 (0.0f);
@@ -315,7 +315,7 @@ void dgBilateralConstraint::CalculateAngularDerivative (
 
 	omegaError = (omega1 - omega0) % dir;
 
-	//at =  [- ks (x2 - x1) - kd * (v2 - v1) - dt * ks * (v2 - v1)] / [1 + dt * kd + dt * dt * ks]
+	//at =  [- ks (x2 - x1) - kd * (v2 - v1) - dt * ks * (v2 - v1)] / [1 + dt * kd + dt * dt * ks] 
 	dgFloat32 dt = desc.m_timestep;
 	dgFloat32 ks = DG_POS_DAMP;
 	dgFloat32 kd = DG_VEL_DAMP;
@@ -341,8 +341,8 @@ void dgBilateralConstraint::CalculateAngularDerivative (
 
 void dgBilateralConstraint::CalculatePointDerivative (
 	dgInt32 index,
-	dgContraintDescritor& desc,
-	const dgVector& dir,
+	dgContraintDescritor& desc, 
+	const dgVector& dir,	
 	const dgPointParam& param,
 	dgFloat32* jointForce)
 {
@@ -355,7 +355,7 @@ void dgBilateralConstraint::CalculatePointDerivative (
 	_ASSERTE (m_body0);
 	_ASSERTE (m_body1);
 
-	dgJacobian &jacobian0 = desc.m_jacobian[index].m_jacobian_IM0;
+	dgJacobian &jacobian0 = desc.m_jacobian[index].m_jacobian_IM0; 
 	dgVector r0CrossDir (param.m_r0 * dir);
 	jacobian0.m_linear[0] = dir.m_x;
 	jacobian0.m_linear[1] = dir.m_y;
@@ -366,7 +366,7 @@ void dgBilateralConstraint::CalculatePointDerivative (
 	jacobian0.m_angular[2] = r0CrossDir.m_z;
 	jacobian0.m_angular[3] = dgFloat32 (0.0f);
 
-	dgJacobian &jacobian1 = desc.m_jacobian[index].m_jacobian_IM1;
+	dgJacobian &jacobian1 = desc.m_jacobian[index].m_jacobian_IM1; 
 	dgVector r1CrossDir (dir * param.m_r1);
 	jacobian1.m_linear[0] = -dir.m_x;
 	jacobian1.m_linear[1] = -dir.m_y;
@@ -383,11 +383,11 @@ void dgBilateralConstraint::CalculatePointDerivative (
 
 	relPosit = positError % dir;
 	relVeloc = velocError % dir;
-	relCentr = centrError % dir;
+	relCentr = centrError % dir; 
 	relCentr = ClampValue (relCentr, dgFloat32(-10000.0f), dgFloat32(10000.0f));
 //relCentr = 0.0f;
 
-	//at =  [- ks (x2 - x1) - kd * (v2 - v1) - dt * ks * (v2 - v1)] / [1 + dt * kd + dt * dt * ks]
+	//at =  [- ks (x2 - x1) - kd * (v2 - v1) - dt * ks * (v2 - v1)] / [1 + dt * kd + dt * dt * ks] 
 	dgFloat32 dt = desc.m_timestep;
 	dgFloat32 ks = DG_POS_DAMP;
 	dgFloat32 kd = DG_VEL_DAMP;
@@ -432,7 +432,7 @@ void dgBilateralConstraint::JointAccelerationsSimd(const dgJointAccelerationDecr
 	const dgVector& bodyVeloc1 = m_body1->m_veloc;
 	const dgVector& bodyOmega1 = m_body1->m_omega;
 
-#if	1
+#if	1	
 	dgFloat32 kd = DG_VEL_DAMP * dgFloat32 (4.0f);
 	dgFloat32 ks = DG_POS_DAMP * dgFloat32 (0.25f);
 
@@ -456,10 +456,10 @@ void dgBilateralConstraint::JointAccelerationsSimd(const dgJointAccelerationDecr
 
 			vRel = relVeloc.m_x + relVeloc.m_y + relVeloc.m_z;
 			aRel = params.m_externAccelaration[k];
-			//at =  [- ks (x2 - x1) - kd * (v2 - v1) - dt * ks * (v2 - v1)] / [1 + dt * kd + dt * dt * ks]
+			//at =  [- ks (x2 - x1) - kd * (v2 - v1) - dt * ks * (v2 - v1)] / [1 + dt * kd + dt * dt * ks] 
 			//		alphaError = num / den;
 
-			//at =  [- ks (x2 - x1) - kd * (v2 - v1) - dt * ks * (v2 - v1)] / [1 + dt * kd + dt * dt * ks]
+			//at =  [- ks (x2 - x1) - kd * (v2 - v1) - dt * ks * (v2 - v1)] / [1 + dt * kd + dt * dt * ks] 
 			//		dgFloat32 dt = desc.m_timestep;
 			//		dgFloat32 ks = DG_POS_DAMP;
 			//		dgFloat32 kd = DG_VEL_DAMP;
@@ -498,7 +498,7 @@ void dgBilateralConstraint::JointAccelerationsSimd(const dgJointAccelerationDecr
 			relVeloc += Jt[k].m_jacobian_IM1.m_linear.CompProduct(bodyVeloc1);
 			relVeloc += Jt[k].m_jacobian_IM1.m_angular.CompProduct(bodyOmega1);
 
-			vRel = relVeloc.m_x + relVeloc.m_y + relVeloc.m_z ;
+			vRel = relVeloc.m_x + relVeloc.m_y + relVeloc.m_z ;		
 
 			penetrationCorrection = vRel * params.m_timeStep * params.m_firstPassCoefFlag;
 			params.m_penetration[k] = params.m_penetration[k] - penetrationCorrection;
@@ -530,7 +530,7 @@ void dgBilateralConstraint::JointAccelerations(const dgJointAccelerationDecripto
 	const dgVector& bodyVeloc1 = m_body1->m_veloc;
 	const dgVector& bodyOmega1 = m_body1->m_omega;
 
-#if	1
+#if	1	
 	dgFloat32 kd = DG_VEL_DAMP * dgFloat32 (4.0f);
 	dgFloat32 ks = DG_POS_DAMP * dgFloat32 (0.25f);
 
@@ -554,10 +554,10 @@ void dgBilateralConstraint::JointAccelerations(const dgJointAccelerationDecripto
 
 			vRel = relVeloc.m_x + relVeloc.m_y + relVeloc.m_z;
 			aRel = params.m_externAccelaration[k];
-			//at =  [- ks (x2 - x1) - kd * (v2 - v1) - dt * ks * (v2 - v1)] / [1 + dt * kd + dt * dt * ks]
+			//at =  [- ks (x2 - x1) - kd * (v2 - v1) - dt * ks * (v2 - v1)] / [1 + dt * kd + dt * dt * ks] 
 			//		alphaError = num / den;
 
-			//at =  [- ks (x2 - x1) - kd * (v2 - v1) - dt * ks * (v2 - v1)] / [1 + dt * kd + dt * dt * ks]
+			//at =  [- ks (x2 - x1) - kd * (v2 - v1) - dt * ks * (v2 - v1)] / [1 + dt * kd + dt * dt * ks] 
 			//		dgFloat32 dt = desc.m_timestep;
 			//		dgFloat32 ks = DG_POS_DAMP;
 			//		dgFloat32 kd = DG_VEL_DAMP;
@@ -596,8 +596,8 @@ void dgBilateralConstraint::JointAccelerations(const dgJointAccelerationDecripto
 			relVeloc += Jt[k].m_jacobian_IM1.m_linear.CompProduct(bodyVeloc1);
 			relVeloc += Jt[k].m_jacobian_IM1.m_angular.CompProduct(bodyOmega1);
 
-			vRel = relVeloc.m_x + relVeloc.m_y + relVeloc.m_z ;
-
+			vRel = relVeloc.m_x + relVeloc.m_y + relVeloc.m_z ;		
+			
 			penetrationCorrection = vRel * params.m_timeStep * params.m_firstPassCoefFlag;
 			params.m_penetration[k] = params.m_penetration[k] - penetrationCorrection;
 			if (params.m_penetration[k] > dgFloat32 (1.0f) ) {
@@ -606,7 +606,7 @@ void dgBilateralConstraint::JointAccelerations(const dgJointAccelerationDecripto
 				params.m_penetration[k] = dgFloat32 (-1.0f);
 			}
 			penetrationVeloc = -(params.m_penetration[k] * params.m_penetrationStiffness[k] * params.m_invTimeStep);
-
+			
 			vRel += penetrationVeloc;
 			//centripetal acceleration is stored restitution member
 			aRel = params.m_externAccelaration[k] + params.m_restitution[k];
@@ -634,7 +634,7 @@ void dgBilateralConstraint::JointVelocityCorrection(const dgJointAccelerationDec
 		relVeloc += Jt[k].m_jacobian_IM1.m_linear.CompProduct(bodyVeloc1);
 		relVeloc += Jt[k].m_jacobian_IM1.m_angular.CompProduct(bodyOmega1);
 		vRel = relVeloc.m_x + relVeloc.m_y + relVeloc.m_z;
-
+		
 		penetrationCorrection = vRel * params.m_timeStep;
 		params.m_penetration[k] -= penetrationCorrection;
 		params.m_coordenateAccel[k] =  - vRel + params.m_penetration[k] * params.m_invTimeStep * 0.25f;

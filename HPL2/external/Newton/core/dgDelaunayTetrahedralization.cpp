@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -29,7 +29,7 @@
 dgDelaunayTetrahedralization::dgDelaunayTetrahedralization(dgMemoryAllocator* const allocator, const dgFloat32* const vertexCloud, dgInt32 count, dgInt32 strideInByte, dgFloat32 distTol)
 	:dgConvexHull4d(allocator)
 {
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32))
+#if (defined (WIN32) || defined(_WIN32))
 	dgUnsigned32 controlWorld = dgControlFP (0xffffffff, 0);
 	dgControlFP (_PC_53, _MCW_PC);
 #endif
@@ -51,7 +51,7 @@ dgDelaunayTetrahedralization::dgDelaunayTetrahedralization(dgMemoryAllocator* co
 	if ((oldCount > m_count) && (m_count >= 4)) {
 		// add the rest of the point by incremental insertion with small perturbation
 		dgInt32 hullCount = m_count;
-
+		
 		for (dgInt32 i = 0; i < count; i ++) {
 			bool inHull = false;
 			const dgHullVector* const hullPoints = &m_points[0];
@@ -59,7 +59,7 @@ dgDelaunayTetrahedralization::dgDelaunayTetrahedralization(dgMemoryAllocator* co
 				if (hullPoints[j].m_index == i) {
 					inHull = true;
 					break;
-				}
+				}			
 			}
 			if (!inHull) {
 				dgBigVector q (points[i]);
@@ -81,7 +81,7 @@ dgDelaunayTetrahedralization::dgDelaunayTetrahedralization(dgMemoryAllocator* co
 	SortVertexArray ();
 #endif
 
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32))
+#if (defined (WIN32) || defined(_WIN32))
 	dgControlFP (controlWorld, _MCW_PC);
 #endif
 }
@@ -93,7 +93,7 @@ dgDelaunayTetrahedralization::~dgDelaunayTetrahedralization()
 
 dgInt32 dgDelaunayTetrahedralization::AddVertex (const dgBigVector& vertex)
 {
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32))
+#if (defined (WIN32) || defined(_WIN32))
 	dgUnsigned32 controlWorld = dgControlFP (0xffffffff, 0);
 	dgControlFP (_PC_53, _MCW_PC);
 #endif
@@ -102,7 +102,7 @@ dgInt32 dgDelaunayTetrahedralization::AddVertex (const dgBigVector& vertex)
 	p.m_w = p % p;
 	dgInt32 index = dgConvexHull4d::AddVertex(p);
 
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32))
+#if (defined (WIN32) || defined(_WIN32))
 	dgControlFP (controlWorld, _MCW_PC);
 #endif
 	return index;
@@ -124,7 +124,7 @@ dgInt32 dgDelaunayTetrahedralization::CompareVertexByIndex(const dgHullVector* c
 void dgDelaunayTetrahedralization::SortVertexArray ()
 {
 	dgHullVector* const points = &m_points[0];
-	for (dgListNode* node = GetFirst(); node; node = node->GetNext()) {
+	for (dgListNode* node = GetFirst(); node; node = node->GetNext()) {	
 		dgConvexHull4dTetraherum* const tetra = &node->GetInfo();
 		for (dgInt32 i = 0; i < 4; i ++) {
 			dgConvexHull4dTetraherum::dgTetrahedrumFace& face = tetra->m_faces[i];
@@ -145,7 +145,7 @@ void dgDelaunayTetrahedralization::SortVertexArray ()
 
 void dgDelaunayTetrahedralization::RemoveUpperHull ()
 {
-	#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32))
+	#if (defined (WIN32) || defined(_WIN32))
 	dgUnsigned32 controlWorld = dgControlFP (0xffffffff, 0);
 	dgControlFP (_PC_53, _MCW_PC);
 	#endif
@@ -181,7 +181,7 @@ void dgDelaunayTetrahedralization::RemoveUpperHull ()
 		}
 	}
 
-	#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32))
+	#if (defined (WIN32) || defined(_WIN32))
 	dgControlFP (controlWorld, _MCW_PC);
 	#endif
 }
@@ -215,7 +215,7 @@ dgFloat64 dgDelaunayTetrahedralization::GetTetraVolume (const dgConvexHull4dTetr
 
 
 	dgFloat64 precision  = dgFloat64 (1.0f) / dgFloat64 (1<<24);
-	dgFloat64 errbound = error * precision;
+	dgFloat64 errbound = error * precision; 
 	if (fabs(det) > errbound) {
 		return det;
 	}

@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -47,9 +47,9 @@ class dgCollisionCompoundBreakable: public dgCollisionCompound
 		dgInt32 m_count;
 	};
 
-	class dgVertexBuffer: public dgRefCounter
+	class dgVertexBuffer: public dgRefCounter  
 	{
-		public:
+		public: 
 
 		DG_CLASS_ALLOCATOR(allocator)
 		dgVertexBuffer (dgInt32 count, dgMemoryAllocator* allocator);
@@ -85,7 +85,7 @@ class dgCollisionCompoundBreakable: public dgCollisionCompound
 	};
 
 
-	class dgMesh: public dgList<dgSubMesh>, public dgRefCounter
+	class dgMesh: public dgList<dgSubMesh>, public dgRefCounter 
 	{
 		public:
 
@@ -110,7 +110,7 @@ class dgCollisionCompoundBreakable: public dgCollisionCompound
 				dgInt32 m_shapeID;
 			};
 			dgInt32 m_distanceToFixNode;
-			dgInt32 m_islandIndex;
+			dgInt32 m_islandIndex; 
 		} m_commonData;
 
 
@@ -136,19 +136,19 @@ class dgCollisionCompoundBreakable: public dgCollisionCompound
 
 //		void AddToHeap (dgDownHeap<dgMeshEffect*, dgFloat32>& heap, dgMeshEffect* front);
 		void AddNode (dgFlatVertexArray& vertexArray, dgMeshEffect* solid, dgInt32 clipperMaterial, dgInt32 id, dgFloat32 density, dgFloat32 padding);
-//		void SplitAndAddNodes (dgFlatVertexArray& vertexArray, dgMeshEffect* solid, dgMeshEffect* const clipper,
+//		void SplitAndAddNodes (dgFlatVertexArray& vertexArray, dgMeshEffect* solid, dgMeshEffect* const clipper, 
 //							   dgInt32 clipperMaterial, dgInt32 id, dgFloat32 density, dgCollisionCompoundBreakableCallback callback, void* buildUsedData);
 
-//		void AddMeshes (dgFlatVertexArray& vertexArray, dgInt32 count, dgMeshEffect* const solidArray[], dgMeshEffect* const clipperArray[],
+//		void AddMeshes (dgFlatVertexArray& vertexArray, dgInt32 count, dgMeshEffect* const solidArray[], dgMeshEffect* const clipperArray[], 
 //						dgMatrix* const matrixArray, dgInt32* const idArray, dgFloat32* const densities, dgCollisionCompoundBreakableCallback callback, void* buildUsedData);
-		void AddMeshes (dgFlatVertexArray& vertexArray, dgInt32 count, const dgMeshEffect* const solidArray[],
+		void AddMeshes (dgFlatVertexArray& vertexArray, dgInt32 count, const dgMeshEffect* const solidArray[], 
 						const dgInt32* const idArray, const dgFloat32* const densities, const dgInt32* const internalFaceMaterial, dgFloat32 gaps);
 
 
 		void Serialize(dgSerialize callback, void* const userData) const;
 	};
 
-	class dgIsland: public dgList<dgDebriGraph::dgListNode*>
+	class dgIsland: public dgList<dgDebriGraph::dgListNode*> 
 	{
 		public:
 		dgIsland(dgMemoryAllocator* const allocator)
@@ -192,7 +192,7 @@ class dgCollisionCompoundBreakable: public dgCollisionCompound
 		virtual dgFloat32 GetBreakImpulse() const;
 
 
-
+		
 		dgNodeBase* m_treeNode;
 		dgCollisionConvex* m_myShape;
 		dgDebriGraph::dgListNode* m_graphNode;
@@ -214,7 +214,7 @@ class dgCollisionCompoundBreakable: public dgCollisionCompound
 
 
 //	class dgSegmenList: public dgList<dgMeshEffect*>
-//	{
+//	{	
 //		public:
 //		dgSegmenList(dgMeshEffect* const source);
 //		~dgSegmenList();
@@ -223,17 +223,17 @@ class dgCollisionCompoundBreakable: public dgCollisionCompound
 
 	dgCollisionCompoundBreakable (const dgCollisionCompoundBreakable& source);
 //	dgCollisionCompoundBreakable (dgInt32 count, dgMeshEffect* const solidArray[], dgMeshEffect* const clipperArray[],
-//								  dgMatrix* const matrixArray, dgInt32* const idArray, dgFloat32* const densities, dgInt32 debriiId,
+//								  dgMatrix* const matrixArray, dgInt32* const idArray, dgFloat32* const densities, dgInt32 debriiId, 
 //								  dgCollisionCompoundBreakableCallback callback, void* buildUsedData, dgWorld* world);
 
-	dgCollisionCompoundBreakable (dgInt32 count, const dgMeshEffect* const solidArray[], const dgInt32* const idArray,
-								  const dgFloat32* const densities, const dgInt32* const internalFaceMaterial,
+	dgCollisionCompoundBreakable (dgInt32 count, const dgMeshEffect* const solidArray[], const dgInt32* const idArray, 
+								  const dgFloat32* const densities, const dgInt32* const internalFaceMaterial, 
 								  dgInt32 debriiId, dgFloat32 gaps, dgWorld* world);
 
 	dgCollisionCompoundBreakable (dgWorld* const world, dgDeserialize deserialization, void* const userData);
 	virtual ~dgCollisionCompoundBreakable(void);
 
-
+	
 	void DeleteComponentBegin ();
 	dgBody* CreateComponentBody (dgDebriGraph::dgListNode* node) const;
 	void DeleteComponent (dgDebriGraph::dgListNode* node);
@@ -254,7 +254,7 @@ class dgCollisionCompoundBreakable: public dgCollisionCompound
 	dgInt32 GetSegmentIndexStreamShort (dgDebriGraph::dgListNode* const node, dgMesh::dgListNode* segment, dgInt16* const index) const;
 
 	dgInt32 GetVertecCount() const {return m_vertexBuffer->m_vertexCount;}
-	void GetVertexStreams (dgInt32 vertexStrideInByte, dgFloat32* vertex,
+	void GetVertexStreams (dgInt32 vertexStrideInByte, dgFloat32* vertex, 
 						   dgInt32 normalStrideInByte, dgFloat32* normal,
 						   dgInt32 uvStrideInByte, dgFloat32* uv) const
 	{
@@ -264,11 +264,11 @@ class dgCollisionCompoundBreakable: public dgCollisionCompound
 
 	private:
 
-	void LinkNodes ();
+	void LinkNodes ();	
 
 	virtual void GetCollisionInfo(dgCollisionInfo* info) const;
 	virtual void Serialize(dgSerialize callback, void* const userData) const;
-
+	
 	dgInt32 m_lru;
 	dgInt32 m_lastIslandColor;
 	dgInt32 m_visibilityMapIndexCount;
@@ -277,7 +277,7 @@ class dgCollisionCompoundBreakable: public dgCollisionCompound
 	dgVertexBuffer* m_vertexBuffer;
 	dgDebriGraph m_conectivity;
 	dgIsland m_detachedIslands;
-
+	
 };
 
 #endif

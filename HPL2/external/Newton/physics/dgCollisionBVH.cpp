@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -43,8 +43,8 @@ dgCollisionBVH::dgCollisionBVH (dgWorld* const world, dgDeserialize deserializat
 
 	dgAABBPolygonSoup::Deserialize (deserialization, userData);
 
-	dgVector p0;
-	dgVector p1;
+	dgVector p0; 
+	dgVector p1; 
 	GetAABB (p0, p1);
 	SetCollisionBBox(p0, p1);
 }
@@ -109,12 +109,12 @@ void dgCollisionBVH::GetCollisionInfo(dgCollisionInfo* info) const
 
 	info->m_offsetMatrix = GetOffsetMatrix();
 	info->m_collisionType = m_collsionId;
-
+		
 	dgGetVertexListIndexList data;
 	data.m_indexList = NULL;
 	data.m_userDataList = NULL;
 	data.m_maxIndexCount = 1000000000;
-	data.m_triangleCount = 0;
+	data.m_triangleCount = 0; 
 	dgVector p0 (-1.0e10f, -1.0e10f, -1.0e10f, 1.0f);
 	dgVector p1 ( 1.0e10f,  1.0e10f,  1.0e10f, 1.0f);
 	ForAllSectors (p0, p1, GetTriangleCount, &data);
@@ -143,7 +143,7 @@ dgIntersectStatus dgCollisionBVH::CollectVertexListIndexList (void *context, con
 		data.m_indexList[j + 1] = index1;
 		data.m_indexList[j + 2] = index2;
 		data.m_userDataList[k] = atribute;
-		index1 = index2;
+		index1 = index2; 
 		k ++;
 		j += 3;
 	}
@@ -176,9 +176,9 @@ void dgCollisionBVH::GetVertexListIndexList (const dgVector& p0, const dgVector&
 {
 	ForAllSectors (p0, p1, CollectVertexListIndexList, &data);
 
-	data.m_veterxArray = GetLocalVertexPool();
-	data.m_vertexCount = GetVertexCount();
-	data.m_vertexStrideInBytes = GetStrideInBytes();
+	data.m_veterxArray = GetLocalVertexPool(); 
+	data.m_vertexCount = GetVertexCount(); 
+	data.m_vertexStrideInBytes = GetStrideInBytes(); 
 
 }
 
@@ -295,7 +295,7 @@ dgFloat32 dgCollisionBVH::RayCastSimd (const dgVector& localP0, const dgVector& 
 	if (!m_userRayCastCallback) {
 		ForAllSectorsRayHitSimd (ray, RayHitSimd, &ray);
 		if (ray.m_t <= 1.0f) {
-			param = ray.m_t;
+			param = ray.m_t; 
 			contactOut.m_normal = ray.m_normal.Scale (dgRsqrt ((ray.m_normal % ray.m_normal) + 1.0e-8f));
 			contactOut.m_userId = ray.m_id;
 		}
@@ -303,10 +303,10 @@ dgFloat32 dgCollisionBVH::RayCastSimd (const dgVector& localP0, const dgVector& 
 		if (body) {
 			ray.m_matrix = body->m_collisionWorldMatrix;
 		}
-
+		
 		ForAllSectorsRayHitSimd (ray, RayHitUserSimd, &ray);
 		if (ray.m_t <= 1.0f) {
-			param = ray.m_t;
+			param = ray.m_t; 
 			contactOut.m_normal = ray.m_normal.Scale (dgRsqrt ((ray.m_normal % ray.m_normal) + 1.0e-8f));
 			contactOut.m_userId = ray.m_id;
 		}
@@ -317,10 +317,10 @@ dgFloat32 dgCollisionBVH::RayCastSimd (const dgVector& localP0, const dgVector& 
 }
 
 dgFloat32 dgCollisionBVH::RayCast (
-	const dgVector& localP0,
-	const dgVector& localP1,
+	const dgVector& localP0, 
+	const dgVector& localP1, 
 	dgContactPoint& contactOut,
-	OnRayPrecastAction preFilter,
+	OnRayPrecastAction preFilter, 
 	const dgBody* const body,
 	void* const userData) const
 {
@@ -337,7 +337,7 @@ dgFloat32 dgCollisionBVH::RayCast (
 	if (!m_userRayCastCallback) {
 		ForAllSectorsRayHit (ray, RayHit, &ray);
 		if (ray.m_t <= 1.0f) {
-			param = ray.m_t;
+			param = ray.m_t; 
 			contactOut.m_normal = ray.m_normal.Scale (dgRsqrt ((ray.m_normal % ray.m_normal) + 1.0e-8f));
 			contactOut.m_userId = ray.m_id;
 		}
@@ -345,10 +345,10 @@ dgFloat32 dgCollisionBVH::RayCast (
 		if (body) {
 			ray.m_matrix = body->m_collisionWorldMatrix;
 		}
-
+		
 		ForAllSectorsRayHit (ray, RayHitUser, &ray);
 		if (ray.m_t <= 1.0f) {
-			param = ray.m_t;
+			param = ray.m_t; 
 			contactOut.m_normal = ray.m_normal.Scale (dgRsqrt ((ray.m_normal % ray.m_normal) + 1.0e-8f));
 			contactOut.m_userId = ray.m_id;
 		}
@@ -357,10 +357,10 @@ dgFloat32 dgCollisionBVH::RayCast (
 }
 
 dgIntersectStatus dgCollisionBVH::GetPolygon (
-	void *context,
-	const dgFloat32* const polygon,
-	dgInt32 strideInBytes,
-	const dgInt32* const indexArray,
+	void *context, 
+	const dgFloat32* const polygon, 
+	dgInt32 strideInBytes, 
+	const dgInt32* const indexArray, 
 	dgInt32 indexCount)
 {
 	dgPolygonMeshDesc& data = (*(dgPolygonMeshDesc*) context);
@@ -374,7 +374,7 @@ dgIntersectStatus dgCollisionBVH::GetPolygon (
 		return t_StopSearh;
 	}
 
-	if (data.m_me->GetDebugCollisionCallback()) {
+	if (data.m_me->GetDebugCollisionCallback()) { 
 		dgTriplex triplex[128];
 		dgInt32 stride = dgInt32 (strideInBytes / sizeof (dgFloat32));
 		const dgMatrix& matrix = data.m_polySoupBody->GetCollisionMatrix();

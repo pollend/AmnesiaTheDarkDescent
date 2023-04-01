@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -100,7 +100,7 @@ void dgContact::CalculatePointDerivative (dgInt32 index, dgContraintDescritor& d
 	_ASSERTE (m_body1);
 
 	dgVector r0CrossDir (param.m_r0 * dir);
-	dgJacobian &jacobian0 = desc.m_jacobian[index].m_jacobian_IM0;
+	dgJacobian &jacobian0 = desc.m_jacobian[index].m_jacobian_IM0; 
 	jacobian0.m_linear[0] = dir.m_x;
 	jacobian0.m_linear[1] = dir.m_y;
 	jacobian0.m_linear[2] = dir.m_z;
@@ -112,7 +112,7 @@ void dgContact::CalculatePointDerivative (dgInt32 index, dgContraintDescritor& d
 
 
 	dgVector r1CrossDir (dir * param.m_r1);
-	dgJacobian &jacobian1 = desc.m_jacobian[index].m_jacobian_IM1;
+	dgJacobian &jacobian1 = desc.m_jacobian[index].m_jacobian_IM1; 
 	jacobian1.m_linear[0] = -dir.m_x;
 	jacobian1.m_linear[1] = -dir.m_y;
 	jacobian1.m_linear[2] = -dir.m_z;
@@ -130,7 +130,7 @@ dgUnsigned32 dgContact::JacobianDerivative (dgContraintDescritor& params)
 		dgInt32 i = 0;
 		frictionIndex = GetCount();
 		for (dgList<dgContactMaterial>::dgListNode* node = GetFirst(); node; node = node->GetNext()) {
-			const dgContactMaterial& contact = node->GetInfo();
+			const dgContactMaterial& contact = node->GetInfo(); 
 			JacobianContactDerivative (params, contact, i, frictionIndex);
 			i ++;
 		}
@@ -141,12 +141,12 @@ dgUnsigned32 dgContact::JacobianDerivative (dgContraintDescritor& params)
 
 
 
-void dgContact::JacobianContactDerivative (dgContraintDescritor& params, const dgContactMaterial& contact, dgInt32 normalIndex, dgInt32& frictionIndex)
+void dgContact::JacobianContactDerivative (dgContraintDescritor& params, const dgContactMaterial& contact, dgInt32 normalIndex, dgInt32& frictionIndex) 
 {
 	dgPointParam pointData;
 
 	InitPointParam (pointData, dgFloat32 (1.0f), contact.m_point, contact.m_point);
-	CalculatePointDerivative (normalIndex, params, contact.m_normal, pointData);
+	CalculatePointDerivative (normalIndex, params, contact.m_normal, pointData); 
 
 	dgVector velocError (pointData.m_veloc1 - pointData.m_veloc0);
 	dgFloat32 restitution	= contact.m_restitution;
@@ -181,7 +181,7 @@ void dgContact::JacobianContactDerivative (dgContraintDescritor& params, const d
 	if (contact.m_flags & dgContactMaterial::m_friction0Enable__) {
 		dgInt32 jacobIndex = frictionIndex;
 		frictionIndex += 1;
-		CalculatePointDerivative (jacobIndex, params, contact.m_dir0, pointData);
+		CalculatePointDerivative (jacobIndex, params, contact.m_dir0, pointData); 
 		relVelocErr = velocError % contact.m_dir0;
 		params.m_forceBounds[jacobIndex].m_normalIndex = normalIndex;
 		params.m_jointStiffness[jacobIndex] = dgFloat32 (1.0f);
@@ -211,7 +211,7 @@ void dgContact::JacobianContactDerivative (dgContraintDescritor& params, const d
 	if (contact.m_flags & dgContactMaterial::m_friction1Enable__) {
 		dgInt32 jacobIndex = frictionIndex;
 		frictionIndex += 1;
-		CalculatePointDerivative (jacobIndex, params, contact.m_dir1, pointData);
+		CalculatePointDerivative (jacobIndex, params, contact.m_dir1, pointData); 
 		relVelocErr = velocError % contact.m_dir1;
 		params.m_forceBounds[jacobIndex].m_normalIndex = normalIndex;
 		params.m_jointStiffness[jacobIndex] = dgFloat32 (1.0f);
@@ -278,10 +278,10 @@ void dgContact::JointAccelerationsSimd(const dgJointAccelerationDecriptor& param
 			//relVeloc += Jt[k].m_jacobian_IM0.m_angular.CompProduct(bodyOmega0);
 			//relVeloc += Jt[k].m_jacobian_IM1.m_linear.CompProduct(bodyVeloc1);
 			//relVeloc += Jt[k].m_jacobian_IM1.m_angular.CompProduct(bodyOmega1);
-			simd_type relVeloc = simd_mul_v (              (simd_type&)Jt[k].m_jacobian_IM0.m_linear, bodyVeloc0);
-			relVeloc = simd_mul_add_v (relVeloc, (simd_type&)Jt[k].m_jacobian_IM0.m_angular, bodyOmega0);
-			relVeloc = simd_mul_add_v (relVeloc, (simd_type&)Jt[k].m_jacobian_IM1.m_linear, bodyVeloc1);
-			relVeloc = simd_mul_add_v (relVeloc, (simd_type&)Jt[k].m_jacobian_IM1.m_angular, bodyOmega1);
+			simd_type relVeloc = simd_mul_v (              (simd_type&)Jt[k].m_jacobian_IM0.m_linear, bodyVeloc0); 
+			relVeloc = simd_mul_add_v (relVeloc, (simd_type&)Jt[k].m_jacobian_IM0.m_angular, bodyOmega0); 
+			relVeloc = simd_mul_add_v (relVeloc, (simd_type&)Jt[k].m_jacobian_IM1.m_linear, bodyVeloc1); 
+			relVeloc = simd_mul_add_v (relVeloc, (simd_type&)Jt[k].m_jacobian_IM1.m_angular, bodyOmega1); 
 
 			//		vRel = relVeloc.m_x + relVeloc.m_y + relVeloc.m_z;
 			//		aRel = relAccel.m_x + relAccel.m_y + relAccel.m_z;
@@ -290,11 +290,11 @@ void dgContact::JointAccelerationsSimd(const dgJointAccelerationDecriptor& param
 			simd_type relAccel = simd_load_s (params.m_externAccelaration[k]);
 			if (params.m_normalForceIndex[k] < 0) {
 				//			dgFloat32 restitution;
-				//simd_type penetration;
-				//simd_type restitution;
+				//simd_type penetration; 
+				//simd_type restitution; 
 				//simd_type velocMask;
 				//simd_type penetrationVeloc;
-				//simd_type penetrationMask;
+				//simd_type penetrationMask; 
 
 				//			restitution = dgFloat32 (1.0f);
 				//			if (vRel <= dgFloat32 (0.0f)) {
@@ -359,7 +359,7 @@ void dgContact::JointAccelerations(const dgJointAccelerationDecriptor& params)
 			if (params.m_normalForceIndex[k] < 0) {
 				dgFloat32 restitution;
 				dgFloat32 penetrationVeloc;
-
+				
 
 				restitution = dgFloat32 (1.0f);
 				if (vRel <= dgFloat32 (0.0f)) {
@@ -463,7 +463,7 @@ void dgCollidingPairCollector::AddPair (dgBody* const bodyPtr0, dgBody* const bo
 					if (constraint->GetId() == dgContactConstraintId) {
 						contact = (dgContact*)constraint;
 						break;
-					}
+					} 
 				}
 			} else {
 				return;
@@ -473,7 +473,7 @@ void dgCollidingPairCollector::AddPair (dgBody* const bodyPtr0, dgBody* const bo
 				_ASSERTE (contact->GetId() == dgContactConstraintId);
 				contact->m_broadphaseLru = dgInt32 (world->m_broadPhaseLru);
 			}
-
+			
 		} else {
 			dgBody* tmpbody0 (bodyPtr0);
 			dgBody* tmpbody1 (bodyPtr1);
@@ -497,7 +497,7 @@ void dgCollidingPairCollector::AddPair (dgBody* const bodyPtr0, dgBody* const bo
 					} else {
 						if (!constraint->IsCollidable()) {
 							return;
-						}
+						} 
 					}
 				}
 			} else if (body1->m_invMass.m_w != dgFloat32 (0.0f)) {
@@ -522,7 +522,7 @@ void dgCollidingPairCollector::AddPair (dgBody* const bodyPtr0, dgBody* const bo
 				}
 			}
 
-
+		
 			_ASSERTE (!contact || contact->GetId() == dgContactConstraintId);
 
 			dgUnsigned32 group0_ID = dgUnsigned32 (body0->m_bodyGroupId);
@@ -532,7 +532,7 @@ void dgCollidingPairCollector::AddPair (dgBody* const bodyPtr0, dgBody* const bo
 			}
 
 			dgUnsigned32 key = (group1_ID << 16) + group0_ID;
-			const dgBodyMaterialList& materialList = *world;
+			const dgBodyMaterialList& materialList = *world;  
 
 			const dgContactMaterial* const material = &materialList.Find (key)->GetInfo();
 //			if (material->m_collisionEnable) {
@@ -548,7 +548,7 @@ void dgCollidingPairCollector::AddPair (dgBody* const bodyPtr0, dgBody* const bo
 					_ASSERTE (!body1->m_collision->IsType (dgCollision::dgCollisionNull_RTTI));
 
 					dgThreadPairCache& pairChache = *m_chacheBuffers[threadIndex];
-
+					
 					if (pairChache.m_count >= DG_CACHE_PAIR_BUFFER) {
 						world->dgGetUserLock();
 						FlushChache (&pairChache);
@@ -558,7 +558,7 @@ void dgCollidingPairCollector::AddPair (dgBody* const bodyPtr0, dgBody* const bo
 					dgInt32 count = pairChache.m_count;
 					pairChache.m_chacheBuffer[count].m_body0 = body0;
 					pairChache.m_chacheBuffer[count].m_body1 = body1;
-					pairChache.m_chacheBuffer[count].m_material = material;
+					pairChache.m_chacheBuffer[count].m_material = material; 
 					pairChache.m_chacheBuffer[count].m_contact = contact;
 					pairChache.m_count = count + 1;
 				}

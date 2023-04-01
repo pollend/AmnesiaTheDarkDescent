@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -31,7 +31,7 @@
 //////////////////////////////////////////////////////////////////////
 
 dgCorkscrewConstraint::dgCorkscrewConstraint ()
-	:dgBilateralConstraint()
+	:dgBilateralConstraint() 
 {
 
 	_ASSERTE ((((dgUnsigned64) &m_localMatrix0) & 15) == 0);
@@ -136,7 +136,7 @@ dgFloat32 dgCorkscrewConstraint::CalculateStopAlpha (dgFloat32 angle, const dgJo
 		if (omega < dgFloat32 (0.0f)) {
 			omega = dgFloat32 (0.0f);
 		}
-		penetrationErr = angle - m_angle;
+		penetrationErr = angle - m_angle; 
 		alpha = dgFloat32 (100.0f) * penetrationErr - omega * dgFloat32 (1.01f) / param->m_timestep;
 
 	} else if (m_angle < angle) {
@@ -145,9 +145,9 @@ dgFloat32 dgCorkscrewConstraint::CalculateStopAlpha (dgFloat32 angle, const dgJo
 			omega = dgFloat32 (0.0f);
 		}
 
-		penetrationErr = angle - m_angle;
+		penetrationErr = angle - m_angle; 
 		alpha = dgFloat32 (100.0f) * penetrationErr - omega * dgFloat32 (1.01f) / param->m_timestep;
-	}
+	} 
 	return alpha;
 }
 
@@ -163,7 +163,7 @@ dgFloat32 dgCorkscrewConstraint::CalculateStopAccel (dgFloat32 distance, const d
 		if (speed < dgFloat32 (0.0f)) {
 			speed = dgFloat32 (0.0f);
 		}
-		penetrationErr = (distance - m_posit);
+		penetrationErr = (distance - m_posit); 
 		accel = dgFloat32 (100.0f) * penetrationErr - speed * dgFloat32 (1.01f) / param->m_timestep;
 
 	} else if (m_posit < distance) {
@@ -171,10 +171,10 @@ dgFloat32 dgCorkscrewConstraint::CalculateStopAccel (dgFloat32 distance, const d
 		if (speed > dgFloat32 (0.0f)) {
 			speed = dgFloat32 (0.0f);
 		}
-		penetrationErr = distance - m_posit;
+		penetrationErr = distance - m_posit; 
 		_ASSERTE (penetrationErr >= dgFloat32 (0.0f));
 		accel = dgFloat32 (100.0f) * penetrationErr - speed * dgFloat32 (1.01f) / param->m_timestep;
-	}
+	} 
 	return accel;
 }
 
@@ -186,8 +186,8 @@ dgVector dgCorkscrewConstraint::GetJointForce () const
 
 	CalculateGlobalMatrixAndAngle (matrix0, matrix1);
 
-	return dgVector (matrix0.m_up.Scale (m_jointForce[0]) +
-		             matrix0.m_right.Scale (m_jointForce[1]) +
+	return dgVector (matrix0.m_up.Scale (m_jointForce[0]) + 
+		             matrix0.m_right.Scale (m_jointForce[1]) + 
 					 matrix0.m_up.Scale (m_jointForce[2]) +
 					 matrix0.m_right.Scale (m_jointForce[3]));
 
@@ -204,9 +204,9 @@ dgUnsigned32 dgCorkscrewConstraint::JacobianDerivative (dgContraintDescritor& pa
 	m_posit = (matrix0.m_posit - matrix1.m_posit) % matrix0.m_front;
 	matrix1.m_posit += matrix1.m_front.Scale (m_posit);
 
-	_ASSERTE (dgAbsf (dgFloat32 (1.0f) - (matrix0.m_front % matrix0.m_front)) < dgFloat32 (1.0e-5f));
-	_ASSERTE (dgAbsf (dgFloat32 (1.0f) - (matrix0.m_up % matrix0.m_up)) < dgFloat32 (1.0e-5f));
-	_ASSERTE (dgAbsf (dgFloat32 (1.0f) - (matrix0.m_right % matrix0.m_right)) < dgFloat32 (1.0e-5f));
+	_ASSERTE (dgAbsf (dgFloat32 (1.0f) - (matrix0.m_front % matrix0.m_front)) < dgFloat32 (1.0e-5f)); 
+	_ASSERTE (dgAbsf (dgFloat32 (1.0f) - (matrix0.m_up % matrix0.m_up)) < dgFloat32 (1.0e-5f)); 
+	_ASSERTE (dgAbsf (dgFloat32 (1.0f) - (matrix0.m_right % matrix0.m_right)) < dgFloat32 (1.0e-5f)); 
 
 	const dgVector& dir1 = matrix0.m_up;
 	const dgVector& dir2 = matrix0.m_right;
@@ -224,10 +224,10 @@ dgUnsigned32 dgCorkscrewConstraint::JacobianDerivative (dgContraintDescritor& pa
 	InitPointParam (pointDataP, m_stiffness, p0, p1);
 	InitPointParam (pointDataQ, m_stiffness, q0, q1);
 
-	CalculatePointDerivative (0, params, dir1, pointDataP, &m_jointForce[0]);
-	CalculatePointDerivative (1, params, dir2, pointDataP, &m_jointForce[1]);
-	CalculatePointDerivative (2, params, dir1, pointDataQ, &m_jointForce[2]);
-	CalculatePointDerivative (3, params, dir2, pointDataQ, &m_jointForce[3]);
+	CalculatePointDerivative (0, params, dir1, pointDataP, &m_jointForce[0]); 
+	CalculatePointDerivative (1, params, dir2, pointDataP, &m_jointForce[1]); 
+	CalculatePointDerivative (2, params, dir1, pointDataQ, &m_jointForce[2]); 
+	CalculatePointDerivative (3, params, dir2, pointDataQ, &m_jointForce[3]); 
 
 	dgInt32 ret = 4;
 	if (m_jointAccelFnt) {
@@ -254,7 +254,7 @@ dgUnsigned32 dgCorkscrewConstraint::JacobianDerivative (dgContraintDescritor& pa
 				params.m_forceBounds[ret].m_normalIndex = DG_BILATERAL_FRICTION_CONSTRAINT;
 			}
 
-			CalculatePointDerivative (ret, params, matrix0.m_front, pointDataP, &m_jointForce[ret]);
+			CalculatePointDerivative (ret, params, matrix0.m_front, pointDataP, &m_jointForce[ret]); 
 			//params.m_jointAccel[ret] = axisParam[0].m_accel;
 			SetMotorAcceleration (ret, axisParam[0].m_accel, params);
 			ret ++;
@@ -271,7 +271,7 @@ dgUnsigned32 dgCorkscrewConstraint::JacobianDerivative (dgContraintDescritor& pa
 //			dgVector p (p0 +  dir1);
 //			dgPointParam pointData;
 //			InitPointParam (pointData, m_stiffness, p, p);
-//			CalculatePointDerivative (ret, params, dir2, pointData, &m_jointForce[ret]);
+//			CalculatePointDerivative (ret, params, dir2, pointData, &m_jointForce[ret]); 
 			CalculateAngularDerivative (ret, params, matrix0.m_front, m_stiffness, dgFloat32 (0.0f), &m_jointForce[ret]);
 			//params.m_jointAccel[ret] = axisParam[1].m_accel;
 			SetMotorAcceleration (ret, axisParam[1].m_accel, params);

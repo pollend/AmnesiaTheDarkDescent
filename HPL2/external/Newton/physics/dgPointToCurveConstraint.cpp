@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -78,7 +78,7 @@ void dgPointToCurveConstraint::SetDestructorCallback (OnConstraintDestroy destru
 
 void dgPointToCurveConstraint::SetPivotPoint(
 	const dgVector &pivot,
-	OnPointToCurveCallback curve,
+	OnPointToCurveCallback curve, 
 	void *curveContext)
 {
 	_ASSERTE (0);
@@ -98,14 +98,14 @@ dgUnsigned32 dgPointToCurveConstraint::JacobianDerivative (dgContraintDescritor&
 	return 0;
 //	dgBody* body0;
 //	dgFloat32 kPosit;
-//
+//	
 //	_ASSERTE (m_dynamic0);
-//
+//	
 //	body0 = m_dynamic0->GetBody();
 //	_ASSERTE (body0);
-//
+//	
 //	_ASSERTE (body0->GetDynamic() == m_dynamic0);
-//
+//	
 //	const dgMatrix& mat0 = body0->GetMatrix();
 //
 //	dgVector front;
@@ -118,13 +118,13 @@ dgUnsigned32 dgPointToCurveConstraint::JacobianDerivative (dgContraintDescritor&
 //	dgVector	point (pivet0 + mat0.posit);
 //	m_curve (m_context, pivet0, pivet1, front);
 
-//	front = front.Scale (dgRsqrt (front % front));
+//	front = front.Scale (dgRsqrt (front % front)); 
 //	Create__Basis(front, up, right);
 
 //	dgVector pivetUp (pivet0 * up);
 //	dgVector pivetRight (pivet0 * right);
 
-//	dgJacobian* jacobian01 = params.m_jacobian_01;
+//	dgJacobian* jacobian01 = params.m_jacobian_01; 
 
 //	jacobian01[0].derivative[0] = up.m_x;
 //	jacobian01[0].derivative[1] = up.m_y;
@@ -132,7 +132,7 @@ dgUnsigned32 dgPointToCurveConstraint::JacobianDerivative (dgContraintDescritor&
 //	jacobian01[0].derivative[3] = pivetUp.m_x;
 //	jacobian01[0].derivative[4] = pivetUp.m_y;
 //	jacobian01[0].derivative[5] = pivetUp.m_z;
-
+	
 //	jacobian01[1].derivative[0] = right.m_x;
 //	jacobian01[1].derivative[1] = right.m_y;
 //	jacobian01[1].derivative[2] = right.m_z;

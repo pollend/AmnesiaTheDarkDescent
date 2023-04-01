@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -25,7 +25,7 @@
 #include "dgConvexHull3d.h"
 #include "dgSmallDeterminant.h"
 
-#define DG_VERTEX_CLUMP_SIZE_3D		8
+#define DG_VERTEX_CLUMP_SIZE_3D		8 
 class dgAABBPointTree3d
 {
 	public:
@@ -56,7 +56,7 @@ class dgAABBPointTree3dClump: public dgAABBPointTree3d
 
 dgConvexHull3DFace::dgConvexHull3DFace()
 {
-	m_mark = 0;
+	m_mark = 0; 
 	m_twin[0] = NULL;
 	m_twin[1] = NULL;
 	m_twin[2] = NULL;
@@ -78,7 +78,7 @@ dgFloat64 dgConvexHull3DFace::Evalue (const dgBigVector* const pointArray, const
 	dgFloat64 error;
 	dgFloat64 det = Determinant3x3 (matrix, &error);
 	dgFloat64 precision  = dgFloat64 (1.0f) / dgFloat64 (1<<24);
-	dgFloat64 errbound = error * precision;
+	dgFloat64 errbound = error * precision; 
 	if (fabs(det) > errbound) {
 		return det;
 	}
@@ -113,16 +113,16 @@ dgConvexHull3d::dgConvexHull3d (dgMemoryAllocator* const allocator)
 
 
 dgConvexHull3d::dgConvexHull3d(dgMemoryAllocator* const allocator, const dgFloat32* const vertexCloud, dgInt32 strideInByte, dgInt32 count, dgFloat32 distTol)
-	:dgList<dgConvexHull3DFace>(allocator),  m_count (0), m_diag(), m_points(count, allocator)
+	:dgList<dgConvexHull3DFace>(allocator),  m_count (0), m_diag(), m_points(count, allocator) 
 {
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32))
+#if (defined (WIN32) || defined(_WIN32))
 	dgUnsigned32 controlWorld = dgControlFP (0xffffffff, 0);
 	dgControlFP (_PC_53, _MCW_PC);
 #endif
 
+	
 
-
-	dgInt32 treeCount = count / (DG_VERTEX_CLUMP_SIZE_3D>>1);
+	dgInt32 treeCount = count / (DG_VERTEX_CLUMP_SIZE_3D>>1); 
 	if (treeCount < 4) {
 		treeCount = 4;
 	}
@@ -142,10 +142,10 @@ dgConvexHull3d::dgConvexHull3d(dgMemoryAllocator* const allocator, const dgFloat
 		for (dgInt32 i = 0; i < m_count; i ++) {
 			points[i] = dgVector (dgFloat32 (hullPoints[i].m_x), dgFloat32 (hullPoints[i].m_y), dgFloat32 (hullPoints[i].m_z), dgFloat32 (0.0f));
 		}
-
+	
 	}
 
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined(WIN32))
+#if (defined (WIN32) || defined(_WIN32))
 	dgControlFP (controlWorld, _MCW_PC);
 #endif
 
@@ -176,8 +176,8 @@ dgAABBPointTree3d* dgConvexHull3d::BuildTree (dgAABBPointTree3d* const parent, d
 	dgAABBPointTree3d* tree = NULL;
 
 	_ASSERTE (count);
-	dgBigVector minP ( dgFloat32 (1.0e15f),  dgFloat32 (1.0e15f),  dgFloat32 (1.0e15f), dgFloat32 (0.0f));
-	dgBigVector maxP (-dgFloat32 (1.0e15f), -dgFloat32 (1.0e15f), -dgFloat32 (1.0e15f), dgFloat32 (0.0f));
+	dgBigVector minP ( dgFloat32 (1.0e15f),  dgFloat32 (1.0e15f),  dgFloat32 (1.0e15f), dgFloat32 (0.0f)); 
+	dgBigVector maxP (-dgFloat32 (1.0e15f), -dgFloat32 (1.0e15f), -dgFloat32 (1.0e15f), dgFloat32 (0.0f)); 
 	if (count <= DG_VERTEX_CLUMP_SIZE_3D) {
 
 		dgAABBPointTree3dClump* const clump = new (*memoryPool) dgAABBPointTree3dClump;
@@ -191,13 +191,13 @@ dgAABBPointTree3d* dgConvexHull3d::BuildTree (dgAABBPointTree3d* const parent, d
 			clump->m_indices[i] = i + baseIndex;
 
 			const dgBigVector& p = points[i];
-			minP.m_x = GetMin (p.m_x, minP.m_x);
-			minP.m_y = GetMin (p.m_y, minP.m_y);
-			minP.m_z = GetMin (p.m_z, minP.m_z);
+			minP.m_x = GetMin (p.m_x, minP.m_x); 
+			minP.m_y = GetMin (p.m_y, minP.m_y); 
+			minP.m_z = GetMin (p.m_z, minP.m_z); 
 
-			maxP.m_x = GetMax (p.m_x, maxP.m_x);
-			maxP.m_y = GetMax (p.m_y, maxP.m_y);
-			maxP.m_z = GetMax (p.m_z, maxP.m_z);
+			maxP.m_x = GetMax (p.m_x, maxP.m_x); 
+			maxP.m_y = GetMax (p.m_y, maxP.m_y); 
+			maxP.m_z = GetMax (p.m_z, maxP.m_z); 
 		}
 
 		clump->m_left = NULL;
@@ -210,13 +210,13 @@ dgAABBPointTree3d* dgConvexHull3d::BuildTree (dgAABBPointTree3d* const parent, d
 		for (dgInt32 i = 0; i < count; i ++) {
 
 			const dgBigVector& p = points[i];
-			minP.m_x = GetMin (p.m_x, minP.m_x);
-			minP.m_y = GetMin (p.m_y, minP.m_y);
-			minP.m_z = GetMin (p.m_z, minP.m_z);
+			minP.m_x = GetMin (p.m_x, minP.m_x); 
+			minP.m_y = GetMin (p.m_y, minP.m_y); 
+			minP.m_z = GetMin (p.m_z, minP.m_z); 
 
-			maxP.m_x = GetMax (p.m_x, maxP.m_x);
-			maxP.m_y = GetMax (p.m_y, maxP.m_y);
-			maxP.m_z = GetMax (p.m_z, maxP.m_z);
+			maxP.m_x = GetMax (p.m_x, maxP.m_x); 
+			maxP.m_y = GetMax (p.m_y, maxP.m_y); 
+			maxP.m_z = GetMax (p.m_z, maxP.m_z); 
 
 			median += p;
 			varian += p.CompProduct (p);
@@ -237,7 +237,7 @@ dgAABBPointTree3d* dgConvexHull3d::BuildTree (dgAABBPointTree3d* const parent, d
 
 		dgInt32 i0 = 0;
 		dgInt32 i1 = count - 1;
-		do {
+		do {    
 			for (; i0 <= i1; i0 ++) {
 				dgFloat64 val = points[i0][index];
 				if (val > test) {
@@ -254,7 +254,7 @@ dgAABBPointTree3d* dgConvexHull3d::BuildTree (dgAABBPointTree3d* const parent, d
 
 			if (i0 < i1)	{
 				Swap(points[i0], points[i1]);
-				i0++;
+				i0++; 
 				i1--;
 			}
 		} while (i0 <= i1);
@@ -318,7 +318,7 @@ dgInt32 dgConvexHull3d::InitVertexArray(dgBigVector* const convexPoints, dgBigVe
 
 	dgAABBPointTree3d* tree = BuildTree (NULL, points, count, 0, (dgInt8**) &memoryPool, maxMemSize);
 
-	dgBigVector boxSize (tree->m_box[1] - tree->m_box[0]);
+	dgBigVector boxSize (tree->m_box[1] - tree->m_box[0]);	
 	m_diag = dgFloat32 (sqrt (boxSize % boxSize));
 
 	dgStack<dgBigVector> normalArrayPool (256);
@@ -477,7 +477,7 @@ dgInt32 dgConvexHull3d::SupportVertex (dgAABBPointTree3d** const treePointer, co
 	dgInt32 stack = 1;
 	stackPool[0] = *treePointer;
 	aabbProjection[0] = dgFloat32 (1.0e20f);
-	dgFloat64 maxProj = dgFloat64 (-1.0e20f);
+	dgFloat64 maxProj = dgFloat64 (-1.0e20f); 
 	dgInt32 ix = (dir[0] > dgFloat64 (0.0f)) ? 1 : 0;
 	dgInt32 iy = (dir[1] > dgFloat64 (0.0f)) ? 1 : 0;
 	dgInt32 iz = (dir[2] > dgFloat64 (0.0f)) ? 1 : 0;
@@ -540,7 +540,7 @@ dgInt32 dgConvexHull3d::SupportVertex (dgAABBPointTree3d** const treePointer, co
 
 				if (clump->m_count == 0) {
 					dgAABBPointTree3d* const parent = clump->m_parent;
-					if (parent) {
+					if (parent) {	
 						dgAABBPointTree3d* const sibling = (parent->m_left != clump) ? parent->m_left : parent->m_right;
 						_ASSERTE (sibling != clump);
 						dgAABBPointTree3d* const grandParent = parent->m_parent;
@@ -568,9 +568,9 @@ dgInt32 dgConvexHull3d::SupportVertex (dgAABBPointTree3d** const treePointer, co
 
 dgInt32 dgConvexHull3d::BuildNormalList (dgBigVector* const normalArray) const
 {
-	dgVector p0 ( dgFloat32 (1.0f), dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f));
-	dgVector p1 (-dgFloat32 (1.0f), dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f));
-	dgVector p2 ( dgFloat32 (0.0f), dgFloat32 (1.0f), dgFloat32 (0.0f), dgFloat32 (0.0f));
+	dgVector p0 ( dgFloat32 (1.0f), dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f)); 
+	dgVector p1 (-dgFloat32 (1.0f), dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f)); 
+	dgVector p2 ( dgFloat32 (0.0f), dgFloat32 (1.0f), dgFloat32 (0.0f), dgFloat32 (0.0f)); 
 	dgVector p3 ( dgFloat32 (0.0f),-dgFloat32 (1.0f), dgFloat32 (0.0f), dgFloat32 (0.0f));
 	dgVector p4 ( dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (1.0f), dgFloat32 (0.0f));
 	dgVector p5 ( dgFloat32 (0.0f), dgFloat32 (0.0f),-dgFloat32 (1.0f), dgFloat32 (0.0f));
@@ -602,13 +602,13 @@ dgConvexHull3d::dgListNode* dgConvexHull3d::AddFace (dgInt32 i0, dgInt32 i1, dgI
 	dgListNode* const node = Append();
 	dgConvexHull3DFace& face = node->GetInfo();
 
-	face.m_index[0] = i0;
-	face.m_index[1] = i1;
-	face.m_index[2] = i2;
+	face.m_index[0] = i0; 
+	face.m_index[1] = i1; 
+	face.m_index[2] = i2; 
 	return node;
 }
 
-void dgConvexHull3d::DeleteFace (dgListNode* const node)
+void dgConvexHull3d::DeleteFace (dgListNode* const node) 
 {
 	Remove (node);
 }
@@ -617,7 +617,7 @@ bool dgConvexHull3d::Sanity() const
 {
 /*
 	for (dgListNode* node = GetFirst(); node; node = node->GetNext()) {
-		dgConvexHull3DFace* const face = &node->GetInfo();
+		dgConvexHull3DFace* const face = &node->GetInfo();		
 		for (dgInt32 i = 0; i < 3; i ++) {
 			dgListNode* const twinNode = face->m_twin[i];
 			if (!twinNode) {
@@ -646,10 +646,10 @@ bool dgConvexHull3d::Sanity() const
 }
 
 void dgConvexHull3d::CalculateConvexHull (
-	dgAABBPointTree3d* vertexTree,
-	dgBigVector* const hullVertexArray,
-	dgBigVector* const points,
-	dgInt32 count,
+	dgAABBPointTree3d* vertexTree, 
+	dgBigVector* const hullVertexArray, 
+	dgBigVector* const points, 
+	dgInt32 count, 
 	dgFloat32 distTol)
 {
 	distTol = dgAbsf (distTol) * m_diag;
@@ -663,22 +663,22 @@ void dgConvexHull3d::CalculateConvexHull (
 	dgConvexHull3DFace* const f2 = &f2Node->GetInfo();
 	dgConvexHull3DFace* const f3 = &f3Node->GetInfo();
 
-	f0->m_twin[0] = (dgList<dgConvexHull3DFace>::dgListNode*)f3Node;
-	f0->m_twin[1] = (dgList<dgConvexHull3DFace>::dgListNode*)f2Node;
+	f0->m_twin[0] = (dgList<dgConvexHull3DFace>::dgListNode*)f3Node; 
+	f0->m_twin[1] = (dgList<dgConvexHull3DFace>::dgListNode*)f2Node; 
 	f0->m_twin[2] = (dgList<dgConvexHull3DFace>::dgListNode*)f1Node;
 
-	f1->m_twin[0] = (dgList<dgConvexHull3DFace>::dgListNode*)f0Node;
-	f1->m_twin[1] = (dgList<dgConvexHull3DFace>::dgListNode*)f2Node;
+	f1->m_twin[0] = (dgList<dgConvexHull3DFace>::dgListNode*)f0Node; 
+	f1->m_twin[1] = (dgList<dgConvexHull3DFace>::dgListNode*)f2Node; 
 	f1->m_twin[2] = (dgList<dgConvexHull3DFace>::dgListNode*)f3Node;
 
-	f2->m_twin[0] = (dgList<dgConvexHull3DFace>::dgListNode*)f0Node;
-	f2->m_twin[1] = (dgList<dgConvexHull3DFace>::dgListNode*)f3Node;
+	f2->m_twin[0] = (dgList<dgConvexHull3DFace>::dgListNode*)f0Node; 
+	f2->m_twin[1] = (dgList<dgConvexHull3DFace>::dgListNode*)f3Node; 
 	f2->m_twin[2] = (dgList<dgConvexHull3DFace>::dgListNode*)f1Node;
 
-	f3->m_twin[0] = (dgList<dgConvexHull3DFace>::dgListNode*)f0Node;
-	f3->m_twin[1] = (dgList<dgConvexHull3DFace>::dgListNode*)f1Node;
+	f3->m_twin[0] = (dgList<dgConvexHull3DFace>::dgListNode*)f0Node; 
+	f3->m_twin[1] = (dgList<dgConvexHull3DFace>::dgListNode*)f1Node; 
 	f3->m_twin[2] = (dgList<dgConvexHull3DFace>::dgListNode*)f2Node;
-
+	
 	dgList<dgListNode*> boundaryFaces(GetAllocator());
 
 	boundaryFaces.Append(f0Node);
@@ -707,7 +707,7 @@ void dgConvexHull3d::CalculateConvexHull (
 		dgFloat64 dist = planeEquation.Evalue(p);
 		if ((dist >= distTol) && (face->Evalue(hullVertexArray, p) > dgFloat64(0.0f))) {
 			_ASSERTE (Sanity());
-
+			
 			_ASSERTE (faceNode);
 			stack[0] = faceNode;
 
@@ -719,7 +719,7 @@ void dgConvexHull3d::CalculateConvexHull (
 				dgListNode* const node = stack[stackIndex];
 				dgConvexHull3DFace* const face = &node->GetInfo();
 
-				if (!face->m_mark && (face->Evalue(hullVertexArray, p) > dgFloat64(0.0f))) {
+				if (!face->m_mark && (face->Evalue(hullVertexArray, p) > dgFloat64(0.0f))) { 
 					#ifdef _DEBUG
 					for (dgInt32 i = 0; i < deletedCount; i ++) {
 						_ASSERTE (deleteList[i] != node);
@@ -773,7 +773,7 @@ void dgConvexHull3d::CalculateConvexHull (
 					}
 				}
 			}
-
+			
 			for (dgInt32 i = 0; i < newCount - 1; i ++) {
 				dgListNode* const nodeA = coneList[i];
 				dgConvexHull3DFace* const faceA = &nodeA->GetInfo();
@@ -804,7 +804,7 @@ void dgConvexHull3d::CalculateConvexHull (
 			for (dgInt32 i = 0; i < deletedCount; i ++) {
 				dgListNode* const node = deleteList[i];
 				boundaryFaces.Remove (node);
-				DeleteFace (node);
+				DeleteFace (node); 
 			}
 
 			currentIndex ++;

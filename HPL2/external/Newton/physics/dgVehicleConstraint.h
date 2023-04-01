@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -40,10 +40,10 @@ class dgVehicleConstraint;
 typedef void (dgApi *OnVehicleUpdate) (const dgVehicleConstraint& vehicle);
 
 
-class dgVehicleConstraint: public dgConstraint
+class dgVehicleConstraint: public dgConstraint  
 {
 	public:
-	class dgTire
+	class dgTire 
 	{
 		public:
 		dgMatrix m_localMatrix;
@@ -107,15 +107,15 @@ class dgVehicleConstraint: public dgConstraint
 	virtual ~dgVehicleConstraint();
 
 	void InitVehicle(const dgVector& upDir);
-	void SetTireCallback (OnVehicleUpdate update);
+	void SetTireCallback (OnVehicleUpdate update); 
 
-	void* AddTire (const dgMatrix& position, const dgVector& pin, dgFloat32 mass, dgFloat32 width, dgFloat32 radius,
+	void* AddTire (const dgMatrix& position, const dgVector& pin, dgFloat32 mass, dgFloat32 width, dgFloat32 radius, 
 		dgFloat32 suspesionShock, dgFloat32 suspesionSpring, dgFloat32 suspesionLength, void* collisionID, void* usedData);
 
 
-	void Reset ();
-	void RemoveTire (void* index);
-
+	void Reset (); 
+	void RemoveTire (void* index); 
+	
 
 	void* GetFirstTireIndex() const;
 	void* GetNextTireIndex(void* index) const;
@@ -150,11 +150,11 @@ class dgVehicleConstraint: public dgConstraint
 
 	void AddContacts();
 	virtual void SetDestructorCallback (OnConstraintDestroy destructor);
-	virtual dgUnsigned32 JacobianDerivative (dgContraintDescritor& params);
+	virtual dgUnsigned32 JacobianDerivative (dgContraintDescritor& params); 
 
-	virtual void JointAccelerations(const dgJointAccelerationDecriptor& params) {_ASSERTE (0);}
-	virtual void JointAccelerationsSimd(const dgJointAccelerationDecriptor& params){_ASSERTE (0);}
-	virtual void JointVelocityCorrection(const dgJointAccelerationDecriptor& params){_ASSERTE (0);}
+	virtual void JointAccelerations(const dgJointAccelerationDecriptor& params) {_ASSERTE (0);} 
+	virtual void JointAccelerationsSimd(const dgJointAccelerationDecriptor& params){_ASSERTE (0);} 
+	virtual void JointVelocityCorrection(const dgJointAccelerationDecriptor& params){_ASSERTE (0);} 
 
 
 	dgVector m_upPin;
@@ -189,8 +189,8 @@ class dgVehicleList: public dgTree<dgVehicleConstraint*, void*>
 	dgFloat32 m_minFrec;
 };
 
-class dgVehicleConstraintArray:
-	public dgVehicleCache,
+class dgVehicleConstraintArray: 
+	public dgVehicleCache, 
 	public dgVehicleList
 {
 	public:
@@ -198,7 +198,7 @@ class dgVehicleConstraintArray:
 };
 
 
-inline void dgVehicleCache::CacheVehicle (dgBody* body)
+inline void dgVehicleCache::CacheVehicle (dgBody* body) 
 {
 	Insert (body, body);
 }
@@ -246,7 +246,7 @@ inline dgFloat32 dgVehicleConstraint::GetTireOmega (void* index) const
 
 inline dgFloat32 dgVehicleConstraint::GetTireNormalLoad (void* index) const
 {
-	dgFloat32 load;
+	dgFloat32 load; 
 	dgVehicleConstraint::WheelsSet::dgListNode *node;
 	node = (dgVehicleConstraint::WheelsSet::dgListNode *) index;
 //	return node->GetInfo().m_tireNormalLoad;
@@ -299,7 +299,7 @@ inline void dgVehicleConstraint::SetTireLongitudinalSlideCoeficient (void* index
 }
 
 
-inline void dgVehicleConstraint::TireSetBrakeAcceleration (void* index, dgFloat32 acceleration, dgFloat32 torqueMaxFriction)
+inline void dgVehicleConstraint::TireSetBrakeAcceleration (void* index, dgFloat32 acceleration, dgFloat32 torqueMaxFriction) 
 {
 	dgVehicleConstraint::WheelsSet::dgListNode *node;
 
@@ -359,7 +359,7 @@ inline bool dgVehicleConstraint::TireLostTraction (void* index) const
 
 
 
-#endif
+#endif 
 
 
 

@@ -18,6 +18,8 @@ jobs:
       - name: Install dependencies
         run: |
           choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System'
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@v1.1
       - name: Configure
         run: |
           mkdir ${{ github.workspace }}\build && cd ${{ github.workspace }}\build
@@ -25,7 +27,7 @@ jobs:
       - name: Build
         run: |
           cd ${{ github.workspace }}\build
-          cmake --build . --config Release --target INSTALL
+          msbuild  INSTALL.vcxproj /property:Configuration=Release
       - name: Zipping (Windows)
         run: |
           cd ${{ github.workspace }}/build

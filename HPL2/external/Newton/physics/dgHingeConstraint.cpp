@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -30,7 +30,7 @@
 //////////////////////////////////////////////////////////////////////
 
 dgHingeConstraint::dgHingeConstraint ()
-	:dgBilateralConstraint()
+	:dgBilateralConstraint() 
 {
 	_ASSERTE ((((dgUnsigned64) &m_localMatrix0) & 15) == 0);
 //	constraint->Init ();
@@ -106,7 +106,7 @@ dgFloat32 dgHingeConstraint::CalculateStopAlpha (dgFloat32 angle, const dgJointC
 		if (omega < dgFloat32 (0.0f)) {
 			omega = dgFloat32 (0.0f);
 		}
-		penetrationErr = (angle - m_angle);
+		penetrationErr = (angle - m_angle); 
 		alpha = dgFloat32 (100.0f) * penetrationErr - omega * dgFloat32 (1.01f) / param->m_timestep;
 
 	} else if (m_angle < angle) {
@@ -115,9 +115,9 @@ dgFloat32 dgHingeConstraint::CalculateStopAlpha (dgFloat32 angle, const dgJointC
 			omega = dgFloat32 (0.0f);
 		}
 
-		penetrationErr = MIN_JOINT_PIN_LENGTH * (angle - m_angle);
+		penetrationErr = MIN_JOINT_PIN_LENGTH * (angle - m_angle); 
 		alpha = dgFloat32 (100.0f) * penetrationErr - omega * dgFloat32 (1.01f) / param->m_timestep;
-	}
+	} 
 	return alpha;
 }
 
@@ -127,8 +127,8 @@ dgVector dgHingeConstraint::GetJointForce () const
 	dgMatrix matrix1;
 
 	CalculateGlobalMatrixAndAngle (matrix0, matrix1);
-	return dgVector (matrix0.m_front.Scale (m_jointForce[0]) +
-		             matrix0.m_up.Scale (m_jointForce[1]) +
+	return dgVector (matrix0.m_front.Scale (m_jointForce[0]) + 
+		             matrix0.m_up.Scale (m_jointForce[1]) + 
 					 matrix0.m_right.Scale (m_jointForce[2]) +
 					 matrix0.m_up.Scale (m_jointForce[3]) +
 					 matrix0.m_right.Scale (m_jointForce[4]));
@@ -143,9 +143,9 @@ dgUnsigned32 dgHingeConstraint::JacobianDerivative (dgContraintDescritor& params
 
 	m_angle = -angle.m_x;
 
-	_ASSERTE (dgAbsf (1.0f - (matrix0.m_front % matrix0.m_front)) < dgFloat32 (1.0e-5f));
-	_ASSERTE (dgAbsf (1.0f - (matrix0.m_up % matrix0.m_up)) < dgFloat32 (1.0e-5f));
-	_ASSERTE (dgAbsf (1.0f - (matrix0.m_right % matrix0.m_right)) < dgFloat32 (1.0e-5f));
+	_ASSERTE (dgAbsf (1.0f - (matrix0.m_front % matrix0.m_front)) < dgFloat32 (1.0e-5f)); 
+	_ASSERTE (dgAbsf (1.0f - (matrix0.m_up % matrix0.m_up)) < dgFloat32 (1.0e-5f)); 
+	_ASSERTE (dgAbsf (1.0f - (matrix0.m_right % matrix0.m_right)) < dgFloat32 (1.0e-5f)); 
 
 	const dgVector& dir0 = matrix0.m_front;
 	const dgVector& dir1 = matrix0.m_up;
@@ -163,11 +163,11 @@ dgUnsigned32 dgHingeConstraint::JacobianDerivative (dgContraintDescritor& params
 	InitPointParam (pointDataP, m_stiffness, p0, p1);
 	InitPointParam (pointDataQ, m_stiffness, q0, q1);
 
-	CalculatePointDerivative (0, params, dir0, pointDataP, &m_jointForce[0]);
-	CalculatePointDerivative (1, params, dir1, pointDataP, &m_jointForce[1]);
-	CalculatePointDerivative (2, params, dir2, pointDataP, &m_jointForce[2]);
-	CalculatePointDerivative (3, params, dir1, pointDataQ, &m_jointForce[3]);
-	CalculatePointDerivative (4, params, dir2, pointDataQ, &m_jointForce[4]);
+	CalculatePointDerivative (0, params, dir0, pointDataP, &m_jointForce[0]); 
+	CalculatePointDerivative (1, params, dir1, pointDataP, &m_jointForce[1]); 
+	CalculatePointDerivative (2, params, dir2, pointDataP, &m_jointForce[2]); 
+	CalculatePointDerivative (3, params, dir1, pointDataQ, &m_jointForce[3]); 
+	CalculatePointDerivative (4, params, dir2, pointDataQ, &m_jointForce[4]); 
 
 	dgInt32 ret = 5;
 	if (m_jointAccelFnt) {

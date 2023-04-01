@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -59,7 +59,7 @@ void dgBodyMasterListRow::RemoveAllJoints ()
 
 void dgBodyMasterListRow::SortList()
 {
-	for (dgListNode* node = GetFirst(); node; ) {
+	for (dgListNode* node = GetFirst(); node; ) { 
 
 		dgListNode* const entry = node;
 		node = node->GetNext();
@@ -108,7 +108,7 @@ void dgBodyMasterList::RemoveBody (dgBody* const body)
 {
 	dgListNode* const node = body->m_masterNode;
 	_ASSERTE (node);
-
+	
 	node->GetInfo().RemoveAllJoints();
 	_ASSERTE (node->GetInfo().GetCount() == 0);
 
@@ -198,7 +198,7 @@ void dgBodyMasterList::SortMasterList()
 {
 	GetFirst()->GetInfo().SortList();
 
-	for (dgListNode* node = GetFirst()->GetNext(); node; ) {
+	for (dgListNode* node = GetFirst()->GetNext(); node; ) { 
 //		dgInt32 key1;
 //		dgBody* body1;
 //		dgListNode* prev;
@@ -206,11 +206,11 @@ void dgBodyMasterList::SortMasterList()
 
 		node->GetInfo().SortList();
 		dgBody* const body1 = node->GetInfo().GetBody();
-
+		
 		_ASSERTE (GetFirst() != node);
 
 		body1->InvalidateCache ();
-
+		
 
 		dgInt32 key1 = body1->m_uniqueID | ((body1->m_invMass.m_w > 0.0f) << 30);
 		dgListNode* const entry = node;

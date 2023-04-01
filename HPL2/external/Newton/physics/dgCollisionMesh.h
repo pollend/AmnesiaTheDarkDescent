@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -31,16 +31,16 @@
 
 
 class dgCollisionMesh;
-typedef void (*dgCollisionMeshCollisionCallback) (const dgBody* bodyWithTreeCollision, const dgBody* const body, dgInt32 faceID,
-												  dgInt32 vertexCount, const dgFloat32* vertex, dgInt32 vertexStrideInBytes);
+typedef void (*dgCollisionMeshCollisionCallback) (const dgBody* bodyWithTreeCollision, const dgBody* const body, dgInt32 faceID, 
+												  dgInt32 vertexCount, const dgFloat32* vertex, dgInt32 vertexStrideInBytes); 
 
 
-DG_MSC_VECTOR_ALIGMENT
+DG_MSC_VECTOR_ALIGMENT 
 class dgPolygonMeshDesc
 {
 	public:
 	// colliding box in polygonSoup local space
-	dgVector m_boxP0;
+	dgVector m_boxP0;                           
 	dgVector m_boxP1;
 	dgInt32 m_threadNumber;
 	dgInt32 m_faceCount;
@@ -58,19 +58,19 @@ class dgPolygonMeshDesc
 	const dgCollisionMesh* m_me;
 	dgInt32* m_faceNormalIndex;
 	dgInt32* m_faceAdjencentEdgeNormal;
-
+	
 	dgInt32 m_globalIndexCount;
-	dgInt32 m_globalUserAttribute[DG_MAX_COLLIDING_FACES]{};
-	dgInt32 m_globalFaceIndexCount[DG_MAX_COLLIDING_FACES]{};
-	dgInt32 m_globalFaceNormalIndex[DG_MAX_COLLIDING_FACES]{};
-	dgFloat32 m_globalFaceMaxSize[DG_MAX_COLLIDING_FACES]{};
-	dgInt32 m_globalFaceVertexIndex[DG_MAX_COLLIDING_VERTEX]{};
-	dgInt32 m_globalAdjencentEdgeNormal[DG_MAX_COLLIDING_VERTEX]{};
+	dgInt32 m_globalUserAttribute[DG_MAX_COLLIDING_FACES];
+	dgInt32 m_globalFaceIndexCount[DG_MAX_COLLIDING_FACES];
+	dgInt32 m_globalFaceNormalIndex[DG_MAX_COLLIDING_FACES];
+	dgFloat32 m_globalFaceMaxSize[DG_MAX_COLLIDING_FACES];
+	dgInt32 m_globalFaceVertexIndex[DG_MAX_COLLIDING_VERTEX];
+	dgInt32 m_globalAdjencentEdgeNormal[DG_MAX_COLLIDING_VERTEX];
 
-
+	
 }DG_GCC_VECTOR_ALIGMENT;
 
-DG_MSC_VECTOR_ALIGMENT
+DG_MSC_VECTOR_ALIGMENT 
 class dgCollisionMeshRayHitDesc
 {
 	public:
@@ -79,8 +79,8 @@ class dgCollisionMeshRayHitDesc
 	{
 	}
 
-	dgVector m_localP0;
-	dgVector m_localP1;
+	dgVector m_localP0; 
+	dgVector m_localP1; 
 	dgVector m_normal;
 	dgUnsigned32 m_userId;
 	void*  m_userData;
@@ -89,7 +89,7 @@ class dgCollisionMeshRayHitDesc
 }DG_GCC_VECTOR_ALIGMENT;
 
 
-class dgCollisionMesh: public dgCollision
+class dgCollisionMesh: public dgCollision  
 {
 	public:
 	class DG_CLIPPED_FACE_EDGE
@@ -101,31 +101,31 @@ class dgCollisionMesh: public dgCollision
 		dgInt32 m_incidentVertex;
 	};
 
-	DG_MSC_VECTOR_ALIGMENT
+	DG_MSC_VECTOR_ALIGMENT 
 	class dgGetVertexListIndexList
 	{
 		public:
 		dgInt32* m_indexList;
 		dgInt32* m_userDataList;
 		dgFloat32* m_veterxArray;
-		dgInt32 m_triangleCount;
+		dgInt32 m_triangleCount; 
 		dgInt32 m_maxIndexCount;
 		dgInt32 m_vertexCount;
 		dgInt32 m_vertexStrideInBytes;
 	}DG_GCC_VECTOR_ALIGMENT;
 
-	DG_MSC_VECTOR_ALIGMENT
-	class dgCollisionConvexPolygon: public dgCollisionConvex
+	DG_MSC_VECTOR_ALIGMENT 
+	class dgCollisionConvexPolygon: public dgCollisionConvex	
 	{
 		public:
 		dgCollisionConvexPolygon (dgMemoryAllocator* const allocator);
 		~dgCollisionConvexPolygon ();
-
+		
 		virtual dgInt32 CalculateSignature () const;
 		virtual void Serialize(dgSerialize callback, void* const userData) const;
 		virtual void SetCollisionBBox (const dgVector& p0, const dgVector& p1);
 		virtual dgFloat32 RayCast (const dgVector& localP0, const dgVector& localP1, dgContactPoint& contactOut, OnRayPrecastAction preFilter, const dgBody* const body, void* const userData) const;
-		virtual bool OOBBTest (const dgMatrix& matrix, const dgCollisionConvex* const shape, void* const cacheOrder) const;
+		virtual bool OOBBTest (const dgMatrix& matrix, const dgCollisionConvex* const shape, void* const cacheOrder) const; 
 
 		virtual dgVector SupportVertex (const dgVector& dir) const;
 		virtual dgVector SupportVertexSimd (const dgVector& dir) const;
@@ -134,7 +134,7 @@ class dgCollisionMesh: public dgCollision
 		virtual dgInt32 CalculatePlaneIntersectionSimd (const dgVector& normal, const dgVector& point, dgVector* const contactsOut) const;
 
 		virtual dgFloat32 GetVolume () const;
-		virtual dgFloat32 GetBoxMinRadius () const;
+		virtual dgFloat32 GetBoxMinRadius () const; 
 		virtual dgFloat32 GetBoxMaxRadius () const;
 		virtual void CalculateInertia (dgVector& inertia, dgVector& origin) const;
 
@@ -151,7 +151,7 @@ class dgCollisionMesh: public dgCollision
 		bool PointToPolygonDistance (const dgVector& point, dgFloat32 radius, dgVector& out);
 		bool DistanceToOrigen (const dgMatrix& matrix, const dgVector& scale, dgFloat32 radius, dgVector& out);
 		dgFloat32 MovingPointToPolygonContact (const dgVector& p, const dgVector& veloc, dgFloat32 radius, dgContactPoint& contact);
-
+		
 		void CalculateNormal();
 		void CalculateNormalSimd();
 
@@ -179,7 +179,7 @@ class dgCollisionMesh: public dgCollision
 
 	virtual void* GetUserData () const;
 	virtual dgFloat32 GetVolume () const;
-	virtual dgFloat32 GetBoxMinRadius () const;
+	virtual dgFloat32 GetBoxMinRadius () const; 
 	virtual dgFloat32 GetBoxMaxRadius () const;
 	virtual void CalculateInertia (dgVector& inertia, dgVector& origin) const;
 	virtual void GetVertexListIndexList (const dgVector& p0, const dgVector& p1, dgGetVertexListIndexList &data) const = 0;
@@ -187,8 +187,8 @@ class dgCollisionMesh: public dgCollision
 	virtual void GetCollidingFaces (dgPolygonMeshDesc* const data) const = 0;
 	virtual void GetCollidingFacesSimd (dgPolygonMeshDesc* const data) const = 0;
 
-	dgCollisionMeshCollisionCallback GetDebugCollisionCallback() const { return m_debugCallback;}
-//	dgCollisionMeshUserRayCastCallback GetDebugRayCastCallback() const { return m_userRayCastCallback;}
+	dgCollisionMeshCollisionCallback GetDebugCollisionCallback() const { return m_debugCallback;} 
+//	dgCollisionMeshUserRayCastCallback GetDebugRayCastCallback() const { return m_userRayCastCallback;} 
 
 	protected:
 	virtual void SetCollisionBBox (const dgVector& p0, const dgVector& p1);
@@ -198,7 +198,7 @@ class dgCollisionMesh: public dgCollision
 	dgVector SupportVertex (const dgVector& dir) const;
 	virtual void CalcAABB (const dgMatrix &matrix, dgVector& p0, dgVector& p1) const;
 	virtual void CalcAABBSimd (const dgMatrix &matrix, dgVector& p0, dgVector& p1) const;
-	virtual bool OOBBTest (const dgMatrix& matrix, const dgCollisionConvex* const shape, void* const cacheOrder) const;
+	virtual bool OOBBTest (const dgMatrix& matrix, const dgCollisionConvex* const shape, void* const cacheOrder) const; 
 
 
 	virtual void DebugCollision (const dgMatrix& matrix, OnDebugCollisionMeshCallback callback, void* const userData) const;
@@ -207,7 +207,7 @@ class dgCollisionMesh: public dgCollision
 	virtual dgFloat32 RayCast (const dgVector& localP0, const dgVector& localP1, dgContactPoint& contactOut, OnRayPrecastAction preFilter, const dgBody* const body, void* const userData) const = 0;
 	virtual dgFloat32 RayCastSimd (const dgVector& localP0, const dgVector& localP1, dgContactPoint& contactOut, OnRayPrecastAction preFilter, const dgBody* const body, void* const userData) const = 0;
 
-	dgInt32 CalculatePlaneIntersection (const dgFloat32* vertex, const dgInt32* index, dgInt32 indexCount, dgInt32 strideInFloat,
+	dgInt32 CalculatePlaneIntersection (const dgFloat32* vertex, const dgInt32* index, dgInt32 indexCount, dgInt32 strideInFloat, 
 										const dgPlane& localPlane, dgVector* const contactsOut) const;
 
 
@@ -222,15 +222,15 @@ class dgCollisionMesh: public dgCollision
 	dgVector m_boxSize;
 	dgVector m_boxOrigin;
 
-	dgMemoryAllocator* m_allocator;
+	dgMemoryAllocator* m_allocator; 
 	dgCollisionMeshCollisionCallback m_debugCallback;
 //	dgCollisionMeshUserRayCastCallback m_userRayCastCallback;
-	dgCollisionConvexPolygon* m_polygon[DG_MAXIMUN_THREADS];
+	dgCollisionConvexPolygon* m_polygon[DG_MAXIMUN_THREADS];	
 
 	friend class dgWorld;
 };
 
 
 
-#endif
+#endif 
 

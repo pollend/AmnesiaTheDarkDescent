@@ -85,7 +85,7 @@ add_library(Newton STATIC
   
   newton/Newton.cpp
   newton/NewtonClass.cpp
-  )
+)
 
 if(WIN32)
 	target_compile_definitions(Newton PRIVATE "_NEWTON_USE_LIB=1")

@@ -1,18 +1,31 @@
 cmake_minimum_required (VERSION 3.0)
 project (AngelScript)
 
+if (MSVC)
+    enable_language(ASM_MASM)
+endif()
+
 set(AngelScript_VERSION_MAJOR 2)
 set(AngelScript_VERSION_MINOR 19)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
+set(ASM_SORUCES)
+if (MSVC)
+  set(ASM_SORUCES
+    sources/as_callfunc_x64_msvc_asm.asm)  # etc for all source files
+    set_source_files_properties(${ASM_SORUCES} PROPERTIES LANGUAGE ASM_MASM)
+    set_source_files_properties(${ASM_SORUCES} PROPERTIES COMPILE_DEFINITIONS  "_M_X64")
+endif()
+
 add_library(AngelScript STATIC
+  ${ASM_SORUCES}
   sources/as_arrayobject.cpp
   sources/as_atomic.cpp
+  # sources/as_callfunc_arm_msvc.asm
   sources/as_builder.cpp
   sources/as_bytecode.cpp
   sources/as_callfunc_arm_gcc.S
-  sources/as_callfunc_arm_msvc.asm
   sources/as_callfunc_arm_xcode.s
   sources/as_callfunc_arm.cpp
   sources/as_callfunc_mips.cpp
@@ -20,7 +33,6 @@ add_library(AngelScript STATIC
   sources/as_callfunc_ppc.cpp
   sources/as_callfunc_sh4.cpp
   sources/as_callfunc_x64_gcc.cpp
-  sources/as_callfunc_x64_msvc_asm.asm
   sources/as_callfunc_x64_msvc.cpp
   sources/as_callfunc_x86.cpp
   sources/as_callfunc_xenon.cpp

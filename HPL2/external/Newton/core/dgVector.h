@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -36,29 +36,29 @@ class dgTemplateVector
 	public:
 	dgTemplateVector ();
 	dgTemplateVector (const T *ptr);
-	dgTemplateVector (T m_x, T m_y, T m_z, T m_w);
+	dgTemplateVector (T m_x, T m_y, T m_z, T m_w); 
 	dgTemplateVector Scale (T s) const;
 	dgTemplateVector Scale4 (T s) const;
 
 	T& operator[] (dgInt32 i);
 	const T& operator[] (dgInt32 i) const;
 
-	dgTemplateVector operator+ (const dgTemplateVector &A) const;
-	dgTemplateVector operator- (const dgTemplateVector &A) const;
+	dgTemplateVector operator+ (const dgTemplateVector &A) const; 
+	dgTemplateVector operator- (const dgTemplateVector &A) const; 
 	dgTemplateVector &operator+= (const dgTemplateVector &A);
-	dgTemplateVector &operator-= (const dgTemplateVector &A);
+	dgTemplateVector &operator-= (const dgTemplateVector &A); 
 
 	// return dot product
-	T operator% (const dgTemplateVector &A) const;
+	T operator% (const dgTemplateVector &A) const; 
 
 	// return cross product
-	dgTemplateVector operator* (const dgTemplateVector &B) const;
+	dgTemplateVector operator* (const dgTemplateVector &B) const; 
 
 	// return dot 4d dot product
 	dgTemplateVector Add4 (const dgTemplateVector &A) const;
 	dgTemplateVector Sub4 (const dgTemplateVector &A) const;
-	T DotProduct4 (const dgTemplateVector &A) const;
-	dgTemplateVector CrossProduct4 (const dgTemplateVector &A, const dgTemplateVector &B) const;
+	T DotProduct4 (const dgTemplateVector &A) const; 
+	dgTemplateVector CrossProduct4 (const dgTemplateVector &A, const dgTemplateVector &B) const; 
 
 	// component wise multiplication
 	dgTemplateVector CompProduct (const dgTemplateVector &A) const;
@@ -88,7 +88,7 @@ class dgVector: public dgTemplateVector<dgFloat32>
 #endif
 	dgVector (const dgTemplateVector<dgFloat32>& v);
 	dgVector (const dgFloat32 *ptr);
-	dgVector (dgFloat32 x, dgFloat32 y, dgFloat32 z, dgFloat32 w);
+	dgVector (dgFloat32 x, dgFloat32 y, dgFloat32 z, dgFloat32 w); 
 
 	dgFloat32 DotProductSimd (const dgVector& A) const;
 	dgVector CrossProductSimd (const dgVector &A) const;
@@ -107,7 +107,7 @@ class dgBigVector: public dgTemplateVector<dgFloat64>
 #ifndef __USE_DOUBLE_PRECISION__
 	dgBigVector (const dgFloat64 *ptr);
 #endif
-	dgBigVector (dgFloat64 x, dgFloat64 y, dgFloat64 z, dgFloat64 w);
+	dgBigVector (dgFloat64 x, dgFloat64 y, dgFloat64 z, dgFloat64 w); 
 }DG_GCC_VECTOR_ALIGMENT;
 
 
@@ -128,7 +128,7 @@ dgTemplateVector<T>::dgTemplateVector (const T *ptr)
 }
 
 template<class T>
-dgTemplateVector<T>::dgTemplateVector (T x, T y, T z, T w)
+dgTemplateVector<T>::dgTemplateVector (T x, T y, T z, T w) 
 {
 	m_x = x;
 	m_y = y;
@@ -143,7 +143,7 @@ T& dgTemplateVector<T>::operator[] (dgInt32 i)
 	_ASSERTE (i < 4);
 	_ASSERTE (i >= 0);
 	return (&m_x)[i];
-}
+}	
 
 template<class T>
 const T& dgTemplateVector<T>::operator[] (dgInt32 i) const
@@ -173,7 +173,7 @@ dgTemplateVector<T> dgTemplateVector<T>::operator+ (const dgTemplateVector<T> &B
 }
 
 template<class T>
-dgTemplateVector<T>& dgTemplateVector<T>::operator+= (const dgTemplateVector<T> &A)
+dgTemplateVector<T>& dgTemplateVector<T>::operator+= (const dgTemplateVector<T> &A) 
 {
 	m_x += A.m_x;
 	m_y += A.m_y;
@@ -189,7 +189,7 @@ dgTemplateVector<T> dgTemplateVector<T>::operator- (const dgTemplateVector<T> &A
 }
 
 template<class T>
-dgTemplateVector<T>& dgTemplateVector<T>::operator-= (const dgTemplateVector<T> &A)
+dgTemplateVector<T>& dgTemplateVector<T>::operator-= (const dgTemplateVector<T> &A) 
 {
 	m_x -= A.m_x;
 	m_y -= A.m_y;
@@ -247,11 +247,11 @@ dgTemplateVector<T> dgTemplateVector<T>::CrossProduct4 (const dgTemplateVector &
 		array[2][i] = B[i];
 		array[3][i] = T (1.0f);
 	}
-
+	
 	dgTemplateVector<T> normal;
 	T sign = T (-1.0f);
 	for (dgInt32 i = 0; i < 4; i ++)  {
-
+		
 		for (dgInt32 j = 0; j < 3; j ++) {
 			dgInt32 k0 = 0;
 			for (dgInt32 k = 0; k < 4; k ++) {
@@ -265,7 +265,7 @@ dgTemplateVector<T> dgTemplateVector<T>::CrossProduct4 (const dgTemplateVector &
 		T y = cofactor[0][1] * (cofactor[1][2] * cofactor[2][0] - cofactor[1][0] * cofactor[2][2]);
 		T z = cofactor[0][2] * (cofactor[1][0] * cofactor[2][1] - cofactor[1][1] * cofactor[2][0]);
 		T det = x + y + z;
-
+		
 		normal[i] = sign * det;
 		sign *= T (-1.0f);
 	}
@@ -315,7 +315,7 @@ DG_INLINE dgVector::dgVector(const simd_type& val)
 }
 #endif
 
-DG_INLINE dgVector::dgVector (dgFloat32 x, dgFloat32 y, dgFloat32 z, dgFloat32 w)
+DG_INLINE dgVector::dgVector (dgFloat32 x, dgFloat32 y, dgFloat32 z, dgFloat32 w) 
 	:dgTemplateVector<dgFloat32>(x, y, z, w)
 {
 	_ASSERTE (dgCheckVector ((*this)));
@@ -341,9 +341,9 @@ DG_INLINE dgVector dgVector::CrossProductSimd (const dgVector &e10) const
 {
 #ifdef DG_BUILD_SIMD_CODE
 	const dgVector& e21 = *this;
-	return dgVector(simd_mul_sub_v (simd_mul_v (simd_permut_v((simd_type&)e21, (simd_type&)e21, PURMUT_MASK(3, 0, 2, 1)), simd_permut_v((simd_type&)e10, (simd_type&)e10, PURMUT_MASK(3, 1, 0, 2))),
+	return dgVector(simd_mul_sub_v (simd_mul_v (simd_permut_v((simd_type&)e21, (simd_type&)e21, PURMUT_MASK(3, 0, 2, 1)), simd_permut_v((simd_type&)e10, (simd_type&)e10, PURMUT_MASK(3, 1, 0, 2))), 
 												simd_permut_v((simd_type&)e21, (simd_type&)e21, PURMUT_MASK(3, 1, 0, 2)), simd_permut_v((simd_type&)e10, (simd_type&)e10, PURMUT_MASK(3, 0, 2, 1))));
-#else
+#else 
 	return dgVector (dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f));
 #endif
 
@@ -390,7 +390,7 @@ DG_INLINE dgBigVector::dgBigVector (const dgFloat64 *ptr)
 }
 #endif
 
-DG_INLINE dgBigVector::dgBigVector (dgFloat64 x, dgFloat64 y, dgFloat64 z, dgFloat64 w)
+DG_INLINE dgBigVector::dgBigVector (dgFloat64 x, dgFloat64 y, dgFloat64 z, dgFloat64 w) 
 	:dgTemplateVector<dgFloat64>(x, y, z, w)
 {
 	_ASSERTE (dgCheckVector ((*this)));
