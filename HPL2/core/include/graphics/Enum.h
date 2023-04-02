@@ -135,8 +135,7 @@ namespace hpl
         Anisotropic
     };
 
-    enum class BlendFunc: uint32_t {
-    };
+    enum class BlendFunc: uint32_t {};
     BlendFunc CreateFromMaterialBlendMode(eMaterialBlendMode mode);
     BlendFunc CreateBlendFunction(BlendOperator type, BlendOperand src, BlendOperand dst);
     BlendOperand GetBlendOperandSrc(BlendFunc func);

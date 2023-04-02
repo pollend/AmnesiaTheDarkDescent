@@ -58,10 +58,11 @@ int hplMain(const tString &asCommandline)
 			cPlatform::CreateMessageBox(_W("Error!"),gpBase->msErrorMessage.c_str());
 			//No Exit, since it was not sure everything was created as it should.
 		}
+		hplDelete(gpBase);
+
 		return 0;
 	});
 	bootstrap.Shutdown();
-	hplDelete(gpBase);
 
 	cMemoryManager::LogResults();
 

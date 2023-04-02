@@ -64,7 +64,6 @@ namespace hpl::window::internal {
 
     NativeWindowHandler Initialize(const WindowStyle& style) {
         auto ptr = NativeWindowHandler::Ptr(new NativeWindowImpl(), [](void* ptr) {
-            BX_ASSERT(false, "Destroying !!")
             auto* impl = static_cast<NativeWindowImpl*>(ptr);
             impl->m_internalWindowEvent.DisconnectAllHandlers();
             impl->m_windowEvent.DisconnectAllHandlers();
@@ -173,6 +172,16 @@ namespace hpl::window::internal {
         eventHandle.Connect(impl->m_windowEvent);
     }
 
+    WindowInternalEvent& NativeInternalEvent(NativeWindowHandler& handler) {
+        auto impl = static_cast<NativeWindowImpl*>(handler.Get());
+        return impl->m_internalWindowEvent;
+    }
+
+    WindowEvent& NativeWindowEvent(NativeWindowHandler& handler) {
+        auto impl = static_cast<NativeWindowImpl*>(handler.Get());
+        return impl->m_windowEvent;
+    }
+
     void SetWindowTitle(NativeWindowHandler& handler, const std::string_view title) {
         auto impl = static_cast<NativeWindowImpl*>(handler.Get());
 
@@ -225,19 +234,6 @@ namespace hpl::window::internal {
             SDL_SetRelativeMouseMode(SDL_FALSE);
         });
     }
-
-
-    // WindowStyle GetWindowStyle(NativeWindowHandler& handler) {
-        
-    // }
-    // void SetWindowStyle(NativeWindowHandler& handler, WindowStyle style) {
-    //     auto impl = static_cast<NativeWindowImpl*>(handler.Get());
-    //     InternalHandleCmd(*impl, [style](NativeWindowImpl& impl) {
-    //         SDL_SetWindowResizable(impl.m_window, any(style & WindowStyle::WindowStyleResizable) ? SDL_TRUE : SDL_FALSE);
-    //         SDL_SetWindowBordered(impl.m_window, any(style & WindowStyle::WindowStyleBorderless) ? SDL_FALSE : SDL_TRUE);
-    //     });
-    // }
-
 
     WindowStatus GetWindowStatus(NativeWindowHandler& handler) {
         auto impl = static_cast<NativeWindowImpl*>(handler.Get());

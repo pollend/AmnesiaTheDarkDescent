@@ -40,29 +40,21 @@ namespace hpl {
 		init.resolution.height = windowSize.y;
 		init.resolution.reset  = BGFX_RESET_VSYNC;
         bgfx::init(init);
-        return bootstrap->m_handler(self);
+        int32_t result = bootstrap->m_handler(self);
+        self->shutdown();
+        bootstrap->m_primaryViewport->Invalidate();
+        bgfx::shutdown();
+        return result;
     }
 
     void Bootstrap::Run(std::function<int32_t(bx::Thread*)> handler) {
         m_handler = handler;
-        volatile bool isRunning = true;
-        hpl::window::WindowEvent::Handler windowEventHandler = hpl::window::WindowEvent::Handler([&](window::WindowEventPayload& payload) {
-            switch(payload.m_type) {
-                case window::WindowEventType::QuitEvent:
-                    isRunning = false;
-                    break;
-                default:
-                    break;
-            }
-        });
-        m_window.ConnectWindowEventHandler(windowEventHandler);
-
         m_thread.init(BootstrapThreadHandler, this);
-        while(isRunning) {
-            bgfx::renderFrame(1000);
+        while(m_thread.isRunning()) {
             m_window.Process();
+            bgfx::renderFrame();
         }
-        m_thread.shutdown();
+
     }
 
     void Bootstrap::Initialize(BootstrapConfiguration configuration) {
@@ -95,7 +87,6 @@ namespace hpl {
     }
 
     void Bootstrap::Shutdown() {
-        while (bgfx::RenderFrame::NoContext != bgfx::renderFrame() ) {};
         
         Interface<hpl::PrimaryViewport>::UnRegister(m_primaryViewport.get());
         Interface<input::InputManager>::UnRegister(&m_inputManager);

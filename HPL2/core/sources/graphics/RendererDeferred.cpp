@@ -609,14 +609,10 @@ namespace hpl {
 			shaderInput.m_configuration.m_write = Write::RGBA;
 			shaderInput.m_configuration.m_cull = Cull::CounterClockwise;
 
-			// shaderInput.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
-			// shaderInput.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
 			shaderInput.m_modelTransform = obj->GetModelMatrixPtr() ?  obj->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity.GetTranspose();
 			shaderInput.m_normalMtx = cMath::MatrixInverse(cMath::MatrixMul(shaderInput.m_modelTransform, viewConfig.m_view)); // matrix is already transposed
 
 			GraphicsContext::DrawRequest drawRequest {layoutInput, shaderInput};
-			// drawRequest.m_width = mvScreenSize.x;
-			// drawRequest.m_height = mvScreenSize.y;
 			context.Submit(view, drawRequest);
 		});
 	}
@@ -642,16 +638,9 @@ namespace hpl {
 			shaderInput.m_configuration.m_rgbBlendFunc = CreateFromMaterialBlendMode(pMaterial->GetBlendMode());
 			shaderInput.m_configuration.m_alphaBlendFunc = CreateFromMaterialBlendMode(pMaterial->GetBlendMode());
 
-			// shaderInput.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
-			// shaderInput.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
 			shaderInput.m_modelTransform = obj->GetModelMatrixPtr() ?  obj->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity.GetTranspose();
 
-			// shaderInput.m_configuration.m_alphaBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
-			
 			GraphicsContext::DrawRequest drawRequest {layoutInput, shaderInput};
-			// drawRequest.m_width = mvScreenSize.x;
-			// drawRequest.m_height = mvScreenSize.y;
-
 			context.Submit(view, drawRequest);
 		});
 	}
@@ -953,23 +942,12 @@ namespace hpl {
 			RenderFullScreenFogPass(context, viewport, sharedData.m_output_target);
 		}
 
-		// TODO: MP need to implement this
-		//  RenderEdgeSmooth();
-		// if(mbEdgeSmoothLoaded && mpCurrentSettings->mbUseEdgeSmooth) {
-		// 	RenderEdgeSmoothPass(context, m_edgeSmooth_LinearDepth);
-		// }
 		{
 			cViewport::PostSolidDrawPayload event;
-			// cMatrixf view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
-			// cMatrixf proj = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
-			// ImmediateDrawBatch batch = context.startImmediateBatch(sharedData.m_output_target,
-			// 	view,
-			// 	proj);
 			event.m_frustum = mpCurrentFrustum;
 			event.m_context = &context;
 			event.m_outputTarget = &sharedData.m_output_target;
 			viewport.SignalDraw(event);
-			// context.flush(batch); // flush the batch
 		}
 		RunCallback(eRendererMessage_PostSolid, handler);
 
@@ -982,14 +960,11 @@ namespace hpl {
 			cViewport::PostTranslucenceDrawPayload event;
 			cMatrixf view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
 			cMatrixf proj = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
-			// ImmediateDrawBatch batch = context.startImmediateBatch(sharedData.m_output_target,
-			// 	view,
-			// 	proj);
+
 			event.m_frustum = mpCurrentFrustum;
 			event.m_context = &context;
 			event.m_outputTarget = &sharedData.m_output_target;
 			viewport.SignalDraw(event);
-			// context.flush(b atch); // flush the batch
 		}
 
 	}

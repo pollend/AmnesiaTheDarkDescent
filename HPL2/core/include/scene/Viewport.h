@@ -280,6 +280,10 @@ namespace hpl {
             return m_renderTarget;
         }
 
+        inline void Invalidate() {
+            m_renderTarget.Invalidate();
+        }
+
         inline void ConnectViewportChanged(ViewportChange::Handler& handler) {
             handler.Connect(m_viewportChanged);
         }

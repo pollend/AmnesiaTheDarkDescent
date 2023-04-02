@@ -40,11 +40,9 @@ namespace hpl
 
     template <typename... Params>
     class EventHandler;
-
-    enum class ConnectionType: uint8_t {
-        Direct, // handler will be connected directly to the event
-        QueueConnection, // handler will be queued to be connected to the event need to call Process() to process the queue
-    };
+    
+    template <typename... Params>
+    class QueuedEventLoopHandler;
 
     template <typename... Params>
     class Event final
@@ -54,8 +52,8 @@ namespace hpl
     public:
 
         using Callback = std::function<void(Params...)>;
-        using Handler = EventHandler<Params...>;       
-
+        using Handler = EventHandler<Params...>;
+        using QueuedEventHandler = QueuedEventLoopHandler<Params...>;
         
         Event() = default;
         Event(Event&& rhs);
@@ -115,7 +113,7 @@ namespace hpl
         // (except for on assignment since that will also add the handle to the event; i.e. there is no way to unbind the callback after being added to an event)
         EventHandler() = default;
         explicit EventHandler(std::nullptr_t);
-        explicit EventHandler(Callback callback, ConnectionType connection = ConnectionType::Direct);
+        explicit EventHandler(Callback callback);
         EventHandler(const EventHandler& rhs);
         EventHandler(EventHandler&& rhs);
 
@@ -147,25 +145,17 @@ namespace hpl
         const Event<Params...>* m_event = nullptr; //< The connected event
         int32_t m_index = 0; //< Index into the add or handler vectors (negative means pending add)
         Callback m_callback; //< The lambda to invoke during events
-        ConnectionType m_connectionType = ConnectionType::Direct; //< The connection type
-        std::queue<std::tuple<typename std::remove_reference<Params>::type...>> m_queuedEvents; //< The queued events
-        std::mutex m_mutex; //< Mutex used to guard m_queuedEvents
     };
 
-
-
     template <typename... Params>
-    EventHandler<Params...>::EventHandler(Callback callback, ConnectionType connection)
-        : m_callback(std::move(callback)),
-        m_connectionType(connection)
+    EventHandler<Params...>::EventHandler(Callback callback)
+        : m_callback(std::move(callback))
     {
     }
-
 
     template <typename... Params>
     EventHandler<Params...>::EventHandler(const EventHandler& rhs)
         : m_callback(rhs.m_callback)
-        , m_connectionType(rhs.m_connectionType)
         , m_event(rhs.m_event)
     {
         // Copy the callback and event, then perform a Connect to the event
@@ -180,12 +170,10 @@ namespace hpl
         }
     }
 
-
     template <typename... Params>
     EventHandler<Params...>::EventHandler(EventHandler&& rhs)
         : m_event(rhs.m_event)
         , m_index(rhs.m_index)
-        , m_connectionType(rhs.m_connectionType)
         , m_callback(std::move(rhs.m_callback))
     {
         // Moves all of the data of the r-value handle, fixup the event to point to them, and revert the r-value handle to it's original construction state
@@ -202,7 +190,6 @@ namespace hpl
         Disconnect();
     }
 
-
     template <typename... Params>
     EventHandler<Params...>& EventHandler<Params...>::operator=(const EventHandler& rhs)
     {
@@ -211,9 +198,7 @@ namespace hpl
         {
             Disconnect();
             m_callback = rhs.m_callback;
-            m_connectionType = rhs.m_connectionType;
             m_event = rhs.m_event;
-            m_connectionType = rhs.m_connectionType;
             // Copy the callback and event, then perform a Connect to the event
             if (m_callback && m_event)
             {
@@ -239,7 +224,6 @@ namespace hpl
             // Moves all of the data of the r-value handle, fixup the event to point to them, and revert the r-value handle to it's original construction state
             m_event = rhs.m_event;
             m_index = rhs.m_index;
-            m_connectionType = rhs.m_connectionType;
             m_callback = std::move(rhs.m_callback);
 
             rhs.m_event = nullptr;
@@ -291,13 +275,6 @@ namespace hpl
         if (!m_callback)
         {
             return;
-        }
-
-        std::lock_guard<std::mutex> lock(m_mutex);
-        while(!m_queuedEvents.empty()) {
-            auto& data = m_queuedEvents.front();
-            std::apply(m_callback, data);
-            m_queuedEvents.pop();
         }
     }
 
@@ -449,12 +426,7 @@ namespace hpl
         {
             if (handler)
             {
-                if(handler->m_connectionType == ConnectionType::Direct) {
-                    handler->m_callback(params...);
-                } else {
-                    std::lock_guard<std::mutex> lock(handler->m_mutex);
-                    handler->m_queuedEvents.push(std::tuple<Params...>(params...));
-                }
+                handler->m_callback(params...);
             }
         }
 

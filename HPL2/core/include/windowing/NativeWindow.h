@@ -99,6 +99,9 @@ namespace hpl::window {
         void ConnectInternalEventHandler(NativeWindowHandler& handler, WindowInternalEvent::Handler& eventHandle);
         void ConnectionWindowEventHandler(NativeWindowHandler& handler, WindowEvent::Handler& eventHandle);
 
+        WindowInternalEvent& NativeInternalEvent(NativeWindowHandler& handler);
+        WindowEvent& NativeWindowEvent(NativeWindowHandler& handler);
+
         NativeWindowHandler Initialize(const WindowStyle& style);
         void SetWindowTitle(NativeWindowHandler& handler, const std::string_view title);
         void SetWindowSize(NativeWindowHandler& handler, const cVector2l& size);
@@ -107,9 +110,6 @@ namespace hpl::window {
         void* NativeDisplayHandle(NativeWindowHandler& handler);
         cVector2l GetWindowSize(NativeWindowHandler& handler);
         WindowStatus GetWindowStatus(NativeWindowHandler& handler);
-
-        // WindowStyle GetWindowStyle(NativeWindowHandler& handler);
-        // void SetWindowStyle(NativeWindowHandler& handler, WindowStyle style);
 
         void WindowGrabCursor(NativeWindowHandler& handler);
         void WindowReleaseCursor(NativeWindowHandler& handler);
@@ -176,6 +176,16 @@ namespace hpl::window {
         inline void ConnectInternalEventHandler(internal::WindowInternalEvent::Handler& handler) {
             BX_ASSERT(m_impl, "NativeWindowHandle is null")
             internal::ConnectInternalEventHandler(m_impl, handler);
+        }
+
+        inline internal::WindowInternalEvent& NativeInternalEvent() {
+            BX_ASSERT(m_impl, "NativeWindowHandle is null")
+            return internal::NativeInternalEvent(m_impl);
+        }
+
+        inline WindowEvent& NativeWindowEvent() {
+            BX_ASSERT(m_impl, "NativeWindowHandle is null")
+            return internal::NativeWindowEvent(m_impl);
         }
 
         inline WindowStatus GetWindowStatus() {

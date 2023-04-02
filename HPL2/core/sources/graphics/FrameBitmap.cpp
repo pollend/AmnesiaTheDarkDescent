@@ -478,7 +478,6 @@ namespace hpl {
 			mpFrameTexture->GetTexture()->Invalidate();
 			desc.m_name = mpFrameTexture->GetTexture()->GetName().c_str();
 			Image::InitializeFromBitmap(*mpFrameTexture->GetTexture(), *mpBitmap, desc);
-			
 
 			mbIsUpdated = false;
 			return true;

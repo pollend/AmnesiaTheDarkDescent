@@ -6,7 +6,6 @@
 
 #include "math/Math.h"
 #include "math/MathTypes.h"
-
 #include "scene/Camera.h"
 
 #include "graphics/Enum.h"
@@ -17,13 +16,15 @@
 #include <bgfx/bgfx.h>
 #include <bgfx/defines.h>
 
-#include <bx/debug.h>
-#include <algorithm>
-#include <variant>
-#include <cstddef>
-#include <cstdint>
 #include <absl/container/inlined_vector.h>
 #include <absl/strings/string_view.h>
+
+#include <bx/debug.h>
+
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <variant>
 
 #include "graphics/Layouts.h"
 
@@ -34,332 +35,26 @@ namespace hpl {
         m_configuration.m_alphaBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::Zero);
     }
 
-    uint64_t convertBGFXStencil(const StencilTest& stencilTest) {
-        if (!IsValidStencilTest(stencilTest)) {
-            return BGFX_STENCIL_NONE;
-        }
-        return BGFX_STENCIL_FUNC_REF(((uint32_t)stencilTest.m_ref)) | BGFX_STENCIL_FUNC_RMASK(((uint32_t)stencilTest.m_mask)) |
-            ([&]() -> uint64_t {
-                   switch (stencilTest.m_sfail) {
-                   case StencilFail::Zero:
-                       return BGFX_STENCIL_OP_FAIL_S_ZERO;
-                   case StencilFail::Keep:
-                       return BGFX_STENCIL_OP_FAIL_S_KEEP;
-                   case StencilFail::Replace:
-                       return BGFX_STENCIL_OP_FAIL_S_REPLACE;
-                   case StencilFail::IncrSat:
-                       return BGFX_STENCIL_OP_FAIL_S_INCRSAT;
-                   case StencilFail::DecrSat:
-                       return BGFX_STENCIL_OP_FAIL_S_DECRSAT;
-                   case StencilFail::Invert:
-                       return BGFX_STENCIL_OP_FAIL_S_INVERT;
-                   case StencilFail::Incr:
-                       return BGFX_STENCIL_OP_FAIL_S_INCR;
-                   case StencilFail::Decr:
-                       return BGFX_STENCIL_OP_FAIL_S_DECR;
-                   default:
-                       break;
-                   }
-                   return 0;
-               })() |
-            ([&]() -> uint64_t {
-                   switch (stencilTest.m_dpfail) {
-                   case StencilDepthFail::Zero:
-                       return BGFX_STENCIL_OP_FAIL_Z_ZERO;
-                   case StencilDepthFail::Keep:
-                       return BGFX_STENCIL_OP_FAIL_Z_KEEP;
-                   case StencilDepthFail::Replace:
-                       return BGFX_STENCIL_OP_FAIL_Z_REPLACE;
-                   case StencilDepthFail::IncrSat:
-                       return BGFX_STENCIL_OP_FAIL_Z_INCRSAT;
-                   case StencilDepthFail::DecrSat:
-                       return BGFX_STENCIL_OP_FAIL_Z_DECRSAT;
-                   case StencilDepthFail::Invert:
-                       return BGFX_STENCIL_OP_FAIL_Z_INVERT;
-                   case StencilDepthFail::Incr:
-                       return BGFX_STENCIL_OP_FAIL_Z_INCR;
-                   case StencilDepthFail::Decr:
-                       return BGFX_STENCIL_OP_FAIL_Z_DECR;
-                   default:
-                       break;
-                   }
-                   return 0;
-               })() |
-            ([&]() -> uint64_t {
-                   switch (stencilTest.m_dppass) {
-                   case StencilDepthPass::Zero:
-                       return BGFX_STENCIL_OP_PASS_Z_ZERO;
-                   case StencilDepthPass::Keep:
-                       return BGFX_STENCIL_OP_PASS_Z_KEEP;
-                   case StencilDepthPass::Replace:
-                       return BGFX_STENCIL_OP_PASS_Z_REPLACE;
-                   case StencilDepthPass::IncrSat:
-                       return BGFX_STENCIL_OP_PASS_Z_INCRSAT;
-                   case StencilDepthPass::DecrSat:
-                       return BGFX_STENCIL_OP_PASS_Z_DECRSAT;
-                   case StencilDepthPass::Invert:
-                       return BGFX_STENCIL_OP_PASS_Z_INVERT;
-                   case StencilDepthPass::Incr:
-                       return BGFX_STENCIL_OP_PASS_Z_INCR;
-                   case StencilDepthPass::Decr:
-                       return BGFX_STENCIL_OP_PASS_Z_DECR;
-                   default:
-                       break;
-                   }
-                   return 0;
-               })() |
-            ([&]() -> uint64_t {
-                   switch (stencilTest.m_func) {
-                   case StencilFunction::Less:
-                       return BGFX_STENCIL_TEST_LESS;
-                   case StencilFunction::LessEqual:
-                       return BGFX_STENCIL_TEST_LEQUAL;
-                   case StencilFunction::Equal:
-                       return BGFX_STENCIL_TEST_EQUAL;
-                   case StencilFunction::GreaterEqual:
-                       return BGFX_STENCIL_TEST_GEQUAL;
-                   case StencilFunction::Greater:
-                       return BGFX_STENCIL_TEST_GREATER;
-                   case StencilFunction::NotEqual:
-                       return BGFX_STENCIL_TEST_NOTEQUAL;
-                   case StencilFunction::Always:
-                       return BGFX_STENCIL_TEST_ALWAYS;
-                   default:
-                       break;
-                   }
-                   return 0;
-               })();
-    }
-
-    uint64_t convertBGFXClearOp(const ClearOp& op) {
-        uint64_t result = 0;
-        if (any(op & ClearOp::Color)) {
-            result |= BGFX_CLEAR_COLOR;
-        }
-        if (any(op & ClearOp::Depth)) {
-            result |= BGFX_CLEAR_DEPTH;
-        }
-        if (any(op & ClearOp::Stencil)) {
-            result |= BGFX_CLEAR_STENCIL;
-        }
-        return result;
-    }
-
-    uint64_t convertToState(const GraphicsContext::DrawRequest& request) {
-        auto& layout = request.m_layout;
-        auto& program = request.m_program;
-
-        return (any(program.m_configuration.m_write & Write::Depth) ? BGFX_STATE_WRITE_Z : 0) |
-            (any(program.m_configuration.m_write & Write::R) ? BGFX_STATE_WRITE_R : 0) |
-            (any(program.m_configuration.m_write & Write::G) ? BGFX_STATE_WRITE_G : 0) |
-            (any(program.m_configuration.m_write & Write::B) ? BGFX_STATE_WRITE_B : 0) |
-            (any(program.m_configuration.m_write & Write::A) ? BGFX_STATE_WRITE_A : 0) | ([&]() -> uint64_t {
-                   switch (program.m_configuration.m_depthTest) {
-                   case DepthTest::Always:
-                       return BGFX_STATE_DEPTH_TEST_ALWAYS;
-                   case DepthTest::Less:
-                       return BGFX_STATE_DEPTH_TEST_LESS;
-                   case DepthTest::LessEqual:
-                       return BGFX_STATE_DEPTH_TEST_LEQUAL;
-                   case DepthTest::Equal:
-                       return BGFX_STATE_DEPTH_TEST_EQUAL;
-                   case DepthTest::GreaterEqual:
-                       return BGFX_STATE_DEPTH_TEST_GEQUAL;
-                   case DepthTest::Greater:
-                       return BGFX_STATE_DEPTH_TEST_GREATER;
-                   case DepthTest::NotEqual:
-                       return BGFX_STATE_DEPTH_TEST_NOTEQUAL;
-                   default:
-                       break;
-                   }
-                   return 0;
-               })() |
-            ([&]() -> uint64_t {
-                   switch (program.m_configuration.m_cull) {
-                   case Cull::Clockwise:
-                       return BGFX_STATE_CULL_CW;
-                   case Cull::CounterClockwise:
-                       return BGFX_STATE_CULL_CCW;
-                   default:
-                       break;
-                   }
-                   return 0;
-               })() |
-            ([&]() -> uint64_t {
-                   switch (layout.m_drawType) {
-                   case eVertexBufferDrawType_Tri:
-                       break;
-                   case eVertexBufferDrawType_TriStrip:
-                       return BGFX_STATE_PT_TRISTRIP;
-                   case eVertexBufferDrawType_Line:
-                       return BGFX_STATE_PT_LINES;
-                   case eVertexBufferDrawType_LineStrip:
-                       return BGFX_STATE_PT_LINESTRIP;
-                   case eVertexBufferDrawType_LineLoop:
-                   case eVertexBufferDrawType_TriFan:
-                   case eVertexBufferDrawType_Quad:
-                   case eVertexBufferDrawType_QuadStrip:
-                   default:
-                       BX_ASSERT(false, "Unsupported draw type");
-                       break;
-                   }
-                   return 0;
-               })() |
-            (program.m_configuration.m_blendAlpha ? BGFX_STATE_BLEND_ALPHA : 0) | ([&] {
-                   auto mapToBGFXBlendOperator = [](BlendOperator op) -> uint64_t {
-                       switch (op) {
-                       case BlendOperator::Add:
-                           return BGFX_STATE_BLEND_EQUATION_ADD;
-                       case BlendOperator::Subtract:
-                           return BGFX_STATE_BLEND_EQUATION_SUB;
-                       case BlendOperator::ReverseSubtract:
-                           return BGFX_STATE_BLEND_EQUATION_REVSUB;
-                       case BlendOperator::Min:
-                           return BGFX_STATE_BLEND_EQUATION_MIN;
-                       case BlendOperator::Max:
-                           return BGFX_STATE_BLEND_EQUATION_MAX;
-                       default:
-                           break;
-                       }
-                       return BGFX_STATE_BLEND_EQUATION_ADD;
-                   };
-
-                   auto mapToBGFXBlendOperand = [](BlendOperand op) -> uint64_t {
-                       switch (op) {
-                       case BlendOperand::Zero:
-                           return BGFX_STATE_BLEND_ZERO;
-                       case BlendOperand::One:
-                           return BGFX_STATE_BLEND_ONE;
-                       case BlendOperand::SrcColor:
-                           return BGFX_STATE_BLEND_SRC_COLOR;
-                       case BlendOperand::InvSrcColor:
-                           return BGFX_STATE_BLEND_INV_SRC_COLOR;
-                       case BlendOperand::SrcAlpha:
-                           return BGFX_STATE_BLEND_SRC_ALPHA;
-                       case BlendOperand::InvSrcAlpha:
-                           return BGFX_STATE_BLEND_INV_SRC_ALPHA;
-                       case BlendOperand::DstAlpha:
-                           return BGFX_STATE_BLEND_DST_ALPHA;
-                       case BlendOperand::InvDestAlpha:
-                           return BGFX_STATE_BLEND_INV_DST_ALPHA;
-                       case BlendOperand::DstColor:
-                           return BGFX_STATE_BLEND_DST_COLOR;
-                       case BlendOperand::InvDestColor:
-                           return BGFX_STATE_BLEND_INV_DST_COLOR;
-                       case BlendOperand::AlphaSat:
-                           return BGFX_STATE_BLEND_SRC_ALPHA_SAT;
-                       case BlendOperand::BlendFactor:
-                           return BGFX_STATE_BLEND_FACTOR;
-                       case BlendOperand::BlendInvFactor:
-                           return BGFX_STATE_BLEND_INV_FACTOR;
-                       default:
-                       case BlendOperand::None:
-                           break;
-                       }
-                       return 0;
-                   };
-
-                   BlendFunc alphaFunc = program.m_configuration.m_alphaBlendFunc;
-                   const auto srcOperandAlpha = mapToBGFXBlendOperand(GetBlendOperandSrc(alphaFunc));
-                   const auto destOperandAlpha = mapToBGFXBlendOperand(GetBlendOperandDst(alphaFunc));
-                   const auto alphaEquation = mapToBGFXBlendOperator(GetBlendOperator(alphaFunc));
-
-                   BlendFunc rgbFunc = program.m_configuration.m_rgbBlendFunc;
-                   const auto srcOperandRgb = mapToBGFXBlendOperand(GetBlendOperandSrc(rgbFunc));
-                   const auto destOperandRgb = mapToBGFXBlendOperand(GetBlendOperandDst(rgbFunc));
-                   const auto rgbEquation = mapToBGFXBlendOperator(GetBlendOperator(rgbFunc));
-
-                   return BGFX_STATE_BLEND_FUNC_SEPARATE(srcOperandRgb, destOperandRgb, srcOperandAlpha, destOperandAlpha) |
-                       BGFX_STATE_BLEND_EQUATION_SEPARATE(rgbEquation, alphaEquation);
-               })();
-    }
-
-    void ConfigureLayoutStream(const GraphicsContext::LayoutStream& layout) {
-        uint8_t streamIndex = 0;
-        for (auto& vertexStream : layout.m_vertexStreams) {
-            if (vertexStream.m_numVertices != std::numeric_limits<uint32_t>::max()) {
-                if (bgfx::isValid(vertexStream.m_handle)) {
-                    bgfx::setVertexBuffer(streamIndex++, vertexStream.m_handle, vertexStream.m_startVertex, vertexStream.m_numVertices);
-                } else if (bgfx::isValid(vertexStream.m_dynamicHandle)) {
-                    bgfx::setVertexBuffer(
-                        streamIndex++, vertexStream.m_dynamicHandle, vertexStream.m_startVertex, vertexStream.m_numVertices);
-                } else if (bgfx::isValid(vertexStream.m_transient.handle)) {
-                    bgfx::setVertexBuffer(streamIndex++, &vertexStream.m_transient, vertexStream.m_startVertex, vertexStream.m_numVertices);
-                }
-            } else {
-                if (bgfx::isValid(vertexStream.m_handle)) {
-                    bgfx::setVertexBuffer(streamIndex++, vertexStream.m_handle);
-                } else if (bgfx::isValid(vertexStream.m_dynamicHandle)) {
-                    bgfx::setVertexBuffer(streamIndex++, vertexStream.m_dynamicHandle);
-                } else if (bgfx::isValid(vertexStream.m_transient.handle)) {
-                    bgfx::setVertexBuffer(streamIndex++, &vertexStream.m_transient);
-                }
-            }
-        }
-        if (layout.m_indexStream.m_numIndices != std::numeric_limits<uint32_t>::max()) {
-            if (bgfx::isValid(layout.m_indexStream.m_dynamicHandle)) {
-                bgfx::setIndexBuffer(
-                    layout.m_indexStream.m_dynamicHandle, layout.m_indexStream.m_startIndex, layout.m_indexStream.m_numIndices);
-            } else if (bgfx::isValid(layout.m_indexStream.m_handle)) {
-                bgfx::setIndexBuffer(layout.m_indexStream.m_handle, layout.m_indexStream.m_startIndex, layout.m_indexStream.m_numIndices);
-            } else if (bgfx::isValid(layout.m_indexStream.m_transient.handle)) {
-                bgfx::setIndexBuffer(
-                    &layout.m_indexStream.m_transient, layout.m_indexStream.m_startIndex, layout.m_indexStream.m_numIndices);
-            }
-        } else {
-            if (bgfx::isValid(layout.m_indexStream.m_dynamicHandle)) {
-                bgfx::setIndexBuffer(layout.m_indexStream.m_dynamicHandle);
-            } else if (bgfx::isValid(layout.m_indexStream.m_handle)) {
-                bgfx::setIndexBuffer(layout.m_indexStream.m_handle);
-            } else if (bgfx::isValid(layout.m_indexStream.m_transient.handle)) {
-                bgfx::setIndexBuffer(&layout.m_indexStream.m_transient);
-            }
-        }
-    }
-
-    void GraphicsContext::ConfigureProgram(const GraphicsContext::ShaderProgram& program) {
-        bgfx::setUniform(m_u_normalMtx, &program.m_normalMtx.v);
-        for (auto& uniform : program.m_uniforms) {
-            if (bgfx::isValid(uniform.m_uniformHandle)) {
-                bgfx::setUniform(uniform.m_uniformHandle, uniform.m_data, uniform.m_num);
-            }
-        }
-
-        for (auto& texture : program.m_textures) {
-            if (bgfx::isValid(texture.m_textureHandle)) {
-                bgfx::setTexture(texture.m_stage, texture.m_uniformHandle, texture.m_textureHandle);
-            }
-        }
-
-        for (auto& uavImage : program.m_uavImage) {
-            if (bgfx::isValid(uavImage.m_textureHandle)) {
-                bgfx::setImage(uavImage.m_stage, uavImage.m_textureHandle, uavImage.m_mip, uavImage.m_access, uavImage.m_format);
-            }
-        }
-    }
-
     GraphicsContext::GraphicsContext()
-        : m_current(0) {
-
-        m_windowEvent = window::WindowEvent::Handler([&](window::WindowEventPayload& payload) {
-            switch(payload.m_type) {
-				case hpl::window::WindowEventType::ResizeWindowEvent: {
-                    bgfx::reset(payload.payload.m_resizeWindow.m_width, payload.payload.m_resizeWindow.m_height); 
+        : m_current(0), 
+        m_queuedWindowEvent(BroadcastEvent::PreUpdate, Interface<window::NativeWindowWrapper>::Get()->NativeWindowEvent(), [](window::WindowEventPayload& payload) {
+            switch (payload.m_type) {
+            case hpl::window::WindowEventType::ResizeWindowEvent:
+                {
+                    bgfx::reset(payload.payload.m_resizeWindow.m_width, payload.payload.m_resizeWindow.m_height);
                     break;
                 }
-                default:
-                    break;
+            default:
+                break;
             }
-        }, ConnectionType::QueueConnection);
-        if(auto* window = Interface<window::NativeWindowWrapper>::Get()) {
-			window->ConnectWindowEventHandler(m_windowEvent);
-		}
-
+        }) {
     }
 
     GraphicsContext::~GraphicsContext() {
-        for(auto& it: m_programCache) {
-            bgfx::destroy(it.second);
+        for (auto& it : m_programCache) {
+            if(bgfx::isValid(it.second)) {
+                bgfx::destroy(it.second);
+            }
         }
     }
 
@@ -367,7 +62,6 @@ namespace hpl {
     }
 
     void GraphicsContext::Init() {
-
         m_copyProgram = resolveProgramCache<StringLiteral("vs_post_effect"), StringLiteral("fs_post_effect_copy")>();
         m_colorProgram = resolveProgramCache<StringLiteral("vs_color"), StringLiteral("fs_color")>();
         m_uvProgram = resolveProgramCache<StringLiteral("vs_basic_uv"), StringLiteral("fs_basic_uv")>();
@@ -376,47 +70,8 @@ namespace hpl {
 
     void GraphicsContext::Frame() {
         m_current = 0;
-        m_windowEvent.Process();
+        // m_windowEvent.Process();
         bgfx::frame();
-    }
-
-    void GraphicsContext::Submit(bgfx::ViewId view, const DrawRequest& request) {
-        auto& layout = request.m_layout;
-        auto& program = request.m_program;
-        ConfigureLayoutStream(layout);
-        ConfigureProgram(program);
-        if (IsValidStencilTest(program.m_configuration.m_backStencilTest) ||
-            IsValidStencilTest(program.m_configuration.m_frontStencilTest)) {
-            bgfx::setStencil(
-                convertBGFXStencil(program.m_configuration.m_frontStencilTest),
-                convertBGFXStencil(program.m_configuration.m_backStencilTest));
-        }
-        bgfx::setTransform(program.m_modelTransform.v);
-        bgfx::setState(convertToState(request));
-        bgfx::submit(view, request.m_program.m_handle);
-    }
-
-    void GraphicsContext::Submit(bgfx::ViewId view, const DrawRequest& request, bgfx::OcclusionQueryHandle query) {
-        auto& layout = request.m_layout;
-        auto& program = request.m_program;
-
-        ConfigureLayoutStream(layout);
-        ConfigureProgram(program);
-
-        if (IsValidStencilTest(program.m_configuration.m_backStencilTest) ||
-            IsValidStencilTest(program.m_configuration.m_frontStencilTest)) {
-            bgfx::setStencil(
-                convertBGFXStencil(program.m_configuration.m_frontStencilTest),
-                convertBGFXStencil(program.m_configuration.m_backStencilTest));
-        }
-        bgfx::setTransform(program.m_modelTransform.v);
-        bgfx::setState(convertToState(request));
-        bgfx::submit(view, request.m_program.m_handle, query);
-    }
-
-    void GraphicsContext::Submit(bgfx::ViewId view, const ComputeRequest& request) {
-        ConfigureProgram(request.m_program);
-        bgfx::dispatch(view, request.m_program.m_handle, request.m_numX, request.m_numY, request.m_numZ);
     }
 
     bgfx::ViewId GraphicsContext::StartPass(absl::string_view name, const ViewConfiguration& config) {
@@ -424,7 +79,7 @@ namespace hpl {
         bgfx::setViewName(view, name.data());
         if (config.m_clear.has_value()) {
             auto& clear = config.m_clear.value();
-            bgfx::setViewClear(view, convertBGFXClearOp(clear.m_clearOp), clear.m_rgba, clear.m_depth, clear.m_stencil);
+            bgfx::setViewClear(view, details::convertBGFXClearOp(clear.m_clearOp), clear.m_rgba, clear.m_depth, clear.m_stencil);
         } else {
             bgfx::setViewClear(view, BGFX_CLEAR_NONE);
         }

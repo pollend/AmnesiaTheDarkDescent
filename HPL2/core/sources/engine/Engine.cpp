@@ -592,9 +592,7 @@ namespace hpl {
 	bool cEngine::GetGameIsDone()
 	{
 		std::lock_guard<std::mutex> lk(m_mutex);
-		bool bDone = mbGameIsDone;
-
-		return bDone;
+		return mbGameIsDone;
 	}
 	//-----------------------------------------------------------------------
 

@@ -17,6 +17,7 @@ namespace hpl {
     bool any(Write write) {
         return static_cast<uint32_t>(write) != 0;
     }
+
     Write operator|(Write lhs, Write rhs) {
         return static_cast<Write>(static_cast<uint32_t>(lhs) | static_cast<uint32_t>(rhs));
     } 
@@ -24,7 +25,6 @@ namespace hpl {
     Write operator&(Write lhs, Write rhs) {
         return static_cast<Write>(static_cast<uint32_t>(lhs) & static_cast<uint32_t>(rhs));
     }
-
 
     ClearOp operator|(ClearOp lhs, ClearOp rhs) {
         return static_cast<ClearOp>(static_cast<uint32_t>(lhs) | static_cast<uint32_t>(rhs));
@@ -39,19 +39,14 @@ namespace hpl {
         switch(mode) {
             case eMaterialBlendMode_Add:
                 return CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
-                break;
             case eMaterialBlendMode_Mul:
                 return CreateBlendFunction(BlendOperator::Add, BlendOperand::Zero, BlendOperand::SrcColor);
-                break;
             case eMaterialBlendMode_MulX2:
                 return CreateBlendFunction(BlendOperator::Add, BlendOperand::DstColor, BlendOperand::SrcColor);
-                break;
             case eMaterialBlendMode_Alpha:
                 return CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
-                break;
             case eMaterialBlendMode_PremulAlpha:
                 return CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::InvSrcAlpha);
-                break;
             default:
                 break;
         }

@@ -40,42 +40,45 @@
 namespace hpl {
 
     cLowLevelInputSDL::cLowLevelInputSDL()
-        : mbQuitMessagePosted(false) {
+        : mbQuitMessagePosted(false),
+            m_windowEventHandler(BroadcastEvent::PreUpdate, 
+                Interface<window::NativeWindowWrapper>::Get()->NativeInternalEvent(), [&](auto& internalEvent) {
+                    auto& event = internalEvent.m_sdlEvent;
+                    // built-in SDL2 gamepad hotplug code
+                    // this whole contract should be rewritten to allow clean adding/removing
+                    // of controllers, instead of brute force rescanning
+                    if (event.type == SDL_CONTROLLERDEVICEADDED) {
+                        // sdlEvent.cdevice.which is the device #
+                        cEngine::SetDeviceWasPlugged();
+                    } else if (event.type == SDL_CONTROLLERDEVICEREMOVED) {
+                        // sdlEvent.cdevice.which is the instance # (not device #).
+                        // instance # increases as devices are plugged and unplugged.
+                        cEngine::SetDeviceWasRemoved();
+                    }
+
+    #if defined(__APPLE__)
+                    if (event.type == SDL_KEYDOWN) {
+                        if (event.key.keysym.sym == SDLK_q && sdlEvent.key.keysym.mod & KMOD_GUI) {
+                            mbQuitMessagePosted = true;
+                        } else {
+                            mlstEvents.push_back(sdlEvent);
+                        }
+                    } else
+    #endif
+                    if (event.type == SDL_QUIT) {
+                        mbQuitMessagePosted = true;
+                    } else {
+                        mlstEvents.push_back(event);
+                    }
+
+                }, {
+                    .onBegin = [&]() {
+                        mlstEvents.clear();
+                    }
+                }) {
         LockInput(true);
         RelativeMouse(false);
         SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER);
-        m_windowHandler = window::internal::WindowInternalEvent::Handler(
-            [&](auto& internalEvent) {
-                auto& event = internalEvent.m_sdlEvent;
-                // built-in SDL2 gamepad hotplug code
-                // this whole contract should be rewritten to allow clean adding/removing
-                // of controllers, instead of brute force rescanning
-                if (event.type == SDL_CONTROLLERDEVICEADDED) {
-                    // sdlEvent.cdevice.which is the device #
-                    cEngine::SetDeviceWasPlugged();
-                } else if (event.type == SDL_CONTROLLERDEVICEREMOVED) {
-                    // sdlEvent.cdevice.which is the instance # (not device #).
-                    // instance # increases as devices are plugged and unplugged.
-                    cEngine::SetDeviceWasRemoved();
-                }
-
-#if defined(__APPLE__)
-                if (event.type == SDL_KEYDOWN) {
-                    if (event.key.keysym.sym == SDLK_q && sdlEvent.key.keysym.mod & KMOD_GUI) {
-                        mbQuitMessagePosted = true;
-                    } else {
-                        mlstEvents.push_back(sdlEvent);
-                    }
-                } else
-#endif
-                    if (event.type == SDL_QUIT) {
-                    mbQuitMessagePosted = true;
-                } else {
-                    mlstEvents.push_back(event);
-                }
-            },
-            ConnectionType::QueueConnection);
-        Interface<window::NativeWindowWrapper>::Get()->ConnectInternalEventHandler(m_windowHandler);
     }
 
     //-----------------------------------------------------------------------
@@ -104,8 +107,8 @@ namespace hpl {
     }
 
     void cLowLevelInputSDL::BeginInputUpdate() {
-        mlstEvents.clear();
-        m_windowHandler.Process();
+        // mlstEvents.clear();
+        // m_windowHandler.Process();
     }
 
     void cLowLevelInputSDL::EndInputUpdate() {
@@ -130,9 +133,7 @@ namespace hpl {
         return SDL_NumJoysticks();
 #endif
     }
-
-    //-----------------------------------------------------------------------
-
+    
     iMouse* cLowLevelInputSDL::CreateMouse() {
         return hplNew(cMouseSDL, (this));
     }

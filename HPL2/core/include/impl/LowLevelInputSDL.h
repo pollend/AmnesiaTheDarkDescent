@@ -18,13 +18,17 @@
  */
 #pragma once 
 
+#include <windowing/NativeWindow.h>
+
+#include <input/LowLevelInput.h>
+
+#include "engine/QueuedEventLoopHandler.h"
+#include <SDL2/SDL_events.h>
+
+
 #include <list>
 #include <mutex>
 #include <vector>
-#include <input/LowLevelInput.h>
-
-#include <SDL2/SDL_events.h>
-#include <windowing/NativeWindow.h>
 
 namespace hpl {
 
@@ -58,6 +62,6 @@ namespace hpl {
 
 	private:
 		bool mbQuitMessagePosted;
-		window::internal::WindowInternalEvent::Handler m_windowHandler;
+		window::internal::WindowInternalEvent::QueuedEventHandler m_windowEventHandler;
 	};
 };

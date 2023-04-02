@@ -57,6 +57,5 @@ namespace hpl {
         FileWriter m_fileWriter;
         bx::Thread m_thread;
         std::function<int32_t(bx::Thread*)> m_handler;
-        bool m_initialized;
     };
 }
