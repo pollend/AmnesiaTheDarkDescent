@@ -12,7 +12,6 @@ A lot of bug fixing is needed before this gets to a usable state.
   - got rid of the bookkeeping for the viewport size, so it's possible to resize the window and have all the window frame buffers update. 
   - Dropped usage of the OpenGL fixed function pipeline.
   - Possible to use DirectX 11, but there are a lot of rendering artifacts that need to be fixed before it's a viable option
-  - Haven't been able to use Vulkan
 - hpl::Event is an interface that makes building Observables a lot easier. 
 
 ## Random Ideas
@@ -21,6 +20,9 @@ A lot of bug fixing is needed before this gets to a usable state.
 - Remove OALWrapper and use miniaudio [ticket](https://github.com/pollend/AmnesiaTheDarkDescent/issues/13)
 - Remove iXMLDocument indirection and use FastXML [ticket](https://github.com/pollend/AmnesiaTheDarkDescent/issues/25)
 - Would like to mess around with raytracing support from Vulkan and DirectX, would probably have to use another solution. 
+- Various collection of possible improvements to the editor [ticket](https://github.com/pollend/AmnesiaTheDarkDescent/issues/22)
+
+Feel free to drop a ticket if your interested in anything. 
 
 # Branches
 - origin/master - contains a graphics backend rework using [BGFX](https://github.com/bkaradzic/bgfx)
