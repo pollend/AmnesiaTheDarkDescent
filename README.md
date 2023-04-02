@@ -1,10 +1,7 @@
 # Amnesia: The Dark Descent
 [![CI](https://github.com/pollend/AmnesiaTheDarkDescent/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/pollend/AmnesiaTheDarkDescent/actions/workflows/build.yml)
 
-This is heavy rework of the core engine. Mostly an experiment in absurdity to see what can be restructured and improved on. Note this is still a work in progress, 
-so a lot of stuff will be broken. It's far enough along that its possible to play through the entire game. 
-Currently, there is a lot of Rendering artifacts, broken functionality and various other problems that shouldn't be too hard to run into. 
-A lot of bug fixing is needed before this gets to a usable state.
+This is a heavy rework of the core engine, mostly an experiment in absurdity to see what can be restructured and improved. Note that this is still a work in progress, so a lot of stuff will be broken. It's far enough along that it's possible to play through the entire game. Currently, there are a lot of rendering artifacts, broken functionality, and various other problems that shouldn't be too hard to run into. A lot of bug fixing is needed before this gets to a usable state.
 
 ## Current Features
 
