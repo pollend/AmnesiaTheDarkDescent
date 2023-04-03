@@ -297,10 +297,9 @@ float cLuxPlayerState_InteractSlide::DrawDebug(cGuiSet *apSet,iFontData *apFont,
 	return afStartY;
 }
 
-void cLuxPlayerState_InteractSlide::RenderSolid(cRendererCallbackFunctions* apFunctions)
+void cLuxPlayerState_InteractSlide::DebugRenderSolid(ImmediateDrawBatch* batch)
 {
 	return;
-	apFunctions->SetMatrix(NULL);
 
 	cCamera *pCam = mpPlayer->GetCamera();
 	cVector3f vUp = pCam->GetUp();
@@ -313,15 +312,15 @@ void cLuxPlayerState_InteractSlide::RenderSolid(cRendererCallbackFunctions* apFu
 
 	cVector3f vWorldInteractPos = cMath::MatrixMul(mpCurrentBody->GetLocalMatrix(), mvLocalInteractPos);
 
-	apFunctions->GetLowLevelGfx()->DrawSphere(vWorldInteractPos, 0.1f, cColor(0,1,0,1));
+	batch->DebugDrawSphere(vWorldInteractPos, 0.1f, cColor(0,1,0,1));
 
 	cVector3f vMouseCamDir = vUp * mvLastMouseAdd.y + vRight * -mvLastMouseAdd.x;
 	float fSpeedAdd = cMath::Vector3Dot(vMouseCamDir, mpCurrentJoint->GetPinDir());
 
-	apFunctions->GetLowLevelGfx()->DrawLine(vWorldInteractPos, vWorldInteractPos+vMouseCamDir*50, cColor(1,0,0,1));
+	batch->DebugDrawLine(vWorldInteractPos, vWorldInteractPos+vMouseCamDir*50, cColor(1,0,0,1));
 
-	apFunctions->GetLowLevelGfx()->DrawLine(vWorldInteractPos, vWorldInteractPos+mpCurrentJoint->GetPinDir(),cColor(0,0,0.3f,1));
-	apFunctions->GetLowLevelGfx()->DrawLine(vWorldInteractPos, vWorldInteractPos+mpCurrentJoint->GetPinDir()*fSpeedAdd*50,cColor(0,0,1,1));
+	batch->DebugDrawLine(vWorldInteractPos, vWorldInteractPos+mpCurrentJoint->GetPinDir(),cColor(0,0,0.3f,1));
+	batch->DebugDrawLine(vWorldInteractPos, vWorldInteractPos+mpCurrentJoint->GetPinDir()*fSpeedAdd*50,cColor(0,0,1,1));
 	
 
 	//apFunctions->GetLowLevelGfx()->DrawLine(vPos, vPos+vRight, cColor(1,0,1,1));

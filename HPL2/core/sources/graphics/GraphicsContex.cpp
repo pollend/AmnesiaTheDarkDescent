@@ -10,7 +10,8 @@
 
 #include "graphics/Enum.h"
 #include "graphics/ShaderUtil.h"
-#include <graphics/GraphicsTypes.h>
+#include "graphics/Layouts.h"
+#include "graphics/GraphicsTypes.h"
 
 #include "bx/math.h"
 #include <bgfx/bgfx.h>
@@ -26,7 +27,6 @@
 #include <cstdint>
 #include <variant>
 
-#include "graphics/Layouts.h"
 
 namespace hpl {
 
@@ -70,7 +70,6 @@ namespace hpl {
 
     void GraphicsContext::Frame() {
         m_current = 0;
-        // m_windowEvent.Process();
         bgfx::frame();
     }
 

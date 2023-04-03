@@ -114,6 +114,39 @@ namespace hpl
             }
             return true;
         }
+
+        void RenderableMaterialIter(
+            iRenderer* renderer, 
+            std::span<iRenderable*> iter,
+            cViewport& viewport,
+            eMaterialRenderMode mode,
+            std::function<void(iRenderable* obj, GraphicsContext::LayoutStream&, GraphicsContext::ShaderProgram&)> handler) {
+                for (auto& obj : iter)
+                {
+                    GraphicsContext::LayoutStream layoutStream;
+                    GraphicsContext::ShaderProgram shaderProgram;
+
+                    cMaterial* pMaterial = obj->GetMaterial();
+                    iMaterialType* materialType = pMaterial->GetType();
+                    // iGpuProgram* program = pMaterial->GetProgram(0, mode);
+                    iVertexBuffer* vertexBuffer = obj->GetVertexBuffer();
+                    if (vertexBuffer == nullptr || materialType == nullptr)
+                    {
+                        continue;
+                    }
+                    vertexBuffer->GetLayoutStream(layoutStream);
+                    materialType->ResolveShaderProgram(
+                        mode,
+                        viewport,
+                        pMaterial,
+                        obj,
+                        renderer,
+                        [&](GraphicsContext::ShaderProgram& program)
+                        {
+                            handler(obj, layoutStream, program);
+                        });
+                }
+        }
     } // namespace rendering::detail
 
     bool cRendererNodeSortFunc::operator()(const iRenderableContainerNode* apNodeA, const iRenderableContainerNode* apNodeB) const
@@ -455,8 +488,7 @@ namespace hpl
             bgfx::destroy(m_nullShader);
         }
 
-        DestroyShadowMaps();
-
+        
         if (mpShapeBox)
             hplDelete(mpShapeBox);
 
@@ -722,14 +754,6 @@ namespace hpl
 
         return bValid ? false : true;
     }
-
-    //-----------------------------------------------------------------------
-
-    void iRenderer::DestroyShadowMaps()
-    {
-    }
-
-    //-----------------------------------------------------------------------
 
     void iRenderer::RenderZObject(GraphicsContext& context, iRenderable* apObject, cFrustum* apCustomFrustum)
     {
@@ -1473,36 +1497,6 @@ namespace hpl
     //-----------------------------------------------------------------------
 
     static cFrustum* gpTempLightFrustum = NULL;
-
-    bool iRenderer::RenderShadowCasterCHC(iRenderable* apObject)
-    {
-        cMaterial* pMaterial = apObject->GetMaterial();
-
-        // Check so it is a solid object
-        if (pMaterial == NULL || pMaterial->GetType()->IsTranslucent())
-        {
-            return false;
-        }
-
-        // Check so it affects the view frustum
-        if (CheckShadowCasterContributesToView(apObject) == false)
-            return false;
-
-        // mvShadowCasters.push_back(apObject); //Debug. Only to see what object are rendered.
-
-        // Render the object
-        //  RenderShadowCaster(apObject,gpTempLightFrustum);
-
-        return true;
-    }
-
-    //-----------------------------------------------------------------------
-
-    void iRenderer::RenderShadowCaster(iRenderable* apObject, cFrustum* apLightFrustum)
-    {
-        GraphicsContext contx;
-        RenderZObject(contx, apObject, apLightFrustum);
-    }
 
     static bool SortFunc_OcclusionObject(cOcclusionQueryObject* apObjectA, cOcclusionQueryObject* apObjectB)
     {

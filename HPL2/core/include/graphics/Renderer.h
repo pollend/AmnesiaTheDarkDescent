@@ -57,6 +57,7 @@ namespace hpl {
     class iRenderableContainerNode;
     class cVisibleRCNodeTracker;
     class RenderCallbackMessage;
+    class iRenderer;
 
     namespace rendering::detail {
         eShadowMapResolution GetShadowMapResolution(eShadowMapResolution aWanted, eShadowMapResolution aMax);
@@ -67,6 +68,14 @@ namespace hpl {
         * @param occlusionPlanes The planes to check against.
         */
         bool IsObjectVisible(iRenderable *apObject, tRenderableFlag alNeededFlags, std::span<cPlanef> occlusionPlanes);
+
+        void RenderableMaterialIter(
+            iRenderer* renderer, 
+            std::span<iRenderable*> iter,
+            cViewport& viewport,
+            eMaterialRenderMode mode,
+            std::function<void(iRenderable* obj, GraphicsContext::LayoutStream&, GraphicsContext::ShaderProgram&)> handler);
+
     }
 
     class cNodeOcclusionPair
@@ -110,7 +119,6 @@ namespace hpl {
     };
 
 
-    class iRenderer;
     class cRenderSettings
     {
     public:
@@ -325,8 +333,6 @@ namespace hpl {
 
         cShadowMapData* GetShadowMapData(eShadowMapResolution aResolution, iLight *apLight);
         bool ShadowMapNeedsUpdate(iLight *apLight, cShadowMapData *apShadowData);
-        void DestroyShadowMaps();
-
 
         void RenderZObject(GraphicsContext& context, iRenderable *apObject, cFrustum *apCustomFrustum);
 
@@ -359,9 +365,7 @@ namespace hpl {
         void GetShadowCasters(iRenderableContainer *apContainer, tRenderableVec& avObjectVec, cFrustum *apLightFrustum);
         bool SetupShadowMapRendering(iLight *apLight);
 
-        bool RenderShadowCasterCHC(iRenderable *apObject);
-        void RenderShadowCaster(iRenderable *apObject, cFrustum *apLightFrustum);
-    
+
         /**
          * Only depth is needed for framebuffer. All objects needs to be added to renderlist!
          */

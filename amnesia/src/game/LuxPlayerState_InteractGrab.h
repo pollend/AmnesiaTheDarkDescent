@@ -89,7 +89,7 @@ public:
 
 	float DrawDebug(cGuiSet *apSet,iFontData *apFont, float afStartY);
 
-	void RenderSolid(cRendererCallbackFunctions* apFunctions);
+	virtual void DebugRenderSolid(ImmediateDrawBatch* apFunctions) override;
 
 	/////////////////////////////////
 	//Save data stuff

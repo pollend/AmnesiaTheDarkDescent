@@ -86,12 +86,12 @@ public:
 
     void Reset();
 
-    void Update(float afTimeStep);
+    virtual void Update(float afTimeStep) override;
 
     void ClearRenderLists();
 
-    void RenderSolid(cRendererCallbackFunctions* apFunctions);
-    void RenderTrans(cRendererCallbackFunctions* apFunctions);
+    void RenderSolid(cViewport::PostSolidDrawPacket& input);
+    void RenderTrans(cViewport::PostTranslucenceDrawPacket& input);
 
     void AddOutlineObject(iRenderable* apObject);
     void ClearOutlineObjects();

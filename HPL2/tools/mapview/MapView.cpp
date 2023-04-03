@@ -289,7 +289,7 @@ public:
 			mpAmbientBox = NULL;
 		}
 
-		m_postSolidDraw = cViewport::PostSolidDraw::Handler([&](cViewport::PostSolidDrawPayload& payload) {
+		m_postSolidDraw = cViewport::PostSolidDraw::Handler([&](cViewport::PostSolidDrawPacket& payload) {
 			
 			// apFunctions->SetDepthTest(false);
 			// apFunctions->SetDepthWrite(false);
@@ -547,7 +547,7 @@ public:
 
 		});
 
-		m_postTestSolidDraw = cViewport::PostSolidDraw::Handler([&](cViewport::PostSolidDrawPayload& payload) {
+		m_postTestSolidDraw = cViewport::PostSolidDraw::Handler([&](cViewport::PostSolidDrawPacket& payload) {
 			cMatrixf view = payload.m_frustum->GetViewMatrix().GetTranspose();
 			cMatrixf proj = payload.m_frustum->GetProjectionMatrix().GetTranspose();
 			ImmediateDrawBatch batch(*payload.m_context, *payload.m_outputTarget,view, proj);

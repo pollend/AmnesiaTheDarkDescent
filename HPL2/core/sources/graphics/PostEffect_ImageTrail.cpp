@@ -66,7 +66,7 @@ namespace hpl {
     cPostEffect_ImageTrail::cPostEffect_ImageTrail(cGraphics* apGraphics, cResources* apResources, iPostEffectType* apType)
         : iPostEffect(apGraphics, apResources, apType) {
         m_boundImageTrailData = UniqueViewportData<ImageTrailData>([&](cViewport& viewport) {
-            auto desc = ImageDescriptor::CreateTexture2D(viewport.GetSize().x / 4.0f, viewport.GetSize().y/ 4.0f , false, bgfx::TextureFormat::Enum::RGBA8);
+            auto desc = ImageDescriptor::CreateTexture2D(viewport.GetSize().x, viewport.GetSize().y , false, bgfx::TextureFormat::Enum::RGBA8);
             desc.m_configuration.m_rt = RTType::RT_Write;
             auto image = std::make_shared<Image>();
             image->Initialize(desc);
@@ -103,7 +103,7 @@ namespace hpl {
     void cPostEffect_ImageTrail::RenderEffect(
         cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, RenderTarget& target) {
         cVector2l vRenderTargetSize = viewport.GetSize();
-          auto& imageTrailData = m_boundImageTrailData.resolve(viewport);
+        auto& imageTrailData = m_boundImageTrailData.resolve(viewport);
 
 
         GraphicsContext::LayoutStream layoutStream;

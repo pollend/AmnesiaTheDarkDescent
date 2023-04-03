@@ -279,8 +279,6 @@ namespace hpl {
         // takes the contents of the gbuffer and renders the lights
         void RenderLightPass(GraphicsContext& context, cViewport& viewport, RenderTarget& rt);
         void RenderDiffusePass(GraphicsContext& context, cViewport& viewport, RenderTarget& rt);
-        void RenderDecalPass(GraphicsContext& context, cViewport& viewport, RenderTarget& rt);
-        void RenderIlluminationPass(GraphicsContext& context, cViewport& viewport, RenderTarget& rt);
         void RenderFogPass(GraphicsContext& context, cViewport& viewport, RenderTarget& rt);
         void RenderFullScreenFogPass(GraphicsContext& context, cViewport& viewport, RenderTarget& rt);
         void RenderEdgeSmoothPass(GraphicsContext& context, cViewport& viewport, RenderTarget& rt);

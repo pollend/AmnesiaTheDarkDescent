@@ -28,6 +28,11 @@
 
 using namespace hpl;
 
+
+namespace hpl {
+	class ImmediateDrawBatch;
+}
+
 //----------------------------------------------
 
 //----------------------------------------------
@@ -51,7 +56,7 @@ enum eLuxAxis
 
 enum eLuxAchievement
 {
-	eLuxAchievement_Insanity = 0, // Platinum ¡DO NOT USE THIS!
+	eLuxAchievement_Insanity = 0, // Platinum ï¿½DO NOT USE THIS!
 
 	// tdd
 	eLuxAchievement_Alchemist,
@@ -634,8 +639,8 @@ public:
 	iLuxPlayerHelper(cLuxPlayer *apPlayer, const tString& asName) : mpPlayer(apPlayer) ,iLuxUpdateable(asName){}
 	virtual ~iLuxPlayerHelper(){}
 
-	virtual void RenderSolid(cRendererCallbackFunctions* apFunctions){}
-	virtual void RenderTrans(cRendererCallbackFunctions* apFunctions){}
+	// virtual void RenderSolid(hpl::ImmediateDrawBatch* apFunctions){}
+	// virtual void RenderTrans(hpl::ImmediateDrawBatch* apFunctions){}
 
 protected:
     cLuxPlayer *mpPlayer;

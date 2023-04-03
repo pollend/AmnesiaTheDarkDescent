@@ -63,13 +63,16 @@ namespace hpl {
             cFrustum* m_frustum;
             GraphicsContext* m_context;
             RenderTarget* m_outputTarget;
+            cViewport* m_viewport;
+            cRenderSettings* m_renderSettings;
+            ImmediateDrawBatch* m_immediateDrawBatch; 
         };
-        struct PostSolidDrawPayload : public DrawPayloadCommon {
+        struct PostSolidDrawPacket : public DrawPayloadCommon {
         };
-        struct PostTranslucenceDrawPayload : public DrawPayloadCommon {
+        struct PostTranslucenceDrawPacket : public DrawPayloadCommon {
         };
-        using PostSolidDraw = hpl::Event<PostSolidDrawPayload&>;
-        using PostTranslucenceDraw = hpl::Event<PostTranslucenceDrawPayload&>;
+        using PostSolidDraw = hpl::Event<PostSolidDrawPacket&>;
+        using PostTranslucenceDraw = hpl::Event<PostTranslucenceDrawPacket&>;
 
         cViewport(cScene* apScene);
 
@@ -159,8 +162,8 @@ namespace hpl {
         inline void ConnectDraw(PostSolidDraw::Handler& handler) { handler.Connect(m_postSolidDraw); }
         inline void ConnectDraw(PostTranslucenceDraw::Handler& handler) { handler.Connect(m_postTranslucenceDraw); }
 
-        inline void SignalDraw(PostSolidDrawPayload& payload) { m_postSolidDraw.Signal(payload);}
-        inline void SignalDraw(PostTranslucenceDrawPayload& payload) { m_postTranslucenceDraw.Signal(payload);}
+        inline void SignalDraw(PostSolidDrawPacket& payload) { m_postSolidDraw.Signal(payload);}
+        inline void SignalDraw(PostTranslucenceDrawPacket& payload) { m_postTranslucenceDraw.Signal(payload);}
 
 
     private:

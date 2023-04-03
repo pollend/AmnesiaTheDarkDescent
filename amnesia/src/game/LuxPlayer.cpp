@@ -568,20 +568,17 @@ void cLuxPlayer::OnLeaveContainer(const tString& asNewContainer)
 
 //-----------------------------------------------------------------------
 
-void cLuxPlayer::RenderSolid(cRendererCallbackFunctions* apFunctions)
+void cLuxPlayer::RenderSolid(hpl::ImmediateDrawBatch* apFunctions)
 {
-	mvStates[mState]->RenderSolid(apFunctions);
+	mvStates[mState]->DebugRenderSolid(apFunctions);
 
-	for(size_t i=0; i<mvHelpers.size(); ++i) mvHelpers[i]->RenderSolid(apFunctions);
+	// for(size_t i=0; i<mvHelpers.size(); ++i) mvHelpers[i]->RenderSolid(apFunctions);
 }
 
-void cLuxPlayer::RenderTrans(cRendererCallbackFunctions* apFunctions)
+void cLuxPlayer::RenderTrans(hpl::ImmediateDrawBatch* apFunctions)
 {
-	mvStates[mState]->RenderTrans(apFunctions);
+	mvStates[mState]->DebugRenderTrans(apFunctions);
 }
-
-
-//-----------------------------------------------------------------------
 
 void cLuxPlayer::GiveDamage(float afAmount, int alStrength, eLuxDamageType aType, bool abSpinHead, bool abLethal)
 {

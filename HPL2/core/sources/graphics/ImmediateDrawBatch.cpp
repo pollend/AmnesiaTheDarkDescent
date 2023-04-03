@@ -381,7 +381,11 @@ namespace hpl {
 
 
     void ImmediateDrawBatch::flush() {
-        if (m_lineSegments.empty() && m_colorQuads.empty() && m_uvQuads.empty() && m_colorTriangles.empty() && m_line2DSegments.empty()) {
+        if (m_line2DSegments.empty() && 
+            m_uvQuads.empty() && 
+            m_colorQuads.empty() && 
+            m_lineSegments.empty() && 
+            m_colorTriangles.empty()) {
             return;
         }
 
@@ -719,9 +723,11 @@ namespace hpl {
                 m_context.Submit(m_perspectiveView, request);
             }
         }
-        m_colorTriangles.clear();
-        m_lineSegments.clear();
-        m_colorQuads.clear();
-        m_uvQuads.clear();
+    m_line2DSegments.clear();
+    m_uvQuads.clear();
+    m_colorQuads.clear();
+    m_lineSegments.clear();
+    m_colorTriangles.clear();
+
     }
 } // namespace hpl

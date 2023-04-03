@@ -84,7 +84,7 @@ cModelEditorWindowPhysicsTest::cModelEditorWindowPhysicsTest(iEditorBase* apEdit
 
 	mbViewMode = false;
 
-	m_postSolidDraw = cViewport::PostSolidDraw::Handler([&](cViewport::PostSolidDrawPayload& payload) {
+	m_postSolidDraw = cViewport::PostSolidDraw::Handler([&](cViewport::PostSolidDrawPacket& payload) {
 		cMatrixf view = payload.m_frustum->GetViewMatrix().GetTranspose();
 		cMatrixf proj = payload.m_frustum->GetProjectionMatrix().GetTranspose();
 		hpl::ImmediateDrawBatch batch(*payload.m_context, *payload.m_outputTarget,view, proj);

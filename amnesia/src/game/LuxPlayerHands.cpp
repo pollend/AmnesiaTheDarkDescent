@@ -307,15 +307,7 @@ void cLuxPlayerHands::DestroyWorldEntities(cLuxMap *apMap)
 
 //-----------------------------------------------------------------------
 
-void cLuxPlayerHands::RenderSolid(cRendererCallbackFunctions* apFunctions)
-{
-	// if(mpCurrentHandObject) mpCurrentHandObject->RenderSolid(apFunctions);
-}
 
-void cLuxPlayerHands::RenderTrans(cRendererCallbackFunctions* apFunctions)
-{
-	// if(mpCurrentHandObject) mpCurrentHandObject->RenderTrans(apFunctions);
-}
 
 //-----------------------------------------------------------------------
 

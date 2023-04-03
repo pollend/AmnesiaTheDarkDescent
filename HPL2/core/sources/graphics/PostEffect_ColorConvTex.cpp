@@ -46,7 +46,7 @@ namespace hpl
         : iPostEffectType("ColorConvTex", apGraphics, apResources)
     {
         m_colorConv = hpl::loadProgram("vs_post_effect", "fs_posteffect_color_conv");
-        m_u_param = bgfx::createUniform("u_param", bgfx::UniformType::Vec4);
+        m_u_param = bgfx::createUniform("u_params", bgfx::UniformType::Vec4);
         m_u_colorConvTex = bgfx::createUniform("s_convMap", bgfx::UniformType::Sampler);
         m_u_diffuseTex = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
     }
@@ -79,14 +79,17 @@ namespace hpl
 
     void cPostEffect_ColorConvTex::OnSetParams()
     {
-        if (mParams.msTextureFile == "")
+        if (mParams.msTextureFile == "") {
             return;
+        }
 
-        if (mpColorConvTex)
-        {
+        if (mpColorConvTex) {
             mpResources->GetTextureManager()->Destroy(mpColorConvTex);
         }
-        mpColorConvTex = mpResources->GetTextureManager()->Create1DImage(mParams.msTextureFile, false);
+        cTextureManager::ImageOptions options;
+		options.m_UWrap = WrapMode::Clamp;
+		options.m_VWrap = WrapMode::Clamp;
+        mpColorConvTex = mpResources->GetTextureManager()->Create1DImage(mParams.msTextureFile, false, eTextureUsage_Normal, 0, options);
     }
 
     void cPostEffect_ColorConvTex::RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, RenderTarget& target)
@@ -105,14 +108,20 @@ namespace hpl
         GraphicsContext::ShaderProgram shaderProgram;
         // shaderProgram.m_projection = projMtx;
         shaderProgram.m_handle = mpSpecificType->m_colorConv;
+
         struct
         {
             float u_alphaFade;
             float pad;
             float pad1;
             float pad2;
-        } uniform = { cMath::Min(1.0f, cMath::Max(mParams.mfFadeAlpha, 0.0f)), 0, 0, 0 };
+        } uniform = { 
+            cMath::Clamp(mParams.mfFadeAlpha, 0.0f, 1.0f), 
+            0, 
+            0, 
+            0 };
         shaderProgram.m_uniforms.push_back({ mpSpecificType->m_u_param, &uniform, 1 });
+        
         shaderProgram.m_textures.push_back({ mpSpecificType->m_u_colorConvTex, mpColorConvTex->GetHandle(), 0 });
         shaderProgram.m_textures.push_back({ mpSpecificType->m_u_diffuseTex, input.GetHandle(), 1 });
 

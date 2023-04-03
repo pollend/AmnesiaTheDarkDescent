@@ -22,6 +22,7 @@
 #include "bgfx/bgfx.h"
 #include "engine/Event.h"
 #include "engine/Interface.h"
+#include "graphics/ImmediateDrawBatch.h"
 #include "scene/Viewport.h"
 #include "windowing/NativeWindow.h"
 #include <bx/debug.h>
@@ -359,7 +360,7 @@ namespace hpl {
 
 		/////////////////////////
 		//Shadow textures
-		DestroyShadowMaps();
+		// DestroyShadowMaps();
 
 		// if(mpShadowJitterTexture) mpGraphics->DestroyTexture(mpShadowJitterTexture);
 
@@ -543,33 +544,6 @@ namespace hpl {
 		context.Submit(view, drawRequest);
 	}
 
-	void cRendererDeferred::RenderIlluminationPass(GraphicsContext& context, cViewport& viewport, RenderTarget& rt) {
-		if(!mpCurrentRenderList->ArrayHasObjects(eRenderListType_Illumination)) {
-			return;
-		}
-		auto& sharedData = m_boundViewportData.resolve(viewport);
-
-		GraphicsContext::ViewConfiguration viewConfig {rt};
-		viewConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
-		viewConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
-		viewConfig.m_viewRect = cRect2l(0, 0, sharedData.m_size.x, sharedData.m_size.y);
-		bgfx::ViewId view = context.StartPass("RenderIllumination", viewConfig);
-		RenderableHelper(eRenderListType_Illumination, viewport, eMaterialRenderMode_Illumination, [&](iRenderable* obj, GraphicsContext::LayoutStream& layoutInput, GraphicsContext::ShaderProgram& shaderInput) {
-			shaderInput.m_configuration.m_depthTest = DepthTest::Equal;
-			shaderInput.m_configuration.m_write = Write::RGBA;
-
-			shaderInput.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
-			shaderInput.m_configuration.m_alphaBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
-
-			// shaderInput.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
-			// shaderInput.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
-			shaderInput.m_modelTransform = obj->GetModelMatrixPtr() ?  obj->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity.GetTranspose();
-
-			GraphicsContext::DrawRequest drawRequest {layoutInput, shaderInput};
-			context.Submit(view, drawRequest);
-		});
-	}
-
 	void cRendererDeferred::RenderEdgeSmoothPass(GraphicsContext& context, cViewport& viewport, RenderTarget& rt) {
 
 		GraphicsContext::ViewConfiguration viewConfig {m_edgeSmooth_LinearDepth};
@@ -604,7 +578,7 @@ namespace hpl {
 		viewConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
 		viewConfig.m_viewRect = {0, 0, sharedData.m_size.x, sharedData.m_size.y};
 		auto view = context.StartPass("Diffuse", viewConfig);
-		RenderableHelper(eRenderListType_Diffuse, viewport, eMaterialRenderMode_Diffuse, [&](iRenderable* obj, GraphicsContext::LayoutStream& layoutInput, GraphicsContext::ShaderProgram& shaderInput) {
+		rendering::detail::RenderableMaterialIter(this, mpCurrentRenderList->GetRenderableItems(eRenderListType_Diffuse), viewport, eMaterialRenderMode_Diffuse, [&](iRenderable* obj, GraphicsContext::LayoutStream& layoutInput, GraphicsContext::ShaderProgram& shaderInput) {
 			shaderInput.m_configuration.m_depthTest = DepthTest::LessEqual;
 			shaderInput.m_configuration.m_write = Write::RGBA;
 			shaderInput.m_configuration.m_cull = Cull::CounterClockwise;
@@ -617,35 +591,6 @@ namespace hpl {
 		});
 	}
 
-	void cRendererDeferred::RenderDecalPass(GraphicsContext& context, cViewport& viewport, RenderTarget& rt) {
-		BX_ASSERT(rt.IsValid(), "Invalid render target");
-		BX_ASSERT(rt.GetImages().size() >= 1, "expected atleast 1 image Color(0)");
-		if(!mpCurrentRenderList->ArrayHasObjects(eRenderListType_Decal)) {
-			return;
-		}
-		auto& sharedData = m_boundViewportData.resolve(viewport);
-
-		GraphicsContext::ViewConfiguration viewConfig {rt};
-		viewConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
-		viewConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
-		viewConfig.m_viewRect = {0, 0, sharedData.m_size.x, sharedData.m_size.y};
-		auto view = context.StartPass("RenderDecals", viewConfig);
-		RenderableHelper(eRenderListType_Decal, viewport, eMaterialRenderMode_Diffuse, [&](iRenderable* obj, GraphicsContext::LayoutStream& layoutInput, GraphicsContext::ShaderProgram& shaderInput) {
-			shaderInput.m_configuration.m_depthTest = DepthTest::LessEqual;
-			shaderInput.m_configuration.m_write = Write::RGBA;
-
-			cMaterial *pMaterial = obj->GetMaterial();
-			shaderInput.m_configuration.m_rgbBlendFunc = CreateFromMaterialBlendMode(pMaterial->GetBlendMode());
-			shaderInput.m_configuration.m_alphaBlendFunc = CreateFromMaterialBlendMode(pMaterial->GetBlendMode());
-
-			shaderInput.m_modelTransform = obj->GetModelMatrixPtr() ?  obj->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity.GetTranspose();
-
-			GraphicsContext::DrawRequest drawRequest {layoutInput, shaderInput};
-			context.Submit(view, drawRequest);
-		});
-	}
-
-
 	void rendering::detail::RenderZPassObject(bgfx::ViewId view, GraphicsContext& context, cViewport& viewport, iRenderer* renderer, iRenderable* object, Cull cull) {
 		eMaterialRenderMode renderMode = object->GetCoverageAmount() >= 1 ? eMaterialRenderMode_Z : eMaterialRenderMode_Z_Dissolve;
 		cMaterial *pMaterial = object->GetMaterial();
@@ -656,7 +601,6 @@ namespace hpl {
 		}
 
 		GraphicsContext::LayoutStream layoutInput;
-		// GraphicsContext::ShaderProgram shaderInput;
 		vertexBuffer->GetLayoutStream(layoutInput);
 		materialType->ResolveShaderProgram(renderMode, viewport, pMaterial, object, renderer, [&](GraphicsContext::ShaderProgram& shaderInput) {
 			shaderInput.m_configuration.m_write = Write::Depth;
@@ -833,6 +777,9 @@ namespace hpl {
 
 		mpCurrentRenderList->Setup(mfCurrentFrameTime,mpCurrentFrustum);
 		
+		const cMatrixf frustumView = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+		const cMatrixf frustumProj = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
+		
 		//Setup far plane coordinates
 		m_farPlane = mpCurrentFrustum->GetFarPlane();
 		m_farTop = -tan(mpCurrentFrustum->GetFOV()*0.5f) * m_farPlane;
@@ -843,7 +790,7 @@ namespace hpl {
 		cRendererCallbackFunctions handler(context, viewport, this);
 
 		auto& sharedData = m_boundViewportData.resolve(viewport);
-
+		
 		[&]{
 			GraphicsContext::ViewConfiguration viewConfig {sharedData.m_gBuffer_full};
 			viewConfig.m_viewRect = {0, 0, sharedData.m_size.x, sharedData.m_size.y};
@@ -928,27 +875,97 @@ namespace hpl {
 
 		// Render GBuffer to m_gBuffer_full old method is RenderGbuffer(context);
 		RenderDiffusePass(context, viewport, sharedData.m_gBuffer_full);
-		RenderDecalPass(context, viewport, sharedData.m_gBuffer_colorAndDepth);
 
+		// ------------------------------------------------------------------------------------
+		//  Render Decal Pass render to color and depth
+		// ------------------------------------------------------------------------------------ 
+		([&]() {
+			BX_ASSERT(sharedData.m_gBuffer_colorAndDepth.IsValid(), "Invalid render target");
+			BX_ASSERT(sharedData.m_gBuffer_colorAndDepth.GetImages().size() >= 1, "expected atleast 1 image Color(0)");
+			auto decalSpan = mpCurrentRenderList->GetRenderableItems(eRenderListType_Decal);
+			if(decalSpan.empty()) {
+				return;
+			}
+
+			GraphicsContext::ViewConfiguration viewConfig {sharedData.m_gBuffer_colorAndDepth};
+			viewConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
+			viewConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+			viewConfig.m_viewRect = {0, 0, sharedData.m_size.x, sharedData.m_size.y};
+			auto view = context.StartPass("RenderDecals", viewConfig);
+			rendering::detail::RenderableMaterialIter(this, 
+				decalSpan, 
+				viewport, 
+				eMaterialRenderMode_Diffuse, 
+				[&](iRenderable* obj, GraphicsContext::LayoutStream& layoutInput, GraphicsContext::ShaderProgram& shaderInput) {
+					shaderInput.m_configuration.m_depthTest = DepthTest::LessEqual;
+					shaderInput.m_configuration.m_write = Write::RGBA;
+
+					cMaterial *pMaterial = obj->GetMaterial();
+					shaderInput.m_configuration.m_rgbBlendFunc = CreateFromMaterialBlendMode(pMaterial->GetBlendMode());
+					shaderInput.m_configuration.m_alphaBlendFunc = CreateFromMaterialBlendMode(pMaterial->GetBlendMode());
+					shaderInput.m_modelTransform = obj->GetModelMatrixPtr() ?  obj->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity.GetTranspose();
+
+					GraphicsContext::DrawRequest drawRequest {layoutInput, shaderInput};
+					context.Submit(view, drawRequest);
+				});
+		})();
+
+		
 		RunCallback(eRendererMessage_PostGBuffer, handler);
 
 		RenderLightPass(context, viewport, sharedData.m_output_target);
 
-		// render illumination into gbuffer color RenderIllumination
-		RenderIlluminationPass(context, viewport, sharedData.m_output_target);
+		// ------------------------------------------------------------------------
+		// Render Illumination Pass --> renders to output target
+		// ------------------------------------------------------------------------ 
+		([&]() {
+			auto illuminationSpan = mpCurrentRenderList->GetRenderableItems(eRenderListType_Illumination);
+			if(illuminationSpan.empty()) {
+				return;
+			}
+
+			GraphicsContext::ViewConfiguration viewConfig {sharedData.m_output_target};
+			viewConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
+			viewConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+			viewConfig.m_viewRect = cRect2l(0, 0, sharedData.m_size.x, sharedData.m_size.y);
+			bgfx::ViewId view = context.StartPass("RenderIllumination", viewConfig);
+			rendering::detail::RenderableMaterialIter(this, 
+				illuminationSpan, 
+				viewport, 
+				eMaterialRenderMode_Illumination, [&](iRenderable* obj, GraphicsContext::LayoutStream& layoutInput, GraphicsContext::ShaderProgram& shaderInput) {
+					shaderInput.m_configuration.m_depthTest = DepthTest::Equal;
+					shaderInput.m_configuration.m_write = Write::RGBA;
+
+					shaderInput.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
+					shaderInput.m_configuration.m_alphaBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
+
+					// shaderInput.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
+					// shaderInput.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+					shaderInput.m_modelTransform = obj->GetModelMatrixPtr() ?  obj->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity.GetTranspose();
+
+					GraphicsContext::DrawRequest drawRequest {layoutInput, shaderInput};
+					context.Submit(view, drawRequest);
+				});
+		})();
+
 		// TODO: MP need to implement this
 		RenderFogPass(context, viewport, sharedData.m_output_target);
 		if(mpCurrentWorld->GetFogActive()) {
 			RenderFullScreenFogPass(context, viewport, sharedData.m_output_target);
 		}
-
-		{
-			cViewport::PostSolidDrawPayload event;
-			event.m_frustum = mpCurrentFrustum;
-			event.m_context = &context;
-			event.m_outputTarget = &sharedData.m_output_target;
-			viewport.SignalDraw(event);
-		}
+	
+		// notify post draw listeners
+		ImmediateDrawBatch postSolidBatch(context, sharedData.m_output_target, frustumView, frustumProj);
+		cViewport::PostSolidDrawPacket postSolidEvent = cViewport::PostSolidDrawPacket({
+			.m_frustum = mpCurrentFrustum,
+			.m_context = &context,
+			.m_outputTarget = &sharedData.m_output_target,
+			.m_viewport = &viewport,
+			.m_renderSettings = mpCurrentSettings,
+			.m_immediateDrawBatch = &postSolidBatch,
+		});
+		viewport.SignalDraw(postSolidEvent);
+		postSolidBatch.flush();
 		RunCallback(eRendererMessage_PostSolid, handler);
 
 		// not going to even try.
@@ -956,19 +973,21 @@ namespace hpl {
 		RenderTranslucentPass(context, viewport, sharedData.m_output_target);
 
 		RunCallback(eRendererMessage_PostTranslucent, handler);
-		{
-			cViewport::PostTranslucenceDrawPayload event;
-			cMatrixf view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
-			cMatrixf proj = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
-
-			event.m_frustum = mpCurrentFrustum;
-			event.m_context = &context;
-			event.m_outputTarget = &sharedData.m_output_target;
-			viewport.SignalDraw(event);
-		}
+		
+		ImmediateDrawBatch postTransBatch(context, sharedData.m_output_target, frustumView, frustumProj);
+		cViewport::PostTranslucenceDrawPacket translucenceEvent = cViewport::PostTranslucenceDrawPacket({
+			.m_frustum = mpCurrentFrustum,
+			.m_context = &context,
+			.m_outputTarget = &sharedData.m_output_target,
+			.m_viewport = &viewport,
+			.m_renderSettings = mpCurrentSettings,
+			.m_immediateDrawBatch = &postTransBatch,
+		});
+		viewport.SignalDraw(translucenceEvent);
+		postTransBatch.flush();
+	
 
 	}
-
 
 	void cRendererDeferred::RenderShadowPass(GraphicsContext& context, cViewport& viewport, const cDeferredLight& apLightData, RenderTarget& rt) {
  		BX_ASSERT(apLightData.mpLight->GetLightType() == eLightType_Spot, "Only spot lights are supported for shadow rendering")

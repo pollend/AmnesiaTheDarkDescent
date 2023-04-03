@@ -8,9 +8,7 @@
 namespace hpl
 {
 
-class ImmediateDrawBatch;
-
- class ImmediateDrawBatch {
+class ImmediateDrawBatch {
     public:
         struct DebugDrawOptions {
         public:
@@ -24,8 +22,7 @@ class ImmediateDrawBatch;
         inline GraphicsContext& GetContext() const { return m_context; }
 
         ImmediateDrawBatch(GraphicsContext& context, RenderTarget& target, const cMatrixf& view, const cMatrixf& projection);
-        
-      
+
         // takes 3 points and the other 1 is calculated
         [[deprecated("Use DrawQuad with Eigen")]]
         void DrawQuad(const cVector3f& v1, const cVector3f& v2, const cVector3f& v3,  const cVector3f& v4, const cVector2f& uv0,const cVector2f& uv1, hpl::Image* image , const cColor& aTint, const DebugDrawOptions& options = DebugDrawOptions());
@@ -111,12 +108,11 @@ class ImmediateDrawBatch;
         };
         // Orthgraphic projection
         std::vector<Line2DSegmentRequest> m_line2DSegments;
-
-        // Perspective projection
         std::vector<UVQuadRequest> m_uvQuads;
         std::vector<ColorQuadRequest> m_colorQuads;
         std::vector<LineSegmentRequest> m_lineSegments;
         std::vector<ColorTriRequest> m_colorTriangles;
+
         cMatrixf m_view;
         cMatrixf m_projection;
 

@@ -24,6 +24,10 @@
 
 #include "LuxBase.h"
 
+namespace hpl {
+	class ImmediateDrawBatch;
+}
+
 //----------------------------------------------
 
 class cLuxPlayer;
@@ -79,9 +83,6 @@ public:
 
 	void CreateWorldEntities(cLuxMap *apMap);
 	void DestroyWorldEntities(cLuxMap *apMap);
-
-	void RenderSolid(cRendererCallbackFunctions* apFunctions);
-	void RenderTrans(cRendererCallbackFunctions* apFunctions);
 
 	///////////////////////////////
 	// Actions

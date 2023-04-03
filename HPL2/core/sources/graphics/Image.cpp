@@ -327,14 +327,12 @@ namespace hpl
             return bgfx::TextureFormat::R32F;
         case ePixelFormat_LuminanceAlpha32:
             return bgfx::TextureFormat::RG32F;
-        case ePixelFormat_RGB32:
-            break;
         case ePixelFormat_RGBA32:
             return bgfx::TextureFormat::RGBA32F;
         case ePixelFormat_RGB16:
             return bgfx::TextureFormat::BC6H;
         case ePixelFormat_BGR:
-            return bgfx::TextureFormat::RGB8;
+            return bgfx::TextureFormat::RGB8; // this is not supported by bgfx so we swap it under Image::InitializeFromBitmap
         default:
             BX_ASSERT(false, "Unsupported texture format: %d", format)
             break;
@@ -378,6 +376,21 @@ namespace hpl
     }
 
     void Image::InitializeFromBitmap(Image& image, cBitmap& bitmap, const ImageDescriptor& desc) {
+        
+        auto copyDataToChunk = [&](unsigned char* m_begin, unsigned char* m_end, unsigned char* dest) {
+            
+            // BGR is not supported by bgfx, so we need to convert it to RGB
+            if(bitmap.GetPixelFormat() == ePixelFormat_BGR) {
+                for(auto* src = m_begin; src < m_end; src += 3) {
+                    *(dest++) = src[2];
+                    *(dest++) = src[1];
+                    *(dest++) = src[0];
+                }
+            } else {
+                std::copy(m_begin, m_end, dest);
+            }
+        };
+
         if(desc.m_isCubeMap) {
             BX_ASSERT(bitmap.GetNumOfImages() == 6, "Cube map must have 6 images");
             
@@ -398,14 +411,16 @@ namespace hpl
                 for(auto imageIdx = 0; imageIdx < bitmap.GetNumOfImages(); ++imageIdx) {
                     for(auto mipIndex = 0; mipIndex < bitmap.GetNumOfMipMaps(); ++mipIndex) {
                         auto data = bitmap.GetData(imageIdx, mipIndex);
-                        std::copy(data->mpData, data->mpData + data->mlSize, memory->data + offset);
+                        // std::copy(data->mpData, data->mpData + data->mlSize, memory->data + offset);
+                        copyDataToChunk(data->mpData, data->mpData + data->mlSize, memory->data + offset);
                         offset += data->mlSize;
                     }
                 }
             } else {
                 for(auto i = 0; i < bitmap.GetNumOfImages(); ++i) {
                     auto data = bitmap.GetData(i, 0);
-                    std::copy(data->mpData, data->mpData + data->mlSize, memory->data + offset);
+                    // std::copy(data->mpData, data->mpData + data->mlSize, memory->data + offset);
+                    copyDataToChunk(data->mpData, data->mpData + data->mlSize, memory->data + offset);
                     offset += data->mlSize;
                 }
             }
@@ -425,15 +440,18 @@ namespace hpl
             size_t offset = 0;
             for(auto i = 0; i < bitmap.GetNumOfMipMaps(); ++i) {
                 auto data = bitmap.GetData(0, i);
-                std::copy(data->mpData, data->mpData + data->mlSize, memory->data + offset);
+                // std::copy(data->mpData, data->mpData + data->mlSize, memory->data + offset);
+                copyDataToChunk(data->mpData, data->mpData + data->mlSize, memory->data + offset);
                 offset += data->mlSize;
             }
             image.Initialize(desc, memory);
             return;
         }
-
+        
         auto data = bitmap.GetData(0, 0);
-        image.Initialize(desc, bgfx::copy(data->mpData, data->mlSize));
+        auto* memory = bgfx::alloc(data->mlSize);
+        copyDataToChunk(data->mpData, data->mpData + data->mlSize, memory->data);
+        image.Initialize(desc, memory);
     }
 
     bgfx::TextureHandle Image::GetHandle() const

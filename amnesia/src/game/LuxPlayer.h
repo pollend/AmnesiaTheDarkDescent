@@ -87,8 +87,8 @@ public:
 	void OnEnterContainer(const tString& asOldContainer);
 	void OnLeaveContainer(const tString& asNewContainer);
 
-	void RenderSolid(cRendererCallbackFunctions* apFunctions);
-	void RenderTrans(cRendererCallbackFunctions* apFunctions);
+	void RenderSolid(hpl::ImmediateDrawBatch* apFunctions);
+	void RenderTrans(hpl::ImmediateDrawBatch* apFunctions);
 
 	////////////////////
 	// Actions

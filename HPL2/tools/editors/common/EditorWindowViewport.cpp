@@ -39,18 +39,19 @@ cEditorWindowViewport::cEditorWindowViewport(iEditorBase* apEditor,
 																					apEditor->GetEditorWorld()->GetWorld())
 {
 	
-	m_postSolidDraw = cViewport::PostSolidDraw::Handler([&](cViewport::PostSolidDrawPayload& payload) {
-		if(mpEditor == nullptr) return;
-		
-		cMatrixf view = payload.m_frustum->GetViewMatrix().GetTranspose();
-		cMatrixf proj = payload.m_frustum->GetProjectionMatrix().GetTranspose();
-		ImmediateDrawBatch batch(*payload.m_context, *payload.m_outputTarget,view, proj);
+	m_postSolidDraw = cViewport::PostSolidDraw::Handler([&](cViewport::PostSolidDrawPacket& payload) {
+		if(mpEditor == nullptr) {
+			return;
+		}
 
-		this->mpEditor->GetEditorWorld()->GetSurfacePicker()->DrawDebug(&batch);
+
+		this->mpEditor->GetEditorWorld()->GetSurfacePicker()->DrawDebug(payload.m_immediateDrawBatch);
 		if(GetDrawGrid())
 		{
 			cEditorGrid* pGrid = GetGrid();
-			if(pGrid) pGrid->Draw(&batch, GetGridCenter());
+			if(pGrid) {
+				pGrid->Draw(payload.m_immediateDrawBatch, GetGridCenter());
+			}
 		}
 		if(GetDrawAxes())
 		{
@@ -64,16 +65,16 @@ cEditorWindowViewport::cEditorWindowViewport(iEditorBase* apEditor,
 				cVector3f vAxisEnd = 0;
 				vAxisStart.v[i] = vCenter.v[i] -1000.0f;
 				vAxisEnd.v[i] = vCenter.v[i] +1000.0f;
-				batch.DebugDrawLine(vAxisStart, vAxisEnd, col);
+				payload.m_immediateDrawBatch->DebugDrawLine(vAxisStart, vAxisEnd, col);
 			}
 		}
 		tEditorClipPlaneVec& vClipPlanes = mpEditor->GetEditorWorld()->GetClipPlanes();
 		for(int i=0;i<(int)vClipPlanes.size();++i)
 		{
-			vClipPlanes[i]->Draw(&batch, 0);
+			vClipPlanes[i]->Draw(payload.m_immediateDrawBatch, 0);
 		}
 
-		batch.DebugDrawSphere(GetVCamera()->GetTargetPosition(),0.1f, cColor(0,1,1,1));
+		payload.m_immediateDrawBatch->DebugDrawSphere(GetVCamera()->GetTargetPosition(),0.1f, cColor(0,1,1,1));
 
 		const cVector3f& vRefMousePos = GetVCamera()->GetTrackRefMousePos();
 		const cVector3f& vMouseNewPos = GetVCamera()->GetTrackNewMousePos();
@@ -87,34 +88,31 @@ cEditorWindowViewport::cEditorWindowViewport(iEditorBase* apEditor,
 			cVector3f& vGridPos = vDebugGridPos;
 			cVector3f& vSnapPos = vDebugSnappedGridPos;
 
-			batch.DebugDrawLine(vPos1,vPos2,cColor(0,0,1,1));
-			batch.DebugDrawSphere(vPos1, 0.01f, cColor(0,1,0,1));
-			batch.DebugDrawSphere(vPos2, 0.2f, cColor(0,1,0,1));
-			batch.DebugDrawSphere(vGridPos, 0.3f, cColor(1,0,0,1));
+			payload.m_immediateDrawBatch->DebugDrawLine(vPos1,vPos2,cColor(0,0,1,1));
+			payload.m_immediateDrawBatch->DebugDrawSphere(vPos1, 0.01f, cColor(0,1,0,1));
+			payload.m_immediateDrawBatch->DebugDrawSphere(vPos2, 0.2f, cColor(0,1,0,1));
+			payload.m_immediateDrawBatch->DebugDrawSphere(vGridPos, 0.3f, cColor(1,0,0,1));
 		}
 
-		batch.flush();
 	});
-	m_postTranslucenceDraw = cViewport::PostTranslucenceDraw::Handler([&](cViewport::PostTranslucenceDrawPayload& payload) {
-		if(mpEditor == nullptr) return;
-
-		cMatrixf view = payload.m_frustum->GetViewMatrix().GetTranspose();
-		cMatrixf proj = payload.m_frustum->GetProjectionMatrix().GetTranspose();
-		ImmediateDrawBatch batch(*payload.m_context, *payload.m_outputTarget,view, proj);
-
+	m_postTranslucenceDraw = cViewport::PostTranslucenceDraw::Handler([&](cViewport::PostTranslucenceDrawPacket& payload) {
+		if(mpEditor == nullptr) {
+			return;
+		}
+		
 		cVector3f& vMousePos = mpEditor->GetPosOnGridFromMousePos();
 		iEditorEditMode* pEditMode = mpEditor->GetCurrentEditMode();
 
 		if(pEditMode)
-			pEditMode->DrawPreGrid(this, &batch, vMousePos);
+			pEditMode->DrawPreGrid(this, payload.m_immediateDrawBatch, vMousePos);
 
 		// apFunctions->SetBlendMode(eMaterialBlendMode_None);
 
 		if(pEditMode)
-			pEditMode->DrawPostGrid(this, &batch, vMousePos);
+			pEditMode->DrawPostGrid(this, payload.m_immediateDrawBatch, vMousePos);
 
 
-		batch.flush();
+		// batch.flush();
 	});
 
 	mpEngineViewport->ConnectDraw(m_postTranslucenceDraw);

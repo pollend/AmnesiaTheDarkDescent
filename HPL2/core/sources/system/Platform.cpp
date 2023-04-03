@@ -28,11 +28,6 @@
 namespace hpl
 {
 
-	//---------------------------------------------------------------
-
-	/////////////////////////////////////////////////////////////////
-	// Predicate for sorting video mode lists
-
 	bool VideoComp::operator() (const cVideoMode& aVM1, const cVideoMode& aVM2) const
 	{
 		//Log("Comparing video mode (1) %dx%d/%d-%d to (2) %dx%d/%d-%d\n", aVM1.mvScreenSize.x, aVM1.mvScreenSize.y,

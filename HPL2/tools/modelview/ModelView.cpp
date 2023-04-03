@@ -197,7 +197,7 @@ public:
 		mpWorld->SetSkyBoxColor(cColor(0.0f, 1.0f));
 		mpWorld->SetSkyBoxActive(true);
 
-		m_postSolidDraw = cViewport::PostSolidDraw::Handler([&](cViewport::PostSolidDrawPayload& payload) {
+		m_postSolidDraw = cViewport::PostSolidDraw::Handler([&](cViewport::PostSolidDrawPacket& payload) {
 			
 			cMatrixf view = payload.m_frustum->GetViewMatrix().GetTranspose();
 			cMatrixf proj = payload.m_frustum->GetProjectionMatrix().GetTranspose();

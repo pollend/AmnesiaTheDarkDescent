@@ -55,14 +55,14 @@ cLuxPlayerState_InteractWheel::~cLuxPlayerState_InteractWheel()
 
 //-----------------------------------------------------------------------
 
-void cLuxPlayerState_InteractWheel::RenderSolid(cRendererCallbackFunctions* apFunctions)
+void cLuxPlayerState_InteractWheel::DebugRenderSolid(ImmediateDrawBatch* apFunctions)
 {
 	return;
 	cCamera *pCam = mpPlayer->GetCamera();
 
-	apFunctions->SetBlendMode(eMaterialBlendMode_None);
-	apFunctions->SetProgram(NULL);
-	apFunctions->SetMatrix(NULL);
+	// apFunctions->SetBlendMode(eMaterialBlendMode_None);
+	// apFunctions->SetProgram(NULL);
+	// apFunctions->SetMatrix(NULL);
 
 
 	cVector3f vAxes(1,1,1);
@@ -76,7 +76,7 @@ void cLuxPlayerState_InteractWheel::RenderSolid(cRendererCallbackFunctions* apFu
 	//apFunctions->GetLowLevelGfx()->DrawLine(vPivot, vPivot+cVector3f(0,1,0)*vAxes.y*10, cColor(0,1,0,1));
 	//apFunctions->GetLowLevelGfx()->DrawLine(vPivot, vPivot+cVector3f(0,0,1)*vAxes.z*-10, cColor(0,0,1,1));
 
-	apFunctions->GetLowLevelGfx()->DrawLine(vPivot, vPivot+vPinDir*10, cColor(0,0,1,1));
+	apFunctions->DebugDrawLine(vPivot, vPivot+vPinDir*10, cColor(0,0,1,1));
 
 	//apFunctions->GetLowLevelGfx()->DrawLine(vPivot, vPivot+mpCurrentJoint->GetPinDir(), cColor(0,0,1,1));
 	//apFunctions->GetLowLevelGfx()->DrawLine(mpCurrentBody->GetLocalPosition(),

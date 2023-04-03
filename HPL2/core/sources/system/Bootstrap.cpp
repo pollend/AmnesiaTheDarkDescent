@@ -54,7 +54,6 @@ namespace hpl {
             m_window.Process();
             bgfx::renderFrame();
         }
-
     }
 
     void Bootstrap::Initialize(BootstrapConfiguration configuration) {

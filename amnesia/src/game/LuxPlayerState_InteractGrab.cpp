@@ -563,10 +563,10 @@ float cLuxPlayerState_InteractGrab::DrawDebug(cGuiSet *apSet,iFontData *apFont, 
 	return afStartY;
 }
 
-void cLuxPlayerState_InteractGrab::RenderSolid(cRendererCallbackFunctions* apFunctions)
+void cLuxPlayerState_InteractGrab::DebugRenderSolid(ImmediateDrawBatch* batch)
 {
 	return;
-	apFunctions->SetMatrix(NULL);
+	// apFunctions->SetMatrix(NULL);
 
 	cCamera *pCam = mpPlayer->GetCamera();
 
@@ -588,11 +588,11 @@ void cLuxPlayerState_InteractGrab::RenderSolid(cRendererCallbackFunctions* apFun
 	cVector3f vRight = mtxBodyInv.GetRight();
 
 	cVector3f vPos = mpCurrentBody->GetLocalPosition();
-	apFunctions->GetLowLevelGfx()->DrawLine(vPos, vPos+vWantedUp, cColor(0,1,0,1));
-	apFunctions->GetLowLevelGfx()->DrawLine(vPos, vPos+vUp, cColor(0,1,1,1));
+	batch->DebugDrawLine(vPos, vPos+vWantedUp, cColor(0,1,0,1));
+	batch->DebugDrawLine(vPos, vPos+vUp, cColor(0,1,1,1));
 
-	apFunctions->GetLowLevelGfx()->DrawLine(vPos, vPos+vWantedRight, cColor(1,0,0,1));
-	apFunctions->GetLowLevelGfx()->DrawLine(vPos, vPos+vRight, cColor(1,0,1,1));
+	batch->DebugDrawLine(vPos, vPos+vWantedRight, cColor(1,0,0,1));
+	batch->DebugDrawLine(vPos, vPos+vRight, cColor(1,0,1,1));
 
 }
 

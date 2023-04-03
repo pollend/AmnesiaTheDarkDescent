@@ -401,7 +401,7 @@ float iLuxPlayerState_InteractRotateBase::DrawDebug(cGuiSet *apSet,iFontData *ap
 
 //-----------------------------------------------------------------------
 
-void iLuxPlayerState_InteractRotateBase::RenderSolid(cRendererCallbackFunctions* apFunctions)
+void iLuxPlayerState_InteractRotateBase::DebugRenderSolid(ImmediateDrawBatch* apFunctions)
 {
 	/*cCamera *pCam = mpPlayer->GetCamera();
 	cVector3f vJointPos = mpCurrentBody->GetLocalPosition();//mpCurrentJoint->GetPivotPoint();

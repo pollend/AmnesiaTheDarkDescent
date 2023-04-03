@@ -113,7 +113,8 @@ namespace hpl {
 			{
 				auto* resource = new Image(asName, path);
 				ImageDescriptor desc =  ImageDescriptor::CreateFromBitmap(*pBmp);
-				auto* image = new Image();
+				desc.m_name = asName.c_str();
+				// auto* image = new Image();
 
 				desc.m_configuration.m_UWrap = options.m_UWrap;
 				desc.m_configuration.m_VWrap = options.m_VWrap;
@@ -124,8 +125,9 @@ namespace hpl {
 				desc.m_configuration.m_magFilter = options.m_magFilter;
 				desc.m_configuration.m_mipFilter = options.m_mipFilter;
 
-				auto data = pBmp->GetData(0, 0);
-				resource->Initialize(desc, bgfx::copy(data->mpData, data->mlSize));
+				// auto data = pBmp->GetData(0, 0);
+				Image::InitializeFromBitmap(*resource, *pBmp, desc);
+				// resource->Initialize(desc, bgfx::copy(data->mpData, data->mlSize));
 				return resource;
 			});
 	}
@@ -140,7 +142,7 @@ namespace hpl {
 				auto* resource = new Image(asName, path);
 				ImageDescriptor desc =  ImageDescriptor::CreateFromBitmap(*pBmp);
 				desc.m_name = asName.c_str();
-				auto* image = new Image();
+				// auto* image = new Image();
 
 				desc.m_configuration.m_UWrap = options.m_UWrap;
 				desc.m_configuration.m_VWrap = options.m_VWrap;
@@ -151,7 +153,7 @@ namespace hpl {
 				desc.m_configuration.m_magFilter = options.m_magFilter;
 				desc.m_configuration.m_mipFilter = options.m_mipFilter;
 
-				auto data = pBmp->GetData(0, 0);
+				// auto data = pBmp->GetData(0, 0);
 				Image::InitializeFromBitmap(*resource, *pBmp, desc);
 				return resource;
 			});
@@ -169,7 +171,7 @@ namespace hpl {
 					auto* resource = new Image(asName, path);
 					ImageDescriptor desc =  ImageDescriptor::CreateFromBitmap(*pBmp);
 					desc.m_name = asName.c_str();
-					auto* image = new Image();
+					// auto* image = new Image();
 
 					desc.m_configuration.m_UWrap = options.m_UWrap;
 					desc.m_configuration.m_VWrap = options.m_VWrap;
@@ -181,7 +183,7 @@ namespace hpl {
 					desc.m_configuration.m_mipFilter = options.m_mipFilter;
 					desc.m_isCubeMap = true;
 
-					auto data = pBmp->GetData(0, 0);
+					// auto data = pBmp->GetData(0, 0);
 					Image::InitializeFromBitmap(*resource, *pBmp, desc);
 					return resource;
 				});

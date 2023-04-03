@@ -218,19 +218,10 @@ void cLuxMainMenu_Options::CreateMainGui()
 
 	pTabFrame->AddCallback(eGuiMessage_SelectionChange, this, kGuiCallback(TabFrame_OnPageChange));
 
-
-
-#ifdef USE_ONLIVE
-	mpTabGame = pTabFrame->AddTab(kTranslate("MainMenu","OptionsGame"));
-	mpTabInput = pTabFrame->AddTab(kTranslate("MainMenu","OptionsInput"));
-	mpTabGraphics = NULL;
-	mpTabSound = NULL;
-#else
 	mpTabGame = pTabFrame->AddTab(kTranslate("MainMenu","OptionsGame"));
 	mpTabGraphics = pTabFrame->AddTab(kTranslate("MainMenu","OptionsGraphics"));
 	mpTabInput = pTabFrame->AddTab(kTranslate("MainMenu","OptionsInput"));
 	mpTabSound = pTabFrame->AddTab(kTranslate("MainMenu","OptionsSound"));
-#endif
 
 #if USE_GAMEPAD
 	///////////////////

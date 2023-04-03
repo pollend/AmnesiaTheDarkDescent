@@ -68,15 +68,15 @@ namespace hpl {
 	public:
 		virtual void RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, RenderTarget& target) override;
 		cPostEffect_ColorConvTex(cGraphics *apGraphics, cResources *apResources, iPostEffectType *apType);
-		~cPostEffect_ColorConvTex();
+		virtual ~cPostEffect_ColorConvTex();
 
 	private:
-		void OnSetParams();
-		iPostEffectParams *GetTypeSpecificParams() { return &mParams; }
+		virtual void OnSetParams() override;
+		virtual iPostEffectParams *GetTypeSpecificParams() override { return &mParams; }
 
-		Image* mpColorConvTex;
+		Image* mpColorConvTex = nullptr;
 
-		cPostEffectType_ColorConvTex* mpSpecificType;
+		cPostEffectType_ColorConvTex* mpSpecificType = nullptr;
 
 		cPostEffectParams_ColorConvTex mParams;
 	};

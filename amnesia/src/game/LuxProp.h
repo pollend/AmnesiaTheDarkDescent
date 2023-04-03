@@ -244,8 +244,6 @@ public:
 
 	void BeforeEntityDestruction();
 
-	virtual void OnRenderSolid(cRendererCallbackFunctions* apFunctions);
-
 	//////////////////////
 	//Actions
 	void GiveDamage(float afAmount, int alStrength);

@@ -328,14 +328,6 @@ iLuxProp::~iLuxProp()
 	}
 }
 
-//-----------------------------------------------------------------------
-
-//////////////////////////////////////////////////////////////////////////
-// PUBLIC METHODS
-//////////////////////////////////////////////////////////////////////////
-
-//-----------------------------------------------------------------------
-
 void iLuxProp::SetupAfterLoad(cWorld *apWorld)
 {
 	//////////////////////
@@ -400,8 +392,6 @@ void iLuxProp::OnUpdate(float afTimeStep)
 	// Specific update
 	UpdatePropSpecific(afTimeStep);
 
-	//if(mvLights.size() > 0)
-	//	Log("End Color: %s\n", mvLights[0]->GetDiffuseColor().ToString().c_str());
 }
 
 //-----------------------------------------------------------------------
@@ -415,19 +405,6 @@ void iLuxProp::BeforeEntityDestruction()
 
 	BeforePropDestruction();
 }
-
-//-----------------------------------------------------------------------
-
-void iLuxProp::OnRenderSolid(cRendererCallbackFunctions* apFunctions)
-{
-	return;
-	if(mvBodies.size()<=0) return;
-
-	cBoundingVolume* pBV = mvBodies[0]->GetBoundingVolume();
-	apFunctions->GetLowLevelGfx()->DrawBoxMinMax(pBV->GetMin(), pBV->GetMax(),cColor(1,1,1,1));
-}
-
-//-----------------------------------------------------------------------
 
 void iLuxProp::SetEffectsActive(bool abActive, bool abFadeAndPlaySounds)
 {

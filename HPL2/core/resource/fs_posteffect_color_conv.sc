@@ -12,7 +12,6 @@ uniform vec4 u_params;
 void main()
 {
     vec3 diffuseColor = texture2D(s_diffuseMap, v_texcoord0).xyz;
-
     vec3 outputColor =  vec3(texture2D(s_convMap, vec2(diffuseColor.x, 0)).x,
                     texture2D(s_convMap, vec2(diffuseColor.y, 0)).y,
                     texture2D(s_convMap, vec2(diffuseColor.z, 0)).z);

@@ -38,9 +38,6 @@ public:
 	void ImplementedCreateEntity(cLuxMap *apMap);
 	void ImplementedDestroyEntity(cLuxMap *apMap);
 
-	// void RenderSolid(cRendererCallbackFunctions* apFunctions);
-	// void RenderTrans(cRendererCallbackFunctions* apFunctions);
-
 	void ImplementedReset();
 
 	void Update(float afTimeStep);
