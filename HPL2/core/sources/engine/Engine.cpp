@@ -296,7 +296,8 @@ namespace hpl {
 							apVars->mGraphics.msWindowCaption,
 							apVars->mGraphics.mvWindowPosition,
 							mpResources,alHplSetupFlags);
-
+		Interface<window::NativeWindowWrapper>::Get()->SetWindowSize(cVector2l(apVars->mGraphics.mvScreenSize.x, apVars->mGraphics.mvScreenSize.y));
+		
 		//Init Sound
 		mpSound->Init(mpResources, apVars->mSound.mlSoundDeviceID,
 						apVars->mSound.mbUseEnvironmentalAudio,

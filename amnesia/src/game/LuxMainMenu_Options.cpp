@@ -1433,6 +1433,8 @@ void cLuxMainMenu_Options::ApplyChanges()
 //		pCfgHdr->mbAdaptiveVSync = mpChBAdaptiveVSync->IsChecked();
 		pGfx->GetLowLevel()->SetVsyncActive(pCfgHdr->mbVSync, pCfgHdr->mbAdaptiveVSync);
 		pGfx->GetLowLevel()->SetGammaCorrection(GetGamma());
+		Interface<window::NativeWindowWrapper>::Get()->SetWindowSize(cVector2l(pCfgHdr->mvScreenSize.x, pCfgHdr->mvScreenSize.y));
+		
 
 		// Parallax
 		//int lParallax = (int)mpCBParallaxQuality->GetSelectedItem() - 1;
