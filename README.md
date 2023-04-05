@@ -13,7 +13,7 @@ This is a heavy rework of the core engine, mostly an experiment in absurdity to 
 
 ## Random Ideas
 
-- Replace newton physics with Jolt [ticet](https://github.com/pollend/AmnesiaTheDarkDescent/issues/20)
+- Replace newton physics with Jolt [ticket](https://github.com/pollend/AmnesiaTheDarkDescent/issues/20)
 - Remove OALWrapper and use miniaudio [ticket](https://github.com/pollend/AmnesiaTheDarkDescent/issues/13)
 - Remove iXMLDocument indirection and use FastXML [ticket](https://github.com/pollend/AmnesiaTheDarkDescent/issues/25)
 - Would like to mess around with raytracing support from Vulkan and DirectX, would probably have to use another solution. 
@@ -50,3 +50,10 @@ otherwise from vcpkg.
 
 The main things that need to be installed and are not included are `python3` and `perl. For Windows just makes sure these dependencies are included 
 on the system path. 
+
+
+# License
+
+- Any code published by `Frictional` is under a GNU GENERAL PUBLIC LICENSE
+- Some code published by `Open 3D Engine` which is under an Apache-2.0 OR MIT
+- Any new code that is under my name will use an Apache-2.0 LICENSE 
