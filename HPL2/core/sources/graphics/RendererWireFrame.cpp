@@ -75,6 +75,7 @@ namespace hpl {
 			return target.GetImage()->GetImageSize() == viewport.GetSize();
 		}));
 
+		m_u_color.Initialize();
 		m_colorProgram = hpl::loadProgram("vs_color", "fs_color");
 	}
 

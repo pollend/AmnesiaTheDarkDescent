@@ -66,6 +66,10 @@ namespace hpl {
         m_colorProgram = resolveProgramCache<StringLiteral("vs_color"), StringLiteral("fs_color")>();
         m_uvProgram = resolveProgramCache<StringLiteral("vs_basic_uv"), StringLiteral("fs_basic_uv")>();
         m_meshColorProgram = resolveProgramCache<StringLiteral("vs_color"), StringLiteral("fs_color_1")>();
+    
+        m_s_diffuseMap.Initialize();
+        m_u_normalMtx.Initialize();
+        m_u_color.Initialize();
     }
 
     void GraphicsContext::Frame() {

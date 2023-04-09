@@ -61,13 +61,13 @@ namespace hpl {
 	{
 	public:
 		cMaterialType_Water(cGraphics *apGraphics, cResources *apResources);
-		~cMaterialType_Water();
+		virtual ~cMaterialType_Water();
 
-		iMaterialVars* CreateSpecificVariables();
-		void LoadVariables(cMaterial *apMaterial, cResourceVarsObject *apVars);
-		void GetVariableValues(cMaterial* apMaterial, cResourceVarsObject* apVars);
+		iMaterialVars* CreateSpecificVariables() override;
+		void LoadVariables(cMaterial *apMaterial, cResourceVarsObject *apVars) override;
+		void GetVariableValues(cMaterial* apMaterial, cResourceVarsObject* apVars) override;
 
-		void CompileMaterialSpecifics(cMaterial *apMaterial);
+		void CompileMaterialSpecifics(cMaterial *apMaterial) override;
 
 		virtual void ResolveShaderProgram(
             eMaterialRenderMode aRenderMode,

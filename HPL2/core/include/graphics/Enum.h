@@ -34,6 +34,23 @@ namespace hpl
         RGBA = RGB | A,
     };
 
+    // enum class RenderableType: uint8_t {
+    //     Renderable_Z,
+	// 	Renderable_Diffuse,
+	// 	Renderable_Translucent,
+	// 	Renderable_Decal,
+	// 	Renderable_Illumination,
+	// 	Renderable_LastEnum
+    // };
+
+    // enum class RenderableBitFlag: uint8_t {
+    //     Renderable_Z = 1 << static_cast<uint8_t>(RenderableType::Renderable_Z),
+    //     Renderable_Diffuse = 1 << static_cast<uint8_t>(RenderableType::Renderable_Diffuse),
+    //     Renderable_Translucent = 1 << static_cast<uint8_t>(RenderableType::Renderable_Translucent),
+    //     Renderable_Decal = 1 << static_cast<uint8_t>(RenderableType::Renderable_Decal),
+    //     Renderable_Illumination = 1 << static_cast<uint8_t>(RenderableType::Renderable_Illumination),
+    // };
+
     enum class ClearOp: uint32_t {
         None = 0,
         Color = 1 << 0,
@@ -41,7 +58,6 @@ namespace hpl
         Stencil = 1 << 2,
         All = Color | Depth | Stencil,
     };
-
 
     enum class StencilFail : uint8_t {
         Zero,

@@ -6,10 +6,11 @@ SAMPLER2D(s_positionMap, 0);
 
 uniform vec4 u_fogColor;
 uniform vec4 u_param[3];
+uniform mat4 u_mtxInvRotation;
 
-#define u_fogStart u_param[0].x
-#define u_fogLength u_param[0].y
-#define u_fogFalloffExp u_param[0].z
+#define u_fogStart (u_param[0].x)
+#define u_fogLength (u_param[0].y)
+#define u_fogFalloffExp (u_param[0].z)
 
 #define u_fogRayCastStart (vec3(u_param[0].w, u_param[1].x, u_param[1].y))
 #define u_fogNegPlaneDistNeg (vec3(u_param[1].z, u_param[1].w, u_param[2].x))
@@ -57,7 +58,7 @@ void main()
         #endif
     #endif
 
-    fDepth = min(- v_position.z, fDepth);
+    fDepth = min(fDepth - u_fogStart, u_fogLength);
     float fAmount = max(fDepth / u_fogLength,0.0);
     
     gl_FragColor.xyz = u_fogColor.xyz;

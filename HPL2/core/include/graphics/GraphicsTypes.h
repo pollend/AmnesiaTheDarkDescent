@@ -699,6 +699,7 @@ namespace hpl {
 	#define eRenderListCompileFlag_Translucent	(0x00000004)
 	#define eRenderListCompileFlag_Decal		(0x00000008)
 	#define eRenderListCompileFlag_Illumination	(0x00000010)
+	#define eRenderListCompileFlag_FogArea		(0x00000020)
 
 	enum eRenderListType
 	{

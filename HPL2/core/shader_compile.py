@@ -106,9 +106,7 @@ shaders = [
     { "type" : ShaderType.VS, "inout" : "resource/vs_basic_solid_illumination.io",     "input": "resource/vs_basic_solid_illumination.sc", "includes": ["resource"]},
     { "type" : ShaderType.VS, "inout" : "resource/vs_basic_solid_z.io",                "input": "resource/vs_basic_solid_z.sc", "includes": ["resource"]},
     { "type" : ShaderType.VS, "inout" : "resource/vs_decal_material.io",               "input": "resource/vs_decal_material.sc", "includes": ["resource"]},
-    { "type" : ShaderType.VS, "inout" : "resource/vs_deferred_fog.io",                 "input": "resource/vs_deferred_fog.sc", "includes": ["resource"]},
     { "type" : ShaderType.VS, "inout" : "resource/vs_post_effect.io",                  "input": "resource/vs_post_effect.sc", "includes": ["resource"]},
-    { "type" : ShaderType.VS, "inout" : "resource/vs_water_material.io",               "input": "resource/vs_water_material.sc", "includes": ["resource"]},
     { "type" : ShaderType.VS, "inout" : "resource/vs_simple_flat.io",                  "input": "resource/vs_simple_flat.sc" , "includes": ["resource"]},
     { "type" : ShaderType.FS, "inout" : "resource/vs_simple_flat.io",                  "input": "resource/fs_simple_flat.sc" , "includes": ["resource"]},
     { "type" : ShaderType.VS, "inout" : "resource/vs_simple_diffuse.io",               "input": "resource/vs_simple_diffuse.sc" , "includes": ["resource"]},
@@ -122,9 +120,11 @@ shaders = [
     { "type" : ShaderType.FS, "inout" : "resource/vs_basic_translucent_material.io",   "input": "resource/fs_basic_translucent_material.sc", "defines": ["USE_BLEND_MODE_ALPHA"], "name": "fs_basic_translucent_blendModeAlpha", "includes": ["resource"], "variants": translucent_variants},
     { "type" : ShaderType.FS, "inout" : "resource/vs_basic_translucent_material.io",   "input": "resource/fs_basic_translucent_material.sc", "defines": ["USE_BLEND_MODE_PREMUL_ALPHA"], "name": "fs_basic_translucent_blendModePremulAlpha", "includes": ["resource"], "variants": translucent_variants},
     { "type" : ShaderType.FS, "inout" : "resource/vs_decal_material.io",               "input": "resource/fs_decal_material.sc", "includes": ["resource"]},
+    { "type" : ShaderType.VS, "inout" : "resource/vs_deferred_fog.io",                 "input": "resource/vs_deferred_fog.sc", "includes": ["resource"],  "variants": deferred_fog_variants},
     { "type" : ShaderType.FS, "inout" : "resource/vs_deferred_fog.io",                 "input": "resource/fs_deferred_fog.sc", "includes": ["resource"],  "variants": deferred_fog_variants},
     { "type" : ShaderType.FS, "inout" : "resource/vs_simple_diffuse.io",               "input": "resource/fs_simple_diffuse.sc", "includes": ["resource"]},
     { "type" : ShaderType.FS, "inout" : "resource/vs_simple_flat.io",                  "input": "resource/fs_simple_flat.sc", "includes": ["resource"]},
+    { "type" : ShaderType.VS, "inout" : "resource/vs_water_material.io",               "input": "resource/vs_water_material.sc", "includes": ["resource"]},
     { "type" : ShaderType.FS, "inout" : "resource/vs_water_material.io",               "input": "resource/fs_water_material.sc", "includes": ["resource"], "variants": water_variants},
 ]
 

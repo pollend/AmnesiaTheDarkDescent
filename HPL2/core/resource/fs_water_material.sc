@@ -1,6 +1,4 @@
-
-
-$input v_texcoord0, v_normal, v_tangent, v_bitangent, v_position
+$input v_position, v_normal, v_tangent, v_bitangent, v_texcoord0
 
 #include <common.sh>
 

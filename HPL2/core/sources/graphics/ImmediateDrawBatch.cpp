@@ -16,6 +16,10 @@ namespace hpl {
         , m_target(target)
         , m_view(view)
         , m_projection(projection) {
+        m_s_diffuseMap.Initialize();
+        m_u_normalMtx.Initialize();
+        m_u_color.Initialize();
+
         m_colorProgram = context.resolveProgramCache<StringLiteral("vs_color"), StringLiteral("fs_color")>();
         m_uvProgram = context.resolveProgramCache<StringLiteral("vs_basic_uv"), StringLiteral("fs_basic_uv")>();
         m_meshColorProgram = context.resolveProgramCache<StringLiteral("vs_color"), StringLiteral("fs_color_1")>();
@@ -36,7 +40,6 @@ namespace hpl {
             viewConfiguration.m_view = m_view;
             m_orthographicView = m_context.StartPass("Immediate - Ortho", viewConfiguration);
         }
-
     }
 
     void ImmediateDrawBatch::DebugDrawBoxMinMax(

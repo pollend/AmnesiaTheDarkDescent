@@ -63,6 +63,7 @@ namespace hpl
     bgfx::ProgramHandle ShaderVariantCollection<TSize>::GetVariant(uint32_t flag) const
     {
         BX_ASSERT(flag <= TSize, "Invalid flag %d", flag)
+        BX_ASSERT(bgfx::isValid(m_variants[flag].m_programHandle), "Invalid program handle")
         return m_variants[flag].m_programHandle;
     }
 

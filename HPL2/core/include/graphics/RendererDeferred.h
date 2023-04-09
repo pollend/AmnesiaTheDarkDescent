@@ -279,10 +279,7 @@ namespace hpl {
         // takes the contents of the gbuffer and renders the lights
         void RenderLightPass(GraphicsContext& context, cViewport& viewport, RenderTarget& rt);
         void RenderDiffusePass(GraphicsContext& context, cViewport& viewport, RenderTarget& rt);
-        void RenderFogPass(GraphicsContext& context, cViewport& viewport, RenderTarget& rt);
-        void RenderFullScreenFogPass(GraphicsContext& context, cViewport& viewport, RenderTarget& rt);
         void RenderEdgeSmoothPass(GraphicsContext& context, cViewport& viewport, RenderTarget& rt);
-        void RenderTranslucentPass(GraphicsContext& context, cViewport& viewport, RenderTarget& rt);
         void RenderZPass(GraphicsContext& context, cViewport& viewport, RenderTarget& rt);
         void RenderShadowPass(GraphicsContext& context, cViewport& viewport, const cDeferredLight& apLightData, RenderTarget& rt);
 
@@ -324,14 +321,15 @@ namespace hpl {
         int m_shadowJitterSamples;
 
         UniformWrapper<StringLiteral("u_param"), bgfx::UniformType::Vec4> m_u_param;
-        UniformWrapper<StringLiteral("u_boxInvViewModelRotation"), bgfx::UniformType::Mat4> m_u_boxInvViewModelRotation;
         UniformWrapper<StringLiteral("u_lightPos"), bgfx::UniformType::Vec4>  m_u_lightPos;
         UniformWrapper<StringLiteral("u_fogColor"), bgfx::UniformType::Vec4> m_u_fogColor;
         UniformWrapper<StringLiteral("u_lightColor"), bgfx::UniformType::Vec4> m_u_lightColor;
-        UniformWrapper<StringLiteral("u_spotViewProj"), bgfx::UniformType::Mat4> m_u_spotViewProj;
         UniformWrapper<StringLiteral("u_overrideColor"), bgfx::UniformType::Vec4> m_u_overrideColor;
-        UniformWrapper<StringLiteral("u_mtxInvViewRotation"), bgfx::UniformType::Mat4> m_u_mtxInvViewRotation;
         UniformWrapper<StringLiteral("u_copyRegion"), bgfx::UniformType::Vec4> m_u_copyRegion;
+
+        UniformWrapper<StringLiteral("u_spotViewProj"), bgfx::UniformType::Mat4> m_u_spotViewProj;
+        UniformWrapper<StringLiteral("u_mtxInvRotation"), bgfx::UniformType::Mat4> m_u_mtxInvRotation;
+        UniformWrapper<StringLiteral("u_mtxInvViewRotation"), bgfx::UniformType::Mat4> m_u_mtxInvViewRotation;
 
         UniformWrapper<StringLiteral("s_depthMap"), bgfx::UniformType::Sampler> m_s_depthMap;
         UniformWrapper<StringLiteral("s_positionMap"), bgfx::UniformType::Sampler> m_s_positionMap;
@@ -349,7 +347,7 @@ namespace hpl {
         bgfx::ProgramHandle m_edgeSmooth_UnpackDepthProgram;
         bgfx::ProgramHandle m_lightBoxProgram;
 
-        ShaderVariantCollection<rendering::detail::FogVariant_UseOutsideBox | rendering::detail::FogVariant_UseBackSide> m_forVariant;
+        ShaderVariantCollection<rendering::detail::FogVariant_UseOutsideBox | rendering::detail::FogVariant_UseBackSide> m_fogVariant;
         ShaderVariantCollection<rendering::detail::SpotlightVariant_UseGoboMap | rendering::detail::SpotlightVariant_UseShadowMap>
             m_spotlightVariants;
         ShaderVariantCollection<rendering::detail::PointlightVariant_UseGoboMap> m_pointLightVariants;

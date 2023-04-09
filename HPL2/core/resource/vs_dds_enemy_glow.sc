@@ -1,4 +1,3 @@
-
 $input a_position, a_texcoord0, a_normal
 $output v_texcoord0, v_normal
 

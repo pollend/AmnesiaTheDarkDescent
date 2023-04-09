@@ -1,4 +1,3 @@
-
 $input a_position
 
 #include <common.sh>

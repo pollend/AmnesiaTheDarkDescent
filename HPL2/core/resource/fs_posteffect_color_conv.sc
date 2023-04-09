@@ -1,4 +1,3 @@
-
 $input v_texcoord0
 
 #include <common.sh>

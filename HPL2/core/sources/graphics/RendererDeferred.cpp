@@ -97,6 +97,127 @@ namespace hpl {
 	eDeferredSSAO cRendererDeferred::mSSAOType = eDeferredSSAO_OnColorBuffer;
 	bool cRendererDeferred::mbEdgeSmoothLoaded = false;
 
+        namespace detail {
+            struct FogRendererData {
+                cFogArea* m_fogArea;
+                bool m_insideNearFrustum;
+                cVector3f m_boxSpaceFrustumOrigin;
+                cMatrixf m_mtxInvBoxSpace;
+            };
+            float GetFogAreaVisibilityForObject(const FogRendererData& fogData, cFrustum& frustum, iRenderable* apObject) {
+                cFogArea* pFogArea = fogData.m_fogArea;
+
+                cVector3f vObjectPos = apObject->GetBoundingVolume()->GetWorldCenter();
+                cVector3f vRayDir = vObjectPos - frustum.GetOrigin();
+                float fCameraDistance = vRayDir.Length();
+                vRayDir = vRayDir / fCameraDistance;
+
+                float fEntryDist, fExitDist;
+
+                auto checkFogAreaIntersection =
+                    [&fEntryDist,
+                     &fExitDist](const cMatrixf& a_mtxInvBoxModelMatrix, const cVector3f& avBoxSpaceRayStart, const cVector3f& avRayDir) {
+                        cVector3f vBoxSpaceDir = cMath::MatrixMul3x3(a_mtxInvBoxModelMatrix, avRayDir);
+
+                        bool bFoundIntersection = false;
+                        fExitDist = 0;
+
+                        std::array<cVector3f, 6> fBoxPlaneNormals = { {
+                            cVector3f(-1, 0, 0), // Left
+                            cVector3f(1, 0, 0), // Right
+
+                            cVector3f(0, -1, 0), // Bottom
+                            cVector3f(0, 1, 0), // Top
+
+                            cVector3f(0, 0, -1), // Back
+                            cVector3f(0, 0, 1), // Front
+                        } };
+
+                        ///////////////////////////////////
+                        // Iterate the sides of the cube
+                        for (auto& planeNormal : fBoxPlaneNormals) {
+                            ///////////////////////////////////
+                            // Calculate plane intersection
+                            float fMul = cMath::Vector3Dot(planeNormal, vBoxSpaceDir);
+                            if (fabs(fMul) < 0.0001f) {
+                                continue;
+							}
+                            float fNegDist = -(cMath::Vector3Dot(planeNormal, avBoxSpaceRayStart) + 0.5f);
+
+                            float fT = fNegDist / fMul;
+                            if (fT < 0)
+                                continue;
+                            cVector3f vAbsNrmIntersect = cMath::Vector3Abs(vBoxSpaceDir * fT + avBoxSpaceRayStart);
+
+                            ///////////////////////////////////
+                            // Check if the intersection is inside the cube
+                            if (cMath::Vector3LessEqual(vAbsNrmIntersect, cVector3f(0.5001f))) {
+                                //////////////////////
+                                // First intersection
+                                if (bFoundIntersection == false) {
+                                    fEntryDist = fT;
+                                    fExitDist = fT;
+                                    bFoundIntersection = true;
+                                }
+                                //////////////////////
+                                // There has already been a intersection.
+                                else {
+                                    fEntryDist = cMath::Min(fEntryDist, fT);
+                                    fExitDist = cMath::Max(fExitDist, fT);
+                                }
+                            }
+                        }
+
+                        if (fExitDist < 0)
+                            return false;
+
+                        return bFoundIntersection;
+                    };
+                if (checkFogAreaIntersection(fogData.m_mtxInvBoxSpace, fogData.m_boxSpaceFrustumOrigin, vRayDir) == false) {
+                    return 1.0f;
+                }
+
+                if (fogData.m_insideNearFrustum == false && fCameraDistance < fEntryDist) {
+                    return 1.0f;
+                }
+
+                //////////////////////////////
+                // Calculate the distance the ray travels in the fog
+                float fFogDist;
+                if (fogData.m_insideNearFrustum) {
+                    if (pFogArea->GetShowBacksideWhenInside())
+                        fFogDist = cMath::Min(fExitDist, fCameraDistance);
+                    else
+                        fFogDist = fCameraDistance;
+                } else {
+                    if (pFogArea->GetShowBacksideWhenOutside())
+                        fFogDist = cMath::Min(fExitDist - fEntryDist, fCameraDistance - fEntryDist);
+                    else
+                        fFogDist = fCameraDistance - fEntryDist;
+                }
+
+                //////////////////////////////
+                // Calculate the alpha
+                if (fFogDist <= 0)
+                    return 1.0f;
+
+                float fFogStart = pFogArea->GetStart();
+                float fFogEnd = pFogArea->GetEnd();
+                float fFogAlpha = 1 - pFogArea->GetColor().a;
+
+                if (fFogDist < fFogStart)
+                    return 1.0f;
+
+                if (fFogDist > fFogEnd)
+                    return fFogAlpha;
+
+                float fAlpha = (fFogDist - fFogStart) / (fFogEnd - fFogStart);
+                if (pFogArea->GetFalloffExp() != 1)
+                    fAlpha = powf(fAlpha, pFogArea->GetFalloffExp());
+
+                return (1.0f - fAlpha) + fFogAlpha * fAlpha;
+            }
+        } // namespace detail
 
 	enum eDefferredProgramMode
 	{
@@ -275,10 +396,33 @@ namespace hpl {
 			TextureCreator::GenerateScatterDiskMap2D(*m_shadowJitterImage, m_shadowJitterSize,m_shadowJitterSamples, true);
 		}
 		
+		m_u_param.Initialize();
+		m_u_lightPos.Initialize();
+		m_u_fogColor.Initialize();
+		m_u_lightColor.Initialize();
+		m_u_overrideColor.Initialize();
+		m_u_copyRegion.Initialize();
+		m_u_spotViewProj.Initialize();
+		m_u_mtxInvRotation.Initialize();
+		m_u_mtxInvViewRotation.Initialize();
+
+		m_s_depthMap.Initialize();
+		m_s_positionMap.Initialize();
+		m_s_diffuseMap.Initialize();
+		m_s_normalMap.Initialize();
+		m_s_specularMap.Initialize();
+		m_s_attenuationLightMap.Initialize();
+		m_s_spotFalloffMap.Initialize();
+		m_s_shadowMap.Initialize();
+		m_s_goboMap.Initialize();
+		m_s_shadowOffsetMap.Initialize();
+		m_s_diffuseMapOut.Initialize();
+
+
 		m_copyRegionProgram = hpl::loadProgram("cs_copy_region");
 		m_lightBoxProgram = hpl::loadProgram("vs_light_box", "fs_light_box");
-		m_forVariant.Initialize(
-			ShaderHelper::LoadProgramHandlerDefault("vs_deferred_fog", "fs_deferred_fog", false, true));
+		m_fogVariant.Initialize(
+			ShaderHelper::LoadProgramHandlerDefault("vs_deferred_fog", "fs_deferred_fog", true, true));
 		m_pointLightVariants.Initialize(
 			ShaderHelper::LoadProgramHandlerDefault("vs_deferred_light", "fs_deferred_pointlight", false, true));
 		
@@ -401,149 +545,6 @@ namespace hpl {
 		return m_boundViewportData.resolve(viewport).m_outputImage;
 	}
 
-	// NOTE: this logic is incomplete
-	void cRendererDeferred::RenderFogPass(GraphicsContext& context, cViewport& viewport, RenderTarget& rt) {
-		if(mpCurrentRenderList->GetFogAreaNum() == 0)
-		{
-			mpCurrentSettings->mvFogRenderData.resize(0); //Make sure render data array is empty!
-			return;
-		}
-		auto& sharedData = m_boundViewportData.resolve(viewport);
-
-		GraphicsContext::ViewConfiguration viewConfig {rt};
-		viewConfig.m_viewRect = {0, 0, sharedData.m_size.x, sharedData.m_size.y};
-		viewConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
-		viewConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
-		const auto view = context.StartPass("Fog Pass", viewConfig);
-		for(auto& fogData: mpCurrentSettings->mvFogRenderData)
-		{
-			cFogArea* pFogArea = fogData.mpFogArea;
-
-			struct {
-				float u_fogStart;
-				float u_fogLength;
-				float u_fogFalloffExp;
-
-				float u_fogRayCastStart[3];
-				float u_fogNegPlaneDistNeg[3];
-				float u_fogNegPlaneDistPos[3];
-			} uniforms = {0};
-
-			//Outside of box setup
-			cMatrixf rotationMatrix = cMatrixf::Identity;
-			uint32_t flags =  rendering::detail::FogVariant_None;
-			if(!fogData.mbInsideNearFrustum)
-			{
-				cMatrixf mtxInvModelView = cMath::MatrixInverse( cMath::MatrixMul(mpCurrentFrustum->GetViewMatrix(), *pFogArea->GetModelMatrixPtr()) );
-				cVector3f vRayCastStart = cMath::MatrixMul(mtxInvModelView, cVector3f(0));
-
-				uniforms.u_fogRayCastStart[0] = vRayCastStart.x;
-				uniforms.u_fogRayCastStart[1] = vRayCastStart.y;
-				uniforms.u_fogRayCastStart[2] = vRayCastStart.z;
-
-				rotationMatrix = mtxInvModelView.GetRotation().GetTranspose();
-
-				cVector3f vNegPlaneDistNeg( cMath::PlaneToPointDist(cPlanef(-1,0,0,0.5f),vRayCastStart), cMath::PlaneToPointDist(cPlanef(0,-1,0,0.5f),vRayCastStart),
-											cMath::PlaneToPointDist(cPlanef(0,0,-1,0.5f),vRayCastStart));
-				cVector3f vNegPlaneDistPos( cMath::PlaneToPointDist(cPlanef(1,0,0,0.5f),vRayCastStart), cMath::PlaneToPointDist(cPlanef(0,1,0,0.5f),vRayCastStart),
-											cMath::PlaneToPointDist(cPlanef(0,0,1,0.5f),vRayCastStart));
-				
-				uniforms.u_fogNegPlaneDistNeg[0] = vNegPlaneDistNeg.x * -1;
-				uniforms.u_fogNegPlaneDistNeg[1] = vNegPlaneDistNeg.y * -1;
-				uniforms.u_fogNegPlaneDistNeg[2] = vNegPlaneDistNeg.z * -1;
-
-				uniforms.u_fogNegPlaneDistPos[0] = vNegPlaneDistPos.x * -1;
-				uniforms.u_fogNegPlaneDistPos[1] = vNegPlaneDistPos.y * -1;
-				uniforms.u_fogNegPlaneDistPos[2] = vNegPlaneDistPos.z * -1;
-			}
-			if(fogData.mbInsideNearFrustum)
-			{
-				flags |=  pFogArea->GetShowBacksideWhenInside() ? rendering::detail::FogVariant_UseBackSide : rendering::detail::FogVariant_None;
-			} 
-			else 
-			{
-				flags |= rendering::detail::FogVariant_UseOutsideBox;
-				flags |=  pFogArea->GetShowBacksideWhenOutside() ? rendering::detail::FogVariant_UseBackSide : rendering::detail::FogVariant_None;
-			}
-			
-			const auto fogColor = mpCurrentWorld->GetFogColor();
-			float uniformFogColor[4] = {fogColor.r, fogColor.g, fogColor.b, fogColor.a};
-
-			GraphicsContext::LayoutStream layoutStream;
-			GraphicsContext::ShaderProgram shaderProgram;
-			shaderProgram.m_handle = m_forVariant.GetVariant(flags);
-			shaderProgram.m_uniforms.push_back(
-				{m_u_param, &uniforms, 3});
-			shaderProgram.m_uniforms.push_back(
-				{m_u_boxInvViewModelRotation, rotationMatrix.v});
-			shaderProgram.m_uniforms.push_back(
-				{m_u_fogColor, uniformFogColor, 1});
-			
-			shaderProgram.m_configuration.m_rgbBlendFunc = 
-				CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
-			shaderProgram.m_configuration.m_write = Write::RGB;
-			
-			// shaderProgram.m_projection = mpCurrentProjectionMatrix->GetTranspose();
-			// shaderProgram.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
-			shaderProgram.m_modelTransform = pFogArea->GetModelMatrixPtr() ? cMatrixf::Identity : pFogArea->GetModelMatrixPtr()->GetTranspose();
-
-			mpShapeBox->GetLayoutStream(layoutStream);
-
-			GraphicsContext::DrawRequest drawRequest {layoutStream, shaderProgram};
-			context.Submit(view, drawRequest);
-		}
-	}
-
-
-	void cRendererDeferred::RenderFullScreenFogPass(GraphicsContext& context, cViewport& viewport, RenderTarget& rt) {
-		auto& sharedData = m_boundViewportData.resolve(viewport);
-
-		GraphicsContext::LayoutStream layout;
-		cMatrixf projMtx;
-		context.ScreenSpaceQuad(layout, projMtx, sharedData.m_size.x, sharedData.m_size.y);
-		
-		GraphicsContext::ViewConfiguration viewConfig {rt};
-		viewConfig.m_projection = projMtx;
-		viewConfig.m_viewRect = cRect2l(0, 0, sharedData.m_size.x, sharedData.m_size.y);
-		const auto view = context.StartPass("Full Screen Fog", viewConfig);
-		
-		struct {
-			float u_fogStart;
-			float u_fogLength;
-			float u_fogFalloffExp;
-		} uniforms = {0};
-
-		uniforms.u_fogStart = mpCurrentWorld->GetFogStart();
-		uniforms.u_fogLength = mpCurrentWorld->GetFogEnd() - mpCurrentWorld->GetFogStart();
-		uniforms.u_fogFalloffExp = mpCurrentWorld->GetFogFalloffExp();
-		
-		
-		GraphicsContext::ShaderProgram shaderProgram;
-		shaderProgram.m_configuration.m_write = Write::RGBA;
-		shaderProgram.m_configuration.m_depthTest = DepthTest::LessEqual;
-		// shaderProgram.m_projection = projMtx;
-
-		shaderProgram.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
-		shaderProgram.m_configuration.m_write = Write::RGB;
-
-		cMatrixf rotationMatrix = cMatrixf::Identity;
-		const auto fogColor = mpCurrentWorld->GetFogColor();
-		float uniformFogColor[4] = {fogColor.r, fogColor.g, fogColor.b, fogColor.a};
-
-		shaderProgram.m_handle = m_forVariant.GetVariant(rendering::detail::FogVariant_None);
-		shaderProgram.m_textures.push_back(
-			{m_s_depthMap, sharedData.m_gBufferPositionImage->GetHandle(), 0});
-		shaderProgram.m_uniforms.push_back(
-			{m_u_param, &uniforms, 3});
-		shaderProgram.m_uniforms.push_back(
-				{m_u_boxInvViewModelRotation, rotationMatrix.v});
-		shaderProgram.m_uniforms.push_back(
-				{m_u_fogColor, uniformFogColor, 1});
-		
-		GraphicsContext::DrawRequest drawRequest {layout, shaderProgram};
-		context.Submit(view, drawRequest);
-	}
-
 	void cRendererDeferred::RenderEdgeSmoothPass(GraphicsContext& context, cViewport& viewport, RenderTarget& rt) {
 
 		GraphicsContext::ViewConfiguration viewConfig {m_edgeSmooth_LinearDepth};
@@ -632,144 +633,6 @@ namespace hpl {
 	}
 
 
-	void cRendererDeferred::RenderTranslucentPass(GraphicsContext& context, cViewport& viewport, RenderTarget& target) {
-		auto& sharedData = m_boundViewportData.resolve(viewport);
-
-		GraphicsContext::ViewConfiguration viewConfig {target};
-		viewConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
-		viewConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
-		viewConfig.m_viewRect = {0, 0, sharedData.m_size.x, sharedData.m_size.y};
-		auto view = context.StartPass("Translucent", viewConfig);
-		bgfx::setViewMode(view, bgfx::ViewMode::Sequential);
-		const float fHalfFovTan = tan(mpCurrentFrustum->GetFOV()*0.5f);
-		for(auto& obj: mpCurrentRenderList->GetRenderableItems(eRenderListType_Translucent))
-		{
-			
-			auto* pMaterial = obj->GetMaterial();
-			auto* pMaterialType = pMaterial->GetType();
-			auto* vertexBuffer = obj->GetVertexBuffer();
-			// const bool hasColorAttribute = vertexBuffer->GetElement(eVertexBufferElement_Color0) != nullptr; // hack 
-			
-			cMatrixf *pMatrix = obj->GetModelMatrix(mpCurrentFrustum);
-
-			eMaterialRenderMode renderMode = mpCurrentWorld->GetFogActive() ? eMaterialRenderMode_DiffuseFog : eMaterialRenderMode_Diffuse;
-			if(!pMaterial->GetAffectedByFog()) {
-				renderMode = eMaterialRenderMode_Diffuse;
-			}
-
-			////////////////////////////////////////
-			// Check the fog area alpha
-			mfTempAlpha = 1;
-			if(pMaterial->GetAffectedByFog())
-			{
-				for(size_t i=0; i<mpCurrentSettings->mvFogRenderData.size(); ++i)
-				{
-					mfTempAlpha *= GetFogAreaVisibilityForObject(&mpCurrentSettings->mvFogRenderData[i], obj);
-				}
-			}
-
-			if(!obj->UpdateGraphicsForViewport(mpCurrentFrustum, mfCurrentFrameTime)) 
-			{
-				continue;
-			}
-
-			if(!obj->RetrieveOcculsionQuery(this))
-			{
-				continue;
-			}
-			
-			if(pMaterial->HasRefraction())
-			{
-				if(!CheckRenderablePlaneIsVisible(obj, mpCurrentFrustum)) {
-					continue;
-				}
-
-				cBoundingVolume *pBV = obj->GetBoundingVolume();
-
-				auto imageSize = target.GetImage()->GetImageSize();
-				cRect2l clipRect = GetClipRectFromObject(obj, 0.2f, mpCurrentFrustum, imageSize, fHalfFovTan);
-				if(clipRect.w <= 0 || clipRect.h <= 0) {
-					continue;
-				}
-
-				GraphicsContext::ShaderProgram shaderInput;
-				shaderInput.m_handle = m_copyRegionProgram;
-				shaderInput.m_textures.push_back({m_s_diffuseMap, sharedData.m_outputImage->GetHandle(), 0});
-				shaderInput.m_uavImage.push_back({sharedData.m_refractionImage->GetHandle(), 1, 0, bgfx::Access::Write, bgfx::TextureFormat::Enum::RGBA8});
-
-				float copyRegion[4] = {static_cast<float>(clipRect.x), static_cast<float>(imageSize.y - (clipRect.h + clipRect.y)), static_cast<float>(clipRect.w), static_cast<float>(clipRect.h)};
-				shaderInput.m_uniforms.push_back({m_u_copyRegion, &copyRegion, 1});
-				
-				GraphicsContext::ComputeRequest computeRequest {shaderInput,  static_cast<uint32_t>((clipRect.w/16) + 1), static_cast<uint32_t>((clipRect.h/16) + 1), 1};
-				context.Submit(view, computeRequest);
-			}
-
-			if(pMaterial->HasWorldReflection() && obj->GetRenderType() == eRenderableType_SubMesh)
-			{
-				// cBoundingVolume *pBV = obj->GetBoundingVolume();
-
-				// cRect2l clipRect = GetClipRectFromObject(obj, 0.2f, mpCurrentFrustum, mvRenderTargetSize, fHalfFovTan);
-				// if(!CheckRenderablePlaneIsVisible(obj, mpCurrentFrustum)) {
-				// 	continue;
-				// }
-
-        		// cRect2l rect = cRect2l(0, 0, mvRenderTargetSize.x, mvRenderTargetSize.y);
-				// auto copyImage = resolveRenderImage(m_gBufferColor);
-				// context.CopyTextureToFrameBuffer( *copyImage, rect, m_refractionTarget);
-			}
-
-			pMaterialType->ResolveShaderProgram(renderMode, viewport, pMaterial, obj, this,[&](GraphicsContext::ShaderProgram& shaderInput) {
-				GraphicsContext::LayoutStream layoutInput;
-				vertexBuffer->GetLayoutStream(layoutInput);
-				
-				shaderInput.m_configuration.m_depthTest = pMaterial->GetDepthTest() ? DepthTest::LessEqual: DepthTest::None;
-				shaderInput.m_configuration.m_write = Write::RGB;
-				shaderInput.m_configuration.m_cull = Cull::None;
-				
-				// shaderInput.m_uniforms.push_back({m_u_overrideColor, overrideColor });
-
-				// shaderInput.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
-				// shaderInput.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
-				shaderInput.m_modelTransform = pMatrix ?  pMatrix->GetTranspose() : cMatrixf::Identity;
-				
-				if(!pMaterial->HasRefraction()) {
-					shaderInput.m_configuration.m_rgbBlendFunc = CreateFromMaterialBlendMode(pMaterial->GetBlendMode());
-					shaderInput.m_configuration.m_alphaBlendFunc = CreateFromMaterialBlendMode(pMaterial->GetBlendMode());
-				}
-
-				GraphicsContext::DrawRequest drawRequest {layoutInput, shaderInput};
-				// drawRequest.m_width = mvScreenSize.x;
-				// drawRequest.m_height = mvScreenSize.y;
-				context.Submit(view, drawRequest);
-			});
-
-			if(pMaterial->HasTranslucentIllumination())
-			{
-				pMaterialType->ResolveShaderProgram(
-					(renderMode == eMaterialRenderMode_Diffuse ? eMaterialRenderMode_Illumination : eMaterialRenderMode_IlluminationFog), viewport, pMaterial, obj, this,[&](GraphicsContext::ShaderProgram& shaderInput) {
-					GraphicsContext::LayoutStream layoutInput;
-					vertexBuffer->GetLayoutStream(layoutInput);
-
-					shaderInput.m_configuration.m_depthTest = pMaterial->GetDepthTest() ? DepthTest::LessEqual: DepthTest::None;
-					shaderInput.m_configuration.m_write = Write::RGB;
-					shaderInput.m_configuration.m_cull = Cull::None;
-
-					shaderInput.m_configuration.m_rgbBlendFunc = CreateFromMaterialBlendMode(eMaterialBlendMode_Add);
-					shaderInput.m_configuration.m_alphaBlendFunc = CreateFromMaterialBlendMode(eMaterialBlendMode_Add);
-
-					// shaderInput.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
-					// shaderInput.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
-					shaderInput.m_modelTransform = pMatrix ?  pMatrix->GetTranspose() : cMatrixf::Identity;
-					
-					GraphicsContext::DrawRequest drawRequest {layoutInput, shaderInput};
-					// drawRequest.m_width = mvScreenSize.x;
-					// drawRequest.m_height = mvScreenSize.y;
-					context.Submit(view, drawRequest);
-				});
-			}
-		}
-	}
-
 	void cRendererDeferred::Draw(GraphicsContext& context, cViewport& viewport, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings,
 					bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList)  {
 		// keep around for the moment ...
@@ -841,7 +704,8 @@ namespace hpl {
 			mpCurrentRenderList->Compile(	eRenderListCompileFlag_Diffuse |
 											eRenderListCompileFlag_Translucent |
 											eRenderListCompileFlag_Decal |
-											eRenderListCompileFlag_Illumination);
+											eRenderListCompileFlag_Illumination |
+											eRenderListCompileFlag_FogArea );
 		}
 		///////////////////////////
 		//Brute force
@@ -854,7 +718,8 @@ namespace hpl {
 											eRenderListCompileFlag_Diffuse |
 											eRenderListCompileFlag_Translucent |
 											eRenderListCompileFlag_Decal |
-											eRenderListCompileFlag_Illumination);
+											eRenderListCompileFlag_Illumination |
+											eRenderListCompileFlag_FogArea );
 			RenderZPass(context, viewport, sharedData.m_gBuffer_depth );
 
 			// this occlusion query logic is used for reflections just cut this for now
@@ -939,8 +804,6 @@ namespace hpl {
 					shaderInput.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
 					shaderInput.m_configuration.m_alphaBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
 
-					// shaderInput.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
-					// shaderInput.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
 					shaderInput.m_modelTransform = obj->GetModelMatrixPtr() ?  obj->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity.GetTranspose();
 
 					GraphicsContext::DrawRequest drawRequest {layoutInput, shaderInput};
@@ -948,10 +811,184 @@ namespace hpl {
 				});
 		})();
 
-		// TODO: MP need to implement this
-		RenderFogPass(context, viewport, sharedData.m_output_target);
+		// ------------------------------------------------------------------------
+		// Setup Fog Pass
+		// ------------------------------------------------------------------------
+		std::vector<detail::FogRendererData> fogRenderData;
+		auto fogAreas = mpCurrentRenderList->GetFogAreas();
+		fogRenderData.reserve(fogAreas.size());
+		for(const auto& fogArea: fogAreas ) {
+			auto& fogData = fogRenderData.emplace_back(detail::FogRendererData {
+				fogArea,
+				false,
+				cVector3f(0.0f),
+				cMatrixf(cMatrixf::Identity)
+			});
+			fogData.m_fogArea = fogArea;
+			fogData.m_mtxInvBoxSpace = cMath::MatrixInverse(*fogArea->GetModelMatrixPtr());
+			fogData.m_boxSpaceFrustumOrigin = cMath::MatrixMul(fogData.m_mtxInvBoxSpace, mpCurrentFrustum->GetOrigin());
+			fogData.m_insideNearFrustum = ([&]() {
+					std::array<cVector3f, 4> nearPlaneVtx;
+					cVector3f min(-0.5f);
+					cVector3f max(0.5f);
+					
+					for (size_t i = 0; i < nearPlaneVtx.size(); ++i)
+					{
+						nearPlaneVtx[i] = cMath::MatrixMul(fogData.m_mtxInvBoxSpace, mpCurrentFrustum->GetVertex(i));
+					}
+					for (size_t i = 0; i < nearPlaneVtx.size(); ++i)
+					{
+						if (cMath::CheckPointInAABBIntersection(nearPlaneVtx[i], min, max)) {
+							return true;
+						}
+					}
+					//////////////////////////////
+					// Check if near plane points intersect with box
+					if (cMath::CheckPointsAABBPlanesCollision(nearPlaneVtx.begin(), 4, min, max) != eCollision_Outside) {
+						return true;
+					}
+					return false;
+			})();
+		}
+		
+		// ------------------------------------------------------------------------
+		// Render Fog Pass --> output target
+		// ------------------------------------------------------------------------
+		([&]() {
+			if(fogRenderData.empty()) {
+				return;
+			}
+
+			GraphicsContext::ViewConfiguration viewConfig {sharedData.m_output_target};
+			viewConfig.m_viewRect = {0, 0, sharedData.m_size.x, sharedData.m_size.y};
+			viewConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
+			viewConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+			const auto view = context.StartPass("Fog Pass", viewConfig);
+			for(const auto& fogArea: fogRenderData) {
+				struct {
+					float u_fogStart;
+					float u_fogLength;
+					float u_fogFalloffExp;
+
+					float u_fogRayCastStart[3];
+					float u_fogNegPlaneDistNeg[3];
+					float u_fogNegPlaneDistPos[3];
+				} uniforms;
+
+				uniforms.u_fogStart = fogArea.m_fogArea->GetStart();
+				uniforms.u_fogLength = fogArea.m_fogArea->GetEnd() - fogArea.m_fogArea->GetStart();
+				uniforms.u_fogFalloffExp = fogArea.m_fogArea->GetFalloffExp();
+				//Outside of box setup
+				cMatrixf rotationMatrix = cMatrixf(cMatrixf::Identity);
+				uint32_t flags =  rendering::detail::FogVariant_None;
+		
+				GraphicsContext::LayoutStream layoutStream;
+				GraphicsContext::ShaderProgram shaderProgram;
+
+				mpShapeBox->GetLayoutStream(layoutStream);
+				
+				shaderProgram.m_modelTransform = fogArea.m_fogArea->GetModelMatrixPtr() ? fogArea.m_fogArea->GetModelMatrixPtr()->GetTranspose(): cMatrixf::Identity;
+				shaderProgram.m_configuration.m_rgbBlendFunc =  CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
+				shaderProgram.m_configuration.m_alphaBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
+				shaderProgram.m_configuration.m_write = Write::RGB;
+
+				if(fogArea.m_insideNearFrustum)
+				{
+					shaderProgram.m_configuration.m_cull = Cull::Clockwise;
+					shaderProgram.m_configuration.m_depthTest = DepthTest::Always;
+					flags |=  fogArea.m_fogArea->GetShowBacksideWhenInside() ? rendering::detail::FogVariant_UseBackSide : rendering::detail::FogVariant_None;
+				} 
+				else 
+				{
+
+					cMatrixf mtxInvModelView = cMath::MatrixInverse( cMath::MatrixMul(mpCurrentFrustum->GetViewMatrix(), *fogArea.m_fogArea->GetModelMatrixPtr()));
+					cVector3f vRayCastStart = cMath::MatrixMul(mtxInvModelView, cVector3f(0));
+					// rotationMatrix = mtxInvModelView.GetRotation().GetTranspose();
+
+					cVector3f vNegPlaneDistNeg( cMath::PlaneToPointDist(cPlanef(-1,0,0,0.5f),vRayCastStart), cMath::PlaneToPointDist(cPlanef(0,-1,0,0.5f),vRayCastStart),
+												cMath::PlaneToPointDist(cPlanef(0,0,-1,0.5f),vRayCastStart));
+					cVector3f vNegPlaneDistPos( cMath::PlaneToPointDist(cPlanef(1,0,0,0.5f),vRayCastStart), cMath::PlaneToPointDist(cPlanef(0,1,0,0.5f),vRayCastStart),
+												cMath::PlaneToPointDist(cPlanef(0,0,1,0.5f),vRayCastStart));
+					
+					uniforms.u_fogRayCastStart[0] = vRayCastStart.x;
+					uniforms.u_fogRayCastStart[1] = vRayCastStart.y;
+					uniforms.u_fogRayCastStart[2] = vRayCastStart.z;
+
+					uniforms.u_fogNegPlaneDistNeg[0] = vNegPlaneDistNeg.x * -1;
+					uniforms.u_fogNegPlaneDistNeg[1] = vNegPlaneDistNeg.y * -1;
+					uniforms.u_fogNegPlaneDistNeg[2] = vNegPlaneDistNeg.z * -1;
+
+					uniforms.u_fogNegPlaneDistPos[0] = vNegPlaneDistPos.x * -1;
+					uniforms.u_fogNegPlaneDistPos[1] = vNegPlaneDistPos.y * -1;
+					uniforms.u_fogNegPlaneDistPos[2] = vNegPlaneDistPos.z * -1;
+
+					shaderProgram.m_configuration.m_cull = Cull::CounterClockwise;
+					shaderProgram.m_configuration.m_depthTest = DepthTest::LessEqual;
+					flags |= rendering::detail::FogVariant_UseOutsideBox;
+					flags |=  fogArea.m_fogArea->GetShowBacksideWhenOutside() ? rendering::detail::FogVariant_UseBackSide : rendering::detail::FogVariant_None;
+				}
+				const auto fogColor = fogArea.m_fogArea->GetColor();
+				float uniformFogColor[4] = {fogColor.r, fogColor.g, fogColor.b, fogColor.a};
+
+				shaderProgram.m_handle = m_fogVariant.GetVariant(flags);
+				
+				shaderProgram.m_uniforms.push_back(	{m_u_mtxInvRotation, &rotationMatrix.v});
+				
+				shaderProgram.m_uniforms.push_back({m_u_param, &uniforms, 3});
+				shaderProgram.m_uniforms.push_back({m_u_fogColor, &uniformFogColor});
+				
+				shaderProgram.m_textures.push_back({m_s_positionMap, sharedData.m_gBufferPositionImage->GetHandle(), 0});
+				
+				GraphicsContext::DrawRequest drawRequest {layoutStream, shaderProgram};
+				context.Submit(view, drawRequest);
+			}
+		})();
+
+		// ------------------------------------------------------------------------
+		// Render Fullscreen Fog Pass
+		// ------------------------------------------------------------------------
 		if(mpCurrentWorld->GetFogActive()) {
-			RenderFullScreenFogPass(context, viewport, sharedData.m_output_target);
+			GraphicsContext::LayoutStream layout;
+			cMatrixf projMtx;
+			context.ScreenSpaceQuad(layout, projMtx, sharedData.m_size.x, sharedData.m_size.y);
+			
+			GraphicsContext::ViewConfiguration viewConfig {sharedData.m_output_target};
+			viewConfig.m_projection = projMtx;
+			viewConfig.m_viewRect = cRect2l(0, 0, sharedData.m_size.x, sharedData.m_size.y);
+			const auto view = context.StartPass("Full Screen Fog", viewConfig);
+			
+			struct {
+				float u_fogStart;
+				float u_fogLength;
+				float u_fogFalloffExp;
+			} uniforms = {{0}};
+
+			uniforms.u_fogStart = mpCurrentWorld->GetFogStart();
+			uniforms.u_fogLength = mpCurrentWorld->GetFogEnd() - mpCurrentWorld->GetFogStart();
+			uniforms.u_fogFalloffExp = mpCurrentWorld->GetFogFalloffExp();
+			
+			GraphicsContext::ShaderProgram shaderProgram;
+			shaderProgram.m_configuration.m_write = Write::RGBA;
+			shaderProgram.m_configuration.m_depthTest = DepthTest::Always;
+
+			shaderProgram.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
+			shaderProgram.m_configuration.m_write = Write::RGB;
+
+			cMatrixf rotationMatrix = cMatrixf::Identity;
+			const auto fogColor = mpCurrentWorld->GetFogColor();
+			float uniformFogColor[4] = {fogColor.r, fogColor.g, fogColor.b, fogColor.a};
+
+			shaderProgram.m_handle = m_fogVariant.GetVariant(rendering::detail::FogVariant_None);
+			
+			shaderProgram.m_textures.push_back({m_s_positionMap, sharedData.m_gBufferPositionImage->GetHandle(), 0});
+				
+			shaderProgram.m_uniforms.push_back(	{m_u_mtxInvRotation, &rotationMatrix.v});
+
+			shaderProgram.m_uniforms.push_back({m_u_param, &uniforms, 1});
+			shaderProgram.m_uniforms.push_back({m_u_fogColor, &uniformFogColor});
+			
+			GraphicsContext::DrawRequest drawRequest {layout, shaderProgram};
+			context.Submit(view, drawRequest);
 		}
 	
 		// notify post draw listeners
@@ -970,7 +1007,145 @@ namespace hpl {
 
 		// not going to even try.
 		// calls back through RendererDeffered need to untangle all the complicated state ...
-		RenderTranslucentPass(context, viewport, sharedData.m_output_target);
+
+		([&]() {
+			auto translucentSpan = mpCurrentRenderList->GetRenderableItems(eRenderListType_Translucent);
+			if(translucentSpan.empty()) {
+				return;
+			}
+			
+			GraphicsContext::ViewConfiguration viewConfig {sharedData.m_output_target};
+			viewConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
+			viewConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+			viewConfig.m_viewRect = {0, 0, sharedData.m_size.x, sharedData.m_size.y};
+			auto view = context.StartPass("Translucent", viewConfig);
+			bgfx::setViewMode(view, bgfx::ViewMode::Sequential);
+			const float fHalfFovTan = tan(mpCurrentFrustum->GetFOV()*0.5f);
+			for(auto& obj: translucentSpan)
+			{
+				
+				auto* pMaterial = obj->GetMaterial();
+				auto* pMaterialType = pMaterial->GetType();
+				auto* vertexBuffer = obj->GetVertexBuffer();
+				// const bool hasColorAttribute = vertexBuffer->GetElement(eVertexBufferElement_Color0) != nullptr; // hack 
+				
+				cMatrixf *pMatrix = obj->GetModelMatrix(mpCurrentFrustum);
+
+				eMaterialRenderMode renderMode = mpCurrentWorld->GetFogActive() ? eMaterialRenderMode_DiffuseFog : eMaterialRenderMode_Diffuse;
+				if(!pMaterial->GetAffectedByFog()) {
+					renderMode = eMaterialRenderMode_Diffuse;
+				}
+
+				////////////////////////////////////////
+				// Check the fog area alpha
+				mfTempAlpha = 1;
+				if(pMaterial->GetAffectedByFog())
+				{
+					for(auto& fogArea: fogRenderData)
+					{
+						mfTempAlpha *= detail::GetFogAreaVisibilityForObject(fogArea, *mpCurrentFrustum, obj);
+					}
+				}
+
+				if(!obj->UpdateGraphicsForViewport(mpCurrentFrustum, mfCurrentFrameTime)) 
+				{
+					continue;
+				}
+
+				if(!obj->RetrieveOcculsionQuery(this))
+				{
+					continue;
+				}
+				
+				if(pMaterial->HasRefraction())
+				{
+					if(!CheckRenderablePlaneIsVisible(obj, mpCurrentFrustum)) {
+						continue;
+					}
+
+					cBoundingVolume *pBV = obj->GetBoundingVolume();
+					cRect2l clipRect = GetClipRectFromObject(obj, 0.2f, mpCurrentFrustum, sharedData.m_size, fHalfFovTan);
+					if(clipRect.w <= 0 || clipRect.h <= 0) {
+						continue;
+					}
+
+					GraphicsContext::ShaderProgram shaderInput;
+					shaderInput.m_handle = m_copyRegionProgram;
+					shaderInput.m_textures.push_back({m_s_diffuseMap, sharedData.m_outputImage->GetHandle(), 0});
+					shaderInput.m_uavImage.push_back({sharedData.m_refractionImage->GetHandle(), 1, 0, bgfx::Access::Write, bgfx::TextureFormat::Enum::RGBA8});
+
+					float copyRegion[4] = {static_cast<float>(clipRect.x), static_cast<float>(sharedData.m_size.y - (clipRect.h + clipRect.y)), static_cast<float>(clipRect.w), static_cast<float>(clipRect.h)};
+					shaderInput.m_uniforms.push_back({m_u_copyRegion, &copyRegion, 1});
+					
+					GraphicsContext::ComputeRequest computeRequest {shaderInput,  static_cast<uint32_t>((clipRect.w/16) + 1), static_cast<uint32_t>((clipRect.h/16) + 1), 1};
+					context.Submit(view, computeRequest);
+				}
+
+				if(pMaterial->HasWorldReflection() && obj->GetRenderType() == eRenderableType_SubMesh)
+				{
+					// cBoundingVolume *pBV = obj->GetBoundingVolume();
+
+					// cRect2l clipRect = GetClipRectFromObject(obj, 0.2f, mpCurrentFrustum, mvRenderTargetSize, fHalfFovTan);
+					// if(!CheckRenderablePlaneIsVisible(obj, mpCurrentFrustum)) {
+					// 	continue;
+					// }
+
+					// cRect2l rect = cRect2l(0, 0, mvRenderTargetSize.x, mvRenderTargetSize.y);
+					// auto copyImage = resolveRenderImage(m_gBufferColor);
+					// context.CopyTextureToFrameBuffer( *copyImage, rect, m_refractionTarget);
+				}
+
+				pMaterialType->ResolveShaderProgram(renderMode, viewport, pMaterial, obj, this,[&](GraphicsContext::ShaderProgram& shaderInput) {
+					GraphicsContext::LayoutStream layoutInput;
+					vertexBuffer->GetLayoutStream(layoutInput);
+					
+					shaderInput.m_configuration.m_depthTest = pMaterial->GetDepthTest() ? DepthTest::LessEqual: DepthTest::None;
+					shaderInput.m_configuration.m_write = Write::RGB;
+					shaderInput.m_configuration.m_cull = Cull::None;
+					
+					// shaderInput.m_uniforms.push_back({m_u_overrideColor, overrideColor });
+
+					// shaderInput.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
+					// shaderInput.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+					shaderInput.m_modelTransform = pMatrix ?  pMatrix->GetTranspose() : cMatrixf::Identity;
+					
+					if(!pMaterial->HasRefraction()) {
+						shaderInput.m_configuration.m_rgbBlendFunc = CreateFromMaterialBlendMode(pMaterial->GetBlendMode());
+						shaderInput.m_configuration.m_alphaBlendFunc = CreateFromMaterialBlendMode(pMaterial->GetBlendMode());
+					}
+
+					GraphicsContext::DrawRequest drawRequest {layoutInput, shaderInput};
+					// drawRequest.m_width = mvScreenSize.x;
+					// drawRequest.m_height = mvScreenSize.y;
+					context.Submit(view, drawRequest);
+				});
+
+				if(pMaterial->HasTranslucentIllumination())
+				{
+					pMaterialType->ResolveShaderProgram(
+						(renderMode == eMaterialRenderMode_Diffuse ? eMaterialRenderMode_Illumination : eMaterialRenderMode_IlluminationFog), viewport, pMaterial, obj, this,[&](GraphicsContext::ShaderProgram& shaderInput) {
+						GraphicsContext::LayoutStream layoutInput;
+						vertexBuffer->GetLayoutStream(layoutInput);
+
+						shaderInput.m_configuration.m_depthTest = pMaterial->GetDepthTest() ? DepthTest::LessEqual: DepthTest::None;
+						shaderInput.m_configuration.m_write = Write::RGB;
+						shaderInput.m_configuration.m_cull = Cull::None;
+
+						shaderInput.m_configuration.m_rgbBlendFunc = CreateFromMaterialBlendMode(eMaterialBlendMode_Add);
+						shaderInput.m_configuration.m_alphaBlendFunc = CreateFromMaterialBlendMode(eMaterialBlendMode_Add);
+
+						// shaderInput.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
+						// shaderInput.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+						shaderInput.m_modelTransform = pMatrix ?  pMatrix->GetTranspose() : cMatrixf::Identity;
+						
+						GraphicsContext::DrawRequest drawRequest {layoutInput, shaderInput};
+						// drawRequest.m_width = mvScreenSize.x;
+						// drawRequest.m_height = mvScreenSize.y;
+						context.Submit(view, drawRequest);
+					});
+				}
+			}
+		})();
 
 		RunCallback(eRendererMessage_PostTranslucent, handler);
 		
@@ -986,7 +1161,6 @@ namespace hpl {
 		viewport.SignalDraw(translucenceEvent);
 		postTransBatch.flush();
 	
-
 	}
 
 	void cRendererDeferred::RenderShadowPass(GraphicsContext& context, cViewport& viewport, const cDeferredLight& apLightData, RenderTarget& rt) {
@@ -1003,12 +1177,6 @@ namespace hpl {
 		bgfx::ViewId view = context.StartPass("Shadow Pass", shadowPassViewConfig);
 		for(auto& shadowCaster: mvShadowCasters)
 		{
-			// rendering::detail::ZPassInput options;
-			// options.m_height = size.y;
-			// options.m_width = size.x;
-			// options.m_cull = pLightFrustum->GetInvertsCullMode() ? Cull::Clockwise : Cull::CounterClockwise;
-			// options.m_view = pLightFrustum->GetViewMatrix().GetTranspose();
-			// options.m_projection = pLightFrustum->GetProjectionMatrix().GetTranspose();
 			rendering::detail::RenderZPassObject(view, context, viewport, this, shadowCaster, pLightFrustum->GetInvertsCullMode() ? Cull::Clockwise : Cull::CounterClockwise);
 		}
 	}
@@ -1155,7 +1323,7 @@ namespace hpl {
 						shaderProgram.m_uniforms.push_back({m_u_lightPos, lightPosition});
 						shaderProgram.m_uniforms.push_back({m_u_lightColor, lightColor});
 						shaderProgram.m_uniforms.push_back({m_u_param, &param});
-						shaderProgram.m_uniforms.push_back({m_u_mtxInvViewRotation, &mtxInvViewRotation.v});
+						shaderProgram.m_uniforms.push_back({m_u_mtxInvViewRotation, mtxInvViewRotation.v});
 
 						shaderProgram.m_textures.push_back({m_s_diffuseMap, sharedData.m_gBufferColor->GetHandle(), 1});
 						shaderProgram.m_textures.push_back({m_s_normalMap, sharedData.m_gBufferNormalImage->GetHandle(), 2});
@@ -1207,7 +1375,7 @@ namespace hpl {
 				
 						shaderProgram.m_uniforms.push_back({m_u_lightPos, lightPosition});
 						shaderProgram.m_uniforms.push_back({m_u_lightColor, lightColor});
-						shaderProgram.m_uniforms.push_back({m_u_spotViewProj, spotViewProj.v});
+						shaderProgram.m_uniforms.push_back({m_u_spotViewProj, &spotViewProj.v});
 
 						
 						shaderProgram.m_textures.push_back({m_s_diffuseMap, sharedData.m_gBufferColor->GetHandle(), 0});

@@ -18,6 +18,7 @@
  */
 #pragma once
 
+#include "graphics/Enum.h"
 #include <graphics/GraphicsTypes.h>
 #include <span>
 
@@ -31,6 +32,7 @@ namespace hpl {
 	class cRenderList
 	{
 	public:
+
 		cRenderList();
 		~cRenderList();
 
@@ -44,41 +46,38 @@ namespace hpl {
 		
 		std::span<iRenderable*> GetRenderableItems(eRenderListType aType);
 		std::span<iRenderable*> GetOcclusionQueryItems();
+		std::span<cFogArea*> GetFogAreas();
 
 		void Clear();
 
-		iLight* GetLight(int alIdx){ return mvLights[alIdx];}
-		int GetLightNum(){ return(int)mvLights.size();}
+		iLight* GetLight(int alIdx){ return m_lights[alIdx];}
+		int GetLightNum(){ return(int)m_lights.size();}
 
-		cFogArea* GetFogArea(int alIdx){ return mvFogAreas[alIdx];}
-		int GetFogAreaNum(){ return(int)mvFogAreas.size();}
+		cFogArea* GetFogArea(int alIdx){ return m_fogAreas[alIdx];}
+		int GetFogAreaNum(){ return(int)m_fogAreas.size();}
 
 		void PrintAllObjects();
 
 		//Temp:
-		int GetSolidObjectNum(){ return (int)mvSolidObjects.size();}
-		iRenderable* GetSolidObject(int alIdx){ return mvSolidObjects[alIdx];}
+		int GetSolidObjectNum(){ return (int)m_solidObjects.size();}
+		iRenderable* GetSolidObject(int alIdx){ return m_solidObjects[alIdx];}
 
-		int GetTransObjectNum(){ return (int)mvTransObjects.size();}
-		iRenderable* GetTransObject(int alIdx){ return mvTransObjects[alIdx];}
+		int GetTransObjectNum(){ return (int)m_transObjects.size();}
+		iRenderable* GetTransObject(int alIdx){ return m_transObjects[alIdx];}
 
 	private:
-		void CompileArray(eRenderListType aType);
+		float m_frameTime;
+		cFrustum* m_frustum;
 
-		void FindNearestLargeSurfacePlane();
+		std::vector<iRenderable*> m_occlusionQueryObjects;
+		std::vector<iRenderable*> m_solidObjects;
+		std::vector<iRenderable*> m_transObjects;
+		std::vector<iRenderable*> m_decalObjects;
+		std::vector<iRenderable*> m_illumObjects;
+		std::vector<iLight*> m_lights;
+		std::vector<cFogArea*> m_fogAreas;
 
-		float mfFrameTime;
-		cFrustum *mpFrustum;
-
-		std::vector<iRenderable*> mvOcclusionQueryObjects;
-		std::vector<iRenderable*> mvSolidObjects;
-		std::vector<iRenderable*> mvTransObjects;
-		std::vector<iRenderable*> mvDecalObjects;
-		std::vector<iRenderable*> mvIllumObjects;
-		std::vector<iLight*> mvLights;
-		std::vector<cFogArea*> mvFogAreas;
-
-		tRenderableVec mvSortedArrays[eRenderListType_LastEnum];
+		tRenderableVec m_sortedArrays[eRenderListType_LastEnum];
 	};
 
 	//---------------------------------------------

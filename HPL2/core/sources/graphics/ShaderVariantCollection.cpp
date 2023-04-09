@@ -21,6 +21,7 @@ namespace hpl::ShaderHelper {
             } else {
                 bx::strCopy(fs_name, std::size(fs_name), fs.data());
             }
+            
             return {
                 hpl::loadProgram(vs_name, fs_name),
                 [](ShaderVariant& variant) {

@@ -136,8 +136,10 @@ namespace hpl {
             const bool hasCubeMap = refractionEnabled && cubeMap;
             const bool hasDiffuseFog = (aRenderMode == eMaterialRenderMode_DiffuseFog);
 
-            tFlag lFlags = (hasReflection ? material::water::UseReflection : 0) | (hasCubeMap ? material::water::UseCubeMapReflection : 0) |
-                (hasDiffuseFog ? material::water::UseFog : 0) | (iRenderer::GetRefractionEnabled() ? material::water::UseRefraction : 0);
+            tFlag lFlags = (hasReflection ? material::water::UseReflection : 0) | 
+                (hasCubeMap ? material::water::UseCubeMapReflection : 0) |
+                (hasDiffuseFog ? material::water::UseFog : 0) | 
+                (iRenderer::GetRefractionEnabled() ? material::water::UseRefraction : 0);
 
             params.u_frenselBiasPow[0] = pVars->mfFrenselBias;
             params.u_frenselBiasPow[1] = pVars->mfFrenselPow;

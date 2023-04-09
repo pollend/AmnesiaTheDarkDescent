@@ -10,7 +10,13 @@ namespace hpl {
     class UniformWrapper {
     public:
         UniformWrapper() {
-            m_handle = bgfx::createUniform(id.m_str, type);
+            // m_handle = bgfx::createUniform(id.m_str, type);
+        }
+
+        void Initialize() {
+            if(!bgfx::isValid(m_handle)) {
+                m_handle = bgfx::createUniform(id.m_str, type);
+            }
         }
 
         ~UniformWrapper() {
