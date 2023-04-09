@@ -77,25 +77,6 @@ namespace hpl {
         bgfx::frame();
     }
 
-    bgfx::ViewId GraphicsContext::StartPass(absl::string_view name, const ViewConfiguration& config) {
-        bgfx::ViewId view = m_current++;
-        bgfx::setViewName(view, name.data());
-        if (config.m_clear.has_value()) {
-            auto& clear = config.m_clear.value();
-            bgfx::setViewClear(view, details::convertBGFXClearOp(clear.m_clearOp), clear.m_rgba, clear.m_depth, clear.m_stencil);
-        } else {
-            bgfx::setViewClear(view, BGFX_CLEAR_NONE);
-        }
-        bgfx::setViewTransform(view, config.m_view.v, config.m_projection.v);
-        auto& rect = config.m_viewRect;
-        bgfx::setViewRect(view, rect.x, rect.y, rect.w, rect.h);
-        if (config.m_target.IsValid()) {
-            bgfx::setViewFrameBuffer(view, config.m_target.GetHandle());
-        } else {
-            bgfx::setViewFrameBuffer(view, BGFX_INVALID_HANDLE);
-        }
-        return view;
-    }
 
     bool GraphicsContext::isOriginBottomLeft() const {
         BX_ASSERT(bgfx::getCaps(), "GraphicsContext::Init() must be called before isOriginBottomLeft()");

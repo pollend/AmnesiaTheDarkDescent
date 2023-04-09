@@ -145,14 +145,6 @@ namespace hpl {
         }
     }
 
-    void cViewport::AddRendererCallback(iRendererCallback* apCallback) {
-        mlstRendererCallbacks.push_back(apCallback);
-    }
-
-    void cViewport::RemoveRendererCallback(iRendererCallback* apCallback) {
-        STLFindAndRemove(mlstRendererCallbacks, apCallback);
-    }
-
     PrimaryViewport::PrimaryViewport() {
 
     }

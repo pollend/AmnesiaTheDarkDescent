@@ -48,7 +48,6 @@ namespace hpl {
     class cPostEffectComposite;
     class cWorld;
     class iViewportCallback;
-    class iRendererCallback;
     class cGuiSet;
 
     class cViewport final {
@@ -151,11 +150,6 @@ namespace hpl {
         void RemoveViewportCallback(iViewportCallback* apCallback);
         void RunViewportCallbackMessage(eViewportMessage aMessage);
 
-        void AddRendererCallback(iRendererCallback* apCallback);
-        void RemoveRendererCallback(iRendererCallback* apCallback);
-        tRendererCallbackList* GetRendererCallbackList() {
-            return &mlstRendererCallbacks;
-        }
 
         inline void ConnectViewportChanged(ViewportChange::Handler& handler) { handler.Connect(m_viewportChanged);}
 
@@ -195,7 +189,6 @@ namespace hpl {
         PostTranslucenceDraw m_postTranslucenceDraw;
 
         tViewportCallbackList mlstCallbacks;
-        tRendererCallbackList mlstRendererCallbacks;
         tGuiSetList m_guiSets;
 
         std::unique_ptr<cRenderSettings> mpRenderSettings;

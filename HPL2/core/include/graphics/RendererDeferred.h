@@ -199,8 +199,7 @@ namespace hpl {
             cFrustum* apFrustum,
             cWorld* apWorld,
             cRenderSettings* apSettings,
-            bool abSendFrameBufferToPostEffects,
-            tRendererCallbackList* apCallbackList) override;
+            bool abSendFrameBufferToPostEffects) override;
 
         static void SetDepthCullLights(bool abX) {
             mbDepthCullLights = abX;
@@ -276,19 +275,10 @@ namespace hpl {
         RenderTarget& resolveRenderTarget(std::array<RenderTarget, 2>& rt);
         std::shared_ptr<Image>& resolveRenderImage(std::array<std::shared_ptr<Image>, 2>& img);
 
-        // takes the contents of the gbuffer and renders the lights
-        void RenderLightPass(GraphicsContext& context, cViewport& viewport, RenderTarget& rt);
-        void RenderDiffusePass(GraphicsContext& context, cViewport& viewport, RenderTarget& rt);
         void RenderEdgeSmoothPass(GraphicsContext& context, cViewport& viewport, RenderTarget& rt);
-        void RenderZPass(GraphicsContext& context, cViewport& viewport, RenderTarget& rt);
-        void RenderShadowPass(GraphicsContext& context, cViewport& viewport, const cDeferredLight& apLightData, RenderTarget& rt);
-
-        void RenderShadowLight(GraphicsContext& context, GraphicsContext::ShaderProgram& shaderProgram, RenderTarget& rt);
-
-        void SetupLightsAndRenderQueries(GraphicsContext& context, RenderTarget& rt);
-        void InitLightRendering();
-
-        iVertexBuffer* GetLightShape(iLight* apLight, eDeferredShapeQuality aQuality);
+    
+        
+        iVertexBuffer* GetLightShape(iLight* apLight, eDeferredShapeQuality aQuality) const;
 
         std::array<std::unique_ptr<iVertexBuffer>, eDeferredShapeQuality_LastEnum> m_shapeSphere;
         std::unique_ptr<iVertexBuffer> m_shapePyramid;

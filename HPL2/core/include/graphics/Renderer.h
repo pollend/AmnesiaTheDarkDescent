@@ -60,6 +60,8 @@ namespace hpl {
     class iRenderer;
 
     namespace rendering::detail {
+        using RenderableIterCallback = std::function<void(iRenderable* obj, GraphicsContext::LayoutStream&, GraphicsContext::ShaderProgram&)>;
+    
         eShadowMapResolution GetShadowMapResolution(eShadowMapResolution aWanted, eShadowMapResolution aMax);
         /**
         * @brief Checks if the given object is occluded by the given planes.
@@ -107,16 +109,6 @@ namespace hpl {
         int32_t mlSampleResults;
     };
 
-    //---------------------------------------------
-
-    class cFogAreaRenderData
-    {
-    public:
-        cFogArea *mpFogArea;
-        bool mbInsideNearFrustum;
-        cVector3f mvBoxSpaceFrustumOrigin;
-        cMatrixf m_mtxInvBoxSpace;
-    };
 
 
     class cRenderSettings
@@ -152,8 +144,6 @@ namespace hpl {
         int mlCurrentOcclusionObject;
         std::vector<cOcclusionQueryObject*> mvOcclusionObjectPool;
         tOcclusionQueryObjectMap m_setOcclusionObjects;
-
-        std::vector<cFogAreaRenderData> mvFogRenderData;
 
         ////////////////////////////
         //General settings
@@ -262,16 +252,14 @@ namespace hpl {
             cFrustum* apFrustum,
             cWorld* apWorld,
             cRenderSettings* apSettings,
-            bool abSendFrameBufferToPostEffects,
-            tRendererCallbackList* apCallbackList){};
+            bool abSendFrameBufferToPostEffects){};
 
         [[deprecated("Use Draw instead")]] void Render(
             float afFrameTime,
             cFrustum* apFrustum,
             cWorld* apWorld,
             cRenderSettings* apSettings,
-            bool abSendFrameBufferToPostEffects,
-            tRendererCallbackList* apCallbackList);
+            bool abSendFrameBufferToPostEffects);
 
         void Update(float afTimeStep);
 
@@ -329,7 +317,7 @@ namespace hpl {
         void RenderableHelper(eRenderListType type, cViewport& viewport, eMaterialRenderMode mode, std::function<void(iRenderable* obj, GraphicsContext::LayoutStream&, GraphicsContext::ShaderProgram&)> handler);
 
         void BeginRendering(float afFrameTime,cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings,
-                            bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList, bool abAtStartOfRendering=true);
+                            bool abSendFrameBufferToPostEffects, bool abAtStartOfRendering=true);
 
         cShadowMapData* GetShadowMapData(eShadowMapResolution aResolution, iLight *apLight);
         bool ShadowMapNeedsUpdate(iLight *apLight, cShadowMapData *apShadowData);
@@ -392,17 +380,7 @@ namespace hpl {
         [[deprecated("use free method rendering::detail::IsObjectVisible")]]
         bool CheckNodeIsVisible(iRenderableContainerNode *apNode);
 
-        bool CheckFogAreaInsideNearPlane(cMatrixf &a_mtxInvBoxModelMatrix);
-        void SetupFogRenderDataArray(bool abSort);
-        bool CheckFogAreaRayIntersection(	cMatrixf &a_mtxInvBoxModelMatrix, const cVector3f &avBoxSpaceRayStart, const cVector3f& avRayDir,
-                                            float &afEntryDist, float &afExitDist);
-        float GetFogAreaVisibilityForObject(cFogAreaRenderData *apFogData, iRenderable *apObject);
-
         void SetOcclusionPlanesActive(bool abX);
-
-        iVertexBuffer* LoadVertexBufferFromMesh(const tString& asMeshName, tVertexElementFlag alVtxToCopy);
-    
-        void RunCallback(eRendererMessage aMessage, cRendererCallbackFunctions& handler);
 
         cResources* mpResources;
         bgfx::ProgramHandle m_nullShader;
@@ -424,7 +402,6 @@ namespace hpl {
         cRenderList *mpCurrentRenderList;
 
         bool mbSendFrameBufferToPostEffects;
-        tRendererCallbackList *mpCallbackList;
 
         float mfCurrentNearPlaneTop;
         float mfCurrentNearPlaneRight;

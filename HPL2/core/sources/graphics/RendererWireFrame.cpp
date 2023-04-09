@@ -126,8 +126,8 @@ namespace hpl {
 	}
 
 
-	void cRendererWireFrame::Draw(GraphicsContext& context, cViewport& viewport, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList) {
-		BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects, apCallbackList);
+	void cRendererWireFrame::Draw(GraphicsContext& context, cViewport& viewport, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, bool abSendFrameBufferToPostEffects) {
+		BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects);
 		
 		auto& rt = m_boundOutputBuffer.resolve(viewport);	
 		

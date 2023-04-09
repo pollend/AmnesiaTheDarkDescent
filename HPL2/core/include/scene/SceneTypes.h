@@ -69,14 +69,6 @@ namespace hpl
 		eViewportMessage_LastEnum
 	};
 
-	enum eRendererMessage
-	{
-		eRendererMessage_PostSolid,
-		eRendererMessage_PostTranslucent,
-		eRendererMessage_PostGBuffer,
-		eRendererMessage_LastEnum
-	};
-
 	//-----------------------------------------
 
 	enum eBillboardType
@@ -124,34 +116,9 @@ namespace hpl
 
 	class cRendererCallbackFunctions;
 
-	class iRendererCallback
-	{
-	public:
-		virtual void OnPostSolidDraw(cRendererCallbackFunctions *apFunctions)=0;
-		virtual void OnPostTranslucentDraw(cRendererCallbackFunctions *apFunctions)=0;
-		virtual void OnPostPostGBufferDraw(cRendererCallbackFunctions *apFunctions){}
-
-		void RunMessage(eRendererMessage aMessage, cRendererCallbackFunctions *apFunctions)
-		{
-			switch(aMessage)
-			{
-			case eRendererMessage_PostSolid:
-				OnPostSolidDraw(apFunctions); break;
-			case eRendererMessage_PostTranslucent:
-				OnPostTranslucentDraw(apFunctions); break;
-			case eRendererMessage_PostGBuffer:
-				OnPostPostGBufferDraw(apFunctions); break;
-			}
-		}
-	};
-
-	//------------------------------------------
-
 	typedef std::list<iViewportCallback*> tViewportCallbackList;
 	typedef tViewportCallbackList::iterator tViewportCallbackListIt;
 
-	typedef std::list<iRendererCallback*> tRendererCallbackList;
-	typedef tRendererCallbackList::iterator tRendererCallbackListIt;
 
     //------------------------------------------
 

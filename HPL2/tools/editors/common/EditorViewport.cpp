@@ -1048,15 +1048,6 @@ const cVector3f& iEditorViewport::GetGridCenter()
 	}
 }
 
-//-------------------------------------------------------------
-
-void iEditorViewport::AddViewportCallback(iRendererCallback* apCallback)
-{
-	mpEngineViewport->AddRendererCallback(apCallback);
-}
-
-//-------------------------------------------------------------
-
 void iEditorViewport::UpdateCameraPlanes()
 {
 	mCamera.SetCameraPlanes(mvCamPlanes);

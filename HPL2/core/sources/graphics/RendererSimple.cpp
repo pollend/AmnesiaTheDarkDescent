@@ -23,6 +23,7 @@
 #include "graphics/Enum.h"
 #include "graphics/GraphicsContext.h"
 #include "graphics/GraphicsTypes.h"
+#include "graphics/ImmediateDrawBatch.h"
 #include "graphics/RenderTarget.h"
 #include "graphics/ShaderUtil.h"
 #include "graphics/VertexBuffer.h"
@@ -90,9 +91,11 @@ namespace hpl
         cFrustum* apFrustum,
         cWorld* apWorld,
         cRenderSettings* apSettings,
-        bool abSendFrameBufferToPostEffects,
-        tRendererCallbackList* apCallbackList)
+        bool abSendFrameBufferToPostEffects)
     {
+		const cMatrixf frustumView = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+		const cMatrixf frustumProj = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
+		
         auto screenSize = viewport.GetSize();
         mpCurrentRenderList->Setup(mfCurrentFrameTime, mpCurrentFrustum);
 
@@ -104,7 +107,7 @@ namespace hpl
 
 		cRendererCallbackFunctions handler(context, viewport, this);
 
-        BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects, apCallbackList);
+        BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects);
         // auto target = m_currentRenderTarget.GetRenderTarget();
         // auto& outputTarget = (target && target->IsValid()) ? *target : RenderTarget::EmptyRenderTarget;
 
@@ -265,7 +268,20 @@ namespace hpl
             }
         }(mpCurrentRenderList->ArrayHasObjects(eRenderListType_Decal));
 
-        RunCallback(eRendererMessage_PostSolid, handler);
+
+        ImmediateDrawBatch postSolidBatch(context, viewport.GetRenderTarget(), frustumView, frustumProj);
+		cViewport::PostSolidDrawPacket postSolidEvent = cViewport::PostSolidDrawPacket({
+			.m_frustum = mpCurrentFrustum,
+			.m_context = &context,
+			.m_outputTarget = &viewport.GetRenderTarget(),
+			.m_viewport = &viewport,
+			.m_renderSettings = mpCurrentSettings,
+			.m_immediateDrawBatch = &postSolidBatch,
+		});
+		viewport.SignalDraw(postSolidEvent);
+		postSolidBatch.flush();
+
+        // RunCallback(eRendererMessage_PostSolid, handler);
 
         // Trans Objects
         [&](bool active)
@@ -313,7 +329,19 @@ namespace hpl
             }
         }(mpCurrentRenderList->ArrayHasObjects(eRenderListType_Translucent));
 
-        RunCallback(eRendererMessage_PostTranslucent, handler);
+        ImmediateDrawBatch postTransBatch(context, viewport.GetRenderTarget(), frustumView, frustumProj);
+		cViewport::PostTranslucenceDrawPacket translucenceEvent = cViewport::PostTranslucenceDrawPacket({
+			.m_frustum = mpCurrentFrustum,
+			.m_context = &context,
+			.m_outputTarget = &viewport.GetRenderTarget(),
+			.m_viewport = &viewport,
+			.m_renderSettings = mpCurrentSettings,
+			.m_immediateDrawBatch = &postTransBatch,
+		});
+		viewport.SignalDraw(postSolidEvent);
+		postSolidBatch.flush();
+
+        // RunCallback(eRendererMessage_PostTranslucent, handler);
     }
 
 } // namespace hpl

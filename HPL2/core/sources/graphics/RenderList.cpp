@@ -468,4 +468,11 @@ namespace hpl {
 		}
         return std::span<cFogArea*>(m_fogAreas);
     }
+
+    std::span<iLight*> cRenderList::GetLights() {
+        if(m_lights.empty()) {
+			return std::span<iLight*>();
+		}
+        return std::span<iLight*>(m_lights);
+    }
 } // namespace hpl

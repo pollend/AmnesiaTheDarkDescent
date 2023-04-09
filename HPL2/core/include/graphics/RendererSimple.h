@@ -39,7 +39,7 @@ namespace hpl {
 		virtual void DestroyData() override;
 
 		virtual void Draw(GraphicsContext& context, cViewport& viewport, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings,
-					bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList) override;
+					bool abSendFrameBufferToPostEffects) override;
 
 	private:
 

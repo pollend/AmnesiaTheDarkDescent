@@ -218,8 +218,7 @@ namespace hpl {
                         pFrustum,
                         pViewPort->GetWorld(),
                         pViewPort->GetRenderSettings(),
-                        bPostEffects,
-                        pViewPort->GetRendererCallbackList());
+                        bPostEffects);
                     STOP_TIMING(RenderWorld)
                 } else {
                     // If no renderer sets up viewport do that by our selves.

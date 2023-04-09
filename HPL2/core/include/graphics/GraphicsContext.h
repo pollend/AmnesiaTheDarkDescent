@@ -133,6 +133,7 @@ namespace hpl {
             cRect2l m_viewRect = cRect2l(0, 0, 0, 0);
         };
 
+
         struct ComputeRequest {
             const ShaderProgram& m_program;
 
@@ -163,7 +164,7 @@ namespace hpl {
         inline void ConfigureLayoutStream(const GraphicsContext::LayoutStream& layout);
 
         void Frame();
-        bgfx::ViewId StartPass(absl::string_view name, const ViewConfiguration& config);
+        inline bgfx::ViewId StartPass(absl::string_view name, const ViewConfiguration& config);
 
         bool isOriginBottomLeft() const;
         void CopyTextureToFrameBuffer(Image& image, cRect2l dstRect, RenderTarget& target, Write write = Write::RGBA);
@@ -552,6 +553,26 @@ namespace hpl {
     void GraphicsContext::Submit(bgfx::ViewId view, const ComputeRequest& request) {
         ConfigureProgram(request.m_program);
         bgfx::dispatch(view, request.m_program.m_handle, request.m_numX, request.m_numY, request.m_numZ);
+    }
+
+    bgfx::ViewId GraphicsContext::StartPass(absl::string_view name, const ViewConfiguration& config) {
+        bgfx::ViewId view = m_current++;
+        bgfx::setViewName(view, name.data());
+        if (config.m_clear.has_value()) {
+            auto& clear = config.m_clear.value();
+            bgfx::setViewClear(view, details::convertBGFXClearOp(clear.m_clearOp), clear.m_rgba, clear.m_depth, clear.m_stencil);
+        } else {
+            bgfx::setViewClear(view, BGFX_CLEAR_NONE);
+        }
+        bgfx::setViewTransform(view, config.m_view.v, config.m_projection.v);
+        auto& rect = config.m_viewRect;
+        bgfx::setViewRect(view, rect.x, rect.y, rect.w, rect.h);
+        if (config.m_target.IsValid()) {
+            bgfx::setViewFrameBuffer(view, config.m_target.GetHandle());
+        } else {
+            bgfx::setViewFrameBuffer(view, BGFX_INVALID_HANDLE);
+        }
+        return view;
     }
 
 } // namespace hpl

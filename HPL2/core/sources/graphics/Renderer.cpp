@@ -76,7 +76,7 @@ namespace hpl
     //-----------------------------------------------------------------------
 
     int iRenderer::mlRenderFrameCount = 0;
-
+        
     namespace rendering::detail
     {
         eShadowMapResolution GetShadowMapResolution(eShadowMapResolution aWanted, eShadowMapResolution aMax)
@@ -114,13 +114,12 @@ namespace hpl
             }
             return true;
         }
-
         void RenderableMaterialIter(
             iRenderer* renderer, 
             std::span<iRenderable*> iter,
             cViewport& viewport,
             eMaterialRenderMode mode,
-            std::function<void(iRenderable* obj, GraphicsContext::LayoutStream&, GraphicsContext::ShaderProgram&)> handler) {
+            RenderableIterCallback handler) {
                 for (auto& obj : iter)
                 {
                     GraphicsContext::LayoutStream layoutStream;
@@ -475,8 +474,14 @@ namespace hpl
         ////////////
         // Create shapes
         //  Color and Texture because Geforce cards fail without it, no idea why...
-        mpShapeBox =
-            LoadVertexBufferFromMesh("core_box.dae", eVertexElementFlag_Position | eVertexElementFlag_Texture0 | eVertexElementFlag_Color0);
+        auto loadVertexBufferFromMesh = [&](const tString& meshName, tVertexElementFlag vtxFlag) {
+			iVertexBuffer* pVtxBuffer = mpResources->GetMeshManager()->CreateVertexBufferFromMesh(meshName, vtxFlag);
+			if (pVtxBuffer == NULL) {
+				FatalError("Could not load vertex buffer from mesh '%s'\n", meshName.c_str());
+			}
+			return pVtxBuffer;
+		};
+        mpShapeBox = loadVertexBufferFromMesh("core_box.dae", eVertexElementFlag_Position | eVertexElementFlag_Texture0 | eVertexElementFlag_Color0);
     }
 
     //-----------------------------------------------------------------------
@@ -508,10 +513,9 @@ namespace hpl
         cFrustum* apFrustum,
         cWorld* apWorld,
         cRenderSettings* apSettings,
-        bool abSendFrameBufferToPostEffects,
-        tRendererCallbackList* apCallbackList)
+        bool abSendFrameBufferToPostEffects)
     {
-        BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects, apCallbackList);
+        BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects);
     }
 
     void iRenderer::RenderableHelper(
@@ -589,7 +593,6 @@ namespace hpl
         cWorld* apWorld,
         cRenderSettings* apSettings,
         bool abSendFrameBufferToPostEffects,
-        tRendererCallbackList* apCallbackList,
         bool abAtStartOfRendering)
     {
         if (apSettings->mbLog)
@@ -605,7 +608,7 @@ namespace hpl
         mpCurrentRenderList = apSettings->mpRenderList;
 
         mbSendFrameBufferToPostEffects = abSendFrameBufferToPostEffects;
-        mpCallbackList = apCallbackList;
+        // mpCallbackList = apCallbackList;
 
         mbOcclusionPlanesActive = true;
 
@@ -1646,237 +1649,11 @@ namespace hpl
         return true;
     }
 
-    //-----------------------------------------------------------------------
-
-    bool iRenderer::CheckFogAreaInsideNearPlane(cMatrixf& a_mtxInvBoxModelMatrix)
-    {
-        cPlanef boxspaceNearPlane = cMath::TransformPlane(a_mtxInvBoxModelMatrix, mpCurrentFrustum->GetPlane(eFrustumPlane_Near));
-        cVector3f vNearPlaneVtx[4];
-        for (int i = 0; i < 4; ++i)
-        {
-            vNearPlaneVtx[i] = cMath::MatrixMul(a_mtxInvBoxModelMatrix, mpCurrentFrustum->GetVertex(i));
-        }
-
-        cVector3f vMin(-0.5f);
-        cVector3f vMax(0.5f);
-
-        //////////////////////////////
-        // AABB vs Near Plane
-        /*if(cMath::CheckPlaneAABBCollision(boxspaceNearPlane, vMin, vMax)!= eCollision_Intersect)
-        {
-                //return false;
-        }*/
-
-        //////////////////////////////
-        // Near plane points vs AABB
-        for (int i = 0; i < 4; ++i)
-        {
-            if (cMath::CheckPointInAABBIntersection(vNearPlaneVtx[i], vMin, vMax))
-                return true;
-        }
-
-        //////////////////////////////
-        // Check if near plane points intersect with box
-        if (cMath::CheckPointsAABBPlanesCollision(vNearPlaneVtx, 4, vMin, vMax) != eCollision_Outside)
-            return true;
-
-        return false;
-    }
-
-    //-----------------------------------------------------------------------
-
-    static const cVector3f gvFogBoxPlaneNormals[6] = {
-        cVector3f(-1, 0, 0), // Left
-        cVector3f(1, 0, 0), // Right
-
-        cVector3f(0, -1, 0), // Bottom
-        cVector3f(0, 1, 0), // Top
-
-        cVector3f(0, 0, -1), // Back
-        cVector3f(0, 0, 1), // Front
-    };
-    static const cVector3f gvFogBoxCompareSize = cVector3f(0.5001f);
-
-    bool iRenderer::CheckFogAreaRayIntersection(
-        cMatrixf& a_mtxInvBoxModelMatrix,
-        const cVector3f& avBoxSpaceRayStart,
-        const cVector3f& avRayDir,
-        float& afEntryDist,
-        float& afExitDist)
-    {
-        cVector3f vBoxSpaceDir = cMath::MatrixMul3x3(a_mtxInvBoxModelMatrix, avRayDir);
-
-        bool bFoundIntersection = false;
-        afExitDist = 0;
-
-        ///////////////////////////////////
-        // Iterate the sides of the cube
-        for (int i = 0; i < 6; ++i)
-        {
-            const cVector3f& vPlaneNormal = gvFogBoxPlaneNormals[i];
-
-            ///////////////////////////////////
-            // Calculate plane intersection
-            float fMul = cMath::Vector3Dot(vPlaneNormal, vBoxSpaceDir);
-            if (fabs(fMul) < 0.0001f)
-                continue;
-            float fNegDist = -(cMath::Vector3Dot(vPlaneNormal, avBoxSpaceRayStart) + 0.5f);
-
-            float fT = fNegDist / fMul;
-            if (fT < 0)
-                continue;
-            cVector3f vAbsNrmIntersect = cMath::Vector3Abs(vBoxSpaceDir * fT + avBoxSpaceRayStart);
-
-            ///////////////////////////////////
-            // Check if the intersection is inside the cube
-            if (cMath::Vector3LessEqual(vAbsNrmIntersect, gvFogBoxCompareSize))
-            {
-                //////////////////////
-                // First intersection
-                if (bFoundIntersection == false)
-                {
-                    afEntryDist = fT;
-                    afExitDist = fT;
-                    bFoundIntersection = true;
-                }
-                //////////////////////
-                // There has already been a intersection.
-                else
-                {
-                    afEntryDist = cMath::Min(afEntryDist, fT);
-                    afExitDist = cMath::Max(afExitDist, fT);
-                }
-            }
-        }
-
-        if (afExitDist < 0)
-            return false;
-
-        return bFoundIntersection;
-    }
-
-    //-----------------------------------------------------------------------
-
-    static bool SortFunc_FogAreaData(const cFogAreaRenderData& aFogDataA, const cFogAreaRenderData& aFogDataB)
-    {
-        return aFogDataA.mpFogArea->GetViewSpaceZ() < aFogDataB.mpFogArea->GetViewSpaceZ();
-    }
-
-    void iRenderer::SetupFogRenderDataArray(bool abSort)
-    {
-        mpCurrentSettings->mvFogRenderData.resize(0);
-        for (int i = 0; i < mpCurrentRenderList->GetFogAreaNum(); ++i)
-        {
-            cFogArea* pFogArea = mpCurrentRenderList->GetFogArea(i);
-            cFogAreaRenderData fogData;
-
-            fogData.mpFogArea = pFogArea;
-            fogData.m_mtxInvBoxSpace = cMath::MatrixInverse(*pFogArea->GetModelMatrixPtr());
-            fogData.mbInsideNearFrustum = CheckFogAreaInsideNearPlane(fogData.m_mtxInvBoxSpace);
-            fogData.mvBoxSpaceFrustumOrigin = cMath::MatrixMul(fogData.m_mtxInvBoxSpace, mpCurrentFrustum->GetOrigin());
-
-            mpCurrentSettings->mvFogRenderData.push_back(fogData);
-        }
-
-        if (abSort && mpCurrentSettings->mvFogRenderData.empty() == false)
-        {
-            std::sort(mpCurrentSettings->mvFogRenderData.begin(), mpCurrentSettings->mvFogRenderData.end(), SortFunc_FogAreaData);
-        }
-    }
-
-    //-----------------------------------------------------------------------
-
-    float iRenderer::GetFogAreaVisibilityForObject(cFogAreaRenderData* apFogData, iRenderable* apObject)
-    {
-        cFogArea* pFogArea = apFogData->mpFogArea;
-
-        cVector3f vObjectPos = apObject->GetBoundingVolume()->GetWorldCenter();
-        cVector3f vRayDir = vObjectPos - mpCurrentFrustum->GetOrigin();
-        float fCameraDistance = vRayDir.Length();
-        vRayDir = vRayDir / fCameraDistance;
-
-        float fEntryDist, fExitDist;
-        if (CheckFogAreaRayIntersection(apFogData->m_mtxInvBoxSpace, apFogData->mvBoxSpaceFrustumOrigin, vRayDir, fEntryDist, fExitDist) ==
-            false)
-        {
-            return 1.0f;
-        }
-
-        if (apFogData->mbInsideNearFrustum == false && fCameraDistance < fEntryDist)
-        {
-            return 1.0f;
-        }
-
-        //////////////////////////////
-        // Calculate the distance the ray travels in the fog
-        float fFogDist;
-        if (apFogData->mbInsideNearFrustum)
-        {
-            if (pFogArea->GetShowBacksideWhenInside())
-                fFogDist = cMath::Min(fExitDist, fCameraDistance);
-            else
-                fFogDist = fCameraDistance;
-        }
-        else
-        {
-            if (pFogArea->GetShowBacksideWhenOutside())
-                fFogDist = cMath::Min(fExitDist - fEntryDist, fCameraDistance - fEntryDist);
-            else
-                fFogDist = fCameraDistance - fEntryDist;
-        }
-
-        //////////////////////////////
-        // Calculate the alpha
-        if (fFogDist <= 0)
-            return 1.0f;
-
-        float fFogStart = pFogArea->GetStart();
-        float fFogEnd = pFogArea->GetEnd();
-        float fFogAlpha = 1 - pFogArea->GetColor().a;
-
-        if (fFogDist < fFogStart)
-            return 1.0f;
-
-        if (fFogDist > fFogEnd)
-            return fFogAlpha;
-
-        float fAlpha = (fFogDist - fFogStart) / (fFogEnd - fFogStart);
-        if (pFogArea->GetFalloffExp() != 1)
-            fAlpha = powf(fAlpha, pFogArea->GetFalloffExp());
-
-        return (1.0f - fAlpha) + fFogAlpha * fAlpha;
-    }
-
-    //-----------------------------------------------------------------------
-
     void iRenderer::SetOcclusionPlanesActive(bool abX)
     {
         mbOcclusionPlanesActive = abX;
     }
 
-    iVertexBuffer* iRenderer::LoadVertexBufferFromMesh(const tString& asMeshName, tVertexElementFlag alVtxToCopy)
-    {
-        iVertexBuffer* pVtxBuffer = mpResources->GetMeshManager()->CreateVertexBufferFromMesh(asMeshName, alVtxToCopy);
-        if (pVtxBuffer == NULL)
-            FatalError("Could not load vertex buffer from mesh '%s'\n", asMeshName.c_str());
 
-        return pVtxBuffer;
-    }
-
-    //-----------------------------------------------------------------------
-
-    void iRenderer::RunCallback(eRendererMessage aMessage, cRendererCallbackFunctions& handler)
-    {
-        if (mpCallbackList == NULL || mpCurrentSettings->mbUseCallbacks == false)
-            return;
-
-        tRendererCallbackListIt it = mpCallbackList->begin();
-        for (; it != mpCallbackList->end(); ++it)
-        {
-            iRendererCallback* pCallback = *it;
-
-            pCallback->RunMessage(aMessage, &handler);
-        }
-    }
 
 } // namespace hpl

@@ -48,7 +48,7 @@ namespace hpl {
 	private:
 
 		virtual void Draw(GraphicsContext& context, cViewport& viewport, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings,
-			bool abSendFrameBufferToPostEffects, tRendererCallbackList *apCallbackList) override;
+			bool abSendFrameBufferToPostEffects) override;
 
         UniqueViewportData<RenderTarget> m_boundOutputBuffer;
         bgfx::ProgramHandle m_colorProgram;

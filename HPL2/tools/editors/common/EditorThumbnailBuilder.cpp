@@ -125,8 +125,7 @@ void cEditorThumbnailBuilder::BuildThumbnailFromMeshEntity(cMeshEntity* apEntity
 										pCamera->GetFrustum(),
 										pWorld,
 										mpViewport->GetRenderSettings(),
-										false,
-										mpViewport->GetRendererCallbackList() );
+										false);
 	pGfx->WaitAndFinishRendering();
 
 	//////////////////////////////////
@@ -205,8 +204,7 @@ void cEditorThumbnailBuilder::BuildThumbnailFromMesh(const tWString& asMeshFilen
 										pCamera->GetFrustum(),
 										pWorld,
 										mpViewport->GetRenderSettings(),
-										false,
-										mpViewport->GetRendererCallbackList() );
+										false);
 	pGfx->WaitAndFinishRendering();
 
 	//////////////////////////////////

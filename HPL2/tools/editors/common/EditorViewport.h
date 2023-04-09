@@ -276,8 +276,6 @@ public:
 	cBoundingVolume* GetRayBV();
 	float GetRayEndDistance() { return mfRayEndDistance; }
 
-	void AddViewportCallback(iRendererCallback* apCallback);
-
 	void UpdateCameraPlanes();
 
 	void SetClearColor(const cColor& aX);
@@ -380,8 +378,6 @@ protected:
 	eRenderer mRenderMode;
 
 	cEditorGrid* mpGrid;
-
-	iRendererCallback* mpViewportCallback;
 
 	static int mlViewportCount;
 
