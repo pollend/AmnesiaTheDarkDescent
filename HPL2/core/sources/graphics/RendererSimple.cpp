@@ -93,11 +93,11 @@ namespace hpl
         cRenderSettings* apSettings,
         bool abSendFrameBufferToPostEffects)
     {
-		const cMatrixf frustumView = mpCurrentFrustum->GetViewMatrix().GetTranspose();
-		const cMatrixf frustumProj = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
+		const cMatrixf frustumView = apFrustum->GetViewMatrix().GetTranspose();
+		const cMatrixf frustumProj = apFrustum->GetProjectionMatrix().GetTranspose();
 		
         auto screenSize = viewport.GetSize();
-        mpCurrentRenderList->Setup(mfCurrentFrameTime, mpCurrentFrustum);
+        mpCurrentRenderList->Setup(mfCurrentFrameTime, apFrustum);
 
         CheckForVisibleAndAddToList(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static), 0);
         CheckForVisibleAndAddToList(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Dynamic), 0);
@@ -111,7 +111,7 @@ namespace hpl
         // auto target = m_currentRenderTarget.GetRenderTarget();
         // auto& outputTarget = (target && target->IsValid()) ? *target : RenderTarget::EmptyRenderTarget;
 
-        mpCurrentRenderList->Setup(mfCurrentFrameTime, mpCurrentFrustum);
+        mpCurrentRenderList->Setup(mfCurrentFrameTime, apFrustum);
         CheckForVisibleAndAddToList(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static), 0);
         CheckForVisibleAndAddToList(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Dynamic), 0);
         mpCurrentRenderList->Compile(
@@ -148,8 +148,8 @@ namespace hpl
             }
             GraphicsContext::ViewConfiguration viewConfiguration {viewport.GetRenderTarget()};
 		    viewConfiguration.m_viewRect = cRect2l(0, 0, screenSize.x, screenSize.y);
-            viewConfiguration.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
-            viewConfiguration.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+            viewConfiguration.m_projection = apFrustum->GetProjectionMatrix().GetTranspose();
+            viewConfiguration.m_view = apFrustum->GetViewMatrix().GetTranspose();
             auto view = context.StartPass("z pre pass, render to z buffer", viewConfiguration );
             for (auto& obj : mpCurrentRenderList->GetRenderableItems(eRenderListType_Z))
             {
@@ -188,8 +188,8 @@ namespace hpl
 
             GraphicsContext::ViewConfiguration viewConfiguration {viewport.GetRenderTarget()};
 		    viewConfiguration.m_viewRect = cRect2l(0, 0, screenSize.x, screenSize.y);
-            viewConfiguration.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
-            viewConfiguration.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+            viewConfiguration.m_projection = apFrustum->GetProjectionMatrix().GetTranspose();
+            viewConfiguration.m_view = apFrustum->GetViewMatrix().GetTranspose();
             auto view = context.StartPass("diffuse pass, render to color buffer", viewConfiguration);
             for (auto& obj : mpCurrentRenderList->GetRenderableItems(eRenderListType_Diffuse))
             {
@@ -232,8 +232,8 @@ namespace hpl
 
             GraphicsContext::ViewConfiguration viewConfiguration {viewport.GetRenderTarget()};
 		    viewConfiguration.m_viewRect = cRect2l(0, 0, screenSize.x, screenSize.y);
-            viewConfiguration.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
-            viewConfiguration.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+            viewConfiguration.m_projection = apFrustum->GetProjectionMatrix().GetTranspose();
+            viewConfiguration.m_view = apFrustum->GetViewMatrix().GetTranspose();
             auto view = context.StartPass("decal pass, render to color buffer", viewConfiguration);
             for (auto& obj : mpCurrentRenderList->GetRenderableItems(eRenderListType_Decal))
             {
@@ -271,7 +271,7 @@ namespace hpl
 
         ImmediateDrawBatch postSolidBatch(context, viewport.GetRenderTarget(), frustumView, frustumProj);
 		cViewport::PostSolidDrawPacket postSolidEvent = cViewport::PostSolidDrawPacket({
-			.m_frustum = mpCurrentFrustum,
+			.m_frustum = apFrustum,
 			.m_context = &context,
 			.m_outputTarget = &viewport.GetRenderTarget(),
 			.m_viewport = &viewport,
@@ -293,8 +293,8 @@ namespace hpl
 
             GraphicsContext::ViewConfiguration viewConfiguration {viewport.GetRenderTarget()};
 		    viewConfiguration.m_viewRect = cRect2l(0, 0, screenSize.x, screenSize.y);
-            viewConfiguration.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
-            viewConfiguration.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+            viewConfiguration.m_projection = apFrustum->GetProjectionMatrix().GetTranspose();
+            viewConfiguration.m_view = apFrustum->GetViewMatrix().GetTranspose();
             auto view = context.StartPass("translucence pass, render to color buffer", viewConfiguration);
             for (auto& obj : mpCurrentRenderList->GetRenderableItems(eRenderListType_Translucent))
             {
@@ -331,7 +331,7 @@ namespace hpl
 
         ImmediateDrawBatch postTransBatch(context, viewport.GetRenderTarget(), frustumView, frustumProj);
 		cViewport::PostTranslucenceDrawPacket translucenceEvent = cViewport::PostTranslucenceDrawPacket({
-			.m_frustum = mpCurrentFrustum,
+			.m_frustum = apFrustum,
 			.m_context = &context,
 			.m_outputTarget = &viewport.GetRenderTarget(),
 			.m_viewport = &viewport,

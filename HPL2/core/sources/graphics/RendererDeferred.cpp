@@ -112,9 +112,12 @@ namespace hpl {
             cMatrixf m_mtxViewSpaceTransform;
             eShadowMapResolution m_shadowResolution = eShadowMapResolution_Low;
             iLight* m_light = nullptr;
-            int m_area = 0;
             bool m_insideNearPlane = false;
             bool m_castShadows = false;
+
+            inline float getArea() {
+                return m_clipRect.w * m_clipRect.h;
+            }
         };
 
         inline cMatrixf GetLightMtx(const DeferredLight& light) {
@@ -145,6 +148,178 @@ namespace hpl {
             return cMatrixf::Identity;
         }
 
+        static void ConstructRenderableList(
+            const char* name,
+            cRenderList& renderList,
+            GraphicsContext& context,
+            cFrustum* frustum,
+            cWorld* world,
+            cVisibleRCNodeTracker* apVisibleNodeTracker,
+            tObjectVariabilityFlag objectTypes,
+            tRenderableFlag alNeededFlags,
+            std::span<cPlanef> occludingPlanes,
+            GraphicsContext::ViewConfiguration& config,
+            RenderTarget& depthTarget) {
+            auto pass = context.StartPass(name, config);
+
+            auto renderNodeHandler = [&](iRenderableContainerNode* apNode, tRenderableFlag alNeededFlags) {
+                if (apNode->HasObjects() == false)
+                    return 0;
+
+                int lRenderedObjects = 0;
+
+                ////////////////////////////////////
+                // Iterate sorted objects and render
+                for (tRenderableListIt it = apNode->GetObjectList()->begin(); it != apNode->GetObjectList()->end(); ++it) {
+                    iRenderable* pObject = *it;
+
+                    //////////////////////
+                    // Check if object is visible
+                    
+                    if (!rendering::detail::CheckIfObjectIsVisible(pObject,alNeededFlags,occludingPlanes)) {
+                        continue;
+                    }
+
+                    /////////////////////////////
+                    // Check if inside frustum, skip test node was inside
+                    // if (apNode->GetPrevFrustumCollision() != eCollision_Inside && pObject->CollidesWithFrustum(mpCurrentFrustum) == false) {
+                    //     continue;
+                    // }
+
+                    // if (renderHandler(pass, pObject)) {
+                    //     ++lRenderedObjects;
+                    // }
+                }
+
+                return lRenderedObjects;
+            };
+
+            struct {
+                iRenderableContainer* container;
+                tObjectVariabilityFlag flag;
+            } containers[] = {
+                { world->GetRenderableContainer(eWorldContainerType_Static), eObjectVariabilityFlag_Static },
+                { world->GetRenderableContainer(eWorldContainerType_Dynamic), eObjectVariabilityFlag_Dynamic },
+            };
+
+            // mpCurrentSettings->mlNumberOfOcclusionQueries = 0;
+
+            // Switch sets, so that the last frames set is not current.
+            apVisibleNodeTracker->SwitchAndClearVisibleNodeSet();
+
+            for (auto& it : containers) {
+                if (it.flag & objectTypes) {
+                    it.container->UpdateBeforeRendering();
+                }
+            }
+
+            // Temp variable used when pushing visibility
+            // gpCurrentVisibleNodeTracker = apVisibleNodeTracker;
+
+            // Add Root nodes to stack
+            tRendererSortedNodeSet setNodeStack;
+
+            for (auto& it : containers) {
+                if (it.flag & objectTypes) {
+                    iRenderableContainerNode* pNode = it.container->GetRoot();
+                    pNode->UpdateBeforeUse(); // Make sure node is updated.
+                    pNode->SetInsideView(true); // We never want to check root! Assume player is inside.
+                    setNodeStack.insert(pNode);
+                }
+            }
+
+            // Render at least X objects without rendering nodes, to some occluders
+            const int minimumObjectsBeforeOcclusionTesting = 0;
+            // const int onlyRenderPrevVisibleOcclusionObjectsFrameCount = 0;
+            int lMinRenderedObjects = minimumObjectsBeforeOcclusionTesting;
+            
+
+            auto pushNodeChildrenToStack = [&](iRenderableContainerNode* apNode) {
+                if (apNode->HasChildNodes() == false)
+                {
+                    return;
+                }
+
+            };
+
+            ////////////////////////////
+            // Iterate the nodes on the stack.
+            while (!setNodeStack.empty()) {
+                tRendererSortedNodeSetIt firstIt = setNodeStack.begin(); // Might be slow...
+                iRenderableContainerNode* pNode = *firstIt;
+                setNodeStack.erase(firstIt); // This is most likely very slow... use list?
+
+                //////////////////////////
+                // Check if node is a leaf
+                bool bNodeIsLeaf = pNode->HasChildNodes() == false;
+
+                //////////////////////////
+                // Check if near plane is inside node AABB
+                bool bNearPlaneInsideNode = pNode->IsInsideView();
+
+                //////////////////////////
+                // Check if node was visible
+                bool bWasVisible = apVisibleNodeTracker->WasNodeVisible(pNode);
+
+                auto occlusionResult = bgfx::OcclusionQueryResult::Visible; // TODO: occlusion queries are broken
+
+                //////////////////////////
+                // Render nodes and queue queries
+                //  Only do this if:
+                //  - Near plane is not inside node AABB
+                //  - All of the closest objects have been rendered (so there are some blockers)
+                //  - Node was not visible or node is leaf (always draw leaves!)
+                if (bNearPlaneInsideNode == false && lMinRenderedObjects <= 0 &&
+                    (bWasVisible == false || bNodeIsLeaf || occlusionResult == bgfx::OcclusionQueryResult::Visible)) {
+                    ////////////////
+                    // If node is leaf and was visible render objects directly.
+                    //  Rendering directly can be good as it may result in extra blocker for next node test.
+                    bool bRenderObjects = false;
+                    if (bNodeIsLeaf && bWasVisible) {
+                        bRenderObjects = true;
+                    }
+
+                    /////////////////////////
+                    // Matrix
+                    cVector3f vSize = pNode->GetMax() - pNode->GetMin();
+                    cMatrixf mtxBox = cMath::MatrixScale(vSize);
+                    mtxBox.SetTranslation(pNode->GetCenter());
+                    // SetModelViewMatrix( cMath::MatrixMul(mpCurrentFrustum->GetViewMatrix(), mtxBox) );
+                    // OcclusionQueryBoundingBoxTest(pass, context, pNode->GetOcclusionQuery(), *mpCurrentFrustum, mtxBox, rt);
+
+                    //////////////////////////
+                    // Render node objects after AABB so that an object does not occlude its own node.
+                    if (bRenderObjects || occlusionResult == bgfx::OcclusionQueryResult::Visible) {
+                        renderNodeHandler(pNode, alNeededFlags);
+                    }
+
+                    // Debug:
+                    //  Skipping any queries, so must push up visible if this node was visible
+                    // if ((mbOnlyRenderPrevVisibleOcclusionObjects && onlyRenderPrevVisibleOcclusionObjectsFrameCount >= 1 &&
+                    //      bRenderObjects && bWasVisible) ||
+                    //     occlusionResult == bgfx::OcclusionQueryResult::Visible) {
+                    //     PushUpVisibility(pNode);
+                    // }
+
+                    if (occlusionResult == bgfx::OcclusionQueryResult::Visible) {
+                        // PushNodeChildrenToStack(setNodeStack, pNode, alNeededFlags);
+                    }
+                }
+                //////////////////////////
+                // If previous test failed, push children to stack and render objects (if any) directly.
+                else {
+                    ////////////////
+                    // Add child nodes to stack if any (also checks if they have needed flags are in frustum)
+                    // PushNodeChildrenToStack(setNodeStack, pNode, alNeededFlags);
+
+                    ////////////////
+                    // Render objects if any
+                    int lObjectsRendered = renderNodeHandler(pNode, alNeededFlags);
+                    lMinRenderedObjects -= lObjectsRendered;
+                }
+            }
+        }
+
         static bool SortDeferredLightBox(const DeferredLight* apLightDataA, const DeferredLight* apLightDataB) {
             iLight* pLightA = apLightDataA->m_light;
             iLight* pLightB = apLightDataB->m_light;
@@ -161,24 +336,70 @@ namespace hpl {
             return pLightA < pLightB;
         }
 
-        rendering::detail::RenderableIterCallback GBufferPassMaterialIter(
-            const char* name, const GraphicsContext::ViewConfiguration& config, GraphicsContext& context) {
+        void RenderGBufferPass(
+            const char* name,
+            GraphicsContext& context,
+            iRenderer* renderer,
+            GraphicsContext::ViewConfiguration& config,
+            std::span<iRenderable*> iter,
+            cViewport& viewport) {
+            if (iter.empty()) {
+                return;
+            }
+
             auto view = context.StartPass(name, config);
+            rendering::detail::RenderableMaterialIter(
+                renderer,
+                iter,
+                viewport,
+                eMaterialRenderMode_Diffuse,
+                [&context,
+                 view, &config](iRenderable* obj, GraphicsContext::LayoutStream& layoutInput, GraphicsContext::ShaderProgram& shaderInput) {
+                    shaderInput.m_configuration.m_depthTest = DepthTest::LessEqual;
+                    shaderInput.m_configuration.m_write = Write::RGBA;
+                    shaderInput.m_configuration.m_cull = Cull::CounterClockwise;
 
-            return [view, &context, &config](
-                       iRenderable* obj, GraphicsContext::LayoutStream& layoutInput, GraphicsContext::ShaderProgram& shaderInput) {
-                shaderInput.m_configuration.m_depthTest = DepthTest::LessEqual;
-                shaderInput.m_configuration.m_write = Write::RGBA;
-                shaderInput.m_configuration.m_cull = Cull::CounterClockwise;
+                    shaderInput.m_modelTransform =
+                        obj->GetModelMatrixPtr() ? obj->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity.GetTranspose();
+                    shaderInput.m_normalMtx =
+                        cMath::MatrixInverse(cMath::MatrixMul(shaderInput.m_modelTransform, config.m_view)); // matrix is already transposed
 
-                shaderInput.m_modelTransform =
-                    obj->GetModelMatrixPtr() ? obj->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity.GetTranspose();
-                shaderInput.m_normalMtx =
-                    cMath::MatrixInverse(cMath::MatrixMul(shaderInput.m_modelTransform, config.m_view)); // matrix is already transposed
+                    GraphicsContext::DrawRequest drawRequest{ layoutInput, shaderInput };
+                    context.Submit(view, drawRequest);
+                });
+        }
 
-                GraphicsContext::DrawRequest drawRequest{ layoutInput, shaderInput };
-                context.Submit(view, drawRequest);
-            };
+        void RenderDecalPass(
+            const char* name,
+            GraphicsContext& context,
+            iRenderer* renderer,
+            GraphicsContext::ViewConfiguration& config,
+            std::span<iRenderable*> iter,
+            cViewport& viewport) {
+
+            if (iter.empty()) {
+                return;
+            }
+
+            auto view = context.StartPass(name, config);
+            rendering::detail::RenderableMaterialIter(
+                renderer,
+                iter,
+                viewport,
+                eMaterialRenderMode_Diffuse,
+                [&context, view, &config](iRenderable* obj, GraphicsContext::LayoutStream& layoutInput, GraphicsContext::ShaderProgram& shaderInput) {
+                     shaderInput.m_configuration.m_depthTest = DepthTest::LessEqual;
+                    shaderInput.m_configuration.m_write = Write::RGBA;
+
+                    cMaterial* pMaterial = obj->GetMaterial();
+                    shaderInput.m_configuration.m_rgbBlendFunc = CreateFromMaterialBlendMode(pMaterial->GetBlendMode());
+                    shaderInput.m_configuration.m_alphaBlendFunc = CreateFromMaterialBlendMode(pMaterial->GetBlendMode());
+                    shaderInput.m_modelTransform =
+                        obj->GetModelMatrixPtr() ? obj->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity.GetTranspose();
+
+                    GraphicsContext::DrawRequest drawRequest{ layoutInput, shaderInput };
+                    context.Submit(view, drawRequest);
+                });
         }
 
         static bool SortDeferredLightDefault(const DeferredLight* a, const DeferredLight* b) {
@@ -401,7 +622,7 @@ namespace hpl {
         m_shadowDistanceLow = 20;
         m_shadowDistanceNone = 40;
 
-        mlMaxBatchLights = 100;
+        m_maxBatchLights = 100;
 
         m_boundViewportData = std::move(UniqueViewportData<SharedViewportData>(
             [](cViewport& viewport) {
@@ -453,15 +674,15 @@ namespace hpl {
                 sharedData->m_gBufferSpecular = colorImage();
                 sharedData->m_gBufferDepthStencil = depthImage();
                 sharedData->m_outputImage = colorImage();
-                sharedData->m_refractionImage = [&] {
+                {
                     auto desc = ImageDescriptor::CreateTexture2D(
-                        viewport.GetSize().x, viewport.GetSize().y, false, bgfx::TextureFormat::Enum::RGBA8);
+                        sharedData->m_size.x, sharedData->m_size.y, false, bgfx::TextureFormat::Enum::RGBA8);
                     desc.m_configuration.m_computeWrite = true;
                     desc.m_configuration.m_rt = RTType::RT_Write;
                     auto image = std::make_shared<Image>();
                     image->Initialize(desc);
-                    return image;
-                }();
+                    sharedData->m_refractionImage = image;
+                }
                 {
                     std::array<std::shared_ptr<Image>, 5> images = { sharedData->m_gBufferColor,
                                                                      sharedData->m_gBufferNormalImage,
@@ -483,6 +704,22 @@ namespace hpl {
                 sharedData->m_gBuffer_depth = RenderTarget(sharedData->m_gBufferDepthStencil);
                 sharedData->m_gBuffer_normals = RenderTarget(sharedData->m_gBufferNormalImage);
                 sharedData->m_gBuffer_linearDepth = RenderTarget(sharedData->m_gBufferPositionImage);
+
+                sharedData->m_gBufferReflectionColor = colorImage();
+                sharedData->m_gBufferReflectionNormalImage = normalImage();
+                sharedData->m_gBufferReflectionPositionImage = positionImage();
+                sharedData->m_gBufferReflectionSpecular = colorImage();
+                sharedData->m_gBufferReflectionDepthStencil = depthImage();
+                sharedData->m_outputReflectionImage = colorImage();
+
+                {
+                    std::array<std::shared_ptr<Image>, 5> images = { sharedData->m_gBufferReflectionColor,
+                                                                     sharedData->m_gBufferReflectionNormalImage,
+                                                                     sharedData->m_gBufferReflectionPositionImage,
+                                                                     sharedData->m_gBufferReflectionSpecular,
+                                                                     sharedData->m_gBufferReflectionDepthStencil };
+                    sharedData->m_gBufferReflection_full = RenderTarget(std::span(images));
+                }
                 return sharedData;
             },
             [](cViewport& viewport, SharedViewportData& target) {
@@ -573,7 +810,6 @@ namespace hpl {
         m_s_shadowMap.Initialize();
         m_s_goboMap.Initialize();
         m_s_shadowOffsetMap.Initialize();
-        m_s_diffuseMapOut.Initialize();
 
         m_copyRegionProgram = hpl::loadProgram("cs_copy_region");
         m_lightBoxProgram = hpl::loadProgram("vs_light_box", "fs_light_box");
@@ -627,8 +863,8 @@ namespace hpl {
 
         ////////////////////////////////////
         // Batch vertex buffer
-        mlMaxBatchVertices = m_shapeSphere[eDeferredShapeQuality_Low]->GetVertexNum() * mlMaxBatchLights;
-        mlMaxBatchIndices = m_shapeSphere[eDeferredShapeQuality_Low]->GetIndexNum() * mlMaxBatchLights;
+        mlMaxBatchVertices = m_shapeSphere[eDeferredShapeQuality_Low]->GetVertexNum() * m_maxBatchLights;
+        mlMaxBatchIndices = m_shapeSphere[eDeferredShapeQuality_Low]->GetIndexNum() * m_maxBatchLights;
     }
 
     //-----------------------------------------------------------------------
@@ -718,34 +954,6 @@ namespace hpl {
         context.Submit(edgeSmoothView, drawRequest);
     }
 
-    // void cRendererDeferred::RenderDiffusePass(GraphicsContext& context, cViewport& viewport, RenderTarget& rt) {
-    // 	BX_ASSERT(rt.GetImages().size() >= 4, "expected 4 images Diffuse(0), Normal(1), Position(2), Specular(3), Depth(4)");
-    // 	BX_ASSERT(rt.IsValid(), "Invalid render target");
-
-    // 	if(!mpCurrentRenderList->ArrayHasObjects(eRenderListType_Diffuse)) {
-    // 		return;
-    // 	}
-    // 	auto& sharedData = m_boundViewportData.resolve(viewport);
-
-    // 	GraphicsContext::ViewConfiguration viewConfig {rt};
-    // 	viewConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
-    // 	viewConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
-    // 	viewConfig.m_viewRect = {0, 0, sharedData.m_size.x, sharedData.m_size.y};
-    // 	auto view = context.StartPass("Diffuse", viewConfig);
-    // 	rendering::detail::RenderableMaterialIter(this, mpCurrentRenderList->GetRenderableItems(eRenderListType_Diffuse), viewport,
-    // eMaterialRenderMode_Diffuse, [&](iRenderable* obj, GraphicsContext::LayoutStream& layoutInput, GraphicsContext::ShaderProgram&
-    // shaderInput) { 		shaderInput.m_configuration.m_depthTest = DepthTest::LessEqual; 		shaderInput.m_configuration.m_write = Write::RGBA;
-    // 		shaderInput.m_configuration.m_cull = Cull::CounterClockwise;
-
-    // 		shaderInput.m_modelTransform = obj->GetModelMatrixPtr() ?  obj->GetModelMatrixPtr()->GetTranspose() :
-    // cMatrixf::Identity.GetTranspose(); 		shaderInput.m_normalMtx = cMath::MatrixInverse(cMath::MatrixMul(shaderInput.m_modelTransform,
-    // viewConfig.m_view)); // matrix is already transposed
-
-    // 		GraphicsContext::DrawRequest drawRequest {layoutInput, shaderInput};
-    // 		context.Submit(view, drawRequest);
-    // 	});
-    // }
-
     void rendering::detail::RenderZPassObject(
         bgfx::ViewId view, GraphicsContext& context, cViewport& viewport, iRenderer* renderer, iRenderable* object, Cull cull) {
         eMaterialRenderMode renderMode = object->GetCoverageAmount() >= 1 ? eMaterialRenderMode_Z : eMaterialRenderMode_Z_Dissolve;
@@ -783,25 +991,24 @@ namespace hpl {
         // keep around for the moment ...
         BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects);
 
-        mpCurrentRenderList->Setup(mfCurrentFrameTime, mpCurrentFrustum);
+        mpCurrentRenderList->Setup(mfCurrentFrameTime, apFrustum);
 
-        const cMatrixf mainFrustumViewInv = cMath::MatrixInverse(mpCurrentFrustum->GetViewMatrix());
-        const cMatrixf mainFrustumView = mpCurrentFrustum->GetViewMatrix().GetTranspose();
-        const cMatrixf mainFrustumProj = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
-        m_mtxInvView = mainFrustumViewInv;
+        const cMatrixf mainFrustumViewInv = cMath::MatrixInverse(apFrustum->GetViewMatrix());
+        const cMatrixf mainFrustumView = apFrustum->GetViewMatrix().GetTranspose();
+        const cMatrixf mainFrustumProj = apFrustum->GetProjectionMatrix().GetTranspose();
 
         // Setup far plane coordinates
-        m_farPlane = mpCurrentFrustum->GetFarPlane();
-        m_farTop = -tan(mpCurrentFrustum->GetFOV() * 0.5f) * m_farPlane;
+        m_farPlane = apFrustum->GetFarPlane();
+        m_farTop = -tan(apFrustum->GetFOV() * 0.5f) * m_farPlane;
         m_farBottom = -m_farTop;
-        m_farRight = m_farBottom * mpCurrentFrustum->GetAspect();
+        m_farRight = m_farBottom * apFrustum->GetAspect();
         m_farLeft = -m_farRight;
 
         cRendererCallbackFunctions handler(context, viewport, this);
 
         auto& sharedData = m_boundViewportData.resolve(viewport);
 
-        auto createStandardViewConfig = [&](const char* name, RenderTarget& rt) -> GraphicsContext::ViewConfiguration {
+        auto createStandardViewConfig = [&](RenderTarget& rt) -> GraphicsContext::ViewConfiguration {
             GraphicsContext::ViewConfiguration viewConfig{ rt };
             viewConfig.m_projection = mainFrustumProj;
             viewConfig.m_view = mainFrustumView;
@@ -821,7 +1028,7 @@ namespace hpl {
 
         ///////////////////////////
         // Occlusion testing
-        if (mpCurrentSettings->mbUseOcclusionCulling) {
+        {
             // GraphicsContext::ViewConfiguration viewConfig {resolveRenderTarget(m_gBuffer_depth)};
             // auto view = context.StartPass("Render Z", viewConfig);
             RenderZPassWithVisibilityCheck(
@@ -852,96 +1059,73 @@ namespace hpl {
             // SetupLightsAndRenderQueries(context, sharedData.m_gBuffer_depth);
 
             mpCurrentRenderList->Compile(
-                eRenderListCompileFlag_Diffuse | eRenderListCompileFlag_Translucent | eRenderListCompileFlag_Decal |
-                eRenderListCompileFlag_Illumination | eRenderListCompileFlag_FogArea);
-        }
-        ///////////////////////////
-        // Brute force
-        else {
-            CheckForVisibleAndAddToList(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static), lVisibleFlags);
-            CheckForVisibleAndAddToList(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Dynamic), lVisibleFlags);
+                eRenderListCompileFlag_Diffuse | 
+                eRenderListCompileFlag_Translucent | 
+                eRenderListCompileFlag_Decal |
+                eRenderListCompileFlag_Illumination | 
+                eRenderListCompileFlag_FogArea);
+        } 
+        // else {
+        //     CheckForVisibleAndAddToList(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static), lVisibleFlags);
+        //     CheckForVisibleAndAddToList(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Dynamic), lVisibleFlags);
 
-            mpCurrentRenderList->Compile(
-                eRenderListCompileFlag_Z | eRenderListCompileFlag_Diffuse | eRenderListCompileFlag_Translucent |
-                eRenderListCompileFlag_Decal | eRenderListCompileFlag_Illumination | eRenderListCompileFlag_FogArea);
-            ([&]() {
-                auto zPassSpan = mpCurrentRenderList->GetRenderableItems(eRenderListType_Z);
-                if (zPassSpan.empty()) {
-                    return;
-                }
-                GraphicsContext::ViewConfiguration viewConfig{ sharedData.m_gBuffer_depth };
-                viewConfig.m_viewRect = { 0, 0, sharedData.m_size.x, sharedData.m_size.y };
-                viewConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
-                viewConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+        //     mpCurrentRenderList->Compile(
+        //         eRenderListCompileFlag_Z | eRenderListCompileFlag_Diffuse | eRenderListCompileFlag_Translucent |
+        //         eRenderListCompileFlag_Decal | eRenderListCompileFlag_Illumination | eRenderListCompileFlag_FogArea);
+        //     ([&]() {
+        //         auto zPassSpan = mpCurrentRenderList->GetRenderableItems(eRenderListType_Z);
+        //         if (zPassSpan.empty()) {
+        //             return;
+        //         }
+        //         GraphicsContext::ViewConfiguration viewConfig{ sharedData.m_gBuffer_depth };
+        //         viewConfig.m_viewRect = { 0, 0, sharedData.m_size.x, sharedData.m_size.y };
+        //         viewConfig.m_projection = apFrustum->GetProjectionMatrix().GetTranspose();
+        //         viewConfig.m_view = apFrustum->GetViewMatrix().GetTranspose();
 
-                auto view = context.StartPass("RenderZ", viewConfig);
-                for (auto& obj : zPassSpan) {
-                    rendering::detail::RenderZPassObject(view, context, viewport, this, obj);
-                }
-            })();
+        //         auto view = context.StartPass("RenderZ", viewConfig);
+        //         for (auto& obj : zPassSpan) {
+        //             rendering::detail::RenderZPassObject(view, context, viewport, this, obj);
+        //         }
+        //     })();
 
-            // this occlusion query logic is used for reflections just cut this for now
+        //     // this occlusion query logic is used for reflections just cut this for now
 
-            GraphicsContext::ViewConfiguration occlusionPassConfig{ sharedData.m_gBuffer_depth };
-            occlusionPassConfig.m_viewRect = { 0, 0, sharedData.m_size.x, sharedData.m_size.y };
-            occlusionPassConfig.m_view = mainFrustumView;
-            occlusionPassConfig.m_projection = mainFrustumProj;
-            AssignAndRenderOcclusionQueryObjects(context.StartPass("Render Occlusion Pass", occlusionPassConfig), context, false, true);
-        }
+        //     GraphicsContext::ViewConfiguration occlusionPassConfig{ sharedData.m_gBuffer_depth };
+        //     occlusionPassConfig.m_viewRect = { 0, 0, sharedData.m_size.x, sharedData.m_size.y };
+        //     occlusionPassConfig.m_view = mainFrustumView;
+        //     occlusionPassConfig.m_projection = mainFrustumProj;
+        //     AssignAndRenderOcclusionQueryObjects(context.StartPass("Render Occlusion Pass", occlusionPassConfig), context, false, true);
+        // }
 
         // ------------------------------------------------------------------------------------
         //  Render Diffuse Pass render to color and depth
         // ------------------------------------------------------------------------------------
-        ([&]() {
-            auto diffuseSpan = mpCurrentRenderList->GetRenderableItems(eRenderListType_Diffuse);
-            if (diffuseSpan.empty()) {
-                return;
-            }
-            auto cfg = createStandardViewConfig("Diffuse", sharedData.m_gBuffer_full);
-            rendering::detail::RenderableMaterialIter(
-                this, diffuseSpan, viewport, eMaterialRenderMode_Diffuse, detail::GBufferPassMaterialIter("Diffuse", cfg, context));
-        })();
+        auto viewGbufferCfg = createStandardViewConfig(sharedData.m_gBuffer_full);
+        detail::RenderGBufferPass(
+            "GBuffer", 
+            context, 
+            this, 
+            viewGbufferCfg, 
+            mpCurrentRenderList->GetRenderableItems(eRenderListType_Diffuse), viewport);
 
         // ------------------------------------------------------------------------------------
         //  Render Decal Pass render to color and depth
         // ------------------------------------------------------------------------------------
-        ([&]() {
-            BX_ASSERT(sharedData.m_gBuffer_colorAndDepth.IsValid(), "Invalid render target");
-            BX_ASSERT(sharedData.m_gBuffer_colorAndDepth.GetImages().size() >= 1, "expected atleast 1 image Color(0)");
-            auto decalSpan = mpCurrentRenderList->GetRenderableItems(eRenderListType_Decal);
-            if (decalSpan.empty()) {
-                return;
-            }
+        auto viewDecalCfg = createStandardViewConfig(sharedData.m_gBuffer_colorAndDepth);
+        detail::RenderDecalPass(
+            "Decal", 
+            context, 
+            this, 
+            viewDecalCfg, 
+            mpCurrentRenderList->GetRenderableItems(eRenderListType_Decal), viewport);
 
-            auto cfg = createStandardViewConfig("RenderDecals", sharedData.m_gBuffer_colorAndDepth);
-            auto view = context.StartPass("RenderDecals", cfg);
-            rendering::detail::RenderableMaterialIter(
-                this,
-                decalSpan,
-                viewport,
-                eMaterialRenderMode_Diffuse,
-                [&](iRenderable* obj, GraphicsContext::LayoutStream& layoutInput, GraphicsContext::ShaderProgram& shaderInput) {
-                    shaderInput.m_configuration.m_depthTest = DepthTest::LessEqual;
-                    shaderInput.m_configuration.m_write = Write::RGBA;
 
-                    cMaterial* pMaterial = obj->GetMaterial();
-                    shaderInput.m_configuration.m_rgbBlendFunc = CreateFromMaterialBlendMode(pMaterial->GetBlendMode());
-                    shaderInput.m_configuration.m_alphaBlendFunc = CreateFromMaterialBlendMode(pMaterial->GetBlendMode());
-                    shaderInput.m_modelTransform =
-                        obj->GetModelMatrixPtr() ? obj->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity.GetTranspose();
-
-                    GraphicsContext::DrawRequest drawRequest{ layoutInput, shaderInput };
-                    context.Submit(view, drawRequest);
-                });
-        })();
-
-        // RunCallback(eRendererMessage_PostGBuffer, handler);
         // ------------------------------------------------------------------------
         // Render Light Pass --> renders to output target
         // ------------------------------------------------------------------------
         ([&]() {
             float fScreenArea = (float)(sharedData.m_size.x * sharedData.m_size.y);
-            mlMinLargeLightArea = (int)(mfMinLargeLightNormalizedArea * fScreenArea);
+            int mlMinLargeLightArea = (int)(mfMinLargeLightNormalizedArea * fScreenArea);
 
             // std::array<std::vector<detail::DeferredLight*>, eDeferredLightList_LastEnum> sortedLights;
             // DON'T touch deferredLights after this point
@@ -964,18 +1148,18 @@ namespace hpl {
                 switch (lightType) {
                 case eLightType_Point:
                     {
-                        deferredLightData.m_insideNearPlane = mpCurrentFrustum->CheckSphereNearPlaneIntersection(
+                        deferredLightData.m_insideNearPlane = apFrustum->CheckSphereNearPlaneIntersection(
                             light->GetWorldPosition(), light->GetRadius() * kLightRadiusMul_Low);
                         detail::SetupLightMatrix(
                             deferredLightData.m_mtxViewSpaceRender,
                             deferredLightData.m_mtxViewSpaceTransform,
                             light,
-                            mpCurrentFrustum,
+                            apFrustum,
                             kLightRadiusMul_Medium);
                         deferredLightData.m_clipRect = cMath::GetClipRectFromSphere(
                             deferredLightData.m_mtxViewSpaceRender.GetTranslation(),
                             light->GetRadius(),
-                            mpCurrentFrustum,
+                            apFrustum,
                             sharedData.m_size,
                             true,
                             mfScissorLastTanHalfFov);
@@ -984,17 +1168,17 @@ namespace hpl {
                 case eLightType_Spot:
                     {
                         cLightSpot* lightSpot = static_cast<cLightSpot*>(light);
-                        deferredLightData.m_insideNearPlane = mpCurrentFrustum->CheckFrustumNearPlaneIntersection(lightSpot->GetFrustum());
+                        deferredLightData.m_insideNearPlane = apFrustum->CheckFrustumNearPlaneIntersection(lightSpot->GetFrustum());
                         detail::SetupLightMatrix(
                             deferredLightData.m_mtxViewSpaceRender,
                             deferredLightData.m_mtxViewSpaceTransform,
                             light,
-                            mpCurrentFrustum,
+                            apFrustum,
                             kLightRadiusMul_Medium);
                         cMath::GetClipRectFromBV(
                             deferredLightData.m_clipRect,
                             *light->GetBoundingVolume(),
-                            mpCurrentFrustum,
+                            apFrustum,
                             sharedData.m_size,
                             mfScissorLastTanHalfFov);
                         break;
@@ -1002,8 +1186,6 @@ namespace hpl {
                 default:
                     break;
                 }
-
-                deferredLightData.m_area = deferredLightData.m_clipRect.w * deferredLightData.m_clipRect.h;
 
                 if (lightType == eLightType_Spot && light->GetCastShadows() && mpCurrentSettings->mbRenderShadows) {
                     cLightSpot* pLightSpot = static_cast<cLightSpot*>(light);
@@ -1018,9 +1200,9 @@ namespace hpl {
                     } else {
                         cVector3f vIntersection = pLightSpot->GetFrustum()->GetOrigin();
                         pLightSpot->GetFrustum()->CheckLineIntersection(
-                            mpCurrentFrustum->GetOrigin(), light->GetBoundingVolume()->GetWorldCenter(), vIntersection);
+                            apFrustum->GetOrigin(), light->GetBoundingVolume()->GetWorldCenter(), vIntersection);
 
-                        float fDistToLight = cMath::Vector3Dist(mpCurrentFrustum->GetOrigin(), vIntersection);
+                        float fDistToLight = cMath::Vector3Dist(apFrustum->GetOrigin(), vIntersection);
 
                         deferredLightData.m_castShadows = true;
                         deferredLightData.m_shadowResolution = rendering::detail::GetShadowMapResolution(
@@ -1067,17 +1249,15 @@ namespace hpl {
                     deferredLight.m_mtxViewSpaceRender = cMath::MatrixScale(pLightBox->GetSize());
                     deferredLight.m_mtxViewSpaceRender.SetTranslation(pLightBox->GetWorldPosition());
                     deferredLight.m_mtxViewSpaceRender =
-                        cMath::MatrixMul(mpCurrentFrustum->GetViewMatrix(), deferredLight.m_mtxViewSpaceRender);
+                        cMath::MatrixMul(apFrustum->GetViewMatrix(), deferredLight.m_mtxViewSpaceRender);
 
                     mpCurrentSettings->mlNumberOfLightsRendered++;
 
                     // Check if near plane is inside box. If so only render back
-                    if (mpCurrentFrustum->CheckBVNearPlaneIntersection(pLight->GetBoundingVolume())) {
+                    if (apFrustum->CheckBVNearPlaneIntersection(pLight->GetBoundingVolume())) {
                         deferredLightBoxRenderBack.emplace_back(&deferredLight);
-                        // sortedLights[eDeferredLightList_Box_RenderBack].push_back(&deferredLight);
                     } else {
                         deferredLightBoxStencilFront.emplace_back(&deferredLight);
-                        // sortedLights[eDeferredLightList_Box_StencilFront_RenderBack].push_back(&deferredLight);
                     }
 
                     continue;
@@ -1089,20 +1269,16 @@ namespace hpl {
                     deferredLightRenderBack.emplace_back(&deferredLight);
                 } else {
                     if (lightType == eLightType_Point) {
-                        if (deferredLight.m_area >= mlMinLargeLightArea) {
+                        if (deferredLight.getArea() >= mlMinLargeLightArea) {
                             deferredLightStencilFrontRenderBack.emplace_back(&deferredLight);
-                            // sortedLights[eDeferredLightList_StencilFront_RenderBack].push_back(&deferredLight);
                         } else {
                             deferredLightRenderBack.emplace_back(&deferredLight);
-                            // sortedLights[eDeferredLightList_RenderBack].push_back(&deferredLight);
                         }
                     }
                     // Always do double passes for spotlights as they need to will get artefacts otherwise...
                     //(At least with gobos)l
                     else if (lightType == eLightType_Spot) {
-                        // mvSortedLights[eDeferredLightList_StencilBack_ScreenQuad].push_back(pLightData);
                         deferredLightStencilFrontRenderBack.emplace_back(&deferredLight);
-                        // sortedLights[eDeferredLightList_StencilFront_RenderBack].push_back(&deferredLight);
                     }
                 }
             }
@@ -1135,8 +1311,6 @@ namespace hpl {
                     shaderProgram.m_textures.push_back({ m_s_diffuseMap, sharedData.m_gBufferColor->GetHandle(), 0 });
                     shaderProgram.m_uniforms.push_back({ m_u_lightColor, lightColor });
 
-                    // shaderProgram.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
-                    // shaderProgram.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
                     shaderProgram.m_modelTransform =
                         cMath::MatrixMul(light->m_light->GetWorldMatrix(), detail::GetLightMtx(*light)).GetTranspose();
 
@@ -1159,8 +1333,8 @@ namespace hpl {
                 };
 
                 GraphicsContext::ViewConfiguration stencilFrontBackViewConfig{ sharedData.m_output_target };
-                stencilFrontBackViewConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
-                stencilFrontBackViewConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+                stencilFrontBackViewConfig.m_projection = mainFrustumProj;
+                stencilFrontBackViewConfig.m_view = mainFrustumView;
                 stencilFrontBackViewConfig.m_clear = { 0, 1.0, 0, ClearOp::Stencil };
                 stencilFrontBackViewConfig.m_viewRect = {
                     0, 0, static_cast<uint16_t>(sharedData.m_size.x), static_cast<uint16_t>(sharedData.m_size.y)
@@ -1200,8 +1374,8 @@ namespace hpl {
                 }
 
                 GraphicsContext::ViewConfiguration boxLightConfig{ sharedData.m_output_target };
-                boxLightConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
-                boxLightConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+                boxLightConfig.m_projection = apFrustum->GetProjectionMatrix().GetTranspose();
+                boxLightConfig.m_view = apFrustum->GetViewMatrix().GetTranspose();
                 boxLightConfig.m_viewRect = {
                     0, 0, static_cast<uint16_t>(sharedData.m_size.x), static_cast<uint16_t>(sharedData.m_size.y)
                 };
@@ -1221,9 +1395,6 @@ namespace hpl {
             // -----------------------------------------------
             {
                 auto drawLight = [&](bgfx::ViewId pass, GraphicsContext::ShaderProgram& shaderProgram, detail::DeferredLight* apLightData) {
-                    // if(bgfx::isValid(apLightData->m_occlusionQuery)) {
-                    // 	bgfx::setCondition(apLightData->m_occlusionQuery, true);
-                    // }
 
                     GraphicsContext::LayoutStream layoutStream;
                     GetLightShape(apLightData->m_light, eDeferredShapeQuality_High)->GetLayoutStream(layoutStream);
@@ -1239,13 +1410,13 @@ namespace hpl {
                             auto attenuationImage = apLightData->m_light->GetFalloffMap();
 
                             const auto modelViewMtx =
-                                cMath::MatrixMul(mpCurrentFrustum->GetViewMatrix(), apLightData->m_light->GetWorldMatrix());
+                                cMath::MatrixMul(apFrustum->GetViewMatrix(), apLightData->m_light->GetWorldMatrix());
                             const auto color = apLightData->m_light->GetDiffuseColor();
                             cVector3f lightViewPos = cMath::MatrixMul(modelViewMtx, detail::GetLightMtx(*apLightData)).GetTranslation();
                             float lightPosition[4] = { lightViewPos.x, lightViewPos.y, lightViewPos.z, 1.0f };
                             float lightColor[4] = { color.r, color.g, color.b, color.a };
                             cMatrixf mtxInvViewRotation =
-                                cMath::MatrixMul(apLightData->m_light->GetWorldMatrix(), m_mtxInvView).GetTranspose();
+                                cMath::MatrixMul(apLightData->m_light->GetWorldMatrix(), mainFrustumViewInv).GetTranspose();
 
                             shaderProgram.m_uniforms.push_back({ m_u_lightPos, lightPosition });
                             shaderProgram.m_uniforms.push_back({ m_u_lightColor, lightColor });
@@ -1294,12 +1465,12 @@ namespace hpl {
 
                             uint32_t flags = 0;
                             const auto modelViewMtx =
-                                cMath::MatrixMul(mpCurrentFrustum->GetViewMatrix(), apLightData->m_light->GetWorldMatrix());
+                                cMath::MatrixMul(apFrustum->GetViewMatrix(), apLightData->m_light->GetWorldMatrix());
                             const auto color = apLightData->m_light->GetDiffuseColor();
                             cVector3f lightViewPos = cMath::MatrixMul(modelViewMtx, detail::GetLightMtx(*apLightData)).GetTranslation();
                             float lightPosition[4] = { lightViewPos.x, lightViewPos.y, lightViewPos.z, 1.0f };
                             float lightColor[4] = { color.r, color.g, color.b, color.a };
-                            cMatrixf spotViewProj = cMath::MatrixMul(pLightSpot->GetViewProjMatrix(), m_mtxInvView).GetTranspose();
+                            cMatrixf spotViewProj = cMath::MatrixMul(pLightSpot->GetViewProjMatrix(), mainFrustumViewInv).GetTranspose();
 
                             shaderProgram.m_uniforms.push_back({ m_u_lightPos, lightPosition });
                             shaderProgram.m_uniforms.push_back({ m_u_lightColor, lightColor });
@@ -1371,8 +1542,8 @@ namespace hpl {
 
                 GraphicsContext::ViewConfiguration viewConfig{ sharedData.m_output_target };
                 viewConfig.m_viewRect = { 0, 0, sharedData.m_size.x, sharedData.m_size.y };
-                viewConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
-                viewConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+                viewConfig.m_projection = mainFrustumProj;
+                viewConfig.m_view = mainFrustumView;
                 const auto lightStencilBackPass = context.StartPass("eDeferredLightList_StencilFront_RenderBack", viewConfig);
                 bgfx::setViewMode(lightStencilBackPass, bgfx::ViewMode::Sequential);
 
@@ -1422,8 +1593,8 @@ namespace hpl {
                 }
 
                 GraphicsContext::ViewConfiguration lightBackPassConfig{ sharedData.m_output_target };
-                lightBackPassConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
-                lightBackPassConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+                lightBackPassConfig.m_projection = mainFrustumProj;
+                lightBackPassConfig.m_view = mainFrustumView;
                 lightBackPassConfig.m_viewRect = { 0, 0, sharedData.m_size.x, sharedData.m_size.y };
                 const auto lightBackPass = context.StartPass("eDeferredLightList_RenderBack", lightBackPassConfig);
                 for (auto& light : deferredLightRenderBack) {
@@ -1492,14 +1663,14 @@ namespace hpl {
                 fogRenderData.emplace_back(detail::FogRendererData{ fogArea, false, cVector3f(0.0f), cMatrixf(cMatrixf::Identity) });
             fogData.m_fogArea = fogArea;
             fogData.m_mtxInvBoxSpace = cMath::MatrixInverse(*fogArea->GetModelMatrixPtr());
-            fogData.m_boxSpaceFrustumOrigin = cMath::MatrixMul(fogData.m_mtxInvBoxSpace, mpCurrentFrustum->GetOrigin());
+            fogData.m_boxSpaceFrustumOrigin = cMath::MatrixMul(fogData.m_mtxInvBoxSpace, apFrustum->GetOrigin());
             fogData.m_insideNearFrustum = ([&]() {
                 std::array<cVector3f, 4> nearPlaneVtx;
                 cVector3f min(-0.5f);
                 cVector3f max(0.5f);
 
                 for (size_t i = 0; i < nearPlaneVtx.size(); ++i) {
-                    nearPlaneVtx[i] = cMath::MatrixMul(fogData.m_mtxInvBoxSpace, mpCurrentFrustum->GetVertex(i));
+                    nearPlaneVtx[i] = cMath::MatrixMul(fogData.m_mtxInvBoxSpace, apFrustum->GetVertex(i));
                 }
                 for (size_t i = 0; i < nearPlaneVtx.size(); ++i) {
                     if (cMath::CheckPointInAABBIntersection(nearPlaneVtx[i], min, max)) {
@@ -1566,7 +1737,7 @@ namespace hpl {
                                                                             : rendering::detail::FogVariant_None;
                 } else {
                     cMatrixf mtxInvModelView =
-                        cMath::MatrixInverse(cMath::MatrixMul(mpCurrentFrustum->GetViewMatrix(), *fogArea.m_fogArea->GetModelMatrixPtr()));
+                        cMath::MatrixInverse(cMath::MatrixMul(apFrustum->GetViewMatrix(), *fogArea.m_fogArea->GetModelMatrixPtr()));
                     cVector3f vRayCastStart = cMath::MatrixMul(mtxInvModelView, cVector3f(0));
                     // rotationMatrix = mtxInvModelView.GetRotation().GetTranspose();
 
@@ -1665,7 +1836,7 @@ namespace hpl {
         // notify post draw listeners
         ImmediateDrawBatch postSolidBatch(context, sharedData.m_output_target, mainFrustumView, mainFrustumProj);
         cViewport::PostSolidDrawPacket postSolidEvent = cViewport::PostSolidDrawPacket({
-            .m_frustum = mpCurrentFrustum,
+            .m_frustum = apFrustum,
             .m_context = &context,
             .m_outputTarget = &sharedData.m_output_target,
             .m_viewport = &viewport,
@@ -1675,9 +1846,6 @@ namespace hpl {
         viewport.SignalDraw(postSolidEvent);
         postSolidBatch.flush();
 
-        // not going to even try.
-        // calls back through RendererDeffered need to untangle all the complicated state ...
-
         ([&]() {
             auto translucentSpan = mpCurrentRenderList->GetRenderableItems(eRenderListType_Translucent);
             if (translucentSpan.empty()) {
@@ -1685,19 +1853,18 @@ namespace hpl {
             }
 
             GraphicsContext::ViewConfiguration viewConfig{ sharedData.m_output_target };
-            viewConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
-            viewConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+            viewConfig.m_projection = mainFrustumProj;
+            viewConfig.m_view = mainFrustumView;
             viewConfig.m_viewRect = { 0, 0, sharedData.m_size.x, sharedData.m_size.y };
             auto view = context.StartPass("Translucent", viewConfig);
             bgfx::setViewMode(view, bgfx::ViewMode::Sequential);
-            const float fHalfFovTan = tan(mpCurrentFrustum->GetFOV() * 0.5f);
+            const float fHalfFovTan = tan(apFrustum->GetFOV() * 0.5f);
             for (auto& obj : translucentSpan) {
                 auto* pMaterial = obj->GetMaterial();
                 auto* pMaterialType = pMaterial->GetType();
                 auto* vertexBuffer = obj->GetVertexBuffer();
-                // const bool hasColorAttribute = vertexBuffer->GetElement(eVertexBufferElement_Color0) != nullptr; // hack
 
-                cMatrixf* pMatrix = obj->GetModelMatrix(mpCurrentFrustum);
+                cMatrixf* pMatrix = obj->GetModelMatrix(apFrustum);
 
                 eMaterialRenderMode renderMode =
                     mpCurrentWorld->GetFogActive() ? eMaterialRenderMode_DiffuseFog : eMaterialRenderMode_Diffuse;
@@ -1710,59 +1877,142 @@ namespace hpl {
                 mfTempAlpha = 1;
                 if (pMaterial->GetAffectedByFog()) {
                     for (auto& fogArea : fogRenderData) {
-                        mfTempAlpha *= detail::GetFogAreaVisibilityForObject(fogArea, *mpCurrentFrustum, obj);
+                        mfTempAlpha *= detail::GetFogAreaVisibilityForObject(fogArea, *apFrustum, obj);
                     }
                 }
 
-                if (!obj->UpdateGraphicsForViewport(mpCurrentFrustum, mfCurrentFrameTime)) {
+                if (!obj->UpdateGraphicsForViewport(apFrustum, mfCurrentFrameTime)) {
                     continue;
                 }
 
                 if (!obj->RetrieveOcculsionQuery(this)) {
                     continue;
                 }
+                // if (!CheckRenderablePlaneIsVisible(obj, mpCurrentFrustum)) {
+                //     continue;
+                // }
 
                 if (pMaterial->HasRefraction()) {
-                    if (!CheckRenderablePlaneIsVisible(obj, mpCurrentFrustum)) {
-                        continue;
-                    }
-
                     cBoundingVolume* pBV = obj->GetBoundingVolume();
-                    cRect2l clipRect = GetClipRectFromObject(obj, 0.2f, mpCurrentFrustum, sharedData.m_size, fHalfFovTan);
-                    if (clipRect.w <= 0 || clipRect.h <= 0) {
-                        continue;
+                    cRect2l clipRect = GetClipRectFromObject(obj, 0.2f, apFrustum, sharedData.m_size, fHalfFovTan);
+                    if (clipRect.w >= 0 || clipRect.h >= 0) {
+                        GraphicsContext::ShaderProgram shaderInput;
+                        shaderInput.m_handle = m_copyRegionProgram;
+                        shaderInput.m_textures.push_back({ m_s_diffuseMap, sharedData.m_outputImage->GetHandle(), 0 });
+                        shaderInput.m_uavImage.push_back(
+                            { sharedData.m_refractionImage->GetHandle(),1, 0, bgfx::Access::Write, bgfx::TextureFormat::Enum::RGBA8 });
+
+                        float copyRegion[4] = { static_cast<float>(clipRect.x),
+                                                static_cast<float>(sharedData.m_size.y - (clipRect.h + clipRect.y)),
+                                                static_cast<float>(clipRect.w),
+                                                static_cast<float>(clipRect.h) };
+                        shaderInput.m_uniforms.push_back({ m_u_copyRegion, &copyRegion, 1 });
+
+                        GraphicsContext::ComputeRequest computeRequest{
+                            shaderInput, static_cast<uint32_t>((clipRect.w / 16) + 1), static_cast<uint32_t>((clipRect.h / 16) + 1), 1
+                        };
+                        context.Submit(view, computeRequest);
+                    }
+                }
+
+                // TODO: need to implement this
+                if (pMaterial->HasWorldReflection() && obj->GetRenderType() == eRenderableType_SubMesh && false) {
+                    auto* reflectionSubMeshEntity = static_cast<cSubMeshEntity*>(obj);
+                    bool bReflectionIsInRange=true;
+                    if(pMaterial->GetMaxReflectionDistance() > 0) {
+                        cVector3f point = apFrustum->GetOrigin() + apFrustum->GetForward() * pMaterial->GetMaxReflectionDistance();
+                        cVector3f normal = apFrustum->GetForward();
+                        cPlanef maxRelfctionDistPlane;
+                        maxRelfctionDistPlane.FromNormalPoint(normal, point);
+
+                        if(cMath::CheckPlaneBVCollision(maxRelfctionDistPlane, *reflectionSubMeshEntity->GetBoundingVolume())==eCollision_Outside)
+                        {
+                            bReflectionIsInRange = false;
+                        }
                     }
 
-                    GraphicsContext::ShaderProgram shaderInput;
-                    shaderInput.m_handle = m_copyRegionProgram;
-                    shaderInput.m_textures.push_back({ m_s_diffuseMap, sharedData.m_outputImage->GetHandle(), 0 });
-                    shaderInput.m_uavImage.push_back(
-                        { sharedData.m_refractionImage->GetHandle(), 1, 0, bgfx::Access::Write, bgfx::TextureFormat::Enum::RGBA8 });
+                    if(mpCurrentSettings->mbRenderWorldReflection && bReflectionIsInRange && reflectionSubMeshEntity->GetIsOneSided())
+		            {
+                        cSubMesh *pSubMesh = reflectionSubMeshEntity->GetSubMesh();
+                        cVector3f reflectionSurfaceNormal = cMath::Vector3Normalize(cMath::MatrixMul3x3(reflectionSubMeshEntity->GetWorldMatrix(), pSubMesh->GetOneSidedNormal()));
+                        cVector3f reflectionSurfacePosition = cMath::MatrixMul(reflectionSubMeshEntity->GetWorldMatrix(), pSubMesh->GetOneSidedPoint());
 
-                    float copyRegion[4] = { static_cast<float>(clipRect.x),
-                                            static_cast<float>(sharedData.m_size.y - (clipRect.h + clipRect.y)),
-                                            static_cast<float>(clipRect.w),
-                                            static_cast<float>(clipRect.h) };
-                    shaderInput.m_uniforms.push_back({ m_u_copyRegion, &copyRegion, 1 });
+                        cPlanef reflectPlane;
+                        reflectPlane.FromNormalPoint(reflectionSurfaceNormal, reflectionSurfacePosition);
 
-                    GraphicsContext::ComputeRequest computeRequest{
-                        shaderInput, static_cast<uint32_t>((clipRect.w / 16) + 1), static_cast<uint32_t>((clipRect.h / 16) + 1), 1
-                    };
-                    context.Submit(view, computeRequest);
+                        cMatrixf reflectionMatrix = cMath::MatrixPlaneMirror(reflectPlane);
+                        cMatrixf reflectionView = cMath::MatrixMul(mpCurrentFrustum->GetViewMatrix(), reflectionMatrix);
+                        cVector3f reflectionOrigin = cMath::MatrixMul(reflectionMatrix, mpCurrentFrustum->GetOrigin());
+
+                        cMatrixf reflectionProjectionMatrix = apFrustum->GetProjectionMatrix();
+
+                        cPlanef cameraSpaceReflPlane = cMath::TransformPlane(reflectionView, reflectPlane);
+                        cMatrixf mtxReflProj = cMath::ProjectionMatrixObliqueNearClipPlane(reflectionProjectionMatrix, cameraSpaceReflPlane);
+
+                        cFrustum reflectFrustum;
+                        reflectFrustum.SetupPerspectiveProj(mtxReflProj, reflectionView,
+                            mpCurrentFrustum->GetFarPlane(),mpCurrentFrustum->GetNearPlane(),
+                            mpCurrentFrustum->GetFOV(), mpCurrentFrustum->GetAspect(),
+                            reflectionOrigin,false, &reflectionProjectionMatrix, true);
+                        reflectFrustum.SetInvertsCullMode(true);
+                        
+                        const float fMaxReflDist = pMaterial->GetMaxReflectionDistance();
+                        if(pMaterial->GetMaxReflectionDistance() > 0) { 
+                            //Forward and normal is aligned, the normal of plane becomes inverse forward
+                            cVector3f frustumForward = mpCurrentFrustum->GetForward()*-1;
+                            cPlanef maxReflectionDistPlane;
+			                float fFDotN = cMath::Vector3Dot(frustumForward, reflectionSurfaceNormal);
+                            if(fFDotN <-0.99999f) {
+                                cVector3f vClipNormal, vClipPoint;
+                                vClipNormal = frustumForward*-1;
+                                vClipPoint = mpCurrentFrustum->GetOrigin() + frustumForward * pMaterial->GetMaxReflectionDistance();
+                                maxReflectionDistPlane.FromNormalPoint(vClipNormal, vClipPoint);
+                            }
+                        } else {
+                            cPlanef cameraSpacePlane = cMath::TransformPlane(mpCurrentFrustum->GetViewMatrix(), reflectPlane);
+
+                            cVector3f vPoint1 = cVector3f(0,0, -fMaxReflDist);
+                            cVector3f vPoint2 = cVector3f(0,0, -fMaxReflDist);
+
+                            //Vertical row (x always same)
+                            if(fabs(cameraSpacePlane.b) < 0.0001f)
+                            {
+                                vPoint1.x = (-cameraSpacePlane.c*-fMaxReflDist - cameraSpacePlane.d) / cameraSpacePlane.a;
+                                vPoint2 = vPoint1;
+                                vPoint2.y+=1;
+                            }
+                            //Horizontal row (y always same)
+                            else if(fabs(cameraSpacePlane.a) < 0.0001f)
+                            {
+                                vPoint1.y = (-cameraSpacePlane.c*-fMaxReflDist - cameraSpacePlane.d) / cameraSpacePlane.b;
+                                vPoint2 = vPoint1;
+                                vPoint2.x+=1;
+                            }
+                            //Oblique row (x and y changes)
+                            else
+                            {
+                                vPoint1.x = (-cameraSpacePlane.c*-fMaxReflDist - cameraSpacePlane.d) / cameraSpacePlane.a;
+                                vPoint2.y = (-cameraSpacePlane.c*-fMaxReflDist - cameraSpacePlane.d) / cameraSpacePlane.b;
+                            }
+
+                            cMatrixf mtxInvCamera = cMath::MatrixInverse(mpCurrentFrustum->GetViewMatrix());
+                            vPoint1 = cMath::MatrixMul(mtxInvCamera, vPoint1);
+                            vPoint2 = cMath::MatrixMul(mtxInvCamera, vPoint2);
+
+                            cVector3f vNormal = cMath::Vector3Cross(vPoint1-reflectionOrigin, vPoint2-reflectionOrigin);
+                            vNormal.Normalize();
+                            //make sure normal has correct sign!
+                            if(cMath::Vector3Dot(reflectionSurfaceNormal, vNormal)<0) {
+                                vNormal = vNormal*-1;
+                            }
+                        }
+                        m_reflectionRenderList.Clear();
+
+
+                    }
+
                 }
 
-                if (pMaterial->HasWorldReflection() && obj->GetRenderType() == eRenderableType_SubMesh) {
-                    // cBoundingVolume *pBV = obj->GetBoundingVolume();
-
-                    // cRect2l clipRect = GetClipRectFromObject(obj, 0.2f, mpCurrentFrustum, mvRenderTargetSize, fHalfFovTan);
-                    // if(!CheckRenderablePlaneIsVisible(obj, mpCurrentFrustum)) {
-                    // 	continue;
-                    // }
-
-                    // cRect2l rect = cRect2l(0, 0, mvRenderTargetSize.x, mvRenderTargetSize.y);
-                    // auto copyImage = resolveRenderImage(m_gBufferColor);
-                    // context.CopyTextureToFrameBuffer( *copyImage, rect, m_refractionTarget);
-                }
 
                 pMaterialType->ResolveShaderProgram(
                     renderMode, viewport, pMaterial, obj, this, [&](GraphicsContext::ShaderProgram& shaderInput) {
@@ -1773,10 +2023,9 @@ namespace hpl {
                         shaderInput.m_configuration.m_write = Write::RGB;
                         shaderInput.m_configuration.m_cull = Cull::None;
 
-                        // shaderInput.m_uniforms.push_back({m_u_overrideColor, overrideColor });
 
-                        // shaderInput.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
-                        // shaderInput.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+                        // shaderInput.m_textures.push_back({ m_s_diffuseMap, pMaterial->GetDiffuseTexture()->GetHandle(), 0 });
+
                         shaderInput.m_modelTransform = pMatrix ? pMatrix->GetTranspose() : cMatrixf::Identity;
 
                         if (!pMaterial->HasRefraction()) {
@@ -1785,8 +2034,6 @@ namespace hpl {
                         }
 
                         GraphicsContext::DrawRequest drawRequest{ layoutInput, shaderInput };
-                        // drawRequest.m_width = mvScreenSize.x;
-                        // drawRequest.m_height = mvScreenSize.y;
                         context.Submit(view, drawRequest);
                     });
 
@@ -1809,13 +2056,9 @@ namespace hpl {
                             shaderInput.m_configuration.m_rgbBlendFunc = CreateFromMaterialBlendMode(eMaterialBlendMode_Add);
                             shaderInput.m_configuration.m_alphaBlendFunc = CreateFromMaterialBlendMode(eMaterialBlendMode_Add);
 
-                            // shaderInput.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
-                            // shaderInput.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
                             shaderInput.m_modelTransform = pMatrix ? pMatrix->GetTranspose() : cMatrixf::Identity;
 
                             GraphicsContext::DrawRequest drawRequest{ layoutInput, shaderInput };
-                            // drawRequest.m_width = mvScreenSize.x;
-                            // drawRequest.m_height = mvScreenSize.y;
                             context.Submit(view, drawRequest);
                         });
                 }
@@ -1824,7 +2067,7 @@ namespace hpl {
 
         ImmediateDrawBatch postTransBatch(context, sharedData.m_output_target, mainFrustumView, mainFrustumProj);
         cViewport::PostTranslucenceDrawPacket translucenceEvent = cViewport::PostTranslucenceDrawPacket({
-            .m_frustum = mpCurrentFrustum,
+            .m_frustum = apFrustum,
             .m_context = &context,
             .m_outputTarget = &sharedData.m_output_target,
             .m_viewport = &viewport,
@@ -1866,18 +2109,15 @@ namespace hpl {
     }
 
     iVertexBuffer* cRendererDeferred::GetLightShape(iLight* apLight, eDeferredShapeQuality aQuality) const {
-        ///////////////////
-        // Point Light
-        if (apLight->GetLightType() == eLightType_Point) {
-            return m_shapeSphere[aQuality].get();
+        switch(apLight->GetLightType()) {
+            case eLightType_Point:
+                return m_shapeSphere[aQuality].get();
+            case eLightType_Spot:
+                return m_shapePyramid.get();
+            default:
+                break;
         }
-        ///////////////////
-        // Spot Light
-        else if (apLight->GetLightType() == eLightType_Spot) {
-            return m_shapePyramid.get();
-        }
-
-        return NULL;
+        return nullptr;
     }
 
 } // namespace hpl

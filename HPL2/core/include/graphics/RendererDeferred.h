@@ -19,6 +19,7 @@
 #pragma once
 
 #include "engine/RTTI.h"
+#include "graphics/RenderList.h"
 #include "scene/Viewport.h"
 #include "windowing/NativeWindow.h"
 #include <array>
@@ -137,7 +138,20 @@ namespace hpl {
                 , m_gBuffer_depth(std::move(buffer.m_gBuffer_depth))
                 , m_gBuffer_normals(std::move(buffer.m_gBuffer_normals))
                 , m_gBuffer_linearDepth(std::move(buffer.m_gBuffer_linearDepth))
-                , m_output_target(std::move(buffer.m_output_target)) {
+                , m_output_target(std::move(buffer.m_output_target))
+                , m_gBufferReflectionColor(std::move(buffer.m_gBufferReflectionColor))
+                , m_gBufferReflectionNormalImage(std::move(buffer.m_gBufferReflectionNormalImage))
+                , m_gBufferReflectionPositionImage(std::move(buffer.m_gBufferReflectionPositionImage))
+                , m_gBufferReflectionSpecular(std::move(buffer.m_gBufferReflectionSpecular))
+                , m_gBufferReflectionDepthStencil(std::move(buffer.m_gBufferReflectionDepthStencil))
+                , m_outputReflectionImage(std::move(buffer.m_outputReflectionImage))
+                , m_gBufferReflection_full(std::move(buffer.m_gBufferReflection_full))
+                , m_gBufferReflection_colorAndDepth(std::move(buffer.m_gBufferReflection_colorAndDepth))
+                , m_gBufferReflection_color(std::move(buffer.m_gBufferReflection_color))
+                , m_gBufferReflection_depth(std::move(buffer.m_gBufferReflection_depth))
+                , m_gBufferReflection_normals(std::move(buffer.m_gBufferReflection_normals))
+                , m_gBufferReflection_linearDepth(std::move(buffer.m_gBufferReflection_linearDepth))
+                , m_outputReflection_target(std::move(buffer.m_outputReflection_target)) {
             }
 
             SharedViewportData& operator=(const SharedViewportData&) = delete;
@@ -150,6 +164,7 @@ namespace hpl {
                 m_gBufferPositionImage = std::move(buffer.m_gBufferPositionImage);
                 m_gBufferSpecular = std::move(buffer.m_gBufferSpecular);
                 m_gBufferDepthStencil = std::move(buffer.m_gBufferDepthStencil);
+
                 m_outputImage = std::move(buffer.m_outputImage);
                 m_gBuffer_full = std::move(buffer.m_gBuffer_full);
                 m_gBuffer_colorAndDepth = std::move(buffer.m_gBuffer_colorAndDepth);
@@ -158,6 +173,21 @@ namespace hpl {
                 m_gBuffer_normals = std::move(buffer.m_gBuffer_normals);
                 m_gBuffer_linearDepth = std::move(buffer.m_gBuffer_linearDepth);
                 m_output_target = std::move(buffer.m_output_target);
+
+                m_gBufferReflectionColor = std::move(buffer.m_gBufferReflectionColor);
+                m_gBufferReflectionNormalImage = std::move(buffer.m_gBufferReflectionNormalImage);
+                m_gBufferReflectionPositionImage = std::move(buffer.m_gBufferReflectionPositionImage);
+                m_gBufferReflectionSpecular = std::move(buffer.m_gBufferReflectionSpecular);
+                m_gBufferReflectionDepthStencil = std::move(buffer.m_gBufferReflectionDepthStencil);
+                m_outputReflectionImage = std::move(buffer.m_outputReflectionImage);
+
+                m_gBufferReflection_full = std::move(buffer.m_gBufferReflection_full);
+                m_gBufferReflection_colorAndDepth = std::move(buffer.m_gBufferReflection_colorAndDepth);
+                m_gBufferReflection_color = std::move(buffer.m_gBufferReflection_color);
+                m_gBufferReflection_depth = std::move(buffer.m_gBufferReflection_depth);
+                m_gBufferReflection_normals = std::move(buffer.m_gBufferReflection_normals);
+                m_gBufferReflection_linearDepth = std::move(buffer.m_gBufferReflection_linearDepth);
+                m_outputReflection_target = std::move(buffer.m_outputReflection_target);
             }
 
             cVector2l m_size = cVector2l(0, 0);
@@ -178,6 +208,21 @@ namespace hpl {
             RenderTarget m_gBuffer_normals;
             RenderTarget m_gBuffer_linearDepth;
             RenderTarget m_output_target; // used for rendering to the screen
+
+            std::shared_ptr<Image> m_gBufferReflectionColor;
+            std::shared_ptr<Image> m_gBufferReflectionNormalImage;
+            std::shared_ptr<Image> m_gBufferReflectionPositionImage;
+            std::shared_ptr<Image> m_gBufferReflectionSpecular;
+            std::shared_ptr<Image> m_gBufferReflectionDepthStencil;
+            std::shared_ptr<Image> m_outputReflectionImage;
+
+            RenderTarget m_gBufferReflection_full;
+            RenderTarget m_gBufferReflection_colorAndDepth;
+            RenderTarget m_gBufferReflection_color;
+            RenderTarget m_gBufferReflection_depth;
+            RenderTarget m_gBufferReflection_normals;
+            RenderTarget m_gBufferReflection_linearDepth;
+            RenderTarget m_outputReflection_target; // used for rendering to the screen
         };
 
         cRendererDeferred(cGraphics* apGraphics, cResources* apResources);
@@ -276,14 +321,13 @@ namespace hpl {
         std::shared_ptr<Image>& resolveRenderImage(std::array<std::shared_ptr<Image>, 2>& img);
 
         void RenderEdgeSmoothPass(GraphicsContext& context, cViewport& viewport, RenderTarget& rt);
-    
-        
+
         iVertexBuffer* GetLightShape(iLight* apLight, eDeferredShapeQuality aQuality) const;
 
         std::array<std::unique_ptr<iVertexBuffer>, eDeferredShapeQuality_LastEnum> m_shapeSphere;
         std::unique_ptr<iVertexBuffer> m_shapePyramid;
 
-        int mlMaxBatchLights;
+        int m_maxBatchLights;
         int mlMaxBatchVertices;
         int mlMaxBatchIndices;
 
@@ -293,10 +337,7 @@ namespace hpl {
         float m_farLeft;
         float m_farRight;
 
-        cMatrixf m_mtxInvView;
-
         float mfMinLargeLightNormalizedArea;
-        int mlMinLargeLightArea;
 
         float m_shadowDistanceMedium;
         float m_shadowDistanceLow;
@@ -331,8 +372,7 @@ namespace hpl {
         UniformWrapper<StringLiteral("s_shadowMap"), bgfx::UniformType::Sampler> m_s_shadowMap;
         UniformWrapper<StringLiteral("s_goboMap"), bgfx::UniformType::Sampler> m_s_goboMap;
         UniformWrapper<StringLiteral("s_shadowOffsetMap"), bgfx::UniformType::Sampler> m_s_shadowOffsetMap;
-        UniformWrapper<StringLiteral("s_diffuseMapOut"), bgfx::UniformType::Sampler> m_s_diffuseMapOut;
-
+        
         bgfx::ProgramHandle m_copyRegionProgram;
         bgfx::ProgramHandle m_edgeSmooth_UnpackDepthProgram;
         bgfx::ProgramHandle m_lightBoxProgram;
@@ -344,6 +384,7 @@ namespace hpl {
 
         std::vector<cDeferredLight*> mvTempDeferredLights;
         std::array<std::vector<cDeferredLight*>, eDeferredLightList_LastEnum> mvSortedLights;
+        cRenderList m_reflectionRenderList;
 
         static bool mbDepthCullLights;
         static bool mbSSAOLoaded;
@@ -358,6 +399,7 @@ namespace hpl {
 
         static bool mbEdgeSmoothLoaded;
         static bool mbEnableParallax;
+
 
     };
 }; // namespace hpl

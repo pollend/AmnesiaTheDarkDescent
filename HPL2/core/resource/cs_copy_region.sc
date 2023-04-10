@@ -6,7 +6,7 @@
 #include "bgfx_compute.sh"
 
 SAMPLER2D(s_diffuseMap, 0);
-IMAGE2D_WR(s_diffuseMapOut, rgba8, 1);
+IMAGE2D_WR(s_copyImageUAV, rgba8, 1);
 
 uniform vec4 u_copyRegion;
 
@@ -20,6 +20,6 @@ void main()
 	if (all(lessThan(coord.xy, ivec2(u_copyRegion.xy + u_copyRegion.zw)) ) )
 	{
 		vec4 diffuseValue = texelFetch(s_diffuseMap, coord.xy, 0);
-		imageStore(s_diffuseMapOut, coord, diffuseValue);
+		imageStore(s_copyImageUAV, coord, diffuseValue);
 	}
 }

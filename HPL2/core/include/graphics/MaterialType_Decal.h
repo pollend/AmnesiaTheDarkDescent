@@ -37,6 +37,8 @@ namespace hpl {
 
 	class cMaterialType_Decal : public iMaterialType
 	{
+		HPL_RTTI_IMPL_CLASS(iMaterialType, cMaterialType_Decal, "{c0c72fe2-2cb7-4b77-a49b-65660b4dfe45}")
+
 	public:
 		cMaterialType_Decal(cGraphics *apGraphics, cResources *apResources);
 		~cMaterialType_Decal();

@@ -77,6 +77,7 @@ namespace hpl {
 
 	class iMaterialType
 	{
+		HPL_RTTI_CLASS(iMaterialType, "{f76039f6-2f46-4135-a7d7-85788ef21cce}")
 	public:
 		iMaterialType(cGraphics *apGraphics, cResources *apResources);
 		virtual ~iMaterialType();
@@ -93,7 +94,7 @@ namespace hpl {
             cMaterial* apMaterial,
             iRenderable* apObject,
             iRenderer* apRenderer,
-			std::function<void(GraphicsContext::ShaderProgram&)> program) {}
+			std::function<void(GraphicsContext::ShaderProgram&)> program) = 0;
 
 		[[deprecated("use span GetUsedTextures")]]
 		int GetUsedTextureNum(){ return (int)m_usedTextures.size(); }

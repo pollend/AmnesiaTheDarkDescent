@@ -114,6 +114,7 @@ namespace hpl
             }
             return true;
         }
+
         void RenderableMaterialIter(
             iRenderer* renderer, 
             std::span<iRenderable*> iter,
@@ -127,7 +128,6 @@ namespace hpl
 
                     cMaterial* pMaterial = obj->GetMaterial();
                     iMaterialType* materialType = pMaterial->GetType();
-                    // iGpuProgram* program = pMaterial->GetProgram(0, mode);
                     iVertexBuffer* vertexBuffer = obj->GetVertexBuffer();
                     if (vertexBuffer == nullptr || materialType == nullptr)
                     {
@@ -145,6 +145,44 @@ namespace hpl
                             handler(obj, layoutStream, program);
                         });
                 }
+        }
+
+        bool checkNodeIsVisible(iRenderableContainerNode* apNode, std::span<cPlanef> clipPlanes) {
+            for(auto& plane: clipPlanes)
+            {
+                if (cMath::CheckPlaneAABBCollision(plane, apNode->GetMin(), apNode->GetMax(), apNode->GetCenter(), apNode->GetRadius()) ==
+                    eCollision_Outside)
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        bool CheckIfObjectIsVisible(
+            iRenderable* object, 
+            tRenderableFlag neededFlags,
+            std::span<cPlanef> clipPlanes) {
+
+            if (object->IsVisible() == false)
+                return false;
+
+            /////////////////////////////
+            // Check flags
+            if ((object->GetRenderFlags() & neededFlags) != neededFlags)
+                return false;
+
+            if (!clipPlanes.empty())
+            {
+                cBoundingVolume* pBV = object->GetBoundingVolume();
+                for(auto& planes: clipPlanes)
+                {
+                    if (cMath::CheckPlaneBVCollision(planes, *pBV) == eCollision_Outside) {
+                        return false;
+                    }
+                }
+            }
+            return true;
         }
     } // namespace rendering::detail
 
@@ -286,21 +324,6 @@ namespace hpl
         RenderSettingsCopy(mlNumberOfOcclusionQueries);
     }
 
-    //-----------------------------------------------------------------------
-
-    void cRenderSettings::AddOcclusionPlane(const cPlanef& aPlane)
-    {
-        mvOcclusionPlanes.push_back(aPlane);
-    }
-
-    //-----------------------------------------------------------------------
-
-    void cRenderSettings::ResetOcclusionPlanes()
-    {
-        mvOcclusionPlanes.clear();
-    }
-
-    //-----------------------------------------------------------------------
 
     void cRenderSettings::AssignOcclusionObject(
         iRenderer* apRenderer, void* apSource, int alCustomIndex, iVertexBuffer* apVtxBuffer, cMatrixf* apMatrix, bool abDepthTest)
@@ -518,40 +541,39 @@ namespace hpl
         BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects);
     }
 
-    void iRenderer::RenderableHelper(
-        eRenderListType type,
-        cViewport& viewport,
-        eMaterialRenderMode mode,
-        std::function<void(iRenderable* obj, GraphicsContext::LayoutStream&, GraphicsContext::ShaderProgram&)> handler)
-    {
-        for (auto& obj : mpCurrentRenderList->GetRenderableItems(type))
-        {
-            GraphicsContext::LayoutStream layoutStream;
-            GraphicsContext::ShaderProgram shaderProgram;
+    // void iRenderer::RenderableHelper(
+    //     eRenderListType type,
+    //     cViewport& viewport,
+    //     eMaterialRenderMode mode,
+    //     std::function<void(iRenderable* obj, GraphicsContext::LayoutStream&, GraphicsContext::ShaderProgram&)> handler)
+    // {
+    //     for (auto& obj : mpCurrentRenderList->GetRenderableItems(type))
+    //     {
+    //         GraphicsContext::LayoutStream layoutStream;
+    //         GraphicsContext::ShaderProgram shaderProgram;
 
-            cMaterial* pMaterial = obj->GetMaterial();
-            iMaterialType* materialType = pMaterial->GetType();
-            // iGpuProgram* program = pMaterial->GetProgram(0, mode);
-            iVertexBuffer* vertexBuffer = obj->GetVertexBuffer();
-            if (vertexBuffer == nullptr || materialType == nullptr)
-            {
-                continue;
-            }
-            vertexBuffer->GetLayoutStream(layoutStream);
-            materialType->ResolveShaderProgram(
-                mode,
-                viewport,
-                pMaterial,
-                obj,
-                this,
-                [&](GraphicsContext::ShaderProgram& program)
-                {
-                    handler(obj, layoutStream, program);
-                });
-        }
-    }
+    //         cMaterial* pMaterial = obj->GetMaterial();
+    //         iMaterialType* materialType = pMaterial->GetType();
+    //         // iGpuProgram* program = pMaterial->GetProgram(0, mode);
+    //         iVertexBuffer* vertexBuffer = obj->GetVertexBuffer();
+    //         if (vertexBuffer == nullptr || materialType == nullptr)
+    //         {
+    //             continue;
+    //         }
+    //         vertexBuffer->GetLayoutStream(layoutStream);
+    //         materialType->ResolveShaderProgram(
+    //             mode,
+    //             viewport,
+    //             pMaterial,
+    //             obj,
+    //             this,
+    //             [&](GraphicsContext::ShaderProgram& program, uint32_t variant)
+    //             {
+    //                 handler(obj, layoutStream, program);
+    //             });
+    //     }
+    // }
 
-    //-----------------------------------------------------------------------
 
     void iRenderer::Update(float afTimeStep)
     {
@@ -625,21 +647,16 @@ namespace hpl
         // Set up near plane variables
 
         // Calculate radius for near plane so that it is always inside it.
-        float fTanHalfFOV = tan(mpCurrentFrustum->GetFOV() * 0.5f);
+        float fTanHalfFOV = tan(apFrustum->GetFOV() * 0.5f);
 
-        float fNearPlane = mpCurrentFrustum->GetNearPlane();
+        float fNearPlane = apFrustum->GetNearPlane();
         mfCurrentNearPlaneTop = fTanHalfFOV * fNearPlane;
-        mfCurrentNearPlaneRight = mpCurrentFrustum->GetAspect() * mfCurrentNearPlaneTop;
+        mfCurrentNearPlaneRight = apFrustum->GetAspect() * mfCurrentNearPlaneTop;
 
         /////////////////////////////////////////////
         // Setup occlusion planes
         mvCurrentOcclusionPlanes.resize(0);
 
-        // User clip planes
-        for (size_t i = 0; i < apSettings->mvOcclusionPlanes.size(); ++i)
-        {
-            mvCurrentOcclusionPlanes.push_back(apSettings->mvOcclusionPlanes[i]);
-        }
 
         // Fog
         if (mbSetupOcclusionPlaneForFog && apWorld->GetFogActive() && apWorld->GetFogColor().a >= 1.0f && apWorld->GetFogCulling())

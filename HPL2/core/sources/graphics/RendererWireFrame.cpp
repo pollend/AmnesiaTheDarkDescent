@@ -139,7 +139,7 @@ namespace hpl {
 		}();
 
 
-		mpCurrentRenderList->Setup(mfCurrentFrameTime,mpCurrentFrustum);
+		mpCurrentRenderList->Setup(mfCurrentFrameTime,apFrustum);
 
 		CheckForVisibleAndAddToList(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static),0);
 		CheckForVisibleAndAddToList(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Dynamic),0);
@@ -163,8 +163,8 @@ namespace hpl {
 		int lCount =0;
 
 		GraphicsContext::ViewConfiguration viewConfig {rt};
-		viewConfig.m_projection = mpCurrentFrustum->GetProjectionMatrix().GetTranspose();
-		viewConfig.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
+		viewConfig.m_projection = apFrustum->GetProjectionMatrix().GetTranspose();
+		viewConfig.m_view = apFrustum->GetViewMatrix().GetTranspose();
 		viewConfig.m_viewRect = {0, 0, viewport.GetSize().x, viewport.GetSize().y};
 		auto view = context.StartPass("Wireframe", viewConfig);
 		for(auto& pObject: mpCurrentRenderList->GetRenderableItems(eRenderListType_Diffuse))
@@ -235,7 +235,7 @@ namespace hpl {
 		{
 			cMaterial *pMaterial = pObject->GetMaterial();
 
-			pObject->UpdateGraphicsForViewport(mpCurrentFrustum, mfCurrentFrameTime);
+			pObject->UpdateGraphicsForViewport(apFrustum, mfCurrentFrameTime);
 
 			// SetBlendMode(pMaterial->GetBlendMode());
 

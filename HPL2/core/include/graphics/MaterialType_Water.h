@@ -28,7 +28,7 @@ namespace hpl {
 
   	namespace material::water
     {
-		enum WaterVariant : uint32_t
+		enum WaterVariant: uint32_t
 		{
 			None = 0,
 			UseReflection = 0x00001,
@@ -59,6 +59,7 @@ namespace hpl {
 
 	class cMaterialType_Water : public iMaterialType
 	{
+		HPL_RTTI_IMPL_CLASS(iMaterialType, cMaterialType_Decal, "{cc45d7fd-aa4e-4a99-92fa-dc0c8b65bdf3}")
 	public:
 		cMaterialType_Water(cGraphics *apGraphics, cResources *apResources);
 		virtual ~cMaterialType_Water();
@@ -76,7 +77,6 @@ namespace hpl {
             iRenderable* apObject,
             iRenderer* apRenderer, 
             std::function<void(GraphicsContext::ShaderProgram&)> handler) override;
-
 
 	private:
 		ShaderVariantCollection<

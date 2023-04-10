@@ -58,12 +58,20 @@ namespace hpl {
 	public:
 		cMaterialManagerBlankMaterialType() : iMaterialType(NULL, NULL){}
 
-		void LoadData(){}
-		void DestroyData(){}
+		void LoadData() override{}
+		void DestroyData() override{}
 
-		iMaterialVars* CreateSpecificVariables(){ return hplNew(cMaterialManagerBlankMaterialType_Vars,());}
-		void LoadVariables(cMaterial *apMaterial, cResourceVarsObject *apVars){ }
-		void GetVariableValues(cMaterial *apMaterial, cResourceVarsObject *apVars){ }
+		iMaterialVars* CreateSpecificVariables() override { return hplNew(cMaterialManagerBlankMaterialType_Vars,());}
+		void LoadVariables(cMaterial *apMaterial, cResourceVarsObject *apVars) override{ }
+		void GetVariableValues(cMaterial *apMaterial, cResourceVarsObject *apVars) override{ }
+		
+		void ResolveShaderProgram(
+            eMaterialRenderMode aRenderMode,
+            cViewport& viewport,
+            cMaterial* apMaterial,
+            iRenderable* apObject,
+            iRenderer* apRenderer,
+			std::function<void(GraphicsContext::ShaderProgram&)> program) override {};
 
 		void CompileMaterialSpecifics(cMaterial *apMaterial){}
 	};

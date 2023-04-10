@@ -188,6 +188,14 @@ namespace hpl
                 uniform.oneMinusFogAlpha = 1 - pWorld->GetFogColor().a;
                 uniform.falloffExp = pWorld->GetFogFalloffExp();
             }
+
+            if(bRefractionEnabled && apRenderer && TypeInfo<cRendererDeferred>::IsType(*apRenderer)) {
+                auto* deferredRenderer = static_cast<cRendererDeferred*>(apRenderer);
+                auto& sharedData = deferredRenderer->GetSharedData(viewport);
+                flags |= material::translucent::Translucent_Refraction;
+                program.m_textures.push_back({m_s_refractionMap, sharedData.m_refractionImage->GetHandle(), 3});
+            }
+            
             switch(aRenderMode) {
                 case eMaterialRenderMode_DiffuseFog:
                 case eMaterialRenderMode_Diffuse:{
@@ -208,13 +216,7 @@ namespace hpl
                                 program.m_textures.push_back({m_s_envMapAlphaMap, cubemapAlphaImage->GetHandle(), 4});
                             }
                         }
-                        auto* renderer = mpGraphics->GetRenderer(eRenderer_Main);
-                        if( renderer && TypeInfo<cRendererDeferred>::IsType(*renderer)) {
-                            auto* deferredRenderer = static_cast<cRendererDeferred*>(renderer);
-                            auto& sharedData = deferredRenderer->GetSharedData(viewport);
-                            flags |= material::translucent::Translucent_Refraction;
-                            program.m_textures.push_back({m_s_refractionMap, sharedData.m_refractionImage->GetHandle(), 3});
-                        }
+                      
                     }
                     if(pVars->mbRefractionNormals && bRefractionEnabled) {
                         uniform.useScreenNormal = 1.0f;

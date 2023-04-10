@@ -620,7 +620,6 @@ namespace hpl {
 		eMaterialAnimationAxis_LastEnum
 	};
 
-	//---------------------------------------
 
 	enum eShadowMapResolution
 	{

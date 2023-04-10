@@ -125,6 +125,7 @@ namespace hpl {
 
         struct ViewConfiguration {
             const RenderTarget& m_target;
+            const char* m_name = nullptr;
 
             std::optional<ClearRequest> m_clear;
 

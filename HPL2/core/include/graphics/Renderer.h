@@ -77,6 +77,10 @@ namespace hpl {
             cViewport& viewport,
             eMaterialRenderMode mode,
             std::function<void(iRenderable* obj, GraphicsContext::LayoutStream&, GraphicsContext::ShaderProgram&)> handler);
+        bool CheckIfObjectIsVisible(
+            iRenderable* object, 
+            tRenderableFlag neededFlags,
+            std::span<cPlanef> clipPlanes = {}); 
 
     }
 
@@ -123,9 +127,6 @@ namespace hpl {
 
         void SetupReflectionSettings();
 
-        void AddOcclusionPlane(const cPlanef &aPlane);
-        void ResetOcclusionPlanes();
-
         void AssignOcclusionObject(iRenderer *apRenderer, void *apSource, int alCustomIndex, iVertexBuffer *apVtxBuffer, cMatrixf *apMatrix, bool abDepthTest);
         int RetrieveOcclusionObjectSamples(iRenderer *apRenderer, void *apSource, int alCustomIndex);
         void ClearOcclusionObjects(iRenderer *apRenderer);
@@ -161,8 +162,6 @@ namespace hpl {
         bool mbUseOcclusionCulling;
 
         bool mbUseEdgeSmooth;
-
-        tPlanefVec mvOcclusionPlanes;
 
         bool mbUseCallbacks;
 
@@ -314,7 +313,7 @@ namespace hpl {
 
     protected:
         // a utility to collect renderable objects from the current render list
-        void RenderableHelper(eRenderListType type, cViewport& viewport, eMaterialRenderMode mode, std::function<void(iRenderable* obj, GraphicsContext::LayoutStream&, GraphicsContext::ShaderProgram&)> handler);
+        // void RenderableHelper(eRenderListType type, cViewport& viewport, eMaterialRenderMode mode, std::function<void(iRenderable* obj, GraphicsContext::LayoutStream&, GraphicsContext::ShaderProgram&)> handler);
 
         void BeginRendering(float afFrameTime,cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings,
                             bool abSendFrameBufferToPostEffects, bool abAtStartOfRendering=true);

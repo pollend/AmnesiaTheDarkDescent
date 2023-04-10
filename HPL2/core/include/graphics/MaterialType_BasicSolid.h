@@ -45,7 +45,9 @@ namespace hpl {
     } // namespace material::solid
 
     class iMaterialType_SolidBase : public iMaterialType {
+        HPL_RTTI_IMPL_CLASS(iMaterialType, iMaterialType_SolidBase, "{06ca56f9-381f-4b73-aaa3-3c951b8d6cad}")
     public:
+		
         iMaterialType_SolidBase(cGraphics* apGraphics, cResources* apResources);
         ~iMaterialType_SolidBase();
 
@@ -117,6 +119,7 @@ namespace hpl {
     };
 
     class cMaterialType_SolidDiffuse : public iMaterialType_SolidBase {
+		HPL_RTTI_IMPL_CLASS(iMaterialType_SolidBase, cMaterialType_SolidDiffuse, "{06904083-3217-48b9-bb27-772df4573557}")
     public:
         cMaterialType_SolidDiffuse(cGraphics* apGraphics, cResources* apResources);
         ~cMaterialType_SolidDiffuse();

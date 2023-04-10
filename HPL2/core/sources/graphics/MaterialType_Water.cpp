@@ -21,6 +21,7 @@
 
 #include "bgfx/bgfx.h"
 #include "graphics/GraphicsContext.h"
+#include "graphics/RendererDeferred.h"
 #include "graphics/ShaderUtil.h"
 #include "math/MathTypes.h"
 #include "system/LowLevelSystem.h"
@@ -136,11 +137,12 @@ namespace hpl {
             const bool hasCubeMap = refractionEnabled && cubeMap;
             const bool hasDiffuseFog = (aRenderMode == eMaterialRenderMode_DiffuseFog);
 
-            tFlag lFlags = (hasReflection ? material::water::UseReflection : 0) | 
+            material::water::WaterVariant flags = static_cast<material::water::WaterVariant>(
+                (hasReflection ? material::water::UseReflection : 0) | 
                 (hasCubeMap ? material::water::UseCubeMapReflection : 0) |
                 (hasDiffuseFog ? material::water::UseFog : 0) | 
-                (iRenderer::GetRefractionEnabled() ? material::water::UseRefraction : 0);
-
+                (refractionEnabled ? material::water::UseRefraction : 0));
+            
             params.u_frenselBiasPow[0] = pVars->mfFrenselBias;
             params.u_frenselBiasPow[1] = pVars->mfFrenselPow;
             params.u_fogStart = pWorld->GetFogStart();
@@ -165,6 +167,12 @@ namespace hpl {
                 program.m_textures.push_back({ m_s_normalMap, normalMap->GetHandle(), 2 });
             }
 
+            if(refractionEnabled && apRenderer && TypeInfo<cRendererDeferred>::IsType(*apRenderer)) {
+                auto* deferredRenderer = static_cast<cRendererDeferred*>(apRenderer);
+                auto& sharedData = deferredRenderer->GetSharedData(viewport);
+                program.m_textures.push_back({m_s_refractionMap, sharedData.m_refractionImage->GetHandle(), 3});
+            }
+
             program.m_uniforms.push_back({ m_u_param, &params, 4 });
             cMatrixf mtxInvView = hasCubeMap ? ([&] {
                 cMatrixf mtxInvView = apRenderer->GetCurrentFrustum()->GetViewMatrix().GetTranspose();
@@ -173,7 +181,7 @@ namespace hpl {
                                              : cMatrixf::Identity;
             program.m_uniforms.push_back({ m_u_mtxInvViewRotation, &mtxInvView.v });
             program.m_uniforms.push_back({ m_u_fogColor, &fogColor.v });
-            program.m_handle = m_waterVariant.GetVariant(lFlags);
+            program.m_handle = m_waterVariant.GetVariant(flags);
             handler(program);
         }
     }
