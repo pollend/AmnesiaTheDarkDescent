@@ -271,28 +271,46 @@ namespace hpl {
 
     void cRenderList::Compile(tRenderListCompileFlag aFlags) {
         auto sortRenderType = [&](eRenderListType type) {
-            constexpr std::array<bool (*)(iRenderable*, iRenderable*), eRenderListType_LastEnum> sortFunction = {
-                { [eRenderListType_Z] = SortFunc_Z,
-                  [eRenderListType_Diffuse] = SortFunc_Diffuse,
-                  [eRenderListType_Translucent] = SortFunc_Translucent,
-                  [eRenderListType_Decal] = SortFunc_Decal,
-                  [eRenderListType_Illumination] = SortFunc_Illumination }
-            };
+            // constexpr std::array<bool (*)(iRenderable*, iRenderable*), eRenderListType_LastEnum> sortFunction = {
+            //     { [eRenderListType_Z] = SortFunc_Z,
+            //       [eRenderListType_Diffuse] = SortFunc_Diffuse,
+            //       [eRenderListType_Translucent] = SortFunc_Translucent,
+            //       [eRenderListType_Decal] = SortFunc_Decal,
+            //       [eRenderListType_Illumination] = SortFunc_Illumination }
+            // };
             switch (type) {
-            case eRenderListType_Translucent:
-                m_sortedArrays[type] = m_transObjects;
-                break;
-            case eRenderListType_Decal:
-                m_sortedArrays[type] = m_decalObjects;
-                break;
-            case eRenderListType_Illumination:
-                m_sortedArrays[type] = m_illumObjects;
-                break;
-            default:
-                m_sortedArrays[type] = m_solidObjects;
-                break;
+                case eRenderListType_Translucent:
+                    m_sortedArrays[type] = m_transObjects;
+                    break;
+                case eRenderListType_Decal:
+                    m_sortedArrays[type] = m_decalObjects;
+                    break;
+                case eRenderListType_Illumination:
+                    m_sortedArrays[type] = m_illumObjects;
+                    break;
+                default:
+                    m_sortedArrays[type] = m_solidObjects;
+                    break;
             }
-            std::sort(m_sortedArrays[type].begin(), m_sortedArrays[type].end(), sortFunction[type]);
+            switch (type) {
+                case eRenderListType_Z:
+                    std::sort(m_sortedArrays[type].begin(), m_sortedArrays[type].end(), SortFunc_Z);
+                    break;
+                case eRenderListType_Diffuse:
+                    std::sort(m_sortedArrays[type].begin(), m_sortedArrays[type].end(), SortFunc_Diffuse);
+                    break;
+                case eRenderListType_Translucent:
+                    std::sort(m_sortedArrays[type].begin(), m_sortedArrays[type].end(), SortFunc_Translucent);
+                    break;
+                case eRenderListType_Decal:
+                    std::sort(m_sortedArrays[type].begin(), m_sortedArrays[type].end(), SortFunc_Decal);
+                    break;
+                case eRenderListType_Illumination:
+                    std::sort(m_sortedArrays[type].begin(), m_sortedArrays[type].end(), SortFunc_Illumination);
+                    break;
+                default:
+                    break;
+            }
         };
 
         if (aFlags & eRenderListCompileFlag_Z) {

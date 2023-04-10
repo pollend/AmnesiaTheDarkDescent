@@ -92,29 +92,6 @@ namespace hpl
             return eShadowMapResolution_Low;
         }
 
-        bool IsObjectVisible(iRenderable* apObject, tRenderableFlag alNeededFlags, std::span<cPlanef> occlusionPlanes)
-        {
-            if (!apObject->IsVisible())
-            {
-                return false;
-            }
-
-            if ((apObject->GetRenderFlags() & alNeededFlags) != alNeededFlags)
-            {
-                return false;
-            }
-
-            for (auto& plane : occlusionPlanes)
-            {
-                cBoundingVolume* pBV = apObject->GetBoundingVolume();
-                if (cMath::CheckPlaneBVCollision(plane, *pBV) == eCollision_Outside)
-                {
-                    return false;
-                }
-            }
-            return true;
-        }
-
         void RenderableMaterialIter(
             iRenderer* renderer, 
             std::span<iRenderable*> iter,
@@ -147,7 +124,7 @@ namespace hpl
                 }
         }
 
-        bool checkNodeIsVisible(iRenderableContainerNode* apNode, std::span<cPlanef> clipPlanes) {
+        bool IsRenderableNodeIsVisible(iRenderableContainerNode* apNode, std::span<cPlanef> clipPlanes) {
             for(auto& plane: clipPlanes)
             {
                 if (cMath::CheckPlaneAABBCollision(plane, apNode->GetMin(), apNode->GetMax(), apNode->GetCenter(), apNode->GetRadius()) ==
@@ -159,7 +136,31 @@ namespace hpl
             return true;
         }
 
-        bool CheckIfObjectIsVisible(
+        bool IsObjectVisible(iRenderable* apObject, tRenderableFlag alNeededFlags, std::span<cPlanef> occlusionPlanes)
+        {
+            if (!apObject->IsVisible())
+            {
+                return false;
+            }
+
+            if ((apObject->GetRenderFlags() & alNeededFlags) != alNeededFlags)
+            {
+                return false;
+            }
+
+            for (auto& plane : occlusionPlanes)
+            {
+                cBoundingVolume* pBV = apObject->GetBoundingVolume();
+                if (cMath::CheckPlaneBVCollision(plane, *pBV) == eCollision_Outside)
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+
+        bool IsObjectIsVisible(
             iRenderable* object, 
             tRenderableFlag neededFlags,
             std::span<cPlanef> clipPlanes) {

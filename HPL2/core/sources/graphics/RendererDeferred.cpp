@@ -120,7 +120,7 @@ namespace hpl {
             }
         };
 
-        inline cMatrixf GetLightMtx(const DeferredLight& light) {
+        static inline cMatrixf GetLightMtx(const DeferredLight& light) {
             switch (light.m_light->GetLightType()) {
             case eLightType_Point:
                 return cMath::MatrixScale(light.m_light->GetRadius() * kLightRadiusMul_Medium);
@@ -148,18 +148,23 @@ namespace hpl {
             return cMatrixf::Identity;
         }
 
-        static void ConstructRenderableList(
-            const char* name,
-            cRenderList& renderList,
-            GraphicsContext& context,
+        /**
+        * updates the render list with objects inside the view frustum
+        */
+        static inline void ConstructRenderableList(
+            cRenderList& renderList, // in/out 
+            iRenderer* renderer,
+            cVisibleRCNodeTracker* apVisibleNodeTracker,
             cFrustum* frustum,
             cWorld* world,
-            cVisibleRCNodeTracker* apVisibleNodeTracker,
-            tObjectVariabilityFlag objectTypes,
-            tRenderableFlag alNeededFlags,
-            std::span<cPlanef> occludingPlanes,
+            const char* name,
             GraphicsContext::ViewConfiguration& config,
-            RenderTarget& depthTarget) {
+            GraphicsContext& context,
+            cViewport& viewport,
+            tObjectVariabilityFlag objectTypes,
+            std::span<cPlanef> occludingPlanes,
+            RenderTarget& depthTarget,
+            tRenderableFlag alNeededFlags) {
             auto pass = context.StartPass(name, config);
 
             auto renderNodeHandler = [&](iRenderableContainerNode* apNode, tRenderableFlag alNeededFlags) {
@@ -176,19 +181,16 @@ namespace hpl {
                     //////////////////////
                     // Check if object is visible
                     
-                    if (!rendering::detail::CheckIfObjectIsVisible(pObject,alNeededFlags,occludingPlanes)) {
+                    if (!rendering::detail::IsObjectIsVisible(pObject,alNeededFlags,occludingPlanes)) {
                         continue;
                     }
-
-                    /////////////////////////////
-                    // Check if inside frustum, skip test node was inside
-                    // if (apNode->GetPrevFrustumCollision() != eCollision_Inside && pObject->CollidesWithFrustum(mpCurrentFrustum) == false) {
-                    //     continue;
-                    // }
-
-                    // if (renderHandler(pass, pObject)) {
-                    //     ++lRenderedObjects;
-                    // }
+                    
+                    cMaterial* material = pObject->GetMaterial();
+                    if(!material || material->GetType()->IsTranslucent()) {
+                        continue;
+                    }
+                    rendering::detail::RenderZPassObject(pass, context, viewport, renderer, pObject);
+                    ++lRenderedObjects;
                 }
 
                 return lRenderedObjects;
@@ -235,11 +237,52 @@ namespace hpl {
             
 
             auto pushNodeChildrenToStack = [&](iRenderableContainerNode* apNode) {
-                if (apNode->HasChildNodes() == false)
-                {
-                    return;
-                }
+                auto childrenNodes = apNode->GetChildNodes();
+                for(auto& childNode: childrenNodes) {
+                    childNode->UpdateBeforeUse();
 
+                    if (childNode->UsesFlagsAndVisibility() &&
+                        (childNode->HasVisibleObjects() == false || (childNode->GetRenderFlags() & alNeededFlags) != alNeededFlags))
+                    {
+                        continue;
+                    }
+
+                    eCollision frustumCollision =
+                        apNode->GetPrevFrustumCollision() == eCollision_Inside ? eCollision_Inside : frustum->CollideNode(childNode);
+
+                    if (frustumCollision == eCollision_Outside) {
+                        continue;
+                    }
+
+                    if(!rendering::detail::IsRenderableNodeIsVisible(childNode, occludingPlanes)) {
+                        continue;
+                    }
+
+                    apNode->SetPrevFrustumCollision(frustumCollision);
+
+                    ////////////////////////////////////////////////////////
+                    // Check if the frustum origin is inside the node AABB.
+                    //  If so no intersection test is needed
+                    if (frustum->CheckAABBNearPlaneIntersection(childNode->GetMin(), childNode->GetMax()))
+                    {
+                        cVector3f vViewSpacePos = cMath::MatrixMul(frustum->GetViewMatrix(), childNode->GetCenter());
+                        childNode->SetViewDistance(vViewSpacePos.z);
+                        childNode->SetInsideView(true);
+                    } else { 
+                        // Frustum origin is outside of node. Do intersection test.
+                        cVector3f vIntersection;
+                        cMath::CheckAABBLineIntersection(
+                            childNode->GetMin(),
+                            childNode->GetMax(),
+                            frustum->GetOrigin(),
+                            childNode->GetCenter(),
+                            &vIntersection,
+                            NULL);
+                        cVector3f vViewSpacePos = cMath::MatrixMul(frustum->GetViewMatrix(), vIntersection);
+                        childNode->SetViewDistance(vViewSpacePos.z);
+                        childNode->SetInsideView(false);
+                    }
+                }
             };
 
             ////////////////////////////
@@ -302,7 +345,7 @@ namespace hpl {
                     // }
 
                     if (occlusionResult == bgfx::OcclusionQueryResult::Visible) {
-                        // PushNodeChildrenToStack(setNodeStack, pNode, alNeededFlags);
+                        pushNodeChildrenToStack(pNode);
                     }
                 }
                 //////////////////////////
@@ -310,7 +353,7 @@ namespace hpl {
                 else {
                     ////////////////
                     // Add child nodes to stack if any (also checks if they have needed flags are in frustum)
-                    // PushNodeChildrenToStack(setNodeStack, pNode, alNeededFlags);
+                    pushNodeChildrenToStack(pNode);
 
                     ////////////////
                     // Render objects if any
@@ -320,7 +363,7 @@ namespace hpl {
             }
         }
 
-        static bool SortDeferredLightBox(const DeferredLight* apLightDataA, const DeferredLight* apLightDataB) {
+        static inline bool SortDeferredLightBox(const DeferredLight* apLightDataA, const DeferredLight* apLightDataB) {
             iLight* pLightA = apLightDataA->m_light;
             iLight* pLightB = apLightDataB->m_light;
 
@@ -336,7 +379,7 @@ namespace hpl {
             return pLightA < pLightB;
         }
 
-        void RenderGBufferPass(
+        static inline void RenderGBufferPass(
             const char* name,
             GraphicsContext& context,
             iRenderer* renderer,
@@ -369,7 +412,7 @@ namespace hpl {
                 });
         }
 
-        void RenderDecalPass(
+        static inline void RenderDecalPass(
             const char* name,
             GraphicsContext& context,
             iRenderer* renderer,
@@ -402,7 +445,7 @@ namespace hpl {
                 });
         }
 
-        static bool SortDeferredLightDefault(const DeferredLight* a, const DeferredLight* b) {
+        static inline bool SortDeferredLightDefault(const DeferredLight* a, const DeferredLight* b) {
             iLight* pLightA = a->m_light;
             iLight* pLightB = b->m_light;
 
@@ -460,7 +503,7 @@ namespace hpl {
             cVector3f m_boxSpaceFrustumOrigin;
             cMatrixf m_mtxInvBoxSpace;
         };
-        float GetFogAreaVisibilityForObject(const FogRendererData& fogData, cFrustum& frustum, iRenderable* apObject) {
+        static inline float GetFogAreaVisibilityForObject(const FogRendererData& fogData, cFrustum& frustum, iRenderable* apObject) {
             cFogArea* pFogArea = fogData.m_fogArea;
 
             cVector3f vObjectPos = apObject->GetBoundingVolume()->GetWorldCenter();
@@ -1679,7 +1722,7 @@ namespace hpl {
                 }
                 //////////////////////////////
                 // Check if near plane points intersect with box
-                if (cMath::CheckPointsAABBPlanesCollision(nearPlaneVtx.begin(), 4, min, max) != eCollision_Outside) {
+                if (cMath::CheckPointsAABBPlanesCollision(nearPlaneVtx.data(), 4, min, max) != eCollision_Outside) {
                     return true;
                 }
                 return false;

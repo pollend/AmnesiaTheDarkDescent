@@ -26,6 +26,7 @@
 #include "system/SystemTypes.h"
 #include "scene/SceneTypes.h"
 #include <bx/debug.h>
+#include <span>
 
 namespace hpl {
 
@@ -79,6 +80,7 @@ namespace hpl {
 		virtual void UpdateBeforeUse(){}
 
 		inline tRenderableContainerNodeList* GetChildNodeList(){ return &mlstChildNodes; }
+		inline std::span<iRenderableContainerNode*> GetChildNodes(){ return mlstChildNodes; }
 		inline bool HasChildNodes(){ return mlstChildNodes.empty() == false; }
 
 		inline tRenderableList* GetObjectList() { return &mlstObjects; }
