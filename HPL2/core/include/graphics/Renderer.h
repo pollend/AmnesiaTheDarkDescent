@@ -80,11 +80,21 @@ namespace hpl {
             std::function<void(iRenderable* obj, GraphicsContext::LayoutStream&, GraphicsContext::ShaderProgram&)> handler);
         
         bool IsRenderableNodeIsVisible(iRenderableContainerNode* apNode, std::span<cPlanef> clipPlanes);
-        bool IsObjectIsVisible(
-            iRenderable* object, 
-            tRenderableFlag neededFlags,
-            std::span<cPlanef> clipPlanes = {}); 
+        bool IsObjectIsVisible(iRenderable* object, tRenderableFlag neededFlags, std::span<cPlanef> clipPlanes = {});
 
+        void UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
+            cRenderList* apRenderList,
+            cFrustum* frustum,
+            iRenderableContainerNode* apNode,
+            std::span<cPlanef> clipPlanes,
+            tRenderableFlag neededFlags);
+
+        void UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
+            cRenderList* apRenderList,
+            cFrustum* frustum,
+            iRenderableContainer* apContainer,
+            std::span<cPlanef> clipPlanes,
+            tRenderableFlag neededFlags);
     }
 
     class cNodeOcclusionPair
@@ -311,8 +321,6 @@ namespace hpl {
         static void SetRefractionEnabled(bool abX) { mbRefractionEnabled = abX;}
         static bool GetRefractionEnabled(){ return mbRefractionEnabled;}
 
-        //Debug
-        tRenderableVec *GetShadowCasterVec(){ return &mvShadowCasters;}
 
     protected:
         // a utility to collect renderable objects from the current render list
@@ -322,38 +330,13 @@ namespace hpl {
                             bool abSendFrameBufferToPostEffects, bool abAtStartOfRendering=true);
 
         cShadowMapData* GetShadowMapData(eShadowMapResolution aResolution, iLight *apLight);
-        bool ShadowMapNeedsUpdate(iLight *apLight, cShadowMapData *apShadowData);
-
-        void RenderZObject(GraphicsContext& context, iRenderable *apObject, cFrustum *apCustomFrustum);
-
-        /**
-         * Brute force adding of visible objects. Nothing is rendered.
-         */
-        void CheckForVisibleAndAddToList(iRenderableContainer *apContainer, tRenderableFlag alNeededFlags);
-
-        void CheckNodesAndAddToListIterative(iRenderableContainerNode *apNode, tRenderableFlag alNeededFlags);
-
+ 
         void OcclusionQueryBoundingBoxTest(bgfx::ViewId view, 
             GraphicsContext& context, 
             bgfx::OcclusionQueryHandle handle, 
             const cFrustum& frustum,
             const cMatrixf& transform, 
             RenderTarget& rt,Cull cull = Cull::CounterClockwise);
-        /**
-         * Uses a Coherent occlusion culling to get visible objects. No early Z needed after calling this
-         */
-        void RenderZPassWithVisibilityCheck(GraphicsContext& context, cVisibleRCNodeTracker *apVisibleNodeTracker, tRenderableFlag alNeededFlags, tObjectVariabilityFlag variabilityFlag,
-            RenderTarget& rt, std::function<bool(bgfx::ViewId view, iRenderable* object)> renderHandler);
-
-        void PushUpVisibility(iRenderableContainerNode *apNode);
-
-        void PushNodeChildrenToStack(tRendererSortedNodeSet& a_setNodeStack, iRenderableContainerNode *apNode, int alNeededFlags);
-        void AddAndRenderNodeOcclusionQuery(tNodeOcclusionPairList *apList, iRenderableContainerNode *apNode, bool abObjectsRendered);
-
-        bool CheckShadowCasterContributesToView(iRenderable *apObject);
-        void GetShadowCastersIterative(iRenderableContainerNode *apNode, eCollision aPrevCollision);
-        void GetShadowCasters(iRenderableContainer *apContainer, tRenderableVec& avObjectVec, cFrustum *apLightFrustum);
-        bool SetupShadowMapRendering(iLight *apLight);
 
 
         /**
@@ -369,20 +352,6 @@ namespace hpl {
          * afHalfFovTan == 0 means that the function calculates tan.
          */
         cRect2l GetClipRectFromObject(iRenderable *apObject, float afPaddingPercent, cFrustum *apFrustum, const cVector2l &avScreenSize, float afHalfFovTan);
-
-
-        /**
-        * Checks the IsVisible and also clip planes (in setttings), if visible in reflection and other stuff . No frustum check!
-        */
-        bool CheckObjectIsVisible(iRenderable *apObject, tRenderableFlag alNeededFlags);
-
-        /**
-         * Checks custom clip planes (in setttings) and more to determine if a node is viisible. No frustum check!
-         */
-        [[deprecated("use free method rendering::detail::IsObjectVisible")]]
-        bool CheckNodeIsVisible(iRenderableContainerNode *apNode);
-
-        void SetOcclusionPlanesActive(bool abX);
 
         cResources* mpResources;
         bgfx::ProgramHandle m_nullShader;
@@ -410,18 +379,9 @@ namespace hpl {
 
         iVertexBuffer *mpShapeBox;
 
-        cMatrixf m_mtxSkyBox;
-
-        cRect2l mTempClipRect;
-        float mfScissorLastFov;
-        float mfScissorLastTanHalfFov;
-
-        std::vector<iRenderable*> mvShadowCasters;
-
         static int mlRenderFrameCount;
         float mfTimeCount;
 
-        bool mbOcclusionPlanesActive;
         std::vector<cPlanef> mvCurrentOcclusionPlanes;
 
         int mlActiveOcclusionQueryNum;

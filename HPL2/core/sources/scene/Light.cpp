@@ -472,7 +472,7 @@ namespace hpl {
 		return it->second == apObject->GetTransformUpdateCount();
 	}
 
-	bool iLight::ShadowCastersAreUnchanged(const tRenderableVec &avObjects)
+	bool iLight::ShadowCastersAreUnchanged(std::span<iRenderable*> avObjects)
 	{
 		size_t lDynObjectCount=0;
 		for(size_t i=0; i<avObjects.size(); ++i)
@@ -493,7 +493,7 @@ namespace hpl {
 		return true;
 	}
 
-	void iLight::SetShadowCasterCacheFromVec(const tRenderableVec &avObjects)
+	void iLight::SetShadowCasterCacheFromVec(std::span<iRenderable*> avObjects)
 	{
 		m_mapShadowCasterCache.clear();
 

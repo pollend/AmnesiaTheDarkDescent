@@ -99,8 +99,10 @@ namespace hpl
         auto screenSize = viewport.GetSize();
         mpCurrentRenderList->Setup(mfCurrentFrameTime, apFrustum);
 
-        CheckForVisibleAndAddToList(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static), 0);
-        CheckForVisibleAndAddToList(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Dynamic), 0);
+		rendering::detail::UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
+			mpCurrentRenderList, apFrustum, mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static), mvCurrentOcclusionPlanes, 0);
+		rendering::detail::UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
+			mpCurrentRenderList, apFrustum, mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Dynamic), mvCurrentOcclusionPlanes, 0);
 
         mpCurrentRenderList->Compile(
             eRenderListCompileFlag_Z | eRenderListCompileFlag_Diffuse | eRenderListCompileFlag_Decal | eRenderListCompileFlag_Translucent);
@@ -112,8 +114,10 @@ namespace hpl
         // auto& outputTarget = (target && target->IsValid()) ? *target : RenderTarget::EmptyRenderTarget;
 
         mpCurrentRenderList->Setup(mfCurrentFrameTime, apFrustum);
-        CheckForVisibleAndAddToList(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static), 0);
-        CheckForVisibleAndAddToList(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Dynamic), 0);
+       rendering::detail::UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
+			mpCurrentRenderList, apFrustum, mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static), mvCurrentOcclusionPlanes, 0);
+		rendering::detail::UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
+			mpCurrentRenderList, apFrustum, mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Dynamic), mvCurrentOcclusionPlanes, 0);
         mpCurrentRenderList->Compile(
             eRenderListCompileFlag_Z | eRenderListCompileFlag_Diffuse | eRenderListCompileFlag_Decal | eRenderListCompileFlag_Translucent);
 

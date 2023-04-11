@@ -150,7 +150,6 @@ namespace hpl {
         void RemoveViewportCallback(iViewportCallback* apCallback);
         void RunViewportCallbackMessage(eViewportMessage aMessage);
 
-
         inline void ConnectViewportChanged(ViewportChange::Handler& handler) { handler.Connect(m_viewportChanged);}
 
         inline void ConnectDraw(PostSolidDraw::Handler& handler) { handler.Connect(m_postSolidDraw); }

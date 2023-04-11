@@ -141,8 +141,10 @@ namespace hpl {
 
 		mpCurrentRenderList->Setup(mfCurrentFrameTime,apFrustum);
 
-		CheckForVisibleAndAddToList(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static),0);
-		CheckForVisibleAndAddToList(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Dynamic),0);
+		rendering::detail::UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
+			mpCurrentRenderList, apFrustum, mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static), mvCurrentOcclusionPlanes, 0);
+		rendering::detail::UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
+			mpCurrentRenderList, apFrustum, mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Dynamic), mvCurrentOcclusionPlanes, 0);
 
 		mpCurrentRenderList->Compile(	eRenderListCompileFlag_Diffuse |
 										eRenderListCompileFlag_Decal |

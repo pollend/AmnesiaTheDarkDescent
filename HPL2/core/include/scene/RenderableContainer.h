@@ -84,6 +84,7 @@ namespace hpl {
 		inline bool HasChildNodes(){ return mlstChildNodes.empty() == false; }
 
 		inline tRenderableList* GetObjectList() { return &mlstObjects; }
+		inline std::span<iRenderable*> GetObjects() { return mlstObjects; }
 		inline bool HasObjects() { return mlstObjects.empty() == false; }
 
 		inline iRenderableContainerNode* GetParent(){ return mpParent;}

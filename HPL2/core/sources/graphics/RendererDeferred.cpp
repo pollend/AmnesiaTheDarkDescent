@@ -120,6 +120,206 @@ namespace hpl {
             }
         };
 
+        static inline bool ShadowMapNeedsUpdate(std::span<iRenderable*> shadowCasters, iLight* apLight, cShadowMapData* apShadowData) {
+            // Occlusion culling must always be updated!
+            if (apLight->GetOcclusionCullShadowCasters())
+                return true;
+
+            cShadowMapLightCache& cacheData = apShadowData->mCache;
+
+            ///////////////////////////
+            // Check if texture map and light are valid
+            bool bValid = cacheData.mpLight == apLight && cacheData.mlTransformCount == apLight->GetTransformUpdateCount() &&
+                cacheData.mfRadius == apLight->GetRadius();
+
+            /////////////////////////////
+            // Spotlight specific
+            if (bValid && apLight->GetLightType() == eLightType_Spot)
+            {
+                cLightSpot* pSpotLight = static_cast<cLightSpot*>(apLight);
+                bValid = pSpotLight->GetAspect() == cacheData.mfAspect && pSpotLight->GetFOV() == cacheData.mfFOV;
+            }
+
+            /////////////////////////////
+            // Shadow casters
+            if (bValid)
+            {
+                bValid = apLight->ShadowCastersAreUnchanged(shadowCasters);
+            }
+
+            /////////////////////////////
+            // If not valid, update data
+            if (bValid == false)
+            {
+                cacheData.SetFromLight(apLight);
+                apLight->SetShadowCasterCacheFromVec(shadowCasters);
+            }
+
+            return bValid ? false : true;
+        }
+
+        static inline bool SetupShadowMapRendering(std::vector<iRenderable*>& shadowCasters, cWorld* world, cFrustum* frustum,  iLight* light, std::span<cPlanef> clipPlanes) {
+            /////////////////////////
+            // Get light data
+            if (light->GetLightType() != eLightType_Spot)
+                return false; // Only support spot lights for now...
+
+            cLightSpot* pSpotLight = static_cast<cLightSpot*>(light);
+            cFrustum* pLightFrustum = pSpotLight->GetFrustum();
+
+            std::function<void(iRenderableContainerNode* apNode, eCollision aPrevCollision)> walkShadowCasters;
+            walkShadowCasters = [&](iRenderableContainerNode* apNode, eCollision aPrevCollision) {
+
+                    ///////////////////////////////////////
+                // Get frustum collision, if previous was inside, then this is too!
+                eCollision frustumCollision = aPrevCollision == eCollision_Inside ? aPrevCollision : pLightFrustum->CollideNode(apNode);
+
+                ///////////////////////////////////
+                // Check if visible but always iterate the root node!
+                if (apNode->GetParent()) {
+                    if (frustumCollision == eCollision_Outside) {
+                        return;
+                    }
+                    if (rendering::detail::IsRenderableNodeIsVisible(apNode, clipPlanes) == false) {
+                        return;
+                    }
+                }
+
+                ////////////////////////
+                // Iterate children
+                if (apNode->HasChildNodes()) {
+                    for (auto& childNode : apNode->GetChildNodes()) {
+                        walkShadowCasters(childNode, frustumCollision);
+                    }
+                }
+
+                /////////////////////////////
+                // Iterate objects
+                if (apNode->HasObjects()) {
+                    for (auto& object : apNode->GetObjects()) {
+                        // Check so visible and shadow caster
+                        if (rendering::detail::IsObjectIsVisible(object, eRenderableFlag_ShadowCaster, clipPlanes) == false || object->GetMaterial() == NULL ||
+                            object->GetMaterial()->GetType()->IsTranslucent()) {
+                            continue;
+                        }
+
+                        /////////
+                        // Check if in frustum
+                        if (frustumCollision != eCollision_Inside &&
+                            frustum->CollideBoundingVolume(object->GetBoundingVolume()) == eCollision_Outside) {
+                            continue;
+                        }
+
+                        // Calculate the view space Z (just a squared distance)
+                        object->SetViewSpaceZ(cMath::Vector3DistSqr(object->GetBoundingVolume()->GetWorldCenter(), frustum->GetOrigin()));
+
+                        // Add to list
+                        shadowCasters.push_back(object);
+                    }
+                }
+            };
+
+
+            /////////////////////////
+            // If culling by occlusion, skip rest of function
+            if (light->GetOcclusionCullShadowCasters())
+            {
+                return true;
+            }
+
+            /////////////////////////
+            // Get objects to render
+
+            // Clear list
+            shadowCasters.resize(0); // No clear, so we keep all in memory.
+
+            // Get the objects
+            if (light->GetShadowCastersAffected() & eObjectVariabilityFlag_Dynamic) {
+                auto container = world->GetRenderableContainer(eWorldContainerType_Dynamic);
+                container->UpdateBeforeRendering();
+                walkShadowCasters(container->GetRoot(), eCollision_Outside);
+            }
+
+            if (light->GetShadowCastersAffected() & eObjectVariabilityFlag_Static) {
+                auto container = world->GetRenderableContainer(eWorldContainerType_Static);
+                container->UpdateBeforeRendering();
+                walkShadowCasters(container->GetRoot(), eCollision_Outside);
+            }
+
+            // See if any objects where added.
+            if (shadowCasters.empty())
+                return false;
+
+            // Sort the list
+            std::sort(shadowCasters.begin(), shadowCasters.end(), [](iRenderable* a, iRenderable* b) {
+                    cMaterial* pMatA = a->GetMaterial();
+                    cMaterial* pMatB = b->GetMaterial();
+
+                    //////////////////////////
+                    // Alpha mode
+                    if (pMatA->GetAlphaMode() != pMatB->GetAlphaMode())
+                    {
+                        return pMatA->GetAlphaMode() < pMatB->GetAlphaMode();
+                    }
+
+                    //////////////////////////
+                    // If alpha, sort by texture (we know alpha is same for both materials, so can just test one)
+                    if (pMatA->GetAlphaMode() == eMaterialAlphaMode_Trans)
+                    {
+                        if (pMatA->GetImage(eMaterialTexture_Diffuse) != pMatB->GetImage(eMaterialTexture_Diffuse))
+                        {
+                            return pMatA->GetImage(eMaterialTexture_Diffuse) < pMatB->GetImage(eMaterialTexture_Diffuse);
+                        }
+                    }
+
+                    //////////////////////////
+                    // View space depth, no need to test further since Z should almost never be the same for two objects.
+                    // View space z is really just BB dist dis squared, so use "<"
+                    return a->GetViewSpaceZ() < b->GetViewSpaceZ();
+                });
+
+            return true;
+        }
+
+
+        static inline bool ShadowMapNeedsUpdate(iLight* light, cShadowMapData* shadowData, std::span<iRenderable*> shadowCasters) {
+            // Occlusion culling must always be updated!
+            if (light->GetOcclusionCullShadowCasters())
+                return true;
+
+            cShadowMapLightCache& cacheData = shadowData->mCache;
+
+            ///////////////////////////
+            // Check if texture map and light are valid
+            bool bValid = cacheData.mpLight == light && cacheData.mlTransformCount == light->GetTransformUpdateCount() &&
+                cacheData.mfRadius == light->GetRadius();
+
+            /////////////////////////////
+            // Spotlight specific
+            if (bValid && light->GetLightType() == eLightType_Spot)
+            {
+                cLightSpot* pSpotLight = static_cast<cLightSpot*>(light);
+                bValid = pSpotLight->GetAspect() == cacheData.mfAspect && pSpotLight->GetFOV() == cacheData.mfFOV;
+            }
+
+            /////////////////////////////
+            // Shadow casters
+            if (bValid)
+            {
+                bValid = light->ShadowCastersAreUnchanged(shadowCasters);
+            }
+
+            /////////////////////////////
+            // If not valid, update data
+            if (bValid == false)
+            {
+                cacheData.SetFromLight(light);
+                light->SetShadowCasterCacheFromVec(shadowCasters);
+            }
+
+            return bValid ? false : true;
+        }
+
         static inline cMatrixf GetLightMtx(const DeferredLight& light) {
             switch (light.m_light->GetLightType()) {
             case eLightType_Point:
@@ -148,11 +348,12 @@ namespace hpl {
             return cMatrixf::Identity;
         }
 
+        // this is a bridge to build a render list from the renderable container
         /**
         * updates the render list with objects inside the view frustum
         */
-        static inline void ConstructRenderableList(
-            cRenderList& renderList, // in/out 
+        static inline void UpdateRenderableList(
+            cRenderList* renderList, // in/out 
             iRenderer* renderer,
             cVisibleRCNodeTracker* apVisibleNodeTracker,
             cFrustum* frustum,
@@ -163,9 +364,9 @@ namespace hpl {
             cViewport& viewport,
             tObjectVariabilityFlag objectTypes,
             std::span<cPlanef> occludingPlanes,
-            RenderTarget& depthTarget,
             tRenderableFlag alNeededFlags) {
             auto pass = context.StartPass(name, config);
+            renderList->Clear();
 
             auto renderNodeHandler = [&](iRenderableContainerNode* apNode, tRenderableFlag alNeededFlags) {
                 if (apNode->HasObjects() == false)
@@ -185,6 +386,8 @@ namespace hpl {
                         continue;
                     }
                     
+                    renderList->AddObject(pObject);
+
                     cMaterial* material = pObject->GetMaterial();
                     if(!material || material->GetType()->IsTranslucent()) {
                         continue;
@@ -282,6 +485,8 @@ namespace hpl {
                         childNode->SetViewDistance(vViewSpacePos.z);
                         childNode->SetInsideView(false);
                     }
+
+                    setNodeStack.insert(childNode);
                 }
             };
 
@@ -1031,6 +1236,7 @@ namespace hpl {
         cWorld* apWorld,
         cRenderSettings* apSettings,
         bool abSendFrameBufferToPostEffects) {
+        iRenderer::Draw(context, viewport, afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects);
         // keep around for the moment ...
         BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects);
 
@@ -1072,32 +1278,16 @@ namespace hpl {
         ///////////////////////////
         // Occlusion testing
         {
-            // GraphicsContext::ViewConfiguration viewConfig {resolveRenderTarget(m_gBuffer_depth)};
-            // auto view = context.StartPass("Render Z", viewConfig);
-            RenderZPassWithVisibilityCheck(
-                context,
+            auto ZPassConfig = createStandardViewConfig(sharedData.m_gBuffer_depth);
+            detail::UpdateRenderableList(
+                mpCurrentRenderList, this, 
                 mpCurrentSettings->mpVisibleNodeTracker,
-                eObjectVariabilityFlag_All,
-                lVisibleFlags,
-                sharedData.m_gBuffer_depth,
-                [&](bgfx::ViewId view, iRenderable* object) {
-                    cMaterial* pMaterial = object->GetMaterial();
-
-                    mpCurrentRenderList->AddObject(object);
-
-                    if (!pMaterial || pMaterial->GetType()->IsTranslucent()) {
-                        return false;
-                    }
-                    rendering::detail::RenderZPassObject(view, context, viewport, this, object);
-                    return true;
-                });
-
-            // this occlusion query logic is used for reflections just cut this for now
-            GraphicsContext::ViewConfiguration occlusionPassConfig{ sharedData.m_gBuffer_depth };
-            occlusionPassConfig.m_viewRect = { 0, 0, sharedData.m_size.x, sharedData.m_size.y };
-            occlusionPassConfig.m_view = mainFrustumView;
-            occlusionPassConfig.m_projection = mainFrustumProj;
-            AssignAndRenderOcclusionQueryObjects(context.StartPass("Render Occlusion", occlusionPassConfig), context, false, true);
+                apFrustum, mpCurrentWorld,"Z Pass", ZPassConfig, context, viewport, 
+                eObjectVariabilityFlag_All, 
+                mvCurrentOcclusionPlanes, 
+                lVisibleFlags);
+            auto occlusionConfig = createStandardViewConfig(sharedData.m_gBuffer_depth);
+            AssignAndRenderOcclusionQueryObjects(context.StartPass("Render Occlusion", occlusionConfig), context, false, true);
 
             // SetupLightsAndRenderQueries(context, sharedData.m_gBuffer_depth);
 
@@ -1107,38 +1297,7 @@ namespace hpl {
                 eRenderListCompileFlag_Decal |
                 eRenderListCompileFlag_Illumination | 
                 eRenderListCompileFlag_FogArea);
-        } 
-        // else {
-        //     CheckForVisibleAndAddToList(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static), lVisibleFlags);
-        //     CheckForVisibleAndAddToList(mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Dynamic), lVisibleFlags);
-
-        //     mpCurrentRenderList->Compile(
-        //         eRenderListCompileFlag_Z | eRenderListCompileFlag_Diffuse | eRenderListCompileFlag_Translucent |
-        //         eRenderListCompileFlag_Decal | eRenderListCompileFlag_Illumination | eRenderListCompileFlag_FogArea);
-        //     ([&]() {
-        //         auto zPassSpan = mpCurrentRenderList->GetRenderableItems(eRenderListType_Z);
-        //         if (zPassSpan.empty()) {
-        //             return;
-        //         }
-        //         GraphicsContext::ViewConfiguration viewConfig{ sharedData.m_gBuffer_depth };
-        //         viewConfig.m_viewRect = { 0, 0, sharedData.m_size.x, sharedData.m_size.y };
-        //         viewConfig.m_projection = apFrustum->GetProjectionMatrix().GetTranspose();
-        //         viewConfig.m_view = apFrustum->GetViewMatrix().GetTranspose();
-
-        //         auto view = context.StartPass("RenderZ", viewConfig);
-        //         for (auto& obj : zPassSpan) {
-        //             rendering::detail::RenderZPassObject(view, context, viewport, this, obj);
-        //         }
-        //     })();
-
-        //     // this occlusion query logic is used for reflections just cut this for now
-
-        //     GraphicsContext::ViewConfiguration occlusionPassConfig{ sharedData.m_gBuffer_depth };
-        //     occlusionPassConfig.m_viewRect = { 0, 0, sharedData.m_size.x, sharedData.m_size.y };
-        //     occlusionPassConfig.m_view = mainFrustumView;
-        //     occlusionPassConfig.m_projection = mainFrustumProj;
-        //     AssignAndRenderOcclusionQueryObjects(context.StartPass("Render Occlusion Pass", occlusionPassConfig), context, false, true);
-        // }
+        }
 
         // ------------------------------------------------------------------------------------
         //  Render Diffuse Pass render to color and depth
@@ -1180,7 +1339,7 @@ namespace hpl {
 
             std::vector<detail::DeferredLight*> deferredLightRenderBack;
             std::vector<detail::DeferredLight*> deferredLightStencilFrontRenderBack;
-
+            
             for (auto& light : lightSpan) {
                 auto lightType = light->GetLightType();
                 auto& deferredLightData = deferredLights.emplace_back(detail::DeferredLight());
@@ -1205,7 +1364,7 @@ namespace hpl {
                             apFrustum,
                             sharedData.m_size,
                             true,
-                            mfScissorLastTanHalfFov);
+                            0);
                         break;
                     }
                 case eLightType_Spot:
@@ -1223,7 +1382,7 @@ namespace hpl {
                             *light->GetBoundingVolume(),
                             apFrustum,
                             sharedData.m_size,
-                            mfScissorLastTanHalfFov);
+                            0);
                         break;
                     }
                 default:
@@ -1532,12 +1691,13 @@ namespace hpl {
                                 shaderProgram.m_textures.push_back({ m_s_spotFalloffMap, spotFallOffImage->GetHandle(), 5 });
                             }
 
-                            if (apLightData->m_castShadows && SetupShadowMapRendering(pLightSpot)) {
+                            std::vector<iRenderable *> shadowCasters;
+                            if (apLightData->m_castShadows && detail::SetupShadowMapRendering(shadowCasters, apWorld, apFrustum, pLightSpot, mvCurrentOcclusionPlanes)) {
                                 flags |= rendering::detail::SpotlightVariant_UseShadowMap;
                                 eShadowMapResolution shadowMapRes = apLightData->m_shadowResolution;
                                 cShadowMapData* pShadowData = GetShadowMapData(shadowMapRes, apLightData->m_light);
                                 const auto shadowMapSize = pShadowData->m_target.GetImage()->GetImageSize();
-                                if (ShadowMapNeedsUpdate(apLightData->m_light, pShadowData)) {
+                                if (detail::ShadowMapNeedsUpdate(shadowCasters, apLightData->m_light, pShadowData)) {
                                     BX_ASSERT(
                                         apLightData->m_light->GetLightType() == eLightType_Spot,
                                         "Only spot lights are supported for shadow rendering")
@@ -1552,7 +1712,7 @@ namespace hpl {
                                         0, 0, static_cast<uint16_t>(shadowMapSize.x), static_cast<uint16_t>(shadowMapSize.y)
                                     };
                                     bgfx::ViewId view = context.StartPass("Shadow Pass", shadowPassViewConfig);
-                                    for (auto& shadowCaster : mvShadowCasters) {
+                                    for (auto& shadowCaster : shadowCasters) {
                                         rendering::detail::RenderZPassObject(
                                             view,
                                             context,
@@ -1984,8 +2144,8 @@ namespace hpl {
                         reflectPlane.FromNormalPoint(reflectionSurfaceNormal, reflectionSurfacePosition);
 
                         cMatrixf reflectionMatrix = cMath::MatrixPlaneMirror(reflectPlane);
-                        cMatrixf reflectionView = cMath::MatrixMul(mpCurrentFrustum->GetViewMatrix(), reflectionMatrix);
-                        cVector3f reflectionOrigin = cMath::MatrixMul(reflectionMatrix, mpCurrentFrustum->GetOrigin());
+                        cMatrixf reflectionView = cMath::MatrixMul(apFrustum->GetViewMatrix(), reflectionMatrix);
+                        cVector3f reflectionOrigin = cMath::MatrixMul(reflectionMatrix, apFrustum->GetOrigin());
 
                         cMatrixf reflectionProjectionMatrix = apFrustum->GetProjectionMatrix();
 
@@ -1994,25 +2154,25 @@ namespace hpl {
 
                         cFrustum reflectFrustum;
                         reflectFrustum.SetupPerspectiveProj(mtxReflProj, reflectionView,
-                            mpCurrentFrustum->GetFarPlane(),mpCurrentFrustum->GetNearPlane(),
-                            mpCurrentFrustum->GetFOV(), mpCurrentFrustum->GetAspect(),
+                            apFrustum->GetFarPlane(),apFrustum->GetNearPlane(),
+                            apFrustum->GetFOV(), apFrustum->GetAspect(),
                             reflectionOrigin,false, &reflectionProjectionMatrix, true);
                         reflectFrustum.SetInvertsCullMode(true);
                         
                         const float fMaxReflDist = pMaterial->GetMaxReflectionDistance();
                         if(pMaterial->GetMaxReflectionDistance() > 0) { 
                             //Forward and normal is aligned, the normal of plane becomes inverse forward
-                            cVector3f frustumForward = mpCurrentFrustum->GetForward()*-1;
+                            cVector3f frustumForward = apFrustum->GetForward()*-1;
                             cPlanef maxReflectionDistPlane;
 			                float fFDotN = cMath::Vector3Dot(frustumForward, reflectionSurfaceNormal);
                             if(fFDotN <-0.99999f) {
                                 cVector3f vClipNormal, vClipPoint;
                                 vClipNormal = frustumForward*-1;
-                                vClipPoint = mpCurrentFrustum->GetOrigin() + frustumForward * pMaterial->GetMaxReflectionDistance();
+                                vClipPoint = apFrustum->GetOrigin() + frustumForward * pMaterial->GetMaxReflectionDistance();
                                 maxReflectionDistPlane.FromNormalPoint(vClipNormal, vClipPoint);
                             }
                         } else {
-                            cPlanef cameraSpacePlane = cMath::TransformPlane(mpCurrentFrustum->GetViewMatrix(), reflectPlane);
+                            cPlanef cameraSpacePlane = cMath::TransformPlane(apFrustum->GetViewMatrix(), reflectPlane);
 
                             cVector3f vPoint1 = cVector3f(0,0, -fMaxReflDist);
                             cVector3f vPoint2 = cVector3f(0,0, -fMaxReflDist);
@@ -2038,7 +2198,7 @@ namespace hpl {
                                 vPoint2.y = (-cameraSpacePlane.c*-fMaxReflDist - cameraSpacePlane.d) / cameraSpacePlane.b;
                             }
 
-                            cMatrixf mtxInvCamera = cMath::MatrixInverse(mpCurrentFrustum->GetViewMatrix());
+                            cMatrixf mtxInvCamera = cMath::MatrixInverse(apFrustum->GetViewMatrix());
                             vPoint1 = cMath::MatrixMul(mtxInvCamera, vPoint1);
                             vPoint2 = cMath::MatrixMul(mtxInvCamera, vPoint2);
 
@@ -2050,8 +2210,6 @@ namespace hpl {
                             }
                         }
                         m_reflectionRenderList.Clear();
-
-
                     }
 
                 }
@@ -2065,10 +2223,7 @@ namespace hpl {
                         shaderInput.m_configuration.m_depthTest = pMaterial->GetDepthTest() ? DepthTest::LessEqual : DepthTest::None;
                         shaderInput.m_configuration.m_write = Write::RGB;
                         shaderInput.m_configuration.m_cull = Cull::None;
-
-
-                        // shaderInput.m_textures.push_back({ m_s_diffuseMap, pMaterial->GetDiffuseTexture()->GetHandle(), 0 });
-
+    
                         shaderInput.m_modelTransform = pMatrix ? pMatrix->GetTranspose() : cMatrixf::Identity;
 
                         if (!pMaterial->HasRefraction()) {

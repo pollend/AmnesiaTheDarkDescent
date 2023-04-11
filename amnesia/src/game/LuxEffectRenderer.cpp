@@ -485,23 +485,6 @@ void cLuxEffectRenderer::AddEnemyGlow(iRenderable* apObject, float afAlpha)
     mvEnemyGlowObjects.push_back(cGlowObject(apObject, afAlpha));
 }
 
-void cLuxEffectRenderer::RenderFlashObjects(cRendererCallbackFunctions* apFunctions)
-{
-    
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxEffectRenderer::RenderEnemyGlow(cRendererCallbackFunctions* apFunctions)
-{
-    
-    
-}
-
-void cLuxEffectRenderer::RenderOutline(cRendererCallbackFunctions* apFunctions)
-{
-   
-}
 
 void cLuxEffectRenderer::RenderBlurPass(GraphicsContext& context, std::span<RenderTarget> blurTargets, Image& input)
 {

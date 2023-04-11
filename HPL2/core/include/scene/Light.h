@@ -70,8 +70,6 @@ namespace hpl {
 	typedef std::map<iRenderable*, int> tShadowCasterCacheMap;
 	typedef tShadowCasterCacheMap::iterator tShadowCasterCacheMapIt;
 
-	//------------------------------------------
-
 	class cLightBillboardConnection
 	{
 	public:
@@ -135,8 +133,8 @@ namespace hpl {
 		//Shadow caster cache
 		void AddShadowCaster(iRenderable *apObject);
 		bool ShadowCasterIsValid(iRenderable *apObject);
-		bool ShadowCastersAreUnchanged(const tRenderableVec &avObjects);
-		void SetShadowCasterCacheFromVec(const tRenderableVec &avObjects);
+		bool ShadowCastersAreUnchanged(const std::span<iRenderable*>  avObjects);
+		void SetShadowCasterCacheFromVec(const std::span<iRenderable*> avObjects);
 		void ClearShadowCasterCache();
 
         //////////////////////////

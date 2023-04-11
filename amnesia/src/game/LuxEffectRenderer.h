@@ -100,10 +100,6 @@ public:
     void AddEnemyGlow(iRenderable* apObject, float afAlpha);
 
 private:
-    void RenderFlashObjects(cRendererCallbackFunctions* apFunctions);
-    void RenderEnemyGlow(cRendererCallbackFunctions* apFunctions);
-
-    void RenderOutline(cRendererCallbackFunctions* apFunctions);
 
     // this is reused code from PostEffect_Bloom. I think the passes can be separated out into handlers of some kind :?
     void RenderBlurPass(GraphicsContext& context, std::span<RenderTarget> blurTargets, Image& input);

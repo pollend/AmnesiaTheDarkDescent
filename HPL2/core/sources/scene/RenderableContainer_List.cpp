@@ -78,7 +78,10 @@ namespace hpl {
 
 	void cRenderableContainer_List::Remove(iRenderable *apRenderable)
 	{
-		mRoot.mlstObjects.remove(apRenderable);
+		mRoot.mlstObjects.erase(
+			std::remove_if(mRoot.mlstObjects.begin(), mRoot.mlstObjects.end(), 
+			[apRenderable](auto* p) { return p == apRenderable; }));
+		// mRoot.mlstObjects.remove(apRenderable);
 	}
 
 	//-----------------------------------------------------------------------
