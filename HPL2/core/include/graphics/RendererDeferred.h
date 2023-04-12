@@ -117,8 +117,19 @@ namespace hpl {
     }; // namespace rendering::detail
 
     class cRendererDeferred : public iRenderer {
-        HPL_RTTI_IMPL_CLASS(cRendererDeferred, iRenderer, "{A3E5E5A1-1F9C-4F5C-9B9B-5B9B9B5B9B9B}")
+        HPL_RTTI_IMPL_CLASS(iRenderer, cRendererDeferred, "{A3E5E5A1-1F9C-4F5C-9B9B-5B9B9B5B9B9B}")
     public:
+        class ShadowMapData {
+        public:
+            RenderTarget m_target;
+            iLight *m_light;
+            int m_transformCount;
+            int m_frameCount;
+            float m_radius;
+            float m_fov;
+            float m_aspect;
+        };
+
         struct SharedViewportData {
         public:
             SharedViewportData() = default;
@@ -321,11 +332,14 @@ namespace hpl {
         std::shared_ptr<Image>& resolveRenderImage(std::array<std::shared_ptr<Image>, 2>& img);
 
         void RenderEdgeSmoothPass(GraphicsContext& context, cViewport& viewport, RenderTarget& rt);
+        // cShadowMapData& iRenderer::GetShadowMapData(eShadowMapResolution aResolution, iLight* apLight);
+
 
         iVertexBuffer* GetLightShape(iLight* apLight, eDeferredShapeQuality aQuality) const;
 
         std::array<std::unique_ptr<iVertexBuffer>, eDeferredShapeQuality_LastEnum> m_shapeSphere;
         std::unique_ptr<iVertexBuffer> m_shapePyramid;
+        std::array<absl::InlinedVector<ShadowMapData, 10>, eShadowMapResolution_LastEnum> m_shadowMapData;
 
         int m_maxBatchLights;
         int mlMaxBatchVertices;
@@ -346,10 +360,7 @@ namespace hpl {
         RenderTarget m_edgeSmooth_LinearDepth;
         UniqueViewportData<SharedViewportData> m_boundViewportData;
 
-        iTexture* mpShadowJitterTexture;
         std::shared_ptr<Image> m_shadowJitterImage;
-        int m_shadowJitterSize;
-        int m_shadowJitterSamples;
 
         UniformWrapper<StringLiteral("u_param"), bgfx::UniformType::Vec4> m_u_param;
         UniformWrapper<StringLiteral("u_lightPos"), bgfx::UniformType::Vec4>  m_u_lightPos;
@@ -376,14 +387,13 @@ namespace hpl {
         bgfx::ProgramHandle m_copyRegionProgram;
         bgfx::ProgramHandle m_edgeSmooth_UnpackDepthProgram;
         bgfx::ProgramHandle m_lightBoxProgram;
+        bgfx::ProgramHandle m_nullShader;
 
         ShaderVariantCollection<rendering::detail::FogVariant_UseOutsideBox | rendering::detail::FogVariant_UseBackSide> m_fogVariant;
         ShaderVariantCollection<rendering::detail::SpotlightVariant_UseGoboMap | rendering::detail::SpotlightVariant_UseShadowMap>
             m_spotlightVariants;
         ShaderVariantCollection<rendering::detail::PointlightVariant_UseGoboMap> m_pointLightVariants;
 
-        std::vector<cDeferredLight*> mvTempDeferredLights;
-        std::array<std::vector<cDeferredLight*>, eDeferredLightList_LastEnum> mvSortedLights;
         cRenderList m_reflectionRenderList;
 
         static bool mbDepthCullLights;
@@ -399,7 +409,5 @@ namespace hpl {
 
         static bool mbEdgeSmoothLoaded;
         static bool mbEnableParallax;
-
-
     };
 }; // namespace hpl

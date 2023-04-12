@@ -80,6 +80,27 @@ namespace hpl
     namespace rendering::detail
     {
 
+
+        cRect2l GetClipRectFromObject(iRenderable* apObject, float afPaddingPercent, cFrustum* apFrustum, const cVector2l& avScreenSize, float afHalfFovTan) {
+            cBoundingVolume* pBV = apObject->GetBoundingVolume();
+
+            cRect2l clipRect;
+            if (afHalfFovTan == 0)
+                afHalfFovTan = tan(apFrustum->GetFOV() * 0.5f);
+            cMath::GetClipRectFromBV(clipRect, *pBV, apFrustum, avScreenSize, afHalfFovTan);
+
+            // Add 20% padding on clip rect
+            int lXInc = (int)((float)clipRect.w * afHalfFovTan);
+            int lYInc = (int)((float)clipRect.h * afHalfFovTan);
+
+            clipRect.x = cMath::Max(clipRect.x - lXInc, 0);
+            clipRect.y = cMath::Max(clipRect.y - lYInc, 0);
+            clipRect.w = cMath::Min(clipRect.w + lXInc * 2, avScreenSize.x - clipRect.x);
+            clipRect.h = cMath::Min(clipRect.h + lYInc * 2, avScreenSize.y - clipRect.y);
+
+            return clipRect;
+        }
+
         void UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
             cRenderList* apRenderList,
             cFrustum* frustum,
@@ -456,25 +477,6 @@ namespace hpl
         return 0;
     }
 
-    //-----------------------------------------------------------------------
-
-    void cRenderSettings::WaitAndRetrieveAllOcclusionQueries(iRenderer* apRenderer)
-    {
-        // for(int i=0; i<mlCurrentOcclusionObject; ++i)
-        // {
-        // 	iOcclusionQuery *pQuery = mvOcclusionObjectPool[i]->mpQuery;
-        // 	if(pQuery==NULL) continue;
-
-        //     while(pQuery->FetchResults()==false);
-
-        // 	mvOcclusionObjectPool[i]->mlSampleResults = pQuery->GetSampleCount();
-        // 	mvOcclusionObjectPool[i]->mpQuery = NULL;
-        // 	apRenderer->ReleaseOcclusionQuery(pQuery);
-        // }
-    }
-
-    //-----------------------------------------------------------------------
-
     void cRenderSettings::ClearOcclusionObjects(iRenderer* apRenderer)
     {
         // if(mbLog) Log(" Clearing occlusion queries i settings!\n");
@@ -547,13 +549,7 @@ namespace hpl
         mbClearFrameBufferAtBeginRendering = true;
         mbSetupOcclusionPlaneForFog = false;
 
-        // mpCallbackFunctions = hplNew( cRendererCallbackFunctions, (this) );
-
         mfTimeCount = 0;
-
-        mlActiveOcclusionQueryNum = 0;
-
-        m_nullShader = hpl::loadProgram("vs_null", "fs_null");
 
         ////////////
         // Create shapes
@@ -572,25 +568,10 @@ namespace hpl
 
     iRenderer::~iRenderer()
     {
-        if (bgfx::isValid(m_nullShader))
-        {
-            bgfx::destroy(m_nullShader);
-        }
-
         
         if (mpShapeBox)
             hplDelete(mpShapeBox);
-
-        // hplDelete(mpCallbackFunctions);
     }
-
-    //-----------------------------------------------------------------------
-
-    //////////////////////////////////////////////////////////////////////////
-    // PUBLIC METHODS
-    //////////////////////////////////////////////////////////////////////////
-
-    //-----------------------------------------------------------------------
 
     void iRenderer::Render(
         float afFrameTime,
@@ -602,73 +583,10 @@ namespace hpl
         BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects);
     }
 
-    // void iRenderer::RenderableHelper(
-    //     eRenderListType type,
-    //     cViewport& viewport,
-    //     eMaterialRenderMode mode,
-    //     std::function<void(iRenderable* obj, GraphicsContext::LayoutStream&, GraphicsContext::ShaderProgram&)> handler)
-    // {
-    //     for (auto& obj : mpCurrentRenderList->GetRenderableItems(type))
-    //     {
-    //         GraphicsContext::LayoutStream layoutStream;
-    //         GraphicsContext::ShaderProgram shaderProgram;
-
-    //         cMaterial* pMaterial = obj->GetMaterial();
-    //         iMaterialType* materialType = pMaterial->GetType();
-    //         // iGpuProgram* program = pMaterial->GetProgram(0, mode);
-    //         iVertexBuffer* vertexBuffer = obj->GetVertexBuffer();
-    //         if (vertexBuffer == nullptr || materialType == nullptr)
-    //         {
-    //             continue;
-    //         }
-    //         vertexBuffer->GetLayoutStream(layoutStream);
-    //         materialType->ResolveShaderProgram(
-    //             mode,
-    //             viewport,
-    //             pMaterial,
-    //             obj,
-    //             this,
-    //             [&](GraphicsContext::ShaderProgram& program, uint32_t variant)
-    //             {
-    //                 handler(obj, layoutStream, program);
-    //             });
-    //     }
-    // }
-
-
     void iRenderer::Update(float afTimeStep)
     {
         mfTimeCount += afTimeStep;
     }
-
-    //-----------------------------------------------------------------------
-
-    void iRenderer::AssignOcclusionObject(
-        void* apSource, int alCustomIndex, iVertexBuffer* apVtxBuffer, cMatrixf* apMatrix, bool abDepthTest)
-    {
-
-        mpCurrentSettings->AssignOcclusionObject(this, apSource, alCustomIndex, apVtxBuffer, apMatrix, abDepthTest);
-    }
-
-    int iRenderer::RetrieveOcclusionObjectSamples(void* apSource, int alCustomIndex)
-    {
-        int lSamples = mpCurrentSettings->RetrieveOcclusionObjectSamples(this, apSource, alCustomIndex);
-
-        return lSamples;
-    }
-
-    void iRenderer::WaitAndRetrieveAllOcclusionQueries()
-    {
-        mpCurrentSettings->WaitAndRetrieveAllOcclusionQueries(this);
-    }
-
-    //-----------------------------------------------------------------------
-
-    //////////////////////////////////////////////////////////////////////////
-    // PRIVATE METHODS
-    //////////////////////////////////////////////////////////////////////////
-
-    //-----------------------------------------------------------------------
 
     void iRenderer::BeginRendering(
         float afFrameTime,
@@ -748,104 +666,52 @@ namespace hpl
             mpCurrentRenderList->Clear();
     }
 
-    cShadowMapData* iRenderer::GetShadowMapData(eShadowMapResolution aResolution, iLight* apLight)
-    {
-        ////////////////////////////
-        // If size is 1, then just return that one
-        if (m_shadowMapData[aResolution].size() == 1)
-        {
-            return &m_shadowMapData[aResolution][0];
-        }
+    // cShadowMapData* iRenderer::GetShadowMapData(eShadowMapResolution aResolution, iLight* apLight)
+    // {
+    //     ////////////////////////////
+    //     // If size is 1, then just return that one
+    //     if (m_shadowMapData[aResolution].size() == 1)
+    //     {
+    //         return &m_shadowMapData[aResolution][0];
+    //     }
 
-        //////////////////////////
-        // Set up variables
-        cShadowMapData* pBestData = NULL;
-        int lMaxFrameDist = -1;
+    //     //////////////////////////
+    //     // Set up variables
+    //     cShadowMapData* pBestData = NULL;
+    //     int lMaxFrameDist = -1;
 
-        ////////////////////////////
-        // Iterate the shadow map array looking for shadow map already used by light
-        // Else find the one with the largest frame length.
-        for (size_t i = 0; i < m_shadowMapData[aResolution].size(); ++i)
-        {
-            cShadowMapData& pData = m_shadowMapData[aResolution][i];
+    //     ////////////////////////////
+    //     // Iterate the shadow map array looking for shadow map already used by light
+    //     // Else find the one with the largest frame length.
+    //     for (size_t i = 0; i < m_shadowMapData[aResolution].size(); ++i)
+    //     {
+    //         cShadowMapData& pData = m_shadowMapData[aResolution][i];
 
-            if (pData.mCache.mpLight == apLight)
-            {
-                pBestData = &pData;
-                break;
-            }
-            else
-            {
-                int lFrameDist = cMath::Abs(pData.mlFrameCount - mlRenderFrameCount);
-                if (lFrameDist > lMaxFrameDist)
-                {
-                    lMaxFrameDist = lFrameDist;
-                    pBestData = &pData;
-                }
-            }
-        }
+    //         if (pData.mCache.mpLight == apLight)
+    //         {
+    //             pBestData = &pData;
+    //             break;
+    //         }
+    //         else
+    //         {
+    //             int lFrameDist = cMath::Abs(pData.mlFrameCount - mlRenderFrameCount);
+    //             if (lFrameDist > lMaxFrameDist)
+    //             {
+    //                 lMaxFrameDist = lFrameDist;
+    //                 pBestData = &pData;
+    //             }
+    //         }
+    //     }
 
-        ////////////////////////////
-        // Update the usage count
-        if (pBestData)
-        {
-            pBestData->mlFrameCount = mlRenderFrameCount;
-        }
+    //     ////////////////////////////
+    //     // Update the usage count
+    //     if (pBestData)
+    //     {
+    //         pBestData->mlFrameCount = mlRenderFrameCount;
+    //     }
 
-        return pBestData;
-    }
-
-    void iRenderer::OcclusionQueryBoundingBoxTest(
-        bgfx::ViewId view,
-        GraphicsContext& context,
-        bgfx::OcclusionQueryHandle handle,
-        const cFrustum& frustum,
-        const cMatrixf& transform,
-        RenderTarget& rt,
-        Cull cull)
-    {
-        GraphicsContext::ShaderProgram shaderProgram;
-        GraphicsContext::LayoutStream layoutStream;
-        mpShapeBox->GetLayoutStream(layoutStream);
-
-        shaderProgram.m_handle = m_nullShader;
-        shaderProgram.m_modelTransform = transform.GetTranspose();
-        shaderProgram.m_configuration.m_depthTest = DepthTest::Less;
-        shaderProgram.m_configuration.m_cull = cull;
-
-        GraphicsContext::DrawRequest drawRequest{ layoutStream, shaderProgram };
-        context.Submit(view, drawRequest);
-    }
-
-    void iRenderer::AssignAndRenderOcclusionQueryObjects(bgfx::ViewId view, GraphicsContext& context, bool abSetFrameBuffer, bool abUsePosAndSize)
-    {
-        cRenderList* pRenderList = mpCurrentSettings->mpRenderList;
-
-        ///////////////////////////////////
-        // Get and use any previous occlusion queries
-        for (auto& pObject: pRenderList->GetOcclusionQueryItems())
-        {
-            pObject->ResolveOcclusionPass(
-                this,
-                [&](bgfx::OcclusionQueryHandle handle,
-                    DepthTest depth,
-                    GraphicsContext::LayoutStream& layoutStream,
-                    const cMatrixf& transformMatrix)
-                {
-                    GraphicsContext::ShaderProgram shaderProgram;
-                    shaderProgram.m_handle = m_nullShader;
-                    shaderProgram.m_configuration.m_depthTest = depth;
-                    shaderProgram.m_configuration.m_cull = Cull::CounterClockwise;
-
-                    shaderProgram.m_modelTransform = transformMatrix;
-                    // shaderProgram.m_view = mpCurrentFrustum->GetViewMatrix().GetTranspose();
-                    // shaderProgram.m_projection = mpCurrentProjectionMatrix->GetTranspose();
-
-                    GraphicsContext::DrawRequest drawRequest{ layoutStream, shaderProgram };
-                    context.Submit(view, drawRequest, handle);
-                });
-        }
-    }
+    //     return pBestData;
+    // }
 
     bool iRenderer::CheckRenderablePlaneIsVisible(iRenderable* apObject, cFrustum* apFrustum)
     {
@@ -864,30 +730,6 @@ namespace hpl
         float fDot = cMath::Vector3Dot(vPos - apFrustum->GetOrigin(), vNormal);
 
         return fDot < 0;
-    }
-
-    //-----------------------------------------------------------------------
-
-    cRect2l iRenderer::GetClipRectFromObject(
-        iRenderable* apObject, float afPaddingPercent, cFrustum* apFrustum, const cVector2l& avScreenSize, float afHalfFovTan)
-    {
-        cBoundingVolume* pBV = apObject->GetBoundingVolume();
-
-        cRect2l clipRect;
-        if (afHalfFovTan == 0)
-            afHalfFovTan = tan(apFrustum->GetFOV() * 0.5f);
-        cMath::GetClipRectFromBV(clipRect, *pBV, apFrustum, avScreenSize, afHalfFovTan);
-
-        // Add 20% padding on clip rect
-        int lXInc = (int)((float)clipRect.w * afHalfFovTan);
-        int lYInc = (int)((float)clipRect.h * afHalfFovTan);
-
-        clipRect.x = cMath::Max(clipRect.x - lXInc, 0);
-        clipRect.y = cMath::Max(clipRect.y - lYInc, 0);
-        clipRect.w = cMath::Min(clipRect.w + lXInc * 2, avScreenSize.x - clipRect.x);
-        clipRect.h = cMath::Min(clipRect.h + lYInc * 2, avScreenSize.y - clipRect.y);
-
-        return clipRect;
     }
 
 } // namespace hpl

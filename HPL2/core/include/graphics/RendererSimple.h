@@ -31,6 +31,7 @@ namespace hpl {
 
 	class cRendererSimple : public  iRenderer
 	{
+		HPL_RTTI_IMPL_CLASS(iRenderer, cRendererSimple, "{ea5e1d79-c424-47c6-bab3-ead1391f64ea}")
 	public:
 		cRendererSimple(cGraphics *apGraphics,cResources* apResources);
 		~cRendererSimple();

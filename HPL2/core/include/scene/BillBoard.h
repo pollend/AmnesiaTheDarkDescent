@@ -76,7 +76,6 @@ namespace hpl {
 
 		bool UsesOcclusionQuery();
 		virtual void ResolveOcclusionPass(iRenderer *apRenderer, std::function<void(bgfx::OcclusionQueryHandle, DepthTest test, GraphicsContext::LayoutStream&, const cMatrixf& transform)>) override;
-		void AssignOcclusionQuery(iRenderer *apRenderer);
 		bool RetrieveOcculsionQuery(iRenderer *apRenderer);
 
 		/////////////////////////////////

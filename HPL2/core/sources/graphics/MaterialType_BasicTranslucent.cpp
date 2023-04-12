@@ -121,16 +121,15 @@ namespace hpl
 
     cMaterialType_Translucent::~cMaterialType_Translucent()
     {
-
     }
 
     void cMaterialType_Translucent::LoadData()
     {
     }
+
     void cMaterialType_Translucent::DestroyData()
     {
     }
-
 
     void cMaterialType_Translucent::ResolveShaderProgram(
             eMaterialRenderMode aRenderMode,

@@ -120,43 +120,6 @@ namespace hpl {
             }
         };
 
-        static inline bool ShadowMapNeedsUpdate(std::span<iRenderable*> shadowCasters, iLight* apLight, cShadowMapData* apShadowData) {
-            // Occlusion culling must always be updated!
-            if (apLight->GetOcclusionCullShadowCasters())
-                return true;
-
-            cShadowMapLightCache& cacheData = apShadowData->mCache;
-
-            ///////////////////////////
-            // Check if texture map and light are valid
-            bool bValid = cacheData.mpLight == apLight && cacheData.mlTransformCount == apLight->GetTransformUpdateCount() &&
-                cacheData.mfRadius == apLight->GetRadius();
-
-            /////////////////////////////
-            // Spotlight specific
-            if (bValid && apLight->GetLightType() == eLightType_Spot)
-            {
-                cLightSpot* pSpotLight = static_cast<cLightSpot*>(apLight);
-                bValid = pSpotLight->GetAspect() == cacheData.mfAspect && pSpotLight->GetFOV() == cacheData.mfFOV;
-            }
-
-            /////////////////////////////
-            // Shadow casters
-            if (bValid)
-            {
-                bValid = apLight->ShadowCastersAreUnchanged(shadowCasters);
-            }
-
-            /////////////////////////////
-            // If not valid, update data
-            if (bValid == false)
-            {
-                cacheData.SetFromLight(apLight);
-                apLight->SetShadowCasterCacheFromVec(shadowCasters);
-            }
-
-            return bValid ? false : true;
-        }
 
         static inline bool SetupShadowMapRendering(std::vector<iRenderable*>& shadowCasters, cWorld* world, cFrustum* frustum,  iLight* light, std::span<cPlanef> clipPlanes) {
             /////////////////////////
@@ -282,24 +245,24 @@ namespace hpl {
         }
 
 
-        static inline bool ShadowMapNeedsUpdate(iLight* light, cShadowMapData* shadowData, std::span<iRenderable*> shadowCasters) {
+        static inline bool ShadowMapNeedsUpdate(iLight* light, cRendererDeferred::ShadowMapData& shadowData, std::span<iRenderable*> shadowCasters) {
             // Occlusion culling must always be updated!
             if (light->GetOcclusionCullShadowCasters())
                 return true;
 
-            cShadowMapLightCache& cacheData = shadowData->mCache;
+            // cShadowMapLightCache& cacheData = shadowData->mCache;
 
             ///////////////////////////
             // Check if texture map and light are valid
-            bool bValid = cacheData.mpLight == light && cacheData.mlTransformCount == light->GetTransformUpdateCount() &&
-                cacheData.mfRadius == light->GetRadius();
+            bool bValid = shadowData.m_light == light && shadowData.m_transformCount == light->GetTransformUpdateCount() &&
+                shadowData.m_radius == light->GetRadius();
 
             /////////////////////////////
             // Spotlight specific
             if (bValid && light->GetLightType() == eLightType_Spot)
             {
                 cLightSpot* pSpotLight = static_cast<cLightSpot*>(light);
-                bValid = pSpotLight->GetAspect() == cacheData.mfAspect && pSpotLight->GetFOV() == cacheData.mfFOV;
+                bValid = pSpotLight->GetAspect() == shadowData.m_aspect && pSpotLight->GetFOV() == shadowData.m_fov;
             }
 
             /////////////////////////////
@@ -313,7 +276,16 @@ namespace hpl {
             // If not valid, update data
             if (bValid == false)
             {
-                cacheData.SetFromLight(light);
+                shadowData.m_light = light;
+                shadowData.m_transformCount = light->GetTransformUpdateCount();
+                shadowData.m_radius = light->GetRadius();
+                if (light->GetLightType() == eLightType_Spot)
+                {
+                    cLightSpot* pSpotLight = static_cast<cLightSpot*>(light);
+                    shadowData.m_aspect = pSpotLight->GetAspect();
+                    shadowData.m_fov = pSpotLight->GetFOV();
+                }
+
                 light->SetShadowCasterCacheFromVec(shadowCasters);
             }
 
@@ -347,6 +319,7 @@ namespace hpl {
 
             return cMatrixf::Identity;
         }
+
 
         // this is a bridge to build a render list from the renderable container
         /**
@@ -960,6 +933,11 @@ namespace hpl {
                 sharedData->m_gBufferReflectionDepthStencil = depthImage();
                 sharedData->m_outputReflectionImage = colorImage();
 
+                sharedData->m_gBufferReflection_color = RenderTarget(sharedData->m_gBufferReflectionColor);
+                sharedData->m_gBufferReflection_depth = RenderTarget(sharedData->m_gBufferReflectionDepthStencil);
+                sharedData->m_gBufferReflection_normals = RenderTarget(sharedData->m_gBufferReflectionNormalImage);
+                sharedData->m_gBufferReflection_linearDepth = RenderTarget(sharedData->m_gBufferReflectionPositionImage);
+
                 {
                     std::array<std::shared_ptr<Image>, 5> images = { sharedData->m_gBufferReflectionColor,
                                                                      sharedData->m_gBufferReflectionNormalImage,
@@ -968,6 +946,15 @@ namespace hpl {
                                                                      sharedData->m_gBufferReflectionDepthStencil };
                     sharedData->m_gBufferReflection_full = RenderTarget(std::span(images));
                 }
+                {
+                    std::array<std::shared_ptr<Image>, 2> images = { sharedData->m_gBufferReflectionColor, sharedData->m_gBufferReflectionDepthStencil };
+                    sharedData->m_gBuffer_colorAndDepth = RenderTarget(std::span(images));
+                }
+                {
+                    std::array<std::shared_ptr<Image>, 2> images = { sharedData->m_outputReflectionImage, sharedData->m_gBufferReflectionDepthStencil };
+                    sharedData->m_outputReflection_target = RenderTarget(std::span(images));
+                }
+                
                 return sharedData;
             },
             [](cViewport& viewport, SharedViewportData& target) {
@@ -988,7 +975,7 @@ namespace hpl {
             lStartSize = 0;
         }
 
-        auto createShadowMap = [](const cVector3l& avSize) -> cShadowMapData {
+        auto createShadowMap = [](const cVector3l& avSize) -> ShadowMapData {
             auto desc = ImageDescriptor::CreateTexture2D(avSize.x, avSize.y, false, bgfx::TextureFormat::D16F);
             desc.m_configuration.m_rt = RTType::RT_Write;
             desc.m_configuration.m_minFilter = FilterType::Point;
@@ -997,45 +984,54 @@ namespace hpl {
             desc.m_configuration.m_comparsion = DepthTest::LessEqual;
             auto image = std::make_shared<Image>();
             image->Initialize(desc);
-            return { -1, RenderTarget(image), {} };
+            return { 
+                .m_target = RenderTarget(image), 
+                .m_light = nullptr,
+                .m_transformCount = -1,
+                .m_frameCount = -1,
+                .m_radius = 0,
+                .m_fov = 0,
+                .m_aspect = 0
+            };
         };
 
         for (size_t i = 0; i < 1; ++i) {
             m_shadowMapData[eShadowMapResolution_High].emplace_back(createShadowMap(vShadowSize[lStartSize + eShadowMapResolution_High]));
         }
         for (size_t i = 0; i < 4; ++i) {
-            m_shadowMapData[eShadowMapResolution_Medium].emplace_back(
-                createShadowMap(vShadowSize[lStartSize + eShadowMapResolution_Medium]));
+            m_shadowMapData[eShadowMapResolution_Medium].emplace_back(createShadowMap(vShadowSize[lStartSize + eShadowMapResolution_Medium]));
         }
         for (size_t i = 0; i < 6; ++i) {
             m_shadowMapData[eShadowMapResolution_Low].emplace_back(createShadowMap(vShadowSize[lStartSize + eShadowMapResolution_Low]));
         }
 
         // High
+        int shadowMapJitterSize = 0;
+        int shadowMapJitterSamples = 0;
         if (mShadowMapQuality == eShadowMapQuality_High) {
-            m_shadowJitterSize = 64;
-            m_shadowJitterSamples = 32; // 64 here instead? I mean, ATI has to deal with medium has max? or different max for ATI?
+            shadowMapJitterSize = 64;
+            shadowMapJitterSamples = 32; // 64 here instead? I mean, ATI has to deal with medium has max? or different max for ATI?
             m_spotlightVariants.Initialize(
                 ShaderHelper::LoadProgramHandlerDefault("vs_deferred_light", "fs_deferred_spotlight_high", false, true));
         }
         // Medium
         else if (mShadowMapQuality == eShadowMapQuality_Medium) {
-            m_shadowJitterSize = 32;
-            m_shadowJitterSamples = 16;
+            shadowMapJitterSize = 32;
+            shadowMapJitterSamples = 16;
             m_spotlightVariants.Initialize(
                 ShaderHelper::LoadProgramHandlerDefault("vs_deferred_light", "fs_deferred_spotlight_medium", false, true));
         }
         // Low
         else {
-            m_shadowJitterSize = 0;
-            m_shadowJitterSamples = 0;
+            shadowMapJitterSize = 0;
+            shadowMapJitterSamples = 0;
             m_spotlightVariants.Initialize(
                 ShaderHelper::LoadProgramHandlerDefault("vs_deferred_light", "fs_deferred_spotlight_low", false, true));
         }
 
         if (mShadowMapQuality != eShadowMapQuality_Low) {
             m_shadowJitterImage = std::make_shared<Image>();
-            TextureCreator::GenerateScatterDiskMap2D(*m_shadowJitterImage, m_shadowJitterSize, m_shadowJitterSamples, true);
+            TextureCreator::GenerateScatterDiskMap2D(*m_shadowJitterImage, shadowMapJitterSize, shadowMapJitterSamples, true);
         }
 
         m_u_param.Initialize();
@@ -1061,6 +1057,7 @@ namespace hpl {
 
         m_copyRegionProgram = hpl::loadProgram("cs_copy_region");
         m_lightBoxProgram = hpl::loadProgram("vs_light_box", "fs_light_box");
+        m_nullShader = hpl::loadProgram("vs_null", "fs_null");
         m_fogVariant.Initialize(ShaderHelper::LoadProgramHandlerDefault("vs_deferred_fog", "fs_deferred_fog", true, true));
         m_pointLightVariants.Initialize(
             ShaderHelper::LoadProgramHandlerDefault("vs_deferred_light", "fs_deferred_pointlight", false, true));
@@ -1125,9 +1122,6 @@ namespace hpl {
     }
 
     cRendererDeferred::~cRendererDeferred() {
-        for (auto& it : mvTempDeferredLights) {
-            delete it;
-        }
     }
 
     bool cRendererDeferred::LoadData() {
@@ -1280,16 +1274,35 @@ namespace hpl {
         {
             auto ZPassConfig = createStandardViewConfig(sharedData.m_gBuffer_depth);
             detail::UpdateRenderableList(
-                mpCurrentRenderList, this, 
+                mpCurrentRenderList, 
+                this, 
                 mpCurrentSettings->mpVisibleNodeTracker,
                 apFrustum, mpCurrentWorld,"Z Pass", ZPassConfig, context, viewport, 
                 eObjectVariabilityFlag_All, 
                 mvCurrentOcclusionPlanes, 
-                lVisibleFlags);
+                eRenderableFlag_VisibleInNonReflection);
             auto occlusionConfig = createStandardViewConfig(sharedData.m_gBuffer_depth);
-            AssignAndRenderOcclusionQueryObjects(context.StartPass("Render Occlusion", occlusionConfig), context, false, true);
+            auto occlusionPass = context.StartPass("Render Occlusion", occlusionConfig);
 
-            // SetupLightsAndRenderQueries(context, sharedData.m_gBuffer_depth);
+            for(auto& object: mpCurrentRenderList->GetOcclusionQueryItems()) {
+                object->ResolveOcclusionPass(
+                this,
+                [&](bgfx::OcclusionQueryHandle handle,
+                    DepthTest depth,
+                    GraphicsContext::LayoutStream& layoutStream,
+                    const cMatrixf& transformMatrix)
+                {
+                    GraphicsContext::ShaderProgram shaderProgram;
+                    shaderProgram.m_handle = m_nullShader;
+                    shaderProgram.m_configuration.m_depthTest = depth;
+                    shaderProgram.m_configuration.m_cull = Cull::CounterClockwise;
+
+                    shaderProgram.m_modelTransform = transformMatrix;
+
+                    GraphicsContext::DrawRequest drawRequest{ layoutStream, shaderProgram };
+                    context.Submit(occlusionPass, drawRequest, handle);
+                });
+            }
 
             mpCurrentRenderList->Compile(
                 eRenderListCompileFlag_Diffuse | 
@@ -1487,8 +1500,7 @@ namespace hpl {
             std::sort(deferredLightBoxRenderBack.begin(), deferredLightBoxRenderBack.end(), detail::SortDeferredLightBox);
             std::sort(deferredLightBoxStencilFront.begin(), deferredLightBoxStencilFront.end(), detail::SortDeferredLightBox);
             std::sort(deferredLightRenderBack.begin(), deferredLightRenderBack.end(), detail::SortDeferredLightDefault);
-            std::sort(
-                deferredLightStencilFrontRenderBack.begin(), deferredLightStencilFrontRenderBack.end(), detail::SortDeferredLightDefault);
+            std::sort(deferredLightStencilFrontRenderBack.begin(), deferredLightStencilFrontRenderBack.end(), detail::SortDeferredLightDefault);
 
             {
                 GraphicsContext::ViewConfiguration clearBackBufferView{ sharedData.m_output_target };
@@ -1695,16 +1707,73 @@ namespace hpl {
                             if (apLightData->m_castShadows && detail::SetupShadowMapRendering(shadowCasters, apWorld, apFrustum, pLightSpot, mvCurrentOcclusionPlanes)) {
                                 flags |= rendering::detail::SpotlightVariant_UseShadowMap;
                                 eShadowMapResolution shadowMapRes = apLightData->m_shadowResolution;
-                                cShadowMapData* pShadowData = GetShadowMapData(shadowMapRes, apLightData->m_light);
-                                const auto shadowMapSize = pShadowData->m_target.GetImage()->GetImageSize();
-                                if (detail::ShadowMapNeedsUpdate(shadowCasters, apLightData->m_light, pShadowData)) {
+                                
+                                auto findBestShadowMap = [&](eShadowMapResolution resolution, iLight* light) -> cRendererDeferred::ShadowMapData* {
+                                    auto& shadowMapVec = m_shadowMapData[resolution];
+                                    int maxFrameDistance = -1;
+                                    size_t bestIndex = 0;
+                                    for (size_t i = 0; i < shadowMapVec.size(); ++i) {
+                                        auto& shadowMap = shadowMapVec[i];
+                                        if(shadowMap.m_light == light) {
+                                            shadowMap.m_frameCount = iRenderer::GetRenderFrameCount();
+                                            return &shadowMap;
+                                        }
+
+                                        const int frameDist = cMath::Abs(shadowMap.m_frameCount - iRenderer::GetRenderFrameCount());
+                                        if (frameDist > maxFrameDistance)
+                                        {
+                                            maxFrameDistance = frameDist;
+                                            bestIndex = i;
+                                        }
+                                    }
+                                    if(maxFrameDistance != -1) {
+                                        shadowMapVec[bestIndex].m_frameCount = iRenderer::GetRenderFrameCount();
+                                        return &shadowMapVec[bestIndex];
+                                    }
+                                    return nullptr;
+                                };
+                                auto& currentLight = apLightData->m_light;
+                                auto* shadowMapData = findBestShadowMap(shadowMapRes, currentLight);
+                                if(!shadowMapData) {
+                                    // No shadow map available
+                                    BX_ASSERT(false, "No shadow map available");
+                                    break;
+                                }
+                                const auto shadowMapSize = shadowMapData->m_target.GetImage()->GetImageSize();
+                                // testing if the shadow map needs to be updated
+                                if ([&]() -> bool {
+                                    // Check if texture map and light are valid
+                                    if(currentLight->GetOcclusionCullShadowCasters()) {
+                                        return true;
+                                    }
+
+                                    if(currentLight->GetLightType() == eLightType_Spot &&
+                                        (static_cast<cLightSpot*>(currentLight)->GetAspect() != shadowMapData->m_aspect ||
+                                            static_cast<cLightSpot*>(currentLight)->GetFOV() != shadowMapData->m_fov)) {
+                                        return true;
+                                    }
+                                    return !currentLight->ShadowCastersAreUnchanged(shadowCasters);
+                                }()) {
+                                    
+                                    shadowMapData->m_light = currentLight;
+                                    shadowMapData->m_transformCount = currentLight->GetTransformUpdateCount();
+                                    shadowMapData->m_radius = currentLight->GetRadius();
+
+                                    if (currentLight->GetLightType() == eLightType_Spot)
+                                    {
+                                        cLightSpot* pSpotLight = static_cast<cLightSpot*>(currentLight);
+                                        shadowMapData->m_aspect = pSpotLight->GetAspect();
+                                        shadowMapData->m_fov = pSpotLight->GetFOV();
+                                    }
+                                    currentLight->SetShadowCasterCacheFromVec(shadowCasters);
+                                    
                                     BX_ASSERT(
-                                        apLightData->m_light->GetLightType() == eLightType_Spot,
+                                        currentLight->GetLightType() == eLightType_Spot,
                                         "Only spot lights are supported for shadow rendering")
-                                    cLightSpot* pSpotLight = static_cast<cLightSpot*>(apLightData->m_light);
+                                    cLightSpot* pSpotLight = static_cast<cLightSpot*>(currentLight);
                                     cFrustum* pLightFrustum = pSpotLight->GetFrustum();
 
-                                    GraphicsContext::ViewConfiguration shadowPassViewConfig{ pShadowData->m_target };
+                                    GraphicsContext::ViewConfiguration shadowPassViewConfig{ shadowMapData->m_target };
                                     shadowPassViewConfig.m_clear = { 0, 1.0, 0, ClearOp::Depth };
                                     shadowPassViewConfig.m_view = pLightFrustum->GetViewMatrix().GetTranspose();
                                     shadowPassViewConfig.m_projection = pLightFrustum->GetProjectionMatrix().GetTranspose();
@@ -1727,7 +1796,7 @@ namespace hpl {
                                 if (m_shadowJitterImage) {
                                     shaderProgram.m_textures.push_back({ m_s_shadowOffsetMap, m_shadowJitterImage->GetHandle(), 7 });
                                 }
-                                shaderProgram.m_textures.push_back({ m_s_shadowMap, pShadowData->m_target.GetImage()->GetHandle(), 6 });
+                                shaderProgram.m_textures.push_back({ m_s_shadowMap, shadowMapData->m_target.GetImage()->GetHandle(), 6 });
                             }
                             shaderProgram.m_uniforms.push_back({ m_u_param, &uParam, 2 });
                             shaderProgram.m_handle = m_spotlightVariants.GetVariant(flags);
@@ -2097,7 +2166,7 @@ namespace hpl {
 
                 if (pMaterial->HasRefraction()) {
                     cBoundingVolume* pBV = obj->GetBoundingVolume();
-                    cRect2l clipRect = GetClipRectFromObject(obj, 0.2f, apFrustum, sharedData.m_size, fHalfFovTan);
+                    cRect2l clipRect = rendering::detail::GetClipRectFromObject(obj, 0.2f, apFrustum, sharedData.m_size, fHalfFovTan);
                     if (clipRect.w >= 0 || clipRect.h >= 0) {
                         GraphicsContext::ShaderProgram shaderInput;
                         shaderInput.m_handle = m_copyRegionProgram;
@@ -2119,7 +2188,7 @@ namespace hpl {
                 }
 
                 // TODO: need to implement this
-                if (pMaterial->HasWorldReflection() && obj->GetRenderType() == eRenderableType_SubMesh && false) {
+                if (pMaterial->HasWorldReflection() && obj->GetRenderType() == eRenderableType_SubMesh) {
                     auto* reflectionSubMeshEntity = static_cast<cSubMeshEntity*>(obj);
                     bool bReflectionIsInRange=true;
                     if(pMaterial->GetMaxReflectionDistance() > 0) {
@@ -2159,61 +2228,98 @@ namespace hpl {
                             reflectionOrigin,false, &reflectionProjectionMatrix, true);
                         reflectFrustum.SetInvertsCullMode(true);
                         
+                        std::vector<cPlanef> m_occlusionPlanes;
+                        
                         const float fMaxReflDist = pMaterial->GetMaxReflectionDistance();
                         if(pMaterial->GetMaxReflectionDistance() > 0) { 
                             //Forward and normal is aligned, the normal of plane becomes inverse forward
                             cVector3f frustumForward = apFrustum->GetForward()*-1;
-                            cPlanef maxReflectionDistPlane;
 			                float fFDotN = cMath::Vector3Dot(frustumForward, reflectionSurfaceNormal);
+                            cPlanef maxRelfctionDistPlane;
                             if(fFDotN <-0.99999f) {
                                 cVector3f vClipNormal, vClipPoint;
                                 vClipNormal = frustumForward*-1;
                                 vClipPoint = apFrustum->GetOrigin() + frustumForward * pMaterial->GetMaxReflectionDistance();
-                                maxReflectionDistPlane.FromNormalPoint(vClipNormal, vClipPoint);
-                            }
-                        } else {
-                            cPlanef cameraSpacePlane = cMath::TransformPlane(apFrustum->GetViewMatrix(), reflectPlane);
+                                maxRelfctionDistPlane.FromNormalPoint(vClipNormal, vClipPoint);
+                            } else {
+                                cPlanef cameraSpacePlane = cMath::TransformPlane(apFrustum->GetViewMatrix(), reflectPlane);
 
-                            cVector3f vPoint1 = cVector3f(0,0, -fMaxReflDist);
-                            cVector3f vPoint2 = cVector3f(0,0, -fMaxReflDist);
+                                cVector3f vPoint1 = cVector3f(0,0, -fMaxReflDist);
+                                cVector3f vPoint2 = cVector3f(0,0, -fMaxReflDist);
 
-                            //Vertical row (x always same)
-                            if(fabs(cameraSpacePlane.b) < 0.0001f)
-                            {
-                                vPoint1.x = (-cameraSpacePlane.c*-fMaxReflDist - cameraSpacePlane.d) / cameraSpacePlane.a;
-                                vPoint2 = vPoint1;
-                                vPoint2.y+=1;
-                            }
-                            //Horizontal row (y always same)
-                            else if(fabs(cameraSpacePlane.a) < 0.0001f)
-                            {
-                                vPoint1.y = (-cameraSpacePlane.c*-fMaxReflDist - cameraSpacePlane.d) / cameraSpacePlane.b;
-                                vPoint2 = vPoint1;
-                                vPoint2.x+=1;
-                            }
-                            //Oblique row (x and y changes)
-                            else
-                            {
-                                vPoint1.x = (-cameraSpacePlane.c*-fMaxReflDist - cameraSpacePlane.d) / cameraSpacePlane.a;
-                                vPoint2.y = (-cameraSpacePlane.c*-fMaxReflDist - cameraSpacePlane.d) / cameraSpacePlane.b;
-                            }
+                                //Vertical row (x always same)
+                                if(fabs(cameraSpacePlane.b) < 0.0001f)
+                                {
+                                    vPoint1.x = (-cameraSpacePlane.c*-fMaxReflDist - cameraSpacePlane.d) / cameraSpacePlane.a;
+                                    vPoint2 = vPoint1;
+                                    vPoint2.y+=1;
+                                }
+                                //Horizontal row (y always same)
+                                else if(fabs(cameraSpacePlane.a) < 0.0001f)
+                                {
+                                    vPoint1.y = (-cameraSpacePlane.c*-fMaxReflDist - cameraSpacePlane.d) / cameraSpacePlane.b;
+                                    vPoint2 = vPoint1;
+                                    vPoint2.x+=1;
+                                }
+                                //Oblique row (x and y changes)
+                                else
+                                {
+                                    vPoint1.x = (-cameraSpacePlane.c*-fMaxReflDist - cameraSpacePlane.d) / cameraSpacePlane.a;
+                                    vPoint2.y = (-cameraSpacePlane.c*-fMaxReflDist - cameraSpacePlane.d) / cameraSpacePlane.b;
+                                }
 
-                            cMatrixf mtxInvCamera = cMath::MatrixInverse(apFrustum->GetViewMatrix());
-                            vPoint1 = cMath::MatrixMul(mtxInvCamera, vPoint1);
-                            vPoint2 = cMath::MatrixMul(mtxInvCamera, vPoint2);
+                                cMatrixf mtxInvCamera = cMath::MatrixInverse(apFrustum->GetViewMatrix());
+                                vPoint1 = cMath::MatrixMul(mtxInvCamera, vPoint1);
+                                vPoint2 = cMath::MatrixMul(mtxInvCamera, vPoint2);
 
-                            cVector3f vNormal = cMath::Vector3Cross(vPoint1-reflectionOrigin, vPoint2-reflectionOrigin);
-                            vNormal.Normalize();
-                            //make sure normal has correct sign!
-                            if(cMath::Vector3Dot(reflectionSurfaceNormal, vNormal)<0) {
-                                vNormal = vNormal*-1;
+                                cVector3f vNormal = cMath::Vector3Cross(vPoint1-reflectionOrigin, vPoint2-reflectionOrigin);
+                                vNormal.Normalize();
+                                //make sure normal has correct sign!
+                                if(cMath::Vector3Dot(reflectionSurfaceNormal, vNormal)<0) {
+                                    vNormal = vNormal*-1;
+                                }
+                                
+                                maxRelfctionDistPlane.FromNormalPoint(vNormal, vPoint1);
                             }
+                            m_occlusionPlanes.push_back(maxRelfctionDistPlane);
                         }
-                        m_reflectionRenderList.Clear();
+                        const cMatrixf reflectionFrustumView = reflectFrustum.GetViewMatrix().GetTranspose();
+                        const cMatrixf reflectionFrustumProj = reflectFrustum.GetProjectionMatrix().GetTranspose();
+
+                        auto createReflectionViewConfig = [&](RenderTarget& rt) -> GraphicsContext::ViewConfiguration {
+                            GraphicsContext::ViewConfiguration viewConfig{ rt };
+                            viewConfig.m_projection = reflectionFrustumProj;
+                            viewConfig.m_view = reflectionFrustumView;
+                            viewConfig.m_viewRect = { 0, 0, sharedData.m_size.x, sharedData.m_size.y };
+                            return viewConfig;
+                        };
+
+                        [&] {
+                            GraphicsContext::ViewConfiguration viewConfig{ sharedData.m_gBufferReflection_full };
+                            viewConfig.m_viewRect = { 0, 0, sharedData.m_size.x, sharedData.m_size.y };
+                            viewConfig.m_clear = { 0, 1, 0, ClearOp::Depth | ClearOp::Stencil | ClearOp::Color };
+                            bgfx::touch(context.StartPass("Clear Depth", viewConfig));
+                        }();
+                        auto ZPassConfig = createReflectionViewConfig(sharedData.m_gBufferReflection_depth);
+                        m_reflectionRenderList.Setup(mfCurrentFrameTime, &reflectFrustum);
+                        detail::UpdateRenderableList(
+                            &m_reflectionRenderList, 
+                            this, 
+                            mpCurrentSettings->mpVisibleNodeTracker,
+                            apFrustum, mpCurrentWorld,"Z Reflection Pass", ZPassConfig, context, viewport, 
+                            eObjectVariabilityFlag_All, 
+                            mvCurrentOcclusionPlanes, 
+                            eRenderableFlag_VisibleInReflection);
+                        m_reflectionRenderList.Compile(eRenderListCompileFlag_Diffuse);
+                        auto viewGbufferCfg = createReflectionViewConfig(sharedData.m_gBufferReflection_full);
+                        detail::RenderGBufferPass(
+                            "Reflection_GBuffer", 
+                            context, 
+                            this, 
+                            viewGbufferCfg, 
+                            m_reflectionRenderList.GetRenderableItems(eRenderListType_Diffuse), viewport);
                     }
-
                 }
-
 
                 pMaterialType->ResolveShaderProgram(
                     renderMode, viewport, pMaterial, obj, this, [&](GraphicsContext::ShaderProgram& shaderInput) {
