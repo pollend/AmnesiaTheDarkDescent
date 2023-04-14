@@ -226,6 +226,7 @@ namespace hpl
                 case eMaterialRenderMode_Illumination:
                 case eMaterialRenderMode_IlluminationFog: {
                     if(bRefractionEnabled == false && cubemapImage) {
+                        blendMode = eMaterialBlendMode_Add;
                         if(normalImage) {
                             flags |= material::translucent::Translucent_NormalMap;
                             program.m_textures.push_back({m_s_normalMap, normalImage->GetHandle(), 2});

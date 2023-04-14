@@ -66,7 +66,7 @@ void main()
     #endif
     #ifdef USE_BLEND_MODE_PREMUL_ALPHA
        vFinalColor *= fFinalAlpha;
-        vFinalColor.xyz *= u_lightLevel;
+       vFinalColor.xyz *= u_lightLevel;
     #endif
 
     
