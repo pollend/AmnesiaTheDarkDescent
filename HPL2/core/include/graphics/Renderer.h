@@ -71,7 +71,6 @@ namespace hpl {
         */
         bool IsObjectVisible(iRenderable *apObject, tRenderableFlag alNeededFlags, std::span<cPlanef> occlusionPlanes);
 
-
         void RenderableMaterialIter(
             iRenderer* renderer, 
             std::span<iRenderable*> iter,
@@ -95,6 +94,8 @@ namespace hpl {
             iRenderableContainer* apContainer,
             std::span<cPlanef> clipPlanes,
             tRenderableFlag neededFlags);
+
+        cRect2l GetClipRectFromObject(iRenderable* apObject, float afPaddingPercent, cFrustum* apFrustum, const cVector2l& avScreenSize, float afHalfFovTan);
     }
 
     class cNodeOcclusionPair
@@ -143,7 +144,6 @@ namespace hpl {
         void AssignOcclusionObject(iRenderer *apRenderer, void *apSource, int alCustomIndex, iVertexBuffer *apVtxBuffer, cMatrixf *apMatrix, bool abDepthTest);
         int RetrieveOcclusionObjectSamples(iRenderer *apRenderer, void *apSource, int alCustomIndex);
         void ClearOcclusionObjects(iRenderer *apRenderer);
-        void WaitAndRetrieveAllOcclusionQueries(iRenderer *apRenderer);
 
         ////////////////////////////
         //Data
@@ -291,14 +291,6 @@ namespace hpl {
 
         iVertexBuffer* GetShapeBoxVertexBuffer(){ return mpShapeBox; }
 
-        void AssignOcclusionObject(void *apSource, int alCustomIndex, iVertexBuffer *apVtxBuffer, cMatrixf *apMatrix, bool abDepthTest);
-        int RetrieveOcclusionObjectSamples(void *apSource, int alCustomIndex);
-        /**
-        * Retrieves number of samples for all active occlusion queries. It does not release the queries, but the values are gotten and stored in query.
-        */
-        void WaitAndRetrieveAllOcclusionQueries();
-
-
         //Temp variables used by material.
         float GetTempAlpha(){ return mfTempAlpha; }
 
@@ -329,32 +321,14 @@ namespace hpl {
         void BeginRendering(float afFrameTime,cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings,
                             bool abSendFrameBufferToPostEffects, bool abAtStartOfRendering=true);
 
-        cShadowMapData* GetShadowMapData(eShadowMapResolution aResolution, iLight *apLight);
- 
-        void OcclusionQueryBoundingBoxTest(bgfx::ViewId view, 
-            GraphicsContext& context, 
-            bgfx::OcclusionQueryHandle handle, 
-            const cFrustum& frustum,
-            const cMatrixf& transform, 
-            RenderTarget& rt,Cull cull = Cull::CounterClockwise);
-
-
-        /**
-         * Only depth is needed for framebuffer. All objects needs to be added to renderlist!
-         */
-        void AssignAndRenderOcclusionQueryObjects(bgfx::ViewId view, GraphicsContext& context, bool abSetFrameBuffer, bool abUsePosAndSize);
+        // cShadowMapData* GetShadowMapData(eShadowMapResolution aResolution, iLight *apLight);
 
         /**
          * Checks if the renderable object is 1) submeshentity 2) is onesided plane 3)is away from camera. If all are true, FALSE is returned.
          */
         bool CheckRenderablePlaneIsVisible(iRenderable *apObject, cFrustum *apFrustum);
-        /**
-         * afHalfFovTan == 0 means that the function calculates tan.
-         */
-        cRect2l GetClipRectFromObject(iRenderable *apObject, float afPaddingPercent, cFrustum *apFrustum, const cVector2l &avScreenSize, float afHalfFovTan);
 
         cResources* mpResources;
-        bgfx::ProgramHandle m_nullShader;
 
         tString msName;
 
@@ -383,11 +357,6 @@ namespace hpl {
         float mfTimeCount;
 
         std::vector<cPlanef> mvCurrentOcclusionPlanes;
-
-        int mlActiveOcclusionQueryNum;
-        std::vector<cOcclusionQueryObject*> mvSortedOcclusionObjects;
-        std::array<absl::InlinedVector<cShadowMapData, 10>, eShadowMapResolution_LastEnum> m_shadowMapData;
-
         float mfTempAlpha;
 
         static eShadowMapQuality mShadowMapQuality;

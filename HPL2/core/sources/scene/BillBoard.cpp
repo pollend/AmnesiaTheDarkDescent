@@ -402,21 +402,6 @@ namespace hpl {
 		handler(m_occlusionMax, DepthTest::Always, layout, mtxTransform);
 	}
 
-	void cBillboard::AssignOcclusionQuery(iRenderer *apRenderer)
-	{
-		if(mbIsHalo==false) return;
-
-		m_mtxHaloOcclusionMatrix = cMath::MatrixScale(mvHaloSourceSize);
-		m_mtxHaloOcclusionMatrix = cMath::MatrixMul(GetWorldMatrix(), m_mtxHaloOcclusionMatrix);
-
-		iVertexBuffer *pShapeVtx = apRenderer->GetShapeBoxVertexBuffer();
-
-		apRenderer->AssignOcclusionObject(this,0, pShapeVtx, &m_mtxHaloOcclusionMatrix, true);
-		apRenderer->AssignOcclusionObject(this,1, pShapeVtx, &m_mtxHaloOcclusionMatrix, false);
-	}
-
-	//-----------------------------------------------------------------------
-
 	bool cBillboard::RetrieveOcculsionQuery(iRenderer *apRenderer)
 	{
 		if(mbIsHalo==false) return  true;

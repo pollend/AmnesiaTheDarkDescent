@@ -12,27 +12,25 @@ SAMPLER2D(s_reflectionMap, 4);
 uniform mat4 u_mtxInvViewRotation;
 uniform vec4 u_fogColor;
 
-uniform vec4 u_params[4];
-#define u_frenselBiasPow (u_params[0].xy)
-#define u_fogStart (u_params[0].z)
-#define u_fogLength (u_params[0].w)
+uniform vec4 u_param[4];
+#define u_frenselBiasPow (u_param[0].xy)
+#define u_fogStart (u_param[0].z)
+#define u_fogLength (u_param[0].w)
 
-#define u_reflectionMapSizeMul (u_params[1].xy)
-#define u_reflectionFadeStart (u_params[1].z)
-#define u_reflectionFadeLength (u_params[1].w)
+#define u_reflectionMapSizeMul (u_param[1].xy)
+#define u_reflectionFadeStart (u_param[1].z)
+#define u_reflectionFadeLength (u_param[1].w)
 
-#define u_falloffExp (u_params[2].x)
-#define u_afT (u_params[2].y)
-#define u_afWaveAmplitude (u_params[2].z)
-#define u_afWaveFreq (u_params[2].w)
+#define u_falloffExp (u_param[2].x)
+#define u_afT (u_param[2].y)
+#define u_afWaveAmplitude (u_param[2].z)
+#define u_afWaveFreq (u_param[2].w)
 
-#define u_afRefractionScale (u_params[3].x)
-#define u_useRefractionFading (u_params[3].y)
-
+#define u_afRefractionScale (u_param[3].x)
+#define u_useRefractionFading (u_param[3].y)
 
 void main()
 {
-	vec2 ndc = gl_FragCoord.xy * u_viewTexel.xy;
 
 	///////////////////////////////
 	//Get the two uv coords
@@ -62,10 +60,10 @@ void main()
 	vec2 vDistortedScreenPos = vec2(0, 0);
 	#ifdef USE_REFRACTION
 		float fInvDist = min(1.0 / v_position.z, 10.0);
-		vDistortedScreenPos = ndc.xy + vFinalNormal.xy * u_afRefractionScale * fInvDist;
-		vRefractionColor = texture2D(s_refractionMap, vDistortedScreenPos);
+		vDistortedScreenPos = gl_FragCoord.xy + vFinalNormal.xy * u_afRefractionScale * fInvDist;
+		vRefractionColor = texture2D(s_refractionMap, vDistortedScreenPos * u_viewTexel.xy);
 		if(vRefractionColor.a < 0.5) {
-			vRefractionColor = texture2D(s_refractionMap, ndc.xy);
+			vRefractionColor = texture2D(s_refractionMap, u_viewTexel.xy * gl_FragCoord.xy);
 		}
 	#endif
 	
@@ -93,7 +91,7 @@ void main()
 			
 			vReflectionColor = textureCube(s_envMap,vEnvUv);
 		#else
-			vReflectionColor = texture2D(s_reflectionMap, vDistortedScreenPos * u_reflectionMapSizeMul);
+			vReflectionColor = texture2D(s_reflectionMap, vDistortedScreenPos * u_viewTexel.xy);
 		#endif
 	#endif
 	

@@ -121,16 +121,15 @@ namespace hpl
 
     cMaterialType_Translucent::~cMaterialType_Translucent()
     {
-
     }
 
     void cMaterialType_Translucent::LoadData()
     {
     }
+
     void cMaterialType_Translucent::DestroyData()
     {
     }
-
 
     void cMaterialType_Translucent::ResolveShaderProgram(
             eMaterialRenderMode aRenderMode,
@@ -173,7 +172,7 @@ namespace hpl
 
                 float frenselBiasPow[2];
                 float rimLightMulPow[2];
-            } uniform = {0};
+            } uniform = {{0}};
 
             uniform.frenselBiasPow[0] = pVars->mfFrenselBias;
             uniform.frenselBiasPow[1] = pVars->mfFrenselPow;
@@ -185,7 +184,7 @@ namespace hpl
                 flags |= material::translucent::Translucent_UseFog;
                 uniform.fogStart = pWorld->GetFogStart();
                 uniform.fogLength = pWorld->GetFogEnd() - pWorld->GetFogStart();
-                uniform.oneMinusFogAlpha = 1 - pWorld->GetFogColor().a;
+                uniform.oneMinusFogAlpha = 1.0f - pWorld->GetFogColor().a;
                 uniform.falloffExp = pWorld->GetFogFalloffExp();
             }
 

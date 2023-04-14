@@ -38,13 +38,13 @@ cLuxEffectRenderer::cLuxEffectRenderer()
      m_boundPostEffectData = std::move(UniqueViewportData<LuxPostEffectData>([](cViewport& viewport) {
         cGraphics* pGraphics = gpBase->mpEngine->GetGraphics();
         cRendererDeferred* pRendererDeferred = static_cast<cRendererDeferred*>(pGraphics->GetRenderer(eRenderer_Main));
-        auto& gbuffer = pRendererDeferred->GetSharedData(viewport);
+        auto& sharedData = pRendererDeferred->GetSharedData(viewport);
 
         auto blurImageDesc = [&]
         {
             auto desc = ImageDescriptor::CreateTexture2D(
-                gbuffer.m_size.x / cLuxEffectRenderer::BlurSize,
-                gbuffer.m_size.y / cLuxEffectRenderer::BlurSize,
+                sharedData.m_size.x / cLuxEffectRenderer::BlurSize,
+                sharedData.m_size.y / cLuxEffectRenderer::BlurSize,
                 false,
                 bgfx::TextureFormat::Enum::RGBA8);
             desc.m_configuration.m_rt = RTType::RT_Write;
@@ -54,8 +54,8 @@ cLuxEffectRenderer::cLuxEffectRenderer()
         };
         
         auto postEffect = std::make_unique<LuxPostEffectData>();
-        postEffect->m_outputImage = gbuffer.m_outputImage;
-        postEffect->m_gBufferDepthStencil = gbuffer.m_gBufferDepthStencil;
+        postEffect->m_outputImage = sharedData.m_gBuffer.m_outputImage;
+        postEffect->m_gBufferDepthStencil = sharedData.m_gBuffer.m_depthStencilImage;
 
         postEffect->m_blurTarget[0] = RenderTarget(blurImageDesc());
         postEffect->m_blurTarget[1] = RenderTarget(blurImageDesc());
@@ -65,7 +65,7 @@ cLuxEffectRenderer::cLuxEffectRenderer()
             postEffect->m_outputTarget = RenderTarget(image);
         }
     
-        auto outlineImageDesc = ImageDescriptor::CreateTexture2D(gbuffer.m_size.x, gbuffer.m_size.y, false, bgfx::TextureFormat::RGBA8);
+        auto outlineImageDesc = ImageDescriptor::CreateTexture2D(sharedData.m_size.x, sharedData.m_size.y, false, bgfx::TextureFormat::RGBA8);
         outlineImageDesc.m_configuration.m_rt = RTType::RT_Write;
         auto outlineImage = std::make_shared<Image>();
         outlineImage->Initialize(outlineImageDesc);
@@ -77,13 +77,13 @@ cLuxEffectRenderer::cLuxEffectRenderer()
     }, [&](cViewport& viewport, LuxPostEffectData& target) {
         cGraphics* pGraphics = gpBase->mpEngine->GetGraphics();
         cRendererDeferred* pRendererDeferred = static_cast<cRendererDeferred*>(pGraphics->GetRenderer(eRenderer_Main));
-        auto& gbuffer = pRendererDeferred->GetSharedData(viewport);
+        auto& sharedData = pRendererDeferred->GetSharedData(viewport);
 
         // as long as the output image and depth stencil image are the same, we can use the same render target 
             // else we need to create a new one
         return viewport.GetRenderTarget().IsValid() 
-            && gbuffer.m_outputImage == target.m_outputImage
-            && gbuffer.m_gBufferDepthStencil == target.m_gBufferDepthStencil;
+            && sharedData.m_gBuffer.m_outputImage == target.m_outputImage
+            && sharedData.m_gBuffer.m_depthStencilImage == target.m_gBufferDepthStencil;
     }));
 
     m_alphaRejectProgram = hpl::loadProgram("vs_alpha_reject", "fs_alpha_reject");
@@ -223,8 +223,6 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
             shaderInput.m_configuration.m_alphaBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
             shaderInput.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
 
-            // shaderInput.m_projection = currentFrustum->GetProjectionMatrix().GetTranspose();
-            // shaderInput.m_view = currentFrustum->GetViewMatrix().GetTranspose();
             shaderInput.m_modelTransform = pObject->GetModelMatrixPtr() ? pObject->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity;
             pObject->GetVertexBuffer()->GetLayoutStream(layoutInput);
 

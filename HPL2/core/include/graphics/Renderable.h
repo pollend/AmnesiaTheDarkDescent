@@ -73,7 +73,6 @@ namespace hpl {
 		virtual bool UsesOcclusionQuery(){ return false; }
 
 		virtual void ResolveOcclusionPass(iRenderer *apRenderer, std::function<void(bgfx::OcclusionQueryHandle, DepthTest test, GraphicsContext::LayoutStream&, const cMatrixf& transform)> handler){}
-		virtual void AssignOcclusionQuery(iRenderer *apRenderer){}
 		virtual bool RetrieveOcculsionQuery(iRenderer *apRenderer){ return true;}
 
 		virtual void SetRenderFlagBit(tRenderableFlag alFlagBit, bool abSet);

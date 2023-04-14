@@ -147,15 +147,13 @@ namespace hpl {
             params.u_frenselBiasPow[1] = pVars->mfFrenselPow;
             params.u_fogStart = pWorld->GetFogStart();
             params.u_fogEnd = pWorld->GetFogEnd() - pWorld->GetFogStart();
-            params.reflectionMapSizeMul[0] = reflectionMapSizeMul.x;
-            params.reflectionMapSizeMul[1] = reflectionMapSizeMul.y;
             params.reflectionFadeStart = pVars->mfReflectionFadeStart;
             params.reflectionFadeStarLength = pVars->mfReflectionFadeEnd - pVars->mfReflectionFadeStart;
             params.falloffExp = pWorld->GetFogFalloffExp();
             params.afT = apRenderer->GetTimeCount() * pVars->mfWaveSpeed;
-            params.afWaveAmplitude = pVars->mfWaveAmplitude;
-            params.afWaveFreq = pVars->mfWaveFreq;
-            params.afRefractionScale = pVars->mfRefractionScale;
+            params.afWaveAmplitude = pVars->mfWaveAmplitude  * 0.04f;
+            params.afWaveFreq = pVars->mfWaveFreq * 10.0f;
+            params.afRefractionScale = pVars->mfRefractionScale * static_cast<float>(viewport.GetSize().x);
             params.useRefractionFading = pVars->mfReflectionFadeEnd > 0.0f ? 1.0f : 0.0f;
 
             cColor fogColor = pWorld->GetFogColor();
@@ -171,6 +169,7 @@ namespace hpl {
                 auto* deferredRenderer = static_cast<cRendererDeferred*>(apRenderer);
                 auto& sharedData = deferredRenderer->GetSharedData(viewport);
                 program.m_textures.push_back({m_s_refractionMap, sharedData.m_refractionImage->GetHandle(), 3});
+                program.m_textures.push_back({m_s_reflectionMap, sharedData.m_gBufferReflection.m_colorImage->GetHandle(), 4});
             }
 
             program.m_uniforms.push_back({ m_u_param, &params, 4 });
