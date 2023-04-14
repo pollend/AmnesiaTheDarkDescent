@@ -42,7 +42,7 @@ translucent_variants = [
     {"bit": 2, "defines": ["USE_NORMAL_MAP"]},
     {"bit": 4, "defines": ["USE_REFRACTION"]},
     {"bit": 8, "defines": ["USE_CUBE_MAP"]},
-    {"bit": 16, "defines": ["USE_USE_FOG"]},
+    {"bit": 16, "defines": ["USE_FOG"]},
 ]
 
 spotlight_variants = [

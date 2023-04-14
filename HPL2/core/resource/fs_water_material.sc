@@ -29,10 +29,8 @@ uniform vec4 u_param[4];
 #define u_afRefractionScale (u_param[3].x)
 #define u_useRefractionFading (u_param[3].y)
 
-
 void main()
 {
-	vec2 ndc = gl_FragCoord.xy * u_viewTexel.xy;
 
 	///////////////////////////////
 	//Get the two uv coords
@@ -62,10 +60,10 @@ void main()
 	vec2 vDistortedScreenPos = vec2(0, 0);
 	#ifdef USE_REFRACTION
 		float fInvDist = min(1.0 / v_position.z, 10.0);
-		vDistortedScreenPos = ndc.xy + vFinalNormal.xy * u_afRefractionScale * fInvDist;
-		vRefractionColor = texture2D(s_refractionMap, vDistortedScreenPos);
+		vDistortedScreenPos = gl_FragCoord.xy + vFinalNormal.xy * u_afRefractionScale * fInvDist;
+		vRefractionColor = texture2D(s_refractionMap, vDistortedScreenPos * u_viewTexel.xy);
 		if(vRefractionColor.a < 0.5) {
-			vRefractionColor = texture2D(s_refractionMap, ndc.xy);
+			vRefractionColor = texture2D(s_refractionMap, u_viewTexel.xy * gl_FragCoord.xy);
 		}
 	#endif
 	
@@ -93,7 +91,7 @@ void main()
 			
 			vReflectionColor = textureCube(s_envMap,vEnvUv);
 		#else
-			vReflectionColor = texture2D(s_reflectionMap, vDistortedScreenPos * u_reflectionMapSizeMul);
+			vReflectionColor = texture2D(s_reflectionMap, vDistortedScreenPos * u_viewTexel.xy);
 		#endif
 	#endif
 	

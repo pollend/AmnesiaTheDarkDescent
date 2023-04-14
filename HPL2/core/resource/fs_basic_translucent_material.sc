@@ -39,7 +39,7 @@ void main()
     //Fog
 
     float fFinalAlpha = u_alpha;
-    #ifdef USE_USE_FOG
+    #ifdef USE_FOG
         float fFogAmount = (-v_position.z - u_fogStart) / u_fogLength;
         fFogAmount = clamp(fFogAmount, 0.0, 1.0);
         fFogAmount = pow(fFogAmount, u_falloffExp);
@@ -58,8 +58,8 @@ void main()
         vFinalColor.xyz += (vec3(1.0,1.0, 1.0) - vFinalColor.xyz) * (1.0-fFinalAlpha);
     #endif
     #ifdef USE_BLEND_MODE_MULX2
-        float fBlendMulAlpha = u_lightLevel*fFinalAlpha;
-        vFinalColor.xyz = mul(vFinalColor.xyz, fBlendMulAlpha) + mul(vec3(0.5,0.5,0.5), (1.0 - fBlendMulAlpha));
+        float fBlendMulAlpha = u_lightLevel * fFinalAlpha;
+        vFinalColor.xyz = mul(vFinalColor.xyz, fBlendMulAlpha) + mul(vec3(0.5,0.5,0.5), vec3(1.0 - fBlendMulAlpha));
     #endif
     #ifdef USE_BLEND_MODE_ALPHA
         vFinalColor.xyz *= u_lightLevel;
@@ -88,7 +88,7 @@ void main()
             
         ///////////////////////
         // Sample refaraction map (using distorted coords)
-        vec2 vDistortedScreenPos = gl_FragCoord.xy * u_viewTexel.xy;
+        vec2 vDistortedScreenPos = vec2(0,0);
         #ifdef USE_NORMAL_MAP
             //Should the screen normal or texture normal be used?
             vec2 vRefractOffset;
@@ -99,12 +99,12 @@ void main()
             }
             
             vRefractOffset *= u_refractionScale * invDist;
-            vDistortedScreenPos += (vRefractOffset * u_viewTexel.xy); 
+            vDistortedScreenPos += gl_FragCoord.xy + vRefractOffset; 
         #else
-            vDistortedScreenPos += (screenNormal.xy  * u_refractionScale * invDist) * u_viewTexel.xy;
+            vDistortedScreenPos += gl_FragCoord.xy + (screenNormal.xy  * u_refractionScale * invDist);
         #endif
         
-        vec4 vRefractionColor = texture2D(s_refractionMap, vDistortedScreenPos);
+        vec4 vRefractionColor = texture2D(s_refractionMap, vDistortedScreenPos * u_viewTexel.xy);
         
         ///////////////////////
         // Do blending in shader (blend mode is None with refraction)
@@ -147,7 +147,7 @@ void main()
             vReflectionColor *= fEnvMapAlpha;
         }
         
-        vFinalColor.xyz += vReflectionColor.xyz * fFresnel * fFinalAlpha*u_lightLevel;
+        vFinalColor.xyz += vReflectionColor.xyz * fFresnel * fFinalAlpha * u_lightLevel;
         
         ///////////////////////////////
         //Rim reflections

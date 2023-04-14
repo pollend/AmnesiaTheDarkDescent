@@ -11,5 +11,10 @@ void main()
 {
 	float rightLight = dot(v_normal, vec3(0.0, 0.0, -1.0));
 	rightLight = 1.0 - abs(rightLight);
-	gl_FragColor = texture2D(s_diffuseMap, v_texcoord0) * vec4(0.5, 0.5, 1.0, 0.0) * rightLight * u_colorMul;
+	vec4 color = texture2D(s_diffuseMap, v_texcoord0);
+	
+	if(color.w < 0.5)
+		discard;
+
+	gl_FragColor = color * vec4(0.5, 0.5, 1.0, 0.0) * rightLight * u_colorMul;
 }
