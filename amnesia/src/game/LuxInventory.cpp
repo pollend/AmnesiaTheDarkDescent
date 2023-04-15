@@ -71,7 +71,7 @@ cLuxInventory::cLuxInventory() : iLuxUpdateable("LuxInventory")
 
 	///////////////////////////////
 	//Load settings
-	mvScreenSize = gpBase->mpEngine->GetGraphics()->GetLowLevel()->GetScreenSizeFloat();
+	// mvScreenSize = gpBase->mpEngine->GetGraphics()->GetLowLevel()->GetScreenSizeFloat();
 
 	mfFadeInTime = gpBase->mpMenuCfg->GetFloat("Inventory","FadeInTime", 10);
 	mfFadeOutTime = gpBase->mpMenuCfg->GetFloat("Inventory","FadeOutTime",10);
@@ -1590,7 +1590,7 @@ void cLuxInventory::RenderBackgroundImage()
 	auto screenTarget = RenderTarget(m_screenImage);
 
 	auto screenSize = viewport->GetSize();
-	cRect2l screenRect(0, 0, mvScreenSize.x, mvScreenSize.y);
+	cRect2l screenRect(0, 0, screenSize.x, screenSize.y);
 
 	graphicsContext.CopyTextureToFrameBuffer(
 		*renderer->GetOutputImage(*viewport), screenRect, screenTarget);

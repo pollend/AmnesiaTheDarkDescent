@@ -82,7 +82,7 @@ protected:
 
 	cWidgetWindow *mpWindow;
 
-	cVector2f mvScreenSize;
+	// cVector2f mvScreenSize;
 };
 
 

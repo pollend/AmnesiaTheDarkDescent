@@ -174,36 +174,6 @@ namespace hpl {
                 m_refractionImage = std::move(buffer.m_refractionImage);
                 m_gBuffer = std::move(buffer.m_gBuffer);
                 m_gBufferReflection = std::move(buffer.m_gBufferReflection);
-                
-                // m_gBufferColor = std::move(buffer.m_gBufferColor);
-                // m_gBufferNormalImage = std::move(buffer.m_gBufferNormalImage);
-                // m_gBufferPositionImage = std::move(buffer.m_gBufferPositionImage);
-                // m_gBufferSpecular = std::move(buffer.m_gBufferSpecular);
-                // m_gBufferDepthStencil = std::move(buffer.m_gBufferDepthStencil);
-
-                // m_outputImage = std::move(buffer.m_outputImage);
-                // m_gBuffer_full = std::move(buffer.m_gBuffer_full);
-                // m_gBuffer_colorAndDepth = std::move(buffer.m_gBuffer_colorAndDepth);
-                // m_gBuffer_color = std::move(buffer.m_gBuffer_color);
-                // m_gBuffer_depth = std::move(buffer.m_gBuffer_depth);
-                // m_gBuffer_normals = std::move(buffer.m_gBuffer_normals);
-                // m_gBuffer_linearDepth = std::move(buffer.m_gBuffer_linearDepth);
-                // m_output_target = std::move(buffer.m_output_target);
-
-                // m_gBufferReflectionColor = std::move(buffer.m_gBufferReflectionColor);
-                // m_gBufferReflectionNormalImage = std::move(buffer.m_gBufferReflectionNormalImage);
-                // m_gBufferReflectionPositionImage = std::move(buffer.m_gBufferReflectionPositionImage);
-                // m_gBufferReflectionSpecular = std::move(buffer.m_gBufferReflectionSpecular);
-                // m_gBufferReflectionDepthStencil = std::move(buffer.m_gBufferReflectionDepthStencil);
-                // m_outputReflectionImage = std::move(buffer.m_outputReflectionImage);
-
-                // m_gBufferReflection_full = std::move(buffer.m_gBufferReflection_full);
-                // m_gBufferReflection_colorAndDepth = std::move(buffer.m_gBufferReflection_colorAndDepth);
-                // m_gBufferReflection_color = std::move(buffer.m_gBufferReflection_color);
-                // m_gBufferReflection_depth = std::move(buffer.m_gBufferReflection_depth);
-                // m_gBufferReflection_normals = std::move(buffer.m_gBufferReflection_normals);
-                // m_gBufferReflection_linearDepth = std::move(buffer.m_gBufferReflection_linearDepth);
-                // m_outputReflection_target = std::move(buffer.m_outputReflection_target);
 
             }
 
@@ -213,35 +183,6 @@ namespace hpl {
             GBuffer m_gBuffer;
             GBuffer m_gBufferReflection;
 
-            // std::shared_ptr<Image> m_gBufferColor;
-            // std::shared_ptr<Image> m_gBufferNormalImage;
-            // std::shared_ptr<Image> m_gBufferPositionImage;
-            // std::shared_ptr<Image> m_gBufferSpecular;
-            // std::shared_ptr<Image> m_gBufferDepthStencil;
-            // std::shared_ptr<Image> m_outputImage;
-
-            // RenderTarget m_gBuffer_full;
-            // RenderTarget m_gBuffer_colorAndDepth;
-            // RenderTarget m_gBuffer_color;
-            // RenderTarget m_gBuffer_depth;
-            // RenderTarget m_gBuffer_normals;
-            // RenderTarget m_gBuffer_linearDepth;
-            // RenderTarget m_output_target; // used for rendering to the screen
-
-            // std::shared_ptr<Image> m_gBufferReflectionColor;
-            // std::shared_ptr<Image> m_gBufferReflectionNormalImage;
-            // std::shared_ptr<Image> m_gBufferReflectionPositionImage;
-            // std::shared_ptr<Image> m_gBufferReflectionSpecular;
-            // std::shared_ptr<Image> m_gBufferReflectionDepthStencil;
-            // std::shared_ptr<Image> m_outputReflectionImage;
-
-            // RenderTarget m_gBufferReflection_full;
-            // RenderTarget m_gBufferReflection_colorAndDepth;
-            // RenderTarget m_gBufferReflection_color;
-            // RenderTarget m_gBufferReflection_depth;
-            // RenderTarget m_gBufferReflection_normals;
-            // RenderTarget m_gBufferReflection_linearDepth;
-            // RenderTarget m_outputReflection_target; // used for rendering to the screen
         };
 
         cRendererDeferred(cGraphics* apGraphics, cResources* apResources);

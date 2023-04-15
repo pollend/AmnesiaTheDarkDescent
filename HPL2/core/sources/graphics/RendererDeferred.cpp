@@ -946,23 +946,6 @@ namespace hpl {
                     gBuffer.m_specularImage = colorImage();
                     gBuffer.m_depthStencilImage = depthImage();
                     gBuffer.m_outputImage = colorImage();
-                    
-                    // {
-                    //     std::array<std::shared_ptr<Image>, 5> images = { gBuffer.m_colorImage,
-                    //                                                     gBuffer.m_normalImage,
-                    //                                                     gBuffer.m_positionImage,
-                    //                                                     gBuffer.m_specularImage,
-                    //                                                     gBuffer.m_depthStencilImage };
-                    //     gBuffer.m_outputTarget = RenderTarget(std::span(images));
-                    // }
-                    // {
-                    //     std::array<std::shared_ptr<Image>, 2> images = { gBuffer.m_colorImage, gBuffer.m_depthStencilImage };
-                    //     gBuffer.m_colorAndDepthTarget = RenderTarget(std::span(images));
-                    // }
-                    // {
-                    //     std::array<std::shared_ptr<Image>, 2> images = { gBuffer.m_outputImage, gBuffer.m_depthStencilImage };
-                    //     gBuffer.m_outputTarget = RenderTarget(std::span(images));
-                    // }
 
                     gBuffer.m_colorTarget = RenderTarget(gBuffer.m_colorImage);
                     gBuffer.m_depthTarget = RenderTarget(gBuffer.m_depthStencilImage);
@@ -1001,64 +984,6 @@ namespace hpl {
                     sharedData->m_refractionImage = image;
                 }
 
-                // sharedData->m_gBufferColor = colorImage();
-                // sharedData->m_gBufferNormalImage = normalImage();
-                // sharedData->m_gBufferPositionImage = positionImage();
-                // sharedData->m_gBufferSpecular = colorImage();
-                // sharedData->m_gBufferDepthStencil = depthImage();
-                // sharedData->m_outputImage = colorImage();
-               
-                // {
-                //     std::array<std::shared_ptr<Image>, 5> images = { sharedData->m_gBufferColor,
-                //                                                      sharedData->m_gBufferNormalImage,
-                //                                                      sharedData->m_gBufferPositionImage,
-                //                                                      sharedData->m_gBufferSpecular,
-                //                                                      sharedData->m_gBufferDepthStencil };
-                //     sharedData->m_gBuffer_full = RenderTarget(std::span(images));
-                // }
-                // {
-                //     std::array<std::shared_ptr<Image>, 2> images = { sharedData->m_gBufferColor, sharedData->m_gBufferDepthStencil };
-                //     sharedData->m_gBuffer_colorAndDepth = RenderTarget(std::span(images));
-                // }
-                // {
-                //     std::array<std::shared_ptr<Image>, 2> images = { sharedData->m_outputImage, sharedData->m_gBufferDepthStencil };
-                //     sharedData->m_output_target = RenderTarget(std::span(images));
-                // }
-
-                // sharedData->m_gBuffer_color = RenderTarget(sharedData->m_gBufferColor);
-                // sharedData->m_gBuffer_depth = RenderTarget(sharedData->m_gBufferDepthStencil);
-                // sharedData->m_gBuffer_normals = RenderTarget(sharedData->m_gBufferNormalImage);
-                // sharedData->m_gBuffer_linearDepth = RenderTarget(sharedData->m_gBufferPositionImage);
-
-                // sharedData->m_gBufferReflectionColor = colorImage();
-                // sharedData->m_gBufferReflectionNormalImage = normalImage();
-                // sharedData->m_gBufferReflectionPositionImage = positionImage();
-                // sharedData->m_gBufferReflectionSpecular = colorImage();
-                // sharedData->m_gBufferReflectionDepthStencil = depthImage();
-                // sharedData->m_outputReflectionImage = colorImage();
-
-                // sharedData->m_gBufferReflection_color = RenderTarget(sharedData->m_gBufferReflectionColor);
-                // sharedData->m_gBufferReflection_depth = RenderTarget(sharedData->m_gBufferReflectionDepthStencil);
-                // sharedData->m_gBufferReflection_normals = RenderTarget(sharedData->m_gBufferReflectionNormalImage);
-                // sharedData->m_gBufferReflection_linearDepth = RenderTarget(sharedData->m_gBufferReflectionPositionImage);
-
-                // {
-                //     std::array<std::shared_ptr<Image>, 5> images = { sharedData->m_gBufferReflectionColor,
-                //                                                      sharedData->m_gBufferReflectionNormalImage,
-                //                                                      sharedData->m_gBufferReflectionPositionImage,
-                //                                                      sharedData->m_gBufferReflectionSpecular,
-                //                                                      sharedData->m_gBufferReflectionDepthStencil };
-                //     sharedData->m_gBufferReflection_full = RenderTarget(std::span(images));
-                // }
-                // {
-                //     std::array<std::shared_ptr<Image>, 2> images = { sharedData->m_gBufferReflectionColor, sharedData->m_gBufferReflectionDepthStencil };
-                //     sharedData->m_gBufferReflection_colorAndDepth = RenderTarget(std::span(images));
-                // }
-                // {
-                //     std::array<std::shared_ptr<Image>, 2> images = { sharedData->m_outputReflectionImage, sharedData->m_gBufferReflectionDepthStencil };
-                //     sharedData->m_outputReflection_target = RenderTarget(std::span(images));
-                // }
-                
                 return sharedData;
             },
             [](cViewport& viewport, SharedViewportData& target) {

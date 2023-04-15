@@ -135,7 +135,7 @@ void cLuxPostEffect_Insanity::RenderEffect(cPostEffectComposite& compositor, cVi
     GraphicsContext::ViewConfiguration viewConfiguration {target};
     viewConfiguration.m_viewRect = cRect2l(0, 0, viewportSize.x, viewportSize.y);
     viewConfiguration.m_projection = projMtx;
-    bgfx::ViewId view = context.StartPass("Bloom Pass", viewConfiguration);
+    bgfx::ViewId view = context.StartPass("DDS_Insanity", viewConfiguration);
 
     struct {
         float alpha;
@@ -144,7 +144,8 @@ void cLuxPostEffect_Insanity::RenderEffect(cPostEffectComposite& compositor, cVi
         float waveAlpha;
 
         float zoomAlpha;
-        float pad[3];
+        float screenSize[2];
+        float pad;
     } param = { 0 };
 
     int lAmp0 = static_cast<int>(mfAnimCount);
@@ -168,8 +169,10 @@ void cLuxPostEffect_Insanity::RenderEffect(cPostEffectComposite& compositor, cVi
     param.ampT = fAmpT;
     param.waveAlpha = mfWaveAlpha;
     param.alpha = 1.0f;
-
-    shaderProgram.m_uniforms.push_back({ m_u_param, &param, 1 });
+    param.screenSize[0] = viewportSize.x;
+    param.screenSize[1] = viewportSize.y;
+    
+    shaderProgram.m_uniforms.push_back({ m_u_param, &param, 2 });
     GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
 
     context.Submit(view, request);
