@@ -59,7 +59,7 @@ void main()
     #endif
     #ifdef USE_BLEND_MODE_MULX2
         float fBlendMulAlpha = u_lightLevel * fFinalAlpha;
-        vFinalColor.xyz = mul(vFinalColor.xyz, fBlendMulAlpha) + mul(vec3(0.5,0.5,0.5), vec3(1.0 - fBlendMulAlpha));
+        vFinalColor.xyz = mul(vFinalColor.xyz, fBlendMulAlpha) + mul(vec3(0.5,0.5,0.5), (1.0 - fBlendMulAlpha));
     #endif
     #ifdef USE_BLEND_MODE_ALPHA
         vFinalColor.xyz *= u_lightLevel;

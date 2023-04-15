@@ -283,25 +283,22 @@ namespace hpl {
             switch (light.m_light->GetLightType()) {
             case eLightType_Point:
                 return cMath::MatrixScale(light.m_light->GetRadius() * kLightRadiusMul_Medium);
-            case eLightType_Spot:
-                {
-                    cLightSpot* pLightSpot = static_cast<cLightSpot*>(light.m_light);
+            case eLightType_Spot: {
+                cLightSpot* pLightSpot = static_cast<cLightSpot*>(light.m_light);
 
-                    float fFarHeight = pLightSpot->GetTanHalfFOV() * pLightSpot->GetRadius() * 2.0f;
-                    // Note: Aspect might be wonky if there is no gobo.
-                    float fFarWidth = fFarHeight * pLightSpot->GetAspect();
+                float fFarHeight = pLightSpot->GetTanHalfFOV() * pLightSpot->GetRadius() * 2.0f;
+                // Note: Aspect might be wonky if there is no gobo.
+                float fFarWidth = fFarHeight * pLightSpot->GetAspect();
 
-                    return cMath::MatrixScale(
-                        cVector3f(fFarWidth, fFarHeight, light.m_light->GetRadius())); // x and y = "far plane", z = radius
-                }
-            case eLightType_Box:
-                {
-                    cLightBox* pLightBox = static_cast<cLightBox*>(light.m_light);
-
-                    auto mtx =  cMath::MatrixScale(pLightBox->GetSize());
-                    mtx.SetTranslation(pLightBox->GetWorldPosition());
-                    return mtx;
-                }
+                return cMath::MatrixScale(
+                    cVector3f(fFarWidth, fFarHeight, light.m_light->GetRadius())); // x and y = "far plane", z = radius
+            }
+            case eLightType_Box: {
+                cLightBox* pLightBox = static_cast<cLightBox*>(light.m_light);
+                auto mtx =  cMath::MatrixScale(pLightBox->GetSize());
+                mtx.SetTranslation(pLightBox->GetWorldPosition());
+                return mtx;
+            }
             default:
                 break;
             }
@@ -1611,8 +1608,7 @@ namespace hpl {
                 shaderProgram.m_textures.push_back({ m_s_diffuseMap, options.m_gBuffer.m_colorImage->GetHandle(), 0 });
                 shaderProgram.m_uniforms.push_back({ m_u_lightColor, lightColor });
 
-                shaderProgram.m_modelTransform =
-                    cMath::MatrixMul(light->m_light->GetWorldMatrix(), detail::GetLightMtx(*light)).GetTranspose();
+               shaderProgram.m_modelTransform = detail::GetLightMtx(*light).GetTranspose();
 
                 switch (pLightBox->GetBlendFunc()) {
                 case eLightBoxBlendFunc_Add:
@@ -1654,8 +1650,7 @@ namespace hpl {
                     shaderProgram.m_configuration.m_frontStencilTest = CreateStencilTest(
                         StencilFunction::Always, StencilFail::Keep, StencilDepthFail::Replace, StencilDepthPass::Keep, 0xff, 0xff);
 
-                    shaderProgram.m_modelTransform =
-                        cMath::MatrixMul(light->m_light->GetWorldMatrix(), detail::GetLightMtx(*light).GetTranspose());
+                    shaderProgram.m_modelTransform = detail::GetLightMtx(*light).GetTranspose();
 
                     GraphicsContext::DrawRequest drawRequest{ layoutStream, shaderProgram };
                     // drawRequest.m_clear =  GraphicsContext::ClearRequest{0, 0, 0, ClearOp::Stencil};
