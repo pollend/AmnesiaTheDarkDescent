@@ -371,7 +371,7 @@ namespace hpl {
 
         std::array<std::unique_ptr<iVertexBuffer>, eDeferredShapeQuality_LastEnum> m_shapeSphere;
         std::unique_ptr<iVertexBuffer> m_shapePyramid;
-        std::array<absl::InlinedVector<ShadowMapData, 10>, eShadowMapResolution_LastEnum> m_shadowMapData;
+        std::array<absl::InlinedVector<ShadowMapData, 15>, eShadowMapResolution_LastEnum> m_shadowMapData;
 
         int m_maxBatchLights;
         int mlMaxBatchVertices;

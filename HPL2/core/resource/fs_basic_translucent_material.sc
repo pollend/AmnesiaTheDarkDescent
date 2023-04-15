@@ -160,6 +160,5 @@ void main()
             vFinalColor.xyz += vReflectionColor.xyz * fRimLight * fFinalAlpha * u_lightLevel;
         }
     #endif
-    
     gl_FragColor = vFinalColor;
 }

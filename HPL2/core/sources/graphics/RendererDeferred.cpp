@@ -617,7 +617,7 @@ namespace hpl {
                 eMaterialRenderMode_Diffuse,
                 [&context,
                  view, &arg](iRenderable* obj, GraphicsContext::LayoutStream& layoutInput, GraphicsContext::ShaderProgram& shaderInput) {
-                    shaderInput.m_configuration.m_depthTest = DepthTest::LessEqual;
+                    shaderInput.m_configuration.m_depthTest = DepthTest::Equal;
                     shaderInput.m_configuration.m_write = Write::RGBA;
                     shaderInput.m_configuration.m_cull = Cull::CounterClockwise;
 
@@ -662,7 +662,7 @@ namespace hpl {
                 eMaterialRenderMode_Diffuse,
                 [&context, view, &args](iRenderable* obj, GraphicsContext::LayoutStream& layoutInput, GraphicsContext::ShaderProgram& shaderInput) {
                      shaderInput.m_configuration.m_depthTest = DepthTest::LessEqual;
-                    shaderInput.m_configuration.m_write = Write::RGBA;
+                    shaderInput.m_configuration.m_write = Write::RGB;
 
                     cMaterial* pMaterial = obj->GetMaterial();
                     shaderInput.m_configuration.m_rgbBlendFunc = CreateFromMaterialBlendMode(pMaterial->GetBlendMode());
@@ -1099,13 +1099,13 @@ namespace hpl {
             };
         };
 
-        for (size_t i = 0; i < 1; ++i) {
+        for (size_t i = 0; i < 10; ++i) {
             m_shadowMapData[eShadowMapResolution_High].emplace_back(createShadowMap(vShadowSize[lStartSize + eShadowMapResolution_High]));
         }
-        for (size_t i = 0; i < 4; ++i) {
+        for (size_t i = 0; i < 15; ++i) {
             m_shadowMapData[eShadowMapResolution_Medium].emplace_back(createShadowMap(vShadowSize[lStartSize + eShadowMapResolution_Medium]));
         }
-        for (size_t i = 0; i < 6; ++i) {
+        for (size_t i = 0; i < 20; ++i) {
             m_shadowMapData[eShadowMapResolution_Low].emplace_back(createShadowMap(vShadowSize[lStartSize + eShadowMapResolution_Low]));
         }
 
@@ -1661,7 +1661,7 @@ namespace hpl {
                     GraphicsContext::ShaderProgram shaderProgram;
                     shaderProgram.m_configuration.m_cull = Cull::Clockwise;
                     shaderProgram.m_configuration.m_depthTest = DepthTest::GreaterEqual;
-                    shaderProgram.m_configuration.m_write = Write::RGBA;
+                    shaderProgram.m_configuration.m_write = Write::RGB;
                     shaderProgram.m_configuration.m_frontStencilTest = CreateStencilTest(
                         StencilFunction::Equal, StencilFail::Zero, StencilDepthFail::Zero, StencilDepthPass::Zero, 0xff, 0xff);
                     drawBoxLight(boxStencilPass, shaderProgram, light);
@@ -1677,7 +1677,7 @@ namespace hpl {
                 GraphicsContext::ShaderProgram shaderProgram;
                 shaderProgram.m_configuration.m_cull = Cull::Clockwise;
                 shaderProgram.m_configuration.m_depthTest = DepthTest::GreaterEqual;
-                shaderProgram.m_configuration.m_write = Write::RGBA;
+                shaderProgram.m_configuration.m_write = Write::RGB;
                 drawBoxLight(boxLightBackPass, shaderProgram, light);
             }
         }
@@ -1778,10 +1778,15 @@ namespace hpl {
                         } else {
                             shaderProgram.m_textures.push_back({ m_s_spotFalloffMap, spotFallOffImage->GetHandle(), 5 });
                         }
+                        auto& currentLight = apLightData->m_light; 
+                        BX_ASSERT(currentLight->GetLightType() == eLightType_Spot, "Only spot lights are supported for shadow rendering")
+                        
+                        cLightSpot* pSpotLight = static_cast<cLightSpot*>(currentLight);
+                        cFrustum* pLightFrustum = pSpotLight->GetFrustum();
 
                         std::vector<iRenderable*> shadowCasters;
                         if (apLightData->m_castShadows &&
-                            detail::SetupShadowMapRendering(shadowCasters, apWorld, apFrustum, pLightSpot, mvCurrentOcclusionPlanes)) {
+                            detail::SetupShadowMapRendering(shadowCasters, apWorld, pLightFrustum, pLightSpot, mvCurrentOcclusionPlanes)) {
                             flags |= rendering::detail::SpotlightVariant_UseShadowMap;
                             eShadowMapResolution shadowMapRes = apLightData->m_shadowResolution;
 
@@ -1809,7 +1814,6 @@ namespace hpl {
                                 }
                                 return nullptr;
                             };
-                            auto& currentLight = apLightData->m_light;
                             auto* shadowMapData = findBestShadowMap(shadowMapRes, currentLight);
                             if (!shadowMapData) {
                                 // No shadow map available
@@ -1825,8 +1829,8 @@ namespace hpl {
                                     }
 
                                     if (currentLight->GetLightType() == eLightType_Spot &&
-                                        (static_cast<cLightSpot*>(currentLight)->GetAspect() != shadowMapData->m_aspect ||
-                                         static_cast<cLightSpot*>(currentLight)->GetFOV() != shadowMapData->m_fov)) {
+                                        (pSpotLight->GetAspect() != shadowMapData->m_aspect ||
+                                         pSpotLight->GetFOV() != shadowMapData->m_fov)) {
                                         return true;
                                     }
                                     return !currentLight->ShadowCastersAreUnchanged(shadowCasters);
@@ -1836,16 +1840,10 @@ namespace hpl {
                                 shadowMapData->m_radius = currentLight->GetRadius();
 
                                 if (currentLight->GetLightType() == eLightType_Spot) {
-                                    cLightSpot* pSpotLight = static_cast<cLightSpot*>(currentLight);
                                     shadowMapData->m_aspect = pSpotLight->GetAspect();
                                     shadowMapData->m_fov = pSpotLight->GetFOV();
                                 }
                                 currentLight->SetShadowCasterCacheFromVec(shadowCasters);
-
-                                BX_ASSERT(
-                                    currentLight->GetLightType() == eLightType_Spot, "Only spot lights are supported for shadow rendering")
-                                cLightSpot* pSpotLight = static_cast<cLightSpot*>(currentLight);
-                                cFrustum* pLightFrustum = pSpotLight->GetFrustum();
 
                                 GraphicsContext::ViewConfiguration shadowPassViewConfig{ shadowMapData->m_target };
                                 shadowPassViewConfig.m_clear = { 0, 1.0, 0, ClearOp::Depth };
@@ -1919,7 +1917,7 @@ namespace hpl {
                 {
                     GraphicsContext::ShaderProgram shaderProgram;
                     shaderProgram.m_configuration.m_cull = Cull::Clockwise;
-                    shaderProgram.m_configuration.m_write = Write::RGBA;
+                    shaderProgram.m_configuration.m_write = Write::RGB;
                     shaderProgram.m_configuration.m_depthTest = DepthTest::GreaterEqual;
                     shaderProgram.m_configuration.m_frontStencilTest = CreateStencilTest(
                         StencilFunction::Equal, StencilFail::Zero, StencilDepthFail::Zero, StencilDepthPass::Zero, 0xff, 0xff);
@@ -1943,7 +1941,7 @@ namespace hpl {
             for (auto& light : deferredLightRenderBack) {
                 GraphicsContext::ShaderProgram shaderProgram;
                 shaderProgram.m_configuration.m_cull = Cull::Clockwise;
-                shaderProgram.m_configuration.m_write = Write::RGBA;
+                shaderProgram.m_configuration.m_write = Write::RGB;
                 shaderProgram.m_configuration.m_depthTest = DepthTest::GreaterEqual;
                 shaderProgram.m_configuration.m_rgbBlendFunc =
                     CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
@@ -2457,12 +2455,12 @@ namespace hpl {
 
                         shaderInput.m_configuration.m_depthTest = pMaterial->GetDepthTest() ? DepthTest::LessEqual : DepthTest::None;
                         shaderInput.m_configuration.m_write = Write::RGB;
-                        shaderInput.m_configuration.m_cull = Cull::None;
+                        shaderInput.m_configuration.m_cull = Cull::CounterClockwise;
     
                         shaderInput.m_modelTransform = pMatrix ? pMatrix->GetTranspose() : cMatrixf::Identity;
 
                         if (pMaterial->HasRefraction()) {
-                            shaderInput.m_configuration.m_rgbBlendFunc = CreateFromMaterialBlendMode(eMaterialBlendMode_Add);
+                            shaderInput.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::One);
                             shaderInput.m_configuration.m_alphaBlendFunc = CreateFromMaterialBlendMode(eMaterialBlendMode_Add);
                         } else {
                             shaderInput.m_configuration.m_rgbBlendFunc = CreateFromMaterialBlendMode(pMaterial->GetBlendMode());
@@ -2487,7 +2485,7 @@ namespace hpl {
 
                             shaderInput.m_configuration.m_depthTest = pMaterial->GetDepthTest() ? DepthTest::LessEqual : DepthTest::None;
                             shaderInput.m_configuration.m_write = Write::RGB;
-                            shaderInput.m_configuration.m_cull = Cull::None;
+                            shaderInput.m_configuration.m_cull = Cull::CounterClockwise;
 
                             shaderInput.m_configuration.m_rgbBlendFunc = CreateFromMaterialBlendMode(eMaterialBlendMode_Add);
                             shaderInput.m_configuration.m_alphaBlendFunc = CreateFromMaterialBlendMode(eMaterialBlendMode_Add);

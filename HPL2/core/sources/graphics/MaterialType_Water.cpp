@@ -173,11 +173,10 @@ namespace hpl {
             }
 
             program.m_uniforms.push_back({ m_u_param, &params, 4 });
-            cMatrixf mtxInvView = hasCubeMap ? ([&] {
+            const cMatrixf mtxInvView = ([&] {
                 cMatrixf mtxInvView = apRenderer->GetCurrentFrustum()->GetViewMatrix().GetTranspose();
                 return mtxInvView.GetRotation().GetTranspose();
-            })()
-                                             : cMatrixf::Identity;
+            })();
             program.m_uniforms.push_back({ m_u_mtxInvViewRotation, &mtxInvView.v });
             program.m_uniforms.push_back({ m_u_fogColor, &fogColor.v });
             program.m_handle = m_waterVariant.GetVariant(flags);
