@@ -66,7 +66,6 @@ private:
 
 	cGuiGfxElement *mpBlackGfx;
 
-	cVector2f mvScreenSize;
 	cVector2f mvGuiSetSize;
 	cVector2f mvGuiSetCenterSize;
 	cVector2f mvGuiSetOffset;

@@ -121,7 +121,11 @@ namespace hpl {
                   m_depthTarget(std::move(buffer.m_depthTarget)), 
                   m_normalTarget(std::move(buffer.m_normalTarget)), 
                   m_positionTarget(std::move(buffer.m_positionTarget)), 
-                  m_outputTarget(std::move(buffer.m_outputTarget)) {
+                  m_outputTarget(std::move(buffer.m_outputTarget)),
+                  m_SSAOImage(std::move(buffer.m_SSAOImage)),
+                  m_SSAOBlurImage(std::move(buffer.m_SSAOBlurImage)),
+                  m_SSAOTarget(std::move(buffer.m_SSAOTarget)),
+                  m_SSAOBlurTarget(std::move(buffer.m_SSAOBlurTarget)) {
             }
             void operator=(GBuffer&& buffer) {
                 m_colorImage = std::move(buffer.m_colorImage);
@@ -137,6 +141,13 @@ namespace hpl {
                 m_normalTarget = std::move(buffer.m_normalTarget);
                 m_positionTarget = std::move(buffer.m_positionTarget);
                 m_outputTarget = std::move(buffer.m_outputTarget);
+
+                m_SSAOImage = std::move(buffer.m_SSAOImage);
+                m_SSAOBlurImage = std::move(buffer.m_SSAOBlurImage);
+
+                m_SSAOTarget = std::move(buffer.m_SSAOTarget);
+                m_SSAOBlurTarget = std::move(buffer.m_SSAOBlurTarget);
+
             }
 
             std::shared_ptr<Image> m_colorImage;
@@ -146,6 +157,9 @@ namespace hpl {
             std::shared_ptr<Image> m_depthStencilImage;
             std::shared_ptr<Image> m_outputImage;
 
+            std::shared_ptr<Image> m_SSAOImage;
+            std::shared_ptr<Image> m_SSAOBlurImage;
+
             RenderTarget m_fullTarget;
             RenderTarget m_colorAndDepthTarget;
             RenderTarget m_colorTarget;
@@ -153,6 +167,9 @@ namespace hpl {
             RenderTarget m_normalTarget;
             RenderTarget m_positionTarget;
             RenderTarget m_outputTarget; // used for rendering to the screen
+
+            RenderTarget m_SSAOTarget;
+            RenderTarget m_SSAOBlurTarget;
             
         };
 
@@ -298,10 +315,6 @@ namespace hpl {
             const cMatrixf& frustumView;
 
            cRendererDeferred::GBuffer& m_gBuffer;
-
-            // RenderTarget& m_output_target; // used for rendering to the screen
-
-            // Image& m_gBufferPositionImage;
         };
         void RenderFogPass(GraphicsContext& context, std::span<cRendererDeferred::FogRendererData> fogRenderData, cWorld* apWorld, cViewport& viewport, cFrustum* apFrustum, FogPassOptions& options);
         struct FogPassFullscreenOptions {
@@ -334,6 +347,7 @@ namespace hpl {
         UniqueViewportData<SharedViewportData> m_boundViewportData;
 
         std::shared_ptr<Image> m_shadowJitterImage;
+        std::shared_ptr<Image> m_ssaoScatterDiskImage;
 
         UniformWrapper<StringLiteral("u_param"), bgfx::UniformType::Vec4> m_u_param;
         UniformWrapper<StringLiteral("u_lightPos"), bgfx::UniformType::Vec4>  m_u_lightPos;
@@ -356,7 +370,14 @@ namespace hpl {
         UniformWrapper<StringLiteral("s_shadowMap"), bgfx::UniformType::Sampler> m_s_shadowMap;
         UniformWrapper<StringLiteral("s_goboMap"), bgfx::UniformType::Sampler> m_s_goboMap;
         UniformWrapper<StringLiteral("s_shadowOffsetMap"), bgfx::UniformType::Sampler> m_s_shadowOffsetMap;
+
+        UniformWrapper<StringLiteral("s_scatterDisk"), bgfx::UniformType::Sampler> m_s_scatterDisk;
         
+        
+        bgfx::ProgramHandle m_deferredSSAOProgram;
+        bgfx::ProgramHandle m_deferredSSAOBlurHorizontalProgram;
+        bgfx::ProgramHandle m_deferredSSAOBlurVerticalProgram;
+
         bgfx::ProgramHandle m_copyRegionProgram;
         bgfx::ProgramHandle m_edgeSmooth_UnpackDepthProgram;
         bgfx::ProgramHandle m_lightBoxProgram;

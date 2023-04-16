@@ -421,7 +421,6 @@ private:
 
 	std::vector<cWidgetImage*> mvImageWidgets;
 
-	// cVector2f mvScreenSize;
 	cVector2f mvGuiSetCenterSize;
 	cVector2f mvGuiSetSize;
 	cVector2f mvGuiSetOffset;

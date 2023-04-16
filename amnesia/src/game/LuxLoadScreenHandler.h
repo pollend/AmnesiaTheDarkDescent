@@ -95,7 +95,6 @@ private:
 
 	cGuiGfxElement* mpWhiteGfx;
 
-	cVector2f mvScreenSize;
 	cVector2f mvGuiSetCenterSize;//Size of the part that is inside a 4:3 ratio!
 	cVector2f mvGuiSetSize;
 	cVector2f mvGuiSetOffset;

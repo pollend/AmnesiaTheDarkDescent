@@ -151,7 +151,6 @@ private:
 
 	cViewport *mpViewport;
 
-	// cVector2f mvScreenSize;
 	cVector2f mvGuiSetSize;
 	cVector2f mvGuiSetCenterSize;
 	cVector2f mvGuiSetOffset;

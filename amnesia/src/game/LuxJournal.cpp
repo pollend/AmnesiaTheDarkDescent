@@ -301,7 +301,6 @@ cLuxJournal::cLuxJournal() : iLuxUpdateable("LuxJournal")
 
 	///////////////////////////////
 	//Load settings
-	mvScreenSize = gpBase->mpEngine->GetGraphics()->GetLowLevel()->GetScreenSizeFloat();
 
 	mfNoteTextWidth = gpBase->mpMenuCfg->GetFloat("Journal","NoteTextWidth",0);
 	mlNoteMaxPageRows = gpBase->mpMenuCfg->GetInt("Journal","NoteMaxPageRows",0);
@@ -1897,7 +1896,7 @@ void cLuxJournal::RenderBackgroundImage()
 	auto screenTarget = RenderTarget(m_screenImage);
 
 	auto screenSize = viewport->GetSize();
-	cRect2l screenRect(0, 0, mvScreenSize.x, mvScreenSize.y);
+	cRect2l screenRect(0, 0, screenSize.x, screenSize.y);
 
 	graphicsContext.CopyTextureToFrameBuffer(
 		*renderer->GetOutputImage(*viewport), screenRect, screenTarget);

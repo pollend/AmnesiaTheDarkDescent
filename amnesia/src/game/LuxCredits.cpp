@@ -44,7 +44,6 @@ cLuxCredits::cLuxCredits() : iLuxUpdateable("LuxCredits")
 
 	///////////////////////
 	// Load settings
-	mvScreenSize = gpBase->mpEngine->GetGraphics()->GetLowLevel()->GetScreenSizeFloat();
 
 	mvGuiSetCenterSize = cVector2f(800, 600);
 

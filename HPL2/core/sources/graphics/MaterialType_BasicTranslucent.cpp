@@ -326,7 +326,7 @@ namespace hpl
         cMaterialType_Translucent_Vars* pVars = (cMaterialType_Translucent_Vars*)apMaterial->GetVars();
         if (pVars == NULL)
         {
-            pVars = (cMaterialType_Translucent_Vars*)CreateSpecificVariables();
+            pVars = static_cast<cMaterialType_Translucent_Vars*>(CreateSpecificVariables());
             apMaterial->SetVars(pVars);
         }
 

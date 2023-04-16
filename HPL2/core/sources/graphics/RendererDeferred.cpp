@@ -103,6 +103,10 @@ namespace hpl {
     static constexpr uint32_t kMaxStencilBitsUsed = 8;
     static constexpr uint32_t kStartStencilBit = 0;
     static constexpr uint32_t MinLargeLightNormalizedArea = 0.2f * 0.2f;
+
+    static constexpr uint32_t SSAOImageSizeDiv = 2;
+    static constexpr uint32_t SSAONumOfSamples = 8;
+
     namespace detail {
         struct DeferredLight {
         public:
@@ -885,7 +889,6 @@ namespace hpl {
         mbSetupOcclusionPlaneForFog = true;
 
         mfMinLargeLightNormalizedArea = 0.2f * 0.2f;
-        // mfMinRenderReflectionNormilzedLength = 0.15f;
 
         m_shadowDistanceMedium = 10;
         m_shadowDistanceLow = 20;
@@ -968,6 +971,28 @@ namespace hpl {
                         std::array<std::shared_ptr<Image>, 2> images = { gBuffer.m_outputImage, gBuffer.m_depthStencilImage };
                         gBuffer.m_outputTarget = RenderTarget(std::span(images));
                     }
+
+                    cVector2l SSAOSize = sharedData->m_size / 2;
+                    {
+                        auto desc = ImageDescriptor::CreateTexture2D(
+                            SSAOSize.x, SSAOSize.y, false, bgfx::TextureFormat::Enum::R16F);
+                        desc.m_configuration.m_computeWrite = true;
+                        desc.m_configuration.m_rt = RTType::RT_Write;
+                        auto image = std::make_shared<Image>();
+                        image->Initialize(desc);
+                        gBuffer.m_SSAOImage = image;
+                    }
+                    {
+                        auto desc = ImageDescriptor::CreateTexture2D(
+                            SSAOSize.x, SSAOSize.y, false, bgfx::TextureFormat::Enum::R16F);
+                        desc.m_configuration.m_computeWrite = true;
+                        desc.m_configuration.m_rt = RTType::RT_Write;
+                        auto image = std::make_shared<Image>();
+                        image->Initialize(desc);
+                        gBuffer.m_SSAOBlurImage = image;
+                    }
+                    gBuffer.m_SSAOTarget = RenderTarget(gBuffer.m_SSAOImage);
+                    gBuffer.m_SSAOBlurTarget = RenderTarget(gBuffer.m_SSAOBlurImage);
 
                     return gBuffer;
                 };
@@ -1062,7 +1087,11 @@ namespace hpl {
             m_shadowJitterImage = std::make_shared<Image>();
             TextureCreator::GenerateScatterDiskMap2D(*m_shadowJitterImage, shadowMapJitterSize, shadowMapJitterSamples, true);
         }
-
+        
+        {
+            m_ssaoScatterDiskImage = std::make_shared<Image>();
+            TextureCreator::GenerateScatterDiskMap2D(*m_ssaoScatterDiskImage, 4, SSAONumOfSamples, false);
+        }
         m_u_param.Initialize();
         m_u_lightPos.Initialize();
         m_u_fogColor.Initialize();
@@ -1084,13 +1113,20 @@ namespace hpl {
         m_s_goboMap.Initialize();
         m_s_shadowOffsetMap.Initialize();
 
+        m_s_scatterDisk.Initialize();
+
+        m_deferredSSAOProgram  = hpl::loadProgram("vs_post_effect", "fs_deferred_ssao");
+        m_deferredSSAOBlurHorizontalProgram  = hpl::loadProgram("vs_post_effect", "fs_deferred_ssao_blur_horizontal");
+        m_deferredSSAOBlurVerticalProgram  = hpl::loadProgram("vs_post_effect", "fs_deferred_ssao_blur_vertical");
+
         m_copyRegionProgram = hpl::loadProgram("cs_copy_region");
         m_lightBoxProgram = hpl::loadProgram("vs_light_box", "fs_light_box");
         m_nullShader = hpl::loadProgram("vs_null", "fs_null");
         m_fogVariant.Initialize(ShaderHelper::LoadProgramHandlerDefault("vs_deferred_fog", "fs_deferred_fog", true, true));
         m_pointLightVariants.Initialize(
             ShaderHelper::LoadProgramHandlerDefault("vs_deferred_light", "fs_deferred_pointlight", false, true));
-
+        
+        
         ////////////////////////////////////
         // Create SSAO programs and textures
         //  if(mbSSAOLoaded && mpLowLevelGraphics->GetCaps(eGraphicCaps_TextureFloat)==0)
@@ -2046,6 +2082,122 @@ namespace hpl {
                 context, 
                 this,  
                 mpCurrentRenderList->GetRenderableItems(eRenderListType_Decal), viewport, args);
+        }
+
+        
+        // ------------------------------------------------------------------------------------
+        //  Render SSAO Pass to color
+        // ------------------------------------------------------------------------------------
+        if(mpCurrentSettings->mbSSAOActive) {
+            GraphicsContext::LayoutStream layoutStream;
+            cMatrixf projMtx;
+            context.ScreenSpaceQuad(layoutStream, projMtx, sharedData.m_size.x, sharedData.m_size.y);
+
+            auto& ssaoImage = sharedData.m_gBuffer.m_SSAOImage;
+            auto& ssaoBlurImage = sharedData.m_gBuffer.m_SSAOBlurImage;
+            auto imageSize = ssaoImage->GetImageSize();
+            {
+                GraphicsContext::ViewConfiguration viewConfig{ sharedData.m_gBuffer.m_SSAOTarget };
+                viewConfig.m_projection = projMtx;
+                viewConfig.m_viewRect = { 0, 0, sharedData.m_size.x, sharedData.m_size.y };
+                auto view = context.StartPass("SSAO", viewConfig);
+
+                GraphicsContext::ShaderProgram shaderProgram;
+                shaderProgram.m_handle = m_deferredSSAOProgram;
+
+                struct {
+                    float u_inputRTSize[2];
+                    float u_negInvFarPlane;
+                    float u_farPlane;
+
+                    float depthDiffMul;
+                    float scatterDepthMul;
+                    float scatterLengthMin;
+                    float scatterLengthMax;
+                } u_param = {{0}};
+                u_param.u_inputRTSize[0] = imageSize.x;
+                u_param.u_inputRTSize[1] = imageSize.y;
+                u_param.u_negInvFarPlane = -1.0f / m_farPlane;
+                u_param.u_farPlane = m_farPlane;
+
+                u_param.depthDiffMul = mfSSAODepthDiffMul;
+                u_param.scatterDepthMul = mfSSAOScatterLengthMul;
+                u_param.scatterLengthMin = mfSSAOScatterLengthMin;
+                u_param.scatterLengthMax = mfSSAOScatterLengthMax;
+
+                shaderProgram.m_uniforms.push_back({ m_u_param, &u_param, 2 });
+
+                shaderProgram.m_textures.push_back({ m_s_positionMap, sharedData.m_gBuffer.m_positionImage->GetHandle(), 0 });
+                shaderProgram.m_textures.push_back({ m_s_normalMap, sharedData.m_gBuffer.m_normalImage->GetHandle(), 1});
+                shaderProgram.m_textures.push_back({ m_s_scatterDisk, m_ssaoScatterDiskImage->GetHandle(), 2 });
+                
+                shaderProgram.m_configuration.m_write = Write::R;
+                shaderProgram.m_configuration.m_rgbBlendFunc =
+                    CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::Zero);
+                shaderProgram.m_configuration.m_alphaBlendFunc =
+                    CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::Zero);
+
+                GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
+                context.Submit(view, request);
+            }
+            // blur pass horizontal
+            {
+                GraphicsContext::ViewConfiguration viewConfig{ sharedData.m_gBuffer.m_SSAOBlurTarget };
+                viewConfig.m_projection = projMtx;
+                viewConfig.m_viewRect = { 0, 0, ssaoBlurImage->GetWidth(), ssaoBlurImage->GetHeight() };
+                auto view = context.StartPass("SSAO Horizontal", viewConfig);
+
+                GraphicsContext::ShaderProgram shaderProgram;
+                shaderProgram.m_handle = m_deferredSSAOBlurHorizontalProgram;
+
+                shaderProgram.m_configuration.m_write = Write::R;
+                shaderProgram.m_configuration.m_rgbBlendFunc =
+                    CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::Zero);
+                shaderProgram.m_configuration.m_alphaBlendFunc =
+                    CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::Zero);
+
+                shaderProgram.m_textures.push_back({ m_s_diffuseMap, sharedData.m_gBuffer.m_SSAOImage->GetHandle(), 0 });
+                shaderProgram.m_textures.push_back({ m_s_depthMap, sharedData.m_gBuffer.m_depthStencilImage->GetHandle(), 1});
+                struct {
+                    float u_farPlane;
+                    float pad[3];
+                } u_param = {{0}};
+                u_param.u_farPlane = m_farPlane;
+                shaderProgram.m_uniforms.push_back({ m_u_param, &u_param, 1 });
+
+                GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
+                context.Submit(view, request);
+            }
+
+             // blur pass horizontal
+            {
+                GraphicsContext::ViewConfiguration viewConfig{ sharedData.m_gBuffer.m_colorImage };
+                viewConfig.m_projection = projMtx;
+                viewConfig.m_viewRect = { 0, 0, sharedData.m_size.x, sharedData.m_size.y };
+                auto view = context.StartPass("SSAO Vertical", viewConfig);
+
+                GraphicsContext::ShaderProgram shaderProgram;
+                shaderProgram.m_handle = m_deferredSSAOBlurVerticalProgram;
+
+                shaderProgram.m_configuration.m_write = Write::RGB;
+                shaderProgram.m_configuration.m_rgbBlendFunc =
+                    CreateBlendFunction(BlendOperator::Add, BlendOperand::Zero, BlendOperand::SrcColor);
+                shaderProgram.m_configuration.m_alphaBlendFunc =
+                    CreateBlendFunction(BlendOperator::Add, BlendOperand::Zero, BlendOperand::One);
+
+                shaderProgram.m_textures.push_back({ m_s_diffuseMap, sharedData.m_gBuffer.m_SSAOBlurImage->GetHandle(), 0 });
+                shaderProgram.m_textures.push_back({ m_s_depthMap, sharedData.m_gBuffer.m_depthStencilImage->GetHandle(), 1});
+                struct {
+                    float u_farPlane;
+                    float pad[3];
+                } u_param = {{0}};
+                u_param.u_farPlane = m_farPlane;
+                shaderProgram.m_uniforms.push_back({ m_u_param, &u_param, 1 });
+
+                GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
+                context.Submit(view, request);
+            }
+
         }
 
 
