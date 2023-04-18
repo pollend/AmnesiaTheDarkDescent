@@ -99,7 +99,10 @@ shaders = [
     { "type" : ShaderType.FS, "inout" : "resource/vs_post_effect.io",                  "input": "resource/fs_deferred_ssao_blur.sc", "name": "fs_deferred_ssao_blur_horizontal",  "defines": ["BLUR_HORIZONTAL=1"] , "includes": ["resource"]},
     { "type" : ShaderType.FS, "inout" : "resource/vs_post_effect.io",                  "input": "resource/fs_deferred_ssao_blur.sc", "name": "fs_deferred_ssao_blur_vertical",  "defines": ["BLUR_HORIZONTAL=0"] , "includes": ["resource"]},
 # other
+    { "type" : ShaderType.CS,                                                          "input": "resource/cs_gdr_downscale_hi_z.sc", "includes": ["resource"]},
+    { "type" : ShaderType.CS,                                                          "input": "resource/cs_gdr_copy_z.sc", "includes": ["resource"]},
     { "type" : ShaderType.CS,                                                          "input": "resource/cs_copy_region.sc", "includes": ["resource"]},
+    { "type" : ShaderType.CS,                                                          "input": "resource/cs_occlude_props.sc", "includes": ["resource"]},
     { "type" : ShaderType.VS, "inout" : "resource/vs_alpha_reject.io",                 "input": "resource/vs_alpha_reject.sc" , "includes": ["resource"]},
     { "type" : ShaderType.FS, "inout" : "resource/vs_alpha_reject.io",                 "input": "resource/fs_alpha_reject.sc" , "includes": ["resource"]},
     { "type" : ShaderType.VS, "inout" : "resource/vs_null.io",                         "input": "resource/vs_null.sc" , "includes": ["resource"]},

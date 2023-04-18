@@ -51,8 +51,8 @@ namespace hpl {
         m_handler = handler;
         m_thread.init(BootstrapThreadHandler, this);
         while(m_thread.isRunning()) {
-            m_window.Process();
             bgfx::renderFrame();
+            m_window.Process();
         }
     }
 

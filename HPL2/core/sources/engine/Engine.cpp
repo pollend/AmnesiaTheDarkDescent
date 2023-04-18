@@ -445,7 +445,6 @@ namespace hpl {
 		bool bSwappedOnce = false;
 
 		//cMemoryManager::SetLogCreation(true);
-
 		while(!GetGameIsDone())
 		{
 			//////////////////////////

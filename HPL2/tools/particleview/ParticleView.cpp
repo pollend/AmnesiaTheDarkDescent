@@ -666,7 +666,6 @@ int hplMain(const tString &asCommandline)
 
 	//iResourceBase::SetLogCreateAndDelete(true);
 	//iGpuProgram::SetLogDebugInformation(true);
-	// cRendererDeferred::SetGBufferType(eDeferredGBuffer_32Bit);
 	cRendererDeferred::SetSSAOLoaded(true);
 
 	SetLogFile(_W("particleview.log"));

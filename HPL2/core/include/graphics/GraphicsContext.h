@@ -79,6 +79,15 @@ namespace hpl {
                 bgfx::TextureFormat::Enum m_format = bgfx::TextureFormat::Count;
             };
 
+            struct UAVBuffer {
+                uint8_t m_stage = 0;
+                std::variant<bgfx::DynamicIndexBufferHandle
+                    ,bgfx::IndexBufferHandle
+                    ,bgfx::VertexBufferHandle
+                    ,bgfx::DynamicVertexBufferHandle> m_handle;
+                bgfx::Access::Enum m_access = bgfx::Access::Write;
+            };
+
             union {
                 struct {
                     StencilTest m_backStencilTest;
@@ -99,6 +108,7 @@ namespace hpl {
             absl::InlinedVector<TextureData, 10> m_textures;
             absl::InlinedVector<UAVImage, 10> m_uavImage;
             absl::InlinedVector<UniformData, 25> m_uniforms;
+            absl::InlinedVector<UAVBuffer, 5> m_buffers;
         };
 
         struct ClearRequest {
@@ -161,8 +171,8 @@ namespace hpl {
             float textureHeight,
             float width = 1.0f,
             float height = 1.0f);
-        inline void ConfigureProgram(const GraphicsContext::ShaderProgram& program);
-        inline void ConfigureLayoutStream(const GraphicsContext::LayoutStream& layout);
+        inline void ConfigureProgram(const GraphicsContext::ShaderProgram& program, bgfx::Encoder* encoder = nullptr);
+        inline void ConfigureLayoutStream(const GraphicsContext::LayoutStream& layout, bgfx::Encoder* encoder = nullptr);
 
         void Frame();
         inline bgfx::ViewId StartPass(absl::string_view name, const ViewConfiguration& config);
@@ -171,7 +181,7 @@ namespace hpl {
         void CopyTextureToFrameBuffer(Image& image, cRect2l dstRect, RenderTarget& target, Write write = Write::RGBA);
         inline void Submit(bgfx::ViewId view, const DrawRequest& request);
         inline void Submit(bgfx::ViewId view, const DrawRequest& request, bgfx::OcclusionQueryHandle query);
-        inline void Submit(bgfx::ViewId view, const ComputeRequest& request);
+        inline void Submit(bgfx::ViewId view, const ComputeRequest& request, bgfx::Encoder* encoder = nullptr);
 
         // eeeh ... not going to bother cleaning up for the moment
         template<StringLiteral VertexShader, StringLiteral FragmentShader>
@@ -453,66 +463,139 @@ namespace hpl {
 
     } // namespace details
 
-    void GraphicsContext::ConfigureLayoutStream(const GraphicsContext::LayoutStream& layout) {
+    void GraphicsContext::ConfigureLayoutStream(const GraphicsContext::LayoutStream& layout,  bgfx::Encoder* encoder) {
         uint8_t streamIndex = 0;
         for (auto& vertexStream : layout.m_vertexStreams) {
             if (vertexStream.m_numVertices != std::numeric_limits<uint32_t>::max()) {
                 if (bgfx::isValid(vertexStream.m_handle)) {
-                    bgfx::setVertexBuffer(streamIndex++, vertexStream.m_handle, vertexStream.m_startVertex, vertexStream.m_numVertices);
+                    if(encoder) {
+                        encoder->setVertexBuffer(streamIndex++, vertexStream.m_handle, vertexStream.m_startVertex, vertexStream.m_numVertices);
+                    } else {
+                        bgfx::setVertexBuffer(streamIndex++, vertexStream.m_handle, vertexStream.m_startVertex, vertexStream.m_numVertices);
+                    }
                 } else if (bgfx::isValid(vertexStream.m_dynamicHandle)) {
-                    bgfx::setVertexBuffer(
-                        streamIndex++, vertexStream.m_dynamicHandle, vertexStream.m_startVertex, vertexStream.m_numVertices);
+                    if(encoder) {
+                        encoder->setVertexBuffer(streamIndex++, vertexStream.m_dynamicHandle, vertexStream.m_startVertex, vertexStream.m_numVertices);
+                    } else {
+                        bgfx::setVertexBuffer(streamIndex++, vertexStream.m_dynamicHandle, vertexStream.m_startVertex, vertexStream.m_numVertices);
+                    }
                 } else if (bgfx::isValid(vertexStream.m_transient.handle)) {
-                    bgfx::setVertexBuffer(streamIndex++, &vertexStream.m_transient, vertexStream.m_startVertex, vertexStream.m_numVertices);
+                    if(encoder) {
+                        encoder->setVertexBuffer(streamIndex++, &vertexStream.m_transient, vertexStream.m_startVertex, vertexStream.m_numVertices);
+                    } else {
+                        bgfx::setVertexBuffer(streamIndex++, &vertexStream.m_transient, vertexStream.m_startVertex, vertexStream.m_numVertices);
+                    }
                 }
             } else {
                 if (bgfx::isValid(vertexStream.m_handle)) {
-                    bgfx::setVertexBuffer(streamIndex++, vertexStream.m_handle);
+                    if(encoder) {
+                        encoder->setVertexBuffer(streamIndex++, vertexStream.m_handle);
+                    } else {
+                        bgfx::setVertexBuffer(streamIndex++, vertexStream.m_handle);
+                    }
                 } else if (bgfx::isValid(vertexStream.m_dynamicHandle)) {
-                    bgfx::setVertexBuffer(streamIndex++, vertexStream.m_dynamicHandle);
+                    if(encoder) {
+                        encoder->setVertexBuffer(streamIndex++, vertexStream.m_dynamicHandle);
+                    } else {
+                        bgfx::setVertexBuffer(streamIndex++, vertexStream.m_dynamicHandle);
+                    }
                 } else if (bgfx::isValid(vertexStream.m_transient.handle)) {
-                    bgfx::setVertexBuffer(streamIndex++, &vertexStream.m_transient);
+                    if(encoder) {
+                        encoder->setVertexBuffer(streamIndex++, &vertexStream.m_transient);
+                    } else {
+                        bgfx::setVertexBuffer(streamIndex++, &vertexStream.m_transient);
+                    }
                 }
             }
         }
         if (layout.m_indexStream.m_numIndices != std::numeric_limits<uint32_t>::max()) {
             if (bgfx::isValid(layout.m_indexStream.m_dynamicHandle)) {
-                bgfx::setIndexBuffer(
-                    layout.m_indexStream.m_dynamicHandle, layout.m_indexStream.m_startIndex, layout.m_indexStream.m_numIndices);
+                if(encoder) {
+                    encoder->setIndexBuffer(
+                        layout.m_indexStream.m_dynamicHandle, layout.m_indexStream.m_startIndex, layout.m_indexStream.m_numIndices);
+                } else {
+                    bgfx::setIndexBuffer(
+                        layout.m_indexStream.m_dynamicHandle, layout.m_indexStream.m_startIndex, layout.m_indexStream.m_numIndices);
+                }
             } else if (bgfx::isValid(layout.m_indexStream.m_handle)) {
-                bgfx::setIndexBuffer(layout.m_indexStream.m_handle, layout.m_indexStream.m_startIndex, layout.m_indexStream.m_numIndices);
+                if(encoder) {
+                    encoder->setIndexBuffer(layout.m_indexStream.m_handle, layout.m_indexStream.m_startIndex, layout.m_indexStream.m_numIndices);
+                } else {
+                    bgfx::setIndexBuffer(layout.m_indexStream.m_handle, layout.m_indexStream.m_startIndex, layout.m_indexStream.m_numIndices);
+                }
             } else if (bgfx::isValid(layout.m_indexStream.m_transient.handle)) {
-                bgfx::setIndexBuffer(
-                    &layout.m_indexStream.m_transient, layout.m_indexStream.m_startIndex, layout.m_indexStream.m_numIndices);
+                if(encoder) {
+                    encoder->setIndexBuffer(
+                        &layout.m_indexStream.m_transient, layout.m_indexStream.m_startIndex, layout.m_indexStream.m_numIndices);
+                } else {
+                    bgfx::setIndexBuffer(
+                        &layout.m_indexStream.m_transient, layout.m_indexStream.m_startIndex, layout.m_indexStream.m_numIndices);
+                }
             }
         } else {
             if (bgfx::isValid(layout.m_indexStream.m_dynamicHandle)) {
-                bgfx::setIndexBuffer(layout.m_indexStream.m_dynamicHandle);
+                if(encoder) {
+                    encoder->setIndexBuffer(layout.m_indexStream.m_dynamicHandle);
+                } else {
+                    bgfx::setIndexBuffer(layout.m_indexStream.m_dynamicHandle);
+                }
             } else if (bgfx::isValid(layout.m_indexStream.m_handle)) {
-                bgfx::setIndexBuffer(layout.m_indexStream.m_handle);
+                if(encoder) {
+                    encoder->setIndexBuffer(layout.m_indexStream.m_handle);
+                } else {
+                    bgfx::setIndexBuffer(layout.m_indexStream.m_handle);
+                }
             } else if (bgfx::isValid(layout.m_indexStream.m_transient.handle)) {
-                bgfx::setIndexBuffer(&layout.m_indexStream.m_transient);
+                if(encoder) {
+                    encoder->setIndexBuffer(&layout.m_indexStream.m_transient);
+                } else {
+                    bgfx::setIndexBuffer(&layout.m_indexStream.m_transient);
+                }
             }
         }
     }
 
-    void GraphicsContext::ConfigureProgram(const GraphicsContext::ShaderProgram& program) {
+    void GraphicsContext::ConfigureProgram(const GraphicsContext::ShaderProgram& program, bgfx::Encoder* encoder) {
         bgfx::setUniform(m_u_normalMtx, &program.m_normalMtx.v);
         for (auto& uniform : program.m_uniforms) {
             if (bgfx::isValid(uniform.m_uniformHandle)) {
-                bgfx::setUniform(uniform.m_uniformHandle, uniform.m_data, uniform.m_num);
+                if(encoder) {
+                    encoder->setUniform(uniform.m_uniformHandle, uniform.m_data, uniform.m_num);
+                } else {
+                    bgfx::setUniform(uniform.m_uniformHandle, uniform.m_data, uniform.m_num);
+                }
             }
+        }
+
+        for(auto& buffer: program.m_buffers) {
+            std::visit([&](auto& arg) {
+                if (bgfx::isValid(arg)) {
+                    if(encoder) {
+                        encoder->setBuffer(buffer.m_stage, arg, buffer.m_access);
+                    } else {
+                        bgfx::setBuffer(buffer.m_stage, arg, buffer.m_access);
+                    }
+                }
+            }, buffer.m_handle);
         }
 
         for (auto& texture : program.m_textures) {
             if (bgfx::isValid(texture.m_textureHandle)) {
-                bgfx::setTexture(texture.m_stage, texture.m_uniformHandle, texture.m_textureHandle);
+                if(encoder) {
+                    encoder->setTexture(texture.m_stage, texture.m_uniformHandle, texture.m_textureHandle);
+                } else {
+                    bgfx::setTexture(texture.m_stage, texture.m_uniformHandle, texture.m_textureHandle);
+                }
             }
         }
 
         for (auto& uavImage : program.m_uavImage) {
             if (bgfx::isValid(uavImage.m_textureHandle)) {
-                bgfx::setImage(uavImage.m_stage, uavImage.m_textureHandle, uavImage.m_mip, uavImage.m_access, uavImage.m_format);
+                if(encoder) {
+                    encoder->setImage(uavImage.m_stage, uavImage.m_textureHandle, uavImage.m_mip, uavImage.m_access, uavImage.m_format);
+                } else {
+                    bgfx::setImage(uavImage.m_stage, uavImage.m_textureHandle, uavImage.m_mip, uavImage.m_access, uavImage.m_format);
+                }
             }
         }
     }
@@ -551,9 +634,13 @@ namespace hpl {
         bgfx::submit(view, request.m_program.m_handle, query);
     }
 
-    void GraphicsContext::Submit(bgfx::ViewId view, const ComputeRequest& request) {
-        ConfigureProgram(request.m_program);
-        bgfx::dispatch(view, request.m_program.m_handle, request.m_numX, request.m_numY, request.m_numZ);
+    void GraphicsContext::Submit(bgfx::ViewId view, const ComputeRequest& request, bgfx::Encoder* encoder) {
+        ConfigureProgram(request.m_program, encoder);
+        if(encoder) {
+            encoder->dispatch(view, request.m_program.m_handle, request.m_numX, request.m_numY, request.m_numZ);
+        } else {
+            bgfx::dispatch(view, request.m_program.m_handle, request.m_numX, request.m_numY, request.m_numZ);
+        }
     }
 
     bgfx::ViewId GraphicsContext::StartPass(absl::string_view name, const ViewConfiguration& config) {

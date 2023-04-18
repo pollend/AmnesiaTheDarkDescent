@@ -86,6 +86,8 @@ namespace hpl {
     class cRendererDeferred : public iRenderer {
         HPL_RTTI_IMPL_CLASS(iRenderer, cRendererDeferred, "{A3E5E5A1-1F9C-4F5C-9B9B-5B9B9B5B9B9B}")
     public:
+
+        static constexpr size_t MaxInstanceSamples = 8120;
         class ShadowMapData {
         public:
             RenderTarget m_target;
@@ -109,7 +111,8 @@ namespace hpl {
             GBuffer() = default;
             GBuffer(const GBuffer&) = delete;
             GBuffer(GBuffer&& buffer)
-                : m_colorImage(std::move(buffer.m_colorImage)),
+                : 
+                  m_colorImage(std::move(buffer.m_colorImage)),
                   m_normalImage(std::move(buffer.m_normalImage)),
                   m_positionImage(std::move(buffer.m_positionImage)),
                   m_specularImage(std::move(buffer.m_specularImage)),
@@ -122,10 +125,13 @@ namespace hpl {
                   m_normalTarget(std::move(buffer.m_normalTarget)), 
                   m_positionTarget(std::move(buffer.m_positionTarget)), 
                   m_outputTarget(std::move(buffer.m_outputTarget)),
+                  m_hiZDepthBuffer(std::move(buffer.m_hiZDepthBuffer)),
                   m_SSAOImage(std::move(buffer.m_SSAOImage)),
                   m_SSAOBlurImage(std::move(buffer.m_SSAOBlurImage)),
                   m_SSAOTarget(std::move(buffer.m_SSAOTarget)),
-                  m_SSAOBlurTarget(std::move(buffer.m_SSAOBlurTarget)) {
+                  m_SSAOBlurTarget(std::move(buffer.m_SSAOBlurTarget)),
+                  m_numberOfHiZMips(buffer.m_numberOfHiZMips),
+                  m_prePassRenderables(std::move(buffer.m_prePassRenderables)){
             }
             void operator=(GBuffer&& buffer) {
                 m_colorImage = std::move(buffer.m_colorImage);
@@ -141,14 +147,22 @@ namespace hpl {
                 m_normalTarget = std::move(buffer.m_normalTarget);
                 m_positionTarget = std::move(buffer.m_positionTarget);
                 m_outputTarget = std::move(buffer.m_outputTarget);
+                m_hiZDepthBuffer = std::move(buffer.m_hiZDepthBuffer);
 
                 m_SSAOImage = std::move(buffer.m_SSAOImage);
                 m_SSAOBlurImage = std::move(buffer.m_SSAOBlurImage);
 
                 m_SSAOTarget = std::move(buffer.m_SSAOTarget);
                 m_SSAOBlurTarget = std::move(buffer.m_SSAOBlurTarget);
+                m_numberOfHiZMips = buffer.m_numberOfHiZMips;
+                m_prePassRenderables = std::move(buffer.m_prePassRenderables);
+
+                // m_prepassDepthImage = std::move(buffer.m_prepassDepthImage);
+                // m_prepassTarget = std::move(buffer.m_prepassTarget);
 
             }
+            // std::shared_ptr<Image> m_prepassDepthImage; // these are temporary to test the prepass
+            // RenderTarget m_prepassTarget;
 
             std::shared_ptr<Image> m_colorImage;
             std::shared_ptr<Image> m_normalImage;
@@ -157,6 +171,10 @@ namespace hpl {
             std::shared_ptr<Image> m_depthStencilImage;
             std::shared_ptr<Image> m_outputImage;
 
+            std::shared_ptr<Image> m_hiZDepthBuffer;
+		    uint8_t m_numberOfHiZMips;
+
+            // SSAO
             std::shared_ptr<Image> m_SSAOImage;
             std::shared_ptr<Image> m_SSAOBlurImage;
 
@@ -170,6 +188,8 @@ namespace hpl {
 
             RenderTarget m_SSAOTarget;
             RenderTarget m_SSAOBlurTarget;
+
+            std::set<iRenderableContainerNode*> m_prePassRenderables;
             
         };
 
@@ -306,7 +326,6 @@ namespace hpl {
             const cMatrixf& frustumView;
 
            cRendererDeferred::GBuffer& m_gBuffer;
-
         };
         void RenderLightPass(GraphicsContext& context, std::span<iLight*> lights, cWorld* apWorld, cViewport& viewport, cFrustum* apFrustum, LightPassOptions& options);
         struct FogPassOptions {
@@ -355,6 +374,7 @@ namespace hpl {
         UniformWrapper<StringLiteral("u_lightColor"), bgfx::UniformType::Vec4> m_u_lightColor;
         UniformWrapper<StringLiteral("u_overrideColor"), bgfx::UniformType::Vec4> m_u_overrideColor;
         UniformWrapper<StringLiteral("u_copyRegion"), bgfx::UniformType::Vec4> m_u_copyRegion;
+        UniformWrapper<StringLiteral("u_inputRTSize"), bgfx::UniformType::Vec4> m_u_inputRTSize;
 
         UniformWrapper<StringLiteral("u_spotViewProj"), bgfx::UniformType::Mat4> m_u_spotViewProj;
         UniformWrapper<StringLiteral("u_mtxInvRotation"), bgfx::UniformType::Mat4> m_u_mtxInvRotation;
@@ -370,10 +390,22 @@ namespace hpl {
         UniformWrapper<StringLiteral("s_shadowMap"), bgfx::UniformType::Sampler> m_s_shadowMap;
         UniformWrapper<StringLiteral("s_goboMap"), bgfx::UniformType::Sampler> m_s_goboMap;
         UniformWrapper<StringLiteral("s_shadowOffsetMap"), bgfx::UniformType::Sampler> m_s_shadowOffsetMap;
-
         UniformWrapper<StringLiteral("s_scatterDisk"), bgfx::UniformType::Sampler> m_s_scatterDisk;
         
-        
+        struct PackedBoundedBoxes {
+            float minx, miny, minz;
+            float maxx, maxy, maxz;
+        };
+
+        bgfx::DynamicVertexBufferHandle m_instanceBoundingBoxes;
+        bgfx::TextureHandle m_instancePredicatesTexture;
+        bgfx::TextureHandle m_instanceTransferTexture;
+        std::array<uint8_t, MaxInstanceSamples> m_instancePredicates;
+
+        bgfx::ProgramHandle m_occlusionPropProgram; // test if a prop is occluded
+        bgfx::ProgramHandle m_programDownscaleHiZ;
+        bgfx::ProgramHandle m_programCopyHiZ;
+
         bgfx::ProgramHandle m_deferredSSAOProgram;
         bgfx::ProgramHandle m_deferredSSAOBlurHorizontalProgram;
         bgfx::ProgramHandle m_deferredSSAOBlurVerticalProgram;

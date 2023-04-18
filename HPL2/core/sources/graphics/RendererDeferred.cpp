@@ -123,7 +123,6 @@ namespace hpl {
                 return m_clipRect.w * m_clipRect.h;
             }
         };
-       
 
         static inline std::vector<cRendererDeferred::FogRendererData> createFogRenderData(std::span<cFogArea*> fogAreas, cFrustum* apFrustum) {
             std::vector<cRendererDeferred::FogRendererData> fogRenderData;
@@ -949,6 +948,9 @@ namespace hpl {
                     gBuffer.m_specularImage = colorImage();
                     gBuffer.m_depthStencilImage = depthImage();
                     gBuffer.m_outputImage = colorImage();
+                    
+                    // gBuffer.m_prepassDepthImage  = depthImage();
+                    // gBuffer.m_prepassTarget = RenderTarget(gBuffer.m_prepassDepthImage);
 
                     gBuffer.m_colorTarget = RenderTarget(gBuffer.m_colorImage);
                     gBuffer.m_depthTarget = RenderTarget(gBuffer.m_depthStencilImage);
@@ -991,9 +993,19 @@ namespace hpl {
                         image->Initialize(desc);
                         gBuffer.m_SSAOBlurImage = image;
                     }
+                    {
+                        auto desc = ImageDescriptor::CreateTexture2D(
+                            sharedData->m_size.x, sharedData->m_size.y, true, bgfx::TextureFormat::Enum::R32F);
+                        desc.m_configuration.m_rt = RTType::RT_Write;
+                        desc.m_configuration.m_computeWrite = true;
+                        auto image = std::make_shared<Image>();
+                        image->Initialize(desc);
+                        gBuffer.m_hiZDepthBuffer = image;
+                    }
+                    gBuffer.m_numberOfHiZMips = static_cast<uint8_t>(std::floor(std::log2(std::max(sharedData->m_size.x, sharedData->m_size.y))) + 1);
+
                     gBuffer.m_SSAOTarget = RenderTarget(gBuffer.m_SSAOImage);
                     gBuffer.m_SSAOBlurTarget = RenderTarget(gBuffer.m_SSAOBlurImage);
-
                     return gBuffer;
                 };
                 sharedData->m_gBuffer = buildGBuffer();
@@ -1015,6 +1027,16 @@ namespace hpl {
                 return target.m_size == viewport.GetSize();
             }));
 
+        bgfx::VertexLayout computeVertexLayout;
+        computeVertexLayout.begin()
+            .add(bgfx::Attrib::TexCoord0, 3, bgfx::AttribType::Float)
+            .end();
+        m_instanceBoundingBoxes = bgfx::createDynamicVertexBuffer(8120, computeVertexLayout, BGFX_BUFFER_COMPUTE_READ);
+        // m_instancePredicates = bgfx::createDynamicIndexBuffer(8120, BGFX_BUFFER_COMPUTE_READ_WRITE); 
+        m_instancePredicatesTexture = bgfx::createTexture2D(8120, 1, false, 1, bgfx::TextureFormat::R8, 
+            BGFX_TEXTURE_COMPUTE_WRITE | BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MIP_POINT);
+        m_instanceTransferTexture = bgfx::createTexture2D(8120, 1, false, 1, bgfx::TextureFormat::R8, 
+            BGFX_TEXTURE_READ_BACK | BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MIP_POINT | BGFX_TEXTURE_BLIT_DST);
         ////////////////////////////////////
         // Create Shadow Textures
         cVector3l vShadowSize[] = { cVector3l(2 * 128, 2 * 128, 1),
@@ -1112,13 +1134,15 @@ namespace hpl {
         m_s_shadowMap.Initialize();
         m_s_goboMap.Initialize();
         m_s_shadowOffsetMap.Initialize();
-
         m_s_scatterDisk.Initialize();
+        m_u_inputRTSize.Initialize();
 
+        m_programDownscaleHiZ = hpl::loadProgram("cs_gdr_downscale_hi_z");
+        m_occlusionPropProgram = hpl::loadProgram("cs_occlude_props");
+		m_programCopyHiZ = hpl::loadProgram("cs_gdr_copy_z");
         m_deferredSSAOProgram  = hpl::loadProgram("vs_post_effect", "fs_deferred_ssao");
         m_deferredSSAOBlurHorizontalProgram  = hpl::loadProgram("vs_post_effect", "fs_deferred_ssao_blur_horizontal");
         m_deferredSSAOBlurVerticalProgram  = hpl::loadProgram("vs_post_effect", "fs_deferred_ssao_blur_vertical");
-
         m_copyRegionProgram = hpl::loadProgram("cs_copy_region");
         m_lightBoxProgram = hpl::loadProgram("vs_light_box", "fs_light_box");
         m_nullShader = hpl::loadProgram("vs_null", "fs_null");
@@ -2005,21 +2029,220 @@ namespace hpl {
             bgfx::touch(context.StartPass("Clear Depth", viewConfig));
         }();
 
-        tRenderableFlag lVisibleFlags =
-            (mpCurrentSettings->mbIsReflection) ? eRenderableFlag_VisibleInReflection : eRenderableFlag_VisibleInNonReflection;
 
         ///////////////////////////
         // Occlusion testing
         {
-            auto ZPassConfig = createStandardViewConfig(sharedData.m_gBuffer.m_depthTarget);
-            detail::UpdateRenderableList(
-                mpCurrentRenderList, 
-                this, 
-                mpCurrentSettings->mpVisibleNodeTracker,
-                apFrustum, mpCurrentWorld,"Z Pass", ZPassConfig, context, viewport, 
-                eObjectVariabilityFlag_All, 
-                mvCurrentOcclusionPlanes, 
-                eRenderableFlag_VisibleInNonReflection);
+            // auto ZPassConfig = createStandardViewConfig(sharedData.m_gBuffer.m_depthTarget);
+            // detail::UpdateRenderableList(
+            //     mpCurrentRenderList, 
+            //     this, 
+            //     mpCurrentSettings->mpVisibleNodeTracker,
+            //     apFrustum, mpCurrentWorld,"Z Pass", ZPassConfig, context, viewport, 
+            //     eObjectVariabilityFlag_All, 
+            //     mvCurrentOcclusionPlanes, 
+            //     eRenderableFlag_VisibleInNonReflection);
+        }
+        {
+
+            [&] {
+                GraphicsContext::ViewConfiguration viewConfig{ sharedData.m_gBuffer.m_depthTarget };
+                viewConfig.m_viewRect = { 0, 0, sharedData.m_size.x, sharedData.m_size.y };
+                viewConfig.m_clear = { 0, 1, 0, ClearOp::Depth | ClearOp::Stencil | ClearOp::Color };
+                bgfx::touch(context.StartPass("Clear Depth", viewConfig));
+            }();
+
+            struct {
+                iRenderableContainer* container;
+                tObjectVariabilityFlag flag;
+            } containers[] = {
+                { mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static), eObjectVariabilityFlag_Static },
+                { mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Dynamic), eObjectVariabilityFlag_Dynamic },
+            };
+            for (auto& it : containers) {
+                it.container->UpdateBeforeRendering();
+            }
+            auto zprePassView = context.StartPass("HI-Z Pre Pass", createStandardViewConfig(sharedData.m_gBuffer.m_depthTarget));
+                
+            // this is the Z-prepass for hi-z
+            std::vector<iRenderableContainerNode*> renderables;
+            // std::set<iRenderable*> m_a;
+            std::function<void(iRenderableContainerNode* apNode)> walkRenderables;
+            walkRenderables = [&](iRenderableContainerNode* apNode) {
+            
+                for(auto& childNode: apNode->GetChildNodes()) {
+                    childNode->UpdateBeforeUse();
+                     if (childNode->UsesFlagsAndVisibility() &&
+                        (childNode->HasVisibleObjects() == false  || (childNode->GetRenderFlags() & eRenderableFlag_VisibleInNonReflection) != eRenderableFlag_VisibleInNonReflection))
+                    {
+                        continue;
+                    }
+                    eCollision frustumCollision = apFrustum->CollideNode(childNode);
+                    if (frustumCollision == eCollision_Outside) {
+                        continue;
+                    }
+
+                    if(!rendering::detail::IsRenderableNodeIsVisible(childNode, mvCurrentOcclusionPlanes)) {
+                        continue;
+                    }
+        
+                    if (apFrustum->CheckAABBNearPlaneIntersection(childNode->GetMin(), childNode->GetMax()))
+                    {
+                        cVector3f vViewSpacePos = cMath::MatrixMul(apFrustum->GetViewMatrix(), childNode->GetCenter());
+                        childNode->SetViewDistance(vViewSpacePos.z);
+                        childNode->SetInsideView(true);
+                    } else { 
+                        // Frustum origin is outside of node. Do intersection test.
+                        cVector3f vIntersection;
+                        cMath::CheckAABBLineIntersection(
+                            childNode->GetMin(),
+                            childNode->GetMax(),
+                            apFrustum->GetOrigin(),
+                            childNode->GetCenter(),
+                            &vIntersection,
+                            NULL);
+                        cVector3f vViewSpacePos = cMath::MatrixMul(apFrustum->GetViewMatrix(), vIntersection);
+                        childNode->SetViewDistance(vViewSpacePos.z);
+                        childNode->SetInsideView(false);
+                    }
+                    
+
+                    walkRenderables(childNode);
+                }
+
+                if (apNode->GetObjects().size() > 0) {
+                    if(sharedData.m_gBuffer.m_prePassRenderables.empty() || sharedData.m_gBuffer.m_prePassRenderables.contains(apNode)) {
+                        // we found a node in the prepass so we need to render it
+                        for(auto& renderable: apNode->GetObjects()) {
+                            if (!rendering::detail::IsObjectIsVisible(renderable,eRenderableFlag_VisibleInNonReflection,mvCurrentOcclusionPlanes)) {
+                                continue;
+                            }
+
+                            cMaterial* material = renderable->GetMaterial();
+                            if(!material || material->GetType()->IsTranslucent()) {
+                                continue;
+                            }
+                            rendering::detail::RenderZPassObject(zprePassView, context, viewport, this, renderable);
+                        }
+                    }
+                    renderables.push_back(apNode);
+                }
+            };
+            for (auto& it : containers) {
+                iRenderableContainerNode* pNode = it.container->GetRoot();
+                pNode->UpdateBeforeUse(); // Make sure node is updated.
+                pNode->SetInsideView(true); // We never want to check root! Assume player is inside.
+                walkRenderables(pNode);
+            }
+
+            if(!renderables.empty()) {
+                auto boxes = bgfx::alloc(renderables.size() * sizeof(PackedBoundedBoxes));
+                size_t i = 0;
+                for(auto& it: renderables) {
+                    auto min = it->GetMin();
+                    auto max = it->GetMax();
+                    
+                    reinterpret_cast<PackedBoundedBoxes*>(boxes->data)[i++] = {
+                        min.x, min.y, min.z,
+                        max.x, max.y, max.z,
+                    };
+                }
+                bgfx::update(m_instanceBoundingBoxes, 0, boxes);
+                
+                auto hiPassConfig = createStandardViewConfig(sharedData.m_gBuffer.m_depthTarget); // this is irrelevant, we just need a render target
+                auto view = context.StartPass("Hi Z Pass", hiPassConfig);
+                {
+                    GraphicsContext::ShaderProgram shaderInput;
+                    shaderInput.m_textures.push_back({m_s_depthMap, sharedData.m_gBuffer.m_depthStencilImage->GetHandle(), 0 });
+                    shaderInput.m_uavImage.push_back({sharedData.m_gBuffer.m_hiZDepthBuffer->GetHandle(), 1, 0, bgfx::Access::Write, bgfx::TextureFormat::R32F});
+
+                    float inputRendertargetSize[4] = { static_cast<float>(sharedData.m_size.x), static_cast<float>(sharedData.m_size.y), 0.0f, 0.0f };
+                    shaderInput.m_uniforms.push_back({m_u_inputRTSize, &inputRendertargetSize});
+
+                    shaderInput.m_handle = m_programCopyHiZ;
+                    GraphicsContext::ComputeRequest computeRequest {shaderInput, static_cast<uint32_t>(sharedData.m_size.x/16) + 1, static_cast<uint32_t>(sharedData.m_size.y/16) + 1, 1};
+                    context.Submit(view, computeRequest);
+                }
+                {
+                    uint32_t hiZWidth = sharedData.m_size.x;
+                    uint32_t hiZHeight = sharedData.m_size.y;
+                    for(uint8_t lod = 1; lod < sharedData.m_gBuffer.m_numberOfHiZMips; ++lod) {
+                        GraphicsContext::ShaderProgram shaderInput;
+
+                        float inputRendertargetSize[4] = { static_cast<float>(hiZWidth), static_cast<float>(hiZHeight), 2.0f, 2.0f };
+                        shaderInput.m_uniforms.push_back({m_u_param, &inputRendertargetSize});
+
+                        // down scale mip 1 onwards
+                        hiZWidth /= 2;
+                        hiZHeight /= 2;
+
+                        shaderInput.m_uavImage.push_back({sharedData.m_gBuffer.m_hiZDepthBuffer->GetHandle(), 0, static_cast<uint8_t>(lod - 1), bgfx::Access::Read, bgfx::TextureFormat::R32F});
+                        shaderInput.m_uavImage.push_back({sharedData.m_gBuffer.m_hiZDepthBuffer->GetHandle(), 1, lod, bgfx::Access::Write, bgfx::TextureFormat::R32F});
+
+                        shaderInput.m_handle = m_programDownscaleHiZ;
+                        GraphicsContext::ComputeRequest computeRequest {shaderInput, (hiZWidth/16) + 1, (hiZHeight/16) + 1, 1};
+                        context.Submit(view, computeRequest);
+
+                    }
+                }
+
+                {
+                    GraphicsContext::ShaderProgram shaderInput;
+                    size_t instanceCount = static_cast<float>(renderables.size());
+                    float inputRendertargetSize[4] = { 
+                        static_cast<float>(instanceCount),
+                        static_cast<float>(sharedData.m_gBuffer.m_numberOfHiZMips),
+                        static_cast<float>(sharedData.m_size.x),
+                        static_cast<float>(sharedData.m_size.y) };
+                    shaderInput.m_uniforms.push_back({m_u_param, &inputRendertargetSize});
+
+                    shaderInput.m_textures.push_back({m_s_depthMap, sharedData.m_gBuffer.m_hiZDepthBuffer->GetHandle(), 0 });
+                    shaderInput.m_buffers.push_back({1, m_instanceBoundingBoxes, bgfx::Access::Read });
+                    shaderInput.m_uavImage.push_back({m_instancePredicatesTexture, 2, 0, bgfx::Access::Write, bgfx::TextureFormat::R8});
+
+                    shaderInput.m_handle = m_occlusionPropProgram;
+                    uint16_t groupX = bx::max<uint16_t>((instanceCount / 64) + 1, 1);
+                    GraphicsContext::ComputeRequest computeRequest {shaderInput,groupX,1,1};
+                    context.Submit(view, computeRequest);
+
+                    bgfx::frame();
+                    auto transferView = context.StartPass("Transfer CPU", hiPassConfig);
+                    bgfx::blit(transferView, m_instanceTransferTexture, 0, 0, m_instancePredicatesTexture, 0, 0, instanceCount);
+                    uint32_t availableFrame = bgfx::readTexture(m_instanceTransferTexture, m_instancePredicates.data());
+                    while(availableFrame != bgfx::frame()) {}
+                    bgfx::frame();
+                    
+                    
+                    auto finalZPass = context.StartPass("Z Pass", createStandardViewConfig(sharedData.m_gBuffer.m_depthTarget));
+                    mpCurrentRenderList->Clear();
+                    std::set<iRenderableContainerNode*> prePassRenderables;
+                    for(size_t i =0; i< renderables.size(); ++i) {
+                        if(m_instancePredicates[i] > 0) {
+                            prePassRenderables.insert(renderables[i]);
+                            
+                            const bool hasBeenProcessed = sharedData.m_gBuffer.m_prePassRenderables.contains(renderables[i]);
+                            for(auto& obj: renderables[i]->GetObjects()) {
+                                if (!rendering::detail::IsObjectIsVisible(obj,eRenderableFlag_VisibleInNonReflection,mvCurrentOcclusionPlanes)) {
+                                    continue;
+                                }
+                                mpCurrentRenderList->AddObject(obj); 
+
+                                if(!hasBeenProcessed) {
+                                    cMaterial* material = obj->GetMaterial();
+                                    if(!material || material->GetType()->IsTranslucent()) {
+                                        continue;
+                                    }
+                                    rendering::detail::RenderZPassObject(finalZPass, context, viewport, this, obj);
+                                }
+                            }
+                        }
+                    }
+                    sharedData.m_gBuffer.m_prePassRenderables = std::move(prePassRenderables);
+                }
+               
+            }
+        }
+        {
             auto occlusionConfig = createStandardViewConfig(sharedData.m_gBuffer.m_depthTarget);
             auto occlusionPass = context.StartPass("Render Occlusion", occlusionConfig);
 
@@ -2050,6 +2273,7 @@ namespace hpl {
                 eRenderListCompileFlag_Illumination | 
                 eRenderListCompileFlag_FogArea);
         }
+
 
         // ------------------------------------------------------------------------------------
         //  Render Diffuse Pass render to color and depth
