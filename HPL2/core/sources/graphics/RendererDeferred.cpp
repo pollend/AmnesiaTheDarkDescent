@@ -387,148 +387,64 @@ namespace hpl {
             // Add Root nodes to stack
             tRendererSortedNodeSet setNodeStack;
 
-            for (auto& it : containers) {
-                if (it.flag & objectTypes) {
-                    iRenderableContainerNode* pNode = it.container->GetRoot();
-                    pNode->UpdateBeforeUse(); // Make sure node is updated.
-                    pNode->SetInsideView(true); // We never want to check root! Assume player is inside.
-                    setNodeStack.insert(pNode);
-                }
-            }
-
             // Render at least X objects without rendering nodes, to some occluders
             const int minimumObjectsBeforeOcclusionTesting = 0;
             // const int onlyRenderPrevVisibleOcclusionObjectsFrameCount = 0;
             int lMinRenderedObjects = minimumObjectsBeforeOcclusionTesting;
             
+            std::function<void(iRenderableContainerNode* apNode)> walkRenderables;
+            walkRenderables = [&](iRenderableContainerNode* apNode) {
+                if(apNode->GetChildNodes().size() > 0) {
+                    for(auto& childNode: apNode->GetChildNodes()) {
+                        childNode->UpdateBeforeUse();
+                        if (childNode->UsesFlagsAndVisibility() &&
+                            (childNode->HasVisibleObjects() == false || (childNode->GetRenderFlags() & alNeededFlags) != alNeededFlags))
+                        {
+                            continue;
+                        }
+                        eCollision frustumCollision = frustum->CollideNode(childNode);
+                        if (frustumCollision == eCollision_Outside) {
+                            continue;
+                        }
 
-            auto pushNodeChildrenToStack = [&](iRenderableContainerNode* apNode) {
-                auto childrenNodes = apNode->GetChildNodes();
-                for(auto& childNode: childrenNodes) {
-                    childNode->UpdateBeforeUse();
+                        if(!rendering::detail::IsRenderableNodeIsVisible(childNode, occludingPlanes)) {
+                            continue;
+                        }
 
-                    if (childNode->UsesFlagsAndVisibility() &&
-                        (childNode->HasVisibleObjects() == false || (childNode->GetRenderFlags() & alNeededFlags) != alNeededFlags))
-                    {
-                        continue;
+                        if (frustum->CheckAABBNearPlaneIntersection(childNode->GetMin(), childNode->GetMax())) {
+                            cVector3f vViewSpacePos = cMath::MatrixMul(frustum->GetViewMatrix(), childNode->GetCenter());
+                            childNode->SetViewDistance(vViewSpacePos.z);
+                            childNode->SetInsideView(true);
+                        } else { 
+                            // Frustum origin is outside of node. Do intersection test.
+                            cVector3f vIntersection;
+                            cMath::CheckAABBLineIntersection(
+                                childNode->GetMin(),
+                                childNode->GetMax(),
+                                frustum->GetOrigin(),
+                                childNode->GetCenter(),
+                                &vIntersection,
+                                NULL);
+                            cVector3f vViewSpacePos = cMath::MatrixMul(frustum->GetViewMatrix(), vIntersection);
+                            childNode->SetViewDistance(vViewSpacePos.z);
+                            childNode->SetInsideView(false);
+                        }
+                        walkRenderables(childNode);
                     }
-
-                    eCollision frustumCollision =
-                        apNode->GetPrevFrustumCollision() == eCollision_Inside ? eCollision_Inside : frustum->CollideNode(childNode);
-
-                    if (frustumCollision == eCollision_Outside) {
-                        continue;
-                    }
-
-                    if(!rendering::detail::IsRenderableNodeIsVisible(childNode, occludingPlanes)) {
-                        continue;
-                    }
-
-                    apNode->SetPrevFrustumCollision(frustumCollision);
-
-                    ////////////////////////////////////////////////////////
-                    // Check if the frustum origin is inside the node AABB.
-                    //  If so no intersection test is needed
-                    if (frustum->CheckAABBNearPlaneIntersection(childNode->GetMin(), childNode->GetMax()))
-                    {
-                        cVector3f vViewSpacePos = cMath::MatrixMul(frustum->GetViewMatrix(), childNode->GetCenter());
-                        childNode->SetViewDistance(vViewSpacePos.z);
-                        childNode->SetInsideView(true);
-                    } else { 
-                        // Frustum origin is outside of node. Do intersection test.
-                        cVector3f vIntersection;
-                        cMath::CheckAABBLineIntersection(
-                            childNode->GetMin(),
-                            childNode->GetMax(),
-                            frustum->GetOrigin(),
-                            childNode->GetCenter(),
-                            &vIntersection,
-                            NULL);
-                        cVector3f vViewSpacePos = cMath::MatrixMul(frustum->GetViewMatrix(), vIntersection);
-                        childNode->SetViewDistance(vViewSpacePos.z);
-                        childNode->SetInsideView(false);
-                    }
-
-                    setNodeStack.insert(childNode);
+                } else {
+                    renderNodeHandler(apNode, alNeededFlags);
                 }
             };
 
-            ////////////////////////////
-            // Iterate the nodes on the stack.
-            while (!setNodeStack.empty()) {
-                tRendererSortedNodeSetIt firstIt = setNodeStack.begin(); // Might be slow...
-                iRenderableContainerNode* pNode = *firstIt;
-                setNodeStack.erase(firstIt); // This is most likely very slow... use list?
-
-                //////////////////////////
-                // Check if node is a leaf
-                bool bNodeIsLeaf = pNode->HasChildNodes() == false;
-
-                //////////////////////////
-                // Check if near plane is inside node AABB
-                bool bNearPlaneInsideNode = pNode->IsInsideView();
-
-                //////////////////////////
-                // Check if node was visible
-                bool bWasVisible = apVisibleNodeTracker->WasNodeVisible(pNode);
-
-                auto occlusionResult = bgfx::OcclusionQueryResult::Visible; // TODO: occlusion queries are broken
-
-                //////////////////////////
-                // Render nodes and queue queries
-                //  Only do this if:
-                //  - Near plane is not inside node AABB
-                //  - All of the closest objects have been rendered (so there are some blockers)
-                //  - Node was not visible or node is leaf (always draw leaves!)
-                if (bNearPlaneInsideNode == false && lMinRenderedObjects <= 0 &&
-                    (bWasVisible == false || bNodeIsLeaf || occlusionResult == bgfx::OcclusionQueryResult::Visible)) {
-                    ////////////////
-                    // If node is leaf and was visible render objects directly.
-                    //  Rendering directly can be good as it may result in extra blocker for next node test.
-                    bool bRenderObjects = false;
-                    if (bNodeIsLeaf && bWasVisible) {
-                        bRenderObjects = true;
-                    }
-
-                    /////////////////////////
-                    // Matrix
-                    cVector3f vSize = pNode->GetMax() - pNode->GetMin();
-                    cMatrixf mtxBox = cMath::MatrixScale(vSize);
-                    mtxBox.SetTranslation(pNode->GetCenter());
-                    // SetModelViewMatrix( cMath::MatrixMul(mpCurrentFrustum->GetViewMatrix(), mtxBox) );
-                    // OcclusionQueryBoundingBoxTest(pass, context, pNode->GetOcclusionQuery(), *mpCurrentFrustum, mtxBox, rt);
-
-                    //////////////////////////
-                    // Render node objects after AABB so that an object does not occlude its own node.
-                    if (bRenderObjects || occlusionResult == bgfx::OcclusionQueryResult::Visible) {
-                        renderNodeHandler(pNode, alNeededFlags);
-                    }
-
-                    // Debug:
-                    //  Skipping any queries, so must push up visible if this node was visible
-                    // if ((mbOnlyRenderPrevVisibleOcclusionObjects && onlyRenderPrevVisibleOcclusionObjectsFrameCount >= 1 &&
-                    //      bRenderObjects && bWasVisible) ||
-                    //     occlusionResult == bgfx::OcclusionQueryResult::Visible) {
-                    //     PushUpVisibility(pNode);
-                    // }
-
-                    if (occlusionResult == bgfx::OcclusionQueryResult::Visible) {
-                        pushNodeChildrenToStack(pNode);
-                    }
-                }
-                //////////////////////////
-                // If previous test failed, push children to stack and render objects (if any) directly.
-                else {
-                    ////////////////
-                    // Add child nodes to stack if any (also checks if they have needed flags are in frustum)
-                    pushNodeChildrenToStack(pNode);
-
-                    ////////////////
-                    // Render objects if any
-                    int lObjectsRendered = renderNodeHandler(pNode, alNeededFlags);
-                    lMinRenderedObjects -= lObjectsRendered;
+            for (auto& it : containers) {
+                if (it.flag & objectTypes) {
+                    iRenderableContainerNode* pNode = it.container->GetRoot();
+                    pNode->UpdateBeforeUse(); // Make sure node is updated.
+                    pNode->SetInsideView(true); // We never want to check root! Assume player is inside.
+                    walkRenderables(pNode);
                 }
             }
+
         }
 
         static inline bool SortDeferredLightBox(const DeferredLight* apLightDataA, const DeferredLight* apLightDataB) {
@@ -1985,8 +1901,6 @@ namespace hpl {
         m_farBottom = -m_farTop;
         m_farRight = m_farBottom * apFrustum->GetAspect();
         m_farLeft = -m_farRight;
-
-        cRendererCallbackFunctions handler(context, viewport, this);
 
         auto& sharedData = m_boundViewportData.resolve(viewport);
 
