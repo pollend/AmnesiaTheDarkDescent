@@ -69,7 +69,7 @@ file(GLOB impl_sources RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
     sources/impl/BitmapLoader*
     # Newton
     sources/impl/*Newton.cpp
-    sources/impl/VertexBufferBGFX.cpp
+    sources/impl/LegacyVertexBuffer.cpp
     # SDL
     sources/impl/GamepadSDL.cpp
     sources/impl/GamepadSDL2.cpp
@@ -238,6 +238,7 @@ target_link_libraries(HPL2
   absl::str_format
   absl::flat_hash_map
   bgfx
+  TheForge
   Eigen3::Eigen
   bx
   bimg

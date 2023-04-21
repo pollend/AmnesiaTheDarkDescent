@@ -19,7 +19,7 @@
 
 #include "bgfx/bgfx.h"
 #include "engine/Interface.h"
-#include "impl/VertexBufferBGFX.h"
+#include "impl/LegacyVertexBuffer.h"
 #include "math/MathTypes.h"
 
 #include <assert.h>
@@ -262,7 +262,7 @@ namespace hpl {
 															eVertexBufferUsageType aUsageType,
 															int alReserveVtxSize,int alReserveIdxSize)
 	{
-		return new iVertexBufferBGFX(aDrawType, aUsageType, alReserveVtxSize, alReserveIdxSize);
+		return new LegacyVertexBuffer(aDrawType, aUsageType, alReserveVtxSize, alReserveIdxSize);
 	}
 
 	//-----------------------------------------------------------------------

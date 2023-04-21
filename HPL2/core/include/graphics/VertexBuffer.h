@@ -66,7 +66,7 @@ namespace hpl {
 		virtual void DrawIndices(	unsigned int *apIndices, int alCount,
 									eVertexBufferDrawType aDrawType = eVertexBufferDrawType_LastEnum)=0;
 
-		virtual void Bind()=0;
+		// virtual void Bind()=0;
 		virtual void UnBind()=0;
 
 		// virtual void Submit(GraphicsContext& context, eVertexBufferDrawType aDrawType = eVertexBufferDrawType_LastEnum) {}

@@ -29,10 +29,13 @@
 #include <span>
 #include <vector>
 
+#include <Common_3/Graphics/Interfaces/IGraphics.h>
+#include <FixPreprocessor.h>
+
 namespace hpl
 {
 
-    class iVertexBufferBGFX : public iVertexBuffer
+    class LegacyVertexBuffer : public iVertexBuffer
     {
     public:
         static size_t GetSizeFromHPL(eVertexBufferElementFormat format);
@@ -41,13 +44,14 @@ namespace hpl
 
         struct VertexElement
         {
+            Buffer* m_vb = nullptr;
             eVertexBufferElementFormat m_format = eVertexBufferElementFormat::eVertexBufferElementFormat_Float;
             eVertexBufferElement m_type = eVertexBufferElement::eVertexBufferElement_Position;
             tVertexElementFlag m_flag = 0;
             bgfx::VertexBufferHandle m_handle = BGFX_INVALID_HANDLE;
             bgfx::DynamicVertexBufferHandle m_dynamicHandle = BGFX_INVALID_HANDLE;
             size_t m_num = 0;
-            int m_programVarIndex = 0;
+            int m_programVarIndex = 0; // for legacy behavior
             std::vector<uint8_t> m_buffer = {};
 
             size_t Stride() const;
@@ -67,12 +71,12 @@ namespace hpl
             }
         };
 
-        iVertexBufferBGFX(
+        LegacyVertexBuffer(
             eVertexBufferDrawType aDrawType,
             eVertexBufferUsageType aUsageType,
             int alReserveVtxSize,
             int alReserveIdxSize);
-        ~iVertexBufferBGFX();
+        ~LegacyVertexBuffer();
 
         virtual void CreateElementArray(
             eVertexBufferElement aType, eVertexBufferElementFormat aFormat, int alElementNum, int alProgramVarIndex = 0) override;
@@ -93,7 +97,7 @@ namespace hpl
         // virtual void Submit(GraphicsContext& context, eVertexBufferDrawType aDrawType = eVertexBufferDrawType_LastEnum) override;
         virtual void GetLayoutStream(GraphicsContext::LayoutStream& layoutStream, eVertexBufferDrawType aDrawType = eVertexBufferDrawType_LastEnum) override; 
     
-        virtual void Bind() override;
+        // virtual void Bind() override;
         virtual void UnBind() override;
 
         virtual iVertexBuffer* CreateCopy(eVertexBufferType aType, eVertexBufferUsageType aUsageType, tVertexElementFlag alVtxToCopy) override;
@@ -121,8 +125,11 @@ namespace hpl
 
     protected:
         absl::InlinedVector<VertexElement, 10> m_vertexElements = {};
+        Buffer* m_indexBuffer = nullptr;
         std::vector<uint32_t> m_indices = {};
         bgfx::IndexBufferHandle m_indexBufferHandle = BGFX_INVALID_HANDLE;
+
+
         bgfx::DynamicIndexBufferHandle m_dynamicIndexBufferHandle = BGFX_INVALID_HANDLE;
     };
 

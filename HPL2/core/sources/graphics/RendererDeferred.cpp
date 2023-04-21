@@ -36,7 +36,7 @@
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Image.h"
 #include "graphics/RenderTarget.h"
-#include "impl/VertexBufferBGFX.h"
+#include "impl/LegacyVertexBuffer.h"
 #include "math/Math.h"
 
 #include "math/MathTypes.h"
