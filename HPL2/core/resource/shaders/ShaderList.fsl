@@ -1,0 +1,7 @@
+#frag basicSolidDiffuse.frag
+#include "basicSolidDiffuse.frag.fsl"
+#end
+
+#vert basicSolidDiffuse.vert
+#include "basicSolidDiffuse.vert.fsl"
+#end

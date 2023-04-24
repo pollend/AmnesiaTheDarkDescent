@@ -43,7 +43,7 @@ namespace hpl {
 
 	class GraphicsContext;
 	class Image;
-	class RenderTarget;
+	class LegacyRenderTarget;
 	
 	#define kPostEffectParamsClassInit(aClass)							\
 		void CopyTo(iPostEffectParams* apDestParams) {					\
@@ -99,7 +99,7 @@ namespace hpl {
 		iPostEffect(cGraphics *apGraphics, cResources *apResources, iPostEffectType *apType);
 		virtual ~iPostEffect();
 
-		virtual void RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, RenderTarget& target) {};
+		virtual void RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, LegacyRenderTarget& target) {};
 
 		/** SetDisabled - Method to disable the Effect completely, meaning IsActive will always return false even
 		 * after a SetActive(true) call

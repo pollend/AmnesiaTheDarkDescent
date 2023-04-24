@@ -61,7 +61,7 @@ protected:
 
 	cLightPoint* mpCamLight;
 
-	std::shared_ptr<RenderTarget> mpRenderTarget128;
+	std::shared_ptr<LegacyRenderTarget> mpRenderTarget128;
 	// std::shared_ptr<RenderTarget> mpFB64;
 	// RenderViewport mpFB128;
 

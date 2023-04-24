@@ -38,13 +38,12 @@
 
 namespace hpl {
 
+	namespace internal {
+        static size_t m_id = 0;
+        static absl::InlinedVector<size_t, cViewport::MaxViewportHandles> m_freelist;
+	}
+
 	bool cMaterial::mbDestroyTypeSpecifics = true;
-
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	cMaterial::cMaterial(const tString& asName, const tWString& asFullPath, cGraphics *apGraphics, cResources *apResources, iMaterialType *apType)
 		: iResourceBase(asName, asFullPath, 0)
@@ -114,12 +113,18 @@ namespace hpl {
 
 	void cMaterial::SetType(iMaterialType* apType)
 	{
-		if(mpType==apType) return;
+		if(mpType == apType) {
+			return;
+		}
 
 		mpType = apType;
 
-		if(mpVars) hplDelete(mpVars);
-		if(mpType) mpVars = mpType->CreateSpecificVariables();
+		if(mpVars) {
+			hplDelete(mpVars);
+		}
+		if(mpType) {
+			mpVars = mpType->CreateSpecificVariables();
+		}
 	}
 
 	//-----------------------------------------------------------------------

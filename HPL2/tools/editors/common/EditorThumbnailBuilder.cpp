@@ -79,7 +79,7 @@ cEditorThumbnailBuilder::cEditorThumbnailBuilder(iEditorBase* apEditor)
 	desc128.m_configuration.m_rt = RTType::RT_Write;
 	auto image128 = std::make_shared<Image>();
 	image128->Initialize(desc128);
-	mpRenderTarget128 = std::make_shared<RenderTarget>(image128);
+	mpRenderTarget128 = std::make_shared<LegacyRenderTarget>(image128);
 
 	mpViewport = pScene->CreateViewport(pCamera,pWorld,true);
 	mpViewport->SetSize(cVector2l(128));

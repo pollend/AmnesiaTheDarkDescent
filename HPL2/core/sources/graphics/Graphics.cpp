@@ -163,7 +163,7 @@ namespace hpl {
     
 			mvRenderers.resize(eRenderer_LastEnum, NULL);
 
-			mvRenderers[eRenderer_Main] = new cRendererDeferred(this, apResources);
+			mvRenderers[eRenderer_Main] = new cRendererDeferred(nullptr, this, apResources);
 			mvRenderers[eRenderer_WireFrame] = new cRendererWireFrame(this, apResources);
 			mvRenderers[eRenderer_Simple] = new cRendererSimple(this, apResources);
 

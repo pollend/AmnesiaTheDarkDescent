@@ -83,7 +83,7 @@ namespace hpl {
         return bgfx::getCaps()->originBottomLeft;
     }
 
-    void GraphicsContext::CopyTextureToFrameBuffer(Image& image, cRect2l dstRect, RenderTarget& target, Write write) {
+    void GraphicsContext::CopyTextureToFrameBuffer(Image& image, cRect2l dstRect, LegacyRenderTarget& target, Write write) {
         GraphicsContext::LayoutStream layout;
         cMatrixf projMtx;
         ScreenSpaceQuad(layout, projMtx, dstRect.w, dstRect.h);

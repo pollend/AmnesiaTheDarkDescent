@@ -58,8 +58,8 @@ namespace hpl {
             result->m_images[0]->Initialize(desc, nullptr);
             result->m_images[1]->Initialize(desc, nullptr);
             
-            result->m_renderTargets[0] = RenderTarget(result->m_images[0]);
-            result->m_renderTargets[1] = RenderTarget(result->m_images[1]);
+            result->m_renderTargets[0] = LegacyRenderTarget(result->m_images[0]);
+            result->m_renderTargets[1] = LegacyRenderTarget(result->m_images[1]);
 
             return result;
         }, [&](cViewport& viewport, PostEffectCompositorData& data) {
@@ -75,7 +75,7 @@ namespace hpl {
     cPostEffectComposite::~cPostEffectComposite() {
     }
 
-    bool cPostEffectComposite::Draw(GraphicsContext& context, cViewport& viewport, float frameTime, Image& inputTexture, RenderTarget& renderTarget) {
+    bool cPostEffectComposite::Draw(GraphicsContext& context, cViewport& viewport, float frameTime, Image& inputTexture, LegacyRenderTarget& renderTarget) {
         mfCurrentFrameTime = frameTime;
 
         auto& boundData = m_boundCompositorData.resolve(viewport);

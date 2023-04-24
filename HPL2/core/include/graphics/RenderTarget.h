@@ -25,25 +25,25 @@
 
 namespace hpl
 {
-    class RenderTarget
+    class LegacyRenderTarget
     {
     public:
-        static const RenderTarget EmptyRenderTarget;
+        static const LegacyRenderTarget EmptyRenderTarget;
 
-        RenderTarget(std::shared_ptr<Image> image);
-        RenderTarget(std::span<std::shared_ptr<Image>> images);
+        LegacyRenderTarget(std::shared_ptr<Image> image);
+        LegacyRenderTarget(std::span<std::shared_ptr<Image>> images);
 
-        RenderTarget(RenderTarget&& target);
-        RenderTarget(const RenderTarget& target) = delete;
-        RenderTarget();
-        ~RenderTarget();
+        LegacyRenderTarget(LegacyRenderTarget&& target);
+        LegacyRenderTarget(const LegacyRenderTarget& target) = delete;
+        LegacyRenderTarget();
+        ~LegacyRenderTarget();
 
         void Initialize(std::span<std::shared_ptr<Image>> descriptor);
         void Invalidate();
         const bool IsValid() const;
 
-        void operator=(const RenderTarget& target) = delete;
-        void operator=(RenderTarget&& target);
+        void operator=(const LegacyRenderTarget& target) = delete;
+        void operator=(LegacyRenderTarget&& target);
 
         const bgfx::FrameBufferHandle GetHandle() const;
         std::span<std::shared_ptr<Image>> GetImages();

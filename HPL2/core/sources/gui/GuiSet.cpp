@@ -586,7 +586,7 @@ namespace hpl {
 		}
 		
 		cVector2l vSize = pLowLevelGraphics->GetScreenSizeInt();
-		GraphicsContext::ViewConfiguration viewConfiguration {RenderTarget::EmptyRenderTarget};
+		GraphicsContext::ViewConfiguration viewConfiguration {LegacyRenderTarget::EmptyRenderTarget};
 		viewConfiguration.m_viewRect = cRect2l(0, 0, vSize.x, vSize.y);
 		viewConfiguration.m_projection = projectionMtx;
 		viewConfiguration.m_view = viewMtx;

@@ -18,6 +18,7 @@
 
 #include "absl/strings/string_view.h"
 #include "graphics/Bitmap.h"
+#include "graphics/Pipeline.h"
 #include "math/MathTypes.h"
 #include "system/SystemTypes.h"
 #include <bgfx/bgfx.h>
@@ -30,6 +31,9 @@
 #include <span>
 #include <string>
 
+
+#include "Common_3/Graphics/Interfaces/IGraphics.h"
+#include <FixPreprocessor.h>
 namespace hpl {
 
     class cBitmap;
@@ -112,10 +116,14 @@ namespace hpl {
             return cVector2l(m_width, m_height);
         }
 
+        ForgeTextureHandle& GetTexture() {
+            return m_textures;
+        }
+
     private:
         uint16_t m_width = 0;
         uint16_t m_height = 0;
-
+        ForgeTextureHandle m_textures;
         bgfx::TextureHandle m_handle = BGFX_INVALID_HANDLE;
     };
 

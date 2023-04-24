@@ -168,8 +168,8 @@ namespace hpl {
             if(refractionEnabled && apRenderer && TypeInfo<cRendererDeferred>::IsType(*apRenderer)) {
                 auto* deferredRenderer = static_cast<cRendererDeferred*>(apRenderer);
                 auto& sharedData = deferredRenderer->GetSharedData(viewport);
-                program.m_textures.push_back({m_s_refractionMap, sharedData.m_refractionImage->GetHandle(), 3});
-                program.m_textures.push_back({m_s_reflectionMap, sharedData.m_gBufferReflection.m_colorImage->GetHandle(), 4});
+                // program.m_textures.push_back({m_s_refractionMap, sharedData.m_refractionImage->GetHandle(), 3});
+                // program.m_textures.push_back({m_s_reflectionMap, sharedData.m_gBufferReflection.m_colorImage->GetHandle(), 4});
             }
 
             program.m_uniforms.push_back({ m_u_param, &params, 4 });

@@ -123,7 +123,6 @@ namespace hpl {
 		virtual void CompileMaterialSpecifics(cMaterial *apMaterial)=0;
 
 		inline bool HasTypeSpecifics(eMaterialRenderMode aMode) const { return mbHasTypeSpecifics[aMode];}
-
 	protected:
 		void AddUsedTexture(eMaterialTexture aType);
 

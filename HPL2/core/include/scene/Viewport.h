@@ -61,7 +61,7 @@ namespace hpl {
         struct DrawPayloadCommon {
             cFrustum* m_frustum;
             GraphicsContext* m_context;
-            RenderTarget* m_outputTarget;
+            LegacyRenderTarget* m_outputTarget;
             cViewport* m_viewport;
             cRenderSettings* m_renderSettings;
             ImmediateDrawBatch* m_immediateDrawBatch; 
@@ -131,17 +131,17 @@ namespace hpl {
             m_imageDescriptor = imageDescriptor;
             m_dirtyViewport = true;
         }
-        void setRenderTarget(std::shared_ptr<RenderTarget> renderTarget) {
+        void setRenderTarget(std::shared_ptr<LegacyRenderTarget> renderTarget) {
             m_renderTarget = renderTarget;
             m_dirtyViewport = true;
         }
         // if a render target is not set then return an empty render target
         // bgfx will draw to the back buffer in this case
-        RenderTarget& GetRenderTarget() {
+        LegacyRenderTarget& GetRenderTarget() {
             if (m_renderTarget) {
                 return *m_renderTarget;
             }
-            static RenderTarget emptyTarget = RenderTarget();
+            static LegacyRenderTarget emptyTarget = LegacyRenderTarget();
             return emptyTarget;
         }
 
@@ -174,7 +174,7 @@ namespace hpl {
 
         ImageDescriptor m_imageDescriptor;
 
-        std::shared_ptr<RenderTarget> m_renderTarget;
+        std::shared_ptr<LegacyRenderTarget> m_renderTarget;
         
         cVector2l m_size = { 0, 0 };
         
@@ -271,7 +271,7 @@ namespace hpl {
         PrimaryViewport& operator=(const PrimaryViewport& other) = delete;
         PrimaryViewport& operator=(PrimaryViewport&& other) = delete;
 
-        inline RenderTarget& GetRenderTarget() {
+        inline LegacyRenderTarget& GetRenderTarget() {
             return m_renderTarget;
         }
 
@@ -292,7 +292,7 @@ namespace hpl {
         void CreateEventHandler();
 
         cVector2l m_size = { 0, 0 };
-        RenderTarget m_renderTarget;
+        LegacyRenderTarget m_renderTarget;
         bool m_dirtyViewport = false;
 
         IUpdateEventLoop::UpdateEvent::Handler m_updateEventHandler;

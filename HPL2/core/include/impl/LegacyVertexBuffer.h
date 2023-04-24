@@ -39,20 +39,20 @@ namespace hpl
     {
     public:
         static size_t GetSizeFromHPL(eVertexBufferElementFormat format);
+        [[deprecated("removing bgfx dependency")]]
         static bgfx::Attrib::Enum GetAttribFromHPL(eVertexBufferElement type);
+        [[deprecated("removing bgfx dependency")]]
         static bgfx::AttribType::Enum GetAttribTypeFromHPL(eVertexBufferElementFormat format);
 
         struct VertexElement
         {
-            Buffer* m_vb = nullptr;
+            ForgeBufferHandle m_buffer;
             eVertexBufferElementFormat m_format = eVertexBufferElementFormat::eVertexBufferElementFormat_Float;
             eVertexBufferElement m_type = eVertexBufferElement::eVertexBufferElement_Position;
             tVertexElementFlag m_flag = 0;
-            bgfx::VertexBufferHandle m_handle = BGFX_INVALID_HANDLE;
-            bgfx::DynamicVertexBufferHandle m_dynamicHandle = BGFX_INVALID_HANDLE;
             size_t m_num = 0;
             int m_programVarIndex = 0; // for legacy behavior
-            std::vector<uint8_t> m_buffer = {};
+            std::vector<uint8_t> m_data = {};
 
             size_t Stride() const;
             size_t NumElements() const;
@@ -60,14 +60,14 @@ namespace hpl
             template<typename TData>
             std::span<TData> GetElements()
             {
-                BX_ASSERT(sizeof(TData) == Stride(), "Data must be same size as stride");
-                return std::span<TData*>(reinterpret_cast<TData*>(m_buffer.data()), m_buffer.size() / Stride());
+                ASSERT(sizeof(TData) == Stride() && "Data must be same size as stride");
+                return std::span<TData*>(reinterpret_cast<TData*>(m_data.data()), m_data.size() / Stride());
             }
 
             template<typename TData>
             TData& GetElement(size_t index) {
-                BX_ASSERT(sizeof(TData) <= Stride(), "Date must be less than or equal to stride");
-                return *reinterpret_cast<TData*>(m_buffer.data() + index * Stride());
+                ASSERT(sizeof(TData) <= Stride() &&  "Date must be less than or equal to stride");
+                return *reinterpret_cast<TData*>(m_data.data() + index * Stride());
             }
         };
 
@@ -125,12 +125,8 @@ namespace hpl
 
     protected:
         absl::InlinedVector<VertexElement, 10> m_vertexElements = {};
-        Buffer* m_indexBuffer = nullptr;
+        ForgeBufferHandle m_indexBuffer;
         std::vector<uint32_t> m_indices = {};
-        bgfx::IndexBufferHandle m_indexBufferHandle = BGFX_INVALID_HANDLE;
-
-
-        bgfx::DynamicIndexBufferHandle m_dynamicIndexBufferHandle = BGFX_INVALID_HANDLE;
     };
 
 }; // namespace hpl

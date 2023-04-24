@@ -36,6 +36,8 @@
 #include <memory>
 #include <vector>
 
+#include "Common_3/Graphics/Interfaces/IGraphics.h"
+#include <FixPreprocessor.h>
 namespace hpl {
     
 
@@ -238,7 +240,7 @@ namespace hpl {
     {
     public:
         int mlFrameCount;
-        RenderTarget m_target;
+        LegacyRenderTarget m_target;
         cShadowMapLightCache mCache;
     };
 
@@ -283,7 +285,7 @@ namespace hpl {
         virtual bool LoadData()=0;
         virtual void DestroyData()=0;
 
-        virtual std::shared_ptr<Image> GetOutputImage(cViewport& viewport) { return std::shared_ptr<Image>(nullptr);}
+        virtual Texture* GetOutputImage(cViewport& viewport) { return nullptr;}
 
         cWorld *GetCurrentWorld(){ return mpCurrentWorld;}
         cFrustum *GetCurrentFrustum(){ return mpCurrentFrustum;}

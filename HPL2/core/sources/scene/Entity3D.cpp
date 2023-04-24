@@ -367,6 +367,7 @@ namespace hpl {
 			{
 				m_mtxWorldTransform = m_mtxLocalTransform;
 			}
+			OnUpdateWorldTransform();
 		}
 	}
 

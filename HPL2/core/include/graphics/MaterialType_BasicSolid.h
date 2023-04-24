@@ -103,6 +103,8 @@ namespace hpl {
 
     class cMaterialType_SolidDiffuse_Vars : public iMaterialVars {
     public:
+
+
         cMaterialType_SolidDiffuse_Vars()
             : mfHeightMapScale(0.05f)
             , mfHeightMapBias(0.0f)
@@ -111,11 +113,16 @@ namespace hpl {
         ~cMaterialType_SolidDiffuse_Vars() {
         }
 
+        uint32_t m_materialId = 0;
+
         float mfHeightMapScale;
         float mfHeightMapBias;
         float mfFrenselBias;
         float mfFrenselPow;
         bool mbAlphaDissolveFilter;
+
+        std::array<ForgeDescriptorSet, eMaterialTexture_LastEnum>  m_descriptorSet;
+
     };
 
     class cMaterialType_SolidDiffuse : public iMaterialType_SolidBase {
@@ -137,7 +144,7 @@ namespace hpl {
         void GetVariableValues(cMaterial* apMaterial, cResourceVarsObject* apVars) override;
 
     private:
-        void CompileSolidSpecifics(cMaterial* apMaterial);
+        void CompileSolidSpecifics(cMaterial* apMaterial) override;
     };
 
     //---------------------------------------------------

@@ -1,0 +1,130 @@
+#include "deferred_resources.h.fsl"
+#include "deferred_common.h.fsl"
+
+
+STRUCT(PsIn) 
+{
+    DATA(float4, pos, SV_Position);
+    DATA(float2, texCoord, TEXCOORD0);
+    DATA(float3, view, TEXCOORD1);
+    DATA(float3, normal, NORMAL);
+    DATA(float3, tangent, TANGENT);
+    DATA(float3, bitangent, BITANGENT);
+};
+
+STRUCT(PSOut)
+{
+    DATA(float4, diffuse, SV_Target0);
+    DATA(float4, normal, SV_Target1);
+    DATA(float4, position, SV_Target2);
+    DATA(float4, specular, SV_Target3);
+};
+
+CBUFFER(cbDeferredProps, UPDATE_FREQ_PER_DRAW, b2, binding = 2)
+{
+    DATA(float2, heightMapScale, None);
+    DATA(float2, heightMapOffset, None);
+    DATA(float, heightMapBias, None);
+    DATA(float, fresnelBias, None);
+    DATA(float, fresnelPow, None);
+    DATA(int, textureConfig, None);
+};
+
+PSOut PS_MAIN(PsIn In)
+{
+    INIT_MAIN;
+    PSOut Out;
+    float2 texCoord = In.texCoord;
+
+    if(HasHeight(Get(textureConfig))) {
+        float3 eyeVec = normalize(In.view);
+
+        //Get give normalizedView the length so it reaches bottom.
+        float normalLength = 1.0 / eyeVec.z;
+        eyeVec *= vec3(normalLength, normalLength, normalLength);	
+        
+        //Apply scale and bias
+        eyeVec.xy *= Get(heightMapScale);
+        //vec2 vBiasPosOffset = vEyeVec.xy * avHeightMapScaleAndBias.y; <- not working! because the ray casting buggers out when u are really close!
+        
+        float3 heightMapPos = float3(texCoord.xy, 0.0);
+
+        //Determine number of steps based on angle between normal and eye
+        float fSteps = floor((1.0 - dot(eyeVec, normalize(In.normal)) ) * 18.0) + 2.0; 
+        
+        // Do a linear search to find the first intersection
+        {
+            eyeVec /= fSteps;
+            int iterations = int(clamp(fSteps - 1.0, 0.0, 28.0));
+            for(int i = 0; i < iterations; i++) 
+            { 
+                float fDepth = SampleTex2D(Get(heightMap), Get(nearestSampler), texCoord.xy).w; 
+                if(heightMapPos.z < fDepth) {
+                    heightMapPos += eyeVec;
+                }
+            } 
+        }
+
+        // Do a binary search to find the exact intersection
+        {
+            const int lSearchSteps = 6; 
+            for(int i=0; i<lSearchSteps; i++) 
+            { 
+                float fDepth = SampleTex2D(Get(diffuseMap), Get(nearestSampler), texCoord.xy).w;
+                if(heightMapPos.z < fDepth) {
+                    heightMapPos += eyeVec; 
+                }
+                
+                eyeVec *= 0.5; 
+                heightMapPos -= eyeVec; 
+            } 
+        }
+        texCoord.xy = heightMapPos.xy;
+    }
+
+    float4 diffuseColor = HasHeight(Get(textureConfig)) ? 
+        SampleTex2D(Get(diffuseMap), Get(nearestSampler), texCoord.xy) : float4(0, 0, 0, 1);
+
+    if(diffuseColor.w < .5) {
+        discard;
+    }
+
+
+    float3 screenNormal = float3(0,0,0);
+    if(HasNormal(Get(textureConfig))) {
+        float3 normal = SampleTex2D(Get(normalMap), Get(nearestSampler), texCoord).xyz - 0.5; //No need for full unpack x*2-1, becuase normal is normalized. (but now we do not normalize...)
+        screenNormal = normalize(normal.x * In.tangent + normal.y * In.bitangent + normal.z * In.normal);
+    }  else {
+        screenNormal = normalize(In.normal);
+    }
+
+    if(HasCubeMap(Get(textureConfig))) {
+       float3 cameraEyeSpace = normalize(In.pos.xyz);	
+
+        float3 envUV = reflect(cameraEyeSpace, screenNormal);
+        envUV = mul(invViewRotation, vec4(envUV.xyz, 1.0)).xyz;
+                    
+        vec4 reflectionColor = SampleTexCube(Get(cubeMap), Get(nearestSampler), envUV);
+        
+        float afEDotN = max(dot(-cameraEyeSpace, screenNormal),0.0);
+        float fFresnel = Fresnel(afEDotN, Get(fresnelBias), Get(fresnelPow));
+        
+        if(HasCubeMapAlpha(Get(textureConfig))) {
+            reflectionColor *= SampleTex2D(Get(cubeMapAlpha), Get(nearestSampler), texCoord).w;
+        }
+        Out.diffuse = diffuseColor + reflectionColor * fFresnel;
+    } else {
+        Out.diffuse = diffuseColor;
+    }
+
+    Out.normal = float4(screenNormal.xy, 0, 1);
+    Out.position = float4(In.pos.xyz, 1);
+    Out.position = In.pos;
+    if(HasSpecular(Get(textureConfig))) {
+        Out.specular = float4(SampleTex2D(Get(specularMap), Get(nearestSampler), texCoord).xy, 0, 0);
+    } else {
+        Out.specular = float4(0, 0, 0, 0);
+    }
+
+    RETURN(Out);
+}

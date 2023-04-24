@@ -213,10 +213,43 @@ namespace hpl
         GraphicsContext::ShaderProgram program;
         cMatrixf mtxUv = apMaterial->HasUvAnimation() ? apMaterial->GetUvMatrix().GetTranspose() : cMatrixf::Identity;
         program.m_uniforms.push_back({m_u_mtxUv, &mtxUv.v});
-
+        
+        auto pipeline = Interface<HPLPipeline>::Get();
         auto* pVars = static_cast<cMaterialType_SolidDiffuse_Vars*>(apMaterial->GetVars());
         switch(aRenderMode) {
             case eMaterialRenderMode_Diffuse: {
+
+                auto& descriptorSet = pVars->m_descriptorSet[eMaterialRenderMode_Diffuse];
+
+                auto diffuseMap = apMaterial->GetImage(eMaterialTexture_Diffuse);
+                auto normalImage = apMaterial->GetImage(eMaterialTexture_NMap);
+                auto specularMap = apMaterial->GetImage(eMaterialTexture_Specular);
+                auto heightMap = apMaterial->GetImage(eMaterialTexture_Height);
+                auto diffuseEnvMap = apMaterial->GetImage(eMaterialTexture_CubeMap);
+                auto cubemapAlphaMap = apMaterial->GetImage(eMaterialTexture_CubeMapAlpha);
+                
+                std::array<eMaterialTexture, 6> poolTextures = {
+                    eMaterialTexture_Diffuse,
+                    eMaterialTexture_NMap,
+                    eMaterialTexture_Specular,
+                    eMaterialTexture_Height,
+                    eMaterialTexture_CubeMap,
+                    eMaterialTexture_CubeMapAlpha
+                };
+                // pipeline->CmdPool(0).AddMaterial(*apMaterial, poolTextures);
+                
+                std::array params = {
+                    [&]{
+                        DescriptorData data = {};
+                        data.pName = "s_diffuseMap";
+                        data.ppTextures = &diffuseMap->GetTexture().m_handle;
+                        return data;
+                    }()
+                };
+
+                updateDescriptorSet(
+                    pipeline->Rend(), 0, descriptorSet.m_handle, params.size(), params.data());
+
                 struct {
                     float heightMapScale;
                     float heightMapBias;
@@ -229,13 +262,7 @@ namespace hpl
                 } param = {0};
                 param.alphaReject = 0.5f;
                 uint32_t flags = 0;
-                auto diffuseMap = apMaterial->GetImage(eMaterialTexture_Diffuse);
-                auto normalImage = apMaterial->GetImage(eMaterialTexture_NMap);
-                auto specularMap = apMaterial->GetImage(eMaterialTexture_Specular);
-                auto heightMap = apMaterial->GetImage(eMaterialTexture_Height);
-                auto diffuseEnvMap = apMaterial->GetImage(eMaterialTexture_CubeMap);
-                auto cubemapAlphaMap = apMaterial->GetImage(eMaterialTexture_CubeMapAlpha);
-                
+               
                 if(diffuseMap) {
                     program.m_textures.push_back({m_s_diffuseMap, diffuseMap->GetHandle(), 4});
                 }
@@ -338,7 +365,22 @@ namespace hpl
 
     iMaterialVars* cMaterialType_SolidDiffuse::CreateSpecificVariables()
     {
-        return hplNew(cMaterialType_SolidDiffuse_Vars, ());
+        auto pVars = new cMaterialType_SolidDiffuse_Vars();
+        auto pipeline = Interface<HPLPipeline>::Get();
+        DescriptorSetDesc desc = { pipeline->Root(), DESCRIPTOR_UPDATE_FREQ_PER_BATCH, 1 };
+
+        DescriptorSet* descriptorSet = {};
+        addDescriptorSet(pipeline->Rend(), &desc, &pVars->m_descriptorSet[eMaterialRenderMode_Diffuse].m_handle);
+        addDescriptorSet(pipeline->Rend(), &desc, &pVars->m_descriptorSet[eMaterialRenderMode_Z].m_handle);
+        addDescriptorSet(pipeline->Rend(), &desc, &pVars->m_descriptorSet[eMaterialRenderMode_Z_Dissolve].m_handle);
+        addDescriptorSet(pipeline->Rend(), &desc, &pVars->m_descriptorSet[eMaterialRenderMode_Illumination].m_handle);
+
+        pVars->m_descriptorSet[eMaterialRenderMode_Diffuse].Initialize();
+        pVars->m_descriptorSet[eMaterialRenderMode_Z].Initialize();
+        pVars->m_descriptorSet[eMaterialRenderMode_Z_Dissolve].Initialize();
+        pVars->m_descriptorSet[eMaterialRenderMode_Illumination].Initialize();
+        
+        return new cMaterialType_SolidDiffuse_Vars();
     }
 
     //--------------------------------------------------------------------------

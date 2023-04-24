@@ -20,6 +20,7 @@
 #ifndef HPL_MATERIAL_H
 #define HPL_MATERIAL_H
 
+#include "engine/Event.h"
 #include "graphics/AnimatedImage.h"
 #include <graphics/Image.h>
 #include <graphics/ImageResourceWrapper.h>
@@ -38,14 +39,15 @@ namespace hpl {
 	class iGpuProgram;
 	class iMaterialType;
 	class cResourceVarsObject;
+	class Texture;
 
-	//---------------------------------------------------
 
 	class iMaterialVars
 	{
 	public:
 		virtual ~iMaterialVars(){}
 	};
+
 
 	//---------------------------------------------------
 
@@ -63,12 +65,12 @@ namespace hpl {
 		eMaterialAnimationAxis mAxis;
 	};
 
-	//---------------------------------------------------
 
 	class cMaterial : public iResourceBase
 	{
 	friend class iMaterialType;
 	public:
+
 		cMaterial(const tString& asName, const tWString& asFullPath, cGraphics *apGraphics, cResources *apResources, iMaterialType *apType);
 		virtual ~cMaterial();
 
@@ -76,10 +78,10 @@ namespace hpl {
 		iMaterialType * GetType(){ return mpType; }
 
 		void Compile();
-
-
 		void SetImage(eMaterialTexture aType, iResourceBase *apTexture);
 		Image *GetImage(eMaterialTexture aType);
+
+		Texture* GetTexture(eMaterialTexture aType);
 
 		void SetVars(iMaterialVars *apVars){ mpVars = apVars;}
 		iMaterialVars* GetVars(){ return mpVars;}
@@ -161,7 +163,7 @@ namespace hpl {
 
 	private:
 		void UpdateAnimations(float afTimeStep);
-
+		
 		cGraphics *mpGraphics;
 		cResources *mpResources;
 

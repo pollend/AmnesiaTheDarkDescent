@@ -1413,9 +1413,9 @@ namespace hpl {
 				BX_ASSERT(targetElement->m_type == sourceElement->m_type, "lDataArrayTypes[i].m_data->m_type == sourceElement->m_type");
 				BX_ASSERT(targetElement->m_num == sourceElement->m_num, "lDataArrayTypes[i].m_targetElement->m_num == sourceElement->m_num");
 				
-				auto targetElementStart = &(targetElement->m_buffer.data()[lDataArrayTypes[i].offset]);
-				std::copy(sourceElement->m_buffer.begin(), sourceElement->m_buffer.end(), targetElementStart);
-				lDataArrayTypes[i].offset += sourceElement->m_buffer.size();
+				auto targetElementStart = &(targetElement->m_data.data()[lDataArrayTypes[i].offset]);
+				std::copy(sourceElement->m_data.begin(), sourceElement->m_data.end(), targetElementStart);
+				lDataArrayTypes[i].offset += sourceElement->m_data.size();
 			}
 
 			//////////////////////////////////////////////
@@ -1553,9 +1553,9 @@ namespace hpl {
 			BX_ASSERT(targetPositionElement->m_type == sourceElement->m_type, "targetPositionElement->m_type == sourceElement->m_type");
 			BX_ASSERT(targetPositionElement->m_num == sourceElement->m_num, "targetPositionElement->m_num == sourceElement->m_num");
 
-			auto elementStart = &(targetPositionElement->m_buffer.data()[targetPositionOffset]);
-			std::copy(sourceElement->m_buffer.begin(), sourceElement->m_buffer.end(), elementStart);
-			targetPositionOffset += sourceElement->m_buffer.size();
+			auto elementStart = &(targetPositionElement->m_data.data()[targetPositionOffset]);
+			std::copy(sourceElement->m_data.begin(), sourceElement->m_data.end(), elementStart);
+			targetPositionOffset += sourceElement->m_data.size();
 
 			//Copy to index array and increase index pointer
 			unsigned int* pTransIdxArray = pTransformedVtxBuffer->GetIndices();

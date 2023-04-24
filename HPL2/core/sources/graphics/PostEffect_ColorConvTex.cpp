@@ -92,7 +92,7 @@ namespace hpl
         mpColorConvTex = mpResources->GetTextureManager()->Create1DImage(mParams.msTextureFile, false, eTextureUsage_Normal, 0, options);
     }
 
-    void cPostEffect_ColorConvTex::RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, RenderTarget& target)
+    void cPostEffect_ColorConvTex::RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, LegacyRenderTarget& target)
     {
 		BX_ASSERT(mpColorConvTex, "ColorConvTex is null");
 	    cVector2l vRenderTargetSize = viewport.GetSize();

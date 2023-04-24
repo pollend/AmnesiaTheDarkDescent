@@ -62,7 +62,7 @@ namespace hpl {
         default:
             break;
         }
-        BX_ASSERT(false, "Unknown vertex attribute type.");
+        ASSERT(false && "Unknown vertex attribute type.");
         return 0;
     }
 
@@ -74,8 +74,11 @@ namespace hpl {
             return bgfx::AttribType::Float;
         case eVertexBufferElementFormat_Byte:
             return bgfx::AttribType::Uint8;
+        default:
+            break;
+
         }
-        BX_ASSERT(false, "Unknown vertex attribute type.");
+        ASSERT(false && "Unknown vertex attribute type.");
         return bgfx::AttribType::Count;
     }
 
@@ -111,7 +114,7 @@ namespace hpl {
         case eVertexBufferElement_LastEnum:
             break;
         }
-        BX_ASSERT(false, "Unknown vertex attribute type.");
+        ASSERT(false && "Unknown vertex attribute type.");
         return bgfx::Attrib::Count;
     }
 
@@ -124,19 +127,19 @@ namespace hpl {
     }
 
     LegacyVertexBuffer::~LegacyVertexBuffer() {
-        for (auto& element : m_vertexElements) {
-            removeResource(element.m_vb);
-        }
-        if(m_indexBuffer) {
-            removeResource(m_indexBuffer);
-        }
+        // for (auto& element : m_vertexElements) {
+        //     removeResource(element.m_buffer);
+        // }
+        // if(m_indexBuffer) {
+        //     removeResource(m_indexBuffer);
+        // }
     }
 
     static void PushVertexElements(
         std::span<const float> values, eVertexBufferElement elementType, std::span<LegacyVertexBuffer::VertexElement> elements) {
         for (auto& element : elements) {
             if (element.m_type == elementType) {
-                auto& buffer = element.m_buffer;
+                auto& buffer = element.m_data;
                 switch (element.m_format) {
                 case eVertexBufferElementFormat_Float:
                     {
@@ -180,7 +183,7 @@ namespace hpl {
     }
 
     size_t LegacyVertexBuffer::VertexElement::NumElements() const {
-        return m_buffer.size() / Stride();
+        return m_data.size() / Stride();
     }
 
     void LegacyVertexBuffer::AddVertexVec3f(eVertexBufferElement aElement, const cVector3f& avVtx) {
@@ -212,8 +215,8 @@ namespace hpl {
             return element.m_type == eVertexBufferElement_Position;
         });
         if (positionElement != m_vertexElements.end()) {
-            BX_ASSERT(positionElement->m_format == eVertexBufferElementFormat_Float, "Only float format supported");
-            BX_ASSERT(positionElement->m_num >= 3, "Only 3 component format supported");
+            ASSERT(positionElement->m_format == eVertexBufferElementFormat_Float && "Only float format supported");
+            ASSERT(positionElement->m_num >= 3 && "Only 3 component format supported");
             struct PackedVec3 {
                 float x;
                 float y;
@@ -337,39 +340,38 @@ namespace hpl {
             ResizeArray(eVertexBufferElement_Texture1Tangent, GetVertexNum() * 4);
 
             cMath::CreateTriTangentVectors(
-                reinterpret_cast<float*>(tangentElement->m_buffer.data()),
+                reinterpret_cast<float*>(tangentElement->m_data.data()),
                 m_indices.data(),
                 m_indices.size(),
-                reinterpret_cast<float*>(positionElement->m_buffer.data()),
+                reinterpret_cast<float*>(positionElement->m_data.data()),
                 positionElement->m_num,
-                reinterpret_cast<float*>(textureElement->m_buffer.data()),
-                reinterpret_cast<float*>(normalElement->m_buffer.data()),
+                reinterpret_cast<float*>(textureElement->m_data.data()),
+                reinterpret_cast<float*>(normalElement->m_data.data()),
                 positionElement->NumElements());
         }
         SyncToken token = {};
 
         for (auto& element : m_vertexElements) {
-            if(element.m_vb) {
-                removeResource(element.m_vb);
-            }
+            element.m_buffer.TryFree();
             BufferLoadDesc loadDesc = {};
-            loadDesc.ppBuffer = &element.m_vb;
+            loadDesc.ppBuffer = &element.m_buffer.m_handle;
             loadDesc.mDesc.mDescriptors = DESCRIPTOR_TYPE_VERTEX_BUFFER;
             loadDesc.mDesc.mMemoryUsage = detail::toMemoryUsage(mUsageType);
-            loadDesc.mDesc.mSize = element.m_buffer.size();
-            loadDesc.pData = element.m_buffer.data();
+            loadDesc.mDesc.mSize = element.m_data.size();
+            loadDesc.pData = element.m_data.data();
             addResource(&loadDesc, &token);
+            element.m_buffer.Initialize();
         }
-        if(m_indexBuffer) {
-            removeResource(m_indexBuffer);
-        }
+
+        m_indexBuffer.TryFree();
         BufferLoadDesc loadDesc = {};
-        loadDesc.ppBuffer = &m_indexBuffer;
+        loadDesc.ppBuffer = &m_indexBuffer.m_handle;
         loadDesc.mDesc.mDescriptors = DESCRIPTOR_TYPE_INDEX_BUFFER;
         loadDesc.mDesc.mMemoryUsage = detail::toMemoryUsage(mUsageType);
         loadDesc.mDesc.mSize = m_indices.size() * sizeof(uint32_t);
         loadDesc.pData = m_indices.data();
         addResource(&loadDesc, &token);
+        m_indexBuffer.Initialize();
 
 
         waitForToken(&token);
@@ -383,30 +385,30 @@ namespace hpl {
                 switch (mUsageType) {
                 case eVertexBufferUsageType_Static:
                     {
-                        if (element.m_vb) {
-                            removeResource(element.m_vb);
-                        }
+                        element.m_buffer.TryFree();
                         BufferLoadDesc loadDesc = {};
-                        loadDesc.ppBuffer = &element.m_vb;
+                        loadDesc.ppBuffer = &element.m_buffer.m_handle;
                         loadDesc.mDesc.mDescriptors = DESCRIPTOR_TYPE_VERTEX_BUFFER;
                         loadDesc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_GPU_ONLY;
-                        loadDesc.mDesc.mSize = element.m_buffer.size();
-                        loadDesc.pData = element.m_buffer.data();
+                        loadDesc.mDesc.mSize = element.m_data.size();
+                        loadDesc.pData = element.m_data.data();
                         addResource(&loadDesc, &token);
+                        element.m_buffer.Initialize();
                         break;
                     }
                 case eVertexBufferUsageType_Dynamic:
                 case eVertexBufferUsageType_Stream:
                     {
-                        BufferUpdateDesc updateDesc = { element.m_vb };
-                        updateDesc.mSize = element.m_buffer.size();
+                        ASSERT(element.m_buffer.IsValid() && "Buffer not initialized");
+                        BufferUpdateDesc updateDesc = { element.m_buffer.m_handle };
+                        updateDesc.mSize = element.m_data.size();
                         beginUpdateResource(&updateDesc);
-                        memcpy(updateDesc.pMappedData, element.m_buffer.data(), element.m_buffer.size());
+                        memcpy(updateDesc.pMappedData, element.m_data.data(), element.m_data.size());
                         endUpdateResource(&updateDesc, &token);
                         break;
                     }
                 default:
-                    BX_ASSERT(false, "Unknown usage type %d", mUsageType);
+                    ASSERT(false && "Unknown usage type");
                     break;
                 }
             }
@@ -415,11 +417,9 @@ namespace hpl {
             switch (mUsageType) {
             case eVertexBufferUsageType_Static:
                 {
-                    if (m_indexBuffer) {
-                        removeResource(m_indexBuffer);
-                    }
+                    m_indexBuffer.TryFree();
                     BufferLoadDesc loadDesc = {};
-                    loadDesc.ppBuffer = &m_indexBuffer;
+                    loadDesc.ppBuffer = &m_indexBuffer.m_handle;
                     loadDesc.mDesc.mDescriptors = DESCRIPTOR_TYPE_INDEX_BUFFER;
                     loadDesc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_GPU_ONLY;
                     loadDesc.mDesc.mSize = m_indices.size() * sizeof(uint32_t);
@@ -430,7 +430,9 @@ namespace hpl {
             case eVertexBufferUsageType_Dynamic:
             case eVertexBufferUsageType_Stream:
                 {
-                    BufferUpdateDesc updateDesc = { m_indexBuffer };
+                    ASSERT(m_indexBuffer.IsValid() && "No indices to update");
+
+                    BufferUpdateDesc updateDesc = { m_indexBuffer.m_handle };
                     updateDesc.mSize = m_indices.size() * sizeof(uint32_t);
                     beginUpdateResource(&updateDesc);
                     auto* indexData = reinterpret_cast<uint32_t*>(updateDesc.pMappedData);
@@ -439,7 +441,7 @@ namespace hpl {
                     break;
                 }
             default:
-                BX_ASSERT(false, "Unknown usage type %d", mUsageType);
+                ASSERT(false && "Unknown usage type");
                 break;
             }
         }
@@ -451,7 +453,7 @@ namespace hpl {
             return element.m_type == aElement;
         });
         if (element != m_vertexElements.end()) {
-            return reinterpret_cast<float*>(element->m_buffer.data());
+            return reinterpret_cast<float*>(element->m_data.data());
         }
         return nullptr;
     }
@@ -461,7 +463,7 @@ namespace hpl {
             return element.m_type == aElement;
         });
         if (element != m_vertexElements.end()) {
-            return reinterpret_cast<int*>(element->m_buffer.data());
+            return reinterpret_cast<int*>(element->m_data.data());
         }
         return nullptr;
     }
@@ -471,7 +473,7 @@ namespace hpl {
             return element.m_type == aElement;
         });
         if (element != m_vertexElements.end()) {
-            return element->m_buffer.data();
+            return element->m_data.data();
         }
         return nullptr;
     }
@@ -485,7 +487,7 @@ namespace hpl {
             return element.m_type == aElement;
         });
         if (element != m_vertexElements.end()) {
-            element->m_buffer.resize(alSize * GetSizeFromHPL(element->m_format));
+            element->m_data.resize(alSize * GetSizeFromHPL(element->m_format));
         }
     }
 
@@ -525,7 +527,7 @@ namespace hpl {
         auto positionElement = std::find_if(m_vertexElements.begin(), m_vertexElements.end(), [](const auto& element) {
             return element.m_type == eVertexBufferElement_Position;
         });
-        BX_ASSERT(positionElement != m_vertexElements.end(), "No position element found");
+        ASSERT(positionElement != m_vertexElements.end() && "No position element found");
         return positionElement->NumElements();
     }
 
@@ -553,7 +555,7 @@ namespace hpl {
             return bv;
         }
 
-        bv.AddArrayPoints(reinterpret_cast<float*>(positionElement->m_buffer.data()), GetVertexNum());
+        bv.AddArrayPoints(reinterpret_cast<float*>(positionElement->m_data.data()), GetVertexNum());
         bv.CreateFromPoints(positionElement->m_num);
 
         return bv;
@@ -562,25 +564,8 @@ namespace hpl {
     void LegacyVertexBuffer::Draw(eVertexBufferDrawType aDrawType) {
     }
     void LegacyVertexBuffer::DrawIndices(unsigned int* apIndices, int alCount, eVertexBufferDrawType aDrawType) {
-        BX_ASSERT(false, "Not implemented");
+        ASSERT(false && "Not implemented");
     }
-
-    // void iVertexBufferBGFX::Submit(GraphicsContext& context, eVertexBufferDrawType aDrawType) {
-
-    //     GraphicsContext::LayoutStream layoutStream;
-    //     layoutStream.m_drawType = aDrawType == eVertexBufferDrawType_LastEnum ?  mDrawType : aDrawType;
-    //     for(auto& element: m_vertexElements) {
-    //         layoutStream.m_vertexStreams.push_back({
-    //             .m_handle = element.m_handle,
-    //             .m_dynamicHandle = element.m_dynamicHandle,
-    //         });
-    //     }
-    //     layoutStream.m_indexStream = {
-    //         .m_handle = BGFX_INVALID_HANDLE,
-    //         .m_dynamicHandle = m_dynamicIndexHandle,
-    //     };
-    //     context.SubmitLayoutStream(layoutStream);
-    // }
 
     void LegacyVertexBuffer::GetLayoutStream(GraphicsContext::LayoutStream& layoutStream, eVertexBufferDrawType aDrawType) {
         ASSERT(false && "need to reimplement");
@@ -597,17 +582,6 @@ namespace hpl {
         // };
     }
 
-    // void LegacyVertexBuffer::Bind() {
-    //     uint8_t stream = 0;
-    //     for (auto& element : m_vertexElements) {
-    //         if (bgfx::isValid(element.m_handle)) {
-    //             bgfx::setVertexBuffer(++stream, element.m_handle);
-    //         } else {
-    //             bgfx::setVertexBuffer(++stream, element.m_dynamicHandle);
-    //         }
-    //     }
-    //     bgfx::setIndexBuffer(m_indexBufferHandle);
-    // }
     void LegacyVertexBuffer::UnBind() {
         return;
     }
@@ -617,30 +591,11 @@ namespace hpl {
         auto* vertexBuffer =
             new LegacyVertexBuffer(mDrawType, aUsageType, GetIndexNum(), GetVertexNum());
         vertexBuffer->m_indices = m_indices;
-    
-        // BufferLoadDesc loadDesc = {};
-        // loadDesc.ppBuffer = &m_indexBuffer;
-        // loadDesc.mDesc.mDescriptors = DESCRIPTOR_TYPE_INDEX_BUFFER;
-        // loadDesc.mDesc.mMemoryUsage = detail::toMemoryUsage(aUsageType);
-        // loadDesc.mDesc.mSize = m_indices.size() * sizeof(uint32_t);
-        // loadDesc.pData = m_indices.data();
-        // addResource(&loadDesc, &token);
 
-        vertexBuffer->m_indices = m_indices;
         for (auto element : m_vertexElements) {
             if (element.m_flag & alVtxToCopy) {
                 auto& vb = vertexBuffer->m_vertexElements.emplace_back(element);
-                vb.m_vb = nullptr; // clear buffer to be created later
-                // eleCopy.m_vb = nullptr;
-
-                // BufferLoadDesc loadDesc = {};
-                // loadDesc.ppBuffer = &m_indexBuffer;
-                // loadDesc.mDesc.mDescriptors = DESCRIPTOR_TYPE_INDEX_BUFFER;
-                // loadDesc.mDesc.mMemoryUsage = detail::toMemoryUsage(mUsageType);
-                // loadDesc.mDesc.mSize = element.m_buffer.size();
-                // loadDesc.pData = element.m_buffer.data();
-                // loadDesc.ppBuffer = &eleCopy.m_vb;
-                // addResource(&loadDesc, &token);
+                vb.m_buffer.TryFree();
             }
         }
         vertexBuffer->Compile(0); // actually create the buffers

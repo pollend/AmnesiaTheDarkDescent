@@ -62,7 +62,7 @@ namespace hpl {
 		mbSetFrameBufferAtBeginRendering = true;
 		mbClearFrameBufferAtBeginRendering = true;
 
-		m_boundOutputBuffer = std::move(UniqueViewportData<RenderTarget>([](cViewport& viewport) {
+		m_boundOutputBuffer = std::move(UniqueViewportData<LegacyRenderTarget>([](cViewport& viewport) {
 				auto colorImage = [&] {
 				auto desc = ImageDescriptor::CreateTexture2D(viewport.GetSize().x, viewport.GetSize().y, false, bgfx::TextureFormat::Enum::RGBA8);
 				desc.m_configuration.m_rt = RTType::RT_Write;
@@ -70,8 +70,8 @@ namespace hpl {
 				image->Initialize(desc);
 				return image;
 			};
-			return std::make_unique<RenderTarget>(colorImage());
-		}, [](cViewport& viewport, RenderTarget& target) {
+			return std::make_unique<LegacyRenderTarget>(colorImage());
+		}, [](cViewport& viewport, LegacyRenderTarget& target) {
 			return target.GetImage()->GetImageSize() == viewport.GetSize();
 		}));
 
@@ -121,9 +121,10 @@ namespace hpl {
 
 
 
-	std::shared_ptr<Image> cRendererWireFrame::GetOutputImage(cViewport& viewport) {
-		return m_boundOutputBuffer.resolve(viewport).GetImage();
-	}
+	// Texture* cRendererWireFrame::GetOutputImage(cViewport& viewport) {
+	// 	return nullptr;
+	// 	// return m_boundOutputBuffer.resolve(viewport).GetImage();
+	// }
 
 
 	void cRendererWireFrame::Draw(GraphicsContext& context, cViewport& viewport, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, bool abSendFrameBufferToPostEffects) {

@@ -91,12 +91,12 @@ namespace hpl {
 				return *this;
 			}
 			cVector2l m_size;
-			std::array<RenderTarget, 2> m_blurTarget;
+			std::array<LegacyRenderTarget, 2> m_blurTarget;
 		};
 	private:
 		virtual void OnSetParams() override;
 		virtual iPostEffectParams *GetTypeSpecificParams() override { return &mParams; }
-		virtual void RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, RenderTarget& target) override;
+		virtual void RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, LegacyRenderTarget& target) override;
 
 		UniqueViewportData<BloomData> m_boundBloomData;
 

@@ -33,11 +33,24 @@ namespace hpl {
 
 	iRenderable::iRenderable(const tString &asName) : iEntity3D(asName)
 	{
+		for(auto& objectUniform: m_cbObjectBuffer) {
+			objectUniform.TryFree();
+			BufferLoadDesc desc = {};
+			desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
+			desc.mDesc.mSize = sizeof(CBObjectData);
+			desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
+			desc.pData = nullptr;
+			desc.ppBuffer = &objectUniform.m_handle;
+			addResource(&desc, nullptr);
+			objectUniform.Initialize();
+		}
+
 		mlLastMatrixCount = -1;
 
 		mbStatic = false;
 
-		mlRenderFlags =eRenderableFlag_VisibleInReflection | eRenderableFlag_VisibleInNonReflection;
+		mlRenderFlags = eRenderableFlag_VisibleInReflection | eRenderableFlag_VisibleInNonReflection;
 
 		mfIlluminationAmount = 1.0f;
 		mfCoverageAmount = 1.0f;
@@ -94,25 +107,6 @@ namespace hpl {
 		if(mpRenderCallback) mpRenderCallback->OnVisibleChange(this);
 	}
 
-	//-----------------------------------------------------------------------
-
-	cMatrixf* iRenderable::GetInvModelMatrix()
-	{
-		cMatrixf *pModelMatrix = GetModelMatrix(NULL);
-		if(pModelMatrix==NULL) return NULL;
-
-		if(mlLastMatrixCount != GetMatrixUpdateCount())
-		{
-			mlLastMatrixCount = GetMatrixUpdateCount();
-
-			m_mtxInvModel = cMath::MatrixInverse(*pModelMatrix);
-		}
-
-		return &m_mtxInvModel;
-	}
-
-	//-----------------------------------------------------------------------
-
 	void iRenderable::SetCoverageAmount(float afX)
 	{
 		if(mfCoverageAmount == afX) return;
@@ -123,7 +117,16 @@ namespace hpl {
 		SetTransformUpdated(false);
 	}
 
-	//-----------------------------------------------------------------------
+	void iRenderable::OnUpdateWorldTransform() {
+		auto* pipeline = Interface<HPLPipeline>::Get();
+
+		CBObjectData uniformData = {};
+		uniformData.m_mtxModel = cMath::ToForgeMat(m_mtxWorldTransform);
+		BufferUpdateDesc cObjectDesc = { m_cbObjectBuffer[pipeline->FrameIndex()].m_handle };
+		beginUpdateResource(&cObjectDesc);
+		*(CBObjectData*)cObjectDesc.pMappedData = uniformData;
+		endUpdateResource(&cObjectDesc, NULL);
+	}
 
 	const cVector3f& iRenderable::GetCalcScale()
 	{

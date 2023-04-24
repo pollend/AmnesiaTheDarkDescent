@@ -67,8 +67,9 @@ namespace hpl {
 
 		void SetLogDestruction(bool abX){ mbLogDestruction = abX;}
 
+		// NOTE: not a functional reference count, but a count of how many objects are using this resource?
 		unsigned int GetUserCount(){return mlUserCount;}
-		void IncUserCount();
+		void IncUserCount(); 
 		void DecUserCount(){if(mlUserCount>0)mlUserCount--;}
 		bool HasUsers(){ return mlUserCount>0;}
 

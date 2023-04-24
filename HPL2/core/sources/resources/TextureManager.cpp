@@ -478,68 +478,6 @@ namespace hpl {
 		}
 	}
 
-	//-----------------------------------------------------------------------
-
-
-	//////////////////////////////////////////////////////////////////////////
-	// PRIVATE METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
-	// iTexture* cTextureManager::CreateSimpleTexture(	const tString& asName,bool abUseMipMaps,
-	// 												eTextureUsage aUsage, eTextureType aType,
-	// 												unsigned int alTextureSizeLevel)
-	// {
-	// 	tWString sPath;
-	// 	iTexture* pTexture;
-
-	// 	BeginLoad(asName);
-
-	// 	pTexture = FindTexture2D(asName,sPath);
-
-	// 	if(pTexture==NULL && sPath!=_W(""))
-	// 	{
-	// 		//Load the bitmap
-	// 		cBitmap *pBmp;
-	// 		pBmp = mpBitmapLoaderHandler->LoadBitmap(sPath,0);
-	// 		if(pBmp==NULL)
-	// 		{
-	// 			Error("Texture manager Couldn't load bitmap '%s'\n", cString::To8Char(sPath).c_str());
-	// 			EndLoad();
-	// 			return NULL;
-	// 		}
-
-	// 		//Create the texture and load from bitmap
-	// 		pTexture = mpGraphics->GetLowLevel()->CreateTexture(asName,aType,aUsage);
-	// 		pTexture->SetFullPath(sPath);
-
-	// 		pTexture->SetUseMipMaps(abUseMipMaps);
-	// 		pTexture->SetSizeDownScaleLevel(alTextureSizeLevel);
-
-	// 		if(pTexture->CreateFromBitmap(pBmp)==false)
-	// 		{
-	// 			hplDelete(pTexture);
-	// 			hplDelete(pBmp);
-	// 			EndLoad();
-	// 			return NULL;
-	// 		}
-
-	// 		//Bitmap is no longer needed so delete it.
-	// 		hplDelete(pBmp);
-
-	// 		mlMemoryUsage += pTexture->GetMemorySize();
-	// 		AddResource(pTexture);
-	// 	}
-
-	// 	if(pTexture)pTexture->IncUserCount();
-	// 	else Error("Couldn't texture '%s'\n",asName.c_str());
-
-	// 	EndLoad();
-	// 	return pTexture;
-	// }
-
-	//-----------------------------------------------------------------------
 	Image* cTextureManager::FindImageResource(const tString &asName, tWString &asFilePath) {
 		Image *pTexture=NULL;
 

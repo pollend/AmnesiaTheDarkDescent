@@ -72,7 +72,7 @@ namespace hpl
     {
     }
 
-    void cPostEffect_RadialBlur::RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, RenderTarget& target)
+    void cPostEffect_RadialBlur::RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, LegacyRenderTarget& target)
     {
         cVector2l vRenderTargetSize = viewport.GetSize();
         cVector2f vRenderTargetSizeFloat((float)vRenderTargetSize.x, (float)vRenderTargetSize.y);

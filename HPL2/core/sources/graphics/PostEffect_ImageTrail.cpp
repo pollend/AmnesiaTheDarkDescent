@@ -101,7 +101,7 @@ namespace hpl {
         }
     }
     void cPostEffect_ImageTrail::RenderEffect(
-        cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, RenderTarget& target) {
+        cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, LegacyRenderTarget& target) {
         cVector2l vRenderTargetSize = viewport.GetSize();
         auto& imageTrailData = m_boundImageTrailData.resolve(viewport);
 

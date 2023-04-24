@@ -75,8 +75,8 @@ namespace hpl
                 return image;
             };
             auto data = std::make_unique<BloomData>();
-            data->m_blurTarget[0] = RenderTarget(ColorImage());
-            data->m_blurTarget[1] = RenderTarget(ColorImage());
+            data->m_blurTarget[0] = LegacyRenderTarget(ColorImage());
+            data->m_blurTarget[1] = LegacyRenderTarget(ColorImage());
             data->m_size = viewport.GetSize();
             return data;
         }, [&](cViewport& viewport, BloomData& data) {
@@ -98,7 +98,7 @@ namespace hpl
     {
     }
 
-    void cPostEffect_Bloom::RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, RenderTarget& target)
+    void cPostEffect_Bloom::RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, LegacyRenderTarget& target)
     {
         cVector2l vRenderTargetSize = viewport.GetSize();
         auto& bloomData = m_boundBloomData.resolve(viewport);

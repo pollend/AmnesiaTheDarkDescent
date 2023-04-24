@@ -240,23 +240,23 @@ namespace hpl {
 
             //////////////////////////////////////////////
             // Render Post effects
-            auto outputImage = pRenderer->GetOutputImage(*pViewPort);
-            if (bPostEffects) {
-                START_TIMING(RenderPostEffects)
-                pPostEffectComposite->Draw(
-                    context,
-                    *pViewPort,
-                    afFrameTime,
-                    *outputImage,
-                    pViewPort->GetRenderTarget());
+            // auto outputImage = pRenderer->GetOutputImage(*pViewPort);
+            // if (bPostEffects) {
+            //     START_TIMING(RenderPostEffects)
+            //     pPostEffectComposite->Draw(
+            //         context,
+            //         *pViewPort,
+            //         afFrameTime,
+            //         *outputImage,
+            //         pViewPort->GetRenderTarget());
 
-                STOP_TIMING(RenderPostEffects)
-            } else {
-                auto size = pViewPort->GetSize();
-                cRect2l rect = cRect2l(0, 0, size.x, size.y);
-                context.CopyTextureToFrameBuffer(
-                    *outputImage, rect, pViewPort->GetRenderTarget());
-            }
+            //     STOP_TIMING(RenderPostEffects)
+            // } else {
+            //     auto size = pViewPort->GetSize();
+            //     cRect2l rect = cRect2l(0, 0, size.x, size.y);
+            //     context.CopyTextureToFrameBuffer(
+            //         *outputImage, rect, pViewPort->GetRenderTarget());
+            // }
 
             //////////////////////////////////////////////
             // Render Screen GUI

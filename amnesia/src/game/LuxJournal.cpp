@@ -1892,35 +1892,35 @@ void cLuxJournal::RenderBackgroundImage()
 	auto* viewport = gpBase->mpMapHandler->GetViewport();
 	auto* renderer = viewport->GetRenderer();
 	
-	auto effectTarget = RenderTarget(m_screenBgTexture);
-	auto screenTarget = RenderTarget(m_screenImage);
+	auto effectTarget = LegacyRenderTarget(m_screenBgTexture);
+	auto screenTarget = LegacyRenderTarget(m_screenImage);
 
 	auto screenSize = viewport->GetSize();
 	cRect2l screenRect(0, 0, screenSize.x, screenSize.y);
 
-	graphicsContext.CopyTextureToFrameBuffer(
-		*renderer->GetOutputImage(*viewport), screenRect, screenTarget);
+	// graphicsContext.CopyTextureToFrameBuffer(
+	// 	*renderer->GetOutputImage(*viewport), screenRect, screenTarget);
 
-	{
-        cMatrixf projMtx;
-		GraphicsContext::LayoutStream layoutStream;
-		graphicsContext.ScreenSpaceQuad(layoutStream, projMtx, screenSize.x, screenSize.y);
+	// {
+    //     cMatrixf projMtx;
+	// 	GraphicsContext::LayoutStream layoutStream;
+	// 	graphicsContext.ScreenSpaceQuad(layoutStream, projMtx, screenSize.x, screenSize.y);
 		
-		GraphicsContext::ViewConfiguration viewConfiguration {effectTarget};
-		viewConfiguration.m_projection = projMtx;
-		viewConfiguration.m_viewRect = cRect2l(0, 0, screenSize.x, screenSize.y);
-		bgfx::ViewId view = graphicsContext.StartPass("Blur Pass 1", viewConfiguration);
+	// 	GraphicsContext::ViewConfiguration viewConfiguration {effectTarget};
+	// 	viewConfiguration.m_projection = projMtx;
+	// 	viewConfiguration.m_viewRect = cRect2l(0, 0, screenSize.x, screenSize.y);
+	// 	bgfx::ViewId view = graphicsContext.StartPass("Blur Pass 1", viewConfiguration);
 
-		GraphicsContext::ShaderProgram shaderProgram;
-		shaderProgram.m_configuration.m_write = Write::RGBA;
-		shaderProgram.m_handle = m_program;
-		// shaderProgram.m_projection = projMtx;
+	// 	GraphicsContext::ShaderProgram shaderProgram;
+	// 	shaderProgram.m_configuration.m_write = Write::RGBA;
+	// 	shaderProgram.m_handle = m_program;
+	// 	// shaderProgram.m_projection = projMtx;
 		
-		shaderProgram.m_textures.push_back({ m_s_diffuseMap, m_screenBgTexture->GetHandle(), 1 });
+	// 	shaderProgram.m_textures.push_back({ m_s_diffuseMap, m_screenBgTexture->GetHandle(), 1 });
 		
-		GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
-		graphicsContext.Submit(view, request);
-	}
+	// 	GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
+	// 	graphicsContext.Submit(view, request);
+	// }
 }
 
 //-----------------------------------------------------------------------

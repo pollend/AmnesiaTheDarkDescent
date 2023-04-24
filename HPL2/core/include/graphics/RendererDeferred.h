@@ -34,6 +34,13 @@
 #include <memory>
 #include <vector>
 
+#include <graphics/Pipeline.h>
+
+
+#include <Common_3/Graphics/Interfaces/IGraphics.h>
+#include <FixPreprocessor.h>
+
+
 namespace hpl {
 
     class iFrameBuffer;
@@ -86,9 +93,12 @@ namespace hpl {
     class cRendererDeferred : public iRenderer {
         HPL_RTTI_IMPL_CLASS(iRenderer, cRendererDeferred, "{A3E5E5A1-1F9C-4F5C-9B9B-5B9B9B5B9B9B}")
     public:
+
+        static constexpr uint32_t FrameBuffer = 2;
+
         class ShadowMapData {
         public:
-            RenderTarget m_target;
+            LegacyRenderTarget m_target;
             iLight *m_light;
             int m_transformCount;
             int m_frameCount;
@@ -109,67 +119,57 @@ namespace hpl {
             GBuffer() = default;
             GBuffer(const GBuffer&) = delete;
             GBuffer(GBuffer&& buffer)
-                : m_colorImage(std::move(buffer.m_colorImage)),
-                  m_normalImage(std::move(buffer.m_normalImage)),
-                  m_positionImage(std::move(buffer.m_positionImage)),
-                  m_specularImage(std::move(buffer.m_specularImage)),
-                  m_depthStencilImage(std::move(buffer.m_depthStencilImage)),
-                  m_outputImage(std::move(buffer.m_outputImage)),
-                  m_fullTarget(std::move(buffer.m_fullTarget)), 
-                  m_colorAndDepthTarget(std::move(buffer.m_colorAndDepthTarget)), 
-                  m_colorTarget(std::move(buffer.m_colorTarget)), 
-                  m_depthTarget(std::move(buffer.m_depthTarget)), 
-                  m_normalTarget(std::move(buffer.m_normalTarget)), 
-                  m_positionTarget(std::move(buffer.m_positionTarget)), 
-                  m_outputTarget(std::move(buffer.m_outputTarget)),
-                  m_SSAOImage(std::move(buffer.m_SSAOImage)),
-                  m_SSAOBlurImage(std::move(buffer.m_SSAOBlurImage)),
-                  m_SSAOTarget(std::move(buffer.m_SSAOTarget)),
-                  m_SSAOBlurTarget(std::move(buffer.m_SSAOBlurTarget)) {
+                : m_colorBuffer(buffer.m_colorBuffer),
+                  m_normalBuffer(buffer.m_normalBuffer),
+                  m_positionBuffer(buffer.m_positionBuffer),
+                  m_depthBuffer(buffer.m_depthBuffer),
+                  m_outputBuffer(buffer.m_outputBuffer) {
+                buffer.m_colorBuffer = nullptr;
+                buffer.m_normalBuffer = nullptr;
+                buffer.m_positionBuffer = nullptr;
+                buffer.m_depthBuffer = nullptr;
+                buffer.m_outputBuffer = nullptr;
             }
             void operator=(GBuffer&& buffer) {
-                m_colorImage = std::move(buffer.m_colorImage);
-                m_normalImage = std::move(buffer.m_normalImage);
-                m_positionImage = std::move(buffer.m_positionImage);
-                m_specularImage = std::move(buffer.m_specularImage);
-                m_depthStencilImage = std::move(buffer.m_depthStencilImage);
-                m_outputImage = std::move(buffer.m_outputImage);
-                m_fullTarget = std::move(buffer.m_fullTarget);
-                m_colorAndDepthTarget = std::move(buffer.m_colorAndDepthTarget);
-                m_colorTarget = std::move(buffer.m_colorTarget);
-                m_depthTarget = std::move(buffer.m_depthTarget);
-                m_normalTarget = std::move(buffer.m_normalTarget);
-                m_positionTarget = std::move(buffer.m_positionTarget);
-                m_outputTarget = std::move(buffer.m_outputTarget);
+                m_colorBuffer = buffer.m_colorBuffer;
+                m_normalBuffer = buffer.m_normalBuffer; 
+                m_positionBuffer = buffer.m_positionBuffer; 
+                m_depthBuffer = buffer.m_depthBuffer; 
+                m_outputBuffer = buffer.m_outputBuffer; 
 
-                m_SSAOImage = std::move(buffer.m_SSAOImage);
-                m_SSAOBlurImage = std::move(buffer.m_SSAOBlurImage);
-
-                m_SSAOTarget = std::move(buffer.m_SSAOTarget);
-                m_SSAOBlurTarget = std::move(buffer.m_SSAOBlurTarget);
-
+                buffer.m_colorBuffer = nullptr;
+                buffer.m_normalBuffer = nullptr;
+                buffer.m_positionBuffer = nullptr;
+                buffer.m_depthBuffer = nullptr;
+                buffer.m_outputBuffer = nullptr;
             }
 
-            std::shared_ptr<Image> m_colorImage;
-            std::shared_ptr<Image> m_normalImage;
-            std::shared_ptr<Image> m_positionImage;
-            std::shared_ptr<Image> m_specularImage;
-            std::shared_ptr<Image> m_depthStencilImage;
-            std::shared_ptr<Image> m_outputImage;
+            RenderTarget* m_colorBuffer;
+            RenderTarget* m_normalBuffer;
+            RenderTarget* m_positionBuffer;
+            RenderTarget* m_depthBuffer;
+            RenderTarget* m_outputBuffer;
 
-            std::shared_ptr<Image> m_SSAOImage;
-            std::shared_ptr<Image> m_SSAOBlurImage;
+            // std::shared_ptr<Image> m_colorImage;
+            // std::shared_ptr<Image> m_normalImage;
+            // std::shared_ptr<Image> m_positionImage;
+            // std::shared_ptr<Image> m_specularImage;
+            // std::shared_ptr<Image> m_depthStencilImage;
+            // std::shared_ptr<Image> m_outputImage;
 
-            RenderTarget m_fullTarget;
-            RenderTarget m_colorAndDepthTarget;
-            RenderTarget m_colorTarget;
-            RenderTarget m_depthTarget;
-            RenderTarget m_normalTarget;
-            RenderTarget m_positionTarget;
-            RenderTarget m_outputTarget; // used for rendering to the screen
+            // std::shared_ptr<Image> m_SSAOImage;
+            // std::shared_ptr<Image> m_SSAOBlurImage;
 
-            RenderTarget m_SSAOTarget;
-            RenderTarget m_SSAOBlurTarget;
+            // LegacyRenderTarget m_fullTarget;
+            // LegacyRenderTarget m_colorAndDepthTarget;
+            // LegacyRenderTarget m_colorTarget;
+            // LegacyRenderTarget m_depthTarget;
+            // LegacyRenderTarget m_normalTarget;
+            // LegacyRenderTarget m_positionTarget;
+            // LegacyRenderTarget m_outputTarget; // used for rendering to the screen
+
+            // LegacyRenderTarget m_SSAOTarget;
+            // LegacyRenderTarget m_SSAOBlurTarget;
             
         };
 
@@ -195,21 +195,22 @@ namespace hpl {
             }
 
             cVector2l m_size = cVector2l(0, 0);
+            std::array<GBuffer, HPLPipeline::SwapChainLength> m_gBuffer;
+            
 
             std::shared_ptr<Image> m_refractionImage;
-            GBuffer m_gBuffer;
             GBuffer m_gBufferReflection;
 
         };
 
-        cRendererDeferred(cGraphics* apGraphics, cResources* apResources);
+        cRendererDeferred(HPLPipeline* pipeline, cGraphics* apGraphics, cResources* apResources);
         ~cRendererDeferred();
 
         inline SharedViewportData& GetSharedData(cViewport& viewport) {
             return m_boundViewportData.resolve(viewport);
         }
         // virtual std::shared_ptr<Image> GetDepthStencilImage(cViewport& viewport) override;
-        virtual std::shared_ptr<Image> GetOutputImage(cViewport& viewport) override;
+        virtual Texture* GetOutputImage(cViewport& viewport) override { return nullptr; }
 
         virtual bool LoadData() override;
         virtual void DestroyData() override;
@@ -294,10 +295,10 @@ namespace hpl {
         }
 
     private:
-        RenderTarget& resolveRenderTarget(std::array<RenderTarget, 2>& rt);
+        LegacyRenderTarget& resolveRenderTarget(std::array<LegacyRenderTarget, 2>& rt);
         std::shared_ptr<Image>& resolveRenderImage(std::array<std::shared_ptr<Image>, 2>& img);
 
-        void RenderEdgeSmoothPass(GraphicsContext& context, cViewport& viewport, RenderTarget& rt);
+        void RenderEdgeSmoothPass(GraphicsContext& context, cViewport& viewport, LegacyRenderTarget& rt);
         // cShadowMapData& iRenderer::GetShadowMapData(eShadowMapResolution aResolution, iLight* apLight);
 
         struct LightPassOptions {
@@ -343,7 +344,7 @@ namespace hpl {
         float m_shadowDistanceLow;
         float m_shadowDistanceNone;
 
-        RenderTarget m_edgeSmooth_LinearDepth;
+        LegacyRenderTarget m_edgeSmooth_LinearDepth;
         UniqueViewportData<SharedViewportData> m_boundViewportData;
 
         std::shared_ptr<Image> m_shadowJitterImage;
@@ -373,7 +374,8 @@ namespace hpl {
 
         UniformWrapper<StringLiteral("s_scatterDisk"), bgfx::UniformType::Sampler> m_s_scatterDisk;
         
-        
+        Buffer* m_indirectDiffusePositionBuffer;
+
         bgfx::ProgramHandle m_deferredSSAOProgram;
         bgfx::ProgramHandle m_deferredSSAOBlurHorizontalProgram;
         bgfx::ProgramHandle m_deferredSSAOBlurVerticalProgram;

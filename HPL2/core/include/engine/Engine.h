@@ -28,6 +28,10 @@
 #include <memory>
 #include <mutex>
 
+
+#include <Common_3/Graphics/Interfaces/IGraphics.h>
+#include <FixPreprocessor.h>
+
 namespace hpl {
 
 	class cUpdater;
@@ -231,6 +235,9 @@ namespace hpl {
 		tStringVec mvEngineTypeStrings;
 
 		//Modules that Game connnect to:
+        SwapChain* m_swapChain;
+		Renderer* m_renderer;
+		
 		cResources *mpResources;
 		cSystem *mpSystem;
 		cInput *mpInput;
