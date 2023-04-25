@@ -353,8 +353,6 @@ namespace hpl {
                     bgfx::destroy(element.m_handle);
                 }
                 element.m_handle = bgfx::createVertexBuffer(bgfx::copy(element.m_buffer.data(), element.m_buffer.size()), layout);
-                m_indexBufferHandle =
-                    bgfx::createIndexBuffer(bgfx::copy(m_indices.data(), m_indices.size() * sizeof(uint32_t)), BGFX_BUFFER_INDEX32);
                 break;
             case eVertexBufferUsageType_Dynamic:
             case eVertexBufferUsageType_Stream:
@@ -610,7 +608,6 @@ namespace hpl {
         auto* vertexBuffer =
             new iVertexBufferBGFX(mDrawType, aUsageType, GetIndexNum(), GetVertexNum());
         vertexBuffer->m_indices = m_indices;
-
         for (auto element : m_vertexElements) {
             if (element.m_flag & alVtxToCopy) {
                 auto& eleCopy = vertexBuffer->m_vertexElements.emplace_back(element);
