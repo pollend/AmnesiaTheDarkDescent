@@ -367,7 +367,7 @@ namespace hpl
     {
         auto pVars = new cMaterialType_SolidDiffuse_Vars();
         auto pipeline = Interface<HPLPipeline>::Get();
-        DescriptorSetDesc desc = { pipeline->Root(), DESCRIPTOR_UPDATE_FREQ_PER_BATCH, 1 };
+        DescriptorSetDesc desc = { pipeline->PipelineSignature(), DESCRIPTOR_UPDATE_FREQ_PER_BATCH, 1 };
 
         DescriptorSet* descriptorSet = {};
         addDescriptorSet(pipeline->Rend(), &desc, &pVars->m_descriptorSet[eMaterialRenderMode_Diffuse].m_handle);

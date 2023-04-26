@@ -125,6 +125,8 @@ namespace hpl {
 		void SetRenderableUserData(void* apData) { mpRenderableUserData = apData; }
 		void* GetRenderableUserData() { return mpRenderableUserData; }
 
+		void bindCommandBuffer(HPLPipeline& pipeline, ForgeCmdHandle& cmd);
+
 	protected:
 		virtual void OnUpdateWorldTransform() override;
 		ForgeDescriptorSet m_cbObjectDescriptor;

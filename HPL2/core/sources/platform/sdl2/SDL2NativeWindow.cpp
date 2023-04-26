@@ -100,6 +100,43 @@ namespace hpl::window::internal {
         eventHandle.Connect(impl->m_windowEvent);
     }
 
+    WindowHandle ForgeWindowHandle(NativeWindowHandler& handler) {
+        WindowHandle handle = {};
+        auto impl = static_cast<NativeWindowImpl*>(handler.Get());
+        BX_ASSERT(impl->m_window, "Window is not initialized");
+
+        SDL_SysWMinfo wmi;
+        SDL_VERSION(&wmi.version);
+        if (!SDL_GetWindowWMInfo(impl->m_window, &wmi)) {
+            return handle;
+        }
+            
+        #if defined(VK_USE_PLATFORM_XLIB_KHR)
+            handle.display = wmi.info.x11.display;
+            handle.window = wmi.info.x11.window;
+            // handle.colormap = wmi.info.x11.colormap;
+            handle.xlib_wm_delete_window = XInternAtom(wmi.info.x11.display, "WM_DELETE_WINDOW", False);
+        #elif defined(VK_USE_PLATFORM_XCB_KHR)
+            handle.connection = wmi.info.x11.display;
+            handle.screen = wmi.info.x11.screen;
+            handle.window = wmi.info.x11.window;
+            handle.atom_wm_delete_window = xcb_intern_atom_reply(handle.connection, xcb_intern_atom(
+                    handle.connection, 0, strlen("WM_DELETE_WINDOW"), "WM_DELETE_WINDOW"), 0);
+        #elif defined(__ANDROID__)
+            handle.window = wmi.info.android.window;
+            handle.activity = wmi.info.android.activity;
+            handle.configuration = wmi.info.android.config;
+        #else
+            handle.window = (void*)SDL_GetWindowWMInfo(impl->m_window, &wmi);
+        #endif
+
+        // #if defined(__linux__)
+        //     handle.window = wmi.info.x11.window;
+        //     handle.display = wmi.info.x11.display;
+        // #endif
+        return handle;
+    }
+
     void* NativeWindowHandle(NativeWindowHandler& handler) {
         auto impl = static_cast<NativeWindowImpl*>(handler.Get());
         BX_ASSERT(impl->m_window, "Window is not initialized");
@@ -111,21 +148,21 @@ namespace hpl::window::internal {
         }
 
 #if BX_PLATFORM_LINUX || BX_PLATFORM_BSD
-#if ENTRY_CONFIG_USE_WAYLAND
-        wl_egl_window* win_impl = (wl_egl_window*)SDL_GetWindowData(_window, "wl_egl_window");
-        if (!win_impl) {
-            int width, height;
-            SDL_GetWindowSize(_window, &width, &height);
-            struct wl_surface* surface = wmi.info.wl.surface;
-            if (!surface)
-                return nullptr;
-            win_impl = wl_egl_window_create(surface, width, height);
-            SDL_SetWindowData(_window, "wl_egl_window", win_impl);
-        }
-        return (void*)(uintptr_t)win_impl;
-#else
-        return (void*)wmi.info.x11.window;
-#endif
+    #if ENTRY_CONFIG_USE_WAYLAND
+            wl_egl_window* win_impl = (wl_egl_window*)SDL_GetWindowData(_window, "wl_egl_window");
+            if (!win_impl) {
+                int width, height;
+                SDL_GetWindowSize(_window, &width, &height);
+                struct wl_surface* surface = wmi.info.wl.surface;
+                if (!surface)
+                    return nullptr;
+                win_impl = wl_egl_window_create(surface, width, height);
+                SDL_SetWindowData(_window, "wl_egl_window", win_impl);
+            }
+            return (void*)(uintptr_t)win_impl;
+    #else
+            return (void*)wmi.info.x11.window;
+    #endif
 #elif BX_PLATFORM_OSX || BX_PLATFORM_IOS
         return wmi.info.cocoa.window;
 #elif BX_PLATFORM_WINDOWS

@@ -122,7 +122,7 @@ namespace hpl {
 
 		CBObjectData uniformData = {};
 		uniformData.m_mtxModel = cMath::ToForgeMat(m_mtxWorldTransform);
-		BufferUpdateDesc cObjectDesc = { m_cbObjectBuffer[pipeline->FrameIndex()].m_handle };
+		BufferUpdateDesc cObjectDesc = { m_cbObjectBuffer[pipeline->CurrentFrame() % HPLPipeline::SwapChainLength].m_handle };
 		beginUpdateResource(&cObjectDesc);
 		*(CBObjectData*)cObjectDesc.pMappedData = uniformData;
 		endUpdateResource(&cObjectDesc, NULL);
@@ -143,7 +143,11 @@ namespace hpl {
 		return mvCalcScale;
 	}
 
-	//-----------------------------------------------------------------------
+	void iRenderable::bindCommandBuffer(HPLPipeline& pipeline, ForgeCmdHandle& cmd) {
+		// pipeline.FrameIndex();
+		// cmdBinddescriptorSet(cmd, 0, m_cbObjectBuffer[frameIndex].m_descriptorSet);
+	}
+
 
 	bool iRenderable::CollidesWithBV(cBoundingVolume *apBV)
 	{

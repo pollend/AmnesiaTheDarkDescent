@@ -3,3 +3,4 @@
 #undef DestroyAll
 #undef ButtonPress
 #undef Success
+#undef KeyPress

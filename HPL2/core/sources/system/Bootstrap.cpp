@@ -73,11 +73,14 @@ namespace hpl {
 
         // this is safe because the render target is scheduled on the api thread
         m_primaryViewport = std::make_unique<hpl::PrimaryViewport>(m_window);
+
+        m_pipeline.InitializeRenderer(&m_window);
         
         // register input devices
         m_inputManager.Register(input::InputManager::KeyboardDeviceID, std::make_shared<input::InputKeyboardDevice>(std::move(keyboardHandle)));
         m_inputManager.Register(input::InputManager::MouseDeviceID, std::make_shared<input::InputMouseDevice>(std::move(mouseHandle)));
 
+        Interface<hpl::HPLPipeline>::Register(&m_pipeline);
         Interface<hpl::PrimaryViewport>::Register(m_primaryViewport.get());
         Interface<input::InputManager>::Register(&m_inputManager);
         Interface<FileReader>::Register(&m_fileReader);
@@ -86,7 +89,7 @@ namespace hpl {
     }
 
     void Bootstrap::Shutdown() {
-        
+        Interface<hpl::HPLPipeline>::UnRegister(&m_pipeline);
         Interface<hpl::PrimaryViewport>::UnRegister(m_primaryViewport.get());
         Interface<input::InputManager>::UnRegister(&m_inputManager);
         Interface<FileReader>::UnRegister(&m_fileReader);

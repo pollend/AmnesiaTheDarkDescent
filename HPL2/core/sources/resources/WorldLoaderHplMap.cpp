@@ -1360,7 +1360,7 @@ namespace hpl {
 		struct VertexDataTable {
 			eVertexBufferElement mType;
 			int mlElementNum;
-			hpl::LegacyVertexBuffer::VertexElement* m_targetElement;
+			const hpl::LegacyVertexBuffer::VertexElement* m_targetElement;
 			size_t offset;
 		} lDataArrayTypes[5] = {
 			{eVertexBufferElement_Position, 4, nullptr, 0},
@@ -1413,9 +1413,9 @@ namespace hpl {
 				BX_ASSERT(targetElement->m_type == sourceElement->m_type, "lDataArrayTypes[i].m_data->m_type == sourceElement->m_type");
 				BX_ASSERT(targetElement->m_num == sourceElement->m_num, "lDataArrayTypes[i].m_targetElement->m_num == sourceElement->m_num");
 				
-				auto targetElementStart = &(targetElement->m_data.data()[lDataArrayTypes[i].offset]);
-				std::copy(sourceElement->m_data.begin(), sourceElement->m_data.end(), targetElementStart);
-				lDataArrayTypes[i].offset += sourceElement->m_data.size();
+				auto targetElementStart = &(targetElement->Data().data()[lDataArrayTypes[i].offset]);
+				std::copy(sourceElement->Data().begin(), sourceElement->Data().end(), targetElementStart);
+				lDataArrayTypes[i].offset += sourceElement->Data().size();
 			}
 
 			//////////////////////////////////////////////
@@ -1553,9 +1553,9 @@ namespace hpl {
 			BX_ASSERT(targetPositionElement->m_type == sourceElement->m_type, "targetPositionElement->m_type == sourceElement->m_type");
 			BX_ASSERT(targetPositionElement->m_num == sourceElement->m_num, "targetPositionElement->m_num == sourceElement->m_num");
 
-			auto elementStart = &(targetPositionElement->m_data.data()[targetPositionOffset]);
-			std::copy(sourceElement->m_data.begin(), sourceElement->m_data.end(), elementStart);
-			targetPositionOffset += sourceElement->m_data.size();
+			auto elementStart = &(targetPositionElement->Data().data()[targetPositionOffset]);
+			std::copy(sourceElement->Data().begin(), sourceElement->Data().end(), elementStart);
+			targetPositionOffset += sourceElement->Data().size();
 
 			//Copy to index array and increase index pointer
 			unsigned int* pTransIdxArray = pTransformedVtxBuffer->GetIndices();
