@@ -348,14 +348,13 @@ namespace hpl {
 
         ///////////////////////////////////////
         // Iterate and render all sets
-        if (mapSortedSets.empty())
+        if (mapSortedSets.empty()) {
             return;
+        }
+
         tPrioMap::iterator SortIt = mapSortedSets.begin();
         for (; SortIt != mapSortedSets.end(); ++SortIt) {
             cGuiSet* pSet = SortIt->second;
-
-            // Log("Rendering gui '%s'\n", pSet->GetName().c_str());
-
             pSet->Draw(context, NULL);
         }
     }

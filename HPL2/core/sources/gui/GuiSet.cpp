@@ -87,6 +87,45 @@
 
 namespace hpl {
 
+	static ForgeBufferHandle vertexBuffer;
+	static ForgeBufferHandle indexBuffer;
+	static RootSignature* guiRootSignature;
+
+	namespace gui {
+		void InitializeGui(HPLPipeline& pipeline) {
+ 			{
+                vertexBuffer.TryFree();
+                BufferLoadDesc loadDesc = {};
+                loadDesc.ppBuffer = &vertexBuffer.m_handle;
+                loadDesc.mDesc.mDescriptors = DESCRIPTOR_TYPE_VERTEX_BUFFER;
+                loadDesc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
+                loadDesc.mDesc.mSize = GUI_STREAM_BUFFER_VB_SIZE;
+                loadDesc.mDesc.pName = "GUI Vertex Buffer";
+                addResource(&loadDesc, nullptr);
+                vertexBuffer.Initialize();
+            }
+            {
+				indexBuffer.TryFree();
+                BufferLoadDesc loadDesc = {};
+                loadDesc.ppBuffer = &indexBuffer.m_handle;
+                loadDesc.mDesc.mDescriptors = DESCRIPTOR_TYPE_INDEX_BUFFER;
+                loadDesc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
+                loadDesc.mDesc.mSize = GUI_STREAM_BUFFER_VB_SIZE;
+                loadDesc.mDesc.pName = "GUI Index Buffer";
+                addResource(&loadDesc, nullptr);
+
+				indexBuffer.Initialize();
+            }
+
+			RootSignatureDesc rootSignatureDesc = {};
+			addRootSignature(pipeline.Rend(), &rootSignatureDesc, &guiRootSignature);
+		}
+
+		void exitGui() {
+
+		}
+	}
+
 	static bgfx::ProgramHandle g_guiProgram = BGFX_INVALID_HANDLE;
 	static bgfx::UniformHandle g_u_params = BGFX_INVALID_HANDLE;
 	static bgfx::UniformHandle g_u_s_diffuseMap = BGFX_INVALID_HANDLE;
@@ -388,14 +427,6 @@ namespace hpl {
 		ClearGlobalShortcuts();
 	}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
 	void cGuiSet::Update(float afTimeStep)
 	{
 		/////////////////////////////
@@ -540,7 +571,7 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 
 
-	void cGuiSet::Draw(GraphicsContext& graphicsContext, cFrustum* apFrustum) {
+	void cGuiSet::Draw(HPLPipeline::Frame& frame, cFrustum* apFrustum) {
 
 		if(m_setRenderObjects.empty()) {
 			return;

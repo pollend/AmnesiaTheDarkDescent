@@ -282,6 +282,7 @@ namespace hpl
             bgfx::destroy(m_handle);
         }
         m_handle = BGFX_INVALID_HANDLE;
+        m_texture.TryFree();
     }
 
     bgfx::TextureFormat::Enum Image::FromHPLTextureFormat(ePixelFormat format)

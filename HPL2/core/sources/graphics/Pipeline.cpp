@@ -5,32 +5,6 @@
 
 namespace hpl {
 
-    void ForgeCmdHandle::Free() {
-        if(m_handle) {
-            ASSERT(m_renderer && "Renderer is null");
-            removeCmd(m_renderer, m_handle);
-        }
-    }
-
-    void ForgeTextureHandle::Free() {
-        if(m_handle) {
-            removeResource(m_handle);
-        }
-    }
-
-    void ForgeBufferHandle::Free() {
-        if(m_handle) {
-            removeResource(m_handle);
-        }
-    }
-
-    void ForgeDescriptorSet::Free() {
-        if(m_handle) {
-            ASSERT(m_renderer && "Renderer is null");
-            removeDescriptorSet(m_renderer, m_handle);
-        }
-    }
-
     void HPLPipeline::CommandResourcePool::AddMaterial(cMaterial& material, std::span<eMaterialTexture> textures) {
         for(auto& tex: textures) {
             auto image = material.GetImage(tex);
@@ -45,6 +19,7 @@ namespace hpl {
 
 
     void HPLPipeline::InitializeRenderer(window::NativeWindowWrapper* window) {
+        SyncToken token = {};
         RendererDesc desc{};
         initRenderer("test", &desc, &m_renderer);
 
@@ -79,5 +54,7 @@ namespace hpl {
 		// graphRootDesc.mShaderCount = 1;
 		// graphRootDesc.ppShaders = &pGraphShader;
 		addRootSignature(m_renderer, &graphRootDesc, &m_pipelineSignature);
+
+
     }
 };

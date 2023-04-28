@@ -28,6 +28,15 @@
 
 namespace hpl {
 
+	namespace gui {
+		static constexpr size_t GUI_STREAM_BUFFER_VB_SIZE = 60000;
+        static constexpr size_t GUI_STREAM_BUFFER_IB_SIZE = 60000;
+        static constexpr size_t GUI_MAX_BATCHES = 4096;
+            
+
+		void InitializeGui();
+		void exitGui();
+	}
 	//---------------------------------------------
 
 	class cResources;
@@ -162,6 +171,7 @@ namespace hpl {
 	{
 	friend class iGuiPopUp;
 	public:
+
 		cGuiSet(const tString &asName, cGui *apGui,cGuiSkin *apSkin,
 				cResources *apResources, cGraphics* apGraphics,
 				cSound *apSound, cScene *apScene);
@@ -188,7 +198,7 @@ namespace hpl {
 		void ResetMouseOver();
 
 
-		void Draw(GraphicsContext& context, cFrustum* apFrustum);
+		void Draw(HPLPipeline::Frame& frame, cFrustum* apFrustum);
 		////////////////////////////////////
 		// Rendering
 		void ClearRenderObjects();
@@ -610,6 +620,7 @@ namespace hpl {
 		bool				mbDrawFocus;
 		void*				mpFocusDrawObject;
 		tGuiCallbackFunc	mpFocusDrawCallback;
+
 	};
 
 };

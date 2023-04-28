@@ -91,6 +91,7 @@ namespace hpl {
         Image& operator=(const Image& other) = delete;
         void operator=(Image&& other);
 
+        inline void Initialize(ForgeTextureHandle&& handle) {m_texture = std::move(handle);}
         void Initialize(const ImageDescriptor& descriptor, const bgfx::Memory* mem = nullptr);
         void Invalidate();
 
@@ -117,13 +118,13 @@ namespace hpl {
         }
 
         ForgeTextureHandle& GetTexture() {
-            return m_textures;
+            return m_texture;
         }
 
     private:
         uint16_t m_width = 0;
         uint16_t m_height = 0;
-        ForgeTextureHandle m_textures;
+        ForgeTextureHandle m_texture;
         bgfx::TextureHandle m_handle = BGFX_INVALID_HANDLE;
     };
 
