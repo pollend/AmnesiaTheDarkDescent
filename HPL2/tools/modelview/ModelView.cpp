@@ -2302,8 +2302,8 @@ int hplMain(const tString &asCommandline)
 	bootstrap.Run([&](bx::Thread* self) {
 		//Init the game engine
 		cEngineInitVars vars;
-		vars.mGraphics.mvScreenSize.x = 1024;
-		vars.mGraphics.mvScreenSize.y = 768;
+		vars.mGraphics.mvScreenSize.x = 1280;
+		vars.mGraphics.mvScreenSize.y = 720;
 		vars.mGraphics.mbFullscreen = false;
 		vars.mGraphics.msWindowCaption = "ModelView - Initalizing...";
 		//vars.mGraphics.mvWindowPosition = cVector2l(0,0);

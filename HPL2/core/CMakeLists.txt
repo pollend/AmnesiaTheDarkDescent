@@ -310,10 +310,15 @@ install(FILES
     DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Amnesia)
 
 
-# install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/shaders"
-#             DESTINATION  ${INSTALL_OUTPUT_PATH}/Amnesia
-#             FILES_MATCHING
-#             PATTERN "*"
-#             )
+install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/Shaders"
+            DESTINATION  ${INSTALL_OUTPUT_PATH}/Amnesia
+            FILES_MATCHING
+            PATTERN "*"
+            )
+install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/CompiledShaders"
+            DESTINATION  ${INSTALL_OUTPUT_PATH}/Amnesia
+            FILES_MATCHING
+            PATTERN "*"
+            )
    
  add_dependencies(HPL2 HPL_SHADERS)

@@ -62,7 +62,7 @@ namespace hpl {
         */
         void Initialize() {
             if(!m_initialized && m_handle) {
-                ASSERT(m_refCounter && m_refCounter->m_refCount > 0 && "Trying to Initialize a handle with references");
+                ASSERT(!m_refCounter && "Trying to Initialize a handle with references");
                 if(!m_refCounter) {
                     m_refCounter = new RefCounter();
                 }
@@ -76,7 +76,7 @@ namespace hpl {
                 return;
             }
             ASSERT(m_refCounter && "Trying to free a handle that has not been initialized");
-            ASSERT(m_refCounter->m_refCount == 0 && "Trying to free resource that is still referenced");
+            ASSERT(m_refCounter->m_refCount > 0 && "Trying to free resource that is still referenced");
             if((--m_refCounter->m_refCount) == 0) {
                 static_cast<TBase*>(this)->Free(); // Free the underlying resource
                 delete m_refCounter;
@@ -105,7 +105,7 @@ namespace hpl {
             other.m_refCounter = nullptr;
         }
 
-        bool IsValid() {
+        bool IsValid() const {
             return m_handle != nullptr;
         }
         
@@ -118,7 +118,6 @@ namespace hpl {
     struct ForgeTextureHandle: public RefHandle<ForgeTextureHandle, Texture> {
     public:
 
-        
         struct BitmapLoadOptions {
         public:
             bool m_useCubeMap = false;

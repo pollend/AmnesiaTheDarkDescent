@@ -938,6 +938,7 @@ namespace hpl {
 		 */
 		static cMatrixf MatrixInverse(const cMatrixf &a_mtxA);
 
+		static mat4 ToForgeMat4(const cMatrixf &a_mtxA);
 		/**
 		 * A mirror matrix for a plane
 		 */

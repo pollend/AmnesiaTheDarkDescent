@@ -1,0 +1,28 @@
+#include "gui_resource.h.fsl"
+
+STRUCT(VSInput)
+{
+	DATA(float3, Position, POSITION);
+	DATA(float2, TexCoord, TEXCOORD0);
+	DATA(float4, Color, COLOR);
+};
+
+STRUCT(VSOutput)
+{
+	DATA(float4, Position, SV_Position);
+	DATA(float2, TexCoord, TEXCOORD0);
+    DATA(float4, Color, COLOR);
+};
+
+
+VSOutput VS_MAIN(VSInput In )
+{
+    INIT_MAIN;
+    VSOutput Out;
+
+    Out.Color = In.Color;
+    Out.TexCoord = In.TexCoord;
+    Out.Position = mul(mvp, float4(In.Position.xyz, 1.0));
+	
+	RETURN(Out);
+}

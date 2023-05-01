@@ -362,7 +362,7 @@ namespace hpl {
             loadDesc.mDesc.mMemoryUsage = detail::toMemoryUsage(mUsageType);
 
             if(detail::IsDynamicMemory(mUsageType)) {
-                loadDesc.mDesc.mSize = element.m_shadowData.size() * HPLPipeline::SwapChainLength;
+                loadDesc.mDesc.mSize = element.m_shadowData.size() * ForgeRenderer::SwapChainLength;
             } else {
                 loadDesc.mDesc.mSize = element.m_shadowData.size();
             }
@@ -379,7 +379,7 @@ namespace hpl {
         loadDesc.mDesc.mMemoryUsage = detail::toMemoryUsage(mUsageType);
         if(detail::IsDynamicMemory(mUsageType)) {
             // we need to multiply by the swapchain length to account for the fact that we have a buffer per swapchain
-            loadDesc.mDesc.mSize = m_indices.size() * sizeof(uint32_t) *  HPLPipeline::SwapChainLength;
+            loadDesc.mDesc.mSize = m_indices.size() * sizeof(uint32_t) *  ForgeRenderer::SwapChainLength;
         } else {
             loadDesc.mDesc.mSize = m_indices.size() * sizeof(uint32_t);
         }
@@ -534,7 +534,7 @@ namespace hpl {
     void LegacyVertexBuffer::resolveGeometryBinding(uint32_t frameIndex, std::span<eVertexBufferElement> elements, std::function<void(GeometryBinding&)> callback) {
         if(m_updateIndices || m_updateFlags) {
         if(m_frameIndex != frameIndex) {
-                m_bufferIndex = (m_bufferIndex + 1) % HPLPipeline::SwapChainLength;
+                m_bufferIndex = (m_bufferIndex + 1) % ForgeRenderer::SwapChainLength;
                 m_frameIndex = frameIndex;
             }
 
@@ -550,7 +550,7 @@ namespace hpl {
                         loadDesc.mDesc.mDescriptors = DESCRIPTOR_TYPE_VERTEX_BUFFER;
                         loadDesc.mDesc.mMemoryUsage = detail::toMemoryUsage(mUsageType);
                         if(detail::IsDynamicMemory(mUsageType)) {
-                            loadDesc.mDesc.mSize = element.m_shadowData.size() * HPLPipeline::SwapChainLength;
+                            loadDesc.mDesc.mSize = element.m_shadowData.size() * ForgeRenderer::SwapChainLength;
                         } else {
                             loadDesc.mDesc.mSize = element.m_shadowData.size();
                         }
@@ -578,7 +578,7 @@ namespace hpl {
                     loadDesc.mDesc.mDescriptors = DESCRIPTOR_TYPE_INDEX_BUFFER;
                     loadDesc.mDesc.mMemoryUsage = detail::toMemoryUsage(mUsageType);
                     if(isDynamicAccess) {
-                        loadDesc.mDesc.mSize = m_indices.size() * HPLPipeline::SwapChainLength;
+                        loadDesc.mDesc.mSize = m_indices.size() * ForgeRenderer::SwapChainLength;
                     } else {
                         loadDesc.mDesc.mSize = m_indices.size();
                     }

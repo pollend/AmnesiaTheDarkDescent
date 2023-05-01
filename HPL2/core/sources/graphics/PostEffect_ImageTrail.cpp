@@ -39,9 +39,9 @@
 namespace hpl {
     cPostEffectType_ImageTrail::cPostEffectType_ImageTrail(cGraphics* apGraphics, cResources* apResources)
         : iPostEffectType("ImageTrail", apGraphics, apResources) {
-        m_program = hpl::loadProgram("vs_post_effect", "fs_posteffect_image_trail_frag");
-        m_u_param = bgfx::createUniform("u_param", bgfx::UniformType::Vec4);
-        m_s_diffuseMap = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
+        // m_program = hpl::loadProgram("vs_post_effect", "fs_posteffect_image_trail_frag");
+        // m_u_param = bgfx::createUniform("u_param", bgfx::UniformType::Vec4);
+        // m_s_diffuseMap = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
     }
 
     cPostEffectType_ImageTrail::~cPostEffectType_ImageTrail() {

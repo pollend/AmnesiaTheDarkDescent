@@ -287,16 +287,19 @@ namespace hpl::window::internal {
     void Process(NativeWindowHandler& handler) {
         auto impl = static_cast<NativeWindowImpl*>(handler.Get());
 
-        std::lock_guard<std::recursive_mutex> lk(impl->m_mutex);
-        for (auto& handler : impl->m_processCmd) {
-            handler(*impl);
+        {
+            std::lock_guard<std::recursive_mutex> lk(impl->m_mutex);
+            for (auto& handler : impl->m_processCmd) {
+                handler(*impl);
+            }
+            impl->m_processCmd.clear();
         }
-        impl->m_processCmd.clear();
 
         impl->m_windowFlags = SDL_GetWindowFlags(impl->m_window);
         InternalEvent internalEvent;
         WindowEventPayload windowEventPayload;
-        while (SDL_PollEvent(&internalEvent.m_sdlEvent)) {
+        // SDL_POL
+        while (SDL_WaitEvent(&internalEvent.m_sdlEvent)) {
             auto& event = internalEvent.m_sdlEvent;
             impl->m_internalWindowEvent.Signal(internalEvent);
             switch (event.type) {

@@ -29,12 +29,13 @@
 namespace hpl {
 
 	namespace gui {
-		static constexpr size_t GUI_STREAM_BUFFER_VB_SIZE = 60000;
-        static constexpr size_t GUI_STREAM_BUFFER_IB_SIZE = 60000;
-        static constexpr size_t GUI_MAX_BATCHES = 4096;
+		static constexpr size_t GUI_STREAM_BUFFER_VB_SIZE = 32768;
+        static constexpr size_t GUI_STREAM_BUFFER_IB_SIZE = 32768;
+        static constexpr size_t GUI_MAX_BATCHES = 1024;
+		static constexpr uint32_t MAX_GUI_DRAW_CALLS = 1024;
             
 
-		void InitializeGui();
+		void InitializeGui(ForgeRenderer& pipeline);
 		void exitGui();
 	}
 	//---------------------------------------------
@@ -177,8 +178,6 @@ namespace hpl {
 				cSound *apSound, cScene *apScene);
 		~cGuiSet();
 
-		static void Init();
-
 		////////////////////////////////////
 		// General
 
@@ -198,7 +197,7 @@ namespace hpl {
 		void ResetMouseOver();
 
 
-		void Draw(HPLPipeline::Frame& frame, cFrustum* apFrustum);
+		void Draw(const ForgeRenderer::Frame& frame, cFrustum* apFrustum);
 		////////////////////////////////////
 		// Rendering
 		void ClearRenderObjects();

@@ -5,7 +5,7 @@
 
 namespace hpl {
 
-    void HPLPipeline::CommandResourcePool::AddMaterial(cMaterial& material, std::span<eMaterialTexture> textures) {
+    void ForgeRenderer::CommandResourcePool::AddMaterial(cMaterial& material, std::span<eMaterialTexture> textures) {
         for(auto& tex: textures) {
             auto image = material.GetImage(tex);
             if(image) {
@@ -18,7 +18,15 @@ namespace hpl {
     }
 
 
-    void HPLPipeline::InitializeRenderer(window::NativeWindowWrapper* window) {
+    void ForgeRenderer::CommandResourcePool::AddTexture(ForgeTextureHandle texture) {
+        m_cmds.push_back(texture);
+    }
+
+    void ForgeRenderer::CommandResourcePool::ResetPool() {
+        m_cmds.clear();
+    }
+
+    void ForgeRenderer::InitializeRenderer(window::NativeWindowWrapper* window) {
         SyncToken token = {};
         RendererDesc desc{};
         initRenderer("test", &desc, &m_renderer);
@@ -42,8 +50,8 @@ namespace hpl {
 		swapChainDesc.mWindowHandle = window->ForgeWindowHandle();
 		swapChainDesc.mPresentQueueCount = 1;
 		swapChainDesc.ppPresentQueues = &m_graphicsQueue;
-		swapChainDesc.mWidth = windowSize.x;
-		swapChainDesc.mHeight = windowSize.y;
+		swapChainDesc.mWidth = 1920;
+		swapChainDesc.mHeight = 1080;
 		swapChainDesc.mImageCount = SwapChainLength;
 		swapChainDesc.mColorFormat = getRecommendedSwapchainFormat(true, true);
 		swapChainDesc.mColorClearValue = { {1, 1, 1, 1} };
@@ -54,6 +62,15 @@ namespace hpl {
 		// graphRootDesc.mShaderCount = 1;
 		// graphRootDesc.ppShaders = &pGraphShader;
 		addRootSignature(m_renderer, &graphRootDesc, &m_pipelineSignature);
+
+
+		addSemaphore(m_renderer, &m_imageAcquiredSemaphore);
+        for(auto& completeSem: m_renderCompleteSemaphores) {
+            addSemaphore(m_renderer, &completeSem);
+        }
+        for(auto& completeFence: m_renderCompleteFences) {
+            addFence(m_renderer, &completeFence);
+        }
 
 
     }

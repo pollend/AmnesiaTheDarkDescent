@@ -66,7 +66,7 @@ namespace hpl {
 		 * Called by cEngine
 		 */
 		void Render(float afFrameTime, tFlag alFlags) {} //TODO MP: this needs to be replaced
-		void Render(GraphicsContext& context, float afFrameTime, tFlag alFlags);
+		void Render(const ForgeRenderer::Frame&, float afFrameTime, tFlag alFlags);
 
 		void Update(float timeStep);
 
@@ -90,8 +90,8 @@ namespace hpl {
 		cViewport* PrimaryViewport();
 
 	private:
-		void Render3DGui(GraphicsContext& context,cViewport* apViewPort,cFrustum *apFrustum,float afTimeStep);
-		void RenderScreenGui(GraphicsContext& context,  cViewport* apViewPort, float afTimeStep);
+		void Render3DGui(const ForgeRenderer::Frame&,cViewport* apViewPort,cFrustum *apFrustum,float afTimeStep);
+		void RenderScreenGui(const ForgeRenderer::Frame&,  cViewport* apViewPort, float afTimeStep);
 
         cGraphics *mpGraphics;
 		cResources *mpResources;

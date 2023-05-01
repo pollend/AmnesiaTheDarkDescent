@@ -75,8 +75,8 @@ namespace hpl {
 			return target.GetImage()->GetImageSize() == viewport.GetSize();
 		}));
 
-		m_u_color.Initialize();
-		m_colorProgram = hpl::loadProgram("vs_color", "fs_color");
+		// m_u_color.Initialize();
+		// m_colorProgram = hpl::loadProgram("vs_color", "fs_color");
 	}
 
 	//-----------------------------------------------------------------------
@@ -127,131 +127,131 @@ namespace hpl {
 	// }
 
 
-	void cRendererWireFrame::Draw(GraphicsContext& context, cViewport& viewport, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, bool abSendFrameBufferToPostEffects) {
+	void cRendererWireFrame::Draw(const ForgeRenderer::Frame& frame, cViewport& viewport, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, bool abSendFrameBufferToPostEffects) {
 		BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects);
 		
-		auto& rt = m_boundOutputBuffer.resolve(viewport);	
+		// auto& rt = m_boundOutputBuffer.resolve(viewport);	
 		
-		[&]{
-			GraphicsContext::ViewConfiguration viewConfig {rt};
-			viewConfig.m_viewRect = {0, 0, viewport.GetSize().x, viewport.GetSize().y};
-			viewConfig.m_clear = {0, 1, 0, ClearOp::Depth | ClearOp::Stencil | ClearOp::Color};
-			bgfx::touch(context.StartPass("Clear", viewConfig));
-		}();
+		// [&]{
+		// 	GraphicsContext::ViewConfiguration viewConfig {rt};
+		// 	viewConfig.m_viewRect = {0, 0, viewport.GetSize().x, viewport.GetSize().y};
+		// 	viewConfig.m_clear = {0, 1, 0, ClearOp::Depth | ClearOp::Stencil | ClearOp::Color};
+		// 	bgfx::touch(context.StartPass("Clear", viewConfig));
+		// }();
 
 
-		mpCurrentRenderList->Setup(mfCurrentFrameTime,apFrustum);
+		// mpCurrentRenderList->Setup(mfCurrentFrameTime,apFrustum);
 
-		rendering::detail::UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
-			mpCurrentRenderList, apFrustum, mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static), mvCurrentOcclusionPlanes, 0);
-		rendering::detail::UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
-			mpCurrentRenderList, apFrustum, mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Dynamic), mvCurrentOcclusionPlanes, 0);
+		// rendering::detail::UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
+		// 	mpCurrentRenderList, apFrustum, mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static), mvCurrentOcclusionPlanes, 0);
+		// rendering::detail::UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
+		// 	mpCurrentRenderList, apFrustum, mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Dynamic), mvCurrentOcclusionPlanes, 0);
 
-		mpCurrentRenderList->Compile(	eRenderListCompileFlag_Diffuse |
-										eRenderListCompileFlag_Decal |
-										eRenderListCompileFlag_Translucent);
+		// mpCurrentRenderList->Compile(	eRenderListCompileFlag_Diffuse |
+		// 								eRenderListCompileFlag_Decal |
+		// 								eRenderListCompileFlag_Translucent);
 
-		// START_RENDER_PASS(WireFrame);
+		// // START_RENDER_PASS(WireFrame);
 
-		////////////////////////////////////////////
-		// Diffuse Objects
-		// SetDepthTest(true);
-		// SetDepthWrite(true);
-		// SetBlendMode(eMaterialBlendMode_None);
-		// SetAlphaMode(eMaterialAlphaMode_Solid);
-		// SetChannelMode(eMaterialChannelMode_RGBA);
+		// ////////////////////////////////////////////
+		// // Diffuse Objects
+		// // SetDepthTest(true);
+		// // SetDepthWrite(true);
+		// // SetBlendMode(eMaterialBlendMode_None);
+		// // SetAlphaMode(eMaterialAlphaMode_Solid);
+		// // SetChannelMode(eMaterialChannelMode_RGBA);
 
-		// SetTextureRange(NULL,0);
+		// // SetTextureRange(NULL,0);
 
-		int lCount =0;
+		// int lCount =0;
 
-		GraphicsContext::ViewConfiguration viewConfig {rt};
-		viewConfig.m_projection = apFrustum->GetProjectionMatrix().GetTranspose();
-		viewConfig.m_view = apFrustum->GetViewMatrix().GetTranspose();
-		viewConfig.m_viewRect = {0, 0, viewport.GetSize().x, viewport.GetSize().y};
-		auto view = context.StartPass("Wireframe", viewConfig);
-		for(auto& pObject: mpCurrentRenderList->GetRenderableItems(eRenderListType_Diffuse))
-		{
-			GraphicsContext::LayoutStream layoutStream;
-            GraphicsContext::ShaderProgram shaderProgram;
+		// GraphicsContext::ViewConfiguration viewConfig {rt};
+		// viewConfig.m_projection = apFrustum->GetProjectionMatrix().GetTranspose();
+		// viewConfig.m_view = apFrustum->GetViewMatrix().GetTranspose();
+		// viewConfig.m_viewRect = {0, 0, viewport.GetSize().x, viewport.GetSize().y};
+		// auto view = context.StartPass("Wireframe", viewConfig);
+		// for(auto& pObject: mpCurrentRenderList->GetRenderableItems(eRenderListType_Diffuse))
+		// {
+		// 	GraphicsContext::LayoutStream layoutStream;
+        //     GraphicsContext::ShaderProgram shaderProgram;
 
-			if(pObject == nullptr)
-			{
-				continue;
-			}
+		// 	if(pObject == nullptr)
+		// 	{
+		// 		continue;
+		// 	}
 
-			iVertexBuffer* vertexBuffer = pObject->GetVertexBuffer();
-			if(vertexBuffer == nullptr) {
-				continue;
-			}
+		// 	iVertexBuffer* vertexBuffer = pObject->GetVertexBuffer();
+		// 	if(vertexBuffer == nullptr) {
+		// 		continue;
+		// 	}
 
-			struct {
-				float m_r;
-				float m_g;
-				float m_b;
-				float m_a;
-			} color = { 1.0f, 1.0f,1.0f ,1.0f };
-
-
-			shaderProgram.m_configuration.m_depthTest = DepthTest::LessEqual;
-			shaderProgram.m_configuration.m_write = Write::RGBA;
-			shaderProgram.m_configuration.m_cull = Cull::None;
-			shaderProgram.m_handle = m_colorProgram;
-
-			shaderProgram.m_uniforms.push_back({ m_u_color, &color });
-			shaderProgram.m_modelTransform = pObject->GetModelMatrixPtr() ?  pObject->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity.GetTranspose();
-
-			vertexBuffer->GetLayoutStream(layoutStream, eVertexBufferDrawType_LineStrip);
-			GraphicsContext::DrawRequest drawRequest {layoutStream, shaderProgram};
-			context.Submit(view, drawRequest);
-
-			lCount++;
-		}
-
-		////////////////////////////////////////////
-		// Decal Objects
-		// SetDepthWrite(false);
-
-		for(auto& pObject: mpCurrentRenderList->GetRenderableItems(eRenderListType_Decal))
-		{
-			cMaterial *pMaterial = pObject->GetMaterial();
-
-			// SetBlendMode(pMaterial->GetBlendMode());
-
-			// SetTexture(0,pMaterial->GetTexture(eMaterialTexture_Diffuse));
-
-			// SetMatrix(pObject->GetModelMatrixPtr());
-
-			// SetVertexBuffer(pObject->GetVertexBuffer());
-
-			// DrawCurrent(eVertexBufferDrawType_LineStrip);
-		}
-
-		// RunCallback(eRendererMessage_PostSolid);
+		// 	struct {
+		// 		float m_r;
+		// 		float m_g;
+		// 		float m_b;
+		// 		float m_a;
+		// 	} color = { 1.0f, 1.0f,1.0f ,1.0f };
 
 
-		////////////////////////////////////////////
-		// Trans Objects
-		// SetDepthWrite(false);
+		// 	shaderProgram.m_configuration.m_depthTest = DepthTest::LessEqual;
+		// 	shaderProgram.m_configuration.m_write = Write::RGBA;
+		// 	shaderProgram.m_configuration.m_cull = Cull::None;
+		// 	shaderProgram.m_handle = m_colorProgram;
 
-		for(auto& pObject: mpCurrentRenderList->GetRenderableItems(eRenderListType_Translucent))
-		{
-			cMaterial *pMaterial = pObject->GetMaterial();
+		// 	shaderProgram.m_uniforms.push_back({ m_u_color, &color });
+		// 	shaderProgram.m_modelTransform = pObject->GetModelMatrixPtr() ?  pObject->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity.GetTranspose();
 
-			pObject->UpdateGraphicsForViewport(apFrustum, mfCurrentFrameTime);
+		// 	vertexBuffer->GetLayoutStream(layoutStream, eVertexBufferDrawType_LineStrip);
+		// 	GraphicsContext::DrawRequest drawRequest {layoutStream, shaderProgram};
+		// 	context.Submit(view, drawRequest);
 
-			// SetBlendMode(pMaterial->GetBlendMode());
+		// 	lCount++;
+		// }
 
-			// SetTexture(0,pMaterial->GetTexture(eMaterialTexture_Diffuse));
+		// ////////////////////////////////////////////
+		// // Decal Objects
+		// // SetDepthWrite(false);
 
-			// SetMatrix(pObject->GetModelMatrix(mpCurrentFrustum));
+		// for(auto& pObject: mpCurrentRenderList->GetRenderableItems(eRenderListType_Decal))
+		// {
+		// 	cMaterial *pMaterial = pObject->GetMaterial();
 
-			// SetVertexBuffer(pObject->GetVertexBuffer());
+		// 	// SetBlendMode(pMaterial->GetBlendMode());
 
-			// DrawCurrent(eVertexBufferDrawType_LineStrip);
-		}
+		// 	// SetTexture(0,pMaterial->GetTexture(eMaterialTexture_Diffuse));
 
-		// RunCallback(eRendererMessage_PostTranslucent);
+		// 	// SetMatrix(pObject->GetModelMatrixPtr());
+
+		// 	// SetVertexBuffer(pObject->GetVertexBuffer());
+
+		// 	// DrawCurrent(eVertexBufferDrawType_LineStrip);
+		// }
+
+		// // RunCallback(eRendererMessage_PostSolid);
+
+
+		// ////////////////////////////////////////////
+		// // Trans Objects
+		// // SetDepthWrite(false);
+
+		// for(auto& pObject: mpCurrentRenderList->GetRenderableItems(eRenderListType_Translucent))
+		// {
+		// 	cMaterial *pMaterial = pObject->GetMaterial();
+
+		// 	pObject->UpdateGraphicsForViewport(apFrustum, mfCurrentFrameTime);
+
+		// 	// SetBlendMode(pMaterial->GetBlendMode());
+
+		// 	// SetTexture(0,pMaterial->GetTexture(eMaterialTexture_Diffuse));
+
+		// 	// SetMatrix(pObject->GetModelMatrix(mpCurrentFrustum));
+
+		// 	// SetVertexBuffer(pObject->GetVertexBuffer());
+
+		// 	// DrawCurrent(eVertexBufferDrawType_LineStrip);
+		// }
+
+		// // RunCallback(eRendererMessage_PostTranslucent);
 
 
 		// END_RENDER_PASS();

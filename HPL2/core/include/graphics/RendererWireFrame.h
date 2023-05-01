@@ -49,8 +49,8 @@ namespace hpl {
 		}
 	private:
 
-		virtual void Draw(GraphicsContext& context, cViewport& viewport, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings,
-			bool abSendFrameBufferToPostEffects) override;
+		virtual void Draw(const ForgeRenderer::Frame& context, cViewport& viewport, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings,
+		bool abSendFrameBufferToPostEffects) override;
 
         UniqueViewportData<LegacyRenderTarget> m_boundOutputBuffer;
         bgfx::ProgramHandle m_colorProgram;

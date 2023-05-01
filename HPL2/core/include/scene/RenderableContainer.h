@@ -123,7 +123,7 @@ namespace hpl {
 
 		void CalculateMinMaxFromObjects();
 
-		bgfx::OcclusionQueryHandle GetOcclusionQuery() const { return m_occlusionQuery; }
+		// bgfx::OcclusionQueryHandle GetOcclusionQuery() const { return m_occlusionQuery; }
 
 	protected:
 		cVector3f mvMin;

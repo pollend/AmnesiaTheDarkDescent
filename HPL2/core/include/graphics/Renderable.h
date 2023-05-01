@@ -125,12 +125,12 @@ namespace hpl {
 		void SetRenderableUserData(void* apData) { mpRenderableUserData = apData; }
 		void* GetRenderableUserData() { return mpRenderableUserData; }
 
-		void bindCommandBuffer(HPLPipeline& pipeline, ForgeCmdHandle& cmd);
+		void bindCommandBuffer(ForgeRenderer& pipeline, ForgeCmdHandle& cmd);
 
 	protected:
 		virtual void OnUpdateWorldTransform() override;
 		ForgeDescriptorSet m_cbObjectDescriptor;
-		std::array<ForgeBufferHandle, HPLPipeline::SwapChainLength> m_cbObjectBuffer;
+		std::array<ForgeBufferHandle, ForgeRenderer::SwapChainLength> m_cbObjectBuffer;
 
 		cMatrixf m_mtxInvModel;
 		cMatrixf *mpModelMatrix;

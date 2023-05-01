@@ -5,3 +5,11 @@
 #vert basicSolidDiffuse.vert
 #include "basicSolidDiffuse.vert.fsl"
 #end
+
+#vert gui.vert
+#include "gui.vert.fsl"
+#end
+
+#frag gui.frag
+#include "gui.frag.fsl"
+#end

@@ -51,7 +51,7 @@ namespace hpl {
         static int32_t BootstrapThreadHandler(bx::Thread* self, void* _userData);
 
         std::unique_ptr<PrimaryViewport> m_primaryViewport;
-        hpl::HPLPipeline m_pipeline;
+        hpl::ForgeRenderer m_renderer;
 
         UpdateEventLoop m_updateEventLoop;
         input::InputManager m_inputManager;

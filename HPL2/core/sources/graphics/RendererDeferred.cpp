@@ -796,7 +796,7 @@ namespace hpl {
 
     enum eDefferredProgramMode { eDefferredProgramMode_Lights, eDefferredProgramMode_Misc, eDefferredProgramMode_LastEnum };
 
-    cRendererDeferred::cRendererDeferred(HPLPipeline* pipeline, cGraphics* apGraphics, cResources* apResources)
+    cRendererDeferred::cRendererDeferred(ForgeRenderer* pipeline, cGraphics* apGraphics, cResources* apResources)
         : iRenderer("Deferred", apGraphics, apResources, eDefferredProgramMode_LastEnum) {
         ////////////////////////////////////
         // Set up render specific things
@@ -991,102 +991,102 @@ namespace hpl {
             lStartSize = 0;
         }
 
-        auto createShadowMap = [](const cVector3l& avSize) -> ShadowMapData {
-            auto desc = ImageDescriptor::CreateTexture2D(avSize.x, avSize.y, false, bgfx::TextureFormat::D16F);
-            desc.m_configuration.m_rt = RTType::RT_Write;
-            desc.m_configuration.m_minFilter = FilterType::Point;
-            desc.m_configuration.m_magFilter = FilterType::Point;
-            desc.m_configuration.m_mipFilter = FilterType::Point;
-            desc.m_configuration.m_comparsion = DepthTest::LessEqual;
-            auto image = std::make_shared<Image>();
-            image->Initialize(desc);
-            return { 
-                .m_target = LegacyRenderTarget(image), 
-                .m_light = nullptr,
-                .m_transformCount = -1,
-                .m_frameCount = -1,
-                .m_radius = 0,
-                .m_fov = 0,
-                .m_aspect = 0
-            };
-        };
+        // auto createShadowMap = [](const cVector3l& avSize) -> ShadowMapData {
+        //     auto desc = ImageDescriptor::CreateTexture2D(avSize.x, avSize.y, false, bgfx::TextureFormat::D16F);
+        //     desc.m_configuration.m_rt = RTType::RT_Write;
+        //     desc.m_configuration.m_minFilter = FilterType::Point;
+        //     desc.m_configuration.m_magFilter = FilterType::Point;
+        //     desc.m_configuration.m_mipFilter = FilterType::Point;
+        //     desc.m_configuration.m_comparsion = DepthTest::LessEqual;
+        //     auto image = std::make_shared<Image>();
+        //     image->Initialize(desc);
+        //     return { 
+        //         .m_target = LegacyRenderTarget(image), 
+        //         .m_light = nullptr,
+        //         .m_transformCount = -1,
+        //         .m_frameCount = -1,
+        //         .m_radius = 0,
+        //         .m_fov = 0,
+        //         .m_aspect = 0
+        //     };
+        // };
 
-        for (size_t i = 0; i < 10; ++i) {
-            m_shadowMapData[eShadowMapResolution_High].emplace_back(createShadowMap(vShadowSize[lStartSize + eShadowMapResolution_High]));
-        }
-        for (size_t i = 0; i < 15; ++i) {
-            m_shadowMapData[eShadowMapResolution_Medium].emplace_back(createShadowMap(vShadowSize[lStartSize + eShadowMapResolution_Medium]));
-        }
-        for (size_t i = 0; i < 20; ++i) {
-            m_shadowMapData[eShadowMapResolution_Low].emplace_back(createShadowMap(vShadowSize[lStartSize + eShadowMapResolution_Low]));
-        }
+        // for (size_t i = 0; i < 10; ++i) {
+        //     m_shadowMapData[eShadowMapResolution_High].emplace_back(createShadowMap(vShadowSize[lStartSize + eShadowMapResolution_High]));
+        // }
+        // for (size_t i = 0; i < 15; ++i) {
+        //     m_shadowMapData[eShadowMapResolution_Medium].emplace_back(createShadowMap(vShadowSize[lStartSize + eShadowMapResolution_Medium]));
+        // }
+        // for (size_t i = 0; i < 20; ++i) {
+        //     m_shadowMapData[eShadowMapResolution_Low].emplace_back(createShadowMap(vShadowSize[lStartSize + eShadowMapResolution_Low]));
+        // }
 
         // High
-        int shadowMapJitterSize = 0;
-        int shadowMapJitterSamples = 0;
-        if (mShadowMapQuality == eShadowMapQuality_High) {
-            shadowMapJitterSize = 64;
-            shadowMapJitterSamples = 32; // 64 here instead? I mean, ATI has to deal with medium has max? or different max for ATI?
-            m_spotlightVariants.Initialize(
-                ShaderHelper::LoadProgramHandlerDefault("vs_deferred_light", "fs_deferred_spotlight_high", false, true));
-        }
-        // Medium
-        else if (mShadowMapQuality == eShadowMapQuality_Medium) {
-            shadowMapJitterSize = 32;
-            shadowMapJitterSamples = 16;
-            m_spotlightVariants.Initialize(
-                ShaderHelper::LoadProgramHandlerDefault("vs_deferred_light", "fs_deferred_spotlight_medium", false, true));
-        }
-        // Low
-        else {
-            shadowMapJitterSize = 0;
-            shadowMapJitterSamples = 0;
-            m_spotlightVariants.Initialize(
-                ShaderHelper::LoadProgramHandlerDefault("vs_deferred_light", "fs_deferred_spotlight_low", false, true));
-        }
+        // int shadowMapJitterSize = 0;
+        // int shadowMapJitterSamples = 0;
+        // if (mShadowMapQuality == eShadowMapQuality_High) {
+        //     shadowMapJitterSize = 64;
+        //     shadowMapJitterSamples = 32; // 64 here instead? I mean, ATI has to deal with medium has max? or different max for ATI?
+        //     m_spotlightVariants.Initialize(
+        //         ShaderHelper::LoadProgramHandlerDefault("vs_deferred_light", "fs_deferred_spotlight_high", false, true));
+        // }
+        // // Medium
+        // else if (mShadowMapQuality == eShadowMapQuality_Medium) {
+        //     shadowMapJitterSize = 32;
+        //     shadowMapJitterSamples = 16;
+        //     m_spotlightVariants.Initialize(
+        //         ShaderHelper::LoadProgramHandlerDefault("vs_deferred_light", "fs_deferred_spotlight_medium", false, true));
+        // }
+        // // Low
+        // else {
+        //     shadowMapJitterSize = 0;
+        //     shadowMapJitterSamples = 0;
+        //     m_spotlightVariants.Initialize(
+        //         ShaderHelper::LoadProgramHandlerDefault("vs_deferred_light", "fs_deferred_spotlight_low", false, true));
+        // }
 
-        if (mShadowMapQuality != eShadowMapQuality_Low) {
-            m_shadowJitterImage = std::make_shared<Image>();
-            TextureCreator::GenerateScatterDiskMap2D(*m_shadowJitterImage, shadowMapJitterSize, shadowMapJitterSamples, true);
-        }
+        // if (mShadowMapQuality != eShadowMapQuality_Low) {
+        //     m_shadowJitterImage = std::make_shared<Image>();
+        //     TextureCreator::GenerateScatterDiskMap2D(*m_shadowJitterImage, shadowMapJitterSize, shadowMapJitterSamples, true);
+        // }
         
-        {
-            m_ssaoScatterDiskImage = std::make_shared<Image>();
-            TextureCreator::GenerateScatterDiskMap2D(*m_ssaoScatterDiskImage, 4, SSAONumOfSamples, false);
-        }
-        m_u_param.Initialize();
-        m_u_lightPos.Initialize();
-        m_u_fogColor.Initialize();
-        m_u_lightColor.Initialize();
-        m_u_overrideColor.Initialize();
-        m_u_copyRegion.Initialize();
-        m_u_spotViewProj.Initialize();
-        m_u_mtxInvRotation.Initialize();
-        m_u_mtxInvViewRotation.Initialize();
+        // {
+        //     m_ssaoScatterDiskImage = std::make_shared<Image>();
+        //     TextureCreator::GenerateScatterDiskMap2D(*m_ssaoScatterDiskImage, 4, SSAONumOfSamples, false);
+        // }
+        // m_u_param.Initialize();
+        // m_u_lightPos.Initialize();
+        // m_u_fogColor.Initialize();
+        // m_u_lightColor.Initialize();
+        // m_u_overrideColor.Initialize();
+        // m_u_copyRegion.Initialize();
+        // m_u_spotViewProj.Initialize();
+        // m_u_mtxInvRotation.Initialize();
+        // m_u_mtxInvViewRotation.Initialize();
 
-        m_s_depthMap.Initialize();
-        m_s_positionMap.Initialize();
-        m_s_diffuseMap.Initialize();
-        m_s_normalMap.Initialize();
-        m_s_specularMap.Initialize();
-        m_s_attenuationLightMap.Initialize();
-        m_s_spotFalloffMap.Initialize();
-        m_s_shadowMap.Initialize();
-        m_s_goboMap.Initialize();
-        m_s_shadowOffsetMap.Initialize();
+        // m_s_depthMap.Initialize();
+        // m_s_positionMap.Initialize();
+        // m_s_diffuseMap.Initialize();
+        // m_s_normalMap.Initialize();
+        // m_s_specularMap.Initialize();
+        // m_s_attenuationLightMap.Initialize();
+        // m_s_spotFalloffMap.Initialize();
+        // m_s_shadowMap.Initialize();
+        // m_s_goboMap.Initialize();
+        // m_s_shadowOffsetMap.Initialize();
 
-        m_s_scatterDisk.Initialize();
+        // m_s_scatterDisk.Initialize();
 
-        m_deferredSSAOProgram  = hpl::loadProgram("vs_post_effect", "fs_deferred_ssao");
-        m_deferredSSAOBlurHorizontalProgram  = hpl::loadProgram("vs_post_effect", "fs_deferred_ssao_blur_horizontal");
-        m_deferredSSAOBlurVerticalProgram  = hpl::loadProgram("vs_post_effect", "fs_deferred_ssao_blur_vertical");
+        // m_deferredSSAOProgram  = hpl::loadProgram("vs_post_effect", "fs_deferred_ssao");
+        // m_deferredSSAOBlurHorizontalProgram  = hpl::loadProgram("vs_post_effect", "fs_deferred_ssao_blur_horizontal");
+        // m_deferredSSAOBlurVerticalProgram  = hpl::loadProgram("vs_post_effect", "fs_deferred_ssao_blur_vertical");
 
-        m_copyRegionProgram = hpl::loadProgram("cs_copy_region");
-        m_lightBoxProgram = hpl::loadProgram("vs_light_box", "fs_light_box");
-        m_nullShader = hpl::loadProgram("vs_null", "fs_null");
-        m_fogVariant.Initialize(ShaderHelper::LoadProgramHandlerDefault("vs_deferred_fog", "fs_deferred_fog", true, true));
-        m_pointLightVariants.Initialize(
-            ShaderHelper::LoadProgramHandlerDefault("vs_deferred_light", "fs_deferred_pointlight", false, true));
+        // m_copyRegionProgram = hpl::loadProgram("cs_copy_region");
+        // m_lightBoxProgram = hpl::loadProgram("vs_light_box", "fs_light_box");
+        // m_nullShader = hpl::loadProgram("vs_null", "fs_null");
+        // m_fogVariant.Initialize(ShaderHelper::LoadProgramHandlerDefault("vs_deferred_fog", "fs_deferred_fog", true, true));
+        // m_pointLightVariants.Initialize(
+        //     ShaderHelper::LoadProgramHandlerDefault("vs_deferred_light", "fs_deferred_pointlight", false, true));
         
         
         ////////////////////////////////////
@@ -1886,7 +1886,7 @@ namespace hpl {
         cVector2f vQuadSize = cVector2f(m_farRight * 2, m_farTop * 2);
 
         GraphicsContext::ShaderProgram shaderProgram;
-        shaderProgram.m_handle = m_edgeSmooth_UnpackDepthProgram;
+        // shaderProgram.m_handle = m_edgeSmooth_UnpackDepthProgram;
         // shaderProgram.m_textures.push_back({BGFX_INVALID_HANDLE,resolveRenderImage(m_gBufferPositionImage)->GetHandle(), 0});
         // shaderProgram.m_textures.push_back({BGFX_INVALID_HANDLE,resolveRenderImage(m_gBufferNormalImage)->GetHandle(), 0});
 
@@ -1924,14 +1924,14 @@ namespace hpl {
     }
 
     void cRendererDeferred::Draw(
-        GraphicsContext& context,
+        const ForgeRenderer::Frame& frame,
         cViewport& viewport,
         float afFrameTime,
         cFrustum* apFrustum,
         cWorld* apWorld,
         cRenderSettings* apSettings,
         bool abSendFrameBufferToPostEffects) {
-        iRenderer::Draw(context, viewport, afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects);
+        iRenderer::Draw(frame, viewport, afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects);
         // keep around for the moment ...
         BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects);
 
@@ -1940,6 +1940,14 @@ namespace hpl {
         const cMatrixf mainFrustumViewInv = cMath::MatrixInverse(apFrustum->GetViewMatrix());
         const cMatrixf mainFrustumView = apFrustum->GetViewMatrix().GetTranspose();
         const cMatrixf mainFrustumProj = apFrustum->GetProjectionMatrix().GetTranspose();
+
+        auto&   swapChainImage = frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex];
+
+        LoadActionsDesc loadActions = {};
+		loadActions.mLoadActionsColor[0] = LOAD_ACTION_CLEAR;
+		loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
+		cmdBindRenderTargets(frame.m_cmd, 1, &swapChainImage, NULL, &loadActions, NULL, NULL, -1, -1);
+		
 
         // // Setup far plane coordinates
         // m_farPlane = apFrustum->GetFarPlane();

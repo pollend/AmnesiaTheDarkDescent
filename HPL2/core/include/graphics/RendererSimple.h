@@ -39,8 +39,7 @@ namespace hpl {
 		virtual bool LoadData() override;
 		virtual void DestroyData() override;
 
-		virtual void Draw(GraphicsContext& context, cViewport& viewport, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings,
-					bool abSendFrameBufferToPostEffects) override;
+		virtual void Draw(const ForgeRenderer::Frame& frame, cViewport& viewport, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, bool abSendFrameBufferToPostEffects) override;
 
 	private:
 

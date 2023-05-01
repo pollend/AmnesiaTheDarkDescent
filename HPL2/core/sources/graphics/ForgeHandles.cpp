@@ -2,6 +2,11 @@
 #include "graphics/ForgeHandles.h"
 #include "graphics/Bitmap.h"
 
+
+#include "Common_3/Resources/ResourceLoader/TextureContainers.h"
+#include "tinyimageformat_query.h"
+#include <FixPreprocessor.h>
+
 namespace hpl {
     void ForgeCmdHandle::Free() {
         if (m_handle) {
@@ -45,57 +50,95 @@ namespace hpl {
                 return TinyImageFormat_B8G8R8A8_UNORM;
             case ePixelFormat_DXT1:
                 return TinyImageFormat_DXBC1_RGBA_UNORM;
-                // return bgfx::TextureFormat::BC1;
             case ePixelFormat_DXT2:
-                return TinyImageFormat_DXBC2_UNORM;
             case ePixelFormat_DXT3:
-                return TinyImageFormat_DXBC3_UNORM;
+                return TinyImageFormat_DXBC2_UNORM;
             case ePixelFormat_DXT4:
-                return TinyImageFormat_DXBC4_UNORM;
             case ePixelFormat_DXT5: 
-                return TinyImageFormat_DXBC5_UNORM;
+                return TinyImageFormat_DXBC3_UNORM;
             case ePixelFormat_Depth16:
                 return TinyImageFormat_D16_UNORM;
             case ePixelFormat_Depth24:
                 return TinyImageFormat_D24_UNORM_S8_UINT;
-                // return bgfx::TextureFormat::D24;
             case ePixelFormat_Depth32:
                 return TinyImageFormat_D32_SFLOAT;
             case ePixelFormat_Alpha16:
                 return TinyImageFormat_R16_UNORM;
-                // return bgfx::TextureFormat::R16F;
             case ePixelFormat_Luminance16:
                 return TinyImageFormat_R16_UNORM;
-                // return bgfx::TextureFormat::R16F;
             case ePixelFormat_LuminanceAlpha16:
                 return TinyImageFormat_R16G16_UNORM;
-                // return bgfx::TextureFormat::RG16F;
             case ePixelFormat_RGBA16:
                 return TinyImageFormat_R16G16B16A16_UNORM;
-                // return bgfx::TextureFormat::RGBA16F;
             case ePixelFormat_Alpha32:
                 return TinyImageFormat_R32_SFLOAT;
-                // return bgfx::TextureFormat::R32F;
             case ePixelFormat_Luminance32:
                 return TinyImageFormat_R32_SFLOAT;
-                // return bgfx::TextureFormat::R32F;
             case ePixelFormat_LuminanceAlpha32:
                 return TinyImageFormat_R32G32_SFLOAT;
-                // return bgfx::TextureFormat::RG32F;
             case ePixelFormat_RGBA32:
                 return TinyImageFormat_R32G32B32A32_SFLOAT;
-                // return bgfx::TextureFormat::RGBA32F;
             case ePixelFormat_RGB16:
                 return TinyImageFormat_R16G16B16_UNORM;
-                // return bgfx::TextureFormat::BC6H;
             case ePixelFormat_BGR:
                 return TinyImageFormat_B8G8R8_UNORM;
-                // return bgfx::TextureFormat::RGB8; // this is not supported by bgfx so we swap it under Image::InitializeFromBitmap
             default:
                 ASSERT(false && "Unsupported texture format");
                 break;
         }
         return TinyImageFormat_UNDEFINED;
+    }
+
+    namespace detail {
+        TinyImageFormat ToGraphicsCardSupportedFormat(ePixelFormat format) {
+            switch(format) {
+                case ePixelFormat_Alpha:
+                case ePixelFormat_Luminance:
+                    return TinyImageFormat_R8_UNORM;
+                case ePixelFormat_LuminanceAlpha:
+                    return TinyImageFormat_R8G8_UNORM;
+                case ePixelFormat_RGB: // generally not supported most hardware does not support 24 bit formats
+                case ePixelFormat_RGBA:
+                    return TinyImageFormat_R8G8B8A8_UNORM;
+                case ePixelFormat_BGRA:
+                    return TinyImageFormat_B8G8R8A8_UNORM;
+                case ePixelFormat_DXT1:
+                    return TinyImageFormat_DXBC1_RGBA_UNORM;
+                case ePixelFormat_DXT2:
+                case ePixelFormat_DXT3:
+                    return TinyImageFormat_DXBC2_UNORM;
+                case ePixelFormat_DXT4:
+                case ePixelFormat_DXT5: 
+                    return TinyImageFormat_DXBC3_UNORM;
+                case ePixelFormat_Depth16:
+                    return TinyImageFormat_D16_UNORM;
+                case ePixelFormat_Depth24:
+                    return TinyImageFormat_D32_SFLOAT_S8_UINT;
+                case ePixelFormat_Depth32:
+                    return TinyImageFormat_D32_SFLOAT;
+                case ePixelFormat_Alpha16:
+                case ePixelFormat_Luminance16:
+                    return TinyImageFormat_R16_UNORM;
+                case ePixelFormat_LuminanceAlpha16:
+                    return TinyImageFormat_R16G16_UNORM;
+                case ePixelFormat_RGBA16:
+                case ePixelFormat_RGB16:
+                    return TinyImageFormat_R16G16B16A16_UNORM;
+                case ePixelFormat_Alpha32:
+                case ePixelFormat_Luminance32:
+                    return TinyImageFormat_R32_SFLOAT;
+                case ePixelFormat_LuminanceAlpha32:
+                    return TinyImageFormat_R32G32_SFLOAT;
+                case ePixelFormat_RGBA32:
+                    return TinyImageFormat_R32G32B32A32_SFLOAT;
+                case ePixelFormat_BGR:
+                    return TinyImageFormat_B8G8R8A8_UNORM;
+                default:
+                    ASSERT(false && "Unsupported texture format");
+                    break;
+            }
+            return TinyImageFormat_UNDEFINED;
+        }
     }
 
 
@@ -107,9 +150,12 @@ namespace hpl {
         desc.mWidth = bitmap.GetWidth();
         desc.mHeight = bitmap.GetHeight();
         desc.mDepth = bitmap.GetDepth();
+        desc.mSampleCount = SAMPLE_COUNT_1;
         desc.mMipLevels = options.m_useMipmaps ? bitmap.GetNumOfMipMaps() : 1;
         desc.mArraySize = options.m_useArray ? bitmap.GetNumOfImages() : 1;
         desc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+        desc.mFormat = detail::ToGraphicsCardSupportedFormat(bitmap.GetPixelFormat());
+	    desc.mStartState = RESOURCE_STATE_COMMON;
         if(options.m_useCubeMap) {
             desc.mDescriptors |= DESCRIPTOR_TYPE_TEXTURE_CUBE;
             if(options.m_useArray) {
@@ -120,24 +166,42 @@ namespace hpl {
                 desc.mArraySize = 6;
             }
         }
-    
+
+       
         TextureLoadDesc textureLoadDesc = {};
         textureLoadDesc.ppTexture = &handle.m_handle;
         textureLoadDesc.pDesc = &desc;
         addResource(&textureLoadDesc, &token);
 
+
+        auto sourceImageFormat = FromHPLPixelFormat(bitmap.GetPixelFormat());
+        uint32_t sourceRowStride;
+        if(!util_get_surface_info(desc.mWidth, desc.mHeight, sourceImageFormat, nullptr, &sourceRowStride, nullptr)) {
+            ASSERT(false && "Failed to get surface info");
+        }
+        uint32_t srcElementStride = sourceRowStride / desc.mWidth;
+
+        auto isCompressed  = TinyImageFormat_IsCompressed(desc.mFormat);
         for(uint32_t arrIndex = 0; arrIndex < desc.mArraySize; arrIndex++) {
             for(uint32_t mipLevel = 0; mipLevel < desc.mMipLevels; mipLevel++) {
                 TextureUpdateDesc update = {handle.m_handle, mipLevel, arrIndex};
                 const auto& input = bitmap.GetData(arrIndex, mipLevel);
                 auto data = std::span<unsigned char>(input->mpData, static_cast<size_t>(input->mlSize));
                 beginUpdateResource(&update);
+                uint32_t dstElementStride = update.mDstRowStride / desc.mWidth;
+
                 for (uint32_t z = 0; z < desc.mDepth; ++z)
                 {
                     uint8_t* dstData = update.pMappedData + update.mDstSliceStride * z;
                     auto srcData = data.begin() + update.mSrcSliceStride * z;
-                    for (uint32_t r = 0; r < update.mRowCount; ++r) {
-                        std::memcpy(dstData + r * update.mDstRowStride, &srcData[r * update.mSrcRowStride], update.mSrcRowStride);
+                    for (uint32_t row = 0; row < update.mRowCount; ++row) {
+                        if(isCompressed) {
+                             std::memcpy(dstData + row * update.mDstRowStride, &srcData[row * update.mSrcRowStride], update.mSrcRowStride);
+                        } else {
+                            for(uint32_t column = 0;  column < desc.mWidth; column++) {
+                                std::memcpy(dstData + row * update.mDstRowStride + column * dstElementStride, &srcData[row * sourceRowStride + column * srcElementStride], std::min(dstElementStride, srcElementStride));
+                            }
+                        }
                     }
                 }
                 endUpdateResource(&update, &token);
@@ -155,9 +219,11 @@ namespace hpl {
         desc.mWidth = bitmaps[0]->GetWidth();
         desc.mHeight = bitmaps[0]->GetHeight();
         desc.mDepth = bitmaps[0]->GetDepth();
+        desc.mArraySize = 6;
         desc.mFormat = FromHPLPixelFormat(bitmaps[0]->GetPixelFormat());
         desc.mMipLevels = options.m_useMipmaps ? bitmaps[0]->GetNumOfMipMaps() : 1;
-        desc.mArraySize = 6;
+	    desc.mStartState = RESOURCE_STATE_COMMON;
+        desc.mSampleCount = SAMPLE_COUNT_1;
         desc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE | DESCRIPTOR_TYPE_TEXTURE_CUBE;
 
         TextureLoadDesc textureLoadDesc = {};
@@ -170,18 +236,35 @@ namespace hpl {
             ASSERT(bitmap->GetWidth() == desc.mWidth && "All bitmaps must have the same width");
             ASSERT(bitmap->GetHeight() == desc.mHeight && "All bitmaps must have the same height");
             ASSERT(bitmap->GetDepth() == desc.mDepth && "All bitmaps must have the same depth");
+            
+            auto sourceImageFormat = FromHPLPixelFormat(bitmap->GetPixelFormat());
+            uint32_t sourceRowStride;
+            if(!util_get_surface_info(desc.mWidth, desc.mHeight, sourceImageFormat, nullptr, &sourceRowStride, nullptr)) {
+                ASSERT(false && "Failed to get surface info");
+            }
+            uint32_t srcElementStride = sourceRowStride / desc.mWidth;
+            auto isCompressed  = TinyImageFormat_IsCompressed(desc.mFormat);
+            
             for(uint32_t arrIndex = 0; arrIndex < desc.mArraySize; arrIndex++) {
                 for(uint32_t mipLevel = 0; mipLevel < desc.mMipLevels; mipLevel++) {
                     TextureUpdateDesc update = {handle.m_handle, mipLevel, arrIndex};
                     const auto& input = bitmap->GetData(arrIndex, mipLevel);
                     auto data = std::span<unsigned char>(input->mpData, static_cast<size_t>(input->mlSize));
                     beginUpdateResource(&update);
-                    for (uint32_t z = 0; z < desc.mDepth; ++z)
-                    {
+                    for (uint32_t z = 0; z < desc.mDepth; ++z) {
+                        uint32_t dstElementStride = update.mDstRowStride / desc.mWidth;
                         uint8_t* dstData = update.pMappedData + update.mDstSliceStride * z;
                         auto srcData = data.begin() + update.mSrcSliceStride * z;
-                        for (uint32_t r = 0; r < update.mRowCount; ++r) {
-                            std::memcpy(dstData + r * update.mDstRowStride, &srcData[r * update.mSrcRowStride], update.mSrcRowStride);
+                        
+                        for (uint32_t row = 0; row < update.mRowCount; ++row) {
+
+                            if(isCompressed) {
+                                std::memcpy(dstData + row * update.mDstRowStride, &srcData[row * update.mSrcRowStride], update.mSrcRowStride);
+                            } else {
+                                for(uint32_t column = 0;  column < desc.mWidth; column++) {
+                                    std::memcpy(dstData + row * update.mDstRowStride + column * dstElementStride, &srcData[row * sourceRowStride + column * srcElementStride], std::min(dstElementStride, srcElementStride));
+                                }
+                            }
                         }
                     }
                     endUpdateResource(&update, &token);

@@ -5,11 +5,11 @@
 
 #include "engine/IUpdateEventLoop.h"
 #include "engine/Interface.h"
+#include "gui/GuiSet.h"
 #include "input/InputKeyboardDevice.h"
 #include "input/InputManager.h"
 
 #include "scene/Viewport.h"
-
 
 #include <input/InputMouseDevice.h>
 #include <windowing/NativeWindow.h>
@@ -26,24 +26,24 @@ namespace hpl {
     int32_t Bootstrap::BootstrapThreadHandler(bx::Thread* self, void* _userData) {
         auto bootstrap = reinterpret_cast<Bootstrap*>(_userData);
         
-        bgfx::Init init;
-        #if defined(WIN32)
-            // DirectX11 is even more broken then opengl something to consider later ...
-		    init.type = bgfx::RendererType::OpenGL;
-		#else
-		    init.type = bgfx::RendererType::OpenGL;
-        #endif
-		auto windowSize = bootstrap->m_window.GetWindowSize();
-        init.platformData.nwh  = bootstrap->m_window.NativeWindowHandle();
-		init.platformData.ndt  = bootstrap->m_window.NativeDisplayHandle();
-		init.resolution.width  = windowSize.x;
-		init.resolution.height = windowSize.y;
-		init.resolution.reset  = BGFX_RESET_VSYNC;
-        bgfx::init(init);
+        // bgfx::Init init;
+        // #if defined(WIN32)
+        //     // DirectX11 is even more broken then opengl something to consider later ...
+		//     init.type = bgfx::RendererType::OpenGL;
+		// #else
+		//     init.type = bgfx::RendererType::OpenGL;
+        // #endif
+		// auto windowSize = bootstrap->m_window.GetWindowSize();
+        // init.platformData.nwh  = bootstrap->m_window.NativeWindowHandle();
+		// init.platformData.ndt  = bootstrap->m_window.NativeDisplayHandle();
+		// init.resolution.width  = windowSize.x;
+		// init.resolution.height = windowSize.y;
+		// init.resolution.reset  = BGFX_RESET_VSYNC;
+        // bgfx::init(init);
         int32_t result = bootstrap->m_handler(self);
         self->shutdown();
-        bootstrap->m_primaryViewport->Invalidate();
-        bgfx::shutdown();
+        // bootstrap->m_primaryViewport->Invalidate();
+        // bgfx::shutdown();
         return result;
     }
 
@@ -51,14 +51,22 @@ namespace hpl {
         m_handler = handler;
         m_thread.init(BootstrapThreadHandler, this);
         while(m_thread.isRunning()) {
-            bgfx::renderFrame();
+            // bgfx::renderFrame();
             m_window.Process();
         }
     }
 
     void Bootstrap::Initialize(BootstrapConfiguration configuration) {
+
+        if (!initMemAlloc("Amnesia"))
+        {
+            return;
+        }
+        fsSetPathForResourceDir(pSystemFileIO, RM_CONTENT, RD_SHADER_SOURCES, "Shaders");
+		fsSetPathForResourceDir(pSystemFileIO, RM_CONTENT, RD_SHADER_BINARIES, "CompiledShaders");
+    
         Interface<IUpdateEventLoop>::Register(&m_updateEventLoop);
-        
+
         auto keyboardHandle = hpl::input::internal::keyboard::Initialize();
         auto mouseHandle = hpl::input::internal::mouse::Initialize();
         auto windowHandle = hpl::window::internal::Initialize(configuration.m_windowStyle);
@@ -69,18 +77,28 @@ namespace hpl {
         hpl::window::internal::ConnectInternalEventHandler(windowHandle,
             hpl::input::internal::mouse::GetWindowEventHandle(mouseHandle));
 
+
         m_window = hpl::window::NativeWindowWrapper(std::move(windowHandle));
+
+        m_window.SetWindowSize(cVector2l(1920, 1080));
+
+
+        // core renderer initialization
+        m_renderer.InitializeRenderer(&m_window);
+
+        // initialize gui rendering
+        initResourceLoaderInterface(m_renderer.Rend()); // initializes resources
+        gui::InitializeGui(m_renderer);
+        
 
         // this is safe because the render target is scheduled on the api thread
         m_primaryViewport = std::make_unique<hpl::PrimaryViewport>(m_window);
 
-        m_pipeline.InitializeRenderer(&m_window);
-        
         // register input devices
         m_inputManager.Register(input::InputManager::KeyboardDeviceID, std::make_shared<input::InputKeyboardDevice>(std::move(keyboardHandle)));
         m_inputManager.Register(input::InputManager::MouseDeviceID, std::make_shared<input::InputMouseDevice>(std::move(mouseHandle)));
 
-        Interface<hpl::HPLPipeline>::Register(&m_pipeline);
+        Interface<hpl::ForgeRenderer>::Register(&m_renderer);
         Interface<hpl::PrimaryViewport>::Register(m_primaryViewport.get());
         Interface<input::InputManager>::Register(&m_inputManager);
         Interface<FileReader>::Register(&m_fileReader);
@@ -89,7 +107,7 @@ namespace hpl {
     }
 
     void Bootstrap::Shutdown() {
-        Interface<hpl::HPLPipeline>::UnRegister(&m_pipeline);
+        Interface<hpl::ForgeRenderer>::UnRegister(&m_renderer);
         Interface<hpl::PrimaryViewport>::UnRegister(m_primaryViewport.get());
         Interface<input::InputManager>::UnRegister(&m_inputManager);
         Interface<FileReader>::UnRegister(&m_fileReader);

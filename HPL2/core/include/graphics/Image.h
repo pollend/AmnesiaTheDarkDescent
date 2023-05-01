@@ -91,7 +91,7 @@ namespace hpl {
         Image& operator=(const Image& other) = delete;
         void operator=(Image&& other);
 
-        inline void Initialize(ForgeTextureHandle&& handle) {m_texture = std::move(handle);}
+        inline void Initialize(ForgeTextureHandle&& handle) { m_texture = std::move(handle); }
         void Initialize(const ImageDescriptor& descriptor, const bgfx::Memory* mem = nullptr);
         void Invalidate();
 
@@ -107,14 +107,22 @@ namespace hpl {
         virtual void Destroy() override;
 
         uint16_t GetWidth() const {
-            return m_width;
+            if(m_texture.IsValid()) {
+                return m_texture.m_handle->mWidth;
+            }
+            return 0;
         }
         uint16_t GetHeight() const {
-            return m_height;
+            if(m_texture.IsValid()) {
+                return m_texture.m_handle->mHeight;
+            }
+            return 0;
         }
 
         cVector2l GetImageSize() const {
-            return cVector2l(m_width, m_height);
+            if(m_texture.IsValid()) {
+                return cVector2l(m_texture.m_handle->mWidth, m_texture.m_handle->mHeight);
+            }
         }
 
         ForgeTextureHandle& GetTexture() {

@@ -472,12 +472,19 @@ namespace hpl {
 	{
 		if(mbIsUpdated)
 		{
-			auto desc = ImageDescriptor::CreateFromBitmap(*mpBitmap);
-			desc.m_configuration.m_UWrap = WrapMode::Clamp;
-			desc.m_configuration.m_VWrap = WrapMode::Clamp;
-			mpFrameTexture->GetTexture()->Invalidate();
-			desc.m_name = mpFrameTexture->GetTexture()->GetName().c_str();
-			Image::InitializeFromBitmap(*mpFrameTexture->GetTexture(), *mpBitmap, desc);
+			auto forgeHandle = ForgeTextureHandle::LoadFromHPLBitmap(*mpBitmap, {
+				false,
+				false,
+				true
+			});
+			mpFrameTexture->GetTexture()->Initialize(std::move(forgeHandle));
+
+			// auto desc = ImageDescriptor::CreateFromBitmap(*mpBitmap);
+			// desc.m_configuration.m_UWrap = WrapMode::Clamp;
+			// desc.m_configuration.m_VWrap = WrapMode::Clamp;
+			// mpFrameTexture->GetTexture()->Invalidate();
+			// desc.m_name = mpFrameTexture->GetTexture()->GetName().c_str();
+			// Image::InitializeFromBitmap(*mpFrameTexture->GetTexture(), *mpBitmap, desc);
 
 			mbIsUpdated = false;
 			return true;

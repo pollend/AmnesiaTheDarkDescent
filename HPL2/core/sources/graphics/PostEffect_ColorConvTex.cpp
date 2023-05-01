@@ -45,10 +45,10 @@ namespace hpl
     cPostEffectType_ColorConvTex::cPostEffectType_ColorConvTex(cGraphics* apGraphics, cResources* apResources)
         : iPostEffectType("ColorConvTex", apGraphics, apResources)
     {
-        m_colorConv = hpl::loadProgram("vs_post_effect", "fs_posteffect_color_conv");
-        m_u_param = bgfx::createUniform("u_params", bgfx::UniformType::Vec4);
-        m_u_colorConvTex = bgfx::createUniform("s_convMap", bgfx::UniformType::Sampler);
-        m_u_diffuseTex = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
+        // m_colorConv = hpl::loadProgram("vs_post_effect", "fs_posteffect_color_conv");
+        // m_u_param = bgfx::createUniform("u_params", bgfx::UniformType::Vec4);
+        // m_u_colorConvTex = bgfx::createUniform("s_convMap", bgfx::UniformType::Sampler);
+        // m_u_diffuseTex = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
     }
 
     cPostEffectType_ColorConvTex::~cPostEffectType_ColorConvTex()

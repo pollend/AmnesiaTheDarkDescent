@@ -260,7 +260,7 @@ namespace hpl {
         // plan to just use the single draw call need to call BeginRendering to setup state
         // ensure the contents is copied to the RenderViewport
         virtual void Draw(
-            GraphicsContext& context,
+            const ForgeRenderer::Frame& context,
             cViewport& viewport,
             float afFrameTime,
             cFrustum* apFrustum,

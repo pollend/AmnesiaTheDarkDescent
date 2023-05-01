@@ -162,17 +162,17 @@ namespace hpl {
 
         m_updateEventHandler = IUpdateEventLoop::UpdateEvent::Handler([&](float dt) {
             if (m_dirtyViewport) {
-                if (m_size.x > 0 && m_size.y > 0) {
-                    auto desc = ImageDescriptor::CreateTexture2D(m_size.x, m_size.y, false, bgfx::TextureFormat::Enum::RGBA8);
-                    desc.m_configuration.m_rt = RTType::RT_Write;
-                    auto image = std::make_shared<Image>();
-                    image->Initialize(desc);
+                // if (m_size.x > 0 && m_size.y > 0) {
+                //     auto desc = ImageDescriptor::CreateTexture2D(m_size.x, m_size.y, false, bgfx::TextureFormat::Enum::RGBA8);
+                //     desc.m_configuration.m_rt = RTType::RT_Write;
+                //     auto image = std::make_shared<Image>();
+                //     image->Initialize(desc);
 
-                    m_dirtyViewport = false;
-                    std::array<std::shared_ptr<Image>, 1> images = { image };
-                    m_renderTarget.Invalidate();
-                    m_renderTarget.Initialize(images);
-                }
+                //     m_dirtyViewport = false;
+                //     std::array<std::shared_ptr<Image>, 1> images = { image };
+                //     m_renderTarget.Invalidate();
+                //     m_renderTarget.Initialize(images);
+                // }
                 m_viewportChanged.Signal();
             }
         });

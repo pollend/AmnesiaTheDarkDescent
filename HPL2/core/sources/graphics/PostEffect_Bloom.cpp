@@ -40,14 +40,14 @@ namespace hpl
     cPostEffectType_Bloom::cPostEffectType_Bloom(cGraphics* apGraphics, cResources* apResources)
         : iPostEffectType("Bloom", apGraphics, apResources)
     {
-        m_blurProgram = hpl::loadProgram("vs_post_effect", "fs_posteffect_blur");
-        m_bloomProgram = hpl::loadProgram("vs_post_effect", "fs_posteffect_bloom_add");
+        // m_blurProgram = hpl::loadProgram("vs_post_effect", "fs_posteffect_blur");
+        // m_bloomProgram = hpl::loadProgram("vs_post_effect", "fs_posteffect_bloom_add");
 
-        m_u_blurMap = bgfx::createUniform("s_blurMap", bgfx::UniformType::Sampler);
-        m_u_diffuseMap = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
+        // m_u_blurMap = bgfx::createUniform("s_blurMap", bgfx::UniformType::Sampler);
+        // m_u_diffuseMap = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
 
-        m_u_rgbToIntensity = bgfx::createUniform("u_rgbToIntensity", bgfx::UniformType::Vec4);
-        m_u_param = bgfx::createUniform("u_param", bgfx::UniformType::Vec4);
+        // m_u_rgbToIntensity = bgfx::createUniform("u_rgbToIntensity", bgfx::UniformType::Vec4);
+        // m_u_param = bgfx::createUniform("u_param", bgfx::UniformType::Vec4);
     }
 
     cPostEffectType_Bloom::~cPostEffectType_Bloom()

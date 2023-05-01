@@ -271,13 +271,13 @@ namespace hpl {
         PrimaryViewport& operator=(const PrimaryViewport& other) = delete;
         PrimaryViewport& operator=(PrimaryViewport&& other) = delete;
 
-        inline LegacyRenderTarget& GetRenderTarget() {
-            return m_renderTarget;
-        }
+        // inline LegacyRenderTarget& GetRenderTarget() {
+        //     return m_renderTarget;
+        // }
 
-        inline void Invalidate() {
-            m_renderTarget.Invalidate();
-        }
+        // inline void Invalidate() {
+        //     m_renderTarget.Invalidate();
+        // }
 
         inline void ConnectViewportChanged(ViewportChange::Handler& handler) {
             handler.Connect(m_viewportChanged);
@@ -292,7 +292,7 @@ namespace hpl {
         void CreateEventHandler();
 
         cVector2l m_size = { 0, 0 };
-        LegacyRenderTarget m_renderTarget;
+        // LegacyRenderTarget m_renderTarget;
         bool m_dirtyViewport = false;
 
         IUpdateEventLoop::UpdateEvent::Handler m_updateEventHandler;

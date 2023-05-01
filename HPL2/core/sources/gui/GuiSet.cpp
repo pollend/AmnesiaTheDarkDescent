@@ -85,80 +85,172 @@
 
 #include <algorithm>
 
+
+#include "Common_3/Utilities/RingBuffer.h"
+#include <FixPreprocessor.h>
+
 namespace hpl {
 
-	static ForgeBufferHandle vertexBuffer;
-	static ForgeBufferHandle indexBuffer;
-	static RootSignature* guiRootSignature;
-
 	namespace gui {
-		void InitializeGui(HPLPipeline& pipeline) {
+		struct UniformBlock {
+			mat4 mvp;
+			uint32_t textureConfig;
+		};
+
+		struct PositionTexColor {
+			float3 position;
+			float2 texCoord;
+			float4 color;
+		};
+
+		enum TextureConfiguration {
+			GUI_TEXTURE_CONFIG_NONE = 0,
+			GUI_TEXTURE_CONFIG_DIFFUSE = 1 << 0,	
+		};
+		
+		static std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> guiUniformDescriptorSet{};
+		static RootSignature* guiRootSignature = nullptr;
+		
+		static GPURingBuffer* guiUniformRingBuffer = nullptr;
+		static GPURingBuffer* guiVertexRingBuffer = nullptr;
+		static GPURingBuffer* guiIndexRingBuffer = nullptr;
+
+		static std::array<Pipeline*, eGuiMaterial_LastEnum> guiPipeline = {};
+		static std::array<Pipeline*, eGuiMaterial_LastEnum> guiPipeline3D = {};
+		static int descriptorIndex = 0;
+
+		static Shader* guiShader = nullptr;
+
+		void InitializeGui(ForgeRenderer& pipeline) {
  			{
-                vertexBuffer.TryFree();
-                BufferLoadDesc loadDesc = {};
-                loadDesc.ppBuffer = &vertexBuffer.m_handle;
-                loadDesc.mDesc.mDescriptors = DESCRIPTOR_TYPE_VERTEX_BUFFER;
-                loadDesc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
-                loadDesc.mDesc.mSize = GUI_STREAM_BUFFER_VB_SIZE;
-                loadDesc.mDesc.pName = "GUI Vertex Buffer";
-                addResource(&loadDesc, nullptr);
-                vertexBuffer.Initialize();
+                // guiVertexBuffer.TryFree();
+                BufferDesc desc = {};
+                // loadDesc.ppBuffer = &guiVertexBuffer.m_handle;
+				desc.mDescriptors = DESCRIPTOR_TYPE_VERTEX_BUFFER;
+                desc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
+                desc.mSize = GUI_STREAM_BUFFER_VB_SIZE * sizeof(PositionTexColor);
+                desc.pName = "GUI Vertex Buffer";
+				
+				addGPURingBuffer(pipeline.Rend(), &desc, &guiVertexRingBuffer);
             }
             {
-				indexBuffer.TryFree();
-                BufferLoadDesc loadDesc = {};
-                loadDesc.ppBuffer = &indexBuffer.m_handle;
-                loadDesc.mDesc.mDescriptors = DESCRIPTOR_TYPE_INDEX_BUFFER;
-                loadDesc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
-                loadDesc.mDesc.mSize = GUI_STREAM_BUFFER_VB_SIZE;
-                loadDesc.mDesc.pName = "GUI Index Buffer";
-                addResource(&loadDesc, nullptr);
-
-				indexBuffer.Initialize();
+				// guiIndexBuffer.TryFree();
+                BufferDesc desc = {};
+                desc.mDescriptors = DESCRIPTOR_TYPE_INDEX_BUFFER;
+                desc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
+                desc.mSize = GUI_STREAM_BUFFER_IB_SIZE * sizeof(uint32_t);
+                desc.pName = "GUI Index Buffer";
+                addGPURingBuffer(pipeline.Rend(), &desc, &guiIndexRingBuffer);
             }
 
+			ShaderLoadDesc loadDesc = {};
+			loadDesc.mStages[0] = {"gui.vert", nullptr, 0};
+			loadDesc.mStages[1] = {"gui.frag", nullptr, 0};
+			addShader(pipeline.Rend(), &loadDesc, &guiShader);
+
+			const char* pguiSamplerNames[] = { "diffuseMap" };
+			Shader* guiRootShaders[] = {guiShader};
+
 			RootSignatureDesc rootSignatureDesc = {};
+			rootSignatureDesc.ppShaders = guiRootShaders;
+			rootSignatureDesc.mShaderCount = std::size(guiRootShaders);
+			// rootSignatureDesc.ppStaticSamplerNames = pguiSamplerNames;
+			// rootSignatureDesc.mStaticSamplerCount = std::size(pguiSamplerNames);
 			addRootSignature(pipeline.Rend(), &rootSignatureDesc, &guiRootSignature);
+
+			for(auto& set: guiUniformDescriptorSet) {
+				DescriptorSetDesc setDesc{};
+				setDesc.pRootSignature = guiRootSignature;
+				setDesc.mUpdateFrequency = DESCRIPTOR_UPDATE_FREQ_PER_BATCH;
+				setDesc.mMaxSets = MAX_GUI_DRAW_CALLS;
+				addDescriptorSet(pipeline.Rend(), &setDesc, &set);
+			}
+			
+			{
+				//layout and pipeline for sphere draw
+				VertexLayout vertexLayout = {};
+				vertexLayout.mAttribCount = 3;
+				vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
+				vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
+				vertexLayout.mAttribs[0].mBinding = 0;
+				vertexLayout.mAttribs[0].mLocation = 0;
+				vertexLayout.mAttribs[0].mOffset = 0;
+				vertexLayout.mAttribs[1].mSemantic = SEMANTIC_TEXCOORD0;
+				vertexLayout.mAttribs[1].mFormat = TinyImageFormat_R32G32_SFLOAT;
+				vertexLayout.mAttribs[1].mBinding = 0;
+				vertexLayout.mAttribs[1].mLocation = 1;
+				vertexLayout.mAttribs[1].mOffset = sizeof(float) * 3;
+				vertexLayout.mAttribs[2].mSemantic = SEMANTIC_COLOR;
+				vertexLayout.mAttribs[2].mFormat = TinyImageFormat_R32G32B32A32_SFLOAT;
+				vertexLayout.mAttribs[2].mBinding = 0;
+				vertexLayout.mAttribs[2].mLocation = 2;
+				vertexLayout.mAttribs[2].mOffset = sizeof(float) * 3 + sizeof(float) * 2;
+
+				RasterizerStateDesc rasterizerStateDesc = {};
+				rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
+
+				DepthStateDesc depthStateDesc = {};
+				depthStateDesc.mDepthTest = false;
+				depthStateDesc.mDepthWrite = false;
+				
+				PipelineDesc pipelineDesc = {};
+				pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+				auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
+				pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+				pipelineSettings.mRenderTargetCount = 1;
+				pipelineSettings.pDepthState = &depthStateDesc;
+				pipelineSettings.pColorFormats = &pipeline.GetSwapChain()->ppRenderTargets[0]->mFormat;
+				pipelineSettings.mSampleCount = pipeline.GetSwapChain()->ppRenderTargets[0]->mSampleCount;
+				pipelineSettings.mSampleQuality = pipeline.GetSwapChain()->ppRenderTargets[0]->mSampleQuality;
+				pipelineSettings.pRootSignature = guiRootSignature;
+				pipelineSettings.pShaderProgram = guiShader;
+				pipelineSettings.pRasterizerState = &rasterizerStateDesc;
+				pipelineSettings.pVertexLayout = &vertexLayout;
+				
+				auto materialBlendFunc = [](BlendConstant srcColor, BlendConstant destColor, BlendConstant srcAlpha, BlendConstant destAlpha) {
+					BlendStateDesc blendStateAddDesc = {};
+					blendStateAddDesc.mSrcFactors[0] = srcColor;
+					blendStateAddDesc.mDstFactors[0] = destColor;
+					blendStateAddDesc.mBlendModes[0] = BM_ADD;
+					blendStateAddDesc.mSrcAlphaFactors[0] = srcAlpha;
+					blendStateAddDesc.mDstAlphaFactors[0] = destAlpha;
+					blendStateAddDesc.mBlendAlphaModes[0] = BM_ADD;
+					blendStateAddDesc.mMasks[0] = ALL;
+					blendStateAddDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
+					blendStateAddDesc.mIndependentBlend = false;
+					
+					return blendStateAddDesc;
+				};
+
+				std::array<BlendStateDesc, eGuiMaterial_LastEnum> blendStateDesc = {};
+				blendStateDesc[eGuiMaterial_Diffuse] = materialBlendFunc(BC_ONE, BC_ZERO, BC_ONE, BC_ZERO);
+				blendStateDesc[eGuiMaterial_PremulAlpha] = materialBlendFunc(BC_ONE, BC_ONE_MINUS_SRC_ALPHA, BC_ONE, BC_ONE_MINUS_SRC_ALPHA);
+				blendStateDesc[eGuiMaterial_Modulative] = materialBlendFunc(BC_DST_COLOR, BC_ZERO, BC_DST_COLOR, BC_ZERO);
+				blendStateDesc[eGuiMaterial_Additive] = materialBlendFunc(BC_ONE, BC_ONE, BC_ONE, BC_ONE);
+				blendStateDesc[eGuiMaterial_FontNormal] = materialBlendFunc(BC_SRC_ALPHA, BC_ONE_MINUS_SRC_ALPHA, BC_SRC_ALPHA, BC_ONE_MINUS_SRC_ALPHA);
+				blendStateDesc[eGuiMaterial_Alpha] = materialBlendFunc(BC_SRC_ALPHA, BC_ONE_MINUS_SRC_ALPHA, BC_SRC_ALPHA, BC_ONE_MINUS_SRC_ALPHA);
+
+				for(size_t i = 0; i < blendStateDesc.size(); i++) {
+					pipelineSettings.pBlendState = &blendStateDesc[i];
+					
+					addPipeline(pipeline.Rend(), &pipelineDesc, &guiPipeline[i]);
+				}
+
+				depthStateDesc.mDepthTest = true;
+				depthStateDesc.mDepthFunc = CMP_LEQUAL;
+				for(size_t i = 0; i < blendStateDesc.size(); i++) {
+					pipelineSettings.pBlendState = &blendStateDesc[i];
+					addPipeline(pipeline.Rend(), &pipelineDesc, &guiPipeline3D[i]);
+				}
+				
+			}
+
+			addUniformGPURingBuffer(pipeline.Rend(), sizeof(UniformBlock) * MAX_GUI_DRAW_CALLS, &guiUniformRingBuffer, true);
 		}
 
 		void exitGui() {
 
 		}
-	}
-
-	static bgfx::ProgramHandle g_guiProgram = BGFX_INVALID_HANDLE;
-	static bgfx::UniformHandle g_u_params = BGFX_INVALID_HANDLE;
-	static bgfx::UniformHandle g_u_s_diffuseMap = BGFX_INVALID_HANDLE;
-	static bgfx::UniformHandle g_u_clip_planes = BGFX_INVALID_HANDLE;
-
-	struct PositionTexCoordColor {
-		float m_uv[2];
-        float m_pos[3];
-		float color[4];
-
-		static void Init() {
-			m_layout.begin()
-				.add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Float)
-				.add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float)
-				.add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Float)
-				.end();
-		}
-
-        static bgfx::VertexLayout m_layout;
-	};
-    bgfx::VertexLayout PositionTexCoordColor::m_layout;
-
-	void cGuiSet::Init() {
-		BX_ASSERT(!bgfx::isValid(g_guiProgram), "Program already initialized");
-
-		PositionTexCoordColor::Init();
-		g_guiProgram = hpl::loadProgram(
-			"vs_gui",
-			"fs_gui"
-		);
-		g_u_params = bgfx::createUniform("u_params", bgfx::UniformType::Vec4);
-		g_u_s_diffuseMap = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
-		g_u_clip_planes = bgfx::createUniform("u_clip_planes", bgfx::UniformType::Vec4, 4);
 	}
 
 	static bool SortWidget_Z (const iWidget* apWidgetA, const iWidget* apWidgetB)
@@ -209,12 +301,6 @@ namespace hpl {
 		return false;
 
 	}
-
-	//////////////////////////////////////////////////////////////////////////
-	// CLIP REGION
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	cGuiClipRegion::~cGuiClipRegion()
 	{
@@ -571,20 +657,17 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 
 
-	void cGuiSet::Draw(HPLPipeline::Frame& frame, cFrustum* apFrustum) {
-
+	void cGuiSet::Draw(const ForgeRenderer::Frame& frame, cFrustum* apFrustum) {
 		if(m_setRenderObjects.empty()) {
 			return;
 		}
 
 		iLowLevelGraphics *pLowLevelGraphics = mpGraphics->GetLowLevel();
 
-		bgfx::TransientVertexBuffer vb;
-		bgfx::TransientIndexBuffer ib;
-		bgfx::allocTransientVertexBuffer(&vb, m_setRenderObjects.size() * 4, PositionTexCoordColor::m_layout);
-		bgfx::allocTransientIndexBuffer(&ib, m_setRenderObjects.size() * 6);
-		PositionTexCoordColor* vertexBuffer = reinterpret_cast<PositionTexCoordColor*>(vb.data);
-		uint16_t* indexBuffer = reinterpret_cast<uint16_t*>(ib.data);
+		size_t vertexBufferSize = m_setRenderObjects.size() * sizeof(gui::PositionTexColor) * 4;
+		size_t indexBufferSize = m_setRenderObjects.size() * sizeof(uint32_t) * 6;
+		GPURingBufferOffset vb = getGPURingBufferOffset(gui::guiVertexRingBuffer, vertexBufferSize);
+		GPURingBufferOffset ib = getGPURingBufferOffset(gui::guiIndexRingBuffer, indexBufferSize);
 
 		cMatrixf projectionMtx(cMatrixf::Identity);
 		cMatrixf viewMtx(cMatrixf::Identity);
@@ -616,12 +699,15 @@ namespace hpl {
 				vProjMin.x,vProjMax.x,vProjMax.y,vProjMin.y,vProjMin.z,vProjMax.z, 0.0f, bgfx::getCaps()->homogeneousDepth);
 		}
 		
+		LoadActionsDesc loadActions = {};
+		loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
+		loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
+				
 		cVector2l vSize = pLowLevelGraphics->GetScreenSizeInt();
-		GraphicsContext::ViewConfiguration viewConfiguration {LegacyRenderTarget::EmptyRenderTarget};
-		viewConfiguration.m_viewRect = cRect2l(0, 0, vSize.x, vSize.y);
-		viewConfiguration.m_projection = projectionMtx;
-		viewConfiguration.m_view = viewMtx;
-		auto view = graphicsContext.StartPass("Draw GUI", viewConfiguration);
+		auto& swapChainImage = frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex];
+		cmdBindRenderTargets(frame.m_cmd, 1, &swapChainImage, NULL, &loadActions, NULL, NULL, -1, -1);
+		cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)vSize.x, (float)vSize.y, 0.0f, 1.0f);
+
 		auto it = m_setRenderObjects.begin();
 
 		eGuiMaterial pLastMaterial = eGuiMaterial::eGuiMaterial_LastEnum;
@@ -633,93 +719,63 @@ namespace hpl {
 		Image* pTexture = pGfx->mvTextures[0];
 		cGuiClipRegion *pClipRegion = it->mpClipRegion;
 
+		BufferUpdateDesc vertexUpdateDesc = { vb.pBuffer, vb.mOffset, vertexBufferSize};
+		BufferUpdateDesc indexUpdateDesc = { ib.pBuffer, ib.mOffset, indexBufferSize};
+		beginUpdateResource(&vertexUpdateDesc);
+		beginUpdateResource(&indexUpdateDesc);
+
 		size_t vertexBufferOffset = 0;
 		size_t indexBufferOffset = 0;
 		while(it != m_setRenderObjects.end()) {
-
+			
 			size_t vertexBufferIndex = 0;
 			size_t indexBufferIndex = 0;
-			GraphicsContext::ShaderProgram shaderProgram;
-			shaderProgram.m_handle = g_guiProgram;
+			
+			GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(gui::guiUniformRingBuffer, sizeof(gui::UniformBlock));
+			
+			
+			DescriptorData params[10]{};
+			uint32_t paramCount = 0;
+			DescriptorDataRange range = { (uint32_t)uniformBlockOffset.mOffset, sizeof(gui::UniformBlock) };
+			params[paramCount].pName = "uniformBlock";
+			params[paramCount].pRanges = &range;
+			params[paramCount++].ppBuffers = &uniformBlockOffset.pBuffer;
 
-			const bool hasClip = pClipRegion && pClipRegion->mRect.w > 0.0f;
-			struct {
-				float x;
-				float y;
-				float z;
-				float w;
-			} clipPlanes [4] = {0};
-
-			struct {
-				float u_hasTexture;
-				float u_numClip;
-				float u_unused1;
-				float u_unused2;
-			} u_params = {
-				pTexture ? 1.0f : 0.0f,
-				hasClip ? 4.0f: 0.0f,
-				0.0f,
-				0.0f		
-			};
-			if(hasClip)
-			{
-				cRect2f& clipRect = pClipRegion->mRect;
-				cPlanef plane;
-				//Bottom
-				plane.FromNormalPoint(cVector3f(0,-1,0),cVector3f(0,clipRect.y+clipRect.h,0));
-				clipPlanes[0] = {plane.a, plane.b, plane.c, plane.d};
-				
-				//Top
-				plane.FromNormalPoint(cVector3f(0,1,0),cVector3f(0,clipRect.y,0));
-				clipPlanes[1] = {plane.a, plane.b, plane.c, plane.d};
-				
-				//Right
-				plane.FromNormalPoint(cVector3f(1,0,0),cVector3f(clipRect.x,0,0));
-				clipPlanes[2] = {plane.a, plane.b, plane.c, plane.d};
-				
-				//Left
-				plane.FromNormalPoint(cVector3f(-1,0,0),cVector3f(clipRect.x+clipRect.w,0,0));
-				clipPlanes[3] = {plane.a, plane.b, plane.c, plane.d};
-			}
-			shaderProgram.m_uniforms.push_back({ g_u_clip_planes, clipPlanes, 4 });
-			shaderProgram.m_uniforms.push_back({ g_u_params, &u_params});
+			gui::UniformBlock uniformBlock = {};
 			if(pTexture) {
-				shaderProgram.m_textures.push_back({ g_u_s_diffuseMap, pTexture->GetHandle(), 0 });
+				uniformBlock.textureConfig |= gui::GUI_TEXTURE_CONFIG_DIFFUSE;
+				params[paramCount].pName = "diffuseMap";
+				params[paramCount++].ppTextures = &pTexture->GetTexture().m_handle;
+			}
+			uniformBlock.mvp = cMath::ToForgeMat4(cMath::MatrixMul(cMath::MatrixMul(projectionMtx, viewMtx), modelMtx));
+			auto& descriptorSet = gui::guiUniformDescriptorSet[frame.m_frameIndex];
+			updateDescriptorSet(frame.m_renderer->Rend(), gui::descriptorIndex, descriptorSet, paramCount, params);
+			
+			BufferUpdateDesc  updateDesc = { uniformBlockOffset.pBuffer, uniformBlockOffset.mOffset };
+			beginUpdateResource(&updateDesc);
+			(*reinterpret_cast<gui::UniformBlock*>(updateDesc.pMappedData)) = uniformBlock;
+			endUpdateResource(&updateDesc, NULL);
+
+			if(mbIs3D) {
+				cmdBindPipeline(frame.m_cmd, gui::guiPipeline3D[materialType]);
+			} else {
+				cmdBindPipeline(frame.m_cmd, gui::guiPipeline[materialType]);
 			}
 
-			switch(materialType) {
-				case eGuiMaterial_Alpha:
-					// shaderProgram.m_configuration.m_blendAlpha = true;
-					shaderProgram.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
-					shaderProgram.m_configuration.m_alphaBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
-					break;
-				case eGuiMaterial_FontNormal:
-					// shaderProgram.m_configuration.m_blendAlpha = true;
-					shaderProgram.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
-					shaderProgram.m_configuration.m_alphaBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
-				break;
-				case eGuiMaterial_Additive:
-					// shaderProgram.m_configuration.m_blendAlpha = true;
-					shaderProgram.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
-					shaderProgram.m_configuration.m_alphaBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
-					break;
-				case eGuiMaterial_Modulative:
-					// shaderProgram.m_configuration.m_blendAlpha = true;
-					shaderProgram.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::DstColor, BlendOperand::Zero);
-					shaderProgram.m_configuration.m_alphaBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::DstColor, BlendOperand::Zero);
-					break;
-				case eGuiMaterial_PremulAlpha:
-					// shaderProgram.m_configuration.m_blendAlpha = true;
-					shaderProgram.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::InvSrcAlpha);
-					shaderProgram.m_configuration.m_alphaBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::InvSrcAlpha);
-					break;
-				case eGuiMaterial_Diffuse:
-				default:
-					// shaderProgram.m_configuration.m_blendAlpha = true;
-					shaderProgram.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::Zero);
-					shaderProgram.m_configuration.m_alphaBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::Zero);
-					break;
+			if(pClipRegion && pClipRegion->mRect.w > 0.0f) {
+				cmdSetScissor(frame.m_cmd, 
+					pClipRegion->mRect.x, 
+					pClipRegion->mRect.y, 
+					pClipRegion->mRect.w, 
+					pClipRegion->mRect.h);
+			} else {
+				cmdSetScissor(frame.m_cmd, 0, 0, vSize.x, vSize.y);
 			}
+
+			uint32_t stride = sizeof(gui::PositionTexColor);
+			cmdBindDescriptorSet(frame.m_cmd, gui::descriptorIndex, descriptorSet);
+			gui::descriptorIndex = (gui::descriptorIndex + 1) % gui::MAX_GUI_DRAW_CALLS;
+			
 
 			do
 			{
@@ -747,14 +803,12 @@ namespace hpl {
 						vVtxPos.x += object.mvPivot.x;
 						vVtxPos.y += object.mvPivot.y;
 
-						vertexBuffer[vertexBufferOffset + (vertexBufferIndex++)] = { 
+						reinterpret_cast<gui::PositionTexColor*>(vertexUpdateDesc.pMappedData)[vertexBufferOffset + (vertexBufferIndex++)] = { 
+							{vVtxPos.x + vPos.x, vVtxPos.y + vPos.y, vPos.z},
 							{ vtx.tex.x, vtx.tex.y},
-							{vVtxPos.x + vPos.x,
-								vVtxPos.y + vPos.y,
-								vPos.z},
 							{color.r, color.g, color.b, color.a}
 						};
-						BX_ASSERT(vertexBufferIndex <= vb.size, "vertexIndex <= vb.m_size")
+
 					}
 				}
 				else
@@ -766,31 +820,28 @@ namespace hpl {
 						const cVector3f& vPos = object.mvPos;
 						const cColor color = vtx.col * object.mColor;
 
-						vertexBuffer[vertexBufferOffset + (vertexBufferIndex++)] = {
+						reinterpret_cast<gui::PositionTexColor*>(vertexUpdateDesc.pMappedData)[vertexBufferOffset + (vertexBufferIndex++)] = { 
+							{vVtxPos.x * object.mvSize.x + vPos.x, vVtxPos.y * object.mvSize.y + vPos.y, vPos.z},
 							{ vtx.tex.x, vtx.tex.y},
-							{vVtxPos.x * object.mvSize.x + vPos.x,
-								vVtxPos.y * object.mvSize.y + vPos.y,
-								vPos.z},
 							{color.r, color.g, color.b, color.a}
 						};
-						BX_ASSERT(vertexBufferIndex <= vb.size, "vertexIndex <= vb.m_size")
 					}
 				}
 
-				BX_ASSERT((indexBufferIndex + 6) <= ib.size, "indexIndex <= ib.m_size")
-				indexBuffer[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex - 4;
-				indexBuffer[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex - 3;
-				indexBuffer[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex - 2;
+				// BX_ASSERT((indexBufferIndex + 6) <= ib.size, "indexIndex <= ib.m_size")
+				reinterpret_cast<uint32_t*>(indexUpdateDesc.pMappedData)[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex - 4;
+				reinterpret_cast<uint32_t*>(indexUpdateDesc.pMappedData)[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex - 3;
+				reinterpret_cast<uint32_t*>(indexUpdateDesc.pMappedData)[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex - 2;
 
-				indexBuffer[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex - 4;
-				indexBuffer[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex - 2;
-				indexBuffer[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex - 1;
+				reinterpret_cast<uint32_t*>(indexUpdateDesc.pMappedData)[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex - 4;
+				reinterpret_cast<uint32_t*>(indexUpdateDesc.pMappedData)[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex - 2;
+				reinterpret_cast<uint32_t*>(indexUpdateDesc.pMappedData)[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex - 1;
 				
 
 				///////////////////////////
 				//Set last texture
 				pLastMaterial =  materialType;
-				pLastTexture =   pTexture;
+				pLastTexture =  pTexture;
 				pLastClipRegion = pClipRegion;
 
 				/////////////////////////////
@@ -805,37 +856,21 @@ namespace hpl {
 			while(pTexture == pLastTexture &&
 				materialType == pLastMaterial &&
 				pClipRegion == pLastClipRegion);
+	
+			uint64_t vbOffset = vb.mOffset + vertexBufferOffset * sizeof(gui::PositionTexColor);
+			uint64_t ibOffset = ib.mOffset + indexBufferOffset * sizeof(uint32_t);
 
-			GraphicsContext::LayoutStream layout;
-			layout.m_vertexStreams.push_back({
-				.m_transient = vb,
-				.m_startVertex = static_cast<uint32_t>(vertexBufferOffset),
-				.m_numVertices = static_cast<uint32_t>(vertexBufferIndex)
-			});
-			layout.m_indexStream = {
-				.m_transient = ib,
-				.m_startIndex = static_cast<uint32_t>(indexBufferOffset),
-				.m_numIndices = static_cast<uint32_t>(indexBufferIndex)
-			};
+			cmdBindVertexBuffer(frame.m_cmd, 1, &vb.pBuffer, &stride, &vbOffset);
+			cmdBindIndexBuffer(frame.m_cmd, ib.pBuffer, INDEX_TYPE_UINT32, ibOffset);
+			cmdDrawIndexed(frame.m_cmd, indexBufferIndex, 0, 0);
+
 			vertexBufferOffset += vertexBufferIndex;
 			indexBufferOffset += indexBufferIndex;
 
-			shaderProgram.m_modelTransform = modelMtx;
-
-			shaderProgram.m_configuration.m_write = Write::RGBA;
-			shaderProgram.m_configuration.m_cull = Cull::CounterClockwise;
-			if(mbIs3D) {
-				shaderProgram.m_configuration.m_depthTest = DepthTest::LessEqual;
-			}
-
-			GraphicsContext::DrawRequest request = {
-				layout,
-				shaderProgram,
-			};
-
-
-			graphicsContext.Submit(view, request);
 		}
+
+		endUpdateResource(&vertexUpdateDesc, NULL);
+		endUpdateResource(&indexUpdateDesc, NULL);
 
 		mBaseClipRegion.Clear();
 	}
