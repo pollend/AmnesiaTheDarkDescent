@@ -29,6 +29,7 @@
 #include <graphics/Image.h>
 #include <graphics/RenderTarget.h>
 #include <graphics/Renderer.h>
+#include <graphics/Material.h>
 #include <graphics/ShaderVariantCollection.h>
 #include <math/MathTypes.h>
 #include <memory>
@@ -36,7 +37,7 @@
 
 #include <graphics/Pipeline.h>
 
-
+#include "Common_3/Utilities/RingBuffer.h"
 #include <Common_3/Graphics/Interfaces/IGraphics.h>
 #include <FixPreprocessor.h>
 
@@ -90,11 +91,28 @@ namespace hpl {
             Cull cull = Cull::CounterClockwise);
     }; // namespace rendering::detail
 
+
     class cRendererDeferred : public iRenderer {
         HPL_RTTI_IMPL_CLASS(iRenderer, cRendererDeferred, "{A3E5E5A1-1F9C-4F5C-9B9B-5B9B9B5B9B9B}")
     public:
+        static void InitializeDeferred(ForgeRenderer& pipeline);
 
+        static constexpr TinyImageFormat DepthBufferFormat = TinyImageFormat_D32_SFLOAT_S8_UINT;
         static constexpr uint32_t FrameBuffer = 2;
+        static constexpr uint32_t MaxObjectUniforms = 4096;
+		
+        struct CBObjectData {
+			mat4 m_modelMatrix;
+			mat4 m_normalMatrix;
+			mat4 m_uvMatrix;
+		};
+
+        struct PerFrameData {
+            mat4 m_invViewRotation;
+            mat4 m_viewMatrix;
+            mat4 m_projectionMatrix;
+            mat4 m_viewProjectionMatrix;
+        };
 
         class ShadowMapData {
         public:
@@ -119,58 +137,25 @@ namespace hpl {
             GBuffer() = default;
             GBuffer(const GBuffer&) = delete;
             GBuffer(GBuffer&& buffer)
-                : m_colorBuffer(buffer.m_colorBuffer),
-                  m_normalBuffer(buffer.m_normalBuffer),
-                  m_positionBuffer(buffer.m_positionBuffer),
-                  m_depthBuffer(buffer.m_depthBuffer),
-                  m_outputBuffer(buffer.m_outputBuffer) {
-                buffer.m_colorBuffer = nullptr;
-                buffer.m_normalBuffer = nullptr;
-                buffer.m_positionBuffer = nullptr;
-                buffer.m_depthBuffer = nullptr;
-                buffer.m_outputBuffer = nullptr;
+                : m_colorBuffer(std::move(buffer.m_colorBuffer)),
+                  m_normalBuffer(std::move(buffer.m_normalBuffer)),
+                  m_positionBuffer(std::move(buffer.m_positionBuffer)),
+                  m_depthBuffer(std::move(buffer.m_depthBuffer)),
+                  m_outputBuffer(std::move(buffer.m_outputBuffer)) {
             }
             void operator=(GBuffer&& buffer) {
-                m_colorBuffer = buffer.m_colorBuffer;
-                m_normalBuffer = buffer.m_normalBuffer; 
-                m_positionBuffer = buffer.m_positionBuffer; 
-                m_depthBuffer = buffer.m_depthBuffer; 
-                m_outputBuffer = buffer.m_outputBuffer; 
-
-                buffer.m_colorBuffer = nullptr;
-                buffer.m_normalBuffer = nullptr;
-                buffer.m_positionBuffer = nullptr;
-                buffer.m_depthBuffer = nullptr;
-                buffer.m_outputBuffer = nullptr;
+                m_colorBuffer = std::move(buffer.m_colorBuffer);
+                m_normalBuffer = std::move(buffer.m_normalBuffer); 
+                m_positionBuffer = std::move(buffer.m_positionBuffer); 
+                m_depthBuffer = std::move(buffer.m_depthBuffer); 
+                m_outputBuffer = std::move(buffer.m_outputBuffer); 
             }
 
-            RenderTarget* m_colorBuffer;
-            RenderTarget* m_normalBuffer;
-            RenderTarget* m_positionBuffer;
-            RenderTarget* m_depthBuffer;
-            RenderTarget* m_outputBuffer;
-
-            // std::shared_ptr<Image> m_colorImage;
-            // std::shared_ptr<Image> m_normalImage;
-            // std::shared_ptr<Image> m_positionImage;
-            // std::shared_ptr<Image> m_specularImage;
-            // std::shared_ptr<Image> m_depthStencilImage;
-            // std::shared_ptr<Image> m_outputImage;
-
-            // std::shared_ptr<Image> m_SSAOImage;
-            // std::shared_ptr<Image> m_SSAOBlurImage;
-
-            // LegacyRenderTarget m_fullTarget;
-            // LegacyRenderTarget m_colorAndDepthTarget;
-            // LegacyRenderTarget m_colorTarget;
-            // LegacyRenderTarget m_depthTarget;
-            // LegacyRenderTarget m_normalTarget;
-            // LegacyRenderTarget m_positionTarget;
-            // LegacyRenderTarget m_outputTarget; // used for rendering to the screen
-
-            // LegacyRenderTarget m_SSAOTarget;
-            // LegacyRenderTarget m_SSAOBlurTarget;
-            
+            ForgeRenderTarget m_colorBuffer;
+            ForgeRenderTarget m_normalBuffer;
+            ForgeRenderTarget m_positionBuffer;
+            ForgeRenderTarget m_depthBuffer;
+            ForgeRenderTarget m_outputBuffer;
         };
 
         struct SharedViewportData {
@@ -196,21 +181,19 @@ namespace hpl {
 
             cVector2l m_size = cVector2l(0, 0);
             std::array<GBuffer, ForgeRenderer::SwapChainLength> m_gBuffer;
-            
-
             std::shared_ptr<Image> m_refractionImage;
             GBuffer m_gBufferReflection;
 
         };
 
-        cRendererDeferred(ForgeRenderer* pipeline, cGraphics* apGraphics, cResources* apResources);
+        cRendererDeferred( cGraphics* apGraphics, cResources* apResources);
         ~cRendererDeferred();
 
         inline SharedViewportData& GetSharedData(cViewport& viewport) {
             return m_boundViewportData.resolve(viewport);
         }
         // virtual std::shared_ptr<Image> GetDepthStencilImage(cViewport& viewport) override;
-        virtual Texture* GetOutputImage(cViewport& viewport) override { return nullptr; }
+        virtual ForgeTextureHandle* GetOutputImage(cViewport& viewport) override { return nullptr; }
 
         virtual bool LoadData() override;
         virtual void DestroyData() override;
@@ -297,10 +280,7 @@ namespace hpl {
     private:
         LegacyRenderTarget& resolveRenderTarget(std::array<LegacyRenderTarget, 2>& rt);
         std::shared_ptr<Image>& resolveRenderImage(std::array<std::shared_ptr<Image>, 2>& img);
-
         void RenderEdgeSmoothPass(GraphicsContext& context, cViewport& viewport, LegacyRenderTarget& rt);
-        // cShadowMapData& iRenderer::GetShadowMapData(eShadowMapResolution aResolution, iLight* apLight);
-
         struct LightPassOptions {
             const cMatrixf& frustumProjection;
             const cMatrixf& frustumInvView;
@@ -337,7 +317,6 @@ namespace hpl {
         float m_farTop;
         float m_farLeft;
         float m_farRight;
-
         float mfMinLargeLightNormalizedArea;
 
         float m_shadowDistanceMedium;
@@ -349,46 +328,21 @@ namespace hpl {
 
         std::shared_ptr<Image> m_shadowJitterImage;
         std::shared_ptr<Image> m_ssaoScatterDiskImage;
-
-        // UniformWrapper<StringLiteral("u_param"), bgfx::UniformType::Vec4> m_u_param;
-        // UniformWrapper<StringLiteral("u_lightPos"), bgfx::UniformType::Vec4>  m_u_lightPos;
-        // UniformWrapper<StringLiteral("u_fogColor"), bgfx::UniformType::Vec4> m_u_fogColor;
-        // UniformWrapper<StringLiteral("u_lightColor"), bgfx::UniformType::Vec4> m_u_lightColor;
-        // UniformWrapper<StringLiteral("u_overrideColor"), bgfx::UniformType::Vec4> m_u_overrideColor;
-        // UniformWrapper<StringLiteral("u_copyRegion"), bgfx::UniformType::Vec4> m_u_copyRegion;
-
-        // UniformWrapper<StringLiteral("u_spotViewProj"), bgfx::UniformType::Mat4> m_u_spotViewProj;
-        // UniformWrapper<StringLiteral("u_mtxInvRotation"), bgfx::UniformType::Mat4> m_u_mtxInvRotation;
-        // UniformWrapper<StringLiteral("u_mtxInvViewRotation"), bgfx::UniformType::Mat4> m_u_mtxInvViewRotation;
-
-        // UniformWrapper<StringLiteral("s_depthMap"), bgfx::UniformType::Sampler> m_s_depthMap;
-        // UniformWrapper<StringLiteral("s_positionMap"), bgfx::UniformType::Sampler> m_s_positionMap;
-        // UniformWrapper<StringLiteral("s_diffuseMap"), bgfx::UniformType::Sampler> m_s_diffuseMap;
-        // UniformWrapper<StringLiteral("s_normalMap"), bgfx::UniformType::Sampler> m_s_normalMap;
-        // UniformWrapper<StringLiteral("s_specularMap"), bgfx::UniformType::Sampler> m_s_specularMap;
-        // UniformWrapper<StringLiteral("s_attenuationLightMap"), bgfx::UniformType::Sampler> m_s_attenuationLightMap;
-        // UniformWrapper<StringLiteral("s_spotFalloffMap"), bgfx::UniformType::Sampler> m_s_spotFalloffMap;
-        // UniformWrapper<StringLiteral("s_shadowMap"), bgfx::UniformType::Sampler> m_s_shadowMap;
-        // UniformWrapper<StringLiteral("s_goboMap"), bgfx::UniformType::Sampler> m_s_goboMap;
-        // UniformWrapper<StringLiteral("s_shadowOffsetMap"), bgfx::UniformType::Sampler> m_s_shadowOffsetMap;
-        // UniformWrapper<StringLiteral("s_scatterDisk"), bgfx::UniformType::Sampler> m_s_scatterDisk;
         
+        ForgeBufferHandle m_perFrameBuffer;
+
+        // diffuse material
+        Shader* m_zPassShader;
+        Pipeline* m_zPassPipeline;
+        RootSignature* m_zPassRootSignature;
+        DescriptorSet* m_zPassPerFrameDescriptorSet;
+        DescriptorSet* m_zPassPerObjectDescriptorSet;
+        DescriptorSet* m_zPassPerMaterialDescriptorSet; 
+
+        Shader* m_ZPassDiffuse;
+        Pipeline* m_diffuseZPass;
+
         Buffer* m_indirectDiffusePositionBuffer;
-
-        // bgfx::ProgramHandle m_deferredSSAOProgram;
-        // bgfx::ProgramHandle m_deferredSSAOBlurHorizontalProgram;
-        // bgfx::ProgramHandle m_deferredSSAOBlurVerticalProgram;
-
-        // bgfx::ProgramHandle m_copyRegionProgram;
-        // bgfx::ProgramHandle m_edgeSmooth_UnpackDepthProgram;
-        // bgfx::ProgramHandle m_lightBoxProgram;
-        // bgfx::ProgramHandle m_nullShader;
-
-        // ShaderVariantCollection<rendering::detail::FogVariant_UseOutsideBox | rendering::detail::FogVariant_UseBackSide> m_fogVariant;
-        // ShaderVariantCollection<rendering::detail::SpotlightVariant_UseGoboMap | rendering::detail::SpotlightVariant_UseShadowMap>
-        //     m_spotlightVariants;
-        // ShaderVariantCollection<rendering::detail::PointlightVariant_UseGoboMap> m_pointLightVariants;
-
         cRenderList m_reflectionRenderList;
 
         static bool mbDepthCullLights;
@@ -404,5 +358,6 @@ namespace hpl {
 
         static bool mbEdgeSmoothLoaded;
         static bool mbEnableParallax;
+        
     };
 }; // namespace hpl

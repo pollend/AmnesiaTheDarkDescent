@@ -1,0 +1,47 @@
+#define MATERIAL_SOLID 1
+#include "deferred_resources.h.fsl"
+#include "deferred_common.h.fsl"
+
+STRUCT(PsIn) 
+{
+	DATA(float4, Position, SV_Position);
+	DATA(float2, TexCoord, TEXCOORD0);
+};
+
+float4 PS_MAIN(PsIn In)
+{
+    INIT_MAIN;
+
+    float diffuseAlpha;
+    if(HasAlpha(Get(textureConfig))) {
+        diffuseAlpha = SampleTex2D(Get(diffuseMap), Get(nearestSampler), In.TexCoord.xy).a;
+    } else {
+        diffuseAlpha = 1.0;
+    }
+
+    if(HasDissolveAlpha(Get(textureConfig)) || HasAlpha(Get(textureConfig)))
+    {
+        vec2 vDissolveCoords = In.TexCoord.xy * (1.0/128.0); //128 = size of dissolve texture.
+        float fDissolve = SampleTex2D(dissolveAlphaMap, Get(nearestSampler), vDissolveCoords).w;
+        
+        if(HasDissolveAlpha(Get(textureConfig))) {
+            //Get in 0.75 - 1 range
+			fDissolve = fDissolve*0.25 + 0.75;
+
+            float fDissolveAlpha = SampleTex2D(Get(dissolveAlphaMap), Get(nearestSampler), In.TexCoord.xy).r;
+            fDissolve -= (0.25 - fDissolveAlpha*0.25);
+        } else {
+            fDissolve = fDissolve*0.5 + 0.5;
+        }
+
+        //Get in 0.5 - 1 range.
+        fDissolve = fDissolve*0.5 + 0.5;
+        diffuseAlpha = fDissolve - (1.0 - diffuseAlpha) * 0.5;
+    }
+
+    if(diffuseAlpha < 0.5) {
+        discard;
+    }
+
+    RETURN(float4(0,0,0,0));
+}

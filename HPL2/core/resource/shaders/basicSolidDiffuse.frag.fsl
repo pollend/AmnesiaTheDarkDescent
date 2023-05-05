@@ -1,14 +1,16 @@
 #include "deferred_resources.h.fsl"
 #include "deferred_common.h.fsl"
 
-CBUFFER(uniformBlock, UPDATE_FREQ_PER_DRAW, b2, binding = 2)
+CBUFFER(uniformMaterialBlock, UPDATE_FREQ_PER_DRAW, b2, binding = 2)
 {
+    DATA(int, textureConfig, None);
+    DATA(float4x4, UVMtx, None);
+
     DATA(float2, heightMapScale, None);
     DATA(float2, heightMapOffset, None);
     DATA(float, heightMapBias, None);
     DATA(float, fresnelBias, None);
     DATA(float, fresnelPow, None);
-    DATA(int, textureConfig, None);
 };
 
 STRUCT(PsIn) 

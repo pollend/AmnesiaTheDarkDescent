@@ -6,6 +6,14 @@
 #include "basicSolidDiffuse.vert.fsl"
 #end
 
+#vert basicSolidDiffuse_Z.vert
+#include "basicSolidDiffuse_Z.vert.fsl"
+#end
+
+#frag basicSolidDiffuse_Z.frag
+#include "basicSolidDiffuse_Z.frag.fsl"
+#end
+
 #vert gui.vert
 #include "gui.vert.fsl"
 #end

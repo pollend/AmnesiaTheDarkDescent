@@ -27,6 +27,14 @@ namespace hpl {
         }
     }
 
+    void ForgeRenderTarget::Free() {
+        if (m_handle) {
+            ASSERT(m_renderer && "Renderer is null");
+            removeRenderTarget(m_renderer, m_handle);
+        }
+    }
+
+
     void ForgeDescriptorSet::Free() {
         if (m_handle) {
             ASSERT(m_renderer && "Renderer is null");
@@ -257,7 +265,6 @@ namespace hpl {
                         auto srcData = data.begin() + update.mSrcSliceStride * z;
                         
                         for (uint32_t row = 0; row < update.mRowCount; ++row) {
-
                             if(isCompressed) {
                                 std::memcpy(dstData + row * update.mDstRowStride, &srcData[row * update.mSrcRowStride], update.mSrcRowStride);
                             } else {

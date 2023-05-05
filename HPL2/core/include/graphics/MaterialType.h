@@ -44,13 +44,7 @@ namespace hpl {
 	class cResourceVarsObject;
 	class iMaterialVars;
 
-	//---------------------------------------------------
-
-	#define kPC_VertexBit		eFlagBit_0
-	#define kPC_FragmentBit		eFlagBit_1
-
-	//---------------------------------------------------
-
+	
 	class cMaterialUsedTexture
 	{
 	public:
@@ -79,6 +73,9 @@ namespace hpl {
 	{
 		HPL_RTTI_CLASS(iMaterialType, "{f76039f6-2f46-4135-a7d7-85788ef21cce}")
 	public:
+		static constexpr uint32_t MaterialIDBufferSize = 60000;
+		static uint32_t GetMaterialID();
+
 		iMaterialType(cGraphics *apGraphics, cResources *apResources);
 		virtual ~iMaterialType();
 
@@ -87,6 +84,50 @@ namespace hpl {
 
 		bool IsTranslucent(){ return mbIsTranslucent; }
 		bool IsDecal(){ return mbIsDecal;}
+
+		struct MaterialDeferredPipelineDescriptor {
+			ForgeRenderer::Frame* m_frame;
+            eMaterialRenderMode aRenderMode;
+			union {
+				struct {
+
+				} m_modeZ; 
+				struct {
+				
+				} m_modeZ_Dissolve; 
+				struct {
+				
+				} m_modeDiffuse; 
+				struct {
+				
+				} m_modeDiffuseFog; 
+				struct {
+				
+				} m_modeLight; 
+				struct {
+				
+				} m_modeIllumination; 
+				struct {
+				
+				} m_modeIlluminationFog; 
+			} m_material;
+
+			// Filled out by the caller
+			// MaterialID m_id;
+			struct  {
+				uint32_t m_offset;
+				ForgeBufferHandle* m_buffer;
+			} m_uniform;
+
+		};
+
+
+		virtual void ResolveShaderProgram(
+            cViewport& viewport,
+            cMaterial* apMaterial,
+            iRenderable* apObject,
+            iRenderer* apRenderer,
+			MaterialDeferredPipelineDescriptor* descriptor) {}
 
 		virtual void ResolveShaderProgram(
             eMaterialRenderMode aRenderMode,
@@ -109,7 +150,6 @@ namespace hpl {
 		cMaterialUserVariable* GetUserVariable(const tString& asName);
 
 		std::span<cMaterialUserVariable> GetUserVariables();
-		std::span<cMaterialUsedTexture> GetUsedTextures();
 
 		void Reload();
 

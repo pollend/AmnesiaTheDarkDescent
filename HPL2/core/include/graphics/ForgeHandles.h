@@ -156,6 +156,40 @@ namespace hpl {
         friend class RefHandle<ForgeTextureHandle, Texture>;
     };
 
+    struct ForgeRenderTarget : public RefHandle<ForgeRenderTarget, RenderTarget> {
+    public:
+        ForgeRenderTarget()
+            : Base() {
+        }
+        ForgeRenderTarget(Renderer* renderer)
+            : m_renderer(renderer)
+            , Base() {
+        }
+        ForgeRenderTarget(const ForgeRenderTarget& other)
+            : Base(other)
+            , m_renderer(other.m_renderer) {
+        }
+        ForgeRenderTarget(ForgeRenderTarget&& other)
+            : Base(std::move(other))
+            , m_renderer(other.m_renderer) {
+        }
+        ~ForgeRenderTarget() {
+        }
+        void operator=(const ForgeRenderTarget& other) {
+            Base::operator=(other);
+            m_renderer = other.m_renderer;
+        }
+        void operator=(ForgeRenderTarget&& other) {
+            Base::operator=(std::move(other));
+            m_renderer = other.m_renderer;
+        }
+
+    private:
+        void Free();
+        Renderer* m_renderer = nullptr;
+        friend class RefHandle<ForgeRenderTarget, RenderTarget>;
+    };
+
     struct ForgeDescriptorSet: public RefHandle<ForgeDescriptorSet, DescriptorSet> {
     public:
         ForgeDescriptorSet():

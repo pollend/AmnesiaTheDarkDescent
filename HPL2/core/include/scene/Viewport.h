@@ -53,7 +53,7 @@ namespace hpl {
     class cViewport final {
         HPL_RTTI_CLASS(cViewport, "{f5d42b52-6e84-4486-afa0-a5888f3513a0}")
     public:
-        static constexpr size_t MaxViewportHandles = 32;
+        static constexpr size_t MaxViewportHandles = 9;
         using ResizeEvent = hpl::Event<hpl::cVector2l&>;
         using ViewportDispose = hpl::Event<>;
         using ViewportChange = hpl::Event<>;

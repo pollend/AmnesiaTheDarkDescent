@@ -104,7 +104,6 @@ namespace hpl {
 		int GetElementNum(){ return mlElementNum;}
 
 		tVertexElementFlag GetVertexElementFlags(){ return mVertexFlags;}
-
 	protected:
 
 		tVertexElementFlag mVertexFlags;

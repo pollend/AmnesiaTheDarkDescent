@@ -32,36 +32,29 @@
 #include <Common_3/Graphics/Interfaces/IGraphics.h>
 #include <FixPreprocessor.h>
 
-namespace hpl
-{
+namespace hpl {
 
-    class LegacyVertexBuffer : public iVertexBuffer
-    {
+    class LegacyVertexBuffer : public iVertexBuffer {
     public:
         static size_t GetSizeFromHPL(eVertexBufferElementFormat format);
-        [[deprecated("removing bgfx dependency")]]
-        static bgfx::Attrib::Enum GetAttribFromHPL(eVertexBufferElement type);
-        [[deprecated("removing bgfx dependency")]]
-        static bgfx::AttribType::Enum GetAttribTypeFromHPL(eVertexBufferElementFormat format);
-
+        [[deprecated("removing bgfx dependency")]] static bgfx::Attrib::Enum GetAttribFromHPL(eVertexBufferElement type);
+        [[deprecated("removing bgfx dependency")]] static bgfx::AttribType::Enum GetAttribTypeFromHPL(eVertexBufferElementFormat format);
 
         // static constexpr std::array
 
-        struct VertexElement
-        {
+        struct VertexElement {
             ForgeBufferHandle m_buffer;
             eVertexBufferElementFormat m_format = eVertexBufferElementFormat::eVertexBufferElementFormat_Float;
             eVertexBufferElement m_type = eVertexBufferElement::eVertexBufferElement_Position;
             tVertexElementFlag m_flag = 0;
             size_t m_num = 0;
             int m_programVarIndex = 0; // for legacy behavior
-           
+
             size_t Stride() const;
             size_t NumElements() const;
 
             template<typename TData>
-            std::span<TData> GetElements()
-            {
+            std::span<TData> GetElements() {
                 ASSERT(sizeof(TData) == Stride() && "Data must be same size as stride");
                 return std::span<TData*>(reinterpret_cast<TData*>(m_shadowData.data()), m_shadowData.size() / Stride());
             }
@@ -72,20 +65,17 @@ namespace hpl
 
             template<typename TData>
             TData& GetElement(size_t index) {
-                ASSERT(sizeof(TData) <= Stride() &&  "Date must be less than or equal to stride");
+                ASSERT(sizeof(TData) <= Stride() && "Date must be less than or equal to stride");
                 return *reinterpret_cast<TData*>(m_shadowData.data() + index * Stride());
             }
+
         private:
             bool m_rebuild = false;
             mutable std::vector<uint8_t> m_shadowData = {};
             friend class LegacyVertexBuffer;
         };
 
-        LegacyVertexBuffer(
-            eVertexBufferDrawType aDrawType,
-            eVertexBufferUsageType aUsageType,
-            int alReserveVtxSize,
-            int alReserveIdxSize);
+        LegacyVertexBuffer(eVertexBufferDrawType aDrawType, eVertexBufferUsageType aUsageType, int alReserveVtxSize, int alReserveIdxSize);
         ~LegacyVertexBuffer();
 
         virtual void CreateElementArray(
@@ -102,12 +92,13 @@ namespace hpl
         virtual void Transform(const cMatrixf& mtxTransform) override;
 
         virtual void Draw(eVertexBufferDrawType aDrawType = eVertexBufferDrawType_LastEnum) override;
-        virtual void DrawIndices(	unsigned int *apIndices, int alCount,
-                                    eVertexBufferDrawType aDrawType = eVertexBufferDrawType_LastEnum) override;
+        virtual void DrawIndices(
+            unsigned int* apIndices, int alCount, eVertexBufferDrawType aDrawType = eVertexBufferDrawType_LastEnum) override;
         // virtual void Submit(GraphicsContext& context, eVertexBufferDrawType aDrawType = eVertexBufferDrawType_LastEnum) override;
-        virtual void GetLayoutStream(GraphicsContext::LayoutStream& layoutStream, eVertexBufferDrawType aDrawType = eVertexBufferDrawType_LastEnum) override; 
-        struct GeometryBinding {
+        virtual void GetLayoutStream(
+            GraphicsContext::LayoutStream& layoutStream, eVertexBufferDrawType aDrawType = eVertexBufferDrawType_LastEnum) override;
 
+        struct GeometryBinding {
             struct VertexGeometryEntry {
                 VertexElement* element;
                 uint64_t offset;
@@ -115,16 +106,20 @@ namespace hpl
             struct VertexIndexEntry {
                 ForgeBufferHandle* element;
                 uint64_t offset;
+                uint32_t numIndicies;
             };
-            absl::InlinedVector<VertexGeometryEntry, eVertexBufferElement_LastEnum> elements; // elements are in the order they are requested
+            absl::InlinedVector<VertexGeometryEntry, eVertexBufferElement_LastEnum>
+                m_vertexElement; // elements are in the order they are requested
             VertexIndexEntry m_indexBuffer;
         };
-        virtual void resolveGeometryBinding(uint32_t frameIndex, std::span<eVertexBufferElement> elements, std::function<void(GeometryBinding&)> callback);
+        void resolveGeometryBinding(
+            uint32_t currentFrame, std::span<eVertexBufferElement> elements, GeometryBinding* binding);
 
         // virtual void Bind() override;
         virtual void UnBind() override;
 
-        virtual iVertexBuffer* CreateCopy(eVertexBufferType aType, eVertexBufferUsageType aUsageType, tVertexElementFlag alVtxToCopy) override;
+        virtual iVertexBuffer* CreateCopy(
+            eVertexBufferType aType, eVertexBufferUsageType aUsageType, tVertexElementFlag alVtxToCopy) override;
 
         virtual cBoundingVolume CreateBoundingVolume() override;
 
@@ -150,7 +145,8 @@ namespace hpl
         size_t m_bufferIndex = 0;
         size_t m_frameIndex = 0;
 
-        static void PushVertexElements(std::span<const float> values, eVertexBufferElement elementType, std::span<LegacyVertexBuffer::VertexElement> elements);
+        static void PushVertexElements(
+            std::span<const float> values, eVertexBufferElement elementType, std::span<LegacyVertexBuffer::VertexElement> elements);
 
         absl::InlinedVector<VertexElement, 10> m_vertexElements = {};
         ForgeBufferHandle m_indexBuffer;
@@ -160,7 +156,6 @@ namespace hpl
         bool m_rebuildIndices = false;
 
         friend struct VertexElement;
-
     };
 
 }; // namespace hpl

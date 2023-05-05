@@ -26,7 +26,6 @@ namespace hpl {
     class cMaterial;
     class ForgeRenderer;
 
-
     //TODO: rename this
     class ForgeRenderer final {
         HPL_RTTI_CLASS(ForgeRenderer, "{66526c65-ad10-4a59-af06-103f34d1cb57}")
@@ -42,13 +41,21 @@ namespace hpl {
         */
         class CommandResourcePool {
         public:
+            using VariantTypes = std::variant<ForgeTextureHandle, ForgeBufferHandle>;
             // could be done better ...
             CommandResourcePool() = default;
+
+            template<class T>
+            void Push(const T& handle) {
+                VariantTypes variant = handle;
+                m_cmds.push_back(variant);
+            }
+
             void AddTexture(ForgeTextureHandle texture);
             void AddMaterial(cMaterial& material, std::span<eMaterialTexture> textures);
             void ResetPool();
         private:
-            absl::InlinedVector<std::variant<ForgeTextureHandle, ForgeBufferHandle>, 1024> m_cmds;
+            absl::InlinedVector<VariantTypes, 1024> m_cmds;
         };
 
         /**
@@ -85,66 +92,8 @@ namespace hpl {
         // void BeginFrame() {}
 
         // increment frame index and swap chain index
-        void IncrementFrame() {
-            // Stall if CPU is running "Swap Chain Buffer Count" frames ahead of GPU
-            FenceStatus fenceStatus;
-            auto& completeFence = m_renderCompleteFences[CurrentFrameIndex()];
-            getFenceStatus(m_renderer, completeFence, &fenceStatus);
-            if (fenceStatus == FENCE_STATUS_INCOMPLETE) {
-                waitForFences(m_renderer, 1, &completeFence);
-            }
-            acquireNextImage(m_renderer, m_swapChain, m_imageAcquiredSemaphore, nullptr, &m_swapChainIndex);
-            m_currentFrameIndex++;
-
-            auto frame = GetFrame();
-
-            resetCmdPool(m_renderer, frame.m_cmdPool);
-
-            beginCmd(m_cmds[CurrentFrameIndex()]);
-    
-            auto&   swapChainImage = frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex];
-
-            RenderTargetBarrier rtBarriers[] = {
-                { swapChainImage, RESOURCE_STATE_PRESENT, RESOURCE_STATE_RENDER_TARGET },
-            };
-            cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, 1, rtBarriers);
-
-            
-
-        }
-
-        void SubmitFrame() {
-            auto frame = GetFrame();
-            
-            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
-            auto&   swapChainImage = frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex];
-		
-            RenderTargetBarrier rtBarriers[] = {
-                { swapChainImage, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_PRESENT },
-            };
-            cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, 1, rtBarriers);
-
-            endCmd(m_cmds[CurrentFrameIndex()]);
-
-            QueueSubmitDesc submitDesc = {};
-            submitDesc.mCmdCount = 1;
-            submitDesc.mSignalSemaphoreCount = 1;
-            submitDesc.mWaitSemaphoreCount = 1;
-            submitDesc.ppCmds = &frame.m_cmd;
-            submitDesc.ppSignalSemaphores = &frame.m_renderCompleteSemaphore;
-            submitDesc.ppWaitSemaphores = &m_imageAcquiredSemaphore;
-            submitDesc.pSignalFence = frame.m_renderCompleteFence;
-            queueSubmit(m_graphicsQueue, &submitDesc);
-            QueuePresentDesc presentDesc = {};
-
-            presentDesc.mIndex = m_swapChainIndex;
-            presentDesc.mWaitSemaphoreCount = 1;
-            presentDesc.pSwapChain = m_swapChain;
-            presentDesc.ppWaitSemaphores = &frame.m_renderCompleteSemaphore;
-            presentDesc.mSubmitDone = true;
-            queuePresent(m_graphicsQueue, &presentDesc);
-        }
-        
+        void IncrementFrame();
+        void SubmitFrame();
         inline Renderer* Rend() { 
             ASSERT(m_renderer);
             return m_renderer; 

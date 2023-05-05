@@ -30,10 +30,12 @@ namespace hpl {
 	class cResources;
 	class cMaterial;
 	class iMaterialType;
+	class cResourceVarsObject;
 
 	class cMaterialManager : public iResourceManager
 	{
 	public:
+
 		cMaterialManager(cGraphics* apGraphics,cResources *apResources);
 		~cMaterialManager();
 

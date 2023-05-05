@@ -50,6 +50,9 @@ namespace hpl {
 	public:
 		struct CBObjectData {
 			mat4 m_mtxModel;
+			mat4 m_normalMtx;
+
+			mat4 m_uvMtx;
 		};
 
 		iRenderable(const tString &asName);
@@ -125,13 +128,9 @@ namespace hpl {
 		void SetRenderableUserData(void* apData) { mpRenderableUserData = apData; }
 		void* GetRenderableUserData() { return mpRenderableUserData; }
 
-		void bindCommandBuffer(ForgeRenderer& pipeline, ForgeCmdHandle& cmd);
-
 	protected:
 		virtual void OnUpdateWorldTransform() override;
-		ForgeDescriptorSet m_cbObjectDescriptor;
-		std::array<ForgeBufferHandle, ForgeRenderer::SwapChainLength> m_cbObjectBuffer;
-
+		
 		cMatrixf m_mtxInvModel;
 		cMatrixf *mpModelMatrix;
 

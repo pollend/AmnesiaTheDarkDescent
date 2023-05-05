@@ -9,6 +9,8 @@
 #include "input/InputKeyboardDevice.h"
 #include "input/InputManager.h"
 
+#include <graphics/RendererDeferred.h>
+
 #include "scene/Viewport.h"
 
 #include <input/InputMouseDevice.h>
@@ -88,7 +90,9 @@ namespace hpl {
 
         // initialize gui rendering
         initResourceLoaderInterface(m_renderer.Rend()); // initializes resources
+        
         gui::InitializeGui(m_renderer);
+        cRendererDeferred::InitializeDeferred(m_renderer);
         
 
         // this is safe because the render target is scheduled on the api thread

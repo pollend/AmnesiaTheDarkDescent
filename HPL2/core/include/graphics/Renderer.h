@@ -285,7 +285,7 @@ namespace hpl {
         virtual bool LoadData()=0;
         virtual void DestroyData()=0;
 
-        virtual Texture* GetOutputImage(cViewport& viewport) { return nullptr;}
+        virtual ForgeTextureHandle* GetOutputImage(cViewport& viewport) { return nullptr;}
 
         cWorld *GetCurrentWorld(){ return mpCurrentWorld;}
         cFrustum *GetCurrentFrustum(){ return mpCurrentFrustum;}

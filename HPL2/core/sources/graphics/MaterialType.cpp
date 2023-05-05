@@ -62,10 +62,6 @@ namespace hpl {
 		return std::span<cMaterialUserVariable>(m_userVariables);
 	}
 
-	std::span<cMaterialUsedTexture> iMaterialType::GetUsedTextures() {
-		return std::span<cMaterialUsedTexture>(m_usedTextures);
-	}
-
 	cMaterialUserVariable* iMaterialType::GetUserVariable(int alIdx)
 	{
 		if(alIdx>=0 && alIdx<GetUserVariableNum())

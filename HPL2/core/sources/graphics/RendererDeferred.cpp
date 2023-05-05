@@ -19,6 +19,7 @@
 
 #include "graphics/RendererDeferred.h"
 
+#include "Common_3/Utilities/Interfaces/ILog.h"
 #include "bgfx/bgfx.h"
 #include "engine/Event.h"
 #include "engine/Interface.h"
@@ -108,6 +109,123 @@ namespace hpl {
     static constexpr uint32_t SSAONumOfSamples = 8;
 
     namespace detail {
+        struct MaterialInfo {
+            void* m_material = nullptr; // void* to avoid accessing the material 
+            uint32_t m_version = 0; // version of the material
+            absl::InlinedVector<void*, 10> m_visitedDescriptors; // list of descriptors that have been visited
+        };
+        static ForgeBufferHandle MaterialUniformBuffer;
+        static std::array<MaterialInfo, cMaterial::MaxMaterialID> m_materialInfo;
+        static GPURingBuffer* CObjectRingBuffer;
+
+        void cmdBindObjectDescriptor(const ForgeRenderer::Frame& frame, uint32_t& updateIndex, cFrustum* frustum, cMaterial* apMaterial, iRenderable* apObject, DescriptorSet* apDescriptorSet) {
+		    GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(CObjectRingBuffer, sizeof(cRendererDeferred::CBObjectData));
+            
+            cRendererDeferred::CBObjectData objectData = {};
+            objectData.m_modelMatrix = cMath::ToForgeMat4(apObject->GetModelMatrixPtr() ? *apObject->GetModelMatrixPtr() : cMatrixf::Identity);
+            if(apMaterial) {
+                objectData.m_uvMatrix = cMath::ToForgeMat4(apMaterial->GetUvMatrix());
+            }
+            // objectData.m_normalMatrix = cMath::ToForgeMat3(apObject->GetNormalMatrixPtr() ? *apObject->GetNormalMatrixPtr() : cMatrixf::Identity);
+
+            BufferUpdateDesc  updateDesc = { uniformBuffer.pBuffer, uniformBuffer.mOffset };
+			beginUpdateResource(&updateDesc);
+			(*reinterpret_cast<cRendererDeferred::CBObjectData*>(updateDesc.pMappedData)) = objectData;
+			endUpdateResource(&updateDesc, NULL);
+			
+            DescriptorData params[15] = {};
+            size_t paramCount = 0;
+            params[paramCount].pName = "uniformObjectBlock";
+            DescriptorDataRange range = { (uint32_t)uniformBuffer.mOffset, sizeof(cRendererDeferred::CBObjectData) };
+            params[paramCount].pRanges = &range;
+            params[paramCount++].ppBuffers = &uniformBuffer.pBuffer;
+
+            // descriptorIndex = (descriptorIndex + 1) % (cRendererDeferred::MaxObjectUniforms * ForgeRenderer::SwapChainLength);
+            updateDescriptorSet(frame.m_renderer->Rend(), updateIndex, apDescriptorSet, paramCount, params);
+            cmdBindDescriptorSet(frame.m_cmd, updateIndex, apDescriptorSet);
+
+            updateIndex++;
+
+
+        }
+
+        void cmdDefaultLegacyGeomBinding(const ForgeRenderer::Frame& frame, LegacyVertexBuffer::GeometryBinding& binding) {
+            absl::InlinedVector<Buffer*, 16> vbBuffer;
+            absl::InlinedVector<uint64_t, 16> vbOffsets;
+            absl::InlinedVector<uint32_t, 16> vbStride;
+
+            for (auto& element : binding.m_vertexElement) {
+                vbBuffer.push_back(element.element->m_buffer.m_handle);
+                vbOffsets.push_back(element.offset);
+                vbStride.push_back(element.element->Stride());
+                frame.m_resourcePool->Push(element.element->m_buffer);
+            }
+            frame.m_resourcePool->Push(*binding.m_indexBuffer.element);
+            
+            cmdBindVertexBuffer(frame.m_cmd, binding.m_vertexElement.size(), vbBuffer.data(), vbStride.data(), vbOffsets.data());
+            cmdBindIndexBuffer(
+                frame.m_cmd, binding.m_indexBuffer.element->m_handle, INDEX_TYPE_UINT32, binding.m_indexBuffer.offset);
+        }
+
+        void cmdBindMaterialDescriptor(const ForgeRenderer::Frame& frame, cMaterial* apMaterial, std::span<const eMaterialTexture> materials, DescriptorSet* apDescriptorSet) {
+            auto& materialType = apMaterial->type();
+            auto& info = m_materialInfo[apMaterial->materialID()];
+            // auto& metaInfo = cMaterial::MetaInfo[materialType.m_id];
+
+            // we are using the same material, but the version has changed so we need to update the descriptor
+            // associated with the material
+            const bool isVisited = std::find_if(info.m_visitedDescriptors.begin(), info.m_visitedDescriptors.end(), [&](const auto& desc) {
+                                       return desc == apDescriptorSet;
+                                   }) == info.m_visitedDescriptors.end();
+            const bool isDirty = (info.m_material != apMaterial || info.m_version != apMaterial->Version());
+
+            if (isDirty || !isVisited) {
+                if (isDirty) {
+                    info.m_version = apMaterial->Version();
+                    info.m_material = apMaterial;
+                    info.m_visitedDescriptors.clear();
+
+                    BufferUpdateDesc  updateDesc = { MaterialUniformBuffer.m_handle, apMaterial->materialID() * sizeof(cMaterial::MaterialType::MaterialData) };
+                    beginUpdateResource(&updateDesc);
+                    memcpy(updateDesc.pMappedData, &materialType.m_data, sizeof(cMaterial::MaterialType::MaterialData));
+                    endUpdateResource(&updateDesc, NULL);
+                }
+
+                DescriptorData params[15] = {};
+                size_t paramCount = 0;
+ 
+                for (auto& supportedTexture : materials) {
+                    static constexpr const char* TextureNameLookup[] = {
+                        "diffuseMap", // eMaterialTexture_Diffuse
+                        "normalMap", // eMaterialTexture_NMap
+                        "specularMap", // eMaterialTexture_Specular
+                        "alphaMap", // eMaterialTexture_Alpha
+                        "heightMap", // eMaterialTexture_Height
+                        "illuminationMap", // eMaterialTexture_Illumination
+                        "cubeMap", // eMaterialTexture_CubeMap
+                        "dissolveAlphaMap", // eMaterialTexture_DissolveAlpha
+                        "cubeMapAlpha", // eMaterialTexture_CubeMapAlpha
+                    };
+
+                    auto* image = apMaterial->GetImage(supportedTexture);
+                    if (image) {
+                        params[paramCount].pName = TextureNameLookup[supportedTexture];
+                        params[paramCount++].ppTextures = &image->GetTexture().m_handle;
+                    }
+                }
+
+                DescriptorDataRange range = { static_cast<uint32_t>(apMaterial->materialID() * sizeof(cMaterial::MaterialType::MaterialData)), sizeof(cMaterial::MaterialType::MaterialData) };
+                params[paramCount].pName = "uniformMaterialBlock";
+                params[paramCount].pRanges = &range;
+                params[paramCount++].ppBuffers = &MaterialUniformBuffer.m_handle;
+
+                updateDescriptorSet(
+                    frame.m_renderer->Rend(), apMaterial->materialID(), apDescriptorSet, paramCount, params);
+            }
+            cmdBindDescriptorSet(frame.m_cmd, apMaterial->materialID(), apDescriptorSet);
+
+        }
+
         struct DeferredLight {
         public:
             DeferredLight() = default;
@@ -123,7 +241,6 @@ namespace hpl {
                 return m_clipRect.w * m_clipRect.h;
             }
         };
-       
 
         static inline std::vector<cRendererDeferred::FogRendererData> createFogRenderData(std::span<cFogArea*> fogAreas, cFrustum* apFrustum) {
             std::vector<cRendererDeferred::FogRendererData> fogRenderData;
@@ -317,18 +434,12 @@ namespace hpl {
         */
         static inline void UpdateRenderableList(
             cRenderList* renderList, // in/out 
-            iRenderer* renderer,
             cVisibleRCNodeTracker* apVisibleNodeTracker,
             cFrustum* frustum,
             cWorld* world,
-            const char* name,
-            GraphicsContext::ViewConfiguration& config,
-            GraphicsContext& context,
-            cViewport& viewport,
             tObjectVariabilityFlag objectTypes,
             std::span<cPlanef> occludingPlanes,
-            tRenderableFlag alNeededFlags) {
-            auto pass = context.StartPass(name, config);
+            tRenderableFlag alNeededFlags, std::function<void(iRenderable*)> zPassCallback) {
             renderList->Clear();
 
             auto renderNodeHandler = [&](iRenderableContainerNode* apNode, tRenderableFlag alNeededFlags) {
@@ -355,7 +466,8 @@ namespace hpl {
                     if(!material || material->GetType()->IsTranslucent()) {
                         continue;
                     }
-                    rendering::detail::RenderZPassObject(pass, context, viewport, renderer, pObject);
+                    zPassCallback(pObject);
+                    // rendering::detail::RenderZPassObject(pass, context, viewport, renderer, pObject);
                     ++lRenderedObjects;
                 }
 
@@ -444,7 +556,6 @@ namespace hpl {
                     walkRenderables(pNode);
                 }
             }
-
         }
 
         static inline bool SortDeferredLightBox(const DeferredLight* apLightDataA, const DeferredLight* apLightDataB) {
@@ -794,9 +905,28 @@ namespace hpl {
         }
     } // namespace detail
 
+    void cRendererDeferred::InitializeDeferred(ForgeRenderer& pipeline) {
+        // static uniform buffer for material data
+        detail::MaterialUniformBuffer.TryFree();
+        BufferLoadDesc desc = {};
+        desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
+        desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
+        desc.mDesc.mSize = sizeof(cMaterial::MaterialType::MaterialData) * cMaterial::MaxMaterialID;
+        // desc.pData =  &m_info.m_data;
+        desc.ppBuffer = &detail::MaterialUniformBuffer.m_handle;
+        addResource(&desc, nullptr);
+        detail::MaterialUniformBuffer.Initialize();
+
+        // ring buffer for object uniforms
+        addUniformGPURingBuffer(pipeline.Rend(), sizeof(cRendererDeferred::CBObjectData) * MaxObjectUniforms, &detail::CObjectRingBuffer, true);
+    }
+
+
+
     enum eDefferredProgramMode { eDefferredProgramMode_Lights, eDefferredProgramMode_Misc, eDefferredProgramMode_LastEnum };
 
-    cRendererDeferred::cRendererDeferred(ForgeRenderer* pipeline, cGraphics* apGraphics, cResources* apResources)
+    cRendererDeferred::cRendererDeferred(cGraphics* apGraphics, cResources* apResources)
         : iRenderer("Deferred", apGraphics, apResources, eDefferredProgramMode_LastEnum) {
         ////////////////////////////////////
         // Set up render specific things
@@ -813,9 +943,10 @@ namespace hpl {
         m_maxBatchLights = 100;
 
         m_boundViewportData = std::move(UniqueViewportData<SharedViewportData>(
-            [pipeline](cViewport& viewport) {
+            [](cViewport& viewport) {
                 auto sharedData = std::make_unique<SharedViewportData>();
                 sharedData->m_size = viewport.GetSize();
+                auto* forgetRenderer = Interface<ForgeRenderer>::Get();
 
                 // auto colorImage = [&] {
                 //     auto desc = ImageDescriptor::CreateTexture2D(
@@ -933,43 +1064,60 @@ namespace hpl {
                    
                    {
                         auto depthRT = deferredRenderTargetDesc();
-                        depthRT.mFormat = TinyImageFormat_D24_UNORM_S8_UINT;
-                        addRenderTarget(pipeline->Rend(), &depthRT, &b.m_depthBuffer);
+                        depthRT.mFormat = DepthBufferFormat;
+                        depthRT.mStartState = RESOURCE_STATE_DEPTH_WRITE;
+                        ForgeRenderTarget target = {forgetRenderer->Rend()};
+                        addRenderTarget(forgetRenderer->Rend(), &depthRT, &target.m_handle);
+                        target.Initialize();
+                        b.m_depthBuffer = std::move(target);
+
                    }
                    {
                         auto normalRT = deferredRenderTargetDesc();
-                        normalRT.mFormat = TinyImageFormat_R16G16B16_SFLOAT;
-                        addRenderTarget(pipeline->Rend(), &normalRT, &b.m_normalBuffer);
+                        normalRT.mFormat = TinyImageFormat_R16G16B16A16_SFLOAT;
+                        ForgeRenderTarget target = {forgetRenderer->Rend()};
+                        addRenderTarget(forgetRenderer->Rend(), &normalRT, &target.m_handle);
+                        target.Initialize();
+                        b.m_normalBuffer = std::move(target);
                    }
                    {
                         auto positionRT = deferredRenderTargetDesc();
-                        positionRT.mFormat = TinyImageFormat_R16G16B16_SFLOAT;
-                        addRenderTarget(pipeline->Rend(), &positionRT, &b.m_positionBuffer);
+                        positionRT.mFormat = TinyImageFormat_R16G16B16A16_SFLOAT;
+                        ForgeRenderTarget target = {forgetRenderer->Rend()};
+                        addRenderTarget(forgetRenderer->Rend(), &positionRT, &target.m_handle);
+                        target.Initialize();
+                        b.m_positionBuffer = std::move(target);
                    }
                    {
                         auto colorRT = deferredRenderTargetDesc();
                         colorRT.mFormat = TinyImageFormat_R8G8B8A8_UNORM;
-                        addRenderTarget(pipeline->Rend(), &colorRT, &b.m_colorBuffer);
+                        ForgeRenderTarget target = {forgetRenderer->Rend()};
+                        addRenderTarget(forgetRenderer->Rend(), &colorRT, &target.m_handle);
+                        target.Initialize();
+                        b.m_colorBuffer = std::move(target);
                    }
                    {
                         auto outputRt = deferredRenderTargetDesc();
                         outputRt.mFormat = getRecommendedSwapchainFormat(false, false);
-                        addRenderTarget(pipeline->Rend(), &outputRt, &b.m_outputBuffer);
+                        ForgeRenderTarget target = {forgetRenderer->Rend()};
+                        addRenderTarget(forgetRenderer->Rend(), &outputRt, &target.m_handle);
+                        target.Initialize();
+                        b.m_outputBuffer = std::move(target);
                    }
                 }
 
                 // sharedData->m_gBuffer = buildGBuffer();
                 // sharedData->m_gBufferReflection = buildGBuffer();
 
-                {
-                    auto desc = ImageDescriptor::CreateTexture2D(
-                        sharedData->m_size.x, sharedData->m_size.y, false, bgfx::TextureFormat::Enum::RGBA8);
-                    desc.m_configuration.m_computeWrite = true;
-                    desc.m_configuration.m_rt = RTType::RT_Write;
-                    auto image = std::make_shared<Image>();
-                    image->Initialize(desc);
-                    sharedData->m_refractionImage = image;
-                }
+                // {
+                //     auto desc = ImageDescriptor::CreateTexture2D(
+                //         sharedData->m_size.x, sharedData->m_size.y, false, bgfx::TextureFormat::Enum::RGBA8);
+                //     desc.m_configuration.m_computeWrite = true;
+                //     desc.m_configuration.m_rt = RTType::RT_Write;
+                //     auto image = std::make_shared<Image>();
+                //     image->Initialize(desc);
+                //     sharedData->m_refractionImage = image;
+                // }
 
                 return sharedData;
             },
@@ -989,6 +1137,106 @@ namespace hpl {
             lStartSize = 1;
         } else if (mShadowMapResolution == eShadowMapResolution_Low) {
             lStartSize = 0;
+        }
+
+        
+		// for(auto& handle: m_bufferHandle) {
+
+			// m_stageDirtyBits = std::numeric_limits<uint32_t>::max();
+		// }
+
+        // per frame constants
+
+        auto* forgetRenderer = Interface<ForgeRenderer>::Get();
+        auto updatePerFrameDescriptor = [&](DescriptorSet* desc) {
+            for(size_t i = 0; i < ForgeRenderer::SwapChainLength; i++) {
+                DescriptorData params[15] = {};
+                size_t paramCount = 0;
+        
+                DescriptorDataRange range = { (uint32_t)(i * sizeof(cRendererDeferred::PerFrameData)) , sizeof(cRendererDeferred::PerFrameData) };
+                params[paramCount].pName = "perFrameConstants";
+                params[paramCount].ppBuffers = &m_perFrameBuffer.m_handle;
+                params[paramCount].pRanges = &range;
+
+                updateDescriptorSet(forgetRenderer->Rend(),i, desc, paramCount, params);
+            }
+        };
+
+        {
+            m_perFrameBuffer.TryFree();
+			BufferLoadDesc desc = {};
+			desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
+			desc.mDesc.mSize = sizeof(cRendererDeferred::PerFrameData) * ForgeRenderer::SwapChainLength; // * cViewport::MaxViewportHandles;
+			desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
+			desc.pData = nullptr;
+			desc.ppBuffer = &m_perFrameBuffer.m_handle;
+			addResource(&desc, nullptr);
+			m_perFrameBuffer.Initialize();
+        }
+
+        
+        //---------------- ZPass Pipeline  ------------------------
+        {
+            ShaderLoadDesc loadDesc = {};
+            loadDesc.mStages[0] = {"basicSolidDiffuse_Z.vert", nullptr, 0};
+            loadDesc.mStages[1] = {"basicSolidDiffuse_Z.frag", nullptr, 0};
+	        addShader(forgetRenderer->Rend(), &loadDesc, &m_zPassShader);
+
+	        Shader* zPassShaders[] = {m_zPassShader};
+			RootSignatureDesc rootSignatureDesc = {};
+			rootSignatureDesc.ppShaders = zPassShaders;
+			rootSignatureDesc.mShaderCount = std::size(zPassShaders);
+			addRootSignature(forgetRenderer->Rend(), &rootSignatureDesc, &m_zPassRootSignature);
+
+
+            //layout and pipeline for sphere draw
+            VertexLayout vertexLayout = {};
+            vertexLayout.mAttribCount = 2;
+            vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
+            vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
+            vertexLayout.mAttribs[0].mBinding = 0;
+            vertexLayout.mAttribs[0].mLocation = 0;
+            vertexLayout.mAttribs[0].mOffset = 0;
+
+            vertexLayout.mAttribs[1].mSemantic = SEMANTIC_TEXCOORD0;
+            vertexLayout.mAttribs[1].mFormat = TinyImageFormat_R32G32_SFLOAT;
+            vertexLayout.mAttribs[1].mBinding = 1;
+            vertexLayout.mAttribs[1].mLocation = 1;
+            vertexLayout.mAttribs[1].mOffset = 0;
+
+            RasterizerStateDesc rasterizerStateDesc = {};
+            rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
+
+            DepthStateDesc depthStateDesc = {};
+            depthStateDesc.mDepthTest = true;
+            depthStateDesc.mDepthWrite = true;
+
+            TinyImageFormat rtFormats[] = { DepthBufferFormat };
+
+            PipelineDesc pipelineDesc = {};
+            pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+            auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
+            pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+            pipelineSettings.mRenderTargetCount = 0;
+            pipelineSettings.pDepthState = &depthStateDesc;
+		    pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
+            pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
+            pipelineSettings.mSampleQuality = 0;
+            pipelineSettings.pRootSignature = m_zPassRootSignature;
+            pipelineSettings.pShaderProgram = m_zPassShader;
+            pipelineSettings.pRasterizerState = &rasterizerStateDesc;
+            pipelineSettings.pVertexLayout = &vertexLayout;
+            addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_zPassPipeline);
+
+
+	        DescriptorSetDesc perFrameDescSet{m_zPassRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, ForgeRenderer::SwapChainLength};
+            addDescriptorSet(forgetRenderer->Rend(), &perFrameDescSet, &m_zPassPerFrameDescriptorSet);
+            DescriptorSetDesc batchDescriptorSet{m_zPassRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_BATCH, cMaterial::MaxMaterialID};
+            addDescriptorSet(forgetRenderer->Rend(), &batchDescriptorSet, &m_zPassPerMaterialDescriptorSet);
+            DescriptorSetDesc perObjectDescriptorSet{m_zPassRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_DRAW, MaxObjectUniforms};
+            addDescriptorSet(forgetRenderer->Rend(), &perObjectDescriptorSet, &m_zPassPerObjectDescriptorSet);
+            updatePerFrameDescriptor(m_zPassPerFrameDescriptorSet);
         }
 
         // auto createShadowMap = [](const cVector3l& avSize) -> ShadowMapData {
@@ -1938,25 +2186,49 @@ namespace hpl {
         mpCurrentRenderList->Setup(mfCurrentFrameTime, apFrustum);
 
         const cMatrixf mainFrustumViewInv = cMath::MatrixInverse(apFrustum->GetViewMatrix());
-        const cMatrixf mainFrustumView = apFrustum->GetViewMatrix().GetTranspose();
-        const cMatrixf mainFrustumProj = apFrustum->GetProjectionMatrix().GetTranspose();
+        const cMatrixf mainFrustumView = apFrustum->GetViewMatrix();
+        const cMatrixf mainFrustumProj = apFrustum->GetProjectionMatrix();
 
-        auto&   swapChainImage = frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex];
-
-        LoadActionsDesc loadActions = {};
-		loadActions.mLoadActionsColor[0] = LOAD_ACTION_CLEAR;
-		loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
-		cmdBindRenderTargets(frame.m_cmd, 1, &swapChainImage, NULL, &loadActions, NULL, NULL, -1, -1);
+        {
+            BufferUpdateDesc updatePerFrameConstantsDesc = { m_perFrameBuffer.m_handle, frame.m_frameIndex * sizeof(PerFrameData), sizeof(PerFrameData)};
+            beginUpdateResource(&updatePerFrameConstantsDesc);
+            reinterpret_cast<PerFrameData*>(updatePerFrameConstantsDesc.pMappedData)->m_viewMatrix = cMath::ToForgeMat(mainFrustumView);
+            reinterpret_cast<PerFrameData*>(updatePerFrameConstantsDesc.pMappedData)->m_projectionMatrix = cMath::ToForgeMat(mainFrustumProj);
+            reinterpret_cast<PerFrameData*>(updatePerFrameConstantsDesc.pMappedData)->m_viewProjectionMatrix = cMath::ToForgeMat(cMath::MatrixMul(mainFrustumProj, mainFrustumView));
+		    endUpdateResource(&updatePerFrameConstantsDesc, NULL);
+        }
 		
 
-        // // Setup far plane coordinates
-        // m_farPlane = apFrustum->GetFarPlane();
-        // m_farTop = -tan(apFrustum->GetFOV() * 0.5f) * m_farPlane;
-        // m_farBottom = -m_farTop;
-        // m_farRight = m_farBottom * apFrustum->GetAspect();
-        // m_farLeft = -m_farRight;
+        auto& swapChainImage = frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex];
 
-        // auto& sharedData = m_boundViewportData.resolve(viewport);
+        auto& sharedData = m_boundViewportData.resolve(viewport);
+        auto& currentGBuffer = sharedData.m_gBuffer[frame.m_frameIndex];
+
+        // {
+        //     LoadActionsDesc loadActions = {};
+        //     loadActions.mLoadActionsColor[0] = LOAD_ACTION_CLEAR;
+        //     loadActions.mLoadActionsColor[1] = LOAD_ACTION_CLEAR;
+        //     loadActions.mLoadActionsColor[2] = LOAD_ACTION_CLEAR;
+        //     loadActions.mLoadActionDepth = LOAD_ACTION_CLEAR;
+        //     loadActions.mClearColorValues[0] = { 0.0f, 0.0f, 0.0f, 0.0f };
+        //     loadActions.mClearColorValues[1] = { 0.0f, 0.0f, 0.0f, 0.0f };
+        //     loadActions.mClearColorValues[2] = { 0.0f, 0.0f, 0.0f, 0.0f };
+		//     loadActions.mClearDepth = currentGBuffer.m_depthBuffer.m_handle->mClearValue;
+        //     std::array targets = {
+        //         currentGBuffer.m_colorBuffer.m_handle,
+        //         currentGBuffer.m_normalBuffer.m_handle,
+        //         currentGBuffer.m_positionBuffer.m_handle
+        //     };
+        //     cmdBindRenderTargets(frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, NULL, NULL, -1, -1);
+        // }
+		
+
+        // Setup far plane coordinates
+        m_farPlane = apFrustum->GetFarPlane();
+        m_farTop = -tan(apFrustum->GetFOV() * 0.5f) * m_farPlane;
+        m_farBottom = -m_farTop;
+        m_farRight = m_farBottom * apFrustum->GetAspect();
+        m_farLeft = -m_farRight;
 
         // auto createStandardViewConfig = [&](LegacyRenderTarget& rt) -> GraphicsContext::ViewConfiguration {
         //     GraphicsContext::ViewConfiguration viewConfig{ rt };
@@ -1976,48 +2248,91 @@ namespace hpl {
         // tRenderableFlag lVisibleFlags =
         //     (mpCurrentSettings->mbIsReflection) ? eRenderableFlag_VisibleInReflection : eRenderableFlag_VisibleInNonReflection;
 
-        // ///////////////////////////
-        // // Occlusion testing
-        // {
-        //     auto ZPassConfig = createStandardViewConfig(sharedData.m_gBuffer.m_depthTarget);
-        //     detail::UpdateRenderableList(
-        //         mpCurrentRenderList, 
-        //         this, 
-        //         mpCurrentSettings->mpVisibleNodeTracker,
-        //         apFrustum, mpCurrentWorld,"Z Pass", ZPassConfig, context, viewport, 
-        //         eObjectVariabilityFlag_All, 
-        //         mvCurrentOcclusionPlanes, 
-        //         eRenderableFlag_VisibleInNonReflection);
-        //     auto occlusionConfig = createStandardViewConfig(sharedData.m_gBuffer.m_depthTarget);
-        //     auto occlusionPass = context.StartPass("Render Occlusion", occlusionConfig);
 
-        //     for(auto& object: mpCurrentRenderList->GetOcclusionQueryItems()) {
-        //         object->ResolveOcclusionPass(
-        //         this,
-        //         [&](bgfx::OcclusionQueryHandle handle,
-        //             DepthTest depth,
-        //             GraphicsContext::LayoutStream& layoutStream,
-        //             const cMatrixf& transformMatrix)
-        //         {
-        //             GraphicsContext::ShaderProgram shaderProgram;
-        //             shaderProgram.m_handle = m_nullShader;
-        //             shaderProgram.m_configuration.m_depthTest = depth;
-        //             shaderProgram.m_configuration.m_cull = Cull::CounterClockwise;
+        cmdSetScissor(frame.m_cmd, 0, 0, sharedData.m_size.x, sharedData.m_size.y);
+        cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)sharedData.m_size.x, (float)sharedData.m_size.y, 0.0f, 1.0f);
+        ///////////////////////////
+        // Occlusion testing
+        {
+            // auto ZPassConfig = createStandardViewConfig(sharedData.m_gBuffer.m_depthTarget);
+            
+            uint32_t perObjectZPassIndex = 0;
+            LoadActionsDesc loadActions = {};
+            loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
+            loadActions.mLoadActionDepth = LOAD_ACTION_CLEAR;
+            loadActions.mClearDepth = {.depth = 1.0f, .stencil = 0};
+            
+            cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "Occlusion Testing");
+            cmdBindRenderTargets(frame.m_cmd, 0, NULL, currentGBuffer.m_depthBuffer.m_handle, &loadActions, NULL, NULL, -1, -1);    
+            ASSERT(currentGBuffer.m_depthBuffer.m_handle && "Depth buffer not created");
+            
+            detail::UpdateRenderableList(
+                mpCurrentRenderList, 
+                mpCurrentSettings->mpVisibleNodeTracker,
+                apFrustum, mpCurrentWorld,
+                eObjectVariabilityFlag_All, 
+                mvCurrentOcclusionPlanes, 
+                eRenderableFlag_VisibleInNonReflection, [&](iRenderable* renderable) {
+                eMaterialRenderMode renderMode = renderable->GetCoverageAmount() >= 1 ? eMaterialRenderMode_Z : eMaterialRenderMode_Z_Dissolve;
+                cMaterial* pMaterial = renderable->GetMaterial();
+                iMaterialType* materialType = pMaterial->GetType();
+                iVertexBuffer* vertexBuffer = renderable->GetVertexBuffer();
+                if (vertexBuffer == nullptr || materialType == nullptr) {
+                    return;
+                }
 
-        //             shaderProgram.m_modelTransform = transformMatrix;
+                cmdBindPipeline(frame.m_cmd, m_zPassPipeline);
+                static constexpr eMaterialTexture textures[] = {
+                    eMaterialTexture_Diffuse,
+                    eMaterialTexture_DissolveAlpha
+                };
+		        detail::cmdBindMaterialDescriptor(frame, pMaterial, textures, m_zPassPerMaterialDescriptorSet);
+                detail::cmdBindObjectDescriptor(frame, perObjectZPassIndex, apFrustum, pMaterial, renderable, m_zPassPerObjectDescriptorSet);
+                cmdBindDescriptorSet(frame.m_cmd, frame.m_frameIndex, m_zPassPerFrameDescriptorSet);
 
-        //             GraphicsContext::DrawRequest drawRequest{ layoutStream, shaderProgram };
-        //             context.Submit(occlusionPass, drawRequest, handle);
-        //         });
-        //     }
+                std::array targets = {
+                    eVertexBufferElement_Position,
+                    eVertexBufferElement_Texture0
+                };
 
-        //     mpCurrentRenderList->Compile(
-        //         eRenderListCompileFlag_Diffuse | 
-        //         eRenderListCompileFlag_Translucent | 
-        //         eRenderListCompileFlag_Decal |
-        //         eRenderListCompileFlag_Illumination | 
-        //         eRenderListCompileFlag_FogArea);
-        // }
+                LegacyVertexBuffer::GeometryBinding binding;
+                static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(
+                    frame.m_currentFrame, targets, &binding);
+                detail::cmdDefaultLegacyGeomBinding(frame, binding);
+                
+                cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+            });
+            cmdEndDebugMarker(frame.m_cmd);
+            // auto occlusionConfig = createStandardViewConfig(sharedData.m_gBuffer.m_depthTarget);
+            // auto occlusionPass = context.StartPass("Render Occlusion", occlusionConfig);
+
+            // for(auto& object: mpCurrentRenderList->GetOcclusionQueryItems()) {
+            //     object->ResolveOcclusionPass(
+            //     this,
+            //     [&](bgfx::OcclusionQueryHandle handle,
+            //         DepthTest depth,
+            //         GraphicsContext::LayoutStream& layoutStream,
+            //         const cMatrixf& transformMatrix)
+            //     {
+            //         GraphicsContext::ShaderProgram shaderProgram;
+            //         shaderProgram.m_handle = m_nullShader;
+            //         shaderProgram.m_configuration.m_depthTest = depth;
+            //         shaderProgram.m_configuration.m_cull = Cull::CounterClockwise;
+
+            //         shaderProgram.m_modelTransform = transformMatrix;
+
+            //         GraphicsContext::DrawRequest drawRequest{ layoutStream, shaderProgram };
+            //         context.Submit(occlusionPass, drawRequest, handle);
+            //     });
+            // }
+
+            mpCurrentRenderList->Compile(
+                eRenderListCompileFlag_Diffuse | 
+                eRenderListCompileFlag_Translucent | 
+                eRenderListCompileFlag_Decal |
+                eRenderListCompileFlag_Illumination | 
+                eRenderListCompileFlag_FogArea);
+        }
 
         // // ------------------------------------------------------------------------------------
         // //  Render Diffuse Pass render to color and depth
@@ -2556,7 +2871,7 @@ namespace hpl {
         // viewport.SignalDraw(translucenceEvent);
         // postTransBatch.flush();
     }
-
+    
     iVertexBuffer* cRendererDeferred::GetLightShape(iLight* apLight, eDeferredShapeQuality aQuality) const {
         switch(apLight->GetLightType()) {
             case eLightType_Point:

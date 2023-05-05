@@ -123,6 +123,7 @@ namespace hpl {
             if(m_texture.IsValid()) {
                 return cVector2l(m_texture.m_handle->mWidth, m_texture.m_handle->mHeight);
             }
+            return cVector2l(0, 0);
         }
 
         ForgeTextureHandle& GetTexture() {

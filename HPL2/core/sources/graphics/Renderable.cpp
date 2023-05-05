@@ -25,26 +25,8 @@
 
 namespace hpl {
 
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
 	iRenderable::iRenderable(const tString &asName) : iEntity3D(asName)
 	{
-		for(auto& objectUniform: m_cbObjectBuffer) {
-			objectUniform.TryFree();
-			BufferLoadDesc desc = {};
-			desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-			desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
-			desc.mDesc.mSize = sizeof(CBObjectData);
-			desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
-			desc.pData = nullptr;
-			desc.ppBuffer = &objectUniform.m_handle;
-			addResource(&desc, nullptr);
-			objectUniform.Initialize();
-		}
 
 		mlLastMatrixCount = -1;
 
@@ -118,14 +100,6 @@ namespace hpl {
 	}
 
 	void iRenderable::OnUpdateWorldTransform() {
-		auto* pipeline = Interface<ForgeRenderer>::Get();
-
-		CBObjectData uniformData = {};
-		uniformData.m_mtxModel = cMath::ToForgeMat(m_mtxWorldTransform);
-		BufferUpdateDesc cObjectDesc = { m_cbObjectBuffer[pipeline->CurrentFrameIndex()].m_handle };
-		beginUpdateResource(&cObjectDesc);
-		*(CBObjectData*)cObjectDesc.pMappedData = uniformData;
-		endUpdateResource(&cObjectDesc, NULL);
 	}
 
 	const cVector3f& iRenderable::GetCalcScale()
@@ -143,10 +117,10 @@ namespace hpl {
 		return mvCalcScale;
 	}
 
-	void iRenderable::bindCommandBuffer(ForgeRenderer& pipeline, ForgeCmdHandle& cmd) {
-		// pipeline.FrameIndex();
-		// cmdBinddescriptorSet(cmd, 0, m_cbObjectBuffer[frameIndex].m_descriptorSet);
-	}
+	// void iRenderable::bindCommandBuffer(ForgeRenderer& pipeline, ForgeCmdHandle& cmd) {
+	// 	// pipeline.FrameIndex();
+	// 	// cmdBinddescriptorSet(cmd, 0, m_cbObjectBuffer[frameIndex].m_descriptorSet);
+	// }
 
 
 	bool iRenderable::CollidesWithBV(cBoundingVolume *apBV)
