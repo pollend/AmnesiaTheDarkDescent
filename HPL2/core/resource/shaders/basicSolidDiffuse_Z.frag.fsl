@@ -2,6 +2,9 @@
 #include "deferred_resources.h.fsl"
 #include "deferred_common.h.fsl"
 
+RES(Tex2D(float4), dissolveMap, UPDATE_FREQ_NONE, t9, binding = 4);
+
+
 STRUCT(PsIn) 
 {
 	DATA(float4, Position, SV_Position);
@@ -13,16 +16,15 @@ float4 PS_MAIN(PsIn In)
     INIT_MAIN;
 
     float diffuseAlpha;
-    if(HasAlpha(Get(textureConfig))) {
+    if(HasDiffuse(Get(textureConfig))) {
         diffuseAlpha = SampleTex2D(Get(diffuseMap), Get(nearestSampler), In.TexCoord.xy).a;
     } else {
         diffuseAlpha = 1.0;
     }
 
-    if(HasDissolveAlpha(Get(textureConfig)) || HasAlpha(Get(textureConfig)))
-    {
+    if(HasDissolveAlpha(Get(textureConfig)) || HasDissolveFilter(Get(textureConfig))) {
         vec2 vDissolveCoords = In.TexCoord.xy * (1.0/128.0); //128 = size of dissolve texture.
-        float fDissolve = SampleTex2D(dissolveAlphaMap, Get(nearestSampler), vDissolveCoords).w;
+        float fDissolve = SampleTex2D(dissolveMap, Get(nearestSampler), vDissolveCoords).w;
         
         if(HasDissolveAlpha(Get(textureConfig))) {
             //Get in 0.75 - 1 range
@@ -39,9 +41,9 @@ float4 PS_MAIN(PsIn In)
         diffuseAlpha = fDissolve - (1.0 - diffuseAlpha) * 0.5;
     }
 
-    if(diffuseAlpha < 0.5) {
-        discard;
-    }
+    //if(diffuseAlpha < 0.5) {
+    //    discard;
+    //}
 
     RETURN(float4(0,0,0,0));
 }

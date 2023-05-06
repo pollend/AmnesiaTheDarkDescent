@@ -143,10 +143,7 @@ namespace hpl {
             // descriptorIndex = (descriptorIndex + 1) % (cRendererDeferred::MaxObjectUniforms * ForgeRenderer::SwapChainLength);
             updateDescriptorSet(frame.m_renderer->Rend(), updateIndex, apDescriptorSet, paramCount, params);
             cmdBindDescriptorSet(frame.m_cmd, updateIndex, apDescriptorSet);
-
-            updateIndex++;
-
-
+            updateIndex = (updateIndex + 1) % cRendererDeferred::MaxObjectUniforms;
         }
 
         void cmdDefaultLegacyGeomBinding(const ForgeRenderer::Frame& frame, LegacyVertexBuffer::GeometryBinding& binding) {
@@ -1139,6 +1136,7 @@ namespace hpl {
             lStartSize = 0;
         }
 
+        m_dissolveImage = mpResources->GetTextureManager()->Create2DImage("core_dissolve.tga", false);
         
 		// for(auto& handle: m_bufferHandle) {
 
@@ -1155,8 +1153,8 @@ namespace hpl {
         
                 DescriptorDataRange range = { (uint32_t)(i * sizeof(cRendererDeferred::PerFrameData)) , sizeof(cRendererDeferred::PerFrameData) };
                 params[paramCount].pName = "perFrameConstants";
-                params[paramCount].ppBuffers = &m_perFrameBuffer.m_handle;
                 params[paramCount].pRanges = &range;
+                params[paramCount++].ppBuffers = &m_perFrameBuffer.m_handle;
 
                 updateDescriptorSet(forgetRenderer->Rend(),i, desc, paramCount, params);
             }
@@ -1183,9 +1181,16 @@ namespace hpl {
             loadDesc.mStages[1] = {"basicSolidDiffuse_Z.frag", nullptr, 0};
 	        addShader(forgetRenderer->Rend(), &loadDesc, &m_zPassShader);
 
+
+		    // const char* pStaticSamplerNames[] = { "dissolveAlphaMap"};
+            // Sampler*          pSamplers[] = { pSampler, pSamplerSkyBox };
+		
+
 	        Shader* zPassShaders[] = {m_zPassShader};
 			RootSignatureDesc rootSignatureDesc = {};
 			rootSignatureDesc.ppShaders = zPassShaders;
+            // rootSignatureDesc.ppStaticSamplerNames = pStaticSamplerNames;
+
 			rootSignatureDesc.mShaderCount = std::size(zPassShaders);
 			addRootSignature(forgetRenderer->Rend(), &rootSignatureDesc, &m_zPassRootSignature);
 
@@ -1206,13 +1211,12 @@ namespace hpl {
             vertexLayout.mAttribs[1].mOffset = 0;
 
             RasterizerStateDesc rasterizerStateDesc = {};
-            rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
+            rasterizerStateDesc.mCullMode = CULL_MODE_NONE;
 
             DepthStateDesc depthStateDesc = {};
             depthStateDesc.mDepthTest = true;
             depthStateDesc.mDepthWrite = true;
-
-            TinyImageFormat rtFormats[] = { DepthBufferFormat };
+            depthStateDesc.mDepthFunc = CMP_LEQUAL;
 
             PipelineDesc pipelineDesc = {};
             pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
@@ -1220,8 +1224,9 @@ namespace hpl {
             pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
             pipelineSettings.mRenderTargetCount = 0;
             pipelineSettings.pDepthState = &depthStateDesc;
-		    pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
+            pipelineSettings.pColorFormats = NULL;
             pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
+		    pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
             pipelineSettings.mSampleQuality = 0;
             pipelineSettings.pRootSignature = m_zPassRootSignature;
             pipelineSettings.pShaderProgram = m_zPassShader;
@@ -1229,14 +1234,21 @@ namespace hpl {
             pipelineSettings.pVertexLayout = &vertexLayout;
             addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_zPassPipeline);
 
+            DescriptorSetDesc constantDescSet{m_zPassRootSignature, DESCRIPTOR_UPDATE_FREQ_NONE, 1};
+            addDescriptorSet(forgetRenderer->Rend(), &constantDescSet, &m_zPassConstantDescriptorSet);
 
+            std::array<DescriptorData, 1> params{};
+            params[0].ppTextures = &m_dissolveImage->GetTexture().m_handle;
+            params[0].pName = "dissolveMap";
+            updateDescriptorSet(forgetRenderer->Rend(), 0, m_zPassConstantDescriptorSet, params.size(), params.data());
+            
 	        DescriptorSetDesc perFrameDescSet{m_zPassRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, ForgeRenderer::SwapChainLength};
             addDescriptorSet(forgetRenderer->Rend(), &perFrameDescSet, &m_zPassPerFrameDescriptorSet);
+            updatePerFrameDescriptor(m_zPassPerFrameDescriptorSet);
             DescriptorSetDesc batchDescriptorSet{m_zPassRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_BATCH, cMaterial::MaxMaterialID};
             addDescriptorSet(forgetRenderer->Rend(), &batchDescriptorSet, &m_zPassPerMaterialDescriptorSet);
             DescriptorSetDesc perObjectDescriptorSet{m_zPassRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_DRAW, MaxObjectUniforms};
             addDescriptorSet(forgetRenderer->Rend(), &perObjectDescriptorSet, &m_zPassPerObjectDescriptorSet);
-            updatePerFrameDescriptor(m_zPassPerFrameDescriptorSet);
         }
 
         // auto createShadowMap = [](const cVector3l& avSize) -> ShadowMapData {
@@ -2249,22 +2261,27 @@ namespace hpl {
         //     (mpCurrentSettings->mbIsReflection) ? eRenderableFlag_VisibleInReflection : eRenderableFlag_VisibleInNonReflection;
 
 
-        cmdSetScissor(frame.m_cmd, 0, 0, sharedData.m_size.x, sharedData.m_size.y);
-        cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)sharedData.m_size.x, (float)sharedData.m_size.y, 0.0f, 1.0f);
         ///////////////////////////
         // Occlusion testing
         {
             // auto ZPassConfig = createStandardViewConfig(sharedData.m_gBuffer.m_depthTarget);
             
-            uint32_t perObjectZPassIndex = 0;
+            // uint32_t perObjectZPassIndex = 0;
             LoadActionsDesc loadActions = {};
-            loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
+            loadActions.mLoadActionsColor[0] = LOAD_ACTION_DONTCARE;
             loadActions.mLoadActionDepth = LOAD_ACTION_CLEAR;
             loadActions.mClearDepth = {.depth = 1.0f, .stencil = 0};
             
+            ASSERT(currentGBuffer.m_depthBuffer.m_handle && "Depth buffer not created");
+        
+
             cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "Occlusion Testing");
             cmdBindRenderTargets(frame.m_cmd, 0, NULL, currentGBuffer.m_depthBuffer.m_handle, &loadActions, NULL, NULL, -1, -1);    
-            ASSERT(currentGBuffer.m_depthBuffer.m_handle && "Depth buffer not created");
+            cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)sharedData.m_size.x, (float)sharedData.m_size.y, 0.0f, 1.0f);
+            cmdSetScissor(frame.m_cmd, 0, 0, sharedData.m_size.x, sharedData.m_size.y);
+            cmdBindPipeline(frame.m_cmd, m_zPassPipeline);
+
+            cmdBindDescriptorSet(frame.m_cmd, 0, m_zPassConstantDescriptorSet);
             
             detail::UpdateRenderableList(
                 mpCurrentRenderList, 
@@ -2281,13 +2298,12 @@ namespace hpl {
                     return;
                 }
 
-                cmdBindPipeline(frame.m_cmd, m_zPassPipeline);
                 static constexpr eMaterialTexture textures[] = {
                     eMaterialTexture_Diffuse,
                     eMaterialTexture_DissolveAlpha
                 };
 		        detail::cmdBindMaterialDescriptor(frame, pMaterial, textures, m_zPassPerMaterialDescriptorSet);
-                detail::cmdBindObjectDescriptor(frame, perObjectZPassIndex, apFrustum, pMaterial, renderable, m_zPassPerObjectDescriptorSet);
+                detail::cmdBindObjectDescriptor(frame, m_zObjectIndex, apFrustum, pMaterial, renderable, m_zPassPerObjectDescriptorSet);
                 cmdBindDescriptorSet(frame.m_cmd, frame.m_frameIndex, m_zPassPerFrameDescriptorSet);
 
                 std::array targets = {
@@ -2299,7 +2315,6 @@ namespace hpl {
                 static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(
                     frame.m_currentFrame, targets, &binding);
                 detail::cmdDefaultLegacyGeomBinding(frame, binding);
-                
                 cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
             });
             cmdEndDebugMarker(frame.m_cmd);

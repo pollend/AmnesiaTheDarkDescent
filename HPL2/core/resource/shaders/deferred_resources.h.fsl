@@ -20,6 +20,9 @@ CBUFFER(uniformMaterialBlock, UPDATE_FREQ_PER_BATCH, b2, binding = 2)
 {
     DATA(int, textureConfig, None);
 };
+INLINE bool HasDissolveFilter(int _textureConfig)   { return (_textureConfig & (1 << 9)) != 0; }
+
+
 #endif
 
 
@@ -45,3 +48,5 @@ INLINE bool HasIllumination(int _textureConfig)   { return (_textureConfig & (1 
 INLINE bool HasCubeMap(int _textureConfig)        { return (_textureConfig & (1 << 6)) != 0; }
 INLINE bool HasDissolveAlpha(int _textureConfig)  { return (_textureConfig & (1 << 7)) != 0; }
 INLINE bool HasCubeMapAlpha(int _textureConfig)   { return (_textureConfig & (1 << 8)) != 0; }
+
+

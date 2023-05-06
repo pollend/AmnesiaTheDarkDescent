@@ -98,12 +98,10 @@ namespace hpl {
 
 		struct MaterialCommonBlock {
 			uint32_t m_textureConfig;
-			mat4 m_textureMatrix;
 		};
 
 		struct MaterialSolidUniformBlock {
 			MaterialCommonBlock m_common;
-
 			float m_heightMapScale;
 			float m_heightMapBias;
 			float m_frenselBias;
@@ -198,8 +196,6 @@ namespace hpl {
 		void Compile();
 		void SetImage(eMaterialTexture aType, iResourceBase *apTexture);
 		Image *GetImage(eMaterialTexture aType);
-
-		Texture* GetTexture(eMaterialTexture aType);
 
 		void SetVars(iMaterialVars *apVars){ mpVars = apVars;}
 		iMaterialVars* GetVars(){ return mpVars;}

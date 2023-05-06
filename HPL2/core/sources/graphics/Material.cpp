@@ -153,7 +153,7 @@ namespace hpl {
 					(GetImage(eMaterialTexture_Diffuse) ? EnableDiffuse: 0) |
 					(GetImage(eMaterialTexture_NMap) ? EnableNormal: 0) |
  					(GetImage(eMaterialTexture_Specular) ? EnableSpecular: 0) |
-					((GetImage(eMaterialTexture_Alpha)) ? EnableAlpha: 0) |
+					(GetImage(eMaterialTexture_Alpha) ? EnableAlpha: 0) |
 					(GetImage(eMaterialTexture_Height) ? EnableHeight: 0) |
 					(GetImage(eMaterialTexture_Illumination) ? EnableIllumination: 0) |
 					(GetImage(eMaterialTexture_CubeMap) ? EnableCubeMap: 0) |

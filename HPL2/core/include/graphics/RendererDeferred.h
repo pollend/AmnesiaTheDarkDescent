@@ -328,6 +328,7 @@ namespace hpl {
 
         std::shared_ptr<Image> m_shadowJitterImage;
         std::shared_ptr<Image> m_ssaoScatterDiskImage;
+        Image* m_dissolveImage;
         
         ForgeBufferHandle m_perFrameBuffer;
 
@@ -335,9 +336,11 @@ namespace hpl {
         Shader* m_zPassShader;
         Pipeline* m_zPassPipeline;
         RootSignature* m_zPassRootSignature;
+        DescriptorSet* m_zPassConstantDescriptorSet;
         DescriptorSet* m_zPassPerFrameDescriptorSet;
         DescriptorSet* m_zPassPerObjectDescriptorSet;
-        DescriptorSet* m_zPassPerMaterialDescriptorSet; 
+        DescriptorSet* m_zPassPerMaterialDescriptorSet;
+        uint32_t m_zObjectIndex = 0;
 
         Shader* m_ZPassDiffuse;
         Pipeline* m_diffuseZPass;
