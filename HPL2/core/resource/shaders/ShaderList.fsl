@@ -1,17 +1,18 @@
-#frag basicSolidDiffuse.frag
-#include "basicSolidDiffuse.frag.fsl"
+// #frag basicSolidDiffuse.frag
+// #include "basicSolidDiffuse.frag.fsl"
+// #end
+// 
+// #vert basicSolidDiffuse.vert
+// #include "basicSolidDiffuse.vert.fsl"
+// #end
+
+#vert solid_z.vert
+#include "solid_z.vert.fsl"
 #end
 
-#vert basicSolidDiffuse.vert
-#include "basicSolidDiffuse.vert.fsl"
-#end
-
-#vert basicSolidDiffuse_Z.vert
-#include "basicSolidDiffuse_Z.vert.fsl"
-#end
-
-#frag basicSolidDiffuse_Z.frag
-#include "basicSolidDiffuse_Z.frag.fsl"
+#frag solid_z.frag
+#define ALPHA_REJECT 0.5
+#include "solid_z.frag.fsl"
 #end
 
 #vert gui.vert
@@ -20,4 +21,47 @@
 
 #frag gui.frag
 #include "gui.frag.fsl"
+#end
+
+#vert solid_diffuse.vert
+#include "solid_diffuse.vert.fsl"
+#end
+
+#frag solid_diffuse.frag
+#define ALPHA_REJECT 0.5
+#include "solid_diffuse.frag.fsl"
+#end
+
+#frag solid_diffuse_parallax.frag
+#define PARALLAX_ENABLED 1
+#define ALPHA_REJECT 0.5
+#include "solid_diffuse.frag.fsl"
+#end
+
+#vert deferred_light.vert
+#include "deferred_light.vert.fsl"
+#end
+
+#frag deferred_light_pointlight.frag
+#include "deferred_light_pointlight.frag.fsl"
+#end
+
+#frag deferred_light_stencil.frag
+#include "deferred_light_stencil.frag.fsl"
+#end
+
+#frag deferred_light_box.frag
+#include "deferred_light_box.frag.fsl"
+#end
+
+// #comp copy_region.comp
+// #include "copy_region.comp.fsl"
+// #end
+
+#vert fullscreen.vert
+#include "fullscreen.vert.fsl"
+#end
+
+#frag post_processing_copy.frag
+#include "post_processing_copy.frag.fsl"
 #end

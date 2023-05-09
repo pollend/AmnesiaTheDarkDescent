@@ -98,14 +98,52 @@ namespace hpl {
         static void InitializeDeferred(ForgeRenderer& pipeline);
 
         static constexpr TinyImageFormat DepthBufferFormat = TinyImageFormat_D32_SFLOAT_S8_UINT;
+        static constexpr TinyImageFormat NormalBufferFormat = TinyImageFormat_R16G16B16A16_SFLOAT;
+        static constexpr TinyImageFormat PositionBufferFormat = TinyImageFormat_R16G16B16A16_SFLOAT;
+        static constexpr TinyImageFormat SpecularBufferFormat = TinyImageFormat_R8G8_UNORM;
+        static constexpr TinyImageFormat ColorBufferFormat = TinyImageFormat_R8G8B8A8_UNORM;
+        
         static constexpr uint32_t FrameBuffer = 2;
         static constexpr uint32_t MaxObjectUniforms = 4096;
+        static constexpr uint32_t MaxLightUniforms = 1024;
 		
+        enum LightConfiguration {
+            HasGoboMap = 0x1,
+        };
+        union LightUniformData {
+            struct LightUniformCommon {
+                uint32_t m_config;
+                mat4 m_mvp;
+            } m_common;
+            struct {
+                LightUniformCommon m_common;
+                float m_radius;
+                float3 m_lightPos;
+                float4 m_lightColor;
+                mat4 m_invViewRotation;
+            } m_pointLight;
+
+            struct {
+                LightUniformCommon m_common;
+                float4 m_lightColor;
+                
+            } m_boxLight;
+        };
+
+        struct MaterialPassDescriptorSet {
+            DescriptorSet* m_constSet;
+            DescriptorSet* m_frameSet;
+            DescriptorSet* m_perObjectSet;
+            DescriptorSet* m_materialSet;
+        };
+
         struct CBObjectData {
-			mat4 m_modelMatrix;
-			mat4 m_normalMatrix;
-			mat4 m_uvMatrix;
-		};
+            mat4 m_modelMat;
+            mat4 m_uvMat;
+            mat4 m_modelViewMat;
+            mat4 m_modelViewProjMat;
+            mat3 m_normalMat;
+        };
 
         struct PerFrameData {
             mat4 m_invViewRotation;
@@ -140,13 +178,15 @@ namespace hpl {
                 : m_colorBuffer(std::move(buffer.m_colorBuffer)),
                   m_normalBuffer(std::move(buffer.m_normalBuffer)),
                   m_positionBuffer(std::move(buffer.m_positionBuffer)),
+                  m_specularBuffer(std::move(buffer.m_specularBuffer)),
                   m_depthBuffer(std::move(buffer.m_depthBuffer)),
                   m_outputBuffer(std::move(buffer.m_outputBuffer)) {
             }
             void operator=(GBuffer&& buffer) {
                 m_colorBuffer = std::move(buffer.m_colorBuffer);
                 m_normalBuffer = std::move(buffer.m_normalBuffer); 
-                m_positionBuffer = std::move(buffer.m_positionBuffer); 
+                m_positionBuffer = std::move(buffer.m_positionBuffer);
+                m_specularBuffer = std::move(buffer.m_specularBuffer);
                 m_depthBuffer = std::move(buffer.m_depthBuffer); 
                 m_outputBuffer = std::move(buffer.m_outputBuffer); 
             }
@@ -154,7 +194,10 @@ namespace hpl {
             ForgeRenderTarget m_colorBuffer;
             ForgeRenderTarget m_normalBuffer;
             ForgeRenderTarget m_positionBuffer;
+            ForgeRenderTarget m_specularBuffer;
+
             ForgeRenderTarget m_depthBuffer;
+            
             ForgeRenderTarget m_outputBuffer;
         };
 
@@ -193,7 +236,10 @@ namespace hpl {
             return m_boundViewportData.resolve(viewport);
         }
         // virtual std::shared_ptr<Image> GetDepthStencilImage(cViewport& viewport) override;
-        virtual ForgeTextureHandle* GetOutputImage(cViewport& viewport) override { return nullptr; }
+        virtual Texture* GetOutputImage(uint32_t frameIndex, cViewport& viewport) override { 
+            auto& sharedData = m_boundViewportData.resolve(viewport);
+            return sharedData.m_gBuffer[frameIndex].m_outputBuffer.m_handle->pTexture;
+        }
 
         virtual bool LoadData() override;
         virtual void DestroyData() override;
@@ -332,20 +378,35 @@ namespace hpl {
         
         ForgeBufferHandle m_perFrameBuffer;
 
-        // diffuse material
+        // z material pass
         Shader* m_zPassShader;
         Pipeline* m_zPassPipeline;
         RootSignature* m_zPassRootSignature;
-        DescriptorSet* m_zPassConstantDescriptorSet;
-        DescriptorSet* m_zPassPerFrameDescriptorSet;
-        DescriptorSet* m_zPassPerObjectDescriptorSet;
-        DescriptorSet* m_zPassPerMaterialDescriptorSet;
+        MaterialPassDescriptorSet m_zDescriptorSet;
         uint32_t m_zObjectIndex = 0;
 
-        Shader* m_ZPassDiffuse;
-        Pipeline* m_diffuseZPass;
+        // diffuse material pass
+        Shader* m_solidDiffuseShader;
+        Shader* m_solidDiffuseParallaxShader;
+        Pipeline* m_solidDiffusePipeline;
+        Pipeline* m_solidDiffuseParallaxPipeline;
+        RootSignature* m_solidDiffuseRootSignature;
+        MaterialPassDescriptorSet m_solidDescriptorSet;
+        uint32_t m_solidObjectIndex = 0;
 
-        Buffer* m_indirectDiffusePositionBuffer;
+        // light pass
+        GPURingBuffer* m_lightPassRingBuffer;
+        RootSignature* m_lightPassRootSignature;
+        Pipeline* m_lightStencilPipeline;
+        Pipeline* m_pointLightPipeline;
+        Pipeline* m_boxLightPipeline;
+        Shader* m_pointLightShader;
+        Shader* m_stencilLightShader;
+        Shader* m_boxLightShader;
+        DescriptorSet* m_lightPerLightSet;
+        DescriptorSet* m_lightFrameSet;
+        uint32_t m_lightObjectIndex = 0;
+
         cRenderList m_reflectionRenderList;
 
         static bool mbDepthCullLights;

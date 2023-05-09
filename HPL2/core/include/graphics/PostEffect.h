@@ -35,7 +35,6 @@ namespace hpl {
 	class iLowLevelGraphics;
 	class iTexture;
 	class iFrameBuffer;
-	class iGpuProgram;
 
 	class cPostEffectComposite;
 	class iPostEffect;

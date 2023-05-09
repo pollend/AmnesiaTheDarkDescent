@@ -1,0 +1,44 @@
+#define MATERIAL_SOLID 1
+#include "deferred_resources.h.fsl"
+#include "deferred_common.h.fsl"
+
+STRUCT(VSInput)
+{
+	DATA(float3, Position, POSITION);
+	DATA(float2, TexCoord, TEXCOORD0);
+	DATA(float3, Normal, NORMAL);
+	DATA(float3, Tangent, TANGENT);
+};
+
+STRUCT(VSOutput)
+{
+	DATA(float4, Position, SV_Position);
+    DATA(float3, pos, POSITION);
+    DATA(float2, uv, TEXCOORD0);
+    DATA(float3, view, TEXCOORD1);
+	DATA(float3, normal, NORMAL);
+	DATA(float3, tangent, TANGENT);
+	DATA(float3, bitangent, BITANGENT);
+};
+
+VSOutput VS_MAIN( VSInput In )
+{
+    INIT_MAIN;
+    VSOutput Out;
+
+    Out.pos = mul(Get(modelViewMat), float4(In.Position.xyz, 1.0)).xyz;
+    Out.uv = mul(Get(uvMat), float4(In.TexCoord, 0, 1.0)).xy;
+
+    Out.normal = normalize(mul(Get(normalMat), In.Normal.xyz));
+    Out.tangent = normalize(mul(Get(normalMat), In.Tangent.xyz));
+    Out.bitangent = normalize(mul(Get(normalMat), cross(In.Tangent.xyz, In.Normal.xyz)));
+
+    vec3 viewEye =  mul(Get(modelViewMat), vec4(In.Position.xyz, 1.0)).xyz;
+    Out.view = vec3(
+        dot(viewEye, Out.tangent), 
+        dot(viewEye, Out.bitangent), 
+        dot(-viewEye, Out.normal));
+
+    Out.Position = mul(Get(modelViewProjMat), float4(In.Position.xyz, 1.0));
+    RETURN(Out);
+}

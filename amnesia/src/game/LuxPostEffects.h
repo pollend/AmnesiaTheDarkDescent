@@ -55,9 +55,6 @@ public:
 	virtual void RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, LegacyRenderTarget& target) override;
 
 private:
-	// iGpuProgram *mpProgram;
-	// std::vector<iTexture*> mvAmpMaps;
-	// iTexture* mpZoomMap;
 
 	bgfx::ProgramHandle m_program;
 	std::array<Image*, 3> m_ampMaps;

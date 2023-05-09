@@ -285,7 +285,7 @@ namespace hpl {
         virtual bool LoadData()=0;
         virtual void DestroyData()=0;
 
-        virtual ForgeTextureHandle* GetOutputImage(cViewport& viewport) { return nullptr;}
+        virtual Texture* GetOutputImage(uint32_t frameIndex, cViewport& viewport) { return nullptr;}
 
         cWorld *GetCurrentWorld(){ return mpCurrentWorld;}
         cFrustum *GetCurrentFrustum(){ return mpCurrentFrustum;}
@@ -440,10 +440,6 @@ namespace hpl {
         inline bool SetBlendMode(eMaterialBlendMode aMode){ 
             return false;
          }
-        [[deprecated("SetProgram is deprecated")]]
-        inline bool SetProgram(iGpuProgram *apProgram){ 
-            return true; 
-        }
         [[deprecated("SetTexture is deprecated")]]
         inline void SetTexture(int alUnit, iTexture *apTexture){
 

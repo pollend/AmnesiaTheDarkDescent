@@ -163,7 +163,7 @@ namespace hpl {
 		apFunctions->SetDepthWrite(false);
 		apFunctions->SetBlendMode(eMaterialBlendMode_None);
 
-		apFunctions->SetProgram(NULL);
+		// apFunctions->SetProgram(NULL);
 		apFunctions->SetTextureRange(NULL, 0);
 		apFunctions->SetMatrix(NULL);
 

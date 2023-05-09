@@ -36,7 +36,6 @@ namespace hpl {
 	class cGraphics;
 	class cResources;
 	class iTexture;
-	class iGpuProgram;
 	class cMaterial;
 	class iRenderable;
 	class cParserVarContainer;

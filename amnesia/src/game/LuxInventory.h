@@ -463,8 +463,6 @@ private:
 
 	cGuiGfxElement *mpWhiteGfx;
 
-	// iGpuProgram *mpEffectProgram;
-
 	iWidget * mpHealthWidget;
 	iWidget * mpSanityWidget;
 	iWidget * mpTinderboxWidget;

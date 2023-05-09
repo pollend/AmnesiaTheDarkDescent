@@ -18,8 +18,7 @@ VSOutput VS_MAIN( VSInput In )
 {
     INIT_MAIN;
     VSOutput Out;
-    Out.TexCoord = mul(Get(uvMatrix), float4(In.TexCoord, 0, 1.0)).xy;
-    float4x4 mvp = mul(Get(viewProjectionMatrix), Get(modelMatrix));
-    Out.Position = mul(mvp, float4(In.Position.xyz, 1.0));
+    Out.TexCoord = mul(Get(uvMat), float4(In.TexCoord, 0, 1.0)).xy;
+    Out.Position = mul(Get(modelViewProjMat), float4(In.Position.xyz, 1.0));
     RETURN(Out);
 }

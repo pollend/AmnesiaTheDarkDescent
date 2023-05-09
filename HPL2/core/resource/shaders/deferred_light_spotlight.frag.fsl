@@ -1,0 +1,46 @@
+#define SPOT_LIGHT 1
+#include "deferred_light_resource.h.fsl"
+
+STRUCT(PsIn)
+{
+	DATA(float4, Position, SV_Position);
+};
+
+float4 PS_MAIN(PsIn In)
+{
+    INIT_MAIN;
+
+    float2 NDC = In.Position.xy * Get(viewTexel);
+
+    float4 color =  SampleTex2D(Get(diffuseMap), Get(nearestSampler), NDC);
+    float3 normal = SampleTex2D(Get(normalMap), Get(nearestSampler), NDC).xyz;
+    float3 position =  SampleTex2D(Get(positionMap), Get(nearestSampler), NDC).xyz;
+    vec2 specular =  SampleTex2D(Get(specularMap), Get(nearestSampler), NDC).xy;
+
+    float3 lightDir = (Get(lightPos).xyz -  position) * (1.0 / Get(lightRadius));
+    float attenuation = SampleTex2D(Get(attenuationLightMap), Get(nearestSampler), vec2(dot(lightDir, lightDir), 0.0)).x;
+    
+    float3 normalLightDir = normalize(lightDir);
+    float3 normalizedNormal = normalize(normal.xyz);
+
+    float3 goboVal = float3(1.0, 1.0, 1.0);
+    if(HasGoboMap(Get(config))) {
+        float4 worldLightDir = mul(Get(invViewRotation), float4(lightDir.x,lightDir.y, lightDir.z,1.0));
+        goboVal = SampleTexCube(Get(goboMap), Get(nearestSampler), worldLightDir.xyz).xyz;
+    }
+    
+    /////////////////////////////////
+	//Calculate diffuse color
+    float fLDotN = max(dot(normalizedNormal, normalLightDir), 0.0);
+	float3 diffuseColor = color.xyz * Get(lightColor).xyz * fLDotN;
+
+
+    if(Get(lightColor).w > 0.0) {
+        float3 halfVec = normalize(normalLightDir + normalize(-position));
+        float specIntensity = specular.x;
+        float specPower = specular.y;
+        float specularValue = Get(lightColor).w * specIntensity *  pow( clamp( dot( halfVec, normalizedNormal), 0.0, 1.0), specPower );
+        diffuseColor += specularValue.xxx * Get(lightColor).xyz;
+    }
+    RETURN(float4(diffuseColor * goboVal * attenuation, 0.0));
+}

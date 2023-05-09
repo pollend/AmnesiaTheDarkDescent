@@ -232,7 +232,6 @@ namespace hpl {
 
 				for(size_t i = 0; i < blendStateDesc.size(); i++) {
 					pipelineSettings.pBlendState = &blendStateDesc[i];
-					
 					addPipeline(pipeline.Rend(), &pipelineDesc, &guiPipeline[i]);
 				}
 
@@ -732,7 +731,6 @@ namespace hpl {
 			size_t indexBufferIndex = 0;
 			
 			GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(gui::guiUniformRingBuffer, sizeof(gui::UniformBlock));
-			
 			
 			DescriptorData params[10]{};
 			uint32_t paramCount = 0;

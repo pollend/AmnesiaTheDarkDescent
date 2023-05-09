@@ -238,9 +238,12 @@ namespace hpl {
                 STOP_TIMING(Render3DGui)
             }
 
+            auto forgeRenderer = Interface<ForgeRenderer>::Get();
+
+
             //////////////////////////////////////////////
             // Render Post effects
-            // auto outputImage = pRenderer->GetOutputImage(*pViewPort);
+            auto outputImage = pRenderer->GetOutputImage(frame.m_frameIndex, *pViewPort);
             // if (bPostEffects) {
             //     START_TIMING(RenderPostEffects)
             //     pPostEffectComposite->Draw(
@@ -252,10 +255,13 @@ namespace hpl {
 
             //     STOP_TIMING(RenderPostEffects)
             // } else {
-            //     auto size = pViewPort->GetSize();
-            //     cRect2l rect = cRect2l(0, 0, size.x, size.y);
-            //     context.CopyTextureToFrameBuffer(
-            //         *outputImage, rect, pViewPort->GetRenderTarget());
+                
+                auto size = pViewPort->GetSize();
+                cRect2l rect = cRect2l(0, 0, size.x, size.y);
+                forgeRenderer->cmdCopyTexture(ForgeRenderer::CopyPipelineToSwapChain, frame.m_cmd, outputImage,
+                    frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex]);
+                // context.CopyTextureToFrameBuffer(
+                //     *outputImage, rect, pViewPort->GetRenderTarget());
             // }
 
             //////////////////////////////////////////////

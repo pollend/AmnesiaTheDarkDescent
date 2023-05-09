@@ -44,7 +44,7 @@ namespace hpl {
 		bool LoadData() override;
 		void DestroyData() override;
 
-		virtual ForgeTextureHandle* GetOutputImage(cViewport& viewport) override {
+		virtual Texture* GetOutputImage(uint32_t frameIndex, cViewport& viewport) override {
 			return nullptr;
 		}
 	private:

@@ -107,8 +107,6 @@ namespace hpl {
 											int alReserveVtxSize=0,int alReserveIdxSize=0);
 
 		[[deprecated("replaced with BGFX")]]
-		iGpuProgram* CreateGpuProgram(const tString& asName);
-		[[deprecated("replaced with BGFX")]]
 		iGpuShader* CreateGpuShader(const tString& asName, eGpuShaderType aType);
 
 		[[deprecated("replaced with BGFX")]]

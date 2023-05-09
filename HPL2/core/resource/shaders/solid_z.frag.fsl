@@ -37,13 +37,13 @@ float4 PS_MAIN(PsIn In)
         }
 
         //Get in 0.5 - 1 range.
-        fDissolve = fDissolve*0.5 + 0.5;
+        fDissolve = fDissolve * 0.5 + 0.5;
         diffuseAlpha = fDissolve - (1.0 - diffuseAlpha) * 0.5;
     }
 
-    //if(diffuseAlpha < 0.5) {
-    //    discard;
-    //}
+   // if(diffuseAlpha < ALPHA_REJECT) {
+   //     discard;
+   // }
 
     RETURN(float4(0,0,0,0));
 }

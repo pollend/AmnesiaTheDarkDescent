@@ -1,30 +1,36 @@
 
 CBUFFER(perFrameConstants, UPDATE_FREQ_PER_FRAME, b0, binding = 0)
 {
-    DATA(float4x4, invViewRotation, None);
-    DATA(float4x4, viewMatrix, None);
-    DATA(float4x4, projectionMatrix, None);
-    DATA(float4x4, viewProjectionMatrix, None);
+    DATA(float4x4, invViewRotationMat, None);
+    DATA(float4x4, viewMat, None);
+    DATA(float4x4, projMat, None);
+    DATA(float4x4, viewProjMat, None);
 };
 
 CBUFFER(uniformObjectBlock, UPDATE_FREQ_PER_DRAW, b1, binding = 1)
 {
-    DATA(float4x4, modelMatrix, None);
-    DATA(float3x3, normalMatrix, None);
-    DATA(float4x4, uvMatrix, None);
+    DATA(float4x4, modelMat, None);
+    DATA(float4x4, uvMat, None);
+
+    DATA(float4x4, modelViewMat, None);
+    DATA(float4x4, modelViewProjMat, None);
+    DATA(float3x3, normalMat, None);
+
 };
 
 #ifdef MATERIAL_SOLID
-// material data
-CBUFFER(uniformMaterialBlock, UPDATE_FREQ_PER_BATCH, b2, binding = 2)
-{
-    DATA(int, textureConfig, None);
-};
-INLINE bool HasDissolveFilter(int _textureConfig)   { return (_textureConfig & (1 << 9)) != 0; }
-
-
+    // material data
+    CBUFFER(uniformMaterialBlock, UPDATE_FREQ_PER_BATCH, b2, binding = 2)
+    {
+        DATA(int, textureConfig, None);
+        DATA(float, heightMapScale, None);
+        DATA(float, heightMapBias, None);
+        DATA(float, frenselBias, None);
+        DATA(float, frenselPow, None);
+    };
+    INLINE bool HasDissolveFilter(int _textureConfig)   { return (_textureConfig & (1 << 9)) != 0; }
+    
 #endif
-
 
 RES(Tex2D(float4), diffuseMap, UPDATE_FREQ_PER_BATCH, t1, binding = 5); 
 RES(Tex2D(float4), normalMap, UPDATE_FREQ_PER_BATCH, t2, binding = 6);

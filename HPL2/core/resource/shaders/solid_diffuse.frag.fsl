@@ -1,0 +1,124 @@
+#define MATERIAL_SOLID 1
+#include "deferred_resources.h.fsl"
+#include "deferred_common.h.fsl"
+
+RES(Tex2D(float4), dissolveMap, UPDATE_FREQ_NONE, t9, binding = 4);
+
+
+STRUCT(PsIn) 
+{
+    DATA(float4, Position, SV_Position);
+    DATA(float3, pos, POSITION);
+    DATA(float2, uv, TEXCOORD0);
+    DATA(float3, view, TEXCOORD1);
+	DATA(float3, normal, NORMAL);
+	DATA(float3, tangent, TANGENT);
+	DATA(float3, bitangent, BITANGENT);
+};
+
+STRUCT(PsOut)
+{
+	DATA(float4, diffuse, SV_Target0);
+	DATA(float4, normal, SV_Target1);
+	DATA(float4, position, SV_Target2);
+	DATA(float2, specular, SV_Target3);
+};
+
+#ifndef SEARCH_SAMPLE_COUNT
+#define SEARCH_SAMPLE_COUNT 4
+#endif
+
+
+PsOut PS_MAIN(PsIn In)
+{
+    INIT_MAIN;
+    PsOut Out;
+
+    float2 texCoord = In.uv.xy;
+    float4 diffuseColor = SampleTex2D(Get(diffuseMap), Get(nearestSampler), texCoord.xy);
+    float3 cameraEyeSpace = normalize(In.pos).xyz;	
+
+
+#ifdef PARALLAX_ENABLED
+    if(HasHeight(Get(textureConfig))) {
+        float3 eyeVec = normalize(In.view);
+
+        //Get give normalizedView the length so it reaches bottom.
+        float normalLength = 1.0 / eyeVec.z;
+        eyeVec *= float3(normalLength, normalLength, normalLength);	
+        
+        //Apply scale and bias
+        eyeVec.xy *= Get(heightMapScale);
+        float3 heightMapPos = vec3(In.uv.xy, 0.0);
+
+        //Determine number of steps based on angle between normal and eye
+        float fSteps = floor((1.0 - dot(eyeVec, normalize(In.normal)) ) * 18.0) + 2.0; 
+        
+        // Do a linear search to find the first intersection
+        {
+            eyeVec /= fSteps;
+            int iterations = int(clamp(fSteps - 1.0, 0.0, 28.0));
+            for(int i = 0; i < iterations; i++) 
+            { 
+                float fDepth = SampleTex2D(Get(heightMap), Get(nearestSampler), texCoord.xy).w; 
+                if(heightMapPos.z < fDepth) {
+                    heightMapPos += eyeVec;
+                }
+            } 
+        }
+
+        // Do a binary search to find the exact intersection
+        {
+            for(int i=0; i< SEARCH_SAMPLE_COUNT; i++) 
+            {
+                float fDepth = SampleTex2D(Get(heightMap), Get(nearestSampler), texCoord.xy).w;
+                if(heightMapPos.z < fDepth) {
+                    heightMapPos += eyeVec; 
+                }
+
+                eyeVec *= 0.5; 
+                heightMapPos -= eyeVec; 
+            }
+        }
+        texCoord.xy = heightMapPos.xy;
+    }
+#endif
+
+   // if(diffuseColor.w < ALPHA_REJECT ) {
+   //     discard;
+   // }
+
+    float3 normal = float3(0, 0, 0);
+    if(HasNormal(Get(textureConfig))) {
+        float3 normalSampler = SampleTex2D(Get(normalMap), Get(nearestSampler), texCoord.xy).xyz - 0.5;
+        normal = normalize(normalSampler.x * In.tangent + normalSampler.y * In.bitangent + normalSampler.z * In.normal);
+    } else {
+        normal = normalize(In.normal);
+    }
+
+    if(HasCubeMap(Get(textureConfig))) {
+        float3 envUV = reflect(cameraEyeSpace, normal);
+        envUV = mul(Get(invViewRotationMat), vec4(envUV.xyz, 1.0)).xyz;
+                    
+        float4 reflectionColor = SampleTexCube(Get(cubeMap), Get(nearestSampler), envUV);
+        
+        float afEDotN = max(dot(-cameraEyeSpace, normal),0.0);
+        float fFresnel = Fresnel(afEDotN, Get(frenselBias), Get(frenselPow));
+        
+        if(HasCubeMapAlpha(Get(textureConfig))) {
+            reflectionColor *= SampleTex2D(Get(cubeMapAlpha),Get(nearestSampler), texCoord.xy).w;
+        }
+        Out.diffuse = diffuseColor + reflectionColor * fFresnel;
+    } else {
+        Out.diffuse = diffuseColor;
+    }
+    Out.normal = float4(normal.xyz, 0.0);
+    Out.position = float4(In.pos.xyz, 1.0);
+    if(HasSpecular(Get(textureConfig))) {
+        Out.specular = SampleTex2D(Get(specularMap), Get(nearestSampler), texCoord.xy).xy;
+    } else {
+        Out.specular = float2(0,0);
+    }
+
+    RETURN(Out);
+}

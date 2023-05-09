@@ -37,10 +37,8 @@ namespace hpl {
 	class cGraphics;
 	class cResources;
 	class iTexture;
-	class iGpuProgram;
 	class iMaterialType;
 	class cResourceVarsObject;
-	class Texture;
 
 
 	class iMaterialVars

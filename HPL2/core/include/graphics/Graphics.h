@@ -43,7 +43,6 @@ namespace hpl {
 	class iTexture;
 	class iMaterialType;
 	class cPostEffectComposite;
-	class iGpuProgram;
 	class cParserVarContainer;
 
 	//------------------------------------------------------

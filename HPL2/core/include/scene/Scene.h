@@ -92,7 +92,7 @@ namespace hpl {
 	private:
 		void Render3DGui(const ForgeRenderer::Frame&,cViewport* apViewPort,cFrustum *apFrustum,float afTimeStep);
 		void RenderScreenGui(const ForgeRenderer::Frame&,  cViewport* apViewPort, float afTimeStep);
-
+		
         cGraphics *mpGraphics;
 		cResources *mpResources;
 		cSound *mpSound;

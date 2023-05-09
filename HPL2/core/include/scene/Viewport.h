@@ -158,7 +158,6 @@ namespace hpl {
         inline void SignalDraw(PostSolidDrawPacket& payload) { m_postSolidDraw.Signal(payload);}
         inline void SignalDraw(PostTranslucenceDrawPacket& payload) { m_postTranslucenceDraw.Signal(payload);}
 
-
     private:
         bool mbActive;
         bool mbVisible;

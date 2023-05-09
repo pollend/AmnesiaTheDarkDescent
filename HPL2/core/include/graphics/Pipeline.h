@@ -26,15 +26,23 @@ namespace hpl {
     class cMaterial;
     class ForgeRenderer;
 
+
     //TODO: rename this
     class ForgeRenderer final {
         HPL_RTTI_CLASS(ForgeRenderer, "{66526c65-ad10-4a59-af06-103f34d1cb57}")
     public:
         ForgeRenderer() = default;
 
-        void InitializeRenderer(window::NativeWindowWrapper* window);
+        enum CopyPipelines: uint8_t {
+            CopyPipelineToSwapChain = 0,
+            CopyPipelineToUnormR8G8B8A8 = 1,
+            CopyPipelineCount = 2
+        };
 
+        static constexpr uint32_t MaxCopyFrames = 16;
         static constexpr uint32_t SwapChainLength = 2; // double buffered
+
+        void InitializeRenderer(window::NativeWindowWrapper* window);
 
         /**
         * tracks the resources used by a single command buffer
@@ -52,7 +60,6 @@ namespace hpl {
             }
 
             void AddTexture(ForgeTextureHandle texture);
-            void AddMaterial(cMaterial& material, std::span<eMaterialTexture> textures);
             void ResetPool();
         private:
             absl::InlinedVector<VariantTypes, 1024> m_cmds;
@@ -109,6 +116,8 @@ namespace hpl {
         inline CommandResourcePool& ResourcePool(size_t index) { return m_commandPool[index]; }
         inline CmdPool* GetCmdPool(size_t index) { return m_cmdPools[index]; }
         
+        void cmdCopyTexture(CopyPipelines copy, Cmd* cmd, Texture* srcTexture, RenderTarget* dstTexture);
+
     private:
         std::array<CommandResourcePool, SwapChainLength> m_commandPool;
         std::array<Fence*, SwapChainLength> m_renderCompleteFences;
@@ -123,7 +132,14 @@ namespace hpl {
         Queue* m_graphicsQueue = nullptr;
         window::NativeWindowWrapper* m_window = nullptr;
 
+        Shader* m_copyShader = nullptr;
+        std::array<Pipeline*,CopyPipelineCount> m_copyPostProcessingPipeline{};
+        RootSignature* m_copyPostProcessingRootSignature = nullptr;
+        DescriptorSet* m_copyPostProcessingDescriptorSet = nullptr;
+        uint32_t m_copyRegionDescriptorIndex = 0;
+  
         uint32_t m_currentFrameIndex = 0;
         uint32_t m_swapChainIndex = 0;
     };
+
 }
