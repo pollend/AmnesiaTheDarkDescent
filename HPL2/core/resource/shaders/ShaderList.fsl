@@ -50,8 +50,13 @@
 #include "deferred_light_stencil.frag.fsl"
 #end
 
+
 #frag deferred_light_box.frag
 #include "deferred_light_box.frag.fsl"
+#end
+
+#frag deferred_light_spotlight.frag
+#include "deferred_light_spotlight.frag.fsl"
 #end
 
 // #comp copy_region.comp
@@ -64,4 +69,12 @@
 
 #frag post_processing_copy.frag
 #include "post_processing_copy.frag.fsl"
+#end
+
+#frag decal.frag
+#include "decal.frag.fsl"
+#end
+
+#vert decal.vert
+#include "decal.vert.fsl"
 #end

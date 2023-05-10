@@ -124,8 +124,15 @@ namespace hpl {
             cMatrixf m_projectionMat;
         };
 
-        void cmdBindObjectDescriptor(const ForgeRenderer::Frame& frame, uint32_t& updateIndex, cFrustum* frustum, cMaterial* apMaterial, iRenderable* apObject, DescriptorSet* apDescriptorSet, const PerObjectOption& option) {
-		    GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(CObjectRingBuffer, sizeof(cRendererDeferred::CBObjectData));
+        void cmdBindObjectDescriptor(
+            const ForgeRenderer::Frame& frame,
+            uint32_t& updateIndex,
+            cFrustum* frustum,
+            cMaterial* apMaterial,
+            iRenderable* apObject,
+            DescriptorSet* apDescriptorSet,
+            const PerObjectOption& option) {
+            GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(CObjectRingBuffer, sizeof(cRendererDeferred::CBObjectData));
             
             cRendererDeferred::CBObjectData uniformObjectData = {};
             cMatrixf modelMat = apObject->GetModelMatrixPtr() ? *apObject->GetModelMatrixPtr() : cMatrixf::Identity;
@@ -133,13 +140,12 @@ namespace hpl {
             cMatrixf modelViewProjMat = cMath::MatrixMul(cMath::MatrixMul(option.m_projectionMat, option.m_viewMat), modelMat);
 
             uniformObjectData.m_modelMat = cMath::ToForgeMat4(modelMat.GetTranspose());
-            if(apMaterial) {
+            if (apMaterial) {
                 uniformObjectData.m_uvMat = cMath::ToForgeMat4(apMaterial->GetUvMatrix());
             }
-            uniformObjectData.m_modelViewMat =  cMath::ToForgeMat4(modelViewMat.GetTranspose());
+            uniformObjectData.m_modelViewMat = cMath::ToForgeMat4(modelViewMat.GetTranspose());
             uniformObjectData.m_modelViewProjMat = cMath::ToForgeMat4(modelViewProjMat.GetTranspose());
-
-            // uniformObjectData.m_normalMatrix = cMath::ToForgeMat3(apObject->GetNormalMatrixPtr() ? *apObject->GetNormalMatrixPtr() : cMatrixf::Identity);
+            uniformObjectData.m_normalMat = cMath::ToForgeMat3(cMath::MatrixInverse(modelViewMat));
 
             BufferUpdateDesc updateDesc = { uniformBuffer.pBuffer, uniformBuffer.mOffset };
 			beginUpdateResource(&updateDesc);
@@ -1098,32 +1104,31 @@ namespace hpl {
 
         {
             m_perFrameBuffer.TryFree();
-			BufferLoadDesc desc = {};
-			desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-			desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
-			desc.mDesc.mSize = sizeof(cRendererDeferred::PerFrameData) * ForgeRenderer::SwapChainLength; // * cViewport::MaxViewportHandles;
-			desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
-			desc.pData = nullptr;
-			desc.ppBuffer = &m_perFrameBuffer.m_handle;
-			addResource(&desc, nullptr);
-			m_perFrameBuffer.Initialize();
+            BufferLoadDesc desc = {};
+            desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
+            desc.mDesc.mSize = sizeof(cRendererDeferred::PerFrameData) * ForgeRenderer::SwapChainLength; // * cViewport::MaxViewportHandles;
+            desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
+            desc.pData = nullptr;
+            desc.ppBuffer = &m_perFrameBuffer.m_handle;
+            addResource(&desc, nullptr);
+            m_perFrameBuffer.Initialize();
         }
 
-        
         //---------------- ZPass Pipeline  ------------------------
         {
             ShaderLoadDesc loadDesc = {};
-            loadDesc.mStages[0] = {"solid_z.vert", nullptr, 0};
-            loadDesc.mStages[1] = {"solid_z.frag", nullptr, 0};
-	        addShader(forgetRenderer->Rend(), &loadDesc, &m_zPassShader);
+            loadDesc.mStages[0] = { "solid_z.vert", nullptr, 0 };
+            loadDesc.mStages[1] = { "solid_z.frag", nullptr, 0 };
+            addShader(forgetRenderer->Rend(), &loadDesc, &m_zPassShader);
 
-	        Shader* zPassShaders[] = {m_zPassShader};
-			RootSignatureDesc rootSignatureDesc = {};
-			rootSignatureDesc.ppShaders = zPassShaders;
-			rootSignatureDesc.mShaderCount = std::size(zPassShaders);
-			addRootSignature(forgetRenderer->Rend(), &rootSignatureDesc, &m_zPassRootSignature);
+            Shader* zPassShaders[] = { m_zPassShader };
+            RootSignatureDesc rootSignatureDesc = {};
+            rootSignatureDesc.ppShaders = zPassShaders;
+            rootSignatureDesc.mShaderCount = std::size(zPassShaders);
+            addRootSignature(forgetRenderer->Rend(), &rootSignatureDesc, &m_zPassRootSignature);
 
-            //layout and pipeline for sphere draw
+            // layout and pipeline for sphere draw
             VertexLayout vertexLayout = {};
             vertexLayout.mAttribCount = 2;
             vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
@@ -1170,7 +1175,6 @@ namespace hpl {
             updateDescriptorSet(forgetRenderer->Rend(), 0, m_zDescriptorSet.m_constSet, params.size(), params.data());
             // updatePerFrameDescriptor(m_zDescriptorSet.m_frameSet);
         }
-
 
         //---------------- Diffuse Pipeline  ------------------------
         {
@@ -1222,7 +1226,7 @@ namespace hpl {
             vertexLayout.mAttribs[3].mOffset = 0;
 
             RasterizerStateDesc rasterizerStateDesc = {};
-            rasterizerStateDesc.mCullMode = CULL_MODE_NONE;
+            rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
 
             DepthStateDesc depthStateDesc = {};
             depthStateDesc.mDepthTest = true;
@@ -1259,6 +1263,95 @@ namespace hpl {
             updatePerFrameDescriptor(m_solidDescriptorSet.m_frameSet);
         }
 
+        // decal pass
+        {
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0] = {"decal.vert", nullptr, 0};
+                loadDesc.mStages[1] = {"decal.frag", nullptr, 0};
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_decalShader);
+            }
+
+            Shader* shaders[] = {m_decalShader};
+
+            RootSignatureDesc rootSignatureDesc = {};
+			rootSignatureDesc.ppShaders = shaders;
+			rootSignatureDesc.mShaderCount = std::size(shaders);
+			addRootSignature(forgetRenderer->Rend(), &rootSignatureDesc, &m_decalRootSignature);
+
+            VertexLayout vertexLayout = {};
+            vertexLayout.mAttribCount = 3;
+            vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
+            vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
+            vertexLayout.mAttribs[0].mBinding = 0;
+            vertexLayout.mAttribs[0].mLocation = 0;
+            vertexLayout.mAttribs[0].mOffset = 0;
+
+            vertexLayout.mAttribs[1].mSemantic = SEMANTIC_TEXCOORD0;
+            vertexLayout.mAttribs[1].mFormat = TinyImageFormat_R32G32_SFLOAT;
+            vertexLayout.mAttribs[1].mBinding = 1;
+            vertexLayout.mAttribs[1].mLocation = 1;
+            vertexLayout.mAttribs[1].mOffset = 0;
+
+            vertexLayout.mAttribs[2].mSemantic = SEMANTIC_COLOR;
+            vertexLayout.mAttribs[2].mFormat = TinyImageFormat_R32G32B32A32_SFLOAT;
+            vertexLayout.mAttribs[2].mBinding = 2;
+            vertexLayout.mAttribs[2].mLocation = 2;
+            vertexLayout.mAttribs[2].mOffset = 0;
+
+            RasterizerStateDesc rasterizerStateDesc = {};
+            rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
+
+            DepthStateDesc depthStateDesc = {};
+            depthStateDesc.mDepthTest = true;
+            depthStateDesc.mDepthWrite = false;
+            depthStateDesc.mDepthFunc = CMP_LEQUAL;
+
+            std::array colorFormats = {
+                getRecommendedSwapchainFormat(false, false)
+            };
+            PipelineDesc pipelineDesc = {};
+            pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+            auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
+            pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+            pipelineSettings.mRenderTargetCount = colorFormats.size();
+            pipelineSettings.pColorFormats = colorFormats.data();
+            pipelineSettings.pDepthState = &depthStateDesc;
+            pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
+		    pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
+            pipelineSettings.mSampleQuality = 0;
+            pipelineSettings.pRootSignature = m_decalRootSignature;
+            pipelineSettings.pShaderProgram = m_decalShader;
+            pipelineSettings.pRasterizerState = &rasterizerStateDesc;
+            pipelineSettings.pVertexLayout = &vertexLayout;
+
+            for(size_t blendRgb = 0; blendRgb < eMaterialBlendMode_LastEnum; ++blendRgb)
+            {
+
+                for(size_t blendAlpha = 0; blendAlpha < eMaterialBlendMode_LastEnum; ++blendAlpha)
+                {
+                    BlendStateDesc blendStateDesc{};
+
+                    blendStateDesc.mSrcFactors[0] = hpl::AmnesiaBlendTable[blendRgb].src;
+                    blendStateDesc.mDstFactors[0] = hpl::AmnesiaBlendTable[blendRgb].dst;
+                    blendStateDesc.mBlendModes[0] = hpl::AmnesiaBlendTable[blendRgb].mode;
+
+                    blendStateDesc.mSrcAlphaFactors[0] = hpl::AmnesiaBlendTable[blendAlpha].src;
+                    blendStateDesc.mDstAlphaFactors[0] = hpl::AmnesiaBlendTable[blendAlpha].dst;
+                    blendStateDesc.mBlendAlphaModes[0] = hpl::AmnesiaBlendTable[blendAlpha].mode;
+
+                    blendStateDesc.mMasks[0] = RED | GREEN | BLUE;
+                    blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
+                    pipelineSettings.pBlendState = &blendStateDesc;
+
+                    addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_decalPipeline[blendRgb][blendAlpha]);
+                }
+            }
+
+            createMaterialsPass(m_decalRootSignature, m_decalDescriptorSet);
+            // updatePerFrameDescriptor(m_decalDescriptorSet.m_frameSet);
+        }
+
         // ------------------------ Light Pass -----------------------------------------------------------------
         {
             addUniformGPURingBuffer(forgetRenderer->Rend(), sizeof(LightUniformData) * MaxLightUniforms, &m_lightPassRingBuffer, true);
@@ -1268,6 +1361,13 @@ namespace hpl {
                 loadDesc.mStages[0] = {"deferred_light.vert", nullptr, 0};
                 loadDesc.mStages[1] = {"deferred_light_pointlight.frag", nullptr, 0};
                 addShader(forgetRenderer->Rend(), &loadDesc, &m_pointLightShader);
+            }
+
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0] = {"deferred_light.vert", nullptr, 0};
+                loadDesc.mStages[1] = {"deferred_light_spotlight.frag", nullptr, 0};
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_spotLightShader);
             }
 
             {
@@ -1283,7 +1383,7 @@ namespace hpl {
                 loadDesc.mStages[1] = {"deferred_light_box.frag", nullptr, 0};
                 addShader(forgetRenderer->Rend(), &loadDesc, &m_boxLightShader);
             }
-            Shader* shaders[] = {m_pointLightShader, m_stencilLightShader, m_boxLightShader};
+            Shader* shaders[] = {m_pointLightShader, m_stencilLightShader, m_boxLightShader, m_spotLightShader};
             RootSignatureDesc rootSignatureDesc = {};
 			rootSignatureDesc.ppShaders = shaders;
 			rootSignatureDesc.mShaderCount = std::size(shaders);
@@ -1297,37 +1397,37 @@ namespace hpl {
             vertexLayout.mAttribs[0].mLocation = 0;
             vertexLayout.mAttribs[0].mOffset = 0;
 
-            DepthStateDesc depthStateDesc = {};
-            depthStateDesc.mDepthTest = true;
-            depthStateDesc.mDepthWrite = false;
-            depthStateDesc.mStencilTest = true;
-            depthStateDesc.mDepthFunc = CMP_GEQUAL;
-            depthStateDesc.mStencilFrontFunc = CMP_ALWAYS;
-            depthStateDesc.mStencilBackFunc = CMP_ALWAYS;
-            depthStateDesc.mStencilFrontPass = STENCIL_OP_REPLACE;
-            depthStateDesc.mStencilBackPass = STENCIL_OP_REPLACE;
-            depthStateDesc.mStencilFrontFail = STENCIL_OP_REPLACE;
-            depthStateDesc.mStencilBackFail = STENCIL_OP_REPLACE;
-            depthStateDesc.mDepthFrontFail = STENCIL_OP_REPLACE;
-            depthStateDesc.mDepthBackFail = STENCIL_OP_REPLACE;
-            depthStateDesc.mStencilWriteMask = 0xff;
-            depthStateDesc.mStencilReadMask = 0xff;
+            auto createPipelineVariants = [&](PipelineDesc& pipelineDesc, std::array<Pipeline*, LightPipelineVariant_Size>& pipelines) {
+                for(uint32_t i = 0; i < LightPipelineVariants::LightPipelineVariant_Size; ++i) {
+                    DepthStateDesc depthStateDec = {};
+                    depthStateDec.mDepthTest = true;
+                    depthStateDec.mDepthWrite = false;
+                    depthStateDec.mDepthFunc = CMP_GEQUAL;
+                    if((LightPipelineVariants::LightPipelineVariant_StencilTest & i) > 0) {
+                        depthStateDec.mStencilTest =  true;
+                        depthStateDec.mStencilFrontFunc = CMP_EQUAL;
+                        depthStateDec.mStencilFrontPass = STENCIL_OP_SET_ZERO;
+                        depthStateDec.mStencilFrontFail = STENCIL_OP_SET_ZERO;
+                        depthStateDec.mStencilBackPass = STENCIL_OP_SET_ZERO;
+                        depthStateDec.mStencilBackFail = STENCIL_OP_SET_ZERO;
+                        depthStateDec.mDepthFrontFail = STENCIL_OP_SET_ZERO;
+                        depthStateDec.mDepthBackFail = STENCIL_OP_SET_ZERO;
+                        depthStateDec.mStencilWriteMask = 0xff;
+                        depthStateDec.mStencilReadMask = 0xff;
+                    }
 
-            DepthStateDesc depthStencilDesc = {};
-            depthStencilDesc.mDepthTest = false;
-            depthStencilDesc.mDepthWrite = false;
-            depthStencilDesc.mStencilTest = true;
-            depthStencilDesc.mDepthFunc = CMP_GEQUAL;
-            depthStencilDesc.mStencilFrontFunc = CMP_ALWAYS;
-            depthStencilDesc.mStencilBackFunc = CMP_ALWAYS;
-            depthStencilDesc.mStencilFrontPass = STENCIL_OP_KEEP;
-            depthStencilDesc.mStencilBackPass = STENCIL_OP_KEEP;
-            depthStencilDesc.mStencilFrontFail = STENCIL_OP_KEEP;
-            depthStencilDesc.mStencilBackFail = STENCIL_OP_KEEP;
-            depthStencilDesc.mDepthFrontFail = STENCIL_OP_KEEP;
-            depthStencilDesc.mDepthBackFail = STENCIL_OP_REPLACE;
-            depthStencilDesc.mStencilWriteMask = 0xff;
-            depthStencilDesc.mStencilReadMask = 0xff;
+                    RasterizerStateDesc rasterizerStateDesc = {};
+                    if((LightPipelineVariants::LightPipelineVariant_Back & i) > 0) {
+                        rasterizerStateDesc.mCullMode = CULL_MODE_BACK;
+                    } else {
+                        rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
+                    }
+                    auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
+                    pipelineSettings.pDepthState = &depthStateDec;
+                    pipelineSettings.pRasterizerState = &rasterizerStateDesc;
+                    addPipeline(forgetRenderer->Rend(), &pipelineDesc, &pipelines[i]);
+                }
+            };
 
             BlendStateDesc blendStateDesc{};
             blendStateDesc.mSrcFactors[0] = BC_ONE;
@@ -1336,6 +1436,9 @@ namespace hpl {
             blendStateDesc.mSrcAlphaFactors[0] = BC_ONE;
             blendStateDesc.mDstAlphaFactors[0] = BC_ONE;
             blendStateDesc.mBlendAlphaModes[0] = BM_ADD;
+            blendStateDesc.mMasks[0] = ALL;
+            blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
+            blendStateDesc.mIndependentBlend = false;
 
             std::array colorFormats = {
                 getRecommendedSwapchainFormat(false, false)
@@ -1353,22 +1456,11 @@ namespace hpl {
                 pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
                 pipelineSettings.pRootSignature = m_lightPassRootSignature;
                 pipelineSettings.pVertexLayout = &vertexLayout;
-
-                RasterizerStateDesc rasterizerStateDesc = {};
-                rasterizerStateDesc.mCullMode = CULL_MODE_BACK;
-
-                pipelineSettings.pDepthState = &depthStateDesc;
-                pipelineSettings.pRasterizerState = &rasterizerStateDesc;
                 pipelineSettings.pShaderProgram = m_pointLightShader;
-                addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_pointLightPipeline);
+                createPipelineVariants(pipelineDesc, m_pointLightPipeline);
             }
 
             {
-
-                RasterizerStateDesc rasterizerStateDesc = {};
-                rasterizerStateDesc.mCullMode = CULL_MODE_BACK;
-                rasterizerStateDesc.mFillMode = FILL_MODE_SOLID;
-
                 PipelineDesc pipelineDesc = {};
                 pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
                 auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
@@ -1381,14 +1473,42 @@ namespace hpl {
                 pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
                 pipelineSettings.pRootSignature = m_lightPassRootSignature;
                 pipelineSettings.pVertexLayout = &vertexLayout;
-
-                pipelineSettings.pDepthState = &depthStencilDesc;
-                pipelineSettings.pRasterizerState = &rasterizerStateDesc;
                 pipelineSettings.pShaderProgram = m_boxLightShader;
-                addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_boxLightPipeline);
+                createPipelineVariants(pipelineDesc, m_boxLightPipeline);
+            }
+
+
+            {
+                PipelineDesc pipelineDesc = {};
+                pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+                auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
+                pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+                pipelineSettings.mRenderTargetCount = colorFormats.size();
+                pipelineSettings.pColorFormats = colorFormats.data();
+                pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
+                pipelineSettings.mSampleQuality = 0;
+                pipelineSettings.pBlendState = &blendStateDesc;
+                pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
+                pipelineSettings.pRootSignature = m_lightPassRootSignature;
+                pipelineSettings.pVertexLayout = &vertexLayout;
+                pipelineSettings.pShaderProgram = m_spotLightShader;
+
+                createPipelineVariants(pipelineDesc, m_spotLightPipeline);
             }
 
             {
+
+                DepthStateDesc stencilDepthTest = {};
+                stencilDepthTest.mDepthTest = true;
+                stencilDepthTest.mDepthWrite = false;
+                stencilDepthTest.mStencilTest = true;
+                stencilDepthTest.mDepthFunc = CMP_GEQUAL;
+                stencilDepthTest.mStencilBackFunc = CMP_ALWAYS;
+                stencilDepthTest.mStencilBackPass = STENCIL_OP_KEEP;
+                stencilDepthTest.mStencilBackFail = STENCIL_OP_KEEP;
+                stencilDepthTest.mDepthBackFail = STENCIL_OP_REPLACE;
+                stencilDepthTest.mStencilWriteMask = 0xff;
+                stencilDepthTest.mStencilReadMask = 0xff;
 
                 RasterizerStateDesc rasterizerStateDesc{};
                 rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
@@ -1406,12 +1526,12 @@ namespace hpl {
                 pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
                 pipelineSettings.pRootSignature = m_lightPassRootSignature;
                 pipelineSettings.pVertexLayout = &vertexLayout;
-                pipelineSettings.pDepthState = &depthStencilDesc;
+                pipelineSettings.pDepthState = &stencilDepthTest;
                 pipelineSettings.pRasterizerState = &rasterizerStateDesc;
                 pipelineSettings.pShaderProgram = m_stencilLightShader;
                 addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_lightStencilPipeline);
             }
-
+            
             DescriptorSetDesc perFrameDescSet{m_lightPassRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, ForgeRenderer::SwapChainLength};
             addDescriptorSet(forgetRenderer->Rend(), &perFrameDescSet, &m_lightFrameSet);
             DescriptorSetDesc batchDescriptorSet{m_lightPassRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_BATCH, cRendererDeferred::MaxLightUniforms};
@@ -2518,14 +2638,16 @@ namespace hpl {
 
 
         {
-            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
-            std::array rtBarriers = {
-                RenderTargetBarrier{ currentGBuffer.m_colorBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
-                RenderTargetBarrier{ currentGBuffer.m_normalBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
-                RenderTargetBarrier{ currentGBuffer.m_positionBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
-                RenderTargetBarrier{ currentGBuffer.m_specularBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
-            };
-            cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+            {
+                cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+                std::array rtBarriers = {
+                    RenderTargetBarrier{ currentGBuffer.m_colorBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
+                    RenderTargetBarrier{ currentGBuffer.m_normalBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
+                    RenderTargetBarrier{ currentGBuffer.m_positionBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
+                    RenderTargetBarrier{ currentGBuffer.m_specularBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
+                };
+                cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+            }
 
             cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "GBuffer Pass");
                 
@@ -2565,7 +2687,7 @@ namespace hpl {
                     eMaterialTexture_CubeMapAlpha
                 };
 
-		        detail::cmdBindMaterialDescriptor(frame, pMaterial, textures, m_solidDescriptorSet.m_materialSet);
+                detail::cmdBindMaterialDescriptor(frame, pMaterial, textures, m_solidDescriptorSet.m_materialSet);
                 detail::cmdBindObjectDescriptor(frame, m_solidObjectIndex, apFrustum, pMaterial, diffuseItems, m_solidDescriptorSet.m_perObjectSet, perObjectOptions);
 
                 std::array targets = {
@@ -2582,34 +2704,60 @@ namespace hpl {
             }
             cmdEndDebugMarker(frame.m_cmd);
         }
+        {
+            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+            std::array rtBarriers = {
+                RenderTargetBarrier{ currentGBuffer.m_colorBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
+                RenderTargetBarrier{ currentGBuffer.m_normalBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
+                RenderTargetBarrier{ currentGBuffer.m_positionBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
+                RenderTargetBarrier{ currentGBuffer.m_specularBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
+                RenderTargetBarrier{currentGBuffer.m_outputBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET }
+            };
+            cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+        }
 
-        cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
-        std::array rtBarriers = {
-            RenderTargetBarrier{ currentGBuffer.m_colorBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
-            RenderTargetBarrier{ currentGBuffer.m_normalBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
-            RenderTargetBarrier{ currentGBuffer.m_positionBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
-            RenderTargetBarrier{ currentGBuffer.m_specularBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
-           RenderTargetBarrier{currentGBuffer.m_outputBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET }
-        };
-        cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+        // --------------- Decal Pass ---------------------------------- 
+        {
+            LoadActionsDesc loadActions = {};
+            loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
+            loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
+            std::array targets = {
+                currentGBuffer.m_outputBuffer.m_handle,
+            };
+            cmdBindRenderTargets(frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, NULL, NULL, -1, -1);    
+            cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)sharedData.m_size.x, (float)sharedData.m_size.y, 0.0f, 1.0f);
+            cmdSetScissor(frame.m_cmd, 0, 0, sharedData.m_size.x, sharedData.m_size.y);
 
+            cmdBindDescriptorSet(frame.m_cmd, 0, m_decalDescriptorSet.m_constSet);
+            // cmdBindDescriptorSet(frame.m_cmd, frame.m_frameIndex, m_decalDescriptorSet.m_frameSet);
 
+            for(auto& decalItem: mpCurrentRenderList->GetRenderableItems(eRenderListType_Decal)) {
+                cMaterial* pMaterial = decalItem->GetMaterial();
+                iVertexBuffer* vertexBuffer = decalItem->GetVertexBuffer();
+                if(pMaterial == nullptr || vertexBuffer == nullptr) {
+                    continue;
+                }
 
-        // // ------------------------------------------------------------------------------------
-        // //  Render Diffuse Pass render to color and depth
-        // // ------------------------------------------------------------------------------------
-        // {
-        //     detail::GBufferPassOptions args = {
-        //         .projectionFrustum = mainFrustumProj,
-        //         .viewFrustum = mainFrustumView,
-        //         .buffer = sharedData.m_gBuffer,
-        //         .name = "Gbuffer",
-        //     };
-        //     detail::RenderGBufferPass(
-        //         context, 
-        //         this,  
-        //         mpCurrentRenderList->GetRenderableItems(eRenderListType_Diffuse), viewport, args);
-        // }
+                std::array targets = {
+                    eVertexBufferElement_Position,
+                    eVertexBufferElement_Texture0,
+                    eVertexBufferElement_Color0
+                };
+
+                static constexpr eMaterialTexture textures[] = {
+                    eMaterialTexture_Diffuse
+                };
+                detail::cmdBindMaterialDescriptor(frame, pMaterial, textures, m_decalDescriptorSet.m_materialSet);
+                detail::cmdBindObjectDescriptor(frame, m_decalObjectIndex, apFrustum, pMaterial, decalItem, m_decalDescriptorSet.m_perObjectSet, perObjectOptions);
+
+                LegacyVertexBuffer::GeometryBinding binding;
+                static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(
+                    frame.m_currentFrame, targets, &binding);
+                detail::cmdDefaultLegacyGeomBinding(frame, binding);
+                cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+            }
+        }
+
 
         // // ------------------------------------------------------------------------------------
         // //  Render Decal Pass render to color and depth
@@ -2899,367 +3047,7 @@ namespace hpl {
             std::sort(deferredLightRenderBack.begin(), deferredLightRenderBack.end(), detail::SortDeferredLightDefault);
             std::sort(deferredLightStencilFrontRenderBack.begin(), deferredLightStencilFrontRenderBack.end(), detail::SortDeferredLightDefault);
 
-            // {
-            //     GraphicsContext::ViewConfiguration clearBackBufferView{ options.m_gBuffer.m_outputTarget };
-            //     clearBackBufferView.m_clear = { 0, 1, 0, ClearOp::Color };
-            //     clearBackBufferView.m_viewRect = {
-            //         0, 0, static_cast<uint16_t>(screenSize.x), static_cast<uint16_t>(screenSize.y)
-            //     };
-            //     bgfx::touch(context.StartPass("Clear Backbuffer", clearBackBufferView));
-            // }
-            // -----------------------------------------------
-            // Draw Box Lights
-            // -----------------------------------------------
-            // {
-            //     auto drawBoxLight = [&](bgfx::ViewId view, GraphicsContext::ShaderProgram& shaderProgram, detail::DeferredLight* light) {
-            //         GraphicsContext::LayoutStream layoutStream;
-            //         mpShapeBox->GetLayoutStream(layoutStream);
-            //         cLightBox* pLightBox = static_cast<cLightBox*>(light->m_light);
-
-            //         const auto& color = light->m_light->GetDiffuseColor();
-            //         float lightColor[4] = { color.r, color.g, color.b, color.a };
-            //         shaderProgram.m_handle = m_lightBoxProgram;
-            //         shaderProgram.m_textures.push_back({ m_s_diffuseMap, options.m_gBuffer.m_colorImage->GetHandle(), 0 });
-            //         shaderProgram.m_uniforms.push_back({ m_u_lightColor, lightColor });
-
-            //        shaderProgram.m_modelTransform = detail::GetLightMtx(*light).GetTranspose();
-
-            //         switch (pLightBox->GetBlendFunc()) {
-            //         case eLightBoxBlendFunc_Add:
-            //             shaderProgram.m_configuration.m_rgbBlendFunc =
-            //                 CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
-            //             shaderProgram.m_configuration.m_alphaBlendFunc =
-            //                 CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
-            //             break;
-            //         case eLightBoxBlendFunc_Replace:
-            //             break;
-            //         default:
-            //             BX_ASSERT(false, "Unknown blend func %d", pLightBox->GetBlendFunc());
-            //             break;
-            //         }
-
-            //         GraphicsContext::DrawRequest drawRequest{ layoutStream, shaderProgram };
-            //         context.Submit(view, drawRequest);
-            //     };
-
-            //     GraphicsContext::ViewConfiguration stencilFrontBackViewConfig{ options.m_gBuffer.m_outputTarget };
-            //     stencilFrontBackViewConfig.m_projection = options.frustumProjection;
-            //     stencilFrontBackViewConfig.m_view = options.frustumView;
-            //     stencilFrontBackViewConfig.m_clear = { 0, 1.0, 0, ClearOp::Stencil };
-            //     stencilFrontBackViewConfig.m_viewRect = {
-            //         0, 0, static_cast<uint16_t>(screenSize.x), static_cast<uint16_t>(screenSize.y)
-            //     };
-            //     const auto boxStencilPass = context.StartPass("eDeferredLightList_Box_StencilFront_RenderBack",
-            //     stencilFrontBackViewConfig); bgfx::setViewMode(boxStencilPass, bgfx::ViewMode::Sequential);
-
-            //     for (auto& light : deferredLightBoxStencilFront) {
-            //         {
-            //             GraphicsContext::ShaderProgram shaderProgram;
-            //             GraphicsContext::LayoutStream layoutStream;
-            //             mpShapeBox->GetLayoutStream(layoutStream);
-
-            //             shaderProgram.m_handle = m_nullShader;
-            //             shaderProgram.m_configuration.m_cull = Cull::CounterClockwise;
-            //             shaderProgram.m_configuration.m_depthTest = DepthTest::GreaterEqual;
-            //             shaderProgram.m_configuration.m_frontStencilTest = CreateStencilTest(
-            //                 StencilFunction::Always, StencilFail::Keep, StencilDepthFail::Replace, StencilDepthPass::Keep, 0xff, 0xff);
-
-            //             shaderProgram.m_modelTransform = detail::GetLightMtx(*light).GetTranspose();
-
-            //             GraphicsContext::DrawRequest drawRequest{ layoutStream, shaderProgram };
-            //             // drawRequest.m_clear =  GraphicsContext::ClearRequest{0, 0, 0, ClearOp::Stencil};
-            //             context.Submit(boxStencilPass, drawRequest);
-            //         }
-
-            //         {
-            //             GraphicsContext::ShaderProgram shaderProgram;
-            //             shaderProgram.m_configuration.m_cull = Cull::Clockwise;
-            //             shaderProgram.m_configuration.m_depthTest = DepthTest::GreaterEqual;
-            //             shaderProgram.m_configuration.m_write = Write::RGB;
-            //             shaderProgram.m_configuration.m_frontStencilTest = CreateStencilTest(
-            //                 StencilFunction::Equal, StencilFail::Zero, StencilDepthFail::Zero, StencilDepthPass::Zero, 0xff, 0xff);
-            //             drawBoxLight(boxStencilPass, shaderProgram, light);
-            //         }
-            //     }
-
-            //     GraphicsContext::ViewConfiguration boxLightConfig{ options.m_gBuffer.m_outputTarget };
-            //     boxLightConfig.m_projection = options.frustumProjection;
-            //     boxLightConfig.m_view = options.frustumView;
-            //     boxLightConfig.m_viewRect = { 0, 0, static_cast<uint16_t>(screenSize.x), static_cast<uint16_t>(screenSize.y) };
-            //     const auto boxLightBackPass = context.StartPass("eDeferredLightList_Box_RenderBack", boxLightConfig);
-            //     for (auto& light : deferredLightBoxRenderBack) {
-            //         GraphicsContext::ShaderProgram shaderProgram;
-            //         shaderProgram.m_configuration.m_cull = Cull::Clockwise;
-            //         shaderProgram.m_configuration.m_depthTest = DepthTest::GreaterEqual;
-            //         shaderProgram.m_configuration.m_write = Write::RGB;
-            //         drawBoxLight(boxLightBackPass, shaderProgram, light);
-            //     }
-            // }
-
-            // -----------------------------------------------
-            // Draw Point Lights
-            // Draw Spot Lights
-            // -----------------------------------------------
             {
-                // auto drawLight = [&](bgfx::ViewId pass, GraphicsContext::ShaderProgram& shaderProgram, detail::DeferredLight*
-                // apLightData) {
-                //     GraphicsContext::LayoutStream layoutStream;
-                //     GetLightShape(apLightData->m_light, eDeferredShapeQuality_High)->GetLayoutStream(layoutStream);
-                //     GraphicsContext::DrawRequest drawRequest{ layoutStream, shaderProgram };
-                //     switch (apLightData->m_light->GetLightType()) {
-                //     case eLightType_Point:
-                //         {
-                //             struct {
-                //                 float lightRadius;
-                //                 float pad[3];
-                //             } param = { 0 };
-                //             param.lightRadius = apLightData->m_light->GetRadius();
-                //             auto attenuationImage = apLightData->m_light->GetFalloffMap();
-
-                //             const auto modelViewMtx = cMath::MatrixMul(apFrustum->GetViewMatrix(),
-                //             apLightData->m_light->GetWorldMatrix()); const auto color = apLightData->m_light->GetDiffuseColor();
-                //             cVector3f lightViewPos = cMath::MatrixMul(modelViewMtx, detail::GetLightMtx(*apLightData)).GetTranslation();
-                //             float lightPosition[4] = { lightViewPos.x, lightViewPos.y, lightViewPos.z, 1.0f };
-                //             float lightColor[4] = { color.r, color.g, color.b, color.a };
-                //             cMatrixf mtxInvViewRotation =
-                //                 cMath::MatrixMul(apLightData->m_light->GetWorldMatrix(), options.frustumInvView).GetTranspose();
-
-                //             shaderProgram.m_uniforms.push_back({ m_u_lightPos, lightPosition });
-                //             shaderProgram.m_uniforms.push_back({ m_u_lightColor, lightColor });
-                //             shaderProgram.m_uniforms.push_back({ m_u_param, &param });
-                //             shaderProgram.m_uniforms.push_back({ m_u_mtxInvViewRotation, mtxInvViewRotation.v });
-
-                //             // shaderProgram.m_textures.push_back({ m_s_diffuseMap, options.m_gBuffer.m_colorImage->GetHandle(), 1 });
-                //             // shaderProgram.m_textures.push_back({ m_s_normalMap, options.m_gBuffer.m_normalImage->GetHandle(), 2 });
-                //             // shaderProgram.m_textures.push_back({ m_s_positionMap, options.m_gBuffer.m_positionImage->GetHandle(), 3
-                //             });
-                //             // shaderProgram.m_textures.push_back({ m_s_specularMap, options.m_gBuffer.m_specularImage->GetHandle(), 4
-                //             }); shaderProgram.m_textures.push_back({ m_s_attenuationLightMap, attenuationImage->GetHandle(), 5 });
-
-                //             uint32_t flags = 0;
-                //             if (apLightData->m_light->GetGoboTexture()) {
-                //                 flags |= rendering::detail::PointlightVariant_UseGoboMap;
-                //                 shaderProgram.m_textures.push_back({ m_s_goboMap, apLightData->m_light->GetGoboTexture()->GetHandle(), 0
-                //                 });
-                //             }
-                //             shaderProgram.m_handle = m_pointLightVariants.GetVariant(flags);
-                //             context.Submit(pass, drawRequest);
-                //             break;
-                //         }
-                //     case eLightType_Spot:
-                //         {
-                //             cLightSpot* pLightSpot = static_cast<cLightSpot*>(apLightData->m_light);
-                //             // Calculate and set the forward vector
-                //             cVector3f vForward = cVector3f(0, 0, 1);
-                //             vForward = cMath::MatrixMul3x3(apLightData->m_mtxViewSpaceTransform, vForward);
-
-                //             struct {
-                //                 float lightRadius;
-                //                 float lightForward[3];
-
-                //                 float oneMinusCosHalfSpotFOV;
-                //                 float shadowMapOffset[2];
-                //                 float pad;
-                //             } uParam = { apLightData->m_light->GetRadius(),
-                //                          { vForward.x, vForward.y, vForward.z },
-                //                          1 - pLightSpot->GetCosHalfFOV(),
-                //                          { 0, 0 },
-                //                          0
-
-                //             };
-                //             auto goboImage = apLightData->m_light->GetGoboTexture();
-                //             auto spotFallOffImage = pLightSpot->GetSpotFalloffMap();
-                //             auto spotAttenuationImage = pLightSpot->GetFalloffMap();
-
-                //             uint32_t flags = 0;
-                //             const auto modelViewMtx = cMath::MatrixMul(apFrustum->GetViewMatrix(),
-                //             apLightData->m_light->GetWorldMatrix()); const auto color = apLightData->m_light->GetDiffuseColor();
-                //             cVector3f lightViewPos = cMath::MatrixMul(modelViewMtx, detail::GetLightMtx(*apLightData)).GetTranslation();
-                //             float lightPosition[4] = { lightViewPos.x, lightViewPos.y, lightViewPos.z, 1.0f };
-                //             float lightColor[4] = { color.r, color.g, color.b, color.a };
-                //             cMatrixf spotViewProj = cMath::MatrixMul(pLightSpot->GetViewProjMatrix(),
-                //             options.frustumInvView).GetTranspose();
-
-                //             shaderProgram.m_uniforms.push_back({ m_u_lightPos, lightPosition });
-                //             shaderProgram.m_uniforms.push_back({ m_u_lightColor, lightColor });
-                //             shaderProgram.m_uniforms.push_back({ m_u_spotViewProj, &spotViewProj.v });
-
-                //             // shaderProgram.m_textures.push_back({ m_s_diffuseMap, options.m_gBuffer.m_colorImage->GetHandle(), 0 });
-                //             // shaderProgram.m_textures.push_back({ m_s_normalMap, options.m_gBuffer.m_normalImage->GetHandle(), 1 });
-                //             // shaderProgram.m_textures.push_back({ m_s_positionMap, options.m_gBuffer.m_positionImage->GetHandle(), 2
-                //             });
-                //             // shaderProgram.m_textures.push_back({ m_s_specularMap, options.m_gBuffer.m_specularImage->GetHandle(), 3
-                //             });
-
-                //             shaderProgram.m_textures.push_back({ m_s_attenuationLightMap, spotAttenuationImage->GetHandle(), 4 });
-                //             if (goboImage) {
-                //                 shaderProgram.m_textures.push_back({ m_s_goboMap, goboImage->GetHandle(), 5 });
-                //                 flags |= rendering::detail::SpotlightVariant_UseGoboMap;
-                //             } else {
-                //                 shaderProgram.m_textures.push_back({ m_s_spotFalloffMap, spotFallOffImage->GetHandle(), 5 });
-                //             }
-                //             auto& currentLight = apLightData->m_light;
-                //             BX_ASSERT(currentLight->GetLightType() == eLightType_Spot, "Only spot lights are supported for shadow
-                //             rendering")
-
-                //             cLightSpot* pSpotLight = static_cast<cLightSpot*>(currentLight);
-                //             cFrustum* pLightFrustum = pSpotLight->GetFrustum();
-
-                //             std::vector<iRenderable*> shadowCasters;
-                //             if (apLightData->m_castShadows &&
-                //                 detail::SetupShadowMapRendering(shadowCasters, apWorld, pLightFrustum, pLightSpot,
-                //                 mvCurrentOcclusionPlanes)) { flags |= rendering::detail::SpotlightVariant_UseShadowMap;
-                //                 eShadowMapResolution shadowMapRes = apLightData->m_shadowResolution;
-
-                //                 auto findBestShadowMap = [&](eShadowMapResolution resolution,
-                //                                              iLight* light) -> cRendererDeferred::ShadowMapData* {
-                //                     auto& shadowMapVec = m_shadowMapData[resolution];
-                //                     int maxFrameDistance = -1;
-                //                     size_t bestIndex = 0;
-                //                     for (size_t i = 0; i < shadowMapVec.size(); ++i) {
-                //                         auto& shadowMap = shadowMapVec[i];
-                //                         if (shadowMap.m_light == light) {
-                //                             shadowMap.m_frameCount = iRenderer::GetRenderFrameCount();
-                //                             return &shadowMap;
-                //                         }
-
-                //                         const int frameDist = cMath::Abs(shadowMap.m_frameCount - iRenderer::GetRenderFrameCount());
-                //                         if (frameDist > maxFrameDistance) {
-                //                             maxFrameDistance = frameDist;
-                //                             bestIndex = i;
-                //                         }
-                //                     }
-                //                     if (maxFrameDistance != -1) {
-                //                         shadowMapVec[bestIndex].m_frameCount = iRenderer::GetRenderFrameCount();
-                //                         return &shadowMapVec[bestIndex];
-                //                     }
-                //                     return nullptr;
-                //                 };
-                //                 auto* shadowMapData = findBestShadowMap(shadowMapRes, currentLight);
-                //                 if (!shadowMapData) {
-                //                     // No shadow map available
-                //                     BX_ASSERT(false, "No shadow map available");
-                //                     break;
-                //                 }
-                //                 const auto shadowMapSize = shadowMapData->m_target.GetImage()->GetImageSize();
-                //                 // testing if the shadow map needs to be updated
-                //                 if ([&]() -> bool {
-                //                         // Check if texture map and light are valid
-                //                         if (currentLight->GetOcclusionCullShadowCasters()) {
-                //                             return true;
-                //                         }
-
-                //                         if (currentLight->GetLightType() == eLightType_Spot &&
-                //                             (pSpotLight->GetAspect() != shadowMapData->m_aspect ||
-                //                              pSpotLight->GetFOV() != shadowMapData->m_fov)) {
-                //                             return true;
-                //                         }
-                //                         return !currentLight->ShadowCastersAreUnchanged(shadowCasters);
-                //                     }()) {
-                //                     shadowMapData->m_light = currentLight;
-                //                     shadowMapData->m_transformCount = currentLight->GetTransformUpdateCount();
-                //                     shadowMapData->m_radius = currentLight->GetRadius();
-
-                //                     if (currentLight->GetLightType() == eLightType_Spot) {
-                //                         shadowMapData->m_aspect = pSpotLight->GetAspect();
-                //                         shadowMapData->m_fov = pSpotLight->GetFOV();
-                //                     }
-                //                     currentLight->SetShadowCasterCacheFromVec(shadowCasters);
-
-                //                     GraphicsContext::ViewConfiguration shadowPassViewConfig{ shadowMapData->m_target };
-                //                     shadowPassViewConfig.m_clear = { 0, 1.0, 0, ClearOp::Depth };
-                //                     shadowPassViewConfig.m_view = pLightFrustum->GetViewMatrix().GetTranspose();
-                //                     shadowPassViewConfig.m_projection = pLightFrustum->GetProjectionMatrix().GetTranspose();
-                //                     shadowPassViewConfig.m_viewRect = {
-                //                         0, 0, static_cast<uint16_t>(shadowMapSize.x), static_cast<uint16_t>(shadowMapSize.y)
-                //                     };
-                //                     bgfx::ViewId view = context.StartPass("Shadow Pass", shadowPassViewConfig);
-                //                     for (auto& shadowCaster : shadowCasters) {
-                //                         rendering::detail::RenderZPassObject(
-                //                             view,
-                //                             context,
-                //                             viewport,
-                //                             this,
-                //                             shadowCaster,
-                //                             pLightFrustum->GetInvertsCullMode() ? Cull::Clockwise : Cull::CounterClockwise);
-                //                     }
-                //                 }
-                //                 uParam.shadowMapOffset[0] = 1.0f / shadowMapSize.x;
-                //                 uParam.shadowMapOffset[1] = 1.0f / shadowMapSize.y;
-                //                 if (m_shadowJitterImage) {
-                //                     shaderProgram.m_textures.push_back({ m_s_shadowOffsetMap, m_shadowJitterImage->GetHandle(), 7 });
-                //                 }
-                //                 shaderProgram.m_textures.push_back({ m_s_shadowMap, shadowMapData->m_target.GetImage()->GetHandle(), 6
-                //                 });
-                //             }
-                //             shaderProgram.m_uniforms.push_back({ m_u_param, &uParam, 2 });
-                //             shaderProgram.m_handle = m_spotlightVariants.GetVariant(flags);
-
-                //             context.Submit(pass, drawRequest);
-                //             break;
-                //         }
-                //     default:
-                //         break;
-                //     }
-                // };
-
-                // GraphicsContext::ViewConfiguration viewConfig{ options.m_gBuffer.m_outputTarget };
-                // viewConfig.m_viewRect = { 0, 0, screenSize.x, screenSize.y };
-                // viewConfig.m_projection = options.frustumProjection;
-                // viewConfig.m_view = options.frustumView;
-                // const auto lightStencilBackPass = context.StartPass("eDeferredLightList_StencilFront_RenderBack", viewConfig);
-                // bgfx::setViewMode(lightStencilBackPass, bgfx::ViewMode::Sequential);
-
-                // for (auto& light : deferredLightStencilFrontRenderBack) {
-                //     {
-                //         GraphicsContext::ShaderProgram shaderProgram;
-                //         GraphicsContext::LayoutStream layoutStream;
-
-                //         GetLightShape(light->m_light, eDeferredShapeQuality_Medium)->GetLayoutStream(layoutStream);
-
-                //         shaderProgram.m_handle = m_nullShader;
-                //         shaderProgram.m_configuration.m_cull = Cull::CounterClockwise;
-                //         shaderProgram.m_configuration.m_depthTest = DepthTest::GreaterEqual;
-
-                //         shaderProgram.m_modelTransform =
-                //             cMath::MatrixMul(light->m_light->GetWorldMatrix(), detail::GetLightMtx(*light)).GetTranspose();
-
-                //         shaderProgram.m_configuration.m_frontStencilTest = CreateStencilTest(
-                //             StencilFunction::Always, StencilFail::Keep, StencilDepthFail::Replace, StencilDepthPass::Keep, 0xff, 0xff);
-
-                //         GraphicsContext::DrawRequest drawRequest{ layoutStream, shaderProgram };
-                //         // drawRequest.m_clear =  GraphicsContext::ClearRequest{0, 0, 0, ClearOp::Stencil};
-                //         // drawRequest.m_width = mvScreenSize.x;
-                //         // drawRequest.m_height = mvScreenSize.y;
-                //         // if(bgfx::isValid(light->m_occlusionQuery)) {
-                //         // 	bgfx::setCondition(light->m_occlusionQuery, true);
-                //         // }
-                //         context.Submit(lightStencilBackPass, drawRequest);
-                //     }
-                //     {
-                //         GraphicsContext::ShaderProgram shaderProgram;
-                //         shaderProgram.m_configuration.m_cull = Cull::Clockwise;
-                //         shaderProgram.m_configuration.m_write = Write::RGB;
-                //         shaderProgram.m_configuration.m_depthTest = DepthTest::GreaterEqual;
-                //         shaderProgram.m_configuration.m_frontStencilTest = CreateStencilTest(
-                //             StencilFunction::Equal, StencilFail::Zero, StencilDepthFail::Zero, StencilDepthPass::Zero, 0xff, 0xff);
-                //         shaderProgram.m_configuration.m_rgbBlendFunc =
-                //             CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
-                //         shaderProgram.m_configuration.m_alphaBlendFunc =
-                //             CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
-
-                //         shaderProgram.m_modelTransform =
-                //             cMath::MatrixMul(light->m_light->GetWorldMatrix(), detail::GetLightMtx(*light)).GetTranspose();
-
-                //         drawLight(lightStencilBackPass, shaderProgram, light);
-                //     }
-                // }
-
-                // GraphicsContext::ViewConfiguration lightBackPassConfig{ options.m_gBuffer.m_outputTarget };
-                // lightBackPassConfig.m_projection = options.frustumProjection;
-                // lightBackPassConfig.m_view = options.frustumView;
-                // lightBackPassConfig.m_viewRect = { 0, 0, screenSize.x, screenSize.y };
-                // const auto lightBackPass = context.StartPass("eDeferredLightList_RenderBack", lightBackPassConfig);
                 cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "Point Light Deferred Back");
                 
                 LoadActionsDesc loadActions = {};
@@ -3299,16 +3087,22 @@ namespace hpl {
                     size_t paramCount = 0;
                     LightUniformData uniformObjectData = {};
                     GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(m_lightPassRingBuffer, sizeof(LightUniformData));
+    
+                    const auto modelViewMtx = cMath::MatrixMul(apFrustum->GetViewMatrix(), light->m_light->GetWorldMatrix());
+                    auto viewProjectionMat = cMath::MatrixMul(mainFrustumProj, mainFrustumView);
+
+                    uniformObjectData.m_common.m_mvp = cMath::ToForgeMat4(
+                        cMath::MatrixMul(viewProjectionMat, 
+                        cMath::MatrixMul(light->m_light->GetWorldMatrix(), detail::GetLightMtx(*light))).GetTranspose());
 
                     switch (light->m_light->GetLightType()) {
                         case eLightType_Point: {
-                            const auto modelViewMtx = cMath::MatrixMul(apFrustum->GetViewMatrix(), light->m_light->GetWorldMatrix());
                             cVector3f lightViewPos = cMath::MatrixMul(modelViewMtx, detail::GetLightMtx(*light)).GetTranslation();
                             const auto color = light->m_light->GetDiffuseColor();
 
                             if (light->m_light->GetGoboTexture()) {
                                 uniformObjectData.m_common.m_config |= LightConfiguration::HasGoboMap;
-                                params[paramCount].pName = "goboMap";
+                                params[paramCount].pName = "goboCubeMap";
                                 params[paramCount++].ppTextures = &light->m_light->GetGoboTexture()->GetTexture().m_handle;
                             }
 
@@ -3318,14 +3112,42 @@ namespace hpl {
                             cMatrixf mtxInvViewRotation =
                                 cMath::MatrixMul(light->m_light->GetWorldMatrix(), mainFrustumViewInv).GetTranspose();
                             uniformObjectData.m_pointLight.m_invViewRotation = cMath::ToForgeMat4(mtxInvViewRotation);
-                            uniformObjectData.m_pointLight.m_common.m_mvp =
-                                cMath::ToForgeMat4(cMath::MatrixMul(mainFrustumProj, modelViewMtx));
                             break;
                         }
                         case eLightType_Spot: {
+                            cLightSpot* pLightSpot = static_cast<cLightSpot*>(light->m_light);
+                            cMatrixf spotViewProj = cMath::MatrixMul(pLightSpot->GetViewProjMatrix(), mainFrustumViewInv).GetTranspose();
+                            cVector3f forward  = cMath::MatrixMul3x3(light->m_mtxViewSpaceTransform, cVector3f(0,0,1));
+                            cVector3f lightViewPos = cMath::MatrixMul(modelViewMtx, detail::GetLightMtx(*light)).GetTranslation();
+                            const auto color = pLightSpot->GetDiffuseColor();
+
+                            uniformObjectData.m_spotLight.m_spotViewProj = cMath::ToForgeMat4(spotViewProj);
+                            uniformObjectData.m_spotLight.m_oneMinusCosHalfSpotFOV = 1 - pLightSpot->GetCosHalfFOV();
+                            uniformObjectData.m_spotLight.m_radius = light->m_light->GetRadius();
+                            uniformObjectData.m_spotLight.m_forward = float3(forward.x,forward.y,forward.z);
+                            uniformObjectData.m_spotLight.m_color = float4(color.r, color.g, color.b, color.a);
+                            uniformObjectData.m_spotLight.m_pos = float3(lightViewPos.x, lightViewPos.y, lightViewPos.z);
+
+                            auto goboImage = light->m_light->GetGoboTexture();
+                            auto spotFallOffImage = pLightSpot->GetSpotFalloffMap();
+                            auto spotAttenuationImage = pLightSpot->GetFalloffMap();
+                            if (goboImage) {
+                                uniformObjectData.m_common.m_config |= LightConfiguration::HasGoboMap;
+                                params[paramCount].pName = "goboMap";
+                                params[paramCount++].ppTextures = &light->m_light->GetGoboTexture()->GetTexture().m_handle;
+                            } else {
+                                params[paramCount].pName = "falloffMap";
+                                params[paramCount++].ppTextures = &spotFallOffImage->GetTexture().m_handle;
+                            }
+                            params[paramCount].pName = "attenuationLightMap";
+                            params[paramCount++].ppTextures = &spotAttenuationImage->GetTexture().m_handle;
+
                             break;
                         }
                         case eLightType_Box: {
+                            cLightBox* pLightBox = static_cast<cLightBox*>(light->m_light);
+                            const auto& color = light->m_light->GetDiffuseColor();
+                            uniformObjectData.m_boxLight.m_lightColor = float4(color.r, color.g, color.b, color.a);
                             break;
                         }
                         default: {
@@ -3349,6 +3171,36 @@ namespace hpl {
                     m_lightObjectIndex = (m_lightObjectIndex + 1) % MaxLightUniforms;
                 };
 
+                {
+                    LegacyVertexBuffer::GeometryBinding binding{};
+                    std::array targets = { eVertexBufferElement_Position };
+                    static_cast<LegacyVertexBuffer*>(mpShapeBox)
+                            ->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
+                    detail::cmdDefaultLegacyGeomBinding(frame, binding); // bind box vertex buffer
+
+                    cmdSetStencilReferenceValue(frame.m_cmd, 0xff);
+                    for (auto& light : deferredLightBoxStencilFront) {
+                        cmdBindLightDescriptor(light);
+                        cmdBindPipeline(frame.m_cmd, m_lightStencilPipeline);
+                        cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+                        cmdBindPipeline(frame.m_cmd, m_boxLightPipeline[LightPipelineVariants::LightPipelineVariant_Back | LightPipelineVariants::LightPipelineVariant_StencilTest]);
+                        cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+                    }
+
+
+                    cmdBindPipeline(frame.m_cmd, m_boxLightPipeline[LightPipelineVariants::LightPipelineVariant_Back]);
+                    for (auto& light : deferredLightBoxRenderBack) {
+                        cmdBindLightDescriptor(light);
+                        cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+                    }
+                }
+            
+
+                // --------------------------------------------------------
+                // Draw Point Lights
+                // Draw Spot Lights
+                // --------------------------------------------------------
+                cmdSetStencilReferenceValue(frame.m_cmd, 0xff);
                 for (auto& light : deferredLightStencilFrontRenderBack) {
                     std::array targets = { eVertexBufferElement_Position };
                     LegacyVertexBuffer::GeometryBinding binding{};
@@ -3361,26 +3213,25 @@ namespace hpl {
 
                     switch (light->m_light->GetLightType()) {
                         case eLightType_Point:
-                            cmdBindPipeline(frame.m_cmd, m_pointLightPipeline);
+                            cmdBindPipeline(frame.m_cmd, m_pointLightPipeline[LightPipelineVariants::LightPipelineVariant_Back | LightPipelineVariants::LightPipelineVariant_StencilTest]);
                             break;
                         case eLightType_Spot:
-                            cmdBindPipeline(frame.m_cmd, m_pointLightPipeline);
+                            cmdBindPipeline(frame.m_cmd, m_spotLightPipeline[LightPipelineVariants::LightPipelineVariant_Back | LightPipelineVariants::LightPipelineVariant_StencilTest]);
                             break;
                         default:
                             ASSERT(false && "Unsupported light type");
                             break;
                     }
                     cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
-
                 }
 
                 for (auto& light : deferredLightRenderBack) {
                     switch (light->m_light->GetLightType()) {
                         case eLightType_Point:
-                            cmdBindPipeline(frame.m_cmd, m_pointLightPipeline);
+                            cmdBindPipeline(frame.m_cmd, m_pointLightPipeline[LightPipelineVariants::LightPipelineVariant_Back]);
                             break;
                         case eLightType_Spot:
-                            cmdBindPipeline(frame.m_cmd, m_pointLightPipeline);
+                            cmdBindPipeline(frame.m_cmd, m_spotLightPipeline[LightPipelineVariants::LightPipelineVariant_Back]);
                             break;
                         default:
                             ASSERT(false && "Unsupported light type");

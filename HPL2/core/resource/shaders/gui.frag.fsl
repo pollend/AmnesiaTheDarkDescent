@@ -8,6 +8,7 @@ STRUCT(PsIn)
     DATA(float4, Color, COLOR);
 };
 
+
 float4 PS_MAIN(PsIn In)
 {
     INIT_MAIN;

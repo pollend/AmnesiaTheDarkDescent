@@ -11,12 +11,10 @@
 
 #include "absl/container/inlined_vector.h"
 
-#include "graphics/GraphicsTypes.h"
-
 #include <engine/RTTI.h>
 
-#include "windowing/NativeWindow.h"
 #include "graphics/ForgeHandles.h"
+#include "windowing/NativeWindow.h"
 
 #include "Common_3/Graphics/Interfaces/IGraphics.h"
 #include "Common_3/Resources/ResourceLoader/Interfaces/IResourceLoader.h"
@@ -25,9 +23,22 @@
 namespace hpl {
     class cMaterial;
     class ForgeRenderer;
+    
+    struct AmnesiaBlend {
+        BlendMode mode;
+        BlendConstant src;
+        BlendConstant dst;
+    };
+    static std::array<AmnesiaBlend, eMaterialBlendMode_LastEnum> AmnesiaBlendTable = ([]() {
+        std::array<AmnesiaBlend, eMaterialBlendMode_LastEnum> result{};
+        result[eMaterialBlendMode_Add] = {BM_ADD, BC_ONE, BC_ONE};
+        result[eMaterialBlendMode_Mul] = {BM_ADD, BC_ZERO, BC_SRC_COLOR};
+        result[eMaterialBlendMode_MulX2] = {BM_ADD, BC_DST_COLOR, BC_SRC_COLOR};
+        result[eMaterialBlendMode_Alpha] = {BM_ADD, BC_SRC_ALPHA, BC_ONE_MINUS_SRC_ALPHA};
+        result[eMaterialBlendMode_PremulAlpha] = {BM_ADD, BC_ONE, BC_ONE_MINUS_SRC_ALPHA};
+        return result;
+    })();
 
-
-    //TODO: rename this
     class ForgeRenderer final {
         HPL_RTTI_CLASS(ForgeRenderer, "{66526c65-ad10-4a59-af06-103f34d1cb57}")
     public:
@@ -142,4 +153,4 @@ namespace hpl {
         uint32_t m_swapChainIndex = 0;
     };
 
-}
+} // namespace hpl

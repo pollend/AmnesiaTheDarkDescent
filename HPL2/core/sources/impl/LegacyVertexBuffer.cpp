@@ -138,7 +138,6 @@ namespace hpl {
         std::span<const float> values, eVertexBufferElement elementType, std::span<LegacyVertexBuffer::VertexElement> elements) {
         for (auto& element : elements) {
             if (element.m_type == elementType) {
-                element.m_rebuild = true;
                 auto& buffer = element.m_shadowData;
                 switch (element.m_format) {
                 case eVertexBufferElementFormat_Float:
@@ -187,22 +186,25 @@ namespace hpl {
     }
 
     void LegacyVertexBuffer::AddVertexVec3f(eVertexBufferElement aElement, const cVector3f& avVtx) {
+        m_updateFlags |= GetVertexElementFlagFromEnum(aElement);
         PushVertexElements(
             std::span(std::begin(avVtx.v), std::end(avVtx.v)), aElement, std::span(m_vertexElements.begin(), m_vertexElements.end()));
     }
 
     void LegacyVertexBuffer::AddVertexVec4f(eVertexBufferElement aElement, const cVector3f& avVtx, float afW) {
+        m_updateFlags |= GetVertexElementFlagFromEnum(aElement);
         PushVertexElements(
             std::span(std::begin(avVtx.v), std::end(avVtx.v)), aElement, std::span(m_vertexElements.begin(), m_vertexElements.end()));
     }
 
     void LegacyVertexBuffer::AddVertexColor(eVertexBufferElement aElement, const cColor& aColor) {
+        m_updateFlags |= GetVertexElementFlagFromEnum(aElement);
         PushVertexElements(
             std::span(std::begin(aColor.v), std::end(aColor.v)), aElement, std::span(m_vertexElements.begin(), m_vertexElements.end()));
     }
 
     void LegacyVertexBuffer::AddIndex(unsigned int alIndex) {
-        m_rebuildIndices = true;
+        m_updateIndices = true;
         m_indices.push_back(alIndex);
     }
 
@@ -350,43 +352,13 @@ namespace hpl {
                 reinterpret_cast<float*>(normalElement->m_shadowData.data()),
                 positionElement->NumElements());
         }
-        SyncToken token = {};
+        // SyncToken token = {};
 
         
         for (auto& element : m_vertexElements) {
-            element.m_buffer.TryFree();
-            element.m_rebuild = false;
-            BufferLoadDesc loadDesc = {};
-            loadDesc.ppBuffer = &element.m_buffer.m_handle;
-            loadDesc.mDesc.mDescriptors = DESCRIPTOR_TYPE_VERTEX_BUFFER;
-            loadDesc.mDesc.mMemoryUsage = detail::toMemoryUsage(mUsageType);
-
-            if(detail::IsDynamicMemory(mUsageType)) {
-                loadDesc.mDesc.mSize = element.m_shadowData.size() * ForgeRenderer::SwapChainLength;
-            } else {
-                loadDesc.mDesc.mSize = element.m_shadowData.size();
-            }
-            loadDesc.pData = element.m_shadowData.data();
-            addResource(&loadDesc, &token);
-            element.m_buffer.Initialize();
+            m_updateFlags |= element.m_flag;
         }
-
-        m_rebuildIndices = false;
-        m_indexBuffer.TryFree();
-        BufferLoadDesc loadDesc = {};
-        loadDesc.ppBuffer = &m_indexBuffer.m_handle;
-        loadDesc.mDesc.mDescriptors = DESCRIPTOR_TYPE_INDEX_BUFFER;
-        loadDesc.mDesc.mMemoryUsage = detail::toMemoryUsage(mUsageType);
-        if(detail::IsDynamicMemory(mUsageType)) {
-            // we need to multiply by the swapchain length to account for the fact that we have a buffer per swapchain
-            loadDesc.mDesc.mSize = m_indices.size() * sizeof(uint32_t) *  ForgeRenderer::SwapChainLength;
-        } else {
-            loadDesc.mDesc.mSize = m_indices.size() * sizeof(uint32_t);
-        }
-        loadDesc.pData = m_indices.data();
-        addResource(&loadDesc, &token);
-        m_indexBuffer.Initialize();
-        waitForToken(&token);
+        m_updateIndices = true;
         return true;
     }
 
@@ -434,13 +406,13 @@ namespace hpl {
             return element.m_type == aElement;
         });
         if (element != m_vertexElements.end()) {
-            element->m_rebuild = true;
+            m_updateFlags |= element->m_flag;
             element->m_shadowData.resize(alSize * GetSizeFromHPL(element->m_format));
         }
     }
 
     void LegacyVertexBuffer::ResizeIndices(int alSize) {
-        m_rebuildIndices = true;
+        m_updateIndices = true;
         m_indices.resize(alSize);
     }
 
@@ -533,75 +505,73 @@ namespace hpl {
 
     void LegacyVertexBuffer::resolveGeometryBinding(
         uint32_t frameIndex, std::span<eVertexBufferElement> elements, GeometryBinding* binding) {
-        if (m_updateIndices || m_updateFlags) {
-            if (m_frameIndex != frameIndex) {
-                m_bufferIndex = (m_bufferIndex + 1) % ForgeRenderer::SwapChainLength;
-                m_frameIndex = frameIndex;
-            }
-
-            SyncToken token = {};
-            const bool isDynamicAccess = detail::IsDynamicMemory(mUsageType);
+        if(m_updateFlags) {
             for (auto& element : m_vertexElements) {
-                if (m_updateFlags & element.m_flag || element.m_rebuild) {
-                    if (!isDynamicAccess || element.m_rebuild) {
-                        element.m_rebuild = false;
-                        element.m_buffer.TryFree();
+                const bool isDynamicAccess = detail::IsDynamicMemory(mUsageType);
+                const bool isUpdate = (m_updateFlags & element.m_flag) > 0;
+                if (isUpdate) {
+                    element.m_activeCopy = isDynamicAccess ? ((element.m_activeCopy + 1) % ForgeRenderer::SwapChainLength) : 0;
+                    size_t minimumSize = element.m_shadowData.size() * (isDynamicAccess ? ForgeRenderer::SwapChainLength: 1);
+                    if (!isDynamicAccess || element.m_buffer.m_handle == nullptr || element.m_buffer.m_handle->mSize > minimumSize) {
+                        
                         BufferLoadDesc loadDesc = {};
                         loadDesc.ppBuffer = &element.m_buffer.m_handle;
                         loadDesc.mDesc.mDescriptors = DESCRIPTOR_TYPE_VERTEX_BUFFER;
                         loadDesc.mDesc.mMemoryUsage = detail::toMemoryUsage(mUsageType);
+                        loadDesc.mDesc.mSize = minimumSize;
                         if (detail::IsDynamicMemory(mUsageType)) {
-                            loadDesc.mDesc.mSize = element.m_shadowData.size() * ForgeRenderer::SwapChainLength;
+                            loadDesc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
                         } else {
-                            loadDesc.mDesc.mSize = element.m_shadowData.size();
+                            loadDesc.pData = element.m_shadowData.data();
                         }
-                        loadDesc.pData = element.m_shadowData.data();
-                        addResource(&loadDesc, &token);
+
+                        element.m_buffer.TryFree();
+                        addResource(&loadDesc, nullptr);
                         element.m_buffer.Initialize();
                     }
                     if (isDynamicAccess) {
                         ASSERT(element.m_buffer.IsValid() && "Buffer not initialized");
                         BufferUpdateDesc updateDesc = { element.m_buffer.m_handle };
                         updateDesc.mSize = element.m_shadowData.size();
-                        updateDesc.mDstOffset = m_bufferIndex * updateDesc.mSize;
+                        updateDesc.mDstOffset = element.m_activeCopy * updateDesc.mSize;
                         beginUpdateResource(&updateDesc);
-                        memcpy(updateDesc.pMappedData, element.m_shadowData.data(), element.m_shadowData.size());
-                        endUpdateResource(&updateDesc, &token);
+                        std::copy(element.m_shadowData.begin(), element.m_shadowData.end(), reinterpret_cast<uint8_t*>(updateDesc.pMappedData));
+                        endUpdateResource(&updateDesc, nullptr);
                     }
                 }
             }
-            if (m_updateIndices || m_rebuildIndices) {
-                if (!isDynamicAccess || m_rebuildIndices) {
-                    m_rebuildIndices = false;
-                    m_indexBuffer.TryFree();
-                    BufferLoadDesc loadDesc = {};
-                    loadDesc.ppBuffer = &m_indexBuffer.m_handle;
-                    loadDesc.mDesc.mDescriptors = DESCRIPTOR_TYPE_INDEX_BUFFER;
-                    loadDesc.mDesc.mMemoryUsage = detail::toMemoryUsage(mUsageType);
-                    if (isDynamicAccess) {
-                        loadDesc.mDesc.mSize = m_indices.size() * ForgeRenderer::SwapChainLength * sizeof(uint32_t);
-                    } else {
-                        loadDesc.mDesc.mSize = m_indices.size() * sizeof(uint32_t);
-                    }
-                    loadDesc.pData = m_indices.data();
-                    addResource(&loadDesc, &token);
-                    m_indexBuffer.Initialize();
-                }
+            m_updateFlags = 0;
+        }
+        if (m_updateIndices) {
+            const bool isDynamicAccess = detail::IsDynamicMemory(mUsageType);
+            size_t minimumSize = m_indices.size() * (isDynamicAccess ? ForgeRenderer::SwapChainLength : 1) * sizeof(uint32_t);
+            if (!isDynamicAccess || m_indexBuffer.m_handle == nullptr || m_indexBuffer.m_handle->mSize > minimumSize) {
+                m_indexBuffer.TryFree();
+                BufferLoadDesc loadDesc = {};
+                loadDesc.ppBuffer = &m_indexBuffer.m_handle;
+                loadDesc.mDesc.mDescriptors = DESCRIPTOR_TYPE_INDEX_BUFFER;
+                loadDesc.mDesc.mMemoryUsage = detail::toMemoryUsage(mUsageType);
+                loadDesc.mDesc.mSize = minimumSize;
                 if (isDynamicAccess) {
-                    ASSERT(m_indexBuffer.IsValid() && "Buffer not initialized");
-                    BufferUpdateDesc updateDesc = { m_indexBuffer.m_handle };
-                    updateDesc.mSize = m_indices.size() * sizeof(uint32_t);
-                    updateDesc.mDstOffset = m_bufferIndex * m_indices.size() * sizeof(uint32_t);
-                    beginUpdateResource(&updateDesc);
-                    memcpy(updateDesc.pMappedData, m_indices.data(), m_indices.size() * sizeof(uint32_t));
-                    endUpdateResource(&updateDesc, &token);
+                    loadDesc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
+                } else {
+                    loadDesc.pData = m_indices.data();
                 }
+                addResource(&loadDesc, nullptr);
+                m_indexBuffer.Initialize();
+            }
+            if (isDynamicAccess) {
+                ASSERT(m_indexBuffer.IsValid() && "Buffer not initialized");
+                m_indexBufferActiveCopy = isDynamicAccess ? ((m_indexBufferActiveCopy + 1) % ForgeRenderer::SwapChainLength) : 0;
+                
+                BufferUpdateDesc updateDesc = { m_indexBuffer.m_handle };
+                updateDesc.mSize =  m_indices.size() * sizeof(uint32_t);
+                updateDesc.mDstOffset = m_indexBufferActiveCopy * updateDesc.mSize;
+                beginUpdateResource(&updateDesc);
+                std::copy(m_indices.begin(), m_indices.end(), reinterpret_cast<uint32_t*>(updateDesc.pMappedData));
+                endUpdateResource(&updateDesc, nullptr);
             }
             m_updateIndices = false;
-            m_updateFlags = 0;
-            m_frameIndex = frameIndex;
-
-            // waitForToken(&token);
         }
 
         // GeometryBinding binding = {};
@@ -613,10 +583,10 @@ namespace hpl {
                 ASSERT(false && "failed to bind vertex buffer");
                 return;
             }
-            binding->m_vertexElement.push_back({found, m_bufferIndex * found->m_shadowData.size() });
+            binding->m_vertexElement.push_back({found, found->m_activeCopy * found->m_shadowData.size() });
         }
         binding->m_indexBuffer = {
-            &m_indexBuffer, m_bufferIndex * m_indices.size() * sizeof(uint32_t), static_cast<uint32_t>(m_indices.size())
+            &m_indexBuffer, m_indexBufferActiveCopy * m_indices.size() * sizeof(uint32_t), static_cast<uint32_t>(m_indices.size())
         };
     }
 

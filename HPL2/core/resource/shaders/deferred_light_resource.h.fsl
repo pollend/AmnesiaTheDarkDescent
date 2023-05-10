@@ -11,51 +11,56 @@ RES(Tex2D(float2), specularMap, UPDATE_FREQ_PER_FRAME, t4, binding = 4);
 
 
 #ifdef LIGHT_COMMON
-CBUFFER(uniformObjectBlock, UPDATE_FREQ_PER_BATCH, b1, binding = 5)
-{
-    DATA(int, config, None);
-    DATA(float4x4, mvp, None);
-};
+    CBUFFER(uniformObjectBlock, UPDATE_FREQ_PER_BATCH, b1, binding = 5)
+    {
+        DATA(int, config, None);
+        DATA(float4x4, mvp, None);
+    };
 #elif defined(BOX_LIGHT)
-CBUFFER(uniformObjectBlock, UPDATE_FREQ_PER_BATCH, b1, binding = 5)
-{
-    DATA(int, config, None);
-    DATA(float4x4, mvp, None);
-    DATA(float4, lightColor, None);
-};
+    CBUFFER(uniformObjectBlock, UPDATE_FREQ_PER_BATCH, b1, binding = 5)
+    {
+        DATA(int, config, None);
+        DATA(float4x4, mvp, None);
+        DATA(float4, lightColor, None);
+    };
 #elif defined(SPOT_LIGHT)
-CBUFFER(uniformObjectBlock, UPDATE_FREQ_PER_BATCH, b1, binding = 5)
-{
-    // common data make sure to match with LIGHT_COMMON
-    DATA(int, config, None);
-    DATA(float4x4, mvp, None);
+    CBUFFER(uniformObjectBlock, UPDATE_FREQ_PER_BATCH, b1, binding = 5)
+    {
+        // common data make sure to match with LIGHT_COMMON
+        DATA(int, config, None);
+        DATA(float4x4, mvp, None);
+        DATA(float4x4, spotViewProj, None);
+        DATA(float4, lightColor, None);
+        DATA(float3, lightForward, None);
+        DATA(float, lightRadius, None);
+        DATA(float3, lightPos, None);
+        DATA(float, oneMinusCosHalfSpotFov, None);
 
-    DATA(float, lightRadius, None);
-    DATA(float3, lightPos, None);
-    DATA(float4, lightColor, None);
-    DATA(float4x4, invViewRotation, None);
-};
+        // DATA(float2, shadowMapOffsetMul, None);
+    };
 #elif defined(POINT_LIGHT)
-CBUFFER(uniformObjectBlock, UPDATE_FREQ_PER_BATCH, b1, binding = 5)
-{
-    // common data make sure to match with LIGHT_COMMON
-    DATA(int, config, None);
-    DATA(float4x4, mvp, None);
+    CBUFFER(uniformObjectBlock, UPDATE_FREQ_PER_BATCH, b1, binding = 5)
+    {
+        // common data make sure to match with LIGHT_COMMON
+        DATA(int, config, None);
+        DATA(float4x4, mvp, None);
 
-    DATA(float, lightRadius, None);
-    DATA(float3, lightPos, None);
-    DATA(float4, lightColor, None);
-    DATA(float4x4, invViewRotation, None);
-};
+        DATA(float3, lightPos, None);
+        DATA(float, lightRadius, None);
+        DATA(float4, lightColor, None);
+        DATA(float4x4, invViewRotation, None);
+    };
 #else
- #error not defined
+    #error not defined
 #endif
 
-RES(SamplerState, nearestSampler, UPDATE_FREQ_NONE, s1, binding = 8);
+RES(SamplerState, nearestSampler, UPDATE_FREQ_PER_BATCH, s1, binding = 8);
 
-RES(Tex2D(float4), attenuationLightMap, UPDATE_FREQ_PER_BATCH, t5, binding = 9);
-RES(TexCube(float4), goboMap, UPDATE_FREQ_PER_BATCH, t7, binding = 10);
+RES(Tex1D(float4), attenuationLightMap, UPDATE_FREQ_PER_BATCH, t5, binding = 9);
+RES(TexCube(float4), goboCubeMap, UPDATE_FREQ_PER_BATCH, t7, binding = 10);
+RES(Tex2D(float4), goboMap, UPDATE_FREQ_PER_BATCH, t7, binding = 11);
+RES(Tex1D(float4), falloffMap, UPDATE_FREQ_PER_BATCH, t7, binding = 12);
 
 INLINE bool HasGoboMap(int _config)        { return (_config & (1 << 0)) != 0; }
-
+INLINE bool HasShadowMap(int _config)        { return (_config & (1 << 1)) != 0; }
 

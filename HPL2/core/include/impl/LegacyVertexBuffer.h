@@ -70,7 +70,8 @@ namespace hpl {
             }
 
         private:
-            bool m_rebuild = false;
+            mutable size_t m_activeCopy = 0; // the active copy of the data 
+            mutable size_t m_internalBufferSize = 0; // the size of the internal buffer
             mutable std::vector<uint8_t> m_shadowData = {};
             friend class LegacyVertexBuffer;
         };
@@ -142,16 +143,17 @@ namespace hpl {
         const VertexElement* GetElement(eVertexBufferElement elementType);
 
     protected:
-        size_t m_bufferIndex = 0;
-        size_t m_frameIndex = 0;
-
+        // size_t m_bufferIndex = 0;
+        
         static void PushVertexElements(
             std::span<const float> values, eVertexBufferElement elementType, std::span<LegacyVertexBuffer::VertexElement> elements);
 
         absl::InlinedVector<VertexElement, 10> m_vertexElements = {};
         ForgeBufferHandle m_indexBuffer;
         std::vector<uint32_t> m_indices = {};
-        tVertexElementFlag m_updateFlags = 0;
+
+        size_t m_indexBufferActiveCopy = 0;
+        tVertexElementFlag m_updateFlags = 0; // update no need to rebuild buffers
         bool m_updateIndices = false;
         bool m_rebuildIndices = false;
 

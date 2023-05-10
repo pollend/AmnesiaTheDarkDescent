@@ -146,6 +146,7 @@ namespace hpl
         BlendInvFactor  //!< 1-Blend factor
     };
 
+
     enum class RTType: uint8_t {
         None,
         RT_Write,

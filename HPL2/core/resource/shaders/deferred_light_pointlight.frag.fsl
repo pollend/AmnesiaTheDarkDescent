@@ -18,7 +18,7 @@ float4 PS_MAIN(PsIn In)
     vec2 specular =  SampleTex2D(Get(specularMap), Get(nearestSampler), NDC).xy;
 
     float3 lightDir = (Get(lightPos).xyz -  position) * (1.0 / Get(lightRadius));
-    float attenuation = SampleTex2D(Get(attenuationLightMap), Get(nearestSampler), vec2(dot(lightDir, lightDir), 0.0)).x;
+    float attenuation = SampleTex1D(Get(attenuationLightMap), Get(nearestSampler), dot(lightDir, lightDir)).x;
     
     float3 normalLightDir = normalize(lightDir);
     float3 normalizedNormal = normalize(normal.xyz);
@@ -26,7 +26,7 @@ float4 PS_MAIN(PsIn In)
     float3 goboVal = float3(1.0, 1.0, 1.0);
     if(HasGoboMap(Get(config))) {
         float4 worldLightDir = mul(Get(invViewRotation), float4(lightDir.x,lightDir.y, lightDir.z,1.0));
-        goboVal = SampleTexCube(Get(goboMap), Get(nearestSampler), worldLightDir.xyz).xyz;
+        goboVal = SampleTexCube(Get(goboCubeMap), Get(nearestSampler), worldLightDir.xyz).xyz;
     }
     
     /////////////////////////////////
@@ -42,5 +42,5 @@ float4 PS_MAIN(PsIn In)
         float specularValue = Get(lightColor).w * specIntensity *  pow( clamp( dot( halfVec, normalizedNormal), 0.0, 1.0), specPower );
         diffuseColor += specularValue.xxx * Get(lightColor).xyz;
     }
-    RETURN(float4(diffuseColor * goboVal * attenuation, 0.0));
+    RETURN(float4(0.2,0.2,0.2,0.0));
 }

@@ -63,6 +63,7 @@ namespace hpl {
         eDeferredSSAO_LastEnum,
     };
 
+
     //---------------------------------------------
     namespace rendering::detail {
         enum SpotlightVariant { 
@@ -110,6 +111,14 @@ namespace hpl {
         enum LightConfiguration {
             HasGoboMap = 0x1,
         };
+
+
+        enum LightPipelineVariants {
+            LightPipelineVariant_Front = 0x0,
+            LightPipelineVariant_Back = 0x1,
+            LightPipelineVariant_StencilTest = 0x2,
+            LightPipelineVariant_Size = 4,
+        };
         union LightUniformData {
             struct LightUniformCommon {
                 uint32_t m_config;
@@ -117,16 +126,23 @@ namespace hpl {
             } m_common;
             struct {
                 LightUniformCommon m_common;
-                float m_radius;
                 float3 m_lightPos;
+                float m_radius;
                 float4 m_lightColor;
                 mat4 m_invViewRotation;
             } m_pointLight;
-
+            struct {
+                LightUniformCommon m_common;
+                mat4 m_spotViewProj;
+                float4 m_color;
+                float3 m_forward;
+                float m_radius;
+                float3 m_pos;
+                float m_oneMinusCosHalfSpotFOV;
+            } m_spotLight;
             struct {
                 LightUniformCommon m_common;
                 float4 m_lightColor;
-                
             } m_boxLight;
         };
 
@@ -385,6 +401,13 @@ namespace hpl {
         MaterialPassDescriptorSet m_zDescriptorSet;
         uint32_t m_zObjectIndex = 0;
 
+        // decal pass
+        Shader* m_decalShader;
+        std::array<std::array<Pipeline*,eMaterialBlendMode_LastEnum>, eMaterialBlendMode_LastEnum> m_decalPipeline;
+        RootSignature* m_decalRootSignature;
+        MaterialPassDescriptorSet m_decalDescriptorSet;
+        uint32_t m_decalObjectIndex = 0;
+
         // diffuse material pass
         Shader* m_solidDiffuseShader;
         Shader* m_solidDiffuseParallaxShader;
@@ -398,9 +421,11 @@ namespace hpl {
         GPURingBuffer* m_lightPassRingBuffer;
         RootSignature* m_lightPassRootSignature;
         Pipeline* m_lightStencilPipeline;
-        Pipeline* m_pointLightPipeline;
-        Pipeline* m_boxLightPipeline;
+        std::array<Pipeline*, LightPipelineVariant_Size> m_pointLightPipeline;
+        std::array<Pipeline*, LightPipelineVariant_Size> m_boxLightPipeline;
+        std::array<Pipeline*, LightPipelineVariant_Size> m_spotLightPipeline;
         Shader* m_pointLightShader;
+        Shader* m_spotLightShader;
         Shader* m_stencilLightShader;
         Shader* m_boxLightShader;
         DescriptorSet* m_lightPerLightSet;
