@@ -744,6 +744,7 @@ namespace hpl {
 				uniformBlock.textureConfig |= gui::GUI_TEXTURE_CONFIG_DIFFUSE;
 				params[paramCount].pName = "diffuseMap";
 				params[paramCount++].ppTextures = &pTexture->GetTexture().m_handle;
+				frame.m_resourcePool->Push(pTexture->GetTexture());
 			}
 			uniformBlock.mvp = cMath::ToForgeMat4(cMath::MatrixMul(cMath::MatrixMul(projectionMtx, viewMtx), modelMtx));
 			auto& descriptorSet = gui::guiUniformDescriptorSet[frame.m_frameIndex];

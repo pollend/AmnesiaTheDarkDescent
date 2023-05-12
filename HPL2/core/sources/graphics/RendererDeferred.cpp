@@ -109,60 +109,6 @@ namespace hpl {
     static constexpr uint32_t SSAONumOfSamples = 8;
 
     namespace detail {
-        struct MaterialInfo {
-            void* m_material = nullptr; // void* to avoid accessing the material 
-            uint32_t m_version = 0; // version of the material
-            absl::InlinedVector<void*, 10> m_visitedDescriptors; // list of descriptors that have been visited
-        };
-        // TODO: move back into cRendererDeferred
-        static ForgeBufferHandle MaterialUniformBuffer;
-        static std::array<MaterialInfo, cMaterial::MaxMaterialID> m_materialInfo;
-        static GPURingBuffer* CObjectRingBuffer;
-
-        struct PerObjectOption {
-            cMatrixf m_viewMat;
-            cMatrixf m_projectionMat;
-        };
-
-        void cmdBindObjectDescriptor(
-            const ForgeRenderer::Frame& frame,
-            uint32_t& updateIndex,
-            cFrustum* frustum,
-            cMaterial* apMaterial,
-            iRenderable* apObject,
-            DescriptorSet* apDescriptorSet,
-            const PerObjectOption& option) {
-            GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(CObjectRingBuffer, sizeof(cRendererDeferred::CBObjectData));
-            
-            cRendererDeferred::CBObjectData uniformObjectData = {};
-            cMatrixf modelMat = apObject->GetModelMatrixPtr() ? *apObject->GetModelMatrixPtr() : cMatrixf::Identity;
-            cMatrixf modelViewMat = cMath::MatrixMul(option.m_viewMat, modelMat);
-            cMatrixf modelViewProjMat = cMath::MatrixMul(cMath::MatrixMul(option.m_projectionMat, option.m_viewMat), modelMat);
-
-            uniformObjectData.m_modelMat = cMath::ToForgeMat4(modelMat.GetTranspose());
-            if (apMaterial) {
-                uniformObjectData.m_uvMat = cMath::ToForgeMat4(apMaterial->GetUvMatrix());
-            }
-            uniformObjectData.m_modelViewMat = cMath::ToForgeMat4(modelViewMat.GetTranspose());
-            uniformObjectData.m_modelViewProjMat = cMath::ToForgeMat4(modelViewProjMat.GetTranspose());
-            uniformObjectData.m_normalMat = cMath::ToForgeMat3(cMath::MatrixInverse(modelViewMat));
-
-            BufferUpdateDesc updateDesc = { uniformBuffer.pBuffer, uniformBuffer.mOffset };
-			beginUpdateResource(&updateDesc);
-			(*reinterpret_cast<cRendererDeferred::CBObjectData*>(updateDesc.pMappedData)) = uniformObjectData;
-			endUpdateResource(&updateDesc, NULL);
-			
-            DescriptorData params[15] = {};
-            size_t paramCount = 0;
-            params[paramCount].pName = "uniformObjectBlock";
-            DescriptorDataRange range = { (uint32_t)uniformBuffer.mOffset, sizeof(cRendererDeferred::CBObjectData) };
-            params[paramCount].pRanges = &range;
-            params[paramCount++].ppBuffers = &uniformBuffer.pBuffer;
-
-            updateDescriptorSet(frame.m_renderer->Rend(), updateIndex, apDescriptorSet, paramCount, params);
-            cmdBindDescriptorSet(frame.m_cmd, updateIndex, apDescriptorSet);
-            updateIndex = (updateIndex + 1) % cRendererDeferred::MaxObjectUniforms;
-        }
 
         void cmdDefaultLegacyGeomBinding(const ForgeRenderer::Frame& frame, LegacyVertexBuffer::GeometryBinding& binding) {
             absl::InlinedVector<Buffer*, 16> vbBuffer;
@@ -180,65 +126,6 @@ namespace hpl {
             cmdBindVertexBuffer(frame.m_cmd, binding.m_vertexElement.size(), vbBuffer.data(), vbStride.data(), vbOffsets.data());
             cmdBindIndexBuffer(
                 frame.m_cmd, binding.m_indexBuffer.element->m_handle, INDEX_TYPE_UINT32, binding.m_indexBuffer.offset);
-        }
-
-        void cmdBindMaterialDescriptor(const ForgeRenderer::Frame& frame, cMaterial* apMaterial, std::span<const eMaterialTexture> materials, DescriptorSet* apDescriptorSet) {
-            auto& materialType = apMaterial->type();
-            auto& info = m_materialInfo[apMaterial->materialID()];
-            // auto& metaInfo = cMaterial::MetaInfo[materialType.m_id];
-
-            // we are using the same material, but the version has changed so we need to update the descriptor
-            // associated with the material
-            const bool isVisited = std::find_if(info.m_visitedDescriptors.begin(), info.m_visitedDescriptors.end(), [&](const auto& desc) {
-                                       return desc == apDescriptorSet;
-                                   }) != info.m_visitedDescriptors.end();
-            const bool isDirty = (info.m_material != apMaterial || info.m_version != apMaterial->Version());
-
-            if (isDirty || !isVisited) {
-                if (isDirty) {
-                    info.m_version = apMaterial->Version();
-                    info.m_material = apMaterial;
-                    info.m_visitedDescriptors.clear();
-
-                    BufferUpdateDesc  updateDesc = { MaterialUniformBuffer.m_handle, apMaterial->materialID() * sizeof(cMaterial::MaterialType::MaterialData) };
-                    beginUpdateResource(&updateDesc);
-                    memcpy(updateDesc.pMappedData, &materialType.m_data, sizeof(cMaterial::MaterialType::MaterialData));
-                    endUpdateResource(&updateDesc, NULL);
-                }
-
-                DescriptorData params[15] = {};
-                size_t paramCount = 0;
- 
-                for (auto& supportedTexture : materials) {
-                    static constexpr const char* TextureNameLookup[] = {
-                        "diffuseMap", // eMaterialTexture_Diffuse
-                        "normalMap", // eMaterialTexture_NMap
-                        "specularMap", // eMaterialTexture_Specular
-                        "alphaMap", // eMaterialTexture_Alpha
-                        "heightMap", // eMaterialTexture_Height
-                        "illuminationMap", // eMaterialTexture_Illumination
-                        "cubeMap", // eMaterialTexture_CubeMap
-                        "dissolveAlphaMap", // eMaterialTexture_DissolveAlpha
-                        "cubeMapAlpha", // eMaterialTexture_CubeMapAlpha
-                    };
-
-                    auto* image = apMaterial->GetImage(supportedTexture);
-                    if (image) {
-                        params[paramCount].pName = TextureNameLookup[supportedTexture];
-                        params[paramCount++].ppTextures = &image->GetTexture().m_handle;
-                    }
-                }
-
-                DescriptorDataRange range = { static_cast<uint32_t>(apMaterial->materialID() * sizeof(cMaterial::MaterialType::MaterialData)), sizeof(cMaterial::MaterialType::MaterialData) };
-                params[paramCount].pName = "uniformMaterialBlock";
-                params[paramCount].pRanges = &range;
-                params[paramCount++].ppBuffers = &MaterialUniformBuffer.m_handle;
-
-                updateDescriptorSet(
-                    frame.m_renderer->Rend(), apMaterial->materialID(), apDescriptorSet, paramCount, params);
-            }
-            cmdBindDescriptorSet(frame.m_cmd, apMaterial->materialID(), apDescriptorSet);
-
         }
 
         struct DeferredLight {
@@ -920,22 +807,6 @@ namespace hpl {
         }
     } // namespace detail
 
-    void cRendererDeferred::InitializeDeferred(ForgeRenderer& pipeline) {
-        // static uniform buffer for material data
-        detail::MaterialUniformBuffer.TryFree();
-        BufferLoadDesc desc = {};
-        desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
-        desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
-        desc.mDesc.mSize = sizeof(cMaterial::MaterialType::MaterialData) * cMaterial::MaxMaterialID;
-        // desc.pData =  &m_info.m_data;
-        desc.ppBuffer = &detail::MaterialUniformBuffer.m_handle;
-        addResource(&desc, nullptr);
-        detail::MaterialUniformBuffer.Initialize();
-
-        // ring buffer for object uniforms
-        addUniformGPURingBuffer(pipeline.Rend(), sizeof(cRendererDeferred::CBObjectData) * MaxObjectUniforms, &detail::CObjectRingBuffer, true);
-    }
 
 
 
@@ -1091,16 +962,6 @@ namespace hpl {
             }
         };
 
-        auto createMaterialsPass = [&](RootSignature* rootSignature, MaterialPassDescriptorSet& descriptor) {
-            DescriptorSetDesc constantDescSet{rootSignature, DESCRIPTOR_UPDATE_FREQ_NONE, 1};
-            addDescriptorSet(forgetRenderer->Rend(), &constantDescSet, &descriptor.m_constSet);
-            DescriptorSetDesc perFrameDescSet{rootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, ForgeRenderer::SwapChainLength};
-            addDescriptorSet(forgetRenderer->Rend(), &perFrameDescSet, &descriptor.m_frameSet);
-            DescriptorSetDesc batchDescriptorSet{rootSignature, DESCRIPTOR_UPDATE_FREQ_PER_BATCH, cMaterial::MaxMaterialID};
-            addDescriptorSet(forgetRenderer->Rend(), &batchDescriptorSet, &descriptor.m_materialSet);
-            DescriptorSetDesc perObjectDescriptorSet{rootSignature, DESCRIPTOR_UPDATE_FREQ_PER_DRAW, MaxObjectUniforms};
-            addDescriptorSet(forgetRenderer->Rend(), &perObjectDescriptorSet, &descriptor.m_perObjectSet);
-        };
 
         {
             m_perFrameBuffer.TryFree();
@@ -1115,242 +976,307 @@ namespace hpl {
             m_perFrameBuffer.Initialize();
         }
 
-        //---------------- ZPass Pipeline  ------------------------
-        {
-            ShaderLoadDesc loadDesc = {};
-            loadDesc.mStages[0] = { "solid_z.vert", nullptr, 0 };
-            loadDesc.mStages[1] = { "solid_z.frag", nullptr, 0 };
-            addShader(forgetRenderer->Rend(), &loadDesc, &m_zPassShader);
-
-            Shader* zPassShaders[] = { m_zPassShader };
-            RootSignatureDesc rootSignatureDesc = {};
-            rootSignatureDesc.ppShaders = zPassShaders;
-            rootSignatureDesc.mShaderCount = std::size(zPassShaders);
-            addRootSignature(forgetRenderer->Rend(), &rootSignatureDesc, &m_zPassRootSignature);
-
-            // layout and pipeline for sphere draw
-            VertexLayout vertexLayout = {};
-            vertexLayout.mAttribCount = 2;
-            vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
-            vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
-            vertexLayout.mAttribs[0].mBinding = 0;
-            vertexLayout.mAttribs[0].mLocation = 0;
-            vertexLayout.mAttribs[0].mOffset = 0;
-
-            vertexLayout.mAttribs[1].mSemantic = SEMANTIC_TEXCOORD0;
-            vertexLayout.mAttribs[1].mFormat = TinyImageFormat_R32G32_SFLOAT;
-            vertexLayout.mAttribs[1].mBinding = 1;
-            vertexLayout.mAttribs[1].mLocation = 1;
-            vertexLayout.mAttribs[1].mOffset = 0;
-
-            RasterizerStateDesc rasterizerStateDesc = {};
-            rasterizerStateDesc.mCullMode = CULL_MODE_NONE;
-
-            DepthStateDesc depthStateDesc = {};
-            depthStateDesc.mDepthTest = true;
-            depthStateDesc.mDepthWrite = true;
-            depthStateDesc.mDepthFunc = CMP_LEQUAL;
-
-            PipelineDesc pipelineDesc = {};
-            pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
-            auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
-            pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
-            pipelineSettings.mRenderTargetCount = 0;
-            pipelineSettings.pDepthState = &depthStateDesc;
-            pipelineSettings.pColorFormats = NULL;
-            pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
-		    pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
-            pipelineSettings.mSampleQuality = 0;
-            pipelineSettings.pRootSignature = m_zPassRootSignature;
-            pipelineSettings.pShaderProgram = m_zPassShader;
-            pipelineSettings.pRasterizerState = &rasterizerStateDesc;
-            pipelineSettings.pVertexLayout = &vertexLayout;
-            addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_zPassPipeline);
-
-            createMaterialsPass(m_zPassRootSignature, m_zDescriptorSet);
-
-            std::array<DescriptorData, 1> params{};
-            params[0].ppTextures = &m_dissolveImage->GetTexture().m_handle;
-            params[0].pName = "dissolveMap";
-            updateDescriptorSet(forgetRenderer->Rend(), 0, m_zDescriptorSet.m_constSet, params.size(), params.data());
-            // updatePerFrameDescriptor(m_zDescriptorSet.m_frameSet);
-        }
 
         //---------------- Diffuse Pipeline  ------------------------
         {
+            // z pass
             {
                 ShaderLoadDesc loadDesc = {};
-                loadDesc.mStages[0] = {"solid_diffuse.vert", nullptr, 0};
-                loadDesc.mStages[1] = {"solid_diffuse.frag", nullptr, 0};
+                loadDesc.mStages[0] = { "solid_z.vert", nullptr, 0 };
+                loadDesc.mStages[1] = { "solid_z.frag", nullptr, 0 };
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_zPassShader);
+            }
+            // diffuse pipeline
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0] = { "solid_diffuse.vert", nullptr, 0 };
+                loadDesc.mStages[1] = { "solid_diffuse.frag", nullptr, 0 };
                 addShader(forgetRenderer->Rend(), &loadDesc, &m_solidDiffuseShader);
             }
 
             {
                 ShaderLoadDesc loadDesc = {};
-                loadDesc.mStages[0] = {"solid_diffuse.vert", nullptr, 0};
-                loadDesc.mStages[1] = {"solid_diffuse_parallax.frag", nullptr, 0};
+                loadDesc.mStages[0] = { "solid_diffuse.vert", nullptr, 0 };
+                loadDesc.mStages[1] = { "solid_diffuse_parallax.frag", nullptr, 0 };
                 addShader(forgetRenderer->Rend(), &loadDesc, &m_solidDiffuseParallaxShader);
             }
-
-            Shader* shaders[] = {m_solidDiffuseShader, m_solidDiffuseParallaxShader};
-            RootSignatureDesc rootSignatureDesc = {};
-			rootSignatureDesc.ppShaders = shaders;
-			rootSignatureDesc.mShaderCount = std::size(shaders);
-			addRootSignature(forgetRenderer->Rend(), &rootSignatureDesc, &m_solidDiffuseRootSignature);
-
-             //layout and pipeline for sphere draw
-            VertexLayout vertexLayout = {};
-            vertexLayout.mAttribCount = 4;
-            vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
-            vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
-            vertexLayout.mAttribs[0].mBinding = 0;
-            vertexLayout.mAttribs[0].mLocation = 0;
-            vertexLayout.mAttribs[0].mOffset = 0;
-
-            vertexLayout.mAttribs[1].mSemantic = SEMANTIC_TEXCOORD0;
-            vertexLayout.mAttribs[1].mFormat = TinyImageFormat_R32G32_SFLOAT;
-            vertexLayout.mAttribs[1].mBinding = 1;
-            vertexLayout.mAttribs[1].mLocation = 1;
-            vertexLayout.mAttribs[1].mOffset = 0;
-
-            vertexLayout.mAttribs[2].mSemantic = SEMANTIC_NORMAL;
-            vertexLayout.mAttribs[2].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
-            vertexLayout.mAttribs[2].mBinding = 2;
-            vertexLayout.mAttribs[2].mLocation = 2;
-            vertexLayout.mAttribs[2].mOffset = 0;
-
-            vertexLayout.mAttribs[3].mSemantic = SEMANTIC_TANGENT;
-            vertexLayout.mAttribs[3].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
-            vertexLayout.mAttribs[3].mBinding = 3;
-            vertexLayout.mAttribs[3].mLocation = 3;
-            vertexLayout.mAttribs[3].mOffset = 0;
-
-            RasterizerStateDesc rasterizerStateDesc = {};
-            rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
-
-            DepthStateDesc depthStateDesc = {};
-            depthStateDesc.mDepthTest = true;
-            depthStateDesc.mDepthWrite = false;
-            depthStateDesc.mDepthFunc = CMP_EQUAL;
-
-            std::array colorFormats = {
-                ColorBufferFormat,
-                NormalBufferFormat,
-                PositionBufferFormat,
-                SpecularBufferFormat
-            };
-
-            PipelineDesc pipelineDesc = {};
-            pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
-            auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
-            pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
-            pipelineSettings.mRenderTargetCount = colorFormats.size();
-            pipelineSettings.pColorFormats = colorFormats.data();
-            pipelineSettings.pDepthState = &depthStateDesc;
-            pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
-		    pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
-            pipelineSettings.mSampleQuality = 0;
-            pipelineSettings.pRootSignature = m_solidDiffuseRootSignature;
-            pipelineSettings.pShaderProgram = m_solidDiffuseShader;
-            pipelineSettings.pRasterizerState = &rasterizerStateDesc;
-            pipelineSettings.pVertexLayout = &vertexLayout;
-            addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_solidDiffusePipeline);
-
-            pipelineSettings.pShaderProgram = m_solidDiffuseParallaxShader;
-            addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_solidDiffuseParallaxPipeline);
-
-            createMaterialsPass(m_solidDiffuseRootSignature, m_solidDescriptorSet);
-            updatePerFrameDescriptor(m_solidDescriptorSet.m_frameSet);
-        }
-
-        // decal pass
-        {
+            
             {
                 ShaderLoadDesc loadDesc = {};
-                loadDesc.mStages[0] = {"decal.vert", nullptr, 0};
-                loadDesc.mStages[1] = {"decal.frag", nullptr, 0};
+                loadDesc.mStages[0] = { "solid_illumination.vert", nullptr, 0 };
+                loadDesc.mStages[1] = { "solid_illumination.frag", nullptr, 0 };
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_solidIlluminationShader);
+            }
+            // decal pass
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0] = { "decal.vert", nullptr, 0 };
+                loadDesc.mStages[1] = { "decal.frag", nullptr, 0 };
                 addShader(forgetRenderer->Rend(), &loadDesc, &m_decalShader);
             }
 
-            Shader* shaders[] = {m_decalShader};
-
+            Shader* shaders[] = { m_solidDiffuseShader, m_solidDiffuseParallaxShader, m_zPassShader, m_decalShader, m_solidIlluminationShader};
             RootSignatureDesc rootSignatureDesc = {};
-			rootSignatureDesc.ppShaders = shaders;
-			rootSignatureDesc.mShaderCount = std::size(shaders);
-			addRootSignature(forgetRenderer->Rend(), &rootSignatureDesc, &m_decalRootSignature);
+            rootSignatureDesc.ppShaders = shaders;
+            rootSignatureDesc.mShaderCount = std::size(shaders);
+            addRootSignature(forgetRenderer->Rend(), &rootSignatureDesc, &m_materialRootSignature);
 
-            VertexLayout vertexLayout = {};
-            vertexLayout.mAttribCount = 3;
-            vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
-            vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
-            vertexLayout.mAttribs[0].mBinding = 0;
-            vertexLayout.mAttribs[0].mLocation = 0;
-            vertexLayout.mAttribs[0].mOffset = 0;
-
-            vertexLayout.mAttribs[1].mSemantic = SEMANTIC_TEXCOORD0;
-            vertexLayout.mAttribs[1].mFormat = TinyImageFormat_R32G32_SFLOAT;
-            vertexLayout.mAttribs[1].mBinding = 1;
-            vertexLayout.mAttribs[1].mLocation = 1;
-            vertexLayout.mAttribs[1].mOffset = 0;
-
-            vertexLayout.mAttribs[2].mSemantic = SEMANTIC_COLOR;
-            vertexLayout.mAttribs[2].mFormat = TinyImageFormat_R32G32B32A32_SFLOAT;
-            vertexLayout.mAttribs[2].mBinding = 2;
-            vertexLayout.mAttribs[2].mLocation = 2;
-            vertexLayout.mAttribs[2].mOffset = 0;
-
-            RasterizerStateDesc rasterizerStateDesc = {};
-            rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
-
-            DepthStateDesc depthStateDesc = {};
-            depthStateDesc.mDepthTest = true;
-            depthStateDesc.mDepthWrite = false;
-            depthStateDesc.mDepthFunc = CMP_LEQUAL;
-
-            std::array colorFormats = {
-                getRecommendedSwapchainFormat(false, false)
-            };
-            PipelineDesc pipelineDesc = {};
-            pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
-            auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
-            pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
-            pipelineSettings.mRenderTargetCount = colorFormats.size();
-            pipelineSettings.pColorFormats = colorFormats.data();
-            pipelineSettings.pDepthState = &depthStateDesc;
-            pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
-		    pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
-            pipelineSettings.mSampleQuality = 0;
-            pipelineSettings.pRootSignature = m_decalRootSignature;
-            pipelineSettings.pShaderProgram = m_decalShader;
-            pipelineSettings.pRasterizerState = &rasterizerStateDesc;
-            pipelineSettings.pVertexLayout = &vertexLayout;
-
-            for(size_t blendRgb = 0; blendRgb < eMaterialBlendMode_LastEnum; ++blendRgb)
+            // diffuse material pass
             {
+                VertexLayout vertexLayout = {};
+                vertexLayout.mAttribCount = 4;
+                vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
+                vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
+                vertexLayout.mAttribs[0].mBinding = 0;
+                vertexLayout.mAttribs[0].mLocation = 0;
+                vertexLayout.mAttribs[0].mOffset = 0;
 
-                for(size_t blendAlpha = 0; blendAlpha < eMaterialBlendMode_LastEnum; ++blendAlpha)
-                {
-                    BlendStateDesc blendStateDesc{};
+                vertexLayout.mAttribs[1].mSemantic = SEMANTIC_TEXCOORD0;
+                vertexLayout.mAttribs[1].mFormat = TinyImageFormat_R32G32_SFLOAT;
+                vertexLayout.mAttribs[1].mBinding = 1;
+                vertexLayout.mAttribs[1].mLocation = 1;
+                vertexLayout.mAttribs[1].mOffset = 0;
 
-                    blendStateDesc.mSrcFactors[0] = hpl::AmnesiaBlendTable[blendRgb].src;
-                    blendStateDesc.mDstFactors[0] = hpl::AmnesiaBlendTable[blendRgb].dst;
-                    blendStateDesc.mBlendModes[0] = hpl::AmnesiaBlendTable[blendRgb].mode;
+                vertexLayout.mAttribs[2].mSemantic = SEMANTIC_NORMAL;
+                vertexLayout.mAttribs[2].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
+                vertexLayout.mAttribs[2].mBinding = 2;
+                vertexLayout.mAttribs[2].mLocation = 2;
+                vertexLayout.mAttribs[2].mOffset = 0;
 
-                    blendStateDesc.mSrcAlphaFactors[0] = hpl::AmnesiaBlendTable[blendAlpha].src;
-                    blendStateDesc.mDstAlphaFactors[0] = hpl::AmnesiaBlendTable[blendAlpha].dst;
-                    blendStateDesc.mBlendAlphaModes[0] = hpl::AmnesiaBlendTable[blendAlpha].mode;
+                vertexLayout.mAttribs[3].mSemantic = SEMANTIC_TANGENT;
+                vertexLayout.mAttribs[3].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
+                vertexLayout.mAttribs[3].mBinding = 3;
+                vertexLayout.mAttribs[3].mLocation = 3;
+                vertexLayout.mAttribs[3].mOffset = 0;
 
-                    blendStateDesc.mMasks[0] = RED | GREEN | BLUE;
-                    blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
-                    pipelineSettings.pBlendState = &blendStateDesc;
+                RasterizerStateDesc rasterizerStateDesc = {};
+                rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
 
-                    addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_decalPipeline[blendRgb][blendAlpha]);
+                DepthStateDesc depthStateDesc = {};
+                depthStateDesc.mDepthTest = true;
+                depthStateDesc.mDepthWrite = false;
+                depthStateDesc.mDepthFunc = CMP_EQUAL;
+
+                std::array colorFormats = { ColorBufferFormat, NormalBufferFormat, PositionBufferFormat, SpecularBufferFormat };
+
+                PipelineDesc pipelineDesc = {};
+                pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+                auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
+                pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+                pipelineSettings.mRenderTargetCount = colorFormats.size();
+                pipelineSettings.pColorFormats = colorFormats.data();
+                pipelineSettings.pDepthState = &depthStateDesc;
+                pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
+                pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
+                pipelineSettings.mSampleQuality = 0;
+                pipelineSettings.pRootSignature = m_materialRootSignature;
+                pipelineSettings.pShaderProgram = m_solidDiffuseShader;
+                pipelineSettings.pRasterizerState = &rasterizerStateDesc;
+                pipelineSettings.pVertexLayout = &vertexLayout;
+                addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_solidDiffusePipeline);
+
+                pipelineSettings.pShaderProgram = m_solidDiffuseParallaxShader;
+                addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_solidDiffuseParallaxPipeline);
+            }
+            // decal material pass
+            {
+                VertexLayout vertexLayout = {};
+                vertexLayout.mAttribCount = 3;
+                vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
+                vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
+                vertexLayout.mAttribs[0].mBinding = 0;
+                vertexLayout.mAttribs[0].mLocation = 0;
+                vertexLayout.mAttribs[0].mOffset = 0;
+
+                vertexLayout.mAttribs[1].mSemantic = SEMANTIC_TEXCOORD0;
+                vertexLayout.mAttribs[1].mFormat = TinyImageFormat_R32G32_SFLOAT;
+                vertexLayout.mAttribs[1].mBinding = 1;
+                vertexLayout.mAttribs[1].mLocation = 1;
+                vertexLayout.mAttribs[1].mOffset = 0;
+
+                vertexLayout.mAttribs[2].mSemantic = SEMANTIC_COLOR;
+                vertexLayout.mAttribs[2].mFormat = TinyImageFormat_R32G32B32A32_SFLOAT;
+                vertexLayout.mAttribs[2].mBinding = 2;
+                vertexLayout.mAttribs[2].mLocation = 2;
+                vertexLayout.mAttribs[2].mOffset = 0;
+
+                RasterizerStateDesc rasterizerStateDesc = {};
+                rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
+
+                DepthStateDesc depthStateDesc = {};
+                depthStateDesc.mDepthTest = true;
+                depthStateDesc.mDepthWrite = false;
+                depthStateDesc.mDepthFunc = CMP_LEQUAL;
+
+                std::array colorFormats = { getRecommendedSwapchainFormat(false, false) };
+                PipelineDesc pipelineDesc = {};
+                pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+                auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
+                pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+                pipelineSettings.mRenderTargetCount = colorFormats.size();
+                pipelineSettings.pColorFormats = colorFormats.data();
+                pipelineSettings.pDepthState = &depthStateDesc;
+                pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
+                pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
+                pipelineSettings.mSampleQuality = 0;
+                pipelineSettings.pRootSignature = m_materialRootSignature;
+                pipelineSettings.pShaderProgram = m_decalShader;
+                pipelineSettings.pRasterizerState = &rasterizerStateDesc;
+                pipelineSettings.pVertexLayout = &vertexLayout;
+
+                for (size_t blendRgb = 0; blendRgb < eMaterialBlendMode_LastEnum; ++blendRgb) {
+                    for (size_t blendAlpha = 0; blendAlpha < eMaterialBlendMode_LastEnum; ++blendAlpha) {
+                        BlendStateDesc blendStateDesc{};
+
+                        blendStateDesc.mSrcFactors[0] = hpl::AmnesiaBlendTable[blendRgb].src;
+                        blendStateDesc.mDstFactors[0] = hpl::AmnesiaBlendTable[blendRgb].dst;
+                        blendStateDesc.mBlendModes[0] = hpl::AmnesiaBlendTable[blendRgb].mode;
+
+                        blendStateDesc.mSrcAlphaFactors[0] = hpl::AmnesiaBlendTable[blendAlpha].src;
+                        blendStateDesc.mDstAlphaFactors[0] = hpl::AmnesiaBlendTable[blendAlpha].dst;
+                        blendStateDesc.mBlendAlphaModes[0] = hpl::AmnesiaBlendTable[blendAlpha].mode;
+
+                        blendStateDesc.mMasks[0] = RED | GREEN | BLUE;
+                        blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
+                        pipelineSettings.pBlendState = &blendStateDesc;
+
+                        addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_decalPipeline[blendRgb][blendAlpha]);
+                    }
                 }
+
+            }
+            // z pass material
+            {
+                // layout and pipeline for sphere draw
+                VertexLayout vertexLayout = {};
+                vertexLayout.mAttribCount = 2;
+                vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
+                vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
+                vertexLayout.mAttribs[0].mBinding = 0;
+                vertexLayout.mAttribs[0].mLocation = 0;
+                vertexLayout.mAttribs[0].mOffset = 0;
+
+                vertexLayout.mAttribs[1].mSemantic = SEMANTIC_TEXCOORD0;
+                vertexLayout.mAttribs[1].mFormat = TinyImageFormat_R32G32_SFLOAT;
+                vertexLayout.mAttribs[1].mBinding = 1;
+                vertexLayout.mAttribs[1].mLocation = 1;
+                vertexLayout.mAttribs[1].mOffset = 0;
+
+                RasterizerStateDesc rasterizerStateDesc = {};
+                rasterizerStateDesc.mCullMode = CULL_MODE_NONE;
+
+                DepthStateDesc depthStateDesc = {};
+                depthStateDesc.mDepthTest = true;
+                depthStateDesc.mDepthWrite = true;
+                depthStateDesc.mDepthFunc = CMP_LEQUAL;
+
+                PipelineDesc pipelineDesc = {};
+                pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+                auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
+                pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+                pipelineSettings.mRenderTargetCount = 0;
+                pipelineSettings.pDepthState = &depthStateDesc;
+                pipelineSettings.pColorFormats = NULL;
+                pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
+                pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
+                pipelineSettings.mSampleQuality = 0;
+                pipelineSettings.pRootSignature = m_materialRootSignature;
+                pipelineSettings.pShaderProgram = m_zPassShader;
+                pipelineSettings.pRasterizerState = &rasterizerStateDesc;
+                pipelineSettings.pVertexLayout = &vertexLayout;
+                addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_zPassPipeline);
+
+                // createMaterialsPass(m_zPassRootSignature, m_zDescriptorSet);
+
+                DescriptorSetDesc constSet{ m_materialRootSignature, DESCRIPTOR_UPDATE_FREQ_NONE, ForgeRenderer::SwapChainLength };
+                addDescriptorSet(forgetRenderer->Rend(), &constSet, &m_zPassConstSet);
+
+                std::array<DescriptorData, 1> params{};
+                params[0].ppTextures = &m_dissolveImage->GetTexture().m_handle;
+                params[0].pName = "dissolveMap";
+                updateDescriptorSet(forgetRenderer->Rend(), 0, m_zPassConstSet, params.size(), params.data());
+            }
+            // illumination pass
+            {
+                // layout and pipeline for sphere draw
+                VertexLayout vertexLayout = {};
+                vertexLayout.mAttribCount = 2;
+                vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
+                vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
+                vertexLayout.mAttribs[0].mBinding = 0;
+                vertexLayout.mAttribs[0].mLocation = 0;
+                vertexLayout.mAttribs[0].mOffset = 0;
+
+                vertexLayout.mAttribs[1].mSemantic = SEMANTIC_TEXCOORD0;
+                vertexLayout.mAttribs[1].mFormat = TinyImageFormat_R32G32_SFLOAT;
+                vertexLayout.mAttribs[1].mBinding = 1;
+                vertexLayout.mAttribs[1].mLocation = 1;
+                vertexLayout.mAttribs[1].mOffset = 0;
+
+                RasterizerStateDesc rasterizerStateDesc = {};
+                rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
+
+                BlendStateDesc blendStateDesc{};
+                blendStateDesc.mMasks[0] = RED | GREEN | BLUE;
+                blendStateDesc.mSrcFactors[0] = BC_ONE;
+                blendStateDesc.mDstFactors[0] = BC_ONE;
+                blendStateDesc.mBlendModes[0] = BM_ADD;
+                blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
+
+                DepthStateDesc depthStateDesc = {};
+                depthStateDesc.mDepthTest = true;
+                depthStateDesc.mDepthWrite = false;
+                depthStateDesc.mDepthFunc = CMP_EQUAL;
+
+                std::array colorFormats = { getRecommendedSwapchainFormat(false, false) };
+                PipelineDesc pipelineDesc = {};
+                pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+                auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
+                pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+                pipelineSettings.mRenderTargetCount = 0;
+                pipelineSettings.pDepthState = &depthStateDesc;
+                pipelineSettings.mRenderTargetCount = colorFormats.size();
+                pipelineSettings.pColorFormats = colorFormats.data();
+                pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
+                pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
+                pipelineSettings.mSampleQuality = 0;
+                pipelineSettings.pBlendState = &blendStateDesc;
+                pipelineSettings.pRootSignature = m_materialRootSignature;
+                pipelineSettings.pShaderProgram = m_solidIlluminationShader;
+                pipelineSettings.pRasterizerState = &rasterizerStateDesc;
+                pipelineSettings.pVertexLayout = &vertexLayout;
+                addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_zPassPipeline);
             }
 
-            createMaterialsPass(m_decalRootSignature, m_decalDescriptorSet);
-            // updatePerFrameDescriptor(m_decalDescriptorSet.m_frameSet);
+            // DescriptorSetDesc constantDescSet{m_materialRootSignature, DESCRIPTOR_UPDATE_FREQ_NONE, 1};
+            // addDescriptorSet(forgetRenderer->Rend(), &constantDescSet, &descriptor.m_constSet);
+            DescriptorSetDesc perFrameDescSet{ m_materialRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, 1 };
+            for (auto& set : m_materialSet.m_frameSet) {
+                addDescriptorSet(forgetRenderer->Rend(), &perFrameDescSet, &set);
+            }
+            DescriptorSetDesc batchDescriptorSet{ m_materialRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_BATCH, cMaterial::MaxMaterialID };
+            for (auto& set : m_materialSet.m_materialSet) {
+                addDescriptorSet(forgetRenderer->Rend(), &batchDescriptorSet, &set);
+            }
+            DescriptorSetDesc perObjectDescriptorSet{ m_materialRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_DRAW, MaxObjectUniforms };
+            for (auto& set : m_materialSet.m_perObjectSet) {
+                addDescriptorSet(forgetRenderer->Rend(), &perObjectDescriptorSet, &set);
+            }
+
+            for (size_t i = 0; i < ForgeRenderer::SwapChainLength; i++) {
+                DescriptorData params[15] = {};
+                size_t paramCount = 0;
+
+                DescriptorDataRange range = { (uint32_t)(i * sizeof(cRendererDeferred::PerFrameData)),
+                                              sizeof(cRendererDeferred::PerFrameData) };
+                params[paramCount].pName = "perFrameConstants";
+                params[paramCount].pRanges = &range;
+                params[paramCount++].ppBuffers = &m_perFrameBuffer.m_handle;
+
+                updateDescriptorSet(forgetRenderer->Rend(), 0, m_materialSet.m_frameSet[i], paramCount, params);
+            }
         }
+
 
         // ------------------------ Light Pass -----------------------------------------------------------------
         {
@@ -1535,8 +1461,25 @@ namespace hpl {
             DescriptorSetDesc perFrameDescSet{m_lightPassRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, ForgeRenderer::SwapChainLength};
             addDescriptorSet(forgetRenderer->Rend(), &perFrameDescSet, &m_lightFrameSet);
             DescriptorSetDesc batchDescriptorSet{m_lightPassRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_BATCH, cRendererDeferred::MaxLightUniforms};
-            addDescriptorSet(forgetRenderer->Rend(), &batchDescriptorSet, &m_lightPerLightSet);
+            for(auto& lightSet: m_lightPerLightSet) {
+                addDescriptorSet(forgetRenderer->Rend(), &batchDescriptorSet, &lightSet);
+            }
         }
+        {
+            m_materialBuffer.TryFree();
+            BufferLoadDesc desc = {};
+            desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
+            desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
+            desc.mDesc.mSize = sizeof(cMaterial::MaterialType::MaterialData) * cMaterial::MaxMaterialID;
+            // desc.pData =  &m_info.m_data;
+            desc.ppBuffer = &m_materialBuffer.m_handle;
+            addResource(&desc, nullptr);
+            m_materialBuffer.Initialize();
+
+            addUniformGPURingBuffer(forgetRenderer->Rend(), sizeof(cRendererDeferred::CBObjectData) * MaxObjectUniforms, &m_objectUniformBuffer, true);
+        }
+   
 
         // auto createShadowMap = [](const cVector3l& avSize) -> ShadowMapData {
         //     auto desc = ImageDescriptor::CreateTexture2D(avSize.x, avSize.y, false, bgfx::TextureFormat::D16F);
@@ -2470,6 +2413,120 @@ namespace hpl {
             });
     }
 
+    void cRendererDeferred::cmdBindObjectDescriptor(
+        const ForgeRenderer::Frame& frame,
+        uint32_t& updateIndex,
+        cMaterial* apMaterial,
+        iRenderable* apObject,
+        const PerObjectOption& option) {
+        auto* objectDescSet = m_materialSet.m_perObjectSet[frame.m_frameIndex];
+
+        // auto& apDescriptorSet = descriptor.m_perObjectSet[frame.m_frameIndex];
+        GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(m_objectUniformBuffer, sizeof(cRendererDeferred::CBObjectData));
+
+        cRendererDeferred::CBObjectData uniformObjectData = {};
+        cMatrixf modelMat = apObject->GetModelMatrixPtr() ? *apObject->GetModelMatrixPtr() : cMatrixf::Identity;
+        cMatrixf modelViewMat = cMath::MatrixMul(option.m_viewMat, modelMat);
+        cMatrixf modelViewProjMat = cMath::MatrixMul(cMath::MatrixMul(option.m_projectionMat, option.m_viewMat), modelMat);
+
+        uniformObjectData.m_modelMat = cMath::ToForgeMat4(modelMat.GetTranspose());
+        if (apMaterial) {
+            uniformObjectData.m_uvMat = cMath::ToForgeMat4(apMaterial->GetUvMatrix());
+        }
+        uniformObjectData.m_modelViewMat = cMath::ToForgeMat4(modelViewMat.GetTranspose());
+        uniformObjectData.m_modelViewProjMat = cMath::ToForgeMat4(modelViewProjMat.GetTranspose());
+        uniformObjectData.m_normalMat = cMath::ToForgeMat3(cMath::MatrixInverse(modelViewMat));
+
+        BufferUpdateDesc updateDesc = { uniformBuffer.pBuffer, uniformBuffer.mOffset };
+        beginUpdateResource(&updateDesc);
+        (*reinterpret_cast<cRendererDeferred::CBObjectData*>(updateDesc.pMappedData)) = uniformObjectData;
+        endUpdateResource(&updateDesc, NULL);
+
+        DescriptorData params[15] = {};
+        size_t paramCount = 0;
+        params[paramCount].pName = "uniformObjectBlock";
+        DescriptorDataRange range = { (uint32_t)uniformBuffer.mOffset, sizeof(cRendererDeferred::CBObjectData) };
+        params[paramCount].pRanges = &range;
+        params[paramCount++].ppBuffers = &uniformBuffer.pBuffer;
+
+        updateDescriptorSet(frame.m_renderer->Rend(), updateIndex, objectDescSet, paramCount, params);
+        cmdBindDescriptorSet(frame.m_cmd, updateIndex, objectDescSet);
+        updateIndex++;
+    }
+
+    void cRendererDeferred::cmdBindMaterialDescriptor(const ForgeRenderer::Frame& frame, cMaterial* apMaterial) {
+            
+            auto& info = m_materialInfo[apMaterial->materialID()];
+
+            auto& descriptorSet = m_materialSet.m_materialSet[frame.m_frameIndex];
+            auto& descInfo = info.m_materialDescInfo[frame.m_frameIndex];
+            auto& materialType = apMaterial->type();
+
+            // we are using the same material, but the version has changed so we need to update the descriptor
+            // associated with the material
+            // auto materialIt = std::find_if(info.m_visitedDescriptors.begin(), info.m_visitedDescriptors.end(), [&](const auto& desc) {
+            //                            return desc.m_descriptor == descriptorSet;
+            //                        });
+            // const bool isVisited = (materialIt != info.m_visitedDescriptors.end());
+            
+            auto metaInfo = std::find_if(cMaterial::MetaInfo.begin(), cMaterial::MetaInfo.end(), [&](auto& info) {
+                return info.m_id == materialType.m_id;
+            });
+            const bool isDirty = (descInfo.m_material != apMaterial || descInfo.m_version != apMaterial->Version());
+            if (isDirty) {
+                descInfo.m_version = apMaterial->Version();
+                descInfo.m_material = apMaterial;
+
+                BufferUpdateDesc  updateDesc = { m_materialBuffer.m_handle, apMaterial->materialID() * sizeof(cMaterial::MaterialType::MaterialData) };
+                beginUpdateResource(&updateDesc);
+                memcpy(updateDesc.pMappedData, &materialType.m_data, sizeof(cMaterial::MaterialType::MaterialData));
+                endUpdateResource(&updateDesc, NULL);
+            
+                DescriptorData params[15] = {};
+                size_t paramCount = 0;
+            
+                descInfo.m_textureHandles.clear();
+                for (auto& supportedTexture : metaInfo->m_usedTextures) {
+                    static constexpr const char* TextureNameLookup[] = {
+                        "diffuseMap", // eMaterialTexture_Diffuse
+                        "normalMap", // eMaterialTexture_NMap
+                        "specularMap", // eMaterialTexture_Specular
+                        "alphaMap", // eMaterialTexture_Alpha
+                        "heightMap", // eMaterialTexture_Height
+                        "illuminationMap", // eMaterialTexture_Illumination
+                        "cubeMap", // eMaterialTexture_CubeMap
+                        "dissolveAlphaMap", // eMaterialTexture_DissolveAlpha
+                        "cubeMapAlpha", // eMaterialTexture_CubeMapAlpha
+                    };
+
+                    auto* image = apMaterial->GetImage(supportedTexture);
+                    if (image) {
+                        ASSERT(image->GetTexture().IsValid());
+                        params[paramCount].pName = TextureNameLookup[supportedTexture];
+                        params[paramCount++].ppTextures = &image->GetTexture().m_handle;
+                        descInfo.m_textureHandles.push_back(image->GetTexture());
+                    }
+                }
+
+                DescriptorDataRange range = { static_cast<uint32_t>(apMaterial->materialID() * sizeof(cMaterial::MaterialType::MaterialData)), sizeof(cMaterial::MaterialType::MaterialData) };
+                params[paramCount].pName = "uniformMaterialBlock";
+                params[paramCount].pRanges = &range;
+                params[paramCount++].ppBuffers = &m_materialBuffer.m_handle;
+
+                updateDescriptorSet(
+                    frame.m_renderer->Rend(), apMaterial->materialID(), descriptorSet, paramCount, params);
+            }
+
+            for (auto& supportedTexture : metaInfo->m_usedTextures) {
+                auto* image = apMaterial->GetImage(supportedTexture);
+                if (image) {
+                    ASSERT(image->GetTexture().IsValid());
+                    frame.m_resourcePool->Push(image->GetTexture());
+                }
+            }
+            cmdBindDescriptorSet(frame.m_cmd, apMaterial->materialID(), descriptorSet);
+    }
+
     void cRendererDeferred::Draw(
         const ForgeRenderer::Frame& frame,
         cViewport& viewport,
@@ -2481,13 +2538,15 @@ namespace hpl {
         iRenderer::Draw(frame, viewport, afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects);
         // keep around for the moment ...
         BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects);
+        uint32_t objectIndex = 0;;
 
         mpCurrentRenderList->Setup(mfCurrentFrameTime, apFrustum);
+        
 
         const cMatrixf mainFrustumViewInv = cMath::MatrixInverse(apFrustum->GetViewMatrix());
         const cMatrixf mainFrustumView = apFrustum->GetViewMatrix();
         const cMatrixf mainFrustumProj = apFrustum->GetProjectionMatrix();
-        detail::PerObjectOption perObjectOptions = {
+        PerObjectOption perObjectOptions = {
             .m_viewMat = mainFrustumView,
             .m_projectionMat = mainFrustumProj,
         };
@@ -2507,7 +2566,12 @@ namespace hpl {
         auto& sharedData = m_boundViewportData.resolve(viewport);
         auto& currentGBuffer = sharedData.m_gBuffer[frame.m_frameIndex];
 
-
+        frame.m_resourcePool->Push(currentGBuffer.m_colorBuffer);
+        frame.m_resourcePool->Push(currentGBuffer.m_normalBuffer);
+        frame.m_resourcePool->Push(currentGBuffer.m_positionBuffer);
+        frame.m_resourcePool->Push(currentGBuffer.m_specularBuffer);
+        frame.m_resourcePool->Push(currentGBuffer.m_depthBuffer);
+        frame.m_resourcePool->Push(currentGBuffer.m_outputBuffer);
         // {
         //     LoadActionsDesc loadActions = {};
         //     loadActions.mLoadActionsColor[0] = LOAD_ACTION_CLEAR;
@@ -2570,9 +2634,9 @@ namespace hpl {
             cmdSetScissor(frame.m_cmd, 0, 0, sharedData.m_size.x, sharedData.m_size.y);
             cmdBindPipeline(frame.m_cmd, m_zPassPipeline);
 
-            cmdBindDescriptorSet(frame.m_cmd, 0, m_zDescriptorSet.m_constSet);
-            cmdBindDescriptorSet(frame.m_cmd, frame.m_frameIndex, m_zDescriptorSet.m_frameSet);
-            
+            cmdBindDescriptorSet(frame.m_cmd, 0, m_zPassConstSet);
+            cmdBindDescriptorSet(frame.m_cmd, 0, m_materialSet.m_frameSet[frame.m_frameIndex]);
+        
             detail::UpdateRenderableList(
                 mpCurrentRenderList, 
                 mpCurrentSettings->mpVisibleNodeTracker,
@@ -2587,12 +2651,9 @@ namespace hpl {
                     return;
                 }
 
-                static constexpr eMaterialTexture textures[] = {
-                    eMaterialTexture_Diffuse,
-                    eMaterialTexture_DissolveAlpha
-                };
-		        detail::cmdBindMaterialDescriptor(frame, pMaterial, textures, m_zDescriptorSet.m_materialSet);
-                detail::cmdBindObjectDescriptor(frame, m_zObjectIndex, apFrustum, pMaterial, renderable, m_zDescriptorSet.m_perObjectSet, perObjectOptions);
+
+		        cmdBindMaterialDescriptor(frame, pMaterial);
+                cmdBindObjectDescriptor(frame, objectIndex, pMaterial, renderable, perObjectOptions);
 
                 std::array targets = {
                     eVertexBufferElement_Position,
@@ -2668,27 +2729,19 @@ namespace hpl {
             cmdSetScissor(frame.m_cmd, 0, 0, sharedData.m_size.x, sharedData.m_size.y);
             cmdBindPipeline(frame.m_cmd, m_solidDiffuseParallaxPipeline);
 
-            cmdBindDescriptorSet(frame.m_cmd, 0, m_solidDescriptorSet.m_constSet);
-            cmdBindDescriptorSet(frame.m_cmd, frame.m_frameIndex, m_solidDescriptorSet.m_frameSet);
+            // cmdBindDescriptorSet(frame.m_cmd, 0, m_solidDescriptorSet.m_constSet);
+            cmdBindDescriptorSet(frame.m_cmd, 0, m_materialSet.m_frameSet[frame.m_frameIndex]);
 
-            for(auto& diffuseItems: mpCurrentRenderList->GetRenderableItems(eRenderListType_Diffuse)) {
-                cMaterial* pMaterial = diffuseItems->GetMaterial();
-                iVertexBuffer* vertexBuffer = diffuseItems->GetVertexBuffer();
+            for(auto& diffuseItem: mpCurrentRenderList->GetRenderableItems(eRenderListType_Diffuse)) {
+                cMaterial* pMaterial = diffuseItem->GetMaterial();
+                iVertexBuffer* vertexBuffer = diffuseItem->GetVertexBuffer();
                 if(pMaterial == nullptr || vertexBuffer == nullptr) {
                     continue;
                 }
 
-                static constexpr eMaterialTexture textures[] = {
-                    eMaterialTexture_Diffuse,
-                    eMaterialTexture_Height,
-                    eMaterialTexture_NMap,
-                    eMaterialTexture_CubeMap,
-                    eMaterialTexture_Specular,
-                    eMaterialTexture_CubeMapAlpha
-                };
-
-                detail::cmdBindMaterialDescriptor(frame, pMaterial, textures, m_solidDescriptorSet.m_materialSet);
-                detail::cmdBindObjectDescriptor(frame, m_solidObjectIndex, apFrustum, pMaterial, diffuseItems, m_solidDescriptorSet.m_perObjectSet, perObjectOptions);
+                ASSERT(pMaterial->type().m_id == cMaterial::SolidDiffuse && "Invalid material type");
+                cmdBindMaterialDescriptor(frame, pMaterial);
+                cmdBindObjectDescriptor(frame, objectIndex, pMaterial, diffuseItem, perObjectOptions);
 
                 std::array targets = {
                     eVertexBufferElement_Position,
@@ -2724,13 +2777,13 @@ namespace hpl {
             std::array targets = {
                 currentGBuffer.m_outputBuffer.m_handle,
             };
-            cmdBindRenderTargets(frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, NULL, NULL, -1, -1);    
+            cmdBindRenderTargets(frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, NULL, NULL, -1, -1);
             cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)sharedData.m_size.x, (float)sharedData.m_size.y, 0.0f, 1.0f);
             cmdSetScissor(frame.m_cmd, 0, 0, sharedData.m_size.x, sharedData.m_size.y);
 
-            cmdBindDescriptorSet(frame.m_cmd, 0, m_decalDescriptorSet.m_constSet);
-            // cmdBindDescriptorSet(frame.m_cmd, frame.m_frameIndex, m_decalDescriptorSet.m_frameSet);
-
+            // cmdBindDescriptorSet(frame.m_cmd, 0, m_decalDescriptorSet.m_constSet);
+            cmdBindDescriptorSet(frame.m_cmd, 0, m_materialSet.m_frameSet[frame.m_frameIndex]);
+            // uint32_t decalIndex = 0;
             for(auto& decalItem: mpCurrentRenderList->GetRenderableItems(eRenderListType_Decal)) {
                 cMaterial* pMaterial = decalItem->GetMaterial();
                 iVertexBuffer* vertexBuffer = decalItem->GetVertexBuffer();
@@ -2744,11 +2797,8 @@ namespace hpl {
                     eVertexBufferElement_Color0
                 };
 
-                static constexpr eMaterialTexture textures[] = {
-                    eMaterialTexture_Diffuse
-                };
-                detail::cmdBindMaterialDescriptor(frame, pMaterial, textures, m_decalDescriptorSet.m_materialSet);
-                detail::cmdBindObjectDescriptor(frame, m_decalObjectIndex, apFrustum, pMaterial, decalItem, m_decalDescriptorSet.m_perObjectSet, perObjectOptions);
+                cmdBindMaterialDescriptor(frame, pMaterial);
+                cmdBindObjectDescriptor(frame, objectIndex, pMaterial, decalItem, perObjectOptions);
 
                 LegacyVertexBuffer::GeometryBinding binding;
                 static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(
@@ -3073,6 +3123,7 @@ namespace hpl {
                     params[paramCount++].ppTextures = &currentGBuffer.m_positionBuffer.m_handle->pTexture;
                     params[paramCount].pName = "specularMap";
                     params[paramCount++].ppTextures = &currentGBuffer.m_specularBuffer.m_handle->pTexture;
+   
                     updateDescriptorSet(frame.m_renderer->Rend(), frame.m_frameIndex, m_lightFrameSet, paramCount, params);
                 }
 
@@ -3081,6 +3132,7 @@ namespace hpl {
                 cmdBindPushConstants(frame.m_cmd, m_lightPassRootSignature, rootConstantIndex, &viewTexel);
                 cmdBindDescriptorSet(frame.m_cmd, frame.m_frameIndex, m_lightFrameSet);
 
+                uint32_t lightIndex = 0;
                 // updates and binds the light data
                 auto cmdBindLightDescriptor = [&](detail::DeferredLight* light) {
                     DescriptorData params[10] = {};
@@ -3104,6 +3156,7 @@ namespace hpl {
                                 uniformObjectData.m_common.m_config |= LightConfiguration::HasGoboMap;
                                 params[paramCount].pName = "goboCubeMap";
                                 params[paramCount++].ppTextures = &light->m_light->GetGoboTexture()->GetTexture().m_handle;
+                                frame.m_resourcePool->Push(light->m_light->GetGoboTexture()->GetTexture());
                             }
 
                             uniformObjectData.m_pointLight.m_radius = light->m_light->GetRadius();
@@ -3135,12 +3188,15 @@ namespace hpl {
                                 uniformObjectData.m_common.m_config |= LightConfiguration::HasGoboMap;
                                 params[paramCount].pName = "goboMap";
                                 params[paramCount++].ppTextures = &light->m_light->GetGoboTexture()->GetTexture().m_handle;
+                                frame.m_resourcePool->Push(light->m_light->GetGoboTexture()->GetTexture());
                             } else {
                                 params[paramCount].pName = "falloffMap";
                                 params[paramCount++].ppTextures = &spotFallOffImage->GetTexture().m_handle;
+                                frame.m_resourcePool->Push(spotFallOffImage->GetTexture());
                             }
                             params[paramCount].pName = "attenuationLightMap";
                             params[paramCount++].ppTextures = &spotAttenuationImage->GetTexture().m_handle;
+                            frame.m_resourcePool->Push(spotAttenuationImage->GetTexture());
 
                             break;
                         }
@@ -3166,9 +3222,9 @@ namespace hpl {
                     params[paramCount].pRanges = &range;
                     params[paramCount++].ppBuffers = &uniformBuffer.pBuffer;
 
-                    updateDescriptorSet(frame.m_renderer->Rend(), m_lightObjectIndex, m_lightPerLightSet, paramCount, params);
-                    cmdBindDescriptorSet(frame.m_cmd, m_lightObjectIndex, m_lightPerLightSet);
-                    m_lightObjectIndex = (m_lightObjectIndex + 1) % MaxLightUniforms;
+                    updateDescriptorSet(frame.m_renderer->Rend(), lightIndex, m_lightPerLightSet[frame.m_frameIndex], paramCount, params);
+                    cmdBindDescriptorSet(frame.m_cmd, lightIndex, m_lightPerLightSet[frame.m_frameIndex]);
+                    lightIndex++;
                 };
 
                 {

@@ -155,7 +155,6 @@ namespace hpl {
         size_t m_indexBufferActiveCopy = 0;
         tVertexElementFlag m_updateFlags = 0; // update no need to rebuild buffers
         bool m_updateIndices = false;
-        bool m_rebuildIndices = false;
 
         friend struct VertexElement;
     };

@@ -4,32 +4,25 @@
 #include "windowing/NativeWindow.h"
 
 namespace hpl {
-    void ForgeRenderer::CommandResourcePool::AddTexture(ForgeTextureHandle texture) {
-        m_cmds.push_back(texture);
-    }
-
-    void ForgeRenderer::CommandResourcePool::ResetPool() {
-        m_cmds.clear();
-    }
 
     void ForgeRenderer::IncrementFrame() {
         // Stall if CPU is running "Swap Chain Buffer Count" frames ahead of GPU
+        // m_resourcePoolIndex = (m_resourcePoolIndex + 1) % ResourcePoolSize;
+        m_currentFrameCount++;
+        auto frame = GetFrame();
+        
         FenceStatus fenceStatus;
-        auto& completeFence = m_renderCompleteFences[CurrentFrameIndex()];
+        auto& completeFence = frame.m_renderCompleteFence;
         getFenceStatus(m_renderer, completeFence, &fenceStatus);
         if (fenceStatus == FENCE_STATUS_INCOMPLETE) {
             waitForFences(m_renderer, 1, &completeFence);
         }
         acquireNextImage(m_renderer, m_swapChain, m_imageAcquiredSemaphore, nullptr, &m_swapChainIndex);
-        m_currentFrameIndex++;
 
-        auto frame = GetFrame();
-
-        frame.m_resourcePool->ResetPool();
         resetCmdPool(m_renderer, frame.m_cmdPool);
-
-        beginCmd(m_cmds[CurrentFrameIndex()]);
-
+        frame.m_resourcePool->ResetPool();
+        beginCmd(frame.m_cmd);
+        
         auto&   swapChainImage = frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex];
 
         RenderTargetBarrier rtBarriers[] = {
@@ -47,7 +40,6 @@ namespace hpl {
             { swapChainImage, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_PRESENT },
         };
         cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, 1, rtBarriers);
-
         endCmd(m_cmds[CurrentFrameIndex()]);
 
         QueueSubmitDesc submitDesc = {};
@@ -171,6 +163,7 @@ namespace hpl {
     }
 
     void ForgeRenderer::cmdCopyTexture(CopyPipelines action, Cmd* cmd, Texture* srcTexture, RenderTarget* dstTexture) {
+        
         ASSERT(srcTexture);
         ASSERT(dstTexture);
 

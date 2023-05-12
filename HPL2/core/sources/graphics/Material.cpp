@@ -164,6 +164,7 @@ namespace hpl {
 
 	void cMaterial::SetImage(eMaterialTexture aType, iResourceBase *apTexture) 
 	{
+		m_version++;
 		m_image[aType].SetAutoDestroyResource(false);
 		if(apTexture) {
 			BX_ASSERT(TypeInfo<Image>().IsType(*apTexture) || TypeInfo<AnimatedImage>().IsType(*apTexture), "cMaterial::SetImage: apTexture is not an Image")

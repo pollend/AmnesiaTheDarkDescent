@@ -490,17 +490,6 @@ namespace hpl {
 
     void LegacyVertexBuffer::GetLayoutStream(GraphicsContext::LayoutStream& layoutStream, eVertexBufferDrawType aDrawType) {
         ASSERT(false && "need to reimplement");
-        // layoutStream.m_drawType = aDrawType == eVertexBufferDrawType_LastEnum ? mDrawType : aDrawType;
-        // for (auto& element : m_vertexElements) {
-        //     layoutStream.m_vertexStreams.push_back({
-        //         .m_handle = element.m_handle,
-        //         .m_dynamicHandle = element.m_dynamicHandle,
-        //     });
-        // }
-        // layoutStream.m_indexStream = {
-        //     .m_handle = m_indexBufferHandle,
-        //     .m_dynamicHandle = m_dynamicIndexBufferHandle,
-        // };
     }
 
     void LegacyVertexBuffer::resolveGeometryBinding(

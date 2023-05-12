@@ -31,8 +31,7 @@ namespace hpl {
             std::atomic<uint32_t> m_refCount = 0;
         };
 
-        RefHandle() {
-        }
+        RefHandle() = default;
 
         RefHandle(const RefHandle& other) {
             m_handle = other.m_handle;
@@ -75,6 +74,7 @@ namespace hpl {
             if(!m_handle) {
                 return;
             }
+            ASSERT(m_initialized && "Trying to free a handle that has not been initialized");
             ASSERT(m_refCounter && "Trying to free a handle that has not been initialized");
             ASSERT(m_refCounter->m_refCount > 0 && "Trying to free resource that is still referenced");
             if((--m_refCounter->m_refCount) == 0) {
@@ -91,6 +91,7 @@ namespace hpl {
             m_refCounter = other.m_refCounter;
             m_initialized = other.m_initialized;
             if(m_initialized) {
+                ASSERT(m_handle && "Handle is null");
                 ASSERT(m_refCounter && "RefCounter is null");
                 m_refCounter->m_refCount++;
             }
@@ -103,6 +104,7 @@ namespace hpl {
             m_initialized = other.m_initialized;
             other.m_handle = nullptr;
             other.m_refCounter = nullptr;
+            other.m_initialized = false;
         }
 
         bool IsValid() const {

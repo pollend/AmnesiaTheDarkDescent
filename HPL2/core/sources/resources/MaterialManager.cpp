@@ -485,11 +485,12 @@ namespace hpl {
 		if(pUserVarsRoot) userVars.LoadVariables(pUserVarsRoot);
 
 		pMatType->LoadVariables(pMat, &userVars);
-
+		
+		tString materialID = cString::ToLowerCase(sType);
 		auto& typeInfo = pMat->type();
 		for(auto& meta: cMaterial::MetaInfo) {
 			// auto& meta = cMaterial::MetaInfo[i];
-			if(meta.m_name == sType) {
+			if(materialID == meta.m_name) {
 				auto& type = pMat->type();
 				type.m_id = meta.m_id;
 				switch(meta.m_id) {

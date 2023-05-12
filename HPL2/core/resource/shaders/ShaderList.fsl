@@ -1,11 +1,3 @@
-// #frag basicSolidDiffuse.frag
-// #include "basicSolidDiffuse.frag.fsl"
-// #end
-// 
-// #vert basicSolidDiffuse.vert
-// #include "basicSolidDiffuse.vert.fsl"
-// #end
-
 #vert solid_z.vert
 #include "solid_z.vert.fsl"
 #end
@@ -25,6 +17,14 @@
 
 #vert solid_diffuse.vert
 #include "solid_diffuse.vert.fsl"
+#end
+
+#vert solid_illumination.vert
+#include "solid_illumination.vert.fsl"
+#end
+
+#frag solid_illumination.frag
+#include "solid_illumination.frag.fsl"
 #end
 
 #frag solid_diffuse.frag
@@ -49,7 +49,6 @@
 #frag deferred_light_stencil.frag
 #include "deferred_light_stencil.frag.fsl"
 #end
-
 
 #frag deferred_light_box.frag
 #include "deferred_light_box.frag.fsl"

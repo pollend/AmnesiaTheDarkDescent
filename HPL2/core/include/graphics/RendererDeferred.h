@@ -96,7 +96,6 @@ namespace hpl {
     class cRendererDeferred : public iRenderer {
         HPL_RTTI_IMPL_CLASS(iRenderer, cRendererDeferred, "{A3E5E5A1-1F9C-4F5C-9B9B-5B9B9B5B9B9B}")
     public:
-        static void InitializeDeferred(ForgeRenderer& pipeline);
 
         static constexpr TinyImageFormat DepthBufferFormat = TinyImageFormat_D32_SFLOAT_S8_UINT;
         static constexpr TinyImageFormat NormalBufferFormat = TinyImageFormat_R16G16B16A16_SFLOAT;
@@ -146,12 +145,6 @@ namespace hpl {
             } m_boxLight;
         };
 
-        struct MaterialPassDescriptorSet {
-            DescriptorSet* m_constSet;
-            DescriptorSet* m_frameSet;
-            DescriptorSet* m_perObjectSet;
-            DescriptorSet* m_materialSet;
-        };
 
         struct CBObjectData {
             mat4 m_modelMat;
@@ -347,9 +340,7 @@ namespace hpl {
             const cMatrixf& frustumProjection;
             const cMatrixf& frustumInvView;
             const cMatrixf& frustumView;
-
            cRendererDeferred::GBuffer& m_gBuffer;
-
         };
         void RenderLightPass(GraphicsContext& context, std::span<iLight*> lights, cWorld* apWorld, cViewport& viewport, cFrustum* apFrustum, LightPassOptions& options);
         struct FogPassOptions {
@@ -365,6 +356,18 @@ namespace hpl {
         };
         void RenderFullscreenFogPass(GraphicsContext& context, cWorld* apWorld, cViewport& viewport, cFrustum* apFrustum, FogPassFullscreenOptions& options);
         iVertexBuffer* GetLightShape(iLight* apLight, eDeferredShapeQuality aQuality) const;
+        
+        struct PerObjectOption {
+            cMatrixf m_viewMat;
+            cMatrixf m_projectionMat;
+        };
+        void cmdBindMaterialDescriptor(const ForgeRenderer::Frame& frame, cMaterial* apMaterial);
+        void cmdBindObjectDescriptor(
+            const ForgeRenderer::Frame& frame,
+            uint32_t& updateIndex,
+            cMaterial* apMaterial,
+            iRenderable* apObject,
+            const PerObjectOption& option);
 
         std::array<std::unique_ptr<iVertexBuffer>, eDeferredShapeQuality_LastEnum> m_shapeSphere;
         std::unique_ptr<iVertexBuffer> m_shapePyramid;
@@ -393,29 +396,44 @@ namespace hpl {
         Image* m_dissolveImage;
         
         ForgeBufferHandle m_perFrameBuffer;
+        
+        // Material
+        struct MaterialInfo {
+            struct MaterialDescInfo {
+                void* m_material = nullptr; // void* to avoid accessing the material 
+                uint32_t m_version = 0; // version of the material
+                absl::InlinedVector<ForgeTextureHandle, 10> m_textureHandles{};
+            } m_materialDescInfo[ForgeRenderer::SwapChainLength];
+        };
+        ForgeBufferHandle m_materialBuffer;
+        GPURingBuffer* m_objectUniformBuffer;
+        std::array<MaterialInfo, cMaterial::MaxMaterialID> m_materialInfo;
 
-        // z material pass
-        Shader* m_zPassShader;
-        Pipeline* m_zPassPipeline;
-        RootSignature* m_zPassRootSignature;
-        MaterialPassDescriptorSet m_zDescriptorSet;
-        uint32_t m_zObjectIndex = 0;
-
+        RootSignature* m_materialRootSignature;
+        
         // decal pass
-        Shader* m_decalShader;
         std::array<std::array<Pipeline*,eMaterialBlendMode_LastEnum>, eMaterialBlendMode_LastEnum> m_decalPipeline;
-        RootSignature* m_decalRootSignature;
-        MaterialPassDescriptorSet m_decalDescriptorSet;
-        uint32_t m_decalObjectIndex = 0;
-
-        // diffuse material pass
+        Shader* m_decalShader;
+        
+        // diffuse solid
         Shader* m_solidDiffuseShader;
         Shader* m_solidDiffuseParallaxShader;
         Pipeline* m_solidDiffusePipeline;
         Pipeline* m_solidDiffuseParallaxPipeline;
-        RootSignature* m_solidDiffuseRootSignature;
-        MaterialPassDescriptorSet m_solidDescriptorSet;
-        uint32_t m_solidObjectIndex = 0;
+
+        // illumination pass
+        Shader* m_solidIlluminationShader;
+        
+        // z pass
+        Shader* m_zPassShader;
+        Pipeline* m_zPassPipeline;
+        DescriptorSet* m_zPassConstSet;
+
+        struct MaterialPassDescriptorSet {
+            std::array<DescriptorSet*, ForgeRenderer::SwapChainLength>  m_frameSet;
+            std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perObjectSet;
+            std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_materialSet;
+        } m_materialSet;
 
         // light pass
         GPURingBuffer* m_lightPassRingBuffer;
@@ -428,9 +446,8 @@ namespace hpl {
         Shader* m_spotLightShader;
         Shader* m_stencilLightShader;
         Shader* m_boxLightShader;
-        DescriptorSet* m_lightPerLightSet;
+        std::array<DescriptorSet*,ForgeRenderer::SwapChainLength> m_lightPerLightSet;
         DescriptorSet* m_lightFrameSet;
-        uint32_t m_lightObjectIndex = 0;
 
         cRenderList m_reflectionRenderList;
 

@@ -90,10 +90,8 @@ namespace hpl {
 
         // initialize gui rendering
         initResourceLoaderInterface(m_renderer.Rend()); // initializes resources
-        
         gui::InitializeGui(m_renderer);
-        cRendererDeferred::InitializeDeferred(m_renderer);
-        
+ 
 
         // this is safe because the render target is scheduled on the api thread
         m_primaryViewport = std::make_unique<hpl::PrimaryViewport>(m_window);

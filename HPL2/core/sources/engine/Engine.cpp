@@ -540,7 +540,6 @@ namespace hpl {
 			{
 
 				renderer->IncrementFrame();
-				auto frame = renderer->GetFrame();
 
 				///////////////////////////////////////
            		//Get the the from the last frame.
@@ -553,7 +552,7 @@ namespace hpl {
 
 				//Render this frame
 				START_TIMING(RenderAll)
-				mpScene->Render(frame, mfFrameTime, tSceneRenderFlag_All);
+				mpScene->Render(renderer->GetFrame(), mfFrameTime, tSceneRenderFlag_All);
 				STOP_TIMING(RenderAll)
 
 				START_TIMING(PostRender)

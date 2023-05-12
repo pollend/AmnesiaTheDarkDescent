@@ -29,7 +29,6 @@ CBUFFER(uniformObjectBlock, UPDATE_FREQ_PER_DRAW, b1, binding = 1)
         DATA(float, frenselPow, None);
     };
     INLINE bool HasDissolveFilter(int _textureConfig)   { return (_textureConfig & (1 << 9)) != 0; }
-    
 #endif
 
 RES(Tex2D(float4), diffuseMap, UPDATE_FREQ_PER_BATCH, t1, binding = 5); 

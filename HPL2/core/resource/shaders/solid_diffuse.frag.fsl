@@ -4,7 +4,6 @@
 
 RES(Tex2D(float4), dissolveMap, UPDATE_FREQ_NONE, t9, binding = 4);
 
-
 STRUCT(PsIn) 
 {
     DATA(float4, Position, SV_Position);

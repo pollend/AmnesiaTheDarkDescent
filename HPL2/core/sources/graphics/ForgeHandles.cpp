@@ -181,7 +181,6 @@ namespace hpl {
         textureLoadDesc.pDesc = &desc;
         addResource(&textureLoadDesc, &token);
 
-
         auto sourceImageFormat = FromHPLPixelFormat(bitmap.GetPixelFormat());
         uint32_t sourceRowStride;
         if(!util_get_surface_info(desc.mWidth, desc.mHeight, sourceImageFormat, nullptr, &sourceRowStride, nullptr)) {
@@ -278,7 +277,7 @@ namespace hpl {
                 }
             }
         }
-
+        handle.Initialize();
         return handle;
     }
 

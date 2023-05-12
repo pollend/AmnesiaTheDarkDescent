@@ -52,6 +52,7 @@ namespace hpl {
 
         static constexpr uint32_t MaxCopyFrames = 16;
         static constexpr uint32_t SwapChainLength = 2; // double buffered
+        static constexpr uint32_t ResourcePoolSize = 4; // double buffered
 
         void InitializeRenderer(window::NativeWindowWrapper* window);
 
@@ -60,20 +61,22 @@ namespace hpl {
         */
         class CommandResourcePool {
         public:
-            using VariantTypes = std::variant<ForgeTextureHandle, ForgeBufferHandle>;
+            using VariantTypes = std::variant<ForgeTextureHandle, ForgeBufferHandle, ForgeRenderTarget>;
             // could be done better ...
             CommandResourcePool() = default;
 
             template<class T>
-            void Push(const T& handle) {
-                VariantTypes variant = handle;
-                m_cmds.push_back(variant);
+            inline void Push(const T& handle) {
+                if(handle.IsValid()) {
+                    m_cmds.emplace_back(VariantTypes{handle});
+                }
             }
 
-            void AddTexture(ForgeTextureHandle texture);
-            void ResetPool();
+            inline void ResetPool() {
+                m_cmds.clear();
+            }
         private:
-            absl::InlinedVector<VariantTypes, 1024> m_cmds;
+            std::vector<VariantTypes> m_cmds;
         };
 
         /**
@@ -104,7 +107,7 @@ namespace hpl {
             frame.m_cmdPool = m_cmdPools[CurrentFrameIndex()];
             frame.m_renderCompleteFence = m_renderCompleteFences[CurrentFrameIndex()];
             frame.m_renderCompleteSemaphore = m_renderCompleteSemaphores[CurrentFrameIndex()];
-            frame.m_resourcePool = &m_commandPool[CurrentFrameIndex()];
+            frame.m_resourcePool = &m_resourcePool[CurrentFrameIndex()];
             return frame;
         }
         // void BeginFrame() {}
@@ -119,18 +122,18 @@ namespace hpl {
         RootSignature* PipelineSignature() { return m_pipelineSignature; }
         
         size_t SwapChainIndex() { return m_swapChainIndex; }
-        size_t CurrentFrameIndex() { return m_currentFrameIndex % SwapChainLength; }
-        size_t FrameCount() { return m_currentFrameIndex; }
+        size_t CurrentFrameIndex() { return m_currentFrameCount % SwapChainLength; }
+        size_t FrameCount() { return m_currentFrameCount; }
         inline SwapChain* GetSwapChain() { return m_swapChain; }
 
         // size_t FrameIndex()  { return (m_currentFrameIndex % SwapChainLength); }
-        inline CommandResourcePool& ResourcePool(size_t index) { return m_commandPool[index]; }
-        inline CmdPool* GetCmdPool(size_t index) { return m_cmdPools[index]; }
+        // inline CommandResourcePool& ResourcePool(size_t index) { return m_commandPool[index]; }
+        // inline CmdPool* GetCmdPool(size_t index) { return m_cmdPools[index]; }
         
         void cmdCopyTexture(CopyPipelines copy, Cmd* cmd, Texture* srcTexture, RenderTarget* dstTexture);
 
     private:
-        std::array<CommandResourcePool, SwapChainLength> m_commandPool;
+        std::array<CommandResourcePool, SwapChainLength> m_resourcePool;
         std::array<Fence*, SwapChainLength> m_renderCompleteFences;
         std::array<Semaphore*, SwapChainLength> m_renderCompleteSemaphores;
         std::array<CmdPool*, SwapChainLength> m_cmdPools;
@@ -149,8 +152,9 @@ namespace hpl {
         DescriptorSet* m_copyPostProcessingDescriptorSet = nullptr;
         uint32_t m_copyRegionDescriptorIndex = 0;
   
-        uint32_t m_currentFrameIndex = 0;
+        uint32_t m_currentFrameCount = 0;
         uint32_t m_swapChainIndex = 0;
+        // uint32_t m_resourcePoolIndex = 0;
     };
 
 } // namespace hpl
