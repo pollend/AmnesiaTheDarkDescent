@@ -327,7 +327,7 @@ namespace hpl {
 			Error("Invalid material type '%s'!\n",sType.c_str());
 			return NULL;
 		}
-		cMaterial* pMat = hplNew( cMaterial, (asName, asPath, mpGraphics, mpResources, pMatType) );
+		cMaterial* pMat = new cMaterial(asName, asPath, mpGraphics, mpResources, pMatType);
 
 		pMat->SetDepthTest(bDepthTest);
 		pMat->SetPhysicsMaterial(sPhysicsMatName);

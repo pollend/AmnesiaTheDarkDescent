@@ -98,8 +98,7 @@ void main()
                 vRefractOffset = mapNormal.xy;
             }
             
-            vRefractOffset *= u_refractionScale * invDist;
-            vDistortedScreenPos += gl_FragCoord.xy + vRefractOffset; 
+            vDistortedScreenPos += gl_FragCoord.xy + (u_refractionScale * invDist); 
         #else
             vDistortedScreenPos += gl_FragCoord.xy + (screenNormal.xy  * u_refractionScale * invDist);
         #endif

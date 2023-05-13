@@ -41,7 +41,7 @@ namespace hpl {
 
 	namespace internal {
         static size_t m_id = 0;
-        static absl::InlinedVector<size_t, cMaterial::MaxMaterialID> m_freelist;
+        static std::vector<size_t> m_freelist;
 	}
 
 	bool cMaterial::mbDestroyTypeSpecifics = true;
@@ -116,6 +116,7 @@ namespace hpl {
 	cMaterial::~cMaterial()
 	{
 		internal::m_freelist.push_back(m_materialID);
+		m_materialID = 0;
 		if(mpVars) {
 			hplDelete(mpVars);
 		}

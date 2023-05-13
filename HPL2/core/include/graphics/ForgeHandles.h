@@ -87,6 +87,7 @@ namespace hpl {
         }
         
         void operator= (const RefHandle& other) {
+            TryFree(); // Free the current handle
             m_handle = other.m_handle;
             m_refCounter = other.m_refCounter;
             m_initialized = other.m_initialized;

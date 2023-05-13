@@ -402,7 +402,7 @@ namespace hpl {
             struct MaterialDescInfo {
                 void* m_material = nullptr; // void* to avoid accessing the material 
                 uint32_t m_version = 0; // version of the material
-                absl::InlinedVector<ForgeTextureHandle, 10> m_textureHandles{};
+                std::array<ForgeTextureHandle, eMaterialTexture_LastEnum> m_textureHandles{};
             } m_materialDescInfo[ForgeRenderer::SwapChainLength];
         };
         ForgeBufferHandle m_materialBuffer;
@@ -411,6 +411,7 @@ namespace hpl {
 
         RootSignature* m_materialRootSignature;
         
+
         // decal pass
         std::array<std::array<Pipeline*,eMaterialBlendMode_LastEnum>, eMaterialBlendMode_LastEnum> m_decalPipeline;
         Shader* m_decalShader;
@@ -423,7 +424,21 @@ namespace hpl {
 
         // illumination pass
         Shader* m_solidIlluminationShader;
+        Pipeline* m_solidIlluminationPipeline;
         
+        // translucency pass
+        Shader* m_translucencyAdd;
+        Shader* m_translucencyMul;
+        Shader* m_translucencyMulX2;
+        Shader* m_translucencyAlpha;
+        Shader* m_translucencyPremulAlpha;
+
+        Shader* m_translucencyFogAdd;
+        Shader* m_translucencyFogMul;
+        Shader* m_translucencyFogMulX2;
+        Shader* m_translucencyFogAlpha;
+        Shader* m_translucencyFogPremulAlpha;
+
         // z pass
         Shader* m_zPassShader;
         Pipeline* m_zPassPipeline;

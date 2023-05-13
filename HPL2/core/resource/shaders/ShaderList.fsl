@@ -58,10 +58,6 @@
 #include "deferred_light_spotlight.frag.fsl"
 #end
 
-// #comp copy_region.comp
-// #include "copy_region.comp.fsl"
-// #end
-
 #vert fullscreen.vert
 #include "fullscreen.vert.fsl"
 #end
@@ -76,4 +72,65 @@
 
 #vert decal.vert
 #include "decal.vert.fsl"
+#end
+
+// translucency
+#vert translucency.vert
+#include "translucency.vert.fsl"
+#end
+
+#frag translucency_add.frag
+#define USE_BLEND_MODE_ADD 1
+#include "translucency.frag.fsl"
+#end
+
+#frag translucency_mul.frag
+#define USE_BLEND_MODE_MUL 1
+#include "translucency.frag.fsl"
+#end
+
+#frag translucency_mulx2.frag
+#define USE_BLEND_MODE_MULX2 1
+#include "translucency.frag.fsl"
+#end
+
+#frag translucency_alpha.frag
+#define USE_BLEND_MODE_ALPHA 1
+#include "translucency.frag.fsl"
+#end
+
+#frag translucency_premul_alpha.frag
+#define USE_BLEND_MODE_PREMUL_ALPHA 1
+#include "translucency.frag.fsl"
+#end
+
+// translucency fog
+#frag translucency_fog_add.frag
+#define USE_FOG 1
+#define USE_BLEND_MODE_ADD 1
+#include "translucency.frag.fsl"
+#end
+
+#frag translucency_fog_mul.frag
+#define USE_FOG 1
+#define USE_BLEND_MODE_MUL 1
+#include "translucency.frag.fsl"
+#end
+
+#frag translucency_fog_mulx2.frag
+#define USE_FOG 1
+#define USE_BLEND_MODE_MULX2 1
+#include "translucency.frag.fsl"
+#end
+
+#frag translucency_fog_alpha.frag
+#define USE_FOG 1
+#define USE_BLEND_MODE_ALPHA 1
+#include "translucency.frag.fsl"
+#end
+
+#frag translucency_fog_premul_alpha.frag
+#define USE_FOG 1
+#define USE_BLEND_MODE_PREMUL_ALPHA 1
+#include "translucency.frag.fsl"
 #end

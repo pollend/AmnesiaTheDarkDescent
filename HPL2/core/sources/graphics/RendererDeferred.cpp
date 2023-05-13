@@ -1014,8 +1014,80 @@ namespace hpl {
                 loadDesc.mStages[1] = { "decal.frag", nullptr, 0 };
                 addShader(forgetRenderer->Rend(), &loadDesc, &m_decalShader);
             }
+            // translucency
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0] = { "translucency.vert", nullptr, 0 };
+                loadDesc.mStages[1] = { "translucency_add.frag", nullptr, 0 };
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_translucencyAdd);
+            }
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0] = { "translucency.vert", nullptr, 0 };
+                loadDesc.mStages[1] = { "translucency_mul.frag", nullptr, 0 };
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_translucencyMul);
+            }
 
-            Shader* shaders[] = { m_solidDiffuseShader, m_solidDiffuseParallaxShader, m_zPassShader, m_decalShader, m_solidIlluminationShader};
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0] = { "translucency.vert", nullptr, 0 };
+                loadDesc.mStages[1] = { "translucency_mulx2.frag", nullptr, 0 };
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_translucencyMulX2);
+            }
+
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0] = { "translucency.vert", nullptr, 0 };
+                loadDesc.mStages[1] = { "translucency_alpha.frag", nullptr, 0 };
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_translucencyAlpha);
+            }
+
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0] = { "translucency.vert", nullptr, 0 };
+                loadDesc.mStages[1] = { "translucency_premul_alpha.frag", nullptr, 0 };
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_translucencyPremulAlpha);
+            }
+            // translucency fog
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0] = { "translucency.vert", nullptr, 0 };
+                loadDesc.mStages[1] = { "translucency_fog_add.frag", nullptr, 0 };
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_translucencyFogAdd);
+            }
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0] = { "translucency.vert", nullptr, 0 };
+                loadDesc.mStages[1] = { "translucency_fog_mul.frag", nullptr, 0 };
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_translucencyFogMul);
+            }
+
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0] = { "translucency.vert", nullptr, 0 };
+                loadDesc.mStages[1] = { "translucency_fog_mulx2.frag", nullptr, 0 };
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_translucencyFogMulX2);
+            }
+
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0] = { "translucency.vert", nullptr, 0 };
+                loadDesc.mStages[1] = { "translucency_fog_alpha.frag", nullptr, 0 };
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_translucencyFogAlpha);
+            }
+
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0] = { "translucency.vert", nullptr, 0 };
+                loadDesc.mStages[1] = { "translucency_fog_premul_alpha.frag", nullptr, 0 };
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_translucencyFogPremulAlpha);
+            }
+
+            Shader* shaders[] = {
+                m_solidDiffuseShader, m_solidDiffuseParallaxShader, m_zPassShader, m_decalShader, m_solidIlluminationShader,
+                m_translucencyAdd, m_translucencyMul, m_translucencyMulX2, m_translucencyAlpha, m_translucencyPremulAlpha,
+                m_translucencyFogAdd,m_translucencyFogMul,m_translucencyFogMulX2,m_translucencyFogAlpha,m_translucencyFogPremulAlpha
+            };
             RootSignatureDesc rootSignatureDesc = {};
             rootSignatureDesc.ppShaders = shaders;
             rootSignatureDesc.mShaderCount = std::size(shaders);
@@ -1245,7 +1317,7 @@ namespace hpl {
                 pipelineSettings.pShaderProgram = m_solidIlluminationShader;
                 pipelineSettings.pRasterizerState = &rasterizerStateDesc;
                 pipelineSettings.pVertexLayout = &vertexLayout;
-                addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_zPassPipeline);
+                addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_solidIlluminationPipeline);
             }
 
             // DescriptorSetDesc constantDescSet{m_materialRootSignature, DESCRIPTOR_UPDATE_FREQ_NONE, 1};
@@ -2455,25 +2527,18 @@ namespace hpl {
     }
 
     void cRendererDeferred::cmdBindMaterialDescriptor(const ForgeRenderer::Frame& frame, cMaterial* apMaterial) {
-            
+            ASSERT(apMaterial != nullptr && "Material is null");
+
             auto& info = m_materialInfo[apMaterial->materialID()];
 
             auto& descriptorSet = m_materialSet.m_materialSet[frame.m_frameIndex];
             auto& descInfo = info.m_materialDescInfo[frame.m_frameIndex];
             auto& materialType = apMaterial->type();
 
-            // we are using the same material, but the version has changed so we need to update the descriptor
-            // associated with the material
-            // auto materialIt = std::find_if(info.m_visitedDescriptors.begin(), info.m_visitedDescriptors.end(), [&](const auto& desc) {
-            //                            return desc.m_descriptor == descriptorSet;
-            //                        });
-            // const bool isVisited = (materialIt != info.m_visitedDescriptors.end());
-            
             auto metaInfo = std::find_if(cMaterial::MetaInfo.begin(), cMaterial::MetaInfo.end(), [&](auto& info) {
                 return info.m_id == materialType.m_id;
             });
-            const bool isDirty = (descInfo.m_material != apMaterial || descInfo.m_version != apMaterial->Version());
-            if (isDirty) {
+            if (descInfo.m_material != apMaterial || descInfo.m_version != apMaterial->Version()) {
                 descInfo.m_version = apMaterial->Version();
                 descInfo.m_material = apMaterial;
 
@@ -2485,7 +2550,12 @@ namespace hpl {
                 DescriptorData params[15] = {};
                 size_t paramCount = 0;
             
-                descInfo.m_textureHandles.clear();
+
+                // for (auto& previousHandles : descInfo.m_textureHandles) {
+                //     ASSERT(previousHandles.IsValid());
+                //     frame.m_resourcePool->Push(previousHandles);
+                // }
+                // descInfo.m_textureHandles.clear();
                 for (auto& supportedTexture : metaInfo->m_usedTextures) {
                     static constexpr const char* TextureNameLookup[] = {
                         "diffuseMap", // eMaterialTexture_Diffuse
@@ -2504,7 +2574,7 @@ namespace hpl {
                         ASSERT(image->GetTexture().IsValid());
                         params[paramCount].pName = TextureNameLookup[supportedTexture];
                         params[paramCount++].ppTextures = &image->GetTexture().m_handle;
-                        descInfo.m_textureHandles.push_back(image->GetTexture());
+                        descInfo.m_textureHandles[supportedTexture] = image->GetTexture();
                     }
                 }
 
@@ -2516,14 +2586,12 @@ namespace hpl {
                 updateDescriptorSet(
                     frame.m_renderer->Rend(), apMaterial->materialID(), descriptorSet, paramCount, params);
             }
-
-            for (auto& supportedTexture : metaInfo->m_usedTextures) {
-                auto* image = apMaterial->GetImage(supportedTexture);
-                if (image) {
-                    ASSERT(image->GetTexture().IsValid());
-                    frame.m_resourcePool->Push(image->GetTexture());
-                }
-            }
+            // for (auto& supportedTexture : metaInfo->m_usedTextures) {
+            //     auto* image = apMaterial->GetImage(supportedTexture);
+            //     if (image) {
+            //         frame.m_resourcePool->Push(image->GetTexture());
+            //     }
+            // }
             cmdBindDescriptorSet(frame.m_cmd, apMaterial->materialID(), descriptorSet);
     }
 
@@ -2546,23 +2614,17 @@ namespace hpl {
         const cMatrixf mainFrustumViewInv = cMath::MatrixInverse(apFrustum->GetViewMatrix());
         const cMatrixf mainFrustumView = apFrustum->GetViewMatrix();
         const cMatrixf mainFrustumProj = apFrustum->GetProjectionMatrix();
-        PerObjectOption perObjectOptions = {
-            .m_viewMat = mainFrustumView,
-            .m_projectionMat = mainFrustumProj,
-        };
-        
+
         {
             BufferUpdateDesc updatePerFrameConstantsDesc = { m_perFrameBuffer.m_handle, frame.m_frameIndex * sizeof(PerFrameData), sizeof(PerFrameData)};
             beginUpdateResource(&updatePerFrameConstantsDesc);
             reinterpret_cast<PerFrameData*>(updatePerFrameConstantsDesc.pMappedData)->m_viewMatrix = cMath::ToForgeMat(mainFrustumView);
             reinterpret_cast<PerFrameData*>(updatePerFrameConstantsDesc.pMappedData)->m_projectionMatrix = cMath::ToForgeMat(mainFrustumProj);
             reinterpret_cast<PerFrameData*>(updatePerFrameConstantsDesc.pMappedData)->m_viewProjectionMatrix = cMath::ToForgeMat(cMath::MatrixMul(mainFrustumProj, mainFrustumView));
-		    endUpdateResource(&updatePerFrameConstantsDesc, NULL);
+           endUpdateResource(&updatePerFrameConstantsDesc, NULL);
         }
-		
 
-        auto& swapChainImage = frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex];
-
+        // auto& swapChainImage = frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex];
         auto& sharedData = m_boundViewportData.resolve(viewport);
         auto& currentGBuffer = sharedData.m_gBuffer[frame.m_frameIndex];
 
@@ -2653,7 +2715,10 @@ namespace hpl {
 
 
 		        cmdBindMaterialDescriptor(frame, pMaterial);
-                cmdBindObjectDescriptor(frame, objectIndex, pMaterial, renderable, perObjectOptions);
+                cmdBindObjectDescriptor(frame, objectIndex, pMaterial, renderable, {
+                    .m_viewMat = mainFrustumView,
+                    .m_projectionMat = mainFrustumProj,
+                });
 
                 std::array targets = {
                     eVertexBufferElement_Position,
@@ -2697,18 +2762,18 @@ namespace hpl {
                 eRenderListCompileFlag_FogArea);
         }
 
+        {
+            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+            std::array rtBarriers = {
+                RenderTargetBarrier{ currentGBuffer.m_colorBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
+                RenderTargetBarrier{ currentGBuffer.m_normalBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
+                RenderTargetBarrier{ currentGBuffer.m_positionBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
+                RenderTargetBarrier{ currentGBuffer.m_specularBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
+            };
+            cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+        }
 
         {
-            {
-                cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
-                std::array rtBarriers = {
-                    RenderTargetBarrier{ currentGBuffer.m_colorBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
-                    RenderTargetBarrier{ currentGBuffer.m_normalBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
-                    RenderTargetBarrier{ currentGBuffer.m_positionBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
-                    RenderTargetBarrier{ currentGBuffer.m_specularBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
-                };
-                cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
-            }
 
             cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "GBuffer Pass");
                 
@@ -2741,7 +2806,10 @@ namespace hpl {
 
                 ASSERT(pMaterial->type().m_id == cMaterial::SolidDiffuse && "Invalid material type");
                 cmdBindMaterialDescriptor(frame, pMaterial);
-                cmdBindObjectDescriptor(frame, objectIndex, pMaterial, diffuseItem, perObjectOptions);
+                cmdBindObjectDescriptor(frame, objectIndex, pMaterial, diffuseItem, {
+                    .m_viewMat = mainFrustumView,
+                    .m_projectionMat = mainFrustumProj,
+                });
 
                 std::array targets = {
                     eVertexBufferElement_Position,
@@ -2769,7 +2837,9 @@ namespace hpl {
             cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
         }
 
-        // --------------- Decal Pass ---------------------------------- 
+        // ------------------------------------------------------------------------------------
+        //  Render Decal Pass render to color and depth
+        // ------------------------------------------------------------------------------------
         {
             LoadActionsDesc loadActions = {};
             loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
@@ -2790,6 +2860,7 @@ namespace hpl {
                 if(pMaterial == nullptr || vertexBuffer == nullptr) {
                     continue;
                 }
+                ASSERT(pMaterial->type().m_id == cMaterial::Decal && "Invalid material type");
 
                 std::array targets = {
                     eVertexBufferElement_Position,
@@ -2798,7 +2869,10 @@ namespace hpl {
                 };
 
                 cmdBindMaterialDescriptor(frame, pMaterial);
-                cmdBindObjectDescriptor(frame, objectIndex, pMaterial, decalItem, perObjectOptions);
+                cmdBindObjectDescriptor(frame, objectIndex, pMaterial, decalItem, {
+                    .m_viewMat = mainFrustumView,
+                    .m_projectionMat = mainFrustumProj,
+                });
 
                 LegacyVertexBuffer::GeometryBinding binding;
                 static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(
@@ -2807,24 +2881,6 @@ namespace hpl {
                 cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
             }
         }
-
-
-        // // ------------------------------------------------------------------------------------
-        // //  Render Decal Pass render to color and depth
-        // // ------------------------------------------------------------------------------------
-        // {
-
-        //     detail::DecalPassOptions args = {
-        //         .projectionFrustum = mainFrustumProj,
-        //         .viewFrustum = mainFrustumView,
-        //         .buffer = sharedData.m_gBuffer,
-        //         .name = "Decal",
-        //     };
-        //     detail::RenderDecalPass(
-        //         context, 
-        //         this,  
-        //         mpCurrentRenderList->GetRenderableItems(eRenderListType_Decal), viewport, args);
-        // }
 
         
         // // ------------------------------------------------------------------------------------
@@ -3304,43 +3360,87 @@ namespace hpl {
                     cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
                 }
                 cmdEndDebugMarker(frame.m_cmd);
-
-                {
-                    cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
-                    std::array rtBarriers = {
-                        RenderTargetBarrier{
-                            currentGBuffer.m_outputBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
-                    };
-                    cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
-                }
             }
         }
-        // // ------------------------------------------------------------------------
-        // // Render Light Pass --> renders to output target
-        // // ------------------------------------------------------------------------
-        // {
-        //     LightPassOptions options = {
-        //         .frustumProjection = mainFrustumProj,
-        //         .frustumInvView = mainFrustumViewInv,
-        //         .frustumView = mainFrustumView,
-        //         .m_gBuffer = sharedData.m_gBuffer,
-        //     };
-        //     RenderLightPass(context, mpCurrentRenderList->GetLights(), apWorld, viewport, apFrustum, options);
-        // }
 
-        // // ------------------------------------------------------------------------
-        // // Render Illumination Pass --> renders to output target
-        // // ------------------------------------------------------------------------
-        // {
-        //     detail::IlluminationOptions args = {
-        //         .projectionFrustum = mainFrustumProj,
-        //         .viewFrustum = mainFrustumView,
-        //         .buffer = sharedData.m_gBuffer,
-        //         .name = "Illumination",
-        //     };
-        //     detail::RenderIlluminationPass(
-        //         context, this, mpCurrentRenderList->GetRenderableItems(eRenderListType_Illumination), viewport, args);
-        // }
+        // ------------------------------------------------------------------------
+        // Render Illumination Pass --> renders to output target
+        // ------------------------------------------------------------------------
+        {
+            LoadActionsDesc loadActions = {};
+            loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
+            loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
+            std::array targets = {
+                currentGBuffer.m_outputBuffer.m_handle,
+            };
+            cmdBindRenderTargets(frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, nullptr, nullptr, -1, -1);
+            cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)sharedData.m_size.x, (float)sharedData.m_size.y, 0.0f, 1.0f);
+            cmdSetScissor(frame.m_cmd, 0, 0, sharedData.m_size.x, sharedData.m_size.y);
+            cmdBindPipeline(frame.m_cmd, m_solidIlluminationPipeline);
+            
+            cmdBindDescriptorSet(frame.m_cmd, 0, m_materialSet.m_frameSet[frame.m_frameIndex]);
+
+            for(auto& illuminationItem: mpCurrentRenderList->GetRenderableItems(eRenderListType_Illumination)) {
+                cMaterial* pMaterial = illuminationItem->GetMaterial();
+                iVertexBuffer* vertexBuffer = illuminationItem->GetVertexBuffer();
+                if(pMaterial == nullptr || vertexBuffer == nullptr) {
+                    continue;
+                }
+                ASSERT(pMaterial->type().m_id == cMaterial::SolidDiffuse && "Invalid material type");
+                cmdBindMaterialDescriptor(frame, pMaterial);
+                cmdBindObjectDescriptor(frame, objectIndex, pMaterial, illuminationItem, {
+                    .m_viewMat = mainFrustumView,
+                    .m_projectionMat = mainFrustumProj,
+                });
+
+                std::array targets = {
+                    eVertexBufferElement_Position,
+                    eVertexBufferElement_Texture0,
+                };
+                LegacyVertexBuffer::GeometryBinding binding;
+                static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(
+                    frame.m_currentFrame, targets, &binding);
+                detail::cmdDefaultLegacyGeomBinding(frame, binding);
+                cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+            }
+        }
+
+        {
+            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+            std::array rtBarriers = {
+                RenderTargetBarrier{
+                    currentGBuffer.m_outputBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
+            };
+            cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+        }
+
+
+        // ------------------------------------------------------------------------
+        // Render Translucency Pass --> renders to output target
+        // ------------------------------------------------------------------------
+        for(auto& translucenceItem: mpCurrentRenderList->GetRenderableItems(eRenderListType_Translucent)) {
+            cMaterial* pMaterial = translucenceItem->GetMaterial();
+            iVertexBuffer* vertexBuffer = translucenceItem->GetVertexBuffer();
+            if(pMaterial == nullptr || vertexBuffer == nullptr) {
+                continue;
+            }
+            // ASSERT(pMaterial->type().m_id == cMaterial::SolidDiffuse && "Invalid material type");
+            // cmdBindMaterialDescriptor(frame, pMaterial);
+            // cmdBindObjectDescriptor(frame, objectIndex, pMaterial, translucenceItem, {
+            //     .m_viewMat = mainFrustumView,
+            //     .m_projectionMat = mainFrustumProj,
+            // });
+
+            // std::array targets = {
+            //     eVertexBufferElement_Position,
+            //     eVertexBufferElement_Texture0,
+            // };
+            // LegacyVertexBuffer::GeometryBinding binding;
+            // static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(
+            //     frame.m_currentFrame, targets, &binding);
+            // detail::cmdDefaultLegacyGeomBinding(frame, binding);
+            // cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+        }
 
         // // ------------------------------------------------------------------------
         // // Render Fog Pass --> output target
