@@ -349,11 +349,7 @@ namespace hpl {
 		for(int i=0; i< pMatType->GetUsedTextureNum(); ++i)
 		{
 			cMaterialUsedTexture* pUsedTexture = pMatType->GetUsedTexture(i);
-			// iTexture *pTex = NULL;
-
-			
 			tString sTextureType = GetTextureString(pUsedTexture->mType);
-			//Log("Trying to load type: %s\n",sTextureType.c_str());
 
 			cXmlElement* pTexChild = pTexRoot->GetFirstElement(sTextureType.c_str());
 			if(pTexChild==NULL){
@@ -410,36 +406,54 @@ namespace hpl {
 			else
 			{
 				Image* pImage = nullptr;
-				if(type == eTextureType_1D)
-				{
-					pImage = mpResources->GetTextureManager()->Create1DImage(sFile,bMipMaps,
+				switch(type) {
+					case eTextureType_1D:
+						pImage = mpResources->GetTextureManager()->Create1DImage(sFile,bMipMaps,
+																				eTextureUsage_Normal,
+																				mlTextureSizeDownScaleLevel, options);
+						break;
+					case eTextureType_2D:
+						pImage = mpResources->GetTextureManager()->Create2DImage(sFile,bMipMaps, eTextureType_2D,
 																			eTextureUsage_Normal,
 																			mlTextureSizeDownScaleLevel, options);
-				}
-				else if(type == eTextureType_2D)
-				{
-					pImage = mpResources->GetTextureManager()->Create2DImage(sFile,bMipMaps, eTextureType_2D,
-																		eTextureUsage_Normal,
-																		mlTextureSizeDownScaleLevel, options);
-				}
-				else if(type == eTextureType_3D)
-				{
-					pImage = mpResources->GetTextureManager()->Create3DImage(sFile,bMipMaps,
-																		eTextureUsage_Normal,
-																		mlTextureSizeDownScaleLevel, options);
-				}
-				else if(type == eTextureType_CubeMap)
-				{
-					pImage = mpResources->GetTextureManager()->CreateCubeMapImage(sFile,bMipMaps,
+						break;
+					case eTextureType_CubeMap:
+						pImage = mpResources->GetTextureManager()->CreateCubeMapImage(sFile,bMipMaps,
 																			eTextureUsage_Normal,
 																			mlTextureSizeDownScaleLevel, options);
+						break;
+					case eTextureType_3D:
+						pImage = mpResources->GetTextureManager()->Create3DImage(sFile,bMipMaps,
+																		eTextureUsage_Normal,
+																		mlTextureSizeDownScaleLevel, options);
+						break;
+					default: {
+						ASSERT(false && "Invalid texture type");
+						break;
+					}
 				}
 				pImageResource = pImage;
 				if(pImage) {
 					pMat->SetImage(pUsedTexture->mType, pImage);
+					pImage->setTextureFilter(Image::TextureFilter {
+						.m_addressMode = ([&]{
+							switch(wrap) {
+								case eTextureWrap_Repeat:
+									return ADDRESS_MODE_REPEAT;
+								case eTextureWrap_Clamp:
+								case eTextureWrap_ClampToEdge:
+									return ADDRESS_MODE_CLAMP_TO_EDGE;
+								case eTextureWrap_ClampToBorder:
+									return ADDRESS_MODE_CLAMP_TO_BORDER;
+								default:
+									ASSERT(false && "Invalid wrap mode");
+									break;
+							}
+							return ADDRESS_MODE_CLAMP_TO_BORDER;
+						})(),
+					});
 				}
 			}
-
 			if(!pImageResource)
 			{
 				mpResources->DestroyXmlDocument(pDoc);
@@ -447,8 +461,6 @@ namespace hpl {
 				return nullptr;
 			}
 
-			// pTex->SetFrameTime(fFrameTime);
-			// pTex->SetAnimMode(animMode);
 
 			// pTex->SetWrapSTR(wrap);
 

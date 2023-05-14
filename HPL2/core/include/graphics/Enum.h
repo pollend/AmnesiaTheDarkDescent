@@ -20,6 +20,7 @@ namespace hpl
         None,
         Mirror,
         Clamp,
+        Edge,
         Border
     };
 

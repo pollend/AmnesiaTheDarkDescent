@@ -168,7 +168,7 @@ namespace hpl {
 		m_version++;
 		m_image[aType].SetAutoDestroyResource(false);
 		if(apTexture) {
-			BX_ASSERT(TypeInfo<Image>().IsType(*apTexture) || TypeInfo<AnimatedImage>().IsType(*apTexture), "cMaterial::SetImage: apTexture is not an Image")
+			ASSERT(TypeInfo<Image>().IsType(*apTexture) || TypeInfo<AnimatedImage>().IsType(*apTexture) && "cMaterial::SetImage: apTexture is not an Image");
 			m_image[aType] = std::move(ImageResourceWrapper(mpResources->GetTextureManager(), apTexture, mbAutoDestroyTextures));
 		} else {
 			m_image[aType] = ImageResourceWrapper();

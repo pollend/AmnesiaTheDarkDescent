@@ -477,7 +477,7 @@ namespace hpl {
 				false,
 				true
 			});
-			mpFrameTexture->GetTexture()->Initialize(std::move(forgeHandle));
+			mpFrameTexture->GetTexture()->SetForgeTexture(std::move(forgeHandle));
 
 			// auto desc = ImageDescriptor::CreateFromBitmap(*mpBitmap);
 			// desc.m_configuration.m_UWrap = WrapMode::Clamp;

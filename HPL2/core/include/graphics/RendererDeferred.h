@@ -439,6 +439,16 @@ namespace hpl {
         Shader* m_translucencyFogAlpha;
         Shader* m_translucencyFogPremulAlpha;
 
+        struct ObjectSamplerKey {
+            union {
+                uint8_t m_id;
+                struct {
+                    AddressMode m_addressMode : 2;
+                } m_field;
+            };
+        };
+        std::array<Sampler*, 16> m_objectSamplers{}; 
+
         // z pass
         Shader* m_zPassShader;
         Pipeline* m_zPassPipeline;

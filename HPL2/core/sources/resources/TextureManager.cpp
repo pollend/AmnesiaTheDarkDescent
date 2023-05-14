@@ -115,7 +115,7 @@ namespace hpl {
 				ForgeTextureHandle::BitmapLoadOptions opts = {0};
 				opts.m_useMipmaps = abUseMipMaps;
 				auto handle = ForgeTextureHandle::LoadFromHPLBitmap(*pBmp, opts);
-				resource->Initialize(std::move(handle));
+				resource->SetForgeTexture(std::move(handle));
 				return resource;		
 
 
@@ -152,7 +152,7 @@ namespace hpl {
 				ForgeTextureHandle::BitmapLoadOptions opts = {0};
 				opts.m_useMipmaps = abUseMipMaps;
 				auto handle = ForgeTextureHandle::LoadFromHPLBitmap(*pBmp, opts);
-				resource->Initialize(std::move(handle));
+				resource->SetForgeTexture(std::move(handle));
 				
 				// ImageDescriptor desc =  ImageDescriptor::CreateFromBitmap(*pBmp);
 				// desc.m_name = asName.c_str();
@@ -186,7 +186,7 @@ namespace hpl {
 					opts.m_useMipmaps = abUseMipMaps;
 					opts.m_useCubeMap = true;
 					auto handle = ForgeTextureHandle::LoadFromHPLBitmap(*pBmp, opts);
-					resource->Initialize(std::move(handle));
+					resource->SetForgeTexture(std::move(handle));
 					return resource;
 						
 
@@ -260,7 +260,7 @@ namespace hpl {
 			ForgeTextureHandle::BitmapCubmapLoadOptions opts = {0};
 			opts.m_useMipmaps = abUseMipMaps;
 			auto handle = ForgeTextureHandle::CreateCubemapFromHPLBitmaps(vBitmaps, opts);
-			image->Initialize(std::move(handle));
+			image->SetForgeTexture(std::move(handle));
 
 			// ImageDescriptor desc;
 			// Image::InitializeFromBitmap(*image, *vBitmaps[0], desc);
@@ -290,7 +290,7 @@ namespace hpl {
 				ForgeTextureHandle::BitmapLoadOptions opts = {0};
 				opts.m_useMipmaps = abUseMipMaps;
 				auto handle = ForgeTextureHandle::LoadFromHPLBitmap(*pBmp, opts);
-				resource->Initialize(std::move(handle));
+				resource->SetForgeTexture(std::move(handle));
 				return resource;				
 
 
@@ -428,7 +428,7 @@ namespace hpl {
 				opts.m_useMipmaps = abUseMipMaps;
 				opts.m_useCubeMap = aType == eTextureType_CubeMap;
 				auto handle = ForgeTextureHandle::LoadFromHPLBitmap(*bitmap, opts);
-				image->Initialize(std::move(handle));
+				image->SetForgeTexture(std::move(handle));
 
 				// Image::InitializeFromBitmap(*image, *bitmap, desc);
 				images.push_back(std::move(image));

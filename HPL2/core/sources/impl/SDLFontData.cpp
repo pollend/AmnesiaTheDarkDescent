@@ -157,7 +157,7 @@ namespace hpl {
 			ForgeTextureHandle::BitmapLoadOptions opts = {0};
 			opts.m_useMipmaps = true;
 			auto handle = ForgeTextureHandle::LoadFromHPLBitmap(*pBitmap, opts);
-			image->Initialize(std::move(handle));
+			image->SetForgeTexture(std::move(handle));
 			// auto desc = ImageDescriptor::CreateFromBitmap(*pBitmap);
 			// desc.m_name = sName.c_str();
 			// Image::InitializeFromBitmap(*image,*pBitmap, desc);

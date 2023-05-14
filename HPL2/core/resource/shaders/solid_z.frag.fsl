@@ -16,8 +16,8 @@ float4 PS_MAIN(PsIn In)
     INIT_MAIN;
 
     float diffuseAlpha;
-    if(HasDiffuse(Get(textureConfig))) {
-        diffuseAlpha = SampleTex2D(Get(diffuseMap), Get(nearestSampler), In.TexCoord.xy).a;
+    if(HasAlpha(Get(textureConfig))) {
+        diffuseAlpha = SampleTex2D(Get(alphaMap), Get(alphaSampler), In.TexCoord.xy).a;
     } else {
         diffuseAlpha = 1.0;
     }

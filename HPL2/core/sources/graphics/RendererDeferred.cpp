@@ -2531,6 +2531,7 @@ namespace hpl {
 
             auto& info = m_materialInfo[apMaterial->materialID()];
 
+
             auto& descriptorSet = m_materialSet.m_materialSet[frame.m_frameIndex];
             auto& descInfo = info.m_materialDescInfo[frame.m_frameIndex];
             auto& materialType = apMaterial->type();
@@ -2547,15 +2548,9 @@ namespace hpl {
                 memcpy(updateDesc.pMappedData, &materialType.m_data, sizeof(cMaterial::MaterialType::MaterialData));
                 endUpdateResource(&updateDesc, NULL);
             
-                DescriptorData params[15] = {};
+                std::array<DescriptorData, 32> params{};
                 size_t paramCount = 0;
-            
-
-                // for (auto& previousHandles : descInfo.m_textureHandles) {
-                //     ASSERT(previousHandles.IsValid());
-                //     frame.m_resourcePool->Push(previousHandles);
-                // }
-                // descInfo.m_textureHandles.clear();
+        
                 for (auto& supportedTexture : metaInfo->m_usedTextures) {
                     static constexpr const char* TextureNameLookup[] = {
                         "diffuseMap", // eMaterialTexture_Diffuse
@@ -2569,11 +2564,41 @@ namespace hpl {
                         "cubeMapAlpha", // eMaterialTexture_CubeMapAlpha
                     };
 
+                    static constexpr const char* TextureSamplerLookup[] = {
+                        "diffuseSampler", // eMaterialTexture_Diffuse
+                        "normalSampler", // eMaterialTexture_NMap
+                        "specularSampler", // eMaterialTexture_Specular
+                        "alphaSampler", // eMaterialTexture_Alpha
+                        "heightSampler", // eMaterialTexture_Height
+                        "illuminationSampler", // eMaterialTexture_Illumination
+                        "cubeSampler", // eMaterialTexture_CubeMap
+                        "dissolveAlphaSampler", // eMaterialTexture_DissolveAlpha
+                        "cubeMapAlphaSampler", // eMaterialTexture_CubeMapAlpha
+                    };
+
+
                     auto* image = apMaterial->GetImage(supportedTexture);
                     if (image) {
+                        auto& textureFilter = image->GetTextureFilter();
+                        cRendererDeferred::ObjectSamplerKey sampler = {};
+                        sampler.m_field.m_addressMode = textureFilter.m_addressMode;
+                        ASSERT(sampler.m_id < m_objectSamplers.size() && "Sampler index out of range");
                         ASSERT(image->GetTexture().IsValid());
+
+                        if(!m_objectSamplers[sampler.m_id]) {
+                            SamplerDesc samplerDesc = {};
+                            samplerDesc.mAddressU = textureFilter.m_addressMode;
+                            samplerDesc.mAddressV = textureFilter.m_addressMode;
+                            samplerDesc.mAddressW = textureFilter.m_addressMode;
+
+                            addSampler(frame.m_renderer->Rend(), &samplerDesc, &m_objectSamplers[sampler.m_id]);
+                        }
+                        params[paramCount].pName = TextureSamplerLookup[supportedTexture];
+                        params[paramCount++].ppSamplers = &m_objectSamplers[sampler.m_id];
+                    
                         params[paramCount].pName = TextureNameLookup[supportedTexture];
                         params[paramCount++].ppTextures = &image->GetTexture().m_handle;
+                        
                         descInfo.m_textureHandles[supportedTexture] = image->GetTexture();
                     }
                 }
@@ -2584,14 +2609,8 @@ namespace hpl {
                 params[paramCount++].ppBuffers = &m_materialBuffer.m_handle;
 
                 updateDescriptorSet(
-                    frame.m_renderer->Rend(), apMaterial->materialID(), descriptorSet, paramCount, params);
+                    frame.m_renderer->Rend(), apMaterial->materialID(), descriptorSet, paramCount, params.data());
             }
-            // for (auto& supportedTexture : metaInfo->m_usedTextures) {
-            //     auto* image = apMaterial->GetImage(supportedTexture);
-            //     if (image) {
-            //         frame.m_resourcePool->Push(image->GetTexture());
-            //     }
-            // }
             cmdBindDescriptorSet(frame.m_cmd, apMaterial->materialID(), descriptorSet);
     }
 
@@ -2840,47 +2859,47 @@ namespace hpl {
         // ------------------------------------------------------------------------------------
         //  Render Decal Pass render to color and depth
         // ------------------------------------------------------------------------------------
-        {
-            LoadActionsDesc loadActions = {};
-            loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
-            loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
-            std::array targets = {
-                currentGBuffer.m_outputBuffer.m_handle,
-            };
-            cmdBindRenderTargets(frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, NULL, NULL, -1, -1);
-            cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)sharedData.m_size.x, (float)sharedData.m_size.y, 0.0f, 1.0f);
-            cmdSetScissor(frame.m_cmd, 0, 0, sharedData.m_size.x, sharedData.m_size.y);
+        // {
+        //     LoadActionsDesc loadActions = {};
+        //     loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
+        //     loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
+        //     std::array targets = {
+        //         currentGBuffer.m_outputBuffer.m_handle,
+        //     };
+        //     cmdBindRenderTargets(frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, NULL, NULL, -1, -1);
+        //     cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)sharedData.m_size.x, (float)sharedData.m_size.y, 0.0f, 1.0f);
+        //     cmdSetScissor(frame.m_cmd, 0, 0, sharedData.m_size.x, sharedData.m_size.y);
 
-            // cmdBindDescriptorSet(frame.m_cmd, 0, m_decalDescriptorSet.m_constSet);
-            cmdBindDescriptorSet(frame.m_cmd, 0, m_materialSet.m_frameSet[frame.m_frameIndex]);
-            // uint32_t decalIndex = 0;
-            for(auto& decalItem: mpCurrentRenderList->GetRenderableItems(eRenderListType_Decal)) {
-                cMaterial* pMaterial = decalItem->GetMaterial();
-                iVertexBuffer* vertexBuffer = decalItem->GetVertexBuffer();
-                if(pMaterial == nullptr || vertexBuffer == nullptr) {
-                    continue;
-                }
-                ASSERT(pMaterial->type().m_id == cMaterial::Decal && "Invalid material type");
+        //     // cmdBindDescriptorSet(frame.m_cmd, 0, m_decalDescriptorSet.m_constSet);
+        //     cmdBindDescriptorSet(frame.m_cmd, 0, m_materialSet.m_frameSet[frame.m_frameIndex]);
+        //     // uint32_t decalIndex = 0;
+        //     for(auto& decalItem: mpCurrentRenderList->GetRenderableItems(eRenderListType_Decal)) {
+        //         cMaterial* pMaterial = decalItem->GetMaterial();
+        //         iVertexBuffer* vertexBuffer = decalItem->GetVertexBuffer();
+        //         if(pMaterial == nullptr || vertexBuffer == nullptr) {
+        //             continue;
+        //         }
+        //         ASSERT(pMaterial->type().m_id == cMaterial::Decal && "Invalid material type");
 
-                std::array targets = {
-                    eVertexBufferElement_Position,
-                    eVertexBufferElement_Texture0,
-                    eVertexBufferElement_Color0
-                };
+        //         std::array targets = {
+        //             eVertexBufferElement_Position,
+        //             eVertexBufferElement_Texture0,
+        //             eVertexBufferElement_Color0
+        //         };
 
-                cmdBindMaterialDescriptor(frame, pMaterial);
-                cmdBindObjectDescriptor(frame, objectIndex, pMaterial, decalItem, {
-                    .m_viewMat = mainFrustumView,
-                    .m_projectionMat = mainFrustumProj,
-                });
+        //         cmdBindMaterialDescriptor(frame, pMaterial);
+        //         cmdBindObjectDescriptor(frame, objectIndex, pMaterial, decalItem, {
+        //             .m_viewMat = mainFrustumView,
+        //             .m_projectionMat = mainFrustumProj,
+        //         });
 
-                LegacyVertexBuffer::GeometryBinding binding;
-                static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(
-                    frame.m_currentFrame, targets, &binding);
-                detail::cmdDefaultLegacyGeomBinding(frame, binding);
-                cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
-            }
-        }
+        //         LegacyVertexBuffer::GeometryBinding binding;
+        //         static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(
+        //             frame.m_currentFrame, targets, &binding);
+        //         detail::cmdDefaultLegacyGeomBinding(frame, binding);
+        //         cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+        //     }
+        // }
 
         
         // // ------------------------------------------------------------------------------------
@@ -3197,7 +3216,7 @@ namespace hpl {
                     GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(m_lightPassRingBuffer, sizeof(LightUniformData));
     
                     const auto modelViewMtx = cMath::MatrixMul(apFrustum->GetViewMatrix(), light->m_light->GetWorldMatrix());
-                    auto viewProjectionMat = cMath::MatrixMul(mainFrustumProj, mainFrustumView);
+                    const auto viewProjectionMat = cMath::MatrixMul(mainFrustumProj, mainFrustumView);
 
                     uniformObjectData.m_common.m_mvp = cMath::ToForgeMat4(
                         cMath::MatrixMul(viewProjectionMat, 

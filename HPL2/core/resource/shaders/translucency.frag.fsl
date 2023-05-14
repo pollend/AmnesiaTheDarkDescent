@@ -35,7 +35,7 @@ PsOut PS_MAIN(PsIn In)
     float4 finalColor = vec4(0.0, 0.0 ,0.0, 1.0);
  
     if(HasDiffuse(Get(textureConfig))) {
-        finalColor = SampleTex2D(Get(diffuseMap), Get(nearestSampler), In.uv);
+        finalColor = SampleTex2D(Get(diffuseMap), Get(diffuseSampler), In.uv);
     }
 
     #ifdef USE_FOG
@@ -74,7 +74,7 @@ PsOut PS_MAIN(PsIn In)
     float3 screenNormal = float3(0,0,0);
     if(isRefractionEnabled || HasCubeMap(Get(textureConfig))) {
         if(HasNormal(Get(textureConfig))) {
-            mapNormal = SampleTex2D(Get(normalMap), Get(nearestSampler), In.uv).xyz * 2.0 - 1.0;
+            mapNormal = SampleTex2D(Get(normalMap), Get(normalSampler), In.uv).xyz * 2.0 - 1.0;
             screenNormal = normalize(mapNormal.x * In.tangent + mapNormal.y * In.bitangent + mapNormal.z * In.normal);
         } else {
             screenNormal = normalize(In.normal);
@@ -122,11 +122,11 @@ PsOut PS_MAIN(PsIn In)
         float3 vEnvUv = reflect(eyeVec, screenNormal);
         vEnvUv = mul(Get(invViewRotationMat), float4(vEnvUv,1)).xyz;
                     
-        float4 reflectionColor = SampleTexCube(Get(cubeMap),  Get(nearestSampler), vEnvUv);
+        float4 reflectionColor = SampleTexCube(Get(cubeMap),  Get(cubeSampler), vEnvUv);
         
         //Alpha for environment map
         if(HasCubeMapAlpha(Get(textureConfig))) {
-            float fEnvMapAlpha = SampleTex2D(Get(cubeMapAlpha), Get(nearestSampler), In.uv.xy).w;
+            float fEnvMapAlpha = SampleTex2D(Get(cubeMapAlpha), Get(cubeMapAlphaSampler), In.uv.xy).w;
             reflectionColor *= fEnvMapAlpha;
         }
         
