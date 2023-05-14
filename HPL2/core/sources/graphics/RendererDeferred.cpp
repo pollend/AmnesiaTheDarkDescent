@@ -1235,7 +1235,7 @@ namespace hpl {
                 vertexLayout.mAttribs[1].mOffset = 0;
 
                 RasterizerStateDesc rasterizerStateDesc = {};
-                rasterizerStateDesc.mCullMode = CULL_MODE_NONE;
+                rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
 
                 DepthStateDesc depthStateDesc = {};
                 depthStateDesc.mDepthTest = true;
@@ -1404,6 +1404,7 @@ namespace hpl {
                     if((LightPipelineVariants::LightPipelineVariant_StencilTest & i) > 0) {
                         depthStateDec.mStencilTest =  true;
                         depthStateDec.mStencilFrontFunc = CMP_EQUAL;
+                        depthStateDec.mStencilBackFunc = CMP_EQUAL;
                         depthStateDec.mStencilFrontPass = STENCIL_OP_SET_ZERO;
                         depthStateDec.mStencilFrontFail = STENCIL_OP_SET_ZERO;
                         depthStateDec.mStencilBackPass = STENCIL_OP_SET_ZERO;
@@ -1415,9 +1416,11 @@ namespace hpl {
                     }
 
                     RasterizerStateDesc rasterizerStateDesc = {};
-                    if((LightPipelineVariants::LightPipelineVariant_Back & i) > 0) {
-                        rasterizerStateDesc.mCullMode = CULL_MODE_BACK;
+                    if((LightPipelineVariants::LightPipelineVariant_CCW & i) > 0) {
+                        rasterizerStateDesc.mFrontFace = FrontFace::FRONT_FACE_CCW;
+                        rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
                     } else {
+                        rasterizerStateDesc.mFrontFace = FrontFace::FRONT_FACE_CW;
                         rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
                     }
                     auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
@@ -1495,12 +1498,16 @@ namespace hpl {
             }
 
             {
-
                 DepthStateDesc stencilDepthTest = {};
                 stencilDepthTest.mDepthTest = true;
                 stencilDepthTest.mDepthWrite = false;
+
                 stencilDepthTest.mStencilTest = true;
                 stencilDepthTest.mDepthFunc = CMP_GEQUAL;
+                stencilDepthTest.mStencilFrontFunc = CMP_ALWAYS;
+                stencilDepthTest.mStencilFrontPass = STENCIL_OP_KEEP;
+                stencilDepthTest.mStencilFrontFail = STENCIL_OP_KEEP;
+                stencilDepthTest.mDepthFrontFail = STENCIL_OP_REPLACE;
                 stencilDepthTest.mStencilBackFunc = CMP_ALWAYS;
                 stencilDepthTest.mStencilBackPass = STENCIL_OP_KEEP;
                 stencilDepthTest.mStencilBackFail = STENCIL_OP_KEEP;
@@ -1509,6 +1516,7 @@ namespace hpl {
                 stencilDepthTest.mStencilReadMask = 0xff;
 
                 RasterizerStateDesc rasterizerStateDesc{};
+                rasterizerStateDesc.mFrontFace = FrontFace::FRONT_FACE_CCW;
                 rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
                 rasterizerStateDesc.mFillMode = FILL_MODE_SOLID;
 
@@ -1544,7 +1552,6 @@ namespace hpl {
             desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
             desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
             desc.mDesc.mSize = sizeof(cMaterial::MaterialType::MaterialData) * cMaterial::MaxMaterialID;
-            // desc.pData =  &m_info.m_data;
             desc.ppBuffer = &m_materialBuffer.m_handle;
             addResource(&desc, nullptr);
             m_materialBuffer.Initialize();
@@ -2629,7 +2636,6 @@ namespace hpl {
 
         mpCurrentRenderList->Setup(mfCurrentFrameTime, apFrustum);
         
-
         const cMatrixf mainFrustumViewInv = cMath::MatrixInverse(apFrustum->GetViewMatrix());
         const cMatrixf mainFrustumView = apFrustum->GetViewMatrix();
         const cMatrixf mainFrustumProj = apFrustum->GetProjectionMatrix();
@@ -2721,31 +2727,34 @@ namespace hpl {
             detail::UpdateRenderableList(
                 mpCurrentRenderList, 
                 mpCurrentSettings->mpVisibleNodeTracker,
-                apFrustum, mpCurrentWorld,
+                apFrustum,
+                mpCurrentWorld,
                 eObjectVariabilityFlag_All, 
                 mvCurrentOcclusionPlanes, 
-                eRenderableFlag_VisibleInNonReflection, [&](iRenderable* renderable) {
-                eMaterialRenderMode renderMode = renderable->GetCoverageAmount() >= 1 ? eMaterialRenderMode_Z : eMaterialRenderMode_Z_Dissolve;
+                eRenderableFlag_VisibleInNonReflection,
+                [&](iRenderable* renderable) {
+                    eMaterialRenderMode renderMode =
+                        renderable->GetCoverageAmount() >= 1 ? eMaterialRenderMode_Z : eMaterialRenderMode_Z_Dissolve;
                 cMaterial* pMaterial = renderable->GetMaterial();
                 iVertexBuffer* vertexBuffer = renderable->GetVertexBuffer();
                 if (vertexBuffer == nullptr) {
                     return;
                 }
 
-
 		        cmdBindMaterialDescriptor(frame, pMaterial);
-                cmdBindObjectDescriptor(frame, objectIndex, pMaterial, renderable, {
+                    cmdBindObjectDescriptor(
+                        frame,
+                        objectIndex,
+                        pMaterial,
+                        renderable,
+                        {
                     .m_viewMat = mainFrustumView,
                     .m_projectionMat = mainFrustumProj,
                 });
 
-                std::array targets = {
-                    eVertexBufferElement_Position,
-                    eVertexBufferElement_Texture0
-                };
+                    std::array targets = { eVertexBufferElement_Position, eVertexBufferElement_Texture0 };
                 LegacyVertexBuffer::GeometryBinding binding{};
-                static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(
-                    frame.m_currentFrame, targets, &binding);
+                    static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
                 detail::cmdDefaultLegacyGeomBinding(frame, binding);
                 cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
             });
@@ -3231,8 +3240,12 @@ namespace hpl {
                                 uniformObjectData.m_common.m_config |= LightConfiguration::HasGoboMap;
                                 params[paramCount].pName = "goboCubeMap";
                                 params[paramCount++].ppTextures = &light->m_light->GetGoboTexture()->GetTexture().m_handle;
-                                frame.m_resourcePool->Push(light->m_light->GetGoboTexture()->GetTexture());
+                                // frame.m_resourcePool->Push(light->m_light->GetGoboTexture()->GetTexture());
                             }
+                            auto falloffMap = light->m_light->GetFalloffMap();
+                            ASSERT(falloffMap && "Point light needs a falloff map");
+                            params[paramCount].pName = "attenuationLightMap";
+                            params[paramCount++].ppTextures = &falloffMap->GetTexture().m_handle;
 
                             uniformObjectData.m_pointLight.m_radius = light->m_light->GetRadius();
                             uniformObjectData.m_pointLight.m_lightPos = float3(lightViewPos.x, lightViewPos.y, lightViewPos.z);
@@ -3302,6 +3315,9 @@ namespace hpl {
                     lightIndex++;
                 };
 
+                // ------------------------------
+                // Draw Box Lights
+                // ------------------------------
                 {
                     LegacyVertexBuffer::GeometryBinding binding{};
                     std::array targets = { eVertexBufferElement_Position };
@@ -3312,14 +3328,15 @@ namespace hpl {
                     cmdSetStencilReferenceValue(frame.m_cmd, 0xff);
                     for (auto& light : deferredLightBoxStencilFront) {
                         cmdBindLightDescriptor(light);
+                        
                         cmdBindPipeline(frame.m_cmd, m_lightStencilPipeline);
                         cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
-                        cmdBindPipeline(frame.m_cmd, m_boxLightPipeline[LightPipelineVariants::LightPipelineVariant_Back | LightPipelineVariants::LightPipelineVariant_StencilTest]);
+                        
+                        cmdBindPipeline(frame.m_cmd, m_boxLightPipeline[LightPipelineVariants::LightPipelineVariant_StencilTest | LightPipelineVariants::LightPipelineVariant_CW]);
                         cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
                     }
 
-
-                    cmdBindPipeline(frame.m_cmd, m_boxLightPipeline[LightPipelineVariants::LightPipelineVariant_Back]);
+                    cmdBindPipeline(frame.m_cmd, m_boxLightPipeline[LightPipelineVariants::LightPipelineVariant_CW]);
                     for (auto& light : deferredLightBoxRenderBack) {
                         cmdBindLightDescriptor(light);
                         cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
@@ -3331,8 +3348,9 @@ namespace hpl {
                 // Draw Point Lights
                 // Draw Spot Lights
                 // --------------------------------------------------------
-                cmdSetStencilReferenceValue(frame.m_cmd, 0xff);
+                // uint8_t countIndex = 0;
                 for (auto& light : deferredLightStencilFrontRenderBack) {
+                    cmdSetStencilReferenceValue(frame.m_cmd, 0xff);
                     std::array targets = { eVertexBufferElement_Position };
                     LegacyVertexBuffer::GeometryBinding binding{};
                     static_cast<LegacyVertexBuffer*>(GetLightShape(light->m_light, eDeferredShapeQuality_High))
@@ -3344,10 +3362,10 @@ namespace hpl {
 
                     switch (light->m_light->GetLightType()) {
                         case eLightType_Point:
-                            cmdBindPipeline(frame.m_cmd, m_pointLightPipeline[LightPipelineVariants::LightPipelineVariant_Back | LightPipelineVariants::LightPipelineVariant_StencilTest]);
+                            cmdBindPipeline(frame.m_cmd, m_pointLightPipeline[LightPipelineVariants::LightPipelineVariant_CW | LightPipelineVariants::LightPipelineVariant_StencilTest]);
                             break;
                         case eLightType_Spot:
-                            cmdBindPipeline(frame.m_cmd, m_spotLightPipeline[LightPipelineVariants::LightPipelineVariant_Back | LightPipelineVariants::LightPipelineVariant_StencilTest]);
+                            cmdBindPipeline(frame.m_cmd, m_spotLightPipeline[LightPipelineVariants::LightPipelineVariant_CW | LightPipelineVariants::LightPipelineVariant_StencilTest]);
                             break;
                         default:
                             ASSERT(false && "Unsupported light type");
@@ -3359,10 +3377,10 @@ namespace hpl {
                 for (auto& light : deferredLightRenderBack) {
                     switch (light->m_light->GetLightType()) {
                         case eLightType_Point:
-                            cmdBindPipeline(frame.m_cmd, m_pointLightPipeline[LightPipelineVariants::LightPipelineVariant_Back]);
+                            cmdBindPipeline(frame.m_cmd, m_pointLightPipeline[LightPipelineVariants::LightPipelineVariant_CW]);
                             break;
                         case eLightType_Spot:
-                            cmdBindPipeline(frame.m_cmd, m_spotLightPipeline[LightPipelineVariants::LightPipelineVariant_Back]);
+                            cmdBindPipeline(frame.m_cmd, m_spotLightPipeline[LightPipelineVariants::LightPipelineVariant_CW]);
                             break;
                         default:
                             ASSERT(false && "Unsupported light type");

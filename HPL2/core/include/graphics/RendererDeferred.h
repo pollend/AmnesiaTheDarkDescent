@@ -111,10 +111,9 @@ namespace hpl {
             HasGoboMap = 0x1,
         };
 
-
         enum LightPipelineVariants {
-            LightPipelineVariant_Front = 0x0,
-            LightPipelineVariant_Back = 0x1,
+            LightPipelineVariant_CW = 0x0,
+            LightPipelineVariant_CCW = 0x1,
             LightPipelineVariant_StencilTest = 0x2,
             LightPipelineVariant_Size = 4,
         };
