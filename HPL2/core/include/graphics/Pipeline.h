@@ -55,6 +55,7 @@ namespace hpl {
         static constexpr uint32_t ResourcePoolSize = 4; // double buffered
 
         void InitializeRenderer(window::NativeWindowWrapper* window);
+        void InitializeResource();
 
         /**
         * tracks the resources used by a single command buffer

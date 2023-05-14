@@ -158,9 +158,14 @@ namespace hpl {
                 addPipeline(m_renderer, &pipelineDesc, &m_copyPostProcessingPipeline[i]);
 
             }
-
         }
     }
+
+
+    void ForgeRenderer::InitializeResource() {
+
+    }
+
 
     void ForgeRenderer::cmdCopyTexture(CopyPipelines action, Cmd* cmd, Texture* srcTexture, RenderTarget* dstTexture) {
         
@@ -188,6 +193,9 @@ namespace hpl {
 		loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
 
         cmdBindRenderTargets(cmd, 1, &dstTexture, NULL, &loadActions, NULL, NULL, -1, -1);
+        cmdSetViewport(cmd, 0.0f, 0.0f, static_cast<float>(dstTexture->mWidth), static_cast<float>(dstTexture->mHeight), 0.0f, 1.0f);
+        cmdSetScissor(cmd, 0, 0, dstTexture->mWidth, dstTexture->mHeight);
+        
         updateDescriptorSet(m_renderer, m_copyRegionDescriptorIndex, m_copyPostProcessingDescriptorSet, paramCount, params);
 
         cmdBindPipeline(cmd, m_copyPostProcessingPipeline[action]);

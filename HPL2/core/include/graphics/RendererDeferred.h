@@ -401,7 +401,7 @@ namespace hpl {
             struct MaterialDescInfo {
                 void* m_material = nullptr; // void* to avoid accessing the material 
                 uint32_t m_version = 0; // version of the material
-                std::array<ForgeTextureHandle, eMaterialTexture_LastEnum> m_textureHandles{};
+                std::array<ForgeTextureHandle, eMaterialTexture_LastEnum> m_textureHandles{}; // handles to keep textures alive for the descriptor
             } m_materialDescInfo[ForgeRenderer::SwapChainLength];
         };
         ForgeBufferHandle m_materialBuffer;

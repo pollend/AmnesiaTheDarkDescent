@@ -6,6 +6,7 @@
 #include "graphics/GraphicsTypes.h"
 
 #include <atomic>
+#include <functional>
 #include <span>
 
 
@@ -59,6 +60,7 @@ namespace hpl {
         /**
         * Initialize the handle with a resource
         */
+        [[deprecated("use load easy to forget to call Initialize")]]
         void Initialize() {
             if(!m_initialized && m_handle) {
                 ASSERT(!m_refCounter && "Trying to Initialize a handle with references");
@@ -70,8 +72,29 @@ namespace hpl {
             }
         }
 
+        void Load(std::function<bool(T** handle)> load) {
+            TryFree();
+            if(!m_initialized) {
+                ASSERT(!m_handle && "Handle is not null");
+                if(load(&m_handle)) {
+                    ASSERT(m_handle && "Handle is null");
+                    ASSERT(!m_refCounter && "Trying to Initialize a handle with references");
+                    if(!m_refCounter) {
+                        m_refCounter = new RefCounter();
+                    }
+                    m_refCounter->m_refCount++;
+                    m_initialized = true;
+                } else {
+                    ASSERT(!m_handle && "Handle is not null");
+                }
+            }
+
+        }
+
         void TryFree() {
-            if(!m_handle) {
+            if(!m_initialized) {
+                ASSERT(!m_handle && "Handle is not null");
+                ASSERT(!m_refCounter && "RefCounter is not null");
                 return;
             }
             ASSERT(m_initialized && "Trying to free a handle that has not been initialized");

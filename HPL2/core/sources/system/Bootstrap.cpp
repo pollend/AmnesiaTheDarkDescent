@@ -90,6 +90,7 @@ namespace hpl {
 
         // initialize gui rendering
         initResourceLoaderInterface(m_renderer.Rend()); // initializes resources
+        m_renderer.InitializeResource();
         gui::InitializeGui(m_renderer);
  
 

@@ -855,10 +855,11 @@ namespace hpl {
                         depthRT.mFormat = DepthBufferFormat;
                         depthRT.mStartState = RESOURCE_STATE_DEPTH_WRITE;
                         ForgeRenderTarget target = {forgetRenderer->Rend()};
-                        addRenderTarget(forgetRenderer->Rend(), &depthRT, &target.m_handle);
-                        target.Initialize();
+                        target.Load([&](RenderTarget** handle) {
+                            addRenderTarget(forgetRenderer->Rend(), &depthRT, handle);
+                            return true;
+                        });
                         b.m_depthBuffer = std::move(target);
-
                    }
                    {
                         auto normalRT = deferredRenderTargetDesc();
@@ -3037,11 +3038,11 @@ namespace hpl {
             // auto lightSpan = lights;
             std::vector<detail::DeferredLight> deferredLights;
             deferredLights.reserve(mpCurrentRenderList->GetLights().size());
-            std::vector<detail::DeferredLight*> deferredLightBoxRenderBack;
-            std::vector<detail::DeferredLight*> deferredLightBoxStencilFront;
-
             std::vector<detail::DeferredLight*> deferredLightRenderBack;
-            std::vector<detail::DeferredLight*> deferredLightStencilFrontRenderBack;
+            std::vector<detail::DeferredLight*> deferredLightStencilFront;
+
+            // std::vector<detail::DeferredLight*> deferredLightRenderBack;
+            // std::vector<detail::DeferredLight*> deferredLightStencilFrontRenderBack;
 
             for (auto& light : mpCurrentRenderList->GetLights()) {
                 auto lightType = light->GetLightType();
@@ -3149,9 +3150,9 @@ namespace hpl {
 
                     // Check if near plane is inside box. If so only render back
                     if (apFrustum->CheckBVNearPlaneIntersection(pLight->GetBoundingVolume())) {
-                        deferredLightBoxRenderBack.emplace_back(&deferredLight);
+                        deferredLightRenderBack.emplace_back(&deferredLight);
                     } else {
-                        deferredLightBoxStencilFront.emplace_back(&deferredLight);
+                        deferredLightStencilFront.emplace_back(&deferredLight);
                     }
 
                     continue;
@@ -3164,7 +3165,7 @@ namespace hpl {
                 } else {
                     if (lightType == eLightType_Point) {
                         if (deferredLight.getArea() >= mlMinLargeLightArea) {
-                            deferredLightStencilFrontRenderBack.emplace_back(&deferredLight);
+                            deferredLightStencilFront.emplace_back(&deferredLight);
                         } else {
                             deferredLightRenderBack.emplace_back(&deferredLight);
                         }
@@ -3172,49 +3173,14 @@ namespace hpl {
                     // Always do double passes for spotlights as they need to will get artefacts otherwise...
                     //(At least with gobos)l
                     else if (lightType == eLightType_Spot) {
-                        deferredLightStencilFrontRenderBack.emplace_back(&deferredLight);
+                        deferredLightStencilFront.emplace_back(&deferredLight);
                     }
                 }
             }
-            std::sort(deferredLightBoxRenderBack.begin(), deferredLightBoxRenderBack.end(), detail::SortDeferredLightBox);
-            std::sort(deferredLightBoxStencilFront.begin(), deferredLightBoxStencilFront.end(), detail::SortDeferredLightBox);
+            std::sort(deferredLightStencilFront.begin(), deferredLightStencilFront.end(), detail::SortDeferredLightDefault);
             std::sort(deferredLightRenderBack.begin(), deferredLightRenderBack.end(), detail::SortDeferredLightDefault);
-            std::sort(deferredLightStencilFrontRenderBack.begin(), deferredLightStencilFrontRenderBack.end(), detail::SortDeferredLightDefault);
 
             {
-                cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "Point Light Deferred Back");
-                
-                LoadActionsDesc loadActions = {};
-                loadActions.mLoadActionsColor[0] = LOAD_ACTION_CLEAR;
-                loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
-                loadActions.mLoadActionStencil = LOAD_ACTION_CLEAR;
-                std::array targets = {
-                    currentGBuffer.m_outputBuffer.m_handle,
-                };
-                
-                cmdBindRenderTargets(frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, nullptr, nullptr, -1, -1);
-                cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)sharedData.m_size.x, (float)sharedData.m_size.y, 0.0f, 1.0f);
-                cmdSetScissor(frame.m_cmd, 0, 0, sharedData.m_size.x, sharedData.m_size.y);
-
-                {
-                    DescriptorData params[15] = {};
-                    size_t paramCount = 0;
-                    params[paramCount].pName = "diffuseMap";
-                    params[paramCount++].ppTextures = &currentGBuffer.m_colorBuffer.m_handle->pTexture;
-                    params[paramCount].pName = "normalMap";
-                    params[paramCount++].ppTextures = &currentGBuffer.m_normalBuffer.m_handle->pTexture;
-                    params[paramCount].pName = "positionMap";
-                    params[paramCount++].ppTextures = &currentGBuffer.m_positionBuffer.m_handle->pTexture;
-                    params[paramCount].pName = "specularMap";
-                    params[paramCount++].ppTextures = &currentGBuffer.m_specularBuffer.m_handle->pTexture;
-   
-                    updateDescriptorSet(frame.m_renderer->Rend(), frame.m_frameIndex, m_lightFrameSet, paramCount, params);
-                }
-
-                float2 viewTexel = { 1.0f / sharedData.m_size.x, 1.0f / sharedData.m_size.y };
-                uint32_t rootConstantIndex = getDescriptorIndexFromName(m_lightPassRootSignature, "uRootConstants");
-                cmdBindPushConstants(frame.m_cmd, m_lightPassRootSignature, rootConstantIndex, &viewTexel);
-                cmdBindDescriptorSet(frame.m_cmd, frame.m_frameIndex, m_lightFrameSet);
 
                 uint32_t lightIndex = 0;
                 // updates and binds the light data
@@ -3240,7 +3206,6 @@ namespace hpl {
                                 uniformObjectData.m_common.m_config |= LightConfiguration::HasGoboMap;
                                 params[paramCount].pName = "goboCubeMap";
                                 params[paramCount++].ppTextures = &light->m_light->GetGoboTexture()->GetTexture().m_handle;
-                                // frame.m_resourcePool->Push(light->m_light->GetGoboTexture()->GetTexture());
                             }
                             auto falloffMap = light->m_light->GetFalloffMap();
                             ASSERT(falloffMap && "Point light needs a falloff map");
@@ -3315,41 +3280,47 @@ namespace hpl {
                     lightIndex++;
                 };
 
-                // ------------------------------
-                // Draw Box Lights
-                // ------------------------------
+                cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "Point Light Deferred Back");
+                
+                LoadActionsDesc loadActions = {};
+                loadActions.mLoadActionsColor[0] = LOAD_ACTION_CLEAR;
+                loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
+                loadActions.mLoadActionStencil = LOAD_ACTION_CLEAR;
+                std::array targets = {
+                    currentGBuffer.m_outputBuffer.m_handle,
+                };
+                
+                cmdBindRenderTargets(frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, nullptr, nullptr, -1, -1);
+                cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)sharedData.m_size.x, (float)sharedData.m_size.y, 0.0f, 1.0f);
+                cmdSetScissor(frame.m_cmd, 0, 0, sharedData.m_size.x, sharedData.m_size.y);
+
                 {
-                    LegacyVertexBuffer::GeometryBinding binding{};
-                    std::array targets = { eVertexBufferElement_Position };
-                    static_cast<LegacyVertexBuffer*>(mpShapeBox)
-                            ->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
-                    detail::cmdDefaultLegacyGeomBinding(frame, binding); // bind box vertex buffer
-
-                    cmdSetStencilReferenceValue(frame.m_cmd, 0xff);
-                    for (auto& light : deferredLightBoxStencilFront) {
-                        cmdBindLightDescriptor(light);
-                        
-                        cmdBindPipeline(frame.m_cmd, m_lightStencilPipeline);
-                        cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
-                        
-                        cmdBindPipeline(frame.m_cmd, m_boxLightPipeline[LightPipelineVariants::LightPipelineVariant_StencilTest | LightPipelineVariants::LightPipelineVariant_CW]);
-                        cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
-                    }
-
-                    cmdBindPipeline(frame.m_cmd, m_boxLightPipeline[LightPipelineVariants::LightPipelineVariant_CW]);
-                    for (auto& light : deferredLightBoxRenderBack) {
-                        cmdBindLightDescriptor(light);
-                        cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
-                    }
+                    DescriptorData params[15] = {};
+                    size_t paramCount = 0;
+                    params[paramCount].pName = "diffuseMap";
+                    params[paramCount++].ppTextures = &currentGBuffer.m_colorBuffer.m_handle->pTexture;
+                    params[paramCount].pName = "normalMap";
+                    params[paramCount++].ppTextures = &currentGBuffer.m_normalBuffer.m_handle->pTexture;
+                    params[paramCount].pName = "positionMap";
+                    params[paramCount++].ppTextures = &currentGBuffer.m_positionBuffer.m_handle->pTexture;
+                    params[paramCount].pName = "specularMap";
+                    params[paramCount++].ppTextures = &currentGBuffer.m_specularBuffer.m_handle->pTexture;
+   
+                    updateDescriptorSet(frame.m_renderer->Rend(), frame.m_frameIndex, m_lightFrameSet, paramCount, params);
                 }
-            
+
+                float2 viewTexel = { 1.0f / sharedData.m_size.x, 1.0f / sharedData.m_size.y };
+                uint32_t rootConstantIndex = getDescriptorIndexFromName(m_lightPassRootSignature, "uRootConstants");
+                cmdBindPushConstants(frame.m_cmd, m_lightPassRootSignature, rootConstantIndex, &viewTexel);
+                cmdBindDescriptorSet(frame.m_cmd, frame.m_frameIndex, m_lightFrameSet);
+
 
                 // --------------------------------------------------------
                 // Draw Point Lights
                 // Draw Spot Lights
+                // Draw Box Lights
                 // --------------------------------------------------------
-                // uint8_t countIndex = 0;
-                for (auto& light : deferredLightStencilFrontRenderBack) {
+                for (auto& light : deferredLightStencilFront) {
                     cmdSetStencilReferenceValue(frame.m_cmd, 0xff);
                     std::array targets = { eVertexBufferElement_Position };
                     LegacyVertexBuffer::GeometryBinding binding{};
@@ -3367,6 +3338,9 @@ namespace hpl {
                         case eLightType_Spot:
                             cmdBindPipeline(frame.m_cmd, m_spotLightPipeline[LightPipelineVariants::LightPipelineVariant_CW | LightPipelineVariants::LightPipelineVariant_StencilTest]);
                             break;
+                        case eLightType_Box:
+                            cmdBindPipeline(frame.m_cmd, m_boxLightPipeline[LightPipelineVariants::LightPipelineVariant_CW | LightPipelineVariants::LightPipelineVariant_StencilTest]);
+                            break;
                         default:
                             ASSERT(false && "Unsupported light type");
                             break;
@@ -3381,6 +3355,9 @@ namespace hpl {
                             break;
                         case eLightType_Spot:
                             cmdBindPipeline(frame.m_cmd, m_spotLightPipeline[LightPipelineVariants::LightPipelineVariant_CW]);
+                            break;
+                        case eLightType_Box:
+                            cmdBindPipeline(frame.m_cmd, m_boxLightPipeline[LightPipelineVariants::LightPipelineVariant_CW]);
                             break;
                         default:
                             ASSERT(false && "Unsupported light type");
