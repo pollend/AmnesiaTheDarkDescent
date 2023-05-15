@@ -20,6 +20,7 @@ INLINE bool UseFeatureRefraction(int _featureConfig)        { return (_featureCo
 
 CBUFFER(uniformObjectBlock, UPDATE_FREQ_PER_DRAW, b1, binding = 1)
 {
+    DATA(float, dissolveAmount, None);
     DATA(float4x4, modelMat, None);
     DATA(float4x4, uvMat, None);
 
@@ -39,6 +40,9 @@ CBUFFER(uniformObjectBlock, UPDATE_FREQ_PER_DRAW, b1, binding = 1)
         DATA(float, frenselPow, None);
     };
     INLINE bool HasDissolveFilter(int _textureConfig)   { return (_textureConfig & (1 << 9)) != 0; }
+    INLINE bool IsAlphaSingleChannel(int _textureConfig)   { return (_textureConfig & (1 << 10)) != 0; }
+    INLINE bool IsHeightMapSingleChannel(int _textureConfig)   { return (_textureConfig & (1 << 11)) != 0; }
+
 #elif defined(MATERIAL_TRANSLUCENT)
     CBUFFER(uniformMaterialBlock, UPDATE_FREQ_PER_BATCH, b2, binding = 2)
     {

@@ -146,6 +146,7 @@ namespace hpl {
 
 
         struct CBObjectData {
+            float4 m_dissolveAmount;
             mat4 m_modelMat;
             mat4 m_uvMat;
             mat4 m_modelViewMat;
@@ -162,7 +163,7 @@ namespace hpl {
 
         class ShadowMapData {
         public:
-            LegacyRenderTarget m_target;
+            ForgeRenderTarget m_target;
             iLight *m_light;
             int m_transformCount;
             int m_frameCount;
@@ -205,7 +206,6 @@ namespace hpl {
             ForgeRenderTarget m_specularBuffer;
 
             ForgeRenderTarget m_depthBuffer;
-            
             ForgeRenderTarget m_outputBuffer;
         };
 
@@ -234,7 +234,6 @@ namespace hpl {
             std::array<GBuffer, ForgeRenderer::SwapChainLength> m_gBuffer;
             std::shared_ptr<Image> m_refractionImage;
             GBuffer m_gBufferReflection;
-
         };
 
         cRendererDeferred( cGraphics* apGraphics, cResources* apResources);
@@ -390,8 +389,12 @@ namespace hpl {
         LegacyRenderTarget m_edgeSmooth_LinearDepth;
         UniqueViewportData<SharedViewportData> m_boundViewportData;
 
-        std::shared_ptr<Image> m_shadowJitterImage;
-        std::shared_ptr<Image> m_ssaoScatterDiskImage;
+        // std::shared_ptr<Image> m_shadowJitterImage;
+        // std::shared_ptr<Image> m_ssaoScatterDiskImage;
+
+        ForgeTextureHandle m_shadowJitterTexture;
+        ForgeTextureHandle m_ssaoScatterDiskTexture;
+
         Image* m_dissolveImage;
         
         ForgeBufferHandle m_perFrameBuffer;
@@ -408,18 +411,57 @@ namespace hpl {
         GPURingBuffer* m_objectUniformBuffer;
         std::array<MaterialInfo, cMaterial::MaxMaterialID> m_materialInfo;
 
-        RootSignature* m_materialRootSignature;
-        
-
         // decal pass
-        std::array<std::array<Pipeline*,eMaterialBlendMode_LastEnum>, eMaterialBlendMode_LastEnum> m_decalPipeline;
+        std::array<Pipeline*,eMaterialBlendMode_LastEnum> m_decalPipeline;
         Shader* m_decalShader;
+
+
+        struct Fog {
+            static constexpr uint32_t MaxFogCount = 256;
+            
+            enum FogVariant {
+                EmptyVariant = 0x0,
+                UseBackSide = 0x1,
+                UseOutsideBox = 0x2,
+            };
+
+            enum PipelineVariant {
+                PipelineVariantEmpty = 0x0,
+                PipelineUseBackSide = 0x1,
+                PipelineUseOutsideBox = 0x2,
+                PipelineInsideNearFrustum = 0x4,
+            };
+
+            struct UniformFogData {
+                mat4 m_mvp;
+                mat4 m_mv;
+                float4 m_color;
+                float4 m_rayCastStart;
+                float4 m_fogNegPlaneDistNeg;
+                float4 m_fogNegPlaneDistPos;
+                float m_start;
+                float m_length;
+                float m_falloffExp;
+            };
+
+            std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perFrameSet{};
+            std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perObjectSet{};
+
+            GPURingBuffer* m_fogUniformBuffer;
+            RootSignature* m_fogRootSignature;
+            std::array<Shader*, 4> m_shader{};
+            std::array<Pipeline*, 8> m_pipeline{};
+        } m_fog;
         
+        RootSignature* m_materialRootSignature;
+
         // diffuse solid
-        Shader* m_solidDiffuseShader;
-        Shader* m_solidDiffuseParallaxShader;
-        Pipeline* m_solidDiffusePipeline;
-        Pipeline* m_solidDiffuseParallaxPipeline;
+        struct MaterialSolid {
+            Shader* m_solidDiffuseShader;
+            Shader* m_solidDiffuseParallaxShader;
+            Pipeline* m_solidDiffusePipeline;
+            Pipeline* m_solidDiffuseParallaxPipeline;
+        } m_materialSolid;
 
         // illumination pass
         Shader* m_solidIlluminationShader;
@@ -438,6 +480,11 @@ namespace hpl {
         Shader* m_translucencyFogAlpha;
         Shader* m_translucencyFogPremulAlpha;
 
+        struct MaterialTranslucency {
+
+        } m_materialTranslucency;
+
+        // post processing
         struct ObjectSamplerKey {
             union {
                 uint8_t m_id;
@@ -446,7 +493,7 @@ namespace hpl {
                 } m_field;
             };
         };
-        std::array<Sampler*, 16> m_objectSamplers{}; 
+        std::array<Sampler*, 4> m_objectSamplers{}; 
 
         // z pass
         Shader* m_zPassShader;

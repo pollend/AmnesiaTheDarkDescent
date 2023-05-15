@@ -37,7 +37,6 @@ namespace hpl {
     class LegacyVertexBuffer : public iVertexBuffer {
     public:
         static size_t GetSizeFromHPL(eVertexBufferElementFormat format);
-        [[deprecated("removing bgfx dependency")]] static bgfx::Attrib::Enum GetAttribFromHPL(eVertexBufferElement type);
         [[deprecated("removing bgfx dependency")]] static bgfx::AttribType::Enum GetAttribTypeFromHPL(eVertexBufferElementFormat format);
 
         // static constexpr std::array

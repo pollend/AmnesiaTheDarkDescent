@@ -3,6 +3,8 @@
 #end
 
 #frag solid_z.frag
+#define SEARCH_SAMPLE_COUNT 4
+#define PARALLAX_ENABLED 1
 #define ALPHA_REJECT 0.5
 #include "solid_z.frag.fsl"
 #end
@@ -34,6 +36,7 @@
 
 #frag solid_diffuse_parallax.frag
 #define PARALLAX_ENABLED 1
+#define SEARCH_SAMPLE_COUNT 4
 #define ALPHA_REJECT 0.5
 #include "solid_diffuse.frag.fsl"
 #end
@@ -133,4 +136,34 @@
 #define USE_FOG 1
 #define USE_BLEND_MODE_PREMUL_ALPHA 1
 #include "translucency.frag.fsl"
+#end
+
+#vert deferred_fog.vert
+    #include "deferred_fog.vert.fsl"
+#end
+
+#vert deferred_fog_ray.vert
+    #define USE_OUTSIDE_BOX 1
+    #define USE_BACK_SIDE 1
+    #include "deferred_fog.vert.fsl"
+#end
+
+#frag deferred_fog.frag
+    #include "deferred_fog.frag.fsl"
+#end
+
+#frag deferred_fog_outside_box_back.frag
+    #define USE_OUTSIDE_BOX 1
+    #define USE_BACK_SIDE 1
+    #include "deferred_fog.frag.fsl"
+#end
+
+#frag deferred_fog_back_side.frag
+    #define USE_BACK_SIDE 1
+    #include "deferred_fog.frag.fsl"
+#end
+
+#frag deferred_fog_outside.frag
+    #define USE_OUTSIDE_BOX 1
+    #include "deferred_fog.frag.fsl"
 #end

@@ -91,7 +91,10 @@ namespace hpl {
 			EnableDissolveAlphaFilter = 1 << 8,
 
 			// additional flags
+			//Solid Diffuse
 			UseDissolveFilter = 1 << 9,
+			IsAlphaSingleChannel = 1 << 10,
+			IsHeightMapSingleChannel = 1 << 11,
 		};
 
 		struct MaterialCommonBlock {
@@ -281,7 +284,7 @@ namespace hpl {
 		inline uint32_t materialID() { return m_materialID; }
 		inline uint32_t Version() { return m_version; }
 	private:
-
+		void UpdateFlags();
 		void UpdateAnimations(float afTimeStep);
 		uint32_t m_materialID = 0;
 		uint32_t m_version = 0; // used to check if the material has changed since last frame

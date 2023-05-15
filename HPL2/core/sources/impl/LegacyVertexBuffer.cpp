@@ -85,43 +85,6 @@ namespace hpl {
         return bgfx::AttribType::Count;
     }
 
-    bgfx::Attrib::Enum LegacyVertexBuffer::GetAttribFromHPL(eVertexBufferElement format) {
-        switch (format) {
-        case eVertexBufferElement_Normal:
-            return bgfx::Attrib::Normal;
-        case eVertexBufferElement_Position:
-            return bgfx::Attrib::Position;
-        case eVertexBufferElement_Color0:
-            return bgfx::Attrib::Color0;
-        case eVertexBufferElement_Color1:
-            return bgfx::Attrib::Color1;
-        case eVertexBufferElement_Texture1Tangent:
-            return bgfx::Attrib::Tangent;
-        case eVertexBufferElement_Texture0:
-            return bgfx::Attrib::TexCoord0;
-        case eVertexBufferElement_Texture1:
-            return bgfx::Attrib::TexCoord1;
-        case eVertexBufferElement_Texture2:
-            return bgfx::Attrib::TexCoord2;
-        case eVertexBufferElement_Texture3:
-            return bgfx::Attrib::TexCoord3;
-        case eVertexBufferElement_Texture4:
-            return bgfx::Attrib::TexCoord4;
-        case eVertexBufferElement_User0:
-            return bgfx::Attrib::TexCoord5;
-        case eVertexBufferElement_User1:
-            return bgfx::Attrib::TexCoord6;
-        case eVertexBufferElement_User2:
-            return bgfx::Attrib::TexCoord7;
-        case eVertexBufferElement_User3:
-        case eVertexBufferElement_LastEnum:
-            break;
-        }
-        ASSERT(false && "Unknown vertex attribute type.");
-        return bgfx::Attrib::Count;
-    }
-
-
     LegacyVertexBuffer::LegacyVertexBuffer(
         eVertexBufferDrawType aDrawType,
         eVertexBufferUsageType aUsageType,

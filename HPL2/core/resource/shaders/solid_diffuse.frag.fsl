@@ -23,10 +23,6 @@ STRUCT(PsOut)
 	DATA(float2, specular, SV_Target3);
 };
 
-#ifndef SEARCH_SAMPLE_COUNT
-#define SEARCH_SAMPLE_COUNT 4
-#endif
-
 
 PsOut PS_MAIN(PsIn In)
 {
@@ -34,55 +30,23 @@ PsOut PS_MAIN(PsIn In)
     PsOut Out;
 
     float2 texCoord = In.uv.xy;
-    float4 diffuseColor = SampleTex2D(Get(diffuseMap), Get(diffuseSampler), texCoord.xy);
-    float3 cameraEyeSpace = normalize(In.pos).xyz;	
-
+    float3 cameraEyeSpace = normalize(In.pos).xyz;
 
 #ifdef PARALLAX_ENABLED
     if(HasHeight(Get(textureConfig))) {
-        float3 eyeVec = normalize(In.view);
-
-        //Get give normalizedView the length so it reaches bottom.
-        float normalLength = 1.0 / eyeVec.z;
-        eyeVec *= float3(normalLength, normalLength, normalLength);	
-        
-        //Apply scale and bias
-        eyeVec.xy *= Get(heightMapScale);
-        float3 heightMapPos = float3(In.uv.xy, 0.0);
-
-        //Determine number of steps based on angle between normal and eye
-        float fSteps = floor((1.0 - dot(eyeVec, normalize(In.normal)) ) * 18.0) + 2.0; 
-        
-        // Do a linear search to find the first intersection
-        {
-            eyeVec /= fSteps;
-            int iterations = int(clamp(fSteps - 1.0, 0.0, 28.0));
-            for(int i = 0; i < iterations; i++) 
-            { 
-                float fDepth = SampleTex2D(Get(heightMap), Get(heightSampler), texCoord.xy).w; 
-                if(heightMapPos.z < fDepth) {
-                    heightMapPos += eyeVec;
-                }
-            } 
-        }
-
-        // Do a binary search to find the exact intersection
-        {
-            for(int i=0; i< SEARCH_SAMPLE_COUNT; i++) 
-            {
-                float fDepth = SampleTex2D(Get(heightMap), Get(heightSampler), texCoord.xy).w;
-                if(heightMapPos.z < fDepth) {
-                    heightMapPos += eyeVec; 
-                }
-
-                eyeVec *= 0.5; 
-                heightMapPos -= eyeVec; 
-            }
-        }
-        texCoord.xy = heightMapPos.xy;
+        texCoord.xy  = ParallaxRelief(
+            SEARCH_SAMPLE_COUNT, 
+            IsHeightMapSingleChannel(Get(textureConfig)), 
+            Get(heightMapScale), 
+            normalize(In.normal), 
+            texCoord, 
+            normalize(In.view), 
+            Get(heightSampler), 
+            Get(heightMap));
     }
 #endif
 
+    float4 diffuseColor = SampleTex2D(Get(diffuseMap), Get(diffuseSampler), texCoord.xy);
     if(diffuseColor.w < ALPHA_REJECT ) {
         discard;
     }

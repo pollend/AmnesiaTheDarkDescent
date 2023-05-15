@@ -38,6 +38,8 @@ void main()
         fDissolve = fDissolve*0.5 + 0.5;
         vFinalColor.w = fDissolve - (1.0 - vFinalColor.w) * 0.5;
     #endif
+
+    
     if(vFinalColor.w < u_alphaReject) {
         discard;
     }

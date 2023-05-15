@@ -898,7 +898,6 @@ namespace hpl {
                         auto outputRt = deferredRenderTargetDesc();
                         outputRt.mFormat = getRecommendedSwapchainFormat(false, false);
                         outputRt.mDescriptors = DESCRIPTOR_TYPE_RW_TEXTURE | DESCRIPTOR_TYPE_TEXTURE;
-                        
                         ForgeRenderTarget target = {forgetRenderer->Rend()};
                         addRenderTarget(forgetRenderer->Rend(), &outputRt, &target.m_handle);
                         target.Initialize();
@@ -963,7 +962,6 @@ namespace hpl {
             }
         };
 
-
         {
             m_perFrameBuffer.TryFree();
             BufferLoadDesc desc = {};
@@ -977,7 +975,104 @@ namespace hpl {
             m_perFrameBuffer.Initialize();
         }
 
+        // -------------- Fog ----------------------------
+        {
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0] = { "deferred_fog_ray.vert", nullptr, 0 };
+                loadDesc.mStages[1] = { "deferred_fog_outside_box_back.frag", nullptr, 0 };
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_fog.m_shader[Fog::UseBackSide | Fog::UseOutsideBox]);
+            }
 
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0] = { "deferred_fog.vert", nullptr, 0 };
+                loadDesc.mStages[1] = { "deferred_fog_outside.frag", nullptr, 0 };
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_fog.m_shader[Fog::UseOutsideBox]);
+            }
+
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0] = { "deferred_fog.vert", nullptr, 0 };
+                loadDesc.mStages[1] = { "deferred_fog_back_side.frag", nullptr, 0 };
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_fog.m_shader[Fog::UseBackSide]);
+            }
+
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0] = { "deferred_fog.vert", nullptr, 0 };
+                loadDesc.mStages[1] = { "deferred_fog.frag", nullptr, 0 };
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_fog.m_shader[Fog::EmptyVariant]);
+            }
+
+            RootSignatureDesc rootSignatureDesc = {};
+            rootSignatureDesc.ppShaders = m_fog.m_shader.data();
+            rootSignatureDesc.mShaderCount = m_fog.m_shader.size();
+            addRootSignature(forgetRenderer->Rend(), &rootSignatureDesc, &m_fog.m_fogRootSignature);
+
+            VertexLayout vertexLayout = {};
+            vertexLayout.mAttribCount = 1;
+            vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
+            vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
+            vertexLayout.mAttribs[0].mBinding = 0;
+            vertexLayout.mAttribs[0].mLocation = 0;
+            vertexLayout.mAttribs[0].mOffset = 0;
+
+            std::array colorFormats = { getRecommendedSwapchainFormat(false, false)  };
+            for(size_t variant = 0; variant <  m_fog.m_pipeline.size(); variant++) {
+                RasterizerStateDesc rasterizerStateDesc = {};
+                DepthStateDesc depthStateDesc = {};
+                depthStateDesc.mDepthTest = true;
+                depthStateDesc.mDepthWrite = false;
+
+                BlendStateDesc blendStateDesc{};
+                blendStateDesc.mSrcFactors[0] = BC_SRC_ALPHA;
+                blendStateDesc.mDstFactors[0] = BC_ONE_MINUS_SRC_ALPHA;
+                blendStateDesc.mBlendModes[0] = BM_ADD;
+                blendStateDesc.mSrcAlphaFactors[0] = BC_SRC_ALPHA;
+                blendStateDesc.mDstAlphaFactors[0] = BC_ONE_MINUS_SRC_ALPHA;
+                blendStateDesc.mBlendAlphaModes[0] = BM_ADD;
+                blendStateDesc.mMasks[0] = RED | GREEN | BLUE;
+                blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
+                blendStateDesc.mIndependentBlend = false;
+
+                if(variant & Fog::PipelineVariant::PipelineInsideNearFrustum) {
+                    rasterizerStateDesc.mFrontFace = FrontFace::FRONT_FACE_CW;
+                    depthStateDesc.mDepthFunc = CMP_ALWAYS;
+                } else {
+                    rasterizerStateDesc.mFrontFace = FrontFace::FRONT_FACE_CCW;
+                    depthStateDesc.mDepthFunc = CMP_LEQUAL;
+                }
+                rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
+
+                PipelineDesc pipelineDesc = {};
+                pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+                auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
+                pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+                pipelineSettings.mRenderTargetCount = colorFormats.size();
+                pipelineSettings.pColorFormats = colorFormats.data();
+                pipelineSettings.pDepthState = &depthStateDesc;
+                pipelineSettings.pBlendState = &blendStateDesc;
+                pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
+                pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
+                pipelineSettings.mSampleQuality = 0;
+                pipelineSettings.pRootSignature = m_fog.m_fogRootSignature;
+                pipelineSettings.pShaderProgram = m_fog.m_shader[(variant & (Fog::PipelineUseBackSide | Fog::PipelineUseOutsideBox))];
+                pipelineSettings.pRasterizerState = &rasterizerStateDesc;
+                pipelineSettings.pVertexLayout = &vertexLayout;
+                addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_fog.m_pipeline[variant]);
+            }
+            DescriptorSetDesc perFrameDescSet{m_fog.m_fogRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, 1};
+            for(auto& perFrameSet: m_fog.m_perFrameSet) {
+                addDescriptorSet(forgetRenderer->Rend(), &perFrameDescSet, &perFrameSet);
+            }
+            DescriptorSetDesc perObjectSet{m_fog.m_fogRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_DRAW, Fog::MaxFogCount};
+            for(auto& objectSet: m_fog.m_perObjectSet) {
+                addDescriptorSet(forgetRenderer->Rend(), &perObjectSet, &objectSet);
+            }
+            addUniformGPURingBuffer(forgetRenderer->Rend(), sizeof(Fog::UniformFogData) * Fog::MaxFogCount, &m_fog.m_fogUniformBuffer, true);
+
+        }
         //---------------- Diffuse Pipeline  ------------------------
         {
             // z pass
@@ -992,14 +1087,14 @@ namespace hpl {
                 ShaderLoadDesc loadDesc = {};
                 loadDesc.mStages[0] = { "solid_diffuse.vert", nullptr, 0 };
                 loadDesc.mStages[1] = { "solid_diffuse.frag", nullptr, 0 };
-                addShader(forgetRenderer->Rend(), &loadDesc, &m_solidDiffuseShader);
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_materialSolid.m_solidDiffuseShader);
             }
 
             {
                 ShaderLoadDesc loadDesc = {};
                 loadDesc.mStages[0] = { "solid_diffuse.vert", nullptr, 0 };
                 loadDesc.mStages[1] = { "solid_diffuse_parallax.frag", nullptr, 0 };
-                addShader(forgetRenderer->Rend(), &loadDesc, &m_solidDiffuseParallaxShader);
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_materialSolid.m_solidDiffuseParallaxShader);
             }
             
             {
@@ -1085,7 +1180,7 @@ namespace hpl {
             }
 
             Shader* shaders[] = {
-                m_solidDiffuseShader, m_solidDiffuseParallaxShader, m_zPassShader, m_decalShader, m_solidIlluminationShader,
+                m_materialSolid.m_solidDiffuseShader, m_materialSolid.m_solidDiffuseParallaxShader, m_zPassShader, m_decalShader, m_solidIlluminationShader,
                 m_translucencyAdd, m_translucencyMul, m_translucencyMulX2, m_translucencyAlpha, m_translucencyPremulAlpha,
                 m_translucencyFogAdd,m_translucencyFogMul,m_translucencyFogMulX2,m_translucencyFogAlpha,m_translucencyFogPremulAlpha
             };
@@ -1143,13 +1238,13 @@ namespace hpl {
                 pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
                 pipelineSettings.mSampleQuality = 0;
                 pipelineSettings.pRootSignature = m_materialRootSignature;
-                pipelineSettings.pShaderProgram = m_solidDiffuseShader;
+                pipelineSettings.pShaderProgram = m_materialSolid.m_solidDiffuseShader;
                 pipelineSettings.pRasterizerState = &rasterizerStateDesc;
                 pipelineSettings.pVertexLayout = &vertexLayout;
-                addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_solidDiffusePipeline);
+                addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_materialSolid.m_solidDiffusePipeline);
 
-                pipelineSettings.pShaderProgram = m_solidDiffuseParallaxShader;
-                addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_solidDiffuseParallaxPipeline);
+                pipelineSettings.pShaderProgram = m_materialSolid.m_solidDiffuseParallaxShader;
+                addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_materialSolid.m_solidDiffuseParallaxPipeline);
             }
             // decal material pass
             {
@@ -1197,32 +1292,29 @@ namespace hpl {
                 pipelineSettings.pRasterizerState = &rasterizerStateDesc;
                 pipelineSettings.pVertexLayout = &vertexLayout;
 
-                for (size_t blendRgb = 0; blendRgb < eMaterialBlendMode_LastEnum; ++blendRgb) {
-                    for (size_t blendAlpha = 0; blendAlpha < eMaterialBlendMode_LastEnum; ++blendAlpha) {
-                        BlendStateDesc blendStateDesc{};
+                for (size_t blendMode = 0; blendMode < eMaterialBlendMode_LastEnum; ++blendMode) {
+                    BlendStateDesc blendStateDesc{};
 
-                        blendStateDesc.mSrcFactors[0] = hpl::AmnesiaBlendTable[blendRgb].src;
-                        blendStateDesc.mDstFactors[0] = hpl::AmnesiaBlendTable[blendRgb].dst;
-                        blendStateDesc.mBlendModes[0] = hpl::AmnesiaBlendTable[blendRgb].mode;
+                    blendStateDesc.mSrcFactors[0] = hpl::AmnesiaBlendTable[blendMode].src;
+                    blendStateDesc.mDstFactors[0] = hpl::AmnesiaBlendTable[blendMode].dst;
+                    blendStateDesc.mBlendModes[0] = hpl::AmnesiaBlendTable[blendMode].mode;
 
-                        blendStateDesc.mSrcAlphaFactors[0] = hpl::AmnesiaBlendTable[blendAlpha].src;
-                        blendStateDesc.mDstAlphaFactors[0] = hpl::AmnesiaBlendTable[blendAlpha].dst;
-                        blendStateDesc.mBlendAlphaModes[0] = hpl::AmnesiaBlendTable[blendAlpha].mode;
+                    blendStateDesc.mSrcAlphaFactors[0] = hpl::AmnesiaBlendTable[blendMode].src;
+                    blendStateDesc.mDstAlphaFactors[0] = hpl::AmnesiaBlendTable[blendMode].dst;
+                    blendStateDesc.mBlendAlphaModes[0] = hpl::AmnesiaBlendTable[blendMode].mode;
 
-                        blendStateDesc.mMasks[0] = RED | GREEN | BLUE;
-                        blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
-                        pipelineSettings.pBlendState = &blendStateDesc;
+                    blendStateDesc.mMasks[0] = RED | GREEN | BLUE;
+                    blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
+                    pipelineSettings.pBlendState = &blendStateDesc;
 
-                        addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_decalPipeline[blendRgb][blendAlpha]);
-                    }
+                    addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_decalPipeline[blendMode]);
                 }
-
             }
             // z pass material
             {
                 // layout and pipeline for sphere draw
                 VertexLayout vertexLayout = {};
-                vertexLayout.mAttribCount = 2;
+                vertexLayout.mAttribCount = 4;
                 vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
                 vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
                 vertexLayout.mAttribs[0].mBinding = 0;
@@ -1234,6 +1326,18 @@ namespace hpl {
                 vertexLayout.mAttribs[1].mBinding = 1;
                 vertexLayout.mAttribs[1].mLocation = 1;
                 vertexLayout.mAttribs[1].mOffset = 0;
+
+                vertexLayout.mAttribs[2].mSemantic = SEMANTIC_NORMAL;
+                vertexLayout.mAttribs[2].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
+                vertexLayout.mAttribs[2].mBinding = 2;
+                vertexLayout.mAttribs[2].mLocation = 2;
+                vertexLayout.mAttribs[2].mOffset = 0;
+
+                vertexLayout.mAttribs[3].mSemantic = SEMANTIC_TANGENT;
+                vertexLayout.mAttribs[3].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
+                vertexLayout.mAttribs[3].mBinding = 3;
+                vertexLayout.mAttribs[3].mLocation = 3;
+                vertexLayout.mAttribs[3].mOffset = 0;
 
                 RasterizerStateDesc rasterizerStateDesc = {};
                 rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
@@ -1361,6 +1465,43 @@ namespace hpl {
                 loadDesc.mStages[1] = {"deferred_light_pointlight.frag", nullptr, 0};
                 addShader(forgetRenderer->Rend(), &loadDesc, &m_pointLightShader);
             }
+
+
+            // High
+            int shadowMapJitterSize = 0;
+            int shadowMapJitterSamples = 0;
+            if (mShadowMapQuality == eShadowMapQuality_High) {
+                shadowMapJitterSize = 64;
+                shadowMapJitterSamples = 32; // 64 here instead? I mean, ATI has to deal with medium has max? or different max for ATI?
+                // m_spotlightVariants.Initialize(
+                //     ShaderHelper::LoadProgramHandlerDefault("vs_deferred_light", "fs_deferred_spotlight_high", false, true));
+            }
+            // Medium
+            else if (mShadowMapQuality == eShadowMapQuality_Medium) {
+                shadowMapJitterSize = 32;
+                shadowMapJitterSamples = 16;
+                // m_spotlightVariants.Initialize(
+                //     ShaderHelper::LoadProgramHandlerDefault("vs_deferred_light", "fs_deferred_spotlight_medium", false, true));
+            }
+            // Low
+            else {
+                shadowMapJitterSize = 0;
+                shadowMapJitterSamples = 0;
+                // m_spotlightVariants.Initialize(
+                //     ShaderHelper::LoadProgramHandlerDefault("vs_deferred_light", "fs_deferred_spotlight_low", false, true));
+            }
+
+            if (mShadowMapQuality != eShadowMapQuality_Low) {
+                m_shadowJitterTexture.Load([&](Texture** texture) {
+                    TextureCreator::GenerateScatterDiskMap2D( shadowMapJitterSize, shadowMapJitterSamples, true,  texture);
+                    return true;
+                });
+            }
+            m_ssaoScatterDiskTexture.Load([&](Texture** texture) {
+                TextureCreator::GenerateScatterDiskMap2D(4, SSAONumOfSamples, false, texture);
+                return true;
+            });
+            
 
             {
                 ShaderLoadDesc loadDesc = {};
@@ -1547,105 +1688,57 @@ namespace hpl {
             }
         }
         {
-            m_materialBuffer.TryFree();
-            BufferLoadDesc desc = {};
-            desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
-            desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
-            desc.mDesc.mSize = sizeof(cMaterial::MaterialType::MaterialData) * cMaterial::MaxMaterialID;
-            desc.ppBuffer = &m_materialBuffer.m_handle;
-            addResource(&desc, nullptr);
-            m_materialBuffer.Initialize();
+            m_materialBuffer.Load([&](Buffer ** buffer) {
+                BufferLoadDesc desc = {};
+                desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+                desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
+                desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
+                desc.mDesc.mSize = sizeof(cMaterial::MaterialType::MaterialData) * cMaterial::MaxMaterialID;
+                desc.ppBuffer = buffer;
+                addResource(&desc, nullptr);
 
+                return true;
+            });
             addUniformGPURingBuffer(forgetRenderer->Rend(), sizeof(cRendererDeferred::CBObjectData) * MaxObjectUniforms, &m_objectUniformBuffer, true);
         }
    
 
-        // auto createShadowMap = [](const cVector3l& avSize) -> ShadowMapData {
-        //     auto desc = ImageDescriptor::CreateTexture2D(avSize.x, avSize.y, false, bgfx::TextureFormat::D16F);
-        //     desc.m_configuration.m_rt = RTType::RT_Write;
-        //     desc.m_configuration.m_minFilter = FilterType::Point;
-        //     desc.m_configuration.m_magFilter = FilterType::Point;
-        //     desc.m_configuration.m_mipFilter = FilterType::Point;
-        //     desc.m_configuration.m_comparsion = DepthTest::LessEqual;
-        //     auto image = std::make_shared<Image>();
-        //     image->Initialize(desc);
-        //     return { 
-        //         .m_target = LegacyRenderTarget(image), 
-        //         .m_light = nullptr,
-        //         .m_transformCount = -1,
-        //         .m_frameCount = -1,
-        //         .m_radius = 0,
-        //         .m_fov = 0,
-        //         .m_aspect = 0
-        //     };
-        // };
+        auto createShadowMap = [&](const cVector3l& avSize) -> ShadowMapData {
+            
+            RenderTargetDesc renderTarget = {};
+            renderTarget.mArraySize = 1;
+            renderTarget.mDepth = 1;
+            renderTarget.mFormat = TinyImageFormat_D16_UNORM;
+            renderTarget.mWidth = avSize.x;
+            renderTarget.mHeight = avSize.y;
+            renderTarget.mSampleCount = SAMPLE_COUNT_1;
+            renderTarget.mSampleQuality = 0;
+            renderTarget.mStartState = RESOURCE_STATE_DEPTH_WRITE;
+            renderTarget.pName = "ShadowMaps RTs";
+            ShadowMapData shadowMapData = {};
+            shadowMapData.m_target.Load([&](RenderTarget** target) {
+                addRenderTarget(forgetRenderer->Rend(), &renderTarget, target);
+                return true;
+            });
 
-        // for (size_t i = 0; i < 10; ++i) {
-        //     m_shadowMapData[eShadowMapResolution_High].emplace_back(createShadowMap(vShadowSize[lStartSize + eShadowMapResolution_High]));
-        // }
-        // for (size_t i = 0; i < 15; ++i) {
-        //     m_shadowMapData[eShadowMapResolution_Medium].emplace_back(createShadowMap(vShadowSize[lStartSize + eShadowMapResolution_Medium]));
-        // }
-        // for (size_t i = 0; i < 20; ++i) {
-        //     m_shadowMapData[eShadowMapResolution_Low].emplace_back(createShadowMap(vShadowSize[lStartSize + eShadowMapResolution_Low]));
-        // }
+            shadowMapData.m_transformCount = -1;
+            shadowMapData.m_frameCount = -1;
+            shadowMapData.m_radius = 0;
+            shadowMapData.m_fov = 0;
+            shadowMapData.m_aspect = 0;
+            shadowMapData.m_light = nullptr;
+            return shadowMapData;
+        };
 
-        // High
-        // int shadowMapJitterSize = 0;
-        // int shadowMapJitterSamples = 0;
-        // if (mShadowMapQuality == eShadowMapQuality_High) {
-        //     shadowMapJitterSize = 64;
-        //     shadowMapJitterSamples = 32; // 64 here instead? I mean, ATI has to deal with medium has max? or different max for ATI?
-        //     m_spotlightVariants.Initialize(
-        //         ShaderHelper::LoadProgramHandlerDefault("vs_deferred_light", "fs_deferred_spotlight_high", false, true));
-        // }
-        // // Medium
-        // else if (mShadowMapQuality == eShadowMapQuality_Medium) {
-        //     shadowMapJitterSize = 32;
-        //     shadowMapJitterSamples = 16;
-        //     m_spotlightVariants.Initialize(
-        //         ShaderHelper::LoadProgramHandlerDefault("vs_deferred_light", "fs_deferred_spotlight_medium", false, true));
-        // }
-        // // Low
-        // else {
-        //     shadowMapJitterSize = 0;
-        //     shadowMapJitterSamples = 0;
-        //     m_spotlightVariants.Initialize(
-        //         ShaderHelper::LoadProgramHandlerDefault("vs_deferred_light", "fs_deferred_spotlight_low", false, true));
-        // }
-
-        // if (mShadowMapQuality != eShadowMapQuality_Low) {
-        //     m_shadowJitterImage = std::make_shared<Image>();
-        //     TextureCreator::GenerateScatterDiskMap2D(*m_shadowJitterImage, shadowMapJitterSize, shadowMapJitterSamples, true);
-        // }
-        
-        // {
-        //     m_ssaoScatterDiskImage = std::make_shared<Image>();
-        //     TextureCreator::GenerateScatterDiskMap2D(*m_ssaoScatterDiskImage, 4, SSAONumOfSamples, false);
-        // }
-        // m_u_param.Initialize();
-        // m_u_lightPos.Initialize();
-        // m_u_fogColor.Initialize();
-        // m_u_lightColor.Initialize();
-        // m_u_overrideColor.Initialize();
-        // m_u_copyRegion.Initialize();
-        // m_u_spotViewProj.Initialize();
-        // m_u_mtxInvRotation.Initialize();
-        // m_u_mtxInvViewRotation.Initialize();
-
-        // m_s_depthMap.Initialize();
-        // m_s_positionMap.Initialize();
-        // m_s_diffuseMap.Initialize();
-        // m_s_normalMap.Initialize();
-        // m_s_specularMap.Initialize();
-        // m_s_attenuationLightMap.Initialize();
-        // m_s_spotFalloffMap.Initialize();
-        // m_s_shadowMap.Initialize();
-        // m_s_goboMap.Initialize();
-        // m_s_shadowOffsetMap.Initialize();
-
-        // m_s_scatterDisk.Initialize();
+        for (size_t i = 0; i < 10; ++i) {
+            m_shadowMapData[eShadowMapResolution_High].emplace_back(createShadowMap(vShadowSize[lStartSize + eShadowMapResolution_High]));
+        }
+        for (size_t i = 0; i < 15; ++i) {
+            m_shadowMapData[eShadowMapResolution_Medium].emplace_back(createShadowMap(vShadowSize[lStartSize + eShadowMapResolution_Medium]));
+        }
+        for (size_t i = 0; i < 20; ++i) {
+            m_shadowMapData[eShadowMapResolution_Low].emplace_back(createShadowMap(vShadowSize[lStartSize + eShadowMapResolution_Low]));
+        }
 
         // m_deferredSSAOProgram  = hpl::loadProgram("vs_post_effect", "fs_deferred_ssao");
         // m_deferredSSAOBlurHorizontalProgram  = hpl::loadProgram("vs_post_effect", "fs_deferred_ssao_blur_horizontal");
@@ -2508,7 +2601,7 @@ namespace hpl {
         cMatrixf modelMat = apObject->GetModelMatrixPtr() ? *apObject->GetModelMatrixPtr() : cMatrixf::Identity;
         cMatrixf modelViewMat = cMath::MatrixMul(option.m_viewMat, modelMat);
         cMatrixf modelViewProjMat = cMath::MatrixMul(cMath::MatrixMul(option.m_projectionMat, option.m_viewMat), modelMat);
-
+        uniformObjectData.m_dissolveAmount = float4(apObject->GetCoverageAmount());
         uniformObjectData.m_modelMat = cMath::ToForgeMat4(modelMat.GetTranspose());
         if (apMaterial) {
             uniformObjectData.m_uvMat = cMath::ToForgeMat4(apMaterial->GetUvMatrix());
@@ -2538,7 +2631,6 @@ namespace hpl {
             ASSERT(apMaterial != nullptr && "Material is null");
 
             auto& info = m_materialInfo[apMaterial->materialID()];
-
 
             auto& descriptorSet = m_materialSet.m_materialSet[frame.m_frameIndex];
             auto& descInfo = info.m_materialDescInfo[frame.m_frameIndex];
@@ -2660,24 +2752,6 @@ namespace hpl {
         frame.m_resourcePool->Push(currentGBuffer.m_specularBuffer);
         frame.m_resourcePool->Push(currentGBuffer.m_depthBuffer);
         frame.m_resourcePool->Push(currentGBuffer.m_outputBuffer);
-        // {
-        //     LoadActionsDesc loadActions = {};
-        //     loadActions.mLoadActionsColor[0] = LOAD_ACTION_CLEAR;
-        //     loadActions.mLoadActionsColor[1] = LOAD_ACTION_CLEAR;
-        //     loadActions.mLoadActionsColor[2] = LOAD_ACTION_CLEAR;
-        //     loadActions.mLoadActionDepth = LOAD_ACTION_CLEAR;
-        //     loadActions.mClearColorValues[0] = { 0.0f, 0.0f, 0.0f, 0.0f };
-        //     loadActions.mClearColorValues[1] = { 0.0f, 0.0f, 0.0f, 0.0f };
-        //     loadActions.mClearColorValues[2] = { 0.0f, 0.0f, 0.0f, 0.0f };
-		//     loadActions.mClearDepth = currentGBuffer.m_depthBuffer.m_handle->mClearValue;
-        //     std::array targets = {
-        //         currentGBuffer.m_colorBuffer.m_handle,
-        //         currentGBuffer.m_normalBuffer.m_handle,
-        //         currentGBuffer.m_positionBuffer.m_handle
-        //     };
-        //     cmdBindRenderTargets(frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, NULL, NULL, -1, -1);
-        // }
-		
 
         // Setup far plane coordinates
         m_farPlane = apFrustum->GetFarPlane();
@@ -2724,64 +2798,42 @@ namespace hpl {
 
             cmdBindDescriptorSet(frame.m_cmd, 0, m_zPassConstSet);
             cmdBindDescriptorSet(frame.m_cmd, 0, m_materialSet.m_frameSet[frame.m_frameIndex]);
-        
+
             detail::UpdateRenderableList(
-                mpCurrentRenderList, 
+                mpCurrentRenderList,
                 mpCurrentSettings->mpVisibleNodeTracker,
                 apFrustum,
                 mpCurrentWorld,
-                eObjectVariabilityFlag_All, 
-                mvCurrentOcclusionPlanes, 
+                eObjectVariabilityFlag_All,
+                mvCurrentOcclusionPlanes,
                 eRenderableFlag_VisibleInNonReflection,
                 [&](iRenderable* renderable) {
                     eMaterialRenderMode renderMode =
                         renderable->GetCoverageAmount() >= 1 ? eMaterialRenderMode_Z : eMaterialRenderMode_Z_Dissolve;
-                cMaterial* pMaterial = renderable->GetMaterial();
-                iVertexBuffer* vertexBuffer = renderable->GetVertexBuffer();
-                if (vertexBuffer == nullptr) {
-                    return;
-                }
+                    cMaterial* pMaterial = renderable->GetMaterial();
+                    iVertexBuffer* vertexBuffer = renderable->GetVertexBuffer();
+                    if (vertexBuffer == nullptr) {
+                        return;
+                    }
 
-		        cmdBindMaterialDescriptor(frame, pMaterial);
+                    cmdBindMaterialDescriptor(frame, pMaterial);
                     cmdBindObjectDescriptor(
                         frame,
                         objectIndex,
                         pMaterial,
                         renderable,
                         {
-                    .m_viewMat = mainFrustumView,
-                    .m_projectionMat = mainFrustumProj,
-                });
+                            .m_viewMat = mainFrustumView,
+                            .m_projectionMat = mainFrustumProj,
+                        });
 
-                    std::array targets = { eVertexBufferElement_Position, eVertexBufferElement_Texture0 };
-                LegacyVertexBuffer::GeometryBinding binding{};
+                    std::array targets = { eVertexBufferElement_Position, eVertexBufferElement_Texture0, eVertexBufferElement_Normal, eVertexBufferElement_Texture1Tangent};
+                    LegacyVertexBuffer::GeometryBinding binding{};
                     static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
-                detail::cmdDefaultLegacyGeomBinding(frame, binding);
-                cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
-            });
+                    detail::cmdDefaultLegacyGeomBinding(frame, binding);
+                    cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+                });
             cmdEndDebugMarker(frame.m_cmd);
-            // auto occlusionConfig = createStandardViewConfig(sharedData.m_gBuffer.m_depthTarget);
-            // auto occlusionPass = context.StartPass("Render Occlusion", occlusionConfig);
-
-            // for(auto& object: mpCurrentRenderList->GetOcclusionQueryItems()) {
-            //     object->ResolveOcclusionPass(
-            //     this,
-            //     [&](bgfx::OcclusionQueryHandle handle,
-            //         DepthTest depth,
-            //         GraphicsContext::LayoutStream& layoutStream,
-            //         const cMatrixf& transformMatrix)
-            //     {
-            //         GraphicsContext::ShaderProgram shaderProgram;
-            //         shaderProgram.m_handle = m_nullShader;
-            //         shaderProgram.m_configuration.m_depthTest = depth;
-            //         shaderProgram.m_configuration.m_cull = Cull::CounterClockwise;
-
-            //         shaderProgram.m_modelTransform = transformMatrix;
-
-            //         GraphicsContext::DrawRequest drawRequest{ layoutStream, shaderProgram };
-            //         context.Submit(occlusionPass, drawRequest, handle);
-            //     });
-            // }
 
             mpCurrentRenderList->Compile(
                 eRenderListCompileFlag_Diffuse | 
@@ -2821,7 +2873,7 @@ namespace hpl {
             cmdBindRenderTargets(frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, NULL, NULL, -1, -1);    
             cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)sharedData.m_size.x, (float)sharedData.m_size.y, 0.0f, 1.0f);
             cmdSetScissor(frame.m_cmd, 0, 0, sharedData.m_size.x, sharedData.m_size.y);
-            cmdBindPipeline(frame.m_cmd, m_solidDiffuseParallaxPipeline);
+            cmdBindPipeline(frame.m_cmd, m_materialSolid.m_solidDiffuseParallaxPipeline);
 
             // cmdBindDescriptorSet(frame.m_cmd, 0, m_solidDescriptorSet.m_constSet);
             cmdBindDescriptorSet(frame.m_cmd, 0, m_materialSet.m_frameSet[frame.m_frameIndex]);
@@ -2869,47 +2921,49 @@ namespace hpl {
         // ------------------------------------------------------------------------------------
         //  Render Decal Pass render to color and depth
         // ------------------------------------------------------------------------------------
-        // {
-        //     LoadActionsDesc loadActions = {};
-        //     loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
-        //     loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
-        //     std::array targets = {
-        //         currentGBuffer.m_outputBuffer.m_handle,
-        //     };
-        //     cmdBindRenderTargets(frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, NULL, NULL, -1, -1);
-        //     cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)sharedData.m_size.x, (float)sharedData.m_size.y, 0.0f, 1.0f);
-        //     cmdSetScissor(frame.m_cmd, 0, 0, sharedData.m_size.x, sharedData.m_size.y);
+        {
+            LoadActionsDesc loadActions = {};
+            loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
+            loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
+            std::array targets = {
+                currentGBuffer.m_outputBuffer.m_handle,
+            };
+            cmdBindRenderTargets(frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, NULL, NULL, -1, -1);
+            cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)sharedData.m_size.x, (float)sharedData.m_size.y, 0.0f, 1.0f);
+            cmdSetScissor(frame.m_cmd, 0, 0, sharedData.m_size.x, sharedData.m_size.y);
+            
+            // cmdBindDescriptorSet(frame.m_cmd, 0, m_decalDescriptorSet.m_constSet);
+            cmdBindDescriptorSet(frame.m_cmd, 0, m_materialSet.m_frameSet[frame.m_frameIndex]);
+            // uint32_t decalIndex = 0;
+            for(auto& decalItem: mpCurrentRenderList->GetRenderableItems(eRenderListType_Decal)) {
+                cMaterial* pMaterial = decalItem->GetMaterial();
+                iVertexBuffer* vertexBuffer = decalItem->GetVertexBuffer();
+                if(pMaterial == nullptr || vertexBuffer == nullptr) {
+                    continue;
+                }
+                ASSERT(pMaterial->GetBlendMode() < eMaterialBlendMode_LastEnum && "Invalid blend mode");;
+                ASSERT(pMaterial->type().m_id == cMaterial::Decal && "Invalid material type");
+                cmdBindPipeline(frame.m_cmd, m_decalPipeline[pMaterial->GetBlendMode()]);
 
-        //     // cmdBindDescriptorSet(frame.m_cmd, 0, m_decalDescriptorSet.m_constSet);
-        //     cmdBindDescriptorSet(frame.m_cmd, 0, m_materialSet.m_frameSet[frame.m_frameIndex]);
-        //     // uint32_t decalIndex = 0;
-        //     for(auto& decalItem: mpCurrentRenderList->GetRenderableItems(eRenderListType_Decal)) {
-        //         cMaterial* pMaterial = decalItem->GetMaterial();
-        //         iVertexBuffer* vertexBuffer = decalItem->GetVertexBuffer();
-        //         if(pMaterial == nullptr || vertexBuffer == nullptr) {
-        //             continue;
-        //         }
-        //         ASSERT(pMaterial->type().m_id == cMaterial::Decal && "Invalid material type");
+                std::array targets = {
+                    eVertexBufferElement_Position,
+                    eVertexBufferElement_Texture0,
+                    eVertexBufferElement_Color0
+                };
 
-        //         std::array targets = {
-        //             eVertexBufferElement_Position,
-        //             eVertexBufferElement_Texture0,
-        //             eVertexBufferElement_Color0
-        //         };
+                cmdBindMaterialDescriptor(frame, pMaterial);
+                cmdBindObjectDescriptor(frame, objectIndex, pMaterial, decalItem, {
+                    .m_viewMat = mainFrustumView,
+                    .m_projectionMat = mainFrustumProj,
+                });
 
-        //         cmdBindMaterialDescriptor(frame, pMaterial);
-        //         cmdBindObjectDescriptor(frame, objectIndex, pMaterial, decalItem, {
-        //             .m_viewMat = mainFrustumView,
-        //             .m_projectionMat = mainFrustumProj,
-        //         });
-
-        //         LegacyVertexBuffer::GeometryBinding binding;
-        //         static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(
-        //             frame.m_currentFrame, targets, &binding);
-        //         detail::cmdDefaultLegacyGeomBinding(frame, binding);
-        //         cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
-        //     }
-        // }
+                LegacyVertexBuffer::GeometryBinding binding;
+                static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(
+                    frame.m_currentFrame, targets, &binding);
+                detail::cmdDefaultLegacyGeomBinding(frame, binding);
+                cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+            }
+        }
 
         
         // // ------------------------------------------------------------------------------------
@@ -3027,6 +3081,9 @@ namespace hpl {
 
         // }
 
+        // --------------------------------------------------------------------
+        // Render Light Pass
+        // --------------------------------------------------------------------
         {
             cVector2l screenSize = viewport.GetSize();
 
@@ -3035,14 +3092,10 @@ namespace hpl {
 
             // std::array<std::vector<detail::DeferredLight*>, eDeferredLightList_LastEnum> sortedLights;
             // DON'T touch deferredLights after this point
-            // auto lightSpan = lights;
             std::vector<detail::DeferredLight> deferredLights;
             deferredLights.reserve(mpCurrentRenderList->GetLights().size());
             std::vector<detail::DeferredLight*> deferredLightRenderBack;
             std::vector<detail::DeferredLight*> deferredLightStencilFront;
-
-            // std::vector<detail::DeferredLight*> deferredLightRenderBack;
-            // std::vector<detail::DeferredLight*> deferredLightStencilFrontRenderBack;
 
             for (auto& light : mpCurrentRenderList->GetLights()) {
                 auto lightType = light->GetLightType();
@@ -3193,12 +3246,12 @@ namespace hpl {
                     const auto modelViewMtx = cMath::MatrixMul(apFrustum->GetViewMatrix(), light->m_light->GetWorldMatrix());
                     const auto viewProjectionMat = cMath::MatrixMul(mainFrustumProj, mainFrustumView);
 
-                    uniformObjectData.m_common.m_mvp = cMath::ToForgeMat4(
-                        cMath::MatrixMul(viewProjectionMat, 
-                        cMath::MatrixMul(light->m_light->GetWorldMatrix(), detail::GetLightMtx(*light))).GetTranspose());
-
                     switch (light->m_light->GetLightType()) {
                         case eLightType_Point: {
+                            uniformObjectData.m_common.m_mvp = cMath::ToForgeMat4(
+                            cMath::MatrixMul(viewProjectionMat, 
+                            cMath::MatrixMul(light->m_light->GetWorldMatrix(), detail::GetLightMtx(*light))).GetTranspose());
+
                             cVector3f lightViewPos = cMath::MatrixMul(modelViewMtx, detail::GetLightMtx(*light)).GetTranslation();
                             const auto color = light->m_light->GetDiffuseColor();
 
@@ -3227,6 +3280,10 @@ namespace hpl {
                             cVector3f lightViewPos = cMath::MatrixMul(modelViewMtx, detail::GetLightMtx(*light)).GetTranslation();
                             const auto color = pLightSpot->GetDiffuseColor();
 
+                            uniformObjectData.m_common.m_mvp = cMath::ToForgeMat4(
+                        cMath::MatrixMul(viewProjectionMat, 
+                        cMath::MatrixMul(light->m_light->GetWorldMatrix(), detail::GetLightMtx(*light))).GetTranspose());
+
                             uniformObjectData.m_spotLight.m_spotViewProj = cMath::ToForgeMat4(spotViewProj);
                             uniformObjectData.m_spotLight.m_oneMinusCosHalfSpotFOV = 1 - pLightSpot->GetCosHalfFOV();
                             uniformObjectData.m_spotLight.m_radius = light->m_light->GetRadius();
@@ -3254,6 +3311,10 @@ namespace hpl {
                             break;
                         }
                         case eLightType_Box: {
+                            uniformObjectData.m_common.m_mvp = cMath::ToForgeMat4(
+                                cMath::MatrixMul(viewProjectionMat, detail::GetLightMtx(*light)).GetTranspose());
+
+
                             cLightBox* pLightBox = static_cast<cLightBox*>(light->m_light);
                             const auto& color = light->m_light->GetDiffuseColor();
                             uniformObjectData.m_boxLight.m_lightColor = float4(color.r, color.g, color.b, color.a);
@@ -3328,7 +3389,7 @@ namespace hpl {
                         ->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
                     detail::cmdDefaultLegacyGeomBinding(frame, binding);
                     cmdBindPipeline(frame.m_cmd, m_lightStencilPipeline);
-                    cmdBindLightDescriptor(light);
+                    cmdBindLightDescriptor(light); // bind light descriptor light uniforms
                     cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
 
                     switch (light->m_light->GetLightType()) {
@@ -3401,7 +3462,7 @@ namespace hpl {
                     continue;
                 }
                 ASSERT(pMaterial->type().m_id == cMaterial::SolidDiffuse && "Invalid material type");
-                cmdBindMaterialDescriptor(frame, pMaterial);
+                cmdBindMaterialDescriptor(frame, pMaterial); // bind material descriptor
                 cmdBindObjectDescriptor(frame, objectIndex, pMaterial, illuminationItem, {
                     .m_viewMat = mainFrustumView,
                     .m_projectionMat = mainFrustumProj,
@@ -3419,6 +3480,104 @@ namespace hpl {
             }
         }
 
+
+        // ------------------------------------------------------------------------
+        // Render Fog Pass --> output target
+        // ------------------------------------------------------------------------
+        auto fogRenderData = detail::createFogRenderData(mpCurrentRenderList->GetFogAreas(), apFrustum);
+        {
+            std::array targets = {
+                currentGBuffer.m_outputBuffer.m_handle,
+            };
+            LoadActionsDesc loadActions = {};
+            loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
+            loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
+            cmdBindRenderTargets(frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, nullptr, nullptr, -1, -1);
+            cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)sharedData.m_size.x, (float)sharedData.m_size.y, 0.0f, 1.0f);
+            cmdSetScissor(frame.m_cmd, 0, 0, sharedData.m_size.x, sharedData.m_size.y);
+            {
+                std::array<DescriptorData, 15> params = {};
+                size_t paramCount = 0;
+                params[paramCount].pName = "positionMap";
+                params[paramCount++].ppTextures = &currentGBuffer.m_positionBuffer.m_handle->pTexture;
+                updateDescriptorSet(frame.m_renderer->Rend(), 0, m_fog.m_perFrameSet[frame.m_frameIndex], paramCount, params.data());
+            }
+
+            LegacyVertexBuffer::GeometryBinding binding{};
+            std::array geometryStream = { eVertexBufferElement_Position };
+            static_cast<LegacyVertexBuffer*>(mpShapeBox)
+                ->resolveGeometryBinding(frame.m_currentFrame, geometryStream, &binding);
+            detail::cmdDefaultLegacyGeomBinding(frame, binding);
+            
+            uint32_t rootConstantIndex = getDescriptorIndexFromName(m_fog.m_fogRootSignature, "uRootConstants");
+            float2 viewTexel = { 1.0f / sharedData.m_size.x, 1.0f / sharedData.m_size.y };
+            cmdBindPushConstants(frame.m_cmd, m_fog.m_fogRootSignature, rootConstantIndex, &viewTexel);
+               
+            size_t objectIndex = 0;
+            for(auto& fogArea: fogRenderData) {
+                GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(m_fog.m_fogUniformBuffer, sizeof(Fog::UniformFogData));
+
+                uint8_t pipelineVariant = 0;
+                Fog::UniformFogData fogUniformData = {};
+                if(fogArea.m_insideNearFrustum) {
+                    pipelineVariant |= ((fogArea.m_fogArea->GetShowBacksideWhenInside() ? Fog::PipelineUseBackSide
+                                                                    : Fog::PipelineVariantEmpty) | Fog::PipelineVariant::PipelineInsideNearFrustum);
+                } else {
+                    cMatrixf mtxInvModelView =
+                        cMath::MatrixInverse(cMath::MatrixMul(apFrustum->GetViewMatrix(), *fogArea.m_fogArea->GetModelMatrixPtr()));
+                    cVector3f vRayCastStart = cMath::MatrixMul(mtxInvModelView, cVector3f(0));
+
+                    cVector3f vNegPlaneDistNeg(
+                        cMath::PlaneToPointDist(cPlanef(-1, 0, 0, 0.5f), vRayCastStart),
+                        cMath::PlaneToPointDist(cPlanef(0, -1, 0, 0.5f), vRayCastStart),
+                        cMath::PlaneToPointDist(cPlanef(0, 0, -1, 0.5f), vRayCastStart));
+                    cVector3f vNegPlaneDistPos(
+                        cMath::PlaneToPointDist(cPlanef(1, 0, 0, 0.5f), vRayCastStart),
+                        cMath::PlaneToPointDist(cPlanef(0, 1, 0, 0.5f), vRayCastStart),
+                        cMath::PlaneToPointDist(cPlanef(0, 0, 1, 0.5f), vRayCastStart));
+                    fogUniformData.m_rayCastStart = float4(vRayCastStart.x, vRayCastStart.y, vRayCastStart.z, 0.0f);
+                    fogUniformData.m_fogNegPlaneDistNeg = float4(vNegPlaneDistNeg.x * -1.0f, vNegPlaneDistNeg.y * -1.0f, vNegPlaneDistNeg.z * -1.0f, 0.0f);
+                    fogUniformData.m_fogNegPlaneDistPos = float4(vNegPlaneDistPos.x * -1.0f, vNegPlaneDistPos.y * -1.0f, vNegPlaneDistPos.z * -1.0f, 0.0f);
+                    pipelineVariant |= Fog::PipelineUseOutsideBox;
+                    pipelineVariant |= fogArea.m_fogArea->GetShowBacksideWhenOutside() ? Fog::PipelineUseBackSide: Fog::PipelineVariantEmpty;
+                }
+                const auto fogColor = fogArea.m_fogArea->GetColor();
+                fogUniformData.m_color = float4(fogColor.r, fogColor.g, fogColor.b, fogColor.a);
+                fogUniformData.m_start = fogArea.m_fogArea->GetStart();
+                fogUniformData.m_length = fogArea.m_fogArea->GetEnd() - fogArea.m_fogArea->GetStart();
+                fogUniformData.m_falloffExp = fogArea.m_fogArea->GetFalloffExp();
+                
+                const cMatrixf modelMat = fogArea.m_fogArea->GetModelMatrixPtr() ? *fogArea.m_fogArea->GetModelMatrixPtr() : cMatrixf::Identity;
+                fogUniformData.m_mv =  cMath::ToForgeMat4(cMath::MatrixMul(mainFrustumView,modelMat).GetTranspose());
+                fogUniformData.m_mvp =
+                    cMath::ToForgeMat4(
+                        cMath::MatrixMul(
+                            cMath::MatrixMul(mainFrustumProj, mainFrustumView),modelMat)
+                        .GetTranspose());
+
+                BufferUpdateDesc updateDesc = { uniformBuffer.pBuffer, uniformBuffer.mOffset };
+                beginUpdateResource(&updateDesc);
+                (*reinterpret_cast<Fog::UniformFogData*>(updateDesc.pMappedData)) = fogUniformData;
+                endUpdateResource(&updateDesc, NULL);
+
+                {
+                    std::array<DescriptorData, 15> params = {};
+                    size_t paramCount = 0;
+                    params[paramCount].pName = "uniformFogBlock";
+                    DescriptorDataRange range = { (uint32_t)uniformBuffer.mOffset, sizeof(Fog::UniformFogData) };
+                    params[paramCount].pRanges = &range;
+                    params[paramCount++].ppBuffers = &uniformBuffer.pBuffer;
+                    updateDescriptorSet(frame.m_renderer->Rend(), objectIndex, m_fog.m_perObjectSet[frame.m_frameIndex], paramCount, params.data());
+                }
+                
+               
+                cmdBindDescriptorSet(frame.m_cmd, 0, m_fog.m_perFrameSet[frame.m_frameIndex]);
+                cmdBindDescriptorSet(frame.m_cmd, objectIndex++, m_fog.m_perObjectSet[frame.m_frameIndex]);
+                cmdBindPipeline(frame.m_cmd, m_fog.m_pipeline[pipelineVariant]);
+                cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+            }
+        }
+
         {
             cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
             std::array rtBarriers = {
@@ -3429,32 +3588,49 @@ namespace hpl {
         }
 
 
+
         // ------------------------------------------------------------------------
         // Render Translucency Pass --> renders to output target
         // ------------------------------------------------------------------------
-        for(auto& translucenceItem: mpCurrentRenderList->GetRenderableItems(eRenderListType_Translucent)) {
-            cMaterial* pMaterial = translucenceItem->GetMaterial();
-            iVertexBuffer* vertexBuffer = translucenceItem->GetVertexBuffer();
-            if(pMaterial == nullptr || vertexBuffer == nullptr) {
-                continue;
-            }
-            // ASSERT(pMaterial->type().m_id == cMaterial::SolidDiffuse && "Invalid material type");
-            // cmdBindMaterialDescriptor(frame, pMaterial);
-            // cmdBindObjectDescriptor(frame, objectIndex, pMaterial, translucenceItem, {
-            //     .m_viewMat = mainFrustumView,
-            //     .m_projectionMat = mainFrustumProj,
-            // });
+        // for(auto& translucenceItem: mpCurrentRenderList->GetRenderableItems(eRenderListType_Translucent)) {
+        //     cMaterial* pMaterial = translucenceItem->GetMaterial();
+        //     iVertexBuffer* vertexBuffer = translucenceItem->GetVertexBuffer();
+        //     if(pMaterial == nullptr || vertexBuffer == nullptr) {
+        //         continue;
+        //     }
+        //     ASSERT(pMaterial->type().m_id == cMaterial::SolidDiffuse && "Invalid material type");
+        //     cmdBindMaterialDescriptor(frame, pMaterial);
+        //     cmdBindObjectDescriptor(frame, objectIndex, pMaterial, translucenceItem, {
+        //         .m_viewMat = mainFrustumView,
+        //         .m_projectionMat = mainFrustumProj,
+        //     });
 
-            // std::array targets = {
-            //     eVertexBufferElement_Position,
-            //     eVertexBufferElement_Texture0,
-            // };
-            // LegacyVertexBuffer::GeometryBinding binding;
-            // static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(
-            //     frame.m_currentFrame, targets, &binding);
-            // detail::cmdDefaultLegacyGeomBinding(frame, binding);
-            // cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
-        }
+        //     if(mpCurrentWorld->GetFogActive() && pMaterial->GetAffectedByFog()) {
+        //         // cmdBindPipeline(frame.m_cmd, m_translucentFogPipeline);
+        //     } else {
+        //         // cmdBindPipeline(frame.m_cmd, m_translucentPipeline);
+        //     }
+
+        //     mfTempAlpha = 1;
+        //     if (pMaterial->GetAffectedByFog()) {
+        //         for (auto& fogArea : fogRenderData) {
+        //             mfTempAlpha *= detail::GetFogAreaVisibilityForObject(fogArea, *apFrustum, obj);
+        //         }
+        //     }
+
+        //     std::array targets = {
+        //         eVertexBufferElement_Position,
+        //         eVertexBufferElement_Texture0,
+        //         eVertexBufferElement_Normal,
+        //         eVertexBufferElement_Texture1Tangent,
+        //         eVertexBufferElement_User0
+        //     };
+        //     LegacyVertexBuffer::GeometryBinding binding;
+        //     static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(
+        //         frame.m_currentFrame, targets, &binding);
+        //     detail::cmdDefaultLegacyGeomBinding(frame, binding);
+        //     cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+        // }
 
         // // ------------------------------------------------------------------------
         // // Render Fog Pass --> output target
@@ -3823,6 +3999,8 @@ namespace hpl {
                 return m_shapeSphere[aQuality].get();
             case eLightType_Spot:
                 return m_shapePyramid.get();
+            case eLightType_Box:
+                return mpShapeBox;
             default:
                 break;
         }

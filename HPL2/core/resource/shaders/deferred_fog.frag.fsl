@@ -1,0 +1,78 @@
+PUSH_CONSTANT(uRootConstants, b0)
+{
+	DATA(float2, viewTexel, None);
+};
+
+CBUFFER(uniformFogBlock, UPDATE_FREQ_PER_DRAW, b1, binding = 2)
+{
+    DATA(mat4, mvp, None);
+    DATA(mat4, mv, None);
+    DATA(float4, fogColor, None);
+    DATA(float4, rayCastStart, None);
+    DATA(float4, fogNegPlaneDistNeg, None);
+    DATA(float4, fogNegPlaneDistPos, None);
+    DATA(float, start, None);
+    DATA(float, length, None);
+    DATA(float, falloffExp, None);
+};
+
+RES(Tex2D(float4), positionMap, UPDATE_FREQ_PER_FRAME, t1, binding = 3);
+RES(SamplerState, nearestSampler, UPDATE_FREQ_PER_FRAME, s1, binding = 4);
+
+STRUCT(PsIn)
+{
+    DATA(float4, Position, SV_Position);
+    DATA(float4, pos, POSITION);
+
+    #if defined(USE_OUTSIDE_BOX) && defined(USE_BACK_SIDE) 
+        DATA(float3, ray, TEXCOORD0);
+    #endif
+};
+
+float GetPlaneIntersection(float3 ray, float3 avPlaneNormal, float afNegPlaneDist, float afFinalT)
+{
+    //Get T (amount of ray) to intersection
+    float fMul  = dot(ray, avPlaneNormal);
+    float fT = afNegPlaneDist / fMul;
+    
+    //Get the intersection and see if inside box
+    float3 vIntersection = abs(ray * fT + Get(rayCastStart).xyz);
+    if( all( lessThan(vIntersection, float3(0.5001,0.5001,0.5001)) ) )
+    {
+        return max(afFinalT, fT);	
+    }
+    return afFinalT;
+}
+
+float4 PS_MAIN(PsIn In)
+{
+    INIT_MAIN;
+
+    float2 ndc = In.Position.xy * Get(viewTexel);
+    float fDepth =  -SampleTex2D(Get(positionMap), Get(nearestSampler), ndc).z;
+
+    #ifdef USE_OUTSIDE_BOX 
+        fDepth = fDepth +  In.pos.z; //VertexPos is negative!
+        float fFinalT = 0.0;
+        #ifdef USE_BACK_SIDE
+            fFinalT = GetPlaneIntersection(In.ray, float3(-1.0, 0.0, 0.0), Get(fogNegPlaneDistNeg).x, fFinalT);//Left
+            fFinalT = GetPlaneIntersection(In.ray, float3(1.0, 0.0, 0.0),  Get(fogNegPlaneDistPos).x, fFinalT);//Right
+            fFinalT = GetPlaneIntersection(In.ray, float3(0.0, -1.0, 0.0), Get(fogNegPlaneDistNeg).y, fFinalT);//Bottom
+            fFinalT = GetPlaneIntersection(In.ray, float3(0.0, 1.0, 0.0 ), Get(fogNegPlaneDistPos).y, fFinalT);//Top
+            fFinalT = GetPlaneIntersection(In.ray, float3(0.0, 0.0, -1.0), Get(fogNegPlaneDistNeg).z, fFinalT);//Back
+            fFinalT = GetPlaneIntersection(In.ray, float3(0.0, 0.0, 1.0),  Get(fogNegPlaneDistPos).z, fFinalT);//Front
+            
+            float fLocalBackZ = (fFinalT * In.pos.z) -  In.pos.z;
+            fDepth = min(-fLocalBackZ, fDepth);
+        #endif
+    #else
+        #ifdef USE_BACK_SIDE
+             fDepth = min(-In.pos.z, fDepth);
+        #endif
+    #endif
+
+    fDepth = min(fDepth - Get(start), Get(length));
+    float fAmount = max(fDepth / Get(length),0.0);
+    
+    RETURN(float4(Get(fogColor).rgb, pow(fAmount, Get(falloffExp)) * Get(fogColor).w));
+}

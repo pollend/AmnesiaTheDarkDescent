@@ -89,7 +89,7 @@ namespace hpl {
 		swapChainDesc.mWidth = 1920;
 		swapChainDesc.mHeight = 1080;
 		swapChainDesc.mImageCount = SwapChainLength;
-		swapChainDesc.mColorFormat = getRecommendedSwapchainFormat(true, true);
+		swapChainDesc.mColorFormat = getRecommendedSwapchainFormat(false, false);
 		swapChainDesc.mColorClearValue = { {1, 1, 1, 1} };
 		swapChainDesc.mEnableVsync = false;
         addSwapChain(m_renderer, &swapChainDesc, &m_swapChain);

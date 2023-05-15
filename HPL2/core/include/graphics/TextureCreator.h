@@ -29,6 +29,9 @@ namespace hpl {
 	namespace TextureCreator {
 		void GenerateScatterDiskMap3D(Image& inputImage, int alSize, int alSamples, bool abSortSamples);
 		void GenerateScatterDiskMap2D(Image& inputImage, int alSize, int alSamples, bool abSortSamples);
+
+		void GenerateScatterDiskMap3D(int alSize, int alSamples, bool abSortSamples, Texture** ppTexture);
+		void GenerateScatterDiskMap2D(int alSize, int alSamples, bool abSortSamples, Texture** ppTexture);
 	}
 };
 
