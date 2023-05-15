@@ -44,13 +44,15 @@ namespace hpl {
 		bool LoadData() override;
 		void DestroyData() override;
 
-		virtual std::shared_ptr<Image> GetOutputImage(cViewport& viewport) override;
+		virtual Texture* GetOutputImage(uint32_t frameIndex, cViewport& viewport) override {
+			return nullptr;
+		}
 	private:
 
-		virtual void Draw(GraphicsContext& context, cViewport& viewport, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings,
-			bool abSendFrameBufferToPostEffects) override;
+		virtual void Draw(const ForgeRenderer::Frame& context, cViewport& viewport, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings,
+		bool abSendFrameBufferToPostEffects) override;
 
-        UniqueViewportData<RenderTarget> m_boundOutputBuffer;
+        UniqueViewportData<LegacyRenderTarget> m_boundOutputBuffer;
         bgfx::ProgramHandle m_colorProgram;
         UniformWrapper<StringLiteral("u_color"),      bgfx::UniformType::Vec4> m_u_color;
 

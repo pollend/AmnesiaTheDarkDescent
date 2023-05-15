@@ -178,7 +178,7 @@ namespace hpl {
 
     //-----------------------------------------------------------------------
 
-    void cScene::Render(GraphicsContext& context, float afFrameTime, tFlag alFlags) {
+    void cScene::Render(const ForgeRenderer::Frame& frame, float afFrameTime, tFlag alFlags) {
         // Increase the frame count (do this at top, so render count is valid until this Render is called again!)
         iRenderer::IncRenderFrameCount();
 
@@ -192,7 +192,7 @@ namespace hpl {
             if(!pViewPort->IsValid()) {
                 continue;
             }
-
+    
             //////////////////////////////////////////////
             // Init vars
             cPostEffectComposite* pPostEffectComposite = pViewPort->GetPostEffectComposite();
@@ -212,7 +212,7 @@ namespace hpl {
                 if (pRenderer && pViewPort->GetWorld() && pFrustum) {
                     START_TIMING(RenderWorld)
                     pRenderer->Draw(
-                        context,
+                        frame,
                         *pViewPort,
                         afFrameTime,
                         pFrustum,
@@ -234,35 +234,41 @@ namespace hpl {
                 // Render 3D GuiSets
                 //  Should this really be here? Or perhaps send in a frame buffer depending on the renderer.
                 START_TIMING(Render3DGui)
-                Render3DGui(context, pViewPort, pFrustum, afFrameTime);
+                Render3DGui(frame, pViewPort, pFrustum, afFrameTime);
                 STOP_TIMING(Render3DGui)
             }
 
+            auto forgeRenderer = Interface<ForgeRenderer>::Get();
+
+
             //////////////////////////////////////////////
             // Render Post effects
-            auto outputImage = pRenderer->GetOutputImage(*pViewPort);
-            if (bPostEffects) {
-                START_TIMING(RenderPostEffects)
-                pPostEffectComposite->Draw(
-                    context,
-                    *pViewPort,
-                    afFrameTime,
-                    *outputImage,
-                    pViewPort->GetRenderTarget());
+            auto outputImage = pRenderer->GetOutputImage(frame.m_frameIndex, *pViewPort);
+            // if (bPostEffects) {
+            //     START_TIMING(RenderPostEffects)
+            //     pPostEffectComposite->Draw(
+            //         context,
+            //         *pViewPort,
+            //         afFrameTime,
+            //         *outputImage,
+            //         pViewPort->GetRenderTarget());
 
-                STOP_TIMING(RenderPostEffects)
-            } else {
+            //     STOP_TIMING(RenderPostEffects)
+            // } else {
+                
                 auto size = pViewPort->GetSize();
                 cRect2l rect = cRect2l(0, 0, size.x, size.y);
-                context.CopyTextureToFrameBuffer(
-                    *outputImage, rect, pViewPort->GetRenderTarget());
-            }
+                forgeRenderer->cmdCopyTexture(ForgeRenderer::CopyPipelineToSwapChain, frame.m_cmd, outputImage,
+                    frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex]);
+                // context.CopyTextureToFrameBuffer(
+                //     *outputImage, rect, pViewPort->GetRenderTarget());
+            // }
 
             //////////////////////////////////////////////
             // Render Screen GUI
             if (alFlags & tSceneRenderFlag_Gui) {
                 START_TIMING(RenderGUI)
-                RenderScreenGui(context, pViewPort, afFrameTime);
+                RenderScreenGui(frame, pViewPort, afFrameTime);
                 STOP_TIMING(RenderGUI)
             }
         }
@@ -319,7 +325,7 @@ namespace hpl {
         return it != m_worlds.end();
     }
 
-    void cScene::Render3DGui(GraphicsContext& context, cViewport* apViewPort, cFrustum* apFrustum, float afTimeStep) {
+    void cScene::Render3DGui(const ForgeRenderer::Frame& frame, cViewport* apViewPort, cFrustum* apFrustum, float afTimeStep) {
         if (apViewPort->GetCamera() == NULL)
             return;
 
@@ -327,12 +333,12 @@ namespace hpl {
         while (it.HasNext()) {
             cGuiSet* pSet = it.Next();
             if (pSet->Is3D()) {
-                pSet->Draw(context, apFrustum);
+                pSet->Draw(frame, apFrustum);
             }
         }
     }
 
-    void cScene::RenderScreenGui(GraphicsContext& context, cViewport* apViewPort, float afTimeStep) {
+    void cScene::RenderScreenGui(const ForgeRenderer::Frame& frame, cViewport* apViewPort, float afTimeStep) {
         ///////////////////////////////////////
         // Put all of the non 3D sets in to a sorted map
         typedef std::multimap<int, cGuiSet*> tPrioMap;
@@ -348,15 +354,14 @@ namespace hpl {
 
         ///////////////////////////////////////
         // Iterate and render all sets
-        if (mapSortedSets.empty())
+        if (mapSortedSets.empty()) {
             return;
+        }
+
         tPrioMap::iterator SortIt = mapSortedSets.begin();
         for (; SortIt != mapSortedSets.end(); ++SortIt) {
             cGuiSet* pSet = SortIt->second;
-
-            // Log("Rendering gui '%s'\n", pSet->GetName().c_str());
-
-            pSet->Draw(context, NULL);
+            pSet->Draw(frame, NULL);
         }
     }
 

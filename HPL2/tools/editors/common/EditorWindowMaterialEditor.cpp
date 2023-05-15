@@ -1575,7 +1575,7 @@ void cEditorWindowMaterialEditor::OnInitLayout()
 
 		auto image = std::make_shared<Image>();
 		image->Initialize(ImageDescriptor::CreateTexture2D(512, 512, false, bgfx::TextureFormat::Enum::RGB8));
-		auto target = std::make_shared<RenderTarget>(image);
+		auto target = std::make_shared<LegacyRenderTarget>(image);
 
 		// iFrameBuffer* pFB = mpEditor->GetEngine()->GetGraphics()->CreateFrameBuffer("MaterialEditor");
 		// pFB->SetTexture2D(0, pTex);

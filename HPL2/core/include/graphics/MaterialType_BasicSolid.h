@@ -103,6 +103,8 @@ namespace hpl {
 
     class cMaterialType_SolidDiffuse_Vars : public iMaterialVars {
     public:
+        std::array<ForgeBufferHandle, ForgeRenderer::SwapChainLength> m_buffer;
+
         cMaterialType_SolidDiffuse_Vars()
             : mfHeightMapScale(0.05f)
             , mfHeightMapBias(0.0f)
@@ -110,6 +112,16 @@ namespace hpl {
         }
         ~cMaterialType_SolidDiffuse_Vars() {
         }
+
+        struct MaterialBufferData {
+            struct {
+                mat4 m_uvMtx;
+                float alphaReject;
+                uint32_t textureConfig;
+            } m_z;
+        } m_vars;
+
+        uint32_t m_materialId = 0;
 
         float mfHeightMapScale;
         float mfHeightMapBias;
@@ -121,6 +133,8 @@ namespace hpl {
     class cMaterialType_SolidDiffuse : public iMaterialType_SolidBase {
 		HPL_RTTI_IMPL_CLASS(iMaterialType_SolidBase, cMaterialType_SolidDiffuse, "{06904083-3217-48b9-bb27-772df4573557}")
     public:
+        static constexpr uint32_t MaxSolidMaterials = 10000;
+
         cMaterialType_SolidDiffuse(cGraphics* apGraphics, cResources* apResources);
         ~cMaterialType_SolidDiffuse();
 
@@ -132,12 +146,21 @@ namespace hpl {
             iRenderer* apRenderer,
             std::function<void(GraphicsContext::ShaderProgram&)> handler) override;
 
+        virtual void ResolveShaderProgram(
+            cViewport& viewport,
+            cMaterial* apMaterial,
+            iRenderable* apObject,
+            iRenderer* apRenderer,
+			iMaterialType::MaterialDeferredPipelineDescriptor* descriptor) override;
+
         iMaterialVars* CreateSpecificVariables() override;
         void LoadVariables(cMaterial* apMaterial, cResourceVarsObject* apVars) override;
         void GetVariableValues(cMaterial* apMaterial, cResourceVarsObject* apVars) override;
 
+        std::array<ForgeDescriptorSet, eMaterialTexture_LastEnum>  m_descriptorSet;
     private:
-        void CompileSolidSpecifics(cMaterial* apMaterial);
+        uint32_t m_materialCount = 0;
+        void CompileSolidSpecifics(cMaterial* apMaterial) override;
     };
 
     //---------------------------------------------------

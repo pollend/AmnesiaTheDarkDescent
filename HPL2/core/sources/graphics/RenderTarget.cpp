@@ -24,25 +24,25 @@
 
 namespace hpl
 {
-    const RenderTarget RenderTarget::EmptyRenderTarget = RenderTarget();
+    const LegacyRenderTarget LegacyRenderTarget::EmptyRenderTarget = LegacyRenderTarget();
 
-    RenderTarget::RenderTarget(std::shared_ptr<Image> image)
+    LegacyRenderTarget::LegacyRenderTarget(std::shared_ptr<Image> image)
     {
         std::array<std::shared_ptr<Image>, 1> images = { image };
         Initialize(std::span(images));
     }
 
-    RenderTarget::RenderTarget(std::span<std::shared_ptr<Image>> images)
+    LegacyRenderTarget::LegacyRenderTarget(std::span<std::shared_ptr<Image>> images)
     {
         Initialize(images);
     }
 
-    RenderTarget::RenderTarget()
+    LegacyRenderTarget::LegacyRenderTarget()
         : m_images({})
     {
     }
 
-    RenderTarget::RenderTarget(RenderTarget&& target)
+    LegacyRenderTarget::LegacyRenderTarget(LegacyRenderTarget&& target)
     {
         Invalidate();
         m_images = std::move(target.m_images);
@@ -50,7 +50,7 @@ namespace hpl
         target.m_buffer = BGFX_INVALID_HANDLE;
     }
 
-    void RenderTarget::operator=(RenderTarget&& target)
+    void LegacyRenderTarget::operator=(LegacyRenderTarget&& target)
     {
         Invalidate();
         m_images = std::move(target.m_images);
@@ -58,7 +58,7 @@ namespace hpl
         target.m_buffer = BGFX_INVALID_HANDLE;
     }
 
-    RenderTarget::~RenderTarget()
+    LegacyRenderTarget::~LegacyRenderTarget()
     {
         if (bgfx::isValid(m_buffer))
         {
@@ -66,7 +66,7 @@ namespace hpl
         }
     }
 
-    void RenderTarget::Initialize(std::span<std::shared_ptr<Image>> images) {
+    void LegacyRenderTarget::Initialize(std::span<std::shared_ptr<Image>> images) {
         BX_ASSERT(!bgfx::isValid(m_buffer), "RenderTarget already initialized");
         
         absl::InlinedVector<bgfx::TextureHandle, 7> handles = {};
@@ -82,7 +82,7 @@ namespace hpl
         m_images = std::move(updateImages);
     }
 
-    void RenderTarget::Invalidate() {
+    void LegacyRenderTarget::Invalidate() {
         if(bgfx::isValid(m_buffer)) {
             bgfx::destroy(m_buffer);
         }
@@ -90,30 +90,30 @@ namespace hpl
         m_buffer = BGFX_INVALID_HANDLE;
     }
 
-    const bool RenderTarget::IsValid() const
+    const bool LegacyRenderTarget::IsValid() const
     {
         return bgfx::isValid(m_buffer);
     }
 
-    std::shared_ptr<Image> RenderTarget::GetImage(size_t index){
+    std::shared_ptr<Image> LegacyRenderTarget::GetImage(size_t index){
         return m_images[index];
     }
 
-    std::span<std::shared_ptr<Image>> RenderTarget::GetImages()
+    std::span<std::shared_ptr<Image>> LegacyRenderTarget::GetImages()
     {
         return std::span(m_images.begin(), m_images.end());
     }
     
-    const std::shared_ptr<Image> RenderTarget::GetImage(size_t index) const {
+    const std::shared_ptr<Image> LegacyRenderTarget::GetImage(size_t index) const {
         return m_images[index];
     }
 
-    const std::span<const std::shared_ptr<Image>> RenderTarget::GetImages() const 
+    const std::span<const std::shared_ptr<Image>> LegacyRenderTarget::GetImages() const 
     {
         return std::span(m_images.begin(), m_images.end());
     }
 
-    const bgfx::FrameBufferHandle RenderTarget::GetHandle() const
+    const bgfx::FrameBufferHandle LegacyRenderTarget::GetHandle() const
     {
         return m_buffer;
     }

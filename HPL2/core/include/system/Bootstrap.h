@@ -18,6 +18,7 @@
 
 #include "bx/thread.h"
 #include "engine/UpdateEventLoop.h"
+#include "graphics/ForgeRenderer.h"
 #include "system/Filesystem.h"
 #include "windowing/NativeWindow.h"
 #include <bx/file.h>
@@ -50,6 +51,8 @@ namespace hpl {
         static int32_t BootstrapThreadHandler(bx::Thread* self, void* _userData);
 
         std::unique_ptr<PrimaryViewport> m_primaryViewport;
+        hpl::ForgeRenderer m_renderer;
+
         UpdateEventLoop m_updateEventLoop;
         input::InputManager m_inputManager;
         window::NativeWindowWrapper m_window;

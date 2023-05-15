@@ -770,7 +770,7 @@ iEditorViewport::iEditorViewport(iEditorBase* apEditor, cWorld* apWorld, bool ab
 
 	mpGrid = hplNew(cEditorGrid, (this));
 
-	m_target = std::make_shared<RenderTarget>();
+	m_target = std::make_shared<LegacyRenderTarget>();
 	mpEngineViewport->setRenderTarget(m_target);
 	auto desc = ImageDescriptor::CreateTexture2D(0, 0, false, bgfx::TextureFormat::Enum::RGBA8);
 	desc.m_configuration.m_rt = RTType::RT_Write;
@@ -851,7 +851,7 @@ void iEditorViewport::SetRenderMode(eRenderer aMode)
 
 //-------------------------------------------------------------
 
-void iEditorViewport::SetFrameBuffer(std::shared_ptr<RenderTarget> target)
+void iEditorViewport::SetFrameBuffer(std::shared_ptr<LegacyRenderTarget> target)
 {
 	m_target = target;
 	mpEngineViewport->setRenderTarget(target);

@@ -38,9 +38,9 @@ namespace hpl
     cPostEffectType_RadialBlur::cPostEffectType_RadialBlur(cGraphics* apGraphics, cResources* apResources)
         : iPostEffectType("RadialBlur", apGraphics, apResources)
     {
-        m_program = hpl::loadProgram("vs_post_effect", "fs_posteffect_radial_blur_frag");
-        m_u_uniform = bgfx::createUniform("u_params", bgfx::UniformType::Vec4);
-        m_s_diffuseMap = bgfx::createUniform("diffuseMap", bgfx::UniformType::Sampler);
+        // m_program = hpl::loadProgram("vs_post_effect", "fs_posteffect_radial_blur_frag");
+        // m_u_uniform = bgfx::createUniform("u_params", bgfx::UniformType::Vec4);
+        // m_s_diffuseMap = bgfx::createUniform("diffuseMap", bgfx::UniformType::Sampler);
     }
 
     cPostEffectType_RadialBlur::~cPostEffectType_RadialBlur()
@@ -72,7 +72,7 @@ namespace hpl
     {
     }
 
-    void cPostEffect_RadialBlur::RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, RenderTarget& target)
+    void cPostEffect_RadialBlur::RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, LegacyRenderTarget& target)
     {
         cVector2l vRenderTargetSize = viewport.GetSize();
         cVector2f vRenderTargetSizeFloat((float)vRenderTargetSize.x, (float)vRenderTargetSize.y);

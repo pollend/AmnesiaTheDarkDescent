@@ -188,7 +188,8 @@ void cLuxHelpFuncs::DrawSetToScreen(bool abClearScreen, const cColor& aCol, cGui
 {
 	auto engine = hpl::Interface<EngineInterface>::Get();
 	auto& graphicsContext = engine->GetGraphicsContext();
-
+	auto renderer = hpl::Interface<ForgeRenderer>::Get();
+	auto frame = renderer->GetFrame();
 	
 	// ///////////////////////////
 	// // Clear screen
@@ -204,7 +205,7 @@ void cLuxHelpFuncs::DrawSetToScreen(bool abClearScreen, const cColor& aCol, cGui
 	if(apSet!=NULL)
 		pSet = apSet;
 
-	pSet->Draw(graphicsContext, nullptr);
+	pSet->Draw(frame, nullptr);
 	pSet->ClearRenderObjects();
 
 }
@@ -282,6 +283,9 @@ float cLuxHelpFuncs::GetStringDuration(const tWString& asStr)
 void cLuxHelpFuncs::RenderBackgroundScreen(bool abDrawFullHUD)
 {
 	auto engine = hpl::Interface<EngineInterface>::Get();
+	auto render = hpl::Interface<ForgeRenderer>::Get();
+	auto frame = render->GetFrame();
+
 	auto& graphicsContext = engine->GetGraphicsContext();
 
 	gpBase->mpMapHandler->GetViewport()->SetVisible(true);
@@ -303,7 +307,7 @@ void cLuxHelpFuncs::RenderBackgroundScreen(bool abDrawFullHUD)
 	gpBase->mpEngine->GetScene()->Render(0.0001f, lFlags);
 
 	if(abDrawFullHUD==false)
-		gpBase->mpGameHudSet->Draw(graphicsContext, NULL);
+		gpBase->mpGameHudSet->Draw(frame, NULL);
 
 	gpBase->mpGameHudSet->ClearRenderObjects();
 	gpBase->mpMapHandler->GetViewport()->SetVisible(false);

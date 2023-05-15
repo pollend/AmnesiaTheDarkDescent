@@ -54,15 +54,15 @@ cLuxEffectRenderer::cLuxEffectRenderer()
         };
         
         auto postEffect = std::make_unique<LuxPostEffectData>();
-        postEffect->m_outputImage = sharedData.m_gBuffer.m_outputImage;
-        postEffect->m_gBufferDepthStencil = sharedData.m_gBuffer.m_depthStencilImage;
+        // postEffect->m_outputImage = sharedData.m_gBuffer.m_outputImage;
+        // postEffect->m_gBufferDepthStencil = sharedData.m_gBuffer.m_depthStencilImage;
 
-        postEffect->m_blurTarget[0] = RenderTarget(blurImageDesc());
-        postEffect->m_blurTarget[1] = RenderTarget(blurImageDesc());
+        postEffect->m_blurTarget[0] = LegacyRenderTarget(blurImageDesc());
+        postEffect->m_blurTarget[1] = LegacyRenderTarget(blurImageDesc());
         
         {
             std::array<std::shared_ptr<Image>, 2> image = {postEffect->m_outputImage, postEffect->m_gBufferDepthStencil};
-            postEffect->m_outputTarget = RenderTarget(image);
+            postEffect->m_outputTarget = LegacyRenderTarget(image);
         }
     
         auto outlineImageDesc = ImageDescriptor::CreateTexture2D(sharedData.m_size.x, sharedData.m_size.y, false, bgfx::TextureFormat::RGBA8);
@@ -71,7 +71,7 @@ cLuxEffectRenderer::cLuxEffectRenderer()
         outlineImage->Initialize(outlineImageDesc);
 
         std::array<std::shared_ptr<Image>, 2> outlineImages = { outlineImage, postEffect->m_gBufferDepthStencil };
-        postEffect->m_outlineTarget = RenderTarget(std::span(outlineImages));
+        postEffect->m_outlineTarget = LegacyRenderTarget(std::span(outlineImages));
 
         return postEffect;
     }, [&](cViewport& viewport, LuxPostEffectData& target) {
@@ -81,9 +81,9 @@ cLuxEffectRenderer::cLuxEffectRenderer()
 
         // as long as the output image and depth stencil image are the same, we can use the same render target 
             // else we need to create a new one
-        return viewport.GetRenderTarget().IsValid() 
-            && sharedData.m_gBuffer.m_outputImage == target.m_outputImage
-            && sharedData.m_gBuffer.m_depthStencilImage == target.m_gBufferDepthStencil;
+        return viewport.GetRenderTarget().IsValid(); 
+            // && sharedData.m_gBuffer.m_outputImage == target.m_outputImage
+            // && sharedData.m_gBuffer.m_depthStencilImage == target.m_gBufferDepthStencil;
     }));
 
     m_alphaRejectProgram = hpl::loadProgram("vs_alpha_reject", "fs_alpha_reject");
@@ -484,7 +484,7 @@ void cLuxEffectRenderer::AddEnemyGlow(iRenderable* apObject, float afAlpha)
 }
 
 
-void cLuxEffectRenderer::RenderBlurPass(GraphicsContext& context, std::span<RenderTarget> blurTargets, Image& input)
+void cLuxEffectRenderer::RenderBlurPass(GraphicsContext& context, std::span<LegacyRenderTarget> blurTargets, Image& input)
 {
     BX_ASSERT(blurTargets.size() == 2, "Invalid blur target count");
 

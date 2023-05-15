@@ -120,6 +120,7 @@ namespace hpl {
 
 	protected:
 		virtual void OnTransformUpdated(){}
+		virtual void OnUpdateWorldTransform(){}
 
 		cNode3D* mpParentNode;
 

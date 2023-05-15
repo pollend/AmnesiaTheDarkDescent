@@ -1,0 +1,61 @@
+#define SPOT_LIGHT 1
+#include "deferred_light_resource.h.fsl"
+
+STRUCT(PsIn)
+{
+	DATA(float4, Position, SV_Position);
+};
+
+
+STRUCT(PsOut)
+{
+	DATA(float4, diffuse, SV_Target0);
+};
+
+
+PsOut PS_MAIN(PsIn In)
+{
+    INIT_MAIN;
+    PsOut Out;
+    float2 NDC = In.Position.xy * Get(viewTexel);
+
+    float4 color =  SampleTex2D(Get(diffuseMap), Get(nearestSampler), NDC);
+    float3 normal = SampleTex2D(Get(normalMap), Get(nearestSampler), NDC).xyz;
+    float3 position =  SampleTex2D(Get(positionMap), Get(nearestSampler), NDC).xyz;
+    float2 specular =  SampleTex2D(Get(specularMap), Get(nearestSampler), NDC).xy;
+
+    float3 lightDir = (Get(lightPos).xyz -  position) * (1.0 / Get(lightRadius));
+    float attenuation = SampleTex1D(Get(attenuationLightMap), Get(nearestSampler), dot(lightDir, lightDir)).x;
+    
+    float3 normalLightDir = normalize(lightDir);
+    float3 normalizedNormal = normalize(normal.xyz);
+
+    float4 projectionUV = mul(Get(spotViewProj), float4(position,1.0));
+        
+    float3 goboVal = float3(1.0, 1.0, 1.0);
+    if(HasGoboMap(Get(config))) {
+        goboVal = SampleTex2DProj(Get(goboMap), Get(nearestSampler), projectionUV).xyz;
+    } else {
+        float fOneMinusCos = 1.0 - dot( normalLightDir,  Get(lightForward));
+        attenuation *= SampleTex1D(Get(falloffMap), Get(nearestSampler), fOneMinusCos / Get(oneMinusCosHalfSpotFov)).x;
+    }
+
+    /////////////////////////////////
+	//Calculate diffuse color
+    float fLDotN = max(dot(normalizedNormal, normalLightDir), 0.0);
+	float3 diffuseColor = color.xyz * Get(lightColor).xyz * fLDotN;
+
+    if(HasShadowMap(Get(config))) {
+        //TODO implement shadow map
+    }
+    float3 specularColor = float3(0.0, 0.0, 0.0);
+    if(Get(lightColor).w > 0.0) {
+        float3 halfVec = normalize(normalLightDir + normalize(-position));
+        float specIntensity = specular.x;
+        float specPower = specular.y;
+        float specularValue = Get(lightColor).w * specIntensity *  pow( clamp( dot( halfVec, normalizedNormal), 0.0, 1.0), specPower );
+        specularColor = Get(lightColor).rgb * specularValue;
+    }
+    Out.diffuse = float4((diffuseColor + specularColor) * goboVal * attenuation, 0.0);
+    RETURN(Out);
+}

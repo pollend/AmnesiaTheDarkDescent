@@ -62,12 +62,12 @@ namespace hpl {
 
 			cVector2l m_size = cVector2l(0, 0);
             std::array<std::shared_ptr<Image>, 2> m_images;
-            std::array<RenderTarget, 2> m_renderTargets;
+            std::array<LegacyRenderTarget, 2> m_renderTargets;
         };
 
         // void Render(float afFrameTime, cFrustum* apFrustum, iTexture* apInputTexture, cRenderTarget* apRenderTarget);
 
-        bool Draw(GraphicsContext& context, cViewport& viewport, float frameTime, Image& inputTexture, RenderTarget& renderTarget);
+        bool Draw(GraphicsContext& context, cViewport& viewport, float frameTime, Image& inputTexture, LegacyRenderTarget& renderTarget);
 
         /**
          * Highest prio is first!

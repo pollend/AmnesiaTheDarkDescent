@@ -55,8 +55,8 @@ namespace hpl {
 		mpMaterialManager = apResources->GetMaterialManager();
 		mpLowLevelGraphics = apGraphics->GetLowLevel();
 
-		m_occlusionCurrent = bgfx::createOcclusionQuery();
-		m_occlusionMax = bgfx::createOcclusionQuery();
+		// m_occlusionCurrent = bgfx::createOcclusionQuery();
+		// m_occlusionMax = bgfx::createOcclusionQuery();
 
 		mvSize = avSize;
 		mvAxis = cVector3f(0,1,0);

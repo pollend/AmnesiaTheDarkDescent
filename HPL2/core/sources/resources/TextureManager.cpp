@@ -109,26 +109,34 @@ namespace hpl {
 	{
 		return _wrapperImageResource(
 			asName,
-			[options](const tString& asName, const tWString& path, cBitmap* pBmp) -> Image*
+			[options, &abUseMipMaps](const tString& asName, const tWString& path, cBitmap* pBmp) -> Image*
 			{
 				auto* resource = new Image(asName, path);
-				ImageDescriptor desc =  ImageDescriptor::CreateFromBitmap(*pBmp);
-				desc.m_name = asName.c_str();
-				// auto* image = new Image();
+				ForgeTextureHandle::BitmapLoadOptions opts = {0};
+				opts.m_useMipmaps = abUseMipMaps;
+				auto handle = ForgeTextureHandle::LoadFromHPLBitmap(*pBmp, opts);
+				resource->SetForgeTexture(std::move(handle));
+				return resource;		
 
-				desc.m_configuration.m_UWrap = options.m_UWrap;
-				desc.m_configuration.m_VWrap = options.m_VWrap;
-				desc.m_configuration.m_WWrap = options.m_WWrap;
-				desc.m_configuration.m_rt = options.m_rt;
-				desc.m_configuration.m_comparsion = options.m_comparsion;
-				desc.m_configuration.m_minFilter = options.m_minFilter;
-				desc.m_configuration.m_magFilter = options.m_magFilter;
-				desc.m_configuration.m_mipFilter = options.m_mipFilter;
 
-				// auto data = pBmp->GetData(0, 0);
-				Image::InitializeFromBitmap(*resource, *pBmp, desc);
-				// resource->Initialize(desc, bgfx::copy(data->mpData, data->mlSize));
-				return resource;
+				// auto* resource = new Image(asName, path);
+				// ImageDescriptor desc =  ImageDescriptor::CreateFromBitmap(*pBmp);
+				// desc.m_name = asName.c_str();
+				// // auto* image = new Image();
+
+				// desc.m_configuration.m_UWrap = options.m_UWrap;
+				// desc.m_configuration.m_VWrap = options.m_VWrap;
+				// desc.m_configuration.m_WWrap = options.m_WWrap;
+				// desc.m_configuration.m_rt = options.m_rt;
+				// desc.m_configuration.m_comparsion = options.m_comparsion;
+				// desc.m_configuration.m_minFilter = options.m_minFilter;
+				// desc.m_configuration.m_magFilter = options.m_magFilter;
+				// desc.m_configuration.m_mipFilter = options.m_mipFilter;
+
+				// // auto data = pBmp->GetData(0, 0);
+				// Image::InitializeFromBitmap(*resource, *pBmp, desc);
+				// // resource->Initialize(desc, bgfx::copy(data->mpData, data->mlSize));
+				// return resource;
 			});
 	}
 
@@ -137,24 +145,29 @@ namespace hpl {
 	{
 		return _wrapperImageResource(
 			asName,
-			[options](const tString& asName, const tWString& path, cBitmap* pBmp) -> Image*
+			[options, &abUseMipMaps](const tString& asName, const tWString& path, cBitmap* pBmp) -> Image*
 			{
+				
 				auto* resource = new Image(asName, path);
-				ImageDescriptor desc =  ImageDescriptor::CreateFromBitmap(*pBmp);
-				desc.m_name = asName.c_str();
-				// auto* image = new Image();
+				ForgeTextureHandle::BitmapLoadOptions opts = {0};
+				opts.m_useMipmaps = abUseMipMaps;
+				auto handle = ForgeTextureHandle::LoadFromHPLBitmap(*pBmp, opts);
+				resource->SetForgeTexture(std::move(handle));
+				
+				// ImageDescriptor desc =  ImageDescriptor::CreateFromBitmap(*pBmp);
+				// desc.m_name = asName.c_str();
+				// // auto* image = new Image();
 
-				desc.m_configuration.m_UWrap = options.m_UWrap;
-				desc.m_configuration.m_VWrap = options.m_VWrap;
-				desc.m_configuration.m_WWrap = options.m_WWrap;
-				desc.m_configuration.m_rt = options.m_rt;
-				desc.m_configuration.m_comparsion = options.m_comparsion;
-				desc.m_configuration.m_minFilter = options.m_minFilter;
-				desc.m_configuration.m_magFilter = options.m_magFilter;
-				desc.m_configuration.m_mipFilter = options.m_mipFilter;
+				// desc.m_configuration.m_UWrap = options.m_UWrap;
+				// desc.m_configuration.m_VWrap = options.m_VWrap;
+				// desc.m_configuration.m_WWrap = options.m_WWrap;
+				// desc.m_configuration.m_rt = options.m_rt;
+				// desc.m_configuration.m_comparsion = options.m_comparsion;
+				// desc.m_configuration.m_minFilter = options.m_minFilter;
+				// desc.m_configuration.m_magFilter = options.m_magFilter;
+				// desc.m_configuration.m_mipFilter = options.m_mipFilter;
 
-				// auto data = pBmp->GetData(0, 0);
-				Image::InitializeFromBitmap(*resource, *pBmp, desc);
+				// Image::InitializeFromBitmap(*resource, *pBmp, desc);
 				return resource;
 			});
 	}
@@ -166,26 +179,35 @@ namespace hpl {
 		if(sExt == "dds")
 		{
 			return _wrapperImageResource(asPathName, 
-			[options](const tString& asName, const tWString& path, cBitmap* pBmp) -> Image*
+			[options, &abUseMipMaps](const tString& asName, const tWString& path, cBitmap* pBmp) -> Image*
 				{
 					auto* resource = new Image(asName, path);
-					ImageDescriptor desc =  ImageDescriptor::CreateFromBitmap(*pBmp);
-					desc.m_name = asName.c_str();
-					// auto* image = new Image();
-
-					desc.m_configuration.m_UWrap = options.m_UWrap;
-					desc.m_configuration.m_VWrap = options.m_VWrap;
-					desc.m_configuration.m_WWrap = options.m_WWrap;
-					desc.m_configuration.m_rt = options.m_rt;
-					desc.m_configuration.m_comparsion = options.m_comparsion;
-					desc.m_configuration.m_minFilter = options.m_minFilter;
-					desc.m_configuration.m_magFilter = options.m_magFilter;
-					desc.m_configuration.m_mipFilter = options.m_mipFilter;
-					desc.m_isCubeMap = true;
-
-					// auto data = pBmp->GetData(0, 0);
-					Image::InitializeFromBitmap(*resource, *pBmp, desc);
+					ForgeTextureHandle::BitmapLoadOptions opts = {0};
+					opts.m_useMipmaps = abUseMipMaps;
+					opts.m_useCubeMap = true;
+					auto handle = ForgeTextureHandle::LoadFromHPLBitmap(*pBmp, opts);
+					resource->SetForgeTexture(std::move(handle));
 					return resource;
+						
+
+					// auto* resource = new Image(asName, path);
+					// ImageDescriptor desc =  ImageDescriptor::CreateFromBitmap(*pBmp);
+					// desc.m_name = asName.c_str();
+					// // auto* image = new Image();
+
+					// desc.m_configuration.m_UWrap = options.m_UWrap;
+					// desc.m_configuration.m_VWrap = options.m_VWrap;
+					// desc.m_configuration.m_WWrap = options.m_WWrap;
+					// desc.m_configuration.m_rt = options.m_rt;
+					// desc.m_configuration.m_comparsion = options.m_comparsion;
+					// desc.m_configuration.m_minFilter = options.m_minFilter;
+					// desc.m_configuration.m_magFilter = options.m_magFilter;
+					// desc.m_configuration.m_mipFilter = options.m_mipFilter;
+					// desc.m_isCubeMap = true;
+
+					// // auto data = pBmp->GetData(0, 0);
+					// Image::InitializeFromBitmap(*resource, *pBmp, desc);
+					// return resource;
 				});
 		}
 
@@ -235,9 +257,14 @@ namespace hpl {
 			}
 			BX_ASSERT(vBitmaps.size() == 6, "vBitmaps.size() == 6");
 
-			ImageDescriptor desc;
-			Image::InitializeFromBitmap(*image, *vBitmaps[0], desc);
-			Image::InitializeCubemapFromBitmaps(*image, std::span(vBitmaps), desc);
+			ForgeTextureHandle::BitmapCubmapLoadOptions opts = {0};
+			opts.m_useMipmaps = abUseMipMaps;
+			auto handle = ForgeTextureHandle::CreateCubemapFromHPLBitmaps(vBitmaps, opts);
+			image->SetForgeTexture(std::move(handle));
+
+			// ImageDescriptor desc;
+			// Image::InitializeFromBitmap(*image, *vBitmaps[0], desc);
+			// Image::InitializeCubemapFromBitmaps(*image, std::span(vBitmaps), desc);
 
 			for(int j=0;j<(int)vBitmaps.size();j++)	{
 				hplDelete(vBitmaps[j]);
@@ -257,20 +284,28 @@ namespace hpl {
 	{
 		return _wrapperImageResource(
 			asName,
-			[options](const tString& asName, const tWString& path, cBitmap* pBmp) -> Image*
+			[options, &abUseMipMaps](const tString& asName, const tWString& path, cBitmap* pBmp) -> Image*
 			{
 				auto* resource = new Image(asName, path);
-				ImageDescriptor desc;
-				desc.format = Image::FromHPLTextureFormat(pBmp->GetPixelFormat());
-				desc.m_width = pBmp->GetWidth();
-				desc.m_height = pBmp->GetHeight();
-				desc.m_depth = pBmp->GetDepth();
-				desc.m_name = asName.c_str();
-				auto* image = new Image();
+				ForgeTextureHandle::BitmapLoadOptions opts = {0};
+				opts.m_useMipmaps = abUseMipMaps;
+				auto handle = ForgeTextureHandle::LoadFromHPLBitmap(*pBmp, opts);
+				resource->SetForgeTexture(std::move(handle));
+				return resource;				
 
-				auto data = pBmp->GetData(0, 0);
-				resource->Initialize(desc, bgfx::copy(data->mpData, data->mlSize));
-				return resource;
+
+				// auto* resource = new Image(asName, path);
+				// ImageDescriptor desc;
+				// desc.format = Image::FromHPLTextureFormat(pBmp->GetPixelFormat());
+				// desc.m_width = pBmp->GetWidth();
+				// desc.m_height = pBmp->GetHeight();
+				// desc.m_depth = pBmp->GetDepth();
+				// desc.m_name = asName.c_str();
+				// auto* image = new Image();
+
+				// auto data = pBmp->GetData(0, 0);
+				// resource->Initialize(desc, bgfx::copy(data->mpData, data->mlSize));
+				// return resource;
 			});
 	}
 
@@ -375,20 +410,27 @@ namespace hpl {
 			animatedImage = new AnimatedImage(sBaseName, sFakeFullPath);
 			std::vector<std::unique_ptr<Image>> images;
 			for(auto& bitmap: vBitmaps) {
-				ImageDescriptor desc =  ImageDescriptor::CreateFromBitmap(*bitmap);
+				// ImageDescriptor desc =  ImageDescriptor::CreateFromBitmap(*bitmap);
 
-				desc.m_configuration.m_UWrap = options.m_UWrap;
-				desc.m_configuration.m_VWrap = options.m_VWrap;
-				desc.m_configuration.m_WWrap = options.m_WWrap;
-				desc.m_configuration.m_rt = options.m_rt;
-				desc.m_configuration.m_comparsion = options.m_comparsion;
-				desc.m_configuration.m_minFilter = options.m_minFilter;
-				desc.m_configuration.m_magFilter = options.m_magFilter;
-				desc.m_configuration.m_mipFilter = options.m_mipFilter;
+				// desc.m_configuration.m_UWrap = options.m_UWrap;
+				// desc.m_configuration.m_VWrap = options.m_VWrap;
+				// desc.m_configuration.m_WWrap = options.m_WWrap;
+				// desc.m_configuration.m_rt = options.m_rt;
+				// desc.m_configuration.m_comparsion = options.m_comparsion;
+				// desc.m_configuration.m_minFilter = options.m_minFilter;
+				// desc.m_configuration.m_magFilter = options.m_magFilter;
+				// desc.m_configuration.m_mipFilter = options.m_mipFilter;
 
-				desc.m_isCubeMap = (aType == eTextureType_CubeMap);
+				// desc.m_isCubeMap = (aType == eTextureType_CubeMap);
 				std::unique_ptr<Image> image = std::make_unique<Image>();
-				Image::InitializeFromBitmap(*image, *bitmap, desc);
+				
+				ForgeTextureHandle::BitmapLoadOptions opts = {0};
+				opts.m_useMipmaps = abUseMipMaps;
+				opts.m_useCubeMap = aType == eTextureType_CubeMap;
+				auto handle = ForgeTextureHandle::LoadFromHPLBitmap(*bitmap, opts);
+				image->SetForgeTexture(std::move(handle));
+
+				// Image::InitializeFromBitmap(*image, *bitmap, desc);
 				images.push_back(std::move(image));
 			}
 			animatedImage->Initialize(std::span(images));
@@ -478,68 +520,6 @@ namespace hpl {
 		}
 	}
 
-	//-----------------------------------------------------------------------
-
-
-	//////////////////////////////////////////////////////////////////////////
-	// PRIVATE METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
-	// iTexture* cTextureManager::CreateSimpleTexture(	const tString& asName,bool abUseMipMaps,
-	// 												eTextureUsage aUsage, eTextureType aType,
-	// 												unsigned int alTextureSizeLevel)
-	// {
-	// 	tWString sPath;
-	// 	iTexture* pTexture;
-
-	// 	BeginLoad(asName);
-
-	// 	pTexture = FindTexture2D(asName,sPath);
-
-	// 	if(pTexture==NULL && sPath!=_W(""))
-	// 	{
-	// 		//Load the bitmap
-	// 		cBitmap *pBmp;
-	// 		pBmp = mpBitmapLoaderHandler->LoadBitmap(sPath,0);
-	// 		if(pBmp==NULL)
-	// 		{
-	// 			Error("Texture manager Couldn't load bitmap '%s'\n", cString::To8Char(sPath).c_str());
-	// 			EndLoad();
-	// 			return NULL;
-	// 		}
-
-	// 		//Create the texture and load from bitmap
-	// 		pTexture = mpGraphics->GetLowLevel()->CreateTexture(asName,aType,aUsage);
-	// 		pTexture->SetFullPath(sPath);
-
-	// 		pTexture->SetUseMipMaps(abUseMipMaps);
-	// 		pTexture->SetSizeDownScaleLevel(alTextureSizeLevel);
-
-	// 		if(pTexture->CreateFromBitmap(pBmp)==false)
-	// 		{
-	// 			hplDelete(pTexture);
-	// 			hplDelete(pBmp);
-	// 			EndLoad();
-	// 			return NULL;
-	// 		}
-
-	// 		//Bitmap is no longer needed so delete it.
-	// 		hplDelete(pBmp);
-
-	// 		mlMemoryUsage += pTexture->GetMemorySize();
-	// 		AddResource(pTexture);
-	// 	}
-
-	// 	if(pTexture)pTexture->IncUserCount();
-	// 	else Error("Couldn't texture '%s'\n",asName.c_str());
-
-	// 	EndLoad();
-	// 	return pTexture;
-	// }
-
-	//-----------------------------------------------------------------------
 	Image* cTextureManager::FindImageResource(const tString &asName, tWString &asFilePath) {
 		Image *pTexture=NULL;
 

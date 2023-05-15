@@ -40,14 +40,14 @@ namespace hpl
     cPostEffectType_Bloom::cPostEffectType_Bloom(cGraphics* apGraphics, cResources* apResources)
         : iPostEffectType("Bloom", apGraphics, apResources)
     {
-        m_blurProgram = hpl::loadProgram("vs_post_effect", "fs_posteffect_blur");
-        m_bloomProgram = hpl::loadProgram("vs_post_effect", "fs_posteffect_bloom_add");
+        // m_blurProgram = hpl::loadProgram("vs_post_effect", "fs_posteffect_blur");
+        // m_bloomProgram = hpl::loadProgram("vs_post_effect", "fs_posteffect_bloom_add");
 
-        m_u_blurMap = bgfx::createUniform("s_blurMap", bgfx::UniformType::Sampler);
-        m_u_diffuseMap = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
+        // m_u_blurMap = bgfx::createUniform("s_blurMap", bgfx::UniformType::Sampler);
+        // m_u_diffuseMap = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
 
-        m_u_rgbToIntensity = bgfx::createUniform("u_rgbToIntensity", bgfx::UniformType::Vec4);
-        m_u_param = bgfx::createUniform("u_param", bgfx::UniformType::Vec4);
+        // m_u_rgbToIntensity = bgfx::createUniform("u_rgbToIntensity", bgfx::UniformType::Vec4);
+        // m_u_param = bgfx::createUniform("u_param", bgfx::UniformType::Vec4);
     }
 
     cPostEffectType_Bloom::~cPostEffectType_Bloom()
@@ -75,8 +75,8 @@ namespace hpl
                 return image;
             };
             auto data = std::make_unique<BloomData>();
-            data->m_blurTarget[0] = RenderTarget(ColorImage());
-            data->m_blurTarget[1] = RenderTarget(ColorImage());
+            data->m_blurTarget[0] = LegacyRenderTarget(ColorImage());
+            data->m_blurTarget[1] = LegacyRenderTarget(ColorImage());
             data->m_size = viewport.GetSize();
             return data;
         }, [&](cViewport& viewport, BloomData& data) {
@@ -98,7 +98,7 @@ namespace hpl
     {
     }
 
-    void cPostEffect_Bloom::RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, RenderTarget& target)
+    void cPostEffect_Bloom::RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, LegacyRenderTarget& target)
     {
         cVector2l vRenderTargetSize = viewport.GetSize();
         auto& bloomData = m_boundBloomData.resolve(viewport);

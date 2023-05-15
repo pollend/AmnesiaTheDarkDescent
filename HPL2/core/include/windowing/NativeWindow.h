@@ -29,6 +29,10 @@
 
 #include <SDL2/SDL_events.h>
 
+
+#include "Common_3/OS/Interfaces/IOperatingSystem.h"
+#include <FixPreprocessor.h>
+
 namespace hpl::window {
 
     enum class WindowEventType : uint16_t {
@@ -106,6 +110,7 @@ namespace hpl::window {
         void SetWindowTitle(NativeWindowHandler& handler, const std::string_view title);
         void SetWindowSize(NativeWindowHandler& handler, const cVector2l& size);
 
+        WindowHandle ForgeWindowHandle(NativeWindowHandler& handler);
         void* NativeWindowHandle(NativeWindowHandler& handler);
         void* NativeDisplayHandle(NativeWindowHandler& handler);
         cVector2l GetWindowSize(NativeWindowHandler& handler);
@@ -181,6 +186,11 @@ namespace hpl::window {
         inline internal::WindowInternalEvent& NativeInternalEvent() {
             BX_ASSERT(m_impl, "NativeWindowHandle is null")
             return internal::NativeInternalEvent(m_impl);
+        }
+
+        inline WindowHandle ForgeWindowHandle() {
+            BX_ASSERT(m_impl, "NativeWindowHandle is null")
+            return internal::ForgeWindowHandle(m_impl);
         }
 
         inline WindowEvent& NativeWindowEvent() {

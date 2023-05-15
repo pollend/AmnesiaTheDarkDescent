@@ -19,6 +19,7 @@
 
 #include "graphics/RendererDeferred.h"
 
+#include "Common_3/Utilities/Interfaces/ILog.h"
 #include "bgfx/bgfx.h"
 #include "engine/Event.h"
 #include "engine/Interface.h"
@@ -36,7 +37,7 @@
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Image.h"
 #include "graphics/RenderTarget.h"
-#include "impl/VertexBufferBGFX.h"
+#include "impl/LegacyVertexBuffer.h"
 #include "math/Math.h"
 
 #include "math/MathTypes.h"
@@ -59,7 +60,6 @@
 #include "graphics/TextureCreator.h"
 #include "graphics/VertexBuffer.h"
 
-#include "graphics/GPUShader.h"
 #include "resources/MeshManager.h"
 #include "resources/Resources.h"
 #include "resources/TextureManager.h"
@@ -108,6 +108,25 @@ namespace hpl {
     static constexpr uint32_t SSAONumOfSamples = 8;
 
     namespace detail {
+
+        void cmdDefaultLegacyGeomBinding(const ForgeRenderer::Frame& frame, LegacyVertexBuffer::GeometryBinding& binding) {
+            absl::InlinedVector<Buffer*, 16> vbBuffer;
+            absl::InlinedVector<uint64_t, 16> vbOffsets;
+            absl::InlinedVector<uint32_t, 16> vbStride;
+
+            for (auto& element : binding.m_vertexElement) {
+                vbBuffer.push_back(element.element->m_buffer.m_handle);
+                vbOffsets.push_back(element.offset);
+                vbStride.push_back(element.element->Stride());
+                frame.m_resourcePool->Push(element.element->m_buffer);
+            }
+            frame.m_resourcePool->Push(*binding.m_indexBuffer.element);
+            
+            cmdBindVertexBuffer(frame.m_cmd, binding.m_vertexElement.size(), vbBuffer.data(), vbStride.data(), vbOffsets.data());
+            cmdBindIndexBuffer(
+                frame.m_cmd, binding.m_indexBuffer.element->m_handle, INDEX_TYPE_UINT32, binding.m_indexBuffer.offset);
+        }
+
         struct DeferredLight {
         public:
             DeferredLight() = default;
@@ -123,7 +142,6 @@ namespace hpl {
                 return m_clipRect.w * m_clipRect.h;
             }
         };
-       
 
         static inline std::vector<cRendererDeferred::FogRendererData> createFogRenderData(std::span<cFogArea*> fogAreas, cFrustum* apFrustum) {
             std::vector<cRendererDeferred::FogRendererData> fogRenderData;
@@ -317,18 +335,12 @@ namespace hpl {
         */
         static inline void UpdateRenderableList(
             cRenderList* renderList, // in/out 
-            iRenderer* renderer,
             cVisibleRCNodeTracker* apVisibleNodeTracker,
             cFrustum* frustum,
             cWorld* world,
-            const char* name,
-            GraphicsContext::ViewConfiguration& config,
-            GraphicsContext& context,
-            cViewport& viewport,
             tObjectVariabilityFlag objectTypes,
             std::span<cPlanef> occludingPlanes,
-            tRenderableFlag alNeededFlags) {
-            auto pass = context.StartPass(name, config);
+            tRenderableFlag alNeededFlags, std::function<void(iRenderable*)> zPassCallback) {
             renderList->Clear();
 
             auto renderNodeHandler = [&](iRenderableContainerNode* apNode, tRenderableFlag alNeededFlags) {
@@ -355,7 +367,8 @@ namespace hpl {
                     if(!material || material->GetType()->IsTranslucent()) {
                         continue;
                     }
-                    rendering::detail::RenderZPassObject(pass, context, viewport, renderer, pObject);
+                    zPassCallback(pObject);
+                    // rendering::detail::RenderZPassObject(pass, context, viewport, renderer, pObject);
                     ++lRenderedObjects;
                 }
 
@@ -444,7 +457,6 @@ namespace hpl {
                     walkRenderables(pNode);
                 }
             }
-
         }
 
         static inline bool SortDeferredLightBox(const DeferredLight* apLightDataA, const DeferredLight* apLightDataB) {
@@ -479,33 +491,33 @@ namespace hpl {
             if (iter.empty()) {
                 return;
             }
-            auto bufferSize = arg.buffer.m_outputImage->GetImageSize();
-            GraphicsContext::ViewConfiguration viewConfig{ arg.buffer.m_outputTarget };
-            viewConfig.m_projection = arg.projectionFrustum;
-            viewConfig.m_view = arg.viewFrustum;
-            viewConfig.m_viewRect = { 0, 0, bufferSize.x, bufferSize.y };
+            // auto bufferSize = arg.buffer.m_outputImage->GetImageSize();
+            // GraphicsContext::ViewConfiguration viewConfig{ arg.buffer.m_outputTarget };
+            // viewConfig.m_projection = arg.projectionFrustum;
+            // viewConfig.m_view = arg.viewFrustum;
+            // viewConfig.m_viewRect = { 0, 0, bufferSize.x, bufferSize.y };
 
-            auto view = context.StartPass(arg.name, viewConfig);
-            rendering::detail::RenderableMaterialIter(
-                renderer,
-                iter,
-                viewport,
-                eMaterialRenderMode_Illumination,
-                [&](iRenderable* obj, GraphicsContext::LayoutStream& layoutInput, GraphicsContext::ShaderProgram& shaderInput) {
-                    shaderInput.m_configuration.m_depthTest = DepthTest::Equal;
-                    shaderInput.m_configuration.m_write = Write::RGBA;
+            // auto view = context.StartPass(arg.name, viewConfig);
+            // rendering::detail::RenderableMaterialIter(
+            //     renderer,
+            //     iter,
+            //     viewport,
+            //     eMaterialRenderMode_Illumination,
+            //     [&](iRenderable* obj, GraphicsContext::LayoutStream& layoutInput, GraphicsContext::ShaderProgram& shaderInput) {
+            //         shaderInput.m_configuration.m_depthTest = DepthTest::Equal;
+            //         shaderInput.m_configuration.m_write = Write::RGBA;
 
-                    shaderInput.m_configuration.m_rgbBlendFunc =
-                        CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
-                    shaderInput.m_configuration.m_alphaBlendFunc =
-                        CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
+            //         shaderInput.m_configuration.m_rgbBlendFunc =
+            //             CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
+            //         shaderInput.m_configuration.m_alphaBlendFunc =
+            //             CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
 
-                    shaderInput.m_modelTransform =
-                        obj->GetModelMatrixPtr() ? obj->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity.GetTranspose();
+            //         shaderInput.m_modelTransform =
+            //             obj->GetModelMatrixPtr() ? obj->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity.GetTranspose();
 
-                    GraphicsContext::DrawRequest drawRequest{ layoutInput, shaderInput };
-                    context.Submit(view, drawRequest);
-                });
+            //         GraphicsContext::DrawRequest drawRequest{ layoutInput, shaderInput };
+            //         context.Submit(view, drawRequest);
+            //     });
         }
         struct GBufferPassOptions {
             const cMatrixf& projectionFrustum;
@@ -523,32 +535,32 @@ namespace hpl {
             if (iter.empty()) {
                 return;
             }
-            auto bufferSize = arg.buffer.m_outputImage->GetImageSize();
-            GraphicsContext::ViewConfiguration viewConfig{ arg.buffer.m_fullTarget };
-            viewConfig.m_projection = arg.projectionFrustum;
-            viewConfig.m_view = arg.viewFrustum;
-            viewConfig.m_viewRect = { 0, 0, bufferSize.x, bufferSize.y };
+            // auto bufferSize = arg.buffer.m_outputImage->GetImageSize();
+            // GraphicsContext::ViewConfiguration viewConfig{ arg.buffer.m_fullTarget };
+            // viewConfig.m_projection = arg.projectionFrustum;
+            // viewConfig.m_view = arg.viewFrustum;
+            // viewConfig.m_viewRect = { 0, 0, bufferSize.x, bufferSize.y };
 
-            auto view = context.StartPass(arg.name, viewConfig);
-            rendering::detail::RenderableMaterialIter(
-                renderer,
-                iter,
-                viewport,
-                eMaterialRenderMode_Diffuse,
-                [&context,
-                 view, &arg](iRenderable* obj, GraphicsContext::LayoutStream& layoutInput, GraphicsContext::ShaderProgram& shaderInput) {
-                    shaderInput.m_configuration.m_depthTest = DepthTest::Equal;
-                    shaderInput.m_configuration.m_write = Write::RGBA;
-                    shaderInput.m_configuration.m_cull = Cull::CounterClockwise;
+            // auto view = context.StartPass(arg.name, viewConfig);
+            // rendering::detail::RenderableMaterialIter(
+            //     renderer,
+            //     iter,
+            //     viewport,
+            //     eMaterialRenderMode_Diffuse,
+            //     [&context,
+            //      view, &arg](iRenderable* obj, GraphicsContext::LayoutStream& layoutInput, GraphicsContext::ShaderProgram& shaderInput) {
+            //         shaderInput.m_configuration.m_depthTest = DepthTest::Equal;
+            //         shaderInput.m_configuration.m_write = Write::RGBA;
+            //         shaderInput.m_configuration.m_cull = Cull::CounterClockwise;
 
-                    shaderInput.m_modelTransform =
-                        obj->GetModelMatrixPtr() ? obj->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity.GetTranspose();
-                    shaderInput.m_normalMtx =
-                        cMath::MatrixInverse(cMath::MatrixMul(shaderInput.m_modelTransform, arg.viewFrustum)); // matrix is already transposed
+            //         shaderInput.m_modelTransform =
+            //             obj->GetModelMatrixPtr() ? obj->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity.GetTranspose();
+            //         shaderInput.m_normalMtx =
+            //             cMath::MatrixInverse(cMath::MatrixMul(shaderInput.m_modelTransform, arg.viewFrustum)); // matrix is already transposed
 
-                    GraphicsContext::DrawRequest drawRequest{ layoutInput, shaderInput };
-                    context.Submit(view, drawRequest);
-                });
+            //         GraphicsContext::DrawRequest drawRequest{ layoutInput, shaderInput };
+            //         context.Submit(view, drawRequest);
+            //     });
         }
 
         struct DecalPassOptions {
@@ -568,31 +580,31 @@ namespace hpl {
             if (iter.empty()) {
                 return;
             }
-            auto bufferSize = args.buffer.m_outputImage->GetImageSize();
-            GraphicsContext::ViewConfiguration viewConfig{ args.buffer.m_colorAndDepthTarget };
-            viewConfig.m_projection = args.projectionFrustum;
-            viewConfig.m_view = args.viewFrustum;
-            viewConfig.m_viewRect = { 0, 0, bufferSize.x, bufferSize.y };
+            // auto bufferSize = args.buffer.m_outputImage->GetImageSize();
+            // GraphicsContext::ViewConfiguration viewConfig{ args.buffer.m_colorAndDepthTarget };
+            // viewConfig.m_projection = args.projectionFrustum;
+            // viewConfig.m_view = args.viewFrustum;
+            // viewConfig.m_viewRect = { 0, 0, bufferSize.x, bufferSize.y };
 
-            auto view = context.StartPass(args.name, viewConfig);
-            rendering::detail::RenderableMaterialIter(
-                renderer,
-                iter,
-                viewport,
-                eMaterialRenderMode_Diffuse,
-                [&context, view, &args](iRenderable* obj, GraphicsContext::LayoutStream& layoutInput, GraphicsContext::ShaderProgram& shaderInput) {
-                     shaderInput.m_configuration.m_depthTest = DepthTest::LessEqual;
-                    shaderInput.m_configuration.m_write = Write::RGB;
+            // auto view = context.StartPass(args.name, viewConfig);
+            // rendering::detail::RenderableMaterialIter(
+            //     renderer,
+            //     iter,
+            //     viewport,
+            //     eMaterialRenderMode_Diffuse,
+            //     [&context, view, &args](iRenderable* obj, GraphicsContext::LayoutStream& layoutInput, GraphicsContext::ShaderProgram& shaderInput) {
+            //          shaderInput.m_configuration.m_depthTest = DepthTest::LessEqual;
+            //         shaderInput.m_configuration.m_write = Write::RGB;
 
-                    cMaterial* pMaterial = obj->GetMaterial();
-                    shaderInput.m_configuration.m_rgbBlendFunc = CreateFromMaterialBlendMode(pMaterial->GetBlendMode());
-                    shaderInput.m_configuration.m_alphaBlendFunc = CreateFromMaterialBlendMode(pMaterial->GetBlendMode());
-                    shaderInput.m_modelTransform =
-                        obj->GetModelMatrixPtr() ? obj->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity.GetTranspose();
+            //         cMaterial* pMaterial = obj->GetMaterial();
+            //         shaderInput.m_configuration.m_rgbBlendFunc = CreateFromMaterialBlendMode(pMaterial->GetBlendMode());
+            //         shaderInput.m_configuration.m_alphaBlendFunc = CreateFromMaterialBlendMode(pMaterial->GetBlendMode());
+            //         shaderInput.m_modelTransform =
+            //             obj->GetModelMatrixPtr() ? obj->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity.GetTranspose();
 
-                    GraphicsContext::DrawRequest drawRequest{ layoutInput, shaderInput };
-                    context.Submit(view, drawRequest);
-                });
+            //         GraphicsContext::DrawRequest drawRequest{ layoutInput, shaderInput };
+            //         context.Submit(view, drawRequest);
+            //     });
         }
 
         // static inline bool RenderShadowPass()
@@ -794,6 +806,9 @@ namespace hpl {
         }
     } // namespace detail
 
+
+
+
     enum eDefferredProgramMode { eDefferredProgramMode_Lights, eDefferredProgramMode_Misc, eDefferredProgramMode_LastEnum };
 
     cRendererDeferred::cRendererDeferred(cGraphics* apGraphics, cResources* apResources)
@@ -816,114 +831,91 @@ namespace hpl {
             [](cViewport& viewport) {
                 auto sharedData = std::make_unique<SharedViewportData>();
                 sharedData->m_size = viewport.GetSize();
+                auto* forgetRenderer = Interface<ForgeRenderer>::Get();
+                ClearValue optimizedColorClearBlack = { { 0.0f, 0.0f, 0.0f, 0.0f } };
+                for(auto& b : sharedData->m_gBuffer) {
+                   auto deferredRenderTargetDesc = [&]() {
+                        RenderTargetDesc renderTarget = {};
+                        renderTarget.mArraySize = 1;
+                        renderTarget.mClearValue = optimizedColorClearBlack;
+                        renderTarget.mDepth = 1;
+                        renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+                        renderTarget.mWidth = sharedData->m_size.x;
+                        renderTarget.mHeight = sharedData->m_size.y;
+                        renderTarget.mSampleCount = SAMPLE_COUNT_1;
+                        renderTarget.mSampleQuality = 0;
+                        renderTarget.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
+                        renderTarget.pName = "G-Buffer RTs";
+                        return renderTarget;
+                   };
+                   
+                   {
+                        auto depthRT = deferredRenderTargetDesc();
+                        depthRT.mFormat = DepthBufferFormat;
+                        depthRT.mStartState = RESOURCE_STATE_DEPTH_WRITE;
+                        ForgeRenderTarget target = {forgetRenderer->Rend()};
+                        target.Load([&](RenderTarget** handle) {
+                            addRenderTarget(forgetRenderer->Rend(), &depthRT, handle);
+                            return true;
+                        });
+                        b.m_depthBuffer = std::move(target);
+                   }
+                   {
+                        auto normalRT = deferredRenderTargetDesc();
+                        normalRT.mFormat = NormalBufferFormat;
+                        ForgeRenderTarget target = {forgetRenderer->Rend()};
+                        addRenderTarget(forgetRenderer->Rend(), &normalRT, &target.m_handle);
+                        target.Initialize();
+                        b.m_normalBuffer = std::move(target);
+                   }
+                   {
+                        auto positionRT = deferredRenderTargetDesc();
+                        positionRT.mFormat = PositionBufferFormat;
+                        ForgeRenderTarget target = {forgetRenderer->Rend()};
+                        addRenderTarget(forgetRenderer->Rend(), &positionRT, &target.m_handle);
+                        target.Initialize();
+                        b.m_positionBuffer = std::move(target);
+                   }
+                   {
+                        auto specularRT = deferredRenderTargetDesc();
+                        specularRT.mFormat = SpecularBufferFormat;
+                        ForgeRenderTarget target = {forgetRenderer->Rend()};
+                        addRenderTarget(forgetRenderer->Rend(), &specularRT, &target.m_handle);
+                        target.Initialize();
+                        b.m_specularBuffer = std::move(target);
+                   }
+                   {
+                        auto colorRT = deferredRenderTargetDesc();
+                        colorRT.mFormat = ColorBufferFormat;
+                        ForgeRenderTarget target = {forgetRenderer->Rend()};
+                        addRenderTarget(forgetRenderer->Rend(), &colorRT, &target.m_handle);
+                        target.Initialize();
+                        b.m_colorBuffer = std::move(target);
+                   }
+                   {
 
-                auto colorImage = [&] {
-                    auto desc = ImageDescriptor::CreateTexture2D(
-                        sharedData->m_size.x, sharedData->m_size.y, false, bgfx::TextureFormat::Enum::RGBA8);
-                    desc.m_configuration.m_rt = RTType::RT_Write;
-                    auto image = std::make_shared<Image>();
-                    image->Initialize(desc);
-                    return image;
-                };
-
-                auto positionImage = [&] {
-                    auto desc = ImageDescriptor::CreateTexture2D(
-                        sharedData->m_size.x, sharedData->m_size.y, false, bgfx::TextureFormat::Enum::RGBA32F);
-                    desc.m_configuration.m_rt = RTType::RT_Write;
-                    auto image = std::make_shared<Image>();
-                    image->Initialize(desc);
-                    return image;
-                };
-
-                auto normalImage = [&] {
-                    auto desc = ImageDescriptor::CreateTexture2D(
-                        sharedData->m_size.x, sharedData->m_size.y, false, bgfx::TextureFormat::Enum::RGBA16F);
-                    desc.m_configuration.m_rt = RTType::RT_Write;
-                    auto image = std::make_shared<Image>();
-                    image->Initialize(desc);
-                    return image;
-                };
-
-                auto depthImage = [&] {
-                    auto desc = ImageDescriptor::CreateTexture2D(
-                        sharedData->m_size.x, sharedData->m_size.y, false, bgfx::TextureFormat::Enum::D24S8);
-                    desc.m_configuration.m_rt = RTType::RT_Write;
-                    desc.m_configuration.m_minFilter = FilterType::Point;
-                    desc.m_configuration.m_magFilter = FilterType::Point;
-                    desc.m_configuration.m_mipFilter = FilterType::Point;
-                    desc.m_configuration.m_comparsion = DepthTest::LessEqual;
-                    auto image = std::make_shared<Image>();
-                    image->Initialize(desc);
-                    return image;
-                };
-
-                auto buildGBuffer = [&] () {
-                    cRendererDeferred::GBuffer gBuffer;
-                    gBuffer.m_colorImage = colorImage();
-                    gBuffer.m_normalImage = normalImage();
-                    gBuffer.m_positionImage = positionImage();
-                    gBuffer.m_specularImage = colorImage();
-                    gBuffer.m_depthStencilImage = depthImage();
-                    gBuffer.m_outputImage = colorImage();
-
-                    gBuffer.m_colorTarget = RenderTarget(gBuffer.m_colorImage);
-                    gBuffer.m_depthTarget = RenderTarget(gBuffer.m_depthStencilImage);
-                    gBuffer.m_normalTarget = RenderTarget(gBuffer.m_normalImage);
-                    gBuffer.m_positionTarget = RenderTarget(gBuffer.m_positionImage);
-
-                    {
-                        std::array<std::shared_ptr<Image>, 5> images = { gBuffer.m_colorImage,
-                                                                        gBuffer.m_normalImage,
-                                                                        gBuffer.m_positionImage,
-                                                                        gBuffer.m_specularImage,
-                                                                        gBuffer.m_depthStencilImage };
-                        gBuffer.m_fullTarget = RenderTarget(std::span(images));
-                    }
-                    {
-                        std::array<std::shared_ptr<Image>, 2> images = { gBuffer.m_colorImage, gBuffer.m_depthStencilImage };
-                        gBuffer.m_colorAndDepthTarget = RenderTarget(std::span(images));
-                    }
-                    {
-                        std::array<std::shared_ptr<Image>, 2> images = { gBuffer.m_outputImage, gBuffer.m_depthStencilImage };
-                        gBuffer.m_outputTarget = RenderTarget(std::span(images));
-                    }
-
-                    cVector2l SSAOSize = sharedData->m_size / 2;
-                    {
-                        auto desc = ImageDescriptor::CreateTexture2D(
-                            SSAOSize.x, SSAOSize.y, false, bgfx::TextureFormat::Enum::R16F);
-                        desc.m_configuration.m_computeWrite = true;
-                        desc.m_configuration.m_rt = RTType::RT_Write;
-                        auto image = std::make_shared<Image>();
-                        image->Initialize(desc);
-                        gBuffer.m_SSAOImage = image;
-                    }
-                    {
-                        auto desc = ImageDescriptor::CreateTexture2D(
-                            SSAOSize.x, SSAOSize.y, false, bgfx::TextureFormat::Enum::R16F);
-                        desc.m_configuration.m_computeWrite = true;
-                        desc.m_configuration.m_rt = RTType::RT_Write;
-                        auto image = std::make_shared<Image>();
-                        image->Initialize(desc);
-                        gBuffer.m_SSAOBlurImage = image;
-                    }
-                    gBuffer.m_SSAOTarget = RenderTarget(gBuffer.m_SSAOImage);
-                    gBuffer.m_SSAOBlurTarget = RenderTarget(gBuffer.m_SSAOBlurImage);
-
-                    return gBuffer;
-                };
-                sharedData->m_gBuffer = buildGBuffer();
-                sharedData->m_gBufferReflection = buildGBuffer();
-
-                {
-                    auto desc = ImageDescriptor::CreateTexture2D(
-                        sharedData->m_size.x, sharedData->m_size.y, false, bgfx::TextureFormat::Enum::RGBA8);
-                    desc.m_configuration.m_computeWrite = true;
-                    desc.m_configuration.m_rt = RTType::RT_Write;
-                    auto image = std::make_shared<Image>();
-                    image->Initialize(desc);
-                    sharedData->m_refractionImage = image;
+                        auto outputRt = deferredRenderTargetDesc();
+                        outputRt.mFormat = getRecommendedSwapchainFormat(false, false);
+                        outputRt.mDescriptors = DESCRIPTOR_TYPE_RW_TEXTURE | DESCRIPTOR_TYPE_TEXTURE;
+                        ForgeRenderTarget target = {forgetRenderer->Rend()};
+                        addRenderTarget(forgetRenderer->Rend(), &outputRt, &target.m_handle);
+                        target.Initialize();
+                        b.m_outputBuffer = std::move(target);
+                   }
                 }
+
+                // sharedData->m_gBuffer = buildGBuffer();
+                // sharedData->m_gBufferReflection = buildGBuffer();
+
+                // {
+                //     auto desc = ImageDescriptor::CreateTexture2D(
+                //         sharedData->m_size.x, sharedData->m_size.y, false, bgfx::TextureFormat::Enum::RGBA8);
+                //     desc.m_configuration.m_computeWrite = true;
+                //     desc.m_configuration.m_rt = RTType::RT_Write;
+                //     auto image = std::make_shared<Image>();
+                //     image->Initialize(desc);
+                //     sharedData->m_refractionImage = image;
+                // }
 
                 return sharedData;
             },
@@ -945,24 +937,797 @@ namespace hpl {
             lStartSize = 0;
         }
 
-        auto createShadowMap = [](const cVector3l& avSize) -> ShadowMapData {
-            auto desc = ImageDescriptor::CreateTexture2D(avSize.x, avSize.y, false, bgfx::TextureFormat::D16F);
-            desc.m_configuration.m_rt = RTType::RT_Write;
-            desc.m_configuration.m_minFilter = FilterType::Point;
-            desc.m_configuration.m_magFilter = FilterType::Point;
-            desc.m_configuration.m_mipFilter = FilterType::Point;
-            desc.m_configuration.m_comparsion = DepthTest::LessEqual;
-            auto image = std::make_shared<Image>();
-            image->Initialize(desc);
-            return { 
-                .m_target = RenderTarget(image), 
-                .m_light = nullptr,
-                .m_transformCount = -1,
-                .m_frameCount = -1,
-                .m_radius = 0,
-                .m_fov = 0,
-                .m_aspect = 0
+        m_dissolveImage = mpResources->GetTextureManager()->Create2DImage("core_dissolve.tga", false);
+        
+		// for(auto& handle: m_bufferHandle) {
+
+			// m_stageDirtyBits = std::numeric_limits<uint32_t>::max();
+		// }
+
+        // per frame constants
+
+        auto* forgetRenderer = Interface<ForgeRenderer>::Get();
+        auto updatePerFrameDescriptor = [&](DescriptorSet* desc) {
+            for(size_t i = 0; i < ForgeRenderer::SwapChainLength; i++) {
+                DescriptorData params[15] = {};
+                size_t paramCount = 0;
+        
+                DescriptorDataRange range = { (uint32_t)(i * sizeof(cRendererDeferred::PerFrameData)) , sizeof(cRendererDeferred::PerFrameData) };
+                params[paramCount].pName = "perFrameConstants";
+                params[paramCount].pRanges = &range;
+                params[paramCount++].ppBuffers = &m_perFrameBuffer.m_handle;
+
+                updateDescriptorSet(forgetRenderer->Rend(),i, desc, paramCount, params);
+            }
+        };
+
+        {
+            m_perFrameBuffer.TryFree();
+            BufferLoadDesc desc = {};
+            desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
+            desc.mDesc.mSize = sizeof(cRendererDeferred::PerFrameData) * ForgeRenderer::SwapChainLength; // * cViewport::MaxViewportHandles;
+            desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
+            desc.pData = nullptr;
+            desc.ppBuffer = &m_perFrameBuffer.m_handle;
+            addResource(&desc, nullptr);
+            m_perFrameBuffer.Initialize();
+        }
+
+        // -------------- Fog ----------------------------
+        {
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0] = { "deferred_fog_ray.vert", nullptr, 0 };
+                loadDesc.mStages[1] = { "deferred_fog_outside_box_back.frag", nullptr, 0 };
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_fogPass.m_shader[Fog::UseBackSide | Fog::UseOutsideBox]);
+            }
+
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0] = { "deferred_fog.vert", nullptr, 0 };
+                loadDesc.mStages[1] = { "deferred_fog_outside.frag", nullptr, 0 };
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_fogPass.m_shader[Fog::UseOutsideBox]);
+            }
+
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0] = { "deferred_fog.vert", nullptr, 0 };
+                loadDesc.mStages[1] = { "deferred_fog_back_side.frag", nullptr, 0 };
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_fogPass.m_shader[Fog::UseBackSide]);
+            }
+
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0] = { "deferred_fog.vert", nullptr, 0 };
+                loadDesc.mStages[1] = { "deferred_fog.frag", nullptr, 0 };
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_fogPass.m_shader[Fog::EmptyVariant]);
+            }
+
+
+            RootSignatureDesc rootSignatureDesc = {};
+            rootSignatureDesc.ppShaders = m_fogPass.m_shader.data();
+            rootSignatureDesc.mShaderCount = m_fogPass.m_shader.size();
+            addRootSignature(forgetRenderer->Rend(), &rootSignatureDesc, &m_fogPass.m_fogRootSignature);
+
+            VertexLayout vertexLayout = {};
+            vertexLayout.mAttribCount = 1;
+            vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
+            vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
+            vertexLayout.mAttribs[0].mBinding = 0;
+            vertexLayout.mAttribs[0].mLocation = 0;
+            vertexLayout.mAttribs[0].mOffset = 0;
+
+            std::array colorFormats = { getRecommendedSwapchainFormat(false, false)  };
+            for(size_t variant = 0; variant <  m_fogPass.m_pipeline.size(); variant++) {
+                RasterizerStateDesc rasterizerStateDesc = {};
+                DepthStateDesc depthStateDesc = {};
+                depthStateDesc.mDepthTest = true;
+                depthStateDesc.mDepthWrite = false;
+
+                BlendStateDesc blendStateDesc{};
+                blendStateDesc.mSrcFactors[0] = BC_SRC_ALPHA;
+                blendStateDesc.mDstFactors[0] = BC_ONE_MINUS_SRC_ALPHA;
+                blendStateDesc.mBlendModes[0] = BM_ADD;
+                blendStateDesc.mSrcAlphaFactors[0] = BC_SRC_ALPHA;
+                blendStateDesc.mDstAlphaFactors[0] = BC_ONE_MINUS_SRC_ALPHA;
+                blendStateDesc.mBlendAlphaModes[0] = BM_ADD;
+                blendStateDesc.mMasks[0] = RED | GREEN | BLUE;
+                blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
+                blendStateDesc.mIndependentBlend = false;
+
+                if(variant & Fog::PipelineVariant::PipelineInsideNearFrustum) {
+                    rasterizerStateDesc.mFrontFace = FrontFace::FRONT_FACE_CW;
+                    depthStateDesc.mDepthFunc = CMP_ALWAYS;
+                } else {
+                    rasterizerStateDesc.mFrontFace = FrontFace::FRONT_FACE_CCW;
+                    depthStateDesc.mDepthFunc = CMP_LEQUAL;
+                }
+                rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
+
+                PipelineDesc pipelineDesc = {};
+                pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+                auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
+                pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+                pipelineSettings.mRenderTargetCount = colorFormats.size();
+                pipelineSettings.pColorFormats = colorFormats.data();
+                pipelineSettings.pDepthState = &depthStateDesc;
+                pipelineSettings.pBlendState = &blendStateDesc;
+                pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
+                pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
+                pipelineSettings.mSampleQuality = 0;
+                pipelineSettings.pRootSignature = m_fogPass.m_fogRootSignature;
+                pipelineSettings.pShaderProgram = m_fogPass.m_shader[(variant & (Fog::PipelineUseBackSide | Fog::PipelineUseOutsideBox))];
+                pipelineSettings.pRasterizerState = &rasterizerStateDesc;
+                pipelineSettings.pVertexLayout = &vertexLayout;
+                addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_fogPass.m_pipeline[variant]);
+            }
+            DescriptorSetDesc perFrameDescSet{m_fogPass.m_fogRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, 1};
+            for(auto& perFrameSet: m_fogPass.m_perFrameSet) {
+                addDescriptorSet(forgetRenderer->Rend(), &perFrameDescSet, &perFrameSet);
+            }
+            DescriptorSetDesc perObjectSet{m_fogPass.m_fogRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_DRAW, Fog::MaxFogCount};
+            for(auto& objectSet: m_fogPass.m_perObjectSet) {
+                addDescriptorSet(forgetRenderer->Rend(), &perObjectSet, &objectSet);
+            }
+            addUniformGPURingBuffer(forgetRenderer->Rend(), sizeof(Fog::UniformFogData) * Fog::MaxFogCount, &m_fogPass.m_fogUniformBuffer, true);
+
+        }
+        //---------------- Diffuse Pipeline  ------------------------
+        {
+            // z pass
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0] = { "solid_z.vert", nullptr, 0 };
+                loadDesc.mStages[1] = { "solid_z.frag", nullptr, 0 };
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_zPassShader);
+            }
+            // diffuse pipeline
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0] = { "solid_diffuse.vert", nullptr, 0 };
+                loadDesc.mStages[1] = { "solid_diffuse.frag", nullptr, 0 };
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_materialSolidPass.m_solidDiffuseShader);
+            }
+
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0] = { "solid_diffuse.vert", nullptr, 0 };
+                loadDesc.mStages[1] = { "solid_diffuse_parallax.frag", nullptr, 0 };
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_materialSolidPass.m_solidDiffuseParallaxShader);
+            }
+            
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0] = { "solid_illumination.vert", nullptr, 0 };
+                loadDesc.mStages[1] = { "solid_illumination.frag", nullptr, 0 };
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_solidIlluminationShader);
+            }
+            // decal pass
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0] = { "decal.vert", nullptr, 0 };
+                loadDesc.mStages[1] = { "decal.frag", nullptr, 0 };
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_decalShader);
+            }
+            // translucency
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0] = { "translucency.vert", nullptr, 0 };
+                loadDesc.mStages[1] = { "translucency_add.frag", nullptr, 0 };
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_translucencyAdd);
+            }
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0] = { "translucency.vert", nullptr, 0 };
+                loadDesc.mStages[1] = { "translucency_mul.frag", nullptr, 0 };
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_translucencyMul);
+            }
+
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0] = { "translucency.vert", nullptr, 0 };
+                loadDesc.mStages[1] = { "translucency_mulx2.frag", nullptr, 0 };
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_translucencyMulX2);
+            }
+
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0] = { "translucency.vert", nullptr, 0 };
+                loadDesc.mStages[1] = { "translucency_alpha.frag", nullptr, 0 };
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_translucencyAlpha);
+            }
+
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0] = { "translucency.vert", nullptr, 0 };
+                loadDesc.mStages[1] = { "translucency_premul_alpha.frag", nullptr, 0 };
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_translucencyPremulAlpha);
+            }
+            // translucency fog
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0] = { "translucency.vert", nullptr, 0 };
+                loadDesc.mStages[1] = { "translucency_fog_add.frag", nullptr, 0 };
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_translucencyFogAdd);
+            }
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0] = { "translucency.vert", nullptr, 0 };
+                loadDesc.mStages[1] = { "translucency_fog_mul.frag", nullptr, 0 };
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_translucencyFogMul);
+            }
+
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0] = { "translucency.vert", nullptr, 0 };
+                loadDesc.mStages[1] = { "translucency_fog_mulx2.frag", nullptr, 0 };
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_translucencyFogMulX2);
+            }
+
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0] = { "translucency.vert", nullptr, 0 };
+                loadDesc.mStages[1] = { "translucency_fog_alpha.frag", nullptr, 0 };
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_translucencyFogAlpha);
+            }
+
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0] = { "translucency.vert", nullptr, 0 };
+                loadDesc.mStages[1] = { "translucency_fog_premul_alpha.frag", nullptr, 0 };
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_translucencyFogPremulAlpha);
+            }
+
+            Shader* shaders[] = {
+                m_materialSolidPass.m_solidDiffuseShader, m_materialSolidPass.m_solidDiffuseParallaxShader, m_zPassShader, m_decalShader, m_solidIlluminationShader,
+                m_translucencyAdd, m_translucencyMul, m_translucencyMulX2, m_translucencyAlpha, m_translucencyPremulAlpha,
+                m_translucencyFogAdd,m_translucencyFogMul,m_translucencyFogMulX2,m_translucencyFogAlpha,m_translucencyFogPremulAlpha
             };
+            RootSignatureDesc rootSignatureDesc = {};
+            rootSignatureDesc.ppShaders = shaders;
+            rootSignatureDesc.mShaderCount = std::size(shaders);
+            addRootSignature(forgetRenderer->Rend(), &rootSignatureDesc, &m_materialRootSignature);
+
+            // diffuse material pass
+            {
+                VertexLayout vertexLayout = {};
+                vertexLayout.mAttribCount = 4;
+                vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
+                vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
+                vertexLayout.mAttribs[0].mBinding = 0;
+                vertexLayout.mAttribs[0].mLocation = 0;
+                vertexLayout.mAttribs[0].mOffset = 0;
+
+                vertexLayout.mAttribs[1].mSemantic = SEMANTIC_TEXCOORD0;
+                vertexLayout.mAttribs[1].mFormat = TinyImageFormat_R32G32_SFLOAT;
+                vertexLayout.mAttribs[1].mBinding = 1;
+                vertexLayout.mAttribs[1].mLocation = 1;
+                vertexLayout.mAttribs[1].mOffset = 0;
+
+                vertexLayout.mAttribs[2].mSemantic = SEMANTIC_NORMAL;
+                vertexLayout.mAttribs[2].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
+                vertexLayout.mAttribs[2].mBinding = 2;
+                vertexLayout.mAttribs[2].mLocation = 2;
+                vertexLayout.mAttribs[2].mOffset = 0;
+
+                vertexLayout.mAttribs[3].mSemantic = SEMANTIC_TANGENT;
+                vertexLayout.mAttribs[3].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
+                vertexLayout.mAttribs[3].mBinding = 3;
+                vertexLayout.mAttribs[3].mLocation = 3;
+                vertexLayout.mAttribs[3].mOffset = 0;
+
+                RasterizerStateDesc rasterizerStateDesc = {};
+                rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
+
+                DepthStateDesc depthStateDesc = {};
+                depthStateDesc.mDepthTest = true;
+                depthStateDesc.mDepthWrite = false;
+                depthStateDesc.mDepthFunc = CMP_EQUAL;
+
+                std::array colorFormats = { ColorBufferFormat, NormalBufferFormat, PositionBufferFormat, SpecularBufferFormat };
+
+                PipelineDesc pipelineDesc = {};
+                pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+                auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
+                pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+                pipelineSettings.mRenderTargetCount = colorFormats.size();
+                pipelineSettings.pColorFormats = colorFormats.data();
+                pipelineSettings.pDepthState = &depthStateDesc;
+                pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
+                pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
+                pipelineSettings.mSampleQuality = 0;
+                pipelineSettings.pRootSignature = m_materialRootSignature;
+                pipelineSettings.pShaderProgram = m_materialSolidPass.m_solidDiffuseShader;
+                pipelineSettings.pRasterizerState = &rasterizerStateDesc;
+                pipelineSettings.pVertexLayout = &vertexLayout;
+                addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_materialSolidPass.m_solidDiffusePipeline);
+
+                pipelineSettings.pShaderProgram = m_materialSolidPass.m_solidDiffuseParallaxShader;
+                addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_materialSolidPass.m_solidDiffuseParallaxPipeline);
+            }
+            // decal material pass
+            {
+                VertexLayout vertexLayout = {};
+                vertexLayout.mAttribCount = 3;
+                vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
+                vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
+                vertexLayout.mAttribs[0].mBinding = 0;
+                vertexLayout.mAttribs[0].mLocation = 0;
+                vertexLayout.mAttribs[0].mOffset = 0;
+
+                vertexLayout.mAttribs[1].mSemantic = SEMANTIC_TEXCOORD0;
+                vertexLayout.mAttribs[1].mFormat = TinyImageFormat_R32G32_SFLOAT;
+                vertexLayout.mAttribs[1].mBinding = 1;
+                vertexLayout.mAttribs[1].mLocation = 1;
+                vertexLayout.mAttribs[1].mOffset = 0;
+
+                vertexLayout.mAttribs[2].mSemantic = SEMANTIC_COLOR;
+                vertexLayout.mAttribs[2].mFormat = TinyImageFormat_R32G32B32A32_SFLOAT;
+                vertexLayout.mAttribs[2].mBinding = 2;
+                vertexLayout.mAttribs[2].mLocation = 2;
+                vertexLayout.mAttribs[2].mOffset = 0;
+
+                RasterizerStateDesc rasterizerStateDesc = {};
+                rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
+
+                DepthStateDesc depthStateDesc = {};
+                depthStateDesc.mDepthTest = true;
+                depthStateDesc.mDepthWrite = false;
+                depthStateDesc.mDepthFunc = CMP_LEQUAL;
+
+                std::array colorFormats = { getRecommendedSwapchainFormat(false, false) };
+                PipelineDesc pipelineDesc = {};
+                pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+                auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
+                pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+                pipelineSettings.mRenderTargetCount = colorFormats.size();
+                pipelineSettings.pColorFormats = colorFormats.data();
+                pipelineSettings.pDepthState = &depthStateDesc;
+                pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
+                pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
+                pipelineSettings.mSampleQuality = 0;
+                pipelineSettings.pRootSignature = m_materialRootSignature;
+                pipelineSettings.pShaderProgram = m_decalShader;
+                pipelineSettings.pRasterizerState = &rasterizerStateDesc;
+                pipelineSettings.pVertexLayout = &vertexLayout;
+
+                for (size_t blendMode = 0; blendMode < eMaterialBlendMode_LastEnum; ++blendMode) {
+                    BlendStateDesc blendStateDesc{};
+
+                    blendStateDesc.mSrcFactors[0] = hpl::AmnesiaBlendTable[blendMode].src;
+                    blendStateDesc.mDstFactors[0] = hpl::AmnesiaBlendTable[blendMode].dst;
+                    blendStateDesc.mBlendModes[0] = hpl::AmnesiaBlendTable[blendMode].mode;
+
+                    blendStateDesc.mSrcAlphaFactors[0] = hpl::AmnesiaBlendTable[blendMode].src;
+                    blendStateDesc.mDstAlphaFactors[0] = hpl::AmnesiaBlendTable[blendMode].dst;
+                    blendStateDesc.mBlendAlphaModes[0] = hpl::AmnesiaBlendTable[blendMode].mode;
+
+                    blendStateDesc.mMasks[0] = RED | GREEN | BLUE;
+                    blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
+                    pipelineSettings.pBlendState = &blendStateDesc;
+
+                    addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_decalPipeline[blendMode]);
+                }
+            }
+            // z pass material
+            {
+                // layout and pipeline for sphere draw
+                VertexLayout vertexLayout = {};
+                vertexLayout.mAttribCount = 4;
+                vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
+                vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
+                vertexLayout.mAttribs[0].mBinding = 0;
+                vertexLayout.mAttribs[0].mLocation = 0;
+                vertexLayout.mAttribs[0].mOffset = 0;
+
+                vertexLayout.mAttribs[1].mSemantic = SEMANTIC_TEXCOORD0;
+                vertexLayout.mAttribs[1].mFormat = TinyImageFormat_R32G32_SFLOAT;
+                vertexLayout.mAttribs[1].mBinding = 1;
+                vertexLayout.mAttribs[1].mLocation = 1;
+                vertexLayout.mAttribs[1].mOffset = 0;
+
+                vertexLayout.mAttribs[2].mSemantic = SEMANTIC_NORMAL;
+                vertexLayout.mAttribs[2].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
+                vertexLayout.mAttribs[2].mBinding = 2;
+                vertexLayout.mAttribs[2].mLocation = 2;
+                vertexLayout.mAttribs[2].mOffset = 0;
+
+                vertexLayout.mAttribs[3].mSemantic = SEMANTIC_TANGENT;
+                vertexLayout.mAttribs[3].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
+                vertexLayout.mAttribs[3].mBinding = 3;
+                vertexLayout.mAttribs[3].mLocation = 3;
+                vertexLayout.mAttribs[3].mOffset = 0;
+
+                RasterizerStateDesc rasterizerStateDesc = {};
+                rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
+
+                DepthStateDesc depthStateDesc = {};
+                depthStateDesc.mDepthTest = true;
+                depthStateDesc.mDepthWrite = true;
+                depthStateDesc.mDepthFunc = CMP_LEQUAL;
+
+                PipelineDesc pipelineDesc = {};
+                pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+                auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
+                pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+                pipelineSettings.mRenderTargetCount = 0;
+                pipelineSettings.pDepthState = &depthStateDesc;
+                pipelineSettings.pColorFormats = NULL;
+                pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
+                pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
+                pipelineSettings.mSampleQuality = 0;
+                pipelineSettings.pRootSignature = m_materialRootSignature;
+                pipelineSettings.pShaderProgram = m_zPassShader;
+                pipelineSettings.pRasterizerState = &rasterizerStateDesc;
+                pipelineSettings.pVertexLayout = &vertexLayout;
+                addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_zPassPipeline);
+
+                // createMaterialsPass(m_zPassRootSignature, m_zDescriptorSet);
+
+                DescriptorSetDesc constSet{ m_materialRootSignature, DESCRIPTOR_UPDATE_FREQ_NONE, ForgeRenderer::SwapChainLength };
+                addDescriptorSet(forgetRenderer->Rend(), &constSet, &m_zPassConstSet);
+
+                std::array<DescriptorData, 1> params{};
+                params[0].ppTextures = &m_dissolveImage->GetTexture().m_handle;
+                params[0].pName = "dissolveMap";
+                updateDescriptorSet(forgetRenderer->Rend(), 0, m_zPassConstSet, params.size(), params.data());
+            }
+            // illumination pass
+            {
+                // layout and pipeline for sphere draw
+                VertexLayout vertexLayout = {};
+                vertexLayout.mAttribCount = 2;
+                vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
+                vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
+                vertexLayout.mAttribs[0].mBinding = 0;
+                vertexLayout.mAttribs[0].mLocation = 0;
+                vertexLayout.mAttribs[0].mOffset = 0;
+
+                vertexLayout.mAttribs[1].mSemantic = SEMANTIC_TEXCOORD0;
+                vertexLayout.mAttribs[1].mFormat = TinyImageFormat_R32G32_SFLOAT;
+                vertexLayout.mAttribs[1].mBinding = 1;
+                vertexLayout.mAttribs[1].mLocation = 1;
+                vertexLayout.mAttribs[1].mOffset = 0;
+
+                RasterizerStateDesc rasterizerStateDesc = {};
+                rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
+
+                BlendStateDesc blendStateDesc{};
+                blendStateDesc.mMasks[0] = RED | GREEN | BLUE;
+                blendStateDesc.mSrcFactors[0] = BC_ONE;
+                blendStateDesc.mDstFactors[0] = BC_ONE;
+                blendStateDesc.mBlendModes[0] = BM_ADD;
+                blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
+
+                DepthStateDesc depthStateDesc = {};
+                depthStateDesc.mDepthTest = true;
+                depthStateDesc.mDepthWrite = false;
+                depthStateDesc.mDepthFunc = CMP_EQUAL;
+
+                std::array colorFormats = { getRecommendedSwapchainFormat(false, false) };
+                PipelineDesc pipelineDesc = {};
+                pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+                auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
+                pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+                pipelineSettings.mRenderTargetCount = 0;
+                pipelineSettings.pDepthState = &depthStateDesc;
+                pipelineSettings.mRenderTargetCount = colorFormats.size();
+                pipelineSettings.pColorFormats = colorFormats.data();
+                pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
+                pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
+                pipelineSettings.mSampleQuality = 0;
+                pipelineSettings.pBlendState = &blendStateDesc;
+                pipelineSettings.pRootSignature = m_materialRootSignature;
+                pipelineSettings.pShaderProgram = m_solidIlluminationShader;
+                pipelineSettings.pRasterizerState = &rasterizerStateDesc;
+                pipelineSettings.pVertexLayout = &vertexLayout;
+                addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_solidIlluminationPipeline);
+            }
+
+            // DescriptorSetDesc constantDescSet{m_materialRootSignature, DESCRIPTOR_UPDATE_FREQ_NONE, 1};
+            // addDescriptorSet(forgetRenderer->Rend(), &constantDescSet, &descriptor.m_constSet);
+            DescriptorSetDesc perFrameDescSet{ m_materialRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, 1 };
+            for (auto& set : m_materialSet.m_frameSet) {
+                addDescriptorSet(forgetRenderer->Rend(), &perFrameDescSet, &set);
+            }
+            DescriptorSetDesc batchDescriptorSet{ m_materialRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_BATCH, cMaterial::MaxMaterialID };
+            for (auto& set : m_materialSet.m_materialSet) {
+                addDescriptorSet(forgetRenderer->Rend(), &batchDescriptorSet, &set);
+            }
+            DescriptorSetDesc perObjectDescriptorSet{ m_materialRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_DRAW, MaxObjectUniforms };
+            for (auto& set : m_materialSet.m_perObjectSet) {
+                addDescriptorSet(forgetRenderer->Rend(), &perObjectDescriptorSet, &set);
+            }
+
+            for (size_t i = 0; i < ForgeRenderer::SwapChainLength; i++) {
+                DescriptorData params[15] = {};
+                size_t paramCount = 0;
+
+                DescriptorDataRange range = { (uint32_t)(i * sizeof(cRendererDeferred::PerFrameData)),
+                                              sizeof(cRendererDeferred::PerFrameData) };
+                params[paramCount].pName = "perFrameConstants";
+                params[paramCount].pRanges = &range;
+                params[paramCount++].ppBuffers = &m_perFrameBuffer.m_handle;
+
+                updateDescriptorSet(forgetRenderer->Rend(), 0, m_materialSet.m_frameSet[i], paramCount, params);
+            }
+        }
+
+
+        // ------------------------ Light Pass -----------------------------------------------------------------
+        {
+            addUniformGPURingBuffer(forgetRenderer->Rend(), sizeof(LightUniformData) * MaxLightUniforms, &m_lightPassRingBuffer, true);
+
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0] = {"deferred_light.vert", nullptr, 0};
+                loadDesc.mStages[1] = {"deferred_light_pointlight.frag", nullptr, 0};
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_pointLightShader);
+            }
+
+
+            // High
+            int shadowMapJitterSize = 0;
+            int shadowMapJitterSamples = 0;
+            if (mShadowMapQuality == eShadowMapQuality_High) {
+                shadowMapJitterSize = 64;
+                shadowMapJitterSamples = 32; // 64 here instead? I mean, ATI has to deal with medium has max? or different max for ATI?
+                // m_spotlightVariants.Initialize(
+                //     ShaderHelper::LoadProgramHandlerDefault("vs_deferred_light", "fs_deferred_spotlight_high", false, true));
+            }
+            // Medium
+            else if (mShadowMapQuality == eShadowMapQuality_Medium) {
+                shadowMapJitterSize = 32;
+                shadowMapJitterSamples = 16;
+                // m_spotlightVariants.Initialize(
+                //     ShaderHelper::LoadProgramHandlerDefault("vs_deferred_light", "fs_deferred_spotlight_medium", false, true));
+            }
+            // Low
+            else {
+                shadowMapJitterSize = 0;
+                shadowMapJitterSamples = 0;
+                // m_spotlightVariants.Initialize(
+                //     ShaderHelper::LoadProgramHandlerDefault("vs_deferred_light", "fs_deferred_spotlight_low", false, true));
+            }
+
+            if (mShadowMapQuality != eShadowMapQuality_Low) {
+                m_shadowJitterTexture.Load([&](Texture** texture) {
+                    TextureCreator::GenerateScatterDiskMap2D( shadowMapJitterSize, shadowMapJitterSamples, true,  texture);
+                    return true;
+                });
+            }
+            m_ssaoScatterDiskTexture.Load([&](Texture** texture) {
+                TextureCreator::GenerateScatterDiskMap2D(4, SSAONumOfSamples, false, texture);
+                return true;
+            });
+            
+
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0] = {"deferred_light.vert", nullptr, 0};
+                loadDesc.mStages[1] = {"deferred_light_spotlight.frag", nullptr, 0};
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_spotLightShader);
+            }
+
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0] = {"deferred_light.vert", nullptr, 0};
+                loadDesc.mStages[1] = {"deferred_light_stencil.frag", nullptr, 0};
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_stencilLightShader);
+            }
+
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0] = {"deferred_light.vert", nullptr, 0};
+                loadDesc.mStages[1] = {"deferred_light_box.frag", nullptr, 0};
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_boxLightShader);
+            }
+            Shader* shaders[] = {m_pointLightShader, m_stencilLightShader, m_boxLightShader, m_spotLightShader};
+            RootSignatureDesc rootSignatureDesc = {};
+			rootSignatureDesc.ppShaders = shaders;
+			rootSignatureDesc.mShaderCount = std::size(shaders);
+			addRootSignature(forgetRenderer->Rend(), &rootSignatureDesc, &m_lightPassRootSignature);
+
+            VertexLayout vertexLayout = {};
+            vertexLayout.mAttribCount = 1;
+            vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
+            vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
+            vertexLayout.mAttribs[0].mBinding = 0;
+            vertexLayout.mAttribs[0].mLocation = 0;
+            vertexLayout.mAttribs[0].mOffset = 0;
+
+            auto createPipelineVariants = [&](PipelineDesc& pipelineDesc, std::array<Pipeline*, LightPipelineVariant_Size>& pipelines) {
+                for(uint32_t i = 0; i < LightPipelineVariants::LightPipelineVariant_Size; ++i) {
+                    DepthStateDesc depthStateDec = {};
+                    depthStateDec.mDepthTest = true;
+                    depthStateDec.mDepthWrite = false;
+                    depthStateDec.mDepthFunc = CMP_GEQUAL;
+                    if((LightPipelineVariants::LightPipelineVariant_StencilTest & i) > 0) {
+                        depthStateDec.mStencilTest =  true;
+                        depthStateDec.mStencilFrontFunc = CMP_EQUAL;
+                        depthStateDec.mStencilBackFunc = CMP_EQUAL;
+                        depthStateDec.mStencilFrontPass = STENCIL_OP_SET_ZERO;
+                        depthStateDec.mStencilFrontFail = STENCIL_OP_SET_ZERO;
+                        depthStateDec.mStencilBackPass = STENCIL_OP_SET_ZERO;
+                        depthStateDec.mStencilBackFail = STENCIL_OP_SET_ZERO;
+                        depthStateDec.mDepthFrontFail = STENCIL_OP_SET_ZERO;
+                        depthStateDec.mDepthBackFail = STENCIL_OP_SET_ZERO;
+                        depthStateDec.mStencilWriteMask = 0xff;
+                        depthStateDec.mStencilReadMask = 0xff;
+                    }
+
+                    RasterizerStateDesc rasterizerStateDesc = {};
+                    if((LightPipelineVariants::LightPipelineVariant_CCW & i) > 0) {
+                        rasterizerStateDesc.mFrontFace = FrontFace::FRONT_FACE_CCW;
+                        rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
+                    } else {
+                        rasterizerStateDesc.mFrontFace = FrontFace::FRONT_FACE_CW;
+                        rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
+                    }
+                    auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
+                    pipelineSettings.pDepthState = &depthStateDec;
+                    pipelineSettings.pRasterizerState = &rasterizerStateDesc;
+                    addPipeline(forgetRenderer->Rend(), &pipelineDesc, &pipelines[i]);
+                }
+            };
+
+            BlendStateDesc blendStateDesc{};
+            blendStateDesc.mSrcFactors[0] = BC_ONE;
+            blendStateDesc.mDstFactors[0] = BC_ONE;
+            blendStateDesc.mBlendModes[0] = BM_ADD;
+            blendStateDesc.mSrcAlphaFactors[0] = BC_ONE;
+            blendStateDesc.mDstAlphaFactors[0] = BC_ONE;
+            blendStateDesc.mBlendAlphaModes[0] = BM_ADD;
+            blendStateDesc.mMasks[0] = ALL;
+            blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
+            blendStateDesc.mIndependentBlend = false;
+
+            std::array colorFormats = {
+                getRecommendedSwapchainFormat(false, false)
+            };
+            {
+                PipelineDesc pipelineDesc = {};
+                pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+                auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
+                pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+                pipelineSettings.mRenderTargetCount = colorFormats.size();
+                pipelineSettings.pColorFormats = colorFormats.data();
+                pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
+                pipelineSettings.mSampleQuality = 0;
+                pipelineSettings.pBlendState = &blendStateDesc;
+                pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
+                pipelineSettings.pRootSignature = m_lightPassRootSignature;
+                pipelineSettings.pVertexLayout = &vertexLayout;
+                pipelineSettings.pShaderProgram = m_pointLightShader;
+                createPipelineVariants(pipelineDesc, m_pointLightPipeline);
+            }
+
+            {
+                PipelineDesc pipelineDesc = {};
+                pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+                auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
+                pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+                pipelineSettings.mRenderTargetCount = colorFormats.size();
+                pipelineSettings.pColorFormats = colorFormats.data();
+                pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
+                pipelineSettings.mSampleQuality = 0;
+                pipelineSettings.pBlendState = &blendStateDesc;
+                pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
+                pipelineSettings.pRootSignature = m_lightPassRootSignature;
+                pipelineSettings.pVertexLayout = &vertexLayout;
+                pipelineSettings.pShaderProgram = m_boxLightShader;
+                createPipelineVariants(pipelineDesc, m_boxLightPipeline);
+            }
+
+
+            {
+                PipelineDesc pipelineDesc = {};
+                pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+                auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
+                pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+                pipelineSettings.mRenderTargetCount = colorFormats.size();
+                pipelineSettings.pColorFormats = colorFormats.data();
+                pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
+                pipelineSettings.mSampleQuality = 0;
+                pipelineSettings.pBlendState = &blendStateDesc;
+                pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
+                pipelineSettings.pRootSignature = m_lightPassRootSignature;
+                pipelineSettings.pVertexLayout = &vertexLayout;
+                pipelineSettings.pShaderProgram = m_spotLightShader;
+
+                createPipelineVariants(pipelineDesc, m_spotLightPipeline);
+            }
+
+            {
+                DepthStateDesc stencilDepthTest = {};
+                stencilDepthTest.mDepthTest = true;
+                stencilDepthTest.mDepthWrite = false;
+
+                stencilDepthTest.mStencilTest = true;
+                stencilDepthTest.mDepthFunc = CMP_GEQUAL;
+                stencilDepthTest.mStencilFrontFunc = CMP_ALWAYS;
+                stencilDepthTest.mStencilFrontPass = STENCIL_OP_KEEP;
+                stencilDepthTest.mStencilFrontFail = STENCIL_OP_KEEP;
+                stencilDepthTest.mDepthFrontFail = STENCIL_OP_REPLACE;
+                stencilDepthTest.mStencilBackFunc = CMP_ALWAYS;
+                stencilDepthTest.mStencilBackPass = STENCIL_OP_KEEP;
+                stencilDepthTest.mStencilBackFail = STENCIL_OP_KEEP;
+                stencilDepthTest.mDepthBackFail = STENCIL_OP_REPLACE;
+                stencilDepthTest.mStencilWriteMask = 0xff;
+                stencilDepthTest.mStencilReadMask = 0xff;
+
+                RasterizerStateDesc rasterizerStateDesc{};
+                rasterizerStateDesc.mFrontFace = FrontFace::FRONT_FACE_CCW;
+                rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
+                rasterizerStateDesc.mFillMode = FILL_MODE_SOLID;
+
+                PipelineDesc pipelineDesc{};
+                pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+                auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
+                pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+                pipelineSettings.mRenderTargetCount = colorFormats.size();
+                pipelineSettings.pColorFormats = colorFormats.data();
+                pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
+                pipelineSettings.mSampleQuality = 0;
+                pipelineSettings.pBlendState = &blendStateDesc;
+                pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
+                pipelineSettings.pRootSignature = m_lightPassRootSignature;
+                pipelineSettings.pVertexLayout = &vertexLayout;
+                pipelineSettings.pDepthState = &stencilDepthTest;
+                pipelineSettings.pRasterizerState = &rasterizerStateDesc;
+                pipelineSettings.pShaderProgram = m_stencilLightShader;
+                addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_lightStencilPipeline);
+            }
+            
+            DescriptorSetDesc perFrameDescSet{m_lightPassRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, ForgeRenderer::SwapChainLength};
+            addDescriptorSet(forgetRenderer->Rend(), &perFrameDescSet, &m_lightFrameSet);
+            DescriptorSetDesc batchDescriptorSet{m_lightPassRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_BATCH, cRendererDeferred::MaxLightUniforms};
+            for(auto& lightSet: m_lightPerLightSet) {
+                addDescriptorSet(forgetRenderer->Rend(), &batchDescriptorSet, &lightSet);
+            }
+        }
+        {
+            m_materialBuffer.Load([&](Buffer ** buffer) {
+                BufferLoadDesc desc = {};
+                desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+                desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
+                desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
+                desc.mDesc.mSize = sizeof(cMaterial::MaterialType::MaterialData) * cMaterial::MaxMaterialID;
+                desc.ppBuffer = buffer;
+                addResource(&desc, nullptr);
+
+                return true;
+            });
+            addUniformGPURingBuffer(forgetRenderer->Rend(), sizeof(cRendererDeferred::CBObjectData) * MaxObjectUniforms, &m_objectUniformBuffer, true);
+        }
+   
+
+        auto createShadowMap = [&](const cVector3l& avSize) -> ShadowMapData {
+            
+            RenderTargetDesc renderTarget = {};
+            renderTarget.mArraySize = 1;
+            renderTarget.mDepth = 1;
+            renderTarget.mFormat = TinyImageFormat_D16_UNORM;
+            renderTarget.mWidth = avSize.x;
+            renderTarget.mHeight = avSize.y;
+            renderTarget.mSampleCount = SAMPLE_COUNT_1;
+            renderTarget.mSampleQuality = 0;
+            renderTarget.mStartState = RESOURCE_STATE_DEPTH_WRITE;
+            renderTarget.pName = "ShadowMaps RTs";
+            ShadowMapData shadowMapData = {};
+            shadowMapData.m_target.Load([&](RenderTarget** target) {
+                addRenderTarget(forgetRenderer->Rend(), &renderTarget, target);
+                return true;
+            });
+
+            shadowMapData.m_transformCount = -1;
+            shadowMapData.m_frameCount = -1;
+            shadowMapData.m_radius = 0;
+            shadowMapData.m_fov = 0;
+            shadowMapData.m_aspect = 0;
+            shadowMapData.m_light = nullptr;
+            return shadowMapData;
         };
 
         for (size_t i = 0; i < 10; ++i) {
@@ -975,72 +1740,16 @@ namespace hpl {
             m_shadowMapData[eShadowMapResolution_Low].emplace_back(createShadowMap(vShadowSize[lStartSize + eShadowMapResolution_Low]));
         }
 
-        // High
-        int shadowMapJitterSize = 0;
-        int shadowMapJitterSamples = 0;
-        if (mShadowMapQuality == eShadowMapQuality_High) {
-            shadowMapJitterSize = 64;
-            shadowMapJitterSamples = 32; // 64 here instead? I mean, ATI has to deal with medium has max? or different max for ATI?
-            m_spotlightVariants.Initialize(
-                ShaderHelper::LoadProgramHandlerDefault("vs_deferred_light", "fs_deferred_spotlight_high", false, true));
-        }
-        // Medium
-        else if (mShadowMapQuality == eShadowMapQuality_Medium) {
-            shadowMapJitterSize = 32;
-            shadowMapJitterSamples = 16;
-            m_spotlightVariants.Initialize(
-                ShaderHelper::LoadProgramHandlerDefault("vs_deferred_light", "fs_deferred_spotlight_medium", false, true));
-        }
-        // Low
-        else {
-            shadowMapJitterSize = 0;
-            shadowMapJitterSamples = 0;
-            m_spotlightVariants.Initialize(
-                ShaderHelper::LoadProgramHandlerDefault("vs_deferred_light", "fs_deferred_spotlight_low", false, true));
-        }
+        // m_deferredSSAOProgram  = hpl::loadProgram("vs_post_effect", "fs_deferred_ssao");
+        // m_deferredSSAOBlurHorizontalProgram  = hpl::loadProgram("vs_post_effect", "fs_deferred_ssao_blur_horizontal");
+        // m_deferredSSAOBlurVerticalProgram  = hpl::loadProgram("vs_post_effect", "fs_deferred_ssao_blur_vertical");
 
-        if (mShadowMapQuality != eShadowMapQuality_Low) {
-            m_shadowJitterImage = std::make_shared<Image>();
-            TextureCreator::GenerateScatterDiskMap2D(*m_shadowJitterImage, shadowMapJitterSize, shadowMapJitterSamples, true);
-        }
-        
-        {
-            m_ssaoScatterDiskImage = std::make_shared<Image>();
-            TextureCreator::GenerateScatterDiskMap2D(*m_ssaoScatterDiskImage, 4, SSAONumOfSamples, false);
-        }
-        m_u_param.Initialize();
-        m_u_lightPos.Initialize();
-        m_u_fogColor.Initialize();
-        m_u_lightColor.Initialize();
-        m_u_overrideColor.Initialize();
-        m_u_copyRegion.Initialize();
-        m_u_spotViewProj.Initialize();
-        m_u_mtxInvRotation.Initialize();
-        m_u_mtxInvViewRotation.Initialize();
-
-        m_s_depthMap.Initialize();
-        m_s_positionMap.Initialize();
-        m_s_diffuseMap.Initialize();
-        m_s_normalMap.Initialize();
-        m_s_specularMap.Initialize();
-        m_s_attenuationLightMap.Initialize();
-        m_s_spotFalloffMap.Initialize();
-        m_s_shadowMap.Initialize();
-        m_s_goboMap.Initialize();
-        m_s_shadowOffsetMap.Initialize();
-
-        m_s_scatterDisk.Initialize();
-
-        m_deferredSSAOProgram  = hpl::loadProgram("vs_post_effect", "fs_deferred_ssao");
-        m_deferredSSAOBlurHorizontalProgram  = hpl::loadProgram("vs_post_effect", "fs_deferred_ssao_blur_horizontal");
-        m_deferredSSAOBlurVerticalProgram  = hpl::loadProgram("vs_post_effect", "fs_deferred_ssao_blur_vertical");
-
-        m_copyRegionProgram = hpl::loadProgram("cs_copy_region");
-        m_lightBoxProgram = hpl::loadProgram("vs_light_box", "fs_light_box");
-        m_nullShader = hpl::loadProgram("vs_null", "fs_null");
-        m_fogVariant.Initialize(ShaderHelper::LoadProgramHandlerDefault("vs_deferred_fog", "fs_deferred_fog", true, true));
-        m_pointLightVariants.Initialize(
-            ShaderHelper::LoadProgramHandlerDefault("vs_deferred_light", "fs_deferred_pointlight", false, true));
+        // m_copyRegionProgram = hpl::loadProgram("cs_copy_region");
+        // m_lightBoxProgram = hpl::loadProgram("vs_light_box", "fs_light_box");
+        // m_nullShader = hpl::loadProgram("vs_null", "fs_null");
+        // m_fogVariant.Initialize(ShaderHelper::LoadProgramHandlerDefault("vs_deferred_fog", "fs_deferred_fog", true, true));
+        // m_pointLightVariants.Initialize(
+        //     ShaderHelper::LoadProgramHandlerDefault("vs_deferred_light", "fs_deferred_pointlight", false, true));
         
         
         ////////////////////////////////////
@@ -1094,7 +1803,7 @@ namespace hpl {
     }
 
     //-----------------------------------------------------------------------
-    RenderTarget& cRendererDeferred::resolveRenderTarget(std::array<RenderTarget, 2>& rt) {
+    LegacyRenderTarget& cRendererDeferred::resolveRenderTarget(std::array<LegacyRenderTarget, 2>& rt) {
         return rt[mpCurrentSettings->mbIsReflection ? 1 : 0];
     }
 
@@ -1155,692 +1864,14 @@ namespace hpl {
         }
     }
 
-    std::shared_ptr<Image> cRendererDeferred::GetOutputImage(cViewport& viewport) {
-        return m_boundViewportData.resolve(viewport).m_gBuffer.m_outputImage;
-    }
-    void cRendererDeferred::RenderFullscreenFogPass(GraphicsContext& context, cWorld* apWorld, cViewport& viewport, cFrustum* apFrustum,  FogPassFullscreenOptions& options) {
-        cVector2l screenSize = viewport.GetSize();
-        GraphicsContext::LayoutStream layout;
-        cMatrixf projMtx;
-        context.ScreenSpaceQuad(layout, projMtx, screenSize.x, screenSize.y);
-
-        GraphicsContext::ViewConfiguration viewConfig{ options.m_gBuffer.m_outputTarget };
-        viewConfig.m_projection = projMtx;
-        viewConfig.m_viewRect = cRect2l(0, 0, screenSize.x, screenSize.y);
-        const auto view = context.StartPass("Full Screen Fog", viewConfig);
-
-        struct {
-            float u_fogStart;
-            float u_fogLength;
-            float u_fogFalloffExp;
-        } uniforms = { { 0 } };
-
-        uniforms.u_fogStart = mpCurrentWorld->GetFogStart();
-        uniforms.u_fogLength = mpCurrentWorld->GetFogEnd() - mpCurrentWorld->GetFogStart();
-        uniforms.u_fogFalloffExp = mpCurrentWorld->GetFogFalloffExp();
-
-        GraphicsContext::ShaderProgram shaderProgram;
-        shaderProgram.m_configuration.m_write = Write::RGBA;
-        shaderProgram.m_configuration.m_depthTest = DepthTest::Always;
-
-        shaderProgram.m_configuration.m_rgbBlendFunc =
-            CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
-        shaderProgram.m_configuration.m_write = Write::RGB;
-
-        cMatrixf rotationMatrix = cMatrixf::Identity;
-        const auto fogColor = mpCurrentWorld->GetFogColor();
-        float uniformFogColor[4] = { fogColor.r, fogColor.g, fogColor.b, fogColor.a };
-
-        shaderProgram.m_handle = m_fogVariant.GetVariant(rendering::detail::FogVariant_None);
-
-        shaderProgram.m_textures.push_back({ m_s_positionMap, options.m_gBuffer.m_positionImage->GetHandle(), 0 });
-
-        shaderProgram.m_uniforms.push_back({ m_u_mtxInvRotation, &rotationMatrix.v });
-
-        shaderProgram.m_uniforms.push_back({ m_u_param, &uniforms, 1 });
-        shaderProgram.m_uniforms.push_back({ m_u_fogColor, &uniformFogColor });
-
-        GraphicsContext::DrawRequest drawRequest{ layout, shaderProgram };
-        context.Submit(view, drawRequest);
-    }
-
-    void cRendererDeferred::RenderFogPass(GraphicsContext& context, std::span<cRendererDeferred::FogRendererData> fogRenderData, cWorld* apWorld, cViewport& viewport, cFrustum* apFrustum, FogPassOptions& options) {
-        cVector2l screenSize = viewport.GetSize();
-        if(fogRenderData.empty()) {
-            return;
-        }
-
-        // ------------------------------------------------------------------------
-        // Render Fog Pass --> output target
-        // ------------------------------------------------------------------------
-        GraphicsContext::ViewConfiguration viewConfig{ options.m_gBuffer.m_outputTarget };
-        viewConfig.m_viewRect = { 0, 0, screenSize.x, screenSize.y };
-        viewConfig.m_view = options.frustumView;
-        viewConfig.m_projection = options.frustumProjection;
-        const auto view = context.StartPass("Fog Pass", viewConfig);
-        for (const auto& fogArea : fogRenderData) {
-            struct {
-                float u_fogStart;
-                float u_fogLength;
-                float u_fogFalloffExp;
-
-                float u_fogRayCastStart[3];
-                float u_fogNegPlaneDistNeg[3];
-                float u_fogNegPlaneDistPos[3];
-            } uniforms;
-
-            uniforms.u_fogStart = fogArea.m_fogArea->GetStart();
-            uniforms.u_fogLength = fogArea.m_fogArea->GetEnd() - fogArea.m_fogArea->GetStart();
-            uniforms.u_fogFalloffExp = fogArea.m_fogArea->GetFalloffExp();
-            // Outside of box setup
-            cMatrixf rotationMatrix = cMatrixf(cMatrixf::Identity);
-            uint32_t flags = rendering::detail::FogVariant_None;
-
-            GraphicsContext::LayoutStream layoutStream;
-            GraphicsContext::ShaderProgram shaderProgram;
-
-            mpShapeBox->GetLayoutStream(layoutStream);
-
-            shaderProgram.m_modelTransform =
-                fogArea.m_fogArea->GetModelMatrixPtr() ? fogArea.m_fogArea->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity;
-            shaderProgram.m_configuration.m_rgbBlendFunc =
-                CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
-            shaderProgram.m_configuration.m_alphaBlendFunc =
-                CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
-            shaderProgram.m_configuration.m_write = Write::RGB;
-
-            if (fogArea.m_insideNearFrustum) {
-                shaderProgram.m_configuration.m_cull = Cull::Clockwise;
-                shaderProgram.m_configuration.m_depthTest = DepthTest::Always;
-                flags |= fogArea.m_fogArea->GetShowBacksideWhenInside() ? rendering::detail::FogVariant_UseBackSide
-                                                                        : rendering::detail::FogVariant_None;
-            } else {
-                cMatrixf mtxInvModelView =
-                    cMath::MatrixInverse(cMath::MatrixMul(apFrustum->GetViewMatrix(), *fogArea.m_fogArea->GetModelMatrixPtr()));
-                cVector3f vRayCastStart = cMath::MatrixMul(mtxInvModelView, cVector3f(0));
-                // rotationMatrix = mtxInvModelView.GetRotation().GetTranspose();
-
-                cVector3f vNegPlaneDistNeg(
-                    cMath::PlaneToPointDist(cPlanef(-1, 0, 0, 0.5f), vRayCastStart),
-                    cMath::PlaneToPointDist(cPlanef(0, -1, 0, 0.5f), vRayCastStart),
-                    cMath::PlaneToPointDist(cPlanef(0, 0, -1, 0.5f), vRayCastStart));
-                cVector3f vNegPlaneDistPos(
-                    cMath::PlaneToPointDist(cPlanef(1, 0, 0, 0.5f), vRayCastStart),
-                    cMath::PlaneToPointDist(cPlanef(0, 1, 0, 0.5f), vRayCastStart),
-                    cMath::PlaneToPointDist(cPlanef(0, 0, 1, 0.5f), vRayCastStart));
-
-                uniforms.u_fogRayCastStart[0] = vRayCastStart.x;
-                uniforms.u_fogRayCastStart[1] = vRayCastStart.y;
-                uniforms.u_fogRayCastStart[2] = vRayCastStart.z;
-
-                uniforms.u_fogNegPlaneDistNeg[0] = vNegPlaneDistNeg.x * -1;
-                uniforms.u_fogNegPlaneDistNeg[1] = vNegPlaneDistNeg.y * -1;
-                uniforms.u_fogNegPlaneDistNeg[2] = vNegPlaneDistNeg.z * -1;
-
-                uniforms.u_fogNegPlaneDistPos[0] = vNegPlaneDistPos.x * -1;
-                uniforms.u_fogNegPlaneDistPos[1] = vNegPlaneDistPos.y * -1;
-                uniforms.u_fogNegPlaneDistPos[2] = vNegPlaneDistPos.z * -1;
-
-                shaderProgram.m_configuration.m_cull = Cull::CounterClockwise;
-                shaderProgram.m_configuration.m_depthTest = DepthTest::LessEqual;
-                flags |= rendering::detail::FogVariant_UseOutsideBox;
-                flags |= fogArea.m_fogArea->GetShowBacksideWhenOutside() ? rendering::detail::FogVariant_UseBackSide
-                                                                            : rendering::detail::FogVariant_None;
-            }
-            const auto fogColor = fogArea.m_fogArea->GetColor();
-            float uniformFogColor[4] = { fogColor.r, fogColor.g, fogColor.b, fogColor.a };
-
-            shaderProgram.m_handle = m_fogVariant.GetVariant(flags);
-
-            shaderProgram.m_uniforms.push_back({ m_u_mtxInvRotation, &rotationMatrix.v });
-
-            shaderProgram.m_uniforms.push_back({ m_u_param, &uniforms, 3 });
-            shaderProgram.m_uniforms.push_back({ m_u_fogColor, &uniformFogColor });
-
-            shaderProgram.m_textures.push_back({ m_s_positionMap, options.m_gBuffer.m_positionImage->GetHandle(), 0 });
-
-            GraphicsContext::DrawRequest drawRequest{ layoutStream, shaderProgram };
-            context.Submit(view, drawRequest);
-        }
-    
-
-    }
-
-    void cRendererDeferred::RenderLightPass(GraphicsContext& context, std::span<iLight*> lights, cWorld* apWorld, cViewport& viewport, cFrustum* apFrustum, LightPassOptions& options) {
-
-        cVector2l screenSize = viewport.GetSize();
-
-        float fScreenArea = (float)(screenSize.x * screenSize.y);
-        int mlMinLargeLightArea = (int)(MinLargeLightNormalizedArea * fScreenArea);
-
-        // std::array<std::vector<detail::DeferredLight*>, eDeferredLightList_LastEnum> sortedLights;
-        // DON'T touch deferredLights after this point
-        // auto lightSpan = lights;
-        std::vector<detail::DeferredLight> deferredLights;
-        deferredLights.reserve(lights.size());
-        std::vector<detail::DeferredLight*> deferredLightBoxRenderBack;
-        std::vector<detail::DeferredLight*> deferredLightBoxStencilFront;
-
-        std::vector<detail::DeferredLight*> deferredLightRenderBack;
-        std::vector<detail::DeferredLight*> deferredLightStencilFrontRenderBack;
-
-        for (auto& light : lights) {
-            auto lightType = light->GetLightType();
-            auto& deferredLightData = deferredLights.emplace_back(detail::DeferredLight());
-            deferredLightData.m_light = light;
-            if (lightType == eLightType_Box) {
-                continue;
-            }
-            switch (lightType) {
-            case eLightType_Point:
-                {
-                    deferredLightData.m_insideNearPlane =
-                        apFrustum->CheckSphereNearPlaneIntersection(light->GetWorldPosition(), light->GetRadius() * kLightRadiusMul_Low);
-                    detail::SetupLightMatrix(
-                        deferredLightData.m_mtxViewSpaceRender,
-                        deferredLightData.m_mtxViewSpaceTransform,
-                        light,
-                        apFrustum,
-                        kLightRadiusMul_Medium);
-                    deferredLightData.m_clipRect = cMath::GetClipRectFromSphere(
-                        deferredLightData.m_mtxViewSpaceRender.GetTranslation(), light->GetRadius(), apFrustum, screenSize, true, 0);
-                    break;
-                }
-            case eLightType_Spot:
-                {
-                    cLightSpot* lightSpot = static_cast<cLightSpot*>(light);
-                    deferredLightData.m_insideNearPlane = apFrustum->CheckFrustumNearPlaneIntersection(lightSpot->GetFrustum());
-                    detail::SetupLightMatrix(
-                        deferredLightData.m_mtxViewSpaceRender,
-                        deferredLightData.m_mtxViewSpaceTransform,
-                        light,
-                        apFrustum,
-                        kLightRadiusMul_Medium);
-                    cMath::GetClipRectFromBV(deferredLightData.m_clipRect, *light->GetBoundingVolume(), apFrustum, screenSize, 0);
-                    break;
-                }
-            default:
-                break;
-            }
-
-            if (lightType == eLightType_Spot && light->GetCastShadows() && mpCurrentSettings->mbRenderShadows) {
-                cLightSpot* pLightSpot = static_cast<cLightSpot*>(light);
-
-                ////////////////////////
-                // Inside near plane, use max resolution
-                if (deferredLightData.m_insideNearPlane) {
-                    deferredLightData.m_castShadows = true;
-
-                    deferredLightData.m_shadowResolution = rendering::detail::GetShadowMapResolution(
-                        light->GetShadowMapResolution(), mpCurrentSettings->mMaxShadowMapResolution);
-                } else {
-                    cVector3f vIntersection = pLightSpot->GetFrustum()->GetOrigin();
-                    pLightSpot->GetFrustum()->CheckLineIntersection(
-                        apFrustum->GetOrigin(), light->GetBoundingVolume()->GetWorldCenter(), vIntersection);
-
-                    float fDistToLight = cMath::Vector3Dist(apFrustum->GetOrigin(), vIntersection);
-
-                    deferredLightData.m_castShadows = true;
-                    deferredLightData.m_shadowResolution = rendering::detail::GetShadowMapResolution(
-                        light->GetShadowMapResolution(), mpCurrentSettings->mMaxShadowMapResolution);
-
-                    ///////////////////////
-                    // Skip shadow
-                    if (fDistToLight > m_shadowDistanceNone) {
-                        deferredLightData.m_castShadows = false;
-                    }
-                    ///////////////////////
-                    // Use Low
-                    else if (fDistToLight > m_shadowDistanceLow) {
-                        if (deferredLightData.m_shadowResolution == eShadowMapResolution_Low) {
-                            deferredLightData.m_castShadows = false;
-                        }
-                        deferredLightData.m_shadowResolution = eShadowMapResolution_Low;
-                    }
-                    ///////////////////////
-                    // Use Medium
-                    else if (fDistToLight > m_shadowDistanceMedium) {
-                        if (deferredLightData.m_shadowResolution == eShadowMapResolution_High) {
-                            deferredLightData.m_shadowResolution = eShadowMapResolution_Medium;
-                        } else {
-                            deferredLightData.m_shadowResolution = eShadowMapResolution_Low;
-                        }
-                    }
-                }
-            }
-        }
-
-        mpCurrentSettings->mlNumberOfLightsRendered = 0;
-        for (auto& deferredLight : deferredLights) {
-            // cDeferredLight* pLightData =  mvTempDeferredLights[i];
-            iLight* pLight = deferredLight.m_light;
-            eLightType lightType = pLight->GetLightType();
-
-            ////////////////////////
-            // If box, we have special case...
-            if (lightType == eLightType_Box) {
-                cLightBox* pLightBox = static_cast<cLightBox*>(pLight);
-
-                // Set up matrix
-                deferredLight.m_mtxViewSpaceRender = cMath::MatrixScale(pLightBox->GetSize());
-                deferredLight.m_mtxViewSpaceRender.SetTranslation(pLightBox->GetWorldPosition());
-                deferredLight.m_mtxViewSpaceRender = cMath::MatrixMul(apFrustum->GetViewMatrix(), deferredLight.m_mtxViewSpaceRender);
-
-                mpCurrentSettings->mlNumberOfLightsRendered++;
-
-                // Check if near plane is inside box. If so only render back
-                if (apFrustum->CheckBVNearPlaneIntersection(pLight->GetBoundingVolume())) {
-                    deferredLightBoxRenderBack.emplace_back(&deferredLight);
-                } else {
-                    deferredLightBoxStencilFront.emplace_back(&deferredLight);
-                }
-
-                continue;
-            }
-
-            mpCurrentSettings->mlNumberOfLightsRendered++;
-
-            if (deferredLight.m_insideNearPlane) {
-                deferredLightRenderBack.emplace_back(&deferredLight);
-            } else {
-                if (lightType == eLightType_Point) {
-                    if (deferredLight.getArea() >= mlMinLargeLightArea) {
-                        deferredLightStencilFrontRenderBack.emplace_back(&deferredLight);
-                    } else {
-                        deferredLightRenderBack.emplace_back(&deferredLight);
-                    }
-                }
-                // Always do double passes for spotlights as they need to will get artefacts otherwise...
-                //(At least with gobos)l
-                else if (lightType == eLightType_Spot) {
-                    deferredLightStencilFrontRenderBack.emplace_back(&deferredLight);
-                }
-            }
-        }
-        std::sort(deferredLightBoxRenderBack.begin(), deferredLightBoxRenderBack.end(), detail::SortDeferredLightBox);
-        std::sort(deferredLightBoxStencilFront.begin(), deferredLightBoxStencilFront.end(), detail::SortDeferredLightBox);
-        std::sort(deferredLightRenderBack.begin(), deferredLightRenderBack.end(), detail::SortDeferredLightDefault);
-        std::sort(deferredLightStencilFrontRenderBack.begin(), deferredLightStencilFrontRenderBack.end(), detail::SortDeferredLightDefault);
-
-        {
-            GraphicsContext::ViewConfiguration clearBackBufferView{ options.m_gBuffer.m_outputTarget };
-            clearBackBufferView.m_clear = { 0, 1, 0, ClearOp::Color };
-            clearBackBufferView.m_viewRect = {
-                0, 0, static_cast<uint16_t>(screenSize.x), static_cast<uint16_t>(screenSize.y)
-            };
-            bgfx::touch(context.StartPass("Clear Backbuffer", clearBackBufferView));
-        }
-        // -----------------------------------------------
-        // Draw Box Lights
-        // -----------------------------------------------
-        {
-            auto drawBoxLight = [&](bgfx::ViewId view, GraphicsContext::ShaderProgram& shaderProgram, detail::DeferredLight* light) {
-                GraphicsContext::LayoutStream layoutStream;
-                mpShapeBox->GetLayoutStream(layoutStream);
-                cLightBox* pLightBox = static_cast<cLightBox*>(light->m_light);
-
-                const auto& color = light->m_light->GetDiffuseColor();
-                float lightColor[4] = { color.r, color.g, color.b, color.a };
-                shaderProgram.m_handle = m_lightBoxProgram;
-                shaderProgram.m_textures.push_back({ m_s_diffuseMap, options.m_gBuffer.m_colorImage->GetHandle(), 0 });
-                shaderProgram.m_uniforms.push_back({ m_u_lightColor, lightColor });
-
-               shaderProgram.m_modelTransform = detail::GetLightMtx(*light).GetTranspose();
-
-                switch (pLightBox->GetBlendFunc()) {
-                case eLightBoxBlendFunc_Add:
-                    shaderProgram.m_configuration.m_rgbBlendFunc =
-                        CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
-                    shaderProgram.m_configuration.m_alphaBlendFunc =
-                        CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
-                    break;
-                case eLightBoxBlendFunc_Replace:
-                    break;
-                default:
-                    BX_ASSERT(false, "Unknown blend func %d", pLightBox->GetBlendFunc());
-                    break;
-                }
-
-                GraphicsContext::DrawRequest drawRequest{ layoutStream, shaderProgram };
-                context.Submit(view, drawRequest);
-            };
-
-            GraphicsContext::ViewConfiguration stencilFrontBackViewConfig{ options.m_gBuffer.m_outputTarget };
-            stencilFrontBackViewConfig.m_projection = options.frustumProjection;
-            stencilFrontBackViewConfig.m_view = options.frustumView;
-            stencilFrontBackViewConfig.m_clear = { 0, 1.0, 0, ClearOp::Stencil };
-            stencilFrontBackViewConfig.m_viewRect = {
-                0, 0, static_cast<uint16_t>(screenSize.x), static_cast<uint16_t>(screenSize.y)
-            };
-            const auto boxStencilPass = context.StartPass("eDeferredLightList_Box_StencilFront_RenderBack", stencilFrontBackViewConfig);
-            bgfx::setViewMode(boxStencilPass, bgfx::ViewMode::Sequential);
-
-            for (auto& light : deferredLightBoxStencilFront) {
-                {
-                    GraphicsContext::ShaderProgram shaderProgram;
-                    GraphicsContext::LayoutStream layoutStream;
-                    mpShapeBox->GetLayoutStream(layoutStream);
-
-                    shaderProgram.m_handle = m_nullShader;
-                    shaderProgram.m_configuration.m_cull = Cull::CounterClockwise;
-                    shaderProgram.m_configuration.m_depthTest = DepthTest::GreaterEqual;
-                    shaderProgram.m_configuration.m_frontStencilTest = CreateStencilTest(
-                        StencilFunction::Always, StencilFail::Keep, StencilDepthFail::Replace, StencilDepthPass::Keep, 0xff, 0xff);
-
-                    shaderProgram.m_modelTransform = detail::GetLightMtx(*light).GetTranspose();
-
-                    GraphicsContext::DrawRequest drawRequest{ layoutStream, shaderProgram };
-                    // drawRequest.m_clear =  GraphicsContext::ClearRequest{0, 0, 0, ClearOp::Stencil};
-                    context.Submit(boxStencilPass, drawRequest);
-                }
-
-                {
-                    GraphicsContext::ShaderProgram shaderProgram;
-                    shaderProgram.m_configuration.m_cull = Cull::Clockwise;
-                    shaderProgram.m_configuration.m_depthTest = DepthTest::GreaterEqual;
-                    shaderProgram.m_configuration.m_write = Write::RGB;
-                    shaderProgram.m_configuration.m_frontStencilTest = CreateStencilTest(
-                        StencilFunction::Equal, StencilFail::Zero, StencilDepthFail::Zero, StencilDepthPass::Zero, 0xff, 0xff);
-                    drawBoxLight(boxStencilPass, shaderProgram, light);
-                }
-            }
-
-            GraphicsContext::ViewConfiguration boxLightConfig{ options.m_gBuffer.m_outputTarget };
-            boxLightConfig.m_projection = options.frustumProjection;
-            boxLightConfig.m_view = options.frustumView;
-            boxLightConfig.m_viewRect = { 0, 0, static_cast<uint16_t>(screenSize.x), static_cast<uint16_t>(screenSize.y) };
-            const auto boxLightBackPass = context.StartPass("eDeferredLightList_Box_RenderBack", boxLightConfig);
-            for (auto& light : deferredLightBoxRenderBack) {
-                GraphicsContext::ShaderProgram shaderProgram;
-                shaderProgram.m_configuration.m_cull = Cull::Clockwise;
-                shaderProgram.m_configuration.m_depthTest = DepthTest::GreaterEqual;
-                shaderProgram.m_configuration.m_write = Write::RGB;
-                drawBoxLight(boxLightBackPass, shaderProgram, light);
-            }
-        }
-
-        // -----------------------------------------------
-        // Draw Point Lights
-        // Draw Spot Lights
-        // -----------------------------------------------
-        {
-            auto drawLight = [&](bgfx::ViewId pass, GraphicsContext::ShaderProgram& shaderProgram, detail::DeferredLight* apLightData) {
-                GraphicsContext::LayoutStream layoutStream;
-                GetLightShape(apLightData->m_light, eDeferredShapeQuality_High)->GetLayoutStream(layoutStream);
-                GraphicsContext::DrawRequest drawRequest{ layoutStream, shaderProgram };
-                switch (apLightData->m_light->GetLightType()) {
-                case eLightType_Point:
-                    {
-                        struct {
-                            float lightRadius;
-                            float pad[3];
-                        } param = { 0 };
-                        param.lightRadius = apLightData->m_light->GetRadius();
-                        auto attenuationImage = apLightData->m_light->GetFalloffMap();
-
-                        const auto modelViewMtx = cMath::MatrixMul(apFrustum->GetViewMatrix(), apLightData->m_light->GetWorldMatrix());
-                        const auto color = apLightData->m_light->GetDiffuseColor();
-                        cVector3f lightViewPos = cMath::MatrixMul(modelViewMtx, detail::GetLightMtx(*apLightData)).GetTranslation();
-                        float lightPosition[4] = { lightViewPos.x, lightViewPos.y, lightViewPos.z, 1.0f };
-                        float lightColor[4] = { color.r, color.g, color.b, color.a };
-                        cMatrixf mtxInvViewRotation =
-                            cMath::MatrixMul(apLightData->m_light->GetWorldMatrix(), options.frustumInvView).GetTranspose();
-
-                        shaderProgram.m_uniforms.push_back({ m_u_lightPos, lightPosition });
-                        shaderProgram.m_uniforms.push_back({ m_u_lightColor, lightColor });
-                        shaderProgram.m_uniforms.push_back({ m_u_param, &param });
-                        shaderProgram.m_uniforms.push_back({ m_u_mtxInvViewRotation, mtxInvViewRotation.v });
-
-                        shaderProgram.m_textures.push_back({ m_s_diffuseMap, options.m_gBuffer.m_colorImage->GetHandle(), 1 });
-                        shaderProgram.m_textures.push_back({ m_s_normalMap, options.m_gBuffer.m_normalImage->GetHandle(), 2 });
-                        shaderProgram.m_textures.push_back({ m_s_positionMap, options.m_gBuffer.m_positionImage->GetHandle(), 3 });
-                        shaderProgram.m_textures.push_back({ m_s_specularMap, options.m_gBuffer.m_specularImage->GetHandle(), 4 });
-                        shaderProgram.m_textures.push_back({ m_s_attenuationLightMap, attenuationImage->GetHandle(), 5 });
-
-                        uint32_t flags = 0;
-                        if (apLightData->m_light->GetGoboTexture()) {
-                            flags |= rendering::detail::PointlightVariant_UseGoboMap;
-                            shaderProgram.m_textures.push_back({ m_s_goboMap, apLightData->m_light->GetGoboTexture()->GetHandle(), 0 });
-                        }
-                        shaderProgram.m_handle = m_pointLightVariants.GetVariant(flags);
-                        context.Submit(pass, drawRequest);
-                        break;
-                    }
-                case eLightType_Spot:
-                    {
-                        cLightSpot* pLightSpot = static_cast<cLightSpot*>(apLightData->m_light);
-                        // Calculate and set the forward vector
-                        cVector3f vForward = cVector3f(0, 0, 1);
-                        vForward = cMath::MatrixMul3x3(apLightData->m_mtxViewSpaceTransform, vForward);
-
-                        struct {
-                            float lightRadius;
-                            float lightForward[3];
-
-                            float oneMinusCosHalfSpotFOV;
-                            float shadowMapOffset[2];
-                            float pad;
-                        } uParam = { apLightData->m_light->GetRadius(),
-                                     { vForward.x, vForward.y, vForward.z },
-                                     1 - pLightSpot->GetCosHalfFOV(),
-                                     { 0, 0 },
-                                     0
-
-                        };
-                        auto goboImage = apLightData->m_light->GetGoboTexture();
-                        auto spotFallOffImage = pLightSpot->GetSpotFalloffMap();
-                        auto spotAttenuationImage = pLightSpot->GetFalloffMap();
-
-                        uint32_t flags = 0;
-                        const auto modelViewMtx = cMath::MatrixMul(apFrustum->GetViewMatrix(), apLightData->m_light->GetWorldMatrix());
-                        const auto color = apLightData->m_light->GetDiffuseColor();
-                        cVector3f lightViewPos = cMath::MatrixMul(modelViewMtx, detail::GetLightMtx(*apLightData)).GetTranslation();
-                        float lightPosition[4] = { lightViewPos.x, lightViewPos.y, lightViewPos.z, 1.0f };
-                        float lightColor[4] = { color.r, color.g, color.b, color.a };
-                        cMatrixf spotViewProj = cMath::MatrixMul(pLightSpot->GetViewProjMatrix(), options.frustumInvView).GetTranspose();
-
-                        shaderProgram.m_uniforms.push_back({ m_u_lightPos, lightPosition });
-                        shaderProgram.m_uniforms.push_back({ m_u_lightColor, lightColor });
-                        shaderProgram.m_uniforms.push_back({ m_u_spotViewProj, &spotViewProj.v });
-
-                        shaderProgram.m_textures.push_back({ m_s_diffuseMap, options.m_gBuffer.m_colorImage->GetHandle(), 0 });
-                        shaderProgram.m_textures.push_back({ m_s_normalMap, options.m_gBuffer.m_normalImage->GetHandle(), 1 });
-                        shaderProgram.m_textures.push_back({ m_s_positionMap, options.m_gBuffer.m_positionImage->GetHandle(), 2 });
-                        shaderProgram.m_textures.push_back({ m_s_specularMap, options.m_gBuffer.m_specularImage->GetHandle(), 3 });
-
-                        shaderProgram.m_textures.push_back({ m_s_attenuationLightMap, spotAttenuationImage->GetHandle(), 4 });
-                        if (goboImage) {
-                            shaderProgram.m_textures.push_back({ m_s_goboMap, goboImage->GetHandle(), 5 });
-                            flags |= rendering::detail::SpotlightVariant_UseGoboMap;
-                        } else {
-                            shaderProgram.m_textures.push_back({ m_s_spotFalloffMap, spotFallOffImage->GetHandle(), 5 });
-                        }
-                        auto& currentLight = apLightData->m_light; 
-                        BX_ASSERT(currentLight->GetLightType() == eLightType_Spot, "Only spot lights are supported for shadow rendering")
-                        
-                        cLightSpot* pSpotLight = static_cast<cLightSpot*>(currentLight);
-                        cFrustum* pLightFrustum = pSpotLight->GetFrustum();
-
-                        std::vector<iRenderable*> shadowCasters;
-                        if (apLightData->m_castShadows &&
-                            detail::SetupShadowMapRendering(shadowCasters, apWorld, pLightFrustum, pLightSpot, mvCurrentOcclusionPlanes)) {
-                            flags |= rendering::detail::SpotlightVariant_UseShadowMap;
-                            eShadowMapResolution shadowMapRes = apLightData->m_shadowResolution;
-
-                            auto findBestShadowMap = [&](eShadowMapResolution resolution,
-                                                         iLight* light) -> cRendererDeferred::ShadowMapData* {
-                                auto& shadowMapVec = m_shadowMapData[resolution];
-                                int maxFrameDistance = -1;
-                                size_t bestIndex = 0;
-                                for (size_t i = 0; i < shadowMapVec.size(); ++i) {
-                                    auto& shadowMap = shadowMapVec[i];
-                                    if (shadowMap.m_light == light) {
-                                        shadowMap.m_frameCount = iRenderer::GetRenderFrameCount();
-                                        return &shadowMap;
-                                    }
-
-                                    const int frameDist = cMath::Abs(shadowMap.m_frameCount - iRenderer::GetRenderFrameCount());
-                                    if (frameDist > maxFrameDistance) {
-                                        maxFrameDistance = frameDist;
-                                        bestIndex = i;
-                                    }
-                                }
-                                if (maxFrameDistance != -1) {
-                                    shadowMapVec[bestIndex].m_frameCount = iRenderer::GetRenderFrameCount();
-                                    return &shadowMapVec[bestIndex];
-                                }
-                                return nullptr;
-                            };
-                            auto* shadowMapData = findBestShadowMap(shadowMapRes, currentLight);
-                            if (!shadowMapData) {
-                                // No shadow map available
-                                BX_ASSERT(false, "No shadow map available");
-                                break;
-                            }
-                            const auto shadowMapSize = shadowMapData->m_target.GetImage()->GetImageSize();
-                            // testing if the shadow map needs to be updated
-                            if ([&]() -> bool {
-                                    // Check if texture map and light are valid
-                                    if (currentLight->GetOcclusionCullShadowCasters()) {
-                                        return true;
-                                    }
-
-                                    if (currentLight->GetLightType() == eLightType_Spot &&
-                                        (pSpotLight->GetAspect() != shadowMapData->m_aspect ||
-                                         pSpotLight->GetFOV() != shadowMapData->m_fov)) {
-                                        return true;
-                                    }
-                                    return !currentLight->ShadowCastersAreUnchanged(shadowCasters);
-                                }()) {
-                                shadowMapData->m_light = currentLight;
-                                shadowMapData->m_transformCount = currentLight->GetTransformUpdateCount();
-                                shadowMapData->m_radius = currentLight->GetRadius();
-
-                                if (currentLight->GetLightType() == eLightType_Spot) {
-                                    shadowMapData->m_aspect = pSpotLight->GetAspect();
-                                    shadowMapData->m_fov = pSpotLight->GetFOV();
-                                }
-                                currentLight->SetShadowCasterCacheFromVec(shadowCasters);
-
-                                GraphicsContext::ViewConfiguration shadowPassViewConfig{ shadowMapData->m_target };
-                                shadowPassViewConfig.m_clear = { 0, 1.0, 0, ClearOp::Depth };
-                                shadowPassViewConfig.m_view = pLightFrustum->GetViewMatrix().GetTranspose();
-                                shadowPassViewConfig.m_projection = pLightFrustum->GetProjectionMatrix().GetTranspose();
-                                shadowPassViewConfig.m_viewRect = {
-                                    0, 0, static_cast<uint16_t>(shadowMapSize.x), static_cast<uint16_t>(shadowMapSize.y)
-                                };
-                                bgfx::ViewId view = context.StartPass("Shadow Pass", shadowPassViewConfig);
-                                for (auto& shadowCaster : shadowCasters) {
-                                    rendering::detail::RenderZPassObject(
-                                        view,
-                                        context,
-                                        viewport,
-                                        this,
-                                        shadowCaster,
-                                        pLightFrustum->GetInvertsCullMode() ? Cull::Clockwise : Cull::CounterClockwise);
-                                }
-                            }
-                            uParam.shadowMapOffset[0] = 1.0f / shadowMapSize.x;
-                            uParam.shadowMapOffset[1] = 1.0f / shadowMapSize.y;
-                            if (m_shadowJitterImage) {
-                                shaderProgram.m_textures.push_back({ m_s_shadowOffsetMap, m_shadowJitterImage->GetHandle(), 7 });
-                            }
-                            shaderProgram.m_textures.push_back({ m_s_shadowMap, shadowMapData->m_target.GetImage()->GetHandle(), 6 });
-                        }
-                        shaderProgram.m_uniforms.push_back({ m_u_param, &uParam, 2 });
-                        shaderProgram.m_handle = m_spotlightVariants.GetVariant(flags);
-
-                        context.Submit(pass, drawRequest);
-                        break;
-                    }
-                default:
-                    break;
-                }
-            };
-
-            GraphicsContext::ViewConfiguration viewConfig{ options.m_gBuffer.m_outputTarget };
-            viewConfig.m_viewRect = { 0, 0, screenSize.x, screenSize.y };
-            viewConfig.m_projection = options.frustumProjection;
-            viewConfig.m_view = options.frustumView;
-            const auto lightStencilBackPass = context.StartPass("eDeferredLightList_StencilFront_RenderBack", viewConfig);
-            bgfx::setViewMode(lightStencilBackPass, bgfx::ViewMode::Sequential);
-
-            for (auto& light : deferredLightStencilFrontRenderBack) {
-                {
-                    GraphicsContext::ShaderProgram shaderProgram;
-                    GraphicsContext::LayoutStream layoutStream;
-
-                    GetLightShape(light->m_light, eDeferredShapeQuality_Medium)->GetLayoutStream(layoutStream);
-
-                    shaderProgram.m_handle = m_nullShader;
-                    shaderProgram.m_configuration.m_cull = Cull::CounterClockwise;
-                    shaderProgram.m_configuration.m_depthTest = DepthTest::GreaterEqual;
-
-                    shaderProgram.m_modelTransform =
-                        cMath::MatrixMul(light->m_light->GetWorldMatrix(), detail::GetLightMtx(*light)).GetTranspose();
-
-                    shaderProgram.m_configuration.m_frontStencilTest = CreateStencilTest(
-                        StencilFunction::Always, StencilFail::Keep, StencilDepthFail::Replace, StencilDepthPass::Keep, 0xff, 0xff);
-
-                    GraphicsContext::DrawRequest drawRequest{ layoutStream, shaderProgram };
-                    // drawRequest.m_clear =  GraphicsContext::ClearRequest{0, 0, 0, ClearOp::Stencil};
-                    // drawRequest.m_width = mvScreenSize.x;
-                    // drawRequest.m_height = mvScreenSize.y;
-                    // if(bgfx::isValid(light->m_occlusionQuery)) {
-                    // 	bgfx::setCondition(light->m_occlusionQuery, true);
-                    // }
-                    context.Submit(lightStencilBackPass, drawRequest);
-                }
-                {
-                    GraphicsContext::ShaderProgram shaderProgram;
-                    shaderProgram.m_configuration.m_cull = Cull::Clockwise;
-                    shaderProgram.m_configuration.m_write = Write::RGB;
-                    shaderProgram.m_configuration.m_depthTest = DepthTest::GreaterEqual;
-                    shaderProgram.m_configuration.m_frontStencilTest = CreateStencilTest(
-                        StencilFunction::Equal, StencilFail::Zero, StencilDepthFail::Zero, StencilDepthPass::Zero, 0xff, 0xff);
-                    shaderProgram.m_configuration.m_rgbBlendFunc =
-                        CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
-                    shaderProgram.m_configuration.m_alphaBlendFunc =
-                        CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
-
-                    shaderProgram.m_modelTransform =
-                        cMath::MatrixMul(light->m_light->GetWorldMatrix(), detail::GetLightMtx(*light)).GetTranspose();
-
-                    drawLight(lightStencilBackPass, shaderProgram, light);
-                }
-            }
-
-            GraphicsContext::ViewConfiguration lightBackPassConfig{ options.m_gBuffer.m_outputTarget };
-            lightBackPassConfig.m_projection = options.frustumProjection;
-            lightBackPassConfig.m_view = options.frustumView;
-            lightBackPassConfig.m_viewRect = { 0, 0, screenSize.x, screenSize.y };
-            const auto lightBackPass = context.StartPass("eDeferredLightList_RenderBack", lightBackPassConfig);
-            for (auto& light : deferredLightRenderBack) {
-                GraphicsContext::ShaderProgram shaderProgram;
-                shaderProgram.m_configuration.m_cull = Cull::Clockwise;
-                shaderProgram.m_configuration.m_write = Write::RGB;
-                shaderProgram.m_configuration.m_depthTest = DepthTest::GreaterEqual;
-                shaderProgram.m_configuration.m_rgbBlendFunc =
-                    CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
-                shaderProgram.m_configuration.m_alphaBlendFunc =
-                    CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
-
-                shaderProgram.m_modelTransform =
-                    cMath::MatrixMul(light->m_light->GetWorldMatrix(), detail::GetLightMtx(*light)).GetTranspose();
-
-                drawLight(lightBackPass, shaderProgram, light);
-            }
-        }
-    }
-
-    void cRendererDeferred::RenderEdgeSmoothPass(GraphicsContext& context, cViewport& viewport, RenderTarget& rt) {
+    void cRendererDeferred::RenderEdgeSmoothPass(GraphicsContext& context, cViewport& viewport, LegacyRenderTarget& rt) {
         GraphicsContext::ViewConfiguration viewConfig{ m_edgeSmooth_LinearDepth };
         auto edgeSmoothView = context.StartPass("EdgeSmooth", viewConfig);
         cVector3f vQuadPos = cVector3f(m_farLeft, m_farBottom, -m_farPlane);
         cVector2f vQuadSize = cVector2f(m_farRight * 2, m_farTop * 2);
 
         GraphicsContext::ShaderProgram shaderProgram;
-        shaderProgram.m_handle = m_edgeSmooth_UnpackDepthProgram;
+        // shaderProgram.m_handle = m_edgeSmooth_UnpackDepthProgram;
         // shaderProgram.m_textures.push_back({BGFX_INVALID_HANDLE,resolveRenderImage(m_gBufferPositionImage)->GetHandle(), 0});
         // shaderProgram.m_textures.push_back({BGFX_INVALID_HANDLE,resolveRenderImage(m_gBufferNormalImage)->GetHandle(), 0});
 
@@ -1851,49 +1882,172 @@ namespace hpl {
         context.Submit(edgeSmoothView, drawRequest);
     }
 
-    void rendering::detail::RenderZPassObject(
-        bgfx::ViewId view, GraphicsContext& context, cViewport& viewport, iRenderer* renderer, iRenderable* object, Cull cull) {
-        eMaterialRenderMode renderMode = object->GetCoverageAmount() >= 1 ? eMaterialRenderMode_Z : eMaterialRenderMode_Z_Dissolve;
-        cMaterial* pMaterial = object->GetMaterial();
-        iMaterialType* materialType = pMaterial->GetType();
-        iVertexBuffer* vertexBuffer = object->GetVertexBuffer();
-        if (vertexBuffer == nullptr || materialType == nullptr) {
-            return;
+    void cRendererDeferred::cmdBindObjectDescriptor(
+        const ForgeRenderer::Frame& frame,
+        uint32_t& updateIndex,
+        cMaterial* apMaterial,
+        iRenderable* apObject,
+        const PerObjectOption& option) {
+        auto* objectDescSet = m_materialSet.m_perObjectSet[frame.m_frameIndex];
+
+        // auto& apDescriptorSet = descriptor.m_perObjectSet[frame.m_frameIndex];
+        GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(m_objectUniformBuffer, sizeof(cRendererDeferred::CBObjectData));
+
+        cRendererDeferred::CBObjectData uniformObjectData = {};
+        cMatrixf modelMat = apObject->GetModelMatrixPtr() ? *apObject->GetModelMatrixPtr() : cMatrixf::Identity;
+        cMatrixf modelViewMat = cMath::MatrixMul(option.m_viewMat, modelMat);
+        cMatrixf modelViewProjMat = cMath::MatrixMul(cMath::MatrixMul(option.m_projectionMat, option.m_viewMat), modelMat);
+        uniformObjectData.m_dissolveAmount = float4(apObject->GetCoverageAmount());
+        uniformObjectData.m_modelMat = cMath::ToForgeMat4(modelMat.GetTranspose());
+        if (apMaterial) {
+            uniformObjectData.m_uvMat = cMath::ToForgeMat4(apMaterial->GetUvMatrix());
         }
+        uniformObjectData.m_modelViewMat = cMath::ToForgeMat4(modelViewMat.GetTranspose());
+        uniformObjectData.m_modelViewProjMat = cMath::ToForgeMat4(modelViewProjMat.GetTranspose());
+        uniformObjectData.m_normalMat = cMath::ToForgeMat3(cMath::MatrixInverse(modelViewMat));
 
-        GraphicsContext::LayoutStream layoutInput;
-        vertexBuffer->GetLayoutStream(layoutInput);
-        materialType->ResolveShaderProgram(
-            renderMode, viewport, pMaterial, object, renderer, [&](GraphicsContext::ShaderProgram& shaderInput) {
-                shaderInput.m_configuration.m_write = Write::Depth;
-                shaderInput.m_configuration.m_cull = cull;
-                shaderInput.m_configuration.m_depthTest = DepthTest::LessEqual;
+        BufferUpdateDesc updateDesc = { uniformBuffer.pBuffer, uniformBuffer.mOffset };
+        beginUpdateResource(&updateDesc);
+        (*reinterpret_cast<cRendererDeferred::CBObjectData*>(updateDesc.pMappedData)) = uniformObjectData;
+        endUpdateResource(&updateDesc, NULL);
 
-                shaderInput.m_modelTransform =
-                    object->GetModelMatrixPtr() ? object->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity;
+        DescriptorData params[15] = {};
+        size_t paramCount = 0;
+        params[paramCount].pName = "uniformObjectBlock";
+        DescriptorDataRange range = { (uint32_t)uniformBuffer.mOffset, sizeof(cRendererDeferred::CBObjectData) };
+        params[paramCount].pRanges = &range;
+        params[paramCount++].ppBuffers = &uniformBuffer.pBuffer;
 
-                GraphicsContext::DrawRequest drawRequest{ layoutInput, shaderInput };
-                context.Submit(view, drawRequest);
+        updateDescriptorSet(frame.m_renderer->Rend(), updateIndex, objectDescSet, paramCount, params);
+        cmdBindDescriptorSet(frame.m_cmd, updateIndex, objectDescSet);
+        updateIndex++;
+    }
+
+    void cRendererDeferred::cmdBindMaterialDescriptor(const ForgeRenderer::Frame& frame, cMaterial* apMaterial) {
+            ASSERT(apMaterial != nullptr && "Material is null");
+
+            auto& info = m_materialInfo[apMaterial->materialID()];
+
+            auto& descriptorSet = m_materialSet.m_materialSet[frame.m_frameIndex];
+            auto& descInfo = info.m_materialDescInfo[frame.m_frameIndex];
+            auto& materialType = apMaterial->type();
+
+            auto metaInfo = std::find_if(cMaterial::MetaInfo.begin(), cMaterial::MetaInfo.end(), [&](auto& info) {
+                return info.m_id == materialType.m_id;
             });
+            if (descInfo.m_material != apMaterial || descInfo.m_version != apMaterial->Version()) {
+                descInfo.m_version = apMaterial->Version();
+                descInfo.m_material = apMaterial;
+
+                BufferUpdateDesc  updateDesc = { m_materialBuffer.m_handle, apMaterial->materialID() * sizeof(cMaterial::MaterialType::MaterialData) };
+                beginUpdateResource(&updateDesc);
+                memcpy(updateDesc.pMappedData, &materialType.m_data, sizeof(cMaterial::MaterialType::MaterialData));
+                endUpdateResource(&updateDesc, NULL);
+            
+                std::array<DescriptorData, 32> params{};
+                size_t paramCount = 0;
+        
+                for (auto& supportedTexture : metaInfo->m_usedTextures) {
+                    static constexpr const char* TextureNameLookup[] = {
+                        "diffuseMap", // eMaterialTexture_Diffuse
+                        "normalMap", // eMaterialTexture_NMap
+                        "specularMap", // eMaterialTexture_Specular
+                        "alphaMap", // eMaterialTexture_Alpha
+                        "heightMap", // eMaterialTexture_Height
+                        "illuminationMap", // eMaterialTexture_Illumination
+                        "cubeMap", // eMaterialTexture_CubeMap
+                        "dissolveAlphaMap", // eMaterialTexture_DissolveAlpha
+                        "cubeMapAlpha", // eMaterialTexture_CubeMapAlpha
+                    };
+
+                    static constexpr const char* TextureSamplerLookup[] = {
+                        "diffuseSampler", // eMaterialTexture_Diffuse
+                        "normalSampler", // eMaterialTexture_NMap
+                        "specularSampler", // eMaterialTexture_Specular
+                        "alphaSampler", // eMaterialTexture_Alpha
+                        "heightSampler", // eMaterialTexture_Height
+                        "illuminationSampler", // eMaterialTexture_Illumination
+                        "cubeSampler", // eMaterialTexture_CubeMap
+                        "dissolveAlphaSampler", // eMaterialTexture_DissolveAlpha
+                        "cubeMapAlphaSampler", // eMaterialTexture_CubeMapAlpha
+                    };
+
+
+                    auto* image = apMaterial->GetImage(supportedTexture);
+                    if (image) {
+                        auto& textureFilter = image->GetTextureFilter();
+                        cRendererDeferred::ObjectSamplerKey sampler = {};
+                        sampler.m_field.m_addressMode = textureFilter.m_addressMode;
+                        ASSERT(sampler.m_id < m_objectSamplers.size() && "Sampler index out of range");
+                        ASSERT(image->GetTexture().IsValid());
+
+                        if(!m_objectSamplers[sampler.m_id]) {
+                            SamplerDesc samplerDesc = {};
+                            samplerDesc.mAddressU = textureFilter.m_addressMode;
+                            samplerDesc.mAddressV = textureFilter.m_addressMode;
+                            samplerDesc.mAddressW = textureFilter.m_addressMode;
+
+                            addSampler(frame.m_renderer->Rend(), &samplerDesc, &m_objectSamplers[sampler.m_id]);
+                        }
+                        params[paramCount].pName = TextureSamplerLookup[supportedTexture];
+                        params[paramCount++].ppSamplers = &m_objectSamplers[sampler.m_id];
+                    
+                        params[paramCount].pName = TextureNameLookup[supportedTexture];
+                        params[paramCount++].ppTextures = &image->GetTexture().m_handle;
+                        
+                        descInfo.m_textureHandles[supportedTexture] = image->GetTexture();
+                    }
+                }
+
+                DescriptorDataRange range = { static_cast<uint32_t>(apMaterial->materialID() * sizeof(cMaterial::MaterialType::MaterialData)), sizeof(cMaterial::MaterialType::MaterialData) };
+                params[paramCount].pName = "uniformMaterialBlock";
+                params[paramCount].pRanges = &range;
+                params[paramCount++].ppBuffers = &m_materialBuffer.m_handle;
+
+                updateDescriptorSet(
+                    frame.m_renderer->Rend(), apMaterial->materialID(), descriptorSet, paramCount, params.data());
+            }
+            cmdBindDescriptorSet(frame.m_cmd, apMaterial->materialID(), descriptorSet);
     }
 
     void cRendererDeferred::Draw(
-        GraphicsContext& context,
+        const ForgeRenderer::Frame& frame,
         cViewport& viewport,
         float afFrameTime,
         cFrustum* apFrustum,
         cWorld* apWorld,
         cRenderSettings* apSettings,
         bool abSendFrameBufferToPostEffects) {
-        iRenderer::Draw(context, viewport, afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects);
+        iRenderer::Draw(frame, viewport, afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects);
         // keep around for the moment ...
         BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects);
+        uint32_t objectIndex = 0;;
 
         mpCurrentRenderList->Setup(mfCurrentFrameTime, apFrustum);
-
+        
         const cMatrixf mainFrustumViewInv = cMath::MatrixInverse(apFrustum->GetViewMatrix());
-        const cMatrixf mainFrustumView = apFrustum->GetViewMatrix().GetTranspose();
-        const cMatrixf mainFrustumProj = apFrustum->GetProjectionMatrix().GetTranspose();
+        const cMatrixf mainFrustumView = apFrustum->GetViewMatrix();
+        const cMatrixf mainFrustumProj = apFrustum->GetProjectionMatrix();
+
+        {
+            BufferUpdateDesc updatePerFrameConstantsDesc = { m_perFrameBuffer.m_handle, frame.m_frameIndex * sizeof(PerFrameData), sizeof(PerFrameData)};
+            beginUpdateResource(&updatePerFrameConstantsDesc);
+            reinterpret_cast<PerFrameData*>(updatePerFrameConstantsDesc.pMappedData)->m_viewMatrix = cMath::ToForgeMat(mainFrustumView);
+            reinterpret_cast<PerFrameData*>(updatePerFrameConstantsDesc.pMappedData)->m_projectionMatrix = cMath::ToForgeMat(mainFrustumProj);
+            reinterpret_cast<PerFrameData*>(updatePerFrameConstantsDesc.pMappedData)->m_viewProjectionMatrix = cMath::ToForgeMat(cMath::MatrixMul(mainFrustumProj, mainFrustumView));
+           endUpdateResource(&updatePerFrameConstantsDesc, NULL);
+        }
+
+        // auto& swapChainImage = frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex];
+        auto& sharedData = m_boundViewportData.resolve(viewport);
+        auto& currentGBuffer = sharedData.m_gBuffer[frame.m_frameIndex];
+
+        frame.m_resourcePool->Push(currentGBuffer.m_colorBuffer);
+        frame.m_resourcePool->Push(currentGBuffer.m_normalBuffer);
+        frame.m_resourcePool->Push(currentGBuffer.m_positionBuffer);
+        frame.m_resourcePool->Push(currentGBuffer.m_specularBuffer);
+        frame.m_resourcePool->Push(currentGBuffer.m_depthBuffer);
+        frame.m_resourcePool->Push(currentGBuffer.m_outputBuffer);
 
         // Setup far plane coordinates
         m_farPlane = apFrustum->GetFarPlane();
@@ -1902,60 +2056,61 @@ namespace hpl {
         m_farRight = m_farBottom * apFrustum->GetAspect();
         m_farLeft = -m_farRight;
 
-        auto& sharedData = m_boundViewportData.resolve(viewport);
-
-        auto createStandardViewConfig = [&](RenderTarget& rt) -> GraphicsContext::ViewConfiguration {
-            GraphicsContext::ViewConfiguration viewConfig{ rt };
-            viewConfig.m_projection = mainFrustumProj;
-            viewConfig.m_view = mainFrustumView;
-            viewConfig.m_viewRect = { 0, 0, sharedData.m_size.x, sharedData.m_size.y };
-            return viewConfig;
-        };
-
-        [&] {
-            GraphicsContext::ViewConfiguration viewConfig{ sharedData.m_gBuffer.m_fullTarget };
-            viewConfig.m_viewRect = { 0, 0, sharedData.m_size.x, sharedData.m_size.y };
-            viewConfig.m_clear = { 0, 1, 0, ClearOp::Depth | ClearOp::Stencil | ClearOp::Color };
-            bgfx::touch(context.StartPass("Clear Depth", viewConfig));
-        }();
-
-        tRenderableFlag lVisibleFlags =
-            (mpCurrentSettings->mbIsReflection) ? eRenderableFlag_VisibleInReflection : eRenderableFlag_VisibleInNonReflection;
-
         ///////////////////////////
         // Occlusion testing
         {
-            auto ZPassConfig = createStandardViewConfig(sharedData.m_gBuffer.m_depthTarget);
+            LoadActionsDesc loadActions = {};
+            loadActions.mLoadActionsColor[0] = LOAD_ACTION_DONTCARE;
+            loadActions.mLoadActionDepth = LOAD_ACTION_CLEAR;
+            loadActions.mLoadActionStencil = LOAD_ACTION_CLEAR;
+            loadActions.mClearDepth = {.depth = 1.0f, .stencil = 0};
+            
+            ASSERT(currentGBuffer.m_depthBuffer.m_handle && "Depth buffer not created");
+    
+            cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "Occlusion Testing");
+            cmdBindRenderTargets(frame.m_cmd, 0, NULL, currentGBuffer.m_depthBuffer.m_handle, &loadActions, NULL, NULL, -1, -1);    
+            cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)sharedData.m_size.x, (float)sharedData.m_size.y, 0.0f, 1.0f);
+            cmdSetScissor(frame.m_cmd, 0, 0, sharedData.m_size.x, sharedData.m_size.y);
+            cmdBindPipeline(frame.m_cmd, m_zPassPipeline);
+
+            cmdBindDescriptorSet(frame.m_cmd, 0, m_zPassConstSet);
+            cmdBindDescriptorSet(frame.m_cmd, 0, m_materialSet.m_frameSet[frame.m_frameIndex]);
+
             detail::UpdateRenderableList(
-                mpCurrentRenderList, 
-                this, 
+                mpCurrentRenderList,
                 mpCurrentSettings->mpVisibleNodeTracker,
-                apFrustum, mpCurrentWorld,"Z Pass", ZPassConfig, context, viewport, 
-                eObjectVariabilityFlag_All, 
-                mvCurrentOcclusionPlanes, 
-                eRenderableFlag_VisibleInNonReflection);
-            auto occlusionConfig = createStandardViewConfig(sharedData.m_gBuffer.m_depthTarget);
-            auto occlusionPass = context.StartPass("Render Occlusion", occlusionConfig);
+                apFrustum,
+                mpCurrentWorld,
+                eObjectVariabilityFlag_All,
+                mvCurrentOcclusionPlanes,
+                eRenderableFlag_VisibleInNonReflection,
+                [&](iRenderable* renderable) {
+                    eMaterialRenderMode renderMode =
+                        renderable->GetCoverageAmount() >= 1 ? eMaterialRenderMode_Z : eMaterialRenderMode_Z_Dissolve;
+                    cMaterial* pMaterial = renderable->GetMaterial();
+                    iVertexBuffer* vertexBuffer = renderable->GetVertexBuffer();
+                    if (vertexBuffer == nullptr) {
+                        return;
+                    }
 
-            for(auto& object: mpCurrentRenderList->GetOcclusionQueryItems()) {
-                object->ResolveOcclusionPass(
-                this,
-                [&](bgfx::OcclusionQueryHandle handle,
-                    DepthTest depth,
-                    GraphicsContext::LayoutStream& layoutStream,
-                    const cMatrixf& transformMatrix)
-                {
-                    GraphicsContext::ShaderProgram shaderProgram;
-                    shaderProgram.m_handle = m_nullShader;
-                    shaderProgram.m_configuration.m_depthTest = depth;
-                    shaderProgram.m_configuration.m_cull = Cull::CounterClockwise;
+                    cmdBindMaterialDescriptor(frame, pMaterial);
+                    cmdBindObjectDescriptor(
+                        frame,
+                        objectIndex,
+                        pMaterial,
+                        renderable,
+                        {
+                            .m_viewMat = mainFrustumView,
+                            .m_projectionMat = mainFrustumProj,
+                        });
 
-                    shaderProgram.m_modelTransform = transformMatrix;
-
-                    GraphicsContext::DrawRequest drawRequest{ layoutStream, shaderProgram };
-                    context.Submit(occlusionPass, drawRequest, handle);
+                    std::array targets = { eVertexBufferElement_Position, eVertexBufferElement_Texture0, eVertexBufferElement_Normal, eVertexBufferElement_Texture1Tangent};
+                    LegacyVertexBuffer::GeometryBinding binding{};
+                    static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
+                    detail::cmdDefaultLegacyGeomBinding(frame, binding);
+                    cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
                 });
-            }
+            cmdEndDebugMarker(frame.m_cmd);
 
             mpCurrentRenderList->Compile(
                 eRenderListCompileFlag_Diffuse | 
@@ -1965,550 +2120,756 @@ namespace hpl {
                 eRenderListCompileFlag_FogArea);
         }
 
-        // ------------------------------------------------------------------------------------
-        //  Render Diffuse Pass render to color and depth
-        // ------------------------------------------------------------------------------------
         {
-            detail::GBufferPassOptions args = {
-                .projectionFrustum = mainFrustumProj,
-                .viewFrustum = mainFrustumView,
-                .buffer = sharedData.m_gBuffer,
-                .name = "Gbuffer",
+            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+            std::array rtBarriers = {
+                RenderTargetBarrier{ currentGBuffer.m_colorBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
+                RenderTargetBarrier{ currentGBuffer.m_normalBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
+                RenderTargetBarrier{ currentGBuffer.m_positionBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
+                RenderTargetBarrier{ currentGBuffer.m_specularBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
             };
-            detail::RenderGBufferPass(
-                context, 
-                this,  
-                mpCurrentRenderList->GetRenderableItems(eRenderListType_Diffuse), viewport, args);
+            cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+        }
+
+        {
+            cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "GBuffer Pass");
+            LoadActionsDesc loadActions = {};
+            loadActions.mLoadActionsColor[0] = LOAD_ACTION_CLEAR;
+            loadActions.mLoadActionsColor[1] = LOAD_ACTION_CLEAR;
+            loadActions.mLoadActionsColor[2] = LOAD_ACTION_CLEAR;
+            loadActions.mLoadActionsColor[3] = LOAD_ACTION_CLEAR;
+            loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
+            std::array targets = {
+                currentGBuffer.m_colorBuffer.m_handle,
+                currentGBuffer.m_normalBuffer.m_handle,
+                currentGBuffer.m_positionBuffer.m_handle,
+                currentGBuffer.m_specularBuffer.m_handle
+            };
+            cmdBindRenderTargets(frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, NULL, NULL, -1, -1);    
+            cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)sharedData.m_size.x, (float)sharedData.m_size.y, 0.0f, 1.0f);
+            cmdSetScissor(frame.m_cmd, 0, 0, sharedData.m_size.x, sharedData.m_size.y);
+            cmdBindPipeline(frame.m_cmd, m_materialSolidPass.m_solidDiffuseParallaxPipeline);
+
+            // cmdBindDescriptorSet(frame.m_cmd, 0, m_solidDescriptorSet.m_constSet);
+            cmdBindDescriptorSet(frame.m_cmd, 0, m_materialSet.m_frameSet[frame.m_frameIndex]);
+
+            for(auto& diffuseItem: mpCurrentRenderList->GetRenderableItems(eRenderListType_Diffuse)) {
+                cMaterial* pMaterial = diffuseItem->GetMaterial();
+                iVertexBuffer* vertexBuffer = diffuseItem->GetVertexBuffer();
+                if(pMaterial == nullptr || vertexBuffer == nullptr) {
+                    continue;
+                }
+
+                ASSERT(pMaterial->type().m_id == cMaterial::SolidDiffuse && "Invalid material type");
+                cmdBindMaterialDescriptor(frame, pMaterial);
+                cmdBindObjectDescriptor(frame, objectIndex, pMaterial, diffuseItem, {
+                    .m_viewMat = mainFrustumView,
+                    .m_projectionMat = mainFrustumProj,
+                });
+
+                std::array targets = {
+                    eVertexBufferElement_Position,
+                    eVertexBufferElement_Texture0,
+                    eVertexBufferElement_Normal,
+                    eVertexBufferElement_Texture1Tangent
+                };
+                LegacyVertexBuffer::GeometryBinding binding;
+                static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(
+                    frame.m_currentFrame, targets, &binding);
+                detail::cmdDefaultLegacyGeomBinding(frame, binding);
+                cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+            }
+            cmdEndDebugMarker(frame.m_cmd);
+        }
+        {
+            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+            std::array rtBarriers = {
+                RenderTargetBarrier{ currentGBuffer.m_colorBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
+                RenderTargetBarrier{ currentGBuffer.m_normalBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
+                RenderTargetBarrier{ currentGBuffer.m_positionBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
+                RenderTargetBarrier{ currentGBuffer.m_specularBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
+                RenderTargetBarrier{currentGBuffer.m_outputBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET }
+            };
+            cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
         }
 
         // ------------------------------------------------------------------------------------
         //  Render Decal Pass render to color and depth
         // ------------------------------------------------------------------------------------
         {
-
-            detail::DecalPassOptions args = {
-                .projectionFrustum = mainFrustumProj,
-                .viewFrustum = mainFrustumView,
-                .buffer = sharedData.m_gBuffer,
-                .name = "Decal",
+            LoadActionsDesc loadActions = {};
+            loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
+            loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
+            std::array targets = {
+                currentGBuffer.m_outputBuffer.m_handle,
             };
-            detail::RenderDecalPass(
-                context, 
-                this,  
-                mpCurrentRenderList->GetRenderableItems(eRenderListType_Decal), viewport, args);
+            cmdBindRenderTargets(frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, NULL, NULL, -1, -1);
+            cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)sharedData.m_size.x, (float)sharedData.m_size.y, 0.0f, 1.0f);
+            cmdSetScissor(frame.m_cmd, 0, 0, sharedData.m_size.x, sharedData.m_size.y);
+            
+            // cmdBindDescriptorSet(frame.m_cmd, 0, m_decalDescriptorSet.m_constSet);
+            cmdBindDescriptorSet(frame.m_cmd, 0, m_materialSet.m_frameSet[frame.m_frameIndex]);
+            // uint32_t decalIndex = 0;
+            for(auto& decalItem: mpCurrentRenderList->GetRenderableItems(eRenderListType_Decal)) {
+                cMaterial* pMaterial = decalItem->GetMaterial();
+                iVertexBuffer* vertexBuffer = decalItem->GetVertexBuffer();
+                if(pMaterial == nullptr || vertexBuffer == nullptr) {
+                    continue;
+                }
+                ASSERT(pMaterial->GetBlendMode() < eMaterialBlendMode_LastEnum && "Invalid blend mode");;
+                ASSERT(pMaterial->type().m_id == cMaterial::Decal && "Invalid material type");
+                cmdBindPipeline(frame.m_cmd, m_decalPipeline[pMaterial->GetBlendMode()]);
+
+                std::array targets = {
+                    eVertexBufferElement_Position,
+                    eVertexBufferElement_Texture0,
+                    eVertexBufferElement_Color0
+                };
+
+                cmdBindMaterialDescriptor(frame, pMaterial);
+                cmdBindObjectDescriptor(frame, objectIndex, pMaterial, decalItem, {
+                    .m_viewMat = mainFrustumView,
+                    .m_projectionMat = mainFrustumProj,
+                });
+
+                LegacyVertexBuffer::GeometryBinding binding;
+                static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(
+                    frame.m_currentFrame, targets, &binding);
+                detail::cmdDefaultLegacyGeomBinding(frame, binding);
+                cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+            }
         }
 
         
-        // ------------------------------------------------------------------------------------
-        //  Render SSAO Pass to color
-        // ------------------------------------------------------------------------------------
-        if(mpCurrentSettings->mbSSAOActive) {
-            GraphicsContext::LayoutStream layoutStream;
-            cMatrixf projMtx;
-            context.ScreenSpaceQuad(layoutStream, projMtx, sharedData.m_size.x, sharedData.m_size.y);
+        // // ------------------------------------------------------------------------------------
+        // //  Render SSAO Pass to color
+        // // ------------------------------------------------------------------------------------
+        // if(mpCurrentSettings->mbSSAOActive) {
+        //     GraphicsContext::LayoutStream layoutStream;
+        //     cMatrixf projMtx;
+        //     context.ScreenSpaceQuad(layoutStream, projMtx, sharedData.m_size.x, sharedData.m_size.y);
 
-            auto& ssaoImage = sharedData.m_gBuffer.m_SSAOImage;
-            auto& ssaoBlurImage = sharedData.m_gBuffer.m_SSAOBlurImage;
-            auto imageSize = ssaoImage->GetImageSize();
-            {
-                GraphicsContext::ViewConfiguration viewConfig{ sharedData.m_gBuffer.m_SSAOTarget };
-                viewConfig.m_projection = projMtx;
-                viewConfig.m_viewRect = { 0, 0, sharedData.m_size.x, sharedData.m_size.y };
-                auto view = context.StartPass("SSAO", viewConfig);
+        //     auto& ssaoImage = sharedData.m_gBuffer.m_SSAOImage;
+        //     auto& ssaoBlurImage = sharedData.m_gBuffer.m_SSAOBlurImage;
+        //     auto imageSize = ssaoImage->GetImageSize();
+        //     {
+        //         GraphicsContext::ViewConfiguration viewConfig{ sharedData.m_gBuffer.m_SSAOTarget };
+        //         viewConfig.m_projection = projMtx;
+        //         viewConfig.m_viewRect = { 0, 0, sharedData.m_size.x, sharedData.m_size.y };
+        //         auto view = context.StartPass("SSAO", viewConfig);
 
-                GraphicsContext::ShaderProgram shaderProgram;
-                shaderProgram.m_handle = m_deferredSSAOProgram;
+        //         GraphicsContext::ShaderProgram shaderProgram;
+        //         shaderProgram.m_handle = m_deferredSSAOProgram;
 
-                struct {
-                    float u_inputRTSize[2];
-                    float u_negInvFarPlane;
-                    float u_farPlane;
+        //         struct {
+        //             float u_inputRTSize[2];
+        //             float u_negInvFarPlane;
+        //             float u_farPlane;
 
-                    float depthDiffMul;
-                    float scatterDepthMul;
-                    float scatterLengthMin;
-                    float scatterLengthMax;
-                } u_param = {{0}};
-                u_param.u_inputRTSize[0] = imageSize.x;
-                u_param.u_inputRTSize[1] = imageSize.y;
-                u_param.u_negInvFarPlane = -1.0f / m_farPlane;
-                u_param.u_farPlane = m_farPlane;
+        //             float depthDiffMul;
+        //             float scatterDepthMul;
+        //             float scatterLengthMin;
+        //             float scatterLengthMax;
+        //         } u_param = {{0}};
+        //         u_param.u_inputRTSize[0] = imageSize.x;
+        //         u_param.u_inputRTSize[1] = imageSize.y;
+        //         u_param.u_negInvFarPlane = -1.0f / m_farPlane;
+        //         u_param.u_farPlane = m_farPlane;
 
-                u_param.depthDiffMul = mfSSAODepthDiffMul;
-                u_param.scatterDepthMul = mfSSAOScatterLengthMul;
-                u_param.scatterLengthMin = mfSSAOScatterLengthMin;
-                u_param.scatterLengthMax = mfSSAOScatterLengthMax;
+        //         u_param.depthDiffMul = mfSSAODepthDiffMul;
+        //         u_param.scatterDepthMul = mfSSAOScatterLengthMul;
+        //         u_param.scatterLengthMin = mfSSAOScatterLengthMin;
+        //         u_param.scatterLengthMax = mfSSAOScatterLengthMax;
 
-                shaderProgram.m_uniforms.push_back({ m_u_param, &u_param, 2 });
+        //         shaderProgram.m_uniforms.push_back({ m_u_param, &u_param, 2 });
 
-                shaderProgram.m_textures.push_back({ m_s_positionMap, sharedData.m_gBuffer.m_positionImage->GetHandle(), 0 });
-                shaderProgram.m_textures.push_back({ m_s_normalMap, sharedData.m_gBuffer.m_normalImage->GetHandle(), 1});
-                shaderProgram.m_textures.push_back({ m_s_scatterDisk, m_ssaoScatterDiskImage->GetHandle(), 2 });
+        //         shaderProgram.m_textures.push_back({ m_s_positionMap, sharedData.m_gBuffer.m_positionImage->GetHandle(), 0 });
+        //         shaderProgram.m_textures.push_back({ m_s_normalMap, sharedData.m_gBuffer.m_normalImage->GetHandle(), 1});
+        //         shaderProgram.m_textures.push_back({ m_s_scatterDisk, m_ssaoScatterDiskImage->GetHandle(), 2 });
                 
-                shaderProgram.m_configuration.m_write = Write::R;
-                shaderProgram.m_configuration.m_rgbBlendFunc =
-                    CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::Zero);
-                shaderProgram.m_configuration.m_alphaBlendFunc =
-                    CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::Zero);
+        //         shaderProgram.m_configuration.m_write = Write::R;
+        //         shaderProgram.m_configuration.m_rgbBlendFunc =
+        //             CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::Zero);
+        //         shaderProgram.m_configuration.m_alphaBlendFunc =
+        //             CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::Zero);
 
-                GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
-                context.Submit(view, request);
-            }
-            // blur pass horizontal
-            {
-                GraphicsContext::ViewConfiguration viewConfig{ sharedData.m_gBuffer.m_SSAOBlurTarget };
-                viewConfig.m_projection = projMtx;
-                viewConfig.m_viewRect = { 0, 0, ssaoBlurImage->GetWidth(), ssaoBlurImage->GetHeight() };
-                auto view = context.StartPass("SSAO Horizontal", viewConfig);
+        //         GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
+        //         context.Submit(view, request);
+        //     }
+        //     // blur pass horizontal
+        //     {
+        //         GraphicsContext::ViewConfiguration viewConfig{ sharedData.m_gBuffer.m_SSAOBlurTarget };
+        //         viewConfig.m_projection = projMtx;
+        //         viewConfig.m_viewRect = { 0, 0, ssaoBlurImage->GetWidth(), ssaoBlurImage->GetHeight() };
+        //         auto view = context.StartPass("SSAO Horizontal", viewConfig);
 
-                GraphicsContext::ShaderProgram shaderProgram;
-                shaderProgram.m_handle = m_deferredSSAOBlurHorizontalProgram;
+        //         GraphicsContext::ShaderProgram shaderProgram;
+        //         shaderProgram.m_handle = m_deferredSSAOBlurHorizontalProgram;
 
-                shaderProgram.m_configuration.m_write = Write::R;
-                shaderProgram.m_configuration.m_rgbBlendFunc =
-                    CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::Zero);
-                shaderProgram.m_configuration.m_alphaBlendFunc =
-                    CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::Zero);
+        //         shaderProgram.m_configuration.m_write = Write::R;
+        //         shaderProgram.m_configuration.m_rgbBlendFunc =
+        //             CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::Zero);
+        //         shaderProgram.m_configuration.m_alphaBlendFunc =
+        //             CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::Zero);
 
-                shaderProgram.m_textures.push_back({ m_s_diffuseMap, sharedData.m_gBuffer.m_SSAOImage->GetHandle(), 0 });
-                shaderProgram.m_textures.push_back({ m_s_depthMap, sharedData.m_gBuffer.m_depthStencilImage->GetHandle(), 1});
-                struct {
-                    float u_farPlane;
-                    float pad[3];
-                } u_param = {{0}};
-                u_param.u_farPlane = m_farPlane;
-                shaderProgram.m_uniforms.push_back({ m_u_param, &u_param, 1 });
+        //         shaderProgram.m_textures.push_back({ m_s_diffuseMap, sharedData.m_gBuffer.m_SSAOImage->GetHandle(), 0 });
+        //         shaderProgram.m_textures.push_back({ m_s_depthMap, sharedData.m_gBuffer.m_depthStencilImage->GetHandle(), 1});
+        //         struct {
+        //             float u_farPlane;
+        //             float pad[3];
+        //         } u_param = {{0}};
+        //         u_param.u_farPlane = m_farPlane;
+        //         shaderProgram.m_uniforms.push_back({ m_u_param, &u_param, 1 });
 
-                GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
-                context.Submit(view, request);
-            }
+        //         GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
+        //         context.Submit(view, request);
+        //     }
 
-             // blur pass horizontal
-            {
-                GraphicsContext::ViewConfiguration viewConfig{ sharedData.m_gBuffer.m_colorImage };
-                viewConfig.m_projection = projMtx;
-                viewConfig.m_viewRect = { 0, 0, sharedData.m_size.x, sharedData.m_size.y };
-                auto view = context.StartPass("SSAO Vertical", viewConfig);
+        //      // blur pass horizontal
+        //     {
+        //         GraphicsContext::ViewConfiguration viewConfig{ sharedData.m_gBuffer.m_colorImage };
+        //         viewConfig.m_projection = projMtx;
+        //         viewConfig.m_viewRect = { 0, 0, sharedData.m_size.x, sharedData.m_size.y };
+        //         auto view = context.StartPass("SSAO Vertical", viewConfig);
 
-                GraphicsContext::ShaderProgram shaderProgram;
-                shaderProgram.m_handle = m_deferredSSAOBlurVerticalProgram;
+        //         GraphicsContext::ShaderProgram shaderProgram;
+        //         shaderProgram.m_handle = m_deferredSSAOBlurVerticalProgram;
 
-                shaderProgram.m_configuration.m_write = Write::RGB;
-                shaderProgram.m_configuration.m_rgbBlendFunc =
-                    CreateBlendFunction(BlendOperator::Add, BlendOperand::Zero, BlendOperand::SrcColor);
-                shaderProgram.m_configuration.m_alphaBlendFunc =
-                    CreateBlendFunction(BlendOperator::Add, BlendOperand::Zero, BlendOperand::One);
+        //         shaderProgram.m_configuration.m_write = Write::RGB;
+        //         shaderProgram.m_configuration.m_rgbBlendFunc =
+        //             CreateBlendFunction(BlendOperator::Add, BlendOperand::Zero, BlendOperand::SrcColor);
+        //         shaderProgram.m_configuration.m_alphaBlendFunc =
+        //             CreateBlendFunction(BlendOperator::Add, BlendOperand::Zero, BlendOperand::One);
 
-                shaderProgram.m_textures.push_back({ m_s_diffuseMap, sharedData.m_gBuffer.m_SSAOBlurImage->GetHandle(), 0 });
-                shaderProgram.m_textures.push_back({ m_s_depthMap, sharedData.m_gBuffer.m_depthStencilImage->GetHandle(), 1});
-                struct {
-                    float u_farPlane;
-                    float pad[3];
-                } u_param = {{0}};
-                u_param.u_farPlane = m_farPlane;
-                shaderProgram.m_uniforms.push_back({ m_u_param, &u_param, 1 });
+        //         shaderProgram.m_textures.push_back({ m_s_diffuseMap, sharedData.m_gBuffer.m_SSAOBlurImage->GetHandle(), 0 });
+        //         shaderProgram.m_textures.push_back({ m_s_depthMap, sharedData.m_gBuffer.m_depthStencilImage->GetHandle(), 1});
+        //         struct {
+        //             float u_farPlane;
+        //             float pad[3];
+        //         } u_param = {{0}};
+        //         u_param.u_farPlane = m_farPlane;
+        //         shaderProgram.m_uniforms.push_back({ m_u_param, &u_param, 1 });
 
-                GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
-                context.Submit(view, request);
-            }
+        //         GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
+        //         context.Submit(view, request);
+        //     }
 
-        }
+        // }
 
-
-        // ------------------------------------------------------------------------
-        // Render Light Pass --> renders to output target
-        // ------------------------------------------------------------------------
+        // --------------------------------------------------------------------
+        // Render Light Pass
+        // --------------------------------------------------------------------
         {
-            LightPassOptions options = {
-                .frustumProjection = mainFrustumProj,
-                .frustumInvView = mainFrustumViewInv,
-                .frustumView = mainFrustumView,
-                .m_gBuffer = sharedData.m_gBuffer,
-            };
-            RenderLightPass(context, mpCurrentRenderList->GetLights(), apWorld, viewport, apFrustum, options);
+            cVector2l screenSize = viewport.GetSize();
+
+            float fScreenArea = (float)(screenSize.x * screenSize.y);
+            int mlMinLargeLightArea = (int)(MinLargeLightNormalizedArea * fScreenArea);
+
+            // std::array<std::vector<detail::DeferredLight*>, eDeferredLightList_LastEnum> sortedLights;
+            // DON'T touch deferredLights after this point
+            std::vector<detail::DeferredLight> deferredLights;
+            deferredLights.reserve(mpCurrentRenderList->GetLights().size());
+            std::vector<detail::DeferredLight*> deferredLightRenderBack;
+            std::vector<detail::DeferredLight*> deferredLightStencilFront;
+
+            for (auto& light : mpCurrentRenderList->GetLights()) {
+                auto lightType = light->GetLightType();
+                auto& deferredLightData = deferredLights.emplace_back(detail::DeferredLight());
+                deferredLightData.m_light = light;
+                if (lightType == eLightType_Box) {
+                    continue;
+                }
+                switch (lightType) {
+                case eLightType_Point:
+                    {
+                        deferredLightData.m_insideNearPlane = apFrustum->CheckSphereNearPlaneIntersection(
+                            light->GetWorldPosition(), light->GetRadius() * kLightRadiusMul_Low);
+                        detail::SetupLightMatrix(
+                            deferredLightData.m_mtxViewSpaceRender,
+                            deferredLightData.m_mtxViewSpaceTransform,
+                            light,
+                            apFrustum,
+                            kLightRadiusMul_Medium);
+                        deferredLightData.m_clipRect = cMath::GetClipRectFromSphere(
+                            deferredLightData.m_mtxViewSpaceRender.GetTranslation(), light->GetRadius(), apFrustum, screenSize, true, 0);
+                        break;
+                    }
+                case eLightType_Spot:
+                    {
+                        cLightSpot* lightSpot = static_cast<cLightSpot*>(light);
+                        deferredLightData.m_insideNearPlane = apFrustum->CheckFrustumNearPlaneIntersection(lightSpot->GetFrustum());
+                        detail::SetupLightMatrix(
+                            deferredLightData.m_mtxViewSpaceRender,
+                            deferredLightData.m_mtxViewSpaceTransform,
+                            light,
+                            apFrustum,
+                            kLightRadiusMul_Medium);
+                        cMath::GetClipRectFromBV(deferredLightData.m_clipRect, *light->GetBoundingVolume(), apFrustum, screenSize, 0);
+                        break;
+                    }
+                default:
+                    break;
+                }
+
+                if (lightType == eLightType_Spot && light->GetCastShadows() && mpCurrentSettings->mbRenderShadows) {
+                    cLightSpot* pLightSpot = static_cast<cLightSpot*>(light);
+
+                    ////////////////////////
+                    // Inside near plane, use max resolution
+                    if (deferredLightData.m_insideNearPlane) {
+                        deferredLightData.m_castShadows = true;
+
+                        deferredLightData.m_shadowResolution = rendering::detail::GetShadowMapResolution(
+                            light->GetShadowMapResolution(), mpCurrentSettings->mMaxShadowMapResolution);
+                    } else {
+                        cVector3f vIntersection = pLightSpot->GetFrustum()->GetOrigin();
+                        pLightSpot->GetFrustum()->CheckLineIntersection(
+                            apFrustum->GetOrigin(), light->GetBoundingVolume()->GetWorldCenter(), vIntersection);
+
+                        float fDistToLight = cMath::Vector3Dist(apFrustum->GetOrigin(), vIntersection);
+
+                        deferredLightData.m_castShadows = true;
+                        deferredLightData.m_shadowResolution = rendering::detail::GetShadowMapResolution(
+                            light->GetShadowMapResolution(), mpCurrentSettings->mMaxShadowMapResolution);
+
+                        ///////////////////////
+                        // Skip shadow
+                        if (fDistToLight > m_shadowDistanceNone) {
+                            deferredLightData.m_castShadows = false;
+                        }
+                        ///////////////////////
+                        // Use Low
+                        else if (fDistToLight > m_shadowDistanceLow) {
+                            if (deferredLightData.m_shadowResolution == eShadowMapResolution_Low) {
+                                deferredLightData.m_castShadows = false;
+                            }
+                            deferredLightData.m_shadowResolution = eShadowMapResolution_Low;
+                        }
+                        ///////////////////////
+                        // Use Medium
+                        else if (fDistToLight > m_shadowDistanceMedium) {
+                            if (deferredLightData.m_shadowResolution == eShadowMapResolution_High) {
+                                deferredLightData.m_shadowResolution = eShadowMapResolution_Medium;
+                            } else {
+                                deferredLightData.m_shadowResolution = eShadowMapResolution_Low;
+                            }
+                        }
+                    }
+                }
+            }
+
+            mpCurrentSettings->mlNumberOfLightsRendered = 0;
+            for (auto& deferredLight : deferredLights) {
+                // cDeferredLight* pLightData =  mvTempDeferredLights[i];
+                iLight* pLight = deferredLight.m_light;
+                eLightType lightType = pLight->GetLightType();
+
+                ////////////////////////
+                // If box, we have special case...
+                if (lightType == eLightType_Box) {
+                    cLightBox* pLightBox = static_cast<cLightBox*>(pLight);
+
+                    // Set up matrix
+                    deferredLight.m_mtxViewSpaceRender = cMath::MatrixScale(pLightBox->GetSize());
+                    deferredLight.m_mtxViewSpaceRender.SetTranslation(pLightBox->GetWorldPosition());
+                    deferredLight.m_mtxViewSpaceRender = cMath::MatrixMul(apFrustum->GetViewMatrix(), deferredLight.m_mtxViewSpaceRender);
+
+                    mpCurrentSettings->mlNumberOfLightsRendered++;
+
+                    // Check if near plane is inside box. If so only render back
+                    if (apFrustum->CheckBVNearPlaneIntersection(pLight->GetBoundingVolume())) {
+                        deferredLightRenderBack.emplace_back(&deferredLight);
+                    } else {
+                        deferredLightStencilFront.emplace_back(&deferredLight);
+                    }
+
+                    continue;
+                }
+
+                mpCurrentSettings->mlNumberOfLightsRendered++;
+
+                if (deferredLight.m_insideNearPlane) {
+                    deferredLightRenderBack.emplace_back(&deferredLight);
+                } else {
+                    if (lightType == eLightType_Point) {
+                        if (deferredLight.getArea() >= mlMinLargeLightArea) {
+                            deferredLightStencilFront.emplace_back(&deferredLight);
+                        } else {
+                            deferredLightRenderBack.emplace_back(&deferredLight);
+                        }
+                    }
+                    // Always do double passes for spotlights as they need to will get artefacts otherwise...
+                    //(At least with gobos)l
+                    else if (lightType == eLightType_Spot) {
+                        deferredLightStencilFront.emplace_back(&deferredLight);
+                    }
+                }
+            }
+            std::sort(deferredLightStencilFront.begin(), deferredLightStencilFront.end(), detail::SortDeferredLightDefault);
+            std::sort(deferredLightRenderBack.begin(), deferredLightRenderBack.end(), detail::SortDeferredLightDefault);
+
+            {
+
+                uint32_t lightIndex = 0;
+                // updates and binds the light data
+                auto cmdBindLightDescriptor = [&](detail::DeferredLight* light) {
+                    DescriptorData params[10] = {};
+                    size_t paramCount = 0;
+                    LightUniformData uniformObjectData = {};
+                    GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(m_lightPassRingBuffer, sizeof(LightUniformData));
+    
+                    const auto modelViewMtx = cMath::MatrixMul(apFrustum->GetViewMatrix(), light->m_light->GetWorldMatrix());
+                    const auto viewProjectionMat = cMath::MatrixMul(mainFrustumProj, mainFrustumView);
+
+                    switch (light->m_light->GetLightType()) {
+                        case eLightType_Point: {
+                            uniformObjectData.m_common.m_mvp = cMath::ToForgeMat4(
+                            cMath::MatrixMul(viewProjectionMat, 
+                            cMath::MatrixMul(light->m_light->GetWorldMatrix(), detail::GetLightMtx(*light))).GetTranspose());
+
+                            cVector3f lightViewPos = cMath::MatrixMul(modelViewMtx, detail::GetLightMtx(*light)).GetTranslation();
+                            const auto color = light->m_light->GetDiffuseColor();
+
+                            if (light->m_light->GetGoboTexture()) {
+                                uniformObjectData.m_common.m_config |= LightConfiguration::HasGoboMap;
+                                params[paramCount].pName = "goboCubeMap";
+                                params[paramCount++].ppTextures = &light->m_light->GetGoboTexture()->GetTexture().m_handle;
+                            }
+                            auto falloffMap = light->m_light->GetFalloffMap();
+                            ASSERT(falloffMap && "Point light needs a falloff map");
+                            params[paramCount].pName = "attenuationLightMap";
+                            params[paramCount++].ppTextures = &falloffMap->GetTexture().m_handle;
+
+                            uniformObjectData.m_pointLight.m_radius = light->m_light->GetRadius();
+                            uniformObjectData.m_pointLight.m_lightPos = float3(lightViewPos.x, lightViewPos.y, lightViewPos.z);
+                            uniformObjectData.m_pointLight.m_lightColor = float4(color.r, color.g, color.b, color.a);
+                            cMatrixf mtxInvViewRotation =
+                                cMath::MatrixMul(light->m_light->GetWorldMatrix(), mainFrustumViewInv).GetTranspose();
+                            uniformObjectData.m_pointLight.m_invViewRotation = cMath::ToForgeMat4(mtxInvViewRotation);
+                            break;
+                        }
+                        case eLightType_Spot: {
+                            cLightSpot* pLightSpot = static_cast<cLightSpot*>(light->m_light);
+                            cMatrixf spotViewProj = cMath::MatrixMul(pLightSpot->GetViewProjMatrix(), mainFrustumViewInv).GetTranspose();
+                            cVector3f forward  = cMath::MatrixMul3x3(light->m_mtxViewSpaceTransform, cVector3f(0,0,1));
+                            cVector3f lightViewPos = cMath::MatrixMul(modelViewMtx, detail::GetLightMtx(*light)).GetTranslation();
+                            const auto color = pLightSpot->GetDiffuseColor();
+
+                            uniformObjectData.m_common.m_mvp = cMath::ToForgeMat4(
+                        cMath::MatrixMul(viewProjectionMat, 
+                        cMath::MatrixMul(light->m_light->GetWorldMatrix(), detail::GetLightMtx(*light))).GetTranspose());
+
+                            uniformObjectData.m_spotLight.m_spotViewProj = cMath::ToForgeMat4(spotViewProj);
+                            uniformObjectData.m_spotLight.m_oneMinusCosHalfSpotFOV = 1 - pLightSpot->GetCosHalfFOV();
+                            uniformObjectData.m_spotLight.m_radius = light->m_light->GetRadius();
+                            uniformObjectData.m_spotLight.m_forward = float3(forward.x,forward.y,forward.z);
+                            uniformObjectData.m_spotLight.m_color = float4(color.r, color.g, color.b, color.a);
+                            uniformObjectData.m_spotLight.m_pos = float3(lightViewPos.x, lightViewPos.y, lightViewPos.z);
+
+                            auto goboImage = light->m_light->GetGoboTexture();
+                            auto spotFallOffImage = pLightSpot->GetSpotFalloffMap();
+                            auto spotAttenuationImage = pLightSpot->GetFalloffMap();
+                            if (goboImage) {
+                                uniformObjectData.m_common.m_config |= LightConfiguration::HasGoboMap;
+                                params[paramCount].pName = "goboMap";
+                                params[paramCount++].ppTextures = &light->m_light->GetGoboTexture()->GetTexture().m_handle;
+                                frame.m_resourcePool->Push(light->m_light->GetGoboTexture()->GetTexture());
+                            } else {
+                                params[paramCount].pName = "falloffMap";
+                                params[paramCount++].ppTextures = &spotFallOffImage->GetTexture().m_handle;
+                                frame.m_resourcePool->Push(spotFallOffImage->GetTexture());
+                            }
+                            params[paramCount].pName = "attenuationLightMap";
+                            params[paramCount++].ppTextures = &spotAttenuationImage->GetTexture().m_handle;
+                            frame.m_resourcePool->Push(spotAttenuationImage->GetTexture());
+
+                            break;
+                        }
+                        case eLightType_Box: {
+                            uniformObjectData.m_common.m_mvp = cMath::ToForgeMat4(
+                                cMath::MatrixMul(viewProjectionMat, detail::GetLightMtx(*light)).GetTranspose());
+
+
+                            cLightBox* pLightBox = static_cast<cLightBox*>(light->m_light);
+                            const auto& color = light->m_light->GetDiffuseColor();
+                            uniformObjectData.m_boxLight.m_lightColor = float4(color.r, color.g, color.b, color.a);
+                            break;
+                        }
+                        default: {
+                            ASSERT(false && "Unsupported light type");
+                            break;
+                        }
+                    }
+
+                    BufferUpdateDesc updateDesc = { uniformBuffer.pBuffer, uniformBuffer.mOffset };
+                    beginUpdateResource(&updateDesc);
+                    memcpy(updateDesc.pMappedData, &uniformObjectData, sizeof(LightUniformData));
+                    endUpdateResource(&updateDesc, NULL);
+
+                    params[paramCount].pName = "uniformObjectBlock";
+                    DescriptorDataRange range = { static_cast<uint32_t>(uniformBuffer.mOffset), sizeof(LightUniformData) };
+                    params[paramCount].pRanges = &range;
+                    params[paramCount++].ppBuffers = &uniformBuffer.pBuffer;
+
+                    updateDescriptorSet(frame.m_renderer->Rend(), lightIndex, m_lightPerLightSet[frame.m_frameIndex], paramCount, params);
+                    cmdBindDescriptorSet(frame.m_cmd, lightIndex, m_lightPerLightSet[frame.m_frameIndex]);
+                    lightIndex++;
+                };
+
+                cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "Point Light Deferred Back");
+                
+                LoadActionsDesc loadActions = {};
+                loadActions.mLoadActionsColor[0] = LOAD_ACTION_CLEAR;
+                loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
+                loadActions.mLoadActionStencil = LOAD_ACTION_CLEAR;
+                std::array targets = {
+                    currentGBuffer.m_outputBuffer.m_handle,
+                };
+                
+                cmdBindRenderTargets(frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, nullptr, nullptr, -1, -1);
+                cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)sharedData.m_size.x, (float)sharedData.m_size.y, 0.0f, 1.0f);
+                cmdSetScissor(frame.m_cmd, 0, 0, sharedData.m_size.x, sharedData.m_size.y);
+
+                {
+                    DescriptorData params[15] = {};
+                    size_t paramCount = 0;
+                    params[paramCount].pName = "diffuseMap";
+                    params[paramCount++].ppTextures = &currentGBuffer.m_colorBuffer.m_handle->pTexture;
+                    params[paramCount].pName = "normalMap";
+                    params[paramCount++].ppTextures = &currentGBuffer.m_normalBuffer.m_handle->pTexture;
+                    params[paramCount].pName = "positionMap";
+                    params[paramCount++].ppTextures = &currentGBuffer.m_positionBuffer.m_handle->pTexture;
+                    params[paramCount].pName = "specularMap";
+                    params[paramCount++].ppTextures = &currentGBuffer.m_specularBuffer.m_handle->pTexture;
+                    updateDescriptorSet(frame.m_renderer->Rend(), frame.m_frameIndex, m_lightFrameSet, paramCount, params);
+                }
+
+                float2 viewTexel = { 1.0f / sharedData.m_size.x, 1.0f / sharedData.m_size.y };
+                uint32_t rootConstantIndex = getDescriptorIndexFromName(m_lightPassRootSignature, "uRootConstants");
+                cmdBindPushConstants(frame.m_cmd, m_lightPassRootSignature, rootConstantIndex, &viewTexel);
+                cmdBindDescriptorSet(frame.m_cmd, frame.m_frameIndex, m_lightFrameSet);
+
+
+                // --------------------------------------------------------
+                // Draw Point Lights
+                // Draw Spot Lights
+                // Draw Box Lights
+                // --------------------------------------------------------
+                for (auto& light : deferredLightStencilFront) {
+                    cmdSetStencilReferenceValue(frame.m_cmd, 0xff);
+                    std::array targets = { eVertexBufferElement_Position };
+                    LegacyVertexBuffer::GeometryBinding binding{};
+                    static_cast<LegacyVertexBuffer*>(GetLightShape(light->m_light, eDeferredShapeQuality_High))
+                        ->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
+                    detail::cmdDefaultLegacyGeomBinding(frame, binding);
+                    cmdBindPipeline(frame.m_cmd, m_lightStencilPipeline);
+                    cmdBindLightDescriptor(light); // bind light descriptor light uniforms
+                    cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+
+                    switch (light->m_light->GetLightType()) {
+                        case eLightType_Point:
+                            cmdBindPipeline(frame.m_cmd, m_pointLightPipeline[LightPipelineVariants::LightPipelineVariant_CW | LightPipelineVariants::LightPipelineVariant_StencilTest]);
+                            break;
+                        case eLightType_Spot:
+                            cmdBindPipeline(frame.m_cmd, m_spotLightPipeline[LightPipelineVariants::LightPipelineVariant_CW | LightPipelineVariants::LightPipelineVariant_StencilTest]);
+                            break;
+                        case eLightType_Box:
+                            cmdBindPipeline(frame.m_cmd, m_boxLightPipeline[LightPipelineVariants::LightPipelineVariant_CW | LightPipelineVariants::LightPipelineVariant_StencilTest]);
+                            break;
+                        default:
+                            ASSERT(false && "Unsupported light type");
+                            break;
+                    }
+                    cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+                }
+
+                for (auto& light : deferredLightRenderBack) {
+                    switch (light->m_light->GetLightType()) {
+                        case eLightType_Point:
+                            cmdBindPipeline(frame.m_cmd, m_pointLightPipeline[LightPipelineVariants::LightPipelineVariant_CW]);
+                            break;
+                        case eLightType_Spot:
+                            cmdBindPipeline(frame.m_cmd, m_spotLightPipeline[LightPipelineVariants::LightPipelineVariant_CW]);
+                            break;
+                        case eLightType_Box:
+                            cmdBindPipeline(frame.m_cmd, m_boxLightPipeline[LightPipelineVariants::LightPipelineVariant_CW]);
+                            break;
+                        default:
+                            ASSERT(false && "Unsupported light type");
+                            break;
+                    }
+                
+                    GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(m_lightPassRingBuffer, sizeof(LightUniformData));
+                    std::array targets = { eVertexBufferElement_Position };
+                    LegacyVertexBuffer::GeometryBinding binding{};
+                    static_cast<LegacyVertexBuffer*>(GetLightShape(light->m_light, eDeferredShapeQuality_High))
+                        ->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
+                    cmdBindLightDescriptor(light);
+                    detail::cmdDefaultLegacyGeomBinding(frame, binding);
+                    cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+                }
+                cmdEndDebugMarker(frame.m_cmd);
+            }
         }
 
         // ------------------------------------------------------------------------
         // Render Illumination Pass --> renders to output target
         // ------------------------------------------------------------------------
         {
-            detail::IlluminationOptions args = {
-                .projectionFrustum = mainFrustumProj,
-                .viewFrustum = mainFrustumView,
-                .buffer = sharedData.m_gBuffer,
-                .name = "Illumination",
+            LoadActionsDesc loadActions = {};
+            loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
+            loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
+            std::array targets = {
+                currentGBuffer.m_outputBuffer.m_handle,
             };
-            detail::RenderIlluminationPass(
-                context, this, mpCurrentRenderList->GetRenderableItems(eRenderListType_Illumination), viewport, args);
+            cmdBindRenderTargets(frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, nullptr, nullptr, -1, -1);
+            cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)sharedData.m_size.x, (float)sharedData.m_size.y, 0.0f, 1.0f);
+            cmdSetScissor(frame.m_cmd, 0, 0, sharedData.m_size.x, sharedData.m_size.y);
+            cmdBindPipeline(frame.m_cmd, m_solidIlluminationPipeline);
+            
+            cmdBindDescriptorSet(frame.m_cmd, 0, m_materialSet.m_frameSet[frame.m_frameIndex]);
+
+            for(auto& illuminationItem: mpCurrentRenderList->GetRenderableItems(eRenderListType_Illumination)) {
+                cMaterial* pMaterial = illuminationItem->GetMaterial();
+                iVertexBuffer* vertexBuffer = illuminationItem->GetVertexBuffer();
+                if(pMaterial == nullptr || vertexBuffer == nullptr) {
+                    continue;
+                }
+                ASSERT(pMaterial->type().m_id == cMaterial::SolidDiffuse && "Invalid material type");
+                cmdBindMaterialDescriptor(frame, pMaterial); // bind material descriptor
+                cmdBindObjectDescriptor(frame, objectIndex, pMaterial, illuminationItem, {
+                    .m_viewMat = mainFrustumView,
+                    .m_projectionMat = mainFrustumProj,
+                });
+
+                std::array targets = {
+                    eVertexBufferElement_Position,
+                    eVertexBufferElement_Texture0,
+                };
+                LegacyVertexBuffer::GeometryBinding binding;
+                static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(
+                    frame.m_currentFrame, targets, &binding);
+                detail::cmdDefaultLegacyGeomBinding(frame, binding);
+                cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+            }
         }
+
 
         // ------------------------------------------------------------------------
         // Render Fog Pass --> output target
         // ------------------------------------------------------------------------
         auto fogRenderData = detail::createFogRenderData(mpCurrentRenderList->GetFogAreas(), apFrustum);
         {
-            FogPassOptions options = {
-                .frustumProjection = mainFrustumProj,
-                .frustumInvView = mainFrustumViewInv,
-                .frustumView = mainFrustumView,
-                .m_gBuffer = sharedData.m_gBuffer
+            std::array targets = {
+                currentGBuffer.m_outputBuffer.m_handle,
             };
-            RenderFogPass(context, fogRenderData, apWorld, viewport, apFrustum, options);
-        }
-
-        // ------------------------------------------------------------------------
-        // Render Fullscreen Fog Pass --> output target
-        // ------------------------------------------------------------------------
-        
-        if (mpCurrentWorld->GetFogActive()) {
-            FogPassFullscreenOptions options = {
-                .m_gBuffer = sharedData.m_gBuffer
-            };
-            RenderFullscreenFogPass(context, apWorld, viewport, apFrustum, options);
-        }
-
-        // notify post draw listeners
-        ImmediateDrawBatch postSolidBatch(context, sharedData.m_gBuffer.m_outputTarget, mainFrustumView, mainFrustumProj);
-        cViewport::PostSolidDrawPacket postSolidEvent = cViewport::PostSolidDrawPacket({
-            .m_frustum = apFrustum,
-            .m_context = &context,
-            .m_outputTarget = &sharedData.m_gBuffer.m_outputTarget,
-            .m_viewport = &viewport,
-            .m_renderSettings = mpCurrentSettings,
-            .m_immediateDrawBatch = &postSolidBatch,
-        });
-        viewport.SignalDraw(postSolidEvent);
-        postSolidBatch.flush();
-
-        ([&]() {
-            auto translucentSpan = mpCurrentRenderList->GetRenderableItems(eRenderListType_Translucent);
-            if (translucentSpan.empty()) {
-                return;
+            LoadActionsDesc loadActions = {};
+            loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
+            loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
+            cmdBindRenderTargets(frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, nullptr, nullptr, -1, -1);
+            cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)sharedData.m_size.x, (float)sharedData.m_size.y, 0.0f, 1.0f);
+            cmdSetScissor(frame.m_cmd, 0, 0, sharedData.m_size.x, sharedData.m_size.y);
+            {
+                std::array<DescriptorData, 15> params = {};
+                size_t paramCount = 0;
+                params[paramCount].pName = "positionMap";
+                params[paramCount++].ppTextures = &currentGBuffer.m_positionBuffer.m_handle->pTexture;
+                updateDescriptorSet(frame.m_renderer->Rend(), 0, m_fogPass.m_perFrameSet[frame.m_frameIndex], paramCount, params.data());
             }
 
-            GraphicsContext::ViewConfiguration viewConfig{ sharedData.m_gBuffer.m_outputTarget };
-            viewConfig.m_projection = mainFrustumProj;
-            viewConfig.m_view = mainFrustumView;
-            viewConfig.m_viewRect = { 0, 0, sharedData.m_size.x, sharedData.m_size.y };
-            auto view = context.StartPass("Translucent", viewConfig);
-            bgfx::setViewMode(view, bgfx::ViewMode::Sequential);
-            const float fHalfFovTan = tan(apFrustum->GetFOV() * 0.5f);
-            for (auto& obj : translucentSpan) {
-                auto* pMaterial = obj->GetMaterial();
-                auto* pMaterialType = pMaterial->GetType();
-                auto* vertexBuffer = obj->GetVertexBuffer();
+            LegacyVertexBuffer::GeometryBinding binding{};
+            std::array geometryStream = { eVertexBufferElement_Position };
+            static_cast<LegacyVertexBuffer*>(mpShapeBox)
+                ->resolveGeometryBinding(frame.m_currentFrame, geometryStream, &binding);
+            detail::cmdDefaultLegacyGeomBinding(frame, binding);
+            
+            uint32_t rootConstantIndex = getDescriptorIndexFromName(m_fogPass.m_fogRootSignature, "uRootConstants");
+            float2 viewTexel = { 1.0f / sharedData.m_size.x, 1.0f / sharedData.m_size.y };
+            cmdBindPushConstants(frame.m_cmd, m_fogPass.m_fogRootSignature, rootConstantIndex, &viewTexel);
+               
+            size_t objectIndex = 0;
+            for(auto& fogArea: fogRenderData) {
+                GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(m_fogPass.m_fogUniformBuffer, sizeof(Fog::UniformFogData));
 
-                cMatrixf* pMatrix = obj->GetModelMatrix(apFrustum);
+                uint8_t pipelineVariant = 0;
+                Fog::UniformFogData fogUniformData = {};
+                if(fogArea.m_insideNearFrustum) {
+                    pipelineVariant |= ((fogArea.m_fogArea->GetShowBacksideWhenInside() ? Fog::PipelineUseBackSide
+                                                                    : Fog::PipelineVariantEmpty) | Fog::PipelineVariant::PipelineInsideNearFrustum);
+                } else {
+                    cMatrixf mtxInvModelView =
+                        cMath::MatrixInverse(cMath::MatrixMul(apFrustum->GetViewMatrix(), *fogArea.m_fogArea->GetModelMatrixPtr()));
+                    cVector3f vRayCastStart = cMath::MatrixMul(mtxInvModelView, cVector3f(0));
 
-                eMaterialRenderMode renderMode =
-                    mpCurrentWorld->GetFogActive() ? eMaterialRenderMode_DiffuseFog : eMaterialRenderMode_Diffuse;
-                if (!pMaterial->GetAffectedByFog()) {
-                    renderMode = eMaterialRenderMode_Diffuse;
+                    cVector3f vNegPlaneDistNeg(
+                        cMath::PlaneToPointDist(cPlanef(-1, 0, 0, 0.5f), vRayCastStart),
+                        cMath::PlaneToPointDist(cPlanef(0, -1, 0, 0.5f), vRayCastStart),
+                        cMath::PlaneToPointDist(cPlanef(0, 0, -1, 0.5f), vRayCastStart));
+                    cVector3f vNegPlaneDistPos(
+                        cMath::PlaneToPointDist(cPlanef(1, 0, 0, 0.5f), vRayCastStart),
+                        cMath::PlaneToPointDist(cPlanef(0, 1, 0, 0.5f), vRayCastStart),
+                        cMath::PlaneToPointDist(cPlanef(0, 0, 1, 0.5f), vRayCastStart));
+                    fogUniformData.m_rayCastStart = float4(vRayCastStart.x, vRayCastStart.y, vRayCastStart.z, 0.0f);
+                    fogUniformData.m_fogNegPlaneDistNeg = float4(vNegPlaneDistNeg.x * -1.0f, vNegPlaneDistNeg.y * -1.0f, vNegPlaneDistNeg.z * -1.0f, 0.0f);
+                    fogUniformData.m_fogNegPlaneDistPos = float4(vNegPlaneDistPos.x * -1.0f, vNegPlaneDistPos.y * -1.0f, vNegPlaneDistPos.z * -1.0f, 0.0f);
+                    pipelineVariant |= Fog::PipelineUseOutsideBox;
+                    pipelineVariant |= fogArea.m_fogArea->GetShowBacksideWhenOutside() ? Fog::PipelineUseBackSide: Fog::PipelineVariantEmpty;
                 }
+                const auto fogColor = fogArea.m_fogArea->GetColor();
+                fogUniformData.m_color = float4(fogColor.r, fogColor.g, fogColor.b, fogColor.a);
+                fogUniformData.m_start = fogArea.m_fogArea->GetStart();
+                fogUniformData.m_length = fogArea.m_fogArea->GetEnd() - fogArea.m_fogArea->GetStart();
+                fogUniformData.m_falloffExp = fogArea.m_fogArea->GetFalloffExp();
+                
+                const cMatrixf modelMat = fogArea.m_fogArea->GetModelMatrixPtr() ? *fogArea.m_fogArea->GetModelMatrixPtr() : cMatrixf::Identity;
+                fogUniformData.m_mv =  cMath::ToForgeMat4(cMath::MatrixMul(mainFrustumView,modelMat).GetTranspose());
+                fogUniformData.m_mvp =
+                    cMath::ToForgeMat4(
+                        cMath::MatrixMul(
+                            cMath::MatrixMul(mainFrustumProj, mainFrustumView),modelMat)
+                        .GetTranspose());
 
-                ////////////////////////////////////////
-                // Check the fog area alpha
-                mfTempAlpha = 1;
-                if (pMaterial->GetAffectedByFog()) {
-                    for (auto& fogArea : fogRenderData) {
-                        mfTempAlpha *= detail::GetFogAreaVisibilityForObject(fogArea, *apFrustum, obj);
-                    }
+                BufferUpdateDesc updateDesc = { uniformBuffer.pBuffer, uniformBuffer.mOffset };
+                beginUpdateResource(&updateDesc);
+                (*reinterpret_cast<Fog::UniformFogData*>(updateDesc.pMappedData)) = fogUniformData;
+                endUpdateResource(&updateDesc, NULL);
+
+                {
+                    std::array<DescriptorData, 15> params = {};
+                    size_t paramCount = 0;
+                    params[paramCount].pName = "uniformFogBlock";
+                    DescriptorDataRange range = { (uint32_t)uniformBuffer.mOffset, sizeof(Fog::UniformFogData) };
+                    params[paramCount].pRanges = &range;
+                    params[paramCount++].ppBuffers = &uniformBuffer.pBuffer;
+                    updateDescriptorSet(frame.m_renderer->Rend(), objectIndex, m_fogPass.m_perObjectSet[frame.m_frameIndex], paramCount, params.data());
                 }
-
-                if (!obj->UpdateGraphicsForViewport(apFrustum, mfCurrentFrameTime)) {
-                    continue;
-                }
-
-                if (!obj->RetrieveOcculsionQuery(this)) {
-                    continue;
-                }
-                // if (!CheckRenderablePlaneIsVisible(obj, mpCurrentFrustum)) {
-                //     continue;
-                // }
-
-                if (pMaterial->HasRefraction()) {
-                    cBoundingVolume* pBV = obj->GetBoundingVolume();
-                    cRect2l clipRect = rendering::detail::GetClipRectFromObject(obj, 0.2f, apFrustum, sharedData.m_size, fHalfFovTan);
-                    if (clipRect.w >= 0 || clipRect.h >= 0) {
-                        GraphicsContext::ShaderProgram shaderInput;
-                        shaderInput.m_handle = m_copyRegionProgram;
-                        shaderInput.m_textures.push_back({ m_s_diffuseMap, sharedData.m_gBuffer.m_outputImage->GetHandle(), 0 });
-                        shaderInput.m_uavImage.push_back(
-                            { sharedData.m_refractionImage->GetHandle(),1, 0, bgfx::Access::Write, bgfx::TextureFormat::Enum::RGBA8 });
-
-                        float copyRegion[4] = { static_cast<float>(clipRect.x),
-                                                static_cast<float>(sharedData.m_size.y - (clipRect.h + clipRect.y)),
-                                                static_cast<float>(clipRect.w),
-                                                static_cast<float>(clipRect.h) };
-                        shaderInput.m_uniforms.push_back({ m_u_copyRegion, &copyRegion, 1 });
-
-                        GraphicsContext::ComputeRequest computeRequest{
-                            shaderInput, static_cast<uint32_t>((clipRect.w / 16) + 1), static_cast<uint32_t>((clipRect.h / 16) + 1), 1
-                        };
-                        context.Submit(view, computeRequest);
-                    }
-                }
-
-                if (pMaterial->HasWorldReflection() && obj->GetRenderType() == eRenderableType_SubMesh) {
-                    auto* reflectionSubMeshEntity = static_cast<cSubMeshEntity*>(obj);
-                    bool bReflectionIsInRange = true;
-                    if (pMaterial->GetMaxReflectionDistance() > 0) {
-                        cVector3f point = apFrustum->GetOrigin() + apFrustum->GetForward() * -1 * pMaterial->GetMaxReflectionDistance();
-                        cVector3f normal = apFrustum->GetForward();
-                        cPlanef maxRelfctionDistPlane;
-                        maxRelfctionDistPlane.FromNormalPoint(normal, point);
-                        if (cMath::CheckPlaneBVCollision(maxRelfctionDistPlane, *reflectionSubMeshEntity->GetBoundingVolume()) == eCollision_Outside) {
-                            bReflectionIsInRange = false;
-                        }
-                    }
-
-                    if(mpCurrentSettings->mbRenderWorldReflection && bReflectionIsInRange && reflectionSubMeshEntity->GetIsOneSided() && false)
-		            {
-                        cSubMesh *pSubMesh = reflectionSubMeshEntity->GetSubMesh();
-                        cVector3f reflectionSurfaceNormal = cMath::Vector3Normalize(cMath::MatrixMul3x3(reflectionSubMeshEntity->GetWorldMatrix(), pSubMesh->GetOneSidedNormal()));
-                        cVector3f reflectionSurfacePosition = cMath::MatrixMul(reflectionSubMeshEntity->GetWorldMatrix(), pSubMesh->GetOneSidedPoint());
-
-                        cPlanef reflectPlane;
-                        reflectPlane.FromNormalPoint(reflectionSurfaceNormal, reflectionSurfacePosition);
-
-                        cMatrixf reflectionMatrix = cMath::MatrixPlaneMirror(reflectPlane);
-                        cMatrixf reflectionView = cMath::MatrixMul(apFrustum->GetViewMatrix(), reflectionMatrix);
-                        cVector3f reflectionOrigin = cMath::MatrixMul(reflectionMatrix, apFrustum->GetOrigin());
-
-                        cMatrixf reflectionProjectionMatrix = apFrustum->GetProjectionMatrix();
-
-                        cPlanef cameraSpaceReflPlane = cMath::TransformPlane(reflectionView, reflectPlane);
-                        cMatrixf mtxReflProj = cMath::ProjectionMatrixObliqueNearClipPlane(reflectionProjectionMatrix, cameraSpaceReflPlane);
-
-                        cFrustum reflectFrustum;
-                        reflectFrustum.SetupPerspectiveProj(mtxReflProj, reflectionView,
-                            apFrustum->GetFarPlane(),apFrustum->GetNearPlane(),
-                            apFrustum->GetFOV(), apFrustum->GetAspect(),
-                            reflectionOrigin,false, &reflectionProjectionMatrix, true);
-                        reflectFrustum.SetInvertsCullMode(true);
-                        
-                        std::vector<cPlanef> m_occlusionPlanes;
-                        
-                        const float fMaxReflDist = pMaterial->GetMaxReflectionDistance();
-                        if(pMaterial->GetMaxReflectionDistance() > 0) { 
-                            //Forward and normal is aligned, the normal of plane becomes inverse forward
-                            cVector3f frustumForward = apFrustum->GetForward()*-1;
-			                float fFDotN = cMath::Vector3Dot(frustumForward, reflectionSurfaceNormal);
-                            cPlanef maxRelfctionDistPlane;
-                            if(fFDotN <-0.99999f) {
-                                cVector3f vClipNormal, vClipPoint;
-                                vClipNormal = frustumForward*-1;
-                                vClipPoint = apFrustum->GetOrigin() + frustumForward * pMaterial->GetMaxReflectionDistance();
-                                maxRelfctionDistPlane.FromNormalPoint(vClipNormal, vClipPoint);
-                            } else {
-                                cPlanef cameraSpacePlane = cMath::TransformPlane(apFrustum->GetViewMatrix(), reflectPlane);
-
-                                cVector3f vPoint1 = cVector3f(0,0, -fMaxReflDist);
-                                cVector3f vPoint2 = cVector3f(0,0, -fMaxReflDist);
-
-                                //Vertical row (x always same)
-                                if(fabs(cameraSpacePlane.b) < 0.0001f)
-                                {
-                                    vPoint1.x = (-cameraSpacePlane.c*-fMaxReflDist - cameraSpacePlane.d) / cameraSpacePlane.a;
-                                    vPoint2 = vPoint1;
-                                    vPoint2.y+=1;
-                                }
-                                //Horizontal row (y always same)
-                                else if(fabs(cameraSpacePlane.a) < 0.0001f)
-                                {
-                                    vPoint1.y = (-cameraSpacePlane.c*-fMaxReflDist - cameraSpacePlane.d) / cameraSpacePlane.b;
-                                    vPoint2 = vPoint1;
-                                    vPoint2.x+=1;
-                                }
-                                //Oblique row (x and y changes)
-                                else
-                                {
-                                    vPoint1.x = (-cameraSpacePlane.c*-fMaxReflDist - cameraSpacePlane.d) / cameraSpacePlane.a;
-                                    vPoint2.y = (-cameraSpacePlane.c*-fMaxReflDist - cameraSpacePlane.d) / cameraSpacePlane.b;
-                                }
-
-                                cMatrixf mtxInvCamera = cMath::MatrixInverse(apFrustum->GetViewMatrix());
-                                vPoint1 = cMath::MatrixMul(mtxInvCamera, vPoint1);
-                                vPoint2 = cMath::MatrixMul(mtxInvCamera, vPoint2);
-
-                                cVector3f vNormal = cMath::Vector3Cross(vPoint1-reflectionOrigin, vPoint2-reflectionOrigin);
-                                vNormal.Normalize();
-                                //make sure normal has correct sign!
-                                if(cMath::Vector3Dot(reflectionSurfaceNormal, vNormal)<0) {
-                                    vNormal = vNormal*-1;
-                                }
-                                
-                                maxRelfctionDistPlane.FromNormalPoint(vNormal, vPoint1);
-                            }
-                            m_occlusionPlanes.push_back(maxRelfctionDistPlane);
-                        }
-                        const cMatrixf reflectionFrustumView = reflectFrustum.GetViewMatrix().GetTranspose();
-                        const cMatrixf reflectionFrustumProj = reflectFrustum.GetProjectionMatrix().GetTranspose();
-                        const cMatrixf reflectionFrustumViewInv = cMath::MatrixInverse(reflectFrustum.GetViewMatrix());
-        
-                        auto createReflectionViewConfig = [&](RenderTarget& rt) -> GraphicsContext::ViewConfiguration {
-                            GraphicsContext::ViewConfiguration viewConfig{ rt };
-                            viewConfig.m_projection = reflectionFrustumProj;
-                            viewConfig.m_view = reflectionFrustumView;
-                            viewConfig.m_viewRect = { 0, 0, sharedData.m_size.x, sharedData.m_size.y };
-                            return viewConfig;
-                        };
-
-                        [&] {
-                            GraphicsContext::ViewConfiguration viewConfig{ sharedData.m_gBufferReflection.m_fullTarget };
-                            viewConfig.m_viewRect = { 0, 0, sharedData.m_size.x, sharedData.m_size.y };
-                            viewConfig.m_clear = { 0, 1, 0, ClearOp::Depth | ClearOp::Stencil | ClearOp::Color };
-                            bgfx::touch(context.StartPass("Clear Depth", viewConfig));
-                        }();
-                        auto ZPassConfig = createReflectionViewConfig(sharedData.m_gBufferReflection.m_depthTarget);
-                        m_reflectionRenderList.Setup(mfCurrentFrameTime, &reflectFrustum);
-                        detail::UpdateRenderableList(
-                            &m_reflectionRenderList, 
-                            this, 
-                            mpCurrentSettings->mpVisibleNodeTracker,
-                            &reflectFrustum, mpCurrentWorld,"Z Reflection Pass", ZPassConfig, context, viewport, 
-                            eObjectVariabilityFlag_All, 
-                            mvCurrentOcclusionPlanes, 
-                            eRenderableFlag_VisibleInReflection);
-                        m_reflectionRenderList.Compile( eRenderListCompileFlag_Diffuse | 
-                            eRenderListCompileFlag_Translucent | 
-                            eRenderListCompileFlag_Decal |
-                            eRenderListCompileFlag_Illumination | 
-                            eRenderListCompileFlag_FogArea);
-                        auto viewGbufferCfg = createReflectionViewConfig(sharedData.m_gBufferReflection.m_fullTarget);
-                        // detail::RenderGBufferPass(
-                        //     "Reflection_GBuffer", 
-                        //     context, 
-                        //     this, 
-                        //     viewGbufferCfg, 
-                        //     m_reflectionRenderList.GetRenderableItems(eRenderListType_Diffuse), viewport);
-
-                        // ------------------------------------------------------------------------------------
-                        //  Render Decal Pass render to color and depth
-                        // ------------------------------------------------------------------------------------
-                        // auto viewDecalCfg = createReflectionViewConfig(sharedData.m_gBufferReflection_colorAndDepth);
-                        // detail::RenderDecalPass(
-                        //     "Reflection Decal", 
-                        //     context, 
-                        //     this, 
-                        //     viewDecalCfg, 
-                        //     m_reflectionRenderList.GetRenderableItems(eRenderListType_Decal), viewport);
-                        
-                        // ------------------------------------------------------------------------
-                        // Render Light Pass --> renders to output target
-                        // ------------------------------------------------------------------------
-                        // {
-                        //     LightPassOptions options = {
-                        //         .frustumProjection = reflectionFrustumProj,
-                        //         .frustumInvView = reflectionFrustumViewInv,
-                        //         .frustumView = reflectionFrustumView,
-                        //         .m_output_target = sharedData.m_outputReflection_target,
-
-                        //         .m_gBufferColor = *sharedData.m_gBufferReflectionColor,
-                        //         .m_gBufferNormalImage = *sharedData.m_gBufferReflectionNormalImage,
-                        //         .m_gBufferPositionImage = *sharedData.m_gBufferReflectionPositionImage,
-                        //         .m_gBufferSpecular = *sharedData.m_gBufferReflectionSpecular,
-                        //         .m_gBufferDepthStencil = *sharedData.m_gBufferReflectionDepthStencil,
-                        //         .m_outputImage = *sharedData.m_outputReflectionImage,
-                        //     };
-                        //     RenderLightPass(context, m_reflectionRenderList.GetLights(), apWorld, viewport, &reflectFrustum, options);
-                        // }
-                        // ------------------------------------------------------------------------
-                        // Render Illumination Pass --> renders to output target
-                        // ------------------------------------------------------------------------
-                        // auto illuminationCfg = createStandardViewConfig(sharedData.m_gBufferReflection_colorAndDepth);
-                        // detail::RenderIlluminationPass(
-                        //     "RenderIllumination", 
-                        //     context, 
-                        //     this, 
-                        //     illuminationCfg, 
-                        //     m_reflectionRenderList.GetRenderableItems(eRenderListType_Illumination), viewport);
-
-                        // auto reflectionfogRenderData = detail::createFogRenderData(m_reflectionRenderList.GetFogAreas(), &reflectFrustum);
-                        // {
-                        //     FogPassOptions options = {
-                        //         .frustumProjection = reflectionFrustumProj,
-                        //         .frustumInvView = reflectionFrustumViewInv,
-                        //         .frustumView = reflectionFrustumView,
-                        //         .m_output_target = sharedData.m_outputReflection_target,
-                        //         .m_gBufferPositionImage = *sharedData.m_gBufferReflectionPositionImage,
-                        //     };
-                        //     RenderFogPass(context, reflectionfogRenderData, apWorld, viewport, &reflectFrustum, options);
-                        // }
-
-                    }
-                }
-
-                pMaterialType->ResolveShaderProgram(
-                    renderMode, viewport, pMaterial, obj, this, [&](GraphicsContext::ShaderProgram& shaderInput) {
-                        GraphicsContext::LayoutStream layoutInput;
-                        vertexBuffer->GetLayoutStream(layoutInput);
-
-                        shaderInput.m_configuration.m_depthTest = pMaterial->GetDepthTest() ? DepthTest::LessEqual : DepthTest::None;
-                        shaderInput.m_configuration.m_write = Write::RGB;
-                        shaderInput.m_configuration.m_cull = Cull::CounterClockwise;
-    
-                        shaderInput.m_modelTransform = pMatrix ? pMatrix->GetTranspose() : cMatrixf::Identity;
-
-                        if (pMaterial->HasRefraction()) {
-                            shaderInput.m_configuration.m_rgbBlendFunc = CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::One);
-                            shaderInput.m_configuration.m_alphaBlendFunc = CreateFromMaterialBlendMode(eMaterialBlendMode_Add);
-                        } else {
-                            shaderInput.m_configuration.m_rgbBlendFunc = CreateFromMaterialBlendMode(pMaterial->GetBlendMode());
-                            shaderInput.m_configuration.m_alphaBlendFunc = CreateFromMaterialBlendMode(pMaterial->GetBlendMode());
-                        }
-
-                        GraphicsContext::DrawRequest drawRequest{ layoutInput, shaderInput };
-                        context.Submit(view, drawRequest);
-                    });
-
-                if (pMaterial->HasTranslucentIllumination()) {
-                    pMaterialType->ResolveShaderProgram(
-                        (renderMode == eMaterialRenderMode_Diffuse ? eMaterialRenderMode_Illumination
-                                                                   : eMaterialRenderMode_IlluminationFog),
-                        viewport,
-                        pMaterial,
-                        obj,
-                        this,
-                        [&](GraphicsContext::ShaderProgram& shaderInput) {
-                            GraphicsContext::LayoutStream layoutInput;
-                            vertexBuffer->GetLayoutStream(layoutInput);
-
-                            shaderInput.m_configuration.m_depthTest = pMaterial->GetDepthTest() ? DepthTest::LessEqual : DepthTest::None;
-                            shaderInput.m_configuration.m_write = Write::RGB;
-                            shaderInput.m_configuration.m_cull = Cull::CounterClockwise;
-
-                            shaderInput.m_configuration.m_rgbBlendFunc = CreateFromMaterialBlendMode(eMaterialBlendMode_Add);
-                            shaderInput.m_configuration.m_alphaBlendFunc = CreateFromMaterialBlendMode(eMaterialBlendMode_Add);
-
-                            shaderInput.m_modelTransform = pMatrix ? pMatrix->GetTranspose() : cMatrixf::Identity;
-
-                            GraphicsContext::DrawRequest drawRequest{ layoutInput, shaderInput };
-                            context.Submit(view, drawRequest);
-                        });
-                }
+               
+                cmdBindDescriptorSet(frame.m_cmd, 0, m_fogPass.m_perFrameSet[frame.m_frameIndex]);
+                cmdBindDescriptorSet(frame.m_cmd, objectIndex++, m_fogPass.m_perObjectSet[frame.m_frameIndex]);
+                cmdBindPipeline(frame.m_cmd, m_fogPass.m_pipeline[pipelineVariant]);
+                cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
             }
-        })();
+        }
 
-        ImmediateDrawBatch postTransBatch(context, sharedData.m_gBuffer.m_outputTarget, mainFrustumView, mainFrustumProj);
-        cViewport::PostTranslucenceDrawPacket translucenceEvent = cViewport::PostTranslucenceDrawPacket({
-            .m_frustum = apFrustum,
-            .m_context = &context,
-            .m_outputTarget = &sharedData.m_gBuffer.m_outputTarget,
-            .m_viewport = &viewport,
-            .m_renderSettings = mpCurrentSettings,
-            .m_immediateDrawBatch = &postTransBatch,
-        });
-        viewport.SignalDraw(translucenceEvent);
-        postTransBatch.flush();
+        {
+            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+            std::array rtBarriers = {
+                RenderTargetBarrier{
+                    currentGBuffer.m_outputBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
+            };
+            cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+        }
+
     }
-
+    
     iVertexBuffer* cRendererDeferred::GetLightShape(iLight* apLight, eDeferredShapeQuality aQuality) const {
         switch(apLight->GetLightType()) {
             case eLightType_Point:
                 return m_shapeSphere[aQuality].get();
             case eLightType_Spot:
                 return m_shapePyramid.get();
+            case eLightType_Box:
+                return mpShapeBox;
             default:
                 break;
         }

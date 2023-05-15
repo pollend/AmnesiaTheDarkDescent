@@ -75,9 +75,9 @@ public:
         std::shared_ptr<Image> m_outputImage;
         std::shared_ptr<Image> m_gBufferDepthStencil;
 
-        std::array<RenderTarget, 2> m_blurTarget;
-        RenderTarget m_outputTarget;
-        RenderTarget m_outlineTarget;
+        std::array<LegacyRenderTarget, 2> m_blurTarget;
+        LegacyRenderTarget m_outputTarget;
+        LegacyRenderTarget m_outlineTarget;
     };
 
     static constexpr uint16_t BlurSize = 4;
@@ -102,7 +102,7 @@ public:
 private:
 
     // this is reused code from PostEffect_Bloom. I think the passes can be separated out into handlers of some kind :?
-    void RenderBlurPass(GraphicsContext& context, std::span<RenderTarget> blurTargets, Image& input);
+    void RenderBlurPass(GraphicsContext& context, std::span<LegacyRenderTarget> blurTargets, Image& input);
 
     std::vector<cGlowObject> mvFlashObjects;
     std::vector<cGlowObject> mvEnemyGlowObjects;

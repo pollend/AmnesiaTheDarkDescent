@@ -26,6 +26,9 @@
 
 #include "graphics/Color.h"
 
+
+#include "Common_3/Utilities/Math/MathTypes.h"
+#include <FixPreprocessor.h>
 namespace hpl {
 
 	//---------------------------------------------
@@ -33,12 +36,18 @@ namespace hpl {
 	class cFrustum;
 	class iVertexBuffer;
 
-	//---------------------------------------------
-
-
 	class cMath
 	{
 	public:
+		static mat4 ToForgeMat(const cMatrixf& mat) {
+			return mat4(
+				Vector4(mat.m[0][0], mat.m[0][1], mat.m[0][2], mat.m[0][3]),
+				Vector4(mat.m[1][0], mat.m[1][1], mat.m[1][2], mat.m[1][3]),
+				Vector4(mat.m[2][0], mat.m[2][1], mat.m[2][2], mat.m[2][3]),
+				Vector4(mat.m[3][0], mat.m[3][1], mat.m[3][2], mat.m[3][3])
+			);
+		}
+
 		 //////////////////////////////////////////////////////
 		////////// RANDOM GENERATION ////////////////////////
 		//////////////////////////////////////////////////////
@@ -929,6 +938,8 @@ namespace hpl {
 		 */
 		static cMatrixf MatrixInverse(const cMatrixf &a_mtxA);
 
+		static mat4 ToForgeMat4(const cMatrixf &a_mtxA);
+		static mat3 ToForgeMat3(const cMatrixf &a_mtxA);
 		/**
 		 * A mirror matrix for a plane
 		 */

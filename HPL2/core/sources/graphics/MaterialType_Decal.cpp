@@ -32,7 +32,6 @@
 #include "math/Frustum.h"
 #include "math/Math.h"
 
-#include "graphics/GPUShader.h"
 #include "graphics/Graphics.h"
 #include "graphics/LowLevelGraphics.h"
 #include "graphics/Material.h"
@@ -49,23 +48,23 @@ namespace hpl {
 
         mbHasTypeSpecifics[eMaterialRenderMode_Diffuse] = true;
 
-        m_u_mtxUV = bgfx::createUniform("a_mtxUV", bgfx::UniformType::Mat4);
-        m_s_diffuseMap = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
-        m_programHandler = hpl::loadProgram("vs_decal_material", "fs_decal_material");
+        // m_u_mtxUV = bgfx::createUniform("a_mtxUV", bgfx::UniformType::Mat4);
+        // m_s_diffuseMap = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
+        // m_programHandler = hpl::loadProgram("vs_decal_material", "fs_decal_material");
 
         AddUsedTexture(eMaterialTexture_Diffuse);
     }
 
     cMaterialType_Decal::~cMaterialType_Decal() {
-        if (bgfx::isValid(m_u_mtxUV)) {
-            bgfx::destroy(m_u_mtxUV);
-        }
-        if (bgfx::isValid(m_s_diffuseMap)) {
-            bgfx::destroy(m_s_diffuseMap);
-        }
-        if (bgfx::isValid(m_programHandler)) {
-            bgfx::destroy(m_programHandler);
-        }
+        // if (bgfx::isValid(m_u_mtxUV)) {
+        //     bgfx::destroy(m_u_mtxUV);
+        // }
+        // if (bgfx::isValid(m_s_diffuseMap)) {
+        //     bgfx::destroy(m_s_diffuseMap);
+        // }
+        // if (bgfx::isValid(m_programHandler)) {
+        //     bgfx::destroy(m_programHandler);
+        // }
     }
 
     void cMaterialType_Decal::LoadData() {

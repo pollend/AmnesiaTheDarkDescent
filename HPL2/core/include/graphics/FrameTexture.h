@@ -46,8 +46,7 @@ namespace hpl {
 		cFrameSubImage* CreateCustomImage(const cVector2l& avPixelPos,const cVector2l& avPixelSize);
 
 	private:
-
-
+		// ForgeTextureHandle m_textureHandle;
 		Image* mpTexture;
 		int mlHandle;
 

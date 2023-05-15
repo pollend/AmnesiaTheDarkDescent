@@ -124,7 +124,7 @@ cLuxPostEffectHandler::cLuxPostEffectHandler()
     mpInsanity->SetActive(true);
 }
 
-void cLuxPostEffect_Insanity::RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, RenderTarget& target) {
+void cLuxPostEffect_Insanity::RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, LegacyRenderTarget& target) {
     
     auto viewportSize = viewport.GetSize();
     cMatrixf projMtx;

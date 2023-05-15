@@ -1,23 +1,24 @@
 /**
-* Copyright 2023 Michael Pollind
-* 
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-* 
-*     http://www.apache.org/licenses/LICENSE-2.0
-* 
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
+ * Copyright 2023 Michael Pollind
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 #pragma once
 
 #include "absl/strings/string_view.h"
 #include "graphics/Bitmap.h"
+#include "graphics/ForgeRenderer.h"
 #include "math/MathTypes.h"
 #include "system/SystemTypes.h"
 #include <bgfx/bgfx.h>
@@ -30,12 +31,15 @@
 #include <span>
 #include <string>
 
+#include "Common_3/Graphics/Interfaces/IGraphics.h"
+#include <FixPreprocessor.h>
 namespace hpl {
 
     class cBitmap;
     struct ImageDescriptor {
-        ImageDescriptor();
-        ImageDescriptor(const ImageDescriptor& desc);
+        [[deprecated("Deprecating BGFX")]] ImageDescriptor();
+
+        [[deprecated("Deprecating BGFX")]] ImageDescriptor(const ImageDescriptor& desc);
 
         uint16_t m_width = 0;
         uint16_t m_height = 0;
@@ -47,7 +51,7 @@ namespace hpl {
 
         union {
             struct {
-                bool m_computeWrite: 1;
+                bool m_computeWrite : 1;
                 WrapMode m_UWrap : 3;
                 WrapMode m_VWrap : 3;
                 WrapMode m_WWrap : 3;
@@ -75,8 +79,12 @@ namespace hpl {
 
     class Image : public iResourceBase {
         HPL_RTTI_IMPL_CLASS(iResourceBase, Image, "{d9cd842a-c76b-4261-879f-53f1baa5ff7c}")
-
     public:
+        struct TextureFilter {
+            AddressMode m_addressMode = AddressMode::ADDRESS_MODE_CLAMP_TO_BORDER;
+            // FilterType m_filter = FilterType::None;
+        };
+
         Image();
         Image(const tString& asName, const tWString& asFullPath);
 
@@ -87,12 +95,17 @@ namespace hpl {
         Image& operator=(const Image& other) = delete;
         void operator=(Image&& other);
 
+        inline void SetForgeTexture(ForgeTextureHandle&& handle) {
+            m_texture = std::move(handle);
+        }
+        inline void setTextureFilter(TextureFilter textureFilter) {
+            m_filter = textureFilter;
+        }
+
         void Initialize(const ImageDescriptor& descriptor, const bgfx::Memory* mem = nullptr);
         void Invalidate();
 
-        bgfx::TextureHandle GetHandle() const;
-
-        static bgfx::TextureFormat::Enum FromHPLTextureFormat(ePixelFormat format);
+        [[deprecated("Removing BGFX")]] bgfx::TextureHandle GetHandle() const;
 
         static void InitializeFromBitmap(Image& image, cBitmap& bitmap, const ImageDescriptor& desc);
         static void InitializeCubemapFromBitmaps(Image& image, const std::span<cBitmap*> bitmaps, const ImageDescriptor& desc);
@@ -101,22 +114,33 @@ namespace hpl {
         virtual void Unload() override;
         virtual void Destroy() override;
 
-        uint16_t GetWidth() const {
-            return m_width;
+        inline uint16_t GetWidth() const {
+            ASSERT(m_texture.IsValid());
+            return m_texture.m_handle->mWidth;
         }
-        uint16_t GetHeight() const {
-            return m_height;
+        inline uint16_t GetHeight() const {
+            ASSERT(m_texture.IsValid());
+            return m_texture.m_handle->mHeight;
         }
 
         cVector2l GetImageSize() const {
-            return cVector2l(m_width, m_height);
+            if (m_texture.IsValid()) {
+                return cVector2l(m_texture.m_handle->mWidth, m_texture.m_handle->mHeight);
+            }
+            return cVector2l(0, 0);
+        }
+
+        inline ForgeTextureHandle& GetTexture() {
+            return m_texture;
+        }
+        inline const TextureFilter& GetTextureFilter() const {
+            return m_filter;
         }
 
     private:
-        uint16_t m_width = 0;
-        uint16_t m_height = 0;
-
-        bgfx::TextureHandle m_handle = BGFX_INVALID_HANDLE;
+        TextureFilter m_filter;
+        hpl::Event<> m_dirtyTextureEvent;
+        ForgeTextureHandle m_texture;
     };
 
 } // namespace hpl

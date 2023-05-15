@@ -1,0 +1,264 @@
+#include <graphics/ForgeRenderer.h>
+#include "engine/Interface.h"
+#include "graphics/Material.h"
+#include "windowing/NativeWindow.h"
+
+namespace hpl {
+
+    void ForgeRenderer::IncrementFrame() {
+        // Stall if CPU is running "Swap Chain Buffer Count" frames ahead of GPU
+        // m_resourcePoolIndex = (m_resourcePoolIndex + 1) % ResourcePoolSize;
+        m_currentFrameCount++;
+        auto frame = GetFrame();
+        
+        FenceStatus fenceStatus;
+        auto& completeFence = frame.m_renderCompleteFence;
+        getFenceStatus(m_renderer, completeFence, &fenceStatus);
+        if (fenceStatus == FENCE_STATUS_INCOMPLETE) {
+            waitForFences(m_renderer, 1, &completeFence);
+        }
+        acquireNextImage(m_renderer, m_swapChain, m_imageAcquiredSemaphore, nullptr, &m_swapChainIndex);
+
+        resetCmdPool(m_renderer, frame.m_cmdPool);
+        frame.m_resourcePool->ResetPool();
+        beginCmd(frame.m_cmd);
+        
+        auto&   swapChainImage = frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex];
+
+        RenderTargetBarrier rtBarriers[] = {
+            { swapChainImage, RESOURCE_STATE_PRESENT, RESOURCE_STATE_RENDER_TARGET },
+        };
+        cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, 1, rtBarriers);
+    }
+
+    void ForgeRenderer::SubmitFrame() {
+        auto frame = GetFrame();
+        cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+        auto&   swapChainImage = frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex];
+    
+        RenderTargetBarrier rtBarriers[] = {
+            { swapChainImage, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_PRESENT },
+        };
+        cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, 1, rtBarriers);
+        endCmd(m_cmds[CurrentFrameIndex()]);
+
+        QueueSubmitDesc submitDesc = {};
+        submitDesc.mCmdCount = 1;
+        submitDesc.mSignalSemaphoreCount = 1;
+        submitDesc.mWaitSemaphoreCount = 1;
+        submitDesc.ppCmds = &frame.m_cmd;
+        submitDesc.ppSignalSemaphores = &frame.m_renderCompleteSemaphore;
+        submitDesc.ppWaitSemaphores = &m_imageAcquiredSemaphore;
+        submitDesc.pSignalFence = frame.m_renderCompleteFence;
+        queueSubmit(m_graphicsQueue, &submitDesc);
+        QueuePresentDesc presentDesc = {};
+
+        presentDesc.mIndex = m_swapChainIndex;
+        presentDesc.mWaitSemaphoreCount = 1;
+        presentDesc.pSwapChain = m_swapChain;
+        presentDesc.ppWaitSemaphores = &frame.m_renderCompleteSemaphore;
+        presentDesc.mSubmitDone = true;
+        queuePresent(m_graphicsQueue, &presentDesc);
+
+    }
+
+    void ForgeRenderer::InitializeRenderer(window::NativeWindowWrapper* window) {
+        SyncToken token = {};
+        RendererDesc desc{};
+        initRenderer("test", &desc, &m_renderer);
+
+		QueueDesc queueDesc = {};
+		queueDesc.mType = QUEUE_TYPE_GRAPHICS;
+		queueDesc.mFlag = QUEUE_FLAG_INIT_MICROPROFILE;
+		addQueue(m_renderer, &queueDesc, &m_graphicsQueue);
+
+        for(size_t i =0; i < m_cmds.size(); i++) {
+            CmdPoolDesc cmdPoolDesc = {};
+            cmdPoolDesc.pQueue = m_graphicsQueue;
+            addCmdPool(m_renderer, &cmdPoolDesc, &m_cmdPools[i]);
+            CmdDesc cmdDesc = {};
+            cmdDesc.pPool = m_cmdPools[i];
+            addCmd(m_renderer, &cmdDesc, &m_cmds[i]);
+        }
+
+        const auto windowSize = window->GetWindowSize();
+        SwapChainDesc swapChainDesc = {};
+		swapChainDesc.mWindowHandle = window->ForgeWindowHandle();
+		swapChainDesc.mPresentQueueCount = 1;
+		swapChainDesc.ppPresentQueues = &m_graphicsQueue;
+		swapChainDesc.mWidth = 1920;
+		swapChainDesc.mHeight = 1080;
+		swapChainDesc.mImageCount = SwapChainLength;
+		swapChainDesc.mColorFormat = getRecommendedSwapchainFormat(false, false);
+		swapChainDesc.mColorClearValue = { {1, 1, 1, 1} };
+		swapChainDesc.mEnableVsync = false;
+        addSwapChain(m_renderer, &swapChainDesc, &m_swapChain);
+       
+		RootSignatureDesc graphRootDesc = {};
+		addRootSignature(m_renderer, &graphRootDesc, &m_pipelineSignature);
+
+
+		addSemaphore(m_renderer, &m_imageAcquiredSemaphore);
+        for(auto& completeSem: m_renderCompleteSemaphores) {
+            addSemaphore(m_renderer, &completeSem);
+        }
+        for(auto& completeFence: m_renderCompleteFences) {
+            addFence(m_renderer, &completeFence);
+        }
+
+        {
+            ShaderLoadDesc postProcessCopyShaderDec = {};
+            postProcessCopyShaderDec.mStages[0] = { "fullscreen.vert", NULL, 0 };
+            postProcessCopyShaderDec.mStages[1] = { "post_processing_copy.frag", NULL, 0 };
+            addShader(m_renderer, &postProcessCopyShaderDec, &m_copyShader);
+
+            RootSignatureDesc rootDesc = { &m_copyShader, 1 };
+            addRootSignature(m_renderer, &rootDesc, &m_copyPostProcessingRootSignature);
+            DescriptorSetDesc setDesc = { m_copyPostProcessingRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_DRAW, MaxCopyFrames };
+            addDescriptorSet(m_renderer, &setDesc, &m_copyPostProcessingDescriptorSet);
+
+            DepthStateDesc depthStateDisabledDesc = {};
+            depthStateDisabledDesc.mDepthWrite = false;
+            depthStateDisabledDesc.mDepthTest = false;
+
+            RasterizerStateDesc rasterStateNoneDesc = {};
+            rasterStateNoneDesc.mCullMode = CULL_MODE_NONE;
+
+            PipelineDesc pipelineDesc = {};
+            pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+		    GraphicsPipelineDesc& copyPipelineDesc = pipelineDesc.mGraphicsDesc;
+            copyPipelineDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+            copyPipelineDesc.pShaderProgram = m_copyShader;
+            copyPipelineDesc.pRootSignature = m_copyPostProcessingRootSignature;
+            copyPipelineDesc.mRenderTargetCount = 1;
+            copyPipelineDesc.mDepthStencilFormat = TinyImageFormat_UNDEFINED;
+            copyPipelineDesc.pVertexLayout = NULL;
+            copyPipelineDesc.pRasterizerState = &rasterStateNoneDesc;
+            copyPipelineDesc.pDepthState = &depthStateDisabledDesc;
+            copyPipelineDesc.pBlendState = NULL;
+
+            struct {
+                TinyImageFormat m_format;
+                SampleCount m_sampleCount;
+                uint32_t m_sampleQuality;
+            } m_copyDescConfig[CopyPipelineCount];
+            m_copyDescConfig[CopyPipelineToSwapChain].m_sampleCount = m_swapChain->ppRenderTargets[0]->mSampleCount;
+            m_copyDescConfig[CopyPipelineToSwapChain].m_sampleQuality = m_swapChain->ppRenderTargets[0]->mSampleQuality;
+            m_copyDescConfig[CopyPipelineToSwapChain].m_format = m_swapChain->ppRenderTargets[0]->mFormat;
+
+            m_copyDescConfig[CopyPipelineToUnormR8G8B8A8].m_sampleCount = SAMPLE_COUNT_1;
+            m_copyDescConfig[CopyPipelineToUnormR8G8B8A8].m_sampleQuality = 0;
+            m_copyDescConfig[CopyPipelineToUnormR8G8B8A8].m_format = TinyImageFormat_R8G8B8A8_UNORM;
+
+            for(size_t i = 0; i < m_copyPostProcessingPipeline.size(); i++) {
+                
+                copyPipelineDesc.pColorFormats = &m_copyDescConfig[i].m_format;
+                copyPipelineDesc.mSampleCount = m_copyDescConfig[i].m_sampleCount;
+                copyPipelineDesc.mSampleQuality = m_copyDescConfig[i].m_sampleQuality;
+                addPipeline(m_renderer, &pipelineDesc, &m_copyPostProcessingPipeline[i]);
+
+            }
+        }
+    }
+
+
+    void ForgeRenderer::InitializeResource() {
+
+    }
+
+
+    void ForgeRenderer::cmdCopyTexture(CopyPipelines action, Cmd* cmd, Texture* srcTexture, RenderTarget* dstTexture) {
+        
+        ASSERT(srcTexture);
+        ASSERT(dstTexture);
+
+        // Texture* src[1] = {srcTexture};
+
+        // uint32_t rootConstantIndex = getDescriptorIndexFromName(m_copyPostProcessingRootSignature, "RootConstant");
+        // struct {
+        //     uint2 pos;
+        //     uint2 size;
+        // } pushConstant = {
+        //     pos, 
+        //     size
+        // };
+
+        DescriptorData params[15] = {};
+        size_t paramCount = 0;
+        params[paramCount].pName = "inputMap";
+        params[paramCount++].ppTextures = &srcTexture;
+        
+        LoadActionsDesc loadActions = {};
+		loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
+		loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
+
+        cmdBindRenderTargets(cmd, 1, &dstTexture, NULL, &loadActions, NULL, NULL, -1, -1);
+        cmdSetViewport(cmd, 0.0f, 0.0f, static_cast<float>(dstTexture->mWidth), static_cast<float>(dstTexture->mHeight), 0.0f, 1.0f);
+        cmdSetScissor(cmd, 0, 0, dstTexture->mWidth, dstTexture->mHeight);
+        
+        updateDescriptorSet(m_renderer, m_copyRegionDescriptorIndex, m_copyPostProcessingDescriptorSet, paramCount, params);
+
+        cmdBindPipeline(cmd, m_copyPostProcessingPipeline[action]);
+        cmdBindDescriptorSet(cmd, m_copyRegionDescriptorIndex, m_copyPostProcessingDescriptorSet);
+        cmdDraw(cmd, 3, 0);
+        m_copyRegionDescriptorIndex = (m_copyRegionDescriptorIndex + 1) % MaxCopyFrames;
+    }
+
+    // void CopyRegionPipeline::cmdSubmit(Cmd* cmd, uint32_t instance, uint2 pos, uint2 size) {
+    //     uint32_t rootConstantIndex = getDescriptorIndexFromName(m_copyRegionRootSignature, "uRootConstants");
+    //     struct {
+    //         uint2 pos;
+    //         uint2 size;
+    //     } pushConstant = {
+    //         pos, 
+    //         size
+    //     };
+
+    //     cmdBindPipeline(cmd, m_copyRegionPipeline);
+    //     cmdBindDescriptorSet(cmd, instance, m_copyRegionDescriptorSet);
+    //     cmdBindPushConstants(cmd, m_copyRegionRootSignature, rootConstantIndex, &pushConstant);
+    //     cmdDispatch(cmd, static_cast<uint32_t>((size.x / 16) + 1), static_cast<uint32_t>((size.y / 16) + 1), 1);
+    // }
+
+    // void CopyRegionPipeline::update(uint32_t instance, Texture* srcTexture, Texture* dstTexture) {
+    //     ASSERT(srcTexture);
+    //     ASSERT(dstTexture);
+
+    //     DescriptorData params[15] = {};
+    //     size_t paramCount = 0;
+    //     params[paramCount].pName = "srcTexture";
+    //     params[paramCount++].ppTextures = &srcTexture;
+    //     params[paramCount].pName = "dstTexture";
+    //     params[paramCount++].ppTextures = &dstTexture;
+    //     updateDescriptorSet(m_renderer->Rend(), instance, m_copyRegionDescriptorSet, paramCount, params);
+    // }
+
+    // CopyRegionPipeline::~CopyRegionPipeline() {
+        
+    //     if(m_copyRegionPipeline) {
+    //         removePipeline(m_renderer->Rend(), m_copyRegionPipeline);
+    //     }
+    //     if(m_copyRegionDescriptorSet) {
+    //         removeDescriptorSet(m_renderer->Rend(), m_copyRegionDescriptorSet);
+    //     }
+    //     if(m_copyRegionRootSignature) {
+    //         removeRootSignature(m_renderer->Rend(), m_copyRegionRootSignature);
+    //     }
+    //     if(m_copyRegionShader) {
+    //         removeShader(m_renderer->Rend(), m_copyRegionShader);
+    //     }
+
+    // }
+
+    // void CopyRegionPipeline::UpdateTexture(uint32_t instance, Texture* src, Texture* dst) {
+    //     Texture* srcTexture = src;
+    //     Texture* dstTexture = dst;
+
+    //     // DescriptorData params[2] = {};
+    //     // params[0].pName = "srcTexture";
+    //     // params[0].ppTextures = &srcTexture;
+    //     // params[0].pName = "dst";
+    //     // params[0].ppTextures = &dstTexture;
+    //     // updateDescriptorSet(m_renderer, instance, m_copyRegionDescriptorSet, 1, params);
+    // }
+};

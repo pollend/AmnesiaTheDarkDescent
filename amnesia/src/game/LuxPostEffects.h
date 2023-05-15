@@ -52,12 +52,9 @@ public:
 	void SetZoomAlpha(float afX){ mfZoomAlpha = afX;}
 	void SetWaveSpeed(float afX){ mfWaveSpeed = afX;}
 	
-	virtual void RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, RenderTarget& target) override;
+	virtual void RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, LegacyRenderTarget& target) override;
 
 private:
-	// iGpuProgram *mpProgram;
-	// std::vector<iTexture*> mvAmpMaps;
-	// iTexture* mpZoomMap;
 
 	bgfx::ProgramHandle m_program;
 	std::array<Image*, 3> m_ampMaps;

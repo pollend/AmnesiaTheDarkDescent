@@ -590,6 +590,7 @@ namespace hpl {
 	};
 
 
+
 	enum eMaterialRenderMode
 	{
 		eMaterialRenderMode_Z,				//Early Z test. Shall always return diffuse texture as unit 0, allthough it might not always be used.

@@ -27,7 +27,6 @@
 #include "resources/Resources.h"
 
 #include "graphics/FrameBuffer.h"
-#include "graphics/GPUShader.h"
 #include "graphics/LowLevelGraphics.h"
 #include "graphics/PostEffectComposite.h"
 #include "graphics/Texture.h"
@@ -45,10 +44,6 @@ namespace hpl
     cPostEffectType_ColorConvTex::cPostEffectType_ColorConvTex(cGraphics* apGraphics, cResources* apResources)
         : iPostEffectType("ColorConvTex", apGraphics, apResources)
     {
-        m_colorConv = hpl::loadProgram("vs_post_effect", "fs_posteffect_color_conv");
-        m_u_param = bgfx::createUniform("u_params", bgfx::UniformType::Vec4);
-        m_u_colorConvTex = bgfx::createUniform("s_convMap", bgfx::UniformType::Sampler);
-        m_u_diffuseTex = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
     }
 
     cPostEffectType_ColorConvTex::~cPostEffectType_ColorConvTex()
@@ -92,7 +87,7 @@ namespace hpl
         mpColorConvTex = mpResources->GetTextureManager()->Create1DImage(mParams.msTextureFile, false, eTextureUsage_Normal, 0, options);
     }
 
-    void cPostEffect_ColorConvTex::RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, RenderTarget& target)
+    void cPostEffect_ColorConvTex::RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, LegacyRenderTarget& target)
     {
 		BX_ASSERT(mpColorConvTex, "ColorConvTex is null");
 	    cVector2l vRenderTargetSize = viewport.GetSize();

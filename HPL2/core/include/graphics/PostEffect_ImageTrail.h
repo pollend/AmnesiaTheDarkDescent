@@ -79,13 +79,13 @@ namespace hpl {
 				m_size = buffer.m_size;
 			}
 			cVector2l m_size;
-			RenderTarget m_accumulationBuffer;
+			LegacyRenderTarget m_accumulationBuffer;
 		};
 
 		cPostEffect_ImageTrail(cGraphics *apGraphics,cResources *apResources, iPostEffectType *apType);
 		~cPostEffect_ImageTrail();
 
-		virtual void RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, RenderTarget& target) override;
+		virtual void RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, LegacyRenderTarget& target) override;
 		
 		virtual void Reset() override;
 

@@ -153,9 +153,14 @@ namespace hpl {
 			tString sName = cString::SetFileExt(cString::To8Char(asFileName),"")+"_"+cString::ToString(lCount);
 
 			Image* image = new Image();
-			auto desc = ImageDescriptor::CreateFromBitmap(*pBitmap);
-			desc.m_name = sName.c_str();
-			Image::InitializeFromBitmap(*image,*pBitmap, desc);
+
+			ForgeTextureHandle::BitmapLoadOptions opts = {0};
+			opts.m_useMipmaps = true;
+			auto handle = ForgeTextureHandle::LoadFromHPLBitmap(*pBitmap, opts);
+			image->SetForgeTexture(std::move(handle));
+			// auto desc = ImageDescriptor::CreateFromBitmap(*pBitmap);
+			// desc.m_name = sName.c_str();
+			// Image::InitializeFromBitmap(*image,*pBitmap, desc);
 			
 			hplDelete( pBitmap ); //Bitmap no longer needed
 

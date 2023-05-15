@@ -43,11 +43,7 @@
 
 namespace hpl {
 
-	//////////////////////////////////////////////////////////////////////////
-	// BLANK MATERIAL
-	//////////////////////////////////////////////////////////////////////////
 
-	//-----------------------------------------------------------------------
 
 	class cMaterialManagerBlankMaterialType_Vars : public iMaterialVars
 	{
@@ -277,13 +273,6 @@ namespace hpl {
 		return pMat;
 	}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PRIVATE METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 	cMaterial* cMaterialManager::LoadFromFile(const tString& asName,const tWString& asPath)
 	{
 		//Log("Load material: %s\n", asName.c_str());
@@ -338,12 +327,13 @@ namespace hpl {
 			Error("Invalid material type '%s'!\n",sType.c_str());
 			return NULL;
 		}
-		cMaterial* pMat = hplNew( cMaterial, (asName, asPath, mpGraphics, mpResources, pMatType) );
+		cMaterial* pMat = new cMaterial(asName, asPath, mpGraphics, mpResources, pMatType);
 
 		pMat->SetDepthTest(bDepthTest);
 		pMat->SetPhysicsMaterial(sPhysicsMatName);
-        if(pMatType->IsTranslucent())
+        if(pMatType->IsTranslucent()) {
 			pMat->SetBlendMode(GetBlendMode(sBlendMode));
+		}
 
 		///////////////////////////
 		//Textures
@@ -359,11 +349,7 @@ namespace hpl {
 		for(int i=0; i< pMatType->GetUsedTextureNum(); ++i)
 		{
 			cMaterialUsedTexture* pUsedTexture = pMatType->GetUsedTexture(i);
-			// iTexture *pTex = NULL;
-
-			
 			tString sTextureType = GetTextureString(pUsedTexture->mType);
-			//Log("Trying to load type: %s\n",sTextureType.c_str());
 
 			cXmlElement* pTexChild = pTexRoot->GetFirstElement(sTextureType.c_str());
 			if(pTexChild==NULL){
@@ -420,36 +406,54 @@ namespace hpl {
 			else
 			{
 				Image* pImage = nullptr;
-				if(type == eTextureType_1D)
-				{
-					pImage = mpResources->GetTextureManager()->Create1DImage(sFile,bMipMaps,
+				switch(type) {
+					case eTextureType_1D:
+						pImage = mpResources->GetTextureManager()->Create1DImage(sFile,bMipMaps,
+																				eTextureUsage_Normal,
+																				mlTextureSizeDownScaleLevel, options);
+						break;
+					case eTextureType_2D:
+						pImage = mpResources->GetTextureManager()->Create2DImage(sFile,bMipMaps, eTextureType_2D,
 																			eTextureUsage_Normal,
 																			mlTextureSizeDownScaleLevel, options);
-				}
-				else if(type == eTextureType_2D)
-				{
-					pImage = mpResources->GetTextureManager()->Create2DImage(sFile,bMipMaps, eTextureType_2D,
-																		eTextureUsage_Normal,
-																		mlTextureSizeDownScaleLevel, options);
-				}
-				else if(type == eTextureType_3D)
-				{
-					pImage = mpResources->GetTextureManager()->Create3DImage(sFile,bMipMaps,
-																		eTextureUsage_Normal,
-																		mlTextureSizeDownScaleLevel, options);
-				}
-				else if(type == eTextureType_CubeMap)
-				{
-					pImage = mpResources->GetTextureManager()->CreateCubeMapImage(sFile,bMipMaps,
+						break;
+					case eTextureType_CubeMap:
+						pImage = mpResources->GetTextureManager()->CreateCubeMapImage(sFile,bMipMaps,
 																			eTextureUsage_Normal,
 																			mlTextureSizeDownScaleLevel, options);
+						break;
+					case eTextureType_3D:
+						pImage = mpResources->GetTextureManager()->Create3DImage(sFile,bMipMaps,
+																		eTextureUsage_Normal,
+																		mlTextureSizeDownScaleLevel, options);
+						break;
+					default: {
+						ASSERT(false && "Invalid texture type");
+						break;
+					}
 				}
 				pImageResource = pImage;
 				if(pImage) {
 					pMat->SetImage(pUsedTexture->mType, pImage);
+					pImage->setTextureFilter(Image::TextureFilter {
+						.m_addressMode = ([&]{
+							switch(wrap) {
+								case eTextureWrap_Repeat:
+									return ADDRESS_MODE_REPEAT;
+								case eTextureWrap_Clamp:
+								case eTextureWrap_ClampToEdge:
+									return ADDRESS_MODE_CLAMP_TO_EDGE;
+								case eTextureWrap_ClampToBorder:
+									return ADDRESS_MODE_CLAMP_TO_BORDER;
+								default:
+									ASSERT(false && "Invalid wrap mode");
+									break;
+							}
+							return ADDRESS_MODE_CLAMP_TO_BORDER;
+						})(),
+					});
 				}
 			}
-
 			if(!pImageResource)
 			{
 				mpResources->DestroyXmlDocument(pDoc);
@@ -457,8 +461,6 @@ namespace hpl {
 				return nullptr;
 			}
 
-			// pTex->SetFrameTime(fFrameTime);
-			// pTex->SetAnimMode(animMode);
 
 			// pTex->SetWrapSTR(wrap);
 
@@ -495,10 +497,62 @@ namespace hpl {
 		if(pUserVarsRoot) userVars.LoadVariables(pUserVarsRoot);
 
 		pMatType->LoadVariables(pMat, &userVars);
+		
+		tString materialID = cString::ToLowerCase(sType);
+		auto& typeInfo = pMat->type();
+		for(auto& meta: cMaterial::MetaInfo) {
+			// auto& meta = cMaterial::MetaInfo[i];
+			if(materialID == meta.m_name) {
+				auto& type = pMat->type();
+				type.m_id = meta.m_id;
+				switch(meta.m_id) {
+					case cMaterial::MaterialID::SolidDiffuse: {	
+						type.m_data.m_solid.m_heightMapScale = userVars.GetVarFloat("HeightMapScale", 0.1f);
+						type.m_data.m_solid.m_heightMapBias = userVars.GetVarFloat("HeightMapBias", 0);
+						type.m_data.m_solid.m_frenselBias = userVars.GetVarFloat("FrenselBias", 0.2f);
+						type.m_data.m_solid.m_frenselPow = userVars.GetVarFloat("FrenselPow", 8.0f);
+						type.m_alphaDissolveFilter = userVars.GetVarBool("AlphaDissolveFilter", false);
+						break;
+					}
+					case cMaterial::MaterialID::Translucent: {
+						// type.m_data.m_translucentUniformBlock.mbRefraction = userVars.GetVarBool("Refraction", false);
+						// type.m_data.m_translucentUniformBlock.mbRefractionEdgeCheck = userVars.GetVarBool("RefractionEdgeCheck", true);
+						// type.m_data.m_translucentUniformBlock.mbRefractionNormals = userVars.GetVarBool("RefractionNormals", true);
+						type.m_data.m_translucentUniformBlock.mfRefractionScale = userVars.GetVarFloat("RefractionScale", 1.0f);
+						type.m_data.m_translucentUniformBlock.mfFrenselBias = userVars.GetVarFloat("FrenselBias", 0.2f);
+						type.m_data.m_translucentUniformBlock.mfFrenselPow = userVars.GetVarFloat("FrenselPow", 8.0);
+						type.m_data.m_translucentUniformBlock.mfRimLightMul = userVars.GetVarFloat("RimLightMul", 0.0f);
+						type.m_data.m_translucentUniformBlock.mfRimLightPow = userVars.GetVarFloat("RimLightPow", 8.0f);
+						// type.m_data.m_translucentUniformBlock.mbAffectedByLightLevel = userVars.GetVarBool("AffectedByLightLevel", false);
+						break;
+					}
+					case cMaterial::MaterialID::Water: {
+						// type.m_data.m_waterUniformBlock.mbHasReflection = userVars.GetVarBool("HasReflection", true);
+						type.m_data.m_waterUniformBlock.mfRefractionScale = userVars.GetVarFloat("RefractionScale", 0.1f);
+						type.m_data.m_waterUniformBlock.mfFrenselBias = userVars.GetVarFloat("FrenselBias", 0.2f);
+						type.m_data.m_waterUniformBlock.mfFrenselPow = userVars.GetVarFloat("FrenselPow", 8.0f);
+						type.m_data.m_waterUniformBlock.mfReflectionFadeStart = userVars.GetVarFloat("ReflectionFadeStart", 0);
+						type.m_data.m_waterUniformBlock.mfReflectionFadeEnd = userVars.GetVarFloat("ReflectionFadeEnd", 0);
+						type.m_data.m_waterUniformBlock.mfWaveSpeed = userVars.GetVarFloat("WaveSpeed", 1.0f);
+						type.m_data.m_waterUniformBlock.mfWaveAmplitude = userVars.GetVarFloat("WaveAmplitude", 1.0f);
+						type.m_data.m_waterUniformBlock.mfWaveFreq = userVars.GetVarFloat("WaveFreq", 1.0f);
 
-
-		///////////////////////////
-		//End
+						pMat->SetWorldReflectionOcclusionTest(userVars.GetVarBool("OcclusionCullWorldReflection", true));
+						pMat->SetMaxReflectionDistance(userVars.GetVarFloat("ReflectionFadeEnd", 0.0f));
+						pMat->SetLargeTransperantSurface(userVars.GetVarBool("LargeSurface", false));
+						break;
+					}
+					case cMaterial::MaterialID::Decal: {
+						// no uniform block
+						break;
+					}
+					default:
+						ASSERT(false && "Invalid material type");
+						break;
+				}
+				break;
+			}
+		}
 
 		mpResources->DestroyXmlDocument(pDoc);
 

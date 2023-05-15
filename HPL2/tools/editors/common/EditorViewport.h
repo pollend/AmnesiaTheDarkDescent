@@ -253,7 +253,7 @@ public:
 	// iFrameBuffer* GetFrameBuffer() { return mpFB; }
 	cViewport* GetEngineViewport() { return mpEngineViewport; }
 	void SetRenderMode(eRenderer aRenderMode);
-	void SetFrameBuffer(std::shared_ptr<RenderTarget> apFB);
+	void SetFrameBuffer(std::shared_ptr<LegacyRenderTarget> apFB);
 	void SetEngineViewportPositionAndSize(const cVector2l& avPos, const cVector2l& avSize);
 	void SetEngineViewportSize(const cVector2l& avSize);
 	void UpdateViewport();
@@ -351,7 +351,7 @@ protected:
 	// iFrameBuffer* mpFB;
 	// Image* mpRenderTarget;
 
-	std::shared_ptr<RenderTarget> m_target;
+	std::shared_ptr<LegacyRenderTarget> m_target;
 	cVector2f mvUVStart;
 	cVector2f mvUVSize;
 	cVector2f mvUVEnd;

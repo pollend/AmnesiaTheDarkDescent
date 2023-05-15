@@ -21,7 +21,7 @@ class ImmediateDrawBatch {
         inline bgfx::ViewId GetPerspectiveView() const { return m_perspectiveView; }
         inline GraphicsContext& GetContext() const { return m_context; }
 
-        ImmediateDrawBatch(GraphicsContext& context, RenderTarget& target, const cMatrixf& view, const cMatrixf& projection);
+        ImmediateDrawBatch(GraphicsContext& context, LegacyRenderTarget& target, const cMatrixf& view, const cMatrixf& projection);
 
         // takes 3 points and the other 1 is calculated
         [[deprecated("Use DrawQuad with Eigen")]]
@@ -116,7 +116,7 @@ class ImmediateDrawBatch {
         cMatrixf m_view;
         cMatrixf m_projection;
 
-        RenderTarget& m_target;
+        LegacyRenderTarget& m_target;
         GraphicsContext& m_context;
         
         bgfx::ProgramHandle m_colorProgram = BGFX_INVALID_HANDLE;

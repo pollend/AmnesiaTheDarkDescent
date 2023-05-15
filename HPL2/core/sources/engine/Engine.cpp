@@ -237,9 +237,6 @@ namespace hpl {
 	{
 		mpGameSetup = apGameSetup;
 
-		m_graphicsContext.Init();
-		cGuiSet::Init();
-
 		Log("Creating Engine Modules\n");
 		Log("--------------------------------------------------------\n");
 
@@ -446,6 +443,9 @@ namespace hpl {
 
 		//cMemoryManager::SetLogCreation(true);
 
+		auto renderer = Interface<ForgeRenderer>::Get();
+
+
 		while(!GetGameIsDone())
 		{
 			//////////////////////////
@@ -525,7 +525,7 @@ namespace hpl {
 				bBufferSwap = false;
 
 				START_TIMING(SwapBuffers)
-				m_graphicsContext.Frame();
+				renderer->SubmitFrame();
 				STOP_TIMING(SwapBuffers)
 
 				//Log("Swap done: %d\n", cPlatform::GetApplicationTime());
@@ -538,6 +538,9 @@ namespace hpl {
 			// Render frame
 			if(!mbLimitFPS || bIsUpdated)
 			{
+
+				renderer->IncrementFrame();
+
 				///////////////////////////////////////
            		//Get the the from the last frame.
 				UpdateFrameTimer();
@@ -549,7 +552,7 @@ namespace hpl {
 
 				//Render this frame
 				START_TIMING(RenderAll)
-				mpScene->Render(m_graphicsContext, mfFrameTime, tSceneRenderFlag_All);
+				mpScene->Render(renderer->GetFrame(), mfFrameTime, tSceneRenderFlag_All);
 				STOP_TIMING(RenderAll)
 
 				START_TIMING(PostRender)

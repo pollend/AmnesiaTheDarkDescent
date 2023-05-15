@@ -20,7 +20,7 @@
 #include "resources/WorldLoaderHplMap.h"
 
 #include "graphics/Image.h"
-#include "impl/VertexBufferBGFX.h"
+#include "impl/LegacyVertexBuffer.h"
 #include "system/String.h"
 #include "system/LowLevelSystem.h"
 #include "system/Platform.h"
@@ -1360,7 +1360,7 @@ namespace hpl {
 		struct VertexDataTable {
 			eVertexBufferElement mType;
 			int mlElementNum;
-			hpl::iVertexBufferBGFX::VertexElement* m_targetElement;
+			const hpl::LegacyVertexBuffer::VertexElement* m_targetElement;
 			size_t offset;
 		} lDataArrayTypes[5] = {
 			{eVertexBufferElement_Position, 4, nullptr, 0},
@@ -1374,7 +1374,7 @@ namespace hpl {
 		{
 			pVtxBuffer->CreateElementArray(lDataArrayTypes[i].mType,eVertexBufferElementFormat_Float, lDataArrayTypes[i].mlElementNum);
 			pVtxBuffer->ResizeArray(lDataArrayTypes[i].mType, lTotalVtxAmount * lDataArrayTypes[i].mlElementNum);
-			lDataArrayTypes[i].m_targetElement = static_cast<hpl::iVertexBufferBGFX*>(pVtxBuffer)->GetElement(lDataArrayTypes[i].mType);
+			lDataArrayTypes[i].m_targetElement = static_cast<hpl::LegacyVertexBuffer*>(pVtxBuffer)->GetElement(lDataArrayTypes[i].mType);
 			BX_ASSERT(lDataArrayTypes[i].m_targetElement != nullptr, "Element not found");
 		}
 
@@ -1398,7 +1398,7 @@ namespace hpl {
 			/////////////////////////////////////
 			// Create a copy of the vertex buffer and transform it according to object
 			iVertexBuffer *pSubVtxBuffer = pObject->GetVertexBuffer();
-			auto* pTransformedVtxBuffer = static_cast<hpl::iVertexBufferBGFX*>(pSubVtxBuffer->CreateCopy(	eVertexBufferType_Software, eVertexBufferUsageType_Static,
+			auto* pTransformedVtxBuffer = static_cast<hpl::LegacyVertexBuffer*>(pSubVtxBuffer->CreateCopy(	eVertexBufferType_Software, eVertexBufferUsageType_Static,
 																				pSubVtxBuffer->GetVertexElementFlags()));
 			pTransformedVtxBuffer->Transform(pObject->GetWorldMatrix());
 
@@ -1413,9 +1413,9 @@ namespace hpl {
 				BX_ASSERT(targetElement->m_type == sourceElement->m_type, "lDataArrayTypes[i].m_data->m_type == sourceElement->m_type");
 				BX_ASSERT(targetElement->m_num == sourceElement->m_num, "lDataArrayTypes[i].m_targetElement->m_num == sourceElement->m_num");
 				
-				auto targetElementStart = &(targetElement->m_buffer.data()[lDataArrayTypes[i].offset]);
-				std::copy(sourceElement->m_buffer.begin(), sourceElement->m_buffer.end(), targetElementStart);
-				lDataArrayTypes[i].offset += sourceElement->m_buffer.size();
+				auto targetElementStart = &(targetElement->Data().data()[lDataArrayTypes[i].offset]);
+				std::copy(sourceElement->Data().begin(), sourceElement->Data().end(), targetElementStart);
+				lDataArrayTypes[i].offset += sourceElement->Data().size();
 			}
 
 			//////////////////////////////////////////////
@@ -1511,7 +1511,7 @@ namespace hpl {
 
 		///////////////////////////////////////////
 		//Create the vertex buffer (skipping color!)
-		auto* targetVertexBuffer = static_cast<iVertexBufferBGFX*>(mpGraphics->GetLowLevel()->CreateVertexBuffer(	eVertexBufferType_Software, eVertexBufferDrawType_Tri,
+		auto* targetVertexBuffer = static_cast<LegacyVertexBuffer*>(mpGraphics->GetLowLevel()->CreateVertexBuffer(	eVertexBufferType_Software, eVertexBufferDrawType_Tri,
 																					eVertexBufferUsageType_Dynamic,lTotalVtxAmount, lTotalIdxAmount));
 
 		targetVertexBuffer->CreateElementArray(eVertexBufferElement_Position,eVertexBufferElementFormat_Float, 4);
@@ -1545,7 +1545,7 @@ namespace hpl {
 			////////////////////////
 			//Get vertex copy and transform
 			iVertexBuffer *pSubVtxBuffer = pObject->GetVertexBuffer();
-			auto* pTransformedVtxBuffer = static_cast<iVertexBufferBGFX*>(pSubVtxBuffer->CreateCopy(	eVertexBufferType_Software, eVertexBufferUsageType_Static,
+			auto* pTransformedVtxBuffer = static_cast<LegacyVertexBuffer*>(pSubVtxBuffer->CreateCopy(	eVertexBufferType_Software, eVertexBufferUsageType_Static,
 																				eVertexElementFlag_Position));
 			pTransformedVtxBuffer->Transform(pObject->GetWorldMatrix());
 			auto sourceElement = pTransformedVtxBuffer->GetElement(eVertexBufferElement_Position);
@@ -1553,9 +1553,9 @@ namespace hpl {
 			BX_ASSERT(targetPositionElement->m_type == sourceElement->m_type, "targetPositionElement->m_type == sourceElement->m_type");
 			BX_ASSERT(targetPositionElement->m_num == sourceElement->m_num, "targetPositionElement->m_num == sourceElement->m_num");
 
-			auto elementStart = &(targetPositionElement->m_buffer.data()[targetPositionOffset]);
-			std::copy(sourceElement->m_buffer.begin(), sourceElement->m_buffer.end(), elementStart);
-			targetPositionOffset += sourceElement->m_buffer.size();
+			auto elementStart = &(targetPositionElement->Data().data()[targetPositionOffset]);
+			std::copy(sourceElement->Data().begin(), sourceElement->Data().end(), elementStart);
+			targetPositionOffset += sourceElement->Data().size();
 
 			//Copy to index array and increase index pointer
 			unsigned int* pTransIdxArray = pTransformedVtxBuffer->GetIndices();

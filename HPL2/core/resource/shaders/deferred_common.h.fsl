@@ -1,0 +1,52 @@
+float Fresnel(float afEDotN, float afFresnelBias, float afFresnelPow)
+{
+    float fFacing = 1.0 - afEDotN;
+    return max(afFresnelBias+ (1.0-afFresnelBias)* pow(abs(fFacing),afFresnelPow), 0.0); 
+}
+
+
+float2 ParallaxRelief(int sampleCount, bool isSingleChannel, float heightMapScale, float3 normalizedNormal, float2 uv, float3 modelViewNormalizedDir,SamplerState samplerState, Tex2D(float4) tex) {
+    //Get give normalizedView the length so it reaches bottom.
+    float normalLength = 1.0 / modelViewNormalizedDir.z;
+    modelViewNormalizedDir *= float3(normalLength, normalLength, normalLength);	
+    
+    //Apply scale and bias
+    modelViewNormalizedDir.xy *= heightMapScale;
+    float3 heightMapPos = float3(uv.xy, 0.0);
+
+    //Determine number of steps based on angle between normal and eye
+    int iterations = clamp(int(floor((1.0 - dot(modelViewNormalizedDir, normalizedNormal) ) * 18.0)) + 2, 0, 30); 
+    
+    // Do a linear search to find the first intersection
+    {
+        modelViewNormalizedDir /= float(iterations);
+        for(int i = 0; i < (iterations - 1); i++) 
+        { 
+
+            float fDepth = isSingleChannel ? 
+                SampleTex2D(tex, samplerState, heightMapPos.xy).r: 
+                SampleTex2D(tex, samplerState, heightMapPos.xy).a; 
+            if(heightMapPos.z < fDepth) {
+                heightMapPos += modelViewNormalizedDir;
+            }
+        } 
+    }
+
+    // Do a binary search to find the exact intersection
+    {
+        for(int i=0; i < sampleCount; i++) 
+        {
+            float fDepth = isSingleChannel ?  
+                SampleTex2D(tex, samplerState, heightMapPos.xy).r:
+                SampleTex2D(tex, samplerState, heightMapPos.xy).a;
+            if(heightMapPos.z < fDepth) {
+                heightMapPos += modelViewNormalizedDir; 
+            }
+
+            modelViewNormalizedDir *= 0.5; 
+            heightMapPos -= modelViewNormalizedDir; 
+        }
+    }
+    
+    return heightMapPos.xy;
+}

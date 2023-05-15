@@ -336,13 +336,7 @@ namespace hpl {
 		return false;
 	}
 
-	//-----------------------------------------------------------------------
 
-	//////////////////////////////////////////////////////////////////////////
-	// PRIVATE METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 	void iEntity3D::UpdateWorldTransform()
 	{
 		if(mbTransformUpdated)
@@ -367,6 +361,7 @@ namespace hpl {
 			{
 				m_mtxWorldTransform = m_mtxLocalTransform;
 			}
+			OnUpdateWorldTransform();
 		}
 	}
 

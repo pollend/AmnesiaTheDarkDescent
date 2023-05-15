@@ -33,6 +33,13 @@ set(BGFX_CONFIG_MAX_OCCLUSION_QUERIES 65535 CACHE INTERNAL "")
 add_compile_definitions(BGFX_CONFIG_MAX_VERTEX_STREAMS=16)
 FetchContent_MakeAvailable(bgfx_cmake) 
 
+# FetchContent_Declare(  
+#   the_forge_cmake
+#   GIT_REPOSITORY https://github.com/OSS-Cosmic/The-Forge.cmake.git
+# )
+# FetchContent_MakeAvailable(the_forge_cmake) 
+add_subdirectory(The-Forge.cmake)
+
 set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 set(EIGEN_BUILD_DOC OFF)
 set(EIGEN_BUILD_PKGCONFIG OFF)

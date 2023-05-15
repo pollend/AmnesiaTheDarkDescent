@@ -39,9 +39,9 @@
 namespace hpl {
     cPostEffectType_ImageTrail::cPostEffectType_ImageTrail(cGraphics* apGraphics, cResources* apResources)
         : iPostEffectType("ImageTrail", apGraphics, apResources) {
-        m_program = hpl::loadProgram("vs_post_effect", "fs_posteffect_image_trail_frag");
-        m_u_param = bgfx::createUniform("u_param", bgfx::UniformType::Vec4);
-        m_s_diffuseMap = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
+        // m_program = hpl::loadProgram("vs_post_effect", "fs_posteffect_image_trail_frag");
+        // m_u_param = bgfx::createUniform("u_param", bgfx::UniformType::Vec4);
+        // m_s_diffuseMap = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
     }
 
     cPostEffectType_ImageTrail::~cPostEffectType_ImageTrail() {
@@ -101,7 +101,7 @@ namespace hpl {
         }
     }
     void cPostEffect_ImageTrail::RenderEffect(
-        cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, RenderTarget& target) {
+        cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, LegacyRenderTarget& target) {
         cVector2l vRenderTargetSize = viewport.GetSize();
         auto& imageTrailData = m_boundImageTrailData.resolve(viewport);
 

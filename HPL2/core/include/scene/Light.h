@@ -37,7 +37,6 @@ namespace hpl {
 	class cRenderSettings;
 	class cCamera;
 	class cFrustum;
-	class iGpuProgram;
 	class cTextureManager;
 	class cResources;
 	class cFileSearcher;

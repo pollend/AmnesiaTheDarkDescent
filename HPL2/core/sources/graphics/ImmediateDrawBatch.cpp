@@ -11,7 +11,7 @@
 
 namespace hpl {
 
-    ImmediateDrawBatch::ImmediateDrawBatch(GraphicsContext& context, RenderTarget& target, const cMatrixf& view, const cMatrixf& projection)
+    ImmediateDrawBatch::ImmediateDrawBatch(GraphicsContext& context, LegacyRenderTarget& target, const cMatrixf& view, const cMatrixf& projection)
         : m_context(context)
         , m_target(target)
         , m_view(view)

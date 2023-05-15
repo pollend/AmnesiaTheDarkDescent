@@ -2202,6 +2202,23 @@ namespace hpl {
 	}
 
 	//-----------------------------------------------------------------------
+	mat4 cMath::ToForgeMat4(const cMatrixf& mtx) {
+		mat4 m;
+		m.setCol(0, { mtx.m[0][0], mtx.m[0][1], mtx.m[0][2], mtx.m[0][3] });
+		m.setCol(1, { mtx.m[1][0], mtx.m[1][1], mtx.m[1][2], mtx.m[1][3] });
+		m.setCol(2, { mtx.m[2][0], mtx.m[2][1], mtx.m[2][2], mtx.m[2][3] });
+		m.setCol(3, { mtx.m[3][0], mtx.m[3][1], mtx.m[3][2], mtx.m[3][3] });
+		return m;
+	}
+
+		//-----------------------------------------------------------------------
+	mat3 cMath::ToForgeMat3(const cMatrixf& mtx) {
+		mat3 m;
+		m.setCol(0, { mtx.m[0][0], mtx.m[0][1], mtx.m[0][2]});
+		m.setCol(1, { mtx.m[1][0], mtx.m[1][1], mtx.m[1][2]});
+		m.setCol(2, { mtx.m[2][0], mtx.m[2][1], mtx.m[2][2]});
+		return m;
+	}
 
 	cMatrixf cMath::MatrixMul(const cMatrixf &a_mtxA,const cMatrixf &a_mtxB)
 	{

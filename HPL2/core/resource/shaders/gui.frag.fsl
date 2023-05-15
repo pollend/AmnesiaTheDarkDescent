@@ -1,0 +1,22 @@
+#include "gui_resource.h.fsl"
+
+
+STRUCT(PsIn)
+{
+	DATA(float4, Position, SV_Position);
+	DATA(float2, TexCoord, TEXCOORD0);
+    DATA(float4, Color, COLOR);
+};
+
+
+float4 PS_MAIN(PsIn In)
+{
+    INIT_MAIN;
+
+    float4 color = In.Color;      // Get the input color.
+    if(HasDiffuse(Get(textureConfig)))
+    {
+        color *= SampleTex2D(Get(diffuseMap), Get(diffuseSampler), In.TexCoord); // Multiply the color by the texture color.
+    }
+    RETURN(color);
+}

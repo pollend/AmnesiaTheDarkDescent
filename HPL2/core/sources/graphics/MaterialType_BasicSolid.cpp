@@ -35,8 +35,6 @@
 #include "math/Frustum.h"
 #include "math/Math.h"
 
-#include "graphics/GPUProgram.h"
-#include "graphics/GPUShader.h"
 #include "graphics/Graphics.h"
 #include "graphics/LowLevelGraphics.h"
 #include "graphics/Material.h"
@@ -57,29 +55,29 @@ namespace hpl
     iMaterialType_SolidBase::iMaterialType_SolidBase(cGraphics* apGraphics, cResources* apResources)
         : iMaterialType(apGraphics, apResources)
     {
-        m_diffuseProgramVariant.Initialize(ShaderHelper::LoadProgramHandlerDefault(
-            "vs_basic_solid_diffuse",
-             "fs_basic_solid_diffuse", false, true));
-        m_ZProgramVariant.Initialize(
-            ShaderHelper::LoadProgramHandlerDefault("vs_basic_solid_z", "fs_basic_solid_z", false, true));
+        // m_diffuseProgramVariant.Initialize(ShaderHelper::LoadProgramHandlerDefault(
+        //     "vs_basic_solid_diffuse",
+        //      "fs_basic_solid_diffuse", false, true));
+        // m_ZProgramVariant.Initialize(
+        //     ShaderHelper::LoadProgramHandlerDefault("vs_basic_solid_z", "fs_basic_solid_z", false, true));
 
-        m_illuminationProgram = hpl::loadProgram("vs_basic_solid_illumination", "fs_basic_solid_illumination");
+        // m_illuminationProgram = hpl::loadProgram("vs_basic_solid_illumination", "fs_basic_solid_illumination");
         
-        m_s_normalMap = bgfx::createUniform("s_normalMap", bgfx::UniformType::Sampler);
-        m_s_specularMap = bgfx::createUniform("s_specularMap", bgfx::UniformType::Sampler);
-        m_s_diffuseMap = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
-        m_s_envMapAlphaMap = bgfx::createUniform("s_envMapAlphaMap", bgfx::UniformType::Sampler);
-        m_s_heightMap = bgfx::createUniform("s_heightMap", bgfx::UniformType::Sampler);
+        // m_s_normalMap = bgfx::createUniform("s_normalMap", bgfx::UniformType::Sampler);
+        // m_s_specularMap = bgfx::createUniform("s_specularMap", bgfx::UniformType::Sampler);
+        // m_s_diffuseMap = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
+        // m_s_envMapAlphaMap = bgfx::createUniform("s_envMapAlphaMap", bgfx::UniformType::Sampler);
+        // m_s_heightMap = bgfx::createUniform("s_heightMap", bgfx::UniformType::Sampler);
 
-        m_s_dissolveMap = bgfx::createUniform("s_dissolveMap", bgfx::UniformType::Sampler);
-        m_s_dissolveAlphaMap = bgfx::createUniform("s_dissolveAlphaMap", bgfx::UniformType::Sampler);
+        // m_s_dissolveMap = bgfx::createUniform("s_dissolveMap", bgfx::UniformType::Sampler);
+        // m_s_dissolveAlphaMap = bgfx::createUniform("s_dissolveAlphaMap", bgfx::UniformType::Sampler);
 
-        m_s_envMap = bgfx::createUniform("s_envMap", bgfx::UniformType::Sampler);
+        // m_s_envMap = bgfx::createUniform("s_envMap", bgfx::UniformType::Sampler);
 
-        m_u_param = bgfx::createUniform("u_param", bgfx::UniformType::Vec4);
-        m_u_mtxUv = bgfx::createUniform("u_mtxUV", bgfx::UniformType::Mat4);
-        m_u_normalMtx = bgfx::createUniform("u_normalMtx", bgfx::UniformType::Mat4);
-        m_u_mtxInvViewRotation = bgfx::createUniform("u_mtxInvViewRotation", bgfx::UniformType::Mat4);
+        // m_u_param = bgfx::createUniform("u_param", bgfx::UniformType::Vec4);
+        // m_u_mtxUv = bgfx::createUniform("u_mtxUV", bgfx::UniformType::Mat4);
+        // m_u_normalMtx = bgfx::createUniform("u_normalMtx", bgfx::UniformType::Mat4);
+        // m_u_mtxInvViewRotation = bgfx::createUniform("u_mtxInvViewRotation", bgfx::UniformType::Mat4);
     }
 
     //--------------------------------------------------------------------------
@@ -203,6 +201,37 @@ namespace hpl
     }
 
 
+
+    void cMaterialType_SolidDiffuse::ResolveShaderProgram(
+        cViewport& viewport,
+        cMaterial* apMaterial,
+        iRenderable* apObject,
+        iRenderer* apRenderer,
+        iMaterialType::MaterialDeferredPipelineDescriptor* apDescriptor) {
+
+        auto* pVars = static_cast<cMaterialType_SolidDiffuse_Vars*>(apMaterial->GetVars());
+        auto& descriptor = m_descriptorSet[apDescriptor->aRenderMode];
+
+        switch(apDescriptor->aRenderMode) {
+            case eMaterialRenderMode_Z: {
+                BufferUpdateDesc  updateDesc = { pVars->m_buffer[apDescriptor->m_frame->m_frameIndex].m_handle, 0};
+                beginUpdateResource(&updateDesc);
+                auto& data = (*reinterpret_cast<cMaterialType_SolidDiffuse_Vars::MaterialBufferData*>(updateDesc.pMappedData));
+                // data.m_z.alphaReject = apMaterial->GetAlphaRejectValue();
+                endUpdateResource(&updateDesc, NULL);
+
+                apDescriptor->m_uniform.m_offset = offsetof(cMaterialType_SolidDiffuse_Vars::MaterialBufferData, m_z);
+                apDescriptor->m_uniform.m_buffer = &pVars->m_buffer[apDescriptor->m_frame->m_frameIndex];
+                break;
+            }
+            default:
+                break;
+
+        }
+ 
+        // apDescriptor->m_descriptorSet.m_materialDescriptorSet = &descriptor;
+    }
+
     void cMaterialType_SolidDiffuse::ResolveShaderProgram(
             eMaterialRenderMode aRenderMode,
             cViewport& viewport,
@@ -213,10 +242,41 @@ namespace hpl
         GraphicsContext::ShaderProgram program;
         cMatrixf mtxUv = apMaterial->HasUvAnimation() ? apMaterial->GetUvMatrix().GetTranspose() : cMatrixf::Identity;
         program.m_uniforms.push_back({m_u_mtxUv, &mtxUv.v});
-
+        
+        auto pipeline = Interface<ForgeRenderer>::Get();
         auto* pVars = static_cast<cMaterialType_SolidDiffuse_Vars*>(apMaterial->GetVars());
         switch(aRenderMode) {
             case eMaterialRenderMode_Diffuse: {
+
+                auto diffuseMap = apMaterial->GetImage(eMaterialTexture_Diffuse);
+                auto normalImage = apMaterial->GetImage(eMaterialTexture_NMap);
+                auto specularMap = apMaterial->GetImage(eMaterialTexture_Specular);
+                auto heightMap = apMaterial->GetImage(eMaterialTexture_Height);
+                auto diffuseEnvMap = apMaterial->GetImage(eMaterialTexture_CubeMap);
+                auto cubemapAlphaMap = apMaterial->GetImage(eMaterialTexture_CubeMapAlpha);
+                
+                std::array<eMaterialTexture, 6> poolTextures = {
+                    eMaterialTexture_Diffuse,
+                    eMaterialTexture_NMap,
+                    eMaterialTexture_Specular,
+                    eMaterialTexture_Height,
+                    eMaterialTexture_CubeMap,
+                    eMaterialTexture_CubeMapAlpha
+                };
+                // pipeline->CmdPool(0).AddMaterial(*apMaterial, poolTextures);
+                
+                std::array params = {
+                    [&]{
+                        DescriptorData data = {};
+                        data.pName = "s_diffuseMap";
+                        data.ppTextures = &diffuseMap->GetTexture().m_handle;
+                        return data;
+                    }()
+                };
+
+                // updateDescriptorSet(
+                //     pipeline->Rend(), 0, descriptorSet.m_handle, params.size(), params.data());
+
                 struct {
                     float heightMapScale;
                     float heightMapBias;
@@ -229,13 +289,7 @@ namespace hpl
                 } param = {0};
                 param.alphaReject = 0.5f;
                 uint32_t flags = 0;
-                auto diffuseMap = apMaterial->GetImage(eMaterialTexture_Diffuse);
-                auto normalImage = apMaterial->GetImage(eMaterialTexture_NMap);
-                auto specularMap = apMaterial->GetImage(eMaterialTexture_Specular);
-                auto heightMap = apMaterial->GetImage(eMaterialTexture_Height);
-                auto diffuseEnvMap = apMaterial->GetImage(eMaterialTexture_CubeMap);
-                auto cubemapAlphaMap = apMaterial->GetImage(eMaterialTexture_CubeMapAlpha);
-                
+               
                 if(diffuseMap) {
                     program.m_textures.push_back({m_s_diffuseMap, diffuseMap->GetHandle(), 4});
                 }
@@ -338,7 +392,34 @@ namespace hpl
 
     iMaterialVars* cMaterialType_SolidDiffuse::CreateSpecificVariables()
     {
-        return hplNew(cMaterialType_SolidDiffuse_Vars, ());
+        auto pVars = new cMaterialType_SolidDiffuse_Vars();
+        auto pipeline = Interface<ForgeRenderer>::Get();
+        DescriptorSetDesc desc = { pipeline->PipelineSignature(), DESCRIPTOR_UPDATE_FREQ_PER_FRAME, 2 };
+
+        BufferDesc bufferDesc = {};
+        bufferDesc.mDescriptors = DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        bufferDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
+        bufferDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
+        bufferDesc.mSize = sizeof(cMaterialType_SolidDiffuse_Vars::MaterialBufferData);
+        pVars->m_materialId = (++m_materialCount) % MaxSolidMaterials;
+        // for(auto& bufferHandle: pVars->m_diffuseBuffer) {
+        //     BufferLoadDesc loadDesc = {};
+        //     loadDesc.mDesc = bufferDesc;
+        //     loadDesc.ppBuffer = &bufferHandle.m_handle;
+        //     addResource(&loadDesc, nullptr);
+        // }
+        // DescriptorSet* descriptorSet = {};
+        // addDescriptorSet(pipeline->Rend(), &desc, &pVars->m_descriptorSet[eMaterialRenderMode_Diffuse].m_handle);
+        // addDescriptorSet(pipeline->Rend(), &desc, &pVars->m_descriptorSet[eMaterialRenderMode_Z].m_handle);
+        // addDescriptorSet(pipeline->Rend(), &desc, &pVars->m_descriptorSet[eMaterialRenderMode_Z_Dissolve].m_handle);
+        // addDescriptorSet(pipeline->Rend(), &desc, &pVars->m_descriptorSet[eMaterialRenderMode_Illumination].m_handle);
+
+        // pVars->m_descriptorSet[eMaterialRenderMode_Diffuse].Initialize();
+        // pVars->m_descriptorSet[eMaterialRenderMode_Z].Initialize();
+        // pVars->m_descriptorSet[eMaterialRenderMode_Z_Dissolve].Initialize();
+        // pVars->m_descriptorSet[eMaterialRenderMode_Illumination].Initialize();
+        
+        return new cMaterialType_SolidDiffuse_Vars();
     }
 
     //--------------------------------------------------------------------------

@@ -109,7 +109,7 @@ namespace hpl {
         };
 
         struct DrawClear {
-            const RenderTarget& m_target;
+            const LegacyRenderTarget& m_target;
             ClearRequest m_clear;
 
             uint16_t m_x = 0;
@@ -124,7 +124,7 @@ namespace hpl {
         };
 
         struct ViewConfiguration {
-            const RenderTarget& m_target;
+            const LegacyRenderTarget& m_target;
             const char* m_name = nullptr;
 
             std::optional<ClearRequest> m_clear;
@@ -168,7 +168,7 @@ namespace hpl {
         inline bgfx::ViewId StartPass(absl::string_view name, const ViewConfiguration& config);
 
         bool isOriginBottomLeft() const;
-        void CopyTextureToFrameBuffer(Image& image, cRect2l dstRect, RenderTarget& target, Write write = Write::RGBA);
+        void CopyTextureToFrameBuffer(Image& image, cRect2l dstRect, LegacyRenderTarget& target, Write write = Write::RGBA);
         inline void Submit(bgfx::ViewId view, const DrawRequest& request);
         inline void Submit(bgfx::ViewId view, const DrawRequest& request, bgfx::OcclusionQueryHandle query);
         inline void Submit(bgfx::ViewId view, const ComputeRequest& request);

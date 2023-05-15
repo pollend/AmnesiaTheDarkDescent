@@ -28,7 +28,6 @@ namespace hpl {
 	class iFontData;
 	class iOcclusionQuery;
 	class iGpuShader;
-	class iGpuProgram;
 	class iTexture;
 	class iVertexBuffer;
 	class cBitmap;
@@ -119,12 +118,6 @@ namespace hpl {
 
 		[[deprecated("interface is deprecated")]]
 		virtual iFontData* CreateFontData(const tString &asName)=0;
-
-		[[deprecated("interface is deprecated")]]
-		virtual iGpuProgram* CreateGpuProgram(const tString& asName)=0;
-		
-		[[deprecated("interface is deprecated")]]
-		virtual iGpuShader* CreateGpuShader(const tString& asName, eGpuShaderType aType)=0;
 
 		[[deprecated("interface is deprecated")]]
 		virtual iTexture* CreateTexture(const tString &asName,eTextureType aType,  eTextureUsage aUsage)=0;

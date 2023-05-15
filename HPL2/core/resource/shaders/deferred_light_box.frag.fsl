@@ -1,0 +1,17 @@
+#define BOX_LIGHT 1
+#include "deferred_light_resource.h.fsl"
+
+STRUCT(PsIn)
+{
+	DATA(float4, Position, SV_Position);
+};
+
+float4 PS_MAIN(PsIn In)
+{
+    INIT_MAIN;
+
+    float2 NDC = In.Position.xy * Get(viewTexel);
+    float4 color =  SampleTex2D(Get(diffuseMap), Get(nearestSampler), NDC);
+
+    RETURN(float4(color.xyz * Get(lightColor).xyz, 0.0));
+}

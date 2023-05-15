@@ -35,7 +35,6 @@
 #include "graphics/PostEffect.h"
 #include "graphics/MaterialType.h"
 #include "graphics/Texture.h"
-#include "graphics/GPUProgram.h"
 
 #include "resources/LowLevelResources.h"
 #include "resources/Resources.h"
@@ -161,11 +160,12 @@ namespace hpl {
 		if(alHplSetupFlags & eHplSetup_Screen)
 		{
     
-			mvRenderers.resize(eRenderer_LastEnum, NULL);
+			mvRenderers.resize(1, NULL);
 
 			mvRenderers[eRenderer_Main] = new cRendererDeferred(this, apResources);
-			mvRenderers[eRenderer_WireFrame] = new cRendererWireFrame(this, apResources);
-			mvRenderers[eRenderer_Simple] = new cRendererSimple(this, apResources);
+			// TODO: need to add these renderers
+			// mvRenderers[eRenderer_WireFrame] = new cRendererWireFrame(this, apResources);
+			// mvRenderers[eRenderer_Simple] = new cRendererSimple(this, apResources);
 
 			for(size_t i=0; i<mvRenderers.size(); ++i)
 			{

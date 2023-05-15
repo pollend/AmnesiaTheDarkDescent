@@ -2032,7 +2032,6 @@ int hplMain(const tString &asCommandline)
 #endif
 
 	//iResourceBase::SetLogCreateAndDelete(true);
-	//iGpuProgram::SetLogDebugInformation(true);
 	// cRendererDeferred::SetGBufferType(eDeferredGBuffer_32Bit);
 	cRendererDeferred::SetSSAOLoaded(true);
 	cRendererDeferred::SetSSAOType(eDeferredSSAO_OnColorBuffer);

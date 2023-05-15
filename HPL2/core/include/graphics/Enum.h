@@ -5,10 +5,22 @@
 
 namespace hpl
 {
+    namespace material {
+        enum MaterialID: uint8_t {
+            SolidDiffuse,
+            Translucent,
+            Water,
+            Decal,
+            MaterialIDCount
+        };
+    }
+    
+
     enum class WrapMode : uint8_t {
         None,
         Mirror,
         Clamp,
+        Edge,
         Border
     };
 
@@ -134,6 +146,7 @@ namespace hpl
         BlendFactor,    //!< Blend factor
         BlendInvFactor  //!< 1-Blend factor
     };
+
 
     enum class RTType: uint8_t {
         None,

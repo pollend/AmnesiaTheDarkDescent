@@ -33,7 +33,6 @@ namespace hpl {
 	class iLowLevelGraphics;
 	class iVertexBuffer;
 	class iTexture;
-	class iGpuProgram;
 	class cFrustum;
 	class cMaterial;
 	class iMaterialType;

@@ -36,6 +36,8 @@
 #include <memory>
 #include <vector>
 
+#include "Common_3/Graphics/Interfaces/IGraphics.h"
+#include <FixPreprocessor.h>
 namespace hpl {
     
 
@@ -238,7 +240,7 @@ namespace hpl {
     {
     public:
         int mlFrameCount;
-        RenderTarget m_target;
+        LegacyRenderTarget m_target;
         cShadowMapLightCache mCache;
     };
 
@@ -258,7 +260,7 @@ namespace hpl {
         // plan to just use the single draw call need to call BeginRendering to setup state
         // ensure the contents is copied to the RenderViewport
         virtual void Draw(
-            GraphicsContext& context,
+            const ForgeRenderer::Frame& context,
             cViewport& viewport,
             float afFrameTime,
             cFrustum* apFrustum,
@@ -283,7 +285,7 @@ namespace hpl {
         virtual bool LoadData()=0;
         virtual void DestroyData()=0;
 
-        virtual std::shared_ptr<Image> GetOutputImage(cViewport& viewport) { return std::shared_ptr<Image>(nullptr);}
+        virtual Texture* GetOutputImage(uint32_t frameIndex, cViewport& viewport) { return nullptr;}
 
         cWorld *GetCurrentWorld(){ return mpCurrentWorld;}
         cFrustum *GetCurrentFrustum(){ return mpCurrentFrustum;}
@@ -438,10 +440,6 @@ namespace hpl {
         inline bool SetBlendMode(eMaterialBlendMode aMode){ 
             return false;
          }
-        [[deprecated("SetProgram is deprecated")]]
-        inline bool SetProgram(iGpuProgram *apProgram){ 
-            return true; 
-        }
         [[deprecated("SetTexture is deprecated")]]
         inline void SetTexture(int alUnit, iTexture *apTexture){
 

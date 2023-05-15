@@ -1,0 +1,105 @@
+
+CBUFFER(perFrameConstants, UPDATE_FREQ_PER_FRAME, b0, binding = 0)
+{
+    DATA(float4x4, invViewRotationMat, None);
+    DATA(float4x4, viewMat, None);
+    DATA(float4x4, projMat, None);
+    DATA(float4x4, viewProjMat, None);
+
+    // scene fog properties
+    DATA(float, worldFogStart, None);
+    DATA(float, worldFogLength, None);
+    DATA(float, oneMinusFogAlpha, None);
+    DATA(float, fogFalloffExp, None);
+
+    DATA(float2, viewTexel, None);
+    DATA(float2, viewportSize, None);
+    DATA(int, features, None);
+};
+INLINE bool UseFeatureRefraction(int _featureConfig)        { return (_featureConfig & (1 << 0)) != 0; }
+
+CBUFFER(uniformObjectBlock, UPDATE_FREQ_PER_DRAW, b1, binding = 1)
+{
+    DATA(float, dissolveAmount, None);
+    DATA(float4x4, modelMat, None);
+    DATA(float4x4, uvMat, None);
+
+    DATA(float4x4, modelViewMat, None);
+    DATA(float4x4, modelViewProjMat, None);
+    DATA(float3x3, normalMat, None);
+};
+
+#if defined(MATERIAL_SOLID)
+    // material data
+    CBUFFER(uniformMaterialBlock, UPDATE_FREQ_PER_BATCH, b2, binding = 2)
+    {
+        DATA(int, textureConfig, None);
+        DATA(float, heightMapScale, None);
+        DATA(float, heightMapBias, None);
+        DATA(float, frenselBias, None);
+        DATA(float, frenselPow, None);
+    };
+    INLINE bool HasDissolveFilter(int _textureConfig)   { return (_textureConfig & (1 << 9)) != 0; }
+    INLINE bool IsAlphaSingleChannel(int _textureConfig)   { return (_textureConfig & (1 << 10)) != 0; }
+    INLINE bool IsHeightMapSingleChannel(int _textureConfig)   { return (_textureConfig & (1 << 11)) != 0; }
+
+#elif defined(MATERIAL_TRANSLUCENT)
+    CBUFFER(uniformMaterialBlock, UPDATE_FREQ_PER_BATCH, b2, binding = 2)
+    {
+        DATA(int, textureConfig, None);
+        DATA(float, fogStart, None);
+        DATA(float, fogEnd, None);
+        DATA(float, refractionScale, None);
+        DATA(float, frenselBias, None);
+        DATA(float, frenselPos, None);
+        DATA(float, rimMulLight, None);
+        DATA(float, rimMulPower, None);
+        //DATA(float, alpha, None);
+    };
+
+    INLINE bool UseRefraction(int _textureConfig)   { return (_textureConfig & (1 << 9)) != 0; }
+    INLINE bool UseRefractionEdgeCheck(int _textureConfig)   { return (_textureConfig & (1 << 10)) != 0; }
+    INLINE bool UseRefractionNormals(int _textureConfig)   { return (_textureConfig & (1 << 11)) != 0; }
+#endif
+
+RES(Tex2D(float4), diffuseMap, UPDATE_FREQ_PER_BATCH, t1, binding = 5); 
+RES(SamplerState, diffuseSampler, UPDATE_FREQ_PER_BATCH, s1, binding = 6); 
+
+RES(Tex2D(float4), normalMap, UPDATE_FREQ_PER_BATCH, t2, binding = 7);
+RES(SamplerState, normalSampler, UPDATE_FREQ_PER_BATCH, s2, binding = 8); 
+
+RES(Tex2D(float4), specularMap, UPDATE_FREQ_PER_BATCH, t3, binding = 9);
+RES(SamplerState, specularSampler, UPDATE_FREQ_PER_BATCH, t3, binding = 10); 
+
+RES(Tex2D(float4), alphaMap, UPDATE_FREQ_PER_BATCH, t4, binding = 11);
+RES(SamplerState, alphaSampler, UPDATE_FREQ_PER_BATCH, t4, binding = 12); 
+
+RES(Tex2D(float4), heightMap, UPDATE_FREQ_PER_BATCH, t5, binding =  13);
+RES(SamplerState, heightSampler, UPDATE_FREQ_PER_BATCH, s5, binding = 14); 
+
+RES(Tex2D(float4), illuminationMap, UPDATE_FREQ_PER_BATCH, t6, binding = 15);
+RES(SamplerState, illuminationSampler, UPDATE_FREQ_PER_BATCH, s6, binding = 16); 
+
+RES(TexCube(float4), cubeMap, UPDATE_FREQ_PER_BATCH, t7, binding = 17);
+RES(SamplerState, cubeSampler, UPDATE_FREQ_PER_BATCH, s7, binding = 18); 
+
+RES(Tex2D(float4), dissolveAlphaMap, UPDATE_FREQ_PER_BATCH, t8, binding = 19);
+RES(SamplerState, dissolveAlphaSampler, UPDATE_FREQ_PER_BATCH, s8, binding = 20); 
+
+RES(Tex2D(float4), cubeMapAlpha, UPDATE_FREQ_PER_BATCH, t9, binding = 21);
+RES(SamplerState, cubeMapAlphaSampler, UPDATE_FREQ_PER_BATCH, s9, binding = 22); 
+
+RES(SamplerState, nearestSampler, UPDATE_FREQ_PER_BATCH, s10, binding = 23);
+RES(SamplerState, bilinearSampler, UPDATE_FREQ_PER_BATCH, s11, binding = 24);
+
+INLINE bool HasDiffuse(int _textureConfig)        { return (_textureConfig & (1 << 0)) != 0; }
+INLINE bool HasNormal(int _textureConfig)         { return (_textureConfig & (1 << 1)) != 0; }
+INLINE bool HasSpecular(int _textureConfig)       { return (_textureConfig & (1 << 2)) != 0; }
+INLINE bool HasAlpha(int _textureConfig)          { return (_textureConfig & (1 << 3)) != 0; }
+INLINE bool HasHeight(int _textureConfig)         { return (_textureConfig & (1 << 4)) != 0; }
+INLINE bool HasIllumination(int _textureConfig)   { return (_textureConfig & (1 << 5)) != 0; }
+INLINE bool HasCubeMap(int _textureConfig)        { return (_textureConfig & (1 << 6)) != 0; }
+INLINE bool HasDissolveAlpha(int _textureConfig)  { return (_textureConfig & (1 << 7)) != 0; }
+INLINE bool HasCubeMapAlpha(int _textureConfig)   { return (_textureConfig & (1 << 8)) != 0; }
+
+

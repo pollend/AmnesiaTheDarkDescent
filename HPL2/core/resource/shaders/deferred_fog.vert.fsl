@@ -1,0 +1,41 @@
+CBUFFER(uniformFogBlock, UPDATE_FREQ_PER_DRAW, b1, binding = 2)
+{
+    DATA(mat4, mvp, None);
+    DATA(mat4, mv, None);
+    DATA(float4, fogColor, None);
+    DATA(float4, rayCastStart, None);
+    DATA(float4, fogNegPlaneDistNeg, None);
+    DATA(float4, fogNegPlaneDistPos, None);
+    DATA(float, start, None);
+    DATA(float, length, None);
+    DATA(float, falloffExp, None);
+};
+
+
+STRUCT(VSInput)
+{
+    DATA(float3, Position, POSITION);
+};
+
+
+STRUCT(VSOutput)
+{
+    DATA(float4, Position, SV_Position);
+    DATA(float4, pos, POSITION);
+
+    #if defined(USE_OUTSIDE_BOX) && defined(USE_BACK_SIDE) 
+        DATA(float3, ray, TEXCOORD0);
+    #endif
+};
+
+VSOutput VS_MAIN( VSInput In )
+{
+    INIT_MAIN;
+    VSOutput Out;
+    Out.Position = mul(Get(mvp), float4(In.Position.xyz, 1.0));
+    Out.pos = mul(Get(mv), float4(In.Position.xyz, 1.0));
+    #if defined(USE_OUTSIDE_BOX) && defined(USE_BACK_SIDE) 
+        Out.ray = In.Position.xyz;
+    #endif
+    RETURN(Out);
+}

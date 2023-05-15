@@ -27,28 +27,37 @@
 #include "resources/TextureManager.h"
 #include "resources/ImageManager.h"
 
-#include "graphics/GPUShader.h"
-#include "graphics/GPUProgram.h"
 #include "graphics/MaterialType.h"
+#include "graphics/Renderable.h"
 
 #include "math/Math.h"
 #include <utility>
 #include <bx/debug.h>
 
 
+
+#include "tinyimageformat_query.h"
+
 namespace hpl {
 
+	namespace internal {
+        static size_t m_id = 0;
+        static std::vector<size_t> m_freelist;
+	}
+
 	bool cMaterial::mbDestroyTypeSpecifics = true;
-
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	cMaterial::cMaterial(const tString& asName, const tWString& asFullPath, cGraphics *apGraphics, cResources *apResources, iMaterialType *apType)
 		: iResourceBase(asName, asFullPath, 0)
 	{
+		if(internal::m_freelist.size() > 0) {
+			m_materialID = internal::m_freelist.back();
+			internal::m_freelist.pop_back();
+		} else {
+			m_materialID = internal::m_id++;
+			ASSERT(m_materialID < MaxMaterialID && "Too many materials created");
+		}
+
 		mpGraphics = apGraphics;
 		mpResources = apResources;
 
@@ -107,6 +116,8 @@ namespace hpl {
 
 	cMaterial::~cMaterial()
 	{
+		internal::m_freelist.push_back(m_materialID);
+		m_materialID = 0;
 		if(mpVars) {
 			hplDelete(mpVars);
 		}
@@ -114,37 +125,69 @@ namespace hpl {
 
 	void cMaterial::SetType(iMaterialType* apType)
 	{
-		if(mpType==apType) return;
+		if(mpType == apType) {
+			return;
+		}
 
 		mpType = apType;
 
-		if(mpVars) hplDelete(mpVars);
-		if(mpType) mpVars = mpType->CreateSpecificVariables();
+		if(mpVars) {
+			hplDelete(mpVars);
+		}
+		if(mpType) {
+			mpVars = mpType->CreateSpecificVariables();
+		}
 	}
 
 	//-----------------------------------------------------------------------
 
 	void cMaterial::Compile()
 	{
-		////////////////////////
-		//Reset some settings before compiling
 		for(int i=0; i<eMaterialRenderMode_LastEnum; ++i)
 		{
 			mbHasSpecificSettings[i] = false;
 			mbHasObjectSpecificsSettings[i] = false;
 		}
 
-
-		///////////////////
-		// Type specifics
 		mpType->CompileMaterialSpecifics(this);
+		UpdateFlags();
 	}
 
+
+	void cMaterial::UpdateFlags() {
+		const auto alphaMapImage = GetImage(eMaterialTexture_Alpha);
+		const auto heightMapImage = GetImage(eMaterialTexture_Height);
+		m_info.m_data.m_common.m_textureConfig = 
+					(GetImage(eMaterialTexture_Diffuse) ? EnableDiffuse: 0) |
+					(GetImage(eMaterialTexture_NMap) ? EnableNormal: 0) |
+ 					(GetImage(eMaterialTexture_Specular) ? EnableSpecular: 0) |
+					(alphaMapImage ? EnableAlpha: 0) |
+					(heightMapImage ? EnableHeight: 0) |
+					(GetImage(eMaterialTexture_Illumination) ? EnableIllumination: 0) |
+					(GetImage(eMaterialTexture_CubeMap) ? EnableCubeMap: 0) |
+					(GetImage(eMaterialTexture_DissolveAlpha) ? EnableDissolveAlpha: 0) |
+					(GetImage(eMaterialTexture_CubeMapAlpha) ? EnableDissolveAlphaFilter: 0) |
+					(m_info.m_alphaDissolveFilter ? UseDissolveFilter: 0);
+		switch(m_info.m_id) {
+			case MaterialID::SolidDiffuse: {
+				m_info.m_data.m_common.m_textureConfig |= 
+					((alphaMapImage && TinyImageFormat_ChannelCount(static_cast<TinyImageFormat>(alphaMapImage->GetTexture().m_handle->mFormat)) == 1) ? IsAlphaSingleChannel: 0) |
+					((heightMapImage && TinyImageFormat_ChannelCount(static_cast<TinyImageFormat>(heightMapImage->GetTexture().m_handle->mFormat)) == 1) ? IsHeightMapSingleChannel: 0);
+				break;
+			}
+			default:
+				break;
+		}
+	}
+	
 	void cMaterial::SetImage(eMaterialTexture aType, iResourceBase *apTexture) 
 	{
+		// increase version number to dirty material
+		m_version++;
+		UpdateFlags();
 		m_image[aType].SetAutoDestroyResource(false);
 		if(apTexture) {
-			BX_ASSERT(TypeInfo<Image>().IsType(*apTexture) || TypeInfo<AnimatedImage>().IsType(*apTexture), "cMaterial::SetImage: apTexture is not an Image")
+			ASSERT(TypeInfo<Image>().IsType(*apTexture) || TypeInfo<AnimatedImage>().IsType(*apTexture) && "cMaterial::SetImage: apTexture is not an Image");
 			m_image[aType] = std::move(ImageResourceWrapper(mpResources->GetTextureManager(), apTexture, mbAutoDestroyTextures));
 		} else {
 			m_image[aType] = ImageResourceWrapper();
@@ -217,14 +260,6 @@ namespace hpl {
 		m_mtxUV = cMatrixf::Identity;
 	}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PRIVATE METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
 	static cVector3f GetAxisVector(eMaterialAnimationAxis aAxis)
 	{
 		switch(aAxis)
@@ -236,10 +271,64 @@ namespace hpl {
 		return 0;
 	}
 
-	//-----------------------------------------------------------------------
 
-	void cMaterial::UpdateAnimations(float afTimeStep)
-	{
+	// bool cMaterial::updateDescriptorSet(const ForgeRenderer::Frame& frame, eMaterialRenderMode mode, DescriptorSet* descriptorSet) {
+	// 	// if(m_descriptorSets[mode] != descriptorSet) {
+	// 	// 	m_stageDirtyBits |= (1 << mode); // mark stage as dirty
+	// 	// 	m_descriptorSets[mode] = descriptorSet;
+	// 	// }
+
+	// 	if((m_stageDirtyBits & (1 << mode))) {
+	// 		m_stageDirtyBits &= ~(1 << mode); // clear dirty bit
+
+	// 		switch(m_info.m_id) {
+	// 			case SolidDiffuse: {
+	// 				switch(mode) {
+	// 					case eMaterialRenderMode_Z: {
+	// 						std::array<DescriptorData, 2> descriptorData{};
+	// 						descriptorData[0].pName = "uniformMaterialBlock";
+	// 						descriptorData[0].ppBuffers = &m_bufferHandle[frame.m_frameIndex].m_handle;
+							
+	// 						return true;
+
+	// 						break;
+	// 					}
+	// 					case eMaterialRenderMode_Z_Dissolve:
+	// 						break;
+	// 					case eMaterialRenderMode_Diffuse:
+	// 						break;
+	// 					case eMaterialRenderMode_DiffuseFog:
+	// 						break;
+	// 					case eMaterialRenderMode_Light:
+	// 						break;
+	// 					case eMaterialRenderMode_Illumination:
+	// 						break;
+	// 					case eMaterialRenderMode_IlluminationFog:
+	// 						break;
+	// 					default:
+	// 						break;
+	// 				}
+	// 				break;
+	// 			}
+	// 			case Translucent: {
+	// 				break;
+	// 			}
+	// 			case Water: {
+	// 				break;
+	// 			}
+	// 			case Decal: {
+	// 				break;
+	// 			}
+	// 			default: {
+	// 				ASSERT(false && "Unknown material type");
+	// 				break;
+	// 			}
+	// 		}
+	// 	}
+	// 	return false;
+	// }
+
+	void cMaterial::UpdateAnimations(float afTimeStep) {
 		m_mtxUV = cMatrixf::Identity;
 
         for(size_t i=0; i<mvUvAnimations.size(); ++i)
@@ -275,6 +364,14 @@ namespace hpl {
 			}
 		}
 
+		// auto frame = Interface<ForgeRenderer>::Get()->GetFrame();
+		// auto& handle = m_bufferHandle[frame.m_frameIndex];
+		// BufferUpdateDesc uniformUpdate = { handle.m_handle};
+		// beginUpdateResource(&uniformUpdate);
+		// reinterpret_cast<MaterialCommonBlock*>(uniformUpdate.pMappedData)->m_textureMatrix = cMath::ToForgeMat4(m_mtxUV);
+		// endUpdateResource(&uniformUpdate, nullptr);
+
+		m_version++;		
 		mfAnimTime += afTimeStep;
 	}
 

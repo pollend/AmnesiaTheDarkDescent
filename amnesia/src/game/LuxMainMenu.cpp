@@ -1381,9 +1381,9 @@ void cLuxMainMenu::RenderBlurTexture()
         return image;
     }();
 
-	std::array<RenderTarget,2> blurTargets {
-		RenderTarget(tempBlurImage),
-		RenderTarget(m_screenBlurImage)
+	std::array<LegacyRenderTarget,2> blurTargets {
+		LegacyRenderTarget(tempBlurImage),
+		LegacyRenderTarget(m_screenBlurImage)
 	};
 
 	// third copy umm need to out how to handle this
@@ -1451,9 +1451,9 @@ void cLuxMainMenu::RenderBlurTexture()
 		}
 	};
 	
-	RenderTarget tempTarget = RenderTarget(m_screenImage);
+	LegacyRenderTarget tempTarget = LegacyRenderTarget(m_screenImage);
 	cRect2l rect = cRect2l(0,0,viewportSize.x,viewportSize.y);
-	graphicsContext.CopyTextureToFrameBuffer(*renderer->GetOutputImage(*viewport), rect, tempTarget);
+	// graphicsContext.CopyTextureToFrameBuffer(*renderer->GetOutputImage(*viewport), rect, tempTarget);
 	
 	requestBlur(*m_screenImage);
 

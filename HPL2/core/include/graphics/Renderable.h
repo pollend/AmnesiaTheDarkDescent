@@ -47,18 +47,19 @@ namespace hpl {
 
 	class iRenderable : public iEntity3D
 	{
-	#ifdef __GNUC__
-		typedef iEntity3D __super;
-	#endif
 	public:
+		struct CBObjectData {
+			mat4 m_mtxModel;
+			mat4 m_normalMtx;
+
+			mat4 m_uvMtx;
+		};
+
 		iRenderable(const tString &asName);
 		virtual ~iRenderable() {}
 
 		virtual cMaterial *GetMaterial()=0;
 		virtual iVertexBuffer* GetVertexBuffer()=0;
-
-
-		// virtual bool Submit(LayoutStream& input, GraphicsContext& context) { return false;}
 
 		virtual bool CollidesWithBV(cBoundingVolume *apBV);
 		virtual bool CollidesWithFrustum(cFrustum *apFrustum);
@@ -108,11 +109,6 @@ namespace hpl {
 		inline float GetViewSpaceZ() const { return mfViewSpaceZ;}
 		inline void SetViewSpaceZ(float afZ){ mfViewSpaceZ = afZ;}
 
-		cMatrixf* GetInvModelMatrix();
-
-		inline void SetPrevMatrix(const cMatrixf& a_mtxPrev){m_mtxPrevious = a_mtxPrev;}
-		inline cMatrixf& GetPrevMatrix(){ return m_mtxPrevious;}
-
 		const cVector3f& GetCalcScale();
 
 		void SetStatic(bool abX){ mbStatic = abX;}
@@ -131,9 +127,11 @@ namespace hpl {
 
 		void SetRenderableUserData(void* apData) { mpRenderableUserData = apData; }
 		void* GetRenderableUserData() { return mpRenderableUserData; }
+
 	protected:
+		virtual void OnUpdateWorldTransform() override;
+		
 		cMatrixf m_mtxInvModel;
-		cMatrixf m_mtxPrevious;
 		cMatrixf *mpModelMatrix;
 
 		iRenderableCallback *mpRenderCallback;

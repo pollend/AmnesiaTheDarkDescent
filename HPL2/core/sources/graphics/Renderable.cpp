@@ -25,19 +25,14 @@
 
 namespace hpl {
 
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
 	iRenderable::iRenderable(const tString &asName) : iEntity3D(asName)
 	{
+
 		mlLastMatrixCount = -1;
 
 		mbStatic = false;
 
-		mlRenderFlags =eRenderableFlag_VisibleInReflection | eRenderableFlag_VisibleInNonReflection;
+		mlRenderFlags = eRenderableFlag_VisibleInReflection | eRenderableFlag_VisibleInNonReflection;
 
 		mfIlluminationAmount = 1.0f;
 		mfCoverageAmount = 1.0f;
@@ -94,25 +89,6 @@ namespace hpl {
 		if(mpRenderCallback) mpRenderCallback->OnVisibleChange(this);
 	}
 
-	//-----------------------------------------------------------------------
-
-	cMatrixf* iRenderable::GetInvModelMatrix()
-	{
-		cMatrixf *pModelMatrix = GetModelMatrix(NULL);
-		if(pModelMatrix==NULL) return NULL;
-
-		if(mlLastMatrixCount != GetMatrixUpdateCount())
-		{
-			mlLastMatrixCount = GetMatrixUpdateCount();
-
-			m_mtxInvModel = cMath::MatrixInverse(*pModelMatrix);
-		}
-
-		return &m_mtxInvModel;
-	}
-
-	//-----------------------------------------------------------------------
-
 	void iRenderable::SetCoverageAmount(float afX)
 	{
 		if(mfCoverageAmount == afX) return;
@@ -123,7 +99,8 @@ namespace hpl {
 		SetTransformUpdated(false);
 	}
 
-	//-----------------------------------------------------------------------
+	void iRenderable::OnUpdateWorldTransform() {
+	}
 
 	const cVector3f& iRenderable::GetCalcScale()
 	{
@@ -140,7 +117,11 @@ namespace hpl {
 		return mvCalcScale;
 	}
 
-	//-----------------------------------------------------------------------
+	// void iRenderable::bindCommandBuffer(ForgeRenderer& pipeline, ForgeCmdHandle& cmd) {
+	// 	// pipeline.FrameIndex();
+	// 	// cmdBinddescriptorSet(cmd, 0, m_cbObjectBuffer[frameIndex].m_descriptorSet);
+	// }
+
 
 	bool iRenderable::CollidesWithBV(cBoundingVolume *apBV)
 	{
