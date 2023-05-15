@@ -20,7 +20,7 @@
 #ifndef HPL_BITMAP_H
 #define HPL_BITMAP_H
 
-#include "graphics/Pipeline.h"
+#include "graphics/ForgeRenderer.h"
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
 

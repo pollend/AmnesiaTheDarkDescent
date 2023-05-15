@@ -44,7 +44,6 @@
 #include "graphics/Texture.h"
 #include <graphics/GraphicsContext.h>
 
-#include "graphics/GPUShader.h"
 #include "resources/Resources.h"
 
 #include "scene/Camera.h"

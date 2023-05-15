@@ -58,8 +58,6 @@
 #include "graphics/DecalCreator.h"
 #include "graphics/FontData.h"
 #include "graphics/Texture.h"
-#include "graphics/GPUShader.h"
-#include "graphics/GPUProgram.h"
 #include "graphics/VertexBuffer.h"
 #include "graphics/Mesh.h"
 #include "graphics/SubMesh.h"

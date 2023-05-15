@@ -35,7 +35,7 @@
 #include <memory>
 #include <vector>
 
-#include <graphics/Pipeline.h>
+#include <graphics/ForgeRenderer.h>
 
 #include "Common_3/Utilities/RingBuffer.h"
 #include <Common_3/Graphics/Interfaces/IGraphics.h>
@@ -62,36 +62,6 @@ namespace hpl {
         eDeferredSSAO_OnColorBuffer,
         eDeferredSSAO_LastEnum,
     };
-
-
-    //---------------------------------------------
-    namespace rendering::detail {
-        enum SpotlightVariant { 
-            SpotlightVariant_None = 0, 
-            SpotlightVariant_UseGoboMap = 0x1, 
-            SpotlightVariant_UseShadowMap = 0x2 
-        };
-
-        enum PointlightVariant { 
-            PointlightVariant_None = 0, 
-            PointlightVariant_UseGoboMap = 0x1 
-        };
-
-        enum FogVariant { 
-            FogVariant_None = 0, 
-            FogVariant_UseOutsideBox = 0x1, 
-            FogVariant_UseBackSide = 0x2 
-        };
-
-        void RenderZPassObject(
-            bgfx::ViewId view,
-            GraphicsContext& context,
-            cViewport& viewport,
-            iRenderer* renderer,
-            iRenderable* object,
-            Cull cull = Cull::CounterClockwise);
-    }; // namespace rendering::detail
-
 
     class cRendererDeferred : public iRenderer {
         HPL_RTTI_IMPL_CLASS(iRenderer, cRendererDeferred, "{A3E5E5A1-1F9C-4F5C-9B9B-5B9B9B5B9B9B}")
@@ -340,7 +310,6 @@ namespace hpl {
             const cMatrixf& frustumView;
            cRendererDeferred::GBuffer& m_gBuffer;
         };
-        void RenderLightPass(GraphicsContext& context, std::span<iLight*> lights, cWorld* apWorld, cViewport& viewport, cFrustum* apFrustum, LightPassOptions& options);
         struct FogPassOptions {
             const cMatrixf& frustumProjection;
             const cMatrixf& frustumInvView;
@@ -348,11 +317,7 @@ namespace hpl {
 
            cRendererDeferred::GBuffer& m_gBuffer;
         };
-        void RenderFogPass(GraphicsContext& context, std::span<cRendererDeferred::FogRendererData> fogRenderData, cWorld* apWorld, cViewport& viewport, cFrustum* apFrustum, FogPassOptions& options);
-        struct FogPassFullscreenOptions {
-            cRendererDeferred::GBuffer& m_gBuffer;
-        };
-        void RenderFullscreenFogPass(GraphicsContext& context, cWorld* apWorld, cViewport& viewport, cFrustum* apFrustum, FogPassFullscreenOptions& options);
+
         iVertexBuffer* GetLightShape(iLight* apLight, eDeferredShapeQuality aQuality) const;
         
         struct PerObjectOption {
@@ -447,11 +412,14 @@ namespace hpl {
             std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perFrameSet{};
             std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perObjectSet{};
 
-            GPURingBuffer* m_fogUniformBuffer;
-            RootSignature* m_fogRootSignature;
+            GPURingBuffer* m_fogUniformBuffer = nullptr;
+            RootSignature* m_fogRootSignature = nullptr;
             std::array<Shader*, 4> m_shader{};
             std::array<Pipeline*, 8> m_pipeline{};
-        } m_fog;
+            
+            Shader* m_fullScreenShader = nullptr;
+            Pipeline* m_fullScreenPipeline = nullptr;
+        } m_fogPass;
         
         RootSignature* m_materialRootSignature;
 
@@ -461,7 +429,7 @@ namespace hpl {
             Shader* m_solidDiffuseParallaxShader;
             Pipeline* m_solidDiffusePipeline;
             Pipeline* m_solidDiffuseParallaxPipeline;
-        } m_materialSolid;
+        } m_materialSolidPass;
 
         // illumination pass
         Shader* m_solidIlluminationShader;

@@ -1,8 +1,4 @@
 
-// RES(RTex2D(float4), srcTexture, UPDATE_FREQ_PER_DRAW, u0, binding = 0);
-// RES(RWTex2D(float4), dstTexture, UPDATE_FREQ_PER_DRAW, u0, binding = 0);
-
-
 STRUCT(VSOutput)
 {
 	DATA(float4, Position, SV_Position);

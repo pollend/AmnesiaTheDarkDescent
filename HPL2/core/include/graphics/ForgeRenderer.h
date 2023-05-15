@@ -23,7 +23,6 @@
 namespace hpl {
     class cMaterial;
     class ForgeRenderer;
-    
     struct AmnesiaBlend {
         BlendMode mode;
         BlendConstant src;

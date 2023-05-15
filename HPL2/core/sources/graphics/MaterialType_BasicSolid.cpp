@@ -35,8 +35,6 @@
 #include "math/Frustum.h"
 #include "math/Math.h"
 
-#include "graphics/GPUProgram.h"
-#include "graphics/GPUShader.h"
 #include "graphics/Graphics.h"
 #include "graphics/LowLevelGraphics.h"
 #include "graphics/Material.h"

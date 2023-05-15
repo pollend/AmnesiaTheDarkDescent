@@ -35,7 +35,6 @@
 #include "graphics/PostEffect.h"
 #include "graphics/MaterialType.h"
 #include "graphics/Texture.h"
-#include "graphics/GPUProgram.h"
 
 #include "resources/LowLevelResources.h"
 #include "resources/Resources.h"

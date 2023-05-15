@@ -21,7 +21,6 @@
 
 #include "graphics/FrameBuffer.h"
 #include "graphics/Graphics.h"
-#include "graphics/GPUProgram.h"
 #include "graphics/LowLevelGraphics.h"
 #include "graphics/RenderList.h"
 #include "graphics/RenderTarget.h"

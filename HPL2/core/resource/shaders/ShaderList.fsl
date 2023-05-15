@@ -167,3 +167,8 @@
     #define USE_OUTSIDE_BOX 1
     #include "deferred_fog.frag.fsl"
 #end
+
+
+#frag deferred_fog_fullscreen.frag
+    #include "deferred_fog_fullscreen.frag.fsl"
+#end

@@ -18,7 +18,7 @@
 
 #include "absl/strings/string_view.h"
 #include "graphics/Bitmap.h"
-#include "graphics/Pipeline.h"
+#include "graphics/ForgeRenderer.h"
 #include "math/MathTypes.h"
 #include "system/SystemTypes.h"
 #include <bgfx/bgfx.h>

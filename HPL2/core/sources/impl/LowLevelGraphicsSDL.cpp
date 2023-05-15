@@ -229,19 +229,10 @@ namespace hpl {
 
 	iFontData* cLowLevelGraphicsSDL::CreateFontData(const tString &asName)
 	{
-		;
 
 		return hplNew( cSDLFontData, (asName, this) );
 	}
 
-
-	iGpuShader* cLowLevelGraphicsSDL::CreateGpuShader(const tString& asName, eGpuShaderType aType)
-	{
-		// BX_ASSERT(false, "deprecated CreateGpuProgram");
-		return nullptr;
-	}
-
-	//-----------------------------------------------------------------------
 
 	iTexture* cLowLevelGraphicsSDL::CreateTexture(const tString &asName,eTextureType aType,   eTextureUsage aUsage)
 	{

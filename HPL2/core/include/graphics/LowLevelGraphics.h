@@ -119,10 +119,6 @@ namespace hpl {
 		[[deprecated("interface is deprecated")]]
 		virtual iFontData* CreateFontData(const tString &asName)=0;
 
-
-		[[deprecated("interface is deprecated")]]
-		virtual iGpuShader* CreateGpuShader(const tString& asName, eGpuShaderType aType)=0;
-
 		[[deprecated("interface is deprecated")]]
 		virtual iTexture* CreateTexture(const tString &asName,eTextureType aType,  eTextureUsage aUsage)=0;
 

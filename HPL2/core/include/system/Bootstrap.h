@@ -18,7 +18,7 @@
 
 #include "bx/thread.h"
 #include "engine/UpdateEventLoop.h"
-#include "graphics/Pipeline.h"
+#include "graphics/ForgeRenderer.h"
 #include "system/Filesystem.h"
 #include "windowing/NativeWindow.h"
 #include <bx/file.h>

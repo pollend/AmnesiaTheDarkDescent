@@ -27,8 +27,6 @@
 #include "resources/TextureManager.h"
 #include "resources/ImageManager.h"
 
-#include "graphics/GPUShader.h"
-#include "graphics/GPUProgram.h"
 #include "graphics/MaterialType.h"
 #include "graphics/Renderable.h"
 
