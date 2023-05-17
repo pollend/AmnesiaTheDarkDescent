@@ -2,7 +2,7 @@
 #include "deferred_resources.h.fsl"
 #include "deferred_common.h.fsl"
 
-PUSH_CONSTANT(uRootConstants, b0)
+PUSH_CONSTANT(translucencyConstant, b0)
 {
     DATA(float, sceneAlpha, None);
     DATA(float, lightLevel, None);
@@ -67,12 +67,17 @@ PsOut PS_MAIN(PsIn In)
        finalColor.xyz *= Get(lightLevel);
     #endif
 
-    bool isRefractionEnabled = UseFeatureRefraction(Get(features)) && UseRefraction(Get(textureConfig));
-    bool useScreenNormal = UseRefractionNormals(Get(textureConfig)) && isRefractionEnabled;
+    bool useScreenNormal = UseRefractionNormals(Get(textureConfig));
 
     float3 mapNormal = float3(0,0,0);
     float3 screenNormal = float3(0,0,0);
-    if(isRefractionEnabled || HasCubeMap(Get(textureConfig))) {
+
+    if(
+        #ifdef USE_REFRACTION
+            true ||
+        #endif
+        HasCubeMap(Get(textureConfig))) {
+
         if(HasNormal(Get(textureConfig))) {
             mapNormal = SampleTex2D(Get(normalMap), Get(normalSampler), In.uv).xyz * 2.0 - 1.0;
             screenNormal = normalize(mapNormal.x * In.tangent + mapNormal.y * In.bitangent + mapNormal.z * In.normal);
@@ -80,8 +85,8 @@ PsOut PS_MAIN(PsIn In)
             screenNormal = normalize(In.normal);
         }
     }
-
-    if(isRefractionEnabled) {
+    
+    #ifdef USE_REFRACTION
         float invDist = min(1.0/In.pos.z, 10.0);
         ///////////////////////
         // Sample refaraction map (using distorted coords)
@@ -111,7 +116,7 @@ PsOut PS_MAIN(PsIn In)
         #ifdef USE_BLEND_MODE_PREMUL_ALPHA
             finalColor.xyz = finalColor.xyz + refractionColor.xyz * (1.0 - finalColor.a);
         #endif
-    }
+    #endif
 
     if(HasCubeMap(Get(textureConfig))) {
         float3 eyeVec = normalize(In.pos);

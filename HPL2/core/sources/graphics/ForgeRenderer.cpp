@@ -1,7 +1,7 @@
-#include <graphics/ForgeRenderer.h>
 #include "engine/Interface.h"
 #include "graphics/Material.h"
 #include "windowing/NativeWindow.h"
+#include <graphics/ForgeRenderer.h>
 
 namespace hpl {
 
@@ -10,7 +10,7 @@ namespace hpl {
         // m_resourcePoolIndex = (m_resourcePoolIndex + 1) % ResourcePoolSize;
         m_currentFrameCount++;
         auto frame = GetFrame();
-        
+
         FenceStatus fenceStatus;
         auto& completeFence = frame.m_renderCompleteFence;
         getFenceStatus(m_renderer, completeFence, &fenceStatus);
@@ -22,8 +22,8 @@ namespace hpl {
         resetCmdPool(m_renderer, frame.m_cmdPool);
         frame.m_resourcePool->ResetPool();
         beginCmd(frame.m_cmd);
-        
-        auto&   swapChainImage = frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex];
+
+        auto& swapChainImage = frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex];
 
         RenderTargetBarrier rtBarriers[] = {
             { swapChainImage, RESOURCE_STATE_PRESENT, RESOURCE_STATE_RENDER_TARGET },
@@ -34,8 +34,8 @@ namespace hpl {
     void ForgeRenderer::SubmitFrame() {
         auto frame = GetFrame();
         cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
-        auto&   swapChainImage = frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex];
-    
+        auto& swapChainImage = frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex];
+
         RenderTargetBarrier rtBarriers[] = {
             { swapChainImage, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_PRESENT },
         };
@@ -59,7 +59,6 @@ namespace hpl {
         presentDesc.ppWaitSemaphores = &frame.m_renderCompleteSemaphore;
         presentDesc.mSubmitDone = true;
         queuePresent(m_graphicsQueue, &presentDesc);
-
     }
 
     void ForgeRenderer::InitializeRenderer(window::NativeWindowWrapper* window) {
@@ -67,12 +66,12 @@ namespace hpl {
         RendererDesc desc{};
         initRenderer("test", &desc, &m_renderer);
 
-		QueueDesc queueDesc = {};
-		queueDesc.mType = QUEUE_TYPE_GRAPHICS;
-		queueDesc.mFlag = QUEUE_FLAG_INIT_MICROPROFILE;
-		addQueue(m_renderer, &queueDesc, &m_graphicsQueue);
+        QueueDesc queueDesc = {};
+        queueDesc.mType = QUEUE_TYPE_GRAPHICS;
+        queueDesc.mFlag = QUEUE_FLAG_INIT_MICROPROFILE;
+        addQueue(m_renderer, &queueDesc, &m_graphicsQueue);
 
-        for(size_t i =0; i < m_cmds.size(); i++) {
+        for (size_t i = 0; i < m_cmds.size(); i++) {
             CmdPoolDesc cmdPoolDesc = {};
             cmdPoolDesc.pQueue = m_graphicsQueue;
             addCmdPool(m_renderer, &cmdPoolDesc, &m_cmdPools[i]);
@@ -83,26 +82,25 @@ namespace hpl {
 
         const auto windowSize = window->GetWindowSize();
         SwapChainDesc swapChainDesc = {};
-		swapChainDesc.mWindowHandle = window->ForgeWindowHandle();
-		swapChainDesc.mPresentQueueCount = 1;
-		swapChainDesc.ppPresentQueues = &m_graphicsQueue;
-		swapChainDesc.mWidth = 1920;
-		swapChainDesc.mHeight = 1080;
-		swapChainDesc.mImageCount = SwapChainLength;
-		swapChainDesc.mColorFormat = getRecommendedSwapchainFormat(false, false);
-		swapChainDesc.mColorClearValue = { {1, 1, 1, 1} };
-		swapChainDesc.mEnableVsync = false;
+        swapChainDesc.mWindowHandle = window->ForgeWindowHandle();
+        swapChainDesc.mPresentQueueCount = 1;
+        swapChainDesc.ppPresentQueues = &m_graphicsQueue;
+        swapChainDesc.mWidth = 1920;
+        swapChainDesc.mHeight = 1080;
+        swapChainDesc.mImageCount = SwapChainLength;
+        swapChainDesc.mColorFormat = getRecommendedSwapchainFormat(false, false);
+        swapChainDesc.mColorClearValue = { { 1, 1, 1, 1 } };
+        swapChainDesc.mEnableVsync = false;
         addSwapChain(m_renderer, &swapChainDesc, &m_swapChain);
-       
-		RootSignatureDesc graphRootDesc = {};
-		addRootSignature(m_renderer, &graphRootDesc, &m_pipelineSignature);
 
+        RootSignatureDesc graphRootDesc = {};
+        addRootSignature(m_renderer, &graphRootDesc, &m_pipelineSignature);
 
-		addSemaphore(m_renderer, &m_imageAcquiredSemaphore);
-        for(auto& completeSem: m_renderCompleteSemaphores) {
+        addSemaphore(m_renderer, &m_imageAcquiredSemaphore);
+        for (auto& completeSem : m_renderCompleteSemaphores) {
             addSemaphore(m_renderer, &completeSem);
         }
-        for(auto& completeFence: m_renderCompleteFences) {
+        for (auto& completeFence : m_renderCompleteFences) {
             addFence(m_renderer, &completeFence);
         }
 
@@ -126,7 +124,7 @@ namespace hpl {
 
             PipelineDesc pipelineDesc = {};
             pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
-		    GraphicsPipelineDesc& copyPipelineDesc = pipelineDesc.mGraphicsDesc;
+            GraphicsPipelineDesc& copyPipelineDesc = pipelineDesc.mGraphicsDesc;
             copyPipelineDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
             copyPipelineDesc.pShaderProgram = m_copyShader;
             copyPipelineDesc.pRootSignature = m_copyPostProcessingRootSignature;
@@ -150,25 +148,19 @@ namespace hpl {
             m_copyDescConfig[CopyPipelineToUnormR8G8B8A8].m_sampleQuality = 0;
             m_copyDescConfig[CopyPipelineToUnormR8G8B8A8].m_format = TinyImageFormat_R8G8B8A8_UNORM;
 
-            for(size_t i = 0; i < m_copyPostProcessingPipeline.size(); i++) {
-                
+            for (size_t i = 0; i < m_copyPostProcessingPipeline.size(); i++) {
                 copyPipelineDesc.pColorFormats = &m_copyDescConfig[i].m_format;
                 copyPipelineDesc.mSampleCount = m_copyDescConfig[i].m_sampleCount;
                 copyPipelineDesc.mSampleQuality = m_copyDescConfig[i].m_sampleQuality;
                 addPipeline(m_renderer, &pipelineDesc, &m_copyPostProcessingPipeline[i]);
-
             }
         }
     }
 
-
     void ForgeRenderer::InitializeResource() {
-
     }
 
-
     void ForgeRenderer::cmdCopyTexture(CopyPipelines action, Cmd* cmd, Texture* srcTexture, RenderTarget* dstTexture) {
-        
         ASSERT(srcTexture);
         ASSERT(dstTexture);
 
@@ -179,7 +171,7 @@ namespace hpl {
         //     uint2 pos;
         //     uint2 size;
         // } pushConstant = {
-        //     pos, 
+        //     pos,
         //     size
         // };
 
@@ -187,15 +179,15 @@ namespace hpl {
         size_t paramCount = 0;
         params[paramCount].pName = "inputMap";
         params[paramCount++].ppTextures = &srcTexture;
-        
+
         LoadActionsDesc loadActions = {};
-		loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
-		loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
+        loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
+        loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
 
         cmdBindRenderTargets(cmd, 1, &dstTexture, NULL, &loadActions, NULL, NULL, -1, -1);
         cmdSetViewport(cmd, 0.0f, 0.0f, static_cast<float>(dstTexture->mWidth), static_cast<float>(dstTexture->mHeight), 0.0f, 1.0f);
         cmdSetScissor(cmd, 0, 0, dstTexture->mWidth, dstTexture->mHeight);
-        
+
         updateDescriptorSet(m_renderer, m_copyRegionDescriptorIndex, m_copyPostProcessingDescriptorSet, paramCount, params);
 
         cmdBindPipeline(cmd, m_copyPostProcessingPipeline[action]);
@@ -210,7 +202,7 @@ namespace hpl {
     //         uint2 pos;
     //         uint2 size;
     //     } pushConstant = {
-    //         pos, 
+    //         pos,
     //         size
     //     };
 
@@ -234,7 +226,7 @@ namespace hpl {
     // }
 
     // CopyRegionPipeline::~CopyRegionPipeline() {
-        
+
     //     if(m_copyRegionPipeline) {
     //         removePipeline(m_renderer->Rend(), m_copyRegionPipeline);
     //     }
@@ -261,4 +253,4 @@ namespace hpl {
     //     // params[0].ppTextures = &dstTexture;
     //     // updateDescriptorSet(m_renderer, instance, m_copyRegionDescriptorSet, 1, params);
     // }
-};
+}; // namespace hpl

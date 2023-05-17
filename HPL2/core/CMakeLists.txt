@@ -196,6 +196,7 @@ find_package(DevIL REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(SDL2 CONFIG REQUIRED)
+find_package(folly CONFIG REQUIRED)
 # find_package(PNG REQUIRED)
 # find_package (Python COMPONENTS Interpreter)
 # find_package(Python3 COMPONENTS Interpreter)
@@ -228,6 +229,13 @@ if(LINUX)
     )
 endif()
 
+# Don't use exceptions
+if(WIN32)
+  add_compile_options(/EHs-c-)
+else()
+  add_compile_options(-fno-exceptions)
+endif()
+
 target_link_libraries(HPL2
   OALWrapper # also pulls in ogg,vorbis,SDL
   AngelScript
@@ -237,6 +245,8 @@ target_link_libraries(HPL2
   absl::strings
   absl::str_format
   absl::flat_hash_map
+  Folly::folly 
+  Folly::folly_deps
   bgfx
   TheForge
   Eigen3::Eigen

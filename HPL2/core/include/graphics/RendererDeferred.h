@@ -41,6 +41,8 @@
 #include <Common_3/Graphics/Interfaces/IGraphics.h>
 #include <FixPreprocessor.h>
 
+#include <folly/small_vector.h>
+
 
 namespace hpl {
 
@@ -73,7 +75,6 @@ namespace hpl {
         static constexpr TinyImageFormat SpecularBufferFormat = TinyImageFormat_R8G8_UNORM;
         static constexpr TinyImageFormat ColorBufferFormat = TinyImageFormat_R8G8B8A8_UNORM;
         
-        static constexpr uint32_t FrameBuffer = 2;
         static constexpr uint32_t MaxObjectUniforms = 4096;
         static constexpr uint32_t MaxLightUniforms = 1024;
 		
@@ -87,7 +88,7 @@ namespace hpl {
             LightPipelineVariant_StencilTest = 0x2,
             LightPipelineVariant_Size = 4,
         };
-        union LightUniformData {
+        union UniformLightData {
             struct LightUniformCommon {
                 uint32_t m_config;
                 mat4 m_mvp;
@@ -115,7 +116,7 @@ namespace hpl {
         };
 
 
-        struct CBObjectData {
+        struct UniformObject {
             float4 m_dissolveAmount;
             mat4 m_modelMat;
             mat4 m_uvMat;
@@ -124,7 +125,7 @@ namespace hpl {
             mat3 m_normalMat;
         };
 
-        struct PerFrameData {
+        struct UniformPerFrameData {
             mat4 m_invViewRotation;
             mat4 m_viewMatrix;
             mat4 m_projectionMatrix;
@@ -334,7 +335,7 @@ namespace hpl {
 
         std::array<std::unique_ptr<iVertexBuffer>, eDeferredShapeQuality_LastEnum> m_shapeSphere;
         std::unique_ptr<iVertexBuffer> m_shapePyramid;
-        std::array<absl::InlinedVector<ShadowMapData, 15>, eShadowMapResolution_LastEnum> m_shadowMapData;
+        std::array<folly::small_vector<ShadowMapData, 32, folly::small_vector_policy::NoHeap>, eShadowMapResolution_LastEnum> m_shadowMapData;
 
         int m_maxBatchLights;
         int mlMaxBatchVertices;
@@ -353,9 +354,6 @@ namespace hpl {
 
         LegacyRenderTarget m_edgeSmooth_LinearDepth;
         UniqueViewportData<SharedViewportData> m_boundViewportData;
-
-        // std::shared_ptr<Image> m_shadowJitterImage;
-        // std::shared_ptr<Image> m_ssaoScatterDiskImage;
 
         ForgeTextureHandle m_shadowJitterTexture;
         ForgeTextureHandle m_ssaoScatterDiskTexture;
@@ -380,9 +378,8 @@ namespace hpl {
         std::array<Pipeline*,eMaterialBlendMode_LastEnum> m_decalPipeline;
         Shader* m_decalShader;
 
-
         struct Fog {
-            static constexpr uint32_t MaxFogCount = 256;
+            static constexpr uint32_t MaxFogCount = 128;
             
             enum FogVariant {
                 EmptyVariant = 0x0,
@@ -436,21 +433,39 @@ namespace hpl {
         Pipeline* m_solidIlluminationPipeline;
         
         // translucency pass
-        Shader* m_translucencyAdd;
-        Shader* m_translucencyMul;
-        Shader* m_translucencyMulX2;
-        Shader* m_translucencyAlpha;
-        Shader* m_translucencyPremulAlpha;
+        struct TranslucencyPipeline {
+            enum TranslucencyShaderVariant {
+                TranslucencyShaderVariantEmpty = 0x0,
+                TranslucencyShaderVariantFog = 0x1,
+                TranslucencyRefraction = 0x2, 
+                TranslucencyVariantCount = 4
+            };
 
-        Shader* m_translucencyFogAdd;
-        Shader* m_translucencyFogMul;
-        Shader* m_translucencyFogMulX2;
-        Shader* m_translucencyFogAlpha;
-        Shader* m_translucencyFogPremulAlpha;
+            enum TranslucencyBlend: uint8_t {
+                BlendAdd,
+                BlendMul,
+                BlendMulX2,
+                BlendAlpha,
+                BlendPremulAlpha,
+                BlendModeCount
+            };
 
-        struct MaterialTranslucency {
+            // 3 bit key for pipeline variant
+            union TranslucencyKey {
+                uint8_t m_id;
+                struct {
+                    uint8_t m_hasDepthTest: 1;
+                    uint8_t m_hasFog: 1;
+                } m_field;
+                static constexpr size_t NumOfVariants = 4;
+            };
 
-        } m_materialTranslucency;
+            std::array<
+                std::array<Shader*, TranslucencyVariantCount>, 
+                    BlendModeCount> m_shaders{};
+            std::array<std::array<Pipeline*, TranslucencyKey::NumOfVariants>,TranslucencyBlend::BlendModeCount> m_pipelines;
+            std::array<Pipeline*, TranslucencyKey::NumOfVariants> m_refractionPipeline;
+        } m_materialTranslucencyPass;
 
         // post processing
         struct ObjectSamplerKey {

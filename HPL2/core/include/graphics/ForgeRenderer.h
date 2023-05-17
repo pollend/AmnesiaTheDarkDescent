@@ -23,13 +23,15 @@
 namespace hpl {
     class cMaterial;
     class ForgeRenderer;
-    struct AmnesiaBlend {
+    struct HPL2Blend {
         BlendMode mode;
         BlendConstant src;
         BlendConstant dst;
     };
-    static std::array<AmnesiaBlend, eMaterialBlendMode_LastEnum> AmnesiaBlendTable = ([]() {
-        std::array<AmnesiaBlend, eMaterialBlendMode_LastEnum> result{};
+
+    // helper to convert from eMaterialBlendMode to The-Forge's BlendMode
+    static std::array<HPL2Blend, eMaterialBlendMode_LastEnum> HPL2BlendTable = ([]() {
+        std::array<HPL2Blend, eMaterialBlendMode_LastEnum> result{};
         result[eMaterialBlendMode_Add] = {BM_ADD, BC_ONE, BC_ONE};
         result[eMaterialBlendMode_Mul] = {BM_ADD, BC_ZERO, BC_SRC_COLOR};
         result[eMaterialBlendMode_MulX2] = {BM_ADD, BC_DST_COLOR, BC_SRC_COLOR};

@@ -6,6 +6,7 @@
       "libogg",
       "openal-soft",
       "zlib",
+      "folly",
       {
         "name": "devil",
         "platform": "windows"

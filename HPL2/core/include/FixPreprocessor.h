@@ -4,3 +4,4 @@
 #undef ButtonPress
 #undef Success
 #undef KeyPress
+#undef assume
