@@ -515,9 +515,13 @@ namespace hpl {
 						break;
 					}
 					case cMaterial::MaterialID::Translucent: {
+						pMat->SetHasRefraction(userVars.GetVarBool("Refraction", false));
+						pMat->SetIsAffectedByLightLevel(userVars.GetVarBool("AffectedByLightLevel", false));
+						pMat->SetHasRefractionNormals(userVars.GetVarBool("RefractionNormals", true));
+						pMat->SetUseRefractionEdgeCheck(userVars.GetVarBool("RefractionEdgeCheck", true));
+						
 						// type.m_data.m_translucentUniformBlock.mbRefraction = userVars.GetVarBool("Refraction", false);
 						// type.m_data.m_translucentUniformBlock.mbRefractionEdgeCheck = userVars.GetVarBool("RefractionEdgeCheck", true);
-						// type.m_data.m_translucentUniformBlock.mbRefractionNormals = userVars.GetVarBool("RefractionNormals", true);
 						type.m_data.m_translucentUniformBlock.mfRefractionScale = userVars.GetVarFloat("RefractionScale", 1.0f);
 						type.m_data.m_translucentUniformBlock.mfFrenselBias = userVars.GetVarFloat("FrenselBias", 0.2f);
 						type.m_data.m_translucentUniformBlock.mfFrenselPow = userVars.GetVarFloat("FrenselPow", 8.0);

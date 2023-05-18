@@ -130,6 +130,15 @@ namespace hpl {
             mat4 m_viewMatrix;
             mat4 m_projectionMatrix;
             mat4 m_viewProjectionMatrix;
+
+            float worldFogStart;
+            float worldFogLength;
+            float oneMinusFogAlpha;
+            float fogFalloffExp;
+
+            float2 viewTexel;
+            float2  viewportSize;
+
         };
 
         class ShadowMapData {
@@ -324,6 +333,7 @@ namespace hpl {
         struct PerObjectOption {
             cMatrixf m_viewMat;
             cMatrixf m_projectionMat;
+            std::optional<cMatrixf> m_modelMatrix = std::nullopt;
         };
         void cmdBindMaterialDescriptor(const ForgeRenderer::Frame& frame, cMaterial* apMaterial);
         void cmdBindObjectDescriptor(
@@ -434,10 +444,11 @@ namespace hpl {
         
         // translucency pass
         struct TranslucencyPipeline {
+            
             enum TranslucencyShaderVariant {
                 TranslucencyShaderVariantEmpty = 0x0,
                 TranslucencyShaderVariantFog = 0x1,
-                TranslucencyRefraction = 0x2, 
+                TranslucencyRefraction = 0x2,
                 TranslucencyVariantCount = 4
             };
 
@@ -460,11 +471,13 @@ namespace hpl {
                 static constexpr size_t NumOfVariants = 4;
             };
 
-            std::array<
-                std::array<Shader*, TranslucencyVariantCount>, 
-                    BlendModeCount> m_shaders{};
-            std::array<std::array<Pipeline*, TranslucencyKey::NumOfVariants>,TranslucencyBlend::BlendModeCount> m_pipelines;
-            std::array<Pipeline*, TranslucencyKey::NumOfVariants> m_refractionPipeline;
+            std::array<std::array<Shader*, TranslucencyVariantCount>, BlendModeCount> m_shaders{};
+            std::array<Shader*, BlendModeCount> m_particleShader{};
+            std::array<Shader*, BlendModeCount> m_particleShaderFog{};
+
+            std::array<std::array<Pipeline*, TranslucencyKey::NumOfVariants>, TranslucencyBlend::BlendModeCount> m_pipelines;
+            std::array<std::array<Pipeline*, TranslucencyKey::NumOfVariants>, TranslucencyBlend::BlendModeCount> m_refractionPipeline;
+            std::array<std::array<Pipeline*, TranslucencyKey::NumOfVariants>, TranslucencyBlend::BlendModeCount> m_particlePipelines;
         } m_materialTranslucencyPass;
 
         // post processing
@@ -475,8 +488,9 @@ namespace hpl {
                     AddressMode m_addressMode : 2;
                 } m_field;
             };
+            static constexpr size_t NumOfVariants = 4;
         };
-        std::array<Sampler*, 4> m_objectSamplers{}; 
+        std::array<Sampler*, ObjectSamplerKey::NumOfVariants> m_objectSamplers{}; 
 
         // z pass
         Shader* m_zPassShader;

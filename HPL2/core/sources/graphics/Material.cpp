@@ -166,13 +166,19 @@ namespace hpl {
 					(GetImage(eMaterialTexture_Illumination) ? EnableIllumination: 0) |
 					(GetImage(eMaterialTexture_CubeMap) ? EnableCubeMap: 0) |
 					(GetImage(eMaterialTexture_DissolveAlpha) ? EnableDissolveAlpha: 0) |
-					(GetImage(eMaterialTexture_CubeMapAlpha) ? EnableDissolveAlphaFilter: 0) |
+					(GetImage(eMaterialTexture_CubeMapAlpha) ? EnableCubeMapAlpha: 0) |
 					(m_info.m_alphaDissolveFilter ? UseDissolveFilter: 0);
 		switch(m_info.m_id) {
 			case MaterialID::SolidDiffuse: {
 				m_info.m_data.m_common.m_textureConfig |= 
 					((alphaMapImage && TinyImageFormat_ChannelCount(static_cast<TinyImageFormat>(alphaMapImage->GetTexture().m_handle->mFormat)) == 1) ? IsAlphaSingleChannel: 0) |
 					((heightMapImage && TinyImageFormat_ChannelCount(static_cast<TinyImageFormat>(heightMapImage->GetTexture().m_handle->mFormat)) == 1) ? IsHeightMapSingleChannel: 0);
+				break;
+			}
+			case MaterialID::Translucent: {
+				m_info.m_data.m_common.m_textureConfig |=
+					(HasRefraction() ? UseRefractionNormals: 0)  |
+					(IsRefractionEdgeCheck() ? UseRefractionEdgeCheck: 0);
 				break;
 			}
 			default:

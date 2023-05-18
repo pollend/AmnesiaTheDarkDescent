@@ -21,6 +21,7 @@
 #define HPL_ENTITY3D_H
 
 #include <list>
+#include "engine/RTTI.h"
 #include "math/MathTypes.h"
 #include "system/SystemTypes.h"
 #include "scene/SceneTypes.h"
@@ -50,6 +51,7 @@ namespace hpl {
 
 	class iEntity3D
 	{
+		HPL_RTTI_CLASS(iEntity3D, "{5349d61b-bec3-4b44-9cf7-9c683dc59602}")
 	public:
 		iEntity3D(tString asName);
 		virtual ~iEntity3D();

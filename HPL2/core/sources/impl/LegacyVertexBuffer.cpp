@@ -531,10 +531,7 @@ namespace hpl {
             auto found = std::find_if(m_vertexElements.begin(), m_vertexElements.end(), [&](auto& element) {
                 return element.m_type == targetEle;
             });
-            if(found == m_vertexElements.end()) {
-                ASSERT(false && "failed to bind vertex buffer");
-                return;
-            }
+            ASSERT(found != m_vertexElements.end() && "Element not found");
             binding->m_vertexElement.push_back({found, found->m_activeCopy * found->m_shadowData.size() });
         }
         binding->m_indexBuffer = {

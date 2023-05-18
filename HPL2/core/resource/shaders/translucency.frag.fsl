@@ -6,6 +6,7 @@ PUSH_CONSTANT(translucencyConstant, b0)
 {
     DATA(float, sceneAlpha, None);
     DATA(float, lightLevel, None);
+    DATA(int,  textureMask, None);
 };
 
 RES(Tex2D(float4), refractionMap, UPDATE_FREQ_PER_FRAME, t1, binding = 4); 
@@ -34,7 +35,7 @@ PsOut PS_MAIN(PsIn In)
 
     float4 finalColor = vec4(0.0, 0.0 ,0.0, 1.0);
  
-    if(HasDiffuse(Get(textureConfig))) {
+    if(HasDiffuse(Get(textureConfig) & Get(textureMask))) {
         finalColor = SampleTex2D(Get(diffuseMap), Get(diffuseSampler), In.uv);
     }
 
@@ -67,7 +68,7 @@ PsOut PS_MAIN(PsIn In)
        finalColor.xyz *= Get(lightLevel);
     #endif
 
-    bool useScreenNormal = UseRefractionNormals(Get(textureConfig));
+    bool useScreenNormal = UseRefractionNormals(Get(textureConfig) & Get(textureMask));
 
     float3 mapNormal = float3(0,0,0);
     float3 screenNormal = float3(0,0,0);
@@ -76,9 +77,9 @@ PsOut PS_MAIN(PsIn In)
         #ifdef USE_REFRACTION
             true ||
         #endif
-        HasCubeMap(Get(textureConfig))) {
+        HasCubeMap(Get(textureConfig) & Get(textureMask))) {
 
-        if(HasNormal(Get(textureConfig))) {
+        if(HasNormal(Get(textureConfig) & Get(textureMask))) {
             mapNormal = SampleTex2D(Get(normalMap), Get(normalSampler), In.uv).xyz * 2.0 - 1.0;
             screenNormal = normalize(mapNormal.x * In.tangent + mapNormal.y * In.bitangent + mapNormal.z * In.normal);
         } else {
@@ -91,7 +92,7 @@ PsOut PS_MAIN(PsIn In)
         ///////////////////////
         // Sample refaraction map (using distorted coords)
         float2 distortedScreenPos = float2(0,0);
-        if(HasNormal(Get(textureConfig))) {
+        if(HasNormal(Get(textureConfig) & Get(textureMask))) {
             float2 refractOffset = useScreenNormal ? screenNormal.xy : mapNormal.xy;
             distortedScreenPos += (In.Position.xy * Get(viewTexel)) + (refractOffset * Get(refractionScale) * invDist);
         } else {
@@ -118,7 +119,7 @@ PsOut PS_MAIN(PsIn In)
         #endif
     #endif
 
-    if(HasCubeMap(Get(textureConfig))) {
+    if(HasCubeMap(Get(textureConfig) & Get(textureMask))) {
         float3 eyeVec = normalize(In.pos);
         
         float afEDotN = max(dot(-eyeVec, screenNormal),0.0);
@@ -130,7 +131,7 @@ PsOut PS_MAIN(PsIn In)
         float4 reflectionColor = SampleTexCube(Get(cubeMap),  Get(cubeSampler), vEnvUv);
         
         //Alpha for environment map
-        if(HasCubeMapAlpha(Get(textureConfig))) {
+        if(HasCubeMapAlpha(Get(textureConfig) & Get(textureMask))) {
             float fEnvMapAlpha = SampleTex2D(Get(cubeMapAlpha), Get(cubeMapAlphaSampler), In.uv.xy).w;
             reflectionColor *= fEnvMapAlpha;
         }

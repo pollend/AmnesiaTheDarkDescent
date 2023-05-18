@@ -168,6 +168,7 @@ namespace hpl {
 
 	class iParticleEmitter :public iRenderable
 	{
+		HPL_RTTI_IMPL_CLASS(iRenderable, iParticleEmitter, "{1547e63f-cb7b-422c-830c-1f3562c2c460}")
 	public:
 		iParticleEmitter(	tString asName,tMaterialVec* avMaterials,unsigned int alMaxParticles,
 							cVector3f avSize, cGraphics* apGraphics,cResources *apResources);

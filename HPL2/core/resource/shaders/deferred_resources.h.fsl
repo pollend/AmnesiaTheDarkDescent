@@ -14,7 +14,6 @@ CBUFFER(perFrameConstants, UPDATE_FREQ_PER_FRAME, b0, binding = 0)
 
     DATA(float2, viewTexel, None);
     DATA(float2, viewportSize, None);
-    DATA(int, features, None);
 };
 INLINE bool UseFeatureRefraction(int _featureConfig)        { return (_featureConfig & (1 << 0)) != 0; }
 
@@ -54,12 +53,9 @@ CBUFFER(uniformObjectBlock, UPDATE_FREQ_PER_DRAW, b1, binding = 1)
         DATA(float, frenselPos, None);
         DATA(float, rimMulLight, None);
         DATA(float, rimMulPower, None);
-        //DATA(float, alpha, None);
     };
 
-    INLINE bool UseRefraction(int _textureConfig)   { return (_textureConfig & (1 << 9)) != 0; }
-    INLINE bool UseRefractionEdgeCheck(int _textureConfig)   { return (_textureConfig & (1 << 10)) != 0; }
-    INLINE bool UseRefractionNormals(int _textureConfig)   { return (_textureConfig & (1 << 11)) != 0; }
+    INLINE bool UseRefractionNormals(int _textureConfig)   { return (_textureConfig & (1 << 9)) != 0; }
 #endif
 
 RES(Tex2D(float4), diffuseMap, UPDATE_FREQ_PER_BATCH, t1, binding = 5); 

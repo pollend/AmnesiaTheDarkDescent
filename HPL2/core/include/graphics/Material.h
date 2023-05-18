@@ -88,13 +88,19 @@ namespace hpl {
 			EnableIllumination = 1 << 5,
 			EnableCubeMap = 1 << 6,
 			EnableDissolveAlpha = 1 << 7,
-			EnableDissolveAlphaFilter = 1 << 8,
+			EnableCubeMapAlpha = 1 << 8,
 
 			// additional flags
-			//Solid Diffuse
-			UseDissolveFilter = 1 << 9,
 			IsAlphaSingleChannel = 1 << 10,
 			IsHeightMapSingleChannel = 1 << 11,
+
+			//Solid Diffuse
+			UseDissolveFilter = 1 << 9,
+
+			//Translucent
+			UseRefractionNormals = 1 << 9,
+			UseRefractionEdgeCheck = 1 << 10,
+
 		};
 
 		struct MaterialCommonBlock {
@@ -139,10 +145,13 @@ namespace hpl {
 
 		
 		struct MaterialType {
-			
+			//  
+			bool m_affectByLightLevel = false;
+
 			MaterialID m_id;
 			// solid
-			bool m_alphaDissolveFilter;
+			bool m_alphaDissolveFilter = false;
+			bool m_refractionNormals = false;
 			union MaterialData {
 				MaterialData() {}
 				MaterialCommonBlock m_common;
@@ -215,8 +224,12 @@ namespace hpl {
 		void SetDepthTest(bool abDepthTest);
 
 		bool HasRefraction(){ return mbHasRefraction; }
-		bool UseRefractionEdgeCheck(){ return mbUseRefractionEdgeCheck;}
+		bool HasRefractionNormals(){ return mbHasRefractionNormals; }
+		bool IsRefractionEdgeCheck(){ return mbUseRefractionEdgeCheck;}
 		void SetHasRefraction(bool abX){ mbHasRefraction = abX; }
+		void SetHasRefractionNormals(bool abX){ mbHasRefractionNormals = abX; }
+		void SetIsAffectedByLightLevel(bool abX){ mbIsAffectedByLightLevel = abX;}
+		bool IsAffectedByLightLevel(){ return mbIsAffectedByLightLevel;}
 		void SetUseRefractionEdgeCheck(bool abX){ mbUseRefractionEdgeCheck = abX;}
 
 		bool HasWorldReflection(){ return mbHasWorldReflection; }
@@ -310,6 +323,7 @@ namespace hpl {
 
 		bool mbDepthTest;
 		bool mbHasRefraction;
+		bool mbHasRefractionNormals;
 		bool mbUseRefractionEdgeCheck;
 		bool mbHasWorldReflection;
 		bool mbWorldReflectionOcclusionTest;
@@ -318,7 +332,8 @@ namespace hpl {
 		bool mbAffectedByFog;
 		bool mbUseAlphaDissolveFilter;
 		bool mbHasUvAnimation;
-
+		bool mbIsAffectedByLightLevel;
+		
 		std::array<ImageResourceWrapper, eMaterialTexture_LastEnum> m_image = {ImageResourceWrapper()};
 
 		std::vector<cMaterialUvAnimation> mvUvAnimations;
