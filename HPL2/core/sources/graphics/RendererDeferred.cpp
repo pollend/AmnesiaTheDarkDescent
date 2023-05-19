@@ -913,7 +913,6 @@ namespace hpl {
                         refractionImageDesc.pName = "Refraction Image";
                         ForgeTextureHandle refractionImage{};
                         refractionImage.Load([&](Texture** texture) {
-                        
                             TextureLoadDesc loadDesc = {};
                             loadDesc.ppTexture = texture;
                             loadDesc.pDesc = &refractionImageDesc;

@@ -5,12 +5,12 @@ This is a heavy rework of the core engine, mostly an experiment in absurdity to 
 
 ## Current Features
 
-- Graphics backend rework in BGFX
-  - got rid of the bookkeeping for the viewport size, so it's possible to resize the window and have all the window frame buffers update. 
+- Graphics backend rework in The Forge
+  - removed bookkeeping for the viewport size, so it's possible to resize the window and have all the window frame buffers update.
   - Dropped usage of the OpenGL fixed function pipeline.
-  - Possible to use DirectX 11, but there are a lot of rendering artifacts that need to be fixed before it's a viable option
+  - At the moment this is pretty unstable origin/bgfx is a more complete implementation but going forward the bgfx branch is abandoned.
 - hpl::Event is an interface that makes building Observables a lot easier. 
-
+- RTTI interface avoid the overhead of using dynamc_cast<>
 ## Random Ideas
 
 - Replace newton physics with Jolt [ticket](https://github.com/pollend/AmnesiaTheDarkDescent/issues/20)
@@ -22,7 +22,8 @@ This is a heavy rework of the core engine, mostly an experiment in absurdity to 
 Feel free to drop a ticket if your interested in anything. 
 
 # Branches
-- origin/master - contains a graphics backend rework using [BGFX](https://github.com/bkaradzic/bgfx)
+- origin/master - Vulkan/Direct11/Direct12 implementation using [The-Forge](https://theforge.dev/)
+- origin/bgfx - contains a graphics backend rework using [BGFX](https://github.com/bkaradzic/bgfx)
 - origin/original - original running code should be as bug free as when the game was released
 
 ## Building
