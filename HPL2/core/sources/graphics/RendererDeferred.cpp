@@ -897,6 +897,31 @@ namespace hpl {
                         target.Initialize();
                         b.m_colorBuffer = std::move(target);
                    }
+
+                   {
+                        TextureDesc refractionImageDesc = {};
+                        refractionImageDesc.mArraySize = 1;
+                        refractionImageDesc.mDepth = 1;
+                        refractionImageDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+                        refractionImageDesc.mFormat = ColorBufferFormat;
+                        refractionImageDesc.mWidth = sharedData->m_size.x;
+                        refractionImageDesc.mHeight = sharedData->m_size.y;
+                        refractionImageDesc.mMipLevels = 1;
+                        refractionImageDesc.mSampleCount = SAMPLE_COUNT_1;
+                        refractionImageDesc.mSampleQuality = 0;
+                        refractionImageDesc.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
+                        refractionImageDesc.pName = "Refraction Image";
+                        ForgeTextureHandle refractionImage{};
+                        refractionImage.Load([&](Texture** texture) {
+                        
+                            TextureLoadDesc loadDesc = {};
+                            loadDesc.ppTexture = texture;
+                            loadDesc.pDesc = &refractionImageDesc;
+                            addResource(&loadDesc, nullptr);
+                            return true;
+                        });
+                        b.m_refractionImage = std::move(refractionImage);
+                   }
                    {
 
                         auto outputRt = deferredRenderTargetDesc();
@@ -1233,7 +1258,11 @@ namespace hpl {
                 depthStateDesc.mDepthWrite = false;
                 depthStateDesc.mDepthFunc = CMP_EQUAL;
 
-                std::array colorFormats = { ColorBufferFormat, NormalBufferFormat, PositionBufferFormat, SpecularBufferFormat };
+                std::array colorFormats = { 
+                    ColorBufferFormat, 
+                    NormalBufferFormat, 
+                    PositionBufferFormat, 
+                    SpecularBufferFormat };
 
                 PipelineDesc pipelineDesc = {};
                 pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
@@ -1402,10 +1431,13 @@ namespace hpl {
                 rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
 
                 BlendStateDesc blendStateDesc{};
-                blendStateDesc.mMasks[0] = RED | GREEN | BLUE;
+                blendStateDesc.mMasks[0] = RED | GREEN | BLUE | ALPHA;
                 blendStateDesc.mSrcFactors[0] = BC_ONE;
                 blendStateDesc.mDstFactors[0] = BC_ONE;
                 blendStateDesc.mBlendModes[0] = BM_ADD;
+                blendStateDesc.mSrcAlphaFactors[0] = BC_ONE;
+                blendStateDesc.mDstAlphaFactors[0] = BC_ONE;
+                blendStateDesc.mBlendAlphaModes[0] = BM_ADD;
                 blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
 
                 DepthStateDesc depthStateDesc = {};
@@ -1509,7 +1541,7 @@ namespace hpl {
                         key.m_id = pipelineKey;
 
                         BlendStateDesc blendStateDesc{};
-                        blendStateDesc.mMasks[0] = RED | GREEN | BLUE;
+                        blendStateDesc.mMasks[0] = ALL;
                         blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
                         blendStateDesc.mIndependentBlend = false;
 
@@ -1565,7 +1597,7 @@ namespace hpl {
                         key.m_id = pipelineKey;
 
                         BlendStateDesc blendStateDesc{};
-                        blendStateDesc.mMasks[0] = RED | GREEN | BLUE;
+                        blendStateDesc.mMasks[0] = ALL;
                         blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
                         blendStateDesc.mIndependentBlend = false;
 
@@ -1628,7 +1660,7 @@ namespace hpl {
                         key.m_id = pipelineKey;
 
                         BlendStateDesc blendStateDesc{};
-                        blendStateDesc.mMasks[0] = RED | GREEN | BLUE;
+                        blendStateDesc.mMasks[0] = ALL;
                         blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
                         blendStateDesc.mIndependentBlend = false;
 
@@ -1833,7 +1865,7 @@ namespace hpl {
             blendStateDesc.mSrcAlphaFactors[0] = BC_ONE;
             blendStateDesc.mDstAlphaFactors[0] = BC_ONE;
             blendStateDesc.mBlendAlphaModes[0] = BM_ADD;
-            blendStateDesc.mMasks[0] = ALL;
+            blendStateDesc.mMasks[0] = RED | GREEN | BLUE;
             blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
             blendStateDesc.mIndependentBlend = false;
 
@@ -2406,6 +2438,7 @@ namespace hpl {
             loadActions.mLoadActionsColor[1] = LOAD_ACTION_CLEAR;
             loadActions.mLoadActionsColor[2] = LOAD_ACTION_CLEAR;
             loadActions.mLoadActionsColor[3] = LOAD_ACTION_CLEAR;
+            loadActions.mClearColorValues[0] = { .r = 0.0f, .g = 0.0f, .b = 0.0f, .a = 0.0f };
             loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
             std::array targets = {
                 currentGBuffer.m_colorBuffer.m_handle,
@@ -3122,6 +3155,12 @@ namespace hpl {
             }
         }
 
+
+                // if (pMaterial->HasRefraction()) {
+                // }
+
+
+
         // ------------------------------------------------------------------------
         // Translucency Pass --> output target
         // ------------------------------------------------------------------------
@@ -3135,9 +3174,15 @@ namespace hpl {
             cmdBindRenderTargets(frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, nullptr, nullptr, -1, -1);
             cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, static_cast<float>(sharedData.m_size.x), static_cast<float>(sharedData.m_size.y), 0.0f, 1.0f);
             cmdSetScissor(frame.m_cmd, 0, 0, sharedData.m_size.x, sharedData.m_size.y);
-            cmdBindPipeline(frame.m_cmd, m_solidIlluminationPipeline);
             
             cmdBindDescriptorSet(frame.m_cmd, 0, m_materialSet.m_frameSet[frame.m_frameIndex]);
+            std::array<TranslucencyPipeline::TranslucencyBlend, eMaterialBlendMode_LastEnum> translucencyBlendTable;
+            translucencyBlendTable[eMaterialBlendMode_Add] =  TranslucencyPipeline::TranslucencyBlend::BlendAdd;
+            translucencyBlendTable[eMaterialBlendMode_Mul] =  TranslucencyPipeline::TranslucencyBlend::BlendMul;
+            translucencyBlendTable[eMaterialBlendMode_MulX2] =  TranslucencyPipeline::TranslucencyBlend::BlendMulX2;
+            translucencyBlendTable[eMaterialBlendMode_Alpha] =  TranslucencyPipeline::TranslucencyBlend::BlendAlpha;
+            translucencyBlendTable[eMaterialBlendMode_PremulAlpha] = TranslucencyPipeline::TranslucencyBlend::BlendPremulAlpha;
+            
             uint32_t translucencyConstantIndex = getDescriptorIndexFromName(m_materialRootSignature, "translucencyConstant");
             for(auto& translucencyItem: mpCurrentRenderList->GetRenderableItems(eRenderListType_Translucent)) {
                 cMaterial* pMaterial = translucencyItem->GetMaterial();
@@ -3177,24 +3222,23 @@ namespace hpl {
 
                     ////////////////////////////////////////
                     //Iterate lights and add light amount
-                    for(int i=0; i<mpCurrentRenderList->GetLightNum(); ++i)
-                    {
-                        iLight* pLight = mpCurrentRenderList->GetLight(i);
+                    for (auto& light : mpCurrentRenderList->GetLights()) {
+                        // iLight* pLight = mpCurrentRenderList->GetLight(i);
                         auto maxColorValue = [](const cColor& aCol) {
                             return cMath::Max(cMath::Max(aCol.r, aCol.g), aCol.b);
                         };
                         //Check if there is an intersection
-                        if(pLight->CheckObjectIntersection(translucencyItem))
+                        if(light->CheckObjectIntersection(translucencyItem))
                         {
-                            if(pLight->GetLightType() == eLightType_Box)
+                            if(light->GetLightType() == eLightType_Box)
                             {
-                                fLightAmount += maxColorValue(pLight->GetDiffuseColor());
+                                fLightAmount += maxColorValue(light->GetDiffuseColor());
                             }
                             else
                             {
-                                float fDist = cMath::Vector3Dist(pLight->GetWorldPosition(), vCenterPos);
+                                float fDist = cMath::Vector3Dist(light->GetWorldPosition(), vCenterPos);
 
-                                fLightAmount += maxColorValue(pLight->GetDiffuseColor()) * cMath::Max(1.0f - (fDist / pLight->GetRadius()), 0.0f);
+                                fLightAmount += maxColorValue(light->GetDiffuseColor()) * cMath::Max(1.0f - (fDist / light->GetRadius()), 0.0f);
                             }
 
                             if(fLightAmount >= 1.0f)
@@ -3212,7 +3256,6 @@ namespace hpl {
                 const bool isParticleEmitter = TypeInfo<iParticleEmitter>::IsSubtype(*translucencyItem);
                 const auto cubeMap = pMaterial->GetImage(eMaterialTexture_CubeMap);
                 cMatrixf* pMatrix = translucencyItem->GetModelMatrix(apFrustum);
-
 
 
                 ASSERT(pMaterial->type().m_id == cMaterial::Translucent && "Invalid material type");
@@ -3245,6 +3288,7 @@ namespace hpl {
                         frame.m_currentFrame, targets, &binding);
                 }
 
+
                 if (pMaterial->HasWorldReflection() && translucencyItem->GetRenderType() == eRenderableType_SubMesh) {
                     // TODO implement world reflection
                 }
@@ -3253,48 +3297,12 @@ namespace hpl {
                 key.m_field.m_hasDepthTest = pMaterial->GetDepthTest();
                 key.m_field.m_hasFog = isFogActive;
 
+                ASSERT(pMaterial->GetBlendMode() < eMaterialBlendMode_LastEnum && pMaterial->GetBlendMode()  != eMaterialBlendMode_None && "Invalid blend mode");
                 if(isParticleEmitter) {
-                    switch(pMaterial->GetBlendMode()) {
-                        case eMaterialBlendMode_Add:
-                            cmdBindPipeline(frame.m_cmd, m_materialTranslucencyPass.m_particlePipelines[TranslucencyPipeline::BlendAdd][key.m_id]);
-                            break;
-                        case eMaterialBlendMode_Mul:
-                            cmdBindPipeline(frame.m_cmd, m_materialTranslucencyPass.m_particlePipelines[TranslucencyPipeline::BlendMul][key.m_id]);
-                            break;
-                        case eMaterialBlendMode_MulX2:
-                            cmdBindPipeline(frame.m_cmd, m_materialTranslucencyPass.m_particlePipelines[TranslucencyPipeline::BlendMulX2][key.m_id]);
-                            break;
-                        case eMaterialBlendMode_Alpha:
-                            cmdBindPipeline(frame.m_cmd,  m_materialTranslucencyPass.m_particlePipelines[TranslucencyPipeline::BlendAlpha][key.m_id]);
-                            break;
-                        case eMaterialBlendMode_PremulAlpha:
-                        cmdBindPipeline(frame.m_cmd, m_materialTranslucencyPass.m_particlePipelines[TranslucencyPipeline::BlendPremulAlpha][key.m_id]);
-                            break;
-                        default:
-                            ASSERT(false && "Invalid blend mode");
-                            break;
-                    }
+                    cmdBindPipeline(frame.m_cmd, m_materialTranslucencyPass.m_particlePipelines[translucencyBlendTable[pMaterial->GetBlendMode()]][key.m_id]);
                 } else {
-                    switch(pMaterial->GetBlendMode()) {
-                        case eMaterialBlendMode_Add:
-                            cmdBindPipeline(frame.m_cmd, (isRefraction ? m_materialTranslucencyPass.m_refractionPipeline[TranslucencyPipeline::BlendAdd] : m_materialTranslucencyPass.m_pipelines[TranslucencyPipeline::BlendAdd])[key.m_id]);
-                            break;
-                        case eMaterialBlendMode_Mul:
-                            cmdBindPipeline(frame.m_cmd, (isRefraction ? m_materialTranslucencyPass.m_refractionPipeline[cubeMap ? TranslucencyPipeline::BlendAdd : TranslucencyPipeline::BlendMul] : m_materialTranslucencyPass.m_pipelines[TranslucencyPipeline::BlendMul])[key.m_id]);
-                            break;
-                        case eMaterialBlendMode_MulX2:
-                            cmdBindPipeline(frame.m_cmd, (isRefraction ? m_materialTranslucencyPass.m_refractionPipeline[cubeMap ? TranslucencyPipeline::BlendAdd : TranslucencyPipeline::BlendMulX2] : m_materialTranslucencyPass.m_pipelines[TranslucencyPipeline::BlendMulX2])[key.m_id]);
-                            break;
-                        case eMaterialBlendMode_Alpha:
-                            cmdBindPipeline(frame.m_cmd, (isRefraction ? m_materialTranslucencyPass.m_refractionPipeline[cubeMap ? TranslucencyPipeline::BlendAdd : TranslucencyPipeline::BlendAlpha] : m_materialTranslucencyPass.m_pipelines[TranslucencyPipeline::BlendAlpha])[key.m_id]);
-                            break;
-                        case eMaterialBlendMode_PremulAlpha:
-                        cmdBindPipeline(frame.m_cmd, (isRefraction ? m_materialTranslucencyPass.m_refractionPipeline[cubeMap ? TranslucencyPipeline::BlendAdd : TranslucencyPipeline::BlendPremulAlpha] : m_materialTranslucencyPass.m_pipelines[TranslucencyPipeline::BlendPremulAlpha])[key.m_id]);
-                            break;
-                        default:
-                            ASSERT(false && "Invalid blend mode");
-                            break;
-                    }
+                    cmdBindPipeline(frame.m_cmd,  
+                        (isRefraction ? m_materialTranslucencyPass.m_refractionPipeline : m_materialTranslucencyPass.m_pipelines)[translucencyBlendTable[pMaterial->GetBlendMode()]][key.m_id]);
                 }
                 
 
@@ -3305,6 +3313,12 @@ namespace hpl {
                 cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
                 
                 if(pMaterial->HasTranslucentIllumination()) {
+                    if(!isParticleEmitter && cubeMap && !isRefraction) {
+                        cmdBindPipeline(frame.m_cmd,  
+                            (isRefraction ? m_materialTranslucencyPass.m_refractionPipeline : m_materialTranslucencyPass.m_pipelines)
+                                [TranslucencyPipeline::TranslucencyBlend::BlendAdd][key.m_id]);
+                    }
+
                     constants.textureMask = isRefraction ? 0 : (cMaterial::EnableNormal | cMaterial::EnableCubeMap | cMaterial::EnableCubeMapAlpha);
                     cmdBindPushConstants(frame.m_cmd, m_materialRootSignature, translucencyConstantIndex, &constants);
                     cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);

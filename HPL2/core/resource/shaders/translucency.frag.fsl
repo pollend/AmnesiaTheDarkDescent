@@ -62,6 +62,7 @@ PsOut PS_MAIN(PsIn In)
     #endif
     #ifdef USE_BLEND_MODE_ALPHA
         finalColor.xyz *= Get(lightLevel);
+        finalColor.a *= finalAlpha;
     #endif
     #ifdef USE_BLEND_MODE_PREMUL_ALPHA
        finalColor *= finalAlpha;

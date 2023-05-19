@@ -169,7 +169,8 @@ namespace hpl {
                   m_positionBuffer(std::move(buffer.m_positionBuffer)),
                   m_specularBuffer(std::move(buffer.m_specularBuffer)),
                   m_depthBuffer(std::move(buffer.m_depthBuffer)),
-                  m_outputBuffer(std::move(buffer.m_outputBuffer)) {
+                  m_outputBuffer(std::move(buffer.m_outputBuffer)),
+                  m_refractionImage(std::move(buffer.m_refractionImage)) {
             }
             void operator=(GBuffer&& buffer) {
                 m_colorBuffer = std::move(buffer.m_colorBuffer);
@@ -178,7 +179,9 @@ namespace hpl {
                 m_specularBuffer = std::move(buffer.m_specularBuffer);
                 m_depthBuffer = std::move(buffer.m_depthBuffer); 
                 m_outputBuffer = std::move(buffer.m_outputBuffer); 
+                m_refractionImage = std::move(buffer.m_refractionImage);
             }
+            ForgeTextureHandle m_refractionImage;
 
             ForgeRenderTarget m_colorBuffer;
             ForgeRenderTarget m_normalBuffer;

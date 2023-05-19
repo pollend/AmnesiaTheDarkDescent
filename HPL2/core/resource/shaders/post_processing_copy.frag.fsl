@@ -1,5 +1,4 @@
 RES(Tex2D(float4), inputMap, UPDATE_FREQ_PER_DRAW, t0, binding = 0);
-
 RES(SamplerState, nearestSampler, UPDATE_FREQ_PER_DRAW, s1, binding = 1);
 
 STRUCT(PsIn) 

@@ -19,27 +19,19 @@ STRUCT(PsIn)
 	DATA(float4, color, COLOR);
 };
 
-STRUCT(PsOut)
-{
-	DATA(float4, diffuse, SV_Target0);
-};
-
-
-PsOut PS_MAIN(PsIn In)
+float4 PS_MAIN(PsIn In)
 {
     INIT_MAIN;
-    PsOut Out;
 
     float4 finalColor = vec4(0.0, 0.0 ,0.0, 1.0);
  
-    if(HasDiffuse(Get(textureConfig))) {
-        finalColor = SampleTex2D(Get(diffuseMap), Get(diffuseSampler), In.uv);
+    if(HasDiffuse(Get(textureConfig) & Get(textureMask))) {
+        finalColor = SampleTex2D(Get(diffuseMap), Get(diffuseSampler), In.uv) * In.color;
     }
 
     #ifdef USE_FOG
         float fFogAmount =  pow(
-            clamp(
-                (-In.pos.z - Get(worldFogStart)) / Get(worldFogLength), 0.0, 1.0), Get(fogFalloffExp));
+            clamp((-In.pos.z - Get(worldFogStart)) / Get(worldFogLength), 0.0, 1.0), Get(fogFalloffExp));
         float finalAlpha = (Get(oneMinusFogAlpha) * fFogAmount + (1.0 - fFogAmount)) * Get(sceneAlpha);
     #else
         float finalAlpha = Get(sceneAlpha);
@@ -48,23 +40,23 @@ PsOut PS_MAIN(PsIn In)
     ////////////////////
     //Calculate new color based on Alpha and Blend mode
     #ifdef USE_BLEND_MODE_ADD
-        finalColor.xyz *= finalAlpha*Get(lightLevel);
+        finalColor.rgb *= finalAlpha * Get(lightLevel);
     #endif
     #ifdef USE_BLEND_MODE_MUL
-        finalColor.xyz += (vec3(1.0,1.0, 1.0) - finalColor.xyz) * (1.0-finalAlpha);
+        finalColor.rgb += (vec3(1.0,1.0, 1.0) - finalColor.xyz) * (1.0-finalAlpha);
     #endif
     #ifdef USE_BLEND_MODE_MULX2
         float fBlendMulAlpha = Get(lightLevel) * finalAlpha;
-        finalColor.xyz = mul(finalColor.xyz, fBlendMulAlpha) + mul(float3(0.5,0.5,0.5), (1.0 - fBlendMulAlpha));
+        finalColor.rgb = mul(finalColor.xyz, fBlendMulAlpha) + mul(float3(0.5,0.5,0.5), (1.0 - fBlendMulAlpha));
     #endif
     #ifdef USE_BLEND_MODE_ALPHA
-        finalColor.xyz *= Get(lightLevel);
+        finalColor.rgb *= Get(lightLevel);
+        finalColor.a *= finalAlpha;
     #endif
     #ifdef USE_BLEND_MODE_PREMUL_ALPHA
-       finalColor *= finalAlpha;
-       finalColor.xyz *= Get(lightLevel);
+       finalColor.a *= finalAlpha;
+       finalColor.rgb *= Get(lightLevel);
     #endif
 
-    Out.diffuse = finalColor;
-    RETURN(Out);
+    RETURN(finalColor);
 }

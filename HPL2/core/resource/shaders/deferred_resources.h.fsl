@@ -46,8 +46,7 @@ CBUFFER(uniformObjectBlock, UPDATE_FREQ_PER_DRAW, b1, binding = 1)
     CBUFFER(uniformMaterialBlock, UPDATE_FREQ_PER_BATCH, b2, binding = 2)
     {
         DATA(int, textureConfig, None);
-        DATA(float, fogStart, None);
-        DATA(float, fogEnd, None);
+
         DATA(float, refractionScale, None);
         DATA(float, frenselBias, None);
         DATA(float, frenselPos, None);
