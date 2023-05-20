@@ -143,7 +143,6 @@ namespace hpl {
 
     struct ForgeTextureHandle: public RefHandle<ForgeTextureHandle, Texture> {
     public:
-
         struct BitmapLoadOptions {
         public:
             bool m_useCubeMap = false;

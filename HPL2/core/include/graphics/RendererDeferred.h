@@ -473,6 +473,10 @@ namespace hpl {
                 } m_field;
                 static constexpr size_t NumOfVariants = 4;
             };
+            RootSignature* m_refractionCopyRootSignature;
+            std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_refractionPerFrameSet;
+            Pipeline* m_refractionCopyPipeline;
+            Shader* m_copyRefraction;
 
             std::array<std::array<Shader*, TranslucencyVariantCount>, BlendModeCount> m_shaders{};
             std::array<Shader*, BlendModeCount> m_particleShader{};

@@ -902,14 +902,14 @@ namespace hpl {
                         TextureDesc refractionImageDesc = {};
                         refractionImageDesc.mArraySize = 1;
                         refractionImageDesc.mDepth = 1;
-                        refractionImageDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
-                        refractionImageDesc.mFormat = ColorBufferFormat;
+		                refractionImageDesc.mMipLevels = 1;
+                        refractionImageDesc.mFormat = TinyImageFormat_R32G32B32A32_SFLOAT;
+                        refractionImageDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE | DESCRIPTOR_TYPE_RW_TEXTURE;
                         refractionImageDesc.mWidth = sharedData->m_size.x;
                         refractionImageDesc.mHeight = sharedData->m_size.y;
-                        refractionImageDesc.mMipLevels = 1;
                         refractionImageDesc.mSampleCount = SAMPLE_COUNT_1;
                         refractionImageDesc.mSampleQuality = 0;
-                        refractionImageDesc.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
+                        refractionImageDesc.mStartState = RESOURCE_STATE_UNORDERED_ACCESS;
                         refractionImageDesc.pName = "Refraction Image";
                         ForgeTextureHandle refractionImage{};
                         refractionImage.Load([&](Texture** texture) {
@@ -967,13 +967,6 @@ namespace hpl {
         }
 
         m_dissolveImage = mpResources->GetTextureManager()->Create2DImage("core_dissolve.tga", false);
-        
-		// for(auto& handle: m_bufferHandle) {
-
-			// m_stageDirtyBits = std::numeric_limits<uint32_t>::max();
-		// }
-
-        // per frame constants
 
         auto* forgetRenderer = Interface<ForgeRenderer>::Get();
         auto updatePerFrameDescriptor = [&](DescriptorSet* desc) {
@@ -1144,11 +1137,11 @@ namespace hpl {
                 ShaderLoadDesc loadDesc = {};
                 loadDesc.mStages[0] = { "translucency.vert", nullptr, 0 };
                 const char* translucencyBlendStr[] = {
-                    "_add",
-                    "_mul",
-                    "_mulx2",
-                    "_alpha",
-                    "_premulalpha"
+                    "_add",         // BlendAdd
+                    "_mul",         // BlendMul
+                    "_mulx2",       // BlendMulX2
+                    "_alpha",       // BlendAlpha
+                    "_premulalpha"  // BlendPremulAlpha
                 };
                 ASSERT(std::size(translucencyBlendStr) == TranslucencyPipeline::BlendModeCount);
 
@@ -1191,6 +1184,29 @@ namespace hpl {
                     loadDesc.mStages[1] = { translucency.c_str(), nullptr, 0 };
                     addShader(forgetRenderer->Rend(), &loadDesc, &m_materialTranslucencyPass.m_particleShaderFog[transBlend]);
                 }
+            }
+
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0] = { "copy_channel_4.comp", NULL, 0 };
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_materialTranslucencyPass.m_copyRefraction);
+
+                RootSignatureDesc refractionCopyRootDesc = {};
+                refractionCopyRootDesc.mShaderCount = 1;
+                refractionCopyRootDesc.ppShaders = &m_materialTranslucencyPass.m_copyRefraction;
+                addRootSignature(forgetRenderer->Rend(), &refractionCopyRootDesc, &m_materialTranslucencyPass.m_refractionCopyRootSignature);
+
+                DescriptorSetDesc setDesc = { m_materialTranslucencyPass.m_refractionCopyRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, 1 };
+                for(auto& frameset: m_materialTranslucencyPass.m_refractionPerFrameSet) {
+                    addDescriptorSet(forgetRenderer->Rend(), &setDesc, &frameset);
+                }
+
+                PipelineDesc desc = {};
+                desc.mType = PIPELINE_TYPE_COMPUTE;
+                ComputePipelineDesc& pipelineSettings = desc.mComputeDesc;
+                pipelineSettings.pShaderProgram = m_materialTranslucencyPass.m_copyRefraction;
+                pipelineSettings.pRootSignature = m_materialTranslucencyPass.m_refractionCopyRootSignature;
+                addPipeline(forgetRenderer->Rend(), &desc, &m_materialTranslucencyPass.m_refractionCopyPipeline);
             }
 
             folly::small_vector<Shader*, 64, folly::small_vector_policy::NoHeap> shaders{
@@ -2340,6 +2356,13 @@ namespace hpl {
            endUpdateResource(&updatePerFrameConstantsDesc, NULL);
         }
 
+        {
+            DescriptorData params[1] = {};
+            params[0].pName = "refractionMap";
+            params[0].ppTextures = &currentGBuffer.m_refractionImage.m_handle;
+            updateDescriptorSet(frame.m_renderer->Rend(), 0, m_materialSet.m_frameSet[frame.m_frameIndex], 1, params);
+        }
+
       
         frame.m_resourcePool->Push(currentGBuffer.m_colorBuffer);
         frame.m_resourcePool->Push(currentGBuffer.m_normalBuffer);
@@ -3154,11 +3177,39 @@ namespace hpl {
             }
         }
 
+        {
+            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
 
-                // if (pMaterial->HasRefraction()) {
-                // }
+            {
+                std::array textureBarriers = {
+                    TextureBarrier{currentGBuffer.m_refractionImage.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_UNORDERED_ACCESS },
+                };
+                std::array rtBarriers = {
+                    RenderTargetBarrier{currentGBuffer.m_outputBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
+                };
+                cmdResourceBarrier(frame.m_cmd, 0, NULL, textureBarriers.size(), textureBarriers.data(), rtBarriers.size(), rtBarriers.data());
+            }
 
+            cmdBindPipeline(frame.m_cmd, m_materialTranslucencyPass.m_refractionCopyPipeline);
+            DescriptorData params[2] = {};
+            params[0].pName = "sourceInput";
+            params[0].ppTextures = &currentGBuffer.m_outputBuffer.m_handle->pTexture;
+            params[1].pName = "destOutput";
+            params[1].ppTextures = &currentGBuffer.m_refractionImage.m_handle;
+            updateDescriptorSet(frame.m_renderer->Rend(), 0, m_materialTranslucencyPass.m_refractionPerFrameSet[frame.m_frameIndex], 2, params);
+            cmdBindDescriptorSet(frame.m_cmd, 0, m_materialTranslucencyPass.m_refractionPerFrameSet[frame.m_frameIndex]);
+            cmdDispatch(frame.m_cmd, static_cast<uint32_t>(static_cast<float>(sharedData.m_size.x) / 16.0f) + 1, static_cast<uint32_t>(static_cast<float>(sharedData.m_size.y) / 16.0f) + 1, 1);
+            {
+                std::array textureBarriers = {
+                    TextureBarrier{currentGBuffer.m_refractionImage.m_handle, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE },
+                };
 
+                std::array rtBarriers = {
+                    RenderTargetBarrier{currentGBuffer.m_outputBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
+                };
+                cmdResourceBarrier(frame.m_cmd, 0, NULL, textureBarriers.size(), textureBarriers.data(), rtBarriers.size(), rtBarriers.data());
+            }
+        }
 
         // ------------------------------------------------------------------------
         // Translucency Pass --> output target
@@ -3190,137 +3241,152 @@ namespace hpl {
                     continue;
                 }
 
-                float sceneAlpha = 1;
-                if (pMaterial->GetAffectedByFog()) {
-                    for (auto& fogArea : fogRenderData) {
-                        sceneAlpha *= detail::GetFogAreaVisibilityForObject(fogArea, *apFrustum, translucencyItem);
-                    }
-                }
-
-                if (translucencyItem->UpdateGraphicsForViewport(mpCurrentFrustum, mfCurrentFrameTime) == false) {
-                    continue;
-                }
-
-                // if(pObject->RetrieveOcculsionQuery(this)==false)
-                // {
-                //     continue;
-                // }
-
-                struct {
-                    float sceneAlpha;
-                    float lightLevel;
-                    uint32_t textureMask;
-                } constants = {};
-                constants.sceneAlpha = sceneAlpha;
-                constants.lightLevel = 1.0f;
-                
-                if(pMaterial->IsAffectedByLightLevel()) {
-                    cVector3f vCenterPos = translucencyItem->GetBoundingVolume()->GetWorldCenter();
-                    // cRenderList *pRenderList = mpCurrentRenderList;
-                    float fLightAmount = 0.0f;
-
-                    ////////////////////////////////////////
-                    //Iterate lights and add light amount
-                    for (auto& light : mpCurrentRenderList->GetLights()) {
-                        // iLight* pLight = mpCurrentRenderList->GetLight(i);
-                        auto maxColorValue = [](const cColor& aCol) {
-                            return cMath::Max(cMath::Max(aCol.r, aCol.g), aCol.b);
-                        };
-                        //Check if there is an intersection
-                        if(light->CheckObjectIntersection(translucencyItem))
-                        {
-                            if(light->GetLightType() == eLightType_Box)
-                            {
-                                fLightAmount += maxColorValue(light->GetDiffuseColor());
-                            }
-                            else
-                            {
-                                float fDist = cMath::Vector3Dist(light->GetWorldPosition(), vCenterPos);
-
-                                fLightAmount += maxColorValue(light->GetDiffuseColor()) * cMath::Max(1.0f - (fDist / light->GetRadius()), 0.0f);
-                            }
-
-                            if(fLightAmount >= 1.0f)
-                            {
-                                fLightAmount = 1.0f;
-                                break;
+                switch (pMaterial->type().m_id) {
+                case cMaterial::Translucent: {
+                        float sceneAlpha = 1;
+                        if (pMaterial->GetAffectedByFog()) {
+                            for (auto& fogArea : fogRenderData) {
+                                sceneAlpha *= detail::GetFogAreaVisibilityForObject(fogArea, *apFrustum, translucencyItem);
                             }
                         }
+
+                        if (translucencyItem->UpdateGraphicsForViewport(mpCurrentFrustum, mfCurrentFrameTime) == false) {
+                            continue;
+                        }
+
+                        // if(pObject->RetrieveOcculsionQuery(this)==false)
+                        // {
+                        //     continue;
+                        // }
+
+                        struct {
+                            float sceneAlpha;
+                            float lightLevel;
+                            uint32_t textureMask;
+                        } constants = {};
+                        constants.sceneAlpha = sceneAlpha;
+                        constants.lightLevel = 1.0f;
+
+                        if (pMaterial->IsAffectedByLightLevel()) {
+                            cVector3f vCenterPos = translucencyItem->GetBoundingVolume()->GetWorldCenter();
+                            // cRenderList *pRenderList = mpCurrentRenderList;
+                            float fLightAmount = 0.0f;
+
+                            ////////////////////////////////////////
+                            // Iterate lights and add light amount
+                            for (auto& light : mpCurrentRenderList->GetLights()) {
+                                // iLight* pLight = mpCurrentRenderList->GetLight(i);
+                                auto maxColorValue = [](const cColor& aCol) {
+                                    return cMath::Max(cMath::Max(aCol.r, aCol.g), aCol.b);
+                                };
+                                // Check if there is an intersection
+                                if (light->CheckObjectIntersection(translucencyItem)) {
+                                    if (light->GetLightType() == eLightType_Box) {
+                                        fLightAmount += maxColorValue(light->GetDiffuseColor());
+                                    } else {
+                                        float fDist = cMath::Vector3Dist(light->GetWorldPosition(), vCenterPos);
+
+                                        fLightAmount +=
+                                            maxColorValue(light->GetDiffuseColor()) * cMath::Max(1.0f - (fDist / light->GetRadius()), 0.0f);
+                                    }
+
+                                    if (fLightAmount >= 1.0f) {
+                                        fLightAmount = 1.0f;
+                                        break;
+                                    }
+                                }
+                            }
+                            constants.lightLevel = fLightAmount;
+                        }
+
+                        const bool isRefraction = iRenderer::GetRefractionEnabled() && pMaterial->HasRefraction();
+                        const bool isFogActive = mpCurrentWorld->GetFogActive() && pMaterial->GetAffectedByFog();
+                        const bool isParticleEmitter = TypeInfo<iParticleEmitter>::IsSubtype(*translucencyItem);
+                        const auto cubeMap = pMaterial->GetImage(eMaterialTexture_CubeMap);
+                        cMatrixf* pMatrix = translucencyItem->GetModelMatrix(apFrustum);
+
+                        cmdBindMaterialDescriptor(frame, pMaterial);
+                        cmdBindObjectDescriptor(
+                            frame,
+                            objectIndex,
+                            pMaterial,
+                            translucencyItem,
+                            {
+                                .m_viewMat = mainFrustumView,
+                                .m_projectionMat = mainFrustumProj,
+                                .m_modelMatrix = std::optional{ pMatrix ? *pMatrix : cMatrixf::Identity },
+                            });
+
+                        LegacyVertexBuffer::GeometryBinding binding;
+
+                        if (isParticleEmitter) {
+                            std::array targets = { eVertexBufferElement_Position,
+                                                   eVertexBufferElement_Texture0,
+                                                   eVertexBufferElement_Color0 };
+                            static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
+                        } else {
+                            std::array targets = { eVertexBufferElement_Position,
+                                                   eVertexBufferElement_Texture0,
+                                                   eVertexBufferElement_Normal,
+                                                   eVertexBufferElement_Texture1Tangent,
+                                                   eVertexBufferElement_Color0 };
+                            static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
+                        }
+
+                        if (pMaterial->HasWorldReflection() && translucencyItem->GetRenderType() == eRenderableType_SubMesh) {
+                            // TODO implement world reflection
+                        }
+
+                        cRendererDeferred::TranslucencyPipeline::TranslucencyKey key = {};
+                        key.m_field.m_hasDepthTest = pMaterial->GetDepthTest();
+                        key.m_field.m_hasFog = isFogActive;
+
+                        ASSERT(
+                            pMaterial->GetBlendMode() < eMaterialBlendMode_LastEnum &&
+                            pMaterial->GetBlendMode() != eMaterialBlendMode_None && "Invalid blend mode");
+                        if (isParticleEmitter) {
+                            cmdBindPipeline(
+                                frame.m_cmd,
+                                m_materialTranslucencyPass
+                                    .m_particlePipelines[translucencyBlendTable[pMaterial->GetBlendMode()]][key.m_id]);
+                        } else {
+                            cmdBindPipeline(
+                                frame.m_cmd,
+                                (isRefraction ? m_materialTranslucencyPass.m_refractionPipeline
+                                              : m_materialTranslucencyPass
+                                                    .m_pipelines)[translucencyBlendTable[pMaterial->GetBlendMode()]][key.m_id]);
+                        }
+
+                        detail::cmdDefaultLegacyGeomBinding(frame, binding);
+
+                        constants.textureMask =
+                            (cMaterial::EnableDiffuse | cMaterial::EnableNormal |
+                             (isRefraction ? (cMaterial::EnableCubeMap | cMaterial::EnableCubeMapAlpha) : 0));
+                        cmdBindPushConstants(frame.m_cmd, m_materialRootSignature, translucencyConstantIndex, &constants);
+                        cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+
+                        if (pMaterial->HasTranslucentIllumination()) {
+                            if (!isParticleEmitter && cubeMap && !isRefraction) {
+                                cmdBindPipeline(
+                                    frame.m_cmd,
+                                    (isRefraction ? m_materialTranslucencyPass.m_refractionPipeline
+                                                  : m_materialTranslucencyPass
+                                                        .m_pipelines)[TranslucencyPipeline::TranslucencyBlend::BlendAdd][key.m_id]);
+                            }
+
+                            constants.textureMask =
+                                isRefraction ? 0 : (cMaterial::EnableNormal | cMaterial::EnableCubeMap | cMaterial::EnableCubeMapAlpha);
+                            cmdBindPushConstants(frame.m_cmd, m_materialRootSignature, translucencyConstantIndex, &constants);
+                            cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+                        }
+                        break;
                     }
-                    constants.lightLevel = fLightAmount;
-                }
-
-                const bool isRefraction = iRenderer::GetRefractionEnabled() && pMaterial->HasRefraction();
-                const bool isFogActive = mpCurrentWorld->GetFogActive() && pMaterial->GetAffectedByFog();                
-                const bool isParticleEmitter = TypeInfo<iParticleEmitter>::IsSubtype(*translucencyItem);
-                const auto cubeMap = pMaterial->GetImage(eMaterialTexture_CubeMap);
-                cMatrixf* pMatrix = translucencyItem->GetModelMatrix(apFrustum);
-
-
-                ASSERT(pMaterial->type().m_id == cMaterial::Translucent && "Invalid material type");
-                cmdBindMaterialDescriptor(frame, pMaterial);
-                cmdBindObjectDescriptor(frame, objectIndex, pMaterial, translucencyItem, {
-                    .m_viewMat = mainFrustumView,
-                    .m_projectionMat = mainFrustumProj,
-                    .m_modelMatrix = std::optional{pMatrix ? *pMatrix: cMatrixf::Identity},
-                });
-
-                LegacyVertexBuffer::GeometryBinding binding;
-
-                if(isParticleEmitter) {
-                    std::array targets = {
-                        eVertexBufferElement_Position,
-                        eVertexBufferElement_Texture0,
-                        eVertexBufferElement_Color0
-                    };
-                    static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(
-                        frame.m_currentFrame, targets, &binding);
-                } else {
-                    std::array targets = {
-                        eVertexBufferElement_Position,
-                        eVertexBufferElement_Texture0,
-                        eVertexBufferElement_Normal,
-                        eVertexBufferElement_Texture1Tangent,
-                        eVertexBufferElement_Color0
-                    };
-                    static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(
-                        frame.m_currentFrame, targets, &binding);
-                }
-
-
-                if (pMaterial->HasWorldReflection() && translucencyItem->GetRenderType() == eRenderableType_SubMesh) {
-                    // TODO implement world reflection
-                }
-
-                cRendererDeferred::TranslucencyPipeline::TranslucencyKey key = {};
-                key.m_field.m_hasDepthTest = pMaterial->GetDepthTest();
-                key.m_field.m_hasFog = isFogActive;
-
-                ASSERT(pMaterial->GetBlendMode() < eMaterialBlendMode_LastEnum && pMaterial->GetBlendMode()  != eMaterialBlendMode_None && "Invalid blend mode");
-                if(isParticleEmitter) {
-                    cmdBindPipeline(frame.m_cmd, m_materialTranslucencyPass.m_particlePipelines[translucencyBlendTable[pMaterial->GetBlendMode()]][key.m_id]);
-                } else {
-                    cmdBindPipeline(frame.m_cmd,  
-                        (isRefraction ? m_materialTranslucencyPass.m_refractionPipeline : m_materialTranslucencyPass.m_pipelines)[translucencyBlendTable[pMaterial->GetBlendMode()]][key.m_id]);
-                }
-                
-
-                detail::cmdDefaultLegacyGeomBinding(frame, binding);
-                
-                constants.textureMask = (cMaterial::EnableDiffuse | cMaterial::EnableNormal | (isRefraction ? (cMaterial::EnableCubeMap | cMaterial::EnableCubeMapAlpha) : 0));
-                cmdBindPushConstants(frame.m_cmd, m_materialRootSignature, translucencyConstantIndex, &constants);
-                cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
-                
-                if(pMaterial->HasTranslucentIllumination()) {
-                    if(!isParticleEmitter && cubeMap && !isRefraction) {
-                        cmdBindPipeline(frame.m_cmd,  
-                            (isRefraction ? m_materialTranslucencyPass.m_refractionPipeline : m_materialTranslucencyPass.m_pipelines)
-                                [TranslucencyPipeline::TranslucencyBlend::BlendAdd][key.m_id]);
-                    }
-
-                    constants.textureMask = isRefraction ? 0 : (cMaterial::EnableNormal | cMaterial::EnableCubeMap | cMaterial::EnableCubeMapAlpha);
-                    cmdBindPushConstants(frame.m_cmd, m_materialRootSignature, translucencyConstantIndex, &constants);
-                    cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+                case cMaterial::Water:
+                    // TODO: Water
+                    continue;
+                default:
+                    ASSERT(false && "Invalid material type");
+                    continue;
                 }
             }
         }

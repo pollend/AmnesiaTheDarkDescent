@@ -239,6 +239,7 @@ namespace hpl {
             auto& target = m_targets[handle];
             if (!target || !m_dataValid(viewport, *target)) {
                 target = m_createData(viewport);
+                m_revision++;
                 auto& disposeHandle = m_disposeHandlers[handle];
                 if (!disposeHandle.IsConnected()) {
                     disposeHandle = std::move(cViewport::ViewportDispose::Handler([&, handle]() {
@@ -251,7 +252,12 @@ namespace hpl {
             return *target;
         }
 
+        uint32_t revision() {
+            return m_revision;
+        }
+
     private:
+        uint32_t m_revision = 0;
         std::function<std::unique_ptr<TData>(cViewport&)> m_createData;
         std::function<bool(cViewport&, TData& target)> m_dataValid;
         std::array<cViewport::ViewportDispose::Handler, cViewport::MaxViewportHandles> m_disposeHandlers;

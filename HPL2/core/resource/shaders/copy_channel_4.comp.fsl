@@ -1,15 +1,15 @@
-RES(Tex2D(float4), Source, UPDATE_FREQ_PER_FRAME, t0, binding = 0);
-RES(RWTex2D(float4), Destination, UPDATE_FREQ_PER_FRAME, u0, binding = 1);
+RES(Tex2D(float4), sourceInput, UPDATE_FREQ_PER_FRAME, t0, binding = 0);
+RES(WTex2D(float4), destOutput, UPDATE_FREQ_PER_FRAME, u0, binding = 1);
 
-NUM_THREADS(8,  8,  1)
+NUM_THREADS(16, 16,  1)
 void CS_MAIN( SV_DispatchThreadID(uint3) did) 
 {    
 	INIT_MAIN;
-    uint2 screen_size = uint2(GetDimensions(Get(Source), NO_SAMPLER));
+    uint2 screenSize = uint2(GetDimensions(Get(sourceInput), NO_SAMPLER));
 
-    if (did.x < screen_size.x && did.y < screen_size.y)
+    if (did.x < screenSize.x && did.y < screenSize.y)
     {
-        Write2D(Get(Destination), did.xy, LoadTex2D(Get(Source), NO_SAMPLER, did.xy, 0));
+        Write2D(Get(destOutput), did.xy, LoadTex2D(Get(sourceInput), NO_SAMPLER, did.xy, 0));
     }
 	RETURN();
 }
