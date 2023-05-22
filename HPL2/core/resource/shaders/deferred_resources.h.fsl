@@ -38,10 +38,7 @@ CBUFFER(uniformObjectBlock, UPDATE_FREQ_PER_DRAW, b1, binding = 1)
         DATA(float, frenselBias, None);
         DATA(float, frenselPow, None);
     };
-    INLINE bool HasDissolveFilter(int _textureConfig)   { return (_textureConfig & (1 << 9)) != 0; }
-    INLINE bool IsAlphaSingleChannel(int _textureConfig)   { return (_textureConfig & (1 << 10)) != 0; }
-    INLINE bool IsHeightMapSingleChannel(int _textureConfig)   { return (_textureConfig & (1 << 11)) != 0; }
-
+    INLINE bool HasDissolveFilter(int _textureConfig)   { return (_textureConfig & (1 << 14)) != 0; }
 #elif defined(MATERIAL_TRANSLUCENT)
     CBUFFER(uniformMaterialBlock, UPDATE_FREQ_PER_BATCH, b2, binding = 2)
     {
@@ -54,7 +51,8 @@ CBUFFER(uniformObjectBlock, UPDATE_FREQ_PER_DRAW, b1, binding = 1)
         DATA(float, rimMulPower, None);
     };
 
-    INLINE bool UseRefractionNormals(int _textureConfig)   { return (_textureConfig & (1 << 9)) != 0; }
+    INLINE bool UseRefractionNormals(int _textureConfig)   { return (_textureConfig & (1 << 14)) != 0; }
+    INLINE bool UseRefractionEdgeCheck(int _textureConfig)   { return (_textureConfig & (1 << 15)) != 0; }
 #endif
 
 RES(Tex2D(float4), diffuseMap, UPDATE_FREQ_PER_BATCH, t1, binding = 5); 
@@ -87,14 +85,5 @@ RES(SamplerState, cubeMapAlphaSampler, UPDATE_FREQ_PER_BATCH, s9, binding = 22);
 RES(SamplerState, nearestSampler, UPDATE_FREQ_PER_BATCH, s10, binding = 23);
 RES(SamplerState, bilinearSampler, UPDATE_FREQ_PER_BATCH, s11, binding = 24);
 
-INLINE bool HasDiffuse(int _textureConfig)        { return (_textureConfig & (1 << 0)) != 0; }
-INLINE bool HasNormal(int _textureConfig)         { return (_textureConfig & (1 << 1)) != 0; }
-INLINE bool HasSpecular(int _textureConfig)       { return (_textureConfig & (1 << 2)) != 0; }
-INLINE bool HasAlpha(int _textureConfig)          { return (_textureConfig & (1 << 3)) != 0; }
-INLINE bool HasHeight(int _textureConfig)         { return (_textureConfig & (1 << 4)) != 0; }
-INLINE bool HasIllumination(int _textureConfig)   { return (_textureConfig & (1 << 5)) != 0; }
-INLINE bool HasCubeMap(int _textureConfig)        { return (_textureConfig & (1 << 6)) != 0; }
-INLINE bool HasDissolveAlpha(int _textureConfig)  { return (_textureConfig & (1 << 7)) != 0; }
-INLINE bool HasCubeMapAlpha(int _textureConfig)   { return (_textureConfig & (1 << 8)) != 0; }
-
+#include "material_resource.h.fsl"
 

@@ -27,6 +27,10 @@
 #include "scene/Viewport.h"
 #include <cstdint>
 
+#include "tinyimageformat_base.h"
+#include "Common_3/Graphics/Interfaces/IGraphics.h"
+#include <FixPreprocessor.h>
+
 namespace hpl {
 
 	class cGraphics;
@@ -43,7 +47,7 @@ namespace hpl {
 	class GraphicsContext;
 	class Image;
 	class LegacyRenderTarget;
-	
+
 	#define kPostEffectParamsClassInit(aClass)							\
 		void CopyTo(iPostEffectParams* apDestParams) {					\
 			aClass *pCastParams = static_cast< aClass *>(apDestParams);	\
@@ -94,10 +98,12 @@ namespace hpl {
 	class iPostEffect
 	{
 	public:
+        static constexpr TinyImageFormat PostEffectImageFormat = TinyImageFormat_R8G8B8A8_UNORM;
 
 		iPostEffect(cGraphics *apGraphics, cResources *apResources, iPostEffectType *apType);
 		virtual ~iPostEffect();
 
+        virtual void Draw(cPostEffectComposite& compositor, cViewport& viewport, Texture* input, RenderTarget* target) {};
 		virtual void RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, LegacyRenderTarget& target) {};
 
 		/** SetDisabled - Method to disable the Effect completely, meaning IsActive will always return false even

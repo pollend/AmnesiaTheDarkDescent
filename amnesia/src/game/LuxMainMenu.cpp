@@ -49,7 +49,6 @@
 #include <scene/Scene.h>
 
 #include <engine/Interface.h>
-
 //--------------------------------------------------------------------------------
 
 static const bool gbDebug_SkipBGScene = false;
@@ -170,7 +169,7 @@ cLuxMainMenu::cLuxMainMenu() : iLuxUpdateable("LuxDebugHandler")
 	mfMainFadeInTime = gpBase->mpMenuCfg->GetFloat("Main","MainFadeInTime", 0);
 	mfMainFadeOutTimeFast = gpBase->mpMenuCfg->GetFloat("Main","MainFadeOutTimeFast", 0);
 	mfMainFadeOutTimeSlow = gpBase->mpMenuCfg->GetFloat("Main","MainFadeOutTimeSlow", 0);
-	
+
 	mfTopMenuFadeInTime = gpBase->mpMenuCfg->GetFloat("Main","TopMenuFadeInTime", 0);
 	mfTopMenuFadeOutTime = gpBase->mpMenuCfg->GetFloat("Main","TopMenuFadeOutTime", 0);
 
@@ -199,11 +198,38 @@ cLuxMainMenu::cLuxMainMenu() : iLuxUpdateable("LuxDebugHandler")
 
 	mpTopBackground = mpGui->CreateGfxFilledRect(cColor(0,1),eGuiMaterial_Alpha);
 	mpBlackFade = mpGui->CreateGfxFilledRect(cColor(0,1),eGuiMaterial_Alpha);
-		
-    m_blurProgram = hpl::loadProgram("vs_post_effect", "fs_posteffect_blur");
-
-	m_s_diffuseMap = createUniform("s_diffuseMap", bgfx::UniformType::Sampler); 
-	m_u_param = bgfx::createUniform("u_param", bgfx::UniformType::Vec4);
+    auto* forgeRenderer = Interface<ForgeRenderer>::Get();
+    m_blurVerticalShader = ForgeShaderHandle(forgeRenderer->Rend());
+    m_blurVerticalShader.Load([&](Shader** shader) {
+        ShaderLoadDesc loadDesc{};
+        loadDesc.mStages[0] = { "fullscreen.vert", nullptr, 0 };
+        loadDesc.mStages[1] = { "blur_posteffect_vertical.frag", nullptr, 0 };
+        addShader(forgeRenderer->Rend(),&loadDesc, shader);
+        return true;
+    });
+    m_blurHorizontalShader = ForgeShaderHandle(forgeRenderer->Rend());
+    m_blurHorizontalShader.Load([&](Shader** shader) {
+        ShaderLoadDesc loadDesc{};
+        loadDesc.mStages[0] = { "fullscreen.vert", nullptr, 0 };
+        loadDesc.mStages[1] = { "blur_posteffect_vertical.frag", nullptr, 0 };
+        addShader(forgeRenderer->Rend(),&loadDesc, shader);
+        return true;
+    });
+    m_screenBlurTarget = ForgeRenderTarget(forgeRenderer->Rend());
+    m_screenBlurTarget.Load([&](RenderTarget** texture) {
+        RenderTargetDesc renderTarget = {};
+        renderTarget.mArraySize = 1;
+        //renderTarget.mClearValue = optimizedColorClearBlack;
+        renderTarget.mDepth = 1;
+        renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+        //renderTarget.mWidth = sharedData->m_size.x;
+        //renderTarget.mHeight = sharedData->m_size.y;
+        renderTarget.mSampleCount = SAMPLE_COUNT_1;
+        renderTarget.mSampleQuality = 0;
+        renderTarget.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
+        addRenderTarget(forgeRenderer->Rend(), &renderTarget, texture);
+        return true;
+    });
 
 	mpScreenGfx = NULL;
 	mpScreenBlurGfx = NULL;
@@ -277,7 +303,7 @@ void cLuxMainMenu::LoadUserConfig()
 
 void cLuxMainMenu::SaveUserConfig()
 {
-	
+
 }
 
 void cLuxMainMenu::OnClearFonts()
@@ -1084,7 +1110,7 @@ void cLuxMainMenu::CreateTopMenuGui()
 
 		SetupTopMenuLabel(pLabel);
 
-																					
+
 		////////////////////////////
 		// Set enabled to false if player does not have enough resources
 		pLabel->SetEnabled(gpBase->mpPlayer->GetTinderboxes() >= 4);
@@ -1393,13 +1419,13 @@ void cLuxMainMenu::RenderBlurTexture()
 			float u_blurSize;
 			float texelSize[2];
 		} blurParams = {0};
-		
+
 		auto image = blurTargets[1].GetImage(0);
 		{
         	GraphicsContext::LayoutStream layoutStream;
 			cMatrixf projMtx;
 			graphicsContext.ScreenSpaceQuad(layoutStream, projMtx, viewportSize.x, viewportSize.y);
-			
+
 			GraphicsContext::ViewConfiguration viewConfiguration {blurTargets[0]};
 			viewConfiguration.m_projection = projMtx;
 			viewConfiguration.m_viewRect = cRect2l(0, 0, image->GetWidth(), image->GetHeight());
@@ -1414,10 +1440,10 @@ void cLuxMainMenu::RenderBlurTexture()
 			shaderProgram.m_configuration.m_write = Write::RGBA;
 			shaderProgram.m_handle = m_blurProgram;
 			// shaderProgram.m_projection = projMtx;
-			
+
 			shaderProgram.m_textures.push_back({ m_s_diffuseMap, input.GetHandle(), 1 });
 			shaderProgram.m_uniforms.push_back({ m_u_param, &blurParams, 1 });
-			
+
 			GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
 			graphicsContext.Submit(view, request);
 		}
@@ -1428,7 +1454,7 @@ void cLuxMainMenu::RenderBlurTexture()
 			GraphicsContext::ShaderProgram shaderProgram;
 			cMatrixf projMtx;
 			graphicsContext.ScreenSpaceQuad(layoutStream, projMtx, viewportSize.x, viewportSize.y);
-			
+
 			GraphicsContext::ViewConfiguration viewConfiguration {blurTargets[1]};
 			viewConfiguration.m_projection = projMtx;
 			viewConfiguration.m_viewRect = cRect2l(0, 0, image->GetWidth(), image->GetHeight());
@@ -1442,19 +1468,19 @@ void cLuxMainMenu::RenderBlurTexture()
 			shaderProgram.m_configuration.m_write = Write::RGBA;
 			shaderProgram.m_handle = m_blurProgram;
 			// shaderProgram.m_projection = projMtx;
-			
+
 			shaderProgram.m_textures.push_back({ m_s_diffuseMap, blurTargets[0].GetImage()->GetHandle(), 1 });
 			shaderProgram.m_uniforms.push_back({ m_u_param, &blurParams, 1 });
-			
+
 			GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
 			graphicsContext.Submit(view, request);
 		}
 	};
-	
+
 	LegacyRenderTarget tempTarget = LegacyRenderTarget(m_screenImage);
 	cRect2l rect = cRect2l(0,0,viewportSize.x,viewportSize.y);
 	// graphicsContext.CopyTextureToFrameBuffer(*renderer->GetOutputImage(*viewport), rect, tempTarget);
-	
+
 	requestBlur(*m_screenImage);
 
 	for(int i=0; i<6; ++i) {

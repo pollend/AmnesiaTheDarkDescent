@@ -25,9 +25,12 @@
 #include "graphics/Image.h"
 #include "graphics/RenderTarget.h"
 
+
 #include <array>
+#include <cstdint>
 #include <memory>
 #include <span>
+#include "graphics/ForgeHandles.h"
 
 class cGlowObject
 {
@@ -50,6 +53,8 @@ public:
 class cLuxEffectRenderer : public iLuxUpdateable
 {
 public:
+    static constexpr uint32_t MaxObjectUniform = 128;
+
     struct LuxPostEffectData {
     public:
         LuxPostEffectData() = default;
@@ -68,14 +73,16 @@ public:
             m_outputImage = std::move(other.m_outputImage);
             m_gBufferDepthStencil = std::move(other.m_gBufferDepthStencil);
             m_blurTarget = std::move(other.m_blurTarget);
-
         }
-
         // images from the gbuffer we need this to determine if we need to rebuild the render targets
         std::shared_ptr<Image> m_outputImage;
         std::shared_ptr<Image> m_gBufferDepthStencil;
 
         std::array<LegacyRenderTarget, 2> m_blurTarget;
+        std::array<std::array<ForgeRenderTarget, 2>, ForgeRenderer::SwapChainLength> m_blurImageTarget;
+        std::array<ForgeRenderTarget, ForgeRenderer::SwapChainLength> m_outlineBuffer; // the intermediary results from the outline
+        std::array<ForgeRenderTarget, ForgeRenderer::SwapChainLength> m_inputDepthBuffer; // the input depth from the main render pass
+
         LegacyRenderTarget m_outputTarget;
         LegacyRenderTarget m_outlineTarget;
     };
@@ -84,7 +91,7 @@ public:
     cLuxEffectRenderer();
     ~cLuxEffectRenderer();
 
-    void Reset();
+    void Reset() override;
 
     virtual void Update(float afTimeStep) override;
 
@@ -99,6 +106,15 @@ public:
     void AddFlashObject(iRenderable* apObject, float afAlpha);
     void AddEnemyGlow(iRenderable* apObject, float afAlpha);
 
+    struct LuxEffectOutlineUniform {
+        float4 color;
+        mat4 mvp;
+        mat3 normalMat;
+    };
+    union LuxEffectUniform {
+        LuxEffectOutlineUniform outline;
+    };
+
 private:
 
     // this is reused code from PostEffect_Bloom. I think the passes can be separated out into handlers of some kind :?
@@ -106,14 +122,26 @@ private:
 
     std::vector<cGlowObject> mvFlashObjects;
     std::vector<cGlowObject> mvEnemyGlowObjects;
-
     std::vector<iRenderable*> mvOutlineObjects;
 
-    // RenderTarget m_outputTarget;
-    // RenderTarget m_outlineTarget;
-    // std::array<RenderTarget, 2> m_blurTarget;
-    
     UniqueViewportData<LuxPostEffectData> m_boundPostEffectData;
+
+    Shader* m_blurShader;
+
+    // glow effect
+    Shader* m_enemyGlowShader;
+
+    // outline effect
+    GPURingBuffer* m_uniformBuffer;
+    Shader* m_outlineShader;
+    Shader* m_outlineStencilShader;
+    DescriptorSet* m_outlinePerObjectDescriptorSet;
+    RootSignature* m_outlineRootSignature;
+    Pipeline* m_outlinePipeline;
+    Pipeline* m_outlineStencilPipeline;
+
+    Shader* m_objectFlashShader;
+    Shader* m_outlineRejectDiffuseAlphaShader;
 
     bgfx::ProgramHandle m_blurProgram = BGFX_INVALID_HANDLE;
     bgfx::ProgramHandle m_enemyGlowProgram = BGFX_INVALID_HANDLE;

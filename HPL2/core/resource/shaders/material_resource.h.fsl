@@ -1,0 +1,14 @@
+
+INLINE bool HasDiffuse(int _textureConfig)        { return (_textureConfig & (1 << 0)) != 0; }
+INLINE bool HasNormal(int _textureConfig)         { return (_textureConfig & (1 << 1)) != 0; }
+INLINE bool HasSpecular(int _textureConfig)       { return (_textureConfig & (1 << 2)) != 0; }
+INLINE bool HasAlpha(int _textureConfig)          { return (_textureConfig & (1 << 3)) != 0; }
+INLINE bool HasHeight(int _textureConfig)         { return (_textureConfig & (1 << 4)) != 0; }
+INLINE bool HasIllumination(int _textureConfig)   { return (_textureConfig & (1 << 5)) != 0; }
+INLINE bool HasCubeMap(int _textureConfig)        { return (_textureConfig & (1 << 6)) != 0; }
+INLINE bool HasDissolveAlpha(int _textureConfig)  { return (_textureConfig & (1 << 7)) != 0; }
+INLINE bool HasCubeMapAlpha(int _textureConfig)   { return (_textureConfig & (1 << 8)) != 0; }
+
+INLINE bool IsHeightMapSingleChannel(int _textureConfig)   { return (_textureConfig & (1 << 9)) != 0; }
+INLINE bool IsAlphaSingleChannel(int _textureConfig)   { return (_textureConfig & (1 << 10)) != 0; }
+

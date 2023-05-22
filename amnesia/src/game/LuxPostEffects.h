@@ -24,8 +24,13 @@
 
 #include "LuxBase.h"
 #include "bgfx/bgfx.h"
+#include "graphics/ForgeRenderer.h"
 #include "graphics/Image.h"
+#include <array>
 #include <bx/debug.h>
+
+#include <graphics/ForgeHandles.h>
+#include <FixPreprocessor.h>
 
 class iLuxPostEffect : public iPostEffect
 {
@@ -45,18 +50,24 @@ class cLuxPostEffect_Insanity : public iLuxPostEffect
 public:
 	cLuxPostEffect_Insanity(cGraphics *apGraphics, cResources *apResources);
 	~cLuxPostEffect_Insanity();
+    static constexpr uint32_t NumMapAmps = 3;
 
 	void Update(float afTimeStep);
 
 	void SetWaveAlpha(float afX){ mfWaveAlpha = afX;}
 	void SetZoomAlpha(float afX){ mfZoomAlpha = afX;}
 	void SetWaveSpeed(float afX){ mfWaveSpeed = afX;}
-	
+
 	virtual void RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, LegacyRenderTarget& target) override;
 
 private:
 
-	bgfx::ProgramHandle m_program;
+    Shader* m_insanityShader;
+    Pipeline* m_insanityPipeline;
+    RootSignature* m_instantyRootSignature = nullptr;
+    std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_insanityPerFrameset {};
+
+    bgfx::ProgramHandle m_program;
 	std::array<Image*, 3> m_ampMaps;
 	Image* m_zoomImage;
 

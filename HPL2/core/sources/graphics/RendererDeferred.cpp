@@ -480,137 +480,6 @@ namespace hpl {
             return pLightA < pLightB;
         }
 
-        struct IlluminationOptions {
-            const cMatrixf& projectionFrustum;
-            const cMatrixf& viewFrustum;
-            cRendererDeferred::GBuffer& buffer;
-            const char* name;
-        };
-
-        static inline void RenderIlluminationPass(
-            GraphicsContext& context,
-            iRenderer* renderer,
-            std::span<iRenderable*> iter,
-            cViewport& viewport,
-            IlluminationOptions& arg) {
-            if (iter.empty()) {
-                return;
-            }
-            // auto bufferSize = arg.buffer.m_outputImage->GetImageSize();
-            // GraphicsContext::ViewConfiguration viewConfig{ arg.buffer.m_outputTarget };
-            // viewConfig.m_projection = arg.projectionFrustum;
-            // viewConfig.m_view = arg.viewFrustum;
-            // viewConfig.m_viewRect = { 0, 0, bufferSize.x, bufferSize.y };
-
-            // auto view = context.StartPass(arg.name, viewConfig);
-            // rendering::detail::RenderableMaterialIter(
-            //     renderer,
-            //     iter,
-            //     viewport,
-            //     eMaterialRenderMode_Illumination,
-            //     [&](iRenderable* obj, GraphicsContext::LayoutStream& layoutInput, GraphicsContext::ShaderProgram& shaderInput) {
-            //         shaderInput.m_configuration.m_depthTest = DepthTest::Equal;
-            //         shaderInput.m_configuration.m_write = Write::RGBA;
-
-            //         shaderInput.m_configuration.m_rgbBlendFunc =
-            //             CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
-            //         shaderInput.m_configuration.m_alphaBlendFunc =
-            //             CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::One);
-
-            //         shaderInput.m_modelTransform =
-            //             obj->GetModelMatrixPtr() ? obj->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity.GetTranspose();
-
-            //         GraphicsContext::DrawRequest drawRequest{ layoutInput, shaderInput };
-            //         context.Submit(view, drawRequest);
-            //     });
-        }
-        struct GBufferPassOptions {
-            const cMatrixf& projectionFrustum;
-            const cMatrixf& viewFrustum;
-            cRendererDeferred::GBuffer& buffer;
-            const char* name;
-        };
-
-        static inline void RenderGBufferPass(
-            GraphicsContext& context,
-            iRenderer* renderer,
-            std::span<iRenderable*> iter,
-            cViewport& viewport,
-            GBufferPassOptions& arg) {
-            if (iter.empty()) {
-                return;
-            }
-            // auto bufferSize = arg.buffer.m_outputImage->GetImageSize();
-            // GraphicsContext::ViewConfiguration viewConfig{ arg.buffer.m_fullTarget };
-            // viewConfig.m_projection = arg.projectionFrustum;
-            // viewConfig.m_view = arg.viewFrustum;
-            // viewConfig.m_viewRect = { 0, 0, bufferSize.x, bufferSize.y };
-
-            // auto view = context.StartPass(arg.name, viewConfig);
-            // rendering::detail::RenderableMaterialIter(
-            //     renderer,
-            //     iter,
-            //     viewport,
-            //     eMaterialRenderMode_Diffuse,
-            //     [&context,
-            //      view, &arg](iRenderable* obj, GraphicsContext::LayoutStream& layoutInput, GraphicsContext::ShaderProgram& shaderInput) {
-            //         shaderInput.m_configuration.m_depthTest = DepthTest::Equal;
-            //         shaderInput.m_configuration.m_write = Write::RGBA;
-            //         shaderInput.m_configuration.m_cull = Cull::CounterClockwise;
-
-            //         shaderInput.m_modelTransform =
-            //             obj->GetModelMatrixPtr() ? obj->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity.GetTranspose();
-            //         shaderInput.m_normalMtx =
-            //             cMath::MatrixInverse(cMath::MatrixMul(shaderInput.m_modelTransform, arg.viewFrustum)); // matrix is already transposed
-
-            //         GraphicsContext::DrawRequest drawRequest{ layoutInput, shaderInput };
-            //         context.Submit(view, drawRequest);
-            //     });
-        }
-
-        struct DecalPassOptions {
-            const cMatrixf& projectionFrustum;
-            const cMatrixf& viewFrustum;
-            cRendererDeferred::GBuffer& buffer;
-            const char* name;
-        };
-
-        static inline void RenderDecalPass(
-            GraphicsContext& context,
-            iRenderer* renderer,
-            std::span<iRenderable*> iter,
-            cViewport& viewport,
-            DecalPassOptions& args) {
-
-            if (iter.empty()) {
-                return;
-            }
-            // auto bufferSize = args.buffer.m_outputImage->GetImageSize();
-            // GraphicsContext::ViewConfiguration viewConfig{ args.buffer.m_colorAndDepthTarget };
-            // viewConfig.m_projection = args.projectionFrustum;
-            // viewConfig.m_view = args.viewFrustum;
-            // viewConfig.m_viewRect = { 0, 0, bufferSize.x, bufferSize.y };
-
-            // auto view = context.StartPass(args.name, viewConfig);
-            // rendering::detail::RenderableMaterialIter(
-            //     renderer,
-            //     iter,
-            //     viewport,
-            //     eMaterialRenderMode_Diffuse,
-            //     [&context, view, &args](iRenderable* obj, GraphicsContext::LayoutStream& layoutInput, GraphicsContext::ShaderProgram& shaderInput) {
-            //          shaderInput.m_configuration.m_depthTest = DepthTest::LessEqual;
-            //         shaderInput.m_configuration.m_write = Write::RGB;
-
-            //         cMaterial* pMaterial = obj->GetMaterial();
-            //         shaderInput.m_configuration.m_rgbBlendFunc = CreateFromMaterialBlendMode(pMaterial->GetBlendMode());
-            //         shaderInput.m_configuration.m_alphaBlendFunc = CreateFromMaterialBlendMode(pMaterial->GetBlendMode());
-            //         shaderInput.m_modelTransform =
-            //             obj->GetModelMatrixPtr() ? obj->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity.GetTranspose();
-
-            //         GraphicsContext::DrawRequest drawRequest{ layoutInput, shaderInput };
-            //         context.Submit(view, drawRequest);
-            //     });
-        }
 
         // static inline bool RenderShadowPass()
 
@@ -903,7 +772,7 @@ namespace hpl {
                         refractionImageDesc.mArraySize = 1;
                         refractionImageDesc.mDepth = 1;
 		                refractionImageDesc.mMipLevels = 1;
-                        refractionImageDesc.mFormat = TinyImageFormat_R32G32B32A32_SFLOAT;
+                        refractionImageDesc.mFormat = TinyImageFormat_R16G16B16A16_SFLOAT;
                         refractionImageDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE | DESCRIPTOR_TYPE_RW_TEXTURE;
                         refractionImageDesc.mWidth = sharedData->m_size.x;
                         refractionImageDesc.mHeight = sharedData->m_size.y;
@@ -1989,7 +1858,7 @@ namespace hpl {
             }
         }
         {
-            m_materialBuffer.Load([&](Buffer ** buffer) {
+            m_materialSet.m_materialUniformBuffer.Load([&](Buffer ** buffer) {
                 BufferLoadDesc desc = {};
                 desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_UNIFORM_BUFFER;
                 desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
@@ -1997,7 +1866,6 @@ namespace hpl {
                 desc.mDesc.mSize = sizeof(cMaterial::MaterialType::MaterialData) * cMaterial::MaxMaterialID;
                 desc.ppBuffer = buffer;
                 addResource(&desc, nullptr);
-
                 return true;
             });
             addUniformGPURingBuffer(forgetRenderer->Rend(), sizeof(cRendererDeferred::UniformObject) * MaxObjectUniforms, &m_objectUniformBuffer, true);
@@ -2191,11 +2059,8 @@ namespace hpl {
         const PerObjectOption& option) {
         auto* objectDescSet = m_materialSet.m_perObjectSet[frame.m_frameIndex];
 
-        // auto& apDescriptorSet = descriptor.m_perObjectSet[frame.m_frameIndex];
         GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(m_objectUniformBuffer, sizeof(cRendererDeferred::UniformObject));
-
         cRendererDeferred::UniformObject uniformObjectData = {};
-        
         
         cMatrixf modelMat = option.m_modelMatrix.value_or(apObject->GetModelMatrixPtr() ? *apObject->GetModelMatrixPtr() : cMatrixf::Identity);
         cMatrixf modelViewMat = cMath::MatrixMul(option.m_viewMat, modelMat);
@@ -2229,7 +2094,7 @@ namespace hpl {
     void cRendererDeferred::cmdBindMaterialDescriptor(const ForgeRenderer::Frame& frame, cMaterial* apMaterial) {
             ASSERT(apMaterial != nullptr && "Material is null");
 
-            auto& info = m_materialInfo[apMaterial->materialID()];
+            auto& info = m_materialSet.m_materialInfo[apMaterial->materialID()];
 
             auto& descriptorSet = m_materialSet.m_materialSet[frame.m_frameIndex];
             auto& descInfo = info.m_materialDescInfo[frame.m_frameIndex];
@@ -2242,7 +2107,7 @@ namespace hpl {
                 descInfo.m_version = apMaterial->Version();
                 descInfo.m_material = apMaterial;
 
-                BufferUpdateDesc  updateDesc = { m_materialBuffer.m_handle, apMaterial->materialID() * sizeof(cMaterial::MaterialType::MaterialData) };
+                BufferUpdateDesc  updateDesc = { m_materialSet.m_materialUniformBuffer.m_handle, apMaterial->materialID() * sizeof(cMaterial::MaterialType::MaterialData) };
                 beginUpdateResource(&updateDesc);
                 memcpy(updateDesc.pMappedData, &materialType.m_data, sizeof(cMaterial::MaterialType::MaterialData));
                 endUpdateResource(&updateDesc, NULL);
@@ -2305,7 +2170,7 @@ namespace hpl {
                 DescriptorDataRange range = { static_cast<uint32_t>(apMaterial->materialID() * sizeof(cMaterial::MaterialType::MaterialData)), sizeof(cMaterial::MaterialType::MaterialData) };
                 params[paramCount].pName = "uniformMaterialBlock";
                 params[paramCount].pRanges = &range;
-                params[paramCount++].ppBuffers = &m_materialBuffer.m_handle;
+                params[paramCount++].ppBuffers = &m_materialSet.m_materialUniformBuffer.m_handle;
 
                 updateDescriptorSet(
                     frame.m_renderer->Rend(), apMaterial->materialID(), descriptorSet, paramCount, params.data());

@@ -15,7 +15,7 @@ STRUCT(PsOut)
 PsOut PS_MAIN(PsIn In)
 {
     INIT_MAIN;
-	PsOut Out;
-	Out.diffuse = SampleTex2D(Get(inputMap), Get(nearestSampler), In.uv.xy);
+    PsOut Out;
+    Out.diffuse = SampleTex2D(Get(inputMap), Get(nearestSampler), In.uv.xy);
     RETURN(Out);
 }

@@ -375,18 +375,6 @@ namespace hpl {
         
         ForgeBufferHandle m_perFrameBuffer;
         
-        // Material
-        struct MaterialInfo {
-            struct MaterialDescInfo {
-                void* m_material = nullptr; // void* to avoid accessing the material 
-                uint32_t m_version = 0; // version of the material
-                std::array<ForgeTextureHandle, eMaterialTexture_LastEnum> m_textureHandles{}; // handles to keep textures alive for the descriptor
-            } m_materialDescInfo[ForgeRenderer::SwapChainLength];
-        };
-        ForgeBufferHandle m_materialBuffer;
-        GPURingBuffer* m_objectUniformBuffer;
-        std::array<MaterialInfo, cMaterial::MaxMaterialID> m_materialInfo;
-
         // decal pass
         std::array<Pipeline*,eMaterialBlendMode_LastEnum> m_decalPipeline;
         Shader* m_decalShader;
@@ -504,10 +492,23 @@ namespace hpl {
         Pipeline* m_zPassPipeline;
         DescriptorSet* m_zPassConstSet;
 
+        GPURingBuffer* m_objectUniformBuffer;
+
         struct MaterialPassDescriptorSet {
-            std::array<DescriptorSet*, ForgeRenderer::SwapChainLength>  m_frameSet;
+            std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_frameSet;
             std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perObjectSet;
             std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_materialSet;
+
+            // Material
+            struct MaterialInfo {
+                struct MaterialDescInfo {
+                    void* m_material = nullptr; // void* to avoid accessing the material 
+                    uint32_t m_version = 0; // version of the material
+                    std::array<ForgeTextureHandle, eMaterialTexture_LastEnum> m_textureHandles{}; // handles to keep textures alive for the descriptor
+                } m_materialDescInfo[ForgeRenderer::SwapChainLength];
+            };
+            std::array<MaterialInfo, cMaterial::MaxMaterialID> m_materialInfo;
+            ForgeBufferHandle m_materialUniformBuffer;
         } m_materialSet;
 
         // light pass

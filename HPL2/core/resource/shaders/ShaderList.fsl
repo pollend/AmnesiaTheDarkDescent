@@ -3,10 +3,10 @@
 #end
 
 #frag solid_z.frag
-#define SEARCH_SAMPLE_COUNT 4
-#define PARALLAX_ENABLED 1
-#define ALPHA_REJECT 0.5
-#include "solid_z.frag.fsl"
+    #define SEARCH_SAMPLE_COUNT 4
+    #define PARALLAX_ENABLED 1
+    #define ALPHA_REJECT 0.5
+    #include "solid_z.frag.fsl"
 #end
 
 #vert gui.vert
@@ -301,4 +301,41 @@
 
 #comp copy_channel_4.comp
     #include "copy_channel_4.comp.fsl"
+#end
+
+#frag dds_enemy_glow.frag
+    #include "dds_enemy_glow.frag.fsl"
+#end
+
+#vert dds_enemy_glow.vert
+    #include "dds_enemy_glow.vert.fsl"
+#end
+
+#vert dds_outline_stencil.vert
+   #include "dds_outline_stencil.vert.fsl"
+#end
+
+#frag dds_outline_stencil.frag
+    #define ALPHA_REJECT 0.5
+    #include "dds_outline_stencil.frag.fsl"
+#end
+
+#vert dds_outline.vert
+   #include "dds_outline.vert.fsl"
+#end
+
+#frag dds_outline.frag
+    #include "dds_outline.frag.fsl"
+#end
+
+#frag dds_insanity_posteffect.frag
+    #include "dds_insanity_posteffect.frag.fsl"
+#end
+
+#frag blur_posteffect_vertical.frag
+    #include "blur_posteffect.frag.fsl"
+#end
+
+#frag blur_posteffect_horizontal.frag
+    #include "blur_posteffect.frag.fsl"
 #end

@@ -23,6 +23,7 @@
 namespace hpl {
     class cMaterial;
     class ForgeRenderer;
+
     struct HPL2Blend {
         BlendMode mode;
         BlendConstant src;
@@ -57,6 +58,18 @@ namespace hpl {
 
         void InitializeRenderer(window::NativeWindowWrapper* window);
         void InitializeResource();
+
+        struct SamplerPoolKey {
+            union {
+                uint8_t m_id;
+                struct {
+                    AddressMode m_addressMode : 2;
+                } m_field;
+            };
+            static constexpr size_t NumOfVariants = 4;
+        };
+        Sampler* resolve(SamplerPoolKey key);
+
 
         /**
         * tracks the resources used by a single command buffer
@@ -97,6 +110,7 @@ namespace hpl {
             CommandResourcePool* m_resourcePool = nullptr;
         };
 
+
         const inline Frame GetFrame() {
             Frame frame;
             frame.m_currentFrame = FrameCount();
@@ -128,13 +142,12 @@ namespace hpl {
         size_t FrameCount() { return m_currentFrameCount; }
         inline SwapChain* GetSwapChain() { return m_swapChain; }
 
-        // size_t FrameIndex()  { return (m_currentFrameIndex % SwapChainLength); }
-        // inline CommandResourcePool& ResourcePool(size_t index) { return m_commandPool[index]; }
-        // inline CmdPool* GetCmdPool(size_t index) { return m_cmdPools[index]; }
-        
         void cmdCopyTexture(CopyPipelines copy, Cmd* cmd, Texture* srcTexture, RenderTarget* dstTexture);
 
+
     private:
+
+        std::array<Sampler*, SamplerPoolKey::NumOfVariants> m_samplerPool;
         std::array<CommandResourcePool, SwapChainLength> m_resourcePool;
         std::array<Fence*, SwapChainLength> m_renderCompleteFences;
         std::array<Semaphore*, SwapChainLength> m_renderCompleteSemaphores;

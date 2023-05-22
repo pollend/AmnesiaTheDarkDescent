@@ -1,0 +1,30 @@
+#include "material_resource.h.fsl"
+
+CBUFFER(uniformBlock, UPDATE_FREQ_PER_DRAW, b2, binding = 0) {
+    DATA(float4, color, None);
+    DATA(float4x4, mvp, None);
+    DATA(int, feature, None);
+};
+
+STRUCT(PsIn)
+{
+    DATA(float4, Position, SV_Position);
+    DATA(float2, uv, TEXCOORD0);
+};
+
+RES(Tex2D(float4), alphaMap, UPDATE_FREQ_PER_DRAW, t0, binding = 1); 
+RES(SamplerState, alphaMapSampler, UPDATE_FREQ_PER_DRAW, s0, binding = 2);
+
+float4 PS_MAIN(PsIn In)
+{
+    INIT_MAIN;
+    float4 color = float4(1.0, 1.0, 1.0, 1.0);
+    if(HasAlpha(Get(feature))) {     
+       float4 color = SampleTex2D(Get(alphaMap), Get(alphaMapSampler), In.uv);
+    }
+    
+    if(color.w < ALPHA_REJECT) {
+        discard;
+    }
+    RETURN(float4(1.0, 1.0, 1.0, 1.0));
+}

@@ -1,5 +1,6 @@
 
 #include "graphics/ForgeHandles.h"
+#include "Common_3/Graphics/Interfaces/IGraphics.h"
 #include "graphics/Bitmap.h"
 
 
@@ -14,7 +15,11 @@ namespace hpl {
             removeCmd(m_renderer, m_handle);
         }
     }
-
+    void ForgeShaderHandle::Free() {
+        if(m_handle) {
+            removeShader(m_renderer, m_handle);
+        }
+    }
     void ForgeTextureHandle::Free() {
         if (m_handle) {
             removeResource(m_handle);
@@ -62,7 +67,7 @@ namespace hpl {
             case ePixelFormat_DXT3:
                 return TinyImageFormat_DXBC2_UNORM;
             case ePixelFormat_DXT4:
-            case ePixelFormat_DXT5: 
+            case ePixelFormat_DXT5:
                 return TinyImageFormat_DXBC3_UNORM;
             case ePixelFormat_Depth16:
                 return TinyImageFormat_D16_UNORM;
@@ -116,7 +121,7 @@ namespace hpl {
                 case ePixelFormat_DXT3:
                     return TinyImageFormat_DXBC2_UNORM;
                 case ePixelFormat_DXT4:
-                case ePixelFormat_DXT5: 
+                case ePixelFormat_DXT5:
                     return TinyImageFormat_DXBC3_UNORM;
                 case ePixelFormat_Depth16:
                     return TinyImageFormat_D16_UNORM;
@@ -175,7 +180,7 @@ namespace hpl {
             }
         }
 
-       
+
         TextureLoadDesc textureLoadDesc = {};
         textureLoadDesc.ppTexture = &handle.m_handle;
         textureLoadDesc.pDesc = &desc;
@@ -243,7 +248,7 @@ namespace hpl {
             ASSERT(bitmap->GetWidth() == desc.mWidth && "All bitmaps must have the same width");
             ASSERT(bitmap->GetHeight() == desc.mHeight && "All bitmaps must have the same height");
             ASSERT(bitmap->GetDepth() == desc.mDepth && "All bitmaps must have the same depth");
-            
+
             auto sourceImageFormat = FromHPLPixelFormat(bitmap->GetPixelFormat());
             uint32_t sourceRowStride;
             if(!util_get_surface_info(desc.mWidth, desc.mHeight, sourceImageFormat, nullptr, &sourceRowStride, nullptr)) {
@@ -251,7 +256,7 @@ namespace hpl {
             }
             uint32_t srcElementStride = sourceRowStride / desc.mWidth;
             auto isCompressed  = TinyImageFormat_IsCompressed(desc.mFormat);
-            
+
             for(uint32_t arrIndex = 0; arrIndex < desc.mArraySize; arrIndex++) {
                 for(uint32_t mipLevel = 0; mipLevel < desc.mMipLevels; mipLevel++) {
                     TextureUpdateDesc update = {handle.m_handle, mipLevel, arrIndex};
@@ -262,7 +267,7 @@ namespace hpl {
                         uint32_t dstElementStride = update.mDstRowStride / desc.mWidth;
                         uint8_t* dstData = update.pMappedData + update.mDstSliceStride * z;
                         auto srcData = data.begin() + update.mSrcSliceStride * z;
-                        
+
                         for (uint32_t row = 0; row < update.mRowCount; ++row) {
                             if(isCompressed) {
                                 std::memcpy(dstData + row * update.mDstRowStride, &srcData[row * update.mSrcRowStride], update.mSrcRowStride);

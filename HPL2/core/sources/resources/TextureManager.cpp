@@ -81,13 +81,13 @@ namespace hpl {
 			// pTexture = FindTexture2D(asName,sPath);
 			cBitmap *pBmp = mpBitmapLoaderHandler->LoadBitmap(sPath,0);
 			if(!pBmp) {
-				
+
 				Error("Texture manager Couldn't load bitmap '%s'\n", cString::To8Char(sPath).c_str());
 				EndLoad();
 				return nullptr;
 			}
 			resource = createImageHandler(asName, sPath, pBmp);
-		
+
 			//Bitmap is no longer needed so delete it.
 			hplDelete(pBmp);
 
@@ -116,7 +116,7 @@ namespace hpl {
 				opts.m_useMipmaps = abUseMipMaps;
 				auto handle = ForgeTextureHandle::LoadFromHPLBitmap(*pBmp, opts);
 				resource->SetForgeTexture(std::move(handle));
-				return resource;		
+				return resource;
 
 
 				// auto* resource = new Image(asName, path);
@@ -147,16 +147,17 @@ namespace hpl {
 			asName,
 			[options, &abUseMipMaps](const tString& asName, const tWString& path, cBitmap* pBmp) -> Image*
 			{
-				
+
 				auto* resource = new Image(asName, path);
 				ForgeTextureHandle::BitmapLoadOptions opts = {0};
 				opts.m_useMipmaps = abUseMipMaps;
 				auto handle = ForgeTextureHandle::LoadFromHPLBitmap(*pBmp, opts);
 				resource->SetForgeTexture(std::move(handle));
-				
+
 				// ImageDescriptor desc =  ImageDescriptor::CreateFromBitmap(*pBmp);
 				// desc.m_name = asName.c_str();
 				// // auto* image = new Image();
+
 
 				// desc.m_configuration.m_UWrap = options.m_UWrap;
 				// desc.m_configuration.m_VWrap = options.m_VWrap;
@@ -178,7 +179,7 @@ namespace hpl {
 
 		if(sExt == "dds")
 		{
-			return _wrapperImageResource(asPathName, 
+			return _wrapperImageResource(asPathName,
 			[options, &abUseMipMaps](const tString& asName, const tWString& path, cBitmap* pBmp) -> Image*
 				{
 					auto* resource = new Image(asName, path);
@@ -188,7 +189,7 @@ namespace hpl {
 					auto handle = ForgeTextureHandle::LoadFromHPLBitmap(*pBmp, opts);
 					resource->SetForgeTexture(std::move(handle));
 					return resource;
-						
+
 
 					// auto* resource = new Image(asName, path);
 					// ImageDescriptor desc =  ImageDescriptor::CreateFromBitmap(*pBmp);
@@ -214,7 +215,7 @@ namespace hpl {
 		tString name = cString::SetFileExt(asPathName,"");
 		tWString fakeFullPath = cString::To16Char(name);
 		Image* image = static_cast<Image*>(GetResource(fakeFullPath));
-		
+
 		BeginLoad(asPathName);
 		if(!image) {
 			//See if files for all faces exist
@@ -227,7 +228,7 @@ namespace hpl {
 				{
 					tString sNewName = name + mvCubeSideSuffixes[i] + "." + *it;
 					sPath = mpFileSearcher->GetFilePath(sNewName);
-	
+
 					if(sPath!=_W(""))break;
 				}
 
@@ -274,7 +275,7 @@ namespace hpl {
 		if(image) {
 			image->IncUserCount();
 		}
-		
+
 		EndLoad();
 		return image;
 	}
@@ -291,7 +292,7 @@ namespace hpl {
 				opts.m_useMipmaps = abUseMipMaps;
 				auto handle = ForgeTextureHandle::LoadFromHPLBitmap(*pBmp, opts);
 				resource->SetForgeTexture(std::move(handle));
-				return resource;				
+				return resource;
 
 
 				// auto* resource = new Image(asName, path);
@@ -387,7 +388,7 @@ namespace hpl {
 				return NULL;
 			}
 
-		
+
 
 			std::vector<cBitmap*> vBitmaps;
 			for(size_t i =0; i< vPaths.size(); ++i)
@@ -406,7 +407,7 @@ namespace hpl {
 			}
 
 			//Create the animated texture
-			
+
 			animatedImage = new AnimatedImage(sBaseName, sFakeFullPath);
 			std::vector<std::unique_ptr<Image>> images;
 			for(auto& bitmap: vBitmaps) {
@@ -423,7 +424,7 @@ namespace hpl {
 
 				// desc.m_isCubeMap = (aType == eTextureType_CubeMap);
 				std::unique_ptr<Image> image = std::make_unique<Image>();
-				
+
 				ForgeTextureHandle::BitmapLoadOptions opts = {0};
 				opts.m_useMipmaps = abUseMipMaps;
 				opts.m_useCubeMap = aType == eTextureType_CubeMap;
@@ -434,7 +435,7 @@ namespace hpl {
 				images.push_back(std::move(image));
 			}
 			animatedImage->Initialize(std::span(images));
-				
+
 			AddResource(animatedImage);
 		}
 		if(animatedImage){
@@ -445,7 +446,7 @@ namespace hpl {
 	}
 
 
-	
+
 	iTexture* cTextureManager::Create1D(const tString& asName,bool abUseMipMaps,
 										eTextureUsage aUsage, unsigned int alTextureSizeLevel)
 	{

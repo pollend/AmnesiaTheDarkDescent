@@ -27,9 +27,13 @@
 #include <memory>
 #include <vector>
 
-
 #include "bgfx/bgfx.h"
+#include "graphics/ShaderUtil.h"
 #include <bx/debug.h>
+
+#include "tinyimageformat_base.h"
+#include <folly/small_vector.h>
+#include "FixPreprocessor.h"
 
 cLuxEffectRenderer::cLuxEffectRenderer()
     : iLuxUpdateable("LuxEffectRenderer")
@@ -39,6 +43,32 @@ cLuxEffectRenderer::cLuxEffectRenderer()
         cGraphics* pGraphics = gpBase->mpEngine->GetGraphics();
         cRendererDeferred* pRendererDeferred = static_cast<cRendererDeferred*>(pGraphics->GetRenderer(eRenderer_Main));
         auto& sharedData = pRendererDeferred->GetSharedData(viewport);
+        auto postEffect = std::make_unique<LuxPostEffectData>();
+        auto* forgeRenderer = Interface<ForgeRenderer>::Get();
+
+        for(size_t i = 0; i < sharedData.m_gBuffer.size(); i++) {
+            postEffect->m_inputDepthBuffer[i] = sharedData.m_gBuffer[i].m_depthBuffer;
+        }
+        for(auto& target: postEffect->m_outlineBuffer) {
+            ClearValue optimizedColorClearBlack = { { 0.0f, 0.0f, 0.0f, 0.0f } };
+            RenderTargetDesc renderTarget = {};
+            renderTarget.mArraySize = 1;
+            renderTarget.mClearValue = optimizedColorClearBlack;
+            renderTarget.mDepth = 1;
+            renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+            renderTarget.mWidth = sharedData.m_size.x;
+            renderTarget.mHeight = sharedData.m_size.y;
+            renderTarget.mSampleCount = SAMPLE_COUNT_1;
+            renderTarget.mSampleQuality = 0;
+            renderTarget.mStartState = RESOURCE_STATE_RENDER_TARGET;
+            renderTarget.pName = "postEffect Outline";
+            renderTarget.mFormat = TinyImageFormat_R8G8B8_UNORM;
+            target.Load([&](RenderTarget** target) {
+                addRenderTarget(forgeRenderer->Rend(), &renderTarget, target);
+                return true;
+            });
+        }
+
 
         auto blurImageDesc = [&]
         {
@@ -52,19 +82,19 @@ cLuxEffectRenderer::cLuxEffectRenderer()
             image->Initialize(desc);
             return image;
         };
-        
-        auto postEffect = std::make_unique<LuxPostEffectData>();
+
+
         // postEffect->m_outputImage = sharedData.m_gBuffer.m_outputImage;
         // postEffect->m_gBufferDepthStencil = sharedData.m_gBuffer.m_depthStencilImage;
 
         postEffect->m_blurTarget[0] = LegacyRenderTarget(blurImageDesc());
         postEffect->m_blurTarget[1] = LegacyRenderTarget(blurImageDesc());
-        
+
         {
             std::array<std::shared_ptr<Image>, 2> image = {postEffect->m_outputImage, postEffect->m_gBufferDepthStencil};
             postEffect->m_outputTarget = LegacyRenderTarget(image);
         }
-    
+
         auto outlineImageDesc = ImageDescriptor::CreateTexture2D(sharedData.m_size.x, sharedData.m_size.y, false, bgfx::TextureFormat::RGBA8);
         outlineImageDesc.m_configuration.m_rt = RTType::RT_Write;
         auto outlineImage = std::make_shared<Image>();
@@ -79,23 +109,107 @@ cLuxEffectRenderer::cLuxEffectRenderer()
         cRendererDeferred* pRendererDeferred = static_cast<cRendererDeferred*>(pGraphics->GetRenderer(eRenderer_Main));
         auto& sharedData = pRendererDeferred->GetSharedData(viewport);
 
-        // as long as the output image and depth stencil image are the same, we can use the same render target 
+        // as long as the output image and depth stencil image are the same, we can use the same render target
             // else we need to create a new one
-        return viewport.GetRenderTarget().IsValid(); 
+        return viewport.GetRenderTarget().IsValid();
             // && sharedData.m_gBuffer.m_outputImage == target.m_outputImage
             // && sharedData.m_gBuffer.m_depthStencilImage == target.m_gBufferDepthStencil;
     }));
 
-    m_alphaRejectProgram = hpl::loadProgram("vs_alpha_reject", "fs_alpha_reject");
-    m_blurProgram = hpl::loadProgram("vs_post_effect", "fs_posteffect_blur");
-    m_enemyGlowProgram = hpl::loadProgram("vs_dds_enemy_glow", "fs_dds_enemy_glow");
-    m_objectFlashProgram = hpl::loadProgram("vs_dds_flash", "fs_dds_flash");
-    m_copyProgram = hpl::loadProgram("vs_post_effect", "fs_post_effect_copy");
-    m_outlineProgram = hpl::loadProgram("vs_dds_outline", "fs_dds_outline");
+    auto* forgeRenderer = Interface<ForgeRenderer>::Get();
+
+    {
+        {
+            ShaderLoadDesc loadDesc = {};
+            loadDesc.mStages[0] = { "dds_outline_stencil.vert", nullptr, 0 };
+            loadDesc.mStages[1] = { "dds_outline_stencil.frag", nullptr, 0 };
+            addShader(forgeRenderer->Rend(), &loadDesc, &m_outlineStencilShader);
+        }
+        {
+            ShaderLoadDesc loadDesc = {};
+            loadDesc.mStages[0] = { "dds_outline.vert", nullptr, 0 };
+            loadDesc.mStages[1] = { "dds_outline.frag", nullptr, 0 };
+            addShader(forgeRenderer->Rend(), &loadDesc, &m_outlineShader);
+        }
+
+        std::array shaders = { m_outlineStencilShader, m_outlineShader };
+        RootSignatureDesc rootSignatureDesc = {};
+        rootSignatureDesc.ppShaders = shaders.data();
+        rootSignatureDesc.mShaderCount = shaders.size();
+        addRootSignature(forgeRenderer->Rend(), &rootSignatureDesc, &m_outlineRootSignature);
 
 
-    m_s_diffuseMap = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
-    m_u_param = bgfx::createUniform("u_param", bgfx::UniformType::Vec4);
+        VertexLayout vertexLayout = {};
+        vertexLayout.mAttribCount = 2;
+        vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
+        vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
+        vertexLayout.mAttribs[0].mBinding = 0;
+        vertexLayout.mAttribs[0].mLocation = 0;
+        vertexLayout.mAttribs[0].mOffset = 0;
+        vertexLayout.mAttribs[1].mSemantic = SEMANTIC_TEXCOORD0;
+        vertexLayout.mAttribs[1].mFormat = TinyImageFormat_R32G32_SFLOAT;
+        vertexLayout.mAttribs[1].mBinding = 1;
+        vertexLayout.mAttribs[1].mLocation = 1;
+        vertexLayout.mAttribs[1].mOffset = 0;
+
+        RasterizerStateDesc rasterizerStateDesc = {};
+        rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
+
+        std::array colorFormats = {
+            TinyImageFormat_R8G8B8A8_UNORM
+        };
+
+        DepthStateDesc depthStateDesc = {};
+        depthStateDesc.mDepthTest = true;
+        depthStateDesc.mDepthWrite = false;
+        depthStateDesc.mDepthFunc = CMP_LEQUAL;
+        {
+            PipelineDesc pipelineDesc = {};
+            pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+            auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
+            pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+            pipelineSettings.mRenderTargetCount = 1;
+            pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
+            pipelineSettings.mRenderTargetCount = colorFormats.size();
+            pipelineSettings.pColorFormats = colorFormats.data();
+            pipelineSettings.pDepthState = &depthStateDesc;
+            pipelineSettings.pShaderProgram = m_outlineShader;
+            pipelineSettings.pRootSignature = m_outlineRootSignature;
+            pipelineSettings.pVertexLayout = &vertexLayout;
+            pipelineSettings.pRasterizerState = &rasterizerStateDesc;
+            pipelineSettings.mSampleQuality = 0;
+            pipelineSettings.mDepthStencilFormat = TinyImageFormat_D32_SFLOAT_S8_UINT;
+            addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_outlinePipeline);
+        }
+        {
+            PipelineDesc pipelineDesc = {};
+            pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+            auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
+            pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+            pipelineSettings.mRenderTargetCount = 1;
+            pipelineSettings.mRenderTargetCount = colorFormats.size();
+            pipelineSettings.pColorFormats = colorFormats.data();
+            pipelineSettings.pDepthState = &depthStateDesc;
+            pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
+            pipelineSettings.pShaderProgram = m_outlineStencilShader;
+            pipelineSettings.pRootSignature = m_outlineRootSignature;
+            pipelineSettings.pVertexLayout = &vertexLayout;
+            pipelineSettings.mSampleQuality = 0;
+            pipelineSettings.mDepthStencilFormat = TinyImageFormat_D32_SFLOAT_S8_UINT;
+            addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_outlineStencilPipeline);
+        }
+    }
+
+    //m_alphaRejectProgram = hpl::loadProgram("vs_alpha_reject", "fs_alpha_reject");
+    //m_blurProgram = hpl::loadProgram("vs_post_effect", "fs_posteffect_blur");
+
+    //m_enemyGlowProgram = hpl::loadProgram("vs_dds_enemy_glow", "fs_dds_enemy_glow");
+    //m_objectFlashProgram = hpl::loadProgram("vs_dds_flash", "fs_dds_flash");
+    //m_copyProgram = hpl::loadProgram("vs_post_effect", "fs_post_effect_copy");
+    //m_outlineProgram = hpl::loadProgram("vs_dds_outline", "fs_dds_outline");
+
+    //m_s_diffuseMap = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
+    //m_u_param = bgfx::createUniform("u_param", bgfx::UniformType::Vec4);
 
     ///////////////////////////
     // Reset variables
@@ -110,38 +224,6 @@ cLuxEffectRenderer::cLuxEffectRenderer()
 
 cLuxEffectRenderer::~cLuxEffectRenderer()
 {
-    if (bgfx::isValid(m_alphaRejectProgram))
-    {
-        bgfx::destroy(m_alphaRejectProgram);
-    }
-    if (bgfx::isValid(m_blurProgram))
-    {
-        bgfx::destroy(m_blurProgram);
-    }
-    if (bgfx::isValid(m_enemyGlowProgram))
-    {
-        bgfx::destroy(m_enemyGlowProgram);
-    }
-    if (bgfx::isValid(m_objectFlashProgram))
-    {
-        bgfx::destroy(m_objectFlashProgram);
-    }
-    if (bgfx::isValid(m_copyProgram))
-    {
-        bgfx::destroy(m_copyProgram);
-    }
-    if (bgfx::isValid(m_outlineProgram))
-    {
-        bgfx::destroy(m_outlineProgram);
-    }
-    if (bgfx::isValid(m_s_diffuseMap))
-    {
-        bgfx::destroy(m_s_diffuseMap);
-    }
-    if (bgfx::isValid(m_u_param))
-    {
-        bgfx::destroy(m_u_param);
-    }
 }
 
 void cLuxEffectRenderer::Reset()
@@ -183,15 +265,15 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
 
         auto& postEffectData = m_boundPostEffectData.resolve(*input.m_viewport);
         // auto& graphicsContext = apFunctions->GetGraphicsContext();
-        if(!postEffectData.m_outputImage || 
+        if(!postEffectData.m_outputImage ||
             !postEffectData.m_gBufferDepthStencil) {
             return;
         }
-        
+
         // auto currentFrustum = apFunctions->GetFrustum();
         float fGlobalAlpha = (0.5f + mFlashOscill.val * 0.5f);
         auto imageSize = postEffectData.m_outputImage->GetImageSize();
-        
+
         GraphicsContext::ViewConfiguration viewConfiguration {postEffectData.m_outputTarget};
         viewConfiguration.m_viewRect = cRect2l(0, 0, imageSize.x, imageSize.y);
         viewConfiguration.m_projection = currentFrustum->GetProjectionMatrix().GetTranspose();
@@ -234,23 +316,25 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
         }
     })();
     // Render Enemy Glow ---------------------------------------------------------------------------------------------------
+
+
     ([&] () {
         if (mvEnemyGlowObjects.empty()) {
             return;
         }
-    
+
         auto& postEffectData = m_boundPostEffectData.resolve(*input.m_viewport);
-        if(!postEffectData.m_outputImage || 
+        if(!postEffectData.m_outputImage ||
             !postEffectData.m_gBufferDepthStencil) {
             return;
         }
         auto imageSize = postEffectData.m_outputImage->GetImageSize();
-        
+
         GraphicsContext::ViewConfiguration viewConfiguration {postEffectData.m_outputTarget};
         viewConfiguration.m_viewRect = cRect2l(0, 0, imageSize.x, imageSize.y);
         viewConfiguration.m_projection = currentFrustum->GetProjectionMatrix().GetTranspose();
         viewConfiguration.m_view = currentFrustum->GetViewMatrix().GetTranspose();
-        
+
         const auto view = input.m_context->StartPass("Render Enemy Glow", viewConfiguration);
         for (auto& enemyGlow : mvEnemyGlowObjects)
         {
@@ -289,17 +373,53 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
     })();
 
     if (input.m_renderSettings->mbIsReflection == false) {
+        auto& postEffectData = m_boundPostEffectData.resolve(*input.m_viewport);
+        if (!postEffectData.m_outputImage || !postEffectData.m_gBufferDepthStencil) {
+            return;
+        }
+        auto imageSize = postEffectData.m_outputImage->GetImageSize();
+
+        {
+            float fScaleAdd = 0.02f;
+            folly::small_vector<iRenderable*, 15> filteredObjects;
+            for(auto& outline: mvOutlineObjects) {
+                if (outline->CollidesWithFrustum(input.m_frustum)) {
+                    filteredObjects.push_back(outline);
+                }
+            }
+
+            cBoundingVolume totalBV;
+            cVector3f vTotalMin = 100000.0f;
+            cVector3f vTotalMax = -100000.0f;
+            for (size_t i = 0; i < filteredObjects.size(); ++i) {
+                cBoundingVolume* pBV = filteredObjects[i]->GetBoundingVolume();
+                cMath::ExpandAABB(vTotalMin, vTotalMax, pBV->GetMin(), pBV->GetMax());
+
+            }
+
+            // Need to scale so the outline is contained.
+            cVector3f vTotalSize = vTotalMax - vTotalMin;
+            cVector3f vTotalAdd = vTotalSize * (cVector3f(1.0f) / vTotalSize) * (fScaleAdd * 2);
+
+            totalBV.SetLocalMinMax(vTotalMin - vTotalAdd, vTotalMax + vTotalAdd);
+
+            // TODO: use clip rect to avoid rendering to the entire framebuffer
+            cRect2l clipRect;
+            cMath::GetClipRectFromBV(clipRect, totalBV, input.m_frustum, imageSize, -1);
+
+            for(size_t i = 0; i < filteredObjects.size(); ++i)  {
+
+            }
+
+            for(auto& obj: filteredObjects) {
+
+            }
+        }
         // Render Enemy Outlines ---------------------------------------------------------------------------------------------------
         ([&]() {
             if (mvOutlineObjects.empty()) {
                 return;
             }
-
-            auto& postEffectData = m_boundPostEffectData.resolve(*input.m_viewport);
-            if (!postEffectData.m_outputImage || !postEffectData.m_gBufferDepthStencil) {
-                return;
-            }
-            auto imageSize = postEffectData.m_outputImage->GetImageSize();
 
             /////////////////////////////
             // Setup vars
@@ -502,7 +622,7 @@ void cLuxEffectRenderer::RenderBlurPass(GraphicsContext& context, std::span<Lega
         GraphicsContext::LayoutStream layoutStream;
         cMatrixf projMtx;
         context.ScreenSpaceQuad(layoutStream, projMtx, imageSize.x, imageSize.y);
-        
+
         GraphicsContext::ViewConfiguration viewConfiguration {blurTargets[0]};
 
 		viewConfiguration.m_viewRect = cRect2l(0, 0, imageSize.x, imageSize.y);
@@ -514,7 +634,7 @@ void cLuxEffectRenderer::RenderBlurPass(GraphicsContext& context, std::span<Lega
         blurParams.texelSize[1] = image->GetHeight();
 
         GraphicsContext::ShaderProgram shaderProgram;
-        shaderProgram.m_configuration.m_write = Write::RGBA;
+        //shaderProgram.m_configuration.m_write = Write::RGBA;
         shaderProgram.m_handle = m_blurProgram;
         // shaderProgram.m_projection = projMtx;
 
@@ -541,12 +661,12 @@ void cLuxEffectRenderer::RenderBlurPass(GraphicsContext& context, std::span<Lega
         blurParams.texelSize[1] = image->GetHeight();
 
         GraphicsContext::ShaderProgram shaderProgram;
-        shaderProgram.m_configuration.m_write = Write::RGBA;
+        //shaderProgram.m_configuration.m_write = Write::RGBA;
         shaderProgram.m_handle = m_blurProgram;
         // shaderProgram.m_projection = projMtx;
 
-        shaderProgram.m_textures.push_back({ m_s_diffuseMap, blurTargets[0].GetImage()->GetHandle(), 1 });
-        shaderProgram.m_uniforms.push_back({ m_u_param, &blurParams, 1 });
+        //shaderProgram.m_textures.push_back({ m_s_diffuseMap, blurTargets[0].GetImage()->GetHandle(), 1 });
+        //shaderProgram.m_uniforms.push_back({ m_u_param, &blurParams, 1 });
 
         GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
         context.Submit(view, request);

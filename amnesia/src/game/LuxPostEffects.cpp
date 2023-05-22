@@ -23,42 +23,64 @@
 #include "bgfx/bgfx.h"
 #include "graphics/ShaderUtil.h"
 
+#include <graphics/ForgeRenderer.h>
+#include <folly/FixedString.h>
+
 
 cLuxPostEffect_Insanity::cLuxPostEffect_Insanity(cGraphics* apGraphics, cResources* apResources)
     : iLuxPostEffect(apGraphics, apResources) {
-    m_program = hpl::loadProgram("vs_post_effect", "fs_dds_posteffect_insanity");
-    m_s_diffuseMap = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
-    m_s_ampMap0 = bgfx::createUniform("s_ampMap0", bgfx::UniformType::Sampler);
-    m_s_ampMap1 = bgfx::createUniform("s_ampMap1", bgfx::UniformType::Sampler);
-    m_s_zoomMap = bgfx::createUniform("s_zoomMap", bgfx::UniformType::Sampler);
-    m_u_param = bgfx::createUniform("u_param", bgfx::UniformType::Vec4);
+    auto* forgeRenderer = Interface<ForgeRenderer>::Get();
+    {
+        ShaderLoadDesc loadDesc = {};
+        loadDesc.mStages[0] = { "fullscreen.vert", nullptr, 0 };
+        loadDesc.mStages[1] = { "dds_insanity_posteffect.frag", nullptr, 0 };
+        addShader(forgeRenderer->Rend(), &loadDesc, &m_insanityShader);
+    }
+    RootSignatureDesc rootDesc = { &m_insanityShader, 1 };
+    addRootSignature(forgeRenderer->Rend(), &rootDesc, &m_instantyRootSignature);
+
+    DescriptorSetDesc perFrameDescSet{m_instantyRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, 1};
+    for(auto &desc: m_insanityPerFrameset) {
+        addDescriptorSet(forgeRenderer->Rend(), &perFrameDescSet, &desc);
+    }
 
     for (size_t i = 0; i < m_ampMaps.size(); i++) {
         m_ampMaps[i] = mpResources->GetTextureManager()->Create2DImage("posteffect_insanity_ampmap" + cString::ToString((int)i), false);
     }
     m_zoomImage = mpResources->GetTextureManager()->Create2DImage("posteffect_insanity_zoom.jpg", false);
+
+
+    DepthStateDesc depthStateDisabledDesc = {};
+    depthStateDisabledDesc.mDepthWrite = false;
+    depthStateDisabledDesc.mDepthTest = false;
+
+    RasterizerStateDesc rasterStateNoneDesc = {};
+    rasterStateNoneDesc.mCullMode = CULL_MODE_NONE;
+
+    std::array imageTargets = {
+        iPostEffect::PostEffectImageFormat
+    };
+    PipelineDesc pipelineDesc = {};
+    pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+    GraphicsPipelineDesc& graphicsPipelineDesc = pipelineDesc.mGraphicsDesc;
+    graphicsPipelineDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+    graphicsPipelineDesc.mRenderTargetCount = imageTargets.size();
+    graphicsPipelineDesc.pColorFormats = imageTargets.data();
+    graphicsPipelineDesc.pShaderProgram = m_insanityShader;
+    graphicsPipelineDesc.pRootSignature = m_instantyRootSignature;
+    graphicsPipelineDesc.mRenderTargetCount = 1;
+    graphicsPipelineDesc.mDepthStencilFormat = TinyImageFormat_UNDEFINED;
+    graphicsPipelineDesc.pVertexLayout = NULL;
+    graphicsPipelineDesc.mSampleCount = SAMPLE_COUNT_1;
+    graphicsPipelineDesc.pRasterizerState = &rasterStateNoneDesc;
+    graphicsPipelineDesc.pDepthState = &depthStateDisabledDesc;
+    graphicsPipelineDesc.pBlendState = NULL;
+
+    addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_insanityPipeline);
 }
 
 
 cLuxPostEffect_Insanity::~cLuxPostEffect_Insanity() {
-    if (bgfx::isValid(m_program)) {
-        bgfx::destroy(m_program);
-    }
-    if (bgfx::isValid(m_s_diffuseMap)) {
-        bgfx::destroy(m_s_diffuseMap);
-    }
-    if (bgfx::isValid(m_s_ampMap0)) {
-        bgfx::destroy(m_s_ampMap0);
-    }
-    if (bgfx::isValid(m_s_ampMap1)) {
-        bgfx::destroy(m_s_ampMap1);
-    }
-    if (bgfx::isValid(m_s_zoomMap)) {
-        bgfx::destroy(m_s_zoomMap);
-    }
-    if (bgfx::isValid(m_u_param)) {
-        bgfx::destroy(m_u_param);
-    }
 }
 
 
@@ -75,44 +97,6 @@ void cLuxPostEffect_Insanity::Update(float afTimeStep) {
 
 //-----------------------------------------------------------------------
 
-// iTexture* cLuxPostEffect_Insanity::RenderEffect(iTexture *apInputTexture, iFrameBuffer *apFinalTempBuffer)
-// {
-// 	/////////////////////////
-// 	// Init render states
-// 	mpCurrentComposite->SetFlatProjection();
-// 	mpCurrentComposite->SetBlendMode(eMaterialBlendMode_None);
-// 	mpCurrentComposite->SetChannelMode(eMaterialChannelMode_RGBA);
-
-// 	/////////////////////////
-// 	// Render the to final buffer
-// 	// This function sets to frame buffer if post effect is last!
-// 	SetFinalFrameBuffer(apFinalTempBuffer);
-
-// 	mpCurrentComposite->SetTexture(0, apInputTexture);
-
-// 	//Log("AnimCount: %f - %d %d - %f\n", mfAnimCount, lAmp0, lAmp1, fAmpT);
-
-// 	mpCurrentComposite->SetTexture(1, mvAmpMaps[lAmp0]);
-// 	mpCurrentComposite->SetTexture(2, mvAmpMaps[lAmp1]);
-// 	mpCurrentComposite->SetTexture(3, mpZoomMap);
-
-// 	mpCurrentComposite->SetProgram(mpProgram);
-// 	if(mpProgram)
-// 	{
-// 		mpProgram->SetFloat(kVar_afAlpha, 1.0f);
-// 		mpProgram->SetFloat(kVar_afT, mfT);
-// 		mpProgram->SetVec2f(kVar_avScreenSize, mpLowLevelGraphics->GetScreenSizeFloat());
-// 		mpProgram->SetFloat(kVar_afAmpT, fAmpT);
-// 		mpProgram->SetFloat(kVar_afWaveAlpha, mfWaveAlpha);
-// 		mpProgram->SetFloat(kVar_afZoomAlpha, mfZoomAlpha);
-// 	}
-
-// 	DrawQuad(0,1,apInputTexture, true);
-
-// 	mpCurrentComposite->SetTextureRange(NULL, 1);
-
-// 	return apFinalTempBuffer->GetColorBuffer(0)->ToTexture();
-// }
 
 cLuxPostEffectHandler::cLuxPostEffectHandler()
     : iLuxUpdateable("LuxPostEffectHandler") {
@@ -125,13 +109,13 @@ cLuxPostEffectHandler::cLuxPostEffectHandler()
 }
 
 void cLuxPostEffect_Insanity::RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, LegacyRenderTarget& target) {
-    
+
     auto viewportSize = viewport.GetSize();
     cMatrixf projMtx;
     GraphicsContext::ShaderProgram shaderProgram;
     GraphicsContext::LayoutStream layoutStream;
     context.ScreenSpaceQuad(layoutStream, projMtx, viewportSize.x, viewportSize.y);
-    
+
     GraphicsContext::ViewConfiguration viewConfiguration {target};
     viewConfiguration.m_viewRect = cRect2l(0, 0, viewportSize.x, viewportSize.y);
     viewConfiguration.m_projection = projMtx;
@@ -155,7 +139,7 @@ void cLuxPostEffect_Insanity::RenderEffect(cPostEffectComposite& compositor, cVi
     }
     float fAmpT = cMath::GetFraction(mfAnimCount);
 
-    
+
     shaderProgram.m_configuration.m_write = Write::RGBA;
     shaderProgram.m_handle = m_program;
 
@@ -171,7 +155,7 @@ void cLuxPostEffect_Insanity::RenderEffect(cPostEffectComposite& compositor, cVi
     param.alpha = 1.0f;
     param.screenSize[0] = viewportSize.x;
     param.screenSize[1] = viewportSize.y;
-    
+
     shaderProgram.m_uniforms.push_back({ m_u_param, &param, 2 });
     GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
 

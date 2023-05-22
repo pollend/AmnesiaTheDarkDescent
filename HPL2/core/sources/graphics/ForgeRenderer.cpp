@@ -157,23 +157,26 @@ namespace hpl {
         }
     }
 
+    Sampler* ForgeRenderer::resolve(SamplerPoolKey key) {
+        ASSERT(key.m_id < SamplerPoolKey::NumOfVariants);
+        auto& sampler = m_samplerPool[key.m_id];
+        if (!sampler) {
+            auto renderer = Interface<ForgeRenderer>::Get()->Rend();
+            SamplerDesc samplerDesc = {};
+            samplerDesc.mAddressU = key.m_field.m_addressMode;
+            samplerDesc.mAddressV = key.m_field.m_addressMode;
+            samplerDesc.mAddressW = key.m_field.m_addressMode;
+            addSampler(renderer, &samplerDesc, &sampler);
+        }
+        return sampler;
+    }
+
     void ForgeRenderer::InitializeResource() {
     }
 
     void ForgeRenderer::cmdCopyTexture(CopyPipelines action, Cmd* cmd, Texture* srcTexture, RenderTarget* dstTexture) {
-        ASSERT(srcTexture);
-        ASSERT(dstTexture);
-
-        // Texture* src[1] = {srcTexture};
-
-        // uint32_t rootConstantIndex = getDescriptorIndexFromName(m_copyPostProcessingRootSignature, "RootConstant");
-        // struct {
-        //     uint2 pos;
-        //     uint2 size;
-        // } pushConstant = {
-        //     pos,
-        //     size
-        // };
+        ASSERT(srcTexture !=  nullptr);
+        ASSERT(dstTexture !=  nullptr);
 
         DescriptorData params[15] = {};
         size_t paramCount = 0;
@@ -196,61 +199,4 @@ namespace hpl {
         m_copyRegionDescriptorIndex = (m_copyRegionDescriptorIndex + 1) % MaxCopyFrames;
     }
 
-    // void CopyRegionPipeline::cmdSubmit(Cmd* cmd, uint32_t instance, uint2 pos, uint2 size) {
-    //     uint32_t rootConstantIndex = getDescriptorIndexFromName(m_copyRegionRootSignature, "uRootConstants");
-    //     struct {
-    //         uint2 pos;
-    //         uint2 size;
-    //     } pushConstant = {
-    //         pos,
-    //         size
-    //     };
-
-    //     cmdBindPipeline(cmd, m_copyRegionPipeline);
-    //     cmdBindDescriptorSet(cmd, instance, m_copyRegionDescriptorSet);
-    //     cmdBindPushConstants(cmd, m_copyRegionRootSignature, rootConstantIndex, &pushConstant);
-    //     cmdDispatch(cmd, static_cast<uint32_t>((size.x / 16) + 1), static_cast<uint32_t>((size.y / 16) + 1), 1);
-    // }
-
-    // void CopyRegionPipeline::update(uint32_t instance, Texture* srcTexture, Texture* dstTexture) {
-    //     ASSERT(srcTexture);
-    //     ASSERT(dstTexture);
-
-    //     DescriptorData params[15] = {};
-    //     size_t paramCount = 0;
-    //     params[paramCount].pName = "srcTexture";
-    //     params[paramCount++].ppTextures = &srcTexture;
-    //     params[paramCount].pName = "dstTexture";
-    //     params[paramCount++].ppTextures = &dstTexture;
-    //     updateDescriptorSet(m_renderer->Rend(), instance, m_copyRegionDescriptorSet, paramCount, params);
-    // }
-
-    // CopyRegionPipeline::~CopyRegionPipeline() {
-
-    //     if(m_copyRegionPipeline) {
-    //         removePipeline(m_renderer->Rend(), m_copyRegionPipeline);
-    //     }
-    //     if(m_copyRegionDescriptorSet) {
-    //         removeDescriptorSet(m_renderer->Rend(), m_copyRegionDescriptorSet);
-    //     }
-    //     if(m_copyRegionRootSignature) {
-    //         removeRootSignature(m_renderer->Rend(), m_copyRegionRootSignature);
-    //     }
-    //     if(m_copyRegionShader) {
-    //         removeShader(m_renderer->Rend(), m_copyRegionShader);
-    //     }
-
-    // }
-
-    // void CopyRegionPipeline::UpdateTexture(uint32_t instance, Texture* src, Texture* dst) {
-    //     Texture* srcTexture = src;
-    //     Texture* dstTexture = dst;
-
-    //     // DescriptorData params[2] = {};
-    //     // params[0].pName = "srcTexture";
-    //     // params[0].ppTextures = &srcTexture;
-    //     // params[0].pName = "dst";
-    //     // params[0].ppTextures = &dstTexture;
-    //     // updateDescriptorSet(m_renderer, instance, m_copyRegionDescriptorSet, 1, params);
-    // }
 }; // namespace hpl

@@ -82,7 +82,6 @@ namespace hpl {
     public:
         struct TextureFilter {
             AddressMode m_addressMode = AddressMode::ADDRESS_MODE_CLAMP_TO_BORDER;
-            // FilterType m_filter = FilterType::None;
         };
 
         Image();
@@ -98,6 +97,7 @@ namespace hpl {
         inline void SetForgeTexture(ForgeTextureHandle&& handle) {
             m_texture = std::move(handle);
         }
+        
         inline void setTextureFilter(TextureFilter textureFilter) {
             m_filter = textureFilter;
         }

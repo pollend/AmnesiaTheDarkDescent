@@ -23,8 +23,10 @@
 //----------------------------------------------
 
 #include "LuxBase.h"
-#include "graphics/Image.h"
 #include <memory>
+
+#include <graphics/ForgeHandles.h>
+#include <graphics/Image.h>
 
 
 enum eLuxMainMenuWindow
@@ -273,9 +275,14 @@ private:
 	std::shared_ptr<Image> m_screenImage;
 	std::shared_ptr<Image> m_screenBlurImage;
 
-	cGuiGfxElement *mpScreenGfx;
+    ForgeRenderTarget m_screenBlurTarget;
+
+    cGuiGfxElement *mpScreenGfx;
 	cGuiGfxElement *mpScreenBlurGfx;
 	bgfx::ProgramHandle m_blurProgram = BGFX_INVALID_HANDLE;
+
+    ForgeShaderHandle m_blurVerticalShader;
+    ForgeShaderHandle m_blurHorizontalShader;
 
 	bgfx::UniformHandle m_s_diffuseMap;
 	bgfx::UniformHandle m_u_param;

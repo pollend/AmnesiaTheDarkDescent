@@ -91,15 +91,15 @@ namespace hpl {
 			EnableCubeMapAlpha = 1 << 8,
 
 			// additional flags
+			IsHeightMapSingleChannel = 1 << 9,
 			IsAlphaSingleChannel = 1 << 10,
-			IsHeightMapSingleChannel = 1 << 11,
 
 			//Solid Diffuse
-			UseDissolveFilter = 1 << 9,
+			UseDissolveFilter = 1 << 14,
 
 			//Translucent
-			UseRefractionNormals = 1 << 9,
-			UseRefractionEdgeCheck = 1 << 10,
+			UseRefractionNormals = 1 << 14,
+			UseRefractionEdgeCheck = 1 << 15,
 
 		};
 
@@ -143,9 +143,9 @@ namespace hpl {
 			float mfWaveFreq;
 		};
 
-		
+
 		struct MaterialType {
-			//  
+			//
 			bool m_affectByLightLevel = false;
 
 			MaterialID m_id;
@@ -175,7 +175,7 @@ namespace hpl {
 			std::span<const eMaterialTexture> m_usedTextures;
 			std::span<const MaterialUserVariable> m_userVariables;
 		};
-	
+
 
 		static constexpr eMaterialTexture SolidMaterialUsedTextures[] = {
 			eMaterialTexture_Diffuse ,eMaterialTexture_NMap ,eMaterialTexture_Alpha ,eMaterialTexture_Specular ,eMaterialTexture_Height ,eMaterialTexture_Illumination ,eMaterialTexture_DissolveAlpha ,eMaterialTexture_CubeMap ,eMaterialTexture_CubeMapAlpha
@@ -189,7 +189,7 @@ namespace hpl {
 		static constexpr eMaterialTexture DecalMaterialUsedTextures[] = {
 			eMaterialTexture_Diffuse
 		};
- 
+
 		static constexpr const std::array MetaInfo {
 			MaterialMeta {MaterialID::SolidDiffuse,"soliddiffuse", false, false, std::span(SolidMaterialUsedTextures)},
 			MaterialMeta {MaterialID::Translucent,"translucent", false, true, std::span(TranslucentMaterialUsedTextures)},
@@ -212,7 +212,7 @@ namespace hpl {
 		cResourceVarsObject* GetVarsObject();
 		void LoadVariablesFromVarsObject(cResourceVarsObject* apVarsObject);
 
-		void SetAutoDestroyTextures(bool abX) { 
+		void SetAutoDestroyTextures(bool abX) {
 			mbAutoDestroyTextures = abX;
 			for(auto& image: m_image) {
 				image.SetAutoDestroyResource(abX);
@@ -288,7 +288,7 @@ namespace hpl {
 		bool Reload(){ return false;}
 		void Unload(){}
 		void Destroy(){}
-	
+
 
 		inline MaterialType& type() { return m_info; }
 		bool updateDescriptorSet(const ForgeRenderer::Frame& frame, eMaterialRenderMode mode, DescriptorSet* set);
@@ -333,12 +333,12 @@ namespace hpl {
 		bool mbUseAlphaDissolveFilter;
 		bool mbHasUvAnimation;
 		bool mbIsAffectedByLightLevel;
-		
+
 		std::array<ImageResourceWrapper, eMaterialTexture_LastEnum> m_image = {ImageResourceWrapper()};
 
 		std::vector<cMaterialUvAnimation> mvUvAnimations;
 		cMatrixf m_mtxUV;
-		
+
 		float mfAnimTime;
 
 		int mlRenderFrameCount;
