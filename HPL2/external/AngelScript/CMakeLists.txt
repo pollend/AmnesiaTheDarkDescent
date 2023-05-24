@@ -25,8 +25,9 @@ add_library(AngelScript STATIC
   # sources/as_callfunc_arm_msvc.asm
   sources/as_builder.cpp
   sources/as_bytecode.cpp
-  sources/as_callfunc_arm_gcc.S
-  sources/as_callfunc_arm_xcode.s
+  # skip compiling assembly for arm
+  # sources/as_callfunc_arm_gcc.S 
+  # sources/as_callfunc_arm_xcode.s
   sources/as_callfunc_arm.cpp
   sources/as_callfunc_mips.cpp
   sources/as_callfunc_ppc_64.cpp

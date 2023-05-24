@@ -105,15 +105,15 @@ namespace hpl {
 
 		enum TextureConfiguration {
 			GUI_TEXTURE_CONFIG_NONE = 0,
-			GUI_TEXTURE_CONFIG_DIFFUSE = 1 << 0,	
+			GUI_TEXTURE_CONFIG_DIFFUSE = 1 << 0,
 		};
-		
+
 		static std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> guiUniformDescriptorSet{};
 		static RootSignature* guiRootSignature = nullptr;
-		
-		static GPURingBuffer* guiUniformRingBuffer = nullptr;
-		static GPURingBuffer* guiVertexRingBuffer = nullptr;
-		static GPURingBuffer* guiIndexRingBuffer = nullptr;
+
+		static GPURingBuffer guiUniformRingBuffer {};
+		static GPURingBuffer guiVertexRingBuffer{};
+		static GPURingBuffer guiIndexRingBuffer{};
 
 		static std::array<Pipeline*, eGuiMaterial_LastEnum> guiPipeline = {};
 		static std::array<Pipeline*, eGuiMaterial_LastEnum> guiPipeline3D = {};
@@ -130,7 +130,7 @@ namespace hpl {
                 desc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
                 desc.mSize = GUI_STREAM_BUFFER_VB_SIZE * sizeof(PositionTexColor);
                 desc.pName = "GUI Vertex Buffer";
-				
+
 				addGPURingBuffer(pipeline.Rend(), &desc, &guiVertexRingBuffer);
             }
             {
@@ -144,8 +144,8 @@ namespace hpl {
             }
 
 			ShaderLoadDesc loadDesc = {};
-			loadDesc.mStages[0] = {"gui.vert", nullptr, 0};
-			loadDesc.mStages[1] = {"gui.frag", nullptr, 0};
+			loadDesc.mStages[0].pFileName = "gui.vert";
+			loadDesc.mStages[1].pFileName = "gui.frag";
 			addShader(pipeline.Rend(), &loadDesc, &guiShader);
 
 			const char* pguiSamplerNames[] = { "diffuseMap" };
@@ -165,12 +165,14 @@ namespace hpl {
 				setDesc.mMaxSets = MAX_GUI_DRAW_CALLS;
 				addDescriptorSet(pipeline.Rend(), &setDesc, &set);
 			}
-			
+
 			{
 				//layout and pipeline for sphere draw
 				VertexLayout vertexLayout = {};
 				vertexLayout.mAttribCount = 3;
-				vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
+				vertexLayout.mBindingCount = 1;
+
+                vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
 				vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
 				vertexLayout.mAttribs[0].mBinding = 0;
 				vertexLayout.mAttribs[0].mLocation = 0;
@@ -192,7 +194,7 @@ namespace hpl {
 				DepthStateDesc depthStateDesc = {};
 				depthStateDesc.mDepthTest = false;
 				depthStateDesc.mDepthWrite = false;
-				
+
 				PipelineDesc pipelineDesc = {};
 				pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
 				auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
@@ -206,7 +208,7 @@ namespace hpl {
 				pipelineSettings.pShaderProgram = guiShader;
 				pipelineSettings.pRasterizerState = &rasterizerStateDesc;
 				pipelineSettings.pVertexLayout = &vertexLayout;
-				
+
 				auto materialBlendFunc = [](BlendConstant srcColor, BlendConstant destColor, BlendConstant srcAlpha, BlendConstant destAlpha) {
 					BlendStateDesc blendStateAddDesc = {};
 					blendStateAddDesc.mSrcFactors[0] = srcColor;
@@ -215,10 +217,10 @@ namespace hpl {
 					blendStateAddDesc.mSrcAlphaFactors[0] = srcAlpha;
 					blendStateAddDesc.mDstAlphaFactors[0] = destAlpha;
 					blendStateAddDesc.mBlendAlphaModes[0] = BM_ADD;
-					blendStateAddDesc.mMasks[0] = ALL;
+					blendStateAddDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_ALL;
 					blendStateAddDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
 					blendStateAddDesc.mIndependentBlend = false;
-					
+
 					return blendStateAddDesc;
 				};
 
@@ -241,7 +243,7 @@ namespace hpl {
 					pipelineSettings.pBlendState = &blendStateDesc[i];
 					addPipeline(pipeline.Rend(), &pipelineDesc, &guiPipeline3D[i]);
 				}
-				
+
 			}
 
 			addUniformGPURingBuffer(pipeline.Rend(), sizeof(UniformBlock) * MAX_GUI_DRAW_CALLS, &guiUniformRingBuffer, true);
@@ -665,8 +667,8 @@ namespace hpl {
 
 		size_t vertexBufferSize = m_setRenderObjects.size() * sizeof(gui::PositionTexColor) * 4;
 		size_t indexBufferSize = m_setRenderObjects.size() * sizeof(uint32_t) * 6;
-		GPURingBufferOffset vb = getGPURingBufferOffset(gui::guiVertexRingBuffer, vertexBufferSize);
-		GPURingBufferOffset ib = getGPURingBufferOffset(gui::guiIndexRingBuffer, indexBufferSize);
+		GPURingBufferOffset vb = getGPURingBufferOffset(&gui::guiVertexRingBuffer, vertexBufferSize);
+		GPURingBufferOffset ib = getGPURingBufferOffset(&gui::guiIndexRingBuffer, indexBufferSize);
 
 		cMatrixf projectionMtx(cMatrixf::Identity);
 		cMatrixf viewMtx(cMatrixf::Identity);
@@ -694,14 +696,14 @@ namespace hpl {
 			//Set up min and max for orth projection
 			cVector3f vProjMin(-mvVirtualSizeOffset.x, -mvVirtualSizeOffset.y, mfVirtualMinZ);
 			cVector3f vProjMax(mvVirtualSize.x-mvVirtualSizeOffset.x, mvVirtualSize.y-mvVirtualSizeOffset.y, mfVirtualMaxZ);
-   			bx::mtxOrtho(projectionMtx.v, 
+   			bx::mtxOrtho(projectionMtx.v,
 				vProjMin.x,vProjMax.x,vProjMax.y,vProjMin.y,vProjMin.z,vProjMax.z, 0.0f, bgfx::getCaps()->homogeneousDepth);
 		}
-		
+
 		LoadActionsDesc loadActions = {};
 		loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
 		loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
-				
+
 		cVector2l vSize = pLowLevelGraphics->GetScreenSizeInt();
 		auto& swapChainImage = frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex];
 		cmdBindRenderTargets(frame.m_cmd, 1, &swapChainImage, NULL, &loadActions, NULL, NULL, -1, -1);
@@ -726,12 +728,12 @@ namespace hpl {
 		size_t vertexBufferOffset = 0;
 		size_t indexBufferOffset = 0;
 		while(it != m_setRenderObjects.end()) {
-			
+
 			size_t vertexBufferIndex = 0;
 			size_t indexBufferIndex = 0;
-			
-			GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(gui::guiUniformRingBuffer, sizeof(gui::UniformBlock));
-			
+
+			GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(&gui::guiUniformRingBuffer, sizeof(gui::UniformBlock));
+
 			DescriptorData params[10]{};
 			uint32_t paramCount = 0;
 			DescriptorDataRange range = { (uint32_t)uniformBlockOffset.mOffset, sizeof(gui::UniformBlock) };
@@ -749,7 +751,7 @@ namespace hpl {
 			uniformBlock.mvp = cMath::ToForgeMat4(cMath::MatrixMul(cMath::MatrixMul(projectionMtx, viewMtx), modelMtx));
 			auto& descriptorSet = gui::guiUniformDescriptorSet[frame.m_frameIndex];
 			updateDescriptorSet(frame.m_renderer->Rend(), gui::descriptorIndex, descriptorSet, paramCount, params);
-			
+
 			BufferUpdateDesc  updateDesc = { uniformBlockOffset.pBuffer, uniformBlockOffset.mOffset };
 			beginUpdateResource(&updateDesc);
 			(*reinterpret_cast<gui::UniformBlock*>(updateDesc.pMappedData)) = uniformBlock;
@@ -762,10 +764,10 @@ namespace hpl {
 			}
 
 			if(pClipRegion && pClipRegion->mRect.w > 0.0f) {
-				cmdSetScissor(frame.m_cmd, 
-					pClipRegion->mRect.x, 
-					pClipRegion->mRect.y, 
-					pClipRegion->mRect.w, 
+				cmdSetScissor(frame.m_cmd,
+					pClipRegion->mRect.x,
+					pClipRegion->mRect.y,
+					pClipRegion->mRect.w,
 					pClipRegion->mRect.h);
 			} else {
 				cmdSetScissor(frame.m_cmd, 0, 0, vSize.x, vSize.y);
@@ -774,7 +776,7 @@ namespace hpl {
 			uint32_t stride = sizeof(gui::PositionTexColor);
 			cmdBindDescriptorSet(frame.m_cmd, gui::descriptorIndex, descriptorSet);
 			gui::descriptorIndex = (gui::descriptorIndex + 1) % gui::MAX_GUI_DRAW_CALLS;
-			
+
 
 			do
 			{
@@ -802,7 +804,7 @@ namespace hpl {
 						vVtxPos.x += object.mvPivot.x;
 						vVtxPos.y += object.mvPivot.y;
 
-						reinterpret_cast<gui::PositionTexColor*>(vertexUpdateDesc.pMappedData)[vertexBufferOffset + (vertexBufferIndex++)] = { 
+						reinterpret_cast<gui::PositionTexColor*>(vertexUpdateDesc.pMappedData)[vertexBufferOffset + (vertexBufferIndex++)] = {
 							{vVtxPos.x + vPos.x, vVtxPos.y + vPos.y, vPos.z},
 							{ vtx.tex.x, vtx.tex.y},
 							{color.r, color.g, color.b, color.a}
@@ -819,7 +821,7 @@ namespace hpl {
 						const cVector3f& vPos = object.mvPos;
 						const cColor color = vtx.col * object.mColor;
 
-						reinterpret_cast<gui::PositionTexColor*>(vertexUpdateDesc.pMappedData)[vertexBufferOffset + (vertexBufferIndex++)] = { 
+						reinterpret_cast<gui::PositionTexColor*>(vertexUpdateDesc.pMappedData)[vertexBufferOffset + (vertexBufferIndex++)] = {
 							{vVtxPos.x * object.mvSize.x + vPos.x, vVtxPos.y * object.mvSize.y + vPos.y, vPos.z},
 							{ vtx.tex.x, vtx.tex.y},
 							{color.r, color.g, color.b, color.a}
@@ -835,7 +837,7 @@ namespace hpl {
 				reinterpret_cast<uint32_t*>(indexUpdateDesc.pMappedData)[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex - 4;
 				reinterpret_cast<uint32_t*>(indexUpdateDesc.pMappedData)[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex - 2;
 				reinterpret_cast<uint32_t*>(indexUpdateDesc.pMappedData)[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex - 1;
-				
+
 
 				///////////////////////////
 				//Set last texture
@@ -855,7 +857,7 @@ namespace hpl {
 			while(pTexture == pLastTexture &&
 				materialType == pLastMaterial &&
 				pClipRegion == pLastClipRegion);
-	
+
 			uint64_t vbOffset = vb.mOffset + vertexBufferOffset * sizeof(gui::PositionTexColor);
 			uint64_t ibOffset = ib.mOffset + indexBufferOffset * sizeof(uint32_t);
 

@@ -32,8 +32,8 @@ cLuxPostEffect_Insanity::cLuxPostEffect_Insanity(cGraphics* apGraphics, cResourc
     auto* forgeRenderer = Interface<ForgeRenderer>::Get();
     {
         ShaderLoadDesc loadDesc = {};
-        loadDesc.mStages[0] = { "fullscreen.vert", nullptr, 0 };
-        loadDesc.mStages[1] = { "dds_insanity_posteffect.frag", nullptr, 0 };
+        loadDesc.mStages[0].pFileName = "fullscreen.vert";
+        loadDesc.mStages[1].pFileName = "dds_insanity_posteffect.frag";
         addShader(forgeRenderer->Rend(), &loadDesc, &m_insanityShader);
     }
     RootSignatureDesc rootDesc = { &m_insanityShader, 1 };

@@ -19,6 +19,7 @@
 
 #include "graphics/RendererDeferred.h"
 
+#include "Common_3/Graphics/Interfaces/IGraphics.h"
 #include "bgfx/bgfx.h"
 #include "engine/Event.h"
 #include "engine/Interface.h"
@@ -112,7 +113,7 @@ namespace hpl {
     static constexpr uint32_t SSAONumOfSamples = 8;
 
     namespace detail {
- 
+
 
         void cmdDefaultLegacyGeomBinding(const ForgeRenderer::Frame& frame, LegacyVertexBuffer::GeometryBinding& binding) {
             absl::InlinedVector<Buffer*, 16> vbBuffer;
@@ -126,7 +127,7 @@ namespace hpl {
                 frame.m_resourcePool->Push(element.element->m_buffer);
             }
             frame.m_resourcePool->Push(*binding.m_indexBuffer.element);
-            
+
             cmdBindVertexBuffer(frame.m_cmd, binding.m_vertexElement.size(), vbBuffer.data(), vbStride.data(), vbOffsets.data());
             cmdBindIndexBuffer(
                 frame.m_cmd, binding.m_indexBuffer.element->m_handle, INDEX_TYPE_UINT32, binding.m_indexBuffer.offset);
@@ -339,7 +340,7 @@ namespace hpl {
         * updates the render list with objects inside the view frustum
         */
         static inline void UpdateRenderableList(
-            cRenderList* renderList, // in/out 
+            cRenderList* renderList, // in/out
             cVisibleRCNodeTracker* apVisibleNodeTracker,
             cFrustum* frustum,
             cWorld* world,
@@ -361,11 +362,11 @@ namespace hpl {
 
                     //////////////////////
                     // Check if object is visible
-                    
+
                     if (!rendering::detail::IsObjectIsVisible(pObject,alNeededFlags,occludingPlanes)) {
                         continue;
                     }
-                    
+
                     renderList->AddObject(pObject);
 
                     cMaterial* material = pObject->GetMaterial();
@@ -409,7 +410,7 @@ namespace hpl {
             const int minimumObjectsBeforeOcclusionTesting = 0;
             // const int onlyRenderPrevVisibleOcclusionObjectsFrameCount = 0;
             int lMinRenderedObjects = minimumObjectsBeforeOcclusionTesting;
-            
+
             std::function<void(iRenderableContainerNode* apNode)> walkRenderables;
             walkRenderables = [&](iRenderableContainerNode* apNode) {
                 if(apNode->GetChildNodes().size() > 0) {
@@ -433,7 +434,7 @@ namespace hpl {
                             cVector3f vViewSpacePos = cMath::MatrixMul(frustum->GetViewMatrix(), childNode->GetCenter());
                             childNode->SetViewDistance(vViewSpacePos.z);
                             childNode->SetInsideView(true);
-                        } else { 
+                        } else {
                             // Frustum origin is outside of node. Do intersection test.
                             cVector3f vIntersection;
                             cMath::CheckAABBLineIntersection(
@@ -722,7 +723,7 @@ namespace hpl {
                         renderTarget.pName = "G-Buffer RTs";
                         return renderTarget;
                    };
-                   
+
                    {
                         auto depthRT = deferredRenderTargetDesc();
                         depthRT.mFormat = DepthBufferFormat;
@@ -842,7 +843,7 @@ namespace hpl {
             for(size_t i = 0; i < ForgeRenderer::SwapChainLength; i++) {
                 DescriptorData params[15] = {};
                 size_t paramCount = 0;
-        
+
                 DescriptorDataRange range = { (uint32_t)(i * sizeof(cRendererDeferred::UniformPerFrameData)) , sizeof(cRendererDeferred::UniformPerFrameData) };
                 params[paramCount].pName = "perFrameConstants";
                 params[paramCount].pRanges = &range;
@@ -869,29 +870,29 @@ namespace hpl {
         {
             {
                 ShaderLoadDesc loadDesc = {};
-                loadDesc.mStages[0] = { "deferred_fog_ray.vert", nullptr, 0 };
-                loadDesc.mStages[1] = { "deferred_fog_outside_box_back.frag", nullptr, 0 };
+                loadDesc.mStages[0].pFileName = "deferred_fog_ray.vert";
+                loadDesc.mStages[1].pFileName = "deferred_fog_outside_box_back.frag";
                 addShader(forgetRenderer->Rend(), &loadDesc, &m_fogPass.m_shader[Fog::UseBackSide | Fog::UseOutsideBox]);
             }
 
             {
                 ShaderLoadDesc loadDesc = {};
-                loadDesc.mStages[0] = { "deferred_fog.vert", nullptr, 0 };
-                loadDesc.mStages[1] = { "deferred_fog_outside.frag", nullptr, 0 };
+                loadDesc.mStages[0].pFileName = "deferred_fog.vert";
+                loadDesc.mStages[1].pFileName = "deferred_fog_outside.frag";
                 addShader(forgetRenderer->Rend(), &loadDesc, &m_fogPass.m_shader[Fog::UseOutsideBox]);
             }
 
             {
                 ShaderLoadDesc loadDesc = {};
-                loadDesc.mStages[0] = { "deferred_fog.vert", nullptr, 0 };
-                loadDesc.mStages[1] = { "deferred_fog_back_side.frag", nullptr, 0 };
+                loadDesc.mStages[0].pFileName  = "deferred_fog.vert";
+                loadDesc.mStages[1].pFileName  = "deferred_fog_back_side.frag";
                 addShader(forgetRenderer->Rend(), &loadDesc, &m_fogPass.m_shader[Fog::UseBackSide]);
             }
 
             {
                 ShaderLoadDesc loadDesc = {};
-                loadDesc.mStages[0] = { "deferred_fog.vert", nullptr, 0 };
-                loadDesc.mStages[1] = { "deferred_fog.frag", nullptr, 0 };
+                loadDesc.mStages[0].pFileName = "deferred_fog.vert";
+                loadDesc.mStages[1].pFileName = "deferred_fog.frag";
                 addShader(forgetRenderer->Rend(), &loadDesc, &m_fogPass.m_shader[Fog::EmptyVariant]);
             }
 
@@ -902,7 +903,9 @@ namespace hpl {
             addRootSignature(forgetRenderer->Rend(), &rootSignatureDesc, &m_fogPass.m_fogRootSignature);
 
             VertexLayout vertexLayout = {};
+            vertexLayout.mBindingCount = 1;
             vertexLayout.mAttribCount = 1;
+            vertexLayout.mBindings[0].mStride = sizeof(float3);
             vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
             vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
             vertexLayout.mAttribs[0].mBinding = 0;
@@ -923,7 +926,7 @@ namespace hpl {
                 blendStateDesc.mSrcAlphaFactors[0] = BC_SRC_ALPHA;
                 blendStateDesc.mDstAlphaFactors[0] = BC_ONE_MINUS_SRC_ALPHA;
                 blendStateDesc.mBlendAlphaModes[0] = BM_ADD;
-                blendStateDesc.mMasks[0] = RED | GREEN | BLUE;
+                blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_RED | ColorMask::COLOR_MASK_GREEN |  ColorMask::COLOR_MASK_BLUE;
                 blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
                 blendStateDesc.mIndependentBlend = false;
 
@@ -969,42 +972,44 @@ namespace hpl {
             // z pass
             {
                 ShaderLoadDesc loadDesc = {};
-                loadDesc.mStages[0] = { "solid_z.vert", nullptr, 0 };
-                loadDesc.mStages[1] = { "solid_z.frag", nullptr, 0 };
+                loadDesc.mStages[0].pFileName = "solid_z.vert";
+                loadDesc.mStages[1].pFileName = "solid_z.frag";
                 addShader(forgetRenderer->Rend(), &loadDesc, &m_zPassShader);
+                setShaderName(forgetRenderer->Rend(), m_zPassShader, SHADER_STAGE_VERT, "solid_z.vert");
+                setShaderName(forgetRenderer->Rend(), m_zPassShader, SHADER_STAGE_FRAG, "solid_z.frag");
             }
             // diffuse pipeline
             {
                 ShaderLoadDesc loadDesc = {};
-                loadDesc.mStages[0] = { "solid_diffuse.vert", nullptr, 0 };
-                loadDesc.mStages[1] = { "solid_diffuse.frag", nullptr, 0 };
+                loadDesc.mStages[0].pFileName = "solid_diffuse.vert";
+                loadDesc.mStages[1].pFileName = "solid_diffuse.frag";
                 addShader(forgetRenderer->Rend(), &loadDesc, &m_materialSolidPass.m_solidDiffuseShader);
             }
 
             {
                 ShaderLoadDesc loadDesc = {};
-                loadDesc.mStages[0] = { "solid_diffuse.vert", nullptr, 0 };
-                loadDesc.mStages[1] = { "solid_diffuse_parallax.frag", nullptr, 0 };
+                loadDesc.mStages[0].pFileName  = "solid_diffuse.vert";
+                loadDesc.mStages[1].pFileName  = "solid_diffuse_parallax.frag";
                 addShader(forgetRenderer->Rend(), &loadDesc, &m_materialSolidPass.m_solidDiffuseParallaxShader);
             }
-            
+
             {
                 ShaderLoadDesc loadDesc = {};
-                loadDesc.mStages[0] = { "solid_illumination.vert", nullptr, 0 };
-                loadDesc.mStages[1] = { "solid_illumination.frag", nullptr, 0 };
+                loadDesc.mStages[0].pFileName = "solid_illumination.vert";
+                loadDesc.mStages[1].pFileName = "solid_illumination.frag";
                 addShader(forgetRenderer->Rend(), &loadDesc, &m_solidIlluminationShader);
             }
             // decal pass
             {
                 ShaderLoadDesc loadDesc = {};
-                loadDesc.mStages[0] = { "decal.vert", nullptr, 0 };
-                loadDesc.mStages[1] = { "decal.frag", nullptr, 0 };
+                loadDesc.mStages[0].pFileName = "decal.vert";
+                loadDesc.mStages[1].pFileName = "decal.frag";
                 addShader(forgetRenderer->Rend(), &loadDesc, &m_decalShader);
             }
             // translucency
             {
                 ShaderLoadDesc loadDesc = {};
-                loadDesc.mStages[0] = { "translucency.vert", nullptr, 0 };
+                loadDesc.mStages[0].pFileName = "translucency.vert";
                 const char* translucencyBlendStr[] = {
                     "_add",         // BlendAdd
                     "_mul",         // BlendMul
@@ -1028,19 +1033,19 @@ namespace hpl {
                         }
                         translucency.append(".frag");
 
-                        loadDesc.mStages[1] = { translucency.c_str(), nullptr, 0 };
+                        loadDesc.mStages[1].pFileName = translucency.c_str();
                         addShader(forgetRenderer->Rend(), &loadDesc, &m_materialTranslucencyPass.m_shaders[transBlend][transVariant]);
                     }
                 }
 
-                loadDesc.mStages[0] = { "translucency_particle.vert", nullptr, 0 };
+                loadDesc.mStages[0].pFileName= "translucency_particle.vert";
                 for(size_t transBlend = 0; transBlend < TranslucencyPipeline::BlendModeCount; transBlend++) {
                     translucency.clear();
                     translucency.append("translucency_particle");
                     translucency.append(translucencyBlendStr[transBlend]);
                     translucency.append(".frag");
 
-                    loadDesc.mStages[1] = { translucency.c_str(), nullptr, 0 };
+                    loadDesc.mStages[1].pFileName = translucency.c_str();
                     addShader(forgetRenderer->Rend(), &loadDesc, &m_materialTranslucencyPass.m_particleShader[transBlend]);
                 }
 
@@ -1050,14 +1055,14 @@ namespace hpl {
                     translucency.append(translucencyBlendStr[transBlend]);
                     translucency.append(".frag");
 
-                    loadDesc.mStages[1] = { translucency.c_str(), nullptr, 0 };
+                    loadDesc.mStages[1].pFileName = translucency.c_str();
                     addShader(forgetRenderer->Rend(), &loadDesc, &m_materialTranslucencyPass.m_particleShaderFog[transBlend]);
                 }
             }
 
             {
                 ShaderLoadDesc loadDesc = {};
-                loadDesc.mStages[0] = { "copy_channel_4.comp", NULL, 0 };
+                loadDesc.mStages[0].pFileName = "copy_channel_4.comp";
                 addShader(forgetRenderer->Rend(), &loadDesc, &m_materialTranslucencyPass.m_copyRefraction);
 
                 RootSignatureDesc refractionCopyRootDesc = {};
@@ -1109,7 +1114,12 @@ namespace hpl {
             // diffuse material pass
             {
                 VertexLayout vertexLayout = {};
+                vertexLayout.mBindingCount = 4;
                 vertexLayout.mAttribCount = 4;
+                vertexLayout.mBindings[0].mStride = sizeof(float3);
+                vertexLayout.mBindings[1].mStride = sizeof(float2);
+                vertexLayout.mBindings[2].mStride = sizeof(float3);
+                vertexLayout.mBindings[3].mStride = sizeof(float3);
                 vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
                 vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
                 vertexLayout.mAttribs[0].mBinding = 0;
@@ -1142,10 +1152,10 @@ namespace hpl {
                 depthStateDesc.mDepthWrite = false;
                 depthStateDesc.mDepthFunc = CMP_EQUAL;
 
-                std::array colorFormats = { 
-                    ColorBufferFormat, 
-                    NormalBufferFormat, 
-                    PositionBufferFormat, 
+                std::array colorFormats = {
+                    ColorBufferFormat,
+                    NormalBufferFormat,
+                    PositionBufferFormat,
                     SpecularBufferFormat };
 
                 PipelineDesc pipelineDesc = {};
@@ -1171,6 +1181,10 @@ namespace hpl {
             {
                 VertexLayout vertexLayout = {};
                 vertexLayout.mAttribCount = 3;
+                vertexLayout.mBindingCount = 3;
+                vertexLayout.mBindings[0].mStride = sizeof(float3);
+                vertexLayout.mBindings[1].mStride = sizeof(float2);
+                vertexLayout.mBindings[2].mStride = sizeof(float4);
                 vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
                 vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
                 vertexLayout.mAttribs[0].mBinding = 0;
@@ -1224,7 +1238,7 @@ namespace hpl {
                     blendStateDesc.mDstAlphaFactors[0] = hpl::HPL2BlendTable[blendMode].dst;
                     blendStateDesc.mBlendAlphaModes[0] = hpl::HPL2BlendTable[blendMode].mode;
 
-                    blendStateDesc.mMasks[0] = RED | GREEN | BLUE;
+                    blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_RED | ColorMask::COLOR_MASK_GREEN | ColorMask::COLOR_MASK_BLUE;
                     blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
                     pipelineSettings.pBlendState = &blendStateDesc;
 
@@ -1235,7 +1249,12 @@ namespace hpl {
             {
                 // layout and pipeline for sphere draw
                 VertexLayout vertexLayout = {};
+                vertexLayout.mBindingCount = 4;
                 vertexLayout.mAttribCount = 4;
+                vertexLayout.mBindings[0].mStride = sizeof(float3);
+                vertexLayout.mBindings[1].mStride = sizeof(float2);
+                vertexLayout.mBindings[2].mStride = sizeof(float3);
+                vertexLayout.mBindings[3].mStride = sizeof(float3);
                 vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
                 vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
                 vertexLayout.mAttribs[0].mBinding = 0;
@@ -1299,6 +1318,9 @@ namespace hpl {
                 // layout and pipeline for sphere draw
                 VertexLayout vertexLayout = {};
                 vertexLayout.mAttribCount = 2;
+                vertexLayout.mBindingCount = 2;
+                vertexLayout.mBindings[0].mStride = sizeof(float3);
+                vertexLayout.mBindings[1].mStride = sizeof(float2);
                 vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
                 vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
                 vertexLayout.mAttribs[0].mBinding = 0;
@@ -1315,7 +1337,7 @@ namespace hpl {
                 rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
 
                 BlendStateDesc blendStateDesc{};
-                blendStateDesc.mMasks[0] = RED | GREEN | BLUE | ALPHA;
+                blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_ALL;
                 blendStateDesc.mSrcFactors[0] = BC_ONE;
                 blendStateDesc.mDstFactors[0] = BC_ONE;
                 blendStateDesc.mBlendModes[0] = BM_ADD;
@@ -1353,7 +1375,11 @@ namespace hpl {
             {
 
                 VertexLayout particleVertexLayout = {};
+                particleVertexLayout.mBindingCount = 3;
                 particleVertexLayout.mAttribCount = 3;
+                particleVertexLayout.mBindings[0].mStride = sizeof(float3);
+                particleVertexLayout.mBindings[1].mStride = sizeof(float2);
+                particleVertexLayout.mBindings[2].mStride = sizeof(float4);
                 particleVertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
                 particleVertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
                 particleVertexLayout.mAttribs[0].mBinding = 0;
@@ -1374,7 +1400,13 @@ namespace hpl {
 
 
                 VertexLayout vertexLayout = {};
+                vertexLayout.mBindingCount = 5;
                 vertexLayout.mAttribCount = 5;
+                vertexLayout.mBindings[0].mStride = sizeof(float3);
+                vertexLayout.mBindings[1].mStride = sizeof(float2);
+                vertexLayout.mBindings[2].mStride = sizeof(float3);
+                vertexLayout.mBindings[3].mStride = sizeof(float3);
+
                 vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
                 vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
                 vertexLayout.mAttribs[0].mBinding = 0;
@@ -1404,8 +1436,8 @@ namespace hpl {
                 vertexLayout.mAttribs[4].mBinding = 4;
                 vertexLayout.mAttribs[4].mLocation = 4;
                 vertexLayout.mAttribs[4].mOffset = 0;
-                
-                
+
+
                 std::array colorFormats = {
                     getRecommendedSwapchainFormat(false, false)
                 };
@@ -1425,7 +1457,7 @@ namespace hpl {
                         key.m_id = pipelineKey;
 
                         BlendStateDesc blendStateDesc{};
-                        blendStateDesc.mMasks[0] = ALL;
+                        blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_ALL;
                         blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
                         blendStateDesc.mIndependentBlend = false;
 
@@ -1481,7 +1513,7 @@ namespace hpl {
                         key.m_id = pipelineKey;
 
                         BlendStateDesc blendStateDesc{};
-                        blendStateDesc.mMasks[0] = ALL;
+                        blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_ALL;
                         blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
                         blendStateDesc.mIndependentBlend = false;
 
@@ -1544,7 +1576,7 @@ namespace hpl {
                         key.m_id = pipelineKey;
 
                         BlendStateDesc blendStateDesc{};
-                        blendStateDesc.mMasks[0] = ALL;
+                        blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_ALL;
                         blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
                         blendStateDesc.mIndependentBlend = false;
 
@@ -1589,7 +1621,7 @@ namespace hpl {
                                 .m_shaders[transBlend]
                                         [TranslucencyPipeline::TranslucencyRefraction |
                                         (key.m_field.m_hasFog ? TranslucencyPipeline::TranslucencyShaderVariantFog : 0)];
-                        
+
                         addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_materialTranslucencyPass.m_refractionPipeline[transBlend][key.m_id]);
                     }
                 }
@@ -1631,8 +1663,8 @@ namespace hpl {
 
             {
                 ShaderLoadDesc loadDesc = {};
-                loadDesc.mStages[0] = {"deferred_light.vert", nullptr, 0};
-                loadDesc.mStages[1] = {"deferred_light_pointlight.frag", nullptr, 0};
+                loadDesc.mStages[0].pFileName = "deferred_light.vert";
+                loadDesc.mStages[1].pFileName = "deferred_light_pointlight.frag";
                 addShader(forgetRenderer->Rend(), &loadDesc, &m_pointLightShader);
             }
 
@@ -1671,26 +1703,26 @@ namespace hpl {
                 TextureCreator::GenerateScatterDiskMap2D(4, SSAONumOfSamples, false, texture);
                 return true;
             });
-            
+
 
             {
                 ShaderLoadDesc loadDesc = {};
-                loadDesc.mStages[0] = {"deferred_light.vert", nullptr, 0};
-                loadDesc.mStages[1] = {"deferred_light_spotlight.frag", nullptr, 0};
+                loadDesc.mStages[0].pFileName  = "deferred_light.vert";
+                loadDesc.mStages[1].pFileName  = "deferred_light_spotlight.frag";
                 addShader(forgetRenderer->Rend(), &loadDesc, &m_spotLightShader);
             }
 
             {
                 ShaderLoadDesc loadDesc = {};
-                loadDesc.mStages[0] = {"deferred_light.vert", nullptr, 0};
-                loadDesc.mStages[1] = {"deferred_light_stencil.frag", nullptr, 0};
+                loadDesc.mStages[0].pFileName  = "deferred_light.vert";
+                loadDesc.mStages[1].pFileName  = "deferred_light_stencil.frag";
                 addShader(forgetRenderer->Rend(), &loadDesc, &m_stencilLightShader);
             }
 
             {
                 ShaderLoadDesc loadDesc = {};
-                loadDesc.mStages[0] = {"deferred_light.vert", nullptr, 0};
-                loadDesc.mStages[1] = {"deferred_light_box.frag", nullptr, 0};
+                loadDesc.mStages[0].pFileName = "deferred_light.vert";
+                loadDesc.mStages[1].pFileName = "deferred_light_box.frag";
                 addShader(forgetRenderer->Rend(), &loadDesc, &m_boxLightShader);
             }
             Shader* shaders[] = {m_pointLightShader, m_stencilLightShader, m_boxLightShader, m_spotLightShader};
@@ -1701,6 +1733,8 @@ namespace hpl {
 
             VertexLayout vertexLayout = {};
             vertexLayout.mAttribCount = 1;
+            vertexLayout.mBindingCount = 1;
+            vertexLayout.mBindings[0].mStride = sizeof(float3);
             vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
             vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
             vertexLayout.mAttribs[0].mBinding = 0;
@@ -1749,7 +1783,7 @@ namespace hpl {
             blendStateDesc.mSrcAlphaFactors[0] = BC_ONE;
             blendStateDesc.mDstAlphaFactors[0] = BC_ONE;
             blendStateDesc.mBlendAlphaModes[0] = BM_ADD;
-            blendStateDesc.mMasks[0] = RED | GREEN | BLUE;
+            blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_RED | ColorMask::COLOR_MASK_GREEN | ColorMask::COLOR_MASK_BLUE;
             blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
             blendStateDesc.mIndependentBlend = false;
 
@@ -1849,7 +1883,7 @@ namespace hpl {
                 pipelineSettings.pShaderProgram = m_stencilLightShader;
                 addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_lightStencilPipeline);
             }
-            
+
             DescriptorSetDesc perFrameDescSet{m_lightPassRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, ForgeRenderer::SwapChainLength};
             addDescriptorSet(forgetRenderer->Rend(), &perFrameDescSet, &m_lightFrameSet);
             DescriptorSetDesc batchDescriptorSet{m_lightPassRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_BATCH, cRendererDeferred::MaxLightUniforms};
@@ -1870,10 +1904,9 @@ namespace hpl {
             });
             addUniformGPURingBuffer(forgetRenderer->Rend(), sizeof(cRendererDeferred::UniformObject) * MaxObjectUniforms, &m_objectUniformBuffer, true);
         }
-   
 
         auto createShadowMap = [&](const cVector3l& avSize) -> ShadowMapData {
-            
+
             RenderTargetDesc renderTarget = {};
             renderTarget.mArraySize = 1;
             renderTarget.mDepth = 1;
@@ -1919,8 +1952,8 @@ namespace hpl {
         // m_fogVariant.Initialize(ShaderHelper::LoadProgramHandlerDefault("vs_deferred_fog", "fs_deferred_fog", true, true));
         // m_pointLightVariants.Initialize(
         //     ShaderHelper::LoadProgramHandlerDefault("vs_deferred_light", "fs_deferred_pointlight", false, true));
-        
-        
+
+
         ////////////////////////////////////
         // Create SSAO programs and textures
         //  if(mbSSAOLoaded && mpLowLevelGraphics->GetCaps(eGraphicCaps_TextureFloat)==0)
@@ -2059,9 +2092,9 @@ namespace hpl {
         const PerObjectOption& option) {
         auto* objectDescSet = m_materialSet.m_perObjectSet[frame.m_frameIndex];
 
-        GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(m_objectUniformBuffer, sizeof(cRendererDeferred::UniformObject));
+        GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(&m_objectUniformBuffer, sizeof(cRendererDeferred::UniformObject));
         cRendererDeferred::UniformObject uniformObjectData = {};
-        
+
         cMatrixf modelMat = option.m_modelMatrix.value_or(apObject->GetModelMatrixPtr() ? *apObject->GetModelMatrixPtr() : cMatrixf::Identity);
         cMatrixf modelViewMat = cMath::MatrixMul(option.m_viewMat, modelMat);
         cMatrixf modelViewProjMat = cMath::MatrixMul(cMath::MatrixMul(option.m_projectionMat, option.m_viewMat), modelMat);
@@ -2111,10 +2144,10 @@ namespace hpl {
                 beginUpdateResource(&updateDesc);
                 memcpy(updateDesc.pMappedData, &materialType.m_data, sizeof(cMaterial::MaterialType::MaterialData));
                 endUpdateResource(&updateDesc, NULL);
-            
+
                 std::array<DescriptorData, 32> params{};
                 size_t paramCount = 0;
-        
+
                 for (auto& supportedTexture : metaInfo->m_usedTextures) {
                     static constexpr const char* TextureNameLookup[] = {
                         "diffuseMap", // eMaterialTexture_Diffuse
@@ -2159,10 +2192,10 @@ namespace hpl {
                         }
                         params[paramCount].pName = TextureSamplerLookup[supportedTexture];
                         params[paramCount++].ppSamplers = &m_objectSamplers[sampler.m_id];
-                    
+
                         params[paramCount].pName = TextureNameLookup[supportedTexture];
                         params[paramCount++].ppTextures = &image->GetTexture().m_handle;
-                        
+
                         descInfo.m_textureHandles[supportedTexture] = image->GetTexture();
                     }
                 }
@@ -2192,11 +2225,11 @@ namespace hpl {
         uint32_t objectIndex = 0;;
 
         mpCurrentRenderList->Setup(mfCurrentFrameTime, apFrustum);
-        
+
         const cMatrixf mainFrustumViewInv = cMath::MatrixInverse(apFrustum->GetViewMatrix());
         const cMatrixf mainFrustumView = apFrustum->GetViewMatrix();
         const cMatrixf mainFrustumProj = apFrustum->GetProjectionMatrix();
-        
+
         // auto& swapChainImage = frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex];
         auto& sharedData = m_boundViewportData.resolve(viewport);
         auto& currentGBuffer = sharedData.m_gBuffer[frame.m_frameIndex];
@@ -2228,7 +2261,7 @@ namespace hpl {
             updateDescriptorSet(frame.m_renderer->Rend(), 0, m_materialSet.m_frameSet[frame.m_frameIndex], 1, params);
         }
 
-      
+
         frame.m_resourcePool->Push(currentGBuffer.m_colorBuffer);
         frame.m_resourcePool->Push(currentGBuffer.m_normalBuffer);
         frame.m_resourcePool->Push(currentGBuffer.m_positionBuffer);
@@ -2251,11 +2284,11 @@ namespace hpl {
             loadActions.mLoadActionDepth = LOAD_ACTION_CLEAR;
             loadActions.mLoadActionStencil = LOAD_ACTION_CLEAR;
             loadActions.mClearDepth = {.depth = 1.0f, .stencil = 0};
-            
+
             ASSERT(currentGBuffer.m_depthBuffer.m_handle && "Depth buffer not created");
-    
+
             cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "Occlusion Testing");
-            cmdBindRenderTargets(frame.m_cmd, 0, NULL, currentGBuffer.m_depthBuffer.m_handle, &loadActions, NULL, NULL, -1, -1);    
+            cmdBindRenderTargets(frame.m_cmd, 0, NULL, currentGBuffer.m_depthBuffer.m_handle, &loadActions, NULL, NULL, -1, -1);
             cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)sharedData.m_size.x, (float)sharedData.m_size.y, 0.0f, 1.0f);
             cmdSetScissor(frame.m_cmd, 0, 0, sharedData.m_size.x, sharedData.m_size.y);
             cmdBindPipeline(frame.m_cmd, m_zPassPipeline);
@@ -2300,10 +2333,10 @@ namespace hpl {
             cmdEndDebugMarker(frame.m_cmd);
 
             mpCurrentRenderList->Compile(
-                eRenderListCompileFlag_Diffuse | 
-                eRenderListCompileFlag_Translucent | 
+                eRenderListCompileFlag_Diffuse |
+                eRenderListCompileFlag_Translucent |
                 eRenderListCompileFlag_Decal |
-                eRenderListCompileFlag_Illumination | 
+                eRenderListCompileFlag_Illumination |
                 eRenderListCompileFlag_FogArea);
         }
 
@@ -2333,7 +2366,7 @@ namespace hpl {
                 currentGBuffer.m_positionBuffer.m_handle,
                 currentGBuffer.m_specularBuffer.m_handle
             };
-            cmdBindRenderTargets(frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, NULL, NULL, -1, -1);    
+            cmdBindRenderTargets(frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, NULL, NULL, -1, -1);
             cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)sharedData.m_size.x, (float)sharedData.m_size.y, 0.0f, 1.0f);
             cmdSetScissor(frame.m_cmd, 0, 0, sharedData.m_size.x, sharedData.m_size.y);
             cmdBindPipeline(frame.m_cmd, m_materialSolidPass.m_solidDiffuseParallaxPipeline);
@@ -2394,7 +2427,7 @@ namespace hpl {
             cmdBindRenderTargets(frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, NULL, NULL, -1, -1);
             cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)sharedData.m_size.x, (float)sharedData.m_size.y, 0.0f, 1.0f);
             cmdSetScissor(frame.m_cmd, 0, 0, sharedData.m_size.x, sharedData.m_size.y);
-            
+
             // cmdBindDescriptorSet(frame.m_cmd, 0, m_decalDescriptorSet.m_constSet);
             cmdBindDescriptorSet(frame.m_cmd, 0, m_materialSet.m_frameSet[frame.m_frameIndex]);
             // uint32_t decalIndex = 0;
@@ -2428,7 +2461,7 @@ namespace hpl {
             }
         }
 
-        
+
         // // ------------------------------------------------------------------------------------
         // //  Render SSAO Pass to color
         // // ------------------------------------------------------------------------------------
@@ -2474,7 +2507,7 @@ namespace hpl {
         //         shaderProgram.m_textures.push_back({ m_s_positionMap, sharedData.m_gBuffer.m_positionImage->GetHandle(), 0 });
         //         shaderProgram.m_textures.push_back({ m_s_normalMap, sharedData.m_gBuffer.m_normalImage->GetHandle(), 1});
         //         shaderProgram.m_textures.push_back({ m_s_scatterDisk, m_ssaoScatterDiskImage->GetHandle(), 2 });
-                
+
         //         shaderProgram.m_configuration.m_write = Write::R;
         //         shaderProgram.m_configuration.m_rgbBlendFunc =
         //             CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::Zero);
@@ -2704,15 +2737,15 @@ namespace hpl {
                     DescriptorData params[10] = {};
                     size_t paramCount = 0;
                     UniformLightData uniformObjectData = {};
-                    GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(m_lightPassRingBuffer, sizeof(UniformLightData));
-    
+                    GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(&m_lightPassRingBuffer, sizeof(UniformLightData));
+
                     const auto modelViewMtx = cMath::MatrixMul(apFrustum->GetViewMatrix(), light->m_light->GetWorldMatrix());
                     const auto viewProjectionMat = cMath::MatrixMul(mainFrustumProj, mainFrustumView);
 
                     switch (light->m_light->GetLightType()) {
                         case eLightType_Point: {
                             uniformObjectData.m_common.m_mvp = cMath::ToForgeMat4(
-                            cMath::MatrixMul(viewProjectionMat, 
+                            cMath::MatrixMul(viewProjectionMat,
                             cMath::MatrixMul(light->m_light->GetWorldMatrix(), detail::GetLightMtx(*light))).GetTranspose());
 
                             cVector3f lightViewPos = cMath::MatrixMul(modelViewMtx, detail::GetLightMtx(*light)).GetTranslation();
@@ -2744,7 +2777,7 @@ namespace hpl {
                             const auto color = pLightSpot->GetDiffuseColor();
 
                             uniformObjectData.m_common.m_mvp = cMath::ToForgeMat4(
-                        cMath::MatrixMul(viewProjectionMat, 
+                        cMath::MatrixMul(viewProjectionMat,
                         cMath::MatrixMul(light->m_light->GetWorldMatrix(), detail::GetLightMtx(*light))).GetTranspose());
 
                             uniformObjectData.m_spotLight.m_spotViewProj = cMath::ToForgeMat4(spotViewProj);
@@ -2805,7 +2838,7 @@ namespace hpl {
                 };
 
                 cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "Point Light Deferred Back");
-                
+
                 LoadActionsDesc loadActions = {};
                 loadActions.mLoadActionsColor[0] = LOAD_ACTION_CLEAR;
                 loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
@@ -2813,7 +2846,7 @@ namespace hpl {
                 std::array targets = {
                     currentGBuffer.m_outputBuffer.m_handle,
                 };
-                
+
                 cmdBindRenderTargets(frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, nullptr, nullptr, -1, -1);
                 cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)sharedData.m_size.x, (float)sharedData.m_size.y, 0.0f, 1.0f);
                 cmdSetScissor(frame.m_cmd, 0, 0, sharedData.m_size.x, sharedData.m_size.y);
@@ -2887,8 +2920,8 @@ namespace hpl {
                             ASSERT(false && "Unsupported light type");
                             break;
                     }
-                
-                    GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(m_lightPassRingBuffer, sizeof(UniformLightData));
+
+                    GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(&m_lightPassRingBuffer, sizeof(UniformLightData));
                     std::array targets = { eVertexBufferElement_Position };
                     LegacyVertexBuffer::GeometryBinding binding{};
                     auto lightShape = GetLightShape(light->m_light, eDeferredShapeQuality_High);
@@ -2917,7 +2950,7 @@ namespace hpl {
             cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)sharedData.m_size.x, (float)sharedData.m_size.y, 0.0f, 1.0f);
             cmdSetScissor(frame.m_cmd, 0, 0, sharedData.m_size.x, sharedData.m_size.y);
             cmdBindPipeline(frame.m_cmd, m_solidIlluminationPipeline);
-            
+
             cmdBindDescriptorSet(frame.m_cmd, 0, m_materialSet.m_frameSet[frame.m_frameIndex]);
 
             for(auto& illuminationItem: mpCurrentRenderList->GetRenderableItems(eRenderListType_Illumination)) {
@@ -2973,14 +3006,14 @@ namespace hpl {
             static_cast<LegacyVertexBuffer*>(mpShapeBox)
                 ->resolveGeometryBinding(frame.m_currentFrame, geometryStream, &binding);
             detail::cmdDefaultLegacyGeomBinding(frame, binding);
-            
+
             uint32_t rootConstantIndex = getDescriptorIndexFromName(m_fogPass.m_fogRootSignature, "uRootConstants");
             float2 viewTexel = { 1.0f / sharedData.m_size.x, 1.0f / sharedData.m_size.y };
             cmdBindPushConstants(frame.m_cmd, m_fogPass.m_fogRootSignature, rootConstantIndex, &viewTexel);
-               
+
             size_t objectIndex = 0;
             for(auto& fogArea: fogRenderData) {
-                GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(m_fogPass.m_fogUniformBuffer, sizeof(Fog::UniformFogData));
+                GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(&m_fogPass.m_fogUniformBuffer, sizeof(Fog::UniformFogData));
 
                 uint8_t pipelineVariant = 0;
                 Fog::UniformFogData fogUniformData = {};
@@ -3011,7 +3044,7 @@ namespace hpl {
                 fogUniformData.m_start = fogArea.m_fogArea->GetStart();
                 fogUniformData.m_length = fogArea.m_fogArea->GetEnd() - fogArea.m_fogArea->GetStart();
                 fogUniformData.m_falloffExp = fogArea.m_fogArea->GetFalloffExp();
-                
+
                 const cMatrixf modelMat = fogArea.m_fogArea->GetModelMatrixPtr() ? *fogArea.m_fogArea->GetModelMatrixPtr() : cMatrixf::Identity;
                 fogUniformData.m_mv =  cMath::ToForgeMat4(cMath::MatrixMul(mainFrustumView,modelMat).GetTranspose());
                 fogUniformData.m_mvp =
@@ -3034,7 +3067,7 @@ namespace hpl {
                     params[paramCount++].ppBuffers = &uniformBuffer.pBuffer;
                     updateDescriptorSet(frame.m_renderer->Rend(), objectIndex, m_fogPass.m_perObjectSet[frame.m_frameIndex], paramCount, params.data());
                 }
-               
+
                 cmdBindDescriptorSet(frame.m_cmd, 0, m_fogPass.m_perFrameSet[frame.m_frameIndex]);
                 cmdBindDescriptorSet(frame.m_cmd, objectIndex++, m_fogPass.m_perObjectSet[frame.m_frameIndex]);
                 cmdBindPipeline(frame.m_cmd, m_fogPass.m_pipeline[pipelineVariant]);
@@ -3089,7 +3122,7 @@ namespace hpl {
             cmdBindRenderTargets(frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, nullptr, nullptr, -1, -1);
             cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, static_cast<float>(sharedData.m_size.x), static_cast<float>(sharedData.m_size.y), 0.0f, 1.0f);
             cmdSetScissor(frame.m_cmd, 0, 0, sharedData.m_size.x, sharedData.m_size.y);
-            
+
             cmdBindDescriptorSet(frame.m_cmd, 0, m_materialSet.m_frameSet[frame.m_frameIndex]);
             std::array<TranslucencyPipeline::TranslucencyBlend, eMaterialBlendMode_LastEnum> translucencyBlendTable;
             translucencyBlendTable[eMaterialBlendMode_Add] =  TranslucencyPipeline::TranslucencyBlend::BlendAdd;
@@ -3097,7 +3130,7 @@ namespace hpl {
             translucencyBlendTable[eMaterialBlendMode_MulX2] =  TranslucencyPipeline::TranslucencyBlend::BlendMulX2;
             translucencyBlendTable[eMaterialBlendMode_Alpha] =  TranslucencyPipeline::TranslucencyBlend::BlendAlpha;
             translucencyBlendTable[eMaterialBlendMode_PremulAlpha] = TranslucencyPipeline::TranslucencyBlend::BlendPremulAlpha;
-            
+
             uint32_t translucencyConstantIndex = getDescriptorIndexFromName(m_materialRootSignature, "translucencyConstant");
             for(auto& translucencyItem: mpCurrentRenderList->GetRenderableItems(eRenderListType_Translucent)) {
                 cMaterial* pMaterial = translucencyItem->GetMaterial();
@@ -3266,7 +3299,7 @@ namespace hpl {
         }
 
     }
-    
+
     iVertexBuffer* cRendererDeferred::GetLightShape(iLight* apLight, eDeferredShapeQuality aQuality) const {
         switch(apLight->GetLightType()) {
             case eLightType_Point:

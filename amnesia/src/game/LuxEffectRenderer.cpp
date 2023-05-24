@@ -121,14 +121,14 @@ cLuxEffectRenderer::cLuxEffectRenderer()
     {
         {
             ShaderLoadDesc loadDesc = {};
-            loadDesc.mStages[0] = { "dds_outline_stencil.vert", nullptr, 0 };
-            loadDesc.mStages[1] = { "dds_outline_stencil.frag", nullptr, 0 };
+            loadDesc.mStages[0].pFileName = "dds_outline_stencil.vert";
+            loadDesc.mStages[1].pFileName = "dds_outline_stencil.frag";
             addShader(forgeRenderer->Rend(), &loadDesc, &m_outlineStencilShader);
         }
         {
             ShaderLoadDesc loadDesc = {};
-            loadDesc.mStages[0] = { "dds_outline.vert", nullptr, 0 };
-            loadDesc.mStages[1] = { "dds_outline.frag", nullptr, 0 };
+            loadDesc.mStages[0].pFileName = "dds_outline.vert";
+            loadDesc.mStages[1].pFileName = "dds_outline.frag";
             addShader(forgeRenderer->Rend(), &loadDesc, &m_outlineShader);
         }
 

@@ -106,8 +106,8 @@ namespace hpl {
 
         {
             ShaderLoadDesc postProcessCopyShaderDec = {};
-            postProcessCopyShaderDec.mStages[0] = { "fullscreen.vert", NULL, 0 };
-            postProcessCopyShaderDec.mStages[1] = { "post_processing_copy.frag", NULL, 0 };
+            postProcessCopyShaderDec.mStages[0].pFileName = "fullscreen.vert";
+            postProcessCopyShaderDec.mStages[1].pFileName = "post_processing_copy.frag";
             addShader(m_renderer, &postProcessCopyShaderDec, &m_copyShader);
 
             RootSignatureDesc rootDesc = { &m_copyShader, 1 };

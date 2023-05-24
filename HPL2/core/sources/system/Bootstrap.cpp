@@ -27,7 +27,7 @@ namespace hpl {
 
     int32_t Bootstrap::BootstrapThreadHandler(bx::Thread* self, void* _userData) {
         auto bootstrap = reinterpret_cast<Bootstrap*>(_userData);
-        
+
         // bgfx::Init init;
         // #if defined(WIN32)
         //     // DirectX11 is even more broken then opengl something to consider later ...
@@ -64,9 +64,8 @@ namespace hpl {
         {
             return;
         }
-        fsSetPathForResourceDir(pSystemFileIO, RM_CONTENT, RD_SHADER_SOURCES, "Shaders");
 		fsSetPathForResourceDir(pSystemFileIO, RM_CONTENT, RD_SHADER_BINARIES, "CompiledShaders");
-    
+
         Interface<IUpdateEventLoop>::Register(&m_updateEventLoop);
 
         auto keyboardHandle = hpl::input::internal::keyboard::Initialize();
@@ -92,7 +91,7 @@ namespace hpl {
         initResourceLoaderInterface(m_renderer.Rend()); // initializes resources
         m_renderer.InitializeResource();
         gui::InitializeGui(m_renderer);
- 
+
 
         // this is safe because the render target is scheduled on the api thread
         m_primaryViewport = std::make_unique<hpl::PrimaryViewport>(m_window);

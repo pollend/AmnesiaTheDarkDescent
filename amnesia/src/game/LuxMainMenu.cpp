@@ -202,16 +202,16 @@ cLuxMainMenu::cLuxMainMenu() : iLuxUpdateable("LuxDebugHandler")
     m_blurVerticalShader = ForgeShaderHandle(forgeRenderer->Rend());
     m_blurVerticalShader.Load([&](Shader** shader) {
         ShaderLoadDesc loadDesc{};
-        loadDesc.mStages[0] = { "fullscreen.vert", nullptr, 0 };
-        loadDesc.mStages[1] = { "blur_posteffect_vertical.frag", nullptr, 0 };
+        loadDesc.mStages[0].pFileName = "fullscreen.vert";
+        loadDesc.mStages[1].pFileName = "blur_posteffect_vertical.frag";
         addShader(forgeRenderer->Rend(),&loadDesc, shader);
         return true;
     });
     m_blurHorizontalShader = ForgeShaderHandle(forgeRenderer->Rend());
     m_blurHorizontalShader.Load([&](Shader** shader) {
         ShaderLoadDesc loadDesc{};
-        loadDesc.mStages[0] = { "fullscreen.vert", nullptr, 0 };
-        loadDesc.mStages[1] = { "blur_posteffect_vertical.frag", nullptr, 0 };
+        loadDesc.mStages[0].pFileName =  "fullscreen.vert";
+        loadDesc.mStages[1].pFileName =  "blur_posteffect_vertical.frag";
         addShader(forgeRenderer->Rend(),&loadDesc, shader);
         return true;
     });
