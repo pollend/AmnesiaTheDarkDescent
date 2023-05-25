@@ -24,6 +24,7 @@
 
 #include "LuxBase.h"
 #include "bgfx/bgfx.h"
+#include "graphics/ForgeHandles.h"
 
 //----------------------------------------------
 
@@ -428,7 +429,8 @@ private:
 
 	cGuiGfxElement *mpScreenGfx;
 	cGuiGfxElement *mpScreenBgGfx;
-	
+
+    ForgeShaderHandle m_inventoryScreenShader;
 	bgfx::ProgramHandle m_program;
 	bgfx::UniformHandle m_s_diffuseMap;
 

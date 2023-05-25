@@ -318,6 +318,7 @@ private:
 	cGuiGfxElement *mpScreenBgGfx;
 	cGuiGfxElement *mpWhiteGfx;
 
+    ForgeShaderHandle m_inventoryScreenShader;
 	bgfx::ProgramHandle m_program;
 	bgfx::UniformHandle m_s_diffuseMap;
 

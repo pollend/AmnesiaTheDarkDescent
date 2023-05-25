@@ -216,20 +216,7 @@ cLuxMainMenu::cLuxMainMenu() : iLuxUpdateable("LuxDebugHandler")
         return true;
     });
     m_screenBlurTarget = ForgeRenderTarget(forgeRenderer->Rend());
-    m_screenBlurTarget.Load([&](RenderTarget** texture) {
-        RenderTargetDesc renderTarget = {};
-        renderTarget.mArraySize = 1;
-        //renderTarget.mClearValue = optimizedColorClearBlack;
-        renderTarget.mDepth = 1;
-        renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
-        //renderTarget.mWidth = sharedData->m_size.x;
-        //renderTarget.mHeight = sharedData->m_size.y;
-        renderTarget.mSampleCount = SAMPLE_COUNT_1;
-        renderTarget.mSampleQuality = 0;
-        renderTarget.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
-        addRenderTarget(forgeRenderer->Rend(), &renderTarget, texture);
-        return true;
-    });
+
 
 	mpScreenGfx = NULL;
 	mpScreenBlurGfx = NULL;
@@ -257,12 +244,6 @@ cLuxMainMenu::cLuxMainMenu() : iLuxUpdateable("LuxDebugHandler")
 
 cLuxMainMenu::~cLuxMainMenu()
 {
-	if(bgfx::isValid(m_s_diffuseMap)) {
-		bgfx::destroy(m_s_diffuseMap);
-	}
-	if(bgfx::isValid(m_u_param)) {
-		bgfx::destroy(m_u_param);
-	}
 	for(size_t i=0; i<mvWindows.size(); ++i)
 	{
 		if(mvWindows[i]) hplDelete(mvWindows[i]);
@@ -1327,6 +1308,22 @@ void cLuxMainMenu::CreateScreenTextures()
 	iLowLevelGraphics *pLowGfx = mpGraphics->GetLowLevel();
 	cVector3l vTexSize = pLowGfx->GetScreenSizeInt();
 	vTexSize.z = 0;
+
+    auto* forgeRenderer = Interface<ForgeRenderer>::Get();
+    m_screenBlurTarget.Load([&](RenderTarget** texture) {
+        RenderTargetDesc renderTarget = {};
+        renderTarget.mArraySize = 1;
+        renderTarget.mDepth = 1;
+        renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+        renderTarget.mWidth = vTexSize.x;
+        renderTarget.mHeight = vTexSize.y;
+        renderTarget.mSampleCount = SAMPLE_COUNT_1;
+        renderTarget.mSampleQuality = 0;
+        renderTarget.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
+        renderTarget.mFormat = TinyImageFormat_R8G8B8A8_UNORM;
+        addRenderTarget(forgeRenderer->Rend(), &renderTarget, texture);
+        return true;
+    });
 
     m_screenImage = [&]{
         auto desc = ImageDescriptor::CreateTexture2D(

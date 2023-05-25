@@ -108,59 +108,57 @@ namespace hpl {
 			GUI_TEXTURE_CONFIG_DIFFUSE = 1 << 0,
 		};
 
-		static std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> guiUniformDescriptorSet{};
-		static RootSignature* guiRootSignature = nullptr;
+		static std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> GuiUniformDescriptorSet{};
+		static std::array<std::array<ForgeTextureHandle, MAX_GUI_DRAW_CALLS>, ForgeRenderer::SwapChainLength> GuiTextures{};
+        static RootSignature* GuiRootSignatnre = nullptr;
 
-		static GPURingBuffer guiUniformRingBuffer {};
-		static GPURingBuffer guiVertexRingBuffer{};
-		static GPURingBuffer guiIndexRingBuffer{};
+		static GPURingBuffer GuiUniformRingBuffer {};
+		static GPURingBuffer GuiVertexRingBuffer{};
+		static GPURingBuffer GuiIndexRingBuffer{};
 
-		static std::array<Pipeline*, eGuiMaterial_LastEnum> guiPipeline = {};
-		static std::array<Pipeline*, eGuiMaterial_LastEnum> guiPipeline3D = {};
-		static int descriptorIndex = 0;
+        static uint32_t descriptorIndex = 0;
+		static std::array<Pipeline*, eGuiMaterial_LastEnum> GuiPipeline = {};
+		static std::array<Pipeline*, eGuiMaterial_LastEnum> GuiPipeline3D = {};
 
-		static Shader* guiShader = nullptr;
+		static Shader* GuiShaner = nullptr;
 
 		void InitializeGui(ForgeRenderer& pipeline) {
  			{
-                // guiVertexBuffer.TryFree();
                 BufferDesc desc = {};
-                // loadDesc.ppBuffer = &guiVertexBuffer.m_handle;
 				desc.mDescriptors = DESCRIPTOR_TYPE_VERTEX_BUFFER;
                 desc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
                 desc.mSize = GUI_STREAM_BUFFER_VB_SIZE * sizeof(PositionTexColor);
                 desc.pName = "GUI Vertex Buffer";
 
-				addGPURingBuffer(pipeline.Rend(), &desc, &guiVertexRingBuffer);
+				addGPURingBuffer(pipeline.Rend(), &desc, &GuiVertexRingBuffer);
             }
             {
-				// guiIndexBuffer.TryFree();
                 BufferDesc desc = {};
                 desc.mDescriptors = DESCRIPTOR_TYPE_INDEX_BUFFER;
                 desc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
                 desc.mSize = GUI_STREAM_BUFFER_IB_SIZE * sizeof(uint32_t);
                 desc.pName = "GUI Index Buffer";
-                addGPURingBuffer(pipeline.Rend(), &desc, &guiIndexRingBuffer);
+                addGPURingBuffer(pipeline.Rend(), &desc, &GuiIndexRingBuffer);
             }
 
 			ShaderLoadDesc loadDesc = {};
 			loadDesc.mStages[0].pFileName = "gui.vert";
 			loadDesc.mStages[1].pFileName = "gui.frag";
-			addShader(pipeline.Rend(), &loadDesc, &guiShader);
+			addShader(pipeline.Rend(), &loadDesc, &GuiShaner);
 
 			const char* pguiSamplerNames[] = { "diffuseMap" };
-			Shader* guiRootShaders[] = {guiShader};
+			Shader* guiRootShaders[] = {GuiShaner};
 
 			RootSignatureDesc rootSignatureDesc = {};
 			rootSignatureDesc.ppShaders = guiRootShaders;
 			rootSignatureDesc.mShaderCount = std::size(guiRootShaders);
 			// rootSignatureDesc.ppStaticSamplerNames = pguiSamplerNames;
 			// rootSignatureDesc.mStaticSamplerCount = std::size(pguiSamplerNames);
-			addRootSignature(pipeline.Rend(), &rootSignatureDesc, &guiRootSignature);
+			addRootSignature(pipeline.Rend(), &rootSignatureDesc, &GuiRootSignatnre);
 
-			for(auto& set: guiUniformDescriptorSet) {
+			for(auto& set: GuiUniformDescriptorSet) {
 				DescriptorSetDesc setDesc{};
-				setDesc.pRootSignature = guiRootSignature;
+				setDesc.pRootSignature = GuiRootSignatnre;
 				setDesc.mUpdateFrequency = DESCRIPTOR_UPDATE_FREQ_PER_BATCH;
 				setDesc.mMaxSets = MAX_GUI_DRAW_CALLS;
 				addDescriptorSet(pipeline.Rend(), &setDesc, &set);
@@ -204,8 +202,8 @@ namespace hpl {
 				pipelineSettings.pColorFormats = &pipeline.GetSwapChain()->ppRenderTargets[0]->mFormat;
 				pipelineSettings.mSampleCount = pipeline.GetSwapChain()->ppRenderTargets[0]->mSampleCount;
 				pipelineSettings.mSampleQuality = pipeline.GetSwapChain()->ppRenderTargets[0]->mSampleQuality;
-				pipelineSettings.pRootSignature = guiRootSignature;
-				pipelineSettings.pShaderProgram = guiShader;
+				pipelineSettings.pRootSignature = GuiRootSignatnre;
+				pipelineSettings.pShaderProgram = GuiShaner;
 				pipelineSettings.pRasterizerState = &rasterizerStateDesc;
 				pipelineSettings.pVertexLayout = &vertexLayout;
 
@@ -234,19 +232,19 @@ namespace hpl {
 
 				for(size_t i = 0; i < blendStateDesc.size(); i++) {
 					pipelineSettings.pBlendState = &blendStateDesc[i];
-					addPipeline(pipeline.Rend(), &pipelineDesc, &guiPipeline[i]);
+					addPipeline(pipeline.Rend(), &pipelineDesc, &GuiPipeline[i]);
 				}
 
 				depthStateDesc.mDepthTest = true;
 				depthStateDesc.mDepthFunc = CMP_LEQUAL;
 				for(size_t i = 0; i < blendStateDesc.size(); i++) {
 					pipelineSettings.pBlendState = &blendStateDesc[i];
-					addPipeline(pipeline.Rend(), &pipelineDesc, &guiPipeline3D[i]);
+					addPipeline(pipeline.Rend(), &pipelineDesc, &GuiPipeline3D[i]);
 				}
 
 			}
 
-			addUniformGPURingBuffer(pipeline.Rend(), sizeof(UniformBlock) * MAX_GUI_DRAW_CALLS, &guiUniformRingBuffer, true);
+			addUniformGPURingBuffer(pipeline.Rend(), sizeof(UniformBlock) * MAX_GUI_DRAW_CALLS, &GuiUniformRingBuffer, true);
 		}
 
 		void exitGui() {
@@ -335,13 +333,6 @@ namespace hpl {
 		return pRegion;
 	}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	cGuiGlobalShortcut::cGuiGlobalShortcut(int alKeyModifiers, eKey aKey, iWidget* apWidget, eGuiMessage aMessage, bool abBypassVisibility, bool abBypassEnabled)
 	{
@@ -659,7 +650,8 @@ namespace hpl {
 
 
 	void cGuiSet::Draw(const ForgeRenderer::Frame& frame, cFrustum* apFrustum) {
-		if(m_setRenderObjects.empty()) {
+		const bool isSwapChainRead = frame.m_currentFrame > 0;
+        if(m_setRenderObjects.empty() || !isSwapChainRead) {
 			return;
 		}
 
@@ -667,8 +659,8 @@ namespace hpl {
 
 		size_t vertexBufferSize = m_setRenderObjects.size() * sizeof(gui::PositionTexColor) * 4;
 		size_t indexBufferSize = m_setRenderObjects.size() * sizeof(uint32_t) * 6;
-		GPURingBufferOffset vb = getGPURingBufferOffset(&gui::guiVertexRingBuffer, vertexBufferSize);
-		GPURingBufferOffset ib = getGPURingBufferOffset(&gui::guiIndexRingBuffer, indexBufferSize);
+		GPURingBufferOffset vb = getGPURingBufferOffset(&gui::GuiVertexRingBuffer, vertexBufferSize);
+		GPURingBufferOffset ib = getGPURingBufferOffset(&gui::GuiIndexRingBuffer, indexBufferSize);
 
 		cMatrixf projectionMtx(cMatrixf::Identity);
 		cMatrixf viewMtx(cMatrixf::Identity);
@@ -703,9 +695,8 @@ namespace hpl {
 		LoadActionsDesc loadActions = {};
 		loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
 		loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
-
+        auto& swapChainImage = frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex];
 		cVector2l vSize = pLowLevelGraphics->GetScreenSizeInt();
-		auto& swapChainImage = frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex];
 		cmdBindRenderTargets(frame.m_cmd, 1, &swapChainImage, NULL, &loadActions, NULL, NULL, -1, -1);
 		cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)vSize.x, (float)vSize.y, 0.0f, 1.0f);
 
@@ -732,7 +723,7 @@ namespace hpl {
 			size_t vertexBufferIndex = 0;
 			size_t indexBufferIndex = 0;
 
-			GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(&gui::guiUniformRingBuffer, sizeof(gui::UniformBlock));
+			GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(&gui::GuiUniformRingBuffer, sizeof(gui::UniformBlock));
 
 			DescriptorData params[10]{};
 			uint32_t paramCount = 0;
@@ -745,11 +736,12 @@ namespace hpl {
 			if(pTexture) {
 				uniformBlock.textureConfig |= gui::GUI_TEXTURE_CONFIG_DIFFUSE;
 				params[paramCount].pName = "diffuseMap";
+				gui::GuiTextures[frame.m_frameIndex][gui::descriptorIndex] = pTexture->GetTexture();
 				params[paramCount++].ppTextures = &pTexture->GetTexture().m_handle;
-				frame.m_resourcePool->Push(pTexture->GetTexture());
+				//frame.m_resourcePool->Push(pTexture->GetTexture());
 			}
 			uniformBlock.mvp = cMath::ToForgeMat4(cMath::MatrixMul(cMath::MatrixMul(projectionMtx, viewMtx), modelMtx));
-			auto& descriptorSet = gui::guiUniformDescriptorSet[frame.m_frameIndex];
+			auto& descriptorSet = gui::GuiUniformDescriptorSet[frame.m_frameIndex];
 			updateDescriptorSet(frame.m_renderer->Rend(), gui::descriptorIndex, descriptorSet, paramCount, params);
 
 			BufferUpdateDesc  updateDesc = { uniformBlockOffset.pBuffer, uniformBlockOffset.mOffset };
@@ -758,15 +750,15 @@ namespace hpl {
 			endUpdateResource(&updateDesc, NULL);
 
 			if(mbIs3D) {
-				cmdBindPipeline(frame.m_cmd, gui::guiPipeline3D[materialType]);
+				cmdBindPipeline(frame.m_cmd, gui::GuiPipeline3D[materialType]);
 			} else {
-				cmdBindPipeline(frame.m_cmd, gui::guiPipeline[materialType]);
+				cmdBindPipeline(frame.m_cmd, gui::GuiPipeline[materialType]);
 			}
 
 			if(pClipRegion && pClipRegion->mRect.w > 0.0f) {
 				cmdSetScissor(frame.m_cmd,
-					pClipRegion->mRect.x,
-					pClipRegion->mRect.y,
+					std::max<float>(0.0f,pClipRegion->mRect.x),
+					std::max<float>(0.0f,pClipRegion->mRect.y),
 					pClipRegion->mRect.w,
 					pClipRegion->mRect.h);
 			} else {
@@ -776,7 +768,6 @@ namespace hpl {
 			uint32_t stride = sizeof(gui::PositionTexColor);
 			cmdBindDescriptorSet(frame.m_cmd, gui::descriptorIndex, descriptorSet);
 			gui::descriptorIndex = (gui::descriptorIndex + 1) % gui::MAX_GUI_DRAW_CALLS;
-
 
 			do
 			{
@@ -1671,8 +1662,6 @@ namespace hpl {
 		mbRendersBeforePostEffects = abX;
 	}
 
-	//-----------------------------------------------------------------------
-
 	void cGuiSet::SetIs3D(bool abX)
 	{
 		mbIs3D = abX;
@@ -1683,27 +1672,20 @@ namespace hpl {
 		mv3DSize = avSize;
 	}
 
-
 	void cGuiSet::Set3DTransform(const cMatrixf& a_mtxTransform)
 	{
 		m_mtx3DTransform = a_mtxTransform;
 	}
-
-	//-----------------------------------------------------------------------
 
 	void cGuiSet::SetCurrentPointer(cGuiGfxElement *apGfx)
 	{
 		mpGfxCurrentPointer = apGfx;
 	}
 
-	//-----------------------------------------------------------------------
-
 	bool cGuiSet::HasFocus()
 	{
 		return mpGui->GetFocusedSet() == this;
 	}
-
-	//-----------------------------------------------------------------------
 
 	void cGuiSet::PositionWidgetInsideBounds(iWidget* apWidget)
 	{

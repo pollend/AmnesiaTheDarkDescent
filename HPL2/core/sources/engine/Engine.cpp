@@ -294,7 +294,7 @@ namespace hpl {
 							apVars->mGraphics.mvWindowPosition,
 							mpResources,alHplSetupFlags);
 		Interface<window::NativeWindowWrapper>::Get()->SetWindowSize(cVector2l(apVars->mGraphics.mvScreenSize.x, apVars->mGraphics.mvScreenSize.y));
-		
+
 		//Init Sound
 		mpSound->Init(mpResources, apVars->mSound.mlSoundDeviceID,
 						apVars->mSound.mbUseEnvironmentalAudio,
@@ -445,7 +445,7 @@ namespace hpl {
 
 		auto renderer = Interface<ForgeRenderer>::Get();
 
-
+		renderer->IncrementFrame();
 		while(!GetGameIsDone())
 		{
 			//////////////////////////
@@ -526,7 +526,8 @@ namespace hpl {
 
 				START_TIMING(SwapBuffers)
 				renderer->SubmitFrame();
-				STOP_TIMING(SwapBuffers)
+				renderer->IncrementFrame();
+                STOP_TIMING(SwapBuffers)
 
 				//Log("Swap done: %d\n", cPlatform::GetApplicationTime());
 				mpUpdater->RunMessage(eUpdateableMessage_OnPostBufferSwap);
@@ -538,9 +539,6 @@ namespace hpl {
 			// Render frame
 			if(!mbLimitFPS || bIsUpdated)
 			{
-
-				renderer->IncrementFrame();
-
 				///////////////////////////////////////
            		//Get the the from the last frame.
 				UpdateFrameTimer();
@@ -801,7 +799,7 @@ namespace hpl {
         iLowLevelGraphics *pllGfx = mpGraphics->GetLowLevel();
 
 		auto* window = Interface<window::NativeWindowWrapper>::Get();
-	
+
 		mbApplicationHasInputFocus = any(window->GetWindowStatus() & window::WindowStatus::WindowStatusInputFocus);
 		mbApplicationHasMouseFocus = any(window->GetWindowStatus() & window::WindowStatus::WindowStatusInputMouseFocus);
 		mbApplicationIsVisible = any(window->GetWindowStatus() & window::WindowStatus::WindowStatusVisible);

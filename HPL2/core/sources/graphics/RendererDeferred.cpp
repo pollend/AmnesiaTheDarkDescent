@@ -19,7 +19,7 @@
 
 #include "graphics/RendererDeferred.h"
 
-#include "Common_3/Graphics/Interfaces/IGraphics.h"
+
 #include "bgfx/bgfx.h"
 #include "engine/Event.h"
 #include "engine/Interface.h"
@@ -86,6 +86,7 @@
 #include "FixPreprocessor.h"
 #include <folly/FixedString.h>
 #include <folly/small_vector.h>
+#include "Common_3/Graphics/Interfaces/IGraphics.h"
 
 namespace hpl {
 
@@ -779,7 +780,7 @@ namespace hpl {
                         refractionImageDesc.mHeight = sharedData->m_size.y;
                         refractionImageDesc.mSampleCount = SAMPLE_COUNT_1;
                         refractionImageDesc.mSampleQuality = 0;
-                        refractionImageDesc.mStartState = RESOURCE_STATE_UNORDERED_ACCESS;
+                        refractionImageDesc.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
                         refractionImageDesc.pName = "Refraction Image";
                         ForgeTextureHandle refractionImage{};
                         refractionImage.Load([&](Texture** texture) {
@@ -975,8 +976,8 @@ namespace hpl {
                 loadDesc.mStages[0].pFileName = "solid_z.vert";
                 loadDesc.mStages[1].pFileName = "solid_z.frag";
                 addShader(forgetRenderer->Rend(), &loadDesc, &m_zPassShader);
-                setShaderName(forgetRenderer->Rend(), m_zPassShader, SHADER_STAGE_VERT, "solid_z.vert");
-                setShaderName(forgetRenderer->Rend(), m_zPassShader, SHADER_STAGE_FRAG, "solid_z.frag");
+                // setShaderName(forgetRenderer->Rend(), m_zPassShader, SHADER_STAGE_VERT, "solid_z.vert");
+                // setShaderName(forgetRenderer->Rend(), m_zPassShader, SHADER_STAGE_FRAG, "solid_z.frag");
             }
             // diffuse pipeline
             {
@@ -2234,7 +2235,6 @@ namespace hpl {
         auto& sharedData = m_boundViewportData.resolve(viewport);
         auto& currentGBuffer = sharedData.m_gBuffer[frame.m_frameIndex];
 
-
         {
             BufferUpdateDesc updatePerFrameConstantsDesc = { m_perFrameBuffer.m_handle, frame.m_frameIndex * sizeof(UniformPerFrameData), sizeof(UniformPerFrameData)};
             beginUpdateResource(&updatePerFrameConstantsDesc);
@@ -2755,11 +2755,13 @@ namespace hpl {
                                 uniformObjectData.m_common.m_config |= LightConfiguration::HasGoboMap;
                                 params[paramCount].pName = "goboCubeMap";
                                 params[paramCount++].ppTextures = &light->m_light->GetGoboTexture()->GetTexture().m_handle;
+                                m_lightResources[frame.m_frameIndex][lightIndex].m_goboCubeMap = light->m_light->GetGoboTexture()->GetTexture();
                             }
                             auto falloffMap = light->m_light->GetFalloffMap();
                             ASSERT(falloffMap && "Point light needs a falloff map");
                             params[paramCount].pName = "attenuationLightMap";
                             params[paramCount++].ppTextures = &falloffMap->GetTexture().m_handle;
+                            m_lightResources[frame.m_frameIndex][lightIndex].m_attenuationLightMap = falloffMap->GetTexture();
 
                             uniformObjectData.m_pointLight.m_radius = light->m_light->GetRadius();
                             uniformObjectData.m_pointLight.m_lightPos = float3(lightViewPos.x, lightViewPos.y, lightViewPos.z);
@@ -2795,11 +2797,14 @@ namespace hpl {
                                 params[paramCount].pName = "goboMap";
                                 params[paramCount++].ppTextures = &light->m_light->GetGoboTexture()->GetTexture().m_handle;
                                 frame.m_resourcePool->Push(light->m_light->GetGoboTexture()->GetTexture());
+                                 m_lightResources[frame.m_frameIndex][lightIndex].m_goboMap = light->m_light->GetGoboTexture()->GetTexture();
                             } else {
                                 params[paramCount].pName = "falloffMap";
                                 params[paramCount++].ppTextures = &spotFallOffImage->GetTexture().m_handle;
                                 frame.m_resourcePool->Push(spotFallOffImage->GetTexture());
+                                m_lightResources[frame.m_frameIndex][lightIndex].m_falloffMap = spotFallOffImage->GetTexture();
                             }
+                            m_lightResources[frame.m_frameIndex][lightIndex].m_attenuationLightMap = spotAttenuationImage->GetTexture();
                             params[paramCount].pName = "attenuationLightMap";
                             params[paramCount++].ppTextures = &spotAttenuationImage->GetTexture().m_handle;
                             frame.m_resourcePool->Push(spotAttenuationImage->GetTexture());

@@ -211,6 +211,7 @@ namespace hpl {
                              std::memcpy(dstData + row * update.mDstRowStride, &srcData[row * update.mSrcRowStride], update.mSrcRowStride);
                         } else {
                             for(uint32_t column = 0;  column < desc.mWidth; column++) {
+                                std::memset(dstData + row * update.mDstRowStride + column * dstElementStride, 0xff, dstElementStride);
                                 std::memcpy(dstData + row * update.mDstRowStride + column * dstElementStride, &srcData[row * sourceRowStride + column * srcElementStride], std::min(dstElementStride, srcElementStride));
                             }
                         }

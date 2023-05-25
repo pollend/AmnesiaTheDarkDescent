@@ -24,11 +24,10 @@ namespace hpl {
         beginCmd(frame.m_cmd);
 
         auto& swapChainImage = frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex];
-
-        RenderTargetBarrier rtBarriers[] = {
-            { swapChainImage, RESOURCE_STATE_PRESENT, RESOURCE_STATE_RENDER_TARGET },
+        std::array rtBarriers = {
+            RenderTargetBarrier { swapChainImage, RESOURCE_STATE_PRESENT, RESOURCE_STATE_RENDER_TARGET },
         };
-        cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, 1, rtBarriers);
+        cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
     }
 
     void ForgeRenderer::SubmitFrame() {
@@ -36,10 +35,10 @@ namespace hpl {
         cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
         auto& swapChainImage = frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex];
 
-        RenderTargetBarrier rtBarriers[] = {
-            { swapChainImage, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_PRESENT },
+        std::array rtBarriers = {
+            RenderTargetBarrier{ swapChainImage, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_PRESENT },
         };
-        cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, 1, rtBarriers);
+        cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
         endCmd(m_cmds[CurrentFrameIndex()]);
 
         QueueSubmitDesc submitDesc = {};

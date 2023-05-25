@@ -39,6 +39,8 @@
 #include "math/MathTypes.h"
 #include <bx/debug.h>
 
+#include <graphics/ForgeHandles.h>
+
 
 //////////////////////////////////////////////////////////////////////////
 // CONSTRUCTORS
@@ -159,8 +161,16 @@ cLuxInventory::cLuxInventory() : iLuxUpdateable("LuxInventory")
 
 	mpWhiteGfx = mpGui->CreateGfxFilledRect(cColor(1,1), eGuiMaterial_Alpha);
 
-	m_program = hpl::loadProgram("vs_post_effect", "fs_dds_inventory_screen_effect");
-	m_s_diffuseMap = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
+    auto* forgeRenderer = Interface<ForgeRenderer>::Get();
+    m_inventoryScreenShader = ForgeShaderHandle(forgeRenderer->Rend());
+    m_inventoryScreenShader.Load([&](Shader ** shader) {
+        ShaderLoadDesc loadDesc = {};
+        loadDesc.mStages[0].pFileName = "fullscreen.vert";
+        loadDesc.mStages[1].pFileName = "dds_inventory_posteffect.frag";
+        addShader(forgeRenderer->Rend(), &loadDesc, shader);
+        return true;
+    });
+
 
 	mpFontDefault = NULL;
 	mpFontHeader = NULL;
@@ -1579,13 +1589,13 @@ void cLuxInventory::CreateScreenTextures()
 void cLuxInventory::RenderBackgroundImage()
 {
 	iLowLevelGraphics *pLowGfx = mpGraphics->GetLowLevel();
-	
+
 
 	EngineInterface* engine = Interface<EngineInterface>::Get();
 	auto& graphicsContext = engine->GetGraphicsContext();
 	auto* viewport = gpBase->mpMapHandler->GetViewport();
 	auto* renderer = viewport->GetRenderer();
-	
+
 	auto effectTarget = LegacyRenderTarget(m_screenBgTexture);
 	auto screenTarget = LegacyRenderTarget(m_screenImage);
 
@@ -1600,7 +1610,7 @@ void cLuxInventory::RenderBackgroundImage()
 	// 	GraphicsContext::ShaderProgram shaderProgram;
 	// 	cMatrixf projMtx;
 	// 	graphicsContext.ScreenSpaceQuad(layoutStream, projMtx, screenSize.x, screenSize.y);
-		
+
 	// 	GraphicsContext::ViewConfiguration viewConfiguration {effectTarget};
 	// 	viewConfiguration.m_projection = projMtx;
 	// 	viewConfiguration.m_viewRect = cRect2l(0, 0, screenSize.x, screenSize.y);
@@ -1609,9 +1619,9 @@ void cLuxInventory::RenderBackgroundImage()
 	// 	shaderProgram.m_configuration.m_write = Write::RGBA;
 	// 	shaderProgram.m_handle = m_program;
 	// 	// shaderProgram.m_projection = projMtx;
-		
+
 	// 	shaderProgram.m_textures.push_back({ m_s_diffuseMap, m_screenBgTexture->GetHandle(), 1 });
-		
+
 	// 	GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
 	// 	graphicsContext.Submit(view, request);
 	// }

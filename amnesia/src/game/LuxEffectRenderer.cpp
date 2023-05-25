@@ -18,6 +18,7 @@
  */
 
 #include "LuxEffectRenderer.h"
+
 #include "engine/Interface.h"
 #include <absl/container/inlined_vector.h>
 #include <graphics/Enum.h>
@@ -34,6 +35,8 @@
 #include "tinyimageformat_base.h"
 #include <folly/small_vector.h>
 #include "FixPreprocessor.h"
+
+#include "Common_3/Utilities/ThirdParty/OpenSource/ModifiedSonyMath/common.hpp"
 
 cLuxEffectRenderer::cLuxEffectRenderer()
     : iLuxUpdateable("LuxEffectRenderer")
@@ -141,6 +144,9 @@ cLuxEffectRenderer::cLuxEffectRenderer()
 
         VertexLayout vertexLayout = {};
         vertexLayout.mAttribCount = 2;
+        vertexLayout.mBindingCount = 2;
+        vertexLayout.mBindings[0].mStride = sizeof(float3);
+        vertexLayout.mBindings[1].mStride = sizeof(float2);
         vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
         vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
         vertexLayout.mAttribs[0].mBinding = 0;

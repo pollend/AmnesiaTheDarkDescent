@@ -19,6 +19,7 @@
 #pragma once
 
 #include "engine/RTTI.h"
+#include "graphics/ForgeHandles.h"
 #include "graphics/RenderList.h"
 #include "scene/Viewport.h"
 #include "windowing/NativeWindow.h"
@@ -138,7 +139,6 @@ namespace hpl {
 
             float2 viewTexel;
             float2  viewportSize;
-
         };
 
         class ShadowMapData {
@@ -486,7 +486,13 @@ namespace hpl {
             static constexpr size_t NumOfVariants = 4;
         };
         std::array<Sampler*, ObjectSamplerKey::NumOfVariants> m_objectSamplers{};
-
+        struct LightResourceEntry {
+            ForgeTextureHandle m_goboCubeMap ;
+            ForgeTextureHandle m_goboMap;
+            ForgeTextureHandle m_falloffMap;
+            ForgeTextureHandle m_attenuationLightMap;
+        };
+        std::array<std::array<LightResourceEntry , MaxLightUniforms>, ForgeRenderer::SwapChainLength> m_lightResources{};
         // z pass
         Shader* m_zPassShader;
         Pipeline* m_zPassPipeline;
