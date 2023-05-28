@@ -101,7 +101,7 @@ namespace hpl {
                 return;
             }
             if(!m_owning) {
-                ASSERT(m_refCounter && "RefCounter is null"); // we should have a refcounter if we don't own the handle
+                ASSERT(!m_refCounter && "RefCounter is not null"); // we should have a refcounter if we don't own the handle
                 m_handle = nullptr;
                 m_initialized = false;
                 return;
@@ -124,7 +124,8 @@ namespace hpl {
             m_handle = other.m_handle;
             m_refCounter = other.m_refCounter;
             m_initialized = other.m_initialized;
-            if(m_initialized) {
+            m_owning = other.m_owning;
+            if(m_initialized && m_owning) {
                 ASSERT(m_handle && "Handle is null");
                 ASSERT(m_refCounter && "RefCounter is null");
                 m_refCounter->m_refCount++;
@@ -136,6 +137,8 @@ namespace hpl {
             m_handle = other.m_handle;
             m_refCounter = other.m_refCounter;
             m_initialized = other.m_initialized;
+            m_owning = other.m_owning;
+            other.m_owning = false;
             other.m_handle = nullptr;
             other.m_refCounter = nullptr;
             other.m_initialized = false;
@@ -212,18 +215,22 @@ namespace hpl {
 
         }
         ForgeTextureHandle(ForgeTextureHandle&& other):
-            Base(std::move(other)) {
+            Base(std::move(other)),
+            m_renderTarget(std::move(other.m_renderTarget)) {
         }
         ~ForgeTextureHandle() {
         }
         void operator= (const ForgeTextureHandle& other) {
             Base::operator=(other);
+            m_renderTarget = other.m_renderTarget;
         }
         void operator= (ForgeTextureHandle&& other) {
             Base::operator=(std::move(other));
+            m_renderTarget = std::move(other.m_renderTarget);
         }
-        void AttachRenderTarget(ForgeRenderTarget renderTarget) {
+        void SetRenderTarget(ForgeRenderTarget renderTarget) {
             TryFree();
+            m_initialized = true;
             m_owning = false; // We don't own the handle we are attaching
             m_handle = renderTarget.m_handle->pTexture;
             m_renderTarget = renderTarget; // We don't own the handle

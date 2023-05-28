@@ -36,12 +36,12 @@ namespace hpl {
     }
 
     GraphicsContext::GraphicsContext()
-        : m_current(0), 
+        : m_current(0),
         m_queuedWindowEvent(BroadcastEvent::PreUpdate, Interface<window::NativeWindowWrapper>::Get()->NativeWindowEvent(), [](window::WindowEventPayload& payload) {
             switch (payload.m_type) {
             case hpl::window::WindowEventType::ResizeWindowEvent:
                 {
-                    bgfx::reset(payload.payload.m_resizeWindow.m_width, payload.payload.m_resizeWindow.m_height);
+                   // bgfx::reset(payload.payload.m_resizeWindow.m_width, payload.payload.m_resizeWindow.m_height);
                     break;
                 }
             default:
@@ -66,7 +66,7 @@ namespace hpl {
         m_colorProgram = resolveProgramCache<StringLiteral("vs_color"), StringLiteral("fs_color")>();
         m_uvProgram = resolveProgramCache<StringLiteral("vs_basic_uv"), StringLiteral("fs_basic_uv")>();
         m_meshColorProgram = resolveProgramCache<StringLiteral("vs_color"), StringLiteral("fs_color_1")>();
-    
+
         m_s_diffuseMap.Initialize();
         m_u_normalMtx.Initialize();
         m_u_color.Initialize();

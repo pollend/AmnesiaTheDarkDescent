@@ -9,7 +9,7 @@ PUSH_CONSTANT(postEffectConstants, b0)
     DATA(float2, blurSize, None);
 };
 
-RES(SamplerState, sampler0, UPDATE_FREQ_NONE, s0, binding = 0);
+RES(SamplerState, inputSampler, UPDATE_FREQ_NONE, s0, binding = 0);
 RES(Tex2D(float4), sourceInput, UPDATE_FREQ_PER_FRAME, t0, binding = 1);
 
 float4 PS_MAIN(PsIn In) 
@@ -34,7 +34,7 @@ float4 PS_MAIN(PsIn In)
     for(int i = 0; i < 5; i++)
     {
         float2 vOffset = (float2(fOffset[i], fOffset[i]) / float2(screenSize)) * offsetMul;
-        float3 vColor = SampleTex2D(sourceInput, Get(sampler0), In.uv.xy + offsetMul).xyz;
+        float3 vColor = SampleTex2D(Get(sourceInput), Get(inputSampler), In.uv.xy + offsetMul).xyz;
         amount += vColor * vMul[i];
     }
     amount /= mulSum;

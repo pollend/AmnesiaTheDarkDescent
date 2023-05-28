@@ -2892,7 +2892,6 @@ namespace hpl {
                     cmdBindPipeline(frame.m_cmd, m_lightStencilPipeline);
                     cmdBindLightDescriptor(light); // bind light descriptor light uniforms
                     cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
-
                     switch (light->m_light->GetLightType()) {
                         case eLightType_Point:
                             cmdBindPipeline(frame.m_cmd, m_pointLightPipeline[LightPipelineVariants::LightPipelineVariant_CW | LightPipelineVariants::LightPipelineVariant_StencilTest]);

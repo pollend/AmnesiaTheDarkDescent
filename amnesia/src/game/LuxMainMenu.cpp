@@ -42,13 +42,16 @@
 #include <sstream>
 #include "LuxAchievementHandler.h"
 #include "bgfx/bgfx.h"
-#include "graphics/Image.h"
-#include "graphics/RenderTarget.h"
 #include "math/MathTypes.h"
 #include <bx/debug.h>
 #include <scene/Scene.h>
 
 #include <engine/Interface.h>
+
+#include <graphics/ForgeHandles.h>
+#include <graphics/Image.h>
+#include <graphics/RenderTarget.h>
+
 //--------------------------------------------------------------------------------
 
 static const bool gbDebug_SkipBGScene = false;
@@ -215,7 +218,80 @@ cLuxMainMenu::cLuxMainMenu() : iLuxUpdateable("LuxDebugHandler")
         addShader(forgeRenderer->Rend(),&loadDesc, shader);
         return true;
     });
-    m_screenBlurTarget = ForgeRenderTarget(forgeRenderer->Rend());
+
+    {
+        std::array shaders = {
+            m_blurVerticalShader.m_handle,
+            m_blurHorizontalShader.m_handle
+        };
+        SamplerDesc samplerDesc = {};
+        addSampler(forgeRenderer->Rend(), &samplerDesc,  &m_inputSampler);
+
+        RootSignatureDesc rootDesc{};
+        const char* pStaticSamplers[] = { "inputSampler" };
+        rootDesc.ppShaders = shaders.data();
+        rootDesc.mShaderCount = shaders.size();
+        rootDesc.mStaticSamplerCount = 1;
+        rootDesc.ppStaticSamplers = &m_inputSampler;
+        rootDesc.ppStaticSamplerNames = pStaticSamplers;
+        addRootSignature(forgeRenderer->Rend(), &rootDesc, &m_blurRootSignature);
+
+        DescriptorSetDesc setDesc = { m_blurRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, cLuxMainMenu::BlurSetSize };
+        for(auto& descSet: m_perFrameBlurDescriptorSet) {
+            addDescriptorSet(forgeRenderer->Rend(), &setDesc, &descSet);
+        }
+    }
+    TinyImageFormat inputFormat = TinyImageFormat_R8G8B8A8_UNORM;
+    {
+            DepthStateDesc depthStateDisabledDesc = {};
+            depthStateDisabledDesc.mDepthWrite = false;
+            depthStateDisabledDesc.mDepthTest = false;
+
+            RasterizerStateDesc rasterStateNoneDesc = {};
+            rasterStateNoneDesc.mCullMode = CULL_MODE_NONE;
+
+            PipelineDesc pipelineDesc = {};
+            pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+            GraphicsPipelineDesc& copyPipelineDesc = pipelineDesc.mGraphicsDesc;
+            copyPipelineDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+            copyPipelineDesc.pShaderProgram = m_blurVerticalShader.m_handle;
+            copyPipelineDesc.pRootSignature = m_blurRootSignature;
+            copyPipelineDesc.mRenderTargetCount = 1;
+            copyPipelineDesc.mDepthStencilFormat = TinyImageFormat_UNDEFINED;
+            copyPipelineDesc.pVertexLayout = NULL;
+            copyPipelineDesc.pRasterizerState = &rasterStateNoneDesc;
+            copyPipelineDesc.pDepthState = &depthStateDisabledDesc;
+            copyPipelineDesc.pBlendState = NULL;
+            copyPipelineDesc.mSampleCount = SAMPLE_COUNT_1;
+            copyPipelineDesc.mSampleQuality = 0;
+            copyPipelineDesc.pColorFormats = &inputFormat;
+            addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_blurVerticalPipeline);
+    }
+    {
+            DepthStateDesc depthStateDisabledDesc = {};
+            depthStateDisabledDesc.mDepthWrite = false;
+            depthStateDisabledDesc.mDepthTest = false;
+
+            RasterizerStateDesc rasterStateNoneDesc = {};
+            rasterStateNoneDesc.mCullMode = CULL_MODE_NONE;
+
+            PipelineDesc pipelineDesc = {};
+            pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+            GraphicsPipelineDesc& copyPipelineDesc = pipelineDesc.mGraphicsDesc;
+            copyPipelineDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+            copyPipelineDesc.pShaderProgram = m_blurVerticalShader.m_handle;
+            copyPipelineDesc.pRootSignature = m_blurRootSignature;
+            copyPipelineDesc.mRenderTargetCount = 1;
+            copyPipelineDesc.mDepthStencilFormat = TinyImageFormat_UNDEFINED;
+            copyPipelineDesc.pVertexLayout = NULL;
+            copyPipelineDesc.pRasterizerState = &rasterStateNoneDesc;
+            copyPipelineDesc.pDepthState = &depthStateDisabledDesc;
+            copyPipelineDesc.pBlendState = NULL;
+            copyPipelineDesc.mSampleCount = SAMPLE_COUNT_1;
+            copyPipelineDesc.mSampleQuality = 0;
+            copyPipelineDesc.pColorFormats = &inputFormat;
+            addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_blurHorizontalPipeline);
+    }
 
 
 	mpScreenGfx = NULL;
@@ -402,7 +478,7 @@ void cLuxMainMenu::OnEnterContainer(const tString& asOldContainer)
 
 void cLuxMainMenu::OnLeaveContainer(const tString& asNewContainer)
 {
-	//Unlock input if not in window
+	//Unlock input if not in windowLuxMain
 	if (gpBase->mpDebugHandler->GetDebugWindowActive()==false)
 	{
 		if(	gpBase->mpConfigHandler->mbFullscreen==false)
@@ -1308,8 +1384,9 @@ void cLuxMainMenu::CreateScreenTextures()
 	iLowLevelGraphics *pLowGfx = mpGraphics->GetLowLevel();
 	cVector3l vTexSize = pLowGfx->GetScreenSizeInt();
 	vTexSize.z = 0;
-
     auto* forgeRenderer = Interface<ForgeRenderer>::Get();
+    m_screenBlurTarget = ForgeRenderTarget(forgeRenderer->Rend());
+    m_screenTarget = ForgeRenderTarget(forgeRenderer->Rend());
     m_screenBlurTarget.Load([&](RenderTarget** texture) {
         RenderTargetDesc renderTarget = {};
         renderTarget.mArraySize = 1;
@@ -1325,163 +1402,157 @@ void cLuxMainMenu::CreateScreenTextures()
         return true;
     });
 
-    m_screenImage = [&]{
-        auto desc = ImageDescriptor::CreateTexture2D(
-            vTexSize.x,
-            vTexSize.y,
-            false,
-            bgfx::TextureFormat::Enum::RGBA8);
-        desc.m_configuration.m_rt = RTType::RT_Write;
-        auto image = std::make_shared<Image>();
-        image->Initialize(desc);
-        return image;
-    }();
+    m_screenTarget.Load([&](RenderTarget** texture) {
+        RenderTargetDesc renderTarget = {};
+        renderTarget.mArraySize = 1;
+        renderTarget.mDepth = 1;
+        renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+        renderTarget.mWidth = vTexSize.x;
+        renderTarget.mHeight = vTexSize.y;
+        renderTarget.mSampleCount = SAMPLE_COUNT_1;
+        renderTarget.mSampleQuality = 0;
+        renderTarget.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
+        renderTarget.mFormat = TinyImageFormat_R8G8B8A8_UNORM;
+        addRenderTarget(forgeRenderer->Rend(), &renderTarget, texture);
+        return true;
+    });
 
-	m_screenBlurImage = [&]{
-        auto desc = ImageDescriptor::CreateTexture2D(
-            vTexSize.x,
-            vTexSize.y,
-            false,
-            bgfx::TextureFormat::Enum::RGBA8);
-        desc.m_configuration.m_rt = RTType::RT_Write;
-		desc.m_configuration.m_UWrap = WrapMode::Clamp;
-		desc.m_configuration.m_VWrap = WrapMode::Clamp;
-        auto image = std::make_shared<Image>();
-        image->Initialize(desc);
-        return image;
-    }();
+    {
+        ForgeTextureHandle texture;
+        texture.SetRenderTarget(m_screenTarget);
+        m_screenImage = std::make_shared<Image>();
+        m_screenImage->SetForgeTexture(std::move(texture));
+        mpScreenGfx = mpGui->CreateGfxTexture(m_screenImage.get(),false,eGuiMaterial_Diffuse, cColor(1,1), true, 0, 1, true);
+    }
 
-	mpScreenGfx = mpGui->CreateGfxTexture(m_screenImage.get(),false,eGuiMaterial_Diffuse, cColor(1,1), true, 0, 1, true);
-	mpScreenBlurGfx = mpGui->CreateGfxTexture(m_screenBlurImage.get(),false,eGuiMaterial_Alpha, cColor(1,1), true, 0, 1, true);
+    {
+        ForgeTextureHandle texture;
+        texture.SetRenderTarget(m_screenBlurTarget);
+        m_screenBlurImage = std::make_shared<Image>();
+        m_screenBlurImage->SetForgeTexture(std::move(texture));
+	    mpScreenBlurGfx = mpGui->CreateGfxTexture(m_screenBlurImage.get(),false,eGuiMaterial_Alpha, cColor(1,1), true, 0, 1, true);
+    }
 }
-
-//-----------------------------------------------------------------------
-
-// void cLuxMainMenu::RenderBlur(iTexture *apInputTexture, iTexture *apTempTexture, iFrameBuffer **apBlurBuffers)
-// {
-// 	iLowLevelGraphics *pLowGfx = mpGraphics->GetLowLevel();
-
-// 	//Draw horizontal blur to temp from screen
-// 	mpBlurProgram[0]->Bind();
-// 	pLowGfx->SetCurrentFrameBuffer(apBlurBuffers[0]);
-
-// 	pLowGfx->SetTexture(0,apInputTexture);
-
-// 	pLowGfx->DrawQuad(0,mvScreenSize,cVector2f(0, mvScreenSize.y),cVector2f(mvScreenSize.x,0),cColor(1,1));
-// 	mpBlurProgram[0]->UnBind();
-
-// 	//Draw vertical blur to final from temp
-// 	mpBlurProgram[1]->Bind();
-// 	pLowGfx->SetCurrentFrameBuffer(apBlurBuffers[1]);
-
-// 	pLowGfx->SetTexture(0,apTempTexture);
-
-// 	pLowGfx->DrawQuad(0,mvScreenSize,cVector2f(0, mvScreenSize.y),cVector2f(mvScreenSize.x,0),cColor(1,1));
-// 	mpBlurProgram[1]->UnBind();
-// }
 
 void cLuxMainMenu::RenderBlurTexture()
 {
 	iLowLevelGraphics *pLowGfx = mpGraphics->GetLowLevel();
 	EngineInterface* engine = Interface<EngineInterface>::Get();
+    auto* forgeRenderer = Interface<ForgeRenderer>::Get();
+    auto frame = forgeRenderer->GetFrame();
 
 	auto* scene = engine->GetScene();
 	auto& graphicsContext = engine->GetGraphicsContext();
-	auto viewport = gpBase->mpMapHandler->GetViewport();
+	auto* viewport = gpBase->mpMapHandler->GetViewport();
 	auto* renderer = viewport->GetRenderer();
-	// auto outputImage = boundViewport->GetRenderTarget().GetImage();
 	auto viewportSize = viewport->GetSize();
 
-	auto tempBlurImage = [&]{
-        auto desc = ImageDescriptor::CreateTexture2D(
-            viewportSize.x,
-            viewportSize.y,
-            false,
-            bgfx::TextureFormat::Enum::RGBA8);
-        desc.m_configuration.m_rt = RTType::RT_Write;
-        auto image = std::make_shared<Image>();
-        image->Initialize(desc);
-        return image;
-    }();
+    ForgeRenderTarget tempBlurTarget(forgeRenderer->Rend());
+    tempBlurTarget.Load([&](RenderTarget** target) {
+        RenderTargetDesc renderTarget = {};
+        renderTarget.mArraySize = 1;
+        renderTarget.mDepth = 1;
+        renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+        renderTarget.mWidth = viewportSize.x;
+        renderTarget.mHeight = viewportSize.y;
+        renderTarget.mSampleCount = SAMPLE_COUNT_1;
+        renderTarget.mSampleQuality = 0;
+        renderTarget.mStartState = RESOURCE_STATE_RENDER_TARGET;
+        renderTarget.mFormat = TinyImageFormat_R8G8B8A8_UNORM;
+        addRenderTarget(forgeRenderer->Rend(), &renderTarget, target);
+        return true;
+    });
 
-	std::array<LegacyRenderTarget,2> blurTargets {
-		LegacyRenderTarget(tempBlurImage),
-		LegacyRenderTarget(m_screenBlurImage)
+
+	uint32_t rootConstantIndex = getDescriptorIndexFromName(m_blurRootSignature, "postEffectConstants");
+    float blurSize = 1.0f;
+    cmdBindPushConstants(frame.m_cmd, m_blurRootSignature, rootConstantIndex, &blurSize);
+    // third copy umm need to out how to handle this
+	auto requestBlur = [&](Texture* input){
+
+        {
+            cmdBindRenderTargets(frame.m_cmd, 1, &tempBlurTarget.m_handle, NULL, NULL, NULL, NULL, -1, -1);
+
+            std::array<DescriptorData, 1> params = {};
+            params[0].pName = "sourceInput";
+            params[0].ppTextures = &input;
+            updateDescriptorSet(frame.m_renderer->Rend(), m_setIndex, m_perFrameBlurDescriptorSet[frame.m_frameIndex], params.size(), params.data());
+
+            LoadActionsDesc loadActions = {};
+            loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
+            loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
+
+            cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, static_cast<float>(viewportSize.x), static_cast<float>(viewportSize.y), 0.0f, 1.0f);
+            cmdSetScissor(frame.m_cmd, 0, 0, static_cast<float>(viewportSize.x), static_cast<float>(viewportSize.y));
+            cmdBindPipeline(frame.m_cmd, m_blurHorizontalPipeline);
+
+            cmdBindDescriptorSet(frame.m_cmd, m_setIndex, m_perFrameBlurDescriptorSet[frame.m_frameIndex]);
+            cmdDraw(frame.m_cmd, 3, 0);
+
+            m_setIndex = (m_setIndex + 1) % cLuxMainMenu::BlurSetSize;
+        }
+        {
+            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+            std::array rtBarriers = {
+                RenderTargetBarrier{ tempBlurTarget.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
+                RenderTargetBarrier{ m_screenBlurTarget.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET},
+            };
+            cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+        }
+        {
+            cmdBindRenderTargets(frame.m_cmd, 1, &m_screenBlurTarget.m_handle, NULL, NULL, NULL, NULL, -1, -1);
+
+            std::array<DescriptorData, 1> params = {};
+            params[0].pName = "sourceInput";
+            params[0].ppTextures = &tempBlurTarget.m_handle->pTexture;
+            updateDescriptorSet(frame.m_renderer->Rend(), m_setIndex, m_perFrameBlurDescriptorSet[frame.m_frameIndex], params.size(), params.data());
+
+            LoadActionsDesc loadActions = {};
+            loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
+            loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
+
+            cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, static_cast<float>(viewportSize.x), static_cast<float>(viewportSize.y), 0.0f, 1.0f);
+            cmdSetScissor(frame.m_cmd, 0, 0, static_cast<float>(viewportSize.x), static_cast<float>(viewportSize.y));
+            cmdBindPipeline(frame.m_cmd, m_blurVerticalPipeline);
+
+            cmdBindDescriptorSet(frame.m_cmd, m_setIndex, m_perFrameBlurDescriptorSet[frame.m_frameIndex]);
+            cmdDraw(frame.m_cmd, 3, 0);
+
+            m_setIndex = (m_setIndex + 1) % cLuxMainMenu::BlurSetSize;
+        }
+        {
+            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+            std::array rtBarriers = {
+                RenderTargetBarrier{ tempBlurTarget.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET},
+                RenderTargetBarrier{ m_screenBlurTarget.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE},
+            };
+            cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+        }
 	};
+    auto outputRt = renderer->GetOutputImage(frame.m_frameIndex, *viewport);
+    {
+        cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+        std::array rtBarriers = {
+            RenderTargetBarrier{ m_screenTarget.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
+        };
+        cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+    }
 
-	// third copy umm need to out how to handle this
-	auto requestBlur = [&](Image& input){
-		struct {
-			float u_useHorizontal;
-			float u_blurSize;
-			float texelSize[2];
-		} blurParams = {0};
-
-		auto image = blurTargets[1].GetImage(0);
-		{
-        	GraphicsContext::LayoutStream layoutStream;
-			cMatrixf projMtx;
-			graphicsContext.ScreenSpaceQuad(layoutStream, projMtx, viewportSize.x, viewportSize.y);
-
-			GraphicsContext::ViewConfiguration viewConfiguration {blurTargets[0]};
-			viewConfiguration.m_projection = projMtx;
-			viewConfiguration.m_viewRect = cRect2l(0, 0, image->GetWidth(), image->GetHeight());
-
-			bgfx::ViewId view = graphicsContext.StartPass("Blur Pass 1", viewConfiguration);
-			blurParams.u_useHorizontal = 0;
-			blurParams.u_blurSize = 1.0;
-			blurParams.texelSize[0] = image->GetWidth();
-			blurParams.texelSize[1] = image->GetHeight();
-
-			GraphicsContext::ShaderProgram shaderProgram;
-			shaderProgram.m_configuration.m_write = Write::RGBA;
-			shaderProgram.m_handle = m_blurProgram;
-			// shaderProgram.m_projection = projMtx;
-
-			shaderProgram.m_textures.push_back({ m_s_diffuseMap, input.GetHandle(), 1 });
-			shaderProgram.m_uniforms.push_back({ m_u_param, &blurParams, 1 });
-
-			GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
-			graphicsContext.Submit(view, request);
-		}
-
-		{
-
-        	GraphicsContext::LayoutStream layoutStream;
-			GraphicsContext::ShaderProgram shaderProgram;
-			cMatrixf projMtx;
-			graphicsContext.ScreenSpaceQuad(layoutStream, projMtx, viewportSize.x, viewportSize.y);
-
-			GraphicsContext::ViewConfiguration viewConfiguration {blurTargets[1]};
-			viewConfiguration.m_projection = projMtx;
-			viewConfiguration.m_viewRect = cRect2l(0, 0, image->GetWidth(), image->GetHeight());
-			bgfx::ViewId view = graphicsContext.StartPass("Blur Pass 2", viewConfiguration);
-
-			blurParams.u_useHorizontal = 1.0;
-			blurParams.u_blurSize = 1.0f;
-			blurParams.texelSize[0] = image->GetWidth();
-			blurParams.texelSize[1] = image->GetHeight();
-
-			shaderProgram.m_configuration.m_write = Write::RGBA;
-			shaderProgram.m_handle = m_blurProgram;
-			// shaderProgram.m_projection = projMtx;
-
-			shaderProgram.m_textures.push_back({ m_s_diffuseMap, blurTargets[0].GetImage()->GetHandle(), 1 });
-			shaderProgram.m_uniforms.push_back({ m_u_param, &blurParams, 1 });
-
-			GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
-			graphicsContext.Submit(view, request);
-		}
-	};
-
-	LegacyRenderTarget tempTarget = LegacyRenderTarget(m_screenImage);
-	cRect2l rect = cRect2l(0,0,viewportSize.x,viewportSize.y);
-	// graphicsContext.CopyTextureToFrameBuffer(*renderer->GetOutputImage(*viewport), rect, tempTarget);
-
-	requestBlur(*m_screenImage);
+    forgeRenderer->cmdCopyTexture(ForgeRenderer::CopyPipelineToUnormR8G8B8A8, frame.m_cmd, outputRt.m_handle->pTexture, m_screenTarget.m_handle);
+    {
+        cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+        std::array rtBarriers = {
+            RenderTargetBarrier{ m_screenTarget.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
+        };
+        cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+    }
+    frame.m_resourcePool->Push(tempBlurTarget);
+    frame.m_resourcePool->Push(m_screenTarget);
+    frame.m_resourcePool->Push(m_screenBlurTarget);
+	requestBlur(m_screenTarget.m_handle->pTexture);
 
 	for(int i=0; i<6; ++i) {
-		requestBlur(*blurTargets[1].GetImage());
+		requestBlur(m_screenBlurTarget.m_handle->pTexture);
 	}
 }
 

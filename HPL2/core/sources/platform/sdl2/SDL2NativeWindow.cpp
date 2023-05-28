@@ -1,12 +1,12 @@
 /**
 * Copyright 2023 Michael Pollind
-* 
+*
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
 * You may obtain a copy of the License at
-* 
+*
 *     http://www.apache.org/licenses/LICENSE-2.0
-* 
+*
 * Unless required by applicable law or agreed to in writing, software
 * distributed under the License is distributed on an "AS IS" BASIS,
 * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -71,7 +71,7 @@ namespace hpl::window::internal {
             SDL_Quit();
             delete impl;
         });
-        uint32_t flags = 
+        uint32_t flags =
             (any(style & WindowStyle::WindowStyleTitleBar) ? SDL_WINDOW_BORDERLESS : 0) |
             (any(style & WindowStyle::WindowStyleResizable) ? SDL_WINDOW_RESIZABLE : 0) |
             (any(style & WindowStyle::WindowStyleBorderless) ? SDL_WINDOW_BORDERLESS : 0) |
@@ -110,7 +110,7 @@ namespace hpl::window::internal {
         if (!SDL_GetWindowWMInfo(impl->m_window, &wmi)) {
             return handle;
         }
-            
+
         #if defined(VK_USE_PLATFORM_XLIB_KHR)
             handle.display = wmi.info.x11.display;
             handle.window = wmi.info.x11.window;
@@ -287,19 +287,19 @@ namespace hpl::window::internal {
     void Process(NativeWindowHandler& handler) {
         auto impl = static_cast<NativeWindowImpl*>(handler.Get());
 
-        {
-            std::lock_guard<std::recursive_mutex> lk(impl->m_mutex);
-            for (auto& handler : impl->m_processCmd) {
-                handler(*impl);
-            }
-            impl->m_processCmd.clear();
-        }
 
-        impl->m_windowFlags = SDL_GetWindowFlags(impl->m_window);
         InternalEvent internalEvent;
         WindowEventPayload windowEventPayload;
-        // SDL_POL
         while (SDL_WaitEvent(&internalEvent.m_sdlEvent)) {
+            {
+                std::lock_guard<std::recursive_mutex> lk(impl->m_mutex);
+                for (auto& handler : impl->m_processCmd) {
+                    handler(*impl);
+                }
+                impl->m_processCmd.clear();
+            }
+            impl->m_windowFlags = SDL_GetWindowFlags(impl->m_window);
+
             auto& event = internalEvent.m_sdlEvent;
             impl->m_internalWindowEvent.Signal(internalEvent);
             switch (event.type) {

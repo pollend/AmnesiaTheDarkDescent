@@ -192,7 +192,7 @@ namespace hpl {
             if(!pViewPort->IsValid()) {
                 continue;
             }
-    
+
             //////////////////////////////////////////////
             // Init vars
             cPostEffectComposite* pPostEffectComposite = pViewPort->GetPostEffectComposite();
@@ -255,10 +255,10 @@ namespace hpl {
 
             //     STOP_TIMING(RenderPostEffects)
             // } else {
-                
+
                 auto size = pViewPort->GetSize();
                 cRect2l rect = cRect2l(0, 0, size.x, size.y);
-                forgeRenderer->cmdCopyTexture(ForgeRenderer::CopyPipelineToSwapChain, frame.m_cmd, outputImage,
+                forgeRenderer->cmdCopyTexture(ForgeRenderer::CopyPipelineToSwapChain, frame.m_cmd, outputImage.m_handle->pTexture,
                     frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex]);
                 // context.CopyTextureToFrameBuffer(
                 //     *outputImage, rect, pViewPort->GetRenderTarget());

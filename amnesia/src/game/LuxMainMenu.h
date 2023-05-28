@@ -14,13 +14,9 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
- */
+ * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>*/
 
-#ifndef LUX_MAIN_MENU_H
-#define LUX_MAIN_MENU_H
-
-//----------------------------------------------
+#pragma once
 
 #include "LuxBase.h"
 #include <memory>
@@ -28,6 +24,8 @@
 #include <graphics/ForgeHandles.h>
 #include <graphics/Image.h>
 
+#include "Common_3/Graphics/Interfaces/IGraphics.h"
+#include <FixPreprocessor.h>
 
 enum eLuxMainMenuWindow
 {
@@ -276,16 +274,20 @@ private:
 	std::shared_ptr<Image> m_screenBlurImage;
 
     ForgeRenderTarget m_screenBlurTarget;
+    ForgeRenderTarget m_screenTarget;
 
     cGuiGfxElement *mpScreenGfx;
 	cGuiGfxElement *mpScreenBlurGfx;
-	bgfx::ProgramHandle m_blurProgram = BGFX_INVALID_HANDLE;
 
+    static constexpr uint32_t BlurSetSize = 64;
+    Sampler* m_inputSampler;
     ForgeShaderHandle m_blurVerticalShader;
     ForgeShaderHandle m_blurHorizontalShader;
-
-	bgfx::UniformHandle m_s_diffuseMap;
-	bgfx::UniformHandle m_u_param;
+    RootSignature* m_blurRootSignature;
+    std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perFrameBlurDescriptorSet;
+    uint32_t m_setIndex = 0;
+    Pipeline* m_blurVerticalPipeline;
+    Pipeline* m_blurHorizontalPipeline;
 
 	cGuiGfxElement *mpLogoGfx;
 
@@ -319,4 +321,3 @@ private:
 //----------------------------------------------
 
 
-#endif // LUX_MAIN_MENU_H

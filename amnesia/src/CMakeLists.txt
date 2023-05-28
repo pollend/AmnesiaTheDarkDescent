@@ -54,8 +54,8 @@ if(WITH_TOOLS)
             DESTINATION ${AMNESIA_EXECUTABLE_OUTPUT_PATH})
     install (TARGETS ParticleEditor RUNTIME
             DESTINATION ${AMNESIA_EXECUTABLE_OUTPUT_PATH})
-    install (TARGETS MaterialEditor RUNTIME
-            DESTINATION ${AMNESIA_EXECUTABLE_OUTPUT_PATH})
+        #    install (TARGETS MaterialEditor RUNTIME
+        #     DESTINATION ${AMNESIA_EXECUTABLE_OUTPUT_PATH})
 endif()
 if(WIN32)
     install (TARGETS Amnesia 

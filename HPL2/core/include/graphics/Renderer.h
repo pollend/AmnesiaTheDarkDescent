@@ -21,6 +21,8 @@
 #include "bgfx/bgfx.h"
 #include "engine/RTTI.h"
 #include "graphics/Enum.h"
+#include "graphics/ForgeHandles.h"
+#include "graphics/ForgeRenderer.h"
 #include "graphics/GraphicsContext.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Image.h"
@@ -39,7 +41,7 @@
 #include "Common_3/Graphics/Interfaces/IGraphics.h"
 #include <FixPreprocessor.h>
 namespace hpl {
-    
+
 
     //---------------------------------------------
 
@@ -63,7 +65,7 @@ namespace hpl {
 
     namespace rendering::detail {
         using RenderableIterCallback = std::function<void(iRenderable* obj, GraphicsContext::LayoutStream&, GraphicsContext::ShaderProgram&)>;
-    
+
         eShadowMapResolution GetShadowMapResolution(eShadowMapResolution aWanted, eShadowMapResolution aMax);
         /**
         * @brief Checks if the given object is occluded by the given planes.
@@ -74,12 +76,12 @@ namespace hpl {
         bool IsObjectVisible(iRenderable *apObject, tRenderableFlag alNeededFlags, std::span<cPlanef> occlusionPlanes);
 
         void RenderableMaterialIter(
-            iRenderer* renderer, 
+            iRenderer* renderer,
             std::span<iRenderable*> iter,
             cViewport& viewport,
             eMaterialRenderMode mode,
             std::function<void(iRenderable* obj, GraphicsContext::LayoutStream&, GraphicsContext::ShaderProgram&)> handler);
-        
+
         bool IsRenderableNodeIsVisible(iRenderableContainerNode* apNode, std::span<cPlanef> clipPlanes);
         bool IsObjectIsVisible(iRenderable* object, tRenderableFlag neededFlags, std::span<cPlanef> clipPlanes = {});
 
@@ -285,7 +287,7 @@ namespace hpl {
         virtual bool LoadData()=0;
         virtual void DestroyData()=0;
 
-        virtual Texture* GetOutputImage(uint32_t frameIndex, cViewport& viewport) { return nullptr;}
+        virtual ForgeRenderTarget GetOutputImage(uint32_t frameIndex, cViewport& viewport) { return ForgeRenderTarget();}
 
         cWorld *GetCurrentWorld(){ return mpCurrentWorld;}
         cFrustum *GetCurrentFrustum(){ return mpCurrentFrustum;}
@@ -374,7 +376,7 @@ namespace hpl {
     class cRendererCallbackFunctions
     {
     public:
-        cRendererCallbackFunctions(GraphicsContext& context, cViewport& viewport,iRenderer *apRenderer) : 
+        cRendererCallbackFunctions(GraphicsContext& context, cViewport& viewport,iRenderer *apRenderer) :
             m_context(context),
             m_viewport(viewport),
             mpRenderer(apRenderer) {}
@@ -390,21 +392,21 @@ namespace hpl {
         [[deprecated("SetFlatProjectionMinMax is deprecated")]]
         inline void SetFlatProjectionMinMax(const cVector3f &avMin,const cVector3f &avMax) { }
         [[deprecated("SetNormalFrustumProjection is deprecated")]]
-        inline void SetNormalFrustumProjection() { 
+        inline void SetNormalFrustumProjection() {
         }
 
         [[deprecated("SetOrthoProjection is deprecated")]]
         inline void DrawQuad(	const cVector3f& aPos, const cVector2f& avSize, const cVector2f& avMinUV=0, const cVector2f& avMaxUV=1,
                                 bool abInvertY=false, const cColor& aColor=cColor(1,1) )
-                            { 
-                                
+                            {
+
                              }
         [[deprecated("SetDepthTest is deprecated")]]
-        inline bool SetDepthTest(bool abX){ 
+        inline bool SetDepthTest(bool abX){
             return false;
          }
         [[deprecated("SetDepthWrite is deprecated")]]
-        inline bool SetDepthWrite(bool abX){ 
+        inline bool SetDepthWrite(bool abX){
             return false;
         }
         [[deprecated("SetDepthTestFunc is deprecated")]]
@@ -412,19 +414,19 @@ namespace hpl {
             return false;
         }
         [[deprecated("SetCullActive is deprecated")]]
-        inline bool SetCullActive(bool abX){ 
-            return false; 
+        inline bool SetCullActive(bool abX){
+            return false;
         }
         [[deprecated("SetCullMode is deprecated")]]
-        inline bool SetCullMode(eCullMode aMode){ 
+        inline bool SetCullMode(eCullMode aMode){
             return false;
         }
         [[deprecated("SetStencilActive is deprecated")]]
-        inline bool SetStencilActive(bool abX){ 
+        inline bool SetStencilActive(bool abX){
             return true;
         }
         [[deprecated("SetStencilFunc is deprecated")]]
-        inline bool SetScissorActive(bool abX){ 
+        inline bool SetScissorActive(bool abX){
             return false;
         }
         [[deprecated("SetStencilFunc is deprecated")]]
@@ -437,7 +439,7 @@ namespace hpl {
         [[deprecated("SetStencilFunc is deprecated")]]
         inline bool SetAlphaMode(eMaterialAlphaMode aMode){ return false; }
         [[deprecated("SetBlendMode is deprecated")]]
-        inline bool SetBlendMode(eMaterialBlendMode aMode){ 
+        inline bool SetBlendMode(eMaterialBlendMode aMode){
             return false;
          }
         [[deprecated("SetTexture is deprecated")]]
@@ -445,7 +447,7 @@ namespace hpl {
 
         }
         [[deprecated("SetTextureRange is deprecated")]]
-        inline void SetTextureRange(iTexture *apTexture, int alFirstUnit, int alLastUnit = kMaxTextureUnits-1){ 
+        inline void SetTextureRange(iTexture *apTexture, int alFirstUnit, int alLastUnit = kMaxTextureUnits-1){
         }
         [[deprecated("SetTexture is deprecated")]]
         inline void SetVertexBuffer(iVertexBuffer *apVtxBuffer){
@@ -455,8 +457,8 @@ namespace hpl {
         inline void SetMatrix(cMatrixf *apMatrix){
         }
         [[deprecated("SetModelViewMatrix is deprecated")]]
-        inline void SetModelViewMatrix(const cMatrixf& a_mtxModelView){ 
-            
+        inline void SetModelViewMatrix(const cMatrixf& a_mtxModelView){
+
         }
 
         [[deprecated("SetProjectionMatrix is deprecated")]]
@@ -465,7 +467,7 @@ namespace hpl {
         [[deprecated("DrawWireFrame is deprecated")]]
         void DrawWireFrame(iVertexBuffer *apVtxBuffer, const cColor &aColor){ }
 
-     
+
         iLowLevelGraphics *GetLowLevelGfx(){ return mpRenderer->mpLowLevelGraphics;}
 
     private:

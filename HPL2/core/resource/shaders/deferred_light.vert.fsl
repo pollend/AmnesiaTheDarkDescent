@@ -18,5 +18,5 @@ VSOutput VS_MAIN(VSInput In )
     VSOutput Out;
 
     Out.Position = mul(Get(mvp), float4(In.Position.xyz, 1.0));
-	RETURN(Out);
+    RETURN(Out);
 }

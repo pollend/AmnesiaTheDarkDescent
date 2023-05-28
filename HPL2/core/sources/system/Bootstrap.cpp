@@ -56,6 +56,7 @@ namespace hpl {
             // bgfx::renderFrame();
             m_window.Process();
         }
+
     }
 
     void Bootstrap::Initialize(BootstrapConfiguration configuration) {
@@ -78,11 +79,8 @@ namespace hpl {
         hpl::window::internal::ConnectInternalEventHandler(windowHandle,
             hpl::input::internal::mouse::GetWindowEventHandle(mouseHandle));
 
-
         m_window = hpl::window::NativeWindowWrapper(std::move(windowHandle));
-
         m_window.SetWindowSize(cVector2l(1920, 1080));
-
 
         // core renderer initialization
         m_renderer.InitializeRenderer(&m_window);

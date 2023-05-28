@@ -131,12 +131,12 @@ namespace hpl {
         // increment frame index and swap chain index
         void IncrementFrame();
         void SubmitFrame();
-        inline Renderer* Rend() { 
+        inline Renderer* Rend() {
             ASSERT(m_renderer);
-            return m_renderer; 
+            return m_renderer;
         }
         RootSignature* PipelineSignature() { return m_pipelineSignature; }
-        
+
         size_t SwapChainIndex() { return m_swapChainIndex; }
         size_t CurrentFrameIndex() { return m_currentFrameCount % SwapChainLength; }
         size_t FrameCount() { return m_currentFrameCount; }
@@ -144,9 +144,7 @@ namespace hpl {
 
         void cmdCopyTexture(CopyPipelines copy, Cmd* cmd, Texture* srcTexture, RenderTarget* dstTexture);
 
-
     private:
-
         std::array<Sampler*, SamplerPoolKey::NumOfVariants> m_samplerPool;
         std::array<CommandResourcePool, SwapChainLength> m_resourcePool;
         std::array<Fence*, SwapChainLength> m_renderCompleteFences;
@@ -166,7 +164,7 @@ namespace hpl {
         RootSignature* m_copyPostProcessingRootSignature = nullptr;
         DescriptorSet* m_copyPostProcessingDescriptorSet = nullptr;
         uint32_t m_copyRegionDescriptorIndex = 0;
-  
+
         uint32_t m_currentFrameCount = 0;
         uint32_t m_swapChainIndex = 0;
         // uint32_t m_resourcePoolIndex = 0;

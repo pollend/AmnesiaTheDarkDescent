@@ -10,6 +10,7 @@ float4 PS_MAIN(PsIn In)
 {
     INIT_MAIN;
     float2 NDC = In.Position.xy * Get(viewTexel);
+    bool isSpecular = Get(lightColor).w > 0.0;
 
     float4 color =  SampleTex2D(Get(diffuseMap), Get(nearestSampler), NDC);
     float3 normal = SampleTex2D(Get(normalMap), Get(nearestSampler), NDC).xyz;
@@ -30,11 +31,11 @@ float4 PS_MAIN(PsIn In)
     
     /////////////////////////////////
 	//Calculate diffuse color
-    float fLDotN = max(dot(normalizedNormal, normalLightDir), 0.0);
-	float3 diffuseColor = color.xyz * Get(lightColor).xyz * fLDotN;
+    float fLDotN = max(dot((isSpecular ? normalizedNormal : normal), normalLightDir), 0.0);
+    float3 diffuseColor = color.xyz * Get(lightColor).xyz * fLDotN;
 
     float3 specularColor = float3(0.0, 0.0, 0.0);
-    if(Get(lightColor).w > 0.0) {
+    if(isSpecular) {
         float3 halfVec = normalize(normalLightDir + normalize(-position));
         float specIntensity = specular.x;
         float specPower = specular.y;

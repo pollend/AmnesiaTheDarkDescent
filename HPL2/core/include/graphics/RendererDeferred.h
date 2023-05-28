@@ -226,9 +226,9 @@ namespace hpl {
             return m_boundViewportData.resolve(viewport);
         }
         // virtual std::shared_ptr<Image> GetDepthStencilImage(cViewport& viewport) override;
-        virtual Texture* GetOutputImage(uint32_t frameIndex, cViewport& viewport) override {
+        virtual ForgeRenderTarget GetOutputImage(uint32_t frameIndex, cViewport& viewport) override {
             auto& sharedData = m_boundViewportData.resolve(viewport);
-            return sharedData.m_gBuffer[frameIndex].m_outputBuffer.m_handle->pTexture;
+            return sharedData.m_gBuffer[frameIndex].m_outputBuffer;
         }
 
         virtual bool LoadData() override;

@@ -20,6 +20,8 @@
 #ifndef HPL_RENDERER_WIRE_FRAME_H
 #define HPL_RENDERER_WIRE_FRAME_H
 
+#include "graphics/ForgeHandles.h"
+#include "graphics/ForgeRenderer.h"
 #include "graphics/Image.h"
 #include "graphics/RenderTarget.h"
 #include "graphics/Renderer.h"
@@ -44,8 +46,8 @@ namespace hpl {
 		bool LoadData() override;
 		void DestroyData() override;
 
-		virtual Texture* GetOutputImage(uint32_t frameIndex, cViewport& viewport) override {
-			return nullptr;
+		virtual ForgeRenderTarget GetOutputImage(uint32_t frameIndex, cViewport& viewport) override {
+			return ForgeRenderTarget();
 		}
 	private:
 

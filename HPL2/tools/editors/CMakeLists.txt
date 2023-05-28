@@ -377,11 +377,10 @@ GenerateBuildID(MATERIALEDITOR_BUILDID
     ${CMAKE_CURRENT_SOURCE_DIR}/materialeditor
 )
 
-AddToolTarget(MaterialEditor
-    ${materialeditor_sources}
-    ${MATERIALEDITOR_BUILDID}
-)
+# AddToolTarget(MaterialEditor
+#    ${materialeditor_sources}
+#    ${MATERIALEDITOR_BUILDID}
+# )
 
-# vim: noet ts=4:
 
 set(CMAKE_CXX_FLAGS "-fpermissive -no-pie")
