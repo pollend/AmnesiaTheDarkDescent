@@ -334,6 +334,38 @@ namespace hpl {
         Renderer* m_renderer = nullptr;
         friend class RefHandle<ForgeShaderHandle, Shader>;
     };
+    struct ForgeSamplerHandle: public RefHandle<ForgeSamplerHandle, Sampler> {
+    public:
+        ForgeSamplerHandle(Renderer* renderer):
+            Base(),
+            m_renderer(renderer) {
+        }
+        ForgeSamplerHandle(const ForgeSamplerHandle& other):
+            Base(other) {
+            m_renderer = other.m_renderer;
+        }
+        ForgeSamplerHandle(ForgeSamplerHandle&& other):
+            Base(std::move(other)),
+            m_renderer(other.m_renderer) {
+
+        }
+        ~ForgeSamplerHandle() {
+        }
+
+        void operator= (const ForgeSamplerHandle& other) {
+            Base::operator=(other);
+            m_renderer = other.m_renderer;
+        }
+        void operator= (ForgeSamplerHandle&& other) {
+            Base::operator=(std::move(other));
+            m_renderer = other.m_renderer;
+        }
+    private:
+        void Free();
+        Renderer* m_renderer = nullptr;
+        friend class RefHandle<ForgeSamplerHandle, Sampler>;
+    };
+
 
     struct ForgeCmdHandle: public RefHandle<ForgeCmdHandle, Cmd> {
     public:

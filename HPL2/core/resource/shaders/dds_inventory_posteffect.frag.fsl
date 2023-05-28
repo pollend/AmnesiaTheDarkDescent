@@ -9,7 +9,7 @@ PUSH_CONSTANT(postEffectConstants, b0)
     DATA(float2, blurSize, None);
 };
 
-RES(SamplerState, sampler0, UPDATE_FREQ_NONE, s0, binding = 0);
+RES(SamplerState, inputSampler, UPDATE_FREQ_NONE, s0, binding = 0);
 RES(Tex2D(float4), sourceInput, UPDATE_FREQ_PER_FRAME, t0, binding = 1);
 
 float4 PS_MAIN(PsIn In) 
@@ -17,7 +17,7 @@ float4 PS_MAIN(PsIn In)
     INIT_MAIN;
     uint2 screenSize = uint2(GetDimensions(Get(sourceInput), NO_SAMPLER));    
 
-    float3 color = SampleTex2D(sourceInput, Get(sampler0), In.uv).rgb;
+    float3 color = SampleTex2D(sourceInput, Get(inputSampler), In.uv).rgb;
     
     float3 colorToR = float3(0.39,  0.769, 0.189);
     float3 colorToG = float3(0.349, 0.686, 0.168);

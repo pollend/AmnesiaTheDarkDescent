@@ -252,19 +252,19 @@ cLuxMainMenu::cLuxMainMenu() : iLuxUpdateable("LuxDebugHandler")
 
             PipelineDesc pipelineDesc = {};
             pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
-            GraphicsPipelineDesc& copyPipelineDesc = pipelineDesc.mGraphicsDesc;
-            copyPipelineDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
-            copyPipelineDesc.pShaderProgram = m_blurVerticalShader.m_handle;
-            copyPipelineDesc.pRootSignature = m_blurRootSignature;
-            copyPipelineDesc.mRenderTargetCount = 1;
-            copyPipelineDesc.mDepthStencilFormat = TinyImageFormat_UNDEFINED;
-            copyPipelineDesc.pVertexLayout = NULL;
-            copyPipelineDesc.pRasterizerState = &rasterStateNoneDesc;
-            copyPipelineDesc.pDepthState = &depthStateDisabledDesc;
-            copyPipelineDesc.pBlendState = NULL;
-            copyPipelineDesc.mSampleCount = SAMPLE_COUNT_1;
-            copyPipelineDesc.mSampleQuality = 0;
-            copyPipelineDesc.pColorFormats = &inputFormat;
+            GraphicsPipelineDesc& graphicsPipelineDesc = pipelineDesc.mGraphicsDesc;
+            graphicsPipelineDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+            graphicsPipelineDesc.pShaderProgram = m_blurVerticalShader.m_handle;
+            graphicsPipelineDesc.pRootSignature = m_blurRootSignature;
+            graphicsPipelineDesc.mRenderTargetCount = 1;
+            graphicsPipelineDesc.mDepthStencilFormat = TinyImageFormat_UNDEFINED;
+            graphicsPipelineDesc.pVertexLayout = NULL;
+            graphicsPipelineDesc.pRasterizerState = &rasterStateNoneDesc;
+            graphicsPipelineDesc.pDepthState = &depthStateDisabledDesc;
+            graphicsPipelineDesc.pBlendState = NULL;
+            graphicsPipelineDesc.mSampleCount = SAMPLE_COUNT_1;
+            graphicsPipelineDesc.mSampleQuality = 0;
+            graphicsPipelineDesc.pColorFormats = &inputFormat;
             addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_blurVerticalPipeline);
     }
     {
@@ -277,19 +277,19 @@ cLuxMainMenu::cLuxMainMenu() : iLuxUpdateable("LuxDebugHandler")
 
             PipelineDesc pipelineDesc = {};
             pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
-            GraphicsPipelineDesc& copyPipelineDesc = pipelineDesc.mGraphicsDesc;
-            copyPipelineDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
-            copyPipelineDesc.pShaderProgram = m_blurVerticalShader.m_handle;
-            copyPipelineDesc.pRootSignature = m_blurRootSignature;
-            copyPipelineDesc.mRenderTargetCount = 1;
-            copyPipelineDesc.mDepthStencilFormat = TinyImageFormat_UNDEFINED;
-            copyPipelineDesc.pVertexLayout = NULL;
-            copyPipelineDesc.pRasterizerState = &rasterStateNoneDesc;
-            copyPipelineDesc.pDepthState = &depthStateDisabledDesc;
-            copyPipelineDesc.pBlendState = NULL;
-            copyPipelineDesc.mSampleCount = SAMPLE_COUNT_1;
-            copyPipelineDesc.mSampleQuality = 0;
-            copyPipelineDesc.pColorFormats = &inputFormat;
+            GraphicsPipelineDesc& graphicsPipelineDesc = pipelineDesc.mGraphicsDesc;
+            graphicsPipelineDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+            graphicsPipelineDesc.pShaderProgram = m_blurVerticalShader.m_handle;
+            graphicsPipelineDesc.pRootSignature = m_blurRootSignature;
+            graphicsPipelineDesc.mRenderTargetCount = 1;
+            graphicsPipelineDesc.mDepthStencilFormat = TinyImageFormat_UNDEFINED;
+            graphicsPipelineDesc.pVertexLayout = NULL;
+            graphicsPipelineDesc.pRasterizerState = &rasterStateNoneDesc;
+            graphicsPipelineDesc.pDepthState = &depthStateDisabledDesc;
+            graphicsPipelineDesc.pBlendState = NULL;
+            graphicsPipelineDesc.mSampleCount = SAMPLE_COUNT_1;
+            graphicsPipelineDesc.mSampleQuality = 0;
+            graphicsPipelineDesc.pColorFormats = &inputFormat;
             addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_blurHorizontalPipeline);
     }
 
@@ -1422,7 +1422,7 @@ void cLuxMainMenu::CreateScreenTextures()
         texture.SetRenderTarget(m_screenTarget);
         m_screenImage = std::make_shared<Image>();
         m_screenImage->SetForgeTexture(std::move(texture));
-        mpScreenGfx = mpGui->CreateGfxTexture(m_screenImage.get(),false,eGuiMaterial_Diffuse, cColor(1,1), true, 0, 1, true);
+        mpScreenGfx = mpGui->CreateGfxTexture(m_screenImage.get(), false, eGuiMaterial_Diffuse, cColor(1, 1), true, 0, 1, false);
     }
 
     {
@@ -1430,22 +1430,22 @@ void cLuxMainMenu::CreateScreenTextures()
         texture.SetRenderTarget(m_screenBlurTarget);
         m_screenBlurImage = std::make_shared<Image>();
         m_screenBlurImage->SetForgeTexture(std::move(texture));
-	    mpScreenBlurGfx = mpGui->CreateGfxTexture(m_screenBlurImage.get(),false,eGuiMaterial_Alpha, cColor(1,1), true, 0, 1, true);
+        mpScreenBlurGfx =
+            mpGui->CreateGfxTexture(m_screenBlurImage.get(), false, eGuiMaterial_Alpha, cColor(1, 1), true, 0, 1, false);
     }
 }
 
-void cLuxMainMenu::RenderBlurTexture()
-{
-	iLowLevelGraphics *pLowGfx = mpGraphics->GetLowLevel();
-	EngineInterface* engine = Interface<EngineInterface>::Get();
+void cLuxMainMenu::RenderBlurTexture() {
+    iLowLevelGraphics* pLowGfx = mpGraphics->GetLowLevel();
+    EngineInterface* engine = Interface<EngineInterface>::Get();
     auto* forgeRenderer = Interface<ForgeRenderer>::Get();
     auto frame = forgeRenderer->GetFrame();
 
-	auto* scene = engine->GetScene();
-	auto& graphicsContext = engine->GetGraphicsContext();
-	auto* viewport = gpBase->mpMapHandler->GetViewport();
-	auto* renderer = viewport->GetRenderer();
-	auto viewportSize = viewport->GetSize();
+    auto* scene = engine->GetScene();
+    auto& graphicsContext = engine->GetGraphicsContext();
+    auto* viewport = gpBase->mpMapHandler->GetViewport();
+    auto* renderer = viewport->GetRenderer();
+    auto viewportSize = viewport->GetSize();
 
     ForgeRenderTarget tempBlurTarget(forgeRenderer->Rend());
     tempBlurTarget.Load([&](RenderTarget** target) {
@@ -1463,24 +1463,23 @@ void cLuxMainMenu::RenderBlurTexture()
         return true;
     });
 
-
-	uint32_t rootConstantIndex = getDescriptorIndexFromName(m_blurRootSignature, "postEffectConstants");
+    uint32_t rootConstantIndex = getDescriptorIndexFromName(m_blurRootSignature, "postEffectConstants");
     float blurSize = 1.0f;
     cmdBindPushConstants(frame.m_cmd, m_blurRootSignature, rootConstantIndex, &blurSize);
     // third copy umm need to out how to handle this
-	auto requestBlur = [&](Texture* input){
-
+    auto requestBlur = [&](Texture* input) {
         {
-            cmdBindRenderTargets(frame.m_cmd, 1, &tempBlurTarget.m_handle, NULL, NULL, NULL, NULL, -1, -1);
+            LoadActionsDesc loadActions = {};
+            loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
+            loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
+
+            cmdBindRenderTargets(frame.m_cmd, 1, &tempBlurTarget.m_handle, NULL, &loadActions, NULL, NULL, -1, -1);
 
             std::array<DescriptorData, 1> params = {};
             params[0].pName = "sourceInput";
             params[0].ppTextures = &input;
-            updateDescriptorSet(frame.m_renderer->Rend(), m_setIndex, m_perFrameBlurDescriptorSet[frame.m_frameIndex], params.size(), params.data());
-
-            LoadActionsDesc loadActions = {};
-            loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
-            loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
+            updateDescriptorSet(
+                frame.m_renderer->Rend(), m_setIndex, m_perFrameBlurDescriptorSet[frame.m_frameIndex], params.size(), params.data());
 
             cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, static_cast<float>(viewportSize.x), static_cast<float>(viewportSize.y), 0.0f, 1.0f);
             cmdSetScissor(frame.m_cmd, 0, 0, static_cast<float>(viewportSize.x), static_cast<float>(viewportSize.y));
@@ -1495,21 +1494,22 @@ void cLuxMainMenu::RenderBlurTexture()
             cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
             std::array rtBarriers = {
                 RenderTargetBarrier{ tempBlurTarget.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
-                RenderTargetBarrier{ m_screenBlurTarget.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET},
+                RenderTargetBarrier{ m_screenBlurTarget.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
             };
             cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
         }
         {
-            cmdBindRenderTargets(frame.m_cmd, 1, &m_screenBlurTarget.m_handle, NULL, NULL, NULL, NULL, -1, -1);
+            LoadActionsDesc loadActions = {};
+            loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
+            loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
+
+            cmdBindRenderTargets(frame.m_cmd, 1, &m_screenBlurTarget.m_handle, NULL, &loadActions, NULL, NULL, -1, -1);
 
             std::array<DescriptorData, 1> params = {};
             params[0].pName = "sourceInput";
             params[0].ppTextures = &tempBlurTarget.m_handle->pTexture;
-            updateDescriptorSet(frame.m_renderer->Rend(), m_setIndex, m_perFrameBlurDescriptorSet[frame.m_frameIndex], params.size(), params.data());
-
-            LoadActionsDesc loadActions = {};
-            loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
-            loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
+            updateDescriptorSet(
+                frame.m_renderer->Rend(), m_setIndex, m_perFrameBlurDescriptorSet[frame.m_frameIndex], params.size(), params.data());
 
             cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, static_cast<float>(viewportSize.x), static_cast<float>(viewportSize.y), 0.0f, 1.0f);
             cmdSetScissor(frame.m_cmd, 0, 0, static_cast<float>(viewportSize.x), static_cast<float>(viewportSize.y));
@@ -1523,40 +1523,40 @@ void cLuxMainMenu::RenderBlurTexture()
         {
             cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
             std::array rtBarriers = {
-                RenderTargetBarrier{ tempBlurTarget.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET},
-                RenderTargetBarrier{ m_screenBlurTarget.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE},
+                RenderTargetBarrier{ tempBlurTarget.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
+                RenderTargetBarrier{ m_screenBlurTarget.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
             };
             cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
         }
-	};
+    };
     auto outputRt = renderer->GetOutputImage(frame.m_frameIndex, *viewport);
     {
-        cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
-        std::array rtBarriers = {
-            RenderTargetBarrier{ m_screenTarget.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
-        };
-        cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+            std::array rtBarriers = {
+                RenderTargetBarrier{ m_screenTarget.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
+            };
+            cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
     }
 
-    forgeRenderer->cmdCopyTexture(ForgeRenderer::CopyPipelineToUnormR8G8B8A8, frame.m_cmd, outputRt.m_handle->pTexture, m_screenTarget.m_handle);
+    forgeRenderer->cmdCopyTexture(
+        ForgeRenderer::CopyPipelineToUnormR8G8B8A8, frame.m_cmd, outputRt.m_handle->pTexture, m_screenTarget.m_handle);
     {
-        cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
-        std::array rtBarriers = {
-            RenderTargetBarrier{ m_screenTarget.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
-        };
-        cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+            std::array rtBarriers = {
+                RenderTargetBarrier{ m_screenTarget.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
+            };
+            cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
     }
     frame.m_resourcePool->Push(tempBlurTarget);
     frame.m_resourcePool->Push(m_screenTarget);
     frame.m_resourcePool->Push(m_screenBlurTarget);
-	requestBlur(m_screenTarget.m_handle->pTexture);
+    requestBlur(m_screenTarget.m_handle->pTexture);
 
-	for(int i=0; i<6; ++i) {
-		requestBlur(m_screenBlurTarget.m_handle->pTexture);
-	}
+    for (int i = 0; i < 6; ++i) {
+            requestBlur(m_screenBlurTarget.m_handle->pTexture);
+    }
 }
 
-//-----------------------------------------------------------------------
 
 void cLuxMainMenu::DestroyBackground()
 {

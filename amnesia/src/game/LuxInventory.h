@@ -23,7 +23,6 @@
 //----------------------------------------------
 
 #include "LuxBase.h"
-#include "bgfx/bgfx.h"
 #include "graphics/ForgeHandles.h"
 
 //----------------------------------------------
@@ -430,14 +429,21 @@ private:
 	cGuiGfxElement *mpScreenGfx;
 	cGuiGfxElement *mpScreenBgGfx;
 
+    static constexpr uint32_t DescriptorSetSize = 16;
+    Sampler* m_inputSampler;
     ForgeShaderHandle m_inventoryScreenShader;
-	bgfx::ProgramHandle m_program;
-	bgfx::UniformHandle m_s_diffuseMap;
+	RootSignature* m_inventoryScreenRootSignature;
+    std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perFrameInvetoryScreenDescriptorSet;
+    uint32_t m_setIndex = 0;
+    Pipeline* m_invetoryPipeline;
 
-	std::shared_ptr<Image> m_screenImage;
+    std::shared_ptr<Image> m_screenImage;
 	std::shared_ptr<Image> m_screenBgTexture;
 
-	cGuiGfxElement* mpFrameHealthCorners[4];
+    ForgeRenderTarget m_screenBgTarget;
+    ForgeRenderTarget m_screenTarget;
+
+    cGuiGfxElement* mpFrameHealthCorners[4];
 	cGuiGfxElement* mpFrameHealthBorders[4];
 
 	cGuiGfxElement* mpFrameSanityCorners[4];
@@ -460,9 +466,7 @@ private:
 	float mfOilMovementT;
 
 	cGuiGfxElement *mpTinderbox;
-
 	cGuiGfxElement *mpJournalMouseOverGfx;
-
 	cGuiGfxElement *mpWhiteGfx;
 
 	iWidget * mpHealthWidget;

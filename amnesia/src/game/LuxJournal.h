@@ -313,18 +313,23 @@ private:
 	iWidget		 *mpWidgetReturn[eLuxJournalState_LastEnum];
 	cWidgetImage *mpImageBackward[eLuxJournalState_LastEnum];
 
-	// iTexture *mpScreenTexture;
 	cGuiGfxElement *mpScreenGfx;
 	cGuiGfxElement *mpScreenBgGfx;
 	cGuiGfxElement *mpWhiteGfx;
 
+    static constexpr uint32_t DescriptorSetSize = 16;
+    Sampler* m_inputSampler;
     ForgeShaderHandle m_inventoryScreenShader;
-	bgfx::ProgramHandle m_program;
-	bgfx::UniformHandle m_s_diffuseMap;
+	RootSignature* m_inventoryScreenRootSignature;
+    std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perFrameInvetoryScreenDescriptorSet;
+    uint32_t m_setIndex = 0;
+    Pipeline* m_invetoryPipeline;
 
 	std::shared_ptr<Image> m_screenImage;
 	std::shared_ptr<Image> m_screenBgTexture;
 
+    ForgeRenderTarget m_screenBgTarget;
+    ForgeRenderTarget m_screenTarget;
 
 	iFontData *mpFontDefault;
 	iFontData *mpFontMenu;
