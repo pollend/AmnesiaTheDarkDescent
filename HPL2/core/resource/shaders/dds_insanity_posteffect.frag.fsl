@@ -12,22 +12,22 @@ PUSH_CONSTANT(postEffectConstants, b0)
     DATA(float, zoomAlpha, None);
 };
 
-RES(SamplerState, sampler0, UPDATE_FREQ_NONE, s0, binding = 0);
+RES(SamplerState, inputSampler, UPDATE_FREQ_NONE, s0, binding = 0);
 RES(Tex2D(float4), sourceInput, UPDATE_FREQ_PER_FRAME, t0, binding = 1);
-
-RES(Tex2D(float4), ampMap0, UPDATE_FREQ_PER_FRAME, t0, binding = 2);
-RES(Tex2D(float4), ampMap1, UPDATE_FREQ_PER_FRAME, t1, binding = 3);
-RES(Tex2D(float4), zoomMap, UPDATE_FREQ_PER_FRAME, t1, binding = 4);
+RES(Tex2D(float4), ampMap0, UPDATE_FREQ_PER_FRAME, t1, binding = 2);
+RES(Tex2D(float4), ampMap1, UPDATE_FREQ_PER_FRAME, t2, binding = 3);
+RES(Tex2D(float4), zoomMap, UPDATE_FREQ_PER_FRAME, t3, binding = 4);
 
 float4 PS_MAIN(PsIn In) 
 {    
     INIT_MAIN;
     uint2 screenSize = uint2(GetDimensions(Get(sourceInput), NO_SAMPLER));
-    
+    float2 viewTexel = 1.0 / float2(screenSize); 
+
     float4 finalColor = float4(0.0, 0.0, 0.0, 1.0);
-    float3 zoomMap = SampleTex2D(zoomMap, Get(sampler0), In.uv).rgb;
-    float3 amp0Color = SampleTex2D(ampMap0, Get(sampler0), In.uv).rgb;
-    float3 amp1Color = SampleTex2D(ampMap0, Get(sampler0), In.uv).rgb;
+    float3 zoomMap = SampleTex2D(Get(zoomMap), Get(inputSampler), In.uv).rgb;
+    float3 amp0Color = SampleTex2D(Get(ampMap0), Get(inputSampler), In.uv).rgb;
+    float3 amp1Color = SampleTex2D(Get(ampMap1), Get(inputSampler), In.uv).rgb;
     float3 combinedAmp = amp0Color * (1.0 - Get(amplitude)) + amp1Color * Get(amplitude);
     float3 ampDir = Get(waveAlpha) * 0.04 * combinedAmp * float(screenSize.y);
     
@@ -37,7 +37,7 @@ float4 PS_MAIN(PsIn In)
     vec2 vSinUv = (uv / screenSize.y) * 0.6;
     uv.x += sin(Get(time) + vSinUv.y) * ampDir.x;
     uv.y += sin(Get(time) + vSinUv.x*1.83) * ampDir.y;
-    finalColor = SampleTex2D(sourceInput, Get(sampler0), uv);
+    finalColor = SampleTex2D(Get(sourceInput), Get(inputSampler), uv * viewTexel);
     finalColor.w = 0.0;
     RETURN(finalColor);
 }

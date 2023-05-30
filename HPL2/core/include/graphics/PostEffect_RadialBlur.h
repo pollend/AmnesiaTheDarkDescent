@@ -51,13 +51,22 @@ namespace hpl {
 	{
 	friend class cPostEffect_RadialBlur;
 	public:
-		cPostEffectType_RadialBlur(cGraphics *apGraphics, cResources *apResources);
-		virtual ~cPostEffectType_RadialBlur();
+	    static constexpr uint32_t DescriptorSetSize = 16;
 
+        cPostEffectType_RadialBlur(cGraphics *apGraphics, cResources *apResources);
+		virtual ~cPostEffectType_RadialBlur();
 		iPostEffect *CreatePostEffect(iPostEffectParams *apParams);
 
 	private:
-		bgfx::ProgramHandle m_program = BGFX_INVALID_HANDLE;
+
+        uint32_t m_descIndex = 0;
+        Pipeline* m_pipeline = nullptr;
+        ForgeShaderHandle m_shader;
+        RootSignature* m_rootSignature = nullptr;
+        Sampler* m_inputSampler = nullptr;
+        std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perFrameDescriptorSet;
+
+        bgfx::ProgramHandle m_program = BGFX_INVALID_HANDLE;
 		bgfx::UniformHandle m_u_uniform = BGFX_INVALID_HANDLE;
 		bgfx::UniformHandle m_s_diffuseMap = BGFX_INVALID_HANDLE;
 	};
@@ -70,12 +79,12 @@ namespace hpl {
 		cPostEffect_RadialBlur(cGraphics *apGraphics,cResources *apResources, iPostEffectType *apType);
 		~cPostEffect_RadialBlur();
 
-		virtual void RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, LegacyRenderTarget& target) override;
+        virtual void RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, const ForgeRenderer::Frame& frame, Texture* inputTexture, RenderTarget* renderTarget) override;
 		virtual void Reset() override;
 
 	private:
-		void OnSetParams();
-		iPostEffectParams *GetTypeSpecificParams() { return &mParams; }
+		virtual void OnSetParams() override;
+		virtual iPostEffectParams *GetTypeSpecificParams() override { return &mParams; }
 
 		void RenderBlur(iTexture *apInputTex);
 

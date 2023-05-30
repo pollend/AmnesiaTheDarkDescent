@@ -52,7 +52,7 @@ namespace hpl {
             CopyPipelineCount = 2
         };
 
-        static constexpr uint32_t MaxCopyFrames = 16;
+        static constexpr uint32_t MaxCopyFrames = 32;
         static constexpr uint32_t SwapChainLength = 2; // double buffered
         static constexpr uint32_t ResourcePoolSize = 4; // double buffered
 

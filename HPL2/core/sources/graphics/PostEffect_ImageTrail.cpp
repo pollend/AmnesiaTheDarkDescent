@@ -232,55 +232,5 @@ namespace hpl {
         renderer->cmdCopyTexture(frame.m_cmd, imageTrailData.m_accumulationTarget.m_handle->pTexture, renderTarget);
         cmdEndDebugMarker(frame.m_cmd);
     }
-    void cPostEffect_ImageTrail::RenderEffect(
-        cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, LegacyRenderTarget& target) {
-        cVector2l vRenderTargetSize = viewport.GetSize();
-        auto& imageTrailData = m_boundImageTrailData.resolve(viewport);
-
-        GraphicsContext::LayoutStream layoutStream;
-        cMatrixf projMtx;
-        context.ScreenSpaceQuad(layoutStream, projMtx, vRenderTargetSize.x, vRenderTargetSize.y);
-
-  //      GraphicsContext::ViewConfiguration viewConfig{ imageTrailData.m_accumulationBuffer };
-    //    viewConfig.m_viewRect = { 0, 0, vRenderTargetSize.x, vRenderTargetSize.y };
-      //  viewConfig.m_projection = projMtx;
-        //auto view = context.StartPass("Image Trail", viewConfig);
-
-        GraphicsContext::ShaderProgram shaderProgram;
-        //shaderProgram.m_handle = mpImageTrailType->m_program;
-        // shaderProgram.m_projection = projMtx;
-
-        struct {
-            float u_alpha;
-            float u_padding[3];
-        } u_params = { 0 };
-        if (mbClearFrameBuffer) {
-            u_params.u_alpha = 1.0f;
-            mbClearFrameBuffer = false;
-        } else {
-            // Get the amount of blur depending frame time.
-            //*30 is just so that good amount values are still between 0 - 1
-            float fFrameTime = compositor.GetCurrentFrameTime();
-            float fPow = (1.0f / fFrameTime) * mParams.mfAmount; // The higher this is, the more blur!
-            float fAmount = exp(-fPow * 0.015f);
-            u_params.u_alpha = fAmount;
-        }
-
-        shaderProgram.m_configuration.m_rgbBlendFunc =
-            CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
-        shaderProgram.m_configuration.m_alphaBlendFunc =
-            CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
-
-  //      shaderProgram.m_textures.push_back({ mpImageTrailType->m_s_diffuseMap, input.GetHandle(), 0 });
-  //      shaderProgram.m_uniforms.push_back({ mpImageTrailType->m_u_param, &u_params, 1 });
-
-        shaderProgram.m_configuration.m_depthTest = DepthTest::None;
-        shaderProgram.m_configuration.m_write = Write::RGBA;
-        GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
-        //context.Submit(view, request);
-
-        cRect2l rect = cRect2l(0, 0, vRenderTargetSize.x, vRenderTargetSize.y);
-//        context.CopyTextureToFrameBuffer(*imageTrailData.m_accumulationBuffer.GetImage(), rect, target);
-    }
 
 } // namespace hpl

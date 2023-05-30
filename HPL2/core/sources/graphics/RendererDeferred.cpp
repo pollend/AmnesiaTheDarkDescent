@@ -483,9 +483,6 @@ namespace hpl {
             return pLightA < pLightB;
         }
 
-
-        // static inline bool RenderShadowPass()
-
         static inline bool SortDeferredLightDefault(const DeferredLight* a, const DeferredLight* b) {
             iLight* pLightA = a->m_light;
             iLight* pLightB = b->m_light;
@@ -530,6 +527,13 @@ namespace hpl {
 
                 if (pLightSpotA->GetSpotFalloffMap() != pLightSpotB->GetSpotFalloffMap()) {
                     return pLightSpotA->GetSpotFalloffMap() < pLightSpotB->GetSpotFalloffMap();
+                }
+            }
+            if(pLightA->GetLightType() == eLightType_Box) {
+                cLightBox* pBoxLightA = static_cast<cLightBox*>(pLightA);
+                cLightBox* pBoxLightB = static_cast<cLightBox*>(pLightB);
+		        if(pBoxLightA->GetBoxLightPrio() != pBoxLightB->GetBoxLightPrio()) {
+			        return pBoxLightA->GetBoxLightPrio() < pBoxLightB->GetBoxLightPrio();
                 }
             }
 
@@ -710,7 +714,6 @@ namespace hpl {
                 sharedData->m_size = viewport.GetSize();
                 auto* forgetRenderer = Interface<ForgeRenderer>::Get();
                 ClearValue optimizedColorClearBlack = { { 0.0f, 0.0f, 0.0f, 0.0f } };
-                auto& b = sharedData->m_gBuffer;
                 auto deferredRenderTargetDesc = [&]() {
                     RenderTargetDesc renderTarget = {};
                     renderTarget.mArraySize = 1;
@@ -725,73 +728,74 @@ namespace hpl {
                     renderTarget.pName = "G-Buffer RTs";
                     return renderTarget;
                 };
+                for(auto& b: sharedData->m_gBuffer) {
+                    b.m_depthBuffer  = {forgetRenderer->Rend()};
+                    b.m_depthBuffer.Load([&](RenderTarget** handle) {
+                        auto targetDesc = deferredRenderTargetDesc();
+                        targetDesc.mFormat = DepthBufferFormat;
+                        targetDesc.mStartState = RESOURCE_STATE_DEPTH_WRITE;
+                        targetDesc.pName = "Depth RT";
+                        addRenderTarget(forgetRenderer->Rend(), &targetDesc, handle);
+                        return true;
+                    });
+                    b.m_normalBuffer= {forgetRenderer->Rend()};
+                    b.m_normalBuffer.Load([&](RenderTarget** handle) {
+                        auto targetDesc = deferredRenderTargetDesc();
+                        targetDesc.mFormat = NormalBufferFormat;
+                        addRenderTarget(forgetRenderer->Rend(), &targetDesc, handle);
+                        return true;
+                    });
+                    b.m_positionBuffer = {forgetRenderer->Rend()};
+                    b.m_positionBuffer.Load([&](RenderTarget** handle) {
+                        auto targetDesc = deferredRenderTargetDesc();
+                        targetDesc.mFormat = PositionBufferFormat;
+                        addRenderTarget(forgetRenderer->Rend(), &targetDesc, handle);
+                        return true;
+                    });
+                    b.m_specularBuffer = ForgeRenderTarget{forgetRenderer->Rend()};
+                    b.m_specularBuffer.Load([&](RenderTarget** handle) {
+                        auto targetDesc = deferredRenderTargetDesc();
+                        targetDesc.mFormat = SpecularBufferFormat;
+                        addRenderTarget(forgetRenderer->Rend(), &targetDesc, handle);
+                        return true;
+                    });
+                    b.m_colorBuffer = {forgetRenderer->Rend()};
+                    b.m_colorBuffer.Load([&](RenderTarget** handle) {
+                        auto targetDesc = deferredRenderTargetDesc();
+                        targetDesc.mFormat = ColorBufferFormat;
+                        addRenderTarget(forgetRenderer->Rend(), &targetDesc, handle);
+                        return true;
+                    });
 
-                b.m_depthBuffer  = {forgetRenderer->Rend()};
-                b.m_depthBuffer.Load([&](RenderTarget** handle) {
-                    auto targetDesc = deferredRenderTargetDesc();
-                    targetDesc.mFormat = DepthBufferFormat;
-                    targetDesc.mStartState = RESOURCE_STATE_DEPTH_WRITE;
-                    targetDesc.pName = "Depth RT";
-                    addRenderTarget(forgetRenderer->Rend(), &targetDesc, handle);
-                    return true;
-                });
-                b.m_normalBuffer= {forgetRenderer->Rend()};
-                b.m_normalBuffer.Load([&](RenderTarget** handle) {
-                    auto targetDesc = deferredRenderTargetDesc();
-                    targetDesc.mFormat = NormalBufferFormat;
-                    addRenderTarget(forgetRenderer->Rend(), &targetDesc, handle);
-                    return true;
-                });
-                b.m_positionBuffer = {forgetRenderer->Rend()};
-                b.m_positionBuffer.Load([&](RenderTarget** handle) {
-                    auto targetDesc = deferredRenderTargetDesc();
-                    targetDesc.mFormat = PositionBufferFormat;
-                    addRenderTarget(forgetRenderer->Rend(), &targetDesc, handle);
-                    return true;
-                });
-                b.m_specularBuffer = ForgeRenderTarget{forgetRenderer->Rend()};
-                b.m_specularBuffer.Load([&](RenderTarget** handle) {
-                    auto targetDesc = deferredRenderTargetDesc();
-                    targetDesc.mFormat = SpecularBufferFormat;
-                    addRenderTarget(forgetRenderer->Rend(), &targetDesc, handle);
-                    return true;
-                });
-                b.m_colorBuffer = {forgetRenderer->Rend()};
-                b.m_colorBuffer.Load([&](RenderTarget** handle) {
-                    auto targetDesc = deferredRenderTargetDesc();
-                    targetDesc.mFormat = ColorBufferFormat;
-                    addRenderTarget(forgetRenderer->Rend(), &targetDesc, handle);
-                    return true;
-                });
-
-                b.m_refractionImage.Load([&](Texture** texture) {
-                    TextureLoadDesc loadDesc = {};
-                    loadDesc.ppTexture = texture;
-                    TextureDesc refractionImageDesc = {};
-                    refractionImageDesc.mArraySize = 1;
-                    refractionImageDesc.mDepth = 1;
-                    refractionImageDesc.mMipLevels = 1;
-                    refractionImageDesc.mFormat = TinyImageFormat_R16G16B16A16_SFLOAT;
-                    refractionImageDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE | DESCRIPTOR_TYPE_RW_TEXTURE;
-                    refractionImageDesc.mWidth = sharedData->m_size.x;
-                    refractionImageDesc.mHeight = sharedData->m_size.y;
-                    refractionImageDesc.mSampleCount = SAMPLE_COUNT_1;
-                    refractionImageDesc.mSampleQuality = 0;
-                    refractionImageDesc.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
-                    refractionImageDesc.pName = "Refraction Image";
-                    loadDesc.pDesc = &refractionImageDesc;
-                    addResource(&loadDesc, nullptr);
-                    return true;
-                });
-                b.m_outputBuffer = {forgetRenderer->Rend()};
-                b.m_outputBuffer.Load([&](RenderTarget** handle) {
-                    auto targetDesc = deferredRenderTargetDesc();
-                    targetDesc.mFormat = ColorBufferFormat;
-                    targetDesc.mFormat = getRecommendedSwapchainFormat(false, false);
-                    targetDesc.mDescriptors = DESCRIPTOR_TYPE_RW_TEXTURE | DESCRIPTOR_TYPE_TEXTURE;
-                    addRenderTarget(forgetRenderer->Rend(), &targetDesc, handle);
-                    return true;
-                });
+                    b.m_refractionImage.Load([&](Texture** texture) {
+                        TextureLoadDesc loadDesc = {};
+                        loadDesc.ppTexture = texture;
+                        TextureDesc refractionImageDesc = {};
+                        refractionImageDesc.mArraySize = 1;
+                        refractionImageDesc.mDepth = 1;
+                        refractionImageDesc.mMipLevels = 1;
+                        refractionImageDesc.mFormat = TinyImageFormat_R16G16B16A16_SFLOAT;
+                        refractionImageDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE | DESCRIPTOR_TYPE_RW_TEXTURE;
+                        refractionImageDesc.mWidth = sharedData->m_size.x;
+                        refractionImageDesc.mHeight = sharedData->m_size.y;
+                        refractionImageDesc.mSampleCount = SAMPLE_COUNT_1;
+                        refractionImageDesc.mSampleQuality = 0;
+                        refractionImageDesc.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
+                        refractionImageDesc.pName = "Refraction Image";
+                        loadDesc.pDesc = &refractionImageDesc;
+                        addResource(&loadDesc, nullptr);
+                        return true;
+                    });
+                    b.m_outputBuffer = {forgetRenderer->Rend()};
+                    b.m_outputBuffer.Load([&](RenderTarget** handle) {
+                        auto targetDesc = deferredRenderTargetDesc();
+                        targetDesc.mFormat = ColorBufferFormat;
+                        targetDesc.mFormat = getRecommendedSwapchainFormat(false, false);
+                        targetDesc.mDescriptors = DESCRIPTOR_TYPE_RW_TEXTURE | DESCRIPTOR_TYPE_TEXTURE;
+                        addRenderTarget(forgetRenderer->Rend(), &targetDesc, handle);
+                        return true;
+                    });
+                }
 
                 return sharedData;
             },
@@ -1188,7 +1192,7 @@ namespace hpl {
                 depthStateDesc.mDepthWrite = false;
                 depthStateDesc.mDepthFunc = CMP_LEQUAL;
 
-                std::array colorFormats = { getRecommendedSwapchainFormat(false, false) };
+                std::array colorFormats = { ColorBufferFormat };
                 PipelineDesc pipelineDesc = {};
                 pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
                 auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
@@ -2199,7 +2203,7 @@ namespace hpl {
         iRenderer::Draw(frame, viewport, afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects);
         // keep around for the moment ...
         BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects);
-        uint32_t objectIndex = 0;;
+        uint32_t objectIndex = 0;
 
         mpCurrentRenderList->Setup(mfCurrentFrameTime, apFrustum);
 
@@ -2209,7 +2213,7 @@ namespace hpl {
 
         // auto& swapChainImage = frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex];
         auto& sharedData = m_boundViewportData.resolve(viewport);
-        auto& currentGBuffer = sharedData.m_gBuffer;
+        auto& currentGBuffer = sharedData.m_gBuffer[frame.m_frameIndex];
 
         {
             BufferUpdateDesc updatePerFrameConstantsDesc = { m_perFrameBuffer.m_handle, frame.m_frameIndex * sizeof(UniformPerFrameData), sizeof(UniformPerFrameData)};
@@ -2236,7 +2240,6 @@ namespace hpl {
             params[0].ppTextures = &currentGBuffer.m_refractionImage.m_handle;
             updateDescriptorSet(frame.m_renderer->Rend(), 0, m_materialSet.m_frameSet[frame.m_frameIndex], 1, params);
         }
-
 
         frame.m_resourcePool->Push(currentGBuffer.m_colorBuffer);
         frame.m_resourcePool->Push(currentGBuffer.m_normalBuffer);
@@ -2378,27 +2381,17 @@ namespace hpl {
             }
             cmdEndDebugMarker(frame.m_cmd);
         }
-        {
-            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
-            std::array rtBarriers = {
-                RenderTargetBarrier{ currentGBuffer.m_colorBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
-                RenderTargetBarrier{ currentGBuffer.m_normalBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
-                RenderTargetBarrier{ currentGBuffer.m_positionBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
-                RenderTargetBarrier{ currentGBuffer.m_specularBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
-                RenderTargetBarrier{currentGBuffer.m_outputBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET }
-            };
-            cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
-        }
 
         // ------------------------------------------------------------------------------------
         //  Render Decal Pass render to color and depth
         // ------------------------------------------------------------------------------------
         {
+            cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "Build Decal");
             LoadActionsDesc loadActions = {};
             loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
             loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
             std::array targets = {
-                currentGBuffer.m_outputBuffer.m_handle,
+                currentGBuffer.m_colorBuffer.m_handle,
             };
             cmdBindRenderTargets(frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, NULL, NULL, -1, -1);
             cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)sharedData.m_size.x, (float)sharedData.m_size.y, 0.0f, 1.0f);
@@ -2435,9 +2428,20 @@ namespace hpl {
                 detail::cmdDefaultLegacyGeomBinding(frame, binding);
                 cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
             }
+            cmdEndDebugMarker(frame.m_cmd);
         }
 
-
+        {
+            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+            std::array rtBarriers = {
+                RenderTargetBarrier{ currentGBuffer.m_colorBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
+                RenderTargetBarrier{ currentGBuffer.m_normalBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
+                RenderTargetBarrier{ currentGBuffer.m_positionBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
+                RenderTargetBarrier{ currentGBuffer.m_specularBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
+                RenderTargetBarrier{  currentGBuffer.m_outputBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET }
+            };
+            cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+        }
         // // ------------------------------------------------------------------------------------
         // //  Render SSAO Pass to color
         // // ------------------------------------------------------------------------------------
@@ -2565,7 +2569,7 @@ namespace hpl {
             // std::array<std::vector<detail::DeferredLight*>, eDeferredLightList_LastEnum> sortedLights;
             // DON'T touch deferredLights after this point
             std::vector<detail::DeferredLight> deferredLights;
-            deferredLights.reserve(mpCurrentRenderList->GetLights().size());
+            //deferredLights.reserve(mpCurrentRenderList->GetLights().size());
             std::vector<detail::DeferredLight*> deferredLightRenderBack;
             std::vector<detail::DeferredLight*> deferredLightStencilFront;
 
@@ -2675,9 +2679,9 @@ namespace hpl {
 
                     // Check if near plane is inside box. If so only render back
                     if (apFrustum->CheckBVNearPlaneIntersection(pLight->GetBoundingVolume())) {
-                        deferredLightRenderBack.emplace_back(&deferredLight);
+                        deferredLightRenderBack.push_back(&deferredLight);
                     } else {
-                        deferredLightStencilFront.emplace_back(&deferredLight);
+                        deferredLightStencilFront.push_back(&deferredLight);
                     }
 
                     continue;
@@ -2690,15 +2694,15 @@ namespace hpl {
                 } else {
                     if (lightType == eLightType_Point) {
                         if (deferredLight.getArea() >= mlMinLargeLightArea) {
-                            deferredLightStencilFront.emplace_back(&deferredLight);
+                            deferredLightStencilFront.push_back(&deferredLight);
                         } else {
-                            deferredLightRenderBack.emplace_back(&deferredLight);
+                            deferredLightRenderBack.push_back(&deferredLight);
                         }
                     }
                     // Always do double passes for spotlights as they need to will get artefacts otherwise...
                     //(At least with gobos)l
                     else if (lightType == eLightType_Spot) {
-                        deferredLightStencilFront.emplace_back(&deferredLight);
+                        deferredLightStencilFront.push_back(&deferredLight);
                     }
                 }
             }
@@ -2755,8 +2759,9 @@ namespace hpl {
                             const auto color = pLightSpot->GetDiffuseColor();
 
                             uniformObjectData.m_common.m_mvp = cMath::ToForgeMat4(
-                        cMath::MatrixMul(viewProjectionMat,
-                        cMath::MatrixMul(light->m_light->GetWorldMatrix(), detail::GetLightMtx(*light))).GetTranspose());
+                                cMath::MatrixMul(
+                                    viewProjectionMat, cMath::MatrixMul(light->m_light->GetWorldMatrix(), detail::GetLightMtx(*light)))
+                                    .GetTranspose());
 
                             uniformObjectData.m_spotLight.m_spotViewProj = cMath::ToForgeMat4(spotViewProj);
                             uniformObjectData.m_spotLight.m_oneMinusCosHalfSpotFOV = 1 - pLightSpot->GetCosHalfFOV();
@@ -2791,7 +2796,6 @@ namespace hpl {
                             uniformObjectData.m_common.m_mvp = cMath::ToForgeMat4(
                                 cMath::MatrixMul(viewProjectionMat, detail::GetLightMtx(*light)).GetTranspose());
 
-
                             cLightBox* pLightBox = static_cast<cLightBox*>(light->m_light);
                             const auto& color = light->m_light->GetDiffuseColor();
                             uniformObjectData.m_boxLight.m_lightColor = float4(color.r, color.g, color.b, color.a);
@@ -2818,7 +2822,7 @@ namespace hpl {
                     lightIndex++;
                 };
 
-                cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "Point Light Deferred Back");
+
 
                 LoadActionsDesc loadActions = {};
                 loadActions.mLoadActionsColor[0] = LOAD_ACTION_CLEAR;
@@ -2857,6 +2861,7 @@ namespace hpl {
                 // Draw Spot Lights
                 // Draw Box Lights
                 // --------------------------------------------------------
+                cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "Point Light Deferred Stencil  Back");
                 for (auto& light : deferredLightStencilFront) {
                     cmdSetStencilReferenceValue(frame.m_cmd, 0xff);
                     std::array targets = { eVertexBufferElement_Position };
@@ -2884,7 +2889,9 @@ namespace hpl {
                     }
                     cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
                 }
+                cmdEndDebugMarker(frame.m_cmd);
 
+                cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "Point Light Deferred Back");
                 for (auto& light : deferredLightRenderBack) {
                     switch (light->m_light->GetLightType()) {
                         case eLightType_Point:
@@ -2901,7 +2908,6 @@ namespace hpl {
                             break;
                     }
 
-                    GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(&m_lightPassRingBuffer, sizeof(UniformLightData));
                     std::array targets = { eVertexBufferElement_Position };
                     LegacyVertexBuffer::GeometryBinding binding{};
                     auto lightShape = GetLightShape(light->m_light, eDeferredShapeQuality_High);

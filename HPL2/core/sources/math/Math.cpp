@@ -834,7 +834,7 @@ namespace hpl {
 
 		//////////////////////////////////////
 		//Set up the size of the near plane
-		float fTan = afTanHalfFov > 0 ? afTanHalfFov : tan(apFrustum->GetFOV()*0.5f);
+		float fTan = tan(apFrustum->GetFOV()*0.5f);
 		float fNearPlane =apFrustum->GetNearPlane();
 		float fNearTop =  fTan * fNearPlane;
 		float fNearRight = apFrustum->GetAspect() * fNearTop;

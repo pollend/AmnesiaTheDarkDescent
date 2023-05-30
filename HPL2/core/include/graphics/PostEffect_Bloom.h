@@ -18,7 +18,6 @@
  */
 #pragma once
 
-#include "bgfx/bgfx.h"
 #include "graphics/PostEffect.h"
 #include "graphics/RenderTarget.h"
 #include "math/MathTypes.h"
@@ -103,7 +102,6 @@ namespace hpl {
 	private:
 		virtual void OnSetParams() override;
 		virtual iPostEffectParams *GetTypeSpecificParams() override { return &mParams; }
-		virtual void RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, LegacyRenderTarget& target) override;
         virtual void RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, const ForgeRenderer::Frame& frame, Texture* inputTexture, RenderTarget* renderTarget) override;
 
         UniqueViewportData<BloomData> m_boundBloomData;

@@ -175,43 +175,4 @@ namespace hpl
         mpSpecificType->m_descIndex = (mpSpecificType->m_descIndex + 1) % cPostEffectType_ColorConvTex::DescriptorSetSize;
     }
 
-    void cPostEffect_ColorConvTex::RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, LegacyRenderTarget& target)
-    {
-		BX_ASSERT(mpColorConvTex, "ColorConvTex is null");
-	    cVector2l vRenderTargetSize = viewport.GetSize();
-        GraphicsContext::LayoutStream layoutStream;
-        cMatrixf projMtx;
-        context.ScreenSpaceQuad(layoutStream, projMtx, vRenderTargetSize.x, vRenderTargetSize.y);
-
-        GraphicsContext::ViewConfiguration viewConfig {target};
-        viewConfig.m_viewRect ={0, 0, vRenderTargetSize.x, vRenderTargetSize.y};
-        viewConfig.m_projection = projMtx;
-        auto view = context.StartPass("Color Conv effect", viewConfig);
-
-        GraphicsContext::ShaderProgram shaderProgram;
-        shaderProgram.m_handle = mpSpecificType->m_colorConv;
-
-        struct
-        {
-            float u_alphaFade;
-            float pad;
-            float pad1;
-            float pad2;
-        } uniform = {
-            cMath::Clamp(mParams.mfFadeAlpha, 0.0f, 1.0f),
-            0,
-            0,
-            0 };
-        shaderProgram.m_uniforms.push_back({ mpSpecificType->m_u_param, &uniform, 1 });
-
-        shaderProgram.m_textures.push_back({ mpSpecificType->m_u_colorConvTex, mpColorConvTex->GetHandle(), 0 });
-        shaderProgram.m_textures.push_back({ mpSpecificType->m_u_diffuseTex, input.GetHandle(), 1 });
-
-        shaderProgram.m_configuration.m_write = Write::RGBA;
-        shaderProgram.m_configuration.m_depthTest = DepthTest::None;
-
-        GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
-        context.Submit(view, request);
-    }
-
 } // namespace hpl

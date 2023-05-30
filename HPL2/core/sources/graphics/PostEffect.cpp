@@ -41,16 +41,12 @@ namespace hpl
     iPostEffectType::~iPostEffectType()
     {
     }
-	
+
     iPostEffect::iPostEffect(cGraphics* apGraphics, cResources* apResources, iPostEffectType* apType)
     {
         mpGraphics = apGraphics;
         mpResources = apResources;
         mpType = apType;
-
-        mbFinalFrameBufferUsed = false;
-
-        mpLowLevelGraphics = mpGraphics->GetLowLevel();
 
         mbActive = true;
         mbDisabled = false;

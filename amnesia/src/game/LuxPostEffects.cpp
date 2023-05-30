@@ -20,35 +20,49 @@
 #include "LuxPostEffects.h"
 
 #include "LuxMapHandler.h"
-#include "bgfx/bgfx.h"
 #include "graphics/ShaderUtil.h"
 
 #include <graphics/ForgeRenderer.h>
-#include <folly/FixedString.h>
-
 
 cLuxPostEffect_Insanity::cLuxPostEffect_Insanity(cGraphics* apGraphics, cResources* apResources)
     : iLuxPostEffect(apGraphics, apResources) {
     auto* forgeRenderer = Interface<ForgeRenderer>::Get();
-    {
-        ShaderLoadDesc loadDesc = {};
+
+    m_insanityShader = ForgeShaderHandle(forgeRenderer->Rend());
+    m_insanityShader.Load([&](Shader** shader) {
+        ShaderLoadDesc loadDesc{};
         loadDesc.mStages[0].pFileName = "fullscreen.vert";
         loadDesc.mStages[1].pFileName = "dds_insanity_posteffect.frag";
-        addShader(forgeRenderer->Rend(), &loadDesc, &m_insanityShader);
+        addShader(forgeRenderer->Rend(), &loadDesc, shader);
+        return true;
+    });
+    {
+        SamplerDesc samplerDesc = {};
+        addSampler(forgeRenderer->Rend(), &samplerDesc, &m_inputSampler);
     }
-    RootSignatureDesc rootDesc = { &m_insanityShader, 1 };
+
+    std::array shaders = {
+        m_insanityShader.m_handle,
+    };
+    const char* pStaticSamplers[] = { "inputSampler" };
+    RootSignatureDesc rootDesc = {};
+    rootDesc.ppShaders = shaders.data();
+    rootDesc.mShaderCount = shaders.size();
+    rootDesc.mStaticSamplerCount = std::size(pStaticSamplers);
+    rootDesc.ppStaticSamplers = &m_inputSampler;
+    rootDesc.ppStaticSamplerNames = pStaticSamplers;
     addRootSignature(forgeRenderer->Rend(), &rootDesc, &m_instantyRootSignature);
 
-    DescriptorSetDesc perFrameDescSet{m_instantyRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, 1};
-    for(auto &desc: m_insanityPerFrameset) {
+    DescriptorSetDesc perFrameDescSet{ m_instantyRootSignature,
+                                       DESCRIPTOR_UPDATE_FREQ_PER_FRAME,
+                                       cLuxPostEffect_Insanity::DescriptorSetSize };
+    for (auto& desc : m_insanityPerFrameset) {
         addDescriptorSet(forgeRenderer->Rend(), &perFrameDescSet, &desc);
     }
-
     for (size_t i = 0; i < m_ampMaps.size(); i++) {
         m_ampMaps[i] = mpResources->GetTextureManager()->Create2DImage("posteffect_insanity_ampmap" + cString::ToString((int)i), false);
     }
     m_zoomImage = mpResources->GetTextureManager()->Create2DImage("posteffect_insanity_zoom.jpg", false);
-
 
     DepthStateDesc depthStateDisabledDesc = {};
     depthStateDisabledDesc.mDepthWrite = false;
@@ -57,16 +71,14 @@ cLuxPostEffect_Insanity::cLuxPostEffect_Insanity(cGraphics* apGraphics, cResourc
     RasterizerStateDesc rasterStateNoneDesc = {};
     rasterStateNoneDesc.mCullMode = CULL_MODE_NONE;
 
-    std::array imageTargets = {
-        iPostEffect::PostEffectImageFormat
-    };
+    std::array imageTargets = { getRecommendedSwapchainFormat(false, false) };
     PipelineDesc pipelineDesc = {};
     pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
     GraphicsPipelineDesc& graphicsPipelineDesc = pipelineDesc.mGraphicsDesc;
     graphicsPipelineDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
     graphicsPipelineDesc.mRenderTargetCount = imageTargets.size();
     graphicsPipelineDesc.pColorFormats = imageTargets.data();
-    graphicsPipelineDesc.pShaderProgram = m_insanityShader;
+    graphicsPipelineDesc.pShaderProgram = m_insanityShader.m_handle;
     graphicsPipelineDesc.pRootSignature = m_instantyRootSignature;
     graphicsPipelineDesc.mRenderTargetCount = 1;
     graphicsPipelineDesc.mDepthStencilFormat = TinyImageFormat_UNDEFINED;
@@ -75,14 +87,11 @@ cLuxPostEffect_Insanity::cLuxPostEffect_Insanity(cGraphics* apGraphics, cResourc
     graphicsPipelineDesc.pRasterizerState = &rasterStateNoneDesc;
     graphicsPipelineDesc.pDepthState = &depthStateDisabledDesc;
     graphicsPipelineDesc.pBlendState = NULL;
-
     addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_insanityPipeline);
 }
 
-
 cLuxPostEffect_Insanity::~cLuxPostEffect_Insanity() {
 }
-
 
 void cLuxPostEffect_Insanity::Update(float afTimeStep) {
     mfT += afTimeStep * mfWaveSpeed;
@@ -95,9 +104,6 @@ void cLuxPostEffect_Insanity::Update(float afTimeStep) {
     }
 }
 
-//-----------------------------------------------------------------------
-
-
 cLuxPostEffectHandler::cLuxPostEffectHandler()
     : iLuxUpdateable("LuxPostEffectHandler") {
     cGraphics* pGraphics = gpBase->mpEngine->GetGraphics();
@@ -108,30 +114,12 @@ cLuxPostEffectHandler::cLuxPostEffectHandler()
     mpInsanity->SetActive(true);
 }
 
-void cLuxPostEffect_Insanity::RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, LegacyRenderTarget& target) {
-
-    auto viewportSize = viewport.GetSize();
-    cMatrixf projMtx;
-    GraphicsContext::ShaderProgram shaderProgram;
-    GraphicsContext::LayoutStream layoutStream;
-    context.ScreenSpaceQuad(layoutStream, projMtx, viewportSize.x, viewportSize.y);
-
-    GraphicsContext::ViewConfiguration viewConfiguration {target};
-    viewConfiguration.m_viewRect = cRect2l(0, 0, viewportSize.x, viewportSize.y);
-    viewConfiguration.m_projection = projMtx;
-    bgfx::ViewId view = context.StartPass("DDS_Insanity", viewConfiguration);
-
-    struct {
-        float alpha;
-        float fT;
-        float ampT;
-        float waveAlpha;
-
-        float zoomAlpha;
-        float screenSize[2];
-        float pad;
-    } param = { 0 };
-
+void cLuxPostEffect_Insanity::RenderEffect(
+    cPostEffectComposite& compositor,
+    cViewport& viewport,
+    const ForgeRenderer::Frame& frame,
+    Texture* inputTexture,
+    RenderTarget* renderTarget) {
     int lAmp0 = static_cast<int>(mfAnimCount);
     int lAmp1 = static_cast<int>(mfAnimCount + 1);
     if (lAmp1 >= static_cast<int>(m_ampMaps.size())) {
@@ -139,27 +127,44 @@ void cLuxPostEffect_Insanity::RenderEffect(cPostEffectComposite& compositor, cVi
     }
     float fAmpT = cMath::GetFraction(mfAnimCount);
 
-
-    shaderProgram.m_configuration.m_write = Write::RGBA;
-    shaderProgram.m_handle = m_program;
-
-    shaderProgram.m_textures.push_back({ m_s_diffuseMap, input.GetHandle(), 0 });
-    shaderProgram.m_textures.push_back({ m_s_ampMap0, m_ampMaps[lAmp0]->GetHandle(), 1 });
-    shaderProgram.m_textures.push_back({ m_s_ampMap1, m_ampMaps[lAmp1]->GetHandle(), 2 });
-    shaderProgram.m_textures.push_back({ m_s_zoomMap, m_zoomImage->GetHandle(), 3 });
-
+    struct {
+        float time;
+        float amplitude;
+        float waveAlpha;
+        float zoomAlpha;
+    } param = { 0 };
+    param.time = mfT;
     param.zoomAlpha = mfZoomAlpha;
-    param.fT = mfT;
-    param.ampT = fAmpT;
     param.waveAlpha = mfWaveAlpha;
-    param.alpha = 1.0f;
-    param.screenSize[0] = viewportSize.x;
-    param.screenSize[1] = viewportSize.y;
+    param.amplitude = fAmpT;
+    uint32_t rootConstantIndex = getDescriptorIndexFromName(m_instantyRootSignature, "postEffectConstants");
+    cmdBindPushConstants(frame.m_cmd, m_instantyRootSignature, rootConstantIndex, &param);
 
-    shaderProgram.m_uniforms.push_back({ m_u_param, &param, 2 });
-    GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
+    LoadActionsDesc loadActions = {};
+    loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
+    loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
 
-    context.Submit(view, request);
+    cmdBindRenderTargets(frame.m_cmd, 1, &renderTarget, NULL, &loadActions, NULL, NULL, -1, -1);
+
+    std::array<DescriptorData, 4> params = {};
+    params[0].pName = "sourceInput";
+    params[0].ppTextures = &inputTexture;
+    params[1].pName = "ampMap0";
+    params[1].ppTextures = &m_ampMaps[lAmp0]->GetTexture().m_handle;
+    params[2].pName = "ampMap1";
+    params[2].ppTextures = &m_ampMaps[lAmp1]->GetTexture().m_handle;
+    params[3].pName = "zoomMap";
+    params[3].ppTextures = &m_zoomImage->GetTexture().m_handle;
+    updateDescriptorSet(frame.m_renderer->Rend(), m_descIndex, m_insanityPerFrameset[frame.m_frameIndex], params.size(), params.data());
+
+    cmdSetViewport(
+        frame.m_cmd, 0.0f, 0.0f, static_cast<float>(renderTarget->mWidth), static_cast<float>(renderTarget->mHeight), 0.0f, 1.0f);
+    cmdSetScissor(frame.m_cmd, 0, 0, static_cast<float>(renderTarget->mWidth), static_cast<float>(renderTarget->mHeight));
+    cmdBindPipeline(frame.m_cmd, m_insanityPipeline);
+
+    cmdBindDescriptorSet(frame.m_cmd, m_descIndex, m_insanityPerFrameset[frame.m_frameIndex]);
+    cmdDraw(frame.m_cmd, 3, 0);
+    m_descIndex = (m_descIndex + 1) % cLuxPostEffect_Insanity::DescriptorSetSize;
 }
 
 cLuxPostEffectHandler::~cLuxPostEffectHandler() {
@@ -171,7 +176,6 @@ cLuxPostEffectHandler::~cLuxPostEffectHandler() {
 void cLuxPostEffectHandler::OnStart() {
 }
 
-
 void cLuxPostEffectHandler::Update(float afTimeStep) {
     for (auto& pPostEffect : mvPostEffects) {
         if (pPostEffect->IsActive()) {
@@ -179,7 +183,6 @@ void cLuxPostEffectHandler::Update(float afTimeStep) {
         }
     }
 }
-
 
 void cLuxPostEffectHandler::Reset() {
 }

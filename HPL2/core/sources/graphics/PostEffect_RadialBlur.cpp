@@ -38,9 +38,65 @@ namespace hpl
     cPostEffectType_RadialBlur::cPostEffectType_RadialBlur(cGraphics* apGraphics, cResources* apResources)
         : iPostEffectType("RadialBlur", apGraphics, apResources)
     {
-        // m_program = hpl::loadProgram("vs_post_effect", "fs_posteffect_radial_blur_frag");
-        // m_u_uniform = bgfx::createUniform("u_params", bgfx::UniformType::Vec4);
-        // m_s_diffuseMap = bgfx::createUniform("diffuseMap", bgfx::UniformType::Sampler);
+        auto* forgeRenderer = Interface<ForgeRenderer>::Get();
+        {
+            m_shader = ForgeShaderHandle(forgeRenderer->Rend());
+            m_shader.Load([&](Shader** shader) {
+                ShaderLoadDesc loadDesc{};
+                loadDesc.mStages[0].pFileName = "fullscreen.vert";
+                loadDesc.mStages[1].pFileName = "radial_blur_posteffect.frag";
+                addShader(forgeRenderer->Rend(),&loadDesc, shader);
+                return true;
+            });
+        }
+        {
+            SamplerDesc samplerDesc = {};
+            addSampler(forgeRenderer->Rend(), &samplerDesc,  &m_inputSampler);
+        }
+        {
+            std::array shaders = {
+                m_shader.m_handle
+            };
+            RootSignatureDesc rootDesc{};
+            const char* pStaticSamplers[] = { "inputSampler" };
+            rootDesc.ppShaders = shaders.data();
+            rootDesc.mShaderCount = shaders.size();
+            rootDesc.mStaticSamplerCount = 1;
+            rootDesc.ppStaticSamplers = &m_inputSampler;
+            rootDesc.ppStaticSamplerNames = pStaticSamplers;
+            addRootSignature(forgeRenderer->Rend(), &rootDesc, &m_rootSignature);
+
+            DescriptorSetDesc setDesc = { m_rootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, cPostEffectType_RadialBlur::DescriptorSetSize  };
+            for(auto& descSet: m_perFrameDescriptorSet) {
+                addDescriptorSet(forgeRenderer->Rend(), &setDesc, &descSet);
+            }
+        }
+        TinyImageFormat inputFormat = getRecommendedSwapchainFormat(false,false);
+        {
+            DepthStateDesc depthStateDisabledDesc = {};
+            depthStateDisabledDesc.mDepthWrite = false;
+            depthStateDisabledDesc.mDepthTest = false;
+
+            RasterizerStateDesc rasterStateNoneDesc = {};
+            rasterStateNoneDesc.mCullMode = CULL_MODE_NONE;
+
+            PipelineDesc pipelineDesc = {};
+            pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+            GraphicsPipelineDesc& graphicsPipelineDesc = pipelineDesc.mGraphicsDesc;
+            graphicsPipelineDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+            graphicsPipelineDesc.pShaderProgram = m_shader.m_handle;
+            graphicsPipelineDesc.pRootSignature = m_rootSignature;
+            graphicsPipelineDesc.mRenderTargetCount = 1;
+            graphicsPipelineDesc.mDepthStencilFormat = TinyImageFormat_UNDEFINED;
+            graphicsPipelineDesc.pVertexLayout = NULL;
+            graphicsPipelineDesc.pRasterizerState = &rasterStateNoneDesc;
+            graphicsPipelineDesc.pDepthState = &depthStateDisabledDesc;
+            graphicsPipelineDesc.pBlendState = NULL;
+            graphicsPipelineDesc.mSampleCount = SAMPLE_COUNT_1;
+            graphicsPipelineDesc.mSampleQuality = 0;
+            graphicsPipelineDesc.pColorFormats = &inputFormat;
+            addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_pipeline);
+        }
     }
 
     cPostEffectType_RadialBlur::~cPostEffectType_RadialBlur()
@@ -72,41 +128,35 @@ namespace hpl
     {
     }
 
-    void cPostEffect_RadialBlur::RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, LegacyRenderTarget& target)
-    {
-        cVector2l vRenderTargetSize = viewport.GetSize();
-        cVector2f vRenderTargetSizeFloat((float)vRenderTargetSize.x, (float)vRenderTargetSize.y);
+    void cPostEffect_RadialBlur::RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, const ForgeRenderer::Frame& frame, Texture* inputTexture, RenderTarget* renderTarget) {
+        ASSERT(mpRadialBlurType);
+        struct {
+            float size;
+            float blurStartDist;
+        } params = { mParams.mfSize, mParams.mfBlurStartDist };
 
-        GraphicsContext::LayoutStream layoutStream;
-        cMatrixf projMtx;
-        context.ScreenSpaceQuad(layoutStream, projMtx, vRenderTargetSize.x, vRenderTargetSize.y);
-        
-        GraphicsContext::ViewConfiguration viewConfiguration {target};
-        viewConfiguration.m_viewRect = {0, 0, vRenderTargetSize.x, vRenderTargetSize.y};
-        viewConfiguration.m_projection = projMtx;
-		bgfx::ViewId view = context.StartPass("Radial Blur", viewConfiguration);
+        uint32_t rootConstantIndex = getDescriptorIndexFromName(mpRadialBlurType->m_rootSignature, "postEffectConstants");
+        cmdBindPushConstants(frame.m_cmd, mpRadialBlurType->m_rootSignature, rootConstantIndex, &params);
 
-        BX_ASSERT(mpRadialBlurType, "radial blur type is null");
-        BX_ASSERT(bgfx::isValid(mpRadialBlurType->m_program), "radial blur program is invalid");
+        LoadActionsDesc loadActions = {};
+        loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
+        loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
 
-        cVector2f blurStartDist = vRenderTargetSizeFloat * 0.5f;
+        cmdBindRenderTargets(frame.m_cmd, 1, &renderTarget, NULL, &loadActions, NULL, NULL, -1, -1);
 
-        struct
-        {
-            float afSize;
-            float afBlurSartDist;
-            float avHalfScreenSize[2];
-        } u_params = { mParams.mfSize * vRenderTargetSizeFloat.x, mParams.mfBlurStartDist, { blurStartDist.x, blurStartDist.y } };
+        std::array<DescriptorData, 1> descData = {};
+        descData[0].pName = "sourceInput";
+        descData[0].ppTextures = &inputTexture;
+        updateDescriptorSet(
+            frame.m_renderer->Rend(), mpRadialBlurType->m_descIndex, mpRadialBlurType->m_perFrameDescriptorSet[frame.m_frameIndex], descData.size(), descData.data());
 
-        GraphicsContext::ShaderProgram shaderProgram;
-        // shaderProgram.m_projection = projMtx;
-        shaderProgram.m_handle = mpRadialBlurType->m_program;
-        shaderProgram.m_uniforms.push_back({ mpRadialBlurType->m_u_uniform, &u_params });
-        shaderProgram.m_textures.push_back({ mpRadialBlurType->m_s_diffuseMap, input.GetHandle() });
-        shaderProgram.m_configuration.m_write = Write::RGBA | Write::Depth;
+        cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, static_cast<float>(renderTarget->mWidth), static_cast<float>(renderTarget->mHeight), 0.0f, 1.0f);
+        cmdSetScissor(frame.m_cmd, 0, 0, static_cast<float>(renderTarget->mWidth), static_cast<float>(renderTarget->mHeight));
+        cmdBindPipeline(frame.m_cmd, mpRadialBlurType->m_pipeline);
 
-        GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
-        context.Submit(view, request);
+        cmdBindDescriptorSet(frame.m_cmd, mpRadialBlurType->m_descIndex, mpRadialBlurType->m_perFrameDescriptorSet[frame.m_frameIndex]);
+        cmdDraw(frame.m_cmd, 3, 0);
+        mpRadialBlurType->m_descIndex = (mpRadialBlurType->m_descIndex + 1) % cPostEffectType_RadialBlur::DescriptorSetSize;
     }
 
 } // namespace hpl

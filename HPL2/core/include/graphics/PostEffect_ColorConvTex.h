@@ -17,8 +17,7 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef HPL_POSTEFFECT_COLOR_CONV_TEX_H
-#define HPL_POSTEFFECT_COLOR_CONV_TEX_H
+#pragma once
 
 #include "bgfx/bgfx.h"
 #include "graphics/Image.h"
@@ -62,12 +61,6 @@ namespace hpl {
         RootSignature* m_rootSignature;
         Sampler* m_inputSampler;
         std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perFrameDescriptorSet;
-
-        bgfx::UniformHandle m_u_param;
-		bgfx::UniformHandle m_u_colorConvTex;
-		bgfx::UniformHandle m_u_diffuseTex;
-
-		bgfx::ProgramHandle m_colorConv;
 	};
 
 	//------------------------------------------
@@ -75,7 +68,6 @@ namespace hpl {
 	class cPostEffect_ColorConvTex : public iPostEffect
 	{
 	public:
-		virtual void RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, LegacyRenderTarget& target) override;
         virtual void RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, const ForgeRenderer::Frame& frame, Texture* inputTexture, RenderTarget* renderTarget) override;
 
         cPostEffect_ColorConvTex(cGraphics *apGraphics, cResources *apResources, iPostEffectType *apType);
@@ -86,13 +78,10 @@ namespace hpl {
 		virtual iPostEffectParams *GetTypeSpecificParams() override { return &mParams; }
 
 		Image* mpColorConvTex = nullptr;
-
 		cPostEffectType_ColorConvTex* mpSpecificType = nullptr;
-
 		cPostEffectParams_ColorConvTex mParams;
 	};
 
 	//------------------------------------------
 
 };
-#endif // HPL_POSTEFFECT_COLOR_CONV_TEX_H

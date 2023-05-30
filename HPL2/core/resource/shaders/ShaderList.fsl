@@ -357,3 +357,6 @@
     #include "color_conv_posteffect.frag.fsl"
 #end
 
+#frag radial_blur_posteffect.frag
+    #include "radial_blur_posteffect.frag.fsl"
+#end

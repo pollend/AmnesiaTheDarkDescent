@@ -17,102 +17,99 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef LUX_POST_EFFECTS_H
-#define LUX_POST_EFFECTS_H
-
-//----------------------------------------------
+#pragma once
 
 #include "LuxBase.h"
-#include "bgfx/bgfx.h"
 #include "graphics/ForgeRenderer.h"
 #include "graphics/Image.h"
 #include <array>
-#include <bx/debug.h>
 
-#include <graphics/ForgeHandles.h>
 #include <FixPreprocessor.h>
+#include <graphics/ForgeHandles.h>
 
-class iLuxPostEffect : public iPostEffect
-{
+class iLuxPostEffect : public iPostEffect {
 public:
-	iLuxPostEffect(cGraphics *apGraphics, cResources *apResources) : iPostEffect(apGraphics, apResources, NULL){}
-	virtual ~iLuxPostEffect(){}
+    iLuxPostEffect(cGraphics* apGraphics, cResources* apResources)
+        : iPostEffect(apGraphics, apResources, NULL) {
+    }
+    virtual ~iLuxPostEffect() {
+    }
 
-	virtual void Update(float afTimeStep){}
+    virtual void Update(float afTimeStep) {
+    }
 
 protected:
-	void OnSetParams(){}
-	iPostEffectParams *GetTypeSpecificParams() { return NULL; }
+    void OnSetParams() {
+    }
+    iPostEffectParams* GetTypeSpecificParams() {
+        return NULL;
+    }
 };
 
-class cLuxPostEffect_Insanity : public iLuxPostEffect
-{
+class cLuxPostEffect_Insanity : public iLuxPostEffect {
 public:
-	cLuxPostEffect_Insanity(cGraphics *apGraphics, cResources *apResources);
-	~cLuxPostEffect_Insanity();
+    cLuxPostEffect_Insanity(cGraphics* apGraphics, cResources* apResources);
+    ~cLuxPostEffect_Insanity();
     static constexpr uint32_t NumMapAmps = 3;
+    static constexpr uint32_t DescriptorSetSize = 16;
 
-	void Update(float afTimeStep);
+    virtual void Update(float afTimeStep) override;
 
-	void SetWaveAlpha(float afX){ mfWaveAlpha = afX;}
-	void SetZoomAlpha(float afX){ mfZoomAlpha = afX;}
-	void SetWaveSpeed(float afX){ mfWaveSpeed = afX;}
+    void SetWaveAlpha(float afX) {
+        mfWaveAlpha = afX;
+    }
+    void SetZoomAlpha(float afX) {
+        mfZoomAlpha = afX;
+    }
+    void SetWaveSpeed(float afX) {
+        mfWaveSpeed = afX;
+    }
 
-	virtual void RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, LegacyRenderTarget& target) override;
+    virtual void RenderEffect(
+        cPostEffectComposite& compositor,
+        cViewport& viewport,
+        const ForgeRenderer::Frame& frame,
+        Texture* inputTexture,
+        RenderTarget* renderTarget) override;
 
 private:
-
-    Shader* m_insanityShader;
+    uint32_t m_descIndex = 0;
+    ForgeShaderHandle m_insanityShader;
     Pipeline* m_insanityPipeline;
     RootSignature* m_instantyRootSignature = nullptr;
-    std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_insanityPerFrameset {};
+    std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_insanityPerFrameset{};
+    Sampler* m_inputSampler;
 
     bgfx::ProgramHandle m_program;
-	std::array<Image*, 3> m_ampMaps;
-	Image* m_zoomImage;
+    std::array<Image*, 3> m_ampMaps;
+    Image* m_zoomImage;
 
-	bgfx::UniformHandle m_s_diffuseMap;
-	bgfx::UniformHandle m_s_ampMap0;
-	bgfx::UniformHandle m_s_ampMap1;
-	bgfx::UniformHandle m_s_zoomMap;
-	bgfx::UniformHandle m_u_param;
-
-	float mfT = 0.0f;
-	float mfAnimCount = 0.0f;
-	float mfWaveAlpha = 0.0f;
-	float mfZoomAlpha = 0.0f;
-	float mfWaveSpeed = 0.0f;
+    float mfT = 0.0f;
+    float mfAnimCount = 0.0f;
+    float mfWaveAlpha = 0.0f;
+    float mfZoomAlpha = 0.0f;
+    float mfWaveSpeed = 0.0f;
 };
 
-
-//----------------------------------------------
-
-
-class cLuxPostEffectHandler : public iLuxUpdateable
-{
+class cLuxPostEffectHandler : public iLuxUpdateable {
 public:
-	cLuxPostEffectHandler();
-	~cLuxPostEffectHandler();
+    cLuxPostEffectHandler();
+    ~cLuxPostEffectHandler();
 
-	void OnStart();
-	void Update(float afTimeStep);
-	void Reset();
+    void OnStart();
+    void Update(float afTimeStep);
+    void Reset();
 
-	cLuxPostEffect_Insanity* GetInsanity(){ return mpInsanity; }
+    cLuxPostEffect_Insanity* GetInsanity() {
+        return mpInsanity;
+    }
 
 private:
-	void LoadMainConfig();
-	void SaveMainConfig();
+    void LoadMainConfig();
+    void SaveMainConfig();
+    void AddEffect(iLuxPostEffect* apPostEffect, int alPrio);
 
-	void AddEffect(iLuxPostEffect *apPostEffect, int alPrio);
+    cLuxPostEffect_Insanity* mpInsanity;
 
-	cLuxPostEffect_Insanity *mpInsanity;
-
-	std::vector<iLuxPostEffect*> mvPostEffects;
-
+    std::vector<iLuxPostEffect*> mvPostEffects;
 };
-
-//----------------------------------------------
-
-
-#endif // LUX_POST_EFFECTS_H

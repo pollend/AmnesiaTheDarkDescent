@@ -73,8 +73,6 @@ namespace hpl {
 		tString msName;
 	};
 
-	//------------------------------------------
-
 	class iPostEffectType
 	{
 	public:
@@ -94,18 +92,13 @@ namespace hpl {
 		tString msName;
 	};
 
-	//------------------------------------------
-
 	class iPostEffect
 	{
 	public:
-        static constexpr TinyImageFormat PostEffectImageFormat = TinyImageFormat_R8G8B8A8_UNORM;
-
 		iPostEffect(cGraphics *apGraphics, cResources *apResources, iPostEffectType *apType);
 		virtual ~iPostEffect();
 
         virtual void Draw(cPostEffectComposite& compositor, cViewport& viewport, Texture* input, RenderTarget* target) {};
-		virtual void RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, LegacyRenderTarget& target) {};
 		virtual void RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, const ForgeRenderer::Frame& frame, Texture* inputTexture, RenderTarget* renderTarget) {};
 		/** SetDisabled - Method to disable the Effect completely, meaning IsActive will always return false even
 		 * after a SetActive(true) call
@@ -121,8 +114,6 @@ namespace hpl {
 		void SetParams(iPostEffectParams *apSrcParams);
 		void GetParams(iPostEffectParams *apDestParams);
 
-		// virtual void OnViewportChanged(const cVector2l& avSize) {}
-
 		virtual void Reset(){}
 
 	protected:
@@ -132,16 +123,10 @@ namespace hpl {
 
 		cGraphics *mpGraphics;
 		cResources *mpResources;
-		iLowLevelGraphics* mpLowLevelGraphics;
-
 		iPostEffectType *mpType;
 
 		bool mbDisabled;
 		bool mbActive;
-
-		bool mbIsLastEffect;
-
-		bool mbFinalFrameBufferUsed;
 	};
 
 };
