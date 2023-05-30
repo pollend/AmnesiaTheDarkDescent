@@ -452,9 +452,8 @@ namespace hpl {
                         }
                         walkRenderables(childNode);
                     }
-                } else {
-                    renderNodeHandler(apNode, alNeededFlags);
                 }
+                renderNodeHandler(apNode, alNeededFlags);
             };
 
             for (auto& it : containers) {
