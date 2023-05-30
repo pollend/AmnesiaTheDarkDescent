@@ -48,13 +48,22 @@ namespace hpl {
 	{
 	friend class cPostEffect_ColorConvTex;
 	public:
-		cPostEffectType_ColorConvTex(cGraphics *apGraphics, cResources *apResources);
+	    static constexpr uint32_t DescriptorSetSize = 64;
+
+        cPostEffectType_ColorConvTex(cGraphics *apGraphics, cResources *apResources);
 		virtual ~cPostEffectType_ColorConvTex();
 
 		iPostEffect *CreatePostEffect(iPostEffectParams *apParams);
 
 	private:
-		bgfx::UniformHandle m_u_param;
+        uint32_t m_descIndex = 0;
+        Pipeline* m_pipeline = nullptr;
+        ForgeShaderHandle m_shader;
+        RootSignature* m_rootSignature;
+        Sampler* m_inputSampler;
+        std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perFrameDescriptorSet;
+
+        bgfx::UniformHandle m_u_param;
 		bgfx::UniformHandle m_u_colorConvTex;
 		bgfx::UniformHandle m_u_diffuseTex;
 
@@ -67,7 +76,9 @@ namespace hpl {
 	{
 	public:
 		virtual void RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, LegacyRenderTarget& target) override;
-		cPostEffect_ColorConvTex(cGraphics *apGraphics, cResources *apResources, iPostEffectType *apType);
+        virtual void RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, const ForgeRenderer::Frame& frame, Texture* inputTexture, RenderTarget* renderTarget) override;
+
+        cPostEffect_ColorConvTex(cGraphics *apGraphics, cResources *apResources, iPostEffectType *apType);
 		virtual ~cPostEffect_ColorConvTex();
 
 	private:

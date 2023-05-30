@@ -79,9 +79,9 @@ public:
         std::shared_ptr<Image> m_gBufferDepthStencil;
 
         std::array<LegacyRenderTarget, 2> m_blurTarget;
-        std::array<std::array<ForgeRenderTarget, 2>, ForgeRenderer::SwapChainLength> m_blurImageTarget;
-        std::array<ForgeRenderTarget, ForgeRenderer::SwapChainLength> m_outlineBuffer; // the intermediary results from the outline
-        std::array<ForgeRenderTarget, ForgeRenderer::SwapChainLength> m_inputDepthBuffer; // the input depth from the main render pass
+        std::array<ForgeRenderTarget, 2> m_blurImageTarget;
+        ForgeRenderTarget m_outlineBuffer; // the intermediary results from the outline
+        ForgeRenderTarget m_inputDepthBuffer; // the input depth from the main render pass
 
         LegacyRenderTarget m_outputTarget;
         LegacyRenderTarget m_outlineTarget;

@@ -1,7 +1,8 @@
+#include <graphics/ForgeRenderer.h>
+
 #include "engine/Interface.h"
 #include "graphics/Material.h"
 #include "windowing/NativeWindow.h"
-#include <graphics/ForgeRenderer.h>
 
 namespace hpl {
 
@@ -134,24 +135,19 @@ namespace hpl {
             copyPipelineDesc.pDepthState = &depthStateDisabledDesc;
             copyPipelineDesc.pBlendState = NULL;
 
-            struct {
-                TinyImageFormat m_format;
-                SampleCount m_sampleCount;
-                uint32_t m_sampleQuality;
-            } m_copyDescConfig[CopyPipelineCount];
-            m_copyDescConfig[CopyPipelineToSwapChain].m_sampleCount = m_swapChain->ppRenderTargets[0]->mSampleCount;
-            m_copyDescConfig[CopyPipelineToSwapChain].m_sampleQuality = m_swapChain->ppRenderTargets[0]->mSampleQuality;
-            m_copyDescConfig[CopyPipelineToSwapChain].m_format = m_swapChain->ppRenderTargets[0]->mFormat;
+            {
+                TinyImageFormat format = TinyImageFormat_R8G8B8A8_UNORM;
+                copyPipelineDesc.pColorFormats = &format;
+                copyPipelineDesc.mSampleCount = SAMPLE_COUNT_1;
+                copyPipelineDesc.mSampleQuality = m_swapChain->ppRenderTargets[0]->mSampleQuality;
+                addPipeline(m_renderer, &pipelineDesc, &m_copyPostProcessingPipelineToUnormR8G8B8A8);
+            }
 
-            m_copyDescConfig[CopyPipelineToUnormR8G8B8A8].m_sampleCount = SAMPLE_COUNT_1;
-            m_copyDescConfig[CopyPipelineToUnormR8G8B8A8].m_sampleQuality = 0;
-            m_copyDescConfig[CopyPipelineToUnormR8G8B8A8].m_format = TinyImageFormat_R8G8B8A8_UNORM;
-
-            for (size_t i = 0; i < m_copyPostProcessingPipeline.size(); i++) {
-                copyPipelineDesc.pColorFormats = &m_copyDescConfig[i].m_format;
-                copyPipelineDesc.mSampleCount = m_copyDescConfig[i].m_sampleCount;
-                copyPipelineDesc.mSampleQuality = m_copyDescConfig[i].m_sampleQuality;
-                addPipeline(m_renderer, &pipelineDesc, &m_copyPostProcessingPipeline[i]);
+            {
+                copyPipelineDesc.pColorFormats = &m_swapChain->ppRenderTargets[0]->mFormat;
+                copyPipelineDesc.mSampleCount = m_swapChain->ppRenderTargets[0]->mSampleCount;
+                copyPipelineDesc.mSampleQuality = m_swapChain->ppRenderTargets[0]->mSampleQuality;
+                addPipeline(m_renderer, &pipelineDesc, &m_copyPostProcessingPipelineToSwapChain );
             }
         }
     }
@@ -173,14 +169,13 @@ namespace hpl {
     void ForgeRenderer::InitializeResource() {
     }
 
-    void ForgeRenderer::cmdCopyTexture(CopyPipelines action, Cmd* cmd, Texture* srcTexture, RenderTarget* dstTexture) {
+    void ForgeRenderer::cmdCopyTexture(Cmd* cmd, Texture* srcTexture, RenderTarget* dstTexture) {
         ASSERT(srcTexture !=  nullptr);
         ASSERT(dstTexture !=  nullptr);
 
-        DescriptorData params[15] = {};
-        size_t paramCount = 0;
-        params[paramCount].pName = "inputMap";
-        params[paramCount++].ppTextures = &srcTexture;
+        std::array<DescriptorData, 1> params = {};
+        params[0].pName = "inputMap";
+        params[0].ppTextures = &srcTexture;
 
         LoadActionsDesc loadActions = {};
         loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
@@ -190,9 +185,21 @@ namespace hpl {
         cmdSetViewport(cmd, 0.0f, 0.0f, static_cast<float>(dstTexture->mWidth), static_cast<float>(dstTexture->mHeight), 0.0f, 1.0f);
         cmdSetScissor(cmd, 0, 0, dstTexture->mWidth, dstTexture->mHeight);
 
-        updateDescriptorSet(m_renderer, m_copyRegionDescriptorIndex, m_copyPostProcessingDescriptorSet, paramCount, params);
+        updateDescriptorSet(m_renderer, m_copyRegionDescriptorIndex, m_copyPostProcessingDescriptorSet, params.size(), params.data());
+        auto swapChainFormat = getRecommendedSwapchainFormat(false, false);
+        if(dstTexture->mFormat  == swapChainFormat) {
+            cmdBindPipeline(cmd, m_copyPostProcessingPipelineToSwapChain);
+        } else {
+            switch(dstTexture->mFormat) {
+                case TinyImageFormat_R8G8B8A8_UNORM:
+                    cmdBindPipeline(cmd, m_copyPostProcessingPipelineToUnormR8G8B8A8);
+                    break;
+                default:
+                    ASSERT(false && "Unsupported format");
+                    break;
+            }
+        }
 
-        cmdBindPipeline(cmd, m_copyPostProcessingPipeline[action]);
         cmdBindDescriptorSet(cmd, m_copyRegionDescriptorIndex, m_copyPostProcessingDescriptorSet);
         cmdDraw(cmd, 3, 0);
         m_copyRegionDescriptorIndex = (m_copyRegionDescriptorIndex + 1) % MaxCopyFrames;

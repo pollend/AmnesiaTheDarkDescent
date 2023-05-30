@@ -20,9 +20,7 @@
 #include "graphics/PostEffectComposite.h"
 
 #include "engine/Interface.h"
-#include "graphics/GraphicsTypes.h"
-#include "graphics/Image.h"
-#include "graphics/RenderTarget.h"
+
 #include "math/MathTypes.h"
 #include "scene/Viewport.h"
 #include "system/LowLevelSystem.h"
@@ -32,6 +30,10 @@
 #include "graphics/PostEffect.h"
 #include "graphics/Texture.h"
 #include "graphics/VertexBuffer.h"
+#include "graphics/ForgeHandles.h"
+#include "graphics/GraphicsTypes.h"
+#include "graphics/Image.h"
+#include "graphics/RenderTarget.h"
 
 #include <algorithm>
 #include <bx/debug.h>
@@ -51,34 +53,82 @@ namespace hpl {
             desc.m_configuration.m_rt = RTType::RT_Write;
 
             auto result = std::make_unique<PostEffectCompositorData>();
-            result->m_images[0] = std::make_shared<Image>();
-            result->m_images[1] = std::make_shared<Image>();
             result->m_size = viewPortSize;
 
-            result->m_images[0]->Initialize(desc, nullptr);
-            result->m_images[1]->Initialize(desc, nullptr);
-            
-            result->m_renderTargets[0] = LegacyRenderTarget(result->m_images[0]);
-            result->m_renderTargets[1] = LegacyRenderTarget(result->m_images[1]);
+            auto* renderer = Interface<ForgeRenderer>::Get();
+
+            result->m_renderTarget[0] = ForgeRenderTarget(renderer->Rend());
+            result->m_renderTarget[1] = ForgeRenderTarget(renderer->Rend());
+            result->m_renderTarget[0].Load([&](RenderTarget** texture) {
+                RenderTargetDesc renderTarget = {};
+                renderTarget.mArraySize = 1;
+                renderTarget.mDepth = 1;
+                renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+                renderTarget.mWidth = result->m_size.x;
+                renderTarget.mHeight = result->m_size.y;
+                renderTarget.mSampleCount = SAMPLE_COUNT_1;
+                renderTarget.mSampleQuality = 0;
+                renderTarget.mFormat = getRecommendedSwapchainFormat(false, false);
+                renderTarget.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
+                addRenderTarget(renderer->Rend(), &renderTarget, texture);
+                return true;
+            });
+
+            result->m_renderTarget[1].Load([&](RenderTarget** texture) {
+                RenderTargetDesc renderTarget = {};
+                renderTarget.mArraySize = 1;
+                renderTarget.mDepth = 1;
+                renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+                renderTarget.mWidth = result->m_size.x;
+                renderTarget.mHeight = result->m_size.y;
+                renderTarget.mSampleCount = SAMPLE_COUNT_1;
+                renderTarget.mSampleQuality = 0;
+                renderTarget.mFormat = getRecommendedSwapchainFormat(false, false);
+                renderTarget.mStartState = RESOURCE_STATE_RENDER_TARGET;
+                addRenderTarget(renderer->Rend(), &renderTarget, texture);
+                return true;
+            });
+
 
             return result;
         }, [&](cViewport& viewport, PostEffectCompositorData& data) {
-            return viewport.GetSize() == data.m_size &&
-                data.m_renderTargets[0].IsValid() &&
-                data.m_renderTargets[1].IsValid();
+            return viewport.GetSize() == data.m_size;
         });
         mpGraphics = apGraphics;
         SetupRenderFunctions(mpGraphics->GetLowLevel());
-
     }
 
     cPostEffectComposite::~cPostEffectComposite() {
     }
 
-    bool cPostEffectComposite::Draw(GraphicsContext& context, cViewport& viewport, float frameTime, Image& inputTexture, LegacyRenderTarget& renderTarget) {
+    bool cPostEffectComposite::Draw(const ForgeRenderer::Frame& frame, cViewport& viewport, float frameTime, Texture* inputTexture, RenderTarget* renderTarget) {
         mfCurrentFrameTime = frameTime;
-
+        auto renderer = Interface<ForgeRenderer>::Get();
         auto& boundData = m_boundCompositorData.resolve(viewport);
+        frame.m_resourcePool->Push(boundData.m_renderTarget[0]);
+        frame.m_resourcePool->Push(boundData.m_renderTarget[1]);
+
+        auto cmdBindRenderTarget = [&](size_t pogoTargetIndex) {
+            if(pogoTargetIndex == boundData.m_pogoTargetIndex) {
+                return;
+            }
+            if(pogoTargetIndex == 0) {
+                cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+                std::array rtBarriers = {
+                    RenderTargetBarrier{ boundData.m_renderTarget[0].m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
+                    RenderTargetBarrier{ boundData.m_renderTarget[1].m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE},
+                };
+                cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+            } else {
+                cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+                std::array rtBarriers = {
+                    RenderTargetBarrier{ boundData.m_renderTarget[0].m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE},
+                    RenderTargetBarrier{ boundData.m_renderTarget[1].m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
+                };
+                cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+            }
+            boundData.m_pogoTargetIndex = pogoTargetIndex;
+        };
 
         auto it = m_postEffects.begin();
         size_t currentIndex = 0;
@@ -89,15 +139,13 @@ namespace hpl {
                 continue;
             }
             hasEffect = true;
-            it->_effect->RenderEffect(*this, viewport, context, inputTexture, boundData.m_renderTargets[currentIndex]);
+            cmdBindRenderTarget(currentIndex);
+            it->_effect->RenderEffect(*this, viewport, frame, inputTexture, boundData.m_renderTarget[currentIndex].m_handle);
         }
 
         // this happens when there are no post effects
         if (!hasEffect) {
-            cVector2l vRenderTargetSize = viewport.GetSize();
-
-            cRect2l rect = cRect2l(0, 0, vRenderTargetSize.x, vRenderTargetSize.y);
-            context.CopyTextureToFrameBuffer(inputTexture, rect, renderTarget);
+            renderer->cmdCopyTexture(frame.m_cmd, inputTexture, renderTarget);
             return false;
         }
 
@@ -118,9 +166,11 @@ namespace hpl {
             size_t nextIndex = (currentIndex + 1) % 2;
             if (nextIt == m_postEffects.end()) {
                 isSavedToPrimaryRenderTarget = true;
-                it->_effect->RenderEffect(*this, viewport, context, *boundData.m_images[currentIndex], renderTarget);
+                cmdBindRenderTarget(currentIndex);
+                it->_effect->RenderEffect(*this, viewport, frame, boundData.m_renderTarget[currentIndex].m_handle->pTexture, renderTarget);
             } else {
-                it->_effect->RenderEffect(*this, viewport, context, *boundData.m_images[currentIndex], boundData.m_renderTargets[nextIndex]);
+                cmdBindRenderTarget(nextIndex);
+                it->_effect->RenderEffect(*this, viewport, frame, boundData.m_renderTarget[currentIndex].m_handle->pTexture, boundData.m_renderTarget[nextIndex].m_handle);
             }
             currentIndex = nextIndex;
             it = nextIt;
@@ -128,7 +178,8 @@ namespace hpl {
         if (!isSavedToPrimaryRenderTarget) {
             cVector2l vRenderTargetSize = viewport.GetSize();
             cRect2l rect = cRect2l(0, 0, vRenderTargetSize.x, vRenderTargetSize.y);
-            context.CopyTextureToFrameBuffer(*boundData.m_images[currentIndex], rect, renderTarget);
+            cmdBindRenderTarget((currentIndex + 1) % 2);
+            renderer->cmdCopyTexture(frame.m_cmd, boundData.m_renderTarget[currentIndex].m_handle->pTexture, renderTarget);
         }
         return true;
     }

@@ -19,8 +19,10 @@
 
 #include "graphics/PostEffect_ImageTrail.h"
 
-#include "bgfx/bgfx.h"
+
+#include "Common_3/Graphics/Interfaces/IGraphics.h"
 #include "graphics/Enum.h"
+#include "graphics/ForgeHandles.h"
 #include "graphics/Graphics.h"
 
 #include "graphics/FrameBuffer.h"
@@ -39,27 +41,86 @@
 namespace hpl {
     cPostEffectType_ImageTrail::cPostEffectType_ImageTrail(cGraphics* apGraphics, cResources* apResources)
         : iPostEffectType("ImageTrail", apGraphics, apResources) {
-        // m_program = hpl::loadProgram("vs_post_effect", "fs_posteffect_image_trail_frag");
-        // m_u_param = bgfx::createUniform("u_param", bgfx::UniformType::Vec4);
-        // m_s_diffuseMap = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
+        auto* forgeRenderer = Interface<ForgeRenderer>::Get();
+        {
+            m_shader = ForgeShaderHandle(forgeRenderer->Rend());
+            m_shader.Load([&](Shader** shader) {
+                ShaderLoadDesc loadDesc{};
+                loadDesc.mStages[0].pFileName = "fullscreen.vert";
+                loadDesc.mStages[1].pFileName = "image_trail_posteffect.frag";
+                addShader(forgeRenderer->Rend(),&loadDesc, shader);
+                return true;
+            });
+        }
+        {
+            SamplerDesc samplerDesc = {};
+            addSampler(forgeRenderer->Rend(), &samplerDesc,  &m_inputSampler);
+        }
+        {
+            std::array shaders = {
+                m_shader.m_handle
+            };
+            RootSignatureDesc rootDesc{};
+            const char* pStaticSamplers[] = { "inputSampler" };
+            rootDesc.ppShaders = shaders.data();
+            rootDesc.mShaderCount = shaders.size();
+            rootDesc.mStaticSamplerCount = 1;
+            rootDesc.ppStaticSamplers = &m_inputSampler;
+            rootDesc.ppStaticSamplerNames = pStaticSamplers;
+            addRootSignature(forgeRenderer->Rend(), &rootDesc, &m_rootSignature);
+
+            DescriptorSetDesc setDesc = { m_rootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, cPostEffectType_ImageTrail::DescSetSize };
+            for(auto& descSet: m_perFrameDescriptorSet) {
+                addDescriptorSet(forgeRenderer->Rend(), &setDesc, &descSet);
+            }
+        }
+        {
+
+            BlendStateDesc blendStateDesc{};
+            blendStateDesc.mSrcFactors[0] = BC_SRC_ALPHA;
+            blendStateDesc.mDstFactors[0] = BC_ONE_MINUS_SRC_ALPHA;
+            blendStateDesc.mBlendModes[0] = BM_ADD;
+            blendStateDesc.mSrcAlphaFactors[0] = BC_SRC_ALPHA;
+            blendStateDesc.mDstAlphaFactors[0] = BC_ONE_MINUS_SRC_ALPHA;
+            blendStateDesc.mBlendAlphaModes[0] = BM_ADD;
+            blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_ALL;
+            blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
+            blendStateDesc.mIndependentBlend = false;
+
+            TinyImageFormat inputFormat = getRecommendedSwapchainFormat(false, false);
+            DepthStateDesc depthStateDisabledDesc = {};
+            depthStateDisabledDesc.mDepthWrite = false;
+            depthStateDisabledDesc.mDepthTest = false;
+
+            RasterizerStateDesc rasterStateNoneDesc = {};
+            rasterStateNoneDesc.mCullMode = CULL_MODE_NONE;
+
+            PipelineDesc pipelineDesc = {};
+            pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+            GraphicsPipelineDesc& graphicsPipelineDesc = pipelineDesc.mGraphicsDesc;
+            graphicsPipelineDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+            graphicsPipelineDesc.pShaderProgram = m_shader.m_handle;
+            graphicsPipelineDesc.pRootSignature = m_rootSignature;
+            graphicsPipelineDesc.mRenderTargetCount = 1;
+            graphicsPipelineDesc.mDepthStencilFormat = TinyImageFormat_UNDEFINED;
+            graphicsPipelineDesc.pVertexLayout = NULL;
+            graphicsPipelineDesc.pRasterizerState = &rasterStateNoneDesc;
+            graphicsPipelineDesc.pDepthState = &depthStateDisabledDesc;
+            graphicsPipelineDesc.pBlendState = NULL;
+            graphicsPipelineDesc.mSampleCount = SAMPLE_COUNT_1;
+            graphicsPipelineDesc.mSampleQuality = 0;
+            graphicsPipelineDesc.pBlendState = &blendStateDesc;
+            graphicsPipelineDesc.pColorFormats = &inputFormat;
+            addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_pipeline);
+        }
     }
 
     cPostEffectType_ImageTrail::~cPostEffectType_ImageTrail() {
-        if (bgfx::isValid(m_program)) {
-            bgfx::destroy(m_program);
-        }
-        if (bgfx::isValid(m_u_param)) {
-            bgfx::destroy(m_u_param);
-        }
-        if (bgfx::isValid(m_s_diffuseMap)) {
-            bgfx::destroy(m_s_diffuseMap);
-        }
     }
 
     iPostEffect* cPostEffectType_ImageTrail::CreatePostEffect(iPostEffectParams* apParams) {
         cPostEffect_ImageTrail* pEffect = hplNew(cPostEffect_ImageTrail, (mpGraphics, mpResources, this));
         cPostEffectParams_ImageTrail* pImageTrailParams = static_cast<cPostEffectParams_ImageTrail*>(apParams);
-
         return pEffect;
     }
 
@@ -67,25 +128,35 @@ namespace hpl {
         : iPostEffect(apGraphics, apResources, apType) {
         m_boundImageTrailData = UniqueViewportData<ImageTrailData>([&](cViewport& viewport) {
             auto desc = ImageDescriptor::CreateTexture2D(viewport.GetSize().x, viewport.GetSize().y , false, bgfx::TextureFormat::Enum::RGBA8);
-            desc.m_configuration.m_rt = RTType::RT_Write;
-            auto image = std::make_shared<Image>();
-            image->Initialize(desc);
-                
+            auto* renderer = Interface<ForgeRenderer>::Get();
+
             auto trailData = std::make_unique<ImageTrailData>();
-            trailData->m_accumulationBuffer = image;
             trailData->m_size = viewport.GetSize();
-
+            trailData->m_accumulationTarget = ForgeRenderTarget(renderer->Rend());
+            trailData->m_accumulationTarget.Load([&](RenderTarget** texture) {
+                RenderTargetDesc renderTarget = {};
+                renderTarget.mArraySize = 1;
+                renderTarget.mDepth = 1;
+                renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+                renderTarget.mWidth = viewport.GetSize().x;
+                renderTarget.mHeight = viewport.GetSize().y;
+                renderTarget.mSampleCount = SAMPLE_COUNT_1;
+                renderTarget.mSampleQuality = 0;
+                renderTarget.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
+                renderTarget.mFormat = getRecommendedSwapchainFormat(false, false);
+                addRenderTarget(renderer->Rend(), &renderTarget, texture);
+                return true;
+            });
             mbClearFrameBuffer = true;
-
             return trailData;
         }, [&](cViewport& viewport, ImageTrailData& data) {
-            return viewport.GetSize() == data.m_size && 
-                data.m_accumulationBuffer.IsValid();
+            return viewport.GetSize() == data.m_size;
         });
         mpImageTrailType = static_cast<cPostEffectType_ImageTrail*>(mpType);
     }
 
     cPostEffect_ImageTrail::~cPostEffect_ImageTrail() {
+
     }
 
     void cPostEffect_ImageTrail::Reset() {
@@ -100,23 +171,83 @@ namespace hpl {
             Reset();
         }
     }
+
+
+    void cPostEffect_ImageTrail::RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, const ForgeRenderer::Frame& frame, Texture* inputTexture, RenderTarget* renderTarget) {
+
+        cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "Image Trail PostEffect");
+        auto* renderer = Interface<ForgeRenderer>::Get();
+        auto& imageTrailData = m_boundImageTrailData.resolve(viewport);
+        {
+            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+            std::array rtBarriers = {
+                RenderTargetBarrier{
+                    imageTrailData.m_accumulationTarget.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
+            };
+            cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+        }
+        float alpha = 0.0f;
+        if (mbClearFrameBuffer) {
+            alpha = 1.0f;
+            mbClearFrameBuffer = false;
+        } else {
+            // Get the amount of blur depending frame time.
+            //*30 is just so that good amount values are still between 0 - 1
+            float fFrameTime = compositor.GetCurrentFrameTime();
+            float fPow = (1.0f / fFrameTime) * mParams.mfAmount; // The higher this is, the more blur!
+            alpha = exp(-fPow * 0.015f);
+        }
+
+        {
+            Texture* input[] = { inputTexture };
+            std::array<DescriptorData, 1> params = {};
+            params[0].pName = "sourceInput";
+            params[0].ppTextures = input;
+
+            updateDescriptorSet(renderer->Rend(), mpImageTrailType->m_descIndex, mpImageTrailType->m_perFrameDescriptorSet[frame.m_frameIndex], params.size(), params.data());
+        }
+        LoadActionsDesc loadActions = {};
+        loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
+        loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
+
+        std::array inputTargets = { imageTrailData.m_accumulationTarget.m_handle };
+        cmdBindRenderTargets(frame.m_cmd, inputTargets.size(), inputTargets.data(), NULL, &loadActions, NULL, NULL, -1, -1);
+
+        uint32_t rootConstantIndex = getDescriptorIndexFromName(mpImageTrailType->m_rootSignature, "postEffectConstants");
+        cmdBindPushConstants(frame.m_cmd, mpImageTrailType->m_rootSignature, rootConstantIndex, &alpha);
+        cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, static_cast<float>(renderTarget->mWidth), static_cast<float>(renderTarget->mHeight), 0.0f, 1.0f);
+        cmdSetScissor(frame.m_cmd, 0, 0, static_cast<float>(renderTarget->mWidth), static_cast<float>(renderTarget->mHeight));
+        cmdBindDescriptorSet(frame.m_cmd, mpImageTrailType->m_descIndex, mpImageTrailType->m_perFrameDescriptorSet[frame.m_frameIndex]);
+        cmdBindPipeline(frame.m_cmd, mpImageTrailType->m_pipeline);
+        cmdDraw(frame.m_cmd, 3, 0);
+        mpImageTrailType->m_descIndex = (mpImageTrailType->m_descIndex + 1) % cPostEffectType_ImageTrail::DescSetSize;
+        {
+            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+            std::array rtBarriers = {
+                RenderTargetBarrier{
+                    imageTrailData.m_accumulationTarget.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
+            };
+            cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+        }
+        renderer->cmdCopyTexture(frame.m_cmd, imageTrailData.m_accumulationTarget.m_handle->pTexture, renderTarget);
+        cmdEndDebugMarker(frame.m_cmd);
+    }
     void cPostEffect_ImageTrail::RenderEffect(
         cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, LegacyRenderTarget& target) {
         cVector2l vRenderTargetSize = viewport.GetSize();
         auto& imageTrailData = m_boundImageTrailData.resolve(viewport);
 
-
         GraphicsContext::LayoutStream layoutStream;
         cMatrixf projMtx;
         context.ScreenSpaceQuad(layoutStream, projMtx, vRenderTargetSize.x, vRenderTargetSize.y);
 
-        GraphicsContext::ViewConfiguration viewConfig{ imageTrailData.m_accumulationBuffer };
-        viewConfig.m_viewRect = { 0, 0, vRenderTargetSize.x, vRenderTargetSize.y };
-        viewConfig.m_projection = projMtx;
-        auto view = context.StartPass("Image Trail", viewConfig);
+  //      GraphicsContext::ViewConfiguration viewConfig{ imageTrailData.m_accumulationBuffer };
+    //    viewConfig.m_viewRect = { 0, 0, vRenderTargetSize.x, vRenderTargetSize.y };
+      //  viewConfig.m_projection = projMtx;
+        //auto view = context.StartPass("Image Trail", viewConfig);
 
         GraphicsContext::ShaderProgram shaderProgram;
-        shaderProgram.m_handle = mpImageTrailType->m_program;
+        //shaderProgram.m_handle = mpImageTrailType->m_program;
         // shaderProgram.m_projection = projMtx;
 
         struct {
@@ -140,16 +271,16 @@ namespace hpl {
         shaderProgram.m_configuration.m_alphaBlendFunc =
             CreateBlendFunction(BlendOperator::Add, BlendOperand::SrcAlpha, BlendOperand::InvSrcAlpha);
 
-        shaderProgram.m_textures.push_back({ mpImageTrailType->m_s_diffuseMap, input.GetHandle(), 0 });
-        shaderProgram.m_uniforms.push_back({ mpImageTrailType->m_u_param, &u_params, 1 });
+  //      shaderProgram.m_textures.push_back({ mpImageTrailType->m_s_diffuseMap, input.GetHandle(), 0 });
+  //      shaderProgram.m_uniforms.push_back({ mpImageTrailType->m_u_param, &u_params, 1 });
 
         shaderProgram.m_configuration.m_depthTest = DepthTest::None;
         shaderProgram.m_configuration.m_write = Write::RGBA;
         GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
-        context.Submit(view, request);
+        //context.Submit(view, request);
 
         cRect2l rect = cRect2l(0, 0, vRenderTargetSize.x, vRenderTargetSize.y);
-        context.CopyTextureToFrameBuffer(*imageTrailData.m_accumulationBuffer.GetImage(), rect, target);
+//        context.CopyTextureToFrameBuffer(*imageTrailData.m_accumulationBuffer.GetImage(), rect, target);
     }
 
 } // namespace hpl

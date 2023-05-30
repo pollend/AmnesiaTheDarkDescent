@@ -21,6 +21,7 @@
 #define HPL_POSTEFFECT_IMAGE_TRAIL_H
 
 #include "bgfx/bgfx.h"
+#include "graphics/ForgeHandles.h"
 #include "graphics/PostEffect.h"
 #include "scene/Viewport.h"
 
@@ -42,24 +43,25 @@ namespace hpl {
 
 	};
 
-	//------------------------------------------
-
 	class cPostEffectType_ImageTrail : public iPostEffectType
 	{
 	friend class cPostEffect_ImageTrail;
 	public:
-		cPostEffectType_ImageTrail(cGraphics *apGraphics, cResources *apResources);
+	    static constexpr uint32_t DescSetSize = 64;
+
+        cPostEffectType_ImageTrail(cGraphics *apGraphics, cResources *apResources);
 		virtual ~cPostEffectType_ImageTrail();
 
 		iPostEffect *CreatePostEffect(iPostEffectParams *apParams);
 
 	private:
-		bgfx::ProgramHandle m_program = BGFX_INVALID_HANDLE;
-		bgfx::UniformHandle m_u_param = BGFX_INVALID_HANDLE;
-		bgfx::UniformHandle m_s_diffuseMap = BGFX_INVALID_HANDLE;
-	};
-
-	//------------------------------------------
+        uint32_t m_descIndex = 0;
+        Pipeline* m_pipeline = nullptr;
+        ForgeShaderHandle m_shader;
+        RootSignature* m_rootSignature;
+        Sampler* m_inputSampler;
+        std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perFrameDescriptorSet;
+    };
 
 	class cPostEffect_ImageTrail : public iPostEffect
 	{
@@ -70,32 +72,31 @@ namespace hpl {
 			ImageTrailData(const ImageTrailData&) = delete;
 			ImageTrailData(ImageTrailData&& buffer):
 				m_size(buffer.m_size),
-				m_accumulationBuffer(std::move(buffer.m_accumulationBuffer))
+				m_accumulationTarget(std::move(buffer.m_accumulationTarget))
 			{}
 
 			ImageTrailData& operator=(const ImageTrailData&) = delete;
 			void operator=(ImageTrailData&& buffer) {
-				m_accumulationBuffer = std::move(buffer.m_accumulationBuffer);
+				m_accumulationTarget = std::move(buffer.m_accumulationTarget);
 				m_size = buffer.m_size;
 			}
 			cVector2l m_size;
-			LegacyRenderTarget m_accumulationBuffer;
+			ForgeRenderTarget m_accumulationTarget;
 		};
 
 		cPostEffect_ImageTrail(cGraphics *apGraphics,cResources *apResources, iPostEffectType *apType);
 		~cPostEffect_ImageTrail();
 
 		virtual void RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, LegacyRenderTarget& target) override;
-		
+        virtual void RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, const ForgeRenderer::Frame& frame, Texture* inputTexture, RenderTarget* renderTarget) override;
 		virtual void Reset() override;
 
 	private:
 		virtual void OnSetActive(bool abX) override;
 		virtual void OnSetParams() override;
-		iPostEffectParams *GetTypeSpecificParams() { return &mParams; }
+		iPostEffectParams *GetTypeSpecificParams() override { return &mParams; }
 
 		UniqueViewportData<ImageTrailData> m_boundImageTrailData;
-		// RenderTarget m_accumulationBuffer;
 
 		cPostEffectType_ImageTrail *mpImageTrailType;
 		cPostEffectParams_ImageTrail mParams;

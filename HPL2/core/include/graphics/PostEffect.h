@@ -20,6 +20,7 @@
 #ifndef HPL_POSTEFFECT_H
 #define HPL_POSTEFFECT_H
 
+#include "graphics/ForgeHandles.h"
 #include "graphics/Image.h"
 #include "graphics/RenderTarget.h"
 #include "math/MathTypes.h"
@@ -105,7 +106,7 @@ namespace hpl {
 
         virtual void Draw(cPostEffectComposite& compositor, cViewport& viewport, Texture* input, RenderTarget* target) {};
 		virtual void RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, LegacyRenderTarget& target) {};
-
+		virtual void RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, const ForgeRenderer::Frame& frame, Texture* inputTexture, RenderTarget* renderTarget) {};
 		/** SetDisabled - Method to disable the Effect completely, meaning IsActive will always return false even
 		 * after a SetActive(true) call
 		 *

@@ -54,17 +54,24 @@ namespace hpl {
 		virtual ~cPostEffectType_Bloom();
 
 		iPostEffect *CreatePostEffect(iPostEffectParams *apParams);
-		
 
 	private:
-		bgfx::ProgramHandle m_blurProgram;
-		bgfx::ProgramHandle m_bloomProgram;
+        static constexpr uint32_t DescriptorSetSize = 16;
 
-		bgfx::UniformHandle m_u_blurMap;
-		bgfx::UniformHandle m_u_diffuseMap;
+        Sampler* m_inputSampler;
+        ForgeShaderHandle m_blurVerticalShader;
+        ForgeShaderHandle m_blurHorizontalShader;
+        RootSignature* m_rootSignature;
+        std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perFrameDescriptorSets;
+        uint32_t m_setIndex = 0;
+        Pipeline* m_blurVerticalPipeline;
+        Pipeline* m_blurHorizontalPipeline;
 
-		bgfx::UniformHandle m_u_rgbToIntensity;
-		bgfx::UniformHandle m_u_param;
+        RootSignature* m_bloomRootSignature;
+        ForgeShaderHandle m_bloomShader;
+        std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perFrameDescriptorBloomSets;
+        uint32_t m_setBloomIndex = 0;
+        Pipeline* m_bloomPipeline;
 	};
 
 	//------------------------------------------
@@ -81,26 +88,25 @@ namespace hpl {
 			BloomData(const BloomData&) = delete;
 			BloomData(BloomData&& buffer):
 				m_size(buffer.m_size),
-				m_blurTarget(std::move(buffer.m_blurTarget))
+				m_blurTargets(std::move(buffer.m_blurTargets))
 			{}
 
 			BloomData& operator=(const BloomData&) = delete;
 			BloomData& operator=(BloomData&& buffer) {
-				m_blurTarget = std::move(buffer.m_blurTarget);
+				m_blurTargets = std::move(buffer.m_blurTargets);
 				m_size = buffer.m_size;
 				return *this;
 			}
 			cVector2l m_size;
-			std::array<LegacyRenderTarget, 2> m_blurTarget;
+            std::array<ForgeRenderTarget, 2> m_blurTargets;
 		};
 	private:
 		virtual void OnSetParams() override;
 		virtual iPostEffectParams *GetTypeSpecificParams() override { return &mParams; }
 		virtual void RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, LegacyRenderTarget& target) override;
+        virtual void RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, const ForgeRenderer::Frame& frame, Texture* inputTexture, RenderTarget* renderTarget) override;
 
-		UniqueViewportData<BloomData> m_boundBloomData;
-
-		// std::array<RenderTarget, 2> m_blurTarget;
+        UniqueViewportData<BloomData> m_boundBloomData;
 
 		cPostEffectType_Bloom *mpBloomType;
 		cPostEffectParams_Bloom mParams;

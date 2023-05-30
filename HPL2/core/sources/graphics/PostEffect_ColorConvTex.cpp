@@ -44,12 +44,70 @@ namespace hpl
     cPostEffectType_ColorConvTex::cPostEffectType_ColorConvTex(cGraphics* apGraphics, cResources* apResources)
         : iPostEffectType("ColorConvTex", apGraphics, apResources)
     {
+        auto* forgeRenderer = Interface<ForgeRenderer>::Get();
+        {
+            m_shader = ForgeShaderHandle(forgeRenderer->Rend());
+            m_shader.Load([&](Shader** shader) {
+                ShaderLoadDesc loadDesc{};
+                loadDesc.mStages[0].pFileName = "fullscreen.vert";
+                loadDesc.mStages[1].pFileName = "color_conv_posteffect.frag";
+                addShader(forgeRenderer->Rend(),&loadDesc, shader);
+                return true;
+            });
+        }
+        {
+            SamplerDesc samplerDesc = {};
+            addSampler(forgeRenderer->Rend(), &samplerDesc,  &m_inputSampler);
+        }
+        {
+            std::array shaders = {
+                m_shader.m_handle
+            };
+            RootSignatureDesc rootDesc{};
+            const char* pStaticSamplers[] = { "inputSampler" };
+            rootDesc.ppShaders = shaders.data();
+            rootDesc.mShaderCount = shaders.size();
+            rootDesc.mStaticSamplerCount = 1;
+            rootDesc.ppStaticSamplers = &m_inputSampler;
+            rootDesc.ppStaticSamplerNames = pStaticSamplers;
+            addRootSignature(forgeRenderer->Rend(), &rootDesc, &m_rootSignature);
+
+            DescriptorSetDesc setDesc = { m_rootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, cPostEffectType_ColorConvTex::DescriptorSetSize  };
+            for(auto& descSet: m_perFrameDescriptorSet) {
+                addDescriptorSet(forgeRenderer->Rend(), &setDesc, &descSet);
+            }
+        }
+        TinyImageFormat inputFormat = getRecommendedSwapchainFormat(false,false);
+        {
+            DepthStateDesc depthStateDisabledDesc = {};
+            depthStateDisabledDesc.mDepthWrite = false;
+            depthStateDisabledDesc.mDepthTest = false;
+
+            RasterizerStateDesc rasterStateNoneDesc = {};
+            rasterStateNoneDesc.mCullMode = CULL_MODE_NONE;
+
+            PipelineDesc pipelineDesc = {};
+            pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+            GraphicsPipelineDesc& graphicsPipelineDesc = pipelineDesc.mGraphicsDesc;
+            graphicsPipelineDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+            graphicsPipelineDesc.pShaderProgram = m_shader.m_handle;
+            graphicsPipelineDesc.pRootSignature = m_rootSignature;
+            graphicsPipelineDesc.mRenderTargetCount = 1;
+            graphicsPipelineDesc.mDepthStencilFormat = TinyImageFormat_UNDEFINED;
+            graphicsPipelineDesc.pVertexLayout = NULL;
+            graphicsPipelineDesc.pRasterizerState = &rasterStateNoneDesc;
+            graphicsPipelineDesc.pDepthState = &depthStateDisabledDesc;
+            graphicsPipelineDesc.pBlendState = NULL;
+            graphicsPipelineDesc.mSampleCount = SAMPLE_COUNT_1;
+            graphicsPipelineDesc.mSampleQuality = 0;
+            graphicsPipelineDesc.pColorFormats = &inputFormat;
+            addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_pipeline);
+        }
     }
 
     cPostEffectType_ColorConvTex::~cPostEffectType_ColorConvTex()
     {
     }
-
 
     iPostEffect* cPostEffectType_ColorConvTex::CreatePostEffect(iPostEffectParams* apParams)
     {
@@ -87,6 +145,36 @@ namespace hpl
         mpColorConvTex = mpResources->GetTextureManager()->Create1DImage(mParams.msTextureFile, false, eTextureUsage_Normal, 0, options);
     }
 
+    void cPostEffect_ColorConvTex::RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, const ForgeRenderer::Frame& frame, Texture* inputTexture, RenderTarget* renderTarget) {
+        ASSERT(mpColorConvTex);
+
+        float alphaFade = cMath::Clamp(mParams.mfFadeAlpha, 0.0f, 1.0f);
+        uint32_t rootConstantIndex = getDescriptorIndexFromName(mpSpecificType->m_rootSignature, "postEffectConstants");
+        cmdBindPushConstants(frame.m_cmd, mpSpecificType->m_rootSignature, rootConstantIndex, &alphaFade);
+
+        LoadActionsDesc loadActions = {};
+        loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
+        loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
+
+        cmdBindRenderTargets(frame.m_cmd, 1, &renderTarget, NULL, &loadActions, NULL, NULL, -1, -1);
+
+        std::array<DescriptorData, 2> params = {};
+        params[0].pName = "sourceInput";
+        params[0].ppTextures = &inputTexture;
+        params[1].pName = "colorConv";
+        params[1].ppTextures = &mpColorConvTex->GetTexture().m_handle;
+        updateDescriptorSet(
+            frame.m_renderer->Rend(), mpSpecificType->m_descIndex, mpSpecificType->m_perFrameDescriptorSet[frame.m_frameIndex], params.size(), params.data());
+
+        cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, static_cast<float>(renderTarget->mWidth), static_cast<float>(renderTarget->mHeight), 0.0f, 1.0f);
+        cmdSetScissor(frame.m_cmd, 0, 0, static_cast<float>(renderTarget->mWidth), static_cast<float>(renderTarget->mHeight));
+        cmdBindPipeline(frame.m_cmd, mpSpecificType->m_pipeline);
+
+        cmdBindDescriptorSet(frame.m_cmd, mpSpecificType->m_descIndex, mpSpecificType->m_perFrameDescriptorSet[frame.m_frameIndex]);
+        cmdDraw(frame.m_cmd, 3, 0);
+        mpSpecificType->m_descIndex = (mpSpecificType->m_descIndex + 1) % cPostEffectType_ColorConvTex::DescriptorSetSize;
+    }
+
     void cPostEffect_ColorConvTex::RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, LegacyRenderTarget& target)
     {
 		BX_ASSERT(mpColorConvTex, "ColorConvTex is null");
@@ -94,14 +182,13 @@ namespace hpl
         GraphicsContext::LayoutStream layoutStream;
         cMatrixf projMtx;
         context.ScreenSpaceQuad(layoutStream, projMtx, vRenderTargetSize.x, vRenderTargetSize.y);
-        
+
         GraphicsContext::ViewConfiguration viewConfig {target};
         viewConfig.m_viewRect ={0, 0, vRenderTargetSize.x, vRenderTargetSize.y};
         viewConfig.m_projection = projMtx;
         auto view = context.StartPass("Color Conv effect", viewConfig);
-        
+
         GraphicsContext::ShaderProgram shaderProgram;
-        // shaderProgram.m_projection = projMtx;
         shaderProgram.m_handle = mpSpecificType->m_colorConv;
 
         struct
@@ -110,13 +197,13 @@ namespace hpl
             float pad;
             float pad1;
             float pad2;
-        } uniform = { 
-            cMath::Clamp(mParams.mfFadeAlpha, 0.0f, 1.0f), 
-            0, 
-            0, 
+        } uniform = {
+            cMath::Clamp(mParams.mfFadeAlpha, 0.0f, 1.0f),
+            0,
+            0,
             0 };
         shaderProgram.m_uniforms.push_back({ mpSpecificType->m_u_param, &uniform, 1 });
-        
+
         shaderProgram.m_textures.push_back({ mpSpecificType->m_u_colorConvTex, mpColorConvTex->GetHandle(), 0 });
         shaderProgram.m_textures.push_back({ mpSpecificType->m_u_diffuseTex, input.GetHandle(), 1 });
 

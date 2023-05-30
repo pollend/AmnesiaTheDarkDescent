@@ -344,3 +344,16 @@
 #frag dds_inventory_posteffect.frag
     #include "dds_inventory_posteffect.frag.fsl"
 #end
+
+#frag image_trail_posteffect.frag
+    #include "image_trail_posteffect.frag.fsl" 
+#end
+
+#frag bloom_add_posteffect.frag
+    #include "bloom_add_posteffect.frag.fsl"
+#end
+
+#frag color_conv_posteffect.frag
+    #include "color_conv_posteffect.frag.fsl"
+#end
+

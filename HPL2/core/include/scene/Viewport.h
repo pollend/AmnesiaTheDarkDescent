@@ -23,6 +23,7 @@
 #include "engine/Interface.h"
 #include "engine/RTTI.h"
 
+#include "graphics/ForgeHandles.h"
 #include "graphics/GraphicsContext.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Image.h"
@@ -64,7 +65,7 @@ namespace hpl {
             LegacyRenderTarget* m_outputTarget;
             cViewport* m_viewport;
             cRenderSettings* m_renderSettings;
-            ImmediateDrawBatch* m_immediateDrawBatch; 
+            ImmediateDrawBatch* m_immediateDrawBatch;
         };
         struct PostSolidDrawPacket : public DrawPayloadCommon {
         };
@@ -84,7 +85,7 @@ namespace hpl {
 
         inline void SetActive(bool abX) { mbActive = abX;}
         inline void SetVisible(bool abX) { mbVisible = abX;}
-        
+
         inline bool IsActive() { return mbActive;}
         inline bool IsVisible() { return mbVisible; }
 
@@ -92,7 +93,7 @@ namespace hpl {
 
         inline size_t GetHandle() { return m_handle; }
         inline void SetIsListener(bool abX) { mbIsListener = abX;}
-        
+
         inline bool IsListener() { return mbIsListener; }
 
         inline void SetCamera(cCamera* apCamera) { mpCamera = apCamera; }
@@ -144,6 +145,9 @@ namespace hpl {
             static LegacyRenderTarget emptyTarget = LegacyRenderTarget();
             return emptyTarget;
         }
+        ForgeRenderTarget& Target() {
+            return m_target;
+        }
 
         void bindToWindow(window::NativeWindowWrapper& window);
         void AddViewportCallback(iViewportCallback* apCallback);
@@ -173,16 +177,17 @@ namespace hpl {
 
         ImageDescriptor m_imageDescriptor;
 
-        std::shared_ptr<LegacyRenderTarget> m_renderTarget;
-        
+        ForgeRenderTarget m_target;
+        std::shared_ptr<LegacyRenderTarget> m_renderTarget; // TODO: REMOVE
+
         cVector2l m_size = { 0, 0 };
-        
+
         IUpdateEventLoop::UpdateEvent::Handler m_updateEventHandler;
-        
+
         ViewportDispose m_disposeEvent;
         ViewportChange m_viewportChanged;
         window::WindowEvent::Handler m_windowEventHandler;
-        
+
         PostSolidDraw m_postSolidDraw;
         PostTranslucenceDraw m_postTranslucenceDraw;
 

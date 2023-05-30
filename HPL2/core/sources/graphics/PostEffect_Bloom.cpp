@@ -19,7 +19,9 @@
 
 #include "graphics/PostEffect_Bloom.h"
 
+#include "Common_3/Graphics/Interfaces/IGraphics.h"
 #include "bgfx/bgfx.h"
+#include "graphics/ForgeHandles.h"
 #include "graphics/Graphics.h"
 
 #include "graphics/FrameBuffer.h"
@@ -40,14 +42,150 @@ namespace hpl
     cPostEffectType_Bloom::cPostEffectType_Bloom(cGraphics* apGraphics, cResources* apResources)
         : iPostEffectType("Bloom", apGraphics, apResources)
     {
-        // m_blurProgram = hpl::loadProgram("vs_post_effect", "fs_posteffect_blur");
-        // m_bloomProgram = hpl::loadProgram("vs_post_effect", "fs_posteffect_bloom_add");
+        auto* forgeRenderer = Interface<ForgeRenderer>::Get();
+        m_blurVerticalShader = ForgeShaderHandle(forgeRenderer->Rend());
+        m_blurVerticalShader.Load([&](Shader** shader) {
+            ShaderLoadDesc loadDesc{};
+            loadDesc.mStages[0].pFileName = "fullscreen.vert";
+            loadDesc.mStages[1].pFileName = "blur_posteffect_vertical.frag";
+            addShader(forgeRenderer->Rend(),&loadDesc, shader);
+            return true;
+        });
+        m_blurHorizontalShader = ForgeShaderHandle(forgeRenderer->Rend());
+        m_blurHorizontalShader.Load([&](Shader** shader) {
+            ShaderLoadDesc loadDesc{};
+            loadDesc.mStages[0].pFileName =  "fullscreen.vert";
+            loadDesc.mStages[1].pFileName =  "blur_posteffect_vertical.frag";
+            addShader(forgeRenderer->Rend(),&loadDesc, shader);
+            return true;
+        });
+        m_bloomShader = ForgeShaderHandle(forgeRenderer->Rend());
+        m_bloomShader.Load([&](Shader** shader) {
+            ShaderLoadDesc loadDesc{};
+            loadDesc.mStages[0].pFileName = "fullscreen.vert";
+            loadDesc.mStages[1].pFileName = "bloom_add_posteffect.frag";
+            addShader(forgeRenderer->Rend(),&loadDesc, shader);
+            return true;
+        });
+        {
+            SamplerDesc samplerDesc = {};
+            addSampler(forgeRenderer->Rend(), &samplerDesc,  &m_inputSampler);
+        }
+        {
+            std::array shaders = {
+                m_blurVerticalShader.m_handle,
+                m_blurHorizontalShader.m_handle,
+            };
+            RootSignatureDesc rootDesc{};
+            const char* pStaticSamplers[] = { "inputSampler" };
+            rootDesc.ppShaders = shaders.data();
+            rootDesc.mShaderCount = shaders.size();
+            rootDesc.mStaticSamplerCount = 1;
+            rootDesc.ppStaticSamplers = &m_inputSampler;
+            rootDesc.ppStaticSamplerNames = pStaticSamplers;
+            addRootSignature(forgeRenderer->Rend(), &rootDesc, &m_rootSignature);
 
-        // m_u_blurMap = bgfx::createUniform("s_blurMap", bgfx::UniformType::Sampler);
-        // m_u_diffuseMap = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
+            DescriptorSetDesc setDesc = { m_rootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, cPostEffectType_Bloom::DescriptorSetSize  };
+            for(auto& descSet: m_perFrameDescriptorSets) {
+                addDescriptorSet(forgeRenderer->Rend(), &setDesc, &descSet);
+            }
 
-        // m_u_rgbToIntensity = bgfx::createUniform("u_rgbToIntensity", bgfx::UniformType::Vec4);
-        // m_u_param = bgfx::createUniform("u_param", bgfx::UniformType::Vec4);
+        }
+        {
+
+            std::array shaders = {
+                m_bloomShader.m_handle
+            };
+            RootSignatureDesc rootDesc{};
+            const char* pStaticSamplers[] = { "inputSampler" };
+            rootDesc.ppShaders = shaders.data();
+            rootDesc.mShaderCount = shaders.size();
+            rootDesc.mStaticSamplerCount = 1;
+            rootDesc.ppStaticSamplers = &m_inputSampler;
+            rootDesc.ppStaticSamplerNames = pStaticSamplers;
+            addRootSignature(forgeRenderer->Rend(), &rootDesc, &m_bloomRootSignature);
+
+            DescriptorSetDesc setDesc = { m_bloomRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, cPostEffectType_Bloom::DescriptorSetSize  };
+            for(auto& descSet: m_perFrameDescriptorBloomSets) {
+                addDescriptorSet(forgeRenderer->Rend(), &setDesc, &descSet);
+            }
+        }
+        TinyImageFormat inputFormat = getRecommendedSwapchainFormat(false,false);
+        {
+            DepthStateDesc depthStateDisabledDesc = {};
+            depthStateDisabledDesc.mDepthWrite = false;
+            depthStateDisabledDesc.mDepthTest = false;
+
+            RasterizerStateDesc rasterStateNoneDesc = {};
+            rasterStateNoneDesc.mCullMode = CULL_MODE_NONE;
+
+            PipelineDesc pipelineDesc = {};
+            pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+            GraphicsPipelineDesc& graphicsPipelineDesc = pipelineDesc.mGraphicsDesc;
+            graphicsPipelineDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+            graphicsPipelineDesc.pShaderProgram = m_blurHorizontalShader.m_handle;
+            graphicsPipelineDesc.pRootSignature = m_rootSignature;
+            graphicsPipelineDesc.mRenderTargetCount = 1;
+            graphicsPipelineDesc.mDepthStencilFormat = TinyImageFormat_UNDEFINED;
+            graphicsPipelineDesc.pVertexLayout = NULL;
+            graphicsPipelineDesc.pRasterizerState = &rasterStateNoneDesc;
+            graphicsPipelineDesc.pDepthState = &depthStateDisabledDesc;
+            graphicsPipelineDesc.pBlendState = NULL;
+            graphicsPipelineDesc.mSampleCount = SAMPLE_COUNT_1;
+            graphicsPipelineDesc.mSampleQuality = 0;
+            graphicsPipelineDesc.pColorFormats = &inputFormat;
+            addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_blurHorizontalPipeline);
+        }
+        {
+            DepthStateDesc depthStateDisabledDesc = {};
+            depthStateDisabledDesc.mDepthWrite = false;
+            depthStateDisabledDesc.mDepthTest = false;
+
+            RasterizerStateDesc rasterStateNoneDesc = {};
+            rasterStateNoneDesc.mCullMode = CULL_MODE_NONE;
+
+            PipelineDesc pipelineDesc = {};
+            pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+            GraphicsPipelineDesc& graphicsPipelineDesc = pipelineDesc.mGraphicsDesc;
+            graphicsPipelineDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+            graphicsPipelineDesc.pShaderProgram = m_blurVerticalShader.m_handle;
+            graphicsPipelineDesc.pRootSignature = m_rootSignature;
+            graphicsPipelineDesc.mRenderTargetCount = 1;
+            graphicsPipelineDesc.mDepthStencilFormat = TinyImageFormat_UNDEFINED;
+            graphicsPipelineDesc.pVertexLayout = NULL;
+            graphicsPipelineDesc.pRasterizerState = &rasterStateNoneDesc;
+            graphicsPipelineDesc.pDepthState = &depthStateDisabledDesc;
+            graphicsPipelineDesc.pBlendState = NULL;
+            graphicsPipelineDesc.mSampleCount = SAMPLE_COUNT_1;
+            graphicsPipelineDesc.mSampleQuality = 0;
+            graphicsPipelineDesc.pColorFormats = &inputFormat;
+            addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_blurVerticalPipeline);
+        }
+        {
+            DepthStateDesc depthStateDisabledDesc = {};
+            depthStateDisabledDesc.mDepthWrite = false;
+            depthStateDisabledDesc.mDepthTest = false;
+
+            RasterizerStateDesc rasterStateNoneDesc = {};
+            rasterStateNoneDesc.mCullMode = CULL_MODE_NONE;
+
+            PipelineDesc pipelineDesc = {};
+            pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+            GraphicsPipelineDesc& graphicsPipelineDesc = pipelineDesc.mGraphicsDesc;
+            graphicsPipelineDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+            graphicsPipelineDesc.pShaderProgram = m_bloomShader.m_handle;
+            graphicsPipelineDesc.pRootSignature = m_bloomRootSignature;
+            graphicsPipelineDesc.mDepthStencilFormat = TinyImageFormat_UNDEFINED;
+            graphicsPipelineDesc.pVertexLayout = NULL;
+            graphicsPipelineDesc.pRasterizerState = &rasterStateNoneDesc;
+            graphicsPipelineDesc.pDepthState = &depthStateDisabledDesc;
+            graphicsPipelineDesc.pBlendState = NULL;
+            graphicsPipelineDesc.mSampleCount = SAMPLE_COUNT_1;
+            graphicsPipelineDesc.mSampleQuality = 0;
+            graphicsPipelineDesc.mRenderTargetCount = 1;
+            graphicsPipelineDesc.pColorFormats = &inputFormat;
+            addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_bloomPipeline);
+        }
     }
 
     cPostEffectType_Bloom::~cPostEffectType_Bloom()
@@ -66,29 +204,51 @@ namespace hpl
         : iPostEffect(apGraphics, apResources, apType)
     {
         m_boundBloomData = UniqueViewportData<BloomData>([&](cViewport& viewport) {
-            auto ColorImage = [&]
-            {
-                auto desc = ImageDescriptor::CreateTexture2D(viewport.GetSize().x / 4.0f, viewport.GetSize().y/ 4.0f , false, bgfx::TextureFormat::Enum::RGBA8);
-                desc.m_configuration.m_rt = RTType::RT_Write;
-                auto image = std::make_shared<Image>();
-                image->Initialize(desc);
-                return image;
-            };
+            auto* renderer = Interface<ForgeRenderer>::Get();
             auto data = std::make_unique<BloomData>();
-            data->m_blurTarget[0] = LegacyRenderTarget(ColorImage());
-            data->m_blurTarget[1] = LegacyRenderTarget(ColorImage());
+            {
+                data->m_blurTargets[0] = ForgeRenderTarget(renderer->Rend());
+                data->m_blurTargets[0].Load([&](RenderTarget** target) {
+                    RenderTargetDesc renderTarget = {};
+                    renderTarget.mArraySize = 1;
+                    renderTarget.mDepth = 1;
+                    renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+                    renderTarget.mWidth = viewport.GetSize().x / 4.0f;
+                    renderTarget.mHeight = viewport.GetSize().y / 4.0f;
+                    renderTarget.mSampleCount = SAMPLE_COUNT_1;
+                    renderTarget.mSampleQuality = 0;
+                    renderTarget.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
+                    renderTarget.mFormat = getRecommendedSwapchainFormat(false, false);
+                    addRenderTarget(renderer->Rend(), &renderTarget, target);
+                    return true;
+                });
+            }
+            {
+                data->m_blurTargets[1] = ForgeRenderTarget(renderer->Rend());
+                data->m_blurTargets[1].Load([&](RenderTarget** target) {
+                    RenderTargetDesc renderTarget = {};
+                    renderTarget.mArraySize = 1;
+                    renderTarget.mDepth = 1;
+                    renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+                    renderTarget.mWidth = viewport.GetSize().x / 4.0f;
+                    renderTarget.mHeight = viewport.GetSize().y / 4.0f;
+                    renderTarget.mSampleCount = SAMPLE_COUNT_1;
+                    renderTarget.mSampleQuality = 0;
+                    renderTarget.mStartState = RESOURCE_STATE_RENDER_TARGET;
+                    renderTarget.mFormat = getRecommendedSwapchainFormat(false, false);
+                    addRenderTarget(renderer->Rend(), &renderTarget, target);
+                    return true;
+                });
+
+            }
             data->m_size = viewport.GetSize();
             return data;
         }, [&](cViewport& viewport, BloomData& data) {
-            return viewport.GetSize() == data.m_size && 
-                data.m_blurTarget[0].IsValid() && 
-                data.m_blurTarget[1].IsValid();
+            return viewport.GetSize() == data.m_size;
         });
 
         mpBloomType = static_cast<cPostEffectType_Bloom*>(mpType);
-        
     }
-
 
     cPostEffect_Bloom::~cPostEffect_Bloom()
     {
@@ -98,101 +258,232 @@ namespace hpl
     {
     }
 
+    void cPostEffect_Bloom::RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, const ForgeRenderer::Frame& frame, Texture* inputTexture, RenderTarget* renderTarget)  {
+        auto& bloomData = m_boundBloomData.resolve(viewport);
+        Texture* sourceInput = inputTexture;
+        auto requestBlur = [&](Texture* input) {
+            ASSERT(input && "Invalid input texture");
+            {
+                cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+                std::array rtBarriers = {
+                    RenderTargetBarrier{ bloomData.m_blurTargets[0].m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
+                    RenderTargetBarrier{ bloomData.m_blurTargets[1].m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE},
+                };
+                cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+            }
+            {
+                LoadActionsDesc loadActions = {};
+                loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
+                loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
+                auto& blurTarget = bloomData.m_blurTargets[0].m_handle;
+                cmdBindRenderTargets(frame.m_cmd, 1, &blurTarget , NULL, &loadActions, NULL, NULL, -1, -1);
+
+                std::array<DescriptorData, 1> params = {};
+                params[0].pName = "sourceInput";
+                params[0].ppTextures = &sourceInput;
+                updateDescriptorSet(
+                    frame.m_renderer->Rend(), mpBloomType->m_setIndex, mpBloomType->m_perFrameDescriptorSets[frame.m_frameIndex], params.size(), params.data());
+
+                cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, static_cast<float>(blurTarget->mWidth), static_cast<float>(blurTarget->mHeight), 0.0f, 1.0f);
+                cmdSetScissor(frame.m_cmd, 0, 0, static_cast<float>(blurTarget->mWidth), static_cast<float>(blurTarget->mHeight));
+                cmdBindPipeline(frame.m_cmd, mpBloomType->m_blurHorizontalPipeline);
+
+                cmdBindDescriptorSet(frame.m_cmd, mpBloomType->m_setIndex, mpBloomType->m_perFrameDescriptorSets[frame.m_frameIndex]);
+                cmdDraw(frame.m_cmd, 3, 0);
+
+                mpBloomType->m_setIndex= (mpBloomType->m_setIndex + 1) % cPostEffectType_Bloom::DescriptorSetSize;
+            }
+            {
+                cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+                std::array rtBarriers = {
+                    RenderTargetBarrier{
+                        bloomData.m_blurTargets[0].m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
+                    RenderTargetBarrier{
+                        bloomData.m_blurTargets[1].m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
+                };
+                cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+            }
+            {
+                LoadActionsDesc loadActions = {};
+                loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
+                loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
+
+                auto& blurTarget = bloomData.m_blurTargets[1].m_handle;
+                cmdBindRenderTargets(frame.m_cmd, 1, &blurTarget, NULL, &loadActions, NULL, NULL, -1, -1);
+
+                std::array<DescriptorData, 1> params = {};
+                params[0].pName = "sourceInput";
+                params[0].ppTextures = &bloomData.m_blurTargets[0].m_handle->pTexture;
+                updateDescriptorSet(
+                    frame.m_renderer->Rend(), mpBloomType->m_setIndex, mpBloomType->m_perFrameDescriptorSets[frame.m_frameIndex], params.size(), params.data());
+
+                cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, static_cast<float>(blurTarget->mWidth), static_cast<float>(blurTarget->mHeight), 0.0f, 1.0f);
+                cmdSetScissor(frame.m_cmd, 0, 0, static_cast<float>(blurTarget->mWidth), static_cast<float>(blurTarget->mHeight));
+                cmdBindPipeline(frame.m_cmd, mpBloomType->m_blurVerticalPipeline);
+
+                cmdBindDescriptorSet(frame.m_cmd, mpBloomType->m_setIndex, mpBloomType->m_perFrameDescriptorSets[frame.m_frameIndex]);
+                cmdDraw(frame.m_cmd, 3, 0);
+
+                mpBloomType->m_setIndex= (mpBloomType->m_setIndex + 1) % cPostEffectType_Bloom::DescriptorSetSize;
+            }
+        };
+        {
+            uint32_t rootConstantIndex = getDescriptorIndexFromName(mpBloomType->m_rootSignature, "postEffectConstants");
+            cmdBindPushConstants(frame.m_cmd, mpBloomType->m_rootSignature, rootConstantIndex, &mParams.mfBlurSize
+);
+        }
+        cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "Bloom Blur");
+        requestBlur(inputTexture);
+        for (int i = 1; i < mParams.mlBlurIterations; ++i)
+        {
+            requestBlur(bloomData.m_blurTargets[1].m_handle->pTexture);
+        }
+        cmdEndDebugMarker(frame.m_cmd);
+        {
+            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+            std::array rtBarriers = {
+                RenderTargetBarrier{
+                    bloomData.m_blurTargets[1].m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
+            };
+            cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+        }
+        {
+            float rgbIntensity[] = {mParams.mvRgbToIntensity.x, mParams.mvRgbToIntensity.y, mParams.mvRgbToIntensity.z, 0.0f};
+            uint32_t rootConstantIndex = getDescriptorIndexFromName(mpBloomType->m_bloomRootSignature, "postEffectConstants");
+            cmdBindPushConstants(frame.m_cmd, mpBloomType->m_bloomRootSignature, rootConstantIndex, rgbIntensity
+);
+        }
+        {
+            cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "Bloom Add");
+            LoadActionsDesc loadActions = {};
+            loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
+            loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
+
+            cmdBindRenderTargets(frame.m_cmd, 1, &renderTarget, NULL, &loadActions, NULL, NULL, -1, -1);
+
+            std::array<DescriptorData, 2> params = {};
+            params[0].pName = "sourceInput";
+            params[0].ppTextures = &inputTexture;
+            params[1].pName = "blurInput";
+            params[1].ppTextures = &bloomData.m_blurTargets[1].m_handle->pTexture;
+
+            updateDescriptorSet(
+                frame.m_renderer->Rend(), mpBloomType->m_setBloomIndex, mpBloomType->m_perFrameDescriptorBloomSets[frame.m_frameIndex], params.size(), params.data());
+
+            cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, static_cast<float>(renderTarget->mWidth), static_cast<float>(renderTarget->mHeight), 0.0f, 1.0f);
+            cmdSetScissor(frame.m_cmd, 0, 0, static_cast<float>(renderTarget->mWidth), static_cast<float>(renderTarget->mHeight));
+            cmdBindPipeline(frame.m_cmd, mpBloomType->m_bloomPipeline);
+
+            cmdBindDescriptorSet(frame.m_cmd, mpBloomType->m_setBloomIndex, mpBloomType->m_perFrameDescriptorBloomSets[frame.m_frameIndex]);
+            cmdDraw(frame.m_cmd, 3, 0);
+            mpBloomType->m_setBloomIndex = (mpBloomType->m_setBloomIndex + 1) % cPostEffectType_Bloom::DescriptorSetSize;
+            cmdEndDebugMarker(frame.m_cmd);
+        }
+        {
+            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+            std::array rtBarriers = {
+                RenderTargetBarrier{
+                    bloomData.m_blurTargets[1].m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
+            };
+            cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+        }
+    }
+
     void cPostEffect_Bloom::RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, GraphicsContext& context, Image& input, LegacyRenderTarget& target)
     {
         cVector2l vRenderTargetSize = viewport.GetSize();
         auto& bloomData = m_boundBloomData.resolve(viewport);
 
-        auto requestBlur = [&](Image& input){
-            struct {
-                float u_useHorizontal;
-                float u_blurSize;
-                float texelSize[2];
-            } blurParams = {0};
-            
-            auto image = bloomData.m_blurTarget[1].GetImage(0);
-            {
-		        GraphicsContext::LayoutStream layoutStream;
-                cMatrixf projMtx;
-                context.ScreenSpaceQuad(layoutStream, projMtx, vRenderTargetSize.x, vRenderTargetSize.y);
-                
-                GraphicsContext::ViewConfiguration viewConfig {bloomData.m_blurTarget[0]};
-                viewConfig.m_viewRect ={0, 0, image->GetWidth(), image->GetHeight()};
-                viewConfig.m_projection = projMtx;
-                bgfx::ViewId view = context.StartPass("Blur Pass 1", viewConfig);
-                blurParams.u_useHorizontal = 0;
-                blurParams.u_blurSize = mParams.mfBlurSize;
-                blurParams.texelSize[0] = image->GetWidth();
-                blurParams.texelSize[1] = image->GetHeight();
+       // auto requestBlur = [&](Image& input){
+       //     struct {
+       //         float u_useHorizontal;
+       //         float u_blurSize;
+       //         float texelSize[2];
+       //     } blurParams = {0};
 
-                GraphicsContext::ShaderProgram shaderProgram;
-                shaderProgram.m_configuration.m_write = Write::RGBA;
-                shaderProgram.m_handle = mpBloomType->m_blurProgram;
-                // shaderProgram.m_projection = projMtx;
-                
-                shaderProgram.m_textures.push_back({ mpBloomType->m_u_diffuseMap, input.GetHandle(), 1 });
-               
-                shaderProgram.m_uniforms.push_back({ mpBloomType->m_u_param, &blurParams, 1 });
-                
-                GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
-                context.Submit(view, request);
-            }
+       //     auto image = bloomData.m_blurTarget[1].GetImage(0);
+       //     {
+	   //         GraphicsContext::LayoutStream layoutStream;
+       //         cMatrixf projMtx;
+       //         context.ScreenSpaceQuad(layoutStream, projMtx, vRenderTargetSize.x, vRenderTargetSize.y);
 
-            {
+       //         GraphicsContext::ViewConfiguration viewConfig {bloomData.m_blurTarget[0]};
+       //         viewConfig.m_viewRect ={0, 0, image->GetWidth(), image->GetHeight()};
+       //         viewConfig.m_projection = projMtx;
+       //         bgfx::ViewId view = context.StartPass("Blur Pass 1", viewConfig);
+       //         blurParams.u_useHorizontal = 0;
+       //         blurParams.u_blurSize = mParams.mfBlurSize;
+       //         blurParams.texelSize[0] = image->GetWidth();
+       //         blurParams.texelSize[1] = image->GetHeight();
 
-		        cMatrixf projMtx;
-                GraphicsContext::LayoutStream layoutStream;
-                context.ScreenSpaceQuad(layoutStream, projMtx, vRenderTargetSize.x, vRenderTargetSize.y);
-                GraphicsContext::ViewConfiguration viewConfig {bloomData.m_blurTarget[1]};
-                viewConfig.m_viewRect ={0, 0, image->GetWidth(), image->GetHeight()};
-                viewConfig.m_projection = projMtx;
-                bgfx::ViewId view = context.StartPass("Blur Pass 2", viewConfig);
+       //         GraphicsContext::ShaderProgram shaderProgram;
+       //         shaderProgram.m_configuration.m_write = Write::RGBA;
+       //         shaderProgram.m_handle = mpBloomType->m_blurProgram;
+       //         // shaderProgram.m_projection = projMtx;
 
-                blurParams.u_useHorizontal = 1.0;
-                blurParams.u_blurSize = mParams.mfBlurSize;
-                blurParams.texelSize[0] = image->GetWidth();
-                blurParams.texelSize[1] = image->GetHeight();
+       //         shaderProgram.m_textures.push_back({ mpBloomType->m_u_diffuseMap, input.GetHandle(), 1 });
 
-                GraphicsContext::ShaderProgram shaderProgram;
-                shaderProgram.m_configuration.m_write = Write::RGBA;
-                shaderProgram.m_handle = mpBloomType->m_blurProgram;
-                // shaderProgram.m_projection = projMtx;
-                
-                shaderProgram.m_textures.push_back({ mpBloomType->m_u_diffuseMap, bloomData.m_blurTarget[0].GetImage()->GetHandle(), 1 });
-                shaderProgram.m_uniforms.push_back({ mpBloomType->m_u_param, &blurParams, 1 });
-                
-                GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
-                context.Submit(view, request);
-            }
-        };
+       //         shaderProgram.m_uniforms.push_back({ mpBloomType->m_u_param, &blurParams, 1 });
 
-        requestBlur(input);
-        for (int i = 1; i < mParams.mlBlurIterations; ++i)
-        {
-            requestBlur(*bloomData.m_blurTarget[1].GetImage());
-        }
+       //         GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
+       //         context.Submit(view, request);
+       //     }
 
-        {
-            GraphicsContext::LayoutStream layoutStream;
-            cMatrixf projMtx;
-            context.ScreenSpaceQuad(layoutStream, projMtx, vRenderTargetSize.x, vRenderTargetSize.y);
-            GraphicsContext::ViewConfiguration viewConfig {target};
-            viewConfig.m_viewRect ={0, 0, vRenderTargetSize.x, vRenderTargetSize.y};
-            viewConfig.m_projection = projMtx;
+       //     {
 
-            GraphicsContext::ShaderProgram shaderProgram;
-            shaderProgram.m_configuration.m_write = Write::RGBA;
-            shaderProgram.m_handle = mpBloomType->m_bloomProgram;
-            // shaderProgram.m_projection = projMtx;
+	   //         cMatrixf projMtx;
+       //         GraphicsContext::LayoutStream layoutStream;
+       //         context.ScreenSpaceQuad(layoutStream, projMtx, vRenderTargetSize.x, vRenderTargetSize.y);
+       //         GraphicsContext::ViewConfiguration viewConfig {bloomData.m_blurTarget[1]};
+       //         viewConfig.m_viewRect ={0, 0, image->GetWidth(), image->GetHeight()};
+       //         viewConfig.m_projection = projMtx;
+       //         bgfx::ViewId view = context.StartPass("Blur Pass 2", viewConfig);
 
-            float rgbToIntensity[4] = { mParams.mvRgbToIntensity.x, mParams.mvRgbToIntensity.y, mParams.mvRgbToIntensity.z, 0.0f };
-            shaderProgram.m_textures.push_back({ mpBloomType->m_u_diffuseMap, input.GetHandle(), 0 });
-            shaderProgram.m_textures.push_back({ mpBloomType->m_u_blurMap, bloomData.m_blurTarget[1].GetImage()->GetHandle(), 1 });
-            shaderProgram.m_uniforms.push_back({ mpBloomType->m_u_rgbToIntensity, &rgbToIntensity, 1 });
-            
-            bgfx::ViewId view = context.StartPass("Bloom Pass", viewConfig);
-            GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
-            context.Submit(view, request);
-        }
+       //         blurParams.u_useHorizontal = 1.0;
+       //         blurParams.u_blurSize = mParams.mfBlurSize;
+       //         blurParams.texelSize[0] = image->GetWidth();
+       //         blurParams.texelSize[1] = image->GetHeight();
+
+       //         GraphicsContext::ShaderProgram shaderProgram;
+       //         shaderProgram.m_configuration.m_write = Write::RGBA;
+       //         shaderProgram.m_handle = mpBloomType->m_blurProgram;
+       //         // shaderProgram.m_projection = projMtx;
+
+       //         shaderProgram.m_textures.push_back({ mpBloomType->m_u_diffuseMap, bloomData.m_blurTarget[0].GetImage()->GetHandle(), 1 });
+       //         shaderProgram.m_uniforms.push_back({ mpBloomType->m_u_param, &blurParams, 1 });
+
+       //         GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
+       //         context.Submit(view, request);
+       //     }
+       // };
+
+       // requestBlur(input);
+       // for (int i = 1; i < mParams.mlBlurIterations; ++i)
+       // {
+       //     requestBlur(*bloomData.m_blurTarget[1].GetImage());
+       // }
+
+       // {
+       //     GraphicsContext::LayoutStream layoutStream;
+       //     cMatrixf projMtx;
+       //     context.ScreenSpaceQuad(layoutStream, projMtx, vRenderTargetSize.x, vRenderTargetSize.y);
+       //     GraphicsContext::ViewConfiguration viewConfig {target};
+       //     viewConfig.m_viewRect ={0, 0, vRenderTargetSize.x, vRenderTargetSize.y};
+       //     viewConfig.m_projection = projMtx;
+
+       //     GraphicsContext::ShaderProgram shaderProgram;
+       //     shaderProgram.m_configuration.m_write = Write::RGBA;
+       //     shaderProgram.m_handle = mpBloomType->m_bloomProgram;
+       //     // shaderProgram.m_projection = projMtx;
+
+       //     float rgbToIntensity[4] = { mParams.mvRgbToIntensity.x, mParams.mvRgbToIntensity.y, mParams.mvRgbToIntensity.z, 0.0f };
+       //     shaderProgram.m_textures.push_back({ mpBloomType->m_u_diffuseMap, input.GetHandle(), 0 });
+       //     shaderProgram.m_textures.push_back({ mpBloomType->m_u_blurMap, bloomData.m_blurTarget[1].GetImage()->GetHandle(), 1 });
+       //     shaderProgram.m_uniforms.push_back({ mpBloomType->m_u_rgbToIntensity, &rgbToIntensity, 1 });
+
+       //     bgfx::ViewId view = context.StartPass("Bloom Pass", viewConfig);
+       //     GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
+       //     context.Submit(view, request);
+       // }
     }
 } // namespace hpl

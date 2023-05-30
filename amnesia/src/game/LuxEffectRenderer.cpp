@@ -49,10 +49,10 @@ cLuxEffectRenderer::cLuxEffectRenderer()
         auto postEffect = std::make_unique<LuxPostEffectData>();
         auto* forgeRenderer = Interface<ForgeRenderer>::Get();
 
-        for(size_t i = 0; i < sharedData.m_gBuffer.size(); i++) {
-            postEffect->m_inputDepthBuffer[i] = sharedData.m_gBuffer[i].m_depthBuffer;
-        }
-        for(auto& target: postEffect->m_outlineBuffer) {
+        //for(size_t i = 0; i < sharedData.m_gBuffer.size(); i++) {
+            postEffect->m_inputDepthBuffer = sharedData.m_gBuffer.m_depthBuffer;
+        //}
+        //for(auto& target: postEffect->m_outlineBuffer) {
             ClearValue optimizedColorClearBlack = { { 0.0f, 0.0f, 0.0f, 0.0f } };
             RenderTargetDesc renderTarget = {};
             renderTarget.mArraySize = 1;
@@ -66,11 +66,11 @@ cLuxEffectRenderer::cLuxEffectRenderer()
             renderTarget.mStartState = RESOURCE_STATE_RENDER_TARGET;
             renderTarget.pName = "postEffect Outline";
             renderTarget.mFormat = TinyImageFormat_R8G8B8_UNORM;
-            target.Load([&](RenderTarget** target) {
+            postEffect->m_outlineBuffer.Load([&](RenderTarget** target) {
                 addRenderTarget(forgeRenderer->Rend(), &renderTarget, target);
                 return true;
             });
-        }
+        //}
 
 
         auto blurImageDesc = [&]

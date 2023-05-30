@@ -214,7 +214,7 @@ namespace hpl {
             }
 
             cVector2l m_size = cVector2l(0, 0);
-            std::array<GBuffer, ForgeRenderer::SwapChainLength> m_gBuffer;
+            GBuffer m_gBuffer;
             std::shared_ptr<Image> m_refractionImage;
             GBuffer m_gBufferReflection;
         };
@@ -228,7 +228,7 @@ namespace hpl {
         // virtual std::shared_ptr<Image> GetDepthStencilImage(cViewport& viewport) override;
         virtual ForgeRenderTarget GetOutputImage(uint32_t frameIndex, cViewport& viewport) override {
             auto& sharedData = m_boundViewportData.resolve(viewport);
-            return sharedData.m_gBuffer[frameIndex].m_outputBuffer;
+            return sharedData.m_gBuffer.m_outputBuffer;
         }
 
         virtual bool LoadData() override;

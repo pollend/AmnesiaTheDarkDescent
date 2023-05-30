@@ -1538,8 +1538,7 @@ void cLuxMainMenu::RenderBlurTexture() {
             cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
     }
 
-    forgeRenderer->cmdCopyTexture(
-        ForgeRenderer::CopyPipelineToUnormR8G8B8A8, frame.m_cmd, outputRt.m_handle->pTexture, m_screenTarget.m_handle);
+    forgeRenderer->cmdCopyTexture(frame.m_cmd, outputRt.m_handle->pTexture, m_screenTarget.m_handle);
     {
             cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
             std::array rtBarriers = {
@@ -1553,7 +1552,7 @@ void cLuxMainMenu::RenderBlurTexture() {
     requestBlur(m_screenTarget.m_handle->pTexture);
 
     for (int i = 0; i < 6; ++i) {
-            requestBlur(m_screenBlurTarget.m_handle->pTexture);
+        requestBlur(m_screenBlurTarget.m_handle->pTexture);
     }
 }
 

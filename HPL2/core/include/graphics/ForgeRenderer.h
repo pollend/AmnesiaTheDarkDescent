@@ -142,7 +142,7 @@ namespace hpl {
         size_t FrameCount() { return m_currentFrameCount; }
         inline SwapChain* GetSwapChain() { return m_swapChain; }
 
-        void cmdCopyTexture(CopyPipelines copy, Cmd* cmd, Texture* srcTexture, RenderTarget* dstTexture);
+        void cmdCopyTexture(Cmd* cmd, Texture* srcTexture, RenderTarget* dstTexture);
 
     private:
         std::array<Sampler*, SamplerPoolKey::NumOfVariants> m_samplerPool;
@@ -160,7 +160,9 @@ namespace hpl {
         window::NativeWindowWrapper* m_window = nullptr;
 
         Shader* m_copyShader = nullptr;
-        std::array<Pipeline*,CopyPipelineCount> m_copyPostProcessingPipeline{};
+        Pipeline* m_copyPostProcessingPipelineToSwapChain = nullptr;
+        Pipeline* m_copyPostProcessingPipelineToUnormR8G8B8A8 = nullptr;
+
         RootSignature* m_copyPostProcessingRootSignature = nullptr;
         DescriptorSet* m_copyPostProcessingDescriptorSet = nullptr;
         uint32_t m_copyRegionDescriptorIndex = 0;

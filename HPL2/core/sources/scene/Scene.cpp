@@ -244,25 +244,39 @@ namespace hpl {
             //////////////////////////////////////////////
             // Render Post effects
             auto outputImage = pRenderer->GetOutputImage(frame.m_frameIndex, *pViewPort);
-            // if (bPostEffects) {
-            //     START_TIMING(RenderPostEffects)
-            //     pPostEffectComposite->Draw(
-            //         context,
-            //         *pViewPort,
-            //         afFrameTime,
-            //         *outputImage,
-            //         pViewPort->GetRenderTarget());
-
-            //     STOP_TIMING(RenderPostEffects)
-            // } else {
-
+            if (bPostEffects) {
+                START_TIMING(RenderPostEffects)
+                const bool isViewportTarget = pViewPort->Target().IsValid();
+                auto& target = isViewportTarget ? pViewPort->Target().m_handle : frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex];
+                if (isViewportTarget) {
+                    cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+                    std::array rtBarriers = {
+                        RenderTargetBarrier{ target, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
+                    };
+                    cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+                }
+                pPostEffectComposite->Draw(
+                    frame,
+                    *pViewPort,
+                     afFrameTime,
+                     outputImage.m_handle->pTexture,
+                    target);
+                if (isViewportTarget) {
+                    cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+                    std::array rtBarriers = {
+                        RenderTargetBarrier{ target, RESOURCE_STATE_RENDER_TARGET ,RESOURCE_STATE_SHADER_RESOURCE},
+                    };
+                    cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+                }
+                 STOP_TIMING(RenderPostEffects)
+             } else {
                 auto size = pViewPort->GetSize();
                 cRect2l rect = cRect2l(0, 0, size.x, size.y);
-                forgeRenderer->cmdCopyTexture(ForgeRenderer::CopyPipelineToSwapChain, frame.m_cmd, outputImage.m_handle->pTexture,
+                forgeRenderer->cmdCopyTexture(frame.m_cmd, outputImage.m_handle->pTexture,
                     frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex]);
                 // context.CopyTextureToFrameBuffer(
                 //     *outputImage, rect, pViewPort->GetRenderTarget());
-            // }
+             }
 
             //////////////////////////////////////////////
             // Render Screen GUI

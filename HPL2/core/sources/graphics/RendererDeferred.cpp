@@ -23,6 +23,7 @@
 #include "bgfx/bgfx.h"
 #include "engine/Event.h"
 #include "engine/Interface.h"
+#include "graphics/ForgeHandles.h"
 #include "graphics/ImmediateDrawBatch.h"
 #include "scene/ParticleEmitter.h"
 #include "scene/Viewport.h"
@@ -709,113 +710,88 @@ namespace hpl {
                 sharedData->m_size = viewport.GetSize();
                 auto* forgetRenderer = Interface<ForgeRenderer>::Get();
                 ClearValue optimizedColorClearBlack = { { 0.0f, 0.0f, 0.0f, 0.0f } };
-                for(auto& b : sharedData->m_gBuffer) {
-                   auto deferredRenderTargetDesc = [&]() {
-                        RenderTargetDesc renderTarget = {};
-                        renderTarget.mArraySize = 1;
-                        renderTarget.mClearValue = optimizedColorClearBlack;
-                        renderTarget.mDepth = 1;
-                        renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
-                        renderTarget.mWidth = sharedData->m_size.x;
-                        renderTarget.mHeight = sharedData->m_size.y;
-                        renderTarget.mSampleCount = SAMPLE_COUNT_1;
-                        renderTarget.mSampleQuality = 0;
-                        renderTarget.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
-                        renderTarget.pName = "G-Buffer RTs";
-                        return renderTarget;
-                   };
+                auto& b = sharedData->m_gBuffer;
+                auto deferredRenderTargetDesc = [&]() {
+                    RenderTargetDesc renderTarget = {};
+                    renderTarget.mArraySize = 1;
+                    renderTarget.mClearValue = optimizedColorClearBlack;
+                    renderTarget.mDepth = 1;
+                    renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+                    renderTarget.mWidth = sharedData->m_size.x;
+                    renderTarget.mHeight = sharedData->m_size.y;
+                    renderTarget.mSampleCount = SAMPLE_COUNT_1;
+                    renderTarget.mSampleQuality = 0;
+                    renderTarget.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
+                    renderTarget.pName = "G-Buffer RTs";
+                    return renderTarget;
+                };
 
-                   {
-                        auto depthRT = deferredRenderTargetDesc();
-                        depthRT.mFormat = DepthBufferFormat;
-                        depthRT.mStartState = RESOURCE_STATE_DEPTH_WRITE;
-                        ForgeRenderTarget target = {forgetRenderer->Rend()};
-                        target.Load([&](RenderTarget** handle) {
-                            addRenderTarget(forgetRenderer->Rend(), &depthRT, handle);
-                            return true;
-                        });
-                        b.m_depthBuffer = std::move(target);
-                   }
-                   {
-                        auto normalRT = deferredRenderTargetDesc();
-                        normalRT.mFormat = NormalBufferFormat;
-                        ForgeRenderTarget target = {forgetRenderer->Rend()};
-                        addRenderTarget(forgetRenderer->Rend(), &normalRT, &target.m_handle);
-                        target.Initialize();
-                        b.m_normalBuffer = std::move(target);
-                   }
-                   {
-                        auto positionRT = deferredRenderTargetDesc();
-                        positionRT.mFormat = PositionBufferFormat;
-                        ForgeRenderTarget target = {forgetRenderer->Rend()};
-                        addRenderTarget(forgetRenderer->Rend(), &positionRT, &target.m_handle);
-                        target.Initialize();
-                        b.m_positionBuffer = std::move(target);
-                   }
-                   {
-                        auto specularRT = deferredRenderTargetDesc();
-                        specularRT.mFormat = SpecularBufferFormat;
-                        ForgeRenderTarget target = {forgetRenderer->Rend()};
-                        addRenderTarget(forgetRenderer->Rend(), &specularRT, &target.m_handle);
-                        target.Initialize();
-                        b.m_specularBuffer = std::move(target);
-                   }
-                   {
-                        auto colorRT = deferredRenderTargetDesc();
-                        colorRT.mFormat = ColorBufferFormat;
-                        ForgeRenderTarget target = {forgetRenderer->Rend()};
-                        addRenderTarget(forgetRenderer->Rend(), &colorRT, &target.m_handle);
-                        target.Initialize();
-                        b.m_colorBuffer = std::move(target);
-                   }
+                b.m_depthBuffer  = {forgetRenderer->Rend()};
+                b.m_depthBuffer.Load([&](RenderTarget** handle) {
+                    auto targetDesc = deferredRenderTargetDesc();
+                    targetDesc.mFormat = DepthBufferFormat;
+                    targetDesc.mStartState = RESOURCE_STATE_DEPTH_WRITE;
+                    targetDesc.pName = "Depth RT";
+                    addRenderTarget(forgetRenderer->Rend(), &targetDesc, handle);
+                    return true;
+                });
+                b.m_normalBuffer= {forgetRenderer->Rend()};
+                b.m_normalBuffer.Load([&](RenderTarget** handle) {
+                    auto targetDesc = deferredRenderTargetDesc();
+                    targetDesc.mFormat = NormalBufferFormat;
+                    addRenderTarget(forgetRenderer->Rend(), &targetDesc, handle);
+                    return true;
+                });
+                b.m_positionBuffer = {forgetRenderer->Rend()};
+                b.m_positionBuffer.Load([&](RenderTarget** handle) {
+                    auto targetDesc = deferredRenderTargetDesc();
+                    targetDesc.mFormat = PositionBufferFormat;
+                    addRenderTarget(forgetRenderer->Rend(), &targetDesc, handle);
+                    return true;
+                });
+                b.m_specularBuffer = ForgeRenderTarget{forgetRenderer->Rend()};
+                b.m_specularBuffer.Load([&](RenderTarget** handle) {
+                    auto targetDesc = deferredRenderTargetDesc();
+                    targetDesc.mFormat = SpecularBufferFormat;
+                    addRenderTarget(forgetRenderer->Rend(), &targetDesc, handle);
+                    return true;
+                });
+                b.m_colorBuffer = {forgetRenderer->Rend()};
+                b.m_colorBuffer.Load([&](RenderTarget** handle) {
+                    auto targetDesc = deferredRenderTargetDesc();
+                    targetDesc.mFormat = ColorBufferFormat;
+                    addRenderTarget(forgetRenderer->Rend(), &targetDesc, handle);
+                    return true;
+                });
 
-                   {
-                        TextureDesc refractionImageDesc = {};
-                        refractionImageDesc.mArraySize = 1;
-                        refractionImageDesc.mDepth = 1;
-		                refractionImageDesc.mMipLevels = 1;
-                        refractionImageDesc.mFormat = TinyImageFormat_R16G16B16A16_SFLOAT;
-                        refractionImageDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE | DESCRIPTOR_TYPE_RW_TEXTURE;
-                        refractionImageDesc.mWidth = sharedData->m_size.x;
-                        refractionImageDesc.mHeight = sharedData->m_size.y;
-                        refractionImageDesc.mSampleCount = SAMPLE_COUNT_1;
-                        refractionImageDesc.mSampleQuality = 0;
-                        refractionImageDesc.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
-                        refractionImageDesc.pName = "Refraction Image";
-                        ForgeTextureHandle refractionImage{};
-                        refractionImage.Load([&](Texture** texture) {
-                            TextureLoadDesc loadDesc = {};
-                            loadDesc.ppTexture = texture;
-                            loadDesc.pDesc = &refractionImageDesc;
-                            addResource(&loadDesc, nullptr);
-                            return true;
-                        });
-                        b.m_refractionImage = std::move(refractionImage);
-                   }
-                   {
-
-                        auto outputRt = deferredRenderTargetDesc();
-                        outputRt.mFormat = getRecommendedSwapchainFormat(false, false);
-                        outputRt.mDescriptors = DESCRIPTOR_TYPE_RW_TEXTURE | DESCRIPTOR_TYPE_TEXTURE;
-                        ForgeRenderTarget target = {forgetRenderer->Rend()};
-                        addRenderTarget(forgetRenderer->Rend(), &outputRt, &target.m_handle);
-                        target.Initialize();
-                        b.m_outputBuffer = std::move(target);
-                   }
-                }
-
-                // sharedData->m_gBuffer = buildGBuffer();
-                // sharedData->m_gBufferReflection = buildGBuffer();
-
-                // {
-                //     auto desc = ImageDescriptor::CreateTexture2D(
-                //         sharedData->m_size.x, sharedData->m_size.y, false, bgfx::TextureFormat::Enum::RGBA8);
-                //     desc.m_configuration.m_computeWrite = true;
-                //     desc.m_configuration.m_rt = RTType::RT_Write;
-                //     auto image = std::make_shared<Image>();
-                //     image->Initialize(desc);
-                //     sharedData->m_refractionImage = image;
-                // }
+                b.m_refractionImage.Load([&](Texture** texture) {
+                    TextureLoadDesc loadDesc = {};
+                    loadDesc.ppTexture = texture;
+                    TextureDesc refractionImageDesc = {};
+                    refractionImageDesc.mArraySize = 1;
+                    refractionImageDesc.mDepth = 1;
+                    refractionImageDesc.mMipLevels = 1;
+                    refractionImageDesc.mFormat = TinyImageFormat_R16G16B16A16_SFLOAT;
+                    refractionImageDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE | DESCRIPTOR_TYPE_RW_TEXTURE;
+                    refractionImageDesc.mWidth = sharedData->m_size.x;
+                    refractionImageDesc.mHeight = sharedData->m_size.y;
+                    refractionImageDesc.mSampleCount = SAMPLE_COUNT_1;
+                    refractionImageDesc.mSampleQuality = 0;
+                    refractionImageDesc.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
+                    refractionImageDesc.pName = "Refraction Image";
+                    loadDesc.pDesc = &refractionImageDesc;
+                    addResource(&loadDesc, nullptr);
+                    return true;
+                });
+                b.m_outputBuffer = {forgetRenderer->Rend()};
+                b.m_outputBuffer.Load([&](RenderTarget** handle) {
+                    auto targetDesc = deferredRenderTargetDesc();
+                    targetDesc.mFormat = ColorBufferFormat;
+                    targetDesc.mFormat = getRecommendedSwapchainFormat(false, false);
+                    targetDesc.mDescriptors = DESCRIPTOR_TYPE_RW_TEXTURE | DESCRIPTOR_TYPE_TEXTURE;
+                    addRenderTarget(forgetRenderer->Rend(), &targetDesc, handle);
+                    return true;
+                });
 
                 return sharedData;
             },
@@ -2233,7 +2209,7 @@ namespace hpl {
 
         // auto& swapChainImage = frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex];
         auto& sharedData = m_boundViewportData.resolve(viewport);
-        auto& currentGBuffer = sharedData.m_gBuffer[frame.m_frameIndex];
+        auto& currentGBuffer = sharedData.m_gBuffer;
 
         {
             BufferUpdateDesc updatePerFrameConstantsDesc = { m_perFrameBuffer.m_handle, frame.m_frameIndex * sizeof(UniformPerFrameData), sizeof(UniformPerFrameData)};
@@ -2352,7 +2328,7 @@ namespace hpl {
         }
 
         {
-            cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "GBuffer Pass");
+            cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "Build GBuffer");
             LoadActionsDesc loadActions = {};
             loadActions.mLoadActionsColor[0] = LOAD_ACTION_CLEAR;
             loadActions.mLoadActionsColor[1] = LOAD_ACTION_CLEAR;
