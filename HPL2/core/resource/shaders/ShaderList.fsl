@@ -360,3 +360,8 @@
 #frag radial_blur_posteffect.frag
     #include "radial_blur_posteffect.frag.fsl"
 #end
+
+#comp depth_reproject.comp
+    #include "depth_reproject.comp.fsl"
+#end
+

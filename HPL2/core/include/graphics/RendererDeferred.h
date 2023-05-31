@@ -170,7 +170,9 @@ namespace hpl {
                   m_specularBuffer(std::move(buffer.m_specularBuffer)),
                   m_depthBuffer(std::move(buffer.m_depthBuffer)),
                   m_outputBuffer(std::move(buffer.m_outputBuffer)),
-                  m_refractionImage(std::move(buffer.m_refractionImage)) {
+                  m_refractionImage(std::move(buffer.m_refractionImage)),
+                  m_coverageBuffer(std::move(buffer.m_coverageBuffer)),
+                  m_invViewProj(buffer.m_invViewProj) {
             }
             void operator=(GBuffer&& buffer) {
                 m_colorBuffer = std::move(buffer.m_colorBuffer);
@@ -180,6 +182,8 @@ namespace hpl {
                 m_depthBuffer = std::move(buffer.m_depthBuffer);
                 m_outputBuffer = std::move(buffer.m_outputBuffer);
                 m_refractionImage = std::move(buffer.m_refractionImage);
+                m_coverageBuffer = std::move(buffer.m_coverageBuffer);
+                m_invViewProj = buffer.m_invViewProj;
             }
             ForgeTextureHandle m_refractionImage;
 
@@ -189,6 +193,9 @@ namespace hpl {
             ForgeRenderTarget m_specularBuffer;
             ForgeRenderTarget m_depthBuffer;
             ForgeRenderTarget m_outputBuffer;
+
+            ForgeTextureHandle m_coverageBuffer;
+            cMatrixf m_invViewProj;
         };
 
         struct SharedViewportData {
@@ -531,6 +538,19 @@ namespace hpl {
         DescriptorSet* m_lightFrameSet;
 
         cRenderList m_reflectionRenderList;
+
+        // depth reprojection
+        struct OcclusionPass {
+            struct PerFrameUniform  {
+                mat4 m_projView;
+                mat4 m_invProjView;
+            };
+            ForgeBufferHandle m_perFrameDepthReprojectionBuffer;
+            RootSignature* m_rootSignature;
+            Shader* m_depthReprojectionShader;
+            std::array<DescriptorSet*,ForgeRenderer::SwapChainLength> m_perFrameDescriptorSet;
+            Pipeline* m_depthReprojectionPipeline;
+        } m_occlusionPass;
 
         static bool mbDepthCullLights;
         static bool mbSSAOLoaded;

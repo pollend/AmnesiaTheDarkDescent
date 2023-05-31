@@ -1,0 +1,34 @@
+
+RES(Tex2D(float4), depthInput, UPDATE_FREQ_PER_FRAME, t0, binding = 0);
+RES(RWTex2D(float), destOutput, UPDATE_FREQ_PER_FRAME, u0, binding = 1);
+
+CBUFFER(perFrameBlock, UPDATE_FREQ_PER_FRAME, b1, binding = 2)
+{
+    DATA(float4x4, projView, None);
+    DATA(float4x4, invViewProjMat, None);
+};
+
+NUM_THREADS(16, 16,  1)
+void CS_MAIN(SV_DispatchThreadID(uint3) did) 
+{    
+    INIT_MAIN;
+    uint2 screenSize = uint2(GetDimensions(Get(depthInput), NO_SAMPLER));
+    if (did.x < screenSize.x && did.y < screenSize.y)
+    {
+        float sceneDepth = LoadTex2D(Get(depthInput), NO_SAMPLER, did.xy, 0).x;
+        float2 uv = float2(did.x, did.y) / float2(screenSize.x, screenSize.y);
+	float2 ndc = float2(uv.x * 2.0 - 1.0, (1.0 - uv.y) * 2.0 - 1.0);
+	float4 worldPos = mul( Get(invViewProjMat), float4(ndc, sceneDepth, 1.0));
+	worldPos /= worldPos.w;
+        
+        float4 clipPos = projView * float4(worldPos.xyz, 1.0);
+        float3  ndcPos = clipPos.xyz / clipPos.w;
+        uint2 uv2 = uint2((ndcPos.xy + 1.0) * 0.5 * float2(screenSize.x, screenSize.y));
+        
+        uint invDepth = asuint(ndcPos.z);
+
+        float finalDepth = LoadRWTex2D(Get(destOutput), did.xy).x;
+        // finalDept = max(finalDepth, ndcPos.z);
+    }
+    RETURN();
+}

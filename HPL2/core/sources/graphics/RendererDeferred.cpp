@@ -27,6 +27,7 @@
 #include "graphics/ImmediateDrawBatch.h"
 #include "scene/ParticleEmitter.h"
 #include "scene/Viewport.h"
+#include "tinyimageformat_base.h"
 #include "windowing/NativeWindow.h"
 #include <bx/debug.h>
 
@@ -737,6 +738,25 @@ namespace hpl {
                         addRenderTarget(forgetRenderer->Rend(), &targetDesc, handle);
                         return true;
                     });
+                    b.m_coverageBuffer.Load([&](Texture** texture) {
+                        TextureLoadDesc loadDesc = {};
+                        loadDesc.ppTexture = texture;
+                        TextureDesc refractionImageDesc = {};
+                        refractionImageDesc.mArraySize = 1;
+                        refractionImageDesc.mDepth = 1;
+                        refractionImageDesc.mMipLevels = 1;
+                        refractionImageDesc.mFormat = TinyImageFormat_R16_SFLOAT;
+                        refractionImageDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE | DESCRIPTOR_TYPE_RW_TEXTURE;
+                        refractionImageDesc.mWidth = sharedData->m_size.x;
+                        refractionImageDesc.mHeight = sharedData->m_size.y;
+                        refractionImageDesc.mSampleCount = SAMPLE_COUNT_1;
+                        refractionImageDesc.mSampleQuality = 0;
+                        refractionImageDesc.mStartState = RESOURCE_STATE_UNORDERED_ACCESS;
+                        refractionImageDesc.pName = "C-Buffer";
+                        loadDesc.pDesc = &refractionImageDesc;
+                        addResource(&loadDesc, nullptr);
+                        return true;
+                    });
                     b.m_normalBuffer= {forgetRenderer->Rend()};
                     b.m_normalBuffer.Load([&](RenderTarget** handle) {
                         auto targetDesc = deferredRenderTargetDesc();
@@ -845,7 +865,44 @@ namespace hpl {
             addResource(&desc, nullptr);
             m_perFrameBuffer.Initialize();
         }
+        {
+            {
+                    ShaderLoadDesc loadDesc = {};
+                    loadDesc.mStages[0].pFileName = "depth_reproject.comp";
+                    addShader(forgetRenderer->Rend(), &loadDesc, &m_occlusionPass.m_depthReprojectionShader);
+            }
+            {
+                std::array shaders = { m_occlusionPass.m_depthReprojectionShader };
+                RootSignatureDesc rootSignatureDesc = {};
+                rootSignatureDesc.ppShaders = shaders.data();
+                rootSignatureDesc.mShaderCount = shaders.size();
+                addRootSignature(forgetRenderer->Rend(), &rootSignatureDesc, &m_occlusionPass.m_rootSignature);
+            }
+            {
+		        DescriptorSetDesc setDesc = { m_occlusionPass.m_rootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, 1};
+                for(auto& set: m_occlusionPass.m_perFrameDescriptorSet) {
+                    addDescriptorSet(forgetRenderer->Rend(), &setDesc, &set);
+                }
+            }
+            m_occlusionPass.m_perFrameDepthReprojectionBuffer.Load([&](Buffer** buffer) {
+                BufferLoadDesc desc = {};
+                desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+                desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
+                desc.mDesc.mSize = sizeof(OcclusionPass::PerFrameUniform) * ForgeRenderer::SwapChainLength; // * cViewport::MaxViewportHandles;
+                desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
+                desc.pData = nullptr;
+                desc.ppBuffer = buffer;
+                addResource(&desc, nullptr);
+                return true;
+            });
 
+            PipelineDesc desc = {};
+            desc.mType = PIPELINE_TYPE_COMPUTE;
+            ComputePipelineDesc& pipelineSettings = desc.mComputeDesc;
+            pipelineSettings.pShaderProgram = m_occlusionPass.m_depthReprojectionShader;
+            pipelineSettings.pRootSignature = m_occlusionPass.m_rootSignature;
+            addPipeline(forgetRenderer->Rend(), &desc, &m_occlusionPass.m_depthReprojectionPipeline);
+        }
         // -------------- Fog ----------------------------
         {
             {
@@ -2209,10 +2266,54 @@ namespace hpl {
         const cMatrixf mainFrustumViewInv = cMath::MatrixInverse(apFrustum->GetViewMatrix());
         const cMatrixf mainFrustumView = apFrustum->GetViewMatrix();
         const cMatrixf mainFrustumProj = apFrustum->GetProjectionMatrix();
+        const cMatrixf invViewProj = cMath::MatrixInverse(cMath::MatrixMul(mainFrustumProj, mainFrustumView));
+
 
         // auto& swapChainImage = frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex];
         auto& sharedData = m_boundViewportData.resolve(viewport);
         auto& currentGBuffer = sharedData.m_gBuffer[frame.m_frameIndex];
+        currentGBuffer.m_invViewProj = invViewProj;
+
+        {
+            auto& previousGBuffer = sharedData.m_gBuffer[(frame.m_frameIndex + 1) % 2];
+            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+            {
+                std::array rtBarriers = {
+                    RenderTargetBarrier{ previousGBuffer.m_depthBuffer.m_handle, RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_UNORDERED_ACCESS },
+                };
+                cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+            }
+            cmdBindPipeline(frame.m_cmd, m_occlusionPass.m_depthReprojectionPipeline);
+            OcclusionPass::PerFrameUniform  perFrameData = {};
+            perFrameData.m_projView = cMath::ToForgeMat(cMath::MatrixMul(mainFrustumProj, mainFrustumView).GetTranspose());
+            perFrameData.m_invProjView = cMath::ToForgeMat(previousGBuffer.m_invViewProj.GetTranspose());
+
+            BufferUpdateDesc updateDesc = { m_occlusionPass.m_perFrameDepthReprojectionBuffer.m_handle, frame.m_frameIndex * sizeof(OcclusionPass::PerFrameUniform) };
+            beginUpdateResource(&updateDesc);
+            (*reinterpret_cast<OcclusionPass::PerFrameUniform*>(updateDesc.pMappedData)) = perFrameData;
+            endUpdateResource(&updateDesc, NULL);
+
+            DescriptorData params[3] = {};
+            params[0].pName = "depthInput";
+            params[0].ppTextures = &previousGBuffer.m_depthBuffer.m_handle->pTexture;
+            params[1].pName = "destOutput";
+            params[1].ppTextures = &currentGBuffer.m_coverageBuffer.m_handle;
+            params[2].pName = "perFrameBlock";
+            DescriptorDataRange range = { (uint32_t)(frame.m_frameIndex * sizeof(OcclusionPass::PerFrameUniform)), sizeof(OcclusionPass::PerFrameUniform) };
+            params[2].pRanges = &range;
+            params[2].ppBuffers = &m_occlusionPass.m_perFrameDepthReprojectionBuffer.m_handle;
+            updateDescriptorSet(frame.m_renderer->Rend(), 0, m_occlusionPass.m_perFrameDescriptorSet[frame.m_frameIndex], std::size(params), params);
+
+            cmdBindDescriptorSet(frame.m_cmd, 0, m_occlusionPass.m_perFrameDescriptorSet[frame.m_frameIndex]);
+            cmdDispatch(frame.m_cmd, static_cast<uint32_t>(static_cast<float>(sharedData.m_size.x) / 16.0f) + 1, static_cast<uint32_t>(static_cast<float>(sharedData.m_size.y) / 16.0f) + 1, 1);
+            {
+                std::array rtBarriers = {
+                    RenderTargetBarrier{ previousGBuffer.m_depthBuffer.m_handle, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_DEPTH_WRITE },
+                };
+                cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+            }
+        }
+
 
         {
             BufferUpdateDesc updatePerFrameConstantsDesc = { m_perFrameBuffer.m_handle, frame.m_frameIndex * sizeof(UniformPerFrameData), sizeof(UniformPerFrameData)};
