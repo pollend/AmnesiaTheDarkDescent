@@ -12,10 +12,8 @@ STRUCT(PsOut)
 	DATA(float4, diffuse, SV_Target0);
 };
 
-PsOut PS_MAIN(PsIn In)
+float4 PS_MAIN(PsIn In)
 {
     INIT_MAIN;
-    PsOut Out;
-    Out.diffuse = SampleTex2D(Get(inputMap), Get(nearestSampler), In.uv.xy);
-    RETURN(Out);
+    RETURN(SampleTex2D(Get(inputMap), Get(nearestSampler), In.uv.xy));
 }

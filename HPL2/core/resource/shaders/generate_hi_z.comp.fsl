@@ -1,0 +1,25 @@
+
+RES(RWTex2DArray(float), depthInput, UPDATE_FREQ_PER_FRAME, u0, binding = 0);
+RES(RWTex2DArray(float), destOutput, UPDATE_FREQ_PER_FRAME, u1, binding = 1);
+
+PUSH_CONSTANT(uRootConstants, b0)
+{
+    DATA(uint, mipLevel, None);
+};
+
+
+NUM_THREADS(16, 16,  1)
+void CS_MAIN(SV_DispatchThreadID(uint3) did) 
+{    
+    INIT_MAIN;
+    uint2 screenSize = uint2(GetDimensions(Get(destOutput), NO_SAMPLER)) / (1 << Get(mipLevel)) ;
+    if (did.x < screenSize.x && did.y < screenSize.y)
+    {
+        float t1 = LoadRWTex3D(Get(depthInput), uint3((did.xy * 2),  Get(mipLevel) - 1)).x;
+        float t2 = LoadRWTex3D(Get(depthInput), uint3((did.xy * 2) + uint2(1,0), Get(mipLevel) - 1)).x;
+        float t3 = LoadRWTex3D(Get(depthInput), uint3((did.xy * 2) + uint2(0,1), Get(mipLevel) - 1)).x;
+        float t4 = LoadRWTex3D(Get(depthInput), uint3((did.xy * 2) + uint2(1,1), Get(mipLevel) - 1)).x;
+        Write3D(Get(destOutput), uint3(did.xy, Get(mipLevel)), max(max(t1, t2), max(t3, t4)));
+    }
+    RETURN();
+}

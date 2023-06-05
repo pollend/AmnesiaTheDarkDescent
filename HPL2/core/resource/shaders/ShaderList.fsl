@@ -360,3 +360,15 @@
 #frag radial_blur_posteffect.frag
     #include "radial_blur_posteffect.frag.fsl"
 #end
+
+#comp test_AABB_hi_z.comp
+    #include "test_AABB_hi_z.comp.fsl"
+#end
+
+#comp generate_hi_z.comp
+    #include "generate_hi_z.comp.fsl"
+#end
+
+#frag copy_hi_z.frag
+    #include "copy_hi_z.frag.fsl"
+#end

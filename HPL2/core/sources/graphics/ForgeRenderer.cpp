@@ -51,8 +51,8 @@ namespace hpl {
         submitDesc.ppWaitSemaphores = &m_imageAcquiredSemaphore;
         submitDesc.pSignalFence = frame.m_renderCompleteFence;
         queueSubmit(m_graphicsQueue, &submitDesc);
-        QueuePresentDesc presentDesc = {};
 
+        QueuePresentDesc presentDesc = {};
         presentDesc.mIndex = m_swapChainIndex;
         presentDesc.mWaitSemaphoreCount = 1;
         presentDesc.pSwapChain = m_swapChain;

@@ -1,0 +1,16 @@
+
+RES(Tex2D(float4), sourceInput, UPDATE_FREQ_PER_FRAME, t0, binding = 2);
+RES(SamplerState, depthSampler, UPDATE_FREQ_NONE, s0, binding = 3);
+
+
+STRUCT(PsIn) 
+{
+    DATA(float4, Position, SV_Position);
+    DATA(float2, uv, TEXCOORD0);
+};
+
+float4 PS_MAIN(PsIn In)
+{
+    INIT_MAIN;
+    RETURN(SampleTex2D(Get(sourceInput), Get(depthSampler), In.uv.xy));
+}

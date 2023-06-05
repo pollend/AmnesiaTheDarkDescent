@@ -19,7 +19,6 @@
 
 #include "graphics/RendererDeferred.h"
 
-
 #include "bgfx/bgfx.h"
 #include "engine/Event.h"
 #include "engine/Interface.h"
@@ -116,8 +115,7 @@ namespace hpl {
 
     namespace detail {
 
-
-        void cmdDefaultLegacyGeomBinding(const ForgeRenderer::Frame& frame, LegacyVertexBuffer::GeometryBinding& binding) {
+        void cmdDefaultLegacyGeomBinding(Cmd* cmd, const ForgeRenderer::Frame& frame, LegacyVertexBuffer::GeometryBinding& binding) {
             absl::InlinedVector<Buffer*, 16> vbBuffer;
             absl::InlinedVector<uint64_t, 16> vbOffsets;
             absl::InlinedVector<uint32_t, 16> vbStride;
@@ -130,9 +128,8 @@ namespace hpl {
             }
             frame.m_resourcePool->Push(*binding.m_indexBuffer.element);
 
-            cmdBindVertexBuffer(frame.m_cmd, binding.m_vertexElement.size(), vbBuffer.data(), vbStride.data(), vbOffsets.data());
-            cmdBindIndexBuffer(
-                frame.m_cmd, binding.m_indexBuffer.element->m_handle, INDEX_TYPE_UINT32, binding.m_indexBuffer.offset);
+            cmdBindVertexBuffer(cmd, binding.m_vertexElement.size(), vbBuffer.data(), vbStride.data(), vbOffsets.data());
+            cmdBindIndexBuffer(cmd, binding.m_indexBuffer.element->m_handle, INDEX_TYPE_UINT32, binding.m_indexBuffer.offset);
         }
 
         struct DeferredLight {
@@ -335,7 +332,23 @@ namespace hpl {
 
             return cMatrixf::Identity;
         }
+        static inline bool IsContainerNodeVisible(iRenderableContainerNode* apNode,cFrustum* frustum,std::span<cPlanef> occludingPlanes, tRenderableFlag alNeededFlags) {
+            apNode->UpdateBeforeUse();
+            if (apNode->UsesFlagsAndVisibility() &&
+                (apNode->HasVisibleObjects() == false || (apNode->GetRenderFlags() & alNeededFlags) != alNeededFlags))
+            {
+                return false;
+            }
+            eCollision frustumCollision = frustum->CollideNode(apNode);
+            if (frustumCollision == eCollision_Outside) {
+                return  false;
+            }
 
+            if(!rendering::detail::IsRenderableNodeIsVisible(apNode, occludingPlanes)) {
+                return false;
+            }
+            return true;
+        }
 
         // this is a bridge to build a render list from the renderable container
         /**
@@ -348,39 +361,26 @@ namespace hpl {
             cWorld* world,
             tObjectVariabilityFlag objectTypes,
             std::span<cPlanef> occludingPlanes,
-            tRenderableFlag alNeededFlags, std::function<void(iRenderable*)> zPassCallback) {
+            tRenderableFlag alNeededFlags, std::function<void(iRenderable*)> callback) {
             renderList->Clear();
 
             auto renderNodeHandler = [&](iRenderableContainerNode* apNode, tRenderableFlag alNeededFlags) {
                 if (apNode->HasObjects() == false)
-                    return 0;
-
-                int lRenderedObjects = 0;
-
-                ////////////////////////////////////
-                // Iterate sorted objects and render
+                    return;
                 for (tRenderableListIt it = apNode->GetObjectList()->begin(); it != apNode->GetObjectList()->end(); ++it) {
                     iRenderable* pObject = *it;
-
-                    //////////////////////
-                    // Check if object is visible
-
                     if (!rendering::detail::IsObjectIsVisible(pObject,alNeededFlags,occludingPlanes)) {
                         continue;
                     }
 
                     renderList->AddObject(pObject);
-
                     cMaterial* material = pObject->GetMaterial();
                     if(!material || material->GetType()->IsTranslucent()) {
                         continue;
                     }
-                    zPassCallback(pObject);
-                    // rendering::detail::RenderZPassObject(pass, context, viewport, renderer, pObject);
-                    ++lRenderedObjects;
+                    callback(pObject);
                 }
 
-                return lRenderedObjects;
             };
 
             struct {
@@ -391,67 +391,50 @@ namespace hpl {
                 { world->GetRenderableContainer(eWorldContainerType_Dynamic), eObjectVariabilityFlag_Dynamic },
             };
 
-            // mpCurrentSettings->mlNumberOfOcclusionQueries = 0;
-
-            // Switch sets, so that the last frames set is not current.
-            apVisibleNodeTracker->SwitchAndClearVisibleNodeSet();
-
             for (auto& it : containers) {
                 if (it.flag & objectTypes) {
                     it.container->UpdateBeforeRendering();
                 }
             }
 
-            // Temp variable used when pushing visibility
-            // gpCurrentVisibleNodeTracker = apVisibleNodeTracker;
-
             // Add Root nodes to stack
-            tRendererSortedNodeSet setNodeStack;
-
-            // Render at least X objects without rendering nodes, to some occluders
-            const int minimumObjectsBeforeOcclusionTesting = 0;
-            // const int onlyRenderPrevVisibleOcclusionObjectsFrameCount = 0;
-            int lMinRenderedObjects = minimumObjectsBeforeOcclusionTesting;
-
             std::function<void(iRenderableContainerNode* apNode)> walkRenderables;
             walkRenderables = [&](iRenderableContainerNode* apNode) {
-                if(apNode->GetChildNodes().size() > 0) {
-                    for(auto& childNode: apNode->GetChildNodes()) {
-                        childNode->UpdateBeforeUse();
-                        if (childNode->UsesFlagsAndVisibility() &&
-                            (childNode->HasVisibleObjects() == false || (childNode->GetRenderFlags() & alNeededFlags) != alNeededFlags))
-                        {
-                            continue;
-                        }
-                        eCollision frustumCollision = frustum->CollideNode(childNode);
-                        if (frustumCollision == eCollision_Outside) {
-                            continue;
-                        }
-
-                        if(!rendering::detail::IsRenderableNodeIsVisible(childNode, occludingPlanes)) {
-                            continue;
-                        }
-
-                        if (frustum->CheckAABBNearPlaneIntersection(childNode->GetMin(), childNode->GetMax())) {
-                            cVector3f vViewSpacePos = cMath::MatrixMul(frustum->GetViewMatrix(), childNode->GetCenter());
-                            childNode->SetViewDistance(vViewSpacePos.z);
-                            childNode->SetInsideView(true);
-                        } else {
-                            // Frustum origin is outside of node. Do intersection test.
-                            cVector3f vIntersection;
-                            cMath::CheckAABBLineIntersection(
-                                childNode->GetMin(),
-                                childNode->GetMax(),
-                                frustum->GetOrigin(),
-                                childNode->GetCenter(),
-                                &vIntersection,
-                                NULL);
-                            cVector3f vViewSpacePos = cMath::MatrixMul(frustum->GetViewMatrix(), vIntersection);
-                            childNode->SetViewDistance(vViewSpacePos.z);
-                            childNode->SetInsideView(false);
-                        }
-                        walkRenderables(childNode);
+                for(auto& childNode: apNode->GetChildNodes()) {
+                    childNode->UpdateBeforeUse();
+                    if (childNode->UsesFlagsAndVisibility() &&
+                        (childNode->HasVisibleObjects() == false || (childNode->GetRenderFlags() & alNeededFlags) != alNeededFlags))
+                    {
+                        continue;
                     }
+                    eCollision frustumCollision = frustum->CollideNode(childNode);
+                    if (frustumCollision == eCollision_Outside) {
+                        continue;
+                    }
+
+                    if(!rendering::detail::IsRenderableNodeIsVisible(childNode, occludingPlanes)) {
+                        continue;
+                    }
+
+                    if (frustum->CheckAABBNearPlaneIntersection(childNode->GetMin(), childNode->GetMax())) {
+                        cVector3f vViewSpacePos = cMath::MatrixMul(frustum->GetViewMatrix(), childNode->GetCenter());
+                        childNode->SetViewDistance(vViewSpacePos.z);
+                        childNode->SetInsideView(true);
+                    } else {
+                        // Frustum origin is outside of node. Do intersection test.
+                        cVector3f vIntersection;
+                        cMath::CheckAABBLineIntersection(
+                            childNode->GetMin(),
+                            childNode->GetMax(),
+                            frustum->GetOrigin(),
+                            childNode->GetCenter(),
+                            &vIntersection,
+                            NULL);
+                        cVector3f vViewSpacePos = cMath::MatrixMul(frustum->GetViewMatrix(), vIntersection);
+                        childNode->SetViewDistance(vViewSpacePos.z);
+                        childNode->SetInsideView(false);
+                    }
+                    walkRenderables(childNode);
                 }
                 renderNodeHandler(apNode, alNeededFlags);
             };
@@ -728,10 +711,50 @@ namespace hpl {
                     return renderTarget;
                 };
                 for(auto& b: sharedData->m_gBuffer) {
+                    b.m_hiZMipCount = static_cast<uint8_t>(std::floor(std::log2(std::max(sharedData->m_size.x, sharedData->m_size.y))));
+                    b.m_hizDepthBuffer.Load([&](RenderTarget** handle) {
+                        RenderTargetDesc renderTargetDesc = {};
+                        renderTargetDesc.mArraySize = b.m_hiZMipCount;
+                        renderTargetDesc.mDepth = 1;
+                        renderTargetDesc.mMipLevels = 1;
+                        renderTargetDesc.mFormat = TinyImageFormat_R32_SFLOAT;
+                        renderTargetDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE | DESCRIPTOR_TYPE_RW_TEXTURE;
+                        renderTargetDesc.mWidth = sharedData->m_size.x;
+                        renderTargetDesc.mHeight = sharedData->m_size.y;
+                        renderTargetDesc.mSampleCount = SAMPLE_COUNT_1;
+                        renderTargetDesc.mSampleQuality = 0;
+                        renderTargetDesc.mStartState = RESOURCE_STATE_UNORDERED_ACCESS;
+                        renderTargetDesc.pName = "hi-z depth buffer";
+                        addRenderTarget(forgetRenderer->Rend(), &renderTargetDesc, handle);
+                        return true;
+                    });
+                   // for(size_t i = 0; i < b.m_hiZMipCount - 1; i++) {
+                   //     b.m_hizLevelsBuffers[i].Load([&](Texture** handle) {
+                   //         TextureLoadDesc textureLoadDesc = {};
+                   //         textureLoadDesc.ppTexture = handle;
+                   //         TextureDesc textureDesc = {};
+                   //         textureDesc.mArraySize = 1;
+                   //         textureDesc.mDepth = 1;
+                   //         textureDesc.mMipLevels = 1;
+                   //         textureDesc.mFormat = TinyImageFormat_R16_SFLOAT;
+                   //         textureDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE | DESCRIPTOR_TYPE_RW_TEXTURE;
+                   //         textureDesc.mWidth = sharedData->m_size.x / (1 << (i + 1));
+                   //         textureDesc.mHeight = sharedData->m_size.y / (1 << (i + 1));
+                   //         textureDesc.mSampleCount = SAMPLE_COUNT_1;
+                   //         textureDesc.mSampleQuality = 0;
+                   //         textureDesc.mStartState = RESOURCE_STATE_UNORDERED_ACCESS;
+                   //         textureDesc.pName = "hi-z depth buffer";
+                   //         textureLoadDesc.pDesc = &textureDesc;
+                   //         addResource(&textureLoadDesc, nullptr);
+                   //         return true;
+                   //     });
+                   // }
+
                     b.m_depthBuffer  = {forgetRenderer->Rend()};
                     b.m_depthBuffer.Load([&](RenderTarget** handle) {
                         auto targetDesc = deferredRenderTargetDesc();
                         targetDesc.mFormat = DepthBufferFormat;
+                        //targetDesc.mDescriptors |= ;
                         targetDesc.mStartState = RESOURCE_STATE_DEPTH_WRITE;
                         targetDesc.pName = "Depth RT";
                         addRenderTarget(forgetRenderer->Rend(), &targetDesc, handle);
@@ -845,7 +868,132 @@ namespace hpl {
             addResource(&desc, nullptr);
             m_perFrameBuffer.Initialize();
         }
+        // prepass
+        {
+            CmdPoolDesc cmdPoolDesc = {};
+            cmdPoolDesc.pQueue = forgetRenderer->GetGraphicsQueue();
+            cmdPoolDesc.mTransient = true;
+            addCmdPool(forgetRenderer->Rend(), &cmdPoolDesc, &m_prePassPool);
+            CmdDesc cmdDesc = {};
+            cmdDesc.pPool = m_prePassPool;
+            addCmd(forgetRenderer->Rend(), &cmdDesc, &m_prePassCmd );
+        }
+        // hi-z
+        {
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0].pFileName = "generate_hi_z.comp";
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_ShaderHIZGenerate );
+            }
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0].pFileName = "test_AABB_hi_z.comp";
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_shaderTestOcclusion);
+            }
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0].pFileName = "fullscreen.vert";
+                loadDesc.mStages[1].pFileName = "copy_hi_z.frag";
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_copyDepthShader);
+            }
+            m_hiZOcclusionUniformBuffer.Load([&](Buffer** buf) {
+                BufferLoadDesc desc = {};
+                desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+                desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
+                desc.mDesc.mSize = sizeof(cRendererDeferred::UniformPropBlock);
+                desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
+                desc.pData = nullptr;
+                desc.ppBuffer = buf;
+                addResource(&desc, nullptr);
+                return true;
+            });
+            m_occlusionTestBuffer.Load([&](Buffer** buf) {
+                BufferLoadDesc desc = {};
+                desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_RW_BUFFER ;
+                desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_GPU_TO_CPU;
+                desc.mDesc.mSize = sizeof(uint32_t) * cRendererDeferred::UniformPropBlock::MaxObjectTest;
+                desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
+                desc.pData = nullptr;
+                desc.ppBuffer = buf;
+                addResource(&desc, nullptr);
+                return true;
+            });
+            {
+                SamplerDesc samplerDesc = {};
+                addSampler(forgetRenderer->Rend(), &samplerDesc,  &m_samplerHIZCopy);
+            }
+            {
 
+                std::array shaders = { m_ShaderHIZGenerate, m_shaderTestOcclusion };
+                RootSignatureDesc rootSignatureDesc = {};
+                rootSignatureDesc.ppShaders = shaders.data();
+                rootSignatureDesc.mShaderCount = shaders.size();
+                addRootSignature(forgetRenderer->Rend(), &rootSignatureDesc, &m_rootSignatureHIZOcclusion);
+
+                DescriptorSetDesc setDesc = { m_rootSignatureHIZOcclusion, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, cRendererDeferred::MaxHiZMipLevels  };
+                addDescriptorSet(forgetRenderer->Rend(), &setDesc, &m_descriptorSetHIZGenerate);
+            }
+            {
+
+                std::array shaders = { m_copyDepthShader };
+                RootSignatureDesc rootSignatureDesc = {};
+                rootSignatureDesc.ppShaders = shaders.data();
+                rootSignatureDesc.mShaderCount = shaders.size();
+                const char* pStaticSamplers[] = { "depthSampler" };
+                rootSignatureDesc.mStaticSamplerCount = 1;
+                rootSignatureDesc.ppStaticSamplers = &m_samplerHIZCopy;
+                rootSignatureDesc.ppStaticSamplerNames = pStaticSamplers;
+                addRootSignature(forgetRenderer->Rend(), &rootSignatureDesc, &m_rootSignatureCopyDepth);
+
+                DescriptorSetDesc setDesc = { m_rootSignatureCopyDepth, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, 1};
+                addDescriptorSet(forgetRenderer->Rend(), &setDesc, &m_descriptorCopyDepth);
+            }
+            {
+                PipelineDesc pipelineDesc = {};
+                pipelineDesc.mType = PIPELINE_TYPE_COMPUTE;
+                ComputePipelineDesc& computePipelineDesc = pipelineDesc.mComputeDesc;
+                computePipelineDesc.pShaderProgram = m_ShaderHIZGenerate;
+                computePipelineDesc.pRootSignature = m_rootSignatureHIZOcclusion;
+                addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_pipelineHIZGenerate);
+            }
+            {
+                PipelineDesc pipelineDesc = {};
+                pipelineDesc.mType = PIPELINE_TYPE_COMPUTE;
+                ComputePipelineDesc& computePipelineDesc = pipelineDesc.mComputeDesc;
+                computePipelineDesc.pShaderProgram = m_shaderTestOcclusion;
+                computePipelineDesc.pRootSignature = m_rootSignatureHIZOcclusion;
+                addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_pipelineAABBOcclusionTest);
+
+                DescriptorSetDesc setDesc = { m_rootSignatureHIZOcclusion, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, 1};
+                addDescriptorSet(forgetRenderer->Rend(), &setDesc, &m_descriptorAABBOcclusionTest);
+            }
+            {
+                RasterizerStateDesc rasterStateNoneDesc = {};
+                rasterStateNoneDesc.mCullMode = CULL_MODE_NONE;
+
+                DepthStateDesc depthStateDisabledDesc = {};
+                depthStateDisabledDesc.mDepthWrite = false;
+                depthStateDisabledDesc.mDepthTest = false;
+
+                std::array imageTargets = { TinyImageFormat_R32_SFLOAT  };
+                PipelineDesc pipelineDesc = {};
+                pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+                GraphicsPipelineDesc& graphicsPipelineDesc = pipelineDesc.mGraphicsDesc;
+                graphicsPipelineDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+                graphicsPipelineDesc.mRenderTargetCount = imageTargets.size();
+                graphicsPipelineDesc.pColorFormats = imageTargets.data();
+                graphicsPipelineDesc.pShaderProgram = m_copyDepthShader;
+                graphicsPipelineDesc.pRootSignature = m_rootSignatureCopyDepth;
+                graphicsPipelineDesc.mRenderTargetCount = 1;
+                graphicsPipelineDesc.mDepthStencilFormat = TinyImageFormat_UNDEFINED;
+                graphicsPipelineDesc.pVertexLayout = NULL;
+                graphicsPipelineDesc.mSampleCount = SAMPLE_COUNT_1;
+                graphicsPipelineDesc.pRasterizerState = &rasterStateNoneDesc;
+                graphicsPipelineDesc.pDepthState = &depthStateDisabledDesc;
+                graphicsPipelineDesc.pBlendState = NULL;
+                addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_pipelineCopyDepth);
+            }
+        }
         // -------------- Fog ----------------------------
         {
             {
@@ -2047,24 +2195,25 @@ namespace hpl {
     }
 
     void cRendererDeferred::RenderEdgeSmoothPass(GraphicsContext& context, cViewport& viewport, LegacyRenderTarget& rt) {
-        GraphicsContext::ViewConfiguration viewConfig{ m_edgeSmooth_LinearDepth };
-        auto edgeSmoothView = context.StartPass("EdgeSmooth", viewConfig);
-        cVector3f vQuadPos = cVector3f(m_farLeft, m_farBottom, -m_farPlane);
-        cVector2f vQuadSize = cVector2f(m_farRight * 2, m_farTop * 2);
+      //  GraphicsContext::ViewConfiguration viewConfig{ m_edgeSmooth_LinearDepth };
+      //  auto edgeSmoothView = context.StartPass("EdgeSmooth", viewConfig);
+      //  cVector3f vQuadPos = cVector3f(m_farLeft, m_farBottom, -m_farPlane);
+      //  cVector2f vQuadSize = cVector2f(m_farRight * 2, m_farTop * 2);
 
-        GraphicsContext::ShaderProgram shaderProgram;
-        // shaderProgram.m_handle = m_edgeSmooth_UnpackDepthProgram;
-        // shaderProgram.m_textures.push_back({BGFX_INVALID_HANDLE,resolveRenderImage(m_gBufferPositionImage)->GetHandle(), 0});
-        // shaderProgram.m_textures.push_back({BGFX_INVALID_HANDLE,resolveRenderImage(m_gBufferNormalImage)->GetHandle(), 0});
+      //  GraphicsContext::ShaderProgram shaderProgram;
+      //  // shaderProgram.m_handle = m_edgeSmooth_UnpackDepthProgram;
+      //  // shaderProgram.m_textures.push_back({BGFX_INVALID_HANDLE,resolveRenderImage(m_gBufferPositionImage)->GetHandle(), 0});
+      //  // shaderProgram.m_textures.push_back({BGFX_INVALID_HANDLE,resolveRenderImage(m_gBufferNormalImage)->GetHandle(), 0});
 
-        GraphicsContext::LayoutStream layout;
-        context.Quad(layout, vQuadPos, cVector2f(1, 1), cVector2f(0, 0), cVector2f(1, 1));
+      //  GraphicsContext::LayoutStream layout;
+      //  context.Quad(layout, vQuadPos, cVector2f(1, 1), cVector2f(0, 0), cVector2f(1, 1));
 
-        GraphicsContext::DrawRequest drawRequest{ layout, shaderProgram };
-        context.Submit(edgeSmoothView, drawRequest);
+      //  GraphicsContext::DrawRequest drawRequest{ layout, shaderProgram };
+      //  context.Submit(edgeSmoothView, drawRequest);
     }
 
     void cRendererDeferred::cmdBindObjectDescriptor(
+        Cmd* cmd,
         const ForgeRenderer::Frame& frame,
         uint32_t& updateIndex,
         cMaterial* apMaterial,
@@ -2100,11 +2249,11 @@ namespace hpl {
         params[paramCount++].ppBuffers = &uniformBuffer.pBuffer;
 
         updateDescriptorSet(frame.m_renderer->Rend(), updateIndex, objectDescSet, paramCount, params);
-        cmdBindDescriptorSet(frame.m_cmd, updateIndex, objectDescSet);
+        cmdBindDescriptorSet(cmd, updateIndex, objectDescSet);
         updateIndex++;
     }
 
-    void cRendererDeferred::cmdBindMaterialDescriptor(const ForgeRenderer::Frame& frame, cMaterial* apMaterial) {
+    void cRendererDeferred::cmdBindMaterialDescriptor(Cmd* cmd, const ForgeRenderer::Frame& frame, cMaterial* apMaterial) {
             ASSERT(apMaterial != nullptr && "Material is null");
 
             auto& info = m_materialSet.m_materialInfo[apMaterial->materialID()];
@@ -2188,7 +2337,7 @@ namespace hpl {
                 updateDescriptorSet(
                     frame.m_renderer->Rend(), apMaterial->materialID(), descriptorSet, paramCount, params.data());
             }
-            cmdBindDescriptorSet(frame.m_cmd, apMaterial->materialID(), descriptorSet);
+            cmdBindDescriptorSet(cmd, apMaterial->materialID(), descriptorSet);
     }
 
     void cRendererDeferred::Draw(
@@ -2257,15 +2406,256 @@ namespace hpl {
         ///////////////////////////
         // Occlusion testing
         {
-            LoadActionsDesc loadActions = {};
-            loadActions.mLoadActionsColor[0] = LOAD_ACTION_DONTCARE;
-            loadActions.mLoadActionDepth = LOAD_ACTION_CLEAR;
-            loadActions.mLoadActionStencil = LOAD_ACTION_CLEAR;
-            loadActions.mClearDepth = {.depth = 1.0f, .stencil = 0};
 
             ASSERT(currentGBuffer.m_depthBuffer.m_handle && "Depth buffer not created");
 
-            cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "Occlusion Testing");
+            std::array worldContainers = {mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Dynamic),
+                                         mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static)};
+            for(auto& container: worldContainers) {
+                container->UpdateBeforeRendering();
+            }
+            SyncToken testBufferSync{};
+            std::vector<UniformTest> uniformTest;
+            // start pre-z pass
+            resetCmdPool(frame.m_renderer->Rend(), m_prePassPool);
+            beginCmd(m_prePassCmd);
+            {
+                cmdBeginDebugMarker(m_prePassCmd, 0, 1, 0, "Pre Z");
+                LoadActionsDesc loadActions = {};
+                loadActions.mLoadActionsColor[0] = LOAD_ACTION_DONTCARE;
+                loadActions.mLoadActionDepth = LOAD_ACTION_CLEAR;
+                loadActions.mLoadActionStencil = LOAD_ACTION_CLEAR;
+                loadActions.mClearDepth = {.depth = 1.0f, .stencil = 0};
+
+                cmdBindRenderTargets(m_prePassCmd, 0, NULL, currentGBuffer.m_depthBuffer.m_handle, &loadActions, NULL, NULL, -1, -1);
+                cmdSetViewport(m_prePassCmd, 0.0f, 0.0f, (float)sharedData.m_size.x, (float)sharedData.m_size.y, 0.0f, 1.0f);
+                cmdSetScissor(m_prePassCmd, 0, 0, sharedData.m_size.x, sharedData.m_size.y);
+                cmdBindPipeline(m_prePassCmd, m_zPassPipeline);
+
+                cmdBindDescriptorSet(m_prePassCmd, 0, m_zPassConstSet);
+                cmdBindDescriptorSet(m_prePassCmd, 0, m_materialSet.m_frameSet[frame.m_frameIndex]);
+
+                BufferUpdateDesc updateDesc = { m_hiZOcclusionUniformBuffer.m_handle, 0, sizeof(UniformPropBlock) };
+                beginUpdateResource(&updateDesc);
+                auto* uniformBlock = reinterpret_cast<UniformPropBlock*>(updateDesc.pMappedData);
+                uniformBlock->viewProjeciton = cMath::ToForgeMat(cMath::MatrixMul(mainFrustumProj, mainFrustumView).GetTranspose());
+
+                std::vector<UniformRenderableContainer> treeEncoding;
+                std::function<void(iRenderableContainerNode * childNode)> walkRenderables;
+                walkRenderables = [&](iRenderableContainerNode* childNode) {
+                    childNode->UpdateBeforeUse();
+                    auto childNodes = childNode->GetChildNodes();
+                    for (auto& childNode : childNodes) {
+                        childNode->UpdateBeforeUse();
+                        eCollision frustumCollision = apFrustum->CollideNode(childNode);
+                        if (frustumCollision == eCollision_Outside) {
+                            continue;
+                        }
+                        if (apFrustum->CheckAABBNearPlaneIntersection(childNode->GetMin(), childNode->GetMax())) {
+                            cVector3f vViewSpacePos = cMath::MatrixMul(apFrustum->GetViewMatrix(), childNode->GetCenter());
+                            childNode->SetViewDistance(vViewSpacePos.z);
+                            childNode->SetInsideView(true);
+                        } else {
+                            // Frustum origin is outside of node. Do intersection test.
+                            cVector3f vIntersection;
+                            cMath::CheckAABBLineIntersection(
+                                childNode->GetMin(),
+                                childNode->GetMax(),
+                                apFrustum->GetOrigin(),
+                                childNode->GetCenter(),
+                                &vIntersection,
+                                NULL);
+                            cVector3f vViewSpacePos = cMath::MatrixMul(apFrustum->GetViewMatrix(), vIntersection);
+                            childNode->SetViewDistance(vViewSpacePos.z);
+                            childNode->SetInsideView(false);
+                        }
+                        walkRenderables(childNode);
+                    }
+                    for(auto& pObject: childNode->GetObjects())  {
+                        if (!rendering::detail::IsObjectIsVisible(pObject, eRenderableFlag_VisibleInNonReflection,{})) {
+                            continue;
+                        }
+
+                        auto& test = uniformTest.emplace_back();
+                        test.m_preZPass = m_preZPassRenderables.empty() || m_preZPassRenderables.contains(pObject);
+                        test.m_renderable = pObject;
+
+                        ASSERT(uniformTest.size() < UniformPropBlock::MaxObjectTest && "Too many renderables");
+                        auto* pBoundingVolume = pObject->GetBoundingVolume();
+                        uniformBlock->inputColliders[(uniformTest.size() - 1) * 2] = float4(pBoundingVolume->GetMin().x,pBoundingVolume->GetMin().y, pBoundingVolume->GetMin().z, 0.0f);
+                        uniformBlock->inputColliders[((uniformTest.size() - 1) * 2) + 1] = float4(pBoundingVolume->GetMax().x,pBoundingVolume->GetMax().y, pBoundingVolume->GetMax().z, 0.0f);
+
+                        cMaterial* pMaterial = pObject->GetMaterial();
+                        iVertexBuffer* vertexBuffer = pObject->GetVertexBuffer();
+
+                        if (pObject && pObject->GetRenderFrameCount() != iRenderer::GetRenderFrameCount()) {
+                            pObject->SetRenderFrameCount(iRenderer::GetRenderFrameCount());
+                            pObject->UpdateGraphicsForFrame(afFrameTime);
+                        }
+
+                        if (pMaterial && pMaterial->GetRenderFrameCount() != iRenderer::GetRenderFrameCount()) {
+                            pMaterial->SetRenderFrameCount(iRenderer::GetRenderFrameCount());
+                            pMaterial->UpdateBeforeRendering(afFrameTime);
+                        }
+                        ////////////////////////////////////////
+                        // Update per viewport specific and set amtrix point
+                        // Skip this for non-decal translucent! This is because the water rendering might mess it up otherwise!
+                        if (pMaterial  == NULL || pMaterial->GetType()->IsTranslucent() == false || pMaterial->GetType()->IsDecal()) {
+                            // skip rendering if the update return false
+                            if (pObject->UpdateGraphicsForViewport(apFrustum, afFrameTime) == false) {
+                                return;
+                            }
+
+                            pObject->SetModelMatrixPtr(pObject->GetModelMatrix(apFrustum));
+                        }
+                        // Only set a matrix used for sorting. Calculate the proper in the trans rendering!
+                        else {
+                            pObject->SetModelMatrixPtr(pObject->GetModelMatrix(NULL));
+                        }
+
+                        if(!vertexBuffer || !pMaterial || pMaterial->GetType()->IsTranslucent()) {
+                            continue;
+                        }
+                        if(test.m_preZPass) {
+                            ////////////////////////////////////////
+                            // Update per frame things, if not done yet.
+
+                            cmdBindMaterialDescriptor(m_prePassCmd,frame, pMaterial);
+                            cmdBindObjectDescriptor(m_prePassCmd,
+                                frame,
+                                objectIndex,
+                                pMaterial,
+                                pObject,
+                                {
+                                    .m_viewMat = mainFrustumView,
+                                    .m_projectionMat = mainFrustumProj,
+                                });
+                            std::array targets = { eVertexBufferElement_Position, eVertexBufferElement_Texture0, eVertexBufferElement_Normal, eVertexBufferElement_Texture1Tangent};
+                            LegacyVertexBuffer::GeometryBinding binding{};
+                            static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
+                            detail::cmdDefaultLegacyGeomBinding(m_prePassCmd, frame, binding);
+                            cmdDrawIndexed(m_prePassCmd, binding.m_indexBuffer.numIndicies, 0, 0);
+                        }
+                    }
+                };
+                for (auto& it : worldContainers ) {
+                    iRenderableContainerNode* pNode = it->GetRoot();
+                    pNode->UpdateBeforeUse(); // Make sure node is updated.
+                    pNode->SetInsideView(true); // We never want to check root! Assume player is inside.
+                    walkRenderables(pNode);
+                }
+                uniformBlock->maxMipLevel = currentGBuffer.m_hiZMipCount - 1;
+                uniformBlock->numObjects = uniformTest.size();
+                endUpdateResource(&updateDesc, &testBufferSync);
+                cmdEndDebugMarker(m_prePassCmd);
+            }
+            // hi-z generate pass
+            {
+                cmdBeginDebugMarker(m_prePassCmd, 0, 0, 0, "Generate HI-Z");
+                {
+                    cmdBindRenderTargets(m_prePassCmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+                    std::array rtBarriers = {
+                        RenderTargetBarrier{currentGBuffer.m_depthBuffer.m_handle, RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_SHADER_RESOURCE},
+                        RenderTargetBarrier{ currentGBuffer.m_hizDepthBuffer.m_handle, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_RENDER_TARGET},
+                    };
+                    cmdResourceBarrier(m_prePassCmd, 0, NULL, 0, NULL,rtBarriers.size(), rtBarriers.data());
+                }
+                {
+                    LoadActionsDesc loadActions = {};
+                    loadActions.mLoadActionsColor[0] = LOAD_ACTION_CLEAR;
+                    loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
+                    loadActions.mClearColorValues[0] = { .r = 1.0f, .g = 0.0f, .b = 0.0f, .a = 0.0f };
+                    cmdBindRenderTargets(m_prePassCmd, 1, &currentGBuffer.m_hizDepthBuffer.m_handle, NULL, &loadActions, NULL, NULL, -1, -1);
+
+                    std::array<DescriptorData, 1> params = {};
+                    params[0].pName = "sourceInput";
+                    params[0].ppTextures = &currentGBuffer.m_depthBuffer.m_handle->pTexture;
+                    updateDescriptorSet(
+                        frame.m_renderer->Rend(), 0, m_descriptorCopyDepth, params.size(), params.data());
+
+                    cmdSetViewport(m_prePassCmd, 0.0f, 0.0f, static_cast<float>(sharedData.m_size.x), static_cast<float>(sharedData.m_size.y), 0.0f, 1.0f);
+                    cmdSetScissor(m_prePassCmd, 0, 0, static_cast<float>(sharedData.m_size.x), static_cast<float>(sharedData.m_size.y));
+                    cmdBindPipeline(m_prePassCmd, m_pipelineCopyDepth);
+
+                    cmdBindDescriptorSet(m_prePassCmd, 0, m_descriptorCopyDepth);
+                    cmdDraw(m_prePassCmd, 3, 0);
+                }
+
+                {
+                    cmdBindRenderTargets(m_prePassCmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+                    std::array rtBarriers = {
+                        RenderTargetBarrier{currentGBuffer.m_depthBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE,RESOURCE_STATE_DEPTH_WRITE  },
+                        RenderTargetBarrier{currentGBuffer.m_hizDepthBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_UNORDERED_ACCESS},
+                    };
+                    cmdResourceBarrier(m_prePassCmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+                }
+                uint32_t rootConstantIndex = getDescriptorIndexFromName(m_rootSignatureHIZOcclusion, "uRootConstants");
+                uint32_t width = static_cast<float>(sharedData.m_size.x);
+                uint32_t height = static_cast<float>(sharedData.m_size.y);
+                for(uint32_t lod = 1; lod < currentGBuffer.m_hiZMipCount; ++lod) {
+                    std::array<DescriptorData,2> params = {};
+                    params[0].pName = "depthInput";
+                    params[0].ppTextures = &currentGBuffer.m_hizDepthBuffer.m_handle->pTexture;
+                    params[1].pName = "destOutput";
+                    params[1].ppTextures = &currentGBuffer.m_hizDepthBuffer.m_handle->pTexture;
+                    updateDescriptorSet(frame.m_renderer->Rend(), lod, m_descriptorSetHIZGenerate, params.size(), params.data());
+
+                    width /= 2;
+                    height /= 2;
+                    // bind lod to push constant
+                    cmdBindPushConstants(m_prePassCmd, m_rootSignatureHIZOcclusion, rootConstantIndex, &lod);
+                    cmdBindDescriptorSet(m_prePassCmd, lod, m_descriptorSetHIZGenerate);
+                    cmdBindPipeline(m_prePassCmd, m_pipelineHIZGenerate);
+                    cmdDispatch(m_prePassCmd, static_cast<uint32_t>(width/ 16) + 1, static_cast<uint32_t>(height / 16) + 1, 1);
+
+                    std::array rtBarriers = {
+                        RenderTargetBarrier{currentGBuffer.m_hizDepthBuffer.m_handle, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_UNORDERED_ACCESS},
+                    };
+                    cmdResourceBarrier(m_prePassCmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+               }
+               cmdEndDebugMarker(m_prePassCmd);
+
+                cmdBeginDebugMarker(m_prePassCmd, 0,1,0, "AABB Hi-Z");
+                {
+
+                    std::array<DescriptorData,3> params = {};
+                    params[0].pName = "objectUniformBlock";
+                    params[0].ppBuffers = &m_hiZOcclusionUniformBuffer.m_handle;
+                    params[1].pName = "occlusionTest";
+                    params[1].ppBuffers = &m_occlusionTestBuffer.m_handle;
+                    params[2].pName = "depthInput";
+                    params[2].ppTextures = &currentGBuffer.m_hizDepthBuffer.m_handle->pTexture;
+                    updateDescriptorSet(frame.m_renderer->Rend(), 0, m_descriptorAABBOcclusionTest, params.size(), params.data());
+
+                    cmdBindDescriptorSet(m_prePassCmd, 0, m_descriptorAABBOcclusionTest);
+                    cmdBindPipeline(m_prePassCmd, m_pipelineAABBOcclusionTest);
+                    cmdDispatch(m_prePassCmd, static_cast<uint32_t>(uniformTest.size()/ 128) + 1, 1,1);
+                }
+                cmdEndDebugMarker(m_prePassCmd);
+
+
+		        endCmd(m_prePassCmd);
+
+                // Submit the gpu work.
+                QueueSubmitDesc submitDesc = {};
+                submitDesc.mCmdCount = 1;
+                submitDesc.ppCmds = &m_prePassCmd;
+                waitForToken(&testBufferSync);
+                queueSubmit(frame.m_renderer->GetGraphicsQueue(), &submitDesc);
+
+                // Wait for work to finish on the GPU.
+                waitQueueIdle(frame.m_renderer->GetGraphicsQueue());
+            }
+
+            m_preZPassRenderables.clear();
+
+            LoadActionsDesc loadActions = {};
+            loadActions.mLoadActionsColor[0] = LOAD_ACTION_DONTCARE;
+            loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
+            loadActions.mLoadActionStencil = LOAD_ACTION_DONTCARE;
+            loadActions.mClearDepth = {.depth = 1.0f, .stencil = 0};
+
+            cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "Post Z");
             cmdBindRenderTargets(frame.m_cmd, 0, NULL, currentGBuffer.m_depthBuffer.m_handle, &loadActions, NULL, NULL, -1, -1);
             cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)sharedData.m_size.x, (float)sharedData.m_size.y, 0.0f, 1.0f);
             cmdSetScissor(frame.m_cmd, 0, 0, sharedData.m_size.x, sharedData.m_size.y);
@@ -2274,40 +2664,45 @@ namespace hpl {
             cmdBindDescriptorSet(frame.m_cmd, 0, m_zPassConstSet);
             cmdBindDescriptorSet(frame.m_cmd, 0, m_materialSet.m_frameSet[frame.m_frameIndex]);
 
-            detail::UpdateRenderableList(
-                mpCurrentRenderList,
-                mpCurrentSettings->mpVisibleNodeTracker,
-                apFrustum,
-                mpCurrentWorld,
-                eObjectVariabilityFlag_All,
-                mvCurrentOcclusionPlanes,
-                eRenderableFlag_VisibleInNonReflection,
-                [&](iRenderable* renderable) {
-                    eMaterialRenderMode renderMode =
-                        renderable->GetCoverageAmount() >= 1 ? eMaterialRenderMode_Z : eMaterialRenderMode_Z_Dissolve;
-                    cMaterial* pMaterial = renderable->GetMaterial();
-                    iVertexBuffer* vertexBuffer = renderable->GetVertexBuffer();
-                    if (vertexBuffer == nullptr) {
-                        return;
+            auto* testResult = reinterpret_cast<uint32_t*>(m_occlusionTestBuffer.m_handle->pCpuMappedAddress);
+            for (size_t i = 0; i < uniformTest.size(); ++i) {
+                if (testResult[i] == 1) {
+                    mpCurrentRenderList->AddObject(uniformTest[i].m_renderable);
+                    m_preZPassRenderables.insert(uniformTest[i].m_renderable);
+                    if (!uniformTest[i].m_preZPass) {
+                            auto* renderable = uniformTest[i].m_renderable;
+                            eMaterialRenderMode renderMode =
+                                renderable->GetCoverageAmount() >= 1 ? eMaterialRenderMode_Z : eMaterialRenderMode_Z_Dissolve;
+
+                            cMaterial* pMaterial = renderable->GetMaterial();
+                            iVertexBuffer* vertexBuffer = renderable->GetVertexBuffer();
+                            if (!vertexBuffer || !pMaterial || pMaterial->GetType()->IsTranslucent()) {
+                                continue;
+                            }
+                            cmdBindMaterialDescriptor(frame.m_cmd, frame, pMaterial);
+                            cmdBindObjectDescriptor(
+                                frame.m_cmd,
+                                frame,
+                                objectIndex,
+                                pMaterial,
+                                renderable,
+                                {
+                                    .m_viewMat = mainFrustumView,
+                                    .m_projectionMat = mainFrustumProj,
+                                });
+
+                            std::array targets = { eVertexBufferElement_Position,
+                                                   eVertexBufferElement_Texture0,
+                                                   eVertexBufferElement_Normal,
+                                                   eVertexBufferElement_Texture1Tangent };
+                            LegacyVertexBuffer::GeometryBinding binding{};
+                            static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
+                            detail::cmdDefaultLegacyGeomBinding(frame.m_cmd, frame, binding);
+                            cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
                     }
+                }
+            }
 
-                    cmdBindMaterialDescriptor(frame, pMaterial);
-                    cmdBindObjectDescriptor(
-                        frame,
-                        objectIndex,
-                        pMaterial,
-                        renderable,
-                        {
-                            .m_viewMat = mainFrustumView,
-                            .m_projectionMat = mainFrustumProj,
-                        });
-
-                    std::array targets = { eVertexBufferElement_Position, eVertexBufferElement_Texture0, eVertexBufferElement_Normal, eVertexBufferElement_Texture1Tangent};
-                    LegacyVertexBuffer::GeometryBinding binding{};
-                    static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
-                    detail::cmdDefaultLegacyGeomBinding(frame, binding);
-                    cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
-                });
             cmdEndDebugMarker(frame.m_cmd);
 
             mpCurrentRenderList->Compile(
@@ -2360,8 +2755,8 @@ namespace hpl {
                 }
 
                 ASSERT(pMaterial->type().m_id == cMaterial::SolidDiffuse && "Invalid material type");
-                cmdBindMaterialDescriptor(frame, pMaterial);
-                cmdBindObjectDescriptor(frame, objectIndex, pMaterial, diffuseItem, {
+                cmdBindMaterialDescriptor(frame.m_cmd,frame, pMaterial);
+                cmdBindObjectDescriptor(frame.m_cmd,frame, objectIndex, pMaterial, diffuseItem, {
                     .m_viewMat = mainFrustumView,
                     .m_projectionMat = mainFrustumProj,
                 });
@@ -2375,7 +2770,7 @@ namespace hpl {
                 LegacyVertexBuffer::GeometryBinding binding;
                 static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(
                     frame.m_currentFrame, targets, &binding);
-                detail::cmdDefaultLegacyGeomBinding(frame, binding);
+                detail::cmdDefaultLegacyGeomBinding(frame.m_cmd, frame, binding);
                 cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
             }
             cmdEndDebugMarker(frame.m_cmd);
@@ -2415,8 +2810,8 @@ namespace hpl {
                     eVertexBufferElement_Color0
                 };
 
-                cmdBindMaterialDescriptor(frame, pMaterial);
-                cmdBindObjectDescriptor(frame, objectIndex, pMaterial, decalItem, {
+                cmdBindMaterialDescriptor(frame.m_cmd,frame, pMaterial);
+                cmdBindObjectDescriptor(frame.m_cmd,frame, objectIndex, pMaterial, decalItem, {
                     .m_viewMat = mainFrustumView,
                     .m_projectionMat = mainFrustumProj,
                 });
@@ -2424,7 +2819,7 @@ namespace hpl {
                 LegacyVertexBuffer::GeometryBinding binding;
                 static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(
                     frame.m_currentFrame, targets, &binding);
-                detail::cmdDefaultLegacyGeomBinding(frame, binding);
+                detail::cmdDefaultLegacyGeomBinding(frame.m_cmd, frame, binding);
                 cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
             }
             cmdEndDebugMarker(frame.m_cmd);
@@ -2868,7 +3263,7 @@ namespace hpl {
                     auto lightShape = GetLightShape(light->m_light, eDeferredShapeQuality_High);
                     ASSERT(lightShape && "Light shape not found");
                     static_cast<LegacyVertexBuffer*>(lightShape)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
-                    detail::cmdDefaultLegacyGeomBinding(frame, binding);
+                    detail::cmdDefaultLegacyGeomBinding(frame.m_cmd, frame, binding);
                     cmdBindPipeline(frame.m_cmd, m_lightStencilPipeline);
                     cmdBindLightDescriptor(light); // bind light descriptor light uniforms
                     cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
@@ -2914,7 +3309,7 @@ namespace hpl {
                     static_cast<LegacyVertexBuffer*>(lightShape)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
 
                     cmdBindLightDescriptor(light);
-                    detail::cmdDefaultLegacyGeomBinding(frame, binding);
+                    detail::cmdDefaultLegacyGeomBinding(frame.m_cmd, frame, binding);
                     cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
                 }
                 cmdEndDebugMarker(frame.m_cmd);
@@ -2945,8 +3340,8 @@ namespace hpl {
                     continue;
                 }
                 ASSERT(pMaterial->type().m_id == cMaterial::SolidDiffuse && "Invalid material type");
-                cmdBindMaterialDescriptor(frame, pMaterial); // bind material descriptor
-                cmdBindObjectDescriptor(frame, objectIndex, pMaterial, illuminationItem, {
+                cmdBindMaterialDescriptor(frame.m_cmd,frame, pMaterial); // bind material descriptor
+                cmdBindObjectDescriptor(frame.m_cmd,frame, objectIndex, pMaterial, illuminationItem, {
                     .m_viewMat = mainFrustumView,
                     .m_projectionMat = mainFrustumProj,
                 });
@@ -2958,7 +3353,7 @@ namespace hpl {
                 LegacyVertexBuffer::GeometryBinding binding;
                 static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(
                     frame.m_currentFrame, targets, &binding);
-                detail::cmdDefaultLegacyGeomBinding(frame, binding);
+                detail::cmdDefaultLegacyGeomBinding(frame.m_cmd, frame, binding);
                 cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
             }
         }
@@ -2990,7 +3385,7 @@ namespace hpl {
             std::array geometryStream = { eVertexBufferElement_Position };
             static_cast<LegacyVertexBuffer*>(mpShapeBox)
                 ->resolveGeometryBinding(frame.m_currentFrame, geometryStream, &binding);
-            detail::cmdDefaultLegacyGeomBinding(frame, binding);
+            detail::cmdDefaultLegacyGeomBinding(frame.m_cmd, frame, binding);
 
             uint32_t rootConstantIndex = getDescriptorIndexFromName(m_fogPass.m_fogRootSignature, "uRootConstants");
             float2 viewTexel = { 1.0f / sharedData.m_size.x, 1.0f / sharedData.m_size.y };
@@ -3188,8 +3583,8 @@ namespace hpl {
                         const auto cubeMap = pMaterial->GetImage(eMaterialTexture_CubeMap);
                         cMatrixf* pMatrix = translucencyItem->GetModelMatrix(apFrustum);
 
-                        cmdBindMaterialDescriptor(frame, pMaterial);
-                        cmdBindObjectDescriptor(
+                        cmdBindMaterialDescriptor(frame.m_cmd, frame, pMaterial);
+                        cmdBindObjectDescriptor(frame.m_cmd,
                             frame,
                             objectIndex,
                             pMaterial,
@@ -3240,7 +3635,7 @@ namespace hpl {
                                                     .m_pipelines)[translucencyBlendTable[pMaterial->GetBlendMode()]][key.m_id]);
                         }
 
-                        detail::cmdDefaultLegacyGeomBinding(frame, binding);
+                        detail::cmdDefaultLegacyGeomBinding(frame.m_cmd, frame, binding);
 
                         constants.textureMask =
                             (cMaterial::EnableDiffuse | cMaterial::EnableNormal |

@@ -131,7 +131,7 @@ namespace hpl {
 
 	protected:
 		virtual void OnUpdateWorldTransform() override;
-		
+
 		cMatrixf m_mtxInvModel;
 		cMatrixf *mpModelMatrix;
 
@@ -145,9 +145,7 @@ namespace hpl {
 		tRenderableFlag mlRenderFlags;
 
 		bool mbIsVisible;
-
 		bool mbStatic;
-
 		bool mbForceShadow;
 
 		int mlLargePlaneSurfacePlacement;

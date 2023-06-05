@@ -21,6 +21,7 @@
 #include "engine/RTTI.h"
 #include "graphics/ForgeHandles.h"
 #include "graphics/RenderList.h"
+#include "graphics/Renderable.h"
 #include "scene/Viewport.h"
 #include "windowing/NativeWindow.h"
 #include <array>
@@ -116,7 +117,10 @@ namespace hpl {
             } m_boxLight;
         };
 
-
+        struct UniformRenderableContainer {
+            float4 m_min;
+            float4 m_max;
+        };
         struct UniformObject {
             float4 m_dissolveAmount;
             mat4 m_modelMat;
@@ -170,7 +174,10 @@ namespace hpl {
                   m_specularBuffer(std::move(buffer.m_specularBuffer)),
                   m_depthBuffer(std::move(buffer.m_depthBuffer)),
                   m_outputBuffer(std::move(buffer.m_outputBuffer)),
-                  m_refractionImage(std::move(buffer.m_refractionImage)) {
+                  m_refractionImage(std::move(buffer.m_refractionImage)),
+                  m_hizDepthBuffer(std::move(buffer.m_hizDepthBuffer)),
+                  m_hizLevelsBuffers(std::move(buffer.m_hizLevelsBuffers)),
+                  m_hiZMipCount(buffer.m_hiZMipCount){
             }
             void operator=(GBuffer&& buffer) {
                 m_colorBuffer = std::move(buffer.m_colorBuffer);
@@ -180,8 +187,15 @@ namespace hpl {
                 m_depthBuffer = std::move(buffer.m_depthBuffer);
                 m_outputBuffer = std::move(buffer.m_outputBuffer);
                 m_refractionImage = std::move(buffer.m_refractionImage);
+                m_hizDepthBuffer = std::move(buffer.m_hizDepthBuffer);
+                m_hizLevelsBuffers = buffer.m_hizLevelsBuffers;
+                m_hiZMipCount = buffer.m_hiZMipCount;
+
             }
             ForgeTextureHandle m_refractionImage;
+            ForgeRenderTarget m_hizDepthBuffer;
+            std::array<ForgeTextureHandle, 32> m_hizLevelsBuffers;
+            uint8_t m_hiZMipCount;
 
             ForgeRenderTarget m_colorBuffer;
             ForgeRenderTarget m_normalBuffer;
@@ -337,8 +351,9 @@ namespace hpl {
             cMatrixf m_projectionMat;
             std::optional<cMatrixf> m_modelMatrix = std::nullopt;
         };
-        void cmdBindMaterialDescriptor(const ForgeRenderer::Frame& frame, cMaterial* apMaterial);
+        void cmdBindMaterialDescriptor(Cmd* cmd, const ForgeRenderer::Frame& frame, cMaterial* apMaterial);
         void cmdBindObjectDescriptor(
+            Cmd* cmd,
             const ForgeRenderer::Frame& frame,
             uint32_t& updateIndex,
             cMaterial* apMaterial,
@@ -364,7 +379,6 @@ namespace hpl {
         float m_shadowDistanceLow;
         float m_shadowDistanceNone;
 
-        LegacyRenderTarget m_edgeSmooth_LinearDepth;
         UniqueViewportData<SharedViewportData> m_boundViewportData;
 
         ForgeTextureHandle m_shadowJitterTexture;
@@ -497,6 +511,8 @@ namespace hpl {
         Pipeline* m_zPassPipeline;
         DescriptorSet* m_zPassConstSet;
 
+        std::set<iRenderable*> m_preZPassRenderables;
+
         GPURingBuffer m_objectUniformBuffer;
 
         struct MaterialPassDescriptorSet {
@@ -515,6 +531,40 @@ namespace hpl {
             std::array<MaterialInfo, cMaterial::MaxMaterialID> m_materialInfo;
             ForgeBufferHandle m_materialUniformBuffer;
         } m_materialSet;
+
+        CmdPool* m_prePassPool = nullptr;
+        Cmd* m_prePassCmd = nullptr;
+
+        static constexpr uint32_t  MaxHiZMipLevels = 32;
+        RootSignature* m_rootSignatureHIZOcclusion;
+        Shader* m_ShaderHIZGenerate;
+        Shader* m_shaderTestOcclusion;
+        DescriptorSet* m_descriptorSetHIZGenerate;
+        Pipeline* m_pipelineHIZGenerate;
+
+        RootSignature* m_rootSignatureCopyDepth;
+        DescriptorSet* m_descriptorCopyDepth;
+        DescriptorSet* m_descriptorAABBOcclusionTest;
+        Pipeline* m_pipelineCopyDepth;
+        Pipeline* m_pipelineAABBOcclusionTest;
+        Sampler* m_samplerHIZCopy;
+        Shader* m_copyDepthShader;
+        ForgeBufferHandle m_hiZOcclusionUniformBuffer;
+        ForgeBufferHandle m_occlusionTestBuffer;
+
+        struct UniformTest {
+            bool m_preZPass = false;
+            iRenderable* m_renderable = nullptr;
+        };
+        struct UniformPropBlock {
+            static constexpr uint32_t MaxObjectTest = 32768;
+            mat4 viewProjeciton;
+            uint32_t numObjects;
+            uint32_t maxMipLevel;
+            uint32_t pad2;
+            uint32_t pad3;
+            float4 inputColliders[MaxObjectTest];
+        };
 
         // light pass
         GPURingBuffer m_lightPassRingBuffer;
