@@ -14,8 +14,8 @@ RES(Tex2D(float4), refractionMap, UPDATE_FREQ_PER_FRAME, t1, binding = 4);
 STRUCT(PsIn) 
 {
 	DATA(float4, Position, SV_Position);
-    DATA(float3, pos, POSITION);
-    DATA(float2, uv, TEXCOORD0);
+        DATA(float3, pos, POSITION);
+        DATA(float2, uv, TEXCOORD0);
 	DATA(float3, normal, NORMAL);
 	DATA(float3, tangent, TANGENT);
 	DATA(float3, bitangent, BITANGENT);
@@ -36,7 +36,7 @@ PsOut PS_MAIN(PsIn In)
     float4 finalColor = vec4(0.0, 0.0 ,0.0, 1.0);
  
     if(HasDiffuse(Get(textureConfig) & Get(textureMask))) {
-        finalColor = SampleTex2D(Get(diffuseMap), Get(diffuseSampler), In.uv);
+        finalColor = SampleTex2D(Get(diffuseMap), Get(diffuseSampler), In.uv) * In.color;
     }
 
     #ifdef USE_FOG

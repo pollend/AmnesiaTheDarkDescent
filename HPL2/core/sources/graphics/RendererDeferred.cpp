@@ -65,6 +65,7 @@
 #include "resources/Resources.h"
 #include "resources/TextureManager.h"
 
+#include "scene/BillBoard.h"
 #include "scene/Camera.h"
 #include "scene/FogArea.h"
 #include "scene/Light.h"
@@ -728,27 +729,6 @@ namespace hpl {
                         addRenderTarget(forgetRenderer->Rend(), &renderTargetDesc, handle);
                         return true;
                     });
-                   // for(size_t i = 0; i < b.m_hiZMipCount - 1; i++) {
-                   //     b.m_hizLevelsBuffers[i].Load([&](Texture** handle) {
-                   //         TextureLoadDesc textureLoadDesc = {};
-                   //         textureLoadDesc.ppTexture = handle;
-                   //         TextureDesc textureDesc = {};
-                   //         textureDesc.mArraySize = 1;
-                   //         textureDesc.mDepth = 1;
-                   //         textureDesc.mMipLevels = 1;
-                   //         textureDesc.mFormat = TinyImageFormat_R16_SFLOAT;
-                   //         textureDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE | DESCRIPTOR_TYPE_RW_TEXTURE;
-                   //         textureDesc.mWidth = sharedData->m_size.x / (1 << (i + 1));
-                   //         textureDesc.mHeight = sharedData->m_size.y / (1 << (i + 1));
-                   //         textureDesc.mSampleCount = SAMPLE_COUNT_1;
-                   //         textureDesc.mSampleQuality = 0;
-                   //         textureDesc.mStartState = RESOURCE_STATE_UNORDERED_ACCESS;
-                   //         textureDesc.pName = "hi-z depth buffer";
-                   //         textureLoadDesc.pDesc = &textureDesc;
-                   //         addResource(&textureLoadDesc, nullptr);
-                   //         return true;
-                   //     });
-                   // }
 
                     b.m_depthBuffer  = {forgetRenderer->Rend()};
                     b.m_depthBuffer.Load([&](RenderTarget** handle) {
@@ -993,6 +973,85 @@ namespace hpl {
                 graphicsPipelineDesc.pBlendState = NULL;
                 addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_pipelineCopyDepth);
             }
+        }
+        {
+
+            m_occlusionReadBackBuffer.Load([&](Buffer** buf) {
+                BufferLoadDesc desc = {};
+                desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_RW_BUFFER;
+                desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_GPU_TO_CPU;
+                desc.mDesc.mSize = sizeof(uint64_t) * cRendererDeferred::MaxQueryPoolSize;
+                desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
+                desc.pData = nullptr;
+                desc.ppBuffer = buf;
+                addResource(&desc, nullptr);
+                return true;
+            });
+
+            {
+
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0].pFileName = "occlusion_empty.vert";
+                loadDesc.mStages[1].pFileName = "occlusion_empty.frag";
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_shaderOcclusionQuery);
+            }
+            {
+                std::array shaders = { m_shaderOcclusionQuery };
+                RootSignatureDesc rootSignatureDesc = {};
+                rootSignatureDesc.ppShaders = shaders.data();
+                rootSignatureDesc.mShaderCount = shaders.size();
+                addRootSignature(forgetRenderer->Rend(), &rootSignatureDesc, &m_rootSignatureOcclusuion);
+
+                DescriptorSetDesc setDesc = { m_rootSignatureOcclusuion, DESCRIPTOR_UPDATE_FREQ_PER_BATCH, cRendererDeferred::MaxOcclusionDescSize};
+                addDescriptorSet(forgetRenderer->Rend(), &setDesc, &m_descriptorOcclusionFrameSet);
+            }
+
+
+            {
+                VertexLayout vertexLayout = {};
+                vertexLayout.mBindingCount = 1;
+                vertexLayout.mAttribCount = 1;
+                vertexLayout.mBindings[0].mStride = sizeof(float3);
+                vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
+                vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
+                vertexLayout.mAttribs[0].mBinding = 0;
+                vertexLayout.mAttribs[0].mLocation = 0;
+                vertexLayout.mAttribs[0].mOffset = 0;
+
+                RasterizerStateDesc rasterStateNoneDesc = {};
+                rasterStateNoneDesc.mCullMode = CULL_MODE_NONE;
+
+                DepthStateDesc depthStateDesc = {};
+                depthStateDesc.mDepthWrite = false;
+                depthStateDesc.mDepthTest = true;
+
+                PipelineDesc pipelineDesc = {};
+                pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+                GraphicsPipelineDesc& graphicsPipelineDesc = pipelineDesc.mGraphicsDesc;
+                graphicsPipelineDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+                graphicsPipelineDesc.pShaderProgram = m_shaderOcclusionQuery;
+                graphicsPipelineDesc.pRootSignature = m_rootSignatureOcclusuion;
+                graphicsPipelineDesc.mDepthStencilFormat = DepthBufferFormat;
+                graphicsPipelineDesc.pVertexLayout = NULL;
+                graphicsPipelineDesc.mSampleCount = SAMPLE_COUNT_1;
+                graphicsPipelineDesc.mDepthStencilFormat = DepthBufferFormat;
+                graphicsPipelineDesc.pRasterizerState = &rasterStateNoneDesc;
+                graphicsPipelineDesc.pDepthState = &depthStateDesc;
+                graphicsPipelineDesc.pBlendState = NULL;
+                graphicsPipelineDesc.pVertexLayout = &vertexLayout;
+
+                depthStateDesc.mDepthFunc = CMP_ALWAYS;
+                addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_pipelineMaxOcclusionQuery);
+
+                depthStateDesc.mDepthFunc = CMP_LEQUAL;
+                addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_pipelineOcclusionQuery);
+            }
+            QueryPoolDesc queryPoolDesc = {};
+            queryPoolDesc.mType = QUERY_TYPE_OCCLUSION;
+            queryPoolDesc.mQueryCount = MaxQueryPoolSize;
+            addQueryPool(forgetRenderer->Rend(),&queryPoolDesc, &m_occlusionQuery);
+
+            addUniformGPURingBuffer(forgetRenderer->Rend(), sizeof(mat4) * MaxOcclusionDescSize, &m_occlusionUniformBuffer, true);
         }
         // -------------- Fog ----------------------------
         {
@@ -1609,11 +1668,9 @@ namespace hpl {
 
                         DepthStateDesc depthStateDesc = {};
                         depthStateDesc.mDepthWrite = false;
-                        depthStateDesc.mDepthTest = true;
                         if (key.m_field.m_hasDepthTest) {
+                            depthStateDesc.mDepthTest = true;
                             depthStateDesc.mDepthFunc = CMP_LEQUAL;
-                        } else {
-                            depthStateDesc.mDepthFunc = CMP_NEVER;
                         }
                         pipelineSettings.pDepthState = &depthStateDesc;
 
@@ -1683,6 +1740,7 @@ namespace hpl {
                         } else {
                             pipelineSettings.pShaderProgram = m_materialTranslucencyPass.m_particleShader[transBlend];
                         }
+
                         blendStateDesc.mSrcFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].src;
                         blendStateDesc.mDstFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].dst;
                         blendStateDesc.mBlendModes[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].mode;
@@ -2406,9 +2464,7 @@ namespace hpl {
         ///////////////////////////
         // Occlusion testing
         {
-
             ASSERT(currentGBuffer.m_depthBuffer.m_handle && "Depth buffer not created");
-
             std::array worldContainers = {mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Dynamic),
                                          mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static)};
             for(auto& container: worldContainers) {
@@ -2416,6 +2472,8 @@ namespace hpl {
             }
             SyncToken testBufferSync{};
             std::vector<UniformTest> uniformTest;
+            uint32_t queryIndex = 0;
+            std::vector<OcclusionQueryAlpha> occlusionQueryAlpha;
             // start pre-z pass
             resetCmdPool(frame.m_renderer->Rend(), m_prePassPool);
             beginCmd(m_prePassCmd);
@@ -2440,7 +2498,6 @@ namespace hpl {
                 auto* uniformBlock = reinterpret_cast<UniformPropBlock*>(updateDesc.pMappedData);
                 uniformBlock->viewProjeciton = cMath::ToForgeMat(cMath::MatrixMul(mainFrustumProj, mainFrustumView).GetTranspose());
 
-                std::vector<UniformRenderableContainer> treeEncoding;
                 std::function<void(iRenderableContainerNode * childNode)> walkRenderables;
                 walkRenderables = [&](iRenderableContainerNode* childNode) {
                     childNode->UpdateBeforeUse();
@@ -2513,10 +2570,16 @@ namespace hpl {
                             pObject->SetModelMatrixPtr(pObject->GetModelMatrix(NULL));
                         }
 
+                        if (test.m_preZPass && pObject->UsesOcclusionQuery()) {
+                            auto& occlusionAlpha = occlusionQueryAlpha.emplace_back();
+                            occlusionAlpha.m_renderable = pObject;
+                        }
+
                         if(!vertexBuffer || !pMaterial || pMaterial->GetType()->IsTranslucent()) {
                             continue;
                         }
                         if(test.m_preZPass) {
+
                             ////////////////////////////////////////
                             // Update per frame things, if not done yet.
 
@@ -2547,6 +2610,55 @@ namespace hpl {
                 uniformBlock->maxMipLevel = currentGBuffer.m_hiZMipCount - 1;
                 uniformBlock->numObjects = uniformTest.size();
                 endUpdateResource(&updateDesc, &testBufferSync);
+                cmdEndDebugMarker(m_prePassCmd);
+
+            }
+            {
+                cmdBeginDebugMarker(m_prePassCmd, 1, 1, 0, "Occlusion Query");
+                LegacyVertexBuffer::GeometryBinding binding{};
+                std::array targets = { eVertexBufferElement_Position };
+                static_cast<LegacyVertexBuffer*>(GetShapeBoxVertexBuffer())->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
+
+                uint32_t occlusionIndex = 0;
+                cMatrixf viewProj = cMath::MatrixMul(mainFrustumProj, mainFrustumView);
+                for (auto& query : occlusionQueryAlpha) {
+                    if(TypeInfo<hpl::cBillboard>::IsType(*query.m_renderable)) {
+                        cBillboard* pBillboard = static_cast<cBillboard*>(query.m_renderable);
+                        GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(&m_occlusionUniformBuffer, sizeof(mat4));
+
+                        auto mvp = cMath::ToForgeMat(cMath::MatrixMul(viewProj, cMath::MatrixMul(pBillboard->GetWorldMatrix(), cMath::MatrixScale(pBillboard->GetHaloSourceSize()))).GetTranspose());
+
+                        BufferUpdateDesc updateDesc = { uniformBlockOffset.pBuffer, uniformBlockOffset.mOffset };
+                        beginUpdateResource(&updateDesc);
+                        (*reinterpret_cast<mat4*>(updateDesc.pMappedData)) = mvp;
+                        endUpdateResource(&updateDesc, NULL);
+
+                        std::array<DescriptorData, 1> descriptorData = {};
+                        DescriptorDataRange range = { (uint32_t)uniformBlockOffset.mOffset, sizeof(mat4) };
+                        descriptorData[0].pName = "occlusionBlock";
+                        descriptorData[0].ppBuffers = &uniformBlockOffset.pBuffer;
+                        descriptorData[0].pRanges = &range;
+                        updateDescriptorSet(frame.m_renderer->Rend(), occlusionIndex, m_descriptorOcclusionFrameSet, descriptorData.size(), descriptorData.data());
+
+                        detail::cmdDefaultLegacyGeomBinding(m_prePassCmd, frame, binding);
+                        cmdBindDescriptorSet(m_prePassCmd, occlusionIndex++, m_descriptorOcclusionFrameSet);
+                        QueryDesc queryDesc = {};
+                        queryDesc.mIndex = queryIndex++;
+                        cmdBindPipeline(m_prePassCmd, m_pipelineOcclusionQuery);
+                        cmdBeginQuery(m_prePassCmd, m_occlusionQuery, &queryDesc);
+                        cmdDrawIndexed(m_prePassCmd, binding.m_indexBuffer.numIndicies, 0, 0);
+                        cmdEndQuery(m_prePassCmd, m_occlusionQuery, &queryDesc);
+                        query.m_queryIndex = queryDesc.mIndex;
+
+                        queryDesc.mIndex = queryIndex++;
+                        cmdBindPipeline(m_prePassCmd, m_pipelineMaxOcclusionQuery);
+                        cmdBeginQuery(m_prePassCmd, m_occlusionQuery, &queryDesc);
+                        cmdDrawIndexed(m_prePassCmd, binding.m_indexBuffer.numIndicies, 0, 0);
+                        cmdEndQuery(m_prePassCmd, m_occlusionQuery, &queryDesc);
+                        query.m_maxQueryIndex = queryDesc.mIndex;
+                    }
+
+                }
                 cmdEndDebugMarker(m_prePassCmd);
             }
             // hi-z generate pass
@@ -2633,18 +2745,36 @@ namespace hpl {
                 }
                 cmdEndDebugMarker(m_prePassCmd);
 
-
+                cmdResolveQuery(m_prePassCmd, m_occlusionQuery, m_occlusionReadBackBuffer.m_handle, 0, queryIndex);
 		        endCmd(m_prePassCmd);
 
                 // Submit the gpu work.
                 QueueSubmitDesc submitDesc = {};
                 submitDesc.mCmdCount = 1;
                 submitDesc.ppCmds = &m_prePassCmd;
+
                 waitForToken(&testBufferSync);
                 queueSubmit(frame.m_renderer->GetGraphicsQueue(), &submitDesc);
 
                 // Wait for work to finish on the GPU.
                 waitQueueIdle(frame.m_renderer->GetGraphicsQueue());
+
+                uint64_t* occlusionCount = reinterpret_cast<uint64_t*>(m_occlusionReadBackBuffer.m_handle->pCpuMappedAddress);
+                for (auto& query : occlusionQueryAlpha) {
+                    if(TypeInfo<hpl::cBillboard>::IsType(*query.m_renderable)) {
+                        cBillboard* pBillboard = static_cast<cBillboard*>(query.m_renderable);
+                        float maxSamples = static_cast<float>(occlusionCount[query.m_maxQueryIndex]);
+                        float samples = static_cast<float>(occlusionCount[query.m_queryIndex]);
+                        float billboardCoverage = pBillboard->getAreaOfScreenSpace(apFrustum);
+                        if(maxSamples > 0.0f ) {
+                            pBillboard->SetHaloAlpha(billboardCoverage * (samples / maxSamples));
+                        } else {
+                            pBillboard->SetHaloAlpha(0.0f);
+                        }
+
+                    }
+                }
+
             }
 
             m_preZPassRenderables.clear();
@@ -3531,11 +3661,6 @@ namespace hpl {
                         if (translucencyItem->UpdateGraphicsForViewport(mpCurrentFrustum, mfCurrentFrameTime) == false) {
                             continue;
                         }
-
-                        // if(pObject->RetrieveOcculsionQuery(this)==false)
-                        // {
-                        //     continue;
-                        // }
 
                         struct {
                             float sceneAlpha;

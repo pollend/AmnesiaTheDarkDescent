@@ -1,0 +1,23 @@
+
+STRUCT(VSInput)
+{
+    DATA(float3, Position, POSITION);
+};
+
+STRUCT(VSOutput)
+{
+    DATA(float4, Position, SV_Position);
+};
+
+CBUFFER(occlusionBlock, UPDATE_FREQ_PER_BATCH, b2, binding = 0)
+{
+    DATA(float4x4, mvp, None);
+};
+
+VSOutput VS_MAIN( VSInput In )
+{
+    INIT_MAIN;
+    VSOutput Out;
+    Out.Position = mul(Get(mvp), float4(In.Position.xyz, 1.0));
+    RETURN(Out);
+}

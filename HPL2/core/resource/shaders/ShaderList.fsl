@@ -372,3 +372,11 @@
 #frag copy_hi_z.frag
     #include "copy_hi_z.frag.fsl"
 #end
+
+#vert occlusion_empty.vert
+    #include "occlusion_empty.vert.fsl"
+#end
+
+#frag occlusion_empty.frag
+    #include "occlusion_empty.frag.fsl"
+#end

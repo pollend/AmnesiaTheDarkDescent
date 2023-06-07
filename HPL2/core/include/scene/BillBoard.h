@@ -40,9 +40,7 @@ namespace hpl {
 
 	class cBillboard : public iRenderable
 	{
-	#ifdef __GNUC__
-		typedef iRenderable __super;
-	#endif
+		HPL_RTTI_IMPL_CLASS(iRenderable, cBillboard, "{e64fb526-0674-4970-b408-a68a7c2cf584}")
 	public:
 		cBillboard(const tString asName,const cVector2f& avSize,eBillboardType aType, cResources *apResources,cGraphics *apGraphics);
 		~cBillboard();
@@ -74,26 +72,28 @@ namespace hpl {
 		void SetHaloSourceSize(const cVector3f &avSize);
 		cVector3f GetHaloSourceSize(){return mvHaloSourceSize;}
 
-		bool UsesOcclusionQuery();
+		bool UsesOcclusionQuery() override;
 		virtual void ResolveOcclusionPass(iRenderer *apRenderer, std::function<void(bgfx::OcclusionQueryHandle, DepthTest test, GraphicsContext::LayoutStream&, const cMatrixf& transform)>) override;
-		bool RetrieveOcculsionQuery(iRenderer *apRenderer);
+		bool RetrieveOcculsionQuery (iRenderer *apRenderer) override;
 
 		/////////////////////////////////
 		//Entity implementation
-		tString GetEntityType(){ return "Billboard";}
+		tString GetEntityType() override{ return "Billboard";}
 
-		bool IsVisible();
+		bool IsVisible() override;
 
 		//Renderable implementations
-		cMaterial *GetMaterial(){ return mpMaterial;}
-		iVertexBuffer* GetVertexBuffer(){return mpVtxBuffer;}
+		cMaterial *GetMaterial() override{ return mpMaterial;}
+		iVertexBuffer* GetVertexBuffer()override{return mpVtxBuffer;}
 
-		cMatrixf* GetModelMatrix(cFrustum *apFrustum);
+		cMatrixf* GetModelMatrix(cFrustum *apFrustum)override;
 
-		int GetMatrixUpdateCount();
+		int GetMatrixUpdateCount()override;
 
-		eRenderableType GetRenderType(){ return eRenderableType_Billboard;}
+		eRenderableType GetRenderType()override{ return eRenderableType_Billboard;}
 
+
+        float getAreaOfScreenSpace(cFrustum* frustum );
 	private:
 		cMaterialManager* mpMaterialManager;
 		iLowLevelGraphics* mpLowLevelGraphics;

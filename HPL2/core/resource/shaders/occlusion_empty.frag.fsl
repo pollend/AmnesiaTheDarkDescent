@@ -1,5 +1,3 @@
-#define POINT_LIGHT 1
-#include "deferred_light_resource.h.fsl"
 
 STRUCT(PsIn)
 {

@@ -35,6 +35,7 @@
 #include <graphics/ShaderVariantCollection.h>
 #include <math/MathTypes.h>
 #include <memory>
+#include <unordered_map>
 #include <vector>
 
 #include <graphics/ForgeRenderer.h>
@@ -117,10 +118,6 @@ namespace hpl {
             } m_boxLight;
         };
 
-        struct UniformRenderableContainer {
-            float4 m_min;
-            float4 m_max;
-        };
         struct UniformObject {
             float4 m_dissolveAmount;
             mat4 m_modelMat;
@@ -551,6 +548,22 @@ namespace hpl {
         Shader* m_copyDepthShader;
         ForgeBufferHandle m_hiZOcclusionUniformBuffer;
         ForgeBufferHandle m_occlusionTestBuffer;
+
+        struct OcclusionQueryAlpha {
+            iRenderable* m_renderable = nullptr;
+            uint32_t m_maxQueryIndex = 0;
+            uint32_t m_queryIndex = 0;
+        };
+        static constexpr uint32_t MaxQueryPoolSize = 4096 * 2;
+        static constexpr uint32_t MaxOcclusionDescSize = 4096;
+        QueryPool* m_occlusionQuery;
+        GPURingBuffer m_occlusionUniformBuffer;
+        RootSignature* m_rootSignatureOcclusuion;
+        DescriptorSet* m_descriptorOcclusionFrameSet;
+        ForgeBufferHandle m_occlusionReadBackBuffer;
+        Shader* m_shaderOcclusionQuery;
+        Pipeline* m_pipelineMaxOcclusionQuery;
+        Pipeline* m_pipelineOcclusionQuery;
 
         struct UniformTest {
             bool m_preZPass = false;
