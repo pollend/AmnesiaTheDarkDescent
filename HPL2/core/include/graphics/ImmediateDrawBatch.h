@@ -19,24 +19,25 @@ class ImmediateDrawBatch {
 
         inline bgfx::ViewId GetOrthographicView() const { return m_orthographicView; }
         inline bgfx::ViewId GetPerspectiveView() const { return m_perspectiveView; }
-        inline GraphicsContext& GetContext() const { return m_context; }
+        inline GraphicsContext& GetContext() const { return *m_context; }
 
         ImmediateDrawBatch(GraphicsContext& context, LegacyRenderTarget& target, const cMatrixf& view, const cMatrixf& projection);
 
+        ImmediateDrawBatch();
         // takes 3 points and the other 1 is calculated
         [[deprecated("Use DrawQuad with Eigen")]]
         void DrawQuad(const cVector3f& v1, const cVector3f& v2, const cVector3f& v3,  const cVector3f& v4, const cVector2f& uv0,const cVector2f& uv1, hpl::Image* image , const cColor& aTint, const DebugDrawOptions& options = DebugDrawOptions());
         void DrawQuad(const Eigen::Vector3f& v1, const Eigen::Vector3f& v2, const Eigen::Vector3f& v3, const Eigen::Vector3f& v4, const Eigen::Vector2f& uv0, const Eigen::Vector2f& uv1, hpl::Image* image, const Eigen::Vector4f& aTint, const DebugDrawOptions& options = DebugDrawOptions());
-        
+
         [[deprecated("Use DrawQuad with Eigen")]]
         void DrawQuad(const cVector3f& v1, const cVector3f& v2, const cVector3f& v3, const cVector3f& v4, const cColor& aColor, const DebugDrawOptions& options = DebugDrawOptions());
         void DrawQuad(const Eigen::Vector3f& v1, const Eigen::Vector3f& v2, const Eigen::Vector3f& v3, const Eigen::Vector3f& v4, const Eigen::Vector4f& color, const DebugDrawOptions& options = DebugDrawOptions());
-        
+
         [[deprecated("Use DrawQuad with Eigen")]]
         void DrawTri(const cVector3f& v1, const cVector3f& v2, const cVector3f& v3, const cColor& color, const DebugDrawOptions& options = DebugDrawOptions());
         void DrawTri(const Eigen::Vector3f& v1, const Eigen::Vector3f& v2, const Eigen::Vector3f& v3, const Eigen::Vector4f& color, const DebugDrawOptions& options = DebugDrawOptions());
         void DrawPyramid(const cVector3f& baseCenter, const cVector3f& top, float halfWidth, const cColor& color, const DebugDrawOptions& options = DebugDrawOptions());
-        
+
         [[deprecated("Use Drawbillboard with Eigen")]]
         void DrawBillboard(const cVector3f& pos, const cVector2f& size, const cVector2f& uv0, const cVector2f& uv1, hpl::Image* image, const cColor& aTint, const DebugDrawOptions& options = DebugDrawOptions());
         void DrawBillboard(const Eigen::Vector3f& pos, const Eigen::Vector2f& size, const Eigen::Vector2f& uv0, const Eigen::Vector2f& uv1, hpl::Image* image, const Eigen::Vector4f& aTint, const DebugDrawOptions& options = DebugDrawOptions());
@@ -44,7 +45,7 @@ class ImmediateDrawBatch {
         void DebugDraw2DLine(const cVector2f& start, const cVector2f& end, const cColor& color);
         void DebugDraw2DLineQuad(cRect2f rect, const cColor& color);
 
-        // draws line 
+        // draws line
         void DebugSolidFromVertexBuffer( iVertexBuffer* vertexBuffer, const cColor& color, const DebugDrawOptions& options = DebugDrawOptions());
         void DebugWireFrameFromVertexBuffer( iVertexBuffer* vertexBuffer, const cColor& color, const DebugDrawOptions& options = DebugDrawOptions());
         void DebugDrawLine(const cVector3f& start, const cVector3f& end, const cColor& color, const DebugDrawOptions& options = DebugDrawOptions());
@@ -54,7 +55,7 @@ class ImmediateDrawBatch {
         void flush();
 
         // scale based on distance from camera
-        static float BillboardScale(cCamera* apCamera, const Eigen::Vector3f& pos); 
+        static float BillboardScale(cCamera* apCamera, const Eigen::Vector3f& pos);
     private:
 
         struct ColorQuadRequest {
@@ -116,9 +117,9 @@ class ImmediateDrawBatch {
         cMatrixf m_view;
         cMatrixf m_projection;
 
-        LegacyRenderTarget& m_target;
-        GraphicsContext& m_context;
-        
+        LegacyRenderTarget* m_target;
+        GraphicsContext* m_context;
+
         bgfx::ProgramHandle m_colorProgram = BGFX_INVALID_HANDLE;
         bgfx::ProgramHandle m_uvProgram = BGFX_INVALID_HANDLE;
         bgfx::ProgramHandle m_meshColorProgram = BGFX_INVALID_HANDLE;

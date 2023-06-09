@@ -55,7 +55,7 @@ namespace hpl
         m_blurHorizontalShader.Load([&](Shader** shader) {
             ShaderLoadDesc loadDesc{};
             loadDesc.mStages[0].pFileName =  "fullscreen.vert";
-            loadDesc.mStages[1].pFileName =  "blur_posteffect_vertical.frag";
+            loadDesc.mStages[1].pFileName =  "blur_posteffect_horizontal.frag";
             addShader(forgeRenderer->Rend(),&loadDesc, shader);
             return true;
         });
@@ -89,7 +89,6 @@ namespace hpl
             for(auto& descSet: m_perFrameDescriptorSets) {
                 addDescriptorSet(forgeRenderer->Rend(), &setDesc, &descSet);
             }
-
         }
         {
 
@@ -260,8 +259,7 @@ namespace hpl
 
     void cPostEffect_Bloom::RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, const ForgeRenderer::Frame& frame, Texture* inputTexture, RenderTarget* renderTarget)  {
         auto& bloomData = m_boundBloomData.resolve(viewport);
-        Texture* sourceInput = inputTexture;
-        auto requestBlur = [&](Texture* input) {
+        auto requestBlur = [&](Texture** input) {
             ASSERT(input && "Invalid input texture");
             {
                 cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
@@ -280,7 +278,7 @@ namespace hpl
 
                 std::array<DescriptorData, 1> params = {};
                 params[0].pName = "sourceInput";
-                params[0].ppTextures = &sourceInput;
+                params[0].ppTextures = input;
                 updateDescriptorSet(
                     frame.m_renderer->Rend(), mpBloomType->m_setIndex, mpBloomType->m_perFrameDescriptorSets[frame.m_frameIndex], params.size(), params.data());
 
@@ -333,10 +331,10 @@ namespace hpl
 );
         }
         cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "Bloom Blur");
-        requestBlur(inputTexture);
+        requestBlur(&inputTexture);
         for (int i = 1; i < mParams.mlBlurIterations; ++i)
         {
-            requestBlur(bloomData.m_blurTargets[1].m_handle->pTexture);
+            requestBlur(&bloomData.m_blurTargets[1].m_handle->pTexture);
         }
         cmdEndDebugMarker(frame.m_cmd);
         {

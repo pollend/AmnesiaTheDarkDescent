@@ -11,9 +11,11 @@
 
 namespace hpl {
 
+    ImmediateDrawBatch::ImmediateDrawBatch() {
+    }
     ImmediateDrawBatch::ImmediateDrawBatch(GraphicsContext& context, LegacyRenderTarget& target, const cMatrixf& view, const cMatrixf& projection)
-        : m_context(context)
-        , m_target(target)
+        : m_context(&context)
+        , m_target(&target)
         , m_view(view)
         , m_projection(projection) {
         m_s_diffuseMap.Initialize();
@@ -24,21 +26,21 @@ namespace hpl {
         m_uvProgram = context.resolveProgramCache<StringLiteral("vs_basic_uv"), StringLiteral("fs_basic_uv")>();
         m_meshColorProgram = context.resolveProgramCache<StringLiteral("vs_color"), StringLiteral("fs_color_1")>();
 
-        cVector2l imageSize = m_target.GetImage()->GetImageSize();
+        cVector2l imageSize = m_target->GetImage()->GetImageSize();
         {
-            GraphicsContext::ViewConfiguration viewConfiguration{ m_target };
+            GraphicsContext::ViewConfiguration viewConfiguration{ *m_target };
             viewConfiguration.m_viewRect = { 0, 0, static_cast<uint16_t>(imageSize.x), static_cast<uint16_t>(imageSize.y) };
             viewConfiguration.m_projection = m_projection;
             viewConfiguration.m_view = m_view;
-            m_perspectiveView = m_context.StartPass("Immediate - Perspective", viewConfiguration);
+            m_perspectiveView = m_context->StartPass("Immediate - Perspective", viewConfiguration);
         }
 
         {
-            GraphicsContext::ViewConfiguration viewConfiguration{ m_target };
+            GraphicsContext::ViewConfiguration viewConfiguration{ *m_target };
             viewConfiguration.m_viewRect = { 0, 0, static_cast<uint16_t>(imageSize.x), static_cast<uint16_t>(imageSize.y) };
             viewConfiguration.m_projection = m_projection;
             viewConfiguration.m_view = m_view;
-            m_orthographicView = m_context.StartPass("Immediate - Ortho", viewConfiguration);
+            m_orthographicView = m_context->StartPass("Immediate - Ortho", viewConfiguration);
         }
     }
 
@@ -384,15 +386,15 @@ namespace hpl {
 
 
     void ImmediateDrawBatch::flush() {
-        if (m_line2DSegments.empty() && 
-            m_uvQuads.empty() && 
-            m_colorQuads.empty() && 
-            m_lineSegments.empty() && 
+        if (m_line2DSegments.empty() &&
+            m_uvQuads.empty() &&
+            m_colorQuads.empty() &&
+            m_lineSegments.empty() &&
             m_colorTriangles.empty()) {
             return;
         }
 
-        cVector2l imageSize = m_target.GetImage()->GetImageSize();
+        cVector2l imageSize = m_target->GetImage()->GetImageSize();
         if (!m_colorTriangles.empty()) {
             size_t vertexBufferOffset = 0;
             size_t indexBufferOffset = 0;
@@ -456,14 +458,14 @@ namespace hpl {
                     layout,
                     shaderProgram,
                 };
-                m_context.Submit(m_perspectiveView, request);
+                m_context->Submit(m_perspectiveView, request);
             }
         }
 
         if (!m_colorQuads.empty()) {
             size_t vertexBufferOffset = 0;
             size_t indexBufferOffset = 0;
-       
+
             std::sort(m_colorQuads.begin(), m_colorQuads.end(), [](const ColorQuadRequest& a, const ColorQuadRequest& b) {
                 return a.m_depthTest < b.m_depthTest;
             });
@@ -537,7 +539,7 @@ namespace hpl {
                     layout,
                     shaderProgram,
                 };
-                m_context.Submit(m_perspectiveView, request);
+                m_context->Submit(m_perspectiveView, request);
             }
         }
         if (!m_line2DSegments.empty()) {
@@ -594,10 +596,10 @@ namespace hpl {
                 layout,
                 shaderProgram,
             };
-            m_context.Submit(m_orthographicView, request);
+            m_context->Submit(m_orthographicView, request);
         }
         if (!m_lineSegments.empty()) {
-            
+
             std::sort(m_lineSegments.begin(), m_lineSegments.end(), [](const LineSegmentRequest& a, const LineSegmentRequest& b) {
                 return a.m_depthTest < b.m_depthTest;
             });
@@ -657,7 +659,7 @@ namespace hpl {
                     layout,
                     shaderProgram,
                 };
-                m_context.Submit(m_perspectiveView, request);
+                m_context->Submit(m_perspectiveView, request);
             }
         }
 
@@ -723,7 +725,7 @@ namespace hpl {
                     layout,
                     shaderProgram,
                 };
-                m_context.Submit(m_perspectiveView, request);
+                m_context->Submit(m_perspectiveView, request);
             }
         }
     m_line2DSegments.clear();

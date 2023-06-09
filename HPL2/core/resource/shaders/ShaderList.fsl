@@ -380,3 +380,15 @@
 #frag occlusion_empty.frag
     #include "occlusion_empty.frag.fsl"
 #end
+
+#vert dds_flash.vert
+    #include "dds_flash.vert.fsl"
+#end
+
+#frag dds_flash.frag
+    #include "dds_flash.frag.fsl"
+#end
+
+#frag dds_outline_copy.frag
+    #include "dds_outline_copy.frag.fsl"
+#end

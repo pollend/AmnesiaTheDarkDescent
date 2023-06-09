@@ -87,7 +87,7 @@ cModelEditorWindowPhysicsTest::cModelEditorWindowPhysicsTest(iEditorBase* apEdit
 	m_postSolidDraw = cViewport::PostSolidDraw::Handler([&](cViewport::PostSolidDrawPacket& payload) {
 		cMatrixf view = payload.m_frustum->GetViewMatrix().GetTranspose();
 		cMatrixf proj = payload.m_frustum->GetProjectionMatrix().GetTranspose();
-		hpl::ImmediateDrawBatch batch(*payload.m_context, *payload.m_outputTarget,view, proj);
+		hpl::ImmediateDrawBatch batch;
 
 		std::function<void(cNode3D* bone)> drawSkeletonRec;
 		drawSkeletonRec = [&](cNode3D* bone) {
@@ -108,7 +108,7 @@ cModelEditorWindowPhysicsTest::cModelEditorWindowPhysicsTest(iEditorBase* apEdit
 		if(m_drawDebug)
 		{
 			mpTestPhysicsWorld->RenderDebugGeometry(&batch, cColor(1,1,1,1));
-			
+
 			for(auto& pJoint: mvJoints)
 			{
 				cVector3f vPivot = pJoint->GetPivotPoint();

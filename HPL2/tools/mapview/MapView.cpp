@@ -290,7 +290,7 @@ public:
 		}
 
 		m_postSolidDraw = cViewport::PostSolidDraw::Handler([&](cViewport::PostSolidDrawPacket& payload) {
-			
+
 			// apFunctions->SetDepthTest(false);
 			// apFunctions->SetDepthWrite(false);
 			// apFunctions->SetBlendMode(eMaterialBlendMode_None);
@@ -300,7 +300,7 @@ public:
 			// apFunctions->SetMatrix(NULL);
 			cMatrixf view = payload.m_frustum->GetViewMatrix().GetTranspose();
 			cMatrixf proj = payload.m_frustum->GetProjectionMatrix().GetTranspose();
-			ImmediateDrawBatch batch(*payload.m_context, *payload.m_outputTarget,view, proj);
+			ImmediateDrawBatch batch;
 
 			std::function<void(iRenderableContainerNode *apNode, int alLevel)> nodeDebug;
 			nodeDebug = [&](iRenderableContainerNode *apNode, int alLevel) {
@@ -356,7 +356,7 @@ public:
 					}
 				}
 			};
-			
+
 
 			cRenderSettings *pSettings = gpSimpleCamera->GetViewport()->GetRenderSettings();
 			cRenderList *pRenderList = pSettings->mpRenderList;
@@ -470,7 +470,7 @@ public:
 					if(gbDrawStaticOcclusionGfxInfo==false && pObject->IsStatic())continue;
 
 					cColor col = CalcDistColorForRenderable(pObject);//cColor(1,1);//gObjectDebugColor[(size_t)pObject % glObjectDebugColorNum];
-					
+
 					ImmediateDrawBatch::DebugDrawOptions options;
 					options.m_transform = *pObject->GetModelMatrix(payload.m_frustum);
 					batch.DebugWireFrameFromVertexBuffer(pObject->GetVertexBuffer(), col, options);
@@ -486,7 +486,7 @@ public:
 					if(gbDrawStaticOcclusionGfxInfo==false && pObject->IsStatic())continue;
 
 					cColor col = CalcDistColorForRenderable(pObject);//cColor(1,1);//gObjectDebugColor[(size_t)pObject % glObjectDebugColorNum];
-					
+
 					ImmediateDrawBatch::DebugDrawOptions options;
 					options.m_transform = *pObject->GetModelMatrix(payload.m_frustum);
 					batch.DebugWireFrameFromVertexBuffer(pObject->GetVertexBuffer(), col, options);
@@ -550,9 +550,8 @@ public:
 		m_postTestSolidDraw = cViewport::PostSolidDraw::Handler([&](cViewport::PostSolidDrawPacket& payload) {
 			cMatrixf view = payload.m_frustum->GetViewMatrix().GetTranspose();
 			cMatrixf proj = payload.m_frustum->GetProjectionMatrix().GetTranspose();
-			ImmediateDrawBatch batch(*payload.m_context, *payload.m_outputTarget,view, proj);
+			ImmediateDrawBatch batch;
 
-			
 			cRenderSettings *pSettings = gpSimpleCamera->GetViewport()->GetRenderSettings();
 			cRenderList *pRenderList = pSettings->mpRenderList;
 
@@ -2073,7 +2072,7 @@ int hplMain(const tString &asCommandline)
 	// vars.mGraphics.mvScreenSize.x = gpConfig->GetInt("Screen","Width",1024);
 	// vars.mGraphics.mvScreenSize.y = gpConfig->GetInt("Screen","Height",768);
 	vars.mGraphics.mbFullscreen = gpConfig->GetBool("Screen","FullScreen", false);
-	
+
 	gsNodeCont_Name = gpConfig->GetString("NodeCont","Name", "MapViewTest");
 	gvNodeCont_BodySize = gpConfig->GetVector3f("NodeCont","BodySize", cVector3f(1, 1.5f, 1));
 	gbNodeCont_NodeAtCenter = gpConfig->GetBool("NodeCont","NodeAtCenter", false);
@@ -2086,7 +2085,7 @@ int hplMain(const tString &asCommandline)
 	Bootstrap::BootstrapConfiguration config;
 	config.m_windowStyle = hpl::window::WindowStyle::WindowStyleResizable;
 	bootstrap.Initialize(config);
-	bootstrap.Run([&](bx::Thread* self) {	
+	bootstrap.Run([&](bx::Thread* self) {
 		gpEngine = CreateHPLEngine(eHplAPI_OpenGL, eHplSetup_All, &vars);
 		gpEngine->SetLimitFPS(false);
 		gpEngine->GetGraphics()->GetLowLevel()->SetVsyncActive(false);
@@ -2128,7 +2127,7 @@ int hplMain(const tString &asCommandline)
 		return 0;
 	});
 	bootstrap.Shutdown();
-	
+
 	hplDelete (gpSimpleCamera);
 
 	//Delete the engine

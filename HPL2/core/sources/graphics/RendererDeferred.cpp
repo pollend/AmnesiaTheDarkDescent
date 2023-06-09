@@ -836,18 +836,17 @@ namespace hpl {
             }
         };
 
-        {
-            m_perFrameBuffer.TryFree();
+        m_perFrameBuffer.Load([&](Buffer** buffer) {
             BufferLoadDesc desc = {};
             desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_UNIFORM_BUFFER;
             desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
-            desc.mDesc.mSize = sizeof(cRendererDeferred::UniformPerFrameData) * ForgeRenderer::SwapChainLength; // * cViewport::MaxViewportHandles;
+            desc.mDesc.mSize = sizeof(cRendererDeferred::UniformPerFrameData) * ForgeRenderer::SwapChainLength;
             desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
             desc.pData = nullptr;
-            desc.ppBuffer = &m_perFrameBuffer.m_handle;
+            desc.ppBuffer = buffer;
             addResource(&desc, nullptr);
-            m_perFrameBuffer.Initialize();
-        }
+            return true;
+        });
         // prepass
         {
             CmdPoolDesc cmdPoolDesc = {};
@@ -1082,7 +1081,6 @@ namespace hpl {
                 loadDesc.mStages[1].pFileName = "deferred_fog.frag";
                 addShader(forgetRenderer->Rend(), &loadDesc, &m_fogPass.m_shader[Fog::EmptyVariant]);
             }
-
 
             RootSignatureDesc rootSignatureDesc = {};
             rootSignatureDesc.ppShaders = m_fogPass.m_shader.data();
@@ -3619,6 +3617,18 @@ namespace hpl {
             }
         }
 
+
+        // notify post draw listeners
+        //ImmediateDrawBatch postSolidBatch(context, sharedData.m_gBuffer.m_outputTarget, mainFrustumView, mainFrustumProj);
+        cViewport::PostSolidDrawPacket postSolidEvent = cViewport::PostSolidDrawPacket({
+            .m_frustum = apFrustum,
+            .m_frame = &frame,
+            .m_outputTarget = &currentGBuffer.m_outputBuffer,
+            .m_viewport = &viewport,
+            .m_renderSettings = mpCurrentSettings,
+        });
+        viewport.SignalDraw(postSolidEvent);
+
         // ------------------------------------------------------------------------
         // Translucency Pass --> output target
         // ------------------------------------------------------------------------
@@ -3793,6 +3803,16 @@ namespace hpl {
                 }
             }
         }
+
+        //ImmediateDrawBatch postTransBatch(context, sharedData.m_gBuffer.m_outputTarget, mainFrustumView, mainFrustumProj);
+        cViewport::PostTranslucenceDrawPacket translucenceEvent = cViewport::PostTranslucenceDrawPacket({
+            .m_frustum = apFrustum,
+            .m_frame = &frame,
+            .m_outputTarget = &currentGBuffer.m_outputBuffer,
+            .m_viewport = &viewport,
+            .m_renderSettings = mpCurrentSettings,
+        });
+        viewport.SignalDraw(translucenceEvent);
 
         {
             cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);

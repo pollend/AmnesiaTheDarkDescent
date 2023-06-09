@@ -21,6 +21,7 @@
 
 #include "bgfx/bgfx.h"
 #include "bgfx/defines.h"
+#include "graphics/ForgeRenderer.h"
 #include "graphics/GraphicsContext.h"
 #include "math/Math.h"
 #include "system/LowLevelSystem.h"
@@ -28,6 +29,7 @@
 #include "impl/LowLevelGraphicsSDL.h"
 
 #include <SDL2/SDL_stdinc.h>
+#include <X11/X.h>
 #include <algorithm>
 #include <cstdint>
 #include <vector>
@@ -97,6 +99,22 @@ namespace hpl {
 
     }
 
+    void LegacyVertexBuffer::cmdBindGeometry(Cmd* cmd, ForgeRenderer::CommandResourcePool* resourcePool, LegacyVertexBuffer::GeometryBinding& binding) {
+        absl::InlinedVector<Buffer*, 16> vbBuffer;
+        absl::InlinedVector<uint64_t, 16> vbOffsets;
+        absl::InlinedVector<uint32_t, 16> vbStride;
+
+        for (auto& element : binding.m_vertexElement) {
+            vbBuffer.push_back(element.element->m_buffer.m_handle);
+            vbOffsets.push_back(element.offset);
+            vbStride.push_back(element.element->Stride());
+            resourcePool->Push(element.element->m_buffer);
+        }
+        resourcePool->Push(*binding.m_indexBuffer.element);
+
+        cmdBindVertexBuffer(cmd, binding.m_vertexElement.size(), vbBuffer.data(), vbStride.data(), vbOffsets.data());
+        cmdBindIndexBuffer(cmd, binding.m_indexBuffer.element->m_handle, INDEX_TYPE_UINT32, binding.m_indexBuffer.offset);
+    }
     void LegacyVertexBuffer::PushVertexElements(
         std::span<const float> values, eVertexBufferElement elementType, std::span<LegacyVertexBuffer::VertexElement> elements) {
         for (auto& element : elements) {
@@ -317,7 +335,7 @@ namespace hpl {
         }
         // SyncToken token = {};
 
-        
+
         for (auto& element : m_vertexElements) {
             m_updateFlags |= element.m_flag;
         }
@@ -465,7 +483,7 @@ namespace hpl {
                     element.m_activeCopy = isDynamicAccess ? ((element.m_activeCopy + 1) % ForgeRenderer::SwapChainLength) : 0;
                     size_t minimumSize = element.m_shadowData.size() * (isDynamicAccess ? ForgeRenderer::SwapChainLength: 1);
                     if (!isDynamicAccess || element.m_buffer.m_handle == nullptr || element.m_buffer.m_handle->mSize > minimumSize) {
-                        
+
                         BufferLoadDesc loadDesc = {};
                         loadDesc.ppBuffer = &element.m_buffer.m_handle;
                         loadDesc.mDesc.mDescriptors = DESCRIPTOR_TYPE_VERTEX_BUFFER;
@@ -476,10 +494,10 @@ namespace hpl {
                         } else {
                             loadDesc.pData = element.m_shadowData.data();
                         }
-
-                        element.m_buffer.TryFree();
-                        addResource(&loadDesc, nullptr);
-                        element.m_buffer.Initialize();
+                        element.m_buffer.Load([&](Buffer** buffer) {
+                            addResource(&loadDesc, nullptr);
+                            return true;
+                        });
                     }
                     if (isDynamicAccess) {
                         ASSERT(element.m_buffer.IsValid() && "Buffer not initialized");
@@ -515,7 +533,7 @@ namespace hpl {
             if (isDynamicAccess) {
                 ASSERT(m_indexBuffer.IsValid() && "Buffer not initialized");
                 m_indexBufferActiveCopy = isDynamicAccess ? ((m_indexBufferActiveCopy + 1) % ForgeRenderer::SwapChainLength) : 0;
-                
+
                 BufferUpdateDesc updateDesc = { m_indexBuffer.m_handle };
                 updateDesc.mSize =  m_indices.size() * sizeof(uint32_t);
                 updateDesc.mDstOffset = m_indexBufferActiveCopy * updateDesc.mSize;

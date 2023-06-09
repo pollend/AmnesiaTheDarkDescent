@@ -61,11 +61,12 @@ namespace hpl {
 
         struct DrawPayloadCommon {
             cFrustum* m_frustum;
-            GraphicsContext* m_context;
-            LegacyRenderTarget* m_outputTarget;
+            const ForgeRenderer::Frame* m_frame;
+            ForgeRenderTarget* m_outputTarget;
             cViewport* m_viewport;
             cRenderSettings* m_renderSettings;
             ImmediateDrawBatch* m_immediateDrawBatch;
+            GraphicsContext* m_context;
         };
         struct PostSolidDrawPacket : public DrawPayloadCommon {
         };

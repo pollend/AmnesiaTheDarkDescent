@@ -98,7 +98,7 @@ public:
 		m_postSolidDraw = cViewport::PostSolidDraw::Handler([&](hpl::cViewport::PostSolidDrawPacket& payload) {
 			cMatrixf view = payload.m_frustum->GetViewMatrix().GetTranspose();
 			cMatrixf proj = payload.m_frustum->GetProjectionMatrix().GetTranspose();
-			ImmediateDrawBatch batch(*payload.m_context, *payload.m_outputTarget,view, proj);
+			ImmediateDrawBatch batch;
 
 			if(gbDrawBoundingBox && gpParticleSystem)
 			{

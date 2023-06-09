@@ -69,7 +69,7 @@ namespace hpl {
             }
 
         private:
-            mutable size_t m_activeCopy = 0; // the active copy of the data 
+            mutable size_t m_activeCopy = 0; // the active copy of the data
             mutable size_t m_internalBufferSize = 0; // the size of the internal buffer
             mutable std::vector<uint8_t> m_shadowData = {};
             friend class LegacyVertexBuffer;
@@ -112,8 +112,8 @@ namespace hpl {
                 m_vertexElement; // elements are in the order they are requested
             VertexIndexEntry m_indexBuffer;
         };
-        void resolveGeometryBinding(
-            uint32_t currentFrame, std::span<eVertexBufferElement> elements, GeometryBinding* binding);
+        static void cmdBindGeometry(Cmd* cmd, ForgeRenderer::CommandResourcePool* resourcePool, LegacyVertexBuffer::GeometryBinding& binding);
+        void resolveGeometryBinding(uint32_t currentFrame, std::span<eVertexBufferElement> elements, GeometryBinding* binding);
 
         // virtual void Bind() override;
         virtual void UnBind() override;
@@ -142,8 +142,6 @@ namespace hpl {
         const VertexElement* GetElement(eVertexBufferElement elementType);
 
     protected:
-        // size_t m_bufferIndex = 0;
-        
         static void PushVertexElements(
             std::span<const float> values, eVertexBufferElement elementType, std::span<LegacyVertexBuffer::VertexElement> elements);
 

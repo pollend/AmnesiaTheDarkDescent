@@ -198,10 +198,10 @@ public:
 		mpWorld->SetSkyBoxActive(true);
 
 		m_postSolidDraw = cViewport::PostSolidDraw::Handler([&](cViewport::PostSolidDrawPacket& payload) {
-			
+
 			cMatrixf view = payload.m_frustum->GetViewMatrix().GetTranspose();
 			cMatrixf proj = payload.m_frustum->GetProjectionMatrix().GetTranspose();
-			ImmediateDrawBatch batch(*payload.m_context, *payload.m_outputTarget,view, proj);
+			ImmediateDrawBatch batch;
 
 			std::function<void(cNode3D* node)> drawSkeletonRec;
 			drawSkeletonRec = [&](cNode3D* node) {
@@ -379,7 +379,7 @@ public:
 			}
 
 			batch.flush();
-		
+
 		});
 
 		////////////////////////////////
@@ -2350,7 +2350,7 @@ int hplMain(const tString &asCommandline)
 		return 0;
 	});
 	bootstrap.Shutdown();
-	
+
 	hplDelete (gpSimpleCamera);
 
 	//Delete the engine
