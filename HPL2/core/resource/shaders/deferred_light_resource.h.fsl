@@ -60,6 +60,7 @@ RES(Tex1D(float4), attenuationLightMap, UPDATE_FREQ_PER_BATCH, t5, binding = 9);
 RES(TexCube(float4), goboCubeMap, UPDATE_FREQ_PER_BATCH, t7, binding = 10);
 RES(Tex2D(float4), goboMap, UPDATE_FREQ_PER_BATCH, t7, binding = 11);
 RES(Tex1D(float4), falloffMap, UPDATE_FREQ_PER_BATCH, t7, binding = 12);
+RES(Tex2D(float), shadowMap, UPDATE_FREQ_PER_BATCH, t7, binding = 13);
 
 INLINE bool HasGoboMap(int _config)        { return (_config & (1 << 0)) != 0; }
 INLINE bool HasShadowMap(int _config)        { return (_config & (1 << 1)) != 0; }

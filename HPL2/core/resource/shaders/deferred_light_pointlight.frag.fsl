@@ -42,6 +42,5 @@ float4 PS_MAIN(PsIn In)
         float specularValue = Get(lightColor).w * specIntensity *  pow( clamp( dot( halfVec, normalizedNormal), 0.0, 1.0), specPower );
         specularColor = specularValue.xxx * Get(lightColor).xyz;
     }
-    //RETURN(float4(diffuseColor, 1.0));
     RETURN(float4((diffuseColor + specularColor) * goboVal * attenuation, 1.0));
 }

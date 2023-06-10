@@ -1,17 +1,17 @@
 #define SPOT_LIGHT 1
 #include "deferred_light_resource.h.fsl"
 
+#define SHADOW_MAP_BIAS 0.002
+
 STRUCT(PsIn)
 {
-	DATA(float4, Position, SV_Position);
+    DATA(float4, Position, SV_Position);
 };
-
 
 STRUCT(PsOut)
 {
-	DATA(float4, diffuse, SV_Target0);
+    DATA(float4, diffuse, SV_Target0);
 };
-
 
 PsOut PS_MAIN(PsIn In)
 {
@@ -44,9 +44,11 @@ PsOut PS_MAIN(PsIn In)
 	//Calculate diffuse color
     float fLDotN = max(dot(normalizedNormal, normalLightDir), 0.0);
 	float3 diffuseColor = color.xyz * Get(lightColor).xyz * fLDotN;
-
+    float t = 0;
     if(HasShadowMap(Get(config))) {
-        //TODO implement shadow map
+        float bias = max(0.05* (1.0 - dot(normalizedNormal, normalLightDir)), 0.005);
+        float sampledDepth = SampleTex2DProj(Get(shadowMap), Get(nearestSampler), projectionUV).x; 
+        attenuation *= sampledDepth < (projectionUV.z/projectionUV.w) - bias ? 0.0 : 1.0;
     }
     float3 specularColor = float3(0.0, 0.0, 0.0);
     if(Get(lightColor).w > 0.0) {

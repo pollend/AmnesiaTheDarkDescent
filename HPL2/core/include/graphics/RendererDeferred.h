@@ -77,12 +77,13 @@ namespace hpl {
         static constexpr TinyImageFormat PositionBufferFormat = TinyImageFormat_R16G16B16A16_SFLOAT;
         static constexpr TinyImageFormat SpecularBufferFormat = TinyImageFormat_R8G8_UNORM;
         static constexpr TinyImageFormat ColorBufferFormat = TinyImageFormat_R8G8B8A8_UNORM;
-
+        static constexpr TinyImageFormat ShadowDepthBufferFormat = TinyImageFormat_D32_SFLOAT;
         static constexpr uint32_t MaxObjectUniforms = 4096;
         static constexpr uint32_t MaxLightUniforms = 1024;
 
         enum LightConfiguration {
             HasGoboMap = 0x1,
+            HasShadowMap = 0x2
         };
 
         enum LightPipelineVariants {
@@ -352,7 +353,6 @@ namespace hpl {
         void cmdBindObjectDescriptor(
             Cmd* cmd,
             const ForgeRenderer::Frame& frame,
-            uint32_t& updateIndex,
             cMaterial* apMaterial,
             iRenderable* apObject,
             const PerObjectOption& option);
@@ -506,9 +506,12 @@ namespace hpl {
         // z pass
         Shader* m_zPassShader;
         Pipeline* m_zPassPipeline;
+        Pipeline* m_zPassShadowPipelineCW;
+        Pipeline* m_zPassShadowPipelineCCW;
         DescriptorSet* m_zPassConstSet;
 
         std::set<iRenderable*> m_preZPassRenderables;
+
 
         GPURingBuffer m_objectUniformBuffer;
 
@@ -516,6 +519,12 @@ namespace hpl {
             std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_frameSet;
             std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perObjectSet;
             std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_materialSet;
+            std::unordered_map<uint32_t, uint32_t> m_objectDescriptorLookup;
+            uint32_t m_objectIndex;
+            inline void reset() {
+                m_objectIndex = 0;
+                m_objectDescriptorLookup.clear();
+            }
 
             // Material
             struct MaterialInfo {
@@ -531,6 +540,7 @@ namespace hpl {
 
         CmdPool* m_prePassPool = nullptr;
         Cmd* m_prePassCmd = nullptr;
+        Fence* m_prePassFence = nullptr;
 
         static constexpr uint32_t  MaxHiZMipLevels = 32;
         RootSignature* m_rootSignatureHIZOcclusion;
