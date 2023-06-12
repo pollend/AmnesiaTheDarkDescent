@@ -1,12 +1,12 @@
 /**
 * Copyright 2023 Michael Pollind
-* 
+*
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
 * You may obtain a copy of the License at
-* 
+*
 *     http://www.apache.org/licenses/LICENSE-2.0
-* 
+*
 * Unless required by applicable law or agreed to in writing, software
 * distributed under the License is distributed on an "AS IS" BASIS,
 * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -19,7 +19,6 @@
 
 #include <engine/IUpdateEventLoop.h>
 
-#include "absl/container/inlined_vector.h"
 #include "engine/Interface.h"
 #include "input/InputTypes.h"
 #include "math/MathTypes.h"
@@ -28,6 +27,8 @@
 
 #include <input/InputKeyboardDevice.h>
 #include <input/InputMouseDevice.h>
+
+#include <folly/small_vector.h>
 
 #include <SDL2/SDL_events.h>
 #include <SDL2/SDL_mouse.h>
@@ -131,10 +132,10 @@ namespace hpl::input::internal {
             IUpdateEventLoop::UpdateEvent::Handler m_postUpdate;
             IUpdateEventLoop::UpdateEvent::Handler m_preUpdate;
             std::mutex m_mutex;
-            absl::InlinedVector<TextPress, 256> m_queuedCharacter;
-            absl::InlinedVector<TextPress, 256> m_stagingCharacter;
-            absl::InlinedVector<KeyPress, 256> m_queuedPresses;
-            absl::InlinedVector<KeyPress, 256> m_stagingPresses;
+            folly::small_vector<TextPress, 256> m_queuedCharacter;
+            folly::small_vector<TextPress, 256> m_stagingCharacter;
+            folly::small_vector<KeyPress, 256> m_queuedPresses;
+            folly::small_vector<KeyPress, 256> m_stagingPresses;
             KeyPressEvent m_keyPressEvent;
             std::array<bool, static_cast<size_t>(eKey::eKey_LastEnum)> m_keyPressState = { { 0 } };
         };

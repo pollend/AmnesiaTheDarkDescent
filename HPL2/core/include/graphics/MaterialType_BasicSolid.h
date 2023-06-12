@@ -47,7 +47,7 @@ namespace hpl {
     class iMaterialType_SolidBase : public iMaterialType {
         HPL_RTTI_IMPL_CLASS(iMaterialType, iMaterialType_SolidBase, "{06ca56f9-381f-4b73-aaa3-3c951b8d6cad}")
     public:
-		
+
         iMaterialType_SolidBase(cGraphics* apGraphics, cResources* apResources);
         ~iMaterialType_SolidBase();
 
@@ -137,21 +137,6 @@ namespace hpl {
 
         cMaterialType_SolidDiffuse(cGraphics* apGraphics, cResources* apResources);
         ~cMaterialType_SolidDiffuse();
-
-        virtual void ResolveShaderProgram(
-            eMaterialRenderMode aRenderMode,
-            cViewport& viewport,
-            cMaterial* apMaterial,
-            iRenderable* apObject,
-            iRenderer* apRenderer,
-            std::function<void(GraphicsContext::ShaderProgram&)> handler) override;
-
-        virtual void ResolveShaderProgram(
-            cViewport& viewport,
-            cMaterial* apMaterial,
-            iRenderable* apObject,
-            iRenderer* apRenderer,
-			iMaterialType::MaterialDeferredPipelineDescriptor* descriptor) override;
 
         iMaterialVars* CreateSpecificVariables() override;
         void LoadVariables(cMaterial* apMaterial, cResourceVarsObject* apVars) override;

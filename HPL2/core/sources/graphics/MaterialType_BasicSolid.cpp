@@ -62,7 +62,7 @@ namespace hpl
         //     ShaderHelper::LoadProgramHandlerDefault("vs_basic_solid_z", "fs_basic_solid_z", false, true));
 
         // m_illuminationProgram = hpl::loadProgram("vs_basic_solid_illumination", "fs_basic_solid_illumination");
-        
+
         // m_s_normalMap = bgfx::createUniform("s_normalMap", bgfx::UniformType::Sampler);
         // m_s_specularMap = bgfx::createUniform("s_specularMap", bgfx::UniformType::Sampler);
         // m_s_diffuseMap = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
@@ -201,195 +201,6 @@ namespace hpl
     }
 
 
-
-    void cMaterialType_SolidDiffuse::ResolveShaderProgram(
-        cViewport& viewport,
-        cMaterial* apMaterial,
-        iRenderable* apObject,
-        iRenderer* apRenderer,
-        iMaterialType::MaterialDeferredPipelineDescriptor* apDescriptor) {
-
-        auto* pVars = static_cast<cMaterialType_SolidDiffuse_Vars*>(apMaterial->GetVars());
-        auto& descriptor = m_descriptorSet[apDescriptor->aRenderMode];
-
-        switch(apDescriptor->aRenderMode) {
-            case eMaterialRenderMode_Z: {
-                BufferUpdateDesc  updateDesc = { pVars->m_buffer[apDescriptor->m_frame->m_frameIndex].m_handle, 0};
-                beginUpdateResource(&updateDesc);
-                auto& data = (*reinterpret_cast<cMaterialType_SolidDiffuse_Vars::MaterialBufferData*>(updateDesc.pMappedData));
-                // data.m_z.alphaReject = apMaterial->GetAlphaRejectValue();
-                endUpdateResource(&updateDesc, NULL);
-
-                apDescriptor->m_uniform.m_offset = offsetof(cMaterialType_SolidDiffuse_Vars::MaterialBufferData, m_z);
-                apDescriptor->m_uniform.m_buffer = &pVars->m_buffer[apDescriptor->m_frame->m_frameIndex];
-                break;
-            }
-            default:
-                break;
-
-        }
- 
-        // apDescriptor->m_descriptorSet.m_materialDescriptorSet = &descriptor;
-    }
-
-    void cMaterialType_SolidDiffuse::ResolveShaderProgram(
-            eMaterialRenderMode aRenderMode,
-            cViewport& viewport,
-            cMaterial* apMaterial,
-            iRenderable* apObject,
-            iRenderer* apRenderer, 
-			std::function<void(GraphicsContext::ShaderProgram&)> handler) {
-        GraphicsContext::ShaderProgram program;
-        cMatrixf mtxUv = apMaterial->HasUvAnimation() ? apMaterial->GetUvMatrix().GetTranspose() : cMatrixf::Identity;
-        program.m_uniforms.push_back({m_u_mtxUv, &mtxUv.v});
-        
-        auto pipeline = Interface<ForgeRenderer>::Get();
-        auto* pVars = static_cast<cMaterialType_SolidDiffuse_Vars*>(apMaterial->GetVars());
-        switch(aRenderMode) {
-            case eMaterialRenderMode_Diffuse: {
-
-                auto diffuseMap = apMaterial->GetImage(eMaterialTexture_Diffuse);
-                auto normalImage = apMaterial->GetImage(eMaterialTexture_NMap);
-                auto specularMap = apMaterial->GetImage(eMaterialTexture_Specular);
-                auto heightMap = apMaterial->GetImage(eMaterialTexture_Height);
-                auto diffuseEnvMap = apMaterial->GetImage(eMaterialTexture_CubeMap);
-                auto cubemapAlphaMap = apMaterial->GetImage(eMaterialTexture_CubeMapAlpha);
-                
-                std::array<eMaterialTexture, 6> poolTextures = {
-                    eMaterialTexture_Diffuse,
-                    eMaterialTexture_NMap,
-                    eMaterialTexture_Specular,
-                    eMaterialTexture_Height,
-                    eMaterialTexture_CubeMap,
-                    eMaterialTexture_CubeMapAlpha
-                };
-                // pipeline->CmdPool(0).AddMaterial(*apMaterial, poolTextures);
-                
-                std::array params = {
-                    [&]{
-                        DescriptorData data = {};
-                        data.pName = "s_diffuseMap";
-                        data.ppTextures = &diffuseMap->GetTexture().m_handle;
-                        return data;
-                    }()
-                };
-
-                // updateDescriptorSet(
-                //     pipeline->Rend(), 0, descriptorSet.m_handle, params.size(), params.data());
-
-                struct {
-                    float heightMapScale;
-                    float heightMapBias;
-                    float fresnelBias;
-                    float fresnelPow;
-
-                    float useCubeMapAlpha;
-                    float alphaReject;
-                    float padding[2];
-                } param = {0};
-                param.alphaReject = 0.5f;
-                uint32_t flags = 0;
-               
-                if(diffuseMap) {
-                    program.m_textures.push_back({m_s_diffuseMap, diffuseMap->GetHandle(), 4});
-                }
-                
-                if(normalImage) {
-                    flags |= material::solid::DiffuseVariant::Diffuse_NormalMap;
-                    program.m_textures.push_back({m_s_normalMap, normalImage->GetHandle(), 1});
-                }
-                if(specularMap) {
-                    flags |= material::solid::DiffuseVariant::Diffuse_SpecularMap;
-                    program.m_textures.push_back({m_s_specularMap, specularMap->GetHandle(), 2});
-                }
-
-                if(heightMap && iRenderer::GetParallaxEnabled()) {
-                    flags |= material::solid::DiffuseVariant::Diffuse_ParallaxMap;
-                    param.heightMapScale = pVars->mfHeightMapScale;
-                    param.heightMapBias = pVars->mfHeightMapBias;
-                    program.m_textures.push_back({m_s_heightMap, heightMap->GetHandle(), 3});
-                }
-
-                if(diffuseEnvMap) {
-                    param.fresnelPow = pVars->mfFrenselPow;
-                    param.fresnelBias = pVars->mfFrenselPow;
-
-                    flags |= material::solid::DiffuseVariant::Diffuse_EnvMap;
-                    program.m_textures.push_back({m_s_envMap, diffuseEnvMap->GetHandle(), 0});
-                    if(cubemapAlphaMap) {
-                        param.useCubeMapAlpha = 1.0f;
-                        program.m_textures.push_back({m_s_envMapAlphaMap, cubemapAlphaMap->GetHandle(), 5});
-                    }
-                }
-                program.m_uniforms.push_back({m_u_param, &param, 2});
-                program.m_handle = m_diffuseProgramVariant.GetVariant(flags);
-                handler(program);
-                break;
-            }
-            case eMaterialRenderMode_Z: {
-                BX_ASSERT(m_dissolveImage, "Dissolve image is not set");
-                struct {
-                    float alphaReject;
-                    float padding[3];
-                } param = {0};
-                param.alphaReject = 0.5f;
-                auto diffuseMap = apMaterial->GetImage(eMaterialTexture_Alpha);
-                uint32_t flags = pVars->mbAlphaDissolveFilter ? material::solid::Z_UseDissolveFilter : 0;
-                program.m_textures.push_back({m_s_dissolveMap, m_dissolveImage->GetHandle()});
-                if(diffuseMap) {
-                    flags |= material::solid::Z_UseAlphaMap;
-                    program.m_textures.push_back({m_s_diffuseMap, diffuseMap->GetHandle(), 0});
-                }
-                program.m_uniforms.push_back({m_u_param, &param});
-                program.m_handle = m_ZProgramVariant.GetVariant(flags);
-                handler(program);
-                break;
-            }
-            case eMaterialRenderMode_Z_Dissolve: {
-                struct {
-                    float alphaReject;
-                    float padding[3];
-                } param = {0};
-                param.alphaReject = 0.5f;
-                auto diffuseMap = apMaterial->GetImage(eMaterialTexture_Alpha);
-                auto alphaDissolveMap = apMaterial->GetImage(eMaterialTexture_DissolveAlpha);
-                uint32_t flags = pVars->mbAlphaDissolveFilter ? material::solid::Z_UseDissolveFilter : 0;
-                if(diffuseMap) {
-                    flags |= material::solid::Z_UseAlphaMap;
-                    program.m_textures.push_back({m_s_diffuseMap, diffuseMap->GetHandle()});
-                }
-                program.m_textures.push_back({m_s_dissolveMap, m_dissolveImage->GetHandle()});
-                if(alphaDissolveMap) {
-                    flags |= material::solid::Z_UseDissolveAlphaMap;
-                    program.m_textures.push_back({m_s_dissolveAlphaMap, alphaDissolveMap->GetHandle()});
-                }
-                program.m_uniforms.push_back({m_u_param, &param});
-                program.m_handle = m_ZProgramVariant.GetVariant(flags);
-                handler(program);
-                break;
-            }
-            case eMaterialRenderMode_Illumination: {
-                auto illumination = apMaterial->GetImage(eMaterialTexture_Illumination);
-                struct {
-                    float colorMul;
-                    float padding[3];
-                } param = {};
-                param.colorMul = apObject->GetIlluminationAmount();
-
-                if(illumination) {
-                    program.m_textures.push_back({m_s_diffuseMap, illumination->GetHandle()});
-                }
-                program.m_uniforms.push_back({m_u_param, &param});
-                program.m_handle = m_illuminationProgram;
-                handler(program);
-                break;
-            }
-
-            default:
-                break;
-        }
-    }
-
     iMaterialVars* cMaterialType_SolidDiffuse::CreateSpecificVariables()
     {
         auto pVars = new cMaterialType_SolidDiffuse_Vars();
@@ -418,7 +229,7 @@ namespace hpl
         // pVars->m_descriptorSet[eMaterialRenderMode_Z].Initialize();
         // pVars->m_descriptorSet[eMaterialRenderMode_Z_Dissolve].Initialize();
         // pVars->m_descriptorSet[eMaterialRenderMode_Illumination].Initialize();
-        
+
         return new cMaterialType_SolidDiffuse_Vars();
     }
 

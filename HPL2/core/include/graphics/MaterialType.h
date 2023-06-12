@@ -43,7 +43,7 @@ namespace hpl {
 	class cResourceVarsObject;
 	class iMaterialVars;
 
-	
+
 	class cMaterialUsedTexture
 	{
 	public:
@@ -83,58 +83,6 @@ namespace hpl {
 
 		bool IsTranslucent(){ return mbIsTranslucent; }
 		bool IsDecal(){ return mbIsDecal;}
-
-		struct MaterialDeferredPipelineDescriptor {
-			ForgeRenderer::Frame* m_frame;
-            eMaterialRenderMode aRenderMode;
-			union {
-				struct {
-
-				} m_modeZ; 
-				struct {
-				
-				} m_modeZ_Dissolve; 
-				struct {
-				
-				} m_modeDiffuse; 
-				struct {
-				
-				} m_modeDiffuseFog; 
-				struct {
-				
-				} m_modeLight; 
-				struct {
-				
-				} m_modeIllumination; 
-				struct {
-				
-				} m_modeIlluminationFog; 
-			} m_material;
-
-			// Filled out by the caller
-			// MaterialID m_id;
-			struct  {
-				uint32_t m_offset;
-				ForgeBufferHandle* m_buffer;
-			} m_uniform;
-
-		};
-
-
-		virtual void ResolveShaderProgram(
-            cViewport& viewport,
-            cMaterial* apMaterial,
-            iRenderable* apObject,
-            iRenderer* apRenderer,
-			MaterialDeferredPipelineDescriptor* descriptor) {}
-
-		virtual void ResolveShaderProgram(
-            eMaterialRenderMode aRenderMode,
-            cViewport& viewport,
-            cMaterial* apMaterial,
-            iRenderable* apObject,
-            iRenderer* apRenderer,
-			std::function<void(GraphicsContext::ShaderProgram&)> program) = 0;
 
 		[[deprecated("use span GetUsedTextures")]]
 		int GetUsedTextureNum(){ return (int)m_usedTextures.size(); }

@@ -8,11 +8,13 @@ PUSH_CONSTANT(uRootConstants, b0)
 };
 
 
-NUM_THREADS(16, 16,  1)
+NUM_THREADS(32, 32,  1)
 void CS_MAIN(SV_DispatchThreadID(uint3) did) 
 {    
     INIT_MAIN;
-    uint2 screenSize = uint2(GetDimensions(Get(destOutput), NO_SAMPLER)) / (1 << Get(mipLevel)) ;
+    uint2 bufferSize = uint2(GetDimensions(Get(destOutput), NO_SAMPLER));
+    uint2 screenSize = bufferSize / (1 << Get(mipLevel)) ;
+
     if (did.x < screenSize.x && did.y < screenSize.y)
     {
         float t1 = LoadRWTex3D(Get(depthInput), uint3((did.xy * 2),  Get(mipLevel) - 1)).x;

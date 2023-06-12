@@ -29,7 +29,7 @@ namespace hpl::math {
         constexpr void Update(const std::string_view value);
         constexpr void Update(const uint32_t value);
         constexpr void Update(const Uuid& value);
-        constexpr void Update(const void* data, size_t size);
+        constexpr void Update(const uint8_t* data, size_t size);
         constexpr bool operator==(const Crc32& other) const {
             return m_value == other.m_value;
         }
@@ -76,7 +76,6 @@ namespace hpl::math {
             0x89b8fd09, 0x8d79e0be, 0x803ac667, 0x84fbdbd0, 0x9abc8bd5, 0x9e7d9662, 0x933eb0bb, 0x97ffad0c, 0xafb010b1, 0xab710d06,
             0xa6322bdf, 0xa2f33668, 0xbcb4666d, 0xb8757bda, 0xb5365d03, 0xb1f740b4
         };
-
         static constexpr uint32_t Update(uint32_t crc, uint32_t value) {
             return crc32_table[((crc >> 24) ^ value) & 0xff] ^ (crc << 8);
         }
@@ -88,8 +87,8 @@ namespace hpl::math {
         }
     }
 
-    constexpr void Crc32::Update(const void* data, size_t size) {
-        auto* ptr = reinterpret_cast<const uint8_t*>(data);
+    constexpr void Crc32::Update(const uint8_t* data, size_t size) {
+        auto* ptr = data;
         for(size_t i = 0; i < size; ++i) {
             m_value = detail::Update(m_value, ptr[i]);
         }

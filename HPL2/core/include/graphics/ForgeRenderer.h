@@ -9,8 +9,6 @@
 #include <variant>
 #include <vector>
 
-#include "absl/container/inlined_vector.h"
-
 #include <engine/RTTI.h>
 
 #include "graphics/ForgeHandles.h"

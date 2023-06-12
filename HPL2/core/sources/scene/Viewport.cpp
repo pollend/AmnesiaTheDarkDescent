@@ -25,14 +25,16 @@
 
 #include "scene/Scene.h"
 #include "scene/World.h"
+
 #include <array>
 #include <memory>
 
+#include <folly/small_vector.h>
 namespace hpl {
 
     namespace internal {
         static size_t m_id = 0;
-        static absl::InlinedVector<size_t, cViewport::MaxViewportHandles> m_freelist;
+        static folly::small_vector<size_t, cViewport::MaxViewportHandles> m_freelist;
         static std::mutex m_mutex;
     } // namespace internal
 
@@ -176,7 +178,7 @@ namespace hpl {
                 m_viewportChanged.Signal();
             }
         });
-        
+
 
         window.ConnectWindowEventHandler(m_windowEventHandler);
         SetSize(window.GetWindowSize());

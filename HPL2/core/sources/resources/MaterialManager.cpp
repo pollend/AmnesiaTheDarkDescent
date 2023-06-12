@@ -39,11 +39,7 @@
 
 #include <bx/debug.h>
 
-
-
 namespace hpl {
-
-
 
 	class cMaterialManagerBlankMaterialType_Vars : public iMaterialVars
 	{
@@ -60,29 +56,11 @@ namespace hpl {
 		iMaterialVars* CreateSpecificVariables() override { return hplNew(cMaterialManagerBlankMaterialType_Vars,());}
 		void LoadVariables(cMaterial *apMaterial, cResourceVarsObject *apVars) override{ }
 		void GetVariableValues(cMaterial *apMaterial, cResourceVarsObject *apVars) override{ }
-		
-		void ResolveShaderProgram(
-            eMaterialRenderMode aRenderMode,
-            cViewport& viewport,
-            cMaterial* apMaterial,
-            iRenderable* apObject,
-            iRenderer* apRenderer,
-			std::function<void(GraphicsContext::ShaderProgram&)> program) override {};
 
 		void CompileMaterialSpecifics(cMaterial *apMaterial){}
 	};
 
 	cMaterialManagerBlankMaterialType gBlankMaterialType;
-
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
 	cMaterialManager::cMaterialManager(cGraphics* apGraphics,cResources *apResources)
 		: iResourceManager(apResources->GetFileSearcher(), apResources->GetLowLevel(),apResources->GetLowLevelSystem())
 	{
@@ -104,14 +82,6 @@ namespace hpl {
 
 		Log(" Done with materials\n");
 	}
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	cMaterial* cMaterialManager::CreateMaterial(const tString& asName)
 	{
@@ -148,20 +118,15 @@ namespace hpl {
 		return pMaterial;
 	}
 
-	//-----------------------------------------------------------------------
-
 	void cMaterialManager::Update(float afTimeStep)
 	{
 
 	}
 
-	//-----------------------------------------------------------------------
-
 	void cMaterialManager::Unload(iResourceBase* apResource)
 	{
 
 	}
-	//-----------------------------------------------------------------------
 
 	void cMaterialManager::Destroy(iResourceBase* apResource)
 	{
@@ -173,8 +138,6 @@ namespace hpl {
 			hplDelete(apResource);
 		}
 	}
-
-	//-----------------------------------------------------------------------
 
 	void cMaterialManager::SetTextureFilter(eTextureFilter aFilter)
 	{
@@ -194,8 +157,6 @@ namespace hpl {
 		}
 	}
 
-	//-----------------------------------------------------------------------
-
 	void cMaterialManager::SetTextureAnisotropy(float afX)
 	{
 
@@ -214,8 +175,6 @@ namespace hpl {
 			}
 		}
 	}
-
-	//-----------------------------------------------------------------------
 
 	tString cMaterialManager::GetPhysicsMaterialName(const tString& asName)
 	{
@@ -392,7 +351,7 @@ namespace hpl {
 					BX_ASSERT(false, "Invalid wrap mode: %d", wrap)
 					break;
 			}
-			
+
 			iResourceBase* pImageResource = nullptr;
 			if(animMode != eTextureAnimMode_None)
 			{
@@ -401,7 +360,7 @@ namespace hpl {
 				animatedImage->SetAnimMode(animMode);
 				pMat->SetImage(pUsedTexture->mType, animatedImage);
 				pImageResource = animatedImage;
-				
+
 			}
 			else
 			{
@@ -467,7 +426,7 @@ namespace hpl {
 			// pTex->SetFilter(mTextureFilter);
 			// pTex->SetAnisotropyDegree(mfTextureAnisotropy);
 
-			
+
 		}
 
 		///////////////////////////
@@ -497,16 +456,16 @@ namespace hpl {
 		if(pUserVarsRoot) userVars.LoadVariables(pUserVarsRoot);
 
 		pMatType->LoadVariables(pMat, &userVars);
-		
+
 		tString materialID = cString::ToLowerCase(sType);
 		auto& typeInfo = pMat->type();
-		for(auto& meta: cMaterial::MetaInfo) {
+		for(auto& meta: cMaterial::MaterialMetaTable) {
 			// auto& meta = cMaterial::MetaInfo[i];
 			if(materialID == meta.m_name) {
 				auto& type = pMat->type();
 				type.m_id = meta.m_id;
 				switch(meta.m_id) {
-					case cMaterial::MaterialID::SolidDiffuse: {	
+					case cMaterial::MaterialID::SolidDiffuse: {
 						type.m_data.m_solid.m_heightMapScale = userVars.GetVarFloat("HeightMapScale", 0.1f);
 						type.m_data.m_solid.m_heightMapBias = userVars.GetVarFloat("HeightMapBias", 0);
 						type.m_data.m_solid.m_frenselBias = userVars.GetVarFloat("FrenselBias", 0.2f);
@@ -519,7 +478,7 @@ namespace hpl {
 						pMat->SetIsAffectedByLightLevel(userVars.GetVarBool("AffectedByLightLevel", false));
 						pMat->SetHasRefractionNormals(userVars.GetVarBool("RefractionNormals", true));
 						pMat->SetUseRefractionEdgeCheck(userVars.GetVarBool("RefractionEdgeCheck", true));
-						
+
 						// type.m_data.m_translucentUniformBlock.mbRefraction = userVars.GetVarBool("Refraction", false);
 						// type.m_data.m_translucentUniformBlock.mbRefractionEdgeCheck = userVars.GetVarBool("RefractionEdgeCheck", true);
 						type.m_data.m_translucentUniformBlock.mfRefractionScale = userVars.GetVarFloat("RefractionScale", 1.0f);

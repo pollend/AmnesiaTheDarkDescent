@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
-#pragma once 
+#pragma once
 
 #include "bgfx/bgfx.h"
 #include "graphics/MaterialType.h"
@@ -45,18 +45,9 @@ namespace hpl {
 
 		iMaterialVars* CreateSpecificVariables() override;
 		void LoadVariables(cMaterial *apMaterial, cResourceVarsObject *apVars) override;
-		void GetVariableValues(cMaterial* apMaterial, cResourceVarsObject* apVars) override; 
+		void GetVariableValues(cMaterial* apMaterial, cResourceVarsObject* apVars) override;
 
 		void CompileMaterialSpecifics(cMaterial *apMaterial) override;
-
-		virtual void ResolveShaderProgram(
-            eMaterialRenderMode aRenderMode,
-            cViewport& viewport,
-            cMaterial* apMaterial,
-            iRenderable* apObject,
-            iRenderer* apRenderer, 
-            std::function<void(GraphicsContext::ShaderProgram&)> handler) override;
-
 
 
 	private:

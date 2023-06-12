@@ -18,10 +18,10 @@
  */
 #pragma once
 
+#include <folly/small_vector.h>
 #include <graphics/GraphicsContext.h>
 #include <graphics/VertexBuffer.h>
 
-#include <absl/container/inlined_vector.h>
 #include <algorithm>
 #include <array>
 #include <bgfx/bgfx.h>
@@ -108,14 +108,12 @@ namespace hpl {
                 uint64_t offset;
                 uint32_t numIndicies;
             };
-            absl::InlinedVector<VertexGeometryEntry, eVertexBufferElement_LastEnum>
-                m_vertexElement; // elements are in the order they are requested
+            folly::small_vector<VertexGeometryEntry, eVertexBufferElement_LastEnum> m_vertexElement; // elements are in the order they are requested
             VertexIndexEntry m_indexBuffer;
         };
         static void cmdBindGeometry(Cmd* cmd, ForgeRenderer::CommandResourcePool* resourcePool, LegacyVertexBuffer::GeometryBinding& binding);
         void resolveGeometryBinding(uint32_t currentFrame, std::span<eVertexBufferElement> elements, GeometryBinding* binding);
 
-        // virtual void Bind() override;
         virtual void UnBind() override;
 
         virtual iVertexBuffer* CreateCopy(
@@ -145,7 +143,7 @@ namespace hpl {
         static void PushVertexElements(
             std::span<const float> values, eVertexBufferElement elementType, std::span<LegacyVertexBuffer::VertexElement> elements);
 
-        absl::InlinedVector<VertexElement, 10> m_vertexElements = {};
+        folly::small_vector<VertexElement, 10> m_vertexElements = {};
         ForgeBufferHandle m_indexBuffer;
         std::vector<uint32_t> m_indices = {};
 

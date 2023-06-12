@@ -75,13 +75,6 @@ namespace hpl {
         */
         bool IsObjectVisible(iRenderable *apObject, tRenderableFlag alNeededFlags, std::span<cPlanef> occlusionPlanes);
 
-        void RenderableMaterialIter(
-            iRenderer* renderer,
-            std::span<iRenderable*> iter,
-            cViewport& viewport,
-            eMaterialRenderMode mode,
-            std::function<void(iRenderable* obj, GraphicsContext::LayoutStream&, GraphicsContext::ShaderProgram&)> handler);
-
         bool IsRenderableNodeIsVisible(iRenderableContainerNode* apNode, std::span<cPlanef> clipPlanes);
         bool IsObjectIsVisible(iRenderable* object, tRenderableFlag neededFlags, std::span<cPlanef> clipPlanes = {});
 

@@ -32,7 +32,7 @@ namespace hpl {
             viewConfiguration.m_viewRect = { 0, 0, static_cast<uint16_t>(imageSize.x), static_cast<uint16_t>(imageSize.y) };
             viewConfiguration.m_projection = m_projection;
             viewConfiguration.m_view = m_view;
-            m_perspectiveView = m_context->StartPass("Immediate - Perspective", viewConfiguration);
+            //m_perspectiveView = m_context->StartPass("Immediate - Perspective", viewConfiguration);
         }
 
         {
@@ -40,7 +40,7 @@ namespace hpl {
             viewConfiguration.m_viewRect = { 0, 0, static_cast<uint16_t>(imageSize.x), static_cast<uint16_t>(imageSize.y) };
             viewConfiguration.m_projection = m_projection;
             viewConfiguration.m_view = m_view;
-            m_orthographicView = m_context->StartPass("Immediate - Ortho", viewConfiguration);
+            //m_orthographicView = m_context->StartPass("Immediate - Ortho", viewConfiguration);
         }
     }
 
@@ -386,6 +386,7 @@ namespace hpl {
 
 
     void ImmediateDrawBatch::flush() {
+        return;
         if (m_line2DSegments.empty() &&
             m_uvQuads.empty() &&
             m_colorQuads.empty() &&

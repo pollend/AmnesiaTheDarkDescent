@@ -21,7 +21,6 @@
 
 
 #include "engine/Interface.h"
-#include <absl/container/inlined_vector.h>
 #include <graphics/Enum.h>
 #include <graphics/GraphicsContext.h>
 #include <graphics/RenderTarget.h>
@@ -110,60 +109,10 @@ cLuxEffectRenderer::cLuxEffectRenderer()
             return true;
         });
 
-        //  auto blurImageDesc = [&]
-        //  {
-        //      auto desc = ImageDescriptor::CreateTexture2D(
-        //          sharedData.m_size.x / cLuxEffectRenderer::BlurSize,
-        //          sharedData.m_size.y / cLuxEffectRenderer::BlurSize,
-        //          false,
-        //          bgfx::TextureFormat::Enum::RGBA8);
-        //      desc.m_configuration.m_rt = RTType::RT_Write;
-        //      auto image = std::make_shared<Image>();
-        //      image->Initialize(desc);
-        //      return image;
-        //  };
-
-        //  postEffect->m_mainOutputBuffer = {
-        //      sharedData.m_gBuffer[0].m_outputBuffer,
-        //      sharedData.m_gBuffer[1].m_outputBuffer
-        //  };
-
-        //  postEffect->m_mainDepthBuffer = {
-        //      sharedData.m_gBuffer[0].m_depthBuffer,
-        //      sharedData.m_gBuffer[1].m_outputBuffer
-        //  };
-
-        // postEffect->m_outputImage = sharedData.m_gBuffer.m_outputImage;
-        // postEffect->m_gBufferDepthStencil = sharedData.m_gBuffer.m_depthStencilImage;
-
-      //  postEffect->m_blurTarget[0] = LegacyRenderTarget(blurImageDesc());
-      //  postEffect->m_blurTarget[1] = LegacyRenderTarget(blurImageDesc());
-
-      //  {
-      //      std::array<std::shared_ptr<Image>, 2> image = {postEffect->m_outputImage, postEffect->m_gBufferDepthStencil};
-      //      postEffect->m_outputTarget = LegacyRenderTarget(image);
-      //  }
-
-      //  auto outlineImageDesc = ImageDescriptor::CreateTexture2D(sharedData.m_size.x, sharedData.m_size.y, false, bgfx::TextureFormat::RGBA8);
-      //  outlineImageDesc.m_configuration.m_rt = RTType::RT_Write;
-      //  auto outlineImage = std::make_shared<Image>();
-      //  outlineImage->Initialize(outlineImageDesc);
-
-      //  std::array<std::shared_ptr<Image>, 2> outlineImages = { outlineImage, postEffect->m_gBufferDepthStencil };
-      //  postEffect->m_outlineTarget = LegacyRenderTarget(std::span(outlineImages));
-
         return postEffect;
     }, [&](cViewport& viewport, LuxPostEffectData& target) {
         cGraphics* pGraphics = gpBase->mpEngine->GetGraphics();
-        //cRendererDeferred* pRendererDeferred = static_cast<cRendererDeferred*>(pGraphics->GetRenderer(eRenderer_Main));
-        //auto& sharedData = pRendererDeferred->GetSharedData(viewport);
-
-
-        // as long as the output image and depth stencil image are the same, we can use the same render target
-            // else we need to create a new one
         return viewport.GetSize() == target.m_size;
-             //&& sharedData.m_gBuffer.m_outputImage == target.m_outputImage
-             //&& sharedData.m_gBuffer.m_depthStencilImage == target.m_gBufferDepthStencil;
     }));
 
     auto* forgeRenderer = Interface<ForgeRenderer>::Get();
@@ -774,7 +723,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
             (*reinterpret_cast<LuxEffectObjectUniform::OutlineUniform*>(updateDesc.pMappedData)) = uniform;
             endUpdateResource(&updateDesc, NULL);
 
-            folly::small_vector<DescriptorData, 2, folly::small_vector_policy::NoHeap> params = {};
+            folly::small_vector<DescriptorData, 2 > params = {};
             DescriptorDataRange range = { (uint32_t)uniformBlockOffset.mOffset, sizeof(LuxEffectObjectUniform::OutlineUniform ) };
             {
                 auto& param = params.emplace_back(DescriptorData{});

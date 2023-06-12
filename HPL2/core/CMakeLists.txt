@@ -240,11 +240,6 @@ target_link_libraries(HPL2
   OALWrapper # also pulls in ogg,vorbis,SDL
   AngelScript
   Newton
-  absl::base
-  absl::fixed_array
-  absl::strings
-  absl::str_format
-  absl::flat_hash_map
   Folly::folly 
   Folly::folly_deps
   bgfx

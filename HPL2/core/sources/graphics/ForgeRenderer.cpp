@@ -24,7 +24,7 @@ namespace hpl {
         frame.m_resourcePool->ResetPool();
         beginCmd(frame.m_cmd);
 
-        auto& swapChainImage = frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex];
+        auto& swapChainImage = frame.m_swapChain->ppRenderTargets[m_swapChainIndex];
         std::array rtBarriers = {
             RenderTargetBarrier { swapChainImage, RESOURCE_STATE_PRESENT, RESOURCE_STATE_RENDER_TARGET },
         };

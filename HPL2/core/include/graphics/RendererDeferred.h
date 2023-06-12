@@ -80,6 +80,7 @@ namespace hpl {
         static constexpr TinyImageFormat ShadowDepthBufferFormat = TinyImageFormat_D32_SFLOAT;
         static constexpr uint32_t MaxObjectUniforms = 4096;
         static constexpr uint32_t MaxLightUniforms = 1024;
+        static constexpr uint32_t  MaxHiZMipLevels = 32;
 
         enum LightConfiguration {
             HasGoboMap = 0x1,
@@ -359,7 +360,7 @@ namespace hpl {
 
         std::array<std::unique_ptr<iVertexBuffer>, eDeferredShapeQuality_LastEnum> m_shapeSphere;
         std::unique_ptr<iVertexBuffer> m_shapePyramid;
-        std::array<folly::small_vector<ShadowMapData, 32, folly::small_vector_policy::NoHeap>, eShadowMapResolution_LastEnum> m_shadowMapData;
+        std::array<folly::small_vector<ShadowMapData, 32>, eShadowMapResolution_LastEnum> m_shadowMapData;
 
         int m_maxBatchLights;
         int mlMaxBatchVertices;
@@ -521,6 +522,7 @@ namespace hpl {
             std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_materialSet;
             std::unordered_map<uint32_t, uint32_t> m_objectDescriptorLookup;
             uint32_t m_objectIndex;
+
             inline void reset() {
                 m_objectIndex = 0;
                 m_objectDescriptorLookup.clear();
@@ -542,7 +544,7 @@ namespace hpl {
         Cmd* m_prePassCmd = nullptr;
         Fence* m_prePassFence = nullptr;
 
-        static constexpr uint32_t  MaxHiZMipLevels = 32;
+
         RootSignature* m_rootSignatureHIZOcclusion;
         Shader* m_ShaderHIZGenerate;
         Shader* m_shaderTestOcclusion;

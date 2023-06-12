@@ -17,9 +17,6 @@
 #include <bgfx/bgfx.h>
 #include <bgfx/defines.h>
 
-#include <absl/container/inlined_vector.h>
-#include <absl/strings/string_view.h>
-
 #include <bx/debug.h>
 
 #include <algorithm>
@@ -91,7 +88,7 @@ namespace hpl {
         GraphicsContext::ViewConfiguration viewConfig{ target };
         viewConfig.m_viewRect = dstRect;
         viewConfig.m_projection = projMtx;
-        auto view = StartPass("Copy To Target", viewConfig);
+        ASSERT(false && "REMOVE");
 
         GraphicsContext::ShaderProgram program;
         program.m_handle = m_copyProgram;
@@ -100,7 +97,6 @@ namespace hpl {
         program.m_textures.push_back({ m_s_diffuseMap, image.GetHandle(), 0 });
 
         DrawRequest request = { layout, program };
-        Submit(view, request);
     }
 
     void GraphicsContext::Quad(

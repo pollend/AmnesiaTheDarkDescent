@@ -78,21 +78,13 @@ namespace hpl
 			material::translucent::Translucent_NormalMap |
 			material::translucent::Translucent_Refraction |
 			material::translucent::Translucent_UseCubeMap |
-			material::translucent::Translucent_UseFog 
+			material::translucent::Translucent_UseFog
 		>;
         HPL_RTTI_IMPL_CLASS(iMaterialType, cMaterialType_Translucent, "{cc03a5ac-9137-4e94-ab6b-095a6c9f0085}")
-    
+
     public:
 		cMaterialType_Translucent(cGraphics* apGraphics, cResources* apResources);
         ~cMaterialType_Translucent();
-
-        virtual void ResolveShaderProgram(
-            eMaterialRenderMode aRenderMode,
-            cViewport& viewport,
-            cMaterial* apMaterial,
-            iRenderable* apObject,
-            iRenderer* apRenderer,
-            std::function<void(GraphicsContext::ShaderProgram&)> handler) override;
 
         virtual iMaterialVars* CreateSpecificVariables() override;
         virtual void LoadVariables(cMaterial* apMaterial, cResourceVarsObject* apVars) override;

@@ -76,7 +76,7 @@ namespace hpl
     //-----------------------------------------------------------------------
 
     int iRenderer::mlRenderFrameCount = 0;
-        
+
     namespace rendering::detail
     {
 
@@ -160,37 +160,6 @@ namespace hpl
             return eShadowMapResolution_Low;
         }
 
-        void RenderableMaterialIter(
-            iRenderer* renderer, 
-            std::span<iRenderable*> iter,
-            cViewport& viewport,
-            eMaterialRenderMode mode,
-            RenderableIterCallback handler) {
-                for (auto& obj : iter)
-                {
-                    GraphicsContext::LayoutStream layoutStream;
-                    GraphicsContext::ShaderProgram shaderProgram;
-
-                    cMaterial* pMaterial = obj->GetMaterial();
-                    iMaterialType* materialType = pMaterial->GetType();
-                    iVertexBuffer* vertexBuffer = obj->GetVertexBuffer();
-                    if (vertexBuffer == nullptr || materialType == nullptr)
-                    {
-                        continue;
-                    }
-                    vertexBuffer->GetLayoutStream(layoutStream);
-                    materialType->ResolveShaderProgram(
-                        mode,
-                        viewport,
-                        pMaterial,
-                        obj,
-                        renderer,
-                        [&](GraphicsContext::ShaderProgram& program)
-                        {
-                            handler(obj, layoutStream, program);
-                        });
-                }
-        }
 
         bool IsRenderableNodeIsVisible(iRenderableContainerNode* apNode, std::span<cPlanef> clipPlanes) {
             for(auto& plane: clipPlanes)
@@ -245,7 +214,7 @@ namespace hpl
         }
 
         bool IsObjectIsVisible(
-            iRenderable* object, 
+            iRenderable* object,
             tRenderableFlag neededFlags,
             std::span<cPlanef> clipPlanes) {
 
@@ -568,7 +537,7 @@ namespace hpl
 
     iRenderer::~iRenderer()
     {
-        
+
         if (mpShapeBox)
             hplDelete(mpShapeBox);
     }
