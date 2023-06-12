@@ -72,6 +72,7 @@ namespace hpl {
 		static constexpr uint32_t MaxMaterialID = 2048;
 
 		enum MaterialID: uint8_t {
+            Unknown = 0,
             SolidDiffuse,
             Translucent,
             Water,
@@ -117,7 +118,6 @@ namespace hpl {
 
 		struct MaterialTranslucentUniformBlock {
 			MaterialCommonBlock m_common;
-
 			// bool mbAffectedByLightLevel;
 			// bool mbRefraction;
 			// bool mbRefractionEdgeCheck;
@@ -141,6 +141,8 @@ namespace hpl {
 			float mfWaveSpeed;
 			float mfWaveAmplitude;
 			float mfWaveFreq;
+
+            float pad[3];
 		};
 
 
@@ -190,11 +192,11 @@ namespace hpl {
 			eMaterialTexture_Diffuse
 		};
 
-		static constexpr const std::array MetaInfo {
-			MaterialMeta {MaterialID::SolidDiffuse,"soliddiffuse", false, false, std::span(SolidMaterialUsedTextures)},
-			MaterialMeta {MaterialID::Translucent,"translucent", false, true, std::span(TranslucentMaterialUsedTextures)},
-			MaterialMeta {MaterialID::Water,"water", false, true, std::span(WaterMaterialUsedTextures)},
-			MaterialMeta {MaterialID::Decal,"decal", true, true, std::span(DecalMaterialUsedTextures)}
+		static constexpr const std::array MaterialMetaTable {
+			MaterialMeta { MaterialID::SolidDiffuse,"soliddiffuse", false, false, std::span(SolidMaterialUsedTextures)},
+			MaterialMeta { MaterialID::Translucent,"translucent", false, true, std::span(TranslucentMaterialUsedTextures)},
+			MaterialMeta { MaterialID::Water,"water", false, true, std::span(WaterMaterialUsedTextures)},
+			MaterialMeta { MaterialID::Decal,"decal", true, true, std::span(DecalMaterialUsedTextures)}
 		};
 
 		cMaterial(const tString& asName, const tWString& asFullPath, cGraphics *apGraphics, cResources *apResources, iMaterialType *apType);
@@ -289,9 +291,7 @@ namespace hpl {
 		void Unload(){}
 		void Destroy(){}
 
-
 		inline MaterialType& type() { return m_info; }
-		bool updateDescriptorSet(const ForgeRenderer::Frame& frame, eMaterialRenderMode mode, DescriptorSet* set);
 
 		// inline ForgeBufferHandle& uniformHandle() { return m_bufferHandle; }
 		inline uint32_t materialID() { return m_materialID; }

@@ -52,7 +52,6 @@ namespace hpl {
 		struct CBObjectData {
 			mat4 m_mtxModel;
 			mat4 m_normalMtx;
-
 			mat4 m_uvMtx;
 		};
 

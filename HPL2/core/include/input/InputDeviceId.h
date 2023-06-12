@@ -1,7 +1,6 @@
 #pragma once
 
 #include "math/Crc32.h"
-#include <absl/container/fixed_array.h>
 #include <array>
 #include <cstdint>
 
@@ -14,7 +13,7 @@ namespace hpl::input {
     public:
         static constexpr size_t MaxNameLength = 95;
 
-        constexpr InputDeviceID(const std::string_view name, uint8_t index = 0): 
+        constexpr InputDeviceID(const std::string_view name, uint8_t index = 0):
             m_index(index) {
             math::Crc32 value;
             value.Update(name);
@@ -37,7 +36,7 @@ namespace hpl::input {
         constexpr bool operator==(const InputDeviceID& other) const {
             return m_id == other.m_id;
         }
-    private: 
+    private:
         uint8_t m_index;
         // std::string m_name;
         math::Crc32 m_id;

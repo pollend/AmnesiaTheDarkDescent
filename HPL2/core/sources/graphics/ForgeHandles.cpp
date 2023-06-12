@@ -3,10 +3,11 @@
 #include "Common_3/Graphics/Interfaces/IGraphics.h"
 #include "graphics/Bitmap.h"
 
-
 #include "Common_3/Resources/ResourceLoader/TextureContainers.h"
 #include "tinyimageformat_query.h"
 #include <FixPreprocessor.h>
+
+#include <cstring>
 
 namespace hpl {
     void ForgeCmdHandle::Free() {

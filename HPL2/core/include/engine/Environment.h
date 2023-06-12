@@ -11,16 +11,17 @@
 
 #include <bx/debug.h>
 
-#include "absl/container/flat_hash_map.h"
-#include "absl/container/inlined_vector.h"
 #include <cstdint>
 #include <functional>
 #include <memory>
 #include <string_view>
 #include <type_traits>
 
-#include <bx/debug.h>
 #include <math/Uuid.h>
+
+#include <folly/container/F14Map.h>
+#include "Common_3/Utilities/Interfaces/ILog.h"
+#include "FixPreprocessor.h"
 
 namespace hpl {
 
@@ -105,17 +106,17 @@ namespace hpl {
         }
 
         T& operator*() {
-            BX_ASSERT(m_holder, "You can't dereference a null pointer");
+            ASSERT(m_holder && "You can't dereference a null pointer");
             return *reinterpret_cast<T*>(&m_holder->Instance());
         }
 
         T* operator->() {
-            BX_ASSERT(m_holder, "You can't dereference a null pointer");
+            ASSERT(m_holder && "You can't dereference a null pointer");
             return reinterpret_cast<T*>(&m_holder->Instance());
         }
 
         T& Get() {
-            BX_ASSERT(m_holder, "You can't dereference a null pointer");
+            ASSERT(m_holder && "You can't dereference a null pointer");
             return *GetPtr();
         }
 
@@ -186,7 +187,7 @@ namespace hpl {
         EnvironmentResult GetVariable(uint32_t id);
 
     private:
-        absl::flat_hash_map<uint32_t, void*> m_variableMap;
+        folly::F14ValueMap<uint32_t, void*> m_variableMap;
     };
 
     namespace Environment {
@@ -204,7 +205,7 @@ namespace hpl {
 
     template<class T, class... TArgs>
     EnvironmentVariableContainer<T> Environment::CreateVariable(uint32_t guid, TArgs&&... args) {
-        BX_ASSERT(guid != 0, "You can't create a variable with a null guid");
+        ASSERT(guid != 0 && "You can't create a variable with a null guid");
         using HolderType = typename EnvironmentVariableContainer<T>::HolderType;
 
         auto& store = GetStore();

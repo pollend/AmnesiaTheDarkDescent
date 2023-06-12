@@ -100,9 +100,9 @@ namespace hpl {
     }
 
     void LegacyVertexBuffer::cmdBindGeometry(Cmd* cmd, ForgeRenderer::CommandResourcePool* resourcePool, LegacyVertexBuffer::GeometryBinding& binding) {
-        absl::InlinedVector<Buffer*, 16> vbBuffer;
-        absl::InlinedVector<uint64_t, 16> vbOffsets;
-        absl::InlinedVector<uint32_t, 16> vbStride;
+        folly::small_vector<Buffer*, 16> vbBuffer;
+        folly::small_vector<uint64_t, 16> vbOffsets;
+        folly::small_vector<uint32_t, 16> vbStride;
 
         for (auto& element : binding.m_vertexElement) {
             vbBuffer.push_back(element.element->m_buffer.m_handle);

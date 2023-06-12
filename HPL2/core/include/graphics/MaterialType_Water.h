@@ -37,7 +37,7 @@ namespace hpl {
 			UseRefraction = 0x00008
 		};
 	}
-	
+
 	class cMaterialType_Water_Vars : public iMaterialVars
 	{
 	public:
@@ -69,14 +69,6 @@ namespace hpl {
 		void GetVariableValues(cMaterial* apMaterial, cResourceVarsObject* apVars) override;
 
 		void CompileMaterialSpecifics(cMaterial *apMaterial) override;
-
-		virtual void ResolveShaderProgram(
-            eMaterialRenderMode aRenderMode,
-            cViewport& viewport,
-            cMaterial* apMaterial,
-            iRenderable* apObject,
-            iRenderer* apRenderer, 
-            std::function<void(GraphicsContext::ShaderProgram&)> handler) override;
 
 	private:
 		ShaderVariantCollection<

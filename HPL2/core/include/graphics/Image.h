@@ -16,7 +16,6 @@
 
 #pragma once
 
-#include "absl/strings/string_view.h"
 #include "graphics/Bitmap.h"
 #include "graphics/ForgeRenderer.h"
 #include "math/MathTypes.h"
@@ -97,7 +96,7 @@ namespace hpl {
         inline void SetForgeTexture(ForgeTextureHandle&& handle) {
             m_texture = std::move(handle);
         }
-        
+
         inline void setTextureFilter(TextureFilter textureFilter) {
             m_filter = textureFilter;
         }

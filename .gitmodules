@@ -1,6 +1,3 @@
-[submodule "HPL2/external/abseil-cpp"]
-	path = HPL2/external/abseil-cpp
-	url = https://github.com/abseil/abseil-cpp.git
 [submodule "vcpkg"]
 	path = vcpkg
 	url = https://github.com/microsoft/vcpkg.git

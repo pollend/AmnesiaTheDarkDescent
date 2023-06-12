@@ -73,29 +73,6 @@ namespace hpl {
     void cMaterialType_Decal::DestroyData() {
     }
 
-    void cMaterialType_Decal::ResolveShaderProgram(
-        eMaterialRenderMode aRenderMode,
-        cViewport& viewport,
-        cMaterial* apMaterial,
-        iRenderable* apObject,
-        iRenderer* apRenderer,
-        std::function<void(GraphicsContext::ShaderProgram&)> handler) {
-        cMatrixf mtxUv = cMatrixf::Identity;
-        GraphicsContext::ShaderProgram program;
-        program.m_handle = m_programHandler;
-        auto diffuseMap = apMaterial->GetImage(eMaterialTexture_Diffuse);
-        if (aRenderMode == eMaterialRenderMode_Diffuse) {
-            cMaterialType_Decal_Vars* pVars = static_cast<cMaterialType_Decal_Vars*>(apMaterial->GetVars());
-            if (apMaterial->HasUvAnimation()) {
-                mtxUv = apMaterial->GetUvMatrix().GetTranspose();
-            }
-        }
-        program.m_uniforms.push_back({ m_u_mtxUV, mtxUv.m });
-        if (diffuseMap) {
-            program.m_textures.push_back({ m_s_diffuseMap, diffuseMap->GetHandle(), 0 });
-        }
-        handler(program);
-    }
 
     iMaterialVars* cMaterialType_Decal::CreateSpecificVariables() {
         return hplNew(cMaterialType_Decal_Vars, ());

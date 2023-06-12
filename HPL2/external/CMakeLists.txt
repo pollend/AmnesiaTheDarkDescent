@@ -45,7 +45,6 @@ set(EIGEN_BUILD_DOC OFF)
 set(EIGEN_BUILD_PKGCONFIG OFF)
 FetchContent_MakeAvailable(Eigen)
 
-add_subdirectory(abseil-cpp)
 add_subdirectory(OALWrapper)
 add_subdirectory(Newton)
 add_subdirectory(AngelScript)

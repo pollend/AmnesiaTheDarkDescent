@@ -18,17 +18,16 @@
 
 #include "engine/QueuedEventLoopHandler.h"
 
-#include <absl/container/flat_hash_map.h>
-#include <absl/container/inlined_vector.h>
-#include <absl/strings/string_view.h>
-
 #include <cstdint>
+#include <folly/small_vector.h>
 #include <optional>
 #include <queue>
 #include <variant>
 #include <vector>
 
 #include <bgfx/bgfx.h>
+#include <folly/small_vector.h>
+
 
 namespace hpl {
     class GraphicsContext;
@@ -53,7 +52,7 @@ namespace hpl {
                 uint32_t m_numIndices = std::numeric_limits<uint32_t>::max();
             };
             eVertexBufferDrawType m_drawType = eVertexBufferDrawType_Tri;
-            absl::InlinedVector<LayoutVertexStream, 4> m_vertexStreams;
+            folly::small_vector<LayoutVertexStream, 4> m_vertexStreams;
             LayoutIndexStream m_indexStream;
         };
 
@@ -96,9 +95,9 @@ namespace hpl {
             cMatrixf m_modelTransform = cMatrixf(cMatrixf::Identity);
             cMatrixf m_normalMtx = cMatrixf(cMatrixf::Identity);
 
-            absl::InlinedVector<TextureData, 10> m_textures;
-            absl::InlinedVector<UAVImage, 10> m_uavImage;
-            absl::InlinedVector<UniformData, 25> m_uniforms;
+            folly::small_vector<TextureData, 10> m_textures;
+            folly::small_vector<UAVImage, 10> m_uavImage;
+            folly::small_vector<UniformData, 25> m_uniforms;
         };
 
         struct ClearRequest {
@@ -165,9 +164,9 @@ namespace hpl {
         inline void ConfigureLayoutStream(const GraphicsContext::LayoutStream& layout);
 
         void Frame();
-        inline bgfx::ViewId StartPass(absl::string_view name, const ViewConfiguration& config);
 
         bool isOriginBottomLeft() const;
+        [[deprecated("Migrating to The-Forge")]]
         void CopyTextureToFrameBuffer(Image& image, cRect2l dstRect, LegacyRenderTarget& target, Write write = Write::RGBA);
         inline void Submit(bgfx::ViewId view, const DrawRequest& request);
         inline void Submit(bgfx::ViewId view, const DrawRequest& request, bgfx::OcclusionQueryHandle query);
@@ -182,7 +181,7 @@ namespace hpl {
                 crc.Update(FragmentShader.m_str);
                 return crc;
             })();
-           
+
             auto it = m_programCache.find(id.value());
             if(it != m_programCache.end()) {
                 return it->second;
@@ -190,10 +189,10 @@ namespace hpl {
             bgfx::ProgramHandle handle = hpl::loadProgram(VertexShader.m_str, FragmentShader.m_str);
             m_programCache[id.value()] = handle;
             return handle;
-        } 
+        }
 
     private:
-        absl::flat_hash_map<uint32_t, bgfx::ProgramHandle> m_programCache;
+        folly::F14ValueMap<uint32_t, bgfx::ProgramHandle> m_programCache;
 
         bgfx::ViewId m_current;
         bgfx::ProgramHandle m_copyProgram = BGFX_INVALID_HANDLE;
@@ -556,24 +555,5 @@ namespace hpl {
         bgfx::dispatch(view, request.m_program.m_handle, request.m_numX, request.m_numY, request.m_numZ);
     }
 
-    bgfx::ViewId GraphicsContext::StartPass(absl::string_view name, const ViewConfiguration& config) {
-        bgfx::ViewId view = m_current++;
-        bgfx::setViewName(view, name.data());
-        if (config.m_clear.has_value()) {
-            auto& clear = config.m_clear.value();
-            bgfx::setViewClear(view, details::convertBGFXClearOp(clear.m_clearOp), clear.m_rgba, clear.m_depth, clear.m_stencil);
-        } else {
-            bgfx::setViewClear(view, BGFX_CLEAR_NONE);
-        }
-        bgfx::setViewTransform(view, config.m_view.v, config.m_projection.v);
-        auto& rect = config.m_viewRect;
-        bgfx::setViewRect(view, rect.x, rect.y, rect.w, rect.h);
-        if (config.m_target.IsValid()) {
-            bgfx::setViewFrameBuffer(view, config.m_target.GetHandle());
-        } else {
-            bgfx::setViewFrameBuffer(view, BGFX_INVALID_HANDLE);
-        }
-        return view;
-    }
 
 } // namespace hpl

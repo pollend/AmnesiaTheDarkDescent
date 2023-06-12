@@ -20,7 +20,6 @@
 
 #include "math/MathTypes.h"
 #include "scene/Viewport.h"
-#include <absl/container/fixed_array.h>
 #include <windowing/NativeWindow.h>
 
 #include <array>

@@ -40,7 +40,7 @@ namespace hpl
 
     template <typename... Params>
     class EventHandler;
-    
+
     template <typename... Params>
     class QueuedEventLoopHandler;
 
@@ -54,10 +54,10 @@ namespace hpl
         using Callback = std::function<void(Params...)>;
         using Handler = EventHandler<Params...>;
         using QueuedEventHandler = QueuedEventLoopHandler<Params...>;
-        
+
         Event() = default;
         Event(Event&& rhs);
-        
+
         ~Event();
 
         Event& operator=(Event&& rhs);
@@ -107,7 +107,7 @@ namespace hpl
     public:
         using Callback = std::function<void(Params...)>;
 
-       
+
         // We support default constructing of event handles (with no callback function being bound) to allow for better usage with container types
         // An unbound event handle cannot be added to an event and we do not support dynamically binding the callback post construction
         // (except for on assignment since that will also add the handle to the event; i.e. there is no way to unbind the callback after being added to an event)
@@ -133,7 +133,7 @@ namespace hpl
         //! @return boolean true if this handler is connected to an event
         bool IsConnected() const;
 
-        //! Process queued 
+        //! Process queued
         void Process();
 
     private:

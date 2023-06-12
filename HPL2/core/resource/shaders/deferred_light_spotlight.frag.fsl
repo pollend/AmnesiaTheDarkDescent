@@ -46,7 +46,7 @@ PsOut PS_MAIN(PsIn In)
 	float3 diffuseColor = color.xyz * Get(lightColor).xyz * fLDotN;
     float t = 0;
     if(HasShadowMap(Get(config))) {
-        float bias = max(0.05* (1.0 - dot(normalizedNormal, normalLightDir)), 0.005);
+        float bias = max(0.01* (1.0 - dot(normalizedNormal, normalLightDir)), 0.001);
         float sampledDepth = SampleTex2DProj(Get(shadowMap), Get(nearestSampler), projectionUV).x; 
         attenuation *= sampledDepth < (projectionUV.z/projectionUV.w) - bias ? 0.0 : 1.0;
     }
