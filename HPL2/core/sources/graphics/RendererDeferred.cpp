@@ -117,7 +117,6 @@ namespace hpl {
     static constexpr uint32_t SSAONumOfSamples = 8;
 
     namespace detail {
-
         void cmdDefaultLegacyGeomBinding(Cmd* cmd, const ForgeRenderer::Frame& frame, LegacyVertexBuffer::GeometryBinding& binding) {
             folly::small_vector<Buffer*, 16> vbBuffer;
             folly::small_vector<uint64_t, 16> vbOffsets;
@@ -213,35 +212,31 @@ namespace hpl {
 
                 ////////////////////////
                 // Iterate children
-                if (apNode->HasChildNodes()) {
-                    for (auto& childNode : apNode->GetChildNodes()) {
-                        walkShadowCasters(childNode, frustumCollision);
-                    }
+                for (auto& childNode : apNode->GetChildNodes()) {
+                    walkShadowCasters(childNode, frustumCollision);
                 }
 
                 /////////////////////////////
                 // Iterate objects
-                if (apNode->HasObjects()) {
-                    for (auto& object : apNode->GetObjects()) {
-                        // Check so visible and shadow caster
-                        if (rendering::detail::IsObjectIsVisible(object, eRenderableFlag_ShadowCaster, clipPlanes) == false || object->GetMaterial() == NULL ||
-                            object->GetMaterial()->GetType()->IsTranslucent()) {
-                            continue;
-                        }
-
-                        /////////
-                        // Check if in frustum
-                        if (frustumCollision != eCollision_Inside &&
-                            frustum->CollideBoundingVolume(object->GetBoundingVolume()) == eCollision_Outside) {
-                            continue;
-                        }
-
-                        // Calculate the view space Z (just a squared distance)
-                        object->SetViewSpaceZ(cMath::Vector3DistSqr(object->GetBoundingVolume()->GetWorldCenter(), frustum->GetOrigin()));
-
-                        // Add to list
-                        shadowCasters.push_back(object);
+                for (auto& object : apNode->GetObjects()) {
+                    // Check so visible and shadow caster
+                    if (rendering::detail::IsObjectIsVisible(object, eRenderableFlag_ShadowCaster, clipPlanes) == false || object->GetMaterial() == NULL ||
+                        object->GetMaterial()->GetType()->IsTranslucent()) {
+                        continue;
                     }
+
+                    /////////
+                    // Check if in frustum
+                    if (frustumCollision != eCollision_Inside &&
+                        frustum->CollideBoundingVolume(object->GetBoundingVolume()) == eCollision_Outside) {
+                        continue;
+                    }
+
+                    // Calculate the view space Z (just a squared distance)
+                    object->SetViewSpaceZ(cMath::Vector3DistSqr(object->GetBoundingVolume()->GetWorldCenter(), frustum->GetOrigin()));
+
+                    // Add to list
+                    shadowCasters.push_back(object);
                 }
             };
 
@@ -2542,8 +2537,7 @@ namespace hpl {
                 std::function<void(iRenderableContainerNode * childNode, eWorldContainerType  staticGeometry)> walkRenderables;
                 walkRenderables = [&](iRenderableContainerNode* childNode, eWorldContainerType containerType) {
                     childNode->UpdateBeforeUse();
-                    auto childNodes = childNode->GetChildNodes();
-                    for (auto& childNode : childNodes) {
+                    for (auto& childNode : childNode->GetChildNodes()) {
                         childNode->UpdateBeforeUse();
                         eCollision frustumCollision = apFrustum->CollideNode(childNode);
                         if (frustumCollision == eCollision_Outside) {
@@ -3423,7 +3417,7 @@ namespace hpl {
                     cLightBox* pLightBox = static_cast<cLightBox*>(pLight);
 
                     // Set up matrix
-                    deferredLight.m_mtxViewSpaceRender = cMath::MatrixScale(pLightBox->GetSize());
+                    deferredLight.m_mtxViewSpaceRender = cMath::MatrixScale( pLightBox->GetSize());
                     deferredLight.m_mtxViewSpaceRender.SetTranslation(pLightBox->GetWorldPosition());
                     deferredLight.m_mtxViewSpaceRender = cMath::MatrixMul(apFrustum->GetViewMatrix(), deferredLight.m_mtxViewSpaceRender);
 
@@ -3579,8 +3573,6 @@ namespace hpl {
                     lightIndex++;
                 };
 
-
-
                 LoadActionsDesc loadActions = {};
                 loadActions.mLoadActionsColor[0] = LOAD_ACTION_CLEAR;
                 loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
@@ -3621,13 +3613,14 @@ namespace hpl {
                 cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "Point Light Deferred Stencil  Back");
                 for (auto& light : deferredLightStencilFront) {
                     cmdSetStencilReferenceValue(frame.m_cmd, 0xff);
+
                     std::array targets = { eVertexBufferElement_Position };
                     LegacyVertexBuffer::GeometryBinding binding{};
                     auto lightShape = GetLightShape(light->m_light, eDeferredShapeQuality_High);
-
                     ASSERT(lightShape && "Light shape not found");
                     static_cast<LegacyVertexBuffer*>(lightShape)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
                     detail::cmdDefaultLegacyGeomBinding(frame.m_cmd, frame, binding);
+
                     cmdBindPipeline(frame.m_cmd, m_lightStencilPipeline);
                     cmdBindLightDescriptor(light); // bind light descriptor light uniforms
                     cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
@@ -3755,6 +3748,7 @@ namespace hpl {
             float2 viewTexel = { 1.0f / sharedData.m_size.x, 1.0f / sharedData.m_size.y };
             cmdBindPushConstants(frame.m_cmd, m_fogPass.m_fogRootSignature, rootConstantIndex, &viewTexel);
 
+            cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "Fog Box Pass ");
             size_t objectIndex = 0;
             for(auto& fogArea: fogRenderData) {
                 GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(&m_fogPass.m_fogUniformBuffer, sizeof(Fog::UniformFogData));
@@ -3762,8 +3756,7 @@ namespace hpl {
                 uint8_t pipelineVariant = 0;
                 Fog::UniformFogData fogUniformData = {};
                 if(fogArea.m_insideNearFrustum) {
-                    pipelineVariant |= ((fogArea.m_fogArea->GetShowBacksideWhenInside() ? Fog::PipelineUseBackSide
-                                                                    : Fog::PipelineVariantEmpty) | Fog::PipelineVariant::PipelineInsideNearFrustum);
+                    pipelineVariant |= ((fogArea.m_fogArea->GetShowBacksideWhenInside() ? Fog::PipelineUseBackSide : Fog::PipelineVariantEmpty) | Fog::PipelineVariant::PipelineInsideNearFrustum);
                 } else {
                     cMatrixf mtxInvModelView =
                         cMath::MatrixInverse(cMath::MatrixMul(apFrustum->GetViewMatrix(), *fogArea.m_fogArea->GetModelMatrixPtr()));
@@ -3777,6 +3770,7 @@ namespace hpl {
                         cMath::PlaneToPointDist(cPlanef(1, 0, 0, 0.5f), vRayCastStart),
                         cMath::PlaneToPointDist(cPlanef(0, 1, 0, 0.5f), vRayCastStart),
                         cMath::PlaneToPointDist(cPlanef(0, 0, 1, 0.5f), vRayCastStart));
+				    fogUniformData.m_invModelRotation = cMath::ToForgeMat4(mtxInvModelView.GetRotation().GetTranspose());
                     fogUniformData.m_rayCastStart = float4(vRayCastStart.x, vRayCastStart.y, vRayCastStart.z, 0.0f);
                     fogUniformData.m_fogNegPlaneDistNeg = float4(vNegPlaneDistNeg.x * -1.0f, vNegPlaneDistNeg.y * -1.0f, vNegPlaneDistNeg.z * -1.0f, 0.0f);
                     fogUniformData.m_fogNegPlaneDistPos = float4(vNegPlaneDistPos.x * -1.0f, vNegPlaneDistPos.y * -1.0f, vNegPlaneDistPos.z * -1.0f, 0.0f);
@@ -3818,6 +3812,7 @@ namespace hpl {
                 cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
             }
         }
+        cmdEndDebugMarker(frame.m_cmd);
 
         {
             cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);

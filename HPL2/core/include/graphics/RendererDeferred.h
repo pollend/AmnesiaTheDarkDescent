@@ -175,7 +175,6 @@ namespace hpl {
                   m_outputBuffer(std::move(buffer.m_outputBuffer)),
                   m_refractionImage(std::move(buffer.m_refractionImage)),
                   m_hizDepthBuffer(std::move(buffer.m_hizDepthBuffer)),
-                  m_hizLevelsBuffers(std::move(buffer.m_hizLevelsBuffers)),
                   m_hiZMipCount(buffer.m_hiZMipCount){
             }
             void operator=(GBuffer&& buffer) {
@@ -187,13 +186,11 @@ namespace hpl {
                 m_outputBuffer = std::move(buffer.m_outputBuffer);
                 m_refractionImage = std::move(buffer.m_refractionImage);
                 m_hizDepthBuffer = std::move(buffer.m_hizDepthBuffer);
-                m_hizLevelsBuffers = buffer.m_hizLevelsBuffers;
                 m_hiZMipCount = buffer.m_hiZMipCount;
 
             }
             ForgeTextureHandle m_refractionImage;
             ForgeRenderTarget m_hizDepthBuffer;
-            std::array<ForgeTextureHandle, 32> m_hizLevelsBuffers;
             uint8_t m_hiZMipCount;
 
             ForgeRenderTarget m_colorBuffer;
@@ -237,7 +234,6 @@ namespace hpl {
         inline SharedViewportData& GetSharedData(cViewport& viewport) {
             return m_boundViewportData.resolve(viewport);
         }
-        // virtual std::shared_ptr<Image> GetDepthStencilImage(cViewport& viewport) override;
         virtual ForgeRenderTarget GetOutputImage(uint32_t frameIndex, cViewport& viewport) override {
             auto& sharedData = m_boundViewportData.resolve(viewport);
             return sharedData.m_gBuffer[frameIndex].m_outputBuffer;
@@ -404,11 +400,13 @@ namespace hpl {
                 PipelineUseBackSide = 0x1,
                 PipelineUseOutsideBox = 0x2,
                 PipelineInsideNearFrustum = 0x4,
+                PipelineNumVariants = 8
             };
 
             struct UniformFogData {
                 mat4 m_mvp;
                 mat4 m_mv;
+                mat4 m_invModelRotation;
                 float4 m_color;
                 float4 m_rayCastStart;
                 float4 m_fogNegPlaneDistNeg;
@@ -424,7 +422,7 @@ namespace hpl {
             GPURingBuffer m_fogUniformBuffer;
             RootSignature* m_fogRootSignature = nullptr;
             std::array<Shader*, 4> m_shader{};
-            std::array<Pipeline*, 8> m_pipeline{};
+            std::array<Pipeline*, PipelineVariant::PipelineNumVariants> m_pipeline{};
 
             Shader* m_fullScreenShader = nullptr;
             Pipeline* m_fullScreenPipeline = nullptr;

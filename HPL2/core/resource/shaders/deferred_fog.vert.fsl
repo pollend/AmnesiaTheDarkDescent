@@ -2,6 +2,7 @@ CBUFFER(uniformFogBlock, UPDATE_FREQ_PER_DRAW, b1, binding = 2)
 {
     DATA(mat4, mvp, None);
     DATA(mat4, mv, None);
+    DATA(mat4, invViewModelRotation, None);
     DATA(float4, fogColor, None);
     DATA(float4, rayCastStart, None);
     DATA(float4, fogNegPlaneDistNeg, None);
@@ -35,7 +36,7 @@ VSOutput VS_MAIN( VSInput In )
     Out.Position = mul(Get(mvp), float4(In.Position.xyz, 1.0));
     Out.pos = mul(Get(mv), float4(In.Position.xyz, 1.0));
     #if defined(USE_OUTSIDE_BOX) && defined(USE_BACK_SIDE) 
-        Out.ray = In.Position.xyz;
+        Out.ray = mul(Get(invViewModelRotation), float4(Out.pos.xyz, 1.0)).xyz;
     #endif
     RETURN(Out);
 }

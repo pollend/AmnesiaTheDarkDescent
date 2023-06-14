@@ -186,11 +186,9 @@ bool cLuxHelpFuncs::PlayGuiSoundData(const tString& asName,eSoundEntryType aDest
 
 void cLuxHelpFuncs::DrawSetToScreen(bool abClearScreen, const cColor& aCol, cGuiSet* apSet)
 {
-	auto engine = hpl::Interface<EngineInterface>::Get();
-	auto& graphicsContext = engine->GetGraphicsContext();
 	auto renderer = hpl::Interface<ForgeRenderer>::Get();
 	auto frame = renderer->GetFrame();
-	
+
 	// ///////////////////////////
 	// // Clear screen
 	// if(abClearScreen)
@@ -282,11 +280,9 @@ float cLuxHelpFuncs::GetStringDuration(const tWString& asStr)
 
 void cLuxHelpFuncs::RenderBackgroundScreen(bool abDrawFullHUD)
 {
-	auto engine = hpl::Interface<EngineInterface>::Get();
 	auto render = hpl::Interface<ForgeRenderer>::Get();
 	auto frame = render->GetFrame();
 
-	auto& graphicsContext = engine->GetGraphicsContext();
 
 	gpBase->mpMapHandler->GetViewport()->SetVisible(true);
 	gpBase->mpGameHudSet->ClearRenderObjects();
