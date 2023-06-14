@@ -33,18 +33,7 @@ namespace hpl {
     }
 
     GraphicsContext::GraphicsContext()
-        : m_current(0),
-        m_queuedWindowEvent(BroadcastEvent::PreUpdate, Interface<window::NativeWindowWrapper>::Get()->NativeWindowEvent(), [](window::WindowEventPayload& payload) {
-            switch (payload.m_type) {
-            case hpl::window::WindowEventType::ResizeWindowEvent:
-                {
-                   // bgfx::reset(payload.payload.m_resizeWindow.m_width, payload.payload.m_resizeWindow.m_height);
-                    break;
-                }
-            default:
-                break;
-            }
-        }) {
+        : m_current(0){
     }
 
     GraphicsContext::~GraphicsContext() {

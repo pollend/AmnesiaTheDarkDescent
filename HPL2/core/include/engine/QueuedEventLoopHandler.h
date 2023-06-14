@@ -2,6 +2,7 @@
 #pragma once
 
 #include "engine/Event.h"
+#include "engine/IUpdateEventLoop.h"
 #include "engine/Interface.h"
 #include "engine/UpdateEventLoop.h"
 
@@ -31,7 +32,7 @@ public:
         */
         std::function<bool(Params...)> filter = [](Params...){ return true; };
     };
-    inline QueuedEventLoopHandler(BroadcastEvent event, TargetEvent& targetEvent, TargetEvent::Callback callback, const Options options = Options {}):
+    inline QueuedEventLoopHandler(BroadcastEvent event, TargetEvent::Callback callback, const Options options = Options {}):
         m_dispatchHandler([&, options, callback](float value) {
             std::lock_guard<std::mutex> lock(m_mutex);
             options.onBegin();
@@ -47,10 +48,13 @@ public:
             if(options.filter(params...)) {
                 m_queuedEvents.emplace(std::tuple<Params...>(params...));
             }
-        })
+        }), m_broadcastEvent(event)
     {
-        Interface<IUpdateEventLoop>::Get()->Subscribe(event, m_dispatchHandler);
-        m_handler.Connect(targetEvent);
+    }
+
+    void Connect(TargetEvent& event) {
+        Interface<IUpdateEventLoop>::Get()->Subscribe(m_broadcastEvent, m_dispatchHandler);
+        m_handler.Connect(event);
     }
 
     QueuedEventLoopHandler(const QueuedEventLoopHandler&) = delete;
@@ -62,6 +66,7 @@ private:
     hpl::Event<Params...>::Handler m_handler;
     std::queue<std::tuple<typename std::remove_reference<Params>::type...>> m_queuedEvents;
     std::mutex m_mutex;
+    BroadcastEvent m_broadcastEvent;
 };
 
 } // namespace hpl

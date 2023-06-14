@@ -13,6 +13,7 @@
 
 #include "graphics/ForgeHandles.h"
 #include "windowing/NativeWindow.h"
+#include "engine/QueuedEventLoopHandler.h"
 
 #include "Common_3/Graphics/Interfaces/IGraphics.h"
 #include "Common_3/Resources/ResourceLoader/Interfaces/IResourceLoader.h"
@@ -42,7 +43,7 @@ namespace hpl {
     class ForgeRenderer final {
         HPL_RTTI_CLASS(ForgeRenderer, "{66526c65-ad10-4a59-af06-103f34d1cb57}")
     public:
-        ForgeRenderer() = default;
+        ForgeRenderer();
 
         enum CopyPipelines: uint8_t {
             CopyPipelineToSwapChain = 0,
@@ -150,12 +151,15 @@ namespace hpl {
         std::array<CmdPool*, SwapChainLength> m_cmdPools;
         std::array<Cmd*, SwapChainLength> m_cmds;
 
+        window::WindowEvent::QueuedEventHandler m_windowEventHandler;
+        window::NativeWindowWrapper* m_window = nullptr;
+
         Renderer* m_renderer = nullptr;
         RootSignature* m_pipelineSignature = nullptr;
         SwapChain* m_swapChain = nullptr;
         Semaphore* m_imageAcquiredSemaphore = nullptr;
         Queue* m_graphicsQueue = nullptr;
-        window::NativeWindowWrapper* m_window = nullptr;
+
 
         Shader* m_copyShader = nullptr;
         Pipeline* m_copyPostProcessingPipelineToSwapChain = nullptr;
@@ -167,7 +171,6 @@ namespace hpl {
 
         uint32_t m_currentFrameCount = 0;
         uint32_t m_swapChainIndex = 0;
-        // uint32_t m_resourcePoolIndex = 0;
     };
 
 } // namespace hpl

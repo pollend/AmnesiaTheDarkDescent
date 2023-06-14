@@ -1,10 +1,14 @@
 #include <graphics/ForgeRenderer.h>
 
+#include "engine/IUpdateEventLoop.h"
 #include "engine/Interface.h"
 #include "graphics/Material.h"
 #include "windowing/NativeWindow.h"
 
+#include "Common_3/Graphics/Interfaces/IGraphics.h"
+
 namespace hpl {
+
 
     void ForgeRenderer::IncrementFrame() {
         // Stall if CPU is running "Swap Chain Buffer Count" frames ahead of GPU
@@ -85,8 +89,8 @@ namespace hpl {
         swapChainDesc.mWindowHandle = window->ForgeWindowHandle();
         swapChainDesc.mPresentQueueCount = 1;
         swapChainDesc.ppPresentQueues = &m_graphicsQueue;
-        swapChainDesc.mWidth = 1920;
-        swapChainDesc.mHeight = 1080;
+        swapChainDesc.mWidth = windowSize.x;
+        swapChainDesc.mHeight = windowSize.y;
         swapChainDesc.mImageCount = SwapChainLength;
         swapChainDesc.mColorFormat = getRecommendedSwapchainFormat(false, false);
         swapChainDesc.mColorClearValue = { { 1, 1, 1, 1 } };
@@ -150,6 +154,8 @@ namespace hpl {
                 addPipeline(m_renderer, &pipelineDesc, &m_copyPostProcessingPipelineToSwapChain );
             }
         }
+        m_window = window;
+        m_windowEventHandler.Connect(window->NativeWindowEvent());
     }
 
     Sampler* ForgeRenderer::resolve(SamplerPoolKey key) {
@@ -164,6 +170,33 @@ namespace hpl {
             addSampler(renderer, &samplerDesc, &sampler);
         }
         return sampler;
+    }
+
+    ForgeRenderer::ForgeRenderer():
+        m_windowEventHandler(BroadcastEvent::OnPostBufferSwap, [&](window::WindowEventPayload& event) {
+            switch (event.m_type) {
+            case window::WindowEventType::ResizeWindowEvent: {
+                    waitQueueIdle(m_graphicsQueue);
+                    removeSwapChain(m_renderer, m_swapChain);
+
+                    const auto windowSize = m_window->GetWindowSize();
+                    SwapChainDesc swapChainDesc = {};
+                    swapChainDesc.mWindowHandle = m_window->ForgeWindowHandle();
+                    swapChainDesc.mPresentQueueCount = 1;
+                    swapChainDesc.ppPresentQueues = &m_graphicsQueue;
+                    swapChainDesc.mWidth = windowSize.x;
+                    swapChainDesc.mHeight = windowSize.y;
+                    swapChainDesc.mImageCount = SwapChainLength;
+                    swapChainDesc.mColorFormat = getRecommendedSwapchainFormat(false, false);
+                    swapChainDesc.mColorClearValue = { { 1, 1, 1, 1 } };
+                    swapChainDesc.mEnableVsync = false;
+                    addSwapChain(m_renderer, &swapChainDesc, &m_swapChain);
+                break;
+            }
+            default:
+                break;
+            }
+        }){
     }
 
     void ForgeRenderer::InitializeResource() {

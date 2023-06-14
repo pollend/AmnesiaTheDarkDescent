@@ -205,7 +205,6 @@ namespace hpl {
         UniformWrapper<StringLiteral("u_normalMtx"),  bgfx::UniformType::Mat4> m_u_normalMtx;
         UniformWrapper<StringLiteral("u_color"),      bgfx::UniformType::Vec4> m_u_color;
 
-        window::WindowEvent::QueuedEventHandler m_queuedWindowEvent;
     };
 
     namespace details {

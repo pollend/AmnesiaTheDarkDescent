@@ -40,42 +40,42 @@
 namespace hpl {
 
     cLowLevelInputSDL::cLowLevelInputSDL()
-        : mbQuitMessagePosted(false),
-            m_windowEventHandler(BroadcastEvent::PreUpdate, 
-                Interface<window::NativeWindowWrapper>::Get()->NativeInternalEvent(), [&](auto& internalEvent) {
-                    auto& event = internalEvent.m_sdlEvent;
-                    // built-in SDL2 gamepad hotplug code
-                    // this whole contract should be rewritten to allow clean adding/removing
-                    // of controllers, instead of brute force rescanning
-                    if (event.type == SDL_CONTROLLERDEVICEADDED) {
-                        // sdlEvent.cdevice.which is the device #
-                        cEngine::SetDeviceWasPlugged();
-                    } else if (event.type == SDL_CONTROLLERDEVICEREMOVED) {
-                        // sdlEvent.cdevice.which is the instance # (not device #).
-                        // instance # increases as devices are plugged and unplugged.
-                        cEngine::SetDeviceWasRemoved();
-                    }
+        : mbQuitMessagePosted(false)
+        , m_windowEventHandler(
+              BroadcastEvent::PreUpdate,
+              [&](auto& internalEvent) {
+                  auto& event = internalEvent.m_sdlEvent;
+                  // built-in SDL2 gamepad hotplug code
+                  // this whole contract should be rewritten to allow clean adding/removing
+                  // of controllers, instead of brute force rescanning
+                  if (event.type == SDL_CONTROLLERDEVICEADDED) {
+                      // sdlEvent.cdevice.which is the device #
+                      cEngine::SetDeviceWasPlugged();
+                  } else if (event.type == SDL_CONTROLLERDEVICEREMOVED) {
+                      // sdlEvent.cdevice.which is the instance # (not device #).
+                      // instance # increases as devices are plugged and unplugged.
+                      cEngine::SetDeviceWasRemoved();
+                  }
+#if defined(__APPLE__)
+                  if (event.type == SDL_KEYDOWN) {
+                      if (event.key.keysym.sym == SDLK_q && sdlEvent.key.keysym.mod & KMOD_GUI) {
+                          mbQuitMessagePosted = true;
+                      } else {
+                          mlstEvents.push_back(sdlEvent);
+                      }
+                  } else
+#endif
+                      if (event.type == SDL_QUIT) {
+                      mbQuitMessagePosted = true;
+                  } else {
+                      mlstEvents.push_back(event);
+                  }
+              },
+              { .onBegin = [&]() {
+                  mlstEvents.clear();
+              } }) {
+        m_windowEventHandler.Connect(Interface<window::NativeWindowWrapper>::Get()->NativeInternalEvent());
 
-    #if defined(__APPLE__)
-                    if (event.type == SDL_KEYDOWN) {
-                        if (event.key.keysym.sym == SDLK_q && sdlEvent.key.keysym.mod & KMOD_GUI) {
-                            mbQuitMessagePosted = true;
-                        } else {
-                            mlstEvents.push_back(sdlEvent);
-                        }
-                    } else
-    #endif
-                    if (event.type == SDL_QUIT) {
-                        mbQuitMessagePosted = true;
-                    } else {
-                        mlstEvents.push_back(event);
-                    }
-
-                }, {
-                    .onBegin = [&]() {
-                        mlstEvents.clear();
-                    }
-                }) {
         LockInput(true);
         RelativeMouse(false);
         SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER);
@@ -133,7 +133,7 @@ namespace hpl {
         return SDL_NumJoysticks();
 #endif
     }
-    
+
     iMouse* cLowLevelInputSDL::CreateMouse() {
         return hplNew(cMouseSDL, (this));
     }
