@@ -1191,8 +1191,7 @@ namespace hpl {
             }
             // translucency
             {
-                ShaderLoadDesc loadDesc = {};
-                loadDesc.mStages[0].pFileName = "translucency.vert";
+
                 const char* translucencyBlendStr[] = {
                     "_add",         // BlendAdd
                     "_mul",         // BlendMul
@@ -1202,45 +1201,85 @@ namespace hpl {
                 };
                 ASSERT(std::size(translucencyBlendStr) == TranslucencyPipeline::BlendModeCount);
 
-                folly::FixedString<256> translucency;
-                for(size_t transBlend = 0; transBlend < TranslucencyPipeline::BlendModeCount; transBlend++) {
-                    for(size_t transVariant = 0; transVariant < TranslucencyPipeline::TranslucencyVariantCount; transVariant++) {
-                        translucency.clear();
-                        translucency.append("translucency");
-                        translucency.append(translucencyBlendStr[transBlend]);
-                        if(transVariant & TranslucencyPipeline::TranslucencyRefraction) {
-                            translucency.append("_refraction");
-                        }
-                        if(transVariant & TranslucencyPipeline::TranslucencyShaderVariantFog) {
-                            translucency.append("_fog");
-                        }
-                        translucency.append(".frag");
+               // folly::FixedString<256> translucency;
+               // for(size_t transBlend = 0; transBlend < TranslucencyPipeline::BlendModeCount; transBlend++) {
+               //     for(size_t transVariant = 0; transVariant < TranslucencyPipeline::TranslucencyVariantCount; transVariant++) {
+               //         translucency.clear();
+               //         translucency.append("translucency");
+               //         translucency.append(translucencyBlendStr[transBlend]);
+               //         if(transVariant & TranslucencyPipeline::TranslucencyShaderVariantFog) {
+               //             translucency.append("_fog");
+               //         }
+               //         translucency.append(".frag");
 
-                        loadDesc.mStages[1].pFileName = translucency.c_str();
-                        addShader(forgetRenderer->Rend(), &loadDesc, &m_materialTranslucencyPass.m_shaders[transBlend][transVariant]);
-                    }
-                }
+               //     }
+               // }
 
-                loadDesc.mStages[0].pFileName= "translucency_particle.vert";
-                for(size_t transBlend = 0; transBlend < TranslucencyPipeline::BlendModeCount; transBlend++) {
-                    translucency.clear();
-                    translucency.append("translucency_particle");
-                    translucency.append(translucencyBlendStr[transBlend]);
-                    translucency.append(".frag");
+                m_materialTranslucencyPass.m_translucencyShader = ForgeShaderHandle{forgetRenderer->Rend()};
+                m_materialTranslucencyPass.m_translucencyShader.Load([&](Shader** shader) {
+                    ShaderLoadDesc loadDesc = {};
+                    loadDesc.mStages[0].pFileName = "translucency.vert";
+                    loadDesc.mStages[1].pFileName = "translucency.frag";
+                    addShader(forgetRenderer->Rend(), &loadDesc, shader);
+                    return true;
+                });
 
-                    loadDesc.mStages[1].pFileName = translucency.c_str();
-                    addShader(forgetRenderer->Rend(), &loadDesc, &m_materialTranslucencyPass.m_particleShader[transBlend]);
-                }
+                m_materialTranslucencyPass.m_waterShader = ForgeShaderHandle{forgetRenderer->Rend()};
+                m_materialTranslucencyPass.m_waterShader .Load([&](Shader** shader) {
+                    ShaderLoadDesc loadDesc = {};
+                    loadDesc.mStages[0].pFileName = "translucency_water.vert";
+                    loadDesc.mStages[1].pFileName = "translucency_water.frag";
+                    addShader(forgetRenderer->Rend(), &loadDesc, shader);
+                    return true;
+                });
 
-                for(size_t transBlend = 0; transBlend < TranslucencyPipeline::BlendModeCount; transBlend++) {
-                    translucency.clear();
-                    translucency.append("translucency_particle_fog");
-                    translucency.append(translucencyBlendStr[transBlend]);
-                    translucency.append(".frag");
+                m_materialTranslucencyPass.m_particleShader = ForgeShaderHandle{forgetRenderer->Rend()};
+                m_materialTranslucencyPass.m_particleShader  .Load([&](Shader** shader) {
+                    ShaderLoadDesc loadDesc = {};
+                    loadDesc.mStages[0].pFileName = "translucency_particle.vert";
+                    loadDesc.mStages[1].pFileName = "translucency_particle.frag";
+                    addShader(forgetRenderer->Rend(), &loadDesc, shader);
+                    return true;
+                });
+               // loadDesc.mStages[1].pFileName = translucency.c_str();
+               // addShader(forgetRenderer->Rend(), &loadDesc, &m_materialTranslucencyPass.m_translucencyShader);
 
-                    loadDesc.mStages[1].pFileName = translucency.c_str();
-                    addShader(forgetRenderer->Rend(), &loadDesc, &m_materialTranslucencyPass.m_particleShaderFog[transBlend]);
-                }
+               // loadDesc.mStages[0].pFileName= "translucency_particle.vert";
+               // for(size_t transBlend = 0; transBlend < TranslucencyPipeline::BlendModeCount; transBlend++) {
+               //     translucency.clear();
+               //     translucency.append("translucency_particle");
+               //     translucency.append(translucencyBlendStr[transBlend]);
+               //     translucency.append(".frag");
+
+               //     loadDesc.mStages[1].pFileName = translucency.c_str();
+               //     addShader(forgetRenderer->Rend(), &loadDesc, &m_materialTranslucencyPass.m_particleShader[transBlend]);
+               // }
+
+               // for(size_t transBlend = 0; transBlend < TranslucencyPipeline::BlendModeCount; transBlend++) {
+               //     translucency.clear();
+               //     translucency.append("translucency_particle_fog");
+               //     translucency.append(translucencyBlendStr[transBlend]);
+               //     translucency.append(".frag");
+
+               //     loadDesc.mStages[1].pFileName = translucency.c_str();
+               //     addShader(forgetRenderer->Rend(), &loadDesc, &m_materialTranslucencyPass.m_particleShaderFog[transBlend]);
+               // }
+
+               // ASSERT(TranslucencyPipeline::TranslucencyWaterVariantCount == m_materialTranslucencyPass.m_waterShader.size());
+               // for(size_t waterVariant = 0; waterVariant  < TranslucencyPipeline::TranslucencyWaterVariantCount; waterVariant++) {
+               //     translucency.clear();
+               //     translucency.append("translucency_water");
+               //     if(waterVariant & TranslucencyPipeline::TranslucencyWaterVariantReflection) {
+               //         translucency.append("_reflection");
+               //     }
+               //     if(waterVariant & TranslucencyPipeline::TranslucencyWaterVariantFog) {
+               //         translucency.append("_fog");
+               //     }
+               //     translucency.append(".frag");
+
+               //     loadDesc.mStages[1].pFileName = translucency.c_str();
+               //     addShader(forgetRenderer->Rend(), &loadDesc, &m_materialTranslucencyPass.m_waterShader[waterVariant]);
+               // }
             }
 
             {
@@ -1271,24 +1310,31 @@ namespace hpl {
                 m_materialSolidPass.m_solidDiffuseParallaxShader,
                 m_zPassShader,
                 m_decalShader,
-                m_solidIlluminationShader
+                m_solidIlluminationShader,
+                m_materialTranslucencyPass.m_particleShader.m_handle,
+                m_materialTranslucencyPass.m_waterShader.m_handle,
+                m_materialTranslucencyPass.m_translucencyShader.m_handle
             };
-            for(auto& blendGroups: m_materialTranslucencyPass.m_shaders) {
-                for(auto& shader:  blendGroups) {
-                    ASSERT(shader && "Shader not loaded");
-                    shaders.push_back(shader);
-                }
-            }
+           // for(auto& blendGroups: m_materialTranslucencyPass.m_shaders) {
+           //     for(auto& shader:  blendGroups) {
+           //         ASSERT(shader && "Shader not loaded");
+           //         shaders.push_back(shader);
+           //     }
+           // }
 
-            for(auto& shader: m_materialTranslucencyPass.m_particleShader) {
-                ASSERT(shader && "Shader not loaded");
-                shaders.push_back(shader);
-            }
+           // for(auto& shader: m_materialTranslucencyPass.m_particleShader) {
+           //     ASSERT(shader && "Shader not loaded");
+           //     shaders.push_back(shader);
+           // }
 
-            for(auto& shader: m_materialTranslucencyPass.m_particleShaderFog) {
-                ASSERT(shader && "Shader not loaded");
-                shaders.push_back(shader);
-            }
+           // for(auto& shader: m_materialTranslucencyPass.m_particleShaderFog) {
+           //     ASSERT(shader && "Shader not loaded");
+           //     shaders.push_back(shader);
+           // }
+           // for(auto& shader: m_materialTranslucencyPass.m_waterShader) {
+           //     ASSERT(shader && "Shader not loaded");
+           //     shaders.push_back(shader);
+           // }
             RootSignatureDesc rootSignatureDesc = {};
             rootSignatureDesc.ppShaders = shaders.data();
             rootSignatureDesc.mShaderCount = shaders.size();
@@ -1723,10 +1769,6 @@ namespace hpl {
                         }
                         pipelineSettings.pDepthState = &depthStateDesc;
 
-                        uint8_t shaderVariant = 0;
-                        if (key.m_field.m_hasFog) {
-                            shaderVariant |= TranslucencyPipeline::TranslucencyShaderVariantFog;
-                        }
                         blendStateDesc.mSrcFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].src;
                         blendStateDesc.mDstFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].dst;
                         blendStateDesc.mBlendModes[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].mode;
@@ -1734,12 +1776,64 @@ namespace hpl {
                         blendStateDesc.mSrcAlphaFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].src;
                         blendStateDesc.mDstAlphaFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].dst;
                         blendStateDesc.mBlendAlphaModes[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].mode;
-                        pipelineSettings.pShaderProgram = m_materialTranslucencyPass.m_shaders[transBlend][shaderVariant];
+                        pipelineSettings.pShaderProgram = m_materialTranslucencyPass.m_translucencyShader.m_handle;
 
                         addPipeline(forgetRenderer->Rend(), &pipelineDesc, &pipelineBlendGroup[key.m_id]);
                     }
                 }
 
+               for (size_t transBlend = 0; transBlend < TranslucencyPipeline::TranslucencyBlend::BlendModeCount; transBlend++) {
+                    auto& pipelineBlendGroup = m_materialTranslucencyPass.m_waterPipelines[transBlend];
+                    for (size_t pipelineKey = 0; pipelineKey < pipelineBlendGroup.size(); pipelineKey++) {
+                        TranslucencyPipeline::TranslucencyKey key = {};
+                        key.m_id = pipelineKey;
+
+                        BlendStateDesc blendStateDesc{};
+                        blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_ALL;
+                        blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
+                        blendStateDesc.mIndependentBlend = false;
+
+                        PipelineDesc pipelineDesc = {};
+                        pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+                        auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
+                        pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+                        pipelineSettings.mRenderTargetCount = colorFormats.size();
+                        pipelineSettings.pColorFormats = colorFormats.data();
+                        pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
+                        pipelineSettings.mSampleQuality = 0;
+                        pipelineSettings.pBlendState = &blendStateDesc;
+                        pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
+                        pipelineSettings.pRootSignature = m_materialRootSignature;
+                        pipelineSettings.pVertexLayout = &particleVertexLayout;
+
+                        RasterizerStateDesc rasterizerStateDesc = {};
+                        rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
+                        rasterizerStateDesc.mFrontFace = FRONT_FACE_CCW;
+                        pipelineSettings.pRasterizerState = &rasterizerStateDesc;
+
+                        DepthStateDesc depthStateDesc = {};
+                        depthStateDesc.mDepthWrite = false;
+                        if (key.m_field.m_hasDepthTest) {
+                            depthStateDesc.mDepthTest = true;
+                            depthStateDesc.mDepthFunc = CMP_LEQUAL;
+                        }
+                        pipelineSettings.pDepthState = &depthStateDesc;
+
+                        pipelineSettings.pShaderProgram = m_materialTranslucencyPass.m_waterShader.m_handle;
+
+                        blendStateDesc.mSrcFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].src;
+                        blendStateDesc.mDstFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].dst;
+                        blendStateDesc.mBlendModes[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].mode;
+
+                        blendStateDesc.mSrcAlphaFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].src;
+                        blendStateDesc.mDstAlphaFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].dst;
+                        blendStateDesc.mBlendAlphaModes[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].mode;
+
+                        addPipeline(
+                            forgetRenderer->Rend(), &pipelineDesc, &pipelineBlendGroup[key.m_id]);
+
+                    }
+                }
                for (size_t transBlend = 0; transBlend < TranslucencyPipeline::TranslucencyBlend::BlendModeCount; transBlend++) {
                     auto& pipelineBlendGroup = m_materialTranslucencyPass.m_particlePipelines[transBlend];
                     for (size_t pipelineKey = 0; pipelineKey < pipelineBlendGroup.size(); pipelineKey++) {
@@ -1771,24 +1865,13 @@ namespace hpl {
 
                         DepthStateDesc depthStateDesc = {};
                         depthStateDesc.mDepthWrite = false;
-                        depthStateDesc.mDepthTest = true;
                         if (key.m_field.m_hasDepthTest) {
+                            depthStateDesc.mDepthTest = true;
                             depthStateDesc.mDepthFunc = CMP_LEQUAL;
-                        } else {
-                            depthStateDesc.mDepthFunc = CMP_NEVER;
                         }
                         pipelineSettings.pDepthState = &depthStateDesc;
 
-                        uint8_t shaderVariant = 0;
-                        if (key.m_field.m_hasFog) {
-                            shaderVariant |= TranslucencyPipeline::TranslucencyShaderVariantFog;
-                        }
-
-                        if (key.m_field.m_hasFog) {
-                            pipelineSettings.pShaderProgram = m_materialTranslucencyPass.m_particleShaderFog[transBlend];
-                        } else {
-                            pipelineSettings.pShaderProgram = m_materialTranslucencyPass.m_particleShader[transBlend];
-                        }
+                        pipelineSettings.pShaderProgram = m_materialTranslucencyPass.m_particleShader.m_handle;
 
                         blendStateDesc.mSrcFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].src;
                         blendStateDesc.mDstFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].dst;
@@ -1804,61 +1887,53 @@ namespace hpl {
                 }
 
                 // create translucent pipelines for  refraction
-                for (size_t transBlend = 0; transBlend < TranslucencyPipeline::TranslucencyBlend::BlendModeCount; transBlend++) {
-                    auto& pipelineBlendGroup = m_materialTranslucencyPass.m_refractionPipeline[transBlend];
-                    for (size_t pipelineKey = 0; pipelineKey < pipelineBlendGroup.size(); pipelineKey++) {
-                        TranslucencyPipeline::TranslucencyKey key = {};
-                        key.m_id = pipelineKey;
+                auto& pipelineBlendGroup = m_materialTranslucencyPass.m_refractionPipeline;
+                for (size_t pipelineKey = 0; pipelineKey < m_materialTranslucencyPass.m_refractionPipeline.size(); pipelineKey++) {
+                    TranslucencyPipeline::TranslucencyKey key = {};
+                    key.m_id = pipelineKey;
 
-                        BlendStateDesc blendStateDesc{};
-                        blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_ALL;
-                        blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
-                        blendStateDesc.mIndependentBlend = false;
+                    BlendStateDesc blendStateDesc{};
+                    blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_ALL;
+                    blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
+                    blendStateDesc.mIndependentBlend = false;
 
-                        PipelineDesc pipelineDesc = {};
-                        pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
-                        auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
-                        pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
-                        pipelineSettings.mRenderTargetCount = colorFormats.size();
-                        pipelineSettings.pColorFormats = colorFormats.data();
-                        pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
-                        pipelineSettings.mSampleQuality = 0;
-                        pipelineSettings.pBlendState = &blendStateDesc;
-                        pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
-                        pipelineSettings.pRootSignature = m_materialRootSignature;
-                        pipelineSettings.pVertexLayout = &vertexLayout;
+                    PipelineDesc pipelineDesc = {};
+                    pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+                    auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
+                    pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+                    pipelineSettings.mRenderTargetCount = colorFormats.size();
+                    pipelineSettings.pColorFormats = colorFormats.data();
+                    pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
+                    pipelineSettings.mSampleQuality = 0;
+                    pipelineSettings.pBlendState = &blendStateDesc;
+                    pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
+                    pipelineSettings.pRootSignature = m_materialRootSignature;
+                    pipelineSettings.pVertexLayout = &vertexLayout;
 
-                        RasterizerStateDesc rasterizerStateDesc = {};
-                        rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
-                        rasterizerStateDesc.mFrontFace = FRONT_FACE_CCW;
-                        pipelineSettings.pRasterizerState = &rasterizerStateDesc;
+                    RasterizerStateDesc rasterizerStateDesc = {};
+                    rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
+                    rasterizerStateDesc.mFrontFace = FRONT_FACE_CCW;
+                    pipelineSettings.pRasterizerState = &rasterizerStateDesc;
 
-                        DepthStateDesc depthStateDesc = {};
-                        depthStateDesc.mDepthWrite = false;
+                    DepthStateDesc depthStateDesc = {};
+                    depthStateDesc.mDepthWrite = false;
+                    if (key.m_field.m_hasDepthTest) {
                         depthStateDesc.mDepthTest = true;
-                        if (key.m_field.m_hasDepthTest) {
-                            depthStateDesc.mDepthFunc = CMP_LEQUAL;
-                        } else {
-                            depthStateDesc.mDepthFunc = CMP_NEVER;
-                        }
-                        pipelineSettings.pDepthState = &depthStateDesc;
-
-                        blendStateDesc.mSrcFactors[0] = BlendConstant::BC_ONE;
-                        blendStateDesc.mDstFactors[0] = BlendConstant::BC_SRC_ALPHA;
-                        blendStateDesc.mBlendModes[0] = BlendMode::BM_ADD;
-
-                        blendStateDesc.mSrcAlphaFactors[0] = hpl::HPL2BlendTable[eMaterialBlendMode_Add].src;
-                        blendStateDesc.mDstAlphaFactors[0] = hpl::HPL2BlendTable[eMaterialBlendMode_Add].dst;
-                        blendStateDesc.mBlendAlphaModes[0] = hpl::HPL2BlendTable[eMaterialBlendMode_Add].mode;
-
-                        pipelineSettings.pShaderProgram =
-                            m_materialTranslucencyPass
-                                .m_shaders[transBlend]
-                                        [TranslucencyPipeline::TranslucencyRefraction |
-                                        (key.m_field.m_hasFog ? TranslucencyPipeline::TranslucencyShaderVariantFog : 0)];
-
-                        addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_materialTranslucencyPass.m_refractionPipeline[transBlend][key.m_id]);
+                        depthStateDesc.mDepthFunc = CMP_LEQUAL;
                     }
+                    pipelineSettings.pDepthState = &depthStateDesc;
+
+                    blendStateDesc.mSrcFactors[0] = BlendConstant::BC_ONE;
+                    blendStateDesc.mDstFactors[0] = BlendConstant::BC_SRC_ALPHA;
+                    blendStateDesc.mBlendModes[0] = BlendMode::BM_ADD;
+
+                    blendStateDesc.mSrcAlphaFactors[0] = hpl::HPL2BlendTable[eMaterialBlendMode_Add].src;
+                    blendStateDesc.mDstAlphaFactors[0] = hpl::HPL2BlendTable[eMaterialBlendMode_Add].dst;
+                    blendStateDesc.mBlendAlphaModes[0] = hpl::HPL2BlendTable[eMaterialBlendMode_Add].mode;
+
+                    pipelineSettings.pShaderProgram = m_materialTranslucencyPass.m_translucencyShader.m_handle;
+
+                    addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_materialTranslucencyPass.m_refractionPipeline[key.m_id]);
                 }
             }
 
@@ -2488,8 +2563,10 @@ namespace hpl {
 
             uniformFrameData->viewTexel = float2(1.0f / sharedData.m_size.x, 1.0f / sharedData.m_size.y);
             uniformFrameData->viewportSize = float2(sharedData.m_size.x,sharedData.m_size.y);
+            const auto fogColor = apWorld->GetFogColor();
+            uniformFrameData->fogColor = float4(fogColor.r, fogColor.g, fogColor.b, fogColor.a);
 
-           endUpdateResource(&updatePerFrameConstantsDesc, NULL);
+            endUpdateResource(&updatePerFrameConstantsDesc, NULL);
         }
 
         {
@@ -3883,6 +3960,7 @@ namespace hpl {
             translucencyBlendTable[eMaterialBlendMode_PremulAlpha] = TranslucencyPipeline::TranslucencyBlend::BlendPremulAlpha;
 
             uint32_t translucencyConstantIndex = getDescriptorIndexFromName(m_materialRootSignature, "translucencyConstant");
+            cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "Translucency Pass");
             for(auto& translucencyItem: mpCurrentRenderList->GetRenderableItems(eRenderListType_Translucent)) {
                 cMaterial* pMaterial = translucencyItem->GetMaterial();
                 iVertexBuffer* vertexBuffer = translucencyItem->GetVertexBuffer();
@@ -3890,26 +3968,35 @@ namespace hpl {
                     continue;
                 }
 
+                if (pMaterial->HasWorldReflection() && translucencyItem->GetRenderType() == eRenderableType_SubMesh) {
+                    // TODO implement world reflection
+                }
+
+                float sceneAlpha = 1;
+                if (pMaterial->GetAffectedByFog()) {
+                    for (auto& fogArea : fogRenderData) {
+                        sceneAlpha *= detail::GetFogAreaVisibilityForObject(fogArea, *apFrustum, translucencyItem);
+                    }
+                }
+
+                if (translucencyItem->UpdateGraphicsForViewport(mpCurrentFrustum, mfCurrentFrameTime) == false) {
+                    continue;
+                }
+                TranslucencyPipeline::TranslucencyConstant constants = {};
+
+
+
+                const bool isRefraction = iRenderer::GetRefractionEnabled() && pMaterial->HasRefraction();
+                const bool isFogActive = mpCurrentWorld->GetFogActive() && pMaterial->GetAffectedByFog();
+                const bool isParticleEmitter = TypeInfo<iParticleEmitter>::IsSubtype(*translucencyItem);
+                const auto cubeMap = pMaterial->GetImage(eMaterialTexture_CubeMap);
+                cMatrixf* pMatrix = translucencyItem->GetModelMatrix(apFrustum);
+
                 switch (pMaterial->type().m_id) {
-                case cMaterial::Translucent: {
-                        float sceneAlpha = 1;
-                        if (pMaterial->GetAffectedByFog()) {
-                            for (auto& fogArea : fogRenderData) {
-                                sceneAlpha *= detail::GetFogAreaVisibilityForObject(fogArea, *apFrustum, translucencyItem);
-                            }
-                        }
-
-                        if (translucencyItem->UpdateGraphicsForViewport(mpCurrentFrustum, mfCurrentFrameTime) == false) {
-                            continue;
-                        }
-
-                        struct {
-                            float sceneAlpha;
-                            float lightLevel;
-                            uint32_t textureMask;
-                        } constants = {};
-                        constants.sceneAlpha = sceneAlpha;
-                        constants.lightLevel = 1.0f;
+                case cMaterial::Translucent:
+                    {
+                        constants.m_translucency.m_sceneAlpha = sceneAlpha;
+                        constants.m_translucency.m_lightLevel = 1.0f;
 
                         if (pMaterial->IsAffectedByLightLevel()) {
                             cVector3f vCenterPos = translucencyItem->GetBoundingVolume()->GetWorldCenter();
@@ -3940,17 +4027,12 @@ namespace hpl {
                                     }
                                 }
                             }
-                            constants.lightLevel = fLightAmount;
+                            constants.m_translucency.m_lightLevel = fLightAmount;
                         }
 
-                        const bool isRefraction = iRenderer::GetRefractionEnabled() && pMaterial->HasRefraction();
-                        const bool isFogActive = mpCurrentWorld->GetFogActive() && pMaterial->GetAffectedByFog();
-                        const bool isParticleEmitter = TypeInfo<iParticleEmitter>::IsSubtype(*translucencyItem);
-                        const auto cubeMap = pMaterial->GetImage(eMaterialTexture_CubeMap);
-                        cMatrixf* pMatrix = translucencyItem->GetModelMatrix(apFrustum);
-
                         cmdBindMaterialDescriptor(frame.m_cmd, frame, pMaterial);
-                        cmdBindObjectDescriptor(frame.m_cmd,
+                        cmdBindObjectDescriptor(
+                            frame.m_cmd,
                             frame,
                             pMaterial,
                             translucencyItem,
@@ -3976,13 +4058,8 @@ namespace hpl {
                             static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
                         }
 
-                        if (pMaterial->HasWorldReflection() && translucencyItem->GetRenderType() == eRenderableType_SubMesh) {
-                            // TODO implement world reflection
-                        }
-
                         cRendererDeferred::TranslucencyPipeline::TranslucencyKey key = {};
                         key.m_field.m_hasDepthTest = pMaterial->GetDepthTest();
-                        key.m_field.m_hasFog = isFogActive;
 
                         ASSERT(
                             pMaterial->GetBlendMode() < eMaterialBlendMode_LastEnum &&
@@ -3995,44 +4072,73 @@ namespace hpl {
                         } else {
                             cmdBindPipeline(
                                 frame.m_cmd,
-                                (isRefraction ? m_materialTranslucencyPass.m_refractionPipeline
+                                (isRefraction ? m_materialTranslucencyPass.m_refractionPipeline[key.m_id]
                                               : m_materialTranslucencyPass
-                                                    .m_pipelines)[translucencyBlendTable[pMaterial->GetBlendMode()]][key.m_id]);
+                                                    .m_pipelines[TranslucencyPipeline::TranslucencyBlend::BlendAdd][key.m_id]));
                         }
 
                         detail::cmdDefaultLegacyGeomBinding(frame.m_cmd, frame, binding);
 
-                        constants.textureMask =
-                            (cMaterial::EnableDiffuse | cMaterial::EnableNormal |
-                             (isRefraction ? (cMaterial::EnableCubeMap | cMaterial::EnableCubeMapAlpha) : 0));
+                        constants.m_flags =
+                            (TranslucencyPipeline::TranslucencyIsDiffuseEnable | TranslucencyPipeline::TranslucencyIsNormalEnable) |
+                            (isRefraction ? (TranslucencyPipeline::TranslucencyIsRefractionEnable | TranslucencyPipeline::TranslucencyIsCubeMapEnable  | TranslucencyPipeline::TranslucencyISCubeMapAlphaEnable ) : 0) |
+                            (isFogActive? TranslucencyPipeline::TranslucencyIsFogEnable : 0);
+                        constants.m_blendMode = translucencyBlendTable[pMaterial->GetBlendMode()];
                         cmdBindPushConstants(frame.m_cmd, m_materialRootSignature, translucencyConstantIndex, &constants);
                         cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
 
                         if (pMaterial->HasTranslucentIllumination()) {
                             if (!isParticleEmitter && cubeMap && !isRefraction) {
-                                cmdBindPipeline(
-                                    frame.m_cmd,
-                                    (isRefraction ? m_materialTranslucencyPass.m_refractionPipeline
-                                                  : m_materialTranslucencyPass
-                                                        .m_pipelines)[TranslucencyPipeline::TranslucencyBlend::BlendAdd][key.m_id]);
+                                constants.m_blendMode = TranslucencyPipeline::BlendAdd;
                             }
+                            constants.m_flags =
+                                (isRefraction ? TranslucencyPipeline::TranslucencyIsRefractionEnable : (TranslucencyPipeline::TranslucencyIsNormalEnable  | TranslucencyPipeline::TranslucencyIsCubeMapEnable  | TranslucencyPipeline::TranslucencyISCubeMapAlphaEnable)) |
+                                (isFogActive? TranslucencyPipeline::TranslucencyIsFogEnable : 0);
 
-                            constants.textureMask =
-                                isRefraction ? 0 : (cMaterial::EnableNormal | cMaterial::EnableCubeMap | cMaterial::EnableCubeMapAlpha);
                             cmdBindPushConstants(frame.m_cmd, m_materialRootSignature, translucencyConstantIndex, &constants);
                             cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
                         }
                         break;
                     }
                 case cMaterial::Water:
-                    // TODO: Water
-                    continue;
+                    {
+                        LegacyVertexBuffer::GeometryBinding binding;
+                        std::array targets = { eVertexBufferElement_Position,
+                                               eVertexBufferElement_Texture0,
+                                               eVertexBufferElement_Normal,
+                                               eVertexBufferElement_Texture1Tangent,
+                                               eVertexBufferElement_Color0 };
+                        static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
+
+                        detail::cmdDefaultLegacyGeomBinding(frame.m_cmd, frame, binding);
+                        constants.m_water.m_afT = GetTimeCount();
+                        constants.m_flags =
+                            (isRefraction ? TranslucencyPipeline::TranslucencyIsRefractionEnable : 0) |
+                            (isFogActive? TranslucencyPipeline::TranslucencyIsFogEnable : 0);
+
+                        constants.m_blendMode = translucencyBlendTable[pMaterial->GetBlendMode()];
+                        cmdBindPushConstants(frame.m_cmd, m_materialRootSignature, translucencyConstantIndex, &constants);
+                        cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+                        if (pMaterial->HasTranslucentIllumination()) {
+                            if (!isParticleEmitter && cubeMap && !isRefraction) {
+                                constants.m_blendMode = TranslucencyPipeline::BlendAdd;
+                            }
+                            constants.m_flags =
+                                (isRefraction ? TranslucencyPipeline::TranslucencyIsRefractionEnable : 0) |
+                                (isFogActive? TranslucencyPipeline::TranslucencyIsFogEnable : 0);
+
+                            cmdBindPushConstants(frame.m_cmd, m_materialRootSignature, translucencyConstantIndex, &constants);
+                            cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+                        }
+                        break;
+                    }
                 default:
                     ASSERT(false && "Invalid material type");
                     continue;
                 }
             }
         }
+        cmdEndDebugMarker(frame.m_cmd);
 
         //ImmediateDrawBatch postTransBatch(context, sharedData.m_gBuffer.m_outputTarget, mainFrustumView, mainFrustumProj);
         cViewport::PostTranslucenceDrawPacket translucenceEvent = cViewport::PostTranslucenceDrawPacket({

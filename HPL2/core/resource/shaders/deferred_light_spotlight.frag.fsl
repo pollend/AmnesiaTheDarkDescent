@@ -43,12 +43,12 @@ PsOut PS_MAIN(PsIn In)
     /////////////////////////////////
 	//Calculate diffuse color
     float fLDotN = max(dot(normalizedNormal, normalLightDir), 0.0);
-	float3 diffuseColor = color.xyz * Get(lightColor).xyz * fLDotN;
+    float3 diffuseColor = color.xyz * Get(lightColor).xyz * fLDotN;
     float t = 0;
     if(HasShadowMap(Get(config))) {
-        float bias = max(0.01* (1.0 - dot(normalizedNormal, normalLightDir)), 0.001);
-        float sampledDepth = SampleTex2DProj(Get(shadowMap), Get(nearestSampler), projectionUV).x; 
-        attenuation *= sampledDepth < (projectionUV.z/projectionUV.w) - bias ? 0.0 : 1.0;
+        float bias = max(0.02 * (1.0 - dot(normalizedNormal, normalLightDir)), 0.0001);
+        float sampledDepth = SampleTex2DProj(Get(shadowMap), Get(nearestSampler), projectionUV).r; 
+        attenuation *= (sampledDepth + 0.001 > (projectionUV.z/projectionUV.w)) ? 1.0 : 0.0;
     }
     float3 specularColor = float3(0.0, 0.0, 0.0);
     if(Get(lightColor).w > 0.0) {

@@ -102,6 +102,8 @@ namespace hpl {
 			UseRefractionNormals = 1 << 14,
 			UseRefractionEdgeCheck = 1 << 15,
 
+            UseRefraction = 1 << 16,
+            UseFog = 1 << 17,
 		};
 
 		struct MaterialCommonBlock {

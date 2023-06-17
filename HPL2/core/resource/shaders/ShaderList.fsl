@@ -1,5 +1,5 @@
 #vert solid_z.vert
-#include "solid_z.vert.fsl"
+    #include "solid_z.vert.fsl"
 #end
 
 #frag solid_z.frag
@@ -30,43 +30,43 @@
 #end
 
 #frag solid_diffuse.frag
-#define ALPHA_REJECT 0.5
-#include "solid_diffuse.frag.fsl"
+    #define ALPHA_REJECT 0.5
+    #include "solid_diffuse.frag.fsl"
 #end
 
 #frag solid_diffuse_parallax.frag
-#define PARALLAX_ENABLED 1
-#define SEARCH_SAMPLE_COUNT 4
-#define ALPHA_REJECT 0.5
-#include "solid_diffuse.frag.fsl"
+    #define PARALLAX_ENABLED 1
+    #define SEARCH_SAMPLE_COUNT 4
+    #define ALPHA_REJECT 0.5
+    #include "solid_diffuse.frag.fsl"
 #end
 
 #vert deferred_light.vert
-#include "deferred_light.vert.fsl"
+    #include "deferred_light.vert.fsl"
 #end
 
 #frag deferred_light_pointlight.frag
-#include "deferred_light_pointlight.frag.fsl"
+    #include "deferred_light_pointlight.frag.fsl"
 #end
 
 #frag deferred_light_stencil.frag
-#include "deferred_light_stencil.frag.fsl"
+    #include "deferred_light_stencil.frag.fsl"
 #end
 
 #frag deferred_light_box.frag
-#include "deferred_light_box.frag.fsl"
+    #include "deferred_light_box.frag.fsl"
 #end
 
 #frag deferred_light_spotlight.frag
-#include "deferred_light_spotlight.frag.fsl"
+    #include "deferred_light_spotlight.frag.fsl"
 #end
 
 #vert fullscreen.vert
-#include "fullscreen.vert.fsl"
+    #include "fullscreen.vert.fsl"
 #end
 
 #frag post_processing_copy.frag
-#include "post_processing_copy.frag.fsl"
+    #include "post_processing_copy.frag.fsl"
 #end
 
 #frag decal.frag
@@ -82,189 +82,28 @@
     #include "translucency.vert.fsl"
 #end
 
-#frag translucency_add.frag
-    #define USE_BLEND_MODE_ADD 1
+#frag translucency.frag
     #include "translucency.frag.fsl"
 #end
 
-#frag translucency_mul.frag
-    #define USE_BLEND_MODE_MUL 1
-    #include "translucency.frag.fsl"
-#end
-
-#frag translucency_mulx2.frag
-    #define USE_BLEND_MODE_MULX2 1
-    #include "translucency.frag.fsl"
-#end
-
-#frag translucency_alpha.frag
-    #define USE_BLEND_MODE_ALPHA 1
-    #include "translucency.frag.fsl"
-#end
-
-#frag translucency_premulalpha.frag
-    #define USE_BLEND_MODE_PREMUL_ALPHA 1
-    #include "translucency.frag.fsl"
-#end
-
-#frag translucency_add_refraction.frag
-    #define USE_REFRACTION 1
-    #define USE_BLEND_MODE_ADD 1
-    #include "translucency.frag.fsl"
-#end
-
-#frag translucency_mul_refraction.frag
-    #define USE_REFRACTION 1
-    #define USE_BLEND_MODE_MUL 1
-    #include "translucency.frag.fsl"
-#end
-
-#frag translucency_mulx2_refraction.frag
-    #define USE_REFRACTION 1
-    #define USE_BLEND_MODE_MULX2 1
-    #include "translucency.frag.fsl"
-#end
-
-#frag translucency_alpha_refraction.frag
-    #define USE_REFRACTION 1
-    #define USE_BLEND_MODE_ALPHA 1
-    #include "translucency.frag.fsl"
-#end
-
-#frag translucency_premulalpha_refraction.frag
-    #define USE_REFRACTION 1
-    #define USE_BLEND_MODE_PREMUL_ALPHA 1
-    #include "translucency.frag.fsl"
-#end
-
-// translucency fog
-#frag translucency_add_fog.frag
-    #define USE_FOG 1
-    #define USE_BLEND_MODE_ADD 1
-    #include "translucency.frag.fsl"
-#end
-
-#frag translucency_mul_fog.frag
-    #define USE_FOG 1
-    #define USE_BLEND_MODE_MUL 1
-    #include "translucency.frag.fsl"
-#end
-
-#frag translucency_mulx2_fog.frag
-    #define USE_FOG 1
-    #define USE_BLEND_MODE_MULX2 1
-    #include "translucency.frag.fsl"
-#end
-
-#frag translucency_alpha_fog.frag
-    #define USE_FOG 1
-    #define USE_BLEND_MODE_ALPHA 1
-    #include "translucency.frag.fsl"
-#end
-
-#frag translucency_premulalpha_fog.frag
-    #define USE_FOG 1
-    #define USE_BLEND_MODE_PREMUL_ALPHA 1
-    #include "translucency.frag.fsl"
-#end
-
-#frag translucency_add_refraction_fog.frag
-    #define USE_REFRACTION 1
-    #define USE_FOG 1
-    #define USE_BLEND_MODE_ADD 1
-    #include "translucency.frag.fsl"
-#end
-
-#frag translucency_mul_refraction_fog.frag
-    #define USE_REFRACTION 1
-    #define USE_FOG 1
-    #define USE_BLEND_MODE_MUL 1
-    #include "translucency.frag.fsl"
-#end
-
-#frag translucency_mulx2_refraction_fog.frag
-    #define USE_REFRACTION 1
-    #define USE_FOG 1
-    #define USE_BLEND_MODE_MULX2 1
-    #include "translucency.frag.fsl"
-#end
-
-#frag translucency_alpha_refraction_fog.frag
-    #define USE_REFRACTION 1
-    #define USE_FOG 1
-    #define USE_BLEND_MODE_ALPHA 1
-    #include "translucency.frag.fsl"
-#end
-
-#frag translucency_premulalpha_refraction_fog.frag
-    #define USE_REFRACTION 1
-    #define USE_FOG 1
-    #define USE_BLEND_MODE_PREMUL_ALPHA 1
-    #include "translucency.frag.fsl"
-#end
-
-// translucency particle
-#vert translucency_particle.vert
+// translucency water 
+#vert translucency_water.vert
     #include "translucency_particle.vert.fsl"
 #end
 
-#frag translucency_particle_add.frag
-    #define USE_BLEND_MODE_ADD 1
+#frag translucency_water.frag
+    #include "translucency_water.frag.fsl"
+#end
+// translucency particle
+#vert translucency_particle.vert
+    #include "translucency_water.vert.fsl"
+#end
+
+#frag translucency_particle.frag
     #include "translucency_particle.frag.fsl"
 #end
 
-#frag translucency_particle_mul.frag
-    #define USE_BLEND_MODE_MUL 1
-    #include "translucency_particle.frag.fsl"
-#end
-
-#frag translucency_particle_mulx2.frag
-    #define USE_BLEND_MODE_MULX2 1
-    #include "translucency_particle.frag.fsl"
-#end
-
-#frag translucency_particle_alpha.frag
-    #define USE_BLEND_MODE_ALPHA 1
-    #include "translucency_particle.frag.fsl"
-#end
-
-#frag translucency_particle_premulalpha.frag
-    #define USE_BLEND_MODE_PREMUL_ALPHA 1
-    #include "translucency_particle.frag.fsl"
-#end
-
-#frag translucency_particle_fog_add.frag
-    #define USE_BLEND_MODE_ADD 1
-    #define USE_FOG 1
-    #include "translucency_particle.frag.fsl"
-#end
-
-#frag translucency_particle_fog_mul.frag
-    #define USE_BLEND_MODE_MUL 1
-    #define USE_FOG 1
-    #include "translucency_particle.frag.fsl"
-#end
-
-#frag translucency_particle_fog_mulx2.frag
-    #define USE_BLEND_MODE_MULX2 1
-    #define USE_FOG 1
-    #include "translucency_particle.frag.fsl"
-#end
-
-#frag translucency_particle_fog_alpha.frag
-    #define USE_BLEND_MODE_ALPHA 1
-    #define USE_FOG 1
-    #include "translucency_particle.frag.fsl"
-#end
-
-#frag translucency_particle_fog_premulalpha.frag
-    #define USE_BLEND_MODE_PREMUL_ALPHA 1
-    #define USE_FOG 1
-    #include "translucency_particle.frag.fsl"
-#end
-
-
-
+// deferred fog
 #vert deferred_fog.vert
     #include "deferred_fog.vert.fsl"
 #end

@@ -1,0 +1,17 @@
+#define BLEND_MODE_ADD 0
+#define BLEND_MODE_MUL 1
+#define BLEND_MODE_MULX2 2
+#define BLEND_MODE_ALPHA 3
+#define BLEND_MODE_PREMUL_ALPHA 4
+
+INLINE int GetBlend(int _featureConfig) { return (_featureConfig & 0xf); }
+
+INLINE bool IsDiffuseEnable(int _featureConfig)           { return (_featureConfig & (1 << 4)) != 0; }
+INLINE bool IsNormalEnable(int _featureConfig)            { return (_featureConfig & (1 << 5)) != 0; }
+INLINE bool IsRefractionNormalEnable(int _featureConfig)  { return (_featureConfig & (1 << 6)) != 0; }
+INLINE bool IsCubeMapEnable(int _featureConfig)           { return (_featureConfig & (1 << 7)) != 0; }
+INLINE bool IsCubeMapAlphaEnable(int _featureConfig)      { return (_featureConfig & (1 << 8)) != 0; }
+
+INLINE bool IsReflectionEnable(int _featureConfig)        { return (_featureConfig & (1 << 9)) != 0; }
+INLINE bool IsRefractionEnable(int _featureConfig)        { return (_featureConfig & (1 << 10)) != 0; }
+INLINE bool IsFogEnable(int _featureConfig)               { return (_featureConfig & (1 << 11)) != 0; }

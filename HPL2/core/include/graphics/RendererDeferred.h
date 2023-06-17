@@ -93,6 +93,10 @@ namespace hpl {
             LightPipelineVariant_StencilTest = 0x2,
             LightPipelineVariant_Size = 4,
         };
+
+        enum SceneFeatures {
+            SceneFeature_Refraction = 0x1
+        };
         union UniformLightData {
             struct LightUniformCommon {
                 uint32_t m_config;
@@ -139,9 +143,10 @@ namespace hpl {
             float worldFogLength;
             float oneMinusFogAlpha;
             float fogFalloffExp;
+            float4 fogColor;
 
             float2 viewTexel;
-            float2  viewportSize;
+            float2 viewportSize;
         };
 
         class ShadowMapData {
@@ -448,40 +453,76 @@ namespace hpl {
             enum TranslucencyShaderVariant {
                 TranslucencyShaderVariantEmpty = 0x0,
                 TranslucencyShaderVariantFog = 0x1,
-                TranslucencyRefraction = 0x2,
-                TranslucencyVariantCount = 4
+                TranslucencyVariantCount = 1
             };
 
-            enum TranslucencyBlend: uint8_t {
-                BlendAdd,
-                BlendMul,
-                BlendMulX2,
-                BlendAlpha,
-                BlendPremulAlpha,
+            enum TranslucencyWaterVariant {
+                TranslucencyWaterVariantEmpty = 0x0,
+                TranslucencyWaterVariantFog = 0x1,
+                TranslucencyWaterVariantReflection = 0x2,
+                TranslucencyWaterVariantCount = 4
+            };
+
+            enum TranslucencyBlend {
+                BlendAdd = 0,
+                BlendMul = 1,
+                BlendMulX2 = 2,
+                BlendAlpha = 3,
+                BlendPremulAlpha = 4,
                 BlendModeCount
             };
+
+            enum TranslucencyFlags {
+                TranslucencyIsDiffuseEnable = (1 << 0),
+                TranslucencyIsNormalEnable = (1 << 1),
+                TranslucencyIsRefractionNormalEnable = (1 << 2),
+                TranslucencyIsCubeMapEnable = (1 << 3),
+                TranslucencyISCubeMapAlphaEnable = (1 << 4),
+
+                TranslucencyIsReflectionEnable = (1 << 5),
+                TranslucencyIsRefractionEnable = (1 << 6),
+                TranslucencyIsFogEnable = (1 << 7)
+            };
+            struct TranslucencyConstant {
+                uint32_t m_blendMode: 4;
+                uint32_t m_flags: 12;
+                union {
+                    struct {
+                        float m_afT;
+                    } m_water;
+                    struct {
+                        float m_sceneAlpha;
+                        float m_lightLevel;
+                    } m_translucency;
+                };
+            };
+
 
             // 3 bit key for pipeline variant
             union TranslucencyKey {
                 uint8_t m_id;
                 struct {
                     uint8_t m_hasDepthTest: 1;
-                    uint8_t m_hasFog: 1;
                 } m_field;
-                static constexpr size_t NumOfVariants = 4;
+                static constexpr size_t NumOfVariants = 2;
             };
             RootSignature* m_refractionCopyRootSignature;
             std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_refractionPerFrameSet;
             Pipeline* m_refractionCopyPipeline;
             Shader* m_copyRefraction;
 
-            std::array<std::array<Shader*, TranslucencyVariantCount>, BlendModeCount> m_shaders{};
-            std::array<Shader*, BlendModeCount> m_particleShader{};
-            std::array<Shader*, BlendModeCount> m_particleShaderFog{};
+            //std::array<std::array<Shader*, TranslucencyVariantCount>, BlendModeCount> m_shaders{};
+            ForgeShaderHandle m_particleShader;
+            ForgeShaderHandle m_waterShader;
+            ForgeShaderHandle m_translucencyShader;
+            // std::array<Shader*, BlendModeCount> m_particleShader{};
+           // std::array<Shader*, BlendModeCount> m_particleShaderFog{};
+           // std::array<Shader*, TranslucencyWaterVariantCount> m_waterShader{};
 
             std::array<std::array<Pipeline*, TranslucencyKey::NumOfVariants>, TranslucencyBlend::BlendModeCount> m_pipelines;
-            std::array<std::array<Pipeline*, TranslucencyKey::NumOfVariants>, TranslucencyBlend::BlendModeCount> m_refractionPipeline;
+            std::array<Pipeline*, TranslucencyKey::NumOfVariants> m_refractionPipeline;
             std::array<std::array<Pipeline*, TranslucencyKey::NumOfVariants>, TranslucencyBlend::BlendModeCount> m_particlePipelines;
+            std::array<std::array<Pipeline*, TranslucencyKey::NumOfVariants>, TranslucencyBlend::BlendModeCount> m_waterPipelines;
         } m_materialTranslucencyPass;
 
         // post processing

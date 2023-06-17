@@ -1,22 +1,23 @@
 #define MATERIAL_TRANSLUCENT 1
+#include "translucency_resource.h.fsl"
 #include "deferred_resources.h.fsl"
 #include "deferred_common.h.fsl"
 
 PUSH_CONSTANT(translucencyConstant, b0)
 {
+    DATA(int,  feature, None);
     DATA(float, sceneAlpha, None);
     DATA(float, lightLevel, None);
-    DATA(int,  textureMask, None);
 };
 
 RES(Tex2D(float4), refractionMap, UPDATE_FREQ_PER_FRAME, t1, binding = 4); 
 
 STRUCT(PsIn) 
 {
-	DATA(float4, Position, SV_Position);
+    DATA(float4, Position, SV_Position);
     DATA(float3, pos, POSITION);
     DATA(float2, uv, TEXCOORD0);
-	DATA(float4, color, COLOR);
+    DATA(float4, color, COLOR);
 };
 
 float4 PS_MAIN(PsIn In)
@@ -24,39 +25,43 @@ float4 PS_MAIN(PsIn In)
     INIT_MAIN;
 
     float4 finalColor = vec4(0.0, 0.0 ,0.0, 1.0);
- 
-    if(HasDiffuse(Get(textureConfig) & Get(textureMask))) {
+    int blend = GetBlend(Get(feature));
+    
+    if(IsDiffuseEnable(Get(feature)) && HasDiffuse(Get(textureConfig))) {
         finalColor = SampleTex2D(Get(diffuseMap), Get(diffuseSampler), In.uv) * In.color;
     }
-
-    #ifdef USE_FOG
+    
+    float finalAlpha = 0.0;
+    if(IsFogEnable(Get(feature))) {
         float fFogAmount =  pow(
             clamp((-In.pos.z - Get(worldFogStart)) / Get(worldFogLength), 0.0, 1.0), Get(fogFalloffExp));
-        float finalAlpha = (Get(oneMinusFogAlpha) * fFogAmount + (1.0 - fFogAmount)) * Get(sceneAlpha);
-    #else
-        float finalAlpha = Get(sceneAlpha);
-    #endif
+        finalAlpha = (Get(oneMinusFogAlpha) * fFogAmount + (1.0 - fFogAmount)) * Get(sceneAlpha);
+    } else {
+        finalAlpha = Get(sceneAlpha);
+    }
 
     ////////////////////
     //Calculate new color based on Alpha and Blend mode
-    #ifdef USE_BLEND_MODE_ADD
-        finalColor.rgb *= finalAlpha * Get(lightLevel);
-    #endif
-    #ifdef USE_BLEND_MODE_MUL
-        finalColor.rgb += (vec3(1.0,1.0, 1.0) - finalColor.xyz) * (1.0-finalAlpha);
-    #endif
-    #ifdef USE_BLEND_MODE_MULX2
-        float fBlendMulAlpha = Get(lightLevel) * finalAlpha;
-        finalColor.rgb = mul(finalColor.xyz, fBlendMulAlpha) + mul(float3(0.5,0.5,0.5), (1.0 - fBlendMulAlpha));
-    #endif
-    #ifdef USE_BLEND_MODE_ALPHA
-        finalColor.rgb *= Get(lightLevel);
-        finalColor.a *= finalAlpha;
-    #endif
-    #ifdef USE_BLEND_MODE_PREMUL_ALPHA
-       finalColor.a *= finalAlpha;
-       finalColor.rgb *= Get(lightLevel);
-    #endif
+    switch(blend) {
+        case BLEND_MODE_ADD: 
+            finalColor.xyz *= finalAlpha*Get(lightLevel);
+            break;
+        case BLEND_MODE_MUL:
+            finalColor.xyz += (vec3(1.0,1.0, 1.0) - finalColor.xyz) * (1.0-finalAlpha);
+            break;
+        case BLEND_MODE_MULX2:
+            float fBlendMulAlpha = Get(lightLevel) * finalAlpha;
+            finalColor.xyz = mul(finalColor.xyz, fBlendMulAlpha) + mul(float3(0.5,0.5,0.5), (1.0 - fBlendMulAlpha));
+            break;
+        case BLEND_MODE_ALPHA:
+            finalColor.xyz *= Get(lightLevel);
+            finalColor.a *= finalAlpha;
+            break;
+        case BLEND_MODE_PREMUL_ALPHA:
+           finalColor *= finalAlpha;
+           finalColor.xyz *= Get(lightLevel);
+           break;
+    }
 
     RETURN(finalColor);
 }
