@@ -452,6 +452,11 @@ namespace hpl {
                 TranslucencyVariantCount = 4
             };
 
+            enum TranslucencyParticleShaderVariant {
+                TranslucencyParticleShaderVariantEmpty = 0x0,
+                TranslucencyParticleShaderVariantFog = 0x1,
+                TranslucencyParticleVariantCount = 2
+            };
             enum TranslucencyBlend: uint8_t {
                 BlendAdd,
                 BlendMul,
@@ -461,6 +466,19 @@ namespace hpl {
                 BlendModeCount
             };
 
+            struct TranslucencyConstant {
+                uint32_t m_blendMode;
+                union {
+                    struct {
+                        float m_afT;
+                    } m_water;
+                    struct {
+                        int m_textureMask;
+                        float m_sceneAlpha;
+                        float m_lightLevel;
+                    } m_translucency;
+                };
+            };
             // 3 bit key for pipeline variant
             union TranslucencyKey {
                 uint8_t m_id;
@@ -475,12 +493,12 @@ namespace hpl {
             Pipeline* m_refractionCopyPipeline;
             Shader* m_copyRefraction;
 
-            std::array<std::array<Shader*, TranslucencyVariantCount>, BlendModeCount> m_shaders{};
-            std::array<Shader*, BlendModeCount> m_particleShader{};
-            std::array<Shader*, BlendModeCount> m_particleShaderFog{};
+            std::array<Shader*, TranslucencyVariantCount> m_shaders{};
+            std::array<Shader*, TranslucencyParticleVariantCount> m_particleShader{};
+            //std::array<Shader*, BlendModeCount> m_particleShaderFog{};
 
             std::array<std::array<Pipeline*, TranslucencyKey::NumOfVariants>, TranslucencyBlend::BlendModeCount> m_pipelines;
-            std::array<std::array<Pipeline*, TranslucencyKey::NumOfVariants>, TranslucencyBlend::BlendModeCount> m_refractionPipeline;
+            std::array<Pipeline*, TranslucencyKey::NumOfVariants> m_refractionPipeline;
             std::array<std::array<Pipeline*, TranslucencyKey::NumOfVariants>, TranslucencyBlend::BlendModeCount> m_particlePipelines;
         } m_materialTranslucencyPass;
 
