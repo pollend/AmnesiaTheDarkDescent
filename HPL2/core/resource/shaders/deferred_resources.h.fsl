@@ -11,11 +11,11 @@ CBUFFER(perFrameConstants, UPDATE_FREQ_PER_FRAME, b0, binding = 0)
     DATA(float, worldFogLength, None);
     DATA(float, oneMinusFogAlpha, None);
     DATA(float, fogFalloffExp, None);
+    DATA(float4, worldFogColor, None);
 
     DATA(float2, viewTexel, None);
     DATA(float2, viewportSize, None);
 };
-INLINE bool UseFeatureRefraction(int _featureConfig)        { return (_featureConfig & (1 << 0)) != 0; }
 
 CBUFFER(uniformObjectBlock, UPDATE_FREQ_PER_DRAW, b1, binding = 1)
 {
@@ -50,11 +50,32 @@ CBUFFER(uniformObjectBlock, UPDATE_FREQ_PER_DRAW, b1, binding = 1)
         DATA(float, rimMulLight, None);
         DATA(float, rimMulPower, None);
     };
-
+    
     INLINE bool UseRefractionNormals(int _textureConfig)   { return (_textureConfig & (1 << 14)) != 0; }
     INLINE bool UseRefractionEdgeCheck(int _textureConfig)   { return (_textureConfig & (1 << 15)) != 0; }
+#elif defined(MATERIAL_WATER)
+    CBUFFER(uniformMaterialBlock, UPDATE_FREQ_PER_BATCH, b2, binding = 2)
+    {
+        DATA(int, textureConfig, None);
+
+        DATA(float, refractionScale, None);
+        DATA(float, frenselBias, None);
+        DATA(float, frenselPow, None);
+        DATA(float, reflectionFadeStart, None);
+        DATA(float, reflectionFadeEnd, None);
+        DATA(float, waveSpeed, None);
+        DATA(float, waveAmplitude, None);
+        DATA(float, waveFreq, None);
+    };
+
 #endif
 
+#define BLEND_MODE_ADD 0
+#define BLEND_MODE_MUL 1
+#define BLEND_MODE_MULX2 2
+#define BLEND_MODE_ALPHA 3
+#define BLEND_MODE_PREMUL_ALPHA 4
+    
 RES(Tex2D(float4), diffuseMap, UPDATE_FREQ_PER_BATCH, t1, binding = 5); 
 RES(SamplerState, diffuseSampler, UPDATE_FREQ_PER_BATCH, s1, binding = 6); 
 
