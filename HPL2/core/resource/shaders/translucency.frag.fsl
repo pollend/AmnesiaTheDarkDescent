@@ -8,7 +8,6 @@ PUSH_CONSTANT(translucencyConstant, b0)
     DATA(int,   textureMask, None);
     DATA(float, sceneAlpha, None);
     DATA(float, lightLevel, None);
-
 };
 
 RES(Tex2D(float4), refractionMap, UPDATE_FREQ_PER_FRAME, t1, binding = 4); 

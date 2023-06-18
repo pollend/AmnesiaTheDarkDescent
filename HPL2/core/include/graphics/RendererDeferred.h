@@ -139,6 +139,7 @@ namespace hpl {
             float worldFogLength;
             float oneMinusFogAlpha;
             float fogFalloffExp;
+            float4 fogColor;
 
             float2 viewTexel;
             float2  viewportSize;
@@ -452,6 +453,14 @@ namespace hpl {
                 TranslucencyVariantCount = 4
             };
 
+            enum TranslucencyWaterShaderVariant {
+                TranslucencyWaterShaderVariantEmpty = 0x0,
+                TranslucencyWaterShaderVariantFog = 0x1,
+                TranslucencyWaterRefraction = 0x2,
+                TranslucencyWaterReflection = 0x4,
+                TranslucencyWaterVariantCount = 8
+            };
+
             enum TranslucencyParticleShaderVariant {
                 TranslucencyParticleShaderVariantEmpty = 0x0,
                 TranslucencyParticleShaderVariantFog = 0x1,
@@ -466,18 +475,15 @@ namespace hpl {
                 BlendModeCount
             };
 
-            struct TranslucencyConstant {
+            struct TranslucencyWaterConstant {
+                float m_afT;
+            };
+
+            struct TranslucencyConstant{
                 uint32_t m_blendMode;
-                union {
-                    struct {
-                        float m_afT;
-                    } m_water;
-                    struct {
-                        int m_textureMask;
-                        float m_sceneAlpha;
-                        float m_lightLevel;
-                    } m_translucency;
-                };
+                int m_textureMask;
+                float m_sceneAlpha;
+                float m_lightLevel;
             };
             // 3 bit key for pipeline variant
             union TranslucencyKey {
@@ -488,6 +494,16 @@ namespace hpl {
                 } m_field;
                 static constexpr size_t NumOfVariants = 4;
             };
+            union TranslucencyWaterKey {
+                uint8_t m_id;
+                struct {
+                    uint8_t m_hasDepthTest: 1;
+                    uint8_t m_hasFog: 1;
+                    uint8_t m_hasReflection: 1;
+                    uint8_t m_hasRefraction: 1;
+                } m_field;
+                static constexpr size_t NumOfVariants = 16;
+            };
             RootSignature* m_refractionCopyRootSignature;
             std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_refractionPerFrameSet;
             Pipeline* m_refractionCopyPipeline;
@@ -495,11 +511,13 @@ namespace hpl {
 
             std::array<Shader*, TranslucencyVariantCount> m_shaders{};
             std::array<Shader*, TranslucencyParticleVariantCount> m_particleShader{};
-            //std::array<Shader*, BlendModeCount> m_particleShaderFog{};
+            std::array<Shader*, TranslucencyWaterVariantCount> m_waterShader{};
 
             std::array<std::array<Pipeline*, TranslucencyKey::NumOfVariants>, TranslucencyBlend::BlendModeCount> m_pipelines;
+            std::array<Pipeline*, TranslucencyWaterKey::NumOfVariants> m_waterPipeline;
             std::array<Pipeline*, TranslucencyKey::NumOfVariants> m_refractionPipeline;
-            std::array<std::array<Pipeline*, TranslucencyKey::NumOfVariants>, TranslucencyBlend::BlendModeCount> m_particlePipelines;
+            std::array<std::array<Pipeline*, TranslucencyKey::NumOfVariants >, TranslucencyBlend::BlendModeCount> m_particlePipelines;
+
         } m_materialTranslucencyPass;
 
         // post processing

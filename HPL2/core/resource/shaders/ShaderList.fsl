@@ -116,6 +116,51 @@
     #include "translucency_particle.frag.fsl"
 #end
 
+// translucency water
+
+#frag translucency_water.frag
+    #include "translucency_water.frag.fsl"
+#end
+
+#frag translucency_water_fog.frag
+    #define USE_FOG 1
+    #include "translucency_water.frag.fsl"
+#end
+
+#frag translucency_water_refraction.frag
+    #define USE_REFRACTION 1
+    #include "translucency_water.frag.fsl"
+#end
+
+#frag translucency_water_refraction_fog.frag
+    #define USE_FOG 1
+    #define USE_REFRACTION 1
+    #include "translucency_water.frag.fsl"
+#end
+
+#frag translucency_water_reflection.frag
+    #define USE_REFLECTION 1
+    #include "translucency_water.frag.fsl"
+#end
+
+#frag translucency_water_reflection_fog.frag
+    #define USE_FOG 1
+    #define USE_REFLECTION 1
+    #include "translucency_water.frag.fsl"
+#end
+
+#frag translucency_water_reflection_refraction.frag
+    #define USE_REFLECTION 1
+    #define USE_REFRACTION 1
+    #include "translucency_water.frag.fsl"
+#end
+
+#frag translucency_water_reflection_refraction_fog.frag
+    #define USE_FOG 1
+    #define USE_REFLECTION 1
+    #define USE_REFRACTION 1
+    #include "translucency_water.frag.fsl"
+#end
 
 #vert deferred_fog.vert
     #include "deferred_fog.vert.fsl"

@@ -8,7 +8,7 @@ STRUCT(VSInput)
 	DATA(float2, TexCoord, TEXCOORD0);
 	DATA(float3, Normal, NORMAL);
 	DATA(float3, Tangent, TANGENT);
-    DATA(float4, Color, COLOR);
+	DATA(float4, Color, COLOR);
 };
 
 STRUCT(VSOutput)
