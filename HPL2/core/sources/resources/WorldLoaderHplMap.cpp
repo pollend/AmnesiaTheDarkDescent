@@ -64,6 +64,9 @@
 #include <cstring>
 #include <iterator>
 
+#include "Common_3/Utilities/Interfaces/ILog.h"
+#include <FixPreprocessor.h>
+
 namespace hpl {
 
 	//////////////////////////////////////////////////////////////////////////
@@ -1375,7 +1378,7 @@ namespace hpl {
 			pVtxBuffer->CreateElementArray(lDataArrayTypes[i].mType,eVertexBufferElementFormat_Float, lDataArrayTypes[i].mlElementNum);
 			pVtxBuffer->ResizeArray(lDataArrayTypes[i].mType, lTotalVtxAmount * lDataArrayTypes[i].mlElementNum);
 			lDataArrayTypes[i].m_targetElement = static_cast<hpl::LegacyVertexBuffer*>(pVtxBuffer)->GetElement(lDataArrayTypes[i].mType);
-			BX_ASSERT(lDataArrayTypes[i].m_targetElement != nullptr, "Element not found");
+			ASSERT(lDataArrayTypes[i].m_targetElement != nullptr && "Element not found");
 		}
 
 		//Set up and get indices
@@ -1408,11 +1411,11 @@ namespace hpl {
 			{
 				auto* sourceElement = pTransformedVtxBuffer->GetElement(lDataArrayTypes[i].mType);
 				auto& targetElement = lDataArrayTypes[i].m_targetElement;
-				BX_ASSERT(targetElement != nullptr, "lDataArrayTypes[i].m_data != nullptr");
-				BX_ASSERT(sourceElement != nullptr, "sourceElement != nullptr");
-				BX_ASSERT(targetElement->m_type == sourceElement->m_type, "lDataArrayTypes[i].m_data->m_type == sourceElement->m_type");
-				BX_ASSERT(targetElement->m_num == sourceElement->m_num, "lDataArrayTypes[i].m_targetElement->m_num == sourceElement->m_num");
-				
+				ASSERT(targetElement != nullptr && "lDataArrayTypes[i].m_data != nullptr");
+				ASSERT(sourceElement != nullptr && "sourceElement != nullptr");
+				ASSERT(targetElement->m_type == sourceElement->m_type && "lDataArrayTypes[i].m_data->m_type == sourceElement->m_type");
+				ASSERT(targetElement->m_num == sourceElement->m_num && "lDataArrayTypes[i].m_targetElement->m_num == sourceElement->m_num");
+
 				auto targetElementStart = &(targetElement->Data().data()[lDataArrayTypes[i].offset]);
 				std::copy(sourceElement->Data().begin(), sourceElement->Data().end(), targetElementStart);
 				lDataArrayTypes[i].offset += sourceElement->Data().size();
@@ -1517,7 +1520,7 @@ namespace hpl {
 		targetVertexBuffer->CreateElementArray(eVertexBufferElement_Position,eVertexBufferElementFormat_Float, 4);
 		targetVertexBuffer->ResizeArray(eVertexBufferElement_Position, lTotalVtxAmount * 4);
 		auto* targetPositionElement = targetVertexBuffer->GetElement(eVertexBufferElement_Position);
-		BX_ASSERT(targetPositionElement != nullptr, "positionElement is null");
+		ASSERT(targetPositionElement != nullptr && "positionElement is null");
 
 		//Set up and get indices
 		targetVertexBuffer->ResizeIndices(lTotalIdxAmount);
@@ -1549,9 +1552,9 @@ namespace hpl {
 																				eVertexElementFlag_Position));
 			pTransformedVtxBuffer->Transform(pObject->GetWorldMatrix());
 			auto sourceElement = pTransformedVtxBuffer->GetElement(eVertexBufferElement_Position);
-			BX_ASSERT(targetPositionElement != nullptr, "targetPositionElement != nullptr");
-			BX_ASSERT(targetPositionElement->m_type == sourceElement->m_type, "targetPositionElement->m_type == sourceElement->m_type");
-			BX_ASSERT(targetPositionElement->m_num == sourceElement->m_num, "targetPositionElement->m_num == sourceElement->m_num");
+			ASSERT(targetPositionElement != nullptr && "targetPositionElement != nullptr");
+			ASSERT(targetPositionElement->m_type == sourceElement->m_type && "targetPositionElement->m_type == sourceElement->m_type");
+			ASSERT(targetPositionElement->m_num == sourceElement->m_num && "targetPositionElement->m_num == sourceElement->m_num");
 
 			auto elementStart = &(targetPositionElement->Data().data()[targetPositionOffset]);
 			std::copy(sourceElement->Data().begin(), sourceElement->Data().end(), elementStart);

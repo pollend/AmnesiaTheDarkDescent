@@ -28,7 +28,6 @@
 #include "EditorWindowEntityEditBoxBone.h"
 
 #include "graphics/Color.h"
-#include "graphics/GraphicsContext.h"
 #include "graphics/ImmediateDrawBatch.h"
 
 #include <algorithm>

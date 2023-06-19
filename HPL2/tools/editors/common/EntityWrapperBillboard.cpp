@@ -27,7 +27,6 @@
 #include "EditorWindowEntityEditBoxBillboard.h"
 
 #include "EntityWrapperLight.h"
-#include "graphics/GraphicsContext.h"
 #include "graphics/ImmediateDrawBatch.h"
 
 //------------------------------------------------------------------------------

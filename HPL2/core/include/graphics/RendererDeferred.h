@@ -326,20 +326,6 @@ namespace hpl {
         LegacyRenderTarget& resolveRenderTarget(std::array<LegacyRenderTarget, 2>& rt);
         std::shared_ptr<Image>& resolveRenderImage(std::array<std::shared_ptr<Image>, 2>& img);
         void RenderEdgeSmoothPass(GraphicsContext& context, cViewport& viewport, LegacyRenderTarget& rt);
-        struct LightPassOptions {
-            const cMatrixf& frustumProjection;
-            const cMatrixf& frustumInvView;
-            const cMatrixf& frustumView;
-           cRendererDeferred::GBuffer& m_gBuffer;
-        };
-        struct FogPassOptions {
-            const cMatrixf& frustumProjection;
-            const cMatrixf& frustumInvView;
-            const cMatrixf& frustumView;
-
-           cRendererDeferred::GBuffer& m_gBuffer;
-        };
-
         iVertexBuffer* GetLightShape(iLight* apLight, eDeferredShapeQuality aQuality) const;
 
         struct PerObjectOption {
@@ -357,6 +343,7 @@ namespace hpl {
 
         std::array<std::unique_ptr<iVertexBuffer>, eDeferredShapeQuality_LastEnum> m_shapeSphere;
         std::unique_ptr<iVertexBuffer> m_shapePyramid;
+        std::unique_ptr<iVertexBuffer> m_box;
         std::array<folly::small_vector<ShadowMapData, 32>, eShadowMapResolution_LastEnum> m_shadowMapData;
 
         int m_maxBatchLights;
@@ -545,9 +532,7 @@ namespace hpl {
         Pipeline* m_zPassShadowPipelineCW;
         Pipeline* m_zPassShadowPipelineCCW;
         DescriptorSet* m_zPassConstSet;
-
         std::set<iRenderable*> m_preZPassRenderables;
-
 
         GPURingBuffer m_objectUniformBuffer;
 
@@ -578,7 +563,6 @@ namespace hpl {
         CmdPool* m_prePassPool = nullptr;
         Cmd* m_prePassCmd = nullptr;
         Fence* m_prePassFence = nullptr;
-
 
         RootSignature* m_rootSignatureHIZOcclusion;
         Shader* m_ShaderHIZGenerate;

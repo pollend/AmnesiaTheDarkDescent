@@ -20,7 +20,6 @@
 #include "graphics/MaterialType_BasicSolid.h"
 
 #include "bgfx/bgfx.h"
-#include "graphics/GraphicsContext.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/ShaderUtil.h"
 #include "graphics/ShaderVariantCollection.h"

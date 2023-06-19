@@ -18,7 +18,6 @@
  */
 
 #include "resources/TextureManager.h"
-#include "bgfx/bgfx.h"
 #include "engine/RTTI.h"
 #include "graphics/AnimatedImage.h"
 #include "graphics/Bitmap.h"
@@ -32,7 +31,7 @@
 #include "resources/Resources.h"
 #include "system/LowLevelSystem.h"
 #include "system/String.h"
-#include <bx/debug.h>
+
 #include <memory>
 #include <vector>
 
@@ -445,52 +444,36 @@ namespace hpl {
 		return animatedImage;
 	}
 
+    iTexture* cTextureManager::Create1D(
+        const tString& asName, bool abUseMipMaps, eTextureUsage aUsage, unsigned int alTextureSizeLevel) {
+            ASSERT(false && "Deprecated and not implemented");
+            return nullptr;
+    }
 
+    iTexture* cTextureManager::Create2D(
+        const tString& asName, bool abUseMipMaps, eTextureType aType, eTextureUsage aUsage, unsigned int alTextureSizeLevel) {
+            ASSERT(false && "Deprecated and not implemented");
+            return nullptr;
+    }
 
-	iTexture* cTextureManager::Create1D(const tString& asName,bool abUseMipMaps,
-										eTextureUsage aUsage, unsigned int alTextureSizeLevel)
-	{
-		BX_ASSERT(false, "Deprecated and not implemented");
-		return nullptr;
-	}
+    iTexture* cTextureManager::Create3D(
+        const tString& asName, bool abUseMipMaps, eTextureUsage aUsage, unsigned int alTextureSizeLevel) {
+            ASSERT(false && "Deprecated and not implemented");
+            return nullptr;
+    }
 
-	//-----------------------------------------------------------------------
+    iTexture* cTextureManager::CreateAnim(
+        const tString& asFirstFrameName, bool abUseMipMaps, eTextureType aType, eTextureUsage aUsage, unsigned int alTextureSizeLevel) {
+            ASSERT(false && "Deprecated and not implemented");
+            return nullptr;
+    }
 
-	iTexture* cTextureManager::Create2D(const tString& asName,bool abUseMipMaps, eTextureType aType,
-										eTextureUsage aUsage, unsigned int alTextureSizeLevel)
-	{
-		BX_ASSERT(false, "Deprecated and not implemented");
-		return nullptr;
-	}
+    iTexture* cTextureManager::CreateCubeMap(
+        const tString& asPathName, bool abUseMipMaps, eTextureUsage aUsage, unsigned int alTextureSizeLevel) {
+            ASSERT(false && "Deprecated and not implemented");
+            return nullptr;
+    }
 
-	//-----------------------------------------------------------------------
-	iTexture* cTextureManager::Create3D(const tString& asName,bool abUseMipMaps, eTextureUsage aUsage,
-										unsigned int alTextureSizeLevel)
-	{
-		BX_ASSERT(false, "Deprecated and not implemented");
-		return nullptr;
-	}
-
-	//-----------------------------------------------------------------------
-
-	iTexture* cTextureManager::CreateAnim(const tString& asFirstFrameName,bool abUseMipMaps,eTextureType aType,
-											eTextureUsage aUsage, unsigned int alTextureSizeLevel)
-	{
-		BX_ASSERT(false, "Deprecated and not implemented");
-		return nullptr;
-	}
-
-	//-----------------------------------------------------------------------
-
-	iTexture* cTextureManager::CreateCubeMap(const tString& asPathName,bool abUseMipMaps,
-											eTextureUsage aUsage,
-											unsigned int alTextureSizeLevel)
-	{
-		BX_ASSERT(false, "Deprecated and not implemented");
-		return nullptr;
-	}
-
-	//-----------------------------------------------------------------------
 
 	void cTextureManager::Unload(iResourceBase* apResource)
 	{

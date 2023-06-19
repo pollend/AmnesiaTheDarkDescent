@@ -17,7 +17,6 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "bgfx/bgfx.h"
 #include "engine/Interface.h"
 #include "impl/LegacyVertexBuffer.h"
 #include "math/MathTypes.h"
@@ -66,9 +65,9 @@ namespace hpl {
 	{
 		mlMultisampling = alMultisampling;
 
-	
+
         SetWindowGrab(true);
-     
+
 
 		//Turn off cursor as default
 		ShowCursor(false);
@@ -309,7 +308,7 @@ namespace hpl {
 	}
 
 	void cLowLevelGraphicsSDL::WaitAndFinishRendering()
-	{	
+	{
 		// BX_ASSERT(false, "Deprecated");
 	}
 

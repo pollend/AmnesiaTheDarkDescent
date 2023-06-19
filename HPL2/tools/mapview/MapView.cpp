@@ -31,6 +31,9 @@
 #include <array>
 #include <memory>
 
+#include "Common_3/Utilities/Interfaces/ILog.h"
+#include <FixPreprocessor.h>
+
 using namespace hpl;
 
 cEngine *gpEngine=NULL;
@@ -445,7 +448,7 @@ public:
 			//Draws how the level have been grouped
 			if(gbDrawContainerDebug)
 			{
-				BX_ASSERT(false, "TODO need to fix this"); // TODO: Fix this
+				ASSERT(false && "TODO need to fix this"); // TODO: Fix this
 				// mpWorld->GetRenderableContainer(eWorldContainerType_Static)->RenderDebug(apFunctions);
 			}
 

@@ -118,9 +118,7 @@ namespace hpl
     }
 
     void Image::Initialize(const ImageDescriptor& descriptor, const bgfx::Memory* mem) {
-        // BX_ASSERT(!bgfx::isValid(m_handle), "RenderTarget already initialized");
         ASSERT(false && "Deprecated");
-
     }
 
     void Image::setTextureFilter(const eTextureFilter& filter) {

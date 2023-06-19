@@ -32,21 +32,12 @@
 #include "LuxJournal.h"
 #include "LuxGlobalDataHandler.h"
 #include "LuxAchievementHandler.h"
-#include "bgfx/bgfx.h"
 #include "engine/Interface.h"
 #include "graphics/Color.h"
 #include "graphics/ShaderUtil.h"
 #include "math/MathTypes.h"
-#include <bx/debug.h>
 
 #include <graphics/ForgeHandles.h>
-
-
-//////////////////////////////////////////////////////////////////////////
-// CONSTRUCTORS
-//////////////////////////////////////////////////////////////////////////
-
-//-----------------------------------------------------------------------
 
 cLuxInventory::cLuxInventory() : iLuxUpdateable("LuxInventory")
 {
@@ -1657,7 +1648,6 @@ void cLuxInventory::RenderBackgroundImage()
 
 	EngineInterface* engine = Interface<EngineInterface>::Get();
 	auto* forgeRenderer = Interface<ForgeRenderer>::Get();
-    auto& graphicsContext = engine->GetGraphicsContext();
 	auto* viewport = gpBase->mpMapHandler->GetViewport();
 	auto* renderer = viewport->GetRenderer();
     auto frame = forgeRenderer->GetFrame();

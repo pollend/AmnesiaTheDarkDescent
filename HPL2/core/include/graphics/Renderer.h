@@ -23,7 +23,6 @@
 #include "graphics/Enum.h"
 #include "graphics/ForgeHandles.h"
 #include "graphics/ForgeRenderer.h"
-#include "graphics/GraphicsContext.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Image.h"
 #include "graphics/RenderTarget.h"
@@ -286,7 +285,6 @@ namespace hpl {
         cFrustum *GetCurrentFrustum(){ return mpCurrentFrustum;}
         cRenderList *GetCurrentRenderList(){ return mpCurrentRenderList;}
 
-        iVertexBuffer* GetShapeBoxVertexBuffer(){ return mpShapeBox; }
 
         //Temp variables used by material.
         float GetTempAlpha(){ return mfTempAlpha; }
@@ -347,8 +345,6 @@ namespace hpl {
 
         float mfCurrentNearPlaneTop;
         float mfCurrentNearPlaneRight;
-
-        iVertexBuffer *mpShapeBox;
 
         static int mlRenderFrameCount;
         float mfTimeCount;

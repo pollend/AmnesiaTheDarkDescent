@@ -21,7 +21,6 @@
 
 #include "bgfx/bgfx.h"
 #include "graphics/Enum.h"
-#include "graphics/GraphicsContext.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/ImmediateDrawBatch.h"
 #include "graphics/RenderTarget.h"
@@ -42,7 +41,6 @@
 #include "graphics/Renderable.h"
 #include "graphics/SubMesh.h"
 #include "graphics/Texture.h"
-#include <graphics/GraphicsContext.h>
 
 #include "resources/Resources.h"
 
@@ -82,7 +80,7 @@ namespace hpl
         }
     }
 
-    
+
     void cRendererSimple::Draw(
         const ForgeRenderer::Frame& frame,
         cViewport& viewport,
@@ -94,7 +92,7 @@ namespace hpl
     {
 	// 	const cMatrixf frustumView = apFrustum->GetViewMatrix().GetTranspose();
 	// 	const cMatrixf frustumProj = apFrustum->GetProjectionMatrix().GetTranspose();
-		
+
     //     auto screenSize = viewport.GetSize();
     //     mpCurrentRenderList->Setup(mfCurrentFrameTime, apFrustum);
 
@@ -131,9 +129,9 @@ namespace hpl
 	// 		viewConfig.m_viewRect = {0, 0, screenSize.x, screenSize.y};
 	// 		viewConfig.m_clear = {0, 1, 0, ClearOp::Color | ClearOp::Depth};
 	// 		bgfx::touch(context.StartPass("clear target", viewConfig));
-		
+
     //         // auto view = context.StartPass("clear target");
-            
+
     //         // GraphicsContext::DrawClear clear{
     //         //     outputTarget, { 0, 1.0f, 0, ClearOp::Color | ClearOp::Depth }, 0,
     //         //     0,      static_cast<uint16_t>(screenSize.x),           static_cast<uint16_t>(screenSize.y)

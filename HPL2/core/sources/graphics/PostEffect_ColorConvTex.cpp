@@ -21,7 +21,6 @@
 
 #include "graphics/Enum.h"
 #include "graphics/Graphics.h"
-#include "graphics/GraphicsContext.h"
 #include "graphics/ShaderUtil.h"
 #include "math/MathTypes.h"
 #include "resources/Resources.h"

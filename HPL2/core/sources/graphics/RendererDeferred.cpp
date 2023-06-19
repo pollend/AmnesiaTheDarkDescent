@@ -329,138 +329,7 @@ namespace hpl {
 
             return cMatrixf::Identity;
         }
-        static inline bool IsContainerNodeVisible(iRenderableContainerNode* apNode,cFrustum* frustum,std::span<cPlanef> occludingPlanes, tRenderableFlag alNeededFlags) {
-            apNode->UpdateBeforeUse();
-            if (apNode->UsesFlagsAndVisibility() &&
-                (apNode->HasVisibleObjects() == false || (apNode->GetRenderFlags() & alNeededFlags) != alNeededFlags))
-            {
-                return false;
-            }
-            eCollision frustumCollision = frustum->CollideNode(apNode);
-            if (frustumCollision == eCollision_Outside) {
-                return  false;
-            }
 
-            if(!rendering::detail::IsRenderableNodeIsVisible(apNode, occludingPlanes)) {
-                return false;
-            }
-            return true;
-        }
-
-        // this is a bridge to build a render list from the renderable container
-        /**
-        * updates the render list with objects inside the view frustum
-        */
-        static inline void UpdateRenderableList(
-            cRenderList* renderList, // in/out
-            cVisibleRCNodeTracker* apVisibleNodeTracker,
-            cFrustum* frustum,
-            cWorld* world,
-            tObjectVariabilityFlag objectTypes,
-            std::span<cPlanef> occludingPlanes,
-            tRenderableFlag alNeededFlags, std::function<void(iRenderable*)> callback) {
-            renderList->Clear();
-
-            auto renderNodeHandler = [&](iRenderableContainerNode* apNode, tRenderableFlag alNeededFlags) {
-                if (apNode->HasObjects() == false)
-                    return;
-                for (tRenderableListIt it = apNode->GetObjectList()->begin(); it != apNode->GetObjectList()->end(); ++it) {
-                    iRenderable* pObject = *it;
-                    if (!rendering::detail::IsObjectIsVisible(pObject,alNeededFlags,occludingPlanes)) {
-                        continue;
-                    }
-
-                    renderList->AddObject(pObject);
-                    cMaterial* material = pObject->GetMaterial();
-                    if(!material || material->GetType()->IsTranslucent()) {
-                        continue;
-                    }
-                    callback(pObject);
-                }
-
-            };
-
-            struct {
-                iRenderableContainer* container;
-                tObjectVariabilityFlag flag;
-            } containers[] = {
-                { world->GetRenderableContainer(eWorldContainerType_Static), eObjectVariabilityFlag_Static },
-                { world->GetRenderableContainer(eWorldContainerType_Dynamic), eObjectVariabilityFlag_Dynamic },
-            };
-
-            for (auto& it : containers) {
-                if (it.flag & objectTypes) {
-                    it.container->UpdateBeforeRendering();
-                }
-            }
-
-            // Add Root nodes to stack
-            std::function<void(iRenderableContainerNode* apNode)> walkRenderables;
-            walkRenderables = [&](iRenderableContainerNode* apNode) {
-                for(auto& childNode: apNode->GetChildNodes()) {
-                    childNode->UpdateBeforeUse();
-                    if (childNode->UsesFlagsAndVisibility() &&
-                        (childNode->HasVisibleObjects() == false || (childNode->GetRenderFlags() & alNeededFlags) != alNeededFlags))
-                    {
-                        continue;
-                    }
-                    eCollision frustumCollision = frustum->CollideNode(childNode);
-                    if (frustumCollision == eCollision_Outside) {
-                        continue;
-                    }
-
-                    if(!rendering::detail::IsRenderableNodeIsVisible(childNode, occludingPlanes)) {
-                        continue;
-                    }
-
-                    if (frustum->CheckAABBNearPlaneIntersection(childNode->GetMin(), childNode->GetMax())) {
-                        cVector3f vViewSpacePos = cMath::MatrixMul(frustum->GetViewMatrix(), childNode->GetCenter());
-                        childNode->SetViewDistance(vViewSpacePos.z);
-                        childNode->SetInsideView(true);
-                    } else {
-                        // Frustum origin is outside of node. Do intersection test.
-                        cVector3f vIntersection;
-                        cMath::CheckAABBLineIntersection(
-                            childNode->GetMin(),
-                            childNode->GetMax(),
-                            frustum->GetOrigin(),
-                            childNode->GetCenter(),
-                            &vIntersection,
-                            NULL);
-                        cVector3f vViewSpacePos = cMath::MatrixMul(frustum->GetViewMatrix(), vIntersection);
-                        childNode->SetViewDistance(vViewSpacePos.z);
-                        childNode->SetInsideView(false);
-                    }
-                    walkRenderables(childNode);
-                }
-                renderNodeHandler(apNode, alNeededFlags);
-            };
-
-            for (auto& it : containers) {
-                if (it.flag & objectTypes) {
-                    iRenderableContainerNode* pNode = it.container->GetRoot();
-                    pNode->UpdateBeforeUse(); // Make sure node is updated.
-                    pNode->SetInsideView(true); // We never want to check root! Assume player is inside.
-                    walkRenderables(pNode);
-                }
-            }
-        }
-
-        static inline bool SortDeferredLightBox(const DeferredLight* apLightDataA, const DeferredLight* apLightDataB) {
-            iLight* pLightA = apLightDataA->m_light;
-            iLight* pLightB = apLightDataB->m_light;
-
-            cLightBox* pBoxLightA = static_cast<cLightBox*>(pLightA);
-            cLightBox* pBoxLightB = static_cast<cLightBox*>(pLightB);
-
-            if (pBoxLightA->GetBoxLightPrio() != pBoxLightB->GetBoxLightPrio()) {
-                return pBoxLightA->GetBoxLightPrio() < pBoxLightB->GetBoxLightPrio();
-            }
-
-            //////////////////////////
-            // Pointer
-            return pLightA < pLightB;
-        }
 
         static inline bool SortDeferredLightDefault(const DeferredLight* a, const DeferredLight* b) {
             iLight* pLightA = a->m_light;
@@ -815,7 +684,6 @@ namespace hpl {
         }
 
         m_dissolveImage = mpResources->GetTextureManager()->Create2DImage("core_dissolve.tga", false);
-
         auto* forgetRenderer = Interface<ForgeRenderer>::Get();
         auto updatePerFrameDescriptor = [&](DescriptorSet* desc) {
             for(size_t i = 0; i < ForgeRenderer::SwapChainLength; i++) {
@@ -2269,9 +2137,8 @@ namespace hpl {
             std::unique_ptr<iVertexBuffer>(loadVertexBufferFromMesh("core_7_7_sphere.dae", lVtxFlag));
         m_shapeSphere[eDeferredShapeQuality_Low] =
             std::unique_ptr<iVertexBuffer>(loadVertexBufferFromMesh("core_5_5_sphere.dae", lVtxFlag));
-
         m_shapePyramid = std::unique_ptr<iVertexBuffer>(loadVertexBufferFromMesh("core_pyramid.dae", lVtxFlag));
-
+        m_box = std::unique_ptr<iVertexBuffer>(loadVertexBufferFromMesh("core_box.dae", lVtxFlag));
         ////////////////////////////////////
         // Batch vertex buffer
         mlMaxBatchVertices = m_shapeSphere[eDeferredShapeQuality_Low]->GetVertexNum() * m_maxBatchLights;
@@ -2737,7 +2604,7 @@ namespace hpl {
                 cmdBeginDebugMarker(m_prePassCmd, 1, 1, 0, "Occlusion Query");
                 LegacyVertexBuffer::GeometryBinding binding{};
                 std::array targets = { eVertexBufferElement_Position };
-                static_cast<LegacyVertexBuffer*>(GetShapeBoxVertexBuffer())->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
+                static_cast<LegacyVertexBuffer*>(m_box.get())->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
 
                 uint32_t occlusionIndex = 0;
                 cMatrixf viewProj = cMath::MatrixMul(mainFrustumProj, mainFrustumView);
@@ -3771,7 +3638,7 @@ namespace hpl {
 
             LegacyVertexBuffer::GeometryBinding binding{};
             std::array geometryStream = { eVertexBufferElement_Position };
-            static_cast<LegacyVertexBuffer*>(mpShapeBox)
+            static_cast<LegacyVertexBuffer*>(m_box.get())
                 ->resolveGeometryBinding(frame.m_currentFrame, geometryStream, &binding);
             detail::cmdDefaultLegacyGeomBinding(frame.m_cmd, frame, binding);
 
@@ -4127,7 +3994,7 @@ namespace hpl {
             case eLightType_Spot:
                 return m_shapePyramid.get();
             case eLightType_Box:
-                return mpShapeBox;
+                return m_box.get();
             default:
                 break;
         }

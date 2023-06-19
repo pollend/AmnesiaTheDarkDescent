@@ -21,7 +21,6 @@
 
 #include "engine/IUpdateEventLoop.h"
 #include "engine/Interface.h"
-#include "graphics/GraphicsContext.h"
 #include "graphics/RenderTarget.h"
 #include "math/MathTypes.h"
 #include "scene/Camera.h"

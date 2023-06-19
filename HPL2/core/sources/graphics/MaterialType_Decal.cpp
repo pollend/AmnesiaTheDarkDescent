@@ -20,7 +20,6 @@
 #include "graphics/MaterialType_Decal.h"
 
 #include "bgfx/bgfx.h"
-#include "graphics/GraphicsContext.h"
 #include "graphics/Image.h"
 #include "graphics/ShaderUtil.h"
 #include "math/MathTypes.h"

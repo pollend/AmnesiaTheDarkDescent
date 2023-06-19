@@ -125,12 +125,6 @@ namespace hpl {
 		if(mpVtxBuffer) hplDelete(mpVtxBuffer);
 		if(mpHaloSourceBV) hplDelete(mpHaloSourceBV);
 
-		if(bgfx::isValid(m_occlusionCurrent)) {
-			bgfx::destroy(m_occlusionCurrent);
-		}
-		if(bgfx::isValid(m_occlusionMax)) {
-			bgfx::destroy(m_occlusionMax);
-		}
 	}
 
 	//-----------------------------------------------------------------------
@@ -385,23 +379,6 @@ namespace hpl {
 		return mbIsHalo;
 	}
 
-	//-----------------------------------------------------------------------
-
-	void cBillboard::ResolveOcclusionPass(iRenderer *apRenderer, std::function<void(bgfx::OcclusionQueryHandle, DepthTest test, GraphicsContext::LayoutStream&, const cMatrixf& transform)> handler) {
-		if(mbIsHalo==false) return;
-
-		m_mtxHaloOcclusionMatrix = cMath::MatrixScale(mvHaloSourceSize);
-		m_mtxHaloOcclusionMatrix = cMath::MatrixMul(GetWorldMatrix(), m_mtxHaloOcclusionMatrix);
-
-		cMatrixf mtxTransform = m_mtxHaloOcclusionMatrix.GetTranspose();
-
-		iVertexBuffer *pShapeVtx = apRenderer->GetShapeBoxVertexBuffer();
-		GraphicsContext::LayoutStream layout;
-		pShapeVtx->GetLayoutStream(layout);
-		handler(m_occlusionCurrent, DepthTest::LessEqual, layout, mtxTransform);
-		handler(m_occlusionMax, DepthTest::Always, layout, mtxTransform);
-	}
-
 
     float cBillboard::getAreaOfScreenSpace(cFrustum* frustum) {
         // Update bv size
@@ -441,97 +418,5 @@ namespace hpl {
         }
         return 0;
     }
-	bool cBillboard::RetrieveOcculsionQuery(iRenderer *apRenderer)
-	{
-		if(mbIsHalo==false) return  true;
-		int lSamples = 0;
-		int lMaxSamples = 0;
-
-		if(bgfx::isValid(m_occlusionCurrent) && bgfx::getResult(m_occlusionCurrent, &lSamples) != bgfx::OcclusionQueryResult::Enum::Visible) {
-			return false;
-		}
-
-		if(bgfx::isValid(m_occlusionMax) &&  bgfx::getResult(m_occlusionMax, &lMaxSamples) != bgfx::OcclusionQueryResult::Enum::Visible) {
-			return false;
-		}
-
-		////////////////////////////
-		// Samples are visible
-		if(lMaxSamples >0)
-		{
-			///////////////////////
-			//Calculate the alpha
-			float fAlpha = (float)lSamples / (float)lMaxSamples;
-
-			///////////////////////
-			//Check if inside screen
-			cFrustum *pFrustum = apRenderer->GetCurrentFrustum();
-
-			//Update bv size
-			if(mbHaloSizeUpdated)
-			{
-				mpHaloSourceBV->SetSize(mvHaloSourceSize);
-				mbHaloSizeUpdated = false;
-			}
-
-			//Update bv transform
-			if(mlHaloBVMatrixCount != GetTransformUpdateCount())
-			{
-				mpHaloSourceBV->SetTransform(GetWorldMatrix());
-				mlHaloBVMatrixCount = GetTransformUpdateCount();
-			}
-
-
-			//Get the screen clip rect and see how much is inside screen.
-			cVector3f vMin,vMax;
-			if(cMath::GetNormalizedClipRectFromBV(vMin,vMax, *mpHaloSourceBV,pFrustum,0))
-			{
-				cVector3f vTotalSize = vMax -vMin;
-
-				if(vMin.x < -1) vMin.x = -1;
-				if(vMin.y < -1) vMin.y = -1;
-				if(vMax.x > 1) vMax.x = 1;
-				if(vMax.y > 1) vMax.y = 1;
-
-				cVector3f vInsideSize = vMax -vMin;
-
-				float fInsideArea = vInsideSize.x*vInsideSize.y;
-				float fTotalArea = vTotalSize.x*vTotalSize.y;
-
-				if(fTotalArea > 0)	fAlpha *= fInsideArea / fTotalArea;
-				else				fAlpha = 0;
-
-
-				SetHaloAlpha(fAlpha);
-			}
-			else
-			{
-				SetHaloAlpha(0);
-			}
-
-			return true;
-		}
-		////////////////////////////
-		// No Samples are visible
-		else
-		{
-			SetHaloAlpha(0);
-			return false;
-		}
-	}
-
-	//-----------------------------------------------------------------------
-
-
-	//////////////////////////////////////////////////////////////////////////
-	// PRIVATE METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-
-	//-----------------------------------------------------------------------
-
-
-
-	//-----------------------------------------------------------------------
 
 }

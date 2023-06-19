@@ -247,7 +247,7 @@ void iLuxProp_CritterBase::OnRenderSolid(hpl::ImmediateDrawBatch* apFunctions)
 	return;
 	iPhysicsWorld *pPhysicsWorld = mpWorld->GetPhysicsWorld();
 
-	BX_ASSERT(false, "bottom line is needed"); // TODO add back this line
+	ASSERT(false && "bottom line is needed"); // TODO add back this line
 	// pPhysicsWorld->RenderShapeDebugGeometry(mpBody->GetShape(), mpBody->GetLocalMatrix(), apFunctions->GetLowLevelGfx(), cColor(1,1));
 
 	apFunctions->DebugDrawLine(mpBody->GetLocalPosition(), mpBody->GetLocalPosition()+mvGroundNormal*0.5f,cColor(1,0,0,1));

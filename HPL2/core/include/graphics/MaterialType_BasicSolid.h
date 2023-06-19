@@ -19,7 +19,6 @@
 
 #pragma once
 
-#include "graphics/GraphicsContext.h"
 #include "graphics/Image.h"
 #include "graphics/Material.h"
 #include "graphics/MaterialType.h"

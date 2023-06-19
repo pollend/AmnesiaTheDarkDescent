@@ -1,18 +1,18 @@
 /**
-* Copyright 2023 Michael Pollind
-* 
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-* 
-*     http://www.apache.org/licenses/LICENSE-2.0
-* 
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
+ * Copyright 2023 Michael Pollind
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 #pragma once
 
@@ -25,12 +25,11 @@
 #include <engine/RTTI.h>
 #include <math/MathTypes.h>
 #include <system/HandleWrapper.h>
-#include <bx/debug.h>
 
 #include <SDL2/SDL_events.h>
 
-
 #include "Common_3/OS/Interfaces/IOperatingSystem.h"
+#include "Common_3/Utilities/Interfaces/ILog.h"
 #include <FixPreprocessor.h>
 
 namespace hpl::window {
@@ -44,7 +43,7 @@ namespace hpl::window {
         // keyboard can move to a separate interface
 
     };
-    enum class WindowStyle: uint32_t {
+    enum class WindowStyle : uint32_t {
         WindowStyleNone = 0,
         WindowStyleTitleBar = 0x01,
         WindowStyleResizable = 0x02,
@@ -57,7 +56,7 @@ namespace hpl::window {
         WindowStyleMaximizable = 0x80,
     };
 
-    enum class WindowStatus: uint32_t {
+    enum class WindowStatus : uint32_t {
         WindowStatusNone = 0,
         WindowStatusInputFocus = 0x01,
         WindowStatusInputMouseFocus = 0x02,
@@ -111,8 +110,6 @@ namespace hpl::window {
         void SetWindowSize(NativeWindowHandler& handler, const cVector2l& size);
 
         WindowHandle ForgeWindowHandle(NativeWindowHandler& handler);
-        void* NativeWindowHandle(NativeWindowHandler& handler);
-        void* NativeDisplayHandle(NativeWindowHandler& handler);
         cVector2l GetWindowSize(NativeWindowHandler& handler);
         WindowStatus GetWindowStatus(NativeWindowHandler& handler);
 
@@ -131,7 +128,6 @@ namespace hpl::window {
     class NativeWindowWrapper final {
         HPL_RTTI_CLASS(NativeWindow, "{d17ea5c7-30f1-4d5d-b38e-1a7e88e137fc}")
     public:
-
         ~NativeWindowWrapper() {
         }
         NativeWindowWrapper() = default;
@@ -147,89 +143,79 @@ namespace hpl::window {
         void operator=(NativeWindowWrapper&& other) {
             m_impl = std::move(other.m_impl);
         }
-        
-        inline void* NativeWindowHandle() {
-            BX_ASSERT(m_impl, "NativeWindowHandle is null")
-            return internal::NativeWindowHandle(m_impl);
-        }
-
-        inline void* NativeDisplayHandle() {
-            BX_ASSERT(m_impl, "NativeDisplayHandle is null")
-            return internal::NativeDisplayHandle(m_impl);
-        }
 
         inline void SetWindowSize(cVector2l size) {
-            BX_ASSERT(m_impl, "NativeWindowHandle is null")
+            ASSERT(m_impl && "NativeWindowHandle is null");
             internal::SetWindowSize(m_impl, size);
         }
 
         inline void SetWindowTitle(const std::string_view title) {
-            BX_ASSERT(m_impl, "NativeWindowHandle is null")
+            ASSERT(m_impl && "NativeWindowHandle is null");
             internal::SetWindowTitle(m_impl, title);
         }
 
         inline cVector2l GetWindowSize() {
-            BX_ASSERT(m_impl, "NativeWindowHandle is null")
+            ASSERT(m_impl && "NativeWindowHandle is null");
             return internal::GetWindowSize(m_impl);
         }
 
         inline void ConnectWindowEventHandler(WindowEvent::Handler& handler) {
-            BX_ASSERT(m_impl, "NativeWindowHandle is null")
+            ASSERT(m_impl && "NativeWindowHandle is null");
             internal::ConnectionWindowEventHandler(m_impl, handler);
         }
 
         inline void ConnectInternalEventHandler(internal::WindowInternalEvent::Handler& handler) {
-            BX_ASSERT(m_impl, "NativeWindowHandle is null")
+            ASSERT(m_impl && "NativeWindowHandle is null");
             internal::ConnectInternalEventHandler(m_impl, handler);
         }
 
         inline internal::WindowInternalEvent& NativeInternalEvent() {
-            BX_ASSERT(m_impl, "NativeWindowHandle is null")
+            ASSERT(m_impl && "NativeWindowHandle is null");
             return internal::NativeInternalEvent(m_impl);
         }
 
         inline WindowHandle ForgeWindowHandle() {
-            BX_ASSERT(m_impl, "NativeWindowHandle is null")
+            ASSERT(m_impl && "NativeWindowHandle is null");
             return internal::ForgeWindowHandle(m_impl);
         }
 
         inline WindowEvent& NativeWindowEvent() {
-            BX_ASSERT(m_impl, "NativeWindowHandle is null")
+            ASSERT(m_impl && "NativeWindowHandle is null");
             return internal::NativeWindowEvent(m_impl);
         }
 
         inline WindowStatus GetWindowStatus() {
-            BX_ASSERT(m_impl, "NativeWindowHandle is null")
+            ASSERT(m_impl && "NativeWindowHandle is null");
             return internal::GetWindowStatus(m_impl);
         }
 
         inline void Process() {
-            BX_ASSERT(m_impl, "NativeWindowHandle is null")
+            ASSERT(m_impl && "NativeWindowHandle is null");
             internal::Process(m_impl);
         }
 
         inline void GrabCursor() {
-            BX_ASSERT(m_impl, "NativeWindowHandle is null")
+            ASSERT(m_impl && "NativeWindowHandle is null");
             internal::WindowGrabCursor(m_impl);
         }
         inline void ReleaseCursor() {
-            BX_ASSERT(m_impl, "NativeWindowHandle is null")
+            ASSERT(m_impl && "NativeWindowHandle is null");
             internal::WindowReleaseCursor(m_impl);
         }
         inline void ShowHardwareCursor() {
-            BX_ASSERT(m_impl, "NativeWindowHandle is null")
+            ASSERT(m_impl && "NativeWindowHandle is null");
             internal::ShowHardwareCursor(m_impl);
         }
         inline void HideHardwareCursor() {
-            BX_ASSERT(m_impl, "NativeWindowHandle is null")
+            ASSERT(m_impl && "NativeWindowHandle is null");
             internal::HideHardwareCursor(m_impl);
         }
         inline void ConstrainCursor() {
-            BX_ASSERT(m_impl, "NativeWindowHandle is null")
+            ASSERT(m_impl && "NativeWindowHandle is null");
             internal::ConstrainCursor(m_impl);
         }
         inline void UnconstrainCursor() {
-            BX_ASSERT(m_impl, "NativeWindowHandle is null")
+            ASSERT(m_impl && "NativeWindowHandle is null");
             internal::UnconstrainCursor(m_impl);
         }
 
@@ -240,7 +226,6 @@ namespace hpl::window {
     private:
         internal::NativeWindowHandler m_impl = internal::NativeWindowHandler();
     };
-    
 
     inline hpl::window::WindowStyle operator&(hpl::window::WindowStyle lhs, hpl::window::WindowStyle rhs) {
         return static_cast<hpl::window::WindowStyle>(static_cast<uint32_t>(lhs) & static_cast<uint32_t>(rhs));
@@ -248,7 +233,7 @@ namespace hpl::window {
     inline hpl::window::WindowStyle operator|(hpl::window::WindowStyle lhs, hpl::window::WindowStyle rhs) {
         return static_cast<hpl::window::WindowStyle>(static_cast<uint32_t>(lhs) | static_cast<uint32_t>(rhs));
     }
-    inline  bool any(hpl::window::WindowStyle lhs) {
+    inline bool any(hpl::window::WindowStyle lhs) {
         return static_cast<uint32_t>(lhs) != 0;
     }
 
@@ -258,7 +243,7 @@ namespace hpl::window {
     inline hpl::window::WindowStatus operator|(hpl::window::WindowStatus lhs, hpl::window::WindowStatus rhs) {
         return static_cast<hpl::window::WindowStatus>(static_cast<uint32_t>(lhs) | static_cast<uint32_t>(rhs));
     }
-    inline  bool any(hpl::window::WindowStatus lhs) {
+    inline bool any(hpl::window::WindowStatus lhs) {
         return static_cast<uint32_t>(lhs) != 0;
     }
 

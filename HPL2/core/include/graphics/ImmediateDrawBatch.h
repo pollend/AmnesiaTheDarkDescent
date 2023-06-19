@@ -19,9 +19,7 @@ class ImmediateDrawBatch {
 
         inline bgfx::ViewId GetOrthographicView() const { return m_orthographicView; }
         inline bgfx::ViewId GetPerspectiveView() const { return m_perspectiveView; }
-        inline GraphicsContext& GetContext() const { return *m_context; }
 
-        ImmediateDrawBatch(GraphicsContext& context, LegacyRenderTarget& target, const cMatrixf& view, const cMatrixf& projection);
 
         ImmediateDrawBatch();
         // takes 3 points and the other 1 is calculated
@@ -118,7 +116,6 @@ class ImmediateDrawBatch {
         cMatrixf m_projection;
 
         LegacyRenderTarget* m_target;
-        GraphicsContext* m_context;
 
         bgfx::ProgramHandle m_colorProgram = BGFX_INVALID_HANDLE;
         bgfx::ProgramHandle m_uvProgram = BGFX_INVALID_HANDLE;

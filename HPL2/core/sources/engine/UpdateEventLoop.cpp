@@ -1,7 +1,9 @@
 #include "math/Crc32.h"
-#include <bx/debug.h>
 #include <engine/UpdateEventLoop.h>
 #include <string_view>
+
+#include "Common_3/Utilities/Interfaces/ILog.h"
+#include <FixPreprocessor.h>
 
 namespace hpl {
 
@@ -50,7 +52,7 @@ namespace hpl {
     }
 
     void UpdateEventLoop::Broadcast(BroadcastEvent event, float value) {
-        BX_ASSERT(static_cast<size_t>(event) < m_events.size(), "Event out of range");
+        ASSERT(static_cast<size_t>(event) < m_events.size() && "Event out of range");
         m_events[static_cast<size_t>(event)].Signal(value);
         for (auto& group : m_eventGroups) {
             if (group.m_id == m_activeEventGroup) {
@@ -60,7 +62,7 @@ namespace hpl {
         }
     }
     void UpdateEventLoop::BroadcastToAll(BroadcastEvent event, float value) {
-        BX_ASSERT(static_cast<size_t>(event) < m_events.size(), "Event out of range");
+        ASSERT(static_cast<size_t>(event) < m_events.size() && "Event out of range");
         m_events[static_cast<size_t>(event)].Signal(value);
         for (auto& group : m_eventGroups) {
             group.m_broadcast->m_events[static_cast<size_t>(event)].Signal(value);
@@ -82,7 +84,7 @@ namespace hpl {
 
     void UpdateEventLoop::Subscribe(
         const std::string_view groupName, BroadcastEvent event, IUpdateEventLoop::UpdateEvent::Handler& handler) {
-        BX_ASSERT(static_cast<size_t>(event) < m_events.size(), "Event out of range");
+        ASSERT(static_cast<size_t>(event) < m_events.size() && "Event out of range");
         math::Crc32 crc(groupName);
         for (auto& group : m_eventGroups) {
             if (group.m_id == groupName) {

@@ -22,7 +22,6 @@
 #include "bgfx/bgfx.h"
 #include "bgfx/defines.h"
 #include "graphics/ForgeRenderer.h"
-#include "graphics/GraphicsContext.h"
 #include "math/Math.h"
 #include "system/LowLevelSystem.h"
 
@@ -48,6 +47,8 @@ namespace hpl {
                 case eVertexBufferUsageType_Dynamic:
                 case eVertexBufferUsageType_Stream:
                     return RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
+                default:
+                    break;
             }
             return RESOURCE_MEMORY_USAGE_GPU_ONLY;
         };
@@ -465,12 +466,9 @@ namespace hpl {
 
     void LegacyVertexBuffer::Draw(eVertexBufferDrawType aDrawType) {
     }
+
     void LegacyVertexBuffer::DrawIndices(unsigned int* apIndices, int alCount, eVertexBufferDrawType aDrawType) {
         ASSERT(false && "Not implemented");
-    }
-
-    void LegacyVertexBuffer::GetLayoutStream(GraphicsContext::LayoutStream& layoutStream, eVertexBufferDrawType aDrawType) {
-        ASSERT(false && "need to reimplement");
     }
 
     void LegacyVertexBuffer::resolveGeometryBinding(

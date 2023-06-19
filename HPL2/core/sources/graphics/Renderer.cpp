@@ -519,18 +519,6 @@ namespace hpl
         mbSetupOcclusionPlaneForFog = false;
 
         mfTimeCount = 0;
-
-        ////////////
-        // Create shapes
-        //  Color and Texture because Geforce cards fail without it, no idea why...
-        auto loadVertexBufferFromMesh = [&](const tString& meshName, tVertexElementFlag vtxFlag) {
-			iVertexBuffer* pVtxBuffer = mpResources->GetMeshManager()->CreateVertexBufferFromMesh(meshName, vtxFlag);
-			if (pVtxBuffer == NULL) {
-				FatalError("Could not load vertex buffer from mesh '%s'\n", meshName.c_str());
-			}
-			return pVtxBuffer;
-		};
-        mpShapeBox = loadVertexBufferFromMesh("core_box.dae", eVertexElementFlag_Position | eVertexElementFlag_Texture0 | eVertexElementFlag_Color0);
     }
 
     //-----------------------------------------------------------------------
@@ -538,8 +526,6 @@ namespace hpl
     iRenderer::~iRenderer()
     {
 
-        if (mpShapeBox)
-            hplDelete(mpShapeBox);
     }
 
     void iRenderer::Render(

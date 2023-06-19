@@ -22,7 +22,6 @@
 #include "graphics/Image.h"
 #include <bgfx/bgfx.h>
 #include <graphics/PostEffect.h>
-#include <graphics/GraphicsContext.h>
 #include <graphics/RenderTarget.h>
 
 namespace hpl {

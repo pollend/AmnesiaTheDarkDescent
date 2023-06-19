@@ -1,12 +1,12 @@
 /**
 * Copyright 2023 Michael Pollind
-* 
+*
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
 * You may obtain a copy of the License at
-* 
+*
 *     http://www.apache.org/licenses/LICENSE-2.0
-* 
+*
 * Unless required by applicable law or agreed to in writing, software
 * distributed under the License is distributed on an "AS IS" BASIS,
 * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,11 +16,13 @@
 
 #include <graphics/ImageResourceWrapper.h>
 
-#include <bx/debug.h>
 #include <resources/TextureManager.h>
 #include <graphics/Image.h>
 #include <engine/RTTI.h>
 #include <graphics/AnimatedImage.h>
+
+#include "Common_3/Utilities/Interfaces/ILog.h"
+#include <FixPreprocessor.h>
 
 namespace hpl {
 
@@ -32,8 +34,8 @@ namespace hpl {
         : m_imageResource(resource)
         , m_textureManager(m_textureManager)
         , m_autoDestroyResource(autoDestroyTextures) {
-        BX_ASSERT(m_imageResource, "ImageResourceWrapper: Image resource is null");
-        BX_ASSERT(m_textureManager, "ImageResourceWrapper: Texture manager is null");
+        ASSERT(m_imageResource && "ImageResourceWrapper: Image resource is null");
+        ASSERT(m_textureManager && "ImageResourceWrapper: Texture manager is null");
     }
     ImageResourceWrapper::ImageResourceWrapper(ImageResourceWrapper&& other) {
         if (m_imageResource && m_autoDestroyResource) {
@@ -46,7 +48,7 @@ namespace hpl {
         other.m_imageResource = nullptr;
         other.m_textureManager = nullptr;
     }
-    
+
     ImageResourceWrapper::~ImageResourceWrapper() {
         if (m_imageResource && m_autoDestroyResource) {
             m_textureManager->Destroy(m_imageResource);

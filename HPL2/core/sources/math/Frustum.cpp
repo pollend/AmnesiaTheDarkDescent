@@ -19,7 +19,6 @@
 
 #include "math/Frustum.h"
 
-#include "graphics/GraphicsContext.h"
 #include "graphics/ImmediateDrawBatch.h"
 #include "math/Math.h"
 #include "system/LowLevelSystem.h"
@@ -29,24 +28,12 @@
 
 namespace hpl {
 
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	cFrustum::cFrustum()
 	{
 		mbInvertsCullMode = false;
 	}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	void cFrustum::SetupPerspectiveProj(const cMatrixf& a_mtxProj, const cMatrixf& a_mtxView,
 										float afFarPlane, float afNearPlane,float afFOV,float afAspect,

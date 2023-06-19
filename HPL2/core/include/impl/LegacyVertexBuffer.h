@@ -94,9 +94,6 @@ namespace hpl {
         virtual void Draw(eVertexBufferDrawType aDrawType = eVertexBufferDrawType_LastEnum) override;
         virtual void DrawIndices(
             unsigned int* apIndices, int alCount, eVertexBufferDrawType aDrawType = eVertexBufferDrawType_LastEnum) override;
-        // virtual void Submit(GraphicsContext& context, eVertexBufferDrawType aDrawType = eVertexBufferDrawType_LastEnum) override;
-        virtual void GetLayoutStream(
-            GraphicsContext::LayoutStream& layoutStream, eVertexBufferDrawType aDrawType = eVertexBufferDrawType_LastEnum) override;
 
         struct GeometryBinding {
             struct VertexGeometryEntry {

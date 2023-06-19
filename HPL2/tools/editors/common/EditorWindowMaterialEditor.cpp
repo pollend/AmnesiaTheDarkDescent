@@ -28,7 +28,8 @@
 #include <algorithm>
 #include <memory>
 
-//------------------------------------------------------------------------------------
+#include "Common_3/Utilities/Interfaces/ILog.h"
+#include <FixPreprocessor.h>
 
 static tString gsTextureTypeStrings[] =
 {
@@ -243,8 +244,8 @@ void cTextureWrapper::Reload()
 		eTextureType type = GetTextureTypeFromBitmap(pBmp);
 		// if(mpTexture || mpTexture && type!=mpTexture->GetType())
 		// {
-		
-			
+
+
 		// 	mpTexture = pGfx->CreateTexture(pMatMgr->GetTextureString(mUnit), type, eTextureUsage_Normal);
 		// }
 		auto desc = ImageDescriptor::CreateFromBitmap(*pBmp);
@@ -252,7 +253,7 @@ void cTextureWrapper::Reload()
 		m_desc = desc;
 		mpTexture = std::make_unique<Image>();
 		Image::InitializeFromBitmap(*mpTexture.get(), *pBmp, desc);
-		
+
 		// mpTexture->SetUseMipMaps(mbMipMaps);
 
 		// mbValid = (mpTexture!=NULL && mpTexture->CreateFromBitmap(pBmp));
@@ -548,7 +549,7 @@ void cMaterialWrapper::Load(const tWString& asFilename)
 
 	for(int i=0;i<eMaterialTexture_LastEnum;++i)
 	{
-		BX_ASSERT(false, "TODO: Fix this!");
+		ASSERT(false && "TODO: Fix this!");
 		// mvTextures[i]->CreateFromTexture(pMat->GetTexture((eMaterialTexture)i));
 		// mvTextures[i]->Update();
 	}
@@ -686,7 +687,7 @@ void cMaterialWrapper::UpdateMaterialInMemory(const tString& asName)
 			bool bMipMaps = descriptor.m_hasMipMaps;
 			// TODO: need to implement updating texture in memory
 			// eTextureWrap wrap = pEditingTex->GetWrapR();
-			
+
 			// Image* pNewTex = NULL;
 			// switch(pEditingTex->GetType())
 			// {
@@ -708,7 +709,7 @@ void cMaterialWrapper::UpdateMaterialInMemory(const tString& asName)
 			// }
 			// if(pNewTex)
 			// {
-				
+
 			// 	pNewTex->SetWrapR(wrap);
 			// 	pNewTex->SetWrapS(wrap);
 			// 	pNewTex->SetWrapT(wrap);

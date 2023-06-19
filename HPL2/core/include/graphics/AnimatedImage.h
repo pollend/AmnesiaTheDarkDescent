@@ -16,7 +16,6 @@ namespace hpl {
         virtual ~AnimatedImage();
         void Initialize(std::span<std::unique_ptr<hpl::Image>> images);
 
-        bgfx::TextureHandle GetHandle() const;
         Image* GetImage() const;
 
         virtual bool Reload() override;

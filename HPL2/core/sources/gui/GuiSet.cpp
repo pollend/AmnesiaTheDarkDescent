@@ -18,12 +18,9 @@
  */
 
 #include "gui/GuiSet.h"
-#include <bgfx/bgfx.h>
-#include <bx/debug.h>
 
 #include "graphics/Color.h"
 #include "graphics/Enum.h"
-#include "graphics/GraphicsContext.h"
 #include "graphics/RenderTarget.h"
 #include "graphics/ShaderUtil.h"
 #include "gui/GuiTypes.h"
@@ -820,7 +817,6 @@ namespace hpl {
 					}
 				}
 
-				// BX_ASSERT((indexBufferIndex + 6) <= ib.size, "indexIndex <= ib.m_size")
 				reinterpret_cast<uint32_t*>(indexUpdateDesc.pMappedData)[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex - 4;
 				reinterpret_cast<uint32_t*>(indexUpdateDesc.pMappedData)[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex - 3;
 				reinterpret_cast<uint32_t*>(indexUpdateDesc.pMappedData)[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex - 2;

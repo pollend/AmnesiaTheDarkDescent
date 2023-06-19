@@ -22,7 +22,6 @@
 
 #include "engine/Interface.h"
 #include <graphics/Enum.h>
-#include <graphics/GraphicsContext.h>
 #include <graphics/RenderTarget.h>
 #include <math/MathTypes.h>
 #include <memory>

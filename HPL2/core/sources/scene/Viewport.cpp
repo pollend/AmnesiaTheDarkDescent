@@ -18,11 +18,9 @@
  */
 
 #include "engine/Interface.h"
-
-#include "scene/Viewport.h"
-
 #include "graphics/Renderer.h"
 
+#include "scene/Viewport.h"
 #include "scene/Scene.h"
 #include "scene/World.h"
 
@@ -30,6 +28,7 @@
 #include <memory>
 
 #include <folly/small_vector.h>
+
 namespace hpl {
 
     namespace internal {
@@ -53,7 +52,7 @@ namespace hpl {
 
         std::lock_guard<std::mutex> lock(internal::m_mutex);
         if (internal::m_freelist.empty()) {
-            BX_ASSERT(internal::m_id < MaxViewportHandles, "MaxViewportHandles exceeded");
+            ASSERT(internal::m_id < MaxViewportHandles && "MaxViewportHandles exceeded");
             m_handle = ++internal::m_id;
         } else {
             m_handle = internal::m_freelist.back();

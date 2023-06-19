@@ -1955,7 +1955,6 @@ void cLuxJournal::RenderBackgroundImage()
 {
 	iLowLevelGraphics *pLowGfx = mpGraphics->GetLowLevel();
 	EngineInterface* engine = Interface<EngineInterface>::Get();
-	auto& graphicsContext = engine->GetGraphicsContext();
 	auto* viewport = gpBase->mpMapHandler->GetViewport();
 	auto* renderer = viewport->GetRenderer();
 	auto* forgeRenderer = Interface<ForgeRenderer>::Get();

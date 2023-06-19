@@ -39,7 +39,6 @@
 #include "EntityIcon.h"
 #include "EngineEntity.h"
 #include "graphics/Color.h"
-#include "graphics/GraphicsContext.h"
 #include "graphics/ImmediateDrawBatch.h"
 
 #include "math/MathTypes.h"
@@ -1363,7 +1362,7 @@ void iEntityWrapper::SetWorldMatrix(const cMatrixf& amtxX)
 
 void iEntityWrapper::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, iEditorEditMode* apEditMode, bool abIsSelected, const cColor& aHighlightCol, const cColor& aDisabledCol)
 {
-	if(mpIcon) 
+	if(mpIcon)
 		mpIcon->DrawIcon(apViewport, apFunctions, apEditMode, mbSelected, mvPosition, mbActive && mpType->IsActive(), aDisabledCol);
 	if(mpEngineEntity)
 		mpEngineEntity->Draw(apViewport, apFunctions, abIsSelected, mbActive && mpType->IsActive(), aHighlightCol);
@@ -2086,25 +2085,25 @@ void iEntityWrapper::DrawArrow(cEditorWindowViewport* apViewport, ImmediateDrawB
 
 	apFunctions->DebugDrawLine(cVector3f(0,-afLength,0), 0, aCol);
 	apFunctions->DrawQuad(
-		cVector3f(fXZ,-fY,fXZ), 
+		cVector3f(fXZ,-fY,fXZ),
 		cVector3f(0,0,0),
 		cVector3f(0,0,0),
 		cVector3f(-fXZ,-fY,fXZ),
 	 cColor(), options);
 	apFunctions->DrawQuad(
-		cVector3f(fXZ,-fY,-fXZ), 
+		cVector3f(fXZ,-fY,-fXZ),
 		cVector3f(0,0,0),
 		cVector3f(0,0,0),
 		cVector3f(fXZ,-fY,fXZ),
 	 cColor(), options);
 	apFunctions->DrawQuad(
-			cVector3f(fXZ,-fY,-fXZ), 
+			cVector3f(fXZ,-fY,-fXZ),
 			cVector3f(0,0,0),
 			cVector3f(0,0,0),
 			cVector3f(fXZ,-fY,fXZ),
 		cColor(), options);
 	apFunctions->DrawQuad(
-			cVector3f(-fXZ,-fY,-fXZ), 
+			cVector3f(-fXZ,-fY,-fXZ),
 			cVector3f(0,0,0),
 			cVector3f(0,0,0),
 			cVector3f(-fXZ,-fY,fXZ),
@@ -2314,7 +2313,7 @@ iEditorAction* iEntityWrapperUserDefinedEntity::CreateActionSetUserVariable(cons
 iEntityWrapperTypeAggregate::iEntityWrapperTypeAggregate(int alType, const tWString& asName,
 														 const tString& asElementName, const tString& asComponentElementName,
 														 bool abDestroyComponentsOnDeletion) : iEntityWrapperType(alType, asName, asElementName)
-														
+
 {
 	msComponentElementName = asComponentElementName;
 	mbDestroyComponentsOnDeletion = abDestroyComponentsOnDeletion;

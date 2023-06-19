@@ -16,15 +16,13 @@
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
-
-#ifndef HPL_GUI_SET_H
-#define HPL_GUI_SET_H
+#pragma once
 
 #include <list>
-#include "graphics/GraphicsContext.h"
 #include "gui/GuiTypes.h"
-#include "graphics/GraphicsTypes.h"
 
+#include "graphics/GraphicsTypes.h"
+#include "graphics/ForgeRenderer.h"
 
 namespace hpl {
 
@@ -33,7 +31,7 @@ namespace hpl {
         static constexpr size_t GUI_STREAM_BUFFER_IB_SIZE = 32768;
         static constexpr size_t GUI_MAX_BATCHES = 1024;
 		static constexpr uint32_t MAX_GUI_DRAW_CALLS = 1024;
-            
+
 
 		void InitializeGui(ForgeRenderer& pipeline);
 		void exitGui();
@@ -623,4 +621,3 @@ namespace hpl {
 	};
 
 };
-#endif // HPL_GUI_SET_H

@@ -1,15 +1,15 @@
 #pragma once
 
-#include "Common_3/Graphics/Interfaces/IGraphics.h"
-#include "Common_3/Resources/ResourceLoader/Interfaces/IResourceLoader.h"
-#include "FixPreprocessor.h"
 #include "graphics/GraphicsTypes.h"
 
 #include <atomic>
 #include <functional>
 #include <span>
-
 #include <folly/hash/Hash.h>
+
+#include "Common_3/Graphics/Interfaces/IGraphics.h"
+#include "Common_3/Resources/ResourceLoader/Interfaces/IResourceLoader.h"
+#include "FixPreprocessor.h"
 
 namespace hpl {
     class cBitmap;

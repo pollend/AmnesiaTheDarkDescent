@@ -39,6 +39,9 @@
 #include <cstdint>
 #include <memory>
 
+#include "Common_3/Utilities/Interfaces/ILog.h"
+#include <FixPreprocessor.h>
+
 namespace hpl {
 
     class cScene;
@@ -241,7 +244,7 @@ namespace hpl {
 
         TData& resolve(cViewport& viewport) {
             uint8_t handle = viewport.GetHandle();
-            BX_ASSERT(handle < cViewport::MaxViewportHandles, "Invalid viewport handle")
+            ASSERT(handle < cViewport::MaxViewportHandles && "Invalid viewport handle");
             auto& target = m_targets[handle];
             if (!target || !m_dataValid(viewport, *target)) {
                 target = m_createData(viewport);
@@ -254,7 +257,7 @@ namespace hpl {
                     disposeHandle.Connect(viewport.m_disposeEvent);
                 }
             }
-            BX_ASSERT(target, "Failed to create viewport data");
+            ASSERT(target && "Failed to create viewport data");
             return *target;
         }
 
