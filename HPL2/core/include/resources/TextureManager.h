@@ -20,6 +20,7 @@
 #pragma once
 
 #include <graphics/Image.h>
+#include "Common_3/Graphics/Interfaces/IGraphics.h"
 #include "graphics/AnimatedImage.h"
 #include "graphics/Enum.h"
 #include "resources/ResourceManager.h"
@@ -47,12 +48,13 @@ namespace hpl {
 
 		struct ImageOptions {
 			ImageOptions(): 
+
 				m_UWrap(WrapMode::None), 
 				m_VWrap(WrapMode::None), 
 				m_WWrap(WrapMode::None), 
-				m_minFilter(FilterType::None), 
-				m_magFilter(FilterType::None), 
-				m_mipFilter(FilterType::None){
+				m_minFilter(FilterType::FILTER_LINEAR),
+				m_magFilter(FilterType::FILTER_LINEAR),
+				m_mipFilter(FilterType::FILTER_LINEAR){
 			};
 
 			WrapMode m_UWrap : 3;

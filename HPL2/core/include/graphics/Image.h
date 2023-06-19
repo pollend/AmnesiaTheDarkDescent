@@ -79,9 +79,6 @@ namespace hpl {
     class Image : public iResourceBase {
         HPL_RTTI_IMPL_CLASS(iResourceBase, Image, "{d9cd842a-c76b-4261-879f-53f1baa5ff7c}")
     public:
-        struct TextureFilter {
-            AddressMode m_addressMode = AddressMode::ADDRESS_MODE_CLAMP_TO_BORDER;
-        };
 
         Image();
         Image(const tString& asName, const tWString& asFullPath);
@@ -97,9 +94,6 @@ namespace hpl {
             m_texture = std::move(handle);
         }
 
-        inline void setTextureFilter(TextureFilter textureFilter) {
-            m_filter = textureFilter;
-        }
 
         void Initialize(const ImageDescriptor& descriptor, const bgfx::Memory* mem = nullptr);
         void Invalidate();
@@ -132,13 +126,10 @@ namespace hpl {
         inline ForgeTextureHandle& GetTexture() {
             return m_texture;
         }
-        inline const TextureFilter& GetTextureFilter() const {
-            return m_filter;
-        }
+        void setTextureFilter(const eTextureFilter& filter);
+        void setWrapMode(const eTextureWrap& wrap);
 
-    private:
-        TextureFilter m_filter;
-        hpl::Event<> m_dirtyTextureEvent;
+        SamplerDesc m_samplerDesc{};
         ForgeTextureHandle m_texture;
     };
 

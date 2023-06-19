@@ -296,7 +296,8 @@ namespace hpl {
 		// inline ForgeBufferHandle& uniformHandle() { return m_bufferHandle; }
 		inline uint32_t materialID() { return m_materialID; }
 		inline uint32_t Version() { return m_version; }
-	private:
+	    inline void Dirty() { m_version++; }
+    private:
 		void UpdateFlags();
 		void UpdateAnimations(float afTimeStep);
 		uint32_t m_materialID = 0;

@@ -9,6 +9,7 @@
 #include <functional>
 #include <span>
 
+#include <folly/hash/Hash.h>
 
 namespace hpl {
     class cBitmap;
@@ -400,3 +401,28 @@ namespace hpl {
     };
 
 }
+
+static bool operator==(const SamplerDesc& lhs, const SamplerDesc& rhs) {
+   return rhs.mMinFilter  ==   lhs.mMinFilter &&
+       rhs.mMagFilter  ==   lhs.mMagFilter &&
+       rhs.mMipMapMode ==   lhs.mMipMapMode &&
+       rhs.mAddressU   ==   lhs.mAddressU &&
+       rhs.mAddressV   ==   lhs.mAddressV &&
+       rhs.mAddressW   ==   lhs.mAddressW &&
+       rhs.mMipLodBias ==   lhs.mMipLodBias &&
+       rhs.mSetLodRange==   lhs.mSetLodRange &&
+       rhs.mMinLod     ==   lhs.mMinLod &&
+       rhs.mMaxLod     ==   lhs.mMaxLod &&
+       rhs.mMaxAnisotropy== lhs.mMaxAnisotropy &&
+       rhs.mCompareFunc  == lhs.mCompareFunc;
+}
+
+namespace std {
+    template<>
+    struct hash<SamplerDesc> {
+        size_t operator()(const SamplerDesc& desc) const {
+            return folly::hash::fnv32_buf(&desc, sizeof(desc));
+        }
+    };
+}
+

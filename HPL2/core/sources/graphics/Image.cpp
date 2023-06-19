@@ -1,12 +1,12 @@
 /**
 * Copyright 2023 Michael Pollind
-* 
+*
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
 * You may obtain a copy of the License at
-* 
+*
 *     http://www.apache.org/licenses/LICENSE-2.0
-* 
+*
 * Unless required by applicable law or agreed to in writing, software
 * distributed under the License is distributed on an "AS IS" BASIS,
 * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -32,7 +32,7 @@ namespace hpl
         , format(desc.format)
     {
     }
-    
+
     ImageDescriptor::ImageDescriptor()
         : m_width(0)
         , m_height(0)
@@ -97,7 +97,7 @@ namespace hpl
     bool Image::Reload() {
         return false;
     }
-    
+
     void Image::Unload() {
     }
 
@@ -120,9 +120,83 @@ namespace hpl
     void Image::Initialize(const ImageDescriptor& descriptor, const bgfx::Memory* mem) {
         // BX_ASSERT(!bgfx::isValid(m_handle), "RenderTarget already initialized");
         ASSERT(false && "Deprecated");
-       
+
     }
-    
+
+    void Image::setTextureFilter(const eTextureFilter& filter) {
+        ASSERT(m_texture.IsValid());
+        if(m_texture.m_handle->mMipLevels > 0)
+        {
+            switch(filter)
+            {
+            case eTextureFilter_Nearest:
+                m_samplerDesc.mMinFilter = FilterType::FILTER_NEAREST;
+                m_samplerDesc.mMagFilter = FilterType::FILTER_NEAREST;
+                m_samplerDesc.mMipMapMode = MipMapMode::MIPMAP_MODE_NEAREST;
+                break;
+            case eTextureFilter_Bilinear:
+                m_samplerDesc.mMinFilter = FilterType::FILTER_LINEAR;
+                m_samplerDesc.mMagFilter = FilterType::FILTER_LINEAR;
+                m_samplerDesc.mMipMapMode = MipMapMode::MIPMAP_MODE_NEAREST;
+                break;
+            case eTextureFilter_Trilinear:
+                m_samplerDesc.mMinFilter = FilterType::FILTER_LINEAR;
+                m_samplerDesc.mMagFilter = FilterType::FILTER_LINEAR;
+                m_samplerDesc.mMipMapMode = MipMapMode::MIPMAP_MODE_LINEAR;
+                break;
+            default:
+                ASSERT(false && "Invalid filter");
+                break;
+            }
+        }
+        else
+        {
+            switch(filter)
+            {
+            case eTextureFilter_Nearest:
+                m_samplerDesc.mMinFilter = FilterType::FILTER_NEAREST;
+                m_samplerDesc.mMagFilter = FilterType::FILTER_NEAREST;
+                m_samplerDesc.mMipMapMode = MipMapMode::MIPMAP_MODE_NEAREST;
+                break;
+            case eTextureFilter_Bilinear:
+            case eTextureFilter_Trilinear:
+                m_samplerDesc.mMinFilter = FilterType::FILTER_LINEAR;
+                m_samplerDesc.mMagFilter = FilterType::FILTER_LINEAR;
+                m_samplerDesc.mMipMapMode = MipMapMode::MIPMAP_MODE_NEAREST;
+                break;
+            default:
+                ASSERT(false && "Invalid filter");
+                break;
+            }
+
+        }
+    }
+
+    void Image::setWrapMode(const eTextureWrap& wrap) {
+        ASSERT(m_texture.IsValid());
+        switch(wrap) {
+            case eTextureWrap_Repeat:
+                m_samplerDesc.mAddressU = ADDRESS_MODE_REPEAT;
+                m_samplerDesc.mAddressV = ADDRESS_MODE_REPEAT;
+                m_samplerDesc.mAddressW = ADDRESS_MODE_REPEAT;
+                break;
+            case eTextureWrap_Clamp:
+            case eTextureWrap_ClampToEdge:
+                m_samplerDesc.mAddressU = ADDRESS_MODE_CLAMP_TO_EDGE;
+                m_samplerDesc.mAddressV = ADDRESS_MODE_CLAMP_TO_EDGE;
+                m_samplerDesc.mAddressW = ADDRESS_MODE_CLAMP_TO_EDGE;
+                break;
+            case eTextureWrap_ClampToBorder:
+                m_samplerDesc.mAddressU = ADDRESS_MODE_CLAMP_TO_BORDER;
+                m_samplerDesc.mAddressV = ADDRESS_MODE_CLAMP_TO_BORDER;
+                m_samplerDesc.mAddressW = ADDRESS_MODE_CLAMP_TO_BORDER;
+                break;
+            default:
+                ASSERT(false && "Invalid wrap mode");
+                break;
+        }
+    }
+
     void Image::Invalidate() {
         // if (bgfx::isValid(m_handle))
         // {
@@ -166,9 +240,9 @@ namespace hpl
     }
 
     void Image::InitializeFromBitmap(Image& image, cBitmap& bitmap, const ImageDescriptor& desc) {
-        
+
         auto copyDataToChunk = [&](unsigned char* m_begin, unsigned char* m_end, unsigned char* dest) {
-            
+
             // BGR is not supported by bgfx, so we need to convert it to RGB
             if(bitmap.GetPixelFormat() == ePixelFormat_BGR) {
                 for(auto* src = m_begin; src < m_end; src += 3) {
@@ -183,7 +257,7 @@ namespace hpl
 
         if(desc.m_isCubeMap) {
             BX_ASSERT(bitmap.GetNumOfImages() == 6, "Cube map must have 6 images");
-            
+
             auto* memory = bgfx::alloc([&]() {
                 if(desc.m_hasMipMaps) {
                     size_t size = 0;
@@ -217,7 +291,7 @@ namespace hpl
             image.Initialize(desc, memory);
             return;
         }
-        
+
         if(desc.m_hasMipMaps) {
             auto* memory = bgfx::alloc([&]() {
                 size_t size = 0;
@@ -237,7 +311,7 @@ namespace hpl
             image.Initialize(desc, memory);
             return;
         }
-        
+
         auto data = bitmap.GetData(0, 0);
         auto* memory = bgfx::alloc(data->mlSize);
         copyDataToChunk(data->mpData, data->mpData + data->mlSize, memory->data);

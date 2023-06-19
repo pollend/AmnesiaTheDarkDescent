@@ -187,8 +187,8 @@ namespace hpl {
 					opts.m_useMipmaps = abUseMipMaps;
 					opts.m_useCubeMap = true;
 					auto handle = ForgeTextureHandle::LoadFromHPLBitmap(*pBmp, opts);
-					resource->SetForgeTexture(std::move(handle));
-					return resource;
+					resource->m_texture = std::move(handle);
+                    return resource;
 
 
 					// auto* resource = new Image(asName, path);

@@ -14,7 +14,7 @@ namespace hpl
             MaterialIDCount
         };
     }
-    
+
 
     enum class WrapMode : uint8_t {
         None,
@@ -158,11 +158,6 @@ namespace hpl
         RT_MSAA_X16,
     };
 
-    enum class FilterType : uint8_t {
-        None,
-        Point,
-        Anisotropic
-    };
 
     enum class BlendFunc: uint32_t {};
     BlendFunc CreateFromMaterialBlendMode(eMaterialBlendMode mode);
@@ -190,6 +185,6 @@ namespace hpl
     ClearOp operator|(ClearOp lhs, ClearOp rhs);
     ClearOp operator&(ClearOp lhs, ClearOp rhs);
     bool any(ClearOp write);
- 
+
 
 } // namespace hpl

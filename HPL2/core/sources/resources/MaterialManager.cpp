@@ -151,9 +151,12 @@ namespace hpl {
 
             for(int i=0; i<eMaterialTexture_LastEnum; ++i)
 			{
-				// iTexture *pTex = pMat->GetTexture((eMaterialTexture)i);
-				// if(pTex)pTex->SetFilter(aFilter);
+                auto image = pMat->GetImage(static_cast<eMaterialTexture>(i));
+                if(image) {
+                    image->setTextureFilter(aFilter);
+                }
 			}
+            pMat->Dirty();
 		}
 	}
 
@@ -170,9 +173,12 @@ namespace hpl {
 
 			for(int i=0; i<eMaterialTexture_LastEnum; ++i)
 			{
-				// iTexture *pTex = pMat->GetTexture((eMaterialTexture)i);
-				// if(pTex)pTex->SetAnisotropyDegree(mfTextureAnisotropy);
+                auto image = pMat->GetImage(static_cast<eMaterialTexture>(i));
+                if(image) {
+                    image->m_samplerDesc.mMaxAnisotropy = afX;
+                }
 			}
+            pMat->Dirty();
 		}
 	}
 
@@ -335,23 +341,6 @@ namespace hpl {
 			}
 
 			cTextureManager::ImageOptions options;
-			switch(wrap) {
-				case eTextureWrap_Repeat:
-					break;
-				case eTextureWrap_Clamp:
-				case eTextureWrap_ClampToEdge:
-					options.m_UWrap = WrapMode::Clamp;
-					options.m_VWrap = WrapMode::Clamp;
-					break;
-				case eTextureWrap_ClampToBorder:
-					options.m_UWrap = WrapMode::Border;
-					options.m_VWrap = WrapMode::Border;
-					break;
-				default:
-					BX_ASSERT(false, "Invalid wrap mode: %d", wrap)
-					break;
-			}
-
 			iResourceBase* pImageResource = nullptr;
 			if(animMode != eTextureAnimMode_None)
 			{
@@ -394,24 +383,10 @@ namespace hpl {
 				pImageResource = pImage;
 				if(pImage) {
 					pMat->SetImage(pUsedTexture->mType, pImage);
-					pImage->setTextureFilter(Image::TextureFilter {
-						.m_addressMode = ([&]{
-							switch(wrap) {
-								case eTextureWrap_Repeat:
-									return ADDRESS_MODE_REPEAT;
-								case eTextureWrap_Clamp:
-								case eTextureWrap_ClampToEdge:
-									return ADDRESS_MODE_CLAMP_TO_EDGE;
-								case eTextureWrap_ClampToBorder:
-									return ADDRESS_MODE_CLAMP_TO_BORDER;
-								default:
-									ASSERT(false && "Invalid wrap mode");
-									break;
-							}
-							return ADDRESS_MODE_CLAMP_TO_BORDER;
-						})(),
-					});
-				}
+                    pImage->setWrapMode(wrap);
+                    pImage->setTextureFilter(mTextureFilter);
+				    pImage->m_samplerDesc.mMaxAnisotropy = mfTextureAnisotropy;
+                }
 			}
 			if(!pImageResource)
 			{
@@ -419,13 +394,6 @@ namespace hpl {
 				hplDelete(pMat);
 				return nullptr;
 			}
-
-
-			// pTex->SetWrapSTR(wrap);
-
-			// pTex->SetFilter(mTextureFilter);
-			// pTex->SetAnisotropyDegree(mfTextureAnisotropy);
-
 
 		}
 

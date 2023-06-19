@@ -2452,22 +2452,14 @@ namespace hpl {
 
                     auto* image = apMaterial->GetImage(supportedTexture);
                     if (image) {
-                        auto& textureFilter = image->GetTextureFilter();
-                        cRendererDeferred::ObjectSamplerKey sampler = {};
-                        sampler.m_field.m_addressMode = textureFilter.m_addressMode;
-                        ASSERT(sampler.m_id < m_objectSamplers.size() && "Sampler index out of range");
-                        ASSERT(image->GetTexture().IsValid());
-
-                        if(!m_objectSamplers[sampler.m_id]) {
-                            SamplerDesc samplerDesc = {};
-                            samplerDesc.mAddressU = textureFilter.m_addressMode;
-                            samplerDesc.mAddressV = textureFilter.m_addressMode;
-                            samplerDesc.mAddressW = textureFilter.m_addressMode;
-
-                            addSampler(frame.m_renderer->Rend(), &samplerDesc, &m_objectSamplers[sampler.m_id]);
+                        auto& samplerDesc = image->m_samplerDesc;
+                        auto& sampler = m_objectSamplerMap[samplerDesc];
+                        if(!sampler) {
+                            addSampler(frame.m_renderer->Rend(), &samplerDesc, &sampler);
                         }
+
                         params[paramCount].pName = TextureSamplerLookup[supportedTexture];
-                        params[paramCount++].ppSamplers = &m_objectSamplers[sampler.m_id];
+                        params[paramCount++].ppSamplers = &sampler;
 
                         params[paramCount].pName = TextureNameLookup[supportedTexture];
                         params[paramCount++].ppTextures = &image->GetTexture().m_handle;
