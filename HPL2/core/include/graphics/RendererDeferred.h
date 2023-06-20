@@ -73,8 +73,8 @@ namespace hpl {
     public:
 
         static constexpr TinyImageFormat DepthBufferFormat = TinyImageFormat_D32_SFLOAT_S8_UINT;
-        static constexpr TinyImageFormat NormalBufferFormat = TinyImageFormat_R16G16B16A16_SFLOAT;
-        static constexpr TinyImageFormat PositionBufferFormat = TinyImageFormat_R16G16B16A16_SFLOAT;
+        static constexpr TinyImageFormat NormalBufferFormat = TinyImageFormat_R32G32B32A32_SFLOAT;
+        static constexpr TinyImageFormat PositionBufferFormat = TinyImageFormat_R32G32B32A32_SFLOAT;
         static constexpr TinyImageFormat SpecularBufferFormat = TinyImageFormat_R8G8_UNORM;
         static constexpr TinyImageFormat ColorBufferFormat = TinyImageFormat_R8G8B8A8_UNORM;
         static constexpr TinyImageFormat ShadowDepthBufferFormat = TinyImageFormat_D32_SFLOAT;
@@ -623,6 +623,8 @@ namespace hpl {
         Shader* m_boxLightShader;
         std::array<DescriptorSet*,ForgeRenderer::SwapChainLength> m_lightPerLightSet;
         DescriptorSet* m_lightFrameSet;
+        Sampler* m_shadowCmpSampler;
+        Sampler* m_samplerPointClampToBorder;
 
         cRenderList m_reflectionRenderList;
 

@@ -699,6 +699,30 @@ namespace hpl {
             }
         };
 
+        {
+            SamplerDesc miplessLinearSamplerDesc = {};
+            miplessLinearSamplerDesc.mMinFilter = FILTER_LINEAR;
+            miplessLinearSamplerDesc.mMagFilter = FILTER_LINEAR;
+            miplessLinearSamplerDesc.mMipLodBias = 0.f;
+            miplessLinearSamplerDesc.mMaxAnisotropy = 0.f;
+            miplessLinearSamplerDesc.mCompareFunc = CompareMode::CMP_LEQUAL;
+            miplessLinearSamplerDesc.mMipMapMode = MIPMAP_MODE_LINEAR;
+            miplessLinearSamplerDesc.mAddressU = ADDRESS_MODE_CLAMP_TO_BORDER;
+            miplessLinearSamplerDesc.mAddressV = ADDRESS_MODE_CLAMP_TO_BORDER;
+            miplessLinearSamplerDesc.mAddressW = ADDRESS_MODE_CLAMP_TO_BORDER;
+            addSampler(forgetRenderer->Rend(), &miplessLinearSamplerDesc, &m_shadowCmpSampler);
+        }
+
+        {
+            SamplerDesc pointSamplerDesc = {};
+            pointSamplerDesc.mMinFilter = FILTER_NEAREST;
+            pointSamplerDesc.mMagFilter = FILTER_NEAREST;
+            pointSamplerDesc.mMipMapMode = MIPMAP_MODE_NEAREST;
+            pointSamplerDesc.mAddressU = ADDRESS_MODE_CLAMP_TO_BORDER;
+            pointSamplerDesc.mAddressV = ADDRESS_MODE_CLAMP_TO_BORDER;
+            pointSamplerDesc.mAddressW = ADDRESS_MODE_CLAMP_TO_BORDER;
+            addSampler(forgetRenderer->Rend(), &pointSamplerDesc, &m_samplerPointClampToBorder);
+        }
         m_perFrameBuffer.Load([&](Buffer** buffer) {
             BufferLoadDesc desc = {};
             desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -1345,8 +1369,8 @@ namespace hpl {
                     pipelineSettings.pDepthState = &depthStateDesc;
                     pipelineSettings.pColorFormats = NULL;
                     pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
-                    pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
                     pipelineSettings.mSampleQuality = 0;
+                    pipelineSettings.mDepthStencilFormat = DepthBufferFormat ;
                     pipelineSettings.pRootSignature = m_materialRootSignature;
                     pipelineSettings.pShaderProgram = m_zPassShader;
                     pipelineSettings.pRasterizerState = &rasterizerStateDesc;
@@ -1356,6 +1380,7 @@ namespace hpl {
                 }
                 {
                     RasterizerStateDesc rasterizerStateDesc = {};
+                    rasterizerStateDesc.mFrontFace = FRONT_FACE_CW;
                     rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
 
                     DepthStateDesc depthStateDesc = {};
@@ -1382,7 +1407,8 @@ namespace hpl {
                 }
                 {
                     RasterizerStateDesc rasterizerStateDesc = {};
-                    rasterizerStateDesc.mCullMode = CULL_MODE_BACK;
+                    rasterizerStateDesc.mFrontFace = FRONT_FACE_CW;
+                    rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
 
                     DepthStateDesc depthStateDesc = {};
                     depthStateDesc.mDepthTest = true;
@@ -1815,22 +1841,28 @@ namespace hpl {
             if (mShadowMapQuality == eShadowMapQuality_High) {
                 shadowMapJitterSize = 64;
                 shadowMapJitterSamples = 32; // 64 here instead? I mean, ATI has to deal with medium has max? or different max for ATI?
-                // m_spotlightVariants.Initialize(
-                //     ShaderHelper::LoadProgramHandlerDefault("vs_deferred_light", "fs_deferred_spotlight_high", false, true));
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0].pFileName  = "deferred_light.vert";
+                loadDesc.mStages[1].pFileName  = "deferred_light_spotlight_high.frag";
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_spotLightShader);
             }
             // Medium
             else if (mShadowMapQuality == eShadowMapQuality_Medium) {
                 shadowMapJitterSize = 32;
                 shadowMapJitterSamples = 16;
-                // m_spotlightVariants.Initialize(
-                //     ShaderHelper::LoadProgramHandlerDefault("vs_deferred_light", "fs_deferred_spotlight_medium", false, true));
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0].pFileName  = "deferred_light.vert";
+                loadDesc.mStages[1].pFileName  = "deferred_light_spotlight_med.frag";
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_spotLightShader);
             }
             // Low
             else {
                 shadowMapJitterSize = 0;
                 shadowMapJitterSamples = 0;
-                // m_spotlightVariants.Initialize(
-                //     ShaderHelper::LoadProgramHandlerDefault("vs_deferred_light", "fs_deferred_spotlight_low", false, true));
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0].pFileName  = "deferred_light.vert";
+                loadDesc.mStages[1].pFileName  = "deferred_light_spotlight.frag";
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_spotLightShader);
             }
 
             if (mShadowMapQuality != eShadowMapQuality_Low) {
@@ -1848,13 +1880,6 @@ namespace hpl {
             {
                 ShaderLoadDesc loadDesc = {};
                 loadDesc.mStages[0].pFileName  = "deferred_light.vert";
-                loadDesc.mStages[1].pFileName  = "deferred_light_spotlight.frag";
-                addShader(forgetRenderer->Rend(), &loadDesc, &m_spotLightShader);
-            }
-
-            {
-                ShaderLoadDesc loadDesc = {};
-                loadDesc.mStages[0].pFileName  = "deferred_light.vert";
                 loadDesc.mStages[1].pFileName  = "deferred_light_stencil.frag";
                 addShader(forgetRenderer->Rend(), &loadDesc, &m_stencilLightShader);
             }
@@ -1865,10 +1890,22 @@ namespace hpl {
                 loadDesc.mStages[1].pFileName = "deferred_light_box.frag";
                 addShader(forgetRenderer->Rend(), &loadDesc, &m_boxLightShader);
             }
+		    Sampler* vbShadeSceneSamplers[] = {
+                m_shadowCmpSampler,
+                m_samplerPointClampToBorder,
+            };
+
+		    const char* vbShadeSceneSamplersNames[] = {
+                "shadowCmpSampler",
+                "pointSampler",
+            };
             Shader* shaders[] = {m_pointLightShader, m_stencilLightShader, m_boxLightShader, m_spotLightShader};
             RootSignatureDesc rootSignatureDesc = {};
 			rootSignatureDesc.ppShaders = shaders;
 			rootSignatureDesc.mShaderCount = std::size(shaders);
+            rootSignatureDesc.mStaticSamplerCount = std::size(vbShadeSceneSamplers);
+            rootSignatureDesc.ppStaticSamplers = vbShadeSceneSamplers;
+            rootSignatureDesc.ppStaticSamplerNames = vbShadeSceneSamplersNames;
 			addRootSignature(forgetRenderer->Rend(), &rootSignatureDesc, &m_lightPassRootSignature);
 
             VertexLayout vertexLayout = {};
@@ -2047,11 +2084,11 @@ namespace hpl {
 
         auto createShadowMap = [&](const cVector3l& avSize) -> ShadowMapData {
 
-
             ShadowMapData shadowMapData = {};
             shadowMapData.m_target.Load([&](RenderTarget** target) {
                 RenderTargetDesc renderTarget = {};
                 renderTarget.mArraySize = 1;
+		        renderTarget.mClearValue.depth = 1.0f;
                 renderTarget.mDepth = 1;
                 renderTarget.mFormat = ShadowDepthBufferFormat;
                 renderTarget.mWidth = avSize.x;
@@ -3243,7 +3280,7 @@ namespace hpl {
 
                                 LoadActionsDesc loadActions = {};
                                 loadActions.mLoadActionDepth = LOAD_ACTION_CLEAR;
-                                loadActions.mLoadActionStencil = LOAD_ACTION_CLEAR;
+                                loadActions.mLoadActionStencil = LOAD_ACTION_DONTCARE;
                                 loadActions.mClearDepth = { .depth = 1.0f, .stencil = 0 };
                                 cmdBindRenderTargets(
                                     frame.m_cmd, 0, NULL, shadowMapData->m_target.m_handle, &loadActions, NULL, NULL, -1, -1);
@@ -3251,14 +3288,14 @@ namespace hpl {
                                     frame.m_cmd,
                                     0.0f,
                                     shadowMapData->m_target.m_handle->mHeight,
-                                    (float)shadowMapData->m_target.m_handle->mWidth,
-                                    (float)-shadowMapData->m_target.m_handle->mHeight,
+                                    shadowMapData->m_target.m_handle->mWidth,
+                                    -shadowMapData->m_target.m_handle->mHeight,
                                     0.0f,
                                     1.0f);
                                 cmdSetScissor(
                                     frame.m_cmd, 0, 0, shadowMapData->m_target.m_handle->mWidth, shadowMapData->m_target.m_handle->mHeight);
-                                cmdBindPipeline(
-                                    frame.m_cmd, pLightFrustum->GetInvertsCullMode() ? m_zPassShadowPipelineCCW : m_zPassShadowPipelineCW);
+                                cmdBindPipeline(frame.m_cmd, m_zPassShadowPipelineCW);
+
                                 for (auto& pObject : shadowCasters) {
                                     eMaterialRenderMode renderMode =
                                         pObject->GetCoverageAmount() >= 1 ? eMaterialRenderMode_Z : eMaterialRenderMode_Z_Dissolve;
@@ -3269,7 +3306,7 @@ namespace hpl {
                                         return;
                                     }
                                     cmdBindMaterialDescriptor(frame.m_cmd, frame, pMaterial);
-                                    cmdBindObjectDescriptor(
+                                    cmdBindObjectDescriptor (
                                         frame.m_cmd,
                                         frame,
                                         pMaterial,
@@ -3398,6 +3435,7 @@ namespace hpl {
                         }
                         case eLightType_Spot: {
                             cLightSpot* pLightSpot = static_cast<cLightSpot*>(light->m_light);
+
                             cMatrixf spotViewProj = cMath::MatrixMul(pLightSpot->GetViewProjMatrix(), mainFrustumViewInv).GetTranspose();
                             cVector3f forward  = cMath::MatrixMul3x3(light->m_mtxViewSpaceTransform, cVector3f(0,0,1));
                             cVector3f lightViewPos = cMath::MatrixMul(modelViewMtx, detail::GetLightMtx(*light)).GetTranslation();
@@ -3413,7 +3451,11 @@ namespace hpl {
                                 params[paramCount].pName = "shadowMap";
                                 params[paramCount++].ppTextures = &light->m_shadowMapData->m_target.m_handle->pTexture;
                             }
-                            uniformObjectData.m_spotLight.m_spotViewProj = cMath::ToForgeMat4(spotViewProj);
+                            if(m_shadowJitterTexture.IsValid()) {
+                                params[paramCount].pName = "shadowOffsetMap";
+                                params[paramCount++].ppTextures = &m_shadowJitterTexture.m_handle;
+                            }
+                            uniformObjectData.m_spotLight.m_spotViewProj =  cMath::ToForgeMat4(spotViewProj);
                             uniformObjectData.m_spotLight.m_oneMinusCosHalfSpotFOV = 1 - pLightSpot->GetCosHalfFOV();
                             uniformObjectData.m_spotLight.m_radius = light->m_light->GetRadius();
                             uniformObjectData.m_spotLight.m_forward = float3(forward.x,forward.y,forward.z);
@@ -3497,9 +3539,9 @@ namespace hpl {
                     updateDescriptorSet(frame.m_renderer->Rend(), frame.m_frameIndex, m_lightFrameSet, paramCount, params);
                 }
 
-                float2 viewTexel = { 1.0f / sharedData.m_size.x, 1.0f / sharedData.m_size.y };
-                uint32_t rootConstantIndex = getDescriptorIndexFromName(m_lightPassRootSignature, "uRootConstants");
-                cmdBindPushConstants(frame.m_cmd, m_lightPassRootSignature, rootConstantIndex, &viewTexel);
+                //float2 viewTexel = { 1.0f / sharedData.m_size.x, 1.0f / sharedData.m_size.y };
+                //uint32_t rootConstantIndex = getDescriptorIndexFromName(m_lightPassRootSignature, "uRootConstants");
+                //cmdBindPushConstants(frame.m_cmd, m_lightPassRootSignature, rootConstantIndex, &viewTexel);
                 cmdBindDescriptorSet(frame.m_cmd, frame.m_frameIndex, m_lightFrameSet);
 
 

@@ -9,13 +9,12 @@ STRUCT(PsIn)
 float4 PS_MAIN(PsIn In)
 {
     INIT_MAIN;
-    float2 NDC = In.Position.xy * Get(viewTexel);
     bool isSpecular = Get(lightColor).w > 0.0;
 
-    float4 color =  SampleTex2D(Get(diffuseMap), Get(nearestSampler), NDC);
-    float3 normal = SampleTex2D(Get(normalMap), Get(nearestSampler), NDC).xyz;
-    float3 position =  SampleTex2D(Get(positionMap), Get(nearestSampler), NDC).xyz;
-    vec2 specular =  SampleTex2D(Get(specularMap), Get(nearestSampler), NDC).xy;
+    float4 color =  LoadTex2D(Get(diffuseMap), Get(pointSampler), uint2(In.Position.xy), 0);
+    float3 normal = LoadTex2D(Get(normalMap), Get(pointSampler), uint2(In.Position.xy), 0).xyz;
+    float3 position =  LoadTex2D(Get(positionMap), Get(pointSampler), uint2(In.Position.xy), 0).xyz;
+    float2 specular =  LoadTex2D(Get(specularMap), Get(pointSampler), uint2(In.Position.xy), 0).xy;
 
     float3 lightDir = (Get(lightPos).xyz -  position) * (1.0 / Get(lightRadius));
     float attenuation = SampleTex1D(Get(attenuationLightMap), Get(nearestSampler), dot(lightDir, lightDir)).x;
@@ -30,7 +29,7 @@ float4 PS_MAIN(PsIn In)
     }
     
     /////////////////////////////////
-	//Calculate diffuse color
+    ////Calculate diffuse color
     float fLDotN = max(dot((isSpecular ? normalizedNormal : normal), normalLightDir), 0.0);
     float3 diffuseColor = color.xyz * Get(lightColor).xyz * fLDotN;
 

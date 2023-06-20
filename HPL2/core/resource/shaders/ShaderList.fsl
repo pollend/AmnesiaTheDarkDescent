@@ -61,6 +61,18 @@
 #include "deferred_light_spotlight.frag.fsl"
 #end
 
+#frag deferred_light_spotlight_med.frag
+#define SHADOW_JITTER_SIZE 32
+#define SHADOW_JITTER_SAMPLES 16
+#include "deferred_light_spotlight.frag.fsl"
+#end
+
+#frag deferred_light_spotlight_high.frag
+#define SHADOW_JITTER_SIZE 64 
+#define SHADOW_JITTER_SAMPLES 32
+#include "deferred_light_spotlight.frag.fsl"
+#end
+
 #vert fullscreen.vert
 #include "fullscreen.vert.fsl"
 #end

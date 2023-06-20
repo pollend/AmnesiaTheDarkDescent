@@ -101,7 +101,7 @@ namespace hpl {
 		cTextureManager::ImageOptions options = {};
 		options.m_UWrap = WrapMode::Clamp;
 		options.m_VWrap = WrapMode::Clamp;
-		mpFalloffMap = mpTextureManager->Create1DImage("core_falloff_linear",false, eTextureUsage_Normal, 0, options);
+		mpFalloffMap = mpTextureManager->Create1DImage("core_falloff_linear",false, eTextureUsage_Normal, 0);
 		// TODO: MP need to configure clamp to edge
 		// mpFalloffMap->SetWrapS(eTextureWrap_ClampToEdge);
 		// mpFalloffMap->SetWrapT(eTextureWrap_ClampToEdge);

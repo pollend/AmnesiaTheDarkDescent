@@ -344,7 +344,7 @@ namespace hpl {
 			iResourceBase* pImageResource = nullptr;
 			if(animMode != eTextureAnimMode_None)
 			{
-				auto animatedImage = mpResources->GetTextureManager()->CreateAnimImage(sFile,bMipMaps,type,eTextureUsage_Normal,mlTextureSizeDownScaleLevel, options);
+				auto animatedImage = mpResources->GetTextureManager()->CreateAnimImage(sFile,bMipMaps,type,eTextureUsage_Normal,mlTextureSizeDownScaleLevel);
 				animatedImage->SetFrameTime(fFrameTime);
 				animatedImage->SetAnimMode(animMode);
 				pMat->SetImage(pUsedTexture->mType, animatedImage);
@@ -358,22 +358,22 @@ namespace hpl {
 					case eTextureType_1D:
 						pImage = mpResources->GetTextureManager()->Create1DImage(sFile,bMipMaps,
 																				eTextureUsage_Normal,
-																				mlTextureSizeDownScaleLevel, options);
+																				mlTextureSizeDownScaleLevel);
 						break;
 					case eTextureType_2D:
 						pImage = mpResources->GetTextureManager()->Create2DImage(sFile,bMipMaps, eTextureType_2D,
 																			eTextureUsage_Normal,
-																			mlTextureSizeDownScaleLevel, options);
+																			mlTextureSizeDownScaleLevel);
 						break;
 					case eTextureType_CubeMap:
 						pImage = mpResources->GetTextureManager()->CreateCubeMapImage(sFile,bMipMaps,
 																			eTextureUsage_Normal,
-																			mlTextureSizeDownScaleLevel, options);
+																			mlTextureSizeDownScaleLevel);
 						break;
 					case eTextureType_3D:
 						pImage = mpResources->GetTextureManager()->Create3DImage(sFile,bMipMaps,
 																		eTextureUsage_Normal,
-																		mlTextureSizeDownScaleLevel, options);
+																		mlTextureSizeDownScaleLevel);
 						break;
 					default: {
 						ASSERT(false && "Invalid texture type");

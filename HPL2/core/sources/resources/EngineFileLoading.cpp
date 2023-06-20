@@ -243,7 +243,7 @@ namespace hpl {
 				cTextureManager::ImageOptions imageOptions;
 				imageOptions.m_UWrap = WrapMode::Clamp;
 				imageOptions.m_VWrap = WrapMode::Clamp;
-				Image *pFalloff = apResources->GetTextureManager()->Create1DImage(sSpotFalloffMap,true, eTextureUsage_Normal, 0, imageOptions);
+				Image *pFalloff = apResources->GetTextureManager()->Create1DImage(sSpotFalloffMap,true, eTextureUsage_Normal, 0);
 				if(pFalloff) pLightSpot->SetSpotFalloffMap(pFalloff);
 			}
 		}
@@ -274,7 +274,7 @@ namespace hpl {
 				cTextureManager::ImageOptions options;
 				options.m_UWrap = WrapMode::Clamp;
 				options.m_VWrap = WrapMode::Clamp;
-				Image *pFalloff = apResources->GetTextureManager()->Create1DImage(sFalloffMap,true, eTextureUsage_Normal, 0, options);
+				Image *pFalloff = apResources->GetTextureManager()->Create1DImage(sFalloffMap,true, eTextureUsage_Normal, 0);
 				if(pFalloff) pLight->SetFalloffMap(pFalloff);
 			}
 
@@ -291,14 +291,14 @@ namespace hpl {
 				if(animMode == eTextureAnimMode_None) {
 					switch(lightType) {
 						case eLightType_Point: {
-							auto* image = apResources->GetTextureManager()->CreateCubeMapImage(sGobo,true, eTextureUsage_Normal, 0, options);
+							auto* image = apResources->GetTextureManager()->CreateCubeMapImage(sGobo,true, eTextureUsage_Normal, 0);
 							if(image) {
 								pLight->SetGoboTexture(image);
-							} 
+							}
 							break;
 						}
 						default: {
-							auto* image = apResources->GetTextureManager()->Create2DImage(sGobo,true, eTextureType_2D, eTextureUsage_Normal, 0, options);
+							auto* image = apResources->GetTextureManager()->Create2DImage(sGobo,true, eTextureType_2D, eTextureUsage_Normal, 0);
 							if(image) {
 								pLight->SetGoboTexture(image);
 							}
@@ -308,15 +308,15 @@ namespace hpl {
 				} else {
 					switch(lightType) {
 						case eLightType_Point: {
-							auto* image = apResources->GetTextureManager()->CreateAnimImage(sGobo,true, eTextureType_CubeMap, eTextureUsage_Normal, 0, options);
+							auto* image = apResources->GetTextureManager()->CreateAnimImage(sGobo,true, eTextureType_CubeMap, eTextureUsage_Normal, 0);
 							if(image) {
 								pLight->SetGoboTexture(image);
 								image->SetFrameTime(fAnimFrameTime);
-							} 
+							}
 							break;
 						}
 						default: {
-							auto* image = apResources->GetTextureManager()->CreateAnimImage(sGobo,true, eTextureType_2D, eTextureUsage_Normal, 0, options);
+							auto* image = apResources->GetTextureManager()->CreateAnimImage(sGobo,true, eTextureType_2D, eTextureUsage_Normal, 0);
 							if(image) {
 								pLight->SetGoboTexture(image);
 								image->SetFrameTime(fAnimFrameTime);

@@ -47,11 +47,11 @@ namespace hpl {
 		~cTextureManager();
 
 		struct ImageOptions {
-			ImageOptions(): 
+			ImageOptions():
 
-				m_UWrap(WrapMode::None), 
-				m_VWrap(WrapMode::None), 
-				m_WWrap(WrapMode::None), 
+				m_UWrap(WrapMode::None),
+				m_VWrap(WrapMode::None),
+				m_WWrap(WrapMode::None),
 				m_minFilter(FilterType::FILTER_LINEAR),
 				m_magFilter(FilterType::FILTER_LINEAR),
 				m_mipFilter(FilterType::FILTER_LINEAR){
@@ -68,22 +68,25 @@ namespace hpl {
 
 
 		Image* Create1DImage(const tString& asName,bool abUseMipMaps, eTextureUsage aUsage=eTextureUsage_Normal,
-							unsigned int alTextureSizeLevel=0, ImageOptions options = ImageOptions());
+							unsigned int alTextureSizeLevel=0);
 
 		Image* Create2DImage(const tString& asName,bool abUseMipMaps,eTextureType aType= eTextureType_2D,
-							eTextureUsage aUsage=eTextureUsage_Normal,unsigned int alTextureSizeLevel=0, ImageOptions options = ImageOptions());
+							eTextureUsage aUsage=eTextureUsage_Normal,unsigned int alTextureSizeLevel=0);
 
 		Image* Create3DImage(const tString& asName,bool abUseMipMaps, eTextureUsage aUsage=eTextureUsage_Normal,
-							unsigned int alTextureSizeLevel=0, ImageOptions options = ImageOptions());
-		
+							unsigned int alTextureSizeLevel=0);
+
 		Image* CreateCubeMapImage(const tString& asName,bool abUseMipMaps, eTextureUsage aUsage=eTextureUsage_Normal,
-					unsigned int alTextureSizeLevel=0, ImageOptions options = ImageOptions());
-		
-		AnimatedImage* CreateAnimImage(const tString& asName,bool abUseMipMaps, eTextureType aType, eTextureUsage aUsage=eTextureUsage_Normal,
-					unsigned int alTextureSizeLevel=0, ImageOptions options = ImageOptions());
+					unsigned int alTextureSizeLevel=0);
 
+        AnimatedImage* CreateAnimImage(
+            const tString& asName,
+            bool abUseMipMaps,
+            eTextureType aType,
+            eTextureUsage aUsage = eTextureUsage_Normal,
+            unsigned int alTextureSizeLevel = 0);
 
-		[[deprecated("Use Create1DImage instead")]]
+        [[deprecated("Use Create1DImage instead")]]
 		iTexture* Create1D(	const tString& asName,bool abUseMipMaps, eTextureUsage aUsage=eTextureUsage_Normal,
 							unsigned int alTextureSizeLevel=0);
 		[[deprecated("Use Create2DImage instead")]]

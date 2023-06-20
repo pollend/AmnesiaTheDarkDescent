@@ -141,7 +141,7 @@ namespace hpl
         cTextureManager::ImageOptions options;
 		options.m_UWrap = WrapMode::Clamp;
 		options.m_VWrap = WrapMode::Clamp;
-        mpColorConvTex = mpResources->GetTextureManager()->Create1DImage(mParams.msTextureFile, false, eTextureUsage_Normal, 0, options);
+        mpColorConvTex = mpResources->GetTextureManager()->Create1DImage(mParams.msTextureFile, false, eTextureUsage_Normal, 0);
     }
 
     void cPostEffect_ColorConvTex::RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, const ForgeRenderer::Frame& frame, Texture* inputTexture, RenderTarget* renderTarget) {

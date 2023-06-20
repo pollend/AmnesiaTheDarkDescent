@@ -38,7 +38,10 @@
 
 namespace hpl {
 
-    static const cMatrixf g_mtxTextureUnitFix(0.5f, 0, 0, 0.5f, 0, 0.5f, 0, 0.5f, 0, 0, 0.5f, 0.5f, 0, 0, 0, 1.0f);
+    static const cMatrixf g_mtxTextureUnitFix(0.5f, 0,    0,    0.5f,
+                                              0,    0.5f, 0,    0.5f,
+                                              0,    0,    0.5f, 0.5f,
+                                              0,    0,    0,    1.0f);
 
     //////////////////////////////////////////////////////////////////////////
     // CONSTRUCTORS
@@ -77,7 +80,7 @@ namespace hpl {
         cTextureManager::ImageOptions options;
 		options.m_UWrap = WrapMode::Clamp;
 		options.m_VWrap = WrapMode::Clamp;
-        mpSpotFalloffMap = mpTextureManager->Create1DImage("core_falloff_linear", false, eTextureUsage_Normal, 0, options);
+        mpSpotFalloffMap = mpTextureManager->Create1DImage("core_falloff_linear", false, eTextureUsage_Normal, 0);
 
         UpdateBoundingVolume();
     }
@@ -88,14 +91,6 @@ namespace hpl {
 
         hplDelete(mpFrustum);
     }
-
-    //-----------------------------------------------------------------------
-
-    //////////////////////////////////////////////////////////////////////////
-    // PUBLIC METHODS
-    //////////////////////////////////////////////////////////////////////////
-
-    //-----------------------------------------------------------------------
 
     void cLightSpot::SetRadius(float afX) {
         mfRadius = afX;
@@ -115,8 +110,6 @@ namespace hpl {
         mfCosHalfFOV = cos(mfFOV * 0.5f);
     }
 
-    //-----------------------------------------------------------------------
-
     const cMatrixf& cLightSpot::GetViewMatrix() {
         if (mlViewMatrixCount != GetTransformUpdateCount()) {
             mlViewMatrixCount = GetTransformUpdateCount();
@@ -125,8 +118,6 @@ namespace hpl {
 
         return m_mtxView;
     }
-
-    //-----------------------------------------------------------------------
 
     const cMatrixf& cLightSpot::GetProjectionMatrix() {
         if (mbProjectionUpdated) {

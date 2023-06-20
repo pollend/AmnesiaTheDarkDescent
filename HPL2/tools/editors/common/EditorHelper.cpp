@@ -617,16 +617,16 @@ bool cEditorHelper::LoadTextureResource(eEditorTextureResourceType aTexType, con
 		switch(aTexType)
 		{
 		case eEditorTextureResourceType_1D:
-			pTexture = pManager->Create1DImage(asFile, true, eTextureUsage_Normal, 0, options);
+			pTexture = pManager->Create1DImage(asFile, true, eTextureUsage_Normal, 0);
 			break;
 		case eEditorTextureResourceType_2D:
-			pTexture = pManager->Create2DImage(asFile,true, eTextureType_2D, eTextureUsage_Normal,0, options);
+			pTexture = pManager->Create2DImage(asFile,true, eTextureType_2D, eTextureUsage_Normal,0);
 			break;
 		case eEditorTextureResourceType_3D:
-			pTexture = pManager->Create3DImage(asFile,true, eTextureUsage_Normal, 0, options);
+			pTexture = pManager->Create3DImage(asFile,true, eTextureUsage_Normal, 0);
 			break;
 		case eEditorTextureResourceType_CubeMap:
-			pTexture = pManager->CreateCubeMapImage(asFile,true, eTextureUsage_Normal, 0, options);
+			pTexture = pManager->CreateCubeMapImage(asFile,true, eTextureUsage_Normal, 0);
 			break;
 		}
 	}

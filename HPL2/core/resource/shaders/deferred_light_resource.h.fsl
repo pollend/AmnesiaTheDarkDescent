@@ -1,7 +1,3 @@
-PUSH_CONSTANT(uRootConstants, b0)
-{
-	DATA(float2, viewTexel, None);
-};
 
 // render targets
 RES(Tex2D(float4), diffuseMap, UPDATE_FREQ_PER_FRAME, t1, binding = 1); 
@@ -36,7 +32,6 @@ RES(Tex2D(float2), specularMap, UPDATE_FREQ_PER_FRAME, t4, binding = 4);
         DATA(float3, lightPos, None);
         DATA(float, oneMinusCosHalfSpotFov, None);
 
-        // DATA(float2, shadowMapOffsetMul, None);
     };
 #elif defined(POINT_LIGHT)
     CBUFFER(uniformObjectBlock, UPDATE_FREQ_PER_BATCH, b1, binding = 5)
@@ -54,13 +49,18 @@ RES(Tex2D(float2), specularMap, UPDATE_FREQ_PER_FRAME, t4, binding = 4);
     #error not defined
 #endif
 
-RES(SamplerState, nearestSampler, UPDATE_FREQ_PER_BATCH, s1, binding = 8);
+RES(SamplerComparisonState, shadowCmpSampler, UPDATE_FREQ_NONE, s2, binding = 14);
+RES(SamplerState, pointSampler, UPDATE_FREQ_NONE, s4, binding = 16);
 
+RES(Tex2D(float), shadowOffsetMap, UPDATE_FREQ_PER_BATCH, t7, binding = 15);
+
+RES(SamplerState, nearestSampler, UPDATE_FREQ_PER_BATCH, s1, binding = 8);
 RES(Tex1D(float4), attenuationLightMap, UPDATE_FREQ_PER_BATCH, t5, binding = 9);
 RES(TexCube(float4), goboCubeMap, UPDATE_FREQ_PER_BATCH, t7, binding = 10);
 RES(Tex2D(float4), goboMap, UPDATE_FREQ_PER_BATCH, t7, binding = 11);
 RES(Tex1D(float4), falloffMap, UPDATE_FREQ_PER_BATCH, t7, binding = 12);
 RES(Tex2D(float), shadowMap, UPDATE_FREQ_PER_BATCH, t7, binding = 13);
+
 
 INLINE bool HasGoboMap(int _config)        { return (_config & (1 << 0)) != 0; }
 INLINE bool HasShadowMap(int _config)        { return (_config & (1 << 1)) != 0; }

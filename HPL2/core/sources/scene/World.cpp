@@ -549,7 +549,7 @@ namespace hpl {
 			cTextureManager::ImageOptions imageOptions;
 			imageOptions.m_UWrap = WrapMode::Clamp;
 			imageOptions.m_VWrap = WrapMode::Clamp;
-			Image *pTexture = mpResources->GetTextureManager()->Create2DImage(asGobo,true, eTextureType_2D, eTextureUsage_Normal, 0, imageOptions);
+			Image *pTexture = mpResources->GetTextureManager()->Create2DImage(asGobo,true, eTextureType_2D, eTextureUsage_Normal, 0);
 			if(pTexture!=NULL) {
 				pLight->SetGoboTexture(pTexture);
 			}

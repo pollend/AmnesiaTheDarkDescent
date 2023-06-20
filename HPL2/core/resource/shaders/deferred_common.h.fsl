@@ -10,13 +10,18 @@ float2 ParallaxRelief(int sampleCount, bool isSingleChannel, float heightMapScal
     float normalLength = 1.0 / modelViewNormalizedDir.z;
     modelViewNormalizedDir *= float3(normalLength, normalLength, normalLength);	
     
+
     //Apply scale and bias
     modelViewNormalizedDir.xy *= heightMapScale;
     float3 heightMapPos = float3(uv.xy, 0.0);
 
     //Determine number of steps based on angle between normal and eye
     int iterations = clamp(int(floor((1.0 - dot(modelViewNormalizedDir, normalizedNormal) ) * 18.0)) + 2, 0, 30); 
-    
+   
+    if(iterations == 0) {
+        return uv.xy;
+    }
+
     // Do a linear search to find the first intersection
     {
         modelViewNormalizedDir /= float(iterations);
@@ -47,6 +52,6 @@ float2 ParallaxRelief(int sampleCount, bool isSingleChannel, float heightMapScal
             heightMapPos -= modelViewNormalizedDir; 
         }
     }
-    
+
     return heightMapPos.xy;
 }
