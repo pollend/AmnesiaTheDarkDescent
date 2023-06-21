@@ -38,17 +38,6 @@
 
 namespace hpl {
 
-    static const cMatrixf g_mtxTextureUnitFix(0.5f, 0,    0,    0.5f,
-                                              0,    0.5f, 0,    0.5f,
-                                              0,    0,    0.5f, 0.5f,
-                                              0,    0,    0,    1.0f);
-
-    //////////////////////////////////////////////////////////////////////////
-    // CONSTRUCTORS
-    //////////////////////////////////////////////////////////////////////////
-
-    //-----------------------------------------------------------------------
-
     cLightSpot::cLightSpot(tString asName, cResources* apResources)
         : iLight(asName, apResources) {
         mbProjectionUpdated = true;
@@ -152,7 +141,7 @@ namespace hpl {
     const cMatrixf& cLightSpot::GetViewProjMatrix() {
         if (mlViewProjMatrixCount != GetTransformUpdateCount() || mbViewProjUpdated || mbProjectionUpdated) {
             m_mtxViewProj = cMath::MatrixMul(GetProjectionMatrix(), GetViewMatrix());
-            m_mtxViewProj = cMath::MatrixMul(g_mtxTextureUnitFix, m_mtxViewProj);
+            //m_mtxViewProj = cMath::MatrixMul(g_mtxTextureUnitFix, m_mtxViewProj);
 
             mlViewProjMatrixCount = GetTransformUpdateCount();
             mbViewProjUpdated = false;

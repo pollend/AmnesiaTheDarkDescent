@@ -28,7 +28,11 @@ PsOut PS_MAIN(PsIn In)
     float3 normalizedNormal = normalize(normal.xyz);
 
     float4 projectionUV = mul(Get(spotViewProj), float4(position, 1.0));
-        
+    projectionUV.xyz = (projectionUV.xyz / projectionUV.w);
+    projectionUV.xy = projectionUV.xy * 0.5 + 0.5;
+    projectionUV.w = 1.0;
+
+
     float3 goboVal = float3(1.0, 1.0, 1.0);
     if(HasGoboMap(Get(config))) {
         goboVal = SampleTex2DProj(Get(goboMap), Get(nearestSampler), projectionUV).xyz;
