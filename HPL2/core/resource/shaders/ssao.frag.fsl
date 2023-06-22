@@ -1,0 +1,95 @@
+STRUCT(PsIn) 
+{
+    DATA(float4, Position, SV_Position);
+    DATA(float2, uv, TEXCOORD0);
+};
+
+#define SSAONumDiv2 (8 / 2)
+#define SSAO_BIAS (0.0025)
+
+PUSH_CONSTANT(postEffectConstants, b0)
+{
+    DATA(float2, rtSize, none);
+    DATA(float, farPlane, none);
+
+    DATA(float, depthDiffMul, None); 
+    DATA(float, scatterDepthMul, None); 
+    DATA(float, scatterLengthMin, None);
+    DATA(float, scatterLengthMax, None); 
+};
+
+
+RES(SamplerState, inputSampler, UPDATE_FREQ_NONE, s0, binding = 0);
+RES(Tex2D(float4), scatterDisk, UPDATE_FREQ_NONE, t0, binding = 1);
+
+RES(Tex2D(float), sourceInput, UPDATE_FREQ_PER_FRAME, t1, binding = 2);
+
+float PS_MAIN(PsIn In) 
+{    
+    INIT_MAIN;
+    
+    uint2 inputDim = uint2(GetDimensions(Get(sourceInput), NO_SAMPLER));    
+    float2 inputTexel = 1.0 / float2(inputDim.x, inputDim.y);
+    ///////////////
+    // This is the core depth that we compare to
+    float coreDepth = SampleTex2D(Get(sourceInput), Get(inputSampler), In.uv.xy).r;
+    // Have a max limit on the length, or else there will be major slowdowns when many objects are upfront.
+    // Multiply with height (y) since width varies with aspect!
+    // Also added a min length to make stuff darker at a distance to avoid flickering.
+    float fScatterLength = clamp(Get(scatterDepthMul) / (coreDepth * Get(farPlane)), Get(scatterLengthMin), Get(scatterLengthMax)) * Get(rtSize.y);
+    float fScatterDiskZ = 0.0;
+    
+    float2 vScreenScatterCoord = (In.Position.xy) * 1.0 / 4.0; // 4 = size of scatter texture, and this is to get a 1-1 pixel-texture usage.
+    vScreenScatterCoord.y = fract(vScreenScatterCoord.y); // Make sure the coord is in 0 - 1 range
+    vScreenScatterCoord.y *= 1.0 / SSAONumDiv2; // Access only first texture piece
+
+    ///////////////////////////////////////////
+    // Depth enhance
+    float fOccSum = 0.0;
+    float fFarPlaneMulDepthDiffMul = Get(farPlane) * Get(depthDiffMul);
+
+    //////////////////////////////////////////
+    // Go through the samples, 4 at a time!
+    for (int i = 0; i < (SSAONumDiv2 / 2); i++) {
+        // Get the scatter coordinates (used to get the randomized postion for each sampling)
+        float2 vScatterLookupCoord1 = float2(vScreenScatterCoord.x, vScreenScatterCoord.y + fScatterDiskZ * 4.0);
+
+        float4 vOffset1 = (SampleTex2D(Get(scatterDisk), Get(inputSampler) , vScatterLookupCoord1) * 2.0 - 1.0) * fScatterLength;
+
+        float2 s1 = In.uv.xy + (vOffset1.xy * inputTexel.xy);
+        float2 s2 = In.uv.xy + (vOffset1.zw * inputTexel.xy);
+        float2 s3 = In.uv.xy - (vOffset1.xy * inputTexel.xy);
+        float2 s4 = In.uv.xy - (vOffset1.zw * inputTexel.xy);
+
+        // Look up the depth at the random samples. Notice that x-z and y-w are each others opposites! (important for extra polation
+        // below!)
+        float4 vDepth = vec4(
+            SampleTex2D(Get(sourceInput), Get(inputSampler), s1).r,
+            SampleTex2D(Get(sourceInput), Get(inputSampler), s2).r,
+            SampleTex2D(Get(sourceInput), Get(inputSampler), s3).r,
+            SampleTex2D(Get(sourceInput), Get(inputSampler), s4).r);
+
+        // The z difference in world coords multplied with DepthDiffMul
+        float4 vDiff = (float4(coreDepth) - vDepth) * fFarPlaneMulDepthDiffMul;
+    
+        // Invert the difference (so positive means uncovered) and then give unocvered values a slight advantage
+        // Also set a max negative value (limits how much covered areas can affect.)
+        vDiff = max(float4(1) - vDiff, -0.7);
+
+        // Caclculate the occulsion value, (the squaring makes sharper dark areas)
+        float4 vOcc = min(vDiff * vDiff, 1.0f);
+        
+        fOccSum += (coreDepth >= vDepth.x + SSAO_BIAS ?  1.0 : vOcc.x);
+        fOccSum += (coreDepth >= vDepth.y + SSAO_BIAS ?  1.0 : vOcc.y);
+        fOccSum += (coreDepth >= vDepth.z + SSAO_BIAS ?  1.0 : vOcc.z);
+        fOccSum += (coreDepth >= vDepth.w + SSAO_BIAS ?  1.0 : vOcc.w);
+
+        // Change the z coord for random coord look up (so new values are used on next iteration)
+        fScatterDiskZ += (1.0 / SSAONumDiv2) * 2.0;
+    }
+
+    float fOcc = fOccSum / (2.0 * SSAONumDiv2);
+    RETURN(fOcc * fOcc);
+    //RETURN(fScatterLength); 
+}
+

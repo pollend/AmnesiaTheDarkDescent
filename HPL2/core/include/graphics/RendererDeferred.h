@@ -23,6 +23,7 @@
 #include "graphics/RenderList.h"
 #include "graphics/Renderable.h"
 #include "scene/Viewport.h"
+#include "tinyimageformat_base.h"
 #include "windowing/NativeWindow.h"
 #include <array>
 #include <bgfx/bgfx.h>
@@ -78,6 +79,7 @@ namespace hpl {
         static constexpr TinyImageFormat SpecularBufferFormat = TinyImageFormat_R8G8_UNORM;
         static constexpr TinyImageFormat ColorBufferFormat = TinyImageFormat_R8G8B8A8_UNORM;
         static constexpr TinyImageFormat ShadowDepthBufferFormat = TinyImageFormat_D32_SFLOAT;
+        static constexpr TinyImageFormat SSAOBufferFormat = TinyImageFormat_R16_SFLOAT;
         static constexpr uint32_t MaxObjectUniforms = 4096;
         static constexpr uint32_t MaxLightUniforms = 1024;
         static constexpr uint32_t  MaxHiZMipLevels = 32;
@@ -208,24 +210,27 @@ namespace hpl {
             SharedViewportData(const SharedViewportData&) = delete;
             SharedViewportData(SharedViewportData&& buffer)
                 : m_size(buffer.m_size)
-                , m_refractionImage(std::move(buffer.m_refractionImage))
                 , m_gBuffer(std::move(buffer.m_gBuffer))
-                , m_gBufferReflection(std::move(buffer.m_gBufferReflection)) {
+                , m_gBufferReflection(std::move(buffer.m_gBufferReflection))
+                , m_ssaoTarget0(std::move(buffer.m_ssaoTarget0))
+                , m_ssaoTarget1(std::move(buffer.m_ssaoTarget1)) {
             }
 
             SharedViewportData& operator=(const SharedViewportData&) = delete;
-
             void operator=(SharedViewportData&& buffer) {
                 m_size = buffer.m_size;
-                m_refractionImage = std::move(buffer.m_refractionImage);
                 m_gBuffer = std::move(buffer.m_gBuffer);
                 m_gBufferReflection = std::move(buffer.m_gBufferReflection);
-
+                m_ssaoTarget0 = std::move(buffer.m_ssaoTarget0);
+                m_ssaoTarget1 = std::move(buffer.m_ssaoTarget1);
             }
 
             cVector2l m_size = cVector2l(0, 0);
             std::array<GBuffer, ForgeRenderer::SwapChainLength> m_gBuffer;
-            std::shared_ptr<Image> m_refractionImage;
+
+            ForgeRenderTarget m_ssaoTarget0; // horizontal blur
+            ForgeRenderTarget m_ssaoTarget1; // vertical blur
+
             GBuffer m_gBufferReflection;
         };
 
@@ -235,6 +240,7 @@ namespace hpl {
         inline SharedViewportData& GetSharedData(cViewport& viewport) {
             return m_boundViewportData.resolve(viewport);
         }
+
         virtual ForgeRenderTarget GetOutputImage(uint32_t frameIndex, cViewport& viewport) override {
             auto& sharedData = m_boundViewportData.resolve(viewport);
             return sharedData.m_gBuffer[frameIndex].m_outputBuffer;
@@ -625,6 +631,18 @@ namespace hpl {
         DescriptorSet* m_lightFrameSet;
         Sampler* m_shadowCmpSampler;
         Sampler* m_samplerPointClampToBorder;
+        Sampler* m_samplerPointWrap;
+
+        // TODO: consider moving this to a separate class
+        RootSignature* m_ssaoRootSignature;
+        DescriptorSet* m_constSSAOSet;
+        std::array<DescriptorSet*,ForgeRenderer::SwapChainLength> m_perFrameSSAOSet;
+        Pipeline* m_ssaoHorizontalBlurPipeline;
+        Pipeline* m_ssaoVerticalBlurPipeline;
+        Pipeline* m_ssaoPipeline;
+        Shader* m_ssaoBlurHorizontalShader;
+        Shader* m_ssaoBlurVerticalShader;
+        Shader* m_ssaoShader;
 
         cRenderList m_reflectionRenderList;
 
