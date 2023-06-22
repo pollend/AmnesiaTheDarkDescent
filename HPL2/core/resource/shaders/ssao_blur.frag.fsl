@@ -1,0 +1,81 @@
+
+STRUCT(PsIn) 
+{
+    DATA(float4, Position, SV_Position);
+    DATA(float2, uv, TEXCOORD0);
+};
+
+PUSH_CONSTANT(postEffectConstants, b0)
+{
+    DATA(float2, rtSize, None);
+    DATA(float, farPlane, None);
+};
+
+RES(SamplerState, inputSampler, UPDATE_FREQ_NONE, s0, binding = 0);
+
+RES(Tex2D(float4), sourceInput, UPDATE_FREQ_PER_FRAME, t0, binding = 2);
+RES(Tex2D(float), depthMap, UPDATE_FREQ_PER_FRAME, t1, binding = 3);
+
+float4 PS_MAIN(PsIn In) 
+{    
+    INIT_MAIN;
+    float vMul[9];
+    float fOffset[9];
+    vMul[0] = 0.05;
+    vMul[1] = 0.1;
+    vMul[2] = 0.25;
+    vMul[3] = 0.3;
+    vMul[4] = 0.1;
+    vMul[5] = 0.3;
+    vMul[6] = 0.25;
+    vMul[7] = 0.1;
+    vMul[8] = 0.05;
+    fOffset[0] = -3.35;
+    fOffset[1] = -2.35;
+    fOffset[2] = -1.35;
+    fOffset[3] = -0.35;
+    fOffset[4] = 0.0;
+    fOffset[5] = 0.35;
+    fOffset[6] = 1.35;
+    fOffset[7] = 2.35;
+    fOffset[8] = 3.35;
+    
+    float2 viewTexle = 1.0 / Get(rtSize);
+
+    float fBlurSize = 2.0;
+
+#if BLUR_HORIZONTAL == 1
+    float2 vOffsetMul = float2(1.0, 0.0) * fBlurSize;
+#else
+    float2 vOffsetMul = float2(0.0, 1.0) * fBlurSize;
+#endif
+
+    //Get the core (at center) depth and create the minimum depth based on that.
+    float fCoreDepth = SampleTex2D(Get(depthMap), Get(inputSampler), In.uv.xy).x;
+    float fMinDepth =  fCoreDepth - 0.2 / Get(farPlane);
+
+    float vAmount = 0.0;
+    float fMulSum = 0.0;
+
+    for (int i = 0; i < 9; i += 1) {
+        float2 vCoordOffset = (fOffset[i] * vOffsetMul) * viewTexle.xy;
+
+        float vOcc = SampleTex2D(Get(sourceInput), Get(inputSampler), In.uv.xy + vCoordOffset).r;
+        float fDepth = SampleTex2D(Get(depthMap), Get(inputSampler), In.uv.xy + vCoordOffset).r;
+        float fMul = vMul[i];
+
+        // Skip any pixels where depth is lower (in front of) the core depth
+        // Do not want foreground leaking into background (opposite is acceptable though)
+        if (fDepth < fMinDepth) {
+            fMul *= 0.25;
+        }
+ 
+        vOcc *= fMul;
+
+        fMulSum += fMul;
+        vAmount += vOcc;
+    }
+    vAmount /= fMulSum;
+    RETURN(float4(vAmount, vAmount, vAmount, 0.0));
+}
+

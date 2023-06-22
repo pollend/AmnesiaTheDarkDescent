@@ -556,6 +556,7 @@ namespace hpl {
 
         m_maxBatchLights = 100;
 
+
         m_boundViewportData = std::move(UniqueViewportData<SharedViewportData>(
             [](cViewport& viewport) {
                 auto sharedData = std::make_unique<SharedViewportData>();
@@ -576,6 +577,42 @@ namespace hpl {
                     renderTarget.pName = "G-Buffer RTs";
                     return renderTarget;
                 };
+
+                sharedData->m_ssaoTarget0  = {forgetRenderer->Rend()};
+                sharedData->m_ssaoTarget0.Load([&](RenderTarget** handle) {
+                    RenderTargetDesc renderTargetDesc = {};
+                    renderTargetDesc.mArraySize = 1;
+                    renderTargetDesc.mClearValue = optimizedColorClearBlack;
+                    renderTargetDesc.mDepth = 1;
+                    renderTargetDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+                    renderTargetDesc.mWidth = sharedData->m_size.x / 2;
+                    renderTargetDesc.mHeight = sharedData->m_size.y / 2;
+                    renderTargetDesc.mSampleCount = SAMPLE_COUNT_1;
+                    renderTargetDesc.mSampleQuality = 0;
+                    renderTargetDesc.mStartState = RESOURCE_STATE_RENDER_TARGET;
+                    renderTargetDesc.mFormat = SSAOBufferFormat;
+                    renderTargetDesc.pName = "SSAO RT 0";
+                    addRenderTarget(forgetRenderer->Rend(), &renderTargetDesc, handle);
+                    return true;
+                });
+                sharedData->m_ssaoTarget1  = {forgetRenderer->Rend()};
+                sharedData->m_ssaoTarget1.Load([&](RenderTarget** handle) {
+                    RenderTargetDesc renderTargetDesc = {};
+                    renderTargetDesc.mArraySize = 1;
+                    renderTargetDesc.mClearValue = optimizedColorClearBlack;
+                    renderTargetDesc.mDepth = 1;
+                    renderTargetDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+                    renderTargetDesc.mWidth = sharedData->m_size.x / 2;
+                    renderTargetDesc.mHeight = sharedData->m_size.y / 2;
+                    renderTargetDesc.mSampleCount = SAMPLE_COUNT_1;
+                    renderTargetDesc.mSampleQuality = 0;
+                    renderTargetDesc.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
+                    renderTargetDesc.mFormat = SSAOBufferFormat;
+                    renderTargetDesc.pName = "SSAO RT 0";
+                    addRenderTarget(forgetRenderer->Rend(), &renderTargetDesc, handle);
+                    return true;
+                });
+
                 for(auto& b: sharedData->m_gBuffer) {
                     b.m_hiZMipCount = std::clamp<uint8_t>(static_cast<uint8_t>(std::floor(std::log2(std::max(sharedData->m_size.x, sharedData->m_size.y)))), 0, 8);
                     b.m_hizDepthBuffer = {forgetRenderer->Rend()};
@@ -685,6 +722,57 @@ namespace hpl {
 
         m_dissolveImage = mpResources->GetTextureManager()->Create2DImage("core_dissolve.tga", false);
         auto* forgetRenderer = Interface<ForgeRenderer>::Get();
+        m_ssaoScatterDiskTexture.Load([&](Texture** texture) {
+            TextureCreator::GenerateScatterDiskMap2D(4, SSAONumOfSamples, false, texture);
+            return true;
+        });
+
+        {
+            SamplerDesc linearSamplerDesc = {};
+            linearSamplerDesc.mMinFilter = FILTER_NEAREST;
+            linearSamplerDesc.mMagFilter = FILTER_NEAREST;
+            linearSamplerDesc.mMipLodBias = 0.f;
+            linearSamplerDesc.mMaxAnisotropy = 0.f;
+            linearSamplerDesc.mMipMapMode = MIPMAP_MODE_NEAREST;
+            linearSamplerDesc.mAddressU = ADDRESS_MODE_CLAMP_TO_BORDER;
+            linearSamplerDesc.mAddressV = ADDRESS_MODE_CLAMP_TO_BORDER;
+            linearSamplerDesc.mAddressW = ADDRESS_MODE_CLAMP_TO_BORDER;
+            addSampler(forgetRenderer->Rend(), &linearSamplerDesc, &m_shadowCmpSampler);
+        }
+        {
+            SamplerDesc miplessLinearSamplerDesc = {};
+            miplessLinearSamplerDesc.mMinFilter = FILTER_LINEAR;
+            miplessLinearSamplerDesc.mMagFilter = FILTER_LINEAR;
+            miplessLinearSamplerDesc.mMipLodBias = 0.f;
+            miplessLinearSamplerDesc.mMaxAnisotropy = 0.f;
+            miplessLinearSamplerDesc.mCompareFunc = CompareMode::CMP_LEQUAL;
+            miplessLinearSamplerDesc.mMipMapMode = MIPMAP_MODE_LINEAR;
+            miplessLinearSamplerDesc.mAddressU = ADDRESS_MODE_CLAMP_TO_BORDER;
+            miplessLinearSamplerDesc.mAddressV = ADDRESS_MODE_CLAMP_TO_BORDER;
+            miplessLinearSamplerDesc.mAddressW = ADDRESS_MODE_CLAMP_TO_BORDER;
+            addSampler(forgetRenderer->Rend(), &miplessLinearSamplerDesc, &m_shadowCmpSampler);
+        }
+        {
+            SamplerDesc pointSamplerDesc = {};
+            pointSamplerDesc.mMinFilter = FILTER_NEAREST;
+            pointSamplerDesc.mMagFilter = FILTER_NEAREST;
+            pointSamplerDesc.mMipMapMode = MIPMAP_MODE_NEAREST;
+            pointSamplerDesc.mAddressU = ADDRESS_MODE_CLAMP_TO_BORDER;
+            pointSamplerDesc.mAddressV = ADDRESS_MODE_CLAMP_TO_BORDER;
+            pointSamplerDesc.mAddressW = ADDRESS_MODE_CLAMP_TO_BORDER;
+            addSampler(forgetRenderer->Rend(), &pointSamplerDesc, &m_samplerPointClampToBorder);
+        }
+        {
+            SamplerDesc pointSamplerDesc = {};
+            pointSamplerDesc.mMinFilter = FILTER_NEAREST;
+            pointSamplerDesc.mMagFilter = FILTER_NEAREST;
+            pointSamplerDesc.mMipMapMode = MIPMAP_MODE_NEAREST;
+            pointSamplerDesc.mAddressU = ADDRESS_MODE_REPEAT;
+            pointSamplerDesc.mAddressV = ADDRESS_MODE_REPEAT;
+            pointSamplerDesc.mAddressW = ADDRESS_MODE_REPEAT;
+            addSampler(forgetRenderer->Rend(), &pointSamplerDesc, &m_samplerPointWrap);
+        }
+
         auto updatePerFrameDescriptor = [&](DescriptorSet* desc) {
             for(size_t i = 0; i < ForgeRenderer::SwapChainLength; i++) {
                 DescriptorData params[15] = {};
@@ -699,30 +787,7 @@ namespace hpl {
             }
         };
 
-        {
-            SamplerDesc miplessLinearSamplerDesc = {};
-            miplessLinearSamplerDesc.mMinFilter = FILTER_LINEAR;
-            miplessLinearSamplerDesc.mMagFilter = FILTER_LINEAR;
-            miplessLinearSamplerDesc.mMipLodBias = 0.f;
-            miplessLinearSamplerDesc.mMaxAnisotropy = 0.f;
-            miplessLinearSamplerDesc.mCompareFunc = CompareMode::CMP_LEQUAL;
-            miplessLinearSamplerDesc.mMipMapMode = MIPMAP_MODE_LINEAR;
-            miplessLinearSamplerDesc.mAddressU = ADDRESS_MODE_CLAMP_TO_BORDER;
-            miplessLinearSamplerDesc.mAddressV = ADDRESS_MODE_CLAMP_TO_BORDER;
-            miplessLinearSamplerDesc.mAddressW = ADDRESS_MODE_CLAMP_TO_BORDER;
-            addSampler(forgetRenderer->Rend(), &miplessLinearSamplerDesc, &m_shadowCmpSampler);
-        }
 
-        {
-            SamplerDesc pointSamplerDesc = {};
-            pointSamplerDesc.mMinFilter = FILTER_NEAREST;
-            pointSamplerDesc.mMagFilter = FILTER_NEAREST;
-            pointSamplerDesc.mMipMapMode = MIPMAP_MODE_NEAREST;
-            pointSamplerDesc.mAddressU = ADDRESS_MODE_CLAMP_TO_BORDER;
-            pointSamplerDesc.mAddressV = ADDRESS_MODE_CLAMP_TO_BORDER;
-            pointSamplerDesc.mAddressW = ADDRESS_MODE_CLAMP_TO_BORDER;
-            addSampler(forgetRenderer->Rend(), &pointSamplerDesc, &m_samplerPointClampToBorder);
-        }
         m_perFrameBuffer.Load([&](Buffer** buffer) {
             BufferLoadDesc desc = {};
             desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -1042,6 +1107,148 @@ namespace hpl {
             addUniformGPURingBuffer(forgetRenderer->Rend(), sizeof(Fog::UniformFogData) * Fog::MaxFogCount, &m_fogPass.m_fogUniformBuffer, true);
 
         }
+        // SSAO
+        {
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0].pFileName = "fullscreen.vert";
+                loadDesc.mStages[1].pFileName = "ssao.frag";
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_ssaoShader);
+            }
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0].pFileName = "fullscreen.vert";
+                loadDesc.mStages[1].pFileName = "ssao_blur_horizontal.frag";
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_ssaoBlurHorizontalShader);
+            }
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0].pFileName = "fullscreen.vert";
+                loadDesc.mStages[1].pFileName = "ssao_blur_vertical.frag";
+                addShader(forgetRenderer->Rend(), &loadDesc, &m_ssaoBlurVerticalShader);
+            }
+
+            std::array shaders = { m_ssaoShader, m_ssaoBlurVerticalShader, m_ssaoBlurHorizontalShader };
+            Sampler* vbShadeSceneSamplers[] = {
+                m_samplerPointWrap,
+            };
+
+            const char* vbShadeSceneSamplersNames[] = {
+                "inputSampler",
+            };
+            RootSignatureDesc rootSignatureDesc = {};
+            rootSignatureDesc.ppShaders = shaders.data();
+            rootSignatureDesc.mShaderCount = shaders.size();
+            rootSignatureDesc.mStaticSamplerCount = std::size(vbShadeSceneSamplers);
+            rootSignatureDesc.ppStaticSamplers = vbShadeSceneSamplers;
+            rootSignatureDesc.ppStaticSamplerNames = vbShadeSceneSamplersNames;
+            addRootSignature(forgetRenderer->Rend(), &rootSignatureDesc, &m_ssaoRootSignature);
+
+
+            for(auto& set: m_perFrameSSAOSet) {
+                DescriptorSetDesc setDesc = { m_ssaoRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, 4};
+                addDescriptorSet(forgetRenderer->Rend(), &setDesc, &set);
+            }
+            {
+                DescriptorSetDesc setDesc  = { m_ssaoRootSignature, DESCRIPTOR_UPDATE_FREQ_NONE, 1};
+                addDescriptorSet(forgetRenderer->Rend(), &setDesc, &m_constSSAOSet);
+            }
+            {
+                std::array<DescriptorData, 1> params = {};
+                params[0].pName = "scatterDisk";
+                params[0].ppTextures = &m_ssaoScatterDiskTexture.m_handle;
+                updateDescriptorSet(forgetRenderer->Rend(), 0, m_constSSAOSet, params.size(), params.data());
+            }
+
+            {
+                TinyImageFormat ssaoInputTarget = SSAOBufferFormat;
+                DepthStateDesc depthStateDisabledDesc = {};
+                depthStateDisabledDesc.mDepthWrite = false;
+                depthStateDisabledDesc.mDepthTest = false;
+
+                RasterizerStateDesc rasterStateNoneDesc = {};
+                rasterStateNoneDesc.mCullMode = CULL_MODE_NONE;
+
+                PipelineDesc pipelineDesc = {};
+                pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+                GraphicsPipelineDesc& graphicsPipelineDesc = pipelineDesc.mGraphicsDesc;
+                graphicsPipelineDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+                graphicsPipelineDesc.pShaderProgram = m_ssaoBlurHorizontalShader;
+                graphicsPipelineDesc.pRootSignature = m_ssaoRootSignature;
+                graphicsPipelineDesc.mRenderTargetCount = 1;
+                graphicsPipelineDesc.mDepthStencilFormat = TinyImageFormat_UNDEFINED;
+                graphicsPipelineDesc.pVertexLayout = NULL;
+                graphicsPipelineDesc.pRasterizerState = &rasterStateNoneDesc;
+                graphicsPipelineDesc.pDepthState = &depthStateDisabledDesc;
+                graphicsPipelineDesc.pBlendState = NULL;
+                graphicsPipelineDesc.mSampleCount = SAMPLE_COUNT_1;
+                graphicsPipelineDesc.mSampleQuality = 0;
+                graphicsPipelineDesc.pColorFormats = &ssaoInputTarget;
+                addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_ssaoHorizontalBlurPipeline);
+            }
+            {
+                TinyImageFormat inputFormat = SSAOBufferFormat;
+
+                DepthStateDesc depthStateDisabledDesc = {};
+                depthStateDisabledDesc.mDepthWrite = false;
+                depthStateDisabledDesc.mDepthTest = false;
+
+                RasterizerStateDesc rasterStateNoneDesc = {};
+                rasterStateNoneDesc.mCullMode = CULL_MODE_NONE;
+
+                PipelineDesc pipelineDesc = {};
+                pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+                GraphicsPipelineDesc& graphicsPipelineDesc = pipelineDesc.mGraphicsDesc;
+
+                graphicsPipelineDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+                graphicsPipelineDesc.pShaderProgram = m_ssaoShader;
+                graphicsPipelineDesc.pRootSignature = m_ssaoRootSignature;
+                graphicsPipelineDesc.mRenderTargetCount = 1;
+                graphicsPipelineDesc.mDepthStencilFormat = TinyImageFormat_UNDEFINED;
+                graphicsPipelineDesc.pVertexLayout = NULL;
+                graphicsPipelineDesc.pRasterizerState = &rasterStateNoneDesc;
+                graphicsPipelineDesc.pDepthState = &depthStateDisabledDesc;
+                graphicsPipelineDesc.pBlendState = NULL;
+                graphicsPipelineDesc.mSampleCount = SAMPLE_COUNT_1;
+                graphicsPipelineDesc.mSampleQuality = 0;
+                graphicsPipelineDesc.pColorFormats = &inputFormat;
+                addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_ssaoPipeline);
+            }
+            {
+                TinyImageFormat inputFormat = ColorBufferFormat;
+
+                BlendStateDesc blendStateDesc{};
+                blendStateDesc.mSrcFactors[0] = BC_ZERO;
+                blendStateDesc.mDstFactors[0] = BC_SRC_COLOR;
+                blendStateDesc.mBlendModes[0] = BM_ADD;
+                blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
+                blendStateDesc.mColorWriteMasks[0] = COLOR_MASK_RED | COLOR_MASK_GREEN  | COLOR_MASK_BLUE ;
+
+                DepthStateDesc depthStateDisabledDesc = {};
+                depthStateDisabledDesc.mDepthWrite = false;
+                depthStateDisabledDesc.mDepthTest = false;
+
+                RasterizerStateDesc rasterStateNoneDesc = {};
+                rasterStateNoneDesc.mCullMode = CULL_MODE_NONE;
+
+                PipelineDesc pipelineDesc = {};
+                pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+                GraphicsPipelineDesc& graphicsPipelineDesc = pipelineDesc.mGraphicsDesc;
+                graphicsPipelineDesc.pBlendState = &blendStateDesc;
+                graphicsPipelineDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+                graphicsPipelineDesc.pShaderProgram = m_ssaoBlurVerticalShader;
+                graphicsPipelineDesc.pRootSignature = m_ssaoRootSignature;
+                graphicsPipelineDesc.mRenderTargetCount = 1;
+                graphicsPipelineDesc.mDepthStencilFormat = TinyImageFormat_UNDEFINED;
+                graphicsPipelineDesc.pVertexLayout = NULL;
+                graphicsPipelineDesc.pRasterizerState = &rasterStateNoneDesc;
+                graphicsPipelineDesc.pDepthState = &depthStateDisabledDesc;
+                graphicsPipelineDesc.mSampleCount = SAMPLE_COUNT_1;
+                graphicsPipelineDesc.mSampleQuality = 0;
+                graphicsPipelineDesc.pColorFormats = &inputFormat;
+                addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_ssaoVerticalBlurPipeline);
+            }
+        }
         //---------------- Diffuse Pipeline  ------------------------
         {
             // z pass
@@ -1050,8 +1257,6 @@ namespace hpl {
                 loadDesc.mStages[0].pFileName = "solid_z.vert";
                 loadDesc.mStages[1].pFileName = "solid_z.frag";
                 addShader(forgetRenderer->Rend(), &loadDesc, &m_zPassShader);
-                // setShaderName(forgetRenderer->Rend(), m_zPassShader, SHADER_STAGE_VERT, "solid_z.vert");
-                // setShaderName(forgetRenderer->Rend(), m_zPassShader, SHADER_STAGE_FRAG, "solid_z.frag");
             }
             // diffuse pipeline
             {
@@ -1871,10 +2076,6 @@ namespace hpl {
                     return true;
                 });
             }
-            m_ssaoScatterDiskTexture.Load([&](Texture** texture) {
-                TextureCreator::GenerateScatterDiskMap2D(4, SSAONumOfSamples, false, texture);
-                return true;
-            });
 
 
             {
@@ -2982,17 +3183,154 @@ namespace hpl {
             cmdEndDebugMarker(frame.m_cmd);
         }
 
+        //SSAO
+        if(mpCurrentSettings->mbSSAOActive) {
+            {
+                cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+                std::array rtBarriers = {
+                    RenderTargetBarrier{ currentGBuffer.m_positionBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
+                    RenderTargetBarrier{ currentGBuffer.m_depthBuffer.m_handle, RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_SHADER_RESOURCE},
+                };
+                cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+            }
+
+            uint32_t rootConstantIndex = getDescriptorIndexFromName(m_ssaoRootSignature, "postEffectConstants");
+
+            uint32_t perFrameSetIndex = 0;
+            LoadActionsDesc loadActions = {};
+            loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
+            loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
+            cmdBindRenderTargets(frame.m_cmd, 1, &sharedData.m_ssaoTarget0.m_handle, NULL, &loadActions, NULL, NULL, -1, -1);
+            {
+                auto renderTarget = sharedData.m_ssaoTarget0.m_handle;
+                std::array<DescriptorData, 1> params = {};
+                params[0].pName = "sourceInput";
+                params[0].ppTextures = &currentGBuffer.m_depthBuffer.m_handle->pTexture;
+                updateDescriptorSet(frame.m_renderer->Rend(), perFrameSetIndex, m_perFrameSSAOSet[frame.m_frameIndex], params.size(), params.data());
+
+                cmdBindPipeline(frame.m_cmd, m_ssaoPipeline);
+
+                struct {
+                    float2 rtSize;
+                    float u_farPlane;
+
+                    float depthDiffMul;
+                    float scatterDepthMul;
+                    float scatterLengthMin;
+                    float scatterLengthMax;
+                } paramConst;
+                paramConst.rtSize = float2{ (float)renderTarget->mWidth, (float)renderTarget->mHeight };
+                paramConst.u_farPlane = m_farPlane;
+
+                paramConst.depthDiffMul = mfSSAODepthDiffMul;
+                paramConst.scatterDepthMul = mfSSAOScatterLengthMul;
+                paramConst.scatterLengthMin = mfSSAOScatterLengthMin;
+                paramConst.scatterLengthMax = mfSSAOScatterLengthMax;
+
+                cmdBindPushConstants(frame.m_cmd, m_ssaoRootSignature, rootConstantIndex, &paramConst);
+                cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, renderTarget->mWidth, renderTarget->mHeight, 0.0f, 1.0f);
+                cmdSetScissor(frame.m_cmd, 0, 0, renderTarget->mWidth, renderTarget->mHeight);
+
+                cmdBindDescriptorSet(frame.m_cmd, perFrameSetIndex++, m_perFrameSSAOSet[frame.m_frameIndex]);
+                cmdBindDescriptorSet(frame.m_cmd, 0, m_constSSAOSet);
+                cmdDraw(frame.m_cmd, 3, 0);
+            }
+            {
+
+                cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+                std::array rtBarriers = {
+                    RenderTargetBarrier{ sharedData.m_ssaoTarget0.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
+                    RenderTargetBarrier{ sharedData.m_ssaoTarget1.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET,},
+
+                };
+                cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+            }
+
+            struct {
+                float2 rtSize;
+                float u_farPlane;
+            } paramConst;
+
+            // blur horizontal
+            {
+
+                auto renderTarget = sharedData.m_ssaoTarget1.m_handle;
+                cmdBindRenderTargets(frame.m_cmd, 1, &sharedData.m_ssaoTarget1.m_handle, NULL, &loadActions, NULL, NULL, -1, -1);
+                cmdBindPipeline(frame.m_cmd, m_ssaoHorizontalBlurPipeline);
+
+                paramConst.rtSize = float2{ (float)renderTarget->mWidth, (float)renderTarget->mHeight };
+                paramConst.u_farPlane = m_farPlane;
+
+                std::array<DescriptorData, 2> params = {};
+                params[0].pName = "sourceInput";
+                params[0].ppTextures = &sharedData.m_ssaoTarget0.m_handle->pTexture;
+                params[1].pName = "depthMap";
+                params[1].ppTextures = &currentGBuffer.m_depthBuffer.m_handle->pTexture;
+                updateDescriptorSet(frame.m_renderer->Rend(), perFrameSetIndex, m_perFrameSSAOSet[frame.m_frameIndex], params.size(), params.data());
+
+                cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, renderTarget->mWidth, renderTarget->mHeight, 0.0f, 1.0f);
+                cmdSetScissor(frame.m_cmd, 0, 0, renderTarget->mWidth, renderTarget->mHeight);
+                cmdBindPushConstants(frame.m_cmd, m_ssaoRootSignature, rootConstantIndex, &paramConst);
+                cmdBindDescriptorSet(frame.m_cmd, perFrameSetIndex++, m_perFrameSSAOSet[frame.m_frameIndex]);
+                cmdBindDescriptorSet(frame.m_cmd, 0, m_constSSAOSet);
+                cmdDraw(frame.m_cmd, 3, 0);
+            }
+            {
+                cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+                std::array rtBarriers = {
+                    RenderTargetBarrier{ sharedData.m_ssaoTarget0.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
+                    RenderTargetBarrier{ currentGBuffer.m_colorBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET , RESOURCE_STATE_RENDER_TARGET },
+                };
+                cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+            }
+            // blur vertical
+            {
+                auto renderTarget = currentGBuffer.m_colorBuffer.m_handle;
+                cmdBindRenderTargets(frame.m_cmd, 1, &currentGBuffer.m_colorBuffer.m_handle, NULL, &loadActions, NULL, NULL, -1, -1);
+                std::array<DescriptorData, 2> params = {};
+                params[0].pName = "sourceInput";
+                params[0].ppTextures = &sharedData.m_ssaoTarget1.m_handle->pTexture;
+                params[1].pName = "depthMap";
+                params[1].ppTextures = &currentGBuffer.m_depthBuffer.m_handle->pTexture;
+
+                cmdBindPipeline(frame.m_cmd, m_ssaoVerticalBlurPipeline);
+
+                updateDescriptorSet(frame.m_renderer->Rend(), perFrameSetIndex, m_perFrameSSAOSet[frame.m_frameIndex], params.size(), params.data());
+
+                paramConst.rtSize = float2{ (float)renderTarget->mWidth, (float)renderTarget->mHeight };
+                paramConst.u_farPlane = m_farPlane;
+
+                cmdBindPushConstants(frame.m_cmd, m_ssaoRootSignature, rootConstantIndex, &paramConst);
+                cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, renderTarget->mWidth, renderTarget->mHeight, 0.0f, 1.0f);
+                cmdSetScissor(frame.m_cmd, 0, 0, renderTarget->mWidth, renderTarget->mHeight);
+
+                cmdBindDescriptorSet(frame.m_cmd, perFrameSetIndex++, m_perFrameSSAOSet[frame.m_frameIndex]);
+                cmdBindDescriptorSet(frame.m_cmd, 0, m_constSSAOSet);
+                cmdDraw(frame.m_cmd, 3, 0);
+            }
+            {
+                cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+                std::array rtBarriers = {
+                    RenderTargetBarrier{ sharedData.m_ssaoTarget0.m_handle,  RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET},
+                    RenderTargetBarrier{ sharedData.m_ssaoTarget1.m_handle,  RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE},
+                    RenderTargetBarrier{ currentGBuffer.m_depthBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_DEPTH_WRITE},
+                };
+                cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+            }
+
+        }
         {
             cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
-            std::array rtBarriers = {
-                RenderTargetBarrier{ currentGBuffer.m_colorBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
-                RenderTargetBarrier{ currentGBuffer.m_normalBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
-                RenderTargetBarrier{ currentGBuffer.m_positionBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
-                RenderTargetBarrier{ currentGBuffer.m_specularBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
-                RenderTargetBarrier{  currentGBuffer.m_outputBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET }
-            };
+            folly::small_vector<RenderTargetBarrier, 6>rtBarriers;
+            rtBarriers.push_back({ currentGBuffer.m_colorBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE });
+            rtBarriers.push_back({ currentGBuffer.m_normalBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE });
+            rtBarriers.push_back({ currentGBuffer.m_specularBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE });
+            rtBarriers.push_back({ currentGBuffer.m_outputBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET });
+            rtBarriers.push_back({ currentGBuffer.m_positionBuffer.m_handle,  RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE });
             cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
         }
+
+
         // // ------------------------------------------------------------------------------------
         // //  Render SSAO Pass to color
         // // ------------------------------------------------------------------------------------
