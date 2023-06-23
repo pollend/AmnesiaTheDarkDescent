@@ -33,6 +33,8 @@
 #include <graphics/Renderer.h>
 #include <graphics/Material.h>
 #include <graphics/ShaderVariantCollection.h>
+#include <graphics/Pipeline_CACAO.h>
+
 #include <math/MathTypes.h>
 #include <memory>
 #include <unordered_map>

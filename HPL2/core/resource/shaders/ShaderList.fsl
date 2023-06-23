@@ -301,3 +301,28 @@
 #frag dds_outline_copy.frag
     #include "dds_outline_copy.frag.fsl"
 #end
+
+//#frag dds_outline_copy.frag
+//#include "ffx_cacao_generate.comp.fsl"
+
+#comp ffx_cacao_generate_Q0
+    #define NUM_TAPS 3 
+    #define ADAPTIVE_BASE (false)
+    #include "ffx_cacao_generate.comp.fsl"
+#end
+
+#comp ffx_cacao_prepareDepthsDownsampleHalf
+    #include "ffx_cacao_prepareDepthsDownsampleHalf.comp.fsl"
+#end
+
+#comp ffx_cacao_prepareDepthsDownsampleHalf
+    #include "ffx_cacao_prepareNativeDepths.comp.fsl"
+#end
+
+#comp ffx_cacao_prepareDepthsDownsampleHalf
+    #include "ffx_cacao_prepareNativeDepthsHalf.comp.fsl"
+#end
+
+#comp ffx_cacao_prepareDepthsDownsampleHalf
+    #include "ffx_cacao_prepareNativeNormals.comp.fsl"
+#end

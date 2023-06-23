@@ -1,0 +1,271 @@
+
+#include "ffx_cacao_resource.h.fsl"
+
+[numthreads(FFX_CACAO_PREPARE_DEPTHS_HALF_WIDTH, FFX_CACAO_PREPARE_DEPTHS_HALF_HEIGHT, 1)]
+void CS_MAIN(SV_DispatchThreadID(uint3) did) 
+{
+	uint xOffset = (did.y * 3 + did.z) % 5;
+	uint2 coord = uint2(5 * did.x + xOffset, did.y);
+	float2 SVPos = float2(coord);
+        
+        float2 SVPosRounded = trunc(SVPos);
+	uint2 SVPosui = uint2(SVPosRounded); //same as uint2( SVPos )
+
+	//const int numberOfTaps = (ADAPTIVE_BASE) ? (FFX_CACAO_ADAPTIVE_TAP_BASE_COUNT) : (g_FFX_CACAO_numTaps[QUALITY_LEVEL]);
+	float pixZ, pixLZ, pixTZ, pixRZ, pixBZ;
+
+	float2 depthBufferUV = (did.xy + 0.5) * Get(DeinterleavedDepthBufferInverseDimensions) + Get(DeinterleavedDepthBufferNormalisedOffset);
+	float4 valuesUL = FFX_CACAO_SSAOGeneration_GatherViewspaceDepthOffset(depthBufferUV, int2(-1, -1));
+	float4 valuesBR = FFX_CACAO_SSAOGeneration_GatherViewspaceDepthOffset(depthBufferUV, int2(0, 0));
+
+	// get this pixel's viewspace depth
+	pixZ = valuesUL.y;
+
+	// get left right top bottom neighbouring pixels for edge detection (gets compiled out on qualityLevel == 0)
+	pixLZ = valuesUL.x;
+	pixTZ = valuesUL.z;
+	pixRZ = valuesBR.z;
+	pixBZ = valuesBR.x;
+
+	// float2 normalizedScreenPos = SVPosRounded * g_FFX_CACAO_Consts.Viewport2xPixelSize + g_FFX_CACAO_Consts.Viewport2xPixelSize_x_025;
+	float2 normalizedScreenPos = (SVPosRounded + 0.5f) * Get(SSAOBufferInverseDimensions);
+	float3 pixCenterPos = FFX_CACAO_NDCToViewSpace(normalizedScreenPos, pixZ); // g
+
+	// Load this pixel's viewspace normal
+	// uint2 fullResCoord = 2 * (SVPosui * 2 + g_FFX_CACAO_Consts.PerPassFullResCoordOffset.xy);
+	float3 pixelNormal = FFX_CACAO_SSAOGeneration_GetNormalPass(SVPosui, g_FFX_CACAO_Consts.PassIndex);
+
+	// optimized approximation of:  float2 pixelDirRBViewspaceSizeAtCenterZ = FFX_CACAO_NDCToViewSpace( normalizedScreenPos.xy + g_FFX_CACAO_Consts._ViewportPixelSize.xy, pixCenterPos.z ).xy - pixCenterPos.xy;
+	// const float2 pixelDirRBViewspaceSizeAtCenterZ = pixCenterPos.z * g_FFX_CACAO_Consts.NDCToViewMul * g_FFX_CACAO_Consts.Viewport2xPixelSize;
+	const float2 pixelDirRBViewspaceSizeAtCenterZ = pixCenterPos.z * g_FFX_CACAO_Consts.NDCToViewMul * g_FFX_CACAO_Consts.SSAOBufferInverseDimensions;
+
+	float pixLookupRadiusMod;
+	float falloffCalcMulSq;
+
+	// calculate effect radius and fit our screen sampling pattern inside it
+	float effectViewspaceRadius;
+	FFX_CACAO_CalculateRadiusParameters(length(pixCenterPos), pixelDirRBViewspaceSizeAtCenterZ, pixLookupRadiusMod, effectViewspaceRadius, falloffCalcMulSq);
+
+	// calculate samples rotation/scaling
+	float2x2 rotScale;
+	{
+		// reduce effect radius near the screen edges slightly; ideally, one would render a larger depth buffer (5% on each side) instead
+		if (!adaptiveBase && (qualityLevel >= FFX_CACAO_REDUCE_RADIUS_NEAR_SCREEN_BORDER_ENABLE_AT_QUALITY_PRESET))
+		{
+			float nearScreenBorder = min(min(depthBufferUV.x, 1.0 - depthBufferUV.x), min(depthBufferUV.y, 1.0 - depthBufferUV.y));
+			nearScreenBorder = saturate(10.0 * nearScreenBorder + 0.6);
+			pixLookupRadiusMod *= nearScreenBorder;
+		}
+
+		// load & update pseudo-random rotation matrix
+		uint pseudoRandomIndex = uint(SVPosRounded.y * 2 + SVPosRounded.x) % 5;
+		float4 rs = g_FFX_CACAO_Consts.PatternRotScaleMatrices[pseudoRandomIndex];
+		rotScale = float2x2(rs.x * pixLookupRadiusMod, rs.y * pixLookupRadiusMod, rs.z * pixLookupRadiusMod, rs.w * pixLookupRadiusMod);
+	}
+
+	// the main obscurance & sample weight storage
+	float obscuranceSum = 0.0;
+	float weightSum = 0.0;
+
+	// edge mask for between this and left/right/top/bottom neighbour pixels - not used in quality level 0 so initialize to "no edge" (1 is no edge, 0 is edge)
+	float4 edgesLRTB = float4(1.0, 1.0, 1.0, 1.0);
+
+	// Move center pixel slightly towards camera to avoid imprecision artifacts due to using of 16bit depth buffer; a lot smaller offsets needed when using 32bit floats
+	pixCenterPos *= g_FFX_CACAO_Consts.DepthPrecisionOffsetMod;
+
+	if (!adaptiveBase && (qualityLevel >= FFX_CACAO_DEPTH_BASED_EDGES_ENABLE_AT_QUALITY_PRESET))
+	{
+		edgesLRTB = FFX_CACAO_CalculateEdges(pixZ, pixLZ, pixRZ, pixTZ, pixBZ);
+	}
+
+	// adds a more high definition sharp effect, which gets blurred out (reuses left/right/top/bottom samples that we used for edge detection)
+	if (!adaptiveBase && (qualityLevel >= FFX_CACAO_DETAIL_AO_ENABLE_AT_QUALITY_PRESET))
+	{
+		// disable in case of quality level 4 (reference)
+		if (qualityLevel != 4)
+		{
+			//approximate neighbouring pixels positions (actually just deltas or "positions - pixCenterPos" )
+			float3 viewspaceDirZNormalized = float3(pixCenterPos.xy / pixCenterPos.zz, 1.0);
+
+			// very close approximation of: float3 pixLPos  = FFX_CACAO_NDCToViewSpace( normalizedScreenPos + float2( -g_FFX_CACAO_Consts.HalfViewportPixelSize.x, 0.0 ), pixLZ ).xyz - pixCenterPos.xyz;
+			float3 pixLDelta = float3(-pixelDirRBViewspaceSizeAtCenterZ.x, 0.0, 0.0) + viewspaceDirZNormalized * (pixLZ - pixCenterPos.z);
+			// very close approximation of: float3 pixRPos  = FFX_CACAO_NDCToViewSpace( normalizedScreenPos + float2( +g_FFX_CACAO_Consts.HalfViewportPixelSize.x, 0.0 ), pixRZ ).xyz - pixCenterPos.xyz;
+			float3 pixRDelta = float3(+pixelDirRBViewspaceSizeAtCenterZ.x, 0.0, 0.0) + viewspaceDirZNormalized * (pixRZ - pixCenterPos.z);
+			// very close approximation of: float3 pixTPos  = FFX_CACAO_NDCToViewSpace( normalizedScreenPos + float2( 0.0, -g_FFX_CACAO_Consts.HalfViewportPixelSize.y ), pixTZ ).xyz - pixCenterPos.xyz;
+			float3 pixTDelta = float3(0.0, -pixelDirRBViewspaceSizeAtCenterZ.y, 0.0) + viewspaceDirZNormalized * (pixTZ - pixCenterPos.z);
+			// very close approximation of: float3 pixBPos  = FFX_CACAO_NDCToViewSpace( normalizedScreenPos + float2( 0.0, +g_FFX_CACAO_Consts.HalfViewportPixelSize.y ), pixBZ ).xyz - pixCenterPos.xyz;
+			float3 pixBDelta = float3(0.0, +pixelDirRBViewspaceSizeAtCenterZ.y, 0.0) + viewspaceDirZNormalized * (pixBZ - pixCenterPos.z);
+
+			const float rangeReductionConst = 4.0f;                         // this is to avoid various artifacts
+			const float modifiedFalloffCalcMulSq = rangeReductionConst * falloffCalcMulSq;
+
+			float4 additionalObscurance;
+			additionalObscurance.x = FFX_CACAO_CalculatePixelObscurance(pixelNormal, pixLDelta, modifiedFalloffCalcMulSq);
+			additionalObscurance.y = FFX_CACAO_CalculatePixelObscurance(pixelNormal, pixRDelta, modifiedFalloffCalcMulSq);
+			additionalObscurance.z = FFX_CACAO_CalculatePixelObscurance(pixelNormal, pixTDelta, modifiedFalloffCalcMulSq);
+			additionalObscurance.w = FFX_CACAO_CalculatePixelObscurance(pixelNormal, pixBDelta, modifiedFalloffCalcMulSq);
+
+			obscuranceSum += g_FFX_CACAO_Consts.DetailAOStrength * dot(additionalObscurance, edgesLRTB);
+		}
+	}
+
+	// Sharp normals also create edges - but this adds to the cost as well
+	if (!adaptiveBase && (qualityLevel >= FFX_CACAO_NORMAL_BASED_EDGES_ENABLE_AT_QUALITY_PRESET))
+	{
+		float3 neighbourNormalL = FFX_CACAO_SSAOGeneration_GetNormalPass(SVPosui + int2(-1, +0), g_FFX_CACAO_Consts.PassIndex);
+		float3 neighbourNormalR = FFX_CACAO_SSAOGeneration_GetNormalPass(SVPosui + int2(+1, +0), g_FFX_CACAO_Consts.PassIndex);
+		float3 neighbourNormalT = FFX_CACAO_SSAOGeneration_GetNormalPass(SVPosui + int2(+0, -1), g_FFX_CACAO_Consts.PassIndex);
+		float3 neighbourNormalB = FFX_CACAO_SSAOGeneration_GetNormalPass(SVPosui + int2(+0, +1), g_FFX_CACAO_Consts.PassIndex);
+
+		const float dotThreshold = FFX_CACAO_NORMAL_BASED_EDGES_DOT_THRESHOLD;
+
+		float4 normalEdgesLRTB;
+		normalEdgesLRTB.x = saturate((dot(pixelNormal, neighbourNormalL) + dotThreshold));
+		normalEdgesLRTB.y = saturate((dot(pixelNormal, neighbourNormalR) + dotThreshold));
+		normalEdgesLRTB.z = saturate((dot(pixelNormal, neighbourNormalT) + dotThreshold));
+		normalEdgesLRTB.w = saturate((dot(pixelNormal, neighbourNormalB) + dotThreshold));
+
+		//#define FFX_CACAO_SMOOTHEN_NORMALS // fixes some aliasing artifacts but kills a lot of high detail and adds to the cost - not worth it probably but feel free to play with it
+#ifdef FFX_CACAO_SMOOTHEN_NORMALS
+		//neighbourNormalL  = LoadNormal( fullResCoord, int2( -1,  0 ) );
+		//neighbourNormalR  = LoadNormal( fullResCoord, int2(  1,  0 ) );
+		//neighbourNormalT  = LoadNormal( fullResCoord, int2(  0, -1 ) );
+		//neighbourNormalB  = LoadNormal( fullResCoord, int2(  0,  1 ) );
+		pixelNormal += neighbourNormalL * edgesLRTB.x + neighbourNormalR * edgesLRTB.y + neighbourNormalT * edgesLRTB.z + neighbourNormalB * edgesLRTB.w;
+		pixelNormal = normalize(pixelNormal);
+#endif
+
+		edgesLRTB *= normalEdgesLRTB;
+	}
+
+
+
+	const float globalMipOffset = FFX_CACAO_DEPTH_MIPS_GLOBAL_OFFSET;
+	float mipOffset = (qualityLevel < FFX_CACAO_DEPTH_MIPS_ENABLE_AT_QUALITY_PRESET) ? (0) : (log2(pixLookupRadiusMod) + globalMipOffset);
+
+	// Used to tilt the second set of samples so that the disk is effectively rotated by the normal
+	// effective at removing one set of artifacts, but too expensive for lower quality settings
+	float2 normXY = float2(pixelNormal.x, pixelNormal.y);
+	float normXYLength = length(normXY);
+	normXY /= float2(normXYLength, -normXYLength);
+	normXYLength *= FFX_CACAO_TILT_SAMPLES_AMOUNT;
+
+	const float3 negViewspaceDir = -normalize(pixCenterPos);
+
+	// standard, non-adaptive approach
+	if ((qualityLevel != 3) || adaptiveBase)
+	{
+		[unroll]
+		for (int i = 0; i < numberOfTaps; i++)
+		{
+			FFX_CACAO_SSAOTap(qualityLevel, obscuranceSum, weightSum, i, rotScale, pixCenterPos, negViewspaceDir, pixelNormal, normalizedScreenPos, depthBufferUV, mipOffset, falloffCalcMulSq, 1.0, normXY, normXYLength);
+		}
+	}
+	else // if( qualityLevel == 3 ) adaptive approach
+	{
+		// add new ones if needed
+		float2 fullResUV = normalizedScreenPos + g_FFX_CACAO_Consts.PerPassFullResUVOffset.xy;
+		float importance = FFX_CACAO_SSAOGeneration_SampleImportance(fullResUV);
+
+		// this is to normalize FFX_CACAO_DETAIL_AO_AMOUNT across all pixel regardless of importance
+		obscuranceSum *= (FFX_CACAO_ADAPTIVE_TAP_BASE_COUNT / (float)FFX_CACAO_MAX_TAPS) + (importance * FFX_CACAO_ADAPTIVE_TAP_FLEXIBLE_COUNT / (float)FFX_CACAO_MAX_TAPS);
+
+		// load existing base values
+		float2 baseValues = FFX_CACAO_SSAOGeneration_LoadBasePassSSAOPass(SVPosui, g_FFX_CACAO_Consts.PassIndex);
+		weightSum += baseValues.y * (float)(FFX_CACAO_ADAPTIVE_TAP_BASE_COUNT * 4.0);
+		obscuranceSum += (baseValues.x) * weightSum;
+
+		// increase importance around edges
+		float edgeCount = dot(1.0 - edgesLRTB, float4(1.0, 1.0, 1.0, 1.0));
+
+		float avgTotalImportance = (float)FFX_CACAO_SSAOGeneration_GetLoadCounter() * g_FFX_CACAO_Consts.LoadCounterAvgDiv;
+
+		float importanceLimiter = saturate(g_FFX_CACAO_Consts.AdaptiveSampleCountLimit / avgTotalImportance);
+		importance *= importanceLimiter;
+
+		float additionalSampleCountFlt = FFX_CACAO_ADAPTIVE_TAP_FLEXIBLE_COUNT * importance;
+
+		additionalSampleCountFlt += 1.5;
+		uint additionalSamples = uint(additionalSampleCountFlt);
+		uint additionalSamplesTo = min(FFX_CACAO_MAX_TAPS, additionalSamples + FFX_CACAO_ADAPTIVE_TAP_BASE_COUNT);
+
+		// sample loop
+		{
+			float4 newSample = g_FFX_CACAO_samplePatternMain[FFX_CACAO_ADAPTIVE_TAP_BASE_COUNT];
+			FFX_CACAO_SSAOSampleData data = FFX_CACAO_SSAOGetSampleData(qualityLevel, rotScale, newSample, mipOffset);
+			FFX_CACAO_SSAOHits hits = FFX_CACAO_SSAOGetHits2(data, depthBufferUV);
+			newSample = g_FFX_CACAO_samplePatternMain[FFX_CACAO_ADAPTIVE_TAP_BASE_COUNT + 1];
+
+			for (uint i = FFX_CACAO_ADAPTIVE_TAP_BASE_COUNT; i < additionalSamplesTo - 1; i++)
+			{
+				data = FFX_CACAO_SSAOGetSampleData(qualityLevel, rotScale, newSample, mipOffset);
+				newSample = g_FFX_CACAO_samplePatternMain[i + 2];
+				FFX_CACAO_SSAOHits nextHits = FFX_CACAO_SSAOGetHits2(data, depthBufferUV);
+
+				FFX_CACAO_SSAOAddHits(qualityLevel, pixCenterPos, pixelNormal, falloffCalcMulSq, weightSum, obscuranceSum, hits);
+				hits = nextHits;
+			}
+
+			// last loop iteration
+			{
+				FFX_CACAO_SSAOAddHits(qualityLevel, pixCenterPos, pixelNormal, falloffCalcMulSq, weightSum, obscuranceSum, hits);
+			}
+		}
+	}
+
+	// early out for adaptive base - just output weight (used for the next pass)
+	if (adaptiveBase)
+	{
+		float obscurance = obscuranceSum / weightSum;
+
+		outShadowTerm = obscurance;
+		outEdges = 0;
+		outWeight = weightSum;
+		return;
+	}
+
+	// calculate weighted average
+	float obscurance = obscuranceSum / weightSum;
+
+	// calculate fadeout (1 close, gradient, 0 far)
+	float fadeOut = saturate(pixCenterPos.z * g_FFX_CACAO_Consts.EffectFadeOutMul + g_FFX_CACAO_Consts.EffectFadeOutAdd);
+
+	// Reduce the SSAO shadowing if we're on the edge to remove artifacts on edges (we don't care for the lower quality one)
+	if (!adaptiveBase && (qualityLevel >= FFX_CACAO_DEPTH_BASED_EDGES_ENABLE_AT_QUALITY_PRESET))
+	{
+		// float edgeCount = dot( 1.0-edgesLRTB, float4( 1.0, 1.0, 1.0, 1.0 ) );
+
+		// when there's more than 2 opposite edges, start fading out the occlusion to reduce aliasing artifacts
+		float edgeFadeoutFactor = saturate((1.0 - edgesLRTB.x - edgesLRTB.y) * 0.35) + saturate((1.0 - edgesLRTB.z - edgesLRTB.w) * 0.35);
+
+		// (experimental) if you want to reduce the effect next to any edge
+		// edgeFadeoutFactor += 0.1 * saturate( dot( 1 - edgesLRTB, float4( 1, 1, 1, 1 ) ) );
+
+		fadeOut *= saturate(1.0 - edgeFadeoutFactor);
+	}
+
+	// same as a bove, but a lot more conservative version
+	// fadeOut *= saturate( dot( edgesLRTB, float4( 0.9, 0.9, 0.9, 0.9 ) ) - 2.6 );
+
+	// strength
+	obscurance = g_FFX_CACAO_Consts.EffectShadowStrength * obscurance;
+
+	// clamp
+	obscurance = min(obscurance, g_FFX_CACAO_Consts.EffectShadowClamp);
+
+	// fadeout
+	obscurance *= fadeOut;
+
+	// conceptually switch to occlusion with the meaning being visibility (grows with visibility, occlusion == 1 implies full visibility),
+	// to be in line with what is more commonly used.
+	float occlusion = 1.0 - obscurance;
+
+	// modify the gradient
+	// note: this cannot be moved to a later pass because of loss of precision after storing in the render target
+	occlusion = pow(saturate(occlusion), g_FFX_CACAO_Consts.EffectShadowPow);
+
+	// outputs!
+	outShadowTerm = occlusion;    // Our final 'occlusion' term (0 means fully occluded, 1 means fully lit)
+	outEdges = edgesLRTB;    // These are used to prevent blurring across edges, 1 means no edge, 0 means edge, 0.5 means half way there, etc.
+	outWeight = weightSum;
+}
