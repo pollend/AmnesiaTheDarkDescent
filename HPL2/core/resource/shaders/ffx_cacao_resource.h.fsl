@@ -1,0 +1,127 @@
+// Modifications Copyright  2021. Advanced Micro Devices, Inc. All Rights Reserved.
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Copyright (c) 2016, Intel Corporation
+// Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+// documentation files (the "Software"), to deal in the Software without restriction, including without limitation
+// the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+// permit persons to whom the Software is furnished to do so, subject to the following conditions:
+// The above copyright notice and this permission notice shall be included in all copies or substantial portions of
+// the Software.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO
+// THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+// TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// File changes (yyyy-mm-dd)
+// 2016-09-07: filip.strugar@intel.com: first commit
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#include "ffx_cacao_const.h.fsl"
+
+RES(RTex2D(float), depthInput, UPDATE_FREQ_PER_FRAME, u0, binding = 0);
+RES(RTex2D(float4), normalInput, UPDATE_FREQ_PER_FRAME, u0, binding = 0);
+
+RES(RWTex2DArray(float), prepareDepths, UPDATE_FREQ_PER_FRAME, u0, binding = 0);
+RES(RWTex2DArray(float4), prepareNormals, UPDATE_FREQ_PER_FRAME, u0, binding = 0);
+
+PUSH_CONSTANT(uRootConstants, b0)
+{
+    DATA(float, depthLinearizeMul, None);
+    DATA(float, depthLinearizeAdd, None);
+    DATA(float, ndcViewMul, None); 
+    DATA(float, ndcViewAdd, None);
+    DATA(mat4, normalToViewspaceMat, None);
+    
+    DATA(float2                   ,DepthUnpackConsts, None);
+    DATA(float2                   ,CameraTanHalfFOV, None);
+
+    DATA(float2                   ,NDCToViewMul, None);
+    DATA(float2                   ,NDCToViewAdd, None);
+
+    DATA(float2                   ,DepthBufferUVToViewMul, None);
+    DATA(float2                   ,DepthBufferUVToViewAdd, None);
+
+    DATA(float                   ,EffectRadius, None);
+    DATA(float                   ,EffectShadowStrength, None);
+    DATA(float                   ,EffectShadowPow, None);
+    DATA(float                   ,EffectShadowClamp, None);
+
+    DATA(float                   ,EffectFadeOutMul, None);
+    DATA(float                   ,EffectFadeOutAdd, None);
+    DATA(float                   ,EffectHorizonAngleThreshold, None);
+    DATA(float                   ,EffectSamplingRadiusNearLimitRec, None);
+
+    DATA(float                   ,DepthPrecisionOffsetMod, None);
+    DATA(float                   ,NegRecEffectRadius, None);
+    DATA(float                   ,LoadCounterAvgDiv, None);
+    DATA(float                   ,AdaptiveSampleCountLimit, None);
+
+    DATA(float                   ,InvSharpness, None);
+    DATA(int                     ,PassIndex, None);
+    DATA(float                   ,BilateralSigmaSquared, None);
+    DATA(float                   ,BilateralSimilarityDistanceSigma, None);
+
+    DATA(float                   ,PatternRotScaleMatrices[5][4], None);
+
+    DATA(float                   ,NormalsUnpackMul, None);
+    DATA(float                   ,NormalsUnpackAdd, None);
+    DATA(float                   ,DetailAOStrength, None);
+    DATA(float                   ,Dummy0, None);
+
+    DATA(float2                   ,SSAOBufferDimensions, None);
+    DATA(float2                   ,SSAOBufferInverseDimensions, None);
+
+    DATA(float2                   ,DepthBufferDimensions, None);
+    DATA(float2                   ,DepthBufferInverseDimensions, None);
+
+    DATA(int2                     ,DepthBufferOffset, None);
+    DATA(float2                   ,PerPassFullResUVOffset, None);
+
+    DATA(float2                   ,InputOutputBufferDimensions, None);
+    DATA(float2                   ,InputOutputBufferInverseDimensions, None);
+
+    DATA(float2                   ,ImportanceMapDimensions, None);
+    DATA(float2                   ,ImportanceMapInverseDimensions, None);
+
+    DATA(float2                   ,DeinterleavedDepthBufferDimensions, None);
+    DATA(float2                   ,DeinterleavedDepthBufferInverseDimensions, None);
+
+    DATA(float2                   ,DeinterleavedDepthBufferOffset, None);
+    DATA(float2                   ,DeinterleavedDepthBufferNormalisedOffset, None);
+};
+
+
+float ScreenSpaceToViewSpaceDepth(float screenDepth)
+{
+    return Get(depthLinearizeMul) / (Get(depthLinearizeAdd) - screenDepth);
+}
+
+float3 NDCToViewSpace(float2 pos, float viewspaceDepth)
+{
+    float3 ret;
+    ret.xy = (Get(ndcViewMul) * pos.xy + Get(ndcViewAdd)) * viewspaceDepth;
+    ret.z = viewspaceDepth;
+    return ret;
+}
+
+STATIC const float4 FFX_CACAO_samplePatternMain[] =
+{
+	float4( 0.78488064,  0.56661671,  1.500000, -0.126083),   float4(  0.26022232, -0.29575172,  1.500000, -1.064030),   float4(  0.10459357,  0.08372527,  1.110000, -2.730563),   float4( -0.68286800,  0.04963045,  1.090000, -0.498827),
+	float4(-0.13570161, -0.64190155,  1.250000, -0.532765),   float4( -0.26193795, -0.08205118,  0.670000, -1.783245),   float4( -0.61177456,  0.66664219,  0.710000, -0.044234),   float4(  0.43675563,  0.25119025,  0.610000, -1.167283),
+	float4( 0.07884444,  0.86618668,  0.640000, -0.459002),   float4( -0.12790935, -0.29869005,  0.600000, -1.729424),   float4( -0.04031125,  0.02413622,  0.600000, -4.792042),   float4(  0.16201244, -0.52851415,  0.790000, -1.067055),
+	float4(-0.70991218,  0.47301072,  0.640000, -0.335236),   float4(  0.03277707, -0.22349690,  0.600000, -1.982384),   float4(  0.68921727,  0.36800742,  0.630000, -0.266718),   float4(  0.29251814,  0.37775412,  0.610000, -1.422520),
+	float4(-0.12224089,  0.96582592,  0.600000, -0.426142),   float4(  0.11071457, -0.16131058,  0.600000, -2.165947),   float4(  0.46562141, -0.59747696,  0.600000, -0.189760),   float4( -0.51548797,  0.11804193,  0.600000, -1.246800),
+	float4( 0.89141309, -0.42090443,  0.600000,  0.028192),   float4( -0.32402530, -0.01591529,  0.600000, -1.543018),   float4(  0.60771245,  0.41635221,  0.600000, -0.605411),   float4(  0.02379565, -0.08239821,  0.600000, -3.809046),
+	float4( 0.48951152, -0.23657045,  0.600000, -1.189011),   float4( -0.17611565, -0.81696892,  0.600000, -0.513724),   float4( -0.33930185, -0.20732205,  0.600000, -1.698047),   float4( -0.91974425,  0.05403209,  0.600000,  0.062246),
+	float4(-0.15064627, -0.14949332,  0.600000, -1.896062),   float4(  0.53180975, -0.35210401,  0.600000, -0.758838),   float4(  0.41487166,  0.81442589,  0.600000, -0.505648),   float4( -0.24106961, -0.32721516,  0.600000, -1.665244)
+};
+
+#define FFX_CACAO_MAX_TAPS (32)
+#define FFX_CACAO_ADAPTIVE_TAP_BASE_COUNT (5)
+#define FFX_CACAO_ADAPTIVE_TAP_FLEXIBLE_COUNT (FFX_CACAO_MAX_TAPS - FFX_CACAO_ADAPTIVE_TAP_BASE_COUNT)
+
+// these values can be changed (up to FFX_CACAO_MAX_TAPS) with no changes required elsewhere; values for 4th and 5th preset are ignored but array needed to avoid compilation errors
+// the actual number of texture samples is two times this value (each "tap" has two symmetrical depth texture samples)
+STATIC const uint g_FFX_CACAO_numTaps[5] = { 3, 5, 12, 0, 0 };

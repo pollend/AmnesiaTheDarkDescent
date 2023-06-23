@@ -1,0 +1,20 @@
+#include "ffx_cacao_resource.h.fsl"
+
+float3 PrepareNormal(float3 normal)
+{
+    //float3 normal = LoadRWTex2D(Get(normalInput), int3(coord, 0)).xyz;
+    normal = normal * float3(2.0,2.0,2.0) + float3(-1.0, -1.0, -1.0);
+    normal = mul(normal, mat3(Get(normalToViewspaceMat))).xyz;
+    return normal;
+}
+
+NUM_THREADS(FFX_CACAO_PREPARE_DEPTHS_HALF_WIDTH, FFX_CACAO_PREPARE_DEPTHS_HALF_HEIGHT, 1)
+void CS_MAIN(SV_DispatchThreadID(uint3) did) 
+{
+    INIT_MAIN;
+    uint2 baseCoord = 4 * did.xy;
+    Write3D(Get(prepareNormals), uint3(did.xy, 0), PrepareNormal(LoadRWTex2D(Get(normalInput), baseCoord + int2(0, 0)).xyz));
+    Write3D(Get(prepareNormals), uint3(did.xy, 1), PrepareNormal(LoadRWTex2D(Get(normalInput), baseCoord + int2(1, 0)).xyz));
+    Write3D(Get(prepareNormals), uint3(did.xy, 2), PrepareNormal(LoadRWTex2D(Get(normalInput), baseCoord + int2(0, 1)).xyz));
+    Write3D(Get(prepareNormals), uint3(did.xy, 3), PrepareNormal(LoadRWTex2D(Get(normalInput), baseCoord + int2(1, 1)).xyz));
+}

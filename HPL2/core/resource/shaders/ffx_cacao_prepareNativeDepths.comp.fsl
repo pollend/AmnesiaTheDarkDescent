@@ -1,0 +1,19 @@
+#include "ffx_cacao_resource.h.fsl"
+
+[numthreads(FFX_CACAO_PREPARE_DEPTHS_HALF_WIDTH, FFX_CACAO_PREPARE_DEPTHS_HALF_HEIGHT, 1)]
+void CS_MAIN(SV_DispatchThreadID(uint3) did) 
+{
+    INIT_MAIN;
+    uint2 screenSize = uint2(GetDimensions(Get(depthInput), NO_SAMPLER));
+    float2 texelSize = 1.0f / screenSize;
+    if (did.x < screenSize.x && did.y < screenSize.y) {
+	int2 depthBufferCoord = 2 * tid.xy;
+	float2 uv = (float2(depthBufferCoord)+0.5f) * texelSize;
+        float4 samples = GatherRedTex2D( Get(depthInput), NO_SAMPLER, uv);
+        
+        Write3D(Get(prepareDepths), uint3(did.xy, 0), ScreenSpaceToViewSpaceDepth(samples.w));
+        Write3D(Get(prepareDepths), uint3(did.xy, 1), ScreenSpaceToViewSpaceDepth(samples.z));
+        Write3D(Get(prepareDepths), uint3(did.xy, 2), ScreenSpaceToViewSpaceDepth(samples.y));
+        Write3D(Get(prepareDepths), uint3(did.xy, 3), ScreenSpaceToViewSpaceDepth(samples.x));
+    }
+}
