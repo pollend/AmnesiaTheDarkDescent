@@ -301,3 +301,23 @@
 #frag dds_outline_copy.frag
     #include "dds_outline_copy.frag.fsl"
 #end
+
+#comp hbao_prepareNativeDepths.comp
+    #include "hbao_prepareNativeDepths.comp.fsl"
+#end
+
+#comp hbao_courseAO.comp
+    #define SMALL_SCALE_AO_AMOUNT (1)   
+    #define LARGE_SCALE_AO_AMOUNT  (1)
+    
+    #define RADIUS (1.6)
+    #define NUM_DIRECTIONS (16)
+    #define NUM_STEPS (16)
+    #define VIEW_COS_BIAS (0.3)
+    #include "hbao_courseAO.comp.fsl"
+#end
+
+#comp hbao_reinterleave.comp
+    #define POWER_EXP (2.0)
+    #include "hbao_reinterleave.comp.fsl"
+#end

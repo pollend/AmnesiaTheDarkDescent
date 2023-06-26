@@ -542,6 +542,9 @@ namespace hpl {
 
     cRendererDeferred::cRendererDeferred(cGraphics* apGraphics, cResources* apResources)
         : iRenderer("Deferred", apGraphics, apResources, eDefferredProgramMode_LastEnum) {
+
+
+
         ////////////////////////////////////
         // Set up render specific things
         mbSetFrameBufferAtBeginRendering = false; // Not using the input frame buffer for any rendering. Only doing copy at the end!
@@ -556,121 +559,9 @@ namespace hpl {
 
         m_maxBatchLights = 100;
 
-        m_boundViewportData = std::move(UniqueViewportData<SharedViewportData>(
-            [](cViewport& viewport) {
-                auto sharedData = std::make_unique<SharedViewportData>();
-                sharedData->m_size = viewport.GetSize();
-                auto* forgetRenderer = Interface<ForgeRenderer>::Get();
-                ClearValue optimizedColorClearBlack = { { 0.0f, 0.0f, 0.0f, 0.0f } };
-                auto deferredRenderTargetDesc = [&]() {
-                    RenderTargetDesc renderTarget = {};
-                    renderTarget.mArraySize = 1;
-                    renderTarget.mClearValue = optimizedColorClearBlack;
-                    renderTarget.mDepth = 1;
-                    renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
-                    renderTarget.mWidth = sharedData->m_size.x;
-                    renderTarget.mHeight = sharedData->m_size.y;
-                    renderTarget.mSampleCount = SAMPLE_COUNT_1;
-                    renderTarget.mSampleQuality = 0;
-                    renderTarget.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
-                    renderTarget.pName = "G-Buffer RTs";
-                    return renderTarget;
-                };
-                for(auto& b: sharedData->m_gBuffer) {
-                    b.m_hiZMipCount = std::clamp<uint8_t>(static_cast<uint8_t>(std::floor(std::log2(std::max(sharedData->m_size.x, sharedData->m_size.y)))), 0, 8);
-                    b.m_hizDepthBuffer = {forgetRenderer->Rend()};
-                    b.m_hizDepthBuffer.Load([&](RenderTarget** handle) {
-                        RenderTargetDesc renderTargetDesc = {};
-                        renderTargetDesc.mArraySize = b.m_hiZMipCount;
-                        renderTargetDesc.mDepth = 1;
-                        renderTargetDesc.mMipLevels = 1;
-                        renderTargetDesc.mFormat = TinyImageFormat_R32_SFLOAT;
-                        renderTargetDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE | DESCRIPTOR_TYPE_RW_TEXTURE;
-                        renderTargetDesc.mWidth = sharedData->m_size.x;
-                        renderTargetDesc.mHeight = sharedData->m_size.y;
-                        renderTargetDesc.mSampleCount = SAMPLE_COUNT_1;
-                        renderTargetDesc.mSampleQuality = 0;
-                        renderTargetDesc.mStartState = RESOURCE_STATE_UNORDERED_ACCESS;
-                        renderTargetDesc.pName = "hi-z depth buffer";
-                        addRenderTarget(forgetRenderer->Rend(), &renderTargetDesc, handle);
-                        return true;
-                    });
 
-                    b.m_depthBuffer  = {forgetRenderer->Rend()};
-                    b.m_depthBuffer.Load([&](RenderTarget** handle) {
-                        auto targetDesc = deferredRenderTargetDesc();
-                        targetDesc.mFormat = DepthBufferFormat;
-                        targetDesc.mStartState = RESOURCE_STATE_DEPTH_WRITE;
-                        targetDesc.pName = "Depth RT";
-                        addRenderTarget(forgetRenderer->Rend(), &targetDesc, handle);
-                        return true;
-                    });
-                    b.m_normalBuffer= {forgetRenderer->Rend()};
-                    b.m_normalBuffer.Load([&](RenderTarget** handle) {
-                        auto targetDesc = deferredRenderTargetDesc();
-                        targetDesc.mFormat = NormalBufferFormat;
-                        addRenderTarget(forgetRenderer->Rend(), &targetDesc, handle);
-                        return true;
-                    });
-                    b.m_positionBuffer = {forgetRenderer->Rend()};
-                    b.m_positionBuffer.Load([&](RenderTarget** handle) {
-                        auto targetDesc = deferredRenderTargetDesc();
-                        targetDesc.mFormat = PositionBufferFormat;
-                        addRenderTarget(forgetRenderer->Rend(), &targetDesc, handle);
-                        return true;
-                    });
-                    b.m_specularBuffer = ForgeRenderTarget{forgetRenderer->Rend()};
-                    b.m_specularBuffer.Load([&](RenderTarget** handle) {
-                        auto targetDesc = deferredRenderTargetDesc();
-                        targetDesc.mFormat = SpecularBufferFormat;
-                        addRenderTarget(forgetRenderer->Rend(), &targetDesc, handle);
-                        return true;
-                    });
-                    b.m_colorBuffer = {forgetRenderer->Rend()};
-                    b.m_colorBuffer.Load([&](RenderTarget** handle) {
-                        auto targetDesc = deferredRenderTargetDesc();
-                        targetDesc.mFormat = ColorBufferFormat;
-                        addRenderTarget(forgetRenderer->Rend(), &targetDesc, handle);
-                        return true;
-                    });
-                    b.m_refractionImage.Load([&](Texture** texture) {
-                        TextureLoadDesc loadDesc = {};
-                        loadDesc.ppTexture = texture;
-                        TextureDesc refractionImageDesc = {};
-                        refractionImageDesc.mArraySize = 1;
-                        refractionImageDesc.mDepth = 1;
-                        refractionImageDesc.mMipLevels = 1;
-                        refractionImageDesc.mFormat = TinyImageFormat_R8G8B8A8_UNORM;
-                        refractionImageDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE | DESCRIPTOR_TYPE_RW_TEXTURE;
-                        refractionImageDesc.mWidth = sharedData->m_size.x;
-                        refractionImageDesc.mHeight = sharedData->m_size.y;
-                        refractionImageDesc.mSampleCount = SAMPLE_COUNT_1;
-                        refractionImageDesc.mSampleQuality = 0;
-                        refractionImageDesc.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
-                        refractionImageDesc.pName = "Refraction Image";
-                        loadDesc.pDesc = &refractionImageDesc;
-                        addResource(&loadDesc, nullptr);
-                        return true;
-                    });
-                    b.m_outputBuffer = {forgetRenderer->Rend()};
-                    b.m_outputBuffer.Load([&](RenderTarget** handle) {
-                        auto targetDesc = deferredRenderTargetDesc();
-                        targetDesc.mFormat = ColorBufferFormat;
-                        targetDesc.mFormat = getRecommendedSwapchainFormat(false, false);
-                        targetDesc.mDescriptors = DESCRIPTOR_TYPE_RW_TEXTURE | DESCRIPTOR_TYPE_TEXTURE;
-                        addRenderTarget(forgetRenderer->Rend(), &targetDesc, handle);
-                        return true;
-                    });
-                }
 
-                return sharedData;
-            },
-            [](cViewport& viewport, SharedViewportData& target) {
-                return target.m_size == viewport.GetSize();
-            }));
 
-        ////////////////////////////////////
-        // Create Shadow Textures
         cVector3l vShadowSize[] = { cVector3l(2 * 128, 2 * 128, 1),
                                     cVector3l(2 * 256, 2 * 256, 1),
                                     cVector3l(2 * 256, 2 * 256, 1),
@@ -712,7 +603,6 @@ namespace hpl {
             miplessLinearSamplerDesc.mAddressW = ADDRESS_MODE_CLAMP_TO_BORDER;
             addSampler(forgetRenderer->Rend(), &miplessLinearSamplerDesc, &m_shadowCmpSampler);
         }
-
         {
             SamplerDesc pointSamplerDesc = {};
             pointSamplerDesc.mMinFilter = FILTER_NEAREST;
@@ -734,6 +624,9 @@ namespace hpl {
             addResource(&desc, nullptr);
             return true;
         });
+
+        m_hbaoPlusPipeline = std::make_unique<renderer::PipelineHBAOPlus>();
+
         // prepass
         {
 
@@ -1050,8 +943,6 @@ namespace hpl {
                 loadDesc.mStages[0].pFileName = "solid_z.vert";
                 loadDesc.mStages[1].pFileName = "solid_z.frag";
                 addShader(forgetRenderer->Rend(), &loadDesc, &m_zPassShader);
-                // setShaderName(forgetRenderer->Rend(), m_zPassShader, SHADER_STAGE_VERT, "solid_z.vert");
-                // setShaderName(forgetRenderer->Rend(), m_zPassShader, SHADER_STAGE_FRAG, "solid_z.frag");
             }
             // diffuse pipeline
             {
@@ -1871,10 +1762,6 @@ namespace hpl {
                     return true;
                 });
             }
-            m_ssaoScatterDiskTexture.Load([&](Texture** texture) {
-                TextureCreator::GenerateScatterDiskMap2D(4, SSAONumOfSamples, false, texture);
-                return true;
-            });
 
 
             {
@@ -2403,8 +2290,120 @@ namespace hpl {
         const cMatrixf mainFrustumProj = apFrustum->GetProjectionMatrix();
 
         // auto& swapChainImage = frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex];
-        auto& sharedData = m_boundViewportData.resolve(viewport);
-        auto& currentGBuffer = sharedData.m_gBuffer[frame.m_frameIndex];
+        auto common = m_boundViewportData.resolve(viewport);
+        if (!common || common->m_size != viewport.GetSize()) {
+            auto* forgeRenderer = Interface<ForgeRenderer>::Get();
+            auto viewportData = std::make_unique<ViewportData>();
+            viewportData->m_size = viewport.GetSize();
+            ClearValue optimizedColorClearBlack = { { 0.0f, 0.0f, 0.0f, 0.0f } };
+            auto deferredRenderTargetDesc = [&]() {
+                RenderTargetDesc renderTarget = {};
+                renderTarget.mArraySize = 1;
+                renderTarget.mClearValue = optimizedColorClearBlack;
+                renderTarget.mDepth = 1;
+                renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+                renderTarget.mWidth = viewportData->m_size.x;
+                renderTarget.mHeight = viewportData->m_size.y;
+                renderTarget.mSampleCount = SAMPLE_COUNT_1;
+                renderTarget.mSampleQuality = 0;
+                renderTarget.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
+                renderTarget.pName = "G-Buffer RTs";
+                return renderTarget;
+            };
+
+            for (auto& b : viewportData->m_gBuffer) {
+                b.m_hiZMipCount = std::clamp<uint8_t>(
+                    static_cast<uint8_t>(std::floor(std::log2(std::max(viewportData->m_size.x, viewportData->m_size.y)))), 0, 8);
+                b.m_hizDepthBuffer = { forgeRenderer->Rend() };
+                b.m_hizDepthBuffer.Load([&](RenderTarget** handle) {
+                    RenderTargetDesc renderTargetDesc = {};
+                    renderTargetDesc.mArraySize = b.m_hiZMipCount;
+                    renderTargetDesc.mDepth = 1;
+                    renderTargetDesc.mMipLevels = 1;
+                    renderTargetDesc.mFormat = TinyImageFormat_R32_SFLOAT;
+                    renderTargetDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE | DESCRIPTOR_TYPE_RW_TEXTURE;
+                    renderTargetDesc.mWidth = viewportData->m_size.x;
+                    renderTargetDesc.mHeight = viewportData->m_size.y;
+                    renderTargetDesc.mSampleCount = SAMPLE_COUNT_1;
+                    renderTargetDesc.mSampleQuality = 0;
+                    renderTargetDesc.mStartState = RESOURCE_STATE_UNORDERED_ACCESS;
+                    renderTargetDesc.pName = "hi-z depth buffer";
+                    addRenderTarget(forgeRenderer->Rend(), &renderTargetDesc, handle);
+                    return true;
+                });
+
+                b.m_depthBuffer = { forgeRenderer->Rend() };
+                b.m_depthBuffer.Load([&](RenderTarget** handle) {
+                    auto targetDesc = deferredRenderTargetDesc();
+                    targetDesc.mFormat = DepthBufferFormat;
+                    targetDesc.mStartState = RESOURCE_STATE_DEPTH_WRITE;
+                    targetDesc.pName = "Depth RT";
+                    addRenderTarget(forgeRenderer->Rend(), &targetDesc, handle);
+                    return true;
+                });
+                b.m_normalBuffer = { forgeRenderer->Rend() };
+                b.m_normalBuffer.Load([&](RenderTarget** handle) {
+                    auto targetDesc = deferredRenderTargetDesc();
+                    targetDesc.mFormat = NormalBufferFormat;
+                    addRenderTarget(forgeRenderer->Rend(), &targetDesc, handle);
+                    return true;
+                });
+                b.m_positionBuffer = { forgeRenderer->Rend() };
+                b.m_positionBuffer.Load([&](RenderTarget** handle) {
+                    auto targetDesc = deferredRenderTargetDesc();
+                    targetDesc.mFormat = PositionBufferFormat;
+                    addRenderTarget(forgeRenderer->Rend(), &targetDesc, handle);
+                    return true;
+                });
+                b.m_specularBuffer = ForgeRenderTarget{ forgeRenderer->Rend() };
+                b.m_specularBuffer.Load([&](RenderTarget** handle) {
+                    auto targetDesc = deferredRenderTargetDesc();
+                    targetDesc.mFormat = SpecularBufferFormat;
+                    addRenderTarget(forgeRenderer->Rend(), &targetDesc, handle);
+                    return true;
+                });
+                b.m_colorBuffer = { forgeRenderer->Rend() };
+                b.m_colorBuffer.Load([&](RenderTarget** handle) {
+                    auto targetDesc = deferredRenderTargetDesc();
+                    targetDesc.mFormat = ColorBufferFormat;
+                    targetDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE | DESCRIPTOR_TYPE_RW_TEXTURE;
+                    addRenderTarget(forgeRenderer->Rend(), &targetDesc, handle);
+                    return true;
+                });
+                b.m_refractionImage.Load([&](Texture** texture) {
+                    TextureLoadDesc loadDesc = {};
+                    loadDesc.ppTexture = texture;
+                    TextureDesc refractionImageDesc = {};
+                    refractionImageDesc.mArraySize = 1;
+                    refractionImageDesc.mDepth = 1;
+                    refractionImageDesc.mMipLevels = 1;
+                    refractionImageDesc.mFormat = TinyImageFormat_R8G8B8A8_UNORM;
+                    refractionImageDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE | DESCRIPTOR_TYPE_RW_TEXTURE;
+                    refractionImageDesc.mWidth = viewportData->m_size.x;
+                    refractionImageDesc.mHeight = viewportData->m_size.y;
+                    refractionImageDesc.mSampleCount = SAMPLE_COUNT_1;
+                    refractionImageDesc.mSampleQuality = 0;
+                    refractionImageDesc.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
+                    refractionImageDesc.pName = "Refraction Image";
+                    loadDesc.pDesc = &refractionImageDesc;
+                    addResource(&loadDesc, nullptr);
+                    return true;
+                });
+                b.m_outputBuffer = { forgeRenderer->Rend() };
+                b.m_outputBuffer.Load([&](RenderTarget** handle) {
+                    auto targetDesc = deferredRenderTargetDesc();
+                    targetDesc.mFormat = ColorBufferFormat;
+                    targetDesc.mFormat = getRecommendedSwapchainFormat(false, false);
+                    targetDesc.mDescriptors = DESCRIPTOR_TYPE_RW_TEXTURE | DESCRIPTOR_TYPE_TEXTURE;
+                    addRenderTarget(forgeRenderer->Rend(), &targetDesc, handle);
+                    return true;
+                });
+            }
+
+            common = m_boundViewportData.update(viewport, std::move(viewportData));
+        }
+
+        auto& currentGBuffer = common->m_gBuffer[frame.m_frameIndex];
 
         {
             BufferUpdateDesc updatePerFrameConstantsDesc = { m_perFrameBuffer.m_handle, frame.m_frameIndex * sizeof(UniformPerFrameData), sizeof(UniformPerFrameData)};
@@ -2419,8 +2418,8 @@ namespace hpl {
             uniformFrameData->oneMinusFogAlpha = 1.0f - apWorld->GetFogColor().a;
             uniformFrameData->fogFalloffExp = apWorld->GetFogFalloffExp();
 
-            uniformFrameData->viewTexel = float2(1.0f / sharedData.m_size.x, 1.0f / sharedData.m_size.y);
-            uniformFrameData->viewportSize = float2(sharedData.m_size.x,sharedData.m_size.y);
+            uniformFrameData->viewTexel = float2(1.0f / common->m_size.x, 1.0f / common->m_size.y);
+            uniformFrameData->viewportSize = float2(common->m_size.x,common->m_size.y);
             const auto fogColor = apWorld->GetFogColor();
             uniformFrameData->fogColor = float4(fogColor.r, fogColor.g, fogColor.b, fogColor.a);
 
@@ -2587,8 +2586,8 @@ namespace hpl {
                 loadActions.mClearDepth = {.depth = 1.0f, .stencil = 0};
 
                 cmdBindRenderTargets(m_prePassCmd, 0, NULL, currentGBuffer.m_depthBuffer.m_handle, &loadActions, NULL, NULL, -1, -1);
-                cmdSetViewport(m_prePassCmd, 0.0f, 0.0f, (float)sharedData.m_size.x, (float)sharedData.m_size.y, 0.0f, 1.0f);
-                cmdSetScissor(m_prePassCmd, 0, 0, sharedData.m_size.x, sharedData.m_size.y);
+                cmdSetViewport(m_prePassCmd, 0.0f, 0.0f, (float)common->m_size.x, (float)common->m_size.y, 0.0f, 1.0f);
+                cmdSetScissor(m_prePassCmd, 0, 0, common->m_size.x, common->m_size.y);
                 cmdBindPipeline(m_prePassCmd, m_zPassPipeline);
 
                 cmdBindDescriptorSet(m_prePassCmd, 0, m_zPassConstSet);
@@ -2709,8 +2708,8 @@ namespace hpl {
                     updateDescriptorSet(
                         frame.m_renderer->Rend(), 0, m_descriptorCopyDepth, params.size(), params.data());
 
-                    cmdSetViewport(m_prePassCmd, 0.0f, 0.0f, static_cast<float>(sharedData.m_size.x), static_cast<float>(sharedData.m_size.y), 0.0f, 1.0f);
-                    cmdSetScissor(m_prePassCmd, 0, 0, static_cast<float>(sharedData.m_size.x), static_cast<float>(sharedData.m_size.y));
+                    cmdSetViewport(m_prePassCmd, 0.0f, 0.0f, static_cast<float>(common->m_size.x), static_cast<float>(common->m_size.y), 0.0f, 1.0f);
+                    cmdSetScissor(m_prePassCmd, 0, 0, static_cast<float>(common->m_size.x), static_cast<float>(common->m_size.y));
                     cmdBindPipeline(m_prePassCmd, m_pipelineCopyDepth);
 
                     cmdBindDescriptorSet(m_prePassCmd, 0, m_descriptorCopyDepth);
@@ -2726,8 +2725,8 @@ namespace hpl {
                     cmdResourceBarrier(m_prePassCmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
                 }
                 uint32_t rootConstantIndex = getDescriptorIndexFromName(m_rootSignatureHIZOcclusion, "uRootConstants");
-                uint32_t width = static_cast<float>(sharedData.m_size.x);
-                uint32_t height = static_cast<float>(sharedData.m_size.y);
+                uint32_t width = static_cast<float>(common->m_size.x);
+                uint32_t height = static_cast<float>(common->m_size.y);
                 for(uint32_t lod = 1; lod < currentGBuffer.m_hiZMipCount; ++lod) {
                     std::array<DescriptorData,2> params = {};
                     params[0].pName = "depthInput";
@@ -2815,8 +2814,8 @@ namespace hpl {
 
             cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "Post Z");
             cmdBindRenderTargets(frame.m_cmd, 0, NULL, currentGBuffer.m_depthBuffer.m_handle, &loadActions, NULL, NULL, -1, -1);
-            cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)sharedData.m_size.x, (float)sharedData.m_size.y, 0.0f, 1.0f);
-            cmdSetScissor(frame.m_cmd, 0, 0, sharedData.m_size.x, sharedData.m_size.y);
+            cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)common->m_size.x, (float)common->m_size.y, 0.0f, 1.0f);
+            cmdSetScissor(frame.m_cmd, 0, 0, common->m_size.x, common->m_size.y);
             cmdBindPipeline(frame.m_cmd, m_zPassPipeline);
 
             cmdBindDescriptorSet(frame.m_cmd, 0, m_zPassConstSet);
@@ -2897,8 +2896,8 @@ namespace hpl {
                 currentGBuffer.m_specularBuffer.m_handle
             };
             cmdBindRenderTargets(frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, NULL, NULL, -1, -1);
-            cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)sharedData.m_size.x, (float)sharedData.m_size.y, 0.0f, 1.0f);
-            cmdSetScissor(frame.m_cmd, 0, 0, sharedData.m_size.x, sharedData.m_size.y);
+            cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)common->m_size.x, (float)common->m_size.y, 0.0f, 1.0f);
+            cmdSetScissor(frame.m_cmd, 0, 0, common->m_size.x, common->m_size.y);
             cmdBindPipeline(frame.m_cmd, m_materialSolidPass.m_solidDiffuseParallaxPipeline);
 
             // cmdBindDescriptorSet(frame.m_cmd, 0, m_solidDescriptorSet.m_constSet);
@@ -2945,8 +2944,8 @@ namespace hpl {
                 currentGBuffer.m_colorBuffer.m_handle,
             };
             cmdBindRenderTargets(frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, NULL, NULL, -1, -1);
-            cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)sharedData.m_size.x, (float)sharedData.m_size.y, 0.0f, 1.0f);
-            cmdSetScissor(frame.m_cmd, 0, 0, sharedData.m_size.x, sharedData.m_size.y);
+            cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)common->m_size.x, (float)common->m_size.y, 0.0f, 1.0f);
+            cmdSetScissor(frame.m_cmd, 0, 0, common->m_size.x, common->m_size.y);
 
             // cmdBindDescriptorSet(frame.m_cmd, 0, m_decalDescriptorSet.m_constSet);
             cmdBindDescriptorSet(frame.m_cmd, 0, m_materialSet.m_frameSet[frame.m_frameIndex]);
@@ -2989,25 +2988,57 @@ namespace hpl {
                 RenderTargetBarrier{ currentGBuffer.m_normalBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
                 RenderTargetBarrier{ currentGBuffer.m_positionBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
                 RenderTargetBarrier{ currentGBuffer.m_specularBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
-                RenderTargetBarrier{  currentGBuffer.m_outputBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET }
+                RenderTargetBarrier{  currentGBuffer.m_outputBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
+
             };
             cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
         }
+
+        if(mpCurrentSettings->mbSSAOActive) {
+            ASSERT(m_hbaoPlusPipeline && "Invalid pipeline");
+            ASSERT(currentGBuffer.m_depthBuffer.IsValid() && "Invalid depth buffer");
+            ASSERT(currentGBuffer.m_normalBuffer.IsValid() && "Invalid depth buffer");
+            ASSERT(currentGBuffer.m_colorBuffer.IsValid() && "Invalid depth buffer");
+            {
+                std::array rtBarriers = {
+                    RenderTargetBarrier{ currentGBuffer.m_normalBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_UNORDERED_ACCESS },
+                    RenderTargetBarrier{ currentGBuffer.m_depthBuffer.m_handle, RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_UNORDERED_ACCESS},
+                    RenderTargetBarrier{ currentGBuffer.m_colorBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE , RESOURCE_STATE_UNORDERED_ACCESS},
+                };
+                cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+            }
+            m_hbaoPlusPipeline->cmdDraw(
+                frame,
+                apFrustum,
+                &viewport,
+                currentGBuffer.m_depthBuffer.m_handle->pTexture,
+                currentGBuffer.m_normalBuffer.m_handle->pTexture,
+                currentGBuffer.m_colorBuffer.m_handle->pTexture);
+            {
+                std::array rtBarriers = {
+                    RenderTargetBarrier{ currentGBuffer.m_normalBuffer.m_handle, RESOURCE_STATE_UNORDERED_ACCESS , RESOURCE_STATE_SHADER_RESOURCE  },
+                    RenderTargetBarrier{ currentGBuffer.m_depthBuffer.m_handle, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_DEPTH_WRITE },
+                    RenderTargetBarrier{ currentGBuffer.m_colorBuffer.m_handle, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE },
+                };
+                cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+            }
+        }
+
         // // ------------------------------------------------------------------------------------
         // //  Render SSAO Pass to color
         // // ------------------------------------------------------------------------------------
         // if(mpCurrentSettings->mbSSAOActive) {
         //     GraphicsContext::LayoutStream layoutStream;
         //     cMatrixf projMtx;
-        //     context.ScreenSpaceQuad(layoutStream, projMtx, sharedData.m_size.x, sharedData.m_size.y);
+        //     context.ScreenSpaceQuad(layoutStream, projMtx, sharedData->m_size.x, sharedData->m_size.y);
 
-        //     auto& ssaoImage = sharedData.m_gBuffer.m_SSAOImage;
-        //     auto& ssaoBlurImage = sharedData.m_gBuffer.m_SSAOBlurImage;
+        //     auto& ssaoImage = sharedData->m_gBuffer.m_SSAOImage;
+        //     auto& ssaoBlurImage = sharedData->m_gBuffer.m_SSAOBlurImage;
         //     auto imageSize = ssaoImage->GetImageSize();
         //     {
-        //         GraphicsContext::ViewConfiguration viewConfig{ sharedData.m_gBuffer.m_SSAOTarget };
+        //         GraphicsContext::ViewConfiguration viewConfig{ sharedData->m_gBuffer.m_SSAOTarget };
         //         viewConfig.m_projection = projMtx;
-        //         viewConfig.m_viewRect = { 0, 0, sharedData.m_size.x, sharedData.m_size.y };
+        //         viewConfig.m_viewRect = { 0, 0, sharedData->m_size.x, sharedData->m_size.y };
         //         auto view = context.StartPass("SSAO", viewConfig);
 
         //         GraphicsContext::ShaderProgram shaderProgram;
@@ -3035,8 +3066,8 @@ namespace hpl {
 
         //         shaderProgram.m_uniforms.push_back({ m_u_param, &u_param, 2 });
 
-        //         shaderProgram.m_textures.push_back({ m_s_positionMap, sharedData.m_gBuffer.m_positionImage->GetHandle(), 0 });
-        //         shaderProgram.m_textures.push_back({ m_s_normalMap, sharedData.m_gBuffer.m_normalImage->GetHandle(), 1});
+        //         shaderProgram.m_textures.push_back({ m_s_positionMap, sharedData->m_gBuffer.m_positionImage->GetHandle(), 0 });
+        //         shaderProgram.m_textures.push_back({ m_s_normalMap, sharedData->m_gBuffer.m_normalImage->GetHandle(), 1});
         //         shaderProgram.m_textures.push_back({ m_s_scatterDisk, m_ssaoScatterDiskImage->GetHandle(), 2 });
 
         //         shaderProgram.m_configuration.m_write = Write::R;
@@ -3050,7 +3081,7 @@ namespace hpl {
         //     }
         //     // blur pass horizontal
         //     {
-        //         GraphicsContext::ViewConfiguration viewConfig{ sharedData.m_gBuffer.m_SSAOBlurTarget };
+        //         GraphicsContext::ViewConfiguration viewConfig{ sharedData->m_gBuffer.m_SSAOBlurTarget };
         //         viewConfig.m_projection = projMtx;
         //         viewConfig.m_viewRect = { 0, 0, ssaoBlurImage->GetWidth(), ssaoBlurImage->GetHeight() };
         //         auto view = context.StartPass("SSAO Horizontal", viewConfig);
@@ -3064,8 +3095,8 @@ namespace hpl {
         //         shaderProgram.m_configuration.m_alphaBlendFunc =
         //             CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::Zero);
 
-        //         shaderProgram.m_textures.push_back({ m_s_diffuseMap, sharedData.m_gBuffer.m_SSAOImage->GetHandle(), 0 });
-        //         shaderProgram.m_textures.push_back({ m_s_depthMap, sharedData.m_gBuffer.m_depthStencilImage->GetHandle(), 1});
+        //         shaderProgram.m_textures.push_back({ m_s_diffuseMap, sharedData->m_gBuffer.m_SSAOImage->GetHandle(), 0 });
+        //         shaderProgram.m_textures.push_back({ m_s_depthMap, sharedData->m_gBuffer.m_depthStencilImage->GetHandle(), 1});
         //         struct {
         //             float u_farPlane;
         //             float pad[3];
@@ -3079,9 +3110,9 @@ namespace hpl {
 
         //      // blur pass horizontal
         //     {
-        //         GraphicsContext::ViewConfiguration viewConfig{ sharedData.m_gBuffer.m_colorImage };
+        //         GraphicsContext::ViewConfiguration viewConfig{ sharedData->m_gBuffer.m_colorImage };
         //         viewConfig.m_projection = projMtx;
-        //         viewConfig.m_viewRect = { 0, 0, sharedData.m_size.x, sharedData.m_size.y };
+        //         viewConfig.m_viewRect = { 0, 0, sharedData->m_size.x, sharedData->m_size.y };
         //         auto view = context.StartPass("SSAO Vertical", viewConfig);
 
         //         GraphicsContext::ShaderProgram shaderProgram;
@@ -3093,8 +3124,8 @@ namespace hpl {
         //         shaderProgram.m_configuration.m_alphaBlendFunc =
         //             CreateBlendFunction(BlendOperator::Add, BlendOperand::Zero, BlendOperand::One);
 
-        //         shaderProgram.m_textures.push_back({ m_s_diffuseMap, sharedData.m_gBuffer.m_SSAOBlurImage->GetHandle(), 0 });
-        //         shaderProgram.m_textures.push_back({ m_s_depthMap, sharedData.m_gBuffer.m_depthStencilImage->GetHandle(), 1});
+        //         shaderProgram.m_textures.push_back({ m_s_diffuseMap, sharedData->m_gBuffer.m_SSAOBlurImage->GetHandle(), 0 });
+        //         shaderProgram.m_textures.push_back({ m_s_depthMap, sharedData->m_gBuffer.m_depthStencilImage->GetHandle(), 1});
         //         struct {
         //             float u_farPlane;
         //             float pad[3];
@@ -3522,8 +3553,8 @@ namespace hpl {
                 };
 
                 cmdBindRenderTargets(frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, nullptr, nullptr, -1, -1);
-                cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)sharedData.m_size.x, (float)sharedData.m_size.y, 0.0f, 1.0f);
-                cmdSetScissor(frame.m_cmd, 0, 0, sharedData.m_size.x, sharedData.m_size.y);
+                cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)common->m_size.x, (float)common->m_size.y, 0.0f, 1.0f);
+                cmdSetScissor(frame.m_cmd, 0, 0, common->m_size.x, common->m_size.y);
 
                 {
                     DescriptorData params[15] = {};
@@ -3539,7 +3570,7 @@ namespace hpl {
                     updateDescriptorSet(frame.m_renderer->Rend(), frame.m_frameIndex, m_lightFrameSet, paramCount, params);
                 }
 
-                //float2 viewTexel = { 1.0f / sharedData.m_size.x, 1.0f / sharedData.m_size.y };
+                //float2 viewTexel = { 1.0f / sharedData->m_size.x, 1.0f / sharedData->m_size.y };
                 //uint32_t rootConstantIndex = getDescriptorIndexFromName(m_lightPassRootSignature, "uRootConstants");
                 //cmdBindPushConstants(frame.m_cmd, m_lightPassRootSignature, rootConstantIndex, &viewTexel);
                 cmdBindDescriptorSet(frame.m_cmd, frame.m_frameIndex, m_lightFrameSet);
@@ -3624,8 +3655,8 @@ namespace hpl {
                 currentGBuffer.m_outputBuffer.m_handle,
             };
             cmdBindRenderTargets(frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, nullptr, nullptr, -1, -1);
-            cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)sharedData.m_size.x, (float)sharedData.m_size.y, 0.0f, 1.0f);
-            cmdSetScissor(frame.m_cmd, 0, 0, sharedData.m_size.x, sharedData.m_size.y);
+            cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)common->m_size.x, (float)common->m_size.y, 0.0f, 1.0f);
+            cmdSetScissor(frame.m_cmd, 0, 0, common->m_size.x, common->m_size.y);
             cmdBindPipeline(frame.m_cmd, m_solidIlluminationPipeline);
 
             cmdBindDescriptorSet(frame.m_cmd, 0, m_materialSet.m_frameSet[frame.m_frameIndex]);
@@ -3668,8 +3699,8 @@ namespace hpl {
             loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
             loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
             cmdBindRenderTargets(frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, nullptr, nullptr, -1, -1);
-            cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)sharedData.m_size.x, (float)sharedData.m_size.y, 0.0f, 1.0f);
-            cmdSetScissor(frame.m_cmd, 0, 0, sharedData.m_size.x, sharedData.m_size.y);
+            cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)common->m_size.x, (float)common->m_size.y, 0.0f, 1.0f);
+            cmdSetScissor(frame.m_cmd, 0, 0, common->m_size.x, common->m_size.y);
             {
                 std::array<DescriptorData, 15> params = {};
                 size_t paramCount = 0;
@@ -3685,7 +3716,7 @@ namespace hpl {
             detail::cmdDefaultLegacyGeomBinding(frame.m_cmd, frame, binding);
 
             uint32_t rootConstantIndex = getDescriptorIndexFromName(m_fogPass.m_fogRootSignature, "uRootConstants");
-            float2 viewTexel = { 1.0f / sharedData.m_size.x, 1.0f / sharedData.m_size.y };
+            float2 viewTexel = { 1.0f / common->m_size.x, 1.0f / common->m_size.y };
             cmdBindPushConstants(frame.m_cmd, m_fogPass.m_fogRootSignature, rootConstantIndex, &viewTexel);
 
             cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "Fog Box Pass ");
@@ -3775,7 +3806,7 @@ namespace hpl {
             params[1].ppTextures = &currentGBuffer.m_refractionImage.m_handle;
             updateDescriptorSet(frame.m_renderer->Rend(), 0, m_materialTranslucencyPass.m_refractionPerFrameSet[frame.m_frameIndex], 2, params);
             cmdBindDescriptorSet(frame.m_cmd, 0, m_materialTranslucencyPass.m_refractionPerFrameSet[frame.m_frameIndex]);
-            cmdDispatch(frame.m_cmd, static_cast<uint32_t>(static_cast<float>(sharedData.m_size.x) / 16.0f) + 1, static_cast<uint32_t>(static_cast<float>(sharedData.m_size.y) / 16.0f) + 1, 1);
+            cmdDispatch(frame.m_cmd, static_cast<uint32_t>(static_cast<float>(common->m_size.x) / 16.0f) + 1, static_cast<uint32_t>(static_cast<float>(common->m_size.y) / 16.0f) + 1, 1);
             {
                 std::array textureBarriers = {
                     TextureBarrier{currentGBuffer.m_refractionImage.m_handle, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE },
@@ -3790,7 +3821,7 @@ namespace hpl {
 
 
         // notify post draw listeners
-        //ImmediateDrawBatch postSolidBatch(context, sharedData.m_gBuffer.m_outputTarget, mainFrustumView, mainFrustumProj);
+        //ImmediateDrawBatch postSolidBatch(context, sharedData->m_gBuffer.m_outputTarget, mainFrustumView, mainFrustumProj);
         cViewport::PostSolidDrawPacket postSolidEvent = cViewport::PostSolidDrawPacket({
             .m_frustum = apFrustum,
             .m_frame = &frame,
@@ -3812,8 +3843,8 @@ namespace hpl {
                 currentGBuffer.m_outputBuffer.m_handle,
             };
             cmdBindRenderTargets(frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, nullptr, nullptr, -1, -1);
-            cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, static_cast<float>(sharedData.m_size.x), static_cast<float>(sharedData.m_size.y), 0.0f, 1.0f);
-            cmdSetScissor(frame.m_cmd, 0, 0, sharedData.m_size.x, sharedData.m_size.y);
+            cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, static_cast<float>(common->m_size.x), static_cast<float>(common->m_size.y), 0.0f, 1.0f);
+            cmdSetScissor(frame.m_cmd, 0, 0, common->m_size.x, common->m_size.y);
 
             cmdBindDescriptorSet(frame.m_cmd, 0, m_materialSet.m_frameSet[frame.m_frameIndex]);
             std::array<TranslucencyPipeline::TranslucencyBlend, eMaterialBlendMode_LastEnum> translucencyBlendTable;
@@ -4008,7 +4039,7 @@ namespace hpl {
         }
 
 
-        //ImmediateDrawBatch postTransBatch(context, sharedData.m_gBuffer.m_outputTarget, mainFrustumView, mainFrustumProj);
+        //ImmediateDrawBatch postTransBatch(context, sharedData->m_gBuffer.m_outputTarget, mainFrustumView, mainFrustumProj);
         cViewport::PostTranslucenceDrawPacket translucenceEvent = cViewport::PostTranslucenceDrawPacket({
             .m_frustum = apFrustum,
             .m_frame = &frame,

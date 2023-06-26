@@ -1,0 +1,156 @@
+// This code contains NVIDIA Confidential Information and is disclosed to you
+// under a form of NVIDIA software license agreement provided separately to you.
+//
+// Notice
+// NVIDIA Corporation and its licensors retain all intellectual property and
+// proprietary rights in and to this software and related documentation and
+// any modifications thereto. Any use, reproduction, disclosure, or
+// distribution of this software and related documentation without an express
+// license agreement from NVIDIA Corporation is strictly prohibited.
+//
+// ALL NVIDIA DESIGN SPECIFICATIONS, CODE ARE PROVIDED "AS IS.". NVIDIA MAKES
+// NO WARRANTIES, EXPRESSED, IMPLIED, STATUTORY, OR OTHERWISE WITH RESPECT TO
+// THE MATERIALS, AND EXPRESSLY DISCLAIMS ALL IMPLIED WARRANTIES OF NONINFRINGEMENT,
+// MERCHANTABILITY, AND FITNESS FOR A PARTICULAR PURPOSE.
+//
+// Information and code furnished is believed to be accurate and reliable.
+// However, NVIDIA Corporation assumes no responsibility for the consequences of use of such
+// information or for any infringement of patents or other rights of third parties that may
+// result from its use. No license is granted by implication or otherwise under any patent
+// or patent rights of NVIDIA Corporation. Details are subject to change without notice.
+// This code supersedes and replaces all information previously supplied.
+// NVIDIA Corporation products are not authorized for use as critical
+// components in life support devices or systems without express written approval of
+// NVIDIA Corporation.
+//
+// Copyright (c) 2008-2021 NVIDIA Corporation. All rights reserved.
+
+// Copyright 2023 Michael Pollind
+
+
+
+/**
+* Copyright 2023 Michael Pollind
+* 
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+* 
+*     http://www.apache.org/licenses/LICENSE-2.0
+* 
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
+
+#include "hbao_resource.h.fsl"
+
+float ComputeAO(float3 viewPosKernelCenter, float3 viewSpaceKernalNormal, float3 viewSpaceSamplePos, float negInvR2)
+{
+    float3 viewKernalDir = viewSpaceSamplePos - viewPosKernelCenter;
+    float viewKernalDirMagnitude = dot(viewKernalDir , viewKernalDir );
+    float viewCos = dot(viewSpaceKernalNormal, viewKernalDir) * rsqrt(viewKernalDirMagnitude);
+
+    // Use saturate(x) instead of max(x,0.f) because that is faster
+    float falloff = viewKernalDirMagnitude * negInvR2 + 1.0;
+    return saturate(viewCos - VIEW_COS_BIAS) * saturate(falloff);
+}
+
+void AccumulateAO(
+    inout float AO,
+    inout float rayPixel,
+    uint sliceIndex,
+    uint2 fullResPos,
+    float StepSizePixels,
+    float2 direction,
+    float3 viewPosKernelCenter, 
+    float3 viewNormalKernelCenter,
+    float negInvR2
+)
+{
+    uint2 samplePos = clamp(uint2(round(rayPixel * direction) + fullResPos), uint2(0, 0), Get(viewportDim).xy - uint2(1, 1));
+     
+    float2 normalizedSamplePos = (float2(samplePos) + float2(0.5, 0.5)) * Get(viewportTexel);
+
+    float viewDepth = LoadRWTex3D(Get(prepareDepths), uint3(floor(samplePos.xy / 4.0), sliceIndex)).r;
+    float3 viewPos = ComputeViewspacePosition(normalizedSamplePos, viewDepth);
+    rayPixel += StepSizePixels;
+    AO += ComputeAO(viewPosKernelCenter, viewNormalKernelCenter, viewPos, negInvR2);
+}
+
+NUM_THREADS(16, 16, 1)
+void CS_MAIN(SV_DispatchThreadID(uint3) did) 
+{
+    INIT_MAIN;
+    if (did.x < Get(quarterViewportDim).x && did.y < Get(quarterViewportDim).y) {
+        float radiusToScreen = RADIUS * (0.5 / Get(tanHalfFOV)) * Get(viewportDim).y;
+
+        const uint sliceIndex = did.z;
+        const uint2 fullResPos = uint2(did.x * 4 + (sliceIndex % 4), did.y * 4 + uint(sliceIndex / 4));
+        const uint2 quarterResPos = did.xy;
+
+        float2 normalizedScreenPos = (float2(fullResPos) + float2(0.5, 0.5)) * Get(viewportTexel);
+
+        float viewDepth = LoadRWTex3D(Get(prepareDepths), uint3(did.xy, sliceIndex)).r;
+        float3 viewNormal = LoadTex2D(Get(normalInput), NO_SAMPLER,  fullResPos, 0).xyz;
+        viewNormal.z = -viewNormal.z;
+
+        float3 viewPos = ComputeViewspacePosition(normalizedScreenPos , viewDepth);
+        
+        float radiusPixels = radiusToScreen / viewDepth;
+        float negInvR2 = NEG_INV_RADIUS_SQUARED;
+
+        if (Get(backgroundViewDepth) != -1.f)
+        {
+            float backgroundRadiusAO = (radiusToScreen / Get(backgroundViewDepth));
+            float scalFactor = max(1.0, backgroundRadiusAO / radiusPixels);
+            radiusPixels  *= scalFactor;
+            negInvR2  *= 1.0 / (scalFactor * scalFactor);
+        }
+
+        if (Get(foregroundViewDepth) != -1.f)
+        {
+            float foregroundRadiusAO = (radiusToScreen / Get(foregroundViewDepth));
+            float scalFactor = max(1.0, foregroundRadiusAO / radiusPixels);
+            radiusPixels *= scalFactor;
+            negInvR2 *= 1.0 / (scalFactor * scalFactor);
+        }
+       
+        const float aoScaleFactor = 1. / (1. - VIEW_COS_BIAS);
+        float smallScaleAOFactor = SMALL_SCALE_AO_AMOUNT * aoScaleFactor * 2.0;
+        float largeScaleAOFactor = LARGE_SCALE_AO_AMOUNT * aoScaleFactor;
+
+        float smallScaleAO = 0;
+        float largeScaleAO = 0;
+        float AO = 1.0;
+        if (radiusPixels > 1.0)
+        {
+            float stepSizePixels = (radiusPixels / 4.0) / (NUM_STEPS + 1);
+            const float alpha = 2.0 * 3.14159265359 / NUM_DIRECTIONS;
+
+            for (float DirectionIndex = 0; DirectionIndex < NUM_DIRECTIONS; ++DirectionIndex)
+            {
+                float angle = alpha * DirectionIndex;
+                // Compute normalized 2D direction
+                float2 direction = float2(cos(angle), sin(angle));
+                
+                // Jitter starting sample within the first step
+                float rayPixels = (stepSizePixels  + 1.0);
+
+                AccumulateAO(smallScaleAO, rayPixels, sliceIndex, fullResPos, stepSizePixels, direction, viewPos, viewNormal, negInvR2);
+
+                for (float StepIndex = 1; StepIndex < NUM_STEPS; ++StepIndex)
+                {
+                    AccumulateAO(largeScaleAO, rayPixels, sliceIndex, fullResPos, stepSizePixels, direction, viewPos, viewNormal, negInvR2);
+                }
+            }
+
+            AO = (smallScaleAO * smallScaleAOFactor ) + (largeScaleAO *  largeScaleAOFactor);
+            AO /= (NUM_DIRECTIONS * NUM_STEPS);
+        }
+        AO = saturate(1.0 - AO * 2.0);
+        Write3D(Get(aoQurter), uint3(did.xy, sliceIndex), AO);
+    }
+}

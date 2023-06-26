@@ -48,6 +48,13 @@ namespace hpl {
         }
     }
 
+    void ForgePipelineHandle::Free() {
+        if (m_handle) {
+            ASSERT(m_renderer && "Renderer is null");
+            removePipeline(m_renderer, m_handle);
+        }
+    }
+
     TinyImageFormat ForgeTextureHandle::FromHPLPixelFormat(ePixelFormat format) {
         switch(format) {
             case ePixelFormat_Alpha:

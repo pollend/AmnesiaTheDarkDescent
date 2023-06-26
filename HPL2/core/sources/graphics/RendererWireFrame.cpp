@@ -61,18 +61,18 @@ namespace hpl {
 		mbSetFrameBufferAtBeginRendering = true;
 		mbClearFrameBufferAtBeginRendering = true;
 
-		m_boundOutputBuffer = std::move(UniqueViewportData<LegacyRenderTarget>([](cViewport& viewport) {
-				auto colorImage = [&] {
-				auto desc = ImageDescriptor::CreateTexture2D(viewport.GetSize().x, viewport.GetSize().y, false, bgfx::TextureFormat::Enum::RGBA8);
-				desc.m_configuration.m_rt = RTType::RT_Write;
-				auto image = std::make_shared<Image>();
-				image->Initialize(desc);
-				return image;
-			};
-			return std::make_unique<LegacyRenderTarget>(colorImage());
-		}, [](cViewport& viewport, LegacyRenderTarget& target) {
-			return target.GetImage()->GetImageSize() == viewport.GetSize();
-		}));
+//		m_boundOutputBuffer = std::move(UniqueViewportData<LegacyRenderTarget>([](cViewport& viewport) {
+//				auto colorImage = [&] {
+//				auto desc = ImageDescriptor::CreateTexture2D(viewport.GetSize().x, viewport.GetSize().y, false, bgfx::TextureFormat::Enum::RGBA8);
+//				desc.m_configuration.m_rt = RTType::RT_Write;
+//				auto image = std::make_shared<Image>();
+//				image->Initialize(desc);
+//				return image;
+//			};
+//			return std::make_unique<LegacyRenderTarget>(colorImage());
+//		}, [](cViewport& viewport, LegacyRenderTarget& target) {
+//			return target.GetImage()->GetImageSize() == viewport.GetSize();
+//		}));
 
 		// m_u_color.Initialize();
 		// m_colorProgram = hpl::loadProgram("vs_color", "fs_color");
@@ -84,41 +84,19 @@ namespace hpl {
 	{
 	}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
 	bool cRendererWireFrame::LoadData()
 	{
 		return true;
 	}
 
-	//-----------------------------------------------------------------------
-
-
 	void cRendererWireFrame::DestroyData()
 	{
 	}
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PRIVATE METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	void cRendererWireFrame::CopyToFrameBuffer()
 	{
 		//Do Nothing
 	}
-
-
-
 
 	// Texture* cRendererWireFrame::GetOutputImage(cViewport& viewport) {
 	// 	return nullptr;
@@ -128,9 +106,9 @@ namespace hpl {
 
 	void cRendererWireFrame::Draw(const ForgeRenderer::Frame& frame, cViewport& viewport, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, bool abSendFrameBufferToPostEffects) {
 		BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects);
-		
-		// auto& rt = m_boundOutputBuffer.resolve(viewport);	
-		
+        ASSERT(false && "TODO: need to implement bound Viewport");
+		// auto& rt = m_boundOutputBuffer.resolve(viewport);
+
 		// [&]{
 		// 	GraphicsContext::ViewConfiguration viewConfig {rt};
 		// 	viewConfig.m_viewRect = {0, 0, viewport.GetSize().x, viewport.GetSize().y};

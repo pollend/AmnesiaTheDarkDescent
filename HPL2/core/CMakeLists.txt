@@ -218,6 +218,18 @@ set(HPL2_INCLUDES
     PRIVATE ${IL_INCLUDE_DIR}
 )
 
+set(RENDERDOC_PATH "/usr/local" CACHE PATH "Path to RenderDoc.")
+set(RENDERDOC_ENABLED OFF CACHE BOOL "Enable RenderDoc integration. Use RENDERDOC_PATH to specific the path to RenderDoc.")
+
+if(RENDERDOC_ENABLED)
+    ADD_DEFINITIONS(-DHPL2_RENDERDOC_ENABLED)
+    set(HPL2_INCLUDES
+        ${HPL2_INCLUDES}
+        PRIVATE ${RENDERDOC_PATH}/include
+    )
+endif()
+
+
 target_include_directories(HPL2
     ${HPL2_INCLUDES}
 )

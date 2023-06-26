@@ -19,33 +19,34 @@
 #pragma once
 
 #include "engine/RTTI.h"
-#include "graphics/ForgeHandles.h"
-#include "graphics/RenderList.h"
-#include "graphics/Renderable.h"
+
 #include "scene/Viewport.h"
 #include "windowing/NativeWindow.h"
-#include <array>
-#include <bgfx/bgfx.h>
-#include <cstdint>
+
+#include <graphics/ForgeHandles.h>
+#include <graphics/RenderList.h>
+#include <graphics/Renderable.h>
 #include <graphics/GraphicsContext.h>
 #include <graphics/Image.h>
 #include <graphics/RenderTarget.h>
 #include <graphics/Renderer.h>
 #include <graphics/Material.h>
 #include <graphics/ShaderVariantCollection.h>
-#include <math/MathTypes.h>
-#include <memory>
-#include <unordered_map>
-#include <vector>
-
 #include <graphics/ForgeRenderer.h>
+#include <graphics/PipelineHBAOPlus.h>
+#include <math/MathTypes.h>
 
-#include "Common_3/Utilities/RingBuffer.h"
+#include <Common_3/Utilities/RingBuffer.h>
 #include <Common_3/Graphics/Interfaces/IGraphics.h>
 #include <FixPreprocessor.h>
 
 #include <folly/small_vector.h>
 
+#include <array>
+#include <cstdint>
+#include <memory>
+#include <unordered_map>
+#include <vector>
 
 namespace hpl {
 
@@ -73,7 +74,7 @@ namespace hpl {
     public:
 
         static constexpr TinyImageFormat DepthBufferFormat = TinyImageFormat_D32_SFLOAT_S8_UINT;
-        static constexpr TinyImageFormat NormalBufferFormat = TinyImageFormat_R32G32B32A32_SFLOAT;
+        static constexpr TinyImageFormat NormalBufferFormat = TinyImageFormat_R16G16B16A16_SFLOAT;
         static constexpr TinyImageFormat PositionBufferFormat = TinyImageFormat_R32G32B32A32_SFLOAT;
         static constexpr TinyImageFormat SpecularBufferFormat = TinyImageFormat_R8G8_UNORM;
         static constexpr TinyImageFormat ColorBufferFormat = TinyImageFormat_R8G8B8A8_UNORM;
@@ -168,15 +169,15 @@ namespace hpl {
             GBuffer() = default;
             GBuffer(const GBuffer&) = delete;
             GBuffer(GBuffer&& buffer)
-                : m_colorBuffer(std::move(buffer.m_colorBuffer)),
-                  m_normalBuffer(std::move(buffer.m_normalBuffer)),
-                  m_positionBuffer(std::move(buffer.m_positionBuffer)),
-                  m_specularBuffer(std::move(buffer.m_specularBuffer)),
-                  m_depthBuffer(std::move(buffer.m_depthBuffer)),
-                  m_outputBuffer(std::move(buffer.m_outputBuffer)),
-                  m_refractionImage(std::move(buffer.m_refractionImage)),
-                  m_hizDepthBuffer(std::move(buffer.m_hizDepthBuffer)),
-                  m_hiZMipCount(buffer.m_hiZMipCount){
+                : m_colorBuffer(std::move(buffer.m_colorBuffer))
+                , m_normalBuffer(std::move(buffer.m_normalBuffer))
+                , m_positionBuffer(std::move(buffer.m_positionBuffer))
+                , m_specularBuffer(std::move(buffer.m_specularBuffer))
+                , m_depthBuffer(std::move(buffer.m_depthBuffer))
+                , m_outputBuffer(std::move(buffer.m_outputBuffer))
+                , m_refractionImage(std::move(buffer.m_refractionImage))
+                , m_hizDepthBuffer(std::move(buffer.m_hizDepthBuffer))
+                , m_hiZMipCount(buffer.m_hiZMipCount) {
             }
             void operator=(GBuffer&& buffer) {
                 m_colorBuffer = std::move(buffer.m_colorBuffer);
@@ -202,25 +203,24 @@ namespace hpl {
             ForgeRenderTarget m_outputBuffer;
         };
 
-        struct SharedViewportData {
+        struct ViewportData {
         public:
-            SharedViewportData() = default;
-            SharedViewportData(const SharedViewportData&) = delete;
-            SharedViewportData(SharedViewportData&& buffer)
+            ViewportData() = default;
+            ViewportData(const ViewportData&) = delete;
+            ViewportData(ViewportData&& buffer)
                 : m_size(buffer.m_size)
                 , m_refractionImage(std::move(buffer.m_refractionImage))
                 , m_gBuffer(std::move(buffer.m_gBuffer))
                 , m_gBufferReflection(std::move(buffer.m_gBufferReflection)) {
             }
 
-            SharedViewportData& operator=(const SharedViewportData&) = delete;
+            ViewportData& operator=(const ViewportData&) = delete;
 
-            void operator=(SharedViewportData&& buffer) {
+            void operator=(ViewportData&& buffer) {
                 m_size = buffer.m_size;
                 m_refractionImage = std::move(buffer.m_refractionImage);
                 m_gBuffer = std::move(buffer.m_gBuffer);
                 m_gBufferReflection = std::move(buffer.m_gBufferReflection);
-
             }
 
             cVector2l m_size = cVector2l(0, 0);
@@ -232,12 +232,15 @@ namespace hpl {
         cRendererDeferred( cGraphics* apGraphics, cResources* apResources);
         ~cRendererDeferred();
 
-        inline SharedViewportData& GetSharedData(cViewport& viewport) {
+        inline ViewportData* GetSharedData(cViewport& viewport) {
             return m_boundViewportData.resolve(viewport);
         }
         virtual ForgeRenderTarget GetOutputImage(uint32_t frameIndex, cViewport& viewport) override {
-            auto& sharedData = m_boundViewportData.resolve(viewport);
-            return sharedData.m_gBuffer[frameIndex].m_outputBuffer;
+            auto sharedData = m_boundViewportData.resolve(viewport);
+            if(!sharedData) {
+                return ForgeRenderTarget();
+            }
+            return sharedData->m_gBuffer[frameIndex].m_outputBuffer;
         }
 
         virtual bool LoadData() override;
@@ -361,7 +364,7 @@ namespace hpl {
         float m_shadowDistanceLow;
         float m_shadowDistanceNone;
 
-        UniqueViewportData<SharedViewportData> m_boundViewportData;
+        UniqueViewportData<ViewportData> m_boundViewportData;
 
         ForgeTextureHandle m_shadowJitterTexture;
         ForgeTextureHandle m_ssaoScatterDiskTexture;
@@ -627,6 +630,8 @@ namespace hpl {
         Sampler* m_samplerPointClampToBorder;
 
         cRenderList m_reflectionRenderList;
+
+        std::unique_ptr<renderer::PipelineHBAOPlus> m_hbaoPlusPipeline;
 
         static bool mbDepthCullLights;
         static bool mbSSAOLoaded;

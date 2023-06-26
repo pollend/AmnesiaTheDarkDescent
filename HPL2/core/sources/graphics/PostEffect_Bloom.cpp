@@ -202,7 +202,66 @@ namespace hpl
     cPostEffect_Bloom::cPostEffect_Bloom(cGraphics* apGraphics, cResources* apResources, iPostEffectType* apType)
         : iPostEffect(apGraphics, apResources, apType)
     {
-        m_boundBloomData = UniqueViewportData<BloomData>([&](cViewport& viewport) {
+
+       // m_boundBloomData = UniqueViewportData<BloomData>([&](cViewport& viewport) {
+       //     auto* renderer = Interface<ForgeRenderer>::Get();
+       //     auto data = std::make_unique<BloomData>();
+       //     {
+       //         data->m_blurTargets[0] = ForgeRenderTarget(renderer->Rend());
+       //         data->m_blurTargets[0].Load([&](RenderTarget** target) {
+       //             RenderTargetDesc renderTarget = {};
+       //             renderTarget.mArraySize = 1;
+       //             renderTarget.mDepth = 1;
+       //             renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+       //             renderTarget.mWidth = viewport.GetSize().x / 4.0f;
+       //             renderTarget.mHeight = viewport.GetSize().y / 4.0f;
+       //             renderTarget.mSampleCount = SAMPLE_COUNT_1;
+       //             renderTarget.mSampleQuality = 0;
+       //             renderTarget.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
+       //             renderTarget.mFormat = getRecommendedSwapchainFormat(false, false);
+       //             addRenderTarget(renderer->Rend(), &renderTarget, target);
+       //             return true;
+       //         });
+       //     }
+       //     {
+       //         data->m_blurTargets[1] = ForgeRenderTarget(renderer->Rend());
+       //         data->m_blurTargets[1].Load([&](RenderTarget** target) {
+       //             RenderTargetDesc renderTarget = {};
+       //             renderTarget.mArraySize = 1;
+       //             renderTarget.mDepth = 1;
+       //             renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+       //             renderTarget.mWidth = viewport.GetSize().x / 4.0f;
+       //             renderTarget.mHeight = viewport.GetSize().y / 4.0f;
+       //             renderTarget.mSampleCount = SAMPLE_COUNT_1;
+       //             renderTarget.mSampleQuality = 0;
+       //             renderTarget.mStartState = RESOURCE_STATE_RENDER_TARGET;
+       //             renderTarget.mFormat = getRecommendedSwapchainFormat(false, false);
+       //             addRenderTarget(renderer->Rend(), &renderTarget, target);
+       //             return true;
+       //         });
+
+       //     }
+       //     data->m_size = viewport.GetSize();
+       //     return data;
+       // }, [&](cViewport& viewport, BloomData& data) {
+       //     return viewport.GetSize() == data.m_size;
+       // });
+
+        mpBloomType = static_cast<cPostEffectType_Bloom*>(mpType);
+    }
+
+    cPostEffect_Bloom::~cPostEffect_Bloom()
+    {
+    }
+
+    void cPostEffect_Bloom::OnSetParams()
+    {
+    }
+
+    void cPostEffect_Bloom::RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, const ForgeRenderer::Frame& frame, Texture* inputTexture, RenderTarget* renderTarget)  {
+        auto bloomData = m_boundBloomData.resolve(viewport);
+
+        if(!bloomData || bloomData->m_size != viewport.GetSize()) {
             auto* renderer = Interface<ForgeRenderer>::Get();
             auto data = std::make_unique<BloomData>();
             {
@@ -241,31 +300,16 @@ namespace hpl
 
             }
             data->m_size = viewport.GetSize();
-            return data;
-        }, [&](cViewport& viewport, BloomData& data) {
-            return viewport.GetSize() == data.m_size;
-        });
+            bloomData = m_boundBloomData.update(viewport, std::move(data));
+        }
 
-        mpBloomType = static_cast<cPostEffectType_Bloom*>(mpType);
-    }
-
-    cPostEffect_Bloom::~cPostEffect_Bloom()
-    {
-    }
-
-    void cPostEffect_Bloom::OnSetParams()
-    {
-    }
-
-    void cPostEffect_Bloom::RenderEffect(cPostEffectComposite& compositor, cViewport& viewport, const ForgeRenderer::Frame& frame, Texture* inputTexture, RenderTarget* renderTarget)  {
-        auto& bloomData = m_boundBloomData.resolve(viewport);
         auto requestBlur = [&](Texture** input) {
             ASSERT(input && "Invalid input texture");
             {
                 cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
                 std::array rtBarriers = {
-                    RenderTargetBarrier{ bloomData.m_blurTargets[0].m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
-                    RenderTargetBarrier{ bloomData.m_blurTargets[1].m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE},
+                    RenderTargetBarrier{ bloomData->m_blurTargets[0].m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
+                    RenderTargetBarrier{ bloomData->m_blurTargets[1].m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE},
                 };
                 cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
             }
@@ -273,7 +317,7 @@ namespace hpl
                 LoadActionsDesc loadActions = {};
                 loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
                 loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
-                auto& blurTarget = bloomData.m_blurTargets[0].m_handle;
+                auto& blurTarget = bloomData->m_blurTargets[0].m_handle;
                 cmdBindRenderTargets(frame.m_cmd, 1, &blurTarget , NULL, &loadActions, NULL, NULL, -1, -1);
 
                 std::array<DescriptorData, 1> params = {};
@@ -289,15 +333,15 @@ namespace hpl
                 cmdBindDescriptorSet(frame.m_cmd, mpBloomType->m_setIndex, mpBloomType->m_perFrameDescriptorSets[frame.m_frameIndex]);
                 cmdDraw(frame.m_cmd, 3, 0);
 
-                mpBloomType->m_setIndex= (mpBloomType->m_setIndex + 1) % cPostEffectType_Bloom::DescriptorSetSize;
+                mpBloomType->m_setIndex = (mpBloomType->m_setIndex + 1) % cPostEffectType_Bloom::DescriptorSetSize;
             }
             {
                 cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
                 std::array rtBarriers = {
                     RenderTargetBarrier{
-                        bloomData.m_blurTargets[0].m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
+                        bloomData->m_blurTargets[0].m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
                     RenderTargetBarrier{
-                        bloomData.m_blurTargets[1].m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
+                        bloomData->m_blurTargets[1].m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
                 };
                 cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
             }
@@ -306,12 +350,12 @@ namespace hpl
                 loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
                 loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
 
-                auto& blurTarget = bloomData.m_blurTargets[1].m_handle;
+                auto& blurTarget = bloomData->m_blurTargets[1].m_handle;
                 cmdBindRenderTargets(frame.m_cmd, 1, &blurTarget, NULL, &loadActions, NULL, NULL, -1, -1);
 
                 std::array<DescriptorData, 1> params = {};
                 params[0].pName = "sourceInput";
-                params[0].ppTextures = &bloomData.m_blurTargets[0].m_handle->pTexture;
+                params[0].ppTextures = &bloomData->m_blurTargets[0].m_handle->pTexture;
                 updateDescriptorSet(
                     frame.m_renderer->Rend(), mpBloomType->m_setIndex, mpBloomType->m_perFrameDescriptorSets[frame.m_frameIndex], params.size(), params.data());
 
@@ -334,14 +378,14 @@ namespace hpl
         requestBlur(&inputTexture);
         for (int i = 1; i < mParams.mlBlurIterations; ++i)
         {
-            requestBlur(&bloomData.m_blurTargets[1].m_handle->pTexture);
+            requestBlur(&bloomData->m_blurTargets[1].m_handle->pTexture);
         }
         cmdEndDebugMarker(frame.m_cmd);
         {
             cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
             std::array rtBarriers = {
                 RenderTargetBarrier{
-                    bloomData.m_blurTargets[1].m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
+                    bloomData->m_blurTargets[1].m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
             };
             cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
         }
@@ -363,7 +407,7 @@ namespace hpl
             params[0].pName = "sourceInput";
             params[0].ppTextures = &inputTexture;
             params[1].pName = "blurInput";
-            params[1].ppTextures = &bloomData.m_blurTargets[1].m_handle->pTexture;
+            params[1].ppTextures = &bloomData->m_blurTargets[1].m_handle->pTexture;
 
             updateDescriptorSet(
                 frame.m_renderer->Rend(), mpBloomType->m_setBloomIndex, mpBloomType->m_perFrameDescriptorBloomSets[frame.m_frameIndex], params.size(), params.data());
@@ -381,7 +425,7 @@ namespace hpl
             cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
             std::array rtBarriers = {
                 RenderTargetBarrier{
-                    bloomData.m_blurTargets[1].m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
+                    bloomData->m_blurTargets[1].m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
             };
             cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
         }

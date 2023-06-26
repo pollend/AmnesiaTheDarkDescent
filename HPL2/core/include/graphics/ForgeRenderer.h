@@ -160,7 +160,6 @@ namespace hpl {
         Semaphore* m_imageAcquiredSemaphore = nullptr;
         Queue* m_graphicsQueue = nullptr;
 
-
         Shader* m_copyShader = nullptr;
         Pipeline* m_copyPostProcessingPipelineToSwapChain = nullptr;
         Pipeline* m_copyPostProcessingPipelineToUnormR8G8B8A8 = nullptr;

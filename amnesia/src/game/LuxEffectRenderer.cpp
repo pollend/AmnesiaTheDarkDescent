@@ -47,72 +47,70 @@ cLuxEffectRenderer::cLuxEffectRenderer()
     : iLuxUpdateable("LuxEffectRenderer")
 {
 
-     m_boundPostEffectData = std::move(UniqueViewportData<LuxPostEffectData>([](cViewport& viewport) {
-        cGraphics* pGraphics = gpBase->mpEngine->GetGraphics();
-        //cRendererDeferred* pRendererDeferred = static_cast<cRendererDeferred*>(pGraphics->GetRenderer(eRenderer_Main));
-        //auto& sharedData = pRendererDeferred->GetSharedData(viewport);
-        auto postEffect = std::make_unique<LuxPostEffectData>();
-        auto* forgeRenderer = Interface<ForgeRenderer>::Get();
-
-        postEffect->m_size = viewport.GetSize();
-        postEffect->m_outlineBuffer.Load([&](RenderTarget** target) {
-            ClearValue optimizedColorClearBlack = { { 0.0f, 0.0f, 0.0f, 0.0f } };
-            RenderTargetDesc renderTarget = {};
-            renderTarget.mArraySize = 1;
-            renderTarget.mClearValue = optimizedColorClearBlack;
-            renderTarget.mDepth = 1;
-            renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
-            renderTarget.mWidth = viewport.GetSize().x;
-            renderTarget.mHeight = viewport.GetSize().y;
-            renderTarget.mSampleCount = SAMPLE_COUNT_1;
-            renderTarget.mSampleQuality = 0;
-            renderTarget.mStartState = RESOURCE_STATE_RENDER_TARGET;
-            renderTarget.pName = "postEffect Outline";
-            renderTarget.mFormat = getRecommendedSwapchainFormat(false, false);
-            addRenderTarget(forgeRenderer->Rend(), &renderTarget, target);
-            return true;
-        });
-        ASSERT(postEffect->m_blurTarget.size() == 2);
-        postEffect->m_blurTarget[0].Load([&](RenderTarget** target) {
-            ClearValue optimizedColorClearBlack = { { 0.0f, 0.0f, 0.0f, 0.0f } };
-            RenderTargetDesc renderTarget = {};
-            renderTarget.mArraySize = 1;
-            renderTarget.mClearValue = optimizedColorClearBlack;
-            renderTarget.mDepth = 1;
-            renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
-            renderTarget.mWidth = viewport.GetSize().x / cLuxEffectRenderer::BlurSize;
-            renderTarget.mHeight = viewport.GetSize().y / cLuxEffectRenderer::BlurSize;
-            renderTarget.mSampleCount = SAMPLE_COUNT_1;
-            renderTarget.mSampleQuality = 0;
-            renderTarget.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
-            renderTarget.pName = "blur Target";
-            renderTarget.mFormat = getRecommendedSwapchainFormat(false, false);
-            addRenderTarget(forgeRenderer->Rend(), &renderTarget, target);
-            return true;
-        });
-        postEffect->m_blurTarget[1].Load([&](RenderTarget** target) {
-            ClearValue optimizedColorClearBlack = { { 0.0f, 0.0f, 0.0f, 0.0f } };
-            RenderTargetDesc renderTarget = {};
-            renderTarget.mArraySize = 1;
-            renderTarget.mClearValue = optimizedColorClearBlack;
-            renderTarget.mDepth = 1;
-            renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
-            renderTarget.mWidth = viewport.GetSize().x / cLuxEffectRenderer::BlurSize;
-            renderTarget.mHeight = viewport.GetSize().y / cLuxEffectRenderer::BlurSize;
-            renderTarget.mSampleCount = SAMPLE_COUNT_1;
-            renderTarget.mSampleQuality = 0;
-            renderTarget.mStartState = RESOURCE_STATE_RENDER_TARGET;
-            renderTarget.pName = "blur Target";
-            renderTarget.mFormat = getRecommendedSwapchainFormat(false, false);
-            addRenderTarget(forgeRenderer->Rend(), &renderTarget, target);
-            return true;
-        });
-
-        return postEffect;
-    }, [&](cViewport& viewport, LuxPostEffectData& target) {
-        cGraphics* pGraphics = gpBase->mpEngine->GetGraphics();
-        return viewport.GetSize() == target.m_size;
-    }));
+//     m_boundPostEffectData = std::move(UniqueViewportData<LuxPostEffectData>([](cViewport& viewport) {
+//        cGraphics* pGraphics = gpBase->mpEngine->GetGraphics();
+//        auto postEffect = std::make_unique<LuxPostEffectData>();
+//        auto* forgeRenderer = Interface<ForgeRenderer>::Get();
+//
+//        postEffect->m_size = viewport.GetSize();
+//        postEffect->m_outlineBuffer.Load([&](RenderTarget** target) {
+//            ClearValue optimizedColorClearBlack = { { 0.0f, 0.0f, 0.0f, 0.0f } };
+//            RenderTargetDesc renderTarget = {};
+//            renderTarget.mArraySize = 1;
+//            renderTarget.mClearValue = optimizedColorClearBlack;
+//            renderTarget.mDepth = 1;
+//            renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+//            renderTarget.mWidth = viewport.GetSize().x;
+//            renderTarget.mHeight = viewport.GetSize().y;
+//            renderTarget.mSampleCount = SAMPLE_COUNT_1;
+//            renderTarget.mSampleQuality = 0;
+//            renderTarget.mStartState = RESOURCE_STATE_RENDER_TARGET;
+//            renderTarget.pName = "postEffect Outline";
+//            renderTarget.mFormat = getRecommendedSwapchainFormat(false, false);
+//            addRenderTarget(forgeRenderer->Rend(), &renderTarget, target);
+//            return true;
+//        });
+//        ASSERT(postEffect->m_blurTarget.size() == 2);
+//        postEffect->m_blurTarget[0].Load([&](RenderTarget** target) {
+//            ClearValue optimizedColorClearBlack = { { 0.0f, 0.0f, 0.0f, 0.0f } };
+//            RenderTargetDesc renderTarget = {};
+//            renderTarget.mArraySize = 1;
+//            renderTarget.mClearValue = optimizedColorClearBlack;
+//            renderTarget.mDepth = 1;
+//            renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+//            renderTarget.mWidth = viewport.GetSize().x / cLuxEffectRenderer::BlurSize;
+//            renderTarget.mHeight = viewport.GetSize().y / cLuxEffectRenderer::BlurSize;
+//            renderTarget.mSampleCount = SAMPLE_COUNT_1;
+//            renderTarget.mSampleQuality = 0;
+//            renderTarget.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
+//            renderTarget.pName = "blur Target";
+//            renderTarget.mFormat = getRecommendedSwapchainFormat(false, false);
+//            addRenderTarget(forgeRenderer->Rend(), &renderTarget, target);
+//            return true;
+//        });
+//        postEffect->m_blurTarget[1].Load([&](RenderTarget** target) {
+//            ClearValue optimizedColorClearBlack = { { 0.0f, 0.0f, 0.0f, 0.0f } };
+//            RenderTargetDesc renderTarget = {};
+//            renderTarget.mArraySize = 1;
+//            renderTarget.mClearValue = optimizedColorClearBlack;
+//            renderTarget.mDepth = 1;
+//            renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+//            renderTarget.mWidth = viewport.GetSize().x / cLuxEffectRenderer::BlurSize;
+//            renderTarget.mHeight = viewport.GetSize().y / cLuxEffectRenderer::BlurSize;
+//            renderTarget.mSampleCount = SAMPLE_COUNT_1;
+//            renderTarget.mSampleQuality = 0;
+//            renderTarget.mStartState = RESOURCE_STATE_RENDER_TARGET;
+//            renderTarget.pName = "blur Target";
+//            renderTarget.mFormat = getRecommendedSwapchainFormat(false, false);
+//            addRenderTarget(forgeRenderer->Rend(), &renderTarget, target);
+//            return true;
+//        });
+//
+//        return postEffect;
+//    }, [&](cViewport& viewport, LuxPostEffectData& target) {
+//        cGraphics* pGraphics = gpBase->mpEngine->GetGraphics();
+//        return viewport.GetSize() == target.m_size;
+//    }));
 
     auto* forgeRenderer = Interface<ForgeRenderer>::Get();
 
@@ -560,12 +558,73 @@ void cLuxEffectRenderer::RenderSolid(cViewport::PostSolidDrawPacket&  input)
 void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  input)
 {
 
-    auto& postEffectData = m_boundPostEffectData.resolve(*input.m_viewport);
+    auto postEffectData = m_boundPostEffectData.resolve(*input.m_viewport);
+    if(!postEffectData || postEffectData->m_size != input.m_viewport->GetSize()) {
+        cGraphics* pGraphics = gpBase->mpEngine->GetGraphics();
+        auto newPostEffect = std::make_unique<LuxPostEffectData>();
+        auto* forgeRenderer = Interface<ForgeRenderer>::Get();
+
+        newPostEffect->m_size = input.m_viewport->GetSize();
+        newPostEffect->m_outlineBuffer.Load([&](RenderTarget** target) {
+            ClearValue optimizedColorClearBlack = { { 0.0f, 0.0f, 0.0f, 0.0f } };
+            RenderTargetDesc renderTarget = {};
+            renderTarget.mArraySize = 1;
+            renderTarget.mClearValue = optimizedColorClearBlack;
+            renderTarget.mDepth = 1;
+            renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+            renderTarget.mWidth = input.m_viewport->GetSize().x;
+            renderTarget.mHeight = input.m_viewport->GetSize().y;
+            renderTarget.mSampleCount = SAMPLE_COUNT_1;
+            renderTarget.mSampleQuality = 0;
+            renderTarget.mStartState = RESOURCE_STATE_RENDER_TARGET;
+            renderTarget.pName = "postEffect Outline";
+            renderTarget.mFormat = getRecommendedSwapchainFormat(false, false);
+            addRenderTarget(forgeRenderer->Rend(), &renderTarget, target);
+            return true;
+        });
+        ASSERT(newPostEffect->m_blurTarget.size() == 2);
+        newPostEffect->m_blurTarget[0].Load([&](RenderTarget** target) {
+            ClearValue optimizedColorClearBlack = { { 0.0f, 0.0f, 0.0f, 0.0f } };
+            RenderTargetDesc renderTarget = {};
+            renderTarget.mArraySize = 1;
+            renderTarget.mClearValue = optimizedColorClearBlack;
+            renderTarget.mDepth = 1;
+            renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+            renderTarget.mWidth = input.m_viewport->GetSize().x / cLuxEffectRenderer::BlurSize;
+            renderTarget.mHeight = input.m_viewport->GetSize().y / cLuxEffectRenderer::BlurSize;
+            renderTarget.mSampleCount = SAMPLE_COUNT_1;
+            renderTarget.mSampleQuality = 0;
+            renderTarget.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
+            renderTarget.pName = "blur Target";
+            renderTarget.mFormat = getRecommendedSwapchainFormat(false, false);
+            addRenderTarget(forgeRenderer->Rend(), &renderTarget, target);
+            return true;
+        });
+        newPostEffect->m_blurTarget[1].Load([&](RenderTarget** target) {
+            ClearValue optimizedColorClearBlack = { { 0.0f, 0.0f, 0.0f, 0.0f } };
+            RenderTargetDesc renderTarget = {};
+            renderTarget.mArraySize = 1;
+            renderTarget.mClearValue = optimizedColorClearBlack;
+            renderTarget.mDepth = 1;
+            renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+            renderTarget.mWidth = input.m_viewport->GetSize().x / cLuxEffectRenderer::BlurSize;
+            renderTarget.mHeight = input.m_viewport->GetSize().y / cLuxEffectRenderer::BlurSize;
+            renderTarget.mSampleCount = SAMPLE_COUNT_1;
+            renderTarget.mSampleQuality = 0;
+            renderTarget.mStartState = RESOURCE_STATE_RENDER_TARGET;
+            renderTarget.pName = "blur Target";
+            renderTarget.mFormat = getRecommendedSwapchainFormat(false, false);
+            addRenderTarget(forgeRenderer->Rend(), &renderTarget, target);
+            return true;
+        });
+        postEffectData = m_boundPostEffectData.update(*input.m_viewport, std::move(newPostEffect));
+    }
+
     cGraphics* pGraphics = gpBase->mpEngine->GetGraphics();
     cRendererDeferred* pRendererDeferred = static_cast<cRendererDeferred*>(pGraphics->GetRenderer(eRenderer_Main));
-    auto& sharedData = pRendererDeferred->GetSharedData(*input.m_viewport);
+    auto sharedData = pRendererDeferred->GetSharedData(*input.m_viewport);
     auto& frame = input.m_frame;
-    auto& currentGBuffer = sharedData.m_gBuffer[input.m_frame->m_frameIndex];
+    cRendererDeferred::GBuffer& currentGBuffer = sharedData->m_gBuffer[input.m_frame->m_frameIndex];
     if(!currentGBuffer.m_depthBuffer.IsValid() ||
         !currentGBuffer.m_outputBuffer.IsValid()) {
         return;
@@ -586,8 +645,8 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
         loadActions.mClearDepth = {.depth = 1.0f, .stencil = 0};
 
         cmdBindRenderTargets(input.m_frame->m_cmd, 1, &currentGBuffer.m_outputBuffer.m_handle, currentGBuffer.m_depthBuffer.m_handle, &loadActions, NULL, NULL, -1, -1);
-        cmdSetViewport(input.m_frame->m_cmd, 0.0f, 0.0f, (float)sharedData.m_size.x, (float)sharedData.m_size.y, 0.0f, 1.0f);
-        cmdSetScissor(input.m_frame->m_cmd, 0, 0, sharedData.m_size.x, sharedData.m_size.y);
+        cmdSetViewport(input.m_frame->m_cmd, 0.0f, 0.0f, (float)sharedData->m_size.x, (float)sharedData->m_size.y, 0.0f, 1.0f);
+        cmdSetScissor(input.m_frame->m_cmd, 0, 0, sharedData->m_size.x, sharedData->m_size.y);
     }
     // render Flashing objects ---------------------------------------------------------------------------------------------------
     cmdBindPipeline(input.m_frame->m_cmd, m_flashPipeline);
@@ -692,7 +751,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
         loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
         loadActions.mLoadActionStencil = LOAD_ACTION_CLEAR;
         loadActions.mClearColorValues[0] = { .r = 0.0f, .g = 0.0f, .b = 0.0f, .a = 0.0f };
-        cmdBindRenderTargets(frame->m_cmd, 1, &postEffectData.m_outlineBuffer.m_handle, currentGBuffer.m_depthBuffer.m_handle, &loadActions, NULL, NULL, -1, -1);
+        cmdBindRenderTargets(frame->m_cmd, 1, &postEffectData->m_outlineBuffer.m_handle, currentGBuffer.m_depthBuffer.m_handle, &loadActions, NULL, NULL, -1, -1);
 
         cmdBeginDebugMarker(input.m_frame->m_cmd, 0, 0, 0, "DDS Outline Stencil");
         cmdBindPipeline(frame->m_cmd, m_outlineStencilPipeline);
@@ -798,8 +857,8 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
             {
                 cmdBindRenderTargets(frame->m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
                 std::array rtBarriers = {
-                    RenderTargetBarrier{ postEffectData.m_blurTarget[0].m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
-                    RenderTargetBarrier{ postEffectData.m_blurTarget[1].m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE},
+                    RenderTargetBarrier{ postEffectData->m_blurTarget[0].m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
+                    RenderTargetBarrier{ postEffectData->m_blurTarget[1].m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE},
                 };
                 cmdResourceBarrier(frame->m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
             }
@@ -807,7 +866,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
                 LoadActionsDesc loadActions = {};
                 loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
                 loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
-                auto& blurTarget = postEffectData.m_blurTarget[0].m_handle;
+                auto& blurTarget = postEffectData->m_blurTarget[0].m_handle;
                 cmdBindRenderTargets(frame->m_cmd, 1, &blurTarget , NULL, &loadActions, NULL, NULL, -1, -1);
 
                 std::array<DescriptorData, 1> params = {};
@@ -827,9 +886,9 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
                 cmdBindRenderTargets(frame->m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
                 std::array rtBarriers = {
                     RenderTargetBarrier{
-                        postEffectData.m_blurTarget[0].m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
+                        postEffectData->m_blurTarget[0].m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
                     RenderTargetBarrier{
-                        postEffectData.m_blurTarget[1].m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
+                        postEffectData->m_blurTarget[1].m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
                 };
                 cmdResourceBarrier(frame->m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
             }
@@ -838,12 +897,12 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
                 loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
                 loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
 
-                auto& blurTarget = postEffectData.m_blurTarget[1].m_handle;
+                auto& blurTarget = postEffectData->m_blurTarget[1].m_handle;
                 cmdBindRenderTargets(frame->m_cmd, 1, &blurTarget, NULL, &loadActions, NULL, NULL, -1, -1);
 
                 std::array<DescriptorData, 1> params = {};
                 params[0].pName = "sourceInput";
-                params[0].ppTextures = &postEffectData.m_blurTarget[0].m_handle->pTexture;
+                params[0].ppTextures = &postEffectData->m_blurTarget[0].m_handle->pTexture;
                 updateDescriptorSet(
                     frame->m_renderer->Rend(), postProcessingIndex, m_outlinePostprocessingDescriptorSet[frame->m_frameIndex], params.size(), params.data());
 
@@ -864,21 +923,21 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
         {
             cmdBindRenderTargets(frame->m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
             std::array rtBarriers = {
-                RenderTargetBarrier{postEffectData.m_outlineBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE }
+                RenderTargetBarrier{postEffectData->m_outlineBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE }
             };
             cmdResourceBarrier(frame->m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
         }
         cmdBeginDebugMarker(input.m_frame->m_cmd, 0, 0, 0, "DDS Outline Blur");
-        requestBlur(&postEffectData.m_outlineBuffer.m_handle->pTexture);
+        requestBlur(&postEffectData->m_outlineBuffer.m_handle->pTexture);
         for (size_t i = 0; i < 2; ++i) {
-            requestBlur(&postEffectData.m_blurTarget[1].m_handle->pTexture);
+            requestBlur(&postEffectData->m_blurTarget[1].m_handle->pTexture);
         }
         cmdEndDebugMarker(input.m_frame->m_cmd);
 
         {
             cmdBindRenderTargets(frame->m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
             std::array rtBarriers = {
-                RenderTargetBarrier{postEffectData.m_blurTarget[1].m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE }
+                RenderTargetBarrier{postEffectData->m_blurTarget[1].m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE }
             };
             cmdResourceBarrier(frame->m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
         }
@@ -891,7 +950,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
         {
             std::array<DescriptorData, 1> params = {};
             params[0].pName = "sourceInput";
-            params[0].ppTextures = &postEffectData.m_blurTarget[1].m_handle->pTexture;
+            params[0].ppTextures = &postEffectData->m_blurTarget[1].m_handle->pTexture;
             updateDescriptorSet(
                 frame->m_renderer->Rend(), postProcessingIndex, m_outlinePostprocessingDescriptorSet[frame->m_frameIndex], params.size(), params.data());
         }
@@ -907,8 +966,8 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
         {
             cmdBindRenderTargets(frame->m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
             std::array rtBarriers = {
-                RenderTargetBarrier{postEffectData.m_outlineBuffer.m_handle,  RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET  },
-                RenderTargetBarrier{postEffectData.m_blurTarget[1].m_handle,  RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET }
+                RenderTargetBarrier{postEffectData->m_outlineBuffer.m_handle,  RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET  },
+                RenderTargetBarrier{postEffectData->m_blurTarget[1].m_handle,  RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET }
             };
             cmdResourceBarrier(frame->m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
         }

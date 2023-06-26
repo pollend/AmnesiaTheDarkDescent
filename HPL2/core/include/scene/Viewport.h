@@ -132,6 +132,11 @@ namespace hpl {
             return m_size;
         }
 
+        uint2 GetSizeU() const {
+            return uint2(m_size.x, m_size.y);
+        }
+
+
         void setImageDescriptor(const ImageDescriptor& imageDescriptor) {
             m_imageDescriptor = imageDescriptor;
             m_dirtyViewport = true;
@@ -208,57 +213,62 @@ namespace hpl {
     template<typename TData>
     class UniqueViewportData final {
     public:
-        UniqueViewportData()
-            : m_createData([](cViewport& viewport) {
-                return std::make_unique<TData>();
-            })
-            , m_dataValid([](cViewport& viewport, TData& target) {
-                return true;
-            }) {
-        }
-        UniqueViewportData(
-            std::function<std::unique_ptr<TData>(cViewport&)>&& createHandler,
-            std::function<bool(cViewport&, TData& payload)>&& dataValid =
-                [](cViewport& viewport, TData& payload) {
-                    return true;
-                })
-            : m_createData(std::move(createHandler))
-            , m_dataValid(std::move(dataValid))
-            , m_targets() {
+        UniqueViewportData(): m_targets(),
+            m_disposeHandlers() {
         }
 
         UniqueViewportData(const UniqueViewportData& other) = delete;
         UniqueViewportData(UniqueViewportData&& other)
-            : m_createData(std::move(other.m_createData))
-            , m_dataValid(std::move(other.m_dataValid))
-            , m_disposeHandlers(std::move(other.m_disposeHandlers))
+            :  m_disposeHandlers(std::move(other.m_disposeHandlers))
             , m_targets(std::move(other.m_targets)) {
         }
         UniqueViewportData& operator=(const UniqueViewportData& other) = delete;
         void operator=(UniqueViewportData&& other) {
-            m_createData = std::move(other.m_createData);
-            m_dataValid = std::move(other.m_dataValid);
             m_disposeHandlers = std::move(other.m_disposeHandlers);
             m_targets = std::move(other.m_targets);
         }
 
-        TData& resolve(cViewport& viewport) {
-            uint8_t handle = viewport.GetHandle();
+        TData* update(cViewport* viewport, std::unique_ptr<TData>&& newData) {
+            if(!viewport) {
+                return nullptr;
+            }
+
+            uint8_t handle = viewport->GetHandle();
             ASSERT(handle < cViewport::MaxViewportHandles && "Invalid viewport handle");
             auto& target = m_targets[handle];
-            if (!target || !m_dataValid(viewport, *target)) {
-                target = m_createData(viewport);
+            target = std::move(newData);
+            if(target) {
                 m_revision++;
                 auto& disposeHandle = m_disposeHandlers[handle];
                 if (!disposeHandle.IsConnected()) {
                     disposeHandle = std::move(cViewport::ViewportDispose::Handler([&, handle]() {
                         m_targets[handle] = nullptr;
                     }));
-                    disposeHandle.Connect(viewport.m_disposeEvent);
+                    disposeHandle.Connect(viewport->m_disposeEvent);
                 }
+            } else {
+                m_disposeHandlers[handle].Disconnect();
             }
-            ASSERT(target && "Failed to create viewport data");
-            return *target;
+            return target.get();
+        }
+
+        TData* update(cViewport& viewport, std::unique_ptr<TData>&& newData) {
+            return update(&viewport, std::move(newData));
+        }
+
+        TData* resolve(cViewport* viewport) {
+            if(!viewport) {
+                return nullptr;
+            }
+
+            uint8_t handle = viewport->GetHandle();
+            ASSERT(handle < cViewport::MaxViewportHandles && "Invalid viewport handle");
+            return m_targets[handle].get();
+        }
+        TData* resolve(cViewport& viewport) {
+            uint8_t handle = viewport.GetHandle();
+            ASSERT(handle < cViewport::MaxViewportHandles && "Invalid viewport handle");
+            return m_targets[handle].get();
         }
 
         uint32_t revision() {
@@ -267,8 +277,6 @@ namespace hpl {
 
     private:
         uint32_t m_revision = 0;
-        std::function<std::unique_ptr<TData>(cViewport&)> m_createData;
-        std::function<bool(cViewport&, TData& target)> m_dataValid;
         std::array<cViewport::ViewportDispose::Handler, cViewport::MaxViewportHandles> m_disposeHandlers;
         std::array<std::unique_ptr<TData>, cViewport::MaxViewportHandles> m_targets;
     };

@@ -126,32 +126,31 @@ namespace hpl {
 
     cPostEffect_ImageTrail::cPostEffect_ImageTrail(cGraphics* apGraphics, cResources* apResources, iPostEffectType* apType)
         : iPostEffect(apGraphics, apResources, apType) {
-        m_boundImageTrailData = UniqueViewportData<ImageTrailData>([&](cViewport& viewport) {
-            auto desc = ImageDescriptor::CreateTexture2D(viewport.GetSize().x, viewport.GetSize().y , false, bgfx::TextureFormat::Enum::RGBA8);
-            auto* renderer = Interface<ForgeRenderer>::Get();
+       // m_boundImageTrailData = UniqueViewportData<ImageTrailData>([&](cViewport& viewport) {
+       //     auto* renderer = Interface<ForgeRenderer>::Get();
 
-            auto trailData = std::make_unique<ImageTrailData>();
-            trailData->m_size = viewport.GetSize();
-            trailData->m_accumulationTarget = ForgeRenderTarget(renderer->Rend());
-            trailData->m_accumulationTarget.Load([&](RenderTarget** texture) {
-                RenderTargetDesc renderTarget = {};
-                renderTarget.mArraySize = 1;
-                renderTarget.mDepth = 1;
-                renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
-                renderTarget.mWidth = viewport.GetSize().x;
-                renderTarget.mHeight = viewport.GetSize().y;
-                renderTarget.mSampleCount = SAMPLE_COUNT_1;
-                renderTarget.mSampleQuality = 0;
-                renderTarget.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
-                renderTarget.mFormat = getRecommendedSwapchainFormat(false, false);
-                addRenderTarget(renderer->Rend(), &renderTarget, texture);
-                return true;
-            });
-            mbClearFrameBuffer = true;
-            return trailData;
-        }, [&](cViewport& viewport, ImageTrailData& data) {
-            return viewport.GetSize() == data.m_size;
-        });
+       //     auto trailData = std::make_unique<ImageTrailData>();
+       //     trailData->m_size = viewport.GetSize();
+       //     trailData->m_accumulationTarget = ForgeRenderTarget(renderer->Rend());
+       //     trailData->m_accumulationTarget.Load([&](RenderTarget** texture) {
+       //         RenderTargetDesc renderTarget = {};
+       //         renderTarget.mArraySize = 1;
+       //         renderTarget.mDepth = 1;
+       //         renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+       //         renderTarget.mWidth = viewport.GetSize().x;
+       //         renderTarget.mHeight = viewport.GetSize().y;
+       //         renderTarget.mSampleCount = SAMPLE_COUNT_1;
+       //         renderTarget.mSampleQuality = 0;
+       //         renderTarget.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
+       //         renderTarget.mFormat = getRecommendedSwapchainFormat(false, false);
+       //         addRenderTarget(renderer->Rend(), &renderTarget, texture);
+       //         return true;
+       //     });
+       //     mbClearFrameBuffer = true;
+       //     return trailData;
+       // }, [&](cViewport& viewport, ImageTrailData& data) {
+       //     return viewport.GetSize() == data.m_size;
+       // });
         mpImageTrailType = static_cast<cPostEffectType_ImageTrail*>(mpType);
     }
 
@@ -177,12 +176,35 @@ namespace hpl {
 
         cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "Image Trail PostEffect");
         auto* renderer = Interface<ForgeRenderer>::Get();
-        auto& imageTrailData = m_boundImageTrailData.resolve(viewport);
+        auto imageTrailData = m_boundImageTrailData.resolve(viewport);
+        if (!imageTrailData || imageTrailData->m_size != viewport.GetSize()) {
+            auto* renderer = Interface<ForgeRenderer>::Get();
+            auto trailData = std::make_unique<ImageTrailData>();
+            trailData->m_size = viewport.GetSize();
+            trailData->m_accumulationTarget = ForgeRenderTarget(renderer->Rend());
+            trailData->m_accumulationTarget.Load([&](RenderTarget** texture) {
+                RenderTargetDesc renderTarget = {};
+                renderTarget.mArraySize = 1;
+                renderTarget.mDepth = 1;
+                renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+                renderTarget.mWidth = viewport.GetSize().x;
+                renderTarget.mHeight = viewport.GetSize().y;
+                renderTarget.mSampleCount = SAMPLE_COUNT_1;
+                renderTarget.mSampleQuality = 0;
+                renderTarget.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
+                renderTarget.mFormat = getRecommendedSwapchainFormat(false, false);
+                addRenderTarget(renderer->Rend(), &renderTarget, texture);
+                return true;
+            });
+            mbClearFrameBuffer = true;
+            imageTrailData = m_boundImageTrailData.update(viewport, std::move(trailData));
+        }
+
         {
             cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
             std::array rtBarriers = {
                 RenderTargetBarrier{
-                    imageTrailData.m_accumulationTarget.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
+                    imageTrailData->m_accumulationTarget.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
             };
             cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
         }
@@ -210,7 +232,7 @@ namespace hpl {
         loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
         loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
 
-        std::array inputTargets = { imageTrailData.m_accumulationTarget.m_handle };
+        std::array inputTargets = { imageTrailData->m_accumulationTarget.m_handle };
         cmdBindRenderTargets(frame.m_cmd, inputTargets.size(), inputTargets.data(), NULL, &loadActions, NULL, NULL, -1, -1);
 
         uint32_t rootConstantIndex = getDescriptorIndexFromName(mpImageTrailType->m_rootSignature, "postEffectConstants");
@@ -225,11 +247,11 @@ namespace hpl {
             cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
             std::array rtBarriers = {
                 RenderTargetBarrier{
-                    imageTrailData.m_accumulationTarget.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
+                    imageTrailData->m_accumulationTarget.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
             };
             cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
         }
-        renderer->cmdCopyTexture(frame.m_cmd, imageTrailData.m_accumulationTarget.m_handle->pTexture, renderTarget);
+        renderer->cmdCopyTexture(frame.m_cmd, imageTrailData->m_accumulationTarget.m_handle->pTexture, renderTarget);
         cmdEndDebugMarker(frame.m_cmd);
     }
 

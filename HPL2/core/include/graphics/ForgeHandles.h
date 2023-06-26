@@ -302,6 +302,40 @@ namespace hpl {
         friend class RefHandle<ForgeBufferHandle, Buffer>;
     };
 
+    struct ForgePipelineHandle: public RefHandle<ForgePipelineHandle, Pipeline> {
+    public:
+        ForgePipelineHandle():
+            Base() {
+        }
+
+        ForgePipelineHandle(Renderer* renderer):
+            Base(),
+            m_renderer(renderer) {
+        }
+        ForgePipelineHandle(const ForgePipelineHandle& other):
+            Base(other),
+            m_renderer(other.m_renderer) {
+        }
+        ForgePipelineHandle(ForgePipelineHandle&& other):
+            Base(std::move(other)){
+        }
+        ~ForgePipelineHandle() {
+        }
+
+        void operator= (const ForgePipelineHandle& other) {
+            Base::operator=(other);
+            m_renderer = other.m_renderer;
+        }
+        void operator= (ForgePipelineHandle&& other) {
+            Base::operator=(std::move(other));
+            m_renderer = other.m_renderer;
+        }
+    private:
+        void Free();
+        Renderer* m_renderer = nullptr;
+        friend class RefHandle<ForgePipelineHandle, Pipeline>;
+    };
+
     struct ForgeShaderHandle: public RefHandle<ForgeShaderHandle, Shader> {
     public:
         ForgeShaderHandle():
