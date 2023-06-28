@@ -1,4 +1,3 @@
-#include "graphics/ShaderUtil.h"
 
 #include "bgfx/bgfx.h"
 #include <bx/debug.h>
@@ -74,7 +73,7 @@ namespace hpl
         auto* reader = Interface<hpl::FileReader>::Get();
         return loadProgram(reader, vsName, fsName);
     }
-    
+
     bgfx::ProgramHandle loadProgram(bx::FileReaderI* reader, const char* vsName, const char* fsName)
     {
         bgfx::ShaderHandle vsh = loadShader(reader, vsName);
@@ -130,7 +129,7 @@ namespace hpl
         // bx::strCopy(filePath, BX_COUNTOF(filePath), shaderPath);
         // bx::strCat(filePath, BX_COUNTOF(filePath), name);
         // bx::strCat(filePath, BX_COUNTOF(filePath), ".bin");
-        
+
         // bgfx::ShaderHandle handle = bgfx::createShader(loadMem(reader, filePath) );
 	    // bgfx::setName(handle, name);
 

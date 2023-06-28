@@ -550,8 +550,9 @@ namespace hpl {
             ASSERT(found != m_vertexElements.end() && "Element not found");
             binding->m_vertexElement.push_back({found, found->m_activeCopy * found->m_shadowData.size() });
         }
+        uint32_t numIndecies = (GetRequestNumberIndecies() > 0) ? GetRequestNumberIndecies() : static_cast<uint32_t>(m_indices.size()) ;
         binding->m_indexBuffer = {
-            &m_indexBuffer, m_indexBufferActiveCopy * m_indices.size() * sizeof(uint32_t), static_cast<uint32_t>(m_indices.size())
+            &m_indexBuffer, m_indexBufferActiveCopy * m_indices.size() * sizeof(uint32_t), numIndecies
         };
     }
 

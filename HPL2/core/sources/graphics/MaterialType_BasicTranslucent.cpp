@@ -24,7 +24,6 @@
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Image.h"
 #include "graphics/RendererDeferred.h"
-#include "graphics/ShaderUtil.h"
 #include "math/MathTypes.h"
 #include "system/LowLevelSystem.h"
 #include "system/PreprocessParser.h"

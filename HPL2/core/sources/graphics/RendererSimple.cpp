@@ -24,7 +24,6 @@
 #include "graphics/GraphicsTypes.h"
 #include "graphics/ImmediateDrawBatch.h"
 #include "graphics/RenderTarget.h"
-#include "graphics/ShaderUtil.h"
 #include "graphics/VertexBuffer.h"
 #include "math/Math.h"
 

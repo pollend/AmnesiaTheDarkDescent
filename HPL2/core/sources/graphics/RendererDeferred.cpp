@@ -19,12 +19,10 @@
 
 #include "graphics/RendererDeferred.h"
 
-#include "bgfx/bgfx.h"
 #include "engine/Event.h"
 #include "engine/Interface.h"
 #include "graphics/ForgeHandles.h"
 #include "graphics/ImmediateDrawBatch.h"
-#include "math/Crc32.h"
 #include "scene/ParticleEmitter.h"
 #include "scene/Viewport.h"
 #include "windowing/NativeWindow.h"
@@ -56,7 +54,6 @@
 #include "graphics/Mesh.h"
 #include "graphics/RenderList.h"
 #include "graphics/Renderable.h"
-#include "graphics/ShaderUtil.h"
 #include "graphics/SubMesh.h"
 #include "graphics/Texture.h"
 #include "graphics/TextureCreator.h"
@@ -558,10 +555,6 @@ namespace hpl {
         m_shadowDistanceNone = 40;
 
         m_maxBatchLights = 100;
-
-
-
-
         cVector3l vShadowSize[] = { cVector3l(2 * 128, 2 * 128, 1),
                                     cVector3l(2 * 256, 2 * 256, 1),
                                     cVector3l(2 * 256, 2 * 256, 1),
@@ -575,7 +568,7 @@ namespace hpl {
         }
 
         m_dissolveImage = mpResources->GetTextureManager()->Create2DImage("core_dissolve.tga", false);
-        auto* forgetRenderer = Interface<ForgeRenderer>::Get();
+        auto* forgeRenderer = Interface<ForgeRenderer>::Get();
         auto updatePerFrameDescriptor = [&](DescriptorSet* desc) {
             for(size_t i = 0; i < ForgeRenderer::SwapChainLength; i++) {
                 DescriptorData params[15] = {};
@@ -586,7 +579,7 @@ namespace hpl {
                 params[paramCount].pRanges = &range;
                 params[paramCount++].ppBuffers = &m_perFrameBuffer.m_handle;
 
-                updateDescriptorSet(forgetRenderer->Rend(),i, desc, paramCount, params);
+                updateDescriptorSet(forgeRenderer->Rend(),i, desc, paramCount, params);
             }
         };
 
@@ -601,7 +594,7 @@ namespace hpl {
             miplessLinearSamplerDesc.mAddressU = ADDRESS_MODE_CLAMP_TO_BORDER;
             miplessLinearSamplerDesc.mAddressV = ADDRESS_MODE_CLAMP_TO_BORDER;
             miplessLinearSamplerDesc.mAddressW = ADDRESS_MODE_CLAMP_TO_BORDER;
-            addSampler(forgetRenderer->Rend(), &miplessLinearSamplerDesc, &m_shadowCmpSampler);
+            addSampler(forgeRenderer->Rend(), &miplessLinearSamplerDesc, &m_shadowCmpSampler);
         }
         {
             SamplerDesc pointSamplerDesc = {};
@@ -611,7 +604,7 @@ namespace hpl {
             pointSamplerDesc.mAddressU = ADDRESS_MODE_CLAMP_TO_BORDER;
             pointSamplerDesc.mAddressV = ADDRESS_MODE_CLAMP_TO_BORDER;
             pointSamplerDesc.mAddressW = ADDRESS_MODE_CLAMP_TO_BORDER;
-            addSampler(forgetRenderer->Rend(), &pointSamplerDesc, &m_samplerPointClampToBorder);
+            addSampler(forgeRenderer->Rend(), &pointSamplerDesc, &m_samplerPointClampToBorder);
         }
         m_perFrameBuffer.Load([&](Buffer** buffer) {
             BufferLoadDesc desc = {};
@@ -625,38 +618,37 @@ namespace hpl {
             return true;
         });
 
-        m_hbaoPlusPipeline = std::make_unique<renderer::PipelineHBAOPlus>();
+        m_hbaoPlusPipeline = std::make_unique<renderer::PassHBAOPlus>();
 
         // prepass
         {
 
-
             CmdPoolDesc cmdPoolDesc = {};
-            cmdPoolDesc.pQueue = forgetRenderer->GetGraphicsQueue();
+            cmdPoolDesc.pQueue = forgeRenderer->GetGraphicsQueue();
             cmdPoolDesc.mTransient = true;
-            addCmdPool(forgetRenderer->Rend(), &cmdPoolDesc, &m_prePassPool);
+            addCmdPool(forgeRenderer->Rend(), &cmdPoolDesc, &m_prePassPool);
             CmdDesc cmdDesc = {};
             cmdDesc.pPool = m_prePassPool;
-            addCmd(forgetRenderer->Rend(), &cmdDesc, &m_prePassCmd );
-            addFence(forgetRenderer->Rend(), &m_prePassFence);
+            addCmd(forgeRenderer->Rend(), &cmdDesc, &m_prePassCmd );
+            addFence(forgeRenderer->Rend(), &m_prePassFence);
         }
         // hi-z
         {
             {
                 ShaderLoadDesc loadDesc = {};
                 loadDesc.mStages[0].pFileName = "generate_hi_z.comp";
-                addShader(forgetRenderer->Rend(), &loadDesc, &m_ShaderHIZGenerate );
+                addShader(forgeRenderer->Rend(), &loadDesc, &m_ShaderHIZGenerate );
             }
             {
                 ShaderLoadDesc loadDesc = {};
                 loadDesc.mStages[0].pFileName = "test_AABB_hi_z.comp";
-                addShader(forgetRenderer->Rend(), &loadDesc, &m_shaderTestOcclusion);
+                addShader(forgeRenderer->Rend(), &loadDesc, &m_shaderTestOcclusion);
             }
             {
                 ShaderLoadDesc loadDesc = {};
                 loadDesc.mStages[0].pFileName = "fullscreen.vert";
                 loadDesc.mStages[1].pFileName = "copy_hi_z.frag";
-                addShader(forgetRenderer->Rend(), &loadDesc, &m_copyDepthShader);
+                addShader(forgeRenderer->Rend(), &loadDesc, &m_copyDepthShader);
             }
             m_hiZOcclusionUniformBuffer.Load([&](Buffer** buf) {
                 BufferLoadDesc desc = {};
@@ -682,7 +674,7 @@ namespace hpl {
             });
             {
                 SamplerDesc samplerDesc = {};
-                addSampler(forgetRenderer->Rend(), &samplerDesc,  &m_samplerHIZCopy);
+                addSampler(forgeRenderer->Rend(), &samplerDesc,  &m_samplerHIZCopy);
             }
             {
 
@@ -690,10 +682,10 @@ namespace hpl {
                 RootSignatureDesc rootSignatureDesc = {};
                 rootSignatureDesc.ppShaders = shaders.data();
                 rootSignatureDesc.mShaderCount = shaders.size();
-                addRootSignature(forgetRenderer->Rend(), &rootSignatureDesc, &m_rootSignatureHIZOcclusion);
+                addRootSignature(forgeRenderer->Rend(), &rootSignatureDesc, &m_rootSignatureHIZOcclusion);
 
                 DescriptorSetDesc setDesc = { m_rootSignatureHIZOcclusion, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, cRendererDeferred::MaxHiZMipLevels  };
-                addDescriptorSet(forgetRenderer->Rend(), &setDesc, &m_descriptorSetHIZGenerate);
+                addDescriptorSet(forgeRenderer->Rend(), &setDesc, &m_descriptorSetHIZGenerate);
             }
             {
 
@@ -705,10 +697,10 @@ namespace hpl {
                 rootSignatureDesc.mStaticSamplerCount = 1;
                 rootSignatureDesc.ppStaticSamplers = &m_samplerHIZCopy;
                 rootSignatureDesc.ppStaticSamplerNames = pStaticSamplers;
-                addRootSignature(forgetRenderer->Rend(), &rootSignatureDesc, &m_rootSignatureCopyDepth);
+                addRootSignature(forgeRenderer->Rend(), &rootSignatureDesc, &m_rootSignatureCopyDepth);
 
                 DescriptorSetDesc setDesc = { m_rootSignatureCopyDepth, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, 1};
-                addDescriptorSet(forgetRenderer->Rend(), &setDesc, &m_descriptorCopyDepth);
+                addDescriptorSet(forgeRenderer->Rend(), &setDesc, &m_descriptorCopyDepth);
             }
             {
                 PipelineDesc pipelineDesc = {};
@@ -716,7 +708,7 @@ namespace hpl {
                 ComputePipelineDesc& computePipelineDesc = pipelineDesc.mComputeDesc;
                 computePipelineDesc.pShaderProgram = m_ShaderHIZGenerate;
                 computePipelineDesc.pRootSignature = m_rootSignatureHIZOcclusion;
-                addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_pipelineHIZGenerate);
+                addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_pipelineHIZGenerate);
             }
             {
                 PipelineDesc pipelineDesc = {};
@@ -724,10 +716,10 @@ namespace hpl {
                 ComputePipelineDesc& computePipelineDesc = pipelineDesc.mComputeDesc;
                 computePipelineDesc.pShaderProgram = m_shaderTestOcclusion;
                 computePipelineDesc.pRootSignature = m_rootSignatureHIZOcclusion;
-                addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_pipelineAABBOcclusionTest);
+                addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_pipelineAABBOcclusionTest);
 
                 DescriptorSetDesc setDesc = { m_rootSignatureHIZOcclusion, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, 1};
-                addDescriptorSet(forgetRenderer->Rend(), &setDesc, &m_descriptorAABBOcclusionTest);
+                addDescriptorSet(forgeRenderer->Rend(), &setDesc, &m_descriptorAABBOcclusionTest);
             }
             {
                 RasterizerStateDesc rasterStateNoneDesc = {};
@@ -753,7 +745,7 @@ namespace hpl {
                 graphicsPipelineDesc.pRasterizerState = &rasterStateNoneDesc;
                 graphicsPipelineDesc.pDepthState = &depthStateDisabledDesc;
                 graphicsPipelineDesc.pBlendState = NULL;
-                addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_pipelineCopyDepth);
+                addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_pipelineCopyDepth);
             }
         }
         {
@@ -775,17 +767,17 @@ namespace hpl {
                 ShaderLoadDesc loadDesc = {};
                 loadDesc.mStages[0].pFileName = "occlusion_empty.vert";
                 loadDesc.mStages[1].pFileName = "occlusion_empty.frag";
-                addShader(forgetRenderer->Rend(), &loadDesc, &m_shaderOcclusionQuery);
+                addShader(forgeRenderer->Rend(), &loadDesc, &m_shaderOcclusionQuery);
             }
             {
                 std::array shaders = { m_shaderOcclusionQuery };
                 RootSignatureDesc rootSignatureDesc = {};
                 rootSignatureDesc.ppShaders = shaders.data();
                 rootSignatureDesc.mShaderCount = shaders.size();
-                addRootSignature(forgetRenderer->Rend(), &rootSignatureDesc, &m_rootSignatureOcclusuion);
+                addRootSignature(forgeRenderer->Rend(), &rootSignatureDesc, &m_rootSignatureOcclusuion);
 
                 DescriptorSetDesc setDesc = { m_rootSignatureOcclusuion, DESCRIPTOR_UPDATE_FREQ_PER_BATCH, cRendererDeferred::MaxOcclusionDescSize};
-                addDescriptorSet(forgetRenderer->Rend(), &setDesc, &m_descriptorOcclusionFrameSet);
+                addDescriptorSet(forgeRenderer->Rend(), &setDesc, &m_descriptorOcclusionFrameSet);
             }
 
 
@@ -823,17 +815,17 @@ namespace hpl {
                 graphicsPipelineDesc.pVertexLayout = &vertexLayout;
 
                 depthStateDesc.mDepthFunc = CMP_ALWAYS;
-                addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_pipelineMaxOcclusionQuery);
+                addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_pipelineMaxOcclusionQuery);
 
                 depthStateDesc.mDepthFunc = CMP_LEQUAL;
-                addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_pipelineOcclusionQuery);
+                addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_pipelineOcclusionQuery);
             }
             QueryPoolDesc queryPoolDesc = {};
             queryPoolDesc.mType = QUERY_TYPE_OCCLUSION;
             queryPoolDesc.mQueryCount = MaxQueryPoolSize;
-            addQueryPool(forgetRenderer->Rend(),&queryPoolDesc, &m_occlusionQuery);
+            addQueryPool(forgeRenderer->Rend(),&queryPoolDesc, &m_occlusionQuery);
 
-            addUniformGPURingBuffer(forgetRenderer->Rend(), sizeof(mat4) * MaxOcclusionDescSize, &m_occlusionUniformBuffer, true);
+            addUniformGPURingBuffer(forgeRenderer->Rend(), sizeof(mat4) * MaxOcclusionDescSize, &m_occlusionUniformBuffer, true);
         }
         // -------------- Fog ----------------------------
         {
@@ -841,34 +833,34 @@ namespace hpl {
                 ShaderLoadDesc loadDesc = {};
                 loadDesc.mStages[0].pFileName = "deferred_fog_ray.vert";
                 loadDesc.mStages[1].pFileName = "deferred_fog_outside_box_back.frag";
-                addShader(forgetRenderer->Rend(), &loadDesc, &m_fogPass.m_shader[Fog::UseBackSide | Fog::UseOutsideBox]);
+                addShader(forgeRenderer->Rend(), &loadDesc, &m_fogPass.m_shader[Fog::UseBackSide | Fog::UseOutsideBox]);
             }
 
             {
                 ShaderLoadDesc loadDesc = {};
                 loadDesc.mStages[0].pFileName = "deferred_fog.vert";
                 loadDesc.mStages[1].pFileName = "deferred_fog_outside.frag";
-                addShader(forgetRenderer->Rend(), &loadDesc, &m_fogPass.m_shader[Fog::UseOutsideBox]);
+                addShader(forgeRenderer->Rend(), &loadDesc, &m_fogPass.m_shader[Fog::UseOutsideBox]);
             }
 
             {
                 ShaderLoadDesc loadDesc = {};
                 loadDesc.mStages[0].pFileName  = "deferred_fog.vert";
                 loadDesc.mStages[1].pFileName  = "deferred_fog_back_side.frag";
-                addShader(forgetRenderer->Rend(), &loadDesc, &m_fogPass.m_shader[Fog::UseBackSide]);
+                addShader(forgeRenderer->Rend(), &loadDesc, &m_fogPass.m_shader[Fog::UseBackSide]);
             }
 
             {
                 ShaderLoadDesc loadDesc = {};
                 loadDesc.mStages[0].pFileName = "deferred_fog.vert";
                 loadDesc.mStages[1].pFileName = "deferred_fog.frag";
-                addShader(forgetRenderer->Rend(), &loadDesc, &m_fogPass.m_shader[Fog::EmptyVariant]);
+                addShader(forgeRenderer->Rend(), &loadDesc, &m_fogPass.m_shader[Fog::EmptyVariant]);
             }
 
             RootSignatureDesc rootSignatureDesc = {};
             rootSignatureDesc.ppShaders = m_fogPass.m_shader.data();
             rootSignatureDesc.mShaderCount = m_fogPass.m_shader.size();
-            addRootSignature(forgetRenderer->Rend(), &rootSignatureDesc, &m_fogPass.m_fogRootSignature);
+            addRootSignature(forgeRenderer->Rend(), &rootSignatureDesc, &m_fogPass.m_fogRootSignature);
 
             VertexLayout vertexLayout = {};
             vertexLayout.mBindingCount = 1;
@@ -922,17 +914,17 @@ namespace hpl {
                 pipelineSettings.pShaderProgram = m_fogPass.m_shader[(variant & (Fog::PipelineUseBackSide | Fog::PipelineUseOutsideBox))];
                 pipelineSettings.pRasterizerState = &rasterizerStateDesc;
                 pipelineSettings.pVertexLayout = &vertexLayout;
-                addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_fogPass.m_pipeline[variant]);
+                addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_fogPass.m_pipeline[variant]);
             }
             DescriptorSetDesc perFrameDescSet{m_fogPass.m_fogRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, 1};
             for(auto& perFrameSet: m_fogPass.m_perFrameSet) {
-                addDescriptorSet(forgetRenderer->Rend(), &perFrameDescSet, &perFrameSet);
+                addDescriptorSet(forgeRenderer->Rend(), &perFrameDescSet, &perFrameSet);
             }
             DescriptorSetDesc perObjectSet{m_fogPass.m_fogRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_DRAW, Fog::MaxFogCount};
             for(auto& objectSet: m_fogPass.m_perObjectSet) {
-                addDescriptorSet(forgetRenderer->Rend(), &perObjectSet, &objectSet);
+                addDescriptorSet(forgeRenderer->Rend(), &perObjectSet, &objectSet);
             }
-            addUniformGPURingBuffer(forgetRenderer->Rend(), sizeof(Fog::UniformFogData) * Fog::MaxFogCount, &m_fogPass.m_fogUniformBuffer, true);
+            addUniformGPURingBuffer(forgeRenderer->Rend(), sizeof(Fog::UniformFogData) * Fog::MaxFogCount, &m_fogPass.m_fogUniformBuffer, true);
 
         }
         //---------------- Diffuse Pipeline  ------------------------
@@ -942,35 +934,35 @@ namespace hpl {
                 ShaderLoadDesc loadDesc = {};
                 loadDesc.mStages[0].pFileName = "solid_z.vert";
                 loadDesc.mStages[1].pFileName = "solid_z.frag";
-                addShader(forgetRenderer->Rend(), &loadDesc, &m_zPassShader);
+                addShader(forgeRenderer->Rend(), &loadDesc, &m_zPassShader);
             }
             // diffuse pipeline
             {
                 ShaderLoadDesc loadDesc = {};
                 loadDesc.mStages[0].pFileName = "solid_diffuse.vert";
                 loadDesc.mStages[1].pFileName = "solid_diffuse.frag";
-                addShader(forgetRenderer->Rend(), &loadDesc, &m_materialSolidPass.m_solidDiffuseShader);
+                addShader(forgeRenderer->Rend(), &loadDesc, &m_materialSolidPass.m_solidDiffuseShader);
             }
 
             {
                 ShaderLoadDesc loadDesc = {};
                 loadDesc.mStages[0].pFileName  = "solid_diffuse.vert";
                 loadDesc.mStages[1].pFileName  = "solid_diffuse_parallax.frag";
-                addShader(forgetRenderer->Rend(), &loadDesc, &m_materialSolidPass.m_solidDiffuseParallaxShader);
+                addShader(forgeRenderer->Rend(), &loadDesc, &m_materialSolidPass.m_solidDiffuseParallaxShader);
             }
 
             {
                 ShaderLoadDesc loadDesc = {};
                 loadDesc.mStages[0].pFileName = "solid_illumination.vert";
                 loadDesc.mStages[1].pFileName = "solid_illumination.frag";
-                addShader(forgetRenderer->Rend(), &loadDesc, &m_solidIlluminationShader);
+                addShader(forgeRenderer->Rend(), &loadDesc, &m_solidIlluminationShader);
             }
             // decal pass
             {
                 ShaderLoadDesc loadDesc = {};
                 loadDesc.mStages[0].pFileName = "decal.vert";
                 loadDesc.mStages[1].pFileName = "decal.frag";
-                addShader(forgetRenderer->Rend(), &loadDesc, &m_decalShader);
+                addShader(forgeRenderer->Rend(), &loadDesc, &m_decalShader);
             }
             // translucency
             {
@@ -989,7 +981,7 @@ namespace hpl {
                     translucency.append(".frag");
 
                     loadDesc.mStages[1].pFileName = translucency.c_str();
-                    addShader(forgetRenderer->Rend(), &loadDesc, &m_materialTranslucencyPass.m_shaders[transVariant]);
+                    addShader(forgeRenderer->Rend(), &loadDesc, &m_materialTranslucencyPass.m_shaders[transVariant]);
                 }
 
                 loadDesc.mStages[0].pFileName = "translucency.vert";
@@ -1008,7 +1000,7 @@ namespace hpl {
                     translucency.append(".frag");
 
                     loadDesc.mStages[1].pFileName = translucency.c_str();
-                    addShader(forgetRenderer->Rend(), &loadDesc, &m_materialTranslucencyPass.m_waterShader[transVariant]);
+                    addShader(forgeRenderer->Rend(), &loadDesc, &m_materialTranslucencyPass.m_waterShader[transVariant]);
                 }
 
                 loadDesc.mStages[0].pFileName= "translucency_particle.vert";
@@ -1020,7 +1012,7 @@ namespace hpl {
                     }
                     translucency.append(".frag");
                     loadDesc.mStages[1].pFileName = translucency.c_str();
-                    addShader(forgetRenderer->Rend(), &loadDesc, &m_materialTranslucencyPass.m_particleShader[transVariant]);
+                    addShader(forgeRenderer->Rend(), &loadDesc, &m_materialTranslucencyPass.m_particleShader[transVariant]);
                 }
 
             }
@@ -1028,16 +1020,16 @@ namespace hpl {
             {
                 ShaderLoadDesc loadDesc = {};
                 loadDesc.mStages[0].pFileName = "copy_channel_4.comp";
-                addShader(forgetRenderer->Rend(), &loadDesc, &m_materialTranslucencyPass.m_copyRefraction);
+                addShader(forgeRenderer->Rend(), &loadDesc, &m_materialTranslucencyPass.m_copyRefraction);
 
                 RootSignatureDesc refractionCopyRootDesc = {};
                 refractionCopyRootDesc.mShaderCount = 1;
                 refractionCopyRootDesc.ppShaders = &m_materialTranslucencyPass.m_copyRefraction;
-                addRootSignature(forgetRenderer->Rend(), &refractionCopyRootDesc, &m_materialTranslucencyPass.m_refractionCopyRootSignature);
+                addRootSignature(forgeRenderer->Rend(), &refractionCopyRootDesc, &m_materialTranslucencyPass.m_refractionCopyRootSignature);
 
                 DescriptorSetDesc setDesc = { m_materialTranslucencyPass.m_refractionCopyRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, 1 };
                 for(auto& frameset: m_materialTranslucencyPass.m_refractionPerFrameSet) {
-                    addDescriptorSet(forgetRenderer->Rend(), &setDesc, &frameset);
+                    addDescriptorSet(forgeRenderer->Rend(), &setDesc, &frameset);
                 }
 
                 PipelineDesc desc = {};
@@ -1045,7 +1037,7 @@ namespace hpl {
                 ComputePipelineDesc& pipelineSettings = desc.mComputeDesc;
                 pipelineSettings.pShaderProgram = m_materialTranslucencyPass.m_copyRefraction;
                 pipelineSettings.pRootSignature = m_materialTranslucencyPass.m_refractionCopyRootSignature;
-                addPipeline(forgetRenderer->Rend(), &desc, &m_materialTranslucencyPass.m_refractionCopyPipeline);
+                addPipeline(forgeRenderer->Rend(), &desc, &m_materialTranslucencyPass.m_refractionCopyPipeline);
             }
 
             folly::small_vector<Shader*, 64> shaders{
@@ -1073,7 +1065,7 @@ namespace hpl {
             RootSignatureDesc rootSignatureDesc = {};
             rootSignatureDesc.ppShaders = shaders.data();
             rootSignatureDesc.mShaderCount = shaders.size();
-            addRootSignature(forgetRenderer->Rend(), &rootSignatureDesc, &m_materialRootSignature);
+            addRootSignature(forgeRenderer->Rend(), &rootSignatureDesc, &m_materialRootSignature);
 
             // diffuse material pass
             {
@@ -1136,10 +1128,10 @@ namespace hpl {
                 pipelineSettings.pShaderProgram = m_materialSolidPass.m_solidDiffuseShader;
                 pipelineSettings.pRasterizerState = &rasterizerStateDesc;
                 pipelineSettings.pVertexLayout = &vertexLayout;
-                addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_materialSolidPass.m_solidDiffusePipeline);
+                addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_materialSolidPass.m_solidDiffusePipeline);
 
                 pipelineSettings.pShaderProgram = m_materialSolidPass.m_solidDiffuseParallaxShader;
-                addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_materialSolidPass.m_solidDiffuseParallaxPipeline);
+                addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_materialSolidPass.m_solidDiffuseParallaxPipeline);
             }
             // decal material pass
             {
@@ -1206,7 +1198,7 @@ namespace hpl {
                     blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
                     pipelineSettings.pBlendState = &blendStateDesc;
 
-                    addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_decalPipeline[blendMode]);
+                    addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_decalPipeline[blendMode]);
                 }
             }
             // z pass material
@@ -1266,7 +1258,7 @@ namespace hpl {
                     pipelineSettings.pShaderProgram = m_zPassShader;
                     pipelineSettings.pRasterizerState = &rasterizerStateDesc;
                     pipelineSettings.pVertexLayout = &vertexLayout;
-                    addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_zPassPipeline);
+                    addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_zPassPipeline);
 
                 }
                 {
@@ -1293,7 +1285,7 @@ namespace hpl {
                     pipelineSettings.pShaderProgram = m_zPassShader;
                     pipelineSettings.pRasterizerState = &rasterizerStateDesc;
                     pipelineSettings.pVertexLayout = &vertexLayout;
-                    addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_zPassShadowPipelineCW);
+                    addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_zPassShadowPipelineCW);
 
                 }
                 {
@@ -1320,17 +1312,17 @@ namespace hpl {
                     pipelineSettings.pShaderProgram = m_zPassShader;
                     pipelineSettings.pRasterizerState = &rasterizerStateDesc;
                     pipelineSettings.pVertexLayout = &vertexLayout;
-                    addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_zPassShadowPipelineCCW);
+                    addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_zPassShadowPipelineCCW);
                 }
                 // createMaterialsPass(m_zPassRootSignature, m_zDescriptorSet);
 
                 DescriptorSetDesc constSet{ m_materialRootSignature, DESCRIPTOR_UPDATE_FREQ_NONE, ForgeRenderer::SwapChainLength };
-                addDescriptorSet(forgetRenderer->Rend(), &constSet, &m_zPassConstSet);
+                addDescriptorSet(forgeRenderer->Rend(), &constSet, &m_zPassConstSet);
 
                 std::array<DescriptorData, 1> params{};
                 params[0].ppTextures = &m_dissolveImage->GetTexture().m_handle;
                 params[0].pName = "dissolveMap";
-                updateDescriptorSet(forgetRenderer->Rend(), 0, m_zPassConstSet, params.size(), params.data());
+                updateDescriptorSet(forgeRenderer->Rend(), 0, m_zPassConstSet, params.size(), params.data());
             }
             // illumination pass
             {
@@ -1387,7 +1379,7 @@ namespace hpl {
                 pipelineSettings.pShaderProgram = m_solidIlluminationShader;
                 pipelineSettings.pRasterizerState = &rasterizerStateDesc;
                 pipelineSettings.pVertexLayout = &vertexLayout;
-                addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_solidIlluminationPipeline);
+                addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_solidIlluminationPipeline);
             }
 
             // translucency pass
@@ -1519,7 +1511,7 @@ namespace hpl {
                         blendStateDesc.mBlendAlphaModes[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].mode;
                         pipelineSettings.pShaderProgram = m_materialTranslucencyPass.m_shaders[shaderVariant];
 
-                        addPipeline(forgetRenderer->Rend(), &pipelineDesc, &pipelineBlendGroup[key.m_id]);
+                        addPipeline(forgeRenderer->Rend(), &pipelineDesc, &pipelineBlendGroup[key.m_id]);
                     }
                 }
                 {
@@ -1570,7 +1562,7 @@ namespace hpl {
 
                         pipelineSettings.pShaderProgram = m_materialTranslucencyPass.m_waterShader[shaderVariant];
 
-                        addPipeline(forgetRenderer->Rend(), &pipelineDesc, &pipelineBlendGroup[key.m_id]);
+                        addPipeline(forgeRenderer->Rend(), &pipelineDesc, &pipelineBlendGroup[key.m_id]);
                     }
                 }
 
@@ -1626,7 +1618,7 @@ namespace hpl {
                         blendStateDesc.mDstAlphaFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].dst;
                         blendStateDesc.mBlendAlphaModes[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].mode;
 
-                        addPipeline(forgetRenderer->Rend(), &pipelineDesc, &pipelineBlendGroup[key.m_id]);
+                        addPipeline(forgeRenderer->Rend(), &pipelineDesc, &pipelineBlendGroup[key.m_id]);
                     }
                 }
 
@@ -1679,7 +1671,7 @@ namespace hpl {
                                 .m_shaders[TranslucencyPipeline::TranslucencyRefraction |
                                         (key.m_field.m_hasFog ? TranslucencyPipeline::TranslucencyShaderVariantFog : 0)];
 
-                        addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_materialTranslucencyPass.m_refractionPipeline[key.m_id]);
+                        addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_materialTranslucencyPass.m_refractionPipeline[key.m_id]);
                     }
                 }
             }
@@ -1688,15 +1680,15 @@ namespace hpl {
             // addDescriptorSet(forgetRenderer->Rend(), &constantDescSet, &descriptor.m_constSet);
             DescriptorSetDesc perFrameDescSet{ m_materialRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, 1 };
             for (auto& set : m_materialSet.m_frameSet) {
-                addDescriptorSet(forgetRenderer->Rend(), &perFrameDescSet, &set);
+                addDescriptorSet(forgeRenderer->Rend(), &perFrameDescSet, &set);
             }
             DescriptorSetDesc batchDescriptorSet{ m_materialRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_BATCH, cMaterial::MaxMaterialID };
             for (auto& set : m_materialSet.m_materialSet) {
-                addDescriptorSet(forgetRenderer->Rend(), &batchDescriptorSet, &set);
+                addDescriptorSet(forgeRenderer->Rend(), &batchDescriptorSet, &set);
             }
             DescriptorSetDesc perObjectDescriptorSet{ m_materialRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_DRAW, MaxObjectUniforms };
             for (auto& set : m_materialSet.m_perObjectSet) {
-                addDescriptorSet(forgetRenderer->Rend(), &perObjectDescriptorSet, &set);
+                addDescriptorSet(forgeRenderer->Rend(), &perObjectDescriptorSet, &set);
             }
 
             for (size_t i = 0; i < ForgeRenderer::SwapChainLength; i++) {
@@ -1709,20 +1701,20 @@ namespace hpl {
                 params[paramCount].pRanges = &range;
                 params[paramCount++].ppBuffers = &m_perFrameBuffer.m_handle;
 
-                updateDescriptorSet(forgetRenderer->Rend(), 0, m_materialSet.m_frameSet[i], paramCount, params);
+                updateDescriptorSet(forgeRenderer->Rend(), 0, m_materialSet.m_frameSet[i], paramCount, params);
             }
         }
 
 
         // ------------------------ Light Pass -----------------------------------------------------------------
         {
-            addUniformGPURingBuffer(forgetRenderer->Rend(), sizeof(UniformLightData) * MaxLightUniforms, &m_lightPassRingBuffer, true);
+            addUniformGPURingBuffer(forgeRenderer->Rend(), sizeof(UniformLightData) * MaxLightUniforms, &m_lightPassRingBuffer, true);
 
             {
                 ShaderLoadDesc loadDesc = {};
                 loadDesc.mStages[0].pFileName = "deferred_light.vert";
                 loadDesc.mStages[1].pFileName = "deferred_light_pointlight.frag";
-                addShader(forgetRenderer->Rend(), &loadDesc, &m_pointLightShader);
+                addShader(forgeRenderer->Rend(), &loadDesc, &m_pointLightShader);
             }
 
 
@@ -1735,7 +1727,7 @@ namespace hpl {
                 ShaderLoadDesc loadDesc = {};
                 loadDesc.mStages[0].pFileName  = "deferred_light.vert";
                 loadDesc.mStages[1].pFileName  = "deferred_light_spotlight_high.frag";
-                addShader(forgetRenderer->Rend(), &loadDesc, &m_spotLightShader);
+                addShader(forgeRenderer->Rend(), &loadDesc, &m_spotLightShader);
             }
             // Medium
             else if (mShadowMapQuality == eShadowMapQuality_Medium) {
@@ -1744,7 +1736,7 @@ namespace hpl {
                 ShaderLoadDesc loadDesc = {};
                 loadDesc.mStages[0].pFileName  = "deferred_light.vert";
                 loadDesc.mStages[1].pFileName  = "deferred_light_spotlight_med.frag";
-                addShader(forgetRenderer->Rend(), &loadDesc, &m_spotLightShader);
+                addShader(forgeRenderer->Rend(), &loadDesc, &m_spotLightShader);
             }
             // Low
             else {
@@ -1753,7 +1745,7 @@ namespace hpl {
                 ShaderLoadDesc loadDesc = {};
                 loadDesc.mStages[0].pFileName  = "deferred_light.vert";
                 loadDesc.mStages[1].pFileName  = "deferred_light_spotlight.frag";
-                addShader(forgetRenderer->Rend(), &loadDesc, &m_spotLightShader);
+                addShader(forgeRenderer->Rend(), &loadDesc, &m_spotLightShader);
             }
 
             if (mShadowMapQuality != eShadowMapQuality_Low) {
@@ -1768,14 +1760,14 @@ namespace hpl {
                 ShaderLoadDesc loadDesc = {};
                 loadDesc.mStages[0].pFileName  = "deferred_light.vert";
                 loadDesc.mStages[1].pFileName  = "deferred_light_stencil.frag";
-                addShader(forgetRenderer->Rend(), &loadDesc, &m_stencilLightShader);
+                addShader(forgeRenderer->Rend(), &loadDesc, &m_stencilLightShader);
             }
 
             {
                 ShaderLoadDesc loadDesc = {};
                 loadDesc.mStages[0].pFileName = "deferred_light.vert";
                 loadDesc.mStages[1].pFileName = "deferred_light_box.frag";
-                addShader(forgetRenderer->Rend(), &loadDesc, &m_boxLightShader);
+                addShader(forgeRenderer->Rend(), &loadDesc, &m_boxLightShader);
             }
 		    Sampler* vbShadeSceneSamplers[] = {
                 m_shadowCmpSampler,
@@ -1793,7 +1785,7 @@ namespace hpl {
             rootSignatureDesc.mStaticSamplerCount = std::size(vbShadeSceneSamplers);
             rootSignatureDesc.ppStaticSamplers = vbShadeSceneSamplers;
             rootSignatureDesc.ppStaticSamplerNames = vbShadeSceneSamplersNames;
-			addRootSignature(forgetRenderer->Rend(), &rootSignatureDesc, &m_lightPassRootSignature);
+			addRootSignature(forgeRenderer->Rend(), &rootSignatureDesc, &m_lightPassRootSignature);
 
             VertexLayout vertexLayout = {};
             vertexLayout.mAttribCount = 1;
@@ -1836,7 +1828,7 @@ namespace hpl {
                     auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
                     pipelineSettings.pDepthState = &depthStateDec;
                     pipelineSettings.pRasterizerState = &rasterizerStateDesc;
-                    addPipeline(forgetRenderer->Rend(), &pipelineDesc, &pipelines[i]);
+                    addPipeline(forgeRenderer->Rend(), &pipelineDesc, &pipelines[i]);
                 }
             };
 
@@ -1945,14 +1937,14 @@ namespace hpl {
                 pipelineSettings.pDepthState = &stencilDepthTest;
                 pipelineSettings.pRasterizerState = &rasterizerStateDesc;
                 pipelineSettings.pShaderProgram = m_stencilLightShader;
-                addPipeline(forgetRenderer->Rend(), &pipelineDesc, &m_lightStencilPipeline);
+                addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_lightStencilPipeline);
             }
 
             DescriptorSetDesc perFrameDescSet{m_lightPassRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, ForgeRenderer::SwapChainLength};
-            addDescriptorSet(forgetRenderer->Rend(), &perFrameDescSet, &m_lightFrameSet);
+            addDescriptorSet(forgeRenderer->Rend(), &perFrameDescSet, &m_lightFrameSet);
             DescriptorSetDesc batchDescriptorSet{m_lightPassRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_BATCH, cRendererDeferred::MaxLightUniforms};
             for(auto& lightSet: m_lightPerLightSet) {
-                addDescriptorSet(forgetRenderer->Rend(), &batchDescriptorSet, &lightSet);
+                addDescriptorSet(forgeRenderer->Rend(), &batchDescriptorSet, &lightSet);
             }
         }
         {
@@ -1966,13 +1958,13 @@ namespace hpl {
                 addResource(&desc, nullptr);
                 return true;
             });
-            addUniformGPURingBuffer(forgetRenderer->Rend(), sizeof(cRendererDeferred::UniformObject) * MaxObjectUniforms, &m_objectUniformBuffer, true);
+            addUniformGPURingBuffer(forgeRenderer->Rend(), sizeof(cRendererDeferred::UniformObject) * MaxObjectUniforms, &m_objectUniformBuffer, true);
         }
 
         auto createShadowMap = [&](const cVector3l& avSize) -> ShadowMapData {
 
             ShadowMapData shadowMapData = {};
-            shadowMapData.m_target.Load([&](RenderTarget** target) {
+            shadowMapData.m_target.Load(forgeRenderer->Rend(),[&](RenderTarget** target) {
                 RenderTargetDesc renderTarget = {};
                 renderTarget.mArraySize = 1;
 		        renderTarget.mClearValue.depth = 1.0f;
@@ -1985,7 +1977,7 @@ namespace hpl {
                 renderTarget.mSampleQuality = 0;
                 renderTarget.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
                 renderTarget.pName = "ShadowMaps RTs";
-                addRenderTarget(forgetRenderer->Rend(), &renderTarget, target);
+                addRenderTarget(forgeRenderer->Rend(), &renderTarget, target);
                 return true;
             });
 
@@ -2315,7 +2307,7 @@ namespace hpl {
                 b.m_hiZMipCount = std::clamp<uint8_t>(
                     static_cast<uint8_t>(std::floor(std::log2(std::max(viewportData->m_size.x, viewportData->m_size.y)))), 0, 8);
                 b.m_hizDepthBuffer = { forgeRenderer->Rend() };
-                b.m_hizDepthBuffer.Load([&](RenderTarget** handle) {
+                b.m_hizDepthBuffer.Load(forgeRenderer->Rend(), [&](RenderTarget** handle) {
                     RenderTargetDesc renderTargetDesc = {};
                     renderTargetDesc.mArraySize = b.m_hiZMipCount;
                     renderTargetDesc.mDepth = 1;
@@ -2332,8 +2324,7 @@ namespace hpl {
                     return true;
                 });
 
-                b.m_depthBuffer = { forgeRenderer->Rend() };
-                b.m_depthBuffer.Load([&](RenderTarget** handle) {
+                b.m_depthBuffer.Load(forgeRenderer->Rend(),[&](RenderTarget** handle) {
                     auto targetDesc = deferredRenderTargetDesc();
                     targetDesc.mFormat = DepthBufferFormat;
                     targetDesc.mStartState = RESOURCE_STATE_DEPTH_WRITE;
@@ -2341,29 +2332,25 @@ namespace hpl {
                     addRenderTarget(forgeRenderer->Rend(), &targetDesc, handle);
                     return true;
                 });
-                b.m_normalBuffer = { forgeRenderer->Rend() };
-                b.m_normalBuffer.Load([&](RenderTarget** handle) {
+                b.m_normalBuffer.Load(forgeRenderer->Rend(),[&](RenderTarget** handle) {
                     auto targetDesc = deferredRenderTargetDesc();
                     targetDesc.mFormat = NormalBufferFormat;
                     addRenderTarget(forgeRenderer->Rend(), &targetDesc, handle);
                     return true;
                 });
-                b.m_positionBuffer = { forgeRenderer->Rend() };
-                b.m_positionBuffer.Load([&](RenderTarget** handle) {
+                b.m_positionBuffer.Load(forgeRenderer->Rend(),[&](RenderTarget** handle) {
                     auto targetDesc = deferredRenderTargetDesc();
                     targetDesc.mFormat = PositionBufferFormat;
                     addRenderTarget(forgeRenderer->Rend(), &targetDesc, handle);
                     return true;
                 });
-                b.m_specularBuffer = ForgeRenderTarget{ forgeRenderer->Rend() };
-                b.m_specularBuffer.Load([&](RenderTarget** handle) {
+                b.m_specularBuffer.Load(forgeRenderer->Rend(),[&](RenderTarget** handle) {
                     auto targetDesc = deferredRenderTargetDesc();
                     targetDesc.mFormat = SpecularBufferFormat;
                     addRenderTarget(forgeRenderer->Rend(), &targetDesc, handle);
                     return true;
                 });
-                b.m_colorBuffer = { forgeRenderer->Rend() };
-                b.m_colorBuffer.Load([&](RenderTarget** handle) {
+                b.m_colorBuffer.Load(forgeRenderer->Rend(),[&](RenderTarget** handle) {
                     auto targetDesc = deferredRenderTargetDesc();
                     targetDesc.mFormat = ColorBufferFormat;
                     targetDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE | DESCRIPTOR_TYPE_RW_TEXTURE;
@@ -2389,8 +2376,7 @@ namespace hpl {
                     addResource(&loadDesc, nullptr);
                     return true;
                 });
-                b.m_outputBuffer = { forgeRenderer->Rend() };
-                b.m_outputBuffer.Load([&](RenderTarget** handle) {
+                b.m_outputBuffer.Load(forgeRenderer->Rend(),[&](RenderTarget** handle) {
                     auto targetDesc = deferredRenderTargetDesc();
                     targetDesc.mFormat = ColorBufferFormat;
                     targetDesc.mFormat = getRecommendedSwapchainFormat(false, false);
@@ -3869,7 +3855,6 @@ namespace hpl {
                 const auto cubeMap = pMaterial->GetImage(eMaterialTexture_CubeMap);
                 cMatrixf* pMatrix = translucencyItem->GetModelMatrix(apFrustum);
 
-
                 if (translucencyItem->UpdateGraphicsForViewport(mpCurrentFrustum, mfCurrentFrameTime) == false) {
                     continue;
                 }
@@ -3878,6 +3863,11 @@ namespace hpl {
                     // TODO implement world reflection
                 }
 
+                if(isParticleEmitter) {
+                    if(static_cast<LegacyVertexBuffer*>(vertexBuffer)->GetRequestNumberIndecies() == 0) {
+                        continue;
+                    }
+                }
                 switch (pMaterial->type().m_id) {
                 case cMaterial::Translucent: {
                         float sceneAlpha = 1;

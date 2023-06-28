@@ -19,10 +19,10 @@
 
 #include "gui/GuiSet.h"
 
+
 #include "graphics/Color.h"
 #include "graphics/Enum.h"
 #include "graphics/RenderTarget.h"
-#include "graphics/ShaderUtil.h"
 #include "gui/GuiTypes.h"
 #include "math/Math.h"
 #include "math/MathTypes.h"
@@ -82,7 +82,7 @@
 
 #include <algorithm>
 
-
+#include "bx/math.h"
 #include "Common_3/Utilities/RingBuffer.h"
 #include <FixPreprocessor.h>
 
@@ -91,7 +91,8 @@ namespace hpl {
 	namespace gui {
 		struct UniformBlock {
 			mat4 mvp;
-			uint32_t textureConfig;
+			float4 clipPlanes[4];
+            uint32_t textureConfig;
 		};
 
 		struct PositionTexColor {
@@ -103,6 +104,7 @@ namespace hpl {
 		enum TextureConfiguration {
 			GUI_TEXTURE_CONFIG_NONE = 0,
 			GUI_TEXTURE_CONFIG_DIFFUSE = 1 << 0,
+			GUI_TEXTURE_CONFIG_CLIP = 1 << 1,
 		};
 
 		static std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> GuiUniformDescriptorSet{};
@@ -117,7 +119,7 @@ namespace hpl {
 		static std::array<Pipeline*, eGuiMaterial_LastEnum> GuiPipeline = {};
 		static std::array<Pipeline*, eGuiMaterial_LastEnum> GuiPipeline3D = {};
 
-		static Shader* GuiShaner = nullptr;
+		static Shader* GuiShader = nullptr;
 
 		void InitializeGui(ForgeRenderer& pipeline) {
  			{
@@ -141,10 +143,10 @@ namespace hpl {
 			ShaderLoadDesc loadDesc = {};
 			loadDesc.mStages[0].pFileName = "gui.vert";
 			loadDesc.mStages[1].pFileName = "gui.frag";
-			addShader(pipeline.Rend(), &loadDesc, &GuiShaner);
+			addShader(pipeline.Rend(), &loadDesc, &GuiShader);
 
 			const char* pguiSamplerNames[] = { "diffuseMap" };
-			Shader* guiRootShaders[] = {GuiShaner};
+			Shader* guiRootShaders[] = {GuiShader};
 
 			RootSignatureDesc rootSignatureDesc = {};
 			rootSignatureDesc.ppShaders = guiRootShaders;
@@ -184,7 +186,7 @@ namespace hpl {
 				vertexLayout.mAttribs[2].mOffset = sizeof(float) * 3 + sizeof(float) * 2;
 
 				RasterizerStateDesc rasterizerStateDesc = {};
-				rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
+				rasterizerStateDesc.mCullMode = CULL_MODE_NONE;
 
 				DepthStateDesc depthStateDesc = {};
 				depthStateDesc.mDepthTest = false;
@@ -200,7 +202,7 @@ namespace hpl {
 				pipelineSettings.mSampleCount = pipeline.GetSwapChain()->ppRenderTargets[0]->mSampleCount;
 				pipelineSettings.mSampleQuality = pipeline.GetSwapChain()->ppRenderTargets[0]->mSampleQuality;
 				pipelineSettings.pRootSignature = GuiRootSignatnre;
-				pipelineSettings.pShaderProgram = GuiShaner;
+				pipelineSettings.pShaderProgram = GuiShader;
 				pipelineSettings.pRasterizerState = &rasterizerStateDesc;
 				pipelineSettings.pVertexLayout = &vertexLayout;
 
@@ -696,8 +698,9 @@ namespace hpl {
 		cVector2l vSize = pLowLevelGraphics->GetScreenSizeInt();
 		cmdBindRenderTargets(frame.m_cmd, 1, &swapChainImage, NULL, &loadActions, NULL, NULL, -1, -1);
 		cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)vSize.x, (float)vSize.y, 0.0f, 1.0f);
+		cmdSetScissor(frame.m_cmd, 0, 0, vSize.x, vSize.y);
 
-		auto it = m_setRenderObjects.begin();
+        auto it = m_setRenderObjects.begin();
 
 		eGuiMaterial pLastMaterial = eGuiMaterial::eGuiMaterial_LastEnum;
 		Image* pLastTexture = NULL;
@@ -741,10 +744,7 @@ namespace hpl {
 			auto& descriptorSet = gui::GuiUniformDescriptorSet[frame.m_frameIndex];
 			updateDescriptorSet(frame.m_renderer->Rend(), gui::descriptorIndex, descriptorSet, paramCount, params);
 
-			BufferUpdateDesc  updateDesc = { uniformBlockOffset.pBuffer, uniformBlockOffset.mOffset };
-			beginUpdateResource(&updateDesc);
-			(*reinterpret_cast<gui::UniformBlock*>(updateDesc.pMappedData)) = uniformBlock;
-			endUpdateResource(&updateDesc, NULL);
+
 
 			if(mbIs3D) {
 				cmdBindPipeline(frame.m_cmd, gui::GuiPipeline3D[materialType]);
@@ -752,15 +752,46 @@ namespace hpl {
 				cmdBindPipeline(frame.m_cmd, gui::GuiPipeline[materialType]);
 			}
 
-			if(pClipRegion && pClipRegion->mRect.w > 0.0f) {
-				cmdSetScissor(frame.m_cmd,
-					std::max<float>(0.0f,pClipRegion->mRect.x),
-					std::max<float>(0.0f,pClipRegion->mRect.y),
-					pClipRegion->mRect.w,
-					pClipRegion->mRect.h);
-			} else {
-				cmdSetScissor(frame.m_cmd, 0, 0, vSize.x, vSize.y);
+			const bool hasClip = pClipRegion && pClipRegion->mRect.w > 0.0f;
+			if(hasClip)
+			{
+				uniformBlock.textureConfig |= gui::GUI_TEXTURE_CONFIG_CLIP;
+				cRect2f& clipRect = pClipRegion->mRect;
+				cPlanef plane;
+				//Bottom
+				plane.FromNormalPoint(cVector3f(0,-1,0),cVector3f(0,clipRect.y+clipRect.h,0));
+				uniformBlock.clipPlanes[0] = {plane.a, plane.b, plane.c, plane.d};
+
+				//Top
+				plane.FromNormalPoint(cVector3f(0,1,0),cVector3f(0,clipRect.y,0));
+				uniformBlock.clipPlanes[1] = {plane.a, plane.b, plane.c, plane.d};
+
+				//Right
+				plane.FromNormalPoint(cVector3f(1,0,0),cVector3f(clipRect.x,0,0));
+				uniformBlock.clipPlanes[2] = {plane.a, plane.b, plane.c, plane.d};
+
+				//Left
+				plane.FromNormalPoint(cVector3f(-1,0,0),cVector3f(clipRect.x+clipRect.w,0,0));
+				uniformBlock.clipPlanes[3] = {plane.a, plane.b, plane.c, plane.d};
 			}
+			BufferUpdateDesc  updateDesc = { uniformBlockOffset.pBuffer, uniformBlockOffset.mOffset };
+			beginUpdateResource(&updateDesc);
+			(*reinterpret_cast<gui::UniformBlock*>(updateDesc.pMappedData)) = uniformBlock;
+			endUpdateResource(&updateDesc, NULL);
+		//	if(pClipRegion && pClipRegion->mRect.w > 0.0f) {
+		//		auto& clipRect =  pClipRegion->mRect;
+
+        //        vec4 topLeft = (uniformBlock.mvp * vec4(clipRect.x, clipRect.y, 0.0f, 1.0f));
+        //        vec4 bottomRight = (uniformBlock.mvp  * vec4(clipRect.x + clipRect.w, clipRect.y + clipRect.h, 0.0f, 1.0f));
+
+        //        cmdSetScissor(frame.m_cmd,
+		//			std::max<float>(0.0f, topLeft.getX() * vSize.x),
+		//			std::max<float>(0.0f, topLeft.getY() * vSize.y),
+		//			(bottomRight.getX() - topLeft.getX()) * vSize.x,
+		//			(bottomRight.getY() - topLeft.getY()) * vSize.y);
+		//	} else {
+		//		cmdSetScissor(frame.m_cmd, 0, 0, vSize.x, vSize.y);
+		//	}
 
 			uint32_t stride = sizeof(gui::PositionTexColor);
 			cmdBindDescriptorSet(frame.m_cmd, gui::descriptorIndex, descriptorSet);

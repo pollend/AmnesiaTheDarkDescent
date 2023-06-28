@@ -29,7 +29,6 @@
 #include "graphics/LowLevelGraphics.h"
 #include "graphics/PostEffectComposite.h"
 #include "graphics/RenderTarget.h"
-#include "graphics/ShaderUtil.h"
 #include "graphics/Texture.h"
 
 #include "math/MathTypes.h"
@@ -43,24 +42,21 @@ namespace hpl
         : iPostEffectType("Bloom", apGraphics, apResources)
     {
         auto* forgeRenderer = Interface<ForgeRenderer>::Get();
-        m_blurVerticalShader = ForgeShaderHandle(forgeRenderer->Rend());
-        m_blurVerticalShader.Load([&](Shader** shader) {
+        m_blurVerticalShader.Load(forgeRenderer->Rend(),[&](Shader** shader) {
             ShaderLoadDesc loadDesc{};
             loadDesc.mStages[0].pFileName = "fullscreen.vert";
             loadDesc.mStages[1].pFileName = "blur_posteffect_vertical.frag";
             addShader(forgeRenderer->Rend(),&loadDesc, shader);
             return true;
         });
-        m_blurHorizontalShader = ForgeShaderHandle(forgeRenderer->Rend());
-        m_blurHorizontalShader.Load([&](Shader** shader) {
+        m_blurHorizontalShader.Load(forgeRenderer->Rend(),[&](Shader** shader) {
             ShaderLoadDesc loadDesc{};
             loadDesc.mStages[0].pFileName =  "fullscreen.vert";
             loadDesc.mStages[1].pFileName =  "blur_posteffect_horizontal.frag";
             addShader(forgeRenderer->Rend(),&loadDesc, shader);
             return true;
         });
-        m_bloomShader = ForgeShaderHandle(forgeRenderer->Rend());
-        m_bloomShader.Load([&](Shader** shader) {
+        m_bloomShader.Load(forgeRenderer->Rend(),[&](Shader** shader) {
             ShaderLoadDesc loadDesc{};
             loadDesc.mStages[0].pFileName = "fullscreen.vert";
             loadDesc.mStages[1].pFileName = "bloom_add_posteffect.frag";
@@ -264,41 +260,34 @@ namespace hpl
         if(!bloomData || bloomData->m_size != viewport.GetSize()) {
             auto* renderer = Interface<ForgeRenderer>::Get();
             auto data = std::make_unique<BloomData>();
-            {
-                data->m_blurTargets[0] = ForgeRenderTarget(renderer->Rend());
-                data->m_blurTargets[0].Load([&](RenderTarget** target) {
-                    RenderTargetDesc renderTarget = {};
-                    renderTarget.mArraySize = 1;
-                    renderTarget.mDepth = 1;
-                    renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
-                    renderTarget.mWidth = viewport.GetSize().x / 4.0f;
-                    renderTarget.mHeight = viewport.GetSize().y / 4.0f;
-                    renderTarget.mSampleCount = SAMPLE_COUNT_1;
-                    renderTarget.mSampleQuality = 0;
-                    renderTarget.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
-                    renderTarget.mFormat = getRecommendedSwapchainFormat(false, false);
-                    addRenderTarget(renderer->Rend(), &renderTarget, target);
-                    return true;
-                });
-            }
-            {
-                data->m_blurTargets[1] = ForgeRenderTarget(renderer->Rend());
-                data->m_blurTargets[1].Load([&](RenderTarget** target) {
-                    RenderTargetDesc renderTarget = {};
-                    renderTarget.mArraySize = 1;
-                    renderTarget.mDepth = 1;
-                    renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
-                    renderTarget.mWidth = viewport.GetSize().x / 4.0f;
-                    renderTarget.mHeight = viewport.GetSize().y / 4.0f;
-                    renderTarget.mSampleCount = SAMPLE_COUNT_1;
-                    renderTarget.mSampleQuality = 0;
-                    renderTarget.mStartState = RESOURCE_STATE_RENDER_TARGET;
-                    renderTarget.mFormat = getRecommendedSwapchainFormat(false, false);
-                    addRenderTarget(renderer->Rend(), &renderTarget, target);
-                    return true;
-                });
-
-            }
+            data->m_blurTargets[0].Load(renderer->Rend(),[&](RenderTarget** target) {
+                RenderTargetDesc renderTarget = {};
+                renderTarget.mArraySize = 1;
+                renderTarget.mDepth = 1;
+                renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+                renderTarget.mWidth = viewport.GetSize().x / 4.0f;
+                renderTarget.mHeight = viewport.GetSize().y / 4.0f;
+                renderTarget.mSampleCount = SAMPLE_COUNT_1;
+                renderTarget.mSampleQuality = 0;
+                renderTarget.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
+                renderTarget.mFormat = getRecommendedSwapchainFormat(false, false);
+                addRenderTarget(renderer->Rend(), &renderTarget, target);
+                return true;
+            });
+            data->m_blurTargets[1].Load(renderer->Rend(), [&](RenderTarget** target) {
+                RenderTargetDesc renderTarget = {};
+                renderTarget.mArraySize = 1;
+                renderTarget.mDepth = 1;
+                renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+                renderTarget.mWidth = viewport.GetSize().x / 4.0f;
+                renderTarget.mHeight = viewport.GetSize().y / 4.0f;
+                renderTarget.mSampleCount = SAMPLE_COUNT_1;
+                renderTarget.mSampleQuality = 0;
+                renderTarget.mStartState = RESOURCE_STATE_RENDER_TARGET;
+                renderTarget.mFormat = getRecommendedSwapchainFormat(false, false);
+                addRenderTarget(renderer->Rend(), &renderTarget, target);
+                return true;
+            });
             data->m_size = viewport.GetSize();
             bloomData = m_boundBloomData.update(viewport, std::move(data));
         }

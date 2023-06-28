@@ -21,7 +21,6 @@
 #include "bgfx/bgfx.h"
 #include "graphics/Material.h"
 #include "graphics/MaterialType.h"
-#include "graphics/ShaderVariantCollection.h"
 #include "scene/Viewport.h"
 #include <cstdint>
 
@@ -73,13 +72,6 @@ namespace hpl
 
     class cMaterialType_Translucent : public iMaterialType
     {
-        using TranslucentShaderCollection = ShaderVariantCollection<
-			material::translucent::Translucent_DiffuseMap |
-			material::translucent::Translucent_NormalMap |
-			material::translucent::Translucent_Refraction |
-			material::translucent::Translucent_UseCubeMap |
-			material::translucent::Translucent_UseFog
-		>;
         HPL_RTTI_IMPL_CLASS(iMaterialType, cMaterialType_Translucent, "{cc03a5ac-9137-4e94-ab6b-095a6c9f0085}")
 
     public:
@@ -93,23 +85,6 @@ namespace hpl
         virtual void CompileMaterialSpecifics(cMaterial* apMaterial) override;
 
     private:
-        bgfx::ProgramHandle _programHandle;
-
-		bgfx::UniformHandle m_u_param;
-		bgfx::UniformHandle m_u_mtxUv;
-        bgfx::UniformHandle m_u_invViewRotation;
-
-		bgfx::UniformHandle m_s_diffuseMap;
-		bgfx::UniformHandle m_s_normalMap;
-		bgfx::UniformHandle m_s_refractionMap;
-		bgfx::UniformHandle m_s_envMapAlphaMap;
-		bgfx::UniformHandle m_s_envMap;
-
-        TranslucentShaderCollection m_translucent_blendModeAdd;
-        TranslucentShaderCollection m_translucent_blendModeMul;
-        TranslucentShaderCollection m_translucent_blendModeMulX2;
-        TranslucentShaderCollection m_translucent_blendModeAlpha;
-        TranslucentShaderCollection m_translucent_blendModePremulAlpha;
 
         void LoadData();
         void DestroyData();

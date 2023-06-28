@@ -21,8 +21,6 @@
 
 #include "bgfx/bgfx.h"
 #include "graphics/GraphicsTypes.h"
-#include "graphics/ShaderUtil.h"
-#include "graphics/ShaderVariantCollection.h"
 #include "math/MathTypes.h"
 #include "math/Matrix.h"
 #include "system/LowLevelSystem.h"

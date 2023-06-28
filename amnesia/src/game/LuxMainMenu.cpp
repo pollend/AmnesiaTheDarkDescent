@@ -202,16 +202,14 @@ cLuxMainMenu::cLuxMainMenu() : iLuxUpdateable("LuxDebugHandler")
 	mpTopBackground = mpGui->CreateGfxFilledRect(cColor(0,1),eGuiMaterial_Alpha);
 	mpBlackFade = mpGui->CreateGfxFilledRect(cColor(0,1),eGuiMaterial_Alpha);
     auto* forgeRenderer = Interface<ForgeRenderer>::Get();
-    m_blurVerticalShader = ForgeShaderHandle(forgeRenderer->Rend());
-    m_blurVerticalShader.Load([&](Shader** shader) {
+    m_blurVerticalShader.Load(forgeRenderer->Rend(),[&](Shader** shader) {
         ShaderLoadDesc loadDesc{};
         loadDesc.mStages[0].pFileName = "fullscreen.vert";
         loadDesc.mStages[1].pFileName = "blur_posteffect_vertical.frag";
         addShader(forgeRenderer->Rend(),&loadDesc, shader);
         return true;
     });
-    m_blurHorizontalShader = ForgeShaderHandle(forgeRenderer->Rend());
-    m_blurHorizontalShader.Load([&](Shader** shader) {
+    m_blurHorizontalShader.Load(forgeRenderer->Rend(),[&](Shader** shader) {
         ShaderLoadDesc loadDesc{};
         loadDesc.mStages[0].pFileName =  "fullscreen.vert";
         loadDesc.mStages[1].pFileName =  "blur_posteffect_vertical.frag";
@@ -1385,9 +1383,7 @@ void cLuxMainMenu::CreateScreenTextures()
 	cVector3l vTexSize = pLowGfx->GetScreenSizeInt();
 	vTexSize.z = 0;
     auto* forgeRenderer = Interface<ForgeRenderer>::Get();
-    m_screenBlurTarget = ForgeRenderTarget(forgeRenderer->Rend());
-    m_screenTarget = ForgeRenderTarget(forgeRenderer->Rend());
-    m_screenBlurTarget.Load([&](RenderTarget** texture) {
+    m_screenBlurTarget.Load(forgeRenderer->Rend(),[&](RenderTarget** texture) {
         RenderTargetDesc renderTarget = {};
         renderTarget.mArraySize = 1;
         renderTarget.mDepth = 1;
@@ -1402,7 +1398,7 @@ void cLuxMainMenu::CreateScreenTextures()
         return true;
     });
 
-    m_screenTarget.Load([&](RenderTarget** texture) {
+    m_screenTarget.Load(forgeRenderer->Rend(),[&](RenderTarget** texture) {
         RenderTargetDesc renderTarget = {};
         renderTarget.mArraySize = 1;
         renderTarget.mDepth = 1;
@@ -1448,7 +1444,7 @@ void cLuxMainMenu::RenderBlurTexture() {
     auto viewportSize = viewport->GetSize();
 
     ForgeRenderTarget tempBlurTarget(forgeRenderer->Rend());
-    tempBlurTarget.Load([&](RenderTarget** target) {
+    tempBlurTarget.Load(forgeRenderer->Rend(), [&](RenderTarget** target) {
         RenderTargetDesc renderTarget = {};
         renderTarget.mArraySize = 1;
         renderTarget.mDepth = 1;

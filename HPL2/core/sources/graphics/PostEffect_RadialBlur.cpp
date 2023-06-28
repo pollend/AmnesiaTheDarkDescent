@@ -25,7 +25,6 @@
 #include "graphics/FrameBuffer.h"
 #include "graphics/LowLevelGraphics.h"
 #include "graphics/PostEffectComposite.h"
-#include "graphics/ShaderUtil.h"
 #include "graphics/Texture.h"
 
 #include "math/MathTypes.h"
@@ -38,16 +37,13 @@ namespace hpl
         : iPostEffectType("RadialBlur", apGraphics, apResources)
     {
         auto* forgeRenderer = Interface<ForgeRenderer>::Get();
-        {
-            m_shader = ForgeShaderHandle(forgeRenderer->Rend());
-            m_shader.Load([&](Shader** shader) {
-                ShaderLoadDesc loadDesc{};
-                loadDesc.mStages[0].pFileName = "fullscreen.vert";
-                loadDesc.mStages[1].pFileName = "radial_blur_posteffect.frag";
-                addShader(forgeRenderer->Rend(),&loadDesc, shader);
-                return true;
-            });
-        }
+        m_shader.Load(forgeRenderer->Rend(), [&](Shader** shader) {
+            ShaderLoadDesc loadDesc{};
+            loadDesc.mStages[0].pFileName = "fullscreen.vert";
+            loadDesc.mStages[1].pFileName = "radial_blur_posteffect.frag";
+            addShader(forgeRenderer->Rend(),&loadDesc, shader);
+            return true;
+        });
         {
             SamplerDesc samplerDesc = {};
             addSampler(forgeRenderer->Rend(), &samplerDesc,  &m_inputSampler);

@@ -19,7 +19,6 @@
 
 #include "scene/BillBoard.h"
 
-#include "bgfx/bgfx.h"
 #include "impl/tinyXML/tinyxml.h"
 
 #include "math/MathTypes.h"

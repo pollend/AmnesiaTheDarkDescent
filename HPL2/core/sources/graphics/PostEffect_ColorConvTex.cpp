@@ -21,7 +21,6 @@
 
 #include "graphics/Enum.h"
 #include "graphics/Graphics.h"
-#include "graphics/ShaderUtil.h"
 #include "math/MathTypes.h"
 #include "resources/Resources.h"
 
@@ -44,16 +43,13 @@ namespace hpl
         : iPostEffectType("ColorConvTex", apGraphics, apResources)
     {
         auto* forgeRenderer = Interface<ForgeRenderer>::Get();
-        {
-            m_shader = ForgeShaderHandle(forgeRenderer->Rend());
-            m_shader.Load([&](Shader** shader) {
-                ShaderLoadDesc loadDesc{};
-                loadDesc.mStages[0].pFileName = "fullscreen.vert";
-                loadDesc.mStages[1].pFileName = "color_conv_posteffect.frag";
-                addShader(forgeRenderer->Rend(),&loadDesc, shader);
-                return true;
-            });
-        }
+        m_shader.Load(forgeRenderer->Rend(), [&](Shader** shader) {
+            ShaderLoadDesc loadDesc{};
+            loadDesc.mStages[0].pFileName = "fullscreen.vert";
+            loadDesc.mStages[1].pFileName = "color_conv_posteffect.frag";
+            addShader(forgeRenderer->Rend(),&loadDesc, shader);
+            return true;
+        });
         {
             SamplerDesc samplerDesc = {};
             addSampler(forgeRenderer->Rend(), &samplerDesc,  &m_inputSampler);

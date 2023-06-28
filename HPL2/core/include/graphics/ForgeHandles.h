@@ -15,10 +15,10 @@ namespace hpl {
     class cBitmap;
 
     // a handle that can be used to reference a resource
-    template<class TBase, class T>
+    template<class CRTP, class T>
     struct RefHandle {
     public:
-        using Base = RefHandle<TBase, T>;
+        using Base = RefHandle<CRTP, T>;
         // NOTE: This is a pointer to the resource
         //      Just how the API works for the-forget this is exposed to the user so be careful
         T* m_handle = nullptr;
@@ -90,7 +90,6 @@ namespace hpl {
                     ASSERT(!m_handle && "Handle is not null");
                 }
             }
-
         }
 
         void TryFree() {
@@ -112,7 +111,7 @@ namespace hpl {
             ASSERT(m_refCounter && "Trying to free a handle that has not been initialized");
             ASSERT(m_refCounter->m_refCount > 0 && "Trying to free resource that is still referenced");
             if((--m_refCounter->m_refCount) == 0) {
-                static_cast<TBase*>(this)->Free(); // Free the underlying resource
+                static_cast<CRTP*>(this)->Free(); // Free the underlying resource
                 delete m_refCounter;
             }
             m_handle = nullptr;
@@ -153,13 +152,15 @@ namespace hpl {
         bool m_owning = true;
         bool m_initialized = false;
         RefCounter* m_refCounter = nullptr;
-        friend TBase;
+
+        friend CRTP;
     };
 
 
 
     struct ForgeRenderTarget : public RefHandle<ForgeRenderTarget, RenderTarget> {
     public:
+        using Base = RefHandle<ForgeRenderTarget, RenderTarget>;
         ForgeRenderTarget()
             : Base() {
         }
@@ -184,6 +185,12 @@ namespace hpl {
         void operator=(ForgeRenderTarget&& other) {
             Base::operator=(std::move(other));
             m_renderer = other.m_renderer;
+        }
+
+        void Load(Renderer* renderer, std::function<bool(RenderTarget** handle)> load) {
+            ASSERT(renderer && "Renderer is null");
+            m_renderer = renderer;
+            static_cast<Base*>(this)->Load(load);
         }
     private:
         void Free();
@@ -213,7 +220,6 @@ namespace hpl {
         }
         ForgeTextureHandle(const ForgeTextureHandle& other):
             Base(other), m_renderTarget(other.m_renderTarget){
-
         }
         ForgeTextureHandle(ForgeTextureHandle&& other):
             Base(std::move(other)),
@@ -221,14 +227,17 @@ namespace hpl {
         }
         ~ForgeTextureHandle() {
         }
+
         void operator= (const ForgeTextureHandle& other) {
             Base::operator=(other);
             m_renderTarget = other.m_renderTarget;
         }
+
         void operator= (ForgeTextureHandle&& other) {
             Base::operator=(std::move(other));
             m_renderTarget = std::move(other.m_renderTarget);
         }
+
         void SetRenderTarget(ForgeRenderTarget renderTarget) {
             TryFree();
             m_initialized = true;
@@ -242,13 +251,9 @@ namespace hpl {
         friend class RefHandle<ForgeTextureHandle, Texture>;
     };
 
-    struct ForgeDescriptorSet: public RefHandle<ForgeDescriptorSet, DescriptorSet> {
+    struct ForgeDescriptorSet final: public RefHandle<ForgeDescriptorSet, DescriptorSet> {
     public:
         ForgeDescriptorSet():
-            Base() {
-        }
-        ForgeDescriptorSet(Renderer* renderer):
-            m_renderer(renderer),
             Base() {
         }
         ForgeDescriptorSet(const ForgeDescriptorSet& other):
@@ -269,6 +274,11 @@ namespace hpl {
         void operator= (ForgeDescriptorSet&& other) {
             Base::operator=(std::move(other));
             m_renderer = other.m_renderer;
+        }
+        void Load(Renderer* renderer, std::function<bool(DescriptorSet** handle)> load) {
+            ASSERT(renderer && "Renderer is null");
+            m_renderer = renderer;
+            Base::Load(load);
         }
 
     private:
@@ -307,11 +317,6 @@ namespace hpl {
         ForgePipelineHandle():
             Base() {
         }
-
-        ForgePipelineHandle(Renderer* renderer):
-            Base(),
-            m_renderer(renderer) {
-        }
         ForgePipelineHandle(const ForgePipelineHandle& other):
             Base(other),
             m_renderer(other.m_renderer) {
@@ -330,6 +335,12 @@ namespace hpl {
             Base::operator=(std::move(other));
             m_renderer = other.m_renderer;
         }
+
+        void Load(Renderer* renderer, std::function<bool(Pipeline** handle)> load) {
+            ASSERT(renderer && "Renderer is null");
+            m_renderer = renderer;
+            Base::Load(load);
+        }
     private:
         void Free();
         Renderer* m_renderer = nullptr;
@@ -340,11 +351,6 @@ namespace hpl {
     public:
         ForgeShaderHandle():
             Base() {
-        }
-
-        ForgeShaderHandle(Renderer* renderer):
-            Base(),
-            m_renderer(renderer) {
         }
         ForgeShaderHandle(const ForgeShaderHandle& other):
             Base(other),
@@ -363,6 +369,12 @@ namespace hpl {
         void operator= (ForgeShaderHandle&& other) {
             Base::operator=(std::move(other));
             m_renderer = other.m_renderer;
+        }
+
+        void Load(Renderer* renderer, std::function<bool(Shader** handle)> load) {
+            ASSERT(renderer && "Renderer is null");
+            m_renderer = renderer;
+            Base::Load(load);
         }
     private:
         void Free();
@@ -385,6 +397,12 @@ namespace hpl {
 
         }
         ~ForgeSamplerHandle() {
+        }
+
+        void Load(Renderer* renderer, std::function<bool(Sampler** handle)> load) {
+            ASSERT(renderer && "Renderer is null");
+            m_renderer = renderer;
+            Base::Load(load);
         }
 
         void operator= (const ForgeSamplerHandle& other) {
@@ -420,6 +438,11 @@ namespace hpl {
         ~ForgeCmdHandle() {
         }
 
+        void Load(Renderer* renderer, std::function<bool(Cmd** handle)> load) {
+            ASSERT(renderer && "Renderer is null");
+            m_renderer = renderer;
+            Base::Load(load);
+        }
         void operator= (const ForgeCmdHandle& other) {
             Base::operator=(other);
             m_renderer = other.m_renderer;

@@ -31,9 +31,8 @@
 #include <graphics/RenderTarget.h>
 #include <graphics/Renderer.h>
 #include <graphics/Material.h>
-#include <graphics/ShaderVariantCollection.h>
 #include <graphics/ForgeRenderer.h>
-#include <graphics/PipelineHBAOPlus.h>
+#include <graphics/PassHBAOPlus.h>
 #include <math/MathTypes.h>
 
 #include <Common_3/Utilities/RingBuffer.h>
@@ -631,7 +630,7 @@ namespace hpl {
 
         cRenderList m_reflectionRenderList;
 
-        std::unique_ptr<renderer::PipelineHBAOPlus> m_hbaoPlusPipeline;
+        std::unique_ptr<renderer::PassHBAOPlus> m_hbaoPlusPipeline;
 
         static bool mbDepthCullLights;
         static bool mbSSAOLoaded;

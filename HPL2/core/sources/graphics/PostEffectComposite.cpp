@@ -109,11 +109,8 @@ namespace hpl {
             auto viewPortSize = viewport.GetSize();
             auto result = std::make_unique<PostEffectCompositorData>();
             result->m_size = viewPortSize;
-
             auto* renderer = Interface<ForgeRenderer>::Get();
-            result->m_renderTarget[0] = ForgeRenderTarget(renderer->Rend());
-            result->m_renderTarget[1] = ForgeRenderTarget(renderer->Rend());
-            result->m_renderTarget[0].Load([&](RenderTarget** texture) {
+            result->m_renderTarget[0].Load(renderer->Rend(),[&](RenderTarget** texture) {
                 RenderTargetDesc renderTarget = {};
                 renderTarget.mArraySize = 1;
                 renderTarget.mDepth = 1;
@@ -128,7 +125,7 @@ namespace hpl {
                 return true;
             });
 
-            result->m_renderTarget[1].Load([&](RenderTarget** texture) {
+            result->m_renderTarget[1].Load(renderer->Rend(),[&](RenderTarget** texture) {
                 RenderTargetDesc renderTarget = {};
                 renderTarget.mArraySize = 1;
                 renderTarget.mDepth = 1;

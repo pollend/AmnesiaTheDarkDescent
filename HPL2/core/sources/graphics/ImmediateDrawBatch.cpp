@@ -323,7 +323,7 @@ namespace hpl {
     void ImmediateDrawBatch::DebugSolidFromVertexBuffer(iVertexBuffer* vertexBuffer, const cColor& color, const DebugDrawOptions& options) {
         ///////////////////////////////////////
         // Set up variables
-        int lIndexNum = vertexBuffer->GetElementNum();
+        int lIndexNum = vertexBuffer->GetRequestNumberIndecies();
         if (lIndexNum < 0)
             lIndexNum = vertexBuffer->GetIndexNum();
         unsigned int* pIndexArray = vertexBuffer->GetIndices();
@@ -353,7 +353,7 @@ namespace hpl {
         iVertexBuffer* vertexBuffer, const cColor& color, const DebugDrawOptions& options) {
         ///////////////////////////////////////
         // Set up variables
-        int lIndexNum = vertexBuffer->GetElementNum();
+        int lIndexNum = vertexBuffer->GetRequestNumberIndecies();
         if (lIndexNum < 0)
             lIndexNum = vertexBuffer->GetIndexNum();
         unsigned int* pIndexArray = vertexBuffer->GetIndices();

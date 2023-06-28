@@ -20,7 +20,6 @@
 
 #include "graphics/MaterialType.h"
 #include "graphics/Material.h"
-#include "graphics/ShaderVariantCollection.h"
 #include <bgfx/bgfx.h>
 
 namespace hpl {
@@ -71,12 +70,6 @@ namespace hpl {
 		void CompileMaterialSpecifics(cMaterial *apMaterial) override;
 
 	private:
-		ShaderVariantCollection<
-			material::water::UseReflection|
-			material::water::UseFog|
-			material::water::UseCubeMapReflection|
-			material::water::UseRefraction
-		> m_waterVariant;
 
 		bgfx::UniformHandle m_u_param = BGFX_INVALID_HANDLE;
 		bgfx::UniformHandle m_u_mtxInvViewRotation = BGFX_INVALID_HANDLE;

@@ -70,7 +70,7 @@ namespace hpl {
 		virtual void UnBind()=0;
 
 		// virtual void Submit(GraphicsContext& context, eVertexBufferDrawType aDrawType = eVertexBufferDrawType_LastEnum) {}
-    	virtual void GetLayoutStream(GraphicsContext::LayoutStream& layoutStream, eVertexBufferDrawType aDrawType = eVertexBufferDrawType_LastEnum) {}; 
+    	virtual void GetLayoutStream(GraphicsContext::LayoutStream& layoutStream, eVertexBufferDrawType aDrawType = eVertexBufferDrawType_LastEnum) {};
 
 
         virtual iVertexBuffer* CreateCopy(	eVertexBufferType aType,eVertexBufferUsageType aUsageType,
@@ -95,13 +95,13 @@ namespace hpl {
 		 */
 		virtual void ResizeArray(eVertexBufferElement aElement, int alSize)=0;
 		virtual void ResizeIndices(int alSize)=0;
-        
+
 		/**
 		 * Set the number of of elements to draw.
 		 * \param alNum If < 0, draw all indices.
 		 */
 		void SetElementNum(int alNum){ mlElementNum = alNum;}
-		int GetElementNum(){ return mlElementNum;}
+		int GetRequestNumberIndecies(){ return mlElementNum;}
 
 		tVertexElementFlag GetVertexElementFlags(){ return mVertexFlags;}
 	protected:

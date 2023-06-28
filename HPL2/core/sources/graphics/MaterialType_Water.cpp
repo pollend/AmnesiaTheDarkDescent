@@ -19,10 +19,8 @@
 
 #include "graphics/MaterialType_Water.h"
 
-#include "bgfx/bgfx.h"
 #include "graphics/GraphicsContext.h"
 #include "graphics/RendererDeferred.h"
-#include "graphics/ShaderUtil.h"
 #include "math/MathTypes.h"
 #include "system/LowLevelSystem.h"
 #include "system/PreprocessParser.h"

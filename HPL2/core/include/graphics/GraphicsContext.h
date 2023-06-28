@@ -1,6 +1,5 @@
 #pragma once
 
-#include "graphics/ShaderUtil.h"
 #include "graphics/UniformWrapper.h"
 #include "math/Crc32.h"
 #include "math/MathTypes.h"
@@ -171,25 +170,6 @@ namespace hpl {
         inline void Submit(bgfx::ViewId view, const DrawRequest& request);
         inline void Submit(bgfx::ViewId view, const DrawRequest& request, bgfx::OcclusionQueryHandle query);
         inline void Submit(bgfx::ViewId view, const ComputeRequest& request);
-
-        // eeeh ... not going to bother cleaning up for the moment
-        template<StringLiteral VertexShader, StringLiteral FragmentShader>
-        bgfx::ProgramHandle resolveProgramCache() {
-            constexpr math::Crc32 id = ([]() {
-                math::Crc32 crc;
-                crc.Update(VertexShader.m_str);
-                crc.Update(FragmentShader.m_str);
-                return crc;
-            })();
-
-            auto it = m_programCache.find(id.value());
-            if(it != m_programCache.end()) {
-                return it->second;
-            }
-            bgfx::ProgramHandle handle = hpl::loadProgram(VertexShader.m_str, FragmentShader.m_str);
-            m_programCache[id.value()] = handle;
-            return handle;
-        }
 
     private:
         folly::F14ValueMap<uint32_t, bgfx::ProgramHandle> m_programCache;

@@ -21,7 +21,6 @@
 
 #include "bgfx/bgfx.h"
 #include "graphics/Image.h"
-#include "graphics/ShaderUtil.h"
 #include "math/MathTypes.h"
 #include "system/LowLevelSystem.h"
 #include "system/PreprocessParser.h"

@@ -232,10 +232,9 @@ namespace hpl::window::internal {
     void Process(NativeWindowHandler& handler) {
         auto impl = static_cast<NativeWindowImpl*>(handler.Get());
 
-
         InternalEvent internalEvent;
         WindowEventPayload windowEventPayload;
-        while (SDL_WaitEvent(&internalEvent.m_sdlEvent)) {
+        while (SDL_WaitEventTimeout(&internalEvent.m_sdlEvent, 200)) {
             {
                 std::lock_guard<std::recursive_mutex> lk(impl->m_mutex);
                 for (auto& handler : impl->m_processCmd) {

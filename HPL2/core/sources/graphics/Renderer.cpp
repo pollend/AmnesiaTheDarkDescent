@@ -19,11 +19,9 @@
 
 #include "graphics/Renderer.h"
 
-#include "bgfx/bgfx.h"
 #include "graphics/Enum.h"
 #include "graphics/GraphicsContext.h"
 #include "graphics/RenderTarget.h"
-#include "graphics/ShaderUtil.h"
 #include "math/BoundingVolume.h"
 #include "math/Math.h"
 

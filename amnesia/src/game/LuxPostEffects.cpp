@@ -20,16 +20,12 @@
 #include "LuxPostEffects.h"
 
 #include "LuxMapHandler.h"
-#include "graphics/ShaderUtil.h"
-
 #include <graphics/ForgeRenderer.h>
 
 cLuxPostEffect_Insanity::cLuxPostEffect_Insanity(cGraphics* apGraphics, cResources* apResources)
     : iLuxPostEffect(apGraphics, apResources) {
     auto* forgeRenderer = Interface<ForgeRenderer>::Get();
-
-    m_insanityShader = ForgeShaderHandle(forgeRenderer->Rend());
-    m_insanityShader.Load([&](Shader** shader) {
+    m_insanityShader.Load(forgeRenderer->Rend(),[&](Shader** shader) {
         ShaderLoadDesc loadDesc{};
         loadDesc.mStages[0].pFileName = "fullscreen.vert";
         loadDesc.mStages[1].pFileName = "dds_insanity_posteffect.frag";

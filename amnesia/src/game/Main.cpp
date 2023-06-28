@@ -59,7 +59,6 @@ int hplMain(const tString &asCommandline)
 			//No Exit, since it was not sure everything was created as it should.
 		}
 		hplDelete(gpBase);
-
 		return 0;
 	});
 	bootstrap.Shutdown();

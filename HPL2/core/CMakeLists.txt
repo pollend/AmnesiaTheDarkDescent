@@ -95,7 +95,6 @@ file(GLOB impl_sources RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
     sources/impl/MeshLoaderMSH.cpp
     sources/impl/MeshLoaderFBX.cpp
 
-    sources/impl/ShaderUtil.cpp
 )
 
 IF(APPLE)

@@ -28,7 +28,7 @@
 // Copyright 2023 Michael Pollind
 // SPDX-License-Identifier: Apache-2.0
 
-#include <graphics/PipelineHBAOPlus.h>
+#include <graphics/PassHBAOPlus.h>
 
 #include "tinyimageformat_base.h"
 #include <memory>
@@ -40,22 +40,21 @@
 
 namespace hpl::renderer {
 
-    PipelineHBAOPlus::PipelineHBAOPlus() {
+    PassHBAOPlus::PassHBAOPlus() {
         auto* forgeRenderer = Interface<ForgeRenderer>::Get();
-        m_shaderDeinterleave = ForgeShaderHandle(forgeRenderer->Rend());
-        m_shaderDeinterleave.Load([&](Shader** handle) {
+        m_shaderDeinterleave.Load(forgeRenderer->Rend(),[&](Shader** handle) {
             ShaderLoadDesc loadDesc{};
             loadDesc.mStages[0].pFileName = "hbao_prepareNativeDepths.comp";
             addShader(forgeRenderer->Rend(),&loadDesc, handle);
             return true;
         });
-        m_shaderCourseAO.Load([&](Shader** handle) {
+        m_shaderCourseAO.Load(forgeRenderer->Rend(),[&](Shader** handle) {
             ShaderLoadDesc loadDesc{};
             loadDesc.mStages[0].pFileName = "hbao_courseAO.comp";
             addShader(forgeRenderer->Rend(),&loadDesc, handle);
             return true;
         });
-        m_shaderReinterleave.Load([&](Shader** handle) {
+        m_shaderReinterleave.Load(forgeRenderer->Rend(),[&](Shader** handle) {
             ShaderLoadDesc loadDesc{};
             loadDesc.mStages[0].pFileName = "hbao_reinterleave.comp";
             addShader(forgeRenderer->Rend(),&loadDesc, handle);
@@ -73,7 +72,7 @@ namespace hpl::renderer {
                 m_pointSampler
             };
 
-            std::array shaders = {m_shaderReinterleave.m_handle, m_shaderDeinterleave.m_handle, m_shaderCourseAO.m_handle};
+            std::array shaders = { m_shaderReinterleave.m_handle, m_shaderDeinterleave.m_handle, m_shaderCourseAO.m_handle };
             RootSignatureDesc rootSignatureDesc = {};
             rootSignatureDesc.ppStaticSamplers = samplers.data();
             rootSignatureDesc.mStaticSamplerCount = samplers.size();
@@ -83,7 +82,7 @@ namespace hpl::renderer {
             addRootSignature(forgeRenderer->Rend(), &rootSignatureDesc, &m_rootSignature);
         }
 
-        m_constBuffer.Load([&](Buffer ** buffer) {
+        m_constBuffer.Load([&](Buffer** buffer) {
             BufferLoadDesc desc = {};
             desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_UNIFORM_BUFFER;
             desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
@@ -95,7 +94,7 @@ namespace hpl::renderer {
             return true;
         });
 
-        m_pipelineDeinterleave.Load([&](Pipeline** handle) {
+        m_pipelineDeinterleave.Load(forgeRenderer->Rend(), [&](Pipeline** handle) {
             PipelineDesc pipelineDesc = {};
             pipelineDesc.mType = PIPELINE_TYPE_COMPUTE;
             ComputePipelineDesc& computePipelineDesc = pipelineDesc.mComputeDesc;
@@ -104,7 +103,7 @@ namespace hpl::renderer {
             addPipeline(forgeRenderer->Rend(), &pipelineDesc, handle);
             return true;
         });
-        m_pipelineCourseAO.Load([&](Pipeline** handle) {
+        m_pipelineCourseAO.Load(forgeRenderer->Rend(), [&](Pipeline** handle) {
             PipelineDesc pipelineDesc = {};
             pipelineDesc.mType = PIPELINE_TYPE_COMPUTE;
             ComputePipelineDesc& computePipelineDesc = pipelineDesc.mComputeDesc;
@@ -113,7 +112,7 @@ namespace hpl::renderer {
             addPipeline(forgeRenderer->Rend(), &pipelineDesc, handle);
             return true;
         });
-        m_pipelineReinterleave.Load([&](Pipeline** handle) {
+        m_pipelineReinterleave.Load(forgeRenderer->Rend(), [&](Pipeline** handle) {
             PipelineDesc pipelineDesc = {};
             pipelineDesc.mType = PIPELINE_TYPE_COMPUTE;
             ComputePipelineDesc& computePipelineDesc = pipelineDesc.mComputeDesc;
@@ -123,7 +122,7 @@ namespace hpl::renderer {
             return true;
         });
     }
-    void PipelineHBAOPlus::cmdDraw(
+    void PassHBAOPlus::cmdDraw(
         const ForgeRenderer::Frame& frame,
         cFrustum* apFrustum,
         cViewport* viewport,
@@ -142,15 +141,13 @@ namespace hpl::renderer {
             viewportData->m_size = viewport->GetSizeU();
 
             for(auto& desc: viewportData->m_perFrameDescriptorSet) {
-                desc = {forgeRenderer->Rend()};
-                desc.Load([&](DescriptorSet** set) {
+                desc.Load(forgeRenderer->Rend(),[&](DescriptorSet** set) {
                     DescriptorSetDesc setDesc = { m_rootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, 1};
                     addDescriptorSet(forgeRenderer->Rend(), &setDesc, set);
                     return true;
                 });
             }
-            viewportData->m_constDescriptorSet = {forgeRenderer->Rend()};
-            viewportData->m_constDescriptorSet.Load([&](DescriptorSet** set) {
+            viewportData->m_constDescriptorSet.Load(forgeRenderer->Rend(),[&](DescriptorSet** set) {
                 DescriptorSetDesc setDesc = { m_rootSignature, DESCRIPTOR_UPDATE_FREQ_NONE, 1};
                 addDescriptorSet(forgeRenderer->Rend(), &setDesc, set);
                 return true;

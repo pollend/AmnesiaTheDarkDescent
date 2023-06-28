@@ -141,6 +141,7 @@ namespace hpl {
         size_t FrameCount() { return m_currentFrameCount; }
         inline SwapChain* GetSwapChain() { return m_swapChain; }
         inline Queue* GetGraphicsQueue() { return m_graphicsQueue; }
+
         void cmdCopyTexture(Cmd* cmd, Texture* srcTexture, RenderTarget* dstTexture);
 
     private:

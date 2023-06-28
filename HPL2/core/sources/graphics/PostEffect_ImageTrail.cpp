@@ -31,7 +31,6 @@
 #include "graphics/LowLevelGraphics.h"
 #include "graphics/PostEffectComposite.h"
 #include "graphics/RenderTarget.h"
-#include "graphics/ShaderUtil.h"
 #include "graphics/Texture.h"
 
 #include "math/MathTypes.h"
@@ -43,8 +42,7 @@ namespace hpl {
         : iPostEffectType("ImageTrail", apGraphics, apResources) {
         auto* forgeRenderer = Interface<ForgeRenderer>::Get();
         {
-            m_shader = ForgeShaderHandle(forgeRenderer->Rend());
-            m_shader.Load([&](Shader** shader) {
+            m_shader.Load(forgeRenderer->Rend(),[&](Shader** shader) {
                 ShaderLoadDesc loadDesc{};
                 loadDesc.mStages[0].pFileName = "fullscreen.vert";
                 loadDesc.mStages[1].pFileName = "image_trail_posteffect.frag";
@@ -181,8 +179,7 @@ namespace hpl {
             auto* renderer = Interface<ForgeRenderer>::Get();
             auto trailData = std::make_unique<ImageTrailData>();
             trailData->m_size = viewport.GetSize();
-            trailData->m_accumulationTarget = ForgeRenderTarget(renderer->Rend());
-            trailData->m_accumulationTarget.Load([&](RenderTarget** texture) {
+            trailData->m_accumulationTarget.Load(renderer->Rend(),[&](RenderTarget** texture) {
                 RenderTargetDesc renderTarget = {};
                 renderTarget.mArraySize = 1;
                 renderTarget.mDepth = 1;

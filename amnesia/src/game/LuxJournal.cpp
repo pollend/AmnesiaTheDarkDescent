@@ -331,8 +331,7 @@ cLuxJournal::cLuxJournal() : iLuxUpdateable("LuxJournal")
 	mpWhiteGfx = mpGui->CreateGfxFilledRect(cColor(1,1), eGuiMaterial_Alpha);
 
     auto* forgeRenderer = Interface<ForgeRenderer>::Get();
-    m_inventoryScreenShader = ForgeShaderHandle(forgeRenderer->Rend());
-    m_inventoryScreenShader.Load([&](Shader ** shader) {
+    m_inventoryScreenShader.Load(forgeRenderer->Rend(), [&](Shader ** shader) {
         ShaderLoadDesc loadDesc = {};
         loadDesc.mStages[0].pFileName = "fullscreen.vert";
         loadDesc.mStages[1].pFileName = "dds_inventory_posteffect.frag";
@@ -1902,9 +1901,7 @@ void cLuxJournal::CreateScreenTextures() {
     vTexSize.z = 0;
 
     auto* forgeRenderer = Interface<ForgeRenderer>::Get();
-    m_screenBgTarget = ForgeRenderTarget(forgeRenderer->Rend());
-    m_screenTarget = ForgeRenderTarget(forgeRenderer->Rend());
-    m_screenBgTarget.Load([&](RenderTarget** texture) {
+    m_screenBgTarget.Load(forgeRenderer->Rend(),[&](RenderTarget** texture) {
         RenderTargetDesc renderTarget = {};
         renderTarget.mArraySize = 1;
         renderTarget.mDepth = 1;
@@ -1919,7 +1916,7 @@ void cLuxJournal::CreateScreenTextures() {
         return true;
     });
 
-    m_screenTarget.Load([&](RenderTarget** texture) {
+    m_screenTarget.Load(forgeRenderer->Rend(),[&](RenderTarget** texture) {
         RenderTargetDesc renderTarget = {};
         renderTarget.mArraySize = 1;
         renderTarget.mDepth = 1;

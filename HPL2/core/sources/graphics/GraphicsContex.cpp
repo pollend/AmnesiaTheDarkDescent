@@ -9,7 +9,6 @@
 #include "scene/Camera.h"
 
 #include "graphics/Enum.h"
-#include "graphics/ShaderUtil.h"
 #include "graphics/Layouts.h"
 #include "graphics/GraphicsTypes.h"
 
@@ -48,10 +47,6 @@ namespace hpl {
     }
 
     void GraphicsContext::Init() {
-        m_copyProgram = resolveProgramCache<StringLiteral("vs_post_effect"), StringLiteral("fs_post_effect_copy")>();
-        m_colorProgram = resolveProgramCache<StringLiteral("vs_color"), StringLiteral("fs_color")>();
-        m_uvProgram = resolveProgramCache<StringLiteral("vs_basic_uv"), StringLiteral("fs_basic_uv")>();
-        m_meshColorProgram = resolveProgramCache<StringLiteral("vs_color"), StringLiteral("fs_color_1")>();
 
         m_s_diffuseMap.Initialize();
         m_u_normalMtx.Initialize();

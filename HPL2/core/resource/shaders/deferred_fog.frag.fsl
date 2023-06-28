@@ -1,6 +1,6 @@
 PUSH_CONSTANT(uRootConstants, b0)
 {
-	DATA(float2, viewTexel, None);
+    DATA(float2, viewTexel, None);
 };
 
 CBUFFER(uniformFogBlock, UPDATE_FREQ_PER_DRAW, b1, binding = 2)

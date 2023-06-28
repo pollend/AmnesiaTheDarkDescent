@@ -40,7 +40,7 @@
 
 namespace hpl::renderer {
 
-class PassHBAOPlus {
+class PassHBAOPlus final {
 public:
     static constexpr uint32_t PreparedDepthCount = 16; // 16 1/4th size depth buffers
 

@@ -30,7 +30,6 @@
 #include "bgfx/bgfx.h"
 #include "graphics/ForgeRenderer.h"
 #include "graphics/GraphicsTypes.h"
-#include "graphics/ShaderUtil.h"
 #include <bx/debug.h>
 
 #include "impl/LegacyVertexBuffer.h"
@@ -565,7 +564,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
         auto* forgeRenderer = Interface<ForgeRenderer>::Get();
 
         newPostEffect->m_size = input.m_viewport->GetSize();
-        newPostEffect->m_outlineBuffer.Load([&](RenderTarget** target) {
+        newPostEffect->m_outlineBuffer.Load(forgeRenderer->Rend(),[&](RenderTarget** target) {
             ClearValue optimizedColorClearBlack = { { 0.0f, 0.0f, 0.0f, 0.0f } };
             RenderTargetDesc renderTarget = {};
             renderTarget.mArraySize = 1;
@@ -583,7 +582,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
             return true;
         });
         ASSERT(newPostEffect->m_blurTarget.size() == 2);
-        newPostEffect->m_blurTarget[0].Load([&](RenderTarget** target) {
+        newPostEffect->m_blurTarget[0].Load(forgeRenderer->Rend(),[&](RenderTarget** target) {
             ClearValue optimizedColorClearBlack = { { 0.0f, 0.0f, 0.0f, 0.0f } };
             RenderTargetDesc renderTarget = {};
             renderTarget.mArraySize = 1;
@@ -600,7 +599,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
             addRenderTarget(forgeRenderer->Rend(), &renderTarget, target);
             return true;
         });
-        newPostEffect->m_blurTarget[1].Load([&](RenderTarget** target) {
+        newPostEffect->m_blurTarget[1].Load(forgeRenderer->Rend(), [&](RenderTarget** target) {
             ClearValue optimizedColorClearBlack = { { 0.0f, 0.0f, 0.0f, 0.0f } };
             RenderTargetDesc renderTarget = {};
             renderTarget.mArraySize = 1;
