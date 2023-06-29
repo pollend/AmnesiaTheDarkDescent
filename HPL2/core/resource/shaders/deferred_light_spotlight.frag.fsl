@@ -1,3 +1,7 @@
+/// Copyright © 2009-2020 Frictional Games
+/// Copyright 2023 Michael Pollind
+/// SPDX-License-Identifier: GPL-3.0
+
 #define SPOT_LIGHT 1
 #include "deferred_light_resource.h.fsl"
 
@@ -6,15 +10,10 @@ STRUCT(PsIn)
     DATA(float4, Position, SV_Position);
 };
 
-STRUCT(PsOut)
-{
-    DATA(float4, diffuse, SV_Target0);
-};
 
-PsOut PS_MAIN(PsIn In)
+float4 PS_MAIN(PsIn In)
 {
     INIT_MAIN;
-    PsOut Out;
 
     float4 color =  LoadTex2D(Get(diffuseMap), Get(pointSampler), uint2(In.Position.xy), 0);
     float3 normal = LoadTex2D(Get(normalMap), Get(pointSampler), uint2(In.Position.xy), 0).xyz;
@@ -103,6 +102,6 @@ PsOut PS_MAIN(PsIn In)
         float specularValue = Get(lightColor).w * specIntensity *  pow( clamp( dot( halfVec, normalizedNormal), 0.0, 1.0), specPower );
         specularColor = Get(lightColor).rgb * specularValue;
     }
-    Out.diffuse = float4((diffuseColor + specularColor) * goboVal * attenuation, 0.0);
-    RETURN(Out);
+    float4 result = float4((diffuseColor + specularColor) * goboVal * attenuation, 0.0);
+    RETURN(result);
 }

@@ -27,7 +27,6 @@
 
 #include "graphics/ImmediateDrawBatch.h"
 #include "graphics/DecalCreator.h"
-#include "graphics/GraphicsContext.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/LowLevelGraphics.h"
 #include "graphics/VertexBuffer.h"
@@ -419,7 +418,7 @@ namespace hpl {
 				for(int i=0; i<kMaxTextureUnits; ++i)
 				{
 
-					
+
 					// iTexture *pTexture = mpDecalMaterial->GetTextureInUnit(eMaterialRenderMode_Diffuse,i);
 					// apFunctions->SetTexture(i, pTexture);
 

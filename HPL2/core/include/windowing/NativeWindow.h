@@ -108,6 +108,7 @@ namespace hpl::window {
         NativeWindowHandler Initialize(const WindowStyle& style);
         void SetWindowTitle(NativeWindowHandler& handler, const std::string_view title);
         void SetWindowSize(NativeWindowHandler& handler, const cVector2l& size);
+        void SetWindowBrightness(NativeWindowHandler& handler, float brightness);
 
         WindowHandle ForgeWindowHandle(NativeWindowHandler& handler);
         cVector2l GetWindowSize(NativeWindowHandler& handler);
@@ -154,6 +155,11 @@ namespace hpl::window {
             internal::SetWindowTitle(m_impl, title);
         }
 
+        inline void SetWindowBrightness(float brightness) {
+            ASSERT(m_impl && "NativeWindowHandle is null");
+            internal::SetWindowBrightness(m_impl, brightness);
+        }
+
         inline cVector2l GetWindowSize() {
             ASSERT(m_impl && "NativeWindowHandle is null");
             return internal::GetWindowSize(m_impl);
@@ -183,6 +189,7 @@ namespace hpl::window {
             ASSERT(m_impl && "NativeWindowHandle is null");
             return internal::NativeWindowEvent(m_impl);
         }
+
 
         inline WindowStatus GetWindowStatus() {
             ASSERT(m_impl && "NativeWindowHandle is null");

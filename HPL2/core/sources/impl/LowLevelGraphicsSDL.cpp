@@ -18,6 +18,7 @@
  */
 
 #include "engine/Interface.h"
+#include "graphics/ForgeRenderer.h"
 #include "impl/LegacyVertexBuffer.h"
 #include "math/MathTypes.h"
 
@@ -191,12 +192,16 @@ namespace hpl {
 	void cLowLevelGraphicsSDL::SetGammaCorrection(float afX)
 	{
 		mfGammaCorrection = afX;
+		if(auto* window = Interface<window::NativeWindowWrapper>::Get()) {
+		    window->SetWindowBrightness(afX);
+        }
         // SDL_SetWindowBrightness(hpl::entry_sdl::getWindow(), mfGammaCorrection);
 	}
 
 	float cLowLevelGraphicsSDL::GetGammaCorrection()
 	{
-		return mfGammaCorrection;
+        return Interface<ForgeRenderer>::Get()->GetGamma();
+
 	}
 
 	//-----------------------------------------------------------------------

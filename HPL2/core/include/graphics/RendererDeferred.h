@@ -613,23 +613,26 @@ namespace hpl {
         };
 
         // light pass
+        struct UniformLightPerFrameSet {
+            float gamma;
+            float3 pad;
+        };
         GPURingBuffer m_lightPassRingBuffer;
         RootSignature* m_lightPassRootSignature;
         Pipeline* m_lightStencilPipeline;
         std::array<Pipeline*, LightPipelineVariant_Size> m_pointLightPipeline;
         std::array<Pipeline*, LightPipelineVariant_Size> m_boxLightPipeline;
         std::array<Pipeline*, LightPipelineVariant_Size> m_spotLightPipeline;
-        Shader* m_pointLightShader;
-        Shader* m_spotLightShader;
-        Shader* m_stencilLightShader;
-        Shader* m_boxLightShader;
+        ForgeShaderHandle m_pointLightShader;
+        ForgeShaderHandle m_spotLightShader;
+        ForgeShaderHandle m_stencilLightShader;
+        ForgeShaderHandle m_boxLightShader;
         std::array<DescriptorSet*,ForgeRenderer::SwapChainLength> m_lightPerLightSet;
-        DescriptorSet* m_lightFrameSet;
+        std::array<DescriptorSet*,ForgeRenderer::SwapChainLength> m_lightPerFrameSet;
         Sampler* m_shadowCmpSampler;
         Sampler* m_samplerPointClampToBorder;
 
         cRenderList m_reflectionRenderList;
-
         std::unique_ptr<renderer::PassHBAOPlus> m_hbaoPlusPipeline;
 
         static bool mbDepthCullLights;

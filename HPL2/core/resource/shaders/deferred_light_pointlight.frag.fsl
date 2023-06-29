@@ -1,3 +1,6 @@
+/// Copyright © 2009-2020 Frictional Games
+/// Copyright 2023 Michael Pollind
+/// SPDX-License-Identifier: GPL-3.0
 #define POINT_LIGHT 1
 #include "deferred_light_resource.h.fsl"
 
@@ -24,7 +27,7 @@ float4 PS_MAIN(PsIn In)
 
     float3 goboVal = float3(1.0, 1.0, 1.0);
     if(HasGoboMap(Get(config))) {
-        float4 worldLightDir = mul(Get(invViewRotation), float4(lightDir.x,lightDir.y, lightDir.z,1.0));
+        float4 worldLightDir = mul(Get(invViewRotation), float4(normalLightDir.xyz,1.0));
         goboVal = SampleTexCube(Get(goboCubeMap), Get(nearestSampler), worldLightDir.xyz).xyz;
     }
     
@@ -41,5 +44,6 @@ float4 PS_MAIN(PsIn In)
         float specularValue = Get(lightColor).w * specIntensity *  pow( clamp( dot( halfVec, normalizedNormal), 0.0, 1.0), specPower );
         specularColor = specularValue.xxx * Get(lightColor).xyz;
     }
-    RETURN(float4((diffuseColor + specularColor) * goboVal * attenuation, 1.0));
+    float4 result = float4((diffuseColor + specularColor) * goboVal * attenuation, 1.0);
+    RETURN(result );
 }

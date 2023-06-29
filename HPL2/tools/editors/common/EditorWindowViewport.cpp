@@ -28,7 +28,6 @@
 #include "SurfacePicker.h"
 
 #include "EntityWrapper.h"
-#include "graphics/GraphicsContext.h"
 #include "graphics/ImmediateDrawBatch.h"
 #include <utility>
 
@@ -38,7 +37,7 @@ cEditorWindowViewport::cEditorWindowViewport(iEditorBase* apEditor,
 																	iEditorViewport(apEditor,
 																					apEditor->GetEditorWorld()->GetWorld())
 {
-	
+
 	m_postSolidDraw = cViewport::PostSolidDraw::Handler([&](cViewport::PostSolidDrawPacket& payload) {
 		if(mpEditor == nullptr) {
 			return;
@@ -99,7 +98,7 @@ cEditorWindowViewport::cEditorWindowViewport(iEditorBase* apEditor,
 		if(mpEditor == nullptr) {
 			return;
 		}
-		
+
 		cVector3f& vMousePos = mpEditor->GetPosOnGridFromMousePos();
 		iEditorEditMode* pEditMode = mpEditor->GetCurrentEditMode();
 

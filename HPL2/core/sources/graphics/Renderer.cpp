@@ -20,7 +20,6 @@
 #include "graphics/Renderer.h"
 
 #include "graphics/Enum.h"
-#include "graphics/GraphicsContext.h"
 #include "graphics/RenderTarget.h"
 #include "math/BoundingVolume.h"
 #include "math/Math.h"

@@ -22,7 +22,6 @@
 #include <memory>
 
 #include "engine/IUpdateEventLoop.h"
-#include "graphics/GraphicsContext.h"
 #include "system/SystemTypes.h"
 #include "engine/EngineTypes.h"
 
@@ -30,6 +29,7 @@
 #include "scene/Camera.h"
 
 #include "resources/MeshLoader.h"
+#include <graphics/ForgeRenderer.h>
 
 namespace hpl {
 
@@ -92,7 +92,7 @@ namespace hpl {
 	private:
 		void Render3DGui(const ForgeRenderer::Frame&,cViewport* apViewPort,cFrustum *apFrustum,float afTimeStep);
 		void RenderScreenGui(const ForgeRenderer::Frame&,  cViewport* apViewPort, float afTimeStep);
-		
+
         cGraphics *mpGraphics;
 		cResources *mpResources;
 		cSound *mpSound;

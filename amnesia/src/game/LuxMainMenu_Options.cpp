@@ -1432,9 +1432,9 @@ void cLuxMainMenu_Options::ApplyChanges()
 		pCfgHdr->mbVSync = mpChBVSync->IsChecked();
 //		pCfgHdr->mbAdaptiveVSync = mpChBAdaptiveVSync->IsChecked();
 		pGfx->GetLowLevel()->SetVsyncActive(pCfgHdr->mbVSync, pCfgHdr->mbAdaptiveVSync);
-		pGfx->GetLowLevel()->SetGammaCorrection(GetGamma());
+	    Interface<ForgeRenderer>::Get()->SetGamma(GetGamma());
 		Interface<window::NativeWindowWrapper>::Get()->SetWindowSize(cVector2l(pCfgHdr->mvScreenSize.x, pCfgHdr->mvScreenSize.y));
-		
+
 
 		// Parallax
 		//int lParallax = (int)mpCBParallaxQuality->GetSelectedItem() - 1;
@@ -2038,7 +2038,7 @@ bool cLuxMainMenu_Options::GammaSlider_OnMove(iWidget* apWidget, const cGuiMessa
 	float fGamma = GetGamma();
 	SetGammaLabelString(fGamma);
 
-	gpBase->mpEngine->GetGraphics()->GetLowLevel()->SetGammaCorrection(fGamma);
+	Interface<ForgeRenderer>::Get()->SetGamma(fGamma);
 
 	return true;
 }
@@ -2160,8 +2160,9 @@ bool cLuxMainMenu_Options::PressCancel(iWidget* apWidget, const cGuiMessageData&
 	//	gpBase->LoadLanguage(mInitialValues.GetVarString("Language"));
 	//	gpBase->mpMainMenu->RecreateGui();
 	//}
-	gpBase->mpEngine->GetGraphics()->GetLowLevel()->SetGammaCorrection(mInitialValues.GetVarFloat("Gamma"));
-	gpBase->mpInputHandler->SetMouseSensitivity(mInitialValues.GetVarFloat("MouseSensitivity"));
+	Interface<ForgeRenderer>::Get()->SetGamma(mInitialValues.GetVarFloat("Gamma"));
+
+    gpBase->mpInputHandler->SetMouseSensitivity(mInitialValues.GetVarFloat("MouseSensitivity"));
 #ifdef USE_GAMEPAD
 	gpBase->mpInputHandler->SetGamepadLookSensitivity(mInitialValues.GetVarFloat("GamepadLookSensitivity"));
 #endif

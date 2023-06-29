@@ -107,6 +107,7 @@ namespace hpl {
             Fence* m_renderCompleteFence = nullptr;
             Semaphore* m_renderCompleteSemaphore = nullptr;
             CommandResourcePool* m_resourcePool = nullptr;
+            RenderTarget* m_finalRenderTarget = nullptr;
         };
 
 
@@ -123,6 +124,7 @@ namespace hpl {
             frame.m_renderCompleteFence = m_renderCompleteFences[CurrentFrameIndex()];
             frame.m_renderCompleteSemaphore = m_renderCompleteSemaphores[CurrentFrameIndex()];
             frame.m_resourcePool = &m_resourcePool[CurrentFrameIndex()];
+            frame.m_finalRenderTarget = m_finalRenderTarget[CurrentFrameIndex()].m_handle;
             return frame;
         }
         // void BeginFrame() {}
@@ -144,6 +146,8 @@ namespace hpl {
 
         void cmdCopyTexture(Cmd* cmd, Texture* srcTexture, RenderTarget* dstTexture);
 
+        inline void SetGamma(float gamma) { m_gamma = gamma; }
+        inline float GetGamma() { return m_gamma; }
     private:
         std::array<Sampler*, SamplerPoolKey::NumOfVariants> m_samplerPool;
         std::array<CommandResourcePool, SwapChainLength> m_resourcePool;
@@ -151,6 +155,9 @@ namespace hpl {
         std::array<Semaphore*, SwapChainLength> m_renderCompleteSemaphores;
         std::array<CmdPool*, SwapChainLength> m_cmdPools;
         std::array<Cmd*, SwapChainLength> m_cmds;
+        std::array<ForgeRenderTarget, SwapChainLength> m_finalRenderTarget;
+
+        float m_gamma = 1.0f;
 
         window::WindowEvent::QueuedEventHandler m_windowEventHandler;
         window::NativeWindowWrapper* m_window = nullptr;
@@ -164,6 +171,13 @@ namespace hpl {
         Shader* m_copyShader = nullptr;
         Pipeline* m_copyPostProcessingPipelineToSwapChain = nullptr;
         Pipeline* m_copyPostProcessingPipelineToUnormR8G8B8A8 = nullptr;
+
+        ForgePipelineHandle m_finalPipeline;
+        ForgeShaderHandle m_finalShader;
+        RootSignature* m_finalRootSignature = nullptr;
+        std::array<ForgeDescriptorSet, SwapChainLength> m_finalPerFrameDescriptorSet;
+
+        ForgeSamplerHandle m_pointSampler ;
 
         RootSignature* m_copyPostProcessingRootSignature = nullptr;
         DescriptorSet* m_copyPostProcessingDescriptorSet = nullptr;

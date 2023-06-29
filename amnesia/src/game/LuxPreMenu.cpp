@@ -424,7 +424,7 @@ bool cLuxPreMenu::Gamma_ChangeValue(iWidget* apWidget, const cGuiMessageData& aD
 	float fGamma = mfGammaMinValue + fRange*fSliderRelValue;
 
 	mpLGamma->SetText(kTranslate("OptionsMenu","Gamma") + _W(": ") + cString::ToStringW(fGamma, 2, true));
-	gpBase->mpEngine->GetGraphics()->GetLowLevel()->SetGammaCorrection(fGamma);
+	Interface<ForgeRenderer>::Get()->SetGamma(fGamma);
 
 	return true;
 }

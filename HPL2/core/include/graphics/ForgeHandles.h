@@ -383,9 +383,8 @@ namespace hpl {
     };
     struct ForgeSamplerHandle: public RefHandle<ForgeSamplerHandle, Sampler> {
     public:
-        ForgeSamplerHandle(Renderer* renderer):
-            Base(),
-            m_renderer(renderer) {
+        ForgeSamplerHandle():
+            Base() {
         }
         ForgeSamplerHandle(const ForgeSamplerHandle& other):
             Base(other) {

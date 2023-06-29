@@ -1,3 +1,7 @@
+/// Copyright © 2009-2020 Frictional Games
+/// Copyright 2023 Michael Pollind
+/// SPDX-License-Identifier: GPL-3.0
+
 #define BOX_LIGHT 1
 #include "deferred_light_resource.h.fsl"
 
@@ -12,7 +16,6 @@ float4 PS_MAIN(PsIn In)
 
     float2 viewTexel = 1.0 / GetDimensions(Get(diffuseMap), NO_SAMPLER).xy;
     float2 NDC = In.Position.xy * viewTexel;
-    float4 color =  SampleTex2D(Get(diffuseMap), Get(nearestSampler), NDC);
-
-    RETURN(float4(color.xyz * Get(lightColor).xyz, 0.0));
+    float4 color =  SampleTex2D(Get(diffuseMap), Get(nearestSampler), NDC) * float4(Get(lightColor).rgb, 1.0);
+    RETURN(float4(color.rgb, 0.0));
 }

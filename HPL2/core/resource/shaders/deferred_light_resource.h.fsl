@@ -1,10 +1,8 @@
 
-// render targets
 RES(Tex2D(float4), diffuseMap, UPDATE_FREQ_PER_FRAME, t1, binding = 1); 
 RES(Tex2D(float4), normalMap, UPDATE_FREQ_PER_FRAME, t2, binding = 2);
 RES(Tex2D(float4), positionMap, UPDATE_FREQ_PER_FRAME, t3, binding = 3);
 RES(Tex2D(float2), specularMap, UPDATE_FREQ_PER_FRAME, t4, binding = 4);
-
 
 #ifdef LIGHT_COMMON
     CBUFFER(uniformObjectBlock, UPDATE_FREQ_PER_BATCH, b1, binding = 5)

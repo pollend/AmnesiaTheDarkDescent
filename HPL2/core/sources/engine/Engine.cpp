@@ -30,7 +30,6 @@
 #include <engine/IUpdateEventLoop.h>
 #include "engine/Interface.h"
 #include "graphics/Enum.h"
-#include "graphics/GraphicsContext.h"
 #include "system/System.h"
 #include "sound/Sound.h"
 #include "physics/Physics.h"

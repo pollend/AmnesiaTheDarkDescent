@@ -63,7 +63,6 @@ namespace hpl {
     class iRenderer;
 
     namespace rendering::detail {
-        using RenderableIterCallback = std::function<void(iRenderable* obj, GraphicsContext::LayoutStream&, GraphicsContext::ShaderProgram&)>;
 
         eShadowMapResolution GetShadowMapResolution(eShadowMapResolution aWanted, eShadowMapResolution aMax);
         /**
@@ -365,14 +364,12 @@ namespace hpl {
     class cRendererCallbackFunctions
     {
     public:
-        cRendererCallbackFunctions(GraphicsContext& context, cViewport& viewport,iRenderer *apRenderer) :
-            m_context(context),
+        cRendererCallbackFunctions(cViewport& viewport,iRenderer *apRenderer) :
             m_viewport(viewport),
             mpRenderer(apRenderer) {}
 
         cRenderSettings* GetSettings(){ return mpRenderer->mpCurrentSettings;}
         cFrustum* GetFrustum(){ return mpRenderer->mpCurrentFrustum;}
-        inline GraphicsContext& GetGraphicsContext(){ return m_context; }
         inline cViewport& GetViewport(){ return m_viewport; }
 
 
@@ -461,7 +458,6 @@ namespace hpl {
 
     private:
         iRenderer *mpRenderer;
-        GraphicsContext& m_context;
         cViewport& m_viewport;
     };
 

@@ -1,3 +1,6 @@
+/// Copyright © 2009-2020 Frictional Games
+/// Copyright 2023 Michael Pollind
+/// SPDX-License-Identifier: GPL-3.0
 #define MATERIAL_TRANSLUCENT 1
 #include "deferred_resources.h.fsl"
 #include "deferred_common.h.fsl"
@@ -11,13 +14,12 @@ PUSH_CONSTANT(translucencyConstant, b0)
 };
 
 RES(Tex2D(float4), refractionMap, UPDATE_FREQ_PER_FRAME, t1, binding = 4); 
-
 STRUCT(PsIn) 
 {
-	DATA(float4, Position, SV_Position);
+    DATA(float4, Position, SV_Position);
     DATA(float3, pos, POSITION);
     DATA(float2, uv, TEXCOORD0);
-	DATA(float4, color, COLOR);
+    DATA(float4, color, COLOR);
 };
 
 float4 PS_MAIN(PsIn In)

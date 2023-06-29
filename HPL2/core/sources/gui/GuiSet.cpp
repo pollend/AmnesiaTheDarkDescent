@@ -19,7 +19,6 @@
 
 #include "gui/GuiSet.h"
 
-
 #include "graphics/Color.h"
 #include "graphics/Enum.h"
 #include "graphics/RenderTarget.h"
@@ -696,7 +695,8 @@ namespace hpl {
 		loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
         auto& swapChainImage = frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex];
 		cVector2l vSize = pLowLevelGraphics->GetScreenSizeInt();
-		cmdBindRenderTargets(frame.m_cmd, 1, &swapChainImage, NULL, &loadActions, NULL, NULL, -1, -1);
+        RenderTarget* target = frame.m_finalRenderTarget;
+		cmdBindRenderTargets(frame.m_cmd, 1, &target, NULL, &loadActions, NULL, NULL, -1, -1);
 		cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)vSize.x, (float)vSize.y, 0.0f, 1.0f);
 		cmdSetScissor(frame.m_cmd, 0, 0, vSize.x, vSize.y);
 
@@ -778,20 +778,6 @@ namespace hpl {
 			beginUpdateResource(&updateDesc);
 			(*reinterpret_cast<gui::UniformBlock*>(updateDesc.pMappedData)) = uniformBlock;
 			endUpdateResource(&updateDesc, NULL);
-		//	if(pClipRegion && pClipRegion->mRect.w > 0.0f) {
-		//		auto& clipRect =  pClipRegion->mRect;
-
-        //        vec4 topLeft = (uniformBlock.mvp * vec4(clipRect.x, clipRect.y, 0.0f, 1.0f));
-        //        vec4 bottomRight = (uniformBlock.mvp  * vec4(clipRect.x + clipRect.w, clipRect.y + clipRect.h, 0.0f, 1.0f));
-
-        //        cmdSetScissor(frame.m_cmd,
-		//			std::max<float>(0.0f, topLeft.getX() * vSize.x),
-		//			std::max<float>(0.0f, topLeft.getY() * vSize.y),
-		//			(bottomRight.getX() - topLeft.getX()) * vSize.x,
-		//			(bottomRight.getY() - topLeft.getY()) * vSize.y);
-		//	} else {
-		//		cmdSetScissor(frame.m_cmd, 0, 0, vSize.x, vSize.y);
-		//	}
 
 			uint32_t stride = sizeof(gui::PositionTexColor);
 			cmdBindDescriptorSet(frame.m_cmd, gui::descriptorIndex, descriptorSet);

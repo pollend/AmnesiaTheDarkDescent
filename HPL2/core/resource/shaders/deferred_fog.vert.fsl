@@ -1,3 +1,7 @@
+/// Copyright © 2009-2020 Frictional Games
+/// Copyright 2023 Michael Pollind
+/// SPDX-License-Identifier: GPL-3.0
+
 CBUFFER(uniformFogBlock, UPDATE_FREQ_PER_DRAW, b1, binding = 2)
 {
     DATA(mat4, mvp, None);
@@ -11,7 +15,6 @@ CBUFFER(uniformFogBlock, UPDATE_FREQ_PER_DRAW, b1, binding = 2)
     DATA(float, length, None);
     DATA(float, falloffExp, None);
 };
-
 
 STRUCT(VSInput)
 {

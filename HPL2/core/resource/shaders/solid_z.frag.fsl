@@ -1,9 +1,11 @@
+/// Copyright © 2009-2020 Frictional Games
+/// Copyright 2023 Michael Pollind
+/// SPDX-License-Identifier: GPL-3.0
 #define MATERIAL_SOLID 1
 #include "deferred_resources.h.fsl"
 #include "deferred_common.h.fsl"
 
 RES(Tex2D(float4), dissolveMap, UPDATE_FREQ_NONE, t9, binding = 4);
-
 
 STRUCT(PsIn) 
 {

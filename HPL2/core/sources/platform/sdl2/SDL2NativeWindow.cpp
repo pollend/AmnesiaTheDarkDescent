@@ -1,18 +1,5 @@
-/**
-* Copyright 2023 Michael Pollind
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-*     http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
+/// Copyright 2023 Michael Pollind
+/// SPDX-License-Identifier: GPL-3.0
 
 #include "engine/Interface.h"
 
@@ -170,6 +157,15 @@ namespace hpl::window::internal {
         std::string name(title);
         InternalHandleCmd(*impl, [name](NativeWindowImpl& impl) {
             SDL_SetWindowTitle(impl.m_window, name.c_str());
+        });
+    }
+
+
+    void SetWindowBrightness(NativeWindowHandler& handler, float brightness) {
+        auto impl = static_cast<NativeWindowImpl*>(handler.Get());
+
+        InternalHandleCmd(*impl, [brightness](NativeWindowImpl& impl) {
+            SDL_SetWindowBrightness(impl.m_window, brightness);
         });
     }
 

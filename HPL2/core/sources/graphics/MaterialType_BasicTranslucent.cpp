@@ -20,7 +20,6 @@
 #include "graphics/MaterialType_BasicTranslucent.h"
 
 #include "bgfx/bgfx.h"
-#include "graphics/GraphicsContext.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Image.h"
 #include "graphics/RendererDeferred.h"

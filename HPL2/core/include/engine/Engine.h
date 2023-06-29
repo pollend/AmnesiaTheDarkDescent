@@ -19,7 +19,6 @@
 
 #pragma once
 
-#include <graphics/GraphicsContext.h>
 #include <engine/IUpdateEventLoop.h>
 #include "system/SystemTypes.h"
 #include "engine/EngineTypes.h"
@@ -136,7 +135,6 @@ namespace hpl {
 		virtual cAI* GetAI() override { return mpAI;}
 		virtual cGui* GetGui() override { return mpGui;}
 		virtual cHaptic* GetHaptic() override { return mpHaptic;}
-		virtual GraphicsContext& GetGraphicsContext() override { return m_graphicsContext; }
 
 		void ResetLogicTimer();
 		void SetUpdatesPerSec(int alUpdatesPerSec);
@@ -211,7 +209,7 @@ namespace hpl {
 		iLowLevelEngineSetup *mpGameSetup;
 		cUpdater *mpUpdater;
 		cLogicTimer *mpLogicTimer;
-		
+
 		std::mutex m_mutex;
 
 		cFPSCounter* mpFPSCounter;
@@ -237,7 +235,7 @@ namespace hpl {
 		//Modules that Game connnect to:
         SwapChain* m_swapChain;
 		Renderer* m_renderer;
-		
+
 		cResources *mpResources;
 		cSystem *mpSystem;
 		cInput *mpInput;
@@ -248,8 +246,7 @@ namespace hpl {
 		cAI *mpAI;
 		cHaptic *mpHaptic;
 		cGui *mpGui;
-		hpl::GraphicsContext m_graphicsContext;
-		
+
 		IUpdateEventLoop::UpdateEvent::Handler m_soundUpdateHandler;
 		IUpdateEventLoop::UpdateEvent::Handler m_sceneUpdateHandler;
 		IUpdateEventLoop::UpdateEvent::Handler m_physicsUpdateHandler;
@@ -257,7 +254,7 @@ namespace hpl {
 		IUpdateEventLoop::UpdateEvent::Handler m_inputUpdateHandler;
 		IUpdateEventLoop::UpdateEvent::Handler m_guiUpdateHandler;
 		IUpdateEventLoop::UpdateEvent::Handler m_resourcesUpdateHandler;
-		
+
 	};
 
 };

@@ -94,6 +94,7 @@
 
 #include "LuxCommentaryIcon.h"
 #include "LuxAchievementHandler.h"
+#include "graphics/ForgeRenderer.h"
 
 
 
@@ -1150,7 +1151,8 @@ bool cLuxBase::InitEngine()
 	mpEngine->GetGraphics()->GetLowLevel()->SetVsyncActive(mpConfigHandler->mbVSync, mpConfigHandler->mbAdaptiveVSync);
 
 	float fGamma = mpMainConfig->GetFloat("Graphics","Gamma", 1.0f);
-	mpEngine->GetGraphics()->GetLowLevel()->SetGammaCorrection(fGamma);
+	Interface<ForgeRenderer>::Get()->SetGamma(fGamma);
+    //mpEngine->GetGraphics()->GetLowLevel()->SetGammaCorrection(fGamma);
 
 	mpEngine->SetLimitFPS(mpMainConfig->GetBool("Engine","LimitFPS", false));
 	mpEngine->SetWaitIfAppOutOfFocus(mpMainConfig->GetBool("Engine","SleepWhenOutOfFocus", true));

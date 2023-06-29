@@ -1438,7 +1438,6 @@ void cLuxMainMenu::RenderBlurTexture() {
     auto frame = forgeRenderer->GetFrame();
 
     auto* scene = engine->GetScene();
-    auto& graphicsContext = engine->GetGraphicsContext();
     auto* viewport = gpBase->mpMapHandler->GetViewport();
     auto* renderer = viewport->GetRenderer();
     auto viewportSize = viewport->GetSize();

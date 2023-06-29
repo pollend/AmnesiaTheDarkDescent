@@ -4,6 +4,9 @@
 
 RES(Tex2D(float4), dissolveMap, UPDATE_FREQ_NONE, t9, binding = 4);
 
+// toned down the parallax effect a bit
+#define PARALAX_MULTIPLIER 0.7
+
 STRUCT(PsIn) 
 {
     DATA(float4, Position, SV_Position);
@@ -37,7 +40,7 @@ PsOut PS_MAIN(PsIn In)
         texCoord.xy  = ParallaxRelief(
             SEARCH_SAMPLE_COUNT, 
             IsHeightMapSingleChannel(Get(textureConfig)), 
-            Get(heightMapScale), 
+            Get(heightMapScale) * PARALAX_MULTIPLIER, 
             normalize(In.normal), 
             texCoord, 
             normalize(In.view), 

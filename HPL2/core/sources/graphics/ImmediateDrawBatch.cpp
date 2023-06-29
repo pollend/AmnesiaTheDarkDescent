@@ -1,6 +1,5 @@
 #include "graphics/ImmediateDrawBatch.h"
 
-#include "graphics/GraphicsContext.h"
 #include "graphics/Layouts.h"
 #include "graphics/VertexBuffer.h"
 

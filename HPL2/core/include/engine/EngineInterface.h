@@ -21,7 +21,7 @@ namespace hpl {
 
     class EngineInterface {
         HPL_RTTI_CLASS(EngineInterface, "{4a770995-9604-41dc-9f81-79b4a230cf24}")
-        
+
     public:
         virtual cScene* GetScene() = 0;
         virtual cResources* GetResources() = 0;
@@ -34,6 +34,5 @@ namespace hpl {
         virtual cAI* GetAI() = 0;
         virtual cGui* GetGui() = 0;
         virtual cHaptic* GetHaptic() = 0;
-        virtual GraphicsContext& GetGraphicsContext() = 0;
     };
 } // namespace hpl

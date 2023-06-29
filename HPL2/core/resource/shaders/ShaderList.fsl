@@ -1,5 +1,9 @@
+/// Copyright © 2009-2020 Frictional Games
+/// Copyright 2023 Michael Pollind
+/// SPDX-License-Identifier: GPL-3.0
+
 #vert solid_z.vert
-#include "solid_z.vert.fsl"
+    #include "solid_z.vert.fsl"
 #end
 
 #frag solid_z.frag
@@ -10,83 +14,83 @@
 #end
 
 #vert gui.vert
-#include "gui.vert.fsl"
+    #include "gui.vert.fsl"
 #end
 
 #frag gui.frag
-#include "gui.frag.fsl"
+    #include "gui.frag.fsl"
 #end
 
 #vert solid_diffuse.vert
-#include "solid_diffuse.vert.fsl"
+    #include "solid_diffuse.vert.fsl"
 #end
 
 #vert solid_illumination.vert
-#include "solid_illumination.vert.fsl"
+    #include "solid_illumination.vert.fsl"
 #end
 
 #frag solid_illumination.frag
-#include "solid_illumination.frag.fsl"
+    #include "solid_illumination.frag.fsl"
 #end
 
 #frag solid_diffuse.frag
-#define ALPHA_REJECT 0.5
-#include "solid_diffuse.frag.fsl"
+    #define ALPHA_REJECT 0.5
+    #include "solid_diffuse.frag.fsl"
 #end
 
 #frag solid_diffuse_parallax.frag
-#define PARALLAX_ENABLED 1
-#define SEARCH_SAMPLE_COUNT 4
-#define ALPHA_REJECT 0.5
-#include "solid_diffuse.frag.fsl"
+    #define PARALLAX_ENABLED 1
+    #define SEARCH_SAMPLE_COUNT 4
+    #define ALPHA_REJECT 0.5
+    #include "solid_diffuse.frag.fsl"
 #end
 
 #vert deferred_light.vert
-#include "deferred_light.vert.fsl"
+    #include "deferred_light.vert.fsl"
 #end
 
 #frag deferred_light_pointlight.frag
-#include "deferred_light_pointlight.frag.fsl"
+    #include "deferred_light_pointlight.frag.fsl"
 #end
 
 #frag deferred_light_stencil.frag
-#include "deferred_light_stencil.frag.fsl"
+    #include "deferred_light_stencil.frag.fsl"
 #end
 
 #frag deferred_light_box.frag
-#include "deferred_light_box.frag.fsl"
+    #include "deferred_light_box.frag.fsl"
 #end
 
 #frag deferred_light_spotlight.frag
-#include "deferred_light_spotlight.frag.fsl"
+    #include "deferred_light_spotlight.frag.fsl"
 #end
 
 #frag deferred_light_spotlight_med.frag
-#define SHADOW_JITTER_SIZE 32
-#define SHADOW_JITTER_SAMPLES 16
-#include "deferred_light_spotlight.frag.fsl"
+    #define SHADOW_JITTER_SIZE 32
+    #define SHADOW_JITTER_SAMPLES 16
+    #include "deferred_light_spotlight.frag.fsl"
 #end
 
 #frag deferred_light_spotlight_high.frag
-#define SHADOW_JITTER_SIZE 64 
-#define SHADOW_JITTER_SAMPLES 32
-#include "deferred_light_spotlight.frag.fsl"
+    #define SHADOW_JITTER_SIZE 64 
+    #define SHADOW_JITTER_SAMPLES 32
+    #include "deferred_light_spotlight.frag.fsl"
 #end
 
 #vert fullscreen.vert
-#include "fullscreen.vert.fsl"
+    #include "fullscreen.vert.fsl"
 #end
 
 #frag post_processing_copy.frag
-#include "post_processing_copy.frag.fsl"
+    #include "post_processing_copy.frag.fsl"
 #end
 
 #frag decal.frag
-#include "decal.frag.fsl"
+    #include "decal.frag.fsl"
 #end
 
 #vert decal.vert
-#include "decal.vert.fsl"
+    #include "decal.vert.fsl"
 #end
 
 // translucency
@@ -320,4 +324,8 @@
 #comp hbao_reinterleave.comp
     #define POWER_EXP (2.0)
     #include "hbao_reinterleave.comp.fsl"
+#end
+
+#frag final_posteffect.frag
+    #include "final_posteffect.frag.fsl"
 #end

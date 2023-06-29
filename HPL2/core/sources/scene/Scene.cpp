@@ -165,8 +165,6 @@ namespace hpl {
         return pCamera;
     }
 
-    //-----------------------------------------------------------------------
-
     void cScene::DestroyCamera(cCamera* apCam) {
         auto it = std::find(mlstCameras.begin(), mlstCameras.end(), apCam);
         if (it != mlstCameras.end()) {
@@ -174,8 +172,6 @@ namespace hpl {
             mlstCameras.erase(it);
         }
     }
-
-    //-----------------------------------------------------------------------
 
     void cScene::Render(const ForgeRenderer::Frame& frame, float afFrameTime, tFlag alFlags) {
         // Increase the frame count (do this at top, so render count is valid until this Render is called again!)
@@ -246,7 +242,7 @@ namespace hpl {
                 if (bPostEffects) {
                     START_TIMING(RenderPostEffects)
                     const bool isViewportTarget = pViewPort->Target().IsValid();
-                    auto& target = isViewportTarget ? pViewPort->Target().m_handle : frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex];
+                    auto& target = isViewportTarget ? pViewPort->Target().m_handle : frame.m_finalRenderTarget;
                     if (isViewportTarget) {
                         cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
                         std::array rtBarriers = {
@@ -272,7 +268,7 @@ namespace hpl {
                     auto size = pViewPort->GetSize();
                     cRect2l rect = cRect2l(0, 0, size.x, size.y);
                     forgeRenderer->cmdCopyTexture(frame.m_cmd, outputImage.m_handle->pTexture,
-                        frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex]);
+                        frame.m_finalRenderTarget);
                     // context.CopyTextureToFrameBuffer(
                     //     *outputImage, rect, pViewPort->GetRenderTarget());
                  }

@@ -1,3 +1,6 @@
+/// Copyright © 2009-2020 Frictional Games
+/// Copyright 2023 Michael Pollind
+/// SPDX-License-Identifier: GPL-3.0
 STRUCT(PsIn) 
 {
     DATA(float4, Position, SV_Position);

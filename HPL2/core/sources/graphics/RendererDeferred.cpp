@@ -19,6 +19,7 @@
 
 #include "graphics/RendererDeferred.h"
 
+#include "Common_3/Resources/ResourceLoader/Interfaces/IResourceLoader.h"
 #include "engine/Event.h"
 #include "engine/Interface.h"
 #include "graphics/ForgeHandles.h"
@@ -33,7 +34,6 @@
 
 #include "bx/math.h"
 
-#include "graphics/GraphicsContext.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Image.h"
 #include "graphics/RenderTarget.h"
@@ -1710,12 +1710,13 @@ namespace hpl {
         {
             addUniformGPURingBuffer(forgeRenderer->Rend(), sizeof(UniformLightData) * MaxLightUniforms, &m_lightPassRingBuffer, true);
 
-            {
+            m_pointLightShader.Load(forgeRenderer->Rend(), [&](Shader** handle) {
                 ShaderLoadDesc loadDesc = {};
                 loadDesc.mStages[0].pFileName = "deferred_light.vert";
                 loadDesc.mStages[1].pFileName = "deferred_light_pointlight.frag";
-                addShader(forgeRenderer->Rend(), &loadDesc, &m_pointLightShader);
-            }
+                addShader(forgeRenderer->Rend(), &loadDesc, handle);
+                return true;
+            });
 
 
             // High
@@ -1724,28 +1725,38 @@ namespace hpl {
             if (mShadowMapQuality == eShadowMapQuality_High) {
                 shadowMapJitterSize = 64;
                 shadowMapJitterSamples = 32; // 64 here instead? I mean, ATI has to deal with medium has max? or different max for ATI?
-                ShaderLoadDesc loadDesc = {};
-                loadDesc.mStages[0].pFileName  = "deferred_light.vert";
-                loadDesc.mStages[1].pFileName  = "deferred_light_spotlight_high.frag";
-                addShader(forgeRenderer->Rend(), &loadDesc, &m_spotLightShader);
+
+                m_spotLightShader.Load(forgeRenderer->Rend(), [&](Shader** handle) {
+                    ShaderLoadDesc loadDesc = {};
+                    loadDesc.mStages[0].pFileName  = "deferred_light.vert";
+                    loadDesc.mStages[1].pFileName  = "deferred_light_spotlight_high.frag";
+                    addShader(forgeRenderer->Rend(), &loadDesc, handle);
+                    return true;
+                });
             }
             // Medium
             else if (mShadowMapQuality == eShadowMapQuality_Medium) {
                 shadowMapJitterSize = 32;
                 shadowMapJitterSamples = 16;
-                ShaderLoadDesc loadDesc = {};
-                loadDesc.mStages[0].pFileName  = "deferred_light.vert";
-                loadDesc.mStages[1].pFileName  = "deferred_light_spotlight_med.frag";
-                addShader(forgeRenderer->Rend(), &loadDesc, &m_spotLightShader);
+                m_spotLightShader.Load(forgeRenderer->Rend(), [&](Shader** handle) {
+                    ShaderLoadDesc loadDesc = {};
+                    loadDesc.mStages[0].pFileName  = "deferred_light.vert";
+                    loadDesc.mStages[1].pFileName  = "deferred_light_spotlight_med.frag";
+                    addShader(forgeRenderer->Rend(), &loadDesc, handle);
+                    return true;
+                });
             }
             // Low
             else {
                 shadowMapJitterSize = 0;
                 shadowMapJitterSamples = 0;
-                ShaderLoadDesc loadDesc = {};
-                loadDesc.mStages[0].pFileName  = "deferred_light.vert";
-                loadDesc.mStages[1].pFileName  = "deferred_light_spotlight.frag";
-                addShader(forgeRenderer->Rend(), &loadDesc, &m_spotLightShader);
+                m_spotLightShader.Load(forgeRenderer->Rend(), [&](Shader** handle) {
+                    ShaderLoadDesc loadDesc = {};
+                    loadDesc.mStages[0].pFileName  = "deferred_light.vert";
+                    loadDesc.mStages[1].pFileName  = "deferred_light_spotlight.frag";
+                    addShader(forgeRenderer->Rend(), &loadDesc, handle);
+                    return true;
+                });
             }
 
             if (mShadowMapQuality != eShadowMapQuality_Low) {
@@ -1755,20 +1766,22 @@ namespace hpl {
                 });
             }
 
-
-            {
+            m_stencilLightShader.Load(forgeRenderer->Rend(), [&](Shader** handle) {
                 ShaderLoadDesc loadDesc = {};
-                loadDesc.mStages[0].pFileName  = "deferred_light.vert";
-                loadDesc.mStages[1].pFileName  = "deferred_light_stencil.frag";
-                addShader(forgeRenderer->Rend(), &loadDesc, &m_stencilLightShader);
-            }
+                loadDesc.mStages[0].pFileName = "deferred_light.vert";
+                loadDesc.mStages[1].pFileName = "deferred_light_stencil.frag";
+                addShader(forgeRenderer->Rend(), &loadDesc, handle);
 
-            {
+                return true;
+            });
+
+            m_boxLightShader.Load(forgeRenderer->Rend(), [&](Shader** handle) {
                 ShaderLoadDesc loadDesc = {};
                 loadDesc.mStages[0].pFileName = "deferred_light.vert";
                 loadDesc.mStages[1].pFileName = "deferred_light_box.frag";
-                addShader(forgeRenderer->Rend(), &loadDesc, &m_boxLightShader);
-            }
+                addShader(forgeRenderer->Rend(), &loadDesc, handle);
+                return true;
+            });
 		    Sampler* vbShadeSceneSamplers[] = {
                 m_shadowCmpSampler,
                 m_samplerPointClampToBorder,
@@ -1778,7 +1791,7 @@ namespace hpl {
                 "shadowCmpSampler",
                 "pointSampler",
             };
-            Shader* shaders[] = {m_pointLightShader, m_stencilLightShader, m_boxLightShader, m_spotLightShader};
+            Shader* shaders[] = {m_pointLightShader.m_handle, m_stencilLightShader.m_handle, m_boxLightShader.m_handle, m_spotLightShader.m_handle};
             RootSignatureDesc rootSignatureDesc = {};
 			rootSignatureDesc.ppShaders = shaders;
 			rootSignatureDesc.mShaderCount = std::size(shaders);
@@ -1859,7 +1872,7 @@ namespace hpl {
                 pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
                 pipelineSettings.pRootSignature = m_lightPassRootSignature;
                 pipelineSettings.pVertexLayout = &vertexLayout;
-                pipelineSettings.pShaderProgram = m_pointLightShader;
+                pipelineSettings.pShaderProgram = m_pointLightShader.m_handle;
                 createPipelineVariants(pipelineDesc, m_pointLightPipeline);
             }
 
@@ -1876,7 +1889,7 @@ namespace hpl {
                 pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
                 pipelineSettings.pRootSignature = m_lightPassRootSignature;
                 pipelineSettings.pVertexLayout = &vertexLayout;
-                pipelineSettings.pShaderProgram = m_boxLightShader;
+                pipelineSettings.pShaderProgram = m_boxLightShader.m_handle;
                 createPipelineVariants(pipelineDesc, m_boxLightPipeline);
             }
 
@@ -1894,7 +1907,7 @@ namespace hpl {
                 pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
                 pipelineSettings.pRootSignature = m_lightPassRootSignature;
                 pipelineSettings.pVertexLayout = &vertexLayout;
-                pipelineSettings.pShaderProgram = m_spotLightShader;
+                pipelineSettings.pShaderProgram = m_spotLightShader.m_handle;
 
                 createPipelineVariants(pipelineDesc, m_spotLightPipeline);
             }
@@ -1936,30 +1949,29 @@ namespace hpl {
                 pipelineSettings.pVertexLayout = &vertexLayout;
                 pipelineSettings.pDepthState = &stencilDepthTest;
                 pipelineSettings.pRasterizerState = &rasterizerStateDesc;
-                pipelineSettings.pShaderProgram = m_stencilLightShader;
+                pipelineSettings.pShaderProgram = m_stencilLightShader.m_handle;
                 addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_lightStencilPipeline);
             }
-
             DescriptorSetDesc perFrameDescSet{m_lightPassRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, ForgeRenderer::SwapChainLength};
-            addDescriptorSet(forgeRenderer->Rend(), &perFrameDescSet, &m_lightFrameSet);
             DescriptorSetDesc batchDescriptorSet{m_lightPassRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_BATCH, cRendererDeferred::MaxLightUniforms};
             for(auto& lightSet: m_lightPerLightSet) {
                 addDescriptorSet(forgeRenderer->Rend(), &batchDescriptorSet, &lightSet);
             }
+            for(auto& perFrameSet: m_lightPerFrameSet) {
+                addDescriptorSet(forgeRenderer->Rend(), &perFrameDescSet, &perFrameSet);
+            }
         }
-        {
-            m_materialSet.m_materialUniformBuffer.Load([&](Buffer ** buffer) {
-                BufferLoadDesc desc = {};
-                desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-                desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
-                desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
-                desc.mDesc.mSize = sizeof(cMaterial::MaterialType::MaterialData) * cMaterial::MaxMaterialID;
-                desc.ppBuffer = buffer;
-                addResource(&desc, nullptr);
-                return true;
-            });
-            addUniformGPURingBuffer(forgeRenderer->Rend(), sizeof(cRendererDeferred::UniformObject) * MaxObjectUniforms, &m_objectUniformBuffer, true);
-        }
+        m_materialSet.m_materialUniformBuffer.Load([&](Buffer ** buffer) {
+            BufferLoadDesc desc = {};
+            desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
+            desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
+            desc.mDesc.mSize = sizeof(cMaterial::MaterialType::MaterialData) * cMaterial::MaxMaterialID;
+            desc.ppBuffer = buffer;
+            addResource(&desc, nullptr);
+            return true;
+        });
+        addUniformGPURingBuffer(forgeRenderer->Rend(), sizeof(cRendererDeferred::UniformObject) * MaxObjectUniforms, &m_objectUniformBuffer, true);
 
         auto createShadowMap = [&](const cVector3l& avSize) -> ShadowMapData {
 
@@ -3545,6 +3557,9 @@ namespace hpl {
                 {
                     DescriptorData params[15] = {};
                     size_t paramCount = 0;
+
+                    DescriptorDataRange range = { (uint32_t)(frame.m_frameIndex * sizeof(UniformLightPerFrameSet)),
+                                              sizeof(UniformLightPerFrameSet) };
                     params[paramCount].pName = "diffuseMap";
                     params[paramCount++].ppTextures = &currentGBuffer.m_colorBuffer.m_handle->pTexture;
                     params[paramCount].pName = "normalMap";
@@ -3553,13 +3568,13 @@ namespace hpl {
                     params[paramCount++].ppTextures = &currentGBuffer.m_positionBuffer.m_handle->pTexture;
                     params[paramCount].pName = "specularMap";
                     params[paramCount++].ppTextures = &currentGBuffer.m_specularBuffer.m_handle->pTexture;
-                    updateDescriptorSet(frame.m_renderer->Rend(), frame.m_frameIndex, m_lightFrameSet, paramCount, params);
+                    updateDescriptorSet(frame.m_renderer->Rend(), 0, m_lightPerFrameSet[frame.m_frameIndex], paramCount, params);
                 }
 
                 //float2 viewTexel = { 1.0f / sharedData->m_size.x, 1.0f / sharedData->m_size.y };
                 //uint32_t rootConstantIndex = getDescriptorIndexFromName(m_lightPassRootSignature, "uRootConstants");
                 //cmdBindPushConstants(frame.m_cmd, m_lightPassRootSignature, rootConstantIndex, &viewTexel);
-                cmdBindDescriptorSet(frame.m_cmd, frame.m_frameIndex, m_lightFrameSet);
+                cmdBindDescriptorSet(frame.m_cmd, 0, m_lightPerFrameSet[frame.m_frameIndex]);
 
 
                 // --------------------------------------------------------

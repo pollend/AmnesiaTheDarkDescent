@@ -1,3 +1,9 @@
+/// Copyright © 2009-2020 Frictional Games
+/// Copyright 2023 Michael Pollind
+/// SPDX-License-Identifier: GPL-3.0
+
+#ifndef _MATERIAL_RESOURCE_H_
+#define _MATERIAL_RESOURCE_H_
 
 INLINE bool HasDiffuse(int _textureConfig)        { return (_textureConfig & (1 << 0)) != 0; }
 INLINE bool HasNormal(int _textureConfig)         { return (_textureConfig & (1 << 1)) != 0; }
@@ -12,3 +18,4 @@ INLINE bool HasCubeMapAlpha(int _textureConfig)   { return (_textureConfig & (1 
 INLINE bool IsHeightMapSingleChannel(int _textureConfig)   { return (_textureConfig & (1 << 9)) != 0; }
 INLINE bool IsAlphaSingleChannel(int _textureConfig)   { return (_textureConfig & (1 << 10)) != 0; }
 
+#endif

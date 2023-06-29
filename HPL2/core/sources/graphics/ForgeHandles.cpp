@@ -55,6 +55,13 @@ namespace hpl {
         }
     }
 
+    void ForgeSamplerHandle::Free() {
+        if (m_handle) {
+            ASSERT(m_renderer && "Renderer is null");
+            removeSampler(m_renderer, m_handle);
+        }
+    }
+
     TinyImageFormat ForgeTextureHandle::FromHPLPixelFormat(ePixelFormat format) {
         switch(format) {
             case ePixelFormat_Alpha:

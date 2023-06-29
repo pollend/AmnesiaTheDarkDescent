@@ -13,9 +13,9 @@
 #endif
 
 namespace hpl {
-
-
     static RENDERDOC_API_1_1_2 *rdoc_api = NULL;
+
+
     void ForgeRenderer::IncrementFrame() {
         // Stall if CPU is running "Swap Chain Buffer Count" frames ahead of GPU
         // m_resourcePoolIndex = (m_resourcePoolIndex + 1) % ResourcePoolSize;
@@ -44,12 +44,37 @@ namespace hpl {
     void ForgeRenderer::SubmitFrame() {
         auto frame = GetFrame();
         cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
-        auto& swapChainImage = frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex];
+        auto& swapChainTarget = frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex];
+        {
+            std::array rtBarriers = {
+                RenderTargetBarrier{ m_finalRenderTarget[frame.m_frameIndex].m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE},
+            };
+            cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+        }
+        {
+            cmdBindRenderTargets(frame.m_cmd, 1, &swapChainTarget, NULL, NULL, NULL, NULL, -1, -1);
+            uint32_t rootConstantIndex = getDescriptorIndexFromName(m_finalRootSignature , "postEffectConstants");
+            cmdBindPushConstants(frame.m_cmd, m_finalRootSignature, rootConstantIndex, &m_gamma);
 
-        std::array rtBarriers = {
-            RenderTargetBarrier{ swapChainImage, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_PRESENT },
-        };
-        cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+            cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, static_cast<float>(swapChainTarget->mWidth), static_cast<float>(swapChainTarget->mHeight), 0.0f, 1.0f);
+            cmdSetScissor(frame.m_cmd, 0, 0, static_cast<float>(swapChainTarget->mWidth), static_cast<float>(swapChainTarget->mHeight));
+            cmdBindPipeline(frame.m_cmd, m_finalPipeline.m_handle);
+
+            std::array<DescriptorData, 1> params = {};
+            params[0].pName = "sourceInput";
+            params[0].ppTextures = &m_finalRenderTarget[frame.m_frameIndex].m_handle->pTexture;
+            updateDescriptorSet(
+                    frame.m_renderer->Rend(), 0, m_finalPerFrameDescriptorSet[frame.m_frameIndex].m_handle, params.size(), params.data());
+            cmdBindDescriptorSet(frame.m_cmd, 0, m_finalPerFrameDescriptorSet[frame.m_frameIndex].m_handle);
+            cmdDraw(frame.m_cmd, 3, 0);
+        }
+        {
+            std::array rtBarriers = {
+                RenderTargetBarrier{ m_finalRenderTarget[frame.m_frameIndex].m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET},
+                RenderTargetBarrier{ swapChainTarget, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_PRESENT },
+            };
+            cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+        }
         endCmd(m_cmds[CurrentFrameIndex()]);
 
         QueueSubmitDesc submitDesc = {};
@@ -122,7 +147,86 @@ namespace hpl {
         for (auto& completeFence : m_renderCompleteFences) {
             addFence(m_renderer, &completeFence);
         }
+        for(auto& rt: m_finalRenderTarget) {
+            rt.Load(m_renderer,[&](RenderTarget** target) {
+                RenderTargetDesc renderTarget = {};
+                renderTarget.mArraySize = 1;
+		        renderTarget.mClearValue.depth = 1.0f;
+                renderTarget.mDepth = 1;
+                renderTarget.mFormat = swapChainDesc.mColorFormat;
+                renderTarget.mWidth = windowSize.x;
+                renderTarget.mHeight = windowSize.y;
+                renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+                renderTarget.mSampleCount = SAMPLE_COUNT_1;
+                renderTarget.mSampleQuality = 0;
+                renderTarget.mStartState = RESOURCE_STATE_RENDER_TARGET;
+                renderTarget.pName = "final RT";
+                addRenderTarget(m_renderer, &renderTarget, target);
+                return true;
+            });
+        }
+        m_pointSampler.Load(m_renderer, [&](Sampler **sampler) {
+            SamplerDesc samplerDesc = {};
+            addSampler(m_renderer, &samplerDesc,  sampler);
+            return true;
+        });
 
+        {
+            m_finalShader.Load(m_renderer, [&](Shader** shader){
+                ShaderLoadDesc shaderLoadDesc = {};
+                shaderLoadDesc.mStages[0].pFileName = "fullscreen.vert";
+                shaderLoadDesc.mStages[1].pFileName = "final_posteffect.frag";
+                addShader(m_renderer, &shaderLoadDesc, shader);
+                return true;
+            });
+
+            std::array samplers = {
+                m_pointSampler.m_handle
+            };
+            std::array samplerName = {
+                (const char*)"inputSampler"
+            };
+            RootSignatureDesc rootDesc = { &m_finalShader.m_handle, 1 };
+            rootDesc.ppStaticSamplers = samplers.data();
+            rootDesc.ppStaticSamplerNames = samplerName.data();
+            rootDesc.mStaticSamplerCount = 1;
+            addRootSignature(m_renderer, &rootDesc, &m_finalRootSignature);
+
+            DescriptorSetDesc setDesc = { m_finalRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, 1};
+            for(auto& desc: m_finalPerFrameDescriptorSet) {
+                desc.Load(m_renderer, [&](DescriptorSet** handle) {
+                    addDescriptorSet(m_renderer, &setDesc, handle);
+                    return true;
+                });
+            }
+            m_finalPipeline.Load(m_renderer, [&](Pipeline** pipeline) {
+                DepthStateDesc depthStateDisabledDesc = {};
+                depthStateDisabledDesc.mDepthWrite = false;
+                depthStateDisabledDesc.mDepthTest = false;
+
+                RasterizerStateDesc rasterStateNoneDesc = {};
+                rasterStateNoneDesc.mCullMode = CULL_MODE_NONE;
+
+                PipelineDesc pipelineDesc = {};
+                pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+                GraphicsPipelineDesc& graphicsPipelineDesc = pipelineDesc.mGraphicsDesc;
+                graphicsPipelineDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+                graphicsPipelineDesc.pShaderProgram = m_finalShader.m_handle;
+                graphicsPipelineDesc.pRootSignature = m_finalRootSignature;
+                graphicsPipelineDesc.mRenderTargetCount = 1;
+                graphicsPipelineDesc.mDepthStencilFormat = TinyImageFormat_UNDEFINED;
+                graphicsPipelineDesc.pVertexLayout = NULL;
+                graphicsPipelineDesc.pRasterizerState = &rasterStateNoneDesc;
+                graphicsPipelineDesc.pDepthState = &depthStateDisabledDesc;
+                graphicsPipelineDesc.pBlendState = NULL;
+
+                graphicsPipelineDesc.pColorFormats = &m_swapChain->ppRenderTargets[0]->mFormat;
+                graphicsPipelineDesc.mSampleCount = m_swapChain->ppRenderTargets[0]->mSampleCount;
+                graphicsPipelineDesc.mSampleQuality = m_swapChain->ppRenderTargets[0]->mSampleQuality;
+                addPipeline(m_renderer, &pipelineDesc, pipeline);
+                return true;
+            });
+        }
         {
             ShaderLoadDesc postProcessCopyShaderDec = {};
             postProcessCopyShaderDec.mStages[0].pFileName = "fullscreen.vert";
@@ -206,6 +310,25 @@ namespace hpl {
                     swapChainDesc.mColorClearValue = { { 1, 1, 1, 1 } };
                     swapChainDesc.mEnableVsync = false;
                     addSwapChain(m_renderer, &swapChainDesc, &m_swapChain);
+
+                    for(auto& rt: m_finalRenderTarget) {
+                        rt.Load(m_renderer,[&](RenderTarget** target) {
+                            RenderTargetDesc renderTarget = {};
+                            renderTarget.mArraySize = 1;
+                            renderTarget.mClearValue.depth = 1.0f;
+                            renderTarget.mDepth = 1;
+                            renderTarget.mFormat = swapChainDesc.mColorFormat;
+                            renderTarget.mWidth = windowSize.x;
+                            renderTarget.mHeight = windowSize.y;
+                            renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+                            renderTarget.mSampleCount = SAMPLE_COUNT_1;
+                            renderTarget.mSampleQuality = 0;
+                            renderTarget.mStartState = RESOURCE_STATE_RENDER_TARGET;
+                            renderTarget.pName = "final RT";
+                            addRenderTarget(m_renderer, &renderTarget, target);
+                            return true;
+                        });
+                    }
                 break;
             }
             default:
