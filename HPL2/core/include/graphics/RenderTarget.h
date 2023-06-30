@@ -16,7 +16,6 @@
 #pragma once
 
 #include "math/MathTypes.h"
-#include <bgfx/bgfx.h>
 #include <cstdint>
 #include <graphics/Image.h>
 #include <memory>
@@ -53,15 +52,11 @@ namespace hpl
         void operator=(const LegacyRenderTarget& target) = delete;
         void operator=(LegacyRenderTarget&& target);
 
-        const bgfx::FrameBufferHandle GetHandle() const;
         std::span<std::shared_ptr<Image>> GetImages();
         std::shared_ptr<Image> GetImage(size_t index = 0);
 
         const std::span<const std::shared_ptr<Image>> GetImages() const;
         const std::shared_ptr<Image> GetImage(size_t index = 0) const;
-
-    private:
-        bgfx::FrameBufferHandle m_buffer = BGFX_INVALID_HANDLE;
     };
 
 } // namespace hpl

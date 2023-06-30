@@ -41,8 +41,6 @@
 #include <memory>
 #include <sstream>
 #include "LuxAchievementHandler.h"
-#include "bgfx/bgfx.h"
-#include "math/MathTypes.h"
 #include <bx/debug.h>
 #include <scene/Scene.h>
 

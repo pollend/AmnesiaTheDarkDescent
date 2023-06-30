@@ -24,7 +24,6 @@
 #include "engine/RTTI.h"
 
 #include "graphics/ForgeHandles.h"
-#include "graphics/GraphicsContext.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Image.h"
 #include "graphics/RenderTarget.h"
@@ -69,7 +68,6 @@ namespace hpl {
             cViewport* m_viewport;
             cRenderSettings* m_renderSettings;
             ImmediateDrawBatch* m_immediateDrawBatch;
-            GraphicsContext* m_context;
         };
         struct PostSolidDrawPacket : public DrawPayloadCommon {
         };

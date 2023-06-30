@@ -20,7 +20,6 @@
 #ifndef HPL_MATERIAL_TYPE_H
 #define HPL_MATERIAL_TYPE_H
 
-#include "graphics/GraphicsContext.h"
 #include "scene/Viewport.h"
 #include "system/SystemTypes.h"
 #include "engine/EngineTypes.h"

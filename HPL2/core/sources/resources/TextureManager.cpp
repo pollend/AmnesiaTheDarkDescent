@@ -153,21 +153,6 @@ namespace hpl {
 				auto handle = ForgeTextureHandle::LoadFromHPLBitmap(*pBmp, opts);
 				resource->SetForgeTexture(std::move(handle));
 
-				// ImageDescriptor desc =  ImageDescriptor::CreateFromBitmap(*pBmp);
-				// desc.m_name = asName.c_str();
-				// // auto* image = new Image();
-
-
-				// desc.m_configuration.m_UWrap = options.m_UWrap;
-				// desc.m_configuration.m_VWrap = options.m_VWrap;
-				// desc.m_configuration.m_WWrap = options.m_WWrap;
-				// desc.m_configuration.m_rt = options.m_rt;
-				// desc.m_configuration.m_comparsion = options.m_comparsion;
-				// desc.m_configuration.m_minFilter = options.m_minFilter;
-				// desc.m_configuration.m_magFilter = options.m_magFilter;
-				// desc.m_configuration.m_mipFilter = options.m_mipFilter;
-
-				// Image::InitializeFromBitmap(*resource, *pBmp, desc);
 				return resource;
 			});
 	}

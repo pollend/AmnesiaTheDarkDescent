@@ -2214,23 +2214,6 @@ namespace hpl {
         }
     }
 
-    void cRendererDeferred::RenderEdgeSmoothPass(GraphicsContext& context, cViewport& viewport, LegacyRenderTarget& rt) {
-      //  GraphicsContext::ViewConfiguration viewConfig{ m_edgeSmooth_LinearDepth };
-      //  auto edgeSmoothView = context.StartPass("EdgeSmooth", viewConfig);
-      //  cVector3f vQuadPos = cVector3f(m_farLeft, m_farBottom, -m_farPlane);
-      //  cVector2f vQuadSize = cVector2f(m_farRight * 2, m_farTop * 2);
-
-      //  GraphicsContext::ShaderProgram shaderProgram;
-      //  // shaderProgram.m_handle = m_edgeSmooth_UnpackDepthProgram;
-      //  // shaderProgram.m_textures.push_back({BGFX_INVALID_HANDLE,resolveRenderImage(m_gBufferPositionImage)->GetHandle(), 0});
-      //  // shaderProgram.m_textures.push_back({BGFX_INVALID_HANDLE,resolveRenderImage(m_gBufferNormalImage)->GetHandle(), 0});
-
-      //  GraphicsContext::LayoutStream layout;
-      //  context.Quad(layout, vQuadPos, cVector2f(1, 1), cVector2f(0, 0), cVector2f(1, 1));
-
-      //  GraphicsContext::DrawRequest drawRequest{ layout, shaderProgram };
-      //  context.Submit(edgeSmoothView, drawRequest);
-    }
 
     void cRendererDeferred::cmdBindObjectDescriptor(
         Cmd* cmd,

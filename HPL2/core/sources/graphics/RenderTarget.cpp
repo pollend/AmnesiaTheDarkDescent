@@ -14,7 +14,6 @@
 * limitations under the License.
 */
 
-#include "bgfx/bgfx.h"
 #include "graphics/Image.h"
 #include <array>
 #include <folly/small_vector.h>
@@ -57,7 +56,6 @@ namespace hpl
 
     void LegacyRenderTarget::Invalidate() {
         ASSERT(false && "This is deprecated");
-        m_buffer = BGFX_INVALID_HANDLE;
     }
 
     const bool LegacyRenderTarget::IsValid() const
@@ -88,8 +86,4 @@ namespace hpl
         return std::span<std::shared_ptr<Image>>();
     }
 
-    const bgfx::FrameBufferHandle LegacyRenderTarget::GetHandle() const
-    {
-        return m_buffer;
-    }
 } // namespace hpl

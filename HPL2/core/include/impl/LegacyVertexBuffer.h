@@ -19,16 +19,16 @@
 #pragma once
 
 #include <folly/small_vector.h>
-#include <graphics/GraphicsContext.h>
 #include <graphics/VertexBuffer.h>
 
 #include <algorithm>
 #include <array>
-#include <bgfx/bgfx.h>
 #include <bx/debug.h>
 #include <span>
 #include <vector>
 
+#include <graphics/ForgeHandles.h>
+#include <graphics/ForgeRenderer.h>
 #include <Common_3/Graphics/Interfaces/IGraphics.h>
 #include <FixPreprocessor.h>
 

@@ -20,7 +20,6 @@
 #include "graphics/PostEffect_Bloom.h"
 
 #include "Common_3/Graphics/Interfaces/IGraphics.h"
-#include "bgfx/bgfx.h"
 #include "graphics/ForgeHandles.h"
 #include "graphics/Graphics.h"
 

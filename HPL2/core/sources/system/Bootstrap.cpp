@@ -16,7 +16,6 @@
 #include <input/InputMouseDevice.h>
 #include <windowing/NativeWindow.h>
 
-#include "bgfx/bgfx.h"
 #include "bgfx/platform.h"
 
 namespace hpl {

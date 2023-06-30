@@ -19,6 +19,7 @@
 
 #include "scene/RenderableContainer_List.h"
 
+#include <algorithm>
 #include "system/LowLevelSystem.h"
 
 #include "graphics/Renderable.h"
@@ -79,7 +80,7 @@ namespace hpl {
 	void cRenderableContainer_List::Remove(iRenderable *apRenderable)
 	{
 		mRoot.mlstObjects.erase(
-			std::remove_if(mRoot.mlstObjects.begin(), mRoot.mlstObjects.end(), 
+			std::remove_if(mRoot.mlstObjects.begin(), mRoot.mlstObjects.end(),
 			[apRenderable](auto* p) { return p == apRenderable; }));
 		// mRoot.mlstObjects.remove(apRenderable);
 	}

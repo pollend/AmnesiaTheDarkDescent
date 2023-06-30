@@ -105,7 +105,7 @@ namespace hpl {
 
 
 	void cRendererWireFrame::Draw(const ForgeRenderer::Frame& frame, cViewport& viewport, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, bool abSendFrameBufferToPostEffects) {
-		BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects);
+		//BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects);
         ASSERT(false && "TODO: need to implement bound Viewport");
 		// auto& rt = m_boundOutputBuffer.resolve(viewport);
 

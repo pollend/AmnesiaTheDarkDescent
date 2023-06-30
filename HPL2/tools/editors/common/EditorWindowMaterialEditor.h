@@ -61,7 +61,6 @@ public:
 
 	void Reset();
 
-	ImageDescriptor getDescriptor() const { return m_desc; }
 	void Load(cXmlElement* apElement);
 	void Save(cXmlElement* apElement);
 
@@ -115,7 +114,7 @@ protected:
 	float mfFrameTime;
 
 	std::unique_ptr<Image> mpTexture;
-	ImageDescriptor m_desc;
+	//ImageDescriptor m_desc;
 	cDate mTimeStamp;
 };
 

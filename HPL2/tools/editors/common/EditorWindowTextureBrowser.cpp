@@ -374,9 +374,10 @@ cTextureBrowserIcon::cTextureBrowserIcon(cEditorWindowTextureBrowser* apBrowser,
 	// iTexture* pTex = pGfx->CreateTexture("", eTextureType_2D, eTextureUsage_Normal);
 	auto* img = new Image();
 	cBitmap* pBmp = pRes->GetBitmapLoaderHandler()->LoadBitmap(sThumbFile, 0);
-	auto desc = ImageDescriptor::CreateFromBitmap(*pBmp);
-	desc.m_name = apEntry->GetTextureFileFullPath().c_str();
-	Image::InitializeFromBitmap(*img, *pBmp , desc);
+    ASSERT(false);
+//	auto desc = ImageDescriptor::CreateFromBitmap(*pBmp);
+//	desc.m_name = apEntry->GetTextureFileFullPath().c_str();
+//	Image::InitializeFromBitmap(*img, *pBmp , desc);
 
 	// if(pTex && pTex->CreateFromBitmap(pBmp))
 	// {

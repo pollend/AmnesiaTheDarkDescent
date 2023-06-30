@@ -27,20 +27,6 @@
 namespace hpl
 {
 
-
-    namespace material::translucent
-    {
-        enum TranslucentVariant: uint32_t
-        {
-            Translucent_None = 0,
-            Translucent_DiffuseMap = 0x00001,
-            Translucent_NormalMap = 0x00002,
-            Translucent_Refraction = 0x00004,
-            Translucent_UseCubeMap = 0x00008,
-            Translucent_UseFog = 0x00010,
-        };
-    }
-
     class cMaterialType_Translucent_Vars : public iMaterialVars
     {
     public:

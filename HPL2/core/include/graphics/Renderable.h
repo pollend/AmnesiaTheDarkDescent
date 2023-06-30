@@ -20,7 +20,6 @@
 #pragma once
 
 #include "bgfx/bgfx.h"
-#include "graphics/GraphicsContext.h"
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
 #include "system/SystemTypes.h"
@@ -49,11 +48,6 @@ namespace hpl {
 	{
 		HPL_RTTI_IMPL_CLASS(iEntity3D, iRenderable, "{285bbdb4-de5b-4960-bf44-ae543432ff40}")
 	public:
-		struct CBObjectData {
-			mat4 m_mtxModel;
-			mat4 m_normalMtx;
-			mat4 m_uvMtx;
-		};
 
 		iRenderable(const tString &asName);
 		virtual ~iRenderable() {}

@@ -26,7 +26,6 @@
 #include <graphics/ForgeHandles.h>
 #include <graphics/RenderList.h>
 #include <graphics/Renderable.h>
-#include <graphics/GraphicsContext.h>
 #include <graphics/Image.h>
 #include <graphics/RenderTarget.h>
 #include <graphics/Renderer.h>
@@ -327,7 +326,6 @@ namespace hpl {
     private:
         LegacyRenderTarget& resolveRenderTarget(std::array<LegacyRenderTarget, 2>& rt);
         std::shared_ptr<Image>& resolveRenderImage(std::array<std::shared_ptr<Image>, 2>& img);
-        void RenderEdgeSmoothPass(GraphicsContext& context, cViewport& viewport, LegacyRenderTarget& rt);
         iVertexBuffer* GetLightShape(iLight* apLight, eDeferredShapeQuality aQuality) const;
 
         struct PerObjectOption {

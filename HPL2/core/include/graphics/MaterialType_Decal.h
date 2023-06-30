@@ -18,7 +18,6 @@
  */
 #pragma once
 
-#include "bgfx/bgfx.h"
 #include "graphics/MaterialType.h"
 #include "graphics/Material.h"
 
@@ -48,13 +47,7 @@ namespace hpl {
 		void GetVariableValues(cMaterial* apMaterial, cResourceVarsObject* apVars) override;
 
 		void CompileMaterialSpecifics(cMaterial *apMaterial) override;
-
-
 	private:
-		bgfx::ProgramHandle m_programHandler;
-		bgfx::UniformHandle m_u_mtxUV;
-		bgfx::UniformHandle m_s_diffuseMap;
-
 		void LoadData();
 		void DestroyData();
 	};

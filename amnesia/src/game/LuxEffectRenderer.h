@@ -20,7 +20,6 @@
 #pragma once
 
 #include "LuxBase.h"
-#include "bgfx/bgfx.h"
 
 #include "graphics/Image.h"
 #include "graphics/RenderTarget.h"

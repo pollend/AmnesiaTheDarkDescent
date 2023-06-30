@@ -19,7 +19,6 @@
 
 #include "impl/LegacyVertexBuffer.h"
 
-#include "bgfx/bgfx.h"
 #include "bgfx/defines.h"
 #include "graphics/ForgeRenderer.h"
 #include "math/Math.h"

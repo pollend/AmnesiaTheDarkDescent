@@ -26,7 +26,6 @@
 #include <memory>
 #include <vector>
 
-#include <graphics/GraphicsContext.h>
 #include <graphics/RenderTarget.h>
 #include <graphics/ForgeRenderer.h>
 #include <graphics/ForgeHandles.h>

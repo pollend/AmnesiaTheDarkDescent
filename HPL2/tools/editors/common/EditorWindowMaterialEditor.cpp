@@ -248,11 +248,11 @@ void cTextureWrapper::Reload()
 
 		// 	mpTexture = pGfx->CreateTexture(pMatMgr->GetTextureString(mUnit), type, eTextureUsage_Normal);
 		// }
-		auto desc = ImageDescriptor::CreateFromBitmap(*pBmp);
-		desc.m_hasMipMaps = mbMipMaps;
-		m_desc = desc;
+		//auto desc = ImageDescriptor::CreateFromBitmap(*pBmp);
+		//desc.m_hasMipMaps = mbMipMaps;
+		//m_desc = desc;
 		mpTexture = std::make_unique<Image>();
-		Image::InitializeFromBitmap(*mpTexture.get(), *pBmp, desc);
+		//Image::InitializeFromBitmap(*mpTexture.get(), *pBmp, desc);
 
 		// mpTexture->SetUseMipMaps(mbMipMaps);
 
@@ -679,12 +679,12 @@ void cMaterialWrapper::UpdateMaterialInMemory(const tString& asName)
 			pTexMgr->Destroy(pOldTex);
 
         Image* pEditingTex = mvTextures[i]->GetTexture();
-		auto descriptor = mvTextures[i]->getDescriptor();
+		//auto descriptor = mvTextures[i]->getDescriptor();
 
         if(pEditingTex)
 		{
 			tString sName = cString::GetFileName(cString::To8Char(pEditingTex->GetFullPath()));
-			bool bMipMaps = descriptor.m_hasMipMaps;
+			//bool bMipMaps = descriptor.m_hasMipMaps;
 			// TODO: need to implement updating texture in memory
 			// eTextureWrap wrap = pEditingTex->GetWrapR();
 

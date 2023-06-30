@@ -27,7 +27,6 @@
 #include <memory>
 #include <vector>
 
-#include "bgfx/bgfx.h"
 #include "graphics/ForgeRenderer.h"
 #include "graphics/GraphicsTypes.h"
 #include <bx/debug.h>

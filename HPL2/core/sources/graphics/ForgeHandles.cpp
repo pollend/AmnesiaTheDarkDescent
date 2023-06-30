@@ -4,6 +4,7 @@
 #include "graphics/Bitmap.h"
 
 #include "Common_3/Resources/ResourceLoader/TextureContainers.h"
+#include "tinyimageformat_base.h"
 #include "tinyimageformat_query.h"
 #include <FixPreprocessor.h>
 

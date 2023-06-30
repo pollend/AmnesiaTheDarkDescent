@@ -19,7 +19,6 @@
 
 #pragma once
 
-#include "bgfx/bgfx.h"
 #include "graphics/Image.h"
 #include "graphics/PostEffect.h"
 
