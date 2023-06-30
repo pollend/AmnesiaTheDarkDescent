@@ -3344,22 +3344,24 @@ namespace hpl {
 
                 mpCurrentSettings->mlNumberOfLightsRendered++;
 
-                if (deferredLight.m_insideNearPlane) {
-                    deferredLightRenderBack.emplace_back(&deferredLight);
-                } else {
-                    if (lightType == eLightType_Point) {
-                        if (deferredLight.getArea() >= mlMinLargeLightArea) {
-                            deferredLightStencilFront.push_back(&deferredLight);
-                        } else {
-                            deferredLightRenderBack.push_back(&deferredLight);
-                        }
-                    }
-                    // Always do double passes for spotlights as they need to will get artefacts otherwise...
-                    //(At least with gobos)l
-                    else if (lightType == eLightType_Spot) {
-                        deferredLightStencilFront.push_back(&deferredLight);
-                    }
-                }
+                deferredLightRenderBack.emplace_back(&deferredLight);
+             // TODO: need pipeline barrieres between stencil and light passes
+             //   if (deferredLight.m_insideNearPlane) {
+             //       deferredLightRenderBack.emplace_back(&deferredLight);
+             //   } else {
+             //       if (lightType == eLightType_Point) {
+             //           if (deferredLight.getArea() >= mlMinLargeLightArea) {
+             //               deferredLightStencilFront.push_back(&deferredLight);
+             //           } else {
+             //               deferredLightRenderBack.push_back(&deferredLight);
+             //           }
+             //       }
+             //       // Always do double passes for spotlights as they need to will get artefacts otherwise...
+             //       //(At least with gobos)l
+             //       else if (lightType == eLightType_Spot) {
+             //           deferredLightStencilFront.push_back(&deferredLight);
+             //       }
+             //   }
             }
             std::sort(deferredLightStencilFront.begin(), deferredLightStencilFront.end(), detail::SortDeferredLightDefault);
             std::sort(deferredLightRenderBack.begin(), deferredLightRenderBack.end(), detail::SortDeferredLightDefault);
@@ -3556,6 +3558,8 @@ namespace hpl {
                             break;
                     }
                     cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+
+
                 }
                 cmdEndDebugMarker(frame.m_cmd);
 

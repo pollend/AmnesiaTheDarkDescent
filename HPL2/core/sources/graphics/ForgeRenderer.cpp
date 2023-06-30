@@ -13,7 +13,7 @@
 #endif
 
 namespace hpl {
-    static RENDERDOC_API_1_1_2 *rdoc_api = NULL;
+
 
 
     void ForgeRenderer::IncrementFrame() {
@@ -100,6 +100,7 @@ namespace hpl {
         SyncToken token = {};
         RendererDesc desc{};
         #ifdef HPL2_RENDERDOC_ENABLED
+            static RENDERDOC_API_1_1_2 *rdoc_api = NULL;
             if(void* mod = dlopen("./librenderdoc.so", RTLD_NOW))
             {
                 pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)dlsym(mod, "RENDERDOC_GetAPI");
