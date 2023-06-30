@@ -97,9 +97,9 @@ namespace hpl {
         * tracks the resources used by a single command buffer
         */
         struct Frame {
-            size_t m_currentFrame = 0;
-            size_t m_frameIndex = 0;
-            size_t m_swapChainIndex = 0;
+            uint32_t m_currentFrame = 0;
+            uint32_t m_frameIndex = 0;
+            uint32_t m_swapChainIndex = 0;
             ForgeRenderer* m_renderer = nullptr;
             SwapChain* m_swapChain = nullptr;
             Cmd* m_cmd = nullptr;

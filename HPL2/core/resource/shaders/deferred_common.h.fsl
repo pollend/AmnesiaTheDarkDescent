@@ -16,7 +16,7 @@ float2 ParallaxRelief(int sampleCount, bool isSingleChannel, float heightMapScal
     float3 heightMapPos = float3(uv.xy, 0.0);
 
     //Determine number of steps based on angle between normal and eye
-    int iterations = clamp(int(floor((1.0 - dot(modelViewNormalizedDir, normalizedNormal) ) * 18.0)) + 2, 0, 30); 
+    int iterations = clamp(int(floor((1.0 - dot(modelViewNormalizedDir, normalizedNormal) ) * 18.0)) + 2, 0, 18); 
    
     if(iterations == 0) {
         return uv.xy;

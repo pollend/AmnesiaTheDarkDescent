@@ -555,11 +555,11 @@ namespace hpl {
         m_shadowDistanceNone = 40;
 
         m_maxBatchLights = 100;
-        cVector3l vShadowSize[] = { cVector3l(2 * 128, 2 * 128, 1),
-                                    cVector3l(2 * 256, 2 * 256, 1),
-                                    cVector3l(2 * 256, 2 * 256, 1),
-                                    cVector3l(2 * 512, 2 * 512, 1),
-                                    cVector3l(2 * 1024, 2 * 1024, 1) };
+        cVector3l vShadowSize[] = { cVector3l( 128, 128, 1),
+                                    cVector3l( 256, 256, 1),
+                                    cVector3l( 256, 256, 1),
+                                    cVector3l( 512, 512, 1),
+                                    cVector3l( 1024, 1024, 1) };
         int lStartSize = 2;
         if (mShadowMapResolution == eShadowMapResolution_Medium) {
             lStartSize = 1;
@@ -597,6 +597,18 @@ namespace hpl {
             addSampler(forgeRenderer->Rend(), &miplessLinearSamplerDesc, &m_shadowCmpSampler);
         }
         {
+            SamplerDesc samplerDesc = {};
+            samplerDesc.mMinFilter = FILTER_LINEAR;
+            samplerDesc.mMagFilter = FILTER_LINEAR;
+            samplerDesc.mMipLodBias = 0.f;
+            samplerDesc.mMaxAnisotropy = 16.f;
+            samplerDesc.mMipMapMode = MIPMAP_MODE_LINEAR;
+            samplerDesc.mAddressU = ADDRESS_MODE_CLAMP_TO_BORDER;
+            samplerDesc.mAddressV = ADDRESS_MODE_CLAMP_TO_BORDER;
+            samplerDesc.mAddressW = ADDRESS_MODE_CLAMP_TO_BORDER;
+            addSampler(forgeRenderer->Rend(), &samplerDesc, &m_goboSampler);
+        }
+        {
             SamplerDesc pointSamplerDesc = {};
             pointSamplerDesc.mMinFilter = FILTER_NEAREST;
             pointSamplerDesc.mMagFilter = FILTER_NEAREST;
@@ -605,6 +617,13 @@ namespace hpl {
             pointSamplerDesc.mAddressV = ADDRESS_MODE_CLAMP_TO_BORDER;
             pointSamplerDesc.mAddressW = ADDRESS_MODE_CLAMP_TO_BORDER;
             addSampler(forgeRenderer->Rend(), &pointSamplerDesc, &m_samplerPointClampToBorder);
+        }
+        {
+            SamplerDesc pointSamplerDesc = {};
+            pointSamplerDesc.mMinFilter = FILTER_NEAREST;
+            pointSamplerDesc.mMagFilter = FILTER_NEAREST;
+            pointSamplerDesc.mMipMapMode = MIPMAP_MODE_NEAREST;
+            addSampler(forgeRenderer->Rend(), &pointSamplerDesc, &m_pointSampler);
         }
         m_perFrameBuffer.Load([&](Buffer** buffer) {
             BufferLoadDesc desc = {};
@@ -829,6 +848,7 @@ namespace hpl {
         }
         // -------------- Fog ----------------------------
         {
+            folly::small_vector<Shader*, 10> shaders = {};
             {
                 ShaderLoadDesc loadDesc = {};
                 loadDesc.mStages[0].pFileName = "deferred_fog_ray.vert";
@@ -856,10 +876,31 @@ namespace hpl {
                 loadDesc.mStages[1].pFileName = "deferred_fog.frag";
                 addShader(forgeRenderer->Rend(), &loadDesc, &m_fogPass.m_shader[Fog::EmptyVariant]);
             }
+            {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0].pFileName = "fullscreen.vert";
+                loadDesc.mStages[1].pFileName = "deferred_fog_fullscreen.frag";
+                addShader(forgeRenderer->Rend(), &loadDesc, &m_fogPass.m_fullScreenShader);
+            }
+            for(auto& shader: m_fogPass.m_shader) {
+                ASSERT(shader && "Shader not loaded");
+                shaders.push_back(shader);
+            }
+            ASSERT(m_fogPass.m_fullScreenShader && "Shader not loaded");
+            shaders.push_back(m_fogPass.m_fullScreenShader);
 
+            std::array samplerNames = {
+                "nearestSampler"
+            };
+            std::array samplers = {
+                m_pointSampler
+            };
             RootSignatureDesc rootSignatureDesc = {};
-            rootSignatureDesc.ppShaders = m_fogPass.m_shader.data();
-            rootSignatureDesc.mShaderCount = m_fogPass.m_shader.size();
+            rootSignatureDesc.ppShaders = shaders.data();
+            rootSignatureDesc.mShaderCount = shaders.size();
+            rootSignatureDesc.mStaticSamplerCount = samplers.size();
+            rootSignatureDesc.ppStaticSamplerNames = samplerNames.data();
+            rootSignatureDesc.ppStaticSamplers = samplers.data();
             addRootSignature(forgeRenderer->Rend(), &rootSignatureDesc, &m_fogPass.m_fogRootSignature);
 
             VertexLayout vertexLayout = {};
@@ -915,6 +956,43 @@ namespace hpl {
                 pipelineSettings.pRasterizerState = &rasterizerStateDesc;
                 pipelineSettings.pVertexLayout = &vertexLayout;
                 addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_fogPass.m_pipeline[variant]);
+            }
+            {
+                DepthStateDesc depthStateDisabledDesc = {};
+                depthStateDisabledDesc.mDepthWrite = false;
+                depthStateDisabledDesc.mDepthTest = false;
+
+                BlendStateDesc blendStateDesc{};
+                blendStateDesc.mSrcFactors[0] = BC_SRC_ALPHA;
+                blendStateDesc.mDstFactors[0] = BC_ONE_MINUS_SRC_ALPHA;
+                blendStateDesc.mBlendModes[0] = BM_ADD;
+                blendStateDesc.mSrcAlphaFactors[0] = BC_SRC_ALPHA;
+                blendStateDesc.mDstAlphaFactors[0] = BC_ONE_MINUS_SRC_ALPHA;
+                blendStateDesc.mBlendAlphaModes[0] = BM_ADD;
+                blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_RED | ColorMask::COLOR_MASK_GREEN |  ColorMask::COLOR_MASK_BLUE;
+                blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
+                blendStateDesc.mIndependentBlend = false;
+
+                RasterizerStateDesc rasterStateNoneDesc = {};
+                rasterStateNoneDesc.mCullMode = CULL_MODE_NONE;
+
+                PipelineDesc pipelineDesc = {};
+                pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+                GraphicsPipelineDesc& graphicsPipelineDesc = pipelineDesc.mGraphicsDesc;
+                graphicsPipelineDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+                graphicsPipelineDesc.pShaderProgram = m_fogPass.m_fullScreenShader;
+                graphicsPipelineDesc.pRootSignature = m_fogPass.m_fogRootSignature;
+                graphicsPipelineDesc.mRenderTargetCount = 1;
+                graphicsPipelineDesc.mDepthStencilFormat = TinyImageFormat_UNDEFINED;
+                graphicsPipelineDesc.pVertexLayout = NULL;
+                graphicsPipelineDesc.pRasterizerState = &rasterStateNoneDesc;
+                graphicsPipelineDesc.pDepthState = &depthStateDisabledDesc;
+                graphicsPipelineDesc.pBlendState = NULL;
+                graphicsPipelineDesc.mSampleCount = SAMPLE_COUNT_1;
+                graphicsPipelineDesc.mSampleQuality = 0;
+                graphicsPipelineDesc.pBlendState = &blendStateDesc;
+                graphicsPipelineDesc.pColorFormats = colorFormats.data();
+                addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_fogPass.m_fullScreenPipeline);
             }
             DescriptorSetDesc perFrameDescSet{m_fogPass.m_fogRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, 1};
             for(auto& perFrameSet: m_fogPass.m_perFrameSet) {
@@ -1286,7 +1364,6 @@ namespace hpl {
                     pipelineSettings.pRasterizerState = &rasterizerStateDesc;
                     pipelineSettings.pVertexLayout = &vertexLayout;
                     addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_zPassShadowPipelineCW);
-
                 }
                 {
                     RasterizerStateDesc rasterizerStateDesc = {};
@@ -1785,11 +1862,13 @@ namespace hpl {
 		    Sampler* vbShadeSceneSamplers[] = {
                 m_shadowCmpSampler,
                 m_samplerPointClampToBorder,
+                m_goboSampler
             };
 
 		    const char* vbShadeSceneSamplersNames[] = {
                 "shadowCmpSampler",
                 "pointSampler",
+                "goboSampler"
             };
             Shader* shaders[] = {m_pointLightShader.m_handle, m_stencilLightShader.m_handle, m_boxLightShader.m_handle, m_spotLightShader.m_handle};
             RootSignatureDesc rootSignatureDesc = {};
@@ -2002,13 +2081,13 @@ namespace hpl {
             return shadowMapData;
         };
 
-        for (size_t i = 0; i < 10; ++i) {
+        for (size_t i = 0; i < 32; ++i) {
             m_shadowMapData[eShadowMapResolution_High].emplace_back(createShadowMap(vShadowSize[lStartSize + eShadowMapResolution_High]));
         }
-        for (size_t i = 0; i < 15; ++i) {
+        for (size_t i = 0; i < 32; ++i) {
             m_shadowMapData[eShadowMapResolution_Medium].emplace_back(createShadowMap(vShadowSize[lStartSize + eShadowMapResolution_Medium]));
         }
-        for (size_t i = 0; i < 20; ++i) {
+        for (size_t i = 0; i < 32; ++i) {
             m_shadowMapData[eShadowMapResolution_Low].emplace_back(createShadowMap(vShadowSize[lStartSize + eShadowMapResolution_Low]));
         }
 
@@ -3022,120 +3101,6 @@ namespace hpl {
             }
         }
 
-        // // ------------------------------------------------------------------------------------
-        // //  Render SSAO Pass to color
-        // // ------------------------------------------------------------------------------------
-        // if(mpCurrentSettings->mbSSAOActive) {
-        //     GraphicsContext::LayoutStream layoutStream;
-        //     cMatrixf projMtx;
-        //     context.ScreenSpaceQuad(layoutStream, projMtx, sharedData->m_size.x, sharedData->m_size.y);
-
-        //     auto& ssaoImage = sharedData->m_gBuffer.m_SSAOImage;
-        //     auto& ssaoBlurImage = sharedData->m_gBuffer.m_SSAOBlurImage;
-        //     auto imageSize = ssaoImage->GetImageSize();
-        //     {
-        //         GraphicsContext::ViewConfiguration viewConfig{ sharedData->m_gBuffer.m_SSAOTarget };
-        //         viewConfig.m_projection = projMtx;
-        //         viewConfig.m_viewRect = { 0, 0, sharedData->m_size.x, sharedData->m_size.y };
-        //         auto view = context.StartPass("SSAO", viewConfig);
-
-        //         GraphicsContext::ShaderProgram shaderProgram;
-        //         shaderProgram.m_handle = m_deferredSSAOProgram;
-
-        //         struct {
-        //             float u_inputRTSize[2];
-        //             float u_negInvFarPlane;
-        //             float u_farPlane;
-
-        //             float depthDiffMul;
-        //             float scatterDepthMul;
-        //             float scatterLengthMin;
-        //             float scatterLengthMax;
-        //         } u_param = {{0}};
-        //         u_param.u_inputRTSize[0] = imageSize.x;
-        //         u_param.u_inputRTSize[1] = imageSize.y;
-        //         u_param.u_negInvFarPlane = -1.0f / m_farPlane;
-        //         u_param.u_farPlane = m_farPlane;
-
-        //         u_param.depthDiffMul = mfSSAODepthDiffMul;
-        //         u_param.scatterDepthMul = mfSSAOScatterLengthMul;
-        //         u_param.scatterLengthMin = mfSSAOScatterLengthMin;
-        //         u_param.scatterLengthMax = mfSSAOScatterLengthMax;
-
-        //         shaderProgram.m_uniforms.push_back({ m_u_param, &u_param, 2 });
-
-        //         shaderProgram.m_textures.push_back({ m_s_positionMap, sharedData->m_gBuffer.m_positionImage->GetHandle(), 0 });
-        //         shaderProgram.m_textures.push_back({ m_s_normalMap, sharedData->m_gBuffer.m_normalImage->GetHandle(), 1});
-        //         shaderProgram.m_textures.push_back({ m_s_scatterDisk, m_ssaoScatterDiskImage->GetHandle(), 2 });
-
-        //         shaderProgram.m_configuration.m_write = Write::R;
-        //         shaderProgram.m_configuration.m_rgbBlendFunc =
-        //             CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::Zero);
-        //         shaderProgram.m_configuration.m_alphaBlendFunc =
-        //             CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::Zero);
-
-        //         GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
-        //         context.Submit(view, request);
-        //     }
-        //     // blur pass horizontal
-        //     {
-        //         GraphicsContext::ViewConfiguration viewConfig{ sharedData->m_gBuffer.m_SSAOBlurTarget };
-        //         viewConfig.m_projection = projMtx;
-        //         viewConfig.m_viewRect = { 0, 0, ssaoBlurImage->GetWidth(), ssaoBlurImage->GetHeight() };
-        //         auto view = context.StartPass("SSAO Horizontal", viewConfig);
-
-        //         GraphicsContext::ShaderProgram shaderProgram;
-        //         shaderProgram.m_handle = m_deferredSSAOBlurHorizontalProgram;
-
-        //         shaderProgram.m_configuration.m_write = Write::R;
-        //         shaderProgram.m_configuration.m_rgbBlendFunc =
-        //             CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::Zero);
-        //         shaderProgram.m_configuration.m_alphaBlendFunc =
-        //             CreateBlendFunction(BlendOperator::Add, BlendOperand::One, BlendOperand::Zero);
-
-        //         shaderProgram.m_textures.push_back({ m_s_diffuseMap, sharedData->m_gBuffer.m_SSAOImage->GetHandle(), 0 });
-        //         shaderProgram.m_textures.push_back({ m_s_depthMap, sharedData->m_gBuffer.m_depthStencilImage->GetHandle(), 1});
-        //         struct {
-        //             float u_farPlane;
-        //             float pad[3];
-        //         } u_param = {{0}};
-        //         u_param.u_farPlane = m_farPlane;
-        //         shaderProgram.m_uniforms.push_back({ m_u_param, &u_param, 1 });
-
-        //         GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
-        //         context.Submit(view, request);
-        //     }
-
-        //      // blur pass horizontal
-        //     {
-        //         GraphicsContext::ViewConfiguration viewConfig{ sharedData->m_gBuffer.m_colorImage };
-        //         viewConfig.m_projection = projMtx;
-        //         viewConfig.m_viewRect = { 0, 0, sharedData->m_size.x, sharedData->m_size.y };
-        //         auto view = context.StartPass("SSAO Vertical", viewConfig);
-
-        //         GraphicsContext::ShaderProgram shaderProgram;
-        //         shaderProgram.m_handle = m_deferredSSAOBlurVerticalProgram;
-
-        //         shaderProgram.m_configuration.m_write = Write::RGB;
-        //         shaderProgram.m_configuration.m_rgbBlendFunc =
-        //             CreateBlendFunction(BlendOperator::Add, BlendOperand::Zero, BlendOperand::SrcColor);
-        //         shaderProgram.m_configuration.m_alphaBlendFunc =
-        //             CreateBlendFunction(BlendOperator::Add, BlendOperand::Zero, BlendOperand::One);
-
-        //         shaderProgram.m_textures.push_back({ m_s_diffuseMap, sharedData->m_gBuffer.m_SSAOBlurImage->GetHandle(), 0 });
-        //         shaderProgram.m_textures.push_back({ m_s_depthMap, sharedData->m_gBuffer.m_depthStencilImage->GetHandle(), 1});
-        //         struct {
-        //             float u_farPlane;
-        //             float pad[3];
-        //         } u_param = {{0}};
-        //         u_param.u_farPlane = m_farPlane;
-        //         shaderProgram.m_uniforms.push_back({ m_u_param, &u_param, 1 });
-
-        //         GraphicsContext::DrawRequest request{ layoutStream, shaderProgram };
-        //         context.Submit(view, request);
-        //     }
-
-        // }
 
         // --------------------------------------------------------------------
         // Render Light Pass
@@ -3252,32 +3217,29 @@ namespace hpl {
                         auto findBestShadowMap = [&](eShadowMapResolution resolution,
                                                      iLight* light) -> cRendererDeferred::ShadowMapData* {
                             auto& shadowMapVec = m_shadowMapData[resolution];
-                            int maxFrameDistance = -1;
+                            uint32_t maxFrameDistance = 0;
                             size_t bestIndex = 0;
                             for (size_t i = 0; i < shadowMapVec.size(); ++i) {
                                 auto& shadowMap = shadowMapVec[i];
                                 if (shadowMap.m_light == light) {
-                                    shadowMap.m_frameCount = iRenderer::GetRenderFrameCount();
+                                    shadowMap.m_frameCount = frame.m_currentFrame;
                                     return &shadowMap;
                                 }
 
-                                const int frameDist = cMath::Abs(shadowMap.m_frameCount - iRenderer::GetRenderFrameCount());
+                                const uint32_t frameDist = frame.m_currentFrame - shadowMap.m_frameCount;
                                 if (frameDist > maxFrameDistance) {
                                     maxFrameDistance = frameDist;
                                     bestIndex = i;
                                 }
                             }
-                            if (maxFrameDistance != -1) {
-                                shadowMapVec[bestIndex].m_frameCount = iRenderer::GetRenderFrameCount();
-                                return &shadowMapVec[bestIndex];
-                            }
-                            return nullptr;
+                            shadowMapVec[bestIndex].m_frameCount = frame.m_currentFrame;
+                            return &shadowMapVec[bestIndex];
                         };
                         auto* shadowMapData = findBestShadowMap(shadowMapResolution, pLightSpot);
                         if (shadowMapData) {
                             deferredLight.m_shadowMapData = shadowMapData;
                             // testing if the shadow map needs to be updated
-                            if ([&]() -> bool {
+                            if (shadowMapData->m_transformCount != pLightSpot->GetTransformUpdateCount() || [&]() -> bool {
                                     // Check if texture map and light are valid
                                     if (pLightSpot->GetOcclusionCullShadowCasters()) {
                                         return true;
@@ -3782,6 +3744,34 @@ namespace hpl {
                 cmdBindDescriptorSet(frame.m_cmd, objectIndex++, m_fogPass.m_perObjectSet[frame.m_frameIndex]);
                 cmdBindPipeline(frame.m_cmd, m_fogPass.m_pipeline[pipelineVariant]);
                 cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+            }
+            if (mpCurrentWorld->GetFogActive())
+            {
+                GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(&m_fogPass.m_fogUniformBuffer, sizeof(Fog::UniformFogData));
+
+                BufferUpdateDesc updateDesc = { uniformBuffer.pBuffer, uniformBuffer.mOffset };
+                beginUpdateResource(&updateDesc);
+                auto* fogData = reinterpret_cast<Fog::UniformFullscreenFogData *>(updateDesc.pMappedData);
+                auto fogColor = mpCurrentWorld->GetFogColor();
+                fogData->m_color = float4(fogColor.r, fogColor.g, fogColor.b, fogColor.a);
+                fogData->m_fogStart = mpCurrentWorld->GetFogStart();
+                fogData->m_fogLength = mpCurrentWorld->GetFogEnd() - mpCurrentWorld->GetFogStart();
+                fogData->m_fogFalloffExp = mpCurrentWorld->GetFogFalloffExp();
+                endUpdateResource(&updateDesc, NULL);
+
+                {
+                    std::array<DescriptorData, 15> params = {};
+                    size_t paramCount = 0;
+                    params[paramCount].pName = "uniformFogBlock";
+                    DescriptorDataRange range = { (uint32_t)uniformBuffer.mOffset, sizeof(Fog::UniformFogData) };
+                    params[paramCount].pRanges = &range;
+                    params[paramCount++].ppBuffers = &uniformBuffer.pBuffer;
+                    updateDescriptorSet(frame.m_renderer->Rend(), objectIndex, m_fogPass.m_perObjectSet[frame.m_frameIndex], paramCount, params.data());
+                }
+                cmdBindDescriptorSet(frame.m_cmd, 0, m_fogPass.m_perFrameSet[frame.m_frameIndex]);
+                cmdBindDescriptorSet(frame.m_cmd, objectIndex++, m_fogPass.m_perObjectSet[frame.m_frameIndex]);
+                cmdBindPipeline(frame.m_cmd, m_fogPass.m_fullScreenPipeline);
+                cmdDraw(frame.m_cmd, 3, 0);
             }
         }
         cmdEndDebugMarker(frame.m_cmd);

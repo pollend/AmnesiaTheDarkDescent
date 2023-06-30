@@ -6,7 +6,7 @@ CBUFFER(uniformBlock, UPDATE_FREQ_PER_BATCH, b2, binding = 0)
 };
 
 RES(Tex2D(float4), diffuseMap, UPDATE_FREQ_PER_BATCH, t1, binding = 1); 
-RES(SamplerState, diffuseSampler, UPDATE_FREQ_PER_BATCH, s1, binding = 2);
+RES(SamplerState, diffuseSampler, UPDATE_FREQ_NONE, s1, binding = 2);
 
 INLINE bool HasDiffuse(int _textureConfig)        { return (_textureConfig & (1 << 0)) != 0; }
 INLINE bool HasClipPlanes(int _textureConfig)        { return (_textureConfig & (1 << 1)) != 0; }

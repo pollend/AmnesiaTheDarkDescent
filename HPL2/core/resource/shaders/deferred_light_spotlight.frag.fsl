@@ -34,7 +34,7 @@ float4 PS_MAIN(PsIn In)
 
     float3 goboVal = float3(1.0, 1.0, 1.0);
     if(HasGoboMap(Get(config))) {
-        goboVal = SampleTex2DProj(Get(goboMap), Get(nearestSampler), projectionUV).xyz;
+        goboVal = SampleTex2DProj(Get(goboMap), Get(goboSampler), projectionUV).xyz;
     } else {
         float fOneMinusCos = 1.0 - dot( normalLightDir,  Get(lightForward));
         attenuation *= SampleTex1D(Get(falloffMap), Get(nearestSampler), fOneMinusCos / Get(oneMinusCosHalfSpotFov)).x;
@@ -46,7 +46,7 @@ float4 PS_MAIN(PsIn In)
     float3 diffuseColor = color.xyz * Get(lightColor).xyz * fLDotN;
     float t = 0;
     if(HasShadowMap(Get(config))) {
-	const float depthBias = 0.001;
+	const float depthBias = 0.0005;
         
         #ifdef SHADOW_JITTER_SIZE
             float2 shadowTexelSize = 1.0/ GetDimensions(Get(shadowMap), NO_SAMPLER).xy;

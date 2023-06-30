@@ -2,7 +2,7 @@
 /// Copyright 2023 Michael Pollind
 /// SPDX-License-Identifier: GPL-3.0
 
-CBUFFER(uniformFogBlock, UPDATE_FREQ_PER_DRAW, b1, binding = 2)
+CBUFFER(uniformFogBlock, UPDATE_FREQ_PER_DRAW, b1, binding = 1)
 {
     DATA(mat4, mvp, None);
     DATA(mat4, mv, None);

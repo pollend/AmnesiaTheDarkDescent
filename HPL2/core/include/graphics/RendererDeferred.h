@@ -149,11 +149,11 @@ namespace hpl {
         public:
             ForgeRenderTarget m_target;
             iLight *m_light;
-            int m_transformCount;
-            int m_frameCount;
-            float m_radius;
-            float m_fov;
-            float m_aspect;
+            uint32_t m_transformCount = 0;
+            uint32_t m_frameCount = 0;
+            float m_radius = 0.0f;
+            float m_fov = 0.0f;
+            float m_aspect = 0.0f;
         };
 
         struct FogRendererData {
@@ -406,6 +406,12 @@ namespace hpl {
                 float m_falloffExp;
             };
 
+            struct UniformFullscreenFogData {
+                float4 m_color;
+                float m_fogStart;
+                float m_fogLength;
+                float m_fogFalloffExp;
+            };
             std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perFrameSet{};
             std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perObjectSet{};
 
@@ -630,7 +636,10 @@ namespace hpl {
         std::array<DescriptorSet*,ForgeRenderer::SwapChainLength> m_lightPerLightSet;
         std::array<DescriptorSet*,ForgeRenderer::SwapChainLength> m_lightPerFrameSet;
         Sampler* m_shadowCmpSampler;
+
         Sampler* m_samplerPointClampToBorder;
+        Sampler* m_pointSampler;
+        Sampler* m_goboSampler;
 
         cRenderList m_reflectionRenderList;
         std::unique_ptr<renderer::PassHBAOPlus> m_hbaoPlusPipeline;

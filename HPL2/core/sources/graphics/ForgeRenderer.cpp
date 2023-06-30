@@ -153,7 +153,7 @@ namespace hpl {
                 renderTarget.mArraySize = 1;
 		        renderTarget.mClearValue.depth = 1.0f;
                 renderTarget.mDepth = 1;
-                renderTarget.mFormat = swapChainDesc.mColorFormat;
+                renderTarget.mFormat = TinyImageFormat_R8G8B8A8_UNORM;
                 renderTarget.mWidth = windowSize.x;
                 renderTarget.mHeight = windowSize.y;
                 renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
@@ -317,7 +317,7 @@ namespace hpl {
                             renderTarget.mArraySize = 1;
                             renderTarget.mClearValue.depth = 1.0f;
                             renderTarget.mDepth = 1;
-                            renderTarget.mFormat = swapChainDesc.mColorFormat;
+                            renderTarget.mFormat = TinyImageFormat_R8G8B8A8_UNORM;
                             renderTarget.mWidth = windowSize.x;
                             renderTarget.mHeight = windowSize.y;
                             renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;

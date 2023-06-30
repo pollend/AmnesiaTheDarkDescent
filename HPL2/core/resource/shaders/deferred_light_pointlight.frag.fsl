@@ -6,7 +6,7 @@
 
 STRUCT(PsIn)
 {
-	DATA(float4, Position, SV_Position);
+    DATA(float4, Position, SV_Position);
 };
 
 float4 PS_MAIN(PsIn In)
@@ -28,7 +28,7 @@ float4 PS_MAIN(PsIn In)
     float3 goboVal = float3(1.0, 1.0, 1.0);
     if(HasGoboMap(Get(config))) {
         float4 worldLightDir = mul(Get(invViewRotation), float4(normalLightDir.xyz,1.0));
-        goboVal = SampleTexCube(Get(goboCubeMap), Get(nearestSampler), worldLightDir.xyz).xyz;
+        goboVal = SampleTexCube(Get(goboCubeMap), Get(goboSampler), worldLightDir.xyz).xyz;
     }
     
     /////////////////////////////////
@@ -40,7 +40,7 @@ float4 PS_MAIN(PsIn In)
     if(isSpecular) {
         float3 halfVec = normalize(normalLightDir + normalize(-position));
         float specIntensity = specular.x;
-        float specPower = specular.y;
+        float specPower = exp2(specular.y * 10.0) + 1.0;
         float specularValue = Get(lightColor).w * specIntensity *  pow( clamp( dot( halfVec, normalizedNormal), 0.0, 1.0), specPower );
         specularColor = specularValue.xxx * Get(lightColor).xyz;
     }

@@ -49,6 +49,7 @@ RES(Tex2D(float2), specularMap, UPDATE_FREQ_PER_FRAME, t4, binding = 4);
 
 RES(SamplerComparisonState, shadowCmpSampler, UPDATE_FREQ_NONE, s2, binding = 14);
 RES(SamplerState, pointSampler, UPDATE_FREQ_NONE, s4, binding = 16);
+RES(SamplerState, goboSampler, UPDATE_FREQ_NONE, s5, binding = 17);
 
 RES(Tex2D(float), shadowOffsetMap, UPDATE_FREQ_PER_BATCH, t7, binding = 15);
 

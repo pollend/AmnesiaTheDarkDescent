@@ -113,6 +113,7 @@ namespace hpl {
 		static GPURingBuffer GuiUniformRingBuffer {};
 		static GPURingBuffer GuiVertexRingBuffer{};
 		static GPURingBuffer GuiIndexRingBuffer{};
+        static Sampler* GuiSampler = nullptr;
 
         static uint32_t descriptorIndex = 0;
 		static std::array<Pipeline*, eGuiMaterial_LastEnum> GuiPipeline = {};
@@ -121,6 +122,18 @@ namespace hpl {
 		static Shader* GuiShader = nullptr;
 
 		void InitializeGui(ForgeRenderer& pipeline) {
+            {
+                SamplerDesc samplerDesc = {};
+                samplerDesc.mMinFilter = FILTER_LINEAR;
+                samplerDesc.mMagFilter = FILTER_LINEAR;
+                samplerDesc.mMipLodBias = 0.f;
+                samplerDesc.mMaxAnisotropy = 16.f;
+                samplerDesc.mMipMapMode = MIPMAP_MODE_LINEAR;
+                samplerDesc.mAddressU = ADDRESS_MODE_CLAMP_TO_BORDER;
+                samplerDesc.mAddressV = ADDRESS_MODE_CLAMP_TO_BORDER;
+                samplerDesc.mAddressW = ADDRESS_MODE_CLAMP_TO_BORDER;
+                addSampler(pipeline.Rend(), &samplerDesc, &GuiSampler);
+            }
  			{
                 BufferDesc desc = {};
 				desc.mDescriptors = DESCRIPTOR_TYPE_VERTEX_BUFFER;
@@ -144,14 +157,16 @@ namespace hpl {
 			loadDesc.mStages[1].pFileName = "gui.frag";
 			addShader(pipeline.Rend(), &loadDesc, &GuiShader);
 
-			const char* pguiSamplerNames[] = { "diffuseMap" };
-			Shader* guiRootShaders[] = {GuiShader};
+            std::array guiSamplersNames = { "diffuseSampler" };
+            std::array guiSamplers = { GuiSampler };
+            std::array guiRootShaders = {GuiShader};
 
 			RootSignatureDesc rootSignatureDesc = {};
-			rootSignatureDesc.ppShaders = guiRootShaders;
-			rootSignatureDesc.mShaderCount = std::size(guiRootShaders);
-			// rootSignatureDesc.ppStaticSamplerNames = pguiSamplerNames;
-			// rootSignatureDesc.mStaticSamplerCount = std::size(pguiSamplerNames);
+			rootSignatureDesc.ppShaders = guiRootShaders.data();
+			rootSignatureDesc.mShaderCount = guiRootShaders.size();
+		    rootSignatureDesc.ppStaticSamplers = guiSamplers.data();
+            rootSignatureDesc.ppStaticSamplerNames = guiSamplersNames.data();
+			rootSignatureDesc.mStaticSamplerCount = guiSamplersNames.size();
 			addRootSignature(pipeline.Rend(), &rootSignatureDesc, &GuiRootSignatnre);
 
 			for(auto& set: GuiUniformDescriptorSet) {

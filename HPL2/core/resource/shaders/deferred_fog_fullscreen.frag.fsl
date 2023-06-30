@@ -7,21 +7,22 @@ STRUCT(PsIn)
     DATA(float4, uv, TEXCOORD0);
 };
 
-PUSH_CONSTANT(uRootConstants, b0)
+CBUFFER(uniformFogBlock, UPDATE_FREQ_PER_DRAW, b1, binding = 1)
 {
     DATA(float4, color, None);
-	DATA(float, fogStart, None);
-	DATA(float, fogLength, None);
-	DATA(float, falloffExp, None);
+    DATA(float, fogStart, None);
+    DATA(float, fogLength, None);
+    DATA(float, falloffExp, None);
 };
 
-RES(Tex2D(float4), positionMap, UPDATE_FREQ_PER_FRAME, t1, binding = 1);
-RES(SamplerState, nearestSampler, UPDATE_FREQ_PER_FRAME, s1, binding = 2);
+RES(Tex2D(float4), positionMap, UPDATE_FREQ_PER_FRAME, t1, binding = 2);
+RES(SamplerState, nearestSampler, UPDATE_FREQ_NONE, s1, binding = 3);
 
 float4 PS_MAIN(PsIn In)
 {
     INIT_MAIN;
-    float fDepth = SampleTex2D(Get(positionMap), Get(nearestSampler), In.uv.xy).z;
+    float fDepth = -SampleTex2D(Get(positionMap), Get(nearestSampler), In.uv.xy).z;
+    
     fDepth = min(fDepth - Get(fogStart), Get(fogLength));
     float fAmount = max(fDepth / Get(fogLength), 0.0);
     RETURN(float4(Get(color).rgb, pow(fAmount, Get(falloffExp)) * Get(color).w));

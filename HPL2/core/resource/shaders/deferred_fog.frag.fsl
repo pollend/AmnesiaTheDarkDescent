@@ -6,7 +6,7 @@ PUSH_CONSTANT(uRootConstants, b0)
     DATA(float2, viewTexel, None);
 };
 
-CBUFFER(uniformFogBlock, UPDATE_FREQ_PER_DRAW, b1, binding = 2)
+CBUFFER(uniformFogBlock, UPDATE_FREQ_PER_DRAW, b1, binding = 1)
 {
     DATA(mat4, mvp, None);
     DATA(mat4, mv, None);
@@ -20,8 +20,8 @@ CBUFFER(uniformFogBlock, UPDATE_FREQ_PER_DRAW, b1, binding = 2)
     DATA(float, falloffExp, None);
 };
 
-RES(Tex2D(float4), positionMap, UPDATE_FREQ_PER_FRAME, t1, binding = 3);
-RES(SamplerState, nearestSampler, UPDATE_FREQ_PER_FRAME, s1, binding = 4);
+RES(Tex2D(float4), positionMap, UPDATE_FREQ_PER_FRAME, t1, binding = 2);
+RES(SamplerState, nearestSampler, UPDATE_FREQ_NONE, s1, binding = 3);
 
 STRUCT(PsIn)
 {
