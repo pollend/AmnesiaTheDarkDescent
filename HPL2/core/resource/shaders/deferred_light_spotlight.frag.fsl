@@ -98,7 +98,7 @@ float4 PS_MAIN(PsIn In)
     if(Get(lightColor).w > 0.0) {
         float3 halfVec = normalize(normalLightDir + normalize(-position));
         float specIntensity = specular.x;
-        float specPower = specular.y;
+        float specPower = exp2(specular.y * 10.0) + 1.0;
         float specularValue = Get(lightColor).w * specIntensity *  pow( clamp( dot( halfVec, normalizedNormal), 0.0, 1.0), specPower );
         specularColor = Get(lightColor).rgb * specularValue;
     }

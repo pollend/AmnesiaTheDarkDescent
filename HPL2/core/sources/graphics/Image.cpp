@@ -315,11 +315,4 @@ namespace hpl
         copyDataToChunk(data->mpData, data->mpData + data->mlSize, memory->data);
         image.Initialize(desc, memory);
     }
-
-    bgfx::TextureHandle Image::GetHandle() const
-    {
-        ASSERT(false && "Not implemented");
-        return bgfx::TextureHandle{};
-        // return m_handle;
-    }
 } // namespace hpl

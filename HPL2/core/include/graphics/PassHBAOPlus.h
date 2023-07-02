@@ -92,7 +92,6 @@ public:
 
         float backgroundViewDepth;
         float foregroundViewDepth;
-
         float pad[2];
     };
     PassHBAOPlus();

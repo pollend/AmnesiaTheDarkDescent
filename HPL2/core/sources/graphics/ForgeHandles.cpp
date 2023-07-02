@@ -41,6 +41,12 @@ namespace hpl {
         }
     }
 
+    void ForgeSwapChainHandle::Free() {
+        if (m_handle) {
+            ASSERT(m_renderer && "Renderer is null");
+            removeSwapChain(m_renderer, m_handle);
+        }
+    }
 
     void ForgeDescriptorSet::Free() {
         if (m_handle) {

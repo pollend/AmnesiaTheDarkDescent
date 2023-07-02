@@ -418,6 +418,42 @@ namespace hpl {
         friend class RefHandle<ForgeSamplerHandle, Sampler>;
     };
 
+    struct ForgeSwapChainHandle: public RefHandle<ForgeSwapChainHandle, SwapChain> {
+
+        ForgeSwapChainHandle():
+            Base() {
+        }
+        ForgeSwapChainHandle(const ForgeSwapChainHandle& other):
+            Base(other) {
+            m_renderer = other.m_renderer;
+        }
+        ForgeSwapChainHandle(ForgeSwapChainHandle&& other):
+            Base(std::move(other)),
+            m_renderer(other.m_renderer) {
+
+        }
+        ~ForgeSwapChainHandle() {
+        }
+
+        void Load(Renderer* renderer, std::function<bool(SwapChain** handle)> load) {
+            ASSERT(renderer && "Renderer is null");
+            m_renderer = renderer;
+            Base::Load(load);
+        }
+
+        void operator= (const ForgeSwapChainHandle& other) {
+            Base::operator=(other);
+            m_renderer = other.m_renderer;
+        }
+        void operator= (ForgeSwapChainHandle&& other) {
+            Base::operator=(std::move(other));
+            m_renderer = other.m_renderer;
+        }
+    private:
+        void Free();
+        Renderer* m_renderer = nullptr;
+        friend class RefHandle<ForgeSwapChainHandle, SwapChain>;
+    };
 
     struct ForgeCmdHandle: public RefHandle<ForgeCmdHandle, Cmd> {
     public:

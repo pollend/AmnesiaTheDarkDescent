@@ -23,7 +23,6 @@ STRUCT(PsOut)
     DATA(float2, specular, SV_Target3);
 };
 
-
 PsOut PS_MAIN(PsIn In)
 {
     INIT_MAIN;

@@ -200,7 +200,7 @@ cLuxEffectRenderer::cLuxEffectRenderer()
             rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
 
             std::array colorFormats = {
-                getRecommendedSwapchainFormat(false, false)
+                TinyImageFormat_R8G8B8A8_UNORM
             };
 
             DepthStateDesc depthStateDesc = {};
@@ -576,7 +576,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
             renderTarget.mSampleQuality = 0;
             renderTarget.mStartState = RESOURCE_STATE_RENDER_TARGET;
             renderTarget.pName = "postEffect Outline";
-            renderTarget.mFormat = getRecommendedSwapchainFormat(false, false);
+            renderTarget.mFormat = TinyImageFormat_R8G8B8A8_UNORM;
             addRenderTarget(forgeRenderer->Rend(), &renderTarget, target);
             return true;
         });
@@ -594,7 +594,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
             renderTarget.mSampleQuality = 0;
             renderTarget.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
             renderTarget.pName = "blur Target";
-            renderTarget.mFormat = getRecommendedSwapchainFormat(false, false);
+            renderTarget.mFormat = TinyImageFormat_R8G8B8A8_UNORM;
             addRenderTarget(forgeRenderer->Rend(), &renderTarget, target);
             return true;
         });
@@ -611,7 +611,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
             renderTarget.mSampleQuality = 0;
             renderTarget.mStartState = RESOURCE_STATE_RENDER_TARGET;
             renderTarget.pName = "blur Target";
-            renderTarget.mFormat = getRecommendedSwapchainFormat(false, false);
+            renderTarget.mFormat = TinyImageFormat_R8G8B8A8_UNORM;
             addRenderTarget(forgeRenderer->Rend(), &renderTarget, target);
             return true;
         });

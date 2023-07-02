@@ -9,7 +9,6 @@ CBUFFER(perFrameConstants, UPDATE_FREQ_PER_FRAME, b0, binding = 0)
     DATA(float4x4, projMat, None);
     DATA(float4x4, viewProjMat, None);
 
-    // scene fog properties
     DATA(float, worldFogStart, None);
     DATA(float, worldFogLength, None);
     DATA(float, oneMinusFogAlpha, None);

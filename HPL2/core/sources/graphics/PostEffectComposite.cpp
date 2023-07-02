@@ -119,7 +119,7 @@ namespace hpl {
                 renderTarget.mHeight = result->m_size.y;
                 renderTarget.mSampleCount = SAMPLE_COUNT_1;
                 renderTarget.mSampleQuality = 0;
-                renderTarget.mFormat = getRecommendedSwapchainFormat(false, false);
+                renderTarget.mFormat = TinyImageFormat_R8G8B8A8_UNORM;
                 renderTarget.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
                 addRenderTarget(renderer->Rend(), &renderTarget, texture);
                 return true;
@@ -134,7 +134,7 @@ namespace hpl {
                 renderTarget.mHeight = result->m_size.y;
                 renderTarget.mSampleCount = SAMPLE_COUNT_1;
                 renderTarget.mSampleQuality = 0;
-                renderTarget.mFormat = getRecommendedSwapchainFormat(false, false);
+                renderTarget.mFormat = TinyImageFormat_R8G8B8A8_UNORM;
                 renderTarget.mStartState = RESOURCE_STATE_RENDER_TARGET;
                 addRenderTarget(renderer->Rend(), &renderTarget, texture);
                 return true;

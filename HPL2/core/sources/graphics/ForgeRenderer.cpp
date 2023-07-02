@@ -28,7 +28,7 @@ namespace hpl {
         if (fenceStatus == FENCE_STATUS_INCOMPLETE) {
             waitForFences(m_renderer, 1, &completeFence);
         }
-        acquireNextImage(m_renderer, m_swapChain, m_imageAcquiredSemaphore, nullptr, &m_swapChainIndex);
+        acquireNextImage(m_renderer, m_swapChain.m_handle, m_imageAcquiredSemaphore, nullptr, &m_swapChainIndex);
 
         resetCmdPool(m_renderer, frame.m_cmdPool);
         frame.m_resourcePool->ResetPool();
@@ -38,14 +38,18 @@ namespace hpl {
         std::array rtBarriers = {
             RenderTargetBarrier { swapChainImage, RESOURCE_STATE_PRESENT, RESOURCE_STATE_RENDER_TARGET },
         };
+        frame.m_resourcePool->Push(m_swapChain);
+        frame.m_resourcePool->Push(m_finalRenderTarget[frame.m_frameIndex]);
         cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+
+
     }
 
     void ForgeRenderer::SubmitFrame() {
         auto frame = GetFrame();
-        cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
         auto& swapChainTarget = frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex];
         {
+            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
             std::array rtBarriers = {
                 RenderTargetBarrier{ m_finalRenderTarget[frame.m_frameIndex].m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE},
             };
@@ -69,6 +73,7 @@ namespace hpl {
             cmdDraw(frame.m_cmd, 3, 0);
         }
         {
+            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
             std::array rtBarriers = {
                 RenderTargetBarrier{ m_finalRenderTarget[frame.m_frameIndex].m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET},
                 RenderTargetBarrier{ swapChainTarget, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_PRESENT },
@@ -90,13 +95,14 @@ namespace hpl {
         QueuePresentDesc presentDesc = {};
         presentDesc.mIndex = m_swapChainIndex;
         presentDesc.mWaitSemaphoreCount = 1;
-        presentDesc.pSwapChain = m_swapChain;
+        presentDesc.pSwapChain = m_swapChain.m_handle;
         presentDesc.ppWaitSemaphores = &frame.m_renderCompleteSemaphore;
         presentDesc.mSubmitDone = true;
         queuePresent(m_graphicsQueue, &presentDesc);
     }
 
     void ForgeRenderer::InitializeRenderer(window::NativeWindowWrapper* window) {
+        m_window = window;
         SyncToken token = {};
         RendererDesc desc{};
         #ifdef HPL2_RENDERDOC_ENABLED
@@ -126,18 +132,20 @@ namespace hpl {
         }
 
         const auto windowSize = window->GetWindowSize();
-        SwapChainDesc swapChainDesc = {};
-        swapChainDesc.mWindowHandle = window->ForgeWindowHandle();
-        swapChainDesc.mPresentQueueCount = 1;
-        swapChainDesc.ppPresentQueues = &m_graphicsQueue;
-        swapChainDesc.mWidth = windowSize.x;
-        swapChainDesc.mHeight = windowSize.y;
-        swapChainDesc.mImageCount = SwapChainLength;
-        swapChainDesc.mColorFormat = getRecommendedSwapchainFormat(false, false);
-        swapChainDesc.mColorClearValue = { { 1, 1, 1, 1 } };
-        swapChainDesc.mEnableVsync = false;
-        addSwapChain(m_renderer, &swapChainDesc, &m_swapChain);
-
+        m_swapChain.Load(m_renderer, [&](SwapChain** handle) {
+            SwapChainDesc swapChainDesc = {};
+            swapChainDesc.mWindowHandle = m_window->ForgeWindowHandle();
+            swapChainDesc.mPresentQueueCount = 1;
+            swapChainDesc.ppPresentQueues = &m_graphicsQueue;
+            swapChainDesc.mWidth = windowSize.x;
+            swapChainDesc.mHeight = windowSize.y;
+            swapChainDesc.mImageCount = SwapChainLength;
+            swapChainDesc.mColorFormat = getRecommendedSwapchainFormat(false, false);
+            swapChainDesc.mColorClearValue = { { 1, 1, 1, 1 } };
+            swapChainDesc.mEnableVsync = false;
+            addSwapChain(m_renderer, &swapChainDesc, handle);
+            return true;
+        });
         RootSignatureDesc graphRootDesc = {};
         addRootSignature(m_renderer, &graphRootDesc, &m_pipelineSignature);
 
@@ -221,9 +229,9 @@ namespace hpl {
                 graphicsPipelineDesc.pDepthState = &depthStateDisabledDesc;
                 graphicsPipelineDesc.pBlendState = NULL;
 
-                graphicsPipelineDesc.pColorFormats = &m_swapChain->ppRenderTargets[0]->mFormat;
-                graphicsPipelineDesc.mSampleCount = m_swapChain->ppRenderTargets[0]->mSampleCount;
-                graphicsPipelineDesc.mSampleQuality = m_swapChain->ppRenderTargets[0]->mSampleQuality;
+                graphicsPipelineDesc.pColorFormats = &m_swapChain.m_handle->ppRenderTargets[0]->mFormat;
+                graphicsPipelineDesc.mSampleCount = m_swapChain.m_handle->ppRenderTargets[0]->mSampleCount;
+                graphicsPipelineDesc.mSampleQuality = m_swapChain.m_handle->ppRenderTargets[0]->mSampleQuality;
                 addPipeline(m_renderer, &pipelineDesc, pipeline);
                 return true;
             });
@@ -263,18 +271,18 @@ namespace hpl {
                 TinyImageFormat format = TinyImageFormat_R8G8B8A8_UNORM;
                 copyPipelineDesc.pColorFormats = &format;
                 copyPipelineDesc.mSampleCount = SAMPLE_COUNT_1;
-                copyPipelineDesc.mSampleQuality = m_swapChain->ppRenderTargets[0]->mSampleQuality;
+                copyPipelineDesc.mSampleQuality = m_swapChain.m_handle->ppRenderTargets[0]->mSampleQuality;
                 addPipeline(m_renderer, &pipelineDesc, &m_copyPostProcessingPipelineToUnormR8G8B8A8);
             }
 
             {
-                copyPipelineDesc.pColorFormats = &m_swapChain->ppRenderTargets[0]->mFormat;
-                copyPipelineDesc.mSampleCount = m_swapChain->ppRenderTargets[0]->mSampleCount;
-                copyPipelineDesc.mSampleQuality = m_swapChain->ppRenderTargets[0]->mSampleQuality;
+                copyPipelineDesc.pColorFormats = &m_swapChain.m_handle->ppRenderTargets[0]->mFormat;
+                copyPipelineDesc.mSampleCount = m_swapChain.m_handle->ppRenderTargets[0]->mSampleCount;
+                copyPipelineDesc.mSampleQuality = m_swapChain.m_handle->ppRenderTargets[0]->mSampleQuality;
                 addPipeline(m_renderer, &pipelineDesc, &m_copyPostProcessingPipelineToSwapChain );
             }
         }
-        m_window = window;
+
         m_windowEventHandler.Connect(window->NativeWindowEvent());
     }
 
@@ -297,21 +305,23 @@ namespace hpl {
             switch (event.m_type) {
             case window::WindowEventType::ResizeWindowEvent: {
                     waitQueueIdle(m_graphicsQueue);
-                    removeSwapChain(m_renderer, m_swapChain);
-
                     const auto windowSize = m_window->GetWindowSize();
-                    SwapChainDesc swapChainDesc = {};
-                    swapChainDesc.mWindowHandle = m_window->ForgeWindowHandle();
-                    swapChainDesc.mPresentQueueCount = 1;
-                    swapChainDesc.ppPresentQueues = &m_graphicsQueue;
-                    swapChainDesc.mWidth = windowSize.x;
-                    swapChainDesc.mHeight = windowSize.y;
-                    swapChainDesc.mImageCount = SwapChainLength;
-                    swapChainDesc.mColorFormat = getRecommendedSwapchainFormat(false, false);
-                    swapChainDesc.mColorClearValue = { { 1, 1, 1, 1 } };
-                    swapChainDesc.mEnableVsync = false;
-                    addSwapChain(m_renderer, &swapChainDesc, &m_swapChain);
-
+                    m_swapChain.Load(m_renderer, [&](SwapChain** handle) {
+                        SwapChainDesc swapChainDesc = {};
+                        swapChainDesc.mWindowHandle = m_window->ForgeWindowHandle();
+                        swapChainDesc.mPresentQueueCount = 1;
+                        swapChainDesc.ppPresentQueues = &m_graphicsQueue;
+                        swapChainDesc.mWidth = windowSize.x;
+                        swapChainDesc.mHeight = windowSize.y;
+                        swapChainDesc.mImageCount = SwapChainLength;
+                        swapChainDesc.mColorFormat = getRecommendedSwapchainFormat(false, false);
+                        swapChainDesc.mColorClearValue = { { 1, 1, 1, 1 } };
+                        swapChainDesc.mEnableVsync = false;
+                        addSwapChain(m_renderer, &swapChainDesc, handle);
+                        return true;
+                    });
+                    removeSemaphore(m_renderer, m_imageAcquiredSemaphore);
+                    addSemaphore(m_renderer, &m_imageAcquiredSemaphore);
                     for(auto& rt: m_finalRenderTarget) {
                         rt.Load(m_renderer,[&](RenderTarget** target) {
                             RenderTargetDesc renderTarget = {};
@@ -329,6 +339,18 @@ namespace hpl {
                             addRenderTarget(m_renderer, &renderTarget, target);
                             return true;
                         });
+                    }
+
+                    {
+                        auto frame = GetFrame();
+                        acquireNextImage(m_renderer, m_swapChain.m_handle, m_imageAcquiredSemaphore, nullptr, &m_swapChainIndex);
+                        auto& swapChainImage = frame.m_swapChain->ppRenderTargets[m_swapChainIndex];
+                        std::array rtBarriers = {
+                            RenderTargetBarrier { swapChainImage, RESOURCE_STATE_PRESENT, RESOURCE_STATE_RENDER_TARGET },
+                        };
+                        frame.m_resourcePool->Push(m_swapChain);
+                        frame.m_resourcePool->Push(m_finalRenderTarget[frame.m_frameIndex]);
+                        cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
                     }
                 break;
             }
@@ -359,17 +381,13 @@ namespace hpl {
 
         updateDescriptorSet(m_renderer, m_copyRegionDescriptorIndex, m_copyPostProcessingDescriptorSet, params.size(), params.data());
         auto swapChainFormat = getRecommendedSwapchainFormat(false, false);
-        if(dstTexture->mFormat  == swapChainFormat) {
-            cmdBindPipeline(cmd, m_copyPostProcessingPipelineToSwapChain);
-        } else {
-            switch(dstTexture->mFormat) {
-                case TinyImageFormat_R8G8B8A8_UNORM:
-                    cmdBindPipeline(cmd, m_copyPostProcessingPipelineToUnormR8G8B8A8);
-                    break;
-                default:
-                    ASSERT(false && "Unsupported format");
-                    break;
-            }
+        switch(dstTexture->mFormat) {
+            case TinyImageFormat_R8G8B8A8_UNORM:
+                cmdBindPipeline(cmd, m_copyPostProcessingPipelineToUnormR8G8B8A8);
+                break;
+            default:
+                ASSERT(false && "Unsupported format");
+                break;
         }
 
         cmdBindDescriptorSet(cmd, m_copyRegionDescriptorIndex, m_copyPostProcessingDescriptorSet);

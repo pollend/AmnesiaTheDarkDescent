@@ -28,6 +28,7 @@
 // Copyright 2023 Michael Pollind
 // SPDX-License-Identifier: Apache-2.0
 
+#include <cstdlib>
 #include <graphics/PassHBAOPlus.h>
 
 #include "tinyimageformat_base.h"
@@ -249,6 +250,7 @@ namespace hpl::renderer {
                 params.size(),
                 params.data());
         }
+
 
         auto viewportSize = viewport->GetSizeU();
         uint2 quarterViewportSize = uint2(viewportSize.x / 4, viewportSize.y / 4);

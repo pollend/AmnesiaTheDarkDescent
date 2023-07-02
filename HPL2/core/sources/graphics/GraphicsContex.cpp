@@ -78,7 +78,7 @@ namespace hpl {
         program.m_handle = m_copyProgram;
         program.m_configuration.m_write = write;
         // program.m_projection = projMtx;
-        program.m_textures.push_back({ m_s_diffuseMap, image.GetHandle(), 0 });
+        //program.m_textures.push_back({ m_s_diffuseMap, image.GetHandle(), 0 });
 
         DrawRequest request = { layout, program };
     }

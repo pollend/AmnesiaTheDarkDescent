@@ -21,12 +21,13 @@
 #include "math/MathTypes.h"
 #include "system/SystemTypes.h"
 #include <bgfx/bgfx.h>
-#include <cstdint>
 #include <engine/RTTI.h>
 #include <graphics/Enum.h>
 #include <graphics/GraphicsTypes.h>
-#include <memory>
 #include <resources/ResourceBase.h>
+
+#include <cstdint>
+#include <memory>
 #include <span>
 #include <string>
 
@@ -94,11 +95,8 @@ namespace hpl {
             m_texture = std::move(handle);
         }
 
-
         void Initialize(const ImageDescriptor& descriptor, const bgfx::Memory* mem = nullptr);
         void Invalidate();
-
-        [[deprecated("Removing BGFX")]] bgfx::TextureHandle GetHandle() const;
 
         static void InitializeFromBitmap(Image& image, cBitmap& bitmap, const ImageDescriptor& desc);
         static void InitializeCubemapFromBitmaps(Image& image, const std::span<cBitmap*> bitmaps, const ImageDescriptor& desc);

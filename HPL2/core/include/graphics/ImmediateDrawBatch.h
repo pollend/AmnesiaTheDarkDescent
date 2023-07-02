@@ -87,7 +87,7 @@ class ImmediateDrawBatch {
         };
 
         struct DebugMeshRequest {
-            GraphicsContext::LayoutStream m_layout;
+            //GraphicsContext::LayoutStream m_layout;
             DepthTest m_depthTest;
             cMatrixf m_transform;
             cColor m_color;

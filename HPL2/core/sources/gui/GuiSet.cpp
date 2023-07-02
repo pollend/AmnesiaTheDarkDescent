@@ -19,6 +19,7 @@
 
 #include "gui/GuiSet.h"
 
+#include "Common_3/Graphics/Interfaces/IGraphics.h"
 #include "graphics/Color.h"
 #include "graphics/Enum.h"
 #include "graphics/RenderTarget.h"
@@ -206,15 +207,16 @@ namespace hpl {
 				depthStateDesc.mDepthTest = false;
 				depthStateDesc.mDepthWrite = false;
 
+                TinyImageFormat inputFormat =  TinyImageFormat_R8G8B8A8_UNORM;
 				PipelineDesc pipelineDesc = {};
 				pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
 				auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
 				pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
 				pipelineSettings.mRenderTargetCount = 1;
 				pipelineSettings.pDepthState = &depthStateDesc;
-				pipelineSettings.pColorFormats = &pipeline.GetSwapChain()->ppRenderTargets[0]->mFormat;
-				pipelineSettings.mSampleCount = pipeline.GetSwapChain()->ppRenderTargets[0]->mSampleCount;
-				pipelineSettings.mSampleQuality = pipeline.GetSwapChain()->ppRenderTargets[0]->mSampleQuality;
+				pipelineSettings.pColorFormats = &inputFormat;
+				pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
+				pipelineSettings.mSampleQuality = 0;
 				pipelineSettings.pRootSignature = GuiRootSignatnre;
 				pipelineSettings.pShaderProgram = GuiShader;
 				pipelineSettings.pRasterizerState = &rasterizerStateDesc;
@@ -708,7 +710,6 @@ namespace hpl {
 		LoadActionsDesc loadActions = {};
 		loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
 		loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
-        auto& swapChainImage = frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex];
 		cVector2l vSize = pLowLevelGraphics->GetScreenSizeInt();
         RenderTarget* target = frame.m_finalRenderTarget;
 		cmdBindRenderTargets(frame.m_cmd, 1, &target, NULL, &loadActions, NULL, NULL, -1, -1);

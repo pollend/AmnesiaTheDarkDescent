@@ -75,7 +75,10 @@ namespace hpl {
         */
         class CommandResourcePool {
         public:
-            using VariantTypes = std::variant<ForgeTextureHandle, ForgeBufferHandle, ForgeRenderTarget>;
+            using VariantTypes = std::variant<ForgeSwapChainHandle,
+                ForgeTextureHandle,
+                ForgeBufferHandle,
+                ForgeRenderTarget>;
             // could be done better ...
             CommandResourcePool() = default;
 
@@ -117,7 +120,7 @@ namespace hpl {
             frame.m_frameIndex = CurrentFrameIndex();
             frame.m_swapChainIndex = SwapChainIndex();
             frame.m_renderer = this;
-            frame.m_swapChain = m_swapChain;
+            frame.m_swapChain = m_swapChain.m_handle;
 
             frame.m_cmd = m_cmds[CurrentFrameIndex()];
             frame.m_cmdPool = m_cmdPools[CurrentFrameIndex()];
@@ -141,7 +144,7 @@ namespace hpl {
         size_t SwapChainIndex() { return m_swapChainIndex; }
         size_t CurrentFrameIndex() { return m_currentFrameCount % SwapChainLength; }
         size_t FrameCount() { return m_currentFrameCount; }
-        inline SwapChain* GetSwapChain() { return m_swapChain; }
+        inline SwapChain* GetSwapChain() { return m_swapChain.m_handle; }
         inline Queue* GetGraphicsQueue() { return m_graphicsQueue; }
 
         void cmdCopyTexture(Cmd* cmd, Texture* srcTexture, RenderTarget* dstTexture);
@@ -164,7 +167,7 @@ namespace hpl {
 
         Renderer* m_renderer = nullptr;
         RootSignature* m_pipelineSignature = nullptr;
-        SwapChain* m_swapChain = nullptr;
+        ForgeSwapChainHandle m_swapChain;
         Semaphore* m_imageAcquiredSemaphore = nullptr;
         Queue* m_graphicsQueue = nullptr;
 

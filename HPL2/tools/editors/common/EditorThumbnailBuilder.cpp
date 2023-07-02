@@ -73,18 +73,18 @@ cEditorThumbnailBuilder::cEditorThumbnailBuilder(iEditorBase* apEditor)
 	// auto thumbnailImage = std::make_shared<Image>();
 	// thumbnailImage->Initialize(desc);
 	// mpFB64 = std::make_shared<RenderTarget>(thumbnailImage);
-	
 
-	auto desc128 = ImageDescriptor::CreateTexture2D(128, 128, false, bgfx::TextureFormat::Enum::RGBA8);
-	desc128.m_configuration.m_rt = RTType::RT_Write;
-	auto image128 = std::make_shared<Image>();
-	image128->Initialize(desc128);
-	mpRenderTarget128 = std::make_shared<LegacyRenderTarget>(image128);
+
+//	auto desc128 = ImageDescriptor::CreateTexture2D(128, 128, false, bgfx::TextureFormat::Enum::RGBA8);
+//	desc128.m_configuration.m_rt = RTType::RT_Write;
+//	auto image128 = std::make_shared<Image>();
+//	image128->Initialize(desc128);
+//	mpRenderTarget128 = std::make_shared<LegacyRenderTarget>(image128);
 
 	mpViewport = pScene->CreateViewport(pCamera,pWorld,true);
 	mpViewport->SetSize(cVector2l(128));
 	mpViewport->setRenderTarget(mpRenderTarget128);
-	mpViewport->setImageDescriptor(desc128);
+	//mpViewport->setImageDescriptor(desc128);
 	mpViewport->SetActive(false);
 	mpViewport->SetVisible(false);
 	mpViewport->GetRenderSettings()->mClearColor = cColor(0,1);
@@ -470,7 +470,7 @@ void cEditorThumbnailBuilder::PreBuild()
 	iLowLevelGraphics* pGfx = mpEditor->GetEngine()->GetGraphics()->GetLowLevel();
 
 	// TODO: need to replace with RendTarget
-	// pGfx->SetCurrentFrameBuffer(mpFB128); 
+	// pGfx->SetCurrentFrameBuffer(mpFB128);
 }
 
 //-------------------------------------------------------------------

@@ -41,6 +41,6 @@ void CS_MAIN(SV_DispatchThreadID(uint3) did)
         float ao = LoadRWTex3D(Get(aoQurter), uint3(did.xy, sliceIndex)).x;
         float4 color = LoadRWTex2D(Get(gOutput), fullResPos).rgba;
 
-	Write2D(Get(gOutput), fullResPos, float4(color.rgb * pow(saturate(ao), POWER_EXP), color.a));
+	    Write2D(Get(gOutput), fullResPos, float4(color.rgb * pow(saturate(ao), POWER_EXP), color.a));
     }
 }

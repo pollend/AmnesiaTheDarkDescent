@@ -913,7 +913,7 @@ namespace hpl {
             vertexLayout.mAttribs[0].mLocation = 0;
             vertexLayout.mAttribs[0].mOffset = 0;
 
-            std::array colorFormats = { getRecommendedSwapchainFormat(false, false)  };
+            std::array colorFormats = { ColorBufferFormat };
             for(size_t variant = 0; variant <  m_fogPass.m_pipeline.size(); variant++) {
                 RasterizerStateDesc rasterizerStateDesc = {};
                 DepthStateDesc depthStateDesc = {};
@@ -1439,7 +1439,7 @@ namespace hpl {
                 depthStateDesc.mDepthWrite = false;
                 depthStateDesc.mDepthFunc = CMP_EQUAL;
 
-                std::array colorFormats = { getRecommendedSwapchainFormat(false, false) };
+                std::array colorFormats = { ColorBufferFormat };
                 PipelineDesc pipelineDesc = {};
                 pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
                 auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
@@ -1527,7 +1527,7 @@ namespace hpl {
 
 
                 std::array colorFormats = {
-                    getRecommendedSwapchainFormat(false, false)
+                    ColorBufferFormat
                 };
                 std::array<eMaterialBlendMode, TranslucencyPipeline::BlendModeCount> blendMapping = {};
                 blendMapping[TranslucencyPipeline::BlendAdd] = eMaterialBlendMode_Add;
@@ -1936,7 +1936,7 @@ namespace hpl {
             blendStateDesc.mIndependentBlend = false;
 
             std::array colorFormats = {
-                getRecommendedSwapchainFormat(false, false)
+                ColorBufferFormat
             };
             {
                 PipelineDesc pipelineDesc = {};
@@ -2349,6 +2349,7 @@ namespace hpl {
         BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects);
         m_materialSet.reset();
 
+        mpCurrentRenderList->Clear();
         mpCurrentRenderList->Setup(mfCurrentFrameTime, apFrustum);
 
         const cMatrixf mainFrustumViewInv = cMath::MatrixInverse(apFrustum->GetViewMatrix());
@@ -2373,7 +2374,6 @@ namespace hpl {
                 renderTarget.mSampleCount = SAMPLE_COUNT_1;
                 renderTarget.mSampleQuality = 0;
                 renderTarget.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
-                renderTarget.pName = "G-Buffer RTs";
                 return renderTarget;
             };
 
@@ -2409,18 +2409,21 @@ namespace hpl {
                 b.m_normalBuffer.Load(forgeRenderer->Rend(),[&](RenderTarget** handle) {
                     auto targetDesc = deferredRenderTargetDesc();
                     targetDesc.mFormat = NormalBufferFormat;
+                    targetDesc.pName = "Normal RT";
                     addRenderTarget(forgeRenderer->Rend(), &targetDesc, handle);
                     return true;
                 });
                 b.m_positionBuffer.Load(forgeRenderer->Rend(),[&](RenderTarget** handle) {
                     auto targetDesc = deferredRenderTargetDesc();
                     targetDesc.mFormat = PositionBufferFormat;
+                    targetDesc.pName = "Position RT";
                     addRenderTarget(forgeRenderer->Rend(), &targetDesc, handle);
                     return true;
                 });
                 b.m_specularBuffer.Load(forgeRenderer->Rend(),[&](RenderTarget** handle) {
                     auto targetDesc = deferredRenderTargetDesc();
                     targetDesc.mFormat = SpecularBufferFormat;
+                    targetDesc.pName = "Specular RT";
                     addRenderTarget(forgeRenderer->Rend(), &targetDesc, handle);
                     return true;
                 });
@@ -2428,6 +2431,7 @@ namespace hpl {
                     auto targetDesc = deferredRenderTargetDesc();
                     targetDesc.mFormat = ColorBufferFormat;
                     targetDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE | DESCRIPTOR_TYPE_RW_TEXTURE;
+                    targetDesc.pName = "Color RT";
                     addRenderTarget(forgeRenderer->Rend(), &targetDesc, handle);
                     return true;
                 });
@@ -2453,7 +2457,6 @@ namespace hpl {
                 b.m_outputBuffer.Load(forgeRenderer->Rend(),[&](RenderTarget** handle) {
                     auto targetDesc = deferredRenderTargetDesc();
                     targetDesc.mFormat = ColorBufferFormat;
-                    targetDesc.mFormat = getRecommendedSwapchainFormat(false, false);
                     targetDesc.mDescriptors = DESCRIPTOR_TYPE_RW_TEXTURE | DESCRIPTOR_TYPE_TEXTURE;
                     addRenderTarget(forgeRenderer->Rend(), &targetDesc, handle);
                     return true;
@@ -3061,8 +3064,7 @@ namespace hpl {
             ASSERT(currentGBuffer.m_colorBuffer.IsValid() && "Invalid depth buffer");
             {
                 std::array rtBarriers = {
-                    RenderTargetBarrier{ currentGBuffer.m_normalBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_UNORDERED_ACCESS },
-                    RenderTargetBarrier{ currentGBuffer.m_depthBuffer.m_handle, RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_UNORDERED_ACCESS},
+                    RenderTargetBarrier{ currentGBuffer.m_depthBuffer.m_handle, RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_SHADER_RESOURCE },
                     RenderTargetBarrier{ currentGBuffer.m_colorBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE , RESOURCE_STATE_UNORDERED_ACCESS},
                 };
                 cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
@@ -3076,8 +3078,7 @@ namespace hpl {
                 currentGBuffer.m_colorBuffer.m_handle->pTexture);
             {
                 std::array rtBarriers = {
-                    RenderTargetBarrier{ currentGBuffer.m_normalBuffer.m_handle, RESOURCE_STATE_UNORDERED_ACCESS , RESOURCE_STATE_SHADER_RESOURCE  },
-                    RenderTargetBarrier{ currentGBuffer.m_depthBuffer.m_handle, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_DEPTH_WRITE },
+                    RenderTargetBarrier{ currentGBuffer.m_depthBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE  , RESOURCE_STATE_DEPTH_WRITE },
                     RenderTargetBarrier{ currentGBuffer.m_colorBuffer.m_handle, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE },
                 };
                 cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
@@ -3097,7 +3098,6 @@ namespace hpl {
             // std::array<std::vector<detail::DeferredLight*>, eDeferredLightList_LastEnum> sortedLights;
             // DON'T touch deferredLights after this point
             std::vector<detail::DeferredLight> deferredLights;
-            //deferredLights.reserve(mpCurrentRenderList->GetLights().size());
             std::vector<detail::DeferredLight*> deferredLightRenderBack;
             std::vector<detail::DeferredLight*> deferredLightStencilFront;
 
@@ -3345,23 +3345,6 @@ namespace hpl {
                 mpCurrentSettings->mlNumberOfLightsRendered++;
 
                 deferredLightRenderBack.emplace_back(&deferredLight);
-             // TODO: need pipeline barrieres between stencil and light passes
-             //   if (deferredLight.m_insideNearPlane) {
-             //       deferredLightRenderBack.emplace_back(&deferredLight);
-             //   } else {
-             //       if (lightType == eLightType_Point) {
-             //           if (deferredLight.getArea() >= mlMinLargeLightArea) {
-             //               deferredLightStencilFront.push_back(&deferredLight);
-             //           } else {
-             //               deferredLightRenderBack.push_back(&deferredLight);
-             //           }
-             //       }
-             //       // Always do double passes for spotlights as they need to will get artefacts otherwise...
-             //       //(At least with gobos)l
-             //       else if (lightType == eLightType_Spot) {
-             //           deferredLightStencilFront.push_back(&deferredLight);
-             //       }
-             //   }
             }
             std::sort(deferredLightStencilFront.begin(), deferredLightStencilFront.end(), detail::SortDeferredLightDefault);
             std::sort(deferredLightRenderBack.begin(), deferredLightRenderBack.end(), detail::SortDeferredLightDefault);
@@ -3488,16 +3471,16 @@ namespace hpl {
                     cmdBindDescriptorSet(frame.m_cmd, lightIndex, m_lightPerLightSet[frame.m_frameIndex]);
                     lightIndex++;
                 };
-
-                LoadActionsDesc loadActions = {};
-                loadActions.mLoadActionsColor[0] = LOAD_ACTION_CLEAR;
-                loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
-                loadActions.mLoadActionStencil = LOAD_ACTION_CLEAR;
-                std::array targets = {
-                    currentGBuffer.m_outputBuffer.m_handle,
-                };
-
-                cmdBindRenderTargets(frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, nullptr, nullptr, -1, -1);
+                {
+                    LoadActionsDesc loadActions = {};
+                    loadActions.mLoadActionsColor[0] = LOAD_ACTION_CLEAR;
+                    loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
+                    loadActions.mLoadActionStencil = LOAD_ACTION_CLEAR;
+                    std::array targets = {
+                        currentGBuffer.m_outputBuffer.m_handle,
+                    };
+                    cmdBindRenderTargets(frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, nullptr, nullptr, -1, -1);
+                }
                 cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)common->m_size.x, (float)common->m_size.y, 0.0f, 1.0f);
                 cmdSetScissor(frame.m_cmd, 0, 0, common->m_size.x, common->m_size.y);
 
@@ -3529,20 +3512,22 @@ namespace hpl {
                 // Draw Spot Lights
                 // Draw Box Lights
                 // --------------------------------------------------------
-                cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "Point Light Deferred Stencil  Back");
+                cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "Point Light Deferred Stencil front");
                 for (auto& light : deferredLightStencilFront) {
                     cmdSetStencilReferenceValue(frame.m_cmd, 0xff);
 
-                    std::array targets = { eVertexBufferElement_Position };
+                    std::array elements = { eVertexBufferElement_Position };
                     LegacyVertexBuffer::GeometryBinding binding{};
                     auto lightShape = GetLightShape(light->m_light, eDeferredShapeQuality_High);
                     ASSERT(lightShape && "Light shape not found");
-                    static_cast<LegacyVertexBuffer*>(lightShape)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
+                    static_cast<LegacyVertexBuffer*>(lightShape)->resolveGeometryBinding(frame.m_currentFrame, elements , &binding);
                     detail::cmdDefaultLegacyGeomBinding(frame.m_cmd, frame, binding);
 
                     cmdBindPipeline(frame.m_cmd, m_lightStencilPipeline);
                     cmdBindLightDescriptor(light); // bind light descriptor light uniforms
                     cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+
+
                     switch (light->m_light->GetLightType()) {
                         case eLightType_Point:
                             cmdBindPipeline(frame.m_cmd, m_pointLightPipeline[LightPipelineVariants::LightPipelineVariant_CW | LightPipelineVariants::LightPipelineVariant_StencilTest]);
@@ -3558,8 +3543,21 @@ namespace hpl {
                             break;
                     }
                     cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
-
-
+                    {
+                        LoadActionsDesc loadActions = {};
+                        loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
+                        loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
+                        loadActions.mLoadActionStencil = LOAD_ACTION_CLEAR;
+                        std::array targets = {
+                            currentGBuffer.m_outputBuffer.m_handle,
+                        };
+                        cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+                        std::array rtBarriers = {
+                            RenderTargetBarrier{currentGBuffer.m_depthBuffer.m_handle, RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_DEPTH_WRITE },
+                        };
+                        cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, nullptr, rtBarriers.size(), rtBarriers.data());
+                        cmdBindRenderTargets(frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, nullptr, nullptr, -1, -1);
+                    }
                 }
                 cmdEndDebugMarker(frame.m_cmd);
 
@@ -3734,6 +3732,8 @@ namespace hpl {
             }
             if (mpCurrentWorld->GetFogActive())
             {
+                cmdBindRenderTargets(frame.m_cmd, targets.size(), targets.data(), nullptr, &loadActions, nullptr, nullptr, -1, -1);
+
                 GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(&m_fogPass.m_fogUniformBuffer, sizeof(Fog::UniformFogData));
 
                 BufferUpdateDesc updateDesc = { uniformBuffer.pBuffer, uniformBuffer.mOffset };
@@ -3750,7 +3750,7 @@ namespace hpl {
                     std::array<DescriptorData, 15> params = {};
                     size_t paramCount = 0;
                     params[paramCount].pName = "uniformFogBlock";
-                    DescriptorDataRange range = { (uint32_t)uniformBuffer.mOffset, sizeof(Fog::UniformFogData) };
+                    DescriptorDataRange range = { (uint32_t)uniformBuffer.mOffset, sizeof(Fog::UniformFullscreenFogData ) };
                     params[paramCount].pRanges = &range;
                     params[paramCount++].ppBuffers = &uniformBuffer.pBuffer;
                     updateDescriptorSet(frame.m_renderer->Rend(), objectIndex, m_fogPass.m_perObjectSet[frame.m_frameIndex], paramCount, params.data());
