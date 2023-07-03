@@ -152,11 +152,8 @@ namespace hpl {
         bool m_owning = true;
         bool m_initialized = false;
         RefCounter* m_refCounter = nullptr;
-
         friend CRTP;
     };
-
-
 
     struct ForgeRenderTarget : public RefHandle<ForgeRenderTarget, RenderTarget> {
     public:

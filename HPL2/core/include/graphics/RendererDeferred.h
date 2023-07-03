@@ -24,18 +24,18 @@
 #include "windowing/NativeWindow.h"
 
 #include <graphics/ForgeHandles.h>
-#include <graphics/RenderList.h>
-#include <graphics/Renderable.h>
-#include <graphics/Image.h>
-#include <graphics/RenderTarget.h>
-#include <graphics/Renderer.h>
-#include <graphics/Material.h>
 #include <graphics/ForgeRenderer.h>
+#include <graphics/Image.h>
+#include <graphics/Material.h>
 #include <graphics/PassHBAOPlus.h>
+#include <graphics/RenderList.h>
+#include <graphics/RenderTarget.h>
+#include <graphics/Renderable.h>
+#include <graphics/Renderer.h>
 #include <math/MathTypes.h>
 
-#include <Common_3/Utilities/RingBuffer.h>
 #include <Common_3/Graphics/Interfaces/IGraphics.h>
+#include <Common_3/Utilities/RingBuffer.h>
 #include <FixPreprocessor.h>
 
 #include <folly/small_vector.h>
@@ -70,7 +70,6 @@ namespace hpl {
     class cRendererDeferred : public iRenderer {
         HPL_RTTI_IMPL_CLASS(iRenderer, cRendererDeferred, "{A3E5E5A1-1F9C-4F5C-9B9B-5B9B9B5B9B9B}")
     public:
-
         static constexpr TinyImageFormat DepthBufferFormat = TinyImageFormat_D32_SFLOAT_S8_UINT;
         static constexpr TinyImageFormat NormalBufferFormat = TinyImageFormat_R16G16B16A16_SFLOAT;
         static constexpr TinyImageFormat PositionBufferFormat = TinyImageFormat_R32G32B32A32_SFLOAT;
@@ -79,12 +78,9 @@ namespace hpl {
         static constexpr TinyImageFormat ShadowDepthBufferFormat = TinyImageFormat_D32_SFLOAT;
         static constexpr uint32_t MaxObjectUniforms = 4096;
         static constexpr uint32_t MaxLightUniforms = 1024;
-        static constexpr uint32_t  MaxHiZMipLevels = 32;
+        static constexpr uint32_t MaxHiZMipLevels = 32;
 
-        enum LightConfiguration {
-            HasGoboMap = 0x1,
-            HasShadowMap = 0x2
-        };
+        enum LightConfiguration { HasGoboMap = 0x1, HasShadowMap = 0x2 };
 
         enum LightPipelineVariants {
             LightPipelineVariant_CW = 0x0,
@@ -141,13 +137,13 @@ namespace hpl {
             float4 fogColor;
 
             float2 viewTexel;
-            float2  viewportSize;
+            float2 viewportSize;
         };
 
         class ShadowMapData {
         public:
             ForgeRenderTarget m_target;
-            iLight *m_light;
+            iLight* m_light;
             uint32_t m_transformCount = 0;
             uint32_t m_frameCount = 0;
             float m_radius = 0.0f;
@@ -187,7 +183,6 @@ namespace hpl {
                 m_refractionImage = std::move(buffer.m_refractionImage);
                 m_hizDepthBuffer = std::move(buffer.m_hizDepthBuffer);
                 m_hiZMipCount = buffer.m_hiZMipCount;
-
             }
             ForgeTextureHandle m_refractionImage;
             ForgeRenderTarget m_hizDepthBuffer;
@@ -227,7 +222,7 @@ namespace hpl {
             GBuffer m_gBufferReflection;
         };
 
-        cRendererDeferred( cGraphics* apGraphics, cResources* apResources);
+        cRendererDeferred(cGraphics* apGraphics, cResources* apResources);
         ~cRendererDeferred();
 
         inline ViewportData* GetSharedData(cViewport& viewport) {
@@ -235,7 +230,7 @@ namespace hpl {
         }
         virtual ForgeRenderTarget GetOutputImage(uint32_t frameIndex, cViewport& viewport) override {
             auto sharedData = m_boundViewportData.resolve(viewport);
-            if(!sharedData) {
+            if (!sharedData) {
                 return ForgeRenderTarget();
             }
             return sharedData->m_gBuffer[frameIndex].m_outputBuffer;
@@ -335,11 +330,7 @@ namespace hpl {
         };
         void cmdBindMaterialDescriptor(Cmd* cmd, const ForgeRenderer::Frame& frame, cMaterial* apMaterial);
         void cmdBindObjectDescriptor(
-            Cmd* cmd,
-            const ForgeRenderer::Frame& frame,
-            cMaterial* apMaterial,
-            iRenderable* apObject,
-            const PerObjectOption& option);
+            Cmd* cmd, const ForgeRenderer::Frame& frame, cMaterial* apMaterial, iRenderable* apObject, const PerObjectOption& option);
 
         std::array<std::unique_ptr<iVertexBuffer>, eDeferredShapeQuality_LastEnum> m_shapeSphere;
         std::unique_ptr<iVertexBuffer> m_shapePyramid;
@@ -371,7 +362,7 @@ namespace hpl {
         ForgeBufferHandle m_perFrameBuffer;
 
         // decal pass
-        std::array<Pipeline*,eMaterialBlendMode_LastEnum> m_decalPipeline;
+        std::array<Pipeline*, eMaterialBlendMode_LastEnum> m_decalPipeline;
         Shader* m_decalShader;
 
         struct Fog {
@@ -438,7 +429,6 @@ namespace hpl {
 
         // translucency pass
         struct TranslucencyPipeline {
-
             enum TranslucencyShaderVariant {
                 TranslucencyShaderVariantEmpty = 0x0,
                 TranslucencyShaderVariantFog = 0x1,
@@ -459,20 +449,13 @@ namespace hpl {
                 TranslucencyParticleShaderVariantFog = 0x1,
                 TranslucencyParticleVariantCount = 2
             };
-            enum TranslucencyBlend: uint8_t {
-                BlendAdd,
-                BlendMul,
-                BlendMulX2,
-                BlendAlpha,
-                BlendPremulAlpha,
-                BlendModeCount
-            };
+            enum TranslucencyBlend : uint8_t { BlendAdd, BlendMul, BlendMulX2, BlendAlpha, BlendPremulAlpha, BlendModeCount };
 
             struct TranslucencyWaterConstant {
                 float m_afT;
             };
 
-            struct TranslucencyConstant{
+            struct TranslucencyConstant {
                 uint32_t m_blendMode;
                 int m_textureMask;
                 float m_sceneAlpha;
@@ -482,18 +465,18 @@ namespace hpl {
             union TranslucencyKey {
                 uint8_t m_id;
                 struct {
-                    uint8_t m_hasDepthTest: 1;
-                    uint8_t m_hasFog: 1;
+                    uint8_t m_hasDepthTest : 1;
+                    uint8_t m_hasFog : 1;
                 } m_field;
                 static constexpr size_t NumOfVariants = 4;
             };
             union TranslucencyWaterKey {
                 uint8_t m_id;
                 struct {
-                    uint8_t m_hasDepthTest: 1;
-                    uint8_t m_hasFog: 1;
-                    uint8_t m_hasReflection: 1;
-                    uint8_t m_hasRefraction: 1;
+                    uint8_t m_hasDepthTest : 1;
+                    uint8_t m_hasFog : 1;
+                    uint8_t m_hasReflection : 1;
+                    uint8_t m_hasRefraction : 1;
                 } m_field;
                 static constexpr size_t NumOfVariants = 16;
             };
@@ -509,7 +492,7 @@ namespace hpl {
             std::array<std::array<Pipeline*, TranslucencyKey::NumOfVariants>, TranslucencyBlend::BlendModeCount> m_pipelines;
             std::array<Pipeline*, TranslucencyWaterKey::NumOfVariants> m_waterPipeline;
             std::array<Pipeline*, TranslucencyKey::NumOfVariants> m_refractionPipeline;
-            std::array<std::array<Pipeline*, TranslucencyKey::NumOfVariants >, TranslucencyBlend::BlendModeCount> m_particlePipelines;
+            std::array<std::array<Pipeline*, TranslucencyKey::NumOfVariants>, TranslucencyBlend::BlendModeCount> m_particlePipelines;
 
         } m_materialTranslucencyPass;
 
@@ -526,12 +509,12 @@ namespace hpl {
         folly::F14VectorMap<SamplerDesc, Sampler*> m_objectSamplerMap;
         std::array<Sampler*, ObjectSamplerKey::NumOfVariants> m_objectSamplers{};
         struct LightResourceEntry {
-            ForgeTextureHandle m_goboCubeMap ;
+            ForgeTextureHandle m_goboCubeMap;
             ForgeTextureHandle m_goboMap;
             ForgeTextureHandle m_falloffMap;
             ForgeTextureHandle m_attenuationLightMap;
         };
-        std::array<std::array<LightResourceEntry , MaxLightUniforms>, ForgeRenderer::SwapChainLength> m_lightResources{};
+        std::array<std::array<LightResourceEntry, MaxLightUniforms>, ForgeRenderer::SwapChainLength> m_lightResources{};
         // z pass
         Shader* m_zPassShader;
         Pipeline* m_zPassPipeline;
@@ -559,7 +542,8 @@ namespace hpl {
                 struct MaterialDescInfo {
                     void* m_material = nullptr; // void* to avoid accessing the material
                     uint32_t m_version = 0; // version of the material
-                    std::array<ForgeTextureHandle, eMaterialTexture_LastEnum> m_textureHandles{}; // handles to keep textures alive for the descriptor
+                    std::array<ForgeTextureHandle, eMaterialTexture_LastEnum>
+                        m_textureHandles{}; // handles to keep textures alive for the descriptor
                 } m_materialDescInfo[ForgeRenderer::SwapChainLength];
             };
             std::array<MaterialInfo, cMaterial::MaxMaterialID> m_materialInfo;
@@ -577,11 +561,10 @@ namespace hpl {
         Pipeline* m_pipelineHIZGenerate;
 
         RootSignature* m_rootSignatureCopyDepth;
-        DescriptorSet* m_descriptorCopyDepth;
-        DescriptorSet* m_descriptorAABBOcclusionTest;
-        Pipeline* m_pipelineCopyDepth;
-        Pipeline* m_pipelineAABBOcclusionTest;
-        Sampler* m_samplerHIZCopy;
+        ForgeDescriptorSet m_descriptorCopyDepth;
+        ForgeDescriptorSet m_descriptorAABBOcclusionTest;
+        ForgePipelineHandle m_pipelineCopyDepth;
+        ForgePipelineHandle m_pipelineAABBOcclusionTest;
         Shader* m_copyDepthShader;
         ForgeBufferHandle m_hiZOcclusionUniformBuffer;
         ForgeBufferHandle m_occlusionTestBuffer;
@@ -593,14 +576,14 @@ namespace hpl {
         };
         static constexpr uint32_t MaxQueryPoolSize = 4096 * 2;
         static constexpr uint32_t MaxOcclusionDescSize = 4096;
-        QueryPool* m_occlusionQuery;
+        QueryPool* m_occlusionQuery = nullptr;
         GPURingBuffer m_occlusionUniformBuffer;
-        RootSignature* m_rootSignatureOcclusuion;
-        DescriptorSet* m_descriptorOcclusionFrameSet;
+        RootSignature* m_rootSignatureOcclusuion = nullptr;
+        ForgeDescriptorSet m_descriptorOcclusionFrameSet;
         ForgeBufferHandle m_occlusionReadBackBuffer;
-        Shader* m_shaderOcclusionQuery;
-        Pipeline* m_pipelineMaxOcclusionQuery;
-        Pipeline* m_pipelineOcclusionQuery;
+        ForgeShaderHandle m_shaderOcclusionQuery;
+        ForgePipelineHandle m_pipelineMaxOcclusionQuery;
+        ForgePipelineHandle m_pipelineOcclusionQuery;
 
         struct UniformTest {
             bool m_preZPass = false;
@@ -623,7 +606,7 @@ namespace hpl {
         };
         GPURingBuffer m_lightPassRingBuffer;
         RootSignature* m_lightPassRootSignature;
-        Pipeline* m_lightStencilPipeline;
+        ForgePipelineHandle m_lightStencilPipeline;
         std::array<Pipeline*, LightPipelineVariant_Size> m_pointLightPipeline;
         std::array<Pipeline*, LightPipelineVariant_Size> m_boxLightPipeline;
         std::array<Pipeline*, LightPipelineVariant_Size> m_spotLightPipeline;
@@ -631,9 +614,9 @@ namespace hpl {
         ForgeShaderHandle m_spotLightShader;
         ForgeShaderHandle m_stencilLightShader;
         ForgeShaderHandle m_boxLightShader;
-        std::array<DescriptorSet*,ForgeRenderer::SwapChainLength> m_lightPerLightSet;
-        std::array<DescriptorSet*,ForgeRenderer::SwapChainLength> m_lightPerFrameSet;
-        Sampler* m_shadowCmpSampler;
+        std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_lightPerLightSet;
+        std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_lightPerFrameSet;
+        ForgeSamplerHandle m_shadowCmpSampler;
 
         Sampler* m_samplerPointClampToBorder;
         Sampler* m_pointSampler;
@@ -655,6 +638,5 @@ namespace hpl {
 
         static bool mbEdgeSmoothLoaded;
         static bool mbEnableParallax;
-
     };
 }; // namespace hpl

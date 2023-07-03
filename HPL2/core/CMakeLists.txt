@@ -318,7 +318,7 @@ get_filename_component(SHADER_RESOURCE_PATH
                        "${CMAKE_CURRENT_SOURCE_DIR}/resource"
                        ABSOLUTE)
 fsl_compile(
-    INPUT ${SHADER_RESOURCE_PATH}/shaders/ShaderList.fsl
+    INPUT ${SHADER_RESOURCE_PATH}/ShaderList.fsl
 )
 
 install(FILES 
