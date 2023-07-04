@@ -3947,12 +3947,17 @@ namespace hpl {
 
 
                         // TODO: fix refraction
-                        if (false && pMaterial->HasTranslucentIllumination()) {
+                        if (pMaterial->HasTranslucentIllumination()) {
                             if ( cubeMap && !isRefraction) {
                                 constants.m_blendMode = TranslucencyPipeline::BlendAdd;
                                 constants.m_textureMask = (cMaterial::EnableNormal | cMaterial::EnableCubeMap | cMaterial::EnableCubeMapAlpha);
                             }
 
+                            cmdBindPipeline(
+                                frame.m_cmd,
+                                (isRefraction ? m_materialTranslucencyPass.m_refractionPipeline[key.m_id]
+                                              : m_materialTranslucencyPass
+                                                    .m_pipelines[constants.m_blendMode][key.m_id]));
                             cmdBindPushConstants(frame.m_cmd, m_materialRootSignature, translucencyConstantIndex, &constants);
                             cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
                         }
