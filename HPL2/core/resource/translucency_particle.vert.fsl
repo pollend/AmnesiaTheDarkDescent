@@ -37,10 +37,13 @@ VSOutput VS_MAIN( VSInput In )
     INIT_MAIN;
     VSOutput Out;
 
-    Out.pos = mul(Get(modelViewMat), float4(In.Position.xyz, 1.0)).xyz;
+    float4x4 modelView = mul(Get(viewMat), Get(modelMat));
+    float4x4 modelViewPrj = mul(Get(projMat), modelView);
+
+    Out.pos = mul(modelView, float4(In.Position.xyz, 1.0)).xyz;
     Out.uv = mul(Get(uvMat), float4(In.TexCoord, 0, 1.0)).xy;
     Out.color = In.Color;
 
-    Out.Position = mul(Get(modelViewProjMat), float4(In.Position.xyz, 1.0));
+    Out.Position = mul(modelViewPrj, float4(In.Position.xyz, 1.0));
     RETURN(Out);
 }

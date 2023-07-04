@@ -569,19 +569,6 @@ namespace hpl {
 
         m_dissolveImage = mpResources->GetTextureManager()->Create2DImage("core_dissolve.tga", false);
         auto* forgeRenderer = Interface<ForgeRenderer>::Get();
-        auto updatePerFrameDescriptor = [&](DescriptorSet* desc) {
-            for(size_t i = 0; i < ForgeRenderer::SwapChainLength; i++) {
-                DescriptorData params[15] = {};
-                size_t paramCount = 0;
-
-                DescriptorDataRange range = { (uint32_t)(i * sizeof(cRendererDeferred::UniformPerFrameData)) , sizeof(cRendererDeferred::UniformPerFrameData) };
-                params[paramCount].pName = "perFrameConstants";
-                params[paramCount].pRanges = &range;
-                params[paramCount++].ppBuffers = &m_perFrameBuffer.m_handle;
-
-                updateDescriptorSet(forgeRenderer->Rend(),i, desc, paramCount, params);
-            }
-        };
 
         m_shadowCmpSampler.Load(forgeRenderer->Rend(), [&](Sampler** handle) {
             SamplerDesc miplessLinearSamplerDesc = {};
@@ -630,7 +617,7 @@ namespace hpl {
             BufferLoadDesc desc = {};
             desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_UNIFORM_BUFFER;
             desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
-            desc.mDesc.mSize = sizeof(cRendererDeferred::UniformPerFrameData) * ForgeRenderer::SwapChainLength;
+            desc.mDesc.mSize = sizeof(cRendererDeferred::UniformPerFrameData) * cRendererDeferred::MaxMaterialFrameDescriptors;
             desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
             desc.pData = nullptr;
             desc.ppBuffer = buffer;
@@ -1753,9 +1740,20 @@ namespace hpl {
 
             // DescriptorSetDesc constantDescSet{m_materialRootSignature, DESCRIPTOR_UPDATE_FREQ_NONE, 1};
             // addDescriptorSet(forgetRenderer->Rend(), &constantDescSet, &descriptor.m_constSet);
-            DescriptorSetDesc perFrameDescSet{ m_materialRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, 1 };
+            DescriptorSetDesc perFrameDescSet{ m_materialRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, MaxMaterialFrameDescriptors };
             for (auto& set : m_materialSet.m_frameSet) {
                 addDescriptorSet(forgeRenderer->Rend(), &perFrameDescSet, &set);
+
+                for(size_t i = 0; i < MaxMaterialFrameDescriptors; i++) {
+                    DescriptorDataRange range = { (uint32_t)(i * sizeof(cRendererDeferred::UniformPerFrameData)),
+                                                  sizeof(cRendererDeferred::UniformPerFrameData) };
+                    std::array<DescriptorData, 1> params = {};
+                    params[0].pName = "perFrameConstants";
+                    params[0].pRanges = &range;
+                    params[0].ppBuffers = &m_perFrameBuffer.m_handle;
+                    updateDescriptorSet(forgeRenderer->Rend(), i, set, 1, params.data());
+                }
+
             }
             DescriptorSetDesc batchDescriptorSet{ m_materialRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_BATCH, cMaterial::MaxMaterialID };
             for (auto& set : m_materialSet.m_materialSet) {
@@ -1764,19 +1762,6 @@ namespace hpl {
             DescriptorSetDesc perObjectDescriptorSet{ m_materialRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_DRAW, MaxObjectUniforms };
             for (auto& set : m_materialSet.m_perObjectSet) {
                 addDescriptorSet(forgeRenderer->Rend(), &perObjectDescriptorSet, &set);
-            }
-
-            for (size_t i = 0; i < ForgeRenderer::SwapChainLength; i++) {
-                DescriptorData params[15] = {};
-                size_t paramCount = 0;
-
-                DescriptorDataRange range = { (uint32_t)(i * sizeof(cRendererDeferred::UniformPerFrameData)),
-                                              sizeof(cRendererDeferred::UniformPerFrameData) };
-                params[paramCount].pName = "perFrameConstants";
-                params[paramCount].pRanges = &range;
-                params[paramCount++].ppBuffers = &m_perFrameBuffer.m_handle;
-
-                updateDescriptorSet(forgeRenderer->Rend(), 0, m_materialSet.m_frameSet[i], paramCount, params);
             }
         }
 
@@ -2081,42 +2066,6 @@ namespace hpl {
             m_shadowMapData[eShadowMapResolution_Low].emplace_back(createShadowMap(vShadowSize[lStartSize + eShadowMapResolution_Low]));
         }
 
-        // m_deferredSSAOProgram  = hpl::loadProgram("vs_post_effect", "fs_deferred_ssao");
-        // m_deferredSSAOBlurHorizontalProgram  = hpl::loadProgram("vs_post_effect", "fs_deferred_ssao_blur_horizontal");
-        // m_deferredSSAOBlurVerticalProgram  = hpl::loadProgram("vs_post_effect", "fs_deferred_ssao_blur_vertical");
-
-        // m_copyRegionProgram = hpl::loadProgram("cs_copy_region");
-        // m_lightBoxProgram = hpl::loadProgram("vs_light_box", "fs_light_box");
-        // m_nullShader = hpl::loadProgram("vs_null", "fs_null");
-        // m_fogVariant.Initialize(ShaderHelper::LoadProgramHandlerDefault("vs_deferred_fog", "fs_deferred_fog", true, true));
-        // m_pointLightVariants.Initialize(
-        //     ShaderHelper::LoadProgramHandlerDefault("vs_deferred_light", "fs_deferred_pointlight", false, true));
-
-        ////////////////////////////////////
-        // Create SSAO programs and textures
-        //  if(mbSSAOLoaded && mpLowLevelGraphics->GetCaps(eGraphicCaps_TextureFloat)==0)
-        //  {
-        //  	mbSSAOLoaded = false;
-        //  	Warning("System does not support float textures! SSAO is disabled.\n");
-        //  }
-        //  if(mbSSAOLoaded)
-        //  {
-        //  	cVector2l vSSAOSize = mvScreenSize / mlSSAOBufferSizeDiv;
-
-        // }
-
-        // ////////////////////////////////////
-        // //Create Smooth Edge and textures
-        // if(mbEdgeSmoothLoaded && mpLowLevelGraphics->GetCaps(eGraphicCaps_TextureFloat)==0)
-        // {
-        // 	mbEdgeSmoothLoaded = false;
-        // 	Warning("System does not support float textures! Edge smooth is disabled.\n");
-        // }
-        // if(mbEdgeSmoothLoaded)
-        // {
-
-        // }
-
         ////////////////////////////////////
         // Create light shapes
         tFlag lVtxFlag = eVertexElementFlag_Position | eVertexElementFlag_Color0 | eVertexElementFlag_Texture0;
@@ -2158,88 +2107,73 @@ namespace hpl {
     }
 
     void cRendererDeferred::DestroyData() {
-        // for(auto& shape: m_shapeSphere) {
-        // 	if(shape) {
-        // 		delete shape;
-        // 	}
-        // }
-        // if(m_shapePyramid) hplDelete(m_shapePyramid);
+    }
 
-        // mpGraphics->DestroyTexture(mpReflectionTexture);
+    uint32_t cRendererDeferred::updateFrameDescriptor( const ForgeRenderer::Frame& frame,Cmd* cmd, cWorld* apWorld,const PerFrameOption& options) {
 
-        /////////////////////////
-        // Shadow textures
-        //  DestroyShadowMaps();
+        uint32_t index = m_materialSet.m_frameIndex;
+        BufferUpdateDesc updatePerFrameConstantsDesc = { m_perFrameBuffer.m_handle,
+                                                         index * sizeof(UniformPerFrameData),
+                                                         sizeof(UniformPerFrameData) };
+        beginUpdateResource(&updatePerFrameConstantsDesc);
+        auto* uniformFrameData = reinterpret_cast<UniformPerFrameData*>(updatePerFrameConstantsDesc.pMappedData);
+        uniformFrameData->m_viewMatrix = cMath::ToForgeMat(options.m_viewMat.GetTranspose());
+        uniformFrameData->m_invViewMatrix = cMath::ToForgeMat(cMath::MatrixInverse(options.m_viewMat).GetTranspose());
+        uniformFrameData->m_projectionMatrix = cMath::ToForgeMat(options.m_projectionMat.GetTranspose());
+        uniformFrameData->m_viewProjectionMatrix = cMath::ToForgeMat(cMath::MatrixMul(options.m_projectionMat, options.m_viewMat).GetTranspose());
 
-        // if(mpShadowJitterTexture) mpGraphics->DestroyTexture(mpShadowJitterTexture);
+        uniformFrameData->worldFogStart = apWorld->GetFogStart();
+        uniformFrameData->worldFogLength = apWorld->GetFogEnd() - apWorld->GetFogStart();
+        uniformFrameData->oneMinusFogAlpha = 1.0f - apWorld->GetFogColor().a;
+        uniformFrameData->fogFalloffExp = apWorld->GetFogFalloffExp();
 
-        /////////////////////////
-        // Fog stuff
-        //  hplDelete(mpFogProgramManager);
+        uniformFrameData->m_invViewRotation = cMath::ToForgeMat((options.m_viewMat.GetTranspose()).GetRotation().GetTranspose());
+        uniformFrameData->viewTexel = float2(1.0f / options.m_size.x, 1.0f / options.m_size.y);
+        uniformFrameData->viewportSize = float2(options.m_size.x, options.m_size.y);
+        const auto fogColor = apWorld->GetFogColor();
+        uniformFrameData->fogColor = float4(fogColor.r, fogColor.g, fogColor.b, fogColor.a);
+        endUpdateResource(&updatePerFrameConstantsDesc, NULL);
 
-        /////////////////////////
-        // SSAO textures and programs
-        if (mbSSAOLoaded) {
-            // mpGraphics->DestroyTexture(mpSSAOTexture);
-            // mpGraphics->DestroyTexture(mpSSAOBlurTexture);
-            // mpGraphics->DestroyTexture(mpSSAOScatterDisk);
-
-            // mpGraphics->DestroyFrameBuffer(mpSSAOBuffer);
-            // mpGraphics->DestroyFrameBuffer(mpSSAOBlurBuffer);
-
-            // mpGraphics->DestroyGpuProgram(mpUnpackDepthProgram);
-            // for(int i=0;i<2; ++i)
-            // 	mpGraphics->DestroyGpuProgram(mpSSAOBlurProgram[i]);
-            // mpGraphics->DestroyGpuProgram(mpSSAORenderProgram);
-        }
-
-        /////////////////////////////
-        // Edge smooth
-        if (mbEdgeSmoothLoaded) {
-            // mpGraphics->DestroyFrameBuffer(mpEdgeSmooth_LinearDepthBuffer);
-
-            // mpGraphics->DestroyGpuProgram(mpEdgeSmooth_UnpackDepthProgram);
-            // mpGraphics->DestroyGpuProgram(mpEdgeSmooth_RenderProgram);
-        }
+        m_materialSet.m_frameIndex = (m_materialSet.m_frameIndex + 1) % MaxMaterialFrameDescriptors;
+        return index;
     }
 
     void cRendererDeferred::cmdBindObjectDescriptor(
         Cmd* cmd, const ForgeRenderer::Frame& frame, cMaterial* apMaterial, iRenderable* apObject, const PerObjectOption& option) {
         auto* objectDescSet = m_materialSet.m_perObjectSet[frame.m_frameIndex];
+        auto objectLookup = m_materialSet.m_objectDescriptorLookup.find(apObject);
 
-        cMatrixf modelMat =
-            option.m_modelMatrix.value_or(apObject->GetModelMatrixPtr() ? *apObject->GetModelMatrixPtr() : cMatrixf::Identity);
-        cMatrixf modelViewMat = cMath::MatrixMul(option.m_viewMat, modelMat);
-        cMatrixf modelViewProjMat = cMath::MatrixMul(cMath::MatrixMul(option.m_projectionMat, option.m_viewMat), modelMat);
+        if(objectLookup == m_materialSet.m_objectDescriptorLookup.end()) {
+            cMatrixf modelMat = option.m_modelMatrix.value_or(apObject->GetModelMatrixPtr() ? *apObject->GetModelMatrixPtr() : cMatrixf::Identity);
+            uint32_t index = m_materialSet.m_objectIndex++;
+            GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(&m_objectUniformBuffer, sizeof(cRendererDeferred::UniformObject));
+            cRendererDeferred::UniformObject uniformObjectData = {};
 
-        uint32_t index = m_materialSet.m_objectIndex++;
+            uniformObjectData.m_dissolveAmount = float4(apObject->GetCoverageAmount());
+            uniformObjectData.m_modelMat = cMath::ToForgeMat4(modelMat.GetTranspose());
+            uniformObjectData.m_invModelMat = cMath::ToForgeMat4(cMath::MatrixInverse(modelMat).GetTranspose());
+            if (apMaterial) {
+                uniformObjectData.m_uvMat = cMath::ToForgeMat4(apMaterial->GetUvMatrix());
+            }
 
-        GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(&m_objectUniformBuffer, sizeof(cRendererDeferred::UniformObject));
-        cRendererDeferred::UniformObject uniformObjectData = {};
+            BufferUpdateDesc updateDesc = { uniformBuffer.pBuffer, uniformBuffer.mOffset };
+            beginUpdateResource(&updateDesc);
+            (*reinterpret_cast<cRendererDeferred::UniformObject*>(updateDesc.pMappedData)) = uniformObjectData;
+            endUpdateResource(&updateDesc, NULL);
 
-        uniformObjectData.m_dissolveAmount = float4(apObject->GetCoverageAmount());
-        uniformObjectData.m_modelMat = cMath::ToForgeMat4(modelMat.GetTranspose());
-        if (apMaterial) {
-            uniformObjectData.m_uvMat = cMath::ToForgeMat4(apMaterial->GetUvMatrix());
+            DescriptorDataRange range = { (uint32_t)uniformBuffer.mOffset, sizeof(cRendererDeferred::UniformObject) };
+            std::array<DescriptorData, 1> params = {};
+            params[0].pName = "uniformObjectBlock";
+            params[0].pRanges = &range;
+            params[0].ppBuffers = &uniformBuffer.pBuffer;
+
+            m_materialSet.m_objectDescriptorLookup[apObject] = index;
+            updateDescriptorSet(frame.m_renderer->Rend(), index, objectDescSet, params.size(), params.data());
+            cmdBindDescriptorSet(cmd, index, objectDescSet);
+        } else {
+            cmdBindDescriptorSet(cmd, objectLookup->second, objectDescSet);
         }
-        uniformObjectData.m_modelViewMat = cMath::ToForgeMat4(modelViewMat.GetTranspose());
-        uniformObjectData.m_modelViewProjMat = cMath::ToForgeMat4(modelViewProjMat.GetTranspose());
-        uniformObjectData.m_normalMat = cMath::ToForgeMat3(cMath::MatrixInverse(modelViewMat));
 
-        BufferUpdateDesc updateDesc = { uniformBuffer.pBuffer, uniformBuffer.mOffset };
-        beginUpdateResource(&updateDesc);
-        (*reinterpret_cast<cRendererDeferred::UniformObject*>(updateDesc.pMappedData)) = uniformObjectData;
-        endUpdateResource(&updateDesc, NULL);
-
-        DescriptorData params[15] = {};
-        size_t paramCount = 0;
-        params[paramCount].pName = "uniformObjectBlock";
-        DescriptorDataRange range = { (uint32_t)uniformBuffer.mOffset, sizeof(cRendererDeferred::UniformObject) };
-        params[paramCount].pRanges = &range;
-        params[paramCount++].ppBuffers = &uniformBuffer.pBuffer;
-
-        updateDescriptorSet(frame.m_renderer->Rend(), index, objectDescSet, paramCount, params);
-        cmdBindDescriptorSet(cmd, index, objectDescSet);
     }
 
     void cRendererDeferred::cmdBindMaterialDescriptor(Cmd* cmd, const ForgeRenderer::Frame& frame, cMaterial* apMaterial) {
@@ -2332,7 +2266,12 @@ namespace hpl {
         iRenderer::Draw(frame, viewport, afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects);
         // keep around for the moment ...
         BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects);
-        m_materialSet.reset();
+
+        if(frame.m_currentFrame != m_activeFrame) {
+            m_materialSet.m_objectIndex = 0;
+            m_materialSet.m_objectDescriptorLookup.clear();
+            m_activeFrame = frame.m_currentFrame;
+        }
 
         mpCurrentRenderList->Clear();
         mpCurrentRenderList->Setup(mfCurrentFrameTime, apFrustum);
@@ -2453,34 +2392,17 @@ namespace hpl {
 
         auto& currentGBuffer = common->m_gBuffer[frame.m_frameIndex];
 
-        {
-            BufferUpdateDesc updatePerFrameConstantsDesc = { m_perFrameBuffer.m_handle,
-                                                             frame.m_frameIndex * sizeof(UniformPerFrameData),
-                                                             sizeof(UniformPerFrameData) };
-            beginUpdateResource(&updatePerFrameConstantsDesc);
-            auto* uniformFrameData = reinterpret_cast<UniformPerFrameData*>(updatePerFrameConstantsDesc.pMappedData);
-            uniformFrameData->m_viewMatrix = cMath::ToForgeMat(mainFrustumView);
-            uniformFrameData->m_projectionMatrix = cMath::ToForgeMat(mainFrustumProj);
-            uniformFrameData->m_viewProjectionMatrix = cMath::ToForgeMat(cMath::MatrixMul(mainFrustumProj, mainFrustumView));
-
-            uniformFrameData->worldFogStart = apWorld->GetFogStart();
-            uniformFrameData->worldFogLength = apWorld->GetFogEnd() - apWorld->GetFogStart();
-            uniformFrameData->oneMinusFogAlpha = 1.0f - apWorld->GetFogColor().a;
-            uniformFrameData->fogFalloffExp = apWorld->GetFogFalloffExp();
-
-            uniformFrameData->viewTexel = float2(1.0f / common->m_size.x, 1.0f / common->m_size.y);
-            uniformFrameData->viewportSize = float2(common->m_size.x, common->m_size.y);
-            const auto fogColor = apWorld->GetFogColor();
-            uniformFrameData->fogColor = float4(fogColor.r, fogColor.g, fogColor.b, fogColor.a);
-
-            endUpdateResource(&updatePerFrameConstantsDesc, NULL);
-        }
+        const uint32_t mainFrameIndex = updateFrameDescriptor(frame, frame.m_cmd, apWorld, {
+            .m_size = float2(common->m_size.x, common->m_size.y),
+            .m_viewMat = mainFrustumView,
+            .m_projectionMat = mainFrustumProj
+        });
 
         {
-            DescriptorData params[1] = {};
+            std::array<DescriptorData, 1> params = {};
             params[0].pName = "refractionMap";
             params[0].ppTextures = &currentGBuffer.m_refractionImage.m_handle;
-            updateDescriptorSet(frame.m_renderer->Rend(), 0, m_materialSet.m_frameSet[frame.m_frameIndex], 1, params);
+            updateDescriptorSet(frame.m_renderer->Rend(), mainFrameIndex, m_materialSet.m_frameSet[frame.m_frameIndex], params.size(), params.data());
         }
 
         frame.m_resourcePool->Push(currentGBuffer.m_colorBuffer);
@@ -2640,7 +2562,7 @@ namespace hpl {
                 cmdBindPipeline(m_prePassCmd, m_zPassPipeline);
 
                 cmdBindDescriptorSet(m_prePassCmd, 0, m_zPassConstSet);
-                cmdBindDescriptorSet(m_prePassCmd, 0, m_materialSet.m_frameSet[frame.m_frameIndex]);
+                cmdBindDescriptorSet(m_prePassCmd, mainFrameIndex, m_materialSet.m_frameSet[frame.m_frameIndex]);
 
                 BufferUpdateDesc updateDesc = { m_hiZOcclusionUniformBuffer.m_handle, 0, sizeof(UniformPropBlock) };
                 beginUpdateResource(&updateDesc);
@@ -2882,7 +2804,7 @@ namespace hpl {
             cmdBindPipeline(frame.m_cmd, m_zPassPipeline);
 
             cmdBindDescriptorSet(frame.m_cmd, 0, m_zPassConstSet);
-            cmdBindDescriptorSet(frame.m_cmd, 0, m_materialSet.m_frameSet[frame.m_frameIndex]);
+            cmdBindDescriptorSet(frame.m_cmd, mainFrameIndex, m_materialSet.m_frameSet[frame.m_frameIndex]);
 
             auto* testResult = reinterpret_cast<uint32_t*>(m_occlusionTestBuffer.m_handle->pCpuMappedAddress);
             for (size_t i = 0; i < uniformTest.size(); ++i) {
@@ -2961,8 +2883,7 @@ namespace hpl {
             cmdSetScissor(frame.m_cmd, 0, 0, common->m_size.x, common->m_size.y);
             cmdBindPipeline(frame.m_cmd, m_materialSolidPass.m_solidDiffuseParallaxPipeline);
 
-            // cmdBindDescriptorSet(frame.m_cmd, 0, m_solidDescriptorSet.m_constSet);
-            cmdBindDescriptorSet(frame.m_cmd, 0, m_materialSet.m_frameSet[frame.m_frameIndex]);
+            cmdBindDescriptorSet(frame.m_cmd, mainFrameIndex, m_materialSet.m_frameSet[frame.m_frameIndex]);
 
             for (auto& diffuseItem : mpCurrentRenderList->GetRenderableItems(eRenderListType_Diffuse)) {
                 cMaterial* pMaterial = diffuseItem->GetMaterial();
@@ -3011,9 +2932,7 @@ namespace hpl {
             cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)common->m_size.x, (float)common->m_size.y, 0.0f, 1.0f);
             cmdSetScissor(frame.m_cmd, 0, 0, common->m_size.x, common->m_size.y);
 
-            // cmdBindDescriptorSet(frame.m_cmd, 0, m_decalDescriptorSet.m_constSet);
-            cmdBindDescriptorSet(frame.m_cmd, 0, m_materialSet.m_frameSet[frame.m_frameIndex]);
-            // uint32_t decalIndex = 0;
+            cmdBindDescriptorSet(frame.m_cmd, mainFrameIndex, m_materialSet.m_frameSet[frame.m_frameIndex]);
             for (auto& decalItem : mpCurrentRenderList->GetRenderableItems(eRenderListType_Decal)) {
                 cMaterial* pMaterial = decalItem->GetMaterial();
                 iVertexBuffer* vertexBuffer = decalItem->GetVertexBuffer();
@@ -3275,6 +3194,13 @@ namespace hpl {
                                     frame.m_cmd, 0, 0, shadowMapData->m_target.m_handle->mWidth, shadowMapData->m_target.m_handle->mHeight);
                                 cmdBindPipeline(frame.m_cmd, m_zPassShadowPipelineCW);
 
+                                uint32_t shadowFrameIndex = updateFrameDescriptor(frame, frame.m_cmd, apWorld, {
+                                    .m_size = float2(common->m_size.x, common->m_size.y),
+                                    .m_viewMat = pLightFrustum->GetViewMatrix(),
+                                    .m_projectionMat = pLightFrustum->GetProjectionMatrix()
+                                });
+                                cmdBindDescriptorSet(frame.m_cmd, shadowFrameIndex, m_materialSet.m_frameSet[frame.m_frameIndex]);
+                                //cmdBindDescriptorSet()
                                 for (auto& pObject : shadowCasters) {
                                     eMaterialRenderMode renderMode =
                                         pObject->GetCoverageAmount() >= 1 ? eMaterialRenderMode_Z : eMaterialRenderMode_Z_Dissolve;
@@ -3644,7 +3570,7 @@ namespace hpl {
             cmdSetScissor(frame.m_cmd, 0, 0, common->m_size.x, common->m_size.y);
             cmdBindPipeline(frame.m_cmd, m_solidIlluminationPipeline);
 
-            cmdBindDescriptorSet(frame.m_cmd, 0, m_materialSet.m_frameSet[frame.m_frameIndex]);
+            cmdBindDescriptorSet(frame.m_cmd, mainFrameIndex, m_materialSet.m_frameSet[frame.m_frameIndex]);
 
             for (auto& illuminationItem : mpCurrentRenderList->GetRenderableItems(eRenderListType_Illumination)) {
                 cMaterial* pMaterial = illuminationItem->GetMaterial();
@@ -3879,7 +3805,7 @@ namespace hpl {
             cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, static_cast<float>(common->m_size.x), static_cast<float>(common->m_size.y), 0.0f, 1.0f);
             cmdSetScissor(frame.m_cmd, 0, 0, common->m_size.x, common->m_size.y);
 
-            cmdBindDescriptorSet(frame.m_cmd, 0, m_materialSet.m_frameSet[frame.m_frameIndex]);
+            cmdBindDescriptorSet(frame.m_cmd, mainFrameIndex, m_materialSet.m_frameSet[frame.m_frameIndex]);
             std::array<TranslucencyPipeline::TranslucencyBlend, eMaterialBlendMode_LastEnum> translucencyBlendTable;
             translucencyBlendTable[eMaterialBlendMode_Add] = TranslucencyPipeline::TranslucencyBlend::BlendAdd;
             translucencyBlendTable[eMaterialBlendMode_Mul] = TranslucencyPipeline::TranslucencyBlend::BlendMul;
@@ -4019,13 +3945,14 @@ namespace hpl {
                         cmdBindPushConstants(frame.m_cmd, m_materialRootSignature, translucencyConstantIndex, &constants);
                         cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
 
-                        if (pMaterial->HasTranslucentIllumination()) {
-                            if (!isParticleEmitter && cubeMap && !isRefraction) {
+
+                        // TODO: fix refraction
+                        if (false && pMaterial->HasTranslucentIllumination()) {
+                            if ( cubeMap && !isRefraction) {
                                 constants.m_blendMode = TranslucencyPipeline::BlendAdd;
+                                constants.m_textureMask = (cMaterial::EnableNormal | cMaterial::EnableCubeMap | cMaterial::EnableCubeMapAlpha);
                             }
 
-                            constants.m_textureMask =
-                                isRefraction ? 0 : (cMaterial::EnableNormal | cMaterial::EnableCubeMap | cMaterial::EnableCubeMapAlpha);
                             cmdBindPushConstants(frame.m_cmd, m_materialRootSignature, translucencyConstantIndex, &constants);
                             cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
                         }

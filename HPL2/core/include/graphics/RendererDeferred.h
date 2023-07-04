@@ -79,6 +79,8 @@ namespace hpl {
         static constexpr uint32_t MaxObjectUniforms = 4096;
         static constexpr uint32_t MaxLightUniforms = 1024;
         static constexpr uint32_t MaxHiZMipLevels = 32;
+        static constexpr uint32_t MaxMaterialFrameDescriptors = 1024;
+
 
         enum LightConfiguration { HasGoboMap = 0x1, HasShadowMap = 0x2 };
 
@@ -118,15 +120,14 @@ namespace hpl {
         struct UniformObject {
             float4 m_dissolveAmount;
             mat4 m_modelMat;
+            mat4 m_invModelMat;
             mat4 m_uvMat;
-            mat4 m_modelViewMat;
-            mat4 m_modelViewProjMat;
-            mat3 m_normalMat;
         };
 
         struct UniformPerFrameData {
             mat4 m_invViewRotation;
             mat4 m_viewMatrix;
+            mat4 m_invViewMatrix;
             mat4 m_projectionMatrix;
             mat4 m_viewProjectionMatrix;
 
@@ -328,9 +329,15 @@ namespace hpl {
             cMatrixf m_projectionMat;
             std::optional<cMatrixf> m_modelMatrix = std::nullopt;
         };
+        struct PerFrameOption {
+            float2 m_size;
+            cMatrixf m_viewMat;
+            cMatrixf m_projectionMat;
+        };
+
+        uint32_t updateFrameDescriptor(const ForgeRenderer::Frame& frame,Cmd* cmd, cWorld* apWorld,const PerFrameOption& options);
         void cmdBindMaterialDescriptor(Cmd* cmd, const ForgeRenderer::Frame& frame, cMaterial* apMaterial);
-        void cmdBindObjectDescriptor(
-            Cmd* cmd, const ForgeRenderer::Frame& frame, cMaterial* apMaterial, iRenderable* apObject, const PerObjectOption& option);
+        void cmdBindObjectDescriptor(Cmd* cmd, const ForgeRenderer::Frame& frame, cMaterial* apMaterial, iRenderable* apObject, const PerObjectOption& option);
 
         std::array<std::unique_ptr<iVertexBuffer>, eDeferredShapeQuality_LastEnum> m_shapeSphere;
         std::unique_ptr<iVertexBuffer> m_shapePyramid;
@@ -414,7 +421,6 @@ namespace hpl {
         } m_fogPass;
 
         RootSignature* m_materialRootSignature;
-
         // diffuse solid
         struct MaterialSolid {
             Shader* m_solidDiffuseShader;
@@ -524,18 +530,13 @@ namespace hpl {
         std::set<iRenderable*> m_preZPassRenderables;
 
         GPURingBuffer m_objectUniformBuffer;
-
         struct MaterialPassDescriptorSet {
             std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_frameSet;
             std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perObjectSet;
             std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_materialSet;
-            std::unordered_map<uint32_t, uint32_t> m_objectDescriptorLookup;
-            uint32_t m_objectIndex;
-
-            inline void reset() {
-                m_objectIndex = 0;
-                m_objectDescriptorLookup.clear();
-            }
+            folly::F14ValueMap<iRenderable*, uint32_t> m_objectDescriptorLookup;
+            uint32_t m_frameIndex = 0;
+            uint32_t m_objectIndex = 0;
 
             // Material
             struct MaterialInfo {
@@ -550,6 +551,7 @@ namespace hpl {
             ForgeBufferHandle m_materialUniformBuffer;
         } m_materialSet;
 
+        uint32_t m_activeFrame = 0; // tracks the active frame if differnt then we need to reset some state
         CmdPool* m_prePassPool = nullptr;
         Cmd* m_prePassCmd = nullptr;
         Fence* m_prePassFence = nullptr;

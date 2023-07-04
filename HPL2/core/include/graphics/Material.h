@@ -328,7 +328,7 @@ namespace hpl {
 		bool mbUseRefractionEdgeCheck;
 		bool mbHasWorldReflection;
 		bool mbWorldReflectionOcclusionTest;
-		bool mbHasTranslucentIllumination;
+		bool mbHasTranslucentIllumination = false;
 		bool mbLargeTransperantSurface;
 		bool mbAffectedByFog;
 		bool mbUseAlphaDissolveFilter;

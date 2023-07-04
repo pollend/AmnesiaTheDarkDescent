@@ -19,6 +19,7 @@
 
 #include "graphics/Material.h"
 
+#include "graphics/GraphicsTypes.h"
 #include "graphics/Image.h"
 #include "system/LowLevelSystem.h"
 #include "system/String.h"
@@ -157,7 +158,8 @@ namespace hpl {
 	void cMaterial::UpdateFlags() {
 		const auto alphaMapImage = GetImage(eMaterialTexture_Alpha);
 		const auto heightMapImage = GetImage(eMaterialTexture_Height);
-		m_info.m_data.m_common.m_textureConfig = 
+
+	    m_info.m_data.m_common.m_textureConfig =
 					(GetImage(eMaterialTexture_Diffuse) ? EnableDiffuse: 0) |
 					(GetImage(eMaterialTexture_NMap) ? EnableNormal: 0) |
  					(GetImage(eMaterialTexture_Specular) ? EnableSpecular: 0) |
@@ -170,7 +172,7 @@ namespace hpl {
 					(m_info.m_alphaDissolveFilter ? UseDissolveFilter: 0);
 		switch(m_info.m_id) {
 			case MaterialID::SolidDiffuse: {
-				m_info.m_data.m_common.m_textureConfig |= 
+				m_info.m_data.m_common.m_textureConfig |=
 					((alphaMapImage && TinyImageFormat_ChannelCount(static_cast<TinyImageFormat>(alphaMapImage->GetTexture().m_handle->mFormat)) == 1) ? IsAlphaSingleChannel: 0) |
 					((heightMapImage && TinyImageFormat_ChannelCount(static_cast<TinyImageFormat>(heightMapImage->GetTexture().m_handle->mFormat)) == 1) ? IsHeightMapSingleChannel: 0);
 				break;
@@ -179,14 +181,14 @@ namespace hpl {
 				m_info.m_data.m_common.m_textureConfig |=
 					(HasRefraction() ? UseRefractionNormals: 0)  |
 					(IsRefractionEdgeCheck() ? UseRefractionEdgeCheck: 0);
-				break;
+			    break;
 			}
 			default:
 				break;
 		}
 	}
-	
-	void cMaterial::SetImage(eMaterialTexture aType, iResourceBase *apTexture) 
+
+	void cMaterial::SetImage(eMaterialTexture aType, iResourceBase *apTexture)
 	{
 		// increase version number to dirty material
 		m_version++;
@@ -294,7 +296,7 @@ namespace hpl {
 	// 						std::array<DescriptorData, 2> descriptorData{};
 	// 						descriptorData[0].pName = "uniformMaterialBlock";
 	// 						descriptorData[0].ppBuffers = &m_bufferHandle[frame.m_frameIndex].m_handle;
-							
+
 	// 						return true;
 
 	// 						break;
@@ -377,7 +379,7 @@ namespace hpl {
 		// reinterpret_cast<MaterialCommonBlock*>(uniformUpdate.pMappedData)->m_textureMatrix = cMath::ToForgeMat4(m_mtxUV);
 		// endUpdateResource(&uniformUpdate, nullptr);
 
-		m_version++;		
+		m_version++;
 		mfAnimTime += afTimeStep;
 	}
 

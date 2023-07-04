@@ -428,9 +428,12 @@ namespace hpl {
 		tString materialID = cString::ToLowerCase(sType);
 		auto& typeInfo = pMat->type();
 		for(auto& meta: cMaterial::MaterialMetaTable) {
-			// auto& meta = cMaterial::MetaInfo[i];
+		// auto& meta = cMaterial::MetaInfo[i];
 			if(materialID == meta.m_name) {
-				auto& type = pMat->type();
+				if(meta.m_isTranslucent) {
+			        pMat->SetBlendMode(GetBlendMode(sBlendMode));
+			    }
+			    auto& type = pMat->type();
 				type.m_id = meta.m_id;
 				switch(meta.m_id) {
 					case cMaterial::MaterialID::SolidDiffuse: {

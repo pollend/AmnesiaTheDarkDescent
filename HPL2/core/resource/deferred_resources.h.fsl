@@ -6,6 +6,7 @@ CBUFFER(perFrameConstants, UPDATE_FREQ_PER_FRAME, b0, binding = 0)
 {
     DATA(float4x4, invViewRotationMat, None);
     DATA(float4x4, viewMat, None);
+    DATA(float4x4, invViewMat, None);
     DATA(float4x4, projMat, None);
     DATA(float4x4, viewProjMat, None);
 
@@ -19,15 +20,16 @@ CBUFFER(perFrameConstants, UPDATE_FREQ_PER_FRAME, b0, binding = 0)
     DATA(float2, viewportSize, None);
 };
 
+INLINE float3x3 ToNormalMat(float4x4 invModel, float4x4 invView) {
+   return transpose(mul(float3x3(invModel), float3x3(invView)));
+}
+
 CBUFFER(uniformObjectBlock, UPDATE_FREQ_PER_DRAW, b1, binding = 1)
 {
     DATA(float, dissolveAmount, None);
     DATA(float4x4, modelMat, None);
+    DATA(float4x4, invModelMat, None);
     DATA(float4x4, uvMat, None);
-
-    DATA(float4x4, modelViewMat, None);
-    DATA(float4x4, modelViewProjMat, None);
-    DATA(float3x3, normalMat, None);
 };
 
 #if defined(MATERIAL_SOLID)

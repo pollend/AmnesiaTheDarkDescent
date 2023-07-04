@@ -29,7 +29,7 @@ STRUCT(VSInput)
 STRUCT(VSOutput)
 {
 	DATA(float4, Position, SV_Position);
-        DATA(float3, pos, POSITION);
+    DATA(float3, pos, POSITION);
 	DATA(float2, uv, TEXCOORD0);
 	DATA(float3, normal, NORMAL);
 	DATA(float3, tangent, TANGENT);
@@ -42,14 +42,18 @@ VSOutput VS_MAIN( VSInput In )
     INIT_MAIN;
     VSOutput Out;
 
-    Out.pos = mul(Get(modelViewMat), float4(In.Position.xyz, 1.0)).xyz;
+    float4x4 modelView = mul(Get(viewMat), Get(modelMat));
+    float4x4 modelViewPrj = mul(Get(projMat), modelView);
+
+    Out.pos = mul(modelView, float4(In.Position.xyz, 1.0)).xyz;
     Out.uv = mul(Get(uvMat), float4(In.TexCoord, 0, 1.0)).xy;
 
-    Out.normal = normalize(mul(Get(normalMat), In.Normal.xyz));
-    Out.tangent = normalize(mul(Get(normalMat), In.Tangent.xyz));
-    Out.bitangent = normalize(mul(Get(normalMat), cross(In.Tangent.xyz, In.Normal.xyz)));
+    float3x3 normalMat = ToNormalMat(Get(invModelMat), Get(invViewMat));
+    Out.normal = normalize(mul(normalMat, In.Normal.xyz));
+    Out.tangent = normalize(mul(normalMat, In.Tangent.xyz));
+    Out.bitangent = normalize(mul(normalMat, cross(In.Tangent.xyz, In.Normal.xyz)));
     Out.color = In.Color;
 
-    Out.Position = mul(Get(modelViewProjMat), float4(In.Position.xyz, 1.0));
+    Out.Position = mul(modelViewPrj, float4(In.Position.xyz, 1.0));
     RETURN(Out);
 }

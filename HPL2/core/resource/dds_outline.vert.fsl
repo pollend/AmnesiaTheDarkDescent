@@ -36,5 +36,6 @@ VSOutput VS_MAIN( VSInput In )
     VSOutput Out;
     Out.uv = In.TexCoord;
     Out.Position = mul(Get(mvp), float4(In.Position.xyz, 1.0));
+    Out.Position.z -= .0001;
     RETURN(Out);
 }
