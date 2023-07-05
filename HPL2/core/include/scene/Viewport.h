@@ -136,7 +136,6 @@ namespace hpl {
 
 
         void setImageDescriptor(const ImageDescriptor& imageDescriptor) {
-            m_imageDescriptor = imageDescriptor;
             m_dirtyViewport = true;
         }
         void setRenderTarget(std::shared_ptr<LegacyRenderTarget> renderTarget) {

@@ -19,7 +19,6 @@
 
 #include "graphics/PostEffect_RadialBlur.h"
 
-#include "bgfx/bgfx.h"
 #include "graphics/Graphics.h"
 
 #include "graphics/FrameBuffer.h"

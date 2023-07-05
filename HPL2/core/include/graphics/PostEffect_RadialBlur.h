@@ -20,7 +20,6 @@
 #pragma once
 
 #include "graphics/Image.h"
-#include <bgfx/bgfx.h>
 #include <graphics/PostEffect.h>
 #include <graphics/RenderTarget.h>
 
@@ -64,10 +63,6 @@ namespace hpl {
         RootSignature* m_rootSignature = nullptr;
         Sampler* m_inputSampler = nullptr;
         std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perFrameDescriptorSet;
-
-        bgfx::ProgramHandle m_program = BGFX_INVALID_HANDLE;
-		bgfx::UniformHandle m_u_uniform = BGFX_INVALID_HANDLE;
-		bgfx::UniformHandle m_s_diffuseMap = BGFX_INVALID_HANDLE;
 	};
 
 	//------------------------------------------

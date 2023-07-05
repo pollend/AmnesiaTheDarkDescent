@@ -19,7 +19,6 @@
 
 #include "graphics/RendererSimple.h"
 
-#include "bgfx/bgfx.h"
 #include "graphics/Enum.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/ImmediateDrawBatch.h"
@@ -71,12 +70,6 @@ namespace hpl
 
     void cRendererSimple::DestroyData()
     {
-        if(bgfx::isValid(m_flatProgram)) {
-            bgfx::destroy(m_flatProgram);
-        }
-        if(bgfx::isValid(m_diffuseProgram)) {
-            bgfx::destroy(m_diffuseProgram);
-        }
     }
 
 

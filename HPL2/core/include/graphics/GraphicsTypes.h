@@ -17,11 +17,7 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef HPL_GRAPHICS_TYPES_H
-#define HPL_GRAPHICS_TYPES_H
-
-#include "bgfx/bgfx.h"
-#pragma warning( disable : 4996 ) //disable unsafe warning!
+#pragma once
 
 #include <list>
 #include <vector>
@@ -819,10 +815,9 @@ namespace hpl {
 	class cOcclusionQueryObject
 	{
 	public:
-		cOcclusionQueryObject() : m_occlusion(BGFX_INVALID_HANDLE), mpQuery(NULL), mpVtxBuffer(NULL),mpMatrix(NULL), mbDepthTest(false), mlSampleResults(0) {}
+		cOcclusionQueryObject() :  mpQuery(NULL), mpVtxBuffer(NULL),mpMatrix(NULL), mbDepthTest(false), mlSampleResults(0) {}
 
 		int mlCustomID;
-		bgfx::OcclusionQueryHandle m_occlusion;
 		iOcclusionQuery *mpQuery;
 		iVertexBuffer *mpVtxBuffer;
 		cMatrixf *mpMatrix;
@@ -894,4 +889,3 @@ namespace hpl {
 
 }
 
-#endif // HPL_GRAPHICS_TYPES_H

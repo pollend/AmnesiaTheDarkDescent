@@ -23,7 +23,6 @@
 #include "graphics/Material.h"
 #include "graphics/MaterialType.h"
 #include "scene/Viewport.h"
-#include <bgfx/bgfx.h>
 #include <cstdint>
 
 namespace hpl {
@@ -65,25 +64,6 @@ namespace hpl {
 
         void LoadData();
         void DestroyData();
-
-        bgfx::ProgramHandle m_illuminationProgram;
-
-        bgfx::UniformHandle m_s_normalMap;
-        bgfx::UniformHandle m_s_specularMap;
-        bgfx::UniformHandle m_s_heightMap;
-        bgfx::UniformHandle m_s_diffuseMap;
-        bgfx::UniformHandle m_s_envMapAlphaMap;
-
-        bgfx::UniformHandle m_s_dissolveMap;
-        bgfx::UniformHandle m_s_dissolveAlphaMap;
-
-        bgfx::UniformHandle m_s_envMap;
-
-        bgfx::UniformHandle m_u_param;
-        bgfx::UniformHandle m_u_mtxUv;
-        bgfx::UniformHandle m_u_normalMtx;
-
-        bgfx::UniformHandle m_u_mtxInvViewRotation;
 
         Image* m_dissolveImage = nullptr;
 

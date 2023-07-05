@@ -19,7 +19,6 @@
 
 #pragma once
 
-#include "bgfx/bgfx.h"
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
 #include "system/SystemTypes.h"

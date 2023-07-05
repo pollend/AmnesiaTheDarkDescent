@@ -18,7 +18,6 @@
  */
 #pragma once
 
-#include "bgfx/bgfx.h"
 #include "graphics/Material.h"
 #include "graphics/MaterialType.h"
 #include "scene/Viewport.h"

@@ -18,7 +18,6 @@
  */
 #pragma once
 
-#include "bgfx/bgfx.h"
 #include "graphics/ForgeHandles.h"
 #include "graphics/PostEffect.h"
 #include "scene/Viewport.h"

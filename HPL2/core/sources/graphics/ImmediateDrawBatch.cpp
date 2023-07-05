@@ -1,6 +1,4 @@
 #include "graphics/ImmediateDrawBatch.h"
-
-#include "graphics/Layouts.h"
 #include "graphics/VertexBuffer.h"
 
 #include "scene/Camera.h"

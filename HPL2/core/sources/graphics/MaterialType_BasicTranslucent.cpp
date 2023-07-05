@@ -19,7 +19,6 @@
 
 #include "graphics/MaterialType_BasicTranslucent.h"
 
-#include "bgfx/bgfx.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Image.h"
 #include "graphics/RendererDeferred.h"
@@ -87,33 +86,6 @@ namespace hpl
         mbHasTypeSpecifics[eMaterialRenderMode_Illumination] = true;
         mbHasTypeSpecifics[eMaterialRenderMode_IlluminationFog] = true;
 
-        // m_u_param = bgfx::createUniform("u_param", bgfx::UniformType::Vec4, 6);
-        // m_u_mtxUv = bgfx::createUniform("u_mtxUV", bgfx::UniformType::Mat4);
-        // m_u_invViewRotation = bgfx::createUniform("mtxInvViewRotation", bgfx::UniformType::Mat4);
-
-        // m_s_diffuseMap  = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
-        // m_s_normalMap  = bgfx::createUniform("s_normalMap", bgfx::UniformType::Sampler);
-        // m_s_refractionMap  = bgfx::createUniform("s_refractionMap", bgfx::UniformType::Sampler);
-        // m_s_envMapAlphaMap  = bgfx::createUniform("s_envMapAlphaMap", bgfx::UniformType::Sampler);
-        // m_s_envMap  = bgfx::createUniform("s_envMap", bgfx::UniformType::Sampler);
-
-        // m_translucent_blendModeAdd.Initialize(ShaderHelper::LoadProgramHandlerDefault(
-        //     "vs_basic_translucent_material",
-        //      "fs_basic_translucent_blendModeAdd", false, true));
-        // m_translucent_blendModeMul.Initialize(ShaderHelper::LoadProgramHandlerDefault(
-        //     "vs_basic_translucent_material",
-        //      "fs_basic_translucent_blendModeMul", false, true));
-        // m_translucent_blendModeMulX2.Initialize(ShaderHelper::LoadProgramHandlerDefault(
-        //     "vs_basic_translucent_material",
-        //      "fs_basic_translucent_blendModeMulX2", false, true));
-        // m_translucent_blendModeAlpha.Initialize(ShaderHelper::LoadProgramHandlerDefault(
-        //     "vs_basic_translucent_material",
-        //      "fs_basic_translucent_blendModeAlpha", false, true));
-        // m_translucent_blendModePremulAlpha.Initialize(ShaderHelper::LoadProgramHandlerDefault(
-        //     "vs_basic_translucent_material",
-        //     "fs_basic_translucent_blendModePremulAlpha", false, true));
-
-        // _programHandle = hpl::loadProgram("vs_basic_translucent_material", "fs_basic_translucent_material");
     }
 
     cMaterialType_Translucent::~cMaterialType_Translucent()

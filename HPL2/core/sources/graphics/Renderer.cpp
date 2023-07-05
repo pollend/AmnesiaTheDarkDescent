@@ -387,7 +387,6 @@ namespace hpl
         cOcclusionQueryObject* pObject = mvOcclusionObjectPool[mlCurrentOcclusionObject];
 
         pObject->mlCustomID = alCustomIndex;
-        pObject->m_occlusion = bgfx::createOcclusionQuery();
         pObject->mpVtxBuffer = apVtxBuffer;
         pObject->mpMatrix = apMatrix;
         pObject->mbDepthTest = abDepthTest;
@@ -430,16 +429,6 @@ namespace hpl
             return 0;
         }
 
-        if (bgfx::isValid(pObject->m_occlusion))
-        {
-            int32_t numSamples = 0;
-            if (bgfx::getResult(pObject->m_occlusion, &numSamples) == bgfx::OcclusionQueryResult::Visible)
-            {
-                pObject->mlSampleResults = numSamples;
-                bgfx::destroy(pObject->m_occlusion);
-                pObject->m_occlusion = BGFX_INVALID_HANDLE;
-            }
-        }
         return 0;
     }
 

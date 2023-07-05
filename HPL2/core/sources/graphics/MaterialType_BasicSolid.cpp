@@ -19,7 +19,6 @@
 
 #include "graphics/MaterialType_BasicSolid.h"
 
-#include "bgfx/bgfx.h"
 #include "graphics/GraphicsTypes.h"
 #include "math/MathTypes.h"
 #include "math/Matrix.h"

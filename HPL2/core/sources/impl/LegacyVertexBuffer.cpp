@@ -71,22 +71,6 @@ namespace hpl {
         return 0;
     }
 
-    bgfx::AttribType::Enum LegacyVertexBuffer::GetAttribTypeFromHPL(eVertexBufferElementFormat format) {
-        switch (format) {
-        case eVertexBufferElementFormat_Float:
-            return bgfx::AttribType::Float;
-        case eVertexBufferElementFormat_Int:
-            return bgfx::AttribType::Float;
-        case eVertexBufferElementFormat_Byte:
-            return bgfx::AttribType::Uint8;
-        default:
-            break;
-
-        }
-        ASSERT(false && "Unknown vertex attribute type.");
-        return bgfx::AttribType::Count;
-    }
-
     LegacyVertexBuffer::LegacyVertexBuffer(
         eVertexBufferDrawType aDrawType,
         eVertexBufferUsageType aUsageType,

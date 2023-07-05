@@ -3,7 +3,11 @@
 #include <Eigen/Dense>
 
 #include "graphics/Enum.h"
-#include "graphics/GraphicsContext.h"
+#include "graphics/Image.h"
+#include "scene/Camera.h"
+
+#include "math/MathTypes.h"
+#include "math/Matrix.h"
 
 namespace hpl
 {
@@ -17,8 +21,8 @@ class ImmediateDrawBatch {
             cMatrixf m_transform = cMatrixf(cMatrixf::Identity);
         };
 
-        inline bgfx::ViewId GetOrthographicView() const { return m_orthographicView; }
-        inline bgfx::ViewId GetPerspectiveView() const { return m_perspectiveView; }
+//        inline bgfx::ViewId GetOrthographicView() const { return m_orthographicView; }
+//        inline bgfx::ViewId GetPerspectiveView() const { return m_perspectiveView; }
 
 
         ImmediateDrawBatch();
@@ -115,8 +119,6 @@ class ImmediateDrawBatch {
         cMatrixf m_view;
         cMatrixf m_projection;
 
-        LegacyRenderTarget* m_target;
-
         bgfx::ProgramHandle m_colorProgram = BGFX_INVALID_HANDLE;
         bgfx::ProgramHandle m_uvProgram = BGFX_INVALID_HANDLE;
         bgfx::ProgramHandle m_meshColorProgram = BGFX_INVALID_HANDLE;
@@ -124,9 +126,9 @@ class ImmediateDrawBatch {
         bgfx::ViewId m_orthographicView = 0;
         bgfx::ViewId m_perspectiveView = 0;
 
-        UniformWrapper<StringLiteral("s_diffuseMap"), bgfx::UniformType::Sampler> m_s_diffuseMap;
-        UniformWrapper<StringLiteral("u_normalMtx"),  bgfx::UniformType::Mat4> m_u_normalMtx;
-        UniformWrapper<StringLiteral("u_color"),      bgfx::UniformType::Vec4> m_u_color;
+       // UniformWrapper<StringLiteral("s_diffuseMap"), bgfx::UniformType::Sampler> m_s_diffuseMap;
+       // UniformWrapper<StringLiteral("u_normalMtx"),  bgfx::UniformType::Mat4> m_u_normalMtx;
+       // UniformWrapper<StringLiteral("u_color"),      bgfx::UniformType::Vec4> m_u_color;
 
     };
 }

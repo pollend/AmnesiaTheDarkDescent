@@ -18,7 +18,6 @@
  */
 #pragma once
 
-#include "bgfx/bgfx.h"
 #include "engine/RTTI.h"
 #include "graphics/Enum.h"
 #include "graphics/ForgeHandles.h"
@@ -108,20 +107,6 @@ namespace hpl {
 
     typedef std::multimap<void*, cOcclusionQueryObject*> tOcclusionQueryObjectMap;
     typedef tOcclusionQueryObjectMap::iterator tOcclusionQueryObjectMapIt;
-
-    //---------------------------------------------
-
-    class cLightOcclusionPair
-    {
-    public:
-        cLightOcclusionPair() : mlSampleResults(0) {}
-
-        iLight *mpLight;
-        iOcclusionQuery *mpQuery;
-        bgfx::OcclusionQueryHandle m_occlusionQuery;
-        int32_t mlSampleResults;
-    };
-
 
 
     class cRenderSettings

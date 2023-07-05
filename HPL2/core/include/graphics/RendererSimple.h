@@ -19,7 +19,6 @@
 
 #pragma once
 
-#include "bgfx/bgfx.h"
 #include "graphics/Renderer.h"
 
 namespace hpl {
@@ -48,10 +47,6 @@ namespace hpl {
 		void RenderObjects();
 
 
-		bgfx::ProgramHandle m_flatProgram;
-		bgfx::ProgramHandle m_diffuseProgram;
-
-		bgfx::UniformHandle m_s_diffuseMap;
 	};
 
 };

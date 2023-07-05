@@ -20,7 +20,6 @@
 #ifndef HPL_RENDERABLE_CONTAINER_H
 #define HPL_RENDERABLE_CONTAINER_H
 
-#include "bgfx/bgfx.h"
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
 #include "system/SystemTypes.h"
@@ -123,8 +122,6 @@ namespace hpl {
 
 		void CalculateMinMaxFromObjects();
 
-		// bgfx::OcclusionQueryHandle GetOcclusionQuery() const { return m_occlusionQuery; }
-
 	protected:
 		cVector3f mvMin;
 		cVector3f mvMax;
@@ -147,7 +144,6 @@ namespace hpl {
 		iRenderableContainerNode *mpParent;
 		tRenderableContainerNodeList mlstChildNodes;
 		tRenderableList mlstObjects;
-		bgfx::OcclusionQueryHandle m_occlusionQuery = BGFX_INVALID_HANDLE;
 	};
 
 	//-------------------------------------------

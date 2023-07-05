@@ -20,7 +20,6 @@
 
 #include "graphics/MaterialType.h"
 #include "graphics/Material.h"
-#include <bgfx/bgfx.h>
 
 namespace hpl {
 
@@ -70,16 +69,6 @@ namespace hpl {
 		void CompileMaterialSpecifics(cMaterial *apMaterial) override;
 
 	private:
-
-		bgfx::UniformHandle m_u_param = BGFX_INVALID_HANDLE;
-		bgfx::UniformHandle m_u_mtxInvViewRotation = BGFX_INVALID_HANDLE;
-		bgfx::UniformHandle m_u_fogColor = BGFX_INVALID_HANDLE;
-
-		bgfx::UniformHandle m_s_diffuseMap = BGFX_INVALID_HANDLE;
-		bgfx::UniformHandle m_s_normalMap = BGFX_INVALID_HANDLE;
-		bgfx::UniformHandle m_s_refractionMap = BGFX_INVALID_HANDLE;
-		bgfx::UniformHandle m_s_reflectionMap = BGFX_INVALID_HANDLE;
-		bgfx::UniformHandle m_s_envMap = BGFX_INVALID_HANDLE;
 
 		void LoadData();
 		void DestroyData();
