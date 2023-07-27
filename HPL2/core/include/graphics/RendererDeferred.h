@@ -411,7 +411,11 @@ namespace hpl {
             std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perFrameSet{};
             std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perObjectSet{};
 
-            GPURingBuffer m_fogUniformBuffer;
+            #ifdef USE_THE_FORGE_LEGACY
+                GPURingBuffer* m_fogUniformBuffer;
+            #else
+                GPURingBuffer m_fogUniformBuffer;
+            #endif
             RootSignature* m_fogRootSignature = nullptr;
             std::array<Shader*, 4> m_shader{};
             std::array<Pipeline*, PipelineVariant::PipelineNumVariants> m_pipeline{};
@@ -529,7 +533,11 @@ namespace hpl {
         DescriptorSet* m_zPassConstSet;
         std::set<iRenderable*> m_preZPassRenderables;
 
-        GPURingBuffer m_objectUniformBuffer;
+        #ifdef USE_THE_FORGE_LEGACY
+            GPURingBuffer* m_objectUniformBuffer;
+        #else
+            GPURingBuffer m_objectUniformBuffer;
+        #endif
         struct MaterialPassDescriptorSet {
             std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_frameSet;
             std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perObjectSet;
@@ -579,7 +587,11 @@ namespace hpl {
         static constexpr uint32_t MaxQueryPoolSize = 4096 * 2;
         static constexpr uint32_t MaxOcclusionDescSize = 4096;
         QueryPool* m_occlusionQuery = nullptr;
-        GPURingBuffer m_occlusionUniformBuffer;
+        #ifdef USE_THE_FORGE_LEGACY
+            GPURingBuffer* m_occlusionUniformBuffer;
+        #else
+            GPURingBuffer m_occlusionUniformBuffer;
+        #endif
         RootSignature* m_rootSignatureOcclusuion = nullptr;
         ForgeDescriptorSet m_descriptorOcclusionFrameSet;
         ForgeBufferHandle m_occlusionReadBackBuffer;
@@ -606,7 +618,11 @@ namespace hpl {
             float gamma;
             float3 pad;
         };
-        GPURingBuffer m_lightPassRingBuffer;
+        #ifdef USE_THE_FORGE_LEGACY
+            GPURingBuffer* m_lightPassRingBuffer;
+        #else
+            GPURingBuffer m_lightPassRingBuffer;
+        #endif
         RootSignature* m_lightPassRootSignature;
         ForgePipelineHandle m_lightStencilPipeline;
         std::array<Pipeline*, LightPipelineVariant_Size> m_pointLightPipeline;

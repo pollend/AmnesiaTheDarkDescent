@@ -798,9 +798,11 @@ namespace hpl {
 
             {
                 VertexLayout vertexLayout = {};
-                vertexLayout.mBindingCount = 1;
+                #ifndef USE_THE_FORGE_LEGACY
+                    vertexLayout.mBindingCount = 1;
+                    vertexLayout.mBindings[0].mStride = sizeof(float3);
+                #endif
                 vertexLayout.mAttribCount = 1;
-                vertexLayout.mBindings[0].mStride = sizeof(float3);
                 vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
                 vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
                 vertexLayout.mAttribs[0].mBinding = 0;
@@ -901,9 +903,12 @@ namespace hpl {
             addRootSignature(forgeRenderer->Rend(), &rootSignatureDesc, &m_fogPass.m_fogRootSignature);
 
             VertexLayout vertexLayout = {};
-            vertexLayout.mBindingCount = 1;
+            #ifndef USE_THE_FORGE_LEGACY
+                vertexLayout.mBindingCount = 1;
+                vertexLayout.mBindings[0].mStride = sizeof(float3);
+            #endif
+
             vertexLayout.mAttribCount = 1;
-            vertexLayout.mBindings[0].mStride = sizeof(float3);
             vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
             vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
             vertexLayout.mAttribs[0].mBinding = 0;
@@ -924,7 +929,11 @@ namespace hpl {
                 blendStateDesc.mSrcAlphaFactors[0] = BC_SRC_ALPHA;
                 blendStateDesc.mDstAlphaFactors[0] = BC_ONE_MINUS_SRC_ALPHA;
                 blendStateDesc.mBlendAlphaModes[0] = BM_ADD;
-                blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_RED | ColorMask::COLOR_MASK_GREEN | ColorMask::COLOR_MASK_BLUE;
+                #ifdef USE_THE_FORGE_LEGACY
+                    blendStateDesc.mMasks[0] = RED | GREEN | BLUE;
+                #else
+                    blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_RED | ColorMask::COLOR_MASK_GREEN | ColorMask::COLOR_MASK_BLUE;
+                #endif
                 blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
                 blendStateDesc.mIndependentBlend = false;
 
@@ -966,7 +975,11 @@ namespace hpl {
                 blendStateDesc.mSrcAlphaFactors[0] = BC_SRC_ALPHA;
                 blendStateDesc.mDstAlphaFactors[0] = BC_ONE_MINUS_SRC_ALPHA;
                 blendStateDesc.mBlendAlphaModes[0] = BM_ADD;
-                blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_RED | ColorMask::COLOR_MASK_GREEN | ColorMask::COLOR_MASK_BLUE;
+                #ifdef USE_THE_FORGE_LEGACY
+                    blendStateDesc.mMasks[0] = RED | GREEN | BLUE;
+                #else
+                    blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_RED | ColorMask::COLOR_MASK_GREEN | ColorMask::COLOR_MASK_BLUE;
+                #endif
                 blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
                 blendStateDesc.mIndependentBlend = false;
 
@@ -1144,12 +1157,14 @@ namespace hpl {
             // diffuse material pass
             {
                 VertexLayout vertexLayout = {};
-                vertexLayout.mBindingCount = 4;
+                #ifndef USE_THE_FORGE_LEGACY
+                    vertexLayout.mBindingCount = 4;
+                    vertexLayout.mBindings[0].mStride = sizeof(float3);
+                    vertexLayout.mBindings[1].mStride = sizeof(float2);
+                    vertexLayout.mBindings[2].mStride = sizeof(float3);
+                    vertexLayout.mBindings[3].mStride = sizeof(float3);
+                #endif
                 vertexLayout.mAttribCount = 4;
-                vertexLayout.mBindings[0].mStride = sizeof(float3);
-                vertexLayout.mBindings[1].mStride = sizeof(float2);
-                vertexLayout.mBindings[2].mStride = sizeof(float3);
-                vertexLayout.mBindings[3].mStride = sizeof(float3);
                 vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
                 vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
                 vertexLayout.mAttribs[0].mBinding = 0;
@@ -1206,11 +1221,13 @@ namespace hpl {
             // decal material pass
             {
                 VertexLayout vertexLayout = {};
+                #ifndef USE_THE_FORGE_LEGACY
+                    vertexLayout.mBindingCount = 3;
+                    vertexLayout.mBindings[0].mStride = sizeof(float3);
+                    vertexLayout.mBindings[1].mStride = sizeof(float2);
+                    vertexLayout.mBindings[2].mStride = sizeof(float4);
+                #endif
                 vertexLayout.mAttribCount = 3;
-                vertexLayout.mBindingCount = 3;
-                vertexLayout.mBindings[0].mStride = sizeof(float3);
-                vertexLayout.mBindings[1].mStride = sizeof(float2);
-                vertexLayout.mBindings[2].mStride = sizeof(float4);
                 vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
                 vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
                 vertexLayout.mAttribs[0].mBinding = 0;
@@ -1263,9 +1280,11 @@ namespace hpl {
                     blendStateDesc.mSrcAlphaFactors[0] = hpl::HPL2BlendTable[blendMode].src;
                     blendStateDesc.mDstAlphaFactors[0] = hpl::HPL2BlendTable[blendMode].dst;
                     blendStateDesc.mBlendAlphaModes[0] = hpl::HPL2BlendTable[blendMode].mode;
-
-                    blendStateDesc.mColorWriteMasks[0] =
-                        ColorMask::COLOR_MASK_RED | ColorMask::COLOR_MASK_GREEN | ColorMask::COLOR_MASK_BLUE;
+                    #ifdef USE_THE_FORGE_LEGACY
+                        blendStateDesc.mMasks[0] = RED | GREEN | BLUE;
+                    #else
+                        blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_RED | ColorMask::COLOR_MASK_GREEN | ColorMask::COLOR_MASK_BLUE;
+                    #endif
                     blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
                     pipelineSettings.pBlendState = &blendStateDesc;
 
@@ -1276,12 +1295,15 @@ namespace hpl {
             {
                 // layout and pipeline for sphere draw
                 VertexLayout vertexLayout = {};
-                vertexLayout.mBindingCount = 4;
                 vertexLayout.mAttribCount = 4;
-                vertexLayout.mBindings[0].mStride = sizeof(float3);
-                vertexLayout.mBindings[1].mStride = sizeof(float2);
-                vertexLayout.mBindings[2].mStride = sizeof(float3);
-                vertexLayout.mBindings[3].mStride = sizeof(float3);
+
+                #ifndef USE_THE_FORGE_LEGACY
+                    vertexLayout.mBindingCount = 4;
+                    vertexLayout.mBindings[0].mStride = sizeof(float3);
+                    vertexLayout.mBindings[1].mStride = sizeof(float2);
+                    vertexLayout.mBindings[2].mStride = sizeof(float3);
+                    vertexLayout.mBindings[3].mStride = sizeof(float3);
+                #endif
                 vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
                 vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
                 vertexLayout.mAttribs[0].mBinding = 0;
@@ -1397,10 +1419,12 @@ namespace hpl {
             {
                 // layout and pipeline for sphere draw
                 VertexLayout vertexLayout = {};
-                vertexLayout.mAttribCount = 2;
+            #ifndef USE_THE_FORGE_LEGACY
                 vertexLayout.mBindingCount = 2;
                 vertexLayout.mBindings[0].mStride = sizeof(float3);
                 vertexLayout.mBindings[1].mStride = sizeof(float2);
+            #endif
+                vertexLayout.mAttribCount = 2;
                 vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
                 vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
                 vertexLayout.mAttribs[0].mBinding = 0;
@@ -1417,7 +1441,11 @@ namespace hpl {
                 rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
 
                 BlendStateDesc blendStateDesc{};
-                blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_ALL;
+                #ifdef USE_THE_FORGE_LEGACY
+                    blendStateDesc.mMasks[0] = ALL;
+                #else
+                    blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_ALL;
+                #endif
                 blendStateDesc.mSrcFactors[0] = BC_ONE;
                 blendStateDesc.mDstFactors[0] = BC_ONE;
                 blendStateDesc.mBlendModes[0] = BM_ADD;
@@ -1454,11 +1482,14 @@ namespace hpl {
             // translucency pass
             {
                 VertexLayout particleVertexLayout = {};
-                particleVertexLayout.mBindingCount = 3;
+                #ifndef USE_THE_FORGE_LEGACY
+                    particleVertexLayout.mBindingCount = 3;
+                    particleVertexLayout.mBindings[0].mStride = sizeof(float3);
+                    particleVertexLayout.mBindings[1].mStride = sizeof(float2);
+                    particleVertexLayout.mBindings[2].mStride = sizeof(float4);
+                #endif
+
                 particleVertexLayout.mAttribCount = 3;
-                particleVertexLayout.mBindings[0].mStride = sizeof(float3);
-                particleVertexLayout.mBindings[1].mStride = sizeof(float2);
-                particleVertexLayout.mBindings[2].mStride = sizeof(float4);
                 particleVertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
                 particleVertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
                 particleVertexLayout.mAttribs[0].mBinding = 0;
@@ -1478,13 +1509,16 @@ namespace hpl {
                 particleVertexLayout.mAttribs[2].mOffset = 0;
 
                 VertexLayout vertexLayout = {};
-                vertexLayout.mBindingCount = 5;
-                vertexLayout.mAttribCount = 5;
-                vertexLayout.mBindings[0].mStride = sizeof(float3);
-                vertexLayout.mBindings[1].mStride = sizeof(float2);
-                vertexLayout.mBindings[2].mStride = sizeof(float3);
-                vertexLayout.mBindings[3].mStride = sizeof(float3);
 
+                #ifndef USE_THE_FORGE_LEGACY
+                    vertexLayout.mBindingCount = 5;
+                    vertexLayout.mBindings[0].mStride = sizeof(float3);
+                    vertexLayout.mBindings[1].mStride = sizeof(float2);
+                    vertexLayout.mBindings[2].mStride = sizeof(float3);
+                    vertexLayout.mBindings[3].mStride = sizeof(float3);
+                    vertexLayout.mBindings[4].mStride = sizeof(float3);
+                #endif
+                vertexLayout.mAttribCount = 5;
                 vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
                 vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
                 vertexLayout.mAttribs[0].mBinding = 0;
@@ -1531,7 +1565,11 @@ namespace hpl {
                         key.m_id = pipelineKey;
 
                         BlendStateDesc blendStateDesc{};
-                        blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_ALL;
+                        #ifdef USE_THE_FORGE_LEGACY
+                            blendStateDesc.mMasks[0] = ALL;
+                        #else
+                            blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_ALL;
+                        #endif
                         blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
                         blendStateDesc.mIndependentBlend = false;
 
@@ -1584,8 +1622,11 @@ namespace hpl {
                         key.m_id = pipelineKey;
 
                         BlendStateDesc blendStateDesc{};
-                        blendStateDesc.mColorWriteMasks[0] =
-                            ColorMask::COLOR_MASK_RED | ColorMask::COLOR_MASK_GREEN | ColorMask::COLOR_MASK_BLUE;
+                        #ifdef USE_THE_FORGE_LEGACY
+                            blendStateDesc.mMasks[0] = RED | GREEN | BLUE;
+                        #else
+                            blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_RED | ColorMask::COLOR_MASK_GREEN | ColorMask::COLOR_MASK_BLUE;
+                        #endif
                         blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
                         blendStateDesc.mIndependentBlend = false;
 
@@ -1636,7 +1677,11 @@ namespace hpl {
                         key.m_id = pipelineKey;
 
                         BlendStateDesc blendStateDesc{};
-                        blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_ALL;
+                        #ifdef USE_THE_FORGE_LEGACY
+                            blendStateDesc.mMasks[0] = ALL;
+                        #else
+                            blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_ALL;
+                        #endif
                         blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
                         blendStateDesc.mIndependentBlend = false;
 
@@ -1690,7 +1735,11 @@ namespace hpl {
                         key.m_id = pipelineKey;
 
                         BlendStateDesc blendStateDesc{};
-                        blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_ALL;
+                        #ifdef USE_THE_FORGE_LEGACY
+                            blendStateDesc.mMasks[0] = ALL;
+                        #else
+                            blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_ALL;
+                        #endif
                         blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
                         blendStateDesc.mIndependentBlend = false;
 
@@ -1854,9 +1903,11 @@ namespace hpl {
             addRootSignature(forgeRenderer->Rend(), &rootSignatureDesc, &m_lightPassRootSignature);
 
             VertexLayout vertexLayout = {};
-            vertexLayout.mAttribCount = 1;
+        #ifndef USE_THE_FORGE_LEGACY
             vertexLayout.mBindingCount = 1;
             vertexLayout.mBindings[0].mStride = sizeof(float3);
+        #endif
+            vertexLayout.mAttribCount = 1;
             vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
             vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
             vertexLayout.mAttribs[0].mBinding = 0;
@@ -1905,7 +1956,11 @@ namespace hpl {
             blendStateDesc.mSrcAlphaFactors[0] = BC_ONE;
             blendStateDesc.mDstAlphaFactors[0] = BC_ONE;
             blendStateDesc.mBlendAlphaModes[0] = BM_ADD;
-            blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_RED | ColorMask::COLOR_MASK_GREEN | ColorMask::COLOR_MASK_BLUE;
+            #ifdef USE_THE_FORGE_LEGACY
+                blendStateDesc.mMasks[0] = RED | GREEN | BLUE;
+            #else
+                blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_RED | ColorMask::COLOR_MASK_GREEN | ColorMask::COLOR_MASK_BLUE;
+            #endif
             blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
             blendStateDesc.mIndependentBlend = false;
 
@@ -2146,7 +2201,12 @@ namespace hpl {
         if(objectLookup == m_materialSet.m_objectDescriptorLookup.end()) {
             cMatrixf modelMat = option.m_modelMatrix.value_or(apObject->GetModelMatrixPtr() ? *apObject->GetModelMatrixPtr() : cMatrixf::Identity);
             uint32_t index = m_materialSet.m_objectIndex++;
-            GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(&m_objectUniformBuffer, sizeof(cRendererDeferred::UniformObject));
+
+            #ifdef USE_THE_FORGE_LEGACY
+                GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(m_objectUniformBuffer, sizeof(cRendererDeferred::UniformObject));
+            #else
+                GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(&m_objectUniformBuffer, sizeof(cRendererDeferred::UniformObject));
+            #endif
             cRendererDeferred::UniformObject uniformObjectData = {};
 
             uniformObjectData.m_dissolveAmount = float4(apObject->GetCoverageAmount());
@@ -2623,7 +2683,13 @@ namespace hpl {
                 for (auto& query : occlusionQueryAlpha) {
                     if (TypeInfo<hpl::cBillboard>::IsType(*query.m_renderable)) {
                         cBillboard* pBillboard = static_cast<cBillboard*>(query.m_renderable);
-                        GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(&m_occlusionUniformBuffer, sizeof(mat4));
+
+                        #ifdef USE_THE_FORGE_LEGACY
+                            GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(m_occlusionUniformBuffer, sizeof(mat4));
+                        #else
+                            GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(&m_occlusionUniformBuffer, sizeof(mat4));
+                        #endif
+
 
                         auto mvp = cMath::ToForgeMat(
                             cMath::MatrixMul(
@@ -3287,8 +3353,12 @@ namespace hpl {
                     DescriptorData params[10] = {};
                     size_t paramCount = 0;
                     UniformLightData uniformObjectData = {};
-                    GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(&m_lightPassRingBuffer, sizeof(UniformLightData));
 
+                    #ifdef USE_THE_FORGE_LEGACY
+                        GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(m_lightPassRingBuffer, sizeof(UniformLightData));
+                    #else
+                        GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(&m_lightPassRingBuffer, sizeof(UniformLightData));
+                    #endif
                     const auto modelViewMtx = cMath::MatrixMul(apFrustum->GetViewMatrix(), light->m_light->GetWorldMatrix());
                     const auto viewProjectionMat = cMath::MatrixMul(mainFrustumProj, mainFrustumView);
 
@@ -3636,8 +3706,11 @@ namespace hpl {
             cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "Fog Box Pass ");
             size_t objectIndex = 0;
             for (auto& fogArea : fogRenderData) {
-                GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(&m_fogPass.m_fogUniformBuffer, sizeof(Fog::UniformFogData));
-
+                #ifdef USE_THE_FORGE_LEGACY
+                    GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(m_fogPass.m_fogUniformBuffer, sizeof(Fog::UniformFogData));
+                #else
+                    GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(&m_fogPass.m_fogUniformBuffer, sizeof(Fog::UniformFogData));
+                #endif
                 uint8_t pipelineVariant = 0;
                 Fog::UniformFogData fogUniformData = {};
                 if (fogArea.m_insideNearFrustum) {
@@ -3703,8 +3776,11 @@ namespace hpl {
             if (mpCurrentWorld->GetFogActive()) {
                 cmdBindRenderTargets(frame.m_cmd, targets.size(), targets.data(), nullptr, &loadActions, nullptr, nullptr, -1, -1);
 
-                GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(&m_fogPass.m_fogUniformBuffer, sizeof(Fog::UniformFogData));
-
+                #ifdef USE_THE_FORGE_LEGACY
+                    GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(m_fogPass.m_fogUniformBuffer, sizeof(Fog::UniformFogData));
+                #else
+                    GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(&m_fogPass.m_fogUniformBuffer, sizeof(Fog::UniformFogData));
+                #endif
                 BufferUpdateDesc updateDesc = { uniformBuffer.pBuffer, uniformBuffer.mOffset };
                 beginUpdateResource(&updateDesc);
                 auto* fogData = reinterpret_cast<Fog::UniformFullscreenFogData*>(updateDesc.pMappedData);

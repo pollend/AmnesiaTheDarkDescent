@@ -111,9 +111,15 @@ namespace hpl {
 		static std::array<std::array<ForgeTextureHandle, MAX_GUI_DRAW_CALLS>, ForgeRenderer::SwapChainLength> GuiTextures{};
         static RootSignature* GuiRootSignatnre = nullptr;
 
-		static GPURingBuffer GuiUniformRingBuffer {};
-		static GPURingBuffer GuiVertexRingBuffer{};
-		static GPURingBuffer GuiIndexRingBuffer{};
+        #ifdef USE_THE_FORGE_LEGACY
+		    static GPURingBuffer* GuiUniformRingBuffer = nullptr;
+		    static GPURingBuffer* GuiVertexRingBuffer = nullptr;
+		    static GPURingBuffer* GuiIndexRingBuffer = nullptr;
+        #else
+		    static GPURingBuffer GuiUniformRingBuffer {};
+		    static GPURingBuffer GuiVertexRingBuffer{};
+		    static GPURingBuffer GuiIndexRingBuffer{};
+        #endif
         static Sampler* GuiSampler = nullptr;
 
         static uint32_t descriptorIndex = 0;
@@ -182,18 +188,24 @@ namespace hpl {
 				//layout and pipeline for sphere draw
 				VertexLayout vertexLayout = {};
 				vertexLayout.mAttribCount = 3;
-				vertexLayout.mBindingCount = 1;
-
+                #ifndef USE_THE_FORGE_LEGACY
+				    vertexLayout.mBindingCount = 3;
+                    vertexLayout.mBindings[0].mStride = sizeof(float3);
+                    vertexLayout.mBindings[1].mStride = sizeof(float2);
+                    vertexLayout.mBindings[2].mStride = sizeof(float3);
+		        #endif
                 vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
 				vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
 				vertexLayout.mAttribs[0].mBinding = 0;
 				vertexLayout.mAttribs[0].mLocation = 0;
 				vertexLayout.mAttribs[0].mOffset = 0;
-				vertexLayout.mAttribs[1].mSemantic = SEMANTIC_TEXCOORD0;
+
+		        vertexLayout.mAttribs[1].mSemantic = SEMANTIC_TEXCOORD0;
 				vertexLayout.mAttribs[1].mFormat = TinyImageFormat_R32G32_SFLOAT;
 				vertexLayout.mAttribs[1].mBinding = 0;
 				vertexLayout.mAttribs[1].mLocation = 1;
 				vertexLayout.mAttribs[1].mOffset = sizeof(float) * 3;
+
 				vertexLayout.mAttribs[2].mSemantic = SEMANTIC_COLOR;
 				vertexLayout.mAttribs[2].mFormat = TinyImageFormat_R32G32B32A32_SFLOAT;
 				vertexLayout.mAttribs[2].mBinding = 0;
@@ -230,7 +242,11 @@ namespace hpl {
 					blendStateAddDesc.mSrcAlphaFactors[0] = srcAlpha;
 					blendStateAddDesc.mDstAlphaFactors[0] = destAlpha;
 					blendStateAddDesc.mBlendAlphaModes[0] = BM_ADD;
-					blendStateAddDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_ALL;
+                    #ifdef USE_THE_FORGE_LEGACY
+                        blendStateAddDesc.mMasks[0] = ALL;
+                    #else
+					    blendStateAddDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_ALL;
+                    #endif
 					blendStateAddDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
 					blendStateAddDesc.mIndependentBlend = false;
 
@@ -674,8 +690,14 @@ namespace hpl {
 
 		size_t vertexBufferSize = m_setRenderObjects.size() * sizeof(gui::PositionTexColor) * 4;
 		size_t indexBufferSize = m_setRenderObjects.size() * sizeof(uint32_t) * 6;
-		GPURingBufferOffset vb = getGPURingBufferOffset(&gui::GuiVertexRingBuffer, vertexBufferSize);
-		GPURingBufferOffset ib = getGPURingBufferOffset(&gui::GuiIndexRingBuffer, indexBufferSize);
+        #ifdef USE_THE_FORGE_LEGACY
+		    GPURingBufferOffset vb = getGPURingBufferOffset(gui::GuiVertexRingBuffer, vertexBufferSize);
+		    GPURingBufferOffset ib = getGPURingBufferOffset(gui::GuiIndexRingBuffer, indexBufferSize);
+        #else
+		    GPURingBufferOffset vb = getGPURingBufferOffset(&gui::GuiVertexRingBuffer, vertexBufferSize);
+		    GPURingBufferOffset ib = getGPURingBufferOffset(&gui::GuiIndexRingBuffer, indexBufferSize);
+        #endif
+
 
 		cMatrixf projectionMtx(cMatrixf::Identity);
 		cMatrixf viewMtx(cMatrixf::Identity);
@@ -739,7 +761,11 @@ namespace hpl {
 			size_t vertexBufferIndex = 0;
 			size_t indexBufferIndex = 0;
 
-			GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(&gui::GuiUniformRingBuffer, sizeof(gui::UniformBlock));
+            #ifdef USE_THE_FORGE_LEGACY
+			    GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(gui::GuiUniformRingBuffer, sizeof(gui::UniformBlock));
+            #else
+			    GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(&gui::GuiUniformRingBuffer, sizeof(gui::UniformBlock));
+            #endif
 
 			DescriptorData params[10]{};
 			uint32_t paramCount = 0;

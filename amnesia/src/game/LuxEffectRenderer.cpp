@@ -209,10 +209,12 @@ cLuxEffectRenderer::cLuxEffectRenderer()
             depthStateDesc.mDepthFunc = CMP_LEQUAL;
             {
                 VertexLayout vertexLayout = {};
-                vertexLayout.mAttribCount = 2;
+            #ifndef USE_THE_FORGE_LEGACY
                 vertexLayout.mBindingCount = 2;
                 vertexLayout.mBindings[0].mStride = sizeof(float3);
                 vertexLayout.mBindings[1].mStride = sizeof(float2);
+            #endif
+                vertexLayout.mAttribCount = 2;
                 vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
                 vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
                 vertexLayout.mAttribs[0].mBinding = 0;
@@ -242,7 +244,12 @@ cLuxEffectRenderer::cLuxEffectRenderer()
                 depthStateOutlineDesc.mStencilReadMask = 0xff;
 
                 BlendStateDesc blendStateDesc{};
+            #ifdef USE_THE_FORGE_LEGACY
+                blendStateDesc.mMasks[0] = ALL;
+            #else
                 blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_ALL;
+            #endif
+
                 blendStateDesc.mSrcFactors[0] = BC_ONE;
                 blendStateDesc.mDstFactors[0] = BC_ZERO;
                 blendStateDesc.mBlendModes[0] = BM_ADD;
@@ -271,10 +278,12 @@ cLuxEffectRenderer::cLuxEffectRenderer()
             }
             {
                 VertexLayout vertexLayout = {};
-                vertexLayout.mAttribCount = 2;
+            #ifndef USE_THE_FORGE_LEGACY
                 vertexLayout.mBindingCount = 2;
                 vertexLayout.mBindings[0].mStride = sizeof(float3);
                 vertexLayout.mBindings[1].mStride = sizeof(float2);
+            #endif
+                vertexLayout.mAttribCount = 2;
                 vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
                 vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
                 vertexLayout.mAttribs[0].mBinding = 0;
@@ -321,11 +330,13 @@ cLuxEffectRenderer::cLuxEffectRenderer()
             }
             {
                 VertexLayout vertexLayout = {};
-                vertexLayout.mAttribCount = 3;
+            #ifndef USE_THE_FORGE_LEGACY
                 vertexLayout.mBindingCount = 3;
                 vertexLayout.mBindings[0].mStride = sizeof(float3);
                 vertexLayout.mBindings[1].mStride = sizeof(float3);
                 vertexLayout.mBindings[1].mStride = sizeof(float2);
+            #endif
+                vertexLayout.mAttribCount = 3;
                 vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
                 vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
                 vertexLayout.mAttribs[0].mBinding = 0;
@@ -349,7 +360,11 @@ cLuxEffectRenderer::cLuxEffectRenderer()
                 blendStateDesc.mSrcAlphaFactors[0] = BC_ONE;
                 blendStateDesc.mDstAlphaFactors[0] = BC_ONE;
                 blendStateDesc.mBlendAlphaModes[0] = BM_ADD;
-                blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_RED | ColorMask::COLOR_MASK_GREEN |  ColorMask::COLOR_MASK_BLUE;
+                #ifdef USE_THE_FORGE_LEGACY
+                    blendStateDesc.mMasks[0] = RED | GREEN | BLUE;
+                #else
+                    blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_RED | ColorMask::COLOR_MASK_GREEN |  ColorMask::COLOR_MASK_BLUE;
+                #endif
                 blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
                 blendStateDesc.mIndependentBlend = false;
 
@@ -373,11 +388,13 @@ cLuxEffectRenderer::cLuxEffectRenderer()
             }
             {
                 VertexLayout vertexLayout = {};
-                vertexLayout.mAttribCount = 3;
+            #ifndef USE_THE_FORGE_LEGACY
                 vertexLayout.mBindingCount = 3;
                 vertexLayout.mBindings[0].mStride = sizeof(float3);
                 vertexLayout.mBindings[1].mStride = sizeof(float3);
                 vertexLayout.mBindings[1].mStride = sizeof(float2);
+            #endif
+                vertexLayout.mAttribCount = 3;
                 vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
                 vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
                 vertexLayout.mAttribs[0].mBinding = 0;
@@ -401,7 +418,12 @@ cLuxEffectRenderer::cLuxEffectRenderer()
                 blendStateDesc.mSrcAlphaFactors[0] = BC_ONE;
                 blendStateDesc.mDstAlphaFactors[0] = BC_ONE;
                 blendStateDesc.mBlendAlphaModes[0] = BM_ADD;
-                blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_RED | ColorMask::COLOR_MASK_GREEN |  ColorMask::COLOR_MASK_BLUE;
+                #ifdef USE_THE_FORGE_LEGACY
+                    blendStateDesc.mMasks[0] = RED | GREEN | BLUE;
+                #else
+                    blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_RED | ColorMask::COLOR_MASK_GREEN |  ColorMask::COLOR_MASK_BLUE;
+                #endif
+
                 blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
                 blendStateDesc.mIndependentBlend = false;
 
@@ -482,7 +504,11 @@ cLuxEffectRenderer::cLuxEffectRenderer()
                 blendStateDesc.mSrcAlphaFactors[0] = BC_ONE;
                 blendStateDesc.mDstAlphaFactors[0] = BC_ONE;
                 blendStateDesc.mBlendAlphaModes[0] = BM_ADD;
-                blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_RED | ColorMask::COLOR_MASK_GREEN |  ColorMask::COLOR_MASK_BLUE;
+                #ifdef USE_THE_FORGE_LEGACY
+                    blendStateDesc.mMasks[0] = RED | GREEN |  BLUE;
+                #else
+                    blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_RED | ColorMask::COLOR_MASK_GREEN |  ColorMask::COLOR_MASK_BLUE;
+                #endif
                 blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
                 blendStateDesc.mIndependentBlend = false;
 
@@ -660,7 +686,12 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
         std::array targets = { eVertexBufferElement_Position, eVertexBufferElement_Normal, eVertexBufferElement_Texture0 };
         static_cast<LegacyVertexBuffer*>(pObject->GetVertexBuffer())->resolveGeometryBinding(frame->m_currentFrame, targets, &binding);
 
-        GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(&m_uniformBuffer, sizeof(LuxEffectObjectUniform::FlashUniform));
+        #ifdef USE_THE_FORGE_LEGACY
+            GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(m_uniformBuffer, sizeof(LuxEffectObjectUniform::FlashUniform));
+        #else
+            GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(&m_uniformBuffer, sizeof(LuxEffectObjectUniform::FlashUniform));
+        #endif
+
         cMatrixf worldMatrix = pObject->GetModelMatrixPtr() ? *pObject->GetModelMatrixPtr() : cMatrixf::Identity;
         const cMatrixf modelViewMat = cMath::MatrixMul(mainFrustumView, worldMatrix);
         const cMatrixf mvp = cMath::MatrixMul(mainFrustumViewProj, worldMatrix);
@@ -706,7 +737,11 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
         std::array targets = { eVertexBufferElement_Position, eVertexBufferElement_Normal, eVertexBufferElement_Texture0 };
         static_cast<LegacyVertexBuffer*>(pObject->GetVertexBuffer())->resolveGeometryBinding(frame->m_currentFrame, targets, &binding);
 
-        GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(&m_uniformBuffer, sizeof(LuxEffectObjectUniform::FlashUniform));
+        #ifdef USE_THE_FORGE_LEGACY
+            GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(m_uniformBuffer, sizeof(LuxEffectObjectUniform::FlashUniform));
+        #else
+            GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(&m_uniformBuffer, sizeof(LuxEffectObjectUniform::FlashUniform));
+        #endif
         cMatrixf worldMatrix = pObject->GetModelMatrixPtr() ? *pObject->GetModelMatrixPtr() : cMatrixf::Identity;
         const cMatrixf modelViewMat = cMath::MatrixMul(mainFrustumView, worldMatrix);
         const cMatrixf mvp = cMath::MatrixMul(mainFrustumViewProj, worldMatrix);
@@ -766,7 +801,12 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
             std::array targets = { eVertexBufferElement_Position, eVertexBufferElement_Texture0 };
             static_cast<LegacyVertexBuffer*>(pObject->GetVertexBuffer())->resolveGeometryBinding(frame->m_currentFrame, targets, &binding);
 
-            GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(&m_uniformBuffer, sizeof(LuxEffectObjectUniform::OutlineUniform));
+            #ifdef USE_THE_FORGE_LEGACY
+                GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(m_uniformBuffer, sizeof(LuxEffectObjectUniform::OutlineUniform));
+            #else
+                GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(&m_uniformBuffer, sizeof(LuxEffectObjectUniform::OutlineUniform));
+            #endif
+
             cMatrixf worldMatrix = pObject->GetModelMatrixPtr() ? *pObject->GetModelMatrixPtr() : cMatrixf::Identity;
             const cMatrixf modelViewMat = cMath::MatrixMul(mainFrustumView, worldMatrix);
 
@@ -815,7 +855,13 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
             LegacyVertexBuffer::GeometryBinding binding{};
             std::array targets = { eVertexBufferElement_Position, eVertexBufferElement_Texture0 };
             static_cast<LegacyVertexBuffer*>(pObject->GetVertexBuffer())->resolveGeometryBinding(frame->m_currentFrame, targets, &binding);
-            GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(&m_uniformBuffer, sizeof(LuxEffectObjectUniform::OutlineUniform));
+
+
+            #ifdef USE_THE_FORGE_LEGACY
+                GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(m_uniformBuffer, sizeof(LuxEffectObjectUniform::OutlineUniform));
+            #else
+                GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(&m_uniformBuffer, sizeof(LuxEffectObjectUniform::OutlineUniform));
+            #endif
 
             cBoundingVolume* pBV = pObject->GetBoundingVolume();
             cVector3f vLocalSize = pBV->GetLocalMax() - pBV->GetLocalMin();

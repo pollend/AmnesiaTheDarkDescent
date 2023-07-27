@@ -80,7 +80,12 @@ namespace hpl {
             blendStateDesc.mSrcAlphaFactors[0] = BC_SRC_ALPHA;
             blendStateDesc.mDstAlphaFactors[0] = BC_ONE_MINUS_SRC_ALPHA;
             blendStateDesc.mBlendAlphaModes[0] = BM_ADD;
-            blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_ALL;
+            #ifdef USE_THE_FORGE_LEGACY
+                blendStateDesc.mMasks[0] = ALL;
+            #else
+                blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_ALL;
+            #endif
+
             blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
             blendStateDesc.mIndependentBlend = false;
 

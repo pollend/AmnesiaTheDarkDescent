@@ -24,6 +24,9 @@ ENDIF()
 if(WIN32)
     add_compile_definitions("NOMINMAX=1")
 endif()
+add_definitions(
+    -DUSE_THE_FORGE_LEGACY
+)
 
 option(COPY_GAME_ASSETS "copy games assets into output directory" ON)
 option(WITH_TOOLS "build HPL2 with tools" ON)
