@@ -32,6 +32,9 @@
 #include "gui/WidgetButton.h"
 #include "gui/WidgetSlider.h"
 
+// fix macro ...
+#undef DrawText
+
 namespace hpl {
 
 	//////////////////////////////////////////////////////////////////////////
@@ -390,6 +393,7 @@ namespace hpl {
 	}
 
 	//-----------------------------------------------------------------------
+
 
 	bool cWidgetComboBox::DrawText(iWidget* apWidget, const cGuiMessageData& aData)
 	{

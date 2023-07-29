@@ -18,8 +18,6 @@
  */
 
 #include "impl/LegacyVertexBuffer.h"
-
-#include "bgfx/defines.h"
 #include "graphics/ForgeRenderer.h"
 #include "math/Math.h"
 #include "system/LowLevelSystem.h"
@@ -27,7 +25,6 @@
 #include "impl/LowLevelGraphicsSDL.h"
 
 #include <SDL2/SDL_stdinc.h>
-#include <X11/X.h>
 #include <algorithm>
 #include <cstdint>
 #include <vector>

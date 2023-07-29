@@ -42,6 +42,8 @@
 
 #include "scene/RenderableContainer_DynBoxTree.h"
 
+#include "Common_3/Utilities/Interfaces/ILog.h"
+#include <FixPreprocessor.h>
 
 //////////////////////////////////////////////////////////////////////////
 // STATIC FUNCTIONS
@@ -619,7 +621,7 @@ void cLuxDebugHandler::OnDraw(float afFrameTime)
 		for(int i=0; i<eMaterialTexture_LastEnum; ++i)
 		{
 
-			BX_ASSERT(false, "TODO: Fix this!");
+			ASSERT(false && "TODO: Fix this!");
 
 			auto* pTex = pMaterial->GetImage((eMaterialTexture)i);
 			if(pTex==NULL) continue;
@@ -654,7 +656,7 @@ void cLuxDebugHandler::RenderSolid(cRendererCallbackFunctions* apFunctions)
 
 	if(mbDrawPhysics)
 	{
-		BX_ASSERT(false, "bottom line is needed"); // TODO: Fix this!
+		ASSERT(false &&  "bottom line is needed"); // TODO: Fix this!
 		// gpBase->mpMapHandler->GetCurrentMap()->GetPhysicsWorld()->RenderDebugGeometry(apFunctions->GetLowLevelGfx(), cColor(0.5f));
 	}
 }

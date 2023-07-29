@@ -25,7 +25,9 @@
 #include "EditorWindowViewport.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Image.h"
-#include <bx/debug.h>
+
+#include "Common_3/Utilities/Interfaces/ILog.h"
+#include <FixPreprocessor.h>
 
 iEditorBase* cEditorHelper::mpEditor = NULL;
 
@@ -655,7 +657,7 @@ bool cEditorHelper::LoadTextureResource(eEditorTextureResourceType aTexType, con
 			animMode = eTextureAnimMode_Oscillate;
 
 
-		BX_ASSERT(animMode!=eTextureAnimMode_None, "Invalid anim mode not supported!");
+		ASSERT(animMode!=eTextureAnimMode_None && "Invalid anim mode not supported!");
 		// pTexture = pManager->CreateAnim(asFile, true, texType);
 		// if(pTexture)
 		// {

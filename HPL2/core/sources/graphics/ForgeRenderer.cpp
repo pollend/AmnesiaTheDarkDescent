@@ -8,13 +8,14 @@
 #include "Common_3/Graphics/Interfaces/IGraphics.h"
 
 #ifdef HPL2_RENDERDOC_ENABLED
-#include <dlfcn.h>
+#ifdef WIN32
+#else
+    #include <dlfcn.h>
+#endif
 #include "renderdoc_app.h"
 #endif
 
 namespace hpl {
-
-
 
     void ForgeRenderer::IncrementFrame() {
         // Stall if CPU is running "Swap Chain Buffer Count" frames ahead of GPU
@@ -106,13 +107,22 @@ namespace hpl {
         SyncToken token = {};
         RendererDesc desc{};
         #ifdef HPL2_RENDERDOC_ENABLED
-            static RENDERDOC_API_1_1_2 *rdoc_api = NULL;
-            if(void* mod = dlopen("./librenderdoc.so", RTLD_NOW))
-            {
-                pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)dlsym(mod, "RENDERDOC_GetAPI");
-                int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_6_0 , (void **)&rdoc_api);
-                assert(ret == 1);
-            }
+
+            static RENDERDOC_API_1_1_2* rdoc_api = NULL;
+            #ifdef WIN32
+                if (HMODULE mod = LoadLibrary("renderdoc.dll")) {
+                    pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)GetProcAddress(mod, "RENDERDOC_GetAPI");
+                    int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_6_0, (void**)&rdoc_api);
+                    assert(ret == 1);
+                }
+            #else
+                if (void* mod = dlopen("./librenderdoc.so", RTLD_NOW)) {
+                    pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)dlsym(mod, "RENDERDOC_GetAPI");
+                    int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_6_0, (void**)&rdoc_api);
+                    assert(ret == 1);
+                }
+            #endif
+           
         #endif
 
         initRenderer("test", &desc, &m_renderer);

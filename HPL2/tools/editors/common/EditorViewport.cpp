@@ -772,9 +772,9 @@ iEditorViewport::iEditorViewport(iEditorBase* apEditor, cWorld* apWorld, bool ab
 
 	m_target = std::make_shared<LegacyRenderTarget>();
 	mpEngineViewport->setRenderTarget(m_target);
-	auto desc = ImageDescriptor::CreateTexture2D(0, 0, false, bgfx::TextureFormat::Enum::RGBA8);
-	desc.m_configuration.m_rt = RTType::RT_Write;
-	mpEngineViewport->setImageDescriptor(desc);
+	// auto desc = ImageDescriptor::CreateTexture2D(0, 0, false, bgfx::TextureFormat::Enum::RGBA8);
+	// desc.m_configuration.m_rt = RTType::RT_Write;
+	// mpEngineViewport->setImageDescriptor(desc);
 	mbViewportNeedsUpdate = true;
 }
 

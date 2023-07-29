@@ -37,8 +37,8 @@ VSOutput VS_MAIN( VSInput In )
     Out.tangent = normalize(mul(normalMat, In.Tangent.xyz));
     Out.bitangent = normalize(mul(normalMat, cross(In.Tangent.xyz, In.Normal.xyz)));
 
-    vec3 viewEye =  mul(modelView, vec4(In.Position.xyz, 1.0)).xyz;
-    Out.view = vec3(
+    float3 viewEye =  mul(modelView, float4(In.Position.xyz, 1.0)).xyz;
+    Out.view = float3(
         dot(viewEye, Out.tangent), 
         dot(viewEye, Out.bitangent), 
         dot(-viewEye, Out.normal));

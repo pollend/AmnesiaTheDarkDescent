@@ -47,18 +47,18 @@ RES(Tex2D(float2), specularMap, UPDATE_FREQ_PER_FRAME, t4, binding = 4);
     #error not defined
 #endif
 
-RES(SamplerComparisonState, shadowCmpSampler, UPDATE_FREQ_NONE, s2, binding = 14);
-RES(SamplerState, pointSampler, UPDATE_FREQ_NONE, s4, binding = 16);
-RES(SamplerState, goboSampler, UPDATE_FREQ_NONE, s5, binding = 17);
+RES(SamplerComparisonState, shadowCmpSampler, UPDATE_FREQ_NONE, s1, binding = 14);
+RES(SamplerState, pointSampler, UPDATE_FREQ_NONE, s2, binding = 16);
+RES(SamplerState, goboSampler, UPDATE_FREQ_NONE, s3, binding = 17);
 
-RES(Tex2D(float), shadowOffsetMap, UPDATE_FREQ_PER_BATCH, t7, binding = 15);
+RES(Tex2D(float), shadowOffsetMap, UPDATE_FREQ_PER_BATCH, t5, binding = 15);
 
-RES(SamplerState, nearestSampler, UPDATE_FREQ_PER_BATCH, s1, binding = 8);
-RES(Tex1D(float4), attenuationLightMap, UPDATE_FREQ_PER_BATCH, t5, binding = 9);
+RES(SamplerState, nearestSampler, UPDATE_FREQ_PER_BATCH, s4, binding = 8);
+RES(Tex1D(float4), attenuationLightMap, UPDATE_FREQ_PER_BATCH, t6, binding = 9);
 RES(TexCube(float4), goboCubeMap, UPDATE_FREQ_PER_BATCH, t7, binding = 10);
-RES(Tex2D(float4), goboMap, UPDATE_FREQ_PER_BATCH, t7, binding = 11);
-RES(Tex1D(float4), falloffMap, UPDATE_FREQ_PER_BATCH, t7, binding = 12);
-RES(Tex2D(float), shadowMap, UPDATE_FREQ_PER_BATCH, t7, binding = 13);
+RES(Tex2D(float4), goboMap, UPDATE_FREQ_PER_BATCH, t8, binding = 11);
+RES(Tex1D(float4), falloffMap, UPDATE_FREQ_PER_BATCH, t9, binding = 12);
+RES(Tex2D(float), shadowMap, UPDATE_FREQ_PER_BATCH, t10, binding = 13);
 
 
 INLINE bool HasGoboMap(int _config)        { return (_config & (1 << 0)) != 0; }

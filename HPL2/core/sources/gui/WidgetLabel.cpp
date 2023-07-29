@@ -31,6 +31,8 @@
 #include "gui/GuiSet.h"
 #include "gui/GuiGfxElement.h"
 
+#undef DrawText
+
 namespace hpl {
 
 	//////////////////////////////////////////////////////////////////////////

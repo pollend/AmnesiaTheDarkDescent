@@ -24,7 +24,6 @@
 #include "graphics/LowLevelGraphics.h"
 #include "graphics/Bitmap.h"
 
-
 #include "graphics/FrameSubImage.h"
 #include "graphics/FrameBitmap.h"
 #include "graphics/FrameTexture.h"

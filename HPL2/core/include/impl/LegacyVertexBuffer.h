@@ -23,7 +23,6 @@
 
 #include <algorithm>
 #include <array>
-#include <bx/debug.h>
 #include <span>
 #include <vector>
 

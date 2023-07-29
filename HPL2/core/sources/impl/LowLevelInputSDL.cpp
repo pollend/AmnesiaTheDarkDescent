@@ -71,9 +71,14 @@ namespace hpl {
                       mlstEvents.push_back(event);
                   }
               },
-              { .onBegin = [&]() {
-                  mlstEvents.clear();
-              } }) {
+              { [&]() {
+                   mlstEvents.clear();
+               },
+                []() {
+                },
+                [](auto ev) {
+                    return true;
+                } }) {
         m_windowEventHandler.Connect(Interface<window::NativeWindowWrapper>::Get()->NativeInternalEvent());
 
         LockInput(true);

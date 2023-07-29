@@ -51,12 +51,12 @@ PsOut PS_MAIN(PsIn In)
     ///////////////////////////////
     //Get the two uv coords
     float fT1 = waveAft * 0.8;
-    vec2 vUv1 = In.uv + waveAft * 0.01f;
+    float2 vUv1 = In.uv + waveAft * 0.01f;
     vUv1.x += sin(fT1 + vUv1.y * Get(waveFreq))* Get(waveAmplitude);
     vUv1.y += sin(fT1 + vUv1.x * Get(waveFreq))* Get(waveAmplitude);
 
     float fT2 = waveAft * -2.6;
-    vec2 vUv2 = In.uv + waveAft * -0.012f;
+    float2 vUv2 = In.uv + waveAft * -0.012f;
     vUv2.x += sin(fT2 + vUv2.y * Get(waveFreq)*1.2) * Get(waveAmplitude)*0.75;
     vUv2.y += sin(fT2 + vUv2.x * Get(waveFreq)*1.2) * Get(waveAmplitude)*0.75;
 

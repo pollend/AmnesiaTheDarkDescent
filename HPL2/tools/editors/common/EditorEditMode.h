@@ -40,6 +40,8 @@ class cEditorWindowViewport;
 
 //------------------------------------------------------
 
+#undef CreateWindow
+
 //////////////////////////////////////////////////////////////
 // iEditorEditMode
 //  Base interface for edit modes. May hold a helper window, and provides means

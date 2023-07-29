@@ -23,6 +23,8 @@
 #include "system/LowLevelSystem.h"
 #include "system/String.h"
 
+#undef LoadBitmap
+
 namespace hpl {
 
 	//////////////////////////////////////////////////////////////////////////

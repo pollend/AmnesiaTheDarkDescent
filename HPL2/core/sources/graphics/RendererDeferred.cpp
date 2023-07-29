@@ -27,12 +27,9 @@
 #include "scene/ParticleEmitter.h"
 #include "scene/Viewport.h"
 #include "windowing/NativeWindow.h"
-#include <bx/debug.h>
 
 #include <cstdint>
 #include <graphics/Enum.h>
-
-#include "bx/math.h"
 
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Image.h"
@@ -2668,6 +2665,7 @@ namespace hpl {
                 }
 
                 uniformBlock->maxMipLevel = currentGBuffer.m_hiZMipCount - 1;
+                uniformBlock->depthDim = uint2(common->m_size.x, common->m_size.y);
                 uniformBlock->numObjects = uniformTest.size();
                 endUpdateResource(&updateDesc, nullptr);
                 cmdEndDebugMarker(m_prePassCmd);
@@ -2792,8 +2790,16 @@ namespace hpl {
 
                     width /= 2;
                     height /= 2;
+                    struct {
+                        uint32_t mipLevel;
+                        uint2 screenDim;
+                    } pushConstants;
+
+                    pushConstants.mipLevel = lod;
+                    pushConstants.screenDim = uint2(common->m_size.x, common->m_size.y);
+
                     // bind lod to push constant
-                    cmdBindPushConstants(m_prePassCmd, m_rootSignatureHIZOcclusion, rootConstantIndex, &lod);
+                    cmdBindPushConstants(m_prePassCmd, m_rootSignatureHIZOcclusion, rootConstantIndex, &pushConstants);
                     cmdBindDescriptorSet(m_prePassCmd, lod, m_descriptorSetHIZGenerate);
                     cmdBindPipeline(m_prePassCmd, m_pipelineHIZGenerate);
                     cmdDispatch(m_prePassCmd, static_cast<uint32_t>(width / 32) + 1, static_cast<uint32_t>(height / 32) + 1, 1);

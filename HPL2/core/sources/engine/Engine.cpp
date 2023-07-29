@@ -19,8 +19,6 @@
 
 #include "engine/Engine.h"
 
-#include <bgfx/platform.h>
-
 #include <functional>
 #include <gui/GuiTypes.h>
 #include <impl/LowLevelInputSDL.h>

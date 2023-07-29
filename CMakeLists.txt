@@ -6,9 +6,13 @@ set(CMAKE_INSTALL_PREFIX ${INSTALL_OUTPUT_PATH} CACHE PATH "Install path prefix,
 enable_language(ASM)
 
 if(MSVC)
-  add_definitions(/MP)
-endif()
+    # hack to get to build on windwos
+    find_package(Vulkan REQUIRED)
+    include_directories(${Vulkan_INCLUDE_DIRS})
+    link_libraries(${Vulkan_LIBRARY})
 
+  add_definitions(/MP /std:c++20)
+endif()
 
 if(UNIX)
     set(VCPKG_CMAKE_SYSTEM_NAME Linux)

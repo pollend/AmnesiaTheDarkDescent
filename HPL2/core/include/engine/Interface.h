@@ -32,7 +32,7 @@ namespace hpl {
     template<class T>
     void Interface<T>::Register(T* instance) {
         auto id = GetClassID();
-        BX_ASSERT(!hpl::Environment::FindVariable<T*>(id).IsConstructed(), "Interface already registered");
+        ASSERT(!hpl::Environment::FindVariable<T*>(id).IsConstructed() && "Interface already registered");
 
         auto inst = hpl::Environment::CreateVariable<T*>(id);
         GetInstance().Swap(inst);
@@ -41,8 +41,8 @@ namespace hpl {
 
     template<class T>
     void Interface<T>::UnRegister(T* instance) {
-        BX_ASSERT(GetInstance().IsConstructed(), "Unregistering wrong instance");
-        BX_ASSERT(GetInstance().Get() == instance, "Unregistering wrong instance");
+        ASSERT(GetInstance().IsConstructed() && "Unregistering wrong instance");
+        ASSERT(GetInstance().Get() == instance && "Unregistering wrong instance");
 
         auto id = GetClassID();
         GetInstance().Reset();

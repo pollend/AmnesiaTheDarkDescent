@@ -47,8 +47,8 @@ namespace hpl {
         , mpRenderer(nullptr)
         , mpPostEffectComposite(nullptr)
         , mbIsListener(false) {
-        m_imageDescriptor = ImageDescriptor::CreateTexture2D(0, 0, false, bgfx::TextureFormat::Enum::RGBA8);
-        m_imageDescriptor.m_configuration.m_rt = RTType::RT_Write;
+        // m_imageDescriptor = ImageDescriptor::CreateTexture2D(0, 0, false, bgfx::TextureFormat::Enum::RGBA8);
+        // m_imageDescriptor.m_configuration.m_rt = RTType::RT_Write;
 
         std::lock_guard<std::mutex> lock(internal::m_mutex);
         if (internal::m_freelist.empty()) {
@@ -63,8 +63,8 @@ namespace hpl {
             if (m_dirtyViewport) {
                 if (m_size.x > 0 && m_size.y > 0 && m_renderTarget) {
                     m_dirtyViewport = false;
-                    m_imageDescriptor.m_width = m_size.x;
-                    m_imageDescriptor.m_height = m_size.y;
+                    // m_imageDescriptor.m_width = m_size.x;
+                    // m_imageDescriptor.m_height = m_size.y;
                //     auto image = std::make_shared<Image>();
                 }
                 m_viewportChanged.Signal();

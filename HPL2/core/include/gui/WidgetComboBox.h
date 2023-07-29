@@ -17,8 +17,7 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef HPL_WIDGET_COMBO_BOX_H
-#define HPL_WIDGET_COMBO_BOX_H
+#pragma once
 
 #include "gui/Widget.h"
 #include "gui/WidgetSlider.h"
@@ -135,4 +134,3 @@ namespace hpl {
 	};
 
 };
-#endif // HPL_WIDGET_COMBO_BOX_H

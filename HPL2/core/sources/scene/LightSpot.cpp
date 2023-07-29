@@ -28,7 +28,6 @@
 #include "resources/Resources.h"
 #include "resources/TextureManager.h"
 #include "scene/Camera.h"
-#include <bx/debug.h>
 
 #include "engine/Engine.h"
 #include "scene/Scene.h"

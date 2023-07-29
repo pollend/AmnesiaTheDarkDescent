@@ -608,8 +608,7 @@ namespace hpl {
             mat4 viewProjeciton;
             uint32_t numObjects;
             uint32_t maxMipLevel;
-            uint32_t pad2;
-            uint32_t pad3;
+            uint2 depthDim;
             float4 inputColliders[MaxObjectTest];
         };
 

@@ -18,13 +18,12 @@
  */
 #pragma once 
 
+#include "engine/QueuedEventLoopHandler.h"
+
 #include <windowing/NativeWindow.h>
 
 #include <input/LowLevelInput.h>
-
-#include "engine/QueuedEventLoopHandler.h"
 #include <SDL2/SDL_events.h>
-
 
 #include <list>
 #include <mutex>

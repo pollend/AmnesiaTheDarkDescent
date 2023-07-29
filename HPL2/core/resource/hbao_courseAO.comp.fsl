@@ -180,7 +180,7 @@ void CS_MAIN(SV_DispatchThreadID(uint3) did)
 
                 // Compute normalized 2D direction
                 #ifdef JITTER_SAMPLES
-                    float3 jitter = JITTER[uint(fract(sin(dot(float2(did.x, did.y), float2(12.9898, 78.233))) * 43758.5453)) % 32];
+                    float3 jitter = JITTER[uint(frac(sin(dot(float2(did.x, did.y), float2(12.9898, 78.233))) * 43758.5453)) % 32];
                     const float2 direction = RotateDirection(float2(cos(angle), sin(angle)), jitter.xy);
                     // Jitter starting sample within the first step
                     float rayPixels = (jitter.z * stepSizePixels)  + 1.0;

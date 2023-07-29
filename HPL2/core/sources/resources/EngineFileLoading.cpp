@@ -49,7 +49,6 @@
 #include "graphics/VertexBuffer.h"
 #include "graphics/Mesh.h"
 #include "graphics/SubMesh.h"
-#include <bx/debug.h>
 
 
 namespace hpl {

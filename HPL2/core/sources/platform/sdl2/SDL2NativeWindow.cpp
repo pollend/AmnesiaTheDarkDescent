@@ -113,6 +113,8 @@ namespace hpl::window::internal {
             handle.window = wmi.info.android.window;
             handle.activity = wmi.info.android.activity;
             handle.configuration = wmi.info.android.config;
+        #elif defined(WIN32)
+            handle.window = wmi.info.win.window;
         #else
             handle.window = (void*)SDL_GetWindowWMInfo(impl->m_window, &wmi);
         #endif

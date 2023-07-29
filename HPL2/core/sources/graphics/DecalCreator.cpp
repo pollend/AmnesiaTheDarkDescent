@@ -38,7 +38,6 @@
 #include "scene/MeshEntity.h"
 #include "math/Math.h"
 
-#include <bx/debug.h>
 
 namespace hpl {
 
@@ -407,7 +406,7 @@ namespace hpl {
 		{
 			if(mpDecalMaterial)
 			{
-				BX_ASSERT(false, ""); // TODO: fix this
+				ASSERT(false && ""); // TODO: fix this
 				// apFunctions->SetDepthTest(true);
 				// apFunctions->SetDepthWrite(false);
 				// apFunctions->SetBlendMode(eMaterialBlendMode_Alpha);

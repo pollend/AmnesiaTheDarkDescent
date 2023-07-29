@@ -26,7 +26,6 @@
 #include "LuxDebugHandler.h"
 #include "LuxLoadScreenHandler.h"
 #include "engine/Interface.h"
-#include <bx/debug.h>
 
 //-----------------------------------------------------------------------
 

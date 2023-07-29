@@ -67,13 +67,13 @@ namespace hpl {
         cVector3f vv1 = cMath::MatrixMul(options.m_transform, v1);
         cVector3f vv2 = cMath::MatrixMul(options.m_transform, v2);
         cVector3f vv3 = cMath::MatrixMul(options.m_transform, v3);
-        m_colorTriangles.push_back(ColorTriRequest{
-            .m_depthTest = options.m_depthTest,
-            .m_v1 = { vv1.x, vv1.y, vv1.z },
-            .m_v2 = { vv2.x, vv2.y, vv2.z },
-            .m_v3 = { vv3.x, vv3.y, vv3.z },
-            .m_color = { color.r, color.g, color.b, color.a },
-        });
+        ColorTriRequest request;
+        request.m_depthTest = options.m_depthTest;
+        request.m_v1 = { vv1.x, vv1.y, vv1.z };
+        request.m_v2 = { vv2.x, vv2.y, vv2.z };
+        request.m_v3 = { vv3.x, vv3.y, vv3.z };
+        request.m_color = { color.r, color.g, color.b, color.a };
+        m_colorTriangles.push_back(request);
     }
     void ImmediateDrawBatch::DrawTri(
         const Eigen::Vector3f& v1,
@@ -110,11 +110,11 @@ namespace hpl {
     }
 
     void ImmediateDrawBatch::DebugDraw2DLine(const cVector2f& start, const cVector2f& end, const cColor& color) {
-        m_line2DSegments.push_back(Line2DSegmentRequest{
-            .m_start = { start.x, start.y },
-            .m_end = { end.x, end.y },
-            .m_color = { color.r, color.g, color.b, color.a },
-        });
+        Line2DSegmentRequest request;
+        request.m_start = { start.x, start.y };
+        request.m_end = { end.x, end.y };
+        request.m_color = { color.r, color.g, color.b, color.a };
+        m_line2DSegments.push_back(request);
     }
 
     void ImmediateDrawBatch::DebugDraw2DLineQuad(cRect2f rect, const cColor& color) {
@@ -128,12 +128,12 @@ namespace hpl {
         const cVector3f& start, const cVector3f& end, const cColor& color, const DebugDrawOptions& options) {
         cVector3f transformStart = cMath::MatrixMul(options.m_transform, start);
         cVector3f transformEnd = cMath::MatrixMul(options.m_transform, end);
-        m_lineSegments.push_back(LineSegmentRequest{
-            .m_depthTest = options.m_depthTest,
-            .m_start = { transformStart.x, transformStart.y, transformStart.z },
-            .m_end = { transformEnd.x, transformEnd.y, transformEnd.z },
-            .m_color = { color.r, color.g, color.b, color.a },
-        });
+        LineSegmentRequest request = {};
+        request.m_depthTest = options.m_depthTest;
+        request.m_start = { transformStart.x, transformStart.y, transformStart.z };
+        request.m_end = { transformEnd.x, transformEnd.y, transformEnd.z };
+        request.m_color = { color.r, color.g, color.b, color.a };
+        m_lineSegments.push_back(request);
     }
 
     void ImmediateDrawBatch::DrawQuad(
@@ -150,18 +150,17 @@ namespace hpl {
         cVector3f vv2 = cMath::MatrixMul(options.m_transform, v2);
         cVector3f vv3 = cMath::MatrixMul(options.m_transform, v3);
         cVector3f vv4 = cMath::MatrixMul(options.m_transform, v4);
-
-        m_uvQuads.push_back(UVQuadRequest{
-            .m_depthTest = options.m_depthTest,
-            .m_v1 = Eigen::Vector3f(vv1.x, vv1.y, vv1.z),
-            .m_v2 = Eigen::Vector3f(vv2.x, vv2.y, vv2.z),
-            .m_v3 = Eigen::Vector3f(vv3.x, vv3.y, vv3.z),
-            .m_v4 = Eigen::Vector3f(vv4.x, vv4.y, vv4.z),
-            .m_uv0 = Eigen::Vector2f(uv0.x, uv0.y),
-            .m_uv1 = Eigen::Vector2f(uv1.x, uv1.y),
-            .m_uvImage = image,
-            .m_color = aTint,
-        });
+        UVQuadRequest request = {};
+        request.m_depthTest = options.m_depthTest;
+        request.m_v1 = Eigen::Vector3f(vv1.x, vv1.y, vv1.z);
+        request.m_v2 = Eigen::Vector3f(vv2.x, vv2.y, vv2.z);
+        request.m_v3 = Eigen::Vector3f(vv3.x, vv3.y, vv3.z);
+        request.m_v4 = Eigen::Vector3f(vv4.x, vv4.y, vv4.z);
+        request.m_uv0 = Eigen::Vector2f(uv0.x, uv0.y);
+        request.m_uv1 = Eigen::Vector2f(uv1.x, uv1.y);
+        request.m_uvImage = image;
+        request.m_color = aTint;
+        m_uvQuads.push_back(request);
     }
 
     void ImmediateDrawBatch::DrawQuad(
@@ -197,14 +196,14 @@ namespace hpl {
         cVector3f vv3 = cMath::MatrixMul(options.m_transform, v3);
         cVector3f vv4 = cMath::MatrixMul(options.m_transform, v4);
 
-        m_colorQuads.push_back(ColorQuadRequest{
-            .m_depthTest = options.m_depthTest,
-            .m_v1 = { vv1.x, vv1.y, vv1.z },
-            .m_v2 = { vv2.x, vv2.y, vv2.z },
-            .m_v3 = { vv3.x, vv3.y, vv3.z },
-            .m_v4 = { vv4.x, vv4.y, vv4.z },
-            .m_color = { aColor.r, aColor.g, aColor.b, aColor.a },
-        });
+        ColorQuadRequest quad = ColorQuadRequest();
+        quad.m_depthTest = options.m_depthTest;
+        quad.m_v1 = { vv1.x, vv1.y, vv1.z };
+        quad.m_v2 = { vv2.x, vv2.y, vv2.z };
+        quad.m_v3 = { vv3.x, vv3.y, vv3.z };
+        quad.m_v4 = { vv4.x, vv4.y, vv4.z };
+        quad.m_color = { aColor.r, aColor.g, aColor.b, aColor.a };
+        m_colorQuads.push_back(quad);
     }
 
     void ImmediateDrawBatch::DrawQuad(
@@ -214,6 +213,7 @@ namespace hpl {
         const Eigen::Vector3f& v4,
         const Eigen::Vector4f& color,
         const DebugDrawOptions& options) {
+
         DrawQuad(
             cVector3f(v1.x(), v1.y(), v1.z()),
             cVector3f(v2.x(), v2.y(), v2.z()),
@@ -252,7 +252,7 @@ namespace hpl {
         default:
             break;
         }
-        BX_ASSERT(false, "invalid projection type");
+        ASSERT(false && "invalid projection type");
         return 0.0f;
     }
 

@@ -37,6 +37,9 @@
 #include <utility>
 #include <vector>
 
+#include "Common_3/Utilities/Interfaces/ILog.h"
+#include <FixPreprocessor.h>
+
 namespace hpl::input::internal {
 
     namespace mouse {
@@ -50,7 +53,7 @@ namespace hpl::input::internal {
 
         bool IsButtonPressed(InternalInputMouseHandle& handle, eMouseButton button) {
             auto* impl = static_cast<InternalInputMouseImpl*>(handle.Get());
-            BX_ASSERT(button < impl->m_mouseButton.size(), "Invalid mouse button");
+            ASSERT(button < impl->m_mouseButton.size() && "Invalid mouse button");
             return impl->m_mouseButton[static_cast<size_t>(button)];
         }
 
@@ -452,7 +455,7 @@ namespace hpl::input::internal {
                 updateLoop->Subscribe(BroadcastEvent::PostUpdate, impl->m_postUpdate);
                 updateLoop->Subscribe(BroadcastEvent::PreUpdate, impl->m_preUpdate);
             } else {
-                BX_ASSERT(false, "No update loop found")
+                ASSERT(false && "No update loop found");
             }
 
             impl->m_windowEventHandle = window::internal::WindowInternalEvent::Handler([impl](hpl::window::InternalEvent& internalEvent) {

@@ -39,7 +39,7 @@ int hplMain(const tString& asCommandLine)
 	Bootstrap::BootstrapConfiguration config;
 	config.m_windowStyle = hpl::window::WindowStyle::WindowStyleResizable;
 	bootstrap.Initialize(config);
-	bootstrap.Run([&](bx::Thread* self) {
+	bootstrap.Run([&]() {
 		pEditor = new cModelEditor();
 		pEngine = pEditor->Init(NULL, "ModelEditor", GetBuildID_ModelEditor(), false);
 		pEngine->Run();

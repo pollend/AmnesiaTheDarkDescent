@@ -35,6 +35,9 @@
 #include <memory>
 #include <vector>
 
+#include "Common_3/Utilities/Interfaces/ILog.h"
+#include <FixPreprocessor.h>
+
 namespace hpl {
 
 	//////////////////////////////////////////////////////////////////////////
@@ -240,7 +243,7 @@ namespace hpl {
 
 				vBitmaps.push_back(pBmp);
 			}
-			BX_ASSERT(vBitmaps.size() == 6, "vBitmaps.size() == 6");
+			ASSERT(vBitmaps.size() == 6 && "vBitmaps.size() == 6");
 
 			ForgeTextureHandle::BitmapCubmapLoadOptions opts = {0};
 			opts.m_useMipmaps = abUseMipMaps;

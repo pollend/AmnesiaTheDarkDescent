@@ -46,7 +46,7 @@ float4 PS_MAIN(PsIn In)
     }
 
     if(HasDissolveAlpha(Get(textureConfig)) || HasDissolveFilter(Get(textureConfig))) {
-        vec2 vDissolveCoords = texCoord.xy * (1.0/128.0); //128 = size of dissolve texture.
+        float2 vDissolveCoords = texCoord.xy * (1.0/128.0); //128 = size of dissolve texture.
         float fDissolve = SampleTex2D(dissolveMap, Get(nearestSampler), vDissolveCoords).w;
         
         if(HasDissolveAlpha(Get(textureConfig))) {

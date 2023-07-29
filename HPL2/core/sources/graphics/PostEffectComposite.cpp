@@ -36,7 +36,6 @@
 #include "graphics/RenderTarget.h"
 
 #include <algorithm>
-#include <bx/debug.h>
 #include <functional>
 #include <memory>
 
@@ -222,7 +221,7 @@ namespace hpl {
     }
 
     void cPostEffectComposite::AddPostEffect(iPostEffect* apPostEffect, int alPrio) {
-        BX_ASSERT(apPostEffect, "Post Effect is not defined");
+        ASSERT(apPostEffect && "Post Effect is not defined");
         if (!apPostEffect) {
             return;
         }

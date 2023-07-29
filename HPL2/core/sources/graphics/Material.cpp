@@ -33,7 +33,6 @@
 
 #include "math/Math.h"
 #include <utility>
-#include <bx/debug.h>
 
 
 

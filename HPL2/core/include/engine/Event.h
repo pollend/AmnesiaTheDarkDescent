@@ -14,10 +14,13 @@
 #include <queue>
 #include <stack>
 #include <mutex>
-#include <bx/debug.h>
 #include <thread>
 #include <tuple>
 #include <type_traits>
+
+#include "Common_3/Utilities/Interfaces/ILog.h"
+#include <FixPreprocessor.h>
+
 
 namespace hpl
 {
@@ -241,13 +244,13 @@ namespace hpl
     {
         // Cannot add an unbound event handle (no function callback) to an event, this is a programmer error
         // We explicitly do not support binding the callback after the handler has been constructed so we can just reject the event handle here
-        BX_ASSERT(m_callback, "Handler callback is null");
+        ASSERT(m_callback &&  "Handler callback is null");
         if (!m_callback)
         {
             return;
         }
 
-        BX_ASSERT(!m_event, "Handler is already registered to an event, binding a handler to multiple events is unsupported");
+        ASSERT(!m_event &&  "Handler is already registered to an event, binding a handler to multiple events is unsupported");
         m_event = &event;
 
         event.Connect(*this);
@@ -289,12 +292,12 @@ namespace hpl
             // The index can then be converted to the add list index in which it lives
             if (m_index < 0)
             {
-                BX_ASSERT(m_event->m_addList[-(m_index + 1)] == &from, "From handle does not match");
+                ASSERT(m_event->m_addList[-(m_index + 1)] == &from &&  "From handle does not match");
                 m_event->m_addList[-(m_index + 1)] = this;
             }
             else
             {
-                BX_ASSERT(m_event->m_handlers[m_index] == &from, "From handle does not match");
+                ASSERT(m_event->m_handlers[m_index] == &from &&  "From handle does not match");
                 m_event->m_handlers[m_index] = this;
             }
         }
@@ -392,7 +395,7 @@ namespace hpl
         {
             if (handler)
             {
-                BX_ASSERT(handler->m_event == this, "Entry event does not match");
+                ASSERT(handler->m_event == this && "Entry event does not match");
                 handler->Disconnect();
             }
         }
@@ -400,8 +403,8 @@ namespace hpl
         // Clear any handlers still pending registration
         for (Handler* handler : m_addList)
         {
-            BX_ASSERT(handler, "NULL handler encountered in Event addList");
-            BX_ASSERT(handler->m_event == this, "Entry event does not match");
+            ASSERT(handler && "NULL handler encountered in Event addList");
+            ASSERT(handler->m_event == this && "Entry event does not match");
             handler->Disconnect();
         }
 
@@ -435,7 +438,7 @@ namespace hpl
         {
             for (Handler* handler : m_addList)
             {
-                BX_ASSERT(handler, "NULL handler encountered in Event addList");
+                ASSERT(handler &&  "NULL handler encountered in Event addList");
                 if (m_freeList.empty())
                 {
                     handler->m_index = static_cast<int32_t>(m_handlers.size());
@@ -446,7 +449,7 @@ namespace hpl
                     handler->m_index = static_cast<int32_t>(m_freeList.top());
                     m_freeList.pop();
 
-                    BX_ASSERT(m_handlers[handler->m_index] == nullptr, "Callback already registered");
+                    ASSERT(m_handlers[handler->m_index] == nullptr &&  "Callback already registered");
                     m_handlers[handler->m_index] = handler;
                 }
             }
@@ -465,7 +468,7 @@ namespace hpl
             if (handler)
             {
                 // This should have happened as part of a move so none of the pointers should refer to this event (they should also all refer to the same event)
-                BX_ASSERT(handler->m_event != this, "Should not refer to this");
+                ASSERT(handler->m_event != this &&  "Should not refer to this");
                 handler->m_event = this;
             }
         }
@@ -473,8 +476,8 @@ namespace hpl
         for (Handler* handler : m_addList)
         {
             // This should have happened as part of a move so none of the pointers should refer to this event (they should also all refer to the same event)
-            BX_ASSERT(handler, "NULL handler encountered in Event addList");
-            BX_ASSERT(handler->m_event != this, "Should not refer to this");
+            ASSERT(handler &&  "NULL handler encountered in Event addList");
+            ASSERT(handler->m_event != this &&  "Should not refer to this");
             handler->m_event = this;
         }
     }
@@ -501,7 +504,7 @@ namespace hpl
             handler.m_index = static_cast<int32_t>(m_freeList.top());
             m_freeList.pop();
 
-            BX_ASSERT(m_handlers[handler.m_index] == nullptr, "Replacing non nullptr event");
+            ASSERT(m_handlers[handler.m_index] == nullptr &&  "Replacing non nullptr event");
             m_handlers[handler.m_index] = &handler;
         }
     }
@@ -511,17 +514,17 @@ namespace hpl
     inline void Event<Params...>::Disconnect(Handler& eventHandle) const
     {
         std::lock_guard<std::recursive_mutex> lk(m_mutex);
-        BX_ASSERT(eventHandle.m_event == this, "Trying to remove a handler bound to a different event");
+        ASSERT(eventHandle.m_event == this &&  "Trying to remove a handler bound to a different event");
 
         int32_t index = eventHandle.m_index;
         if (index < 0)
         {
-            BX_ASSERT(m_addList[-(index + 1)] == &eventHandle, "Entry does not refer to handle");
+            ASSERT(m_addList[-(index + 1)] == &eventHandle &&  "Entry does not refer to handle");
             m_addList[-(index + 1)] = nullptr;
         }
         else
         {
-            BX_ASSERT(m_handlers[index] == &eventHandle, "Entry does not refer to handle");
+            ASSERT(m_handlers[index] == &eventHandle &&  "Entry does not refer to handle");
             m_handlers[index] = nullptr;
             m_freeList.push(index);
         }

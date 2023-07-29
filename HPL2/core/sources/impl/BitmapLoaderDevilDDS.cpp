@@ -24,6 +24,8 @@
 #include "system/String.h"
 #include "graphics/LowLevelGraphics.h"
 
+#undef LoadBitmap
+
 namespace hpl {
 
 	//////////////////////////////////////////////////////////////////////////

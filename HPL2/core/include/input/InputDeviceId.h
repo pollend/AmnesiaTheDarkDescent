@@ -4,7 +4,6 @@
 #include <array>
 #include <cstdint>
 
-#include <bx/debug.h>
 #include <string>
 #include <string_view>
 

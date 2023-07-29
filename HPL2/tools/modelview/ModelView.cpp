@@ -2299,7 +2299,7 @@ int hplMain(const tString &asCommandline)
 	Bootstrap::BootstrapConfiguration config;
 	config.m_windowStyle = hpl::window::WindowStyle::WindowStyleResizable;
 	bootstrap.Initialize(config);
-	bootstrap.Run([&](bx::Thread* self) {
+	bootstrap.Run([&]() {
 		//Init the game engine
 		cEngineInitVars vars;
 		vars.mGraphics.mvScreenSize.x = 1280;
@@ -2347,7 +2347,6 @@ int hplMain(const tString &asCommandline)
 		//Run the engine
 		gpEngine->Run();
 
-		return 0;
 	});
 	bootstrap.Shutdown();
 

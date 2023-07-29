@@ -30,12 +30,12 @@
 
 RES(Tex2D(float), depthInput, UPDATE_FREQ_PER_FRAME, t0, binding = 0);
 RES(Tex2D(float4), normalInput, UPDATE_FREQ_PER_FRAME, t1, binding = 1);
-RES(RWTex2D(float4), gOutput, UPDATE_FREQ_PER_FRAME, t2, binding = 2);
+RES(RWTex2D(float4), gOutput, UPDATE_FREQ_PER_FRAME, u0, binding = 2);
 
-RES(RWTex2DArray(float), prepareDepths, UPDATE_FREQ_NONE, t3, binding = 3);
-RES(RWTex2DArray(float), aoQurter, UPDATE_FREQ_NONE, t4, binding = 4);
+RES(RWTex2DArray(float), prepareDepths, UPDATE_FREQ_NONE, u1, binding = 3);
+RES(RWTex2DArray(float), aoQurter, UPDATE_FREQ_NONE, u2, binding = 4);
 
-RES(SamplerState, pointSampler, UPDATE_FREQ_NONE, s1, binding = 5);
+RES(SamplerState, pointSampler, UPDATE_FREQ_NONE, s0, binding = 5);
 
 #define RADIUS_SQUARED (RADIUS * RADIUS)
 #define NEG_INV_RADIUS_SQUARED (-1.0 / RADIUS_SQUARED)

@@ -16,18 +16,17 @@
 
 #pragma once
 
-#include "bx/thread.h"
 #include "engine/UpdateEventLoop.h"
 #include "graphics/ForgeRenderer.h"
-#include "system/Filesystem.h"
 #include "windowing/NativeWindow.h"
-#include <bx/file.h>
 #include <cstdint>
 #include <engine/RTTI.h>
 #include <functional>
 #include <memory>
-#include <system/Filesystem.h>
 #include <input/InputManager.h>
+
+#include "Common_3/Utilities/Interfaces/IThread.h"
+#include <FixPreprocessor.h>
 
 namespace hpl {
     class PrimaryViewport;
@@ -37,7 +36,6 @@ namespace hpl {
         struct BootstrapConfiguration final {
         public:
             BootstrapConfiguration() {}
-
             window::WindowStyle m_windowStyle = window::WindowStyle::WindowStyleNone;
         };
 
@@ -45,10 +43,10 @@ namespace hpl {
         ~Bootstrap();
 
         void Initialize(BootstrapConfiguration configuration = BootstrapConfiguration{ } );
-        void Run(std::function<int32_t(bx::Thread*)> handler);
+        void Run(std::function<void()> handler);
         void Shutdown();
     private:
-        static int32_t BootstrapThreadHandler(bx::Thread* self, void* _userData);
+        static void BootstrapThreadHandler(void* _userData);
 
         std::unique_ptr<PrimaryViewport> m_primaryViewport;
         hpl::ForgeRenderer m_renderer;
@@ -56,9 +54,8 @@ namespace hpl {
         UpdateEventLoop m_updateEventLoop;
         input::InputManager m_inputManager;
         window::NativeWindowWrapper m_window;
-        FileReader m_fileReader;
-        FileWriter m_fileWriter;
-        bx::Thread m_thread;
-        std::function<int32_t(bx::Thread*)> m_handler;
+        ThreadHandle m_thread;
+        std::function<void()> m_handler;
+        std::atomic_bool m_isRunning;
     };
 }

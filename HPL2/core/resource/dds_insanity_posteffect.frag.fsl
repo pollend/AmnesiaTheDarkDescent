@@ -29,16 +29,16 @@ float4 PS_MAIN(PsIn In)
     float2 viewTexel = 1.0 / float2(screenSize); 
 
     float4 finalColor = float4(0.0, 0.0, 0.0, 1.0);
-    float3 zoomMap = SampleTex2D(Get(zoomMap), Get(inputSampler), In.uv).rgb;
+    float3 zoomValue = SampleTex2D(Get(zoomMap), Get(inputSampler), In.uv).rgb;
     float3 amp0Color = SampleTex2D(Get(ampMap0), Get(inputSampler), In.uv).rgb;
     float3 amp1Color = SampleTex2D(Get(ampMap1), Get(inputSampler), In.uv).rgb;
     float3 combinedAmp = amp0Color * (1.0 - Get(amplitude)) + amp1Color * Get(amplitude);
     float3 ampDir = Get(waveAlpha) * 0.04 * combinedAmp * float(screenSize.y);
     
     float2 uv = In.Position.xy;
-    uv += (zoomMap.xy - float2(0.5, 0.5)) * 2.0 * 0.6 * zoomMap.z * screenSize.y * Get(zoomAlpha);
+    uv += (zoomValue.xy - float2(0.5, 0.5)) * 2.0 * 0.6 * zoomValue.z * screenSize.y * Get(zoomAlpha);
 
-    vec2 vSinUv = (uv / screenSize.y) * 0.6;
+    float2 vSinUv = (uv / screenSize.y) * 0.6;
     uv.x += sin(Get(time) + vSinUv.y) * ampDir.x;
     uv.y += sin(Get(time) + vSinUv.x*1.83) * ampDir.y;
     finalColor = SampleTex2D(Get(sourceInput), Get(inputSampler), uv * viewTexel);

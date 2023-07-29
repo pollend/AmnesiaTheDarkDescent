@@ -30,8 +30,6 @@
 #include "LuxInventory.h"
 #include "LuxHintHandler.h"
 
-#include <bx/debug.h>
-
 #include "LuxAchievementHandler.h"
 #include "engine/Interface.h"
 #include "graphics/Color.h"
