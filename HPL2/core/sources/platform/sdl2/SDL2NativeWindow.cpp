@@ -102,7 +102,7 @@ namespace hpl::window::internal {
             handle.display = wmi.info.x11.display;
             handle.window = wmi.info.x11.window;
             // handle.colormap = wmi.info.x11.colormap;
-            handle.xlib_wm_delete_window = XInternAtom(wmi.info.x11.display, "WM_DELETE_WINDOW", False);
+            //handle.xlib_wm_delete_window = XInternAtom(wmi.info.x11.display, "WM_DELETE_WINDOW", False);
         #elif defined(VK_USE_PLATFORM_XCB_KHR)
             handle.connection = wmi.info.x11.display;
             handle.screen = wmi.info.x11.screen;

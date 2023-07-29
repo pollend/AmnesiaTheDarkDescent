@@ -32,7 +32,7 @@ class QueuedEventLoopHandler
 public:
     using TargetEvent = hpl::Event<Params...>;
 
-    inline struct QueueEventOptions {
+    struct QueueEventOptions {
     public:
 
         inline QueueEventOptions()
