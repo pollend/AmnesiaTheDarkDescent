@@ -193,7 +193,7 @@ namespace hpl {
                 renderTarget.mSampleCount = SAMPLE_COUNT_1;
                 renderTarget.mSampleQuality = 0;
                 renderTarget.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
-                renderTarget.mFormat = getRecommendedSwapchainFormat(false, false);
+                renderTarget.mFormat = TinyImageFormat_R8G8B8A8_UNORM;
                 addRenderTarget(renderer->Rend(), &renderTarget, texture);
                 return true;
             });

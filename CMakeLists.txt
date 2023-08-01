@@ -5,13 +5,13 @@ set(CMAKE_INSTALL_PREFIX ${INSTALL_OUTPUT_PATH} CACHE PATH "Install path prefix,
 
 enable_language(ASM)
 
-if(MSVC)
-    # hack to get to build on windwos
-    find_package(Vulkan REQUIRED)
-    include_directories(${Vulkan_INCLUDE_DIRS})
-    link_libraries(${Vulkan_LIBRARY})
+# hack to get to build on windwos
+find_package(Vulkan REQUIRED)
+include_directories(${Vulkan_INCLUDE_DIRS})
+link_libraries(${Vulkan_LIBRARY})
 
-  add_definitions(/MP /std:c++20)
+if(MSVC)
+    add_definitions(/MP /std:c++20)
 endif()
 
 if(UNIX)

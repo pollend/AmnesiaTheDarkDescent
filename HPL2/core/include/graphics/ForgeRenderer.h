@@ -27,16 +27,19 @@ namespace hpl {
         BlendMode mode;
         BlendConstant src;
         BlendConstant dst;
+        BlendMode alphaMode;
+        BlendConstant srcAlpha;
+        BlendConstant dstAlpha;
     };
 
     // helper to convert from eMaterialBlendMode to The-Forge's BlendMode
     static std::array<HPL2Blend, eMaterialBlendMode_LastEnum> HPL2BlendTable = ([]() {
         std::array<HPL2Blend, eMaterialBlendMode_LastEnum> result{};
-        result[eMaterialBlendMode_Add] = {BM_ADD, BC_ONE, BC_ONE};
-        result[eMaterialBlendMode_Mul] = {BM_ADD, BC_ZERO, BC_SRC_COLOR};
-        result[eMaterialBlendMode_MulX2] = {BM_ADD, BC_DST_COLOR, BC_SRC_COLOR};
-        result[eMaterialBlendMode_Alpha] = {BM_ADD, BC_SRC_ALPHA, BC_ONE_MINUS_SRC_ALPHA};
-        result[eMaterialBlendMode_PremulAlpha] = {BM_ADD, BC_ONE, BC_ONE_MINUS_SRC_ALPHA};
+        result[eMaterialBlendMode_Add] = {BM_ADD, BC_ONE, BC_ONE, BM_ADD, BC_ONE, BC_ONE};
+        result[eMaterialBlendMode_Mul] = {BM_ADD, BC_ZERO, BC_SRC_COLOR, BM_ADD, BC_ZERO, BC_SRC_ALPHA};
+        result[eMaterialBlendMode_MulX2] = {BM_ADD, BC_DST_COLOR, BC_SRC_COLOR, BM_ADD, BC_DST_ALPHA, BC_SRC_ALPHA};
+        result[eMaterialBlendMode_Alpha] = {BM_ADD, BC_SRC_ALPHA, BC_ONE_MINUS_SRC_ALPHA, BM_ADD, BC_SRC_ALPHA, BC_ONE_MINUS_SRC_ALPHA};
+        result[eMaterialBlendMode_PremulAlpha] = {BM_ADD, BC_ONE, BC_ONE_MINUS_SRC_ALPHA, BM_ADD, BC_ONE, BC_ONE_MINUS_SRC_ALPHA};
         return result;
     })();
 

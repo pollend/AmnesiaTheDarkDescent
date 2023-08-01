@@ -48,6 +48,8 @@ namespace hpl {
         {
             return;
         }
+
+        initLog("HPL2", DEFAULT_LOG_LEVEL);
 		fsSetPathForResourceDir(pSystemFileIO, RM_CONTENT, RD_SHADER_BINARIES, "CompiledShaders");
 
         Interface<IUpdateEventLoop>::Register(&m_updateEventLoop);
@@ -92,6 +94,7 @@ namespace hpl {
         Interface<input::InputManager>::UnRegister(&m_inputManager);
         Interface<window::NativeWindowWrapper>::UnRegister(&m_window);
         Interface<IUpdateEventLoop>::UnRegister(&m_updateEventLoop);
+        exitLog();
     }
 
 }; // namespace hpl

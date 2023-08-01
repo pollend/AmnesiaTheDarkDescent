@@ -39,7 +39,6 @@ namespace hpl {
         std::array rtBarriers = {
             RenderTargetBarrier { swapChainImage, RESOURCE_STATE_PRESENT, RESOURCE_STATE_RENDER_TARGET },
         };
-        frame.m_resourcePool->Push(m_swapChain);
         frame.m_resourcePool->Push(m_finalRenderTarget[frame.m_frameIndex]);
         cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
 
@@ -349,18 +348,6 @@ namespace hpl {
                             addRenderTarget(m_renderer, &renderTarget, target);
                             return true;
                         });
-                    }
-
-                    {
-                        auto frame = GetFrame();
-                        acquireNextImage(m_renderer, m_swapChain.m_handle, m_imageAcquiredSemaphore, nullptr, &m_swapChainIndex);
-                        auto& swapChainImage = frame.m_swapChain->ppRenderTargets[m_swapChainIndex];
-                        std::array rtBarriers = {
-                            RenderTargetBarrier { swapChainImage, RESOURCE_STATE_PRESENT, RESOURCE_STATE_RENDER_TARGET },
-                        };
-                        frame.m_resourcePool->Push(m_swapChain);
-                        frame.m_resourcePool->Push(m_finalRenderTarget[frame.m_frameIndex]);
-                        cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
                     }
                 break;
             }

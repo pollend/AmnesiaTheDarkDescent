@@ -67,7 +67,7 @@ cLuxPostEffect_Insanity::cLuxPostEffect_Insanity(cGraphics* apGraphics, cResourc
     RasterizerStateDesc rasterStateNoneDesc = {};
     rasterStateNoneDesc.mCullMode = CULL_MODE_NONE;
 
-    std::array imageTargets = { getRecommendedSwapchainFormat(false, false) };
+    std::array imageTargets = { TinyImageFormat_R8G8B8A8_UNORM };
     PipelineDesc pipelineDesc = {};
     pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
     GraphicsPipelineDesc& graphicsPipelineDesc = pipelineDesc.mGraphicsDesc;

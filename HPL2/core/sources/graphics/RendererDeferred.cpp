@@ -1274,9 +1274,9 @@ namespace hpl {
                     blendStateDesc.mDstFactors[0] = hpl::HPL2BlendTable[blendMode].dst;
                     blendStateDesc.mBlendModes[0] = hpl::HPL2BlendTable[blendMode].mode;
 
-                    blendStateDesc.mSrcAlphaFactors[0] = hpl::HPL2BlendTable[blendMode].src;
-                    blendStateDesc.mDstAlphaFactors[0] = hpl::HPL2BlendTable[blendMode].dst;
-                    blendStateDesc.mBlendAlphaModes[0] = hpl::HPL2BlendTable[blendMode].mode;
+                    blendStateDesc.mSrcAlphaFactors[0] = hpl::HPL2BlendTable[blendMode].srcAlpha;
+                    blendStateDesc.mDstAlphaFactors[0] = hpl::HPL2BlendTable[blendMode].dstAlpha;
+                    blendStateDesc.mBlendAlphaModes[0] = hpl::HPL2BlendTable[blendMode].alphaMode;
                     #ifdef USE_THE_FORGE_LEGACY
                         blendStateDesc.mMasks[0] = RED | GREEN | BLUE;
                     #else
@@ -1604,9 +1604,9 @@ namespace hpl {
                         blendStateDesc.mDstFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].dst;
                         blendStateDesc.mBlendModes[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].mode;
 
-                        blendStateDesc.mSrcAlphaFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].src;
-                        blendStateDesc.mDstAlphaFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].dst;
-                        blendStateDesc.mBlendAlphaModes[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].mode;
+                        blendStateDesc.mSrcAlphaFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].srcAlpha;
+                        blendStateDesc.mDstAlphaFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].dstAlpha;
+                        blendStateDesc.mBlendAlphaModes[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].alphaMode;
                         pipelineSettings.pShaderProgram = m_materialTranslucencyPass.m_shaders[shaderVariant];
 
                         addPipeline(forgeRenderer->Rend(), &pipelineDesc, &pipelineBlendGroup[key.m_id]);
@@ -3257,9 +3257,9 @@ namespace hpl {
                                 cmdSetViewport(
                                     frame.m_cmd,
                                     0.0f,
-                                    shadowMapData->m_target.m_handle->mHeight,
-                                    shadowMapData->m_target.m_handle->mWidth,
-                                    -shadowMapData->m_target.m_handle->mHeight,
+                                    static_cast<float>(shadowMapData->m_target.m_handle->mHeight),
+                                    static_cast<float>(shadowMapData->m_target.m_handle->mWidth),
+                                    -static_cast<float>(shadowMapData->m_target.m_handle->mHeight),
                                     0.0f,
                                     1.0f);
                                 cmdSetScissor(
