@@ -222,10 +222,10 @@ set(RENDERDOC_PATH "/usr/local" CACHE PATH "Path to RenderDoc.")
 set(RENDERDOC_ENABLED OFF CACHE BOOL "Enable RenderDoc integration. Use RENDERDOC_PATH to specific the path to RenderDoc.")
 
 if(RENDERDOC_ENABLED)
-    ADD_DEFINITIONS(-DHPL2_RENDERDOC_ENABLED)
+    add_definitions(-DHPL2_RENDERDOC_ENABLED)
     set(HPL2_INCLUDES
         ${HPL2_INCLUDES}
-        PRIVATE ${RENDERDOC_PATH}/include
+        PRIVATE ${RENDERDOC_PATH}
     )
 endif()
 
@@ -254,11 +254,8 @@ target_link_libraries(HPL2
   Newton
   Folly::folly 
   Folly::folly_deps
-  bgfx
   TheForge
   Eigen3::Eigen
-  bx
-  bimg
   $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
   $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
   ZLIB::ZLIB
@@ -276,22 +273,6 @@ target_link_libraries(HPL2
      HPL_SHADERS
      )
 
-# find_file(SHADER_COMPILER_BIN shader_compile.py
-#     PATHS ${CMAKE_CURRENT_SOURCE_DIR}
-#     NO_DEFAULT_PATH
-# )
-# add_custom_command(
-#      TARGET HPL_SHADERS
-#      MAIN_DEPENDENCY
-#      ${shader_resources}
-#      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-#      COMMAND "python3" "${SHADER_COMPILER_BIN}"
-#      --output ${CMAKE_CURRENT_BINARY_DIR}
-#      --bgfx "${BGFX_DIR}"
-#      --compiler $<TARGET_FILE:shaderc>
-#  )
-
-
 function(fsl_compile)
     cmake_parse_arguments(
         ARG 
@@ -299,20 +280,38 @@ function(fsl_compile)
         "INPUT" 
         "" 
         ${ARGN} )
-    add_custom_command(
-        TARGET HPL_SHADERS
-        MAIN_DEPENDENCY
-        ${shader_resources}
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        COMMAND "python3" "${FSL_COMPILER}"
-        -l VULKAN 
-        -d ${CMAKE_CURRENT_BINARY_DIR}/Shaders/ 
-        --verbose 
-        -b  ${CMAKE_CURRENT_BINARY_DIR}/CompiledShaders/ 
-        --incremental 
-        --compile ${ARG_INPUT}
-    )
-   
+    
+
+    IF(CMAKE_SYSTEM_NAME MATCHES "Windows")
+        add_custom_command(
+            TARGET HPL_SHADERS
+            MAIN_DEPENDENCY
+            ${shader_resources}
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+            COMMAND ${CMAKE_COMMAND} -E env "VULKAN_SDK=${VULKAN_SDK}" "python3" "${FSL_COMPILER}"
+            -l VULKAN 
+            -d ${CMAKE_CURRENT_BINARY_DIR}/Shaders/
+            --verbose 
+            -b  ${CMAKE_CURRENT_BINARY_DIR}/CompiledShaders/ 
+            --incremental 
+            --compile ${ARG_INPUT}
+        )
+    else()
+        add_custom_command(
+            TARGET HPL_SHADERS
+            MAIN_DEPENDENCY
+            ${shader_resources}
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+            COMMAND ${CMAKE_COMMAND} -E env "VULKAN_SDK=$ENV{VULKAN_SDK}" "python3" "${FSL_COMPILER}"
+            -l VULKAN 
+            -d ${CMAKE_CURRENT_BINARY_DIR}/Shaders/
+            --verbose 
+            -b  ${CMAKE_CURRENT_BINARY_DIR}/CompiledShaders/ 
+            --incremental 
+            --compile ${ARG_INPUT}
+        )
+    endif()
+
 endfunction()
 
 get_filename_component(SHADER_RESOURCE_PATH

@@ -80,7 +80,6 @@ private:
     std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_insanityPerFrameset{};
     Sampler* m_inputSampler;
 
-    bgfx::ProgramHandle m_program;
     std::array<Image*, 3> m_ampMaps;
     Image* m_zoomImage;
 

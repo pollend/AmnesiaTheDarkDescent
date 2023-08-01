@@ -14,7 +14,7 @@ STRUCT(VSOutput)
 {
 	DATA(float4, Position, SV_Position);
 	DATA(float2, uv, TEXCOORD0);
-  DATA(float3, view, TEXCOORD1);
+    DATA(float3, view, TEXCOORD1);
 	DATA(float3, normal, NORMAL);
 };
 
@@ -34,8 +34,8 @@ VSOutput VS_MAIN( VSInput In )
     float3 tangent = normalize(mul(normalMat, In.Tangent.xyz));
     float3 bitangent = normalize(mul(normalMat, cross(In.Tangent.xyz, In.Normal.xyz)));
 
-    vec3 viewEye =  mul(modelView, vec4(In.Position.xyz, 1.0)).xyz;
-    Out.view = vec3(
+    float3 viewEye =  mul(modelView, float4(In.Position.xyz, 1.0)).xyz;
+    Out.view = float3(
         dot(viewEye, tangent), 
         dot(viewEye, bitangent), 
         dot(-viewEye, Out.normal));

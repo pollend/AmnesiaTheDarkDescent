@@ -9,8 +9,6 @@
 
 // NOTE: none of these classes are thread safe
 
-#include <bx/debug.h>
-
 #include <cstdint>
 #include <functional>
 #include <memory>

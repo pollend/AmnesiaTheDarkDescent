@@ -24,7 +24,6 @@
 #include "graphics/GraphicsTypes.h"
 #include "system/SystemTypes.h"
 #include "scene/SceneTypes.h"
-#include <bx/debug.h>
 #include <span>
 
 namespace hpl {

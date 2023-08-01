@@ -104,7 +104,7 @@ namespace hpl
                 addDescriptorSet(forgeRenderer->Rend(), &setDesc, &descSet);
             }
         }
-        TinyImageFormat inputFormat = getRecommendedSwapchainFormat(false,false);
+        TinyImageFormat inputFormat = TinyImageFormat_R8G8B8A8_UNORM;
         {
             DepthStateDesc depthStateDisabledDesc = {};
             depthStateDisabledDesc.mDepthWrite = false;

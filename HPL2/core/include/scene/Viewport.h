@@ -134,10 +134,6 @@ namespace hpl {
             return uint2(m_size.x, m_size.y);
         }
 
-
-        void setImageDescriptor(const ImageDescriptor& imageDescriptor) {
-            m_dirtyViewport = true;
-        }
         void setRenderTarget(std::shared_ptr<LegacyRenderTarget> renderTarget) {
             m_renderTarget = renderTarget;
             m_dirtyViewport = true;
@@ -181,7 +177,7 @@ namespace hpl {
         iRenderer* mpRenderer;
         cPostEffectComposite* mpPostEffectComposite;
 
-        ImageDescriptor m_imageDescriptor;
+        // ImageDescriptor m_imageDescriptor;
 
         ForgeRenderTarget m_target;
         std::shared_ptr<LegacyRenderTarget> m_renderTarget; // TODO: REMOVE

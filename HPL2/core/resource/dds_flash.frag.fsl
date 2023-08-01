@@ -17,12 +17,12 @@ RES(SamplerState, diffuseSampler, UPDATE_FREQ_NONE, s0, binding = 2);
 float4 PS_MAIN(PsIn In)
 {
     INIT_MAIN;
-    float rightLight = dot(In.normal, vec3(0.0, 0.0, -1.0));
+    float rightLight = dot(In.normal, float3(0.0, 0.0, -1.0));
     rightLight = 1.0 - abs(rightLight);
     float4 color = SampleTex2D(Get(diffuseMap), Get(diffuseSampler), In.uv);
     
     if(color.w < 0.5)
             discard;
     
-    RETURN(color * vec4(0.5, 0.5, 1.0, 0.0) * rightLight * Get(colorMul));
+    RETURN(color * float4(0.5, 0.5, 1.0, 0.0) * rightLight * Get(colorMul));
 }

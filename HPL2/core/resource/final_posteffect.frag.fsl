@@ -20,7 +20,7 @@ float4 PS_MAIN(PsIn In)
 {    
     INIT_MAIN;
     
-    float4 color = SampleTex2D(Get(sourceInput), Get(inputSampler), In.uv) * float4(Get(gamma));
+    float4 color = SampleTex2D(Get(sourceInput), Get(inputSampler), In.uv) * float4(Get(gamma).xxxx);
     RETURN(color);
 }
 

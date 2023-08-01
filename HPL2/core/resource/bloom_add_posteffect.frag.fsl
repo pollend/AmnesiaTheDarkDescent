@@ -29,7 +29,7 @@ PUSH_CONSTANT(postEffectConstants, b0)
 
 RES(SamplerState, inputSampler, UPDATE_FREQ_NONE, s0, binding = 0);
 RES(Tex2D(float4), sourceInput, UPDATE_FREQ_PER_FRAME, t0, binding = 1);
-RES(Tex2D(float4), blurInput, UPDATE_FREQ_PER_FRAME, t0, binding = 2);
+RES(Tex2D(float4), blurInput, UPDATE_FREQ_PER_FRAME, t1, binding = 2);
 
 float4 PS_MAIN(PsIn In) 
 {    

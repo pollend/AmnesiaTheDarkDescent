@@ -41,7 +41,6 @@
 #include <memory>
 #include <sstream>
 #include "LuxAchievementHandler.h"
-#include <bx/debug.h>
 #include <scene/Scene.h>
 
 #include <engine/Interface.h>

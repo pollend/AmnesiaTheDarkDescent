@@ -5,3 +5,5 @@
 #undef Success
 #undef KeyPress
 #undef assume
+#undef LoadBitmap
+#undef CreateEvent

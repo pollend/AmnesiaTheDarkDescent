@@ -1574,14 +1574,14 @@ void cEditorWindowMaterialEditor::OnInitLayout()
 		// pTex->SetWrapS(eTextureWrap_ClampToEdge);
 		// pTex->CreateFromRawData(cVector3l(512,512,0), ePixelFormat_RGB, 0);
 
-		auto image = std::make_shared<Image>();
-		image->Initialize(ImageDescriptor::CreateTexture2D(512, 512, false, bgfx::TextureFormat::Enum::RGB8));
-		auto target = std::make_shared<LegacyRenderTarget>(image);
+		// auto image = std::make_shared<Image>();
+		// image->Initialize(ImageDescriptor::CreateTexture2D(512, 512, false, bgfx::TextureFormat::Enum::RGB8));
+		// auto target = std::make_shared<LegacyRenderTarget>(image);
 
 		// iFrameBuffer* pFB = mpEditor->GetEngine()->GetGraphics()->CreateFrameBuffer("MaterialEditor");
 		// pFB->SetTexture2D(0, pTex);
 		// pFB->CompileAndValidate();
-		SetFrameBuffer(target);
+		//SetFrameBuffer(target);
 
 		SetEngineViewportPositionAndSize(0, 512);
 		UpdateViewport();

@@ -34,7 +34,7 @@ PsOut PS_MAIN(PsIn In)
     INIT_MAIN;
     PsOut Out;
 
-    float4 finalColor = vec4(0.0, 0.0 ,0.0, 1.0);
+    float4 finalColor = float4(0.0, 0.0 ,0.0, 1.0);
  
     if(HasDiffuse(Get(textureConfig) & Get(textureMask))) {
         finalColor = SampleTex2D(Get(diffuseMap), Get(diffuseSampler), In.uv) * In.color;
@@ -71,24 +71,29 @@ PsOut PS_MAIN(PsIn In)
    // #endif
 
     switch(Get(blendMode)) {
-        case BLEND_MODE_ADD: 
+        case BLEND_MODE_ADD: {
             finalColor.xyz *= finalAlpha*Get(lightLevel);
             break;
-        case BLEND_MODE_MUL:
-            finalColor.xyz += (vec3(1.0,1.0, 1.0) - finalColor.xyz) * (1.0-finalAlpha);
+        }
+        case BLEND_MODE_MUL: {
+            finalColor.xyz += (float3(1.0,1.0, 1.0) - finalColor.xyz) * (1.0-finalAlpha);
             break;
-        case BLEND_MODE_MULX2:
+        }
+        case BLEND_MODE_MULX2: {
             float fBlendMulAlpha = Get(lightLevel) * finalAlpha;
             finalColor.xyz = mul(finalColor.xyz, fBlendMulAlpha) + mul(float3(0.5,0.5,0.5), (1.0 - fBlendMulAlpha));
             break;
-        case BLEND_MODE_ALPHA:
+        }
+        case BLEND_MODE_ALPHA: {
             finalColor.xyz *= Get(lightLevel);
             finalColor.a *= finalAlpha;
             break;
-        case BLEND_MODE_PREMUL_ALPHA:
+        }
+        case BLEND_MODE_PREMUL_ALPHA: {
             finalColor *= finalAlpha;
             finalColor.xyz *= Get(lightLevel);
             break;
+        }
     }
 
 
@@ -184,7 +189,7 @@ PsOut PS_MAIN(PsIn In)
         //Rim reflections
         if(Get(rimMulLight) >0.0) 
         {
-            float fRimLight = dot(screenNormal, vec3(0.0, 0.0, -1.0));
+            float fRimLight = dot(screenNormal, float3(0.0, 0.0, -1.0));
             fRimLight = pow(1.0 - abs(fRimLight), Get(rimMulPower)) * Get(rimMulLight);	
             
             finalColor.xyz += reflectionColor.xyz * fRimLight * finalAlpha * Get(lightLevel);

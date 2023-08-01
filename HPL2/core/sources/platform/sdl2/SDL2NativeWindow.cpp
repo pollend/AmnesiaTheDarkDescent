@@ -102,7 +102,7 @@ namespace hpl::window::internal {
             handle.display = wmi.info.x11.display;
             handle.window = wmi.info.x11.window;
             // handle.colormap = wmi.info.x11.colormap;
-            handle.xlib_wm_delete_window = XInternAtom(wmi.info.x11.display, "WM_DELETE_WINDOW", False);
+            //handle.xlib_wm_delete_window = XInternAtom(wmi.info.x11.display, "WM_DELETE_WINDOW", False);
         #elif defined(VK_USE_PLATFORM_XCB_KHR)
             handle.connection = wmi.info.x11.display;
             handle.screen = wmi.info.x11.screen;
@@ -113,6 +113,8 @@ namespace hpl::window::internal {
             handle.window = wmi.info.android.window;
             handle.activity = wmi.info.android.activity;
             handle.configuration = wmi.info.android.config;
+        #elif defined(WIN32)
+            handle.window = wmi.info.win.window;
         #else
             handle.window = (void*)SDL_GetWindowWMInfo(impl->m_window, &wmi);
         #endif

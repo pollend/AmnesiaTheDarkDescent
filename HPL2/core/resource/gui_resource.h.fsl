@@ -1,7 +1,7 @@
 CBUFFER(uniformBlock, UPDATE_FREQ_PER_BATCH, b2, binding = 0)
 {
     DATA(float4x4, mvp, None);
-    DATA(float4[4], clipPlane, None);
+    DATA(float4, clipPlane[4], None);
     DATA(int, textureConfig, None);
 };
 

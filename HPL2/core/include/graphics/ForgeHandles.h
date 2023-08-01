@@ -2,14 +2,15 @@
 
 #include "graphics/GraphicsTypes.h"
 
+#include "Common_3/Graphics/Interfaces/IGraphics.h"
+#include "Common_3/Resources/ResourceLoader/Interfaces/IResourceLoader.h"
+#include "FixPreprocessor.h"
+
 #include <atomic>
 #include <functional>
 #include <span>
 #include <folly/hash/Hash.h>
 
-#include "Common_3/Graphics/Interfaces/IGraphics.h"
-#include "Common_3/Resources/ResourceLoader/Interfaces/IResourceLoader.h"
-#include "FixPreprocessor.h"
 
 namespace hpl {
     class cBitmap;
@@ -192,7 +193,7 @@ namespace hpl {
     private:
         void Free();
         Renderer* m_renderer = nullptr;
-        friend class RefHandle<ForgeRenderTarget, RenderTarget>;
+        friend struct RefHandle<ForgeRenderTarget, RenderTarget>;
     };
 
     struct ForgeTextureHandle: public RefHandle<ForgeTextureHandle, Texture> {
@@ -245,7 +246,7 @@ namespace hpl {
     private:
         void Free();
         ForgeRenderTarget m_renderTarget{};
-        friend class RefHandle<ForgeTextureHandle, Texture>;
+        friend struct RefHandle<ForgeTextureHandle, Texture>;
     };
 
     struct ForgeDescriptorSet final: public RefHandle<ForgeDescriptorSet, DescriptorSet> {
@@ -281,7 +282,7 @@ namespace hpl {
     private:
         void Free();
         Renderer* m_renderer = nullptr;
-        friend class RefHandle<ForgeDescriptorSet, DescriptorSet>;
+        friend struct RefHandle<ForgeDescriptorSet, DescriptorSet>;
     };
 
     struct ForgeBufferHandle : public RefHandle<ForgeBufferHandle, Buffer> {
@@ -306,7 +307,7 @@ namespace hpl {
         }
     private:
         void Free();
-        friend class RefHandle<ForgeBufferHandle, Buffer>;
+        friend struct RefHandle<ForgeBufferHandle, Buffer>;
     };
 
     struct ForgePipelineHandle: public RefHandle<ForgePipelineHandle, Pipeline> {
@@ -341,7 +342,7 @@ namespace hpl {
     private:
         void Free();
         Renderer* m_renderer = nullptr;
-        friend class RefHandle<ForgePipelineHandle, Pipeline>;
+        friend struct RefHandle<ForgePipelineHandle, Pipeline>;
     };
 
     struct ForgeShaderHandle: public RefHandle<ForgeShaderHandle, Shader> {
@@ -376,7 +377,7 @@ namespace hpl {
     private:
         void Free();
         Renderer* m_renderer = nullptr;
-        friend class RefHandle<ForgeShaderHandle, Shader>;
+        friend struct RefHandle<ForgeShaderHandle, Shader>;
     };
     struct ForgeSamplerHandle: public RefHandle<ForgeSamplerHandle, Sampler> {
     public:
@@ -412,7 +413,7 @@ namespace hpl {
     private:
         void Free();
         Renderer* m_renderer = nullptr;
-        friend class RefHandle<ForgeSamplerHandle, Sampler>;
+        friend struct RefHandle<ForgeSamplerHandle, Sampler>;
     };
 
     struct ForgeSwapChainHandle: public RefHandle<ForgeSwapChainHandle, SwapChain> {
@@ -449,7 +450,7 @@ namespace hpl {
     private:
         void Free();
         Renderer* m_renderer = nullptr;
-        friend class RefHandle<ForgeSwapChainHandle, SwapChain>;
+        friend struct RefHandle<ForgeSwapChainHandle, SwapChain>;
     };
 
     struct ForgeCmdHandle: public RefHandle<ForgeCmdHandle, Cmd> {
@@ -486,7 +487,7 @@ namespace hpl {
     private:
         void Free();
         Renderer* m_renderer = nullptr;
-        friend class RefHandle<ForgeCmdHandle, Cmd>;
+        friend struct RefHandle<ForgeCmdHandle, Cmd>;
     };
 
 }

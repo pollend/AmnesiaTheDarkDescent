@@ -54,7 +54,7 @@ namespace hpl {
 
         constexpr hpl::Uuid From(const std::string_view str) {
             auto current = str.begin();
-            hpl::Uuid id;
+            hpl::Uuid id = { 0 };
             char c = *current;
             for (size_t i = 0; i < 16; i++) {
                 if (c == '{' || c == '-' || c == '}') {
@@ -77,29 +77,40 @@ namespace hpl {
             union {
                 uint32_t value;
                 uint8_t cr[sizeof(uint32_t)];
-            } data1 = { .cr = { uuid.m_data[0], uuid.m_data[1], uuid.m_data[2], uuid.m_data[3] } };
+            } data1 = { 0 };
+            data1.cr[0] = uuid.m_data[0];
+            data1.cr[1] = uuid.m_data[1];
+            data1.cr[2] = uuid.m_data[2];
+            data1.cr[3] = uuid.m_data[3];
 
             union {
                 uint16_t value;
                 uint8_t cr[sizeof(uint16_t)];
-            } data2 = { .cr = { uuid.m_data[4], uuid.m_data[5] } };
+            } data2 = { 0 };
+            data2.cr[0] = uuid.m_data[4];
+            data2.cr[1] = uuid.m_data[5];
 
             union {
                 uint16_t value;
                 uint8_t cr[sizeof(uint16_t)];
-            } data3 = { .cr = { uuid.m_data[6], uuid.m_data[7] } };
+            } data3 = { 0 };
+            data3.cr[0] = uuid.m_data[6];
+            data3.cr[1] = uuid.m_data[7];
 
-            return { .m_data1 = data1.value,
-                     .m_data2 = data2.value,
-                     .m_data3 = data3.value,
-                     .m_data4 = { uuid.m_data[8],
-                                  uuid.m_data[9],
-                                  uuid.m_data[10],
-                                  uuid.m_data[11],
-                                  uuid.m_data[12],
-                                  uuid.m_data[13],
-                                  uuid.m_data[14],
-                                  uuid.m_data[15] } };
+            hpl::Guid result = { 0 };
+            result.m_data1 = data1.value;
+            result.m_data2 = data2.value;
+            result.m_data3 = data3.value;
+
+            result.m_data4[0] = uuid.m_data[8];
+            result.m_data4[1] = uuid.m_data[9];
+            result.m_data4[2] = uuid.m_data[10];
+            result.m_data4[3] = uuid.m_data[11];
+            result.m_data4[4] = uuid.m_data[12];
+            result.m_data4[5] = uuid.m_data[13];
+            result.m_data4[6] = uuid.m_data[14];
+            result.m_data4[7] = uuid.m_data[15];
+            return result;
         }
 
         

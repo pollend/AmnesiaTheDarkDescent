@@ -16,25 +16,27 @@
 #include <input/InputMouseDevice.h>
 #include <windowing/NativeWindow.h>
 
-#include "bgfx/platform.h"
-
 namespace hpl {
     Bootstrap::Bootstrap() {
     }
     Bootstrap::~Bootstrap() {
     }
 
-    int32_t Bootstrap::BootstrapThreadHandler(bx::Thread* self, void* _userData) {
-        auto bootstrap = reinterpret_cast<Bootstrap*>(_userData);
-        int32_t result = bootstrap->m_handler(self);
-        self->shutdown();
-        return result;
+    void Bootstrap::BootstrapThreadHandler(void* userData) {
+        auto bootstrap = reinterpret_cast<Bootstrap*>(userData);
+        bootstrap->m_handler();
+        bootstrap->m_isRunning = false;
     }
 
-    void Bootstrap::Run(std::function<int32_t(bx::Thread*)> handler) {
+    void Bootstrap::Run(std::function<void()> handler) {
+        m_isRunning = true;
         m_handler = handler;
-        m_thread.init(BootstrapThreadHandler, this);
-        while(m_thread.isRunning()) {
+        ThreadDesc threadDesc = {};
+        threadDesc.pFunc = BootstrapThreadHandler;
+        threadDesc.pData = this;
+        initThread(&threadDesc, &m_thread);
+
+        while (m_isRunning) {
             m_window.Process();
         }
 
@@ -46,6 +48,8 @@ namespace hpl {
         {
             return;
         }
+
+        initLog("HPL2", DEFAULT_LOG_LEVEL);
 		fsSetPathForResourceDir(pSystemFileIO, RM_CONTENT, RD_SHADER_BINARIES, "CompiledShaders");
 
         Interface<IUpdateEventLoop>::Register(&m_updateEventLoop);
@@ -81,8 +85,6 @@ namespace hpl {
         Interface<hpl::ForgeRenderer>::Register(&m_renderer);
         Interface<hpl::PrimaryViewport>::Register(m_primaryViewport.get());
         Interface<input::InputManager>::Register(&m_inputManager);
-        Interface<FileReader>::Register(&m_fileReader);
-        Interface<FileWriter>::Register(&m_fileWriter);
         Interface<window::NativeWindowWrapper>::Register(&m_window); // storing as a singleton means we can only have one window ...
     }
 
@@ -90,10 +92,9 @@ namespace hpl {
         Interface<hpl::ForgeRenderer>::UnRegister(&m_renderer);
         Interface<hpl::PrimaryViewport>::UnRegister(m_primaryViewport.get());
         Interface<input::InputManager>::UnRegister(&m_inputManager);
-        Interface<FileReader>::UnRegister(&m_fileReader);
-        Interface<FileWriter>::UnRegister(&m_fileWriter);
         Interface<window::NativeWindowWrapper>::UnRegister(&m_window);
         Interface<IUpdateEventLoop>::UnRegister(&m_updateEventLoop);
+        exitLog();
     }
 
 }; // namespace hpl

@@ -22,8 +22,6 @@
 #include "LuxInputHandler.h"
 #include "LuxSaveHandler.h"
 #include "LuxProgressLogHandler.h"
-#include <bx/debug.h>
-
 
 //-----------------------------------------------------------------------
 
@@ -183,7 +181,7 @@ void cLuxMainMenu_CustomStory::SetCurrentStory(cLuxCustomStorySettings* apStory)
 			pGfx = NULL;
 		}
 
-		BX_ASSERT(false, "TODO: migrate to Image");
+		ASSERT(false && "TODO: migrate to Image");
 		// TODO: MP migrate to Image
 		// iTexture* pTex = gpBase->mpEngine->GetResources()->GetTextureManager()->Create2D(mpStory->msImgFile, false, eTextureType_Rect);
 		// if(pTex)

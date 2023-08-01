@@ -42,7 +42,6 @@
 #include "graphics/PostEffectComposite.h"
 #include "graphics/Renderer.h"
 #include <algorithm>
-#include <bx/debug.h>
 
 #include "sound/LowLevelSound.h"
 #include "sound/Sound.h"

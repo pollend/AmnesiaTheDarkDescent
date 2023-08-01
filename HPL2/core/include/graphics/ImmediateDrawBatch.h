@@ -119,12 +119,12 @@ class ImmediateDrawBatch {
         cMatrixf m_view;
         cMatrixf m_projection;
 
-        bgfx::ProgramHandle m_colorProgram = BGFX_INVALID_HANDLE;
-        bgfx::ProgramHandle m_uvProgram = BGFX_INVALID_HANDLE;
-        bgfx::ProgramHandle m_meshColorProgram = BGFX_INVALID_HANDLE;
+        // bgfx::ProgramHandle m_colorProgram = BGFX_INVALID_HANDLE;
+        // bgfx::ProgramHandle m_uvProgram = BGFX_INVALID_HANDLE;
+        // bgfx::ProgramHandle m_meshColorProgram = BGFX_INVALID_HANDLE;
 
-        bgfx::ViewId m_orthographicView = 0;
-        bgfx::ViewId m_perspectiveView = 0;
+        // bgfx::ViewId m_orthographicView = 0;
+        // bgfx::ViewId m_perspectiveView = 0;
 
        // UniformWrapper<StringLiteral("s_diffuseMap"), bgfx::UniformType::Sampler> m_s_diffuseMap;
        // UniformWrapper<StringLiteral("u_normalMtx"),  bgfx::UniformType::Mat4> m_u_normalMtx;

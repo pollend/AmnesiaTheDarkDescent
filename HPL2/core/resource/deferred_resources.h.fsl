@@ -21,6 +21,7 @@ CBUFFER(perFrameConstants, UPDATE_FREQ_PER_FRAME, b0, binding = 0)
 };
 
 INLINE float3x3 ToNormalMat(float4x4 invModel, float4x4 invView) {
+    //TODO fix for DIRECTX12
    return transpose(mul(float3x3(invModel), float3x3(invView)));
 }
 
@@ -58,8 +59,7 @@ CBUFFER(uniformObjectBlock, UPDATE_FREQ_PER_DRAW, b1, binding = 1)
     INLINE bool UseRefractionNormals(int _textureConfig)   { return (_textureConfig & (1 << 14)) != 0; }
     INLINE bool UseRefractionEdgeCheck(int _textureConfig)   { return (_textureConfig & (1 << 15)) != 0; }
 #elif defined(MATERIAL_WATER)
-    CBUFFER(uniformMaterialBlock, UPDATE_FREQ_PER_BATCH, b2, binding = 2)
-    {
+    CBUFFER(uniformMaterialBlock, UPDATE_FREQ_PER_BATCH, b2, binding = 2) {
         DATA(int, textureConfig, None);
 
         DATA(float, refractionScale, None);

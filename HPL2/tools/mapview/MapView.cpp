@@ -2088,7 +2088,7 @@ int hplMain(const tString &asCommandline)
 	Bootstrap::BootstrapConfiguration config;
 	config.m_windowStyle = hpl::window::WindowStyle::WindowStyleResizable;
 	bootstrap.Initialize(config);
-	bootstrap.Run([&](bx::Thread* self) {
+	bootstrap.Run([&]() {
 		gpEngine = CreateHPLEngine(eHplAPI_OpenGL, eHplSetup_All, &vars);
 		gpEngine->SetLimitFPS(false);
 		gpEngine->GetGraphics()->GetLowLevel()->SetVsyncActive(false);

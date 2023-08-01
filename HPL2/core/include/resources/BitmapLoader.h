@@ -26,6 +26,8 @@
 #include "graphics/GraphicsTypes.h"
 #include "resources/ResourcesTypes.h"
 
+#undef LoadBitmap
+
 namespace hpl {
 
 	class iLowLevelGraphics;

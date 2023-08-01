@@ -27,12 +27,9 @@
 #include "scene/ParticleEmitter.h"
 #include "scene/Viewport.h"
 #include "windowing/NativeWindow.h"
-#include <bx/debug.h>
 
 #include <cstdint>
 #include <graphics/Enum.h>
-
-#include "bx/math.h"
 
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Image.h"
@@ -1277,9 +1274,9 @@ namespace hpl {
                     blendStateDesc.mDstFactors[0] = hpl::HPL2BlendTable[blendMode].dst;
                     blendStateDesc.mBlendModes[0] = hpl::HPL2BlendTable[blendMode].mode;
 
-                    blendStateDesc.mSrcAlphaFactors[0] = hpl::HPL2BlendTable[blendMode].src;
-                    blendStateDesc.mDstAlphaFactors[0] = hpl::HPL2BlendTable[blendMode].dst;
-                    blendStateDesc.mBlendAlphaModes[0] = hpl::HPL2BlendTable[blendMode].mode;
+                    blendStateDesc.mSrcAlphaFactors[0] = hpl::HPL2BlendTable[blendMode].srcAlpha;
+                    blendStateDesc.mDstAlphaFactors[0] = hpl::HPL2BlendTable[blendMode].dstAlpha;
+                    blendStateDesc.mBlendAlphaModes[0] = hpl::HPL2BlendTable[blendMode].alphaMode;
                     #ifdef USE_THE_FORGE_LEGACY
                         blendStateDesc.mMasks[0] = RED | GREEN | BLUE;
                     #else
@@ -1607,9 +1604,9 @@ namespace hpl {
                         blendStateDesc.mDstFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].dst;
                         blendStateDesc.mBlendModes[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].mode;
 
-                        blendStateDesc.mSrcAlphaFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].src;
-                        blendStateDesc.mDstAlphaFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].dst;
-                        blendStateDesc.mBlendAlphaModes[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].mode;
+                        blendStateDesc.mSrcAlphaFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].srcAlpha;
+                        blendStateDesc.mDstAlphaFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].dstAlpha;
+                        blendStateDesc.mBlendAlphaModes[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].alphaMode;
                         pipelineSettings.pShaderProgram = m_materialTranslucencyPass.m_shaders[shaderVariant];
 
                         addPipeline(forgeRenderer->Rend(), &pipelineDesc, &pipelineBlendGroup[key.m_id]);
@@ -2668,6 +2665,7 @@ namespace hpl {
                 }
 
                 uniformBlock->maxMipLevel = currentGBuffer.m_hiZMipCount - 1;
+                uniformBlock->depthDim = uint2(common->m_size.x, common->m_size.y);
                 uniformBlock->numObjects = uniformTest.size();
                 endUpdateResource(&updateDesc, nullptr);
                 cmdEndDebugMarker(m_prePassCmd);
@@ -2792,8 +2790,16 @@ namespace hpl {
 
                     width /= 2;
                     height /= 2;
+                    struct {
+                        uint32_t mipLevel;
+                        uint2 screenDim;
+                    } pushConstants;
+
+                    pushConstants.mipLevel = lod;
+                    pushConstants.screenDim = uint2(common->m_size.x, common->m_size.y);
+
                     // bind lod to push constant
-                    cmdBindPushConstants(m_prePassCmd, m_rootSignatureHIZOcclusion, rootConstantIndex, &lod);
+                    cmdBindPushConstants(m_prePassCmd, m_rootSignatureHIZOcclusion, rootConstantIndex, &pushConstants);
                     cmdBindDescriptorSet(m_prePassCmd, lod, m_descriptorSetHIZGenerate);
                     cmdBindPipeline(m_prePassCmd, m_pipelineHIZGenerate);
                     cmdDispatch(m_prePassCmd, static_cast<uint32_t>(width / 32) + 1, static_cast<uint32_t>(height / 32) + 1, 1);
@@ -3251,9 +3257,9 @@ namespace hpl {
                                 cmdSetViewport(
                                     frame.m_cmd,
                                     0.0f,
-                                    shadowMapData->m_target.m_handle->mHeight,
-                                    shadowMapData->m_target.m_handle->mWidth,
-                                    -shadowMapData->m_target.m_handle->mHeight,
+                                    static_cast<float>(shadowMapData->m_target.m_handle->mHeight),
+                                    static_cast<float>(shadowMapData->m_target.m_handle->mWidth),
+                                    -static_cast<float>(shadowMapData->m_target.m_handle->mHeight),
                                     0.0f,
                                     1.0f);
                                 cmdSetScissor(

@@ -8,13 +8,14 @@
 #include "Common_3/Graphics/Interfaces/IGraphics.h"
 
 #ifdef HPL2_RENDERDOC_ENABLED
-#include <dlfcn.h>
+#ifdef WIN32
+#else
+    #include <dlfcn.h>
+#endif
 #include "renderdoc_app.h"
 #endif
 
 namespace hpl {
-
-
 
     void ForgeRenderer::IncrementFrame() {
         // Stall if CPU is running "Swap Chain Buffer Count" frames ahead of GPU
@@ -38,7 +39,6 @@ namespace hpl {
         std::array rtBarriers = {
             RenderTargetBarrier { swapChainImage, RESOURCE_STATE_PRESENT, RESOURCE_STATE_RENDER_TARGET },
         };
-        frame.m_resourcePool->Push(m_swapChain);
         frame.m_resourcePool->Push(m_finalRenderTarget[frame.m_frameIndex]);
         cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
 
@@ -106,13 +106,22 @@ namespace hpl {
         SyncToken token = {};
         RendererDesc desc{};
         #ifdef HPL2_RENDERDOC_ENABLED
-            static RENDERDOC_API_1_1_2 *rdoc_api = NULL;
-            if(void* mod = dlopen("./librenderdoc.so", RTLD_NOW))
-            {
-                pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)dlsym(mod, "RENDERDOC_GetAPI");
-                int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_6_0 , (void **)&rdoc_api);
-                assert(ret == 1);
-            }
+
+            static RENDERDOC_API_1_1_2* rdoc_api = NULL;
+            #ifdef WIN32
+                if (HMODULE mod = LoadLibrary("renderdoc.dll")) {
+                    pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)GetProcAddress(mod, "RENDERDOC_GetAPI");
+                    int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_6_0, (void**)&rdoc_api);
+                    assert(ret == 1);
+                }
+            #else
+                if (void* mod = dlopen("./librenderdoc.so", RTLD_NOW)) {
+                    pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)dlsym(mod, "RENDERDOC_GetAPI");
+                    int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_6_0, (void**)&rdoc_api);
+                    assert(ret == 1);
+                }
+            #endif
+           
         #endif
 
         initRenderer("test", &desc, &m_renderer);
@@ -339,18 +348,6 @@ namespace hpl {
                             addRenderTarget(m_renderer, &renderTarget, target);
                             return true;
                         });
-                    }
-
-                    {
-                        auto frame = GetFrame();
-                        acquireNextImage(m_renderer, m_swapChain.m_handle, m_imageAcquiredSemaphore, nullptr, &m_swapChainIndex);
-                        auto& swapChainImage = frame.m_swapChain->ppRenderTargets[m_swapChainIndex];
-                        std::array rtBarriers = {
-                            RenderTargetBarrier { swapChainImage, RESOURCE_STATE_PRESENT, RESOURCE_STATE_RENDER_TARGET },
-                        };
-                        frame.m_resourcePool->Push(m_swapChain);
-                        frame.m_resourcePool->Push(m_finalRenderTarget[frame.m_frameIndex]);
-                        cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
                     }
                 break;
             }

@@ -26,8 +26,6 @@
 #include "graphics/RenderTarget.h"
 #include "graphics/Texture.h"
 #include "graphics/VertexBuffer.h"
-#include <bx/debug.h>
-
 #include "system/LowLevelSystem.h"
 
 #include "math/Frustum.h"

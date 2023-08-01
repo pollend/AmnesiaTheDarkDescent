@@ -18,7 +18,6 @@
  */
 
 #include "LuxBase.h"
-#include "bx/thread.h"
 
 //---------------------------------------
 #ifdef WIN32
@@ -35,10 +34,11 @@ cLuxBase* gpBase = NULL;
 //---------------------------------------
 
 int hplMain(const tString &asCommandline)
+
 {
-	Bootstrap bootstrap;
-	bootstrap.Initialize();
-	bootstrap.Run([&](bx::Thread* self) {
+    Bootstrap bootstrap;
+    bootstrap.Initialize();
+	bootstrap.Run([&]() {
 		//////////////////////////
 		// Game creation and exit
 		gpBase = hplNew( cLuxBase, ());

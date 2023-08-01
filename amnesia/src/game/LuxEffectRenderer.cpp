@@ -29,7 +29,6 @@
 
 #include "graphics/ForgeRenderer.h"
 #include "graphics/GraphicsTypes.h"
-#include <bx/debug.h>
 
 #include "impl/LegacyVertexBuffer.h"
 #include "tinyimageformat_base.h"

@@ -19,7 +19,6 @@
 #include <folly/small_vector.h>
 #include <graphics/RenderTarget.h>
 #include <memory>
-#include <bx/debug.h>
 #include <span>
 
 namespace hpl

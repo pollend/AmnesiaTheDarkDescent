@@ -37,8 +37,6 @@
 
 #include "impl/tinyXML/tinyxml.h"
 
-#include <bx/debug.h>
-
 namespace hpl {
 
 	class cMaterialManagerBlankMaterialType_Vars : public iMaterialVars

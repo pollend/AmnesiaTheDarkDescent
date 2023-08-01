@@ -82,7 +82,6 @@
 
 #include <algorithm>
 
-#include "bx/math.h"
 #include "Common_3/Utilities/RingBuffer.h"
 #include <FixPreprocessor.h>
 
@@ -256,7 +255,7 @@ namespace hpl {
 				std::array<BlendStateDesc, eGuiMaterial_LastEnum> blendStateDesc = {};
 				blendStateDesc[eGuiMaterial_Diffuse] = materialBlendFunc(BC_ONE, BC_ZERO, BC_ONE, BC_ZERO);
 				blendStateDesc[eGuiMaterial_PremulAlpha] = materialBlendFunc(BC_ONE, BC_ONE_MINUS_SRC_ALPHA, BC_ONE, BC_ONE_MINUS_SRC_ALPHA);
-				blendStateDesc[eGuiMaterial_Modulative] = materialBlendFunc(BC_DST_COLOR, BC_ZERO, BC_DST_COLOR, BC_ZERO);
+				blendStateDesc[eGuiMaterial_Modulative] = materialBlendFunc(BC_DST_COLOR, BC_ZERO, BC_DST_ALPHA, BC_ZERO);
 				blendStateDesc[eGuiMaterial_Additive] = materialBlendFunc(BC_ONE, BC_ONE, BC_ONE, BC_ONE);
 				blendStateDesc[eGuiMaterial_FontNormal] = materialBlendFunc(BC_SRC_ALPHA, BC_ONE_MINUS_SRC_ALPHA, BC_SRC_ALPHA, BC_ONE_MINUS_SRC_ALPHA);
 				blendStateDesc[eGuiMaterial_Alpha] = materialBlendFunc(BC_SRC_ALPHA, BC_ONE_MINUS_SRC_ALPHA, BC_SRC_ALPHA, BC_ONE_MINUS_SRC_ALPHA);
@@ -725,8 +724,9 @@ namespace hpl {
 			//Set up min and max for orth projection
 			cVector3f vProjMin(-mvVirtualSizeOffset.x, -mvVirtualSizeOffset.y, mfVirtualMinZ);
 			cVector3f vProjMax(mvVirtualSize.x-mvVirtualSizeOffset.x, mvVirtualSize.y-mvVirtualSizeOffset.y, mfVirtualMaxZ);
-   			bx::mtxOrtho(projectionMtx.v,
-				vProjMin.x,vProjMax.x,vProjMax.y,vProjMin.y,vProjMin.z,vProjMax.z, 0.0f, bgfx::getCaps()->homogeneousDepth);
+
+            mat4 proj = mat4::orthographic(vProjMin.x, vProjMax.x, vProjMax.y, vProjMin.y, vProjMin.z, vProjMax.z);
+            projectionMtx = cMath::FromForgeMat(proj);
 		}
 
 		LoadActionsDesc loadActions = {};

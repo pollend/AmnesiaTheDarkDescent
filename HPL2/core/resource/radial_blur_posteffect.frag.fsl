@@ -44,7 +44,7 @@ float4 PS_MAIN(PsIn In)
     
     vDir *= fDist * Get(size) * screenSize.x;
                     
-    float3 vDiffuseColor = vec3(0.0, 0.0, 0.0);
+    float3 vDiffuseColor = float3(0.0, 0.0, 0.0);
     
     for(int i=0; i<5; ++i)
     {

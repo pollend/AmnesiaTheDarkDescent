@@ -38,6 +38,10 @@
 
 #include "Common_3/Graphics/Interfaces/IGraphics.h"
 #include <FixPreprocessor.h>
+
+
+#include <span>
+
 namespace hpl {
 
 
