@@ -17,7 +17,7 @@
 #include "deferred_resources.h.fsl"
 #include "deferred_common.h.fsl"
 
-PUSH_CONSTANT(translucencyConstant, b0)
+PUSH_CONSTANT(uTranslucencyWater, b4)
 {
     DATA(float, afT, None);
 };

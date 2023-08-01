@@ -88,7 +88,6 @@
 namespace hpl {
 
     bool cRendererDeferred::mbDepthCullLights = true;
-
     bool cRendererDeferred::mbSSAOLoaded = false;
     int cRendererDeferred::mlSSAONumOfSamples = 8;
     int cRendererDeferred::mlSSAOBufferSizeDiv = 2;
@@ -109,6 +108,14 @@ namespace hpl {
 
     static constexpr uint32_t SSAOImageSizeDiv = 2;
     static constexpr uint32_t SSAONumOfSamples = 8;
+
+    static uint32_t UniformPerFrameDataSize = round_up(sizeof(cRendererDeferred::UniformPerFrameData), 256);
+    static uint32_t MaterialDataSize = round_up(sizeof(cMaterial::MaterialType::MaterialData), 256);
+    static uint32_t ObjectDataSize = round_up(sizeof(cRendererDeferred::UniformObject), 256);
+    static uint32_t LightBufferDataSize = round_up(sizeof(cRendererDeferred::UniformLightData), 256);
+    static uint32_t OcclusionDataSize = round_up(sizeof(mat4), 256);
+    static uint32_t UniformFogDataSize = round_up(sizeof(cRendererDeferred::UniformFogData), 256);
+
 
     namespace detail {
         void cmdDefaultLegacyGeomBinding(Cmd* cmd, const ForgeRenderer::Frame& frame, LegacyVertexBuffer::GeometryBinding& binding) {
@@ -538,7 +545,6 @@ namespace hpl {
         : iRenderer("Deferred", apGraphics, apResources, eDefferredProgramMode_LastEnum) {
 
 
-
         ////////////////////////////////////
         // Set up render specific things
         mbSetFrameBufferAtBeginRendering = false; // Not using the input frame buffer for any rendering. Only doing copy at the end!
@@ -566,6 +572,23 @@ namespace hpl {
 
         m_dissolveImage = mpResources->GetTextureManager()->Create2DImage("core_dissolve.tga", false);
         auto* forgeRenderer = Interface<ForgeRenderer>::Get();
+
+        
+        for (auto& buff : m_objectUniformBuffer) {
+            buff.Load([&](Buffer** buffer) {
+                BufferLoadDesc desc = {};
+                desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_BUFFER | DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+                desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
+                desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
+                desc.mDesc.mFirstElement = 0;
+                desc.mDesc.mElementCount = MaxObjectUniforms;
+                desc.mDesc.mStructStride = ObjectDataSize;
+                desc.mDesc.mSize = MaxObjectUniforms * ObjectDataSize;
+                desc.ppBuffer = buffer;
+                addResource(&desc, nullptr);
+                return true;
+            });
+        }
 
         m_shadowCmpSampler.Load(forgeRenderer->Rend(), [&](Sampler** handle) {
             SamplerDesc miplessLinearSamplerDesc = {};
@@ -614,7 +637,7 @@ namespace hpl {
             BufferLoadDesc desc = {};
             desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_UNIFORM_BUFFER;
             desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
-            desc.mDesc.mSize = sizeof(cRendererDeferred::UniformPerFrameData) * cRendererDeferred::MaxMaterialFrameDescriptors;
+            desc.mDesc.mSize = UniformPerFrameDataSize * cRendererDeferred::MaxMaterialFrameDescriptors;
             desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
             desc.pData = nullptr;
             desc.ppBuffer = buffer;
@@ -669,6 +692,8 @@ namespace hpl {
                 desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_RW_BUFFER;
                 desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_GPU_TO_CPU;
                 desc.mDesc.mSize = sizeof(uint32_t) * cRendererDeferred::UniformPropBlock::MaxObjectTest;
+                desc.mDesc.mElementCount = cRendererDeferred::UniformPropBlock::MaxObjectTest;
+                desc.mDesc.mStructStride = sizeof(uint32_t);
                 desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
                 desc.pData = nullptr;
                 desc.ppBuffer = buf;
@@ -746,7 +771,6 @@ namespace hpl {
                 graphicsPipelineDesc.pColorFormats = imageTargets.data();
                 graphicsPipelineDesc.pShaderProgram = m_copyDepthShader;
                 graphicsPipelineDesc.pRootSignature = m_rootSignatureCopyDepth;
-                graphicsPipelineDesc.mRenderTargetCount = 1;
                 graphicsPipelineDesc.mDepthStencilFormat = TinyImageFormat_UNDEFINED;
                 graphicsPipelineDesc.pVertexLayout = NULL;
                 graphicsPipelineDesc.mSampleCount = SAMPLE_COUNT_1;
@@ -764,6 +788,8 @@ namespace hpl {
                 desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_GPU_TO_CPU;
                 desc.mDesc.mSize = sizeof(uint64_t) * cRendererDeferred::MaxQueryPoolSize;
                 desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
+                desc.mDesc.mElementCount = cRendererDeferred::UniformPropBlock::MaxObjectTest;
+                desc.mDesc.mStructStride = sizeof(uint64_t);
                 desc.pData = nullptr;
                 desc.ppBuffer = buf;
                 addResource(&desc, nullptr);
@@ -1010,7 +1036,7 @@ namespace hpl {
                 addDescriptorSet(forgeRenderer->Rend(), &perObjectSet, &objectSet);
             }
             addUniformGPURingBuffer(
-                forgeRenderer->Rend(), sizeof(Fog::UniformFogData) * Fog::MaxFogCount, &m_fogPass.m_fogUniformBuffer, true);
+                forgeRenderer->Rend(), sizeof(UniformFogData) * Fog::MaxFogCount, &m_fogPass.m_fogUniformBuffer, true);
         }
         //---------------- Diffuse Pipeline  ------------------------
         {
@@ -1274,9 +1300,9 @@ namespace hpl {
                     blendStateDesc.mDstFactors[0] = hpl::HPL2BlendTable[blendMode].dst;
                     blendStateDesc.mBlendModes[0] = hpl::HPL2BlendTable[blendMode].mode;
 
-                    blendStateDesc.mSrcAlphaFactors[0] = hpl::HPL2BlendTable[blendMode].src;
-                    blendStateDesc.mDstAlphaFactors[0] = hpl::HPL2BlendTable[blendMode].dst;
-                    blendStateDesc.mBlendAlphaModes[0] = hpl::HPL2BlendTable[blendMode].mode;
+                    blendStateDesc.mSrcAlphaFactors[0] = hpl::HPL2BlendTable[blendMode].srcAlpha;
+                    blendStateDesc.mDstAlphaFactors[0] = hpl::HPL2BlendTable[blendMode].dstAlpha;
+                    blendStateDesc.mBlendAlphaModes[0] = hpl::HPL2BlendTable[blendMode].alphaMode;
                     #ifdef USE_THE_FORGE_LEGACY
                         blendStateDesc.mMasks[0] = RED | GREEN | BLUE;
                     #else
@@ -1604,9 +1630,9 @@ namespace hpl {
                         blendStateDesc.mDstFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].dst;
                         blendStateDesc.mBlendModes[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].mode;
 
-                        blendStateDesc.mSrcAlphaFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].src;
-                        blendStateDesc.mDstAlphaFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].dst;
-                        blendStateDesc.mBlendAlphaModes[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].mode;
+                        blendStateDesc.mSrcAlphaFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].srcAlpha;
+                        blendStateDesc.mDstAlphaFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].dstAlpha;
+                        blendStateDesc.mBlendAlphaModes[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].alphaMode;
                         pipelineSettings.pShaderProgram = m_materialTranslucencyPass.m_shaders[shaderVariant];
 
                         addPipeline(forgeRenderer->Rend(), &pipelineDesc, &pipelineBlendGroup[key.m_id]);
@@ -1718,9 +1744,9 @@ namespace hpl {
                         blendStateDesc.mDstFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].dst;
                         blendStateDesc.mBlendModes[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].mode;
 
-                        blendStateDesc.mSrcAlphaFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].src;
-                        blendStateDesc.mDstAlphaFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].dst;
-                        blendStateDesc.mBlendAlphaModes[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].mode;
+                        blendStateDesc.mSrcAlphaFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].srcAlpha;
+                        blendStateDesc.mDstAlphaFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].dstAlpha;
+                        blendStateDesc.mBlendAlphaModes[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].alphaMode;
 
                         addPipeline(forgeRenderer->Rend(), &pipelineDesc, &pipelineBlendGroup[key.m_id]);
                     }
@@ -1791,8 +1817,9 @@ namespace hpl {
                 addDescriptorSet(forgeRenderer->Rend(), &perFrameDescSet, &set);
 
                 for(size_t i = 0; i < MaxMaterialFrameDescriptors; i++) {
-                    DescriptorDataRange range = { (uint32_t)(i * sizeof(cRendererDeferred::UniformPerFrameData)),
-                                                  sizeof(cRendererDeferred::UniformPerFrameData) };
+
+                    DescriptorDataRange range = { (uint32_t)(i * hpl::UniformPerFrameDataSize),
+                                                  hpl::UniformPerFrameDataSize};
                     std::array<DescriptorData, 1> params = {};
                     params[0].pName = "perFrameConstants";
                     params[0].pRanges = &range;
@@ -1806,8 +1833,17 @@ namespace hpl {
                 addDescriptorSet(forgeRenderer->Rend(), &batchDescriptorSet, &set);
             }
             DescriptorSetDesc perObjectDescriptorSet{ m_materialRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_DRAW, MaxObjectUniforms };
-            for (auto& set : m_materialSet.m_perObjectSet) {
-                addDescriptorSet(forgeRenderer->Rend(), &perObjectDescriptorSet, &set);
+            for (size_t i = 0; i < m_materialSet.m_perObjectSet.size(); i++) {
+                addDescriptorSet(forgeRenderer->Rend(), &perObjectDescriptorSet, &m_materialSet.m_perObjectSet[i]);
+
+                for(size_t entryIdx = 0; entryIdx < MaxObjectUniforms; entryIdx++) {
+                    DescriptorDataRange range = { static_cast<uint32_t>(entryIdx * ObjectDataSize), ObjectDataSize };
+                    std::array<DescriptorData, 1> params = {};
+                    params[0].pName = "uniformObjectBlock";
+                    params[0].pRanges = &range;
+                    params[0].ppBuffers = &m_objectUniformBuffer[i].m_handle;
+                    updateDescriptorSet(forgeRenderer->Rend(), entryIdx, m_materialSet.m_perObjectSet[i], 1, params.data());
+                }
             }
         }
 
@@ -2071,13 +2107,15 @@ namespace hpl {
             desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_UNIFORM_BUFFER;
             desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
             desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
-            desc.mDesc.mSize = sizeof(cMaterial::MaterialType::MaterialData) * cMaterial::MaxMaterialID;
+            desc.mDesc.mSize = MaterialDataSize * cMaterial::MaxMaterialID;
             desc.ppBuffer = buffer;
             addResource(&desc, nullptr);
             return true;
         });
-        addUniformGPURingBuffer(
-            forgeRenderer->Rend(), sizeof(cRendererDeferred::UniformObject) * MaxObjectUniforms, &m_objectUniformBuffer, true);
+
+
+        // addUniformGPURingBuffer(
+        //     forgeRenderer->Rend(), ObjectDataSize * MaxObjectUniforms, &m_objectUniformBuffer, true);
 
         auto createShadowMap = [&](const cVector3l& avSize) -> ShadowMapData {
             ShadowMapData shadowMapData = {};
@@ -2199,11 +2237,6 @@ namespace hpl {
             cMatrixf modelMat = option.m_modelMatrix.value_or(apObject->GetModelMatrixPtr() ? *apObject->GetModelMatrixPtr() : cMatrixf::Identity);
             uint32_t index = m_materialSet.m_objectIndex++;
 
-            #ifdef USE_THE_FORGE_LEGACY
-                GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(m_objectUniformBuffer, sizeof(cRendererDeferred::UniformObject));
-            #else
-                GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(&m_objectUniformBuffer, sizeof(cRendererDeferred::UniformObject));
-            #endif
             cRendererDeferred::UniformObject uniformObjectData = {};
 
             uniformObjectData.m_dissolveAmount = float4(apObject->GetCoverageAmount());
@@ -2213,19 +2246,20 @@ namespace hpl {
                 uniformObjectData.m_uvMat = cMath::ToForgeMat4(apMaterial->GetUvMatrix());
             }
 
-            BufferUpdateDesc updateDesc = { uniformBuffer.pBuffer, uniformBuffer.mOffset };
+            BufferUpdateDesc updateDesc = { m_objectUniformBuffer[frame.m_frameIndex].m_handle, index * ObjectDataSize, sizeof(cRendererDeferred::UniformObject)};
             beginUpdateResource(&updateDesc);
-            (*reinterpret_cast<cRendererDeferred::UniformObject*>(updateDesc.pMappedData)) = uniformObjectData;
-            endUpdateResource(&updateDesc, NULL);
+            memcpy(updateDesc.pMappedData, &uniformObjectData, sizeof(cRendererDeferred::UniformObject));
+            endUpdateResource(&updateDesc, nullptr);
 
-            DescriptorDataRange range = { (uint32_t)uniformBuffer.mOffset, sizeof(cRendererDeferred::UniformObject) };
-            std::array<DescriptorData, 1> params = {};
-            params[0].pName = "uniformObjectBlock";
-            params[0].pRanges = &range;
-            params[0].ppBuffers = &uniformBuffer.pBuffer;
+        //    DescriptorDataRange range = { static_cast<uint32_t>(index * ObjectDataSize), ObjectDataSize };
+      //      std::array<DescriptorData, 1> params = {};
+    //        params[0].pName = "uniformObjectBlock";
+   //         params[0].pRanges = &range;
+  //          params[0].ppBuffers = &m_objectUniformBuffer[frame.m_frameIndex].m_handle;
 
             m_materialSet.m_objectDescriptorLookup[apObject] = index;
-            updateDescriptorSet(frame.m_renderer->Rend(), index, objectDescSet, params.size(), params.data());
+
+//            updateDescriptorSet(frame.m_renderer->Rend(), index, objectDescSet, params.size(), params.data());
             cmdBindDescriptorSet(cmd, index, objectDescSet);
         } else {
             cmdBindDescriptorSet(cmd, objectLookup->second, objectDescSet);
@@ -2250,7 +2284,7 @@ namespace hpl {
             descInfo.m_material = apMaterial;
 
             BufferUpdateDesc updateDesc = { m_materialSet.m_materialUniformBuffer.m_handle,
-                                            apMaterial->materialID() * sizeof(cMaterial::MaterialType::MaterialData) };
+                                            apMaterial->materialID() * MaterialDataSize};
             beginUpdateResource(&updateDesc);
             memcpy(updateDesc.pMappedData, &materialType.m_data, sizeof(cMaterial::MaterialType::MaterialData));
             endUpdateResource(&updateDesc, NULL);
@@ -2301,8 +2335,9 @@ namespace hpl {
                 }
             }
 
-            DescriptorDataRange range = { static_cast<uint32_t>(apMaterial->materialID() * sizeof(cMaterial::MaterialType::MaterialData)),
-                                          sizeof(cMaterial::MaterialType::MaterialData) };
+
+            DescriptorDataRange range = { static_cast<uint32_t>(apMaterial->materialID() * MaterialDataSize),
+                                          MaterialDataSize};
             params[paramCount].pName = "uniformMaterialBlock";
             params[paramCount].pRanges = &range;
             params[paramCount++].ppBuffers = &m_materialSet.m_materialUniformBuffer.m_handle;
@@ -2475,6 +2510,7 @@ namespace hpl {
         m_farBottom = -m_farTop;
         m_farRight = m_farBottom * apFrustum->GetAspect();
         m_farLeft = -m_farRight;
+
 
         ///////////////////////////
         // Occlusion testing
@@ -2683,9 +2719,9 @@ namespace hpl {
                         cBillboard* pBillboard = static_cast<cBillboard*>(query.m_renderable);
 
                         #ifdef USE_THE_FORGE_LEGACY
-                            GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(m_occlusionUniformBuffer, sizeof(mat4));
+                            GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(m_occlusionUniformBuffer, OcclusionDataSize);
                         #else
-                            GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(&m_occlusionUniformBuffer, sizeof(mat4));
+                            GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(&m_occlusionUniformBuffer, OcclusionDataSize);
                         #endif
 
 
@@ -2701,7 +2737,7 @@ namespace hpl {
                         endUpdateResource(&updateDesc, NULL);
 
                         std::array<DescriptorData, 1> descriptorData = {};
-                        DescriptorDataRange range = { (uint32_t)uniformBlockOffset.mOffset, sizeof(mat4) };
+                        DescriptorDataRange range = { (uint32_t)uniformBlockOffset.mOffset, OcclusionDataSize};
                         descriptorData[0].pName = "occlusionBlock";
                         descriptorData[0].ppBuffers = &uniformBlockOffset.pBuffer;
                         descriptorData[0].pRanges = &range;
@@ -3052,6 +3088,7 @@ namespace hpl {
             cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
         }
 
+
         if (mpCurrentSettings->mbSSAOActive) {
             ASSERT(m_hbaoPlusPipeline && "Invalid pipeline");
             ASSERT(currentGBuffer.m_depthBuffer.IsValid() && "Invalid depth buffer");
@@ -3083,6 +3120,8 @@ namespace hpl {
                 cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
             }
         }
+
+
 
         // --------------------------------------------------------------------
         // Render Light Pass
@@ -3257,9 +3296,9 @@ namespace hpl {
                                 cmdSetViewport(
                                     frame.m_cmd,
                                     0.0f,
-                                    shadowMapData->m_target.m_handle->mHeight,
-                                    shadowMapData->m_target.m_handle->mWidth,
-                                    -shadowMapData->m_target.m_handle->mHeight,
+                                    static_cast<float>(shadowMapData->m_target.m_handle->mHeight),
+                                    static_cast<float>(shadowMapData->m_target.m_handle->mWidth),
+                                    -static_cast<float>(shadowMapData->m_target.m_handle->mHeight),
                                     0.0f,
                                     1.0f);
                                 cmdSetScissor(
@@ -3361,9 +3400,9 @@ namespace hpl {
                     UniformLightData uniformObjectData = {};
 
                     #ifdef USE_THE_FORGE_LEGACY
-                        GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(m_lightPassRingBuffer, sizeof(UniformLightData));
+                        GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(m_lightPassRingBuffer, LightBufferDataSize);
                     #else
-                        GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(&m_lightPassRingBuffer, sizeof(UniformLightData));
+                        GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(&m_lightPassRingBuffer, LightBufferDataSize);
                     #endif
                     const auto modelViewMtx = cMath::MatrixMul(apFrustum->GetViewMatrix(), light->m_light->GetWorldMatrix());
                     const auto viewProjectionMat = cMath::MatrixMul(mainFrustumProj, mainFrustumView);
@@ -3475,7 +3514,7 @@ namespace hpl {
                     endUpdateResource(&updateDesc, NULL);
 
                     params[paramCount].pName = "uniformObjectBlock";
-                    DescriptorDataRange range = { static_cast<uint32_t>(uniformBuffer.mOffset), sizeof(UniformLightData) };
+                    DescriptorDataRange range = { static_cast<uint32_t>(uniformBuffer.mOffset), LightBufferDataSize };
                     params[paramCount].pRanges = &range;
                     params[paramCount++].ppBuffers = &uniformBuffer.pBuffer;
 
@@ -3713,12 +3752,12 @@ namespace hpl {
             size_t objectIndex = 0;
             for (auto& fogArea : fogRenderData) {
                 #ifdef USE_THE_FORGE_LEGACY
-                    GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(m_fogPass.m_fogUniformBuffer, sizeof(Fog::UniformFogData));
+                    GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(m_fogPass.m_fogUniformBuffer, UniformFogDataSize);
                 #else
-                    GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(&m_fogPass.m_fogUniformBuffer, sizeof(Fog::UniformFogData));
+                    GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(&m_fogPass.m_fogUniformBuffer, UniformFogDataSize);
                 #endif
                 uint8_t pipelineVariant = 0;
-                Fog::UniformFogData fogUniformData = {};
+                UniformFogData fogUniformData = {};
                 if (fogArea.m_insideNearFrustum) {
                     pipelineVariant |=
                         ((fogArea.m_fogArea->GetShowBacksideWhenInside() ? Fog::PipelineUseBackSide : Fog::PipelineVariantEmpty) |
@@ -3760,14 +3799,14 @@ namespace hpl {
 
                 BufferUpdateDesc updateDesc = { uniformBuffer.pBuffer, uniformBuffer.mOffset };
                 beginUpdateResource(&updateDesc);
-                (*reinterpret_cast<Fog::UniformFogData*>(updateDesc.pMappedData)) = fogUniformData;
+                (*reinterpret_cast<UniformFogData*>(updateDesc.pMappedData)) = fogUniformData;
                 endUpdateResource(&updateDesc, NULL);
 
                 {
                     std::array<DescriptorData, 15> params = {};
                     size_t paramCount = 0;
                     params[paramCount].pName = "uniformFogBlock";
-                    DescriptorDataRange range = { (uint32_t)uniformBuffer.mOffset, sizeof(Fog::UniformFogData) };
+                    DescriptorDataRange range = { (uint32_t)uniformBuffer.mOffset, UniformFogDataSize};
                     params[paramCount].pRanges = &range;
                     params[paramCount++].ppBuffers = &uniformBuffer.pBuffer;
                     updateDescriptorSet(
@@ -3783,13 +3822,13 @@ namespace hpl {
                 cmdBindRenderTargets(frame.m_cmd, targets.size(), targets.data(), nullptr, &loadActions, nullptr, nullptr, -1, -1);
 
                 #ifdef USE_THE_FORGE_LEGACY
-                    GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(m_fogPass.m_fogUniformBuffer, sizeof(Fog::UniformFogData));
+                    GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(m_fogPass.m_fogUniformBuffer, sizeof(UniformFogData));
                 #else
                     GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(&m_fogPass.m_fogUniformBuffer, sizeof(Fog::UniformFogData));
                 #endif
                 BufferUpdateDesc updateDesc = { uniformBuffer.pBuffer, uniformBuffer.mOffset };
                 beginUpdateResource(&updateDesc);
-                auto* fogData = reinterpret_cast<Fog::UniformFullscreenFogData*>(updateDesc.pMappedData);
+                auto* fogData = reinterpret_cast<UniformFullscreenFogData*>(updateDesc.pMappedData);
                 auto fogColor = mpCurrentWorld->GetFogColor();
                 fogData->m_color = float4(fogColor.r, fogColor.g, fogColor.b, fogColor.a);
                 fogData->m_fogStart = mpCurrentWorld->GetFogStart();
@@ -3801,7 +3840,7 @@ namespace hpl {
                     std::array<DescriptorData, 15> params = {};
                     size_t paramCount = 0;
                     params[paramCount].pName = "uniformFogBlock";
-                    DescriptorDataRange range = { (uint32_t)uniformBuffer.mOffset, sizeof(Fog::UniformFullscreenFogData) };
+                    DescriptorDataRange range = { (uint32_t)uniformBuffer.mOffset, sizeof(UniformFullscreenFogData) };
                     params[paramCount].pRanges = &range;
                     params[paramCount++].ppBuffers = &uniformBuffer.pBuffer;
                     updateDescriptorSet(
@@ -3875,7 +3914,7 @@ namespace hpl {
         // Translucency Pass --> output target
         // ------------------------------------------------------------------------
 
-        {
+        /* {
             LoadActionsDesc loadActions = {};
             loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
             loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
@@ -3896,7 +3935,8 @@ namespace hpl {
             translucencyBlendTable[eMaterialBlendMode_PremulAlpha] = TranslucencyPipeline::TranslucencyBlend::BlendPremulAlpha;
 
             cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "Translucency Pass");
-            uint32_t translucencyConstantIndex = getDescriptorIndexFromName(m_materialRootSignature, "translucencyConstant");
+            uint32_t translucencyConstantIndex = getDescriptorIndexFromName(m_materialRootSignature, "uTranslucency");
+            uint32_t translucencyWaterConstantIndex = getDescriptorIndexFromName(m_materialRootSignature, "uTranslucencyWater");
             for (auto& translucencyItem : mpCurrentRenderList->GetRenderableItems(eRenderListType_Translucent)) {
                 cMaterial* pMaterial = translucencyItem->GetMaterial();
                 iVertexBuffer* vertexBuffer = translucencyItem->GetVertexBuffer();
@@ -4077,7 +4117,7 @@ namespace hpl {
                             });
                         cmdBindPipeline(frame.m_cmd, m_materialTranslucencyPass.m_waterPipeline[key.m_id]);
                         constants.m_afT = GetTimeCount();
-                        cmdBindPushConstants(frame.m_cmd, m_materialRootSignature, translucencyConstantIndex, &constants);
+                        cmdBindPushConstants(frame.m_cmd, m_materialRootSignature, translucencyWaterConstantIndex, &constants);
                         cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
                         break;
                     }
@@ -4087,7 +4127,7 @@ namespace hpl {
                 }
             }
             cmdEndDebugMarker(frame.m_cmd);
-        }
+        } */
 
         // ImmediateDrawBatch postTransBatch(context, sharedData->m_gBuffer.m_outputTarget, mainFrustumView, mainFrustumProj);
         cViewport::PostTranslucenceDrawPacket translucenceEvent = cViewport::PostTranslucenceDrawPacket({

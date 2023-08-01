@@ -16,7 +16,7 @@ NUM_THREADS(32, 32,  1)
 void CS_MAIN(SV_DispatchThreadID(uint3) did) 
 {    
     INIT_MAIN;
-    uint2 bufferSize = uint2(GetDimensions(Get(destOutput), NO_SAMPLER)); // TODO: fix for directX12
+    uint2 bufferSize = uint2(Get(screenDim));//uint2(GetDimensions(Get(destOutput), NO_SAMPLER)); // TODO: fix for directX12
     uint2 screenSize = bufferSize / (1 << Get(mipLevel)) ;
 
     if (did.x < screenSize.x && did.y < screenSize.y)

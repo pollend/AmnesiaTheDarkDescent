@@ -39,11 +39,9 @@ namespace hpl {
         std::array rtBarriers = {
             RenderTargetBarrier { swapChainImage, RESOURCE_STATE_PRESENT, RESOURCE_STATE_RENDER_TARGET },
         };
-        frame.m_resourcePool->Push(m_swapChain);
+        //frame.m_resourcePool->Push(m_swapChain);
         frame.m_resourcePool->Push(m_finalRenderTarget[frame.m_frameIndex]);
         cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
-
-
     }
 
     void ForgeRenderer::SubmitFrame() {
@@ -58,19 +56,21 @@ namespace hpl {
         }
         {
             cmdBindRenderTargets(frame.m_cmd, 1, &swapChainTarget, NULL, NULL, NULL, NULL, -1, -1);
-            uint32_t rootConstantIndex = getDescriptorIndexFromName(m_finalRootSignature , "postEffectConstants");
-            cmdBindPushConstants(frame.m_cmd, m_finalRootSignature, rootConstantIndex, &m_gamma);
+            cmdBindPipeline(frame.m_cmd, m_finalPipeline.m_handle);
 
             cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, static_cast<float>(swapChainTarget->mWidth), static_cast<float>(swapChainTarget->mHeight), 0.0f, 1.0f);
             cmdSetScissor(frame.m_cmd, 0, 0, static_cast<float>(swapChainTarget->mWidth), static_cast<float>(swapChainTarget->mHeight));
-            cmdBindPipeline(frame.m_cmd, m_finalPipeline.m_handle);
-
+            
             std::array<DescriptorData, 1> params = {};
             params[0].pName = "sourceInput";
             params[0].ppTextures = &m_finalRenderTarget[frame.m_frameIndex].m_handle->pTexture;
             updateDescriptorSet(
                     frame.m_renderer->Rend(), 0, m_finalPerFrameDescriptorSet[frame.m_frameIndex].m_handle, params.size(), params.data());
             cmdBindDescriptorSet(frame.m_cmd, 0, m_finalPerFrameDescriptorSet[frame.m_frameIndex].m_handle);
+
+            uint32_t rootConstantIndex = getDescriptorIndexFromName(m_finalRootSignature, "uRootConstants");
+            cmdBindPushConstants(frame.m_cmd, m_finalRootSignature, rootConstantIndex, &m_gamma);
+            
             cmdDraw(frame.m_cmd, 3, 0);
         }
         {
@@ -316,6 +316,7 @@ namespace hpl {
             case window::WindowEventType::ResizeWindowEvent: {
                     waitQueueIdle(m_graphicsQueue);
                     const auto windowSize = m_window->GetWindowSize();
+
                     m_swapChain.Load(m_renderer, [&](SwapChain** handle) {
                         SwapChainDesc swapChainDesc = {};
                         swapChainDesc.mWindowHandle = m_window->ForgeWindowHandle();
@@ -325,7 +326,7 @@ namespace hpl {
                         swapChainDesc.mHeight = windowSize.y;
                         swapChainDesc.mImageCount = SwapChainLength;
                         swapChainDesc.mColorFormat = getRecommendedSwapchainFormat(false, false);
-                        swapChainDesc.mColorClearValue = { { 1, 1, 1, 1 } };
+                        //swapChainDesc.mColorClearValue = { { 1, 1, 1, 1 } };
                         swapChainDesc.mEnableVsync = false;
                         addSwapChain(m_renderer, &swapChainDesc, handle);
                         return true;
@@ -351,17 +352,17 @@ namespace hpl {
                         });
                     }
 
-                    {
-                        auto frame = GetFrame();
-                        acquireNextImage(m_renderer, m_swapChain.m_handle, m_imageAcquiredSemaphore, nullptr, &m_swapChainIndex);
-                        auto& swapChainImage = frame.m_swapChain->ppRenderTargets[m_swapChainIndex];
-                        std::array rtBarriers = {
-                            RenderTargetBarrier { swapChainImage, RESOURCE_STATE_PRESENT, RESOURCE_STATE_RENDER_TARGET },
-                        };
-                        frame.m_resourcePool->Push(m_swapChain);
-                        frame.m_resourcePool->Push(m_finalRenderTarget[frame.m_frameIndex]);
-                        cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
-                    }
+                  //  {
+                  //      auto frame = GetFrame();
+                  //      acquireNextImage(m_renderer, m_swapChain.m_handle, m_imageAcquiredSemaphore, nullptr, &m_swapChainIndex);
+                  //      auto& swapChainImage = frame.m_swapChain->ppRenderTargets[m_swapChainIndex];
+                  //      std::array rtBarriers = {
+                  //          RenderTargetBarrier { swapChainImage, RESOURCE_STATE_PRESENT, RESOURCE_STATE_RENDER_TARGET },
+                  //      };
+                  ////      frame.m_resourcePool->Push(m_swapChain);
+                  //      frame.m_resourcePool->Push(m_finalRenderTarget[frame.m_frameIndex]);
+                  //      cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+                  //  }
                 break;
             }
             default:

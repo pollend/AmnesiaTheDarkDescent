@@ -5,10 +5,10 @@
 #include "deferred_resources.h.fsl"
 #include "deferred_common.h.fsl"
 
-PUSH_CONSTANT(translucencyConstant, b0)
+PUSH_CONSTANT(uTranslucency, b3)
 {
-    DATA(int,   blendMode,   None);
-    DATA(int,   textureMask, None);
+    DATA(int,   blendMode,  None);
+    DATA(int,   textureMask,None);
     DATA(float, sceneAlpha, None);
     DATA(float, lightLevel, None);
 };

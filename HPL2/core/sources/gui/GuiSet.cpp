@@ -769,7 +769,7 @@ namespace hpl {
 
 			DescriptorData params[10]{};
 			uint32_t paramCount = 0;
-			DescriptorDataRange range = { (uint32_t)uniformBlockOffset.mOffset, sizeof(gui::UniformBlock) };
+			DescriptorDataRange range = { (uint32_t)uniformBlockOffset.mOffset, round_up(sizeof(gui::UniformBlock), 256) };
 			params[paramCount].pName = "uniformBlock";
 			params[paramCount].pRanges = &range;
 			params[paramCount++].ppBuffers = &uniformBlockOffset.pBuffer;
@@ -785,8 +785,6 @@ namespace hpl {
 			uniformBlock.mvp = cMath::ToForgeMat4(cMath::MatrixMul(cMath::MatrixMul(projectionMtx, viewMtx), modelMtx));
 			auto& descriptorSet = gui::GuiUniformDescriptorSet[frame.m_frameIndex];
 			updateDescriptorSet(frame.m_renderer->Rend(), gui::descriptorIndex, descriptorSet, paramCount, params);
-
-
 
 			if(mbIs3D) {
 				cmdBindPipeline(frame.m_cmd, gui::GuiPipeline3D[materialType]);

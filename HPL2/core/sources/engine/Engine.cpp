@@ -521,12 +521,12 @@ namespace hpl {
 				bBufferSwap = false;
 
 				START_TIMING(SwapBuffers)
-				renderer->SubmitFrame();
+                renderer->SubmitFrame();
+                mpUpdater->RunMessage(eUpdateableMessage_OnPostBufferSwap);
 				renderer->IncrementFrame();
                 STOP_TIMING(SwapBuffers)
 
 				//Log("Swap done: %d\n", cPlatform::GetApplicationTime());
-				mpUpdater->RunMessage(eUpdateableMessage_OnPostBufferSwap);
 				bSwappedOnce =true;
 				if(mbRenderOnce) continue;
 			}

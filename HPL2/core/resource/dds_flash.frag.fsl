@@ -11,7 +11,7 @@ CBUFFER(uniformBlock, UPDATE_FREQ_PER_FRAME, b0, binding = 0) {
     DATA(float3x3, normalMat, None);
 };
 
-RES(Tex2D(float4), diffuseMap, UPDATE_FREQ_PER_FRAME, t1, binding = 1); 
+RES(Tex2D(float4), diffuseMap, UPDATE_FREQ_PER_FRAME, t0, binding = 1); 
 RES(SamplerState, diffuseSampler, UPDATE_FREQ_NONE, s0, binding = 2);
 
 float4 PS_MAIN(PsIn In)
