@@ -2,8 +2,7 @@
 /// Copyright 2023 Michael Pollind
 /// SPDX-License-Identifier: GPL-3.0
 
-CBUFFER(uniformFogBlock, UPDATE_FREQ_PER_DRAW, b1, binding = 1)
-{
+STRUCT(UniformFog) {
     DATA(float4x4, mvp, None);
     DATA(float4x4, mv, None);
     DATA(float4x4, invViewModelRotation, None);
@@ -12,34 +11,32 @@ CBUFFER(uniformFogBlock, UPDATE_FREQ_PER_DRAW, b1, binding = 1)
     DATA(float4, fogNegPlaneDistNeg, None);
     DATA(float4, fogNegPlaneDistPos, None);
     DATA(float, start, None);
-    DATA(float, length, None);
+    DATA(float, len, None);
     DATA(float, falloffExp, None);
+    DATA(uint, flags, None);
 };
+RES(Buffer(UniformFog), uniformFogBuffer, UPDATE_FREQ_PER_FRAME, t1, binding = 0);
 
 STRUCT(VSInput)
 {
     DATA(float3, Position, POSITION);
 };
 
-
 STRUCT(VSOutput)
 {
     DATA(float4, Position, SV_Position);
     DATA(float4, pos, POSITION);
-
-    #if defined(USE_OUTSIDE_BOX) && defined(USE_BACK_SIDE) 
-        DATA(float3, ray, TEXCOORD0);
-    #endif
+    DATA(float3, ray, TEXCOORD0);
+	DATA(FLAT(uint), drawId, TEXCOORD1);
 };
 
-VSOutput VS_MAIN( VSInput In )
+VSOutput VS_MAIN(VSInput In, SV_InstanceID(uint) InstanceID )
 {
     INIT_MAIN;
     VSOutput Out;
-    Out.Position = mul(Get(mvp), float4(In.Position.xyz, 1.0));
-    Out.pos = mul(Get(mv), float4(In.Position.xyz, 1.0));
-    #if defined(USE_OUTSIDE_BOX) && defined(USE_BACK_SIDE) 
-        Out.ray = mul(Get(invViewModelRotation), float4(Out.pos.xyz, 1.0)).xyz;
-    #endif
+    Out.Position = mul(Get(uniformFogBuffer)[InstanceID].mvp, float4(In.Position.xyz, 1.0));
+    Out.pos = mul(Get(uniformFogBuffer)[InstanceID].mv, float4(In.Position.xyz, 1.0));
+    Out.ray = mul(Get(uniformFogBuffer)[InstanceID].invViewModelRotation, float4(Out.pos.xyz, 1.0)).xyz;
+    Out.drawId = InstanceID;
     RETURN(Out);
 }

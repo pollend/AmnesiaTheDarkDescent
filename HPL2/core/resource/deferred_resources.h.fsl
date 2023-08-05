@@ -110,7 +110,6 @@ STRUCT(UniformObject)
     PUSH_CONSTANT(rootConstant, b0)
     {
         DATA(uint, objectIndex, None);
-	    
 	    DATA(uint, _pad1[3], None);
     };
 #endif

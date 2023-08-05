@@ -394,8 +394,6 @@ namespace hpl {
                 PipelineVariantEmpty = 0x0,
                 PipelineUseBackSide = 0x1,
                 PipelineUseOutsideBox = 0x2,
-                PipelineInsideNearFrustum = 0x4,
-                PipelineNumVariants = 8
             };
 
             struct UniformFogData {
@@ -409,6 +407,7 @@ namespace hpl {
                 float m_start;
                 float m_length;
                 float m_falloffExp;
+                uint32_t m_flags;
             };
 
             struct UniformFullscreenFogData {
@@ -418,16 +417,14 @@ namespace hpl {
                 float m_fogFalloffExp;
             };
             std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perFrameSet{};
-            std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perObjectSet{};
 
-            #ifdef USE_THE_FORGE_LEGACY
-                GPURingBuffer* m_fogUniformBuffer;
-            #else
-                GPURingBuffer m_fogUniformBuffer;
-            #endif
+            std::array<ForgeBufferHandle, ForgeRenderer::SwapChainLength> m_fogUniformBuffer;
+            std::array<ForgeBufferHandle, ForgeRenderer::SwapChainLength> m_fogFullscreenUniformBuffer;
+            uint32_t m_fogIndex = 0;
             RootSignature* m_fogRootSignature = nullptr;
-            std::array<Shader*, 4> m_shader{};
-            std::array<Pipeline*, PipelineVariant::PipelineNumVariants> m_pipeline{};
+            Shader* m_shader{};
+            Pipeline* m_pipeline{};
+            Pipeline* m_pipelineInsideNearFrustum{};
 
             Shader* m_fullScreenShader = nullptr;
             Pipeline* m_fullScreenPipeline = nullptr;
@@ -596,16 +593,14 @@ namespace hpl {
             uint32_t m_maxQueryIndex = 0;
             uint32_t m_queryIndex = 0;
         };
-        static constexpr uint32_t MaxQueryPoolSize = 4096 * 2;
+
         static constexpr uint32_t MaxOcclusionDescSize = 4096;
+        static constexpr uint32_t MaxQueryPoolSize = MaxOcclusionDescSize * 2;
         QueryPool* m_occlusionQuery = nullptr;
-        #ifdef USE_THE_FORGE_LEGACY
-            GPURingBuffer* m_occlusionUniformBuffer;
-        #else
-            GPURingBuffer m_occlusionUniformBuffer;
-        #endif
+        uint32_t m_occlusionIndex = 0;
+        ForgeBufferHandle m_occlusionUniformBuffer;
         RootSignature* m_rootSignatureOcclusuion = nullptr;
-        ForgeDescriptorSet m_descriptorOcclusionFrameSet;
+        ForgeDescriptorSet m_descriptorOcclusionConstSet;
         ForgeBufferHandle m_occlusionReadBackBuffer;
         ForgeShaderHandle m_shaderOcclusionQuery;
         ForgePipelineHandle m_pipelineMaxOcclusionQuery;
@@ -634,6 +629,7 @@ namespace hpl {
         #else
             GPURingBuffer m_lightPassRingBuffer;
         #endif
+
         RootSignature* m_lightPassRootSignature;
         ForgePipelineHandle m_lightStencilPipeline;
         std::array<Pipeline*, LightPipelineVariant_Size> m_pointLightPipeline;

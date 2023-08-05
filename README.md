@@ -23,7 +23,6 @@ Feel free to drop a ticket if your interested in anything.
 
 # Branches
 - origin/master - Vulkan/Direct11/Direct12 implementation using [The-Forge](https://theforge.dev/)
-- origin/bgfx - contains a graphics backend rework using [BGFX](https://github.com/bkaradzic/bgfx)
 - origin/original - original running code should be as bug free as when the game was released
 
 ## Building

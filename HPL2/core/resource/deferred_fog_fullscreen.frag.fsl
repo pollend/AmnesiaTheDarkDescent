@@ -7,7 +7,7 @@ STRUCT(PsIn)
 	DATA(float2, uv, TEXCOORD0);
 };
 
-CBUFFER(uniformFogBlock, UPDATE_FREQ_PER_DRAW, b1, binding = 1)
+CBUFFER(uniformFogFullscreen, UPDATE_FREQ_PER_FRAME, b1, binding = 1)
 {
     DATA(float4, color, None);
     DATA(float, fogStart, None);
