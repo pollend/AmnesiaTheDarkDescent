@@ -40,7 +40,7 @@
 
 #frag solid_diffuse_parallax.frag
     // toned down the parallax effect a bit
-    #define PARALAX_MULTIPLIER 0.7
+
     #define PARALLAX_ENABLED 1
     #define SEARCH_SAMPLE_COUNT 4
     #define ALPHA_REJECT 0.5

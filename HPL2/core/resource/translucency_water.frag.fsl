@@ -17,11 +17,6 @@
 #include "deferred_resources.h.fsl"
 #include "deferred_common.h.fsl"
 
-PUSH_CONSTANT(translucencyConstant, b0)
-{
-    DATA(float, afT, None);
-};
-
 RES(Tex2D(float4), refractionMap, UPDATE_FREQ_PER_FRAME, t1, binding = 4); 
 RES(Tex2D(float4), reflectionMap, UPDATE_FREQ_PER_FRAME, t2, binding = 5); 
 
@@ -46,19 +41,20 @@ PsOut PS_MAIN(PsIn In)
 {
     INIT_MAIN;
     PsOut Out;
-
-    float waveAft = Get(afT) * Get(waveSpeed);
+    uint materialID = Get(uniformObjectBuffer)[Get(objectIndex)].materialID;
+    
+    float waveAft = Get(afT) * Get(uniformMaterialBuffer)[materialID].waveSpeed;
     ///////////////////////////////
     //Get the two uv coords
     float fT1 = waveAft * 0.8;
     float2 vUv1 = In.uv + waveAft * 0.01f;
-    vUv1.x += sin(fT1 + vUv1.y * Get(waveFreq))* Get(waveAmplitude);
-    vUv1.y += sin(fT1 + vUv1.x * Get(waveFreq))* Get(waveAmplitude);
+    vUv1.x += sin(fT1 + vUv1.y * Get(uniformMaterialBuffer)[materialID].waveFreq) * Get(uniformMaterialBuffer)[materialID].waveAmplitude;
+    vUv1.y += sin(fT1 + vUv1.x * Get(uniformMaterialBuffer)[materialID].waveFreq) * Get(uniformMaterialBuffer)[materialID].waveAmplitude;
 
     float fT2 = waveAft * -2.6;
     float2 vUv2 = In.uv + waveAft * -0.012f;
-    vUv2.x += sin(fT2 + vUv2.y * Get(waveFreq)*1.2) * Get(waveAmplitude)*0.75;
-    vUv2.y += sin(fT2 + vUv2.x * Get(waveFreq)*1.2) * Get(waveAmplitude)*0.75;
+    vUv2.x += sin(fT2 + vUv2.y * Get(uniformMaterialBuffer)[materialID].waveFreq * 1.2) * Get(uniformMaterialBuffer)[materialID].waveAmplitude * 0.75;
+    vUv2.y += sin(fT2 + vUv2.x * Get(uniformMaterialBuffer)[materialID].waveFreq * 1.2) * Get(uniformMaterialBuffer)[materialID].waveAmplitude * 0.75;
 
     ///////////////////////////////
     //Get the normals and combine into final normal
@@ -78,7 +74,7 @@ PsOut PS_MAIN(PsIn In)
     float2 refractionViewTexel = 1.0 / GetDimensions(Get(refractionMap), NO_SAMPLER);
     #ifdef USE_REFRACTION
         float fInvDist = min(1.0 / In.pos.z, 10.0);
-        vDistortedScreenPos = In.Position.xy + (vFinalNormal.xy * Get(refractionScale) * fInvDist);
+        vDistortedScreenPos = In.Position.xy + (vFinalNormal.xy * Get(uniformMaterialBuffer)[materialID].refractionScale * fInvDist);
         vRefractionColor = SampleTex2D(Get(refractionMap), Get(nearestSampler), vDistortedScreenPos  * refractionViewTexel );
        // if(vRefractionColor.a < 0.5) {
        //     vRefractionColor = SampleTex2D(Get(refractionMap), Get(nearestSampler), In.Position.xy * refractionViewTexel);
@@ -95,16 +91,16 @@ PsOut PS_MAIN(PsIn In)
             float3 vEyeVec = normalize(In.pos);
 
             float afEDotN = max(dot(-vEyeVec, vScreenNormal),0.0);
-            fFresnel = Fresnel(afEDotN, Get(frenselBias), Get(frenselPow));
+            fFresnel = Fresnel(afEDotN, Get(uniformMaterialBuffer)[materialID].frenselBias, Get(uniformMaterialBuffer)[materialID].frenselPow);
 
-            if(Get(reflectionFadeEnd) > 0) {
-                float refractionFadeLength = Get(reflectionFadeEnd) - Get(reflectionFadeStart);  
-                fFresnel *= 1.0 - clamp( (In.pos.z - Get(reflectionFadeStart)) / refractionFadeLength, 0.0, 1.0);
+            if(Get(uniformMaterialBuffer)[materialID].reflectionFadeEnd > 0) {
+                float refractionFadeLength = Get(uniformMaterialBuffer)[materialID].reflectionFadeEnd - Get(uniformMaterialBuffer)[materialID].reflectionFadeStart;  
+                fFresnel *= 1.0 - clamp( (In.pos.z - Get(uniformMaterialBuffer)[materialID].reflectionFadeStart) / refractionFadeLength, 0.0, 1.0);
             }
 
             //////////////////
             //Cubemap
-            if(HasCubeMap(Get(textureConfig))) {
+            if(HasCubeMap(Get(uniformMaterialBuffer)[materialID].textureConfig)) {
                 float3 vEnvUv = reflect(vEyeVec, vScreenNormal);
                 vEnvUv = mul(Get(invViewRotationMat), float4(vEnvUv.x, vEnvUv.y, vEnvUv.z, 1)).xyz;
                 vReflectionColor  = SampleTexCube(Get(cubeMap),  Get(cubeSampler), vEnvUv);

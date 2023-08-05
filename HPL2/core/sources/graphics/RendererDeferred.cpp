@@ -537,8 +537,7 @@ namespace hpl {
     cRendererDeferred::cRendererDeferred(cGraphics* apGraphics, cResources* apResources)
         : iRenderer("Deferred", apGraphics, apResources, eDefferredProgramMode_LastEnum) {
 
-
-
+        m_hbaoPlusPipeline = std::make_unique<renderer::PassHBAOPlus>();
         ////////////////////////////////////
         // Set up render specific things
         mbSetFrameBufferAtBeginRendering = false; // Not using the input frame buffer for any rendering. Only doing copy at the end!
@@ -566,6 +565,36 @@ namespace hpl {
 
         m_dissolveImage = mpResources->GetTextureManager()->Create2DImage("core_dissolve.tga", false);
         auto* forgeRenderer = Interface<ForgeRenderer>::Get();
+
+        m_materialSet.m_materialUniformBuffer.Load([&](Buffer** buffer) {
+            BufferLoadDesc desc = {};
+		    desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_BUFFER;
+            desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
+            desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
+		    desc.mDesc.mFirstElement = 0;
+		    desc.mDesc.mElementCount = cMaterial::MaxMaterialID;
+		    desc.mDesc.mStructStride = sizeof(cMaterial::MaterialType::MaterialData);
+		    desc.mDesc.mSize = desc.mDesc.mElementCount * desc.mDesc.mStructStride;
+            desc.ppBuffer = buffer;
+            addResource(&desc, nullptr);
+            return true;
+        });
+
+        for(auto& buffer: m_objectUniformBuffer) {
+            buffer.Load([&](Buffer** buffer) {
+                BufferLoadDesc desc = {};
+		        desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_BUFFER;
+                desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
+                desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
+		        desc.mDesc.mFirstElement = 0;
+		        desc.mDesc.mElementCount = MaxObjectUniforms;
+		        desc.mDesc.mStructStride = sizeof(cRendererDeferred::UniformObject);
+		        desc.mDesc.mSize = desc.mDesc.mElementCount * desc.mDesc.mStructStride;
+                desc.ppBuffer = buffer;
+                addResource(&desc, nullptr);
+                return true;
+            });
+        }
 
         m_shadowCmpSampler.Load(forgeRenderer->Rend(), [&](Sampler** handle) {
             SamplerDesc miplessLinearSamplerDesc = {};
@@ -622,7 +651,7 @@ namespace hpl {
             return true;
         });
 
-        m_hbaoPlusPipeline = std::make_unique<renderer::PassHBAOPlus>();
+
 
         // prepass
         {
@@ -1145,6 +1174,7 @@ namespace hpl {
                 ASSERT(shader && "Shader not loaded");
                 shaders.push_back(shader);
             }
+
 
             RootSignatureDesc rootSignatureDesc = {};
             rootSignatureDesc.ppShaders = shaders.data();
@@ -1784,8 +1814,6 @@ namespace hpl {
                 }
             }
 
-            // DescriptorSetDesc constantDescSet{m_materialRootSignature, DESCRIPTOR_UPDATE_FREQ_NONE, 1};
-            // addDescriptorSet(forgetRenderer->Rend(), &constantDescSet, &descriptor.m_constSet);
             DescriptorSetDesc perFrameDescSet{ m_materialRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, MaxMaterialFrameDescriptors };
             for (auto& set : m_materialSet.m_frameSet) {
                 addDescriptorSet(forgeRenderer->Rend(), &perFrameDescSet, &set);
@@ -1802,12 +1830,16 @@ namespace hpl {
 
             }
             DescriptorSetDesc batchDescriptorSet{ m_materialRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_BATCH, cMaterial::MaxMaterialID };
-            for (auto& set : m_materialSet.m_materialSet) {
-                addDescriptorSet(forgeRenderer->Rend(), &batchDescriptorSet, &set);
-            }
-            DescriptorSetDesc perObjectDescriptorSet{ m_materialRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_DRAW, MaxObjectUniforms };
-            for (auto& set : m_materialSet.m_perObjectSet) {
-                addDescriptorSet(forgeRenderer->Rend(), &perObjectDescriptorSet, &set);
+            for(size_t setIndex = 0; setIndex < m_materialSet.m_perBatchSet.size(); setIndex++ ) {
+                addDescriptorSet(forgeRenderer->Rend(), &batchDescriptorSet, &m_materialSet.m_perBatchSet[setIndex]);
+                for(size_t descIndex = 0; descIndex < cMaterial::MaxMaterialID; descIndex++) {
+                    std::array<DescriptorData, 2> params = {};
+                    params[0].pName = "uniformObjectBuffer";
+                    params[0].ppBuffers = &m_objectUniformBuffer[setIndex].m_handle;
+                    params[1].pName = "uniformMaterialBuffer";
+                    params[1].ppBuffers = &m_materialSet.m_materialUniformBuffer.m_handle;
+                    updateDescriptorSet(forgeRenderer->Rend(), descIndex, m_materialSet.m_perBatchSet[setIndex], params.size(), params.data());
+                }
             }
         }
 
@@ -2066,18 +2098,6 @@ namespace hpl {
                 addDescriptorSet(forgeRenderer->Rend(), &perFrameDescSet, &perFrameSet);
             }
         }
-        m_materialSet.m_materialUniformBuffer.Load([&](Buffer** buffer) {
-            BufferLoadDesc desc = {};
-            desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
-            desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
-            desc.mDesc.mSize = sizeof(cMaterial::MaterialType::MaterialData) * cMaterial::MaxMaterialID;
-            desc.ppBuffer = buffer;
-            addResource(&desc, nullptr);
-            return true;
-        });
-        addUniformGPURingBuffer(
-            forgeRenderer->Rend(), sizeof(cRendererDeferred::UniformObject) * MaxObjectUniforms, &m_objectUniformBuffer, true);
 
         auto createShadowMap = [&](const cVector3l& avSize) -> ShadowMapData {
             ShadowMapData shadowMapData = {};
@@ -2195,42 +2215,146 @@ namespace hpl {
         auto* objectDescSet = m_materialSet.m_perObjectSet[frame.m_frameIndex];
         auto objectLookup = m_materialSet.m_objectDescriptorLookup.find(apObject);
 
-        if(objectLookup == m_materialSet.m_objectDescriptorLookup.end()) {
+       if(objectLookup == m_materialSet.m_objectDescriptorLookup.end()) {
+           cMatrixf modelMat = option.m_modelMatrix.value_or(apObject->GetModelMatrixPtr() ? *apObject->GetModelMatrixPtr() : cMatrixf::Identity);
+           uint32_t index = m_materialSet.m_objectIndex++;
+
+          // #ifdef USE_THE_FORGE_LEGACY
+          //     GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(m_objectUniformBuffer, sizeof(cRendererDeferred::UniformObject));
+          // #else
+          //     GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(&m_objectUniformBuffer, sizeof(cRendererDeferred::UniformObject));
+          // #endif
+           cRendererDeferred::UniformObject uniformObjectData = {};
+
+           uniformObjectData.m_dissolveAmount = apObject->GetCoverageAmount();
+           uniformObjectData.m_modelMat = cMath::ToForgeMat4(modelMat.GetTranspose());
+           uniformObjectData.m_invModelMat = cMath::ToForgeMat4(cMath::MatrixInverse(modelMat).GetTranspose());
+           if (apMaterial) {
+               uniformObjectData.m_uvMat = cMath::ToForgeMat4(apMaterial->GetUvMatrix());
+           }
+
+         //  BufferUpdateDesc updateDesc = { uniformBuffer.pBuffer, uniformBuffer.mOffset };
+          // beginUpdateResource(&updateDesc);
+          // (*reinterpret_cast<cRendererDeferred::UniformObject*>(updateDesc.pMappedData)) = uniformObjectData;
+          // endUpdateResource(&updateDesc, NULL);
+
+         //  DescriptorDataRange range = { (uint32_t)uniformBuffer.mOffset, sizeof(cRendererDeferred::UniformObject) };
+         //  std::array<DescriptorData, 1> params = {};
+         //  params[0].pName = "uniformObjectBlock";
+         //  params[0].pRanges = &range;
+         //  params[0].ppBuffers = &uniformBuffer.pBuffer;
+
+           m_materialSet.m_objectDescriptorLookup[apObject] = index;
+           //updateDescriptorSet(frame.m_renderer->Rend(), index, objectDescSet, params.size(), params.data());
+           cmdBindDescriptorSet(cmd, index, objectDescSet);
+       } else {
+           cmdBindDescriptorSet(cmd, objectLookup->second, objectDescSet);
+       }
+
+    }
+
+    void cRendererDeferred::cmdBindMaterialAndObject(Cmd* cmd,
+        const ForgeRenderer::Frame& frame,
+        cMaterial* apMaterial,
+        iRenderable* apObject,
+        std::function<void(uint32_t)> objectIndexHandle,
+        const PerObjectOption& option) {
+
+        auto* objectDescSet = m_materialSet.m_perObjectSet[frame.m_frameIndex];
+        auto objectLookup = m_materialSet.m_objectDescriptorLookup.find(apObject);
+        auto& info = m_materialSet.m_materialInfo[apMaterial->materialID()];
+        auto& descInfo = info.m_materialDescInfo[frame.m_frameIndex];
+        auto& materialType = apMaterial->type();
+
+        auto metaInfo = std::find_if(cMaterial::MaterialMetaTable.begin(), cMaterial::MaterialMetaTable.end(), [&](auto& info) {
+            return info.m_id == materialType.m_id;
+        });
+        if (descInfo.m_material != apMaterial || descInfo.m_version != apMaterial->Version()) {
+            descInfo.m_version = apMaterial->Version();
+            descInfo.m_material = apMaterial;
+
+            BufferUpdateDesc updateDesc = { m_materialSet.m_materialUniformBuffer.m_handle,
+                                            apMaterial->materialID() * sizeof(cMaterial::MaterialType::MaterialData) };
+            beginUpdateResource(&updateDesc);
+            memcpy(updateDesc.pMappedData, &materialType.m_data, sizeof(cMaterial::MaterialType::MaterialData));
+            endUpdateResource(&updateDesc, NULL);
+
+            std::array<DescriptorData, 32> params{};
+            size_t paramCount = 0;
+
+            for (auto& supportedTexture : metaInfo->m_usedTextures) {
+                static constexpr const char* TextureNameLookup[] = {
+                    "diffuseMap", // eMaterialTexture_Diffuse
+                    "normalMap", // eMaterialTexture_NMap
+                    "specularMap", // eMaterialTexture_Specular
+                    "alphaMap", // eMaterialTexture_Alpha
+                    "heightMap", // eMaterialTexture_Height
+                    "illuminationMap", // eMaterialTexture_Illumination
+                    "cubeMap", // eMaterialTexture_CubeMap
+                    "dissolveAlphaMap", // eMaterialTexture_DissolveAlpha
+                    "cubeMapAlpha", // eMaterialTexture_CubeMapAlpha
+                };
+
+                static constexpr const char* TextureSamplerLookup[] = {
+                    "diffuseSampler", // eMaterialTexture_Diffuse
+                    "normalSampler", // eMaterialTexture_NMap
+                    "specularSampler", // eMaterialTexture_Specular
+                    "alphaSampler", // eMaterialTexture_Alpha
+                    "heightSampler", // eMaterialTexture_Height
+                    "illuminationSampler", // eMaterialTexture_Illumination
+                    "cubeSampler", // eMaterialTexture_CubeMap
+                    "dissolveAlphaSampler", // eMaterialTexture_DissolveAlpha
+                    "cubeMapAlphaSampler", // eMaterialTexture_CubeMapAlpha
+                };
+
+                auto* image = apMaterial->GetImage(supportedTexture);
+                if (image) {
+                    auto& samplerDesc = image->m_samplerDesc;
+                    auto& sampler = m_objectSamplerMap[samplerDesc];
+                    if (!sampler) {
+                        addSampler(frame.m_renderer->Rend(), &samplerDesc, &sampler);
+                    }
+
+                    params[paramCount].pName = TextureSamplerLookup[supportedTexture];
+                    params[paramCount++].ppSamplers = &sampler;
+
+                    params[paramCount].pName = TextureNameLookup[supportedTexture];
+                    params[paramCount++].ppTextures = &image->GetTexture().m_handle;
+
+                    descInfo.m_textureHandles[supportedTexture] = image->GetTexture();
+                }
+            }
+            updateDescriptorSet(
+                frame.m_renderer->Rend(),
+                apMaterial->materialID(),
+                m_materialSet.m_perBatchSet[frame.m_frameIndex],
+                paramCount,
+                params.data());
+        }
+
+        const bool isFound = objectLookup != m_materialSet.m_objectDescriptorLookup.end();
+        uint32_t index = isFound ?  objectLookup->second : m_materialSet.m_objectIndex++;
+        if(!isFound) {
             cMatrixf modelMat = option.m_modelMatrix.value_or(apObject->GetModelMatrixPtr() ? *apObject->GetModelMatrixPtr() : cMatrixf::Identity);
-            uint32_t index = m_materialSet.m_objectIndex++;
 
-            #ifdef USE_THE_FORGE_LEGACY
-                GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(m_objectUniformBuffer, sizeof(cRendererDeferred::UniformObject));
-            #else
-                GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(&m_objectUniformBuffer, sizeof(cRendererDeferred::UniformObject));
-            #endif
             cRendererDeferred::UniformObject uniformObjectData = {};
-
-            uniformObjectData.m_dissolveAmount = float4(apObject->GetCoverageAmount());
+            uniformObjectData.m_dissolveAmount = apObject->GetCoverageAmount();
+            uniformObjectData.m_materialIndex = apMaterial->materialID();
             uniformObjectData.m_modelMat = cMath::ToForgeMat4(modelMat.GetTranspose());
             uniformObjectData.m_invModelMat = cMath::ToForgeMat4(cMath::MatrixInverse(modelMat).GetTranspose());
             if (apMaterial) {
                 uniformObjectData.m_uvMat = cMath::ToForgeMat4(apMaterial->GetUvMatrix());
             }
 
-            BufferUpdateDesc updateDesc = { uniformBuffer.pBuffer, uniformBuffer.mOffset };
+            BufferUpdateDesc updateDesc = { m_objectUniformBuffer[frame.m_frameIndex].m_handle, sizeof(cRendererDeferred::UniformObject) * index};
             beginUpdateResource(&updateDesc);
             (*reinterpret_cast<cRendererDeferred::UniformObject*>(updateDesc.pMappedData)) = uniformObjectData;
             endUpdateResource(&updateDesc, NULL);
 
-            DescriptorDataRange range = { (uint32_t)uniformBuffer.mOffset, sizeof(cRendererDeferred::UniformObject) };
-            std::array<DescriptorData, 1> params = {};
-            params[0].pName = "uniformObjectBlock";
-            params[0].pRanges = &range;
-            params[0].ppBuffers = &uniformBuffer.pBuffer;
-
             m_materialSet.m_objectDescriptorLookup[apObject] = index;
-            updateDescriptorSet(frame.m_renderer->Rend(), index, objectDescSet, params.size(), params.data());
-            cmdBindDescriptorSet(cmd, index, objectDescSet);
-        } else {
-            cmdBindDescriptorSet(cmd, objectLookup->second, objectDescSet);
         }
-
+        objectIndexHandle(index);
+        cmdBindDescriptorSet(cmd, apMaterial->materialID(), m_materialSet.m_perBatchSet[frame.m_frameIndex]);
     }
 
     void cRendererDeferred::cmdBindMaterialDescriptor(Cmd* cmd, const ForgeRenderer::Frame& frame, cMaterial* apMaterial) {
@@ -2238,7 +2362,7 @@ namespace hpl {
 
         auto& info = m_materialSet.m_materialInfo[apMaterial->materialID()];
 
-        auto& descriptorSet = m_materialSet.m_materialSet[frame.m_frameIndex];
+        auto& descriptorSet = m_materialSet.m_perBatchSet[frame.m_frameIndex];
         auto& descInfo = info.m_materialDescInfo[frame.m_frameIndex];
         auto& materialType = apMaterial->type();
 
@@ -2306,7 +2430,6 @@ namespace hpl {
             params[paramCount].pName = "uniformMaterialBlock";
             params[paramCount].pRanges = &range;
             params[paramCount++].ppBuffers = &m_materialSet.m_materialUniformBuffer.m_handle;
-
             updateDescriptorSet(frame.m_renderer->Rend(), apMaterial->materialID(), descriptorSet, paramCount, params.data());
         }
         cmdBindDescriptorSet(cmd, apMaterial->materialID(), descriptorSet);
@@ -2448,6 +2571,7 @@ namespace hpl {
         }
 
         auto& currentGBuffer = common->m_gBuffer[frame.m_frameIndex];
+        uint32_t materialObjectIndex = getDescriptorIndexFromName(m_materialRootSignature, "rootConstant");
 
         const uint32_t mainFrameIndex = updateFrameDescriptor(frame, frame.m_cmd, apWorld, {
             .m_size = float2(common->m_size.x, common->m_size.y),
@@ -2642,18 +2766,21 @@ namespace hpl {
                         continue;
                     }
 
-                    ////////////////////////////////////////
-                    // Update per frame things, if not done yet.
-                    cmdBindMaterialDescriptor(m_prePassCmd, frame, pMaterial);
-                    cmdBindObjectDescriptor(
+                   cmdBindMaterialAndObject(
                         m_prePassCmd,
                         frame,
                         pMaterial,
                         test.m_renderable,
+                        [&](uint32_t objectIndex) {
+                            MaterialRootConstant constants;
+                            constants.m_default.m_objectIndex = objectIndex;
+                            cmdBindPushConstants(m_prePassCmd, m_materialRootSignature, materialObjectIndex, &constants);
+                        },
                         {
                             .m_viewMat = mainFrustumView,
                             .m_projectionMat = mainFrustumProj,
                         });
+
                     std::array targets = { eVertexBufferElement_Position,
                                            eVertexBufferElement_Texture0,
                                            eVertexBufferElement_Normal,
@@ -2873,6 +3000,7 @@ namespace hpl {
             cmdBindRenderTargets(frame.m_cmd, 0, NULL, currentGBuffer.m_depthBuffer.m_handle, &loadActions, NULL, NULL, -1, -1);
             cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)common->m_size.x, (float)common->m_size.y, 0.0f, 1.0f);
             cmdSetScissor(frame.m_cmd, 0, 0, common->m_size.x, common->m_size.y);
+
             cmdBindPipeline(frame.m_cmd, m_zPassPipeline);
 
             cmdBindDescriptorSet(frame.m_cmd, 0, m_zPassConstSet);
@@ -2893,17 +3021,21 @@ namespace hpl {
                         if (!vertexBuffer || !pMaterial || pMaterial->GetType()->IsTranslucent()) {
                             continue;
                         }
-                        cmdBindMaterialDescriptor(frame.m_cmd, frame, pMaterial);
-                        cmdBindObjectDescriptor(
+
+                       cmdBindMaterialAndObject(
                             frame.m_cmd,
                             frame,
                             pMaterial,
                             renderable,
+                            [&](uint32_t objectIndex) {
+                                MaterialRootConstant constants;
+                                constants.m_default.m_objectIndex = objectIndex;
+                                cmdBindPushConstants(frame.m_cmd, m_materialRootSignature, materialObjectIndex, &constants);
+                            },
                             {
                                 .m_viewMat = mainFrustumView,
                                 .m_projectionMat = mainFrustumProj,
                             });
-
                         std::array targets = { eVertexBufferElement_Position,
                                                eVertexBufferElement_Texture0,
                                                eVertexBufferElement_Normal,
@@ -2965,17 +3097,20 @@ namespace hpl {
                 }
 
                 ASSERT(pMaterial->type().m_id == cMaterial::SolidDiffuse && "Invalid material type");
-                cmdBindMaterialDescriptor(frame.m_cmd, frame, pMaterial);
-                cmdBindObjectDescriptor(
+                cmdBindMaterialAndObject(
                     frame.m_cmd,
                     frame,
                     pMaterial,
                     diffuseItem,
+                    [&](uint32_t objectIndex) {
+                        MaterialRootConstant constants;
+                        constants.m_default.m_objectIndex = objectIndex;
+                        cmdBindPushConstants(frame.m_cmd, m_materialRootSignature, materialObjectIndex, &constants);
+                    },
                     {
                         .m_viewMat = mainFrustumView,
                         .m_projectionMat = mainFrustumProj,
                     });
-
                 std::array targets = { eVertexBufferElement_Position,
                                        eVertexBufferElement_Texture0,
                                        eVertexBufferElement_Normal,
@@ -3018,12 +3153,16 @@ namespace hpl {
 
                 std::array targets = { eVertexBufferElement_Position, eVertexBufferElement_Texture0, eVertexBufferElement_Color0 };
 
-                cmdBindMaterialDescriptor(frame.m_cmd, frame, pMaterial);
-                cmdBindObjectDescriptor(
+                cmdBindMaterialAndObject(
                     frame.m_cmd,
                     frame,
                     pMaterial,
                     decalItem,
+                    [&](uint32_t objectIndex) {
+                        MaterialRootConstant constants;
+                        constants.m_default.m_objectIndex = objectIndex;
+                        cmdBindPushConstants(frame.m_cmd, m_materialRootSignature, materialObjectIndex, &constants);
+                    },
                     {
                         .m_viewMat = mainFrustumView,
                         .m_projectionMat = mainFrustumProj,
@@ -3282,12 +3421,16 @@ namespace hpl {
                                     if (vertexBuffer == nullptr || materialType == nullptr) {
                                         return;
                                     }
-                                    cmdBindMaterialDescriptor(frame.m_cmd, frame, pMaterial);
-                                    cmdBindObjectDescriptor(
+                                    cmdBindMaterialAndObject(
                                         frame.m_cmd,
                                         frame,
                                         pMaterial,
                                         pObject,
+                                        [&](uint32_t objectIndex) {
+                                            MaterialRootConstant constants;
+                                            constants.m_default.m_objectIndex = objectIndex;
+                                            cmdBindPushConstants(frame.m_cmd, m_materialRootSignature, materialObjectIndex, &constants);
+                                        },
                                         {
                                             .m_viewMat = pLightFrustum->GetViewMatrix(),
                                             .m_projectionMat = pLightFrustum->GetProjectionMatrix(),
@@ -3655,12 +3798,16 @@ namespace hpl {
                     continue;
                 }
                 ASSERT(pMaterial->type().m_id == cMaterial::SolidDiffuse && "Invalid material type");
-                cmdBindMaterialDescriptor(frame.m_cmd, frame, pMaterial); // bind material descriptor
-                cmdBindObjectDescriptor(
+                cmdBindMaterialAndObject(
                     frame.m_cmd,
                     frame,
                     pMaterial,
                     illuminationItem,
+                    [&](uint32_t objectIndex) {
+                        MaterialRootConstant constants;
+                        constants.m_default.m_objectIndex = objectIndex;
+                        cmdBindPushConstants(frame.m_cmd, m_materialRootSignature, materialObjectIndex, &constants);
+                    },
                     {
                         .m_viewMat = mainFrustumView,
                         .m_projectionMat = mainFrustumProj,
@@ -3896,7 +4043,6 @@ namespace hpl {
             translucencyBlendTable[eMaterialBlendMode_PremulAlpha] = TranslucencyPipeline::TranslucencyBlend::BlendPremulAlpha;
 
             cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "Translucency Pass");
-            uint32_t translucencyConstantIndex = getDescriptorIndexFromName(m_materialRootSignature, "translucencyConstant");
             for (auto& translucencyItem : mpCurrentRenderList->GetRenderableItems(eRenderListType_Translucent)) {
                 cMaterial* pMaterial = translucencyItem->GetMaterial();
                 iVertexBuffer* vertexBuffer = translucencyItem->GetVertexBuffer();
@@ -3932,10 +4078,10 @@ namespace hpl {
                                 sceneAlpha *= detail::GetFogAreaVisibilityForObject(fogArea, *apFrustum, translucencyItem);
                             }
                         }
-                        TranslucencyPipeline::TranslucencyConstant constants;
+                        MaterialRootConstant translucencyConstant = {0};
 
-                        constants.m_sceneAlpha = sceneAlpha;
-                        constants.m_lightLevel = 1.0f;
+                        translucencyConstant.m_translucency.m_sceneAlpha = sceneAlpha;
+                        translucencyConstant.m_translucency.m_lightLevel = 1.0f;
 
                         if (pMaterial->IsAffectedByLightLevel()) {
                             cVector3f vCenterPos = translucencyItem->GetBoundingVolume()->GetWorldCenter();
@@ -3966,15 +4112,17 @@ namespace hpl {
                                     }
                                 }
                             }
-                            constants.m_lightLevel = fLightAmount;
+                            translucencyConstant.m_translucency.m_lightLevel = fLightAmount;
                         }
 
-                        cmdBindMaterialDescriptor(frame.m_cmd, frame, pMaterial);
-                        cmdBindObjectDescriptor(
+                        cmdBindMaterialAndObject(
                             frame.m_cmd,
                             frame,
                             pMaterial,
                             translucencyItem,
+                            [&](uint32_t objectIndex) {
+                                translucencyConstant.m_translucency.m_objectIndex = objectIndex;
+                            },
                             {
                                 .m_viewMat = mainFrustumView,
                                 .m_projectionMat = mainFrustumProj,
@@ -4005,6 +4153,7 @@ namespace hpl {
                             pMaterial->GetBlendMode() < eMaterialBlendMode_LastEnum &&
                             pMaterial->GetBlendMode() != eMaterialBlendMode_None && "Invalid blend mode");
                         if (isParticleEmitter) {
+
                             cmdBindPipeline(
                                 frame.m_cmd,
                                 m_materialTranslucencyPass
@@ -4019,35 +4168,35 @@ namespace hpl {
 
                         detail::cmdDefaultLegacyGeomBinding(frame.m_cmd, frame, binding);
 
-                        constants.m_blendMode = translucencyBlendTable[pMaterial->GetBlendMode()];
-                        constants.m_textureMask =
+                        translucencyConstant.m_translucency.m_blendMode = translucencyBlendTable[pMaterial->GetBlendMode()];
+                        translucencyConstant.m_translucency.m_textureMask =
                             (cMaterial::EnableDiffuse | cMaterial::EnableNormal |
                              (isRefraction ? (cMaterial::EnableCubeMap | cMaterial::EnableCubeMapAlpha | cMaterial::UseRefractionNormals)
                                            : 0));
-                        cmdBindPushConstants(frame.m_cmd, m_materialRootSignature, translucencyConstantIndex, &constants);
+                        cmdBindPushConstants(frame.m_cmd, m_materialRootSignature, materialObjectIndex, &translucencyConstant);
                         cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
-
 
                         // TODO: fix refraction
                         if (pMaterial->HasTranslucentIllumination()) {
                             if ( cubeMap && !isRefraction) {
-                                constants.m_blendMode = TranslucencyPipeline::BlendAdd;
-                                constants.m_textureMask = (cMaterial::EnableNormal | cMaterial::EnableCubeMap | cMaterial::EnableCubeMapAlpha);
+                                translucencyConstant.m_translucency.m_blendMode = TranslucencyPipeline::BlendAdd;
+                                translucencyConstant.m_translucency.m_textureMask = (cMaterial::EnableNormal | cMaterial::EnableCubeMap | cMaterial::EnableCubeMapAlpha);
                             }
 
                             cmdBindPipeline(
                                 frame.m_cmd,
                                 (isRefraction ? m_materialTranslucencyPass.m_refractionPipeline[key.m_id]
                                               : m_materialTranslucencyPass
-                                                    .m_pipelines[constants.m_blendMode][key.m_id]));
-                            cmdBindPushConstants(frame.m_cmd, m_materialRootSignature, translucencyConstantIndex, &constants);
+                                                    .m_pipelines[translucencyConstant.m_translucency.m_blendMode][key.m_id]));
+                            cmdBindPushConstants(frame.m_cmd, m_materialRootSignature, materialObjectIndex, &translucencyConstant);
                             cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
                         }
                         break;
                     }
                 case cMaterial::Water:
                     {
-                        TranslucencyPipeline::TranslucencyWaterConstant constants{};
+                        MaterialRootConstant waterConstants {};
+
                         LegacyVertexBuffer::GeometryBinding binding;
                         std::array targets = { eVertexBufferElement_Position,
                                                eVertexBufferElement_Texture0,
@@ -4063,21 +4212,24 @@ namespace hpl {
                         key.m_field.m_hasReflection = false;
 
                         detail::cmdDefaultLegacyGeomBinding(frame.m_cmd, frame, binding);
+                        waterConstants.m_water.m_afT = GetTimeCount();
 
-                        cmdBindMaterialDescriptor(frame.m_cmd, frame, pMaterial);
-                        cmdBindObjectDescriptor(
+                        cmdBindPipeline(frame.m_cmd, m_materialTranslucencyPass.m_waterPipeline[key.m_id]);
+                        cmdBindMaterialAndObject(
                             frame.m_cmd,
                             frame,
                             pMaterial,
                             translucencyItem,
+                            [&](uint32_t objectIndex) {
+                                waterConstants.m_water.m_objectIndex = objectIndex;
+                                cmdBindPushConstants(frame.m_cmd, m_materialRootSignature, materialObjectIndex, &waterConstants);
+                            },
                             {
                                 .m_viewMat = mainFrustumView,
                                 .m_projectionMat = mainFrustumProj,
                                 .m_modelMatrix = std::optional{ pMatrix ? *pMatrix : cMatrixf::Identity },
                             });
-                        cmdBindPipeline(frame.m_cmd, m_materialTranslucencyPass.m_waterPipeline[key.m_id]);
-                        constants.m_afT = GetTimeCount();
-                        cmdBindPushConstants(frame.m_cmd, m_materialRootSignature, translucencyConstantIndex, &constants);
+
                         cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
                         break;
                     }

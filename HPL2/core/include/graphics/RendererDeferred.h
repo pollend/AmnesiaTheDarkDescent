@@ -118,7 +118,9 @@ namespace hpl {
         };
 
         struct UniformObject {
-            float4 m_dissolveAmount;
+            float m_dissolveAmount;
+            uint m_materialIndex;
+            uint pad[2];
             mat4 m_modelMat;
             mat4 m_invModelMat;
             mat4 m_uvMat;
@@ -339,6 +341,13 @@ namespace hpl {
         void cmdBindMaterialDescriptor(Cmd* cmd, const ForgeRenderer::Frame& frame, cMaterial* apMaterial);
         void cmdBindObjectDescriptor(Cmd* cmd, const ForgeRenderer::Frame& frame, cMaterial* apMaterial, iRenderable* apObject, const PerObjectOption& option);
 
+        void cmdBindMaterialAndObject(Cmd* cmd,
+            const ForgeRenderer::Frame& frame,
+            cMaterial* apMaterial,
+            iRenderable* apObject,
+            std::function<void(uint32_t)> objectIndexHandle,
+            const PerObjectOption& option);
+
         std::array<std::unique_ptr<iVertexBuffer>, eDeferredShapeQuality_LastEnum> m_shapeSphere;
         std::unique_ptr<iVertexBuffer> m_shapePyramid;
         std::unique_ptr<iVertexBuffer> m_box;
@@ -424,6 +433,23 @@ namespace hpl {
             Pipeline* m_fullScreenPipeline = nullptr;
         } m_fogPass;
 
+        union MaterialRootConstant {
+            struct {
+               uint32_t m_objectIndex;
+            } m_default;
+            struct {
+               uint32_t m_objectIndex;
+               float m_afT;
+            } m_water;
+            struct {
+                uint32_t m_objectIndex;
+                uint32_t m_blendMode;
+                uint32_t m_textureMask;
+                float m_sceneAlpha;
+                float m_lightLevel;
+            } m_translucency;
+        };
+
         RootSignature* m_materialRootSignature;
         // diffuse solid
         struct MaterialSolid {
@@ -461,16 +487,6 @@ namespace hpl {
             };
             enum TranslucencyBlend : uint8_t { BlendAdd, BlendMul, BlendMulX2, BlendAlpha, BlendPremulAlpha, BlendModeCount };
 
-            struct TranslucencyWaterConstant {
-                float m_afT;
-            };
-
-            struct TranslucencyConstant {
-                uint32_t m_blendMode;
-                int m_textureMask;
-                float m_sceneAlpha;
-                float m_lightLevel;
-            };
             // 3 bit key for pipeline variant
             union TranslucencyKey {
                 uint8_t m_id;
@@ -533,15 +549,11 @@ namespace hpl {
         DescriptorSet* m_zPassConstSet;
         std::set<iRenderable*> m_preZPassRenderables;
 
-        #ifdef USE_THE_FORGE_LEGACY
-            GPURingBuffer* m_objectUniformBuffer;
-        #else
-            GPURingBuffer m_objectUniformBuffer;
-        #endif
+        std::array<ForgeBufferHandle, ForgeRenderer::SwapChainLength> m_objectUniformBuffer;
         struct MaterialPassDescriptorSet {
             std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_frameSet;
+            std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perBatchSet;
             std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perObjectSet;
-            std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_materialSet;
             folly::F14ValueMap<iRenderable*, uint32_t> m_objectDescriptorLookup;
             uint32_t m_frameIndex = 0;
             uint32_t m_objectIndex = 0;

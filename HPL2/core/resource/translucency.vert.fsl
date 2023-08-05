@@ -42,13 +42,13 @@ VSOutput VS_MAIN( VSInput In )
     INIT_MAIN;
     VSOutput Out;
 
-    float4x4 modelView = mul(Get(viewMat), Get(modelMat));
+    float4x4 modelView = mul(Get(viewMat), Get(uniformObjectBuffer)[Get(objectIndex)].modelMat);
     float4x4 modelViewPrj = mul(Get(projMat), modelView);
 
     Out.pos = mul(modelView, float4(In.Position.xyz, 1.0)).xyz;
-    Out.uv = mul(Get(uvMat), float4(In.TexCoord, 0, 1.0)).xy;
+    Out.uv = mul(Get(uniformObjectBuffer)[Get(objectIndex)].uvMat, float4(In.TexCoord, 0, 1.0)).xy;
 
-    float3x3 normalMat = ToNormalMat(Get(invModelMat), Get(invViewMat));
+    float3x3 normalMat = ToNormalMat(Get(uniformObjectBuffer)[Get(objectIndex)].invModelMat, Get(invViewMat));
     Out.normal = normalize(mul(normalMat, In.Normal.xyz));
     Out.tangent = normalize(mul(normalMat, In.Tangent.xyz));
     Out.bitangent = normalize(mul(normalMat, cross(In.Tangent.xyz, In.Normal.xyz)));

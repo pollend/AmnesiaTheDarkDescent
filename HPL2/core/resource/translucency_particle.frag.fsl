@@ -5,14 +5,6 @@
 #include "deferred_resources.h.fsl"
 #include "deferred_common.h.fsl"
 
-PUSH_CONSTANT(translucencyConstant, b0)
-{
-    DATA(int,   blendMode,   None);
-    DATA(int,   textureMask, None);
-    DATA(float, sceneAlpha, None);
-    DATA(float, lightLevel, None);
-};
-
 RES(Tex2D(float4), refractionMap, UPDATE_FREQ_PER_FRAME, t1, binding = 4); 
 STRUCT(PsIn) 
 {
@@ -26,9 +18,11 @@ float4 PS_MAIN(PsIn In)
 {
     INIT_MAIN;
 
+    uint materialID = Get(uniformObjectBuffer)[Get(objectIndex)].materialID;
     float4 finalColor = float4(0.0, 0.0 ,0.0, 1.0);
- 
-    if(HasDiffuse(Get(textureConfig) & Get(textureMask))) {
+    uint textureConfig = Get(uniformMaterialBuffer)[materialID].textureConfig & Get(textureMask);
+
+    if(HasDiffuse(textureConfig)) {
         finalColor = SampleTex2D(Get(diffuseMap), Get(diffuseSampler), In.uv) * In.color;
     }
 

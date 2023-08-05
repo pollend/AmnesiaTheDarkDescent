@@ -2,14 +2,6 @@
 #include "deferred_resources.h.fsl"
 #include "deferred_common.h.fsl"
 
-PUSH_CONSTANT(translucencyConstant, b0)
-{
-    DATA(int,   blendMode,   None);
-    DATA(int,   textureMask, None);
-    DATA(float, sceneAlpha, None);
-    DATA(float, lightLevel, None);
-};
-
 RES(Tex2D(float4), refractionMap, UPDATE_FREQ_PER_FRAME, t1, binding = 4); 
 
 STRUCT(PsIn) 
@@ -28,15 +20,16 @@ STRUCT(PsOut)
     DATA(float4, diffuse, SV_Target0);
 };
 
-
 PsOut PS_MAIN(PsIn In)
 {
     INIT_MAIN;
     PsOut Out;
+    uint materialID = Get(uniformObjectBuffer)[Get(objectIndex)].materialID;
+    uint textureConfig = Get(uniformMaterialBuffer)[materialID].textureConfig & Get(textureMask);
 
     float4 finalColor = float4(0.0, 0.0 ,0.0, 1.0);
- 
-    if(HasDiffuse(Get(textureConfig) & Get(textureMask))) {
+    
+    if(HasDiffuse(textureConfig)) {
         finalColor = SampleTex2D(Get(diffuseMap), Get(diffuseSampler), In.uv) * In.color;
     }
 
@@ -48,27 +41,6 @@ PsOut PS_MAIN(PsIn In)
     #else
         float finalAlpha = Get(sceneAlpha);
     #endif
-
-    ////////////////////
-    //Calculate new color based on Alpha and Blend mode
-   // #ifdef USE_BLEND_MODE_ADD
-   //     finalColor.xyz *= finalAlpha*Get(lightLevel);
-   // #endif
-   // #ifdef USE_BLEND_MODE_MUL
-   //     finalColor.xyz += (vec3(1.0,1.0, 1.0) - finalColor.xyz) * (1.0-finalAlpha);
-   // #endif
-   // #ifdef USE_BLEND_MODE_MULX2
-   //     float fBlendMulAlpha = Get(lightLevel) * finalAlpha;
-   //     finalColor.xyz = mul(finalColor.xyz, fBlendMulAlpha) + mul(float3(0.5,0.5,0.5), (1.0 - fBlendMulAlpha));
-   // #endif
-   // #ifdef USE_BLEND_MODE_ALPHA
-   //     finalColor.xyz *= Get(lightLevel);
-   //     finalColor.a *= finalAlpha;
-   // #endif
-   // #ifdef USE_BLEND_MODE_PREMUL_ALPHA
-   //    finalColor *= finalAlpha;
-   //    finalColor.xyz *= Get(lightLevel);
-   // #endif
 
     switch(Get(blendMode)) {
         case BLEND_MODE_ADD: {
@@ -97,7 +69,7 @@ PsOut PS_MAIN(PsIn In)
     }
 
 
-    bool useScreenNormal = UseRefractionNormals(Get(textureConfig) & Get(textureMask));
+    bool useScreenNormal = UseRefractionNormals(textureConfig);
 
     float3 mapNormal = float3(0,0,0);
     float3 screenNormal = float3(0,0,0);
@@ -106,9 +78,9 @@ PsOut PS_MAIN(PsIn In)
         #ifdef USE_REFRACTION
             true ||
         #endif
-        HasCubeMap(Get(textureConfig) & Get(textureMask))) {
+        HasCubeMap(Get(uniformMaterialBuffer)[materialID].textureConfig & Get(textureMask))) {
 
-        if(HasNormal(Get(textureConfig) & Get(textureMask))) {
+        if(HasNormal(Get(uniformMaterialBuffer)[materialID].textureConfig & Get(textureMask))) {
             mapNormal = SampleTex2D(Get(normalMap), Get(normalSampler), In.uv).xyz * 2.0 - 1.0;
             screenNormal = normalize(mapNormal.x * In.tangent + mapNormal.y * In.bitangent + mapNormal.z * In.normal);
         } else {
@@ -121,31 +93,13 @@ PsOut PS_MAIN(PsIn In)
         ///////////////////////
         // Sample refaraction map (using distorted coords)
         float2 distortedScreenPos = float2(0,0);
-        if(HasNormal(Get(textureConfig) & Get(textureMask))) {
+        if(HasNormal(textureConfig)) {
             float2 refractOffset = useScreenNormal ? screenNormal.xy : mapNormal.xy;
-            distortedScreenPos += (In.Position.xy * Get(viewTexel)) + (refractOffset * Get(refractionScale) * invDist);
+            distortedScreenPos += (In.Position.xy * Get(viewTexel)) + (refractOffset * Get(uniformMaterialBuffer)[materialID].refractionScale * invDist);
         } else {
-            distortedScreenPos += (In.Position.xy * Get(viewTexel)) + (screenNormal.xy * Get(refractionScale) * invDist);
+            distortedScreenPos += (In.Position.xy * Get(viewTexel)) + (screenNormal.xy * Get(uniformMaterialBuffer)[materialID].refractionScale * invDist);
         }
         float4 refractionColor = SampleTex2D(Get(refractionMap), Get(nearestSampler), distortedScreenPos);
-
-        ///////////////////////
-        // Do blending in shader (blend mode is None with refraction)
-       // #ifdef USE_BLEND_MODE_ADD
-       //     finalColor.xyz = finalColor.xyz + refractionColor.xyz;
-       // #endif
-       // #ifdef USE_BLEND_MODE_MUL
-       //     finalColor.xyz = finalColor.xyz * refractionColor.xyz;
-       // #endif
-       // #ifdef USE_BLEND_MODE_MULX2
-       //     finalColor.xyz = finalColor.xyz * refractionColor.xyz * 2.0;
-       // #endif
-       // #ifdef USE_BLEND_MODE_ALPHA
-       //     finalColor.xyz = finalColor.xyz * finalColor.a + refractionColor.xyz * (1.0 - finalColor.a);
-       // #endif
-       // #ifdef USE_BLEND_MODE_PREMUL_ALPHA
-       //     finalColor.xyz = finalColor.xyz + refractionColor.xyz * (1.0 - finalColor.a);
-       // #endif        
 
         switch(Get(blendMode)) {
             case BLEND_MODE_ADD: 
@@ -166,11 +120,11 @@ PsOut PS_MAIN(PsIn In)
         }
     #endif
 
-    if(HasCubeMap(Get(textureConfig) & Get(textureMask))) {
+    if(HasCubeMap(Get(uniformMaterialBuffer)[materialID].textureConfig & Get(textureMask))) {
         float3 eyeVec = normalize(In.pos);
         
         float afEDotN = max(dot(-eyeVec, screenNormal),0.0);
-        float fFresnel = Fresnel(afEDotN, Get(frenselBias), Get(frenselPos));
+        float fFresnel = Fresnel(afEDotN, Get(uniformMaterialBuffer)[materialID].frenselBias, Get(uniformMaterialBuffer)[materialID].frenselPos);
         
         float3 vEnvUv = reflect(eyeVec, screenNormal);
         vEnvUv = mul(Get(invViewRotationMat), float4(vEnvUv,1)).xyz;
@@ -178,7 +132,7 @@ PsOut PS_MAIN(PsIn In)
         float4 reflectionColor = SampleTexCube(Get(cubeMap),  Get(cubeSampler), vEnvUv);
         
         //Alpha for environment map
-        if(HasCubeMapAlpha(Get(textureConfig) & Get(textureMask))) {
+        if(HasCubeMapAlpha(textureConfig)) {
             float fEnvMapAlpha = SampleTex2D(Get(cubeMapAlpha), Get(cubeMapAlphaSampler), In.uv.xy).w;
             reflectionColor *= fEnvMapAlpha;
         }
@@ -187,10 +141,10 @@ PsOut PS_MAIN(PsIn In)
         
         ///////////////////////////////
         //Rim reflections
-        if(Get(rimMulLight) >0.0) 
+        if(Get(uniformMaterialBuffer)[materialID].rimMulLight >0.0) 
         {
             float fRimLight = dot(screenNormal, float3(0.0, 0.0, -1.0));
-            fRimLight = pow(1.0 - abs(fRimLight), Get(rimMulPower)) * Get(rimMulLight);	
+            fRimLight = pow(1.0 - abs(fRimLight), Get(uniformMaterialBuffer)[materialID].rimMulPower) * Get(uniformMaterialBuffer)[materialID].rimMulLight;	
             
             finalColor.xyz += reflectionColor.xyz * fRimLight * finalAlpha * Get(lightLevel);
         }

@@ -118,10 +118,6 @@ namespace hpl {
 
 		struct MaterialTranslucentUniformBlock {
 			MaterialCommonBlock m_common;
-			// bool mbAffectedByLightLevel;
-			// bool mbRefraction;
-			// bool mbRefractionEdgeCheck;
-			// bool mbRefractionNormals;
 			float mfRefractionScale;
 			float mfFrenselBias;
 			float mfFrenselPow;
@@ -132,7 +128,6 @@ namespace hpl {
 		struct MaterialWaterUniformBlock {
 			MaterialCommonBlock m_common;
 
-			// bool mbHasReflection;
 			float mfRefractionScale;
 			float mfFrenselBias;
 			float mfFrenselPow;
@@ -141,8 +136,6 @@ namespace hpl {
 			float mfWaveSpeed;
 			float mfWaveAmplitude;
 			float mfWaveFreq;
-
-            float pad[3];
 		};
 
 

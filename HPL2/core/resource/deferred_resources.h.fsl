@@ -2,6 +2,8 @@
 /// Copyright 2023 Michael Pollind
 /// SPDX-License-Identifier: GPL-3.0
 
+#define PARALAX_MULTIPLIER 0.7
+
 CBUFFER(perFrameConstants, UPDATE_FREQ_PER_FRAME, b0, binding = 0)
 {
     DATA(float4x4, invViewRotationMat, None);
@@ -25,9 +27,10 @@ INLINE float3x3 ToNormalMat(float4x4 invModel, float4x4 invView) {
    return transpose(mul(float3x3(invModel), float3x3(invView)));
 }
 
-CBUFFER(uniformObjectBlock, UPDATE_FREQ_PER_DRAW, b1, binding = 1)
+STRUCT(UniformObject) 
 {
     DATA(float, dissolveAmount, None);
+    DATA(uint, materialID, None);
     DATA(float4x4, modelMat, None);
     DATA(float4x4, invModelMat, None);
     DATA(float4x4, uvMat, None);
@@ -35,32 +38,53 @@ CBUFFER(uniformObjectBlock, UPDATE_FREQ_PER_DRAW, b1, binding = 1)
 
 #if defined(MATERIAL_SOLID)
     // material data
-    CBUFFER(uniformMaterialBlock, UPDATE_FREQ_PER_BATCH, b2, binding = 2)
-    {
-        DATA(int, textureConfig, None);
+    STRUCT(UniformMaterial) {
+        DATA(uint, textureConfig, None);
+        
         DATA(float, heightMapScale, None);
         DATA(float, heightMapBias, None);
         DATA(float, frenselBias, None);
         DATA(float, frenselPow, None);
+	    
+	    DATA(uint, _pad0[4], None);
     };
-    INLINE bool HasDissolveFilter(int _textureConfig)   { return (_textureConfig & (1 << 14)) != 0; }
-#elif defined(MATERIAL_TRANSLUCENT)
-    CBUFFER(uniformMaterialBlock, UPDATE_FREQ_PER_BATCH, b2, binding = 2)
+    PUSH_CONSTANT(rootConstant, b0)
     {
-        DATA(int, textureConfig, None);
+        DATA(uint, objectIndex, None);
+	    
+	    DATA(uint, _pad1[4], None);
+    };
+    INLINE bool HasDissolveFilter(uint _textureConfig)   { return (_textureConfig & (1 << 14)) != 0; }
+    
+    RES(Buffer(UniformMaterial), uniformMaterialBuffer, UPDATE_FREQ_PER_BATCH, t1, binding = 2);
+#elif defined(MATERIAL_TRANSLUCENT)
+    STRUCT(UniformMaterial) {
+        DATA(uint, textureConfig, None);
 
         DATA(float, refractionScale, None);
         DATA(float, frenselBias, None);
         DATA(float, frenselPos, None);
         DATA(float, rimMulLight, None);
         DATA(float, rimMulPower, None);
+	    
+	    DATA(uint, _pad0[3], None);
     };
+
+    PUSH_CONSTANT(rootConstant, b1)
+    {
+        DATA(uint,  objectIndex, None);
+        DATA(uint,  blendMode,   None);
+        DATA(uint,  textureMask, None);
+        DATA(float, sceneAlpha, None);
+        DATA(float, lightLevel, None);
+    };
+    INLINE bool UseRefractionNormals(uint _textureConfig)   { return (_textureConfig & (1 << 14)) != 0; }
+    INLINE bool UseRefractionEdgeCheck(uint _textureConfig)   { return (_textureConfig & (1 << 15)) != 0; }
     
-    INLINE bool UseRefractionNormals(int _textureConfig)   { return (_textureConfig & (1 << 14)) != 0; }
-    INLINE bool UseRefractionEdgeCheck(int _textureConfig)   { return (_textureConfig & (1 << 15)) != 0; }
+    RES(Buffer(UniformMaterial), uniformMaterialBuffer, UPDATE_FREQ_PER_BATCH, t1, binding = 2);
 #elif defined(MATERIAL_WATER)
-    CBUFFER(uniformMaterialBlock, UPDATE_FREQ_PER_BATCH, b2, binding = 2) {
-        DATA(int, textureConfig, None);
+    STRUCT(UniformMaterial) {
+        DATA(uint, textureConfig, None);
 
         DATA(float, refractionScale, None);
         DATA(float, frenselBias, None);
@@ -71,7 +95,24 @@ CBUFFER(uniformObjectBlock, UPDATE_FREQ_PER_DRAW, b1, binding = 1)
         DATA(float, waveAmplitude, None);
         DATA(float, waveFreq, None);
     };
+    
+    PUSH_CONSTANT(rootConstant, b2)
+    {
+        DATA(uint, objectIndex, None);
+        DATA(float, afT, None);
+	    
+	    DATA(uint, _pad1[3], None);
+    };
 
+    RES(Buffer(UniformMaterial), uniformMaterialBuffer, UPDATE_FREQ_PER_BATCH, t1, binding = 2);
+#else
+
+    PUSH_CONSTANT(rootConstant, b0)
+    {
+        DATA(uint, objectIndex, None);
+	    
+	    DATA(uint, _pad1[3], None);
+    };
 #endif
 
 #define BLEND_MODE_ADD 0
@@ -79,6 +120,8 @@ CBUFFER(uniformObjectBlock, UPDATE_FREQ_PER_DRAW, b1, binding = 1)
 #define BLEND_MODE_MULX2 2
 #define BLEND_MODE_ALPHA 3
 #define BLEND_MODE_PREMUL_ALPHA 4
+
+RES(Buffer(UniformObject), uniformObjectBuffer, UPDATE_FREQ_PER_BATCH, t0, binding = 0);
     
 RES(Tex2D(float4), diffuseMap, UPDATE_FREQ_PER_BATCH, t1, binding = 5); 
 RES(SamplerState, diffuseSampler, UPDATE_FREQ_PER_BATCH, s1, binding = 6); 
