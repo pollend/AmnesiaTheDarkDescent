@@ -33,12 +33,22 @@ namespace hpl {
 
 	//---------------------------------------------
 
+	static constexpr size_t bufferRoundUp(size_t multiple, size_t size) {
+		size_t rem = size % multiple;
+		if(rem == 0) {
+		    return size;
+		}
+		return size + (256 - rem);
+	}
+
 	class cFrustum;
 	class iVertexBuffer;
 
 	class cMath
 	{
 	public:
+
+
 		static mat4 ToForgeMat(const cMatrixf& mat) {
 			return mat4(
 				Vector4(mat.m[0][0], mat.m[0][1], mat.m[0][2], mat.m[0][3]),
@@ -499,8 +509,8 @@ namespace hpl {
 
 		static inline bool Vector3EqualEpsilon(const cVector3f &a, const cVector3f &b, float epsilon = 0.0001f)
 		{
-			return (Abs(a.x - b.x) < epsilon 
-				&& Abs(a.y - b.y) < epsilon && 
+			return (Abs(a.x - b.x) < epsilon
+				&& Abs(a.y - b.y) < epsilon &&
 				Abs(a.z - b.z) < epsilon);
 		}
 

@@ -43,6 +43,7 @@
 #include <array>
 #include <cstdint>
 #include <memory>
+#include <stdint.h>
 #include <unordered_map>
 #include <vector>
 
@@ -76,10 +77,10 @@ namespace hpl {
         static constexpr TinyImageFormat SpecularBufferFormat = TinyImageFormat_R8G8_UNORM;
         static constexpr TinyImageFormat ColorBufferFormat = TinyImageFormat_R8G8B8A8_UNORM;
         static constexpr TinyImageFormat ShadowDepthBufferFormat = TinyImageFormat_D32_SFLOAT;
-        static constexpr uint32_t MaxObjectUniforms = 4096;
-        static constexpr uint32_t MaxLightUniforms = 1024;
+        static constexpr uint32_t MaxObjectUniforms = 256;
+        static constexpr uint32_t MaxLightUniforms = 256;
         static constexpr uint32_t MaxHiZMipLevels = 32;
-        static constexpr uint32_t MaxMaterialFrameDescriptors = 1024;
+        static constexpr uint32_t MaxMaterialFrameDescriptors = 64;
 
 
         enum LightConfiguration { HasGoboMap = 0x1, HasShadowMap = 0x2 };
@@ -154,6 +155,26 @@ namespace hpl {
 
             float2 viewTexel;
             float2 viewportSize;
+        };
+
+        struct UniformFogData {
+            mat4 m_mvp;
+            mat4 m_mv;
+            mat4 m_invModelRotation;
+            float4 m_color;
+            float4 m_rayCastStart;
+            float4 m_fogNegPlaneDistNeg;
+            float4 m_fogNegPlaneDistPos;
+            float m_start;
+            float m_length;
+            float m_falloffExp;
+        };
+
+        struct UniformFullscreenFogData {
+            float4 m_color;
+            float m_fogStart;
+            float m_fogLength;
+            float m_fogFalloffExp;
         };
 
         class ShadowMapData {
@@ -623,7 +644,7 @@ namespace hpl {
             iRenderable* m_renderable = nullptr;
         };
         struct UniformPropBlock {
-            static constexpr uint32_t MaxObjectTest = 32768;
+            static constexpr uint32_t MaxObjectTest = 2048;
             mat4 viewProjeciton;
             uint32_t numObjects;
             uint32_t maxMipLevel;

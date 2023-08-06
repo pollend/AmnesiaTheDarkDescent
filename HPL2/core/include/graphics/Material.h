@@ -69,7 +69,7 @@ namespace hpl {
 	{
 	friend class iMaterialType;
 	public:
-		static constexpr uint32_t MaxMaterialID = 2048;
+		static constexpr uint32_t MaxMaterialID = 128;
 
 		enum MaterialID: uint8_t {
             Unknown = 0,

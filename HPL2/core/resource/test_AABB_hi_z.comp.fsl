@@ -1,4 +1,4 @@
-#define  MAX_NUM_OBJECTS 32768 
+#define  MAX_NUM_OBJECTS 2048 
 
 RES(RWTex2DArray(float), depthInput, UPDATE_FREQ_PER_FRAME, u0, binding = 0);
 RES(RWBuffer(bool), occlusionTest, UPDATE_FREQ_PER_FRAME, u2, binding = 2);
@@ -60,7 +60,7 @@ void CS_MAIN(SV_DispatchThreadID(uint3) did)
         minZ = saturate(min(minZ, clipPos.z));
     }
     //TODO fix for DIRECTX12
-    uint2 dim = GetDimensions(Get(depthInput), NO_SAMPLER).xy;
+    uint2 dim = Get(depthDim);//GetDimensions(Get(depthInput), NO_SAMPLER).xy;
     int2 size = int2((maxXY - minXY) * dim);
     int mip = int(ceil(log2(max(size.x, size.y))));
     mip = clamp(mip, 0, Get(maxMipLevel));

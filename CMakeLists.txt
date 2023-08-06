@@ -28,6 +28,7 @@ ENDIF()
 if(WIN32)
     add_compile_definitions("NOMINMAX=1")
 endif()
+
 add_definitions(
     -DUSE_THE_FORGE_LEGACY
 )

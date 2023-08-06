@@ -126,12 +126,12 @@ private:
     Sampler* m_diffuseSampler;
 
     std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perObjectDescriptorSet;
-    Pipeline* m_outlinePipeline;
-    Pipeline* m_outlineStencilPipeline;
-    Pipeline* m_objectFlashPipeline;
-    Pipeline* m_flashPipeline;
-    Pipeline* m_enemyGlowPipeline;
-    RootSignature* m_perObjectRootSignature;
+    Pipeline* m_outlinePipeline = nullptr;
+    Pipeline* m_outlineStencilPipeline = nullptr;
+    Pipeline* m_objectFlashPipeline = nullptr;
+    Pipeline* m_flashPipeline = nullptr;
+    Pipeline* m_enemyGlowPipeline = nullptr;
+    RootSignature* m_perObjectRootSignature = nullptr;
 
     std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_outlinePostprocessingDescriptorSet;
     RootSignature* m_postProcessingRootSignature;
