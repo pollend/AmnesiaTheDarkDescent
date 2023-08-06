@@ -375,11 +375,10 @@ namespace hpl {
         void cmdBindMaterialDescriptor(Cmd* cmd, const ForgeRenderer::Frame& frame, cMaterial* apMaterial);
         void cmdBindObjectDescriptor(Cmd* cmd, const ForgeRenderer::Frame& frame, cMaterial* apMaterial, iRenderable* apObject, const PerObjectOption& option);
 
-        void cmdBindMaterialAndObject(Cmd* cmd,
+        uint32_t cmdBindMaterialAndObject(Cmd* cmd,
             const ForgeRenderer::Frame& frame,
             cMaterial* apMaterial,
             iRenderable* apObject,
-            std::function<void(uint32_t)> objectIndexHandle,
             const PerObjectOption& option);
 
         std::array<std::unique_ptr<iVertexBuffer>, eDeferredShapeQuality_LastEnum> m_shapeSphere;
@@ -408,7 +407,7 @@ namespace hpl {
         ForgeTextureHandle m_ssaoScatterDiskTexture;
 
         Image* m_dissolveImage;
-        ForgeBufferHandle m_perFrameBuffer;
+        std::array<ForgeBufferHandle, MaxMaterialFrameDescriptors> m_perFrameBuffer;
 
         // decal pass
         std::array<Pipeline*, eMaterialBlendMode_LastEnum> m_decalPipeline;

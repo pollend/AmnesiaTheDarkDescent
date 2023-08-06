@@ -13,13 +13,15 @@ STRUCT(PsIn)
 	DATA(float2, uv, TEXCOORD0);
     DATA(float3, view, TEXCOORD1);
     DATA(float3, normal, NORMAL);
+    
+    DATA(FLAT(uint), drawId, TEXCOORD2);
 };
 
 float4 PS_MAIN(PsIn In)
 {
     INIT_MAIN;
     float2 texCoord = In.uv.xy;
-    uint materialID = Get(uniformObjectBuffer)[Get(objectIndex)].materialID;
+    uint materialID = Get(uniformObjectBuffer)[In.drawId].materialID;
     
     #ifdef PARALLAX_ENABLED
         if(HasHeight(Get(uniformMaterialBuffer)[materialID].textureConfig)) {
@@ -60,7 +62,7 @@ float4 PS_MAIN(PsIn In)
             //Get in 0.5 - 1 range.
             fDissolve = fDissolve*0.5 + 0.5;
         }
-        diffuseAlpha = fDissolve - (1.0 - Get(uniformObjectBuffer)[Get(objectIndex)].dissolveAmount * diffuseAlpha) * 0.5;
+        diffuseAlpha = fDissolve - (1.0 - Get(uniformObjectBuffer)[In.drawId].dissolveAmount * diffuseAlpha) * 0.5;
     }
 
     

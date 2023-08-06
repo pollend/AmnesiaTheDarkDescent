@@ -48,15 +48,8 @@ STRUCT(UniformObject)
 	    
 	    DATA(uint, _pad0[4], None);
     };
-    PUSH_CONSTANT(rootConstant, b0)
-    {
-        DATA(uint, objectIndex, None);
-	    
-	    DATA(uint, _pad1[4], None);
-    };
     INLINE bool HasDissolveFilter(uint _textureConfig)   { return (_textureConfig & (1 << 14)) != 0; }
     
-    RES(Buffer(UniformMaterial), uniformMaterialBuffer, UPDATE_FREQ_PER_BATCH, t1, binding = 2);
 #elif defined(MATERIAL_TRANSLUCENT)
     STRUCT(UniformMaterial) {
         DATA(uint, textureConfig, None);
@@ -70,18 +63,9 @@ STRUCT(UniformObject)
 	    DATA(uint, _pad0[3], None);
     };
 
-    PUSH_CONSTANT(rootConstant, b1)
-    {
-        DATA(uint,  objectIndex, None);
-        DATA(uint,  blendMode,   None);
-        DATA(uint,  textureMask, None);
-        DATA(float, sceneAlpha, None);
-        DATA(float, lightLevel, None);
-    };
+
     INLINE bool UseRefractionNormals(uint _textureConfig)   { return (_textureConfig & (1 << 14)) != 0; }
     INLINE bool UseRefractionEdgeCheck(uint _textureConfig)   { return (_textureConfig & (1 << 15)) != 0; }
-    
-    RES(Buffer(UniformMaterial), uniformMaterialBuffer, UPDATE_FREQ_PER_BATCH, t1, binding = 2);
 #elif defined(MATERIAL_WATER)
     STRUCT(UniformMaterial) {
         DATA(uint, textureConfig, None);
@@ -96,22 +80,11 @@ STRUCT(UniformObject)
         DATA(float, waveFreq, None);
     };
     
-    PUSH_CONSTANT(rootConstant, b2)
-    {
-        DATA(uint, objectIndex, None);
-        DATA(float, afT, None);
-	    
-	    DATA(uint, _pad1[3], None);
-    };
-
-    RES(Buffer(UniformMaterial), uniformMaterialBuffer, UPDATE_FREQ_PER_BATCH, t1, binding = 2);
 #else
-
-    PUSH_CONSTANT(rootConstant, b0)
-    {
-        DATA(uint, objectIndex, None);
-	    DATA(uint, _pad1[3], None);
-    };
+     STRUCT(UniformMaterial) {
+        DATA(uint, textureConfig, None);
+	    DATA(uint, _pad0[8], None);
+     };
 #endif
 
 #define BLEND_MODE_ADD 0
@@ -120,37 +93,38 @@ STRUCT(UniformObject)
 #define BLEND_MODE_ALPHA 3
 #define BLEND_MODE_PREMUL_ALPHA 4
 
-RES(Buffer(UniformObject), uniformObjectBuffer, UPDATE_FREQ_PER_BATCH, t0, binding = 0);
+RES(Buffer(UniformMaterial), uniformMaterialBuffer, UPDATE_FREQ_PER_FRAME, t0, binding = 1);
+RES(Buffer(UniformObject), uniformObjectBuffer, UPDATE_FREQ_PER_FRAME, t1, binding = 2);
     
-RES(Tex2D(float4), diffuseMap, UPDATE_FREQ_PER_BATCH, t0, binding = 5); 
-RES(SamplerState, diffuseSampler, UPDATE_FREQ_PER_BATCH, s0, binding = 6); 
+RES(Tex2D(float4), diffuseMap, UPDATE_FREQ_PER_BATCH, t2, binding = 3); 
+RES(SamplerState, diffuseSampler, UPDATE_FREQ_PER_BATCH, s0, binding = 4); 
 
-RES(Tex2D(float4), normalMap, UPDATE_FREQ_PER_BATCH, t1, binding = 7);
-RES(SamplerState, normalSampler, UPDATE_FREQ_PER_BATCH, s1, binding = 8); 
+RES(Tex2D(float4), normalMap, UPDATE_FREQ_PER_BATCH, t3, binding = 5);
+RES(SamplerState, normalSampler, UPDATE_FREQ_PER_BATCH, s1, binding = 6); 
 
-RES(Tex2D(float4), specularMap, UPDATE_FREQ_PER_BATCH, t2, binding = 9);
-RES(SamplerState, specularSampler, UPDATE_FREQ_PER_BATCH, s2, binding = 10); 
+RES(Tex2D(float4), specularMap, UPDATE_FREQ_PER_BATCH, t4, binding = 7);
+RES(SamplerState, specularSampler, UPDATE_FREQ_PER_BATCH, s2, binding = 8); 
 
-RES(Tex2D(float4), alphaMap, UPDATE_FREQ_PER_BATCH, t3, binding = 11);
-RES(SamplerState, alphaSampler, UPDATE_FREQ_PER_BATCH, s3, binding = 12); 
+RES(Tex2D(float4), alphaMap, UPDATE_FREQ_PER_BATCH, t5, binding = 9);
+RES(SamplerState, alphaSampler, UPDATE_FREQ_PER_BATCH, s3, binding = 10); 
 
-RES(Tex2D(float4), heightMap, UPDATE_FREQ_PER_BATCH, t4, binding =  13);
-RES(SamplerState, heightSampler, UPDATE_FREQ_PER_BATCH, s4, binding = 14); 
+RES(Tex2D(float4), heightMap, UPDATE_FREQ_PER_BATCH, t6, binding =  11);
+RES(SamplerState, heightSampler, UPDATE_FREQ_PER_BATCH, s4, binding = 12); 
 
-RES(Tex2D(float4), illuminationMap, UPDATE_FREQ_PER_BATCH, t5, binding = 15);
-RES(SamplerState, illuminationSampler, UPDATE_FREQ_PER_BATCH, s5, binding = 16); 
+RES(Tex2D(float4), illuminationMap, UPDATE_FREQ_PER_BATCH, t7, binding = 13);
+RES(SamplerState, illuminationSampler, UPDATE_FREQ_PER_BATCH, s5, binding = 14); 
 
-RES(TexCube(float4), cubeMap, UPDATE_FREQ_PER_BATCH, t6, binding = 17);
-RES(SamplerState, cubeSampler, UPDATE_FREQ_PER_BATCH, s6, binding = 18); 
+RES(TexCube(float4), cubeMap, UPDATE_FREQ_PER_BATCH, t8, binding = 15);
+RES(SamplerState, cubeSampler, UPDATE_FREQ_PER_BATCH, s6, binding = 16); 
 
-RES(Tex2D(float4), dissolveAlphaMap, UPDATE_FREQ_PER_BATCH, t7, binding = 19);
-RES(SamplerState, dissolveAlphaSampler, UPDATE_FREQ_PER_BATCH, s7, binding = 20); 
+RES(Tex2D(float4), dissolveAlphaMap, UPDATE_FREQ_PER_BATCH, t9, binding = 17);
+RES(SamplerState, dissolveAlphaSampler, UPDATE_FREQ_PER_BATCH, s7, binding = 18); 
 
-RES(Tex2D(float4), cubeMapAlpha, UPDATE_FREQ_PER_BATCH, t8, binding = 21);
-RES(SamplerState, cubeMapAlphaSampler, UPDATE_FREQ_PER_BATCH, s8, binding = 22); 
+RES(Tex2D(float4), cubeMapAlpha, UPDATE_FREQ_PER_BATCH, t10, binding = 19);
+RES(SamplerState, cubeMapAlphaSampler, UPDATE_FREQ_PER_BATCH, s8, binding = 20); 
 
-RES(SamplerState, nearestSampler, UPDATE_FREQ_PER_BATCH, s9, binding = 23);
-RES(SamplerState, bilinearSampler, UPDATE_FREQ_PER_BATCH, s10, binding = 24);
+RES(SamplerState, nearestSampler, UPDATE_FREQ_PER_BATCH, s9, binding = 21);
+RES(SamplerState, bilinearSampler, UPDATE_FREQ_PER_BATCH, s10, binding = 22);
 
 #include "material_resource.h.fsl"
 
