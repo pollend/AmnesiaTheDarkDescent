@@ -786,8 +786,6 @@ namespace hpl {
 			auto& descriptorSet = gui::GuiUniformDescriptorSet[frame.m_frameIndex];
 			updateDescriptorSet(frame.m_renderer->Rend(), gui::descriptorIndex, descriptorSet, paramCount, params);
 
-
-
 			if(mbIs3D) {
 				cmdBindPipeline(frame.m_cmd, gui::GuiPipeline3D[materialType]);
 			} else {

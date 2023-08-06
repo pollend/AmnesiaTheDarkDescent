@@ -289,6 +289,19 @@ function(fsl_compile)
             ${shader_resources}
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
             COMMAND ${CMAKE_COMMAND} -E env "VULKAN_SDK=${VULKAN_SDK}" "python3" "${FSL_COMPILER}"
+            -l DIRECT3D12 
+            -d ${CMAKE_CURRENT_BINARY_DIR}/Shaders/
+            --verbose 
+            -b  ${CMAKE_CURRENT_BINARY_DIR}/CompiledShaders/ 
+            --incremental 
+            --compile ${ARG_INPUT}
+        )
+        add_custom_command(
+            TARGET HPL_SHADERS
+            MAIN_DEPENDENCY
+            ${shader_resources}
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+            COMMAND ${CMAKE_COMMAND} -E env "VULKAN_SDK=${VULKAN_SDK}" "python3" "${FSL_COMPILER}"
             -l VULKAN 
             -d ${CMAKE_CURRENT_BINARY_DIR}/Shaders/
             --verbose 
@@ -303,7 +316,7 @@ function(fsl_compile)
             ${shader_resources}
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
             COMMAND ${CMAKE_COMMAND} -E env "VULKAN_SDK=$ENV{VULKAN_SDK}" "python3" "${FSL_COMPILER}"
-            -l VULKAN 
+            -l VULKAN
             -d ${CMAKE_CURRENT_BINARY_DIR}/Shaders/
             --verbose 
             -b  ${CMAKE_CURRENT_BINARY_DIR}/CompiledShaders/ 

@@ -7,6 +7,8 @@ STRUCT(PsIn)
 {
 	DATA(float4, Position, SV_Position);
     DATA(float2, uv, TEXCOORD0);
+    
+    DATA(FLAT(uint), drawId, TEXCOORD2);
 };
 
 

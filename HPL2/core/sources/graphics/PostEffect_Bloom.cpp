@@ -119,7 +119,6 @@ namespace hpl
             graphicsPipelineDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
             graphicsPipelineDesc.pShaderProgram = m_blurHorizontalShader.m_handle;
             graphicsPipelineDesc.pRootSignature = m_rootSignature;
-            graphicsPipelineDesc.mRenderTargetCount = 1;
             graphicsPipelineDesc.mDepthStencilFormat = TinyImageFormat_UNDEFINED;
             graphicsPipelineDesc.pVertexLayout = NULL;
             graphicsPipelineDesc.pRasterizerState = &rasterStateNoneDesc;
@@ -127,6 +126,7 @@ namespace hpl
             graphicsPipelineDesc.pBlendState = NULL;
             graphicsPipelineDesc.mSampleCount = SAMPLE_COUNT_1;
             graphicsPipelineDesc.mSampleQuality = 0;
+            graphicsPipelineDesc.mRenderTargetCount = 1;
             graphicsPipelineDesc.pColorFormats = &inputFormat;
             addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_blurHorizontalPipeline);
         }
