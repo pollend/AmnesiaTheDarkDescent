@@ -55,7 +55,7 @@ float4 PS_MAIN(PsIn In)
             float fShadowSum = 0.0;
             float fJitterZ = 0.0;
             float2 vScreenJitterCoord = In.Position.xy * (1.0 / float(SHADOW_JITTER_SIZE));
-            vScreenJitterCoord.y = fract(vScreenJitterCoord.y);	 //Make sure the coord is in 0 - 1 range
+            vScreenJitterCoord.y = frac(vScreenJitterCoord.y);	 //Make sure the coord is in 0 - 1 range
             vScreenJitterCoord.y *= 1.0 / (float(SHADOW_JITTER_SAMPLES)/2.0);	 //Access only first texture piece
             
             for(int i=0; i < 2; i++)

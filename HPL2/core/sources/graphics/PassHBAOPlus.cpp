@@ -41,6 +41,8 @@
 
 namespace hpl::renderer {
 
+    static uint32_t HBAODataSize = round_up(sizeof(PassHBAOPlus::HBAORootConstant), 256);
+
     PassHBAOPlus::PassHBAOPlus() {
         auto* forgeRenderer = Interface<ForgeRenderer>::Get();
         m_shaderDeinterleave.Load(forgeRenderer->Rend(),[&](Shader** handle) {
@@ -87,7 +89,7 @@ namespace hpl::renderer {
             BufferLoadDesc desc = {};
             desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_UNIFORM_BUFFER;
             desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
-            desc.mDesc.mSize = sizeof(HBAORootConstant) * cViewport::MaxViewportHandles;
+            desc.mDesc.mSize = HBAODataSize * cViewport::MaxViewportHandles;
             desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
             desc.pData = nullptr;
             desc.ppBuffer = buffer;
@@ -214,14 +216,14 @@ namespace hpl::renderer {
             });
 
             size_t viewportIndex = viewport->GetHandle();
-            BufferUpdateDesc updateDesc = { m_constBuffer.m_handle, viewportIndex * sizeof(HBAORootConstant), sizeof(HBAORootConstant) };
+            BufferUpdateDesc updateDesc = { m_constBuffer.m_handle, viewportIndex * HBAODataSize, HBAODataSize };
             beginUpdateResource(&updateDesc);
             (*reinterpret_cast<HBAORootConstant *>(updateDesc.pMappedData)) = constData;
             endUpdateResource(&updateDesc, &token);
             waitForToken(&token);
             {
                 std::array<DescriptorData, 3> descriptorData = {};
-                DescriptorDataRange range = { (uint32_t)(viewportIndex  * sizeof(HBAORootConstant)) , sizeof(HBAORootConstant) };
+                DescriptorDataRange range = { (uint32_t)(viewportIndex * HBAODataSize), HBAODataSize };
                 descriptorData[0].pName = "constUniformBuffer";
                 descriptorData[0].pRanges = &range;
                 descriptorData[0].ppBuffers = &m_constBuffer.m_handle;
