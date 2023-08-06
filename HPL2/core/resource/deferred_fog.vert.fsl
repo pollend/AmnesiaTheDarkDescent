@@ -27,7 +27,8 @@ STRUCT(VSOutput)
     DATA(float4, Position, SV_Position);
     DATA(float4, pos, POSITION);
     DATA(float3, ray, TEXCOORD0);
-	DATA(FLAT(uint), drawId, TEXCOORD1);
+
+    DATA(FLAT(uint), drawId, TEXCOORD1);
 };
 
 VSOutput VS_MAIN(VSInput In, SV_InstanceID(uint) InstanceID )

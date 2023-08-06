@@ -1878,7 +1878,22 @@ namespace hpl {
 
         // ------------------------ Light Pass -----------------------------------------------------------------
         {
-            addUniformGPURingBuffer(forgeRenderer->Rend(), sizeof(UniformLightData) * MaxLightUniforms, &m_lightPassRingBuffer, true);
+
+            for(auto& buffer: m_lightPassBuffer) {
+                buffer.Load([&](Buffer** buffer) {
+                    BufferLoadDesc desc = {};
+		            desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_BUFFER;
+                    desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
+                    desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
+		            desc.mDesc.mFirstElement = 0;
+		            desc.mDesc.mElementCount = MaxLightUniforms;
+		            desc.mDesc.mStructStride = sizeof(UniformLightData);
+		            desc.mDesc.mSize = desc.mDesc.mElementCount * desc.mDesc.mStructStride;
+                    desc.ppBuffer = buffer;
+                    addResource(&desc, nullptr);
+                    return true;
+                });
+            }
 
             m_pointLightShader.Load(forgeRenderer->Rend(), [&](Shader** handle) {
                 ShaderLoadDesc loadDesc = {};
@@ -2127,8 +2142,13 @@ namespace hpl {
             for (auto& lightSet : m_lightPerLightSet) {
                 addDescriptorSet(forgeRenderer->Rend(), &batchDescriptorSet, &lightSet);
             }
-            for (auto& perFrameSet : m_lightPerFrameSet) {
-                addDescriptorSet(forgeRenderer->Rend(), &perFrameDescSet, &perFrameSet);
+            for(size_t setIndex = 0; setIndex < m_lightPerFrameSet.size(); setIndex++) {
+                addDescriptorSet(forgeRenderer->Rend(), &perFrameDescSet, &m_lightPerFrameSet[setIndex]);
+
+                std::array<DescriptorData, 1> params = {};
+                params[0].pName = "lightObjectBuffer";
+                params[0].ppBuffers = &m_lightPassBuffer[setIndex].m_handle;
+                updateDescriptorSet(forgeRenderer->Rend(), 0, m_lightPerFrameSet[setIndex], params.size(), params.data());
             }
         }
 
@@ -3524,11 +3544,6 @@ namespace hpl {
                     size_t paramCount = 0;
                     UniformLightData uniformObjectData = {};
 
-                    #ifdef USE_THE_FORGE_LEGACY
-                        GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(m_lightPassRingBuffer, sizeof(UniformLightData));
-                    #else
-                        GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(&m_lightPassRingBuffer, sizeof(UniformLightData));
-                    #endif
                     const auto modelViewMtx = cMath::MatrixMul(apFrustum->GetViewMatrix(), light->m_light->GetWorldMatrix());
                     const auto viewProjectionMat = cMath::MatrixMul(mainFrustumProj, mainFrustumView);
 
@@ -3633,19 +3648,16 @@ namespace hpl {
                         }
                     }
 
-                    BufferUpdateDesc updateDesc = { uniformBuffer.pBuffer, uniformBuffer.mOffset };
+                    BufferUpdateDesc updateDesc = { m_lightPassBuffer[frame.m_frameIndex].m_handle, lightIndex * sizeof(UniformLightData) };
                     beginUpdateResource(&updateDesc);
                     memcpy(updateDesc.pMappedData, &uniformObjectData, sizeof(UniformLightData));
                     endUpdateResource(&updateDesc, NULL);
 
-                    params[paramCount].pName = "uniformObjectBlock";
-                    DescriptorDataRange range = { static_cast<uint32_t>(uniformBuffer.mOffset), sizeof(UniformLightData) };
-                    params[paramCount].pRanges = &range;
-                    params[paramCount++].ppBuffers = &uniformBuffer.pBuffer;
-
                     updateDescriptorSet(frame.m_renderer->Rend(), lightIndex, m_lightPerLightSet[frame.m_frameIndex], paramCount, params);
                     cmdBindDescriptorSet(frame.m_cmd, lightIndex, m_lightPerLightSet[frame.m_frameIndex]);
+                    uint32_t index = lightIndex;
                     lightIndex++;
+                    return index;
                 };
                 {
                     LoadActionsDesc loadActions = {};
@@ -3686,9 +3698,6 @@ namespace hpl {
                     updateDescriptorSet(frame.m_renderer->Rend(), 0, m_lightPerFrameSet[frame.m_frameIndex], paramCount, params);
                 }
 
-                // float2 viewTexel = { 1.0f / sharedData->m_size.x, 1.0f / sharedData->m_size.y };
-                // uint32_t rootConstantIndex = getDescriptorIndexFromName(m_lightPassRootSignature, "uRootConstants");
-                // cmdBindPushConstants(frame.m_cmd, m_lightPassRootSignature, rootConstantIndex, &viewTexel);
                 cmdBindDescriptorSet(frame.m_cmd, 0, m_lightPerFrameSet[frame.m_frameIndex]);
 
                 // --------------------------------------------------------
@@ -3708,8 +3717,9 @@ namespace hpl {
                     detail::cmdDefaultLegacyGeomBinding(frame.m_cmd, frame, binding);
 
                     cmdBindPipeline(frame.m_cmd, m_lightStencilPipeline.m_handle);
-                    cmdBindLightDescriptor(light); // bind light descriptor light uniforms
-                    cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+                    uint32_t instance = cmdBindLightDescriptor(light); // bind light descriptor light uniforms
+                    //cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+                    cmdDrawIndexedInstanced(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 1, instance, 0);
 
                     switch (light->m_light->GetLightType()) {
                     case eLightType_Point:
@@ -3734,7 +3744,7 @@ namespace hpl {
                         ASSERT(false && "Unsupported light type");
                         break;
                     }
-                    cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+                    cmdDrawIndexedInstanced(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 1, instance, 0);
                     {
                         LoadActionsDesc loadActions = {};
                         loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
@@ -3786,9 +3796,10 @@ namespace hpl {
                     ASSERT(lightShape && "Light shape not found");
                     static_cast<LegacyVertexBuffer*>(lightShape)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
 
-                    cmdBindLightDescriptor(light);
+                    uint32_t instance = cmdBindLightDescriptor(light);
                     detail::cmdDefaultLegacyGeomBinding(frame.m_cmd, frame, binding);
-                    cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+                    cmdDrawIndexedInstanced(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 1, instance, 0);
+                    //cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
                 }
                 cmdEndDebugMarker(frame.m_cmd);
             }
@@ -3973,192 +3984,6 @@ namespace hpl {
 
             }
         }
-
-       // std::vector<FogRendererData*> insideNearPlaneFog;
-       // {
-       //     std::array targets = {
-       //         currentGBuffer.m_outputBuffer.m_handle,
-       //     };
-       //     LoadActionsDesc loadActions = {};
-       //     loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
-       //     loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
-       //     cmdBindRenderTargets(
-       //         frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, nullptr, nullptr, -1, -1);
-       //     cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)common->m_size.x, (float)common->m_size.y, 0.0f, 1.0f);
-       //     cmdSetScissor(frame.m_cmd, 0, 0, common->m_size.x, common->m_size.y);
-       //     {
-       //         std::array<DescriptorData, 15> params = {};
-       //         size_t paramCount = 0;
-       //         params[paramCount].pName = "positionMap";
-       //         params[paramCount++].ppTextures = &currentGBuffer.m_positionBuffer.m_handle->pTexture;
-       //         updateDescriptorSet(frame.m_renderer->Rend(), 0, m_fogPass.m_perFrameSet[frame.m_frameIndex], paramCount, params.data());
-       //     }
-
-       //     LegacyVertexBuffer::GeometryBinding binding{};
-       //     std::array geometryStream = { eVertexBufferElement_Position };
-       //     static_cast<LegacyVertexBuffer*>(m_box.get())->resolveGeometryBinding(frame.m_currentFrame, geometryStream, &binding);
-       //     detail::cmdDefaultLegacyGeomBinding(frame.m_cmd, frame, binding);
-
-       //     uint32_t rootConstantIndex = getDescriptorIndexFromName(m_fogPass.m_fogRootSignature, "uRootConstants");
-       //     float2 viewTexel = { 1.0f / common->m_size.x, 1.0f / common->m_size.y };
-       //     cmdBindPushConstants(frame.m_cmd, m_fogPass.m_fogRootSignature, rootConstantIndex, &viewTexel);
-
-       //     cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "Fog Box Pass ");
-       //     size_t objectIndex = 0;
-       //     for (auto& fogArea : fogRenderData) {
-       //         uint32_t index = objectIndex++;
-       //         Fog::UniformFogData fogUniformData = {};
-       //         if (fogArea.m_insideNearFrustum) {
-       //             insideNearPlaneFog.push_back(&fogArea);
-       //             fogUniformData.m_flags |=
-       //                 ((fogArea.m_fogArea->GetShowBacksideWhenInside() ? Fog::PipelineUseBackSide : Fog::PipelineVariantEmpty) |
-       //                  Fog::PipelineVariant::PipelineInsideNearFrustum);
-       //         } else {
-       //             cMatrixf mtxInvModelView =
-       //                 cMath::MatrixInverse(cMath::MatrixMul(apFrustum->GetViewMatrix(), *fogArea.m_fogArea->GetModelMatrixPtr()));
-       //             cVector3f vRayCastStart = cMath::MatrixMul(mtxInvModelView, cVector3f(0));
-
-       //             cVector3f vNegPlaneDistNeg(
-       //                 cMath::PlaneToPointDist(cPlanef(-1, 0, 0, 0.5f), vRayCastStart),
-       //                 cMath::PlaneToPointDist(cPlanef(0, -1, 0, 0.5f), vRayCastStart),
-       //                 cMath::PlaneToPointDist(cPlanef(0, 0, -1, 0.5f), vRayCastStart));
-       //             cVector3f vNegPlaneDistPos(
-       //                 cMath::PlaneToPointDist(cPlanef(1, 0, 0, 0.5f), vRayCastStart),
-       //                 cMath::PlaneToPointDist(cPlanef(0, 1, 0, 0.5f), vRayCastStart),
-       //                 cMath::PlaneToPointDist(cPlanef(0, 0, 1, 0.5f), vRayCastStart));
-       //             fogUniformData.m_invModelRotation = cMath::ToForgeMat4(mtxInvModelView.GetRotation().GetTranspose());
-       //             fogUniformData.m_rayCastStart = float4(vRayCastStart.x, vRayCastStart.y, vRayCastStart.z, 0.0f);
-       //             fogUniformData.m_fogNegPlaneDistNeg =
-       //                 float4(vNegPlaneDistNeg.x * -1.0f, vNegPlaneDistNeg.y * -1.0f, vNegPlaneDistNeg.z * -1.0f, 0.0f);
-       //             fogUniformData.m_fogNegPlaneDistPos =
-       //                 float4(vNegPlaneDistPos.x * -1.0f, vNegPlaneDistPos.y * -1.0f, vNegPlaneDistPos.z * -1.0f, 0.0f);
-       //             fogUniformData.m_flags |= Fog::PipelineUseOutsideBox;
-       //             fogUniformData.m_flags |=
-       //                 fogArea.m_fogArea->GetShowBacksideWhenOutside() ? Fog::PipelineUseBackSide : Fog::PipelineVariantEmpty;
-       //         }
-       //         const auto fogColor = fogArea.m_fogArea->GetColor();
-       //         fogUniformData.m_color = float4(fogColor.r, fogColor.g, fogColor.b, fogColor.a);
-       //         fogUniformData.m_start = fogArea.m_fogArea->GetStart();
-       //         fogUniformData.m_length = fogArea.m_fogArea->GetEnd() - fogArea.m_fogArea->GetStart();
-       //         fogUniformData.m_falloffExp = fogArea.m_fogArea->GetFalloffExp();
-
-       //         const cMatrixf modelMat =
-       //             fogArea.m_fogArea->GetModelMatrixPtr() ? *fogArea.m_fogArea->GetModelMatrixPtr() : cMatrixf::Identity;
-       //         fogUniformData.m_mv = cMath::ToForgeMat4(cMath::MatrixMul(mainFrustumView, modelMat).GetTranspose());
-       //         fogUniformData.m_mvp =
-       //             cMath::ToForgeMat4(cMath::MatrixMul(cMath::MatrixMul(mainFrustumProj, mainFrustumView), modelMat).GetTranspose());
-
-       //         BufferUpdateDesc updateDesc = { m_fogPass.m_fogUniformBuffer[frame.m_currentFrame].m_handle, index * sizeof(Fog::UniformFogData)};
-       //         beginUpdateResource(&updateDesc);
-       //         (*reinterpret_cast<Fog::UniformFogData*>(updateDesc.pMappedData)) = fogUniformData;
-       //         endUpdateResource(&updateDesc, NULL);
-       //     }
-
-
-
-
-       //     for (auto& fogArea : fogRenderData) {
-       //        // #ifdef USE_THE_FORGE_LEGACY
-       //        //     GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(m_fogPass.m_fogUniformBuffer, sizeof(Fog::UniformFogData));
-       //        // #else
-       //        //     GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(&m_fogPass.m_fogUniformBuffer, sizeof(Fog::UniformFogData));
-       //        // #endif
-       //         uint8_t pipelineVariant = 0;
-       //         Fog::UniformFogData fogUniformData = {};
-       //         if (fogArea.m_insideNearFrustum) {
-       //             pipelineVariant |=
-       //                 ((fogArea.m_fogArea->GetShowBacksideWhenInside() ? Fog::PipelineUseBackSide : Fog::PipelineVariantEmpty) |
-       //                  Fog::PipelineVariant::PipelineInsideNearFrustum);
-       //         } else {
-       //             cMatrixf mtxInvModelView =
-       //                 cMath::MatrixInverse(cMath::MatrixMul(apFrustum->GetViewMatrix(), *fogArea.m_fogArea->GetModelMatrixPtr()));
-       //             cVector3f vRayCastStart = cMath::MatrixMul(mtxInvModelView, cVector3f(0));
-
-       //             cVector3f vNegPlaneDistNeg(
-       //                 cMath::PlaneToPointDist(cPlanef(-1, 0, 0, 0.5f), vRayCastStart),
-       //                 cMath::PlaneToPointDist(cPlanef(0, -1, 0, 0.5f), vRayCastStart),
-       //                 cMath::PlaneToPointDist(cPlanef(0, 0, -1, 0.5f), vRayCastStart));
-       //             cVector3f vNegPlaneDistPos(
-       //                 cMath::PlaneToPointDist(cPlanef(1, 0, 0, 0.5f), vRayCastStart),
-       //                 cMath::PlaneToPointDist(cPlanef(0, 1, 0, 0.5f), vRayCastStart),
-       //                 cMath::PlaneToPointDist(cPlanef(0, 0, 1, 0.5f), vRayCastStart));
-       //             fogUniformData.m_invModelRotation = cMath::ToForgeMat4(mtxInvModelView.GetRotation().GetTranspose());
-       //             fogUniformData.m_rayCastStart = float4(vRayCastStart.x, vRayCastStart.y, vRayCastStart.z, 0.0f);
-       //             fogUniformData.m_fogNegPlaneDistNeg =
-       //                 float4(vNegPlaneDistNeg.x * -1.0f, vNegPlaneDistNeg.y * -1.0f, vNegPlaneDistNeg.z * -1.0f, 0.0f);
-       //             fogUniformData.m_fogNegPlaneDistPos =
-       //                 float4(vNegPlaneDistPos.x * -1.0f, vNegPlaneDistPos.y * -1.0f, vNegPlaneDistPos.z * -1.0f, 0.0f);
-       //             pipelineVariant |= Fog::PipelineUseOutsideBox;
-       //             pipelineVariant |=
-       //                 fogArea.m_fogArea->GetShowBacksideWhenOutside() ? Fog::PipelineUseBackSide : Fog::PipelineVariantEmpty;
-       //         }
-       //         const auto fogColor = fogArea.m_fogArea->GetColor();
-       //         fogUniformData.m_color = float4(fogColor.r, fogColor.g, fogColor.b, fogColor.a);
-       //         fogUniformData.m_start = fogArea.m_fogArea->GetStart();
-       //         fogUniformData.m_length = fogArea.m_fogArea->GetEnd() - fogArea.m_fogArea->GetStart();
-       //         fogUniformData.m_falloffExp = fogArea.m_fogArea->GetFalloffExp();
-
-       //         const cMatrixf modelMat =
-       //             fogArea.m_fogArea->GetModelMatrixPtr() ? *fogArea.m_fogArea->GetModelMatrixPtr() : cMatrixf::Identity;
-       //         fogUniformData.m_mv = cMath::ToForgeMat4(cMath::MatrixMul(mainFrustumView, modelMat).GetTranspose());
-       //         fogUniformData.m_mvp =
-       //             cMath::ToForgeMat4(cMath::MatrixMul(cMath::MatrixMul(mainFrustumProj, mainFrustumView), modelMat).GetTranspose());
-
-       //         BufferUpdateDesc updateDesc = { uniformBuffer.pBuffer, uniformBuffer.mOffset };
-       //         beginUpdateResource(&updateDesc);
-       //         (*reinterpret_cast<Fog::UniformFogData*>(updateDesc.pMappedData)) = fogUniformData;
-       //         endUpdateResource(&updateDesc, NULL);
-
-       //         {
-       //             std::array<DescriptorData, 15> params = {};
-       //             size_t paramCount = 0;
-       //             params[paramCount].pName = "uniformFogBlock";
-       //             DescriptorDataRange range = { (uint32_t)uniformBuffer.mOffset, sizeof(Fog::UniformFogData) };
-       //             params[paramCount].pRanges = &range;
-       //             params[paramCount++].ppBuffers = &uniformBuffer.pBuffer;
-       //             updateDescriptorSet(
-       //                 frame.m_renderer->Rend(), objectIndex, m_fogPass.m_perObjectSet[frame.m_frameIndex], paramCount, params.data());
-       //         }
-
-       //         cmdBindDescriptorSet(frame.m_cmd, 0, m_fogPass.m_perFrameSet[frame.m_frameIndex]);
-       //         cmdBindDescriptorSet(frame.m_cmd, objectIndex++, m_fogPass.m_perObjectSet[frame.m_frameIndex]);
-       //         cmdBindPipeline(frame.m_cmd, m_fogPass.m_pipeline[pipelineVariant]);
-       //         cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
-       //     }
-       //     if (mpCurrentWorld->GetFogActive()) {
-       //         cmdBindRenderTargets(frame.m_cmd, targets.size(), targets.data(), nullptr, &loadActions, nullptr, nullptr, -1, -1);
-
-       //         #ifdef USE_THE_FORGE_LEGACY
-       //             GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(m_fogPass.m_fogUniformBuffer, sizeof(Fog::UniformFogData));
-       //         #else
-       //             GPURingBufferOffset uniformBuffer = getGPURingBufferOffset(&m_fogPass.m_fogUniformBuffer, sizeof(Fog::UniformFogData));
-       //         #endif
-       //         BufferUpdateDesc updateDesc = { uniformBuffer.pBuffer, uniformBuffer.mOffset };
-       //         beginUpdateResource(&updateDesc);
-       //         auto* fogData = reinterpret_cast<Fog::UniformFullscreenFogData*>(updateDesc.pMappedData);
-       //         auto fogColor = mpCurrentWorld->GetFogColor();
-       //         fogData->m_color = float4(fogColor.r, fogColor.g, fogColor.b, fogColor.a);
-       //         fogData->m_fogStart = mpCurrentWorld->GetFogStart();
-       //         fogData->m_fogLength = mpCurrentWorld->GetFogEnd() - mpCurrentWorld->GetFogStart();
-       //         fogData->m_fogFalloffExp = mpCurrentWorld->GetFogFalloffExp();
-       //         endUpdateResource(&updateDesc, NULL);
-
-       //         {
-       //             std::array<DescriptorData, 15> params = {};
-       //             size_t paramCount = 0;
-       //             params[paramCount].pName = "uniformFogBlock";
-       //             DescriptorDataRange range = { (uint32_t)uniformBuffer.mOffset, sizeof(Fog::UniformFullscreenFogData) };
-       //             params[paramCount].pRanges = &range;
-       //             params[paramCount++].ppBuffers = &uniformBuffer.pBuffer;
-       //             updateDescriptorSet(
-       //                 frame.m_renderer->Rend(), objectIndex, m_fogPass.m_perObjectSet[frame.m_frameIndex], paramCount, params.data());
-       //         }
-       //         cmdBindDescriptorSet(frame.m_cmd, 0, m_fogPass.m_perFrameSet[frame.m_frameIndex]);
-       //         cmdBindDescriptorSet(frame.m_cmd, objectIndex++, m_fogPass.m_perObjectSet[frame.m_frameIndex]);
-       //         cmdBindPipeline(frame.m_cmd, m_fogPass.m_fullScreenPipeline);
-       //         cmdDraw(frame.m_cmd, 3, 0);
-       //     }
-       // }
         cmdEndDebugMarker(frame.m_cmd);
 
         {
@@ -4220,7 +4045,6 @@ namespace hpl {
         // ------------------------------------------------------------------------
         // Translucency Pass --> output target
         // ------------------------------------------------------------------------
-
         {
             LoadActionsDesc loadActions = {};
             loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;

@@ -92,27 +92,40 @@ namespace hpl {
         };
         union UniformLightData {
             struct LightUniformCommon {
-                uint32_t m_config;
                 mat4 m_mvp;
+                uint32_t m_config;
             } m_common;
             struct {
-                LightUniformCommon m_common;
+                mat4 m_mvp;
+                uint32_t m_config;
+                uint32_t m_pad[3];
+
                 float3 m_lightPos;
                 float m_radius;
+
                 float4 m_lightColor;
                 mat4 m_invViewRotation;
+
             } m_pointLight;
             struct {
-                LightUniformCommon m_common;
+                mat4 m_mvp;
+                uint32_t m_config;
+                uint32_t m_pad[3];
+
+                float3 m_forward;
+                float m_oneMinusCosHalfSpotFOV;
+
                 mat4 m_spotViewProj;
                 float4 m_color;
-                float3 m_forward;
-                float m_radius;
+
                 float3 m_pos;
-                float m_oneMinusCosHalfSpotFOV;
+                float m_radius;
             } m_spotLight;
             struct {
-                LightUniformCommon m_common;
+                mat4 m_mvp;
+                uint32_t m_config;
+                uint32_t m_pad[3];
+
                 float4 m_lightColor;
             } m_boxLight;
         };
@@ -374,7 +387,6 @@ namespace hpl {
         ForgeTextureHandle m_ssaoScatterDiskTexture;
 
         Image* m_dissolveImage;
-
         ForgeBufferHandle m_perFrameBuffer;
 
         // decal pass
@@ -624,11 +636,7 @@ namespace hpl {
             float gamma;
             float3 pad;
         };
-        #ifdef USE_THE_FORGE_LEGACY
-            GPURingBuffer* m_lightPassRingBuffer;
-        #else
-            GPURingBuffer m_lightPassRingBuffer;
-        #endif
+        std::array<ForgeBufferHandle, ForgeRenderer::SwapChainLength> m_lightPassBuffer;
 
         RootSignature* m_lightPassRootSignature;
         ForgePipelineHandle m_lightStencilPipeline;
