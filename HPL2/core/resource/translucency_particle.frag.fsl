@@ -5,31 +5,19 @@
 #include "deferred_resources.h.fsl"
 #include "deferred_common.h.fsl"
 
-RES(Tex2D(float4), refractionMap, UPDATE_FREQ_PER_FRAME, t13, binding = 24); 
-
-PUSH_CONSTANT(translucencyConstant, b2)
-{
-    DATA(uint,  blendMode,   None);
-    DATA(uint,  textureMask, None);
-    DATA(float, sceneAlpha, None);
-    DATA(float, lightLevel, None);
-};
-
 STRUCT(PsIn) 
 {
     DATA(float4, Position, SV_Position);
     DATA(float3, pos, POSITION);
     DATA(float2, uv, TEXCOORD0);
     DATA(float4, color, COLOR);
-    
-    DATA(FLAT(uint), drawId, TEXCOORD2);
 };
 
 float4 PS_MAIN(PsIn In)
 {
     INIT_MAIN;
 
-    uint materialID = Get(uniformObjectBuffer)[In.drawId].materialID;
+    uint materialID = Get(uniformObjectBuffer)[Get(objectId)].materialID;
     float4 finalColor = float4(0.0, 0.0 ,0.0, 1.0);
     uint textureConfig = Get(uniformMaterialBuffer)[materialID].textureConfig & Get(textureMask);
 

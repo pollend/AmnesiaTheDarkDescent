@@ -372,9 +372,6 @@ namespace hpl {
         };
 
         uint32_t updateFrameDescriptor(const ForgeRenderer::Frame& frame,Cmd* cmd, cWorld* apWorld,const PerFrameOption& options);
-        void cmdBindMaterialDescriptor(Cmd* cmd, const ForgeRenderer::Frame& frame, cMaterial* apMaterial);
-        void cmdBindObjectDescriptor(Cmd* cmd, const ForgeRenderer::Frame& frame, cMaterial* apMaterial, iRenderable* apObject, const PerObjectOption& option);
-
         uint32_t cmdBindMaterialAndObject(Cmd* cmd,
             const ForgeRenderer::Frame& frame,
             cMaterial* apMaterial,
@@ -407,7 +404,7 @@ namespace hpl {
         ForgeTextureHandle m_ssaoScatterDiskTexture;
 
         Image* m_dissolveImage;
-        std::array<ForgeBufferHandle, MaxMaterialFrameDescriptors> m_perFrameBuffer;
+        ForgeBufferHandle m_perFrameBuffer;
 
         // decal pass
         std::array<Pipeline*, eMaterialBlendMode_LastEnum> m_decalPipeline;
@@ -462,21 +459,13 @@ namespace hpl {
             Pipeline* m_fullScreenPipeline = nullptr;
         } m_fogPass;
 
-        union MaterialRootConstant {
-            struct {
-               uint32_t m_objectIndex;
-            } m_default;
-            struct {
-               uint32_t m_objectIndex;
-               float m_afT;
-            } m_water;
-            struct {
-                uint32_t m_objectIndex;
-                uint32_t m_blendMode;
-                uint32_t m_textureMask;
-                float m_sceneAlpha;
-                float m_lightLevel;
-            } m_translucency;
+        struct MaterialRootConstant {
+            uint32_t m_objectId;
+            float m_afT;
+            uint32_t m_blendMode;
+            uint32_t m_textureMask;
+            float m_sceneAlpha;
+            float m_lightLevel;
         };
 
         RootSignature* m_materialRootSignature;

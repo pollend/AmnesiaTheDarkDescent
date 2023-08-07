@@ -17,14 +17,6 @@
 #include "deferred_resources.h.fsl"
 #include "deferred_common.h.fsl"
 
-PUSH_CONSTANT(waterRootConstant, b1)
-{
-    DATA(float, afT, None);	
-};
-
-RES(Tex2D(float4), refractionMap, UPDATE_FREQ_PER_FRAME, t13, binding = 24); 
-RES(Tex2D(float4), reflectionMap, UPDATE_FREQ_PER_FRAME, t15, binding = 25); 
-
 STRUCT(PsIn) 
 {
     DATA(float4, Position, SV_Position);
@@ -34,8 +26,6 @@ STRUCT(PsIn)
     DATA(float3, tangent, TANGENT);
     DATA(float3, bitangent, BITANGENT);
     DATA(float4, color, COLOR);
-    
-    DATA(FLAT(uint), drawId, TEXCOORD2);
 };
 
 STRUCT(PsOut)
@@ -47,7 +37,7 @@ PsOut PS_MAIN(PsIn In)
 {
     INIT_MAIN;
     PsOut Out;
-    uint materialID = Get(uniformObjectBuffer)[In.drawId].materialID;
+    uint materialID = Get(uniformObjectBuffer)[Get(objectId)].materialID;
     
     float waveAft = Get(afT) * Get(uniformMaterialBuffer)[materialID].waveSpeed;
     ///////////////////////////////

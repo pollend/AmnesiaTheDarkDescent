@@ -4,7 +4,17 @@
 
 #define PARALAX_MULTIPLIER 0.7
 
-CBUFFER(perFrameConstants, UPDATE_FREQ_PER_FRAME, b0, binding = 0)
+PUSH_CONSTANT(materialRootConstant, b0)
+{
+    DATA(uint, objectId, None);
+    DATA(float, afT, None);	
+    DATA(uint,  blendMode,   None);
+    DATA(uint,  textureMask, None);
+    DATA(float, sceneAlpha, None);
+    DATA(float, lightLevel, None);
+};
+
+CBUFFER(perFrameConstants, UPDATE_FREQ_PER_FRAME, b1, binding = 0)
 {
     DATA(float4x4, invViewRotationMat, None);
     DATA(float4x4, viewMat, None);
@@ -63,7 +73,6 @@ STRUCT(UniformObject)
 	    DATA(uint, _pad0[3], None);
     };
 
-
     INLINE bool UseRefractionNormals(uint _textureConfig)   { return (_textureConfig & (1 << 14)) != 0; }
     INLINE bool UseRefractionEdgeCheck(uint _textureConfig)   { return (_textureConfig & (1 << 15)) != 0; }
 #elif defined(MATERIAL_WATER)
@@ -86,6 +95,7 @@ STRUCT(UniformObject)
 	    DATA(uint, _pad0[8], None);
      };
 #endif
+
 
 #define BLEND_MODE_ADD 0
 #define BLEND_MODE_MUL 1
@@ -125,6 +135,11 @@ RES(SamplerState, cubeMapAlphaSampler, UPDATE_FREQ_PER_BATCH, s8, binding = 20);
 
 RES(SamplerState, nearestSampler, UPDATE_FREQ_PER_BATCH, s9, binding = 21);
 RES(SamplerState, bilinearSampler, UPDATE_FREQ_PER_BATCH, s10, binding = 22);
+
+RES(Tex2D(float4), dissolveMap, UPDATE_FREQ_NONE, t11, binding = 23);
+RES(Tex2D(float4), refractionMap, UPDATE_FREQ_PER_FRAME, t12, binding = 24); 
+RES(Tex2D(float4), reflectionMap, UPDATE_FREQ_PER_FRAME, t13, binding = 25); 
+
 
 #include "material_resource.h.fsl"
 
