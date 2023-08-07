@@ -13,6 +13,8 @@ STRUCT(PsIn)
     DATA(float3, normal, NORMAL);
     DATA(float3, tangent, TANGENT);
     DATA(float3, bitangent, BITANGENT);
+    
+    DATA(FLAT(uint), drawId, TEXCOORD2);
 };
 
 STRUCT(PsOut)
@@ -27,7 +29,7 @@ PsOut PS_MAIN(PsIn In)
 {
     INIT_MAIN;
     PsOut Out;
-    uint materialID = Get(uniformObjectBuffer)[Get(objectIndex)].materialID;
+    uint materialID = Get(uniformObjectBuffer)[In.drawId].materialID;
 
     float2 texCoord = In.uv.xy;
     float3 cameraEyeSpace = normalize(In.pos).xyz;

@@ -50,8 +50,6 @@ STRUCT(UniformObject)
     };
     PUSH_CONSTANT(rootConstant, b0)
     {
-        DATA(uint, objectIndex, None);
-	    
 	    DATA(uint, _pad1[4], None);
     };
     INLINE bool HasDissolveFilter(uint _textureConfig)   { return (_textureConfig & (1 << 14)) != 0; }
@@ -72,7 +70,6 @@ STRUCT(UniformObject)
 
     PUSH_CONSTANT(rootConstant, b1)
     {
-        DATA(uint,  objectIndex, None);
         DATA(uint,  blendMode,   None);
         DATA(uint,  textureMask, None);
         DATA(float, sceneAlpha, None);
@@ -98,7 +95,6 @@ STRUCT(UniformObject)
     
     PUSH_CONSTANT(rootConstant, b2)
     {
-        DATA(uint, objectIndex, None);
         DATA(float, afT, None);
 	    
 	    DATA(uint, _pad1[3], None);
@@ -109,8 +105,7 @@ STRUCT(UniformObject)
 
     PUSH_CONSTANT(rootConstant, b0)
     {
-        DATA(uint, objectIndex, None);
-	    DATA(uint, _pad1[3], None);
+	    DATA(uint, _pad1[4], None);
     };
 #endif
 

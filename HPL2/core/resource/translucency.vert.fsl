@@ -35,25 +35,28 @@ STRUCT(VSOutput)
 	DATA(float3, tangent, TANGENT);
 	DATA(float3, bitangent, BITANGENT);
 	DATA(float4, color, COLOR);
+
+    DATA(FLAT(uint), drawId, TEXCOORD1);
 };
 
-VSOutput VS_MAIN( VSInput In )
+VSOutput VS_MAIN( VSInput In, SV_InstanceID(uint) InstanceID)
 {
     INIT_MAIN;
     VSOutput Out;
 
-    float4x4 modelView = mul(Get(viewMat), Get(uniformObjectBuffer)[Get(objectIndex)].modelMat);
+    float4x4 modelView = mul(Get(viewMat), Get(uniformObjectBuffer)[InstanceID].modelMat);
     float4x4 modelViewPrj = mul(Get(projMat), modelView);
 
     Out.pos = mul(modelView, float4(In.Position.xyz, 1.0)).xyz;
-    Out.uv = mul(Get(uniformObjectBuffer)[Get(objectIndex)].uvMat, float4(In.TexCoord, 0, 1.0)).xy;
+    Out.uv = mul(Get(uniformObjectBuffer)[InstanceID].uvMat, float4(In.TexCoord, 0, 1.0)).xy;
 
-    float3x3 normalMat = ToNormalMat(Get(uniformObjectBuffer)[Get(objectIndex)].invModelMat, Get(invViewMat));
+    float3x3 normalMat = ToNormalMat(Get(uniformObjectBuffer)[InstanceID].invModelMat, Get(invViewMat));
     Out.normal = normalize(mul(normalMat, In.Normal.xyz));
     Out.tangent = normalize(mul(normalMat, In.Tangent.xyz));
     Out.bitangent = normalize(mul(normalMat, cross(In.Tangent.xyz, In.Normal.xyz)));
     Out.color = In.Color;
 
     Out.Position = mul(modelViewPrj, float4(In.Position.xyz, 1.0));
+    Out.drawId = InstanceID;
     RETURN(Out);
 }

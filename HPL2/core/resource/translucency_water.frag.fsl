@@ -29,6 +29,8 @@ STRUCT(PsIn)
     DATA(float3, tangent, TANGENT);
     DATA(float3, bitangent, BITANGENT);
     DATA(float4, color, COLOR);
+    
+    DATA(FLAT(uint), drawId, TEXCOORD1);
 };
 
 STRUCT(PsOut)
@@ -41,7 +43,7 @@ PsOut PS_MAIN(PsIn In)
 {
     INIT_MAIN;
     PsOut Out;
-    uint materialID = Get(uniformObjectBuffer)[Get(objectIndex)].materialID;
+    uint materialID = Get(uniformObjectBuffer)[In.drawId].materialID;
     
     float waveAft = Get(afT) * Get(uniformMaterialBuffer)[materialID].waveSpeed;
     ///////////////////////////////

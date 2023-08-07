@@ -30,20 +30,23 @@ STRUCT(VSOutput)
     DATA(float3, pos, POSITION);
     DATA(float2, uv, TEXCOORD0);
 	DATA(float4, color, COLOR);
+    
+    DATA(FLAT(uint), drawId, TEXCOORD1);
 };
 
-VSOutput VS_MAIN( VSInput In )
+VSOutput VS_MAIN( VSInput In, SV_InstanceID(uint) InstanceID )
 {
     INIT_MAIN;
     VSOutput Out;
 
-    float4x4 modelView = mul(Get(viewMat), Get(uniformObjectBuffer)[Get(objectIndex)].modelMat);
+    float4x4 modelView = mul(Get(viewMat), Get(uniformObjectBuffer)[InstanceID].modelMat);
     float4x4 modelViewPrj = mul(Get(projMat), modelView);
 
     Out.pos = mul(modelView, float4(In.Position.xyz, 1.0)).xyz;
-    Out.uv = mul(Get(uniformObjectBuffer)[Get(objectIndex)].uvMat, float4(In.TexCoord, 0, 1.0)).xy;
+    Out.uv = mul(Get(uniformObjectBuffer)[InstanceID].uvMat, float4(In.TexCoord, 0, 1.0)).xy;
     Out.color = In.Color;
 
     Out.Position = mul(modelViewPrj, float4(In.Position.xyz, 1.0));
+    Out.drawId = InstanceID;
     RETURN(Out);
 }

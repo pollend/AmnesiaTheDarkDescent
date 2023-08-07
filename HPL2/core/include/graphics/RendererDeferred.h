@@ -351,14 +351,10 @@ namespace hpl {
         };
 
         uint32_t updateFrameDescriptor(const ForgeRenderer::Frame& frame,Cmd* cmd, cWorld* apWorld,const PerFrameOption& options);
-        void cmdBindMaterialDescriptor(Cmd* cmd, const ForgeRenderer::Frame& frame, cMaterial* apMaterial);
-        void cmdBindObjectDescriptor(Cmd* cmd, const ForgeRenderer::Frame& frame, cMaterial* apMaterial, iRenderable* apObject, const PerObjectOption& option);
-
-        void cmdBindMaterialAndObject(Cmd* cmd,
+        uint32_t cmdBindMaterialAndObject(Cmd* cmd,
             const ForgeRenderer::Frame& frame,
             cMaterial* apMaterial,
             iRenderable* apObject,
-            std::function<void(uint32_t)> objectIndexHandle,
             const PerObjectOption& option);
 
         std::array<std::unique_ptr<iVertexBuffer>, eDeferredShapeQuality_LastEnum> m_shapeSphere;
@@ -444,14 +440,9 @@ namespace hpl {
 
         union MaterialRootConstant {
             struct {
-               uint32_t m_objectIndex;
-            } m_default;
-            struct {
-               uint32_t m_objectIndex;
                float m_afT;
             } m_water;
             struct {
-                uint32_t m_objectIndex;
                 uint32_t m_blendMode;
                 uint32_t m_textureMask;
                 float m_sceneAlpha;
