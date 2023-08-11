@@ -127,13 +127,13 @@ void cLuxPostEffect_Insanity::RenderEffect(
         float time;
         float amplitude;
         float waveAlpha;
-        float zoomAlpha;
+        float zoomAlpha; 
     } param = { 0 };
     param.time = mfT;
     param.zoomAlpha = mfZoomAlpha;
     param.waveAlpha = mfWaveAlpha;
     param.amplitude = fAmpT;
-    uint32_t rootConstantIndex = getDescriptorIndexFromName(m_instantyRootSignature, "postEffectConstants");
+    uint32_t rootConstantIndex = getDescriptorIndexFromName(m_instantyRootSignature, "rootConstant");
     cmdBindPushConstants(frame.m_cmd, m_instantyRootSignature, rootConstantIndex, &param);
 
     LoadActionsDesc loadActions = {};

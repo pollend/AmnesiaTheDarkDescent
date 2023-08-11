@@ -49,9 +49,7 @@ namespace hpl {
         Image& operator=(const Image& other) = delete;
         void operator=(Image&& other);
 
-        inline void SetForgeTexture(ForgeTextureHandle&& handle) {
-            m_texture = std::move(handle);
-        }
+        inline void SetForgeTexture(ForgeTextureHandle&& handle) { m_texture = std::move(handle); }
 
         virtual bool Reload() override;
         virtual void Unload() override;
@@ -76,11 +74,15 @@ namespace hpl {
         inline ForgeTextureHandle& GetTexture() {
             return m_texture;
         }
+        inline eTextureWrap wrapMode() { return m_wrapMode; }
+        inline eTextureFilter textureFilter() { return m_filter; } 
         void setTextureFilter(const eTextureFilter& filter);
         void setWrapMode(const eTextureWrap& wrap);
 
         SamplerDesc m_samplerDesc{};
         ForgeTextureHandle m_texture;
+        eTextureFilter m_filter;
+        eTextureWrap m_wrapMode;
     };
 
 } // namespace hpl

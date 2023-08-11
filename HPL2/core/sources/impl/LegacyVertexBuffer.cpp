@@ -461,18 +461,18 @@ namespace hpl {
                     element.m_activeCopy = isDynamicAccess ? ((element.m_activeCopy + 1) % ForgeRenderer::SwapChainLength) : 0;
                     size_t minimumSize = element.m_shadowData.size() * (isDynamicAccess ? ForgeRenderer::SwapChainLength: 1);
                     if (!isDynamicAccess || element.m_buffer.m_handle == nullptr || element.m_buffer.m_handle->mSize > minimumSize) {
-
-                        BufferLoadDesc loadDesc = {};
-                        loadDesc.ppBuffer = &element.m_buffer.m_handle;
-                        loadDesc.mDesc.mDescriptors = DESCRIPTOR_TYPE_VERTEX_BUFFER;
-                        loadDesc.mDesc.mMemoryUsage = detail::toMemoryUsage(mUsageType);
-                        loadDesc.mDesc.mSize = minimumSize;
-                        if (detail::IsDynamicMemory(mUsageType)) {
-                            loadDesc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
-                        } else {
-                            loadDesc.pData = element.m_shadowData.data();
-                        }
                         element.m_buffer.Load([&](Buffer** buffer) {
+                            BufferLoadDesc loadDesc = {};
+                            loadDesc.ppBuffer = buffer;
+                            loadDesc.mDesc.mDescriptors = DESCRIPTOR_TYPE_VERTEX_BUFFER;
+                            loadDesc.mDesc.mMemoryUsage = detail::toMemoryUsage(mUsageType);
+                            loadDesc.mDesc.mSize = minimumSize;
+                            if (detail::IsDynamicMemory(mUsageType)) {
+                                loadDesc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
+                            } else {
+                                loadDesc.mDesc.mSize = element.m_shadowData.size();
+                                loadDesc.pData = element.m_shadowData.data();
+                            }
                             addResource(&loadDesc, nullptr);
                             return true;
                         });

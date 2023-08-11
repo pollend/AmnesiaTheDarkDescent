@@ -957,12 +957,6 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
                 cmdDraw(frame->m_cmd, 3, 0);
             }
         };
-
-        {
-            uint32_t rootConstantIndex = getDescriptorIndexFromName(m_postProcessingRootSignature, "postEffectConstants");
-            float blurSize = 1.0;
-            cmdBindPushConstants(frame->m_cmd, m_postProcessingRootSignature, rootConstantIndex, &blurSize);
-        }
         {
             cmdBindRenderTargets(frame->m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
             std::array rtBarriers = {

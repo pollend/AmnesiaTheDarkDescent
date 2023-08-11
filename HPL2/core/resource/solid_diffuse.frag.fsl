@@ -1,6 +1,5 @@
 #define MATERIAL_SOLID 1
 #include "deferred_resources.h.fsl"
-#include "deferred_common.h.fsl"
 
 STRUCT(PsIn) 
 {
@@ -33,25 +32,24 @@ PsOut PS_MAIN(PsIn In)
 #ifdef PARALLAX_ENABLED
     if(HasHeight(Get(uniformMaterialBuffer)[materialID].textureConfig)) {
         texCoord.xy  = ParallaxRelief(
+            materialID,
             SEARCH_SAMPLE_COUNT, 
             IsHeightMapSingleChannel(Get(uniformMaterialBuffer)[materialID].textureConfig), 
             Get(uniformMaterialBuffer)[materialID].heightMapScale * PARALAX_MULTIPLIER, 
             normalize(In.normal), 
             texCoord, 
-            normalize(In.view), 
-            Get(heightSampler), 
-            Get(heightMap));
+            normalize(In.view));
     }
 #endif
 
-    float4 diffuseColor = SampleTex2D(Get(diffuseMap), Get(diffuseSampler), texCoord.xy);
+    float4 diffuseColor = DIFFUSE_SamplerTex2D(Get(diffuseMap), diffuseMapSamplerID(materialID), texCoord.xy);
     if(diffuseColor.w < ALPHA_REJECT ) {
         discard;
     }
 
     float3 normal = float3(0, 0, 0);
     if(HasNormal(Get(uniformMaterialBuffer)[materialID].textureConfig)) {
-        float3 normalSample = SampleTex2D(Get(normalMap), Get(normalSampler), texCoord.xy).xyz - 0.5;
+        float3 normalSample = DIFFUSE_SamplerTex2D(Get(normalMap), normalMapSamplerID(materialID), texCoord.xy).xyz - 0.5;
         normal = normalize(normalSample.x * In.tangent + normalSample.y * In.bitangent + normalSample.z * In.normal);
     } else {
         normal = normalize(In.normal);
@@ -61,7 +59,7 @@ PsOut PS_MAIN(PsIn In)
         float3 envUV = reflect(cameraEyeSpace, normal);
         envUV = mul(Get(invViewRotationMat), float4(envUV.xyz, 1.0)).xyz;
                     
-        float4 reflectionColor = SampleTexCube(Get(cubeMap), Get(cubeSampler), envUV);
+        float4 reflectionColor = DIFFUSE_SampleTexCube(Get(cubeMap), cubeMapSamplerID(materialID), envUV);
         
         float afEDotN = max(dot(-cameraEyeSpace, normal),0.0);
         float fFresnel = Fresnel(afEDotN,
@@ -69,7 +67,7 @@ PsOut PS_MAIN(PsIn In)
             Get(uniformMaterialBuffer)[materialID].frenselPow);
         
         if(HasCubeMapAlpha(Get(uniformMaterialBuffer)[materialID].textureConfig)) {
-            reflectionColor *= SampleTex2D(Get(cubeMapAlpha), Get(cubeMapAlphaSampler), texCoord.xy).wwww;
+            reflectionColor *= DIFFUSE_SamplerTex2D(Get(cubeMapAlpha), cubeMapAlphaSamplerID(materialID), texCoord.xy).wwww;
         }
         Out.diffuse = diffuseColor + reflectionColor * fFresnel;
     } else {
@@ -78,7 +76,7 @@ PsOut PS_MAIN(PsIn In)
     Out.normal = float4(normal.xyz, 0.0);
     Out.position = float4(In.pos.xyz, 1.0);
     if(HasSpecular(Get(uniformMaterialBuffer)[materialID].textureConfig)) {
-        Out.specular = SampleTex2D(Get(specularMap), Get(specularSampler), texCoord.xy).xy;
+        Out.specular = DIFFUSE_SamplerTex2D(Get(specularMap), specularMapSamplerID(materialID), texCoord.xy).xy;
     } else {
         Out.specular = float2(0,0);
     }

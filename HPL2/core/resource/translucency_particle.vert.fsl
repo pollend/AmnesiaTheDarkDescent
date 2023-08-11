@@ -15,7 +15,6 @@
 */
 #define MATERIAL_TRANSLUCENT 1
 #include "deferred_resources.h.fsl"
-#include "deferred_common.h.fsl"
 
 STRUCT(VSInput)
 {

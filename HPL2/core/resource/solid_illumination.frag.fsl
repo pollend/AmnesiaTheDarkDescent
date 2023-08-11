@@ -1,7 +1,5 @@
 #define MATERIAL_SOLID 1
 #include "deferred_resources.h.fsl"
-#include "deferred_common.h.fsl"
-
 
 STRUCT(PsIn) 
 {
@@ -20,9 +18,11 @@ STRUCT(PsOut)
 PsOut PS_MAIN(PsIn In)
 {
     INIT_MAIN;
+    uint materialID = Get(uniformObjectBuffer)[Get(objectId)].materialID;
+
     PsOut Out;
-    Out.diffuse = SampleTex2D(Get(illuminationMap), 
-        Get(illuminationSampler), 
+    Out.diffuse = DIFFUSE_SamplerTex2D(Get(illuminationMap), 
+        illuminationMapSamplerID(materialID), 
         In.uv).rgba;
     RETURN(Out);
 }

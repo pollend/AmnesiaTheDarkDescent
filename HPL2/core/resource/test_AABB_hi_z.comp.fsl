@@ -9,7 +9,7 @@ CBUFFER(objectUniformBlock, UPDATE_FREQ_PER_FRAME, b0, binding = 3)
     DATA(uint, numObjects, None);
     DATA(int, maxMipLevel, None);
     DATA(uint2, depthDim, None);
-    DATA(float3, inputCollider[MAX_NUM_OBJECTS], None);
+    DATA(float4, inputCollider[MAX_NUM_OBJECTS], None);
 };
 
 NUM_THREADS(128, 1,  1)
@@ -22,8 +22,8 @@ void CS_MAIN(SV_DispatchThreadID(uint3) did)
         return;
     }
      
-    float3 bboxMin = Get(inputCollider)[2 * did.x];
-    float3 bboxMax = Get(inputCollider)[2 * did.x + 1];
+    float3 bboxMin = Get(inputCollider)[2 * did.x].xyz;
+    float3 bboxMax = Get(inputCollider)[2 * did.x + 1].xyz;
    
     //Adapted from http://blog.selfshadow.com/publications/practical-visibility/
     float3 bboxSize = bboxMax.xyz - bboxMin.xyz;
@@ -79,7 +79,7 @@ void CS_MAIN(SV_DispatchThreadID(uint3) did)
     uint2 dimMip = dim / (1 << mip); 	
     int2 minPos = int2(minXY.xy * dimMip.xy); 
     int2 maxPos = int2(maxXY.xy * dimMip.xy); 
-    Get(occlusionTest)[did.x] = false;;
+    Get(occlusionTest)[did.x] = false;
     for(int i = minPos.x; i <= maxPos.x; i++)
     {
         for(int j = minPos.y; j <= maxPos.y; j++)

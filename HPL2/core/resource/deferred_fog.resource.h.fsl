@@ -1,5 +1,6 @@
 PUSH_CONSTANT(uRootConstants, b0)
 {
+    DATA(uint, instanceOffset, None);
     DATA(float2, viewTexel, None);
 };
 

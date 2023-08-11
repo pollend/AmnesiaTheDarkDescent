@@ -16,20 +16,21 @@
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
+
+
+RES(SamplerState, inputSampler, UPDATE_FREQ_NONE, s0, binding = 0);
+RES(Tex2D(float4), sourceInput, UPDATE_FREQ_PER_FRAME, t0, binding = 1);
+RES(Tex2D(float4), blurInput, UPDATE_FREQ_PER_FRAME, t1, binding = 2);
+
+PUSH_CONSTANT(rootConstant, b1) {
+    DATA(float4, rgbToIntensity, None);
+};
+
 STRUCT(PsIn) 
 {
     DATA(float4, Position, SV_Position);
     DATA(float2, uv, TEXCOORD0);
 };
-
-PUSH_CONSTANT(postEffectConstants, b0)
-{
-    DATA(float4, rgbToIntensity, None);
-};
-
-RES(SamplerState, inputSampler, UPDATE_FREQ_NONE, s0, binding = 0);
-RES(Tex2D(float4), sourceInput, UPDATE_FREQ_PER_FRAME, t0, binding = 1);
-RES(Tex2D(float4), blurInput, UPDATE_FREQ_PER_FRAME, t1, binding = 2);
 
 float4 PS_MAIN(PsIn In) 
 {    

@@ -8,7 +8,6 @@
 STRUCT(PsIn)
 {
 	DATA(float4, Position, SV_Position);
-    DATA(FLAT(uint), drawId, TEXCOORD0);
 };
 
 float4 PS_MAIN(PsIn In)
@@ -16,6 +15,6 @@ float4 PS_MAIN(PsIn In)
     INIT_MAIN;
     float2 viewTexel = 1.0 / GetDimensions(Get(diffuseMap), NO_SAMPLER).xy;
     float2 NDC = In.Position.xy * viewTexel;
-    float4 color =  SampleTex2D(Get(diffuseMap), Get(nearestSampler), NDC) * float4(Get(lightObjectBuffer)[In.drawId].lightColor.rgb, 1.0);
+    float4 color =  SampleTex2D(Get(diffuseMap), Get(nearestSampler), NDC) * float4(Get(lightObjectBuffer)[Get(lightId)].lightColor.rgb, 1.0);
     RETURN(float4(color.rgb, 0.0));
 }

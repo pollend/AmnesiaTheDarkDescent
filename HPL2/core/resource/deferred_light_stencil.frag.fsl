@@ -4,7 +4,6 @@
 STRUCT(PsIn)
 {
     DATA(float4, Position, SV_Position);
-    DATA(FLAT(uint), drawId, TEXCOORD0);
 };
 
 float4 PS_MAIN(PsIn In)

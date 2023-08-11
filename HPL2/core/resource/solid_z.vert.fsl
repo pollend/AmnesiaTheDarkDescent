@@ -1,6 +1,5 @@
 #define MATERIAL_SOLID 1
 #include "deferred_resources.h.fsl"
-#include "deferred_common.h.fsl"
 
 STRUCT(VSInput)
 {
@@ -40,5 +39,8 @@ VSOutput VS_MAIN(VSInput In)
         dot(viewEye, tangent), 
         dot(viewEye, bitangent), 
         dot(-viewEye, Out.normal));
+    
+    Out.normal =  Get(uniformObjectBuffer)[Get(objectId)].modelMat[0].xyz;
+    Out.view =  Get(uniformObjectBuffer)[Get(objectId)].modelMat[1].xyz;
     RETURN(Out);
 }
