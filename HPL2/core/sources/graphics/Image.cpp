@@ -57,6 +57,7 @@ namespace hpl
     }
 
     void Image::setTextureFilter(const eTextureFilter& filter) {
+        m_filter = filter;
         ASSERT(m_texture.IsValid());
         if(m_texture.m_handle->mMipLevels > 0)
         {
@@ -106,6 +107,7 @@ namespace hpl
     }
 
     void Image::setWrapMode(const eTextureWrap& wrap) {
+        m_wrapMode = wrap;
         ASSERT(m_texture.IsValid());
         switch(wrap) {
             case eTextureWrap_Repeat:

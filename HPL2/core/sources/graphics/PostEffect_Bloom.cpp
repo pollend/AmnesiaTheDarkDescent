@@ -41,17 +41,10 @@ namespace hpl
         : iPostEffectType("Bloom", apGraphics, apResources)
     {
         auto* forgeRenderer = Interface<ForgeRenderer>::Get();
-        m_blurVerticalShader.Load(forgeRenderer->Rend(),[&](Shader** shader) {
+        m_blurShader.Load(forgeRenderer->Rend(), [&](Shader** shader) {
             ShaderLoadDesc loadDesc{};
             loadDesc.mStages[0].pFileName = "fullscreen.vert";
-            loadDesc.mStages[1].pFileName = "blur_posteffect_vertical.frag";
-            addShader(forgeRenderer->Rend(),&loadDesc, shader);
-            return true;
-        });
-        m_blurHorizontalShader.Load(forgeRenderer->Rend(),[&](Shader** shader) {
-            ShaderLoadDesc loadDesc{};
-            loadDesc.mStages[0].pFileName =  "fullscreen.vert";
-            loadDesc.mStages[1].pFileName =  "blur_posteffect_horizontal.frag";
+            loadDesc.mStages[1].pFileName = "blur_posteffect.frag";
             addShader(forgeRenderer->Rend(),&loadDesc, shader);
             return true;
         });
@@ -68,8 +61,7 @@ namespace hpl
         }
         {
             std::array shaders = {
-                m_blurVerticalShader.m_handle,
-                m_blurHorizontalShader.m_handle,
+                m_blurShader.m_handle
             };
             RootSignatureDesc rootDesc{};
             const char* pStaticSamplers[] = { "inputSampler" };
@@ -78,9 +70,9 @@ namespace hpl
             rootDesc.mStaticSamplerCount = 1;
             rootDesc.ppStaticSamplers = &m_inputSampler;
             rootDesc.ppStaticSamplerNames = pStaticSamplers;
-            addRootSignature(forgeRenderer->Rend(), &rootDesc, &m_rootSignature);
+            addRootSignature(forgeRenderer->Rend(), &rootDesc, &m_blurSignature);
 
-            DescriptorSetDesc setDesc = { m_rootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, cPostEffectType_Bloom::DescriptorSetSize  };
+            DescriptorSetDesc setDesc = { m_blurSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, cPostEffectType_Bloom::DescriptorSetSize };
             for(auto& descSet: m_perFrameDescriptorSets) {
                 addDescriptorSet(forgeRenderer->Rend(), &setDesc, &descSet);
             }
@@ -117,9 +109,8 @@ namespace hpl
             pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
             GraphicsPipelineDesc& graphicsPipelineDesc = pipelineDesc.mGraphicsDesc;
             graphicsPipelineDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
-            graphicsPipelineDesc.pShaderProgram = m_blurHorizontalShader.m_handle;
-            graphicsPipelineDesc.pRootSignature = m_rootSignature;
-            graphicsPipelineDesc.mRenderTargetCount = 1;
+            graphicsPipelineDesc.pShaderProgram = m_blurShader.m_handle;
+            graphicsPipelineDesc.pRootSignature = m_blurSignature;
             graphicsPipelineDesc.mDepthStencilFormat = TinyImageFormat_UNDEFINED;
             graphicsPipelineDesc.pVertexLayout = NULL;
             graphicsPipelineDesc.pRasterizerState = &rasterStateNoneDesc;
@@ -127,33 +118,9 @@ namespace hpl
             graphicsPipelineDesc.pBlendState = NULL;
             graphicsPipelineDesc.mSampleCount = SAMPLE_COUNT_1;
             graphicsPipelineDesc.mSampleQuality = 0;
-            graphicsPipelineDesc.pColorFormats = &inputFormat;
-            addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_blurHorizontalPipeline);
-        }
-        {
-            DepthStateDesc depthStateDisabledDesc = {};
-            depthStateDisabledDesc.mDepthWrite = false;
-            depthStateDisabledDesc.mDepthTest = false;
-
-            RasterizerStateDesc rasterStateNoneDesc = {};
-            rasterStateNoneDesc.mCullMode = CULL_MODE_NONE;
-
-            PipelineDesc pipelineDesc = {};
-            pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
-            GraphicsPipelineDesc& graphicsPipelineDesc = pipelineDesc.mGraphicsDesc;
-            graphicsPipelineDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
-            graphicsPipelineDesc.pShaderProgram = m_blurVerticalShader.m_handle;
-            graphicsPipelineDesc.pRootSignature = m_rootSignature;
             graphicsPipelineDesc.mRenderTargetCount = 1;
-            graphicsPipelineDesc.mDepthStencilFormat = TinyImageFormat_UNDEFINED;
-            graphicsPipelineDesc.pVertexLayout = NULL;
-            graphicsPipelineDesc.pRasterizerState = &rasterStateNoneDesc;
-            graphicsPipelineDesc.pDepthState = &depthStateDisabledDesc;
-            graphicsPipelineDesc.pBlendState = NULL;
-            graphicsPipelineDesc.mSampleCount = SAMPLE_COUNT_1;
-            graphicsPipelineDesc.mSampleQuality = 0;
             graphicsPipelineDesc.pColorFormats = &inputFormat;
-            addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_blurVerticalPipeline);
+            addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_blurPipeline);
         }
         {
             DepthStateDesc depthStateDisabledDesc = {};
@@ -292,6 +259,7 @@ namespace hpl
         }
 
         auto requestBlur = [&](Texture** input) {
+            uint32_t rootConstantIndex = getDescriptorIndexFromName(mpBloomType->m_blurSignature, "rootConstant");
             ASSERT(input && "Invalid input texture");
             {
                 cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
@@ -316,8 +284,10 @@ namespace hpl
 
                 cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, static_cast<float>(blurTarget->mWidth), static_cast<float>(blurTarget->mHeight), 0.0f, 1.0f);
                 cmdSetScissor(frame.m_cmd, 0, 0, static_cast<float>(blurTarget->mWidth), static_cast<float>(blurTarget->mHeight));
-                cmdBindPipeline(frame.m_cmd, mpBloomType->m_blurHorizontalPipeline);
+                cmdBindPipeline(frame.m_cmd, mpBloomType->m_blurPipeline);
 
+                float2 blurSize = float2(mParams.mfBlurSize, 0.0f);
+                cmdBindPushConstants(frame.m_cmd, mpBloomType->m_blurSignature, rootConstantIndex, &blurSize);
                 cmdBindDescriptorSet(frame.m_cmd, mpBloomType->m_setIndex, mpBloomType->m_perFrameDescriptorSets[frame.m_frameIndex]);
                 cmdDraw(frame.m_cmd, 3, 0);
 
@@ -349,19 +319,17 @@ namespace hpl
 
                 cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, static_cast<float>(blurTarget->mWidth), static_cast<float>(blurTarget->mHeight), 0.0f, 1.0f);
                 cmdSetScissor(frame.m_cmd, 0, 0, static_cast<float>(blurTarget->mWidth), static_cast<float>(blurTarget->mHeight));
-                cmdBindPipeline(frame.m_cmd, mpBloomType->m_blurVerticalPipeline);
+                cmdBindPipeline(frame.m_cmd, mpBloomType->m_blurPipeline);
 
+                
+                float2 blurSize = float2(0.0f, mParams.mfBlurSize);
+                cmdBindPushConstants(frame.m_cmd, mpBloomType->m_blurSignature, rootConstantIndex, &blurSize);
                 cmdBindDescriptorSet(frame.m_cmd, mpBloomType->m_setIndex, mpBloomType->m_perFrameDescriptorSets[frame.m_frameIndex]);
                 cmdDraw(frame.m_cmd, 3, 0);
 
                 mpBloomType->m_setIndex= (mpBloomType->m_setIndex + 1) % cPostEffectType_Bloom::DescriptorSetSize;
             }
         };
-        {
-            uint32_t rootConstantIndex = getDescriptorIndexFromName(mpBloomType->m_rootSignature, "postEffectConstants");
-            cmdBindPushConstants(frame.m_cmd, mpBloomType->m_rootSignature, rootConstantIndex, &mParams.mfBlurSize
-);
-        }
         cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "Bloom Blur");
         requestBlur(&inputTexture);
         for (int i = 1; i < mParams.mlBlurIterations; ++i)
@@ -376,12 +344,6 @@ namespace hpl
                     bloomData->m_blurTargets[1].m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
             };
             cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
-        }
-        {
-            float rgbIntensity[] = {mParams.mvRgbToIntensity.x, mParams.mvRgbToIntensity.y, mParams.mvRgbToIntensity.z, 0.0f};
-            uint32_t rootConstantIndex = getDescriptorIndexFromName(mpBloomType->m_bloomRootSignature, "postEffectConstants");
-            cmdBindPushConstants(frame.m_cmd, mpBloomType->m_bloomRootSignature, rootConstantIndex, rgbIntensity
-);
         }
         {
             cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "Bloom Add");
@@ -403,6 +365,13 @@ namespace hpl
             cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, static_cast<float>(renderTarget->mWidth), static_cast<float>(renderTarget->mHeight), 0.0f, 1.0f);
             cmdSetScissor(frame.m_cmd, 0, 0, static_cast<float>(renderTarget->mWidth), static_cast<float>(renderTarget->mHeight));
             cmdBindPipeline(frame.m_cmd, mpBloomType->m_bloomPipeline);
+
+               
+            {
+                float rgbIntensity[] = { mParams.mvRgbToIntensity.x, mParams.mvRgbToIntensity.y, mParams.mvRgbToIntensity.z, 0.0f };
+                uint32_t rootConstantIndex = getDescriptorIndexFromName(mpBloomType->m_bloomRootSignature, "rootConstant");
+                cmdBindPushConstants(frame.m_cmd, mpBloomType->m_bloomRootSignature, rootConstantIndex, rgbIntensity);
+            }
 
             cmdBindDescriptorSet(frame.m_cmd, mpBloomType->m_setBloomIndex, mpBloomType->m_perFrameDescriptorBloomSets[frame.m_frameIndex]);
             cmdDraw(frame.m_cmd, 3, 0);

@@ -15,10 +15,6 @@
 */
 #define MATERIAL_WATER 1
 #include "deferred_resources.h.fsl"
-#include "deferred_common.h.fsl"
-
-RES(Tex2D(float4), refractionMap, UPDATE_FREQ_PER_FRAME, t1, binding = 4); 
-RES(Tex2D(float4), reflectionMap, UPDATE_FREQ_PER_FRAME, t2, binding = 5); 
 
 STRUCT(PsIn) 
 {
@@ -29,8 +25,6 @@ STRUCT(PsIn)
     DATA(float3, tangent, TANGENT);
     DATA(float3, bitangent, BITANGENT);
     DATA(float4, color, COLOR);
-    
-    DATA(FLAT(uint), drawId, TEXCOORD1);
 };
 
 STRUCT(PsOut)
@@ -38,12 +32,11 @@ STRUCT(PsOut)
     DATA(float4, diffuse, SV_Target0);
 };
 
-
 PsOut PS_MAIN(PsIn In)
 {
     INIT_MAIN;
     PsOut Out;
-    uint materialID = Get(uniformObjectBuffer)[In.drawId].materialID;
+    uint materialID = Get(uniformObjectBuffer)[Get(objectId)].materialID;
     
     float waveAft = Get(afT) * Get(uniformMaterialBuffer)[materialID].waveSpeed;
     ///////////////////////////////
@@ -61,14 +54,14 @@ PsOut PS_MAIN(PsIn In)
     ///////////////////////////////
     //Get the normals and combine into final normal
     // (No need for full unpack since there is a normalize later)
-    float3 vNormal1 = SampleTex2D(Get(normalMap), Get(normalSampler), vUv1).xyz - 0.5;
-    float3 vNormal2 = SampleTex2D(Get(normalMap), Get(normalSampler), vUv2).xyz - 0.5;
+    float3 vNormal1 = DIFFUSE_SamplerTex2D(Get(normalMap), normalMapSamplerID(materialID), vUv1).xyz - 0.5;
+    float3 vNormal2 = DIFFUSE_SamplerTex2D(Get(normalMap), normalMapSamplerID(materialID), vUv2).xyz - 0.5;
 
     float3 vFinalNormal = normalize(vNormal1*0.7 + vNormal2*0.3);
 
     ///////////////////////////////
     //Get the diffuse color
-    float4 surfaceColor  = SampleTex2D(Get(diffuseMap), Get(diffuseSampler), vUv1);
+    float4 surfaceColor  = DIFFUSE_SamplerTex2D(Get(diffuseMap), diffuseMapSamplerID(materialID), vUv1);
 
     float4 vRefractionColor = float4(1,1,1,1);
     float2 vDistortedScreenPos = float2(0, 0);
@@ -105,7 +98,7 @@ PsOut PS_MAIN(PsIn In)
             if(HasCubeMap(Get(uniformMaterialBuffer)[materialID].textureConfig)) {
                 float3 vEnvUv = reflect(vEyeVec, vScreenNormal);
                 vEnvUv = mul(Get(invViewRotationMat), float4(vEnvUv.x, vEnvUv.y, vEnvUv.z, 1)).xyz;
-                vReflectionColor  = SampleTexCube(Get(cubeMap),  Get(cubeSampler), vEnvUv);
+                vReflectionColor  = DIFFUSE_SampleTexCube(Get(cubeMap),  cubeMapSamplerID(materialID), vEnvUv);
             } else {
                 vRefractionColor = SampleTex2D(Get(reflectionMap), Get(nearestSampler), vDistortedScreenPos * Get(viewTexel));
             }

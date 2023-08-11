@@ -58,13 +58,11 @@ namespace hpl {
         static constexpr uint32_t DescriptorSetSize = 16;
 
         Sampler* m_inputSampler;
-        ForgeShaderHandle m_blurVerticalShader;
-        ForgeShaderHandle m_blurHorizontalShader;
-        RootSignature* m_rootSignature;
+        ForgeShaderHandle m_blurShader;
+        RootSignature* m_blurSignature;
         std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perFrameDescriptorSets;
         uint32_t m_setIndex = 0;
-        Pipeline* m_blurVerticalPipeline;
-        Pipeline* m_blurHorizontalPipeline;
+        Pipeline* m_blurPipeline;
 
         RootSignature* m_bloomRootSignature;
         ForgeShaderHandle m_bloomShader;

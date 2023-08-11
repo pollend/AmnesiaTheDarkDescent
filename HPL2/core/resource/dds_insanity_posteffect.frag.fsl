@@ -1,14 +1,13 @@
 /// Copyright © 2009-2020 Frictional Games
 /// Copyright 2023 Michael Pollind
 /// SPDX-License-Identifier: GPL-3.0
+RES(SamplerState, inputSampler, UPDATE_FREQ_NONE, s0, binding = 0);
+RES(Tex2D(float4), sourceInput, UPDATE_FREQ_PER_FRAME, t0, binding = 1);
+RES(Tex2D(float4), ampMap0, UPDATE_FREQ_PER_FRAME, t1, binding = 2);
+RES(Tex2D(float4), ampMap1, UPDATE_FREQ_PER_FRAME, t2, binding = 3);
+RES(Tex2D(float4), zoomMap, UPDATE_FREQ_PER_FRAME, t3, binding = 4);
 
-STRUCT(PsIn) 
-{
-    DATA(float4, Position, SV_Position);
-    DATA(float2, uv, TEXCOORD0);
-};
-
-PUSH_CONSTANT(postEffectConstants, b0)
+PUSH_CONSTANT(rootConstant, b1)
 {
     DATA(float, time, None);
     DATA(float, amplitude, None);
@@ -16,11 +15,12 @@ PUSH_CONSTANT(postEffectConstants, b0)
     DATA(float, zoomAlpha, None);
 };
 
-RES(SamplerState, inputSampler, UPDATE_FREQ_NONE, s0, binding = 0);
-RES(Tex2D(float4), sourceInput, UPDATE_FREQ_PER_FRAME, t0, binding = 1);
-RES(Tex2D(float4), ampMap0, UPDATE_FREQ_PER_FRAME, t1, binding = 2);
-RES(Tex2D(float4), ampMap1, UPDATE_FREQ_PER_FRAME, t2, binding = 3);
-RES(Tex2D(float4), zoomMap, UPDATE_FREQ_PER_FRAME, t3, binding = 4);
+STRUCT(PsIn) 
+{
+    DATA(float4, Position, SV_Position);
+    DATA(float2, uv, TEXCOORD0);
+};
+
 
 float4 PS_MAIN(PsIn In) 
 {    

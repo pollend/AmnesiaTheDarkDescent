@@ -108,28 +108,28 @@ if(THE_FORGE_VULKAN)
 endif()
 
 # if(THE_FORGE_D3D12)
-#     file(GLOB GRAPHICS_D3D12_SOURCE
-#         "${THE_FORGE_DIR}/Common_3/Graphics/Direct3D12/*.cpp")
-#     target_sources(TheForge PRIVATE ${GRAPHICS_D3D12_SOURCE})
-#     target_include_directories(TheForge PRIVATE ${THE_FORGE_DIR}/Common_3/Graphics/ThirdParty/OpenSource/D3D12MemoryAllocator)
-#     target_link_libraries(TheForge PRIVATE Nvapi ags)
+     file(GLOB GRAPHICS_D3D12_SOURCE
+         "${THE_FORGE_DIR}/Common_3/Graphics/Direct3D12/*.cpp")
+     target_sources(TheForge PRIVATE ${GRAPHICS_D3D12_SOURCE})
+     target_include_directories(TheForge PRIVATE ${THE_FORGE_DIR}/Common_3/Graphics/ThirdParty/OpenSource/D3D12MemoryAllocator)
+     target_link_libraries(TheForge PRIVATE Nvapi ags)
 # endif()
 
 # if(THE_FORGE_D3D11)
-#    add_library(DirectXShaderCompiler STATIC IMPORTED)
-#    set_property(TARGET DirectXShaderCompiler PROPERTY IMPORTED_LOCATION
-#            ${THE_FORGE_DIR}/Common_3/Graphics/ThirdParty/OpenSource/DirectXShaderCompiler/lib/x64/dxcompiler.lib
-#        )     
-#    file(GLOB GRAPHICS_D3D11_SOURCE
-#         "${THE_FORGE_DIR}/Common_3/Graphics/Direct3D11/*.cpp")
-#     target_sources(TheForge PRIVATE ${GRAPHICS_D3D11_SOURCE})
-#     target_link_libraries( TheForge PRIVATE 
-#           DirectXShaderCompiler
-#            "d3d11.lib")
+    add_library(DirectXShaderCompiler STATIC IMPORTED)
+    set_property(TARGET DirectXShaderCompiler PROPERTY IMPORTED_LOCATION
+            ${THE_FORGE_DIR}/Common_3/Graphics/ThirdParty/OpenSource/DirectXShaderCompiler/lib/x64/dxcompiler.lib
+        )     
+    file(GLOB GRAPHICS_D3D11_SOURCE
+         "${THE_FORGE_DIR}/Common_3/Graphics/Direct3D11/*.cpp")
+     target_sources(TheForge PRIVATE ${GRAPHICS_D3D11_SOURCE})
+     target_link_libraries( TheForge PRIVATE 
+           DirectXShaderCompiler
+            "d3d11.lib")
 # endif()
 #IF(THE_FORGE_D3D12 OR THE_FORGE_D3D11)
-#     include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/3rdParty/WinPixEventRuntime.cmake)    
-#     target_link_libraries( TheForge PRIVATE WinPixEventRuntime  )
+     include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/3rdParty/WinPixEventRuntime.cmake)    
+     target_link_libraries( TheForge PRIVATE WinPixEventRuntime  )
 # #ENDIF()
 
 if(THE_FORGE_OPENGLES)

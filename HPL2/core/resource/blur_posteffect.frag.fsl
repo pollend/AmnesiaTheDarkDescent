@@ -1,19 +1,21 @@
 /// Copyright © 2009-2020 Frictional Games
 /// Copyright 2023 Michael Pollind
 /// SPDX-License-Identifier: GPL-3.0
+
+RES(SamplerState, inputSampler, UPDATE_FREQ_NONE, s0, binding = 0);
+RES(Tex2D(float4), sourceInput, UPDATE_FREQ_PER_FRAME, t0, binding = 1);
+
+PUSH_CONSTANT(rootConstant, b0)
+{
+    DATA(float2, blurOffset, None);
+};
+
+
 STRUCT(PsIn) 
 {
     DATA(float4, Position, SV_Position);
     DATA(float2, uv, TEXCOORD0);
 };
-
-PUSH_CONSTANT(postEffectConstants, b0)
-{
-    DATA(float, blurSize, None);
-};
-
-RES(SamplerState, inputSampler, UPDATE_FREQ_NONE, s0, binding = 0);
-RES(Tex2D(float4), sourceInput, UPDATE_FREQ_PER_FRAME, t0, binding = 1);
 
 float4 PS_MAIN(PsIn In) 
 {    
@@ -28,11 +30,7 @@ float4 PS_MAIN(PsIn In)
 
     float3 amount = float3(0.0, 0.0, 0.0);
 
-    #ifdef USE_HORIZONTAL
-       	float2 offsetMul = float2(1.0, 0.0) * Get(blurSize);
-    #else
-        float2 offsetMul = float2(0.0, 1.0) * Get(blurSize);
-    #endif
+    float2 offsetMul = Get(blurOffset);
 
     for(int i = 0; i < 5; i++)
     {

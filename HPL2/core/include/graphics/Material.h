@@ -69,7 +69,7 @@ namespace hpl {
 	{
 	friend class iMaterialType;
 	public:
-		static constexpr uint32_t MaxMaterialID = 2048;
+		static constexpr uint32_t MaxMaterialID = 128;
 
 		enum MaterialID: uint8_t {
             Unknown = 0,
@@ -78,6 +78,21 @@ namespace hpl {
             Water,
             Decal,
             MaterialIDCount
+        };
+
+        enum TextureSamplerFlag {
+            clampNearSampler = 0,
+            clampLinearSampler = 1,
+            clampTrilinearSampler = 2,
+
+            clampBorderNearSampler = 3,
+            clampBorderLinearSampler = 4,
+            clampBorderTrilinearSampler = 5,
+
+            repeatNearSampler = 6,
+            repeatLinearSampler = 7,
+            repeatTrilinearSampler = 8,
+
         };
 
 		enum TextureConfigFlags {
@@ -106,10 +121,12 @@ namespace hpl {
 
 		struct MaterialCommonBlock {
 			uint32_t m_textureConfig;
+            uint32_t m_samplerConfig[2];
 		};
 
 		struct MaterialSolidUniformBlock {
-			MaterialCommonBlock m_common;
+			uint32_t m_textureConfig;
+            uint32_t m_samplerConfig[2];
 			float m_heightMapScale;
 			float m_heightMapBias;
 			float m_frenselBias;
@@ -117,8 +134,10 @@ namespace hpl {
 		};
 
 		struct MaterialTranslucentUniformBlock {
-			MaterialCommonBlock m_common;
+			uint32_t m_textureConfig;
+            uint32_t m_samplerConfig[2];
 			float mfRefractionScale;
+
 			float mfFrenselBias;
 			float mfFrenselPow;
 			float mfRimLightMul;
@@ -126,16 +145,19 @@ namespace hpl {
 		};
 
 		struct MaterialWaterUniformBlock {
-			MaterialCommonBlock m_common;
-
+			uint32_t m_textureConfig;
+            uint32_t m_samplerConfig[2];
 			float mfRefractionScale;
+
 			float mfFrenselBias;
 			float mfFrenselPow;
 			float mfReflectionFadeStart;
 			float mfReflectionFadeEnd;
+
 			float mfWaveSpeed;
 			float mfWaveAmplitude;
 			float mfWaveFreq;
+			uint32_t m_pading;
 		};
 
 
@@ -229,9 +251,9 @@ namespace hpl {
 
 		bool HasWorldReflection(){ return mbHasWorldReflection; }
 		void SetHasWorldReflection(bool abX){ mbHasWorldReflection = abX; }
-		void  SetWorldReflectionOcclusionTest(bool abX){ mbWorldReflectionOcclusionTest=abX;}
+		void SetWorldReflectionOcclusionTest(bool abX){ mbWorldReflectionOcclusionTest=abX;}
 		void SetMaxReflectionDistance(float afX){ mfMaxReflectionDistance = afX;}
-		bool  GetWorldReflectionOcclusionTest(){ return mbWorldReflectionOcclusionTest;}
+		bool GetWorldReflectionOcclusionTest(){ return mbWorldReflectionOcclusionTest;}
 		float GetMaxReflectionDistance(){ return mfMaxReflectionDistance;}
 
 		void SetHasTranslucentIllumination(bool abX){ mbHasTranslucentIllumination = abX;}

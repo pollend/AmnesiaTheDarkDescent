@@ -1,9 +1,5 @@
 #define MATERIAL_TRANSLUCENT 1
 #include "deferred_resources.h.fsl"
-#include "deferred_common.h.fsl"
-
-RES(Tex2D(float4), refractionMap, UPDATE_FREQ_PER_FRAME, t1, binding = 4); 
-
 
 STRUCT(PsIn) 
 {
@@ -14,8 +10,6 @@ STRUCT(PsIn)
     DATA(float3, tangent, TANGENT);
     DATA(float3, bitangent, BITANGENT);
     DATA(float4, color, COLOR);
-
-    DATA(FLAT(uint), drawId, TEXCOORD1);
 };
 
 STRUCT(PsOut)
@@ -27,13 +21,13 @@ PsOut PS_MAIN(PsIn In)
 {
     INIT_MAIN;
     PsOut Out;
-    uint materialID = Get(uniformObjectBuffer)[In.drawId].materialID;
+    uint materialID = Get(uniformObjectBuffer)[Get(objectId)].materialID;
     uint textureConfig = Get(uniformMaterialBuffer)[materialID].textureConfig & Get(textureMask);
 
     float4 finalColor = float4(0.0, 0.0 ,0.0, 1.0);
     
     if(HasDiffuse(textureConfig)) {
-        finalColor = SampleTex2D(Get(diffuseMap), Get(diffuseSampler), In.uv) * In.color;
+        finalColor = DIFFUSE_SamplerTex2D(Get(diffuseMap), diffuseMapSamplerID(materialID), In.uv) * In.color;
     }
 
     #ifdef USE_FOG
@@ -84,7 +78,7 @@ PsOut PS_MAIN(PsIn In)
         HasCubeMap(Get(uniformMaterialBuffer)[materialID].textureConfig & Get(textureMask))) {
 
         if(HasNormal(Get(uniformMaterialBuffer)[materialID].textureConfig & Get(textureMask))) {
-            mapNormal = SampleTex2D(Get(normalMap), Get(normalSampler), In.uv).xyz * 2.0 - 1.0;
+            mapNormal = DIFFUSE_SamplerTex2D(Get(normalMap), normalMapSamplerID(materialID), In.uv).xyz * 2.0 - 1.0;
             screenNormal = normalize(mapNormal.x * In.tangent + mapNormal.y * In.bitangent + mapNormal.z * In.normal);
         } else {
             screenNormal = normalize(In.normal);
@@ -132,11 +126,11 @@ PsOut PS_MAIN(PsIn In)
         float3 vEnvUv = reflect(eyeVec, screenNormal);
         vEnvUv = mul(Get(invViewRotationMat), float4(vEnvUv,1)).xyz;
                     
-        float4 reflectionColor = SampleTexCube(Get(cubeMap),  Get(cubeSampler), vEnvUv);
+        float4 reflectionColor = DIFFUSE_SampleTexCube(Get(cubeMap),  cubeMapSamplerID(materialID), vEnvUv);
         
         //Alpha for environment map
         if(HasCubeMapAlpha(textureConfig)) {
-            float fEnvMapAlpha = SampleTex2D(Get(cubeMapAlpha), Get(cubeMapAlphaSampler), In.uv.xy).w;
+            float fEnvMapAlpha = DIFFUSE_SamplerTex2D(Get(cubeMapAlpha), dissolveAlphaMapSamplerID(materialID), In.uv.xy).w;
             reflectionColor *= fEnvMapAlpha;
         }
         
@@ -144,7 +138,7 @@ PsOut PS_MAIN(PsIn In)
         
         ///////////////////////////////
         //Rim reflections
-        if(Get(uniformMaterialBuffer)[materialID].rimMulLight >0.0) 
+        if(Get(uniformMaterialBuffer)[materialID].rimMulLight > 0.0) 
         {
             float fRimLight = dot(screenNormal, float3(0.0, 0.0, -1.0));
             fRimLight = pow(1.0 - abs(fRimLight), Get(uniformMaterialBuffer)[materialID].rimMulPower) * Get(uniformMaterialBuffer)[materialID].rimMulLight;	

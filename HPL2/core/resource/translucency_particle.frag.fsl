@@ -3,29 +3,25 @@
 /// SPDX-License-Identifier: GPL-3.0
 #define MATERIAL_TRANSLUCENT 1
 #include "deferred_resources.h.fsl"
-#include "deferred_common.h.fsl"
 
-RES(Tex2D(float4), refractionMap, UPDATE_FREQ_PER_FRAME, t1, binding = 4); 
 STRUCT(PsIn) 
 {
     DATA(float4, Position, SV_Position);
     DATA(float3, pos, POSITION);
     DATA(float2, uv, TEXCOORD0);
     DATA(float4, color, COLOR);
-    
-    DATA(FLAT(uint), drawId, TEXCOORD1);
 };
 
 float4 PS_MAIN(PsIn In)
 {
     INIT_MAIN;
 
-    uint materialID = Get(uniformObjectBuffer)[In.drawId].materialID;
+    uint materialID = Get(uniformObjectBuffer)[Get(objectId)].materialID;
     float4 finalColor = float4(0.0, 0.0 ,0.0, 1.0);
     uint textureConfig = Get(uniformMaterialBuffer)[materialID].textureConfig & Get(textureMask);
 
     if(HasDiffuse(textureConfig)) {
-        finalColor = SampleTex2D(Get(diffuseMap), Get(diffuseSampler), In.uv) * In.color;
+        finalColor = DIFFUSE_SamplerTex2D(Get(diffuseMap), diffuseMapSamplerID(materialID), In.uv) * In.color;
     }
 
     #ifdef USE_FOG

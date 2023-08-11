@@ -1,5 +1,4 @@
 #include "deferred_resources.h.fsl"
-#include "deferred_common.h.fsl"
 
 STRUCT(PsIn)
 {
@@ -17,8 +16,10 @@ PsOut PS_MAIN( PsIn In )
 {
     INIT_MAIN;
     PsOut Out;
+    
+    uint materialID = Get(uniformObjectBuffer)[Get(objectId)].materialID;
 
-    float4 diffuseColor = SampleTex2D(Get(diffuseMap), Get(diffuseSampler), In.uv.xy);
+    float4 diffuseColor = DIFFUSE_SamplerTex2D(Get(diffuseMap), diffuseMapSamplerID(materialID), In.uv.xy);
     Out.diffuse = diffuseColor * In.color;
     RETURN(Out);
 }

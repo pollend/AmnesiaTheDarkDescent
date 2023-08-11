@@ -155,37 +155,75 @@ namespace hpl {
 
 
 	void cMaterial::UpdateFlags() {
-		const auto alphaMapImage = GetImage(eMaterialTexture_Alpha);
-		const auto heightMapImage = GetImage(eMaterialTexture_Height);
-
-	    m_info.m_data.m_common.m_textureConfig =
-					(GetImage(eMaterialTexture_Diffuse) ? EnableDiffuse: 0) |
-					(GetImage(eMaterialTexture_NMap) ? EnableNormal: 0) |
- 					(GetImage(eMaterialTexture_Specular) ? EnableSpecular: 0) |
-					(alphaMapImage ? EnableAlpha: 0) |
-					(heightMapImage ? EnableHeight: 0) |
-					(GetImage(eMaterialTexture_Illumination) ? EnableIllumination: 0) |
-					(GetImage(eMaterialTexture_CubeMap) ? EnableCubeMap: 0) |
-					(GetImage(eMaterialTexture_DissolveAlpha) ? EnableDissolveAlpha: 0) |
-					(GetImage(eMaterialTexture_CubeMapAlpha) ? EnableCubeMapAlpha: 0) |
-					(m_info.m_alphaDissolveFilter ? UseDissolveFilter: 0);
-		switch(m_info.m_id) {
-			case MaterialID::SolidDiffuse: {
-				m_info.m_data.m_common.m_textureConfig |=
-					((alphaMapImage && TinyImageFormat_ChannelCount(static_cast<TinyImageFormat>(alphaMapImage->GetTexture().m_handle->mFormat)) == 1) ? IsAlphaSingleChannel: 0) |
-					((heightMapImage && TinyImageFormat_ChannelCount(static_cast<TinyImageFormat>(heightMapImage->GetTexture().m_handle->mFormat)) == 1) ? IsHeightMapSingleChannel: 0);
-				break;
-			}
-			case MaterialID::Translucent: {
-				m_info.m_data.m_common.m_textureConfig |=
-					(HasRefraction() ? UseRefractionNormals: 0)  |
-					(IsRefractionEdgeCheck() ? UseRefractionEdgeCheck: 0);
-			    break;
-			}
-			default:
-				break;
-		}
-	}
+            const auto alphaMapImage = GetImage(eMaterialTexture_Alpha);
+            const auto heightMapImage = GetImage(eMaterialTexture_Height);
+            m_info.m_data.m_common.m_samplerConfig[0] = 0;
+            m_info.m_data.m_common.m_samplerConfig[1] = 0;
+            for (int i = 0; i < eMaterialTexture_LastEnum; ++i) {
+                auto image = GetImage(static_cast<eMaterialTexture>(i));
+                if (image) {
+                    const bool hasMips = image->GetTexture().m_handle->mMipLevels > 0;
+                    uint64_t index = 0;
+                    switch (image->wrapMode()) {
+                    case eTextureWrap_Repeat:
+                        index = TextureSamplerFlag::repeatNearSampler;
+                        break;
+                    case eTextureWrap_Clamp:
+                    case eTextureWrap_ClampToEdge:
+                        index = TextureSamplerFlag::clampNearSampler;
+                        break;
+                    case eTextureWrap_ClampToBorder:
+                        index = TextureSamplerFlag::clampBorderNearSampler;
+                        break;
+                    }
+                    switch (image->textureFilter()) {
+                    case eTextureFilter_Bilinear:
+                        index += 1;
+                        break;
+                    case eTextureFilter_Trilinear:
+                        index += 2;
+                        break;
+                    default:
+                        break;
+                    }
+                    ASSERT(index <= 14 && "invalid TextureSamplerFlag");
+                    ASSERT(static_cast<uint32_t>(i/8) <= 1 && "overflow");
+                    m_info.m_data.m_common.m_samplerConfig[i / 8] |= (index << (i * 4));
+                }
+            }
+            m_info.m_data.m_common.m_textureConfig = (GetImage(eMaterialTexture_Diffuse) ? EnableDiffuse : 0) |
+                (GetImage(eMaterialTexture_NMap) ? EnableNormal : 0) | (GetImage(eMaterialTexture_Specular) ? EnableSpecular : 0) |
+                (alphaMapImage ? EnableAlpha : 0) | (heightMapImage ? EnableHeight : 0) |
+                (GetImage(eMaterialTexture_Illumination) ? EnableIllumination : 0) |
+                (GetImage(eMaterialTexture_CubeMap) ? EnableCubeMap : 0) |
+                (GetImage(eMaterialTexture_DissolveAlpha) ? EnableDissolveAlpha : 0) |
+                (GetImage(eMaterialTexture_CubeMapAlpha) ? EnableCubeMapAlpha : 0) |
+                (m_info.m_alphaDissolveFilter ? UseDissolveFilter : 0);
+            switch (m_info.m_id) {
+            case MaterialID::SolidDiffuse:
+                    {
+                        m_info.m_data.m_common.m_textureConfig |= ((alphaMapImage &&
+                                                                    TinyImageFormat_ChannelCount(static_cast<TinyImageFormat>(
+                                                                        alphaMapImage->GetTexture().m_handle->mFormat)) == 1)
+                                                                        ? IsAlphaSingleChannel
+                                                                        : 0) |
+                            ((heightMapImage &&
+                                TinyImageFormat_ChannelCount(
+                                    static_cast<TinyImageFormat>(heightMapImage->GetTexture().m_handle->mFormat)) == 1)
+                                    ? IsHeightMapSingleChannel
+                                    : 0);
+                        break;
+                    }
+            case MaterialID::Translucent:
+                    {
+                        m_info.m_data.m_common.m_textureConfig |=
+                            (HasRefraction() ? UseRefractionNormals : 0) | (IsRefractionEdgeCheck() ? UseRefractionEdgeCheck : 0);
+                        break;
+                    }
+            default:
+                    break;
+            }
+    }
 
 	void cMaterial::SetImage(eMaterialTexture aType, iResourceBase *apTexture)
 	{

@@ -225,12 +225,7 @@
     #include "dds_insanity_posteffect.frag.fsl"
 #end
 
-#frag blur_posteffect_vertical.frag
-    #include "blur_posteffect.frag.fsl"
-#end
-
-#frag blur_posteffect_horizontal.frag
-    #define USE_HORIZONTAL 1
+#frag blur_posteffect.frag
     #include "blur_posteffect.frag.fsl"
 #end
 

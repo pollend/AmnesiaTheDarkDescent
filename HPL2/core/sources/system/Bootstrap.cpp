@@ -49,7 +49,7 @@ namespace hpl {
             return;
         }
 
-        initLog("HPL2", DEFAULT_LOG_LEVEL);
+        //initLog("HPL2", DEFAULT_LOG_LEVEL);
 		fsSetPathForResourceDir(pSystemFileIO, RM_CONTENT, RD_SHADER_BINARIES, "CompiledShaders");
 
         Interface<IUpdateEventLoop>::Register(&m_updateEventLoop);

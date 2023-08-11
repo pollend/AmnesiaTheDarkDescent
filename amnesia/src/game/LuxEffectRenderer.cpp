@@ -341,7 +341,7 @@ cLuxEffectRenderer::cLuxEffectRenderer()
                 vertexLayout.mAttribs[0].mBinding = 0;
                 vertexLayout.mAttribs[0].mLocation = 0;
                 vertexLayout.mAttribs[0].mOffset = 0;
-                vertexLayout.mAttribs[1].mSemantic = SEMANTIC_NORMAL;
+                vertexLayout.mAttribs[1].mSemantic = SEMANTIC_TEXCOORD0;
                 vertexLayout.mAttribs[1].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
                 vertexLayout.mAttribs[1].mBinding = 1;
                 vertexLayout.mAttribs[1].mLocation = 1;
@@ -399,7 +399,7 @@ cLuxEffectRenderer::cLuxEffectRenderer()
                 vertexLayout.mAttribs[0].mBinding = 0;
                 vertexLayout.mAttribs[0].mLocation = 0;
                 vertexLayout.mAttribs[0].mOffset = 0;
-                vertexLayout.mAttribs[1].mSemantic = SEMANTIC_NORMAL;
+                vertexLayout.mAttribs[1].mSemantic = SEMANTIC_TEXCOORD0;
                 vertexLayout.mAttribs[1].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
                 vertexLayout.mAttribs[1].mBinding = 1;
                 vertexLayout.mAttribs[1].mLocation = 1;
@@ -957,12 +957,6 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
                 cmdDraw(frame->m_cmd, 3, 0);
             }
         };
-
-        {
-            uint32_t rootConstantIndex = getDescriptorIndexFromName(m_postProcessingRootSignature, "postEffectConstants");
-            float blurSize = 1.0;
-            cmdBindPushConstants(frame->m_cmd, m_postProcessingRootSignature, rootConstantIndex, &blurSize);
-        }
         {
             cmdBindRenderTargets(frame->m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
             std::array rtBarriers = {

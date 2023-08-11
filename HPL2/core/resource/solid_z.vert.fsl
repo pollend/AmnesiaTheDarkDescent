@@ -1,6 +1,5 @@
 #define MATERIAL_SOLID 1
 #include "deferred_resources.h.fsl"
-#include "deferred_common.h.fsl"
 
 STRUCT(VSInput)
 {
@@ -17,21 +16,20 @@ STRUCT(VSOutput)
     DATA(float3, view, TEXCOORD1);
 	DATA(float3, normal, NORMAL);
 
-    DATA(FLAT(uint), drawId, TEXCOORD2);
 };
 
-VSOutput VS_MAIN(VSInput In, SV_InstanceID(uint) InstanceID)
+VSOutput VS_MAIN(VSInput In)
 {
     INIT_MAIN;
     VSOutput Out;
     
-    float4x4 modelView = mul(Get(viewMat), Get(uniformObjectBuffer)[InstanceID].modelMat);
+    float4x4 modelView = mul(Get(viewMat), Get(uniformObjectBuffer)[Get(objectId)].modelMat);
     float4x4 modelViewPrj = mul(Get(projMat), modelView);
     
-    Out.uv = mul(Get(uniformObjectBuffer)[InstanceID].uvMat, float4(In.TexCoord, 0, 1.0)).xy;
+    Out.uv = mul(Get(uniformObjectBuffer)[Get(objectId)].uvMat, float4(In.TexCoord, 0, 1.0)).xy;
     Out.Position = mul(modelViewPrj , float4(In.Position.xyz, 1.0));
 
-    float3x3 normalMat = ToNormalMat(Get(uniformObjectBuffer)[InstanceID].invModelMat, Get(invViewMat));
+    float3x3 normalMat = ToNormalMat(Get(uniformObjectBuffer)[Get(objectId)].invModelMat, Get(invViewMat));
     Out.normal = normalize(mul(normalMat, In.Normal.xyz));
     float3 tangent = normalize(mul(normalMat, In.Tangent.xyz));
     float3 bitangent = normalize(mul(normalMat, cross(In.Tangent.xyz, In.Normal.xyz)));
@@ -41,6 +39,8 @@ VSOutput VS_MAIN(VSInput In, SV_InstanceID(uint) InstanceID)
         dot(viewEye, tangent), 
         dot(viewEye, bitangent), 
         dot(-viewEye, Out.normal));
-    Out.drawId = InstanceID;
+    
+    Out.normal =  Get(uniformObjectBuffer)[Get(objectId)].modelMat[0].xyz;
+    Out.view =  Get(uniformObjectBuffer)[Get(objectId)].modelMat[1].xyz;
     RETURN(Out);
 }

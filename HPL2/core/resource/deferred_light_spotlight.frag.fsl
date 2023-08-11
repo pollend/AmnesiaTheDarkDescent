@@ -8,7 +8,6 @@
 STRUCT(PsIn)
 {
     DATA(float4, Position, SV_Position);
-    DATA(FLAT(uint), drawId, TEXCOORD0);
 };
 
 
@@ -21,32 +20,32 @@ float4 PS_MAIN(PsIn In)
     float3 position =  LoadTex2D(Get(positionMap), Get(pointSampler), uint2(In.Position.xy), 0).xyz;
     float2 specular =  LoadTex2D(Get(specularMap), Get(pointSampler), uint2(In.Position.xy), 0).xy;
 
-    float3 lightDir = (Get(lightObjectBuffer)[In.drawId].lightPos.xyz -  position) * (1.0 / Get(lightObjectBuffer)[In.drawId].lightRadius);
+    float3 lightDir = (Get(lightObjectBuffer)[Get(lightId)].lightPos.xyz -  position) * (1.0 / Get(lightObjectBuffer)[Get(lightId)].lightRadius);
     float attenuation = SampleTex1D(Get(attenuationLightMap), Get(nearestSampler), dot(lightDir, lightDir)).x;
     
     float3 normalLightDir = normalize(lightDir);
     float3 normalizedNormal = normalize(normal.xyz);
 
-    float4 projectionUV = mul(Get(lightObjectBuffer)[In.drawId].spotViewProj, float4(position, 1.0));
+    float4 projectionUV = mul(Get(lightObjectBuffer)[Get(lightId)].spotViewProj, float4(position, 1.0));
     projectionUV.xyz = (projectionUV.xyz / projectionUV.w);
     projectionUV.xy = projectionUV.xy * 0.5 + 0.5;
     projectionUV.w = 1.0;
 
 
     float3 goboVal = float3(1.0, 1.0, 1.0);
-    if(HasGoboMap(Get(lightObjectBuffer)[In.drawId].config)) {
+    if(HasGoboMap(Get(lightObjectBuffer)[Get(lightId)].config)) {
         goboVal = SampleTex2DProj(Get(goboMap), Get(goboSampler), projectionUV).xyz;
     } else {
-        float fOneMinusCos = 1.0 - dot( normalLightDir,  Get(lightObjectBuffer)[In.drawId].lightForward);
-        attenuation *= SampleTex1D(Get(falloffMap), Get(nearestSampler), fOneMinusCos / Get(lightObjectBuffer)[In.drawId].oneMinusCosHalfSpotFov).x;
+        float fOneMinusCos = 1.0 - dot( normalLightDir,  Get(lightObjectBuffer)[Get(lightId)].lightForward);
+        attenuation *= SampleTex1D(Get(falloffMap), Get(nearestSampler), fOneMinusCos / Get(lightObjectBuffer)[Get(lightId)].oneMinusCosHalfSpotFov).x;
     }
 
     /////////////////////////////////
 	//Calculate diffuse color
     float fLDotN = max(dot(normalizedNormal, normalLightDir), 0.0);
-    float3 diffuseColor = color.xyz * Get(lightObjectBuffer)[In.drawId].lightColor.xyz * fLDotN;
+    float3 diffuseColor = color.xyz * Get(lightObjectBuffer)[Get(lightId)].lightColor.xyz * fLDotN;
     float t = 0;
-    if(HasShadowMap(Get(lightObjectBuffer)[In.drawId].config)) {
+    if(HasShadowMap(Get(lightObjectBuffer)[Get(lightId)].config)) {
 	const float depthBias = 0.0005;
         
         #ifdef SHADOW_JITTER_SIZE
@@ -55,7 +54,7 @@ float4 PS_MAIN(PsIn In)
             float fShadowSum = 0.0;
             float fJitterZ = 0.0;
             float2 vScreenJitterCoord = In.Position.xy * (1.0 / float(SHADOW_JITTER_SIZE));
-            vScreenJitterCoord.y = fract(vScreenJitterCoord.y);	 //Make sure the coord is in 0 - 1 range
+            vScreenJitterCoord.y = frac(vScreenJitterCoord.y);	 //Make sure the coord is in 0 - 1 range
             vScreenJitterCoord.y *= 1.0 / (float(SHADOW_JITTER_SAMPLES)/2.0);	 //Access only first texture piece
             
             for(int i=0; i < 2; i++)
@@ -96,12 +95,12 @@ float4 PS_MAIN(PsIn In)
     }
     
     float3 specularColor = float3(0.0, 0.0, 0.0);
-    if(Get(lightObjectBuffer)[In.drawId].lightColor.w > 0.0) {
+    if(Get(lightObjectBuffer)[Get(lightId)].lightColor.w > 0.0) {
         float3 halfVec = normalize(normalLightDir + normalize(-position));
         float specIntensity = specular.x;
         float specPower = exp2(specular.y * 10.0) + 1.0;
-        float specularValue = Get(lightObjectBuffer)[In.drawId].lightColor.w * specIntensity *  pow( clamp( dot( halfVec, normalizedNormal), 0.0, 1.0), specPower );
-        specularColor = Get(lightObjectBuffer)[In.drawId].lightColor.rgb * specularValue;
+        float specularValue = Get(lightObjectBuffer)[Get(lightId)].lightColor.w * specIntensity *  pow( clamp( dot( halfVec, normalizedNormal), 0.0, 1.0), specPower );
+        specularColor = Get(lightObjectBuffer)[Get(lightId)].lightColor.rgb * specularValue;
     }
     float4 result = float4((diffuseColor + specularColor) * goboVal * attenuation, 0.0);
     RETURN(result);

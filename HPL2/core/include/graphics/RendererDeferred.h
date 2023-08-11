@@ -43,6 +43,7 @@
 #include <array>
 #include <cstdint>
 #include <memory>
+#include <stdint.h>
 #include <unordered_map>
 #include <vector>
 
@@ -76,10 +77,10 @@ namespace hpl {
         static constexpr TinyImageFormat SpecularBufferFormat = TinyImageFormat_R8G8_UNORM;
         static constexpr TinyImageFormat ColorBufferFormat = TinyImageFormat_R8G8B8A8_UNORM;
         static constexpr TinyImageFormat ShadowDepthBufferFormat = TinyImageFormat_D32_SFLOAT;
-        static constexpr uint32_t MaxObjectUniforms = 4096;
-        static constexpr uint32_t MaxLightUniforms = 1024;
+        static constexpr uint32_t MaxObjectUniforms = 1024;
+        static constexpr uint32_t MaxLightUniforms = 256;
         static constexpr uint32_t MaxHiZMipLevels = 32;
-        static constexpr uint32_t MaxMaterialFrameDescriptors = 1024;
+        static constexpr uint32_t MaxMaterialFrameDescriptors = 64;
 
 
         enum LightConfiguration { HasGoboMap = 0x1, HasShadowMap = 0x2 };
@@ -110,16 +111,14 @@ namespace hpl {
             struct {
                 mat4 m_mvp;
                 uint32_t m_config;
-                uint32_t m_pad[3];
-
                 float3 m_forward;
-                float m_oneMinusCosHalfSpotFOV;
 
                 mat4 m_spotViewProj;
                 float4 m_color;
 
                 float3 m_pos;
                 float m_radius;
+                float m_oneMinusCosHalfSpotFOV;
             } m_spotLight;
             struct {
                 mat4 m_mvp;
@@ -128,16 +127,19 @@ namespace hpl {
 
                 float4 m_lightColor;
             } m_boxLight;
+            uint32_t m_size[48];
         };
 
         struct UniformObject {
-            float m_dissolveAmount;
-            uint m_materialIndex;
-            uint pad[2];
             mat4 m_modelMat;
             mat4 m_invModelMat;
             mat4 m_uvMat;
+            float m_dissolveAmount;
+            uint32_t m_materialIndex;
+            uint32_t m_pad0;
+            uint32_t m_pad1;
         };
+
 
         struct UniformPerFrameData {
             mat4 m_invViewRotation;
@@ -154,6 +156,26 @@ namespace hpl {
 
             float2 viewTexel;
             float2 viewportSize;
+        };
+
+        struct UniformFogData {
+            mat4 m_mvp;
+            mat4 m_mv;
+            mat4 m_invModelRotation;
+            float4 m_color;
+            float4 m_rayCastStart;
+            float4 m_fogNegPlaneDistNeg;
+            float4 m_fogNegPlaneDistPos;
+            float m_start;
+            float m_length;
+            float m_falloffExp;
+        };
+
+        struct UniformFullscreenFogData {
+            float4 m_color;
+            float m_fogStart;
+            float m_fogLength;
+            float m_fogFalloffExp;
         };
 
         class ShadowMapData {
@@ -438,16 +460,13 @@ namespace hpl {
             Pipeline* m_fullScreenPipeline = nullptr;
         } m_fogPass;
 
-        union MaterialRootConstant {
-            struct {
-               float m_afT;
-            } m_water;
-            struct {
-                uint32_t m_blendMode;
-                uint32_t m_textureMask;
-                float m_sceneAlpha;
-                float m_lightLevel;
-            } m_translucency;
+        struct MaterialRootConstant {
+            uint32_t m_objectId;
+            float m_afT;
+            uint32_t m_blendMode;
+            uint32_t m_textureMask;
+            float m_sceneAlpha;
+            float m_lightLevel;
         };
 
         RootSignature* m_materialRootSignature;
@@ -532,7 +551,6 @@ namespace hpl {
             };
             static constexpr size_t NumOfVariants = 4;
         };
-        folly::F14VectorMap<SamplerDesc, Sampler*> m_objectSamplerMap;
         std::array<Sampler*, ObjectSamplerKey::NumOfVariants> m_objectSamplers{};
         struct LightResourceEntry {
             ForgeTextureHandle m_goboCubeMap;
@@ -557,6 +575,18 @@ namespace hpl {
             folly::F14ValueMap<iRenderable*, uint32_t> m_objectDescriptorLookup;
             uint32_t m_frameIndex = 0;
             uint32_t m_objectIndex = 0;
+
+            ForgeSamplerHandle m_clampNearSampler;
+            ForgeSamplerHandle m_clampLinearSampler;
+            ForgeSamplerHandle m_clampTrilinearSampler;
+
+            ForgeSamplerHandle m_clampBorderNearSampler;
+            ForgeSamplerHandle m_clampBorderLinearSampler;
+            ForgeSamplerHandle m_clampBorderTrilinearSampler;
+
+            ForgeSamplerHandle m_repeatNearSampler;
+            ForgeSamplerHandle m_repeatLinearSampler;
+            ForgeSamplerHandle m_repeatTrilinearSampler;
 
             // Material
             struct MaterialInfo {
@@ -614,7 +644,7 @@ namespace hpl {
             iRenderable* m_renderable = nullptr;
         };
         struct UniformPropBlock {
-            static constexpr uint32_t MaxObjectTest = 32768;
+            static constexpr uint32_t MaxObjectTest = 2048;
             mat4 viewProjeciton;
             uint32_t numObjects;
             uint32_t maxMipLevel;
@@ -643,6 +673,7 @@ namespace hpl {
         ForgeSamplerHandle m_shadowCmpSampler;
 
         Sampler* m_samplerPointClampToBorder;
+        Sampler* m_bilinearSampler;
         Sampler* m_pointSampler;
         Sampler* m_goboSampler;
 
