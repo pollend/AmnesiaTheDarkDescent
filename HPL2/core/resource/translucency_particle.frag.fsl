@@ -5,7 +5,6 @@
 #include "deferred_resources.h.fsl"
 #include "deferred_common.h.fsl"
 
-RES(Tex2D(float4), refractionMap, UPDATE_FREQ_PER_FRAME, t1, binding = 4); 
 STRUCT(PsIn) 
 {
     DATA(float4, Position, SV_Position);
@@ -13,30 +12,29 @@ STRUCT(PsIn)
     DATA(float2, uv, TEXCOORD0);
     DATA(float4, color, COLOR);
     
-    DATA(FLAT(uint), drawId, TEXCOORD1);
 };
 
 float4 PS_MAIN(PsIn In)
 {
     INIT_MAIN;
+    uint blendMode = BlendModeTrans(Get(options)); 
 
-    uint materialID = Get(uniformObjectBuffer)[In.drawId].materialID;
+    uint materialID = Get(uniformObjectBuffer)[Get(objectId)].materialID;
     float4 finalColor = float4(0.0, 0.0 ,0.0, 1.0);
-    uint textureConfig = Get(uniformMaterialBuffer)[materialID].textureConfig & Get(textureMask);
+    uint textureConfig = Get(uniformMaterialBuffer)[materialID].textureConfig;
 
     if(HasDiffuse(textureConfig)) {
         finalColor = SampleTex2D(Get(diffuseMap), Get(diffuseSampler), In.uv) * In.color;
     }
 
-    #ifdef USE_FOG
+    float finalAlpha = Get(sceneAlpha);
+    if (UseFog(Get(options))) {
         float fFogAmount =  pow(
             clamp((-In.pos.z - Get(worldFogStart)) / Get(worldFogLength), 0.0, 1.0), Get(fogFalloffExp));
-        float finalAlpha = (Get(oneMinusFogAlpha) * fFogAmount + (1.0 - fFogAmount)) * Get(sceneAlpha);
-    #else
-        float finalAlpha = Get(sceneAlpha);
-    #endif
+        finalAlpha = (Get(oneMinusFogAlpha) * fFogAmount + (1.0 - fFogAmount)) * Get(sceneAlpha);
+    }
 
-    switch(Get(blendMode)) {
+    switch(blendMode) {
         case BLEND_MODE_ADD: {
             finalColor.xyz *= finalAlpha*Get(lightLevel);
             break;

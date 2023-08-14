@@ -2,9 +2,6 @@
 #include "deferred_resources.h.fsl"
 #include "deferred_common.h.fsl"
 
-RES(Tex2D(float4), refractionMap, UPDATE_FREQ_PER_FRAME, t1, binding = 4); 
-
-
 STRUCT(PsIn) 
 {
     DATA(float4, Position, SV_Position);
@@ -14,8 +11,6 @@ STRUCT(PsIn)
     DATA(float3, tangent, TANGENT);
     DATA(float3, bitangent, BITANGENT);
     DATA(float4, color, COLOR);
-
-    DATA(FLAT(uint), drawId, TEXCOORD1);
 };
 
 STRUCT(PsOut)
@@ -27,25 +22,30 @@ PsOut PS_MAIN(PsIn In)
 {
     INIT_MAIN;
     PsOut Out;
-    uint materialID = Get(uniformObjectBuffer)[In.drawId].materialID;
-    uint textureConfig = Get(uniformMaterialBuffer)[materialID].textureConfig & Get(textureMask);
+    uint materialID = Get(uniformObjectBuffer)[Get(objectId)].materialID;
+    uint textureConfig = Get(uniformMaterialBuffer)[materialID].textureConfig;
+    uint blendMode = BlendModeTrans(Get(options)); 
 
     float4 finalColor = float4(0.0, 0.0 ,0.0, 1.0);
-    
     if(HasDiffuse(textureConfig)) {
         finalColor = SampleTex2D(Get(diffuseMap), Get(diffuseSampler), In.uv) * In.color;
     }
 
-    #ifdef USE_FOG
+    if(UseIlluminationTrans(Get(options)) &&
+        HasCubeMap(textureConfig) &&  
+        !UseRefractionTrans(Get(options)) ) {
+        textureConfig &= (DiffuseFlag | CubMapFlag | CubeMapAlphaFlag);
+    }
+
+    float finalAlpha = Get(sceneAlpha);
+    if (UseFog(Get(options))) {
         float fFogAmount =  pow(
             clamp(
                 (-In.pos.z - Get(worldFogStart)) / Get(worldFogLength), 0.0, 1.0), Get(fogFalloffExp));
-        float finalAlpha = (Get(oneMinusFogAlpha) * fFogAmount + (1.0 - fFogAmount)) * Get(sceneAlpha);
-    #else
-        float finalAlpha = Get(sceneAlpha);
-    #endif
+        finalAlpha = (Get(oneMinusFogAlpha) * fFogAmount + (1.0 - fFogAmount)) * Get(sceneAlpha); 
+    }
 
-    switch(Get(blendMode)) {
+    switch(blendMode) {
         case BLEND_MODE_ADD: {
             finalColor.xyz *= finalAlpha*Get(lightLevel);
             break;
@@ -77,13 +77,8 @@ PsOut PS_MAIN(PsIn In)
     float3 mapNormal = float3(0,0,0);
     float3 screenNormal = float3(0,0,0);
 
-    if(
-        #ifdef USE_REFRACTION
-            true ||
-        #endif
-        HasCubeMap(Get(uniformMaterialBuffer)[materialID].textureConfig & Get(textureMask))) {
-
-        if(HasNormal(Get(uniformMaterialBuffer)[materialID].textureConfig & Get(textureMask))) {
+    if(UseRefractionTrans(Get(options)) && HasCubeMap(textureConfig)) {
+        if(HasNormal(textureConfig)) {
             mapNormal = SampleTex2D(Get(normalMap), Get(normalSampler), In.uv).xyz * 2.0 - 1.0;
             screenNormal = normalize(mapNormal.x * In.tangent + mapNormal.y * In.bitangent + mapNormal.z * In.normal);
         } else {
@@ -91,7 +86,7 @@ PsOut PS_MAIN(PsIn In)
         }
     }
     
-    #ifdef USE_REFRACTION
+    if(UseRefractionTrans(Get(options))) {
         float invDist = min(1.0/In.pos.z, 10.0);
         ///////////////////////
         // Sample refaraction map (using distorted coords)
@@ -104,7 +99,7 @@ PsOut PS_MAIN(PsIn In)
         }
         float4 refractionColor = SampleTex2D(Get(refractionMap), Get(nearestSampler), distortedScreenPos);
 
-        switch(Get(blendMode)) {
+        switch(blendMode) {
             case BLEND_MODE_ADD: 
                 finalColor.xyz = finalColor.xyz + refractionColor.xyz;
                 break;
@@ -121,9 +116,9 @@ PsOut PS_MAIN(PsIn In)
                 finalColor.xyz = finalColor.xyz + refractionColor.xyz * (1.0 - finalColor.a);
                 break;
         }
-    #endif
+    }
 
-    if(HasCubeMap(Get(uniformMaterialBuffer)[materialID].textureConfig & Get(textureMask))) {
+    if(HasCubeMap(textureConfig) && UseRefractionTrans(Get(options))) {
         float3 eyeVec = normalize(In.pos);
         
         float afEDotN = max(dot(-eyeVec, screenNormal),0.0);

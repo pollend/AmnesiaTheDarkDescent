@@ -17,9 +17,6 @@
 #include "deferred_resources.h.fsl"
 #include "deferred_common.h.fsl"
 
-RES(Tex2D(float4), refractionMap, UPDATE_FREQ_PER_FRAME, t1, binding = 4); 
-RES(Tex2D(float4), reflectionMap, UPDATE_FREQ_PER_FRAME, t2, binding = 5); 
-
 STRUCT(PsIn) 
 {
     DATA(float4, Position, SV_Position);
@@ -29,8 +26,6 @@ STRUCT(PsIn)
     DATA(float3, tangent, TANGENT);
     DATA(float3, bitangent, BITANGENT);
     DATA(float4, color, COLOR);
-    
-    DATA(FLAT(uint), drawId, TEXCOORD1);
 };
 
 STRUCT(PsOut)
@@ -43,7 +38,7 @@ PsOut PS_MAIN(PsIn In)
 {
     INIT_MAIN;
     PsOut Out;
-    uint materialID = Get(uniformObjectBuffer)[In.drawId].materialID;
+    uint materialID = Get(uniformObjectBuffer)[Get(objectId)].materialID;
     
     float waveAft = Get(afT) * Get(uniformMaterialBuffer)[materialID].waveSpeed;
     ///////////////////////////////
@@ -74,42 +69,43 @@ PsOut PS_MAIN(PsIn In)
     float2 vDistortedScreenPos = float2(0, 0);
 
     float2 refractionViewTexel = 1.0 / GetDimensions(Get(refractionMap), NO_SAMPLER);
-    #ifdef USE_REFRACTION
+
+    if(UseRefractionTrans(Get(options))) {
         float fInvDist = min(1.0 / In.pos.z, 10.0);
         vDistortedScreenPos = In.Position.xy + (vFinalNormal.xy * Get(uniformMaterialBuffer)[materialID].refractionScale * fInvDist);
         vRefractionColor = SampleTex2D(Get(refractionMap), Get(nearestSampler), vDistortedScreenPos  * refractionViewTexel );
        // if(vRefractionColor.a < 0.5) {
        //     vRefractionColor = SampleTex2D(Get(refractionMap), Get(nearestSampler), In.Position.xy * refractionViewTexel);
        // }
-     #endif 
+     }
 
 
     float4 vReflectionColor = float4(0,0,0,0);
     float fFresnel = 1.0;
-    #ifdef USE_REFLECTION
-            //////////////////
-            //Fresnel
-            float3 vScreenNormal = normalize(vFinalNormal.x * In.tangent + vFinalNormal.y * In.bitangent + vFinalNormal.z * In.normal);
-            float3 vEyeVec = normalize(In.pos);
+    if(UseReflectionTrans(Get(options))) {
+        //////////////////
+        //Fresnel
+        float3 vScreenNormal = normalize(vFinalNormal.x * In.tangent + vFinalNormal.y * In.bitangent + vFinalNormal.z * In.normal);
+        float3 vEyeVec = normalize(In.pos);
 
-            float afEDotN = max(dot(-vEyeVec, vScreenNormal),0.0);
-            fFresnel = Fresnel(afEDotN, Get(uniformMaterialBuffer)[materialID].frenselBias, Get(uniformMaterialBuffer)[materialID].frenselPow);
+        float afEDotN = max(dot(-vEyeVec, vScreenNormal),0.0);
+        fFresnel = Fresnel(afEDotN, Get(uniformMaterialBuffer)[materialID].frenselBias, Get(uniformMaterialBuffer)[materialID].frenselPow);
 
-            if(Get(uniformMaterialBuffer)[materialID].reflectionFadeEnd > 0) {
-                float refractionFadeLength = Get(uniformMaterialBuffer)[materialID].reflectionFadeEnd - Get(uniformMaterialBuffer)[materialID].reflectionFadeStart;  
-                fFresnel *= 1.0 - clamp( (In.pos.z - Get(uniformMaterialBuffer)[materialID].reflectionFadeStart) / refractionFadeLength, 0.0, 1.0);
-            }
+        if(Get(uniformMaterialBuffer)[materialID].reflectionFadeEnd > 0) {
+            float refractionFadeLength = Get(uniformMaterialBuffer)[materialID].reflectionFadeEnd - Get(uniformMaterialBuffer)[materialID].reflectionFadeStart;  
+            fFresnel *= 1.0 - clamp( (In.pos.z - Get(uniformMaterialBuffer)[materialID].reflectionFadeStart) / refractionFadeLength, 0.0, 1.0);
+        }
 
-            //////////////////
-            //Cubemap
-            if(HasCubeMap(Get(uniformMaterialBuffer)[materialID].textureConfig)) {
-                float3 vEnvUv = reflect(vEyeVec, vScreenNormal);
-                vEnvUv = mul(Get(invViewRotationMat), float4(vEnvUv.x, vEnvUv.y, vEnvUv.z, 1)).xyz;
-                vReflectionColor  = SampleTexCube(Get(cubeMap),  Get(cubeSampler), vEnvUv);
-            } else {
-                vRefractionColor = SampleTex2D(Get(reflectionMap), Get(nearestSampler), vDistortedScreenPos * Get(viewTexel));
-            }
-    #endif 
+        //////////////////
+        //Cubemap
+        if(HasCubeMap(Get(uniformMaterialBuffer)[materialID].textureConfig)) {
+            float3 vEnvUv = reflect(vEyeVec, vScreenNormal);
+            vEnvUv = mul(Get(invViewRotationMat), float4(vEnvUv.x, vEnvUv.y, vEnvUv.z, 1)).xyz;
+            vReflectionColor  = SampleTexCube(Get(cubeMap),  Get(cubeSampler), vEnvUv);
+        } else {
+            vRefractionColor = SampleTex2D(Get(reflectionMap), Get(nearestSampler), vDistortedScreenPos * Get(viewTexel));
+        }
+    }
 
 
     float3 vLightDir = normalize(float3(0.5, 0.5, 0.5));
@@ -118,17 +114,17 @@ PsOut PS_MAIN(PsIn In)
     float fSpecular = pow(fLDotN,16.0);
 
     float fFogAmount = 0.0;
-    #ifdef USE_FOG
+    if (UseFog(Get(options))) {
             fFogAmount = (-In.pos.z - Get(worldFogStart)) /Get(worldFogLength);
             fFogAmount = clamp(fFogAmount, 0.0, 1.0);
             fFogAmount = pow(fFogAmount, Get(fogFalloffExp)) * Get(worldFogColor).a;
-    #endif 
+    } 
 
-    #ifdef USE_REFLECTION
-            Out.diffuse.rgb = (surfaceColor.xyz * vRefractionColor.xyz + vReflectionColor.xyz * fFresnel) * (1.0-fFogAmount) + Get(worldFogColor).xyz*fFogAmount;
-    #else
-            Out.diffuse.rgb = (surfaceColor.xyz * vRefractionColor.xyz * fDiffuse + float3(fSpecular, fSpecular, fSpecular)) * (1.0-fFogAmount) + Get(worldFogColor).xyz*fFogAmount;
-    #endif
+    if (UseReflectionTrans(Get(options))) {
+        Out.diffuse.rgb = (surfaceColor.xyz * vRefractionColor.xyz + vReflectionColor.xyz * fFresnel) * (1.0-fFogAmount) + Get(worldFogColor).xyz*fFogAmount;
+    } else {
+        Out.diffuse.rgb = (surfaceColor.xyz * vRefractionColor.xyz * fDiffuse + float3(fSpecular, fSpecular, fSpecular)) * (1.0-fFogAmount) + Get(worldFogColor).xyz*fFogAmount;
+    }
 
     Out.diffuse.w = 1.0;
     RETURN(Out);

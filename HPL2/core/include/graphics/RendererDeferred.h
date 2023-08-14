@@ -90,6 +90,22 @@ namespace hpl {
             LightPipelineVariant_StencilTest = 0x2,
             LightPipelineVariant_Size = 4,
         };
+
+
+        static constexpr uint32_t TranslucencyBlendModeMask = 0xf;
+        enum TranslucencyFlags {
+            UseIlluminationTrans = (1 << 4),
+            UseReflectionTrans = (1 << 5),
+            UseRefractionTrans = (1 << 6),
+            UseFog = (1 << 7),
+        };
+        struct MaterialRootConstant {
+            uint32_t objectId;
+            float m_afT;
+            uint32_t m_options;
+            float m_sceneAlpha;
+            float m_lightLevel;
+        };
         union UniformLightData {
             struct LightUniformCommon {
                 mat4 m_mvp;
@@ -438,17 +454,7 @@ namespace hpl {
             Pipeline* m_fullScreenPipeline = nullptr;
         } m_fogPass;
 
-        union MaterialRootConstant {
-            struct {
-               float m_afT;
-            } m_water;
-            struct {
-                uint32_t m_blendMode;
-                uint32_t m_textureMask;
-                float m_sceneAlpha;
-                float m_lightLevel;
-            } m_translucency;
-        };
+
 
         RootSignature* m_materialRootSignature;
         // diffuse solid
@@ -492,28 +498,24 @@ namespace hpl {
                 uint8_t m_id;
                 struct {
                     uint8_t m_hasDepthTest : 1;
-                    uint8_t m_hasFog : 1;
                 } m_field;
-                static constexpr size_t NumOfVariants = 4;
+                static constexpr size_t NumOfVariants = 2;
             };
             union TranslucencyWaterKey {
                 uint8_t m_id;
                 struct {
                     uint8_t m_hasDepthTest : 1;
-                    uint8_t m_hasFog : 1;
-                    uint8_t m_hasReflection : 1;
-                    uint8_t m_hasRefraction : 1;
                 } m_field;
-                static constexpr size_t NumOfVariants = 16;
+                static constexpr size_t NumOfVariants = 2;
             };
             RootSignature* m_refractionCopyRootSignature;
             std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_refractionPerFrameSet;
             Pipeline* m_refractionCopyPipeline;
             Shader* m_copyRefraction;
 
-            std::array<Shader*, TranslucencyVariantCount> m_shaders{};
-            std::array<Shader*, TranslucencyParticleVariantCount> m_particleShader{};
-            std::array<Shader*, TranslucencyWaterVariantCount> m_waterShader{};
+            ForgeShaderHandle m_shader{};
+            ForgeShaderHandle m_particleShader{};
+            ForgeShaderHandle m_waterShader{};
 
             std::array<std::array<Pipeline*, TranslucencyKey::NumOfVariants>, TranslucencyBlend::BlendModeCount> m_pipelines;
             std::array<Pipeline*, TranslucencyWaterKey::NumOfVariants> m_waterPipeline;
