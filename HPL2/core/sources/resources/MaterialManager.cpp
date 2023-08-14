@@ -20,6 +20,7 @@
 #include "resources/MaterialManager.h"
 
 #include "graphics/Image.h"
+#include "graphics/IndexPool.h"
 #include "system/LowLevelSystem.h"
 #include "system/String.h"
 #include "system/System.h"
@@ -38,6 +39,10 @@
 #include "impl/tinyXML/tinyxml.h"
 
 namespace hpl {
+
+	namespace internal {
+        static IndexPool m_MaterialIndexPool(cMaterial::MaxMaterialID);
+    }
 
 	class cMaterialManagerBlankMaterialType_Vars : public iMaterialVars
 	{
@@ -433,9 +438,10 @@ namespace hpl {
 			    }
 			    auto& type = pMat->type();
 				type.m_id = meta.m_id;
+				type.m_handle = IndexPoolHandle(&internal::m_MaterialIndexPool);
 				switch(meta.m_id) {
 					case cMaterial::MaterialID::SolidDiffuse: {
-						type.m_data.m_solid.m_heightMapScale = userVars.GetVarFloat("HeightMapScale", 0.1f);
+					    type.m_data.m_solid.m_heightMapScale = userVars.GetVarFloat("HeightMapScale", 0.1f);
 						type.m_data.m_solid.m_heightMapBias = userVars.GetVarFloat("HeightMapBias", 0);
 						type.m_data.m_solid.m_frenselBias = userVars.GetVarFloat("FrenselBias", 0.2f);
 						type.m_data.m_solid.m_frenselPow = userVars.GetVarFloat("FrenselPow", 8.0f);

@@ -225,7 +225,7 @@
     #include "dds_insanity_posteffect.frag.fsl"
 #end
 
-#frag blur_posteffect_vertical.frag
+#frag blur_posteffect.frag
     #include "blur_posteffect.frag.fsl"
 #end
 

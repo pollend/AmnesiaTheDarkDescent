@@ -39,14 +39,15 @@ STRUCT(UniformObject)
 #if defined(MATERIAL_SOLID)
     // material data
     STRUCT(UniformMaterial) {
-        DATA(uint, textureConfig, None);
-        
+        DATA(uint, textureConfig, None); 
         DATA(float, heightMapScale, None);
         DATA(float, heightMapBias, None);
         DATA(float, frenselBias, None);
+
         DATA(float, frenselPow, None);
+	    DATA(uint, _pad0[3], None);
 	    
-	    DATA(uint, _pad0[4], None);
+	    DATA(uint, _pad1[4], None);
     };
     PUSH_CONSTANT(rootConstant, b0)
     {
@@ -58,14 +59,15 @@ STRUCT(UniformObject)
 #elif defined(MATERIAL_TRANSLUCENT)
     STRUCT(UniformMaterial) {
         DATA(uint, textureConfig, None);
-
         DATA(float, refractionScale, None);
         DATA(float, frenselBias, None);
         DATA(float, frenselPos, None);
+
         DATA(float, rimMulLight, None);
         DATA(float, rimMulPower, None);
+	    DATA(uint, _pad0[2], None);
 	    
-	    DATA(uint, _pad0[3], None);
+	    DATA(uint, _pad1[4], None);
     };
 
     PUSH_CONSTANT(rootConstant, b1)
@@ -82,15 +84,17 @@ STRUCT(UniformObject)
 #elif defined(MATERIAL_WATER)
     STRUCT(UniformMaterial) {
         DATA(uint, textureConfig, None);
-
         DATA(float, refractionScale, None);
         DATA(float, frenselBias, None);
         DATA(float, frenselPow, None);
+
         DATA(float, reflectionFadeStart, None);
         DATA(float, reflectionFadeEnd, None);
         DATA(float, waveSpeed, None);
         DATA(float, waveAmplitude, None);
+        
         DATA(float, waveFreq, None);
+	    DATA(uint, _pad0[3], None);
     };
     
     PUSH_CONSTANT(rootConstant, b2)

@@ -90,8 +90,6 @@ namespace hpl {
         virtual void Transform(const cMatrixf& mtxTransform) override;
 
         virtual void Draw(eVertexBufferDrawType aDrawType = eVertexBufferDrawType_LastEnum) override;
-        virtual void DrawIndices(
-            unsigned int* apIndices, int alCount, eVertexBufferDrawType aDrawType = eVertexBufferDrawType_LastEnum) override;
 
         struct GeometryBinding {
             struct VertexGeometryEntry {
@@ -141,6 +139,7 @@ namespace hpl {
         folly::small_vector<VertexElement, 10> m_vertexElements = {};
         ForgeBufferHandle m_indexBuffer;
         std::vector<uint32_t> m_indices = {};
+        SyncToken m_bufferSync = {};
 
         size_t m_indexBufferActiveCopy = 0;
         tVertexElementFlag m_updateFlags = 0; // update no need to rebuild buffers

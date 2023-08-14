@@ -175,7 +175,7 @@ namespace hpl {
 										eBinTreeNode_Right);
 					}
 
-					vPos = cVector2l(NewRect.x+1,NewRect.y+1);//+1 for the right pos		
+					vPos = cVector2l(NewRect.x+1,NewRect.y+1);//+1 for the right pos
 
 					//Draw corners for border
 					mpBitmap->Blit(	apSrc,cVector3l(NewRect.x, NewRect.y, 0),
@@ -478,14 +478,6 @@ namespace hpl {
 				true
 			});
 			mpFrameTexture->GetTexture()->SetForgeTexture(std::move(forgeHandle));
-
-			// auto desc = ImageDescriptor::CreateFromBitmap(*mpBitmap);
-			// desc.m_configuration.m_UWrap = WrapMode::Clamp;
-			// desc.m_configuration.m_VWrap = WrapMode::Clamp;
-			// mpFrameTexture->GetTexture()->Invalidate();
-			// desc.m_name = mpFrameTexture->GetTexture()->GetName().c_str();
-			// Image::InitializeFromBitmap(*mpFrameTexture->GetTexture(), *mpBitmap, desc);
-
 			mbIsUpdated = false;
 			return true;
 		}

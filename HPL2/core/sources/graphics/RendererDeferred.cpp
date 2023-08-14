@@ -3311,7 +3311,6 @@ namespace hpl {
                                     .m_projectionMat = pLightFrustum->GetProjectionMatrix()
                                 });
                                 cmdBindDescriptorSet(frame.m_cmd, shadowFrameIndex, m_materialSet.m_frameSet[frame.m_frameIndex]);
-                                //cmdBindDescriptorSet()
                                 for (auto& pObject : shadowCasters) {
                                     eMaterialRenderMode renderMode =
                                         pObject->GetCoverageAmount() >= 1 ? eMaterialRenderMode_Z : eMaterialRenderMode_Z_Dissolve;
