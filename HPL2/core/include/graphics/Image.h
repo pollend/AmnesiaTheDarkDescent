@@ -32,6 +32,7 @@
 
 #include "Common_3/Graphics/Interfaces/IGraphics.h"
 #include <FixPreprocessor.h>
+
 namespace hpl {
 
     class cBitmap;

@@ -202,11 +202,13 @@ namespace hpl {
             }
         }
 
-
-        TextureLoadDesc textureLoadDesc = {};
-        textureLoadDesc.ppTexture = &handle.m_handle;
-        textureLoadDesc.pDesc = &desc;
-        addResource(&textureLoadDesc, &token);
+        handle.Load([&](Texture** texture) {
+            TextureLoadDesc textureLoadDesc = {};
+            textureLoadDesc.ppTexture = texture;
+            textureLoadDesc.pDesc = &desc;
+            addResource(&textureLoadDesc, &token);
+            return true;
+        });
 
         auto sourceImageFormat = FromHPLPixelFormat(bitmap.GetPixelFormat());
         uint32_t sourceRowStride;
@@ -242,7 +244,6 @@ namespace hpl {
                 endUpdateResource(&update, &token);
             }
         }
-        handle.Initialize();
         waitForToken(&token);
         return handle;
     }
@@ -261,10 +262,13 @@ namespace hpl {
         desc.mSampleCount = SAMPLE_COUNT_1;
         desc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE | DESCRIPTOR_TYPE_TEXTURE_CUBE;
 
-        TextureLoadDesc textureLoadDesc = {};
-        textureLoadDesc.ppTexture = &handle.m_handle;
-        textureLoadDesc.pDesc = &desc;
-        addResource(&textureLoadDesc, &token);
+        handle.Load([&](Texture** texture) {
+            TextureLoadDesc textureLoadDesc = {};
+            textureLoadDesc.ppTexture = texture;
+            textureLoadDesc.pDesc = &desc;
+            addResource(&textureLoadDesc, &token);
+            return true;
+        });
 
         for(auto& bitmap : bitmaps) {
             ASSERT((options.m_useMipmaps || (bitmap->GetNumOfMipMaps() == desc.mMipLevels)) && "All bitmaps must have the same number of mipmaps");
@@ -305,7 +309,6 @@ namespace hpl {
                 }
             }
         }
-        handle.Initialize();
         return handle;
     }
 

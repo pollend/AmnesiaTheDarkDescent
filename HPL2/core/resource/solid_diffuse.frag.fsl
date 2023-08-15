@@ -2,8 +2,6 @@
 #include "deferred_resources.h.fsl"
 #include "deferred_common.h.fsl"
 
-RES(Tex2D(float4), dissolveMap, UPDATE_FREQ_NONE, t9, binding = 4);
-
 STRUCT(PsIn) 
 {
     DATA(float4, Position, SV_Position);
@@ -13,8 +11,6 @@ STRUCT(PsIn)
     DATA(float3, normal, NORMAL);
     DATA(float3, tangent, TANGENT);
     DATA(float3, bitangent, BITANGENT);
-    
-    DATA(FLAT(uint), drawId, TEXCOORD2);
 };
 
 STRUCT(PsOut)
@@ -29,7 +25,7 @@ PsOut PS_MAIN(PsIn In)
 {
     INIT_MAIN;
     PsOut Out;
-    uint materialID = Get(uniformObjectBuffer)[In.drawId].materialID;
+    uint materialID = Get(uniformObjectBuffer)[Get(objectId)].materialID;
 
     float2 texCoord = In.uv.xy;
     float3 cameraEyeSpace = normalize(In.pos).xyz;

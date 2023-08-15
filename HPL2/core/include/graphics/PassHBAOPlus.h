@@ -37,7 +37,6 @@
 #include "Common_3/Utilities/Math/MathTypes.h"
 #include "FixPreprocessor.h"
 
-
 namespace hpl::renderer {
 
 class PassHBAOPlus final {
@@ -52,7 +51,8 @@ public:
             , m_perFrameDescriptorSet(std::move(buffer.m_perFrameDescriptorSet))
             , m_constDescriptorSet(std::move(buffer.m_constDescriptorSet))
             , m_size(buffer.m_size)
-            , m_frustum(buffer.m_frustum) {
+            , m_frustum(buffer.m_frustum)
+            , m_constBuffer(buffer.m_constBuffer) {
         }
 
         ViewportData& operator=(const ViewportData&) = delete;
@@ -63,16 +63,18 @@ public:
             m_perFrameDescriptorSet = std::move(buffer.m_perFrameDescriptorSet);
             m_constDescriptorSet = std::move(buffer.m_constDescriptorSet);
             m_preparedDepth = std::move(buffer.m_preparedDepth);
+            m_constBuffer = std::move(buffer.m_constBuffer);
             m_frustum =  buffer.m_frustum;
         }
 
         // 16 depth intermediary buffers
         ForgeTextureHandle m_preparedDepth = {};
         ForgeTextureHandle m_aoQurter = {};
-        std::array<ForgeDescriptorSet, ForgeRenderer::SwapChainLength> m_perFrameDescriptorSet = {};
         ForgeDescriptorSet m_constDescriptorSet = {};
         uint2 m_size = uint2(0, 0);
         cFrustum* m_frustum = nullptr;
+        std::array<ForgeDescriptorSet, ForgeRenderer::SwapChainLength> m_perFrameDescriptorSet = {};
+        ForgeBufferHandle m_constBuffer;
     };
 
     struct HBAORootConstant {
@@ -104,7 +106,6 @@ public:
         Texture* outputBuffer);
 
 private:
-    ForgeBufferHandle m_constantBuffer;
     UniqueViewportData<ViewportData> m_boundViewportData;
     RootSignature* m_rootSignature;
 
@@ -118,23 +119,6 @@ private:
     ForgePipelineHandle m_pipelineReinterleave;
 
     Sampler* m_pointSampler;
-    ForgeBufferHandle m_constBuffer;
-    //    void SetAORadiusConstants(const GFSDK_SSAO_Parameters& Params, const GFSDK::SSAO::InputDepthInfo& InputDepth)
-//    {
-//        const float RadiusInMeters = Max(Params.Radius, EPSILON);
-//        const float R = RadiusInMeters * InputDepth.MetersToViewSpaceUnits;
-//        m_Data.fR2 = R * R;
-//        m_Data.fNegInvR2 = -1.f / m_Data.fR2;
-//
-//        const float TanHalfFovy = InputDepth.ProjectionMatrixInfo.GetTanHalfFovY();
-//        m_Data.fRadiusToScreen = R * 0.5f / TanHalfFovy * InputDepth.Viewport.Height;
-//
-//        const float BackgroundViewDepth = Max(Params.BackgroundAO.BackgroundViewDepth, EPSILON);
-//        m_Data.fBackgroundAORadiusPixels = Params.BackgroundAO.Enable ? (m_Data.fRadiusToScreen / BackgroundViewDepth) : -1.f;
-//
-//        const float ForegroundViewDepth = Max(Params.ForegroundAO.ForegroundViewDepth, EPSILON);
-//        m_Data.fForegroundAORadiusPixels = Params.ForegroundAO.Enable ? (m_Data.fRadiusToScreen / ForegroundViewDepth) : -1.f;
-//    }
 };
 
 }

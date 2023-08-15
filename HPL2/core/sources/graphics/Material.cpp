@@ -40,24 +40,13 @@
 
 namespace hpl {
 
-	namespace internal {
-        static size_t m_id = 0;
-        static std::vector<size_t> m_freelist;
-	}
+
 
 	bool cMaterial::mbDestroyTypeSpecifics = true;
 
 	cMaterial::cMaterial(const tString& asName, const tWString& asFullPath, cGraphics *apGraphics, cResources *apResources, iMaterialType *apType)
 		: iResourceBase(asName, asFullPath, 0)
 	{
-		if(internal::m_freelist.size() > 0) {
-			m_materialID = internal::m_freelist.back();
-			internal::m_freelist.pop_back();
-		} else {
-			m_materialID = internal::m_id++;
-			ASSERT(m_materialID < MaxMaterialID && "Too many materials created");
-		}
-
 		mpGraphics = apGraphics;
 		mpResources = apResources;
 
@@ -116,8 +105,6 @@ namespace hpl {
 
 	cMaterial::~cMaterial()
 	{
-		internal::m_freelist.push_back(m_materialID);
-		m_materialID = 0;
 		if(mpVars) {
 			hplDelete(mpVars);
 		}
@@ -277,63 +264,6 @@ namespace hpl {
 		}
 		return 0;
 	}
-
-
-	// bool cMaterial::updateDescriptorSet(const ForgeRenderer::Frame& frame, eMaterialRenderMode mode, DescriptorSet* descriptorSet) {
-	// 	// if(m_descriptorSets[mode] != descriptorSet) {
-	// 	// 	m_stageDirtyBits |= (1 << mode); // mark stage as dirty
-	// 	// 	m_descriptorSets[mode] = descriptorSet;
-	// 	// }
-
-	// 	if((m_stageDirtyBits & (1 << mode))) {
-	// 		m_stageDirtyBits &= ~(1 << mode); // clear dirty bit
-
-	// 		switch(m_info.m_id) {
-	// 			case SolidDiffuse: {
-	// 				switch(mode) {
-	// 					case eMaterialRenderMode_Z: {
-	// 						std::array<DescriptorData, 2> descriptorData{};
-	// 						descriptorData[0].pName = "uniformMaterialBlock";
-	// 						descriptorData[0].ppBuffers = &m_bufferHandle[frame.m_frameIndex].m_handle;
-
-	// 						return true;
-
-	// 						break;
-	// 					}
-	// 					case eMaterialRenderMode_Z_Dissolve:
-	// 						break;
-	// 					case eMaterialRenderMode_Diffuse:
-	// 						break;
-	// 					case eMaterialRenderMode_DiffuseFog:
-	// 						break;
-	// 					case eMaterialRenderMode_Light:
-	// 						break;
-	// 					case eMaterialRenderMode_Illumination:
-	// 						break;
-	// 					case eMaterialRenderMode_IlluminationFog:
-	// 						break;
-	// 					default:
-	// 						break;
-	// 				}
-	// 				break;
-	// 			}
-	// 			case Translucent: {
-	// 				break;
-	// 			}
-	// 			case Water: {
-	// 				break;
-	// 			}
-	// 			case Decal: {
-	// 				break;
-	// 			}
-	// 			default: {
-	// 				ASSERT(false && "Unknown material type");
-	// 				break;
-	// 			}
-	// 		}
-	// 	}
-	// 	return false;
-	// }
 
 	void cMaterial::UpdateAnimations(float afTimeStep) {
 		m_mtxUV = cMatrixf::Identity;

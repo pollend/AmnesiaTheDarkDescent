@@ -141,7 +141,7 @@ cLuxEffectRenderer::cLuxEffectRenderer()
         {
             ShaderLoadDesc loadDesc = {};
             loadDesc.mStages[0].pFileName = "fullscreen.vert";
-            loadDesc.mStages[1].pFileName = "blur_posteffect_horizontal.frag";
+            loadDesc.mStages[1].pFileName = "blur_posteffect.frag";
             addShader(forgeRenderer->Rend(), &loadDesc, &m_blurHorizontalShader);
         }
         {

@@ -5,23 +5,19 @@
 #include "deferred_resources.h.fsl"
 #include "deferred_common.h.fsl"
 
-RES(Tex2D(float4), dissolveMap, UPDATE_FREQ_NONE, t9, binding = 4);
-
 STRUCT(PsIn) 
 {
 	DATA(float4, Position, SV_Position);
 	DATA(float2, uv, TEXCOORD0);
     DATA(float3, view, TEXCOORD1);
     DATA(float3, normal, NORMAL);
-    
-    DATA(FLAT(uint), drawId, TEXCOORD2);
 };
 
 float4 PS_MAIN(PsIn In)
 {
     INIT_MAIN;
     float2 texCoord = In.uv.xy;
-    uint materialID = Get(uniformObjectBuffer)[In.drawId].materialID;
+    uint materialID = Get(uniformObjectBuffer)[Get(objectId)].materialID;
     
     #ifdef PARALLAX_ENABLED
         if(HasHeight(Get(uniformMaterialBuffer)[materialID].textureConfig)) {
@@ -62,7 +58,7 @@ float4 PS_MAIN(PsIn In)
             //Get in 0.5 - 1 range.
             fDissolve = fDissolve*0.5 + 0.5;
         }
-        diffuseAlpha = fDissolve - (1.0 - Get(uniformObjectBuffer)[In.drawId].dissolveAmount * diffuseAlpha) * 0.5;
+        diffuseAlpha = fDissolve - (1.0 - Get(uniformObjectBuffer)[Get(objectId)].dissolveAmount * diffuseAlpha) * 0.5;
     }
 
     

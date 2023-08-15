@@ -13,16 +13,12 @@ STRUCT(VSInput)
 STRUCT(VSOutput)
 {
 	DATA(float4, Position, SV_Position);
-    DATA(FLAT(uint), drawId, TEXCOORD0);
 };
 
-
-VSOutput VS_MAIN(VSInput In, SV_InstanceID(uint) InstanceID )
+VSOutput VS_MAIN(VSInput In)
 {
     INIT_MAIN;
     VSOutput Out;
-    
-    Out.Position = mul(Get(lightObjectBuffer)[InstanceID].mvp, float4(In.Position.xyz, 1.0));
-    Out.drawId = InstanceID;
+    Out.Position = mul(Get(lightObjectBuffer)[Get(lightId)].mvp, float4(In.Position.xyz, 1.0));
     RETURN(Out);
 }

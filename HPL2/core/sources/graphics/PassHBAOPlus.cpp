@@ -83,17 +83,7 @@ namespace hpl::renderer {
             addRootSignature(forgeRenderer->Rend(), &rootSignatureDesc, &m_rootSignature);
         }
 
-        m_constBuffer.Load([&](Buffer** buffer) {
-            BufferLoadDesc desc = {};
-            desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
-            desc.mDesc.mSize = sizeof(HBAORootConstant) * cViewport::MaxViewportHandles;
-            desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
-            desc.pData = nullptr;
-            desc.ppBuffer = buffer;
-            addResource(&desc, nullptr);
-            return true;
-        });
+
 
         m_pipelineDeinterleave.Load(forgeRenderer->Rend(), [&](Pipeline** handle) {
             PipelineDesc pipelineDesc = {};
@@ -148,6 +138,18 @@ namespace hpl::renderer {
                     return true;
                 });
             }
+            viewportData->m_constBuffer.Load([&](Buffer** buffer) {
+                BufferLoadDesc desc = {};
+                desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+                desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
+                desc.mDesc.mSize = sizeof(HBAORootConstant);
+                desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
+                desc.pData = nullptr;
+                desc.ppBuffer = buffer;
+                addResource(&desc, nullptr);
+                return true;
+            });
+
             viewportData->m_constDescriptorSet.Load(forgeRenderer->Rend(),[&](DescriptorSet** set) {
                 DescriptorSetDesc setDesc = { m_rootSignature, DESCRIPTOR_UPDATE_FREQ_NONE, 1};
                 addDescriptorSet(forgeRenderer->Rend(), &setDesc, set);
@@ -214,17 +216,15 @@ namespace hpl::renderer {
             });
 
             size_t viewportIndex = viewport->GetHandle();
-            BufferUpdateDesc updateDesc = { m_constBuffer.m_handle, viewportIndex * sizeof(HBAORootConstant), sizeof(HBAORootConstant) };
+            BufferUpdateDesc updateDesc = { viewportData->m_constBuffer.m_handle, 0, sizeof(HBAORootConstant) };
             beginUpdateResource(&updateDesc);
             (*reinterpret_cast<HBAORootConstant *>(updateDesc.pMappedData)) = constData;
             endUpdateResource(&updateDesc, &token);
             waitForToken(&token);
             {
                 std::array<DescriptorData, 3> descriptorData = {};
-                DescriptorDataRange range = { (uint32_t)(viewportIndex  * sizeof(HBAORootConstant)) , sizeof(HBAORootConstant) };
                 descriptorData[0].pName = "constUniformBuffer";
-                descriptorData[0].pRanges = &range;
-                descriptorData[0].ppBuffers = &m_constBuffer.m_handle;
+                descriptorData[0].ppBuffers = &viewportData->m_constBuffer.m_handle;
                 descriptorData[1].pName = "prepareDepths";
                 descriptorData[1].ppTextures = &viewportData->m_preparedDepth.m_handle;
                 descriptorData[2].pName = "aoQurter";
@@ -258,8 +258,6 @@ namespace hpl::renderer {
         cmdBindDescriptorSet(frame.m_cmd, 0, common->m_perFrameDescriptorSet[frame.m_frameIndex].m_handle);
         cmdBindDescriptorSet(frame.m_cmd, 0, common->m_constDescriptorSet.m_handle);
 
-        //cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, static_cast<float>(viewportSize.x), static_cast<float>(viewportSize.y), 0.0f, 1.0f);
-        //cmdSetScissor(frame.m_cmd, 0, 0, static_cast<float>(viewportSize.x), static_cast<float>(viewportSize.y));
         cmdBindPipeline(frame.m_cmd, m_pipelineDeinterleave.m_handle);
         cmdDispatch(frame.m_cmd, static_cast<uint32_t>(quarterViewportSize.x / 16) + 1 , static_cast<uint32_t>(quarterViewportSize.y / 16) + 1, 1);
         {

@@ -16,12 +16,11 @@
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
-
-#ifndef HPL_MATERIAL_H
-#define HPL_MATERIAL_H
+#pragma once
 
 #include "engine/Event.h"
 #include "graphics/AnimatedImage.h"
+#include "graphics/IndexPool.h"
 #include "resources/Resources.h"
 #include <graphics/Image.h>
 #include <graphics/ImageResourceWrapper.h>
@@ -70,7 +69,6 @@ namespace hpl {
 	friend class iMaterialType;
 	public:
 		static constexpr uint32_t MaxMaterialID = 2048;
-
 		enum MaterialID: uint8_t {
             Unknown = 0,
             SolidDiffuse,
@@ -109,33 +107,44 @@ namespace hpl {
 		};
 
 		struct MaterialSolidUniformBlock {
-			MaterialCommonBlock m_common;
+			uint32_t m_textureConfig;
 			float m_heightMapScale;
 			float m_heightMapBias;
 			float m_frenselBias;
+
 			float m_frenselPow;
+			uint32_t m_pad0;
+			uint32_t m_pad1;
+			uint32_t m_pad2;
 		};
 
 		struct MaterialTranslucentUniformBlock {
-			MaterialCommonBlock m_common;
+			uint32_t m_textureConfig;
 			float mfRefractionScale;
 			float mfFrenselBias;
 			float mfFrenselPow;
+
 			float mfRimLightMul;
 			float mfRimLightPow;
+			uint32_t m_pad0;
+			uint32_t m_pad1;
 		};
 
 		struct MaterialWaterUniformBlock {
-			MaterialCommonBlock m_common;
-
+			uint32_t m_textureConfig;
 			float mfRefractionScale;
 			float mfFrenselBias;
 			float mfFrenselPow;
+
 			float mfReflectionFadeStart;
 			float mfReflectionFadeEnd;
 			float mfWaveSpeed;
 			float mfWaveAmplitude;
+
 			float mfWaveFreq;
+			uint32_t m_pad0;
+			uint32_t m_pad1;
+			uint32_t m_pad2;
 		};
 
 
@@ -144,6 +153,7 @@ namespace hpl {
 			bool m_affectByLightLevel = false;
 
 			MaterialID m_id;
+			IndexPoolHandle m_handle;
 			// solid
 			bool m_alphaDissolveFilter = false;
 			bool m_refractionNormals = false;
@@ -287,16 +297,13 @@ namespace hpl {
 		inline MaterialType& type() { return m_info; }
 
 		// inline ForgeBufferHandle& uniformHandle() { return m_bufferHandle; }
-		inline uint32_t materialID() { return m_materialID; }
+		inline uint32_t materialID() { return m_info.m_handle.get(); }
 		inline uint32_t Version() { return m_version; }
 	    inline void Dirty() { m_version++; }
     private:
 		void UpdateFlags();
 		void UpdateAnimations(float afTimeStep);
-		uint32_t m_materialID = 0;
 		uint32_t m_version = 0; // used to check if the material has changed since last frame
-
-		// std::array<ForgeBufferHandle,  ForgeRenderer::SwapChainLength> m_materialBuffer;
 		MaterialType m_info;
 
 		cGraphics *mpGraphics;
@@ -346,4 +353,3 @@ namespace hpl {
 	//---------------------------------------------------
 
 };
-#endif // HPL_MATERIAL_H

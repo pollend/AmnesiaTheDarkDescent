@@ -22,11 +22,6 @@ CBUFFER(perFrameConstants, UPDATE_FREQ_PER_FRAME, b0, binding = 0)
     DATA(float2, viewportSize, None);
 };
 
-INLINE float3x3 ToNormalMat(float4x4 invModel, float4x4 invView) {
-    //TODO fix for DIRECTX12
-   return transpose(mul(float3x3(invModel), float3x3(invView)));
-}
-
 STRUCT(UniformObject) 
 {
     DATA(float, dissolveAmount, None);
@@ -39,74 +34,48 @@ STRUCT(UniformObject)
 #if defined(MATERIAL_SOLID)
     // material data
     STRUCT(UniformMaterial) {
-        DATA(uint, textureConfig, None);
-        
+        DATA(uint, textureConfig, None); 
         DATA(float, heightMapScale, None);
         DATA(float, heightMapBias, None);
         DATA(float, frenselBias, None);
+
         DATA(float, frenselPow, None);
+	    DATA(uint, _pad0[3], None);
 	    
-	    DATA(uint, _pad0[4], None);
-    };
-    PUSH_CONSTANT(rootConstant, b0)
-    {
 	    DATA(uint, _pad1[4], None);
     };
-    INLINE bool HasDissolveFilter(uint _textureConfig)   { return (_textureConfig & (1 << 14)) != 0; }
-    
     RES(Buffer(UniformMaterial), uniformMaterialBuffer, UPDATE_FREQ_PER_BATCH, t1, binding = 2);
 #elif defined(MATERIAL_TRANSLUCENT)
     STRUCT(UniformMaterial) {
         DATA(uint, textureConfig, None);
-
         DATA(float, refractionScale, None);
         DATA(float, frenselBias, None);
         DATA(float, frenselPos, None);
+
         DATA(float, rimMulLight, None);
         DATA(float, rimMulPower, None);
+	    DATA(uint, _pad0[2], None);
 	    
-	    DATA(uint, _pad0[3], None);
+	    DATA(uint, _pad1[4], None);
     };
-
-    PUSH_CONSTANT(rootConstant, b1)
-    {
-        DATA(uint,  blendMode,   None);
-        DATA(uint,  textureMask, None);
-        DATA(float, sceneAlpha, None);
-        DATA(float, lightLevel, None);
-    };
-    INLINE bool UseRefractionNormals(uint _textureConfig)   { return (_textureConfig & (1 << 14)) != 0; }
-    INLINE bool UseRefractionEdgeCheck(uint _textureConfig)   { return (_textureConfig & (1 << 15)) != 0; }
-    
     RES(Buffer(UniformMaterial), uniformMaterialBuffer, UPDATE_FREQ_PER_BATCH, t1, binding = 2);
 #elif defined(MATERIAL_WATER)
     STRUCT(UniformMaterial) {
         DATA(uint, textureConfig, None);
-
         DATA(float, refractionScale, None);
         DATA(float, frenselBias, None);
         DATA(float, frenselPow, None);
+
         DATA(float, reflectionFadeStart, None);
         DATA(float, reflectionFadeEnd, None);
         DATA(float, waveSpeed, None);
         DATA(float, waveAmplitude, None);
+        
         DATA(float, waveFreq, None);
+	    DATA(uint, _pad0[3], None);
     };
-    
-    PUSH_CONSTANT(rootConstant, b2)
-    {
-        DATA(float, afT, None);
-	    
-	    DATA(uint, _pad1[3], None);
-    };
-
     RES(Buffer(UniformMaterial), uniformMaterialBuffer, UPDATE_FREQ_PER_BATCH, t1, binding = 2);
 #else
-
-    PUSH_CONSTANT(rootConstant, b0)
-    {
-	    DATA(uint, _pad1[4], None);
-    };
 #endif
 
 #define BLEND_MODE_ADD 0
@@ -146,6 +115,30 @@ RES(SamplerState, cubeMapAlphaSampler, UPDATE_FREQ_PER_BATCH, s9, binding = 22);
 
 RES(SamplerState, nearestSampler, UPDATE_FREQ_PER_BATCH, s10, binding = 23);
 RES(SamplerState, bilinearSampler, UPDATE_FREQ_PER_BATCH, s11, binding = 24);
+
+RES(Tex2D(float4), dissolveMap, UPDATE_FREQ_NONE, t11, binding = 25);
+RES(Tex2D(float4), refractionMap, UPDATE_FREQ_PER_FRAME, t12, binding = 26); 
+RES(Tex2D(float4), reflectionMap, UPDATE_FREQ_PER_FRAME, t13, binding = 27); 
+
+PUSH_CONSTANT(materialRootConstant, b0)
+{
+    DATA(uint, objectId, None);
+    DATA(float, afT, None);
+    DATA(uint,  options,   None);
+    DATA(float, sceneAlpha, None);
+    DATA(float, lightLevel, None);
+};
+
+// translucency 
+INLINE uint BlendModeTrans(uint _options) { return  (_options & 0xf); } 
+INLINE bool UseIlluminationTrans(uint _options) { return (_options & (1 << 4)) != 0;}
+INLINE bool UseReflectionTrans(uint _options)   { return (_options & (1 << 5)) != 0; }
+INLINE bool UseRefractionTrans(uint _options)   { return (_options & (1 << 6)) != 0; }
+INLINE bool UseFog(uint _options) { return (_options & (1 << 7)) != 0;}
+
+INLINE float3x3 ToNormalMat(float4x4 invModel, float4x4 invView) {
+    return transpose(mul(float3x3(invModel[0].xyz, invModel[1].xyz, invModel[2].xyz), float3x3(invView[0].xyz, invView[1].xyz, invView[2].xyz)));
+}
 
 #include "material_resource.h.fsl"
 
