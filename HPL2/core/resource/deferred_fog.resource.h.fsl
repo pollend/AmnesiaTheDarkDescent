@@ -1,8 +1,3 @@
-PUSH_CONSTANT(uRootConstants, b0)
-{
-    DATA(float2, viewTexel, None);
-};
-
 STRUCT(UniformFog) {
     DATA(float4x4, mvp, None);
     DATA(float4x4, mv, None);
@@ -20,12 +15,15 @@ RES(SamplerState, nearestSampler, UPDATE_FREQ_NONE, s0, binding = 3);
 RES(Tex2D(float4), positionMap, UPDATE_FREQ_PER_FRAME, t0, binding = 2);
 RES(Buffer(UniformFog), uniformFogBuffer, UPDATE_FREQ_PER_FRAME, t1, binding = 0);
 
-CBUFFER(uniformFogFullscreen, UPDATE_FREQ_PER_FRAME, b1, binding = 1)
-{
+CBUFFER(uniformFogFullscreen, UPDATE_FREQ_PER_FRAME, b1, binding = 1) {
     DATA(float4, color, None);
     DATA(float, fogStart, None);
     DATA(float, fogLength, None);
     DATA(float, falloffExp, None);
 };
 
+PUSH_CONSTANT(rootConstant, b0) {
+    DATA(float2, viewTexel, None);
+    DATA(uint, instanceOffset, None);
+};
 

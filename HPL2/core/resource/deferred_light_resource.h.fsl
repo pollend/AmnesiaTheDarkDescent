@@ -45,6 +45,12 @@
     #error not defined
 #endif
 
+PUSH_CONSTANT(lightPushConstant, b0)
+{
+    DATA(uint, lightId, None);
+};
+
+
 RES(Buffer(LightObject), lightObjectBuffer, UPDATE_FREQ_PER_FRAME, t0, binding = 0);
 RES(Tex2D(float4), diffuseMap, UPDATE_FREQ_PER_FRAME, t1, binding = 1); 
 RES(Tex2D(float4), normalMap, UPDATE_FREQ_PER_FRAME, t2, binding = 2);

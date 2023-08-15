@@ -3516,6 +3516,7 @@ namespace hpl {
                 // Draw Box Lights
                 // --------------------------------------------------------
                 cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "Point Light Deferred Stencil front");
+                uint32_t lightRootConstantIndex = getDescriptorIndexFromName(m_lightPassRootSignature, "lightPushConstant");
                 for (auto& light : deferredLightStencilFront) {
                     cmdSetStencilReferenceValue(frame.m_cmd, 0xff);
 
@@ -3528,7 +3529,8 @@ namespace hpl {
 
                     cmdBindPipeline(frame.m_cmd, m_lightStencilPipeline.m_handle);
                     uint32_t instance = cmdBindLightDescriptor(light); // bind light descriptor light uniforms
-                    cmdDrawIndexedInstanced(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 1, instance, 0);
+                    cmdBindPushConstants(frame.m_cmd, m_lightPassRootSignature, lightRootConstantIndex, &instance);
+                    cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
 
                     switch (light->m_light->GetLightType()) {
                     case eLightType_Point:
@@ -3553,7 +3555,8 @@ namespace hpl {
                         ASSERT(false && "Unsupported light type");
                         break;
                     }
-                    cmdDrawIndexedInstanced(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 1, instance, 0);
+                    cmdBindPushConstants(frame.m_cmd, m_lightPassRootSignature, lightRootConstantIndex, &instance);
+                    cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
                     {
                         LoadActionsDesc loadActions = {};
                         loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
@@ -3607,7 +3610,8 @@ namespace hpl {
 
                     uint32_t instance = cmdBindLightDescriptor(light);
                     detail::cmdDefaultLegacyGeomBinding(frame.m_cmd, frame, binding);
-                    cmdDrawIndexedInstanced(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 1, instance, 0);
+                    cmdBindPushConstants(frame.m_cmd, m_lightPassRootSignature, lightRootConstantIndex, &instance);
+                    cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
                 }
                 cmdEndDebugMarker(frame.m_cmd);
             }
@@ -3750,12 +3754,15 @@ namespace hpl {
                 params[0].ppTextures = &currentGBuffer.m_positionBuffer.m_handle->pTexture;
                 updateDescriptorSet(frame.m_renderer->Rend(), 0, m_fogPass.m_perFrameSet[frame.m_frameIndex], params.size(), params.data());
             }
-
-            uint32_t rootConstantIndex = getDescriptorIndexFromName(m_fogPass.m_fogRootSignature, "uRootConstants");
-            float2 viewTexel = { 1.0f / common->m_size.x, 1.0f / common->m_size.y };
-            cmdBindPushConstants(frame.m_cmd, m_fogPass.m_fogRootSignature, rootConstantIndex, &viewTexel);
+            uint32_t rootConstantIndex = getDescriptorIndexFromName(m_fogPass.m_fogRootSignature, "rootConstant");
+            struct {
+                float2 viewTexel;
+                uint32_t m_instanceIndex;
+                uint32_t pad0;
+            } fogConstant = {float2(1.0f / static_cast<float>(common->m_size.x), 1.0f / static_cast<float>(common->m_size.y))};
 
             cmdBindDescriptorSet(frame.m_cmd, 0, m_fogPass.m_perFrameSet[frame.m_frameIndex]);
+            cmdBindPushConstants(frame.m_cmd, m_fogPass.m_fogRootSignature, rootConstantIndex, &fogConstant);
             cmdDrawIndexedInstanced(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, fogIndex, 0, 0);
 
             size_t offsetIndex = fogIndex;
@@ -3769,7 +3776,9 @@ namespace hpl {
             }
 
             cmdBindPipeline(frame.m_cmd, m_fogPass.m_pipelineInsideNearFrustum);
-            cmdDrawIndexedInstanced(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, fogIndex - offsetIndex, offsetIndex, 0);
+            fogConstant.m_instanceIndex = offsetIndex;
+            cmdBindPushConstants(frame.m_cmd, m_fogPass.m_fogRootSignature, rootConstantIndex, &fogConstant);
+            cmdDrawIndexedInstanced(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, fogIndex - offsetIndex, 0, 0);
 
             cmdEndDebugMarker(frame.m_cmd);
             if (mpCurrentWorld->GetFogActive()) {

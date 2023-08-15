@@ -1,22 +1,13 @@
 /// Copyright © 2009-2020 Frictional Games
 /// Copyright 2023 Michael Pollind
 /// SPDX-License-Identifier: GPL-3.0
+#include "deferred_fog.resource.h.fsl"
+
 STRUCT(PsIn)
 {
 	DATA(float4, Position, SV_Position);
 	DATA(float2, uv, TEXCOORD0);
 };
-
-CBUFFER(uniformFogFullscreen, UPDATE_FREQ_PER_FRAME, b1, binding = 1)
-{
-    DATA(float4, color, None);
-    DATA(float, fogStart, None);
-    DATA(float, fogLength, None);
-    DATA(float, falloffExp, None);
-};
-
-RES(Tex2D(float4), positionMap, UPDATE_FREQ_PER_FRAME, t1, binding = 2);
-RES(SamplerState, nearestSampler, UPDATE_FREQ_NONE, s1, binding = 3);
 
 float4 PS_MAIN(PsIn In)
 {
