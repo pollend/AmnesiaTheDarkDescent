@@ -40,8 +40,6 @@
 
 namespace hpl {
 
-
-
 	bool cMaterial::mbDestroyTypeSpecifics = true;
 
 	cMaterial::cMaterial(const tString& asName, const tWString& asFullPath, cGraphics *apGraphics, cResources *apResources, iMaterialType *apType)
@@ -140,12 +138,22 @@ namespace hpl {
 		UpdateFlags();
 	}
 
+    void cMaterial::SetTextureAnisotropy(float afx) {
+        if(afx >= 32.0f) {
+            m_antistropy = Antistropy_32;
+        } else if(afx >= 16.0f) {
+            m_antistropy = Antistropy_16;
+        } else if(afx >= 8.0f) {
+            m_antistropy = Antistropy_8;
+        } else {
+            m_antistropy = Antistropy_None ;
+        }
+    }
 
 	void cMaterial::UpdateFlags() {
 		const auto alphaMapImage = GetImage(eMaterialTexture_Alpha);
 		const auto heightMapImage = GetImage(eMaterialTexture_Height);
-
-	    m_info.m_data.m_common.m_textureConfig =
+	    m_info.m_data.m_common.m_materialConfig =
 					(GetImage(eMaterialTexture_Diffuse) ? EnableDiffuse: 0) |
 					(GetImage(eMaterialTexture_NMap) ? EnableNormal: 0) |
  					(GetImage(eMaterialTexture_Specular) ? EnableSpecular: 0) |
@@ -158,13 +166,13 @@ namespace hpl {
 					(m_info.m_alphaDissolveFilter ? UseDissolveFilter: 0);
 		switch(m_info.m_id) {
 			case MaterialID::SolidDiffuse: {
-				m_info.m_data.m_common.m_textureConfig |=
+				m_info.m_data.m_common.m_materialConfig |=
 					((alphaMapImage && TinyImageFormat_ChannelCount(static_cast<TinyImageFormat>(alphaMapImage->GetTexture().m_handle->mFormat)) == 1) ? IsAlphaSingleChannel: 0) |
 					((heightMapImage && TinyImageFormat_ChannelCount(static_cast<TinyImageFormat>(heightMapImage->GetTexture().m_handle->mFormat)) == 1) ? IsHeightMapSingleChannel: 0);
 				break;
 			}
 			case MaterialID::Translucent: {
-				m_info.m_data.m_common.m_textureConfig |=
+				m_info.m_data.m_common.m_materialConfig |=
 					(HasRefraction() ? UseRefractionNormals: 0)  |
 					(IsRefractionEdgeCheck() ? UseRefractionEdgeCheck: 0);
 			    break;

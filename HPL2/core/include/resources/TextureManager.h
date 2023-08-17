@@ -42,7 +42,8 @@ namespace hpl {
 
 	class cTextureManager : public iResourceManager
 	{
-	public:
+        HPL_RTTI_IMPL_CLASS(iResourceManager, cTextureManager, "{6ccdf2cf-aa5c-4992-af8c-dbe6c1db7c98}")
+    public:
 		cTextureManager(cGraphics* apGraphics,cResources *apResources);
 		~cTextureManager();
 

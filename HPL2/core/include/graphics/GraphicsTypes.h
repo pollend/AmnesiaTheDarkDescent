@@ -408,10 +408,10 @@ namespace hpl {
 
 	enum eTextureWrap
 	{
-		eTextureWrap_Repeat,
-		eTextureWrap_Clamp,
-		eTextureWrap_ClampToEdge,
-		eTextureWrap_ClampToBorder,
+		eTextureWrap_Clamp = 0,
+		eTextureWrap_ClampToEdge = eTextureWrap_Clamp,
+		eTextureWrap_Repeat = 1,
+		eTextureWrap_ClampToBorder = 2,
 		eTextureWrap_LastEnum
 	};
 

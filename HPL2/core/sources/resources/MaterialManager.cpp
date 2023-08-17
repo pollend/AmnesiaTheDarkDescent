@@ -151,6 +151,7 @@ namespace hpl {
 		for(; it != m_mapResources.end(); ++it)
 		{
 			cMaterial *pMat = static_cast<cMaterial*>(it->second);
+		    pMat->SetTextureAnisotropy(aFilter);
 
             for(int i=0; i<eMaterialTexture_LastEnum; ++i)
 			{
@@ -384,7 +385,11 @@ namespace hpl {
 					}
 				}
 				pImageResource = pImage;
-				if(pImage) {
+
+			    pMat->setTextureWrap(wrap);
+			    pMat->setTextureFilter(mTextureFilter);
+			    pMat->SetTextureAnisotropy(mfTextureAnisotropy);
+		        if(pImage) {
 					pMat->SetImage(pUsedTexture->mType, pImage);
                     pImage->setWrapMode(wrap);
                     pImage->setTextureFilter(mTextureFilter);
@@ -431,7 +436,6 @@ namespace hpl {
 		tString materialID = cString::ToLowerCase(sType);
 		auto& typeInfo = pMat->type();
 		for(auto& meta: cMaterial::MaterialMetaTable) {
-		// auto& meta = cMaterial::MetaInfo[i];
 			if(materialID == meta.m_name) {
 				if(meta.m_isTranslucent) {
 			        pMat->SetBlendMode(GetBlendMode(sBlendMode));
@@ -439,7 +443,8 @@ namespace hpl {
 			    auto& type = pMat->type();
 				type.m_id = meta.m_id;
 				type.m_handle = IndexPoolHandle(&internal::m_MaterialIndexPool);
-				switch(meta.m_id) {
+				//type.m_data.m_common.m_textureConfig
+			    switch(meta.m_id) {
 					case cMaterial::MaterialID::SolidDiffuse: {
 					    type.m_data.m_solid.m_heightMapScale = userVars.GetVarFloat("HeightMapScale", 0.1f);
 						type.m_data.m_solid.m_heightMapBias = userVars.GetVarFloat("HeightMapBias", 0);

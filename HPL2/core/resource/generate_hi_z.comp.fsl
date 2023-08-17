@@ -7,8 +7,8 @@ RES(RWTex2DArray(float), destOutput, UPDATE_FREQ_PER_FRAME, u1, binding = 1);
 
 PUSH_CONSTANT(uRootConstants, b0)
 {
-    DATA(uint, mipLevel, None);
     DATA(uint2, screenDim, None);
+    DATA(uint, mipLevel, None);
 };
 
 

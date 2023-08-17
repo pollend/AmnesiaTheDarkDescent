@@ -19,8 +19,6 @@ PsOut PS_MAIN(PsIn In)
 {
     INIT_MAIN;
     PsOut Out;
-    Out.diffuse = SampleTex2D(Get(illuminationMap), 
-        Get(illuminationSampler), 
-        In.uv).rgba;
+    Out.diffuse = SampleTex2D(Get(illuminationMap), Get(materialSampler), In.uv).rgba;
     RETURN(Out);
 }

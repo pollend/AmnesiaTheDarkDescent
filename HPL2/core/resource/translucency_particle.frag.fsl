@@ -21,10 +21,10 @@ float4 PS_MAIN(PsIn In)
 
     uint materialID = Get(uniformObjectBuffer)[Get(objectId)].materialID;
     float4 finalColor = float4(0.0, 0.0 ,0.0, 1.0);
-    uint textureConfig = Get(uniformMaterialBuffer)[materialID].textureConfig;
+    uint textureConfig = Get(uniformMaterialBuffer)[materialID].materialConfig;
 
     if(HasDiffuse(textureConfig)) {
-        finalColor = SampleTex2D(Get(diffuseMap), Get(diffuseSampler), In.uv) * In.color;
+        finalColor = SampleTex2D(Get(diffuseMap), Get(materialSampler), In.uv) * In.color;
     }
 
     float finalAlpha = Get(sceneAlpha);

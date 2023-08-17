@@ -811,7 +811,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
 
             LuxEffectObjectUniform::OutlineUniform  uniform{};
             uniform.m_mvp = cMath::ToForgeMat4(cMath::MatrixMul(mainFrustumViewProj, worldMatrix).GetTranspose());
-            uniform.m_feature = pMaterial->type().m_data.m_common.m_textureConfig;
+            uniform.m_feature = pMaterial->type().m_data.m_common.m_materialConfig;
 
             BufferUpdateDesc updateDesc = { uniformBlockOffset.pBuffer, uniformBlockOffset.mOffset };
             beginUpdateResource(&updateDesc);
@@ -872,7 +872,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
 
             LuxEffectObjectUniform::OutlineUniform uniform{};
             uniform.m_mvp = cMath::ToForgeMat4(cMath::MatrixMul(mainFrustumViewProj, cMath::MatrixMul(worldMatrix, mtxScale)).GetTranspose());
-            uniform.m_feature = pMaterial->type().m_data.m_common.m_textureConfig;
+            uniform.m_feature = pMaterial->type().m_data.m_common.m_materialConfig;
 
             BufferUpdateDesc updateDesc = { uniformBlockOffset.pBuffer, uniformBlockOffset.mOffset };
             beginUpdateResource(&updateDesc);

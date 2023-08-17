@@ -128,6 +128,11 @@ namespace hpl {
             cmdBindIndexBuffer(cmd, binding.m_indexBuffer.element->m_handle, INDEX_TYPE_UINT32, binding.m_indexBuffer.offset);
         }
 
+        uint32_t resolveMaterialID(cMaterial::TextureAntistropy anisotropy, eTextureWrap wrap, eTextureFilter filter) {
+            const uint32_t anisotropyGroup = (static_cast<uint32_t>(eTextureFilter_LastEnum) * static_cast<uint32_t>(eTextureWrap_LastEnum)) * static_cast<uint32_t>(anisotropy);
+            return anisotropyGroup + ((static_cast<uint32_t>(wrap) * static_cast<uint32_t>(eTextureFilter_LastEnum)) + static_cast<uint32_t>(filter));
+        }
+
         struct DeferredLight {
         public:
             DeferredLight() = default;
@@ -1174,6 +1179,9 @@ namespace hpl {
             shaders.push_back(m_materialTranslucencyPass.m_waterShader.m_handle);
 
             RootSignatureDesc rootSignatureDesc = {};
+            const char* pStaticSamplers[] = { "nearestSampler" };
+            rootSignatureDesc.ppStaticSamplers =  &m_pointSampler;
+            rootSignatureDesc.ppStaticSamplerNames = pStaticSamplers;
             rootSignatureDesc.ppShaders = shaders.data();
             rootSignatureDesc.mShaderCount = shaders.size();
             addRootSignature(forgeRenderer->Rend(), &rootSignatureDesc, &m_materialRootSignature);
@@ -1429,16 +1437,86 @@ namespace hpl {
                     pipelineSettings.pVertexLayout = &vertexLayout;
                     addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_zPassShadowPipelineCCW);
                 }
-                // createMaterialsPass(m_zPassRootSignature, m_zDescriptorSet);
 
-                DescriptorSetDesc constSet{ m_materialRootSignature, DESCRIPTOR_UPDATE_FREQ_NONE, ForgeRenderer::SwapChainLength };
-                addDescriptorSet(forgeRenderer->Rend(), &constSet, &m_zPassConstSet);
+                m_materialSet.m_materialConstSet.Load(forgeRenderer->Rend(), [&](DescriptorSet** handle) {
+                    DescriptorSetDesc setDesc{ m_materialRootSignature, DESCRIPTOR_UPDATE_FREQ_NONE, MaxMaterialSamplers};
+                    addDescriptorSet(forgeRenderer->Rend(), &setDesc, handle);
+                    return true;
+                });
+                for(size_t antistropy = 0; antistropy < cMaterial::Antistropy_Count; antistropy++) {
+                    for(size_t textureWrap = 0; textureWrap < eTextureWrap_LastEnum; textureWrap++) {
+                        for(size_t textureFilter = 0; textureFilter < eTextureFilter_LastEnum; textureFilter++) {
+                            uint32_t materialID = detail::resolveMaterialID(static_cast<cMaterial::TextureAntistropy>(antistropy), static_cast<eTextureWrap>(textureWrap), static_cast<eTextureFilter>(textureFilter));
+                            m_materialSet.m_samplers[materialID].Load(forgeRenderer->Rend(), [&](Sampler** sampler){
+                                SamplerDesc samplerDesc = {};
+                                switch(textureWrap) {
+                                    case eTextureWrap_Repeat:
+                                        samplerDesc.mAddressU = ADDRESS_MODE_REPEAT;
+                                        samplerDesc.mAddressV = ADDRESS_MODE_REPEAT;
+                                        samplerDesc.mAddressW = ADDRESS_MODE_REPEAT;
+                                        break;
+                                    case eTextureWrap_Clamp:
+                                        samplerDesc.mAddressU = ADDRESS_MODE_CLAMP_TO_EDGE;
+                                        samplerDesc.mAddressV = ADDRESS_MODE_CLAMP_TO_EDGE;
+                                        samplerDesc.mAddressW = ADDRESS_MODE_CLAMP_TO_EDGE;
+                                        break;
+                                    case eTextureWrap_ClampToBorder:
+                                        samplerDesc.mAddressU = ADDRESS_MODE_CLAMP_TO_BORDER;
+                                        samplerDesc.mAddressV = ADDRESS_MODE_CLAMP_TO_BORDER;
+                                        samplerDesc.mAddressW = ADDRESS_MODE_CLAMP_TO_BORDER;
+                                        break;
+                                    default:
+                                        ASSERT(false && "Invalid wrap mode");
+                                        break;
+                                }
+                                switch(textureFilter) {
+                                    case eTextureFilter_Nearest:
+                                        samplerDesc.mMinFilter = FilterType::FILTER_NEAREST;
+                                        samplerDesc.mMagFilter = FilterType::FILTER_NEAREST;
+                                        samplerDesc.mMipMapMode = MipMapMode::MIPMAP_MODE_NEAREST;
+                                        break;
+                                    case eTextureFilter_Bilinear:
+                                        samplerDesc.mMinFilter = FilterType::FILTER_LINEAR;
+                                        samplerDesc.mMagFilter = FilterType::FILTER_LINEAR;
+                                        samplerDesc.mMipMapMode = MipMapMode::MIPMAP_MODE_NEAREST;
+                                        break;
+                                    case eTextureFilter_Trilinear:
+                                        samplerDesc.mMinFilter = FilterType::FILTER_LINEAR;
+                                        samplerDesc.mMagFilter = FilterType::FILTER_LINEAR;
+                                        samplerDesc.mMipMapMode = MipMapMode::MIPMAP_MODE_LINEAR;
+                                        break;
+                                    default:
+                                        ASSERT(false && "Invalid filter");
+                                        break;
+                                }
+                                switch(antistropy) {
+                                    case cMaterial::Antistropy_8:
+                                        samplerDesc.mMaxAnisotropy = 8.0f;
+                                        break;
+                                    case cMaterial::Antistropy_16:
+                                        samplerDesc.mMaxAnisotropy = 16.0f;
+                                        break;
+                                    case cMaterial::Antistropy_32:
+                                        samplerDesc.mMaxAnisotropy = 32.0f;
+                                        break;
+                                    default:
+                                        break;
+                                }
+                                addSampler(forgeRenderer->Rend(), &samplerDesc, sampler);
+                                return true;
+                            });
+                            std::array<DescriptorData, 2> params{};
+                            params[0].ppTextures = &m_dissolveImage->GetTexture().m_handle;
+                            params[0].pName = "dissolveMap";
+                            params[1].ppSamplers = &m_materialSet.m_samplers[materialID].m_handle;
+                            params[1].pName = "materialSampler";
+                            updateDescriptorSet(forgeRenderer->Rend(), materialID, m_materialSet.m_materialConstSet.m_handle, params.size(), params.data());
 
-                std::array<DescriptorData, 1> params{};
-                params[0].ppTextures = &m_dissolveImage->GetTexture().m_handle;
-                params[0].pName = "dissolveMap";
-                updateDescriptorSet(forgeRenderer->Rend(), 0, m_zPassConstSet, params.size(), params.data());
+                        }
+                    }
+                }
             }
+
             // illumination pass
             {
                 // layout and pipeline for sphere draw
@@ -2224,6 +2302,7 @@ namespace hpl {
         auto metaInfo = std::find_if(cMaterial::MaterialMetaTable.begin(), cMaterial::MaterialMetaTable.end(), [&](auto& info) {
             return info.m_id == materialType.m_id;
         });
+
         if (descInfo.m_material != apMaterial || descInfo.m_version != apMaterial->Version()) {
             descInfo.m_version = apMaterial->Version();
             descInfo.m_material = apMaterial;
@@ -2250,18 +2329,6 @@ namespace hpl {
                     "cubeMapAlpha", // eMaterialTexture_CubeMapAlpha
                 };
 
-                static constexpr const char* TextureSamplerLookup[] = {
-                    "diffuseSampler", // eMaterialTexture_Diffuse
-                    "normalSampler", // eMaterialTexture_NMap
-                    "specularSampler", // eMaterialTexture_Specular
-                    "alphaSampler", // eMaterialTexture_Alpha
-                    "heightSampler", // eMaterialTexture_Height
-                    "illuminationSampler", // eMaterialTexture_Illumination
-                    "cubeSampler", // eMaterialTexture_CubeMap
-                    "dissolveAlphaSampler", // eMaterialTexture_DissolveAlpha
-                    "cubeMapAlphaSampler", // eMaterialTexture_CubeMapAlpha
-                };
-
                 auto* image = apMaterial->GetImage(supportedTexture);
                 if (image) {
                     auto& samplerDesc = image->m_samplerDesc;
@@ -2269,9 +2336,6 @@ namespace hpl {
                     if (!sampler) {
                         addSampler(frame.m_renderer->Rend(), &samplerDesc, &sampler);
                     }
-
-                    params[paramCount].pName = TextureSamplerLookup[supportedTexture];
-                    params[paramCount++].ppSamplers = &sampler;
 
                     params[paramCount].pName = TextureNameLookup[supportedTexture];
                     params[paramCount++].ppTextures = &image->GetTexture().m_handle;
@@ -2308,6 +2372,9 @@ namespace hpl {
 
             m_materialSet.m_objectDescriptorLookup[apObject] = index;
         }
+        cmdBindDescriptorSet(cmd,
+            detail::resolveMaterialID(apMaterial->GetTextureAntistropy(), apMaterial->GetTextureWrap(), apMaterial->GetTextureFilter()),
+            m_materialSet.m_materialConstSet.m_handle);
         cmdBindDescriptorSet(cmd, apMaterial->materialID(), m_materialSet.m_perBatchSet[frame.m_frameIndex]);
         return index;
     }
@@ -2619,7 +2686,6 @@ namespace hpl {
                 cmdSetScissor(m_prePassCmd, 0, 0, common->m_size.x, common->m_size.y);
                 cmdBindPipeline(m_prePassCmd, m_zPassPipeline);
 
-                cmdBindDescriptorSet(m_prePassCmd, 0, m_zPassConstSet);
                 cmdBindDescriptorSet(m_prePassCmd, mainFrameIndex, m_materialSet.m_frameSet[frame.m_frameIndex]);
 
                 BufferUpdateDesc updateDesc = { m_hiZOcclusionUniformBuffer.m_handle, 0, sizeof(UniformPropBlock) };
@@ -2780,9 +2846,9 @@ namespace hpl {
                     width /= 2;
                     height /= 2;
                     struct {
-                        uint32_t mipLevel;
                         uint2 screenDim;
-                    } pushConstants;
+                        uint32_t mipLevel;
+                    } pushConstants = {};
 
                     pushConstants.mipLevel = lod;
                     pushConstants.screenDim = uint2(common->m_size.x, common->m_size.y);
@@ -2865,7 +2931,6 @@ namespace hpl {
 
             cmdBindPipeline(frame.m_cmd, m_zPassPipeline);
 
-            cmdBindDescriptorSet(frame.m_cmd, 0, m_zPassConstSet);
             cmdBindDescriptorSet(frame.m_cmd, mainFrameIndex, m_materialSet.m_frameSet[frame.m_frameIndex]);
 
             auto* testResult = reinterpret_cast<uint32_t*>(m_occlusionTestBuffer.m_handle->pCpuMappedAddress);

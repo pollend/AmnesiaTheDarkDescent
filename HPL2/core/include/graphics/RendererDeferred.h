@@ -80,7 +80,8 @@ namespace hpl {
         static constexpr uint32_t MaxLightUniforms = 1024;
         static constexpr uint32_t MaxHiZMipLevels = 32;
         static constexpr uint32_t MaxMaterialFrameDescriptors = 1024;
-
+        //static constexpr uint32_t MaxSamplers =
+        static constexpr uint32_t MaxMaterialSamplers = static_cast<uint32_t>(eTextureWrap_LastEnum) * static_cast<uint32_t>(eTextureFilter_LastEnum) * static_cast<uint32_t>(cMaterial::TextureAntistropy::Antistropy_Count);
 
         enum LightConfiguration { HasGoboMap = 0x1, HasShadowMap = 0x2 };
 
@@ -454,8 +455,6 @@ namespace hpl {
             Pipeline* m_fullScreenPipeline = nullptr;
         } m_fogPass;
 
-
-
         RootSignature* m_materialRootSignature;
         // diffuse solid
         struct MaterialSolid {
@@ -548,7 +547,7 @@ namespace hpl {
         Pipeline* m_zPassPipeline;
         Pipeline* m_zPassShadowPipelineCW;
         Pipeline* m_zPassShadowPipelineCCW;
-        DescriptorSet* m_zPassConstSet;
+
         std::set<iRenderable*> m_preZPassRenderables;
 
         std::array<ForgeBufferHandle, ForgeRenderer::SwapChainLength> m_objectUniformBuffer;
@@ -569,7 +568,10 @@ namespace hpl {
                         m_textureHandles{}; // handles to keep textures alive for the descriptor
                 } m_materialDescInfo[ForgeRenderer::SwapChainLength];
             };
+
             std::array<MaterialInfo, cMaterial::MaxMaterialID> m_materialInfo;
+            std::array<ForgeSamplerHandle,MaxMaterialSamplers> m_samplers;
+            ForgeDescriptorSet m_materialConstSet;
             ForgeBufferHandle m_materialUniformBuffer;
         } m_materialSet;
 

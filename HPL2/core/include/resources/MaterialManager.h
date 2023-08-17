@@ -17,8 +17,7 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef HPL_MATERIAL_MANAGER_H
-#define HPL_MATERIAL_MANAGER_H
+#pragma once
 
 #include "resources/ResourceManager.h"
 #include "graphics/Texture.h"
@@ -92,4 +91,3 @@ namespace hpl {
 	};
 
 };
-#endif // HPL_MATERIAL_MANAGER_H

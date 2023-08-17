@@ -17,11 +17,11 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef HPL_RESOURCEMANAGER_H
-#define HPL_RESOURCEMANAGER_H
+#pragma once
 
 #include <map>
 #include "system/SystemTypes.h"
+#include <engine/RTTI.h>
 
 namespace hpl {
 
@@ -42,7 +42,8 @@ namespace hpl {
 
 	class iResourceManager
 	{
-	public:
+        HPL_RTTI_CLASS(iResourceManager, "{1cd7e9fa-c0ec-461f-960d-729e3c7059c7}")
+    public:
 		iResourceManager(cFileSearcher *apFileSearcher, iLowLevelResources *apLowLevelResources,
 						iLowLevelSystem *apLowLevelSystem);
 		virtual ~iResourceManager(){}
@@ -88,4 +89,3 @@ namespace hpl {
 	};
 
 };
-#endif // HPL_RESOURCEMANAGER_H

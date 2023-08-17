@@ -56,14 +56,14 @@ PsOut PS_MAIN(PsIn In)
     ///////////////////////////////
     //Get the normals and combine into final normal
     // (No need for full unpack since there is a normalize later)
-    float3 vNormal1 = SampleTex2D(Get(normalMap), Get(normalSampler), vUv1).xyz - 0.5;
-    float3 vNormal2 = SampleTex2D(Get(normalMap), Get(normalSampler), vUv2).xyz - 0.5;
+    float3 vNormal1 = SampleTex2D(Get(normalMap), Get(materialSampler), vUv1).xyz - 0.5;
+    float3 vNormal2 = SampleTex2D(Get(normalMap), Get(materialSampler), vUv2).xyz - 0.5;
 
     float3 vFinalNormal = normalize(vNormal1*0.7 + vNormal2*0.3);
 
     ///////////////////////////////
     //Get the diffuse color
-    float4 surfaceColor  = SampleTex2D(Get(diffuseMap), Get(diffuseSampler), vUv1);
+    float4 surfaceColor  = SampleTex2D(Get(diffuseMap), Get(materialSampler), vUv1);
 
     float4 vRefractionColor = float4(1,1,1,1);
     float2 vDistortedScreenPos = float2(0, 0);
@@ -98,10 +98,10 @@ PsOut PS_MAIN(PsIn In)
 
         //////////////////
         //Cubemap
-        if(HasCubeMap(Get(uniformMaterialBuffer)[materialID].textureConfig)) {
+        if(HasCubeMap(Get(uniformMaterialBuffer)[materialID].materialConfig)) {
             float3 vEnvUv = reflect(vEyeVec, vScreenNormal);
             vEnvUv = mul(Get(invViewRotationMat), float4(vEnvUv.x, vEnvUv.y, vEnvUv.z, 1)).xyz;
-            vReflectionColor  = SampleTexCube(Get(cubeMap),  Get(cubeSampler), vEnvUv);
+            vReflectionColor  = SampleTexCube(Get(cubeMap),  Get(materialSampler), vEnvUv);
         } else {
             vRefractionColor = SampleTex2D(Get(reflectionMap), Get(nearestSampler), vDistortedScreenPos * Get(viewTexel));
         }

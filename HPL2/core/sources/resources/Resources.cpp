@@ -82,6 +82,8 @@ namespace hpl {
 		STLDeleteAll(mlstXmlDocuments);
 		STLDeleteAll(mlstBinBuffers);
 
+        Interface<cTextureManager>::UnRegister(mpTextureManager);
+
 		hplDelete(mpFontManager);
 		hplDelete(mpScriptManager);
 		hplDelete(mpParticleManager);
@@ -282,6 +284,8 @@ namespace hpl {
 		mlstManagers.push_back(mpAnimationManager);
 		mpEntFileManager = hplNew( cEntFileManager,(this) );
 		mlstManagers.push_back(mpEntFileManager);
+
+        Interface<cTextureManager>::Register(mpTextureManager);
 
 		Log(" Adding loaders to handlers \n");
 

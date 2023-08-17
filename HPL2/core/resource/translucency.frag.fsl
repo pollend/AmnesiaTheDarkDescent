@@ -23,12 +23,12 @@ PsOut PS_MAIN(PsIn In)
     INIT_MAIN;
     PsOut Out;
     uint materialID = Get(uniformObjectBuffer)[Get(objectId)].materialID;
-    uint textureConfig = Get(uniformMaterialBuffer)[materialID].textureConfig;
+    uint textureConfig = Get(uniformMaterialBuffer)[materialID].materialConfig;
     uint blendMode = BlendModeTrans(Get(options)); 
 
     float4 finalColor = float4(0.0, 0.0 ,0.0, 1.0);
     if(HasDiffuse(textureConfig)) {
-        finalColor = SampleTex2D(Get(diffuseMap), Get(diffuseSampler), In.uv) * In.color;
+        finalColor = SampleTex2D(Get(diffuseMap), Get(materialSampler), In.uv) * In.color;
     }
 
     if(UseIlluminationTrans(Get(options)) &&
@@ -79,7 +79,7 @@ PsOut PS_MAIN(PsIn In)
 
     if(UseRefractionTrans(Get(options)) && HasCubeMap(textureConfig)) {
         if(HasNormal(textureConfig)) {
-            mapNormal = SampleTex2D(Get(normalMap), Get(normalSampler), In.uv).xyz * 2.0 - 1.0;
+            mapNormal = SampleTex2D(Get(normalMap), Get(materialSampler), In.uv).xyz * 2.0 - 1.0;
             screenNormal = normalize(mapNormal.x * In.tangent + mapNormal.y * In.bitangent + mapNormal.z * In.normal);
         } else {
             screenNormal = normalize(In.normal);
@@ -127,11 +127,11 @@ PsOut PS_MAIN(PsIn In)
         float3 vEnvUv = reflect(eyeVec, screenNormal);
         vEnvUv = mul(Get(invViewRotationMat), float4(vEnvUv,1)).xyz;
                     
-        float4 reflectionColor = SampleTexCube(Get(cubeMap),  Get(cubeSampler), vEnvUv);
+        float4 reflectionColor = SampleTexCube(Get(cubeMap),  Get(materialSampler), vEnvUv);
         
         //Alpha for environment map
         if(HasCubeMapAlpha(textureConfig)) {
-            float fEnvMapAlpha = SampleTex2D(Get(cubeMapAlpha), Get(cubeMapAlphaSampler), In.uv.xy).w;
+            float fEnvMapAlpha = SampleTex2D(Get(cubeMapAlpha), Get(materialSampler), In.uv.xy).w;
             reflectionColor *= fEnvMapAlpha;
         }
         

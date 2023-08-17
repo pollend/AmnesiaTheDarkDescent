@@ -106,6 +106,7 @@ namespace hpl
     }
 
     void Image::setWrapMode(const eTextureWrap& wrap) {
+        m_textureWrapMode = wrap;
         ASSERT(m_texture.IsValid());
         switch(wrap) {
             case eTextureWrap_Repeat:
@@ -114,7 +115,6 @@ namespace hpl
                 m_samplerDesc.mAddressW = ADDRESS_MODE_REPEAT;
                 break;
             case eTextureWrap_Clamp:
-            case eTextureWrap_ClampToEdge:
                 m_samplerDesc.mAddressU = ADDRESS_MODE_CLAMP_TO_EDGE;
                 m_samplerDesc.mAddressV = ADDRESS_MODE_CLAMP_TO_EDGE;
                 m_samplerDesc.mAddressW = ADDRESS_MODE_CLAMP_TO_EDGE;

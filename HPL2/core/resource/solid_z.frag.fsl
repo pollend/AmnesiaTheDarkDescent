@@ -20,39 +20,39 @@ float4 PS_MAIN(PsIn In)
     uint materialID = Get(uniformObjectBuffer)[Get(objectId)].materialID;
     
     #ifdef PARALLAX_ENABLED
-        if(HasHeight(Get(uniformMaterialBuffer)[materialID].textureConfig)) {
+        if(HasHeight(Get(uniformMaterialBuffer)[materialID].materialConfig)) {
             texCoord.xy = ParallaxRelief(
                 SEARCH_SAMPLE_COUNT, 
-                IsHeightMapSingleChannel(Get(uniformMaterialBuffer)[materialID].textureConfig), 
+                IsHeightMapSingleChannel(Get(uniformMaterialBuffer)[materialID].materialConfig), 
                 Get(uniformMaterialBuffer)[materialID].heightMapScale * PARALAX_MULTIPLIER, 
                 normalize(In.normal), 
                 texCoord, 
                 normalize(In.view), 
-                Get(heightSampler), 
+                Get(materialSampler), 
                 Get(heightMap));
         }
     #endif    
     
     float diffuseAlpha;
-    if(HasAlpha(Get(uniformMaterialBuffer)[materialID].textureConfig)) {
-        if(IsAlphaSingleChannel(Get(uniformMaterialBuffer)[materialID].textureConfig)) {
-            diffuseAlpha = SampleTex2D(Get(alphaMap), Get(alphaSampler), texCoord.xy).r;
+    if(HasAlpha(Get(uniformMaterialBuffer)[materialID].materialConfig)) {
+        if(IsAlphaSingleChannel(Get(uniformMaterialBuffer)[materialID].materialConfig)) {
+            diffuseAlpha = SampleTex2D(Get(alphaMap), Get(materialSampler), texCoord.xy).r;
         } else {
-            diffuseAlpha = SampleTex2D(Get(alphaMap), Get(alphaSampler), texCoord.xy).a;
+            diffuseAlpha = SampleTex2D(Get(alphaMap), Get(materialSampler), texCoord.xy).a;
         }
     } else {
         diffuseAlpha = 1.0;
     }
 
-    if(HasDissolveAlpha(Get(uniformMaterialBuffer)[materialID].textureConfig) || HasDissolveFilter(Get(uniformMaterialBuffer)[materialID].textureConfig)) {
+    if(HasDissolveAlpha(Get(uniformMaterialBuffer)[materialID].materialConfig) || HasDissolveFilter(Get(uniformMaterialBuffer)[materialID].materialConfig)) {
         float2 vDissolveCoords = texCoord.xy * (1.0/128.0); //128 = size of dissolve texture.
         float fDissolve = SampleTex2D(dissolveMap, Get(nearestSampler), vDissolveCoords).w;
         
-        if(HasDissolveAlpha(Get(uniformMaterialBuffer)[materialID].textureConfig)) {
+        if(HasDissolveAlpha(Get(uniformMaterialBuffer)[materialID].materialConfig)) {
             //Get in 0.75 - 1 range
             fDissolve = fDissolve*0.25 + 0.75;
 
-            float fDissolveAlpha = SampleTex2D(Get(dissolveAlphaMap), Get(dissolveAlphaSampler), texCoord.xy).r;
+            float fDissolveAlpha = SampleTex2D(Get(dissolveAlphaMap), Get(materialSampler), texCoord.xy).r;
             fDissolve -= (0.25 - fDissolveAlpha * 0.25);
         } else {
             //Get in 0.5 - 1 range.

@@ -119,26 +119,6 @@ namespace hpl {
 				auto handle = ForgeTextureHandle::LoadFromHPLBitmap(*pBmp, opts);
 				resource->SetForgeTexture(std::move(handle));
 				return resource;
-
-
-				// auto* resource = new Image(asName, path);
-				// ImageDescriptor desc =  ImageDescriptor::CreateFromBitmap(*pBmp);
-				// desc.m_name = asName.c_str();
-				// // auto* image = new Image();
-
-				// desc.m_configuration.m_UWrap = options.m_UWrap;
-				// desc.m_configuration.m_VWrap = options.m_VWrap;
-				// desc.m_configuration.m_WWrap = options.m_WWrap;
-				// desc.m_configuration.m_rt = options.m_rt;
-				// desc.m_configuration.m_comparsion = options.m_comparsion;
-				// desc.m_configuration.m_minFilter = options.m_minFilter;
-				// desc.m_configuration.m_magFilter = options.m_magFilter;
-				// desc.m_configuration.m_mipFilter = options.m_mipFilter;
-
-				// // auto data = pBmp->GetData(0, 0);
-				// Image::InitializeFromBitmap(*resource, *pBmp, desc);
-				// // resource->Initialize(desc, bgfx::copy(data->mpData, data->mlSize));
-				// return resource;
 			});
 	}
 
@@ -176,26 +156,6 @@ namespace hpl {
 					auto handle = ForgeTextureHandle::LoadFromHPLBitmap(*pBmp, opts);
 					resource->m_texture = std::move(handle);
                     return resource;
-
-
-					// auto* resource = new Image(asName, path);
-					// ImageDescriptor desc =  ImageDescriptor::CreateFromBitmap(*pBmp);
-					// desc.m_name = asName.c_str();
-					// // auto* image = new Image();
-
-					// desc.m_configuration.m_UWrap = options.m_UWrap;
-					// desc.m_configuration.m_VWrap = options.m_VWrap;
-					// desc.m_configuration.m_WWrap = options.m_WWrap;
-					// desc.m_configuration.m_rt = options.m_rt;
-					// desc.m_configuration.m_comparsion = options.m_comparsion;
-					// desc.m_configuration.m_minFilter = options.m_minFilter;
-					// desc.m_configuration.m_magFilter = options.m_magFilter;
-					// desc.m_configuration.m_mipFilter = options.m_mipFilter;
-					// desc.m_isCubeMap = true;
-
-					// // auto data = pBmp->GetData(0, 0);
-					// Image::InitializeFromBitmap(*resource, *pBmp, desc);
-					// return resource;
 				});
 		}
 
@@ -250,10 +210,6 @@ namespace hpl {
 			auto handle = ForgeTextureHandle::CreateCubemapFromHPLBitmaps(vBitmaps, opts);
 			image->SetForgeTexture(std::move(handle));
 
-			// ImageDescriptor desc;
-			// Image::InitializeFromBitmap(*image, *vBitmaps[0], desc);
-			// Image::InitializeCubemapFromBitmaps(*image, std::span(vBitmaps), desc);
-
 			for(int j=0;j<(int)vBitmaps.size();j++)	{
 				hplDelete(vBitmaps[j]);
 			}
@@ -280,20 +236,6 @@ namespace hpl {
 				auto handle = ForgeTextureHandle::LoadFromHPLBitmap(*pBmp, opts);
 				resource->SetForgeTexture(std::move(handle));
 				return resource;
-
-
-				// auto* resource = new Image(asName, path);
-				// ImageDescriptor desc;
-				// desc.format = Image::FromHPLTextureFormat(pBmp->GetPixelFormat());
-				// desc.m_width = pBmp->GetWidth();
-				// desc.m_height = pBmp->GetHeight();
-				// desc.m_depth = pBmp->GetDepth();
-				// desc.m_name = asName.c_str();
-				// auto* image = new Image();
-
-				// auto data = pBmp->GetData(0, 0);
-				// resource->Initialize(desc, bgfx::copy(data->mpData, data->mlSize));
-				// return resource;
 			});
 	}
 
@@ -387,18 +329,6 @@ namespace hpl {
                     animatedImage = new AnimatedImage(sBaseName, sFakeFullPath);
                     std::vector<std::unique_ptr<Image>> images;
                     for (auto& bitmap : vBitmaps) {
-                            // ImageDescriptor desc =  ImageDescriptor::CreateFromBitmap(*bitmap);
-
-                            // desc.m_configuration.m_UWrap = options.m_UWrap;
-                            // desc.m_configuration.m_VWrap = options.m_VWrap;
-                            // desc.m_configuration.m_WWrap = options.m_WWrap;
-                            // desc.m_configuration.m_rt = options.m_rt;
-                            // desc.m_configuration.m_comparsion = options.m_comparsion;
-                            // desc.m_configuration.m_minFilter = options.m_minFilter;
-                            // desc.m_configuration.m_magFilter = options.m_magFilter;
-                            // desc.m_configuration.m_mipFilter = options.m_mipFilter;
-
-                            // desc.m_isCubeMap = (aType == eTextureType_CubeMap);
                             std::unique_ptr<Image> image = std::make_unique<Image>();
 
                             ForgeTextureHandle::BitmapLoadOptions opts = { 0 };
@@ -557,6 +487,4 @@ namespace hpl {
 		return pTexture;
 	}
 
-
-	//-----------------------------------------------------------------------
 }

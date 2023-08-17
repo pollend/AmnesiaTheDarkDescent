@@ -78,6 +78,14 @@ namespace hpl {
             MaterialIDCount
         };
 
+        enum TextureAntistropy {
+            Antistropy_None = 0,
+            Antistropy_8 = 1,
+            Antistropy_16 = 2,
+            Antistropy_32 = 3,
+            Antistropy_Count = 4
+        };
+
 		enum TextureConfigFlags {
 			EnableDiffuse = 1 << 0,
 			EnableNormal = 1 << 1,
@@ -99,15 +107,14 @@ namespace hpl {
 			//Translucent
 			UseRefractionNormals = 1 << 14,
 			UseRefractionEdgeCheck = 1 << 15,
-
 		};
 
 		struct MaterialCommonBlock {
-			uint32_t m_textureConfig;
+			uint32_t m_materialConfig;
 		};
 
 		struct MaterialSolidUniformBlock {
-			uint32_t m_textureConfig;
+			uint32_t m_materialConfig;
 			float m_heightMapScale;
 			float m_heightMapBias;
 			float m_frenselBias;
@@ -119,7 +126,7 @@ namespace hpl {
 		};
 
 		struct MaterialTranslucentUniformBlock {
-			uint32_t m_textureConfig;
+			uint32_t m_materialConfig;
 			float mfRefractionScale;
 			float mfFrenselBias;
 			float mfFrenselPow;
@@ -131,7 +138,7 @@ namespace hpl {
 		};
 
 		struct MaterialWaterUniformBlock {
-			uint32_t m_textureConfig;
+			uint32_t m_materialConfig;
 			float mfRefractionScale;
 			float mfFrenselBias;
 			float mfFrenselPow;
@@ -224,6 +231,7 @@ namespace hpl {
 			}
 		}
 
+		void SetTextureAnisotropy(float afx);
 		void SetBlendMode(eMaterialBlendMode aBlendMode);
 		void SetAlphaMode(eMaterialAlphaMode aAlphaMode);
 		void SetDepthTest(bool abDepthTest);
@@ -265,6 +273,12 @@ namespace hpl {
 
 		void UpdateBeforeRendering(float afTimeStep);
 
+        inline eTextureFilter GetTextureFilter() const { return m_textureFilter; }
+        inline TextureAntistropy GetTextureAntistropy() const { return m_antistropy; }
+        inline eTextureWrap GetTextureWrap() const { return m_textureWrap; }
+
+        inline void setTextureFilter(eTextureFilter filter) { m_textureFilter = filter; }
+        inline void setTextureWrap(eTextureWrap wrap) { m_textureWrap = wrap; }
 		inline int GetRenderFrameCount() const { return mlRenderFrameCount;}
 		inline void SetRenderFrameCount(const int alCount) { mlRenderFrameCount = alCount;}
 
@@ -305,6 +319,9 @@ namespace hpl {
 		void UpdateAnimations(float afTimeStep);
 		uint32_t m_version = 0; // used to check if the material has changed since last frame
 		MaterialType m_info;
+        TextureAntistropy m_antistropy = Antistropy_None;
+        eTextureWrap m_textureWrap = eTextureWrap::eTextureWrap_Clamp;
+        eTextureFilter m_textureFilter = eTextureFilter::eTextureFilter_Nearest;
 
 		cGraphics *mpGraphics;
 		cResources *mpResources;
