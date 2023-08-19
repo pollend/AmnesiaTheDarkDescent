@@ -1,6 +1,6 @@
 [submodule "vcpkg"]
 	path = vcpkg
 	url = https://github.com/microsoft/vcpkg.git
-[submodule "HPL2/external/The-Forge/The-Forge"]
-	path = HPL2/external/The-Forge/The-Forge
+[submodule "external/The-Forge"]
+	path = external/The-Forge
 	url = git@github.com:OSS-Cosmic/The-Forge.git
