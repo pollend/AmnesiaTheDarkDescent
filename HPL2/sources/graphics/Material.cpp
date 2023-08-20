@@ -139,9 +139,7 @@ namespace hpl {
 	}
 
     void cMaterial::SetTextureAnisotropy(float afx) {
-        if(afx >= 32.0f) {
-            m_antistropy = Antistropy_32;
-        } else if(afx >= 16.0f) {
+        if(afx >= 16.0f) {
             m_antistropy = Antistropy_16;
         } else if(afx >= 8.0f) {
             m_antistropy = Antistropy_8;

@@ -7,7 +7,7 @@ STRUCT(PsIn)
     DATA(float2, uv, TEXCOORD0);
 };
 
-PUSH_CONSTANT(postEffectConstants, b0)
+PUSH_CONSTANT(rootConstant, b0)
 {
     DATA(float, alphaFade, None);
 };

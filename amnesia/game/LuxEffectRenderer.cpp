@@ -142,13 +142,7 @@ cLuxEffectRenderer::cLuxEffectRenderer()
             ShaderLoadDesc loadDesc = {};
             loadDesc.mStages[0].pFileName = "fullscreen.vert";
             loadDesc.mStages[1].pFileName = "blur_posteffect.frag";
-            addShader(forgeRenderer->Rend(), &loadDesc, &m_blurHorizontalShader);
-        }
-        {
-            ShaderLoadDesc loadDesc = {};
-            loadDesc.mStages[0].pFileName = "fullscreen.vert";
-            loadDesc.mStages[1].pFileName = "blur_posteffect_vertical.frag";
-            addShader(forgeRenderer->Rend(), &loadDesc, &m_blurVerticalShader);
+            addShader(forgeRenderer->Rend(), &loadDesc, &m_blurShader);
         }
         {
             ShaderLoadDesc loadDesc = {};
@@ -163,7 +157,10 @@ cLuxEffectRenderer::cLuxEffectRenderer()
             addShader(forgeRenderer->Rend(), &loadDesc, &m_enemyGlowShader);
         }
         {
-            std::array shaders = { m_blurVerticalShader, m_blurHorizontalShader, m_outlineCopyShader};
+            std::array shaders = {
+                m_outlineCopyShader,
+                m_blurShader
+            };
             const char* pStaticSamplers[] = { "inputSampler" };
             RootSignatureDesc rootSignatureDesc = {};
             rootSignatureDesc.ppStaticSamplers = &m_diffuseSampler;
@@ -341,7 +338,7 @@ cLuxEffectRenderer::cLuxEffectRenderer()
                 vertexLayout.mAttribs[0].mBinding = 0;
                 vertexLayout.mAttribs[0].mLocation = 0;
                 vertexLayout.mAttribs[0].mOffset = 0;
-                vertexLayout.mAttribs[1].mSemantic = SEMANTIC_NORMAL;
+                vertexLayout.mAttribs[1].mSemantic = SEMANTIC_TEXCOORD0;
                 vertexLayout.mAttribs[1].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
                 vertexLayout.mAttribs[1].mBinding = 1;
                 vertexLayout.mAttribs[1].mLocation = 1;
@@ -399,7 +396,7 @@ cLuxEffectRenderer::cLuxEffectRenderer()
                 vertexLayout.mAttribs[0].mBinding = 0;
                 vertexLayout.mAttribs[0].mLocation = 0;
                 vertexLayout.mAttribs[0].mOffset = 0;
-                vertexLayout.mAttribs[1].mSemantic = SEMANTIC_NORMAL;
+                vertexLayout.mAttribs[1].mSemantic = SEMANTIC_TEXCOORD0;
                 vertexLayout.mAttribs[1].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
                 vertexLayout.mAttribs[1].mBinding = 1;
                 vertexLayout.mAttribs[1].mLocation = 1;
@@ -457,7 +454,7 @@ cLuxEffectRenderer::cLuxEffectRenderer()
                 pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
                 GraphicsPipelineDesc& graphicsPipelineDesc = pipelineDesc.mGraphicsDesc;
                 graphicsPipelineDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
-                graphicsPipelineDesc.pShaderProgram = m_blurHorizontalShader;
+                graphicsPipelineDesc.pShaderProgram = m_blurShader;
                 graphicsPipelineDesc.pRootSignature = m_postProcessingRootSignature;
                 graphicsPipelineDesc.mRenderTargetCount = 1;
                 graphicsPipelineDesc.mDepthStencilFormat = TinyImageFormat_UNDEFINED;
@@ -468,32 +465,7 @@ cLuxEffectRenderer::cLuxEffectRenderer()
                 graphicsPipelineDesc.mSampleCount = SAMPLE_COUNT_1;
                 graphicsPipelineDesc.mSampleQuality = 0;
                 graphicsPipelineDesc.pColorFormats = colorFormats.data();
-                addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_blurHorizontalPipeline);
-            }
-            {
-                DepthStateDesc depthStateDisabledDesc = {};
-                depthStateDisabledDesc.mDepthWrite = false;
-                depthStateDisabledDesc.mDepthTest = false;
-
-                RasterizerStateDesc rasterStateNoneDesc = {};
-                rasterStateNoneDesc.mCullMode = CULL_MODE_NONE;
-
-                PipelineDesc pipelineDesc = {};
-                pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
-                GraphicsPipelineDesc& graphicsPipelineDesc = pipelineDesc.mGraphicsDesc;
-                graphicsPipelineDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
-                graphicsPipelineDesc.pShaderProgram = m_blurVerticalShader;
-                graphicsPipelineDesc.pRootSignature = m_postProcessingRootSignature;
-                graphicsPipelineDesc.mRenderTargetCount = 1;
-                graphicsPipelineDesc.mDepthStencilFormat = TinyImageFormat_UNDEFINED;
-                graphicsPipelineDesc.pVertexLayout = NULL;
-                graphicsPipelineDesc.pRasterizerState = &rasterStateNoneDesc;
-                graphicsPipelineDesc.pDepthState = &depthStateDisabledDesc;
-                graphicsPipelineDesc.pBlendState = NULL;
-                graphicsPipelineDesc.mSampleCount = SAMPLE_COUNT_1;
-                graphicsPipelineDesc.mSampleQuality = 0;
-                graphicsPipelineDesc.pColorFormats = colorFormats.data();
-                addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_blurVerticalPipeline);
+                addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_blurPipeline);
             }
             {
                 BlendStateDesc blendStateDesc{};
@@ -685,10 +657,12 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
         std::array targets = { eVertexBufferElement_Position, eVertexBufferElement_Normal, eVertexBufferElement_Texture0 };
         static_cast<LegacyVertexBuffer*>(pObject->GetVertexBuffer())->resolveGeometryBinding(frame->m_currentFrame, targets, &binding);
 
+
+        uint64_t requestSize = round_up(sizeof(LuxEffectObjectUniform::FlashUniform), 256);
         #ifdef USE_THE_FORGE_LEGACY
-            GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(m_uniformBuffer, sizeof(LuxEffectObjectUniform::FlashUniform));
+            GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(m_uniformBuffer, requestSize);
         #else
-            GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(&m_uniformBuffer, sizeof(LuxEffectObjectUniform::FlashUniform));
+            GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(&m_uniformBuffer, requestSize);
         #endif
 
         cMatrixf worldMatrix = pObject->GetModelMatrixPtr() ? *pObject->GetModelMatrixPtr() : cMatrixf::Identity;
@@ -701,7 +675,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
         uniform.m_normalMat = cMath::ToForgeMat3(cMath::MatrixInverse(modelViewMat));
 
         std::array<DescriptorData, 2> params = {};
-        DescriptorDataRange range = { (uint32_t)uniformBlockOffset.mOffset, sizeof(LuxEffectObjectUniform::FlashUniform) };
+        DescriptorDataRange range = { (uint32_t)uniformBlockOffset.mOffset, requestSize };
         params[0].pName = "uniformBlock";
         params[0].ppBuffers = &uniformBlockOffset.pBuffer;
         params[0].pRanges = &range;
@@ -736,10 +710,11 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
         std::array targets = { eVertexBufferElement_Position, eVertexBufferElement_Normal, eVertexBufferElement_Texture0 };
         static_cast<LegacyVertexBuffer*>(pObject->GetVertexBuffer())->resolveGeometryBinding(frame->m_currentFrame, targets, &binding);
 
+        uint64_t requestSize = round_up(sizeof(LuxEffectObjectUniform::FlashUniform), 256);       
         #ifdef USE_THE_FORGE_LEGACY
-            GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(m_uniformBuffer, sizeof(LuxEffectObjectUniform::FlashUniform));
+            GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(m_uniformBuffer, requestSize);
         #else
-            GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(&m_uniformBuffer, sizeof(LuxEffectObjectUniform::FlashUniform));
+            GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(&m_uniformBuffer, requestSize);
         #endif
         cMatrixf worldMatrix = pObject->GetModelMatrixPtr() ? *pObject->GetModelMatrixPtr() : cMatrixf::Identity;
         const cMatrixf modelViewMat = cMath::MatrixMul(mainFrustumView, worldMatrix);
@@ -751,7 +726,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
         uniform.m_normalMat = cMath::ToForgeMat3(cMath::MatrixInverse(modelViewMat));
 
         std::array<DescriptorData, 2> params = {};
-        DescriptorDataRange range = { (uint32_t)uniformBlockOffset.mOffset, sizeof(LuxEffectObjectUniform::FlashUniform) };
+        DescriptorDataRange range = { (uint32_t)uniformBlockOffset.mOffset, requestSize };
         params[0].pName = "uniformBlock";
         params[0].ppBuffers = &uniformBlockOffset.pBuffer;
         params[0].pRanges = &range;
@@ -800,10 +775,11 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
             std::array targets = { eVertexBufferElement_Position, eVertexBufferElement_Texture0 };
             static_cast<LegacyVertexBuffer*>(pObject->GetVertexBuffer())->resolveGeometryBinding(frame->m_currentFrame, targets, &binding);
 
+            uint64_t requestSize = round_up(sizeof(LuxEffectObjectUniform::OutlineUniform), 256);   
             #ifdef USE_THE_FORGE_LEGACY
-                GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(m_uniformBuffer, sizeof(LuxEffectObjectUniform::OutlineUniform));
+            GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(m_uniformBuffer, requestSize);
             #else
-                GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(&m_uniformBuffer, sizeof(LuxEffectObjectUniform::OutlineUniform));
+            GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(&m_uniformBuffer, requestSize);
             #endif
 
             cMatrixf worldMatrix = pObject->GetModelMatrixPtr() ? *pObject->GetModelMatrixPtr() : cMatrixf::Identity;
@@ -819,7 +795,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
             endUpdateResource(&updateDesc, NULL);
 
             folly::small_vector<DescriptorData, 2 > params = {};
-            DescriptorDataRange range = { (uint32_t)uniformBlockOffset.mOffset, sizeof(LuxEffectObjectUniform::OutlineUniform ) };
+            DescriptorDataRange range = { (uint32_t)uniformBlockOffset.mOffset, requestSize };
             {
                 auto& param = params.emplace_back(DescriptorData{});
                 param.pName = "uniformBlock";
@@ -856,10 +832,11 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
             static_cast<LegacyVertexBuffer*>(pObject->GetVertexBuffer())->resolveGeometryBinding(frame->m_currentFrame, targets, &binding);
 
 
+            uint64_t requestSize = round_up(sizeof(LuxEffectObjectUniform::OutlineUniform), 256);
             #ifdef USE_THE_FORGE_LEGACY
-                GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(m_uniformBuffer, sizeof(LuxEffectObjectUniform::OutlineUniform));
+                GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(m_uniformBuffer, requestSize);
             #else
-                GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(&m_uniformBuffer, sizeof(LuxEffectObjectUniform::OutlineUniform));
+                GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(&m_uniformBuffer, requestSize);
             #endif
 
             cBoundingVolume* pBV = pObject->GetBoundingVolume();
@@ -880,7 +857,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
             endUpdateResource(&updateDesc, NULL);
 
             std::array<DescriptorData, 2> params = {};
-            DescriptorDataRange range = { (uint32_t)uniformBlockOffset.mOffset, sizeof(LuxEffectObjectUniform::OutlineUniform ) };
+            DescriptorDataRange range = { (uint32_t)uniformBlockOffset.mOffset, requestSize };
             params[0].pName = "uniformBlock";
             params[0].ppBuffers = &uniformBlockOffset.pBuffer;
             params[0].pRanges = &range;
@@ -895,6 +872,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
         cmdEndDebugMarker(input.m_frame->m_cmd);
 
         uint32_t postProcessingIndex = 0;
+        uint32_t blurPostEffectConstIndex = getDescriptorIndexFromName(m_postProcessingRootSignature, "rootConstant");
         auto requestBlur = [&](Texture** input) {
             ASSERT(input && "Invalid input texture");
             {
@@ -911,17 +889,20 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
                 loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
                 auto& blurTarget = postEffectData->m_blurTarget[0].m_handle;
                 cmdBindRenderTargets(frame->m_cmd, 1, &blurTarget , NULL, &loadActions, NULL, NULL, -1, -1);
-
+                cmdSetViewport(
+                    frame->m_cmd, 0.0f, 0.0f, static_cast<float>(blurTarget->mWidth), static_cast<float>(blurTarget->mHeight), 0.0f, 1.0f);
+                cmdSetScissor(frame->m_cmd, 0, 0, static_cast<float>(blurTarget->mWidth), static_cast<float>(blurTarget->mHeight));
+                
                 std::array<DescriptorData, 1> params = {};
                 params[0].pName = "sourceInput";
                 params[0].ppTextures = input;
+                cmdBindPipeline(frame->m_cmd, m_blurPipeline);
                 updateDescriptorSet(
                     frame->m_renderer->Rend(), postProcessingIndex , m_outlinePostprocessingDescriptorSet[frame->m_frameIndex], params.size(), params.data());
-
-                cmdSetViewport(frame->m_cmd, 0.0f, 0.0f, static_cast<float>(blurTarget->mWidth), static_cast<float>(blurTarget->mHeight), 0.0f, 1.0f);
-                cmdSetScissor(frame->m_cmd, 0, 0, static_cast<float>(blurTarget->mWidth), static_cast<float>(blurTarget->mHeight));
-                cmdBindPipeline(frame->m_cmd, m_blurHorizontalPipeline);
+                
                 cmdBindDescriptorSet(frame->m_cmd, postProcessingIndex++, m_outlinePostprocessingDescriptorSet[frame->m_frameIndex]);
+                float2 blurScale = float2(1.0f, 0.0f);
+                //cmdBindPushConstants(frame->m_cmd, m_postProcessingRootSignature, blurPostEffectConstIndex, &blurScale);
                 cmdDraw(frame->m_cmd, 3, 0);
 
             }
@@ -942,27 +923,24 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
 
                 auto& blurTarget = postEffectData->m_blurTarget[1].m_handle;
                 cmdBindRenderTargets(frame->m_cmd, 1, &blurTarget, NULL, &loadActions, NULL, NULL, -1, -1);
-
+                cmdSetViewport(
+                    frame->m_cmd, 0.0f, 0.0f, static_cast<float>(blurTarget->mWidth), static_cast<float>(blurTarget->mHeight), 0.0f, 1.0f);
+                cmdSetScissor(frame->m_cmd, 0, 0, static_cast<float>(blurTarget->mWidth), static_cast<float>(blurTarget->mHeight));
+                
                 std::array<DescriptorData, 1> params = {};
                 params[0].pName = "sourceInput";
                 params[0].ppTextures = &postEffectData->m_blurTarget[0].m_handle->pTexture;
+                cmdBindPipeline(frame->m_cmd, m_blurPipeline);
+
                 updateDescriptorSet(
                     frame->m_renderer->Rend(), postProcessingIndex, m_outlinePostprocessingDescriptorSet[frame->m_frameIndex], params.size(), params.data());
-
-                cmdSetViewport(frame->m_cmd, 0.0f, 0.0f, static_cast<float>(blurTarget->mWidth), static_cast<float>(blurTarget->mHeight), 0.0f, 1.0f);
-                cmdSetScissor(frame->m_cmd, 0, 0, static_cast<float>(blurTarget->mWidth), static_cast<float>(blurTarget->mHeight));
-                cmdBindPipeline(frame->m_cmd, m_blurVerticalPipeline);
-
+                
+                float2 blurScale = float2(0.0f, 1.0f);
+                //cmdBindPushConstants(frame->m_cmd, m_postProcessingRootSignature, blurPostEffectConstIndex, &blurScale);
                 cmdBindDescriptorSet(frame->m_cmd, postProcessingIndex++, m_outlinePostprocessingDescriptorSet[frame->m_frameIndex]);
                 cmdDraw(frame->m_cmd, 3, 0);
             }
         };
-
-        {
-            uint32_t rootConstantIndex = getDescriptorIndexFromName(m_postProcessingRootSignature, "postEffectConstants");
-            float blurSize = 1.0;
-            cmdBindPushConstants(frame->m_cmd, m_postProcessingRootSignature, rootConstantIndex, &blurSize);
-        }
         {
             cmdBindRenderTargets(frame->m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
             std::array rtBarriers = {

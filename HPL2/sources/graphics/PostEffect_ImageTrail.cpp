@@ -236,7 +236,7 @@ namespace hpl {
         std::array inputTargets = { imageTrailData->m_accumulationTarget.m_handle };
         cmdBindRenderTargets(frame.m_cmd, inputTargets.size(), inputTargets.data(), NULL, &loadActions, NULL, NULL, -1, -1);
 
-        uint32_t rootConstantIndex = getDescriptorIndexFromName(mpImageTrailType->m_rootSignature, "postEffectConstants");
+        uint32_t rootConstantIndex = getDescriptorIndexFromName(mpImageTrailType->m_rootSignature, "rootConstant");
         cmdBindPushConstants(frame.m_cmd, mpImageTrailType->m_rootSignature, rootConstantIndex, &alpha);
         cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, static_cast<float>(renderTarget->mWidth), static_cast<float>(renderTarget->mHeight), 0.0f, 1.0f);
         cmdSetScissor(frame.m_cmd, 0, 0, static_cast<float>(renderTarget->mWidth), static_cast<float>(renderTarget->mHeight));

@@ -199,25 +199,17 @@ cLuxMainMenu::cLuxMainMenu() : iLuxUpdateable("LuxDebugHandler")
 	mpTopBackground = mpGui->CreateGfxFilledRect(cColor(0,1),eGuiMaterial_Alpha);
 	mpBlackFade = mpGui->CreateGfxFilledRect(cColor(0,1),eGuiMaterial_Alpha);
     auto* forgeRenderer = Interface<ForgeRenderer>::Get();
-    m_blurVerticalShader.Load(forgeRenderer->Rend(),[&](Shader** shader) {
-        ShaderLoadDesc loadDesc{};
-        loadDesc.mStages[0].pFileName = "fullscreen.vert";
-        loadDesc.mStages[1].pFileName = "blur_posteffect_vertical.frag";
-        addShader(forgeRenderer->Rend(),&loadDesc, shader);
-        return true;
-    });
-    m_blurHorizontalShader.Load(forgeRenderer->Rend(),[&](Shader** shader) {
+    m_blurShader.Load(forgeRenderer->Rend(),[&](Shader** shader) {
         ShaderLoadDesc loadDesc{};
         loadDesc.mStages[0].pFileName =  "fullscreen.vert";
-        loadDesc.mStages[1].pFileName =  "blur_posteffect_vertical.frag";
+        loadDesc.mStages[1].pFileName =  "blur_posteffect.frag";
         addShader(forgeRenderer->Rend(),&loadDesc, shader);
         return true;
     });
 
     {
         std::array shaders = {
-            m_blurVerticalShader.m_handle,
-            m_blurHorizontalShader.m_handle
+            m_blurShader.m_handle,
         };
         SamplerDesc samplerDesc = {};
         addSampler(forgeRenderer->Rend(), &samplerDesc,  &m_inputSampler);
@@ -249,7 +241,7 @@ cLuxMainMenu::cLuxMainMenu() : iLuxUpdateable("LuxDebugHandler")
             pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
             GraphicsPipelineDesc& graphicsPipelineDesc = pipelineDesc.mGraphicsDesc;
             graphicsPipelineDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
-            graphicsPipelineDesc.pShaderProgram = m_blurVerticalShader.m_handle;
+            graphicsPipelineDesc.pShaderProgram = m_blurShader.m_handle;
             graphicsPipelineDesc.pRootSignature = m_blurRootSignature;
             graphicsPipelineDesc.mRenderTargetCount = 1;
             graphicsPipelineDesc.mDepthStencilFormat = TinyImageFormat_UNDEFINED;
@@ -260,32 +252,7 @@ cLuxMainMenu::cLuxMainMenu() : iLuxUpdateable("LuxDebugHandler")
             graphicsPipelineDesc.mSampleCount = SAMPLE_COUNT_1;
             graphicsPipelineDesc.mSampleQuality = 0;
             graphicsPipelineDesc.pColorFormats = &inputFormat;
-            addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_blurVerticalPipeline);
-    }
-    {
-            DepthStateDesc depthStateDisabledDesc = {};
-            depthStateDisabledDesc.mDepthWrite = false;
-            depthStateDisabledDesc.mDepthTest = false;
-
-            RasterizerStateDesc rasterStateNoneDesc = {};
-            rasterStateNoneDesc.mCullMode = CULL_MODE_NONE;
-
-            PipelineDesc pipelineDesc = {};
-            pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
-            GraphicsPipelineDesc& graphicsPipelineDesc = pipelineDesc.mGraphicsDesc;
-            graphicsPipelineDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
-            graphicsPipelineDesc.pShaderProgram = m_blurVerticalShader.m_handle;
-            graphicsPipelineDesc.pRootSignature = m_blurRootSignature;
-            graphicsPipelineDesc.mRenderTargetCount = 1;
-            graphicsPipelineDesc.mDepthStencilFormat = TinyImageFormat_UNDEFINED;
-            graphicsPipelineDesc.pVertexLayout = NULL;
-            graphicsPipelineDesc.pRasterizerState = &rasterStateNoneDesc;
-            graphicsPipelineDesc.pDepthState = &depthStateDisabledDesc;
-            graphicsPipelineDesc.pBlendState = NULL;
-            graphicsPipelineDesc.mSampleCount = SAMPLE_COUNT_1;
-            graphicsPipelineDesc.mSampleQuality = 0;
-            graphicsPipelineDesc.pColorFormats = &inputFormat;
-            addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_blurHorizontalPipeline);
+            addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_blurPipeline);
     }
 
 
@@ -1455,9 +1422,8 @@ void cLuxMainMenu::RenderBlurTexture() {
         return true;
     });
 
-    uint32_t rootConstantIndex = getDescriptorIndexFromName(m_blurRootSignature, "postEffectConstants");
-    float blurSize = 1.0f;
-    cmdBindPushConstants(frame.m_cmd, m_blurRootSignature, rootConstantIndex, &blurSize);
+    uint32_t rootConstantIndex = getDescriptorIndexFromName(m_blurRootSignature, "rootConstant");
+
     // third copy umm need to out how to handle this
     auto requestBlur = [&](Texture* input) {
         {
@@ -1473,9 +1439,11 @@ void cLuxMainMenu::RenderBlurTexture() {
             updateDescriptorSet(
                 frame.m_renderer->Rend(), m_setIndex, m_perFrameBlurDescriptorSet[frame.m_frameIndex], params.size(), params.data());
 
+            float2 blurScale = float2(0.0f, 1.0f);
             cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, static_cast<float>(viewportSize.x), static_cast<float>(viewportSize.y), 0.0f, 1.0f);
             cmdSetScissor(frame.m_cmd, 0, 0, static_cast<float>(viewportSize.x), static_cast<float>(viewportSize.y));
-            cmdBindPipeline(frame.m_cmd, m_blurHorizontalPipeline);
+            cmdBindPipeline(frame.m_cmd, m_blurPipeline);
+            cmdBindPushConstants(frame.m_cmd, m_blurRootSignature, rootConstantIndex, &blurScale);
 
             cmdBindDescriptorSet(frame.m_cmd, m_setIndex, m_perFrameBlurDescriptorSet[frame.m_frameIndex]);
             cmdDraw(frame.m_cmd, 3, 0);
@@ -1505,9 +1473,11 @@ void cLuxMainMenu::RenderBlurTexture() {
 
             cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, static_cast<float>(viewportSize.x), static_cast<float>(viewportSize.y), 0.0f, 1.0f);
             cmdSetScissor(frame.m_cmd, 0, 0, static_cast<float>(viewportSize.x), static_cast<float>(viewportSize.y));
-            cmdBindPipeline(frame.m_cmd, m_blurVerticalPipeline);
+            cmdBindPipeline(frame.m_cmd, m_blurPipeline);
 
+            float2 blurScale = float2(1.0f, 0.0f);
             cmdBindDescriptorSet(frame.m_cmd, m_setIndex, m_perFrameBlurDescriptorSet[frame.m_frameIndex]);
+            cmdBindPushConstants(frame.m_cmd, m_blurRootSignature, rootConstantIndex, &blurScale);
             cmdDraw(frame.m_cmd, 3, 0);
 
             m_setIndex = (m_setIndex + 1) % cLuxMainMenu::BlurSetSize;

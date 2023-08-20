@@ -80,7 +80,6 @@ namespace hpl {
         static constexpr uint32_t MaxLightUniforms = 1024;
         static constexpr uint32_t MaxHiZMipLevels = 32;
         static constexpr uint32_t MaxMaterialFrameDescriptors = 256;
-        //static constexpr uint32_t MaxSamplers =
         static constexpr uint32_t MaxMaterialSamplers = static_cast<uint32_t>(eTextureWrap_LastEnum) * static_cast<uint32_t>(eTextureFilter_LastEnum) * static_cast<uint32_t>(cMaterial::TextureAntistropy::Antistropy_Count);
 
         enum LightConfiguration { HasGoboMap = 0x1, HasShadowMap = 0x2 };
@@ -110,22 +109,26 @@ namespace hpl {
         union UniformLightData {
             struct LightUniformCommon {
                 mat4 m_mvp;
+
                 uint32_t m_config;
             } m_common;
             struct {
                 mat4 m_mvp;
+
                 uint32_t m_config;
                 uint32_t m_pad[3];
 
-                float3 m_lightPos;
+                mat4 m_invViewRotation;
+
                 float m_radius;
+                float3 m_lightPos;
 
                 float4 m_lightColor;
-                mat4 m_invViewRotation;
 
             } m_pointLight;
             struct {
                 mat4 m_mvp;
+
                 uint32_t m_config;
                 uint32_t m_pad[3];
 
@@ -133,6 +136,7 @@ namespace hpl {
                 float m_oneMinusCosHalfSpotFOV;
 
                 mat4 m_spotViewProj;
+
                 float4 m_color;
 
                 float3 m_pos;
@@ -140,6 +144,7 @@ namespace hpl {
             } m_spotLight;
             struct {
                 mat4 m_mvp;
+
                 uint32_t m_config;
                 uint32_t m_pad[3];
 
@@ -172,6 +177,27 @@ namespace hpl {
             float2 viewTexel;
             float2 viewportSize;
         };
+        struct UniformFogData {
+            mat4 m_mvp;
+            mat4 m_mv;
+            mat4 m_invModelRotation;
+            float4 m_color;
+            float4 m_rayCastStart;
+            float4 m_fogNegPlaneDistNeg;
+            float4 m_fogNegPlaneDistPos;
+            float m_start;
+            float m_length;
+            float m_falloffExp;
+            uint32_t m_flags;
+        };
+
+        struct UniformFullscreenFogData {
+            float4 m_color;
+            float m_fogStart;
+            float m_fogLength;
+            float m_fogFalloffExp;
+        };
+
 
         class ShadowMapData {
         public:
@@ -182,6 +208,10 @@ namespace hpl {
             float m_radius = 0.0f;
             float m_fov = 0.0f;
             float m_aspect = 0.0f;
+
+            CmdPool* m_pool;
+            Cmd* m_cmd = nullptr;
+            Fence* m_shadowFence = nullptr;
         };
 
         struct FogRendererData {
@@ -400,7 +430,7 @@ namespace hpl {
         ForgeTextureHandle m_ssaoScatterDiskTexture;
 
         Image* m_dissolveImage;
-        ForgeBufferHandle m_perFrameBuffer;
+        std::array<ForgeBufferHandle, MaxMaterialFrameDescriptors> m_perFrameBuffer;
 
         // decal pass
         std::array<Pipeline*, eMaterialBlendMode_LastEnum> m_decalPipeline;
@@ -421,26 +451,6 @@ namespace hpl {
                 PipelineUseOutsideBox = 0x2,
             };
 
-            struct UniformFogData {
-                mat4 m_mvp;
-                mat4 m_mv;
-                mat4 m_invModelRotation;
-                float4 m_color;
-                float4 m_rayCastStart;
-                float4 m_fogNegPlaneDistNeg;
-                float4 m_fogNegPlaneDistPos;
-                float m_start;
-                float m_length;
-                float m_falloffExp;
-                uint32_t m_flags;
-            };
-
-            struct UniformFullscreenFogData {
-                float4 m_color;
-                float m_fogStart;
-                float m_fogLength;
-                float m_fogFalloffExp;
-            };
             std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perFrameSet{};
 
             std::array<ForgeBufferHandle, ForgeRenderer::SwapChainLength> m_fogUniformBuffer;
@@ -618,7 +628,7 @@ namespace hpl {
             iRenderable* m_renderable = nullptr;
         };
         struct UniformPropBlock {
-            static constexpr uint32_t MaxObjectTest = 32768;
+            static constexpr uint32_t MaxObjectTest = 2048;
             mat4 viewProjeciton;
             uint32_t numObjects;
             uint32_t maxMipLevel;
@@ -647,7 +657,7 @@ namespace hpl {
         ForgeSamplerHandle m_shadowCmpSampler;
 
         Sampler* m_samplerPointClampToBorder;
-        Sampler* m_pointSampler;
+        //Sampler* m_pointSampler;
         Sampler* m_goboSampler;
 
         cRenderList m_reflectionRenderList;

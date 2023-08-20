@@ -761,15 +761,16 @@ namespace hpl {
 			size_t vertexBufferIndex = 0;
 			size_t indexBufferIndex = 0;
 
-            #ifdef USE_THE_FORGE_LEGACY
-			    GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(gui::GuiUniformRingBuffer, sizeof(gui::UniformBlock));
+            uint64_t requestSize = round_up(sizeof(gui::UniformBlock), 256);
+			#ifdef USE_THE_FORGE_LEGACY
+            GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(gui::GuiUniformRingBuffer, requestSize);
             #else
-			    GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(&gui::GuiUniformRingBuffer, sizeof(gui::UniformBlock));
+            GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(&gui::GuiUniformRingBuffer, requestSize);
             #endif
 
 			DescriptorData params[10]{};
 			uint32_t paramCount = 0;
-			DescriptorDataRange range = { (uint32_t)uniformBlockOffset.mOffset, sizeof(gui::UniformBlock) };
+                        DescriptorDataRange range = { (uint32_t)uniformBlockOffset.mOffset, requestSize };
 			params[paramCount].pName = "uniformBlock";
 			params[paramCount].pRanges = &range;
 			params[paramCount++].ppBuffers = &uniformBlockOffset.pBuffer;
@@ -780,13 +781,10 @@ namespace hpl {
 				params[paramCount].pName = "diffuseMap";
 				gui::GuiTextures[frame.m_frameIndex][gui::descriptorIndex] = pTexture->GetTexture();
 				params[paramCount++].ppTextures = &pTexture->GetTexture().m_handle;
-				//frame.m_resourcePool->Push(pTexture->GetTexture());
 			}
 			uniformBlock.mvp = cMath::ToForgeMat4(cMath::MatrixMul(cMath::MatrixMul(projectionMtx, viewMtx), modelMtx));
 			auto& descriptorSet = gui::GuiUniformDescriptorSet[frame.m_frameIndex];
 			updateDescriptorSet(frame.m_renderer->Rend(), gui::descriptorIndex, descriptorSet, paramCount, params);
-
-
 
 			if(mbIs3D) {
 				cmdBindPipeline(frame.m_cmd, gui::GuiPipeline3D[materialType]);

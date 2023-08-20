@@ -47,7 +47,7 @@ PsOut PS_MAIN(PsIn In)
 
     switch(blendMode) {
         case BLEND_MODE_ADD: {
-            finalColor.xyz *= finalAlpha*Get(lightLevel);
+            finalColor.xyz *= finalAlpha * Get(lightLevel);
             break;
         }
         case BLEND_MODE_MUL: {

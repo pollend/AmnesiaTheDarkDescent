@@ -651,26 +651,22 @@ namespace hpl {
             pointSamplerDesc.mAddressW = ADDRESS_MODE_CLAMP_TO_BORDER;
             addSampler(forgeRenderer->Rend(), &pointSamplerDesc, &m_samplerPointClampToBorder);
         }
-        {
-            SamplerDesc pointSamplerDesc = {};
-            pointSamplerDesc.mMinFilter = FILTER_NEAREST;
-            pointSamplerDesc.mMagFilter = FILTER_NEAREST;
-            pointSamplerDesc.mMipMapMode = MIPMAP_MODE_NEAREST;
-            addSampler(forgeRenderer->Rend(), &pointSamplerDesc, &m_pointSampler);
+
+        for (auto& buffer : m_perFrameBuffer) {
+            buffer.Load([&](Buffer** buffer) {
+                BufferLoadDesc desc = {};
+                desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+                desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
+		        desc.mDesc.mElementCount = 1;
+		        desc.mDesc.mStructStride = sizeof(cRendererDeferred::UniformPerFrameData);
+                desc.mDesc.mSize = sizeof(cRendererDeferred::UniformPerFrameData);
+                desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
+                desc.pData = nullptr;
+                desc.ppBuffer = buffer;
+                addResource(&desc, nullptr);
+                return true;
+            });
         }
-        m_perFrameBuffer.Load([&](Buffer** buffer) {
-            BufferLoadDesc desc = {};
-            desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
-            desc.mDesc.mSize = sizeof(cRendererDeferred::UniformPerFrameData) * cRendererDeferred::MaxMaterialFrameDescriptors;
-            desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
-            desc.pData = nullptr;
-            desc.ppBuffer = buffer;
-            addResource(&desc, nullptr);
-            return true;
-        });
-
-
 
         // prepass
         {
@@ -683,6 +679,7 @@ namespace hpl {
             addCmd(forgeRenderer->Rend(), &cmdDesc, &m_prePassCmd);
             addFence(forgeRenderer->Rend(), &m_prePassFence);
         }
+
         // hi-z
         {
             {
@@ -716,6 +713,8 @@ namespace hpl {
                 BufferLoadDesc desc = {};
                 desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_RW_BUFFER;
                 desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_GPU_TO_CPU;
+                desc.mDesc.mElementCount = cRendererDeferred::UniformPropBlock::MaxObjectTest;
+                desc.mDesc.mStructStride = sizeof(uint32_t);
                 desc.mDesc.mSize = sizeof(uint32_t) * cRendererDeferred::UniformPropBlock::MaxObjectTest;
                 desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
                 desc.pData = nullptr;
@@ -742,7 +741,7 @@ namespace hpl {
                 rootSignatureDesc.mShaderCount = shaders.size();
                 const char* pStaticSamplers[] = { "depthSampler" };
                 rootSignatureDesc.mStaticSamplerCount = 1;
-                rootSignatureDesc.ppStaticSamplers =  &m_pointSampler;
+                rootSignatureDesc.ppStaticSamplers = &m_samplerPointClampToBorder;
                 rootSignatureDesc.ppStaticSamplerNames = pStaticSamplers;
                 addRootSignature(forgeRenderer->Rend(), &rootSignatureDesc, &m_rootSignatureCopyDepth);
 
@@ -810,8 +809,10 @@ namespace hpl {
                 BufferLoadDesc desc = {};
                 desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_RW_BUFFER;
                 desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_GPU_TO_CPU;
-                desc.mDesc.mSize = sizeof(uint64_t) * cRendererDeferred::MaxQueryPoolSize;
                 desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
+                desc.mDesc.mElementCount = cRendererDeferred::UniformPropBlock::MaxObjectTest;
+                desc.mDesc.mStructStride = sizeof(uint64_t);
+                desc.mDesc.mSize = desc.mDesc.mStructStride * desc.mDesc.mElementCount;
                 desc.pData = nullptr;
                 desc.ppBuffer = buf;
                 addResource(&desc, nullptr);
@@ -922,7 +923,7 @@ namespace hpl {
 
 
             std::array samplerNames = { "nearestSampler" };
-            std::array samplers = { m_pointSampler };
+            std::array samplers = { m_samplerPointClampToBorder };
             RootSignatureDesc rootSignatureDesc = {};
             rootSignatureDesc.ppShaders = shaders.data();
             rootSignatureDesc.mShaderCount = shaders.size();
@@ -1035,12 +1036,12 @@ namespace hpl {
             for(auto& buffer: m_fogPass.m_fogUniformBuffer) {
                 buffer.Load([&](Buffer** buffer){
                     BufferLoadDesc desc = {};
-		            desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_BUFFER;
+                    desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_BUFFER;
                     desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
                     desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
 		            desc.mDesc.mFirstElement = 0;
 		            desc.mDesc.mElementCount = Fog::MaxFogCount;
-		            desc.mDesc.mStructStride = sizeof(Fog::UniformFogData);
+		            desc.mDesc.mStructStride = sizeof(UniformFogData);
 		            desc.mDesc.mSize = desc.mDesc.mElementCount * desc.mDesc.mStructStride;
                     desc.ppBuffer = buffer;
                     addResource(&desc, nullptr);
@@ -1050,10 +1051,12 @@ namespace hpl {
             for(auto& buffer: m_fogPass.m_fogFullscreenUniformBuffer) {
                 buffer.Load([&](Buffer** buffer){
                     BufferLoadDesc desc = {};
-		            desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_BUFFER;
+                    desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_UNIFORM_BUFFER;
                     desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
                     desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
-		            desc.mDesc.mSize = sizeof(Fog::UniformFullscreenFogData);
+                    desc.mDesc.mElementCount = 1;
+                    desc.mDesc.mStructStride = sizeof(UniformFullscreenFogData);
+		            desc.mDesc.mSize = sizeof(UniformFullscreenFogData);
                     desc.ppBuffer = buffer;
                     addResource(&desc, nullptr);
                     return true;
@@ -1180,7 +1183,7 @@ namespace hpl {
 
             RootSignatureDesc rootSignatureDesc = {};
             const char* pStaticSamplers[] = { "nearestSampler" };
-            rootSignatureDesc.ppStaticSamplers =  &m_pointSampler;
+            rootSignatureDesc.ppStaticSamplers = &m_samplerPointClampToBorder;
             rootSignatureDesc.ppStaticSamplerNames = pStaticSamplers;
             rootSignatureDesc.ppShaders = shaders.data();
             rootSignatureDesc.mShaderCount = shaders.size();
@@ -1496,9 +1499,6 @@ namespace hpl {
                                     case cMaterial::Antistropy_16:
                                         samplerDesc.mMaxAnisotropy = 16.0f;
                                         break;
-                                    case cMaterial::Antistropy_32:
-                                        samplerDesc.mMaxAnisotropy = 32.0f;
-                                        break;
                                     default:
                                         break;
                                 }
@@ -1809,9 +1809,9 @@ namespace hpl {
                         blendStateDesc.mDstFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].dst;
                         blendStateDesc.mBlendModes[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].mode;
 
-                        blendStateDesc.mSrcAlphaFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].src;
-                        blendStateDesc.mDstAlphaFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].dst;
-                        blendStateDesc.mBlendAlphaModes[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].mode;
+                        blendStateDesc.mSrcAlphaFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].srcAlpha;
+                        blendStateDesc.mDstAlphaFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].dstAlpha;
+                        blendStateDesc.mBlendAlphaModes[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].alphaMode;
 
                         addPipeline(forgeRenderer->Rend(), &pipelineDesc, &pipelineBlendGroup[key.m_id]);
                     }
@@ -1861,9 +1861,9 @@ namespace hpl {
                         blendStateDesc.mDstFactors[0] = BlendConstant::BC_SRC_ALPHA;
                         blendStateDesc.mBlendModes[0] = BlendMode::BM_ADD;
 
-                        blendStateDesc.mSrcAlphaFactors[0] = hpl::HPL2BlendTable[eMaterialBlendMode_Add].src;
-                        blendStateDesc.mDstAlphaFactors[0] = hpl::HPL2BlendTable[eMaterialBlendMode_Add].dst;
-                        blendStateDesc.mBlendAlphaModes[0] = hpl::HPL2BlendTable[eMaterialBlendMode_Add].mode;
+                        blendStateDesc.mSrcAlphaFactors[0] = hpl::HPL2BlendTable[eMaterialBlendMode_Add].srcAlpha;
+                        blendStateDesc.mDstAlphaFactors[0] = hpl::HPL2BlendTable[eMaterialBlendMode_Add].dstAlpha;
+                        blendStateDesc.mBlendAlphaModes[0] = hpl::HPL2BlendTable[eMaterialBlendMode_Add].alphaMode;
 
                         pipelineSettings.pShaderProgram = m_materialTranslucencyPass.m_shader.m_handle;
                         addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_materialTranslucencyPass.m_refractionPipeline[key.m_id]);
@@ -1872,31 +1872,23 @@ namespace hpl {
             }
 
             DescriptorSetDesc perFrameDescSet{ m_materialRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, MaxMaterialFrameDescriptors };
-            for (auto& set : m_materialSet.m_frameSet) {
-                addDescriptorSet(forgeRenderer->Rend(), &perFrameDescSet, &set);
-
+            for (size_t setIndex = 0; setIndex < m_materialSet.m_frameSet.size(); setIndex++) {
+                addDescriptorSet(forgeRenderer->Rend(), &perFrameDescSet, &m_materialSet.m_frameSet[setIndex]);
                 for(size_t i = 0; i < MaxMaterialFrameDescriptors; i++) {
-                    DescriptorDataRange range = { (uint32_t)(i * sizeof(cRendererDeferred::UniformPerFrameData)),
-                                                  sizeof(cRendererDeferred::UniformPerFrameData) };
-                    std::array<DescriptorData, 1> params = {};
+                    std::array<DescriptorData, 3> params = {};
                     params[0].pName = "perFrameConstants";
-                    params[0].pRanges = &range;
-                    params[0].ppBuffers = &m_perFrameBuffer.m_handle;
-                    updateDescriptorSet(forgeRenderer->Rend(), i, set, 1, params.data());
+                    params[0].ppBuffers = &m_perFrameBuffer[i].m_handle;
+                    params[1].pName = "uniformObjectBuffer";
+                    params[1].ppBuffers = &m_objectUniformBuffer[setIndex].m_handle;
+                    params[2].pName = "uniformMaterialBuffer";
+                    params[2].ppBuffers = &m_materialSet.m_materialUniformBuffer.m_handle;
+                    updateDescriptorSet(forgeRenderer->Rend(), i, m_materialSet.m_frameSet[setIndex], params.size(), params.data());
                 }
-
             }
+
             DescriptorSetDesc batchDescriptorSet{ m_materialRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_BATCH, cMaterial::MaxMaterialID };
             for(size_t setIndex = 0; setIndex < m_materialSet.m_perBatchSet.size(); setIndex++ ) {
                 addDescriptorSet(forgeRenderer->Rend(), &batchDescriptorSet, &m_materialSet.m_perBatchSet[setIndex]);
-                for(size_t descIndex = 0; descIndex < cMaterial::MaxMaterialID; descIndex++) {
-                    std::array<DescriptorData, 2> params = {};
-                    params[0].pName = "uniformObjectBuffer";
-                    params[0].ppBuffers = &m_objectUniformBuffer[setIndex].m_handle;
-                    params[1].pName = "uniformMaterialBuffer";
-                    params[1].ppBuffers = &m_materialSet.m_materialUniformBuffer.m_handle;
-                    updateDescriptorSet(forgeRenderer->Rend(), descIndex, m_materialSet.m_perBatchSet[setIndex], params.size(), params.data());
-                }
             }
         }
 
@@ -1990,8 +1982,10 @@ namespace hpl {
                 addShader(forgeRenderer->Rend(), &loadDesc, handle);
                 return true;
             });
-            Sampler* vbShadeSceneSamplers[] = { m_shadowCmpSampler.m_handle, m_samplerPointClampToBorder, m_goboSampler };
-            const char* vbShadeSceneSamplersNames[] = { "shadowCmpSampler", "pointSampler", "goboSampler" };
+            Sampler* vbShadeSceneSamplers[] = {
+                m_shadowCmpSampler.m_handle, m_samplerPointClampToBorder, m_goboSampler, m_samplerPointClampToBorder
+            };
+            const char* vbShadeSceneSamplersNames[] = { "shadowCmpSampler", "pointSampler", "goboSampler", "nearestSampler"};
             Shader* shaders[] = {
                 m_pointLightShader.m_handle, m_stencilLightShader.m_handle, m_boxLightShader.m_handle, m_spotLightShader.m_handle
             };
@@ -2201,6 +2195,14 @@ namespace hpl {
             shadowMapData.m_fov = 0;
             shadowMapData.m_aspect = 0;
             shadowMapData.m_light = nullptr;
+
+            CmdPoolDesc cmdPoolDesc = {};
+            cmdPoolDesc.pQueue = forgeRenderer->GetGraphicsQueue();
+            addCmdPool(forgeRenderer->Rend(), &cmdPoolDesc, &shadowMapData.m_pool);
+            CmdDesc cmdDesc = {};
+            cmdDesc.pPool = shadowMapData.m_pool;
+            addCmd(forgeRenderer->Rend(), &cmdDesc, &shadowMapData.m_cmd);
+            addFence(forgeRenderer->Rend(), &shadowMapData.m_shadowFence);
             return shadowMapData;
         };
 
@@ -2261,9 +2263,7 @@ namespace hpl {
     uint32_t cRendererDeferred::updateFrameDescriptor( const ForgeRenderer::Frame& frame,Cmd* cmd, cWorld* apWorld,const PerFrameOption& options) {
 
         uint32_t index = m_materialSet.m_frameIndex;
-        BufferUpdateDesc updatePerFrameConstantsDesc = { m_perFrameBuffer.m_handle,
-                                                         index * sizeof(UniformPerFrameData),
-                                                         sizeof(UniformPerFrameData) };
+        BufferUpdateDesc updatePerFrameConstantsDesc = { m_perFrameBuffer[index].m_handle, 0};
         beginUpdateResource(&updatePerFrameConstantsDesc);
         auto* uniformFrameData = reinterpret_cast<UniformPerFrameData*>(updatePerFrameConstantsDesc.pMappedData);
         uniformFrameData->m_viewMatrix = cMath::ToForgeMat(options.m_viewMat.GetTranspose());
@@ -3100,10 +3100,8 @@ namespace hpl {
             std::array rtBarriers = {
                 RenderTargetBarrier{ currentGBuffer.m_colorBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
                 RenderTargetBarrier{ currentGBuffer.m_normalBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
-                RenderTargetBarrier{
-                    currentGBuffer.m_positionBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
-                RenderTargetBarrier{
-                    currentGBuffer.m_specularBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
+                RenderTargetBarrier{currentGBuffer.m_positionBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
+                RenderTargetBarrier{ currentGBuffer.m_specularBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
                 RenderTargetBarrier{ currentGBuffer.m_outputBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
 
             };
@@ -3297,13 +3295,20 @@ namespace hpl {
 
                                 pLightSpot->SetShadowCasterCacheFromVec(shadowCasters);
 
+                                FenceStatus fenceStatus;
+                                getFenceStatus(frame.m_renderer->Rend(), shadowMapData->m_shadowFence, &fenceStatus);
+                                if (fenceStatus == FENCE_STATUS_INCOMPLETE)
+                                    waitForFences(frame.m_renderer->Rend(), 1, &shadowMapData->m_shadowFence);
+                                resetCmdPool(frame.m_renderer->Rend(), shadowMapData->m_pool);
+
+                                beginCmd(shadowMapData->m_cmd);
                                 {
-                                    cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+                                    cmdBindRenderTargets(shadowMapData->m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
                                     std::array rtBarriers = {
                                         RenderTargetBarrier{
                                             shadowMapData->m_target.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_DEPTH_WRITE },
                                     };
-                                    cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+                                    cmdResourceBarrier(shadowMapData->m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
                                 }
 
                                 LoadActionsDesc loadActions = {};
@@ -3311,9 +3316,9 @@ namespace hpl {
                                 loadActions.mLoadActionStencil = LOAD_ACTION_DONTCARE;
                                 loadActions.mClearDepth = { .depth = 1.0f, .stencil = 0 };
                                 cmdBindRenderTargets(
-                                    frame.m_cmd, 0, NULL, shadowMapData->m_target.m_handle, &loadActions, NULL, NULL, -1, -1);
+                                    shadowMapData->m_cmd, 0, NULL, shadowMapData->m_target.m_handle, &loadActions, NULL, NULL, -1, -1);
                                 cmdSetViewport(
-                                    frame.m_cmd,
+                                    shadowMapData->m_cmd,
                                     0.0f,
                                     static_cast<float>(shadowMapData->m_target.m_handle->mHeight),
                                     static_cast<float>(shadowMapData->m_target.m_handle->mWidth),
@@ -3321,15 +3326,19 @@ namespace hpl {
                                     0.0f,
                                     1.0f);
                                 cmdSetScissor(
-                                    frame.m_cmd, 0, 0, shadowMapData->m_target.m_handle->mWidth, shadowMapData->m_target.m_handle->mHeight);
-                                cmdBindPipeline(frame.m_cmd, m_zPassShadowPipelineCW);
+                                    shadowMapData->m_cmd,
+                                    0,
+                                    0,
+                                    shadowMapData->m_target.m_handle->mWidth,
+                                    shadowMapData->m_target.m_handle->mHeight);
+                                cmdBindPipeline(shadowMapData->m_cmd, m_zPassShadowPipelineCW);
 
-                                uint32_t shadowFrameIndex = updateFrameDescriptor(frame, frame.m_cmd, apWorld, {
+                                uint32_t shadowFrameIndex = updateFrameDescriptor(frame, shadowMapData->m_cmd, apWorld, {
                                     .m_size = float2(common->m_size.x, common->m_size.y),
                                     .m_viewMat = pLightFrustum->GetViewMatrix(),
                                     .m_projectionMat = pLightFrustum->GetProjectionMatrix()
                                 });
-                                cmdBindDescriptorSet(frame.m_cmd, shadowFrameIndex, m_materialSet.m_frameSet[frame.m_frameIndex]);
+                                cmdBindDescriptorSet(shadowMapData->m_cmd, shadowFrameIndex, m_materialSet.m_frameSet[frame.m_frameIndex]);
                                 for (auto& pObject : shadowCasters) {
                                     eMaterialRenderMode renderMode =
                                         pObject->GetCoverageAmount() >= 1 ? eMaterialRenderMode_Z : eMaterialRenderMode_Z_Dissolve;
@@ -3341,7 +3350,7 @@ namespace hpl {
                                     }
                                     MaterialRootConstant materialConst = {};
                                     uint32_t instance = cmdBindMaterialAndObject(
-                                        frame.m_cmd,
+                                        shadowMapData->m_cmd,
                                         frame,
                                         pMaterial,
                                         pObject,
@@ -3357,18 +3366,26 @@ namespace hpl {
                                     LegacyVertexBuffer::GeometryBinding binding{};
                                     static_cast<LegacyVertexBuffer*>(vertexBuffer)
                                         ->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
-                                    detail::cmdDefaultLegacyGeomBinding(frame.m_cmd, frame, binding);
-                                    cmdBindPushConstants(frame.m_cmd, m_materialRootSignature, materialObjectIndex, &materialConst);
-                                    cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+                                    detail::cmdDefaultLegacyGeomBinding(shadowMapData->m_cmd, frame, binding);
+                                    cmdBindPushConstants(
+                                        shadowMapData->m_cmd, m_materialRootSignature, materialObjectIndex, &materialConst);
+                                    cmdDrawIndexed(shadowMapData->m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
                                 }
                                 {
-                                    cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+                                    cmdBindRenderTargets(shadowMapData->m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
                                     std::array rtBarriers = {
                                         RenderTargetBarrier{
                                             shadowMapData->m_target.m_handle, RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_SHADER_RESOURCE },
                                     };
-                                    cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+                                    cmdResourceBarrier(shadowMapData->m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
                                 }
+                                endCmd(shadowMapData->m_cmd);
+                                QueueSubmitDesc submitDesc = {};
+                                submitDesc.mCmdCount = 1;
+                                submitDesc.ppCmds = &shadowMapData->m_cmd;
+                                submitDesc.pSignalFence = shadowMapData->m_shadowFence;
+                                submitDesc.mSubmitDone = true;
+                                queueSubmit(frame.m_renderer->GetGraphicsQueue(), &submitDesc);
                             }
                         }
                     }
@@ -3631,11 +3648,21 @@ namespace hpl {
                             currentGBuffer.m_outputBuffer.m_handle,
                         };
                         cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
-                        std::array rtBarriers = {
-                            RenderTargetBarrier{
-                                currentGBuffer.m_depthBuffer.m_handle, RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_DEPTH_WRITE },
-                        };
-                        cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, nullptr, rtBarriers.size(), rtBarriers.data());
+                        {
+                            std::array rtBarriers = {
+                                RenderTargetBarrier{
+                                    currentGBuffer.m_depthBuffer.m_handle, RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_PRESENT },
+                            };
+                            cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, nullptr, rtBarriers.size(), rtBarriers.data());
+                        }
+                        {
+                            std::array rtBarriers = {
+                                RenderTargetBarrier{
+                                    currentGBuffer.m_depthBuffer.m_handle, RESOURCE_STATE_PRESENT, RESOURCE_STATE_DEPTH_WRITE },
+                            };
+                            cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, nullptr, rtBarriers.size(), rtBarriers.data());
+                        }
+
                         cmdBindRenderTargets(
                             frame.m_cmd,
                             targets.size(),
@@ -3738,7 +3765,7 @@ namespace hpl {
             cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "Fog Box Pass ");
 
             auto createUniformFog = [&](bool isInsideNearPlane, cFogArea* fogArea) {
-                Fog::UniformFogData fogUniformData = {};
+                UniformFogData fogUniformData = {};
                 if (isInsideNearPlane) {
                     fogUniformData.m_flags |=
                         (fogArea->GetShowBacksideWhenInside() ? Fog::PipelineUseBackSide : Fog::PipelineVariantEmpty);
@@ -3787,10 +3814,10 @@ namespace hpl {
                 if(fogArea.m_insideNearFrustum) {
                     nearPlanFog.emplace_back(fogArea.m_fogArea);
                 } else {
-                    Fog::UniformFogData uniformData =  createUniformFog(false, fogArea.m_fogArea);
-                    BufferUpdateDesc updateDesc = { m_fogPass.m_fogUniformBuffer[frame.m_frameIndex].m_handle, fogIndex * sizeof(Fog::UniformFogData)};
+                    UniformFogData uniformData =  createUniformFog(false, fogArea.m_fogArea);
+                    BufferUpdateDesc updateDesc = { m_fogPass.m_fogUniformBuffer[frame.m_frameIndex].m_handle, fogIndex * sizeof(UniformFogData)};
                     beginUpdateResource(&updateDesc);
-                    (*reinterpret_cast<Fog::UniformFogData*>(updateDesc.pMappedData)) = uniformData;
+                    (*reinterpret_cast<UniformFogData*>(updateDesc.pMappedData)) = uniformData;
                     endUpdateResource(&updateDesc, NULL);
                     fogIndex++;
                 }
@@ -3832,10 +3859,10 @@ namespace hpl {
 
             size_t offsetIndex = fogIndex;
             for(auto& fogArea: nearPlanFog) {
-                Fog::UniformFogData uniformData =  createUniformFog(true, fogArea);
-                BufferUpdateDesc updateDesc = { m_fogPass.m_fogUniformBuffer[frame.m_frameIndex].m_handle, fogIndex * sizeof(Fog::UniformFogData)};
+                UniformFogData uniformData =  createUniformFog(true, fogArea);
+                BufferUpdateDesc updateDesc = { m_fogPass.m_fogUniformBuffer[frame.m_frameIndex].m_handle, fogIndex * sizeof(UniformFogData)};
                 beginUpdateResource(&updateDesc);
-                (*reinterpret_cast<Fog::UniformFogData*>(updateDesc.pMappedData)) = uniformData;
+                (*reinterpret_cast<UniformFogData*>(updateDesc.pMappedData)) = uniformData;
                 endUpdateResource(&updateDesc, NULL);
                 fogIndex++;
             }
@@ -3849,7 +3876,7 @@ namespace hpl {
             if (mpCurrentWorld->GetFogActive()) {
                     BufferUpdateDesc updateDesc = { m_fogPass.m_fogFullscreenUniformBuffer[frame.m_frameIndex].m_handle};
                     beginUpdateResource(&updateDesc);
-                    auto* fogData = reinterpret_cast<Fog::UniformFullscreenFogData*>(updateDesc.pMappedData);
+                    auto* fogData = reinterpret_cast<UniformFullscreenFogData*>(updateDesc.pMappedData);
                     auto fogColor = mpCurrentWorld->GetFogColor();
                     fogData->m_color = float4(fogColor.r, fogColor.g, fogColor.b, fogColor.a);
                     fogData->m_fogStart = mpCurrentWorld->GetFogStart();
@@ -4079,14 +4106,11 @@ namespace hpl {
                         // TODO: fix refraction
                         if (pMaterial->HasTranslucentIllumination()) {
                             TranslucencyPipeline::TranslucencyBlend blendMode = translucencyBlendTable[pMaterial->GetBlendMode()];
-                            if ( cubeMap && !isRefraction) {
-                                blendMode = TranslucencyPipeline::TranslucencyBlend::BlendAdd;
-                            }
                             materialConst.m_options =
                                 (TranslucencyFlags::UseIlluminationTrans) |
                                 (isFogActive ? TranslucencyFlags::UseFog : 0) |
                                 (isRefraction ? TranslucencyFlags::UseRefractionTrans : 0) |
-                                blendMode;
+                                ((cubeMap && !isRefraction) ? TranslucencyPipeline::TranslucencyBlend::BlendAdd: blendMode);
 
                             cmdBindPipeline(
                                 frame.m_cmd,
@@ -4118,12 +4142,8 @@ namespace hpl {
 
                         cRendererDeferred::TranslucencyPipeline::TranslucencyWaterKey key = {};
                         key.m_field.m_hasDepthTest = pMaterial->GetDepthTest();
-                       // key.m_field.m_hasFog = isFogActive;
-                       // key.m_field.m_hasRefraction = isRefraction;
-                       // key.m_field.m_hasReflection = false;
 
                         detail::cmdDefaultLegacyGeomBinding(frame.m_cmd, frame, binding);
-                        //waterConstants.m_water.m_afT = GetTimeCount();
 
                         cmdBindPipeline(frame.m_cmd, m_materialTranslucencyPass.m_waterPipeline[key.m_id]);
                         uint32_t instance = cmdBindMaterialAndObject(

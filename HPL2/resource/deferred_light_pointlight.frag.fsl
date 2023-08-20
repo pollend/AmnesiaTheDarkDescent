@@ -45,5 +45,5 @@ float4 PS_MAIN(PsIn In)
         specularColor = specularValue.xxx * Get(lightObjectBuffer)[Get(lightId)].lightColor.xyz;
     }
     float4 result = float4((diffuseColor + specularColor) * goboVal * attenuation, 1.0);
-    RETURN(result );
+    RETURN(result);
 }

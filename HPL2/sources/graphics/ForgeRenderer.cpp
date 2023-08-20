@@ -57,12 +57,12 @@ namespace hpl {
         }
         {
             cmdBindRenderTargets(frame.m_cmd, 1, &swapChainTarget, NULL, NULL, NULL, NULL, -1, -1);
-            uint32_t rootConstantIndex = getDescriptorIndexFromName(m_finalRootSignature , "postEffectConstants");
-            cmdBindPushConstants(frame.m_cmd, m_finalRootSignature, rootConstantIndex, &m_gamma);
-
+            uint32_t rootConstantIndex = getDescriptorIndexFromName(m_finalRootSignature , "uRootConstants");
+            
             cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, static_cast<float>(swapChainTarget->mWidth), static_cast<float>(swapChainTarget->mHeight), 0.0f, 1.0f);
             cmdSetScissor(frame.m_cmd, 0, 0, static_cast<float>(swapChainTarget->mWidth), static_cast<float>(swapChainTarget->mHeight));
             cmdBindPipeline(frame.m_cmd, m_finalPipeline.m_handle);
+            cmdBindPushConstants(frame.m_cmd, m_finalRootSignature, rootConstantIndex, &m_gamma);
 
             std::array<DescriptorData, 1> params = {};
             params[0].pName = "sourceInput";

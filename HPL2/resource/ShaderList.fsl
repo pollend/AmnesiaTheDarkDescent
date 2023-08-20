@@ -166,11 +166,6 @@
     #include "blur_posteffect.frag.fsl"
 #end
 
-#frag blur_posteffect_horizontal.frag
-    #define USE_HORIZONTAL 1
-    #include "blur_posteffect.frag.fsl"
-#end
-
 #frag dds_inventory_posteffect.frag
     #include "dds_inventory_posteffect.frag.fsl"
 #end

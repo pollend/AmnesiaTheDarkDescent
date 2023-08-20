@@ -144,7 +144,7 @@ namespace hpl
         ASSERT(mpColorConvTex);
 
         float alphaFade = cMath::Clamp(mParams.mfFadeAlpha, 0.0f, 1.0f);
-        uint32_t rootConstantIndex = getDescriptorIndexFromName(mpSpecificType->m_rootSignature, "postEffectConstants");
+        uint32_t rootConstantIndex = getDescriptorIndexFromName(mpSpecificType->m_rootSignature, "rootConstant");
         cmdBindPushConstants(frame.m_cmd, mpSpecificType->m_rootSignature, rootConstantIndex, &alphaFade);
 
         LoadActionsDesc loadActions = {};

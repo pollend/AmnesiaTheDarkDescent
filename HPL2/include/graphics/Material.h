@@ -82,8 +82,7 @@ namespace hpl {
             Antistropy_None = 0,
             Antistropy_8 = 1,
             Antistropy_16 = 2,
-            Antistropy_32 = 3,
-            Antistropy_Count = 4
+            Antistropy_Count = 3
         };
 
 		enum TextureConfigFlags {

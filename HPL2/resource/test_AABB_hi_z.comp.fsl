@@ -1,4 +1,4 @@
-#define  MAX_NUM_OBJECTS 32768 
+#define  MAX_NUM_OBJECTS 2048 
 
 RES(RWTex2DArray(float), depthInput, UPDATE_FREQ_PER_FRAME, u0, binding = 0);
 RES(RWBuffer(bool), occlusionTest, UPDATE_FREQ_PER_FRAME, u2, binding = 2);
@@ -9,7 +9,7 @@ CBUFFER(objectUniformBlock, UPDATE_FREQ_PER_FRAME, b0, binding = 3)
     DATA(uint, numObjects, None);
     DATA(int, maxMipLevel, None);
     DATA(uint2, depthDim, None);
-    DATA(float3, inputCollider[MAX_NUM_OBJECTS], None);
+    DATA(float4, inputCollider[MAX_NUM_OBJECTS], None);
 };
 
 NUM_THREADS(128, 1,  1)
@@ -21,9 +21,9 @@ void CS_MAIN(SV_DispatchThreadID(uint3) did)
     {
         return;
     }
-     
-    float3 bboxMin = Get(inputCollider)[2 * did.x];
-    float3 bboxMax = Get(inputCollider)[2 * did.x + 1];
+
+    float3 bboxMin = Get(inputCollider)[2 * did.x].xyz;
+    float3 bboxMax = Get(inputCollider)[2 * did.x + 1].xyz;
    
     //Adapted from http://blog.selfshadow.com/publications/practical-visibility/
     float3 bboxSize = bboxMax.xyz - bboxMin.xyz;

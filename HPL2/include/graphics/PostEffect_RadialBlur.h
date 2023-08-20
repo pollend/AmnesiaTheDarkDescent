@@ -82,7 +82,7 @@ namespace hpl {
 
 		void RenderBlur(iTexture *apInputTex);
 
-		cPostEffectType_RadialBlur *mpRadialBlurType;
+		cPostEffectType_RadialBlur *mpRadialBlurType = nullptr;
 		cPostEffectParams_RadialBlur mParams;
 
 	};

@@ -281,13 +281,12 @@ private:
 
     static constexpr uint32_t BlurSetSize = 64;
     Sampler* m_inputSampler;
-    ForgeShaderHandle m_blurVerticalShader;
-    ForgeShaderHandle m_blurHorizontalShader;
+    ForgeShaderHandle m_blurShader;
+
     RootSignature* m_blurRootSignature;
     std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perFrameBlurDescriptorSet;
     uint32_t m_setIndex = 0;
-    Pipeline* m_blurVerticalPipeline;
-    Pipeline* m_blurHorizontalPipeline;
+    Pipeline* m_blurPipeline;
 
 	cGuiGfxElement *mpLogoGfx;
 

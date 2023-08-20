@@ -127,9 +127,14 @@ namespace hpl
         struct {
             float size;
             float blurStartDist;
-        } params = { mParams.mfSize, mParams.mfBlurStartDist };
+            float2 screenDim;
+        } params = {
+            mParams.mfSize,
+            mParams.mfBlurStartDist,
+            float2(static_cast<float>(renderTarget->mWidth), static_cast<float>(renderTarget->mHeight))
+        };
 
-        uint32_t rootConstantIndex = getDescriptorIndexFromName(mpRadialBlurType->m_rootSignature, "postEffectConstants");
+        uint32_t rootConstantIndex = getDescriptorIndexFromName(mpRadialBlurType->m_rootSignature, "rootConstant");
         cmdBindPushConstants(frame.m_cmd, mpRadialBlurType->m_rootSignature, rootConstantIndex, &params);
 
         LoadActionsDesc loadActions = {};

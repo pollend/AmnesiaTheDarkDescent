@@ -126,26 +126,25 @@ private:
     Sampler* m_diffuseSampler;
 
     std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perObjectDescriptorSet;
-    Pipeline* m_outlinePipeline;
-    Pipeline* m_outlineStencilPipeline;
-    Pipeline* m_objectFlashPipeline;
-    Pipeline* m_flashPipeline;
-    Pipeline* m_enemyGlowPipeline;
-    RootSignature* m_perObjectRootSignature;
+    Pipeline* m_outlinePipeline = nullptr;
+    Pipeline* m_outlineStencilPipeline = nullptr;
+    Pipeline* m_objedds_outline_copyctFlashPipeline = nullptr;
+    Pipeline* m_flashPipeline = nullptr;
+    Pipeline* m_enemyGlowPipeline = nullptr;
+    RootSignature* m_perObjectRootSignature = nullptr;
 
     std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_outlinePostprocessingDescriptorSet;
-    RootSignature* m_postProcessingRootSignature;
-    Pipeline* m_blurHorizontalPipeline;
-    Pipeline* m_blurVerticalPipeline;
-    Pipeline* m_combineOutlineAddPipeline;
+    RootSignature* m_postProcessingRootSignature = nullptr;
+    RootSignature* m_postProcessingBlurSignature = nullptr;
+    Pipeline* m_blurPipeline = nullptr;
+    Pipeline* m_combineOutlineAddPipeline = nullptr;
 
-    Shader* m_blurVerticalShader;
-    Shader* m_blurHorizontalShader;
-    Shader* m_enemyGlowShader;
-    Shader* m_outlineShader;
-    Shader* m_outlineStencilShader;
-    Shader* m_objectFlashShader;
-    Shader* m_outlineCopyShader;
+    Shader* m_blurShader = nullptr;
+    Shader* m_enemyGlowShader = nullptr;
+    Shader* m_outlineShader = nullptr;
+    Shader* m_outlineStencilShader = nullptr;
+    Shader* m_objectFlashShader = nullptr;
+    Shader* m_outlineCopyShader = nullptr;
 
     cLinearOscillation mFlashOscill;
 };

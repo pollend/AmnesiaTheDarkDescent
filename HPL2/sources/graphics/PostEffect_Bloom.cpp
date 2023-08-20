@@ -260,7 +260,7 @@ namespace hpl
 
         auto requestBlur = [&](Texture** input) {
             ASSERT(input && "Invalid input texture");
-            uint32_t blurPostEffectConstIndex = getDescriptorIndexFromName(mpBloomType->m_blurSignature, "postEffectConstants");
+            uint32_t blurPostEffectConstIndex = getDescriptorIndexFromName(mpBloomType->m_blurSignature, "rootConstant");
             {
                 cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
                 std::array rtBarriers = {
@@ -288,7 +288,7 @@ namespace hpl
 
                 cmdBindDescriptorSet(frame.m_cmd, mpBloomType->m_setIndex, mpBloomType->m_perFrameDescriptorSets[frame.m_frameIndex]);
                 float2 blurScale = float2(mParams.mfBlurSize, 0.0f);
-                cmdBindPushConstants(frame.m_cmd, mpBloomType->m_blurSignature, blurPostEffectConstIndex, &blurScale);
+                //cmdBindPushConstants(frame.m_cmd, mpBloomType->m_blurSignature, blurPostEffectConstIndex, &blurScale);
                 cmdDraw(frame.m_cmd, 3, 0);
 
                 mpBloomType->m_setIndex = (mpBloomType->m_setIndex + 1) % cPostEffectType_Bloom::DescriptorSetSize;
@@ -346,7 +346,7 @@ namespace hpl
         }
         {
             float rgbIntensity[] = {mParams.mvRgbToIntensity.x, mParams.mvRgbToIntensity.y, mParams.mvRgbToIntensity.z, 0.0f};
-            uint32_t rootConstantIndex = getDescriptorIndexFromName(mpBloomType->m_bloomRootSignature, "postEffectConstants");
+            uint32_t rootConstantIndex = getDescriptorIndexFromName(mpBloomType->m_bloomRootSignature, "rootConstant");
             cmdBindPushConstants(frame.m_cmd, mpBloomType->m_bloomRootSignature, rootConstantIndex, rgbIntensity
 );
         }
