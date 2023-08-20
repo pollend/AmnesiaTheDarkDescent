@@ -4106,11 +4106,14 @@ namespace hpl {
                         // TODO: fix refraction
                         if (pMaterial->HasTranslucentIllumination()) {
                             TranslucencyPipeline::TranslucencyBlend blendMode = translucencyBlendTable[pMaterial->GetBlendMode()];
+                            if ( cubeMap && !isRefraction) {
+                                blendMode = TranslucencyPipeline::TranslucencyBlend::BlendAdd;
+                            }
                             materialConst.m_options =
                                 (TranslucencyFlags::UseIlluminationTrans) |
                                 (isFogActive ? TranslucencyFlags::UseFog : 0) |
                                 (isRefraction ? TranslucencyFlags::UseRefractionTrans : 0) |
-                                ((cubeMap && !isRefraction) ? TranslucencyPipeline::TranslucencyBlend::BlendAdd: blendMode);
+                                blendMode;
 
                             cmdBindPipeline(
                                 frame.m_cmd,

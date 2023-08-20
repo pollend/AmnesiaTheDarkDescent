@@ -338,12 +338,12 @@ cLuxEffectRenderer::cLuxEffectRenderer()
                 vertexLayout.mAttribs[0].mBinding = 0;
                 vertexLayout.mAttribs[0].mLocation = 0;
                 vertexLayout.mAttribs[0].mOffset = 0;
-                vertexLayout.mAttribs[1].mSemantic = SEMANTIC_TEXCOORD0;
+                vertexLayout.mAttribs[1].mSemantic = SEMANTIC_NORMAL;
                 vertexLayout.mAttribs[1].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
                 vertexLayout.mAttribs[1].mBinding = 1;
                 vertexLayout.mAttribs[1].mLocation = 1;
                 vertexLayout.mAttribs[2].mOffset = 0;
-                vertexLayout.mAttribs[2].mSemantic = SEMANTIC_NORMAL;
+                vertexLayout.mAttribs[2].mSemantic = SEMANTIC_TEXCOORD0;
                 vertexLayout.mAttribs[2].mFormat = TinyImageFormat_R32G32_SFLOAT;
                 vertexLayout.mAttribs[2].mBinding = 2;
                 vertexLayout.mAttribs[2].mLocation = 2;
@@ -396,12 +396,12 @@ cLuxEffectRenderer::cLuxEffectRenderer()
                 vertexLayout.mAttribs[0].mBinding = 0;
                 vertexLayout.mAttribs[0].mLocation = 0;
                 vertexLayout.mAttribs[0].mOffset = 0;
-                vertexLayout.mAttribs[1].mSemantic = SEMANTIC_TEXCOORD0;
+                vertexLayout.mAttribs[1].mSemantic =  SEMANTIC_NORMAL;
                 vertexLayout.mAttribs[1].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
                 vertexLayout.mAttribs[1].mBinding = 1;
                 vertexLayout.mAttribs[1].mLocation = 1;
                 vertexLayout.mAttribs[2].mOffset = 0;
-                vertexLayout.mAttribs[2].mSemantic = SEMANTIC_NORMAL;
+                vertexLayout.mAttribs[2].mSemantic = SEMANTIC_TEXCOORD0;
                 vertexLayout.mAttribs[2].mFormat = TinyImageFormat_R32G32_SFLOAT;
                 vertexLayout.mAttribs[2].mBinding = 2;
                 vertexLayout.mAttribs[2].mLocation = 2;
@@ -710,7 +710,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
         std::array targets = { eVertexBufferElement_Position, eVertexBufferElement_Normal, eVertexBufferElement_Texture0 };
         static_cast<LegacyVertexBuffer*>(pObject->GetVertexBuffer())->resolveGeometryBinding(frame->m_currentFrame, targets, &binding);
 
-        uint64_t requestSize = round_up(sizeof(LuxEffectObjectUniform::FlashUniform), 256);       
+        uint64_t requestSize = round_up(sizeof(LuxEffectObjectUniform::FlashUniform), 256);
         #ifdef USE_THE_FORGE_LEGACY
             GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(m_uniformBuffer, requestSize);
         #else
@@ -775,7 +775,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
             std::array targets = { eVertexBufferElement_Position, eVertexBufferElement_Texture0 };
             static_cast<LegacyVertexBuffer*>(pObject->GetVertexBuffer())->resolveGeometryBinding(frame->m_currentFrame, targets, &binding);
 
-            uint64_t requestSize = round_up(sizeof(LuxEffectObjectUniform::OutlineUniform), 256);   
+            uint64_t requestSize = round_up(sizeof(LuxEffectObjectUniform::OutlineUniform), 256);
             #ifdef USE_THE_FORGE_LEGACY
             GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(m_uniformBuffer, requestSize);
             #else
@@ -892,17 +892,17 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
                 cmdSetViewport(
                     frame->m_cmd, 0.0f, 0.0f, static_cast<float>(blurTarget->mWidth), static_cast<float>(blurTarget->mHeight), 0.0f, 1.0f);
                 cmdSetScissor(frame->m_cmd, 0, 0, static_cast<float>(blurTarget->mWidth), static_cast<float>(blurTarget->mHeight));
-                
+
                 std::array<DescriptorData, 1> params = {};
                 params[0].pName = "sourceInput";
                 params[0].ppTextures = input;
                 cmdBindPipeline(frame->m_cmd, m_blurPipeline);
                 updateDescriptorSet(
                     frame->m_renderer->Rend(), postProcessingIndex , m_outlinePostprocessingDescriptorSet[frame->m_frameIndex], params.size(), params.data());
-                
+
                 cmdBindDescriptorSet(frame->m_cmd, postProcessingIndex++, m_outlinePostprocessingDescriptorSet[frame->m_frameIndex]);
                 float2 blurScale = float2(1.0f, 0.0f);
-                //cmdBindPushConstants(frame->m_cmd, m_postProcessingRootSignature, blurPostEffectConstIndex, &blurScale);
+                cmdBindPushConstants(frame->m_cmd, m_postProcessingRootSignature, blurPostEffectConstIndex, &blurScale);
                 cmdDraw(frame->m_cmd, 3, 0);
 
             }
@@ -926,7 +926,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
                 cmdSetViewport(
                     frame->m_cmd, 0.0f, 0.0f, static_cast<float>(blurTarget->mWidth), static_cast<float>(blurTarget->mHeight), 0.0f, 1.0f);
                 cmdSetScissor(frame->m_cmd, 0, 0, static_cast<float>(blurTarget->mWidth), static_cast<float>(blurTarget->mHeight));
-                
+
                 std::array<DescriptorData, 1> params = {};
                 params[0].pName = "sourceInput";
                 params[0].ppTextures = &postEffectData->m_blurTarget[0].m_handle->pTexture;
@@ -934,9 +934,9 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
 
                 updateDescriptorSet(
                     frame->m_renderer->Rend(), postProcessingIndex, m_outlinePostprocessingDescriptorSet[frame->m_frameIndex], params.size(), params.data());
-                
+
                 float2 blurScale = float2(0.0f, 1.0f);
-                //cmdBindPushConstants(frame->m_cmd, m_postProcessingRootSignature, blurPostEffectConstIndex, &blurScale);
+                cmdBindPushConstants(frame->m_cmd, m_postProcessingRootSignature, blurPostEffectConstIndex, &blurScale);
                 cmdBindDescriptorSet(frame->m_cmd, postProcessingIndex++, m_outlinePostprocessingDescriptorSet[frame->m_frameIndex]);
                 cmdDraw(frame->m_cmd, 3, 0);
             }

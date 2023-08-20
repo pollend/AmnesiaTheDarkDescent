@@ -151,7 +151,7 @@ namespace hpl {
 		for(; it != m_mapResources.end(); ++it)
 		{
 			cMaterial *pMat = static_cast<cMaterial*>(it->second);
-		    pMat->SetTextureAnisotropy(aFilter);
+		    pMat->setTextureFilter(aFilter);
 
             for(int i=0; i<eMaterialTexture_LastEnum; ++i)
 			{
@@ -174,7 +174,7 @@ namespace hpl {
 		for(; it != m_mapResources.end(); ++it)
 		{
 			cMaterial *pMat = static_cast<cMaterial*>(it->second);
-
+            pMat->SetTextureAnisotropy(afX);
 			for(int i=0; i<eMaterialTexture_LastEnum; ++i)
 			{
                 auto image = pMat->GetImage(static_cast<eMaterialTexture>(i));
