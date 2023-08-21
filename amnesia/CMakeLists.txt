@@ -2,6 +2,11 @@ cmake_minimum_required (VERSION 3.0)
 project(Lux)
 set(VERSION "1.3.1")
 
+if (${CMAKE_SYSTEM_NAME} MATCHES "Linux" OR ${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD")
+  set(LINUX ON)
+endif()
+
+
 if(LINUX)
     # Well, first of all, disable some harmless warnings, which are really
     # hard to get rid off (they are overall in the code).

@@ -5,7 +5,6 @@ set(CMAKE_INSTALL_PREFIX ${INSTALL_OUTPUT_PATH} CACHE PATH "Install path prefix,
 
 enable_language(ASM)
 
-
 if(MSVC)
     add_definitions(/MP /std:c++20)
 endif()

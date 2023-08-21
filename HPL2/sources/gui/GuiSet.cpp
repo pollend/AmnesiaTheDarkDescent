@@ -761,7 +761,7 @@ namespace hpl {
 			size_t vertexBufferIndex = 0;
 			size_t indexBufferIndex = 0;
 
-            uint64_t requestSize = round_up(sizeof(gui::UniformBlock), 256);
+            uint32_t requestSize = round_up(sizeof(gui::UniformBlock), 256);
 			#ifdef USE_THE_FORGE_LEGACY
             GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(gui::GuiUniformRingBuffer, requestSize);
             #else

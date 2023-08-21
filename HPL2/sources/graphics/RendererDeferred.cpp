@@ -3939,13 +3939,12 @@ namespace hpl {
 
         // notify post draw listeners
         // ImmediateDrawBatch postSolidBatch(context, sharedData->m_gBuffer.m_outputTarget, mainFrustumView, mainFrustumProj);
-        cViewport::PostSolidDrawPacket postSolidEvent = cViewport::PostSolidDrawPacket({
-            .m_frustum = apFrustum,
-            .m_frame = &frame,
-            .m_outputTarget = &currentGBuffer.m_outputBuffer,
-            .m_viewport = &viewport,
-            .m_renderSettings = mpCurrentSettings,
-        });
+        cViewport::PostSolidDrawPacket postSolidEvent = cViewport::PostSolidDrawPacket();
+        postSolidEvent.m_frustum = apFrustum;
+        postSolidEvent.m_frame = &frame;
+        postSolidEvent.m_outputTarget = &currentGBuffer.m_outputBuffer;
+        postSolidEvent.m_viewport = &viewport;
+        postSolidEvent.m_renderSettings = mpCurrentSettings;
         viewport.SignalDraw(postSolidEvent);
 
         // ------------------------------------------------------------------------
@@ -4173,13 +4172,12 @@ namespace hpl {
         }
 
         // ImmediateDrawBatch postTransBatch(context, sharedData->m_gBuffer.m_outputTarget, mainFrustumView, mainFrustumProj);
-        cViewport::PostTranslucenceDrawPacket translucenceEvent = cViewport::PostTranslucenceDrawPacket({
-            .m_frustum = apFrustum,
-            .m_frame = &frame,
-            .m_outputTarget = &currentGBuffer.m_outputBuffer,
-            .m_viewport = &viewport,
-            .m_renderSettings = mpCurrentSettings,
-        });
+        cViewport::PostTranslucenceDrawPacket translucenceEvent = cViewport::PostTranslucenceDrawPacket();
+        translucenceEvent.m_frustum = apFrustum;
+        translucenceEvent.m_frame = &frame;
+        translucenceEvent.m_outputTarget = &currentGBuffer.m_outputBuffer;
+        translucenceEvent.m_viewport = &viewport;
+        translucenceEvent.m_renderSettings = mpCurrentSettings;
         viewport.SignalDraw(translucenceEvent);
 
         {

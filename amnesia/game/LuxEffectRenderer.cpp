@@ -658,7 +658,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
         static_cast<LegacyVertexBuffer*>(pObject->GetVertexBuffer())->resolveGeometryBinding(frame->m_currentFrame, targets, &binding);
 
 
-        uint64_t requestSize = round_up(sizeof(LuxEffectObjectUniform::FlashUniform), 256);
+        uint32_t requestSize = round_up(sizeof(LuxEffectObjectUniform::FlashUniform), 256);
         #ifdef USE_THE_FORGE_LEGACY
             GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(m_uniformBuffer, requestSize);
         #else
@@ -710,7 +710,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
         std::array targets = { eVertexBufferElement_Position, eVertexBufferElement_Normal, eVertexBufferElement_Texture0 };
         static_cast<LegacyVertexBuffer*>(pObject->GetVertexBuffer())->resolveGeometryBinding(frame->m_currentFrame, targets, &binding);
 
-        uint64_t requestSize = round_up(sizeof(LuxEffectObjectUniform::FlashUniform), 256);
+        uint32_t requestSize = round_up(sizeof(LuxEffectObjectUniform::FlashUniform), 256);
         #ifdef USE_THE_FORGE_LEGACY
             GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(m_uniformBuffer, requestSize);
         #else
@@ -775,7 +775,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
             std::array targets = { eVertexBufferElement_Position, eVertexBufferElement_Texture0 };
             static_cast<LegacyVertexBuffer*>(pObject->GetVertexBuffer())->resolveGeometryBinding(frame->m_currentFrame, targets, &binding);
 
-            uint64_t requestSize = round_up(sizeof(LuxEffectObjectUniform::OutlineUniform), 256);
+            uint32_t requestSize = round_up(sizeof(LuxEffectObjectUniform::OutlineUniform), 256);
             #ifdef USE_THE_FORGE_LEGACY
             GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(m_uniformBuffer, requestSize);
             #else
@@ -832,7 +832,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
             static_cast<LegacyVertexBuffer*>(pObject->GetVertexBuffer())->resolveGeometryBinding(frame->m_currentFrame, targets, &binding);
 
 
-            uint64_t requestSize = round_up(sizeof(LuxEffectObjectUniform::OutlineUniform), 256);
+            uint32_t requestSize = round_up(sizeof(LuxEffectObjectUniform::OutlineUniform), 256);
             #ifdef USE_THE_FORGE_LEGACY
                 GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(m_uniformBuffer, requestSize);
             #else

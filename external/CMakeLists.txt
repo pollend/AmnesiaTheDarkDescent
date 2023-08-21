@@ -19,9 +19,9 @@ add_subdirectory(AngelScript)
 
 set(THE_FORGE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/The-Forge" CACHE STRING "Location of the forge.")
 
-file(GLOB EASTL_SOURCES
-    ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/EASTL/*.cpp)
-add_library(Eastl STATIC ${EASTL_SOURCES})
+# file(GLOB EASTL_SOURCES
+#    ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/EASTL/*.cpp)
+# add_library(Eastl STATIC ${EASTL_SOURCES})
 
 add_library(cpu_features OBJECT 
      ${THE_FORGE_DIR}/Common_3/OS/ThirdParty/OpenSource/cpu_features/src/impl_x86_macos.c
@@ -62,6 +62,11 @@ set_property(TARGET ags PROPERTY IMPORTED_IMPLIB
         )
 target_include_directories(ags INTERFACE  ${THE_FORGE_DIR}/Common_3/Graphics/ThirdParty/OpenSource/ags)
 
+# add_library(tinyEXR STATIC ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/TinyEXR/tinyexr.cc)
+#target_include_directories(tinyEXR PRIVATE 
+#    ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/TinyEXR)
+
+  
 add_library(astc-encoder OBJECT 
     ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/astc-encoder/Source/astcenccli_error_metrics.cpp
     ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/astc-encoder/Source/astcenccli_image.cpp
@@ -92,11 +97,12 @@ add_library(astc-encoder OBJECT
     ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/astc-encoder/Source/astcenc_weight_align.cpp
     ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/astc-encoder/Source/astcenc_weight_quant_xfer_tables.cpp
     ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/astc-encoder/Source/wuffs-v0.3.c
-    ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/TinyEXR/tinyexr.cpp
+
+    ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/TinyEXR/miniz.c
 )
 target_include_directories(astc-encoder PRIVATE 
     ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/TinyEXR)
-#target_link_libraries(astc-encoder PRIVATE tinyEXR)
+target_include_directories(astc-encoder  PUBLIC ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/zip)
 
 
 # VulkanMemoryAllocator
@@ -224,7 +230,7 @@ target_include_directories(imgui PUBLIC ${THE_FORGE_DIR}/Common_3/ThirdParty/Ope
 
 
 add_library(TheForge STATIC ${THE_FORGE_SOURCES})
-target_link_libraries(TheForge PUBLIC cpu_features Eastl imgui astc-encoder cgltf Bstr basis_universal meshoptimizer tinydds tinyimageformat tinyktx ga)
+target_link_libraries(TheForge PUBLIC cpu_features imgui astc-encoder cgltf Bstr basis_universal meshoptimizer tinydds tinyimageformat tinyktx ga)
 target_include_directories(TheForge PUBLIC ${THE_FORGE_DIR})
 
 IF(CMAKE_SYSTEM_NAME MATCHES "Darwin")
@@ -239,6 +245,8 @@ elseif(CMAKE_SYSTEM_NAME MATCHES "Windows")
         
     target_sources(TheForge PRIVATE ${THE_FORGE_OS_WINDOWS_SOURCES})
 elseif(CMAKE_SYSTEM_NAME MATCHES "Linux")
+    include(FindPkgConfig)
+
     file(GLOB THE_FORGE_OS_LINUX_SOURCES
         ${THE_FORGE_DIR}/Common_3/OS/Linux/*.cpp
         ${THE_FORGE_DIR}/Common_3/OS/Linux/*.c

@@ -120,8 +120,8 @@ namespace hpl {
 
                 mat4 m_invViewRotation;
 
-                float m_radius;
                 float3 m_lightPos;
+                float m_radius;
 
                 float4 m_lightColor;
 

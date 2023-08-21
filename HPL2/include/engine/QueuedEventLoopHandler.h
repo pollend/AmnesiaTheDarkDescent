@@ -68,7 +68,7 @@ public:
         std::function<bool(Params...)> filter;
     };
     inline QueuedEventLoopHandler(
-        BroadcastEvent event, TargetEvent::Callback callback, const QueueEventOptions options = QueueEventOptions{})
+        BroadcastEvent event, typename TargetEvent::Callback callback, const QueueEventOptions options = QueueEventOptions{})
         :
         m_dispatchHandler([&, options, callback](float value) {
             std::lock_guard<std::mutex> lock(m_mutex);
@@ -100,7 +100,7 @@ public:
     QueuedEventLoopHandler& operator=(QueuedEventLoopHandler&&) = delete;
 private:
     hpl::IUpdateEventLoop::UpdateEvent::Handler m_dispatchHandler;
-    hpl::Event<Params...>::Handler m_handler;
+    typename hpl::Event<Params...>::Handler m_handler;
     std::queue<std::tuple<typename std::remove_reference<Params>::type...>> m_queuedEvents;
     std::mutex m_mutex;
     BroadcastEvent m_broadcastEvent;

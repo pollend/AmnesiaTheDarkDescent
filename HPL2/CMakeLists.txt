@@ -2,18 +2,12 @@ cmake_minimum_required (VERSION 3.0)
 project(HPL2)
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-if (${CMAKE_SYSTEM_NAME} MATCHES "Linux" OR ${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD")
-  set(LINUX ON)
-  set(LINUX ON PARENT_SCOPE)
-endif()
-
 set(HPL2_VERSION_MAJOR 2)
 set(HPL2_VERSION_MINOR 0)
 
 add_definitions(
   -DUSE_OALWRAPPER
   -DUSE_SDL2
-
 )
 
 # common shared source
@@ -308,7 +302,7 @@ else()
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         COMMAND ${CMAKE_COMMAND} -E env "VULKAN_SDK=$ENV{VULKAN_SDK}" "python3" "${FSL_COMPILER}"
         -l VULKAN 
-        -d ${_HPL2_SHADER_}
+        -d ${HPL2_SHADER}
         --verbose 
         -b ${HPL2_COMPILEDSHADER}
         --incremental 

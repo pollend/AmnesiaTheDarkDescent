@@ -46,8 +46,8 @@
         
         DATA(float4x4, invViewRotation, none);
         
-        DATA(float, lightRadius, none);
         DATA(float3, lightPos, none);
+        DATA(float, lightRadius, none);
         
         DATA(float4, lightColor, none);
 
