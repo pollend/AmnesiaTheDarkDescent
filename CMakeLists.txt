@@ -38,7 +38,7 @@ add_definitions(
     -DUSE_THE_FORGE_LEGACY
 )
 
-option(COPY_GAME_ASSETS "copy games assets into output directory" ON)
+option(COPY_GAME_ASSETS "copy games assets into output directory" OFF)
 option(WITH_TOOLS "build HPL2 with tools" ON)
 
 add_subdirectory(external)
