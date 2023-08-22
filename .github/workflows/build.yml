@@ -2,6 +2,11 @@ name: CI
 
 on: [push, pull_request]
 
+permissions:
+  contents: write
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  VCPKG_FEATURE_FLAGS: dependencygraph
 jobs:
   build:
     runs-on: ubuntu-latest

@@ -6,7 +6,11 @@ on:
       tag:
         description: 'Tagged Version'
         required: true
-
+permissions:
+  contents: write
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  VCPKG_FEATURE_FLAGS: dependencygraph
 jobs:
   windows:
     runs-on: windows-latest
