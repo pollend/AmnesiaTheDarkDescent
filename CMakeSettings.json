@@ -1,13 +1,13 @@
 ﻿{
+  "environments": [ { "VULKAN_SDK": "C:\\VulkanSDK\\1.3.250.1" } ],
   "configurations": [
     {
       "name": "x64-Debug",
-      "generator": "Ninja",
+      "generator": "Visual Studio 17 2022 Win64",
       "configurationType": "Debug",
       "inheritEnvironments": [ "msvc_x64_x64" ],
       "buildRoot": "${projectDir}\\out\\build\\${name}",
       "installRoot": "${projectDir}\\out\\install\\${name}",
-      "cmakeCommandArgs": "",
       "ctestCommandArgs": "",
       "variables": [
         {
@@ -15,7 +15,8 @@
           "value": "C:/Program Files (x86)/Steam/steamapps/common/Amnesia The Dark Descent",
           "type": "PATH"
         }
-      ]
+      ],
+      "cmakeCommandArgs": "VULKAN_SDK=\"C:\\VulkanSDK\\1.3.250.1\""
     }
   ]
 }

@@ -5,11 +5,6 @@ set(CMAKE_INSTALL_PREFIX ${INSTALL_OUTPUT_PATH} CACHE PATH "Install path prefix,
 
 enable_language(ASM)
 
-# hack to get to build on windwos
-find_package(Vulkan REQUIRED)
-include_directories(${Vulkan_INCLUDE_DIRS})
-link_libraries(${Vulkan_LIBRARY})
-
 if(MSVC)
     add_definitions(/MP /std:c++20)
 endif()
@@ -19,6 +14,16 @@ if(UNIX)
 endif()
 include("${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake")
 
+find_package(Vulkan REQUIRED)
+include_directories(${Vulkan_INCLUDE_DIRS})
+link_libraries(${Vulkan_LIBRARY})
+
+add_definitions(
+    -DUSE_THE_FORGE_LEGACY
+)
+
+
+# hack to get to build on windwos
 # HACK to correctly set Linux property for newer cmake
 if(NOT APPLE AND UNIX)
     set(LINUX TRUE)
@@ -28,12 +33,14 @@ ENDIF()
 if(WIN32)
     add_compile_definitions("NOMINMAX=1")
 endif()
+
 add_definitions(
     -DUSE_THE_FORGE_LEGACY
 )
 
-option(COPY_GAME_ASSETS "copy games assets into output directory" ON)
+option(COPY_GAME_ASSETS "copy games assets into output directory" OFF)
 option(WITH_TOOLS "build HPL2 with tools" ON)
 
+add_subdirectory(external)
 add_subdirectory(HPL2)
-add_subdirectory(amnesia/src)
+add_subdirectory(amnesia)

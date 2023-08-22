@@ -1,23 +1,27 @@
 {
     "name": "amnesia",
-    "dependencies": [
-      "libvorbis",
-      {
-        "name": "sdl2",
-        "platform": "linux",
-        "features": ["x11"]
-      },
-      {
-        "name": "sdl2",
-        "platform": "windows"
-      },
-      "libogg",
-      "openal-soft",
-      "zlib",
-      "folly",
-      {
-        "name": "devil",
-        "platform": "windows"
-      }
-    ]
+  "dependencies": [
+    "libvorbis",
+    {
+      "name": "sdl2",
+      "platform": "linux",
+      "features": [ "x11" ]
+    },
+    {
+      "name": "sdl2",
+      "platform": "windows"
+    },
+    {
+      "name": "vulkan",
+      "platform": "windows"
+    },
+    "libogg",
+    "openal-soft",
+    "zlib",
+    "folly",
+    {
+      "name": "devil",
+      "platform": "windows"
+    }
+  ]
 }

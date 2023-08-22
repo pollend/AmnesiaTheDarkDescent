@@ -1,0 +1,7 @@
+<Material>
+  <Main Type="SolidDiffuse" PhysicsMaterial="Default" UseAlpha="False" DepthTest="True" HeightMapScale="0.07" HeightMapBias="0"/>
+  <TextureUnits>
+    <Diffuse File="modelview_rect.jpg" Compress="false" Type="2D" Mipmaps="true" Wrap="Repeat" />
+    <NMap File="modelview_rect_bump.jpg" Compress="false" Type="2D" Mipmaps="true" Wrap="Repeat" />
+  </TextureUnits>
+</Material>
