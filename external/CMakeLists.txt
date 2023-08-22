@@ -216,6 +216,9 @@ file(GLOB THE_FORGE_SOURCES
 # volk
 add_library(volk STATIC 
     ${THE_FORGE_DIR}/Common_3/Graphics/ThirdParty/OpenSource/volk/volk.c)
+if(WIN32)
+    target_include_directories(volk  PUBLIC ${THE_FORGE_DIR}/Common_3/Graphics/ThirdParty/OpenSource/Vulkan-Headers)
+endif()
 target_include_directories(volk PUBLIC ${THE_FORGE_DIR}/Common_3/Graphics/ThirdParty/OpenSource/volk)
 
 # SPIRV_Cross

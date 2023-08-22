@@ -14,10 +14,6 @@ if(UNIX)
 endif()
 include("${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake")
 
-find_package(Vulkan REQUIRED)
-include_directories(${Vulkan_INCLUDE_DIRS})
-link_libraries(${Vulkan_LIBRARY})
-
 add_definitions(
     -DUSE_THE_FORGE_LEGACY
 )
