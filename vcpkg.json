@@ -11,10 +11,6 @@
       "name": "sdl2",
       "platform": "windows"
     },
-    {
-      "name": "vulkan",
-      "platform": "windows"
-    },
     "libogg",
     "openal-soft",
     "zlib",
