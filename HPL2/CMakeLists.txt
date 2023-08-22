@@ -270,18 +270,19 @@ set(HPL2_COMPILEDSHADER ${CMAKE_CURRENT_BINARY_DIR}/CompiledShaders/)
 get_filename_component(SHADER_RESOURCE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/resource" ABSOLUTE)
 
 IF(CMAKE_SYSTEM_NAME MATCHES "Windows")
-    add_custom_command(
-        TARGET HPL_SHADERS
-        MAIN_DEPENDENCY
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        COMMAND ${CMAKE_COMMAND} -E env "VULKAN_SDK=$ENV{VULKAN_SDK}" "python3" "${FSL_COMPILER}"
-        -l VULKAN 
-        -d ${HPL2_SHADER}
-        --verbose 
-        -b  ${HPL2_COMPILEDSHADER}
-        --incremental 
-        --compile ${SHADER_RESOURCE_PATH}/ShaderList.fsl
-    )
+    # omit for now Vulkan is not an option 
+    # add_custom_command(
+    #     TARGET HPL_SHADERS
+    #     MAIN_DEPENDENCY
+    #     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    #     COMMAND ${CMAKE_COMMAND} -E env "VULKAN_SDK=$ENV{VULKAN_SDK}" "python3" "${FSL_COMPILER}"
+    #     -l VULKAN 
+    #     -d ${HPL2_SHADER}
+    #     --verbose 
+    #     -b  ${HPL2_COMPILEDSHADER}
+    #     --incremental 
+    #     --compile ${SHADER_RESOURCE_PATH}/ShaderList.fsl
+    # )
     add_custom_command(
         TARGET HPL_SHADERS
         MAIN_DEPENDENCY
