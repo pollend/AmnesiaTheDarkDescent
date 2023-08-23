@@ -6,6 +6,8 @@ on:
       tag:
         description: 'Tagged Version'
         required: true
+permissions:
+  contents: write
 jobs:
   windows:
     runs-on: windows-latest
