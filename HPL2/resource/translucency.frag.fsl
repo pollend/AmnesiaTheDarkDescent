@@ -26,15 +26,15 @@ PsOut PS_MAIN(PsIn In)
     uint textureConfig = Get(uniformMaterialBuffer)[materialID].materialConfig;
     uint blendMode = BlendModeTrans(Get(options)); 
 
-    float4 finalColor = float4(0.0, 0.0 ,0.0, 1.0);
-    if(HasDiffuse(textureConfig)) {
-        finalColor = SampleTex2D(Get(diffuseMap), Get(materialSampler), In.uv) * In.color;
-    }
-
     if(UseIlluminationTrans(Get(options)) &&
         HasCubeMap(textureConfig) &&  
         !UseRefractionTrans(Get(options)) ) {
         textureConfig &= (DiffuseFlag | CubMapFlag | CubeMapAlphaFlag);
+    }
+
+    float4 finalColor = float4(0.0, 0.0 ,0.0, 1.0);
+    if(HasDiffuse(textureConfig)) {
+        finalColor = SampleTex2D(Get(diffuseMap), Get(materialSampler), In.uv) * In.color;
     }
 
     float finalAlpha = Get(sceneAlpha);

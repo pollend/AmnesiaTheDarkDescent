@@ -182,8 +182,9 @@ namespace hpl
          // Set up the reflections
          if (apMaterial->GetImage(eMaterialTexture_CubeMap))
          {
-             if (bRefractionEnabled == false)
-                 apMaterial->SetHasTranslucentIllumination(true);
+            if (bRefractionEnabled == false) {
+                apMaterial->SetHasTranslucentIllumination(true);
+            }
          }
     }
 

@@ -709,13 +709,26 @@ namespace hpl {
                 addResource(&desc, nullptr);
                 return true;
             });
+            m_hiZBoundBoxBuffer.Load([&](Buffer** buf) {
+                BufferLoadDesc desc = {};
+                desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_BUFFER;
+                desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
+                desc.mDesc.mElementCount = cRendererDeferred::MaxObjectTest;
+                desc.mDesc.mStructStride = sizeof(float4);
+                desc.mDesc.mSize = desc.mDesc.mStructStride * desc.mDesc.mElementCount;
+                desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
+                desc.pData = nullptr;
+                desc.ppBuffer = buf;
+                addResource(&desc, nullptr);
+                return true;
+            });
             m_occlusionTestBuffer.Load([&](Buffer** buf) {
                 BufferLoadDesc desc = {};
                 desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_RW_BUFFER;
                 desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_GPU_TO_CPU;
-                desc.mDesc.mElementCount = cRendererDeferred::UniformPropBlock::MaxObjectTest;
+                desc.mDesc.mElementCount = cRendererDeferred::MaxObjectTest;
                 desc.mDesc.mStructStride = sizeof(uint32_t);
-                desc.mDesc.mSize = sizeof(uint32_t) * cRendererDeferred::UniformPropBlock::MaxObjectTest;
+                desc.mDesc.mSize = sizeof(uint32_t) * cRendererDeferred::MaxObjectTest;
                 desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
                 desc.pData = nullptr;
                 desc.ppBuffer = buf;
@@ -810,7 +823,7 @@ namespace hpl {
                 desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_RW_BUFFER;
                 desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_GPU_TO_CPU;
                 desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
-                desc.mDesc.mElementCount = cRendererDeferred::UniformPropBlock::MaxObjectTest;
+                desc.mDesc.mElementCount = cRendererDeferred::MaxObjectTest;
                 desc.mDesc.mStructStride = sizeof(uint64_t);
                 desc.mDesc.mSize = desc.mDesc.mStructStride * desc.mDesc.mElementCount;
                 desc.pData = nullptr;
@@ -2688,23 +2701,26 @@ namespace hpl {
 
                 cmdBindDescriptorSet(m_prePassCmd, mainFrameIndex, m_materialSet.m_frameSet[frame.m_frameIndex]);
 
-                BufferUpdateDesc updateDesc = { m_hiZOcclusionUniformBuffer.m_handle, 0, sizeof(UniformPropBlock) };
-                beginUpdateResource(&updateDesc);
-                auto* uniformBlock = reinterpret_cast<UniformPropBlock*>(updateDesc.pMappedData);
-                uniformBlock->viewProjeciton = cMath::ToForgeMat(cMath::MatrixMul(mainFrustumProj, mainFrustumView).GetTranspose());
 
+                UniformPropBlock uniformPropBlock = {};
+                uniformPropBlock.viewProjeciton = cMath::ToForgeMat(cMath::MatrixMul(mainFrustumProj, mainFrustumView).GetTranspose());
                 for (size_t i = 0; i < uniformTest.size(); i++) {
                     auto& test = uniformTest[i];
                     cMaterial* pMaterial = test.m_renderable->GetMaterial();
                     iVertexBuffer* vertexBuffer = test.m_renderable->GetVertexBuffer();
 
-                    ASSERT(uniformTest.size() < UniformPropBlock::MaxObjectTest && "Too many renderables");
+                    ASSERT(uniformTest.size() < MaxObjectTest && "Too many renderables");
                     auto* pBoundingVolume = test.m_renderable->GetBoundingVolume();
-                    uniformBlock->inputColliders[i * 2] =
-                        float4(pBoundingVolume->GetMin().x, pBoundingVolume->GetMin().y, pBoundingVolume->GetMin().z, 0.0f);
-                    uniformBlock->inputColliders[(i * 2) + 1] =
-                        float4(pBoundingVolume->GetMax().x, pBoundingVolume->GetMax().y, pBoundingVolume->GetMax().z, 0.0f);
 
+                    BufferUpdateDesc updateDesc = { m_hiZBoundBoxBuffer.m_handle, i * (sizeof(float4) * 2), sizeof(float4) * 2 };
+                    beginUpdateResource(&updateDesc);
+                    reinterpret_cast<float4*>(updateDesc.pMappedData)[0] =
+                        float4(pBoundingVolume->GetMin().x, pBoundingVolume->GetMin().y, pBoundingVolume->GetMin().z, 0.0f);
+                    reinterpret_cast<float4*>(updateDesc.pMappedData)[1] =
+                        float4(pBoundingVolume->GetMax().x, pBoundingVolume->GetMax().y, pBoundingVolume->GetMax().z, 0.0f);
+                    endUpdateResource(&updateDesc, nullptr);
+
+            
                     if (!test.m_preZPass || !vertexBuffer || !pMaterial || pMaterial->GetType()->IsTranslucent()) {
                         continue;
                     }
@@ -2731,9 +2747,14 @@ namespace hpl {
                     cmdDrawIndexed(m_prePassCmd, binding.m_indexBuffer.numIndicies, 0, 0);
                 }
 
-                uniformBlock->maxMipLevel = currentGBuffer.m_hiZMipCount - 1;
-                uniformBlock->depthDim = uint2(common->m_size.x, common->m_size.y);
-                uniformBlock->numObjects = uniformTest.size();
+
+                uniformPropBlock.maxMipLevel = currentGBuffer.m_hiZMipCount - 1;
+                uniformPropBlock.depthDim = uint2(common->m_size.x, common->m_size.y);
+                uniformPropBlock.numObjects = uniformTest.size();
+
+                BufferUpdateDesc updateDesc = { m_hiZOcclusionUniformBuffer.m_handle, 0, sizeof(UniformPropBlock) };
+                beginUpdateResource(&updateDesc);
+                (*reinterpret_cast<UniformPropBlock*>(updateDesc.pMappedData)) = uniformPropBlock;
                 endUpdateResource(&updateDesc, nullptr);
                 cmdEndDebugMarker(m_prePassCmd);
             }
@@ -2869,13 +2890,15 @@ namespace hpl {
 
                 cmdBeginDebugMarker(m_prePassCmd, 0, 1, 0, "AABB Hi-Z");
                 {
-                    std::array<DescriptorData, 3> params = {};
+                    std::array<DescriptorData, 4> params = {};
                     params[0].pName = "objectUniformBlock";
                     params[0].ppBuffers = &m_hiZOcclusionUniformBuffer.m_handle;
                     params[1].pName = "occlusionTest";
                     params[1].ppBuffers = &m_occlusionTestBuffer.m_handle;
-                    params[2].pName = "depthInput";
-                    params[2].ppTextures = &currentGBuffer.m_hizDepthBuffer.m_handle->pTexture;
+                    params[2].pName = "occlusionBoxBuffer";
+                    params[2].ppBuffers = &m_hiZBoundBoxBuffer.m_handle;
+                    params[3].pName = "depthInput";
+                    params[3].ppTextures = &currentGBuffer.m_hizDepthBuffer.m_handle->pTexture;
                     updateDescriptorSet(frame.m_renderer->Rend(), 0, m_descriptorAABBOcclusionTest.m_handle, params.size(), params.data());
 
                     cmdBindDescriptorSet(m_prePassCmd, 0, m_descriptorAABBOcclusionTest.m_handle);
@@ -4105,7 +4128,7 @@ namespace hpl {
                         // TODO: fix refraction
                         if (pMaterial->HasTranslucentIllumination()) {
                             TranslucencyPipeline::TranslucencyBlend blendMode = translucencyBlendTable[pMaterial->GetBlendMode()];
-                            if ( cubeMap && !isRefraction) {
+                            if (cubeMap && !isRefraction) {
                                 blendMode = TranslucencyPipeline::TranslucencyBlend::BlendAdd;
                             }
                             materialConst.m_options =
@@ -4159,7 +4182,7 @@ namespace hpl {
                                 .m_modelMatrix = std::optional{ pMatrix ? *pMatrix : cMatrixf::Identity },
                             });
                         materialConst.objectId = instance;
-
+                        cmdBindPushConstants(frame.m_cmd, m_materialRootSignature, materialObjectIndex, &materialConst);
                         cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
                         break;
                     }
