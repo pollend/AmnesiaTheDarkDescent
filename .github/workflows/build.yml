@@ -12,8 +12,8 @@ jobs:
           submodules: recursive
       - name: Configure Cache
         run: |
-          echo "ACTIONS_CACHE_URL=${{ env.ACTIONS_CACHE_URL }}" >> "$GITHUB_ENV"
-          echo "ACTIONS_CACHE_URL=${{ env.ACTIONS_RUNTIME_TOKEN }}" >> "$GITHUB_ENV"
+          echo 'ACTIONS_CACHE_URL=${{ env.ACTIONS_CACHE_URL }}' >> "$GITHUB_ENV"
+          echo 'ACTIONS_CACHE_URL=${{ env.ACTIONS_RUNTIME_TOKEN }}' >> "$GITHUB_ENV"
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -21,7 +21,7 @@ jobs:
       - name: Configure
         run: |
           mkdir ${{ github.workspace }}/build && cd ${{ github.workspace }}/build
-          cmake ${{ github.workspace }} -DVCPKG_INSTALL_OPTIONS='clear;x-gha,readwrite' -G Ninja
+          cmake ${{ github.workspace }} -DVCPKG_INSTALL_OPTIONS='--binarysource="clear;x-gha,readwrite"' -G Ninja
       - name: Build
         run: |
           cd ${{ github.workspace }}/build
