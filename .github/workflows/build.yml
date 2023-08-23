@@ -22,7 +22,7 @@ jobs:
       - name: Configure
         run: |
           ./vcpkg/bootstrap-vcpkg.sh
-          ./vcpkg/vcpkg install --triplet x64-windows --binarysource="clear;x-gha,readwrite"
+          ./vcpkg/vcpkg install --triplet x64-linux --binarysource="clear;x-gha,readwrite"
           mkdir ${{ github.workspace }}/build && cd ${{ github.workspace }}/build
           cmake ${{ github.workspace }} -G Ninja
       - name: Build
