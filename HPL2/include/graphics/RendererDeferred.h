@@ -81,6 +81,7 @@ namespace hpl {
         static constexpr uint32_t MaxHiZMipLevels = 32;
         static constexpr uint32_t MaxMaterialFrameDescriptors = 256;
         static constexpr uint32_t MaxMaterialSamplers = static_cast<uint32_t>(eTextureWrap_LastEnum) * static_cast<uint32_t>(eTextureFilter_LastEnum) * static_cast<uint32_t>(cMaterial::TextureAntistropy::Antistropy_Count);
+        static constexpr uint32_t MaxObjectTest = 32768;
 
         enum LightConfiguration { HasGoboMap = 0x1, HasShadowMap = 0x2 };
 
@@ -603,6 +604,7 @@ namespace hpl {
         ForgePipelineHandle m_pipelineAABBOcclusionTest;
         Shader* m_copyDepthShader;
         ForgeBufferHandle m_hiZOcclusionUniformBuffer;
+        ForgeBufferHandle m_hiZBoundBoxBuffer;
         ForgeBufferHandle m_occlusionTestBuffer;
 
         struct OcclusionQueryAlpha {
@@ -627,13 +629,12 @@ namespace hpl {
             bool m_preZPass = false;
             iRenderable* m_renderable = nullptr;
         };
+
         struct UniformPropBlock {
-            static constexpr uint32_t MaxObjectTest = 2048;
             mat4 viewProjeciton;
             uint32_t numObjects;
             uint32_t maxMipLevel;
             uint2 depthDim;
-            float4 inputColliders[MaxObjectTest];
         };
 
         // light pass

@@ -2,11 +2,6 @@ name: CI
 
 on: [push, pull_request]
 
-permissions:
-  contents: write
-env:
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  VCPKG_FEATURE_FLAGS: dependencygraph
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -15,6 +10,10 @@ jobs:
         uses: actions/checkout@v3
         with:
           submodules: recursive
+      - name: Configure Cache
+        run: |
+          echo "ACTIONS_CACHE_URL=${{ env.ACTIONS_CACHE_URL }}" >> "$GITHUB_ENV"
+          echo "ACTIONS_CACHE_URL=${{ env.ACTIONS_RUNTIME_TOKEN }}" >> "$GITHUB_ENV"
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -22,7 +21,7 @@ jobs:
       - name: Configure
         run: |
           mkdir ${{ github.workspace }}/build && cd ${{ github.workspace }}/build
-          cmake ${{ github.workspace }} -G Ninja
+          cmake ${{ github.workspace }} -DVCPKG_INSTALL_OPTIONS='clear;x-gha,readwrite' -G Ninja
       - name: Build
         run: |
           cd ${{ github.workspace }}/build
