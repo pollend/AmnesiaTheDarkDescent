@@ -276,8 +276,14 @@ namespace hpl {
         inline TextureAntistropy GetTextureAntistropy() const { return m_antistropy; }
         inline eTextureWrap GetTextureWrap() const { return m_textureWrap; }
 
-        inline void setTextureFilter(eTextureFilter filter) { m_textureFilter = filter; }
-        inline void setTextureWrap(eTextureWrap wrap) { m_textureWrap = wrap; }
+        inline void setTextureFilter(eTextureFilter filter) {
+            m_textureFilter = filter;
+            Dirty();
+        }
+        inline void setTextureWrap(eTextureWrap wrap) {
+            m_textureWrap = wrap;
+            Dirty();
+        }
 		inline int GetRenderFrameCount() const { return mlRenderFrameCount;}
 		inline void SetRenderFrameCount(const int alCount) { mlRenderFrameCount = alCount;}
 

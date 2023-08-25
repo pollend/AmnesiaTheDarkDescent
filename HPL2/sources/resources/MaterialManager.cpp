@@ -152,15 +152,6 @@ namespace hpl {
 		{
 			cMaterial *pMat = static_cast<cMaterial*>(it->second);
 		    pMat->setTextureFilter(aFilter);
-
-            for(int i=0; i<eMaterialTexture_LastEnum; ++i)
-			{
-                auto image = pMat->GetImage(static_cast<eMaterialTexture>(i));
-                if(image) {
-                    image->setTextureFilter(aFilter);
-                }
-			}
-            pMat->Dirty();
 		}
 	}
 
@@ -175,14 +166,7 @@ namespace hpl {
 		{
 			cMaterial *pMat = static_cast<cMaterial*>(it->second);
             pMat->SetTextureAnisotropy(afX);
-			for(int i=0; i<eMaterialTexture_LastEnum; ++i)
-			{
-                auto image = pMat->GetImage(static_cast<eMaterialTexture>(i));
-                if(image) {
-                    image->m_samplerDesc.mMaxAnisotropy = afX;
-                }
-			}
-            pMat->Dirty();
+
 		}
 	}
 
@@ -391,9 +375,6 @@ namespace hpl {
 			    pMat->SetTextureAnisotropy(mfTextureAnisotropy);
 		        if(pImage) {
 					pMat->SetImage(pUsedTexture->mType, pImage);
-                    pImage->setWrapMode(wrap);
-                    pImage->setTextureFilter(mTextureFilter);
-				    pImage->m_samplerDesc.mMaxAnisotropy = mfTextureAnisotropy;
                 }
 			}
 			if(!pImageResource)

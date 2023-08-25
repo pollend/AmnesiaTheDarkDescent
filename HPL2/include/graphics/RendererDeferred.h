@@ -544,7 +544,6 @@ namespace hpl {
             };
             static constexpr size_t NumOfVariants = 4;
         };
-        folly::F14VectorMap<SamplerDesc, Sampler*> m_objectSamplerMap;
         std::array<Sampler*, ObjectSamplerKey::NumOfVariants> m_objectSamplers{};
         struct LightResourceEntry {
             ForgeTextureHandle m_goboCubeMap;

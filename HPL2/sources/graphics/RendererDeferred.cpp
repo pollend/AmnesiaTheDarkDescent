@@ -2344,15 +2344,8 @@ namespace hpl {
 
                 auto* image = apMaterial->GetImage(supportedTexture);
                 if (image) {
-                    auto& samplerDesc = image->m_samplerDesc;
-                    auto& sampler = m_objectSamplerMap[samplerDesc];
-                    if (!sampler) {
-                        addSampler(frame.m_renderer->Rend(), &samplerDesc, &sampler);
-                    }
-
                     params[paramCount].pName = TextureNameLookup[supportedTexture];
                     params[paramCount++].ppTextures = &image->GetTexture().m_handle;
-
                     descInfo.m_textureHandles[supportedTexture] = image->GetTexture();
                 }
             }

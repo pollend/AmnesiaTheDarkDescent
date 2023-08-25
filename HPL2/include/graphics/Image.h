@@ -77,13 +77,7 @@ namespace hpl {
         inline ForgeTextureHandle& GetTexture() {
             return m_texture;
         }
-        inline eTextureWrap textureWrapMode() { return m_textureWrapMode; }
-        void setTextureFilter(const eTextureFilter& filter);
-        void setWrapMode(const eTextureWrap& wrap);
-
-        SamplerDesc m_samplerDesc{};
         ForgeTextureHandle m_texture;
-        eTextureWrap m_textureWrapMode;
     };
 
 } // namespace hpl
