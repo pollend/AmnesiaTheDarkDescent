@@ -95,14 +95,6 @@ namespace hpl {
 		}
 	}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// BIT WISE OPERATIONS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
 	int cMath::GetFlagBit(int alBitNum)
 	{
 		switch(alBitNum)
@@ -146,6 +138,15 @@ namespace hpl {
 		if(avBaseMax.z < avAddMax.z)	avBaseMax.z = avAddMax.z;
 	}
 
+	void cMath::ExpandAABB(vec3& avBaseMin,vec3& avBaseMax, const vec3& avAddMin, const vec3& avAddMax) {
+		if(avBaseMin.getX() > avAddMin.getX())	avBaseMin.setX(avAddMin.getX());
+		if(avBaseMin.getY() > avAddMin.getY())	avBaseMin.setY(avAddMin.getY());
+		if(avBaseMin.getZ() > avAddMin.getZ())	avBaseMin.setZ(avAddMin.getZ());
+
+		if(avBaseMax.getX() < avAddMax.getX())	avBaseMax.setX(avAddMax.getX());
+		if(avBaseMax.getY() < avAddMax.getY())	avBaseMax.setY(avAddMax.getY());
+		if(avBaseMax.getZ() < avAddMax.getZ())	avBaseMax.setZ(avAddMax.getZ());
+    }
 	//-----------------------------------------------------------------------
 
 	//////////////////////////////////////////////////////////////////////////

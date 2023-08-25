@@ -26,61 +26,6 @@
 
 namespace hpl {
 
-	//////////////////////////////////////////////////////////////////////////
-	// VISIBLE NODE TRACKER
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
-	cVisibleRCNodeTracker::cVisibleRCNodeTracker()
-	{
-		mlCurrentVisibleNodeSet =0;
-
-		mlFrameCounter =0;
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cVisibleRCNodeTracker::SwitchAndClearVisibleNodeSet()
-	{
-		mlCurrentVisibleNodeSet++;
-		if(mlCurrentVisibleNodeSet>=2) mlCurrentVisibleNodeSet=0;
-
-		m_setVisibleNodes[mlCurrentVisibleNodeSet].clear();
-	}
-
-	void cVisibleRCNodeTracker::SetNodeVisible(iRenderableContainerNode *apNode)
-	{
-		m_setVisibleNodes[mlCurrentVisibleNodeSet].insert(apNode);
-	}
-
-	bool cVisibleRCNodeTracker::WasNodeVisible(iRenderableContainerNode *apNode)
-	{
-		int lPrevSet = mlCurrentVisibleNodeSet==0 ? 1 : 0;
-
-		tRenderableContainerNodeSetIt it  = m_setVisibleNodes[lPrevSet].find(apNode);
-		return it != m_setVisibleNodes[lPrevSet].end();
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cVisibleRCNodeTracker::Reset()
-	{
-		mlCurrentVisibleNodeSet =0;
-		mlFrameCounter =0;
-
-		for(int i=0; i<2; i++) m_setVisibleNodes[i].clear();
-	}
-
-	//-----------------------------------------------------------------------
-
-
-	//////////////////////////////////////////////////////////////////////////
-	// RENDERABLE CALLBACK
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
 	cRenderableContainerObjectCallback::cRenderableContainerObjectCallback()
 	{
 
@@ -132,7 +77,7 @@ namespace hpl {
 		mbNeedAABBUpdate = false;
 		mPrevFrustumCollision = eCollision_Outside;
 	}
-	
+
 	iRenderableContainerNode::~iRenderableContainerNode(){
 	}
 

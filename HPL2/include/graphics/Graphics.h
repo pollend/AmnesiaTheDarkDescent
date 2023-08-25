@@ -45,18 +45,6 @@ namespace hpl {
 	class cPostEffectComposite;
 	class cParserVarContainer;
 
-	//------------------------------------------------------
-
-	class cTempFrameBuffer
-	{
-	public:
-		iFrameBuffer *mpFrameBuffer;
-		cVector2l mvSize;
-		ePixelFormat mPixelFormat;
-		int mlIndex;
-	};
-
-	//------------------------------------------------------
 
 	typedef std::list<iFrameBuffer*> tFrameBufferList;
 	typedef tFrameBufferList::iterator tFrameBufferListIt;
@@ -98,7 +86,7 @@ namespace hpl {
 
 		[[deprecated("replaced with RenderTarget")]]
 		cPostEffectComposite* CreatePostEffectComposite();
-		
+
 		[[deprecated("replaced with RenderTarget")]]
 		void DestroyPostEffectComposite(cPostEffectComposite* apComposite);
 
@@ -122,8 +110,6 @@ namespace hpl {
 		cMeshCreator *mpMeshCreator;
 		cDecalCreator* mpDecalCreator;
 		cResources *mpResources;
-
-		std::vector<cTempFrameBuffer> mvTempFrameBuffers;
 
 		std::vector<iRenderer*> mvRenderers;
 		std::vector<iPostEffectType*> mvPostEffectTypes;

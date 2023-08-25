@@ -35,28 +35,6 @@ namespace hpl {
 	class iRenderable;
 	class cFrustum;
 
-	//-------------------------------------------
-
-	class cVisibleRCNodeTracker
-	{
-	public:
-		cVisibleRCNodeTracker();
-
-		void SwitchAndClearVisibleNodeSet();
-		void SetNodeVisible(iRenderableContainerNode *apNode);
-		bool WasNodeVisible(iRenderableContainerNode *apNode);
-
-		void Reset();
-
-	private:
-		tRenderableContainerNodeSet m_setVisibleNodes[2];
-		int mlCurrentVisibleNodeSet;
-		int mlFrameCounter;
-
-	};
-
-	//-------------------------------------------
-
 	class cRenderableContainerObjectCallback : public iRenderableCallback
 	{
 	public:

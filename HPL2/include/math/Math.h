@@ -109,6 +109,7 @@ namespace hpl {
 		//////////////////////////////////////////////////////
 
 		static void ExpandAABB(cVector3f& avBaseMin,cVector3f& avBaseMax, const cVector3f& avAddMin, const cVector3f& avAddMax);
+		static void ExpandAABB(vec3& avBaseMin,vec3& avBaseMax, const vec3& avAddMin, const vec3& avAddMax);
 
 		//////////////////////////////////////////////////////
 		////////// BV AND RECT INTERSECTION //////////////////
@@ -499,8 +500,8 @@ namespace hpl {
 
 		static inline bool Vector3EqualEpsilon(const cVector3f &a, const cVector3f &b, float epsilon = 0.0001f)
 		{
-			return (Abs(a.x - b.x) < epsilon 
-				&& Abs(a.y - b.y) < epsilon && 
+			return (Abs(a.x - b.x) < epsilon
+				&& Abs(a.y - b.y) < epsilon &&
 				Abs(a.z - b.z) < epsilon);
 		}
 

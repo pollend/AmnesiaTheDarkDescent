@@ -253,11 +253,6 @@ namespace hpl
         // Create data
         mpRenderList = hplNew(cRenderList, ());
 
-        mpVisibleNodeTracker = hplNew(cVisibleRCNodeTracker, ());
-
-        ////////////////////////
-        // Setup data
-
         ////////////////////////
         // Set up General Variables
         mbIsReflection = abIsReflection;
@@ -318,7 +313,6 @@ namespace hpl
     cRenderSettings::~cRenderSettings()
     {
         hplDelete(mpRenderList);
-        hplDelete(mpVisibleNodeTracker);
 
         if (mpReflectionSettings)
             hplDelete(mpReflectionSettings);
@@ -328,8 +322,6 @@ namespace hpl
 
     void cRenderSettings::ResetVariables()
     {
-        // return;
-        mpVisibleNodeTracker->Reset();
 
         if (mpReflectionSettings)
             mpReflectionSettings->ResetVariables();
@@ -370,20 +362,6 @@ namespace hpl
         // Output
         RenderSettingsCopy(mlNumberOfLightsRendered);
         RenderSettingsCopy(mlNumberOfOcclusionQueries);
-    }
-
-    void cShadowMapLightCache::SetFromLight(iLight* apLight)
-    {
-        mpLight = apLight;
-        mlTransformCount = apLight->GetTransformUpdateCount();
-        mfRadius = apLight->GetRadius();
-
-        if (apLight->GetLightType() == eLightType_Spot)
-        {
-            cLightSpot* pSpotLight = static_cast<cLightSpot*>(apLight);
-            mfAspect = pSpotLight->GetAspect();
-            mfFOV = pSpotLight->GetFOV();
-        }
     }
 
     //-----------------------------------------------------------------------

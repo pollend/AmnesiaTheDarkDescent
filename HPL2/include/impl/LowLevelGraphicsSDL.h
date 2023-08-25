@@ -105,7 +105,7 @@ namespace hpl {
 											eVertexBufferDrawType aDrawType,
 											eVertexBufferUsageType aUsageType,
 											int alReserveVtxSize=0,int alReserveIdxSize=0);
-											
+
 		[[deprecated("replaced with BGFX")]]
 		iFrameBuffer* CreateFrameBuffer(const tString& asName);
 		[[deprecated("replaced with BGFX")]]
@@ -204,10 +204,6 @@ namespace hpl {
 		[[deprecated("replaced with BGFX")]]
 		void SetPolygonOffset(float afBias,float afSlopeScaleBias);
 
-		/////////////////////////////////////////////////////
-		/////////// MATRIX //////////////////////////////////
-		/////////////////////////////////////////////////////
-
 		[[deprecated("replaced with BGFX")]]
 		void PushMatrix(eMatrix aMtxType);
 		[[deprecated("replaced with BGFX")]]
@@ -223,29 +219,20 @@ namespace hpl {
 		[[deprecated("replaced with BGFX")]]
 		void SetOrthoProjection(const cVector3f& avMin, const cVector3f& avMax);
 
-		/////////////////////////////////////////////////////
-		/////////// TEXTURE OPERATIONS ///////////////////////
-		/////////////////////////////////////////////////////
-
 		[[deprecated("replaced with BGFX")]]
 		void SetTexture(unsigned int alUnit,iTexture* apTex);
-
-
-		/////////////////////////////////////////////////////
-		/////////// DRAWING ///////////////////////////////
-		/////////////////////////////////////////////////////
 
 		[[deprecated("replaced with BGFX")]]
 		void DrawTriangle(tVertexVec& avVtx);
 
 		[[deprecated("replaced with BGFX")]]
 		void DrawQuad(	const cVector3f &avPos,const cVector2f &avSize, const cColor& aColor=cColor(1,1));
-		
+
 		[[deprecated("replaced with BGFX")]]
 		void DrawQuad(	const cVector3f &avPos,const cVector2f &avSize,
 						const cVector2f &avMinTexCoord,const cVector2f &avMaxTexCoord,
 						const cColor& aColor=cColor(1,1));
-		
+
 		[[deprecated("replaced with BGFX")]]
 		void DrawQuad(	const cVector3f &avPos,const cVector2f &avSize,
 						const cVector2f &avMinTexCoord0,const cVector2f &avMaxTexCoord0,
@@ -314,7 +301,6 @@ namespace hpl {
 		void FlushQuadBatch(tVtxBatchFlag aTypeFlags, bool abAutoClear=true);
 		[[deprecated("replaced with BGFX")]]
 		void ClearBatch();
-
 
 	private:
 		int mlMultisampling;

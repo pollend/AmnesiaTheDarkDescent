@@ -645,13 +645,14 @@ void cLuxDebugHandler::RenderSolid(cRendererCallbackFunctions* apFunctions)
 {
 	if(mbInspectionMode && mpInspectMeshEntity)
 	{
-		apFunctions->SetBlendMode(eMaterialBlendMode_None);
-		apFunctions->SetDepthTest(true);
-		apFunctions->SetDepthWrite(false);
+	    ASSERT(false && "methods fremoved from cRendererCallbackFunction");
+   // 	apFunctions->SetBlendMode(eMaterialBlendMode_None);
+   // 	apFunctions->SetDepthTest(true);
+   // 	apFunctions->SetDepthWrite(false);
 
-		apFunctions->SetMatrix(mpInspectMeshEntity->GetModelMatrix(NULL));
-		apFunctions->DrawWireFrame(mpInspectMeshEntity->GetVertexBuffer(), cColor(1,1,1,1));
-		apFunctions->SetMatrix(NULL);
+   // 	apFunctions->SetMatrix(mpInspectMeshEntity->GetModelMatrix(NULL));
+   // 	apFunctions->DrawWireFrame(mpInspectMeshEntity->GetVertexBuffer(), cColor(1,1,1,1));
+   // 	apFunctions->SetMatrix(NULL);
 	}
 
 	if(mbDrawPhysics)

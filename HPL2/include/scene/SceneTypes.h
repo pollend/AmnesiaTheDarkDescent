@@ -124,8 +124,6 @@ namespace hpl
 
 	class iRenderableContainerNode;
 
-	typedef std::set<iRenderableContainerNode*> tRenderableContainerNodeSet;
-	typedef tRenderableContainerNodeSet::iterator tRenderableContainerNodeSetIt;
 
 	typedef std::vector<iRenderableContainerNode*> tRenderableContainerNodeList;
 	typedef tRenderableContainerNodeList::iterator tRenderableContainerNodeListIt;

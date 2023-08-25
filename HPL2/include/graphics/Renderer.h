@@ -57,7 +57,6 @@ namespace hpl {
     class cRenderSettings;
     class cRenderList;
     class iLight;
-    class iOcclusionQuery;
     class cBoundingVolume;
     class iRenderableContainer;
     class iRenderableContainerNode;
@@ -96,19 +95,6 @@ namespace hpl {
         cRect2l GetClipRectFromObject(iRenderable* apObject, float afPaddingPercent, cFrustum* apFrustum, const cVector2l& avScreenSize, float afHalfFovTan);
     }
 
-    class cNodeOcclusionPair
-    {
-    public:
-        iRenderableContainerNode *mpNode;
-        iOcclusionQuery *mpQuery;
-        bool mbObjectsRendered;
-    };
-
-    typedef std::list<cNodeOcclusionPair> tNodeOcclusionPairList;
-    typedef tNodeOcclusionPairList::iterator tNodeOcclusionPairListIt;
-
-
-
     class cRenderSettings
     {
     public:
@@ -123,18 +109,13 @@ namespace hpl {
 
         cRenderList *mpRenderList;
 
-        cVisibleRCNodeTracker *mpVisibleNodeTracker;
-
         cRenderSettings *mpReflectionSettings;
-
-        std::vector<iRenderableContainerNode*> m_testNodes;
 
         ////////////////////////////
         //General settings
         bool mbLog;
 
         cColor mClearColor;
-
         ////////////////////////////
         //Render settings
         int mlMinimumObjectsBeforeOcclusionTesting;
@@ -170,8 +151,6 @@ namespace hpl {
         //Output
         int mlNumberOfLightsRendered;
         int mlNumberOfOcclusionQueries;
-
-
     };
 
     //---------------------------------------------
@@ -183,43 +162,12 @@ namespace hpl {
     };
 
 
-    typedef std::multiset<iRenderableContainerNode*, cRendererNodeSortFunc> tRendererSortedNodeSet;
-    typedef tRendererSortedNodeSet::iterator tRendererSortedNodeSetIt;
-
-    //---------------------------------------------
-
-    class cShadowMapLightCache
-    {
-    public:
-        cShadowMapLightCache() : mpLight(NULL), mlTransformCount(-1), mfRadius(0),mfFOV(0), mfAspect(0) {}
-
-        void SetFromLight(iLight* apLight);
-
-        iLight *mpLight;
-        int mlTransformCount;
-        float mfRadius;
-        float mfFOV;
-        float mfAspect;
-    };
-
-    //---------------------------------------------
-
-    class cShadowMapData
-    {
-    public:
-        int mlFrameCount;
-        LegacyRenderTarget m_target;
-        cShadowMapLightCache mCache;
-    };
-
-
     class iRenderer : public iRenderFunctions
     {
         HPL_RTTI_CLASS(iRenderer, "{A3E0F5A0-0F9B-4F5C-9B9E-0F9B4F5C9B9E}")
 
         friend class cRendererCallbackFunctions;
         friend class cRenderSettings;
-
     public:
 
         iRenderer(const tString& asName, cGraphics *apGraphics,cResources* apResources, int alNumOfProgramComboModes);
@@ -259,7 +207,6 @@ namespace hpl {
         cFrustum *GetCurrentFrustum(){ return mpCurrentFrustum;}
         cRenderList *GetCurrentRenderList(){ return mpCurrentRenderList;}
 
-
         //Temp variables used by material.
         float GetTempAlpha(){ return mfTempAlpha; }
 
@@ -281,16 +228,9 @@ namespace hpl {
 
         static void SetRefractionEnabled(bool abX) { mbRefractionEnabled = abX;}
         static bool GetRefractionEnabled(){ return mbRefractionEnabled;}
-
-
     protected:
-        // a utility to collect renderable objects from the current render list
-        // void RenderableHelper(eRenderListType type, cViewport& viewport, eMaterialRenderMode mode, std::function<void(iRenderable* obj, GraphicsContext::LayoutStream&, GraphicsContext::ShaderProgram&)> handler);
-
         void BeginRendering(float afFrameTime,cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings,
                             bool abSendFrameBufferToPostEffects, bool abAtStartOfRendering=true);
-
-        // cShadowMapData* GetShadowMapData(eShadowMapResolution aResolution, iLight *apLight);
 
         /**
          * Checks if the renderable object is 1) submeshentity 2) is onesided plane 3)is away from camera. If all are true, FALSE is returned.
@@ -346,88 +286,6 @@ namespace hpl {
         cRenderSettings* GetSettings(){ return mpRenderer->mpCurrentSettings;}
         cFrustum* GetFrustum(){ return mpRenderer->mpCurrentFrustum;}
         inline cViewport& GetViewport(){ return m_viewport; }
-
-
-        [[deprecated("SetOrthoProjection is deprecated")]]
-        inline void SetFlatProjection(const cVector2f &avSize=1,float afMin=-100,float afMax=100) { }
-        [[deprecated("SetFlatProjectionMinMax is deprecated")]]
-        inline void SetFlatProjectionMinMax(const cVector3f &avMin,const cVector3f &avMax) { }
-        [[deprecated("SetNormalFrustumProjection is deprecated")]]
-        inline void SetNormalFrustumProjection() {
-        }
-
-        [[deprecated("SetOrthoProjection is deprecated")]]
-        inline void DrawQuad(	const cVector3f& aPos, const cVector2f& avSize, const cVector2f& avMinUV=0, const cVector2f& avMaxUV=1,
-                                bool abInvertY=false, const cColor& aColor=cColor(1,1) )
-                            {
-
-                             }
-        [[deprecated("SetDepthTest is deprecated")]]
-        inline bool SetDepthTest(bool abX){
-            return false;
-         }
-        [[deprecated("SetDepthWrite is deprecated")]]
-        inline bool SetDepthWrite(bool abX){
-            return false;
-        }
-        [[deprecated("SetDepthTestFunc is deprecated")]]
-        inline bool SetDepthTestFunc(eDepthTestFunc aFunc){
-            return false;
-        }
-        [[deprecated("SetCullActive is deprecated")]]
-        inline bool SetCullActive(bool abX){
-            return false;
-        }
-        [[deprecated("SetCullMode is deprecated")]]
-        inline bool SetCullMode(eCullMode aMode){
-            return false;
-        }
-        [[deprecated("SetStencilActive is deprecated")]]
-        inline bool SetStencilActive(bool abX){
-            return true;
-        }
-        [[deprecated("SetStencilFunc is deprecated")]]
-        inline bool SetScissorActive(bool abX){
-            return false;
-        }
-        [[deprecated("SetStencilFunc is deprecated")]]
-        inline bool SetScissorRect(const cVector2l& avPos, const cVector2l& avSize, bool abAutoEnabling){
-            return false;}
-        [[deprecated("SetStencilFunc is deprecated")]]
-        inline bool SetScissorRect(const cRect2l& aClipRect, bool abAutoEnabling){return false;}
-        [[deprecated("SetStencilFunc is deprecated")]]
-        inline bool SetChannelMode(eMaterialChannelMode aMode){ return false; }
-        [[deprecated("SetStencilFunc is deprecated")]]
-        inline bool SetAlphaMode(eMaterialAlphaMode aMode){ return false; }
-        [[deprecated("SetBlendMode is deprecated")]]
-        inline bool SetBlendMode(eMaterialBlendMode aMode){
-            return false;
-         }
-        [[deprecated("SetTexture is deprecated")]]
-        inline void SetTexture(int alUnit, iTexture *apTexture){
-
-        }
-        [[deprecated("SetTextureRange is deprecated")]]
-        inline void SetTextureRange(iTexture *apTexture, int alFirstUnit, int alLastUnit = kMaxTextureUnits-1){
-        }
-        [[deprecated("SetTexture is deprecated")]]
-        inline void SetVertexBuffer(iVertexBuffer *apVtxBuffer){
-
-        }
-        [[deprecated("SetMatrix is deprecated")]]
-        inline void SetMatrix(cMatrixf *apMatrix){
-        }
-        [[deprecated("SetModelViewMatrix is deprecated")]]
-        inline void SetModelViewMatrix(const cMatrixf& a_mtxModelView){
-
-        }
-
-        [[deprecated("SetProjectionMatrix is deprecated")]]
-        inline void DrawCurrent(eVertexBufferDrawType aDrawType = eVertexBufferDrawType_LastEnum){ }
-
-        [[deprecated("DrawWireFrame is deprecated")]]
-        void DrawWireFrame(iVertexBuffer *apVtxBuffer, const cColor &aColor){ }
-
 
         iLowLevelGraphics *GetLowLevelGfx(){ return mpRenderer->mpLowLevelGraphics;}
 
