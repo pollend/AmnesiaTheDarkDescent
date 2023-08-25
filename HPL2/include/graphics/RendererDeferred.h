@@ -313,57 +313,6 @@ namespace hpl {
             bool abSendFrameBufferToPostEffects) override;
 
 
-        static void SetSSAONumOfSamples(int alX) {
-            mlSSAONumOfSamples = alX;
-        }
-        static void SetSSAOBufferSizeDiv(int alX) {
-            mlSSAOBufferSizeDiv = alX;
-        }
-        static void SetSSAOScatterLengthMul(float afX) {
-            mfSSAOScatterLengthMul = afX;
-        }
-        static void SetSSAOScatterLengthMin(float afX) {
-            mfSSAOScatterLengthMin = afX;
-        }
-        static void SetSSAOScatterLengthMax(float afX) {
-            mfSSAOScatterLengthMax = afX;
-        }
-        static void SetSSAODepthDiffMul(float afX) {
-            mfSSAODepthDiffMul = afX;
-        }
-        static void SetSSAOSkipEdgeLimit(float afX) {
-            mfSSAOSkipEdgeLimit = afX;
-        }
-
-        static int GetSSAONumOfSamples() {
-            return mlSSAONumOfSamples;
-        }
-        static int GetSSAOBufferSizeDiv() {
-            return mlSSAOBufferSizeDiv;
-        }
-        static float GetSSAOScatterLengthMul() {
-            return mfSSAOScatterLengthMul;
-        }
-        static float GetSSAOScatterLengthMin() {
-            return mfSSAOScatterLengthMin;
-        }
-        static float GetSSAOScatterLengthMax() {
-            return mfSSAOScatterLengthMax;
-        }
-        static float GetSSAODepthDiffMul() {
-            return mfSSAODepthDiffMul;
-        }
-        static float GetSSAOSkipEdgeLimit() {
-            return mfSSAOSkipEdgeLimit;
-        }
-
-        static void SetEdgeSmoothLoaded(bool abX) {
-            mbEdgeSmoothLoaded = abX;
-        }
-        static bool GetEdgeSmoothLoaded() {
-            return mbEdgeSmoothLoaded;
-        }
-
     private:
         LegacyRenderTarget& resolveRenderTarget(std::array<LegacyRenderTarget, 2>& rt);
         std::shared_ptr<Image>& resolveRenderImage(std::array<std::shared_ptr<Image>, 2>& img);
@@ -643,17 +592,5 @@ namespace hpl {
 
         cRenderList m_reflectionRenderList;
         std::unique_ptr<renderer::PassHBAOPlus> m_hbaoPlusPipeline;
-
-        static bool mbDepthCullLights;
-        static int mlSSAONumOfSamples;
-        static float mfSSAOScatterLengthMul;
-        static float mfSSAOScatterLengthMin;
-        static float mfSSAOScatterLengthMax;
-        static float mfSSAODepthDiffMul;
-        static float mfSSAOSkipEdgeLimit;
-        static int mlSSAOBufferSizeDiv;
-
-        static bool mbEdgeSmoothLoaded;
-        static bool mbEnableParallax;
     };
 }; // namespace hpl

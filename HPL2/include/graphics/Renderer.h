@@ -107,10 +107,6 @@ namespace hpl {
     typedef std::list<cNodeOcclusionPair> tNodeOcclusionPairList;
     typedef tNodeOcclusionPairList::iterator tNodeOcclusionPairListIt;
 
-    //---------------------------------------------
-
-    typedef std::multimap<void*, cOcclusionQueryObject*> tOcclusionQueryObjectMap;
-    typedef tOcclusionQueryObjectMap::iterator tOcclusionQueryObjectMapIt;
 
 
     class cRenderSettings
@@ -125,12 +121,6 @@ namespace hpl {
 
         void SetupReflectionSettings();
 
-        void AssignOcclusionObject(iRenderer *apRenderer, void *apSource, int alCustomIndex, iVertexBuffer *apVtxBuffer, cMatrixf *apMatrix, bool abDepthTest);
-        int RetrieveOcclusionObjectSamples(iRenderer *apRenderer, void *apSource, int alCustomIndex);
-        void ClearOcclusionObjects(iRenderer *apRenderer);
-
-        ////////////////////////////
-        //Data
         cRenderList *mpRenderList;
 
         cVisibleRCNodeTracker *mpVisibleNodeTracker;
@@ -138,10 +128,6 @@ namespace hpl {
         cRenderSettings *mpReflectionSettings;
 
         std::vector<iRenderableContainerNode*> m_testNodes;
-
-        int mlCurrentOcclusionObject;
-        std::vector<cOcclusionQueryObject*> mvOcclusionObjectPool;
-        tOcclusionQueryObjectMap m_setOcclusionObjects;
 
         ////////////////////////////
         //General settings

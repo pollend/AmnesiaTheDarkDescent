@@ -87,15 +87,6 @@
 
 namespace hpl {
 
-    int cRendererDeferred::mlSSAONumOfSamples = 8;
-    int cRendererDeferred::mlSSAOBufferSizeDiv = 2;
-    float cRendererDeferred::mfSSAOScatterLengthMul = 0.2f;
-    float cRendererDeferred::mfSSAOScatterLengthMin = 0.015f;
-    float cRendererDeferred::mfSSAOScatterLengthMax = 0.13f;
-    float cRendererDeferred::mfSSAODepthDiffMul = 1.5f;
-    float cRendererDeferred::mfSSAOSkipEdgeLimit = 3.0f;
-    bool cRendererDeferred::mbEdgeSmoothLoaded = false;
-
     static constexpr float kLightRadiusMul_High = 1.08f;
     static constexpr float kLightRadiusMul_Medium = 1.12f;
     static constexpr float kLightRadiusMul_Low = 1.2f;
