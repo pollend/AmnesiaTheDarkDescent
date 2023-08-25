@@ -472,7 +472,7 @@ namespace hpl {
 	{
 		if(mbIsUpdated)
 		{
-			auto forgeHandle = ForgeTextureHandle::LoadFromHPLBitmap(*mpBitmap, {
+			auto forgeHandle = SharedTexture::LoadFromHPLBitmap(*mpBitmap, {
 				false,
 				false,
 				true

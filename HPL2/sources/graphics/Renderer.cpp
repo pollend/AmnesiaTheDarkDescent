@@ -257,7 +257,6 @@ namespace hpl
 
         ////////////////////////
         // Setup data
-        mlCurrentOcclusionObject = 0;
 
         ////////////////////////
         // Set up General Variables
@@ -321,8 +320,6 @@ namespace hpl
         hplDelete(mpRenderList);
         hplDelete(mpVisibleNodeTracker);
 
-        STLDeleteAll(mvOcclusionObjectPool);
-
         if (mpReflectionSettings)
             hplDelete(mpReflectionSettings);
     }
@@ -374,87 +371,6 @@ namespace hpl
         RenderSettingsCopy(mlNumberOfLightsRendered);
         RenderSettingsCopy(mlNumberOfOcclusionQueries);
     }
-
-
-    void cRenderSettings::AssignOcclusionObject(
-        iRenderer* apRenderer, void* apSource, int alCustomIndex, iVertexBuffer* apVtxBuffer, cMatrixf* apMatrix, bool abDepthTest)
-    {
-        if (mlCurrentOcclusionObject == mvOcclusionObjectPool.size())
-        {
-            mvOcclusionObjectPool.push_back(hplNew(cOcclusionQueryObject, ()));
-        }
-
-        cOcclusionQueryObject* pObject = mvOcclusionObjectPool[mlCurrentOcclusionObject];
-
-        pObject->mlCustomID = alCustomIndex;
-        pObject->mpVtxBuffer = apVtxBuffer;
-        pObject->mpMatrix = apMatrix;
-        pObject->mbDepthTest = abDepthTest;
-
-        m_setOcclusionObjects.insert(tOcclusionQueryObjectMap::value_type(apSource, pObject));
-
-        ++mlCurrentOcclusionObject;
-    }
-
-    //-----------------------------------------------------------------------
-
-    int cRenderSettings::RetrieveOcclusionObjectSamples(iRenderer* apRenderer, void* apSource, int alCustomIndex)
-    {
-        tOcclusionQueryObjectMapIt it = m_setOcclusionObjects.find(apSource);
-        if (it == m_setOcclusionObjects.end())
-        {
-            if (mbLog)
-                Log(" Could not find source %d custom index %d in occlusion objects set!\n", apSource, alCustomIndex);
-            return 0;
-        }
-
-        //////////////////////////////////////
-        // Get the number of objects with key and get the one with right custom ID
-        size_t lCount = m_setOcclusionObjects.count(apSource);
-        cOcclusionQueryObject* pObject = NULL;
-        for (size_t i = 0; i < lCount; ++i)
-        {
-            cOcclusionQueryObject* pTestObject = it->second;
-            if (pTestObject->mlCustomID == alCustomIndex)
-            {
-                pObject = pTestObject;
-                break;
-            }
-            it++;
-        }
-        if (pObject == NULL)
-        {
-            if (mbLog)
-                Log(" Found source %d but could NOT find custom index %d in occlusion objects set!\n", apSource, alCustomIndex);
-            return 0;
-        }
-
-        return 0;
-    }
-
-    void cRenderSettings::ClearOcclusionObjects(iRenderer* apRenderer)
-    {
-        // if(mbLog) Log(" Clearing occlusion queries i settings!\n");
-        // m_setOcclusionObjects.clear();
-        // for(int i=0; i<mlCurrentOcclusionObject; ++i)
-        // {
-        // 	iOcclusionQuery *pQuery = mvOcclusionObjectPool[i]->mpQuery;
-        // 	if(pQuery==NULL) continue;
-
-        // 	apRenderer->ReleaseOcclusionQuery(pQuery);
-        // 	mvOcclusionObjectPool[i]->mpQuery = NULL;
-        // }
-
-        // mlCurrentOcclusionObject = 0;
-    }
-
-    //-----------------------------------------------------------------------
-
-    //////////////////////////////////////////////////////////////////////////
-    // SHADOWMAP CACHE
-    //////////////////////////////////////////////////////////////////////////
-
-    //-----------------------------------------------------------------------
 
     void cShadowMapLightCache::SetFromLight(iLight* apLight)
     {

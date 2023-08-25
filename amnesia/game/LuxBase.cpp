@@ -1130,11 +1130,6 @@ bool cLuxBase::InitEngine()
 
 	iRenderer::SetRefractionEnabled(mpConfigHandler->mbRefraction);
 
-	cRendererDeferred::SetSSAOBufferSizeDiv(mpConfigHandler->mlSSAOResolution==0? 2 : 1);
-	cRendererDeferred::SetSSAONumOfSamples(mpConfigHandler->mlSSAOSamples);
-	cRendererDeferred::SetSSAOLoaded(mpConfigHandler->mbSSAOActive);
-	cRendererDeferred::SetEdgeSmoothLoaded(mpConfigHandler->mbEdgeSmooth);
-
 	// cRendererDeferred::SetOcclusionTestLargeLights(mpConfigHandler->mbOcclusionTestLights);
 
 	//Other vars

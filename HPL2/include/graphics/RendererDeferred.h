@@ -202,7 +202,7 @@ namespace hpl {
 
         class ShadowMapData {
         public:
-            ForgeRenderTarget m_target;
+            SharedRenderTarget m_target;
             iLight* m_light;
             uint32_t m_transformCount = 0;
             uint32_t m_frameCount = 0;
@@ -248,16 +248,16 @@ namespace hpl {
                 m_hizDepthBuffer = std::move(buffer.m_hizDepthBuffer);
                 m_hiZMipCount = buffer.m_hiZMipCount;
             }
-            ForgeTextureHandle m_refractionImage;
-            ForgeRenderTarget m_hizDepthBuffer;
+            SharedTexture m_refractionImage;
+            SharedRenderTarget m_hizDepthBuffer;
             uint8_t m_hiZMipCount;
 
-            ForgeRenderTarget m_colorBuffer;
-            ForgeRenderTarget m_normalBuffer;
-            ForgeRenderTarget m_positionBuffer;
-            ForgeRenderTarget m_specularBuffer;
-            ForgeRenderTarget m_depthBuffer;
-            ForgeRenderTarget m_outputBuffer;
+            SharedRenderTarget m_colorBuffer;
+            SharedRenderTarget m_normalBuffer;
+            SharedRenderTarget m_positionBuffer;
+            SharedRenderTarget m_specularBuffer;
+            SharedRenderTarget m_depthBuffer;
+            SharedRenderTarget m_outputBuffer;
         };
 
         struct ViewportData {
@@ -292,10 +292,10 @@ namespace hpl {
         inline ViewportData* GetSharedData(cViewport& viewport) {
             return m_boundViewportData.resolve(viewport);
         }
-        virtual ForgeRenderTarget GetOutputImage(uint32_t frameIndex, cViewport& viewport) override {
+        virtual SharedRenderTarget GetOutputImage(uint32_t frameIndex, cViewport& viewport) override {
             auto sharedData = m_boundViewportData.resolve(viewport);
             if (!sharedData) {
-                return ForgeRenderTarget();
+                return SharedRenderTarget();
             }
             return sharedData->m_gBuffer[frameIndex].m_outputBuffer;
         }
@@ -312,75 +312,6 @@ namespace hpl {
             cRenderSettings* apSettings,
             bool abSendFrameBufferToPostEffects) override;
 
-        static void SetDepthCullLights(bool abX) {
-            mbDepthCullLights = abX;
-        }
-        static int GetDepthCullLights() {
-            return mbDepthCullLights;
-        }
-
-        static void SetSSAOLoaded(bool abX) {
-            mbSSAOLoaded = abX;
-        }
-        static void SetSSAONumOfSamples(int alX) {
-            mlSSAONumOfSamples = alX;
-        }
-        static void SetSSAOBufferSizeDiv(int alX) {
-            mlSSAOBufferSizeDiv = alX;
-        }
-        static void SetSSAOScatterLengthMul(float afX) {
-            mfSSAOScatterLengthMul = afX;
-        }
-        static void SetSSAOScatterLengthMin(float afX) {
-            mfSSAOScatterLengthMin = afX;
-        }
-        static void SetSSAOScatterLengthMax(float afX) {
-            mfSSAOScatterLengthMax = afX;
-        }
-        static void SetSSAOType(eDeferredSSAO aType) {
-            mSSAOType = aType;
-        }
-        static void SetSSAODepthDiffMul(float afX) {
-            mfSSAODepthDiffMul = afX;
-        }
-        static void SetSSAOSkipEdgeLimit(float afX) {
-            mfSSAOSkipEdgeLimit = afX;
-        }
-
-        static bool GetSSAOLoaded() {
-            return mbSSAOLoaded;
-        }
-        static int GetSSAONumOfSamples() {
-            return mlSSAONumOfSamples;
-        }
-        static int GetSSAOBufferSizeDiv() {
-            return mlSSAOBufferSizeDiv;
-        }
-        static float GetSSAOScatterLengthMul() {
-            return mfSSAOScatterLengthMul;
-        }
-        static float GetSSAOScatterLengthMin() {
-            return mfSSAOScatterLengthMin;
-        }
-        static float GetSSAOScatterLengthMax() {
-            return mfSSAOScatterLengthMax;
-        }
-        static eDeferredSSAO GetSSAOType() {
-            return mSSAOType;
-        }
-        static float GetSSAODepthDiffMul() {
-            return mfSSAODepthDiffMul;
-        }
-        static float GetSSAOSkipEdgeLimit() {
-            return mfSSAOSkipEdgeLimit;
-        }
-
-        static void SetEdgeSmoothLoaded(bool abX) {
-            mbEdgeSmoothLoaded = abX;
-        }
-        static bool GetEdgeSmoothLoaded() {
-            return mbEdgeSmoothLoaded;
-        }
 
     private:
         LegacyRenderTarget& resolveRenderTarget(std::array<LegacyRenderTarget, 2>& rt);
@@ -427,11 +358,11 @@ namespace hpl {
 
         UniqueViewportData<ViewportData> m_boundViewportData;
 
-        ForgeTextureHandle m_shadowJitterTexture;
-        ForgeTextureHandle m_ssaoScatterDiskTexture;
+        SharedTexture m_shadowJitterTexture;
+        SharedTexture m_ssaoScatterDiskTexture;
 
         Image* m_dissolveImage;
-        std::array<ForgeBufferHandle, MaxMaterialFrameDescriptors> m_perFrameBuffer;
+        std::array<SharedBuffer, MaxMaterialFrameDescriptors> m_perFrameBuffer;
 
         // decal pass
         std::array<Pipeline*, eMaterialBlendMode_LastEnum> m_decalPipeline;
@@ -454,8 +385,8 @@ namespace hpl {
 
             std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perFrameSet{};
 
-            std::array<ForgeBufferHandle, ForgeRenderer::SwapChainLength> m_fogUniformBuffer;
-            std::array<ForgeBufferHandle, ForgeRenderer::SwapChainLength> m_fogFullscreenUniformBuffer;
+            std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_fogUniformBuffer;
+            std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_fogFullscreenUniformBuffer;
             uint32_t m_fogIndex = 0;
             RootSignature* m_fogRootSignature = nullptr;
             Shader* m_shader{};
@@ -523,9 +454,9 @@ namespace hpl {
             Pipeline* m_refractionCopyPipeline;
             Shader* m_copyRefraction;
 
-            ForgeShaderHandle m_shader{};
-            ForgeShaderHandle m_particleShader{};
-            ForgeShaderHandle m_waterShader{};
+            SharedShader m_shader{};
+            SharedShader m_particleShader{};
+            SharedShader m_waterShader{};
 
             std::array<std::array<Pipeline*, TranslucencyKey::NumOfVariants>, TranslucencyBlend::BlendModeCount> m_pipelines;
             std::array<Pipeline*, TranslucencyWaterKey::NumOfVariants> m_waterPipeline;
@@ -544,13 +475,12 @@ namespace hpl {
             };
             static constexpr size_t NumOfVariants = 4;
         };
-        folly::F14VectorMap<SamplerDesc, Sampler*> m_objectSamplerMap;
         std::array<Sampler*, ObjectSamplerKey::NumOfVariants> m_objectSamplers{};
         struct LightResourceEntry {
-            ForgeTextureHandle m_goboCubeMap;
-            ForgeTextureHandle m_goboMap;
-            ForgeTextureHandle m_falloffMap;
-            ForgeTextureHandle m_attenuationLightMap;
+            SharedTexture m_goboCubeMap;
+            SharedTexture m_goboMap;
+            SharedTexture m_falloffMap;
+            SharedTexture m_attenuationLightMap;
         };
         std::array<std::array<LightResourceEntry, MaxLightUniforms>, ForgeRenderer::SwapChainLength> m_lightResources{};
         // z pass
@@ -561,7 +491,7 @@ namespace hpl {
 
         std::set<iRenderable*> m_preZPassRenderables;
 
-        std::array<ForgeBufferHandle, ForgeRenderer::SwapChainLength> m_objectUniformBuffer;
+        std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_objectUniformBuffer;
         struct MaterialPassDescriptorSet {
             std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_frameSet;
             std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perBatchSet;
@@ -575,15 +505,15 @@ namespace hpl {
                 struct MaterialDescInfo {
                     void* m_material = nullptr; // void* to avoid accessing the material
                     uint32_t m_version = 0; // version of the material
-                    std::array<ForgeTextureHandle, eMaterialTexture_LastEnum>
+                    std::array<SharedTexture, eMaterialTexture_LastEnum>
                         m_textureHandles{}; // handles to keep textures alive for the descriptor
                 } m_materialDescInfo[ForgeRenderer::SwapChainLength];
             };
 
             std::array<MaterialInfo, cMaterial::MaxMaterialID> m_materialInfo;
-            std::array<ForgeSamplerHandle,MaxMaterialSamplers> m_samplers;
-            ForgeDescriptorSet m_materialConstSet;
-            ForgeBufferHandle m_materialUniformBuffer;
+            std::array<SharedSampler,MaxMaterialSamplers> m_samplers;
+            SharedDescriptorSet m_materialConstSet;
+            SharedBuffer m_materialUniformBuffer;
         } m_materialSet;
 
         uint32_t m_activeFrame = 0; // tracks the active frame if differnt then we need to reset some state
@@ -598,14 +528,14 @@ namespace hpl {
         Pipeline* m_pipelineHIZGenerate;
 
         RootSignature* m_rootSignatureCopyDepth;
-        ForgeDescriptorSet m_descriptorCopyDepth;
-        ForgeDescriptorSet m_descriptorAABBOcclusionTest;
-        ForgePipelineHandle m_pipelineCopyDepth;
-        ForgePipelineHandle m_pipelineAABBOcclusionTest;
-        Shader* m_copyDepthShader;
-        ForgeBufferHandle m_hiZOcclusionUniformBuffer;
-        ForgeBufferHandle m_hiZBoundBoxBuffer;
-        ForgeBufferHandle m_occlusionTestBuffer;
+        SharedDescriptorSet m_descriptorCopyDepth;
+        SharedDescriptorSet m_descriptorAABBOcclusionTest;
+        SharedPipeline m_pipelineCopyDepth;
+        SharedPipeline m_pipelineAABBOcclusionTest;
+        SharedShader m_copyDepthShader;
+        SharedBuffer m_hiZOcclusionUniformBuffer;
+        SharedBuffer m_hiZBoundBoxBuffer;
+        SharedBuffer m_occlusionTestBuffer;
 
         struct OcclusionQueryAlpha {
             iRenderable* m_renderable = nullptr;
@@ -617,13 +547,13 @@ namespace hpl {
         static constexpr uint32_t MaxQueryPoolSize = MaxOcclusionDescSize * 2;
         QueryPool* m_occlusionQuery = nullptr;
         uint32_t m_occlusionIndex = 0;
-        ForgeBufferHandle m_occlusionUniformBuffer;
+        SharedBuffer m_occlusionUniformBuffer;
         RootSignature* m_rootSignatureOcclusuion = nullptr;
-        ForgeDescriptorSet m_descriptorOcclusionConstSet;
-        ForgeBufferHandle m_occlusionReadBackBuffer;
-        ForgeShaderHandle m_shaderOcclusionQuery;
-        ForgePipelineHandle m_pipelineMaxOcclusionQuery;
-        ForgePipelineHandle m_pipelineOcclusionQuery;
+        SharedDescriptorSet m_descriptorOcclusionConstSet;
+        SharedBuffer m_occlusionReadBackBuffer;
+        SharedShader m_shaderOcclusionQuery;
+        SharedPipeline m_pipelineMaxOcclusionQuery;
+        SharedPipeline m_pipelineOcclusionQuery;
 
         struct UniformTest {
             bool m_preZPass = false;
@@ -642,40 +572,25 @@ namespace hpl {
             float gamma;
             float3 pad;
         };
-        std::array<ForgeBufferHandle, ForgeRenderer::SwapChainLength> m_lightPassBuffer;
+        std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_lightPassBuffer;
 
         RootSignature* m_lightPassRootSignature;
-        ForgePipelineHandle m_lightStencilPipeline;
-        std::array<Pipeline*, LightPipelineVariant_Size> m_pointLightPipeline;
-        std::array<Pipeline*, LightPipelineVariant_Size> m_boxLightPipeline;
-        std::array<Pipeline*, LightPipelineVariant_Size> m_spotLightPipeline;
-        ForgeShaderHandle m_pointLightShader;
-        ForgeShaderHandle m_spotLightShader;
-        ForgeShaderHandle m_stencilLightShader;
-        ForgeShaderHandle m_boxLightShader;
-        std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_lightPerLightSet;
-        std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_lightPerFrameSet;
-        ForgeSamplerHandle m_shadowCmpSampler;
+        SharedPipeline m_lightStencilPipeline;
+        std::array<SharedPipeline, LightPipelineVariant_Size> m_pointLightPipeline;
+        std::array<SharedPipeline, LightPipelineVariant_Size> m_boxLightPipeline;
+        std::array<SharedPipeline, LightPipelineVariant_Size> m_spotLightPipeline;
+        SharedShader m_pointLightShader;
+        SharedShader m_spotLightShader;
+        SharedShader m_stencilLightShader;
+        SharedShader m_boxLightShader;
+        std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_lightPerLightSet;
+        std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_lightPerFrameSet;
+        SharedSampler m_shadowCmpSampler;
 
-        Sampler* m_samplerPointClampToBorder;
-        //Sampler* m_pointSampler;
-        Sampler* m_goboSampler;
+        SharedSampler m_samplerPointClampToBorder;
+        SharedSampler m_goboSampler;
 
         cRenderList m_reflectionRenderList;
         std::unique_ptr<renderer::PassHBAOPlus> m_hbaoPlusPipeline;
-
-        static bool mbDepthCullLights;
-        static bool mbSSAOLoaded;
-        static int mlSSAONumOfSamples;
-        static float mfSSAOScatterLengthMul;
-        static float mfSSAOScatterLengthMin;
-        static float mfSSAOScatterLengthMax;
-        static float mfSSAODepthDiffMul;
-        static float mfSSAOSkipEdgeLimit;
-        static eDeferredSSAO mSSAOType;
-        static int mlSSAOBufferSizeDiv;
-
-        static bool mbEdgeSmoothLoaded;
-        static bool mbEnableParallax;
     };
 }; // namespace hpl

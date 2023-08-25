@@ -53,7 +53,7 @@ namespace hpl {
     private:
         uint32_t m_descIndex = 0;
         Pipeline* m_pipeline = nullptr;
-        ForgeShaderHandle m_shader;
+        SharedShader m_shader;
         RootSignature* m_rootSignature;
         Sampler* m_inputSampler;
         std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perFrameDescriptorSet;
@@ -76,7 +76,7 @@ namespace hpl {
                 m_size = buffer.m_size;
             }
             cVector2l m_size;
-            ForgeRenderTarget m_accumulationTarget;
+            SharedRenderTarget m_accumulationTarget;
         };
 
         cPostEffect_ImageTrail(cGraphics* apGraphics, cResources* apResources, iPostEffectType* apType);

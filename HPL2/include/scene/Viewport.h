@@ -64,7 +64,7 @@ namespace hpl {
         struct DrawPayloadCommon {
             cFrustum* m_frustum;
             const ForgeRenderer::Frame* m_frame;
-            ForgeRenderTarget* m_outputTarget;
+            SharedRenderTarget* m_outputTarget;
             cViewport* m_viewport;
             cRenderSettings* m_renderSettings;
             ImmediateDrawBatch* m_immediateDrawBatch;
@@ -147,7 +147,7 @@ namespace hpl {
             static LegacyRenderTarget emptyTarget = LegacyRenderTarget();
             return emptyTarget;
         }
-        ForgeRenderTarget& Target() {
+        SharedRenderTarget& Target() {
             return m_target;
         }
 
@@ -179,7 +179,7 @@ namespace hpl {
 
         // ImageDescriptor m_imageDescriptor;
 
-        ForgeRenderTarget m_target;
+        SharedRenderTarget m_target;
         std::shared_ptr<LegacyRenderTarget> m_renderTarget; // TODO: REMOVE
 
         cVector2l m_size = { 0, 0 };

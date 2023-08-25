@@ -26,7 +26,6 @@
 namespace hpl {
 
 	class iFontData;
-	class iOcclusionQuery;
 	class iGpuShader;
 	class iTexture;
 	class iVertexBuffer;
@@ -130,7 +129,7 @@ namespace hpl {
 
 		[[deprecated("interface is deprecated")]]
 		virtual iFrameBuffer* CreateFrameBuffer(const tString& asName)=0;
-		
+
 		[[deprecated("interface is deprecated")]]
 		virtual iDepthStencilBuffer* CreateDepthStencilBuffer(const cVector2l& avSize, int alDepthBits, int alStencilBits)=0;
 
@@ -139,10 +138,10 @@ namespace hpl {
 
 		[[deprecated("interface is deprecated")]]
 		virtual void SetClearColor(const cColor& aCol)=0;
-		
+
 		[[deprecated("interface is deprecated")]]
 		virtual void SetClearDepth(float afDepth)=0;
-		
+
 		[[deprecated("interface is deprecated")]]
 		virtual void SetClearStencil(int alVal)=0;
 
@@ -192,10 +191,10 @@ namespace hpl {
 
 		[[deprecated("interface is deprecated")]]
 		virtual iFrameBuffer* GetCurrentFrameBuffer()=0;
-		
+
 		[[deprecated("interface is deprecated")]]
 		virtual void SetColorWriteActive(bool abR,bool abG,bool abB,bool abA)=0;
-		
+
 		[[deprecated("interface is deprecated")]]
 		virtual void SetDepthWriteActive(bool abX)=0;
 
@@ -225,11 +224,11 @@ namespace hpl {
 
 		[[deprecated("interface is deprecated")]]
 		virtual void SetStencilWriteMask(unsigned int alMask)=0;
-		
+
 		[[deprecated("interface is deprecated")]]
 		virtual void SetStencil(eStencilFunc aFunc,int alRef, unsigned int aMask,
 								eStencilOp aFailOp,eStencilOp aZFailOp,eStencilOp aZPassOp)=0;
-		
+
 		[[deprecated("interface is deprecated")]]
 		virtual void SetStencilTwoSide(eStencilFunc aFrontFunc,eStencilFunc aBackFunc,
 										int alRef, unsigned int aMask,
@@ -287,7 +286,7 @@ namespace hpl {
 
 		[[deprecated("interface is deprecated")]]
 		virtual void SetOrthoProjection(const cVector2f& avSize, float afMin, float afMax)=0;
-		
+
 		[[deprecated("interface is deprecated")]]
 		virtual void SetOrthoProjection(const cVector3f& avMin, const cVector3f& avMax)=0;
 
@@ -308,13 +307,13 @@ namespace hpl {
 
 		[[deprecated("interface is deprecated")]]
 		virtual void DrawQuad(	const cVector3f &avPos,const cVector2f &avSize, const cColor& aColor=cColor(1,1))=0;
-		
-		
+
+
 		[[deprecated("interface is deprecated")]]
 		virtual void DrawQuad(	const cVector3f &avPos,const cVector2f &avSize,
 								const cVector2f &avMinTexCoord,const cVector2f &avMaxTexCoord,
 								const cColor& aColor=cColor(1,1))=0;
-		
+
 		[[deprecated("interface is deprecated")]]
 		virtual void DrawQuad(	const cVector3f &avPos,const cVector2f &avSize,
 								const cVector2f &avMinTexCoord0,const cVector2f &avMaxTexCoord0,
@@ -326,33 +325,33 @@ namespace hpl {
 
 		[[deprecated("interface is deprecated")]]
 		virtual void DrawQuad(const tVertexVec &avVtx, const cColor aCol)=0;
-		
+
 		[[deprecated("interface is deprecated")]]
 		virtual void DrawQuad(const tVertexVec &avVtx,const float afZ)=0;
-		
+
 		[[deprecated("interface is deprecated")]]
 		virtual void DrawQuad(const tVertexVec &avVtx,const float afZ,const cColor &aCol)=0;
-		
+
 		[[deprecated("interface is deprecated")]]
 		virtual void DrawQuadMultiTex(const tVertexVec &avVtx,const tVector3fVec &avExtraUvs)=0;
 
-		
+
 		[[deprecated("interface is deprecated")]]
 		virtual void DrawLine(const cVector3f& avBegin, const cVector3f& avEnd, cColor aCol)=0;
-		
+
 		[[deprecated("interface is deprecated")]]
 		virtual void DrawLine(const cVector3f& avBegin, const cColor& aBeginCol, const cVector3f& avEnd, const cColor& aEndCol)=0;
-		
+
 		[[deprecated("interface is deprecated")]]
 		virtual void DrawBoxMinMax(const cVector3f& avMin, const cVector3f& avMax, cColor aCol)=0;
-		
+
 		[[deprecated("interface is deprecated")]]
 		virtual void DrawSphere(const cVector3f& avPos, float afRadius, cColor aCol)=0;
-		
+
 		[[deprecated("interface is deprecated")]]
 		virtual void DrawSphere(const cVector3f& avPos, float afRadius, cColor aColX, cColor aColY, cColor aColZ)=0;
 
-		
+
 		[[deprecated("interface is deprecated")]]
 		virtual void DrawLineQuad(const cRect2f& aRect, float afZ, cColor aCol)=0;
 		[[deprecated("interface is deprecated")]]
@@ -362,17 +361,17 @@ namespace hpl {
 		/////////// VERTEX BATCHING /////////////////////////
 		/////////////////////////////////////////////////////
 
-		
+
 		[[deprecated("interface is deprecated")]]
 		virtual void AddVertexToBatch(const cVertex *apVtx)=0;
-		
+
 		[[deprecated("interface is deprecated")]]
 		virtual void AddVertexToBatch(const cVertex *apVtx, const cVector3f* avTransform)=0;
-		
+
 		[[deprecated("interface is deprecated")]]
 		virtual void AddVertexToBatch(const cVertex *apVtx, const cMatrixf* aMtx)=0;
 
-		
+
 		[[deprecated("interface is deprecated")]]
 		virtual void AddVertexToBatch_Size2D(const cVertex *apVtx, const cVector3f* avTransform,
 									const cColor* apCol,const float& mfW, const float& mfH)=0;
@@ -387,16 +386,16 @@ namespace hpl {
 
 		[[deprecated("interface is deprecated")]]
 		virtual void AddTexCoordToBatch(unsigned int alUnit,const cVector3f *apCoord)=0;
-		
+
 		[[deprecated("interface is deprecated")]]
 		virtual void SetBatchTextureUnitActive(unsigned int alUnit,bool abActive)=0;
 
 		[[deprecated("interface is deprecated")]]
 		virtual void FlushTriBatch(tVtxBatchFlag aTypeFlags, bool abAutoClear=true)=0;
-		
+
 		[[deprecated("interface is deprecated")]]
 		virtual void FlushQuadBatch(tVtxBatchFlag aTypeFlags, bool abAutoClear=true)=0;
-		
+
 		[[deprecated("interface is deprecated")]]
 		virtual void ClearBatch()=0;
 
@@ -406,7 +405,7 @@ namespace hpl {
 
 		[[deprecated("interface is deprecated")]]
 		static void SetForceShaderModel3And4Off(bool abX){ mbForceShaderModel3And4Off = abX;}
-		
+
 		[[deprecated("interface is deprecated")]]
 		static bool GetForceShaderModel3And4Off(){	return mbForceShaderModel3And4Off;}
 

@@ -87,19 +87,6 @@
 
 namespace hpl {
 
-    bool cRendererDeferred::mbDepthCullLights = true;
-
-    bool cRendererDeferred::mbSSAOLoaded = false;
-    int cRendererDeferred::mlSSAONumOfSamples = 8;
-    int cRendererDeferred::mlSSAOBufferSizeDiv = 2;
-    float cRendererDeferred::mfSSAOScatterLengthMul = 0.2f;
-    float cRendererDeferred::mfSSAOScatterLengthMin = 0.015f;
-    float cRendererDeferred::mfSSAOScatterLengthMax = 0.13f;
-    float cRendererDeferred::mfSSAODepthDiffMul = 1.5f;
-    float cRendererDeferred::mfSSAOSkipEdgeLimit = 3.0f;
-    eDeferredSSAO cRendererDeferred::mSSAOType = eDeferredSSAO_OnColorBuffer;
-    bool cRendererDeferred::mbEdgeSmoothLoaded = false;
-
     static constexpr float kLightRadiusMul_High = 1.08f;
     static constexpr float kLightRadiusMul_Medium = 1.12f;
     static constexpr float kLightRadiusMul_Low = 1.2f;
@@ -629,7 +616,7 @@ namespace hpl {
             addSampler(forgeRenderer->Rend(), &miplessLinearSamplerDesc, handle);
             return true;
         });
-        {
+        m_goboSampler.Load(forgeRenderer->Rend(), [&](Sampler** sampler) {
             SamplerDesc samplerDesc = {};
             samplerDesc.mMinFilter = FILTER_LINEAR;
             samplerDesc.mMagFilter = FILTER_LINEAR;
@@ -639,9 +626,10 @@ namespace hpl {
             samplerDesc.mAddressU = ADDRESS_MODE_CLAMP_TO_BORDER;
             samplerDesc.mAddressV = ADDRESS_MODE_CLAMP_TO_BORDER;
             samplerDesc.mAddressW = ADDRESS_MODE_CLAMP_TO_BORDER;
-            addSampler(forgeRenderer->Rend(), &samplerDesc, &m_goboSampler);
-        }
-        {
+            addSampler(forgeRenderer->Rend(), &samplerDesc, sampler);
+            return true;
+        });
+        m_samplerPointClampToBorder.Load(forgeRenderer->Rend(), [&](Sampler** sampler) {
             SamplerDesc pointSamplerDesc = {};
             pointSamplerDesc.mMinFilter = FILTER_NEAREST;
             pointSamplerDesc.mMagFilter = FILTER_NEAREST;
@@ -649,8 +637,9 @@ namespace hpl {
             pointSamplerDesc.mAddressU = ADDRESS_MODE_CLAMP_TO_BORDER;
             pointSamplerDesc.mAddressV = ADDRESS_MODE_CLAMP_TO_BORDER;
             pointSamplerDesc.mAddressW = ADDRESS_MODE_CLAMP_TO_BORDER;
-            addSampler(forgeRenderer->Rend(), &pointSamplerDesc, &m_samplerPointClampToBorder);
-        }
+            addSampler(forgeRenderer->Rend(), &pointSamplerDesc, sampler);
+            return true;
+        });
 
         for (auto& buffer : m_perFrameBuffer) {
             buffer.Load([&](Buffer** buffer) {
@@ -692,12 +681,14 @@ namespace hpl {
                 loadDesc.mStages[0].pFileName = "test_AABB_hi_z.comp";
                 addShader(forgeRenderer->Rend(), &loadDesc, &m_shaderTestOcclusion);
             }
-            {
+            m_copyDepthShader.Load(forgeRenderer->Rend(), [&](Shader** shader) {
                 ShaderLoadDesc loadDesc = {};
                 loadDesc.mStages[0].pFileName = "fullscreen.vert";
                 loadDesc.mStages[1].pFileName = "copy_hi_z.frag";
-                addShader(forgeRenderer->Rend(), &loadDesc, &m_copyDepthShader);
-            }
+                addShader(forgeRenderer->Rend(), &loadDesc, shader);
+                return true;
+            });
+
             m_hiZOcclusionUniformBuffer.Load([&](Buffer** buf) {
                 BufferLoadDesc desc = {};
                 desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -748,13 +739,13 @@ namespace hpl {
                 addDescriptorSet(forgeRenderer->Rend(), &setDesc, &m_descriptorSetHIZGenerate);
             }
             {
-                std::array shaders = { m_copyDepthShader };
+                std::array shaders = { m_copyDepthShader.m_handle };
                 RootSignatureDesc rootSignatureDesc = {};
                 rootSignatureDesc.ppShaders = shaders.data();
                 rootSignatureDesc.mShaderCount = shaders.size();
                 const char* pStaticSamplers[] = { "depthSampler" };
                 rootSignatureDesc.mStaticSamplerCount = 1;
-                rootSignatureDesc.ppStaticSamplers = &m_samplerPointClampToBorder;
+                rootSignatureDesc.ppStaticSamplers = &m_samplerPointClampToBorder.m_handle;
                 rootSignatureDesc.ppStaticSamplerNames = pStaticSamplers;
                 addRootSignature(forgeRenderer->Rend(), &rootSignatureDesc, &m_rootSignatureCopyDepth);
 
@@ -804,7 +795,7 @@ namespace hpl {
                 graphicsPipelineDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
                 graphicsPipelineDesc.mRenderTargetCount = imageTargets.size();
                 graphicsPipelineDesc.pColorFormats = imageTargets.data();
-                graphicsPipelineDesc.pShaderProgram = m_copyDepthShader;
+                graphicsPipelineDesc.pShaderProgram = m_copyDepthShader.m_handle;
                 graphicsPipelineDesc.pRootSignature = m_rootSignatureCopyDepth;
                 graphicsPipelineDesc.mRenderTargetCount = 1;
                 graphicsPipelineDesc.mDepthStencilFormat = TinyImageFormat_UNDEFINED;
@@ -936,7 +927,7 @@ namespace hpl {
 
 
             std::array samplerNames = { "nearestSampler" };
-            std::array samplers = { m_samplerPointClampToBorder };
+            std::array samplers = { m_samplerPointClampToBorder.m_handle };
             RootSignatureDesc rootSignatureDesc = {};
             rootSignatureDesc.ppShaders = shaders.data();
             rootSignatureDesc.mShaderCount = shaders.size();
@@ -1196,7 +1187,7 @@ namespace hpl {
 
             RootSignatureDesc rootSignatureDesc = {};
             const char* pStaticSamplers[] = { "nearestSampler" };
-            rootSignatureDesc.ppStaticSamplers = &m_samplerPointClampToBorder;
+            rootSignatureDesc.ppStaticSamplers = &m_samplerPointClampToBorder.m_handle;
             rootSignatureDesc.ppStaticSamplerNames = pStaticSamplers;
             rootSignatureDesc.ppShaders = shaders.data();
             rootSignatureDesc.mShaderCount = shaders.size();
@@ -1996,7 +1987,7 @@ namespace hpl {
                 return true;
             });
             Sampler* vbShadeSceneSamplers[] = {
-                m_shadowCmpSampler.m_handle, m_samplerPointClampToBorder, m_goboSampler, m_samplerPointClampToBorder
+                m_shadowCmpSampler.m_handle, m_samplerPointClampToBorder.m_handle, m_goboSampler.m_handle, m_samplerPointClampToBorder.m_handle
             };
             const char* vbShadeSceneSamplersNames[] = { "shadowCmpSampler", "pointSampler", "goboSampler", "nearestSampler"};
             Shader* shaders[] = {
@@ -2022,7 +2013,7 @@ namespace hpl {
             vertexLayout.mAttribs[0].mLocation = 0;
             vertexLayout.mAttribs[0].mOffset = 0;
 
-            auto createPipelineVariants = [&](PipelineDesc& pipelineDesc, std::array<Pipeline*, LightPipelineVariant_Size>& pipelines) {
+            auto createPipelineVariants = [&](PipelineDesc& pipelineDesc, std::array<SharedPipeline, LightPipelineVariant_Size>& pipelines) {
                 for (uint32_t i = 0; i < LightPipelineVariants::LightPipelineVariant_Size; ++i) {
                     DepthStateDesc depthStateDec = {};
                     depthStateDec.mDepthTest = true;
@@ -2053,7 +2044,11 @@ namespace hpl {
                     auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
                     pipelineSettings.pDepthState = &depthStateDec;
                     pipelineSettings.pRasterizerState = &rasterizerStateDesc;
-                    addPipeline(forgeRenderer->Rend(), &pipelineDesc, &pipelines[i]);
+                    pipelines[i].Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
+                        addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
+                        return true;
+                    });
+
                 }
             };
 
@@ -2166,20 +2161,29 @@ namespace hpl {
                 addPipeline(forgeRenderer->Rend(), &pipelineDesc, handle);
                 return true;
             });
-            DescriptorSetDesc perFrameDescSet{ m_lightPassRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, ForgeRenderer::SwapChainLength };
-            DescriptorSetDesc batchDescriptorSet{ m_lightPassRootSignature,
+
+
+            for (auto& lightSet : m_lightPerLightSet) {
+                lightSet.Load(forgeRenderer->Rend(), [&](DescriptorSet** set) {
+                    DescriptorSetDesc batchDescriptorSet{ m_lightPassRootSignature,
                                                   DESCRIPTOR_UPDATE_FREQ_PER_BATCH,
                                                   cRendererDeferred::MaxLightUniforms };
-            for (auto& lightSet : m_lightPerLightSet) {
-                addDescriptorSet(forgeRenderer->Rend(), &batchDescriptorSet, &lightSet);
+                    addDescriptorSet(forgeRenderer->Rend(), &batchDescriptorSet, set);
+                    return true;
+                });
+
             }
             for(size_t setIndex = 0; setIndex < m_lightPerFrameSet.size(); setIndex++) {
-                addDescriptorSet(forgeRenderer->Rend(), &perFrameDescSet, &m_lightPerFrameSet[setIndex]);
+                m_lightPerFrameSet[setIndex].Load(forgeRenderer->Rend(), [&](DescriptorSet** set) {
+                    DescriptorSetDesc perFrameDescSet{ m_lightPassRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, ForgeRenderer::SwapChainLength };
+                    addDescriptorSet(forgeRenderer->Rend(), &perFrameDescSet, set);
+                    return true;
+                });
 
                 std::array<DescriptorData, 1> params = {};
                 params[0].pName = "lightObjectBuffer";
                 params[0].ppBuffers = &m_lightPassBuffer[setIndex].m_handle;
-                updateDescriptorSet(forgeRenderer->Rend(), 0, m_lightPerFrameSet[setIndex], params.size(), params.data());
+                updateDescriptorSet(forgeRenderer->Rend(), 0, m_lightPerFrameSet[setIndex].m_handle, params.size(), params.data());
             }
         }
 
@@ -2344,15 +2348,8 @@ namespace hpl {
 
                 auto* image = apMaterial->GetImage(supportedTexture);
                 if (image) {
-                    auto& samplerDesc = image->m_samplerDesc;
-                    auto& sampler = m_objectSamplerMap[samplerDesc];
-                    if (!sampler) {
-                        addSampler(frame.m_renderer->Rend(), &samplerDesc, &sampler);
-                    }
-
                     params[paramCount].pName = TextureNameLookup[supportedTexture];
                     params[paramCount++].ppTextures = &image->GetTexture().m_handle;
-
                     descInfo.m_textureHandles[supportedTexture] = image->GetTexture();
                 }
             }
@@ -2720,7 +2717,7 @@ namespace hpl {
                         float4(pBoundingVolume->GetMax().x, pBoundingVolume->GetMax().y, pBoundingVolume->GetMax().z, 0.0f);
                     endUpdateResource(&updateDesc, nullptr);
 
-            
+
                     if (!test.m_preZPass || !vertexBuffer || !pMaterial || pMaterial->GetType()->IsTranslucent()) {
                         continue;
                     }
@@ -3568,8 +3565,8 @@ namespace hpl {
                     memcpy(updateDesc.pMappedData, &uniformObjectData, sizeof(UniformLightData));
                     endUpdateResource(&updateDesc, NULL);
 
-                    updateDescriptorSet(frame.m_renderer->Rend(), lightIndex, m_lightPerLightSet[frame.m_frameIndex], paramCount, params);
-                    cmdBindDescriptorSet(frame.m_cmd, lightIndex, m_lightPerLightSet[frame.m_frameIndex]);
+                    updateDescriptorSet(frame.m_renderer->Rend(), lightIndex, m_lightPerLightSet[frame.m_frameIndex].m_handle, paramCount, params);
+                    cmdBindDescriptorSet(frame.m_cmd, lightIndex, m_lightPerLightSet[frame.m_frameIndex].m_handle);
                     uint32_t index = lightIndex;
                     lightIndex++;
                     return index;
@@ -3610,10 +3607,10 @@ namespace hpl {
                     params[paramCount++].ppTextures = &currentGBuffer.m_positionBuffer.m_handle->pTexture;
                     params[paramCount].pName = "specularMap";
                     params[paramCount++].ppTextures = &currentGBuffer.m_specularBuffer.m_handle->pTexture;
-                    updateDescriptorSet(frame.m_renderer->Rend(), 0, m_lightPerFrameSet[frame.m_frameIndex], paramCount, params);
+                    updateDescriptorSet(frame.m_renderer->Rend(), 0, m_lightPerFrameSet[frame.m_frameIndex].m_handle, paramCount, params);
                 }
 
-                cmdBindDescriptorSet(frame.m_cmd, 0, m_lightPerFrameSet[frame.m_frameIndex]);
+                cmdBindDescriptorSet(frame.m_cmd, 0, m_lightPerFrameSet[frame.m_frameIndex].m_handle);
 
                 // --------------------------------------------------------
                 // Draw Point Lights
@@ -3642,19 +3639,19 @@ namespace hpl {
                         cmdBindPipeline(
                             frame.m_cmd,
                             m_pointLightPipeline
-                                [LightPipelineVariants::LightPipelineVariant_CW | LightPipelineVariants::LightPipelineVariant_StencilTest]);
+                                [LightPipelineVariants::LightPipelineVariant_CW | LightPipelineVariants::LightPipelineVariant_StencilTest].m_handle);
                         break;
                     case eLightType_Spot:
                         cmdBindPipeline(
                             frame.m_cmd,
                             m_spotLightPipeline
-                                [LightPipelineVariants::LightPipelineVariant_CW | LightPipelineVariants::LightPipelineVariant_StencilTest]);
+                                [LightPipelineVariants::LightPipelineVariant_CW | LightPipelineVariants::LightPipelineVariant_StencilTest].m_handle);
                         break;
                     case eLightType_Box:
                         cmdBindPipeline(
                             frame.m_cmd,
                             m_boxLightPipeline
-                                [LightPipelineVariants::LightPipelineVariant_CW | LightPipelineVariants::LightPipelineVariant_StencilTest]);
+                                [LightPipelineVariants::LightPipelineVariant_CW | LightPipelineVariants::LightPipelineVariant_StencilTest].m_handle);
                         break;
                     default:
                         ASSERT(false && "Unsupported light type");
@@ -3704,13 +3701,13 @@ namespace hpl {
                 for (auto& light : deferredLightRenderBack) {
                     switch (light->m_light->GetLightType()) {
                     case eLightType_Point:
-                        cmdBindPipeline(frame.m_cmd, m_pointLightPipeline[LightPipelineVariants::LightPipelineVariant_CW]);
+                        cmdBindPipeline(frame.m_cmd, m_pointLightPipeline[LightPipelineVariants::LightPipelineVariant_CW].m_handle);
                         break;
                     case eLightType_Spot:
-                        cmdBindPipeline(frame.m_cmd, m_spotLightPipeline[LightPipelineVariants::LightPipelineVariant_CW]);
+                        cmdBindPipeline(frame.m_cmd, m_spotLightPipeline[LightPipelineVariants::LightPipelineVariant_CW].m_handle);
                         break;
                     case eLightType_Box:
-                        cmdBindPipeline(frame.m_cmd, m_boxLightPipeline[LightPipelineVariants::LightPipelineVariant_CW]);
+                        cmdBindPipeline(frame.m_cmd, m_boxLightPipeline[LightPipelineVariants::LightPipelineVariant_CW].m_handle);
                         break;
                     default:
                         ASSERT(false && "Unsupported light type");

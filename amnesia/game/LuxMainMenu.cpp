@@ -1378,7 +1378,7 @@ void cLuxMainMenu::CreateScreenTextures()
     });
 
     {
-        ForgeTextureHandle texture;
+        SharedTexture texture;
         texture.SetRenderTarget(m_screenTarget);
         m_screenImage = std::make_shared<Image>();
         m_screenImage->SetForgeTexture(std::move(texture));
@@ -1386,7 +1386,7 @@ void cLuxMainMenu::CreateScreenTextures()
     }
 
     {
-        ForgeTextureHandle texture;
+        SharedTexture texture;
         texture.SetRenderTarget(m_screenBlurTarget);
         m_screenBlurImage = std::make_shared<Image>();
         m_screenBlurImage->SetForgeTexture(std::move(texture));
@@ -1406,7 +1406,7 @@ void cLuxMainMenu::RenderBlurTexture() {
     auto* renderer = viewport->GetRenderer();
     auto viewportSize = viewport->GetSize();
 
-    ForgeRenderTarget tempBlurTarget(forgeRenderer->Rend());
+    SharedRenderTarget tempBlurTarget(forgeRenderer->Rend());
     tempBlurTarget.Load(forgeRenderer->Rend(), [&](RenderTarget** target) {
         RenderTargetDesc renderTarget = {};
         renderTarget.mArraySize = 1;

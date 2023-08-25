@@ -58,14 +58,14 @@ namespace hpl {
         static constexpr uint32_t DescriptorSetSize = 16;
 
         Sampler* m_inputSampler;
-        ForgeShaderHandle m_blurShader;
+        SharedShader m_blurShader;
         RootSignature* m_blurSignature;
         std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perFrameDescriptorSets;
         uint32_t m_setIndex = 0;
         Pipeline* m_blurPipeline;
 
         RootSignature* m_bloomRootSignature;
-        ForgeShaderHandle m_bloomShader;
+        SharedShader m_bloomShader;
         std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perFrameDescriptorBloomSets;
         uint32_t m_setBloomIndex = 0;
         Pipeline* m_bloomPipeline;
@@ -95,7 +95,7 @@ namespace hpl {
 				return *this;
 			}
 			cVector2l m_size;
-            std::array<ForgeRenderTarget, 2> m_blurTargets;
+            std::array<SharedRenderTarget, 2> m_blurTargets;
 		};
 	private:
 		virtual void OnSetParams() override;

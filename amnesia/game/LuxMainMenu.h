@@ -273,15 +273,15 @@ private:
 	std::shared_ptr<Image> m_screenImage;
 	std::shared_ptr<Image> m_screenBlurImage;
 
-    ForgeRenderTarget m_screenBlurTarget;
-    ForgeRenderTarget m_screenTarget;
+    SharedRenderTarget m_screenBlurTarget;
+    SharedRenderTarget m_screenTarget;
 
     cGuiGfxElement *mpScreenGfx;
 	cGuiGfxElement *mpScreenBlurGfx;
 
     static constexpr uint32_t BlurSetSize = 64;
     Sampler* m_inputSampler;
-    ForgeShaderHandle m_blurShader;
+    SharedShader m_blurShader;
 
     RootSignature* m_blurRootSignature;
     std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perFrameBlurDescriptorSet;

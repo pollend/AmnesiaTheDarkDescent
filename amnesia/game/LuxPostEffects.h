@@ -74,7 +74,7 @@ public:
 
 private:
     uint32_t m_descIndex = 0;
-    ForgeShaderHandle m_insanityShader;
+    SharedShader m_insanityShader;
     Pipeline* m_insanityPipeline;
     RootSignature* m_instantyRootSignature = nullptr;
     std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_insanityPerFrameset{};

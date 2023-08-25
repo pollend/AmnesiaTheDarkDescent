@@ -11,65 +11,85 @@
 #include <cstring>
 
 namespace hpl {
-    void ForgeCmdHandle::Free() {
+    void SharedCmd::Free() {
         if (m_handle) {
             ASSERT(m_renderer && "Renderer is null");
             removeCmd(m_renderer, m_handle);
         }
     }
-    void ForgeShaderHandle::Free() {
+    void SharedShader::Free() {
         if(m_handle) {
             removeShader(m_renderer, m_handle);
         }
     }
-    void ForgeTextureHandle::Free() {
+    void SharedTexture::Free() {
         if (m_handle) {
             removeResource(m_handle);
         }
     }
 
-    void ForgeBufferHandle::Free() {
+    void SharedBuffer::Free() {
         if (m_handle) {
             removeResource(m_handle);
         }
     }
 
-    void ForgeRenderTarget::Free() {
+    void SharedRenderTarget::Free() {
         if (m_handle) {
             ASSERT(m_renderer && "Renderer is null");
             removeRenderTarget(m_renderer, m_handle);
         }
     }
 
-    void ForgeSwapChainHandle::Free() {
+    void SharedSwapChain::Free() {
         if (m_handle) {
             ASSERT(m_renderer && "Renderer is null");
             removeSwapChain(m_renderer, m_handle);
         }
     }
 
-    void ForgeDescriptorSet::Free() {
+    void SharedDescriptorSet::Free() {
         if (m_handle) {
             ASSERT(m_renderer && "Renderer is null");
             removeDescriptorSet(m_renderer, m_handle);
         }
     }
 
-    void ForgePipelineHandle::Free() {
+    void SharedPipeline::Free() {
         if (m_handle) {
             ASSERT(m_renderer && "Renderer is null");
             removePipeline(m_renderer, m_handle);
         }
     }
 
-    void ForgeSamplerHandle::Free() {
+    void SharedSampler::Free() {
         if (m_handle) {
             ASSERT(m_renderer && "Renderer is null");
             removeSampler(m_renderer, m_handle);
         }
     }
 
-    TinyImageFormat ForgeTextureHandle::FromHPLPixelFormat(ePixelFormat format) {
+    void SharedRootSignature::Free() {
+        if (m_handle) {
+            ASSERT(m_renderer && "Renderer is null");
+            removeRootSignature(m_renderer, m_handle);
+        }
+    }
+
+    void SharedCmdPool::Free() {
+        if (m_handle) {
+            ASSERT(m_renderer && "Renderer is null");
+            removeCmdPool(m_renderer, m_handle);
+        }
+    }
+
+    void SharedFence::Free() {
+        if (m_handle) {
+            ASSERT(m_renderer && "Renderer is null");
+            removeFence(m_renderer, m_handle);
+        }
+    }
+    TinyImageFormat SharedTexture::FromHPLPixelFormat(ePixelFormat format) {
         switch(format) {
             case ePixelFormat_Alpha:
                 return TinyImageFormat_A8_UNORM;
@@ -177,8 +197,8 @@ namespace hpl {
     }
 
 
-    ForgeTextureHandle ForgeTextureHandle::LoadFromHPLBitmap(cBitmap& bitmap, const BitmapLoadOptions& options) {
-        ForgeTextureHandle handle;
+    SharedTexture SharedTexture::LoadFromHPLBitmap(cBitmap& bitmap, const BitmapLoadOptions& options) {
+        SharedTexture handle;
         SyncToken token = {};
 
         TextureDesc desc{};
@@ -247,8 +267,8 @@ namespace hpl {
         waitForToken(&token);
         return handle;
     }
-    ForgeTextureHandle ForgeTextureHandle::CreateCubemapFromHPLBitmaps(const std::span<cBitmap*> bitmaps, const BitmapCubmapLoadOptions& options) {
-        ForgeTextureHandle handle;
+    SharedTexture SharedTexture::CreateCubemapFromHPLBitmaps(const std::span<cBitmap*> bitmaps, const BitmapCubmapLoadOptions& options) {
+        SharedTexture handle;
         ASSERT(bitmaps.size() == 6 && "Cubemap must have 6 bitmaps");
         SyncToken token = {};
         TextureDesc desc{};

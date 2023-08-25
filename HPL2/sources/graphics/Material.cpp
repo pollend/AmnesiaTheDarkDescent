@@ -146,6 +146,7 @@ namespace hpl {
         } else {
             m_antistropy = Antistropy_None ;
         }
+        Dirty();
     }
 
 	void cMaterial::UpdateFlags() {
@@ -183,7 +184,6 @@ namespace hpl {
 	void cMaterial::SetImage(eMaterialTexture aType, iResourceBase *apTexture)
 	{
 		// increase version number to dirty material
-		m_version++;
 		UpdateFlags();
 		m_image[aType].SetAutoDestroyResource(false);
 		if(apTexture) {
@@ -192,6 +192,7 @@ namespace hpl {
 		} else {
 			m_image[aType] = ImageResourceWrapper();
 		}
+        Dirty();
 	}
 
 	Image* cMaterial::GetImage(eMaterialTexture aType)

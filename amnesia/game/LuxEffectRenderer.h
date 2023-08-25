@@ -85,8 +85,8 @@ public:
             m_size = other.m_size;
         }
         cVector2l m_size = cVector2l(0, 0);
-        ForgeRenderTarget m_outlineBuffer; // the intermediary results from the outline
-        std::array<ForgeRenderTarget, 2> m_blurTarget;
+        SharedRenderTarget m_outlineBuffer; // the intermediary results from the outline
+        std::array<SharedRenderTarget, 2> m_blurTarget;
     };
 
 
