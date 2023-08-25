@@ -1621,7 +1621,7 @@ void cLuxInventory::CreateScreenTextures()
     });
 
     {
-        ForgeTextureHandle texture;
+        SharedTexture texture;
         texture.SetRenderTarget(m_screenTarget);
         m_screenImage = std::make_shared<Image>();
         m_screenImage->SetForgeTexture(std::move(texture));
@@ -1629,7 +1629,7 @@ void cLuxInventory::CreateScreenTextures()
     }
     {
 
-        ForgeTextureHandle texture;
+        SharedTexture texture;
         texture.SetRenderTarget(m_screenBgTarget);
         m_screenBgTexture = std::make_shared<Image>();
         m_screenBgTexture->SetForgeTexture(std::move(texture));

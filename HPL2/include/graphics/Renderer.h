@@ -267,7 +267,7 @@ namespace hpl {
         virtual bool LoadData()=0;
         virtual void DestroyData()=0;
 
-        virtual ForgeRenderTarget GetOutputImage(uint32_t frameIndex, cViewport& viewport) { return ForgeRenderTarget();}
+        virtual SharedRenderTarget GetOutputImage(uint32_t frameIndex, cViewport& viewport) { return SharedRenderTarget();}
 
         cWorld *GetCurrentWorld(){ return mpCurrentWorld;}
         cFrustum *GetCurrentFrustum(){ return mpCurrentFrustum;}

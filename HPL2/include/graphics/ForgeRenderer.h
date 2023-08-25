@@ -78,10 +78,10 @@ namespace hpl {
         */
         class CommandResourcePool {
         public:
-            using VariantTypes = std::variant<ForgeSwapChainHandle,
-                ForgeTextureHandle,
-                ForgeBufferHandle,
-                ForgeRenderTarget>;
+            using VariantTypes = std::variant<SharedSwapChain,
+                SharedTexture,
+                SharedBuffer,
+                SharedRenderTarget>;
             // could be done better ...
             CommandResourcePool() = default;
 
@@ -161,7 +161,7 @@ namespace hpl {
         std::array<Semaphore*, SwapChainLength> m_renderCompleteSemaphores;
         std::array<CmdPool*, SwapChainLength> m_cmdPools;
         std::array<Cmd*, SwapChainLength> m_cmds;
-        std::array<ForgeRenderTarget, SwapChainLength> m_finalRenderTarget;
+        std::array<SharedRenderTarget, SwapChainLength> m_finalRenderTarget;
 
         float m_gamma = 1.0f;
 
@@ -170,7 +170,7 @@ namespace hpl {
 
         Renderer* m_renderer = nullptr;
         RootSignature* m_pipelineSignature = nullptr;
-        ForgeSwapChainHandle m_swapChain;
+        SharedSwapChain m_swapChain;
         Semaphore* m_imageAcquiredSemaphore = nullptr;
         Queue* m_graphicsQueue = nullptr;
 
@@ -178,12 +178,12 @@ namespace hpl {
         Pipeline* m_copyPostProcessingPipelineToSwapChain = nullptr;
         Pipeline* m_copyPostProcessingPipelineToUnormR8G8B8A8 = nullptr;
 
-        ForgePipelineHandle m_finalPipeline;
-        ForgeShaderHandle m_finalShader;
+        SharedPipeline m_finalPipeline;
+        SharedShader m_finalShader;
         RootSignature* m_finalRootSignature = nullptr;
-        std::array<ForgeDescriptorSet, SwapChainLength> m_finalPerFrameDescriptorSet;
+        std::array<SharedDescriptorSet, SwapChainLength> m_finalPerFrameDescriptorSet;
 
-        ForgeSamplerHandle m_pointSampler ;
+        SharedSampler m_pointSampler ;
 
         RootSignature* m_copyPostProcessingRootSignature = nullptr;
         DescriptorSet* m_copyPostProcessingDescriptorSet = nullptr;

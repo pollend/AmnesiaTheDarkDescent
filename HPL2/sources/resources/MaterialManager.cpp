@@ -38,6 +38,9 @@
 
 #include "impl/tinyXML/tinyxml.h"
 
+#include "Common_3/Utilities/Interfaces/ILog.h"
+#include <FixPreprocessor.h>
+
 namespace hpl {
 
 	namespace internal {
@@ -228,8 +231,6 @@ namespace hpl {
 
 	cMaterial* cMaterialManager::LoadFromFile(const tString& asName,const tWString& asPath)
 	{
-		//Log("Load material: %s\n", asName.c_str());
-
 		iXmlDocument* pDoc = mpResources->GetLowLevel()->CreateXmlDocument();
 		if(pDoc->CreateFromFile(asPath)==false)
 		{
@@ -274,17 +275,21 @@ namespace hpl {
 		/////////////////////////////
 		// CreateType
 		iMaterialType *pMatType = mpGraphics->GetMaterialType(sType);
-		if(pMatType ==NULL)
+		tString normalizedMaterialName = cString::ToLowerCase(sType);
+	    auto metaInfo = std::find_if(cMaterial::MaterialMetaTable.begin(), cMaterial::MaterialMetaTable.end(), [&](auto& info) {
+	        return info.m_name == normalizedMaterialName;
+	    });
+
+	    if(pMatType == NULL || metaInfo == cMaterial::MaterialMetaTable.end())
 		{
 			mpResources->DestroyXmlDocument(pDoc);
-			Error("Invalid material type '%s'!\n",sType.c_str());
+			LOGF(eERROR, "Invalid material type %s", sType.c_str());
 			return NULL;
 		}
 		cMaterial* pMat = new cMaterial(asName, asPath, mpGraphics, mpResources, pMatType);
-
 		pMat->SetDepthTest(bDepthTest);
 		pMat->SetPhysicsMaterial(sPhysicsMatName);
-        if(pMatType->IsTranslucent()) {
+        if(metaInfo->m_isTranslucent) {
 			pMat->SetBlendMode(GetBlendMode(sBlendMode));
 		}
 
@@ -297,12 +302,8 @@ namespace hpl {
 			return NULL;
 		}
 
-		//Log("Material %s\n",asName.c_str());
-
-		for(int i=0; i< pMatType->GetUsedTextureNum(); ++i)
-		{
-			cMaterialUsedTexture* pUsedTexture = pMatType->GetUsedTexture(i);
-			tString sTextureType = GetTextureString(pUsedTexture->mType);
+	    for(eMaterialTexture textureType: metaInfo->m_usedTextures) {
+			tString sTextureType = GetTextureString(textureType);
 
 			cXmlElement* pTexChild = pTexRoot->GetFirstElement(sTextureType.c_str());
 			if(pTexChild==NULL){
@@ -323,8 +324,7 @@ namespace hpl {
 
 			if(sFile=="") continue;
 
-			if(cString::GetFilePath(sFile).length() <= 1)
-			{
+			if(cString::GetFilePath(sFile).length() <= 1) {
 				sFile = cString::SetFilePath(sFile, cString::To8Char(cString::GetFilePathW(asPath)));
 			}
 
@@ -335,7 +335,7 @@ namespace hpl {
 				auto animatedImage = mpResources->GetTextureManager()->CreateAnimImage(sFile,bMipMaps,type,eTextureUsage_Normal,mlTextureSizeDownScaleLevel);
 				animatedImage->SetFrameTime(fFrameTime);
 				animatedImage->SetAnimMode(animMode);
-				pMat->SetImage(pUsedTexture->mType, animatedImage);
+				pMat->SetImage(textureType, animatedImage);
 				pImageResource = animatedImage;
 
 			}
@@ -374,7 +374,7 @@ namespace hpl {
 			    pMat->setTextureFilter(mTextureFilter);
 			    pMat->SetTextureAnisotropy(mfTextureAnisotropy);
 		        if(pImage) {
-					pMat->SetImage(pUsedTexture->mType, pImage);
+					pMat->SetImage(textureType, pImage);
                 }
 			}
 			if(!pImageResource)
@@ -383,8 +383,7 @@ namespace hpl {
 				hplDelete(pMat);
 				return nullptr;
 			}
-
-		}
+	    }
 
 		///////////////////////////
 		//Animations

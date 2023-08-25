@@ -50,7 +50,7 @@ namespace hpl {
         Image& operator=(const Image& other) = delete;
         void operator=(Image&& other);
 
-        inline void SetForgeTexture(ForgeTextureHandle&& handle) {
+        inline void SetForgeTexture(SharedTexture&& handle) {
             m_texture = std::move(handle);
         }
 
@@ -74,10 +74,10 @@ namespace hpl {
             return cVector2l(0, 0);
         }
 
-        inline ForgeTextureHandle& GetTexture() {
+        inline SharedTexture& GetTexture() {
             return m_texture;
         }
-        ForgeTextureHandle m_texture;
+        SharedTexture m_texture;
     };
 
 } // namespace hpl

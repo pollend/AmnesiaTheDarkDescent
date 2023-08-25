@@ -72,7 +72,7 @@ namespace hpl {
 
     class cMaterialType_SolidDiffuse_Vars : public iMaterialVars {
     public:
-        std::array<ForgeBufferHandle, ForgeRenderer::SwapChainLength> m_buffer;
+        std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_buffer;
 
         cMaterialType_SolidDiffuse_Vars()
             : mfHeightMapScale(0.05f)
@@ -111,7 +111,7 @@ namespace hpl {
         void LoadVariables(cMaterial* apMaterial, cResourceVarsObject* apVars) override;
         void GetVariableValues(cMaterial* apMaterial, cResourceVarsObject* apVars) override;
 
-        std::array<ForgeDescriptorSet, eMaterialTexture_LastEnum>  m_descriptorSet;
+        std::array<SharedDescriptorSet, eMaterialTexture_LastEnum>  m_descriptorSet;
     private:
         uint32_t m_materialCount = 0;
         void CompileSolidSpecifics(cMaterial* apMaterial) override;

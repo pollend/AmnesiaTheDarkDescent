@@ -46,8 +46,8 @@ namespace hpl {
 		bool LoadData() override;
 		void DestroyData() override;
 
-		virtual ForgeRenderTarget GetOutputImage(uint32_t frameIndex, cViewport& viewport) override {
-			return ForgeRenderTarget();
+		virtual SharedRenderTarget GetOutputImage(uint32_t frameIndex, cViewport& viewport) override {
+			return SharedRenderTarget();
 		}
 	private:
 

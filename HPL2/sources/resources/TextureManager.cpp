@@ -114,9 +114,9 @@ namespace hpl {
 			[&abUseMipMaps](const tString& asName, const tWString& path, cBitmap* pBmp) -> Image*
 			{
 				auto* resource = new Image(asName, path);
-				ForgeTextureHandle::BitmapLoadOptions opts = {0};
+				SharedTexture::BitmapLoadOptions opts = {0};
 				opts.m_useMipmaps = abUseMipMaps;
-				auto handle = ForgeTextureHandle::LoadFromHPLBitmap(*pBmp, opts);
+				auto handle = SharedTexture::LoadFromHPLBitmap(*pBmp, opts);
 				resource->SetForgeTexture(std::move(handle));
 				return resource;
 			});
@@ -131,9 +131,9 @@ namespace hpl {
 			{
 
 				auto* resource = new Image(asName, path);
-				ForgeTextureHandle::BitmapLoadOptions opts = {0};
+				SharedTexture::BitmapLoadOptions opts = {0};
 				opts.m_useMipmaps = abUseMipMaps;
-				auto handle = ForgeTextureHandle::LoadFromHPLBitmap(*pBmp, opts);
+				auto handle = SharedTexture::LoadFromHPLBitmap(*pBmp, opts);
 				resource->SetForgeTexture(std::move(handle));
 
 				return resource;
@@ -150,10 +150,10 @@ namespace hpl {
 			[&abUseMipMaps](const tString& asName, const tWString& path, cBitmap* pBmp) -> Image*
 				{
 					auto* resource = new Image(asName, path);
-					ForgeTextureHandle::BitmapLoadOptions opts = {0};
+					SharedTexture::BitmapLoadOptions opts = {0};
 					opts.m_useMipmaps = abUseMipMaps;
 					opts.m_useCubeMap = true;
-					auto handle = ForgeTextureHandle::LoadFromHPLBitmap(*pBmp, opts);
+					auto handle = SharedTexture::LoadFromHPLBitmap(*pBmp, opts);
 					resource->m_texture = std::move(handle);
                     return resource;
 				});
@@ -205,9 +205,9 @@ namespace hpl {
 			}
 			ASSERT(vBitmaps.size() == 6 && "vBitmaps.size() == 6");
 
-			ForgeTextureHandle::BitmapCubmapLoadOptions opts = {0};
+			SharedTexture::BitmapCubmapLoadOptions opts = {0};
 			opts.m_useMipmaps = abUseMipMaps;
-			auto handle = ForgeTextureHandle::CreateCubemapFromHPLBitmaps(vBitmaps, opts);
+			auto handle = SharedTexture::CreateCubemapFromHPLBitmaps(vBitmaps, opts);
 			image->SetForgeTexture(std::move(handle));
 
 			for(int j=0;j<(int)vBitmaps.size();j++)	{
@@ -231,9 +231,9 @@ namespace hpl {
 			[ &abUseMipMaps](const tString& asName, const tWString& path, cBitmap* pBmp) -> Image*
 			{
 				auto* resource = new Image(asName, path);
-				ForgeTextureHandle::BitmapLoadOptions opts = {0};
+				SharedTexture::BitmapLoadOptions opts = {0};
 				opts.m_useMipmaps = abUseMipMaps;
-				auto handle = ForgeTextureHandle::LoadFromHPLBitmap(*pBmp, opts);
+				auto handle = SharedTexture::LoadFromHPLBitmap(*pBmp, opts);
 				resource->SetForgeTexture(std::move(handle));
 				return resource;
 			});
@@ -331,10 +331,10 @@ namespace hpl {
                     for (auto& bitmap : vBitmaps) {
                             std::unique_ptr<Image> image = std::make_unique<Image>();
 
-                            ForgeTextureHandle::BitmapLoadOptions opts = { 0 };
+                            SharedTexture::BitmapLoadOptions opts = { 0 };
                             opts.m_useMipmaps = abUseMipMaps;
                             opts.m_useCubeMap = aType == eTextureType_CubeMap;
-                            auto handle = ForgeTextureHandle::LoadFromHPLBitmap(*bitmap, opts);
+                            auto handle = SharedTexture::LoadFromHPLBitmap(*bitmap, opts);
                             image->SetForgeTexture(std::move(handle));
 
                             // Image::InitializeFromBitmap(*image, *bitmap, desc);

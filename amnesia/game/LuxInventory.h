@@ -431,7 +431,7 @@ private:
 
     static constexpr uint32_t DescriptorSetSize = 16;
     Sampler* m_inputSampler;
-    ForgeShaderHandle m_inventoryScreenShader;
+    SharedShader m_inventoryScreenShader;
 	RootSignature* m_inventoryScreenRootSignature;
     std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perFrameInvetoryScreenDescriptorSet;
     uint32_t m_setIndex = 0;
@@ -440,8 +440,8 @@ private:
     std::shared_ptr<Image> m_screenImage;
 	std::shared_ptr<Image> m_screenBgTexture;
 
-    ForgeRenderTarget m_screenBgTarget;
-    ForgeRenderTarget m_screenTarget;
+    SharedRenderTarget m_screenBgTarget;
+    SharedRenderTarget m_screenTarget;
 
     cGuiGfxElement* mpFrameHealthCorners[4];
 	cGuiGfxElement* mpFrameHealthBorders[4];

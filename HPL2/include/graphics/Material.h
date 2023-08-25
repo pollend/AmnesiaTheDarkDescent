@@ -64,8 +64,7 @@ namespace hpl {
 	};
 
 
-	class cMaterial : public iResourceBase
-	{
+	class cMaterial : public iResourceBase {
 	friend class iMaterialType;
 	public:
 		static constexpr uint32_t MaxMaterialID = 2048;
@@ -308,14 +307,12 @@ namespace hpl {
 		static void SetDestroyTypeSpecifics(bool abX){ mbDestroyTypeSpecifics = abX; }
 		static bool GetDestroyTypeSpecifics(){ return mbDestroyTypeSpecifics; }
 
-		//resources stuff.
 		bool Reload(){ return false;}
 		void Unload(){}
 		void Destroy(){}
 
 		inline MaterialType& type() { return m_info; }
 
-		// inline ForgeBufferHandle& uniformHandle() { return m_bufferHandle; }
 		inline uint32_t materialID() { return m_info.m_handle.get(); }
 		inline uint32_t Version() { return m_version; }
 	    inline void Dirty() { m_version++; }

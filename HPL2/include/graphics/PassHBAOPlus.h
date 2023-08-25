@@ -68,13 +68,13 @@ public:
         }
 
         // 16 depth intermediary buffers
-        ForgeTextureHandle m_preparedDepth = {};
-        ForgeTextureHandle m_aoQurter = {};
-        ForgeDescriptorSet m_constDescriptorSet = {};
+        SharedTexture m_preparedDepth = {};
+        SharedTexture m_aoQurter = {};
+        SharedDescriptorSet m_constDescriptorSet = {};
         uint2 m_size = uint2(0, 0);
         cFrustum* m_frustum = nullptr;
-        std::array<ForgeDescriptorSet, ForgeRenderer::SwapChainLength> m_perFrameDescriptorSet = {};
-        ForgeBufferHandle m_constBuffer;
+        std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_perFrameDescriptorSet = {};
+        SharedBuffer m_constBuffer;
     };
 
     struct HBAORootConstant {
@@ -96,6 +96,7 @@ public:
         float foregroundViewDepth;
         float pad[2];
     };
+
     PassHBAOPlus();
     void cmdDraw(
         const ForgeRenderer::Frame& frame,
@@ -109,14 +110,14 @@ private:
     UniqueViewportData<ViewportData> m_boundViewportData;
     RootSignature* m_rootSignature;
 
-    ForgeShaderHandle m_shaderDeinterleave;
-    ForgePipelineHandle m_pipelineDeinterleave;
+    SharedShader m_shaderDeinterleave;
+    SharedPipeline m_pipelineDeinterleave;
 
-    ForgeShaderHandle m_shaderCourseAO;
-    ForgePipelineHandle m_pipelineCourseAO;
+    SharedShader m_shaderCourseAO;
+    SharedPipeline m_pipelineCourseAO;
 
-    ForgeShaderHandle m_shaderReinterleave;
-    ForgePipelineHandle m_pipelineReinterleave;
+    SharedShader m_shaderReinterleave;
+    SharedPipeline m_pipelineReinterleave;
 
     Sampler* m_pointSampler;
 };

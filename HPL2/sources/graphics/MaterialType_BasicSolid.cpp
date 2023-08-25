@@ -51,29 +51,6 @@ namespace hpl
     iMaterialType_SolidBase::iMaterialType_SolidBase(cGraphics* apGraphics, cResources* apResources)
         : iMaterialType(apGraphics, apResources)
     {
-        // m_diffuseProgramVariant.Initialize(ShaderHelper::LoadProgramHandlerDefault(
-        //     "vs_basic_solid_diffuse",
-        //      "fs_basic_solid_diffuse", false, true));
-        // m_ZProgramVariant.Initialize(
-        //     ShaderHelper::LoadProgramHandlerDefault("vs_basic_solid_z", "fs_basic_solid_z", false, true));
-
-        // m_illuminationProgram = hpl::loadProgram("vs_basic_solid_illumination", "fs_basic_solid_illumination");
-
-        // m_s_normalMap = bgfx::createUniform("s_normalMap", bgfx::UniformType::Sampler);
-        // m_s_specularMap = bgfx::createUniform("s_specularMap", bgfx::UniformType::Sampler);
-        // m_s_diffuseMap = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
-        // m_s_envMapAlphaMap = bgfx::createUniform("s_envMapAlphaMap", bgfx::UniformType::Sampler);
-        // m_s_heightMap = bgfx::createUniform("s_heightMap", bgfx::UniformType::Sampler);
-
-        // m_s_dissolveMap = bgfx::createUniform("s_dissolveMap", bgfx::UniformType::Sampler);
-        // m_s_dissolveAlphaMap = bgfx::createUniform("s_dissolveAlphaMap", bgfx::UniformType::Sampler);
-
-        // m_s_envMap = bgfx::createUniform("s_envMap", bgfx::UniformType::Sampler);
-
-        // m_u_param = bgfx::createUniform("u_param", bgfx::UniformType::Vec4);
-        // m_u_mtxUv = bgfx::createUniform("u_mtxUV", bgfx::UniformType::Mat4);
-        // m_u_normalMtx = bgfx::createUniform("u_normalMtx", bgfx::UniformType::Mat4);
-        // m_u_mtxInvViewRotation = bgfx::createUniform("u_mtxInvViewRotation", bgfx::UniformType::Mat4);
     }
 
     //--------------------------------------------------------------------------

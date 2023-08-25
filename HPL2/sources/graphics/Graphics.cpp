@@ -159,7 +159,7 @@ namespace hpl {
 		// Create Renderers
 		if(alHplSetupFlags & eHplSetup_Screen)
 		{
-    
+
 			mvRenderers.resize(1, NULL);
 
 			mvRenderers[eRenderer_Main] = new cRendererDeferred(this, apResources);

@@ -1930,14 +1930,14 @@ void cLuxJournal::CreateScreenTextures() {
     });
 
     {
-        ForgeTextureHandle texture;
+        SharedTexture texture;
         texture.SetRenderTarget(m_screenTarget);
         m_screenImage = std::make_shared<Image>();
         m_screenImage->SetForgeTexture(std::move(texture));
         mpScreenGfx = mpGui->CreateGfxTexture(m_screenImage.get(), false, eGuiMaterial_Diffuse, cColor(1, 1), true, 0, 1, false);
     }
     {
-        ForgeTextureHandle texture;
+        SharedTexture texture;
         texture.SetRenderTarget(m_screenBgTarget);
         m_screenBgTexture = std::make_shared<Image>();
         m_screenBgTexture->SetForgeTexture(std::move(texture));

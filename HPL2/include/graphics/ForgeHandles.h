@@ -15,13 +15,22 @@
 namespace hpl {
     class cBitmap;
 
+    template<class CRTP, class T>
+    struct UniqueHandle {
+    public:
+        using Base = UniqueHandle<CRTP, T>;
+        // NOTE: This is a pointer to the resource
+        //      Just how the API works for the-forge this is exposed to the user so be careful
+        T* m_handle = nullptr;
+    };
+
     // a handle that can be used to reference a resource
     template<class CRTP, class T>
     struct RefHandle {
     public:
         using Base = RefHandle<CRTP, T>;
         // NOTE: This is a pointer to the resource
-        //      Just how the API works for the-forget this is exposed to the user so be careful
+        //      Just how the API works for the-forge this is exposed to the user so be careful
         T* m_handle = nullptr;
 
         struct RefCounter {
@@ -57,21 +66,6 @@ namespace hpl {
             other.m_handle = nullptr;
             other.m_refCounter = nullptr;
             other.m_initialized = false;
-        }
-
-        /**
-        * Initialize the handle with a resource
-        */
-        [[deprecated("use load easy to forget to call Initialize")]]
-        void Initialize() {
-            if(!m_initialized && m_handle) {
-                ASSERT(!m_refCounter && "Trying to Initialize a handle with references");
-                if(!m_refCounter) {
-                    m_refCounter = new RefCounter();
-                }
-                m_refCounter->m_refCount++;
-                m_initialized = true;
-            }
         }
 
         void Load(std::function<bool(T** handle)> load) {
@@ -156,31 +150,31 @@ namespace hpl {
         friend CRTP;
     };
 
-    struct ForgeRenderTarget : public RefHandle<ForgeRenderTarget, RenderTarget> {
+    struct SharedRenderTarget : public RefHandle<SharedRenderTarget, RenderTarget> {
     public:
-        using Base = RefHandle<ForgeRenderTarget, RenderTarget>;
-        ForgeRenderTarget()
+        using Base = RefHandle<SharedRenderTarget, RenderTarget>;
+        SharedRenderTarget()
             : Base() {
         }
-        ForgeRenderTarget(Renderer* renderer)
+        SharedRenderTarget(Renderer* renderer)
             : m_renderer(renderer)
             , Base() {
         }
-        ForgeRenderTarget(const ForgeRenderTarget& other)
+        SharedRenderTarget(const SharedRenderTarget& other)
             : Base(other)
             , m_renderer(other.m_renderer) {
         }
-        ForgeRenderTarget(ForgeRenderTarget&& other)
+        SharedRenderTarget(SharedRenderTarget&& other)
             : Base(std::move(other))
             , m_renderer(other.m_renderer) {
         }
-        ~ForgeRenderTarget() {
+        ~SharedRenderTarget() {
         }
-        void operator=(const ForgeRenderTarget& other) {
+        void operator=(const SharedRenderTarget& other) {
             Base::operator=(other);
             m_renderer = other.m_renderer;
         }
-        void operator=(ForgeRenderTarget&& other) {
+        void operator=(SharedRenderTarget&& other) {
             Base::operator=(std::move(other));
             m_renderer = other.m_renderer;
         }
@@ -193,10 +187,10 @@ namespace hpl {
     private:
         void Free();
         Renderer* m_renderer = nullptr;
-        friend struct RefHandle<ForgeRenderTarget, RenderTarget>;
+        friend struct RefHandle<SharedRenderTarget, RenderTarget>;
     };
 
-    struct ForgeTextureHandle: public RefHandle<ForgeTextureHandle, Texture> {
+    struct SharedTexture: public RefHandle<SharedTexture, Texture> {
     public:
         struct BitmapLoadOptions {
         public:
@@ -209,34 +203,34 @@ namespace hpl {
             bool m_useMipmaps: 1;
         };
 
-        static ForgeTextureHandle LoadFromHPLBitmap(cBitmap& bitmap, const BitmapLoadOptions& options);
-        static ForgeTextureHandle CreateCubemapFromHPLBitmaps(const std::span<cBitmap*> bitmaps, const BitmapCubmapLoadOptions& options);
+        static SharedTexture LoadFromHPLBitmap(cBitmap& bitmap, const BitmapLoadOptions& options);
+        static SharedTexture CreateCubemapFromHPLBitmaps(const std::span<cBitmap*> bitmaps, const BitmapCubmapLoadOptions& options);
         static TinyImageFormat FromHPLPixelFormat(ePixelFormat format);
 
-        ForgeTextureHandle():
+        SharedTexture():
             Base() {
         }
-        ForgeTextureHandle(const ForgeTextureHandle& other):
+        SharedTexture(const SharedTexture& other):
             Base(other), m_renderTarget(other.m_renderTarget){
         }
-        ForgeTextureHandle(ForgeTextureHandle&& other):
+        SharedTexture(SharedTexture&& other):
             Base(std::move(other)),
             m_renderTarget(std::move(other.m_renderTarget)) {
         }
-        ~ForgeTextureHandle() {
+        ~SharedTexture() {
         }
 
-        void operator= (const ForgeTextureHandle& other) {
+        void operator= (const SharedTexture& other) {
             Base::operator=(other);
             m_renderTarget = other.m_renderTarget;
         }
 
-        void operator= (ForgeTextureHandle&& other) {
+        void operator= (SharedTexture&& other) {
             Base::operator=(std::move(other));
             m_renderTarget = std::move(other.m_renderTarget);
         }
 
-        void SetRenderTarget(ForgeRenderTarget renderTarget) {
+        void SetRenderTarget(SharedRenderTarget renderTarget) {
             TryFree();
             m_initialized = true;
             m_owning = false; // We don't own the handle we are attaching
@@ -245,31 +239,31 @@ namespace hpl {
         }
     private:
         void Free();
-        ForgeRenderTarget m_renderTarget{};
-        friend struct RefHandle<ForgeTextureHandle, Texture>;
+        SharedRenderTarget m_renderTarget{};
+        friend struct RefHandle<SharedTexture, Texture>;
     };
 
-    struct ForgeDescriptorSet final: public RefHandle<ForgeDescriptorSet, DescriptorSet> {
+    struct SharedDescriptorSet final: public RefHandle<SharedDescriptorSet, DescriptorSet> {
     public:
-        ForgeDescriptorSet():
+        SharedDescriptorSet():
             Base() {
         }
-        ForgeDescriptorSet(const ForgeDescriptorSet& other):
+        SharedDescriptorSet(const SharedDescriptorSet& other):
             Base(other),
             m_renderer(other.m_renderer) {
 
         }
-        ForgeDescriptorSet(ForgeDescriptorSet&& other):
+        SharedDescriptorSet(SharedDescriptorSet&& other):
             Base(std::move(other)),
             m_renderer(other.m_renderer){
         }
-        ~ForgeDescriptorSet() {
+        ~SharedDescriptorSet() {
         }
-        void operator= (const ForgeDescriptorSet& other) {
+        void operator= (const SharedDescriptorSet& other) {
             Base::operator=(other);
             m_renderer = other.m_renderer;
         }
-        void operator= (ForgeDescriptorSet&& other) {
+        void operator= (SharedDescriptorSet&& other) {
             Base::operator=(std::move(other));
             m_renderer = other.m_renderer;
         }
@@ -282,54 +276,54 @@ namespace hpl {
     private:
         void Free();
         Renderer* m_renderer = nullptr;
-        friend struct RefHandle<ForgeDescriptorSet, DescriptorSet>;
+        friend struct RefHandle<SharedDescriptorSet, DescriptorSet>;
     };
 
-    struct ForgeBufferHandle : public RefHandle<ForgeBufferHandle, Buffer> {
+    struct SharedBuffer : public RefHandle<SharedBuffer, Buffer> {
     public:
-        ForgeBufferHandle():
+        SharedBuffer():
             Base() {
         }
-        ForgeBufferHandle(const ForgeBufferHandle& other):
+        SharedBuffer(const SharedBuffer& other):
             Base(other) {
         }
-        ForgeBufferHandle(ForgeBufferHandle&& other):
+        SharedBuffer(SharedBuffer&& other):
             Base(std::move(other)) {
         }
-        ~ForgeBufferHandle() {
+        ~SharedBuffer() {
         }
 
-        void operator= (const ForgeBufferHandle& other) {
+        void operator= (const SharedBuffer& other) {
             Base::operator=(other);
         }
-        void operator= (ForgeBufferHandle&& other) {
+        void operator= (SharedBuffer&& other) {
             Base::operator=(std::move(other));
         }
     private:
         void Free();
-        friend struct RefHandle<ForgeBufferHandle, Buffer>;
+        friend struct RefHandle<SharedBuffer, Buffer>;
     };
 
-    struct ForgePipelineHandle: public RefHandle<ForgePipelineHandle, Pipeline> {
+    struct SharedPipeline: public RefHandle<SharedPipeline, Pipeline> {
     public:
-        ForgePipelineHandle():
+        SharedPipeline():
             Base() {
         }
-        ForgePipelineHandle(const ForgePipelineHandle& other):
+        SharedPipeline(const SharedPipeline& other):
             Base(other),
             m_renderer(other.m_renderer) {
         }
-        ForgePipelineHandle(ForgePipelineHandle&& other):
+        SharedPipeline(SharedPipeline&& other):
             Base(std::move(other)){
         }
-        ~ForgePipelineHandle() {
+        ~SharedPipeline() {
         }
 
-        void operator= (const ForgePipelineHandle& other) {
+        void operator= (const SharedPipeline& other) {
             Base::operator=(other);
             m_renderer = other.m_renderer;
         }
-        void operator= (ForgePipelineHandle&& other) {
+        void operator= (SharedPipeline&& other) {
             Base::operator=(std::move(other));
             m_renderer = other.m_renderer;
         }
@@ -342,29 +336,29 @@ namespace hpl {
     private:
         void Free();
         Renderer* m_renderer = nullptr;
-        friend struct RefHandle<ForgePipelineHandle, Pipeline>;
+        friend struct RefHandle<SharedPipeline, Pipeline>;
     };
 
-    struct ForgeShaderHandle: public RefHandle<ForgeShaderHandle, Shader> {
+    struct SharedShader: public RefHandle<SharedShader, Shader> {
     public:
-        ForgeShaderHandle():
+        SharedShader():
             Base() {
         }
-        ForgeShaderHandle(const ForgeShaderHandle& other):
+        SharedShader(const SharedShader& other):
             Base(other),
             m_renderer(other.m_renderer) {
         }
-        ForgeShaderHandle(ForgeShaderHandle&& other):
+        SharedShader(SharedShader&& other):
             Base(std::move(other)){
         }
-        ~ForgeShaderHandle() {
+        ~SharedShader() {
         }
 
-        void operator= (const ForgeShaderHandle& other) {
+        void operator= (const SharedShader& other) {
             Base::operator=(other);
             m_renderer = other.m_renderer;
         }
-        void operator= (ForgeShaderHandle&& other) {
+        void operator= (SharedShader&& other) {
             Base::operator=(std::move(other));
             m_renderer = other.m_renderer;
         }
@@ -377,23 +371,23 @@ namespace hpl {
     private:
         void Free();
         Renderer* m_renderer = nullptr;
-        friend struct RefHandle<ForgeShaderHandle, Shader>;
+        friend struct RefHandle<SharedShader, Shader>;
     };
-    struct ForgeSamplerHandle: public RefHandle<ForgeSamplerHandle, Sampler> {
+    struct SharedSampler: public RefHandle<SharedSampler, Sampler> {
     public:
-        ForgeSamplerHandle():
+        SharedSampler():
             Base() {
         }
-        ForgeSamplerHandle(const ForgeSamplerHandle& other):
+        SharedSampler(const SharedSampler& other):
             Base(other) {
             m_renderer = other.m_renderer;
         }
-        ForgeSamplerHandle(ForgeSamplerHandle&& other):
+        SharedSampler(SharedSampler&& other):
             Base(std::move(other)),
             m_renderer(other.m_renderer) {
 
         }
-        ~ForgeSamplerHandle() {
+        ~SharedSampler() {
         }
 
         void Load(Renderer* renderer, std::function<bool(Sampler** handle)> load) {
@@ -402,35 +396,35 @@ namespace hpl {
             Base::Load(load);
         }
 
-        void operator= (const ForgeSamplerHandle& other) {
+        void operator= (const SharedSampler& other) {
             Base::operator=(other);
             m_renderer = other.m_renderer;
         }
-        void operator= (ForgeSamplerHandle&& other) {
+        void operator= (SharedSampler&& other) {
             Base::operator=(std::move(other));
             m_renderer = other.m_renderer;
         }
     private:
         void Free();
         Renderer* m_renderer = nullptr;
-        friend struct RefHandle<ForgeSamplerHandle, Sampler>;
+        friend struct RefHandle<SharedSampler, Sampler>;
     };
 
-    struct ForgeSwapChainHandle: public RefHandle<ForgeSwapChainHandle, SwapChain> {
+    struct SharedSwapChain: public RefHandle<SharedSwapChain, SwapChain> {
 
-        ForgeSwapChainHandle():
+        SharedSwapChain():
             Base() {
         }
-        ForgeSwapChainHandle(const ForgeSwapChainHandle& other):
+        SharedSwapChain(const SharedSwapChain& other):
             Base(other) {
             m_renderer = other.m_renderer;
         }
-        ForgeSwapChainHandle(ForgeSwapChainHandle&& other):
+        SharedSwapChain(SharedSwapChain&& other):
             Base(std::move(other)),
             m_renderer(other.m_renderer) {
 
         }
-        ~ForgeSwapChainHandle() {
+        ~SharedSwapChain() {
         }
 
         void Load(Renderer* renderer, std::function<bool(SwapChain** handle)> load) {
@@ -439,57 +433,162 @@ namespace hpl {
             Base::Load(load);
         }
 
-        void operator= (const ForgeSwapChainHandle& other) {
+        void operator= (const SharedSwapChain& other) {
             Base::operator=(other);
             m_renderer = other.m_renderer;
         }
-        void operator= (ForgeSwapChainHandle&& other) {
+        void operator= (SharedSwapChain&& other) {
             Base::operator=(std::move(other));
             m_renderer = other.m_renderer;
         }
     private:
         void Free();
         Renderer* m_renderer = nullptr;
-        friend struct RefHandle<ForgeSwapChainHandle, SwapChain>;
+        friend struct RefHandle<SharedSwapChain, SwapChain>;
     };
 
-    struct ForgeCmdHandle: public RefHandle<ForgeCmdHandle, Cmd> {
+    struct SharedRootSignature: public RefHandle<SharedRootSignature, RootSignature> {
     public:
-        ForgeCmdHandle(Renderer* renderer):
+        SharedRootSignature(Renderer* renderer):
             Base(),
             m_renderer(renderer) {
         }
-        ForgeCmdHandle(const ForgeCmdHandle& other):
+        SharedRootSignature(const SharedRootSignature& other):
             Base(other) {
             m_renderer = other.m_renderer;
         }
-        ForgeCmdHandle(ForgeCmdHandle&& other):
+        SharedRootSignature(SharedRootSignature&& other):
             Base(std::move(other)),
             m_renderer(other.m_renderer) {
-
         }
-        ~ForgeCmdHandle() {
+        ~SharedRootSignature() {
         }
 
-        void Load(Renderer* renderer, std::function<bool(Cmd** handle)> load) {
+        void Load(Renderer* renderer, std::function<bool(RootSignature** handle)> load) {
             ASSERT(renderer && "Renderer is null");
             m_renderer = renderer;
             Base::Load(load);
         }
-        void operator= (const ForgeCmdHandle& other) {
+        void operator= (const SharedRootSignature& other) {
             Base::operator=(other);
             m_renderer = other.m_renderer;
         }
-        void operator= (ForgeCmdHandle&& other) {
+        void operator= (SharedRootSignature&& other) {
             Base::operator=(std::move(other));
             m_renderer = other.m_renderer;
         }
     private:
         void Free();
         Renderer* m_renderer = nullptr;
-        friend struct RefHandle<ForgeCmdHandle, Cmd>;
+        friend struct RefHandle<SharedRootSignature, RootSignature>;
     };
 
+    struct SharedFence: public RefHandle<SharedFence, Fence> {
+    public:
+        SharedFence(Renderer* renderer):
+            Base(),
+            m_renderer(renderer) {
+        }
+        SharedFence(const SharedFence& other):
+            Base(other) {
+            m_renderer = other.m_renderer;
+        }
+        SharedFence(SharedFence&& other):
+            Base(std::move(other)),
+            m_renderer(other.m_renderer) {
+        }
+        ~SharedFence() {
+        }
+
+        void Load(Renderer* renderer, std::function<bool(Fence** handle)> load) {
+            ASSERT(renderer && "Renderer is null");
+            m_renderer = renderer;
+            Base::Load(load);
+        }
+        void operator= (const SharedFence& other) {
+            Base::operator=(other);
+            m_renderer = other.m_renderer;
+        }
+        void operator= (SharedFence&& other) {
+            Base::operator=(std::move(other));
+            m_renderer = other.m_renderer;
+        }
+    private:
+        void Free();
+        Renderer* m_renderer = nullptr;
+        friend struct RefHandle<SharedFence, Fence>;
+    };
+    struct SharedCmdPool: public RefHandle<SharedCmdPool, CmdPool> {
+        public:
+            SharedCmdPool(Renderer* renderer):
+                Base(),
+                m_renderer(renderer) {
+            }
+            SharedCmdPool(const SharedCmdPool& other):
+                Base(other) {
+                m_renderer = other.m_renderer;
+            }
+            SharedCmdPool(SharedCmdPool&& other):
+                Base(std::move(other)),
+                m_renderer(other.m_renderer) {
+            }
+            ~SharedCmdPool() {
+            }
+
+            void Load(Renderer* renderer, std::function<bool(CmdPool** handle)> load) {
+                ASSERT(renderer && "Renderer is null");
+                m_renderer = renderer;
+                Base::Load(load);
+            }
+            void operator= (const SharedCmdPool& other) {
+                Base::operator=(other);
+                m_renderer = other.m_renderer;
+            }
+            void operator= (SharedCmdPool&& other) {
+                Base::operator=(std::move(other));
+                m_renderer = other.m_renderer;
+            }
+        private:
+            void Free();
+            Renderer* m_renderer = nullptr;
+            friend struct RefHandle<SharedCmdPool, CmdPool>;
+        };
+
+    struct SharedCmd: public RefHandle<SharedCmd, Cmd> {
+        public:
+            SharedCmd(Renderer* renderer):
+                Base(),
+                m_renderer(renderer) {
+            }
+            SharedCmd(const SharedCmd& other):
+                Base(other) {
+                m_renderer = other.m_renderer;
+            }
+            SharedCmd(SharedCmd&& other):
+                Base(std::move(other)),
+                m_renderer(other.m_renderer) {
+            }
+            ~SharedCmd() {
+            }
+
+            void Load(Renderer* renderer, std::function<bool(Cmd** handle)> load) {
+                ASSERT(renderer && "Renderer is null");
+                m_renderer = renderer;
+                Base::Load(load);
+            }
+            void operator= (const SharedCmd& other) {
+                Base::operator=(other);
+                m_renderer = other.m_renderer;
+            }
+            void operator= (SharedCmd&& other) {
+                Base::operator=(std::move(other));
+                m_renderer = other.m_renderer;
+            }
+        private:
+            void Free();
+            Renderer* m_renderer = nullptr;
+            friend struct RefHandle<SharedCmd, Cmd>;
+    };
 }
 
 static bool operator==(const SamplerDesc& lhs, const SamplerDesc& rhs) {

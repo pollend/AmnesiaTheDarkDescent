@@ -154,14 +154,14 @@ namespace hpl {
 
 			Image* image = new Image();
 
-			ForgeTextureHandle::BitmapLoadOptions opts = {0};
+			SharedTexture::BitmapLoadOptions opts = {0};
 			opts.m_useMipmaps = true;
-			auto handle = ForgeTextureHandle::LoadFromHPLBitmap(*pBitmap, opts);
+			auto handle = SharedTexture::LoadFromHPLBitmap(*pBitmap, opts);
 			image->SetForgeTexture(std::move(handle));
 			// auto desc = ImageDescriptor::CreateFromBitmap(*pBitmap);
 			// desc.m_name = sName.c_str();
 			// Image::InitializeFromBitmap(*image,*pBitmap, desc);
-			
+
 			hplDelete( pBitmap ); //Bitmap no longer needed
 
 			///////////////////////

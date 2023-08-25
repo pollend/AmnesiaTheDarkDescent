@@ -107,7 +107,7 @@ namespace hpl {
 		};
 
 		static std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> GuiUniformDescriptorSet{};
-		static std::array<std::array<ForgeTextureHandle, MAX_GUI_DRAW_CALLS>, ForgeRenderer::SwapChainLength> GuiTextures{};
+		static std::array<std::array<SharedTexture, MAX_GUI_DRAW_CALLS>, ForgeRenderer::SwapChainLength> GuiTextures{};
         static RootSignature* GuiRootSignatnre = nullptr;
 
         #ifdef USE_THE_FORGE_LEGACY

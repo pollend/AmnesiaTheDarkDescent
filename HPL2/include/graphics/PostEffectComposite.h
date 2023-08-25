@@ -63,7 +63,7 @@ namespace hpl {
 			cVector2l m_size = cVector2l(0, 0);
             uint32_t m_pogoTargetIndex = 1;
             // 2 render targets two ping pong between
-            std::array<ForgeRenderTarget, 2> m_renderTarget;
+            std::array<SharedRenderTarget, 2> m_renderTarget;
         };
 
 

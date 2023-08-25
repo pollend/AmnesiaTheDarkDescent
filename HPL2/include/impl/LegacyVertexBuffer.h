@@ -40,7 +40,7 @@ namespace hpl {
         // static constexpr std::array
 
         struct VertexElement {
-            ForgeBufferHandle m_buffer;
+            SharedBuffer m_buffer;
             eVertexBufferElementFormat m_format = eVertexBufferElementFormat::eVertexBufferElementFormat_Float;
             eVertexBufferElement m_type = eVertexBufferElement::eVertexBufferElement_Position;
             tVertexElementFlag m_flag = 0;
@@ -97,7 +97,7 @@ namespace hpl {
                 uint64_t offset;
             };
             struct VertexIndexEntry {
-                ForgeBufferHandle* element;
+                SharedBuffer* element;
                 uint64_t offset;
                 uint32_t numIndicies;
             };
@@ -137,7 +137,7 @@ namespace hpl {
             std::span<const float> values, eVertexBufferElement elementType, std::span<LegacyVertexBuffer::VertexElement> elements);
 
         folly::small_vector<VertexElement, 10> m_vertexElements = {};
-        ForgeBufferHandle m_indexBuffer;
+        SharedBuffer m_indexBuffer;
         std::vector<uint32_t> m_indices = {};
         SyncToken m_bufferSync = {};
 
