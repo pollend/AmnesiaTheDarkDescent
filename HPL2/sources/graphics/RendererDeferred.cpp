@@ -523,8 +523,6 @@ namespace hpl {
     } // namespace detail
 
 
-
-
     enum eDefferredProgramMode { eDefferredProgramMode_Lights, eDefferredProgramMode_Misc, eDefferredProgramMode_LastEnum };
 
     cRendererDeferred::cRendererDeferred(cGraphics* apGraphics, cResources* apResources)
@@ -533,8 +531,6 @@ namespace hpl {
         m_hbaoPlusPipeline = std::make_unique<renderer::PassHBAOPlus>();
         ////////////////////////////////////
         // Set up render specific things
-        mbSetFrameBufferAtBeginRendering = false; // Not using the input frame buffer for any rendering. Only doing copy at the end!
-        mbClearFrameBufferAtBeginRendering = false;
         mbSetupOcclusionPlaneForFog = true;
 
         mfMinLargeLightNormalizedArea = 0.2f * 0.2f;
@@ -658,16 +654,23 @@ namespace hpl {
         }
 
         // prepass
-        {
+        m_prePassPool.Load(forgeRenderer->Rend(), [&](CmdPool** pool) {
             CmdPoolDesc cmdPoolDesc = {};
             cmdPoolDesc.pQueue = forgeRenderer->GetGraphicsQueue();
             cmdPoolDesc.mTransient = true;
-            addCmdPool(forgeRenderer->Rend(), &cmdPoolDesc, &m_prePassPool);
+            addCmdPool(forgeRenderer->Rend(), &cmdPoolDesc, pool);
+            return true;
+        });
+        m_prePassCmd.Load(forgeRenderer->Rend(), [&](Cmd** cmd) {
             CmdDesc cmdDesc = {};
-            cmdDesc.pPool = m_prePassPool;
-            addCmd(forgeRenderer->Rend(), &cmdDesc, &m_prePassCmd);
-            addFence(forgeRenderer->Rend(), &m_prePassFence);
-        }
+            cmdDesc.pPool = m_prePassPool.m_handle;
+            addCmd(forgeRenderer->Rend(), &cmdDesc, cmd);
+            return true;
+        });
+        m_prePassFence.Load(forgeRenderer->Rend(), [&](Fence** fence) {
+            addFence(forgeRenderer->Rend(), fence);
+            return true;
+        });
 
         // hi-z
         {
@@ -1089,12 +1092,13 @@ namespace hpl {
         //---------------- Diffuse Pipeline  ------------------------
         {
             // z pass
-            {
+            m_zPassShader.Load(forgeRenderer->Rend(), [&](Shader** shader){
                 ShaderLoadDesc loadDesc = {};
                 loadDesc.mStages[0].pFileName = "solid_z.vert";
                 loadDesc.mStages[1].pFileName = "solid_z.frag";
-                addShader(forgeRenderer->Rend(), &loadDesc, &m_zPassShader);
-            }
+                addShader(forgeRenderer->Rend(), &loadDesc, shader);
+                return true;
+            });
             // diffuse pipeline
             {
                 ShaderLoadDesc loadDesc = {};
@@ -1178,7 +1182,7 @@ namespace hpl {
 
             folly::small_vector<Shader*, 64> shaders{ m_materialSolidPass.m_solidDiffuseShader,
                                                       m_materialSolidPass.m_solidDiffuseParallaxShader,
-                                                      m_zPassShader,
+                                                      m_zPassShader.m_handle,
                                                       m_decalShader,
                                                       m_solidIlluminationShader };
             shaders.push_back(m_materialTranslucencyPass.m_shader.m_handle);
@@ -1367,7 +1371,7 @@ namespace hpl {
                 vertexLayout.mAttribs[3].mLocation = 3;
                 vertexLayout.mAttribs[3].mOffset = 0;
 
-                {
+                m_zPassPipeline.Load(forgeRenderer->Rend(),[&](Pipeline** pipeline) {
                     RasterizerStateDesc rasterizerStateDesc = {};
                     rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
 
@@ -1387,12 +1391,13 @@ namespace hpl {
                     pipelineSettings.mSampleQuality = 0;
                     pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
                     pipelineSettings.pRootSignature = m_materialRootSignature;
-                    pipelineSettings.pShaderProgram = m_zPassShader;
+                    pipelineSettings.pShaderProgram = m_zPassShader.m_handle;
                     pipelineSettings.pRasterizerState = &rasterizerStateDesc;
                     pipelineSettings.pVertexLayout = &vertexLayout;
-                    addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_zPassPipeline);
-                }
-                {
+                    addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
+                    return true;
+                });
+                m_zPassShadowPipelineCW.Load(forgeRenderer->Rend(),[&](Pipeline** pipeline) {
                     RasterizerStateDesc rasterizerStateDesc = {};
                     rasterizerStateDesc.mFrontFace = FRONT_FACE_CW;
                     rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
@@ -1413,12 +1418,13 @@ namespace hpl {
                     pipelineSettings.mDepthStencilFormat = ShadowDepthBufferFormat;
                     pipelineSettings.mSampleQuality = 0;
                     pipelineSettings.pRootSignature = m_materialRootSignature;
-                    pipelineSettings.pShaderProgram = m_zPassShader;
+                    pipelineSettings.pShaderProgram = m_zPassShader.m_handle;
                     pipelineSettings.pRasterizerState = &rasterizerStateDesc;
                     pipelineSettings.pVertexLayout = &vertexLayout;
-                    addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_zPassShadowPipelineCW);
-                }
-                {
+                    addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
+                    return true;
+                });
+                m_zPassShadowPipelineCCW.Load(forgeRenderer->Rend(),[&](Pipeline** pipeline) {
                     RasterizerStateDesc rasterizerStateDesc = {};
                     rasterizerStateDesc.mFrontFace = FRONT_FACE_CW;
                     rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
@@ -1439,11 +1445,12 @@ namespace hpl {
                     pipelineSettings.mDepthStencilFormat = ShadowDepthBufferFormat;
                     pipelineSettings.mSampleQuality = 0;
                     pipelineSettings.pRootSignature = m_materialRootSignature;
-                    pipelineSettings.pShaderProgram = m_zPassShader;
+                    pipelineSettings.pShaderProgram = m_zPassShader.m_handle;
                     pipelineSettings.pRasterizerState = &rasterizerStateDesc;
                     pipelineSettings.pVertexLayout = &vertexLayout;
-                    addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_zPassShadowPipelineCCW);
-                }
+                    addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
+                    return true;
+                });
 
                 m_materialSet.m_materialConstSet.Load(forgeRenderer->Rend(), [&](DescriptorSet** handle) {
                     DescriptorSetDesc setDesc{ m_materialRootSignature, DESCRIPTOR_UPDATE_FREQ_NONE, MaxMaterialSamplers};
@@ -1877,7 +1884,11 @@ namespace hpl {
 
             DescriptorSetDesc perFrameDescSet{ m_materialRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, MaxMaterialFrameDescriptors };
             for (size_t setIndex = 0; setIndex < m_materialSet.m_frameSet.size(); setIndex++) {
-                addDescriptorSet(forgeRenderer->Rend(), &perFrameDescSet, &m_materialSet.m_frameSet[setIndex]);
+                m_materialSet.m_frameSet[setIndex].Load(forgeRenderer->Rend(), [&](DescriptorSet** descSet) {
+                    addDescriptorSet(forgeRenderer->Rend(), &perFrameDescSet, descSet);
+                    return true;
+                });
+
                 for(size_t i = 0; i < MaxMaterialFrameDescriptors; i++) {
                     std::array<DescriptorData, 3> params = {};
                     params[0].pName = "perFrameConstants";
@@ -1886,13 +1897,18 @@ namespace hpl {
                     params[1].ppBuffers = &m_objectUniformBuffer[setIndex].m_handle;
                     params[2].pName = "uniformMaterialBuffer";
                     params[2].ppBuffers = &m_materialSet.m_materialUniformBuffer.m_handle;
-                    updateDescriptorSet(forgeRenderer->Rend(), i, m_materialSet.m_frameSet[setIndex], params.size(), params.data());
+                    updateDescriptorSet(forgeRenderer->Rend(), i, m_materialSet.m_frameSet[setIndex].m_handle, params.size(), params.data());
                 }
             }
 
-            DescriptorSetDesc batchDescriptorSet{ m_materialRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_BATCH, cMaterial::MaxMaterialID };
+
             for(size_t setIndex = 0; setIndex < m_materialSet.m_perBatchSet.size(); setIndex++ ) {
-                addDescriptorSet(forgeRenderer->Rend(), &batchDescriptorSet, &m_materialSet.m_perBatchSet[setIndex]);
+                m_materialSet.m_perBatchSet[setIndex].Load(forgeRenderer->Rend(), [&](DescriptorSet** descSet) {
+                    DescriptorSetDesc batchDescriptorSet{ m_materialRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_BATCH, cMaterial::MaxMaterialID };
+                    addDescriptorSet(forgeRenderer->Rend(), &batchDescriptorSet, descSet);
+                    return true;
+                });
+
             }
         }
 
@@ -2310,7 +2326,7 @@ namespace hpl {
         iRenderable* apObject,
         const PerObjectOption& option) {
 
-        auto* objectDescSet = m_materialSet.m_perObjectSet[frame.m_frameIndex];
+        auto* objectDescSet = m_materialSet.m_perObjectSet[frame.m_frameIndex].m_handle;
         auto objectLookup = m_materialSet.m_objectDescriptorLookup.find(apObject);
         auto& info = m_materialSet.m_materialInfo[apMaterial->materialID()];
         auto& descInfo = info.m_materialDescInfo[frame.m_frameIndex];
@@ -2356,7 +2372,7 @@ namespace hpl {
             updateDescriptorSet(
                 frame.m_renderer->Rend(),
                 apMaterial->materialID(),
-                m_materialSet.m_perBatchSet[frame.m_frameIndex],
+                m_materialSet.m_perBatchSet[frame.m_frameIndex].m_handle,
                 paramCount,
                 params.data());
         }
@@ -2385,7 +2401,7 @@ namespace hpl {
         cmdBindDescriptorSet(cmd,
             detail::resolveMaterialID(apMaterial->GetTextureAntistropy(), apMaterial->GetTextureWrap(), apMaterial->GetTextureFilter()),
             m_materialSet.m_materialConstSet.m_handle);
-        cmdBindDescriptorSet(cmd, apMaterial->materialID(), m_materialSet.m_perBatchSet[frame.m_frameIndex]);
+        cmdBindDescriptorSet(cmd, apMaterial->materialID(), m_materialSet.m_perBatchSet[frame.m_frameIndex].m_handle);
         return index;
     }
 
@@ -2537,7 +2553,7 @@ namespace hpl {
             std::array<DescriptorData, 1> params = {};
             params[0].pName = "refractionMap";
             params[0].ppTextures = &currentGBuffer.m_refractionImage.m_handle;
-            updateDescriptorSet(frame.m_renderer->Rend(), mainFrameIndex, m_materialSet.m_frameSet[frame.m_frameIndex], params.size(), params.data());
+            updateDescriptorSet(frame.m_renderer->Rend(), mainFrameIndex, m_materialSet.m_frameSet[frame.m_frameIndex].m_handle, params.size(), params.data());
         }
 
         frame.m_resourcePool->Push(currentGBuffer.m_colorBuffer);
@@ -2574,7 +2590,7 @@ namespace hpl {
             uint32_t queryIndex = 0;
             std::vector<OcclusionQueryAlpha> occlusionQueryAlpha;
             // start pre-z pass
-            beginCmd(m_prePassCmd);
+            beginCmd(m_prePassCmd.m_handle);
             {
                 std::function<void(iRenderableContainerNode * childNode, eWorldContainerType staticGeometry)> walkRenderables;
                 walkRenderables = [&](iRenderableContainerNode* childNode, eWorldContainerType containerType) {
@@ -2684,19 +2700,19 @@ namespace hpl {
                     // return apObjectA < apObjectB;
                 });
 
-                cmdBeginDebugMarker(m_prePassCmd, 0, 1, 0, "Pre Z");
+                cmdBeginDebugMarker(m_prePassCmd.m_handle, 0, 1, 0, "Pre Z");
                 LoadActionsDesc loadActions = {};
                 loadActions.mLoadActionsColor[0] = LOAD_ACTION_DONTCARE;
                 loadActions.mLoadActionDepth = LOAD_ACTION_CLEAR;
                 loadActions.mLoadActionStencil = LOAD_ACTION_DONTCARE;
                 loadActions.mClearDepth = { .depth = 1.0f, .stencil = 0 };
 
-                cmdBindRenderTargets(m_prePassCmd, 0, NULL, currentGBuffer.m_depthBuffer.m_handle, &loadActions, NULL, NULL, -1, -1);
-                cmdSetViewport(m_prePassCmd, 0.0f, 0.0f, (float)common->m_size.x, (float)common->m_size.y, 0.0f, 1.0f);
-                cmdSetScissor(m_prePassCmd, 0, 0, common->m_size.x, common->m_size.y);
-                cmdBindPipeline(m_prePassCmd, m_zPassPipeline);
+                cmdBindRenderTargets(m_prePassCmd.m_handle, 0, NULL, currentGBuffer.m_depthBuffer.m_handle, &loadActions, NULL, NULL, -1, -1);
+                cmdSetViewport(m_prePassCmd.m_handle, 0.0f, 0.0f, (float)common->m_size.x, (float)common->m_size.y, 0.0f, 1.0f);
+                cmdSetScissor(m_prePassCmd.m_handle, 0, 0, common->m_size.x, common->m_size.y);
+                cmdBindPipeline(m_prePassCmd.m_handle, m_zPassPipeline.m_handle);
 
-                cmdBindDescriptorSet(m_prePassCmd, mainFrameIndex, m_materialSet.m_frameSet[frame.m_frameIndex]);
+                cmdBindDescriptorSet(m_prePassCmd.m_handle, mainFrameIndex, m_materialSet.m_frameSet[frame.m_frameIndex].m_handle);
 
 
                 UniformPropBlock uniformPropBlock = {};
@@ -2724,7 +2740,7 @@ namespace hpl {
 
                     MaterialRootConstant materialConst = {};
                     uint32_t instance = cmdBindMaterialAndObject(
-                        m_prePassCmd,
+                        m_prePassCmd.m_handle,
                         frame,
                         pMaterial,
                         test.m_renderable,
@@ -2739,9 +2755,9 @@ namespace hpl {
                                            eVertexBufferElement_Texture1Tangent };
                     LegacyVertexBuffer::GeometryBinding binding{};
                     static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
-                    detail::cmdDefaultLegacyGeomBinding(m_prePassCmd, frame, binding);
-                    cmdBindPushConstants(m_prePassCmd, m_materialRootSignature, materialObjectIndex, &materialConst);
-                    cmdDrawIndexed(m_prePassCmd, binding.m_indexBuffer.numIndicies, 0, 0);
+                    detail::cmdDefaultLegacyGeomBinding(m_prePassCmd.m_handle, frame, binding);
+                    cmdBindPushConstants(m_prePassCmd.m_handle, m_materialRootSignature, materialObjectIndex, &materialConst);
+                    cmdDrawIndexed(m_prePassCmd.m_handle, binding.m_indexBuffer.numIndicies, 0, 0);
                 }
 
 
@@ -2753,10 +2769,10 @@ namespace hpl {
                 beginUpdateResource(&updateDesc);
                 (*reinterpret_cast<UniformPropBlock*>(updateDesc.pMappedData)) = uniformPropBlock;
                 endUpdateResource(&updateDesc, nullptr);
-                cmdEndDebugMarker(m_prePassCmd);
+                cmdEndDebugMarker(m_prePassCmd.m_handle);
             }
             {
-                cmdBeginDebugMarker(m_prePassCmd, 1, 1, 0, "Occlusion Query");
+                cmdBeginDebugMarker(m_prePassCmd.m_handle, 1, 1, 0, "Occlusion Query");
                 LegacyVertexBuffer::GeometryBinding binding{};
                 std::array targets = { eVertexBufferElement_Position };
                 static_cast<LegacyVertexBuffer*>(m_box.get())->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
@@ -2765,7 +2781,7 @@ namespace hpl {
                 uint32_t occlusionObjectIndex = getDescriptorIndexFromName(m_rootSignatureOcclusuion, "rootConstant");
                 uint32_t occlusionIndex = 0;
                 cMatrixf viewProj = cMath::MatrixMul(mainFrustumProj, mainFrustumView);
-                cmdBindDescriptorSet(m_prePassCmd, 0, m_descriptorOcclusionConstSet.m_handle);
+                cmdBindDescriptorSet(m_prePassCmd.m_handle, 0, m_descriptorOcclusionConstSet.m_handle);
                 for (auto& query : occlusionQueryAlpha) {
                     if (TypeInfo<hpl::cBillboard>::IsType(*query.m_renderable)) {
                         cBillboard* pBillboard = static_cast<cBillboard*>(query.m_renderable);
@@ -2781,42 +2797,42 @@ namespace hpl {
                         (*reinterpret_cast<mat4*>(updateDesc.pMappedData)) = mvp;
                         endUpdateResource(&updateDesc, NULL);
 
-                        cmdBindPushConstants(m_prePassCmd, m_rootSignatureOcclusuion, occlusionObjectIndex, &m_occlusionIndex);
+                        cmdBindPushConstants(m_prePassCmd.m_handle, m_rootSignatureOcclusuion, occlusionObjectIndex, &m_occlusionIndex);
 
-                        detail::cmdDefaultLegacyGeomBinding(m_prePassCmd, frame, binding);
+                        detail::cmdDefaultLegacyGeomBinding(m_prePassCmd.m_handle, frame, binding);
 
                         QueryDesc queryDesc = {};
                         queryDesc.mIndex = queryIndex++;
-                        cmdBindPipeline(m_prePassCmd, m_pipelineOcclusionQuery.m_handle);
-                        cmdBeginQuery(m_prePassCmd, m_occlusionQuery, &queryDesc);
-                        cmdDrawIndexed(m_prePassCmd, binding.m_indexBuffer.numIndicies, 0, 0);
-                        cmdEndQuery(m_prePassCmd, m_occlusionQuery, &queryDesc);
+                        cmdBindPipeline(m_prePassCmd.m_handle, m_pipelineOcclusionQuery.m_handle);
+                        cmdBeginQuery(m_prePassCmd.m_handle, m_occlusionQuery, &queryDesc);
+                        cmdDrawIndexed(m_prePassCmd.m_handle, binding.m_indexBuffer.numIndicies, 0, 0);
+                        cmdEndQuery(m_prePassCmd.m_handle, m_occlusionQuery, &queryDesc);
                         query.m_queryIndex = queryDesc.mIndex;
 
                         queryDesc.mIndex = queryIndex++;
-                        cmdBindPipeline(m_prePassCmd, m_pipelineMaxOcclusionQuery.m_handle);
-                        cmdBeginQuery(m_prePassCmd, m_occlusionQuery, &queryDesc);
-                        cmdDrawIndexed(m_prePassCmd, binding.m_indexBuffer.numIndicies, 0, 0);
-                        cmdEndQuery(m_prePassCmd, m_occlusionQuery, &queryDesc);
+                        cmdBindPipeline(m_prePassCmd.m_handle, m_pipelineMaxOcclusionQuery.m_handle);
+                        cmdBeginQuery(m_prePassCmd.m_handle, m_occlusionQuery, &queryDesc);
+                        cmdDrawIndexed(m_prePassCmd.m_handle, binding.m_indexBuffer.numIndicies, 0, 0);
+                        cmdEndQuery(m_prePassCmd.m_handle, m_occlusionQuery, &queryDesc);
                         query.m_maxQueryIndex = queryDesc.mIndex;
 
                         m_occlusionIndex = (m_occlusionIndex + 1) % MaxOcclusionDescSize;
                     }
                 }
-                cmdEndDebugMarker(m_prePassCmd);
+                cmdEndDebugMarker(m_prePassCmd.m_handle);
             }
             // hi-z generate pass
             {
-                cmdBeginDebugMarker(m_prePassCmd, 0, 0, 0, "Generate HI-Z");
+                cmdBeginDebugMarker(m_prePassCmd.m_handle, 0, 0, 0, "Generate HI-Z");
                 {
-                    cmdBindRenderTargets(m_prePassCmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+                    cmdBindRenderTargets(m_prePassCmd.m_handle, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
                     std::array rtBarriers = {
                         RenderTargetBarrier{
                             currentGBuffer.m_depthBuffer.m_handle, RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_SHADER_RESOURCE },
                         RenderTargetBarrier{
                             currentGBuffer.m_hizDepthBuffer.m_handle, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_RENDER_TARGET },
                     };
-                    cmdResourceBarrier(m_prePassCmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+                    cmdResourceBarrier(m_prePassCmd.m_handle, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
                 }
                 {
                     LoadActionsDesc loadActions = {};
@@ -2824,7 +2840,7 @@ namespace hpl {
                     loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
                     loadActions.mClearColorValues[0] = { .r = 1.0f, .g = 0.0f, .b = 0.0f, .a = 0.0f };
                     cmdBindRenderTargets(
-                        m_prePassCmd, 1, &currentGBuffer.m_hizDepthBuffer.m_handle, NULL, &loadActions, NULL, NULL, -1, -1);
+                        m_prePassCmd.m_handle, 1, &currentGBuffer.m_hizDepthBuffer.m_handle, NULL, &loadActions, NULL, NULL, -1, -1);
 
                     std::array<DescriptorData, 1> params = {};
                     params[0].pName = "sourceInput";
@@ -2832,23 +2848,23 @@ namespace hpl {
                     updateDescriptorSet(frame.m_renderer->Rend(), 0, m_descriptorCopyDepth.m_handle, params.size(), params.data());
 
                     cmdSetViewport(
-                        m_prePassCmd, 0.0f, 0.0f, static_cast<float>(common->m_size.x), static_cast<float>(common->m_size.y), 0.0f, 1.0f);
-                    cmdSetScissor(m_prePassCmd, 0, 0, static_cast<float>(common->m_size.x), static_cast<float>(common->m_size.y));
-                    cmdBindPipeline(m_prePassCmd, m_pipelineCopyDepth.m_handle);
+                        m_prePassCmd.m_handle, 0.0f, 0.0f, static_cast<float>(common->m_size.x), static_cast<float>(common->m_size.y), 0.0f, 1.0f);
+                    cmdSetScissor(m_prePassCmd.m_handle, 0, 0, static_cast<float>(common->m_size.x), static_cast<float>(common->m_size.y));
+                    cmdBindPipeline(m_prePassCmd.m_handle, m_pipelineCopyDepth.m_handle);
 
-                    cmdBindDescriptorSet(m_prePassCmd, 0, m_descriptorCopyDepth.m_handle);
-                    cmdDraw(m_prePassCmd, 3, 0);
+                    cmdBindDescriptorSet(m_prePassCmd.m_handle, 0, m_descriptorCopyDepth.m_handle);
+                    cmdDraw(m_prePassCmd.m_handle, 3, 0);
                 }
 
                 {
-                    cmdBindRenderTargets(m_prePassCmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+                    cmdBindRenderTargets(m_prePassCmd.m_handle, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
                     std::array rtBarriers = {
                         RenderTargetBarrier{
                             currentGBuffer.m_depthBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_DEPTH_WRITE },
                         RenderTargetBarrier{
                             currentGBuffer.m_hizDepthBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_UNORDERED_ACCESS },
                     };
-                    cmdResourceBarrier(m_prePassCmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+                    cmdResourceBarrier(m_prePassCmd.m_handle, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
                 }
                 uint32_t rootConstantIndex = getDescriptorIndexFromName(m_rootSignatureHIZOcclusion, "uRootConstants");
                 uint32_t width = static_cast<float>(common->m_size.x);
@@ -2872,20 +2888,20 @@ namespace hpl {
                     pushConstants.screenDim = uint2(common->m_size.x, common->m_size.y);
 
                     // bind lod to push constant
-                    cmdBindPushConstants(m_prePassCmd, m_rootSignatureHIZOcclusion, rootConstantIndex, &pushConstants);
-                    cmdBindDescriptorSet(m_prePassCmd, lod, m_descriptorSetHIZGenerate);
-                    cmdBindPipeline(m_prePassCmd, m_pipelineHIZGenerate);
-                    cmdDispatch(m_prePassCmd, static_cast<uint32_t>(width / 32) + 1, static_cast<uint32_t>(height / 32) + 1, 1);
+                    cmdBindPushConstants(m_prePassCmd.m_handle, m_rootSignatureHIZOcclusion, rootConstantIndex, &pushConstants);
+                    cmdBindDescriptorSet(m_prePassCmd.m_handle, lod, m_descriptorSetHIZGenerate);
+                    cmdBindPipeline(m_prePassCmd.m_handle, m_pipelineHIZGenerate);
+                    cmdDispatch(m_prePassCmd.m_handle, static_cast<uint32_t>(width / 32) + 1, static_cast<uint32_t>(height / 32) + 1, 1);
 
                     std::array rtBarriers = {
                         RenderTargetBarrier{
                             currentGBuffer.m_hizDepthBuffer.m_handle, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_UNORDERED_ACCESS },
                     };
-                    cmdResourceBarrier(m_prePassCmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+                    cmdResourceBarrier(m_prePassCmd.m_handle, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
                 }
-                cmdEndDebugMarker(m_prePassCmd);
+                cmdEndDebugMarker(m_prePassCmd.m_handle);
 
-                cmdBeginDebugMarker(m_prePassCmd, 0, 1, 0, "AABB Hi-Z");
+                cmdBeginDebugMarker(m_prePassCmd.m_handle, 0, 1, 0, "AABB Hi-Z");
                 {
                     std::array<DescriptorData, 4> params = {};
                     params[0].pName = "objectUniformBlock";
@@ -2898,27 +2914,28 @@ namespace hpl {
                     params[3].ppTextures = &currentGBuffer.m_hizDepthBuffer.m_handle->pTexture;
                     updateDescriptorSet(frame.m_renderer->Rend(), 0, m_descriptorAABBOcclusionTest.m_handle, params.size(), params.data());
 
-                    cmdBindDescriptorSet(m_prePassCmd, 0, m_descriptorAABBOcclusionTest.m_handle);
-                    cmdBindPipeline(m_prePassCmd, m_pipelineAABBOcclusionTest.m_handle);
-                    cmdDispatch(m_prePassCmd, static_cast<uint32_t>(uniformTest.size() / 128) + 1, 1, 1);
+                    cmdBindDescriptorSet(m_prePassCmd.m_handle, 0, m_descriptorAABBOcclusionTest.m_handle);
+                    cmdBindPipeline(m_prePassCmd.m_handle, m_pipelineAABBOcclusionTest.m_handle);
+                    cmdDispatch(m_prePassCmd.m_handle, static_cast<uint32_t>(uniformTest.size() / 128) + 1, 1, 1);
                 }
-                cmdEndDebugMarker(m_prePassCmd);
+                cmdEndDebugMarker(m_prePassCmd.m_handle);
 
-                cmdResolveQuery(m_prePassCmd, m_occlusionQuery, m_occlusionReadBackBuffer.m_handle, 0, queryIndex);
-                endCmd(m_prePassCmd);
+                cmdResolveQuery(m_prePassCmd.m_handle, m_occlusionQuery, m_occlusionReadBackBuffer.m_handle, 0, queryIndex);
+                endCmd(m_prePassCmd.m_handle);
 
                 // Submit the gpu work.
                 QueueSubmitDesc submitDesc = {};
                 submitDesc.mCmdCount = 1;
-                submitDesc.ppCmds = &m_prePassCmd;
-                submitDesc.pSignalFence = m_prePassFence;
+                submitDesc.ppCmds = &m_prePassCmd.m_handle;
+                submitDesc.pSignalFence = m_prePassFence.m_handle;
                 submitDesc.mSubmitDone = true;
                 queueSubmit(frame.m_renderer->GetGraphicsQueue(), &submitDesc);
                 FenceStatus fenceStatus;
-                getFenceStatus(frame.m_renderer->Rend(), m_prePassFence, &fenceStatus);
-                if (fenceStatus == FENCE_STATUS_INCOMPLETE)
-                    waitForFences(frame.m_renderer->Rend(), 1, &m_prePassFence);
-                resetCmdPool(frame.m_renderer->Rend(), m_prePassPool);
+                getFenceStatus(frame.m_renderer->Rend(), m_prePassFence.m_handle, &fenceStatus);
+                if (fenceStatus == FENCE_STATUS_INCOMPLETE) {
+                    waitForFences(frame.m_renderer->Rend(), 1, &m_prePassFence.m_handle);
+                }
+                resetCmdPool(frame.m_renderer->Rend(), m_prePassPool.m_handle);
 
                 uint64_t* occlusionCount = reinterpret_cast<uint64_t*>(m_occlusionReadBackBuffer.m_handle->pCpuMappedAddress);
                 for (auto& query : occlusionQueryAlpha) {
@@ -2949,9 +2966,9 @@ namespace hpl {
             cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)common->m_size.x, (float)common->m_size.y, 0.0f, 1.0f);
             cmdSetScissor(frame.m_cmd, 0, 0, common->m_size.x, common->m_size.y);
 
-            cmdBindPipeline(frame.m_cmd, m_zPassPipeline);
+            cmdBindPipeline(frame.m_cmd, m_zPassPipeline.m_handle);
 
-            cmdBindDescriptorSet(frame.m_cmd, mainFrameIndex, m_materialSet.m_frameSet[frame.m_frameIndex]);
+            cmdBindDescriptorSet(frame.m_cmd, mainFrameIndex, m_materialSet.m_frameSet[frame.m_frameIndex].m_handle);
 
             auto* testResult = reinterpret_cast<uint32_t*>(m_occlusionTestBuffer.m_handle->pCpuMappedAddress);
             for (size_t i = 0; i < uniformTest.size(); ++i) {
@@ -3032,7 +3049,7 @@ namespace hpl {
             cmdSetScissor(frame.m_cmd, 0, 0, common->m_size.x, common->m_size.y);
             cmdBindPipeline(frame.m_cmd, m_materialSolidPass.m_solidDiffuseParallaxPipeline);
 
-            cmdBindDescriptorSet(frame.m_cmd, mainFrameIndex, m_materialSet.m_frameSet[frame.m_frameIndex]);
+            cmdBindDescriptorSet(frame.m_cmd, mainFrameIndex, m_materialSet.m_frameSet[frame.m_frameIndex].m_handle);
 
             for (auto& diffuseItem : mpCurrentRenderList->GetRenderableItems(eRenderListType_Diffuse)) {
                 cMaterial* pMaterial = diffuseItem->GetMaterial();
@@ -3082,7 +3099,7 @@ namespace hpl {
             cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)common->m_size.x, (float)common->m_size.y, 0.0f, 1.0f);
             cmdSetScissor(frame.m_cmd, 0, 0, common->m_size.x, common->m_size.y);
 
-            cmdBindDescriptorSet(frame.m_cmd, mainFrameIndex, m_materialSet.m_frameSet[frame.m_frameIndex]);
+            cmdBindDescriptorSet(frame.m_cmd, mainFrameIndex, m_materialSet.m_frameSet[frame.m_frameIndex].m_handle);
             for (auto& decalItem : mpCurrentRenderList->GetRenderableItems(eRenderListType_Decal)) {
                 cMaterial* pMaterial = decalItem->GetMaterial();
                 iVertexBuffer* vertexBuffer = decalItem->GetVertexBuffer();
@@ -3351,14 +3368,14 @@ namespace hpl {
                                     0,
                                     shadowMapData->m_target.m_handle->mWidth,
                                     shadowMapData->m_target.m_handle->mHeight);
-                                cmdBindPipeline(shadowMapData->m_cmd, m_zPassShadowPipelineCW);
+                                cmdBindPipeline(shadowMapData->m_cmd, m_zPassShadowPipelineCW.m_handle);
 
                                 uint32_t shadowFrameIndex = updateFrameDescriptor(frame, shadowMapData->m_cmd, apWorld, {
                                     .m_size = float2(common->m_size.x, common->m_size.y),
                                     .m_viewMat = pLightFrustum->GetViewMatrix(),
                                     .m_projectionMat = pLightFrustum->GetProjectionMatrix()
                                 });
-                                cmdBindDescriptorSet(shadowMapData->m_cmd, shadowFrameIndex, m_materialSet.m_frameSet[frame.m_frameIndex]);
+                                cmdBindDescriptorSet(shadowMapData->m_cmd, shadowFrameIndex, m_materialSet.m_frameSet[frame.m_frameIndex].m_handle);
                                 for (auto& pObject : shadowCasters) {
                                     eMaterialRenderMode renderMode =
                                         pObject->GetCoverageAmount() >= 1 ? eMaterialRenderMode_Z : eMaterialRenderMode_Z_Dissolve;
@@ -3745,7 +3762,7 @@ namespace hpl {
             cmdSetScissor(frame.m_cmd, 0, 0, common->m_size.x, common->m_size.y);
             cmdBindPipeline(frame.m_cmd, m_solidIlluminationPipeline);
 
-            cmdBindDescriptorSet(frame.m_cmd, mainFrameIndex, m_materialSet.m_frameSet[frame.m_frameIndex]);
+            cmdBindDescriptorSet(frame.m_cmd, mainFrameIndex, m_materialSet.m_frameSet[frame.m_frameIndex].m_handle);
 
             for (auto& illuminationItem : mpCurrentRenderList->GetRenderableItems(eRenderListType_Illumination)) {
                 cMaterial* pMaterial = illuminationItem->GetMaterial();
@@ -3982,7 +3999,7 @@ namespace hpl {
             cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, static_cast<float>(common->m_size.x), static_cast<float>(common->m_size.y), 0.0f, 1.0f);
             cmdSetScissor(frame.m_cmd, 0, 0, common->m_size.x, common->m_size.y);
 
-            cmdBindDescriptorSet(frame.m_cmd, mainFrameIndex, m_materialSet.m_frameSet[frame.m_frameIndex]);
+            cmdBindDescriptorSet(frame.m_cmd, mainFrameIndex, m_materialSet.m_frameSet[frame.m_frameIndex].m_handle);
             std::array<TranslucencyPipeline::TranslucencyBlend, eMaterialBlendMode_LastEnum> translucencyBlendTable;
             translucencyBlendTable[eMaterialBlendMode_Add] = TranslucencyPipeline::TranslucencyBlend::BlendAdd;
             translucencyBlendTable[eMaterialBlendMode_Mul] = TranslucencyPipeline::TranslucencyBlend::BlendMul;

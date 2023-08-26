@@ -83,6 +83,13 @@ namespace hpl {
         }
     }
 
+    void SharedQueryPool::Free() {
+        if (m_handle) {
+            ASSERT(m_renderer && "Renderer is null");
+            removeQueryPool(m_renderer, m_handle);
+        }
+    }
+
     void SharedFence::Free() {
         if (m_handle) {
             ASSERT(m_renderer && "Renderer is null");

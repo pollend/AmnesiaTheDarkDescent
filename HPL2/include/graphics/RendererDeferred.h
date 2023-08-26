@@ -82,6 +82,8 @@ namespace hpl {
         static constexpr uint32_t MaxMaterialFrameDescriptors = 256;
         static constexpr uint32_t MaxMaterialSamplers = static_cast<uint32_t>(eTextureWrap_LastEnum) * static_cast<uint32_t>(eTextureFilter_LastEnum) * static_cast<uint32_t>(cMaterial::TextureAntistropy::Antistropy_Count);
         static constexpr uint32_t MaxObjectTest = 32768;
+        static constexpr uint32_t MaxOcclusionDescSize = 4096;
+        static constexpr uint32_t MaxQueryPoolSize = MaxOcclusionDescSize * 2;
 
         enum LightConfiguration { HasGoboMap = 0x1, HasShadowMap = 0x2 };
 
@@ -484,18 +486,17 @@ namespace hpl {
         };
         std::array<std::array<LightResourceEntry, MaxLightUniforms>, ForgeRenderer::SwapChainLength> m_lightResources{};
         // z pass
-        Shader* m_zPassShader;
-        Pipeline* m_zPassPipeline;
-        Pipeline* m_zPassShadowPipelineCW;
-        Pipeline* m_zPassShadowPipelineCCW;
-
+        SharedShader m_zPassShader;
+        SharedPipeline m_zPassPipeline;
+        SharedPipeline m_zPassShadowPipelineCW;
+        SharedPipeline m_zPassShadowPipelineCCW;
         std::set<iRenderable*> m_preZPassRenderables;
 
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_objectUniformBuffer;
         struct MaterialPassDescriptorSet {
-            std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_frameSet;
-            std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perBatchSet;
-            std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perObjectSet;
+            std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_frameSet;
+            std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_perBatchSet;
+            std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_perObjectSet;
             folly::F14ValueMap<iRenderable*, uint32_t> m_objectDescriptorLookup;
             uint32_t m_frameIndex = 0;
             uint32_t m_objectIndex = 0;
@@ -511,15 +512,15 @@ namespace hpl {
             };
 
             std::array<MaterialInfo, cMaterial::MaxMaterialID> m_materialInfo;
-            std::array<SharedSampler,MaxMaterialSamplers> m_samplers;
+            std::array<SharedSampler, MaxMaterialSamplers> m_samplers;
             SharedDescriptorSet m_materialConstSet;
             SharedBuffer m_materialUniformBuffer;
         } m_materialSet;
 
         uint32_t m_activeFrame = 0; // tracks the active frame if differnt then we need to reset some state
-        CmdPool* m_prePassPool = nullptr;
-        Cmd* m_prePassCmd = nullptr;
-        Fence* m_prePassFence = nullptr;
+        SharedCmdPool m_prePassPool;
+        SharedCmd m_prePassCmd;
+        SharedFence m_prePassFence;
 
         RootSignature* m_rootSignatureHIZOcclusion;
         Shader* m_ShaderHIZGenerate;
@@ -543,8 +544,6 @@ namespace hpl {
             uint32_t m_queryIndex = 0;
         };
 
-        static constexpr uint32_t MaxOcclusionDescSize = 4096;
-        static constexpr uint32_t MaxQueryPoolSize = MaxOcclusionDescSize * 2;
         QueryPool* m_occlusionQuery = nullptr;
         uint32_t m_occlusionIndex = 0;
         SharedBuffer m_occlusionUniformBuffer;

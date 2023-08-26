@@ -207,9 +207,6 @@ namespace hpl {
         cFrustum *GetCurrentFrustum(){ return mpCurrentFrustum;}
         cRenderList *GetCurrentRenderList(){ return mpCurrentRenderList;}
 
-        //Temp variables used by material.
-        float GetTempAlpha(){ return mfTempAlpha; }
-
         //Static settings. Must be set before renderer data load.
         static void SetShadowMapQuality(eShadowMapQuality aQuality) { mShadowMapQuality = aQuality;}
         static eShadowMapQuality GetShadowMapQuality(){ return mShadowMapQuality;}
@@ -239,16 +236,7 @@ namespace hpl {
 
         cResources* mpResources;
 
-        tString msName;
-
-        float mfDefaultAlphaLimit;
-
-        bool mbSetFrameBufferAtBeginRendering;
-        bool mbClearFrameBufferAtBeginRendering;
         bool mbSetupOcclusionPlaneForFog;
-
-        bool mbOnlyRenderPrevVisibleOcclusionObjects;
-        int mlOnlyRenderPrevVisibleOcclusionObjectsFrameCount;
 
         float mfCurrentFrameTime;
         cWorld *mpCurrentWorld;
@@ -264,7 +252,6 @@ namespace hpl {
         float mfTimeCount;
 
         std::vector<cPlanef> mvCurrentOcclusionPlanes;
-        float mfTempAlpha;
 
         static eShadowMapQuality mShadowMapQuality;
         static eShadowMapResolution mShadowMapResolution;

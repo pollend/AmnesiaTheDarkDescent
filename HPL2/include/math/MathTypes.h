@@ -317,6 +317,9 @@ namespace hpl {
 
 	//-------------------------------------------
 
+
+
+
 	template <class T> class cRect2 {
 	public:
 		T x,y,w,h;

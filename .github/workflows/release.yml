@@ -36,7 +36,7 @@ jobs:
       - name: Zipping (Windows)
         run: |
           cd ${{ github.workspace }}/build
-          7z a Amnesia_windows_x68_64.zip amnesia/Release
+          7z a Amnesia_windows_x68_64_${{ github.event.inputs.tag }}.zip amnesia/Release
       - uses: actions/upload-artifact@master
         with:
           name: windows-build-artifacts
@@ -68,7 +68,7 @@ jobs:
       - name: Zipping
         run: |
           cd ${{ github.workspace }}/build
-          zip -r Amnesia_linux_x68_64.zip amnesia
+          zip -r Amnesia_linux_x68_64_${{ github.event.inputs.tag }}.zip amnesia
       - uses: actions/upload-artifact@master
         with:
           name: linux-build-artifacts

@@ -108,6 +108,7 @@ namespace hpl {
 		////////// BV AND AABB OPERTIONS //////////////////
 		//////////////////////////////////////////////////////
 
+	    [[deprecated("replaced with SonyMath")]]
 		static void ExpandAABB(cVector3f& avBaseMin,cVector3f& avBaseMax, const cVector3f& avAddMin, const cVector3f& avAddMax);
 		static void ExpandAABB(vec3& avBaseMin,vec3& avBaseMax, const vec3& avAddMin, const vec3& avAddMax);
 

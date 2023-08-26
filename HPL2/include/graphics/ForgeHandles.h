@@ -449,9 +449,8 @@ namespace hpl {
 
     struct SharedRootSignature: public RefHandle<SharedRootSignature, RootSignature> {
     public:
-        SharedRootSignature(Renderer* renderer):
-            Base(),
-            m_renderer(renderer) {
+        SharedRootSignature():
+            Base() {
         }
         SharedRootSignature(const SharedRootSignature& other):
             Base(other) {
@@ -485,9 +484,8 @@ namespace hpl {
 
     struct SharedFence: public RefHandle<SharedFence, Fence> {
     public:
-        SharedFence(Renderer* renderer):
-            Base(),
-            m_renderer(renderer) {
+        SharedFence():
+            Base() {
         }
         SharedFence(const SharedFence& other):
             Base(other) {
@@ -518,11 +516,11 @@ namespace hpl {
         Renderer* m_renderer = nullptr;
         friend struct RefHandle<SharedFence, Fence>;
     };
+
     struct SharedCmdPool: public RefHandle<SharedCmdPool, CmdPool> {
         public:
-            SharedCmdPool(Renderer* renderer):
-                Base(),
-                m_renderer(renderer) {
+            SharedCmdPool():
+                Base() {
             }
             SharedCmdPool(const SharedCmdPool& other):
                 Base(other) {
@@ -556,9 +554,8 @@ namespace hpl {
 
     struct SharedCmd: public RefHandle<SharedCmd, Cmd> {
         public:
-            SharedCmd(Renderer* renderer):
-                Base(),
-                m_renderer(renderer) {
+            SharedCmd():
+                Base() {
             }
             SharedCmd(const SharedCmd& other):
                 Base(other) {
@@ -588,6 +585,41 @@ namespace hpl {
             void Free();
             Renderer* m_renderer = nullptr;
             friend struct RefHandle<SharedCmd, Cmd>;
+    };
+
+    struct SharedQueryPool: public RefHandle<SharedQueryPool, QueryPool> {
+        public:
+            SharedQueryPool():
+                Base() {
+            }
+            SharedQueryPool(const SharedQueryPool& other):
+                Base(other) {
+                m_renderer = other.m_renderer;
+            }
+            SharedQueryPool(SharedQueryPool&& other):
+                Base(std::move(other)),
+                m_renderer(other.m_renderer) {
+            }
+            ~SharedQueryPool() {
+            }
+
+            void Load(Renderer* renderer, std::function<bool(QueryPool** handle)> load) {
+                ASSERT(renderer && "Renderer is null");
+                m_renderer = renderer;
+                Base::Load(load);
+            }
+            void operator= (const SharedQueryPool& other) {
+                Base::operator=(other);
+                m_renderer = other.m_renderer;
+            }
+            void operator= (SharedQueryPool&& other) {
+                Base::operator=(std::move(other));
+                m_renderer = other.m_renderer;
+            }
+        private:
+            void Free();
+            Renderer* m_renderer = nullptr;
+            friend struct RefHandle<SharedQueryPool, QueryPool>;
     };
 }
 

@@ -19,26 +19,12 @@
 
 #pragma once
 
-#include "graphics/GraphicsTypes.h"
-#include "graphics/RenderTarget.h"
-#include "math/MathTypes.h"
-
-#include <cstdint>
-#include <memory>
 
 namespace hpl {
 
-	//---------------------------------------------
-
 	class iLowLevelGraphics;
-	class iVertexBuffer;
-	class iTexture;
 	class cFrustum;
-	class cMaterial;
-	class iMaterialType;
 	class cGraphics;
-
-	//---------------------------------------------
 
 	class iRenderFunctions
 	{
@@ -49,14 +35,6 @@ namespace hpl {
 		 * This function must be set before the render functions can be used!
 	     */
 		void SetupRenderFunctions(iLowLevelGraphics *apLowLevelGraphics);
-
-
-		/**
-		 * This must be called every frame before any render function is called
-		 */
-		void InitAndResetRenderFunctions(	cFrustum *apFrustum, bool abLog,
-											bool abUseGlobalScissorRect=false,
-											const cVector2l& avGlobalScissorRectPos=0, const cVector2l& avGlobalScissorRectSize=0);
 
 
 	protected:

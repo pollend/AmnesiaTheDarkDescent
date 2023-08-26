@@ -58,8 +58,6 @@ namespace hpl {
 	{
 		////////////////////////////////////
 		// Set up render specific things
-		mbSetFrameBufferAtBeginRendering = true;
-		mbClearFrameBufferAtBeginRendering = true;
 
 //		m_boundOutputBuffer = std::move(UniqueViewportData<LegacyRenderTarget>([](cViewport& viewport) {
 //				auto colorImage = [&] {
