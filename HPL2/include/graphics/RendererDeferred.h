@@ -451,19 +451,19 @@ namespace hpl {
                 } m_field;
                 static constexpr size_t NumOfVariants = 2;
             };
-            RootSignature* m_refractionCopyRootSignature;
-            std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_refractionPerFrameSet;
-            Pipeline* m_refractionCopyPipeline;
-            Shader* m_copyRefraction;
+            SharedRootSignature m_refractionCopyRootSignature;
+            std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_refractionPerFrameSet;
+            SharedPipeline m_refractionCopyPipeline;
+            SharedShader m_copyRefraction;
 
             SharedShader m_shader{};
             SharedShader m_particleShader{};
             SharedShader m_waterShader{};
 
-            std::array<std::array<Pipeline*, TranslucencyKey::NumOfVariants>, TranslucencyBlend::BlendModeCount> m_pipelines;
-            std::array<Pipeline*, TranslucencyWaterKey::NumOfVariants> m_waterPipeline;
-            std::array<Pipeline*, TranslucencyKey::NumOfVariants> m_refractionPipeline;
-            std::array<std::array<Pipeline*, TranslucencyKey::NumOfVariants>, TranslucencyBlend::BlendModeCount> m_particlePipelines;
+            std::array<std::array<SharedPipeline, TranslucencyKey::NumOfVariants>, TranslucencyBlend::BlendModeCount> m_pipelines;
+            std::array<SharedPipeline, TranslucencyWaterKey::NumOfVariants> m_waterPipeline;
+            std::array<SharedPipeline, TranslucencyKey::NumOfVariants> m_refractionPipeline;
+            std::array<std::array<SharedPipeline, TranslucencyKey::NumOfVariants>, TranslucencyBlend::BlendModeCount> m_particlePipelines;
 
         } m_materialTranslucencyPass;
 
@@ -522,13 +522,13 @@ namespace hpl {
         SharedCmd m_prePassCmd;
         SharedFence m_prePassFence;
 
-        RootSignature* m_rootSignatureHIZOcclusion;
-        Shader* m_ShaderHIZGenerate;
-        Shader* m_shaderTestOcclusion;
-        DescriptorSet* m_descriptorSetHIZGenerate;
-        Pipeline* m_pipelineHIZGenerate;
+        SharedRootSignature m_rootSignatureHIZOcclusion;
+        SharedShader m_ShaderHIZGenerate;
+        SharedShader m_shaderTestOcclusion;
+        SharedDescriptorSet m_descriptorSetHIZGenerate;
+        SharedPipeline m_pipelineHIZGenerate;
 
-        RootSignature* m_rootSignatureCopyDepth;
+        SharedRootSignature m_rootSignatureCopyDepth;
         SharedDescriptorSet m_descriptorCopyDepth;
         SharedDescriptorSet m_descriptorAABBOcclusionTest;
         SharedPipeline m_pipelineCopyDepth;
@@ -573,7 +573,7 @@ namespace hpl {
         };
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_lightPassBuffer;
 
-        RootSignature* m_lightPassRootSignature;
+        SharedRootSignature m_lightPassRootSignature;
         SharedPipeline m_lightStencilPipeline;
         std::array<SharedPipeline, LightPipelineVariant_Size> m_pointLightPipeline;
         std::array<SharedPipeline, LightPipelineVariant_Size> m_boxLightPipeline;
