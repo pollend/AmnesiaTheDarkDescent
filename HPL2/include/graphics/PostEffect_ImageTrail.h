@@ -29,9 +29,7 @@ namespace hpl {
     class cPostEffectParams_ImageTrail : public iPostEffectParams {
     public:
         cPostEffectParams_ImageTrail()
-            : iPostEffectParams("ImageTrail")
-            ,
-
+            : iPostEffectParams("ImageTrail"),
             mfAmount(0.3f) {
         }
 
@@ -44,7 +42,6 @@ namespace hpl {
 
     public:
         static constexpr uint32_t DescSetSize = 64;
-
         cPostEffectType_ImageTrail(cGraphics* apGraphics, cResources* apResources);
         virtual ~cPostEffectType_ImageTrail();
 
@@ -52,11 +49,11 @@ namespace hpl {
 
     private:
         uint32_t m_descIndex = 0;
-        Pipeline* m_pipeline = nullptr;
+        SharedPipeline m_pipeline;
         SharedShader m_shader;
-        RootSignature* m_rootSignature;
-        Sampler* m_inputSampler;
-        std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perFrameDescriptorSet;
+        SharedRootSignature m_rootSignature;
+        SharedSampler m_inputSampler;
+        std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_perFrameDescriptorSet;
     };
 
     class cPostEffect_ImageTrail : public iPostEffect {

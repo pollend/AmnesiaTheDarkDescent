@@ -136,15 +136,15 @@ private:
     std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_outlinePostprocessingDescriptorSet;
     RootSignature* m_postProcessingRootSignature = nullptr;
     RootSignature* m_postProcessingBlurSignature = nullptr;
-    Pipeline* m_blurPipeline = nullptr;
-    Pipeline* m_combineOutlineAddPipeline = nullptr;
+    SharedPipeline m_blurPipeline;
+    SharedPipeline m_combineOutlineAddPipeline;
 
-    Shader* m_blurShader = nullptr;
-    Shader* m_enemyGlowShader = nullptr;
-    Shader* m_outlineShader = nullptr;
-    Shader* m_outlineStencilShader = nullptr;
-    Shader* m_objectFlashShader = nullptr;
-    Shader* m_outlineCopyShader = nullptr;
+    SharedShader m_blurShader;
+    SharedShader m_enemyGlowShader;
+    SharedShader m_outlineShader;
+    SharedShader m_outlineStencilShader;
+    SharedShader m_objectFlashShader;
+    SharedShader m_outlineCopyShader;
 
     cLinearOscillation mFlashOscill;
 };

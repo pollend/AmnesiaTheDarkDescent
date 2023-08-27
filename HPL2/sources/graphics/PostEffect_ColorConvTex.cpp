@@ -31,6 +31,7 @@
 
 #include "resources/TextureManager.h"
 
+#include "Common_3/Graphics/Interfaces/IGraphics.h"
 #include "system/PreprocessParser.h"
 #include "system/String.h"
 
@@ -50,11 +51,13 @@ namespace hpl
             addShader(forgeRenderer->Rend(),&loadDesc, shader);
             return true;
         });
-        {
+        m_inputSampler.Load(forgeRenderer->Rend(), [&](Sampler** sampler) {
             SamplerDesc samplerDesc = {};
-            addSampler(forgeRenderer->Rend(), &samplerDesc,  &m_inputSampler);
-        }
-        {
+            addSampler(forgeRenderer->Rend(), &samplerDesc,  sampler);
+            return true;
+        });
+
+        m_rootSignature.Load(forgeRenderer->Rend(), [&](RootSignature** rootSignature) {
             std::array shaders = {
                 m_shader.m_handle
             };
@@ -63,17 +66,21 @@ namespace hpl
             rootDesc.ppShaders = shaders.data();
             rootDesc.mShaderCount = shaders.size();
             rootDesc.mStaticSamplerCount = 1;
-            rootDesc.ppStaticSamplers = &m_inputSampler;
+            rootDesc.ppStaticSamplers = &m_inputSampler.m_handle;
             rootDesc.ppStaticSamplerNames = pStaticSamplers;
-            addRootSignature(forgeRenderer->Rend(), &rootDesc, &m_rootSignature);
+            addRootSignature(forgeRenderer->Rend(), &rootDesc, rootSignature);
+            return true;
+        });
 
-            DescriptorSetDesc setDesc = { m_rootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, cPostEffectType_ColorConvTex::DescriptorSetSize  };
-            for(auto& descSet: m_perFrameDescriptorSet) {
-                addDescriptorSet(forgeRenderer->Rend(), &setDesc, &descSet);
-            }
+        for(auto& descSet: m_perFrameDescriptorSet) {
+            descSet.Load(forgeRenderer->Rend(), [&](DescriptorSet** descSet) {
+                DescriptorSetDesc setDesc = { m_rootSignature.m_handle, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, cPostEffectType_ColorConvTex::DescriptorSetSize  };
+                addDescriptorSet(forgeRenderer->Rend(), &setDesc, descSet);
+                return true;
+            });
         }
         TinyImageFormat inputFormat = TinyImageFormat_R8G8B8A8_UNORM;
-        {
+        m_pipeline.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
             DepthStateDesc depthStateDisabledDesc = {};
             depthStateDisabledDesc.mDepthWrite = false;
             depthStateDisabledDesc.mDepthTest = false;
@@ -86,7 +93,7 @@ namespace hpl
             GraphicsPipelineDesc& graphicsPipelineDesc = pipelineDesc.mGraphicsDesc;
             graphicsPipelineDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
             graphicsPipelineDesc.pShaderProgram = m_shader.m_handle;
-            graphicsPipelineDesc.pRootSignature = m_rootSignature;
+            graphicsPipelineDesc.pRootSignature = m_rootSignature.m_handle;
             graphicsPipelineDesc.mRenderTargetCount = 1;
             graphicsPipelineDesc.mDepthStencilFormat = TinyImageFormat_UNDEFINED;
             graphicsPipelineDesc.pVertexLayout = NULL;
@@ -96,8 +103,9 @@ namespace hpl
             graphicsPipelineDesc.mSampleCount = SAMPLE_COUNT_1;
             graphicsPipelineDesc.mSampleQuality = 0;
             graphicsPipelineDesc.pColorFormats = &inputFormat;
-            addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_pipeline);
-        }
+            addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
+            return true;
+        });
     }
 
     cPostEffectType_ColorConvTex::~cPostEffectType_ColorConvTex()
@@ -116,7 +124,6 @@ namespace hpl
         : iPostEffect(apGraphics, apResources, apType)
     {
         mpSpecificType = static_cast<cPostEffectType_ColorConvTex*>(mpType);
-
         mpColorConvTex = NULL;
     }
 
@@ -144,8 +151,8 @@ namespace hpl
         ASSERT(mpColorConvTex);
 
         float alphaFade = cMath::Clamp(mParams.mfFadeAlpha, 0.0f, 1.0f);
-        uint32_t rootConstantIndex = getDescriptorIndexFromName(mpSpecificType->m_rootSignature, "rootConstant");
-        cmdBindPushConstants(frame.m_cmd, mpSpecificType->m_rootSignature, rootConstantIndex, &alphaFade);
+        uint32_t rootConstantIndex = getDescriptorIndexFromName(mpSpecificType->m_rootSignature.m_handle, "rootConstant");
+        cmdBindPushConstants(frame.m_cmd, mpSpecificType->m_rootSignature.m_handle, rootConstantIndex, &alphaFade);
 
         LoadActionsDesc loadActions = {};
         loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
@@ -159,13 +166,13 @@ namespace hpl
         params[1].pName = "colorConv";
         params[1].ppTextures = &mpColorConvTex->GetTexture().m_handle;
         updateDescriptorSet(
-            frame.m_renderer->Rend(), mpSpecificType->m_descIndex, mpSpecificType->m_perFrameDescriptorSet[frame.m_frameIndex], params.size(), params.data());
+            frame.m_renderer->Rend(), mpSpecificType->m_descIndex, mpSpecificType->m_perFrameDescriptorSet[frame.m_frameIndex].m_handle, params.size(), params.data());
 
         cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, static_cast<float>(renderTarget->mWidth), static_cast<float>(renderTarget->mHeight), 0.0f, 1.0f);
         cmdSetScissor(frame.m_cmd, 0, 0, static_cast<float>(renderTarget->mWidth), static_cast<float>(renderTarget->mHeight));
-        cmdBindPipeline(frame.m_cmd, mpSpecificType->m_pipeline);
+        cmdBindPipeline(frame.m_cmd, mpSpecificType->m_pipeline.m_handle);
 
-        cmdBindDescriptorSet(frame.m_cmd, mpSpecificType->m_descIndex, mpSpecificType->m_perFrameDescriptorSet[frame.m_frameIndex]);
+        cmdBindDescriptorSet(frame.m_cmd, mpSpecificType->m_descIndex, mpSpecificType->m_perFrameDescriptorSet[frame.m_frameIndex].m_handle);
         cmdDraw(frame.m_cmd, 3, 0);
         mpSpecificType->m_descIndex = (mpSpecificType->m_descIndex + 1) % cPostEffectType_ColorConvTex::DescriptorSetSize;
     }
