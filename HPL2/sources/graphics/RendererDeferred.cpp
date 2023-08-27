@@ -4117,6 +4117,7 @@ namespace hpl {
                         continue;
                     }
                 }
+
                 MaterialRootConstant materialConst = {0};
                 materialConst.m_afT = GetTimeCount();
                 switch (pMaterial->type().m_id) {
@@ -4198,7 +4199,6 @@ namespace hpl {
                             pMaterial->GetBlendMode() < eMaterialBlendMode_LastEnum &&
                             pMaterial->GetBlendMode() != eMaterialBlendMode_None && "Invalid blend mode");
                         if (isParticleEmitter) {
-
                             cmdBindPipeline(
                                 frame.m_cmd,
                                 m_materialTranslucencyPass
@@ -4212,7 +4212,6 @@ namespace hpl {
                         }
 
                         detail::cmdDefaultLegacyGeomBinding(frame.m_cmd, frame, binding);
-
                         materialConst.m_options =
                             (isFogActive ? TranslucencyFlags::UseFog : 0) |
                             (isRefraction ? TranslucencyFlags::UseRefractionTrans : 0) |
@@ -4222,25 +4221,18 @@ namespace hpl {
                         cmdBindPushConstants(frame.m_cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
                         cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
 
-                        // TODO: fix refraction
-                        if (pMaterial->HasTranslucentIllumination()) {
-                            TranslucencyPipeline::TranslucencyBlend blendMode = translucencyBlendTable[pMaterial->GetBlendMode()];
-                            if (cubeMap && !isRefraction) {
-                                blendMode = TranslucencyPipeline::TranslucencyBlend::BlendAdd;
-                            }
+                        if (cubeMap && !isRefraction){
                             materialConst.m_options =
-                                (TranslucencyFlags::UseIlluminationTrans) |
+                                TranslucencyFlags::UseIlluminationTrans |
                                 (isFogActive ? TranslucencyFlags::UseFog : 0) |
-                                (isRefraction ? TranslucencyFlags::UseRefractionTrans : 0) |
-                                blendMode;
+                                TranslucencyPipeline::TranslucencyBlend::BlendAdd;
 
                             cmdBindPipeline(
-                                frame.m_cmd,
-                                (isRefraction ? m_materialTranslucencyPass.m_refractionPipeline[key.m_id].m_handle
-                                              : m_materialTranslucencyPass
-                                                    .m_pipelines[blendMode][key.m_id].m_handle));
+                                frame.m_cmd, m_materialTranslucencyPass
+                                        .m_pipelines[TranslucencyPipeline::TranslucencyBlend::BlendAdd][key.m_id].m_handle);
                             cmdBindPushConstants(frame.m_cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
                             cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+
                         }
                         break;
                     }
