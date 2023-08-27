@@ -275,7 +275,7 @@ set_property(TARGET WinPixEventRuntime PROPERTY IMPORTED_IMPLIB
         ${THE_FORGE_DIR}/Common_3/OS/ThirdParty/OpenSource/winpixeventruntime/bin/WinPixEventRuntime.lib)
 
 # DirectXShaderCompiler 
-add_library(DirectXShaderCompiler STATIC IMPORTED GLOBAL)
+add_library(DirectXShaderCompiler SHARED IMPORTED GLOBAL)
 set_property(TARGET DirectXShaderCompiler PROPERTY IMPORTED_LOCATION
         ${THE_FORGE_DIR}/Common_3/Graphics/ThirdParty/OpenSource/DirectXShaderCompiler/bin/x64/dxcompiler.dll)
 set_property(TARGET DirectXShaderCompiler PROPERTY IMPORTED_IMPLIB
