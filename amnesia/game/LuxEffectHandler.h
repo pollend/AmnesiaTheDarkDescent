@@ -48,8 +48,6 @@ protected:
 };
 
 
-//----------------------------------------------
-
 class cLuxEffect_PlayCommentary : public iLuxEffect
 {
 public:
@@ -79,7 +77,6 @@ private:
 	int mlIconID;
 };
 
-//----------------------------------------------
 
 class cLuxEffect_EmotionFlash : public iLuxEffect
 {

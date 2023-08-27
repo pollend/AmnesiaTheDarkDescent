@@ -49,9 +49,11 @@ STRUCT(UniformObject)
         DATA(float, frenselBias, None);
 
         DATA(float, frenselPow, None);
-	    DATA(uint, _pad0[3], None);
+	    DATA(uint, _pad0, None);
+	    DATA(uint, _pad1, None);
+	    DATA(uint, _pad2, None);
 	    
-	    DATA(uint, _pad1[4], None);
+	    DATA(uint, _pad3[4], None);
     };
 #elif defined(MATERIAL_TRANSLUCENT)
     STRUCT(UniformMaterial) {
@@ -62,9 +64,10 @@ STRUCT(UniformObject)
 
         DATA(float, rimMulLight, None);
         DATA(float, rimMulPower, None);
-	    DATA(uint, _pad0[2], None);
+	    DATA(uint, _pad0, None);
+	    DATA(uint, _pad1, None);
 	    
-	    DATA(uint, _pad1[4], None);
+	    DATA(float4, _pad2, None);
     };
 #elif defined(MATERIAL_WATER)
     STRUCT(UniformMaterial) {
@@ -79,7 +82,9 @@ STRUCT(UniformObject)
         DATA(float, waveAmplitude, None);
         
         DATA(float, waveFreq, None);
-	    DATA(uint, _pad0[3], None);
+	    DATA(uint, _pad0, None);
+	    DATA(uint, _pad1, None);
+	    DATA(uint, _pad2, None);
     };
 
 #else

@@ -159,13 +159,13 @@ namespace hpl {
 			if(glDrawLevel > 5) glDrawLevel =0;
 		}
 
-		apFunctions->SetDepthTest(true);
-		apFunctions->SetDepthWrite(false);
-		apFunctions->SetBlendMode(eMaterialBlendMode_None);
+	   // apFunctions->SetDepthTest(true);
+	   // apFunctions->SetDepthWrite(false);
+	   // apFunctions->SetBlendMode(eMaterialBlendMode_None);
 
-		// apFunctions->SetProgram(NULL);
-		apFunctions->SetTextureRange(NULL, 0);
-		apFunctions->SetMatrix(NULL);
+	   // // apFunctions->SetProgram(NULL);
+	   // apFunctions->SetTextureRange(NULL, 0);
+	   // apFunctions->SetMatrix(NULL);
 
 
 		RenderDebugNode(apFunctions, mpRoot,0);

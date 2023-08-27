@@ -95,21 +95,19 @@ if(WITH_TOOLS)
 endif()
 
 if(WIN32)
-    install (TARGETS Amnesia 
-        RUNTIME_DEPENDENCIES
-        PRE_EXCLUDE_REGEXES "api-ms-" "ext-ms-"
-        POST_EXCLUDE_REGEXES ".*system32/.*\\.dll"
-        RUNTIME DESTINATION ${AMNESIA_EXECUTABLE_OUTPUT_PATH}
-        LIBRARY DESTINATION ${AMNESIA_EXECUTABLE_OUTPUT_PATH})
-else()
-    install (TARGETS Amnesia
-        RUNTIME DESTINATION ${AMNESIA_EXECUTABLE_OUTPUT_PATH}
-        LIBRARY DESTINATION ${AMNESIA_EXECUTABLE_OUTPUT_PATH})
+    add_custom_command ( TARGET Amnesia POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        $<TARGET_FILE:WinPixEventRuntime> $<TARGET_FILE_DIR:Amnesia>
+    )
+    add_custom_command ( TARGET Amnesia POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        $<TARGET_FILE:ags> $<TARGET_FILE_DIR:Amnesia>
+    )
+    add_custom_command ( TARGET Amnesia POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        $<TARGET_FILE:DirectXShaderCompiler> $<TARGET_FILE_DIR:Amnesia>
+    )
 endif()
-
-install(FILES
-    $<TARGET_RUNTIME_DLLS:Amnesia>
-    DESTINATION ${AMNESIA_EXECUTABLE_OUTPUT_PATH})
 
 add_custom_command(
     TARGET Amnesia POST_BUILD
@@ -123,14 +121,6 @@ add_custom_command(
     ARGS -E copy_directory  "${_HPL2_COMPILEDSHADER_}" "$<TARGET_FILE_DIR:Amnesia>/CompiledShaders"
 )
 
-add_custom_command ( TARGET Amnesia POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    $<TARGET_FILE:WinPixEventRuntime> $<TARGET_FILE_DIR:Amnesia>
-)
-add_custom_command ( TARGET Amnesia POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    $<TARGET_FILE:ags> $<TARGET_FILE_DIR:Amnesia>
-)
 
 if((NOT ${AMNESIA_GAME_DIRECTORY} STREQUAL "") AND COPY_GAME_ASSETS)
     add_custom_command(TARGET Amnesia POST_BUILD COMMAND ${CMAKE_COMMAND} 

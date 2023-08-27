@@ -120,63 +120,69 @@ cLuxEffectRenderer::cLuxEffectRenderer()
 		addUniformGPURingBuffer(forgeRenderer->Rend(),
                           sizeof(LuxEffectObjectUniform) * MaxObjectUniform, &m_uniformBuffer, true);
 
-        {
-            ShaderLoadDesc loadDesc = {};
-            loadDesc.mStages[0].pFileName = "dds_outline_stencil.vert";
-            loadDesc.mStages[1].pFileName = "dds_outline_stencil.frag";
-            addShader(forgeRenderer->Rend(), &loadDesc, &m_outlineStencilShader);
-        }
-        {
-            ShaderLoadDesc loadDesc = {};
-            loadDesc.mStages[0].pFileName = "dds_outline.vert";
-            loadDesc.mStages[1].pFileName = "dds_outline.frag";
-            addShader(forgeRenderer->Rend(), &loadDesc, &m_outlineShader);
-        }
-        {
-            ShaderLoadDesc loadDesc = {};
-            loadDesc.mStages[0].pFileName = "dds_flash.vert";
-            loadDesc.mStages[1].pFileName = "dds_flash.frag";
-            addShader(forgeRenderer->Rend(), &loadDesc, &m_objectFlashShader);
-        }
-        {
-            ShaderLoadDesc loadDesc = {};
-            loadDesc.mStages[0].pFileName = "fullscreen.vert";
-            loadDesc.mStages[1].pFileName = "blur_posteffect.frag";
-            addShader(forgeRenderer->Rend(), &loadDesc, &m_blurShader);
-        }
-        {
-            ShaderLoadDesc loadDesc = {};
-            loadDesc.mStages[0].pFileName = "fullscreen.vert";
-            loadDesc.mStages[1].pFileName = "dds_outline_copy.frag";
-            addShader(forgeRenderer->Rend(), &loadDesc, &m_outlineCopyShader);
-        }
-        {
-            ShaderLoadDesc loadDesc = {};
-            loadDesc.mStages[0].pFileName = "dds_enemy_glow.vert";
-            loadDesc.mStages[1].pFileName = "dds_enemy_glow.frag";
-            addShader(forgeRenderer->Rend(), &loadDesc, &m_enemyGlowShader);
-        }
-        {
-            std::array shaders = {
-                m_outlineCopyShader,
-                m_blurShader
-            };
-            const char* pStaticSamplers[] = { "inputSampler" };
-            RootSignatureDesc rootSignatureDesc = {};
-            rootSignatureDesc.ppStaticSamplers = &m_diffuseSampler;
-            rootSignatureDesc.mStaticSamplerCount = 1;
-            rootSignatureDesc.ppStaticSamplerNames = pStaticSamplers;
-            rootSignatureDesc.ppShaders = shaders.data();
-            rootSignatureDesc.mShaderCount = shaders.size();
-            addRootSignature(forgeRenderer->Rend(), &rootSignatureDesc, &m_postProcessingRootSignature);
+                m_outlineStencilShader.Load(forgeRenderer->Rend(), [&](Shader** shader) {
+                    ShaderLoadDesc loadDesc = {};
+                    loadDesc.mStages[0].pFileName = "dds_outline_stencil.vert";
+                    loadDesc.mStages[1].pFileName = "dds_outline_stencil.frag";
+                    addShader(forgeRenderer->Rend(), &loadDesc, shader);
+                    return true;
+                });
+                m_outlineShader.Load(forgeRenderer->Rend(), [&](Shader** shader) {
+                    ShaderLoadDesc loadDesc = {};
+                    loadDesc.mStages[0].pFileName = "dds_outline.vert";
+                    loadDesc.mStages[1].pFileName = "dds_outline.frag";
+                    addShader(forgeRenderer->Rend(), &loadDesc, shader);
+                    return true;
+                });
+                m_objectFlashShader.Load(forgeRenderer->Rend(), [&](Shader** shader) {
+                    ShaderLoadDesc loadDesc = {};
+                    loadDesc.mStages[0].pFileName = "dds_flash.vert";
+                    loadDesc.mStages[1].pFileName = "dds_flash.frag";
+                    addShader(forgeRenderer->Rend(), &loadDesc, shader);
+                    return true;
+                });
+                m_blurShader.Load(forgeRenderer->Rend(), [&](Shader** shader) {
+                    ShaderLoadDesc loadDesc = {};
+                    loadDesc.mStages[0].pFileName = "fullscreen.vert";
+                    loadDesc.mStages[1].pFileName = "blur_posteffect.frag";
+                    addShader(forgeRenderer->Rend(), &loadDesc, shader);
+                    return true;
+                });
+                m_outlineCopyShader.Load(forgeRenderer->Rend(), [&](Shader** shader) {
+                    ShaderLoadDesc loadDesc = {};
+                    loadDesc.mStages[0].pFileName = "fullscreen.vert";
+                    loadDesc.mStages[1].pFileName = "dds_outline_copy.frag";
+                    addShader(forgeRenderer->Rend(), &loadDesc, shader);
+                    return true;
+                });
+                m_enemyGlowShader.Load(forgeRenderer->Rend(), [&](Shader** shader) {
+                    ShaderLoadDesc loadDesc = {};
+                    loadDesc.mStages[0].pFileName = "dds_enemy_glow.vert";
+                    loadDesc.mStages[1].pFileName = "dds_enemy_glow.frag";
+                    addShader(forgeRenderer->Rend(), &loadDesc, shader);
+                    return true;
+                });
 
-            DescriptorSetDesc setDesc = { m_postProcessingRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, cLuxEffectRenderer::DescriptorSetPostEffectSize   };
-            for(auto& descSet: m_outlinePostprocessingDescriptorSet) {
-                addDescriptorSet(forgeRenderer->Rend(), &setDesc, &descSet);
-            }
+                {
+                    std::array shaders = { m_outlineCopyShader.m_handle, m_blurShader.m_handle };
+                    const char* pStaticSamplers[] = { "inputSampler" };
+                    RootSignatureDesc rootSignatureDesc = {};
+                    rootSignatureDesc.ppStaticSamplers = &m_diffuseSampler;
+                    rootSignatureDesc.mStaticSamplerCount = 1;
+                    rootSignatureDesc.ppStaticSamplerNames = pStaticSamplers;
+                    rootSignatureDesc.ppShaders = shaders.data();
+                    rootSignatureDesc.mShaderCount = shaders.size();
+                    addRootSignature(forgeRenderer->Rend(), &rootSignatureDesc, &m_postProcessingRootSignature);
+
+                    DescriptorSetDesc setDesc = { m_postProcessingRootSignature,
+                                                  DESCRIPTOR_UPDATE_FREQ_PER_FRAME,
+                                                  cLuxEffectRenderer::DescriptorSetPostEffectSize };
+                    for (auto& descSet : m_outlinePostprocessingDescriptorSet) {
+                        addDescriptorSet(forgeRenderer->Rend(), &setDesc, &descSet);
+                    }
         }
         {
-            std::array shaders = { m_outlineStencilShader, m_outlineShader, m_enemyGlowShader, m_objectFlashShader };
+            std::array shaders = { m_outlineStencilShader.m_handle, m_outlineShader.m_handle, m_enemyGlowShader.m_handle, m_objectFlashShader.m_handle};
             const char* pStaticSamplers[] = { "diffuseSampler" };
             RootSignatureDesc rootSignatureDesc = {};
             rootSignatureDesc.ppStaticSamplers = &m_diffuseSampler;
@@ -263,7 +269,7 @@ cLuxEffectRenderer::cLuxEffectRenderer()
                 pipelineSettings.mRenderTargetCount = colorFormats.size();
                 pipelineSettings.pColorFormats = colorFormats.data();
                 pipelineSettings.pDepthState = &depthStateOutlineDesc;
-                pipelineSettings.pShaderProgram = m_outlineShader;
+                pipelineSettings.pShaderProgram = m_outlineShader.m_handle;
                 pipelineSettings.pRootSignature = m_perObjectRootSignature;
                 pipelineSettings.pBlendState = &blendStateDesc;
                 pipelineSettings.pVertexLayout = &vertexLayout;
@@ -317,7 +323,7 @@ cLuxEffectRenderer::cLuxEffectRenderer()
                 pipelineSettings.pDepthState = &depthStateOutlineDesc;
                 pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
                 pipelineSettings.pRasterizerState = &stencilRasterizeDesc;
-                pipelineSettings.pShaderProgram = m_outlineStencilShader;
+                pipelineSettings.pShaderProgram = m_outlineStencilShader.m_handle;
                 pipelineSettings.pRootSignature = m_perObjectRootSignature;
                 pipelineSettings.pVertexLayout = &vertexLayout;
                 pipelineSettings.mSampleQuality = 0;
@@ -374,7 +380,7 @@ cLuxEffectRenderer::cLuxEffectRenderer()
                 pipelineSettings.mRenderTargetCount = colorFormats.size();
                 pipelineSettings.pColorFormats = colorFormats.data();
                 pipelineSettings.pDepthState = &depthStateDesc;
-                pipelineSettings.pShaderProgram = m_objectFlashShader;
+                pipelineSettings.pShaderProgram = m_objectFlashShader.m_handle;
                 pipelineSettings.pRootSignature = m_perObjectRootSignature;
                 pipelineSettings.pVertexLayout = &vertexLayout;
                 pipelineSettings.pRasterizerState = &rasterizerStateDesc;
@@ -433,7 +439,7 @@ cLuxEffectRenderer::cLuxEffectRenderer()
                 pipelineSettings.mRenderTargetCount = colorFormats.size();
                 pipelineSettings.pColorFormats = colorFormats.data();
                 pipelineSettings.pDepthState = &depthStateDesc;
-                pipelineSettings.pShaderProgram = m_enemyGlowShader;
+                pipelineSettings.pShaderProgram = m_enemyGlowShader.m_handle;
                 pipelineSettings.pRootSignature = m_perObjectRootSignature;
                 pipelineSettings.pVertexLayout = &vertexLayout;
                 pipelineSettings.pRasterizerState = &rasterizerStateDesc;
@@ -442,7 +448,7 @@ cLuxEffectRenderer::cLuxEffectRenderer()
                 addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_enemyGlowPipeline);
             }
 
-            {
+            m_blurPipeline.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
                 DepthStateDesc depthStateDisabledDesc = {};
                 depthStateDisabledDesc.mDepthWrite = false;
                 depthStateDisabledDesc.mDepthTest = false;
@@ -454,7 +460,7 @@ cLuxEffectRenderer::cLuxEffectRenderer()
                 pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
                 GraphicsPipelineDesc& graphicsPipelineDesc = pipelineDesc.mGraphicsDesc;
                 graphicsPipelineDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
-                graphicsPipelineDesc.pShaderProgram = m_blurShader;
+                graphicsPipelineDesc.pShaderProgram = m_blurShader.m_handle;
                 graphicsPipelineDesc.pRootSignature = m_postProcessingRootSignature;
                 graphicsPipelineDesc.mRenderTargetCount = 1;
                 graphicsPipelineDesc.mDepthStencilFormat = TinyImageFormat_UNDEFINED;
@@ -465,9 +471,11 @@ cLuxEffectRenderer::cLuxEffectRenderer()
                 graphicsPipelineDesc.mSampleCount = SAMPLE_COUNT_1;
                 graphicsPipelineDesc.mSampleQuality = 0;
                 graphicsPipelineDesc.pColorFormats = colorFormats.data();
-                addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_blurPipeline);
-            }
-            {
+                addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
+                return true;
+            });
+
+            m_combineOutlineAddPipeline.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
                 BlendStateDesc blendStateDesc{};
                 blendStateDesc.mSrcFactors[0] = BC_ONE;
                 blendStateDesc.mDstFactors[0] = BC_ONE;
@@ -494,7 +502,7 @@ cLuxEffectRenderer::cLuxEffectRenderer()
                 pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
                 GraphicsPipelineDesc& graphicsPipelineDesc = pipelineDesc.mGraphicsDesc;
                 graphicsPipelineDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
-                graphicsPipelineDesc.pShaderProgram = m_outlineCopyShader;
+                graphicsPipelineDesc.pShaderProgram = m_outlineCopyShader.m_handle;
                 graphicsPipelineDesc.pRootSignature = m_postProcessingRootSignature;
                 graphicsPipelineDesc.mRenderTargetCount = 1;
                 graphicsPipelineDesc.mDepthStencilFormat = TinyImageFormat_UNDEFINED;
@@ -505,8 +513,9 @@ cLuxEffectRenderer::cLuxEffectRenderer()
                 graphicsPipelineDesc.mSampleCount = SAMPLE_COUNT_1;
                 graphicsPipelineDesc.mSampleQuality = 0;
                 graphicsPipelineDesc.pColorFormats = colorFormats.data();
-                addPipeline(forgeRenderer->Rend(), &pipelineDesc, &m_combineOutlineAddPipeline);
-            }
+                addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
+                return true;
+            });
         }
     }
 
@@ -896,7 +905,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
                 std::array<DescriptorData, 1> params = {};
                 params[0].pName = "sourceInput";
                 params[0].ppTextures = input;
-                cmdBindPipeline(frame->m_cmd, m_blurPipeline);
+                cmdBindPipeline(frame->m_cmd, m_blurPipeline.m_handle);
                 updateDescriptorSet(
                     frame->m_renderer->Rend(), postProcessingIndex , m_outlinePostprocessingDescriptorSet[frame->m_frameIndex], params.size(), params.data());
 
@@ -930,7 +939,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
                 std::array<DescriptorData, 1> params = {};
                 params[0].pName = "sourceInput";
                 params[0].ppTextures = &postEffectData->m_blurTarget[0].m_handle->pTexture;
-                cmdBindPipeline(frame->m_cmd, m_blurPipeline);
+                cmdBindPipeline(frame->m_cmd, m_blurPipeline.m_handle);
 
                 updateDescriptorSet(
                     frame->m_renderer->Rend(), postProcessingIndex, m_outlinePostprocessingDescriptorSet[frame->m_frameIndex], params.size(), params.data());
@@ -979,7 +988,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
         cmdBeginDebugMarker(input.m_frame->m_cmd, 0, 0, 0, "DDS Outline Combine");
         cmdSetViewport(frame->m_cmd, 0.0f, 0.0f, static_cast<float>(currentGBuffer.m_outputBuffer.m_handle->mWidth), static_cast<float>(currentGBuffer.m_outputBuffer.m_handle->mHeight), 0.0f, 1.0f);
         cmdSetScissor(frame->m_cmd, 0, 0, static_cast<float>(currentGBuffer.m_outputBuffer.m_handle->mWidth), static_cast<float>(currentGBuffer.m_outputBuffer.m_handle->mHeight));
-        cmdBindPipeline(frame->m_cmd, m_combineOutlineAddPipeline);
+        cmdBindPipeline(frame->m_cmd, m_combineOutlineAddPipeline.m_handle);
 
         cmdBindDescriptorSet(frame->m_cmd, postProcessingIndex++, m_outlinePostprocessingDescriptorSet[frame->m_frameIndex]);
         cmdDraw(frame->m_cmd, 3, 0);

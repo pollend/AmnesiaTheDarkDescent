@@ -16,36 +16,12 @@
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
-
 #include "graphics/RenderFunctions.h"
-
-#include "graphics/FrameBuffer.h"
-#include "graphics/Graphics.h"
-#include "graphics/LowLevelGraphics.h"
-#include "graphics/RenderList.h"
-#include "graphics/RenderTarget.h"
-#include "graphics/Texture.h"
-#include "graphics/VertexBuffer.h"
-#include "system/LowLevelSystem.h"
-
-#include "math/Frustum.h"
-#include "math/Math.h"
 
 namespace hpl {
 
     void iRenderFunctions::SetupRenderFunctions(iLowLevelGraphics* apLowLevelGraphics) {
         mpLowLevelGraphics = apLowLevelGraphics;
-    }
-
-    //-----------------------------------------------------------------------
-
-    void iRenderFunctions::InitAndResetRenderFunctions(
-        cFrustum* apFrustum,
-        bool abLog,
-        bool abUseGlobalScissorRect,
-        const cVector2l& avGlobalScissorRectPos,
-        const cVector2l& avGlobalScissorRectSize) {
-        mpCurrentFrustum = apFrustum;
     }
 
 } // namespace hpl

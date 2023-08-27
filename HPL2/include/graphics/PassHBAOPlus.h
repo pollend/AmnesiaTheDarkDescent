@@ -108,7 +108,7 @@ public:
 
 private:
     UniqueViewportData<ViewportData> m_boundViewportData;
-    RootSignature* m_rootSignature;
+    SharedRootSignature m_rootSignature;
 
     SharedShader m_shaderDeinterleave;
     SharedPipeline m_pipelineDeinterleave;
@@ -119,7 +119,7 @@ private:
     SharedShader m_shaderReinterleave;
     SharedPipeline m_pipelineReinterleave;
 
-    Sampler* m_pointSampler;
+    SharedSampler m_pointSampler;
 };
 
 }

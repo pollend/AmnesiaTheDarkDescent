@@ -65,7 +65,7 @@ namespace hpl {
 		mbWorldReflectionOcclusionTest = true;
 		mfMaxReflectionDistance = 0;
 
-		mbHasTranslucentIllumination = false; //If the material is translucent and also need an extra additive pass.
+		//mbHasTranslucentIllumination = false; //If the material is translucent and also need an extra additive pass.
 
 		mbLargeTransperantSurface = false;
 

@@ -809,7 +809,6 @@ namespace hpl {
 
 	//---------------------------------------
 
-	class iOcclusionQuery;
 	class iVertexBuffer;
 
 	//---------------------------------------

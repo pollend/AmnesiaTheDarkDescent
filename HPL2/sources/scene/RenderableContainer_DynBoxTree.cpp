@@ -779,13 +779,13 @@ namespace hpl {
 
 	void cRenderableContainer_DynBoxTree::RenderDebug(cRendererCallbackFunctions *apFunctions)
 	{
-		apFunctions->SetDepthTest(true);
-		apFunctions->SetDepthWrite(false);
-		apFunctions->SetBlendMode(eMaterialBlendMode_None);
-
-		// apFunctions->SetProgram(NULL);
-		apFunctions->SetTextureRange(NULL, 0);
-		apFunctions->SetMatrix(NULL);
+//		apFunctions->SetDepthTest(true);
+//		apFunctions->SetDepthWrite(false);
+//		apFunctions->SetBlendMode(eMaterialBlendMode_None);
+//
+//		// apFunctions->SetProgram(NULL);
+//		apFunctions->SetTextureRange(NULL, 0);
+//		apFunctions->SetMatrix(NULL);
 
 
 		RenderDebugNode(apFunctions, &mRoot,0);

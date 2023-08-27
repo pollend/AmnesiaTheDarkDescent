@@ -57,18 +57,18 @@ namespace hpl {
 	private:
         static constexpr uint32_t DescriptorSetSize = 16;
 
-        Sampler* m_inputSampler;
+        SharedSampler m_inputSampler;
         SharedShader m_blurShader;
-        RootSignature* m_blurSignature;
-        std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perFrameDescriptorSets;
+        SharedRootSignature m_blurSignature;
+        std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_perFrameDescriptorSets;
         uint32_t m_setIndex = 0;
-        Pipeline* m_blurPipeline;
+        SharedPipeline m_blurPipeline;
 
-        RootSignature* m_bloomRootSignature;
+        SharedRootSignature m_bloomRootSignature;
         SharedShader m_bloomShader;
-        std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perFrameDescriptorBloomSets;
+        std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_perFrameDescriptorBloomSets;
         uint32_t m_setBloomIndex = 0;
-        Pipeline* m_bloomPipeline;
+        SharedPipeline m_bloomPipeline;
 	};
 
 	//------------------------------------------

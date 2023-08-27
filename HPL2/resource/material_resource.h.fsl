@@ -15,6 +15,7 @@
 #define CubMapFlag (1 << 6)
 #define DissolveAlphaFlag (1 << 7)
 #define CubeMapAlphaFlag (1 << 8)
+#define TextureFlags (DiffuseFlag | NormalFlag | SpecularFlag |  AlphaFlag | HeightFlag | IlluminationFlag | CubMapFlag | DissolveAlphaFlag | CubeMapAlphaFlag)
 
 // default resource flags
 INLINE bool HasDiffuse(uint _textureConfig)        { return (_textureConfig & (1 << 0)) != 0; }
@@ -26,6 +27,8 @@ INLINE bool HasIllumination(uint _textureConfig)   { return (_textureConfig & (1
 INLINE bool HasCubeMap(uint _textureConfig)        { return (_textureConfig & (1 << 6)) != 0; }
 INLINE bool HasDissolveAlpha(uint _textureConfig)  { return (_textureConfig & (1 << 7)) != 0; }
 INLINE bool HasCubeMapAlpha(uint _textureConfig)   { return (_textureConfig & (1 << 8)) != 0; }
+
+
 
 INLINE bool IsHeightMapSingleChannel(uint _textureConfig)   { return (_textureConfig & (1 << 9)) != 0; }
 INLINE bool IsAlphaSingleChannel(uint _textureConfig)   { return (_textureConfig & (1 << 10)) != 0; }

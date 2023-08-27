@@ -106,14 +106,12 @@ namespace hpl {
 		// mpFalloffMap->SetWrapS(eTextureWrap_ClampToEdge);
 		// mpFalloffMap->SetWrapT(eTextureWrap_ClampToEdge);
 
-        mpVisibleNodeTracker = hplNew( cVisibleRCNodeTracker, () );
 	}
 
 	//-----------------------------------------------------------------------
 
 	iLight::~iLight()
 	{
-		if(mpVisibleNodeTracker) hplDelete(mpVisibleNodeTracker);
 		if(mpFalloffMap) mpTextureManager->Destroy(mpFalloffMap);
 		// if(mpGoboTexture) mpTextureManager->Destroy(mpGoboTexture);
 		// m_goboImageWrapper = ImageResourceWrapper();

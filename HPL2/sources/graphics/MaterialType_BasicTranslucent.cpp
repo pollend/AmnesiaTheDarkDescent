@@ -168,24 +168,25 @@ namespace hpl
 
         /////////////////////////////////////
         // Set up the refraction
-         bool bRefractionEnabled = pVars->mbRefraction && iRenderer::GetRefractionEnabled();
+         apMaterial->SetHasRefraction(pVars->mbRefraction);
+         apMaterial->SetUseRefractionEdgeCheck(pVars->mbRefractionEdgeCheck);
 
-        // if (bRefractionEnabled)
-        // {
-        //     apMaterial->SetHasRefraction(true);
-        //     apMaterial->SetUseRefractionEdgeCheck(pVars->mbRefractionEdgeCheck);
-        //     // Note: No need to set blend mode to None since rendered sets that when refraction is true!
-        //     //		Also, this gives problems when recompiling, since the material data would not be accurate!
-        // }
-
-         /////////////////////////////////////
-         // Set up the reflections
-         if (apMaterial->GetImage(eMaterialTexture_CubeMap))
-         {
-            if (bRefractionEnabled == false) {
-                apMaterial->SetHasTranslucentIllumination(true);
-            }
-         }
+		 //bool bRefractionEnabled = pVars->mbRefraction && iRenderer::GetRefractionEnabled();
+         //if (bRefractionEnabled)
+         //{
+         //
+         //    // Note: No need to set blend mode to None since rendered sets that when refraction is true!
+         //    //		Also, this gives problems when recompiling, since the material data would not be accurate!
+         //}
+         //
+         ///////////////////////////////////////
+         //// Set up the reflections
+         //if (apMaterial->GetImage(eMaterialTexture_CubeMap))
+         //{
+         //   if (bRefractionEnabled == false) {
+         //       apMaterial->SetHasTranslucentIllumination(true);
+         //   }
+         //}
     }
 
     //--------------------------------------------------------------------------

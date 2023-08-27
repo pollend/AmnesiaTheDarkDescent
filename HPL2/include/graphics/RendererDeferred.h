@@ -82,6 +82,8 @@ namespace hpl {
         static constexpr uint32_t MaxMaterialFrameDescriptors = 256;
         static constexpr uint32_t MaxMaterialSamplers = static_cast<uint32_t>(eTextureWrap_LastEnum) * static_cast<uint32_t>(eTextureFilter_LastEnum) * static_cast<uint32_t>(cMaterial::TextureAntistropy::Antistropy_Count);
         static constexpr uint32_t MaxObjectTest = 32768;
+        static constexpr uint32_t MaxOcclusionDescSize = 4096;
+        static constexpr uint32_t MaxQueryPoolSize = MaxOcclusionDescSize * 2;
 
         enum LightConfiguration { HasGoboMap = 0x1, HasShadowMap = 0x2 };
 
@@ -365,8 +367,8 @@ namespace hpl {
         std::array<SharedBuffer, MaxMaterialFrameDescriptors> m_perFrameBuffer;
 
         // decal pass
-        std::array<Pipeline*, eMaterialBlendMode_LastEnum> m_decalPipeline;
-        Shader* m_decalShader;
+        std::array<SharedPipeline, eMaterialBlendMode_LastEnum> m_decalPipeline;
+        SharedShader m_decalShader;
 
         struct Fog {
             static constexpr uint32_t MaxFogCount = 128;
@@ -388,27 +390,27 @@ namespace hpl {
             std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_fogUniformBuffer;
             std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_fogFullscreenUniformBuffer;
             uint32_t m_fogIndex = 0;
-            RootSignature* m_fogRootSignature = nullptr;
-            Shader* m_shader{};
-            Pipeline* m_pipeline{};
-            Pipeline* m_pipelineInsideNearFrustum{};
+            SharedRootSignature m_fogRootSignature;
+            SharedShader m_shader;
+            SharedPipeline m_pipeline;
+            SharedPipeline m_pipelineInsideNearFrustum;
 
-            Shader* m_fullScreenShader = nullptr;
-            Pipeline* m_fullScreenPipeline = nullptr;
+            SharedShader m_fullScreenShader;
+            SharedPipeline m_fullScreenPipeline;
         } m_fogPass;
 
-        RootSignature* m_materialRootSignature;
+        SharedRootSignature m_materialRootSignature;
         // diffuse solid
         struct MaterialSolid {
-            Shader* m_solidDiffuseShader;
-            Shader* m_solidDiffuseParallaxShader;
-            Pipeline* m_solidDiffusePipeline;
-            Pipeline* m_solidDiffuseParallaxPipeline;
+            SharedShader m_solidDiffuseShader;
+            SharedShader m_solidDiffuseParallaxShader;
+            SharedPipeline m_solidDiffusePipeline;
+            SharedPipeline m_solidDiffuseParallaxPipeline;
         } m_materialSolidPass;
 
         // illumination pass
-        Shader* m_solidIlluminationShader;
-        Pipeline* m_solidIlluminationPipeline;
+        SharedShader m_solidIlluminationShader;
+        SharedPipeline m_solidIlluminationPipeline;
 
         // translucency pass
         struct TranslucencyPipeline {
@@ -449,19 +451,19 @@ namespace hpl {
                 } m_field;
                 static constexpr size_t NumOfVariants = 2;
             };
-            RootSignature* m_refractionCopyRootSignature;
-            std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_refractionPerFrameSet;
-            Pipeline* m_refractionCopyPipeline;
-            Shader* m_copyRefraction;
+            SharedRootSignature m_refractionCopyRootSignature;
+            std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_refractionPerFrameSet;
+            SharedPipeline m_refractionCopyPipeline;
+            SharedShader m_copyRefraction;
 
             SharedShader m_shader{};
             SharedShader m_particleShader{};
             SharedShader m_waterShader{};
 
-            std::array<std::array<Pipeline*, TranslucencyKey::NumOfVariants>, TranslucencyBlend::BlendModeCount> m_pipelines;
-            std::array<Pipeline*, TranslucencyWaterKey::NumOfVariants> m_waterPipeline;
-            std::array<Pipeline*, TranslucencyKey::NumOfVariants> m_refractionPipeline;
-            std::array<std::array<Pipeline*, TranslucencyKey::NumOfVariants>, TranslucencyBlend::BlendModeCount> m_particlePipelines;
+            std::array<std::array<SharedPipeline, TranslucencyKey::NumOfVariants>, TranslucencyBlend::BlendModeCount> m_pipelines;
+            std::array<SharedPipeline, TranslucencyWaterKey::NumOfVariants> m_waterPipeline;
+            std::array<SharedPipeline, TranslucencyKey::NumOfVariants> m_refractionPipeline;
+            std::array<std::array<SharedPipeline, TranslucencyKey::NumOfVariants>, TranslucencyBlend::BlendModeCount> m_particlePipelines;
 
         } m_materialTranslucencyPass;
 
@@ -475,7 +477,6 @@ namespace hpl {
             };
             static constexpr size_t NumOfVariants = 4;
         };
-        std::array<Sampler*, ObjectSamplerKey::NumOfVariants> m_objectSamplers{};
         struct LightResourceEntry {
             SharedTexture m_goboCubeMap;
             SharedTexture m_goboMap;
@@ -484,18 +485,17 @@ namespace hpl {
         };
         std::array<std::array<LightResourceEntry, MaxLightUniforms>, ForgeRenderer::SwapChainLength> m_lightResources{};
         // z pass
-        Shader* m_zPassShader;
-        Pipeline* m_zPassPipeline;
-        Pipeline* m_zPassShadowPipelineCW;
-        Pipeline* m_zPassShadowPipelineCCW;
-
+        SharedShader m_zPassShader;
+        SharedPipeline m_zPassPipeline;
+        SharedPipeline m_zPassShadowPipelineCW;
+        SharedPipeline m_zPassShadowPipelineCCW;
         std::set<iRenderable*> m_preZPassRenderables;
 
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_objectUniformBuffer;
         struct MaterialPassDescriptorSet {
-            std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_frameSet;
-            std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perBatchSet;
-            std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perObjectSet;
+            std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_frameSet;
+            std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_perBatchSet;
+            std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_perObjectSet;
             folly::F14ValueMap<iRenderable*, uint32_t> m_objectDescriptorLookup;
             uint32_t m_frameIndex = 0;
             uint32_t m_objectIndex = 0;
@@ -505,29 +505,28 @@ namespace hpl {
                 struct MaterialDescInfo {
                     void* m_material = nullptr; // void* to avoid accessing the material
                     uint32_t m_version = 0; // version of the material
-                    std::array<SharedTexture, eMaterialTexture_LastEnum>
-                        m_textureHandles{}; // handles to keep textures alive for the descriptor
+                    std::array<SharedTexture, eMaterialTexture_LastEnum> m_textureHandles{}; // handles to keep textures alive for the descriptor
                 } m_materialDescInfo[ForgeRenderer::SwapChainLength];
             };
 
             std::array<MaterialInfo, cMaterial::MaxMaterialID> m_materialInfo;
-            std::array<SharedSampler,MaxMaterialSamplers> m_samplers;
+            std::array<SharedSampler, MaxMaterialSamplers> m_samplers;
             SharedDescriptorSet m_materialConstSet;
             SharedBuffer m_materialUniformBuffer;
         } m_materialSet;
 
         uint32_t m_activeFrame = 0; // tracks the active frame if differnt then we need to reset some state
-        CmdPool* m_prePassPool = nullptr;
-        Cmd* m_prePassCmd = nullptr;
-        Fence* m_prePassFence = nullptr;
+        SharedCmdPool m_prePassPool;
+        SharedCmd m_prePassCmd;
+        SharedFence m_prePassFence;
 
-        RootSignature* m_rootSignatureHIZOcclusion;
-        Shader* m_ShaderHIZGenerate;
-        Shader* m_shaderTestOcclusion;
-        DescriptorSet* m_descriptorSetHIZGenerate;
-        Pipeline* m_pipelineHIZGenerate;
+        SharedRootSignature m_rootSignatureHIZOcclusion;
+        SharedShader m_ShaderHIZGenerate;
+        SharedShader m_shaderTestOcclusion;
+        SharedDescriptorSet m_descriptorSetHIZGenerate;
+        SharedPipeline m_pipelineHIZGenerate;
 
-        RootSignature* m_rootSignatureCopyDepth;
+        SharedRootSignature m_rootSignatureCopyDepth;
         SharedDescriptorSet m_descriptorCopyDepth;
         SharedDescriptorSet m_descriptorAABBOcclusionTest;
         SharedPipeline m_pipelineCopyDepth;
@@ -543,12 +542,10 @@ namespace hpl {
             uint32_t m_queryIndex = 0;
         };
 
-        static constexpr uint32_t MaxOcclusionDescSize = 4096;
-        static constexpr uint32_t MaxQueryPoolSize = MaxOcclusionDescSize * 2;
-        QueryPool* m_occlusionQuery = nullptr;
+        SharedQueryPool m_occlusionQuery;
         uint32_t m_occlusionIndex = 0;
         SharedBuffer m_occlusionUniformBuffer;
-        RootSignature* m_rootSignatureOcclusuion = nullptr;
+        SharedRootSignature m_rootSignatureOcclusuion;
         SharedDescriptorSet m_descriptorOcclusionConstSet;
         SharedBuffer m_occlusionReadBackBuffer;
         SharedShader m_shaderOcclusionQuery;
@@ -574,7 +571,7 @@ namespace hpl {
         };
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_lightPassBuffer;
 
-        RootSignature* m_lightPassRootSignature;
+        SharedRootSignature m_lightPassRootSignature;
         SharedPipeline m_lightStencilPipeline;
         std::array<SharedPipeline, LightPipelineVariant_Size> m_pointLightPipeline;
         std::array<SharedPipeline, LightPipelineVariant_Size> m_boxLightPipeline;

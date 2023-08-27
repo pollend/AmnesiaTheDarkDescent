@@ -124,7 +124,6 @@ namespace hpl {
         static uint32_t descriptorIndex = 0;
 		static std::array<Pipeline*, eGuiMaterial_LastEnum> GuiPipeline = {};
 		static std::array<Pipeline*, eGuiMaterial_LastEnum> GuiPipeline3D = {};
-
 		static Shader* GuiShader = nullptr;
 
 		void InitializeGui(ForgeRenderer& pipeline) {

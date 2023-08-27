@@ -250,8 +250,8 @@ namespace hpl {
 		bool  GetWorldReflectionOcclusionTest(){ return mbWorldReflectionOcclusionTest;}
 		float GetMaxReflectionDistance(){ return mfMaxReflectionDistance;}
 
-		void SetHasTranslucentIllumination(bool abX){ mbHasTranslucentIllumination = abX;}
-		bool HasTranslucentIllumination(){ return mbHasTranslucentIllumination;}
+		//void SetHasTranslucentIllumination(bool abX){ mbHasTranslucentIllumination = abX;}
+		//bool HasTranslucentIllumination(){ return mbHasTranslucentIllumination;}
 
 		void SetLargeTransperantSurface(bool abX){ mbLargeTransperantSurface = abX;}
 		bool GetLargeTransperantSurface(){ return mbLargeTransperantSurface;}
@@ -347,7 +347,7 @@ namespace hpl {
 		bool mbUseRefractionEdgeCheck;
 		bool mbHasWorldReflection;
 		bool mbWorldReflectionOcclusionTest;
-		bool mbHasTranslucentIllumination = false;
+		//bool mbHasTranslucentIllumination = false;
 		bool mbLargeTransperantSurface;
 		bool mbAffectedByFog;
 		bool mbUseAlphaDissolveFilter;

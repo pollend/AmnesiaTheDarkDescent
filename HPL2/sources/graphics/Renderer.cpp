@@ -253,11 +253,6 @@ namespace hpl
         // Create data
         mpRenderList = hplNew(cRenderList, ());
 
-        mpVisibleNodeTracker = hplNew(cVisibleRCNodeTracker, ());
-
-        ////////////////////////
-        // Setup data
-
         ////////////////////////
         // Set up General Variables
         mbIsReflection = abIsReflection;
@@ -318,7 +313,6 @@ namespace hpl
     cRenderSettings::~cRenderSettings()
     {
         hplDelete(mpRenderList);
-        hplDelete(mpVisibleNodeTracker);
 
         if (mpReflectionSettings)
             hplDelete(mpReflectionSettings);
@@ -328,8 +322,6 @@ namespace hpl
 
     void cRenderSettings::ResetVariables()
     {
-        // return;
-        mpVisibleNodeTracker->Reset();
 
         if (mpReflectionSettings)
             mpReflectionSettings->ResetVariables();
@@ -372,52 +364,15 @@ namespace hpl
         RenderSettingsCopy(mlNumberOfOcclusionQueries);
     }
 
-    void cShadowMapLightCache::SetFromLight(iLight* apLight)
-    {
-        mpLight = apLight;
-        mlTransformCount = apLight->GetTransformUpdateCount();
-        mfRadius = apLight->GetRadius();
-
-        if (apLight->GetLightType() == eLightType_Spot)
-        {
-            cLightSpot* pSpotLight = static_cast<cLightSpot*>(apLight);
-            mfAspect = pSpotLight->GetAspect();
-            mfFOV = pSpotLight->GetFOV();
-        }
-    }
-
-    //-----------------------------------------------------------------------
-
-    //////////////////////////////////////////////////////////////////////////
-    // CONSTRUCTORS
-    //////////////////////////////////////////////////////////////////////////
-
-    //-----------------------------------------------------------------------
-
     iRenderer::iRenderer(const tString& asName, cGraphics* apGraphics, cResources* apResources, int alNumOfProgramComboModes)
     {
         mpGraphics = apGraphics;
         mpResources = apResources;
 
-        //////////////
-        // Set variables from arguments
-        msName = asName;
-
         /////////////////////////////////
         // Set up the render functions
         SetupRenderFunctions(mpGraphics->GetLowLevel());
 
-        ////////////////////////
-        // Debug Variables
-        mbOnlyRenderPrevVisibleOcclusionObjects = false;
-        mlOnlyRenderPrevVisibleOcclusionObjectsFrameCount = 0;
-
-        //////////////
-        // Init variables
-        mfDefaultAlphaLimit = 0.5f;
-
-        mbSetFrameBufferAtBeginRendering = true;
-        mbClearFrameBufferAtBeginRendering = true;
         mbSetupOcclusionPlaneForFog = false;
 
         mfTimeCount = 0;
@@ -453,30 +408,14 @@ namespace hpl
         bool abSendFrameBufferToPostEffects,
         bool abAtStartOfRendering)
     {
-        if (apSettings->mbLog)
-        {
-            Log("-----------------  START -------------------------\n");
-        }
-
         //////////////////////////////////////////
         // Set up variables
         mfCurrentFrameTime = afFrameTime;
         mpCurrentWorld = apWorld;
         mpCurrentSettings = apSettings;
         mpCurrentRenderList = apSettings->mpRenderList;
-
         mbSendFrameBufferToPostEffects = abSendFrameBufferToPostEffects;
-        // mpCallbackList = apCallbackList;
-
-        ////////////////////////////////
-        // Initialize render functions
-        InitAndResetRenderFunctions(
-            apFrustum,
-            apSettings->mbLog,
-            apSettings->mbUseScissorRect,
-            apSettings->mvScissorRectPos,
-            apSettings->mvScissorRectSize);
-
+        mpCurrentFrustum = apFrustum;
         ////////////////////////////////
         // Set up near plane variables
 
@@ -500,75 +439,10 @@ namespace hpl
             mvCurrentOcclusionPlanes.push_back(fogPlane);
         }
 
-        // if (mbSetFrameBufferAtBeginRendering && abAtStartOfRendering)
-        // {
-        // 	SetFrameBuffer(mpCurrentRenderTarget->mpFrameBuffer, true, true);
-        // }
-
-        // //////////////////////////////
-        // // Clear screen
-        // if (mbClearFrameBufferAtBeginRendering && abAtStartOfRendering)
-        // {
-        // 	// TODO: need to work out clearing framebuffer
-        // 	ClearFrameBuffer(eClearFrameBufferFlag_Depth | eClearFrameBufferFlag_Color, true);
-        // }
-
-        //////////////////////////////////////////////////
-        // Projection matrix
-        // SetNormalFrustumProjection();
-
-        /////////////////////////////////////////////
-        // Clear Render list
-        if (abAtStartOfRendering)
+        if (abAtStartOfRendering) {
             mpCurrentRenderList->Clear();
+        }
     }
-
-    // cShadowMapData* iRenderer::GetShadowMapData(eShadowMapResolution aResolution, iLight* apLight)
-    // {
-    //     ////////////////////////////
-    //     // If size is 1, then just return that one
-    //     if (m_shadowMapData[aResolution].size() == 1)
-    //     {
-    //         return &m_shadowMapData[aResolution][0];
-    //     }
-
-    //     //////////////////////////
-    //     // Set up variables
-    //     cShadowMapData* pBestData = NULL;
-    //     int lMaxFrameDist = -1;
-
-    //     ////////////////////////////
-    //     // Iterate the shadow map array looking for shadow map already used by light
-    //     // Else find the one with the largest frame length.
-    //     for (size_t i = 0; i < m_shadowMapData[aResolution].size(); ++i)
-    //     {
-    //         cShadowMapData& pData = m_shadowMapData[aResolution][i];
-
-    //         if (pData.mCache.mpLight == apLight)
-    //         {
-    //             pBestData = &pData;
-    //             break;
-    //         }
-    //         else
-    //         {
-    //             int lFrameDist = cMath::Abs(pData.mlFrameCount - mlRenderFrameCount);
-    //             if (lFrameDist > lMaxFrameDist)
-    //             {
-    //                 lMaxFrameDist = lFrameDist;
-    //                 pBestData = &pData;
-    //             }
-    //         }
-    //     }
-
-    //     ////////////////////////////
-    //     // Update the usage count
-    //     if (pBestData)
-    //     {
-    //         pBestData->mlFrameCount = mlRenderFrameCount;
-    //     }
-
-    //     return pBestData;
-    // }
 
     bool iRenderer::CheckRenderablePlaneIsVisible(iRenderable* apObject, cFrustum* apFrustum)
     {

@@ -58,11 +58,11 @@ namespace hpl {
 	private:
 
         uint32_t m_descIndex = 0;
-        Pipeline* m_pipeline = nullptr;
+        SharedPipeline m_pipeline;
         SharedShader m_shader;
-        RootSignature* m_rootSignature = nullptr;
-        Sampler* m_inputSampler = nullptr;
-        std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perFrameDescriptorSet;
+        SharedRootSignature m_rootSignature;
+        SharedSampler m_inputSampler;
+        std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_perFrameDescriptorSet;
 	};
 
 	//------------------------------------------

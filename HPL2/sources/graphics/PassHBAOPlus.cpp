@@ -61,16 +61,17 @@ namespace hpl::renderer {
             addShader(forgeRenderer->Rend(),&loadDesc, handle);
             return true;
         });
-        {
+        m_pointSampler.Load(forgeRenderer->Rend(), [&](Sampler** sampler) {
             SamplerDesc samplerDesc = {};
-            addSampler(forgeRenderer->Rend(), &samplerDesc,  &m_pointSampler);
-        }
-        {
+            addSampler(forgeRenderer->Rend(), &samplerDesc,  sampler);
+            return true;
+        });
+        m_rootSignature.Load(forgeRenderer->Rend(), [&](RootSignature** sig) {
             std::array samplerNames = {
                 "pointSampler"
             };
             std::array samplers = {
-                m_pointSampler
+                m_pointSampler.m_handle
             };
 
             std::array shaders = { m_shaderReinterleave.m_handle, m_shaderDeinterleave.m_handle, m_shaderCourseAO.m_handle };
@@ -80,17 +81,16 @@ namespace hpl::renderer {
             rootSignatureDesc.ppStaticSamplerNames = samplerNames.data();
             rootSignatureDesc.ppShaders = shaders.data();
             rootSignatureDesc.mShaderCount = shaders.size();
-            addRootSignature(forgeRenderer->Rend(), &rootSignatureDesc, &m_rootSignature);
-        }
-
-
+            addRootSignature(forgeRenderer->Rend(), &rootSignatureDesc, sig);
+            return true;
+        });
 
         m_pipelineDeinterleave.Load(forgeRenderer->Rend(), [&](Pipeline** handle) {
             PipelineDesc pipelineDesc = {};
             pipelineDesc.mType = PIPELINE_TYPE_COMPUTE;
             ComputePipelineDesc& computePipelineDesc = pipelineDesc.mComputeDesc;
             computePipelineDesc.pShaderProgram = m_shaderDeinterleave.m_handle;
-            computePipelineDesc.pRootSignature = m_rootSignature;
+            computePipelineDesc.pRootSignature = m_rootSignature.m_handle;
             addPipeline(forgeRenderer->Rend(), &pipelineDesc, handle);
             return true;
         });
@@ -99,7 +99,7 @@ namespace hpl::renderer {
             pipelineDesc.mType = PIPELINE_TYPE_COMPUTE;
             ComputePipelineDesc& computePipelineDesc = pipelineDesc.mComputeDesc;
             computePipelineDesc.pShaderProgram = m_shaderCourseAO.m_handle;
-            computePipelineDesc.pRootSignature = m_rootSignature;
+            computePipelineDesc.pRootSignature = m_rootSignature.m_handle;
             addPipeline(forgeRenderer->Rend(), &pipelineDesc, handle);
             return true;
         });
@@ -108,7 +108,7 @@ namespace hpl::renderer {
             pipelineDesc.mType = PIPELINE_TYPE_COMPUTE;
             ComputePipelineDesc& computePipelineDesc = pipelineDesc.mComputeDesc;
             computePipelineDesc.pShaderProgram = m_shaderReinterleave.m_handle;
-            computePipelineDesc.pRootSignature = m_rootSignature;
+            computePipelineDesc.pRootSignature = m_rootSignature.m_handle;
             addPipeline(forgeRenderer->Rend(), &pipelineDesc, handle);
             return true;
         });
@@ -133,7 +133,7 @@ namespace hpl::renderer {
 
             for(auto& desc: viewportData->m_perFrameDescriptorSet) {
                 desc.Load(forgeRenderer->Rend(),[&](DescriptorSet** set) {
-                    DescriptorSetDesc setDesc = { m_rootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, 1};
+                    DescriptorSetDesc setDesc = { m_rootSignature.m_handle, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, 1};
                     addDescriptorSet(forgeRenderer->Rend(), &setDesc, set);
                     return true;
                 });
@@ -151,7 +151,7 @@ namespace hpl::renderer {
             });
 
             viewportData->m_constDescriptorSet.Load(forgeRenderer->Rend(),[&](DescriptorSet** set) {
-                DescriptorSetDesc setDesc = { m_rootSignature, DESCRIPTOR_UPDATE_FREQ_NONE, 1};
+                DescriptorSetDesc setDesc = { m_rootSignature.m_handle, DESCRIPTOR_UPDATE_FREQ_NONE, 1};
                 addDescriptorSet(forgeRenderer->Rend(), &setDesc, set);
                 return true;
             });

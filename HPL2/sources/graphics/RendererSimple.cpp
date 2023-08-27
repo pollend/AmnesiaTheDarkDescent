@@ -52,8 +52,6 @@ namespace hpl
     cRendererSimple::cRendererSimple(cGraphics* apGraphics, cResources* apResources)
         : iRenderer("Simple", apGraphics, apResources, 0)
     {
-        mbSetFrameBufferAtBeginRendering = true;
-        mbClearFrameBufferAtBeginRendering = true;
     }
 
     cRendererSimple::~cRendererSimple()
