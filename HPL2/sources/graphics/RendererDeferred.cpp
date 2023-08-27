@@ -3003,7 +3003,6 @@ namespace hpl {
                     cmdDispatch(m_prePassCmd.m_handle, static_cast<uint32_t>(uniformTest.size() / 128) + 1, 1, 1);
                 }
                 cmdEndDebugMarker(m_prePassCmd.m_handle);
-
                 cmdResolveQuery(m_prePassCmd.m_handle, m_occlusionQuery.m_handle, m_occlusionReadBackBuffer.m_handle, 0, queryIndex);
                 endCmd(m_prePassCmd.m_handle);
 
