@@ -275,10 +275,11 @@ set_property(TARGET WinPixEventRuntime PROPERTY IMPORTED_IMPLIB
         ${THE_FORGE_DIR}/Common_3/OS/ThirdParty/OpenSource/winpixeventruntime/bin/WinPixEventRuntime.lib)
 
 # DirectXShaderCompiler 
-add_library(DirectXShaderCompiler STATIC IMPORTED)
+add_library(DirectXShaderCompiler STATIC IMPORTED GLOBAL)
 set_property(TARGET DirectXShaderCompiler PROPERTY IMPORTED_LOCATION
-    ${THE_FORGE_DIR}/Common_3/Graphics/ThirdParty/OpenSource/DirectXShaderCompiler/lib/x64/dxcompiler.lib
-)     
+    ${THE_FORGE_DIR}/Common_3/Graphics/ThirdParty/OpenSource/DirectXShaderCompiler/lib/x64/dxcompiler.lib)     
+set_property(TARGET DirectXShaderCompiler PROPERTY IMPORTED_LOCATION
+        ${THE_FORGE_DIR}/Common_3/Graphics/ThirdParty/OpenSource/DirectXShaderCompiler/bin/x64/dxcompiler.dll)
 
 # Nvapi
 add_library(Nvapi STATIC IMPORTED)
@@ -293,13 +294,10 @@ if(CMAKE_SYSTEM_NAME MATCHES "Windows")
     target_include_directories(TheForge PRIVATE ${THE_FORGE_DIR}/Common_3/Graphics/ThirdParty/OpenSource/D3D12MemoryAllocator)
     target_link_libraries(TheForge PRIVATE Nvapi ags)
 
-    file(GLOB GRAPHICS_D3D11_SOURCE
-        "${THE_FORGE_DIR}/Common_3/Graphics/Direct3D11/*.cpp")
+    file(GLOB GRAPHICS_D3D11_SOURCE "${THE_FORGE_DIR}/Common_3/Graphics/Direct3D11/*.cpp")
     target_sources(TheForge PRIVATE ${GRAPHICS_D3D11_SOURCE})
-    target_link_libraries( TheForge PRIVATE 
-        DirectXShaderCompiler
-        "d3d11.lib")
-    target_link_libraries( TheForge PRIVATE WinPixEventRuntime  )
+    target_link_libraries(TheForge PRIVATE DirectXShaderCompiler "d3d11.lib")
+    target_link_libraries(TheForge PRIVATE WinPixEventRuntime)
 endif()
 
 
