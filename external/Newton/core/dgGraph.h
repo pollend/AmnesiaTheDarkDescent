@@ -49,7 +49,7 @@ class dgGraph: public dgList<dgGraphNode<dgNodeData, dgEdgeData> >
 
 	void Trace () const;
 
-	#ifdef _DEBUG
+	#ifdef _DG_DEBUG
 	dgInt32 m_counter;
 	#endif
 };
@@ -67,7 +67,7 @@ class dgGraphNode: public dgList<dgGraphEdge<dgNodeData, dgEdgeData> >
 
 	void Trace () const;
 
-#ifdef _DEBUG
+#ifdef _DG_DEBUG
 	dgInt32 m_index;
 #endif
 
@@ -91,7 +91,7 @@ template<class dgNodeData, class dgEdgeData>
 dgGraph<dgNodeData, dgEdgeData>::dgGraph () 
 	:dgList<dgGraphNode<dgNodeData, dgEdgeData> >()
 {
-#ifdef _DEBUG
+#ifdef _DG_DEBUG
 	m_counter = 0;
 #endif
 }
@@ -101,7 +101,7 @@ template<class dgNodeData, class dgEdgeData>
 dgGraph<dgNodeData, dgEdgeData>::dgGraph (dgMemoryAllocator* const allocator) 
 	:dgList<dgGraphNode<dgNodeData, dgEdgeData> >(allocator)
 {
-#ifdef _DEBUG
+#ifdef _DG_DEBUG
 	m_counter = 0;
 #endif
 }
@@ -118,7 +118,7 @@ typename dgGraph<dgNodeData, dgEdgeData>::dgListNode* dgGraph<dgNodeData, dgEdge
 	typename dgGraph<dgNodeData, dgEdgeData>::dgListNode* const node = dgGraph<dgNodeData, dgEdgeData>::Append();
 
 	node->GetInfo().SetAllocator(dgGraph<dgNodeData, dgEdgeData>::GetAllocator());
-#ifdef _DEBUG
+#ifdef _DG_DEBUG
 	node->GetInfo().m_index = m_counter;
 	m_counter ++;
 #endif

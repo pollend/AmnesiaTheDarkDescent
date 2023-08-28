@@ -170,7 +170,7 @@ void dgApi GetMinMax (dgVector &minOut, dgVector &maxOut, const dgFloat32* const
 	dgInt32 stride = dgInt32 (strideInBytes / sizeof (dgFloat32));
 	const dgFloat32* vArray = vertexArray + stride;
 
-	_ASSERTE (stride >= 3);
+	_DG_ASSERTE (stride >= 3);
  	minOut = dgVector (vertexArray[0], vertexArray[1], vertexArray[2], dgFloat32 (0.0f)); 
 	maxOut = dgVector (vertexArray[0], vertexArray[1], vertexArray[2], dgFloat32 (0.0f)); 
 
@@ -473,7 +473,7 @@ namespace InternalGeoUtil
 					stack[stackIndex][1] = j;
 					stackIndex ++;
 				}
-				_ASSERTE (stackIndex < sizeof (stack) / (2 * sizeof (stack[0][0])));
+				_DG_ASSERTE (stackIndex < sizeof (stack) / (2 * sizeof (stack[0][0])));
 			} else {
 				for (dgInt32 i = lo + 1; i <= hi ; i++) {
 					dgInt32 j;
@@ -491,15 +491,15 @@ namespace InternalGeoUtil
 		}
 
 
-#ifdef _DEBUG
+#ifdef _DG_DEBUG
 		for (dgInt32 i = 0; i < (vertexCount - 1); i ++) {
-			_ASSERTE (cmp_vertex (&vertexList[i * stride], &vertexList[(i + 1) * stride], firstSortAxis) <= 0);
+			_DG_ASSERTE (cmp_vertex (&vertexList[i * stride], &vertexList[(i + 1) * stride], firstSortAxis) <= 0);
 		}
 #endif
 
 		dgInt32 count = 0;
 #ifdef __USE_DOUBLE_PRECISION__
-		_ASSERTE (0);
+		_DG_ASSERTE (0);
 		indexPtr = (dgInt64*)vertexList;
 #else
 		indexPtr = (dgInt32*)vertexList;
@@ -628,7 +628,7 @@ namespace InternalGeoUtil
 					i1 --;
 				}
 			} while (i0 <= i1);
-			_ASSERTE (i0 < vertexCount);
+			_DG_ASSERTE (i0 < vertexCount);
 
 			count0 = QuickSortVertices (&vertList[ 0 * stride], stride, floatSize, unsignedSize, i0, tolerance);
 			count1 = QuickSortVertices (&vertList[i0 * stride], stride, floatSize, unsignedSize, vertexCount - i0, tolerance);

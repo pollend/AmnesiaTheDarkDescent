@@ -24,7 +24,7 @@
 
 
 
-#ifdef _DEBUG
+#ifdef _DG_DEBUG
 void dgApi dgExpandTraceMessage (const char *fmt, ...)
 {
 //	unsigned ctrl;

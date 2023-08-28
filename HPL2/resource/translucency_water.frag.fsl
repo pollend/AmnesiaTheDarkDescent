@@ -17,6 +17,8 @@
 #include "deferred_resources.h.fsl"
 #include "deferred_common.h.fsl"
 
+#define WAVE_AMPLITUDE_SCALE 0.04
+#define WAVE_FREQUENCY_SCALE 10.0
 STRUCT(PsIn) 
 {
     DATA(float4, Position, SV_Position);
@@ -41,17 +43,20 @@ PsOut PS_MAIN(PsIn In)
     uint materialID = Get(uniformObjectBuffer)[Get(objectId)].materialID;
     
     float waveAft = Get(afT) * Get(uniformMaterialBuffer)[materialID].waveSpeed;
+    float waveAmplitude = Get(uniformMaterialBuffer)[materialID].waveAmplitude * WAVE_AMPLITUDE_SCALE;
+    float waveFrequency = Get(uniformMaterialBuffer)[materialID].waveFreq * WAVE_FREQUENCY_SCALE;
+
     ///////////////////////////////
     //Get the two uv coords
     float fT1 = waveAft * 0.8;
     float2 vUv1 = In.uv + waveAft * 0.01f;
-    vUv1.x += sin(fT1 + vUv1.y * Get(uniformMaterialBuffer)[materialID].waveFreq) * Get(uniformMaterialBuffer)[materialID].waveAmplitude;
-    vUv1.y += sin(fT1 + vUv1.x * Get(uniformMaterialBuffer)[materialID].waveFreq) * Get(uniformMaterialBuffer)[materialID].waveAmplitude;
+    vUv1.x += sin(fT1 + vUv1.y * waveFrequency) * waveAmplitude;
+    vUv1.y += sin(fT1 + vUv1.x * waveFrequency) * waveAmplitude; 
 
     float fT2 = waveAft * -2.6;
     float2 vUv2 = In.uv + waveAft * -0.012f;
-    vUv2.x += sin(fT2 + vUv2.y * Get(uniformMaterialBuffer)[materialID].waveFreq * 1.2) * Get(uniformMaterialBuffer)[materialID].waveAmplitude * 0.75;
-    vUv2.y += sin(fT2 + vUv2.x * Get(uniformMaterialBuffer)[materialID].waveFreq * 1.2) * Get(uniformMaterialBuffer)[materialID].waveAmplitude * 0.75;
+    vUv2.x += sin(fT2 + vUv2.y * waveFrequency * 1.2) * waveAmplitude * 0.75;
+    vUv2.y += sin(fT2 + vUv2.x * waveFrequency * 1.2) * waveAmplitude * 0.75;
 
     ///////////////////////////////
     //Get the normals and combine into final normal
@@ -66,21 +71,19 @@ PsOut PS_MAIN(PsIn In)
     float4 surfaceColor  = SampleTex2D(Get(diffuseMap), Get(materialSampler), vUv1);
 
     float4 vRefractionColor = float4(1,1,1,1);
-    float2 vDistortedScreenPos = float2(0, 0);
-
+    float2 vDistortedScreenPos = float2(0.0,0.0);
     float2 refractionViewTexel = 1.0 / GetDimensions(Get(refractionMap), NO_SAMPLER);
-
     if(UseRefractionTrans(Get(options))) {
         float fInvDist = min(1.0 / In.pos.z, 10.0);
-        vDistortedScreenPos = In.Position.xy + (vFinalNormal.xy * Get(uniformMaterialBuffer)[materialID].refractionScale * fInvDist);
-        vRefractionColor = SampleTex2D(Get(refractionMap), Get(nearestSampler), vDistortedScreenPos  * refractionViewTexel );
-       // if(vRefractionColor.a < 0.5) {
-       //     vRefractionColor = SampleTex2D(Get(refractionMap), Get(nearestSampler), In.Position.xy * refractionViewTexel);
-       // }
+        vDistortedScreenPos = (In.Position.xy * refractionViewTexel) + (vFinalNormal.xy * Get(uniformMaterialBuffer)[materialID].refractionScale * fInvDist);
+        vRefractionColor = SampleTex2D(Get(refractionMap), Get(nearestSampler), vDistortedScreenPos);
+        if(vRefractionColor.a < 0.5) {
+            vRefractionColor = SampleTex2D(Get(refractionMap), Get(nearestSampler), In.Position.xy * refractionViewTexel);
+        }
      }
 
 
-    float4 vReflectionColor = float4(0,0,0,0);
+    float4 vReflectionColor = float4(1.0,1.0,1.0,1.0);
     float fFresnel = 1.0;
     if(UseReflectionTrans(Get(options))) {
         //////////////////

@@ -152,14 +152,14 @@ void dgCollisionConvexModifier::ModifierSetMatrix (const dgMatrix& matrix)
 		}
 	}
 
-	#ifdef _DEBUG
+	#ifdef _DG_DEBUG
 		// check the the matrix is correctly inverted
 		dgMatrix tmp (m_modifierInvMatrix * m_modifierMatrix);
 		for (i = 0; i < 4; i ++) {
-			_ASSERTE (dgAbsf (tmp[i][i] - dgFloat32 (1.0f)) < dgFloat32 (1.0e-5f));
+			_DG_ASSERTE (dgAbsf (tmp[i][i] - dgFloat32 (1.0f)) < dgFloat32 (1.0e-5f));
 			for (j = i + 1; j < 4; j ++) {
-				_ASSERTE (dgAbsf (tmp[i][j]) < dgFloat32 (1.0e-5f));
-				_ASSERTE (dgAbsf (tmp[j][i]) < dgFloat32 (1.0e-5f));
+				_DG_ASSERTE (dgAbsf (tmp[i][j]) < dgFloat32 (1.0e-5f));
+				_DG_ASSERTE (dgAbsf (tmp[j][i]) < dgFloat32 (1.0e-5f));
 			}
 		}
 	#endif
@@ -172,7 +172,7 @@ dgInt32 dgCollisionConvexModifier::CalculateSignature () const
 
 void dgCollisionConvexModifier::SetCollisionBBox (const dgVector& p0__, const dgVector& p1__)
 {
-	_ASSERTE (0);
+	_DG_ASSERTE (0);
 }
 
 
@@ -204,12 +204,12 @@ void dgCollisionConvexModifier::CalcAABBSimd (const dgMatrix &matrix, dgVector &
 
 dgVector dgCollisionConvexModifier::SupportVertex (const dgVector& dir) const
 {
-	_ASSERTE (dgAbsf(dir % dir - dgFloat32 (1.0f)) < dgFloat32 (1.0e-2f));
+	_DG_ASSERTE (dgAbsf(dir % dir - dgFloat32 (1.0f)) < dgFloat32 (1.0e-2f));
 
 	dgVector dir1 (m_modifierMatrix.UnrotateVector (dir));
 	dir1 = dir1.Scale (dgRsqrt (dir1 % dir1));
 
-	_ASSERTE (dgAbsf(dir1 % dir1 - dgFloat32 (1.0f)) < dgFloat32 (1.0e-2f));
+	_DG_ASSERTE (dgAbsf(dir1 % dir1 - dgFloat32 (1.0f)) < dgFloat32 (1.0e-2f));
 	return m_modifierMatrix.TransformVector (m_convexCollision->SupportVertex (dir1));
 }
 
@@ -221,7 +221,7 @@ dgVector dgCollisionConvexModifier::SupportVertexSimd (const dgVector& dir) cons
 	dgVector localDir; 
 	dgVector dir1 (m_modifierMatrix.UnrotateVectorSimd(dir));
 
-	_ASSERTE (dgAbsf(dir % dir - dgFloat32 (1.0f)) < dgFloat32 (1.0e-2f));
+	_DG_ASSERTE (dgAbsf(dir % dir - dgFloat32 (1.0f)) < dgFloat32 (1.0e-2f));
 //	dir1 = dir1.Scale (dgRsqrt (dir1 % dir1));
 	tmp1 = simd_mul_v ((simd_type&)dir1, simd_and_v ((simd_type&)dir1, (simd_type&)m_triplexMask));
 	tmp1 = simd_add_v (tmp1, simd_move_hl_v (tmp1, tmp1));
@@ -231,7 +231,7 @@ dgVector dgCollisionConvexModifier::SupportVertexSimd (const dgVector& dir) cons
 	tmp0 =  simd_mul_s (simd_mul_s((simd_type&)m_nrh0p5, tmp0), simd_mul_sub_s ((simd_type&)m_nrh3p0, simd_mul_s (tmp1, tmp0), tmp0));
 	(simd_type&)localDir = simd_mul_v ((simd_type&)dir1, simd_permut_v (tmp0, tmp0, PURMUT_MASK(3, 0, 0, 0)));
 
-	_ASSERTE (dgAbsf(localDir % localDir - dgFloat32 (1.0f)) < dgFloat32 (1.0e-2f));
+	_DG_ASSERTE (dgAbsf(localDir % localDir - dgFloat32 (1.0f)) < dgFloat32 (1.0e-2f));
 	return m_modifierMatrix.TransformVectorSimd (m_convexCollision->SupportVertexSimd(localDir)); 
 
 

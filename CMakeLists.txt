@@ -25,6 +25,13 @@ if(NOT APPLE AND UNIX)
     set(LINUX TRUE)
 ENDIF()
 
+execute_process(
+        COMMAND git log -1 --format=%h
+        WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
+        OUTPUT_VARIABLE AMNESIA_TDD_TAG
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        )
+
 # Hack to correctly compile on windows ...
 if(WIN32)
     add_compile_definitions("NOMINMAX=1")

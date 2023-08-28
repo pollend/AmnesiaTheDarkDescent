@@ -49,8 +49,8 @@ bool _CholeskyDecomposition (
 		return CholeskyDecomposition (rows, size);
 
 	} else {
-		_ASSERTE (0);
-		_ASSERTE (typeSizeInBytes == sizeof (dgFloat64));
+		_DG_ASSERTE (0);
+		_DG_ASSERTE (typeSizeInBytes == sizeof (dgFloat64));
 	}
 
 	return true;
@@ -79,8 +79,8 @@ void _BackAndForwardSustitition (
 		BackAndForwardSustitition (rows, size, (dgFloat32*)rightsideVector);
 
 	} else {
-		_ASSERTE (0);
-		_ASSERTE (typeSizeInBytes == sizeof (dgFloat64));
+		_DG_ASSERTE (0);
+		_DG_ASSERTE (typeSizeInBytes == sizeof (dgFloat64));
 	}
 }
 */
@@ -111,8 +111,8 @@ bool _SolveByCholeskyDecomposition (
 			return true;
 		}
 	} else {
-		_ASSERTE (0);
-		_ASSERTE (typeSizeInBytes == sizeof (dgFloat64));
+		_DG_ASSERTE (0);
+		_DG_ASSERTE (typeSizeInBytes == sizeof (dgFloat64));
 	}
 
 	return false;

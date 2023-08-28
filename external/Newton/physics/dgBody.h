@@ -626,7 +626,7 @@ inline void dgBody::AddDamingAcceleration()
 /*
 inline void dgBody::AddGyroscopicTorque()
 {
-	_ASSERTE (0);
+	_DG_ASSERTE (0);
 	if (m_applyGyroscopic) {
 		const dgVector inertia = m_mass;
 		dgVector omega (m_matrix.UnrotateVector (m_omega));
@@ -725,10 +725,10 @@ inline void dgBody::SetMatrixOriginAndRotation(const dgMatrix& matrix)
 {
 	m_matrix = matrix;
 
-#ifdef _DEBUG
+#ifdef _DG_DEBUG
 	for (int i = 0; i < 4; i ++) {
 		for (int j = 0; j < 4; j ++) {
-			_ASSERTE (dgCheckFloat(m_matrix[i][j]));
+			_DG_ASSERTE (dgCheckFloat(m_matrix[i][j]));
 		}
 	}
 
@@ -736,16 +736,17 @@ inline void dgBody::SetMatrixOriginAndRotation(const dgMatrix& matrix)
 	int j1 = 2;
 	for (dgInt32 i = 0; i < 3; i ++) {
 		dgFloat32 val;
-		_ASSERTE (m_matrix[i][3] == 0.0f);
+		_DG_ASSERTE (m_matrix[i][3] == 0.0f);
 		val = m_matrix[i] % m_matrix[i];
-		_ASSERTE (dgAbsf (val - 1.0f) < 1.0e-5f);
+		_DG_ASSERTE (dgAbsf (val - 1.0f) < 1.0e-5f);
 		dgVector tmp (m_matrix[j0] * m_matrix[j1]);
 		val = tmp % m_matrix[i];
-		_ASSERTE (dgAbsf (val - 1.0f) < 1.0e-5f);
+		_DG_ASSERTE (dgAbsf (val - 1.0f) < 1.0e-5f);
 		j0 = j1;
 		j1 = i;
 	}
-#endif
+
+ #endif
 
 	m_rotation = dgQuaternion (m_matrix);
 	m_globalCentreOfMass = m_matrix.TransformVector (m_localCentreOfMass);

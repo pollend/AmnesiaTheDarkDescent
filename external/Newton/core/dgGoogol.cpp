@@ -38,7 +38,7 @@ static dgFloat64 m_splitter = 0.0f;
 dgGoogol::dgGoogol(void)
 	:m_significantCount (0)
 {
-#ifdef _DEBUG
+#ifdef _DG_DEBUG
 	memset (m_elements, 0, sizeof (m_elements));
 #endif
 }
@@ -85,7 +85,7 @@ void dgGoogol::InitFloatFloat (dgFloat64 value)
 
 
 	m_significantCount = 1;
-#ifdef _DEBUG
+#ifdef _DG_DEBUG
 	memset (m_elements, 0, sizeof (m_elements));
 #endif
 	m_elements[0] = value;
@@ -134,13 +134,13 @@ inline void dgGoogol::PackFloat ()
 		if (q != 0) {
 			elements[top] = q;
 			top ++;
-			_ASSERTE (top < DG_GOOGOL_SIZE);
+			_DG_ASSERTE (top < DG_GOOGOL_SIZE);
 		}
 		Q = Qnew;
 	}
 	elements[top] = Q;
 	m_significantCount = top + 1;
-	_ASSERTE (m_significantCount < DG_GOOGOL_SIZE);
+	_DG_ASSERTE (m_significantCount < DG_GOOGOL_SIZE);
 	memcpy (m_elements, elements, m_significantCount * sizeof (dgFloat64));
 }
 
@@ -190,16 +190,16 @@ inline dgGoogol dgGoogol::ScaleFloat(dgFloat64 scale) const
 
 		AddFloat (Q, product0, sum, tmp.m_elements[hindex]);
 		hindex++;
-		_ASSERTE (hindex < DG_GOOGOL_SIZE);
+		_DG_ASSERTE (hindex < DG_GOOGOL_SIZE);
 
 		AddFloat (product1, sum, Q, tmp.m_elements[hindex]);
 		hindex++;
-		_ASSERTE (hindex < DG_GOOGOL_SIZE);
+		_DG_ASSERTE (hindex < DG_GOOGOL_SIZE);
 	}
 	tmp.m_elements[hindex] = Q;
-	_ASSERTE (hindex < DG_GOOGOL_SIZE);
+	_DG_ASSERTE (hindex < DG_GOOGOL_SIZE);
 	tmp.m_significantCount = m_significantCount + m_significantCount;
-	_ASSERTE (tmp.m_significantCount < DG_GOOGOL_SIZE);
+	_DG_ASSERTE (tmp.m_significantCount < DG_GOOGOL_SIZE);
 	return tmp;
 }
 
@@ -227,7 +227,7 @@ dgGoogol dgGoogol::operator+ (const dgGoogol &A) const
 		}
 		tmp.m_elements[significantCount] = q;
 		significantCount ++;
-		_ASSERTE (significantCount < DG_GOOGOL_SIZE);
+		_DG_ASSERTE (significantCount < DG_GOOGOL_SIZE);
 	}
 	tmp.m_significantCount = significantCount;
 

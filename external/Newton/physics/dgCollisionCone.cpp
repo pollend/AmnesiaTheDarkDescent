@@ -55,7 +55,7 @@ dgCollisionCone::dgCollisionCone(dgWorld* const world, dgDeserialize deserializa
 dgCollisionCone::~dgCollisionCone()
 {
 	m_shapeRefCount --;
-	_ASSERTE (m_shapeRefCount >= 0);
+	_DG_ASSERTE (m_shapeRefCount >= 0);
 
 	dgCollisionConvex::m_simplex = NULL;
 	dgCollisionConvex::m_vertex = NULL;
@@ -112,7 +112,7 @@ void dgCollisionCone::Init (dgFloat32 radius, dgFloat32 height)
 		polyhedra.AddFace (DG_CONE_SEGMENTS, wireframe);
 		polyhedra.EndFace ();
 
-		_ASSERTE (SanityCheck (polyhedra));
+		_DG_ASSERTE (SanityCheck (polyhedra));
 
 		dgUnsigned64 i = 0;
 		dgPolyhedra::Iterator iter (polyhedra);
@@ -202,7 +202,7 @@ void dgCollisionCone::DebugCollision (const dgMatrix& matrixPtr, OnDebugCollisio
 
 void dgCollisionCone::SetCollisionBBox (const dgVector& p0__, const dgVector& p1__)
 {
-	_ASSERTE (0);
+	_DG_ASSERTE (0);
 }
 
 
@@ -225,7 +225,7 @@ dgVector dgCollisionCone::SupportVertex (const dgVector& dir) const
 	dgFloat32 dist1;
 	dgFloat32 tetha;
 
-	_ASSERTE (dgAbsf(dir % dir - dgFloat32 (1.0f)) < dgFloat32 (1.0e-3f));
+	_DG_ASSERTE (dgAbsf(dir % dir - dgFloat32 (1.0f)) < dgFloat32 (1.0e-3f));
 
 	if (dir.m_x > m_sinAngle) {
 		return dgVector (m_height, dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f));       
@@ -253,7 +253,7 @@ dgVector dgCollisionCone::SupportVertex (const dgVector& dir) const
 	dgFloat32 z0;
 	dgFloat32 mag2;
 
-	_ASSERTE (dgAbsf(dir % dir - dgFloat32 (1.0f)) < dgFloat32 (1.0e-3f));
+	_DG_ASSERTE (dgAbsf(dir % dir - dgFloat32 (1.0f)) < dgFloat32 (1.0e-3f));
 
 	if (dir.m_x > m_sinAngle) {
 		return dgVector (m_height, dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f));       
@@ -346,7 +346,7 @@ dgInt32 dgCollisionCone::CalculatePlaneIntersection (const dgVector& normal, con
 		magInv = dgRsqrt (normal.m_y * normal.m_y + normal.m_z * normal.m_z);
 		cosAng = normal.m_y * magInv;
 		sinAng = normal.m_z * magInv;
-		_ASSERTE (dgAbsf (normal.m_z * cosAng - normal.m_y * sinAng) < dgFloat32 (1.0e-4f));
+		_DG_ASSERTE (dgAbsf (normal.m_z * cosAng - normal.m_y * sinAng) < dgFloat32 (1.0e-4f));
 //		dgVector normal1 (normal.m_x, normal.m_y * cosAng + normal.m_z * sinAng, 
 //									  normal.m_z * cosAng - normal.m_y * sinAng, dgFloat32 (0.0f));
 		dgVector normal1 (normal.m_x, normal.m_y * cosAng + normal.m_z * sinAng, dgFloat32 (0.0f), dgFloat32 (0.0f));
@@ -406,7 +406,7 @@ dgInt32 dgCollisionCone::CalculatePlaneIntersectionSimd (
 
 		cosAng = normal.m_y * magInv;
 		sinAng = normal.m_z * magInv;
-		_ASSERTE (dgAbsf (normal.m_z * cosAng - normal.m_y * sinAng) < dgFloat32 (1.0e-4f));
+		_DG_ASSERTE (dgAbsf (normal.m_z * cosAng - normal.m_y * sinAng) < dgFloat32 (1.0e-4f));
 //		dgVector normal1 (normal.m_x, normal.m_y * cosAng + normal.m_z * sinAng, 
 //									  normal.m_z * cosAng - normal.m_y * sinAng, dgFloat32 (0.0f));
 		dgVector normal1 (normal.m_x, normal.m_y * cosAng + normal.m_z * sinAng, dgFloat32 (0.0f), dgFloat32 (0.0f));

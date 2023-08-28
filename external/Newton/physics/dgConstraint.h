@@ -235,7 +235,7 @@ class dgConstraint
 
 inline dgConstraint::dgConstraint() 
 {
-	_ASSERTE ((((dgUnsigned64) this) & 15) == 0);
+	_DG_ASSERTE ((((dgUnsigned64) this) & 15) == 0);
 
 	m_link0 = NULL;
 	m_link1 = NULL;

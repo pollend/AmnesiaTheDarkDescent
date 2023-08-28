@@ -152,9 +152,9 @@ class dgVehicleConstraint: public dgConstraint
 	virtual void SetDestructorCallback (OnConstraintDestroy destructor);
 	virtual dgUnsigned32 JacobianDerivative (dgContraintDescritor& params); 
 
-	virtual void JointAccelerations(const dgJointAccelerationDecriptor& params) {_ASSERTE (0);} 
-	virtual void JointAccelerationsSimd(const dgJointAccelerationDecriptor& params){_ASSERTE (0);} 
-	virtual void JointVelocityCorrection(const dgJointAccelerationDecriptor& params){_ASSERTE (0);} 
+	virtual void JointAccelerations(const dgJointAccelerationDecriptor& params) {_DG_ASSERTE (0);} 
+	virtual void JointAccelerationsSimd(const dgJointAccelerationDecriptor& params){_DG_ASSERTE (0);} 
+	virtual void JointVelocityCorrection(const dgJointAccelerationDecriptor& params){_DG_ASSERTE (0);} 
 
 
 	dgVector m_upPin;
@@ -253,7 +253,7 @@ inline dgFloat32 dgVehicleConstraint::GetTireNormalLoad (void* index) const
 
 //	load = node->GetInfo().m_tireNormalLoad___;
 	load = node->GetInfo().m_tireNormalLoad % m_body0->m_matrix.RotateVector(m_upPin);
-//_ASSERTE (dgAbsf(load - node->GetInfo().m_tireNormalLoad_ % m_body0->m_matrix.RotateVector(m_upPin)) < 0.1f);
+//_DG_ASSERTE (dgAbsf(load - node->GetInfo().m_tireNormalLoad_ % m_body0->m_matrix.RotateVector(m_upPin)) < 0.1f);
 	return load;
 }
 

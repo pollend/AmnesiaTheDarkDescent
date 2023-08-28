@@ -261,7 +261,7 @@ void dgThreads::CreateThreaded (dgInt32 threads)
 void dgThreads::DestroydgThreads()
 {
 	#if (defined (WIN32) || defined(_WIN32) || defined (__MINGW32__) || defined (__MINGW64__))
-		_ASSERTE (m_workInProgress == 0);
+		_DG_ASSERTE (m_workInProgress == 0);
 
 		while(m_workInProgress > 0){
 			Sleep(10);
@@ -326,7 +326,7 @@ void dgThreads::DestroydgThreads()
 dgInt32 dgThreads::SubmitJob(dgWorkerThread* const job)
 {
 	if (!m_numOfThreads) {
-		_ASSERTE (job->m_threadIndex != -1);
+		_DG_ASSERTE (job->m_threadIndex != -1);
 		job->ThreadExecute();
 	} else {
 
@@ -489,7 +489,7 @@ void dgThreads::CalculateChunkSizes (dgInt32 elements, dgInt32* const chunkSizes
 
 void dgThreads::dgGetLock() const
 {
-	_ASSERTE (sizeof (dgInt32) == sizeof (long));
+	_DG_ASSERTE (sizeof (dgInt32) == sizeof (long));
 	dgSpinLock( &m_globalSpinLock );
 
 	//spinLock( &m_globalSpinLock );
@@ -506,13 +506,13 @@ void dgThreads::dgReleaseLock() const
 
 void dgThreads::dgGetIndirectLock(dgInt32* lockVar)
 {
-	_ASSERTE (sizeof (dgInt32) == sizeof (long));
+	_DG_ASSERTE (sizeof (dgInt32) == sizeof (long));
 	dgSpinLock(lockVar);
 }
 
 void dgThreads::dgReleaseIndirectLock(dgInt32* lockVar)
 {
-	_ASSERTE (sizeof (dgInt32) == sizeof (long));
+	_DG_ASSERTE (sizeof (dgInt32) == sizeof (long));
 	dgSpinUnlock (lockVar);
 }
 

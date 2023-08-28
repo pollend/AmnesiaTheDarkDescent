@@ -71,7 +71,7 @@ void dgPointToCurveConstraint::SetDestructorCallback (OnConstraintDestroy destru
 
 //dgUnsigned32 dgPointToCurveConstraint::CalcRestrictedDOF()
 //{
-//	_ASSERTE (0);
+//	_DG_ASSERTE (0);
 //	return 0;
 //}
 
@@ -81,9 +81,9 @@ void dgPointToCurveConstraint::SetPivotPoint(
 	OnPointToCurveCallback curve, 
 	void *curveContext)
 {
-	_ASSERTE (0);
+	_DG_ASSERTE (0);
 
-//	_ASSERTE (m_dynamic0);
+//	_DG_ASSERTE (m_dynamic0);
 
 //	m_curve = curve;
 //	m_context = curveContext;
@@ -94,17 +94,17 @@ void dgPointToCurveConstraint::SetPivotPoint(
 
 dgUnsigned32 dgPointToCurveConstraint::JacobianDerivative (dgContraintDescritor& params)
 {
-	_ASSERTE (0);
+	_DG_ASSERTE (0);
 	return 0;
 //	dgBody* body0;
 //	dgFloat32 kPosit;
 //	
-//	_ASSERTE (m_dynamic0);
+//	_DG_ASSERTE (m_dynamic0);
 //	
 //	body0 = m_dynamic0->GetBody();
-//	_ASSERTE (body0);
+//	_DG_ASSERTE (body0);
 //	
-//	_ASSERTE (body0->GetDynamic() == m_dynamic0);
+//	_DG_ASSERTE (body0->GetDynamic() == m_dynamic0);
 //	
 //	const dgMatrix& mat0 = body0->GetMatrix();
 //

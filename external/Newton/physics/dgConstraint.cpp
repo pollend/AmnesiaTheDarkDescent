@@ -57,8 +57,8 @@ bool dgConstraint::IsBilateral () const
 
 void dgConstraint::InitPointParam (dgPointParam& param, dgFloat32 stiffness, const dgVector& p0Global, const dgVector& p1Global) const
 {
-	_ASSERTE (m_body0);
-	_ASSERTE (m_body1);
+	_DG_ASSERTE (m_body0);
+	_DG_ASSERTE (m_body1);
 	param.m_stiffness = stiffness; 
 
 	param.m_r0 = p0Global - m_body0->m_globalCentreOfMass;
@@ -81,7 +81,7 @@ void dgConstraint::InitInfo (dgConstraintInfo* const info) const
 {
 
 	info->m_attachBody_0 = GetBody0();
-	_ASSERTE (info->m_attachBody_0);
+	_DG_ASSERTE (info->m_attachBody_0);
 	dgWorld* const world = info->m_attachBody_0->GetWorld();
 	if (info->m_attachBody_0  == world->GetSentinelBody()) {
 		info->m_attachBody_0  = NULL;
@@ -101,5 +101,5 @@ void dgConstraint::InitInfo (dgConstraintInfo* const info) const
 
 void dgConstraint::GetInfo (dgConstraintInfo* const info) const
 {
-	_ASSERTE (0);
+	_DG_ASSERTE (0);
 }

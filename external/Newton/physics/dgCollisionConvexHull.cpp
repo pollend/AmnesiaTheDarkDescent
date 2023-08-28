@@ -100,13 +100,13 @@ dgCollisionConvexHull::dgCollisionConvexHull(
 				dgPlane plane (normal, dgFloat32 (0.0f));
 				dgVector planeSupport (SupportVertex (plane));
 				plane.m_w = - (plane % planeSupport);
-//				_ASSERTE (plane.Evalue(m_boxOrigin) < 0.0f);
+//				_DG_ASSERTE (plane.Evalue(m_boxOrigin) < 0.0f);
 				dgPlane& tmpPlane = planesArray[planeCount];
 				tmpPlane = plane;
 				planesArray[planeCount].m_index = i;
 				planesArray[planeCount].m_face = face;
 				planeCount ++;
-				_ASSERTE (planeCount < (sizeof (planesArray) / sizeof (planesArray[0])));
+				_DG_ASSERTE (planeCount < (sizeof (planesArray) / sizeof (planesArray[0])));
 			}
 		}
 	}
@@ -124,7 +124,7 @@ dgCollisionConvexHull::dgCollisionConvexHull(
 					break;
 				}
 			}
-			_ASSERTE (j < m_faceCount);
+			_DG_ASSERTE (j < m_faceCount);
 		}
 		m_boundPlanesCount ++;
 	}
@@ -210,9 +210,9 @@ dgBigVector dgCollisionConvexHull::FaceNormal (const dgEdge *face, const dgVecto
 		dgBigVector p2 (&pool[edge->m_incidentVertex].m_x);
 		dgBigVector e2 (p2 - p0);
 		dgBigVector n1 (e1 * e2);
-#ifdef _DEBUG
+#ifdef _DG_DEBUG
 		dgFloat64 mag = normal % n1;
-		_ASSERTE ( mag >= -dgFloat32 (0.1f));
+		_DG_ASSERTE ( mag >= -dgFloat32 (0.1f));
 #endif
 		normal += n1;
 		e1 = e2;
@@ -220,14 +220,14 @@ dgBigVector dgCollisionConvexHull::FaceNormal (const dgEdge *face, const dgVecto
 	dgFloat64 den = sqrt (normal % normal) + dgFloat64 (1.0e-24f);
 	normal = normal.Scale (dgFloat64 (1.0f)/ den);
 
-#ifdef _DEBUG
+#ifdef _DG_DEBUG
 	edge = face;
 	dgBigVector e0 (pool[edge->m_incidentVertex] - pool[edge->m_prev->m_incidentVertex]);	
 	do {
 		dgBigVector e1 (pool[edge->m_next->m_incidentVertex] - pool[edge->m_incidentVertex]);	
 		dgBigVector n1 (e0 * e1);
 		dgFloat64 x = normal % n1;
-		_ASSERTE (x > -dgFloat64 (0.01f));
+		_DG_ASSERTE (x > -dgFloat64 (0.01f));
 		e0 = e1;
 		edge = edge->m_next;
 	} while (edge != face);
@@ -273,8 +273,8 @@ bool dgCollisionConvexHull::RemoveCoplanarEdge (dgPolyhedra& polyhedra, dgVector
 						dgBigVector e1 (hullVertexArray[edge0->m_twin->m_next->m_next->m_incidentVertex] - hullVertexArray[edge0->m_incidentVertex]);
 						dgBigVector e0 (hullVertexArray[edge0->m_incidentVertex] - hullVertexArray[edge0->m_prev->m_incidentVertex]);
 
-						_ASSERTE ((e0 % e0) >= dgFloat64 (0.0f));
-						_ASSERTE ((e1 % e1) >= dgFloat64 (0.0f));
+						_DG_ASSERTE ((e0 % e0) >= dgFloat64 (0.0f));
+						_DG_ASSERTE ((e1 % e1) >= dgFloat64 (0.0f));
 
 						e0 = e0.Scale (dgFloat64 (1.0f) / sqrt (e0 % e0));
 						e1 = e1.Scale (dgFloat64 (1.0f) / sqrt (e1 % e1));
@@ -285,8 +285,8 @@ bool dgCollisionConvexHull::RemoveCoplanarEdge (dgPolyhedra& polyhedra, dgVector
 
 							dgBigVector e1 (hullVertexArray[edge0->m_next->m_next->m_incidentVertex] - hullVertexArray[edge0->m_twin->m_incidentVertex]);
 							dgBigVector e0 (hullVertexArray[edge0->m_twin->m_incidentVertex] - hullVertexArray[edge0->m_twin->m_prev->m_incidentVertex]);
-							_ASSERTE ((e0 % e0) >= dgFloat64 (0.0f));
-							_ASSERTE ((e1 % e1) >= dgFloat64 (0.0f));
+							_DG_ASSERTE ((e0 % e0) >= dgFloat64 (0.0f));
+							_DG_ASSERTE ((e1 % e1) >= dgFloat64 (0.0f));
 							//e0 = e0.Scale (dgRsqrt (e0 % e0));
 							//e1 = e1.Scale (dgRsqrt (e1 % e1));
 							e0 = e0.Scale (dgFloat64 (1.0f) / sqrt (e0 % e0));
@@ -295,8 +295,8 @@ bool dgCollisionConvexHull::RemoveCoplanarEdge (dgPolyhedra& polyhedra, dgVector
 							dgBigVector n1 (e0 * e1);
 							projection = n1 % normal0;
 							if (projection >= DG_MAX_EDGE_ANGLE) {
-								_ASSERTE (&(*iter) != edge0);
-								_ASSERTE (&(*iter) != edge0->m_twin);
+								_DG_ASSERTE (&(*iter) != edge0);
+								_DG_ASSERTE (&(*iter) != edge0->m_twin);
 								polyhedra.DeleteEdge(edge0);
 								removeEdge = true;
 							}
@@ -456,11 +456,11 @@ bool dgCollisionConvexHull::Create (dgInt32 count, dgInt32 strideInBytes, const 
 	}
 
 	dgInt32 index = BruteForceSupportVertex (count, &tmpArray[0], dgBigVector (&m_hullDirs[0].m_x));
-	_ASSERTE (index >= 0);
-	_ASSERTE (index < count);
+	_DG_ASSERTE (index >= 0);
+	_DG_ASSERTE (index < count);
 	hullVertexArray[0] = tmpArray[index];
 	--count;
-	_ASSERTE (count >= 0);
+	_DG_ASSERTE (count >= 0);
 	tmpArray[index] = tmpArray[count]; 
 
 	dgInt32 i;
@@ -469,27 +469,27 @@ bool dgCollisionConvexHull::Create (dgInt32 count, dgInt32 strideInBytes, const 
 	normalsCount = sizeof (m_hullDirs) / sizeof (dgTriplex);
 	for (i = 1; i < normalsCount; i ++) {
 		index = BruteForceSupportVertex (count, &tmpArray[0], dgBigVector (&m_hullDirs[i].m_x));
-		_ASSERTE (index >= 0);
-		_ASSERTE (index < count);
+		_DG_ASSERTE (index >= 0);
+		_DG_ASSERTE (index < count);
 
 		hullVertexArray[1] = tmpArray[index];
 		e1 = hullVertexArray[1] - hullVertexArray[0];
 		dgFloat32 error2 = e1 % e1;
 		if (error2 > dgFloat32 (1.0e-2f)) {
 			--count;
-			_ASSERTE (count >= 0);
+			_DG_ASSERTE (count >= 0);
 			tmpArray[index] = tmpArray[count]; 
 			break;
 		}
-		_ASSERTE (i < normalsCount);
+		_DG_ASSERTE (i < normalsCount);
 	}
 
 	dgVector e2;
 	dgVector normal (dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f));
 	for (i ++; i < normalsCount; i ++) {
 		index = BruteForceSupportVertex (count, &tmpArray[0], dgBigVector (&m_hullDirs[i].m_x));
-		_ASSERTE (index >= 0);
-		_ASSERTE (index < count);
+		_DG_ASSERTE (index >= 0);
+		_DG_ASSERTE (index < count);
 
 		hullVertexArray[2] = tmpArray[index];
 		e2 = hullVertexArray[2] - hullVertexArray[0];
@@ -497,12 +497,12 @@ bool dgCollisionConvexHull::Create (dgInt32 count, dgInt32 strideInBytes, const 
 		dgFloat32 error2 = normal % normal;
 		if (error2 > dgFloat32 (1.0e-2f)) {
 			--count;
-			_ASSERTE (count >= 0);
+			_DG_ASSERTE (count >= 0);
 			tmpArray[index] = tmpArray[count]; 
 			break;
 		}
 	}
-	_ASSERTE (i < normalsCount);
+	_DG_ASSERTE (i < normalsCount);
 
 	dgInt32 bestIndex = -1;
 	dgFloat32 maxError = dgFloat32 (0.0f);
@@ -510,15 +510,15 @@ bool dgCollisionConvexHull::Create (dgInt32 count, dgInt32 strideInBytes, const 
 	dgVector e3;
 	for (i ++; i < normalsCount; i ++) {
 		index = BruteForceSupportVertex (count, &tmpArray[0], dgBigVector (&m_hullDirs[i].m_x));
-		_ASSERTE (index >= 0);
-		_ASSERTE (index < count);
+		_DG_ASSERTE (index >= 0);
+		_DG_ASSERTE (index < count);
 
 		hullVertexArray[3] = tmpArray[index];
 		e3 = hullVertexArray[3] - hullVertexArray[0];
 		error2 = normal % e3;
 		if (dgAbsf (error2) > dgFloat32 (1.0e-2f)) {
 			--count;
-			_ASSERTE (count >= 0);
+			_DG_ASSERTE (count >= 0);
 			tmpArray[index] = tmpArray[count]; 
 			break;
 		} else if (error2 > maxError) {
@@ -536,7 +536,7 @@ bool dgCollisionConvexHull::Create (dgInt32 count, dgInt32 strideInBytes, const 
 		e3 = hullVertexArray[3] - hullVertexArray[0];
 		error2 = normal % e3;
 		--count;
-		_ASSERTE (count >= 0);
+		_DG_ASSERTE (count >= 0);
 		tmpArray[bestIndex] = tmpArray[count]; ; 
 
 	}
@@ -570,7 +570,7 @@ bool dgCollisionConvexHull::Create (dgInt32 count, dgInt32 strideInBytes, const 
 				if (plane2.Evalue (p) < dgFloat32 (-1.0e-6f)) {
 					if (plane3.Evalue (p) < dgFloat32 (-1.0e-6f)) {
 						--count;
-						_ASSERTE (count >= 0);
+						_DG_ASSERTE (count >= 0);
 						tmpArray[i] = tmpArray[count]; 
 						i --;
 					}
@@ -643,15 +643,15 @@ bool dgCollisionConvexHull::Create (dgInt32 count, dgInt32 strideInBytes, const 
 									stack[stackIndex] = twin;
 									stackIndex ++;
 									silhouette = ptr;
-	//								_ASSERTE (stackIndex < DG_HULL_MAX_DEPTH);
+	//								_DG_ASSERTE (stackIndex < DG_HULL_MAX_DEPTH);
 								} else if ((twin->m_userData & (DG_EDGE_TO_DESTROY | DG_EDGE_MARKED)) == DG_EDGE_MARKED) {
-									_ASSERTE ((twin->m_userData & DG_EDGE_TO_DESTROY) == 0);
-									_ASSERTE (twin->m_userData & DG_EDGE_MARKED);
+									_DG_ASSERTE ((twin->m_userData & DG_EDGE_TO_DESTROY) == 0);
+									_DG_ASSERTE (twin->m_userData & DG_EDGE_MARKED);
 									ptr->m_userData = DG_EDGE_TO_DESTROY | DG_EDGE_MARKED;
 									twin->m_userData = DG_EDGE_TO_DESTROY | DG_EDGE_MARKED;
 									deleted[deletedCount] = ptr;
 									deletedCount ++;
-	//								_ASSERTE (deletedCount < DG_HULL_MAX_DEPTH);
+	//								_DG_ASSERTE (deletedCount < DG_HULL_MAX_DEPTH);
 								}
 								ptr = ptr->m_next;
 							} while (ptr != edge0);
@@ -677,8 +677,8 @@ bool dgCollisionConvexHull::Create (dgInt32 count, dgInt32 strideInBytes, const 
 				dgEdge* prev = polyhedra.AddHalfEdge(vertexIndex, silhouette->m_incidentVertex);
 				dgEdge* edge1 = polyhedra.AddHalfEdge(silhouette->m_incidentVertex, vertexIndex);
 
-				_ASSERTE (prev);
-				_ASSERTE (edge1);
+				_DG_ASSERTE (prev);
+				_DG_ASSERTE (edge1);
 
 				edge1->m_twin = prev;
 				prev->m_twin = edge1;
@@ -705,8 +705,8 @@ bool dgCollisionConvexHull::Create (dgInt32 count, dgInt32 strideInBytes, const 
 					edge1->m_next = next;
 					next->m_prev = edge1;
 
-					_ASSERTE (next);
-					_ASSERTE (edge1);
+					_DG_ASSERTE (next);
+					_DG_ASSERTE (edge1);
 
 					edge1->m_twin = next;
 					next->m_twin = edge1;
@@ -731,12 +731,12 @@ bool dgCollisionConvexHull::Create (dgInt32 count, dgInt32 strideInBytes, const 
 				} while (silhouette != last);
 
 				
-				_ASSERTE (vertexIndex < dgInt32 (hullVertex.GetElementsCount()));
+				_DG_ASSERTE (vertexIndex < dgInt32 (hullVertex.GetElementsCount()));
 				hullVertexArray[vertexIndex] = dgVector (dgFloat32 (p.m_x), dgFloat32 (p.m_y), dgFloat32 (p.m_z), dgFloat32 (0.0f));;
 				vertexIndex++;
 
 				--count;
-				_ASSERTE (count >= 0);
+				_DG_ASSERTE (count >= 0);
 				tmpArray[index] = tmpArray[count]; 
 
 				ptr = prev;
@@ -752,12 +752,12 @@ bool dgCollisionConvexHull::Create (dgInt32 count, dgInt32 strideInBytes, const 
 				} while (ptr != prev);
 			}
 
-//			_ASSERTE (CheckConvex (polyhedra, hullVertexArray));
+//			_DG_ASSERTE (CheckConvex (polyhedra, hullVertexArray));
 		}
 	}
 
 
-	_ASSERTE (CheckConvex (polyhedra, hullVertexArray));
+	_DG_ASSERTE (CheckConvex (polyhedra, hullVertexArray));
 	bool edgeRemoved = false;
 	while (RemoveCoplanarEdge (polyhedra, hullVertexArray)) {
 		edgeRemoved = true;
@@ -767,11 +767,11 @@ bool dgCollisionConvexHull::Create (dgInt32 count, dgInt32 strideInBytes, const 
 			return false;
 		}
 	}
-//	_ASSERTE (CheckConvex (polyhedra, hullVertexArray));
+//	_DG_ASSERTE (CheckConvex (polyhedra, hullVertexArray));
 
 	dgEdge *firstFace = &polyhedra.GetRoot()->GetInfo();
 
-	_ASSERTE (firstFace->m_twin->m_next != firstFace);
+	_DG_ASSERTE (firstFace->m_twin->m_next != firstFace);
 
 	dgInt32 stackIndex = 1; 
 	stack[0] = firstFace;
@@ -856,7 +856,7 @@ bool dgCollisionConvexHull::Create (dgInt32 count, dgInt32 strideInBytes, const 
 		if (!mark[i]) {
 			ptr = face;
 			do {
-				_ASSERTE ((ptr - m_simplex) >= 0);
+				_DG_ASSERTE ((ptr - m_simplex) >= 0);
 				mark[dgInt32 (ptr - m_simplex)] = '1';
 				ptr = ptr->m_next;
 			} while (ptr != face);
@@ -916,7 +916,7 @@ bool dgCollisionConvexHull::Create (dgInt32 count, dgInt32 strideInBytes, const 
 	dgStack<dgEdge*> stack(1024 + maxEdgeCount);
 	dgEdge* firstFace = &polyhedra.GetRoot()->GetInfo();
 
-	_ASSERTE (firstFace->m_twin->m_next != firstFace);
+	_DG_ASSERTE (firstFace->m_twin->m_next != firstFace);
 
 	dgInt32 stackIndex = 1; 
 	stack[0] = firstFace;
@@ -998,7 +998,7 @@ bool dgCollisionConvexHull::Create (dgInt32 count, dgInt32 strideInBytes, const 
 		if (!mark[i]) {
 			dgConvexSimplexEdge* ptr = face;
 			do {
-				_ASSERTE ((ptr - m_simplex) >= 0);
+				_DG_ASSERTE ((ptr - m_simplex) >= 0);
 				mark[dgInt32 (ptr - m_simplex)] = '1';
 				ptr = ptr->m_next;
 			} while (ptr != face);
@@ -1018,7 +1018,7 @@ bool dgCollisionConvexHull::Create (dgInt32 count, dgInt32 strideInBytes, const 
 
 dgInt32 dgCollisionConvexHull::CalculateSignature () const
 {
-	_ASSERTE (0);
+	_DG_ASSERTE (0);
 	return dgInt32 (GetSignature());
 }
 
@@ -1036,7 +1036,7 @@ dgFloat32 dgCollisionConvexHull::GetBreakImpulse() const
 
 void dgCollisionConvexHull::SetCollisionBBox (const dgVector& p0__, const dgVector& p1__)
 {
-	_ASSERTE (0);
+	_DG_ASSERTE (0);
 }
 
 
@@ -1117,7 +1117,7 @@ void dgCollisionConvexHull::Serialize(dgSerialize callback, void* const userData
 bool dgCollisionConvexHull::OOBBTest (const dgMatrix& matrix, const dgCollisionConvex* const shape, void* const cacheOrder) const
 {
 	bool ret;
-	_ASSERTE (cacheOrder);
+	_DG_ASSERTE (cacheOrder);
 
 	ret = dgCollisionConvex::OOBBTest (matrix, shape, cacheOrder);
 	if (ret) {
@@ -1157,7 +1157,7 @@ bool dgCollisionConvexHull::OOBBTest (const dgMatrix& matrix, const dgCollisionC
 			dir.m_w = dgFloat32 (0.0f);
 			dgVector p (matrix.TransformVector (shape->SupportVertex(dir)));
 
-			//_ASSERTE ((normal % (m_boxOrigin - p0)) < 0.0f);
+			//_DG_ASSERTE ((normal % (m_boxOrigin - p0)) < 0.0f);
 			dist = normal % (p - p0);
 			if (dist > dgFloat32 (0.1f)){
 				for (dgInt32 j = 0; j < (dgInt32 (sizeof (cache->m_planes) / sizeof (dgPlane)) - 1); j ++) {

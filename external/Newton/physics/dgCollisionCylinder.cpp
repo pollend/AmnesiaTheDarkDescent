@@ -105,7 +105,7 @@ void dgCollisionCylinder::Init (dgFloat32 radius, dgFloat32 height)
 		polyhedra.AddFace (DG_CYLINDER_SEGMENTS, wireframe);
 		polyhedra.EndFace ();
 
-		_ASSERTE (SanityCheck (polyhedra));
+		_DG_ASSERTE (SanityCheck (polyhedra));
 
 		dgUnsigned64 i = 0;
 		dgPolyhedra::Iterator iter (polyhedra);
@@ -135,7 +135,7 @@ void dgCollisionCylinder::Init (dgFloat32 radius, dgFloat32 height)
 dgCollisionCylinder::~dgCollisionCylinder()
 {
 	m_shapeRefCount --;
-	_ASSERTE (m_shapeRefCount >= 0);
+	_DG_ASSERTE (m_shapeRefCount >= 0);
 
 	dgCollisionConvex::m_simplex = NULL;
 	dgCollisionConvex::m_vertex = NULL;
@@ -157,7 +157,7 @@ dgInt32 dgCollisionCylinder::CalculateSignature () const
 
 void dgCollisionCylinder::SetCollisionBBox (const dgVector& p0__, const dgVector& p1__)
 {
-	_ASSERTE (0);
+	_DG_ASSERTE (0);
 }
 
 
@@ -229,7 +229,7 @@ dgVector dgCollisionCylinder::SupportVertex (const dgVector& dir) const
 	dgFloat32 dist0;
 	dgFloat32 dist1;
 
-	_ASSERTE (dgAbsf ((dir % dir - dgFloat32 (1.0f))) < dgFloat32 (1.0e-3f));
+	_DG_ASSERTE (dgAbsf ((dir % dir - dgFloat32 (1.0f))) < dgFloat32 (1.0e-3f));
 
 	//	sign = dir.m_x > dgFloat32 (0.0f) ? dgFloat32 (1.0f) : -dgFloat32 (1.0f);
 	dgFloatSign *ptr = (dgFloatSign*) &dir; 
@@ -258,7 +258,7 @@ dgVector dgCollisionCylinder::SupportVertex (const dgVector& dir) const
 	dgFloat32 mag2;
 	dgFloatSign const *ptr = (dgFloatSign*) &dir; 
 
-	_ASSERTE (dgAbsf ((dir % dir - dgFloat32 (1.0f))) < dgFloat32 (1.0e-3f));
+	_DG_ASSERTE (dgAbsf ((dir % dir - dgFloat32 (1.0f))) < dgFloat32 (1.0e-3f));
 
 	y0 = m_radius;
 	z0 = dgFloat32 (0.0f);
@@ -279,7 +279,7 @@ dgVector dgCollisionCylinder::ImplicitCylindexSupport (const dgVector& dir) cons
 	dgFloat32 sign;
 	dgFloat32 invMag;
 
-	_ASSERTE ((dir % dir - dgFloat32 (dgFloat32 (1.0f))) < dgFloat32 (1.0e-3f));
+	_DG_ASSERTE ((dir % dir - dgFloat32 (dgFloat32 (1.0f))) < dgFloat32 (1.0e-3f));
 	sign = dir.m_x > dgFloat32 (0.0f) ? dgFloat32 (dgFloat32 (1.0f)) : -dgFloat32 (dgFloat32 (1.0f));
 	
 	invMag = m_radius * dgRsqrt (dir.m_y * dir.m_y + dir.m_z * dir.m_z + 1.0e-12f) ;
@@ -351,7 +351,7 @@ dgInt32 dgCollisionCylinder::CalculatePlaneIntersection (
 //		dgVector normal1 (matrix.UnrotateVector (normal));
 //		dgVector origin1 (matrix.UnrotateVector (origin));
 
-		_ASSERTE (dgAbsf (normal.m_z * cosAng - normal.m_y * sinAng) < dgFloat32 (1.0e-4f));
+		_DG_ASSERTE (dgAbsf (normal.m_z * cosAng - normal.m_y * sinAng) < dgFloat32 (1.0e-4f));
 //		dgVector normal1 (normal.m_x, normal.m_y * cosAng + normal.m_z * sinAng, 
 //									  normal.m_z * cosAng - normal.m_y * sinAng, dgFloat32 (0.0f));
 		dgVector normal1 (normal.m_x, normal.m_y * cosAng + normal.m_z * sinAng, dgFloat32 (0.0f), dgFloat32 (0.0f));
@@ -406,7 +406,7 @@ dgInt32 dgCollisionCylinder::CalculatePlaneIntersectionSimd (
 //		matrix[2][2] = cosAng;
 //		dgVector normal1 (matrix.UnrotateVector (normal));
 //		dgVector origin1 (matrix.UnrotateVector (origin));
-		_ASSERTE (dgAbsf (normal.m_z * cosAng - normal.m_y * sinAng) < dgFloat32 (1.0e-4f));
+		_DG_ASSERTE (dgAbsf (normal.m_z * cosAng - normal.m_y * sinAng) < dgFloat32 (1.0e-4f));
 //		dgVector normal1 (normal.m_x, normal.m_y * cosAng + normal.m_z * sinAng, 
 //									  normal.m_z * cosAng - normal.m_y * sinAng, dgFloat32 (0.0f));
 		dgVector normal1 (normal.m_x, normal.m_y * cosAng + normal.m_z * sinAng, dgFloat32 (0.0f), dgFloat32 (0.0f));

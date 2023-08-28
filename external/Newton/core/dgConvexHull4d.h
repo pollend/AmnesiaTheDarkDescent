@@ -79,7 +79,7 @@ class dgConvexHull4dTetraherum
 	void SetMark(dgInt32 mark) { m_mark = mark; }
 	
 	dgTetrahedrumFace m_faces[4];
-#ifdef _DEBUG
+#ifdef _DG_DEBUG
 	dgInt32 m_debugID;
 #endif
 
@@ -150,16 +150,16 @@ inline dgInt32 dgConvexHull4d::GetVertexCount() const
 
 inline dgInt32 dgConvexHull4d::GetVertexIndex(dgInt32 index) const
 {
-	_ASSERTE (index >= 0);
-	_ASSERTE (index < m_count);
+	_DG_ASSERTE (index >= 0);
+	_DG_ASSERTE (index < m_count);
 	return m_points[index].m_index;
 }
 
 
 inline const dgBigVector& dgConvexHull4d::GetVertex(dgInt32 index) const
 {
-	_ASSERTE (index >= 0);
-	_ASSERTE (index < m_count);
+	_DG_ASSERTE (index >= 0);
+	_DG_ASSERTE (index < m_count);
 //	return dgVector (dgFloat32 (m_points[index].m_x), dgFloat32 (m_points[index].m_y), dgFloat32 (m_points[index].m_z), dgFloat32 (m_points[index].m_w));
 	return m_points[index];
 }

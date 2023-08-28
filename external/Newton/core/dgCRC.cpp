@@ -355,7 +355,7 @@ dgUnsigned32 dgApi dgCRC (const char* const name)
 		crc = (crc << 8) ^ val;
 	}
 
-	_ASSERTE (0);
+	_DG_ASSERTE (0);
 //	InternalCRC::GetDatabase().AddString (crc, name);
 	return crc;
 }
@@ -364,7 +364,7 @@ dgUnsigned32 dgApi dgCRC (const char* const name)
 
 dgUnsigned32 dgApi dgCRC (const void* const buffer, dgInt32 size, dgUnsigned32 crcAcc)
 {
-	_ASSERTE (buffer);
+	_DG_ASSERTE (buffer);
 	unsigned char* const ptr = (unsigned char*)buffer;
 	for (dgInt32 i = 0; i < size; i ++) {
 		dgUnsigned32 c = ptr[i];
@@ -377,7 +377,7 @@ dgUnsigned32 dgApi dgCRC (const void* const buffer, dgInt32 size, dgUnsigned32 c
 
 const char* dgApi dgInverseCRC (dgUnsigned32 crc)
 {	
-	_ASSERTE (0);
+	_DG_ASSERTE (0);
 	return NULL;
 //	return InternalCRC::GetDatabase().FindString (crc);
 }

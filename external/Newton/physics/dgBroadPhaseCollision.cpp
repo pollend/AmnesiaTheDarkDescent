@@ -37,7 +37,7 @@ dgSortArray::dgSortArray()
 
 dgSortArray::~dgSortArray ()
 {
-	_ASSERTE (GetCount() == 0);
+	_DG_ASSERTE (GetCount() == 0);
 }
 
 
@@ -55,7 +55,7 @@ void dgSortArray::Add (dgBody* const body)
 void dgSortArray::Remove (dgBody* const body)
 {
 	dgListNode* const node = (dgListNode*) body->m_collisionCell.m_axisArrayNode[dgInt32(m_index)];
-	_ASSERTE (node);
+	_DG_ASSERTE (node);
 
 	dgList<dgSortArrayEntry>::Remove (node);
 	body->m_collisionCell.m_axisArrayNode[dgInt32(m_index)] = NULL;
@@ -95,7 +95,7 @@ dgFloat32 dgSortArray::Sort ()
 			InsertAfter (prev, entry);
 		}
 	}
-	//	_ASSERTE ((GetCount() * sum2 - sum * sum) > dgFloat32 (-10.0f));
+	//	_DG_ASSERTE ((GetCount() * sum2 - sum * sum) > dgFloat32 (-10.0f));
 	return GetCount() * sum2 - sum * sum;
 }
 
@@ -110,7 +110,7 @@ dgFloat32 dgSortArray::RayCast (
 	if (m_isSorted) {
 //		dgFloat32 minVal = line.m_boxL0[m_index];
 		dgFloat32 maxVal = line.m_boxL1[m_index];
-		_ASSERTE (line.m_boxL0[m_index] <= maxVal);
+		_DG_ASSERTE (line.m_boxL0[m_index] <= maxVal);
 
 		for (dgListNode* node = GetFirst(); node && (node->GetInfo().m_key < maxVal); node = node->GetNext() ) {
 			minT = node->GetInfo().m_body->RayCast (line, filter, prefilter, userData, minT);
@@ -169,7 +169,7 @@ dgBroadPhaseCell::dgBroadPhaseCell ()
 
 dgBroadPhaseCell::~dgBroadPhaseCell()
 {
-	_ASSERTE (m_count == 0);
+	_DG_ASSERTE (m_count == 0);
 }
 
 void dgBroadPhaseCell::Init (dgInt32 layer, dgMemoryAllocator* allocator)
@@ -193,7 +193,7 @@ void dgBroadPhaseCell::Add (dgBody* const body)
 	m_count ++;
 	m_active = 1;
 
-	_ASSERTE (!body->m_collisionCell.m_cell);
+	_DG_ASSERTE (!body->m_collisionCell.m_cell);
 
 	m_sort[0].Add (body);
 	m_sort[1].Add (body);	
@@ -206,8 +206,8 @@ void dgBroadPhaseCell::Remove (dgBody* const body)
 	m_count --;
 	m_active = 1;
 
-	_ASSERTE (m_count >= 0);
-	_ASSERTE (body->m_collisionCell.m_cell);
+	_DG_ASSERTE (m_count >= 0);
+	_DG_ASSERTE (body->m_collisionCell.m_cell);
 
 	m_sort[0].Remove(body);
 	m_sort[1].Remove(body);
@@ -260,7 +260,7 @@ void dgBroadPhaseCell::UpdateAutoPair(dgWorld * const world, dgInt32 threadIndex
 			for (dgSortArray::dgListNode* innerNode = outerNode->GetNext(); innerNode && innerNode->GetInfo().m_key <= maxVal; innerNode = innerNode->GetNext() ) {
 				dgBody * const body1 = innerNode->GetInfo().m_body;
 				if (!body1->m_collision->IsType (dgCollision::dgCollisionNull_RTTI)) {
-					_ASSERTE (body0 != body1);
+					_DG_ASSERTE (body0 != body1);
 					if (OverlapTest(body0, body1)) {
 						contactPair.AddPair(body0, body1, threadIndex);
 					}
@@ -282,12 +282,12 @@ dgBroadPhaseLayer::dgBroadPhaseLayer()
 
 dgBroadPhaseLayer::~dgBroadPhaseLayer()
 {
-	_ASSERTE (!GetCount());
+	_DG_ASSERTE (!GetCount());
 }
 
 void dgBroadPhaseLayer::Init (dgWorld* const world, dgFloat32 cellSize, dgInt32 layerIndex)
 {
-	_ASSERTE (GetCount() == 0);
+	_DG_ASSERTE (GetCount() == 0);
 	m_me = world;
 	m_layerIndex = dgInt16(layerIndex);
 	m_cellSize = cellSize;
@@ -392,7 +392,7 @@ void dgBroadPhaseCollision::SetWorldSize (const dgVector& min, const dgVector& m
 	m_inactiveList.Init(0, me->GetAllocator());
 	cellSize = m_worlSize; 
 	for (dgInt32 i = 0; i < DG_OCTREE_MAX_DEPTH; i ++) {
-		_ASSERTE (m_layerMap[i].GetCount() == 0);
+		_DG_ASSERTE (m_layerMap[i].GetCount() == 0);
 		m_layerMap[i].Init(me, cellSize, i);
 		cellSize *= dgFloat32 (0.5f);
 	}
@@ -447,7 +447,7 @@ void dgBroadPhaseCollision::InvalidateCache ()
 
 void dgBroadPhaseCollision::Add (dgBody* const body)
 {
-	_ASSERTE (!body->m_collisionCell.m_cell);
+	_DG_ASSERTE (!body->m_collisionCell.m_cell);
 	// new bodies are added to the root node, and the function set matrix relocate them
 	m_layerMap[0].FindCreate (0, 0)->Add (body);
 }
@@ -458,14 +458,14 @@ void dgBroadPhaseCollision::Remove (dgBody* const body)
 //	dgBroadPhaseCell* obtreeCell;
 //	dgBroadPhaseLayer::dgTreeNode* node;
 
-	_ASSERTE (body->m_collisionCell.m_cell);
+	_DG_ASSERTE (body->m_collisionCell.m_cell);
 	dgBroadPhaseCell* const obtreeCell = body->m_collisionCell.m_cell;
 	obtreeCell->Remove (body);
 
 	if (!obtreeCell->m_count) {
 		if (obtreeCell != &m_inactiveList) {
 			dgBroadPhaseLayer::dgTreeNode* const node = m_layerMap[dgInt32(obtreeCell->m_layerIndex)].GetNodeFromInfo(*obtreeCell);
-			_ASSERTE (node);
+			_DG_ASSERTE (node);
 			m_layerMap[dgInt32(obtreeCell->m_layerIndex)].Remove(node);
 		}
 	}
@@ -483,7 +483,7 @@ void dgBroadPhaseCollision::UpdatePairs (dgBody* const body0, dgSortArray::dgLis
 		for (dgSortArray::dgListNode* node = srcnode; node && (node->GetInfo().m_key < val); node = node->GetNext() ) {
 			dgBody* const body1 = node->GetInfo().m_body;
 			if (!body1->m_collision->IsType (dgCollision::dgCollisionNull_RTTI)) {
-				_ASSERTE (body0 != body1);
+				_DG_ASSERTE (body0 != body1);
 				if (OverlapTest(body0, body1)) {
 					contactPair.AddPair(body0, body1, threadIndex);
 				}
@@ -740,7 +740,7 @@ void dgBroadPhaseCalculateContactsWorkerThread::Realloc (dgInt32 jointsCount, dg
 		}
 	}
 
-	_ASSERTE (index == contactCount);
+	_DG_ASSERTE (index == contactCount);
 
 	m_world->GetAllocator()->FreeLow(m_world->m_contactBuffers[threadIndex]);
 	m_world->m_contactBuffersSizeInBytes[threadIndex] = size;
@@ -775,7 +775,7 @@ void dgBroadPhaseApplyExternalForce::ThreadExecute()
 		if (m_world->m_cpu == dgSimdPresent) {
 			for (dgInt32 i = 0; i < count; i += step) {
 				dgBody* const body = bodyArray[i];
-				_ASSERTE (body->m_collision->IsType(dgCollision::dgConvexCollision_RTTI) || body->m_collision->IsType(dgCollision::dgCollisionCompound_RTTI) ||	body->m_collision->IsType(dgCollision::dgCollisionConvexModifier_RTTI));
+				_DG_ASSERTE (body->m_collision->IsType(dgCollision::dgConvexCollision_RTTI) || body->m_collision->IsType(dgCollision::dgCollisionCompound_RTTI) ||	body->m_collision->IsType(dgCollision::dgCollisionConvexModifier_RTTI));
 				if (!body->IsInEquelibrium()) {
 					body->UpdateCollisionMatrixSimd(m_timeStep, m_threadIndex);
 				}
@@ -783,7 +783,7 @@ void dgBroadPhaseApplyExternalForce::ThreadExecute()
 		} else {
 			for (dgInt32 i = 0; i < count; i += step) {
 				dgBody* const body = bodyArray[i];
-				_ASSERTE (body->m_collision->IsType(dgCollision::dgConvexCollision_RTTI) || body->m_collision->IsType(dgCollision::dgCollisionCompound_RTTI) ||	body->m_collision->IsType(dgCollision::dgCollisionConvexModifier_RTTI));
+				_DG_ASSERTE (body->m_collision->IsType(dgCollision::dgConvexCollision_RTTI) || body->m_collision->IsType(dgCollision::dgCollisionCompound_RTTI) ||	body->m_collision->IsType(dgCollision::dgCollisionConvexModifier_RTTI));
 				if (!body->IsInEquelibrium()) {
 					body->UpdateCollisionMatrixSimd(m_timeStep, m_threadIndex);
 				}
@@ -795,9 +795,9 @@ void dgBroadPhaseApplyExternalForce::ThreadExecute()
 				dgBody* const body = bodyArray[i];
 
 				body->m_solverInContinueCollision = false;
-				_ASSERTE (body->m_invMass.m_w > dgFloat32(0.0f));
+				_DG_ASSERTE (body->m_invMass.m_w > dgFloat32(0.0f));
 
-				_ASSERTE (body->m_collision->IsType(dgCollision::dgConvexCollision_RTTI) || body->m_collision->IsType(dgCollision::dgCollisionCompound_RTTI) ||	body->m_collision->IsType(dgCollision::dgCollisionConvexModifier_RTTI));
+				_DG_ASSERTE (body->m_collision->IsType(dgCollision::dgConvexCollision_RTTI) || body->m_collision->IsType(dgCollision::dgCollisionCompound_RTTI) ||	body->m_collision->IsType(dgCollision::dgCollisionConvexModifier_RTTI));
 
 				body->ApplyExtenalForces (m_timeStep, m_threadIndex);
 				if (!body->IsInEquelibrium()) {
@@ -813,9 +813,9 @@ void dgBroadPhaseApplyExternalForce::ThreadExecute()
 				dgBody* const body = bodyArray[i];
 
 				body->m_solverInContinueCollision = false;
-				_ASSERTE (body->m_invMass.m_w > dgFloat32(0.0f));
+				_DG_ASSERTE (body->m_invMass.m_w > dgFloat32(0.0f));
 
-				_ASSERTE (body->m_collision->IsType(dgCollision::dgConvexCollision_RTTI) || body->m_collision->IsType(dgCollision::dgCollisionCompound_RTTI) ||	body->m_collision->IsType(dgCollision::dgCollisionConvexModifier_RTTI));
+				_DG_ASSERTE (body->m_collision->IsType(dgCollision::dgConvexCollision_RTTI) || body->m_collision->IsType(dgCollision::dgCollisionCompound_RTTI) ||	body->m_collision->IsType(dgCollision::dgCollisionConvexModifier_RTTI));
 
 				body->ApplyExtenalForces (m_timeStep, m_threadIndex);
 				if (!body->IsInEquelibrium()) {
@@ -856,7 +856,7 @@ void dgBroadPhaseCalculateContactsWorkerThread::ThreadExecute()
 			m_world->CalculateContactsSimd(&pair, m_timestep, m_threadIndex);
 
 			contactIndex += pair.m_contactCount;
-			_ASSERTE (contactIndex < contactSize);
+			_DG_ASSERTE (contactIndex < contactSize);
 		}
 	} else {
 		for (dgInt32 i = 0; i < count; i += step) {
@@ -872,7 +872,7 @@ void dgBroadPhaseCalculateContactsWorkerThread::ThreadExecute()
 			m_world->CalculateContacts (&pair, m_timestep, m_threadIndex);
 
 			contactIndex += pair.m_contactCount;
-			_ASSERTE (contactIndex < contactSize);
+			_DG_ASSERTE (contactIndex < contactSize);
 		}
 	}
 }
@@ -891,7 +891,7 @@ void dgBroadPhaseMaterialCallbackWorkerThread::ThreadExecute()
 		dgCollidingPairCollector::dgPair& pair = pairs[i];
 
 		if (pair.m_contactCount || pair.m_isTrigger) {
-			_ASSERTE (pair.m_contactCount <= (DG_CONSTRAINT_MAX_ROWS / 3));
+			_DG_ASSERTE (pair.m_contactCount <= (DG_CONSTRAINT_MAX_ROWS / 3));
 			if (pair.m_isTrigger) {
 				m_world->ProcessTriggers (&pair, m_timestep, m_threadIndex);
 			} else {
@@ -1039,8 +1039,8 @@ void dgBroadPhaseCollision::RayCast (
 					do {
 						dgBroadPhaseCell *const cell = layer.Find (xIndex0, zIndex0);
 						if (cell) {
-							//_ASSERTE (cell->m_count);
-							_ASSERTE (cell->m_lastSortArray);
+							//_DG_ASSERTE (cell->m_count);
+							_DG_ASSERTE (cell->m_lastSortArray);
 							if (!me->m_inUpdate) {
 								if (!cell->m_lastSortArray->m_isSorted) {
 									cell->m_lastSortArray->Sort();
@@ -1072,7 +1072,7 @@ void dgBroadPhaseCollision::UpdateBodyBroadphase(dgBody* const body, dgInt32 thr
 		if (dgOverlapTest (body->m_minAABB, body->m_maxAABB, m_appMinBox, m_appMaxBox)) {
 //			dgBroadPhaseCell *cell;
 //			cell = body->m_collisionCell.m_cell;
-//			_ASSERTE (cell);
+//			_DG_ASSERTE (cell);
 			Remove (body);
 			Add (body); 
 			body->m_isInWorld = true;
@@ -1113,7 +1113,7 @@ void dgBroadPhaseCollision::UpdateBodyBroadphase(dgBody* const body, dgInt32 thr
 							cell->Remove(body);
 							if (!cell->m_count) {
 								dgBroadPhaseLayer::dgTreeNode* const node = m_layerMap[dgInt32(cell->m_layerIndex)].GetNodeFromInfo(*cell);
-								_ASSERTE (node);
+								_DG_ASSERTE (node);
 								m_layerMap[int(cell->m_layerIndex)].Remove(node);
 							}
 							newCell->Add (body); 
@@ -1140,7 +1140,7 @@ void dgBroadPhaseCollision::UpdateBodyBroadphase(dgBody* const body, dgInt32 thr
 				cell->Remove(body);
 				if (!cell->m_count) {
 					dgBroadPhaseLayer::dgTreeNode* const node = m_layerMap[dgInt32(cell->m_layerIndex)].GetNodeFromInfo(*cell);
-					_ASSERTE (node);
+					_DG_ASSERTE (node);
 					m_layerMap[dgInt32(cell->m_layerIndex)].Remove(node);
 				}
 				newCell->Add (body); 
@@ -1168,7 +1168,7 @@ void dgBroadPhaseCollision::UpdateBodyBroadphase(dgBody* const body, dgInt32 thr
 			cell->Remove(body);
 			if (!cell->m_count) {
 				dgBroadPhaseLayer::dgTreeNode* const node = m_layerMap[dgInt32(cell->m_layerIndex)].GetNodeFromInfo(*cell);
-				_ASSERTE (node);
+				_DG_ASSERTE (node);
 				m_layerMap[dgInt32(cell->m_layerIndex)].Remove(node);
 			}
 			m_inactiveList.Add (body); 
@@ -1223,7 +1223,7 @@ dgUnsigned32 dgBroadPhaseCollision::UpdateContactsBroadPhaseBegin(dgFloat32 time
 	dgInt32 skipForceUpdate = collisioUpdateOnly ? 1 : 0;
 
 	dgInt32 cellsBodyCount = 0;
-	_ASSERTE (masterList.GetFirst()->GetInfo().GetBody() == me->GetSentinelBody());
+	_DG_ASSERTE (masterList.GetFirst()->GetInfo().GetBody() == me->GetSentinelBody());
 	for (dgBodyMasterList::dgListNode* node = masterList.GetFirst()->GetNext(); node; node = node->GetNext()) { 
 		dgBody* const body = node->GetInfo().GetBody();
 
@@ -1247,7 +1247,7 @@ dgUnsigned32 dgBroadPhaseCollision::UpdateContactsBroadPhaseBegin(dgFloat32 time
 			if (cellsBodyCount >= dgInt32 ((sizeof (cellArray) / sizeof (dgBody*)))) {
 
 				if (threadCounts > 1) {
-					_ASSERTE (0);
+					_DG_ASSERTE (0);
 					me->m_threadsManager.CalculateChunkSizes(cellsBodyCount, chunkSizes);
 					for (dgInt32 threadIndex = 0; threadIndex < threadCounts; threadIndex ++) {
 						m_applyExtForces[threadIndex].m_step = threadCounts;
@@ -1261,7 +1261,7 @@ dgUnsigned32 dgBroadPhaseCollision::UpdateContactsBroadPhaseBegin(dgFloat32 time
 					}
 					me->m_threadsManager.SynchronizationBarrier ();
 				} else {
-					_ASSERTE (0);
+					_DG_ASSERTE (0);
 					m_applyExtForces[0].m_step = 1;
 
 					m_applyExtForces[0].m_count = cellsBodyCount;
@@ -1326,7 +1326,7 @@ dgUnsigned32 dgBroadPhaseCollision::UpdateContactsBroadPhaseBegin(dgFloat32 time
 		dgBroadPhaseLayer::Iterator iter (m_layerMap[i]);
 		for (iter.Begin(); iter; iter ++) {
 			dgBroadPhaseCell& cell = iter.GetNode()->GetInfo();
-			_ASSERTE (cell.m_count);
+			_DG_ASSERTE (cell.m_count);
 			if (cell.m_active) {
 				cell.Sort();
 			}
@@ -1384,7 +1384,7 @@ dgUnsigned32 dgBroadPhaseCollision::UpdateContactsBroadPhaseBegin(dgFloat32 time
 		dgBroadPhaseLayer::Iterator iter (m_layerMap[i]);
 		for (iter.Begin(); iter; iter ++) {
 			dgBroadPhaseCell& cell = iter.GetNode()->GetInfo();
-			_ASSERTE (cell.m_count);
+			_DG_ASSERTE (cell.m_count);
 			if (cell.m_active) {
 				cellArray[cellsPairsCount].m_cell_A = &cell;
 				cellArray[cellsPairsCount].m_cell_B = NULL;

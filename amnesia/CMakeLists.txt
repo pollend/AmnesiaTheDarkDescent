@@ -2,6 +2,10 @@ cmake_minimum_required (VERSION 3.0)
 project(Lux)
 set(VERSION "1.3.1")
 
+option(USERDIR_RESOURCES "Allow using local userdirectory resources" ON)
+option(SYSTEMWIDE_RESOURCES "Allow system-wide installation of game resources" OFF)
+SET(AMNESIA_TDD_VERSION "V0000" CACHE STRING "Amnesia Release Version")
+
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux" OR ${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD")
   set(LINUX ON)
 endif()
@@ -19,8 +23,7 @@ else()
     set(AMNESIA_GAME_DIRECTORY "" CACHE PATH "")
 endif()
 
-option(USERDIR_RESOURCES "Allow using local userdirectory resources" ON)
-option(SYSTEMWIDE_RESOURCES "Allow system-wide installation of game resources" OFF)
+
 set(MACOSX_BUNDLE_COPYRIGHT "Copyright © 2010-2013 Frictional Games")
 
 if (NOT DEFINED SYSTEMWIDE_RESOURCES_LOCATION)
@@ -42,6 +45,7 @@ if(USE_GAMEPAD)
 	list(APPEND compile_defs USE_GAMEPAD)
 	list(APPEND demo_compile_defs USE_GAMEPAD)
 endif()
+
 
 
 file(GLOB AMENISA_GAME_SOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
@@ -73,7 +77,6 @@ ENDIF()
 
 
 add_custom_target(GameRelease DEPENDS Amnesia)
-
 set(AMNESIA_EXECUTABLE_OUTPUT_PATH  ${INSTALL_OUTPUT_PATH}/Amnesia)
 install(DIRECTORY DESTINATION ${AMNESIA_EXECUTABLE_OUTPUT_PATH})
 
@@ -121,6 +124,8 @@ add_custom_command(
     ARGS -E copy_directory  "${_HPL2_COMPILEDSHADER_}" "$<TARGET_FILE_DIR:Amnesia>/CompiledShaders"
 )
 
+target_compile_definitions(Amnesia PUBLIC AMNESIA_TDD_VERSION="${AMNESIA_TDD_VERSION}")
+target_compile_definitions(Amnesia PUBLIC AMNESIA_TDD_TAG="${AMNESIA_TDD_TAG}")
 
 if((NOT ${AMNESIA_GAME_DIRECTORY} STREQUAL "") AND COPY_GAME_ASSETS)
     add_custom_command(TARGET Amnesia POST_BUILD COMMAND ${CMAKE_COMMAND} 

@@ -97,7 +97,7 @@ class dgTree
 			dgTreeNode* parentNode)
 			:dgRedBackNode(parentNode), m_info (info), m_key (key)
 		{
-			_ASSERTE ((dgUnsigned64 (&m_info) & 0x0f) == 0);
+			_DG_ASSERTE ((dgUnsigned64 (&m_info) & 0x0f) == 0);
 		}
 
 		~dgTreeNode () 
@@ -188,25 +188,25 @@ class dgTree
 
 		void operator++ ()
 		{
-			_ASSERTE (m_ptr);
+			_DG_ASSERTE (m_ptr);
 			m_ptr = m_ptr->Next();
 		}
 
 		void operator++ (dgInt32)
 		{
-			_ASSERTE (m_ptr);
+			_DG_ASSERTE (m_ptr);
 			m_ptr = m_ptr->Next();
 		}
 
 		void operator-- () 
 		{
-			_ASSERTE (m_ptr);
+			_DG_ASSERTE (m_ptr);
 			m_ptr = m_ptr->Prev();
 		}
 
 		void operator-- (dgInt32) 
 		{
-			_ASSERTE (m_ptr);
+			_DG_ASSERTE (m_ptr);
 			m_ptr = m_ptr->Prev();
 		}
 
@@ -410,13 +410,13 @@ typename dgTree<OBJECT, KEY>::dgTreeNode* dgTree<OBJECT, KEY>::Find (KEY key) co
 	dgTreeNode* ptr = m_head;
 	while (ptr != NULL) {
 		if (key < ptr->m_key) {
-			_ASSERTE (CompareKeys (ptr->m_key, key) == -1) ;
+			_DG_ASSERTE (CompareKeys (ptr->m_key, key) == -1) ;
 			ptr = ptr->GetLeft();
 		} else if (key > ptr->m_key) {
-			_ASSERTE (CompareKeys (ptr->m_key, key) == 1) ;
+			_DG_ASSERTE (CompareKeys (ptr->m_key, key) == 1) ;
 			ptr = ptr->GetRight();
 		} else {
-			_ASSERTE (CompareKeys (ptr->m_key, key) == 0) ;
+			_DG_ASSERTE (CompareKeys (ptr->m_key, key) == 0) ;
 			break;
 		}
 	}
@@ -430,8 +430,8 @@ typename dgTree<OBJECT, KEY>::dgTreeNode* dgTree<OBJECT, KEY>::GetNodeFromInfo (
 	dgInt64 offset = ((char*) &node->m_info) - ((char *) node);
 	dgTreeNode* const retnode = (dgTreeNode* ) (((char *) node) - offset);
 
-	_ASSERTE (retnode->IsInTree ());
-	_ASSERTE (&retnode->GetInfo () == &info);
+	_DG_ASSERTE (retnode->IsInTree ());
+	_DG_ASSERTE (&retnode->GetInfo () == &info);
 	return (retnode->IsInTree ()) ? retnode : NULL;
 
 }
@@ -451,7 +451,7 @@ typename dgTree<OBJECT, KEY>::dgTreeNode* dgTree<OBJECT, KEY>::FindGreater (KEY 
 	dgTreeNode* ptr = m_head;
 	dgInt32 val = 0;
 	while (ptr != NULL) {
-		_ASSERTE (0);
+		_DG_ASSERTE (0);
 		val = CompareKeys (ptr->m_key, key);
 		if (!val) {
 			return (dgTreeNode* )ptr->Next();
@@ -484,7 +484,7 @@ typename dgTree<OBJECT, KEY>::dgTreeNode* dgTree<OBJECT, KEY>::FindGreaterEqual 
 	dgTreeNode* ptr = m_head;
 	dgInt32 val = 0;
 	while (ptr != NULL) {
-		_ASSERTE (0);
+		_DG_ASSERTE (0);
 		val = CompareKeys (ptr->m_key, key);
 		if (!val) {
 			return ptr;
@@ -517,7 +517,7 @@ typename dgTree<OBJECT, KEY>::dgTreeNode* dgTree<OBJECT, KEY>::FindLessEqual (KE
 	dgTreeNode* ptr = m_head;
 	dgInt32 val = 0;
 	while (ptr != NULL) {
-		_ASSERTE (0);
+		_DG_ASSERTE (0);
 		val = CompareKeys (ptr->m_key, key);
 		if (!val) {
 			return ptr;
@@ -561,22 +561,22 @@ typename dgTree<OBJECT, KEY>::dgTreeNode* dgTree<OBJECT, KEY>::Insert (const OBJ
 //		}
 
 		if (key < ptr->m_key) {
-			_ASSERTE (CompareKeys (ptr->m_key, key) == -1) ;
+			_DG_ASSERTE (CompareKeys (ptr->m_key, key) == -1) ;
 			val = -1;
 			ptr = ptr->GetLeft();
 		} else if (key > ptr->m_key) {
-			_ASSERTE (CompareKeys (ptr->m_key, key) == 1) ;
+			_DG_ASSERTE (CompareKeys (ptr->m_key, key) == 1) ;
 			val = 1;
 			ptr = ptr->GetRight();
 		} else {
-			_ASSERTE (CompareKeys (ptr->m_key, key) == 0) ;
+			_DG_ASSERTE (CompareKeys (ptr->m_key, key) == 0) ;
 			elementWasInTree = true;
 			return ptr;
 		}
 	}
 
 	m_count	++;
-	_ASSERTE (m_allocator);
+	_DG_ASSERTE (m_allocator);
 	ptr = new (m_allocator) dgTreeNode (element, key, parent);
 	if (!parent) {
 		m_head = ptr;
@@ -624,15 +624,15 @@ typename dgTree<OBJECT, KEY>::dgTreeNode* dgTree<OBJECT, KEY>::Insert (typename 
 //		}
 
 		if (key < ptr->m_key) {
-			_ASSERTE (CompareKeys (ptr->m_key, key) == -1) ;
+			_DG_ASSERTE (CompareKeys (ptr->m_key, key) == -1) ;
 			val = -1;
 			ptr = ptr->GetLeft();
 		} else if (key > ptr->m_key) {
-			_ASSERTE (CompareKeys (ptr->m_key, key) == 1) ;
+			_DG_ASSERTE (CompareKeys (ptr->m_key, key) == 1) ;
 			val = 1;
 			ptr = ptr->GetRight();
 		} else {
-			_ASSERTE (CompareKeys (ptr->m_key, key) == 0) ;
+			_DG_ASSERTE (CompareKeys (ptr->m_key, key) == 0) ;
 			return NULL;
 		}
 	}
@@ -669,7 +669,7 @@ typename dgTree<OBJECT, KEY>::dgTreeNode* dgTree<OBJECT, KEY>::Replace (OBJECT &
 	while (ptr != NULL) {
 		parent = ptr;
 
-		_ASSERTE (0);
+		_DG_ASSERTE (0);
 		val = CompareKeys (ptr->m_key, key);
 		if (val == 0) {
 			ptr->m_info = element;
@@ -682,7 +682,7 @@ typename dgTree<OBJECT, KEY>::dgTreeNode* dgTree<OBJECT, KEY>::Replace (OBJECT &
 		}
 	}
 
-	_ASSERTE (m_allocator);
+	_DG_ASSERTE (m_allocator);
 	ptr = new (m_allocator) dgTreeNode (element, key, parent);
 	if (!parent) {
 		m_head = ptr;
@@ -706,7 +706,7 @@ typename dgTree<OBJECT, KEY>::dgTreeNode* dgTree<OBJECT, KEY>::ReplaceKey (typen
 {
 	Unlink (node);
 	dgTreeNode* const ptr = Insert (node, key);
-	_ASSERTE (ptr);
+	_DG_ASSERTE (ptr);
 	return ptr;
 }
 
@@ -724,7 +724,7 @@ void dgTree<OBJECT, KEY>::Unlink (typename dgTree<OBJECT, KEY>::dgTreeNode* cons
 
 	dgTreeNode** const headPtr = (dgTreeNode**) &m_head;
 	node->Unlink ((dgRedBackNode**)headPtr);
-	_ASSERTE (!Find (node->GetKey()));
+	_DG_ASSERTE (!Find (node->GetKey()));
 }
 
 

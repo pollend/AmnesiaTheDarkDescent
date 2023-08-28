@@ -71,7 +71,7 @@ void dgCollisionBVH::AddFace(dgInt32 vertexCount, const dgFloat32* const vertexP
 	dgInt32 indexList[256];
 
 	faceArray = vertexCount;
-	_ASSERTE (vertexCount < sizeof (indexList) / sizeof (indexList[0]));
+	_DG_ASSERTE (vertexCount < sizeof (indexList) / sizeof (indexList[0]));
 	for (dgInt32 i = 0; i < vertexCount; i ++) {
 		indexList[i] = i;
 	}
@@ -148,9 +148,9 @@ dgIntersectStatus dgCollisionBVH::CollectVertexListIndexList (void *context, con
 		j += 3;
 	}
 
-	_ASSERTE (j <= data.m_maxIndexCount);
+	_DG_ASSERTE (j <= data.m_maxIndexCount);
 	data.m_triangleCount = k;
-	_ASSERTE ((data.m_triangleCount * 3) <= data.m_maxIndexCount);
+	_DG_ASSERTE ((data.m_triangleCount * 3) <= data.m_maxIndexCount);
 
 	return t_ContinueSearh;
 }
@@ -167,7 +167,7 @@ dgIntersectStatus dgCollisionBVH::GetTriangleCount (void *context, const dgFloat
 	}
 
 	data.m_triangleCount += (indexCount - 2);
-	_ASSERTE ((data.m_triangleCount * 3) <= data.m_maxIndexCount);
+	_DG_ASSERTE ((data.m_triangleCount * 3) <= data.m_maxIndexCount);
 	return t_ContinueSearh;
 }
 
@@ -365,12 +365,12 @@ dgIntersectStatus dgCollisionBVH::GetPolygon (
 {
 	dgPolygonMeshDesc& data = (*(dgPolygonMeshDesc*) context);
 	if (data.m_faceCount >= DG_MAX_COLLIDING_FACES) {
-		_ASSERTE (0);
+		_DG_ASSERTE (0);
 		return t_StopSearh;
 	}
 
 	if ((data.m_globalIndexCount + indexCount) >= DG_MAX_COLLIDING_VERTEX) {
-		_ASSERTE (0);
+		_DG_ASSERTE (0);
 		return t_StopSearh;
 	}
 
@@ -389,7 +389,7 @@ dgIntersectStatus dgCollisionBVH::GetPolygon (
 
 	}
 
-	_ASSERTE (data.m_vertex == polygon);
+	_DG_ASSERTE (data.m_vertex == polygon);
 
 	data.m_userAttribute[data.m_faceCount] = indexArray[-1];
 	data.m_faceIndexCount[data.m_faceCount] = indexCount;

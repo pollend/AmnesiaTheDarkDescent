@@ -70,14 +70,14 @@ dgDelaunayTetrahedralization::dgDelaunayTetrahedralization(dgMemoryAllocator* co
 					q.m_z += dgFloat64 (1.0e-3f);
 					index = AddVertex(q);
 				}
-				_ASSERTE (index != -1);
+				_DG_ASSERTE (index != -1);
 				//m_points[index] = points[i];
 				m_points[index].m_index = i;
 			}
 		}
 	}
 
-#ifdef _DEBUG
+#ifdef _DG_DEBUG
 	SortVertexArray ();
 #endif
 
@@ -109,7 +109,7 @@ dgInt32 dgDelaunayTetrahedralization::AddVertex (const dgBigVector& vertex)
 }
 
 
-#ifdef _DEBUG
+#ifdef _DG_DEBUG
 dgInt32 dgDelaunayTetrahedralization::CompareVertexByIndex(const dgHullVector* const  A, const dgHullVector* const B, void* const context)
 {
 	if (A->m_index < B ->m_index) {
