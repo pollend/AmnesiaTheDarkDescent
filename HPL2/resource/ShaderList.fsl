@@ -88,6 +88,7 @@
 #end
 
 #frag decal.frag
+    #define ALPHA_REJECT 0.5
     #include "decal.frag.fsl"
 #end
 
