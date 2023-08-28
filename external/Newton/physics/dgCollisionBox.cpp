@@ -120,7 +120,7 @@ void dgCollisionBox::Init (dgFloat32 size_x, dgFloat32 size_y, dgFloat32 size_z)
 dgCollisionBox::~dgCollisionBox()
 {
 //	m_shapeRefCount --;
-//	_ASSERTE (m_shapeRefCount >= 0);
+//	_DG_ASSERTE (m_shapeRefCount >= 0);
 
 	dgCollisionConvex::m_simplex = NULL;
 	dgCollisionConvex::m_vertex = NULL;
@@ -128,7 +128,7 @@ dgCollisionBox::~dgCollisionBox()
 
 void dgCollisionBox::SetCollisionBBox (const dgVector& p0__, const dgVector& p1__)
 {
-	_ASSERTE (0);
+	_DG_ASSERTE (0);
 }
 
 dgInt32 dgCollisionBox::CalculateSignature () const
@@ -165,7 +165,7 @@ dgVector dgCollisionBox::SupportVertexSimd (const dgVector& dir) const
 
 dgVector dgCollisionBox::SupportVertex (const dgVector& dir) const
 {
-	_ASSERTE (dgAbsf(dir % dir - dgFloat32 (1.0f)) < dgFloat32 (1.0e-3f));
+	_DG_ASSERTE (dgAbsf(dir % dir - dgFloat32 (1.0f)) < dgFloat32 (1.0e-3f));
 
 #if 1
 	dgInt32 x;
@@ -365,7 +365,7 @@ dgFloat32 dgCollisionBox::RayCast (
 	}
 
 	if (tmin >= dgFloat32 (0.0f)) {
-		_ASSERTE (tmin < 1.0f);
+		_DG_ASSERTE (tmin < 1.0f);
 		contactOut.m_normal = dgVector (dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f));
 		contactOut.m_normal[index] = signDir;
 		//contactOut.m_userId = SetUserData();
@@ -471,13 +471,13 @@ dgInt32 dgCollisionBox::CalculatePlaneIntersection (const dgVector& normal, cons
 
 	count = 0;
 	if (edge) {
-		_ASSERTE (test[edge->m_vertex] > dgFloat32 (0.0f));
+		_DG_ASSERTE (test[edge->m_vertex] > dgFloat32 (0.0f));
 
 		ptr = edge;
 		firstEdge = NULL;
 		side0 = test[edge->m_vertex];
 		do {
-			_ASSERTE (m_vertex[ptr->m_twin->m_vertex].m_w == dgFloat32 (1.0f));
+			_DG_ASSERTE (m_vertex[ptr->m_twin->m_vertex].m_w == dgFloat32 (1.0f));
 			side1 = test[ptr->m_twin->m_vertex];
 			if (side1 < side0) {
 				if (side1 < dgFloat32 (0.0f)) {
@@ -511,19 +511,19 @@ dgInt32 dgCollisionBox::CalculatePlaneIntersection (const dgVector& normal, cons
 					}
 				}
 
-				_ASSERTE (t <= dgFloat32 (0.01f));
-				_ASSERTE (t >= dgFloat32 (-1.05f));
+				_DG_ASSERTE (t <= dgFloat32 (0.01f));
+				_DG_ASSERTE (t >= dgFloat32 (-1.05f));
 				contactsOut[count] = m_vertex[ptr->m_vertex] - dp.Scale (t);
 				count ++;
 
 				for (ptr1 = ptr->m_next; ptr1 != ptr; ptr1 = ptr1->m_next) {
 					index0 = ptr1->m_twin->m_vertex;
 					if (test[index0] >= dgFloat32 (0.0f)) {
-						_ASSERTE (test[ptr1->m_vertex] <= dgFloat32 (0.0f));
+						_DG_ASSERTE (test[ptr1->m_vertex] <= dgFloat32 (0.0f));
 						break;
 					}
 				}
-				_ASSERTE (ptr != ptr1);
+				_DG_ASSERTE (ptr != ptr1);
 				ptr = ptr1->m_twin;
 
 			} while ((ptr != edge) && (count < 8));
@@ -610,7 +610,7 @@ dgInt32 dgCollisionBox::CalculatePlaneIntersectionSimd (const dgVector& normal, 
 		firstEdge = NULL;
 		side0 = test[edge->m_vertex];
 		do {
-			_ASSERTE (m_vertex[ptr->m_twin->m_vertex].m_w == dgFloat32 (1.0f));
+			_DG_ASSERTE (m_vertex[ptr->m_twin->m_vertex].m_w == dgFloat32 (1.0f));
 			side1 = test[ptr->m_twin->m_vertex];
 			if (side1 < side0) {
 				if (side1 < dgFloat32 (0.0f)) {
@@ -634,8 +634,8 @@ dgInt32 dgCollisionBox::CalculatePlaneIntersectionSimd (const dgVector& normal, 
 	//			dgVector dp (m_vertex[index1] - m_vertex[index0]);
 	//			contactsOut[count] = m_vertex[index0] - dp.Scale (test[index0] / (plane % dp));
 
-				_ASSERTE (m_vertex[index0].m_w == dgFloat32 (1.0f));
-				_ASSERTE (m_vertex[index1].m_w == dgFloat32 (1.0f));
+				_DG_ASSERTE (m_vertex[index0].m_w == dgFloat32 (1.0f));
+				_DG_ASSERTE (m_vertex[index1].m_w == dgFloat32 (1.0f));
 				p1p0 = simd_sub_v (*(simd_type*) &m_vertex[index1], *(simd_type*) &m_vertex[index0]);		
 				dot = simd_mul_v (p1p0, *(simd_type*) &plane);
 				dot = simd_add_s(simd_add_v (dot, simd_move_hl_v (dot, dot)), simd_permut_v (dot, dot, PURMUT_MASK (3,3,3,1)));
@@ -643,19 +643,19 @@ dgInt32 dgCollisionBox::CalculatePlaneIntersectionSimd (const dgVector& normal, 
 				den = simd_mul_s (simd_load_s(test[index0]), simd_mul_sub_s(simd_add_s(den, den), simd_mul_s(den, dot), den));
 				den = simd_min_s (simd_max_s (den, *(simd_type*)&m_negOne), *(simd_type*)&m_zero);
 
-				_ASSERTE (((dgFloat32*)&den)[0] <= dgFloat32 (0.0f));
-				_ASSERTE (((dgFloat32*)&den)[0] >= dgFloat32 (-1.0f));
+				_DG_ASSERTE (((dgFloat32*)&den)[0] <= dgFloat32 (0.0f));
+				_DG_ASSERTE (((dgFloat32*)&den)[0] >= dgFloat32 (-1.0f));
 				(*(simd_type*) &contactsOut[count]) = simd_mul_sub_v (*(simd_type*) &m_vertex[index0], p1p0, simd_permut_v (den, den, PURMUT_MASK (3,0,0,0)));
 
 				count ++;
 				for (ptr1 = ptr->m_next; ptr1 != ptr; ptr1 = ptr1->m_next) {
 					index0 = ptr1->m_twin->m_vertex;
 					if (test[index0] >= dgFloat32 (0.0f)) {
-						_ASSERTE (test[ptr1->m_vertex] <= dgFloat32 (0.0f));
+						_DG_ASSERTE (test[ptr1->m_vertex] <= dgFloat32 (0.0f));
 						break;
 					}
 				}
-				_ASSERTE (ptr != ptr1);
+				_DG_ASSERTE (ptr != ptr1);
 				ptr = ptr1->m_twin;
 			} while ((ptr != edge) && (count < 8));
 		}

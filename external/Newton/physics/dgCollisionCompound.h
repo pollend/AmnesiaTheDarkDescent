@@ -143,7 +143,7 @@ class dgCollisionCompound: public dgCollision
 	dgInt32 ClosestDitance (dgBody* const bodyA, dgTriplex& contactA, dgBody* const bodyB, dgTriplex& contactB, dgTriplex& normalAB) const;
 
 
-#ifdef _DEBUG
+#ifdef _DG_DEBUG
 	dgVector IntenalSupportVertex (const dgVector& dir) const;
 #endif
 	

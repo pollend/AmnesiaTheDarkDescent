@@ -199,7 +199,7 @@ class dgCollisionCompoundBreakable: public dgCollisionCompound
 		dgVector m_inertia;
 		dgFloat32 m_destructionImpulse;
 
-#ifdef _DEBUG
+#ifdef _DG_DEBUG
 		dgInt32 m_ordinal;
 #endif
 		friend class dgCollisionCompoundBreakable;

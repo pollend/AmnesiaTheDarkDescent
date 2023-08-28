@@ -67,7 +67,7 @@
 		#pragma warning (disable: 4514) //function '$E1' selected for automatic inline expansion
 	#endif
 
-	#ifdef _DEBUG
+	#ifdef _DG_DEBUG
 		#pragma warning (disable: 4127)	//conditional expression is constant
 	#endif
 
@@ -134,10 +134,20 @@
 	#include <sys/sysctl.h>
 #endif
 
+#ifdef _DG_DEBUG
+//#define __ENABLE_SANITY_CHECK 
+#endif
 
 //************************************************************
 #if !(defined (WIN32) || defined(_WIN32))
-	#define _ASSERTE(x)
+	#define _DG_ASSERTE(x)
+#else
+	#ifdef _DG_DEBUG
+		#define _DG_ASSERTE(expr) _DG_ASSERTE(expr)
+	#else
+		#define _DG_ASSERTE(x)
+	#endif
+
 #endif
 
 #define __USE_CPU_FOUND__
@@ -145,9 +155,6 @@
 #define DG_MAXIMUN_THREADS  8
 
 
-#ifdef _DEBUG
-//#define __ENABLE_SANITY_CHECK 
-#endif
 
 
 #ifdef DLL_DECLSPEC
@@ -236,7 +243,7 @@ class dgVector;
 
 
 #if (defined (WIN32) || defined(_WIN32))
-	#ifdef _DEBUG
+	#ifdef _DG_DEBUG
 		#define dgCheckFloat(x) _finite(x)
 	#else
 		#define dgCheckFloat(x) true
@@ -332,8 +339,8 @@ dgInt32 dgBinarySearch (T const* array, dgInt32 elements, dgInt32 entry)
       index1 = (index0 + index2) >> 1;
 		entry1 = array[index1].m_Key;
 		if (entry1 == entry) {
-			_ASSERTE (array[index1].m_Key <= entry);
-			_ASSERTE (array[index1 + 1].m_Key >= entry);
+			_DG_ASSERTE (array[index1].m_Key <= entry);
+			_DG_ASSERTE (array[index1 + 1].m_Key >= entry);
 			return index1;
 		} else if (entry < entry1) {
 			index2 = index1;
@@ -348,8 +355,8 @@ dgInt32 dgBinarySearch (T const* array, dgInt32 elements, dgInt32 entry)
 		index0 --;
 	}
 
-	_ASSERTE (array[index0].m_Key <= entry);
-	_ASSERTE (array[index0 + 1].m_Key >= entry);
+	_DG_ASSERTE (array[index0].m_Key <= entry);
+	_DG_ASSERTE (array[index0 + 1].m_Key >= entry);
 	return index0;
 }
 
@@ -363,8 +370,8 @@ void dgRadixSort (T* const array, T* const tmpArray, dgInt32 elements, dgInt32 r
 	dgInt32 scanCount[256]; 
 	dgInt32 histogram[256][4];
 
-	_ASSERTE (radixPass >= 1);
-	_ASSERTE (radixPass <= 4);
+	_DG_ASSERTE (radixPass >= 1);
+	_DG_ASSERTE (radixPass <= 4);
 	
 	memset (histogram, 0, sizeof (histogram));
 	for (dgInt32 i = 0; i < elements; i ++) {
@@ -407,9 +414,9 @@ void dgRadixSort (T* const array, T* const tmpArray, dgInt32 elements, dgInt32 r
 	}
 
 
-#ifdef _DEBUG
+#ifdef _DG_DEBUG
 	for (dgInt32 i = 0; i < (elements - 1); i ++) {
-		_ASSERTE (getRadixKey (&array[i], context) <= getRadixKey (&array[i + 1], context));
+		_DG_ASSERTE (getRadixKey (&array[i], context) <= getRadixKey (&array[i + 1], context));
 	}
 #endif
 
@@ -455,7 +462,7 @@ void dgSort (T* const array, dgInt32 elements, dgInt32 (*compare) (const T* cons
 				stack[stackIndex][1] = j;
 				stackIndex ++;
 			}
-			_ASSERTE (stackIndex < sizeof (stack) / (2 * sizeof (stack[0][0])));
+			_DG_ASSERTE (stackIndex < sizeof (stack) / (2 * sizeof (stack[0][0])));
 		}
 	}
 
@@ -470,9 +477,9 @@ void dgSort (T* const array, dgInt32 elements, dgInt32 (*compare) (const T* cons
 	}
 
 
-#ifdef _DEBUG
+#ifdef _DG_DEBUG
 	for (dgInt32 i = 0; i < (elements - 1); i ++) {
-		_ASSERTE (compare (&array[i], &array[i + 1], context) <= 0);
+		_DG_ASSERTE (compare (&array[i], &array[i + 1], context) <= 0);
 	}
 #endif
 
@@ -518,7 +525,7 @@ void dgSortIndirect (T** const array, dgInt32 elements, dgInt32 (*compare) (cons
 				stack[stackIndex][1] = j;
 				stackIndex ++;
 			}
-			_ASSERTE (stackIndex < sizeof (stack) / (2 * sizeof (stack[0][0])));
+			_DG_ASSERTE (stackIndex < sizeof (stack) / (2 * sizeof (stack[0][0])));
 		}
 	}
 
@@ -533,9 +540,9 @@ void dgSortIndirect (T** const array, dgInt32 elements, dgInt32 (*compare) (cons
 	}
 
 
-#ifdef _DEBUG
+#ifdef _DG_DEBUG
 	for (dgInt32 i = 0; i < (elements - 1); i ++) {
-		_ASSERTE (compare (array[i], array[i + 1], context) <= 0);
+		_DG_ASSERTE (compare (array[i], array[i + 1], context) <= 0);
 	}
 #endif
 }

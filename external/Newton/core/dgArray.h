@@ -71,7 +71,7 @@ dgArray<T>::~dgArray ()
 template<class T>
 const T& dgArray<T>::operator[] (dgInt32 i) const
 { 
-	_ASSERTE (i >= 0);
+	_DG_ASSERTE (i >= 0);
 	while (i >= m_maxSize) {
 		Resize (i);
 	}
@@ -82,7 +82,7 @@ const T& dgArray<T>::operator[] (dgInt32 i) const
 template<class T>
 T& dgArray<T>::operator[] (dgInt32 i)
 {
-	_ASSERTE (i >= 0);
+	_DG_ASSERTE (i >= 0);
 	while (i >= m_maxSize) {
 		Resize (i);
 	}

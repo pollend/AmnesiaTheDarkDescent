@@ -166,7 +166,7 @@ void dgRedBackNode::InsertFixup(dgRedBackNode ** const head)
 				}
 			}
 		} else {
-			_ASSERTE (ptr->m_parent == ptr->m_parent->m_parent->m_right);
+			_DG_ASSERTE (ptr->m_parent == ptr->m_parent->m_parent->m_right);
 			// mirror image of above code 
 			dgRedBackNode* const tmp = ptr->m_parent->m_parent->m_left;
 			if (tmp && (tmp->GetColor() == RED)) {
@@ -340,14 +340,14 @@ void dgRedBackNode::Unlink (dgRedBackNode ** const head)
 			endNode = endNode->m_left;
 		}
 
-		_ASSERTE (endNode);
-		_ASSERTE (endNode->m_parent);
-		_ASSERTE (!endNode->m_left);
+		_DG_ASSERTE (endNode);
+		_DG_ASSERTE (endNode->m_parent);
+		_DG_ASSERTE (!endNode->m_left);
 
 		// x is y's only child 
 		dgRedBackNode* const child = endNode->m_right;
 
-		_ASSERTE ((endNode != node->m_right) || !child || (child->m_parent == endNode));
+		_DG_ASSERTE ((endNode != node->m_right) || !child || (child->m_parent == endNode));
 
 		endNode->m_left = node->m_left;
 		node->m_left->m_parent = endNode;

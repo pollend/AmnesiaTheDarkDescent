@@ -64,7 +64,7 @@ dgMatrix::dgMatrix (
 	y2 = dgFloat32 (2.0f) * rotation.m_q2 * rotation.m_q2;
 	z2 = dgFloat32 (2.0f) * rotation.m_q3 * rotation.m_q3;
 	w2 = dgFloat32 (2.0f) * rotation.m_q0 * rotation.m_q0;
-	_ASSERTE (dgAbsf (w2 + x2 + y2 + z2 - dgFloat32(2.0f)) <dgFloat32 (1.0e-3f));
+	_DG_ASSERTE (dgAbsf (w2 + x2 + y2 + z2 - dgFloat32(2.0f)) <dgFloat32 (1.0e-3f));
 
 	xy = dgFloat32 (2.0f) * rotation.m_q1 * rotation.m_q2;
 	xz = dgFloat32 (2.0f) * rotation.m_q1 * rotation.m_q3;
@@ -234,16 +234,16 @@ dgMatrix dgMatrix::Symetric3by3Inverse () const
 	x23 = (dgFloat32)(det * (mat[0][1] * mat[2][0] - mat[0][0] * mat[2][1]));  
 
 
-#ifdef _DEBUG
+#ifdef _DG_DEBUG
 	dgMatrix matInv (dgVector (x11, x12, x13, dgFloat32(0.0f)),
 				     dgVector (x12, x22, x23, dgFloat32(0.0f)),
 					 dgVector (x13, x23, x33, dgFloat32(0.0f)),
 					 dgVector (dgFloat32(0.0f), dgFloat32(0.0f), dgFloat32(0.0f), dgFloat32(1.0f)));
 
 	dgMatrix test (matInv * mat);
-	_ASSERTE (dgAbsf (test[0][0] - dgFloat32(1.0f)) < dgFloat32(0.01f));
-	_ASSERTE (dgAbsf (test[1][1] - dgFloat32(1.0f)) < dgFloat32(0.01f));
-	_ASSERTE (dgAbsf (test[2][2] - dgFloat32(1.0f)) < dgFloat32(0.01f));
+	_DG_ASSERTE (dgAbsf (test[0][0] - dgFloat32(1.0f)) < dgFloat32(0.01f));
+	_DG_ASSERTE (dgAbsf (test[1][1] - dgFloat32(1.0f)) < dgFloat32(0.01f));
+	_DG_ASSERTE (dgAbsf (test[2][2] - dgFloat32(1.0f)) < dgFloat32(0.01f));
 #endif
 
 	return dgMatrix (dgVector (x11, x12, x13, dgFloat32(0.0f)),
@@ -309,9 +309,9 @@ void dgMatrix::EigenVectors (dgVector &eigenValues)
 		sm = dgAbsf(mat[0][1]) + dgAbsf(mat[0][2]) + dgAbsf(mat[1][2]);
 
 		if (sm < dgEPSILON * dgFloat32(1.0e-5f)) {
-			_ASSERTE (dgAbsf((eigenVectors.m_front % eigenVectors.m_front) - dgFloat32(1.0f)) < dgEPSILON);
-			_ASSERTE (dgAbsf((eigenVectors.m_up % eigenVectors.m_up) - dgFloat32(1.0f)) < dgEPSILON);
-			_ASSERTE (dgAbsf((eigenVectors.m_right % eigenVectors.m_right) - dgFloat32(1.0f)) < dgEPSILON);
+			_DG_ASSERTE (dgAbsf((eigenVectors.m_front % eigenVectors.m_front) - dgFloat32(1.0f)) < dgEPSILON);
+			_DG_ASSERTE (dgAbsf((eigenVectors.m_up % eigenVectors.m_up) - dgFloat32(1.0f)) < dgEPSILON);
+			_DG_ASSERTE (dgAbsf((eigenVectors.m_right % eigenVectors.m_right) - dgFloat32(1.0f)) < dgEPSILON);
 
 			// order the eigenvalue vectors	
 			dgVector tmp (eigenVectors.m_front * eigenVectors.m_up);
@@ -453,7 +453,7 @@ dgVector dgMatrix::CalcPitchYawRoll () const
 	pitch  = dgFloat32(0.0f);
 	yaw = dgAsin (-ClampValue (matrix[0][2], dgFloat32(-0.999999f), dgFloat32(0.999999f)));
 
-	_ASSERTE (dgCheckFloat (yaw));
+	_DG_ASSERTE (dgCheckFloat (yaw));
 	if (matrix[0][2] < minSin) {
 		if (matrix[0][2] > (-minSin)) {
 			roll = dgAtan2 (matrix[0][1], matrix[0][0]);
@@ -465,12 +465,12 @@ dgVector dgMatrix::CalcPitchYawRoll () const
 		pitch = -dgAtan2 (matrix[1][0], matrix[1][1]);
 	}
 
-#ifdef _DEBUG
+#ifdef _DG_DEBUG
 	dgMatrix m (dgPitchMatrix (pitch) * dgYawMatrix(yaw) * dgRollMatrix(roll));
 	for (dgInt32 i = 0; i < 3; i ++) {
 		for (dgInt32 j = 0; j < 3; j ++) {
 			dgFloat32 error = dgAbsf (m[i][j] - matrix[i][j]);
-			_ASSERTE (error < 5.0e-2f);
+			_DG_ASSERTE (error < 5.0e-2f);
 		}
 	}
 #endif

@@ -89,7 +89,7 @@ dgCollisionCompound::OOBBTestData::OOBBTestData (const dgMatrix& matrix, const d
 
 			m_extends[i][j] = dgVector (c - d, c + d, dgFloat32 (0.0f), dgFloat32 (0.0f));
 
-			_ASSERTE (m_extends[i][j].m_x <= m_extends[i][j].m_y);
+			_DG_ASSERTE (m_extends[i][j].m_x <= m_extends[i][j].m_y);
 			m_crossAxisAbs[i][j] = dgVector (dgAbsf (axis.m_x), dgAbsf (axis.m_y), dgAbsf (axis.m_z), dgFloat32 (0.0f));
 		}
 	}
@@ -191,14 +191,14 @@ bool dgCollisionCompound::dgNodeBase::BoxTest (const OOBBTestData& data, const d
 					c = m_origin % axis;
 					x0 = c - d;
 					x1 = c + d;
-					_ASSERTE (x0 <= x1);
+					_DG_ASSERTE (x0 <= x1);
 
 					const dgVector& axisDotAbs = data.m_crossAxisDotAbs[i][j]; 
 					d = otherNode->m_size.m_x * axisDotAbs.m_x + otherNode->m_size.m_y * axisDotAbs.m_y + otherNode->m_size.m_z * axisDotAbs.m_z + dgFloat32 (1.0e-3f); 
 					c = otherOrigin % axis;
 					z0 = c - d;
 					z1 = c + d;
-					_ASSERTE (z0 <= z1);
+					_DG_ASSERTE (z0 <= z1);
 
 					if ((x1 < z0) || (x0 > z1)) {
 						return false;
@@ -236,7 +236,7 @@ bool dgCollisionCompound::dgNodeBase::BoxTest (const OOBBTestData& data) const
 
 					x0 = c - d;
 					x1 = c + d;
-					_ASSERTE (x0 <= x1);
+					_DG_ASSERTE (x0 <= x1);
 					const dgVector& extend = data.m_extends[i][j];
 					if ((x1 < extend.m_x) || (x0 > extend.m_y)) {
 						return false;
@@ -414,7 +414,7 @@ dgCollisionCompound::dgCollisionCompound (dgWorld* const world, dgDeserialize de
 					if (node->m_left == NULL) {
 						node->m_left = newNode;
 					} else {
-						_ASSERTE (!node->m_right);
+						_DG_ASSERTE (!node->m_right);
 						node->m_right = newNode;
 					}
 					break;
@@ -508,12 +508,12 @@ void dgCollisionCompound::LinkParentNodes()
 
 void dgCollisionCompound::SetCollisionBBox (const dgVector& p0__, const dgVector& p1__)
 {
-	_ASSERTE (0);
+	_DG_ASSERTE (0);
 }
 
 dgInt32 dgCollisionCompound::CalculateSignature () const
 {
-	_ASSERTE (0);
+	_DG_ASSERTE (0);
 	return 0;
 }
 
@@ -589,14 +589,14 @@ dgFloat32 dgCollisionCompound::RayCast (const dgVector& localP0, const dgVector&
 				}
 
 			} else {
-				_ASSERTE (me->m_type == m_node);
+				_DG_ASSERTE (me->m_type == m_node);
 				stackPool[stack] = me->m_left;
 				stack++;
-				_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNodeBase*));
+				_DG_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNodeBase*));
 				
 				stackPool[stack] = me->m_right;
 				stack++;
-				_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNodeBase*));
+				_DG_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNodeBase*));
 			}
 		}
 	}
@@ -637,14 +637,14 @@ dgFloat32 dgCollisionCompound::RayCastSimd (const dgVector& localP0, const dgVec
 				}
 
 			} else {
-				_ASSERTE (me->m_type == m_node);
+				_DG_ASSERTE (me->m_type == m_node);
 				stackPool[stack] = me->m_left;
 				stack++;
-				_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNodeBase*));
+				_DG_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNodeBase*));
 
 				stackPool[stack] = me->m_right;
 				stack++;
-				_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNodeBase*));
+				_DG_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNodeBase*));
 			}
 		}
 	}
@@ -739,15 +739,15 @@ void dgCollisionCompound::CalculateInertia (dgVector& inertia, dgVector& origin)
 //	crossInertia.m_y += totalCrossInertia.m_x + origin.m_z * origin.m_x;
 //	crossInertia.m_z += totalCrossInertia.m_x + origin.m_x * origin.m_y;
 
-	_ASSERTE (inertia[0] > 0.0f);
-	_ASSERTE (inertia[1] > 0.0f);
-	_ASSERTE (inertia[2] > 0.0f);
+	_DG_ASSERTE (inertia[0] > 0.0f);
+	_DG_ASSERTE (inertia[1] > 0.0f);
+	_DG_ASSERTE (inertia[2] > 0.0f);
 }
 
 
 void dgCollisionCompound::AddCollision (dgCollisionConvex* part)
 {
-_ASSERTE (0);
+_DG_ASSERTE (0);
 /*
 	dgInt32 i;
 	dgInt8 *ptr;
@@ -755,7 +755,7 @@ _ASSERTE (0);
 	dgMatrix* collisionMatrix;
 	AABB* aabb;
 
-	_ASSERTE (0);
+	_DG_ASSERTE (0);
 	if (m_count >= m_maxCount) {
 		m_maxCount = m_maxCount * 2;
 
@@ -978,7 +978,7 @@ void dgCollisionCompound::Serialize(dgSerialize callback, void* const userData) 
 
 bool dgCollisionCompound::OOBBTest (const dgMatrix& matrix, const dgCollisionConvex* const shape, void* const cacheOrder) const
 {
-	_ASSERTE (0);
+	_DG_ASSERTE (0);
 	return true;
 }
 
@@ -1088,7 +1088,7 @@ dgCollisionCompound::dgNodeBase* dgCollisionCompound::BuildBottomUpTree(dgInt32 
 				}
 			}
 
-			_ASSERTE (bestProxi != -1);
+			_DG_ASSERTE (bestProxi != -1);
 
 			dgHeapNodePair pair;
 			pair.m_nodeA = i;
@@ -1130,7 +1130,7 @@ dgCollisionCompound::dgNodeBase* dgCollisionCompound::BuildBottomUpTree(dgInt32 
 			}
 		}
 
-		_ASSERTE (newCount < count);
+		_DG_ASSERTE (newCount < count);
 		count = newCount;
 	}
 	return proxiArray[0];
@@ -1248,8 +1248,8 @@ dgFloat32 dgCollisionCompound::CalculateSurfaceArea (dgNodeBase* const node0, dg
 
 void dgCollisionCompound::ImproveNodeFitness (dgNodeBase* const node) const
 {
-	_ASSERTE (node->m_left);
-	_ASSERTE (node->m_right);
+	_DG_ASSERTE (node->m_left);
+	_DG_ASSERTE (node->m_right);
 
 	if (node->m_parent)	{
 		if (node->m_parent->m_left == node) {
@@ -1275,7 +1275,7 @@ void dgCollisionCompound::ImproveNodeFitness (dgNodeBase* const node) const
 					if (parent->m_parent->m_left == parent) {
 						parent->m_parent->m_left = node;
 					} else {
-						_ASSERTE (parent->m_parent->m_right == parent);
+						_DG_ASSERTE (parent->m_parent->m_right == parent);
 						parent->m_parent->m_right = node;
 					}
 				}
@@ -1302,7 +1302,7 @@ void dgCollisionCompound::ImproveNodeFitness (dgNodeBase* const node) const
 					if (parent->m_parent->m_left == parent) {
 						parent->m_parent->m_left = node;
 					} else {
-						_ASSERTE (parent->m_parent->m_right == parent);
+						_DG_ASSERTE (parent->m_parent->m_right == parent);
 						parent->m_parent->m_right = node;
 					}
 				}
@@ -1342,7 +1342,7 @@ void dgCollisionCompound::ImproveNodeFitness (dgNodeBase* const node) const
 					if (parent->m_parent->m_left == parent) {
 						parent->m_parent->m_left = node;
 					} else {
-						_ASSERTE (parent->m_parent->m_right == parent);
+						_DG_ASSERTE (parent->m_parent->m_right == parent);
 						parent->m_parent->m_right = node;
 					}
 				}
@@ -1370,7 +1370,7 @@ void dgCollisionCompound::ImproveNodeFitness (dgNodeBase* const node) const
 					if (parent->m_parent->m_left == parent) {
 						parent->m_parent->m_left = node;
 					} else {
-						_ASSERTE (parent->m_parent->m_right == parent);
+						_DG_ASSERTE (parent->m_parent->m_right == parent);
 						parent->m_parent->m_right = node;
 					}
 				}
@@ -1437,7 +1437,7 @@ dgCollisionCompound::dgNodeBase* dgCollisionCompound::BuildTree(dgInt32 count, d
 	} while (maxPasses && (newCost < prevCost));
 
 	if (tree->m_parent) {
-		_ASSERTE (index);
+		_DG_ASSERTE (index);
 		for (tree = proxiArray[index-1]; tree->m_parent; tree = tree->m_parent);
 	}
 	return tree;
@@ -1448,7 +1448,7 @@ dgInt32 dgCollisionCompound::CalculateContacts (dgCollidingPairCollector::dgPair
 {
 	dgInt32 contactCount = 0;
 	if (m_root) {
-		_ASSERTE (IsType (dgCollision::dgCollisionCompound_RTTI));
+		_DG_ASSERTE (IsType (dgCollision::dgCollisionCompound_RTTI));
 		if (pair->m_body1->m_collision->IsType (dgCollision::dgConvexCollision_RTTI)) {
 			contactCount = CalculateContactsToSingle (pair, proxi, useSimd);
 		} else if (pair->m_body1->m_collision->IsType (dgCollision::dgCollisionCompound_RTTI)) {
@@ -1458,7 +1458,7 @@ dgInt32 dgCollisionCompound::CalculateContacts (dgCollidingPairCollector::dgPair
 		} else if (pair->m_body1->m_collision->IsType (dgCollision::dgCollisionHeightField_RTTI)) {
 			contactCount = CalculateContactsToHightField (pair, proxi, useSimd);
 		} else {
-			_ASSERTE (pair->m_body1->m_collision->IsType (dgCollision::dgCollisionUserMesh_RTTI));
+			_DG_ASSERTE (pair->m_body1->m_collision->IsType (dgCollision::dgCollisionUserMesh_RTTI));
 			contactCount = CalculateContactsBruteForce (pair, proxi, useSimd);
 		}
 	}
@@ -1476,8 +1476,8 @@ dgInt32 dgCollisionCompound::CalculateContactsToSingle (dgCollidingPairCollector
 	dgBody* const otherBody = pair->m_body1;
 	dgBody* const compoundBody = pair->m_body0;
 
-	_ASSERTE (pair->m_body0->m_collision == this);
-	_ASSERTE (otherBody->m_collision->IsType (dgCollision::dgConvexCollision_RTTI));
+	_DG_ASSERTE (pair->m_body0->m_collision == this);
+	_DG_ASSERTE (otherBody->m_collision->IsType (dgCollision::dgConvexCollision_RTTI));
 
 	//dgInt32 lru = m_world->m_broadPhaseLru;
 	proxi.m_referenceBody = compoundBody;
@@ -1510,7 +1510,7 @@ dgInt32 dgCollisionCompound::CalculateContactsToSingle (dgCollidingPairCollector
 
 		stack --;
 		const dgNodeBase* const me = stackPool[stack];
-		_ASSERTE (me);
+		_DG_ASSERTE (me);
 		
 		if (me->BoxTest (data)) {
 			if (me->m_type == m_leaf) {
@@ -1543,14 +1543,14 @@ dgInt32 dgCollisionCompound::CalculateContactsToSingle (dgCollidingPairCollector
 				}
 
 			} else {
-				_ASSERTE (me->m_type == m_node);
+				_DG_ASSERTE (me->m_type == m_node);
 				stackPool[stack] = me->m_left;
 				stack++;
-				_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNodeBase*));
+				_DG_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNodeBase*));
 
 				stackPool[stack] = me->m_right;
 				stack++;
-				_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNodeBase*));
+				_DG_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNodeBase*));
 			}
 		}
 	}
@@ -1568,7 +1568,7 @@ dgInt32 dgCollisionCompound::CalculateContactsToCompound (dgCollidingPairCollect
 	dgBody* const myBody = pair->m_body0;
 	dgBody* const otherBody = pair->m_body1;
 
-	_ASSERTE (pair->m_body0->m_collision == this);
+	_DG_ASSERTE (pair->m_body0->m_collision == this);
 	dgCollisionCompound* const otherCompound = (dgCollisionCompound*)otherBody->m_collision;
 
 	//dgInt32 lru = m_world->m_broadPhaseLru;
@@ -1588,7 +1588,7 @@ dgInt32 dgCollisionCompound::CalculateContactsToCompound (dgCollidingPairCollect
 		const dgNodeBase* const me = stackPool[stack][0];
 		const dgNodeBase* const other = stackPool[stack][1];
 
-		_ASSERTE (me && other);
+		_DG_ASSERTE (me && other);
 
 		if (me->BoxTest (data, other)) {
 			if ((me->m_type == m_leaf) && (other->m_type == m_leaf)) {
@@ -1639,62 +1639,62 @@ dgInt32 dgCollisionCompound::CalculateContactsToCompound (dgCollidingPairCollect
 
 			} else if (me->m_type == m_leaf) {
 //				dgNode* const otherNode = (dgNode*)other;
-				_ASSERTE (other->m_type == m_node);
+				_DG_ASSERTE (other->m_type == m_node);
 
 				stackPool[stack][0] = me;
 				stackPool[stack][1] = other->m_left;
 				stack++;
-				_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNodeBase*));
+				_DG_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNodeBase*));
 
 				stackPool[stack][0] = me;
 				stackPool[stack][1] = other->m_right;
 				stack++;
-				_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNodeBase*));
+				_DG_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNodeBase*));
 
 
 			} else if (other->m_type == m_leaf) {
 //				dgNode* const myNode = (dgNode*)me;
-				_ASSERTE (me->m_type == m_node);
+				_DG_ASSERTE (me->m_type == m_node);
 
 				stackPool[stack][0] = me->m_left;
 				stackPool[stack][1] = other;
 				stack++;
-				_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNodeBase*));
+				_DG_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNodeBase*));
 
 				stackPool[stack][0] = me->m_right;
 				stackPool[stack][1] = other;
 				stack++;
-				_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNodeBase*));
+				_DG_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNodeBase*));
 
 			} else if (other->m_area > me->m_area) {
 //				dgNode* const otherNode = (dgNode*)other;
-				_ASSERTE (me->m_type == m_node);
-				_ASSERTE (other->m_type == m_node);
+				_DG_ASSERTE (me->m_type == m_node);
+				_DG_ASSERTE (other->m_type == m_node);
 
 				stackPool[stack][0] = me;
 				stackPool[stack][1] = other->m_left;
 				stack++;
-				_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNodeBase*));
+				_DG_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNodeBase*));
 
 				stackPool[stack][0] = me;
 				stackPool[stack][1] = other->m_right;
 				stack++;
-				_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNodeBase*));
+				_DG_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNodeBase*));
 
 			} else {
 //				dgNode* const myNode = (dgNode*)me;
-				_ASSERTE (me->m_type == m_node);
-				_ASSERTE (other->m_type == m_node);
+				_DG_ASSERTE (me->m_type == m_node);
+				_DG_ASSERTE (other->m_type == m_node);
 
 				stackPool[stack][0] = me->m_left;
 				stackPool[stack][1] = other;
 				stack++;
-				_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNodeBase*));
+				_DG_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNodeBase*));
 
 				stackPool[stack][0] = me->m_right;
 				stackPool[stack][1] = other;
 				stack++;
-				_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNodeBase*));
+				_DG_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNodeBase*));
 			}
 		}
 	}
@@ -1721,7 +1721,7 @@ dgInt32 dgCollisionCompound::CalculateContactsToCollisionTree (dgCollidingPairCo
 	dgBody* const myBody = pair->m_body0;
 	dgBody* const treeBody = pair->m_body1;
 
-	_ASSERTE (pair->m_body0->m_collision == this);
+	_DG_ASSERTE (pair->m_body0->m_collision == this);
 	dgCollisionBVH* const treeCollision = (dgCollisionBVH*)treeBody->m_collision;
 
 //	dgInt32 lru = m_world->m_broadPhaseLru;
@@ -1753,14 +1753,14 @@ dgInt32 dgCollisionCompound::CalculateContactsToCollisionTree (dgCollidingPairCo
 		const void* const other = stackPool[stack].m_treeNode;
 		treeNodeIsLeaf = stackPool[stack].m_treeNodeIsLeaf;
 
-		_ASSERTE (me && other);
+		_DG_ASSERTE (me && other);
 
 		treeCollision->GetNodeAABB(other, nodeProxi.m_p0, nodeProxi.m_p1);
 		nodeProxi.m_size = (nodeProxi.m_p1 - nodeProxi.m_p0).Scale (dgFloat32 (0.5f));
 		nodeProxi.m_origin = (nodeProxi.m_p1 + nodeProxi.m_p0).Scale (dgFloat32 (0.5f));
 		dgVector size (nodeProxi.m_size.m_y, nodeProxi.m_size.m_z, nodeProxi.m_size.m_x, dgFloat32 (0.0f));
 		nodeProxi.m_area = nodeProxi.m_size  % size;
-		_ASSERTE (nodeProxi.m_area > dgFloat32 (0.0f));
+		_DG_ASSERTE (nodeProxi.m_area > dgFloat32 (0.0f));
 
 		if (me->BoxTest (data, &nodeProxi)) {
 			if ((me->m_type == m_leaf) && treeNodeIsLeaf) {
@@ -1846,16 +1846,16 @@ dgInt32 dgCollisionCompound::CalculateContactsToCollisionTree (dgCollidingPairCo
 				stackPool[stack].m_treeNode = other;
 				stackPool[stack].m_treeNodeIsLeaf = 1;
 				stack++;
-				_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNodeBase*));
+				_DG_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNodeBase*));
 
 				stackPool[stack].m_myNode = me->m_right;
 				stackPool[stack].m_treeNode = other;
 				stackPool[stack].m_treeNodeIsLeaf = 1;
 				stack++;
-				_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNodeBase*));
+				_DG_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNodeBase*));
 
 			} else if (nodeProxi.m_area > me->m_area) {
-				_ASSERTE (me->m_type == m_node);
+				_DG_ASSERTE (me->m_type == m_node);
 				void* const frontNode = treeCollision->GetFrontNode(other);
 				void* const backNode = treeCollision->GetBackNode(other);
 				if (backNode && frontNode) {
@@ -1914,7 +1914,7 @@ dgInt32 dgCollisionCompound::CalculateContactsToCollisionTree (dgCollidingPairCo
 				}
 
 			} else {
-				_ASSERTE (me->m_type == m_node);
+				_DG_ASSERTE (me->m_type == m_node);
 				stackPool[stack].m_myNode = me->m_left;
 				stackPool[stack].m_treeNode = other;
 				stackPool[stack].m_treeNodeIsLeaf = treeNodeIsLeaf;
@@ -1948,7 +1948,7 @@ dgInt32 dgCollisionCompound::CalculateContactsToHightField (dgCollidingPairColle
 	dgBody* const myBody = pair->m_body0;
 	dgBody* const terrainBody = pair->m_body1;
 
-	_ASSERTE (pair->m_body0->m_collision == this);
+	_DG_ASSERTE (pair->m_body0->m_collision == this);
 	dgCollisionHeightField* const terrainCollision = (dgCollisionHeightField*)terrainBody->m_collision;
 
 //	dgInt32 lru = m_world->m_broadPhaseLru;
@@ -2005,7 +2005,7 @@ dgInt32 dgCollisionCompound::CalculateContactsToHightField (dgCollidingPairColle
 				}
 	
 			} else {
-				_ASSERTE (me->m_type == m_node);
+				_DG_ASSERTE (me->m_type == m_node);
 				stackPool[stack] = me->m_left;
 				stack++;
 
@@ -2029,7 +2029,7 @@ dgInt32 dgCollisionCompound::CalculateContactsBruteForce (dgCollidingPairCollect
 	dgBody* const myBody = pair->m_body0;
 	dgBody* const userBody = pair->m_body1;
 
-	_ASSERTE (pair->m_body0->m_collision == this);
+	_DG_ASSERTE (pair->m_body0->m_collision == this);
 	dgCollisionMesh* const userCollision = (dgCollisionMesh*)userBody->m_collision;
 
 //	dgInt32 lru = m_world->m_broadPhaseLru;
@@ -2077,7 +2077,7 @@ dgInt32 dgCollisionCompound::CalculateContactsBruteForce (dgCollidingPairCollect
 			}
 
 		} else {
-			_ASSERTE (me->m_type == m_node);
+			_DG_ASSERTE (me->m_type == m_node);
 			stackPool[stack] = me->m_left;
 			stack++;
 
@@ -2098,7 +2098,7 @@ dgInt32 dgCollisionCompound::ClosestDitance (dgBody* const compoundBody, dgTripl
 
 
 #if 0
-	_ASSERTE (compoundBody->m_collision == this);
+	_DG_ASSERTE (compoundBody->m_collision == this);
 	dgCollisionConvex* const collisionB = (dgCollisionConvex*) bodyB->m_collision;
 
 	//	dgInt32 lru;
@@ -2113,8 +2113,8 @@ dgInt32 dgCollisionCompound::ClosestDitance (dgBody* const compoundBody, dgTripl
 	//	otherBody = pair->m_body1;
 	//	compoundBody = pair->m_body0;
 
-	//	_ASSERTE (pair->m_body0->m_collision == this);
-	//	_ASSERTE (otherBody->m_collision->IsType (dgCollision::dgConvexCollision_RTTI));
+	//	_DG_ASSERTE (pair->m_body0->m_collision == this);
+	//	_DG_ASSERTE (otherBody->m_collision->IsType (dgCollision::dgConvexCollision_RTTI));
 
 	//	lru = m_world->m_broadPhaseLru;
 	//	proxi.m_referenceBody = compoundBody;
@@ -2156,13 +2156,13 @@ dgInt32 dgCollisionCompound::ClosestDitance (dgBody* const compoundBody, dgTripl
 		
 		dgFloat32 dist = distPool[stack];
 		const dgNodeBase* const me = stackPool[stack];
-		_ASSERTE (me);
+		_DG_ASSERTE (me);
 
 //		if (me->BoxTest (data)) {
 		if (dist < baseDist) {
 
 			if (me->m_type == m_leaf) {
-				_ASSERTE (0);
+				_DG_ASSERTE (0);
 /*
 				dgInt32 processContacts;
 
@@ -2205,27 +2205,27 @@ dgInt32 dgCollisionCompound::ClosestDitance (dgBody* const compoundBody, dgTripl
 					rightDist = right->BoxClosestDistance (points, 8);
 				}
 
-				_ASSERTE (me->m_type == m_node);
+				_DG_ASSERTE (me->m_type == m_node);
 				if (leftDist > rightDist) {
 					distPool[stack] = leftDist;
 					stackPool[stack] = me->m_left;
 					stack++;
-					_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNodeBase*));
+					_DG_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNodeBase*));
 
 					distPool[stack] = rightDist;
 					stackPool[stack] = me->m_right;
 					stack++;
-					_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNodeBase*));
+					_DG_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNodeBase*));
 				} else {
 					distPool[stack] = rightDist;
 					stackPool[stack] = me->m_right;
 					stack++;
-					_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNodeBase*));
+					_DG_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNodeBase*));
 					
 					distPool[stack] = leftDist;
 					stackPool[stack] = me->m_left;
 					stack++;
-					_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNodeBase*));
+					_DG_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNodeBase*));
 				}
 			}
 		}
@@ -2276,7 +2276,7 @@ dgInt32 dgCollisionCompound::ClosestDitance (dgBody* const compoundBody, dgTripl
 		dgCollisionParamProxi proxi(0);
 		dgContactPoint contacts[16];
 
-		_ASSERTE (bodyB->m_collision->IsType (dgCollision::dgCollisionCompound_RTTI));
+		_DG_ASSERTE (bodyB->m_collision->IsType (dgCollision::dgCollisionCompound_RTTI));
 		dgCollisionCompound *const compoundCollision1 = (dgCollisionCompound *) bodyB->m_collision;
 		dgInt32 count1 = compoundCollision1->m_count;
 		dgCollisionConvex** collisionArray1 = compoundCollision1->m_array;

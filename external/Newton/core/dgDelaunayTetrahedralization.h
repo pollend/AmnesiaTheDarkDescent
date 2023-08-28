@@ -38,7 +38,7 @@ class dgDelaunayTetrahedralization: public dgConvexHull4d
 	dgFloat64 GetTetraVolume (const dgConvexHull4dTetraherum* const tetra) const;
 
 
-#ifdef _DEBUG
+#ifdef _DG_DEBUG
 	static dgInt32 CompareVertexByIndex(const dgHullVector* const  A, const dgHullVector* const B, void* const context);
 	void SortVertexArray ();
 #endif

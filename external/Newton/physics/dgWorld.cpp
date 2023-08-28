@@ -454,26 +454,26 @@ void dgWorld::DestroyAllBodies ()
 //	dgBodyMasterList::Iterator iter(me);
 //	for (iter.Begin(); iter; ) {
 
-	_ASSERTE (dgBodyMasterList::GetFirst()->GetInfo().GetBody() == m_sentionelBody);
+	_DG_ASSERTE (dgBodyMasterList::GetFirst()->GetInfo().GetBody() == m_sentionelBody);
 	for (node = me.GetFirst()->GetNext(); node; ) {
 		body = node->GetInfo().GetBody();
 		node = node->GetNext();
 		DestroyBody (body);
 	}
 
-	_ASSERTE (me.GetFirst()->GetInfo().GetCount() == 0);
-	_ASSERTE (dgBodyCollisionList::GetCount() == 0);
+	_DG_ASSERTE (me.GetFirst()->GetInfo().GetCount() == 0);
+	_DG_ASSERTE (dgBodyCollisionList::GetCount() == 0);
 }
 
 dgBody* dgWorld::CreateBody(dgCollision* const collision/*, const dgMatrix& matrix*/)
 {
 	dgBody* body;
 
-	_ASSERTE (collision);
+	_DG_ASSERTE (collision);
 
 	body = new (m_allocator) dgBody();
-	_ASSERTE ((sizeof (dgBody) & 0xf) == 0);
-	_ASSERTE ((dgUnsigned64 (body) & 0xf) == 0);
+	_DG_ASSERTE ((sizeof (dgBody) & 0xf) == 0);
+	_DG_ASSERTE ((dgUnsigned64 (body) & 0xf) == 0);
 
 	memset (body, 0, sizeof (dgBody));
 
@@ -498,7 +498,7 @@ dgBody* dgWorld::CreateBody(dgCollision* const collision/*, const dgMatrix& matr
 	dgBodyMasterList::AddBody(body);
 
 //	dgBodyActiveList___::AddBody(body);
-//	_ASSERTE (body->m_activeNode);
+//	_DG_ASSERTE (body->m_activeNode);
 
 
 //	body->m_freezeAccel2 = m_freezeAccel2;
@@ -536,7 +536,7 @@ void dgWorld::DestroyBody(dgBody* const body)
 //	}
 	dgBodyMasterList::RemoveBody (body);
 
-	_ASSERTE (body->m_collision);
+	_DG_ASSERTE (body->m_collision);
 	ReleaseCollision (body->m_collision);
 
 	delete body;
@@ -561,9 +561,9 @@ void dgWorld::UnfreezeBody (dgBody *body)
 
 void dgWorld::FreezeBody (dgBody *body)
 {
-	_ASSERTE (0);
+	_DG_ASSERTE (0);
 	if (body->m_activeNode) {
-		_ASSERTE (0);
+		_DG_ASSERTE (0);
 		dgBodyActiveList___::RemoveBody(body);
 		if (body->m_activation && body->m_active) {
 			body->m_activation (*body, 0);
@@ -577,7 +577,7 @@ void dgWorld::FreezeBody (dgBody *body)
 void dgWorld::UpdateCollision ()
 {
 	dgFloat32 timestep;
-	_ASSERTE (m_inUpdate == 0);
+	_DG_ASSERTE (m_inUpdate == 0);
 
 	
 	m_threadsManager.ClearTimers();
@@ -586,7 +586,7 @@ void dgWorld::UpdateCollision ()
 
 
 	m_inUpdate ++;
-	_ASSERTE (m_numberOfTheads  >= 1);
+	_DG_ASSERTE (m_numberOfTheads  >= 1);
 
 #if (defined (WIN32) || defined(_WIN32))
 	#ifndef __USE_DOUBLE_PRECISION__
@@ -649,7 +649,7 @@ void dgWorld::Update (dgFloat32 timestep)
 //		m_cpu = dgNoSimdPresent;
 	#endif
 
-	_ASSERTE (m_inUpdate == 0);
+	_DG_ASSERTE (m_inUpdate == 0);
 
 	m_threadsManager.ClearTimers();
 	memset (m_perfomanceCounters, 0, sizeof (m_perfomanceCounters));
@@ -659,7 +659,7 @@ void dgWorld::Update (dgFloat32 timestep)
 	m_destroyeddBodiesPool.m_count = 0;
 	
 	m_inUpdate ++;
-	_ASSERTE (m_numberOfTheads  >= 1);
+	_DG_ASSERTE (m_numberOfTheads  >= 1);
 
 #if (defined (WIN32) || defined(_WIN32))
 	#ifndef __USE_DOUBLE_PRECISION__
@@ -772,8 +772,8 @@ dgBallConstraint* dgWorld::CreateBallConstraint (
 {
 	dgBallConstraint *constraint;
 	
-	_ASSERTE (body0);
-	_ASSERTE (body0 != body1);
+	_DG_ASSERTE (body0);
+	_DG_ASSERTE (body0 != body1);
 //	constraint = dgBallConstraint::Create(this);
 	constraint = new (m_allocator) dgBallConstraint;
 
@@ -791,8 +791,8 @@ dgHingeConstraint* dgWorld::CreateHingeConstraint (
 {
 	dgHingeConstraint *constraint;
 
-	_ASSERTE (body0);
-	_ASSERTE (body0 != body1);
+	_DG_ASSERTE (body0);
+	_DG_ASSERTE (body0 != body1);
 //	constraint = dgHingeConstraint::Create(this);
 	constraint = new (m_allocator) dgHingeConstraint;
 
@@ -806,7 +806,7 @@ dgUpVectorConstraint* dgWorld::CreateUpVectorConstraint (const dgVector& pin, dg
 {
 	dgUpVectorConstraint *constraint;
 	
-	_ASSERTE (body);
+	_DG_ASSERTE (body);
 //	constraint = dgUpVectorConstraint::Create(this);
 	constraint = new (m_allocator) dgUpVectorConstraint;
 
@@ -825,8 +825,8 @@ dgSlidingConstraint* dgWorld::CreateSlidingConstraint (
 {
 	dgSlidingConstraint *constraint;
 
-	_ASSERTE (body0);
-	_ASSERTE (body0 != body1);
+	_DG_ASSERTE (body0);
+	_DG_ASSERTE (body0 != body1);
 //	constraint = dgSlidingConstraint::Create(this);
 	constraint = new (m_allocator) dgSlidingConstraint;
 
@@ -844,8 +844,8 @@ dgCorkscrewConstraint* dgWorld::CreateCorkscrewConstraint (
 {
 	dgCorkscrewConstraint *constraint;
 
-	_ASSERTE (body0);
-	_ASSERTE (body0 != body1);
+	_DG_ASSERTE (body0);
+	_DG_ASSERTE (body0 != body1);
 //	constraint = dgCorkscrewConstraint::Create(this);
 	constraint = new (m_allocator) dgCorkscrewConstraint;
 
@@ -864,8 +864,8 @@ dgUniversalConstraint* dgWorld::CreateUniversalConstraint (
 {
 	dgUniversalConstraint *constraint;
 
-	_ASSERTE (body0);
-	_ASSERTE (body0 != body1);
+	_DG_ASSERTE (body0);
+	_DG_ASSERTE (body0 != body1);
 //	constraint = dgUniversalConstraint::Create(this);
 	constraint = new (m_allocator) dgUniversalConstraint;
 
@@ -883,7 +883,7 @@ dgPointToCurveConstraint* dgWorld::AttachPointToCurveConstraint (
 {
 	dgPointToCurveConstraint *constraint;
 
-	_ASSERTE (body0);
+	_DG_ASSERTE (body0);
 	constraint = dgPointToCurveConstraint::Create();
 
 	AttachConstraint (constraint, body0, NULL);
@@ -895,13 +895,13 @@ dgPointToCurveConstraint* dgWorld::AttachPointToCurveConstraint (
 /*
 dgConnectorConstraint* dgWorld::CreateConnectorConstraint (dgBody *body0__, dgBody *body1__)
 {
-	_ASSERTE (0);
+	_DG_ASSERTE (0);
 	return NULL;
 
 	dgConnectorConstraint *constraint;
 
-	_ASSERTE (body0);
-	_ASSERTE (body0 != body1);
+	_DG_ASSERTE (body0);
+	_DG_ASSERTE (body0 != body1);
 	constraint = dgConnectorConstraint::Create();
 
 	AttachConstraint (constraint, body0, body1);
@@ -934,14 +934,14 @@ dgInt32 dgWorld::GetConstraintsCount() const
 /*
 dgLink* dgWorld::FindConstraintLink (const dgBody* const body0, const dgBody* const body1) const
 {
-	_ASSERTE (0);
+	_DG_ASSERTE (0);
 
 	dgLink *ptr;
 	dgLink *link;
 
-	_ASSERTE (body0);
+	_DG_ASSERTE (body0);
 	if (!body0) {
-		_ASSERTE (0);
+		_DG_ASSERTE (0);
 		Swap (body0, body1);
 	}
 
@@ -950,7 +950,7 @@ dgLink* dgWorld::FindConstraintLink (const dgBody* const body0, const dgBody* co
 		if (link) {
 			ptr = link;
 			do {
-				_ASSERTE (ptr->m_body == body0);
+				_DG_ASSERTE (ptr->m_body == body0);
 				if (ptr->m_twin->m_body == body1) {
 					return ptr;
 				}
@@ -989,7 +989,7 @@ void dgWorld::BodySetMatrix (dgBody* body, const dgMatrix& matrix)
 		
 		index --;
 		body = queue[index];
-		_ASSERTE (body != m_sentionelBody);
+		_DG_ASSERTE (body != m_sentionelBody);
 
 		dgBroadPhaseCollision::Remove (body);
 		dgBroadPhaseCollision::Add (body);
@@ -1011,7 +1011,7 @@ void dgWorld::BodySetMatrix (dgBody* body, const dgMatrix& matrix)
 						body->m_genericLRUMark = m_genericLRUMark;
 						queue[index] = body;
 						index ++;
-						_ASSERTE (index < DG_RECURSIVE_SIZE);
+						_DG_ASSERTE (index < DG_RECURSIVE_SIZE);
 					}
 				}
 			}
@@ -1031,7 +1031,7 @@ void dgWorld::AddBodyImpulse (dgBody* body, const dgVector& pointVeloc, const dg
 /*
 dgInt32 dgWorld::GetBodyArray (dgBody* root, dgBody** array, dgInt32 maxSize) const
 {
-	_ASSERTE (0);
+	_DG_ASSERTE (0);
 	return 0;
 
 	dgInt32 i;
@@ -1056,7 +1056,7 @@ dgInt32 dgWorld::GetBodyArray (dgBody* root, dgBody** array, dgInt32 maxSize) co
 			do {
 				body = ptr->m_twin->m_body;
 				if (body) {
-					_ASSERTE (body);
+					_DG_ASSERTE (body);
 					if (~body->m_lru & mask) {
 						constraint = ptr->m_constraint;
 						if (constraint->IsBilateral()) {
@@ -1086,7 +1086,7 @@ dgInt32 dgWorld::GetBodyArray (dgBody* root, dgBody** array, dgInt32 maxSize) co
 			do {
 				body = ptr->m_twin->m_body;
 				if (body) {
-					_ASSERTE (body);
+					_DG_ASSERTE (body);
 					if (body->m_lru & mask) {
 						constraint = ptr->m_constraint;
 						if (constraint->IsBilateral()) {
@@ -1107,7 +1107,7 @@ dgInt32 dgWorld::GetBodyArray (dgBody* root, dgBody** array, dgInt32 maxSize) co
 
 dgInt32 dgWorld::GetConstraintArray (dgConstraint* root, dgConstraint** constraintArray, dgInt32 maxSize) const
 {
-_ASSERTE (0);
+_DG_ASSERTE (0);
 return 0;
 
 	dgInt32 i;
@@ -1135,7 +1135,7 @@ return 0;
 		body = constraint->m_body0;
 		if (body && (body->m_invMass.m_w != dgFloat32 (0.0f))) {
 			link = body->m_firstConstraintLink; 
-			_ASSERTE (link);
+			_DG_ASSERTE (link);
 			ptr = link;
 			do {
 				constraintPtr = ptr->m_constraint;
@@ -1152,7 +1152,7 @@ return 0;
 		body = constraint->m_body1;
 		if (body && (body->m_invMass.m_w != dgFloat32 (0.0f))) {
 			link = body->m_firstConstraintLink; 
-			_ASSERTE (link);
+			_DG_ASSERTE (link);
 			ptr = link;
 			do {
 				constraintPtr = ptr->m_constraint;
@@ -1176,9 +1176,9 @@ return 0;
 		constraint = constraintArray[i];
 		constraint->m_lru &= ~mask;
 
-		#ifdef _DEBUG
+		#ifdef _DG_DEBUG
 		for (stack = i + 1; stack < count; stack ++) {                                                                 
-			_ASSERTE (constraint != constraintArray[stack]);
+			_DG_ASSERTE (constraint != constraintArray[stack]);
 		}
 		#endif                             
 	}

@@ -152,7 +152,7 @@ class dgPolyhedra: public dgTree <dgEdge, dgEdgeKey>
 	dgInt32 IncLRU() const
 	{	
 		m_edgeMark ++;
-		_ASSERTE (m_edgeMark < 0x7fffffff);
+		_DG_ASSERTE (m_edgeMark < 0x7fffffff);
 		return m_edgeMark;
 	}
 

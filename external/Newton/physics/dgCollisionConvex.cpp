@@ -205,11 +205,11 @@ void dgCollisionConvex::SetVolumeAndCG ()
 			edge = face;
 			count = 0;
 			do {
-				_ASSERTE ((edge - m_simplex) >= 0);
+				_DG_ASSERTE ((edge - m_simplex) >= 0);
 				edgeMarks[dgInt32 (edge - m_simplex)] = '1';
 				faceVertex[count] = m_vertex[edge->m_vertex];
 				count ++;
-				_ASSERTE (count < sizeof (faceVertex) / sizeof (faceVertex[0]));
+				_DG_ASSERTE (count < sizeof (faceVertex) / sizeof (faceVertex[0]));
 				edge = edge->m_next;
 			} while (edge != face);
 
@@ -227,10 +227,10 @@ void dgCollisionConvex::SetVolumeAndCG ()
 	for (i = 0; i < count; i ++) {
 		m_supportVertexStarCuadrant[i] = GetSupportEdge (m_multiResDir[i]);
 	}
-	_ASSERTE (m_supportVertexStarCuadrant[4] == GetSupportEdge (m_multiResDir[0].Scale (-1.0f)));
-	_ASSERTE (m_supportVertexStarCuadrant[5] == GetSupportEdge (m_multiResDir[1].Scale (-1.0f)));
-	_ASSERTE (m_supportVertexStarCuadrant[6] == GetSupportEdge (m_multiResDir[2].Scale (-1.0f)));
-	_ASSERTE (m_supportVertexStarCuadrant[7] == GetSupportEdge (m_multiResDir[3].Scale (-1.0f)));
+	_DG_ASSERTE (m_supportVertexStarCuadrant[4] == GetSupportEdge (m_multiResDir[0].Scale (-1.0f)));
+	_DG_ASSERTE (m_supportVertexStarCuadrant[5] == GetSupportEdge (m_multiResDir[1].Scale (-1.0f)));
+	_DG_ASSERTE (m_supportVertexStarCuadrant[6] == GetSupportEdge (m_multiResDir[2].Scale (-1.0f)));
+	_DG_ASSERTE (m_supportVertexStarCuadrant[7] == GetSupportEdge (m_multiResDir[3].Scale (-1.0f)));
 
 
 	// calculate the origin of the bound box of this primitive
@@ -328,7 +328,7 @@ void dgCollisionConvex::DebugCollision (const dgMatrix& matrixPtr, OnDebugCollis
 	dgVector tmp[DG_MAX_EDGE_COUNT];
 	dgTriplex vertex[DG_MAX_EDGE_COUNT];
 
-//	_ASSERTE (myBody.m_collision == this);
+//	_DG_ASSERTE (myBody.m_collision == this);
 //	dgMatrix matrix (GetOffsetMatrix() * myBody.m_matrix);
 	dgMatrix matrix (GetOffsetMatrix() * matrixPtr);
 	matrix.TransformTriplex (tmp, sizeof (dgVector), m_vertex, sizeof (dgVector), m_vertexCount);
@@ -378,8 +378,8 @@ void dgCollisionConvex::CalcAABB (const dgMatrix &matrix, dgVector& p0, dgVector
 	dgVector err1 (p1 - q1);
 	dgFloat32 err; 
 	err = GetMax (size.m_x, size.m_y, size.m_z) * 0.5f; 
-	_ASSERTE ((err0 % err0) < err * err);
-	_ASSERTE ((err1 % err1) < err * err);
+	_DG_ASSERTE ((err0 % err0) < err * err);
+	_DG_ASSERTE ((err1 % err1) < err * err);
 #endif
 
 }
@@ -420,7 +420,7 @@ dgConvexSimplexEdge *dgCollisionConvex::GetSupportEdge (const dgVector& dir) con
 	dgConvexSimplexEdge *ptr;
 	dgConvexSimplexEdge *edge;
 
-	_ASSERTE (dgAbsf(dir % dir - dgFloat32 (1.0f)) < dgFloat32 (1.0e-3f));
+	_DG_ASSERTE (dgAbsf(dir % dir - dgFloat32 (1.0f)) < dgFloat32 (1.0e-3f));
 	
 	edge = &m_simplex[0];
 	side0 = m_vertex[edge->m_vertex] % dir;
@@ -460,7 +460,7 @@ dgFloat32 dgCollisionConvex::CalculateMassProperties (dgVector& inertia, dgVecto
 	DebugCollision (dgGetIdentityMatrix(), CalculateInertia, &localData);
 	volume = localData.MassProperties (centerOfMass, inertia, crossInertia);
 /*
-	#ifdef _DEBUG
+	#ifdef _DG_DEBUG
 		dgFloat32 volume1;
 		dgVector inertia1;
 		dgVector crossInertia1;
@@ -468,12 +468,12 @@ dgFloat32 dgCollisionConvex::CalculateMassProperties (dgVector& inertia, dgVecto
 		dgConvexMassData localData1;
 		DebugCollision (dgGetIdentityMatrix(), CalculateInertia, &localData1);
 		volume1 = localData1.MassProperties (centerOfMass1, inertia1, crossInertia1);
-		_ASSERTE (dgAbsf (volume1 - volume) < dgFloat32 (1.0e-3f));
+		_DG_ASSERTE (dgAbsf (volume1 - volume) < dgFloat32 (1.0e-3f));
 
 		for (dgInt32 i = 0; i < 3; i ++) {
-			_ASSERTE (dgAbsf (inertia[i] - inertia1[i]) < dgFloat32 (1.0e-3f));
-			_ASSERTE (dgAbsf (crossInertia[i] - crossInertia1[i]) < dgFloat32 (1.0e-3f));
-			_ASSERTE (dgAbsf (centerOfMass[i] - centerOfMass1[i]) < dgFloat32 (1.0e-3f));
+			_DG_ASSERTE (dgAbsf (inertia[i] - inertia1[i]) < dgFloat32 (1.0e-3f));
+			_DG_ASSERTE (dgAbsf (crossInertia[i] - crossInertia1[i]) < dgFloat32 (1.0e-3f));
+			_DG_ASSERTE (dgAbsf (centerOfMass[i] - centerOfMass1[i]) < dgFloat32 (1.0e-3f));
 		}
 	#endif
 */
@@ -519,9 +519,9 @@ void dgCollisionConvex::CalculateInertia (dgVector& inertiaOut, dgVector& origin
 	if (inertiaOut.m_y < dgFloat32 (1.0e-3f)) inertiaOut.m_y = dgFloat32 (1.0e-3f);
 	if (inertiaOut.m_z < dgFloat32 (1.0e-3f)) inertiaOut.m_z = dgFloat32 (1.0e-3f);
 
-	_ASSERTE (inertiaOut[0] > 0.0f);
-	_ASSERTE (inertiaOut[1] > 0.0f);
-	_ASSERTE (inertiaOut[2] > 0.0f);
+	_DG_ASSERTE (inertiaOut[0] > 0.0f);
+	_DG_ASSERTE (inertiaOut[1] > 0.0f);
+	_DG_ASSERTE (inertiaOut[2] > 0.0f);
 } 
 
 
@@ -529,13 +529,13 @@ void dgCollisionConvex::CalculateInertia (dgVector& inertiaOut, dgVector& origin
 
 dgFloat32 dgCollisionConvex::GetVolume () const
 {
-	#ifdef _DEBUG
+	#ifdef _DG_DEBUG
 		dgFloat32 volume;
 		dgVector inertia;
 		dgVector centerOfMass;
 		dgVector crossInertia;
 		volume = CalculateMassProperties (inertia, crossInertia, centerOfMass);
-		_ASSERTE ( m_volume.m_w >= dgFloat32 (0.7f) * volume);
+		_DG_ASSERTE ( m_volume.m_w >= dgFloat32 (0.7f) * volume);
 	#endif
 
 	return m_volume.m_w;
@@ -628,9 +628,9 @@ dgInt32 dgCollisionConvex::RayCastClosestFace (
 			dist = (e1 * e0) % e2;
 			//			return (volume >= dgFloat32 (0.0f));
 			if (dist <= dgFloat32 (0.0f)) {
-				//				_ASSERTE (0);
+				//				_DG_ASSERTE (0);
 				Swap (tetrahedrum[1], tetrahedrum[2]);
-				//				_ASSERTE (CheckTetraHedronVolume ());
+				//				_DG_ASSERTE (CheckTetraHedronVolume ());
 			}
 		}
 	} 
@@ -818,7 +818,7 @@ dgVector dgCollisionConvex::CalculateVolumeIntegral (const dgPlane& plane) const
 					dgVector dp (m_vertex[edge->m_vertex] - m_vertex[edge->m_prev->m_vertex]);
 					faceVertex[count] = m_vertex[edge->m_prev->m_vertex] - dp.Scale (size0 / (plane % dp));
 					count ++;
-					_ASSERTE (count < sizeof (faceVertex) / sizeof (faceVertex[0]));
+					_DG_ASSERTE (count < sizeof (faceVertex) / sizeof (faceVertex[0]));
 				}
 
 				if (!capEdge) {
@@ -899,7 +899,7 @@ dgVector dgCollisionConvex::SupportVertex (const dgVector& direction) const
 	dgConvexSimplexEdge *edge;
 	const dgVector dir (direction.m_x, direction.m_y, direction.m_z, dgFloat32 (0.0f));
 
-	_ASSERTE (dgAbsf(dir % dir - dgFloat32 (1.0f)) < dgFloat32 (1.0e-3f));
+	_DG_ASSERTE (dgAbsf(dir % dir - dgFloat32 (1.0f)) < dgFloat32 (1.0e-3f));
 
 	index = 0;
 	side0 = dgFloat32 (-1.0e20f);
@@ -933,9 +933,9 @@ dgVector dgCollisionConvex::SupportVertex (const dgVector& direction) const
 		ptr = ptr->m_twin->m_next;
 		maxCount --;
 	} while ((ptr != edge) && maxCount);
-	_ASSERTE (maxCount);
+	_DG_ASSERTE (maxCount);
 
-	_ASSERTE (index != -1);
+	_DG_ASSERTE (index != -1);
 	return m_vertex[index];
 }
 
@@ -957,7 +957,7 @@ dgVector dgCollisionConvex::SupportVertexSimd (const dgVector& direction) const
 //	simd_type dir_z;
 //	simd_type entry;
 	
-	_ASSERTE (dgAbsf(direction % direction - dgFloat32 (1.0f)) < dgFloat32 (1.0e-3f));
+	_DG_ASSERTE (dgAbsf(direction % direction - dgFloat32 (1.0f)) < dgFloat32 (1.0e-3f));
 
 //	index = 0;
 //	side0 = dgFloat32 (-1.0e20f);
@@ -1000,7 +1000,7 @@ dgVector dgCollisionConvex::SupportVertexSimd (const dgVector& direction) const
 
 //	const dgVector dir (direction.m_x, direction.m_y, direction.m_z, dgFloat32 (0.0f));
 	simd_type dir = simd_set (direction.m_x, direction.m_y, direction.m_z, dgFloat32 (0.0f));
-	_ASSERTE (m_vertex[edge->m_vertex].m_w == dgFloat32 (1.0f));
+	_DG_ASSERTE (m_vertex[edge->m_vertex].m_w == dgFloat32 (1.0f));
 //	dgFloat32 side0 = m_vertex[edge->m_vertex] % dir;
 //	dir_x = simd_mul_v (*(simd_type*)&m_vertex[edge->m_vertex], *(simd_type*)&dir);
 //	dir_x = simd_add_s(simd_add_v (dir_x, simd_move_hl_v (dir_x, dir_x)), simd_permut_v (dir_x, dir_x, PURMUT_MASK (3,3,3,1)));
@@ -1013,7 +1013,7 @@ dgVector dgCollisionConvex::SupportVertexSimd (const dgVector& direction) const
 	dgConvexSimplexEdge* ptr = edge;
 	dgInt32 maxCount = 128;
 	do {
-		_ASSERTE (m_vertex[edge->m_twin->m_vertex].m_w == dgFloat32 (1.0f));
+		_DG_ASSERTE (m_vertex[edge->m_twin->m_vertex].m_w == dgFloat32 (1.0f));
 //		dir_x = simd_mul_v (*(simd_type*)&m_vertex[ptr->m_twin->m_vertex], *(simd_type*)&dir);
 //		dir_x = simd_add_s(simd_add_v (dir_x, simd_move_hl_v (dir_x, dir_x)), simd_permut_v (dir_x, dir_x, PURMUT_MASK (3,3,3,1)));
 //		dgFloat32 side1;
@@ -1033,9 +1033,9 @@ dgVector dgCollisionConvex::SupportVertexSimd (const dgVector& direction) const
 		ptr = ptr->m_twin->m_next;
 		maxCount --;
 	} while ((ptr != edge) && maxCount);
-	_ASSERTE (maxCount);
+	_DG_ASSERTE (maxCount);
 
-	_ASSERTE (index != -1);
+	_DG_ASSERTE (index != -1);
 	return m_vertex[index];
 
 
@@ -1055,7 +1055,7 @@ bool dgCollisionConvex::SanityCheck(dgInt32 count, const dgVector& normal, dgVec
 		dgInt32 j = count - 1;
 		for (dgInt32 i = 0; i < count; i ++) {
 			dgVector error (contactsOut[i] - contactsOut[j]);
-			//			_ASSERTE ((error % error) > dgFloat32 (1.0e-20f));
+			//			_DG_ASSERTE ((error % error) > dgFloat32 (1.0e-20f));
 			if ((error % error) <= dgFloat32 (1.0e-20f)) {
 				return false;
 			} 
@@ -1070,11 +1070,11 @@ bool dgCollisionConvex::SanityCheck(dgInt32 count, const dgVector& normal, dgVec
 				n += e0 * e1;
 				e0 = e1;
 			} 
-			_ASSERTE ((n % n) > dgFloat32 (0.0f));
+			_DG_ASSERTE ((n % n) > dgFloat32 (0.0f));
 			n = n.Scale (dgFloat32 (1.0f) / dgSqrt(n % n));
 			dgFloat32 projection;
 			projection = n % normal;
-			_ASSERTE (projection > dgFloat32 (0.9f));
+			_DG_ASSERTE (projection > dgFloat32 (0.9f));
 			if (projection < dgFloat32 (0.9f)) {
 				return false;
 			}
@@ -1085,7 +1085,7 @@ bool dgCollisionConvex::SanityCheck(dgInt32 count, const dgVector& normal, dgVec
 				dgVector e1 (contactsOut[i] - contactsOut[j]);
 				dgVector n (e0 * e1);
 				dgFloat32 error = n % normal;
-				_ASSERTE (error >= dgFloat32 (-1.0e-4f));
+				_DG_ASSERTE (error >= dgFloat32 (-1.0e-4f));
 				if (error < dgFloat32 (-1.0e-4f)) {
 					return false;
 				}
@@ -1112,7 +1112,7 @@ dgInt32 dgCollisionConvex::SimplifyClipPolygon (
 	dgInt8 mark[DG_MAX_VERTEX_CLIP_FACE * 8];
 	dgInt8 buffer[8 * DG_MAX_VERTEX_CLIP_FACE * (sizeof (dgInt32) + sizeof (dgFloat32))];
 
-	_ASSERTE (count < sizeof (mark) / sizeof (mark[0]));
+	_DG_ASSERTE (count < sizeof (mark) / sizeof (mark[0]));
 	dgUpHeap<dgInt32, dgFloat32> sortHeap (buffer, sizeof (buffer));	
 
 	while (count > DG_MAX_VERTEX_CLIP_FACE) {
@@ -1171,7 +1171,7 @@ dgInt32 dgCollisionConvex::RectifyConvexSlice (dgInt32 count, const dgVector& no
 	DG_CONVEX_FIXUP_FACE linkFace[DG_CLIP_MAX_POINT_COUNT * 2];
 
 
-	_ASSERTE (count > 2);
+	_DG_ASSERTE (count > 2);
 
 	DG_CONVEX_FIXUP_FACE* poly = &linkFace[0];
 	for (dgInt32 i = 0; i < count; i ++) {
@@ -1251,7 +1251,7 @@ dgInt32 dgCollisionConvex::RectifyConvexSlice (dgInt32 count, const dgVector& no
 			}
 		}
 		count = newCount;
-		_ASSERTE (tmpCount == count);
+		_DG_ASSERTE (tmpCount == count);
 	}
 
 
@@ -1259,7 +1259,7 @@ dgInt32 dgCollisionConvex::RectifyConvexSlice (dgInt32 count, const dgVector& no
 		count = SimplifyClipPolygon (count, normal, contactsOut);
 	}
 
-	_ASSERTE (SanityCheck(count, normal, contactsOut));
+	_DG_ASSERTE (SanityCheck(count, normal, contactsOut));
 	return count;
 }
 
@@ -1286,7 +1286,7 @@ dgInt32 dgCollisionConvex::CalculatePlaneIntersectionSimd (const dgVector& norma
 	dgPlane plane (normal, - (normal % origin));
 	simd_type planeSimdD = *(simd_type*)&plane;
 
-	_ASSERTE (m_vertex[edge->m_vertex].m_w == dgFloat32 (1.0f));
+	_DG_ASSERTE (m_vertex[edge->m_vertex].m_w == dgFloat32 (1.0f));
 //	side0 = plane.Evalue(m_vertex[edge->m_vertex]);
 //	simd_type tmp_ = simd_mul_v (planeSimdD, *(simd_type*)&m_vertex[edge->m_vertex]);
 //	tmp_ = simd_add_v (tmp_, simd_move_hl_v (tmp_, tmp_));
@@ -1306,7 +1306,7 @@ dgInt32 dgCollisionConvex::CalculatePlaneIntersectionSimd (const dgVector& norma
 	if (simd_store_is (simd_cmpgt_s(side0, zero))) {
 		dgConvexSimplexEdge* ptr = edge;
 		do {
-			_ASSERTE (m_vertex[ptr->m_twin->m_vertex].m_w == dgFloat32 (1.0f));
+			_DG_ASSERTE (m_vertex[ptr->m_twin->m_vertex].m_w == dgFloat32 (1.0f));
 //			side1 = plane.Evalue (m_vertex[ptr->m_twin->m_vertex]);
 //			simd_type tmp = simd_mul_v (planeSimdD, *(simd_type*)&m_vertex[ptr->m_twin->m_vertex]);
 //			tmp = simd_add_v (tmp, simd_move_hl_v (tmp, tmp));
@@ -1373,7 +1373,7 @@ dgInt32 dgCollisionConvex::CalculatePlaneIntersectionSimd (const dgVector& norma
 	} else if (simd_store_is (simd_cmplt_s(side0, zero))) {
 		dgConvexSimplexEdge* ptr = edge;
 		do {
-			_ASSERTE (m_vertex[ptr->m_twin->m_vertex].m_w == dgFloat32 (1.0f));
+			_DG_ASSERTE (m_vertex[ptr->m_twin->m_vertex].m_w == dgFloat32 (1.0f));
 //			side1 = plane.Evalue (m_vertex[ptr->m_twin->m_vertex]);
 //			simd_type tmp = simd_mul_v (planeSimdD, *(simd_type*)&m_vertex[ptr->m_twin->m_vertex]);
 //			tmp = simd_add_v (tmp, simd_move_hl_v (tmp, tmp));
@@ -1437,35 +1437,35 @@ dgInt32 dgCollisionConvex::CalculatePlaneIntersectionSimd (const dgVector& norma
 
 	if (firstEdge) {
 		//		hullFixup = 0;
-//		_ASSERTE (side0 >= dgFloat32 (0.0f));
-//		_ASSERTE ((side1 = plane.Evalue (m_vertex[firstEdge->m_vertex])) >= dgFloat32 (0.0f));
-//		_ASSERTE ((side1 = plane.Evalue (m_vertex[firstEdge->m_twin->m_vertex])) < dgFloat32 (0.0f));
-//		_ASSERTE (dgAbsf (side0 - plane.Evalue (m_vertex[firstEdge->m_vertex])) < dgFloat32 (1.0e-5f));
+//		_DG_ASSERTE (side0 >= dgFloat32 (0.0f));
+//		_DG_ASSERTE ((side1 = plane.Evalue (m_vertex[firstEdge->m_vertex])) >= dgFloat32 (0.0f));
+//		_DG_ASSERTE ((side1 = plane.Evalue (m_vertex[firstEdge->m_twin->m_vertex])) < dgFloat32 (0.0f));
+//		_DG_ASSERTE (dgAbsf (side0 - plane.Evalue (m_vertex[firstEdge->m_vertex])) < dgFloat32 (1.0e-5f));
 
 		dgInt32 maxCount = 0;
 		dgConvexSimplexEdge* ptr = firstEdge;
 		do {
 //			if (side0 > dgFloat32 (0.0f)) {
 			if (simd_store_is (simd_cmpgt_s(side0, zero))) {
-//				_ASSERTE (plane.Evalue (m_vertex[ptr->m_vertex]) > dgFloat32 (0.0f));
-//				_ASSERTE (plane.Evalue (m_vertex[ptr->m_twin->m_vertex]) < dgFloat32 (0.0f));
+//				_DG_ASSERTE (plane.Evalue (m_vertex[ptr->m_vertex]) > dgFloat32 (0.0f));
+//				_DG_ASSERTE (plane.Evalue (m_vertex[ptr->m_twin->m_vertex]) < dgFloat32 (0.0f));
 //				dgVector dp (m_vertex[ptr->m_twin->m_vertex] - m_vertex[ptr->m_vertex]);
 
 				simd_type deltaP = simd_sub_v (*(simd_type*)&m_vertex[ptr->m_twin->m_vertex], *(simd_type*)&m_vertex[ptr->m_vertex]);
 
-				_ASSERTE (((dgFloat32*)&deltaP)[3] == dgFloat32 (0.0f));
+				_DG_ASSERTE (((dgFloat32*)&deltaP)[3] == dgFloat32 (0.0f));
 
 //				t = plane % dp;
 				simd_type tmp = simd_mul_v (planeSimdD, deltaP);
 				tmp = simd_add_s(simd_add_v (tmp, simd_move_hl_v (tmp, tmp)), simd_permut_v (tmp, tmp, PURMUT_MASK (3,3,3,1)));
-				_ASSERTE (((dgFloat32*)&tmp)[3] <= dgFloat32 (0.0f));
+				_DG_ASSERTE (((dgFloat32*)&tmp)[3] <= dgFloat32 (0.0f));
 
-//				_ASSERTE (t <= 0.0f);
+//				_DG_ASSERTE (t <= 0.0f);
 //				if (t < dgFloat32 (0.0f)) {
 //					t = side0 / t;
 //				}
-//				_ASSERTE (t <= dgFloat32 (0.01f));
-//				_ASSERTE (t >= dgFloat32 (-1.05f));
+//				_DG_ASSERTE (t <= dgFloat32 (0.01f));
+//				_DG_ASSERTE (t >= dgFloat32 (-1.05f));
 //				contactsOut[count] = m_vertex[ptr->m_vertex] - dp.Scale (t);
 
 				tmp = simd_min_s (*(simd_type*)&m_negativeTiny, tmp);
@@ -1473,14 +1473,14 @@ dgInt32 dgCollisionConvex::CalculatePlaneIntersectionSimd (const dgVector& norma
 //				den = simd_mul_s (simd_load_s(side0), simd_mul_sub_s(simd_add_s(den, den), simd_mul_s(den, tmp), den));
 				den = simd_mul_s (side0, simd_mul_sub_s(simd_add_s(den, den), simd_mul_s(den, tmp), den));
 				den = simd_min_s (simd_max_s (den, *(simd_type*)&m_negOne), zero);
-				_ASSERTE (((dgFloat32*)&den)[0] <= dgFloat32 (0.0f));
-				_ASSERTE (((dgFloat32*)&den)[0] >= dgFloat32 (-1.0f));
+				_DG_ASSERTE (((dgFloat32*)&den)[0] <= dgFloat32 (0.0f));
+				_DG_ASSERTE (((dgFloat32*)&den)[0] >= dgFloat32 (-1.0f));
 				*((simd_type*)&contactsOut[count]) = simd_mul_sub_v (*((simd_type*)&m_vertex[ptr->m_vertex]), deltaP, simd_permut_v (den, den, PURMUT_MASK (3,0,0,0)));
 
 				dgConvexSimplexEdge* ptr1 = ptr->m_next;
 				for (; ptr1 != ptr; ptr1 = ptr1->m_next) {
 //					side0 = plane.Evalue (m_vertex[ptr1->m_twin->m_vertex]); 
-					_ASSERTE (m_vertex[ptr1->m_twin->m_vertex].m_w == dgFloat32 (1.0f));
+					_DG_ASSERTE (m_vertex[ptr1->m_twin->m_vertex].m_w == dgFloat32 (1.0f));
 //					tmp = simd_mul_v (planeSimdD, *(simd_type*)&m_vertex[ptr1->m_twin->m_vertex]);
 //					tmp = simd_add_v (tmp, simd_move_hl_v (tmp, tmp));
 //					tmp = simd_add_s(tmp, simd_permut_v (tmp, tmp, PURMUT_MASK (3,3,3,1)));
@@ -1494,7 +1494,7 @@ dgInt32 dgCollisionConvex::CalculatePlaneIntersectionSimd (const dgVector& norma
 						break;
 					}
 				}
-				_ASSERTE (ptr1 != ptr);
+				_DG_ASSERTE (ptr1 != ptr);
 				ptr = ptr1->m_twin;
 			} else {
 //				contactsOut[count] = m_vertex[ptr->m_vertex];
@@ -1505,12 +1505,12 @@ dgInt32 dgCollisionConvex::CalculatePlaneIntersectionSimd (const dgVector& norma
 //						ptr1 = ptr1->m_twin->m_next; 
 //						side0 = plane.Evalue (m_vertex[ptr1->m_twin->m_vertex]); 
 //					} while ((ptr1 != ptr) && (side0 < dgFloat32 (0.0f)));
-//					_ASSERTE (ptr1 != ptr);
+//					_DG_ASSERTE (ptr1 != ptr);
 //					do {
 //						ptr1 = ptr1->m_twin->m_next; 
 //						side0 = plane.Evalue (m_vertex[ptr1->m_twin->m_vertex]); 
 //					} while ((ptr1 != ptr) && (side0 > dgFloat32 (0.0f)));
-//					_ASSERTE (side0 <= dgFloat32 (0.0f));
+//					_DG_ASSERTE (side0 <= dgFloat32 (0.0f));
 //					ptr = ptr1;
 //				}
 				contactsOut[count] = m_vertex[ptr->m_vertex];
@@ -1546,7 +1546,7 @@ dgInt32 dgCollisionConvex::CalculatePlaneIntersectionSimd (const dgVector& norma
 			}
 
 		} while ((ptr != firstEdge) && (maxCount < DG_CLIP_MAX_COUNT));
-		_ASSERTE (maxCount < DG_CLIP_MAX_COUNT);
+		_DG_ASSERTE (maxCount < DG_CLIP_MAX_COUNT);
 
 
 		if (count > 1) {
@@ -1582,7 +1582,7 @@ dgInt32 dgCollisionConvex::CalculatePlaneIntersection (const dgVector& normal, c
 	if (side0 > dgFloat32 (0.0f)) {
 		dgConvexSimplexEdge* ptr = edge;
 		do {
-			_ASSERTE (m_vertex[ptr->m_twin->m_vertex].m_w == dgFloat32 (1.0f));
+			_DG_ASSERTE (m_vertex[ptr->m_twin->m_vertex].m_w == dgFloat32 (1.0f));
 			side1 = plane.Evalue (m_vertex[ptr->m_twin->m_vertex]);
 			if (side1 < side0) {
 				if (side1 < dgFloat32 (0.0f)) {
@@ -1613,7 +1613,7 @@ dgInt32 dgCollisionConvex::CalculatePlaneIntersection (const dgVector& normal, c
 	} else if (side0 < dgFloat32 (0.0f)) {
 		dgConvexSimplexEdge* ptr = edge;
 		do {
-			_ASSERTE (m_vertex[ptr->m_twin->m_vertex].m_w == dgFloat32 (1.0f));
+			_DG_ASSERTE (m_vertex[ptr->m_twin->m_vertex].m_w == dgFloat32 (1.0f));
 			side1 = plane.Evalue (m_vertex[ptr->m_twin->m_vertex]);
 			if (side1 > side0) {
 				if (side1 >= dgFloat32 (0.0f)) {
@@ -1645,17 +1645,17 @@ dgInt32 dgCollisionConvex::CalculatePlaneIntersection (const dgVector& normal, c
 
 	dgInt32 count = 0;
 	if (firstEdge) {
-		_ASSERTE (side0 >= dgFloat32 (0.0f));
-		_ASSERTE ((side1 = plane.Evalue (m_vertex[firstEdge->m_vertex])) >= dgFloat32 (0.0f));
-		_ASSERTE ((side1 = plane.Evalue (m_vertex[firstEdge->m_twin->m_vertex])) < dgFloat32 (0.0f));
-		_ASSERTE (dgAbsf (side0 - plane.Evalue (m_vertex[firstEdge->m_vertex])) < dgFloat32 (1.0e-5f));
+		_DG_ASSERTE (side0 >= dgFloat32 (0.0f));
+		_DG_ASSERTE ((side1 = plane.Evalue (m_vertex[firstEdge->m_vertex])) >= dgFloat32 (0.0f));
+		_DG_ASSERTE ((side1 = plane.Evalue (m_vertex[firstEdge->m_twin->m_vertex])) < dgFloat32 (0.0f));
+		_DG_ASSERTE (dgAbsf (side0 - plane.Evalue (m_vertex[firstEdge->m_vertex])) < dgFloat32 (1.0e-5f));
 
 		dgInt32 maxCount = 0;
 		dgConvexSimplexEdge* ptr = firstEdge;
 		do {
 			if (side0 > dgFloat32 (0.0f)) {
-				_ASSERTE (plane.Evalue (m_vertex[ptr->m_vertex]) > dgFloat32 (0.0f));
-				_ASSERTE (plane.Evalue (m_vertex[ptr->m_twin->m_vertex]) < dgFloat32 (0.0f));
+				_DG_ASSERTE (plane.Evalue (m_vertex[ptr->m_vertex]) > dgFloat32 (0.0f));
+				_DG_ASSERTE (plane.Evalue (m_vertex[ptr->m_twin->m_vertex]) < dgFloat32 (0.0f));
 
 				dgVector dp (m_vertex[ptr->m_twin->m_vertex] - m_vertex[ptr->m_vertex]);
 				dgFloat32 t = plane % dp;
@@ -1671,25 +1671,25 @@ dgInt32 dgCollisionConvex::CalculatePlaneIntersection (const dgVector& normal, c
 					}
 				}
 
-				_ASSERTE (t <= dgFloat32 (0.01f));
-				_ASSERTE (t >= dgFloat32 (-1.05f));
+				_DG_ASSERTE (t <= dgFloat32 (0.01f));
+				_DG_ASSERTE (t >= dgFloat32 (-1.05f));
 				contactsOut[count] = m_vertex[ptr->m_vertex] - dp.Scale (t);
 
 				dgConvexSimplexEdge* ptr1 = ptr->m_next;
 				for (; ptr1 != ptr; ptr1 = ptr1->m_next) {
-					_ASSERTE (m_vertex[ptr->m_twin->m_vertex].m_w == dgFloat32 (1.0f));
+					_DG_ASSERTE (m_vertex[ptr->m_twin->m_vertex].m_w == dgFloat32 (1.0f));
 					side0 = plane.Evalue (m_vertex[ptr1->m_twin->m_vertex]); 
 					if (side0 >= dgFloat32 (0.0f)) {
 						break;
 					}
 				}
-				_ASSERTE (ptr1 != ptr);
+				_DG_ASSERTE (ptr1 != ptr);
 				ptr = ptr1->m_twin;
 			} else {
 				contactsOut[count] = m_vertex[ptr->m_vertex];
 				dgConvexSimplexEdge* ptr1 = ptr->m_next;
 				for (; ptr1 != ptr; ptr1 = ptr1->m_next) {
-					_ASSERTE (m_vertex[ptr1->m_twin->m_vertex].m_w == dgFloat32 (1.0f));
+					_DG_ASSERTE (m_vertex[ptr1->m_twin->m_vertex].m_w == dgFloat32 (1.0f));
 					side0 = plane.Evalue (m_vertex[ptr1->m_twin->m_vertex]); 
 					if (side0 >= dgFloat32 (0.0f)) {
 						break;
@@ -1712,7 +1712,7 @@ dgInt32 dgCollisionConvex::CalculatePlaneIntersection (const dgVector& normal, c
 			}
 
 		} while ((ptr != firstEdge) && (maxCount < DG_CLIP_MAX_COUNT));
-		_ASSERTE (maxCount < DG_CLIP_MAX_COUNT);
+		_DG_ASSERTE (maxCount < DG_CLIP_MAX_COUNT);
 
 		if (count > 2) {
 			count = RectifyConvexSlice (count, normal, contactsOut);
@@ -1944,7 +1944,7 @@ dgFloat32 dgCollisionConvex::RayCast (
 						return dgFloat32 (1.2f);
 					}
 				} else {
-					_ASSERTE (D >= dgFloat32 (0.0f));
+					_DG_ASSERTE (D >= dgFloat32 (0.0f));
 					//then segment S is leaving W across face Fi 
 					tL = GetMin (tL, t);
 					if (tL < tE) {

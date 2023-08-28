@@ -32,8 +32,8 @@
 dgUpVectorConstraint::dgUpVectorConstraint ()
 	:dgBilateralConstraint() 
 {
-	_ASSERTE ((sizeof (dgUpVectorConstraint) & 15) == 0);
-	_ASSERTE ((((dgUnsigned64) &m_localMatrix0) & 15) == 0);
+	_DG_ASSERTE ((sizeof (dgUpVectorConstraint) & 15) == 0);
+	_DG_ASSERTE ((((dgUnsigned64) &m_localMatrix0) & 15) == 0);
 
 //	dgUpVectorConstraintArray& array = * world;
 //	constraint = array.GetElement();
@@ -57,7 +57,7 @@ dgUpVectorConstraint* dgUpVectorConstraint::Create(dgWorld* world)
 	dgUpVectorConstraintArray& array = * world;
 	constraint = array.GetElement();
 
-	_ASSERTE ((((dgUnsigned64) &constraint->m_localMatrix0) & 15) == 0);
+	_DG_ASSERTE ((((dgUnsigned64) &constraint->m_localMatrix0) & 15) == 0);
 
 	constraint->Init ();
 

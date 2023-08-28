@@ -51,13 +51,13 @@ class dgAABBTree
 		public:
 		inline TreeNode ()
 		{
-			_ASSERTE (0);
+			_DG_ASSERTE (0);
 		}
 
 		inline TreeNode (dgUnsigned32 node)
 		{
 			m_node = node;
-			_ASSERTE (!IsLeaf());
+			_DG_ASSERTE (!IsLeaf());
 		}
 
 		inline dgUnsigned32 IsLeaf () const 
@@ -67,20 +67,20 @@ class dgAABBTree
 
 		inline dgUnsigned32 GetCount() const 
 		{
-			_ASSERTE (IsLeaf());
+			_DG_ASSERTE (IsLeaf());
 			return (m_node & (~0x80000000)) >> (32 - DG_INDEX_COUNT_BITS - 1);
 		}
 
 		inline dgUnsigned32 GetIndex() const 
 		{
-			_ASSERTE (IsLeaf());
+			_DG_ASSERTE (IsLeaf());
 			return m_node & (~(-(1 << (32 - DG_INDEX_COUNT_BITS - 1))));
 		}
 
 
 		inline TreeNode (dgUnsigned32 faceIndexCount, dgUnsigned32 faceIndexStart)
 		{
-			_ASSERTE (faceIndexCount < (1<<DG_INDEX_COUNT_BITS));
+			_DG_ASSERTE (faceIndexCount < (1<<DG_INDEX_COUNT_BITS));
 			m_node = 0x80000000 | (faceIndexCount << (32 - DG_INDEX_COUNT_BITS - 1)) | faceIndexStart;
 		}
 
@@ -198,7 +198,7 @@ class dgAABBTree
 					*parentNode = boxCopy[node->m_boxIndex].m_back;
 				} else {
 
-					//_ASSERTE (boxCount == 1);
+					//_DG_ASSERTE (boxCount == 1);
 					dgAABBTree* const newNode = &boxArray[index];
 					*newNode = boxCopy[node->m_boxIndex];
 					index ++;
@@ -268,8 +268,8 @@ class dgAABBTree
 			maxDepth = GetMax(maxDepth, depth);
 
 			if (node->m_boxIndex == -1) {
-				_ASSERTE (node->m_back);
-				_ASSERTE (node->m_front);
+				_DG_ASSERTE (node->m_back);
+				_DG_ASSERTE (node->m_front);
 
 				depth ++;
 				depthPool[stack] = depth;
@@ -309,8 +309,8 @@ class dgAABBTree
 
 	void ImproveNodeFitness (dgConstructionTree* const node) const
 	{
-		_ASSERTE (node->m_back);
-		_ASSERTE (node->m_front);
+		_DG_ASSERTE (node->m_back);
+		_DG_ASSERTE (node->m_front);
 
 		if (node->m_parent)	{
 			if (node->m_parent->m_back == node) {
@@ -326,7 +326,7 @@ class dgAABBTree
 						if (parent->m_parent->m_back == parent) {
 							parent->m_parent->m_back = node;
 						} else {
-							_ASSERTE (parent->m_parent->m_front == parent);
+							_DG_ASSERTE (parent->m_parent->m_front == parent);
 							parent->m_parent->m_front = node;
 						}
 					}
@@ -345,7 +345,7 @@ class dgAABBTree
 						if (parent->m_parent->m_back == parent) {
 							parent->m_parent->m_back = node;
 						} else {
-							_ASSERTE (parent->m_parent->m_front == parent);
+							_DG_ASSERTE (parent->m_parent->m_front == parent);
 							parent->m_parent->m_front = node;
 						}
 					}
@@ -371,7 +371,7 @@ class dgAABBTree
 						if (parent->m_parent->m_back == parent) {
 							parent->m_parent->m_back = node;
 						} else {
-							_ASSERTE (parent->m_parent->m_front == parent);
+							_DG_ASSERTE (parent->m_parent->m_front == parent);
 							parent->m_parent->m_front = node;
 						}
 					}
@@ -390,7 +390,7 @@ class dgAABBTree
 						if (parent->m_parent->m_back == parent) {
 							parent->m_parent->m_back = node;
 						} else {
-							_ASSERTE (parent->m_parent->m_front == parent);
+							_DG_ASSERTE (parent->m_parent->m_front == parent);
 							parent->m_parent->m_front = node;
 						}
 					}
@@ -522,7 +522,7 @@ class dgAABBTree
 					}
 				}
 
-				_ASSERTE (bestProxi != -1);
+				_DG_ASSERTE (bestProxi != -1);
 
 				dgHeapNodePair pair;
 				pair.m_nodeA = i;
@@ -560,7 +560,7 @@ class dgAABBTree
 				}
 			}
 
-			_ASSERTE (newCount < count);
+			_DG_ASSERTE (newCount < count);
 			count = newCount;
 		}
 
@@ -573,8 +573,8 @@ class dgAABBTree
 	dgConstructionTree* BuildTree (dgMemoryAllocator* const allocator, dgInt32 firstBox, dgInt32 lastBox, dgAABBTree* const boxArray, const dgTriplex* const vertexArray, dgConstructionTree* parent)
 	{
 		dgConstructionTree* const tree = new (allocator) dgConstructionTree();
-		_ASSERTE (firstBox >= 0);
-		_ASSERTE (lastBox >= 0);
+		_DG_ASSERTE (firstBox >= 0);
+		_DG_ASSERTE (lastBox >= 0);
 
 		tree->m_parent = parent;
 
@@ -699,9 +699,9 @@ class dgAABBTree
 						m_axis = i0 + 1;
 					}
 
-					_ASSERTE (maxP.m_x - minP.m_x >= dgFloat32 (0.0f));
-					_ASSERTE (maxP.m_y - minP.m_y >= dgFloat32 (0.0f));
-					_ASSERTE (maxP.m_z - minP.m_z >= dgFloat32 (0.0f));
+					_DG_ASSERTE (maxP.m_x - minP.m_x >= dgFloat32 (0.0f));
+					_DG_ASSERTE (maxP.m_y - minP.m_y >= dgFloat32 (0.0f));
+					_DG_ASSERTE (maxP.m_z - minP.m_z >= dgFloat32 (0.0f));
 					m_p0 = minP;
 					m_p1 = maxP;
 				}
@@ -920,7 +920,7 @@ class dgAABBTree
 					}
 
 				} else {
-					_ASSERTE (stack < DG_STACK_DEPTH);
+					_DG_ASSERTE (stack < DG_STACK_DEPTH);
 					stackPool[stack] = me->m_back.GetNode(this);
 					stack++;
 				}
@@ -947,7 +947,7 @@ class dgAABBTree
 						return;
 					}
 				} else {
-					_ASSERTE (stack < DG_STACK_DEPTH);
+					_DG_ASSERTE (stack < DG_STACK_DEPTH);
 					stackPool[stack] = me->m_front.GetNode(this);
 					stack ++;
 				}
@@ -993,7 +993,7 @@ class dgAABBTree
 					}
 
 				} else {
-					_ASSERTE (stack < DG_STACK_DEPTH);
+					_DG_ASSERTE (stack < DG_STACK_DEPTH);
 					stackPool[stack] = me->m_back.GetNode(this);
 					stack++;
 				}
@@ -1021,7 +1021,7 @@ class dgAABBTree
 					}
 
 				} else {
-					_ASSERTE (stack < DG_STACK_DEPTH);
+					_DG_ASSERTE (stack < DG_STACK_DEPTH);
 					stackPool[stack] = me->m_front.GetNode(this);
 					stack ++;
 				}
@@ -1055,7 +1055,7 @@ class dgAABBTree
 						dgInt32 index = dgInt32 (me->m_back.GetIndex());
 
 						dgFloat32 param = callback(context, vertexArray, sizeof (dgTriplex), &indexArray[index + 1], vCount);
-						_ASSERTE (param >= dgFloat32 (0.0f));
+						_DG_ASSERTE (param >= dgFloat32 (0.0f));
 						if (param < maxParam) {
 							maxParam = param;
 							ray.Reset (maxParam) ;
@@ -1063,7 +1063,7 @@ class dgAABBTree
 					}
 
 				} else {
-					_ASSERTE (stack < DG_STACK_DEPTH);
+					_DG_ASSERTE (stack < DG_STACK_DEPTH);
 					stackPool[stack] = me->m_back.GetNode(this);
 					stack++;
 				}
@@ -1079,7 +1079,7 @@ class dgAABBTree
 //						index = firstBox[i].m_back.GetIndex();
 //						vCount = (firstBox[i].m_back.GetCount() >> 1) - 1;
 //						param = callback(context, vertexArray, sizeof (dgTriplex), &indexArray[index + 1], vCount);
-//						_ASSERTE (param >= dgFloat32 (0.0f));
+//						_DG_ASSERTE (param >= dgFloat32 (0.0f));
 //						if (param < maxParam) {
 //							maxParam = param;
 //							ray.Reset (maxParam);
@@ -1090,7 +1090,7 @@ class dgAABBTree
 					if (vCount > 0) {
 						dgInt32 index = dgInt32 (me->m_front.GetIndex());
 						dgFloat32 param = callback(context, vertexArray, sizeof (dgTriplex), &indexArray[index + 1], vCount);
-						_ASSERTE (param >= dgFloat32 (0.0f));
+						_DG_ASSERTE (param >= dgFloat32 (0.0f));
 						if (param < maxParam) {
 							maxParam = param;
 							ray.Reset (maxParam);
@@ -1099,7 +1099,7 @@ class dgAABBTree
 
 
 				} else {
-					_ASSERTE (stack < DG_STACK_DEPTH);
+					_DG_ASSERTE (stack < DG_STACK_DEPTH);
 					stackPool[stack] = me->m_front.GetNode(this);
 					stack ++;
 				}
@@ -1126,7 +1126,7 @@ class dgAABBTree
 					if (vCount > 0) {
 						dgInt32 index = dgInt32 (me->m_back.GetIndex());
 						dgFloat32 param = callback(context, vertexArray, sizeof (dgTriplex), &indexArray[index + 1], vCount);
-						_ASSERTE (param >= dgFloat32 (0.0f));
+						_DG_ASSERTE (param >= dgFloat32 (0.0f));
 						if (param < maxParam) {
 							maxParam = param;
 							ray.Reset (maxParam) ;
@@ -1134,7 +1134,7 @@ class dgAABBTree
 					}
 
 				} else {
-					_ASSERTE (stack < DG_STACK_DEPTH);
+					_DG_ASSERTE (stack < DG_STACK_DEPTH);
 					stackPool[stack] = me->m_back.GetNode(this);
 					stack++;
 				}
@@ -1144,7 +1144,7 @@ class dgAABBTree
 					if (vCount > 0) {
 						dgInt32 index = dgInt32 (me->m_front.GetIndex());
 						dgFloat32 param = callback(context, vertexArray, sizeof (dgTriplex), &indexArray[index + 1], vCount);
-						_ASSERTE (param >= dgFloat32 (0.0f));
+						_DG_ASSERTE (param >= dgFloat32 (0.0f));
 						if (param < maxParam) {
 							maxParam = param;
 							ray.Reset (maxParam);
@@ -1152,7 +1152,7 @@ class dgAABBTree
 					}
 
 				} else {
-					_ASSERTE (stack < DG_STACK_DEPTH);
+					_DG_ASSERTE (stack < DG_STACK_DEPTH);
 					stackPool[stack] = me->m_front.GetNode(this);
 					stack ++;
 				}
@@ -1673,7 +1673,7 @@ dgFloat32 dgAABBPolygonSoup::CalculateFaceMaxSize (dgTriplex* const vertex, dgIn
 
 void dgAABBPolygonSoup::Create (const dgPolygonSoupDatabaseBuilder& builder, bool optimizedBuild)
 {
-//	_ASSERTE (builder.m_faceCount >= 1);
+//	_DG_ASSERTE (builder.m_faceCount >= 1);
 	if (builder.m_faceCount == 0) {
 		return;
 	}

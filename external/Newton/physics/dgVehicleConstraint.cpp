@@ -58,7 +58,7 @@ class dgTireCollision: public dgCollisionChamferCylinder
 	dgTireCollision (dgWorld* world, dgVehicleConstraint::dgTire* tire, const dgMatrix& matrix, const dgVector& updir)
 		:dgCollisionChamferCylinder(0, dgFloat32 (1.0f), dgFloat32 (1.0f), matrix)
 	{
-		_ASSERTE (0);
+		_DG_ASSERTE (0);
 /*
 //		SetAsTire(true);
 		m_tire = tire;
@@ -95,7 +95,7 @@ class dgTireCollision: public dgCollisionChamferCylinder
 
 	void SelectContacts (const dgMatrix &matrix, const dgVector& updir, TiresContacts* contacts, dgInt32 count)
 	{
-		_ASSERTE (0);
+		_DG_ASSERTE (0);
 /*
 		dgInt32 i;
 		dgInt32 j;
@@ -166,7 +166,7 @@ class dgTireCollision: public dgCollisionChamferCylinder
 			}
 			contact[i]->RotateToEnd (array[i]);
 			contact[i]->m_activeContacts --; 
-			_ASSERTE (contact[i]->m_activeContacts >= 0);
+			_DG_ASSERTE (contact[i]->m_activeContacts >= 0);
 		}
 
 
@@ -185,7 +185,7 @@ class dgTireCollision: public dgCollisionChamferCylinder
 			m_activeContactsContacts[i].m_dynamicFriction1 = material.m_dynamicFriction1;
 		}
 		m_activeContactsCount = m_masterContactCount;
-		_ASSERTE (m_activeContactsCount <= DG_MAX_CONTACTS_PER_TIRES);
+		_DG_ASSERTE (m_activeContactsCount <= DG_MAX_CONTACTS_PER_TIRES);
 */
 	}
 
@@ -206,7 +206,7 @@ class dgTireCollision: public dgCollisionChamferCylinder
 
 	dgVector SupportVertexSimd (const dgVector& dir) const
 	{
-		_ASSERTE (0);
+		_DG_ASSERTE (0);
 		return dgVector (dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f));
 	}
 
@@ -232,7 +232,7 @@ class dgTireCollision: public dgCollisionChamferCylinder
 		const dgVector& origin, 
 		dgVector contactsOut[]) const
 	{
-		_ASSERTE (0);
+		_DG_ASSERTE (0);
 		return 0; 
 	}
 
@@ -243,7 +243,7 @@ class dgTireCollision: public dgCollisionChamferCylinder
 		mat.m_front = mat.m_front.Scale (m_scale.m_x);
 		mat.m_up = mat.m_up.Scale (m_scale.m_y);
 		mat.m_right = mat.m_right.Scale (m_scale.m_z);
-		_ASSERTE (0);
+		_DG_ASSERTE (0);
 		dgCollisionChamferCylinder::CalcAABB (mat, p0, p1);
 	}
 
@@ -258,7 +258,7 @@ class dgTireCollision: public dgCollisionChamferCylinder
 
 	void DebugCollision (const dgMatrix& matrixPtr, OnDebugCollisionMeshCallback callback, void* const userData) const
 	{
-		_ASSERTE (0);
+		_DG_ASSERTE (0);
 		dgMatrix saveMatrix (m_offset);
 		dgMatrix& mat = ((dgTireCollision*) this)->m_offset;  
 		mat.m_front = mat.m_front.Scale (m_scale.m_x);
@@ -400,9 +400,9 @@ class dgVehicleForceMiniSolver
 				akDen += m_deltaAccel[j] * m_deltaForce[j];
 			}
 
-			_ASSERTE (akDen >= dgFloat32 (0.0f));
+			_DG_ASSERTE (akDen >= dgFloat32 (0.0f));
 			akDen = GetMax (akDen, dgFloat32 (1.0e-16f));
-			_ASSERTE (dgAbsf (akDen) >= dgFloat32 (1.0e-16f));
+			_DG_ASSERTE (dgAbsf (akDen) >= dgFloat32 (1.0e-16f));
 
 			ak = akNum / akDen;
 
@@ -411,12 +411,12 @@ class dgVehicleForceMiniSolver
 				if (m_activeRow[j]) {
 					force = m_force[j] + ak * m_deltaForce[j];
 					if (force < m_bilateralForceBounds[j].m_low) {
-						_ASSERTE (((m_bilateralForceBounds[j].m_low - m_force[j]) / m_deltaForce[j]) <= ak);
+						_DG_ASSERTE (((m_bilateralForceBounds[j].m_low - m_force[j]) / m_deltaForce[j]) <= ak);
 						ak = (m_bilateralForceBounds[j].m_low - m_force[j]) / m_deltaForce[j];
 						clampedForce = j;
 						clipVal = m_bilateralForceBounds[j].m_low;
 					} else if (force > m_bilateralForceBounds[j].m_upper) {
-						_ASSERTE (((m_bilateralForceBounds[j].m_upper - m_force[j]) / m_deltaForce[j]) <= ak);
+						_DG_ASSERTE (((m_bilateralForceBounds[j].m_upper - m_force[j]) / m_deltaForce[j]) <= ak);
 						ak = (m_bilateralForceBounds[j].m_upper - m_force[j]) / m_deltaForce[j];
 						clampedForce = j;
 						clipVal = m_bilateralForceBounds[j].m_upper;
@@ -434,8 +434,8 @@ class dgVehicleForceMiniSolver
 					m_accel[j] -= ak * m_deltaAccel[j];
 
 #ifdef _MSC_VER
-					_ASSERTE (dgCheckFloat(m_force[j]));
-					_ASSERTE (dgCheckFloat(m_accel[j]));
+					_DG_ASSERTE (dgCheckFloat(m_force[j]));
+					_DG_ASSERTE (dgCheckFloat(m_accel[j]));
 #endif
 
 					val = m_accel[j] * m_invDJMinvJt[j] * m_activeRow[j];
@@ -454,8 +454,8 @@ class dgVehicleForceMiniSolver
 					accNorm = GetMax (dgAbsf (m_accel[j] * m_activeRow[j]), accNorm);
 
 #ifdef _MSC_VER
-					_ASSERTE (dgCheckFloat(m_force[j]));
-					_ASSERTE (dgCheckFloat(m_accel[j]));
+					_DG_ASSERTE (dgCheckFloat(m_force[j]));
+					_DG_ASSERTE (dgCheckFloat(m_accel[j]));
 #endif
 				}
 
@@ -469,7 +469,7 @@ class dgVehicleForceMiniSolver
 						akNum += m_accel[j] * val;
 					}
 
-					_ASSERTE (bk >= dgFloat32 (0.0f));
+					_DG_ASSERTE (bk >= dgFloat32 (0.0f));
 					bk = GetMax (bk, dgFloat32(1.0e-17f));
 					bk = akNum / bk;
 					for (j = 0; j < forceRows; j ++) {
@@ -610,9 +610,9 @@ class dgVehicleForceMiniSolver
 				akDen += m_deltaAccel[j] * m_deltaForce[j];
 			}
 
-			_ASSERTE (akDen >= dgFloat32 (0.0f));
+			_DG_ASSERTE (akDen >= dgFloat32 (0.0f));
 			akDen = GetMax (akDen, dgFloat32 (1.0e-16f));
-			_ASSERTE (dgAbsf (akDen) >= dgFloat32 (1.0e-16f));
+			_DG_ASSERTE (dgAbsf (akDen) >= dgFloat32 (1.0e-16f));
 
 			ak = akNum / akDen;
 
@@ -621,12 +621,12 @@ class dgVehicleForceMiniSolver
 				if (m_activeRow[j]) {
 					force = m_force[j] + ak * m_deltaForce[j];
 					if (force < m_bilateralForceBounds[j].m_low) {
-						_ASSERTE (((m_bilateralForceBounds[j].m_low - m_force[j]) / m_deltaForce[j]) <= ak);
+						_DG_ASSERTE (((m_bilateralForceBounds[j].m_low - m_force[j]) / m_deltaForce[j]) <= ak);
 						ak = (m_bilateralForceBounds[j].m_low - m_force[j]) / m_deltaForce[j];
 						clampedForce = j;
 						clipVal = m_bilateralForceBounds[j].m_low;
 					} else if (force > m_bilateralForceBounds[j].m_upper) {
-						_ASSERTE (((m_bilateralForceBounds[j].m_upper - m_force[j]) / m_deltaForce[j]) <= ak);
+						_DG_ASSERTE (((m_bilateralForceBounds[j].m_upper - m_force[j]) / m_deltaForce[j]) <= ak);
 						ak = (m_bilateralForceBounds[j].m_upper - m_force[j]) / m_deltaForce[j];
 						clampedForce = j;
 						clipVal = m_bilateralForceBounds[j].m_upper;
@@ -644,8 +644,8 @@ class dgVehicleForceMiniSolver
 					m_accel[j] -= ak * m_deltaAccel[j];
 
 #ifdef _MSC_VER
-					_ASSERTE (dgCheckFloat(m_force[j]));
-					_ASSERTE (dgCheckFloat(m_accel[j]));
+					_DG_ASSERTE (dgCheckFloat(m_force[j]));
+					_DG_ASSERTE (dgCheckFloat(m_accel[j]));
 #endif
 
 					val = m_accel[j] * m_invDJMinvJt[j] * m_activeRow[j];
@@ -664,8 +664,8 @@ class dgVehicleForceMiniSolver
 					accNorm = GetMax (dgAbsf (m_accel[j] * m_activeRow[j]), accNorm);
 
 #ifdef _MSC_VER
-					_ASSERTE (dgCheckFloat(m_force[j]));
-					_ASSERTE (dgCheckFloat(m_accel[j]));
+					_DG_ASSERTE (dgCheckFloat(m_force[j]));
+					_DG_ASSERTE (dgCheckFloat(m_accel[j]));
 #endif
 				}
 
@@ -679,7 +679,7 @@ class dgVehicleForceMiniSolver
 						akNum += m_accel[j] * val;
 					}
 
-					_ASSERTE (bk >= dgFloat32 (0.0f));
+					_DG_ASSERTE (bk >= dgFloat32 (0.0f));
 					bk = GetMax (bk, dgFloat32(1.0e-17f));
 					bk = akNum / bk;
 					for (j = 0; j < forceRows; j ++) {
@@ -829,7 +829,7 @@ dgVehicleList::dgVehicleList()
 
 dgVehicleList::~dgVehicleList()
 {
-	_ASSERTE (GetCount() == 0);
+	_DG_ASSERTE (GetCount() == 0);
 }
 
 
@@ -844,7 +844,7 @@ dgVehicleList::~dgVehicleList()
 dgVehicleConstraint::dgVehicleConstraint(dgWorld* world)
 	:dgConstraint(), m_wheels() 
 {
-	_ASSERTE ((sizeof (dgVehicleConstraint) & 15) == 0);
+	_DG_ASSERTE ((sizeof (dgVehicleConstraint) & 15) == 0);
 
 
 //	dgVehicleConstraint* constraint;
@@ -853,7 +853,7 @@ dgVehicleConstraint::dgVehicleConstraint(dgWorld* world)
 
 //	constraint = array.GetElement();
 
-	_ASSERTE ((sizeof(dgVehicleConstraint) & 15) == 0);
+	_DG_ASSERTE ((sizeof(dgVehicleConstraint) & 15) == 0);
 	//	constraint->Init ();
 	
 	m_maxDOF = 0;
@@ -870,7 +870,7 @@ dgVehicleConstraint::dgVehicleConstraint(dgWorld* world)
 
 dgVehicleConstraint::~dgVehicleConstraint()
 {
-	_ASSERTE (0);
+	_DG_ASSERTE (0);
 /*
 	dgVehicleConstraintArray& array = *m_world;
 
@@ -906,7 +906,7 @@ dgVehicleConstraint* dgVehicleConstraint::Create(dgWorld* world)
 	dgVehicleConstraintArray& array = *world;
 	constraint = array.GetElement();
 
-	_ASSERTE ((sizeof(dgVehicleConstraint) & 15) == 0);
+	_DG_ASSERTE ((sizeof(dgVehicleConstraint) & 15) == 0);
 //	constraint->Init ();
 	constraint->m_maxDOF = 0;
 	constraint->m_updateLRU = 0;
@@ -1007,9 +1007,9 @@ void dgVehicleCache::UpdateVehicleContacts ()
 	dgBodyMasterListRow::dgListNode* link; 
 
 	while (GetRoot()) {
-		_ASSERTE (0);
+		_DG_ASSERTE (0);
 		body = GetRoot()->GetInfo();
-		_ASSERTE (body->m_masterNode->GetInfo().GetBody() == body);
+		_DG_ASSERTE (body->m_masterNode->GetInfo().GetBody() == body);
 
 //		for (link = body->m_firstConstraintLink; link->m_constraint->GetId() != dgVehicleContraintId; link = link->m_twin->m_next){}
 		for (link = body->m_masterNode->GetInfo().GetFirst(); link->GetInfo().m_joint->GetId(); link = link->GetNext()) {}
@@ -1025,7 +1025,7 @@ void dgVehicleCache::UpdateVehicleContacts ()
 
 void dgVehicleConstraint::InitVehicle(const dgVector& upDir)
 {
-	_ASSERTE (0);
+	_DG_ASSERTE (0);
 /*
 	dgInt32 i;
 	dgInt32 collisionCounts;
@@ -1098,7 +1098,7 @@ void dgVehicleConstraint::GetTireMatrix (void* index, dgMatrix& matrix) const
 
 void dgVehicleConstraint::AddContacts()
 {
-_ASSERTE (0);
+_DG_ASSERTE (0);
 /*
 	dgInt32 i;
 	dgInt32 count;
@@ -1116,7 +1116,7 @@ _ASSERTE (0);
 	count = 0;
 	link = m_body0->m_firstConstraintLink;
 	do {
-		_ASSERTE (link->m_body == m_body0);
+		_DG_ASSERTE (link->m_body == m_body0);
 		if (link->m_constraint->GetId() == dgContactConstraintId) {
 			contact = (dgContact*)link->m_constraint;
 			activeContacts = contact->m_activeContacts;
@@ -1127,7 +1127,7 @@ _ASSERTE (0);
 				body1 = contactPoint.m_body1;
 				collision = contactPoint.m_collision0;
 				if (body0 != m_body0) {
-					_ASSERTE (m_body0 == contactPoint.m_body1);
+					_DG_ASSERTE (m_body0 == contactPoint.m_body1);
 					collision = contactPoint.m_collision1;
 					Swap (body0, body1);
 				}
@@ -1200,7 +1200,7 @@ void* dgVehicleConstraint::AddTire (
 
 	dgTire& tire = wheel->GetInfo();
 
-	_ASSERTE ((((dgUnsigned64)&tire.m_localMatrix) & 15) == 0);
+	_DG_ASSERTE ((((dgUnsigned64)&tire.m_localMatrix) & 15) == 0);
 
 	memset (&tire, 0, sizeof (dgTire));
 	tire.m_vehicle = this;
@@ -1269,7 +1269,7 @@ void dgVehicleConstraint::RemoveTire (void* index)
 
 void dgVehicleForceMiniSolver::CalculateConstraintForces (dgVehicleConstraint& vehicle, dgFloat32 timestep)
 {
-_ASSERTE (0);
+_DG_ASSERTE (0);
 /*
 	dgInt32 i;
 	dgInt32 j;
@@ -1405,7 +1405,7 @@ _ASSERTE (0);
 		tire.m_lostSideGrip = false;
 		tire.m_lostTraction = false;
 		collision = tire.m_collision;
-		_ASSERTE (collision->m_activeContactsCount <= collision->m_masterContactCount);
+		_DG_ASSERTE (collision->m_activeContactsCount <= collision->m_masterContactCount);
 		for (k = 0; k < collision->m_activeContactsCount; k ++) {
 			dgVector p0 (matrix.TransformVector (tire.m_localMatrix.m_posit + localUpDir.Scale (tire.m_parametricPosit)));
 			penetration = GetMin (collision->m_activeContactsContacts[k].m_penetration, dgFloat32 (0.1f));
@@ -1614,8 +1614,8 @@ _ASSERTE (0);
 		accel = dgFloat32 (0.0f);
 
 		j = m_jacobianIndexArray[i].m_m0;
-		_ASSERTE (j < m_bodies); 
-		_ASSERTE ((j == 0) || (j == 1) || (j >= m_vehicleBodiesCount)); 
+		_DG_ASSERTE (j < m_bodies); 
+		_DG_ASSERTE ((j == 0) || (j == 1) || (j >= m_vehicleBodiesCount)); 
 //		body = m_bodyArray[j];
 //		invMass = body->m_invMass[3];
 //		dgMatrix* invInertia0;
@@ -1649,8 +1649,8 @@ _ASSERTE (0);
 		m_force[i] = dgFloat32 (0.0f);
 		m_accel[i] -= accel;
 
-		_ASSERTE (m_diagDamp[i] >= dgFloat32 (0.0f));
-		//		_ASSERTE (m_diagDamp[i] <= dgFloat32 (1.0f));
+		_DG_ASSERTE (m_diagDamp[i] >= dgFloat32 (0.0f));
+		//		_DG_ASSERTE (m_diagDamp[i] <= dgFloat32 (1.0f));
 		slip = DG_VEHICLE_DIAG_DAMP + m_diagDamp[i];
 		m_diagDamp[i] = diag * slip;
 		diag *= (dgFloat32 (1.0f) + slip);
@@ -1680,7 +1680,7 @@ _ASSERTE (0);
 		force = m_force[i]; 
 
 #ifdef _MSC_VER
-		_ASSERTE (dgCheckFloat(force));
+		_DG_ASSERTE (dgCheckFloat(force));
 #endif
 
 		j = m_jacobianIndexArray[i].m_m0;
@@ -1698,7 +1698,7 @@ _ASSERTE (0);
 		if (body2 == body) {
 //			tire.m_tireNormalLoad___ -= forceComponent % upDir;
 			tire.m_tireNormalLoad -= forceComponent;
-//			_ASSERTE (dgAbsf (tire.m_tireNormalLoad___ - (tire.m_tireNormalLoad_ % upDir)) < 0.1f);
+//			_DG_ASSERTE (dgAbsf (tire.m_tireNormalLoad___ - (tire.m_tireNormalLoad_ % upDir)) < 0.1f);
 		}
 	}
 
@@ -1744,7 +1744,7 @@ _ASSERTE (0);
 
 dgUnsigned32 dgVehicleConstraint::JacobianDerivative (dgContraintDescritor& params)
 {
-	_ASSERTE (0);
+	_DG_ASSERTE (0);
 /*
 	bool isFloating;
 	dgInt32 j;

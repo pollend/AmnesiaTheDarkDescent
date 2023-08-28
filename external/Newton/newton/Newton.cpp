@@ -29,7 +29,7 @@
 #endif
 
 
-#ifdef _DEBUG
+#ifdef _DG_DEBUG
 void TraceFuntionName (const char *name)
 {
 //	static int trace;
@@ -705,7 +705,7 @@ void NewtonUpdate(const NewtonWorld* newtonWorld, dFloat timestep)
 		__try {
 			world->UpdatePhysics (time);
 		} __except (ExecptionHandler (_exception_info ())){
-			_ASSERTE (0);
+			_DG_ASSERTE (0);
 //				world->UpdatePhysics (time);
 		}
 #else
@@ -768,7 +768,7 @@ void NewtonSetMinimumFrameRate(const NewtonWorld* newtonWorld, dFloat frameRate)
 	world = (Newton *) newtonWorld;
 
 	TRACE_FUNTION(__FUNCTION__);
-	_ASSERTE (dgFloat32(1.0f) / dgFloat32 (MAX_TIMESTEP) < dgFloat32(1.0f) / dgFloat32 (MIN_TIMESTEP));
+	_DG_ASSERTE (dgFloat32(1.0f) / dgFloat32 (MAX_TIMESTEP) < dgFloat32(1.0f) / dgFloat32 (MIN_TIMESTEP));
 	frameRate = ClampValue (frameRate, dgFloat32(1.0f) / dgFloat32 (MAX_TIMESTEP), dgFloat32(1.0f) / dgFloat32 (MIN_TIMESTEP));  
 	world->g_maxTimeStep = dgFloat32(1.0f) / frameRate;
 }
@@ -965,7 +965,7 @@ NewtonBody* NewtonWorldGetFirstBody(const NewtonWorld* newtonWorld)
 	dgBodyMasterList &masterList = *world;
 
 	TRACE_FUNTION(__FUNCTION__);
-	_ASSERTE (masterList.GetFirst()->GetInfo().GetBody() == world->GetSentinelBody());
+	_DG_ASSERTE (masterList.GetFirst()->GetInfo().GetBody() == world->GetSentinelBody());
 	node = masterList.GetFirst()->GetNext();
 //		body = node->GetInfo().GetBody();
 //		node = node->GetNext();
@@ -1214,7 +1214,7 @@ int NewtonWorldGetBodyCount(const NewtonWorld* newtonWorld)
 	world = (Newton *) newtonWorld;
 //	dgBodyMasterList &masterList = *world;
 	
-//	_ASSERTE (masterList.GetFirst()->GetInfo().GetBody() == world->GetSentinelBody());
+//	_DG_ASSERTE (masterList.GetFirst()->GetInfo().GetBody() == world->GetSentinelBody());
 //	return masterList.GetCount() - 1;
 	return world->GetBodiesCount();
 }
@@ -1472,7 +1472,7 @@ void NewtonMaterialDestroyAllGroupID(const NewtonWorld* newtonWorld)
 {
 	Newton* world;
 
-//	_ASSERTE (0);
+//	_DG_ASSERTE (0);
 	world = (Newton *)newtonWorld;
 
 	TRACE_FUNTION(__FUNCTION__);
@@ -1483,13 +1483,13 @@ void NewtonMaterialDestroyAllGroupID(const NewtonWorld* newtonWorld)
 
 //int NewtonGetActiveBodiesCount()
 //{
-//	_ASSERTE (0);
+//	_DG_ASSERTE (0);
 //	return 0;
 //}
 
 //int NewtonGetActiveConstraintsCount()
 //{
-//	_ASSERTE (0);
+//	_DG_ASSERTE (0);
 //	return 0;
 //}
 
@@ -1959,7 +1959,7 @@ dFloat NewtonMaterialGetCurrentTimestep(const NewtonMaterial* materialHandle)
 	material = (dgContactMaterial*) materialHandle;
 //	return material->m_currTimestep;
 
-	_ASSERTE (material->m_body0);
+	_DG_ASSERTE (material->m_body0);
 	return material->m_body0->GetWorld()->GetTimeStep();
 }
 */
@@ -1984,7 +1984,7 @@ dFloat NewtonMaterialGetContactNormalSpeed(const NewtonMaterial* materialHandle)
 //	dgContact* contact;
 	dgContactMaterial* material;
 
-//	_ASSERTE (0);
+//	_DG_ASSERTE (0);
 
 	TRACE_FUNTION(__FUNCTION__);
 	material = (dgContactMaterial*) materialHandle;
@@ -2025,7 +2025,7 @@ dFloat NewtonMaterialGetContactTangentSpeed(const NewtonMaterial* materialHandle
 	dgVector dir;
 	dgContactMaterial* material;
 
-//	_ASSERTE (0);
+//	_DG_ASSERTE (0);
 
 	TRACE_FUNTION(__FUNCTION__);
 	material = (dgContactMaterial*) materialHandle;
@@ -2400,7 +2400,7 @@ void NewtonMaterialSetContactNormalDirection(const NewtonMaterial* materialHandl
 	dgVector normal (direction[0], direction[1], direction[2], dgFloat32 (0.0f));
 
 
-	_ASSERTE ((dgAbsf (normal % material->m_normal) - dgFloat32(1.0f)) <dgFloat32 (0.01f));
+	_DG_ASSERTE ((dgAbsf (normal % material->m_normal) - dgFloat32(1.0f)) <dgFloat32 (0.01f));
 	if ((normal % material->m_normal) < dgFloat32 (0.0f)) {
 		normal = normal.Scale (-dgFloat32(1.0f));
 	}
@@ -3658,7 +3658,7 @@ void NewtonTreeCollisionBeginBuild(const NewtonCollision* treeCollision)
 
 	TRACE_FUNTION(__FUNCTION__);
 	collision = (dgCollisionBVH*) treeCollision;
-	_ASSERTE (collision->IsType (dgCollision::dgCollisionBVH_RTTI));
+	_DG_ASSERTE (collision->IsType (dgCollision::dgCollisionBVH_RTTI));
 
 	collision->BeginBuild();
 }
@@ -3691,7 +3691,7 @@ void NewtonTreeCollisionAddFace(
 
 	TRACE_FUNTION(__FUNCTION__);
 	collision = (dgCollisionBVH*) treeCollision;
-	_ASSERTE (collision->IsType (dgCollision::dgCollisionBVH_RTTI));
+	_DG_ASSERTE (collision->IsType (dgCollision::dgCollisionBVH_RTTI));
 	collision->AddFace(vertexCount, vertexPtr, strideInBytes, faceAttribute);
 }
 
@@ -3719,7 +3719,7 @@ void NewtonTreeCollisionEndBuild(const NewtonCollision* treeCollision, int optim
 
 	TRACE_FUNTION(__FUNCTION__);
 	collision = (dgCollisionBVH*) treeCollision;
-	_ASSERTE (collision->IsType (dgCollision::dgCollisionBVH_RTTI));
+	_DG_ASSERTE (collision->IsType (dgCollision::dgCollisionBVH_RTTI));
 	collision->EndBuild(optimize);
 }
 
@@ -3744,7 +3744,7 @@ int NewtonTreeCollisionGetFaceAtribute(const NewtonCollision* treeCollision, con
 
 	TRACE_FUNTION(__FUNCTION__);
 	collision = (dgCollisionBVH*) treeCollision;
-	_ASSERTE (collision->IsType (dgCollision::dgCollisionBVH_RTTI));
+	_DG_ASSERTE (collision->IsType (dgCollision::dgCollisionBVH_RTTI));
 
 	return int (collision->GetTagId (faceIndexArray));
 }
@@ -3772,7 +3772,7 @@ void NewtonTreeCollisionSetFaceAtribute(const NewtonCollision* treeCollision, co
 
 	TRACE_FUNTION(__FUNCTION__);
 	collision = (dgCollisionBVH*) treeCollision;
-	_ASSERTE (collision->IsType (dgCollision::dgCollisionBVH_RTTI));
+	_DG_ASSERTE (collision->IsType (dgCollision::dgCollisionBVH_RTTI));
 
 	collision->SetTagId (faceIndexArray, dgUnsigned32 (attribute));
 }
@@ -3915,7 +3915,7 @@ NewtonSceneProxy* NewtonSceneCollisionCreateProxy (NewtonCollision* const scene,
 	matrix.m_posit.m_w = dgFloat32 (1.0f);*/
 
 	dgCollisionScene* const newtonScene = (dgCollisionScene*) scene;
-	_ASSERTE (newtonScene->IsType(dgCollision::dgCollisionScene_RTTI));
+	_DG_ASSERTE (newtonScene->IsType(dgCollision::dgCollisionScene_RTTI));
 	return (NewtonSceneProxy*) newtonScene->AddProxy ((dgCollision*) collision/*, matrix*/);
 }
 
@@ -3923,7 +3923,7 @@ NewtonSceneProxy* NewtonSceneCollisionCreateProxy (NewtonCollision* const scene,
 void NewtonSceneCollisionDestroyProxy (NewtonCollision* const scene, NewtonSceneProxy* const proxy)
 {
 	dgCollisionScene* const newtonScene = (dgCollisionScene*) scene;
-	_ASSERTE (newtonScene->IsType(dgCollision::dgCollisionScene_RTTI));
+	_DG_ASSERTE (newtonScene->IsType(dgCollision::dgCollisionScene_RTTI));
 	newtonScene->RemoveProxy (proxy);
 }
 
@@ -3962,7 +3962,7 @@ void* NewtonSceneGetNextProxy (NewtonCollision* const scene, void* const proxy)
 void NewtonSceneCollisionOptimize (NewtonCollision* const scene)
 {
 	dgCollisionScene* const newtonScene = (dgCollisionScene*) scene;
-	_ASSERTE (newtonScene->IsType(dgCollision::dgCollisionScene_RTTI));
+	_DG_ASSERTE (newtonScene->IsType(dgCollision::dgCollisionScene_RTTI));
 	newtonScene->ImproveTotalFitness();
 }
 
@@ -4147,7 +4147,7 @@ int NewtonCollisionCollideContinue(const NewtonWorld* newtonWorld, int maxSize, 
 //	return world->Collide ((dgCollision*)collisionA, *((dgMatrix*) matrixA), 
 //		(dgCollision*)collisionB, *((dgMatrix*) matrixB), 
 //		(dgTriplex*) contacts, (dgTriplex*) normals, penetration, maxSize);
-//	_ASSERTE (0);
+//	_DG_ASSERTE (0);
 	Newton* world;
 	world = (Newton *)newtonWorld;
 
@@ -4181,7 +4181,7 @@ void NewtonCollisionSupportVertex(const NewtonCollision* collisionPtr, const dFl
 	TRACE_FUNTION(__FUNCTION__);
 
 	collision = (dgCollisionConvex*) collisionPtr;
-//	_ASSERTE (collision->IsType (dgCollision::dgConvexCollision_RTTI));
+//	_DG_ASSERTE (collision->IsType (dgCollision::dgConvexCollision_RTTI));
 
 	const dgMatrix& matrix = collision->GetOffsetMatrix ();
 	dgVector searchDir (matrix.UnrotateVector(dgVector (dir[0], dir[1], dir[2], dgFloat32 (0.0f)))); 
@@ -4505,7 +4505,7 @@ void NewtonCollisionGetInfo(const NewtonCollision* collision, NewtonCollisionInf
 
 	TRACE_FUNTION(__FUNCTION__);
 
-	_ASSERTE (sizeof (dgCollisionInfo) <= sizeof (NewtonCollisionInfoRecord));
+	_DG_ASSERTE (sizeof (dgCollisionInfo) <= sizeof (NewtonCollisionInfoRecord));
 	coll->GetCollisionInfo ((dgCollisionInfo*) collisionInfo);
 }
 
@@ -4606,7 +4606,7 @@ dFloat NewtonCalculateSpringDamperAcceleration(dFloat dt, dFloat ks, dFloat x, d
 	dgFloat32 ksd = dt * ks;
 	dgFloat32 num = ks * x + kd * s + ksd * s;
 	dgFloat32 den = dgFloat32 (1.0f) + dt * kd + dt * ksd;
-	_ASSERTE (den > 0.0f);
+	_DG_ASSERTE (den > 0.0f);
 	accel = - num / den;
 //	dgCheckFloat (accel);
 	return accel;
@@ -4649,7 +4649,7 @@ NewtonBody* NewtonCreateBody(const NewtonWorld* const newtonWorld, const NewtonC
 
 	/*
 	dgMatrix matrix (*((dgMatrix*) matrixPtr));
-#ifdef _DEBUG
+#ifdef _DG_DEBUG
 	//	matrix.m_front = matrix.m_front.Scale (dgRsqrt (matrix.m_front % matrix.m_front));
 	//	matrix.m_right = matrix.m_front * matrix.m_up;
 	//	matrix.m_right = matrix.m_right.Scale (dgRsqrt (matrix.m_right % matrix.m_right));
@@ -5030,7 +5030,7 @@ void NewtonBodySetMatrix(const NewtonBody* bodyPtr, const dFloat* matrixPtr)
 
 	TRACE_FUNTION(__FUNCTION__);
 
-#ifdef _DEBUG
+#ifdef _DG_DEBUG
 //	matrix.m_front = matrix.m_front.Scale (dgRsqrt (matrix.m_front % matrix.m_front));
 //	matrix.m_right = matrix.m_front * matrix.m_up;
 //	matrix.m_right = matrix.m_right.Scale (dgRsqrt (matrix.m_right % matrix.m_right));
@@ -6458,7 +6458,7 @@ void NewtonBallSetConeLimits(const NewtonJoint* ball, const dFloat* pin, dFloat 
 		tmp = dgVector (dgFloat32 (0.0f), dgFloat32(1.0f), dgFloat32 (0.0f), dgFloat32 (0.0f)); 
 		if (dgAbsf (tmp % coneAxis) > dgFloat32 (0.999f)) {
 			tmp = dgVector (dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32(1.0f), dgFloat32 (0.0f)); 
-			_ASSERTE (dgAbsf (tmp % coneAxis) < dgFloat32 (0.999f));
+			_DG_ASSERTE (dgAbsf (tmp % coneAxis) < dgFloat32 (0.999f));
 		}
 	}
 	dgVector lateral (tmp * coneAxis); 
@@ -7495,7 +7495,7 @@ void NewtonUserJointAddLinearRow(const NewtonJoint* joint, const dFloat *pivot0,
 	TRACE_FUNTION(__FUNCTION__);
 	dgVector direction (dir[0], dir[1], dir[2], dgFloat32 (0.0f)); 
 	direction = direction.Scale (dgRsqrt (direction % direction));
-	_ASSERTE (dgAbsf (direction % direction - dgFloat32 (1.0f)) < dgFloat32 (1.0e-2f));
+	_DG_ASSERTE (dgAbsf (direction % direction - dgFloat32 (1.0f)) < dgFloat32 (1.0e-2f));
 	dgVector pivotPoint0 (pivot0[0], pivot0[1], pivot0[2], dgFloat32 (0.0f)); 
 	dgVector pivotPoint1 (pivot1[0], pivot1[1], pivot1[2], dgFloat32 (0.0f)); 
 	
@@ -7532,7 +7532,7 @@ void NewtonUserJointAddAngularRow(const NewtonJoint* joint, dFloat relativeAngle
 	userJoint = (NewtonUserJoint*) joint;
 	dgVector direction (pin[0], pin[1], pin[2], dgFloat32 (0.0f));
 	direction = direction.Scale (dgRsqrt (direction % direction));
-	_ASSERTE (dgAbsf (direction % direction - dgFloat32 (1.0f)) < dgFloat32 (1.0e-3f));
+	_DG_ASSERTE (dgAbsf (direction % direction - dgFloat32 (1.0f)) < dgFloat32 (1.0e-3f));
 
 	userJoint->AddAngularRowJacobian (direction, relativeAngleError);
 }
@@ -8526,7 +8526,7 @@ NewtonMesh* NewtonMeshCreateNextSingleSegment (const NewtonMesh* const mesh, con
 
 	TRACE_FUNTION(__FUNCTION__);
 
-	_ASSERTE (segment);
+	_DG_ASSERTE (segment);
 	moreSegments = effectMesh->GetConectedSurface (nextSegment);
 	if (moreSegments) {
 		solid = new (effectMesh->GetAllocator()) dgMeshEffect(nextSegment, *effectMesh);

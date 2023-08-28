@@ -50,7 +50,7 @@ class dgPolySoupFilterAllocator: public dgPolyhedra
 		bool reduction;
 
 		BeginFace();
-		_ASSERTE (count);
+		_DG_ASSERTE (count);
 		reduction = true;
 		while (reduction && !AddFace (dgInt32 (count), pool)) {
 			reduction = false;
@@ -72,7 +72,7 @@ class dgPolySoupFilterAllocator: public dgPolyhedra
 		}
 		EndFace();
 
-		_ASSERTE (reduction);
+		_DG_ASSERTE (reduction);
 		return reduction ? dgInt32 (count) : 0;
 	}
 };
@@ -232,7 +232,7 @@ void dgPolygonSoupDatabaseBuilder::OptimizeByGroupID()
 					break;
 				}
 			}
-			_ASSERTE (builderLeftOver.m_faceCount == 0);
+			_DG_ASSERTE (builderLeftOver.m_faceCount == 0);
 		}
 		polygonIndex += m_faceVertexCount[i];
 	}
@@ -272,7 +272,7 @@ void dgPolygonSoupDatabaseBuilder::OptimizeByGroupID (dgPolygonSoupDatabaseBuild
 	for (dgInt32 i = faceNumber; i < source.m_faceCount; i ++) {
 		dgInt32 indexCount;
 		indexCount = source.m_faceVertexCount[i];
-		_ASSERTE (indexCount < 1024);
+		_DG_ASSERTE (indexCount < 1024);
 
 		if (source.m_vertexIndex[faceIndexNumber] == attribute) {
 			dgEdge *face;
@@ -402,7 +402,7 @@ void dgPolygonSoupDatabaseBuilder::OptimizeByIndividualFaces()
 		polygonIndex += oldCount;
 	}
 
-_ASSERTE (polygonIndex == m_indexCount);
+_DG_ASSERTE (polygonIndex == m_indexCount);
 
 	m_faceCount = newFaceCount;
 	m_indexCount = newIndexCount;
@@ -652,7 +652,7 @@ dgInt32 dgPolygonSoupDatabaseBuilder::FilterFace (dgInt32 count, dgInt32 pool[])
 		flag = true;
 		dgVector normal (polyhedra.FaceNormal (edge, &m_vertexPoints[0].m_x, sizeof (dgTriplex)));
 
-		_ASSERTE ((normal % normal) > dgFloat32 (1.0e-10f)); 
+		_DG_ASSERTE ((normal % normal) > dgFloat32 (1.0e-10f)); 
 		normal = normal.Scale (dgRsqrt (normal % normal + dgFloat32 (1.0e-20f)));
 
 		while (flag) {
@@ -738,7 +738,7 @@ dgInt32 dgPolygonSoupDatabaseBuilder::FilterFace (dgInt32 count, dgInt32 pool[])
 		} while (ptr != first);
 	}
 
-#ifdef _DEBUG
+#ifdef _DG_DEBUG
 	if (count >= 3) {
 		dgInt32 j0 = count - 2;  
 		dgInt32 j1 = count - 1;  
@@ -751,7 +751,7 @@ dgInt32 dgPolygonSoupDatabaseBuilder::FilterFace (dgInt32 count, dgInt32 pool[])
 			dgVector e1 ((p2 - p1));
 
 			dgVector n (e1 * e0);
-			_ASSERTE ((n % normal) > dgFloat32 (0.0f));
+			_DG_ASSERTE ((n % normal) > dgFloat32 (0.0f));
 			j0 = j1;
 			j1 = j2;
 		}
@@ -907,7 +907,7 @@ dgInt32 dgPolygonSoupDatabaseBuilder::AddConvexFace (dgInt32 count, dgInt32* con
 		leftOver.BeginFace();
 		polyhedra2.ConvexPartition (&m_vertexPoints[0].m_x, sizeof (dgTriplex), &leftOver);
 		leftOver.EndFace();
-		_ASSERTE (leftOver.GetCount() == 0);
+		_DG_ASSERTE (leftOver.GetCount() == 0);
 
 		dgInt32 mark = polyhedra2.IncLRU();
 		dgInt32 index = 0;

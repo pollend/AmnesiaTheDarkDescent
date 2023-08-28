@@ -70,7 +70,7 @@ dgInt32 dgCollisionEllipse::CalculateSignature () const
 
 void dgCollisionEllipse::SetCollisionBBox (const dgVector& p0__, const dgVector& p1__)
 {
-	_ASSERTE (0);
+	_DG_ASSERTE (0);
 }
 
 
@@ -95,19 +95,19 @@ void dgCollisionEllipse::CalcAABBSimd (const dgMatrix &matrix, dgVector& p0, dgV
 	dgVector xxx0;
 	dgVector xxx1;
 	CalcAABB (matrix, xxx0, xxx1);
-	_ASSERTE (dgAbsf(xxx0.m_x - p0.m_x) < 1.0e-3f);
-	_ASSERTE (dgAbsf(xxx0.m_y - p0.m_y) < 1.0e-3f);
-	_ASSERTE (dgAbsf(xxx0.m_z - p0.m_z) < 1.0e-3f);
-	_ASSERTE (dgAbsf(xxx1.m_x - p1.m_x) < 1.0e-3f);
-	_ASSERTE (dgAbsf(xxx1.m_y - p1.m_y) < 1.0e-3f);
-	_ASSERTE (dgAbsf(xxx1.m_z - p1.m_z) < 1.0e-3f);
+	_DG_ASSERTE (dgAbsf(xxx0.m_x - p0.m_x) < 1.0e-3f);
+	_DG_ASSERTE (dgAbsf(xxx0.m_y - p0.m_y) < 1.0e-3f);
+	_DG_ASSERTE (dgAbsf(xxx0.m_z - p0.m_z) < 1.0e-3f);
+	_DG_ASSERTE (dgAbsf(xxx1.m_x - p1.m_x) < 1.0e-3f);
+	_DG_ASSERTE (dgAbsf(xxx1.m_y - p1.m_y) < 1.0e-3f);
+	_DG_ASSERTE (dgAbsf(xxx1.m_z - p1.m_z) < 1.0e-3f);
 #endif
 
 }
 
 dgVector dgCollisionEllipse::SupportVertex (const dgVector& dir) const
 {
-	_ASSERTE ((dir % dir) > dgFloat32 (0.999f));
+	_DG_ASSERTE ((dir % dir) > dgFloat32 (0.999f));
 	dgVector dir1 (dir.m_x * m_scale.m_x, dir.m_y * m_scale.m_y, dir.m_z * m_scale.m_z, dgFloat32 (0.0f));
 
 	dir1 = dir1.Scale (dgRsqrt (dir1 % dir1));
@@ -119,9 +119,9 @@ dgVector dgCollisionEllipse::SupportVertex (const dgVector& dir) const
 dgVector dgCollisionEllipse::SupportVertexSimd (const dgVector& dir) const
 {
 #ifdef DG_BUILD_SIMD_CODE
-	_ASSERTE ((dir % dir) > dgFloat32 (0.999f));
-	_ASSERTE ((dgUnsigned64(&dir) & 0x0f) == 0);
-	_ASSERTE ((dgUnsigned64(&m_scale) & 0x0f) == 0);
+	_DG_ASSERTE ((dir % dir) > dgFloat32 (0.999f));
+	_DG_ASSERTE ((dgUnsigned64(&dir) & 0x0f) == 0);
+	_DG_ASSERTE ((dgUnsigned64(&m_scale) & 0x0f) == 0);
 
 	dgVector dir1;
 	simd_type n;
@@ -150,7 +150,7 @@ dgVector dgCollisionEllipse::SupportVertexSimd (const dgVector& dir) const
 
 dgInt32 dgCollisionEllipse::CalculatePlaneIntersection (const dgVector& normal, const dgVector& point, dgVector* const contactsOut) const
 {
-	_ASSERTE ((normal % normal) > dgFloat32 (0.999f));
+	_DG_ASSERTE ((normal % normal) > dgFloat32 (0.999f));
 //	contactsOut[0] = point;
 
 	dgVector n (normal.m_x * m_scale.m_x, normal.m_y * m_scale.m_y, normal.m_z * m_scale.m_z, dgFloat32 (0.0f));
@@ -162,7 +162,7 @@ dgInt32 dgCollisionEllipse::CalculatePlaneIntersection (const dgVector& normal, 
 dgInt32 dgCollisionEllipse::CalculatePlaneIntersectionSimd (const dgVector& normal, const dgVector& point, dgVector* const contactsOut) const
 {
 #ifdef DG_BUILD_SIMD_CODE	
-	_ASSERTE ((normal % normal) > dgFloat32 (0.999f));
+	_DG_ASSERTE ((normal % normal) > dgFloat32 (0.999f));
 	dgVector n (normal.m_x * m_scale.m_x, normal.m_y * m_scale.m_y, normal.m_z * m_scale.m_z, dgFloat32 (0.0f));
 	n = n.Scale ((normal % point) / (n % n));
 	contactsOut[0] = dgVector (n.m_x * m_scale.m_x, n.m_y * m_scale.m_y, n.m_z * m_scale.m_z, dgFloat32 (0.0f)); 

@@ -45,7 +45,7 @@ inline dgRefCounter::dgRefCounter(void)
 
 inline dgRefCounter::~dgRefCounter(void)
 {
-	_ASSERTE (m_refCount <= 1);
+	_DG_ASSERTE (m_refCount <= 1);
 }
 
 

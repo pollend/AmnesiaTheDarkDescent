@@ -94,8 +94,8 @@ T& dgStack<T>::operator[] (dgInt32 entry)
 {
 	T *mem;
 
-	_ASSERTE (entry >= 0);
-	_ASSERTE ((entry < m_size) || ((m_size == 0) && (entry == 0)));
+	_DG_ASSERTE (entry >= 0);
+	_DG_ASSERTE ((entry < m_size) || ((m_size == 0) && (entry == 0)));
 
 	mem = (T*) m_ptr;
 	return mem[entry];
@@ -106,9 +106,9 @@ const T& dgStack<T>::operator[] (dgInt32 entry) const
 {
 	T *mem;
 
-	_ASSERTE (0);
-	_ASSERTE (entry >= 0);
-	_ASSERTE ((entry < m_size) || ((m_size == 0) && (entry == 0)));
+	_DG_ASSERTE (0);
+	_DG_ASSERTE (entry >= 0);
+	_DG_ASSERTE ((entry < m_size) || ((m_size == 0) && (entry == 0)));
 
 	mem = (T*) m_ptr;
 	return mem[entry];

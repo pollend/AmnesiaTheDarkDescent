@@ -33,7 +33,7 @@
 dgUniversalConstraint::dgUniversalConstraint ()
 	:dgBilateralConstraint() 
 {
-	_ASSERTE ((((dgUnsigned64) &m_localMatrix0) & 15) == 0);
+	_DG_ASSERTE ((((dgUnsigned64) &m_localMatrix0) & 15) == 0);
 	m_maxDOF = 6;
 	m_constId = dgUniversalConstraintId;
 
@@ -56,7 +56,7 @@ dgUniversalConstraint* dgUniversalConstraint::Create(dgWorld* world)
 	dgUniversalConstraintArray& array = * world;
 	constraint = array.GetElement();
 
-	_ASSERTE ((((dgUnsigned64) &constraint->m_localMatrix0) & 15) == 0);
+	_DG_ASSERTE ((((dgUnsigned64) &constraint->m_localMatrix0) & 15) == 0);
 	constraint->Init ();
 	constraint->m_maxDOF = 6;
 	constraint->m_constId = dgUniversalConstraintId;
@@ -96,8 +96,8 @@ dgFloat32 dgUniversalConstraint::GetJointAngle1 () const
 
 dgFloat32 dgUniversalConstraint::GetJointOmega0 () const
 {
-	_ASSERTE (m_body0);
-	_ASSERTE (m_body1);
+	_DG_ASSERTE (m_body0);
+	_DG_ASSERTE (m_body1);
 
 	dgVector dir (m_body0->GetMatrix().RotateVector (m_localMatrix0[0]));
 	const dgVector& omega0 = m_body0->GetOmega();
@@ -113,8 +113,8 @@ dgFloat32 dgUniversalConstraint::GetJointOmega0 () const
 
 dgFloat32 dgUniversalConstraint::GetJointOmega1 () const
 {
-	_ASSERTE (m_body0);
-	_ASSERTE (m_body1);
+	_DG_ASSERTE (m_body0);
+	_DG_ASSERTE (m_body1);
 
 	dgVector dir (m_body1->GetMatrix().RotateVector (m_localMatrix1[1]));
 	const dgVector& omega0 = m_body0->GetOmega();
@@ -244,7 +244,7 @@ dgUnsigned32 dgUniversalConstraint::JacobianDerivative (dgContraintDescritor& pa
 
 	sinAngle = (matrix1.m_up * matrix0.m_up) % matrix0.m_front;
 	cosAngle = matrix0.m_up % matrix1.m_up;
-//	_ASSERTE (dgAbsf (m_angle0 - dgAtan2 (sinAngle, cosAngle)) < 1.0e-1f);
+//	_DG_ASSERTE (dgAbsf (m_angle0 - dgAtan2 (sinAngle, cosAngle)) < 1.0e-1f);
 	m_angle0 = dgAtan2 (sinAngle, cosAngle);
 
 //	dgVector sinAngle1 (matrix0.m_front * matrix1.m_front);
@@ -255,7 +255,7 @@ dgUnsigned32 dgUniversalConstraint::JacobianDerivative (dgContraintDescritor& pa
 
 	sinAngle = (matrix0.m_front * matrix1.m_front) % matrix1.m_up;
 	cosAngle = matrix0.m_front % matrix1.m_front;
-//	_ASSERTE (dgAbsf (m_angle1 - dgAtan2 (sinAngle, cosAngle)) < 1.0e-1f);
+//	_DG_ASSERTE (dgAbsf (m_angle1 - dgAtan2 (sinAngle, cosAngle)) < 1.0e-1f);
 	m_angle1 = dgAtan2 (sinAngle, cosAngle);
 
 	if (m_jointAccelFnt) {
