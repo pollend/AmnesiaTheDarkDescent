@@ -117,8 +117,8 @@ RES(Tex2D(float4), reflectionMap, UPDATE_FREQ_PER_FRAME, t13, binding = 16);
 PUSH_CONSTANT(materialRootConstant, b0)
 {
     DATA(uint, objectId, None);
-    DATA(float, afT, None);
     DATA(uint,  options,   None);
+    DATA(float, afT, None);
     DATA(float, sceneAlpha, None);
     DATA(float, lightLevel, None);
 };

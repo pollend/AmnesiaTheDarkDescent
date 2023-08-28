@@ -4084,6 +4084,7 @@ namespace hpl {
 
             cmdBindDescriptorSet(frame.m_cmd, mainFrameIndex, m_materialSet.m_frameSet[frame.m_frameIndex].m_handle);
             std::array<TranslucencyPipeline::TranslucencyBlend, eMaterialBlendMode_LastEnum> translucencyBlendTable;
+            translucencyBlendTable[eMaterialBlendMode_None] = TranslucencyPipeline::TranslucencyBlend::BlendAdd;
             translucencyBlendTable[eMaterialBlendMode_Add] = TranslucencyPipeline::TranslucencyBlend::BlendAdd;
             translucencyBlendTable[eMaterialBlendMode_Mul] = TranslucencyPipeline::TranslucencyBlend::BlendMul;
             translucencyBlendTable[eMaterialBlendMode_MulX2] = TranslucencyPipeline::TranslucencyBlend::BlendMulX2;
@@ -4119,50 +4120,52 @@ namespace hpl {
                 }
 
                 MaterialRootConstant materialConst = {0};
+                float sceneAlpha = 1;
+                if (pMaterial->GetAffectedByFog()) {
+                    for (auto& fogArea : fogRenderData) {
+                        sceneAlpha *= detail::GetFogAreaVisibilityForObject(fogArea, *apFrustum, translucencyItem);
+                    }
+                }
+                materialConst.m_sceneAlpha = sceneAlpha;
+                materialConst.m_lightLevel = 1.0f;
+
+                if (pMaterial->IsAffectedByLightLevel()) {
+                    cVector3f vCenterPos = translucencyItem->GetBoundingVolume()->GetWorldCenter();
+                    // cRenderList *pRenderList = mpCurrentRenderList;
+                    float fLightAmount = 0.0f;
+
+                    ////////////////////////////////////////
+                    // Iterate lights and add light amount
+                    for (auto& light : mpCurrentRenderList->GetLights()) {
+                        // iLight* pLight = mpCurrentRenderList->GetLight(i);
+                        auto maxColorValue = [](const cColor& aCol) {
+                            return cMath::Max(cMath::Max(aCol.r, aCol.g), aCol.b);
+                        };
+                        // Check if there is an intersection
+                        if (light->CheckObjectIntersection(translucencyItem)) {
+                            if (light->GetLightType() == eLightType_Box) {
+                                fLightAmount += maxColorValue(light->GetDiffuseColor());
+                            } else {
+                                float fDist = cMath::Vector3Dist(light->GetWorldPosition(), vCenterPos);
+
+                                fLightAmount +=
+                                    maxColorValue(light->GetDiffuseColor()) * cMath::Max(1.0f - (fDist / light->GetRadius()), 0.0f);
+                            }
+
+                            if (fLightAmount >= 1.0f) {
+                                fLightAmount = 1.0f;
+                                break;
+                            }
+                        }
+                    }
+                    materialConst.m_lightLevel = fLightAmount;
+                }
                 materialConst.m_afT = GetTimeCount();
+
                 switch (pMaterial->type().m_id) {
                     case cMaterial::Translucent:
                     {
-                        float sceneAlpha = 1;
-                        if (pMaterial->GetAffectedByFog()) {
-                            for (auto& fogArea : fogRenderData) {
-                                sceneAlpha *= detail::GetFogAreaVisibilityForObject(fogArea, *apFrustum, translucencyItem);
-                            }
-                        }
-                        materialConst.m_sceneAlpha = sceneAlpha;
-                        materialConst.m_lightLevel = 1.0f;
 
-                        if (pMaterial->IsAffectedByLightLevel()) {
-                            cVector3f vCenterPos = translucencyItem->GetBoundingVolume()->GetWorldCenter();
-                            // cRenderList *pRenderList = mpCurrentRenderList;
-                            float fLightAmount = 0.0f;
-
-                            ////////////////////////////////////////
-                            // Iterate lights and add light amount
-                            for (auto& light : mpCurrentRenderList->GetLights()) {
-                                // iLight* pLight = mpCurrentRenderList->GetLight(i);
-                                auto maxColorValue = [](const cColor& aCol) {
-                                    return cMath::Max(cMath::Max(aCol.r, aCol.g), aCol.b);
-                                };
-                                // Check if there is an intersection
-                                if (light->CheckObjectIntersection(translucencyItem)) {
-                                    if (light->GetLightType() == eLightType_Box) {
-                                        fLightAmount += maxColorValue(light->GetDiffuseColor());
-                                    } else {
-                                        float fDist = cMath::Vector3Dist(light->GetWorldPosition(), vCenterPos);
-
-                                        fLightAmount +=
-                                            maxColorValue(light->GetDiffuseColor()) * cMath::Max(1.0f - (fDist / light->GetRadius()), 0.0f);
-                                    }
-
-                                    if (fLightAmount >= 1.0f) {
-                                        fLightAmount = 1.0f;
-                                        break;
-                                    }
-                                }
-                            }
-                            materialConst.m_lightLevel = fLightAmount;
-                        }
 
                         uint32_t instance = cmdBindMaterialAndObject(
                             frame.m_cmd,
@@ -4238,8 +4241,6 @@ namespace hpl {
                     }
                 case cMaterial::Water:
                     {
-                        MaterialRootConstant waterConstants {};
-
                         LegacyVertexBuffer::GeometryBinding binding;
                         std::array targets = { eVertexBufferElement_Position,
                                                eVertexBufferElement_Texture0,

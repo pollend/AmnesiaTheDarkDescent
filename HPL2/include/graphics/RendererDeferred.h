@@ -104,8 +104,8 @@ namespace hpl {
         };
         struct MaterialRootConstant {
             uint32_t objectId;
-            float m_afT;
             uint32_t m_options;
+            float m_afT;
             float m_sceneAlpha;
             float m_lightLevel;
         };

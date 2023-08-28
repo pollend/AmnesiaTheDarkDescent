@@ -19,6 +19,9 @@ PsOut PS_MAIN( PsIn In )
     PsOut Out;
 
     float4 diffuseColor = SampleTex2D(Get(diffuseMap), Get(materialSampler), In.uv.xy);
+    if(diffuseColor.w < ALPHA_REJECT ) {
+        discard;
+    }
     Out.diffuse = diffuseColor * In.color;
     RETURN(Out);
 }
