@@ -28,7 +28,7 @@ jobs:
       - name: Configure
         run: |
           mkdir ${{ github.workspace }}\build && cd ${{ github.workspace }}\build
-          cmake ${{ github.workspace }} -DVCPKG_INSTALL_OPTIONS="--binarysource=clear\;x-gha,readwrite" -DCMAKE_BUILD_TYPE:STRING=Release -DAMNESIA_GAME_DIRECTORY:STRING='' -G "Visual Studio 17 2022" -A x64
+          cmake ${{ github.workspace }} -DAMNESIA_TDD_VERSION:STRING="${{github.event.inputs.tag}}" -DVCPKG_INSTALL_OPTIONS="--binarysource=clear\;x-gha,readwrite" -DCMAKE_BUILD_TYPE:STRING=Release -DAMNESIA_GAME_DIRECTORY:STRING='' -G "Visual Studio 17 2022" -A x64
       - name: Build
         run: |
           cd ${{ github.workspace }}\build
@@ -60,7 +60,7 @@ jobs:
       - name: Configure
         run: |
           mkdir ${{ github.workspace }}/build && cd ${{ github.workspace }}/build
-          cmake ${{ github.workspace }} -DVCPKG_INSTALL_OPTIONS="--binarysource=clear\;x-gha,readwrite" -DCMAKE_BUILD_TYPE:STRING=Release -DAMNESIA_GAME_DIRECTORY:STRING='' -G Ninja
+          cmake ${{ github.workspace }} -DAMNESIA_TDD_VERSION:STRING="${{github.event.inputs.tag}}" -DVCPKG_INSTALL_OPTIONS="--binarysource=clear\;x-gha,readwrite" -DCMAKE_BUILD_TYPE:STRING=Release -DAMNESIA_GAME_DIRECTORY:STRING='' -G Ninja
       - name: Build
         run: |
           cd ${{ github.workspace }}/build

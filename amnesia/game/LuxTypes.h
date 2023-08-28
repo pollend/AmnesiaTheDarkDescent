@@ -42,6 +42,8 @@ namespace hpl {
 #define kCopyToVar(aVar, aVal)	(aVar->aVal = aVal)
 #define kCopyFromVar(aVar, aVal)(aVal = aVar->aVal)
 
+#define __AMNEISA_TDD_VERSION__ L"VER: " AMNESIA_TDD_VERSION
+#define __AMNEISA_GIT_VERSION__ L"TAG: " AMNESIA_TDD_TAG
 //----------------------------------------------
 
 enum eLuxAxis

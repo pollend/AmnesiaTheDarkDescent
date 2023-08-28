@@ -1076,6 +1076,15 @@ void cLuxMainMenu::CreateTopMenuGui()
 	}
 
 	float fRowAdd = mvTopMenuFontSize.y*mfTopMenuFontSizeMul*1.3f;
+    if(gpBase->mpMapHandler->MapIsLoaded()==false) {
+        auto tagLabel = mpGuiSet->CreateWidgetLabel(cVector2f(0, 0), 0, __AMNEISA_GIT_VERSION__);
+        tagLabel->SetTextAlign(eFontAlign_Left);
+        tagLabel->SetPosition(tagLabel->GetLocalPosition() + cVector3f(0, 0, 0));
+
+        auto verionLabel = mpGuiSet->CreateWidgetLabel(cVector2f(0, 0), 0, __AMNEISA_TDD_VERSION__);
+		verionLabel->SetTextAlign(eFontAlign_Left);
+        verionLabel->SetPosition(verionLabel->GetLocalPosition() + cVector3f(0, tagLabel->GetDefaultFontSize().y, 0));
+    }
 
 	///////////////
 	//Continue
@@ -1087,6 +1096,7 @@ void cLuxMainMenu::CreateTopMenuGui()
 		SetupTopMenuLabel(pLabel);
 		vPos.y += fRowAdd;
 	}
+
 
 	///////////////
 	//Start game
@@ -1653,9 +1663,6 @@ bool cLuxMainMenu::PressStartGame(iWidget* apWidget, const cGuiMessageData& aDat
 {
 	if(mbTopMenuVisible==false)
 		return true;
-
-	/////////////
-	//HARDMODE
 
     if (gpBase->mbAllowHardmode == true && gpBase->mpCustomStory == 0)
 	{
