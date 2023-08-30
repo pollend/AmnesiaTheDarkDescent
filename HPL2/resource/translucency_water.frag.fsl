@@ -41,6 +41,7 @@ PsOut PS_MAIN(PsIn In)
     INIT_MAIN;
     PsOut Out;
     uint materialID = Get(uniformObjectBuffer)[Get(objectId)].materialID;
+    float4 screenDepth = SampleTex2D(Get(screenDepthMap), Get(nearestSampler), (In.Position.xy * Get(viewTexel)));
     
     float waveAft = Get(afT) * Get(uniformMaterialBuffer)[materialID].waveSpeed;
     float waveAmplitude = Get(uniformMaterialBuffer)[materialID].waveAmplitude * WAVE_AMPLITUDE_SCALE;
@@ -68,7 +69,9 @@ PsOut PS_MAIN(PsIn In)
 
     ///////////////////////////////
     //Get the diffuse color
-    float4 surfaceColor  = SampleTex2D(Get(diffuseMap), Get(materialSampler), vUv1);
+    float4 surfaceColor = SampleTex2D(Get(diffuseMap), Get(materialSampler), vUv1);
+
+
 
     float4 vRefractionColor = float4(1,1,1,1);
     float2 vDistortedScreenPos = float2(0.0,0.0);
@@ -77,9 +80,9 @@ PsOut PS_MAIN(PsIn In)
         float fInvDist = min(1.0 / In.pos.z, 10.0);
         vDistortedScreenPos = (In.Position.xy * refractionViewTexel) + (vFinalNormal.xy * Get(uniformMaterialBuffer)[materialID].refractionScale * fInvDist);
         vRefractionColor = SampleTex2D(Get(refractionMap), Get(nearestSampler), vDistortedScreenPos);
-        if(vRefractionColor.a < 0.5) {
-            vRefractionColor = SampleTex2D(Get(refractionMap), Get(nearestSampler), In.Position.xy * refractionViewTexel);
-        }
+        //if(vRefractionColor.a < 0.5) {
+        //    vRefractionColor = SampleTex2D(Get(refractionMap), Get(nearestSampler), In.Position.xy * refractionViewTexel);
+        //}
      }
 
 
@@ -127,6 +130,14 @@ PsOut PS_MAIN(PsIn In)
         Out.diffuse.rgb = (surfaceColor.xyz * vRefractionColor.xyz + vReflectionColor.xyz * fFresnel) * (1.0-fFogAmount) + Get(worldFogColor).xyz*fFogAmount;
     } else {
         Out.diffuse.rgb = (surfaceColor.xyz * vRefractionColor.xyz * fDiffuse + float3(fSpecular, fSpecular, fSpecular)) * (1.0-fFogAmount) + Get(worldFogColor).xyz*fFogAmount;
+    }
+
+    float waterDepth = clamp(0, 1, screenDepth.x - In.Position.z);
+    if(waterDepth < .00001 ) {
+       float leading = (waterDepth / .00001) + 0.1;
+       //surfaceColor.rgb +=  (leading * float3(1.0,1.0,1.0));
+       Out.diffuse.rgb = ((1.0 - leading) * Out.diffuse.rgb) + (float3(1.0,1.0,1.0) * leading);
+       //Out.diffuse.rgb = ((1.0 - leading) * Out.diffuse.rgb) + (leading * float3(1.0,1.0,1.0));
     }
 
     Out.diffuse.w = 1.0;

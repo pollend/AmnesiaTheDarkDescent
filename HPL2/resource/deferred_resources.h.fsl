@@ -113,6 +113,7 @@ RES(SamplerState, materialSampler, UPDATE_FREQ_NONE, s2, binding = 13);
 RES(Tex2D(float4), dissolveMap, UPDATE_FREQ_NONE, t11, binding = 14);
 RES(Tex2D(float4), refractionMap, UPDATE_FREQ_PER_FRAME, t12, binding = 15); 
 RES(Tex2D(float4), reflectionMap, UPDATE_FREQ_PER_FRAME, t13, binding = 16); 
+RES(Tex2D(float4), screenDepthMap, UPDATE_FREQ_PER_FRAME, t14, binding = 17); 
 
 PUSH_CONSTANT(materialRootConstant, b0)
 {
