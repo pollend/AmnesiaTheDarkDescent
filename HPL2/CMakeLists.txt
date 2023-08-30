@@ -263,10 +263,10 @@ target_link_libraries(HPL2
     "${CMAKE_CURRENT_SOURCE_DIR}/resource/*.io"
     "${CMAKE_CURRENT_SOURCE_DIR}/resource/*.sh")
 
- add_custom_target(HPL_SHADERS)
+add_custom_target(HPL_SHADERS)
 
-set(HPL2_SHADER ${CMAKE_CURRENT_BINARY_DIR}/Shaders/)
-set(HPL2_COMPILEDSHADER ${CMAKE_CURRENT_BINARY_DIR}/CompiledShaders/)
+set(HPL2_SHADER_PATH ${CMAKE_CURRENT_BINARY_DIR}/Shaders/)
+set(HPL2_COMPILEDSHADER_PATH ${CMAKE_CURRENT_BINARY_DIR}/CompiledShaders/)
 get_filename_component(SHADER_RESOURCE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/resource" ABSOLUTE)
 
 IF(CMAKE_SYSTEM_NAME MATCHES "Windows")
@@ -289,9 +289,9 @@ IF(CMAKE_SYSTEM_NAME MATCHES "Windows")
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         COMMAND ${CMAKE_COMMAND} -E env "VULKAN_SDK=$ENV{VULKAN_SDK}" "python3" "${FSL_COMPILER}"
         -l DIRECT3D12 
-        -d ${HPL2_SHADER}
+        -d ${HPL2_SHADER_PATH}
         --verbose 
-        -b  ${HPL2_COMPILEDSHADER}
+        -b  ${HPL2_COMPILEDSHADER_PATH}
         --incremental 
         --compile ${SHADER_RESOURCE_PATH}/ShaderList.fsl
     )
@@ -303,31 +303,30 @@ else()
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         COMMAND ${CMAKE_COMMAND} -E env "VULKAN_SDK=$ENV{VULKAN_SDK}" "python3" "${FSL_COMPILER}"
         -l VULKAN 
-        -d ${HPL2_SHADER}
+        -d ${HPL2_SHADER_PATH}
         --verbose 
-        -b ${HPL2_COMPILEDSHADER}
+        -b ${HPL2_COMPILEDSHADER_PATH}
         --incremental 
         --compile ${SHADER_RESOURCE_PATH}/ShaderList.fsl
     )
 endif()
 
-install(FILES 
-    ${IL_LIBRARIES}
-    DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Amnesia)
+# install(FILES 
+#     ${IL_LIBRARIES}
+#     DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Amnesia)
 
-install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/Shaders"
-            DESTINATION  ${INSTALL_OUTPUT_PATH}/Amnesia
-            FILES_MATCHING
-            PATTERN "*"
-            )
-install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/CompiledShaders"
-            DESTINATION  ${INSTALL_OUTPUT_PATH}/Amnesia
-            FILES_MATCHING
-            PATTERN "*"
-            )
+# install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/Shaders"
+#             DESTINATION  ${INSTALL_OUTPUT_PATH}/Amnesia
+#             FILES_MATCHING
+#             PATTERN "*"
+#             )
+# install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/CompiledShaders"
+#             DESTINATION  ${INSTALL_OUTPUT_PATH}/Amnesia
+#             FILES_MATCHING
+#             PATTERN "*"
+#             )
 
 
-set(_HPL2_SHADER_ ${HPL2_SHADER} PARENT_SCOPE)
-set(_HPL2_COMPILEDSHADER_ ${HPL2_COMPILEDSHADER} PARENT_SCOPE)
-
- add_dependencies(HPL2 HPL_SHADERS)
+set(_HPL2_SHADER_ ${HPL2_SHADER_PATH} PARENT_SCOPE)
+set(_HPL2_COMPILEDSHADER_ ${HPL2_COMPILEDSHADER_PATH} PARENT_SCOPE)
+add_dependencies(HPL2 HPL_SHADERS)
