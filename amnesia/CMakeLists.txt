@@ -112,17 +112,22 @@ if(WIN32)
     )
 endif()
 
+add_custom_target(HPL_SHADERS_AMNESIA)
 add_custom_command(
-    TARGET Amnesia POST_BUILD
-    COMMAND ${CMAKE_COMMAND} 
-    ARGS -E copy_directory  "${_HPL2_SHADER_}" "$<TARGET_FILE_DIR:Amnesia>/Shaders"
+    TARGET HPL_SHADERS_AMNESIA POST_BUILD
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    COMMAND ${CMAKE_COMMAND} ARGS -E copy_directory  "${_HPL2_SHADER_}" "$<TARGET_FILE_DIR:Amnesia>/Shaders"
+    COMMENT "copying ${_HPL2_SHADER_} to $<TARGET_FILE_DIR:Amnesia>"
 )
 
 add_custom_command(
-    TARGET Amnesia POST_BUILD
-    COMMAND ${CMAKE_COMMAND} 
-    ARGS -E copy_directory  "${_HPL2_COMPILEDSHADER_}" "$<TARGET_FILE_DIR:Amnesia>/CompiledShaders"
+    TARGET HPL_SHADERS_AMNESIA POST_BUILD
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    COMMAND ${CMAKE_COMMAND} ARGS -E copy_directory  "${_HPL2_COMPILEDSHADER_}" "$<TARGET_FILE_DIR:Amnesia>/CompiledShaders"
+    COMMENT "copying ${_HPL2_SHADER_} to $<TARGET_FILE_DIR:Amnesia>"
 )
+add_dependencies(HPL_SHADERS HPL_SHADERS_AMNESIA)
+add_dependencies(Amnesia HPL_SHADERS_AMNESIA)
 
 target_compile_definitions(Amnesia PUBLIC AMNESIA_TDD_VERSION="${AMNESIA_TDD_VERSION}")
 target_compile_definitions(Amnesia PUBLIC AMNESIA_TDD_TAG="${AMNESIA_TDD_TAG}")

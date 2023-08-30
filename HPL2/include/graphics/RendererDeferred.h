@@ -434,7 +434,13 @@ namespace hpl {
                 TranslucencyParticleShaderVariantFog = 0x1,
                 TranslucencyParticleVariantCount = 2
             };
-            enum TranslucencyBlend : uint8_t { BlendAdd, BlendMul, BlendMulX2, BlendAlpha, BlendPremulAlpha, BlendModeCount };
+            enum TranslucencyBlend : uint8_t {
+                BlendAdd,
+                BlendMul,
+                BlendMulX2,
+                BlendAlpha,
+                BlendPremulAlpha,
+                BlendModeCount };
 
             // 3 bit key for pipeline variant
             union TranslucencyKey {

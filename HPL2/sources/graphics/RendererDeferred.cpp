@@ -4012,50 +4012,50 @@ namespace hpl {
         }
         cmdEndDebugMarker(frame.m_cmd);
 
-        {
-            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
-
-            {
-                std::array textureBarriers = {
-                    TextureBarrier{
-                        currentGBuffer.m_refractionImage.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_UNORDERED_ACCESS },
-                };
-                std::array rtBarriers = {
-                    RenderTargetBarrier{
-                        currentGBuffer.m_outputBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
-                };
-                cmdResourceBarrier(
-                    frame.m_cmd, 0, NULL, textureBarriers.size(), textureBarriers.data(), rtBarriers.size(), rtBarriers.data());
-            }
-
-            cmdBindPipeline(frame.m_cmd, m_materialTranslucencyPass.m_refractionCopyPipeline.m_handle);
-            DescriptorData params[2] = {};
-            params[0].pName = "sourceInput";
-            params[0].ppTextures = &currentGBuffer.m_outputBuffer.m_handle->pTexture;
-            params[1].pName = "destOutput";
-            params[1].ppTextures = &currentGBuffer.m_refractionImage.m_handle;
-            updateDescriptorSet(
-                frame.m_renderer->Rend(), 0, m_materialTranslucencyPass.m_refractionPerFrameSet[frame.m_frameIndex].m_handle, 2, params);
-            cmdBindDescriptorSet(frame.m_cmd, 0, m_materialTranslucencyPass.m_refractionPerFrameSet[frame.m_frameIndex].m_handle);
-            cmdDispatch(
-                frame.m_cmd,
-                static_cast<uint32_t>(static_cast<float>(common->m_size.x) / 16.0f) + 1,
-                static_cast<uint32_t>(static_cast<float>(common->m_size.y) / 16.0f) + 1,
-                1);
-            {
-                std::array textureBarriers = {
-                    TextureBarrier{
-                        currentGBuffer.m_refractionImage.m_handle, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE },
-                };
-
-                std::array rtBarriers = {
-                    RenderTargetBarrier{
-                        currentGBuffer.m_outputBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
-                };
-                cmdResourceBarrier(
-                    frame.m_cmd, 0, NULL, textureBarriers.size(), textureBarriers.data(), rtBarriers.size(), rtBarriers.data());
-            }
-        }
+//        {
+//            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+//
+//            {
+//                std::array textureBarriers = {
+//                    TextureBarrier{
+//                        currentGBuffer.m_refractionImage.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_UNORDERED_ACCESS },
+//                };
+//                std::array rtBarriers = {
+//                    RenderTargetBarrier{
+//                        currentGBuffer.m_outputBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
+//                };
+//                cmdResourceBarrier(
+//                    frame.m_cmd, 0, NULL, textureBarriers.size(), textureBarriers.data(), rtBarriers.size(), rtBarriers.data());
+//            }
+//
+//            cmdBindPipeline(frame.m_cmd, m_materialTranslucencyPass.m_refractionCopyPipeline.m_handle);
+//            DescriptorData params[2] = {};
+//            params[0].pName = "sourceInput";
+//            params[0].ppTextures = &currentGBuffer.m_outputBuffer.m_handle->pTexture;
+//            params[1].pName = "destOutput";
+//            params[1].ppTextures = &currentGBuffer.m_refractionImage.m_handle;
+//            updateDescriptorSet(
+//                frame.m_renderer->Rend(), 0, m_materialTranslucencyPass.m_refractionPerFrameSet[frame.m_frameIndex].m_handle, 2, params);
+//            cmdBindDescriptorSet(frame.m_cmd, 0, m_materialTranslucencyPass.m_refractionPerFrameSet[frame.m_frameIndex].m_handle);
+//            cmdDispatch(
+//                frame.m_cmd,
+//                static_cast<uint32_t>(static_cast<float>(common->m_size.x) / 16.0f) + 1,
+//                static_cast<uint32_t>(static_cast<float>(common->m_size.y) / 16.0f) + 1,
+//                1);
+//            {
+//                std::array textureBarriers = {
+//                    TextureBarrier{
+//                        currentGBuffer.m_refractionImage.m_handle, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE },
+//                };
+//
+//                std::array rtBarriers = {
+//                    RenderTargetBarrier{
+//                        currentGBuffer.m_outputBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
+//                };
+//                cmdResourceBarrier(
+//                    frame.m_cmd, 0, NULL, textureBarriers.size(), textureBarriers.data(), rtBarriers.size(), rtBarriers.data());
+//            }
+//        }
 
         // notify post draw listeners
         // ImmediateDrawBatch postSolidBatch(context, sharedData->m_gBuffer.m_outputTarget, mainFrustumView, mainFrustumProj);
@@ -4071,6 +4071,21 @@ namespace hpl {
         // Translucency Pass --> output target
         // ------------------------------------------------------------------------
         {
+            {
+
+                DescriptorData params[2] = {};
+                params[0].pName = "sourceInput";
+                params[0].ppTextures = &currentGBuffer.m_outputBuffer.m_handle->pTexture;
+                params[1].pName = "destOutput";
+                params[1].ppTextures = &currentGBuffer.m_refractionImage.m_handle;
+                updateDescriptorSet(
+                    frame.m_renderer->Rend(),
+                    0,
+                    m_materialTranslucencyPass.m_refractionPerFrameSet[frame.m_frameIndex].m_handle,
+                    2,
+                    params);
+
+            }
             LoadActionsDesc loadActions = {};
             loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
             loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
@@ -4113,10 +4128,53 @@ namespace hpl {
                     // TODO implement world reflection
                 }
 
+
                 if (isParticleEmitter) {
                     if (static_cast<LegacyVertexBuffer*>(vertexBuffer)->GetRequestNumberIndecies() == 0) {
                         continue;
                     }
+                }
+
+                if(isRefraction) {
+                    cmdBeginDebugMarker(frame.m_cmd, 0, 0, 1, "Copy Refractive");
+                    {
+                        cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+                        std::array textureBarriers = {
+                            TextureBarrier { currentGBuffer.m_refractionImage.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_UNORDERED_ACCESS },
+                        };
+                        std::array rtBarriers = {
+                            RenderTargetBarrier { currentGBuffer.m_outputBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
+                        };
+                        cmdResourceBarrier(frame.m_cmd, 0, NULL, textureBarriers.size(), textureBarriers.data(), rtBarriers.size(), rtBarriers.data());
+                    }
+                    cmdBindPipeline(frame.m_cmd, m_materialTranslucencyPass.m_refractionCopyPipeline.m_handle);
+                    cmdBindDescriptorSet(frame.m_cmd, 0, m_materialTranslucencyPass.m_refractionPerFrameSet[frame.m_frameIndex].m_handle);
+                    cmdDispatch(
+                        frame.m_cmd,
+                        static_cast<uint32_t>(static_cast<float>(common->m_size.x) / 16.0f) + 1,
+                        static_cast<uint32_t>(static_cast<float>(common->m_size.y) / 16.0f) + 1,
+                        1);
+                    {
+                        std::array textureBarriers = {
+                            TextureBarrier{ currentGBuffer.m_refractionImage.m_handle, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE },
+                        };
+
+                        std::array rtBarriers = {
+                            RenderTargetBarrier{
+                                currentGBuffer.m_outputBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
+                        };
+                        cmdResourceBarrier(frame.m_cmd, 0, NULL, textureBarriers.size(), textureBarriers.data(), rtBarriers.size(), rtBarriers.data());
+                    }
+                    LoadActionsDesc loadActions = {};
+                    loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
+                    loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
+                    std::array targets = {
+                        currentGBuffer.m_outputBuffer.m_handle,
+                    };
+                    cmdBindRenderTargets(frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, nullptr, nullptr, -1, -1);
+                    cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, static_cast<float>(common->m_size.x), static_cast<float>(common->m_size.y), 0.0f, 1.0f);
+                    cmdSetScissor(frame.m_cmd, 0, 0, common->m_size.x, common->m_size.y);
+                    cmdEndDebugMarker(frame.m_cmd);
                 }
 
                 MaterialRootConstant materialConst = {0};
@@ -4126,6 +4184,13 @@ namespace hpl {
                         sceneAlpha *= detail::GetFogAreaVisibilityForObject(fogArea, *apFrustum, translucencyItem);
                     }
                 }
+
+                materialConst.m_afT = GetTimeCount();
+
+                switch (pMaterial->type().m_id) {
+                    case cMaterial::Translucent:
+                    {
+                        ASSERT(pMaterial->GetBlendMode() >= eMaterialBlendMode_Add && pMaterial->GetBlendMode() <= eMaterialBlendMode_PremulAlpha);
                 materialConst.m_sceneAlpha = sceneAlpha;
                 materialConst.m_lightLevel = 1.0f;
 
@@ -4160,12 +4225,6 @@ namespace hpl {
                     }
                     materialConst.m_lightLevel = fLightAmount;
                 }
-                materialConst.m_afT = GetTimeCount();
-
-                switch (pMaterial->type().m_id) {
-                    case cMaterial::Translucent:
-                    {
-
 
                         uint32_t instance = cmdBindMaterialAndObject(
                             frame.m_cmd,
