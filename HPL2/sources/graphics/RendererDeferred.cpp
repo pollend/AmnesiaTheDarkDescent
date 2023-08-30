@@ -2634,9 +2634,11 @@ namespace hpl {
         });
 
         {
-            std::array<DescriptorData, 1> params = {};
+            std::array<DescriptorData, 2> params = {};
             params[0].pName = "refractionMap";
             params[0].ppTextures = &currentGBuffer.m_refractionImage.m_handle;
+            params[1].pName = "screenDepthMap";
+            params[1].ppTextures = &currentGBuffer.m_depthBuffer.m_handle->pTexture;
             updateDescriptorSet(frame.m_renderer->Rend(), mainFrameIndex, m_materialSet.m_frameSet[frame.m_frameIndex].m_handle, params.size(), params.data());
         }
 
