@@ -1,15 +1,55 @@
 
-RES(RWTex2DArray(float), depthInput, UPDATE_FREQ_PER_FRAME, u0, binding = 0);
+RES(RTex2D(float), depthInput[13], UPDATE_FREQ_PER_FRAME, u0, binding = 0);
 RES(RWBuffer(bool), occlusionTest, UPDATE_FREQ_PER_FRAME, u2, binding = 1);
 RES(Buffer(float4), occlusionBoxBuffer, UPDATE_FREQ_PER_FRAME, t0, binding = 2);
 
 CBUFFER(objectUniformBlock, UPDATE_FREQ_PER_FRAME, b0, binding = 3)
 { 
-    DATA(float4x4, viewProj, None);
+    DATA(uint2, depthDim, None);
     DATA(uint, numObjects, None);
     DATA(int, maxMipLevel, None);
-    DATA(uint2, depthDim, None);
 };
+
+CBUFFER(perFrameConstants, UPDATE_FREQ_PER_FRAME, b1, binding = 4)
+{
+    DATA(float4x4, invViewRotationMat, None);
+    DATA(float4x4, viewMat, None);
+    DATA(float4x4, invViewMat, None);
+    DATA(float4x4, projMat, None);
+    DATA(float4x4, viewProjMat, None);
+
+    DATA(float, worldFogStart, None);
+    DATA(float, worldFogLength, None);
+    DATA(float, oneMinusFogAlpha, None);
+    DATA(float, fogFalloffExp, None);
+    DATA(float4, worldFogColor, None);
+
+    DATA(float2, viewTexel, None);
+    DATA(float2, viewportSize, None);
+};
+
+
+bool testOcclusion(int mip, float2 minPosXY, float2 maxPosXY, float minZ) {
+    float2 scale = floor(float2(Get(depthDim)) / float(1 << mip).xx);
+
+    //float2 scale = exp2(-mip).xx;
+    int2 minPos = int2(floor(minPosXY.xy * scale)); 
+    int2 maxPos = int2(ceil(maxPosXY.xy * scale));
+    
+    for(uint i = minPos.x; i <= maxPos.x; i++)
+    {
+        for(uint j = minPos.y; j <= maxPos.y; j++)
+        {
+            float depth = Load2D(Get(depthInput)[mip], uint2(i, j)).x + 0.05;
+            if(minZ <= depth) {
+                return true;
+            } 
+        }
+    }
+
+    return false;
+}
+
 
 NUM_THREADS(128, 1,  1)
 void CS_MAIN(SV_DispatchThreadID(uint3) did)
@@ -21,82 +61,63 @@ void CS_MAIN(SV_DispatchThreadID(uint3) did)
         return;
     }
 
-    float3 bboxMin = Get(occlusionBoxBuffer)[2 * did.x].xyz;
-    float3 bboxMax = Get(occlusionBoxBuffer)[2 * did.x + 1].xyz;
-   
+    float3 bboxMin = Get(occlusionBoxBuffer)[(2 * did.x)].xyz;
+    float3 bboxMax = Get(occlusionBoxBuffer)[(2 * did.x) + 1].xyz;
+
     //Adapted from http://blog.selfshadow.com/publications/practical-visibility/
-    float3 bboxSize = bboxMax.xyz - bboxMin.xyz;
+    //float3 bboxSize = bboxMax.xyz - bboxMin.xyz;
     float3 boxCorners[] = {
-        bboxMin.xyz,
-        bboxMin.xyz + float3(bboxSize.x,0,0),
-        bboxMin.xyz + float3(0, bboxSize.y,0),
-        bboxMin.xyz + float3(0, 0, bboxSize.z),
-        bboxMin.xyz + float3(bboxSize.xy,0),
-        bboxMin.xyz + float3(0, bboxSize.yz),
-        bboxMin.xyz + float3(bboxSize.x, 0, bboxSize.z),
-        bboxMin.xyz + bboxSize.xyz
+        float3(bboxMax.x,bboxMax.y,bboxMax.z),
+		float3(bboxMax.x,bboxMax.y,bboxMin.z),
+		float3(bboxMax.x,bboxMin.y,bboxMax.z),
+		float3(bboxMax.x,bboxMin.y,bboxMin.z),
+		float3(bboxMin.x,bboxMax.y,bboxMax.z),
+		float3(bboxMin.x,bboxMax.y,bboxMin.z),
+		float3(bboxMin.x,bboxMin.y,bboxMax.z),
+		float3(bboxMin.x,bboxMin.y,bboxMin.z)
     };
 
     float minZ = 1.0;
     float2 minXY = float2(1.0, 1.0);
     float2 maxXY = float2(0.0, 0.0);
 
-    for (int k = 0; k < 8; k++)
+    float4x4 projView = mul(Get(projMat), Get(viewMat));
+
+    for (uint k = 0; k < 8; k++)
     {
         //transform World space aaBox to NDC
-        float4 clipPos = mul(Get(viewProj), float4(boxCorners[k], 1) );
+        float4 clipPos = mul(projView, float4(boxCorners[k].xyz, 1.0));
+		
+		clipPos.z = max(clipPos.z, 0);
+		
+		clipPos.xyz = clipPos.xyz / clipPos.w;
+
+		clipPos.xy = clamp(clipPos.xy, -1, 1);
+		clipPos.xy = (clipPos.xy * float2(0.5, -0.5)) + float2(0.5, 0.5);	
         
-        //clipPos.z = 0.5 * ( clipPos.z + clipPos.w );
-
-        clipPos.z = max(clipPos.z, 0);
-
-        clipPos.xyz = clipPos.xyz / clipPos.w;
-        clipPos.xy = clamp(clipPos.xy, -1, 1);
-        clipPos.xy = clipPos.xy * float2(0.5, -0.5) + float2(0.5, 0.5);
-
         minXY = min(clipPos.xy, minXY);
         maxXY = max(clipPos.xy, maxXY);
         minZ = saturate(min(minZ, clipPos.z));
     }
+    
     //TODO fix for DIRECTX12
-    uint2 dim = Get(depthDim); //GetDimensions(Get(depthInput), NO_SAMPLER).xy;
-    int2 size = int2((maxXY - minXY) * dim);
+    int2 rtSize = int2(Get(depthDim).xy);
+    int2 size = int2((maxXY - minXY) * rtSize);
     int mip = int(ceil(log2(max(size.x, size.y))));
+    
     mip = clamp(mip, 0, Get(maxMipLevel));
 
     // Texel footprint for the lower (finer-grained) level
     int level_lower = max(mip - 1, 0);
-    float2 scale = float2(exp2(-level_lower).xx);
+    float2 scale = exp2(-level_lower).xx;
     float2 a = floor(minXY.xy*scale);
     float2 b = ceil(maxXY.xy*scale);
     float2 dims = b - a;
     
     // Use the lower level if we only touch <= 2 texels in both dimensions
-    if (dims.x <= 2 && dims.y <= 2)  {
+    if (dims.x <= 2.0 && dims.y <= 2.0)  {
         mip = level_lower;
     }
-    uint2 dimMip = dim / (1 << mip); 	
-    int2 minPos = int2(minXY.xy * dimMip.xy); 
-    int2 maxPos = int2(maxXY.xy * dimMip.xy); 
-    Get(occlusionTest)[did.x] = false;;
-    for(int i = minPos.x; i <= maxPos.x; i++)
-    {
-        for(int j = minPos.y; j <= maxPos.y; j++)
-        {
-            float maxDepth = LoadRWTex3D(Get(depthInput), uint3(i, j, mip)).x;
-            if(minZ <= maxDepth)
-            {
-                Get(occlusionTest)[did.x] = true;
-                return;
-            }
-        }
-    }
-    //float t1 = LoadRWTex3D(Get(depthInput), uint3(minPos.xy, mip)).x;
 
-   // float t1 = LoadRWTex3D(Get(depthInput), uint3(minPos.xy, mip)).x;
-   // float t2 = LoadRWTex3D(Get(depthInput), uint3(maxPos.xy, mip)).x;
-   // float t3 = LoadRWTex3D(Get(depthInput), uint3(minPos.x, maxPos.y * dimMip.y, mip)).x;
-   // float t4 = LoadRWTex3D(Get(depthInput), uint3(minPos.y, maxPos.x * dimMip.y, mip)).x;
-   // float maxDepth = max(max(t1, t2), max(t3, t4));
-   // Get(occlusionTest)[did.x] = minZ <= maxDepth;
+    Get(occlusionTest)[did.x] = testOcclusion(mip, minXY, maxXY, minZ);
 }

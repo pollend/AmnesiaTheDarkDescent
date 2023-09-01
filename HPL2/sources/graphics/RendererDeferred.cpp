@@ -539,8 +539,6 @@ namespace hpl {
         m_shadowDistanceLow = 20;
         m_shadowDistanceNone = 40;
 
-        m_maxBatchLights = 100;
-
         UVector3 shadowSizes[] = { UVector3( 128, 128, 1),
                                     UVector3( 256, 256, 1),
                                     UVector3( 256, 256, 1),
@@ -2367,8 +2365,6 @@ namespace hpl {
         m_box = std::unique_ptr<iVertexBuffer>(loadVertexBufferFromMesh("core_box.dae", lVtxFlag));
         ////////////////////////////////////
         // Batch vertex buffer
-        mlMaxBatchVertices = m_shapeSphere[eDeferredShapeQuality_Low]->GetVertexNum() * m_maxBatchLights;
-        mlMaxBatchIndices = m_shapeSphere[eDeferredShapeQuality_Low]->GetIndexNum() * m_maxBatchLights;
     }
 
     //-----------------------------------------------------------------------
@@ -2551,13 +2547,12 @@ namespace hpl {
 
             for (auto& b : viewportData->m_gBuffer) {
                 b.m_hiZMipCount = std::clamp<uint8_t>(
-                    static_cast<uint8_t>(std::floor(std::log2(std::max(viewportData->m_size.x, viewportData->m_size.y)))), 0, 8);
-                b.m_hizDepthBuffer = { forgeRenderer->Rend() };
+                    static_cast<uint8_t>(std::floor(std::log2(std::max(viewportData->m_size.x, viewportData->m_size.y)))), 0, 13);
                 b.m_hizDepthBuffer.Load(forgeRenderer->Rend(), [&](RenderTarget** handle) {
                     RenderTargetDesc renderTargetDesc = {};
-                    renderTargetDesc.mArraySize = b.m_hiZMipCount;
+                    renderTargetDesc.mArraySize = 1;
                     renderTargetDesc.mDepth = 1;
-                    renderTargetDesc.mMipLevels = 1;
+                    renderTargetDesc.mMipLevels = b.m_hiZMipCount;
                     renderTargetDesc.mFormat = TinyImageFormat_R32_SFLOAT;
                     renderTargetDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE | DESCRIPTOR_TYPE_RW_TEXTURE;
                     renderTargetDesc.mWidth = viewportData->m_size.x;
@@ -2814,7 +2809,6 @@ namespace hpl {
 
 
                 UniformPropBlock uniformPropBlock = {};
-                uniformPropBlock.viewProjeciton = cMath::ToForgeMat(cMath::MatrixMul(mainFrustumProj, mainFrustumView).GetTranspose());
                 for (size_t i = 0; i < uniformTest.size(); i++) {
                     auto& test = uniformTest[i];
                     cMaterial* pMaterial = test.m_renderable->GetMaterial();
@@ -2825,10 +2819,11 @@ namespace hpl {
 
                     BufferUpdateDesc updateDesc = { m_hiZBoundBoxBuffer.m_handle, i * (sizeof(float4) * 2), sizeof(float4) * 2 };
                     beginUpdateResource(&updateDesc);
+                    cVector3f scale = pBoundingVolume->GetSize() * 0.5f;
                     reinterpret_cast<float4*>(updateDesc.pMappedData)[0] =
-                        float4(pBoundingVolume->GetMin().x, pBoundingVolume->GetMin().y, pBoundingVolume->GetMin().z, 0.0f);
+                        float4(pBoundingVolume->GetMin().x - scale.x, pBoundingVolume->GetMin().y - scale.y, pBoundingVolume->GetMin().z - scale.z, 0.0f);
                     reinterpret_cast<float4*>(updateDesc.pMappedData)[1] =
-                        float4(pBoundingVolume->GetMax().x, pBoundingVolume->GetMax().y, pBoundingVolume->GetMax().z, 0.0f);
+                        float4(pBoundingVolume->GetMax().x + scale.x , pBoundingVolume->GetMax().y + scale.y, pBoundingVolume->GetMax().z + scale.z, 0.0f);
                     endUpdateResource(&updateDesc, nullptr);
 
 
@@ -2857,7 +2852,6 @@ namespace hpl {
                     cmdBindPushConstants(m_prePassCmd.m_handle, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
                     cmdDrawIndexed(m_prePassCmd.m_handle, binding.m_indexBuffer.numIndicies, 0, 0);
                 }
-
 
                 uniformPropBlock.maxMipLevel = currentGBuffer.m_hiZMipCount - 1;
                 uniformPropBlock.depthDim = uint2(common->m_size.x, common->m_size.y);
@@ -2968,11 +2962,10 @@ namespace hpl {
                 uint32_t width = static_cast<float>(common->m_size.x);
                 uint32_t height = static_cast<float>(common->m_size.y);
                 for (uint32_t lod = 1; lod < currentGBuffer.m_hiZMipCount; ++lod) {
-                    std::array<DescriptorData, 2> params = {};
+                    std::array<DescriptorData, 1> params = {};
                     params[0].pName = "depthInput";
+                    params[0].mBindMipChain = true;
                     params[0].ppTextures = &currentGBuffer.m_hizDepthBuffer.m_handle->pTexture;
-                    params[1].pName = "destOutput";
-                    params[1].ppTextures = &currentGBuffer.m_hizDepthBuffer.m_handle->pTexture;
                     updateDescriptorSet(frame.m_renderer->Rend(), lod, m_descriptorSetHIZGenerate.m_handle, params.size(), params.data());
 
                     width /= 2;
@@ -3001,15 +2994,22 @@ namespace hpl {
 
                 cmdBeginDebugMarker(m_prePassCmd.m_handle, 0, 1, 0, "AABB Hi-Z");
                 {
-                    std::array<DescriptorData, 4> params = {};
-                    params[0].pName = "objectUniformBlock";
-                    params[0].ppBuffers = &m_hiZOcclusionUniformBuffer.m_handle;
-                    params[1].pName = "occlusionTest";
-                    params[1].ppBuffers = &m_occlusionTestBuffer.m_handle;
-                    params[2].pName = "occlusionBoxBuffer";
-                    params[2].ppBuffers = &m_hiZBoundBoxBuffer.m_handle;
-                    params[3].pName = "depthInput";
-                    params[3].ppTextures = &currentGBuffer.m_hizDepthBuffer.m_handle->pTexture;
+                    std::array<DescriptorData, 5> params = {};
+                    params[0].pName = "perFrameConstants";
+                    params[0].ppBuffers = &m_perFrameBuffer[mainFrameIndex].m_handle;
+
+                    params[1].pName = "objectUniformBlock";
+                    params[1].ppBuffers = &m_hiZOcclusionUniformBuffer.m_handle;
+
+                    params[2].pName = "occlusionTest";
+                    params[2].ppBuffers = &m_occlusionTestBuffer.m_handle;
+
+                    params[3].pName = "occlusionBoxBuffer";
+                    params[3].ppBuffers = &m_hiZBoundBoxBuffer.m_handle;
+
+                    params[4].pName = "depthInput";
+                    params[4].mBindMipChain = true;
+                    params[4].ppTextures = &currentGBuffer.m_hizDepthBuffer.m_handle->pTexture;
                     updateDescriptorSet(frame.m_renderer->Rend(), 0, m_descriptorAABBOcclusionTest.m_handle, params.size(), params.data());
 
                     cmdBindDescriptorSet(m_prePassCmd.m_handle, 0, m_descriptorAABBOcclusionTest.m_handle);
@@ -4158,41 +4158,43 @@ namespace hpl {
                 switch (pMaterial->type().m_id) {
                     case cMaterial::Translucent:
                     {
-                        ASSERT(pMaterial->GetBlendMode() >= eMaterialBlendMode_Add && pMaterial->GetBlendMode() <= eMaterialBlendMode_PremulAlpha);
-                materialConst.m_sceneAlpha = sceneAlpha;
-                materialConst.m_lightLevel = 1.0f;
+                        ASSERT(
+                            pMaterial->GetBlendMode() >= eMaterialBlendMode_Add &&
+                            pMaterial->GetBlendMode() <= eMaterialBlendMode_PremulAlpha);
+                        materialConst.m_sceneAlpha = sceneAlpha;
+                        materialConst.m_lightLevel = 1.0f;
 
-                if (pMaterial->IsAffectedByLightLevel()) {
-                    cVector3f vCenterPos = translucencyItem->GetBoundingVolume()->GetWorldCenter();
-                    // cRenderList *pRenderList = mpCurrentRenderList;
-                    float fLightAmount = 0.0f;
+                        if (pMaterial->IsAffectedByLightLevel()) {
+                            cVector3f vCenterPos = translucencyItem->GetBoundingVolume()->GetWorldCenter();
+                            // cRenderList *pRenderList = mpCurrentRenderList;
+                            float fLightAmount = 0.0f;
 
-                    ////////////////////////////////////////
-                    // Iterate lights and add light amount
-                    for (auto& light : mpCurrentRenderList->GetLights()) {
-                        // iLight* pLight = mpCurrentRenderList->GetLight(i);
-                        auto maxColorValue = [](const cColor& aCol) {
-                            return cMath::Max(cMath::Max(aCol.r, aCol.g), aCol.b);
-                        };
-                        // Check if there is an intersection
-                        if (light->CheckObjectIntersection(translucencyItem)) {
-                            if (light->GetLightType() == eLightType_Box) {
-                                fLightAmount += maxColorValue(light->GetDiffuseColor());
-                            } else {
-                                float fDist = cMath::Vector3Dist(light->GetWorldPosition(), vCenterPos);
+                            ////////////////////////////////////////
+                            // Iterate lights and add light amount
+                            for (auto& light : mpCurrentRenderList->GetLights()) {
+                                // iLight* pLight = mpCurrentRenderList->GetLight(i);
+                                auto maxColorValue = [](const cColor& aCol) {
+                                    return cMath::Max(cMath::Max(aCol.r, aCol.g), aCol.b);
+                                };
+                                // Check if there is an intersection
+                                if (light->CheckObjectIntersection(translucencyItem)) {
+                                    if (light->GetLightType() == eLightType_Box) {
+                                        fLightAmount += maxColorValue(light->GetDiffuseColor());
+                                    } else {
+                                        float fDist = cMath::Vector3Dist(light->GetWorldPosition(), vCenterPos);
 
-                                fLightAmount +=
-                                    maxColorValue(light->GetDiffuseColor()) * cMath::Max(1.0f - (fDist / light->GetRadius()), 0.0f);
+                                        fLightAmount +=
+                                            maxColorValue(light->GetDiffuseColor()) * cMath::Max(1.0f - (fDist / light->GetRadius()), 0.0f);
+                                    }
+
+                                    if (fLightAmount >= 1.0f) {
+                                        fLightAmount = 1.0f;
+                                        break;
+                                    }
+                                }
                             }
-
-                            if (fLightAmount >= 1.0f) {
-                                fLightAmount = 1.0f;
-                                break;
-                            }
+                            materialConst.m_lightLevel = fLightAmount;
                         }
-                    }
-                    materialConst.m_lightLevel = fLightAmount;
-                }
 
                         uint32_t instance = cmdBindMaterialAndObject(
                             frame.m_cmd,

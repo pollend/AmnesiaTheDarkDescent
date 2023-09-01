@@ -1,0 +1,26 @@
+
+/// Copyright © 2009-2020 Frictional Games
+/// Copyright 2023 Michael Pollind
+/// SPDX-License-Identifier: GPL-3.0
+
+RES(Tex2D(float4), sourceInput, UPDATE_FREQ_PER_FRAME, t0, binding = 0);
+RES(WTex2D(float4), destOutput, UPDATE_FREQ_PER_FRAME, u0, binding = 1);
+
+PUSH_CONSTANT(uRootConstants, b0)
+{
+    DATA(uint2, topLeft, None);
+    DATA(uint2, size, None);
+};
+
+NUM_THREADS(16, 16,  1)
+void CS_MAIN( SV_DispatchThreadID(uint3) did) 
+{    
+    INIT_MAIN;
+
+    uint2 coord = uint2(did.xy) + Get(topLeft);
+    if (coord.x < (Get(topLeft).x + Get(size).x) && coord.y < (Get(topLeft).y + Get(size).y))
+    {
+        Write2D(Get(destOutput), coord.xy, LoadTex2D(Get(sourceInput), NO_SAMPLER, coord.xy, 0));
+    }
+    RETURN();
+}
