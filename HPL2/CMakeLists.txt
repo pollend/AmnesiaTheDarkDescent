@@ -263,12 +263,13 @@ target_link_libraries(HPL2
     "${CMAKE_CURRENT_SOURCE_DIR}/resource/*.io"
     "${CMAKE_CURRENT_SOURCE_DIR}/resource/*.sh")
 
- add_custom_target(HPL_SHADERS)
+
 
 set(HPL2_SHADER ${CMAKE_CURRENT_BINARY_DIR}/Shaders/)
 set(HPL2_COMPILEDSHADER ${CMAKE_CURRENT_BINARY_DIR}/CompiledShaders/)
 get_filename_component(SHADER_RESOURCE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/resource" ABSOLUTE)
 
+add_custom_target(HPL_SHADERS)
 IF(CMAKE_SYSTEM_NAME MATCHES "Windows")
     # omit for now Vulkan is not an option 
     # add_custom_command(
@@ -311,23 +312,41 @@ else()
     )
 endif()
 
-install(FILES 
-    ${IL_LIBRARIES}
-    DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Amnesia)
-
-install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/Shaders"
-            DESTINATION  ${INSTALL_OUTPUT_PATH}/Amnesia
-            FILES_MATCHING
-            PATTERN "*"
-            )
-install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/CompiledShaders"
-            DESTINATION  ${INSTALL_OUTPUT_PATH}/Amnesia
-            FILES_MATCHING
-            PATTERN "*"
-            )
+function(copy_shader_to_target_dir TARGET) 
+    add_custom_target(${TARGET}_HPL_SHADERS)
+    IF(CMAKE_SYSTEM_NAME MATCHES "Windows")
+        add_custom_command(
+            TARGET ${TARGET}_HPL_SHADERS
+            MAIN_DEPENDENCY
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+            COMMAND ${CMAKE_COMMAND} -E env "VULKAN_SDK=$ENV{VULKAN_SDK}" "python3" "${FSL_COMPILER}"
+            -l DIRECT3D12 
+            -d "$<TARGET_FILE_DIR:${TARGET}>/Shaders"
+            --verbose 
+            -b  "$<TARGET_FILE_DIR:${TARGET}>/CompiledShaders"
+            --incremental 
+            --compile ${_SHADER_RESOURCE_PATH_}/ShaderList.fsl
+        )
+           
+    else()
+        add_custom_command(
+            TARGET ${TARGET}_HPL_SHADERS
+            MAIN_DEPENDENCY
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+            COMMAND ${CMAKE_COMMAND} -E env "VULKAN_SDK=$ENV{VULKAN_SDK}" "python3" "${FSL_COMPILER}"
+            -l VULKAN 
+            -d "$<TARGET_FILE_DIR:${TARGET}>/Shaders"
+            --verbose 
+            -b  "$<TARGET_FILE_DIR:${TARGET}>/CompiledShaders"
+            --incremental 
+            --compile ${_SHADER_RESOURCE_PATH_}/ShaderList.fsl
+        )
+    endif()
+    add_dependencies(HPL2 ${TARGET}_HPL_SHADERS)
+endfunction()
 
 
 set(_HPL2_SHADER_ ${HPL2_SHADER} PARENT_SCOPE)
 set(_HPL2_COMPILEDSHADER_ ${HPL2_COMPILEDSHADER} PARENT_SCOPE)
-
+set(_SHADER_RESOURCE_PATH_  ${SHADER_RESOURCE_PATH} PARENT_SCOPE)
  add_dependencies(HPL2 HPL_SHADERS)

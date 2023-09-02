@@ -2548,7 +2548,7 @@ namespace hpl {
             };
 
             for (auto& b : viewportData->m_gBuffer) {
-                b.m_hiZMipCount = std::floor(std::log2(std::max(viewportData->m_size.x, viewportData->m_size.y)));
+                b.m_hiZMipCount = std::min<uint8_t>(std::floor(std::log2(std::max(viewportData->m_size.x, viewportData->m_size.y))), MaxHiZMipLevels);
                 b.m_hizDepthBuffer.Load(forgeRenderer->Rend(), [&](RenderTarget** handle) {
                     RenderTargetDesc renderTargetDesc = {};
                     renderTargetDesc.mArraySize = 1;
@@ -2819,11 +2819,13 @@ namespace hpl {
                     auto* pBoundingVolume = test.m_renderable->GetBoundingVolume();
 
                     BufferUpdateDesc updateDesc = { m_hiZBoundBoxBuffer.m_handle, i  * (2 * sizeof(float4)), sizeof(float4) * 2};
+                    auto boundBoxMin = pBoundingVolume->GetMin();
+                    auto boundBoxMax = pBoundingVolume->GetMax();
                     beginUpdateResource(&updateDesc);
                     reinterpret_cast<float4*>(updateDesc.pMappedData)[0] =
-                        float4(pBoundingVolume->GetMin().x, pBoundingVolume->GetMin().y, pBoundingVolume->GetMin().z, 0.0f);
+                        float4(boundBoxMin.x, boundBoxMin.y, boundBoxMin.z, 0.0f);
                     reinterpret_cast<float4*>(updateDesc.pMappedData)[1] =
-                        float4(pBoundingVolume->GetMax().x, pBoundingVolume->GetMax().y, pBoundingVolume->GetMax().z, 0.0f);
+                        float4(boundBoxMax.x, boundBoxMax.y, boundBoxMax.z, 0.0f);
                     endUpdateResource(&updateDesc, nullptr);
 
 

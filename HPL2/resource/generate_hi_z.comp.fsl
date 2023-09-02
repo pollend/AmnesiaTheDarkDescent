@@ -2,7 +2,7 @@
 /// Copyright 2023 Michael Pollind
 /// SPDX-License-Identifier: GPL-3.0
 
-RES(RWTex2D(float), depthInput[20], UPDATE_FREQ_PER_FRAME, u1, binding = 0);
+RES(RWTex2D(float), depthInput[16], UPDATE_FREQ_PER_FRAME, u1, binding = 6);
 
 PUSH_CONSTANT(uRootConstants, b0)
 {
@@ -15,7 +15,7 @@ NUM_THREADS(16, 16,  1)
 void CS_MAIN(SV_DispatchThreadID(uint3) did) 
 {    
     INIT_MAIN;
-    uint2 screenSize = Get(screenDim) * exp2(-Get(mipLevel)).xx;
+    uint2 screenSize = uint2(Get(screenDim) * exp2(-Get(mipLevel)).xx);
     uint lastMip = Get(mipLevel) - 1;
 
     if (did.x < screenSize.x && did.y < screenSize.y) {
@@ -37,10 +37,6 @@ void CS_MAIN(SV_DispatchThreadID(uint3) did)
         }
         // if we are reducing an odd-height texture then fetch the edge texels
         if (((screenSize.y & 1) != 0) && (did.y == screenSize.y-3)) {
-            //extra.x = textureOffset(lastMip, TexCoord, ivec2( 0, 1)).x;
-            //extra.y = textureOffset(lastMip, TexCoord, ivec2(-1, 1)).x;
-            //maxZ = max(maxZ, max(extra.x, extra.y));
-            
             maxDepth = max(maxDepth, LoadRWTex2D(Get(depthInput)[lastMip], (did.xy * 2) + int2(0,2)).x);      
             maxDepth = max(maxDepth, LoadRWTex2D(Get(depthInput)[lastMip], (did.xy * 2) + int2(1,2)).x);
         }

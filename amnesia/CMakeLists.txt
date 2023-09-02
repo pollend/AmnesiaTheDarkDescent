@@ -112,17 +112,18 @@ if(WIN32)
     )
 endif()
 
-add_custom_command(
-    TARGET Amnesia POST_BUILD
-    COMMAND ${CMAKE_COMMAND} 
-    ARGS -E copy_directory  "${_HPL2_SHADER_}" "$<TARGET_FILE_DIR:Amnesia>/Shaders"
-)
-
-add_custom_command(
-    TARGET Amnesia POST_BUILD
-    COMMAND ${CMAKE_COMMAND} 
-    ARGS -E copy_directory  "${_HPL2_COMPILEDSHADER_}" "$<TARGET_FILE_DIR:Amnesia>/CompiledShaders"
-)
+##add_custom_command(
+##    TARGET Amnesia POST_BUILD
+##    COMMAND ${CMAKE_COMMAND} 
+##    ARGS -E copy_directory  "${_HPL2_SHADER_}" "$<TARGET_FILE_DIR:Amnesia>/Shaders"
+##)
+##
+##add_custom_command(
+##    TARGET Amnesia POST_BUILD
+##    COMMAND ${CMAKE_COMMAND} 
+##    ARGS -E copy_directory  "${_HPL2_COMPILEDSHADER_}" "$<TARGET_FILE_DIR:Amnesia>/CompiledShaders"
+##)
+copy_shader_to_target_dir(Amnesia)
 
 target_compile_definitions(Amnesia PUBLIC AMNESIA_TDD_VERSION="${AMNESIA_TDD_VERSION}")
 target_compile_definitions(Amnesia PUBLIC AMNESIA_TDD_TAG="${AMNESIA_TDD_TAG}")

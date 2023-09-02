@@ -78,7 +78,7 @@ namespace hpl {
         static constexpr TinyImageFormat ShadowDepthBufferFormat = TinyImageFormat_D32_SFLOAT;
         static constexpr uint32_t MaxObjectUniforms = 4096;
         static constexpr uint32_t MaxLightUniforms = 1024;
-        static constexpr uint32_t MaxHiZMipLevels = 32;
+        static constexpr uint32_t MaxHiZMipLevels = 10;
         static constexpr uint32_t MaxMaterialFrameDescriptors = 256;
         static constexpr uint32_t MaxMaterialSamplers = static_cast<uint32_t>(eTextureWrap_LastEnum) * static_cast<uint32_t>(eTextureFilter_LastEnum) * static_cast<uint32_t>(cMaterial::TextureAntistropy::Antistropy_Count);
         static constexpr uint32_t MaxObjectTest = 32768;
