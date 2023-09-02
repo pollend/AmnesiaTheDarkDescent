@@ -33,6 +33,8 @@ PsOut PS_MAIN(PsIn In)
     float4 finalColor = float4(0.0, 0.0 ,0.0, 1.0);
     if(HasDiffuse(textureConfig)) {
         finalColor = SampleTex2D(Get(diffuseMap), Get(materialSampler), In.uv) * In.color;
+    } else {
+        finalColor.a = SampleTex2D(Get(diffuseMap), Get(materialSampler), In.uv).a * In.color.a;
     }
 
     float finalAlpha = Get(sceneAlpha);
@@ -69,7 +71,6 @@ PsOut PS_MAIN(PsIn In)
         }
     }
 
-
     bool useScreenNormal = UseRefractionNormals(textureConfig);
 
     float3 mapNormal = float3(0,0,0);
@@ -96,7 +97,6 @@ PsOut PS_MAIN(PsIn In)
             distortedScreenPos += (In.Position.xy * Get(viewTexel)) + (screenNormal.xy * Get(uniformMaterialBuffer)[materialID].refractionScale * invDist);
         }
         float4 refractionColor = SampleTex2D(Get(refractionMap), Get(refractionSampler), distortedScreenPos);
-
         switch(blendMode) {
             case BLEND_MODE_ADD: 
                 finalColor.xyz = finalColor.xyz + refractionColor.xyz;
@@ -144,6 +144,10 @@ PsOut PS_MAIN(PsIn In)
             
             finalColor.xyz += reflectionColor.xyz * fRimLight * finalAlpha * Get(lightLevel);
         }
+    }
+
+    if(finalColor.a == 0.0) {
+        discard;
     }
 
     Out.diffuse = finalColor;

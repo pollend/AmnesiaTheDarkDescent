@@ -102,6 +102,7 @@
 #end
 
 #frag translucency.frag
+    #define ALPHA_REJECT 0.5
     #include "translucency.frag.fsl"
 #end
 
@@ -111,6 +112,7 @@
 #end
 
 #frag translucency_particle.frag
+    #define ALPHA_REJECT 0.5
     #include "translucency_particle.frag.fsl"
 #end
 

@@ -78,7 +78,7 @@ namespace hpl {
         static constexpr TinyImageFormat ShadowDepthBufferFormat = TinyImageFormat_D32_SFLOAT;
         static constexpr uint32_t MaxObjectUniforms = 4096;
         static constexpr uint32_t MaxLightUniforms = 1024;
-        static constexpr uint32_t MaxHiZMipLevels = 32;
+        static constexpr uint32_t MaxHiZMipLevels = 10;
         static constexpr uint32_t MaxMaterialFrameDescriptors = 256;
         static constexpr uint32_t MaxMaterialSamplers = static_cast<uint32_t>(eTextureWrap_LastEnum) * static_cast<uint32_t>(eTextureFilter_LastEnum) * static_cast<uint32_t>(cMaterial::TextureAntistropy::Antistropy_Count);
         static constexpr uint32_t MaxObjectTest = 32768;
@@ -343,10 +343,6 @@ namespace hpl {
         std::unique_ptr<iVertexBuffer> m_box;
         std::array<folly::small_vector<ShadowMapData, 32>, eShadowMapResolution_LastEnum> m_shadowMapData;
 
-        int m_maxBatchLights;
-        int mlMaxBatchVertices;
-        int mlMaxBatchIndices;
-
         float m_farPlane;
         float m_farBottom;
         float m_farTop;
@@ -564,10 +560,9 @@ namespace hpl {
         };
 
         struct UniformPropBlock {
-            mat4 viewProjeciton;
+            uint2 depthDim;
             uint32_t numObjects;
             uint32_t maxMipLevel;
-            uint2 depthDim;
         };
 
         // light pass
@@ -593,6 +588,7 @@ namespace hpl {
         SharedSampler m_samplerPointClampToBorder;
         SharedSampler m_samplerPointClampToEdge;
         SharedSampler m_goboSampler;
+        SharedSampler m_bilinearSampler;
 
         cRenderList m_reflectionRenderList;
         std::unique_ptr<renderer::PassHBAOPlus> m_hbaoPlusPipeline;

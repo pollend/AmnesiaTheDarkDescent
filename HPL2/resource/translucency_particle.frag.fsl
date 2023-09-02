@@ -25,6 +25,8 @@ float4 PS_MAIN(PsIn In)
 
     if(HasDiffuse(textureConfig)) {
         finalColor = SampleTex2D(Get(diffuseMap), Get(materialSampler), In.uv) * In.color;
+    } else {
+        finalColor.a = SampleTex2D(Get(diffuseMap), Get(materialSampler), In.uv).a * In.color.a;
     }
 
     float finalAlpha = Get(sceneAlpha);
@@ -58,6 +60,10 @@ float4 PS_MAIN(PsIn In)
            finalColor.xyz *= Get(lightLevel);
            break;
         }
+    }
+
+    if(finalColor.a == 0.0) {
+        discard;
     }
     RETURN(finalColor);
 }
