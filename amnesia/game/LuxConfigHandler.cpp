@@ -63,7 +63,6 @@ void cLuxConfigHandler::LoadMainConfig()
 	/////////////////////
 	// Main
 	mbLoadDebugMenu = gpBase->mpMainConfig->GetBool("Main","LoadDebugMenu", false);
-	mbLoadDebugMenu = true;
 	mbFirstStart = gpBase->CheckFirstStartFlag()==false;
 	//mbFirstStart = gpBase->mpMainConfig->GetBool("Main","FirstStart", true);
 
