@@ -10,7 +10,8 @@ This is a heavy rework of the core engine, mostly an experiment in absurdity to 
 - Graphics backend rework in The Forge
   - removed bookkeeping for the viewport size, so it's possible to resize the window and have all the window frame buffers update.
   - Dropped usage of the OpenGL fixed function pipeline.
-  - At the moment this is pretty unstable origin/bgfx is a more complete implementation but going forward the bgfx branch is abandoned.
+  - replaced the exsiting SSAO implementation with [HBAO+](https://www.nvidia.com/en-gb/geforce/technologies/hbao-plus/technology/)
+  - fixed parallax occlusion mapping, rendering artifacts need to be fixed with curved surfaces.
 - hpl::Event is an interface that makes building Observables a lot easier. 
 - RTTI interface avoid the overhead of using dynamc_cast<>
 ## Random Ideas
