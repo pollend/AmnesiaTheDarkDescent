@@ -638,6 +638,17 @@ namespace hpl {
             return true;
         });
 
+        m_samplerPointClampToEdge.Load(forgeRenderer->Rend(), [&](Sampler** sampler) {
+            SamplerDesc pointSamplerDesc = {};
+            pointSamplerDesc.mMinFilter = FILTER_NEAREST;
+            pointSamplerDesc.mMagFilter = FILTER_NEAREST;
+            pointSamplerDesc.mMipMapMode = MIPMAP_MODE_NEAREST;
+            pointSamplerDesc.mAddressU = ADDRESS_MODE_CLAMP_TO_EDGE;
+            pointSamplerDesc.mAddressV = ADDRESS_MODE_CLAMP_TO_EDGE;
+            pointSamplerDesc.mAddressW = ADDRESS_MODE_CLAMP_TO_EDGE;
+            addSampler(forgeRenderer->Rend(), &pointSamplerDesc, sampler);
+            return true;
+        });
         for (auto& buffer : m_perFrameBuffer) {
             buffer.Load([&](Buffer** buffer) {
                 BufferLoadDesc desc = {};
@@ -1246,9 +1257,11 @@ namespace hpl {
 
             m_materialRootSignature.Load(forgeRenderer->Rend(), [&](RootSignature** signature) {
                 RootSignatureDesc rootSignatureDesc = {};
-                const char* pStaticSamplers[] = { "nearestSampler" };
-                rootSignatureDesc.ppStaticSamplers = &m_samplerPointClampToBorder.m_handle;
-                rootSignatureDesc.ppStaticSamplerNames = pStaticSamplers;
+                const char* pStaticSamplersNames[] = { "nearestSampler", "refractionSampler" };
+                Sampler* pStaticSampler[] = {m_samplerPointClampToBorder.m_handle, m_samplerPointClampToEdge.m_handle};
+                rootSignatureDesc.mStaticSamplerCount = std::size(pStaticSamplersNames);
+                rootSignatureDesc.ppStaticSamplerNames = pStaticSamplersNames;
+                rootSignatureDesc.ppStaticSamplers = pStaticSampler;
                 rootSignatureDesc.ppShaders = shaders.data();
                 rootSignatureDesc.mShaderCount = shaders.size();
                 addRootSignature(forgeRenderer->Rend(), &rootSignatureDesc, signature);
@@ -2420,7 +2433,8 @@ namespace hpl {
             return info.m_id == materialType.m_id;
         });
 
-        if (descInfo.m_material != apMaterial || descInfo.m_version != apMaterial->Version()) {
+        if (descInfo.m_material != apMaterial ||
+            descInfo.m_version != apMaterial->Version()) {
             descInfo.m_version = apMaterial->Version();
             descInfo.m_material = apMaterial;
 

@@ -95,7 +95,7 @@ PsOut PS_MAIN(PsIn In)
         } else {
             distortedScreenPos += (In.Position.xy * Get(viewTexel)) + (screenNormal.xy * Get(uniformMaterialBuffer)[materialID].refractionScale * invDist);
         }
-        float4 refractionColor = SampleTex2D(Get(refractionMap), Get(nearestSampler), distortedScreenPos);
+        float4 refractionColor = SampleTex2D(Get(refractionMap), Get(refractionSampler), distortedScreenPos);
 
         switch(blendMode) {
             case BLEND_MODE_ADD: 
