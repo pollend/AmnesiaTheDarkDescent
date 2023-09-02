@@ -343,10 +343,6 @@ namespace hpl {
         std::unique_ptr<iVertexBuffer> m_box;
         std::array<folly::small_vector<ShadowMapData, 32>, eShadowMapResolution_LastEnum> m_shadowMapData;
 
-        int m_maxBatchLights;
-        int mlMaxBatchVertices;
-        int mlMaxBatchIndices;
-
         float m_farPlane;
         float m_farBottom;
         float m_farTop;
@@ -558,10 +554,9 @@ namespace hpl {
         };
 
         struct UniformPropBlock {
-            mat4 viewProjeciton;
+            uint2 depthDim;
             uint32_t numObjects;
             uint32_t maxMipLevel;
-            uint2 depthDim;
         };
 
         // light pass
@@ -586,6 +581,7 @@ namespace hpl {
 
         SharedSampler m_samplerPointClampToBorder;
         SharedSampler m_goboSampler;
+        SharedSampler m_bilinearSampler;
 
         cRenderList m_reflectionRenderList;
         std::unique_ptr<renderer::PassHBAOPlus> m_hbaoPlusPipeline;

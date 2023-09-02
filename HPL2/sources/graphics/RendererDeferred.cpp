@@ -539,8 +539,6 @@ namespace hpl {
         m_shadowDistanceLow = 20;
         m_shadowDistanceNone = 40;
 
-        m_maxBatchLights = 100;
-
         UVector3 shadowSizes[] = { UVector3( 128, 128, 1),
                                     UVector3( 256, 256, 1),
                                     UVector3( 256, 256, 1),
@@ -624,6 +622,17 @@ namespace hpl {
             samplerDesc.mAddressV = ADDRESS_MODE_CLAMP_TO_BORDER;
             samplerDesc.mAddressW = ADDRESS_MODE_CLAMP_TO_BORDER;
             addSampler(forgeRenderer->Rend(), &samplerDesc, sampler);
+            return true;
+        });
+
+        m_bilinearSampler.Load(forgeRenderer->Rend(), [&](Sampler** sampler) {
+            SamplerDesc bilinearClampDesc = { FILTER_NEAREST,
+                                              FILTER_NEAREST,
+                                              MIPMAP_MODE_NEAREST,
+                                              ADDRESS_MODE_CLAMP_TO_EDGE,
+                                              ADDRESS_MODE_CLAMP_TO_EDGE,
+                                              ADDRESS_MODE_CLAMP_TO_EDGE };
+            addSampler(forgeRenderer->Rend(), &bilinearClampDesc, sampler);
             return true;
         });
         m_samplerPointClampToBorder.Load(forgeRenderer->Rend(), [&](Sampler** sampler) {
@@ -738,6 +747,10 @@ namespace hpl {
             m_rootSignatureHIZOcclusion.Load(forgeRenderer->Rend(), [&](RootSignature ** sig) {
                 std::array shaders = { m_ShaderHIZGenerate.m_handle, m_shaderTestOcclusion.m_handle };
                 RootSignatureDesc rootSignatureDesc = {};
+                const char* pStaticSamplers[] = { "depthSampler" };
+                rootSignatureDesc.mStaticSamplerCount = 1;
+                rootSignatureDesc.ppStaticSamplers = &m_bilinearSampler.m_handle;
+                rootSignatureDesc.ppStaticSamplerNames = pStaticSamplers;
                 rootSignatureDesc.ppShaders = shaders.data();
                 rootSignatureDesc.mShaderCount = shaders.size();
                 addRootSignature(forgeRenderer->Rend(), &rootSignatureDesc, sig);
@@ -753,9 +766,10 @@ namespace hpl {
             m_rootSignatureCopyDepth.Load(forgeRenderer->Rend(), [&](RootSignature** signature) {
                 std::array shaders = { m_copyDepthShader.m_handle };
                 RootSignatureDesc rootSignatureDesc = {};
+                const char* pStaticSamplers[] = { "depthSampler" };
+
                 rootSignatureDesc.ppShaders = shaders.data();
                 rootSignatureDesc.mShaderCount = shaders.size();
-                const char* pStaticSamplers[] = { "depthSampler" };
                 rootSignatureDesc.mStaticSamplerCount = 1;
                 rootSignatureDesc.ppStaticSamplers = &m_samplerPointClampToBorder.m_handle;
                 rootSignatureDesc.ppStaticSamplerNames = pStaticSamplers;
@@ -2354,8 +2368,6 @@ namespace hpl {
         m_box = std::unique_ptr<iVertexBuffer>(loadVertexBufferFromMesh("core_box.dae", lVtxFlag));
         ////////////////////////////////////
         // Batch vertex buffer
-        mlMaxBatchVertices = m_shapeSphere[eDeferredShapeQuality_Low]->GetVertexNum() * m_maxBatchLights;
-        mlMaxBatchIndices = m_shapeSphere[eDeferredShapeQuality_Low]->GetIndexNum() * m_maxBatchLights;
     }
 
     //-----------------------------------------------------------------------
@@ -2536,14 +2548,12 @@ namespace hpl {
             };
 
             for (auto& b : viewportData->m_gBuffer) {
-                b.m_hiZMipCount = std::clamp<uint8_t>(
-                    static_cast<uint8_t>(std::floor(std::log2(std::max(viewportData->m_size.x, viewportData->m_size.y)))), 0, 8);
-                b.m_hizDepthBuffer = { forgeRenderer->Rend() };
+                b.m_hiZMipCount = std::floor(std::log2(std::max(viewportData->m_size.x, viewportData->m_size.y)));
                 b.m_hizDepthBuffer.Load(forgeRenderer->Rend(), [&](RenderTarget** handle) {
                     RenderTargetDesc renderTargetDesc = {};
-                    renderTargetDesc.mArraySize = b.m_hiZMipCount;
+                    renderTargetDesc.mArraySize = 1;
                     renderTargetDesc.mDepth = 1;
-                    renderTargetDesc.mMipLevels = 1;
+                    renderTargetDesc.mMipLevels = b.m_hiZMipCount;
                     renderTargetDesc.mFormat = TinyImageFormat_R32_SFLOAT;
                     renderTargetDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE | DESCRIPTOR_TYPE_RW_TEXTURE;
                     renderTargetDesc.mWidth = viewportData->m_size.x;
@@ -2800,7 +2810,6 @@ namespace hpl {
 
 
                 UniformPropBlock uniformPropBlock = {};
-                uniformPropBlock.viewProjeciton = cMath::ToForgeMat(cMath::MatrixMul(mainFrustumProj, mainFrustumView).GetTranspose());
                 for (size_t i = 0; i < uniformTest.size(); i++) {
                     auto& test = uniformTest[i];
                     cMaterial* pMaterial = test.m_renderable->GetMaterial();
@@ -2809,7 +2818,7 @@ namespace hpl {
                     ASSERT(uniformTest.size() < MaxObjectTest && "Too many renderables");
                     auto* pBoundingVolume = test.m_renderable->GetBoundingVolume();
 
-                    BufferUpdateDesc updateDesc = { m_hiZBoundBoxBuffer.m_handle, i * (sizeof(float4) * 2), sizeof(float4) * 2 };
+                    BufferUpdateDesc updateDesc = { m_hiZBoundBoxBuffer.m_handle, i  * (2 * sizeof(float4)), sizeof(float4) * 2};
                     beginUpdateResource(&updateDesc);
                     reinterpret_cast<float4*>(updateDesc.pMappedData)[0] =
                         float4(pBoundingVolume->GetMin().x, pBoundingVolume->GetMin().y, pBoundingVolume->GetMin().z, 0.0f);
@@ -2843,7 +2852,6 @@ namespace hpl {
                     cmdBindPushConstants(m_prePassCmd.m_handle, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
                     cmdDrawIndexed(m_prePassCmd.m_handle, binding.m_indexBuffer.numIndicies, 0, 0);
                 }
-
 
                 uniformPropBlock.maxMipLevel = currentGBuffer.m_hiZMipCount - 1;
                 uniformPropBlock.depthDim = uint2(common->m_size.x, common->m_size.y);
@@ -2954,11 +2962,10 @@ namespace hpl {
                 uint32_t width = static_cast<float>(common->m_size.x);
                 uint32_t height = static_cast<float>(common->m_size.y);
                 for (uint32_t lod = 1; lod < currentGBuffer.m_hiZMipCount; ++lod) {
-                    std::array<DescriptorData, 2> params = {};
+                    std::array<DescriptorData, 1> params = {};
                     params[0].pName = "depthInput";
+                    params[0].mBindMipChain = true;
                     params[0].ppTextures = &currentGBuffer.m_hizDepthBuffer.m_handle->pTexture;
-                    params[1].pName = "destOutput";
-                    params[1].ppTextures = &currentGBuffer.m_hizDepthBuffer.m_handle->pTexture;
                     updateDescriptorSet(frame.m_renderer->Rend(), lod, m_descriptorSetHIZGenerate.m_handle, params.size(), params.data());
 
                     width /= 2;
@@ -2975,7 +2982,7 @@ namespace hpl {
                     cmdBindPushConstants(m_prePassCmd.m_handle, m_rootSignatureHIZOcclusion.m_handle, rootConstantIndex, &pushConstants);
                     cmdBindDescriptorSet(m_prePassCmd.m_handle, lod, m_descriptorSetHIZGenerate.m_handle);
                     cmdBindPipeline(m_prePassCmd.m_handle, m_pipelineHIZGenerate.m_handle);
-                    cmdDispatch(m_prePassCmd.m_handle, static_cast<uint32_t>(width / 32) + 1, static_cast<uint32_t>(height / 32) + 1, 1);
+                    cmdDispatch(m_prePassCmd.m_handle, static_cast<uint32_t>(width / 16) + 1, static_cast<uint32_t>(height / 16) + 1, 1);
 
                     std::array rtBarriers = {
                         RenderTargetBarrier{
@@ -2983,24 +2990,40 @@ namespace hpl {
                     };
                     cmdResourceBarrier(m_prePassCmd.m_handle, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
                 }
+                {
+                    std::array rtBarriers = {
+                        RenderTargetBarrier{
+                            currentGBuffer.m_hizDepthBuffer.m_handle, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE}
+                    };
+                    cmdResourceBarrier(m_prePassCmd.m_handle, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+                }
                 cmdEndDebugMarker(m_prePassCmd.m_handle);
 
                 cmdBeginDebugMarker(m_prePassCmd.m_handle, 0, 1, 0, "AABB Hi-Z");
                 {
-                    std::array<DescriptorData, 4> params = {};
-                    params[0].pName = "objectUniformBlock";
-                    params[0].ppBuffers = &m_hiZOcclusionUniformBuffer.m_handle;
-                    params[1].pName = "occlusionTest";
-                    params[1].ppBuffers = &m_occlusionTestBuffer.m_handle;
-                    params[2].pName = "occlusionBoxBuffer";
-                    params[2].ppBuffers = &m_hiZBoundBoxBuffer.m_handle;
-                    params[3].pName = "depthInput";
-                    params[3].ppTextures = &currentGBuffer.m_hizDepthBuffer.m_handle->pTexture;
+                    std::array<DescriptorData, 5> params = {};
+                    params[0].pName = "perFrameConstants";
+                    params[0].ppBuffers = &m_perFrameBuffer[mainFrameIndex].m_handle;
+                    params[1].pName = "objectUniformBlock";
+                    params[1].ppBuffers = &m_hiZOcclusionUniformBuffer.m_handle;
+                    params[2].pName = "occlusionTest";
+                    params[2].ppBuffers = &m_occlusionTestBuffer.m_handle;
+                    params[3].pName = "occlusionBoxBuffer";
+                    params[3].ppBuffers = &m_hiZBoundBoxBuffer.m_handle;
+                    params[4].pName = "depthTest";
+                    params[4].ppTextures = &currentGBuffer.m_hizDepthBuffer.m_handle->pTexture;
                     updateDescriptorSet(frame.m_renderer->Rend(), 0, m_descriptorAABBOcclusionTest.m_handle, params.size(), params.data());
 
                     cmdBindDescriptorSet(m_prePassCmd.m_handle, 0, m_descriptorAABBOcclusionTest.m_handle);
                     cmdBindPipeline(m_prePassCmd.m_handle, m_pipelineAABBOcclusionTest.m_handle);
                     cmdDispatch(m_prePassCmd.m_handle, static_cast<uint32_t>(uniformTest.size() / 128) + 1, 1, 1);
+                    {
+                        std::array rtBarriers = {
+                            RenderTargetBarrier{
+                                currentGBuffer.m_hizDepthBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_UNORDERED_ACCESS}
+                        };
+                        cmdResourceBarrier(m_prePassCmd.m_handle, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+                    }
                 }
                 cmdEndDebugMarker(m_prePassCmd.m_handle);
                 cmdResolveQuery(m_prePassCmd.m_handle, m_occlusionQuery.m_handle, m_occlusionReadBackBuffer.m_handle, 0, queryIndex);
