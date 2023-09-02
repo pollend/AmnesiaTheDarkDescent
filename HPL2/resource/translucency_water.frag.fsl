@@ -72,14 +72,13 @@ PsOut PS_MAIN(PsIn In)
 
     float4 vRefractionColor = float4(1,1,1,1);
     float2 vDistortedScreenPos = float2(0.0,0.0);
-    float2 refractionViewTexel = 1.0 / GetDimensions(Get(refractionMap), NO_SAMPLER);
     if(UseRefractionTrans(Get(options))) {
         float fInvDist = min(1.0 / In.pos.z, 10.0);
-        vDistortedScreenPos = (In.Position.xy * refractionViewTexel) + (vFinalNormal.xy * Get(uniformMaterialBuffer)[materialID].refractionScale * fInvDist);
-        vRefractionColor = SampleTex2D(Get(refractionMap), Get(nearestSampler), vDistortedScreenPos);
-        if(vRefractionColor.a < 0.5) {
-            vRefractionColor = SampleTex2D(Get(refractionMap), Get(nearestSampler), In.Position.xy * refractionViewTexel);
-        }
+        vDistortedScreenPos = In.Position.xy  + (Get(viewportSize).x * vFinalNormal.xy * Get(uniformMaterialBuffer)[materialID].refractionScale * fInvDist );
+        vRefractionColor = SampleTex2D(Get(refractionMap), Get(refractionSampler), vDistortedScreenPos * Get(viewTexel));
+      //  if(vRefractionColor.a < 0.5) {
+      //      vRefractionColor = SampleTex2D(Get(refractionMap), Get(nearestSampler), In.Position.xy * Get(viewTexel));
+      //  }
      }
 
 

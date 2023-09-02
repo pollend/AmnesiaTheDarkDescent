@@ -451,7 +451,7 @@ namespace hpl {
 					}
 					case cMaterial::MaterialID::Water: {
 						// type.m_data.m_waterUniformBlock.mbHasReflection = userVars.GetVarBool("HasReflection", true);
-						type.m_data.m_waterUniformBlock.mfRefractionScale = userVars.GetVarFloat("RefractionScale", 0.1f);
+						type.m_data.m_waterUniformBlock.mfRefractionScale = userVars.GetVarFloat("RefractionScale", 1.0f);
 						type.m_data.m_waterUniformBlock.mfFrenselBias = userVars.GetVarFloat("FrenselBias", 0.2f);
 						type.m_data.m_waterUniformBlock.mfFrenselPow = userVars.GetVarFloat("FrenselPow", 8.0f);
 						type.m_data.m_waterUniformBlock.mfReflectionFadeStart = userVars.GetVarFloat("ReflectionFadeStart", 0);

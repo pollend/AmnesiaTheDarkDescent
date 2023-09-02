@@ -430,7 +430,13 @@ namespace hpl {
                 TranslucencyParticleShaderVariantFog = 0x1,
                 TranslucencyParticleVariantCount = 2
             };
-            enum TranslucencyBlend : uint8_t { BlendAdd, BlendMul, BlendMulX2, BlendAlpha, BlendPremulAlpha, BlendModeCount };
+            enum TranslucencyBlend : uint8_t {
+                BlendAdd,
+                BlendMul,
+                BlendMulX2,
+                BlendAlpha,
+                BlendPremulAlpha,
+                BlendModeCount };
 
             // 3 bit key for pipeline variant
             union TranslucencyKey {
@@ -577,9 +583,10 @@ namespace hpl {
         SharedShader m_boxLightShader;
         std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_lightPerLightSet;
         std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_lightPerFrameSet;
-        SharedSampler m_shadowCmpSampler;
 
+        SharedSampler m_shadowCmpSampler;
         SharedSampler m_samplerPointClampToBorder;
+        SharedSampler m_samplerPointClampToEdge;
         SharedSampler m_goboSampler;
         SharedSampler m_bilinearSampler;
 

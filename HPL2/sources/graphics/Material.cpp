@@ -45,6 +45,7 @@ namespace hpl {
 	cMaterial::cMaterial(const tString& asName, const tWString& asFullPath, cGraphics *apGraphics, cResources *apResources, iMaterialType *apType)
 		: iResourceBase(asName, asFullPath, 0)
 	{
+        m_version = rand();
 		mpGraphics = apGraphics;
 		mpResources = apResources;
 
