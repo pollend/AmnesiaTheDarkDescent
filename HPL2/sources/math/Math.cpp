@@ -2473,9 +2473,9 @@ namespace hpl {
 
 	cMatrixf cMath::MatrixPlaneMirror(const cPlanef &aPlane)
 	{
-		return	cMatrixf(	1-2*aPlane.a*aPlane.a,	-2*aPlane.b*aPlane.a,	-2*aPlane.c*aPlane.a,	-2*aPlane.a*aPlane.d,
-							-2*aPlane.a*aPlane.b,	1-2*aPlane.b*aPlane.b,	-2*aPlane.c*aPlane.b,	-2*aPlane.b*aPlane.d,
-							-2*aPlane.a*aPlane.c,	-2*aPlane.b*aPlane.c,	1-2*aPlane.c*aPlane.c,	-2*aPlane.c*aPlane.d,
+		return	cMatrixf(	1.0f-2.0f*aPlane.a*aPlane.a,	-2.0f*aPlane.b*aPlane.a,	-2.0f*aPlane.c*aPlane.a,	-2*aPlane.a*aPlane.d,
+							-2.0f*aPlane.a*aPlane.b,	1.0f-2.0f*aPlane.b*aPlane.b,	-2.0f*aPlane.c*aPlane.b,	-2*aPlane.b*aPlane.d,
+							-2.0f*aPlane.a*aPlane.c,	-2.0f*aPlane.b*aPlane.c,	1.0f-2.0f*aPlane.c*aPlane.c,	-2*aPlane.c*aPlane.d,
 							0,						0,						0,						1);
 	}
 
@@ -2617,13 +2617,13 @@ namespace hpl {
 		pQ.a = (Sign(aClipPlane.a) + a_mtxProjMatrix.m[0][2]) / a_mtxProjMatrix.m[0][0];
 		pQ.b = (Sign(aClipPlane.b) + a_mtxProjMatrix.m[1][2]) / a_mtxProjMatrix.m[1][1];
 		pQ.c = -1.0f;
-		pQ.d = (1.0f + a_mtxProjMatrix.m[2][2]) / a_mtxProjMatrix.m[2][3];
+		pQ.d = (1.0f - a_mtxProjMatrix.m[2][2]) / a_mtxProjMatrix.m[2][3];
 
 		cPlanef pC = aClipPlane * (2.0f / PlaneDot(aClipPlane, pQ));
 
 		mtxOutput.m[2][0] = pC.a;
 		mtxOutput.m[2][1] = pC.b;
-		mtxOutput.m[2][2] = pC.c + 1.0f;
+		mtxOutput.m[2][2] = pC.c;// + 1.0f;
 		mtxOutput.m[2][3] = pC.d;
 
 		return mtxOutput;

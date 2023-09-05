@@ -50,7 +50,7 @@ namespace hpl
 {
 
     cRendererSimple::cRendererSimple(cGraphics* apGraphics, cResources* apResources)
-        : iRenderer("Simple", apGraphics, apResources, 0)
+        : iRenderer("Simple", apGraphics, apResources)
     {
     }
 

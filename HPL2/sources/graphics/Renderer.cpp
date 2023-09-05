@@ -364,7 +364,7 @@ namespace hpl
         RenderSettingsCopy(mlNumberOfOcclusionQueries);
     }
 
-    iRenderer::iRenderer(const tString& asName, cGraphics* apGraphics, cResources* apResources, int alNumOfProgramComboModes)
+    iRenderer::iRenderer(const tString& asName, cGraphics* apGraphics, cResources* apResources)
     {
         mpGraphics = apGraphics;
         mpResources = apResources;

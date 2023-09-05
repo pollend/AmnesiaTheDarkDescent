@@ -170,7 +170,7 @@ namespace hpl {
         friend class cRenderSettings;
     public:
 
-        iRenderer(const tString& asName, cGraphics *apGraphics,cResources* apResources, int alNumOfProgramComboModes);
+        iRenderer(const tString& asName, cGraphics *apGraphics,cResources* apResources);
         virtual ~iRenderer();
 
         // plan to just use the single draw call need to call BeginRendering to setup state

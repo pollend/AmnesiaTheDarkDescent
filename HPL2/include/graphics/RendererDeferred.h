@@ -21,6 +21,7 @@
 #include "engine/RTTI.h"
 
 #include "scene/Viewport.h"
+#include "scene/World.h"
 #include "windowing/NativeWindow.h"
 
 #include <graphics/ForgeHandles.h>
@@ -43,6 +44,7 @@
 #include <array>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <unordered_map>
 #include <vector>
 
@@ -76,6 +78,7 @@ namespace hpl {
         static constexpr TinyImageFormat SpecularBufferFormat = TinyImageFormat_R8G8_UNORM;
         static constexpr TinyImageFormat ColorBufferFormat = TinyImageFormat_R8G8B8A8_UNORM;
         static constexpr TinyImageFormat ShadowDepthBufferFormat = TinyImageFormat_D32_SFLOAT;
+        static constexpr uint32_t MaxReflectionBuffers = 4;
         static constexpr uint32_t MaxObjectUniforms = 4096;
         static constexpr uint32_t MaxLightUniforms = 1024;
         static constexpr uint32_t MaxHiZMipLevels = 10;
@@ -85,6 +88,10 @@ namespace hpl {
         static constexpr uint32_t MaxOcclusionDescSize = 4096;
         static constexpr uint32_t MaxQueryPoolSize = MaxOcclusionDescSize * 2;
 
+        static constexpr uint32_t TranslucencyBlendModeMask = 0xf;
+
+        static constexpr uint32_t TranslucencyReflectionBufferMask = 0x7;
+        static constexpr uint32_t TranslucencyReflectionBufferOffset = 4;
         enum LightConfiguration { HasGoboMap = 0x1, HasShadowMap = 0x2 };
 
         enum LightPipelineVariants {
@@ -95,12 +102,11 @@ namespace hpl {
         };
 
 
-        static constexpr uint32_t TranslucencyBlendModeMask = 0xf;
         enum TranslucencyFlags {
-            UseIlluminationTrans = (1 << 4),
-            UseReflectionTrans = (1 << 5),
-            UseRefractionTrans = (1 << 6),
-            UseFog = (1 << 7),
+            UseIlluminationTrans = (1 << 7),
+            UseReflectionTrans = (1 << 8),
+            UseRefractionTrans = (1 << 9),
+            UseFog = (1 << 10),
         };
         struct MaterialRootConstant {
             uint32_t objectId;
@@ -201,20 +207,19 @@ namespace hpl {
             float m_fogFalloffExp;
         };
 
-
         class ShadowMapData {
         public:
             SharedRenderTarget m_target;
-            iLight* m_light;
             uint32_t m_transformCount = 0;
             uint32_t m_frameCount = 0;
             float m_radius = 0.0f;
             float m_fov = 0.0f;
             float m_aspect = 0.0f;
 
-            CmdPool* m_pool;
-            Cmd* m_cmd = nullptr;
-            Fence* m_shadowFence = nullptr;
+            iLight* m_light = nullptr;
+            SharedCmdPool m_pool;
+            SharedCmd m_cmd;
+            SharedFence m_shadowFence;
         };
 
         struct FogRendererData {
@@ -237,7 +242,8 @@ namespace hpl {
                 , m_outputBuffer(std::move(buffer.m_outputBuffer))
                 , m_refractionImage(std::move(buffer.m_refractionImage))
                 , m_hizDepthBuffer(std::move(buffer.m_hizDepthBuffer))
-                , m_hiZMipCount(buffer.m_hiZMipCount) {
+                , m_preZPassRenderables(std::move(buffer.m_preZPassRenderables))
+                 {
             }
             void operator=(GBuffer&& buffer) {
                 m_colorBuffer = std::move(buffer.m_colorBuffer);
@@ -248,11 +254,12 @@ namespace hpl {
                 m_outputBuffer = std::move(buffer.m_outputBuffer);
                 m_refractionImage = std::move(buffer.m_refractionImage);
                 m_hizDepthBuffer = std::move(buffer.m_hizDepthBuffer);
-                m_hiZMipCount = buffer.m_hiZMipCount;
+                m_preZPassRenderables = std::move(buffer.m_preZPassRenderables);
             }
+            std::set<iRenderable*> m_preZPassRenderables;
+
             SharedTexture m_refractionImage;
             SharedRenderTarget m_hizDepthBuffer;
-            uint8_t m_hiZMipCount;
 
             SharedRenderTarget m_colorBuffer;
             SharedRenderTarget m_normalBuffer;
@@ -260,6 +267,43 @@ namespace hpl {
             SharedRenderTarget m_specularBuffer;
             SharedRenderTarget m_depthBuffer;
             SharedRenderTarget m_outputBuffer;
+
+            bool isValid() {
+                return m_refractionImage.IsValid()
+                    && m_hizDepthBuffer.IsValid()
+                    && m_colorBuffer.IsValid()
+                    && m_normalBuffer.IsValid()
+                    && m_positionBuffer.IsValid()
+                    && m_specularBuffer.IsValid()
+                    && m_depthBuffer.IsValid()
+                    && m_outputBuffer.IsValid();
+            }
+        };
+
+        struct ReflectionGBuffer {
+            iRenderable* m_target = nullptr;
+
+            uint32_t m_frameCount = 0;
+            GBuffer m_buffer;
+            SharedCmdPool m_pool;
+            SharedCmd m_cmd;
+            SharedFence m_fence;
+
+            ReflectionGBuffer() = default;
+            ReflectionGBuffer(ReflectionGBuffer&& buffer):
+                m_pool(std::move(buffer.m_pool)),
+                m_cmd(std::move(buffer.m_cmd)),
+                m_fence(std::move(buffer.m_fence)),
+                m_buffer(std::move(buffer.m_buffer)),
+                m_frameCount(buffer.m_frameCount){
+            }
+            void operator=(ReflectionGBuffer&& buffer) {
+                m_pool = std::move(buffer.m_pool);
+                m_cmd = std::move(buffer.m_cmd);
+                m_fence = std::move(buffer.m_fence);
+                m_buffer = std::move(buffer.m_buffer);
+                m_frameCount= buffer.m_frameCount;
+            }
         };
 
         struct ViewportData {
@@ -270,7 +314,7 @@ namespace hpl {
                 : m_size(buffer.m_size)
                 , m_refractionImage(std::move(buffer.m_refractionImage))
                 , m_gBuffer(std::move(buffer.m_gBuffer))
-                , m_gBufferReflection(std::move(buffer.m_gBufferReflection)) {
+                , m_reflectionBuffer(std::move(buffer.m_reflectionBuffer)) {
             }
 
             ViewportData& operator=(const ViewportData&) = delete;
@@ -279,13 +323,13 @@ namespace hpl {
                 m_size = buffer.m_size;
                 m_refractionImage = std::move(buffer.m_refractionImage);
                 m_gBuffer = std::move(buffer.m_gBuffer);
-                m_gBufferReflection = std::move(buffer.m_gBufferReflection);
+                m_reflectionBuffer = std::move(buffer.m_reflectionBuffer);
             }
 
             cVector2l m_size = cVector2l(0, 0);
             std::array<GBuffer, ForgeRenderer::SwapChainLength> m_gBuffer;
+            std::array<ReflectionGBuffer, MaxReflectionBuffers> m_reflectionBuffer;
             std::shared_ptr<Image> m_refractionImage;
-            GBuffer m_gBufferReflection;
         };
 
         cRendererDeferred(cGraphics* apGraphics, cResources* apResources);
@@ -314,15 +358,12 @@ namespace hpl {
             cRenderSettings* apSettings,
             bool abSendFrameBufferToPostEffects) override;
 
-
     private:
         LegacyRenderTarget& resolveRenderTarget(std::array<LegacyRenderTarget, 2>& rt);
         std::shared_ptr<Image>& resolveRenderImage(std::array<std::shared_ptr<Image>, 2>& img);
         iVertexBuffer* GetLightShape(iLight* apLight, eDeferredShapeQuality aQuality) const;
 
         struct PerObjectOption {
-            cMatrixf m_viewMat;
-            cMatrixf m_projectionMat;
             std::optional<cMatrixf> m_modelMatrix = std::nullopt;
         };
         struct PerFrameOption {
@@ -330,13 +371,62 @@ namespace hpl {
             cMatrixf m_viewMat;
             cMatrixf m_projectionMat;
         };
+        void RebuildGBuffer(ForgeRenderer& renderer,GBuffer& buffer, uint32_t width, uint32_t height);
+        struct AdditionalGbufferPassOptions {
+            bool m_invert = true;
+        };
+
+        void cmdBuildPrimaryGBuffer(const ForgeRenderer::Frame& frame, Cmd* cmd,
+            uint32_t frameDescriptorIndex,
+            RenderTarget* colorBuffer,
+            RenderTarget* normalBuffer,
+            RenderTarget* positionBuffer,
+            RenderTarget* specularBuffer,
+            RenderTarget* depthBuffer,
+            AdditionalGbufferPassOptions options
+        );
+        void cmdLightPass(Cmd* cmd,
+            const ForgeRenderer::Frame& frame,
+            cWorld* apWorld,
+            cFrustum* apFrustum,
+            uint32_t frameDescriptorIndex,
+            RenderTarget* colorBuffer,
+            RenderTarget* normalBuffer,
+            RenderTarget* positionBuffer,
+            RenderTarget* specularBuffer,
+            RenderTarget* depthBuffer,
+            RenderTarget* outputBuffer,
+            cMatrixf viewMat,
+            cMatrixf invViewMat,
+            cMatrixf projectionMat);
+
+
+        struct AdditionalZPassOptions {
+            tRenderableFlag objectVisibilityFlags = eRenderableFlag_VisibleInNonReflection;
+            std::span<cPlanef> clipPlanes = {};
+            bool m_invert = false;
+            bool m_disableOcclusionQueries = false;
+        };
+        void cmdPreAndPostZ(
+            Cmd* cmd,
+            std::set<iRenderable*>& prePassRenderables,
+            const ForgeRenderer::Frame& frame,
+            cRenderList& renderList,
+            float frameTime,
+            RenderTarget* depthBuffer,
+            RenderTarget* hiZBuffer,
+            cFrustum* apFrustum,
+            uint32_t frameDescriptorIndex,
+            cMatrixf viewMat,
+            cMatrixf projectionMat,
+            AdditionalZPassOptions flags);
 
         uint32_t updateFrameDescriptor(const ForgeRenderer::Frame& frame,Cmd* cmd, cWorld* apWorld,const PerFrameOption& options);
         uint32_t cmdBindMaterialAndObject(Cmd* cmd,
             const ForgeRenderer::Frame& frame,
             cMaterial* apMaterial,
             iRenderable* apObject,
-            const PerObjectOption& option);
+            std::optional<cMatrixf> modelMatrix = std::nullopt);
 
         std::array<std::unique_ptr<iVertexBuffer>, eDeferredShapeQuality_LastEnum> m_shapeSphere;
         std::unique_ptr<iVertexBuffer> m_shapePyramid;
@@ -364,6 +454,7 @@ namespace hpl {
 
         // decal pass
         std::array<SharedPipeline, eMaterialBlendMode_LastEnum> m_decalPipeline;
+        std::array<SharedPipeline, eMaterialBlendMode_LastEnum> m_decalPipelineCW;
         SharedShader m_decalShader;
 
         struct Fog {
@@ -402,6 +493,9 @@ namespace hpl {
             SharedShader m_solidDiffuseParallaxShader;
             SharedPipeline m_solidDiffusePipeline;
             SharedPipeline m_solidDiffuseParallaxPipeline;
+
+            SharedPipeline m_solidDiffusePipelineCW;
+            SharedPipeline m_solidDiffuseParallaxPipelineCW;
         } m_materialSolidPass;
 
         // illumination pass
@@ -485,13 +579,16 @@ namespace hpl {
             SharedTexture m_falloffMap;
             SharedTexture m_attenuationLightMap;
         };
+        folly::F14ValueMap<iRenderable*, uint32_t> m_lightDescriptorLookup;
         std::array<std::array<LightResourceEntry, MaxLightUniforms>, ForgeRenderer::SwapChainLength> m_lightResources{};
         // z pass
         SharedShader m_zPassShader;
-        SharedPipeline m_zPassPipeline;
+        SharedPipeline m_zPassPipelineCCW;
+        SharedPipeline m_zPassPipelineCW;
+
         SharedPipeline m_zPassShadowPipelineCW;
         SharedPipeline m_zPassShadowPipelineCCW;
-        std::set<iRenderable*> m_preZPassRenderables;
+
 
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_objectUniformBuffer;
         struct MaterialPassDescriptorSet {
@@ -590,7 +687,8 @@ namespace hpl {
         SharedSampler m_goboSampler;
         SharedSampler m_bilinearSampler;
 
-        cRenderList m_reflectionRenderList;
+        cRenderList m_rendererList;
+        cRenderList m_reflectionRendererList;
         std::unique_ptr<renderer::PassHBAOPlus> m_hbaoPlusPipeline;
     };
 }; // namespace hpl
