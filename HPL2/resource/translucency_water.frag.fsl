@@ -103,9 +103,9 @@ PsOut PS_MAIN(PsIn In)
         if(HasCubeMap(Get(uniformMaterialBuffer)[materialID].materialConfig)) {
             float3 vEnvUv = reflect(vEyeVec, vScreenNormal);
             vEnvUv = mul(Get(invViewRotationMat), float4(vEnvUv.x, vEnvUv.y, vEnvUv.z, 1)).xyz;
-            vReflectionColor  = SampleTexCube(Get(cubeMap),  Get(materialSampler), vEnvUv);
+            vReflectionColor = SampleTexCube(Get(cubeMap),  Get(materialSampler), vEnvUv);
         } else {
-            vRefractionColor = SampleTex2D(Get(reflectionMap), Get(nearestSampler), vDistortedScreenPos * Get(viewTexel));
+            vReflectionColor = SampleTex2D(Get(reflectionMap)[ReflectionBuffer(Get(options))], Get(nearestSampler), vDistortedScreenPos * Get(viewTexel));
         }
     }
 

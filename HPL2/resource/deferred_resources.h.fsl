@@ -10,7 +10,6 @@
 #define BLEND_MODE_ALPHA 3
 #define BLEND_MODE_PREMUL_ALPHA 4
 
-
 CBUFFER(perFrameConstants, UPDATE_FREQ_PER_FRAME, b0, binding = 0)
 {
     DATA(float4x4, invViewRotationMat, None);
@@ -93,9 +92,6 @@ STRUCT(UniformObject)
         DATA(uint, _pad0[8], None);
     };
 #endif
-
-RES(Buffer(UniformMaterial), uniformMaterialBuffer, UPDATE_FREQ_PER_FRAME, t0, binding = 1);
-RES(Buffer(UniformObject), uniformObjectBuffer, UPDATE_FREQ_PER_FRAME, t1, binding = 2);
     
 RES(Tex2D(float4), diffuseMap, UPDATE_FREQ_PER_BATCH, t2, binding = 3); 
 RES(Tex2D(float4), normalMap, UPDATE_FREQ_PER_BATCH, t3, binding = 4);
@@ -112,8 +108,11 @@ RES(SamplerState, nearestSampler, UPDATE_FREQ_NONE, s2, binding = 13);
 RES(SamplerState, materialSampler, UPDATE_FREQ_NONE, s3, binding = 14); 
 
 RES(Tex2D(float4), dissolveMap, UPDATE_FREQ_NONE, t11, binding = 15);
+
+RES(Buffer(UniformMaterial), uniformMaterialBuffer, UPDATE_FREQ_PER_FRAME, t0, binding = 1);
+RES(Buffer(UniformObject), uniformObjectBuffer, UPDATE_FREQ_PER_FRAME, t1, binding = 2);
 RES(Tex2D(float4), refractionMap, UPDATE_FREQ_PER_FRAME, t12, binding = 16); 
-RES(Tex2D(float4), reflectionMap, UPDATE_FREQ_PER_FRAME, t13, binding = 17); 
+RES(Tex2D(float4), reflectionMap[4], UPDATE_FREQ_PER_FRAME, t13, binding = 17); 
 
 PUSH_CONSTANT(materialRootConstant, b0)
 {
@@ -126,10 +125,11 @@ PUSH_CONSTANT(materialRootConstant, b0)
 
 // translucency 
 INLINE uint BlendModeTrans(uint _options) { return  (_options & 0xf); } 
-INLINE bool UseIlluminationTrans(uint _options) { return (_options & (1 << 4)) != 0;}
-INLINE bool UseReflectionTrans(uint _options)   { return (_options & (1 << 5)) != 0; }
-INLINE bool UseRefractionTrans(uint _options)   { return (_options & (1 << 6)) != 0; }
-INLINE bool UseFog(uint _options) { return (_options & (1 << 7)) != 0;}
+INLINE uint ReflectionBuffer(uint _options) { return (_options >> 4) & 0x7; }
+INLINE bool UseIlluminationTrans(uint _options) { return (_options & (1 << 7)) != 0;}
+INLINE bool UseReflectionTrans(uint _options)   { return (_options & (1 << 8)) != 0; }
+INLINE bool UseRefractionTrans(uint _options)   { return (_options & (1 << 9)) != 0; }
+INLINE bool UseFog(uint _options) { return (_options & (1 << 10)) != 0;}
 
 INLINE float3x3 ToNormalMat(float4x4 invModel, float4x4 invView) {
     return transpose(mul(float3x3(invModel[0].xyz, invModel[1].xyz, invModel[2].xyz), float3x3(invView[0].xyz, invView[1].xyz, invView[2].xyz)));

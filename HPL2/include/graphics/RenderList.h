@@ -21,6 +21,7 @@
 #include "graphics/Enum.h"
 #include <graphics/GraphicsTypes.h>
 #include <span>
+#include <array>
 
 namespace hpl {
 
@@ -36,20 +37,25 @@ namespace hpl {
 		cRenderList();
 		~cRenderList();
 
+        [[deprecated("use BeginAndReset")]]
 		void Setup(float afFrameTime, cFrustum *apFrustum);
+        [[deprecated("Use BeginAndReset")]]
+		void Clear();
 
 		void AddObject(iRenderable *apObject);
 
+        [[deprecated("Use End")]]
 		void Compile(tRenderListCompileFlag aFlags);
 
 		bool ArrayHasObjects(eRenderListType aType);
-		
+
 		std::span<iRenderable*> GetRenderableItems(eRenderListType aType);
 		std::span<iRenderable*> GetOcclusionQueryItems();
 		std::span<cFogArea*> GetFogAreas();
 		std::span<iLight*> GetLights();
 
-		void Clear();
+        void BeginAndReset(float frameTime, cFrustum* frustum);
+        void End(tRenderListCompileFlag aFlags);
 
 		iLight* GetLight(int alIdx){ return m_lights[alIdx];}
 		int GetLightNum(){ return(int)m_lights.size();}
@@ -67,8 +73,8 @@ namespace hpl {
 		iRenderable* GetTransObject(int alIdx){ return m_transObjects[alIdx];}
 
 	private:
-		float m_frameTime;
-		cFrustum* m_frustum;
+		float m_frameTime = 0.0f;
+		cFrustum* m_frustum = nullptr;
 
 		std::vector<iRenderable*> m_occlusionQueryObjects;
 		std::vector<iRenderable*> m_solidObjects;
@@ -77,8 +83,7 @@ namespace hpl {
 		std::vector<iRenderable*> m_illumObjects;
 		std::vector<iLight*> m_lights;
 		std::vector<cFogArea*> m_fogAreas;
-
-		tRenderableVec m_sortedArrays[eRenderListType_LastEnum];
+		std::array<std::vector<iRenderable*>,eRenderListType_LastEnum> m_sortedArrays;
 	};
 
 	//---------------------------------------------
