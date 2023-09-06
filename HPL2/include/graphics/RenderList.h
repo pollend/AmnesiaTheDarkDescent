@@ -21,6 +21,7 @@
 #include "graphics/Enum.h"
 #include <graphics/GraphicsTypes.h>
 #include <span>
+#include <array>
 
 namespace hpl {
 
