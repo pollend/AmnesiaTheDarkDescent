@@ -82,7 +82,7 @@ namespace hpl {
         static constexpr uint32_t MaxObjectUniforms = 4096;
         static constexpr uint32_t MaxLightUniforms = 1024;
         static constexpr uint32_t MaxHiZMipLevels = 10;
-        static constexpr uint32_t MaxMaterialFrameDescriptors = 256;
+        static constexpr uint32_t MaxViewportFrameDescriptors = 256;
         static constexpr uint32_t MaxMaterialSamplers = static_cast<uint32_t>(eTextureWrap_LastEnum) * static_cast<uint32_t>(eTextureFilter_LastEnum) * static_cast<uint32_t>(cMaterial::TextureAntistropy::Antistropy_Count);
         static constexpr uint32_t MaxObjectTest = 32768;
         static constexpr uint32_t MaxOcclusionDescSize = 4096;
@@ -100,7 +100,6 @@ namespace hpl {
             LightPipelineVariant_StencilTest = 0x2,
             LightPipelineVariant_Size = 4,
         };
-
 
         enum TranslucencyFlags {
             UseIlluminationTrans = (1 << 7),
@@ -373,7 +372,7 @@ namespace hpl {
         };
         void RebuildGBuffer(ForgeRenderer& renderer,GBuffer& buffer, uint32_t width, uint32_t height);
         struct AdditionalGbufferPassOptions {
-            bool m_invert = true;
+            bool m_invert = false;
         };
 
         void cmdBuildPrimaryGBuffer(const ForgeRenderer::Frame& frame, Cmd* cmd,
@@ -385,10 +384,15 @@ namespace hpl {
             RenderTarget* depthBuffer,
             AdditionalGbufferPassOptions options
         );
+
+        struct AdditionalLightPassOptions {
+            bool m_invert = false;
+        };
         void cmdLightPass(Cmd* cmd,
             const ForgeRenderer::Frame& frame,
             cWorld* apWorld,
             cFrustum* apFrustum,
+            cRenderList& renderList,
             uint32_t frameDescriptorIndex,
             RenderTarget* colorBuffer,
             RenderTarget* normalBuffer,
@@ -398,7 +402,8 @@ namespace hpl {
             RenderTarget* outputBuffer,
             cMatrixf viewMat,
             cMatrixf invViewMat,
-            cMatrixf projectionMat);
+            cMatrixf projectionMat,
+            AdditionalLightPassOptions options);
 
 
         struct AdditionalZPassOptions {
@@ -450,7 +455,7 @@ namespace hpl {
         SharedTexture m_ssaoScatterDiskTexture;
 
         Image* m_dissolveImage;
-        std::array<SharedBuffer, MaxMaterialFrameDescriptors> m_perFrameBuffer;
+        std::array<SharedBuffer, MaxViewportFrameDescriptors> m_perFrameBuffer;
 
         // decal pass
         std::array<SharedPipeline, eMaterialBlendMode_LastEnum> m_decalPipeline;
@@ -670,7 +675,8 @@ namespace hpl {
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_lightPassBuffer;
 
         SharedRootSignature m_lightPassRootSignature;
-        SharedPipeline m_lightStencilPipeline;
+        SharedPipeline m_lightStencilPipelineCCW;
+        SharedPipeline m_lightStencilPipelineCW;
         std::array<SharedPipeline, LightPipelineVariant_Size> m_pointLightPipeline;
         std::array<SharedPipeline, LightPipelineVariant_Size> m_boxLightPipeline;
         std::array<SharedPipeline, LightPipelineVariant_Size> m_spotLightPipeline;
@@ -680,6 +686,7 @@ namespace hpl {
         SharedShader m_boxLightShader;
         std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_lightPerLightSet;
         std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_lightPerFrameSet;
+        uint32_t m_lightIndex = 0;
 
         SharedSampler m_shadowCmpSampler;
         SharedSampler m_samplerPointClampToBorder;

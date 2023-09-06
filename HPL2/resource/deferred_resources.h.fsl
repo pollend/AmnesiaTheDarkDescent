@@ -92,8 +92,6 @@ STRUCT(UniformObject)
         DATA(uint, _pad0[8], None);
     };
 #endif
-
-
     
 RES(Tex2D(float4), diffuseMap, UPDATE_FREQ_PER_BATCH, t2, binding = 3); 
 RES(Tex2D(float4), normalMap, UPDATE_FREQ_PER_BATCH, t3, binding = 4);

@@ -2024,14 +2024,14 @@ namespace hpl {
 
             DescriptorSetDesc perFrameDescSet{ m_materialRootSignature.m_handle,
                                                DESCRIPTOR_UPDATE_FREQ_PER_FRAME,
-                                               MaxMaterialFrameDescriptors };
+                                               MaxViewportFrameDescriptors };
             for (size_t setIndex = 0; setIndex < m_materialSet.m_frameSet.size(); setIndex++) {
                 m_materialSet.m_frameSet[setIndex].Load(forgeRenderer->Rend(), [&](DescriptorSet** descSet) {
                     addDescriptorSet(forgeRenderer->Rend(), &perFrameDescSet, descSet);
                     return true;
                 });
 
-                for (size_t i = 0; i < MaxMaterialFrameDescriptors; i++) {
+                for (size_t i = 0; i < MaxViewportFrameDescriptors; i++) {
                     std::array<DescriptorData, 3> params = {};
                     params[0].pName = "perFrameConstants";
                     params[0].ppBuffers = &m_perFrameBuffer[i].m_handle;
@@ -2281,8 +2281,7 @@ namespace hpl {
 
                 createPipelineVariants(pipelineDesc, m_spotLightPipeline);
             }
-
-            m_lightStencilPipeline.Load(forgeRenderer->Rend(), [&](Pipeline** handle) {
+            {
                 DepthStateDesc stencilDepthTest = {};
                 stencilDepthTest.mDepthTest = true;
                 stencilDepthTest.mDepthWrite = false;
@@ -2320,9 +2319,17 @@ namespace hpl {
                 pipelineSettings.pDepthState = &stencilDepthTest;
                 pipelineSettings.pRasterizerState = &rasterizerStateDesc;
                 pipelineSettings.pShaderProgram = m_stencilLightShader.m_handle;
-                addPipeline(forgeRenderer->Rend(), &pipelineDesc, handle);
-                return true;
-            });
+                m_lightStencilPipelineCCW.Load(forgeRenderer->Rend(), [&](Pipeline** handle) {
+                    addPipeline(forgeRenderer->Rend(), &pipelineDesc, handle);
+                    return true;
+                });
+
+                rasterizerStateDesc.mFrontFace = FrontFace::FRONT_FACE_CW;
+                m_lightStencilPipelineCCW.Load(forgeRenderer->Rend(), [&](Pipeline** handle) {
+                    addPipeline(forgeRenderer->Rend(), &pipelineDesc, handle);
+                    return true;
+                });
+            }
 
             for (auto& lightSet : m_lightPerLightSet) {
                 lightSet.Load(forgeRenderer->Rend(), [&](DescriptorSet** set) {
@@ -2337,15 +2344,16 @@ namespace hpl {
                 m_lightPerFrameSet[setIndex].Load(forgeRenderer->Rend(), [&](DescriptorSet** set) {
                     DescriptorSetDesc perFrameDescSet{ m_lightPassRootSignature.m_handle,
                                                        DESCRIPTOR_UPDATE_FREQ_PER_FRAME,
-                                                       ForgeRenderer::SwapChainLength };
+                                                       MaxViewportFrameDescriptors  };
                     addDescriptorSet(forgeRenderer->Rend(), &perFrameDescSet, set);
                     return true;
                 });
-
-                std::array<DescriptorData, 1> params = {};
-                params[0].pName = "lightObjectBuffer";
-                params[0].ppBuffers = &m_lightPassBuffer[setIndex].m_handle;
-                updateDescriptorSet(forgeRenderer->Rend(), 0, m_lightPerFrameSet[setIndex].m_handle, params.size(), params.data());
+                for(uint32_t i = 0; i < MaxViewportFrameDescriptors; i++) {
+                    std::array<DescriptorData, 1> params = {};
+                    params[0].pName = "lightObjectBuffer";
+                    params[0].ppBuffers = &m_lightPassBuffer[setIndex].m_handle;
+                    updateDescriptorSet(forgeRenderer->Rend(), i, m_lightPerFrameSet[setIndex].m_handle, params.size(), params.data());
+                }
             }
         }
 
@@ -2469,7 +2477,7 @@ namespace hpl {
         uniformFrameData->fogColor = float4(fogColor.r, fogColor.g, fogColor.b, fogColor.a);
         endUpdateResource(&updatePerFrameConstantsDesc, NULL);
 
-        m_materialSet.m_frameIndex = (m_materialSet.m_frameIndex + 1) % MaxMaterialFrameDescriptors;
+        m_materialSet.m_frameIndex = (m_materialSet.m_frameIndex + 1) % MaxViewportFrameDescriptors;
         return index;
     }
 
@@ -2478,6 +2486,7 @@ namespace hpl {
         const ForgeRenderer::Frame& frame,
         cWorld* apWorld,
         cFrustum* apFrustum,
+        cRenderList& renderList,
         uint32_t frameDescriptorIndex,
         RenderTarget* colorBuffer,
         RenderTarget* normalBuffer,
@@ -2487,7 +2496,8 @@ namespace hpl {
         RenderTarget* outputBuffer,
         cMatrixf viewMat,
         cMatrixf invViewMat,
-        cMatrixf projectionMat) {
+        cMatrixf projectionMat,
+        AdditionalLightPassOptions options) {
         uint32_t materialObjectIndex = getDescriptorIndexFromName(m_materialRootSignature.m_handle, "materialRootConstant");
         // --------------------------------------------------------------------
         // Render Light Pass
@@ -2503,7 +2513,7 @@ namespace hpl {
             std::vector<detail::DeferredLight*> deferredLightRenderBack;
             std::vector<detail::DeferredLight*> deferredLightStencilFront;
 
-            for (auto& light : m_rendererList.GetLights()) {
+            for (auto& light : renderList.GetLights()) {
                 auto lightType = light->GetLightType();
                 auto& deferredLightData = deferredLights.emplace_back(detail::DeferredLight());
                 deferredLightData.m_light = light;
@@ -2679,7 +2689,7 @@ namespace hpl {
                                     0,
                                     shadowMapData->m_target.m_handle->mWidth,
                                     shadowMapData->m_target.m_handle->mHeight);
-                                cmdBindPipeline(shadowMapData->m_cmd.m_handle, m_zPassShadowPipelineCW.m_handle);
+                                cmdBindPipeline(shadowMapData->m_cmd.m_handle, options.m_invert ? m_zPassShadowPipelineCCW.m_handle : m_zPassShadowPipelineCW.m_handle);
 
                                 uint32_t shadowFrameIndex = updateFrameDescriptor(
                                     frame,
@@ -2772,7 +2782,6 @@ namespace hpl {
             std::sort(deferredLightRenderBack.begin(), deferredLightRenderBack.end(), detail::SortDeferredLightDefault);
 
             {
-                uint32_t lightIndex = 0;
                 // updates and binds the light data
                 auto cmdBindLightDescriptor = [&](detail::DeferredLight* light) {
                     DescriptorData params[10] = {};
@@ -2797,7 +2806,7 @@ namespace hpl {
                                 uniformObjectData.m_common.m_config |= LightConfiguration::HasGoboMap;
                                 params[paramCount].pName = "goboCubeMap";
                                 params[paramCount++].ppTextures = &light->m_light->GetGoboTexture()->GetTexture().m_handle;
-                                m_lightResources[frame.m_frameIndex][lightIndex].m_goboCubeMap =
+                                m_lightResources[frame.m_frameIndex][m_lightIndex].m_goboCubeMap =
                                     light->m_light->GetGoboTexture()->GetTexture();
                             }
 
@@ -2805,7 +2814,7 @@ namespace hpl {
                             ASSERT(falloffMap && "Point light needs a falloff map");
                             params[paramCount].pName = "attenuationLightMap";
                             params[paramCount++].ppTextures = &falloffMap->GetTexture().m_handle;
-                            m_lightResources[frame.m_frameIndex][lightIndex].m_attenuationLightMap = falloffMap->GetTexture();
+                            m_lightResources[frame.m_frameIndex][m_lightIndex].m_attenuationLightMap = falloffMap->GetTexture();
 
                             uniformObjectData.m_pointLight.m_radius = light->m_light->GetRadius();
                             uniformObjectData.m_pointLight.m_lightPos = float3(lightViewPos.x, lightViewPos.y, lightViewPos.z);
@@ -2853,14 +2862,14 @@ namespace hpl {
                                 params[paramCount].pName = "goboMap";
                                 params[paramCount++].ppTextures = &light->m_light->GetGoboTexture()->GetTexture().m_handle;
                                 frame.m_resourcePool->Push(light->m_light->GetGoboTexture()->GetTexture());
-                                m_lightResources[frame.m_frameIndex][lightIndex].m_goboMap = light->m_light->GetGoboTexture()->GetTexture();
+                                m_lightResources[frame.m_frameIndex][m_lightIndex].m_goboMap = light->m_light->GetGoboTexture()->GetTexture();
                             } else {
                                 params[paramCount].pName = "falloffMap";
                                 params[paramCount++].ppTextures = &spotFallOffImage->GetTexture().m_handle;
                                 frame.m_resourcePool->Push(spotFallOffImage->GetTexture());
-                                m_lightResources[frame.m_frameIndex][lightIndex].m_falloffMap = spotFallOffImage->GetTexture();
+                                m_lightResources[frame.m_frameIndex][m_lightIndex].m_falloffMap = spotFallOffImage->GetTexture();
                             }
-                            m_lightResources[frame.m_frameIndex][lightIndex].m_attenuationLightMap = spotAttenuationImage->GetTexture();
+                            m_lightResources[frame.m_frameIndex][m_lightIndex].m_attenuationLightMap = spotAttenuationImage->GetTexture();
                             params[paramCount].pName = "attenuationLightMap";
                             params[paramCount++].ppTextures = &spotAttenuationImage->GetTexture().m_handle;
                             frame.m_resourcePool->Push(spotAttenuationImage->GetTexture());
@@ -2883,16 +2892,16 @@ namespace hpl {
                         }
                     }
 
-                    BufferUpdateDesc updateDesc = { m_lightPassBuffer[frame.m_frameIndex].m_handle, lightIndex * sizeof(UniformLightData) };
+                    BufferUpdateDesc updateDesc = { m_lightPassBuffer[frame.m_frameIndex].m_handle, m_lightIndex* sizeof(UniformLightData) };
                     beginUpdateResource(&updateDesc);
                     memcpy(updateDesc.pMappedData, &uniformObjectData, sizeof(UniformLightData));
                     endUpdateResource(&updateDesc, NULL);
 
                     updateDescriptorSet(
-                        frame.m_renderer->Rend(), lightIndex, m_lightPerLightSet[frame.m_frameIndex].m_handle, paramCount, params);
-                    cmdBindDescriptorSet(frame.m_cmd, lightIndex, m_lightPerLightSet[frame.m_frameIndex].m_handle);
-                    uint32_t index = lightIndex;
-                    lightIndex++;
+                        frame.m_renderer->Rend(), m_lightIndex, m_lightPerLightSet[frame.m_frameIndex].m_handle, paramCount, params);
+                    cmdBindDescriptorSet(cmd, m_lightIndex, m_lightPerLightSet[frame.m_frameIndex].m_handle);
+                    uint32_t index = m_lightIndex;
+                    m_lightIndex++;
                     return index;
                 };
                 {
@@ -2904,7 +2913,7 @@ namespace hpl {
                         outputBuffer,
                     };
                     cmdBindRenderTargets(
-                        frame.m_cmd,
+                        cmd,
                         targets.size(),
                         targets.data(),
                         depthBuffer,
@@ -2914,8 +2923,8 @@ namespace hpl {
                         -1,
                         -1);
                 }
-                cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, outputBuffer->mWidth, outputBuffer->mHeight, 0.0f, 1.0f);
-                cmdSetScissor(frame.m_cmd, 0, 0, outputBuffer->mWidth, outputBuffer->mHeight);
+                cmdSetViewport(cmd, 0.0f, 0.0f, outputBuffer->mWidth, outputBuffer->mHeight, 0.0f, 1.0f);
+                cmdSetScissor(cmd, 0, 0, outputBuffer->mWidth, outputBuffer->mHeight);
 
                 {
                     DescriptorData params[15] = {};
@@ -2931,61 +2940,61 @@ namespace hpl {
                     params[paramCount++].ppTextures = &positionBuffer->pTexture;
                     params[paramCount].pName = "specularMap";
                     params[paramCount++].ppTextures = &specularBuffer->pTexture;
-                    updateDescriptorSet(frame.m_renderer->Rend(), 0, m_lightPerFrameSet[frame.m_frameIndex].m_handle, paramCount, params);
+                    updateDescriptorSet(frame.m_renderer->Rend(), frameDescriptorIndex, m_lightPerFrameSet[frame.m_frameIndex].m_handle, paramCount, params);
                 }
 
-                cmdBindDescriptorSet(frame.m_cmd, 0, m_lightPerFrameSet[frame.m_frameIndex].m_handle);
+                cmdBindDescriptorSet(cmd, frameDescriptorIndex, m_lightPerFrameSet[frame.m_frameIndex].m_handle);
 
                 // --------------------------------------------------------
                 // Draw Point Lights
                 // Draw Spot Lights
                 // Draw Box Lights
                 // --------------------------------------------------------
-                cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "Point Light Deferred Stencil front");
+                cmdBeginDebugMarker(cmd, 0, 1, 0, "Point Light Deferred Stencil front");
                 uint32_t lightRootConstantIndex = getDescriptorIndexFromName(m_lightPassRootSignature.m_handle, "lightPushConstant");
                 for (auto& light : deferredLightStencilFront) {
-                    cmdSetStencilReferenceValue(frame.m_cmd, 0xff);
+                    cmdSetStencilReferenceValue(cmd, 0xff);
 
                     std::array elements = { eVertexBufferElement_Position };
                     LegacyVertexBuffer::GeometryBinding binding{};
                     auto lightShape = GetLightShape(light->m_light, eDeferredShapeQuality_High);
                     ASSERT(lightShape && "Light shape not found");
                     static_cast<LegacyVertexBuffer*>(lightShape)->resolveGeometryBinding(frame.m_currentFrame, elements, &binding);
-                    detail::cmdDefaultLegacyGeomBinding(frame.m_cmd, frame, binding);
+                    detail::cmdDefaultLegacyGeomBinding(cmd, frame, binding);
 
-                    cmdBindPipeline(frame.m_cmd, m_lightStencilPipeline.m_handle);
+                    cmdBindPipeline(cmd, options.m_invert ? m_lightStencilPipelineCW.m_handle : m_lightStencilPipelineCCW.m_handle);
                     uint32_t instance = cmdBindLightDescriptor(light); // bind light descriptor light uniforms
-                    cmdBindPushConstants(frame.m_cmd, m_lightPassRootSignature.m_handle, lightRootConstantIndex, &instance);
-                    cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+                    cmdBindPushConstants(cmd, m_lightPassRootSignature.m_handle, lightRootConstantIndex, &instance);
+                    cmdDrawIndexed(cmd, binding.m_indexBuffer.numIndicies, 0, 0);
 
                     switch (light->m_light->GetLightType()) {
                     case eLightType_Point:
                         cmdBindPipeline(
-                            frame.m_cmd,
+                            cmd,
                             m_pointLightPipeline
-                                [LightPipelineVariants::LightPipelineVariant_CW | LightPipelineVariants::LightPipelineVariant_StencilTest]
+                                [(options.m_invert ? LightPipelineVariants::LightPipelineVariant_CCW : LightPipelineVariants::LightPipelineVariant_CW) | LightPipelineVariants::LightPipelineVariant_StencilTest]
                                     .m_handle);
                         break;
                     case eLightType_Spot:
                         cmdBindPipeline(
-                            frame.m_cmd,
+                            cmd,
                             m_spotLightPipeline
-                                [LightPipelineVariants::LightPipelineVariant_CW | LightPipelineVariants::LightPipelineVariant_StencilTest]
+                                [(options.m_invert ? LightPipelineVariants::LightPipelineVariant_CCW : LightPipelineVariants::LightPipelineVariant_CW) | LightPipelineVariants::LightPipelineVariant_StencilTest]
                                     .m_handle);
                         break;
                     case eLightType_Box:
                         cmdBindPipeline(
-                            frame.m_cmd,
+                            cmd,
                             m_boxLightPipeline
-                                [LightPipelineVariants::LightPipelineVariant_CW | LightPipelineVariants::LightPipelineVariant_StencilTest]
+                                [(options.m_invert ? LightPipelineVariants::LightPipelineVariant_CCW : LightPipelineVariants::LightPipelineVariant_CW) | LightPipelineVariants::LightPipelineVariant_StencilTest]
                                     .m_handle);
                         break;
                     default:
                         ASSERT(false && "Unsupported light type");
                         break;
                     }
-                    cmdBindPushConstants(frame.m_cmd, m_lightPassRootSignature.m_handle, lightRootConstantIndex, &instance);
-                    cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+                    cmdBindPushConstants(cmd, m_lightPassRootSignature.m_handle, lightRootConstantIndex, &instance);
+                    cmdDrawIndexed(cmd, binding.m_indexBuffer.numIndicies, 0, 0);
                     {
                         LoadActionsDesc loadActions = {};
                         loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
@@ -2994,24 +3003,24 @@ namespace hpl {
                         std::array targets = {
                             outputBuffer,
                         };
-                        cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+                        cmdBindRenderTargets(cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
                         {
                             std::array rtBarriers = {
                                 RenderTargetBarrier{
                                     depthBuffer, RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_PRESENT },
                             };
-                            cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, nullptr, rtBarriers.size(), rtBarriers.data());
+                            cmdResourceBarrier(cmd, 0, NULL, 0, nullptr, rtBarriers.size(), rtBarriers.data());
                         }
                         {
                             std::array rtBarriers = {
                                 RenderTargetBarrier{
                                    depthBuffer, RESOURCE_STATE_PRESENT, RESOURCE_STATE_DEPTH_WRITE },
                             };
-                            cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, nullptr, rtBarriers.size(), rtBarriers.data());
+                            cmdResourceBarrier(cmd, 0, NULL, 0, nullptr, rtBarriers.size(), rtBarriers.data());
                         }
 
                         cmdBindRenderTargets(
-                            frame.m_cmd,
+                            cmd,
                             targets.size(),
                             targets.data(),
                             depthBuffer,
@@ -3022,19 +3031,26 @@ namespace hpl {
                             -1);
                     }
                 }
-                cmdEndDebugMarker(frame.m_cmd);
+                cmdEndDebugMarker(cmd);
 
-                cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "Point Light Deferred Back");
+                cmdBeginDebugMarker(cmd, 0, 1, 0, "Point Light Deferred Back");
                 for (auto& light : deferredLightRenderBack) {
                     switch (light->m_light->GetLightType()) {
                     case eLightType_Point:
-                        cmdBindPipeline(frame.m_cmd, m_pointLightPipeline[LightPipelineVariants::LightPipelineVariant_CW].m_handle);
+                        cmdBindPipeline(
+                            cmd,
+                            m_pointLightPipeline
+                                [options.m_invert ? LightPipelineVariants::LightPipelineVariant_CCW
+                                                  : LightPipelineVariants::LightPipelineVariant_CW]
+                                    .m_handle);
                         break;
                     case eLightType_Spot:
-                        cmdBindPipeline(frame.m_cmd, m_spotLightPipeline[LightPipelineVariants::LightPipelineVariant_CW].m_handle);
+                        cmdBindPipeline(cmd, m_spotLightPipeline[options.m_invert ? LightPipelineVariants::LightPipelineVariant_CCW
+                                                  : LightPipelineVariants::LightPipelineVariant_CW].m_handle);
                         break;
                     case eLightType_Box:
-                        cmdBindPipeline(frame.m_cmd, m_boxLightPipeline[LightPipelineVariants::LightPipelineVariant_CW].m_handle);
+                        cmdBindPipeline(cmd, m_boxLightPipeline[options.m_invert ? LightPipelineVariants::LightPipelineVariant_CCW
+                                                  : LightPipelineVariants::LightPipelineVariant_CW].m_handle);
                         break;
                     default:
                         ASSERT(false && "Unsupported light type");
@@ -3048,11 +3064,11 @@ namespace hpl {
                     static_cast<LegacyVertexBuffer*>(lightShape)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
 
                     uint32_t instance = cmdBindLightDescriptor(light);
-                    detail::cmdDefaultLegacyGeomBinding(frame.m_cmd, frame, binding);
-                    cmdBindPushConstants(frame.m_cmd, m_lightPassRootSignature.m_handle, lightRootConstantIndex, &instance);
-                    cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+                    detail::cmdDefaultLegacyGeomBinding(cmd, frame, binding);
+                    cmdBindPushConstants(cmd, m_lightPassRootSignature.m_handle, lightRootConstantIndex, &instance);
+                    cmdDrawIndexed(cmd, binding.m_indexBuffer.numIndicies, 0, 0);
                 }
-                cmdEndDebugMarker(frame.m_cmd);
+                cmdEndDebugMarker(cmd);
             }
         }
     }
@@ -3803,6 +3819,7 @@ void cRendererDeferred::Draw(
     if (frame.m_currentFrame != m_activeFrame) {
         m_materialSet.m_objectIndex = 0;
         m_materialSet.m_objectDescriptorLookup.clear();
+        m_lightIndex = 0;
         m_lightDescriptorLookup.clear();
         m_activeFrame = frame.m_currentFrame;
     }
@@ -3864,9 +3881,8 @@ void cRendererDeferred::Draw(
 
         std::array<Texture*, MaxReflectionBuffers> reflectionBuffers;
         for(size_t i = 0; i < common->m_reflectionBuffer.size(); i++) {
-            reflectionBuffers[i] = common->m_reflectionBuffer[i].m_buffer.m_colorBuffer.m_handle->pTexture;
+            reflectionBuffers[i] = common->m_reflectionBuffer[i].m_buffer.m_outputBuffer.m_handle->pTexture;
         }
-
         std::array<DescriptorData, 2> params = {};
         params[0].pName = "refractionMap";
         params[0].ppTextures = &currentGBuffer.m_refractionImage.m_handle;
@@ -3970,15 +3986,22 @@ void cRendererDeferred::Draw(
         }
     }
 
-    cmdLightPass(frame.m_cmd, frame, apWorld, apFrustum, mainFrameIndex,
+    cmdLightPass(
+        frame.m_cmd,
+        frame,
+        apWorld,
+        apFrustum,
+        m_rendererList,
+        mainFrameIndex,
         currentGBuffer.m_colorBuffer.m_handle,
         currentGBuffer.m_normalBuffer.m_handle,
         currentGBuffer.m_positionBuffer.m_handle,
-        currentGBuffer.m_specularBuffer.m_handle, currentGBuffer.m_depthBuffer.m_handle,
+        currentGBuffer.m_specularBuffer.m_handle,
+        currentGBuffer.m_depthBuffer.m_handle,
         currentGBuffer.m_outputBuffer.m_handle,
         mainFrustumView,
         mainFrustumViewInv,
-        mainFrustumProj);
+        mainFrustumProj, {});
 
     // ------------------------------------------------------------------------
     // Render Illumination Pass --> renders to output target
@@ -4237,7 +4260,8 @@ void cRendererDeferred::Draw(
             }
 
             const bool isRefraction = iRenderer::GetRefractionEnabled() && pMaterial->HasRefraction();
-            const bool isReflection = pMaterial->HasWorldReflection() && translucencyItem->GetRenderType() == eRenderableType_SubMesh && mpCurrentSettings->mbRenderWorldReflection;
+            const bool isReflection = pMaterial->HasWorldReflection() && translucencyItem->GetRenderType() == eRenderableType_SubMesh &&
+                mpCurrentSettings->mbRenderWorldReflection;
             const bool isFogActive = mpCurrentWorld->GetFogActive() && pMaterial->GetAffectedByFog();
             const bool isParticleEmitter = TypeInfo<iParticleEmitter>::IsSubtype(*translucencyItem);
             const auto cubeMap = pMaterial->GetImage(eMaterialTexture_CubeMap);
@@ -4253,156 +4277,200 @@ void cRendererDeferred::Draw(
 
                 bool bReflectionIsInRange = true;
                 if (pMaterial->GetMaxReflectionDistance() > 0) {
-                    cVector3f vPoint =
-                        apFrustum->GetOrigin() + apFrustum->GetForward() * -1 * pMaterial->GetMaxReflectionDistance();
-                    cVector3f vNormal = apFrustum->GetForward();
+                        cVector3f vPoint = apFrustum->GetOrigin() + apFrustum->GetForward() * -1 * pMaterial->GetMaxReflectionDistance();
+                        cVector3f vNormal = apFrustum->GetForward();
 
-                    cPlanef maxRelfctionDistPlane;
-                    maxRelfctionDistPlane.FromNormalPoint(vNormal, vPoint);
+                        cPlanef maxRelfctionDistPlane;
+                        maxRelfctionDistPlane.FromNormalPoint(vNormal, vPoint);
 
-                    if (cMath::CheckPlaneBVCollision(maxRelfctionDistPlane, *translucencyItem->GetBoundingVolume()) ==
-                        eCollision_Outside) {
-                        bReflectionIsInRange = false;
-                    }
+                        if (cMath::CheckPlaneBVCollision(maxRelfctionDistPlane, *translucencyItem->GetBoundingVolume()) ==
+                            eCollision_Outside) {
+                            bReflectionIsInRange = false;
+                        }
                 }
-                ///////////////////////////
-                // Make a frustum, mirrored along the plane
-                cSubMesh* pSubMesh = pReflectionObject->GetSubMesh();
-                cVector3f vSurfaceNormal = cMath::Vector3Normalize(cMath::MatrixMul3x3(pReflectionObject->GetWorldMatrix(), pSubMesh->GetOneSidedNormal()));
-                cVector3f vSurfacePos = cMath::MatrixMul(pReflectionObject->GetWorldMatrix(), pSubMesh->GetOneSidedPoint());
+                if (bReflectionIsInRange) {
+                        ///////////////////////////
+                        // Make a frustum, mirrored along the plane
+                        cSubMesh* pSubMesh = pReflectionObject->GetSubMesh();
+                        cVector3f vSurfaceNormal = cMath::Vector3Normalize(
+                            cMath::MatrixMul3x3(pReflectionObject->GetWorldMatrix(), pSubMesh->GetOneSidedNormal()));
+                        cVector3f vSurfacePos = cMath::MatrixMul(pReflectionObject->GetWorldMatrix(), pSubMesh->GetOneSidedPoint());
 
-                cPlanef reflectPlane;
-                reflectPlane.FromNormalPoint(vSurfaceNormal, vSurfacePos);
+                        cPlanef reflectPlane;
+                        reflectPlane.FromNormalPoint(vSurfaceNormal, vSurfacePos);
 
-                cMatrixf mtxReflection = cMath::MatrixPlaneMirror(reflectPlane);
-                cMatrixf mtxReflView = cMath::MatrixMul(apFrustum->GetViewMatrix(), mtxReflection);
-                cVector3f vReflOrigin = cMath::MatrixMul(mtxReflection, apFrustum->GetOrigin());
+                        cMatrixf mtxReflection = cMath::MatrixPlaneMirror(reflectPlane);
+                        cMatrixf mtxReflView = cMath::MatrixMul(apFrustum->GetViewMatrix(), mtxReflection);
+                        cVector3f vReflOrigin = cMath::MatrixMul(mtxReflection, apFrustum->GetOrigin());
 
-                cMatrixf mtxProj = apFrustum->GetProjectionMatrix();
+                        cMatrixf mtxProj = apFrustum->GetProjectionMatrix();
 
-                cPlanef cameraSpaceReflPlane = cMath::TransformPlane(mtxReflView, reflectPlane);
-                cMatrixf mtxReflProj = cMath::ProjectionMatrixObliqueNearClipPlane(mtxProj, cameraSpaceReflPlane);
+                        cPlanef cameraSpaceReflPlane = cMath::TransformPlane(mtxReflView, reflectPlane);
+                        cMatrixf mtxReflProj = cMath::ProjectionMatrixObliqueNearClipPlane(mtxProj, cameraSpaceReflPlane);
 
-                cFrustum reflectFrustum;
-                reflectFrustum.SetupPerspectiveProj(
-                    mtxReflProj,
-                    mtxReflView,
-                    apFrustum->GetFarPlane(),
-                    apFrustum->GetNearPlane(),
-                    apFrustum->GetFOV(),
-                    apFrustum->GetAspect(),
-                    vReflOrigin,
-                    false,
-                    &mtxProj,
-                    true);
-                reflectFrustum.SetInvertsCullMode(true);
+                        cFrustum reflectFrustum;
+                        reflectFrustum.SetupPerspectiveProj(
+                            mtxReflProj,
+                            mtxReflView,
+                            apFrustum->GetFarPlane(),
+                            apFrustum->GetNearPlane(),
+                            apFrustum->GetFOV(),
+                            apFrustum->GetAspect(),
+                            vReflOrigin,
+                            false,
+                            &mtxProj,
+                            true);
+                        reflectFrustum.SetInvertsCullMode(true);
 
-                uint32_t maxFrameDistance = 0;
-                for(uint32_t i = 0; i < common->m_reflectionBuffer.size(); i++) {
-                    if(common->m_reflectionBuffer[i].m_target == translucencyItem) {
-                        reflectionBufferIndex = i;
-                        break;
-                    }
+                        uint32_t maxFrameDistance = 0;
+                        for (uint32_t i = 0; i < common->m_reflectionBuffer.size(); i++) {
+                            if (common->m_reflectionBuffer[i].m_target == translucencyItem) {
+                                reflectionBufferIndex = i;
+                                break;
+                            }
 
-                    const uint32_t frameDist = frame.m_currentFrame - common->m_reflectionBuffer[i].m_frameCount;
-                    if(frameDist > maxFrameDistance) {
-                        maxFrameDistance = frameDist;
-                        reflectionBufferIndex = i;
-                    }
+                            const uint32_t frameDist = frame.m_currentFrame - common->m_reflectionBuffer[i].m_frameCount;
+                            if (frameDist > maxFrameDistance) {
+                                maxFrameDistance = frameDist;
+                                reflectionBufferIndex = i;
+                            }
+                        }
+                        cRendererDeferred::ReflectionGBuffer& resolveReflectionBuffer = common->m_reflectionBuffer[reflectionBufferIndex];
+                        const cMatrixf reflectionFrustumViewInv = cMath::MatrixInverse(reflectFrustum.GetViewMatrix());
+                        const cMatrixf reflectionFrustumView = reflectFrustum.GetViewMatrix();
+                        const cMatrixf reflectionFrustumProj = reflectFrustum.GetProjectionMatrix();
+                        const uint32_t reflectionFrameDescIndex = updateFrameDescriptor(
+                            frame,
+                            frame.m_cmd,
+                            apWorld,
+                            { .m_size = float2(
+                                  resolveReflectionBuffer.m_buffer.m_depthBuffer.m_handle->mWidth,
+                                  resolveReflectionBuffer.m_buffer.m_depthBuffer.m_handle->mHeight),
+                              .m_viewMat = reflectionFrustumView,
+                              .m_projectionMat = reflectionFrustumProj });
+
+                        FenceStatus fenceStatus;
+                        getFenceStatus(frame.m_renderer->Rend(), resolveReflectionBuffer.m_fence.m_handle, &fenceStatus);
+                        if (fenceStatus == FENCE_STATUS_INCOMPLETE) {
+                            waitForFences(frame.m_renderer->Rend(), 1, &resolveReflectionBuffer.m_fence.m_handle);
+                        }
+                        resetCmdPool(frame.m_renderer->Rend(), resolveReflectionBuffer.m_pool.m_handle);
+
+                        beginCmd(resolveReflectionBuffer.m_cmd.m_handle);
+                        m_reflectionRendererList.BeginAndReset(afFrameTime, &reflectFrustum);
+                        cmdPreAndPostZ(
+                            resolveReflectionBuffer.m_cmd.m_handle,
+                            resolveReflectionBuffer.m_buffer.m_preZPassRenderables,
+                            frame,
+                            m_reflectionRendererList,
+                            afFrameTime,
+                            resolveReflectionBuffer.m_buffer.m_depthBuffer.m_handle,
+                            resolveReflectionBuffer.m_buffer.m_hizDepthBuffer.m_handle,
+                            &reflectFrustum,
+                            reflectionFrameDescIndex,
+                            reflectionFrustumView,
+                            reflectionFrustumProj,
+                            {
+                                .objectVisibilityFlags = eRenderableFlag_VisibleInReflection,
+                                .clipPlanes = {},
+                                .m_invert = true,
+                                .m_disableOcclusionQueries = true,
+                            });
+                        m_reflectionRendererList.End(
+                            eRenderListCompileFlag_Diffuse | eRenderListCompileFlag_Translucent | eRenderListCompileFlag_Decal |
+                            eRenderListCompileFlag_Illumination | eRenderListCompileFlag_FogArea);
+
+                        {
+                            cmdBindRenderTargets(resolveReflectionBuffer.m_cmd.m_handle, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+                            std::array rtBarriers = {
+                                RenderTargetBarrier{ resolveReflectionBuffer.m_buffer.m_colorBuffer.m_handle,
+                                                     RESOURCE_STATE_SHADER_RESOURCE,
+                                                     RESOURCE_STATE_RENDER_TARGET },
+                                RenderTargetBarrier{ resolveReflectionBuffer.m_buffer.m_normalBuffer.m_handle,
+                                                     RESOURCE_STATE_SHADER_RESOURCE,
+                                                     RESOURCE_STATE_RENDER_TARGET },
+                                RenderTargetBarrier{ resolveReflectionBuffer.m_buffer.m_positionBuffer.m_handle,
+                                                     RESOURCE_STATE_SHADER_RESOURCE,
+                                                     RESOURCE_STATE_RENDER_TARGET },
+                                RenderTargetBarrier{ resolveReflectionBuffer.m_buffer.m_specularBuffer.m_handle,
+                                                     RESOURCE_STATE_SHADER_RESOURCE,
+                                                     RESOURCE_STATE_RENDER_TARGET },
+                            };
+                            cmdResourceBarrier(
+                                resolveReflectionBuffer.m_cmd.m_handle, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+                        }
+                        // options.m_invert = true;
+                        cmdBuildPrimaryGBuffer(
+                            frame,
+                            resolveReflectionBuffer.m_cmd.m_handle,
+                            reflectionFrameDescIndex,
+                            resolveReflectionBuffer.m_buffer.m_colorBuffer.m_handle,
+                            resolveReflectionBuffer.m_buffer.m_normalBuffer.m_handle,
+                            resolveReflectionBuffer.m_buffer.m_positionBuffer.m_handle,
+                            resolveReflectionBuffer.m_buffer.m_specularBuffer.m_handle,
+                            resolveReflectionBuffer.m_buffer.m_depthBuffer.m_handle,
+                            { .m_invert = true });
+
+                        {
+                            cmdBindRenderTargets(resolveReflectionBuffer.m_cmd.m_handle, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+                            std::array rtBarriers = {
+                                RenderTargetBarrier{ resolveReflectionBuffer.m_buffer.m_colorBuffer.m_handle,
+                                                     RESOURCE_STATE_RENDER_TARGET,
+                                                     RESOURCE_STATE_SHADER_RESOURCE },
+                                RenderTargetBarrier{ resolveReflectionBuffer.m_buffer.m_normalBuffer.m_handle,
+                                                     RESOURCE_STATE_RENDER_TARGET,
+                                                     RESOURCE_STATE_SHADER_RESOURCE },
+                                RenderTargetBarrier{ resolveReflectionBuffer.m_buffer.m_positionBuffer.m_handle,
+                                                     RESOURCE_STATE_RENDER_TARGET,
+                                                     RESOURCE_STATE_SHADER_RESOURCE },
+                                RenderTargetBarrier{ resolveReflectionBuffer.m_buffer.m_specularBuffer.m_handle,
+                                                     RESOURCE_STATE_RENDER_TARGET,
+                                                     RESOURCE_STATE_SHADER_RESOURCE },
+                                RenderTargetBarrier{ resolveReflectionBuffer.m_buffer.m_outputBuffer.m_handle,
+                                                     RESOURCE_STATE_SHADER_RESOURCE,
+                                                     RESOURCE_STATE_RENDER_TARGET },
+                            };
+                            cmdResourceBarrier(
+                                resolveReflectionBuffer.m_cmd.m_handle, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+                        }
+                        cmdLightPass(
+                            resolveReflectionBuffer.m_cmd.m_handle,
+                            frame,
+                            apWorld,
+                            apFrustum,
+                            m_reflectionRendererList,
+                            reflectionFrameDescIndex,
+                            resolveReflectionBuffer.m_buffer.m_colorBuffer.m_handle,
+                            resolveReflectionBuffer.m_buffer.m_normalBuffer.m_handle,
+                            resolveReflectionBuffer.m_buffer.m_positionBuffer.m_handle,
+                            resolveReflectionBuffer.m_buffer.m_specularBuffer.m_handle,
+                            resolveReflectionBuffer.m_buffer.m_depthBuffer.m_handle,
+                            resolveReflectionBuffer.m_buffer.m_outputBuffer.m_handle,
+                            reflectionFrustumView,
+                            reflectionFrustumViewInv,
+                            reflectionFrustumProj,
+                            { .m_invert = true });
+
+                        {
+                            cmdBindRenderTargets(resolveReflectionBuffer.m_cmd.m_handle, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+                            std::array rtBarriers = {
+                                RenderTargetBarrier{ resolveReflectionBuffer.m_buffer.m_outputBuffer.m_handle,
+                                                     RESOURCE_STATE_RENDER_TARGET,
+                                                     RESOURCE_STATE_SHADER_RESOURCE },
+                            };
+                            cmdResourceBarrier(
+                                resolveReflectionBuffer.m_cmd.m_handle, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+                        }
+
+                        endCmd(resolveReflectionBuffer.m_cmd.m_handle);
+
+                        QueueSubmitDesc submitDesc = {};
+                        submitDesc.mCmdCount = 1;
+                        submitDesc.ppCmds = &resolveReflectionBuffer.m_cmd.m_handle;
+                        submitDesc.pSignalFence = resolveReflectionBuffer.m_fence.m_handle;
+                        submitDesc.mSubmitDone = true;
+                        queueSubmit(frame.m_renderer->GetGraphicsQueue(), &submitDesc);
                 }
-                cRendererDeferred::ReflectionGBuffer& resolveReflectionBuffer = common->m_reflectionBuffer[reflectionBufferIndex];
-                const cMatrixf reflectionFrustumViewInv = cMath::MatrixInverse(reflectFrustum.GetViewMatrix());
-                const cMatrixf reflectionFrustumView = reflectFrustum.GetViewMatrix();
-                const cMatrixf reflectionFrustumProj = reflectFrustum.GetProjectionMatrix();
-                const uint32_t reflectionFrameDescIndex = updateFrameDescriptor(
-                    frame,
-                    frame.m_cmd,
-                    apWorld,
-                    {
-                        .m_size = float2(
-                            resolveReflectionBuffer.m_buffer.m_depthBuffer.m_handle->mWidth,
-                            resolveReflectionBuffer.m_buffer.m_depthBuffer.m_handle->mHeight
-                        ),
-                        .m_viewMat = reflectionFrustumView,
-                        .m_projectionMat = reflectionFrustumProj
-                    }
-                );
-
-                FenceStatus fenceStatus;
-                getFenceStatus(frame.m_renderer->Rend(), resolveReflectionBuffer.m_fence.m_handle, &fenceStatus);
-                if (fenceStatus == FENCE_STATUS_INCOMPLETE) {
-                    waitForFences(frame.m_renderer->Rend(), 1, &resolveReflectionBuffer.m_fence.m_handle);
-                }
-                resetCmdPool(frame.m_renderer->Rend(), resolveReflectionBuffer.m_pool.m_handle);
-
-                beginCmd(resolveReflectionBuffer.m_cmd.m_handle);
-                m_reflectionRendererList.BeginAndReset(afFrameTime, &reflectFrustum);
-                cmdPreAndPostZ(
-                    resolveReflectionBuffer.m_cmd.m_handle,
-                    resolveReflectionBuffer.m_buffer.m_preZPassRenderables,
-                    frame,
-                    m_reflectionRendererList,
-                    afFrameTime,
-                    resolveReflectionBuffer.m_buffer.m_depthBuffer.m_handle,
-                    resolveReflectionBuffer.m_buffer.m_hizDepthBuffer.m_handle,
-                    &reflectFrustum,
-                    reflectionFrameDescIndex,
-                    reflectionFrustumView,
-                    reflectionFrustumProj,
-                    {
-                        .objectVisibilityFlags = eRenderableFlag_VisibleInReflection,
-                        .clipPlanes = {},
-                        .m_invert = true,
-                        .m_disableOcclusionQueries = true,
-                    });
-                m_reflectionRendererList.End(
-                    eRenderListCompileFlag_Diffuse |
-                    eRenderListCompileFlag_Translucent |
-                    eRenderListCompileFlag_Decal |
-                    eRenderListCompileFlag_Illumination |
-                    eRenderListCompileFlag_FogArea);
-
-                {
-                    cmdBindRenderTargets(resolveReflectionBuffer.m_cmd.m_handle, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
-                    std::array rtBarriers = {
-                        RenderTargetBarrier{ resolveReflectionBuffer.m_buffer.m_colorBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
-                        RenderTargetBarrier{ resolveReflectionBuffer.m_buffer.m_normalBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
-                        RenderTargetBarrier{ resolveReflectionBuffer.m_buffer.m_positionBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
-                        RenderTargetBarrier{ resolveReflectionBuffer.m_buffer.m_specularBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
-                    };
-                    cmdResourceBarrier(resolveReflectionBuffer.m_cmd.m_handle, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
-                }
-                //options.m_invert = true;
-                cmdBuildPrimaryGBuffer(frame, resolveReflectionBuffer.m_cmd.m_handle, reflectionFrameDescIndex,
-                    resolveReflectionBuffer.m_buffer.m_colorBuffer.m_handle,
-                    resolveReflectionBuffer.m_buffer.m_normalBuffer.m_handle,
-                    resolveReflectionBuffer.m_buffer.m_positionBuffer.m_handle,
-                    resolveReflectionBuffer.m_buffer.m_specularBuffer.m_handle,
-                    resolveReflectionBuffer.m_buffer.m_depthBuffer.m_handle,
-                    {
-                        .m_invert = true
-                    });
-
-                {
-                    cmdBindRenderTargets(resolveReflectionBuffer.m_cmd.m_handle, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
-                    std::array rtBarriers = {
-                        RenderTargetBarrier{ resolveReflectionBuffer.m_buffer.m_colorBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
-                        RenderTargetBarrier{ resolveReflectionBuffer.m_buffer.m_normalBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
-                        RenderTargetBarrier{ resolveReflectionBuffer.m_buffer.m_positionBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
-                        RenderTargetBarrier{ resolveReflectionBuffer.m_buffer.m_specularBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE }//,
-//                        RenderTargetBarrier{ currentGBuffer.m_outputBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
-
-                    };
-                    cmdResourceBarrier(resolveReflectionBuffer.m_cmd.m_handle, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
-                }
-                endCmd(resolveReflectionBuffer.m_cmd.m_handle);
-
-                QueueSubmitDesc submitDesc = {};
-                submitDesc.mCmdCount = 1;
-                submitDesc.ppCmds = &resolveReflectionBuffer.m_cmd.m_handle;
-                submitDesc.pSignalFence = resolveReflectionBuffer.m_fence.m_handle;
-                submitDesc.mSubmitDone = true;
-                queueSubmit(frame.m_renderer->GetGraphicsQueue(), &submitDesc);
             }
 
             if (isParticleEmitter) {
