@@ -405,6 +405,17 @@ namespace hpl {
             cMatrixf projectionMat,
             AdditionalLightPassOptions options);
 
+        struct AdditionalIlluminationPassOptions {
+            bool m_invert = false;
+        };
+        void cmdIlluminationPass(Cmd* cmd,
+            const ForgeRenderer::Frame& frame,
+            cRenderList& renderList,
+            uint32_t frameDescriptorIndex,
+            RenderTarget* depthBuffer,
+            RenderTarget* outputBuffer,
+            AdditionalIlluminationPassOptions options
+        );
 
         struct AdditionalZPassOptions {
             tRenderableFlag objectVisibilityFlags = eRenderableFlag_VisibleInNonReflection;
@@ -505,7 +516,8 @@ namespace hpl {
 
         // illumination pass
         SharedShader m_solidIlluminationShader;
-        SharedPipeline m_solidIlluminationPipeline;
+        SharedPipeline m_solidIlluminationPipelineCCW;
+        SharedPipeline m_solidIlluminationPipelineCW;
 
         // translucency pass
         struct TranslucencyPipeline {

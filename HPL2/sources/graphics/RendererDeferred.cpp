@@ -1656,9 +1656,7 @@ namespace hpl {
                     }
                 }
             }
-
-            // illumination pass
-            m_solidIlluminationPipeline.Load(forgeRenderer->Rend(), [&](Pipeline** pipline) {
+            {
                 // layout and pipeline for sphere draw
                 VertexLayout vertexLayout = {};
 #ifndef USE_THE_FORGE_LEGACY
@@ -1681,6 +1679,7 @@ namespace hpl {
 
                 RasterizerStateDesc rasterizerStateDesc = {};
                 rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
+                rasterizerStateDesc.mFrontFace = FRONT_FACE_CCW;
 
                 BlendStateDesc blendStateDesc{};
 #ifdef USE_THE_FORGE_LEGACY
@@ -1718,9 +1717,19 @@ namespace hpl {
                 pipelineSettings.pShaderProgram = m_solidIlluminationShader.m_handle;
                 pipelineSettings.pRasterizerState = &rasterizerStateDesc;
                 pipelineSettings.pVertexLayout = &vertexLayout;
-                addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipline);
-                return true;
-            });
+                // illumination pass
+                m_solidIlluminationPipelineCCW.Load(forgeRenderer->Rend(), [&](Pipeline** pipline) {
+                    addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipline);
+                    return true;
+                });
+
+                rasterizerStateDesc.mFrontFace = FRONT_FACE_CW;
+                m_solidIlluminationPipelineCW.Load(forgeRenderer->Rend(), [&](Pipeline** pipline) {
+                    addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipline);
+                    return true;
+                });
+
+            }
 
             // translucency pass
             {
@@ -2325,7 +2334,7 @@ namespace hpl {
                 });
 
                 rasterizerStateDesc.mFrontFace = FrontFace::FRONT_FACE_CW;
-                m_lightStencilPipelineCCW.Load(forgeRenderer->Rend(), [&](Pipeline** handle) {
+                m_lightStencilPipelineCW.Load(forgeRenderer->Rend(), [&](Pipeline** handle) {
                     addPipeline(forgeRenderer->Rend(), &pipelineDesc, handle);
                     return true;
                 });
@@ -2481,6 +2490,50 @@ namespace hpl {
         return index;
     }
 
+    void cRendererDeferred::cmdIlluminationPass(Cmd* cmd,
+        const ForgeRenderer::Frame& frame,
+        cRenderList& renderList,
+        uint32_t frameDescriptorIndex,
+        RenderTarget* depthBuffer,
+        RenderTarget* outputBuffer,
+        AdditionalIlluminationPassOptions options
+    ) {
+        uint32_t materialObjectIndex = getDescriptorIndexFromName(m_materialRootSignature.m_handle, "materialRootConstant");
+        LoadActionsDesc loadActions = {};
+        loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
+        loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
+        std::array targets = {
+            outputBuffer,
+        };
+        cmdBindRenderTargets(
+            cmd, targets.size(), targets.data(), depthBuffer, &loadActions, nullptr, nullptr, -1, -1);
+        cmdSetViewport(cmd, 0.0f, 0.0f, outputBuffer->mWidth, outputBuffer->mHeight, 0.0f, 1.0f);
+        cmdSetScissor(cmd, 0, 0, outputBuffer->mWidth, outputBuffer->mHeight);
+        cmdBindPipeline(cmd, options.m_invert ? m_solidIlluminationPipelineCW.m_handle: m_solidIlluminationPipelineCCW.m_handle);
+
+        cmdBindDescriptorSet(cmd, frameDescriptorIndex, m_materialSet.m_frameSet[frame.m_frameIndex].m_handle);
+
+        for (auto& illuminationItem : m_rendererList.GetRenderableItems(eRenderListType_Illumination)) {
+            cMaterial* pMaterial = illuminationItem->GetMaterial();
+            iVertexBuffer* vertexBuffer = illuminationItem->GetVertexBuffer();
+            if (pMaterial == nullptr || vertexBuffer == nullptr) {
+                continue;
+            }
+            ASSERT(pMaterial->type().m_id == cMaterial::SolidDiffuse && "Invalid material type");
+            MaterialRootConstant materialConst = {};
+            uint32_t instance = cmdBindMaterialAndObject(frame.m_cmd, frame, pMaterial, illuminationItem);
+            materialConst.objectId = instance;
+            std::array targets = {
+                eVertexBufferElement_Position,
+                eVertexBufferElement_Texture0,
+            };
+            LegacyVertexBuffer::GeometryBinding binding;
+            static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
+            detail::cmdDefaultLegacyGeomBinding(frame.m_cmd, frame, binding);
+            cmdBindPushConstants(cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
+            cmdDrawIndexed(cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+        }
+    }
     void cRendererDeferred::cmdLightPass(
         Cmd* cmd,
         const ForgeRenderer::Frame& frame,
@@ -4003,6 +4056,14 @@ void cRendererDeferred::Draw(
         mainFrustumViewInv,
         mainFrustumProj, {});
 
+    cmdIlluminationPass(
+        frame.m_cmd,
+        frame,
+        m_rendererList,
+        mainFrameIndex,
+        currentGBuffer.m_depthBuffer.m_handle,
+        currentGBuffer.m_outputBuffer.m_handle,
+        {});
     // ------------------------------------------------------------------------
     // Render Illumination Pass --> renders to output target
     // ------------------------------------------------------------------------
@@ -4017,7 +4078,7 @@ void cRendererDeferred::Draw(
             frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, nullptr, nullptr, -1, -1);
         cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)common->m_size.x, (float)common->m_size.y, 0.0f, 1.0f);
         cmdSetScissor(frame.m_cmd, 0, 0, common->m_size.x, common->m_size.y);
-        cmdBindPipeline(frame.m_cmd, m_solidIlluminationPipeline.m_handle);
+        cmdBindPipeline(frame.m_cmd, m_solidIlluminationPipelineCCW.m_handle);
 
         cmdBindDescriptorSet(frame.m_cmd, mainFrameIndex, m_materialSet.m_frameSet[frame.m_frameIndex].m_handle);
 
@@ -4451,6 +4512,14 @@ void cRendererDeferred::Draw(
                             reflectionFrustumProj,
                             { .m_invert = true });
 
+                        cmdIlluminationPass(
+                            resolveReflectionBuffer.m_cmd.m_handle,
+                            frame,
+                            m_reflectionRendererList,
+                            reflectionFrameDescIndex,
+                            resolveReflectionBuffer.m_buffer.m_depthBuffer.m_handle,
+                            resolveReflectionBuffer.m_buffer.m_outputBuffer.m_handle,
+                            { .m_invert = true });
                         {
                             cmdBindRenderTargets(resolveReflectionBuffer.m_cmd.m_handle, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
                             std::array rtBarriers = {
