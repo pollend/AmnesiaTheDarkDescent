@@ -134,9 +134,9 @@ namespace hpl {
                 samplerDesc.mMipLodBias = 0.f;
                 samplerDesc.mMaxAnisotropy = 16.f;
                 samplerDesc.mMipMapMode = MIPMAP_MODE_LINEAR;
-                samplerDesc.mAddressU = ADDRESS_MODE_CLAMP_TO_BORDER;
-                samplerDesc.mAddressV = ADDRESS_MODE_CLAMP_TO_BORDER;
-                samplerDesc.mAddressW = ADDRESS_MODE_CLAMP_TO_BORDER;
+                samplerDesc.mAddressU = ADDRESS_MODE_CLAMP_TO_EDGE;
+                samplerDesc.mAddressV = ADDRESS_MODE_CLAMP_TO_EDGE;
+                samplerDesc.mAddressW = ADDRESS_MODE_CLAMP_TO_EDGE;
                 addSampler(pipeline.Rend(), &samplerDesc, &GuiSampler);
             }
  			{
