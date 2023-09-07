@@ -377,6 +377,7 @@ namespace hpl {
 
         void cmdBuildPrimaryGBuffer(const ForgeRenderer::Frame& frame, Cmd* cmd,
             uint32_t frameDescriptorIndex,
+            cRenderList& renderList,
             RenderTarget* colorBuffer,
             RenderTarget* normalBuffer,
             RenderTarget* positionBuffer,
@@ -449,11 +450,6 @@ namespace hpl {
         std::unique_ptr<iVertexBuffer> m_box;
         std::array<folly::small_vector<ShadowMapData, 32>, eShadowMapResolution_LastEnum> m_shadowMapData;
 
-        float m_farPlane;
-        float m_farBottom;
-        float m_farTop;
-        float m_farLeft;
-        float m_farRight;
         float mfMinLargeLightNormalizedArea;
 
         float m_shadowDistanceMedium;

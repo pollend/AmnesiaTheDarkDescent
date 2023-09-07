@@ -2505,8 +2505,7 @@ namespace hpl {
         std::array targets = {
             outputBuffer,
         };
-        cmdBindRenderTargets(
-            cmd, targets.size(), targets.data(), depthBuffer, &loadActions, nullptr, nullptr, -1, -1);
+        cmdBindRenderTargets(cmd, targets.size(), targets.data(), depthBuffer, &loadActions, nullptr, nullptr, -1, -1);
         cmdSetViewport(cmd, 0.0f, 0.0f, outputBuffer->mWidth, outputBuffer->mHeight, 0.0f, 1.0f);
         cmdSetScissor(cmd, 0, 0, outputBuffer->mWidth, outputBuffer->mHeight);
         cmdBindPipeline(cmd, options.m_invert ? m_solidIlluminationPipelineCW.m_handle: m_solidIlluminationPipelineCCW.m_handle);
@@ -2521,7 +2520,7 @@ namespace hpl {
             }
             ASSERT(pMaterial->type().m_id == cMaterial::SolidDiffuse && "Invalid material type");
             MaterialRootConstant materialConst = {};
-            uint32_t instance = cmdBindMaterialAndObject(frame.m_cmd, frame, pMaterial, illuminationItem);
+            uint32_t instance = cmdBindMaterialAndObject(cmd, frame, pMaterial, illuminationItem);
             materialConst.objectId = instance;
             std::array targets = {
                 eVertexBufferElement_Position,
@@ -2529,7 +2528,7 @@ namespace hpl {
             };
             LegacyVertexBuffer::GeometryBinding binding;
             static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
-            detail::cmdDefaultLegacyGeomBinding(frame.m_cmd, frame, binding);
+            detail::cmdDefaultLegacyGeomBinding(cmd, frame, binding);
             cmdBindPushConstants(cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
             cmdDrawIndexed(cmd, binding.m_indexBuffer.numIndicies, 0, 0);
         }
@@ -3130,6 +3129,7 @@ namespace hpl {
         const ForgeRenderer::Frame& frame,
         Cmd* cmd,
         uint32_t frameDescriptorIndex,
+        cRenderList& renderList,
         RenderTarget* colorBuffer,
         RenderTarget* normalBuffer,
         RenderTarget* positionBuffer,
@@ -3154,7 +3154,7 @@ namespace hpl {
 
             cmdBindDescriptorSet(cmd, frameDescriptorIndex, m_materialSet.m_frameSet[frame.m_frameIndex].m_handle);
 
-            for (auto& diffuseItem : m_rendererList.GetRenderableItems(eRenderListType_Diffuse)) {
+            for (auto& diffuseItem : renderList.GetRenderableItems(eRenderListType_Diffuse)) {
                 cMaterial* pMaterial = diffuseItem->GetMaterial();
                 iVertexBuffer* vertexBuffer = diffuseItem->GetVertexBuffer();
                 if (pMaterial == nullptr || vertexBuffer == nullptr) {
@@ -3954,11 +3954,6 @@ void cRendererDeferred::Draw(
     frame.m_resourcePool->Push(currentGBuffer.m_outputBuffer);
     frame.m_resourcePool->Push(currentGBuffer.m_refractionImage);
     // Setup far plane coordinates
-    m_farPlane = apFrustum->GetFarPlane();
-    m_farTop = -tan(apFrustum->GetFOV() * 0.5f) * m_farPlane;
-    m_farBottom = -m_farTop;
-    m_farRight = m_farBottom * apFrustum->GetAspect();
-    m_farLeft = -m_farRight;
 
     ///////////////////////////
     // Occlusion testing
@@ -3990,6 +3985,7 @@ void cRendererDeferred::Draw(
         cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
     }
     cmdBuildPrimaryGBuffer(frame, frame.m_cmd, mainFrameIndex,
+        m_rendererList,
         currentGBuffer.m_colorBuffer.m_handle,
         currentGBuffer.m_normalBuffer.m_handle,
         currentGBuffer.m_positionBuffer.m_handle,
@@ -4439,7 +4435,7 @@ void cRendererDeferred::Draw(
                             });
                         m_reflectionRendererList.End(
                             eRenderListCompileFlag_Diffuse | eRenderListCompileFlag_Translucent | eRenderListCompileFlag_Decal |
-                            eRenderListCompileFlag_Illumination | eRenderListCompileFlag_FogArea);
+                            eRenderListCompileFlag_Illumination );
 
                         {
                             cmdBindRenderTargets(resolveReflectionBuffer.m_cmd.m_handle, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
@@ -4465,6 +4461,7 @@ void cRendererDeferred::Draw(
                             frame,
                             resolveReflectionBuffer.m_cmd.m_handle,
                             reflectionFrameDescIndex,
+                            m_reflectionRendererList,
                             resolveReflectionBuffer.m_buffer.m_colorBuffer.m_handle,
                             resolveReflectionBuffer.m_buffer.m_normalBuffer.m_handle,
                             resolveReflectionBuffer.m_buffer.m_positionBuffer.m_handle,
