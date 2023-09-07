@@ -203,10 +203,6 @@ namespace hpl {
 
         virtual SharedRenderTarget GetOutputImage(uint32_t frameIndex, cViewport& viewport) { return SharedRenderTarget();}
 
-        cWorld *GetCurrentWorld(){ return mpCurrentWorld;}
-        cFrustum *GetCurrentFrustum(){ return mpCurrentFrustum;}
-        cRenderList *GetCurrentRenderList(){ return mpCurrentRenderList;}
-
         //Static settings. Must be set before renderer data load.
         static void SetShadowMapQuality(eShadowMapQuality aQuality) { mShadowMapQuality = aQuality;}
         static eShadowMapQuality GetShadowMapQuality(){ return mShadowMapQuality;}
@@ -229,11 +225,6 @@ namespace hpl {
         void BeginRendering(float afFrameTime,cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings,
                             bool abSendFrameBufferToPostEffects, bool abAtStartOfRendering=true);
 
-        /**
-         * Checks if the renderable object is 1) submeshentity 2) is onesided plane 3)is away from camera. If all are true, FALSE is returned.
-         */
-        bool CheckRenderablePlaneIsVisible(iRenderable *apObject, cFrustum *apFrustum);
-
         cResources* mpResources;
 
         bool mbSetupOcclusionPlaneForFog;
@@ -241,12 +232,7 @@ namespace hpl {
         float mfCurrentFrameTime;
         cWorld *mpCurrentWorld;
         cRenderSettings *mpCurrentSettings;
-        cRenderList *mpCurrentRenderList;
 
-        bool mbSendFrameBufferToPostEffects;
-
-        float mfCurrentNearPlaneTop;
-        float mfCurrentNearPlaneRight;
 
         static int mlRenderFrameCount;
         float mfTimeCount;

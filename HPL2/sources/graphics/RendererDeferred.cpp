@@ -530,12 +530,6 @@ namespace hpl {
         // Set up render specific things
         mbSetupOcclusionPlaneForFog = true;
 
-        mfMinLargeLightNormalizedArea = 0.2f * 0.2f;
-
-        m_shadowDistanceMedium = 10;
-        m_shadowDistanceLow = 20;
-        m_shadowDistanceNone = 40;
-
         UVector3 shadowSizes[] = {
             UVector3(128, 128, 1), UVector3(256, 256, 1), UVector3(256, 256, 1), UVector3(512, 512, 1), UVector3(1024, 1024, 1)
         };
@@ -2522,6 +2516,7 @@ namespace hpl {
             MaterialRootConstant materialConst = {};
             uint32_t instance = cmdBindMaterialAndObject(cmd, frame, pMaterial, illuminationItem);
             materialConst.objectId = instance;
+            materialConst.m_afT = illuminationItem->GetIlluminationAmount();
             std::array targets = {
                 eVertexBufferElement_Position,
                 eVertexBufferElement_Texture0,
@@ -2634,12 +2629,12 @@ namespace hpl {
 
                         ///////////////////////
                         // Skip shadow
-                        if (fDistToLight > m_shadowDistanceNone) {
+                        if (fDistToLight > ShadowDistanceNone) {
                             castShadow = false;
                         }
                         ///////////////////////
                         // Use Low
-                        else if (fDistToLight > m_shadowDistanceLow) {
+                        else if (fDistToLight > ShadowDistanceLow) {
                             if (shadowMapResolution == eShadowMapResolution_Low) {
                                 castShadow = false;
                             }
@@ -2647,7 +2642,7 @@ namespace hpl {
                         }
                         ///////////////////////
                         // Use Medium
-                        else if (fDistToLight > m_shadowDistanceMedium) {
+                        else if (fDistToLight > ShadowDistanceMedium) {
                             if (shadowMapResolution == eShadowMapResolution_High) {
                                 shadowMapResolution = eShadowMapResolution_Medium;
                             } else {
@@ -3894,7 +3889,7 @@ void cRendererDeferred::Draw(
             viewportData->m_reflectionBuffer = std::move(common->m_reflectionBuffer);
         }
         for(auto& reflection: viewportData->m_reflectionBuffer) {
-            RebuildGBuffer(*forgeRenderer, reflection.m_buffer, viewportData->m_size.x, viewportData->m_size.y);
+            RebuildGBuffer(*forgeRenderer, reflection.m_buffer, viewportData->m_size.x / 2, viewportData->m_size.y / 2);
             reflection.m_target = nullptr;// we are clearing targets they are irrelevant when the gbuffer is discarded
             if(!reflection.m_pool.IsValid() ||
                 !reflection.m_cmd.IsValid() ||

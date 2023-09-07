@@ -413,24 +413,13 @@ namespace hpl
         mfCurrentFrameTime = afFrameTime;
         mpCurrentWorld = apWorld;
         mpCurrentSettings = apSettings;
-        mpCurrentRenderList = apSettings->mpRenderList;
-        mbSendFrameBufferToPostEffects = abSendFrameBufferToPostEffects;
         mpCurrentFrustum = apFrustum;
         ////////////////////////////////
         // Set up near plane variables
 
-        // Calculate radius for near plane so that it is always inside it.
-        float fTanHalfFOV = tan(apFrustum->GetFOV() * 0.5f);
-
-        float fNearPlane = apFrustum->GetNearPlane();
-        mfCurrentNearPlaneTop = fTanHalfFOV * fNearPlane;
-        mfCurrentNearPlaneRight = apFrustum->GetAspect() * mfCurrentNearPlaneTop;
-
         /////////////////////////////////////////////
         // Setup occlusion planes
         mvCurrentOcclusionPlanes.resize(0);
-
-
         // Fog
         if (mbSetupOcclusionPlaneForFog && apWorld->GetFogActive() && apWorld->GetFogColor().a >= 1.0f && apWorld->GetFogCulling())
         {
@@ -438,29 +427,6 @@ namespace hpl
             fogPlane.FromNormalPoint(apFrustum->GetForward(), apFrustum->GetOrigin() + apFrustum->GetForward() * -apWorld->GetFogEnd());
             mvCurrentOcclusionPlanes.push_back(fogPlane);
         }
-
-        if (abAtStartOfRendering) {
-            mpCurrentRenderList->Clear();
-        }
-    }
-
-    bool iRenderer::CheckRenderablePlaneIsVisible(iRenderable* apObject, cFrustum* apFrustum)
-    {
-        if (apObject->GetRenderType() != eRenderableType_SubMesh)
-            return true;
-
-        cSubMeshEntity* pSubMeshEnt = static_cast<cSubMeshEntity*>(apObject);
-        cSubMesh* pSubMesh = pSubMeshEnt->GetSubMesh();
-
-        if (pSubMesh->GetIsOneSided() == false)
-            return true;
-
-        cVector3f vNormal = cMath::MatrixMul3x3(apObject->GetWorldMatrix(), pSubMesh->GetOneSidedNormal());
-        cVector3f vPos = cMath::MatrixMul(apObject->GetWorldMatrix(), pSubMesh->GetOneSidedPoint());
-
-        float fDot = cMath::Vector3Dot(vPos - apFrustum->GetOrigin(), vNormal);
-
-        return fDot < 0;
     }
 
 } // namespace hpl

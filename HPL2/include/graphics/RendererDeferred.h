@@ -92,6 +92,10 @@ namespace hpl {
 
         static constexpr uint32_t TranslucencyReflectionBufferMask = 0x7;
         static constexpr uint32_t TranslucencyReflectionBufferOffset = 4;
+
+        static constexpr float ShadowDistanceMedium = 10;
+        static constexpr float ShadowDistanceLow = 20;
+        static constexpr float ShadowDistanceNone = 40;
         enum LightConfiguration { HasGoboMap = 0x1, HasShadowMap = 0x2 };
 
         enum LightPipelineVariants {
@@ -449,12 +453,6 @@ namespace hpl {
         std::unique_ptr<iVertexBuffer> m_shapePyramid;
         std::unique_ptr<iVertexBuffer> m_box;
         std::array<folly::small_vector<ShadowMapData, 32>, eShadowMapResolution_LastEnum> m_shadowMapData;
-
-        float mfMinLargeLightNormalizedArea;
-
-        float m_shadowDistanceMedium;
-        float m_shadowDistanceLow;
-        float m_shadowDistanceNone;
 
         UniqueViewportData<ViewportData> m_boundViewportData;
 
