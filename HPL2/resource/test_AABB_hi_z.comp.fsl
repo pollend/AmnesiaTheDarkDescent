@@ -55,7 +55,6 @@ void CS_MAIN(SV_DispatchThreadID(uint3) did)
 		float3(bboxMin.x,bboxMin.y,bboxMin.z)
     };
 
-
     float minZ = 1.0;
     float2 minXY = float2(1.0, 1.0);
     float2 maxXY = float2(0.0, 0.0);
@@ -108,7 +107,7 @@ void CS_MAIN(SV_DispatchThreadID(uint3) did)
    
     const uint2 maxSamples = uint2(16, 16);
     const float2 XYSize = (maxXY - minXY);
-    const float2 steps =  XYSize / float2(maxSamples) ; 
+    const float2 steps =  XYSize / float2(maxSamples); 
     
     float maxDepth = 0.0;
     float yPos = minXY.y;
@@ -122,5 +121,5 @@ void CS_MAIN(SV_DispatchThreadID(uint3) did)
         }
         yPos += steps.y;
     }
-    Get(occlusionTest)[did.x] = (minZ - 0.00015) <= maxDepth; 
+    Get(occlusionTest)[did.x] = minZ <= (maxDepth + 0.00015); 
 }
