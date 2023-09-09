@@ -3,4 +3,4 @@
 	url = https://github.com/microsoft/vcpkg.git
 [submodule "external/The-Forge"]
 	path = external/The-Forge
-	url = git@github.com:OSS-Cosmic/The-Forge.git
+	url = https://github.com/OSS-Cosmic/The-Forge.git
