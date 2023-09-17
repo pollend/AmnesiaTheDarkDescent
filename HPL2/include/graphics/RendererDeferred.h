@@ -78,6 +78,7 @@ namespace hpl {
         static constexpr TinyImageFormat SpecularBufferFormat = TinyImageFormat_R8G8_UNORM;
         static constexpr TinyImageFormat ColorBufferFormat = TinyImageFormat_R8G8B8A8_UNORM;
         static constexpr TinyImageFormat ShadowDepthBufferFormat = TinyImageFormat_D32_SFLOAT;
+
         static constexpr uint32_t MaxReflectionBuffers = 4;
         static constexpr uint32_t MaxObjectUniforms = 4096;
         static constexpr uint32_t MaxLightUniforms = 1024;
@@ -111,6 +112,46 @@ namespace hpl {
             UseRefractionTrans = (1 << 9),
             UseFog = (1 << 10),
         };
+        struct UnifomMaterialBlock {
+            struct {
+                uint32_t m_materialConfig;
+                float m_heightMapScale;
+                float m_heightMapBias;
+                float m_frenselBias;
+
+                float m_frenselPow;
+                uint32_t m_pad0;
+                uint32_t m_pad1;
+                uint32_t m_pad2;
+            } m_solid;
+            struct {
+                uint32_t m_materialConfig;
+                float m_refractionScale;
+                float m_frenselBias;
+                float m_frenselPow;
+
+                float mfRimLightMul;
+                float mfRimLightPow;
+                uint32_t m_pad0;
+                uint32_t m_pad1;
+            } m_translucenct;
+            struct {
+                uint32_t m_materialConfig;
+                float mfRefractionScale;
+                float mfFrenselBias;
+                float mfFrenselPow;
+
+                float m_reflectionFadeStart;
+                float m_reflectionFadeEnd;
+                float m_waveSpeed;
+                float mfWaveAmplitude;
+
+                float mfWaveFreq;
+                uint32_t m_pad0;
+                uint32_t m_pad1;
+                uint32_t m_pad2;
+            } m_water;
+        };
         struct MaterialRootConstant {
             uint32_t objectId;
             uint32_t m_options;
@@ -118,7 +159,7 @@ namespace hpl {
             float m_sceneAlpha;
             float m_lightLevel;
         };
-        union UniformLightData {
+        union UniformLightBlock {
             struct LightUniformCommon {
                 mat4 m_mvp;
 

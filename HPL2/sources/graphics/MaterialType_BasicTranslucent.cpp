@@ -72,7 +72,7 @@ namespace hpl
             0.2f,
             "Bias for Fresnel term. values: 0-1. Higher means that more of reflection is seen when looking straight at the surface.");
         AddVarFloat(
-            "FrenselPow", 8.0f, "The higher the 'sharper' the reflection is, meaning that it is only clearly seen at sharp angles.");
+            "Fre2nselPow", 8.0f, "The higher the 'sharper' the reflection is, meaning that it is only clearly seen at sharp angles.");
         AddVarFloat(
             "RimLightMul",
             0.0f,

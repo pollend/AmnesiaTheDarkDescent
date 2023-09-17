@@ -19,8 +19,10 @@
 
 #include "graphics/Material.h"
 
+#include "graphics/Enum.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Image.h"
+#include "stl/transform.h"
 #include "system/LowLevelSystem.h"
 #include "system/String.h"
 
@@ -32,6 +34,7 @@
 #include "graphics/Renderable.h"
 
 #include "math/Math.h"
+#include <optional>
 #include <utility>
 
 
@@ -40,62 +43,94 @@
 
 namespace hpl {
 
-	bool cMaterial::mbDestroyTypeSpecifics = true;
+        eMaterialBlendMode cMaterial::GetBlendMode(bool hasRefraction) const {
+            // for water we enforce a blend mode
+            switch(m_descriptor.m_id) {
+                case MaterialID::Water:
+                    return hasRefraction ? eMaterialBlendMode_None : eMaterialBlendMode_Mul;
+                case MaterialID::Translucent:
+                    return m_descriptor.m_translucent.m_blend;
+                default:
+                    break;
+            }
+            return eMaterialBlendMode_Add;
+        }
+        eMaterialAlphaMode cMaterial::GetAlphaMode() const {
+            switch(m_descriptor.m_id) {
+                case MaterialID::SolidDiffuse:
+                    if(GetImage(eMaterialTexture_Alpha))  {
+                        return eMaterialAlphaMode_Trans;
+                    }
+                    break;
+                default:
+                    break;
+            }
+	        return eMaterialAlphaMode_Solid;
+        }
+        bool cMaterial::GetHasRefraction() const {
+            switch(m_descriptor.m_id) {
+                case MaterialID::Translucent:
+                    return m_descriptor.m_translucent.m_hasRefraction;
+                case MaterialID::Water:
+                    return true;
+                default:
+                    break;
+            }
+            return false;
+        }
+        bool cMaterial::GetHasReflection() const {
+            switch(m_descriptor.m_id) {
+                case MaterialID::Water:
+                    return m_descriptor.m_water.m_hasReflection;
+                default:
+                    break;
+            }
+            return false;
+        }
+
+        bool cMaterial::GetHasWorldReflections() const {
+	        return m_descriptor.m_id == MaterialID::Water &&
+		        GetHasReflection() &&
+		        !GetImage(eMaterialTexture_CubeMap);
+        }
+
+        float cMaterial::maxReflectionDistance() const {
+            switch(m_descriptor.m_id) {
+                case MaterialID::Water:
+                    return m_descriptor.m_water.m_maxReflectionDistance;
+                default:
+                    break;
+            }
+            return 0.0f;
+        }
+
 
 	cMaterial::cMaterial(const tString& asName, const tWString& asFullPath, cGraphics *apGraphics, cResources *apResources, iMaterialType *apType)
 		: iResourceBase(asName, asFullPath, 0)
 	{
-        m_version = rand();
-		mpGraphics = apGraphics;
+        m_generation = rand();
 		mpResources = apResources;
-
-		mpType = NULL;
-		mpVars = NULL;
-		SetType(apType);
 
 		mbAutoDestroyTextures = true;
 
 		mlRenderFrameCount = -1;
 
-		mbHasRefraction = false;
-		mlRefractionTextureUnit =0;
-		mbUseRefractionEdgeCheck = false;
+	   // mbHasRefraction = false;
+	   // mlRefractionTextureUnit =0;
+	   // mbUseRefractionEdgeCheck = false;
 
-		mbHasWorldReflection = false;
-		mlWorldReflectionTextureUnit =0;
-		mbWorldReflectionOcclusionTest = true;
-		mfMaxReflectionDistance = 0;
+	   // mlWorldReflectionTextureUnit =0;
+	   // mfMaxReflectionDistance = 0;
 
-		//mbHasTranslucentIllumination = false; //If the material is translucent and also need an extra additive pass.
+	   // mbLargeTransperantSurface = false;
 
-		mbLargeTransperantSurface = false;
+	   // mbUseAlphaDissolveFilter = false;
 
-		mbUseAlphaDissolveFilter = false;
-
-		mbAffectedByFog = true;
-
-		for(int i=0; i<eMaterialRenderMode_LastEnum; ++i)
-		{
-			mbHasSpecificSettings[i] = false;
-			mbHasObjectSpecificsSettings[i] = false;
-		}
 
 		mfAnimTime = 0;
 		m_mtxUV = cMatrixf::Identity;
 		mbHasUvAnimation = false;
 
-
-		///////////////////////
-		//Set up depending in type
-		if(mpType->IsTranslucent())
-		{
-			mBlendMode = eMaterialBlendMode_Add;
-		}
-		else
-		{
-			mBlendMode = eMaterialBlendMode_None;
-		}
-		mAlphaMode = eMaterialAlphaMode_Solid;
 		mbDepthTest = true;
 
 	}
@@ -104,39 +139,11 @@ namespace hpl {
 
 	cMaterial::~cMaterial()
 	{
-		if(mpVars) {
-			hplDelete(mpVars);
-		}
 	}
 
-	void cMaterial::SetType(iMaterialType* apType)
-	{
-		if(mpType == apType) {
-			return;
-		}
-
-		mpType = apType;
-
-		if(mpVars) {
-			hplDelete(mpVars);
-		}
-		if(mpType) {
-			mpVars = mpType->CreateSpecificVariables();
-		}
-	}
-
-	//-----------------------------------------------------------------------
 
 	void cMaterial::Compile()
 	{
-		for(int i=0; i<eMaterialRenderMode_LastEnum; ++i)
-		{
-			mbHasSpecificSettings[i] = false;
-			mbHasObjectSpecificsSettings[i] = false;
-		}
-
-		mpType->CompileMaterialSpecifics(this);
-		UpdateFlags();
 	}
 
     void cMaterial::SetTextureAnisotropy(float afx) {
@@ -147,45 +154,12 @@ namespace hpl {
         } else {
             m_antistropy = Antistropy_None ;
         }
-        Dirty();
+        IncreaseGeneration();
     }
-
-	void cMaterial::UpdateFlags() {
-		const auto alphaMapImage = GetImage(eMaterialTexture_Alpha);
-		const auto heightMapImage = GetImage(eMaterialTexture_Height);
-	    m_info.m_data.m_common.m_materialConfig =
-					(GetImage(eMaterialTexture_Diffuse) ? EnableDiffuse: 0) |
-					(GetImage(eMaterialTexture_NMap) ? EnableNormal: 0) |
- 					(GetImage(eMaterialTexture_Specular) ? EnableSpecular: 0) |
-					(alphaMapImage ? EnableAlpha: 0) |
-					(heightMapImage ? EnableHeight: 0) |
-					(GetImage(eMaterialTexture_Illumination) ? EnableIllumination: 0) |
-					(GetImage(eMaterialTexture_CubeMap) ? EnableCubeMap: 0) |
-					(GetImage(eMaterialTexture_DissolveAlpha) ? EnableDissolveAlpha: 0) |
-					(GetImage(eMaterialTexture_CubeMapAlpha) ? EnableCubeMapAlpha: 0) |
-					(m_info.m_alphaDissolveFilter ? UseDissolveFilter: 0);
-		switch(m_info.m_id) {
-			case MaterialID::SolidDiffuse: {
-				m_info.m_data.m_common.m_materialConfig |=
-					((alphaMapImage && TinyImageFormat_ChannelCount(static_cast<TinyImageFormat>(alphaMapImage->GetTexture().m_handle->mFormat)) == 1) ? IsAlphaSingleChannel: 0) |
-					((heightMapImage && TinyImageFormat_ChannelCount(static_cast<TinyImageFormat>(heightMapImage->GetTexture().m_handle->mFormat)) == 1) ? IsHeightMapSingleChannel: 0);
-				break;
-			}
-			case MaterialID::Translucent: {
-				m_info.m_data.m_common.m_materialConfig |=
-					(HasRefraction() ? UseRefractionNormals: 0)  |
-					(IsRefractionEdgeCheck() ? UseRefractionEdgeCheck: 0);
-			    break;
-			}
-			default:
-				break;
-		}
-	}
 
 	void cMaterial::SetImage(eMaterialTexture aType, iResourceBase *apTexture)
 	{
 		// increase version number to dirty material
-		UpdateFlags();
 		m_image[aType].SetAutoDestroyResource(false);
 		if(apTexture) {
 			ASSERT(TypeInfo<Image>().IsType(*apTexture) || TypeInfo<AnimatedImage>().IsType(*apTexture) && "cMaterial::SetImage: apTexture is not an Image");
@@ -193,7 +167,7 @@ namespace hpl {
 		} else {
 			m_image[aType] = ImageResourceWrapper();
 		}
-        Dirty();
+        IncreaseGeneration();
 	}
 
 	Image* cMaterial::GetImage(eMaterialTexture aType)
@@ -201,48 +175,29 @@ namespace hpl {
 		return m_image[aType].GetImage();
 	}
 
-	cResourceVarsObject* cMaterial::GetVarsObject()
+    const Image* cMaterial::GetImage(eMaterialTexture aType) const
 	{
-		cResourceVarsObject* pVarsObject = hplNew(cResourceVarsObject,());
-		mpType->GetVariableValues(this, pVarsObject);
-
-		return pVarsObject;
+		return m_image[aType].GetImage();
 	}
 
-	void cMaterial::LoadVariablesFromVarsObject(cResourceVarsObject* apVarsObject)
-	{
-		mpType->LoadVariables(this, apVarsObject);
-	}
-
-	void cMaterial::SetBlendMode(eMaterialBlendMode aBlendMode)
-	{
-		if(mpType->IsTranslucent()==false) return;
-
-		mBlendMode = aBlendMode;
-	}
-
-	void cMaterial::SetAlphaMode(eMaterialAlphaMode aAlphaMode)
-	{
-		//if(mpType->IsTranslucent()) return;
-
-		mAlphaMode = aAlphaMode;
-	}
 
 	void cMaterial::SetDepthTest(bool abDepthTest)
 	{
-		if(mpType->IsTranslucent()==false) return;
+	    // strange ..
+        if(hpl::stl::TransformOrDefault(Meta(), false,
+                            [](auto& meta) {
+                                return !meta->m_isTranslucent;
+                            })) {
+            return;
+        }
 
 		mbDepthTest = abDepthTest;
 	}
-
-	//-----------------------------------------------------------------------
 
 	void cMaterial::UpdateBeforeRendering(float afTimeStep)
 	{
 		if(mbHasUvAnimation) UpdateAnimations(afTimeStep);
 	}
-
-	//-----------------------------------------------------------------------
 
 	void cMaterial::AddUvAnimation(eMaterialUvAnimation aType, float afSpeed, float afAmp, eMaterialAnimationAxis aAxis)
 	{
@@ -250,8 +205,6 @@ namespace hpl {
 
 		mbHasUvAnimation = true;
 	}
-
-	//-----------------------------------------------------------------------
 
 	void cMaterial::ClearUvAnimations()
 	{
@@ -266,13 +219,21 @@ namespace hpl {
 	{
 		switch(aAxis)
 		{
-		case eMaterialAnimationAxis_X: return cVector3f(1,0,0);
-		case eMaterialAnimationAxis_Y: return cVector3f(0,1,0);
-		case eMaterialAnimationAxis_Z: return cVector3f(0,0,1);
+		    case eMaterialAnimationAxis_X: return cVector3f(1,0,0);
+		    case eMaterialAnimationAxis_Y: return cVector3f(0,1,0);
+		    case eMaterialAnimationAxis_Z: return cVector3f(0,0,1);
 		}
 		return 0;
 	}
 
+    std::optional<const cMaterial::MaterialMeta*> cMaterial::Meta() {
+	    auto metaInfo = std::find_if(cMaterial::MaterialMetaTable.begin(), cMaterial::MaterialMetaTable.end(), [&](auto& meta) {
+	        return m_descriptor.m_id == meta.m_id;
+	    });
+	    return (metaInfo == cMaterial::MaterialMetaTable.end()) ?
+            std::nullopt : std::optional(metaInfo);
+
+    }
 	void cMaterial::UpdateAnimations(float afTimeStep) {
 		m_mtxUV = cMatrixf::Identity;
 
@@ -309,14 +270,7 @@ namespace hpl {
 			}
 		}
 
-		// auto frame = Interface<ForgeRenderer>::Get()->GetFrame();
-		// auto& handle = m_bufferHandle[frame.m_frameIndex];
-		// BufferUpdateDesc uniformUpdate = { handle.m_handle};
-		// beginUpdateResource(&uniformUpdate);
-		// reinterpret_cast<MaterialCommonBlock*>(uniformUpdate.pMappedData)->m_textureMatrix = cMath::ToForgeMat4(m_mtxUV);
-		// endUpdateResource(&uniformUpdate, nullptr);
-
-		m_version++;
+		m_generation++;
 		mfAnimTime += afTimeStep;
 	}
 

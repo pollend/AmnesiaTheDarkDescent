@@ -28,54 +28,101 @@
 #include <math/MathTypes.h>
 #include <graphics/GraphicsTypes.h>
 #include <resources/ResourceBase.h>
+#include "graphics/Renderer.h"
 
 namespace hpl {
 
-	//---------------------------------------------------
+    class cGraphics;
+    class cResources;
+    class iTexture;
+    class iMaterialType;
+    class cResourceVarsObject;
 
-	class cGraphics;
-	class cResources;
-	class iTexture;
-	class iMaterialType;
-	class cResourceVarsObject;
-
-
-	class iMaterialVars
-	{
-	public:
-		virtual ~iMaterialVars(){}
+    struct MaterialDiffuseSolid {
+		float m_heightMapScale;
+		float m_heightMapBias;
+		float m_frenselBias;
+		float m_frenselPow;
+		bool m_alphaDissolveFilter;
 	};
 
+    struct MaterialTranslucent {
+        eMaterialBlendMode m_blend;
 
-	//---------------------------------------------------
+		bool m_hasRefraction;
+		bool m_refractionEdgeCheck;
+		bool m_refractionNormals;
+		bool m_affectedByLightLevel;
 
-	class cMaterialUvAnimation
-	{
-	public:
-		cMaterialUvAnimation(eMaterialUvAnimation aType, float afSpeed, float afAmp, eMaterialAnimationAxis aAxis) :
-							  mType(aType), mfSpeed(afSpeed), mfAmp(afAmp), mAxis(aAxis) {}
+		float m_refractionScale;
+		float m_frenselBias;
+		float m_frenselPow;
+		float m_rimLightMul;
+		float m_rimLightPow;
+    };
 
-	    eMaterialUvAnimation mType;
+    // always has refraction if enabled
+    struct MaterialWater {
+        bool m_hasReflection;
+        float m_maxReflectionDistance;
 
-		float mfSpeed;
-		float mfAmp;
+		float m_refractionScale;
+		float m_frenselBias;
+		float mfFrenselPow;
+		float mfReflectionFadeStart;
+		float mfReflectionFadeEnd;
+		float mfWaveSpeed;
+		float mfWaveAmplitude;
+		float mfWaveFreq;
+    };
 
-		eMaterialAnimationAxis mAxis;
+	enum class MaterialID: uint8_t {
+        Unknown = 0,
+        SolidDiffuse,
+        Translucent,
+        Water,
+        Decal,
+        MaterialIDCount
+    };
+
+	struct MaterialType final {
+		MaterialID m_id = MaterialID::Unknown;
+        union {
+	        MaterialDiffuseSolid m_solid;
+            MaterialTranslucent m_translucent;
+            MaterialWater m_water;
+        };
+
 	};
 
+    class iMaterialVars {
+    public:
+        virtual ~iMaterialVars() {
+        }
+    };
 
+    class cMaterialUvAnimation {
+    public:
+        cMaterialUvAnimation(eMaterialUvAnimation aType, float afSpeed, float afAmp, eMaterialAnimationAxis aAxis)
+            : mType(aType)
+            , mfSpeed(afSpeed)
+            , mfAmp(afAmp)
+            , mAxis(aAxis) {
+        }
+
+        eMaterialUvAnimation mType;
+
+        float mfSpeed;
+        float mfAmp;
+
+        eMaterialAnimationAxis mAxis;
+    };
+
+    // TODO: need to trim down Material Information
 	class cMaterial : public iResourceBase {
-	friend class iMaterialType;
+	    friend class iMaterialType;
 	public:
 		static constexpr uint32_t MaxMaterialID = 2048;
-		enum MaterialID: uint8_t {
-            Unknown = 0,
-            SolidDiffuse,
-            Translucent,
-            Water,
-            Decal,
-            MaterialIDCount
-        };
 
         enum TextureAntistropy {
             Antistropy_None = 0,
@@ -83,93 +130,6 @@ namespace hpl {
             Antistropy_16 = 2,
             Antistropy_Count = 3
         };
-
-		enum TextureConfigFlags {
-			EnableDiffuse = 1 << 0,
-			EnableNormal = 1 << 1,
-			EnableSpecular = 1 << 2,
-			EnableAlpha = 1 << 3,
-			EnableHeight = 1 << 4,
-			EnableIllumination = 1 << 5,
-			EnableCubeMap = 1 << 6,
-			EnableDissolveAlpha = 1 << 7,
-			EnableCubeMapAlpha = 1 << 8,
-
-			// additional flags
-			IsHeightMapSingleChannel = 1 << 9,
-			IsAlphaSingleChannel = 1 << 10,
-
-			//Solid Diffuse
-			UseDissolveFilter = 1 << 14,
-
-			//Translucent
-			UseRefractionNormals = 1 << 14,
-			UseRefractionEdgeCheck = 1 << 15,
-		};
-
-		struct MaterialCommonBlock {
-			uint32_t m_materialConfig;
-		};
-
-		struct MaterialSolidUniformBlock {
-			uint32_t m_materialConfig;
-			float m_heightMapScale;
-			float m_heightMapBias;
-			float m_frenselBias;
-
-			float m_frenselPow;
-			uint32_t m_pad0;
-			uint32_t m_pad1;
-			uint32_t m_pad2;
-		};
-
-		struct MaterialTranslucentUniformBlock {
-			uint32_t m_materialConfig;
-			float mfRefractionScale;
-			float mfFrenselBias;
-			float mfFrenselPow;
-
-			float mfRimLightMul;
-			float mfRimLightPow;
-			uint32_t m_pad0;
-			uint32_t m_pad1;
-		};
-
-		struct MaterialWaterUniformBlock {
-			uint32_t m_materialConfig;
-			float mfRefractionScale;
-			float mfFrenselBias;
-			float mfFrenselPow;
-
-			float mfReflectionFadeStart;
-			float mfReflectionFadeEnd;
-			float mfWaveSpeed;
-			float mfWaveAmplitude;
-
-			float mfWaveFreq;
-			uint32_t m_pad0;
-			uint32_t m_pad1;
-			uint32_t m_pad2;
-		};
-
-
-		struct MaterialType {
-			//
-			bool m_affectByLightLevel = false;
-
-			MaterialID m_id;
-			IndexPoolHandle m_handle;
-			// solid
-			bool m_alphaDissolveFilter = false;
-			bool m_refractionNormals = false;
-			union MaterialData {
-				MaterialData() {}
-				MaterialCommonBlock m_common;
-				MaterialSolidUniformBlock m_solid;
-				MaterialTranslucentUniformBlock m_translucentUniformBlock;
-				MaterialWaterUniformBlock m_waterUniformBlock;
-			} m_data;
-		};
 
 		struct MaterialUserVariable {
 			const char* m_name;
@@ -182,10 +142,10 @@ namespace hpl {
 			const char* m_name;
 			bool m_isDecal ;
 			bool m_isTranslucent;
+
 			std::span<const eMaterialTexture> m_usedTextures;
 			std::span<const MaterialUserVariable> m_userVariables;
 		};
-
 
 		static constexpr eMaterialTexture SolidMaterialUsedTextures[] = {
 			eMaterialTexture_Diffuse ,eMaterialTexture_NMap ,eMaterialTexture_Alpha ,eMaterialTexture_Specular ,eMaterialTexture_Height ,eMaterialTexture_Illumination ,eMaterialTexture_DissolveAlpha ,eMaterialTexture_CubeMap ,eMaterialTexture_CubeMapAlpha
@@ -200,6 +160,8 @@ namespace hpl {
 			eMaterialTexture_Diffuse
 		};
 
+        // TODO: move this outside of material potentialy
+        // Meta information about the material
 		static constexpr const std::array MaterialMetaTable {
 			MaterialMeta { MaterialID::SolidDiffuse,"soliddiffuse", false, false, std::span(SolidMaterialUsedTextures)},
 			MaterialMeta { MaterialID::Translucent,"translucent", false, true, std::span(TranslucentMaterialUsedTextures)},
@@ -210,17 +172,12 @@ namespace hpl {
 		cMaterial(const tString& asName, const tWString& asFullPath, cGraphics *apGraphics, cResources *apResources, iMaterialType *apType);
 		virtual ~cMaterial();
 
-		void SetType(iMaterialType* apType);
-		iMaterialType * GetType(){ return mpType; }
+	    std::optional<const cMaterial::MaterialMeta*> Meta();
 
-		void Compile();
+	    void Compile();
 		void SetImage(eMaterialTexture aType, iResourceBase *apTexture);
 		Image *GetImage(eMaterialTexture aType);
-
-		void SetVars(iMaterialVars *apVars){ mpVars = apVars;}
-		iMaterialVars* GetVars(){ return mpVars;}
-		cResourceVarsObject* GetVarsObject();
-		void LoadVariablesFromVarsObject(cResourceVarsObject* apVarsObject);
+		const Image* GetImage(eMaterialTexture aType) const;
 
 		void SetAutoDestroyTextures(bool abX) {
 			mbAutoDestroyTextures = abX;
@@ -228,43 +185,14 @@ namespace hpl {
 				image.SetAutoDestroyResource(abX);
 			}
 		}
+        inline void setDescriptor(const MaterialType& desc) {
+            m_descriptor = desc;
+            IncreaseGeneration();
+        }
+        const MaterialType& Descriptor() { return m_descriptor; }
 
-		void SetTextureAnisotropy(float afx);
-		void SetBlendMode(eMaterialBlendMode aBlendMode);
-		void SetAlphaMode(eMaterialAlphaMode aAlphaMode);
+	    void SetTextureAnisotropy(float afx);
 		void SetDepthTest(bool abDepthTest);
-
-		bool HasRefraction(){ return mbHasRefraction; }
-		bool HasRefractionNormals(){ return mbHasRefractionNormals; }
-		bool IsRefractionEdgeCheck(){ return mbUseRefractionEdgeCheck;}
-		void SetHasRefraction(bool abX){ mbHasRefraction = abX; }
-		void SetHasRefractionNormals(bool abX){ mbHasRefractionNormals = abX; }
-		void SetIsAffectedByLightLevel(bool abX){ mbIsAffectedByLightLevel = abX;}
-		bool IsAffectedByLightLevel(){ return mbIsAffectedByLightLevel;}
-		void SetUseRefractionEdgeCheck(bool abX){ mbUseRefractionEdgeCheck = abX;}
-
-		bool HasWorldReflection(){ return mbHasWorldReflection; }
-		void SetHasWorldReflection(bool abX){ mbHasWorldReflection = abX; }
-		void  SetWorldReflectionOcclusionTest(bool abX){ mbWorldReflectionOcclusionTest=abX;}
-		void SetMaxReflectionDistance(float afX){ mfMaxReflectionDistance = afX;}
-		bool  GetWorldReflectionOcclusionTest(){ return mbWorldReflectionOcclusionTest;}
-		float GetMaxReflectionDistance(){ return mfMaxReflectionDistance;}
-
-		//void SetHasTranslucentIllumination(bool abX){ mbHasTranslucentIllumination = abX;}
-		//bool HasTranslucentIllumination(){ return mbHasTranslucentIllumination;}
-
-		void SetLargeTransperantSurface(bool abX){ mbLargeTransperantSurface = abX;}
-		bool GetLargeTransperantSurface(){ return mbLargeTransperantSurface;}
-
-		bool GetUseAlphaDissolveFilter(){ return mbUseAlphaDissolveFilter;}
-		void SetUseAlphaDissolveFilter(bool abX){ mbUseAlphaDissolveFilter = abX;}
-
-		void SetAffectedByFog(bool abX){ mbAffectedByFog = abX;}
-		bool GetAffectedByFog(){ return mbAffectedByFog;}
-
-		inline eMaterialBlendMode GetBlendMode() const { return mBlendMode; }
-		inline eMaterialAlphaMode GetAlphaMode() const { return mAlphaMode; }
-		inline bool GetDepthTest() const { return mbDepthTest; }
 
 		void SetPhysicsMaterial(const tString & asPhysicsMaterial){ msPhysicsMaterial = asPhysicsMaterial;}
 		const tString& GetPhysicsMaterial(){ return msPhysicsMaterial;}
@@ -275,22 +203,29 @@ namespace hpl {
         inline TextureAntistropy GetTextureAntistropy() const { return m_antistropy; }
         inline eTextureWrap GetTextureWrap() const { return m_textureWrap; }
 
+        // we want to build a derived state from the matera information
+        // decouples the state managment to work on forward++ model
+        eMaterialBlendMode GetBlendMode(bool hasRefraction) const;
+        eMaterialAlphaMode GetAlphaMode() const;
+        bool GetHasRefraction() const;
+        bool GetHasReflection() const;
+        bool GetHasWorldReflections() const;
+
+        // water
+        float maxReflectionDistance() const;
+
+        void Serialize(cResourceVarsObject* vars);
+        void Deserialize(cResourceVarsObject* vars);
         inline void setTextureFilter(eTextureFilter filter) {
             m_textureFilter = filter;
-            Dirty();
+            IncreaseGeneration();
         }
         inline void setTextureWrap(eTextureWrap wrap) {
             m_textureWrap = wrap;
-            Dirty();
+            IncreaseGeneration();
         }
 		inline int GetRenderFrameCount() const { return mlRenderFrameCount;}
 		inline void SetRenderFrameCount(const int alCount) { mlRenderFrameCount = alCount;}
-
-		inline bool GetHasSpecificSettings(eMaterialRenderMode aMode) const{ return mbHasSpecificSettings[aMode];}
-		void SetHasSpecificSettings(eMaterialRenderMode aMode,bool abX){ mbHasSpecificSettings[aMode] = abX;}
-
-		inline bool HasObjectSpecificsSettings(eMaterialRenderMode aMode)const { return  mbHasObjectSpecificsSettings[aMode];}
-		void SetHasObjectSpecificsSettings(eMaterialRenderMode aMode,bool abX){ mbHasObjectSpecificsSettings[aMode] = abX;}
 
 		//Animation
 		void AddUvAnimation(eMaterialUvAnimation aType, float afSpeed, float afAmp, eMaterialAnimationAxis aAxis);
@@ -300,75 +235,43 @@ namespace hpl {
 		inline const cMatrixf& GetUvMatrix() const { return m_mtxUV;}
 		void ClearUvAnimations();
 
-		/**
-		 * This is used so that materials do not call type specific things after types have been destroyed!
-		 * Shall only be set by graphics!
-		 */
-		static void SetDestroyTypeSpecifics(bool abX){ mbDestroyTypeSpecifics = abX; }
-		static bool GetDestroyTypeSpecifics(){ return mbDestroyTypeSpecifics; }
+        inline const uint32_t GetIndex() { return m_resourceHandle.get();}
+        inline void setHandle(IndexPoolHandle&& handle) {
+            m_resourceHandle = std::move(handle);
+        }
 
 		bool Reload(){ return false;}
 		void Unload(){}
 		void Destroy(){}
 
-		inline MaterialType& type() { return m_info; }
-
-		inline uint32_t materialID() { return m_info.m_handle.get(); }
-		inline uint32_t Version() { return m_version; }
-	    inline void Dirty() { m_version++; }
+		inline uint32_t Generation() { return m_generation; }
+	    inline void IncreaseGeneration() { m_generation++; }
     private:
-		void UpdateFlags();
 		void UpdateAnimations(float afTimeStep);
-		uint32_t m_version = 0; // used to check if the material has changed since last frame
-		MaterialType m_info;
+		uint32_t m_generation = 0; // used to check if the material has changed since last frame
         TextureAntistropy m_antistropy = Antistropy_None;
         eTextureWrap m_textureWrap = eTextureWrap::eTextureWrap_Clamp;
         eTextureFilter m_textureFilter = eTextureFilter::eTextureFilter_Nearest;
-
-		cGraphics *mpGraphics;
-		cResources *mpResources;
-		iMaterialType *mpType;
-		iMaterialVars *mpVars;
-
-		bool mbAutoDestroyTextures;
-		bool mbHasSpecificSettings[eMaterialRenderMode_LastEnum];
-		bool mbHasObjectSpecificsSettings[eMaterialRenderMode_LastEnum];
-
-		eMaterialBlendMode mBlendMode;
-		eMaterialAlphaMode mAlphaMode;
-		int mlRefractionTextureUnit;
-
-		int mlWorldReflectionTextureUnit;
-		float mfMaxReflectionDistance;
+        MaterialType m_descriptor;
 
 		bool mbDepthTest;
-		bool mbHasRefraction;
-		bool mbHasRefractionNormals;
-		bool mbUseRefractionEdgeCheck;
-		bool mbHasWorldReflection;
-		bool mbWorldReflectionOcclusionTest;
-		//bool mbHasTranslucentIllumination = false;
-		bool mbLargeTransperantSurface;
-		bool mbAffectedByFog;
-		bool mbUseAlphaDissolveFilter;
-		bool mbHasUvAnimation;
-		bool mbIsAffectedByLightLevel;
 
+	    cResources *mpResources;
+        IndexPoolHandle m_resourceHandle;
+
+		bool mbAutoDestroyTextures;
+        bool mbHasUvAnimation;
 		std::array<ImageResourceWrapper, eMaterialTexture_LastEnum> m_image = {ImageResourceWrapper()};
 
 		std::vector<cMaterialUvAnimation> mvUvAnimations;
 		cMatrixf m_mtxUV;
 
 		float mfAnimTime;
-
 		int mlRenderFrameCount;
-
 		tString msPhysicsMaterial;
 
-		static bool mbDestroyTypeSpecifics;
-		uint32_t m_stageDirtyBits = 0;
 	};
 
 	//---------------------------------------------------
 
-};
+}; // namespace hpl

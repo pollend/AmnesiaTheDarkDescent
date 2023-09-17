@@ -27,6 +27,7 @@
 #include "math/Frustum.h"
 #include "scene/ParticleEmitter.h"
 #include "scene/Viewport.h"
+
 #include "windowing/NativeWindow.h"
 
 #include <cstdint>
@@ -37,6 +38,8 @@
 #include "graphics/RenderTarget.h"
 #include "impl/LegacyVertexBuffer.h"
 #include "math/Math.h"
+
+#include "stl/transform.h"
 
 #include "math/MathTypes.h"
 #include "scene/SceneTypes.h"
@@ -210,8 +213,12 @@ namespace hpl {
                 // Iterate objects
                 for (auto& object : apNode->GetObjects()) {
                     // Check so visible and shadow caster
+
                     if (rendering::detail::IsObjectIsVisible(object, eRenderableFlag_ShadowCaster, clipPlanes) == false ||
-                        object->GetMaterial() == NULL || object->GetMaterial()->GetType()->IsTranslucent()) {
+                        object->GetMaterial() == nullptr ||
+                        hpl::stl::TransformOrDefault(object->GetMaterial()->Meta(), false, [](auto& meta) {
+                            return meta->m_isTranslucent;
+                        })) {
                         continue;
                     }
 
@@ -563,7 +570,7 @@ namespace hpl {
             desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
             desc.mDesc.mFirstElement = 0;
             desc.mDesc.mElementCount = cMaterial::MaxMaterialID;
-            desc.mDesc.mStructStride = sizeof(cMaterial::MaterialType::MaterialData);
+            desc.mDesc.mStructStride = sizeof(UnifomMaterialBlock);
             desc.mDesc.mSize = desc.mDesc.mElementCount * desc.mDesc.mStructStride;
             desc.ppBuffer = buffer;
             addResource(&desc, nullptr);
@@ -2068,7 +2075,7 @@ namespace hpl {
                     desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
                     desc.mDesc.mFirstElement = 0;
                     desc.mDesc.mElementCount = MaxLightUniforms;
-                    desc.mDesc.mStructStride = sizeof(UniformLightData);
+                    desc.mDesc.mStructStride = sizeof(UniformLightBlock);
                     desc.mDesc.mSize = desc.mDesc.mElementCount * desc.mDesc.mStructStride;
                     desc.ppBuffer = buffer;
                     addResource(&desc, nullptr);
@@ -2751,9 +2758,8 @@ namespace hpl {
                                     eMaterialRenderMode renderMode =
                                         pObject->GetCoverageAmount() >= 1 ? eMaterialRenderMode_Z : eMaterialRenderMode_Z_Dissolve;
                                     cMaterial* pMaterial = pObject->GetMaterial();
-                                    iMaterialType* materialType = pMaterial->GetType();
                                     iVertexBuffer* vertexBuffer = pObject->GetVertexBuffer();
-                                    if (vertexBuffer == nullptr || materialType == nullptr) {
+                                    if (vertexBuffer == nullptr || pMaterial->Meta().has_value()) {
                                         return;
                                     }
                                     MaterialRootConstant materialConst = {};
@@ -2833,7 +2839,7 @@ namespace hpl {
                 auto cmdBindLightDescriptor = [&](detail::DeferredLight* light) {
                     DescriptorData params[10] = {};
                     size_t paramCount = 0;
-                    UniformLightData uniformObjectData = {};
+                    UniformLightBlock uniformObjectData = {};
 
                     const auto modelViewMtx = cMath::MatrixMul(apFrustum->GetViewMatrix(), light->m_light->GetWorldMatrix());
                     const auto viewProjectionMat = cMath::MatrixMul(projectionMat, viewMat);
@@ -2939,9 +2945,9 @@ namespace hpl {
                         }
                     }
 
-                    BufferUpdateDesc updateDesc = { m_lightPassBuffer[frame.m_frameIndex].m_handle, m_lightIndex* sizeof(UniformLightData) };
+                    BufferUpdateDesc updateDesc = { m_lightPassBuffer[frame.m_frameIndex].m_handle, m_lightIndex* sizeof(UniformLightBlock) };
                     beginUpdateResource(&updateDesc);
-                    memcpy(updateDesc.pMappedData, &uniformObjectData, sizeof(UniformLightData));
+                    memcpy(updateDesc.pMappedData, &uniformObjectData, sizeof(UniformLightBlock));
                     endUpdateResource(&updateDesc, NULL);
 
                     updateDescriptorSet(
@@ -3306,16 +3312,18 @@ namespace hpl {
                     ////////////////////////////////////////
                     // Update per viewport specific and set amtrix point
                     // Skip this for non-decal translucent! This is because the water rendering might mess it up otherwise!
-                    if (pMaterial == NULL || pMaterial->GetType()->IsTranslucent() == false || pMaterial->GetType()->IsDecal()) {
+
+                    if (pMaterial == nullptr || hpl::stl::TransformOrDefault(pMaterial->Meta(), false, [](auto& meta) -> bool {
+                        return meta->m_isTranslucent == false || meta->m_id == cMaterial::MaterialID::Decal;
+                    })) {
                         // skip rendering if the update return false
                         if (pObject->UpdateGraphicsForViewport(apFrustum, frameTime) == false) {
                             return;
                         }
 
                         pObject->SetModelMatrixPtr(pObject->GetModelMatrix(apFrustum));
-                    }
-                    // Only set a matrix used for sorting. Calculate the proper in the trans rendering!
-                    else {
+                    } else {
+                        // Only set a matrix used for sorting. Calculate the proper in the trans rendering!
                         pObject->SetModelMatrixPtr(pObject->GetModelMatrix(NULL));
                     }
 
@@ -3404,7 +3412,10 @@ namespace hpl {
                 reinterpret_cast<float4*>(updateDesc.pMappedData)[1] = float4(boundBoxMax.x, boundBoxMax.y, boundBoxMax.z, 0.0f);
                 endUpdateResource(&updateDesc, nullptr);
 
-                if (!test.m_preZPass || !vertexBuffer || !pMaterial || pMaterial->GetType()->IsTranslucent()) {
+                if (!test.m_preZPass || !vertexBuffer || !pMaterial ||
+                    hpl::stl::TransformOrDefault(pMaterial->Meta(), false, [](auto& meta) {
+                        return meta->m_isTranslucent;
+                    })) {
                     continue;
                 }
 
@@ -3644,7 +3655,10 @@ namespace hpl {
 
                     cMaterial* pMaterial = renderable->GetMaterial();
                     iVertexBuffer* vertexBuffer = renderable->GetVertexBuffer();
-                    if (!vertexBuffer || !pMaterial || pMaterial->GetType()->IsTranslucent()) {
+
+                    if (!vertexBuffer || !pMaterial || hpl::stl::TransformOrDefault(pMaterial->Meta(), false, [](auto& meta) {
+                        return meta->m_isTranslucent;
+                    })) {
                         continue;
                     }
 
@@ -3676,20 +3690,21 @@ namespace hpl {
 
         auto* objectDescSet = m_materialSet.m_perObjectSet[frame.m_frameIndex].m_handle;
         auto objectLookup = m_materialSet.m_objectDescriptorLookup.find(apObject);
-        auto& info = m_materialSet.m_materialInfo[apMaterial->materialID()];
+        auto& descriptor = apMaterial->Descriptor();
+
+        auto& info = m_materialSet.m_materialInfo[descriptor.m_id];
         auto& descInfo = info.m_materialDescInfo[frame.m_frameIndex];
-        auto& materialType = apMaterial->type();
 
         auto metaInfo = std::find_if(cMaterial::MaterialMetaTable.begin(), cMaterial::MaterialMetaTable.end(), [&](auto& info) {
-            return info.m_id == materialType.m_id;
+            return info.m_id == descriptor.m_id;
         });
 
-        if (descInfo.m_material != apMaterial || descInfo.m_version != apMaterial->Version()) {
-            descInfo.m_version = apMaterial->Version();
+        if (descInfo.m_material != apMaterial || descInfo.m_version != apMaterial->Generation()) {
+            descInfo.m_version = apMaterial->Generation();
             descInfo.m_material = apMaterial;
 
             BufferUpdateDesc updateDesc = { m_materialSet.m_materialUniformBuffer.m_handle,
-                                            apMaterial->materialID() * sizeof(cMaterial::MaterialType::MaterialData) };
+                                            qsqpMaterial->materialID() * sizeof(cMaterial::MaterialType::MaterialData) };
             beginUpdateResource(&updateDesc);
             memcpy(updateDesc.pMappedData, &materialType.m_data, sizeof(cMaterial::MaterialType::MaterialData));
             endUpdateResource(&updateDesc, NULL);
@@ -4312,9 +4327,9 @@ void cRendererDeferred::Draw(
             }
 
             const bool isRefraction = iRenderer::GetRefractionEnabled() && pMaterial->HasRefraction();
-            const bool isReflection = pMaterial->HasWorldReflection() && translucencyItem->GetRenderType() == eRenderableType_SubMesh &&
+            const bool isReflection = material::hasWorldReflections(*pMaterial) && translucencyItem->GetRenderType() == eRenderableType_SubMesh &&
                 mpCurrentSettings->mbRenderWorldReflection;
-            const bool isFogActive = mpCurrentWorld->GetFogActive() && pMaterial->GetAffectedByFog();
+            const bool isFogActive = mpCurrentWorld->GetFogActive();
             const bool isParticleEmitter = TypeInfo<iParticleEmitter>::IsSubtype(*translucencyItem);
             const auto cubeMap = pMaterial->GetImage(eMaterialTexture_CubeMap);
             uint32_t reflectionBufferIndex = 0;
@@ -4328,8 +4343,9 @@ void cRendererDeferred::Draw(
                 cSubMeshEntity* pReflectionObject = static_cast<cSubMeshEntity*>(translucencyItem);
 
                 bool bReflectionIsInRange = true;
-                if (pMaterial->GetMaxReflectionDistance() > 0) {
-                        cVector3f vPoint = apFrustum->GetOrigin() + apFrustum->GetForward() * -1 * pMaterial->GetMaxReflectionDistance();
+                const float maxReflectionDistance = material::maxReflectionDistance(*pMaterial);
+                if (maxReflectionDistance > 0) {
+                        cVector3f vPoint = apFrustum->GetOrigin() + apFrustum->GetForward() * -1 * maxReflectionDistance;
                         cVector3f vNormal = apFrustum->GetForward();
 
                         cPlanef maxRelfctionDistPlane;
@@ -4395,11 +4411,12 @@ void cRendererDeferred::Draw(
                             frame,
                             frame.m_cmd,
                             apWorld,
-                            { .m_size = float2(
+                            {
+                                .m_size = float2(
                                   resolveReflectionBuffer.m_buffer.m_depthBuffer.m_handle->mWidth,
                                   resolveReflectionBuffer.m_buffer.m_depthBuffer.m_handle->mHeight),
-                              .m_viewMat = reflectionFrustumView,
-                              .m_projectionMat = reflectionFrustumProj });
+                                .m_viewMat = reflectionFrustumView,
+                                .m_projectionMat = reflectionFrustumProj });
 
                         FenceStatus fenceStatus;
                         getFenceStatus(frame.m_renderer->Rend(), resolveReflectionBuffer.m_fence.m_handle, &fenceStatus);
@@ -4542,47 +4559,44 @@ void cRendererDeferred::Draw(
 
             MaterialRootConstant materialConst = { 0 };
             float sceneAlpha = 1;
-            if (pMaterial->GetAffectedByFog()) {
-                for (auto& fogArea : fogRenderData) {
-                    sceneAlpha *= detail::GetFogAreaVisibilityForObject(fogArea, *apFrustum, translucencyItem);
-                }
+            for (auto& fogArea : fogRenderData) {
+                sceneAlpha *= detail::GetFogAreaVisibilityForObject(fogArea, *apFrustum, translucencyItem);
             }
             materialConst.m_sceneAlpha = sceneAlpha;
             materialConst.m_lightLevel = 1.0f;
 
-            if (pMaterial->IsAffectedByLightLevel()) {
-                cVector3f vCenterPos = translucencyItem->GetBoundingVolume()->GetWorldCenter();
-                float fLightAmount = 0.0f;
-
-                ////////////////////////////////////////
-                // Iterate lights and add light amount
-                for (auto& light : m_rendererList.GetLights()) {
-                    auto maxColorValue = [](const cColor& aCol) {
-                        return cMath::Max(cMath::Max(aCol.r, aCol.g), aCol.b);
-                    };
-                    // Check if there is an intersection
-                    if (light->CheckObjectIntersection(translucencyItem)) {
-                        if (light->GetLightType() == eLightType_Box) {
-                            fLightAmount += maxColorValue(light->GetDiffuseColor());
-                        } else {
-                            float fDist = cMath::Vector3Dist(light->GetWorldPosition(), vCenterPos);
-
-                            fLightAmount += maxColorValue(light->GetDiffuseColor()) * cMath::Max(1.0f - (fDist / light->GetRadius()), 0.0f);
-                        }
-
-                        if (fLightAmount >= 1.0f) {
-                            fLightAmount = 1.0f;
-                            break;
-                        }
-                    }
-                }
-                materialConst.m_lightLevel = fLightAmount;
-            }
-            materialConst.m_afT = GetTimeCount();
-
             switch (pMaterial->type().m_id) {
             case cMaterial::Translucent:
                 {
+                    if (pMaterial->IsAffectedByLightLevel()) {
+                        cVector3f vCenterPos = translucencyItem->GetBoundingVolume()->GetWorldCenter();
+                        float fLightAmount = 0.0f;
+
+                        ////////////////////////////////////////
+                        // Iterate lights and add light amount
+                        for (auto& light : m_rendererList.GetLights()) {
+                            auto maxColorValue = [](const cColor& aCol) {
+                                return cMath::Max(cMath::Max(aCol.r, aCol.g), aCol.b);
+                            };
+                            // Check if there is an intersection
+                            if (light->CheckObjectIntersection(translucencyItem)) {
+                                if (light->GetLightType() == eLightType_Box) {
+                                    fLightAmount += maxColorValue(light->GetDiffuseColor());
+                                } else {
+                                    float fDist = cMath::Vector3Dist(light->GetWorldPosition(), vCenterPos);
+
+                                    fLightAmount += maxColorValue(light->GetDiffuseColor()) * cMath::Max(1.0f - (fDist / light->GetRadius()), 0.0f);
+                                }
+
+                                if (fLightAmount >= 1.0f) {
+                                    fLightAmount = 1.0f;
+                                    break;
+                                }
+                            }
+                        }
+                        materialConst.m_lightLevel = fLightAmount;
+                    }
+                    materialConst.m_afT = GetTimeCount();
                     uint32_t instance = cmdBindMaterialAndObject(
                         frame.m_cmd, frame, pMaterial, translucencyItem, std::optional{ pMatrix ? *pMatrix : cMatrixf::Identity });
                     materialConst.objectId = instance;
@@ -4621,15 +4635,19 @@ void cRendererDeferred::Draw(
                     }
 
                     detail::cmdDefaultLegacyGeomBinding(frame.m_cmd, frame, binding);
-                    materialConst.m_options = (isFogActive ? TranslucencyFlags::UseFog : 0) |
-                        (isRefraction ? TranslucencyFlags::UseRefractionTrans : 0) | translucencyBlendTable[pMaterial->GetBlendMode()];
+                    materialConst.m_options =
+                        (isFogActive ? TranslucencyFlags::UseFog : 0) |
+                        (isRefraction ? TranslucencyFlags::UseRefractionTrans : 0) |
+                        translucencyBlendTable[pMaterial->GetBlendMode()];
 
                     cmdBindPushConstants(frame.m_cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
                     cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
 
                     if (cubeMap && !isRefraction) {
-                        materialConst.m_options = TranslucencyFlags::UseIlluminationTrans | (isFogActive ? TranslucencyFlags::UseFog : 0) |
-                            TranslucencyPipeline::TranslucencyBlend::BlendAdd;
+                        materialConst.m_options =
+                                TranslucencyFlags::UseIlluminationTrans |
+                                (isFogActive ? TranslucencyFlags::UseFog : 0) |
+                                TranslucencyPipeline::TranslucencyBlend::BlendAdd;
 
                         cmdBindPipeline(
                             frame.m_cmd,

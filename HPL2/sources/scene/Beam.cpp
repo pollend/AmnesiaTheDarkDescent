@@ -285,17 +285,7 @@ namespace hpl {
 			pTex+=3;
 		}
 
-		if(mpMaterial->GetType()->IsTranslucent())
-		{
-			mpVtxBuffer->UpdateData(eVertexElementFlag_Position | eVertexElementFlag_Texture0,false);
-		}
-		else
-		{
-			mpVtxBuffer->UpdateData(eVertexElementFlag_Position | eVertexElementFlag_Texture0,false);
-		}
-
-
-
+		mpVtxBuffer->UpdateData(eVertexElementFlag_Position | eVertexElementFlag_Texture0,false);
 	}
 
 	//-----------------------------------------------------------------------

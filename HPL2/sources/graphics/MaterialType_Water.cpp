@@ -73,15 +73,6 @@ namespace hpl {
         mbHasTypeSpecifics[eMaterialRenderMode_Diffuse] = true;
         mbHasTypeSpecifics[eMaterialRenderMode_DiffuseFog] = true;
 
-        // m_u_param = bgfx::createUniform("u_param", bgfx::UniformType::Vec4);
-        // m_u_mtxInvViewRotation = bgfx::createUniform("u_mtxInvViewRotation", bgfx::UniformType::Mat4);
-        // m_u_fogColor = bgfx::createUniform("u_fogColor", bgfx::UniformType::Vec4);
-
-        // m_s_diffuseMap = bgfx::createUniform("s_diffuseMap", bgfx::UniformType::Sampler);
-        // m_s_normalMap = bgfx::createUniform("s_normalMap", bgfx::UniformType::Sampler);
-        // m_s_refractionMap = bgfx::createUniform("s_refractionMap", bgfx::UniformType::Sampler);
-        // m_s_reflectionMap = bgfx::createUniform("s_reflectionMap", bgfx::UniformType::Sampler);
-        // m_s_envMap = bgfx::createUniform("s_envMap", bgfx::UniformType::Sampler);
     }
 
     cMaterialType_Water::~cMaterialType_Water() {
@@ -167,12 +158,12 @@ namespace hpl {
         }
 
         ///////////////////////////
-        // Set up reflection
-        if (pVars->mbHasReflection && iRenderer::GetRefractionEnabled()) {
-            if (apMaterial->GetImage(eMaterialTexture_CubeMap) == NULL) {
-                apMaterial->SetHasWorldReflection(true);
-            }
-        }
+    //    // Set up reflection
+    //    if (pVars->mbHasReflection && iRenderer::GetRefractionEnabled()) {
+    //        if (apMaterial->GetImage(eMaterialTexture_CubeMap) == NULL) {
+    //            apMaterial->SetHasWorldReflection(true);
+    //        }
+    //    }
     }
 
 } // namespace hpl

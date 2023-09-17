@@ -25,6 +25,7 @@
 
 #include "LuxPlayer.h"
 #include "LuxPlayerHelpers.h"
+#include "stl/transform.h"
 
 //-----------------------------------------------------------------------
 
@@ -41,49 +42,45 @@ void cLuxLineOfSightCallback::Reset()
 
 //-----------------------------------------------------------------------
 
-bool cLuxLineOfSightCallback::BeforeIntersect(iPhysicsBody *apBody)
-{
-	if(apBody->IsCharacter() || apBody->GetCollide()==false || (mbCheckShadow && apBody->GetBlocksLight()==false) )
-	{
-		return false;
-	}
+bool cLuxLineOfSightCallback::BeforeIntersect(iPhysicsBody* apBody) {
+        if (apBody->IsCharacter() || apBody->GetCollide() == false || (mbCheckShadow && apBody->GetBlocksLight() == false)) {
+            return false;
+        }
 
-	iLuxEntity* pEntity = (iLuxEntity*)apBody->GetUserData();
-	if(pEntity && pEntity->GetMeshEntity())
-	{
-		cMeshEntity *pMeshEntity = pEntity->GetMeshEntity();
-		if(pMeshEntity)
-		{
-			bool bFoundSolid = false;
-			for(int i=0; i< pMeshEntity->GetSubMeshEntityNum(); ++i)
-			{
-				cSubMeshEntity *pSubMeshEnt = pMeshEntity->GetSubMeshEntity(i);
-				if(pSubMeshEnt->GetEntityParent() != (iEntity3D*)apBody)
-				{
-					continue;
-				}
+        iLuxEntity* pEntity = (iLuxEntity*)apBody->GetUserData();
+        if (pEntity && pEntity->GetMeshEntity()) {
+            cMeshEntity* pMeshEntity = pEntity->GetMeshEntity();
+            if (pMeshEntity) {
+                bool bFoundSolid = false;
+                for (int i = 0; i < pMeshEntity->GetSubMeshEntityNum(); ++i) {
+                    cSubMeshEntity* pSubMeshEnt = pMeshEntity->GetSubMeshEntity(i);
+                    if (pSubMeshEnt->GetEntityParent() != (iEntity3D*)apBody) {
+                        continue;
+                    }
 
-				cMaterial *pMaterial = pSubMeshEnt->GetMaterial();
-				if(	pMaterial && pMaterial->GetType()->IsTranslucent()==false &&
-					(mbCheckShadow==false || pSubMeshEnt->GetRenderFlagBit(eRenderableFlag_ShadowCaster)) )
-				{
-					bFoundSolid = true;
-					break;
-				}
-			}
-			if(bFoundSolid==false)
-			{
-				//if(bDebug)Log("Out on non solid!\n");
-				return false;
-			}
-		}
-		else
-		{
-			return false;
-		}
-	}
+                    cMaterial* pMaterial = pSubMeshEnt->GetMaterial();
+                    if (pMaterial &&
+                        hpl::stl::TransformOrDefault(
+                            pMaterial->Meta(),
+                            false,
+                            [](auto& meta) {
+                                return !meta->m_isTranslucent;
+                            }) &&
+                        (mbCheckShadow == false || pSubMeshEnt->GetRenderFlagBit(eRenderableFlag_ShadowCaster))) {
+                        bFoundSolid = true;
+                        break;
+                    }
+                }
+                if (bFoundSolid == false) {
+                    // if(bDebug)Log("Out on non solid!\n");
+                    return false;
+                }
+            } else {
+                return false;
+            }
+        }
 
-	return true;
+        return true;
 }
 
 //-----------------------------------------------------------------------

@@ -85,14 +85,14 @@ namespace hpl
 
     void iMaterialType_SolidBase::CompileMaterialSpecifics(cMaterial* apMaterial)
     {
-        if (apMaterial->GetImage(eMaterialTexture_Alpha))
-        {
-            apMaterial->SetAlphaMode(eMaterialAlphaMode_Trans);
-        }
-        else
-        {
-            apMaterial->SetAlphaMode(eMaterialAlphaMode_Solid);
-        }
+       // if (apMaterial->GetImage(eMaterialTexture_Alpha))
+       // {
+       //     apMaterial->SetAlphaMode(eMaterialAlphaMode_Trans);
+       // }
+       // else
+       // {
+       //     apMaterial->SetAlphaMode(eMaterialAlphaMode_Solid);
+       // }
 
         CompileSolidSpecifics(apMaterial);
     }
