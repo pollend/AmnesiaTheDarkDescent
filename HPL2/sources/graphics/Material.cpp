@@ -45,8 +45,6 @@ namespace hpl {
         eMaterialBlendMode cMaterial::GetBlendMode() const {
             // for water we enforce a blend mode
             switch(m_descriptor.m_id) {
-               // case MaterialID::Water:
-               //     return hasRefraction ? eMaterialBlendMode_None : eMaterialBlendMode_Mul;
                 case MaterialID::Translucent:
                     return m_descriptor.m_translucent.m_blend;
                 case MaterialID::Decal:

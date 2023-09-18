@@ -1804,12 +1804,6 @@ namespace hpl {
                 vertexLayout.mAttribs[4].mOffset = 0;
 
                 std::array colorFormats = { ColorBufferFormat };
-                std::array<eMaterialBlendMode, TranslucencyPipeline::BlendModeCount> blendMapping = {};
-                blendMapping[TranslucencyPipeline::BlendAdd] = eMaterialBlendMode_Add;
-                blendMapping[TranslucencyPipeline::BlendMul] = eMaterialBlendMode_Mul;
-                blendMapping[TranslucencyPipeline::BlendMulX2] = eMaterialBlendMode_MulX2;
-                blendMapping[TranslucencyPipeline::BlendAlpha] = eMaterialBlendMode_Alpha;
-                blendMapping[TranslucencyPipeline::BlendPremulAlpha] = eMaterialBlendMode_PremulAlpha;
 
                 // create translucent pipelines
                 for (size_t transBlend = 0; transBlend < TranslucencyPipeline::TranslucencyBlend::BlendModeCount; transBlend++) {
@@ -1854,13 +1848,13 @@ namespace hpl {
                             }
                             pipelineSettings.pDepthState = &depthStateDesc;
 
-                            blendStateDesc.mSrcFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].src;
-                            blendStateDesc.mDstFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].dst;
-                            blendStateDesc.mBlendModes[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].mode;
+                            blendStateDesc.mSrcFactors[0] = hpl::HPL2BlendTable[TranslucencyPipeline::TranslucencyBlendReverseTable[transBlend]].src;
+                            blendStateDesc.mDstFactors[0] = hpl::HPL2BlendTable[TranslucencyPipeline::TranslucencyBlendReverseTable[transBlend]].dst;
+                            blendStateDesc.mBlendModes[0] = hpl::HPL2BlendTable[TranslucencyPipeline::TranslucencyBlendReverseTable[transBlend]].mode;
 
-                            blendStateDesc.mSrcAlphaFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].srcAlpha;
-                            blendStateDesc.mDstAlphaFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].dstAlpha;
-                            blendStateDesc.mBlendAlphaModes[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].alphaMode;
+                            blendStateDesc.mSrcAlphaFactors[0] = hpl::HPL2BlendTable[TranslucencyPipeline::TranslucencyBlendReverseTable[transBlend]].srcAlpha;
+                            blendStateDesc.mDstAlphaFactors[0] = hpl::HPL2BlendTable[TranslucencyPipeline::TranslucencyBlendReverseTable[transBlend]].dstAlpha;
+                            blendStateDesc.mBlendAlphaModes[0] = hpl::HPL2BlendTable[TranslucencyPipeline::TranslucencyBlendReverseTable[transBlend]].alphaMode;
                             pipelineSettings.pShaderProgram = m_materialTranslucencyPass.m_shader.m_handle;
 
                             addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
@@ -1963,13 +1957,13 @@ namespace hpl {
                             pipelineSettings.pDepthState = &depthStateDesc;
                             pipelineSettings.pShaderProgram = m_materialTranslucencyPass.m_particleShader.m_handle;
 
-                            blendStateDesc.mSrcFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].src;
-                            blendStateDesc.mDstFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].dst;
-                            blendStateDesc.mBlendModes[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].mode;
+                            blendStateDesc.mSrcFactors[0] = hpl::HPL2BlendTable[TranslucencyPipeline::TranslucencyBlendReverseTable[transBlend]].src;
+                            blendStateDesc.mDstFactors[0] = hpl::HPL2BlendTable[TranslucencyPipeline::TranslucencyBlendReverseTable[transBlend]].dst;
+                            blendStateDesc.mBlendModes[0] = hpl::HPL2BlendTable[TranslucencyPipeline::TranslucencyBlendReverseTable[transBlend]].mode;
 
-                            blendStateDesc.mSrcAlphaFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].srcAlpha;
-                            blendStateDesc.mDstAlphaFactors[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].dstAlpha;
-                            blendStateDesc.mBlendAlphaModes[0] = hpl::HPL2BlendTable[blendMapping[transBlend]].alphaMode;
+                            blendStateDesc.mSrcAlphaFactors[0] = hpl::HPL2BlendTable[TranslucencyPipeline::TranslucencyBlendReverseTable[transBlend]].srcAlpha;
+                            blendStateDesc.mDstAlphaFactors[0] = hpl::HPL2BlendTable[TranslucencyPipeline::TranslucencyBlendReverseTable[transBlend]].dstAlpha;
+                            blendStateDesc.mBlendAlphaModes[0] = hpl::HPL2BlendTable[TranslucencyPipeline::TranslucencyBlendReverseTable[transBlend]].alphaMode;
 
                             addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
                             return true;
@@ -3695,7 +3689,7 @@ namespace hpl {
             return info.m_id == descriptor.m_id;
         });
 
-        if (descInfo.m_material != apMaterial || descInfo.m_version != apMaterial->Generation()) {
+        if (descInfo.m_material != apMaterial || descInfo.m_version != apMaterial->Generation() ) {
             descInfo.m_version = apMaterial->Generation();
             descInfo.m_material = apMaterial;
 
@@ -4310,15 +4304,6 @@ void cRendererDeferred::Draw(
         cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, static_cast<float>(common->m_size.x), static_cast<float>(common->m_size.y), 0.0f, 1.0f);
         cmdSetScissor(frame.m_cmd, 0, 0, common->m_size.x, common->m_size.y);
 
-
-        std::array<TranslucencyPipeline::TranslucencyBlend, eMaterialBlendMode_LastEnum> translucencyBlendTable;
-        translucencyBlendTable[eMaterialBlendMode_None] = TranslucencyPipeline::TranslucencyBlend::BlendAdd;
-        translucencyBlendTable[eMaterialBlendMode_Add] = TranslucencyPipeline::TranslucencyBlend::BlendAdd;
-        translucencyBlendTable[eMaterialBlendMode_Mul] = TranslucencyPipeline::TranslucencyBlend::BlendMul;
-        translucencyBlendTable[eMaterialBlendMode_MulX2] = TranslucencyPipeline::TranslucencyBlend::BlendMulX2;
-        translucencyBlendTable[eMaterialBlendMode_Alpha] = TranslucencyPipeline::TranslucencyBlend::BlendAlpha;
-        translucencyBlendTable[eMaterialBlendMode_PremulAlpha] = TranslucencyPipeline::TranslucencyBlend::BlendPremulAlpha;
-
         cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "Translucency Pass");
         cmdBindDescriptorSet(frame.m_cmd, mainFrameIndex, m_materialSet.m_frameSet[frame.m_frameIndex].m_handle);
         for (auto& translucencyItem : m_rendererList.GetRenderableItems(eRenderListType_Translucent)) {
@@ -4331,7 +4316,7 @@ void cRendererDeferred::Draw(
 	        cRenderSettings *renderSettings = viewport.GetRenderSettings();
             const bool isRefraction = iRenderer::GetRefractionEnabled() && pMaterial->GetHasRefraction();
             const bool isReflection = pMaterial->GetHasReflection() && translucencyItem->GetRenderType() == eRenderableType_SubMesh &&
-                renderSettings->mbIsReflection;
+                renderSettings->mbRenderWorldReflection;
             const bool isFogActive = mpCurrentWorld->GetFogActive();
             const bool isParticleEmitter = TypeInfo<iParticleEmitter>::IsSubtype(*translucencyItem);
             const auto cubeMap = pMaterial->GetImage(eMaterialTexture_CubeMap);
@@ -4571,6 +4556,7 @@ void cRendererDeferred::Draw(
             }
             materialConst.m_sceneAlpha = sceneAlpha;
             materialConst.m_lightLevel = 1.0f;
+            materialConst.m_afT = GetTimeCount();
 
             switch (pMaterial->Type().m_id) {
             case MaterialID::Translucent:
@@ -4603,7 +4589,7 @@ void cRendererDeferred::Draw(
                         }
                         materialConst.m_lightLevel = fLightAmount;
                     }
-                    materialConst.m_afT = GetTimeCount();
+
                     uint32_t instance = cmdBindMaterialAndObject(
                         frame.m_cmd, frame, viewport, pMaterial, translucencyItem, std::optional{ pMatrix ? *pMatrix : cMatrixf::Identity });
                     materialConst.objectId = instance;
@@ -4630,14 +4616,14 @@ void cRendererDeferred::Draw(
                     if (isParticleEmitter) {
                         cmdBindPipeline(
                             frame.m_cmd,
-                            m_materialTranslucencyPass.m_particlePipelines[translucencyBlendTable[pMaterial->GetBlendMode()]][key.m_id]
+                            m_materialTranslucencyPass.m_particlePipelines[TranslucencyPipeline::TranslucencyBlendTable[pMaterial->GetBlendMode()]][key.m_id]
                                 .m_handle);
                     } else {
                         cmdBindPipeline(
                             frame.m_cmd,
                             (isRefraction
                                  ? m_materialTranslucencyPass.m_refractionPipeline[key.m_id].m_handle
-                                 : m_materialTranslucencyPass.m_pipelines[translucencyBlendTable[pMaterial->GetBlendMode()]][key.m_id]
+                                 : m_materialTranslucencyPass.m_pipelines[TranslucencyPipeline::TranslucencyBlendTable[pMaterial->GetBlendMode()]][key.m_id]
                                        .m_handle));
                     }
 
@@ -4645,7 +4631,7 @@ void cRendererDeferred::Draw(
                     materialConst.m_options =
                         (isFogActive ? TranslucencyFlags::UseFog : 0) |
                         (isRefraction ? TranslucencyFlags::UseRefractionTrans : 0) |
-                        translucencyBlendTable[pMaterial->GetBlendMode()];
+                        TranslucencyPipeline::TranslucencyBlendTable[pMaterial->GetBlendMode()];
 
                     cmdBindPushConstants(frame.m_cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
                     cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
@@ -4677,7 +4663,7 @@ void cRendererDeferred::Draw(
                     materialConst.m_options = (isFogActive ? TranslucencyFlags::UseFog : 0) |
                         (isRefraction ? TranslucencyFlags::UseRefractionTrans : 0) |
                         (isReflection ? TranslucencyFlags::UseReflectionTrans : 0) |
-                        isRefraction ? translucencyBlendTable[eMaterialBlendMode_None] : translucencyBlendTable[eMaterialBlendMode_Mul] |
+                        (isRefraction ? TranslucencyPipeline::TranslucencyBlendTable[eMaterialBlendMode_None] : TranslucencyPipeline::TranslucencyBlendTable[eMaterialBlendMode_Mul])|
                         (((reflectionBufferIndex & TranslucencyReflectionBufferMask) << TranslucencyReflectionBufferOffset));
 
 

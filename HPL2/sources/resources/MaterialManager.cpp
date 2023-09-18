@@ -453,7 +453,11 @@ namespace hpl {
 			    // type.m_data.m_translucentUniformBlock.mbAffectedByLightLevel = userVars.GetVarBool("AffectedByLightLevel", false);
 				break;
 			}
-			case MaterialID::Water: {
+		    case MaterialID::Decal: {
+				materialType.m_translucent.m_blend = GetBlendMode(sBlendMode);
+		        break;
+		    }
+		    case MaterialID::Water: {
 			    materialType.m_water.m_hasReflection = userVars.GetVarBool("HasReflection", true);
 				materialType.m_water.m_refractionScale = userVars.GetVarFloat("RefractionScale", 1.0f);
 				materialType.m_water.m_frenselBias = userVars.GetVarFloat("FrenselBias", 0.2f);
@@ -471,10 +475,6 @@ namespace hpl {
 				//pMat->SetWorldReflectionOcclusionTest(userVars.GetVarBool("OcclusionCullWorldReflection", true));
 				//pMat->SetMaxReflectionDistance(userVars.GetVarFloat("ReflectionFadeEnd", 0.0f));
 				//pMat->SetLargeTransperantSurface(userVars.GetVarBool("LargeSurface", false));
-				break;
-			}
-			case MaterialID::Decal: {
-				// no uniform block
 				break;
 			}
 			default:

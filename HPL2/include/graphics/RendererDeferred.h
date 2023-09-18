@@ -548,6 +548,27 @@ namespace hpl {
                 BlendPremulAlpha,
                 BlendModeCount };
 
+            static constexpr std::array<TranslucencyBlend, eMaterialBlendMode_LastEnum> TranslucencyBlendTable = ([]() {
+                std::array<TranslucencyBlend, eMaterialBlendMode_LastEnum> translucencyBlendTable;
+                translucencyBlendTable[eMaterialBlendMode_None] = TranslucencyPipeline::TranslucencyBlend::BlendAdd;
+                translucencyBlendTable[eMaterialBlendMode_Add] = TranslucencyPipeline::TranslucencyBlend::BlendAdd;
+                translucencyBlendTable[eMaterialBlendMode_Mul] = TranslucencyPipeline::TranslucencyBlend::BlendMul;
+                translucencyBlendTable[eMaterialBlendMode_MulX2] = TranslucencyPipeline::TranslucencyBlend::BlendMulX2;
+                translucencyBlendTable[eMaterialBlendMode_Alpha] = TranslucencyPipeline::TranslucencyBlend::BlendAlpha;
+                translucencyBlendTable[eMaterialBlendMode_PremulAlpha] = TranslucencyPipeline::TranslucencyBlend::BlendPremulAlpha;
+                return translucencyBlendTable;
+            })();
+
+             static constexpr std::array<eMaterialBlendMode, TranslucencyBlend::BlendModeCount> TranslucencyBlendReverseTable = ([]() {
+                std::array<eMaterialBlendMode, TranslucencyBlend::BlendModeCount> translucencyBlendTable;
+                translucencyBlendTable[TranslucencyPipeline::TranslucencyBlend::BlendAdd] = eMaterialBlendMode_Add;
+                translucencyBlendTable[TranslucencyPipeline::TranslucencyBlend::BlendMul] = eMaterialBlendMode_Mul;
+                translucencyBlendTable[TranslucencyPipeline::TranslucencyBlend::BlendMulX2] = eMaterialBlendMode_MulX2;
+                translucencyBlendTable[TranslucencyPipeline::TranslucencyBlend::BlendAlpha] = eMaterialBlendMode_Alpha;
+                translucencyBlendTable[TranslucencyPipeline::TranslucencyBlend::BlendPremulAlpha] = eMaterialBlendMode_PremulAlpha;
+                return translucencyBlendTable;
+            })();
+
             // 3 bit key for pipeline variant
             union TranslucencyKey {
                 uint8_t m_id;

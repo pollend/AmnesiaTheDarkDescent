@@ -45,9 +45,9 @@ namespace hpl::material {
         switch(descriptor.m_id) {
             case hpl::MaterialID::SolidDiffuse:
                 block.m_solid.m_materialConfig = flags;
-                block.m_solid.m_heightMapScale = descriptor.m_solid.m_heightMapScale ;
+                block.m_solid.m_heightMapScale = descriptor.m_solid.m_heightMapScale;
                 block.m_solid.m_heightMapBias = descriptor.m_solid.m_heightMapBias;
-                block.m_solid.m_frenselBias = descriptor.m_solid.m_frenselBias ;
+                block.m_solid.m_frenselBias = descriptor.m_solid.m_frenselBias;
                 block.m_solid.m_frenselPow = descriptor.m_solid.m_frenselPow;
                 break;
             case hpl::MaterialID::Decal:

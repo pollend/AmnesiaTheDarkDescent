@@ -12,6 +12,7 @@
 #include <engine/RTTI.h>
 
 #include "graphics/ForgeHandles.h"
+#include "graphics/GraphicsTypes.h"
 #include "windowing/NativeWindow.h"
 #include "engine/QueuedEventLoopHandler.h"
 
@@ -35,6 +36,7 @@ namespace hpl {
     // helper to convert from eMaterialBlendMode to The-Forge's BlendMode
     static std::array<HPL2Blend, eMaterialBlendMode_LastEnum> HPL2BlendTable = ([]() {
         std::array<HPL2Blend, eMaterialBlendMode_LastEnum> result{};
+        result[eMaterialBlendMode_None] = {BM_ADD, BC_ONE, BC_ONE, BM_ADD, BC_ONE, BC_ONE};
         result[eMaterialBlendMode_Add] = {BM_ADD, BC_ONE, BC_ONE, BM_ADD, BC_ONE, BC_ONE};
         result[eMaterialBlendMode_Mul] = {BM_ADD, BC_ZERO, BC_SRC_COLOR, BM_ADD, BC_ZERO, BC_SRC_ALPHA};
         result[eMaterialBlendMode_MulX2] = {BM_ADD, BC_DST_COLOR, BC_SRC_COLOR, BM_ADD, BC_DST_ALPHA, BC_SRC_ALPHA};
