@@ -32,7 +32,6 @@
 #include "graphics/Mesh.h"
 #include "graphics/SubMesh.h"
 #include "graphics/Material.h"
-#include "graphics/MaterialType.h"
 #include "graphics/LowLevelGraphics.h"
 #include "graphics/VertexBuffer.h"
 
@@ -479,7 +478,7 @@ namespace hpl {
 			eVertexBufferUsageType UsageType = eVertexBufferUsageType_Static;
 			iVertexBuffer *pVtxBuffer = CreateVertexBuffer(Geom, UsageType);//, vExtraVtxVec);
 			pSubMesh->SetVertexBuffer(pVtxBuffer);
-			
+
 			/////////////////////////////
 			//Add material
 			tString sNodeMaterial = pGeomNode->msInstanceMaterial != "" ? pGeomNode->msInstanceMaterial : Geom.msMaterial;

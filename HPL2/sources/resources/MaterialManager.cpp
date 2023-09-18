@@ -219,11 +219,9 @@ namespace hpl {
 			return "";
 	}
 
-	//-----------------------------------------------------------------------
-
 	cMaterial* cMaterialManager::CreateCustomMaterial(const tString& asName, iMaterialType *apMaterialType)
 	{
-		cMaterial* pMat = hplNew( cMaterial, (asName, cString::To16Char(asName), mpGraphics, mpResources, apMaterialType) );
+		cMaterial* pMat = hplNew( cMaterial, (asName, cString::To16Char(asName), mpGraphics, mpResources) );
 		pMat->IncUserCount();
 		AddResource(pMat);
 		return pMat;
@@ -265,7 +263,7 @@ namespace hpl {
 		// Make a "fake" material, with a blank type
 		if(mbDisableRenderDataLoading)
 		{
-			cMaterial* pMat = hplNew( cMaterial, (asName, asPath, mpGraphics, mpResources, &gBlankMaterialType) );
+			cMaterial* pMat = hplNew( cMaterial, (asName, asPath, mpGraphics, mpResources) );
 			pMat->SetPhysicsMaterial(sPhysicsMatName);
 
 			mpResources->DestroyXmlDocument(pDoc);
@@ -274,24 +272,24 @@ namespace hpl {
 
 		/////////////////////////////
 		// CreateType
-		iMaterialType *pMatType = mpGraphics->GetMaterialType(sType);
+//		iMaterialType *pMatType = mpGraphics->GetMaterialType(sType);
 		tString normalizedMaterialName = cString::ToLowerCase(sType);
 	    auto metaInfo = std::find_if(cMaterial::MaterialMetaTable.begin(), cMaterial::MaterialMetaTable.end(), [&](auto& info) {
 	        return info.m_name == normalizedMaterialName;
 	    });
 
-	    if(pMatType == NULL || metaInfo == cMaterial::MaterialMetaTable.end())
+	    if(metaInfo == cMaterial::MaterialMetaTable.end())
 		{
 			mpResources->DestroyXmlDocument(pDoc);
 			LOGF(eERROR, "Invalid material type %s", sType.c_str());
 			return nullptr;
 		}
-		cMaterial* pMat = new cMaterial(asName, asPath, mpGraphics, mpResources, pMatType);
+		cMaterial* pMat = new cMaterial(asName, asPath, mpGraphics, mpResources);
 		pMat->SetDepthTest(bDepthTest);
 		pMat->SetPhysicsMaterial(sPhysicsMatName);
-        if(metaInfo->m_isTranslucent) {
-			pMat->SetBlendMode(GetBlendMode(sBlendMode));
-		}
+       // if(metaInfo->m_isTranslucent) {
+	   // 	pMat->SetBlendMode(GetBlendMode(sBlendMode));
+	   // }
 
 		///////////////////////////
 		//Textures
@@ -411,68 +409,71 @@ namespace hpl {
 		cResourceVarsObject userVars;
 		if(pUserVarsRoot) userVars.LoadVariables(pUserVarsRoot);
 
-		pMatType->LoadVariables(pMat, &userVars);
+		//pMatType->LoadVariables(pMat, &userVars);
 
 		tString materialID = cString::ToLowerCase(sType);
-		auto& typeInfo = pMat->type();
-		if(metaInfo->m_isTranslucent) {
-			pMat->SetBlendMode(GetBlendMode(sBlendMode));
-		}
-	    auto& descriptor = pMat->Descriptor();
-        descriptor.m_id = metaInfo->m_id;
+		//auto& typeInfo = pMat->type();
+   // 	if(metaInfo->m_isTranslucent) {
+   // 		pMat->SetBlendMode(GetBlendMode(sBlendMode));
+   // 	}
+	    //auto& descriptor = pMat->Type();
+//        descriptor.m_id = metaInfo->m_id;
 
+        MaterialType materialType = {};
+        materialType.m_id = metaInfo->m_id;
 
 	   // auto& type = pMat->type();
 	   // type.m_id = metaInfo->m_id;
-	   // type.m_handle = IndexPoolHandle(&internal::m_MaterialIndexPool);
 		switch(metaInfo->m_id) {
-			case cMaterial::MaterialID::SolidDiffuse: {
-				descriptor.m_info.m_solid.m_heightMapScale = userVars.GetVarFloat("HeightMapScale", 0.1f);
-				descriptor.m_info.m_solid.m_heightMapBias = userVars.GetVarFloat("HeightMapBias", 0);
-				descriptor.m_info.m_solid.m_frenselBias = userVars.GetVarFloat("FrenselBias", 0.2f);
-				descriptor.m_info.m_solid.m_frenselPow = userVars.GetVarFloat("FrenselPow", 8.0f);
-				descriptor.m_info.m_solid.m_alphaDissolveFilter = userVars.GetVarBool("AlphaDissolveFilter", false);
+			case MaterialID::SolidDiffuse: {
+				materialType.m_solid.m_heightMapScale = userVars.GetVarFloat("HeightMapScale", 0.1f);
+				materialType.m_solid.m_heightMapBias = userVars.GetVarFloat("HeightMapBias", 0);
+				materialType.m_solid.m_frenselBias = userVars.GetVarFloat("FrenselBias", 0.2f);
+				materialType.m_solid.m_frenselPow = userVars.GetVarFloat("FrenselPow", 8.0f);
+				materialType.m_solid.m_alphaDissolveFilter = userVars.GetVarBool("AlphaDissolveFilter", false);
 			    break;
 			}
-			case cMaterial::MaterialID::Translucent: {
-				pMat->SetHasRefraction(userVars.GetVarBool("Refraction", false));
-				pMat->SetIsAffectedByLightLevel(userVars.GetVarBool("AffectedByLightLevel", false));
-				pMat->SetHasRefractionNormals(userVars.GetVarBool("RefractionNormals", true));
-				pMat->SetUseRefractionEdgeCheck(userVars.GetVarBool("RefractionEdgeCheck", true));
+			case MaterialID::Translucent: {
+				//pMat->SetHasRefraction(userVars.GetVarBool("Refraction", false));
+				//pMat->SetIsAffectedByLightLevel(userVars.GetVarBool("AffectedByLightLevel", false));
+				//pMat->SetHasRefractionNormals(userVars.GetVarBool("RefractionNormals", true));
+				//pMat->SetUseRefractionEdgeCheck(userVars.GetVarBool("RefractionEdgeCheck", true));
 
-				descriptor.m_info.m_translucent.m_hasRefraction = userVars.GetVarBool("Refraction", false);
-				descriptor.m_info.m_translucent.m_refractionNormals = userVars.GetVarBool("RefractionNormals", true);
-				descriptor.m_info.m_translucent.m_refractionEdgeCheck = userVars.GetVarBool("RefractionEdgeCheck", true);
+				materialType.m_translucent.m_hasRefraction = userVars.GetVarBool("Refraction", false);
+				materialType.m_translucent.m_refractionNormals = userVars.GetVarBool("RefractionNormals", true);
+				materialType.m_translucent.m_refractionEdgeCheck = userVars.GetVarBool("RefractionEdgeCheck", true);
+                materialType.m_translucent.m_isAffectedByLightLevel = userVars.GetVarBool("AffectedByLightLevel", false);
 
-			    descriptor.m_info.m_translucent.m_refractionScale = userVars.GetVarFloat("RefractionScale", 1.0f);
-			    descriptor.m_info.m_translucent.m_frenselBias = userVars.GetVarFloat("FrenselBias", 0.2f);
-				descriptor.m_info.m_translucent.m_frenselPow = userVars.GetVarFloat("FrenselPow", 8.0);
-				descriptor.m_info.m_translucent.m_rimLightMul = userVars.GetVarFloat("RimLightMul", 0.0f);
-				descriptor.m_info.m_translucent.m_rimLightPow = userVars.GetVarFloat("RimLightPow", 8.0f);
-				descriptor.m_info.m_translucent.m_blend = GetBlendMode(sBlendMode);
+			    materialType.m_translucent.m_refractionScale = userVars.GetVarFloat("RefractionScale", 1.0f);
+			    materialType.m_translucent.m_frenselBias = userVars.GetVarFloat("FrenselBias", 0.2f);
+				materialType.m_translucent.m_frenselPow = userVars.GetVarFloat("FrenselPow", 8.0);
+				materialType.m_translucent.m_rimLightMul = userVars.GetVarFloat("RimLightMul", 0.0f);
+				materialType.m_translucent.m_rimLightPow = userVars.GetVarFloat("RimLightPow", 8.0f);
+				materialType.m_translucent.m_blend = GetBlendMode(sBlendMode);
 			    // type.m_data.m_translucentUniformBlock.mbAffectedByLightLevel = userVars.GetVarBool("AffectedByLightLevel", false);
 				break;
 			}
-			case cMaterial::MaterialID::Water: {
-			    descriptor.m_info.m_water.m_hasReflection = userVars.GetVarBool("HasReflection", true);
-				descriptor.m_info.m_water.m_refractionScale = userVars.GetVarFloat("RefractionScale", 1.0f);
-				descriptor.m_info.m_water.m_frenselBias = userVars.GetVarFloat("FrenselBias", 0.2f);
-				descriptor.m_info.m_water.mfFrenselPow = userVars.GetVarFloat("FrenselPow", 8.0f);
-				descriptor.m_info.m_water.mfReflectionFadeStart = userVars.GetVarFloat("ReflectionFadeStart", 0);
-				descriptor.m_info.m_water.mfReflectionFadeEnd = userVars.GetVarFloat("ReflectionFadeEnd", 0);
-				descriptor.m_info.m_water.mfWaveSpeed = userVars.GetVarFloat("WaveSpeed", 1.0f);
-				descriptor.m_info.m_water.mfWaveAmplitude = userVars.GetVarFloat("WaveAmplitude", 1.0f);
-				descriptor.m_info.m_water.mfWaveFreq = userVars.GetVarFloat("WaveFreq", 1.0f);
-                descriptor.m_info.m_water.m_maxReflectionDistance = userVars.GetVarFloat("ReflectionFadeEnd", 0.0f);
+			case MaterialID::Water: {
+			    materialType.m_water.m_hasReflection = userVars.GetVarBool("HasReflection", true);
+				materialType.m_water.m_refractionScale = userVars.GetVarFloat("RefractionScale", 1.0f);
+				materialType.m_water.m_frenselBias = userVars.GetVarFloat("FrenselBias", 0.2f);
+				materialType.m_water.mfFrenselPow = userVars.GetVarFloat("FrenselPow", 8.0f);
+				materialType.m_water.mfReflectionFadeStart = userVars.GetVarFloat("ReflectionFadeStart", 0);
+				materialType.m_water.mfReflectionFadeEnd = userVars.GetVarFloat("ReflectionFadeEnd", 0);
+				materialType.m_water.mfWaveSpeed = userVars.GetVarFloat("WaveSpeed", 1.0f);
+				materialType.m_water.mfWaveAmplitude = userVars.GetVarFloat("WaveAmplitude", 1.0f);
+				materialType.m_water.mfWaveFreq = userVars.GetVarFloat("WaveFreq", 1.0f);
+                materialType.m_water.m_maxReflectionDistance = userVars.GetVarFloat("ReflectionFadeEnd", 0.0f);
 
-			    pMat->SetHasRefraction(true);
-			    pMat->SetHasReflections(userVars.GetVarBool("HasReflection", true));
+                materialType.m_water.m_isLargeSurface = userVars.GetVarBool("LargeSurface", false);
+			    //pMat->SetHasRefraction(true);
+			    //pMat->SetHasReflections(userVars.GetVarBool("HasReflection", true));
 				//pMat->SetWorldReflectionOcclusionTest(userVars.GetVarBool("OcclusionCullWorldReflection", true));
-				pMat->SetMaxReflectionDistance(userVars.GetVarFloat("ReflectionFadeEnd", 0.0f));
-				pMat->SetLargeTransperantSurface(userVars.GetVarBool("LargeSurface", false));
+				//pMat->SetMaxReflectionDistance(userVars.GetVarFloat("ReflectionFadeEnd", 0.0f));
+				//pMat->SetLargeTransperantSurface(userVars.GetVarBool("LargeSurface", false));
 				break;
 			}
-			case cMaterial::MaterialID::Decal: {
+			case MaterialID::Decal: {
 				// no uniform block
 				break;
 			}
@@ -480,6 +481,8 @@ namespace hpl {
 				ASSERT(false && "Invalid material type");
 				break;
 		}
+	   pMat->SetType(materialType);
+	   pMat->setHandle(IndexPoolHandle(&internal::m_MaterialIndexPool));
 
 		mpResources->DestroyXmlDocument(pDoc);
 

@@ -32,7 +32,6 @@
 #include "graphics/Graphics.h"
 #include "graphics/VertexBuffer.h"
 #include "graphics/Material.h"
-#include "graphics/MaterialType.h"
 #include "graphics/LowLevelGraphics.h"
 
 #include "scene/Camera.h"

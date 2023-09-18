@@ -34,7 +34,6 @@
 #include "graphics/Graphics.h"
 #include "graphics/LowLevelGraphics.h"
 #include "graphics/Material.h"
-#include "graphics/MaterialType.h"
 #include "graphics/Mesh.h"
 #include "graphics/MeshCreator.h"
 #include "graphics/RenderList.h"

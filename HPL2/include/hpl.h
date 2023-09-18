@@ -74,7 +74,6 @@
 #include "graphics/PostEffect.h"
 #include "graphics/PostEffectComposite.h"
 #include "graphics/Material.h"
-#include "graphics/MaterialType.h"
 #include "graphics/PostEffect_Bloom.h"
 #include "graphics/PostEffect_ColorConvTex.h"
 #include "graphics/PostEffect_ImageTrail.h"

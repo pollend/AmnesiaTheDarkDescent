@@ -111,65 +111,68 @@ namespace hpl
 
     void cMaterialType_Translucent::LoadVariables(cMaterial* apMaterial, cResourceVarsObject* apVars)
     {
-        cMaterialType_Translucent_Vars* pVars = (cMaterialType_Translucent_Vars*)apMaterial->GetVars();
-        if (pVars == NULL)
-        {
-            pVars = static_cast<cMaterialType_Translucent_Vars*>(CreateSpecificVariables());
-            apMaterial->SetVars(pVars);
-        }
-
-        pVars->mbRefraction = apVars->GetVarBool("Refraction", false);
-        pVars->mbRefractionEdgeCheck = apVars->GetVarBool("RefractionEdgeCheck", true);
-        pVars->mbRefractionNormals = apVars->GetVarBool("RefractionNormals", true);
-        pVars->mfRefractionScale = apVars->GetVarFloat("RefractionScale", 1.0f);
-        pVars->mfFrenselBias = apVars->GetVarFloat("FrenselBias", 0.2f);
-        pVars->mfFrenselPow = apVars->GetVarFloat("FrenselPow", 8.0);
-        pVars->mfRimLightMul = apVars->GetVarFloat("RimLightMul", 0.0f);
-        pVars->mfRimLightPow = apVars->GetVarFloat("RimLightPow", 8.0f);
-        pVars->mbAffectedByLightLevel = apVars->GetVarBool("AffectedByLightLevel", false);
+        ASSERT(false && "DEPRECATED");
+//        cMaterialType_Translucent_Vars* pVars = (cMaterialType_Translucent_Vars*)apMaterial->GetVars();
+//        if (pVars == NULL)
+//        {
+//            pVars = static_cast<cMaterialType_Translucent_Vars*>(CreateSpecificVariables());
+//            apMaterial->SetVars(pVars);
+//        }
+//
+//        pVars->mbRefraction = apVars->GetVarBool("Refraction", false);
+//        pVars->mbRefractionEdgeCheck = apVars->GetVarBool("RefractionEdgeCheck", true);
+//        pVars->mbRefractionNormals = apVars->GetVarBool("RefractionNormals", true);
+//        pVars->mfRefractionScale = apVars->GetVarFloat("RefractionScale", 1.0f);
+//        pVars->mfFrenselBias = apVars->GetVarFloat("FrenselBias", 0.2f);
+//        pVars->mfFrenselPow = apVars->GetVarFloat("FrenselPow", 8.0);
+//        pVars->mfRimLightMul = apVars->GetVarFloat("RimLightMul", 0.0f);
+//        pVars->mfRimLightPow = apVars->GetVarFloat("RimLightPow", 8.0f);
+//        pVars->mbAffectedByLightLevel = apVars->GetVarBool("AffectedByLightLevel", false);
     }
 
     //--------------------------------------------------------------------------
 
     void cMaterialType_Translucent::GetVariableValues(cMaterial* apMaterial, cResourceVarsObject* apVars)
     {
-        cMaterialType_Translucent_Vars* pVars = (cMaterialType_Translucent_Vars*)apMaterial->GetVars();
-
-        apVars->AddVarBool("Refraction", pVars->mbRefraction);
-        apVars->AddVarBool("RefractionEdgeCheck", pVars->mbRefractionEdgeCheck);
-        apVars->AddVarBool("RefractionNormals", pVars->mbRefractionNormals);
-        apVars->AddVarFloat("RefractionScale", pVars->mfRefractionScale);
-        apVars->AddVarFloat("FrenselBias", pVars->mfFrenselBias);
-        apVars->AddVarFloat("FrenselPow", pVars->mfFrenselPow);
-        apVars->AddVarFloat("RimLightMul", pVars->mfRimLightMul);
-        apVars->AddVarFloat("RimLightPow", pVars->mfRimLightPow);
-        apVars->AddVarBool("AffectedByLightLevel", pVars->mbAffectedByLightLevel);
+        ASSERT(false && "DEPRECATED");
+//        cMaterialType_Translucent_Vars* pVars = (cMaterialType_Translucent_Vars*)apMaterial->GetVars();
+//
+//        apVars->AddVarBool("Refraction", pVars->mbRefraction);
+//        apVars->AddVarBool("RefractionEdgeCheck", pVars->mbRefractionEdgeCheck);
+//        apVars->AddVarBool("RefractionNormals", pVars->mbRefractionNormals);
+//        apVars->AddVarFloat("RefractionScale", pVars->mfRefractionScale);
+//        apVars->AddVarFloat("FrenselBias", pVars->mfFrenselBias);
+//        apVars->AddVarFloat("FrenselPow", pVars->mfFrenselPow);
+//        apVars->AddVarFloat("RimLightMul", pVars->mfRimLightMul);
+//        apVars->AddVarFloat("RimLightPow", pVars->mfRimLightPow);
+//        apVars->AddVarBool("AffectedByLightLevel", pVars->mbAffectedByLightLevel);
     }
 
     //--------------------------------------------------------------------------
 
     void cMaterialType_Translucent::CompileMaterialSpecifics(cMaterial* apMaterial)
     {
-        cMaterialType_Translucent_Vars* pVars = static_cast<cMaterialType_Translucent_Vars*>(apMaterial->GetVars());
-
-        /////////////////////////////////////
-        // Set up specifics
-        apMaterial->SetHasSpecificSettings(eMaterialRenderMode_Diffuse, true);
-        apMaterial->SetHasObjectSpecificsSettings(eMaterialRenderMode_Diffuse, true);
-
-        apMaterial->SetHasSpecificSettings(eMaterialRenderMode_DiffuseFog, true);
-        apMaterial->SetHasObjectSpecificsSettings(eMaterialRenderMode_DiffuseFog, true);
-
-        apMaterial->SetHasSpecificSettings(eMaterialRenderMode_Illumination, true);
-        apMaterial->SetHasObjectSpecificsSettings(eMaterialRenderMode_Illumination, true);
-
-        apMaterial->SetHasSpecificSettings(eMaterialRenderMode_IlluminationFog, true);
-        apMaterial->SetHasObjectSpecificsSettings(eMaterialRenderMode_IlluminationFog, true);
-
-        /////////////////////////////////////
-        // Set up the refraction
-         apMaterial->SetHasRefraction(pVars->mbRefraction);
-         apMaterial->SetUseRefractionEdgeCheck(pVars->mbRefractionEdgeCheck);
+        ASSERT(false && "DEPRECATED");
+//        cMaterialType_Translucent_Vars* pVars = static_cast<cMaterialType_Translucent_Vars*>(apMaterial->GetVars());
+//
+//        /////////////////////////////////////
+//        // Set up specifics
+//        apMaterial->SetHasSpecificSettings(eMaterialRenderMode_Diffuse, true);
+//        apMaterial->SetHasObjectSpecificsSettings(eMaterialRenderMode_Diffuse, true);
+//
+//        apMaterial->SetHasSpecificSettings(eMaterialRenderMode_DiffuseFog, true);
+//        apMaterial->SetHasObjectSpecificsSettings(eMaterialRenderMode_DiffuseFog, true);
+//
+//        apMaterial->SetHasSpecificSettings(eMaterialRenderMode_Illumination, true);
+//        apMaterial->SetHasObjectSpecificsSettings(eMaterialRenderMode_Illumination, true);
+//
+//        apMaterial->SetHasSpecificSettings(eMaterialRenderMode_IlluminationFog, true);
+//        apMaterial->SetHasObjectSpecificsSettings(eMaterialRenderMode_IlluminationFog, true);
+//
+//        /////////////////////////////////////
+//        // Set up the refraction
+//         apMaterial->SetHasRefraction(pVars->mbRefraction);
+//         apMaterial->SetUseRefractionEdgeCheck(pVars->mbRefractionEdgeCheck);
 
 		 //bool bRefractionEnabled = pVars->mbRefraction && iRenderer::GetRefractionEnabled();
          //if (bRefractionEnabled)

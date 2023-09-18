@@ -5,16 +5,6 @@
 
 namespace hpl
 {
-    namespace material {
-        enum MaterialID: uint8_t {
-            SolidDiffuse,
-            Translucent,
-            Water,
-            Decal,
-            MaterialIDCount
-        };
-    }
-
 
     enum class WrapMode : uint8_t {
         None,

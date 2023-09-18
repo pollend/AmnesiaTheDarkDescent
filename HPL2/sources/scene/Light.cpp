@@ -46,7 +46,6 @@
 #include "scene/Camera.h"
 
 #include "graphics/Material.h"
-#include "graphics/MaterialType.h"
 #include "graphics/SubMesh.h"
 #include "graphics/LowLevelGraphics.h"
 #include "graphics/Renderer.h"

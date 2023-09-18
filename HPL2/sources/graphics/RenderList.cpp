@@ -34,6 +34,7 @@
 #include "math/Math.h"
 
 #include <algorithm>
+#include <optional>
 #include <span>
 
 namespace hpl {
@@ -327,7 +328,7 @@ namespace hpl {
         ////////////////////////////////////////
         // Update material, if not already done this frame
         cMaterial* pMaterial = apObject->GetMaterial();
-        auto metaInfo = pMaterial->Meta();
+        auto metaInfo = pMaterial ? pMaterial->Meta() : std::nullopt;
 
         if (pMaterial && pMaterial->GetRenderFrameCount() != iRenderer::GetRenderFrameCount()) {
             pMaterial->SetRenderFrameCount(iRenderer::GetRenderFrameCount());

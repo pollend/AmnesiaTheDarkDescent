@@ -1746,7 +1746,7 @@ namespace hpl {
 			pUserData->mbCharCollider = bIsCharCollider;
 
 			//If one sided and world reflector, do not combine!
-			if(pSubMesh->GetIsOneSided() && pMaterial && pMaterial->HasWorldReflection())
+			if(pSubMesh->GetIsOneSided() && pMaterial && pMaterial->GetHasWorldReflections())
 				pUserData->mbCombine = false;
 			else
 				pUserData->mbCombine = true;
@@ -1975,7 +1975,7 @@ namespace hpl {
 				pUserData->mbCharCollider = false;
 
 				//If one sided and world reflector, do not combine!
-				if(pSubMesh->GetIsOneSided() && pMaterial->HasWorldReflection())
+				if(pSubMesh->GetIsOneSided() && pMaterial->GetHasWorldReflections())
 					pUserData->mbCombine = false;
 				else
 					pUserData->mbCombine = true;

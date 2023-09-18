@@ -112,46 +112,7 @@ namespace hpl {
             UseRefractionTrans = (1 << 9),
             UseFog = (1 << 10),
         };
-        struct UnifomMaterialBlock {
-            struct {
-                uint32_t m_materialConfig;
-                float m_heightMapScale;
-                float m_heightMapBias;
-                float m_frenselBias;
 
-                float m_frenselPow;
-                uint32_t m_pad0;
-                uint32_t m_pad1;
-                uint32_t m_pad2;
-            } m_solid;
-            struct {
-                uint32_t m_materialConfig;
-                float m_refractionScale;
-                float m_frenselBias;
-                float m_frenselPow;
-
-                float mfRimLightMul;
-                float mfRimLightPow;
-                uint32_t m_pad0;
-                uint32_t m_pad1;
-            } m_translucenct;
-            struct {
-                uint32_t m_materialConfig;
-                float mfRefractionScale;
-                float mfFrenselBias;
-                float mfFrenselPow;
-
-                float m_reflectionFadeStart;
-                float m_reflectionFadeEnd;
-                float m_waveSpeed;
-                float mfWaveAmplitude;
-
-                float mfWaveFreq;
-                uint32_t m_pad0;
-                uint32_t m_pad1;
-                uint32_t m_pad2;
-            } m_water;
-        };
         struct MaterialRootConstant {
             uint32_t objectId;
             uint32_t m_options;
@@ -403,8 +364,6 @@ namespace hpl {
             bool abSendFrameBufferToPostEffects) override;
 
     private:
-        LegacyRenderTarget& resolveRenderTarget(std::array<LegacyRenderTarget, 2>& rt);
-        std::shared_ptr<Image>& resolveRenderImage(std::array<std::shared_ptr<Image>, 2>& img);
         iVertexBuffer* GetLightShape(iLight* apLight, eDeferredShapeQuality aQuality) const;
 
         struct PerObjectOption {
@@ -421,6 +380,7 @@ namespace hpl {
         };
 
         void cmdBuildPrimaryGBuffer(const ForgeRenderer::Frame& frame, Cmd* cmd,
+            cViewport& viewport,
             uint32_t frameDescriptorIndex,
             cRenderList& renderList,
             RenderTarget* colorBuffer,
@@ -436,6 +396,7 @@ namespace hpl {
         };
         void cmdLightPass(Cmd* cmd,
             const ForgeRenderer::Frame& frame,
+            cViewport& viewport,
             cWorld* apWorld,
             cFrustum* apFrustum,
             cRenderList& renderList,
@@ -456,6 +417,7 @@ namespace hpl {
         };
         void cmdIlluminationPass(Cmd* cmd,
             const ForgeRenderer::Frame& frame,
+            cViewport& viewport,
             cRenderList& renderList,
             uint32_t frameDescriptorIndex,
             RenderTarget* depthBuffer,
@@ -471,6 +433,7 @@ namespace hpl {
         };
         void cmdPreAndPostZ(
             Cmd* cmd,
+            cViewport& viewport,
             std::set<iRenderable*>& prePassRenderables,
             const ForgeRenderer::Frame& frame,
             cRenderList& renderList,
@@ -486,6 +449,7 @@ namespace hpl {
         uint32_t updateFrameDescriptor(const ForgeRenderer::Frame& frame,Cmd* cmd, cWorld* apWorld,const PerFrameOption& options);
         uint32_t cmdBindMaterialAndObject(Cmd* cmd,
             const ForgeRenderer::Frame& frame,
+            cViewport& viewport,
             cMaterial* apMaterial,
             iRenderable* apObject,
             std::optional<cMatrixf> modelMatrix = std::nullopt);

@@ -30,7 +30,6 @@
 #include "resources/TextureManager.h"
 #include "resources/ImageManager.h"
 
-#include "graphics/MaterialType.h"
 #include "graphics/Renderable.h"
 
 #include "math/Math.h"
@@ -43,18 +42,31 @@
 
 namespace hpl {
 
-        eMaterialBlendMode cMaterial::GetBlendMode(bool hasRefraction) const {
+        eMaterialBlendMode cMaterial::GetBlendMode() const {
             // for water we enforce a blend mode
             switch(m_descriptor.m_id) {
-                case MaterialID::Water:
-                    return hasRefraction ? eMaterialBlendMode_None : eMaterialBlendMode_Mul;
+               // case MaterialID::Water:
+               //     return hasRefraction ? eMaterialBlendMode_None : eMaterialBlendMode_Mul;
                 case MaterialID::Translucent:
                     return m_descriptor.m_translucent.m_blend;
+                case MaterialID::Decal:
+                    return m_descriptor.m_decal.m_blend;
                 default:
                     break;
             }
-            return eMaterialBlendMode_Add;
+            ASSERT(false && "material type does not have a blend mode");
+            return eMaterialBlendMode_LastEnum;
         }
+        bool cMaterial::IsAffectedByLightLevel() const {
+            switch(m_descriptor.m_id) {
+                case MaterialID::Translucent:
+                    return m_descriptor.m_translucent.m_isAffectedByLightLevel;
+                default:
+                    break;
+            }
+            return false;
+        }
+
         eMaterialAlphaMode cMaterial::GetAlphaMode() const {
             switch(m_descriptor.m_id) {
                 case MaterialID::SolidDiffuse:
@@ -94,6 +106,17 @@ namespace hpl {
 		        !GetImage(eMaterialTexture_CubeMap);
         }
 
+        bool cMaterial::GetLargeTransperantSurface() const {
+
+            switch(m_descriptor.m_id) {
+                case MaterialID::Water:
+                    return m_descriptor.m_water.m_isLargeSurface;
+                default:
+                    break;
+            }
+            return false;
+        }
+
         float cMaterial::maxReflectionDistance() const {
             switch(m_descriptor.m_id) {
                 case MaterialID::Water:
@@ -105,7 +128,7 @@ namespace hpl {
         }
 
 
-	cMaterial::cMaterial(const tString& asName, const tWString& asFullPath, cGraphics *apGraphics, cResources *apResources, iMaterialType *apType)
+	cMaterial::cMaterial(const tString& asName, const tWString& asFullPath, cGraphics *apGraphics, cResources *apResources)
 		: iResourceBase(asName, asFullPath, 0)
 	{
         m_generation = rand();

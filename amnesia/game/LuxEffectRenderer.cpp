@@ -30,6 +30,7 @@
 #include "graphics/ForgeRenderer.h"
 #include "graphics/GraphicsTypes.h"
 
+#include "graphics/MaterialResource.h"
 #include "impl/LegacyVertexBuffer.h"
 #include "tinyimageformat_base.h"
 #include <folly/small_vector.h>
@@ -796,7 +797,8 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
 
             LuxEffectObjectUniform::OutlineUniform  uniform{};
             uniform.m_mvp = cMath::ToForgeMat4(cMath::MatrixMul(mainFrustumViewProj, worldMatrix).GetTranspose());
-            uniform.m_feature = pMaterial->type().m_data.m_common.m_materialConfig;
+            material::MaterialBlockOptions options;
+            uniform.m_feature = material::resolveMaterialConfig(*pMaterial, options);
 
             BufferUpdateDesc updateDesc = { uniformBlockOffset.pBuffer, uniformBlockOffset.mOffset };
             beginUpdateResource(&updateDesc);
@@ -831,7 +833,6 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
         for(auto& pObject: filteredObjects) {
             auto* vertexBuffer = pObject->GetVertexBuffer();
             auto* pMaterial = pObject->GetMaterial();
-            auto& materialType = pMaterial->type();
             if (!pObject->CollidesWithFrustum(input.m_frustum)) {
                 continue;
             }
@@ -857,8 +858,10 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
             cMatrixf worldMatrix = pObject->GetModelMatrixPtr() ? *pObject->GetModelMatrixPtr() : cMatrixf::Identity;
 
             LuxEffectObjectUniform::OutlineUniform uniform{};
+
             uniform.m_mvp = cMath::ToForgeMat4(cMath::MatrixMul(mainFrustumViewProj, cMath::MatrixMul(worldMatrix, mtxScale)).GetTranspose());
-            uniform.m_feature = pMaterial->type().m_data.m_common.m_materialConfig;
+            material::MaterialBlockOptions options;
+            uniform.m_feature = material::resolveMaterialConfig(*pMaterial, options);
 
             BufferUpdateDesc updateDesc = { uniformBlockOffset.pBuffer, uniformBlockOffset.mOffset };
             beginUpdateResource(&updateDesc);

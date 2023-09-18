@@ -6,7 +6,6 @@
 
 // resources defined for the deferred renderer pipeline
 namespace hpl::material {
-
     enum TextureConfigFlags {
         EnableDiffuse = 1 << 0,
         EnableNormal = 1 << 1,
@@ -30,16 +29,54 @@ namespace hpl::material {
         UseRefractionEdgeCheck = 1 << 15,
     };
 
+    struct UnifomMaterialBlock {
+        struct {
+            uint32_t m_materialConfig;
+            float m_heightMapScale;
+            float m_heightMapBias;
+            float m_frenselBias;
 
+            float m_frenselPow;
+            uint32_t m_pad0;
+            uint32_t m_pad1;
+            uint32_t m_pad2;
+        } m_solid;
+        struct {
+            uint32_t m_materialConfig;
+        } m_decal;
+        struct {
+            uint32_t m_materialConfig;
+            float m_refractionScale;
+            float m_frenselBias;
+            float m_frenselPow;
 
+            float mfRimLightMul;
+            float mfRimLightPow;
+            uint32_t m_pad0;
+            uint32_t m_pad1;
+        } m_translucenct;
+        struct {
+            uint32_t m_materialConfig;
+            float mfRefractionScale;
+            float mfFrenselBias;
+            float mfFrenselPow;
 
+            float m_reflectionFadeStart;
+            float m_reflectionFadeEnd;
+            float m_waveSpeed;
+            float mfWaveAmplitude;
 
-
-
+            float mfWaveFreq;
+            uint32_t m_pad0;
+            uint32_t m_pad1;
+            uint32_t m_pad2;
+        } m_water;
+    };
     struct MaterialBlockOptions {
         bool m_enableRefration = false;
         bool m_enableReflection = false;
     };
+    uint32_t resolveMaterialConfig(cMaterial& mat, const MaterialBlockOptions& options);
     UnifomMaterialBlock resolveMaterialBlock(cMaterial& mat, const MaterialBlockOptions& options);
 
 

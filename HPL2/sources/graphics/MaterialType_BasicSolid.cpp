@@ -132,76 +132,77 @@ namespace hpl
 
     void cMaterialType_SolidDiffuse::CompileSolidSpecifics(cMaterial* apMaterial)
     {
-        cMaterialType_SolidDiffuse_Vars* pVars = (cMaterialType_SolidDiffuse_Vars*)apMaterial->GetVars();
+        ASSERT(false && "DEPRECATED");
+      //  cMaterialType_SolidDiffuse_Vars* pVars = (cMaterialType_SolidDiffuse_Vars*)apMaterial->GetVars();
 
-        //////////////////////////////////
-        // Z specifics
-        apMaterial->SetHasObjectSpecificsSettings(eMaterialRenderMode_Z_Dissolve, true);
-        apMaterial->SetUseAlphaDissolveFilter(pVars->mbAlphaDissolveFilter);
+      //  //////////////////////////////////
+      //  // Z specifics
+      //  apMaterial->SetHasObjectSpecificsSettings(eMaterialRenderMode_Z_Dissolve, true);
+      //  apMaterial->SetUseAlphaDissolveFilter(pVars->mbAlphaDissolveFilter);
 
-        //////////////////////////////////
-        // Normal map and height specifics
-        if (apMaterial->GetImage(eMaterialTexture_NMap))
-        {
-            if (apMaterial->GetImage(eMaterialTexture_Height))
-            {
-                apMaterial->SetHasSpecificSettings(eMaterialRenderMode_Diffuse, true);
-            }
-        }
+      //  //////////////////////////////////
+      //  // Normal map and height specifics
+      //  if (apMaterial->GetImage(eMaterialTexture_NMap))
+      //  {
+      //      if (apMaterial->GetImage(eMaterialTexture_Height))
+      //      {
+      //          apMaterial->SetHasSpecificSettings(eMaterialRenderMode_Diffuse, true);
+      //      }
+      //  }
 
-        //////////////////////////////////
-        // Uv animation specifics
-        if (apMaterial->HasUvAnimation())
-        {
-            apMaterial->SetHasSpecificSettings(eMaterialRenderMode_Z, true);
-            apMaterial->SetHasSpecificSettings(eMaterialRenderMode_Diffuse, true);
-            apMaterial->SetHasSpecificSettings(eMaterialRenderMode_Illumination, true);
-        }
+      //  //////////////////////////////////
+      //  // Uv animation specifics
+      //  if (apMaterial->HasUvAnimation())
+      //  {
+      //      apMaterial->SetHasSpecificSettings(eMaterialRenderMode_Z, true);
+      //      apMaterial->SetHasSpecificSettings(eMaterialRenderMode_Diffuse, true);
+      //      apMaterial->SetHasSpecificSettings(eMaterialRenderMode_Illumination, true);
+      //  }
 
-        //////////////////////////////////
-        // Cubemap
-        if (apMaterial->GetImage(eMaterialTexture_CubeMap))
-        {
-            apMaterial->SetHasSpecificSettings(eMaterialRenderMode_Diffuse, true);
-        }
+      //  //////////////////////////////////
+      //  // Cubemap
+      //  if (apMaterial->GetImage(eMaterialTexture_CubeMap))
+      //  {
+      //      apMaterial->SetHasSpecificSettings(eMaterialRenderMode_Diffuse, true);
+      //  }
 
-        //////////////////////////////////
-        // Illuminations specifics
-        if (apMaterial->GetImage(eMaterialTexture_Illumination))
-        {
-            apMaterial->SetHasObjectSpecificsSettings(eMaterialRenderMode_Illumination, true);
-        }
+      //  //////////////////////////////////
+      //  // Illuminations specifics
+      //  if (apMaterial->GetImage(eMaterialTexture_Illumination))
+      //  {
+      //      apMaterial->SetHasObjectSpecificsSettings(eMaterialRenderMode_Illumination, true);
+      //  }
     }
 
 
     iMaterialVars* cMaterialType_SolidDiffuse::CreateSpecificVariables()
     {
-        auto pVars = new cMaterialType_SolidDiffuse_Vars();
-        auto pipeline = Interface<ForgeRenderer>::Get();
-        DescriptorSetDesc desc = { pipeline->PipelineSignature(), DESCRIPTOR_UPDATE_FREQ_PER_FRAME, 2 };
+       // auto pVars = new cMaterialType_SolidDiffuse_Vars();
+       // auto pipeline = Interface<ForgeRenderer>::Get();
+       // DescriptorSetDesc desc = { pipeline->PipelineSignature(), DESCRIPTOR_UPDATE_FREQ_PER_FRAME, 2 };
 
-        BufferDesc bufferDesc = {};
-        bufferDesc.mDescriptors = DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        bufferDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
-        bufferDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
-        bufferDesc.mSize = sizeof(cMaterialType_SolidDiffuse_Vars::MaterialBufferData);
-        pVars->m_materialId = (++m_materialCount) % MaxSolidMaterials;
-        // for(auto& bufferHandle: pVars->m_diffuseBuffer) {
-        //     BufferLoadDesc loadDesc = {};
-        //     loadDesc.mDesc = bufferDesc;
-        //     loadDesc.ppBuffer = &bufferHandle.m_handle;
-        //     addResource(&loadDesc, nullptr);
-        // }
-        // DescriptorSet* descriptorSet = {};
-        // addDescriptorSet(pipeline->Rend(), &desc, &pVars->m_descriptorSet[eMaterialRenderMode_Diffuse].m_handle);
-        // addDescriptorSet(pipeline->Rend(), &desc, &pVars->m_descriptorSet[eMaterialRenderMode_Z].m_handle);
-        // addDescriptorSet(pipeline->Rend(), &desc, &pVars->m_descriptorSet[eMaterialRenderMode_Z_Dissolve].m_handle);
-        // addDescriptorSet(pipeline->Rend(), &desc, &pVars->m_descriptorSet[eMaterialRenderMode_Illumination].m_handle);
+       // BufferDesc bufferDesc = {};
+       // bufferDesc.mDescriptors = DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+       // bufferDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
+       // bufferDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
+       // bufferDesc.mSize = sizeof(cMaterialType_SolidDiffuse_Vars::MaterialBufferData);
+       // pVars->m_materialId = (++m_materialCount) % MaxSolidMaterials;
+       // // for(auto& bufferHandle: pVars->m_diffuseBuffer) {
+       // //     BufferLoadDesc loadDesc = {};
+       // //     loadDesc.mDesc = bufferDesc;
+       // //     loadDesc.ppBuffer = &bufferHandle.m_handle;
+       // //     addResource(&loadDesc, nullptr);
+       // // }
+       // // DescriptorSet* descriptorSet = {};
+       // // addDescriptorSet(pipeline->Rend(), &desc, &pVars->m_descriptorSet[eMaterialRenderMode_Diffuse].m_handle);
+       // // addDescriptorSet(pipeline->Rend(), &desc, &pVars->m_descriptorSet[eMaterialRenderMode_Z].m_handle);
+       // // addDescriptorSet(pipeline->Rend(), &desc, &pVars->m_descriptorSet[eMaterialRenderMode_Z_Dissolve].m_handle);
+       // // addDescriptorSet(pipeline->Rend(), &desc, &pVars->m_descriptorSet[eMaterialRenderMode_Illumination].m_handle);
 
-        // pVars->m_descriptorSet[eMaterialRenderMode_Diffuse].Initialize();
-        // pVars->m_descriptorSet[eMaterialRenderMode_Z].Initialize();
-        // pVars->m_descriptorSet[eMaterialRenderMode_Z_Dissolve].Initialize();
-        // pVars->m_descriptorSet[eMaterialRenderMode_Illumination].Initialize();
+       // // pVars->m_descriptorSet[eMaterialRenderMode_Diffuse].Initialize();
+       // // pVars->m_descriptorSet[eMaterialRenderMode_Z].Initialize();
+       // // pVars->m_descriptorSet[eMaterialRenderMode_Z_Dissolve].Initialize();
+       // // pVars->m_descriptorSet[eMaterialRenderMode_Illumination].Initialize();
 
         return new cMaterialType_SolidDiffuse_Vars();
     }
@@ -210,31 +211,33 @@ namespace hpl
 
     void cMaterialType_SolidDiffuse::LoadVariables(cMaterial* apMaterial, cResourceVarsObject* apVars)
     {
-        cMaterialType_SolidDiffuse_Vars* pVars = (cMaterialType_SolidDiffuse_Vars*)apMaterial->GetVars();
-        if (pVars == NULL)
-        {
-            pVars = (cMaterialType_SolidDiffuse_Vars*)CreateSpecificVariables();
-            apMaterial->SetVars(pVars);
-        }
+        ASSERT(false && "DEPRECATED");
+       // cMaterialType_SolidDiffuse_Vars* pVars = (cMaterialType_SolidDiffuse_Vars*)apMaterial->GetVars();
+       // if (pVars == NULL)
+       // {
+       //     pVars = (cMaterialType_SolidDiffuse_Vars*)CreateSpecificVariables();
+       //     apMaterial->SetVars(pVars);
+       // }
 
-        pVars->mfHeightMapScale = apVars->GetVarFloat("HeightMapScale", 0.1f);
-        pVars->mfHeightMapBias = apVars->GetVarFloat("HeightMapBias", 0);
-        pVars->mfFrenselBias = apVars->GetVarFloat("FrenselBias", 0.2f);
-        pVars->mfFrenselPow = apVars->GetVarFloat("FrenselPow", 8.0f);
-        pVars->mbAlphaDissolveFilter = apVars->GetVarBool("AlphaDissolveFilter", false);
+       // pVars->mfHeightMapScale = apVars->GetVarFloat("HeightMapScale", 0.1f);
+       // pVars->mfHeightMapBias = apVars->GetVarFloat("HeightMapBias", 0);
+       // pVars->mfFrenselBias = apVars->GetVarFloat("FrenselBias", 0.2f);
+       // pVars->mfFrenselPow = apVars->GetVarFloat("FrenselPow", 8.0f);
+       // pVars->mbAlphaDissolveFilter = apVars->GetVarBool("AlphaDissolveFilter", false);
     }
 
     //--------------------------------------------------------------------------
 
     void cMaterialType_SolidDiffuse::GetVariableValues(cMaterial* apMaterial, cResourceVarsObject* apVars)
     {
-        cMaterialType_SolidDiffuse_Vars* pVars = (cMaterialType_SolidDiffuse_Vars*)apMaterial->GetVars();
+        ASSERT(false && "DEPRECATED");
+       // cMaterialType_SolidDiffuse_Vars* pVars = (cMaterialType_SolidDiffuse_Vars*)apMaterial->GetVars();
 
-        apVars->AddVarFloat("HeightMapScale", pVars->mfHeightMapScale);
-        apVars->AddVarFloat("HeightMapBias", pVars->mfHeightMapBias);
-        apVars->AddVarFloat("FrenselBias", pVars->mfFrenselBias);
-        apVars->AddVarFloat("FrenselPow", pVars->mfFrenselPow);
-        apVars->AddVarBool("AlphaDissolveFilter", pVars->mbAlphaDissolveFilter);
+       // apVars->AddVarFloat("HeightMapScale", pVars->mfHeightMapScale);
+       // apVars->AddVarFloat("HeightMapBias", pVars->mfHeightMapBias);
+       // apVars->AddVarFloat("FrenselBias", pVars->mfFrenselBias);
+       // apVars->AddVarFloat("FrenselPow", pVars->mfFrenselPow);
+       // apVars->AddVarBool("AlphaDissolveFilter", pVars->mbAlphaDissolveFilter);
     }
 
     //--------------------------------------------------------------------------
