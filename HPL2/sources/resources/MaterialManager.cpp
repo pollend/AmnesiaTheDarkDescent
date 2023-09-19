@@ -423,33 +423,48 @@ namespace hpl {
 			    auto& type = pMat->type();
 				type.m_id = meta.m_id;
 				type.m_handle = IndexPoolHandle(&internal::m_MaterialIndexPool);
-				//type.m_data.m_common.m_textureConfig
+			    MaterialDescriptor materialDescriptor;
+			    materialDescriptor.m_id = meta.m_id;
 			    switch(meta.m_id) {
-					case cMaterial::MaterialID::SolidDiffuse: {
+					case MaterialID::SolidDiffuse: {
 					    type.m_data.m_solid.m_heightMapScale = userVars.GetVarFloat("HeightMapScale", 0.1f);
 						type.m_data.m_solid.m_heightMapBias = userVars.GetVarFloat("HeightMapBias", 0);
 						type.m_data.m_solid.m_frenselBias = userVars.GetVarFloat("FrenselBias", 0.2f);
 						type.m_data.m_solid.m_frenselPow = userVars.GetVarFloat("FrenselPow", 8.0f);
 						type.m_alphaDissolveFilter = userVars.GetVarBool("AlphaDissolveFilter", false);
+
+                        materialDescriptor.m_solid.m_heightMapScale = userVars.GetVarFloat("HeightMapScale", 0.1f);
+				        materialDescriptor.m_solid.m_heightMapBias = userVars.GetVarFloat("HeightMapBias", 0);
+				        materialDescriptor.m_solid.m_frenselBias = userVars.GetVarFloat("FrenselBias", 0.2f);
+				        materialDescriptor.m_solid.m_frenselPow = userVars.GetVarFloat("FrenselPow", 8.0f);
+				        materialDescriptor.m_solid.m_alphaDissolveFilter = userVars.GetVarBool("AlphaDissolveFilter", false);
 						break;
 					}
-					case cMaterial::MaterialID::Translucent: {
+					case MaterialID::Translucent: {
 						pMat->SetHasRefraction(userVars.GetVarBool("Refraction", false));
 						pMat->SetIsAffectedByLightLevel(userVars.GetVarBool("AffectedByLightLevel", false));
 						pMat->SetHasRefractionNormals(userVars.GetVarBool("RefractionNormals", true));
 						pMat->SetUseRefractionEdgeCheck(userVars.GetVarBool("RefractionEdgeCheck", true));
-
-						// type.m_data.m_translucentUniformBlock.mbRefraction = userVars.GetVarBool("Refraction", false);
-						// type.m_data.m_translucentUniformBlock.mbRefractionEdgeCheck = userVars.GetVarBool("RefractionEdgeCheck", true);
 						type.m_data.m_translucentUniformBlock.mfRefractionScale = userVars.GetVarFloat("RefractionScale", 1.0f);
 						type.m_data.m_translucentUniformBlock.mfFrenselBias = userVars.GetVarFloat("FrenselBias", 0.2f);
 						type.m_data.m_translucentUniformBlock.mfFrenselPow = userVars.GetVarFloat("FrenselPow", 8.0);
 						type.m_data.m_translucentUniformBlock.mfRimLightMul = userVars.GetVarFloat("RimLightMul", 0.0f);
 						type.m_data.m_translucentUniformBlock.mfRimLightPow = userVars.GetVarFloat("RimLightPow", 8.0f);
-						// type.m_data.m_translucentUniformBlock.mbAffectedByLightLevel = userVars.GetVarBool("AffectedByLightLevel", false);
-						break;
+
+                        materialDescriptor.m_translucent.m_hasRefraction = userVars.GetVarBool("Refraction", false);
+				        materialDescriptor.m_translucent.m_refractionNormals = userVars.GetVarBool("RefractionNormals", true);
+				        materialDescriptor.m_translucent.m_refractionEdgeCheck = userVars.GetVarBool("RefractionEdgeCheck", true);
+                        materialDescriptor.m_translucent.m_isAffectedByLightLevel = userVars.GetVarBool("AffectedByLightLevel", false);
+
+			            materialDescriptor.m_translucent.m_refractionScale = userVars.GetVarFloat("RefractionScale", 1.0f);
+			            materialDescriptor.m_translucent.m_frenselBias = userVars.GetVarFloat("FrenselBias", 0.2f);
+				        materialDescriptor.m_translucent.m_frenselPow = userVars.GetVarFloat("FrenselPow", 8.0);
+				        materialDescriptor.m_translucent.m_rimLightMul = userVars.GetVarFloat("RimLightMul", 0.0f);
+				        materialDescriptor.m_translucent.m_rimLightPow = userVars.GetVarFloat("RimLightPow", 8.0f);
+				        materialDescriptor.m_translucent.m_blend = GetBlendMode(sBlendMode);
+					    break;
 					}
-					case cMaterial::MaterialID::Water: {
+					case MaterialID::Water: {
 						// type.m_data.m_waterUniformBlock.mbHasReflection = userVars.GetVarBool("HasReflection", true);
 						type.m_data.m_waterUniformBlock.mfRefractionScale = userVars.GetVarFloat("RefractionScale", 1.0f);
 						type.m_data.m_waterUniformBlock.mfFrenselBias = userVars.GetVarFloat("FrenselBias", 0.2f);
@@ -463,16 +478,30 @@ namespace hpl {
 						pMat->SetWorldReflectionOcclusionTest(userVars.GetVarBool("OcclusionCullWorldReflection", true));
 						pMat->SetMaxReflectionDistance(userVars.GetVarFloat("ReflectionFadeEnd", 0.0f));
 						pMat->SetLargeTransperantSurface(userVars.GetVarBool("LargeSurface", false));
+
+					    materialDescriptor.m_water.m_hasReflection = userVars.GetVarBool("HasReflection", true);
+				        materialDescriptor.m_water.m_refractionScale = userVars.GetVarFloat("RefractionScale", 1.0f);
+				        materialDescriptor.m_water.m_frenselBias = userVars.GetVarFloat("FrenselBias", 0.2f);
+				        materialDescriptor.m_water.mfFrenselPow = userVars.GetVarFloat("FrenselPow", 8.0f);
+				        materialDescriptor.m_water.mfReflectionFadeStart = userVars.GetVarFloat("ReflectionFadeStart", 0);
+				        materialDescriptor.m_water.mfReflectionFadeEnd = userVars.GetVarFloat("ReflectionFadeEnd", 0);
+				        materialDescriptor.m_water.mfWaveSpeed = userVars.GetVarFloat("WaveSpeed", 1.0f);
+				        materialDescriptor.m_water.mfWaveAmplitude = userVars.GetVarFloat("WaveAmplitude", 1.0f);
+				        materialDescriptor.m_water.mfWaveFreq = userVars.GetVarFloat("WaveFreq", 1.0f);
+                        materialDescriptor.m_water.m_maxReflectionDistance = userVars.GetVarFloat("ReflectionFadeEnd", 0.0f);
+
+                        materialDescriptor.m_water.m_isLargeSurface = userVars.GetVarBool("LargeSurface", false);
 						break;
 					}
-					case cMaterial::MaterialID::Decal: {
-						// no uniform block
-						break;
+					case MaterialID::Decal: {
+                        materialDescriptor.m_translucent.m_blend = GetBlendMode(sBlendMode);
+					    break;
 					}
 					default:
 						ASSERT(false && "Invalid material type");
 						break;
 				}
+			    pMat->SetDescriptor(materialDescriptor);
 				break;
 			}
 		}

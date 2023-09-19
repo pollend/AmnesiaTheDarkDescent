@@ -362,10 +362,7 @@ namespace hpl {
             bool abSendFrameBufferToPostEffects) override;
 
     private:
-        LegacyRenderTarget& resolveRenderTarget(std::array<LegacyRenderTarget, 2>& rt);
-        std::shared_ptr<Image>& resolveRenderImage(std::array<std::shared_ptr<Image>, 2>& img);
         iVertexBuffer* GetLightShape(iLight* apLight, eDeferredShapeQuality aQuality) const;
-
         struct PerObjectOption {
             std::optional<cMatrixf> m_modelMatrix = std::nullopt;
         };

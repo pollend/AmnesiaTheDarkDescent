@@ -21,6 +21,7 @@
 
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Image.h"
+#include "graphics/MaterialResource.h"
 #include "system/LowLevelSystem.h"
 #include "system/String.h"
 
@@ -150,31 +151,110 @@ namespace hpl {
         Dirty();
     }
 
-	void cMaterial::UpdateFlags() {
+    eMaterialBlendMode cMaterial::Desc_GetBlendMode() const {
+        // for water we enforce a blend mode
+        switch(m_descriptor.m_id) {
+            case MaterialID::Translucent:
+                return m_descriptor.m_translucent.m_blend;
+            case MaterialID::Decal:
+                return m_descriptor.m_decal.m_blend;
+            default:
+                break;
+        }
+        ASSERT(false && "material type does not have a blend mode");
+        return eMaterialBlendMode_LastEnum;
+    }
+    eMaterialAlphaMode cMaterial::Desc_GetAlphaMode() const {
+           switch(m_descriptor.m_id) {
+                case MaterialID::SolidDiffuse:
+                    if(GetImage(eMaterialTexture_Alpha))  {
+                        return eMaterialAlphaMode_Trans;
+                    }
+                    break;
+                default:
+                    break;
+            }
+	        return eMaterialAlphaMode_Solid;
+    }
+    bool cMaterial::Desc_GetIsAffectedByLight() const {
+        switch (m_descriptor.m_id) {
+            case MaterialID::Translucent:
+                return m_descriptor.m_translucent.m_isAffectedByLightLevel;
+            default:
+                break;
+        }
+
+        return false;
+    }
+    bool cMaterial::Desc_GetHasRefraction() const {
+        switch (m_descriptor.m_id) {
+            case MaterialID::Translucent:
+                    return m_descriptor.m_translucent.m_hasRefraction;
+            case MaterialID::Water:
+                    return true;
+            default:
+                    break;
+        }
+        return false;
+    }
+    bool cMaterial::Desc_GetHasReflection() const {
+       switch(m_descriptor.m_id) {
+            case MaterialID::Water:
+                return m_descriptor.m_water.m_hasReflection;
+            default:
+                break;
+        }
+        return false;
+    }
+    bool cMaterial::Desc_GetHasWorldReflections() const {
+        return m_descriptor.m_id == MaterialID::Water &&
+		            Desc_GetHasReflection() &&
+		            !GetImage(eMaterialTexture_CubeMap);
+    }
+    bool cMaterial::Desc_GetLargeTransperantSurface() const {
+      switch(m_descriptor.m_id) {
+            case MaterialID::Water:
+                return m_descriptor.m_water.m_isLargeSurface;
+            default:
+                break;
+        }
+        return false;
+    }
+    float cMaterial::Desc_maxReflectionDistance() const {
+        switch(m_descriptor.m_id) {
+            case MaterialID::Water:
+                return m_descriptor.m_water.m_maxReflectionDistance;
+            default:
+                break;
+        }
+        return 0.0f;
+    }
+
+    void cMaterial::UpdateFlags() {
 		const auto alphaMapImage = GetImage(eMaterialTexture_Alpha);
 		const auto heightMapImage = GetImage(eMaterialTexture_Height);
 	    m_info.m_data.m_common.m_materialConfig =
-					(GetImage(eMaterialTexture_Diffuse) ? EnableDiffuse: 0) |
-					(GetImage(eMaterialTexture_NMap) ? EnableNormal: 0) |
- 					(GetImage(eMaterialTexture_Specular) ? EnableSpecular: 0) |
-					(alphaMapImage ? EnableAlpha: 0) |
-					(heightMapImage ? EnableHeight: 0) |
-					(GetImage(eMaterialTexture_Illumination) ? EnableIllumination: 0) |
-					(GetImage(eMaterialTexture_CubeMap) ? EnableCubeMap: 0) |
-					(GetImage(eMaterialTexture_DissolveAlpha) ? EnableDissolveAlpha: 0) |
-					(GetImage(eMaterialTexture_CubeMapAlpha) ? EnableCubeMapAlpha: 0) |
-					(m_info.m_alphaDissolveFilter ? UseDissolveFilter: 0);
+					(GetImage(eMaterialTexture_Diffuse) ? material::EnableDiffuse: 0) |
+					(GetImage(eMaterialTexture_NMap) ? material::EnableNormal: 0) |
+ 					(GetImage(eMaterialTexture_Specular) ? material::EnableSpecular: 0) |
+					(alphaMapImage ? material::EnableAlpha: 0) |
+					(heightMapImage ? material::EnableHeight: 0) |
+					(GetImage(eMaterialTexture_Illumination) ? material::EnableIllumination: 0) |
+					(GetImage(eMaterialTexture_CubeMap) ? material::EnableCubeMap: 0) |
+					(GetImage(eMaterialTexture_DissolveAlpha) ? material::EnableDissolveAlpha: 0) |
+					(GetImage(eMaterialTexture_CubeMapAlpha) ? material::EnableCubeMapAlpha: 0) |
+					(m_info.m_alphaDissolveFilter ? material::UseDissolveFilter: 0);
 		switch(m_info.m_id) {
 			case MaterialID::SolidDiffuse: {
 				m_info.m_data.m_common.m_materialConfig |=
-					((alphaMapImage && TinyImageFormat_ChannelCount(static_cast<TinyImageFormat>(alphaMapImage->GetTexture().m_handle->mFormat)) == 1) ? IsAlphaSingleChannel: 0) |
-					((heightMapImage && TinyImageFormat_ChannelCount(static_cast<TinyImageFormat>(heightMapImage->GetTexture().m_handle->mFormat)) == 1) ? IsHeightMapSingleChannel: 0);
+					((alphaMapImage && TinyImageFormat_ChannelCount(static_cast<TinyImageFormat>(alphaMapImage->GetTexture().m_handle->mFormat)) == 1) ? material::IsAlphaSingleChannel: 0) |
+					((heightMapImage && TinyImageFormat_ChannelCount(static_cast<TinyImageFormat>(heightMapImage->GetTexture().m_handle->mFormat)) == 1) ? material::IsHeightMapSingleChannel: 0);
 				break;
 			}
 			case MaterialID::Translucent: {
 				m_info.m_data.m_common.m_materialConfig |=
-					(HasRefraction() ? UseRefractionNormals: 0)  |
-					(IsRefractionEdgeCheck() ? UseRefractionEdgeCheck: 0);
+					(HasRefraction() ? material::UseRefractionNormals: 0)  |
+					(IsRefractionEdgeCheck() ? material::UseRefractionEdgeCheck: 0);
 			    break;
 			}
 			default:
@@ -196,12 +276,15 @@ namespace hpl {
         Dirty();
 	}
 
-	Image* cMaterial::GetImage(eMaterialTexture aType)
-	{
-		return m_image[aType].GetImage();
-	}
+    Image* cMaterial::GetImage(eMaterialTexture aType) {
+        return m_image[aType].GetImage();
+    }
 
-	cResourceVarsObject* cMaterial::GetVarsObject()
+    const Image* cMaterial::GetImage(eMaterialTexture aType) const {
+        return m_image[aType].GetImage();
+    }
+
+    cResourceVarsObject* cMaterial::GetVarsObject()
 	{
 		cResourceVarsObject* pVarsObject = hplNew(cResourceVarsObject,());
 		mpType->GetVariableValues(this, pVarsObject);

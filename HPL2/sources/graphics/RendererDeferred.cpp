@@ -24,6 +24,7 @@
 #include "engine/Interface.h"
 #include "graphics/ForgeHandles.h"
 #include "graphics/ImmediateDrawBatch.h"
+#include "graphics/MaterialResource.h"
 #include "math/Frustum.h"
 #include "scene/ParticleEmitter.h"
 #include "scene/Viewport.h"
@@ -2438,15 +2439,6 @@ namespace hpl {
         // Batch vertex buffer
     }
 
-    //-----------------------------------------------------------------------
-    LegacyRenderTarget& cRendererDeferred::resolveRenderTarget(std::array<LegacyRenderTarget, 2>& rt) {
-        return rt[mpCurrentSettings->mbIsReflection ? 1 : 0];
-    }
-
-    std::shared_ptr<Image>& cRendererDeferred::resolveRenderImage(std::array<std::shared_ptr<Image>, 2>& img) {
-        return img[mpCurrentSettings->mbIsReflection ? 1 : 0];
-    }
-
     cRendererDeferred::~cRendererDeferred() {
     }
 
@@ -2512,7 +2504,7 @@ namespace hpl {
             if (pMaterial == nullptr || vertexBuffer == nullptr) {
                 continue;
             }
-            ASSERT(pMaterial->type().m_id == cMaterial::SolidDiffuse && "Invalid material type");
+            ASSERT(pMaterial->type().m_id == MaterialID::SolidDiffuse && "Invalid material type");
             MaterialRootConstant materialConst = {};
             uint32_t instance = cmdBindMaterialAndObject(cmd, frame, pMaterial, illuminationItem);
             materialConst.objectId = instance;
@@ -3156,7 +3148,7 @@ namespace hpl {
                     continue;
                 }
 
-                ASSERT(pMaterial->type().m_id == cMaterial::SolidDiffuse && "Invalid material type");
+                ASSERT(pMaterial->type().m_id == MaterialID::SolidDiffuse && "Invalid material type");
                 MaterialRootConstant materialConst = {};
                 uint32_t instance = cmdBindMaterialAndObject(cmd, frame, pMaterial, diffuseItem);
                 materialConst.objectId = instance;
@@ -3196,7 +3188,7 @@ namespace hpl {
                     continue;
                 }
                 ASSERT(pMaterial->GetBlendMode() < eMaterialBlendMode_LastEnum && "Invalid blend mode");
-                ASSERT(pMaterial->type().m_id == cMaterial::Decal && "Invalid material type");
+                ASSERT(pMaterial->type().m_id == MaterialID::Decal && "Invalid material type");
                 cmdBindPipeline(cmd, options.m_invert ? m_decalPipelineCW[pMaterial->GetBlendMode()].m_handle : m_decalPipeline[pMaterial->GetBlendMode()].m_handle);
 
                 std::array targets = { eVertexBufferElement_Position, eVertexBufferElement_Texture0, eVertexBufferElement_Color0 };
@@ -3679,6 +3671,8 @@ namespace hpl {
         auto& info = m_materialSet.m_materialInfo[apMaterial->materialID()];
         auto& descInfo = info.m_materialDescInfo[frame.m_frameIndex];
         auto& materialType = apMaterial->type();
+        auto& materialDesc = apMaterial->Descriptor();
+
 
         auto metaInfo = std::find_if(cMaterial::MaterialMetaTable.begin(), cMaterial::MaterialMetaTable.end(), [&](auto& info) {
             return info.m_id == materialType.m_id;
@@ -3691,7 +3685,7 @@ namespace hpl {
             BufferUpdateDesc updateDesc = { m_materialSet.m_materialUniformBuffer.m_handle,
                                             apMaterial->materialID() * sizeof(cMaterial::MaterialType::MaterialData) };
             beginUpdateResource(&updateDesc);
-            memcpy(updateDesc.pMappedData, &materialType.m_data, sizeof(cMaterial::MaterialType::MaterialData));
+            (*reinterpret_cast<material::UniformMaterialBlock*>(updateDesc.pMappedData)) = material::UniformMaterialBlock::CreateFromMaterial(*apMaterial);
             endUpdateResource(&updateDesc, NULL);
 
             std::array<DescriptorData, 32> params{};
@@ -4079,7 +4073,7 @@ void cRendererDeferred::Draw(
             if (pMaterial == nullptr || vertexBuffer == nullptr) {
                 continue;
             }
-            ASSERT(pMaterial->type().m_id == cMaterial::SolidDiffuse && "Invalid material type");
+            ASSERT(pMaterial->type().m_id == MaterialID::SolidDiffuse && "Invalid material type");
             MaterialRootConstant materialConst = {};
             uint32_t instance = cmdBindMaterialAndObject(frame.m_cmd, frame, pMaterial, illuminationItem);
             materialConst.objectId = instance;
@@ -4581,7 +4575,7 @@ void cRendererDeferred::Draw(
             materialConst.m_afT = GetTimeCount();
 
             switch (pMaterial->type().m_id) {
-            case cMaterial::Translucent:
+            case MaterialID::Translucent:
                 {
                     uint32_t instance = cmdBindMaterialAndObject(
                         frame.m_cmd, frame, pMaterial, translucencyItem, std::optional{ pMatrix ? *pMatrix : cMatrixf::Identity });
@@ -4639,7 +4633,7 @@ void cRendererDeferred::Draw(
                     }
                 }
                 break;
-            case cMaterial::Water:
+            case MaterialID::Water:
                 {
                     LegacyVertexBuffer::GeometryBinding binding;
                     std::array targets = { eVertexBufferElement_Position,

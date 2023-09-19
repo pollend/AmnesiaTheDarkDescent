@@ -40,6 +40,62 @@ namespace hpl {
 	class cResourceVarsObject;
 
 
+    struct MaterialDecal {
+        eMaterialBlendMode m_blend;
+    };
+    struct MaterialDiffuseSolid {
+        float m_heightMapScale;
+        float m_heightMapBias;
+        float m_frenselBias;
+        float m_frenselPow;
+        bool m_alphaDissolveFilter;
+    };
+
+    struct MaterialTranslucent {
+        eMaterialBlendMode m_blend;
+
+        bool m_isAffectedByLightLevel;
+        bool m_hasRefraction;
+        bool m_refractionEdgeCheck;
+        bool m_refractionNormals;
+        bool m_affectedByLightLevel;
+
+        float m_refractionScale;
+        float m_frenselBias;
+        float m_frenselPow;
+        float m_rimLightMul;
+        float m_rimLightPow;
+    };
+
+    // always has refraction if enabled
+    struct MaterialWater {
+        bool m_hasReflection;
+        bool m_isLargeSurface;
+        float m_maxReflectionDistance;
+
+        float m_refractionScale;
+        float m_frenselBias;
+        float mfFrenselPow;
+        float mfReflectionFadeStart;
+        float mfReflectionFadeEnd;
+        float mfWaveSpeed;
+        float mfWaveAmplitude;
+        float mfWaveFreq;
+    };
+
+    enum class MaterialID : uint8_t { Unknown = 0, SolidDiffuse, Translucent, Water, Decal, MaterialIDCount };
+
+    struct MaterialDescriptor final {
+        MaterialID m_id = MaterialID::Unknown;
+        union {
+            MaterialDecal m_decal;
+            MaterialDiffuseSolid m_solid;
+            MaterialTranslucent m_translucent;
+            MaterialWater m_water;
+        };
+    };
+
+
 	class iMaterialVars
 	{
 	public:
@@ -68,14 +124,6 @@ namespace hpl {
 	friend class iMaterialType;
 	public:
 		static constexpr uint32_t MaxMaterialID = 2048;
-		enum MaterialID: uint8_t {
-            Unknown = 0,
-            SolidDiffuse,
-            Translucent,
-            Water,
-            Decal,
-            MaterialIDCount
-        };
 
         enum TextureAntistropy {
             Antistropy_None = 0,
@@ -83,29 +131,6 @@ namespace hpl {
             Antistropy_16 = 2,
             Antistropy_Count = 3
         };
-
-		enum TextureConfigFlags {
-			EnableDiffuse = 1 << 0,
-			EnableNormal = 1 << 1,
-			EnableSpecular = 1 << 2,
-			EnableAlpha = 1 << 3,
-			EnableHeight = 1 << 4,
-			EnableIllumination = 1 << 5,
-			EnableCubeMap = 1 << 6,
-			EnableDissolveAlpha = 1 << 7,
-			EnableCubeMapAlpha = 1 << 8,
-
-			// additional flags
-			IsHeightMapSingleChannel = 1 << 9,
-			IsAlphaSingleChannel = 1 << 10,
-
-			//Solid Diffuse
-			UseDissolveFilter = 1 << 14,
-
-			//Translucent
-			UseRefractionNormals = 1 << 14,
-			UseRefractionEdgeCheck = 1 << 15,
-		};
 
 		struct MaterialCommonBlock {
 			uint32_t m_materialConfig;
@@ -215,9 +240,10 @@ namespace hpl {
 
 		void Compile();
 		void SetImage(eMaterialTexture aType, iResourceBase *apTexture);
-		Image *GetImage(eMaterialTexture aType);
+		Image* GetImage(eMaterialTexture aType);
+		const Image* GetImage(eMaterialTexture aType) const;
 
-		void SetVars(iMaterialVars *apVars){ mpVars = apVars;}
+	    void SetVars(iMaterialVars *apVars){ mpVars = apVars;}
 		iMaterialVars* GetVars(){ return mpVars;}
 		cResourceVarsObject* GetVarsObject();
 		void LoadVariablesFromVarsObject(cResourceVarsObject* apVarsObject);
@@ -300,6 +326,17 @@ namespace hpl {
 		inline const cMatrixf& GetUvMatrix() const { return m_mtxUV;}
 		void ClearUvAnimations();
 
+        // we want to build a derived state from the matera information
+        // decouples the state managment to work on forward++ model
+        eMaterialBlendMode Desc_GetBlendMode() const;
+        eMaterialAlphaMode Desc_GetAlphaMode() const;
+        bool Desc_GetHasRefraction() const;
+        bool Desc_GetHasReflection() const;
+        bool Desc_GetHasWorldReflections() const;
+        bool Desc_GetIsAffectedByLight() const;
+        bool Desc_GetLargeTransperantSurface() const;
+        float Desc_maxReflectionDistance() const;
+
 		/**
 		 * This is used so that materials do not call type specific things after types have been destroyed!
 		 * Shall only be set by graphics!
@@ -311,6 +348,13 @@ namespace hpl {
 		void Unload(){}
 		void Destroy(){}
 
+        inline void SetDescriptor(const MaterialDescriptor& desc) {
+            m_descriptor = desc;
+            Dirty();
+        }
+        const MaterialDescriptor& Descriptor() const {
+            return m_descriptor;
+        }
 		inline MaterialType& type() { return m_info; }
 
 		inline uint32_t materialID() { return m_info.m_handle.get(); }
@@ -329,6 +373,7 @@ namespace hpl {
 		cResources *mpResources;
 		iMaterialType *mpType;
 		iMaterialVars *mpVars;
+	    MaterialDescriptor m_descriptor;
 
 		bool mbAutoDestroyTextures;
 		bool mbHasSpecificSettings[eMaterialRenderMode_LastEnum];
