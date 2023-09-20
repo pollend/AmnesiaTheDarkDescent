@@ -212,7 +212,7 @@ namespace hpl {
                 for (auto& object : apNode->GetObjects()) {
                     // Check so visible and shadow caster
                     if (rendering::detail::IsObjectIsVisible(object, eRenderableFlag_ShadowCaster, clipPlanes) == false ||
-                        object->GetMaterial() == NULL || object->GetMaterial()->GetType()->IsTranslucent()) {
+                        object->GetMaterial() == NULL || cMaterial::IsTranslucent(object->GetMaterial()->Descriptor().m_id)) {
                         continue;
                     }
 
@@ -564,7 +564,7 @@ namespace hpl {
             desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
             desc.mDesc.mFirstElement = 0;
             desc.mDesc.mElementCount = cMaterial::MaxMaterialID;
-            desc.mDesc.mStructStride = sizeof(cMaterial::MaterialType::MaterialData);
+            desc.mDesc.mStructStride = sizeof(material::UniformMaterialBlock);
             desc.mDesc.mSize = desc.mDesc.mElementCount * desc.mDesc.mStructStride;
             desc.ppBuffer = buffer;
             addResource(&desc, nullptr);
@@ -2504,7 +2504,7 @@ namespace hpl {
             if (pMaterial == nullptr || vertexBuffer == nullptr) {
                 continue;
             }
-            ASSERT(pMaterial->type().m_id == MaterialID::SolidDiffuse && "Invalid material type");
+            ASSERT(pMaterial->Descriptor().m_id == MaterialID::SolidDiffuse && "Invalid material type");
             MaterialRootConstant materialConst = {};
             uint32_t instance = cmdBindMaterialAndObject(cmd, frame, pMaterial, illuminationItem);
             materialConst.objectId = instance;
@@ -2743,9 +2743,9 @@ namespace hpl {
                                     eMaterialRenderMode renderMode =
                                         pObject->GetCoverageAmount() >= 1 ? eMaterialRenderMode_Z : eMaterialRenderMode_Z_Dissolve;
                                     cMaterial* pMaterial = pObject->GetMaterial();
-                                    iMaterialType* materialType = pMaterial->GetType();
+                                    const MaterialDescriptor& descriptor = pMaterial->Descriptor();
                                     iVertexBuffer* vertexBuffer = pObject->GetVertexBuffer();
-                                    if (vertexBuffer == nullptr || materialType == nullptr) {
+                                    if (vertexBuffer == nullptr || descriptor.m_id == MaterialID::Unknown) {
                                         return;
                                     }
                                     MaterialRootConstant materialConst = {};
@@ -3148,7 +3148,7 @@ namespace hpl {
                     continue;
                 }
 
-                ASSERT(pMaterial->type().m_id == MaterialID::SolidDiffuse && "Invalid material type");
+                ASSERT(pMaterial->Descriptor().m_id == MaterialID::SolidDiffuse && "Invalid material type");
                 MaterialRootConstant materialConst = {};
                 uint32_t instance = cmdBindMaterialAndObject(cmd, frame, pMaterial, diffuseItem);
                 materialConst.objectId = instance;
@@ -3188,7 +3188,7 @@ namespace hpl {
                     continue;
                 }
                 ASSERT(pMaterial->GetBlendMode() < eMaterialBlendMode_LastEnum && "Invalid blend mode");
-                ASSERT(pMaterial->type().m_id == MaterialID::Decal && "Invalid material type");
+                ASSERT(pMaterial->Descriptor().m_id == MaterialID::Decal && "Invalid material type");
                 cmdBindPipeline(cmd, options.m_invert ? m_decalPipelineCW[pMaterial->GetBlendMode()].m_handle : m_decalPipeline[pMaterial->GetBlendMode()].m_handle);
 
                 std::array targets = { eVertexBufferElement_Position, eVertexBufferElement_Texture0, eVertexBufferElement_Color0 };
@@ -3298,7 +3298,7 @@ namespace hpl {
                     ////////////////////////////////////////
                     // Update per viewport specific and set amtrix point
                     // Skip this for non-decal translucent! This is because the water rendering might mess it up otherwise!
-                    if (pMaterial == NULL || pMaterial->GetType()->IsTranslucent() == false || pMaterial->GetType()->IsDecal()) {
+                    if (pMaterial == NULL || cMaterial::IsTranslucent(pMaterial->Descriptor().m_id) == false || pMaterial->Descriptor().m_id == MaterialID::Decal) {
                         // skip rendering if the update return false
                         if (pObject->UpdateGraphicsForViewport(apFrustum, frameTime) == false) {
                             return;
@@ -3396,7 +3396,7 @@ namespace hpl {
                 reinterpret_cast<float4*>(updateDesc.pMappedData)[1] = float4(boundBoxMax.x, boundBoxMax.y, boundBoxMax.z, 0.0f);
                 endUpdateResource(&updateDesc, nullptr);
 
-                if (!test.m_preZPass || !vertexBuffer || !pMaterial || pMaterial->GetType()->IsTranslucent()) {
+                if (!test.m_preZPass || !vertexBuffer || !pMaterial || cMaterial::IsTranslucent(pMaterial->Descriptor().m_id)) {
                     continue;
                 }
 
@@ -3636,7 +3636,7 @@ namespace hpl {
 
                     cMaterial* pMaterial = renderable->GetMaterial();
                     iVertexBuffer* vertexBuffer = renderable->GetVertexBuffer();
-                    if (!vertexBuffer || !pMaterial || pMaterial->GetType()->IsTranslucent()) {
+                    if (!vertexBuffer || !pMaterial || cMaterial::IsTranslucent(pMaterial->Descriptor().m_id)) {
                         continue;
                     }
 
@@ -3668,22 +3668,21 @@ namespace hpl {
 
         auto* objectDescSet = m_materialSet.m_perObjectSet[frame.m_frameIndex].m_handle;
         auto objectLookup = m_materialSet.m_objectDescriptorLookup.find(apObject);
-        auto& info = m_materialSet.m_materialInfo[apMaterial->materialID()];
+        auto& info = m_materialSet.m_materialInfo[apMaterial->Index()];
         auto& descInfo = info.m_materialDescInfo[frame.m_frameIndex];
-        auto& materialType = apMaterial->type();
         auto& materialDesc = apMaterial->Descriptor();
 
 
         auto metaInfo = std::find_if(cMaterial::MaterialMetaTable.begin(), cMaterial::MaterialMetaTable.end(), [&](auto& info) {
-            return info.m_id == materialType.m_id;
+            return info.m_id == materialDesc.m_id;
         });
 
-        if (descInfo.m_material != apMaterial || descInfo.m_version != apMaterial->Version()) {
-            descInfo.m_version = apMaterial->Version();
+        if (descInfo.m_material != apMaterial || descInfo.m_version != apMaterial->Generation()) {
+            descInfo.m_version = apMaterial->Generation();
             descInfo.m_material = apMaterial;
 
             BufferUpdateDesc updateDesc = { m_materialSet.m_materialUniformBuffer.m_handle,
-                                            apMaterial->materialID() * sizeof(cMaterial::MaterialType::MaterialData) };
+                                            apMaterial->Index() * sizeof(hpl::material::UniformMaterialBlock) };
             beginUpdateResource(&updateDesc);
             (*reinterpret_cast<material::UniformMaterialBlock*>(updateDesc.pMappedData)) = material::UniformMaterialBlock::CreateFromMaterial(*apMaterial);
             endUpdateResource(&updateDesc, NULL);
@@ -3713,7 +3712,7 @@ namespace hpl {
             }
             updateDescriptorSet(
                 frame.m_renderer->Rend(),
-                apMaterial->materialID(),
+                apMaterial->Index(),
                 m_materialSet.m_perBatchSet[frame.m_frameIndex].m_handle,
                 paramCount,
                 params.data());
@@ -3726,7 +3725,7 @@ namespace hpl {
 
             cRendererDeferred::UniformObject uniformObjectData = {};
             uniformObjectData.m_dissolveAmount = apObject->GetCoverageAmount();
-            uniformObjectData.m_materialIndex = apMaterial->materialID();
+            uniformObjectData.m_materialIndex = apMaterial->Index();
             uniformObjectData.m_modelMat = cMath::ToForgeMat4(modelMat.GetTranspose());
             uniformObjectData.m_invModelMat = cMath::ToForgeMat4(cMath::MatrixInverse(modelMat).GetTranspose());
             if (apMaterial) {
@@ -3745,7 +3744,7 @@ namespace hpl {
             cmd,
             detail::resolveMaterialID(apMaterial->GetTextureAntistropy(), apMaterial->GetTextureWrap(), apMaterial->GetTextureFilter()),
             m_materialSet.m_materialConstSet.m_handle);
-        cmdBindDescriptorSet(cmd, apMaterial->materialID(), m_materialSet.m_perBatchSet[frame.m_frameIndex].m_handle);
+        cmdBindDescriptorSet(cmd, apMaterial->Index(), m_materialSet.m_perBatchSet[frame.m_frameIndex].m_handle);
         return index;
     }
 
@@ -4073,7 +4072,7 @@ void cRendererDeferred::Draw(
             if (pMaterial == nullptr || vertexBuffer == nullptr) {
                 continue;
             }
-            ASSERT(pMaterial->type().m_id == MaterialID::SolidDiffuse && "Invalid material type");
+            ASSERT(pMaterial->Descriptor().m_id == MaterialID::SolidDiffuse && "Invalid material type");
             MaterialRootConstant materialConst = {};
             uint32_t instance = cmdBindMaterialAndObject(frame.m_cmd, frame, pMaterial, illuminationItem);
             materialConst.objectId = instance;
@@ -4308,7 +4307,7 @@ void cRendererDeferred::Draw(
             const bool isRefraction = iRenderer::GetRefractionEnabled() && pMaterial->HasRefraction();
             const bool isReflection = pMaterial->HasWorldReflection() && translucencyItem->GetRenderType() == eRenderableType_SubMesh &&
                 mpCurrentSettings->mbRenderWorldReflection;
-            const bool isFogActive = mpCurrentWorld->GetFogActive() && pMaterial->GetAffectedByFog();
+            const bool isFogActive = mpCurrentWorld->GetFogActive();
             const bool isParticleEmitter = TypeInfo<iParticleEmitter>::IsSubtype(*translucencyItem);
             const auto cubeMap = pMaterial->GetImage(eMaterialTexture_CubeMap);
             uint32_t reflectionBufferIndex = 0;
@@ -4536,10 +4535,8 @@ void cRendererDeferred::Draw(
 
             MaterialRootConstant materialConst = { 0 };
             float sceneAlpha = 1;
-            if (pMaterial->GetAffectedByFog()) {
-                for (auto& fogArea : fogRenderData) {
-                    sceneAlpha *= detail::GetFogAreaVisibilityForObject(fogArea, *apFrustum, translucencyItem);
-                }
+            for (auto& fogArea : fogRenderData) {
+                sceneAlpha *= detail::GetFogAreaVisibilityForObject(fogArea, *apFrustum, translucencyItem);
             }
             materialConst.m_sceneAlpha = sceneAlpha;
             materialConst.m_lightLevel = 1.0f;
@@ -4574,7 +4571,7 @@ void cRendererDeferred::Draw(
             }
             materialConst.m_afT = GetTimeCount();
 
-            switch (pMaterial->type().m_id) {
+            switch (pMaterial->Descriptor().m_id) {
             case MaterialID::Translucent:
                 {
                     uint32_t instance = cmdBindMaterialAndObject(
@@ -4646,7 +4643,7 @@ void cRendererDeferred::Draw(
                     materialConst.m_options = (isFogActive ? TranslucencyFlags::UseFog : 0) |
                         (isRefraction ? TranslucencyFlags::UseRefractionTrans : 0) |
                         (isReflection ? TranslucencyFlags::UseReflectionTrans : 0) |
-                        translucencyBlendTable[pMaterial->GetBlendMode()] |
+                        (isRefraction ? translucencyBlendTable[eMaterialBlendMode_None]: translucencyBlendTable[eMaterialBlendMode_Mul]) |
                         (((reflectionBufferIndex & TranslucencyReflectionBufferMask) << TranslucencyReflectionBufferOffset));
 
 

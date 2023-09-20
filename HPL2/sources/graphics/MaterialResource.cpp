@@ -29,14 +29,14 @@ namespace hpl::material {
             case hpl::MaterialID::Water:
                 block.m_water.mfRefractionScale = descriptor.m_water.m_refractionScale;
  		        block.m_water.mfFrenselBias = descriptor.m_water.m_frenselBias;
-		        block.m_water.mfFrenselPow = descriptor.m_water.mfFrenselPow;
+		        block.m_water.mfFrenselPow = descriptor.m_water.m_frenselPow;
 
-		        block.m_water.m_reflectionFadeStart = descriptor.m_water.mfReflectionFadeStart;
-		        block.m_water.m_reflectionFadeEnd = descriptor.m_water.mfReflectionFadeEnd;
-		        block.m_water.m_waveSpeed = descriptor.m_water.mfWaveSpeed;
-		        block.m_water.mfWaveAmplitude = descriptor.m_water.mfWaveAmplitude;
+		        block.m_water.m_reflectionFadeStart = descriptor.m_water.m_reflectionFadeStart;
+		        block.m_water.m_reflectionFadeEnd = descriptor.m_water.m_reflectionFadeEnd;
+		        block.m_water.m_waveSpeed = descriptor.m_water.m_waveSpeed;
+		        block.m_water.mfWaveAmplitude = descriptor.m_water.m_waveAmplitude;
 
-		        block.m_water.mfWaveFreq = descriptor.m_water.mfWaveFreq;
+		        block.m_water.mfWaveFreq = descriptor.m_water.m_waveFreq;
 
                 break;
             default:

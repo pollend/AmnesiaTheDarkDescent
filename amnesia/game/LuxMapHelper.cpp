@@ -64,7 +64,7 @@ bool cLuxLineOfSightCallback::BeforeIntersect(iPhysicsBody *apBody)
 				}
 
 				cMaterial *pMaterial = pSubMeshEnt->GetMaterial();
-				if(	pMaterial && pMaterial->GetType()->IsTranslucent()==false &&
+				if(	pMaterial && cMaterial::IsTranslucent(pMaterial->Descriptor().m_id)==false &&
 					(mbCheckShadow==false || pSubMeshEnt->GetRenderFlagBit(eRenderableFlag_ShadowCaster)) )
 				{
 					bFoundSolid = true;
