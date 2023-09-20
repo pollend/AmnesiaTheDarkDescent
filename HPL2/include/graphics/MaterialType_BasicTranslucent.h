@@ -26,35 +26,7 @@
 namespace hpl
 {
 
-    class cMaterialType_Translucent_Vars : public iMaterialVars
-    {
-    public:
-        cMaterialType_Translucent_Vars()
-            : mbRefraction(false)
-            , mbRefractionEdgeCheck(true)
-            , mbRefractionNormals(false)
-            , mfRefractionScale(0.1f)
-            , mfFrenselBias(0.2f)
-            , mfFrenselPow(8.0f)
-        {
-        }
-        ~cMaterialType_Translucent_Vars()
-        {
-        }
-
-        bool mbRefraction;
-        bool mbRefractionEdgeCheck;
-        bool mbRefractionNormals;
-        float mfRefractionScale;
-        float mfFrenselBias;
-        float mfFrenselPow;
-        float mfRimLightMul;
-        float mfRimLightPow;
-        bool mbAffectedByLightLevel;
-    };
-
-    //--------------------------------------------------
-
+    //DEPRECATED
     class cMaterialType_Translucent : public iMaterialType
     {
         HPL_RTTI_IMPL_CLASS(iMaterialType, cMaterialType_Translucent, "{cc03a5ac-9137-4e94-ab6b-095a6c9f0085}")

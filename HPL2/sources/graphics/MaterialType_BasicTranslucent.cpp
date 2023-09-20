@@ -102,9 +102,7 @@ namespace hpl
 
     iMaterialVars* cMaterialType_Translucent::CreateSpecificVariables()
     {
-        cMaterialType_Translucent_Vars* pVars = hplNew(cMaterialType_Translucent_Vars, ());
-
-        return pVars;
+        return nullptr;
     }
 
     //--------------------------------------------------------------------------

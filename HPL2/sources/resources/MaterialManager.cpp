@@ -47,32 +47,6 @@ namespace hpl {
         static IndexPool m_MaterialIndexPool(cMaterial::MaxMaterialID);
     }
 
-    class cMaterialManagerBlankMaterialType_Vars : public iMaterialVars {};
-
-    class cMaterialManagerBlankMaterialType : public iMaterialType {
-    public:
-        cMaterialManagerBlankMaterialType()
-            : iMaterialType(NULL, NULL) {
-        }
-
-        void LoadData() override {
-        }
-        void DestroyData() override {
-        }
-
-        iMaterialVars* CreateSpecificVariables() override {
-            return hplNew(cMaterialManagerBlankMaterialType_Vars, ());
-        }
-        void LoadVariables(cMaterial* apMaterial, cResourceVarsObject* apVars) override {
-        }
-        void GetVariableValues(cMaterial* apMaterial, cResourceVarsObject* apVars) override {
-        }
-
-        void CompileMaterialSpecifics(cMaterial* apMaterial) {
-        }
-    };
-
-    cMaterialManagerBlankMaterialType gBlankMaterialType;
     cMaterialManager::cMaterialManager(cGraphics* apGraphics, cResources* apResources)
         : iResourceManager(apResources->GetFileSearcher(), apResources->GetLowLevel(), apResources->GetLowLevelSystem()) {
         mpGraphics = apGraphics;
@@ -214,7 +188,7 @@ namespace hpl {
     //-----------------------------------------------------------------------
 
     cMaterial* cMaterialManager::CreateCustomMaterial(const tString& asName, iMaterialType* apMaterialType) {
-        cMaterial* pMat = hplNew(cMaterial, (asName, cString::To16Char(asName), mpGraphics, mpResources));
+        cMaterial* pMat = hplNew(cMaterial, (asName, cString::To16Char(asName), mpResources));
         pMat->IncUserCount();
         AddResource(pMat);
         return pMat;
@@ -251,7 +225,7 @@ namespace hpl {
         /////////////////////////////
         // Make a "fake" material, with a blank type
         if (mbDisableRenderDataLoading) {
-            cMaterial* pMat = hplNew(cMaterial, (asName, asPath, mpGraphics, mpResources));
+            cMaterial* pMat = hplNew(cMaterial, (asName, asPath, mpResources));
             pMat->SetPhysicsMaterial(sPhysicsMatName);
 
             mpResources->DestroyXmlDocument(pDoc);
@@ -270,7 +244,7 @@ namespace hpl {
             LOGF(eERROR, "Invalid material type %s", sType.c_str());
             return NULL;
         }
-        cMaterial* pMat = new cMaterial(asName, asPath, mpGraphics, mpResources);
+        cMaterial* pMat = new cMaterial(asName, asPath, mpResources);
         pMat->SetDepthTest(bDepthTest);
         pMat->SetPhysicsMaterial(sPhysicsMatName);
 
@@ -482,7 +456,6 @@ namespace hpl {
 
         mpResources->DestroyXmlDocument(pDoc);
 
-        pMat->Compile();
 
         return pMat;
     }

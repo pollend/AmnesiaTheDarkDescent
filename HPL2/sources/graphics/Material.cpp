@@ -40,25 +40,14 @@
 namespace hpl {
 
     cMaterial::cMaterial(
-        const tString& asName, const tWString& asFullPath, cGraphics* apGraphics, cResources* apResources)
-        : iResourceBase(asName, asFullPath, 0) {
+        const tString& asName, const tWString& asFullPath, cResources* apResources)
+        : iResourceBase(asName, asFullPath, 0),
+          mpResources(apResources) {
         m_generation = rand();
         m_descriptor.m_id = MaterialID::Unknown;
-        mpGraphics = apGraphics;
-        mpResources = apResources;
-
-        mfAnimTime = 0;
-        m_mtxUV = cMatrixf::Identity;
-
-        mbDepthTest = true;
     }
-
-    //-----------------------------------------------------------------------
 
     cMaterial::~cMaterial() {
-    }
-
-    void cMaterial::Compile() {
     }
 
     void cMaterial::SetTextureAnisotropy(float afx) {

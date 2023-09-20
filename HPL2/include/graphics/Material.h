@@ -39,11 +39,11 @@ namespace hpl {
 	class iMaterialType;
 	class cResourceVarsObject;
 
-
-    struct MaterialDecal {
+    struct MaterialDecal final {
         eMaterialBlendMode m_blend;
     };
-    struct MaterialDiffuseSolid {
+
+    struct MaterialDiffuseSolid final {
         float m_heightMapScale;
         float m_heightMapBias;
         float m_frenselBias;
@@ -51,7 +51,7 @@ namespace hpl {
         bool m_alphaDissolveFilter;
     };
 
-    struct MaterialTranslucent {
+    struct MaterialTranslucent final {
         eMaterialBlendMode m_blend;
 
         bool m_isAffectedByLightLevel;
@@ -68,7 +68,7 @@ namespace hpl {
     };
 
     // always has refraction if enabled
-    struct MaterialWater {
+    struct MaterialWater final {
         bool m_hasReflection;
         bool m_isLargeSurface;
         bool m_worldReflectionOcclusionTest; //DEPRECATED
@@ -102,13 +102,7 @@ namespace hpl {
         };
     };
 
-	class iMaterialVars
-	{
-	public:
-		virtual ~iMaterialVars(){}
-	};
-
-	class cMaterialUvAnimation
+	class cMaterialUvAnimation final
 	{
 	public:
 		cMaterialUvAnimation(eMaterialUvAnimation aType, float afSpeed, float afAmp, eMaterialAnimationAxis aAxis) :
@@ -173,10 +167,9 @@ namespace hpl {
 			MaterialMeta { MaterialID::Decal,"decal", std::span(DecalMaterialUsedTextures)}
 		};
 
-		cMaterial(const tString& asName, const tWString& asFullPath, cGraphics *apGraphics, cResources *apResources);
+		cMaterial(const tString& asName, const tWString& asFullPath, cResources *apResources);
 		virtual ~cMaterial();
 
-		void Compile();
 		void SetImage(eMaterialTexture aType, iResourceBase *apTexture);
 		Image* GetImage(eMaterialTexture aType);
 		const Image* GetImage(eMaterialTexture aType) const;
@@ -240,22 +233,21 @@ namespace hpl {
         eTextureWrap m_textureWrap = eTextureWrap::eTextureWrap_Clamp;
         eTextureFilter m_textureFilter = eTextureFilter::eTextureFilter_Nearest;
 
-		cGraphics *mpGraphics;
 		cResources *mpResources;
 	    MaterialDescriptor m_descriptor;
 		IndexPoolHandle m_handle;
 
 		std::array<ImageResourceWrapper, eMaterialTexture_LastEnum> m_image = {ImageResourceWrapper()};
 		std::vector<cMaterialUvAnimation> mvUvAnimations;
-		cMatrixf m_mtxUV;
+		cMatrixf m_mtxUV = cMatrixf::Identity;
 		tString msPhysicsMaterial;
 
 		uint32_t m_generation = 0; // used to check if the material has changed since last frame
-		float mfAnimTime;
+		float mfAnimTime = 0;
 		int mlRenderFrameCount = -1;
 
 		bool mbAutoDestroyTextures = true;
-		bool mbDepthTest;
+		bool mbDepthTest = true;
 
 	};
 

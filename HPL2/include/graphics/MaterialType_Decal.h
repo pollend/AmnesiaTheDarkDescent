@@ -23,17 +23,7 @@
 
 namespace hpl {
 
-	//---------------------------------------------------
-	// Decal
-	//---------------------------------------------------
-
-	class cMaterialType_Decal_Vars : public iMaterialVars
-	{
-	public:
-		cMaterialType_Decal_Vars(){}
-		~cMaterialType_Decal_Vars(){}
-   	};
-
+    // DEPRECATED
 	class cMaterialType_Decal : public iMaterialType
 	{
 		HPL_RTTI_IMPL_CLASS(iMaterialType, cMaterialType_Decal, "{c0c72fe2-2cb7-4b77-a49b-65660b4dfe45}")

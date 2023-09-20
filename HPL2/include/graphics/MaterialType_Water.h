@@ -23,38 +23,6 @@
 
 namespace hpl {
 
-
-  	namespace material::water
-    {
-		enum WaterVariant: uint32_t
-		{
-			None = 0,
-			UseReflection = 0x00001,
-			UseFog = 0x00002,
-			UseCubeMapReflection = 0x00004,
-			UseRefraction = 0x00008
-		};
-	}
-
-	class cMaterialType_Water_Vars : public iMaterialVars
-	{
-	public:
-		cMaterialType_Water_Vars() : mbHasReflection(true), mfRefractionScale(0.1f), mfFrenselBias(0.2f), mfFrenselPow(8.0f){}
-		~cMaterialType_Water_Vars(){}
-
-        bool mbHasReflection;
-		float mfRefractionScale;
-		float mfFrenselBias;
-		float mfFrenselPow;
-		float mfReflectionFadeStart;
-		float mfReflectionFadeEnd;
-		float mfWaveSpeed;
-		float mfWaveAmplitude;
-		float mfWaveFreq;
-	};
-
-	//-----------------------------------------------------
-
 	class cMaterialType_Water : public iMaterialType
 	{
 		HPL_RTTI_IMPL_CLASS(iMaterialType, cMaterialType_Decal, "{cc45d7fd-aa4e-4a99-92fa-dc0c8b65bdf3}")
