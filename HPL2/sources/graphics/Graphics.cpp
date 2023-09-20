@@ -84,7 +84,6 @@ namespace hpl {
 			pType->DestroyData();
 		}
 		STLMapDeleteAll(m_mapMaterialTypes);
-		cMaterial::SetDestroyTypeSpecifics(false); //Material types are destroyed! Remaining materials may not call!
 
 		STLDeleteAll(mvPostEffectTypes);
 

@@ -21,12 +21,13 @@
 
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Image.h"
+#include "graphics/MaterialResource.h"
 #include "system/LowLevelSystem.h"
 #include "system/String.h"
 
+#include "resources/ImageManager.h"
 #include "resources/Resources.h"
 #include "resources/TextureManager.h"
-#include "resources/ImageManager.h"
 
 #include "graphics/MaterialType.h"
 #include "graphics/Renderable.h"
@@ -34,292 +35,225 @@
 #include "math/Math.h"
 #include <utility>
 
-
-
 #include "tinyimageformat_query.h"
 
 namespace hpl {
 
-	bool cMaterial::mbDestroyTypeSpecifics = true;
-
-	cMaterial::cMaterial(const tString& asName, const tWString& asFullPath, cGraphics *apGraphics, cResources *apResources, iMaterialType *apType)
-		: iResourceBase(asName, asFullPath, 0)
-	{
-        m_version = rand();
-		mpGraphics = apGraphics;
-		mpResources = apResources;
-
-		mpType = NULL;
-		mpVars = NULL;
-		SetType(apType);
-
-		mbAutoDestroyTextures = true;
-
-		mlRenderFrameCount = -1;
-
-		mbHasRefraction = false;
-		mlRefractionTextureUnit =0;
-		mbUseRefractionEdgeCheck = false;
-
-		mbHasWorldReflection = false;
-		mlWorldReflectionTextureUnit =0;
-		mbWorldReflectionOcclusionTest = true;
-		mfMaxReflectionDistance = 0;
-
-		//mbHasTranslucentIllumination = false; //If the material is translucent and also need an extra additive pass.
-
-		mbLargeTransperantSurface = false;
-
-		mbUseAlphaDissolveFilter = false;
-
-		mbAffectedByFog = true;
-
-		for(int i=0; i<eMaterialRenderMode_LastEnum; ++i)
-		{
-			mbHasSpecificSettings[i] = false;
-			mbHasObjectSpecificsSettings[i] = false;
-		}
-
-		mfAnimTime = 0;
-		m_mtxUV = cMatrixf::Identity;
-		mbHasUvAnimation = false;
-
-
-		///////////////////////
-		//Set up depending in type
-		if(mpType->IsTranslucent())
-		{
-			mBlendMode = eMaterialBlendMode_Add;
-		}
-		else
-		{
-			mBlendMode = eMaterialBlendMode_None;
-		}
-		mAlphaMode = eMaterialAlphaMode_Solid;
-		mbDepthTest = true;
-
-	}
-
-	//-----------------------------------------------------------------------
-
-	cMaterial::~cMaterial()
-	{
-		if(mpVars) {
-			hplDelete(mpVars);
-		}
-	}
-
-	void cMaterial::SetType(iMaterialType* apType)
-	{
-		if(mpType == apType) {
-			return;
-		}
-
-		mpType = apType;
-
-		if(mpVars) {
-			hplDelete(mpVars);
-		}
-		if(mpType) {
-			mpVars = mpType->CreateSpecificVariables();
-		}
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cMaterial::Compile()
-	{
-		for(int i=0; i<eMaterialRenderMode_LastEnum; ++i)
-		{
-			mbHasSpecificSettings[i] = false;
-			mbHasObjectSpecificsSettings[i] = false;
-		}
-
-		mpType->CompileMaterialSpecifics(this);
-		UpdateFlags();
-	}
-
-    void cMaterial::SetTextureAnisotropy(float afx) {
-        if(afx >= 16.0f) {
-            m_antistropy = Antistropy_16;
-        } else if(afx >= 8.0f) {
-            m_antistropy = Antistropy_8;
-        } else {
-            m_antistropy = Antistropy_None ;
-        }
-        Dirty();
+    cMaterial::cMaterial(
+        const tString& asName, const tWString& asFullPath, cResources* apResources)
+        : iResourceBase(asName, asFullPath, 0),
+          mpResources(apResources) {
+        m_generation = rand();
+        m_descriptor.m_id = MaterialID::Unknown;
     }
 
-	void cMaterial::UpdateFlags() {
-		const auto alphaMapImage = GetImage(eMaterialTexture_Alpha);
-		const auto heightMapImage = GetImage(eMaterialTexture_Height);
-	    m_info.m_data.m_common.m_materialConfig =
-					(GetImage(eMaterialTexture_Diffuse) ? EnableDiffuse: 0) |
-					(GetImage(eMaterialTexture_NMap) ? EnableNormal: 0) |
- 					(GetImage(eMaterialTexture_Specular) ? EnableSpecular: 0) |
-					(alphaMapImage ? EnableAlpha: 0) |
-					(heightMapImage ? EnableHeight: 0) |
-					(GetImage(eMaterialTexture_Illumination) ? EnableIllumination: 0) |
-					(GetImage(eMaterialTexture_CubeMap) ? EnableCubeMap: 0) |
-					(GetImage(eMaterialTexture_DissolveAlpha) ? EnableDissolveAlpha: 0) |
-					(GetImage(eMaterialTexture_CubeMapAlpha) ? EnableCubeMapAlpha: 0) |
-					(m_info.m_alphaDissolveFilter ? UseDissolveFilter: 0);
-		switch(m_info.m_id) {
-			case MaterialID::SolidDiffuse: {
-				m_info.m_data.m_common.m_materialConfig |=
-					((alphaMapImage && TinyImageFormat_ChannelCount(static_cast<TinyImageFormat>(alphaMapImage->GetTexture().m_handle->mFormat)) == 1) ? IsAlphaSingleChannel: 0) |
-					((heightMapImage && TinyImageFormat_ChannelCount(static_cast<TinyImageFormat>(heightMapImage->GetTexture().m_handle->mFormat)) == 1) ? IsHeightMapSingleChannel: 0);
-				break;
-			}
-			case MaterialID::Translucent: {
-				m_info.m_data.m_common.m_materialConfig |=
-					(HasRefraction() ? UseRefractionNormals: 0)  |
-					(IsRefractionEdgeCheck() ? UseRefractionEdgeCheck: 0);
-			    break;
-			}
-			default:
-				break;
-		}
-	}
+    cMaterial::~cMaterial() {
+    }
 
-	void cMaterial::SetImage(eMaterialTexture aType, iResourceBase *apTexture)
-	{
-		// increase version number to dirty material
-		UpdateFlags();
-		m_image[aType].SetAutoDestroyResource(false);
-		if(apTexture) {
-			ASSERT(TypeInfo<Image>().IsType(*apTexture) || TypeInfo<AnimatedImage>().IsType(*apTexture) && "cMaterial::SetImage: apTexture is not an Image");
-			m_image[aType] = std::move(ImageResourceWrapper(mpResources->GetTextureManager(), apTexture, mbAutoDestroyTextures));
-		} else {
-			m_image[aType] = ImageResourceWrapper();
-		}
-        Dirty();
-	}
+    void cMaterial::SetTextureAnisotropy(float afx) {
+        if (afx >= 16.0f) {
+            m_antistropy = Antistropy_16;
+        } else if (afx >= 8.0f) {
+            m_antistropy = Antistropy_8;
+        } else {
+            m_antistropy = Antistropy_None;
+        }
+        IncreaseGeneration();
+    }
 
-	Image* cMaterial::GetImage(eMaterialTexture aType)
-	{
-		return m_image[aType].GetImage();
-	}
+    eMaterialBlendMode cMaterial::GetBlendMode() const {
+        // for water we enforce a blend mode
+        switch (m_descriptor.m_id) {
+        case MaterialID::Translucent:
+            return m_descriptor.m_translucent.m_blend;
+        case MaterialID::Decal:
+            return m_descriptor.m_decal.m_blend;
+        default:
+            break;
+        }
+        ASSERT(false && "material type does not have a blend mode");
+        return eMaterialBlendMode_LastEnum;
+    }
+    eMaterialAlphaMode cMaterial::GetAlphaMode() const {
+        switch (m_descriptor.m_id) {
+        case MaterialID::SolidDiffuse:
+            if (GetImage(eMaterialTexture_Alpha)) {
+                return eMaterialAlphaMode_Trans;
+            }
+            break;
+        default:
+            break;
+        }
+        return eMaterialAlphaMode_Solid;
+    }
+    bool cMaterial::IsAffectedByLightLevel() const {
+        switch (m_descriptor.m_id) {
+        case MaterialID::Translucent:
+            return m_descriptor.m_translucent.m_isAffectedByLightLevel;
+        default:
+            break;
+        }
 
-	cResourceVarsObject* cMaterial::GetVarsObject()
-	{
-		cResourceVarsObject* pVarsObject = hplNew(cResourceVarsObject,());
-		mpType->GetVariableValues(this, pVarsObject);
+        return false;
+    }
+    bool cMaterial::HasRefraction() const {
+        switch (m_descriptor.m_id) {
+        case MaterialID::Translucent:
+            return m_descriptor.m_translucent.m_hasRefraction;
+        case MaterialID::Water:
+            return true;
+        default:
+            break;
+        }
+        return false;
+    }
+    bool cMaterial::HasReflection() const {
+        switch (m_descriptor.m_id) {
+        case MaterialID::Water:
+            return m_descriptor.m_water.m_hasReflection;
+        default:
+            break;
+        }
+        return false;
+    }
+    bool cMaterial::HasWorldReflection() const {
+        return m_descriptor.m_id == MaterialID::Water &&
+            HasReflection() &&
+            !GetImage(eMaterialTexture_CubeMap);
+    }
+    bool cMaterial::GetLargeTransperantSurface() const {
+        switch (m_descriptor.m_id) {
+        case MaterialID::Water:
+            return m_descriptor.m_water.m_isLargeSurface;
+        default:
+            break;
+        }
+        return false;
+    }
+    float cMaterial::GetMaxReflectionDistance() const {
+        switch (m_descriptor.m_id) {
+        case MaterialID::Water:
+            return m_descriptor.m_water.m_reflectionFadeEnd;
+        default:
+            break;
+        }
+        return 0.0f;
+    }
 
-		return pVarsObject;
-	}
+    void cMaterial::SetImage(eMaterialTexture aType, iResourceBase* apTexture) {
+        // increase version number to dirty material
+        m_image[aType].SetAutoDestroyResource(false);
+        if (apTexture) {
+            ASSERT(
+                TypeInfo<Image>().IsType(*apTexture) ||
+                TypeInfo<AnimatedImage>().IsType(*apTexture) && "cMaterial::SetImage: apTexture is not an Image");
+            m_image[aType] = std::move(ImageResourceWrapper(mpResources->GetTextureManager(), apTexture, mbAutoDestroyTextures));
+        } else {
+            m_image[aType] = ImageResourceWrapper();
+        }
+        IncreaseGeneration();
+    }
 
-	void cMaterial::LoadVariablesFromVarsObject(cResourceVarsObject* apVarsObject)
-	{
-		mpType->LoadVariables(this, apVarsObject);
-	}
+    Image* cMaterial::GetImage(eMaterialTexture aType) {
+        return m_image[aType].GetImage();
+    }
 
-	void cMaterial::SetBlendMode(eMaterialBlendMode aBlendMode)
-	{
-		if(mpType->IsTranslucent()==false) return;
+    const Image* cMaterial::GetImage(eMaterialTexture aType) const {
+        return m_image[aType].GetImage();
+    }
 
-		mBlendMode = aBlendMode;
-	}
+    void cMaterial::SetAutoDestroyTextures(bool abX) {
+        mbAutoDestroyTextures = abX;
+        for (auto& image : m_image) {
+            image.SetAutoDestroyResource(abX);
+        }
+    }
 
-	void cMaterial::SetAlphaMode(eMaterialAlphaMode aAlphaMode)
-	{
-		//if(mpType->IsTranslucent()) return;
+   // cResourceVarsObject* cMaterial::GetVarsObject() {
+   //     cResourceVarsObject* pVarsObject = hplNew(cResourceVarsObject, ());
+   //     mpType->GetVariableValues(this, pVarsObject);
 
-		mAlphaMode = aAlphaMode;
-	}
+   //     return pVarsObject;
+   // }
 
-	void cMaterial::SetDepthTest(bool abDepthTest)
-	{
-		if(mpType->IsTranslucent()==false) return;
+   // void cMaterial::LoadVariablesFromVarsObject(cResourceVarsObject* apVarsObject) {
+   //     mpType->LoadVariables(this, apVarsObject);
+   // }
 
-		mbDepthTest = abDepthTest;
-	}
+    void cMaterial::setTextureFilter(eTextureFilter filter) {
+        m_textureFilter = filter;
+        IncreaseGeneration();
+    }
 
-	//-----------------------------------------------------------------------
+    void cMaterial::setTextureWrap(eTextureWrap wrap) {
+        m_textureWrap = wrap;
+        IncreaseGeneration();
+    }
 
-	void cMaterial::UpdateBeforeRendering(float afTimeStep)
-	{
-		if(mbHasUvAnimation) UpdateAnimations(afTimeStep);
-	}
+    void cMaterial::SetDepthTest(bool abDepthTest) {
+        mbDepthTest = abDepthTest;
+        IncreaseGeneration();
+    }
 
-	//-----------------------------------------------------------------------
+    static cVector3f GetAxisVector(eMaterialAnimationAxis aAxis) {
+        switch (aAxis) {
+        case eMaterialAnimationAxis_X:
+            return cVector3f(1, 0, 0);
+        case eMaterialAnimationAxis_Y:
+            return cVector3f(0, 1, 0);
+        case eMaterialAnimationAxis_Z:
+            return cVector3f(0, 0, 1);
+        default:
+            break;
+        }
+        return 0;
+    }
 
-	void cMaterial::AddUvAnimation(eMaterialUvAnimation aType, float afSpeed, float afAmp, eMaterialAnimationAxis aAxis)
-	{
-		mvUvAnimations.push_back(cMaterialUvAnimation(aType, afSpeed, afAmp, aAxis));
+    void cMaterial::UpdateBeforeRendering(float afTimeStep) {
+        if(!mvUvAnimations.empty()) {
+            m_mtxUV = cMatrixf::Identity;
+            for (size_t i = 0; i < mvUvAnimations.size(); ++i) {
+                cMaterialUvAnimation* pAnim = &mvUvAnimations[i];
+                switch(pAnim->mType) {
+                    case eMaterialUvAnimation_Translate: {
+                        cVector3f vDir = GetAxisVector(pAnim->mAxis);
+                        cMatrixf mtxAdd = cMath::MatrixTranslate(vDir * pAnim->mfSpeed * mfAnimTime);
+                        m_mtxUV = cMath::MatrixMul(m_mtxUV, mtxAdd);
+                        break;
+                    }
+                    case eMaterialUvAnimation_Sin: {
+                        cVector3f vDir = GetAxisVector(pAnim->mAxis);
+                        cMatrixf mtxAdd = cMath::MatrixTranslate(vDir * sin(mfAnimTime * pAnim->mfSpeed) * pAnim->mfAmp);
+                        m_mtxUV = cMath::MatrixMul(m_mtxUV, mtxAdd);
+                        break;
+                    }
+                    case eMaterialUvAnimation_Rotate: {
+                        cVector3f vDir = GetAxisVector(pAnim->mAxis);
 
-		mbHasUvAnimation = true;
-	}
+                        cMatrixf mtxRot = cMath::MatrixRotate(vDir * pAnim->mfSpeed * mfAnimTime, eEulerRotationOrder_XYZ);
+                        m_mtxUV = cMath::MatrixMul(m_mtxUV, mtxRot);
+                        break;
+                    }
+                    default: {
+                        ASSERT(false && "Unknown Animation Type");
+                        break;
+                    }
+                }
+            }
+            IncreaseGeneration();
+            mfAnimTime += afTimeStep;
+        }
+    }
 
-	//-----------------------------------------------------------------------
+    void cMaterial::AddUvAnimation(eMaterialUvAnimation aType, float afSpeed, float afAmp, eMaterialAnimationAxis aAxis) {
+        mvUvAnimations.push_back(cMaterialUvAnimation(aType, afSpeed, afAmp, aAxis));
+    }
 
-	void cMaterial::ClearUvAnimations()
-	{
-		mvUvAnimations.clear();
+    //-----------------------------------------------------------------------
 
-		mbHasUvAnimation = false;
+    void cMaterial::ClearUvAnimations() {
+        mvUvAnimations.clear();
+        m_mtxUV = cMatrixf::Identity;
+    }
 
-		m_mtxUV = cMatrixf::Identity;
-	}
-
-	static cVector3f GetAxisVector(eMaterialAnimationAxis aAxis)
-	{
-		switch(aAxis)
-		{
-		case eMaterialAnimationAxis_X: return cVector3f(1,0,0);
-		case eMaterialAnimationAxis_Y: return cVector3f(0,1,0);
-		case eMaterialAnimationAxis_Z: return cVector3f(0,0,1);
-		}
-		return 0;
-	}
-
-	void cMaterial::UpdateAnimations(float afTimeStep) {
-		m_mtxUV = cMatrixf::Identity;
-
-        for(size_t i=0; i<mvUvAnimations.size(); ++i)
-		{
-			cMaterialUvAnimation *pAnim = &mvUvAnimations[i];
-
-			///////////////////////////
-			// Translate
-			if(pAnim->mType == eMaterialUvAnimation_Translate)
-			{
-				cVector3f vDir = GetAxisVector(pAnim->mAxis);
-
-				cMatrixf mtxAdd = cMath::MatrixTranslate(vDir * pAnim->mfSpeed * mfAnimTime);
-				m_mtxUV = cMath::MatrixMul(m_mtxUV, mtxAdd);
-			}
-			///////////////////////////
-			// Sin
-			else if(pAnim->mType == eMaterialUvAnimation_Sin)
-			{
-				cVector3f vDir = GetAxisVector(pAnim->mAxis);
-
-				cMatrixf mtxAdd = cMath::MatrixTranslate(vDir * sin(mfAnimTime * pAnim->mfSpeed) * pAnim->mfAmp);
-				m_mtxUV = cMath::MatrixMul(m_mtxUV, mtxAdd);
-			}
-			///////////////////////////
-			// Rotate
-			else if(pAnim->mType == eMaterialUvAnimation_Rotate)
-			{
-				cVector3f vDir = GetAxisVector(pAnim->mAxis);
-
-				cMatrixf mtxRot = cMath::MatrixRotate(vDir * pAnim->mfSpeed * mfAnimTime,eEulerRotationOrder_XYZ);
-				m_mtxUV = cMath::MatrixMul(m_mtxUV, mtxRot);
-			}
-		}
-
-		// auto frame = Interface<ForgeRenderer>::Get()->GetFrame();
-		// auto& handle = m_bufferHandle[frame.m_frameIndex];
-		// BufferUpdateDesc uniformUpdate = { handle.m_handle};
-		// beginUpdateResource(&uniformUpdate);
-		// reinterpret_cast<MaterialCommonBlock*>(uniformUpdate.pMappedData)->m_textureMatrix = cMath::ToForgeMat4(m_mtxUV);
-		// endUpdateResource(&uniformUpdate, nullptr);
-
-		m_version++;
-		mfAnimTime += afTimeStep;
-	}
-
-	//-----------------------------------------------------------------------
-
-}
+} // namespace hpl

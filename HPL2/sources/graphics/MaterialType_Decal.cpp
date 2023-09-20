@@ -59,27 +59,21 @@ namespace hpl {
 
 
     iMaterialVars* cMaterialType_Decal::CreateSpecificVariables() {
-        return hplNew(cMaterialType_Decal_Vars, ());
+        return nullptr;
     }
 
     void cMaterialType_Decal::LoadVariables(cMaterial* apMaterial, cResourceVarsObject* apVars) {
-        cMaterialType_Decal_Vars* pVars = (cMaterialType_Decal_Vars*)apMaterial->GetVars();
-        if (pVars == NULL) {
-            pVars = (cMaterialType_Decal_Vars*)CreateSpecificVariables();
-            apMaterial->SetVars(pVars);
-        }
     }
 
     void cMaterialType_Decal::GetVariableValues(cMaterial* apMaterial, cResourceVarsObject* apVars) {
-        cMaterialType_Decal_Vars* pVars = (cMaterialType_Decal_Vars*)apMaterial->GetVars();
     }
 
     void cMaterialType_Decal::CompileMaterialSpecifics(cMaterial* apMaterial) {
-        cMaterialType_Decal_Vars* pVars = static_cast<cMaterialType_Decal_Vars*>(apMaterial->GetVars());
+        //cMaterialType_Decal_Vars* pVars = static_cast<cMaterialType_Decal_Vars*>(apMaterial->GetVars());
 
-        if (apMaterial->HasUvAnimation()) {
-            apMaterial->SetHasSpecificSettings(eMaterialRenderMode_Diffuse, true);
-        }
+ //       if (apMaterial->HasUvAnimation()) {
+////            apMaterial->SetHasSpecificSettings(eMaterialRenderMode_Diffuse, true);
+ //       }
     }
 
 } // namespace hpl

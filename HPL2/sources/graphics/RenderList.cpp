@@ -327,10 +327,7 @@ namespace hpl {
         ////////////////////////////////////////
         // Update material, if not already done this frame
         cMaterial* pMaterial = apObject->GetMaterial();
-        auto metaInfoIt = pMaterial ? std::find_if(cMaterial::MaterialMetaTable.begin(), cMaterial::MaterialMetaTable.end(), [&](auto& info) {
-            return info.m_id == pMaterial->type().m_id;
-        }) : std::end(cMaterial::MaterialMetaTable);
-
+        const bool isValidMaterial = pMaterial && pMaterial->Descriptor().m_id != MaterialID::Unknown;
         if (pMaterial && pMaterial->GetRenderFrameCount() != iRenderer::GetRenderFrameCount()) {
             pMaterial->SetRenderFrameCount(iRenderer::GetRenderFrameCount());
             pMaterial->UpdateBeforeRendering(m_frameTime);
@@ -346,7 +343,7 @@ namespace hpl {
         ////////////////////////////////////////
         // Update per viewport specific and set amtrix point
         // Skip this for non-decal translucent! This is because the water rendering might mess it up otherwise!
-        if (metaInfoIt == std::end(cMaterial::MaterialMetaTable) || metaInfoIt->m_isTranslucent == false || metaInfoIt->m_isDecal) {
+        if (!isValidMaterial || !cMaterial::IsTranslucent(pMaterial->Descriptor().m_id) || pMaterial->Descriptor().m_id == MaterialID::Decal) {
             // skip rendering if the update return false
             if (apObject->UpdateGraphicsForViewport(m_frustum, m_frameTime) == false) {
                 return;
@@ -362,7 +359,7 @@ namespace hpl {
         ////////////////////////////////////////
         // Calculate the View Z value
         //  For transparent and non decals!
-        if (metaInfoIt != std::end(cMaterial::MaterialMetaTable) && metaInfoIt->m_isTranslucent && metaInfoIt->m_isDecal == false) {
+        if (isValidMaterial && cMaterial::IsTranslucent(pMaterial->Descriptor().m_id) && pMaterial->Descriptor().m_id != MaterialID::Decal) {
             cVector3f vIntersectionPos;
             cBoundingVolume* pBV = apObject->GetBoundingVolume();
 
@@ -408,9 +405,8 @@ namespace hpl {
 
             ////////////////////////
             // Transparent
-            ASSERT(metaInfoIt != std::end(cMaterial::MaterialMetaTable));
-            if (metaInfoIt->m_isTranslucent) {
-                if (metaInfoIt->m_isDecal) {
+            if (cMaterial::IsTranslucent(pMaterial->Descriptor().m_id)) {
+                if (pMaterial->Descriptor().m_id == MaterialID::Decal) {
                     m_decalObjects.push_back(apObject);
                 } else {
                     m_transObjects.push_back(apObject);
