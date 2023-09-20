@@ -2538,6 +2538,14 @@ namespace hpl {
         cMatrixf projectionMat,
         AdditionalLightPassOptions options) {
         uint32_t materialObjectIndex = getDescriptorIndexFromName(m_materialRootSignature.m_handle, "materialRootConstant");
+
+        folly::small_vector<cPlanef, 3> occlusionPlanes;
+        if(apWorld->GetFogActive() && apWorld->GetFogColor().a >= 1.0f && apWorld->GetFogCulling()) {
+            cPlanef fogPlane;
+            fogPlane.FromNormalPoint(apFrustum->GetForward(), apFrustum->GetOrigin() + apFrustum->GetForward() * -apWorld->GetFogEnd());
+            occlusionPlanes.push_back(fogPlane);
+        }
+
         // --------------------------------------------------------------------
         // Render Light Pass
         // --------------------------------------------------------------------
@@ -2646,7 +2654,7 @@ namespace hpl {
                     cFrustum* pLightFrustum = pLightSpot->GetFrustum();
                     std::vector<iRenderable*> shadowCasters;
                     if (castShadow &&
-                        detail::SetupShadowMapRendering(shadowCasters, apWorld, pLightFrustum, pLightSpot, mvCurrentOcclusionPlanes)) {
+                        detail::SetupShadowMapRendering(shadowCasters, apWorld, pLightFrustum, pLightSpot, occlusionPlanes)) {
                         auto findBestShadowMap = [&](eShadowMapResolution resolution, iLight* light) -> cRendererDeferred::ShadowMapData* {
                             auto& shadowMapVec = m_shadowMapData[resolution];
                             uint32_t maxFrameDistance = 0;
@@ -3207,6 +3215,7 @@ namespace hpl {
 
     void cRendererDeferred::cmdPreAndPostZ(
         Cmd* cmd,
+        cWorld* apWorld,
         std::set<iRenderable*>& prePassRenderables,
         const ForgeRenderer::Frame& frame,
         cRenderList& renderList,
@@ -3236,8 +3245,8 @@ namespace hpl {
             eWorldContainerType m_type;
         };
         std::array worldContainers = {
-            RenderableContainer{ mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Dynamic), eWorldContainerType_Dynamic },
-            RenderableContainer{ mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static), eWorldContainerType_Static }
+            RenderableContainer{ apWorld->GetRenderableContainer(eWorldContainerType_Dynamic), eWorldContainerType_Dynamic },
+            RenderableContainer{ apWorld->GetRenderableContainer(eWorldContainerType_Static), eWorldContainerType_Static }
         };
 
         for (auto& container : worldContainers) {
@@ -3948,6 +3957,7 @@ void cRendererDeferred::Draw(
     m_rendererList.BeginAndReset(afFrameTime, apFrustum);
     cmdPreAndPostZ(
         frame.m_cmd,
+        apWorld,
         currentGBuffer.m_preZPassRenderables,
         frame,
         m_rendererList,
@@ -4202,15 +4212,15 @@ void cRendererDeferred::Draw(
         cmdDrawIndexedInstanced(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, fogIndex - offsetIndex, 0, 0);
 
         cmdEndDebugMarker(frame.m_cmd);
-        if (mpCurrentWorld->GetFogActive()) {
+        if (apWorld->GetFogActive()) {
             BufferUpdateDesc updateDesc = { m_fogPass.m_fogFullscreenUniformBuffer[frame.m_frameIndex].m_handle };
             beginUpdateResource(&updateDesc);
             auto* fogData = reinterpret_cast<UniformFullscreenFogData*>(updateDesc.pMappedData);
-            auto fogColor = mpCurrentWorld->GetFogColor();
+            auto fogColor = apWorld->GetFogColor();
             fogData->m_color = float4(fogColor.r, fogColor.g, fogColor.b, fogColor.a);
-            fogData->m_fogStart = mpCurrentWorld->GetFogStart();
-            fogData->m_fogLength = mpCurrentWorld->GetFogEnd() - mpCurrentWorld->GetFogStart();
-            fogData->m_fogFalloffExp = mpCurrentWorld->GetFogFalloffExp();
+            fogData->m_fogStart = apWorld->GetFogStart();
+            fogData->m_fogLength = apWorld->GetFogEnd() - apWorld->GetFogStart();
+            fogData->m_fogFalloffExp = apWorld->GetFogFalloffExp();
             endUpdateResource(&updateDesc, NULL);
 
             cmdBindDescriptorSet(frame.m_cmd, 0, m_fogPass.m_perFrameSet[frame.m_frameIndex]);
@@ -4307,13 +4317,13 @@ void cRendererDeferred::Draw(
             const bool isRefraction = iRenderer::GetRefractionEnabled() && pMaterial->HasRefraction();
             const bool isReflection = pMaterial->HasWorldReflection() && translucencyItem->GetRenderType() == eRenderableType_SubMesh &&
                 mpCurrentSettings->mbRenderWorldReflection;
-            const bool isFogActive = mpCurrentWorld->GetFogActive();
+            const bool isFogActive = apWorld->GetFogActive();
             const bool isParticleEmitter = TypeInfo<iParticleEmitter>::IsSubtype(*translucencyItem);
             const auto cubeMap = pMaterial->GetImage(eMaterialTexture_CubeMap);
             uint32_t reflectionBufferIndex = 0;
             cMatrixf* pMatrix = translucencyItem->GetModelMatrix(apFrustum);
 
-            if (translucencyItem->UpdateGraphicsForViewport(apFrustum, mfCurrentFrameTime) == false) {
+            if (translucencyItem->UpdateGraphicsForViewport(apFrustum, afFrameTime) == false) {
                 continue;
             }
 
@@ -4405,6 +4415,7 @@ void cRendererDeferred::Draw(
                         m_reflectionRendererList.BeginAndReset(afFrameTime, &reflectFrustum);
                         cmdPreAndPostZ(
                             resolveReflectionBuffer.m_cmd.m_handle,
+                            apWorld,
                             resolveReflectionBuffer.m_buffer.m_preZPassRenderables,
                             frame,
                             m_reflectionRendererList,

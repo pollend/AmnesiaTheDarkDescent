@@ -184,13 +184,6 @@ namespace hpl {
             cRenderSettings* apSettings,
             bool abSendFrameBufferToPostEffects){};
 
-        [[deprecated("Use Draw instead")]] void Render(
-            float afFrameTime,
-            cFrustum* apFrustum,
-            cWorld* apWorld,
-            cRenderSettings* apSettings,
-            bool abSendFrameBufferToPostEffects);
-
         void Update(float afTimeStep);
 
         inline static int GetRenderFrameCount()  { return mlRenderFrameCount;}
@@ -216,9 +209,6 @@ namespace hpl {
         static void SetParallaxEnabled(bool abX) { mbParallaxEnabled = abX;}
         static bool GetParallaxEnabled(){ return mbParallaxEnabled;}
 
-        static void SetReflectionSizeDiv(int alX) { mlReflectionSizeDiv = alX;}
-        static int GetReflectionSizeDiv(){ return mlReflectionSizeDiv;}
-
         static void SetRefractionEnabled(bool abX) { mbRefractionEnabled = abX;}
         static bool GetRefractionEnabled(){ return mbRefractionEnabled;}
     protected:
@@ -230,24 +220,18 @@ namespace hpl {
         bool mbSetupOcclusionPlaneForFog;
 
         float mfCurrentFrameTime;
-        cWorld *mpCurrentWorld;
         cRenderSettings *mpCurrentSettings;
 
 
         static int mlRenderFrameCount;
         float mfTimeCount;
 
-        std::vector<cPlanef> mvCurrentOcclusionPlanes;
-
         static eShadowMapQuality mShadowMapQuality;
         static eShadowMapResolution mShadowMapResolution;
         static eParallaxQuality mParallaxQuality;
         static bool mbParallaxEnabled;
-        static int mlReflectionSizeDiv;
         static bool mbRefractionEnabled;
     };
-
-    //---------------------------------------------
 
     class cRendererCallbackFunctions
     {
@@ -256,17 +240,11 @@ namespace hpl {
             m_viewport(viewport),
             mpRenderer(apRenderer) {}
 
-        cRenderSettings* GetSettings(){ return mpRenderer->mpCurrentSettings;}
-        cFrustum* GetFrustum(){ return mpRenderer->mpCurrentFrustum;}
-        inline cViewport& GetViewport(){ return m_viewport; }
-
         iLowLevelGraphics *GetLowLevelGfx(){ return mpRenderer->mpLowLevelGraphics;}
 
     private:
         iRenderer *mpRenderer;
         cViewport& m_viewport;
     };
-
-    //---------------------------------------------
 
 };

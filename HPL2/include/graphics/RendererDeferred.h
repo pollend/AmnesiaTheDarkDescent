@@ -427,6 +427,7 @@ namespace hpl {
         };
         void cmdPreAndPostZ(
             Cmd* cmd,
+            cWorld* apWorld,
             std::set<iRenderable*>& prePassRenderables,
             const ForgeRenderer::Frame& frame,
             cRenderList& renderList,
@@ -596,7 +597,6 @@ namespace hpl {
 
         SharedPipeline m_zPassShadowPipelineCW;
         SharedPipeline m_zPassShadowPipelineCCW;
-
 
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_objectUniformBuffer;
         struct MaterialPassDescriptorSet {

@@ -67,7 +67,6 @@ namespace hpl
     eShadowMapResolution iRenderer::mShadowMapResolution = eShadowMapResolution_High;
     eParallaxQuality iRenderer::mParallaxQuality = eParallaxQuality_Low;
     bool iRenderer::mbParallaxEnabled = true;
-    int iRenderer::mlReflectionSizeDiv = 2;
     bool iRenderer::mbRefractionEnabled = true;
 
     //-----------------------------------------------------------------------
@@ -76,7 +75,6 @@ namespace hpl
 
     namespace rendering::detail
     {
-
 
         cRect2l GetClipRectFromObject(iRenderable* apObject, float afPaddingPercent, cFrustum* apFrustum, const cVector2l& avScreenSize, float afHalfFovTan) {
             cBoundingVolume* pBV = apObject->GetBoundingVolume();
@@ -385,15 +383,6 @@ namespace hpl
 
     }
 
-    void iRenderer::Render(
-        float afFrameTime,
-        cFrustum* apFrustum,
-        cWorld* apWorld,
-        cRenderSettings* apSettings,
-        bool abSendFrameBufferToPostEffects)
-    {
-        BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects);
-    }
 
     void iRenderer::Update(float afTimeStep)
     {
@@ -411,22 +400,7 @@ namespace hpl
         //////////////////////////////////////////
         // Set up variables
         mfCurrentFrameTime = afFrameTime;
-        mpCurrentWorld = apWorld;
         mpCurrentSettings = apSettings;
-        mpCurrentFrustum = apFrustum;
-        ////////////////////////////////
-        // Set up near plane variables
-
-        /////////////////////////////////////////////
-        // Setup occlusion planes
-        mvCurrentOcclusionPlanes.resize(0);
-        // Fog
-        if (mbSetupOcclusionPlaneForFog && apWorld->GetFogActive() && apWorld->GetFogColor().a >= 1.0f && apWorld->GetFogCulling())
-        {
-            cPlanef fogPlane;
-            fogPlane.FromNormalPoint(apFrustum->GetForward(), apFrustum->GetOrigin() + apFrustum->GetForward() * -apWorld->GetFogEnd());
-            mvCurrentOcclusionPlanes.push_back(fogPlane);
-        }
     }
 
 } // namespace hpl

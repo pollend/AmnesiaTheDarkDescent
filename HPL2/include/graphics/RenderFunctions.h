@@ -40,7 +40,6 @@ namespace hpl {
 	protected:
 		cGraphics *mpGraphics;
 		iLowLevelGraphics *mpLowLevelGraphics;
-		cFrustum *mpCurrentFrustum;
 	};
 
 	//---------------------------------------------
