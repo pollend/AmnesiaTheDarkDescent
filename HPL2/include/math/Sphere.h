@@ -1,9 +1,7 @@
 #pragma once
 
 #include "Common_3/Utilities/Math/MathTypes.h"
-#include "Common_3/Utilities/ThirdParty/OpenSource/ModifiedSonyMath/sse/vectormath.hpp"
 #include "FixPreprocessor.h"
-
 
 namespace hpl::math {
     class SphereF {
