@@ -19,13 +19,13 @@
 
 #include "graphics/RendererDeferred.h"
 
-#include "Common_3/Resources/ResourceLoader/Interfaces/IResourceLoader.h"
+
 #include "engine/Event.h"
 #include "engine/Interface.h"
 #include "graphics/ForgeHandles.h"
 #include "graphics/ImmediateDrawBatch.h"
 #include "graphics/MaterialResource.h"
-#include "math/Frustum.h"
+#include "math/cFrustum.h"
 #include "scene/ParticleEmitter.h"
 #include "scene/Viewport.h"
 #include "windowing/NativeWindow.h"
@@ -81,6 +81,8 @@
 #include <unordered_map>
 #include <utility>
 
+#include "Common_3/Utilities/Math/MathTypes.h"
+#include "Common_3/Resources/ResourceLoader/Interfaces/IResourceLoader.h"
 #include "Common_3/Graphics/Interfaces/IGraphics.h"
 #include "FixPreprocessor.h"
 #include <folly/FixedString.h>
@@ -529,7 +531,6 @@ namespace hpl {
         m_hbaoPlusPipeline = std::make_unique<renderer::PassHBAOPlus>();
         ////////////////////////////////////
         // Set up render specific things
-        mbSetupOcclusionPlaneForFog = true;
 
         UVector3 shadowSizes[] = {
             UVector3(128, 128, 1), UVector3(256, 256, 1), UVector3(256, 256, 1), UVector3(512, 512, 1), UVector3(1024, 1024, 1)
@@ -3877,6 +3878,10 @@ void cRendererDeferred::Draw(
     const cMatrixf mainFrustumViewInv = cMath::MatrixInverse(apFrustum->GetViewMatrix());
     const cMatrixf mainFrustumView = apFrustum->GetViewMatrix();
     const cMatrixf mainFrustumProj = apFrustum->GetProjectionMatrix();
+
+    const Matrix4 mainFrustumViewInvMat = inverse(apFrustum->GetViewMat());
+    const Matrix4 mainFrustumViewMat = apFrustum->GetViewMat();
+    const Matrix4 mainFrustumProjMat = apFrustum->GetProjectionMat();
 
     // auto& swapChainImage = frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex];
     auto common = m_boundViewportData.resolve(viewport);

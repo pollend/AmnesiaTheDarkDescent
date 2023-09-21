@@ -28,6 +28,8 @@
 #include "system/Container.h"
 
 #include "math/BoundingVolume.h"
+#include "Common_3/Utilities/Math/MathTypes.h"
+#include "FixPreprocessor.h"
 
 namespace hpl {
 
@@ -72,11 +74,13 @@ namespace hpl {
 
 		cVector3f GetLocalPosition();
 		cMatrixf& GetLocalMatrix();
+		Matrix4 GetLocalMat();
 
 		cVector3f GetWorldPosition();
 		cMatrixf& GetWorldMatrix();
+		Matrix4 GetWorldMat();
 
-		void SetPosition(const cVector3f& avPos);
+        void SetPosition(const cVector3f& avPos);
 		void SetMatrix(const cMatrixf& a_mtxTransform);
 
 		void SetWorldPosition(const cVector3f& avWorldPos);

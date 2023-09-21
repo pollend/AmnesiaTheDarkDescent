@@ -48,6 +48,11 @@ namespace hpl {
 			);
 		}
 
+        static Vector3 ToForgeVec3(const cVector3f& vec) {
+            return Vector3(vec.x, vec.y, vec.z);
+        }
+
+
         static cMatrixf FromForgeMat(const mat4& mat) {
             return cMatrixf(
                     mat[0][0], mat[0][1], mat[0][2], mat[0][3],
@@ -56,6 +61,9 @@ namespace hpl {
                     mat[3][0], mat[3][1], mat[3][2], mat[3][3]);
         }
 
+        static cVector3f FromForgeVector3(const Vector3& v) {
+            return cVector3f(v.getX(), v.getY(), v.getZ());
+        }
 		 //////////////////////////////////////////////////////
 		////////// RANDOM GENERATION ////////////////////////
 		//////////////////////////////////////////////////////

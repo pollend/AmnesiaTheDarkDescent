@@ -83,7 +83,7 @@
 #include "math/MathTypes.h"
 #include "math/Math.h"
 #include "math/BoundingVolume.h"
-#include "math/Frustum.h"
+#include "math/cFrustum.h"
 #include "math/Spring.h"
 #include "math/PidController.h"
 #include "math/CRC.h"

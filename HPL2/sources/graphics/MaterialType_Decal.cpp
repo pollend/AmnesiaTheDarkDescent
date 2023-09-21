@@ -26,7 +26,7 @@
 
 #include "resources/Resources.h"
 
-#include "math/Frustum.h"
+#include "math/cFrustum.h"
 #include "math/Math.h"
 
 #include "graphics/Graphics.h"

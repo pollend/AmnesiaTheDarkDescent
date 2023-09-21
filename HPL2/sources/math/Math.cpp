@@ -19,7 +19,7 @@
 
 #include "math/Math.h"
 
-#include "math/Frustum.h"
+#include "math/cFrustum.h"
 #include "graphics/VertexBuffer.h"
 
 #include "system/LowLevelSystem.h"
@@ -2623,7 +2623,7 @@ namespace hpl {
 
 		mtxOutput.m[2][0] = pC.a;
 		mtxOutput.m[2][1] = pC.b;
-		mtxOutput.m[2][2] = pC.c;// + 1.0f;
+		mtxOutput.m[2][2] = pC.c;
 		mtxOutput.m[2][3] = pC.d;
 
 		return mtxOutput;

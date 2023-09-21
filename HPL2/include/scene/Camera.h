@@ -21,7 +21,7 @@
 #define HPL_CAMERA_H
 
 #include "math/MathTypes.h"
-#include "math/Frustum.h"
+#include "math/cFrustum.h"
 #include "scene/Node3D.h"
 
 namespace hpl {

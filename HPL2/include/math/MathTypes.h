@@ -17,8 +17,7 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef HPL_MATHTYPES_H
-#define HPL_MATHTYPES_H
+#pragma once
 
 #pragma warning( disable : 4996 ) //disable unsafe warning!
 
@@ -174,7 +173,6 @@ namespace hpl {
 
 	};
 
-	//-------------------------------------------
 
 	template <class T> class cPlane {
 	public:
@@ -395,5 +393,3 @@ namespace hpl {
 
 #include "math/Quaternion.h"
 
-
-#endif // HPL_MATHTYPES_H

@@ -30,7 +30,7 @@
 #include "scene/MeshEntity.h"
 #include "scene/SubMeshEntity.h"
 
-#include "math/Frustum.h"
+#include "math/cFrustum.h"
 #include "math/Math.h"
 
 #include <algorithm>
