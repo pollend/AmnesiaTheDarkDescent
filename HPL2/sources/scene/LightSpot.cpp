@@ -23,7 +23,7 @@
 #include "graphics/Image.h"
 #include "graphics/LowLevelGraphics.h"
 #include "impl/tinyXML/tinyxml.h"
-#include "math/Frustum.h"
+#include "math/cFrustum.h"
 #include "math/Math.h"
 #include "resources/Resources.h"
 #include "resources/TextureManager.h"

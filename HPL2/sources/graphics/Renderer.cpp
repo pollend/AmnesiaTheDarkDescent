@@ -371,8 +371,6 @@ namespace hpl
         // Set up the render functions
         SetupRenderFunctions(mpGraphics->GetLowLevel());
 
-        mbSetupOcclusionPlaneForFog = false;
-
         mfTimeCount = 0;
     }
 

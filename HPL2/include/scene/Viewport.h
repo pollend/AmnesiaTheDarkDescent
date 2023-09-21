@@ -29,7 +29,7 @@
 #include "graphics/RenderTarget.h"
 
 #include "gui/GuiTypes.h"
-#include "math/Frustum.h"
+#include "math/cFrustum.h"
 #include "math/MathTypes.h"
 #include "scene/SceneTypes.h"
 #include "windowing/NativeWindow.h"

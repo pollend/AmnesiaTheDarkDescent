@@ -20,10 +20,15 @@
 #ifndef HPL_FRUSTUM_H
 #define HPL_FRUSTUM_H
 
+
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
 #include "system/SystemTypes.h"
 #include "math/BoundingVolume.h"
+#include "math/Math.h"
+
+#include "Common_3/Utilities/Math/MathTypes.h"
+#include <FixPreprocessor.h>
 
 namespace hpl {
 
@@ -31,8 +36,7 @@ namespace hpl {
 	class iRenderableContainerNode;
 	class ImmediateDrawBatch;
 
-	//-----------------------------------------------
-
+    //TODO: replace with a better abstraction
 	class cFrustum
 	{
 	public:
@@ -58,6 +62,10 @@ namespace hpl {
 
 		inline const cMatrixf& GetProjectionMatrix() const { return m_mtxProj;}
 		inline const cMatrixf& GetViewMatrix()const { return m_mtxView;}
+
+		inline const Matrix4 GetProjectionMat() const { return cMath::ToForgeMat4(m_mtxProj.GetTranspose());}
+		inline const Matrix4 GetViewMat()const { return cMath::ToForgeMat4(m_mtxView.GetTranspose());}
+		inline const Matrix4 GetViewpProjectionMat()const { return cMath::ToForgeMat4(m_mtxViewProj.GetTranspose());}
 
 		inline float GetFarPlane()const { return mfFarPlane;}
 		inline float GetNearPlane()const { return mfNearPlane;}

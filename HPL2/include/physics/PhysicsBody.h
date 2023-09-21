@@ -21,6 +21,8 @@
 #define HPL_PHYSICS_BODY_H
 
 #include "graphics/ImmediateDrawBatch.h"
+#include "math/MathTypes.h"
+#include "math/Math.h"
 #include "scene/Entity3D.h"
 #include "graphics/GraphicsTypes.h"
 #include "physics/PhysicsTypes.h"
@@ -119,6 +121,12 @@ namespace hpl {
 		virtual void AddTorque(const cVector3f &avTorque)=0;
 		virtual void AddImpulse(const cVector3f &avImpulse)=0;
 		virtual void AddImpulseAtPosition(const cVector3f &avImpulse, const cVector3f &avPos)=0;
+
+		void AddForce(const Vector3& avForce) { AddForce(hpl::cMath::FromForgeVector3(avForce));}
+		void AddForceAtPosition(const Vector3 &avForce, const Vector3 &avPos) { AddForceAtPosition(cMath::FromForgeVector3(avForce),cMath::FromForgeVector3(avPos));}
+		void AddTorque(const Vector3&avTorque) { AddTorque(cMath::FromForgeVector3(avTorque));}
+		void AddImpulse(const Vector3 &avImpulse){ AddImpulse(cMath::FromForgeVector3(avImpulse));}
+		void AddImpulseAtPosition(const Vector3 &avImpulse, const Vector3 &avPos) {AddImpulseAtPosition(cMath::FromForgeVector3(avImpulse), cMath::FromForgeVector3(avPos));}
 
 		virtual void Enable()=0;
 		virtual bool GetEnabled() const=0;
@@ -271,7 +279,7 @@ namespace hpl {
 		bool mbDestroying;
 
 		std::list<iCharacterBody*> mlstConnectedCharBodies;
-		        
+
 		iPhysicsBody *mpScrapeBody;
 		cSoundEntity *mpScrapeSoundEntity;
 		int mlScrapeSoundEntityID;

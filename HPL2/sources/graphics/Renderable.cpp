@@ -20,7 +20,7 @@
 #include "graphics/Renderable.h"
 
 #include "math/Math.h"
-#include "math/Frustum.h"
+#include "math/cFrustum.h"
 #include "system/LowLevelSystem.h"
 
 namespace hpl {

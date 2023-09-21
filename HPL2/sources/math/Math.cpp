@@ -19,7 +19,7 @@
 
 #include "math/Math.h"
 
-#include "math/Frustum.h"
+#include "math/cFrustum.h"
 #include "graphics/VertexBuffer.h"
 
 #include "system/LowLevelSystem.h"

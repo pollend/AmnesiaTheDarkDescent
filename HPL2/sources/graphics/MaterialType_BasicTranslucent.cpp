@@ -32,7 +32,7 @@
 #include "scene/Light.h"
 #include "scene/World.h"
 
-#include "math/Frustum.h"
+#include "math/cFrustum.h"
 #include "math/Math.h"
 
 #include "graphics/Graphics.h"

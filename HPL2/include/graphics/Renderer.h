@@ -25,7 +25,7 @@
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Image.h"
 #include "graphics/RenderTarget.h"
-#include "math/Frustum.h"
+#include "math/cFrustum.h"
 #include "math/MathTypes.h"
 #include "scene/SceneTypes.h"
 
@@ -214,14 +214,10 @@ namespace hpl {
     protected:
         void BeginRendering(float afFrameTime,cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings,
                             bool abSendFrameBufferToPostEffects, bool abAtStartOfRendering=true);
-
         cResources* mpResources;
-
-        bool mbSetupOcclusionPlaneForFog;
 
         float mfCurrentFrameTime;
         cRenderSettings *mpCurrentSettings;
-
 
         static int mlRenderFrameCount;
         float mfTimeCount;

@@ -17,14 +17,13 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "math/Frustum.h"
+#include "math/cFrustum.h"
 
 #include "graphics/ImmediateDrawBatch.h"
 #include "math/Math.h"
 #include "system/LowLevelSystem.h"
 #include "graphics/LowLevelGraphics.h"
 #include "scene/RenderableContainer.h"
-
 
 namespace hpl {
 
