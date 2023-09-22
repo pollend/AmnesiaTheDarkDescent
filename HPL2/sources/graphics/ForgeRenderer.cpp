@@ -14,8 +14,12 @@
 #endif
 #include "renderdoc_app.h"
 #endif
+extern RendererApi gSelectedRendererApi;
 
 namespace hpl {
+    RendererApi ForgeRenderer::GetApi() {
+        return gSelectedRendererApi;
+    }
 
     void ForgeRenderer::IncrementFrame() {
         // Stall if CPU is running "Swap Chain Buffer Count" frames ahead of GPU
@@ -58,7 +62,7 @@ namespace hpl {
         {
             cmdBindRenderTargets(frame.m_cmd, 1, &swapChainTarget, NULL, NULL, NULL, NULL, -1, -1);
             uint32_t rootConstantIndex = getDescriptorIndexFromName(m_finalRootSignature , "uRootConstants");
-            
+
             cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, static_cast<float>(swapChainTarget->mWidth), static_cast<float>(swapChainTarget->mHeight), 0.0f, 1.0f);
             cmdSetScissor(frame.m_cmd, 0, 0, static_cast<float>(swapChainTarget->mWidth), static_cast<float>(swapChainTarget->mHeight));
             cmdBindPipeline(frame.m_cmd, m_finalPipeline.m_handle);
@@ -121,7 +125,7 @@ namespace hpl {
                     assert(ret == 1);
                 }
             #endif
-           
+
         #endif
 
         initRenderer("test", &desc, &m_renderer);
