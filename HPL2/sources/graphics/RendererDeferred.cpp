@@ -2508,7 +2508,7 @@ namespace hpl {
         cmdSetScissor(cmd, 0, 0, outputBuffer->mWidth, outputBuffer->mHeight);
         cmdBindPipeline(cmd, options.m_invert ? m_solidIlluminationPipelineCW.m_handle: m_solidIlluminationPipelineCCW.m_handle);
 
-        cmdBindDescriptorSet(cmd, frameDescriptorIndex, m_materialSet.m_frameSet[frame.m_frameIndex].m_handle);
+        //cmdBindDescriptorSet(cmd, frameDescriptorIndex, m_materialSet.m_frameSet[frame.m_frameIndex].m_handle);
 
         for (auto& illuminationItem : m_rendererList.GetRenderableItems(eRenderListType_Illumination)) {
             cMaterial* pMaterial = illuminationItem->GetMaterial();
