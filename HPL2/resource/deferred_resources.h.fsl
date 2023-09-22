@@ -104,15 +104,16 @@ RES(Tex2D(float4), dissolveAlphaMap, UPDATE_FREQ_PER_BATCH, t9, binding = 10);
 RES(Tex2D(float4), cubeMapAlpha, UPDATE_FREQ_PER_BATCH, t10, binding = 11);
 
 RES(SamplerState, refractionSampler, UPDATE_FREQ_NONE, s1, binding = 12);
-RES(SamplerState, nearestSampler, UPDATE_FREQ_NONE, s2, binding = 13);
-RES(SamplerState, materialSampler, UPDATE_FREQ_NONE, s3, binding = 14); 
+RES(SamplerState, dissolveSampler, UPDATE_FREQ_NONE, s2, binding = 13);
+RES(SamplerState, nearestSampler, UPDATE_FREQ_NONE, s3, binding = 14);
+RES(SamplerState, materialSampler, UPDATE_FREQ_NONE, s4, binding = 15); 
 
-RES(Tex2D(float4), dissolveMap, UPDATE_FREQ_NONE, t11, binding = 15);
+RES(Tex2D(float4), dissolveMap, UPDATE_FREQ_NONE, t11, binding = 16);
 
 RES(Buffer(UniformMaterial), uniformMaterialBuffer, UPDATE_FREQ_PER_FRAME, t0, binding = 1);
 RES(Buffer(UniformObject), uniformObjectBuffer, UPDATE_FREQ_PER_FRAME, t1, binding = 2);
-RES(Tex2D(float4), refractionMap, UPDATE_FREQ_PER_FRAME, t12, binding = 16); 
-RES(Tex2D(float4), reflectionMap[4], UPDATE_FREQ_PER_FRAME, t13, binding = 17); 
+RES(Tex2D(float4), refractionMap, UPDATE_FREQ_PER_FRAME, t12, binding = 18); 
+RES(Tex2D(float4), reflectionMap[4], UPDATE_FREQ_PER_FRAME, t13, binding = 19); 
 
 PUSH_CONSTANT(materialRootConstant, b0)
 {

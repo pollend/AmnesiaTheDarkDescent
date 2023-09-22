@@ -44,9 +44,11 @@ float4 PS_MAIN(PsIn In)
         diffuseAlpha = 1.0;
     }
 
-    if(HasDissolveAlpha(Get(uniformMaterialBuffer)[materialID].materialConfig) || HasDissolveFilter(Get(uniformMaterialBuffer)[materialID].materialConfig)) {
-        float2 vDissolveCoords = texCoord.xy * (1.0/128.0); //128 = size of dissolve texture.
-        float fDissolve = SampleTex2D(dissolveMap, Get(nearestSampler), vDissolveCoords).w;
+    const float dissolveAmount = Get(uniformObjectBuffer)[Get(objectId)].dissolveAmount;
+
+    if(dissolveAmount < 1.0 || HasDissolveAlpha(Get(uniformMaterialBuffer)[materialID].materialConfig) || HasDissolveFilter(Get(uniformMaterialBuffer)[materialID].materialConfig)) {
+        float2 vDissolveCoords = In.Position.xy * (1.0/128.0); //128 = size of dissolve texture.
+        float fDissolve = SampleTex2D(dissolveMap, Get(dissolveSampler), vDissolveCoords).x;
         
         if(HasDissolveAlpha(Get(uniformMaterialBuffer)[materialID].materialConfig)) {
             //Get in 0.75 - 1 range
@@ -58,7 +60,7 @@ float4 PS_MAIN(PsIn In)
             //Get in 0.5 - 1 range.
             fDissolve = fDissolve*0.5 + 0.5;
         }
-        diffuseAlpha = fDissolve - (1.0 - Get(uniformObjectBuffer)[Get(objectId)].dissolveAmount * diffuseAlpha) * 0.5;
+        diffuseAlpha = fDissolve -  (1.0 - (dissolveAmount * diffuseAlpha)) * 0.5;
     }
 
     

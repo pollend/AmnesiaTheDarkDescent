@@ -694,6 +694,7 @@ namespace hpl {
         SharedSampler m_shadowCmpSampler;
         SharedSampler m_samplerPointClampToBorder;
         SharedSampler m_samplerPointClampToEdge;
+        SharedSampler m_samplerPointWrap;
         SharedSampler m_goboSampler;
         SharedSampler m_bilinearSampler;
 

@@ -649,6 +649,17 @@ namespace hpl {
             addSampler(forgeRenderer->Rend(), &pointSamplerDesc, sampler);
             return true;
         });
+        m_samplerPointWrap.Load(forgeRenderer->Rend(), [&](Sampler** sampler) {
+            SamplerDesc pointSamplerDesc = {};
+            pointSamplerDesc.mMinFilter = FILTER_NEAREST;
+            pointSamplerDesc.mMagFilter = FILTER_NEAREST;
+            pointSamplerDesc.mMipMapMode = MIPMAP_MODE_NEAREST;
+            pointSamplerDesc.mAddressU = ADDRESS_MODE_REPEAT;
+            pointSamplerDesc.mAddressV = ADDRESS_MODE_REPEAT;
+            pointSamplerDesc.mAddressW = ADDRESS_MODE_REPEAT;
+            addSampler(forgeRenderer->Rend(), &pointSamplerDesc, sampler);
+            return true;
+        });
         for (auto& buffer : m_perFrameBuffer) {
             buffer.Load([&](Buffer** buffer) {
                 BufferLoadDesc desc = {};
@@ -1251,8 +1262,8 @@ namespace hpl {
 
             m_materialRootSignature.Load(forgeRenderer->Rend(), [&](RootSignature** signature) {
                 RootSignatureDesc rootSignatureDesc = {};
-                const char* pStaticSamplersNames[] = { "nearestSampler", "refractionSampler" };
-                Sampler* pStaticSampler[] = { m_samplerPointClampToBorder.m_handle, m_samplerPointClampToEdge.m_handle };
+                const char* pStaticSamplersNames[] = { "nearestSampler", "refractionSampler", "dissolveSampler" };
+                Sampler* pStaticSampler[] = { m_samplerPointClampToBorder.m_handle, m_samplerPointClampToEdge.m_handle, m_samplerPointWrap.m_handle };
                 rootSignatureDesc.mStaticSamplerCount = std::size(pStaticSamplersNames);
                 rootSignatureDesc.ppStaticSamplerNames = pStaticSamplersNames;
                 rootSignatureDesc.ppStaticSamplers = pStaticSampler;
