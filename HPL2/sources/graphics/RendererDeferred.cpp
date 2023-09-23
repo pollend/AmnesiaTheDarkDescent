@@ -2508,10 +2508,13 @@ namespace hpl {
         cmdSetScissor(cmd, 0, 0, outputBuffer->mWidth, outputBuffer->mHeight);
         cmdBindPipeline(cmd, options.m_invert ? m_solidIlluminationPipelineCW.m_handle: m_solidIlluminationPipelineCCW.m_handle);
 
+
+        // for DirectX12 these frame descriptors are not used so its ommitied for the draw
+#if defined(VULKAN)
 	    if (frame.m_renderer->GetApi() == RENDERER_API_VULKAN) {
             cmdBindDescriptorSet(cmd, frameDescriptorIndex, m_materialSet.m_frameSet[frame.m_frameIndex].m_handle);
         }
-
+#endif
         for (auto& illuminationItem : m_rendererList.GetRenderableItems(eRenderListType_Illumination)) {
             cMaterial* pMaterial = illuminationItem->GetMaterial();
             iVertexBuffer* vertexBuffer = illuminationItem->GetVertexBuffer();
