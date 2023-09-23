@@ -60,6 +60,7 @@ namespace hpl {
 
         void InitializeRenderer(window::NativeWindowWrapper* window);
         void InitializeResource();
+        RendererApi GetApi();
 
         struct SamplerPoolKey {
             union {
