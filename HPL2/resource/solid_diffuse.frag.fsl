@@ -32,7 +32,7 @@ PsOut PS_MAIN(PsIn In)
 
 #ifdef PARALLAX_ENABLED
     if(HasHeight(Get(uniformMaterialBuffer)[materialID].materialConfig)) {
-        float depthScale = (Get(uniformMaterialBuffer)[materialID].heightMapScale) * PARALAX_MULTIPLIER;
+        float depthScale = (Get(uniformMaterialBuffer)[materialID].heightMapScale);
         float2 uv = texCoord;
         const bool isSingleChannel = IsHeightMapSingleChannel(Get(uniformMaterialBuffer)[materialID].materialConfig);
         const float numberOfSteps = 32.0;
