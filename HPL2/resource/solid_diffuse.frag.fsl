@@ -7,7 +7,6 @@ STRUCT(PsIn)
     DATA(float4, Position, SV_Position);
     DATA(float3, pos, POSITION);
     DATA(float2, uv, TEXCOORD0);
-    DATA(float3, view, TEXCOORD1);
     DATA(float3, normal, NORMAL);
     DATA(float3, tangent, TANGENT);
     DATA(float3, bitangent, BITANGENT);
@@ -32,15 +31,15 @@ PsOut PS_MAIN(PsIn In)
 
 #ifdef PARALLAX_ENABLED
     if(HasHeight(Get(uniformMaterialBuffer)[materialID].materialConfig)) {
-        texCoord.xy  = ParallaxRelief(
-            SEARCH_SAMPLE_COUNT, 
-            IsHeightMapSingleChannel(Get(uniformMaterialBuffer)[materialID].materialConfig), 
-            Get(uniformMaterialBuffer)[materialID].heightMapScale * PARALAX_MULTIPLIER, 
-            normalize(In.normal), 
-            texCoord, 
-            normalize(In.view), 
-            Get(materialSampler), 
-            Get(heightMap));
+        texCoord.xy += ParallaxAdvance(texCoord,
+            0.0,
+            32.0, 
+            Get(uniformMaterialBuffer)[materialID].heightMapScale * PARALAX_MULTIPLIER,
+            In.pos,
+            In.normal,
+            In.tangent,
+            In.bitangent,
+            IsHeightMapSingleChannel(Get(uniformMaterialBuffer)[materialID].materialConfig));
     }
 #endif
 
