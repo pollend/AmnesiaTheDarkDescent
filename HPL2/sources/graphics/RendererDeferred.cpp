@@ -2510,11 +2510,11 @@ namespace hpl {
 
 
         // for DirectX12 these frame descriptors are not used so its ommitied for the draw
-#if defined(VULKAN)
-	    if (frame.m_renderer->GetApi() == RENDERER_API_VULKAN) {
+//#if defined(VULKAN)
+//	    if (frame.m_renderer->GetApi() == RENDERER_API_VULKAN) {
             cmdBindDescriptorSet(cmd, frameDescriptorIndex, m_materialSet.m_frameSet[frame.m_frameIndex].m_handle);
-        }
-#endif
+//        }
+//#endif
         for (auto& illuminationItem : m_rendererList.GetRenderableItems(eRenderListType_Illumination)) {
             cMaterial* pMaterial = illuminationItem->GetMaterial();
             iVertexBuffer* vertexBuffer = illuminationItem->GetVertexBuffer();

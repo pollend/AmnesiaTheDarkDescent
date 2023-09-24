@@ -129,7 +129,6 @@ namespace hpl {
 			asName,
 			[&abUseMipMaps](const tString& asName, const tWString& path, cBitmap* pBmp) -> Image*
 			{
-
 				auto* resource = new Image(asName, path);
 				SharedTexture::BitmapLoadOptions opts = {0};
 				opts.m_useMipmaps = abUseMipMaps;
