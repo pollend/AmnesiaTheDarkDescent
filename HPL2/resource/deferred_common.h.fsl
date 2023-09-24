@@ -5,14 +5,31 @@ float Fresnel(float afEDotN, float afFresnelBias, float afFresnelPow)
 }
 
 
-float2 ParallaxRelief(int sampleCount, bool isSingleChannel, float heightMapScale, float3 normalizedNormal, float2 uv, float3 modelViewNormalizedDir,SamplerState samplerState, Tex2D(float4) tex) {
+float3 WorldSpaceToTangent(float3 dir, float3 normal, float3 tangent, float3 bitangent)
+{
+    float a = dot(tangent, dir);
+    float b = dot(bitangent, dir);
+    float c = dot(normal, dir);
+
+    return float3(a,b,c);
+}
+
+float2 ParallaxRelief(
+    int sampleCount, 
+    bool isSingleChannel, 
+    float heightMapScale, 
+    float3 normalizedNormal, 
+    float2 uv,
+    float3 modelViewNormalizedDir,
+    SamplerState samplerState, 
+    Tex2D(float4) tex) {
     //Get give normalizedView the length so it reaches bottom.
     float normalLength = 1.0 / modelViewNormalizedDir.z;
     modelViewNormalizedDir *= float3(normalLength, normalLength, normalLength);	
-    
+    modelViewNormalizedDir.xy *= heightMapScale;
 
     //Apply scale and bias
-    modelViewNormalizedDir.xy *= heightMapScale;
+
     float3 heightMapPos = float3(uv.xy, 0.0);
 
     //Determine number of steps based on angle between normal and eye
