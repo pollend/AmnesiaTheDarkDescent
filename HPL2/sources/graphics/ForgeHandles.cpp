@@ -204,6 +204,9 @@ namespace hpl {
     }
 
 
+    #define MIP_REDUCE(s, mip) (max(1u, (uint32_t)((s) >> (mip))))
+
+
     SharedTexture SharedTexture::LoadFromHPLBitmap(cBitmap& bitmap, const BitmapLoadOptions& options) {
         SharedTexture handle;
         SyncToken token = {};
@@ -238,32 +241,50 @@ namespace hpl {
         });
 
         auto sourceImageFormat = FromHPLPixelFormat(bitmap.GetPixelFormat());
-        uint32_t sourceRowStride;
-        if(!util_get_surface_info(desc.mWidth, desc.mHeight, sourceImageFormat, nullptr, &sourceRowStride, nullptr)) {
-            ASSERT(false && "Failed to get surface info");
-        }
-        uint32_t srcElementStride = sourceRowStride / desc.mWidth;
-
         auto isCompressed  = TinyImageFormat_IsCompressed(desc.mFormat);
         for(uint32_t arrIndex = 0; arrIndex < desc.mArraySize; arrIndex++) {
             for(uint32_t mipLevel = 0; mipLevel < desc.mMipLevels; mipLevel++) {
                 TextureUpdateDesc update = {handle.m_handle, mipLevel, arrIndex};
                 const auto& input = bitmap.GetData(arrIndex, mipLevel);
-                auto data = std::span<unsigned char>(input->mpData, static_cast<size_t>(input->mlSize));
+                //auto data = std::span<uint8_t>(input->mpData, static_cast<size_t>(input->mlSize));
                 beginUpdateResource(&update);
-                uint32_t dstElementStride = update.mDstRowStride / desc.mWidth;
+         
+                uint32_t sourceRowStride;
+                uint32_t destRowStride;
+                if (!util_get_surface_info(
+                        MIP_REDUCE(desc.mWidth, mipLevel),
+                        MIP_REDUCE(desc.mHeight, mipLevel),
+                        sourceImageFormat,
+                        nullptr,
+                        &sourceRowStride,
+                        nullptr)) {
+                    ASSERT(false && "Failed to get surface info");
+                }
+                uint32_t srcElementStride = sourceRowStride / desc.mWidth;
 
-                for (uint32_t z = 0; z < desc.mDepth; ++z)
+                 if (!util_get_surface_info(
+                        MIP_REDUCE(desc.mWidth, mipLevel),
+                        MIP_REDUCE(desc.mHeight, mipLevel),
+                        desc.mFormat,
+                        nullptr,
+                        &destRowStride,
+                        nullptr)) {
+                    ASSERT(false && "Failed to get surface info");
+                }
+
+                uint32_t dstElementStride = destRowStride / desc.mWidth;
+
+                for (size_t z = 0; z < desc.mDepth; ++z)
                 {
-                    uint8_t* dstData = update.pMappedData + update.mDstSliceStride * z;
-                    auto srcData = data.begin() + update.mSrcSliceStride * z;
+                    uint8_t* dstData = update.pMappedData + (update.mDstSliceStride * z);
+                    auto srcData = input->mpData + update.mSrcSliceStride * z;
                     for (uint32_t row = 0; row < update.mRowCount; ++row) {
                         if(isCompressed) {
-                             std::memcpy(dstData + row * update.mDstRowStride, &srcData[row * update.mSrcRowStride], update.mSrcRowStride);
+                             std::memcpy(dstData + (row * update.mDstRowStride), srcData + (row * update.mSrcRowStride), update.mSrcRowStride);
                         } else {
                             for(uint32_t column = 0;  column < desc.mWidth; column++) {
-                                std::memset(dstData + row * update.mDstRowStride + column * dstElementStride, 0xff, dstElementStride);
-                                std::memcpy(dstData + row * update.mDstRowStride + column * dstElementStride, &srcData[row * sourceRowStride + column * srcElementStride], std::min(dstElementStride, srcElementStride));
+                                std::memset(dstData + (row * update.mDstRowStride + column * dstElementStride), 0xff, dstElementStride);
+                                std::memcpy(dstData + (row * update.mDstRowStride + column * dstElementStride), srcData + (row * sourceRowStride + column * srcElementStride), std::min(dstElementStride, srcElementStride));
                             }
                         }
                     }

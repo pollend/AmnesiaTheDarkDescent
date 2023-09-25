@@ -33,8 +33,6 @@ PsOut PS_MAIN(PsIn In)
     float4 finalColor = float4(0.0, 0.0 ,0.0, 1.0);
     if(HasDiffuse(textureConfig)) {
         finalColor = SampleTex2D(Get(diffuseMap), Get(materialSampler), In.uv) * In.color;
-    } else {
-        finalColor.a = SampleTex2D(Get(diffuseMap), Get(materialSampler), In.uv).a * In.color.a;
     }
 
     float finalAlpha = Get(sceneAlpha);
