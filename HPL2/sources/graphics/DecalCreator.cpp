@@ -431,7 +431,7 @@ namespace hpl {
 				// apFunctions->SetBlendMode(eMaterialBlendMode_None);
 			}
 			if(abDrawWireframe) {
-				apFunctions->DebugWireFrameFromVertexBuffer(mpDecalVB, cColor(1));
+				apFunctions->DebugWireFrameFromVertexBuffer(mpDecalVB, Vector4(1));
 			}
 			// if(abDrawWireframe)	apFunctions->DrawWireFrame(mpDecalVB, cColor(1));
 		}
@@ -446,11 +446,12 @@ namespace hpl {
 			// apFunctions->SetMatrix(&mtxTransform);
 			//apFunctions->GetLowLevelGfx()->DrawSphere(0, 0.01f, 1);
 			ImmediateDrawBatch::DebugDrawOptions options;
-			options.m_transform = mtxTransform;
-			apFunctions->DebugDrawLine(0,cVector3f(vHalfDecalSize.x,0,0), cColor(1,0,0,1), options);
-			apFunctions->DebugDrawLine(0,cVector3f(0,vHalfDecalSize.y,0), cColor(0,1,0,1), options);
-			apFunctions->DebugDrawLine(0,cVector3f(0,0,vHalfDecalSize.z), cColor(0,0,1,1), options);
-			apFunctions->DebugDrawBoxMinMax(vHalfDecalSize*-1, vHalfDecalSize, 1, options);
+		    options.m_transform = cMath::ToForgeMat(mtxTransform.GetTranspose());
+		    apFunctions->DebugDrawLine(Vector3(0),Vector3(vHalfDecalSize.x,0,0), Vector4(1,0,0,1), options);
+			apFunctions->DebugDrawLine(Vector3(0),Vector3(0,vHalfDecalSize.y,0), Vector4(0,1,0,1), options);
+			apFunctions->DebugDrawLine(Vector3(0),Vector3(0,0,vHalfDecalSize.z), Vector4(0,0,1,1), options);
+		    apFunctions->DebugDrawBoxMinMax(Vector3(vHalfDecalSize.x, vHalfDecalSize.y, vHalfDecalSize.z)*-1,
+		                              Vector3(vHalfDecalSize.x, vHalfDecalSize.y, vHalfDecalSize.z), Vector4(1), options);
 
 			for(size_t i=0;i<mvTransformedBases.size();i+=4)
 			{
@@ -459,11 +460,12 @@ namespace hpl {
 				const cVector3f& vFwd = mvTransformedBases[i+3];
 
 				cMatrixf mtxBasis = cMath::MatrixUnitVectors(vRight, vUp, vFwd, mvTransformedBases[i]);
-				// apFunctions->SetMatrix(&mtxBasis);
-				apFunctions->DebugDrawLine(0,cVector3f(vHalfDecalSize.x,0,0), cColor(1,0,0,1), options);
-				apFunctions->DebugDrawLine(0,cVector3f(0,vHalfDecalSize.y,0), cColor(0,1,0,1), options);
-				apFunctions->DebugDrawLine(0,cVector3f(0,0,vHalfDecalSize.z), cColor(0,0,1,1), options);
-				apFunctions->DebugDrawBoxMinMax(vHalfDecalSize*-1, vHalfDecalSize, 1, options);
+	            apFunctions->DebugDrawLine(Vector3(0),Vector3(vHalfDecalSize.x,0,0), Vector4(1,0,0,1), options);
+	            apFunctions->DebugDrawLine(Vector3(0),Vector3(0,vHalfDecalSize.y,0), Vector4(0,1,0,1), options);
+	            apFunctions->DebugDrawLine(Vector3(0),Vector3(0,0,vHalfDecalSize.z), Vector4(0,0,1,1), options);
+	            apFunctions->DebugDrawBoxMinMax(
+	                Vector3(vHalfDecalSize.x,vHalfDecalSize.y,vHalfDecalSize.z)*-1,
+	                Vector3(vHalfDecalSize.x,vHalfDecalSize.y,vHalfDecalSize.z), Vector4(1), options);
 			}
 
 			//for(int i=0;i<(int)mvMatrices.size();++i)

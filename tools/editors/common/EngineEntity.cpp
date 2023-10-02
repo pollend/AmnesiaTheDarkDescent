@@ -195,8 +195,8 @@ void iEngineEntityMesh::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBat
 	{
 		cSubMeshEntity* pSubMeshEntity = pMeshEntity->GetSubMeshEntity(i);
 		ImmediateDrawBatch::DebugDrawOptions options;
-		options.m_transform = *pSubMeshEntity->GetModelMatrix(NULL);
-		apFunctions->DebugWireFrameFromVertexBuffer(pSubMeshEntity->GetVertexBuffer(), aHighlightCol, options);
+		options.m_transform = cMath::ToForgeMat(pSubMeshEntity->GetModelMatrix(NULL)->GetTranspose());
+		apFunctions->DebugWireFrameFromVertexBuffer(pSubMeshEntity->GetVertexBuffer(), cMath::ToForgeVec4(aHighlightCol), options);
 	}
 }
 
@@ -209,8 +209,8 @@ void iEngineEntityMesh::DrawSolid(cEditorWindowViewport* apViewport, ImmediateDr
 	{
 		cSubMeshEntity* pSubMeshEntity = pMeshEntity->GetSubMeshEntity(i);
 		ImmediateDrawBatch::DebugDrawOptions options;
-		options.m_transform = *pSubMeshEntity->GetModelMatrix(NULL);
-		apFunctions->DebugSolidFromVertexBuffer(pSubMeshEntity->GetVertexBuffer(), aCol, options);
+		options.m_transform = cMath::ToForgeMat(pSubMeshEntity->GetModelMatrix(NULL)->GetTranspose());
+		apFunctions->DebugSolidFromVertexBuffer(pSubMeshEntity->GetVertexBuffer(), cMath::ToForgeVec4(aCol), options);
 	}
 }
 

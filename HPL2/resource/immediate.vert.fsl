@@ -1,0 +1,22 @@
+#include "immediate_resource.h.fsl"
+
+STRUCT(VSInput)
+{
+	DATA(float3, Position, POSITION);
+	DATA(float4, color, COLOR);
+};
+
+STRUCT(VSOutput)
+{
+	DATA(float4, Position, SV_Position);
+	DATA(float4, color, COLOR);
+};
+
+VSOutput VS_MAIN(VSInput In)
+{
+    INIT_MAIN;
+    VSOutput Out;
+    Out.color = In.color;
+    Out.Position = mul(Get(viewProjMat), float4(In.Position.xyz, 1.0));
+    RETURN(Out);
+}

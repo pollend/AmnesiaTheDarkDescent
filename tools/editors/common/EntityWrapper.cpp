@@ -1377,14 +1377,14 @@ void iEntityWrapper::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch*
 		//cVector3f vHalfSize = pBV->GetSize()*0.5f;
 
 		//apFunctions->GetLowLevelGfx()->DrawBoxMinMax(vPos-vHalfSize, vPos+vHalfSize, cColor(1,0,0,1));
-		apFunctions->DebugDrawLine(mvPosition, mpParent->GetPosition(), cColor(1,0,0,1));
+		apFunctions->DebugDrawLine(cMath::ToForgeVec3(mvPosition), cMath::ToForgeVec3(mpParent->GetPosition()), Vector4(1,0,0,1));
 	}
 
 	tEntityWrapperListIt itChildren = mlstChildren.begin();
 	for(;itChildren!=mlstChildren.end();++itChildren)
 	{
 		iEntityWrapper* pEnt = *itChildren;
-		apFunctions->DebugDrawLine(mvPosition, pEnt->GetPosition(), cColor(0,1,0,1));
+		apFunctions->DebugDrawLine(cMath::ToForgeVec3(mvPosition), cMath::ToForgeVec3(pEnt->GetPosition()), Vector4(0,1,0,1));
 	}
 }
 
@@ -2081,33 +2081,33 @@ void iEntityWrapper::DrawArrow(cEditorWindowViewport* apViewport, ImmediateDrawB
 	cMatrixf mtxWorld = cMath::MatrixMul(amtxTransform, cMath::MatrixTranslate(cVector3f(0,afLength,0)));;
 
 	ImmediateDrawBatch::DebugDrawOptions options;
-	options.m_transform = mtxWorld;
+	options.m_transform = cMath::ToForgeMat(mtxWorld.GetTranspose());
 
-	apFunctions->DebugDrawLine(cVector3f(0,-afLength,0), 0, aCol);
+	apFunctions->DebugDrawLine(Vector3(0,-afLength,0), Vector3(0), cMath::ToForgeVec4(aCol));
 	apFunctions->DrawQuad(
-		cVector3f(fXZ,-fY,fXZ),
-		cVector3f(0,0,0),
-		cVector3f(0,0,0),
-		cVector3f(-fXZ,-fY,fXZ),
-	 cColor(), options);
+		Vector3(fXZ,-fY,fXZ),
+		Vector3(0,0,0),
+		Vector3(0,0,0),
+		Vector3(-fXZ,-fY,fXZ),
+	 Vector4(0,0,0,1), options);
 	apFunctions->DrawQuad(
-		cVector3f(fXZ,-fY,-fXZ),
-		cVector3f(0,0,0),
-		cVector3f(0,0,0),
-		cVector3f(fXZ,-fY,fXZ),
-	 cColor(), options);
+		Vector3(fXZ,-fY,-fXZ),
+		Vector3(0,0,0),
+		Vector3(0,0,0),
+		Vector3(fXZ,-fY,fXZ),
+	 Vector4(0,0,0,1), options);
 	apFunctions->DrawQuad(
-			cVector3f(fXZ,-fY,-fXZ),
-			cVector3f(0,0,0),
-			cVector3f(0,0,0),
-			cVector3f(fXZ,-fY,fXZ),
-		cColor(), options);
+			Vector3(fXZ,-fY,-fXZ),
+			Vector3(0,0,0),
+			Vector3(0,0,0),
+			Vector3(fXZ,-fY,fXZ),
+		Vector4(0,0,0,1), options);
 	apFunctions->DrawQuad(
-			cVector3f(-fXZ,-fY,-fXZ),
-			cVector3f(0,0,0),
-			cVector3f(0,0,0),
-			cVector3f(-fXZ,-fY,fXZ),
-		cColor(), options);
+			Vector3(-fXZ,-fY,-fXZ),
+			Vector3(0,0,0),
+			Vector3(0,0,0),
+			Vector3(-fXZ,-fY,fXZ),
+		Vector4(0,0,0,1), options);
 }
 
 //------------------------------------------------------------------

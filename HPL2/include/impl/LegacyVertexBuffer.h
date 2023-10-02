@@ -37,7 +37,6 @@ namespace hpl {
     public:
         static size_t GetSizeFromHPL(eVertexBufferElementFormat format);
 
-        // static constexpr std::array
 
         struct VertexElement {
             SharedBuffer m_buffer;

@@ -96,9 +96,9 @@ void cPrimitiveMeshCreatorPlane::Draw(cEditorWindowViewport* apViewport, Immedia
 		cVector3f vFirstCorner = mvCorners[0];
 		cVector3f vMousePos = mpEditMode->GetEditor()->GetPosOnGridFromMousePos();
 
-		apFunctions->DebugDrawBoxMinMax(vFirstCorner, vMousePos,cColor(1,1));
+		apFunctions->DebugDrawBoxMinMax(cMath::ToForgeVec3(vFirstCorner), cMath::ToForgeVec3(vMousePos),Vector4(1,1,1,1));
 
-		apFunctions->DebugDrawSphere((vFirstCorner + vMousePos)*0.5f, 0.1f, cColor(1,0,0,1));
+		apFunctions->DebugDrawSphere(cMath::ToForgeVec3((vFirstCorner + vMousePos)*0.5f), 0.1f, Vector4(1,0,0,1));
 	}
 }
 

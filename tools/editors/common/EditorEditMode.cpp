@@ -263,7 +263,7 @@ void iEditorEditModeObjectCreator::DrawPostGrid(cEditorWindowViewport* apViewpor
 			cMath::MatrixScale(GetCreatorScale())));
 
 	cColor col = mbPreCreationActive? cColor(0,1,0,1):cColor(1,0,0,1);
-	apFunctions->DebugDrawSphere(mtxTransform.GetTranslation(),0.1f,col);
+	apFunctions->DebugDrawSphere(cMath::ToForgeVec3(mtxTransform.GetTranslation()),0.1f,cMath::ToForgeVec4(col));
 
 	DrawObjectPreview(apViewport, apFunctions, mtxTransform, mbPreCreationActive);
 

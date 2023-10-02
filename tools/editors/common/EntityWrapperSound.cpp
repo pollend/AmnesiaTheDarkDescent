@@ -231,8 +231,8 @@ void cEntityWrapperSound::Draw(cEditorWindowViewport* apViewport, ImmediateDrawB
 			fMax = mpSoundEntityData->GetMaxDistance();
 		}
 
-		apFunctions->DebugDrawSphere(mvPosition, fMin, cColor(0.6f, 1));
-		apFunctions->DebugDrawSphere(mvPosition, fMax, cColor(0.4f, 1));
+		apFunctions->DebugDrawSphere(cMath::ToForgeVec3(mvPosition), fMin, Vector4(0.6f,0.6f,0.6f, 1));
+		apFunctions->DebugDrawSphere(cMath::ToForgeVec3(mvPosition), fMax, Vector4(0.4f,0.4f,0.4f, 1));
 	}
 
 	// apFunctions->SetMatrix(NULL);

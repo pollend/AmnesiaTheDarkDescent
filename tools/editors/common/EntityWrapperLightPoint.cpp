@@ -123,7 +123,7 @@ void cEntityWrapperLightPoint::DrawLightTypeSpecific(cEditorWindowViewport* apVi
 {
 	if(abIsSelected==false) return;
 
-	apFunctions->DebugDrawSphere(mvPosition, mfRadius, mcolDiffuseColor);
+	apFunctions->DebugDrawSphere(cMath::ToForgeVec3(mvPosition), mfRadius, cMath::ToForgeVec4(mcolDiffuseColor));
 }
 
 //---------------------------------------------------------------------------

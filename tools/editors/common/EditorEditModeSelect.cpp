@@ -1001,7 +1001,7 @@ void cEntitySelectorNormal::Draw(cEditorWindowViewport* apViewport, ImmediateDra
 	{
 		apFunctions->DebugDraw2DLineQuad(cRect2f((float)mMouseRect.x,(float)mMouseRect.y,
 															(float)mMouseRect.w,(float)mMouseRect.h),
-															cColor(1,1));
+															Vector4(1,1,1,1));
 	}
 }
 
@@ -1133,7 +1133,7 @@ void cEntitySelectorHighlighter::Draw(cEditorWindowViewport* apViewport, Immedia
 	{
 		//cBoundingVolume* pBV = mpEntityUnderPointer->GetPickBV(apViewport);
 		mpEntityUnderPointer->Draw(apViewport, apFunctions, NULL, true, cColor(0,0.5f,1,1));
-		apFunctions->DebugDrawSphere(mpEntityUnderPointer->GetPosition(), 0.1f, cColor(0,0.5f,1,1));
+		apFunctions->DebugDrawSphere(cMath::ToForgeVec3(mpEntityUnderPointer->GetPosition()), 0.1f, Vector4(0,0.5f,1,1));
 	}
 	tEntityWrapperListIt it = mlstHighlightedEntities.begin();
 	for(;it!=mlstHighlightedEntities.end();++it)

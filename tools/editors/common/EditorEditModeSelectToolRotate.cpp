@@ -202,16 +202,16 @@ void cEditorEditModeSelectToolRotate::DrawAxes(cEditorWindowViewport* apViewport
 
 
 	ImmediateDrawBatch::DebugDrawOptions options;
-	options.m_transform = mtxTransform;
+	options.m_transform = cMath::ToForgeMat(mtxTransform.GetTranspose());
 	// apFunctions->SetMatrix(&mtxTransform);
 
 
 	// apFunctions->GetLowLevelGfx()->SetClipPlaneActive(0,true);
 	cColor color = cColor(1,1,1,1);
-	apFunctions->DebugDrawSphere(0, afAxisLength,
-											  col[0],
-											  col[1],
-											  col[2], options);
+	apFunctions->DebugDrawSphere(Vector3(0,0,0), afAxisLength,
+							              cMath::ToForgeVec4(col[0]),
+										  cMath::ToForgeVec4(col[1]),
+										  cMath::ToForgeVec4(col[2]), options);
 
 	// apFunctions->GetLowLevelGfx()->SetClipPlaneActive(0,false);
 

@@ -628,7 +628,7 @@ namespace hpl {
 						if(abCorrectNormalDirection && apShapeA->GetType() != eCollideShapeType_Mesh)
 							CorrectNormalDirection(CollPoint.mvNormal,CollPoint.mvPoint, a_mtxA.GetTranslation());
 					}
-	
+
 					lCollideDataStart += lNum;
 					aCollideData.mlNumOfPoints += lNum;
 
@@ -698,7 +698,7 @@ namespace hpl {
 		{
 			cVector3f vP1 (apFaceArray[i * 3 + 0], apFaceArray[i * 3 + 1], apFaceArray[i * 3 + 2]);
 
-			data->batch->DebugDrawLine(vP0, vP1, data->debugColor);
+			data->batch->DebugDrawLine(cMath::ToForgeVec3(vP0), cMath::ToForgeVec3(vP1), cMath::ToForgeVec4(data->debugColor));
 
 			vP0 = vP1;
 		}

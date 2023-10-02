@@ -1,8 +1,6 @@
 cmake_minimum_required (VERSION 2.8.11)
 project(Editors)
 
-### LevelEditor
-
 file(GLOB_RECURSE leveleditor_sources
     BoxCreator.cpp
     DirectoryHandler.cpp
@@ -314,8 +312,6 @@ AddToolTarget(ParticleEditor
     ${particleeditor_sources}
     ${PARTCLEEDITOR_BUILDID}
 )
-
-### MaterialEditor
 
 file(GLOB_RECURSE materialeditor_sources
     DirectoryHandler.cpp

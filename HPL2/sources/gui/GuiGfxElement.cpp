@@ -257,43 +257,18 @@ namespace hpl {
 
 		if(mlTextureNum==0)
 		{
-			// const auto& desc = apTexture->GetDescriptor();
-			
-			cVector2f vSize = cVector2f((float)apTexture->GetWidth(), (float)apTexture->GetHeight());
 
-			mvImageSize.x = vSize.x * (avEndUV.x - avStartUV.x);
-			mvImageSize.y = vSize.y * (avEndUV.y - avStartUV.y);
+			mvVtx[0].tex.x = avStartUV.x;
+			mvVtx[0].tex.y = avStartUV.y;
 
-			// if(apTexture->GetType() == eTextureType_Rect)
-			// {
-			// 	//If a rect, give new texture coordinates
+			mvVtx[1].tex.x = avEndUV.x;
+			mvVtx[1].tex.y = avStartUV.y;
 
-			// 	mvVtx[0].tex.x = avStartUV.x * vSize.x;
-			// 	mvVtx[0].tex.y = avStartUV.y * vSize.y;
+			mvVtx[2].tex.x = avEndUV.x;
+			mvVtx[2].tex.y = avEndUV.y;
 
-			// 	mvVtx[1].tex.x = avEndUV.x * vSize.x;
-			// 	mvVtx[1].tex.y = avStartUV.y * vSize.y;
-
-			// 	mvVtx[2].tex.x = avEndUV.x * vSize.x;
-			// 	mvVtx[2].tex.y = avEndUV.y * vSize.y;
-
-			// 	mvVtx[3].tex.x = avStartUV.x * vSize.x;
-			// 	mvVtx[3].tex.y = avEndUV.y * vSize.y;
-			// }
-			// else
-			// {
-				mvVtx[0].tex.x = avStartUV.x;
-				mvVtx[0].tex.y = avStartUV.y;
-
-				mvVtx[1].tex.x = avEndUV.x;
-				mvVtx[1].tex.y = avStartUV.y;
-
-				mvVtx[2].tex.x = avEndUV.x;
-				mvVtx[2].tex.y = avEndUV.y;
-
-				mvVtx[3].tex.x = avStartUV.x;
-				mvVtx[3].tex.y = avEndUV.y;
-			// }
+			mvVtx[3].tex.x = avStartUV.x;
+			mvVtx[3].tex.y = avEndUV.y;
 
 			if(mbFlipUvYAxis) SetFlipUvYAxis(mbFlipUvYAxis);
 		}

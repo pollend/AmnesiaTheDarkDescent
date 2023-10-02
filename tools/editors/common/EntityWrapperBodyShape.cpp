@@ -208,10 +208,10 @@ void cEntityWrapperBodyShape::Draw(	cEditorWindowViewport* apViewport, Immediate
 	// apFunctions->SetDepthWrite(false);
 	cEngineEntityGeneratedMesh* pMesh = (cEngineEntityGeneratedMesh*)mpEngineEntity;
 	ImmediateDrawBatch::DebugDrawOptions options;
-	options.m_transform = *pMesh->GetMeshEntity()->GetSubMeshEntity(0)->GetModelMatrix(NULL);
+	options.m_transform = cMath::ToForgeMat(pMesh->GetMeshEntity()->GetSubMeshEntity(0)->GetModelMatrix(NULL)->GetTranspose());
 
 	cColor col = abIsSelected?cColor(1) : cColor(1,1,1,0.1f);
-	apFunctions->DebugWireFrameFromVertexBuffer(pMesh->GetVertexBuffer(), col);
+	apFunctions->DebugWireFrameFromVertexBuffer(pMesh->GetVertexBuffer(), cMath::ToForgeVec4(col));
 
 
 	// apFunctions->SetMatrix(pMesh->GetMeshEntity()->GetSubMeshEntity(0)->GetModelMatrix(NULL));

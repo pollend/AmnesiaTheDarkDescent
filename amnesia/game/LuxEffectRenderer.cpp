@@ -38,7 +38,6 @@
 
 #include "Common_3/Graphics/Interfaces/IGraphics.h"
 #include "Common_3/Utilities/Math/MathTypes.h"
-#include "Common_3/Utilities/ThirdParty/OpenSource/ModifiedSonyMath/common.hpp"
 #include "FixPreprocessor.h"
 
 cLuxEffectRenderer::cLuxEffectRenderer()

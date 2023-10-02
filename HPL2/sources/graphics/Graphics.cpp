@@ -159,12 +159,10 @@ namespace hpl {
 		if(alHplSetupFlags & eHplSetup_Screen)
 		{
 
-			mvRenderers.resize(1, NULL);
+			mvRenderers.resize(2, NULL);
 
 			mvRenderers[eRenderer_Main] = new cRendererDeferred(this, apResources);
-			// TODO: need to add these renderers
-			// mvRenderers[eRenderer_WireFrame] = new cRendererWireFrame(this, apResources);
-			// mvRenderers[eRenderer_Simple] = new cRendererSimple(this, apResources);
+		    mvRenderers[eRenderer_WireFrame] = new cRendererWireFrame(this, apResources);
 
 			for(size_t i=0; i<mvRenderers.size(); ++i)
 			{

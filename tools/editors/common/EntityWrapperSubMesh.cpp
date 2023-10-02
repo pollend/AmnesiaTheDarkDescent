@@ -96,11 +96,11 @@ void cEngineEntitySubMesh::Draw(cEditorWindowViewport* apViewport, ImmediateDraw
 	// apFunctions->DrawWireFrame(pSubMeshEntity->GetVertexBuffer(), cColor(1,1,1,0.25f));
 
 	ImmediateDrawBatch::DebugDrawOptions options;
-	options.m_transform = *pSubMeshEntity->GetModelMatrix(NULL);
+	options.m_transform = cMath::ToForgeMat(pSubMeshEntity->GetModelMatrix(NULL)->GetTranspose());
 	//GraphicsContext::LayoutStream layoutStream;
 	//pSubMeshEntity->GetVertexBuffer()->GetLayoutStream(layoutStream);
 
-	apFunctions->DebugWireFrameFromVertexBuffer(pSubMeshEntity->GetVertexBuffer(), cColor(1,1,1,0.25f));
+	apFunctions->DebugWireFrameFromVertexBuffer(pSubMeshEntity->GetVertexBuffer(), Vector4(1,1,1,0.25f));
 	// apFunctions->SetMatrix(NULL);
 	// apFunctions->SetBlendMode(eMaterialBlendMode_None);
 	// apFunctions->SetDepthTest(false);

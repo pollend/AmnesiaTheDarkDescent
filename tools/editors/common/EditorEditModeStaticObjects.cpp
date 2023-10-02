@@ -52,7 +52,7 @@ void cEditorEditModeStaticObjects::DrawObjectPreview(cEditorWindowViewport* apVi
 	// apFunctions->SetDepthTest(true);
 	// apFunctions->SetDepthWrite(false);
 
-	apFunctions->DebugDrawSphere(mpEditor->GetPosOnGridFromMousePos(),0.1f,cColor(1,0,0,1));
+	apFunctions->DebugDrawSphere(cMath::ToForgeVec3(mpEditor->GetPosOnGridFromMousePos()),0.1f,Vector4(1,0,0,1));
 
 	cEditorWindowStaticObjects* pWin = (cEditorWindowStaticObjects*)mpWindow;
 	iEditorObjectIndexEntryMeshObject* pObj = pWin->GetSelectedObject();
@@ -72,10 +72,10 @@ void cEditorEditModeStaticObjects::DrawObjectPreview(cEditorWindowViewport* apVi
 			ImmediateDrawBatch::DebugDrawOptions options;
 			options.m_depthTest = DepthTest::Greater;
 			// apFunctions->SetDepthTestFunc(eDepthTestFunc_Greater);
-			apFunctions->DebugDrawBoxMinMax(vBVMin,vBVMax, cColor(1,0,0,0.6f), options);
+			apFunctions->DebugDrawBoxMinMax(cMath::ToForgeVec3(vBVMin),cMath::ToForgeVec3(vBVMax), Vector4(1,0,0,0.6f), options);
 			options.m_depthTest = DepthTest::Less;
 			// apFunctions->SetDepthTestFunc(eDepthTestFunc_Less);
-			apFunctions->DebugDrawBoxMinMax(vBVMin,vBVMax, cColor(0,1,0,0.6f), options);
+			apFunctions->DebugDrawBoxMinMax(cMath::ToForgeVec3(vBVMin),cMath::ToForgeVec3(vBVMax), Vector4(0,1,0,0.6f), options);
 
 			/////////////////////////////////////////
 			// Draw Textured Mesh
@@ -86,7 +86,7 @@ void cEditorEditModeStaticObjects::DrawObjectPreview(cEditorWindowViewport* apVi
 		}
 		else
 		{
-			apFunctions->DebugDrawBoxMinMax(vBVMin,vBVMax, cColor(1,0.5f));
+			apFunctions->DebugDrawBoxMinMax(cMath::ToForgeVec3(vBVMin),cMath::ToForgeVec3(vBVMax), Vector4(1,1,1,0.5f));
 		}
 	}
 

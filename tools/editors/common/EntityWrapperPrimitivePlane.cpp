@@ -336,7 +336,7 @@ void cEntityWrapperPrimitivePlane::Draw(cEditorWindowViewport* apViewport, Immed
 
 	cBoundingVolume* pBV = mpEngineEntity->GetRenderBV();
 
-	apFunctions->DebugDrawBoxMinMax(pBV->GetMin(), pBV->GetMax(), cColor(1));
+	apFunctions->DebugDrawBoxMinMax(cMath::ToForgeVec3(pBV->GetMin()), cMath::ToForgeVec3(pBV->GetMax()), Vector4(1,1,1,1));
 }
 
 //------------------------------------------------------------------------

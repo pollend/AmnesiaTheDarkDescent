@@ -68,9 +68,9 @@ void cEditorClipPlane::Draw(ImmediateDrawBatch* apFunctions, const cVector3f& av
 	cVector3f vCenter = vPlaneNormal*GetHeight();
 	float fSign[] = { -1, 1 };
 	//vCenter + vPlaneNormal*3*fSign[mbCullingOnPositiveSide]
-	apFunctions->DebugDrawBoxMinMax(GetProjectedPosOnPlane(vCenter-20), GetProjectedPosOnPlane(vCenter+20), cColor(1,1));
+	apFunctions->DebugDrawBoxMinMax(cMath::ToForgeVec3(GetProjectedPosOnPlane(vCenter-20)), cMath::ToForgeVec3(GetProjectedPosOnPlane(vCenter+20)), Vector4(1,1,1,1));
 	//cEditorHelper::DrawPyramid(apFunctions, vCenter, vCenter + vPlaneNormal*fSign[mbCullingOnPositiveSide]*5, 1, cColor(1,0,0,1));
-	apFunctions->DebugDrawLine(vCenter, vCenter + vPlaneNormal*fSign[mbCullingOnPositiveSide]*5, cColor(1,1));
+	apFunctions->DebugDrawLine(cMath::ToForgeVec3(vCenter), cMath::ToForgeVec3(vCenter + vPlaneNormal*fSign[mbCullingOnPositiveSide]*5), Vector4(1,1,1,1));
 }
 
 //------------------------------------------------------------------

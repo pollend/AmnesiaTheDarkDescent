@@ -83,7 +83,7 @@ cEditorThumbnailBuilder::cEditorThumbnailBuilder(iEditorBase* apEditor)
 
 	mpViewport = pScene->CreateViewport(pCamera,pWorld,true);
 	mpViewport->SetSize(cVector2l(128));
-	mpViewport->setRenderTarget(mpRenderTarget128);
+	//mpViewport->setRenderTarget(mpRenderTarget128);
 	//mpViewport->setImageDescriptor(desc128);
 	mpViewport->SetActive(false);
 	mpViewport->SetVisible(false);
@@ -121,11 +121,12 @@ void cEditorThumbnailBuilder::BuildThumbnailFromMeshEntity(cMeshEntity* apEntity
 
 	//////////////////////////////////////
 	// Render 128x128 thumbnail
-	mpViewport->GetRenderer()->Render(	1.0f/60.0f,
-										pCamera->GetFrustum(),
-										pWorld,
-										mpViewport->GetRenderSettings(),
-										false);
+   ASSERT(false && "not implemented");
+    // mpViewport->GetRenderer()->Draw(	1.0f/60.0f,
+   // 									pCamera->GetFrustum(),
+   // 									pWorld,
+   // 									mpViewport->GetRenderSettings(),
+   // 									false);
 	pGfx->WaitAndFinishRendering();
 
 	//////////////////////////////////
@@ -200,11 +201,12 @@ void cEditorThumbnailBuilder::BuildThumbnailFromMesh(const tWString& asMeshFilen
 
 	//////////////////////////////////////
 	// Render 128x128 thumbnail
-	mpViewport->GetRenderer()->Render(	1.0f/60.0f,
-										pCamera->GetFrustum(),
-										pWorld,
-										mpViewport->GetRenderSettings(),
-										false);
+   ASSERT(false && "need to implement");
+    // mpViewport->GetRenderer()->Draw(	1.0f/60.0f,
+   // 									pCamera->GetFrustum(),
+   // 									pWorld,
+   // 									mpViewport->GetRenderSettings(),
+   // 									false);
 	pGfx->WaitAndFinishRendering();
 
 	//////////////////////////////////

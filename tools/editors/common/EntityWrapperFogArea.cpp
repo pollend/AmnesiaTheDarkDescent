@@ -317,8 +317,8 @@ void cEntityWrapperFogArea::Draw(cEditorWindowViewport* apViewport, ImmediateDra
 	if(mbSelected)
 	{
 		ImmediateDrawBatch::DebugDrawOptions options;
-		options.m_transform = mmtxTransform;
-		apFunctions->DebugDrawBoxMinMax(-0.5f, 0.5f, cColor(1,1), options);
+		options.m_transform = cMath::ToForgeMat(mmtxTransform.GetTranspose());
+		apFunctions->DebugDrawBoxMinMax(Vector3(-0.5f), Vector3(0.5f), Vector4(1,1,1,1), options);
 	}
 }
 

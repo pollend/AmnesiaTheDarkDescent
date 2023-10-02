@@ -16,13 +16,12 @@
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
-
-#ifndef HPLEDITOR_EDITOR_VIEWPORT_H
-#define HPLEDITOR_EDITOR_VIEWPORT_H
+#pragma once
 
 #include "../common/StdAfx.h"
 
 #include "EditorGrid.h"
+#include "graphics/ForgeHandles.h"
 #include "graphics/Image.h"
 #include "graphics/RenderTarget.h"
 #include "scene/Viewport.h"
@@ -253,7 +252,7 @@ public:
 	// iFrameBuffer* GetFrameBuffer() { return mpFB; }
 	cViewport* GetEngineViewport() { return mpEngineViewport; }
 	void SetRenderMode(eRenderer aRenderMode);
-	void SetFrameBuffer(std::shared_ptr<LegacyRenderTarget> apFB);
+	//void SetFrameBuffer(SharedRenderTarget apFB);
 	void SetEngineViewportPositionAndSize(const cVector2l& avPos, const cVector2l& avSize);
 	void SetEngineViewportSize(const cVector2l& avSize);
 	void UpdateViewport();
@@ -284,6 +283,7 @@ public:
 	static void SetCamPlanes(const cVector2f& avX) { mvCamPlanes = avX; }
 	static const cVector2f& GetCamPlanes() { return mvCamPlanes; }
 protected:
+	void updateViewportSize(cVector2l size);
 	///////////////////////////////////
 	// GUI Callbacks
 
@@ -351,7 +351,6 @@ protected:
 	// iFrameBuffer* mpFB;
 	// Image* mpRenderTarget;
 
-	std::shared_ptr<LegacyRenderTarget> m_target;
 	cVector2f mvUVStart;
 	cVector2f mvUVSize;
 	cVector2f mvUVEnd;
@@ -385,4 +384,3 @@ protected:
 	static cVector2f mvCamPlanes;
 };
 
-#endif

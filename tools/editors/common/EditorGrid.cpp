@@ -168,8 +168,8 @@ void cEditorGrid::Draw(ImmediateDrawBatch *batch, const cVector3f& avPos)
 
 	while(fCount <= mfSize)
 	{
-		batch->DebugDrawLine(vLineStart1, vLineStart1+vLineEnd1, mColor);
-		batch->DebugDrawLine(vLineStart2, vLineStart2+vLineEnd2, mColor);
+		batch->DebugDrawLine(cMath::ToForgeVec3(vLineStart1), cMath::ToForgeVec3(vLineStart1+vLineEnd1), cMath::ToForgeVec4(mColor));
+		batch->DebugDrawLine(cMath::ToForgeVec3(vLineStart2), cMath::ToForgeVec3(vLineStart2+vLineEnd2), cMath::ToForgeVec4(mColor));
 
 		vLineStart1 += vAdd1;
 		vLineStart2 += vAdd2;

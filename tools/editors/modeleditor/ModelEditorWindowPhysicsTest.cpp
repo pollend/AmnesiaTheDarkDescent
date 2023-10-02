@@ -21,6 +21,7 @@
 
 #include "ModelEditor.h"
 #include "ModelEditorWorld.h"
+#include "graphics/ForgeRenderer.h"
 #include "math/MathTypes.h"
 
 #include <algorithm>
@@ -87,20 +88,20 @@ cModelEditorWindowPhysicsTest::cModelEditorWindowPhysicsTest(iEditorBase* apEdit
 	m_postSolidDraw = cViewport::PostSolidDraw::Handler([&](cViewport::PostSolidDrawPacket& payload) {
 		cMatrixf view = payload.m_frustum->GetViewMatrix().GetTranspose();
 		cMatrixf proj = payload.m_frustum->GetProjectionMatrix().GetTranspose();
-		hpl::ImmediateDrawBatch batch;
+		hpl::ImmediateDrawBatch batch(Interface<ForgeRenderer>::Get());
 
 		std::function<void(cNode3D* bone)> drawSkeletonRec;
 		drawSkeletonRec = [&](cNode3D* bone) {
 			cVector3f vCameraSpacePos = cMath::MatrixMul(payload.m_frustum->GetViewMatrix(), bone->GetWorldPosition());
 			float fSize = cMath::Min(-0.01f * vCameraSpacePos.z, 0.03f);
-			batch.DebugDrawSphere(bone->GetWorldPosition(), fSize, cColor(1, 0, 0, 1));
+			batch.DebugDrawSphere(cMath::ToForgeVec3(bone->GetWorldPosition()), fSize, Vector4(1, 0, 0, 1));
 
 			cNode3DIterator it = bone->GetChildIterator();
 			while (it.HasNext()) {
 				cNode3D* pChild = static_cast<cNode3D*>(it.Next());
 				ImmediateDrawBatch::DebugDrawOptions options;
 				options.m_depthTest = DepthTest::Always;
-				batch.DebugDrawLine(bone->GetWorldPosition(), pChild->GetWorldPosition(), cColor(1, 1), options);
+				batch.DebugDrawLine(cMath::ToForgeVec3(bone->GetWorldPosition()), cMath::ToForgeVec3(pChild->GetWorldPosition()), Vector4(1,1,1, 1), options);
 				drawSkeletonRec(pChild);
 			}
 		};
@@ -112,8 +113,8 @@ cModelEditorWindowPhysicsTest::cModelEditorWindowPhysicsTest(iEditorBase* apEdit
 			for(auto& pJoint: mvJoints)
 			{
 				cVector3f vPivot = pJoint->GetPivotPoint();
-				batch.DebugDrawSphere(vPivot,0.2f,cColor(1,0,0,1));
-				batch.DebugDrawLine(vPivot,vPivot + pJoint->GetPinDir()*0.25 ,cColor(0,1,0,1));
+				batch.DebugDrawSphere(cMath::ToForgeVec3(vPivot),0.2f,Vector4(1,0,0,1));
+				batch.DebugDrawLine(cMath::ToForgeVec3(vPivot),cMath::ToForgeVec3(vPivot + pJoint->GetPinDir()*0.25),Vector4(0,1,0,1));
 			}
 		}
 
@@ -131,13 +132,14 @@ cModelEditorWindowPhysicsTest::cModelEditorWindowPhysicsTest(iEditorBase* apEdit
 
 		if(mBodyPicker.mpPickedBody!=NULL) {
 
-			batch.DebugDrawSphere(mBodyPicker.mvPos,0.1f, cColor(1,0,0,1));
-			batch.DebugDrawSphere(m_dragPos, 0.1f, cColor(1,0,0,1));
+			batch.DebugDrawSphere(cMath::ToForgeVec3(mBodyPicker.mvPos),0.1f, Vector4(1,0,0,1));
+			batch.DebugDrawSphere(cMath::ToForgeVec3(m_dragPos), 0.1f, Vector4(1,0,0,1));
 
-			batch.DebugDrawLine(mBodyPicker.mvPos, m_dragPos, cColor(1,1,1,1));
+			batch.DebugDrawLine(cMath::ToForgeVec3(mBodyPicker.mvPos), cMath::ToForgeVec3(m_dragPos), Vector4(1,1,1,1));
 		}
 
-		batch.flush();
+		ASSERT(false && "TODO: add back batch");
+		//batch.flush(); // flush the batch
 	});
 
 	// mRenderCallback.mpBodyPicker = &mBodyPicker;
@@ -472,8 +474,11 @@ void cModelEditorWindowPhysicsTest::OnInitLayout()
 	mpInpBuoyancyAngularViscosity->SetValue(mfBuoyancyAngularViscosity, false);
 	mpInpBuoyancyLinearViscosity->SetValue(mfBuoyancyLinearViscosity, false);
 
-	auto image = m_target->GetImage();
-	SetEngineViewportPositionAndSize(0,cVector2l(image->GetWidth(), image->GetHeight()));
+	auto& target = mpEngineViewport->Target();
+    if(target.IsValid()) {
+	    SetEngineViewportPositionAndSize(0,cVector2l(
+	        target.m_handle->mWidth, target.m_handle->mHeight));
+	}
 	CreateGuiViewport(mpBGFrame);
 	SetGuiViewportPos(cVector3f(2,55,0.1f));
 	SetGuiViewportSize(cVector2f(mpBGFrame->GetSize() - cVector2f(4,58)));

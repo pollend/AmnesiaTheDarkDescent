@@ -205,7 +205,7 @@ void cEditorEditModeCombine::DrawPostGrid(cEditorWindowViewport* apViewport, Imm
 	{
 		apFunctions->DebugDraw2DLineQuad(cRect2f((float)mMouseRect.x,(float)mMouseRect.y,
 															(float)mMouseRect.w,(float)mMouseRect.h),
-															cColor(1,1));
+															Vector4(1,1,1,1));
 	}
 }
 

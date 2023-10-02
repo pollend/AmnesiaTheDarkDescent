@@ -250,9 +250,9 @@ void iLuxProp_CritterBase::OnRenderSolid(hpl::ImmediateDrawBatch* apFunctions)
 	ASSERT(false && "bottom line is needed"); // TODO add back this line
 	// pPhysicsWorld->RenderShapeDebugGeometry(mpBody->GetShape(), mpBody->GetLocalMatrix(), apFunctions->GetLowLevelGfx(), cColor(1,1));
 
-	apFunctions->DebugDrawLine(mpBody->GetLocalPosition(), mpBody->GetLocalPosition()+mvGroundNormal*0.5f,cColor(1,0,0,1));
+	apFunctions->DebugDrawLine(cMath::ToForgeVec3(mpBody->GetLocalPosition()), cMath::ToForgeVec3(mpBody->GetLocalPosition()+mvGroundNormal*0.5f),Vector4(1,0,0,1));
 	cVector3f vFwdDir = cMath::Vector3Normalize(mvVel==0 ? mlstFwdDirs.back() : mvVel);
-	apFunctions->DebugDrawLine(mpBody->GetLocalPosition(), mpBody->GetLocalPosition()+vFwdDir*0.5f,cColor(0,1,0,1));
+	apFunctions->DebugDrawLine(cMath::ToForgeVec3(mpBody->GetLocalPosition()), cMath::ToForgeVec3(mpBody->GetLocalPosition()+vFwdDir*0.5f),Vector4(0,1,0,1));
 
 	if(mpDamageShape)
 	{

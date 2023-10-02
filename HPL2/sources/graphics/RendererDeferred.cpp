@@ -81,13 +81,14 @@
 #include <unordered_map>
 #include <utility>
 
+#include <folly/FixedString.h>
+#include <folly/hash/Hash.h>
+#include <folly/small_vector.h>
+
 #include "Common_3/Utilities/Math/MathTypes.h"
 #include "Common_3/Resources/ResourceLoader/Interfaces/IResourceLoader.h"
 #include "Common_3/Graphics/Interfaces/IGraphics.h"
 #include "FixPreprocessor.h"
-#include <folly/FixedString.h>
-#include <folly/hash/Hash.h>
-#include <folly/small_vector.h>
 
 namespace hpl {
 
@@ -533,7 +534,11 @@ namespace hpl {
         // Set up render specific things
 
         UVector3 shadowSizes[] = {
-            UVector3(128, 128, 1), UVector3(256, 256, 1), UVector3(256, 256, 1), UVector3(512, 512, 1), UVector3(1024, 1024, 1)
+            UVector3(128, 128, 1),
+            UVector3(256, 256, 1),
+            UVector3(256, 256, 1),
+            UVector3(512, 512, 1),
+            UVector3(1024, 1024, 1)
         };
         int startSize = 2;
         if (mShadowMapResolution == eShadowMapResolution_Medium) {
@@ -542,9 +547,11 @@ namespace hpl {
             startSize = 0;
         }
 
+
         m_dissolveImage = mpResources->GetTextureManager()->Create2DImage("core_dissolve.tga", false);
         auto* forgeRenderer = Interface<ForgeRenderer>::Get();
 
+        m_drawBatch = std::make_unique<ImmediateDrawBatch>(forgeRenderer);
         m_occlusionUniformBuffer.Load([&](Buffer** buffer) {
             BufferLoadDesc desc = {};
             desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_BUFFER;
@@ -4091,7 +4098,7 @@ void cRendererDeferred::Draw(
         };
         cmdBindRenderTargets(
             frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, nullptr, nullptr, -1, -1);
-        cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)common->m_size.x, (float)common->m_size.y, 0.0f, 1.0f);
+        cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, static_cast<float>(common->m_size.x), static_cast<float>(common->m_size.y), 0.0f, 1.0f);
         cmdSetScissor(frame.m_cmd, 0, 0, common->m_size.x, common->m_size.y);
         cmdBindPipeline(frame.m_cmd, m_solidIlluminationPipelineCCW.m_handle);
 
@@ -4300,7 +4307,9 @@ void cRendererDeferred::Draw(
     postSolidEvent.m_outputTarget = &currentGBuffer.m_outputBuffer;
     postSolidEvent.m_viewport = &viewport;
     postSolidEvent.m_renderSettings = mpCurrentSettings;
+    postSolidEvent.m_immediateDrawBatch = m_drawBatch.get();
     viewport.SignalDraw(postSolidEvent);
+    m_drawBatch->flush(frame.m_cmd, currentGBuffer.m_outputBuffer, currentGBuffer.m_depthBuffer);
 
     // ------------------------------------------------------------------------
     // Translucency Pass --> output target
@@ -4708,7 +4717,9 @@ void cRendererDeferred::Draw(
     translucenceEvent.m_outputTarget = &currentGBuffer.m_outputBuffer;
     translucenceEvent.m_viewport = &viewport;
     translucenceEvent.m_renderSettings = mpCurrentSettings;
+    translucenceEvent.m_immediateDrawBatch = m_drawBatch.get();
     viewport.SignalDraw(translucenceEvent);
+    m_drawBatch->flush(frame.m_cmd, currentGBuffer.m_outputBuffer, currentGBuffer.m_depthBuffer);
 
     {
         cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);

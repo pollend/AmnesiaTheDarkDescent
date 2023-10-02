@@ -421,7 +421,7 @@ void cEntityWrapperBillboard::Draw(cEditorWindowViewport* apViewport, ImmediateD
     if(abIsSelected==false)
 		return;
 	cBoundingVolume* pBV = mpEngineEntity->GetRenderBV();
-	apFunctions->DebugDrawBoxMinMax(pBV->GetMin(), pBV->GetMax(), cColor(1,1));
+	apFunctions->DebugDrawBoxMinMax(cMath::ToForgeVec3(pBV->GetMin()), cMath::ToForgeVec3(pBV->GetMax()), Vector4(1,1,1,1));
 
 	if(msType=="Axis" || msType=="FixedAxis")
 		DrawArrow(apViewport, apFunctions, mmtxTransform, 1, true, cVector2f(0.05f, 0.4f), cColor(1,1));
@@ -432,8 +432,8 @@ void cEntityWrapperBillboard::Draw(cEditorWindowViewport* apViewport, ImmediateD
 		mtxTransform.SetTranslation(mvPosition);
 		cVector3f vHalfHaloSourceSize = mvHaloSourceSize*0.5f;
 		ImmediateDrawBatch::DebugDrawOptions options;
-		options.m_transform = mtxTransform;
-		apFunctions->DebugDrawBoxMinMax(vHalfHaloSourceSize*-1, vHalfHaloSourceSize, cColor(0,1,0,1), options);
+		options.m_transform = cMath::ToForgeMat(mtxTransform.GetTranspose());
+		apFunctions->DebugDrawBoxMinMax(cMath::ToForgeVec3(vHalfHaloSourceSize*-1), cMath::ToForgeVec3(vHalfHaloSourceSize), Vector4(0,1,0,1), options);
 	}
 }
 

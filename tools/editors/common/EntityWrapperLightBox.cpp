@@ -163,7 +163,7 @@ void cEntityWrapperLightBox::DrawLightTypeSpecific(cEditorWindowViewport* apView
 {
 	if(abIsSelected==false) return;
 
-	apFunctions->DebugDrawBoxMinMax(mvPosition-(mvSize*0.5f), mvPosition+(mvSize*0.5f),mcolDiffuseColor);
+	apFunctions->DebugDrawBoxMinMax(cMath::ToForgeVec3(mvPosition-(mvSize*0.5f)), cMath::ToForgeVec3(mvPosition+(mvSize*0.5f)),cMath::ToForgeVec4(mcolDiffuseColor));
 }
 
 

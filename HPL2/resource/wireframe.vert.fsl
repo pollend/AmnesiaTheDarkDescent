@@ -1,0 +1,37 @@
+
+
+STRUCT(UniformObject) 
+{
+    DATA(float4x4, modelMat, None);
+};
+
+CBUFFER(perFrameConstants, UPDATE_FREQ_PER_FRAME, b0, binding = 0)
+{
+    DATA(float4x4, viewProjMat, None);
+};
+
+RES(Buffer(UniformObject), uniformObjectBuffer, UPDATE_FREQ_NONE, t1, binding = 1);
+PUSH_CONSTANT(rootConstant, b0)
+{
+    DATA(uint, objectId, None);
+};
+
+STRUCT(VSInput)
+{
+	DATA(float3, Position, POSITION);
+};
+
+STRUCT(VSOutput)
+{
+	DATA(float4, Position, SV_Position);
+};
+
+VSOutput VS_MAIN(VSInput In)
+{
+    INIT_MAIN;
+    float4x4 modelViewPrj = mul(Get(viewProjMat), Get(uniformObjectBuffer)[Get(objectId)].modelMat);
+    VSOutput Out;
+    Out.Position = mul(modelViewPrj, float4(In.Position.xyz, 1.0));
+    Out.Position.z = (Out.Position.z * 0.5) + 0.5;
+    RETURN(Out);
+}

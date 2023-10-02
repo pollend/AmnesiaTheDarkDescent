@@ -76,7 +76,7 @@ void cLuxPlayerState_InteractWheel::DebugRenderSolid(ImmediateDrawBatch* apFunct
 	//apFunctions->GetLowLevelGfx()->DrawLine(vPivot, vPivot+cVector3f(0,1,0)*vAxes.y*10, cColor(0,1,0,1));
 	//apFunctions->GetLowLevelGfx()->DrawLine(vPivot, vPivot+cVector3f(0,0,1)*vAxes.z*-10, cColor(0,0,1,1));
 
-	apFunctions->DebugDrawLine(vPivot, vPivot+vPinDir*10, cColor(0,0,1,1));
+	apFunctions->DebugDrawLine(cMath::ToForgeVec3(vPivot), cMath::ToForgeVec3(vPivot+vPinDir*10), Vector4(0,0,1,1));
 
 	//apFunctions->GetLowLevelGfx()->DrawLine(vPivot, vPivot+mpCurrentJoint->GetPinDir(), cColor(0,0,1,1));
 	//apFunctions->GetLowLevelGfx()->DrawLine(mpCurrentBody->GetLocalPosition(),

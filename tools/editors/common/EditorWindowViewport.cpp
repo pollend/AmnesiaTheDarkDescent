@@ -64,7 +64,7 @@ cEditorWindowViewport::cEditorWindowViewport(iEditorBase* apEditor,
 				cVector3f vAxisEnd = 0;
 				vAxisStart.v[i] = vCenter.v[i] -1000.0f;
 				vAxisEnd.v[i] = vCenter.v[i] +1000.0f;
-				payload.m_immediateDrawBatch->DebugDrawLine(vAxisStart, vAxisEnd, col);
+				payload.m_immediateDrawBatch->DebugDrawLine(cMath::ToForgeVec3(vAxisStart), cMath::ToForgeVec3(vAxisEnd), cMath::ToForgeVec4(col));
 			}
 		}
 		tEditorClipPlaneVec& vClipPlanes = mpEditor->GetEditorWorld()->GetClipPlanes();
@@ -73,7 +73,7 @@ cEditorWindowViewport::cEditorWindowViewport(iEditorBase* apEditor,
 			vClipPlanes[i]->Draw(payload.m_immediateDrawBatch, 0);
 		}
 
-		payload.m_immediateDrawBatch->DebugDrawSphere(GetVCamera()->GetTargetPosition(),0.1f, cColor(0,1,1,1));
+		payload.m_immediateDrawBatch->DebugDrawSphere(cMath::ToForgeVec3(GetVCamera()->GetTargetPosition()),0.1f, Vector4(0,1,1,1));
 
 		const cVector3f& vRefMousePos = GetVCamera()->GetTrackRefMousePos();
 		const cVector3f& vMouseNewPos = GetVCamera()->GetTrackNewMousePos();
@@ -87,10 +87,10 @@ cEditorWindowViewport::cEditorWindowViewport(iEditorBase* apEditor,
 			cVector3f& vGridPos = vDebugGridPos;
 			cVector3f& vSnapPos = vDebugSnappedGridPos;
 
-			payload.m_immediateDrawBatch->DebugDrawLine(vPos1,vPos2,cColor(0,0,1,1));
-			payload.m_immediateDrawBatch->DebugDrawSphere(vPos1, 0.01f, cColor(0,1,0,1));
-			payload.m_immediateDrawBatch->DebugDrawSphere(vPos2, 0.2f, cColor(0,1,0,1));
-			payload.m_immediateDrawBatch->DebugDrawSphere(vGridPos, 0.3f, cColor(1,0,0,1));
+			payload.m_immediateDrawBatch->DebugDrawLine(cMath::ToForgeVec3(vPos1),cMath::ToForgeVec3(vPos2),Vector4(0,0,1,1));
+			payload.m_immediateDrawBatch->DebugDrawSphere(cMath::ToForgeVec3(vPos1), 0.01f, Vector4(0,1,0,1));
+			payload.m_immediateDrawBatch->DebugDrawSphere(cMath::ToForgeVec3(vPos2), 0.2f, Vector4(0,1,0,1));
+			payload.m_immediateDrawBatch->DebugDrawSphere(cMath::ToForgeVec3(vGridPos), 0.3f, Vector4(1,0,0,1));
 		}
 
 	});
@@ -139,17 +139,6 @@ cEditorWindowViewport::~cEditorWindowViewport()
 {
 }
 
-//----------------------------------------------------------------
-
-///////////////////////////////////////////////////////////////
-// PUBLIC METHODS
-///////////////////////////////////////////////////////////////
-
-//----------------------------------------------------------------
-
-//----------------------------------------------------------------
-
-//----------------------------------------------------------------
 
 void cEditorWindowViewport::SetPreset(eEditorWindowViewportPreset aPreset)
 {
@@ -281,10 +270,6 @@ void cEditorWindowViewport::Save(cXmlElement* apElement)
 	apElement->SetAttributeBool("UsingLTCam", mCamera.IsLockedToGrid());
 }
 
-//----------------------------------------------------------------
-
-//----------------------------------------------------------------
-
 void cEditorWindowViewport::SetEnlarged(bool abX)
 {
 	cVector3f vPos;
@@ -297,8 +282,7 @@ void cEditorWindowViewport::SetEnlarged(bool abX)
 		vPos = mvEnlargedPosition;
 		vSize = mvEnlargedSize;
 		vFBPos = cVector2l(0);
-		auto image = m_target->GetImage();
-		vFBSize = cVector2l(image->GetWidth(), image->GetHeight());
+	    vFBSize = cVector2l(mpEngineViewport->GetSize().x, mpEngineViewport->GetSize().y);
 	}
 	else
 	{
@@ -313,20 +297,6 @@ void cEditorWindowViewport::SetEnlarged(bool abX)
 	SetSize(vSize);
 	UpdateViewport();
 }
-
-
-//----------------------------------------------------------------
-
-//----------------------------------------------------------------
-//----------------------------------------------------------------
-
-//----------------------------------------------------------------
-
-/////////////////////////////////////////////////////////////////////
-// PROTECTED METHODS
-/////////////////////////////////////////////////////////////////////
-
-//----------------------------------------------------------------
 
 bool cEditorWindowViewport::MenuView_Presets(iWidget *apWidget, const cGuiMessageData& aData)
 {
@@ -352,7 +322,6 @@ bool cEditorWindowViewport::MenuView_Presets(iWidget *apWidget, const cGuiMessag
 }
 kGuiCallbackDeclaredFuncEnd(cEditorWindowViewport, MenuView_Presets);
 
-//----------------------------------------------------------------
 
 bool cEditorWindowViewport::MenuView_Rendering(iWidget *apWidget, const cGuiMessageData& aData)
 {
@@ -375,8 +344,6 @@ bool cEditorWindowViewport::MenuView_Rendering(iWidget *apWidget, const cGuiMess
 }
 kGuiCallbackDeclaredFuncEnd(cEditorWindowViewport, MenuView_Rendering);
 
-//----------------------------------------------------------------
-
 bool cEditorWindowViewport::MenuView_ShowGrid(iWidget *apWidget, const cGuiMessageData& aData)
 {
 	cWidgetMenuItem* pItem = (cWidgetMenuItem*) apWidget;
@@ -389,8 +356,6 @@ bool cEditorWindowViewport::MenuView_ShowGrid(iWidget *apWidget, const cGuiMessa
 }
 kGuiCallbackDeclaredFuncEnd(cEditorWindowViewport, MenuView_ShowGrid);
 
-//----------------------------------------------------------------
-
 bool cEditorWindowViewport::MenuView_ShowAxes(iWidget *apWidget, const cGuiMessageData& aData)
 {
 	cWidgetMenuItem* pItem = (cWidgetMenuItem*) apWidget;
@@ -402,8 +367,6 @@ bool cEditorWindowViewport::MenuView_ShowAxes(iWidget *apWidget, const cGuiMessa
 	return true;
 }
 kGuiCallbackDeclaredFuncEnd(cEditorWindowViewport, MenuView_ShowAxes);
-
-//----------------------------------------------------------------
 
 void cEditorWindowViewport::UpdateMenu()
 {
@@ -421,8 +384,6 @@ void cEditorWindowViewport::UpdateMenu()
     mpMainMenuShowGrid->SetChecked(GetDrawGrid());
 	mpMainMenuShowAxes->SetChecked(GetDrawAxes());
 }
-
-//----------------------------------------------------------------
 
 bool cEditorWindowViewport::OnViewportUpdate(const cGuiMessageData& aData)
 {
@@ -444,21 +405,15 @@ bool cEditorWindowViewport::OnViewportUpdate(const cGuiMessageData& aData)
 	return true;
 }
 
-//----------------------------------------------------------------
-
 bool cEditorWindowViewport::OnViewportGotFocus(const cGuiMessageData& aData)
 {
 	return false;
 }
 
-//----------------------------------------------------------------
-
 bool cEditorWindowViewport::OnViewportLostFocus(const cGuiMessageData& aData)
 {
 	return false;
 }
-
-//----------------------------------------------------------------
 
 bool cEditorWindowViewport::OnViewportDraw(const cGuiMessageData& aData)
 {
@@ -482,8 +437,6 @@ bool cEditorWindowViewport::OnViewportDraw(const cGuiMessageData& aData)
 
 	return true;
 }
-
-//----------------------------------------------------------------
 
 bool cEditorWindowViewport::OnViewportMouseDown(const cGuiMessageData& aData)
 {
@@ -543,8 +496,6 @@ bool cEditorWindowViewport::OnViewportMouseDown(const cGuiMessageData& aData)
 	return true;
 }
 
-//----------------------------------------------------------------
-
 bool cEditorWindowViewport::OnViewportMouseUp(const cGuiMessageData& aData)
 {
 	mpEditor->SetViewportLocked(false);
@@ -561,8 +512,6 @@ bool cEditorWindowViewport::OnViewportMouseUp(const cGuiMessageData& aData)
 	return true;
 }
 
-//----------------------------------------------------------------
-
 bool cEditorWindowViewport::OnViewportMouseMove(const cGuiMessageData& aData)
 {
 	if(IsFocused()==false && mpSet->GetAttentionWidget()==NULL)
@@ -578,8 +527,6 @@ bool cEditorWindowViewport::OnViewportMouseMove(const cGuiMessageData& aData)
 	return true;
 }
 
-//----------------------------------------------------------------
-
 bool cEditorWindowViewport::OnViewportKeyPress(const cGuiMessageData& aData)
 {
 	if(IsFocused()==false)
@@ -588,14 +535,10 @@ bool cEditorWindowViewport::OnViewportKeyPress(const cGuiMessageData& aData)
 	return false;
 }
 
-//----------------------------------------------------------------
-
 bool cEditorWindowViewport::OnViewportKeyRelease(const cGuiMessageData& aData)
 {
 	return false;
 }
-
-//----------------------------------------------------------------
 
 void cEditorWindowViewport::OnInitLayout()
 {
@@ -667,20 +610,14 @@ void cEditorWindowViewport::OnInitLayout()
 	SetGuiViewportPos(cVector3f(0,vMenuSize.y,0.05f));
 }
 
-//----------------------------------------------------------------
-
 void cEditorWindowViewport::OnLoadLevel()
 {
 }
-
-//----------------------------------------------------------------
 
 void cEditorWindowViewport::OnUpdate(float afTimeStep)
 {
 	UpdateMenu();
 }
-
-//-------------------------------------------------------
 
 void cEditorWindowViewport::OnChangeSize()
 {
@@ -693,8 +630,6 @@ void cEditorWindowViewport::OnChangeSize()
 
 	SetGuiViewportSize(mpBGFrame->GetSize() - cVector2f(0,vMenuSize.y));
 }
-
-//----------------------------------------------------------------
 
 void cEditorWindowViewport::OnSetActive(bool abX)
 {

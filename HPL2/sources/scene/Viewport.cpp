@@ -59,10 +59,10 @@ namespace hpl {
 
         m_updateEventHandler = IUpdateEventLoop::UpdateEvent::Handler([&](float dt) {
             if (m_dirtyViewport) {
-                if (m_size.x > 0 && m_size.y > 0 && m_renderTarget) {
+                if (m_size.x > 0 && m_size.y > 0 && m_target.IsValid()) {
                     m_dirtyViewport = false;
+                    m_viewportChanged.Signal();
                 }
-                m_viewportChanged.Signal();
             }
         });
         Interface<IUpdateEventLoop>::Get()->Subscribe(BroadcastEvent::PreUpdate, m_updateEventHandler);
@@ -137,6 +137,24 @@ namespace hpl {
         }
     }
 
+    void cViewport::SetTarget(SharedRenderTarget& target) {
+        m_target = target;
+        auto texture = SharedTexture();
+        texture.SetRenderTarget(m_target);
+        m_image = std::make_shared<Image>();
+        m_image->SetForgeTexture(std::move(texture));
+        //m_dirtyViewport = true;
+    }
+
+    void cViewport::SetTarget(SharedRenderTarget&& target) {
+        m_target = std::move(target);
+        auto texture = SharedTexture();
+        texture.SetRenderTarget(m_target);
+        m_image = std::make_shared<Image>();
+        m_image->SetForgeTexture(std::move(texture));
+        //m_dirtyViewport = true;
+    }
+
     PrimaryViewport::PrimaryViewport() {
 
     }
@@ -160,7 +178,6 @@ namespace hpl {
                 m_viewportChanged.Signal();
             }
         });
-
 
         window.ConnectWindowEventHandler(m_windowEventHandler);
         SetSize(window.GetWindowSize());

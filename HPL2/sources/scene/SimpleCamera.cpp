@@ -17,10 +17,10 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "scene/SimpleCamera.h"
 #include "engine/Interface.h"
 #include "math/MathTypes.h"
-#include "stdafx.h"
-#include "SimpleCamera.h"
+
 
 cSimpleCamera::cSimpleCamera(const tString& asAppName,cEngine *apGame, cWorld *apWorld, float afSpeed,cVector3f avStartPos,bool abShowFPS, bool abLoadSkin)
 : iUpdateable("SimpleCamera")
@@ -83,7 +83,7 @@ cSimpleCamera::cSimpleCamera(const tString& asAppName,cEngine *apGame, cWorld *a
 	mpViewport->bindToWindow(*window);
 	//mpViewport = mpEngine->GetScene()->CreateViewport(NULL, NULL);
 
-	mpViewport->SetRenderer(mpEngine->GetGraphics()->GetRenderer(eRenderer_WireFrame));
+	//mpViewport->SetRenderer(mpEngine->GetGraphics()->GetRenderer(eRenderer_WireFrame));
 	//mpViewport->GetRenderSettings()->mClearColor = cColor(0.7f,1);
 
 	mpEngine->GetScene()->SetCurrentListener(mpViewport);

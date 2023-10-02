@@ -225,6 +225,26 @@
     #include "hbao_prepareNativeDepths.comp.fsl"
 #end
 
+#vert immediate.vert
+    #include "immediate.vert.fsl"
+#end
+
+#vert immediate_2D.vert
+    #include "immediate_2D.vert.fsl"
+#end
+
+#frag immediate_color.frag
+    #include "immediate_color.frag.fsl"
+#end
+
+#vert wireframe.vert
+    #include "wireframe.vert.fsl"
+#end
+
+#frag wireframe.frag
+    #include "wireframe.frag.fsl"
+#end
+
 #comp hbao_courseAO.comp
     #define SMALL_SCALE_AO_AMOUNT (1)   
     #define LARGE_SCALE_AO_AMOUNT  (1)

@@ -249,13 +249,13 @@ void cLuxEnemyPathfinder::OnRenderSolid(hpl::ImmediateDrawBatch* apFunctions)
 	{
 		cAINode *pNode = mpNodeContainer->GetNode(i);
 
-		apFunctions->DebugDrawSphere(pNode->GetPosition(), 0.3f,cColor(0.4f,1));
+		apFunctions->DebugDrawSphere(cMath::ToForgeVec3(pNode->GetPosition()), 0.3f,Vector4(0.4f,0.4f,0.4f,1));
 
 		for(int j=0; j < pNode->GetEdgeNum(); ++j)
 		{
 			cAINodeEdge *pEdge = pNode->GetEdge(j);
 
-			apFunctions->DebugDrawLine(pNode->GetPosition(),pEdge->mpNode->GetPosition(),cColor(0.4f,0.4f,0.4f,1));
+			apFunctions->DebugDrawLine(cMath::ToForgeVec3(pNode->GetPosition()),cMath::ToForgeVec3(pEdge->mpNode->GetPosition()),Vector4(0.4f,0.4f,0.4f,1));
 		}
 	}
 
@@ -271,7 +271,7 @@ void cLuxEnemyPathfinder::OnRenderSolid(hpl::ImmediateDrawBatch* apFunctions)
 		vGoalPos += cVector3f(0,mpNodeContainer->GetCollideSize().y/2, 0);
 	}
 
-	apFunctions->DebugDrawSphere(vGoalPos,0.2f, cColor(1,0,1));
+	apFunctions->DebugDrawSphere(cMath::ToForgeVec3(vGoalPos),0.2f, Vector4(1,0,1, 1));
 	cVector3f vLastVec = vGoalPos;
 
 	//////////////////////////////
@@ -287,8 +287,8 @@ void cLuxEnemyPathfinder::OnRenderSolid(hpl::ImmediateDrawBatch* apFunctions)
 			vNodePos += cVector3f(0,mpNodeContainer->GetCollideSize().y/2, 0);
 		}
 
-		apFunctions->DebugDrawSphere(vNodePos,0.2f, cColor(1,0,1));
-		apFunctions->DebugDrawLine(vLastVec, vNodePos,cColor(1,0,1));
+	     apFunctions->DebugDrawSphere(cMath::ToForgeVec3(vNodePos),0.2f, Vector4(1,0,1, 1));
+	     apFunctions->DebugDrawLine(cMath::ToForgeVec3(vLastVec), cMath::ToForgeVec3(vNodePos),Vector4(1,0,1,1));
 
 		vLastVec = vNodePos;
 	}
@@ -299,8 +299,8 @@ void cLuxEnemyPathfinder::OnRenderSolid(hpl::ImmediateDrawBatch* apFunctions)
 	//if(mpContainer->GetNodeIsAtCenter()==false){
 	//vStartPos += cVector3f(0,mpContainer->GetCollideSize().y/2, 0);
 	//}
-	apFunctions->DebugDrawSphere(vStartPos,0.2f,cColor(1,0,1));
-	apFunctions->DebugDrawLine(vLastVec, vStartPos,cColor(1,0,1));
+	apFunctions->DebugDrawSphere(cMath::ToForgeVec3(vStartPos),0.2f,Vector4(1,0,1, 1));
+	apFunctions->DebugDrawLine(cMath::ToForgeVec3(vLastVec), cMath::ToForgeVec3(vStartPos),Vector4(1,0,1,1));
 
 
 }

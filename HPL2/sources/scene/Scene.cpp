@@ -237,11 +237,12 @@ namespace hpl {
             //////////////////////////////////////////////
             // Render Post effects
             auto outputImage = pRenderer->GetOutputImage(frame.m_frameIndex, *pViewPort);
+            const bool isViewportTarget = pViewPort->Target().IsValid();
+            auto& target = isViewportTarget ? pViewPort->Target().m_handle : frame.m_finalRenderTarget;
             if(outputImage.IsValid()) {
                 if (bPostEffects) {
                     START_TIMING(RenderPostEffects)
-                    const bool isViewportTarget = pViewPort->Target().IsValid();
-                    auto& target = isViewportTarget ? pViewPort->Target().m_handle : frame.m_finalRenderTarget;
+
                     if (isViewportTarget) {
                         cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
                         std::array rtBarriers = {
@@ -267,9 +268,7 @@ namespace hpl {
                     auto size = pViewPort->GetSize();
                     cRect2l rect = cRect2l(0, 0, size.x, size.y);
                     forgeRenderer->cmdCopyTexture(frame.m_cmd, outputImage.m_handle->pTexture,
-                        frame.m_finalRenderTarget);
-                    // context.CopyTextureToFrameBuffer(
-                    //     *outputImage, rect, pViewPort->GetRenderTarget());
+                        target);
                  }
             }
 
