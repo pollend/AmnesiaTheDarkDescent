@@ -36,8 +36,8 @@ class DebugDraw final {
             Count
         };
 
-        static constexpr uint32_t ImmediateVertexBufferSize = 1 << 20;
-        static constexpr uint32_t ImmediateIndexBufferSize = 1 << 18;
+        static constexpr uint32_t ImmediateVertexBufferSize = 1 << 23;
+        static constexpr uint32_t ImmediateIndexBufferSize = 1 << 20;
         static constexpr uint32_t NumberOfPerFrameUniforms = 32;
 
         static constexpr TinyImageFormat ColorBufferFormat = TinyImageFormat_R8G8B8A8_UNORM;
