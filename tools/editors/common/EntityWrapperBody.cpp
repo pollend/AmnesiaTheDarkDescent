@@ -26,7 +26,7 @@
 
 #include "EntityWrapperBodyShape.h"
 
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 
 #include <algorithm>
 
@@ -324,7 +324,7 @@ bool cEntityWrapperBody::GetProperty(int alPropID, tString& asX)
 
 //---------------------------------------------------------------------------
 
-void cEntityWrapperBody::Draw(	cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions,
+void cEntityWrapperBody::Draw(	cEditorWindowViewport* apViewport, DebugDraw* apFunctions,
 									iEditorEditMode* apEditMode,bool abIsSelected, const cColor& aHighlightCol, const cColor& aDisabledCol)
 {
 	iEntityWrapper::Draw(apViewport, apFunctions, apEditMode, abIsSelected);

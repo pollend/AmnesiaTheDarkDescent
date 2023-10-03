@@ -38,7 +38,7 @@ public:
 
 	cMatrixf& GetTransformMatrix();
 
-	void DrawAxes(cEditorWindowViewport* apViewport, ImmediateDrawBatch *apFunctions, float afAxisLength);
+	void DrawAxes(cEditorWindowViewport* apViewport, DebugDraw *apFunctions, float afAxisLength);
 
 	void UpdateTransformation();
 

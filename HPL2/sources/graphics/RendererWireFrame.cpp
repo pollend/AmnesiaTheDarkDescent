@@ -279,11 +279,11 @@ namespace hpl {
 
             common = m_boundViewportData.update(viewport, std::move(viewportData));
         }
-        m_rendererList.BeginAndReset(afFrameTime, apFrustum);
 
         const cMatrixf mainFrustumView = apFrustum->GetViewMatrix();
         const cMatrixf mainFrustumProj = apFrustum->GetProjectionMatrix();
 
+        m_rendererList.BeginAndReset(afFrameTime, apFrustum);
         std::array<cPlanef, 0> occlusionPlanes = {};
 		rendering::detail::UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
 			&m_rendererList, apFrustum, apWorld->GetRenderableContainer(eWorldContainerType_Static), occlusionPlanes, 0);

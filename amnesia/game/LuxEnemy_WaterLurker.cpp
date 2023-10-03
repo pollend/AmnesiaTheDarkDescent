@@ -548,7 +548,7 @@ bool cLuxEnemy_WaterLurker::InRangeOfFood(iPhysicsBody *apFoodBody)
 
 //-----------------------------------------------------------------------
 
-void cLuxEnemy_WaterLurker::OnRenderSolidImplemented(hpl::ImmediateDrawBatch* apFunctions)
+void cLuxEnemy_WaterLurker::OnRenderSolidImplemented(hpl::DebugDraw* apFunctions)
 {
 	iPhysicsWorld *pPhysicsWorld = mpMap->GetPhysicsWorld();
 	// BX_ASSERT(false, );  // TODO: Fix this

@@ -1808,7 +1808,7 @@ bool cLuxEnemy_ManPig::StateEventImplement(int alState, eLuxEnemyStateEvent aEve
 
 //-----------------------------------------------------------------------
 
-void cLuxEnemy_ManPig::OnRenderSolidImplemented(hpl::ImmediateDrawBatch* apFunctions)
+void cLuxEnemy_ManPig::OnRenderSolidImplemented(hpl::DebugDraw* apFunctions)
 {
 	iPhysicsWorld *pPhysicsWorld = mpMap->GetPhysicsWorld();
 

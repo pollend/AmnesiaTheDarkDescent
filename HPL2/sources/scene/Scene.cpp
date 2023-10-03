@@ -237,9 +237,10 @@ namespace hpl {
             //////////////////////////////////////////////
             // Render Post effects
             auto outputImage = pRenderer->GetOutputImage(frame.m_frameIndex, *pViewPort);
-            const bool isViewportTarget = pViewPort->Target().IsValid();
-            auto& target = isViewportTarget ? pViewPort->Target().m_handle : frame.m_finalRenderTarget;
+
             if(outputImage.IsValid()) {
+                const bool isViewportTarget = pViewPort->Target().IsValid();
+                auto& target = isViewportTarget ? pViewPort->Target().m_handle : frame.m_finalRenderTarget;
                 if (bPostEffects) {
                     START_TIMING(RenderPostEffects)
 

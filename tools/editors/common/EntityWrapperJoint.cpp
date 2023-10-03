@@ -32,7 +32,7 @@
 
 #include "EntityIcon.h"
 
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 
 //-------------------------------------------------------------------
 
@@ -493,7 +493,7 @@ cEditorWindowEntityEditBox* iEntityWrapperJoint::CreateEditBox(cEditorEditModeSe
 
 //------------------------------------------------------------------------------
 
-void iEntityWrapperJoint::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, iEditorEditMode* apEditMode, bool abIsSelected, const cColor& aHighlightCol, const cColor& aDisabledCol)
+void iEntityWrapperJoint::Draw(cEditorWindowViewport* apViewport, DebugDraw* apFunctions, iEditorEditMode* apEditMode, bool abIsSelected, const cColor& aHighlightCol, const cColor& aDisabledCol)
 {
 	iEntityWrapper::Draw(apViewport, apFunctions, apEditMode, abIsSelected);
 	//DrawIcon(apViewport, apFunctions, apEditMode, abIsSelected, mvPosition);

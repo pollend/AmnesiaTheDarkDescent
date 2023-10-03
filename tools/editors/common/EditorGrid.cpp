@@ -23,7 +23,7 @@
 #include "EditorViewport.h"
 
 
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 
 
 bool cEditorGrid::mbSnapToGrid = true;
@@ -66,7 +66,7 @@ cVector3f cEditorGrid::GetSnappedPosInSpace(const cVector3f& avWorldPos)
 
 //--------------------------------------------------------
 
-void cEditorGrid::Draw(ImmediateDrawBatch *batch, const cVector3f& avPos)
+void cEditorGrid::Draw(DebugDraw *batch, const cVector3f& avPos)
 {
 	if(mbVisible==false || mfSnapSeparation<=0)
 		return;

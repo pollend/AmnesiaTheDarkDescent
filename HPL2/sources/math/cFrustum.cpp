@@ -19,7 +19,7 @@
 
 #include "math/cFrustum.h"
 
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 #include "math/Math.h"
 #include "system/LowLevelSystem.h"
 #include "graphics/LowLevelGraphics.h"
@@ -674,7 +674,7 @@ namespace hpl {
 	}
 	//-----------------------------------------------------------------------
 
-	void cFrustum::Draw(ImmediateDrawBatch *drawBatch, const cColor &aColor)
+	void cFrustum::Draw(DebugDraw *drawBatch, const cColor &aColor)
 	{
 		if(mbObliqueNearPlane)
 		{

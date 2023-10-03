@@ -42,7 +42,7 @@ public:
 	cEditorEditModeStaticObjects(iEditorBase* apEditor,
 								 iEditorWorld* apEditorWorld);
 
-	void DrawObjectPreview(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, const cMatrixf& amtxTransform, bool abPreCreationActive);
+	void DrawObjectPreview(cEditorWindowViewport* apViewport, DebugDraw* apFunctions, const cMatrixf& amtxTransform, bool abPreCreationActive);
 
 	void OnEditorUpdate(float afTimeStep);
 

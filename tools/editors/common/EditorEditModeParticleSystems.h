@@ -45,7 +45,7 @@ public:
 	cEditorEditModeParticleSystems(iEditorBase* apEditor,
 								   iEditorWorld* apEditorWorld);
 
-	void DrawObjectPreview(cEditorWindowViewport* apViewport, ImmediateDrawBatch *apFunctions, const cVector3f& avPos){}
+	void DrawObjectPreview(cEditorWindowViewport* apViewport, DebugDraw *apFunctions, const cVector3f& avPos){}
 
 	bool SetUpCreationData(iEntityWrapperData* apData);
 protected:

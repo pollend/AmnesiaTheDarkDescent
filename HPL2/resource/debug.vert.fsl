@@ -1,4 +1,4 @@
-#include "immediate_resource.h.fsl"
+#include "debug_resource.h.fsl"
 
 STRUCT(VSInput)
 {
@@ -16,8 +16,7 @@ VSOutput VS_MAIN(VSInput In)
 {
     INIT_MAIN;
     VSOutput Out;
-    Out.Position = mul(Get(viewProj2DMat), float4(In.Position.xyz, 1.0));
     Out.color = In.color;
+    Out.Position = mul(Get(viewProjMat), float4(In.Position.xyz, 1.0));
     RETURN(Out);
 }
-

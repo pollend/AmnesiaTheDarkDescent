@@ -49,7 +49,7 @@ public:
 	void SetColor(const cColor& acCol) { mColor = acCol; }
 	cColor GetColor() { return mColor; }
 
-	void Draw(ImmediateDrawBatch* apFunctions, const cVector3f& avPos);
+	void Draw(DebugDraw* apFunctions, const cVector3f& avPos);
 
 	cVector3f GetSnappedPosOnGrid(const cVector3f& avWorldPos, bool abForceSnap=false);
 	static cVector3f GetSnappedPosInSpace(const cVector3f& avWorldPos);

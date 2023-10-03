@@ -31,7 +31,7 @@
 
 #include "EditorWindowEntityEditBoxArea.h"
 
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 //------------------------------------------------------------------------------
 
 cEntityWrapperTypeArea::cEntityWrapperTypeArea(cEditorUserClassSubType* apType) : iEntityWrapperTypeUserDefinedEntity(eEditorEntityType_Area,
@@ -295,7 +295,7 @@ void cEntityWrapperArea::SetMeshFile(const tString& asX)
 
 //------------------------------------------------------------------------------
 
-void cEntityWrapperArea::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, iEditorEditMode* apEditMode,
+void cEntityWrapperArea::Draw(cEditorWindowViewport* apViewport, DebugDraw* apFunctions, iEditorEditMode* apEditMode,
 								bool abIsSelected, const cColor& aHighlightCol, const cColor& aDisabledCol)
 {
 	iEntityWrapper::Draw(apViewport, apFunctions, apEditMode, abIsSelected, aHighlightCol, cColor(1,0,0,1));
@@ -308,7 +308,7 @@ void cEntityWrapperArea::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBa
 		col = pType->GetColor();
 
 	cMatrixf mtxRT = cMath::MatrixMul(cMath::MatrixTranslate(mvPosition), cMath::MatrixRotate(mvRotation, eEulerRotationOrder_XYZ));
-	ImmediateDrawBatch::DebugDrawOptions options;
+	DebugDraw::DebugDrawOptions options;
 	options.m_transform = cMath::ToForgeMat(mtxRT.GetTranspose());
 	apFunctions->DebugDrawLine(Vector3(-0.05f,0,0), Vector3(0.05f,0,0), cMath::ToForgeVec4(col), options);
 	apFunctions->DebugDrawLine(Vector3(0,-0.05f,0), Vector3(0,0.05f,0), cMath::ToForgeVec4(col), options);

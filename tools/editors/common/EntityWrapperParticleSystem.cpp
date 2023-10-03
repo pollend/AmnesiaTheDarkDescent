@@ -331,7 +331,7 @@ bool cEntityWrapperParticleSystem::EntitySpecificCheckCulled(cEditorClipPlane* a
 //------------------------------------------------------------------------------
 
 
-void cEntityWrapperParticleSystem::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions,iEditorEditMode* apEditMode,
+void cEntityWrapperParticleSystem::Draw(cEditorWindowViewport* apViewport, DebugDraw* apFunctions,iEditorEditMode* apEditMode,
 						bool abIsSelected, const cColor& aHighlightCol, const cColor& aDisabledCol)
 {
 	iEntityWrapper::Draw(apViewport,apFunctions,apEditMode,abIsSelected, aHighlightCol);

@@ -67,7 +67,7 @@ namespace hpl {
             SharedRenderTarget* m_outputTarget;
             cViewport* m_viewport;
             cRenderSettings* m_renderSettings;
-            ImmediateDrawBatch* m_immediateDrawBatch;
+            DebugDraw* m_debug;
         };
         struct PostSolidDrawPacket : public DrawPayloadCommon {
         };

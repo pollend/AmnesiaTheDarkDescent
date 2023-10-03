@@ -27,7 +27,7 @@
 #include "EntityWrapperPrimitivePlane.h"
 
 
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 
 iPrimitiveMeshCreator::iPrimitiveMeshCreator(cEditorEditModePrimitives* apEditMode)
 {
@@ -84,7 +84,7 @@ void cPrimitiveMeshCreatorPlane::StoreMousePosition()
 
 //---------------------------------------------------------------------------
 
-void cPrimitiveMeshCreatorPlane::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, const cVector3f& avPos)
+void cPrimitiveMeshCreatorPlane::Draw(cEditorWindowViewport* apViewport, DebugDraw* apFunctions, const cVector3f& avPos)
 {
 	if(mvCorners.size()==1)
 	{
@@ -282,7 +282,7 @@ void cEditorEditModePrimitives::OnViewportMouseUp(int alButtons)
 
 //---------------------------------------------------------------------------
 
-void cEditorEditModePrimitives::DrawPostGrid(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, const cVector3f& avPos)
+void cEditorEditModePrimitives::DrawPostGrid(cEditorWindowViewport* apViewport, DebugDraw* apFunctions, const cVector3f& avPos)
 {
 	iEditorEditMode::DrawPostGrid(apViewport, apFunctions, avPos);
 

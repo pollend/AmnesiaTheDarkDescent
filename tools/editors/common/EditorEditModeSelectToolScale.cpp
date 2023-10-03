@@ -27,7 +27,7 @@
 #include "EditorGrid.h"
 
 #include "EditorActionSelection.h"
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 
 
 //----------------------------------------------------------------------
@@ -48,7 +48,7 @@ bool cEditorEditModeSelectToolScale::IsActive()
 
 //----------------------------------------------------------------
 
-void cEditorEditModeSelectToolScale::DrawAxes(cEditorWindowViewport* apViewport, ImmediateDrawBatch *apFunctions, float afAxisLength)
+void cEditorEditModeSelectToolScale::DrawAxes(cEditorWindowViewport* apViewport, DebugDraw *apFunctions, float afAxisLength)
 {
 
 	float fHalfSide = 0.05f*afAxisLength;
@@ -96,7 +96,7 @@ void cEditorEditModeSelectToolScale::DrawAxes(cEditorWindowViewport* apViewport,
 
 	cColor col[3];
 
-	auto drawCubeQuads = [&](cColor& col, ImmediateDrawBatch::DebugDrawOptions& options) {
+	auto drawCubeQuads = [&](cColor& col, DebugDraw::DebugDrawOptions& options) {
 		apFunctions->DrawQuad(
 			Vector3(fHalfSide,fHalfSide,fHalfSide),
 			Vector3(fHalfSide,-fHalfSide,fHalfSide),
@@ -147,7 +147,7 @@ void cEditorEditModeSelectToolScale::DrawAxes(cEditorWindowViewport* apViewport,
 		);
 	};
 
-	ImmediateDrawBatch::DebugDrawOptions options;
+	DebugDraw::DebugDrawOptions options;
 	options.m_transform = cMath::ToForgeMat(mtxTransform.GetTranspose());
 	for(int i=eSelectToolAxis_X; i<eSelectToolAxis_LastEnum; ++i)
 	{

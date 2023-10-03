@@ -1,4 +1,4 @@
-#include "immediate_resource.h.fsl"
+#include "debug_resource.h.fsl"
 
 STRUCT(PsIn)
 {

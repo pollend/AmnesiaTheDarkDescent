@@ -94,7 +94,7 @@ public:
 	bool GetProperty(int, bool&);
 	bool GetProperty(int, float&);
 
-	void Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, iEditorEditMode* apEditMode, bool abIsSelected, const cColor& aHighlightCol=cColor(1,1), const cColor& aDisabledCol=cColor(0.5f,1));
+	void Draw(cEditorWindowViewport* apViewport, DebugDraw* apFunctions, iEditorEditMode* apEditMode, bool abIsSelected, const cColor& aHighlightCol=cColor(1,1), const cColor& aDisabledCol=cColor(0.5f,1));
 
 	void SetTileAmount(const cVector3f& avTileAmount);
 	void SetTileOffset(const cVector3f& avOffset);

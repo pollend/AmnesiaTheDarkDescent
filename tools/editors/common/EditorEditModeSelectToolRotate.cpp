@@ -27,7 +27,7 @@
 #include "EditorActionSelection.h"
 #include "EditorGrid.h"
 
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 
 
 cEditorEditModeSelectToolRotate::cEditorEditModeSelectToolRotate(cEditorEditModeSelect* apParent, cEditorSelection* apSelection) : cEditorEditModeSelectTool(eSelectToolMode_Rotate, apParent, apSelection)
@@ -179,7 +179,7 @@ bool cEditorEditModeSelectToolRotate::PointIntersectsAxis(eSelectToolAxis aAxis,
 
 //----------------------------------------------------------------
 
-void cEditorEditModeSelectToolRotate::DrawAxes(cEditorWindowViewport* apViewport, ImmediateDrawBatch *apFunctions, float afAxisLength)
+void cEditorEditModeSelectToolRotate::DrawAxes(cEditorWindowViewport* apViewport, DebugDraw *apFunctions, float afAxisLength)
 {
 	// apFunctions->SetDepthTest(false);
 	// apFunctions->SetTextureRange(NULL,0);
@@ -201,7 +201,7 @@ void cEditorEditModeSelectToolRotate::DrawAxes(cEditorWindowViewport* apViewport
 											 cMath::MatrixRotate(mpSelection->GetCenterRotation(),eEulerRotationOrder_XYZ));
 
 
-	ImmediateDrawBatch::DebugDrawOptions options;
+	DebugDraw::DebugDrawOptions options;
 	options.m_transform = cMath::ToForgeMat(mtxTransform.GetTranspose());
 	// apFunctions->SetMatrix(&mtxTransform);
 

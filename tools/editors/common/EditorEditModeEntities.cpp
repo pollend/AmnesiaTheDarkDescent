@@ -30,7 +30,7 @@
 
 #include "../leveleditor/LevelEditor.h"
 
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 //-----------------------------------------------------------------
 
 ///////////////////////////////////////////////////////////////////
@@ -56,7 +56,7 @@ cEditorEditModeEntities::cEditorEditModeEntities(iEditorBase* apEditor,
 
 //-----------------------------------------------------------------
 
-void cEditorEditModeEntities::DrawObjectPreview(cEditorWindowViewport* apViewport, ImmediateDrawBatch *apFunctions, const cMatrixf& amtxTransform, bool abPreCreationActive)
+void cEditorEditModeEntities::DrawObjectPreview(cEditorWindowViewport* apViewport, DebugDraw *apFunctions, const cMatrixf& amtxTransform, bool abPreCreationActive)
 {
 	cEditorWindowEntities* pWin = (cEditorWindowEntities*)mpWindow;
 
@@ -88,11 +88,11 @@ void cEditorEditModeEntities::DrawObjectPreview(cEditorWindowViewport* apViewpor
 
 		if(abPreCreationActive)
 		{
-			ImmediateDrawBatch::DebugDrawOptions options;
-			options.m_depthTest = DepthTest::Greater;
+			DebugDraw::DebugDrawOptions options;
+			options.m_depthTest = DebugDraw::DebugDepthTest::Greater;
 			options.m_transform = cMath::ToForgeMat(amtxTransform.GetTranspose());
 			apFunctions->DebugDrawBoxMinMax(cMath::ToForgeVec3(vBVMin),cMath::ToForgeVec3(vBVMax), Vector4(1,0,0,0.6f), options);
-			options.m_depthTest = DepthTest::Less;
+			options.m_depthTest = DebugDraw::DebugDepthTest::Less;
 			apFunctions->DebugDrawBoxMinMax(cMath::ToForgeVec3(vBVMin),cMath::ToForgeVec3(vBVMax), Vector4(0,1,0,0.6f), options);
 		}
 		else

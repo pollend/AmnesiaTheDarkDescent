@@ -86,7 +86,7 @@ namespace hpl {
         Interface<hpl::PrimaryViewport>::Register(m_primaryViewport.get());
         Interface<input::InputManager>::Register(&m_inputManager);
         Interface<window::NativeWindowWrapper>::Register(&m_window); // storing as a singleton means we can only have one window ...
-        //Interface<ImmediateDrawBatch>::Register(m_debug.get());
+        //Interface<DebugDraw>::Register(m_debug.get());
     }
 
     void Bootstrap::Shutdown() {
@@ -95,7 +95,7 @@ namespace hpl {
         Interface<input::InputManager>::UnRegister(&m_inputManager);
         Interface<window::NativeWindowWrapper>::UnRegister(&m_window);
         Interface<IUpdateEventLoop>::UnRegister(&m_updateEventLoop);
-        //Interface<ImmediateDrawBatch>::UnRegister(m_debug.get());
+        //Interface<DebugDraw>::UnRegister(m_debug.get());
         exitLog();
     }
 

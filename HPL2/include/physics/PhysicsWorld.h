@@ -21,7 +21,7 @@
 #define HPL_PHYSICS_WORLD_H
 
 #include <map>
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 #include "system/SystemTypes.h"
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
@@ -239,9 +239,9 @@ namespace hpl {
 							bool abUsePrefilter=false)=0;
 
 		virtual void RenderShapeDebugGeometry(	iCollideShape *apShape, const cMatrixf& a_mtxTransform,
-												ImmediateDrawBatch *apLowLevel, const cColor& aColor)=0;
+												DebugDraw *apLowLevel, const cColor& aColor)=0;
 
-		virtual void RenderDebugGeometry(ImmediateDrawBatch *apLowLevel, const cColor& aColor)=0;
+		virtual void RenderDebugGeometry(DebugDraw *apLowLevel, const cColor& aColor)=0;
 
 		virtual bool CheckShapeCollision(	iCollideShape* apShapeA, const cMatrixf& a_mtxA,
 										iCollideShape* apShapeB, const cMatrixf& a_mtxB,

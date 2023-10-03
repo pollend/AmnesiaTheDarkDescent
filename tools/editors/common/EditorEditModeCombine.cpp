@@ -164,7 +164,7 @@ void cEditorEditModeCombine::OnEditorUpdate(float afTimeStep)
 
 //-------------------------------------------------------------
 
-void cEditorEditModeCombine::DrawPostGrid(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, const cVector3f& avPos)
+void cEditorEditModeCombine::DrawPostGrid(cEditorWindowViewport* apViewport, DebugDraw* apFunctions, const cVector3f& avPos)
 {
 	iEditorEditMode::DrawPostGrid(apViewport,apFunctions,avPos);
 

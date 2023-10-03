@@ -257,6 +257,10 @@ namespace hpl {
 
 		if(mlTextureNum==0)
 		{
+			cVector2f vSize = cVector2f((float)apTexture->GetWidth(), (float)apTexture->GetHeight());
+
+		    mvImageSize.x = vSize.x * (avEndUV.x - avStartUV.x);
+		    mvImageSize.y = vSize.y * (avEndUV.y - avStartUV.y);
 
 			mvVtx[0].tex.x = avStartUV.x;
 			mvVtx[0].tex.y = avStartUV.y;

@@ -43,7 +43,7 @@
 
 #include "EntityWrapper.h"
 #include "EntityWrapperCompoundObject.h"
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 
 #include <algorithm>
 
@@ -443,7 +443,7 @@ void cEditorEditModeSelect::OnViewportMouseUp(int alButtons)
 
 //----------------------------------------------------------------------
 
-void cEditorEditModeSelect::DrawPostGrid(cEditorWindowViewport* apViewport, ImmediateDrawBatch *apFunctions, const cVector3f &avPos)
+void cEditorEditModeSelect::DrawPostGrid(cEditorWindowViewport* apViewport, DebugDraw *apFunctions, const cVector3f &avPos)
 {
 	iEditorEditMode::DrawPostGrid(apViewport,apFunctions,avPos);
 
@@ -972,7 +972,7 @@ void cEntitySelectorNormal::OnEditorUpdate()
 
 //----------------------------------------------------------------------
 
-void cEntitySelectorNormal::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions)
+void cEntitySelectorNormal::Draw(cEditorWindowViewport* apViewport, DebugDraw* apFunctions)
 {
 
 	///////////////////////////////////////////////////
@@ -1126,7 +1126,7 @@ void cEntitySelectorHighlighter::OnEditorUpdate()
 
 //----------------------------------------------------------------------------
 
-void cEntitySelectorHighlighter::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions)
+void cEntitySelectorHighlighter::Draw(cEditorWindowViewport* apViewport, DebugDraw* apFunctions)
 {
 	cCamera* pCam = apViewport->GetCamera();
 	if(mpEntityUnderPointer)

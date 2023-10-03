@@ -22,7 +22,7 @@
 #include "EditorEditMode.h"
 #include "EditorWindowViewport.h"
 
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 
 cSphereCreator::cSphereCreator(iEditorEditMode* apEditMode) : iShapeCreator(apEditMode)
 {
@@ -43,7 +43,7 @@ void cSphereCreator::OnViewportMouseUp(int alButtons)
 		StoreMousePosition(mvTempPoint);
 }
 
-void cSphereCreator::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions)
+void cSphereCreator::Draw(cEditorWindowViewport* apViewport, DebugDraw* apFunctions)
 {
 	// apFunctions->SetProgram(NULL);
 	// apFunctions->SetTextureRange(NULL,0);

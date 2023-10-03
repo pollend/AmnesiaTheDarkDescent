@@ -1,4 +1,4 @@
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 #include "Common_3/Graphics/Interfaces/IGraphics.h"
 #include "Common_3/Resources/ResourceLoader/Interfaces/IResourceLoader.h"
 #include "graphics/VertexBuffer.h"
@@ -11,7 +11,33 @@
 
 namespace hpl {
 
-    ImmediateDrawBatch::ImmediateDrawBatch(ForgeRenderer* renderer) {
+    namespace details {
+       static CompareMode toCompareMode(DebugDraw::DebugDepthTest test) {
+            switch(test) {
+                case DebugDraw::DebugDepthTest::None:
+                    return CMP_NEVER;
+                case DebugDraw::DebugDepthTest::Less:
+                    return CMP_LESS;
+                case DebugDraw::DebugDepthTest::LessEqual:
+                    return CMP_LEQUAL;
+                case DebugDraw::DebugDepthTest::Equal:
+                    return CMP_EQUAL;
+                case DebugDraw::DebugDepthTest::GreaterEqual:
+                    return CMP_GEQUAL;
+                case DebugDraw::DebugDepthTest::Greater:
+                    return CMP_GREATER;
+                case DebugDraw::DebugDepthTest::NotEqual:
+                    return CMP_NOTEQUAL;
+                case DebugDraw::DebugDepthTest::Always:
+                    return CMP_ALWAYS;
+                default: break;
+            }
+            ASSERT(false && "unhandled case");
+            return CMP_ALWAYS;
+        }
+    }
+
+    DebugDraw::DebugDraw(ForgeRenderer* renderer) {
         {
             BufferDesc desc = {};
 			desc.mDescriptors = DESCRIPTOR_TYPE_VERTEX_BUFFER;
@@ -30,15 +56,15 @@ namespace hpl {
 	    }
 	    m_colorShader.Load(renderer->Rend(), [&](Shader** shader) {
             ShaderLoadDesc loadDesc = {};
-            loadDesc.mStages[0].pFileName = "immediate.vert";
-            loadDesc.mStages[1].pFileName = "immediate_color.frag";
+            loadDesc.mStages[0].pFileName = "debug_line.vert";
+            loadDesc.mStages[1].pFileName = "debug_line.frag";
             addShader(renderer->Rend(), &loadDesc, shader);
             return true;
 	    });
 	    m_color2DShader.Load(renderer->Rend(), [&](Shader** shader) {
             ShaderLoadDesc loadDesc = {};
-            loadDesc.mStages[0].pFileName = "immediate_2D.vert";
-            loadDesc.mStages[1].pFileName = "immediate_color.frag";
+            loadDesc.mStages[0].pFileName = "debug_line_2D.vert";
+            loadDesc.mStages[1].pFileName = "debug_line.frag";
             addShader(renderer->Rend(), &loadDesc, shader);
             return true;
 	    });
@@ -72,58 +98,59 @@ namespace hpl {
         m_perFrameDescriptorSet.Load(renderer->Rend(), [&](DescriptorSet** set) {
             DescriptorSetDesc setDesc = { m_rootSignature.m_handle,
                                           DESCRIPTOR_UPDATE_FREQ_PER_FRAME,
-                                          ImmediateDrawBatch::NumberOfPerFrameUniforms };
+                                          DebugDraw::NumberOfPerFrameUniforms };
             addDescriptorSet(renderer->Rend(), &setDesc, set);
             return true;
         });
 
-        for(uint32_t i = 0; i < ImmediateDrawBatch::NumberOfPerFrameUniforms; i++) {
+        for(uint32_t i = 0; i < DebugDraw::NumberOfPerFrameUniforms; i++) {
             std::array<DescriptorData, 1> params = {};
             params[0].pName = "perFrameConstants";
             params[0].ppBuffers = &m_frameBufferUniform[i].m_handle;
             updateDescriptorSet(renderer->Rend(), i, m_perFrameDescriptorSet.m_handle, params.size(), params.data());
         }
-
-        {
-            std::array colorFormats = { TinyImageFormat_R8G8B8A8_UNORM };
-            VertexLayout vertexLayout = {};
+        VertexLayout colorVertexLayout = {};
 #ifndef USE_THE_FORGE_LEGACY
-            vertexLayout.mBindingCount = 1;
-            vertexLayout.mBindings[0].mStride = sizeof(float3);
+        vertexLayout.mBindingCount = 1;
+        vertexLayout.mBindings[0].mStride = sizeof(float3);
 #endif
-            vertexLayout.mAttribCount = 2;
-            vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
-            vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
-            vertexLayout.mAttribs[0].mBinding = 0;
-            vertexLayout.mAttribs[0].mLocation = 0;
-            vertexLayout.mAttribs[0].mOffset = 0;
+        colorVertexLayout.mAttribCount = 2;
+        colorVertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
+        colorVertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
+        colorVertexLayout.mAttribs[0].mBinding = 0;
+        colorVertexLayout.mAttribs[0].mLocation = 0;
+        colorVertexLayout.mAttribs[0].mOffset = 0;
 
-            vertexLayout.mAttribs[1].mSemantic = SEMANTIC_COLOR;
-            vertexLayout.mAttribs[1].mFormat = TinyImageFormat_R32G32B32A32_SFLOAT;
-            vertexLayout.mAttribs[1].mBinding = 0;
-            vertexLayout.mAttribs[1].mLocation = 1;
-            vertexLayout.mAttribs[1].mOffset = sizeof(float) * 3;
+        colorVertexLayout.mAttribs[1].mSemantic = SEMANTIC_COLOR;
+        colorVertexLayout.mAttribs[1].mFormat = TinyImageFormat_R32G32B32A32_SFLOAT;
+        colorVertexLayout.mAttribs[1].mBinding = 0;
+        colorVertexLayout.mAttribs[1].mLocation = 1;
+        colorVertexLayout.mAttribs[1].mOffset = sizeof(float) * 3;
 
-            RasterizerStateDesc rasterizerStateDesc = {};
+
+
+        BlendStateDesc blendStateDesc{};
+        blendStateDesc.mSrcFactors[0] = BC_ONE;
+        blendStateDesc.mDstFactors[0] = BC_ZERO;
+        blendStateDesc.mBlendModes[0] = BM_ADD;
+#ifdef USE_THE_FORGE_LEGACY
+        blendStateDesc.mMasks[0] = RED | GREEN | BLUE;
+#else
+        blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_RED | ColorMask::COLOR_MASK_GREEN | ColorMask::COLOR_MASK_BLUE;
+#endif
+        blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
+        blendStateDesc.mIndependentBlend = false;
+
+        std::array colorFormats = { ColorBufferFormat };
+        for(size_t depth = 0; depth < static_cast<size_t>(DebugDepthTest::Count); depth++){
+
             DepthStateDesc depthStateDesc = {};
             depthStateDesc.mDepthTest = true;
             depthStateDesc.mDepthWrite = false;
+            depthStateDesc.mDepthFunc = details::toCompareMode(static_cast<DebugDraw::DebugDepthTest>(depth));
 
-            BlendStateDesc blendStateDesc{};
-            blendStateDesc.mSrcFactors[0] = BC_ONE;
-            blendStateDesc.mDstFactors[0] = BC_ZERO;
-            blendStateDesc.mBlendModes[0] = BM_ADD;
-#ifdef USE_THE_FORGE_LEGACY
-            blendStateDesc.mMasks[0] = RED | GREEN | BLUE;
-#else
-            blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_RED | ColorMask::COLOR_MASK_GREEN | ColorMask::COLOR_MASK_BLUE;
-#endif
-            blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
-            blendStateDesc.mIndependentBlend = false;
-
-            //rasterizerStateDesc.mFrontFace = FrontFace::FRONT_FACE_CCW;
-            //rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
-            depthStateDesc.mDepthFunc = CMP_LEQUAL;
+            RasterizerStateDesc rasterizerStateDesc = {};
+            rasterizerStateDesc.mFillMode = FILL_MODE_SOLID;
 
             PipelineDesc pipelineDesc = {};
             pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
@@ -134,33 +161,83 @@ namespace hpl {
             pipelineSettings.pDepthState = &depthStateDesc;
             pipelineSettings.pBlendState = &blendStateDesc;
             pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
-            pipelineSettings.mDepthStencilFormat = TinyImageFormat_D32_SFLOAT_S8_UINT;
+            pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
             pipelineSettings.mSampleQuality = 0;
             pipelineSettings.pRootSignature = m_rootSignature.m_handle;
             pipelineSettings.pShaderProgram = m_color2DShader.m_handle;
             pipelineSettings.pRasterizerState = &rasterizerStateDesc;
-            pipelineSettings.pVertexLayout = &vertexLayout;
-            m_lineSegmentPipeline2D.Load(renderer->Rend(), [&](Pipeline** pipline) {
+            pipelineSettings.pVertexLayout = &colorVertexLayout;
+
+            m_solidColorPipeline[depth].Load(renderer->Rend(), [&](Pipeline** pipline) {
                 addPipeline(renderer->Rend(), &pipelineDesc, pipline);
                 return true;
             });
+        }
+        for(size_t depth = 0; depth < static_cast<size_t>(DebugDepthTest::Count); depth++) {
+            DepthStateDesc depthStateDesc = {};
+            depthStateDesc.mDepthTest = true;
+            depthStateDesc.mDepthWrite = false;
+            depthStateDesc.mDepthFunc = details::toCompareMode(static_cast<DebugDraw::DebugDepthTest>(depth));
+
+            RasterizerStateDesc rasterizerStateDesc = {};
+            rasterizerStateDesc.mFillMode = FILL_MODE_WIREFRAME;
+
+            PipelineDesc pipelineDesc = {};
+            pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+            auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
+            pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_LINE_LIST;
+            pipelineSettings.mRenderTargetCount = colorFormats.size();
+            pipelineSettings.pColorFormats = colorFormats.data();
+            pipelineSettings.pDepthState = &depthStateDesc;
+            pipelineSettings.pBlendState = &blendStateDesc;
+            pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
+            pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
+            pipelineSettings.mSampleQuality = 0;
+            pipelineSettings.pRootSignature = m_rootSignature.m_handle;
             pipelineSettings.pShaderProgram = m_colorShader.m_handle;
-            m_lineSegmentPipeline.Load(renderer->Rend(), [&](Pipeline** pipline) {
+            pipelineSettings.pRasterizerState = &rasterizerStateDesc;
+            pipelineSettings.pVertexLayout = &colorVertexLayout;
+
+            m_linePipeline[depth].Load(renderer->Rend(), [&](Pipeline** pipline) {
                 addPipeline(renderer->Rend(), &pipelineDesc, pipline);
                 return true;
             });
+        }
+        {
+            DepthStateDesc depthStateDesc = {};
+            depthStateDesc.mDepthTest = true;
+            depthStateDesc.mDepthWrite = false;
             depthStateDesc.mDepthFunc = CMP_ALWAYS;
-            m_lineSegmentPipelineDisableDepth.Load(renderer->Rend(), [&](Pipeline** pipline) {
+
+            RasterizerStateDesc rasterizerStateDesc = {};
+            rasterizerStateDesc.mFillMode = FILL_MODE_WIREFRAME;
+
+            PipelineDesc pipelineDesc = {};
+            pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+            auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
+            pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_LINE_LIST;
+            pipelineSettings.mRenderTargetCount = colorFormats.size();
+            pipelineSettings.pColorFormats = colorFormats.data();
+            pipelineSettings.pDepthState = &depthStateDesc;
+            pipelineSettings.pBlendState = &blendStateDesc;
+            pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
+            pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
+            pipelineSettings.mSampleQuality = 0;
+            pipelineSettings.pRootSignature = m_rootSignature.m_handle;
+            pipelineSettings.pShaderProgram = m_color2DShader.m_handle;
+            pipelineSettings.pRasterizerState = &rasterizerStateDesc;
+            pipelineSettings.pVertexLayout = &colorVertexLayout;
+            m_lineSegmentPipeline2D.Load(renderer->Rend(), [&](Pipeline** pipline) {
                 addPipeline(renderer->Rend(), &pipelineDesc, pipline);
                 return true;
             });
         }
     }
 
-    void ImmediateDrawBatch::Reset() {
+    void DebugDraw::Reset() {
     }
 
-    void ImmediateDrawBatch::DebugDrawBoxMinMax(
+    void DebugDraw::DebugDrawBoxMinMax(
         const Vector3& avMin, const Vector3& avMax, const Vector4& color, const DebugDrawOptions& options) {
         DebugDrawLine(Vector3(avMax.getX(), avMax.getY(), avMax.getZ()), Vector3(avMin.getX(), avMax.getY(), avMax.getZ()), color, options);
         DebugDrawLine(Vector3(avMax.getX(), avMax.getY(), avMax.getZ()), Vector3(avMax.getX(), avMin.getY(), avMax.getZ()), color, options);
@@ -180,7 +257,7 @@ namespace hpl {
         DebugDrawLine(Vector3(avMax.getX(), avMin.getY(), avMax.getZ()), Vector3(avMax.getX(), avMin.getY(), avMin.getZ()), color, options);
     }
 
-    void ImmediateDrawBatch::DrawTri(
+    void DebugDraw::DrawTri(
         const Vector3& v1, const Vector3& v2, const Vector3& v3, const Vector4& color, const DebugDrawOptions& options) {
         const Vector4 vv1 = options.m_transform * Vector4(v1, 1.0f);
         const Vector4 vv2 = options.m_transform * Vector4(v2, 1.0f);
@@ -194,7 +271,7 @@ namespace hpl {
         m_colorTriangles.push_back(request);
     }
 
-    void ImmediateDrawBatch::DrawPyramid(
+    void DebugDraw::DrawPyramid(
         const Vector3& baseCenter, const Vector3& top, float halfWidth, const Vector4& color, const DebugDrawOptions& options) {
         Vector3 vNormal = top - baseCenter;
         Vector3 vPoint = baseCenter + Vector3(1, 1, 1);
@@ -212,7 +289,7 @@ namespace hpl {
         DrawTri(top, bottomRight, topRight, color, options);
     }
 
-    void ImmediateDrawBatch::DebugDraw2DLine(const Vector2& start, const Vector2& end, const Vector4& color) {
+    void DebugDraw::DebugDraw2DLine(const Vector2& start, const Vector2& end, const Vector4& color) {
         Line2DSegmentRequest request;
         request.m_start = { start.getX(), start.getY() };
         request.m_end = { end.getX(), end.getY() };
@@ -220,14 +297,14 @@ namespace hpl {
         m_line2DSegments.push_back(request);
     }
 
-    void ImmediateDrawBatch::DebugDraw2DLineQuad(cRect2f rect, const Vector4& color) {
+    void DebugDraw::DebugDraw2DLineQuad(cRect2f rect, const Vector4& color) {
         DebugDraw2DLine(Vector2(rect.x, rect.y), Vector2(rect.x + rect.w, rect.y), color);
         DebugDraw2DLine(Vector2(rect.x + rect.w, rect.y), Vector2(rect.x + rect.w, rect.y + rect.h), color);
         DebugDraw2DLine(Vector2(rect.x + rect.w, rect.y + rect.h), Vector2(rect.x, rect.y + rect.h), color);
         DebugDraw2DLine(Vector2(rect.x, rect.y + rect.h), Vector2(rect.x, rect.y), color);
     }
 
-    void ImmediateDrawBatch::DebugDrawLine(
+    void DebugDraw::DebugDrawLine(
         const Vector3& start, const Vector3& end, const Vector4& color, const DebugDrawOptions& options) {
         Vector3 transformStart = (options.m_transform * Vector4(start, 1.0f)).getXYZ();
         Vector3 transformEnd = (options.m_transform * Vector4(end, 1.0f)).getXYZ();
@@ -239,7 +316,7 @@ namespace hpl {
         m_lineSegments.push_back(request);
     }
 
-    void ImmediateDrawBatch::DrawQuad(
+    void DebugDraw::DrawQuad(
         const Vector3& v1,
         const Vector3& v2,
         const Vector3& v3,
@@ -266,7 +343,7 @@ namespace hpl {
         m_uvQuads.push_back(request);
     }
 
-    void ImmediateDrawBatch::DrawQuad(
+    void DebugDraw::DrawQuad(
         const Vector3& v1,
         const Vector3& v2,
         const Vector3& v3,
@@ -289,7 +366,7 @@ namespace hpl {
     }
 
     // scale based on distance from camera
-    float ImmediateDrawBatch::BillboardScale(cCamera* apCamera, const Eigen::Vector3f& pos) {
+    float DebugDraw::BillboardScale(cCamera* apCamera, const Eigen::Vector3f& pos) {
         const auto avViewSpacePosition = cMath::MatrixMul(apCamera->GetViewMatrix(), cVector3f(pos.x(), pos.y(), pos.z()));
         switch (apCamera->GetProjectionType()) {
         case eProjectionType_Orthographic:
@@ -303,7 +380,7 @@ namespace hpl {
         return 0.0f;
     }
 
-    void ImmediateDrawBatch::DrawBillboard(
+    void DebugDraw::DrawBillboard(
         const Vector3& pos,
         const Vector2& size,
         const Vector2& uv0,
@@ -331,11 +408,11 @@ namespace hpl {
         DrawQuad(v1.getXYZ(), v2.getXYZ(), v3.getXYZ(), v4.getXYZ(), uv0, uv1, image, aTint, options);
     }
 
-    void ImmediateDrawBatch::DebugDrawSphere(const Vector3& pos, float radius, const Vector4& color, const DebugDrawOptions& options) {
+    void DebugDraw::DebugDrawSphere(const Vector3& pos, float radius, const Vector4& color, const DebugDrawOptions& options) {
         DebugDrawSphere(pos, radius, color, color, color, options);
     }
 
-    void ImmediateDrawBatch::DebugDrawSphere(
+    void DebugDraw::DebugDrawSphere(
         const Vector3& pos, float radius, const Vector4& c1, const Vector4& c2, const Vector4& c3, const DebugDrawOptions& options) {
         constexpr int alSegments = 32;
         constexpr float afAngleStep = k2Pif / static_cast<float>(alSegments);
@@ -367,7 +444,7 @@ namespace hpl {
         }
     }
 
-    void ImmediateDrawBatch::DebugSolidFromVertexBuffer(
+    void DebugDraw::DebugSolidFromVertexBuffer(
         iVertexBuffer* vertexBuffer, const Vector4& color, const DebugDrawOptions& options) {
         ///////////////////////////////////////
         // Set up variables
@@ -396,7 +473,7 @@ namespace hpl {
             DrawTri(vTriPos[0], vTriPos[1], vTriPos[2], color, options);
         }
     }
-    void ImmediateDrawBatch::DebugWireFrameFromVertexBuffer(
+    void DebugDraw::DebugWireFrameFromVertexBuffer(
         iVertexBuffer* vertexBuffer, const Vector4& color, const DebugDrawOptions& options) {
         ///////////////////////////////////////
         // Set up variables
@@ -432,8 +509,20 @@ namespace hpl {
         }
     }
 
-    void ImmediateDrawBatch::flush(Cmd* cmd, SharedRenderTarget& targetBuffer, SharedRenderTarget& depthBuffer) {
+    void DebugDraw::flush(Cmd* cmd, const cViewport& viewport, const cFrustum& frustum, SharedRenderTarget& targetBuffer, SharedRenderTarget& depthBuffer) {
         m_frameIndex = (m_frameIndex + 1) % NumberOfPerFrameUniforms;
+        const cMatrixf mainFrustumView = frustum.GetViewMatrix();
+        const cMatrixf mainFrustumProj = frustum.GetProjectionMatrix();
+        {
+            BufferUpdateDesc updateDesc = { m_frameBufferUniform[m_frameIndex].m_handle, 0, sizeof(FrameUniformBuffer)};
+            beginUpdateResource(&updateDesc);
+            FrameUniformBuffer  uniformData;
+            uniformData.m_viewProjMat = cMath::ToForgeMat(cMath::MatrixMul(mainFrustumProj, mainFrustumView).GetTranspose());
+            uniformData.m_viewProj2DMat = Matrix4::frustum(0.0f, viewport.GetSizeU().x, viewport.GetSizeU().y, 0.0f, 0.0f, 1.0f);
+            (*reinterpret_cast<FrameUniformBuffer*>(updateDesc.pMappedData)) = uniformData;
+            endUpdateResource(&updateDesc, NULL);
+        }
+
 
         std::array targets = {
             targetBuffer.m_handle,
@@ -446,9 +535,89 @@ namespace hpl {
         cmdSetViewport(cmd, 0.0f, 0.0f, static_cast<float>(targetBuffer.m_handle->mWidth), static_cast<float>(targetBuffer.m_handle->mHeight), 0.0f, 1.0f);
         cmdSetScissor(cmd, 0, 0, static_cast<float>(targetBuffer.m_handle->mWidth), static_cast<float>(targetBuffer.m_handle->mHeight));
 
+        if (!m_colorQuads.empty()) {
+            size_t vertexBufferOffset = 0;
+            size_t indexBufferOffset = 0;
+            struct PositionColorVertex {
+                float3 position;
+                float4 color;
+            };
+
+            std::sort(m_colorQuads.begin(), m_colorQuads.end(), [](const ColorQuadRequest& a, const ColorQuadRequest& b) {
+                return a.m_depthTest < b.m_depthTest;
+            });
+
+            const size_t numVertices = m_colorQuads.size() * 4;
+            const size_t numIndices = m_colorQuads.size() * 6;
+            const size_t vertexBufferSize = sizeof(PositionColorVertex) * numVertices;
+            const size_t indexBufferSize = sizeof(uint32_t) * numIndices;
+			const uint32_t vertexBufferStride = sizeof(PositionColorVertex);
+
+		    GPURingBufferOffset vb = getGPURingBufferOffset(m_vertexBuffer, vertexBufferSize);
+		    GPURingBufferOffset ib = getGPURingBufferOffset(m_indexBuffer, indexBufferSize);
+
+            auto it = m_colorQuads.begin();
+            auto lastIt = m_colorQuads.begin();
+		    BufferUpdateDesc vertexUpdateDesc = { vb.pBuffer, vb.mOffset, vertexBufferSize};
+		    BufferUpdateDesc indexUpdateDesc = { ib.pBuffer, ib.mOffset, indexBufferSize};
+		    beginUpdateResource(&vertexUpdateDesc);
+		    beginUpdateResource(&indexUpdateDesc);
+            while (it != m_colorQuads.end()) {
+                size_t vertexBufferIndex = 0;
+                size_t indexBufferIndex = 0;
+                do {
+                    // reinterpret_cast<uint16_t*>(ib.data)[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex;
+                    reinterpret_cast<PositionColorVertex*>(vertexUpdateDesc.pMappedData)[vertexBufferOffset + (vertexBufferIndex++)] = {
+                        { it->m_v1.getX(), it->m_v1.getY(), it->m_v1.getZ() },
+                        { it->m_color.getX(), it->m_color.getY(), it->m_color.getZ(), it->m_color.getW() }
+                    };
+
+                    // reinterpret_cast<uint16_t*>(ib.data)[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex;
+                    reinterpret_cast<PositionColorVertex*>(vertexUpdateDesc.pMappedData)[vertexBufferOffset + (vertexBufferIndex++)] = {
+                        { it->m_v2.getX(), it->m_v2.getY(), it->m_v2.getZ() },
+                        { it->m_color.getX(), it->m_color.getY(), it->m_color.getZ(), it->m_color.getW() }
+                    };
+
+                    // reinterpret_cast<uint16_t*>(ib.data)[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex;
+                    reinterpret_cast<PositionColorVertex*>(vertexUpdateDesc.pMappedData)[vertexBufferOffset + (vertexBufferIndex++)] = {
+                        { it->m_v3.getX(), it->m_v3.getY(), it->m_v3.getZ() },
+                        { it->m_color.getX(), it->m_color.getY(), it->m_color.getZ(), it->m_color.getW() }
+                    };
+
+                    // reinterpret_cast<uint16_t*>(ib.data)[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex;
+                    reinterpret_cast<PositionColorVertex*>(vertexUpdateDesc.pMappedData)[vertexBufferOffset + (vertexBufferIndex++)] = {
+                        { it->m_v4.getX(), it->m_v4.getY(), it->m_v4.getZ() },
+                        { it->m_color.getX(), it->m_color.getY(), it->m_color.getZ(), it->m_color.getW() }
+                    };
+
+                    reinterpret_cast<uint16_t*>(indexUpdateDesc.pMappedData)[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex - 4;
+                    reinterpret_cast<uint16_t*>(indexUpdateDesc.pMappedData)[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex - 3;
+                    reinterpret_cast<uint16_t*>(indexUpdateDesc.pMappedData)[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex - 2;
+                    reinterpret_cast<uint16_t*>(indexUpdateDesc.pMappedData)[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex - 3;
+                    reinterpret_cast<uint16_t*>(indexUpdateDesc.pMappedData)[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex - 2;
+                    reinterpret_cast<uint16_t*>(indexUpdateDesc.pMappedData)[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex - 1;
+
+                    lastIt = it;
+                    it++;
+                } while (it != m_colorQuads.end() && it->m_depthTest == lastIt->m_depthTest);
+
+
+
+                cmdBindPipeline(cmd, m_solidColorPipeline[static_cast<size_t>(lastIt->m_depthTest)].m_handle);
+                cmdBindDescriptorSet(cmd, m_frameIndex, m_perFrameDescriptorSet.m_handle);
+			    cmdBindVertexBuffer(cmd, 1, &vb.pBuffer, &vertexBufferStride, &vb.mOffset);
+			    cmdBindIndexBuffer(cmd, ib.pBuffer, INDEX_TYPE_UINT16, ib.mOffset);
+
+                cmdDrawIndexed(cmd, indexBufferIndex, indexBufferOffset, vertexBufferOffset);
+
+                indexBufferOffset += indexBufferIndex;
+                vertexBufferOffset += vertexBufferIndex;
+            }
+            endUpdateResource(&vertexUpdateDesc, nullptr);
+            endUpdateResource(&indexUpdateDesc, nullptr);
+        }
 
         if(!m_line2DSegments.empty()) {
-
             struct PositionColorVertex {
                 float3 position;
                 float4 color;
@@ -468,13 +637,13 @@ namespace hpl {
 		    beginUpdateResource(&vertexUpdateDesc);
 		    beginUpdateResource(&indexUpdateDesc);
             for(auto& segment: m_line2DSegments) {
-                reinterpret_cast<uint16_t*>(vertexUpdateDesc.pMappedData)[indexBufferOffset++] = vertexBufferOffset;
-                reinterpret_cast<PositionColorVertex*>(indexUpdateDesc.pMappedData)[vertexBufferOffset++] = PositionColorVertex {
+                reinterpret_cast<uint16_t*>(indexUpdateDesc.pMappedData)[indexBufferOffset++] = vertexBufferOffset;
+                reinterpret_cast<PositionColorVertex*>(vertexUpdateDesc.pMappedData)[vertexBufferOffset++] = PositionColorVertex {
                     float3(segment.m_start.getX(), segment.m_start.getY(), 0.0f),
                     float4(segment.m_color.getX(), segment.m_color.getY(), segment.m_color.getZ(), segment.m_color.getW())
                 };
-                reinterpret_cast<uint16_t*>(vertexUpdateDesc.pMappedData)[indexBufferOffset++] = vertexBufferOffset;
-                reinterpret_cast<PositionColorVertex*>(indexUpdateDesc.pMappedData)[vertexBufferOffset++] = PositionColorVertex {
+                reinterpret_cast<uint16_t*>(indexUpdateDesc.pMappedData)[indexBufferOffset++] = vertexBufferOffset;
+                reinterpret_cast<PositionColorVertex*>(vertexUpdateDesc.pMappedData)[vertexBufferOffset++] = PositionColorVertex {
                     float3(segment.m_end.getX(), segment.m_end.getY(), 0.0f),
                     float4(segment.m_color.getX(), segment.m_color.getY(), segment.m_color.getZ(), segment.m_color.getW())
                 };
@@ -482,11 +651,70 @@ namespace hpl {
             endUpdateResource(&vertexUpdateDesc, nullptr);
             endUpdateResource(&indexUpdateDesc, nullptr);
             cmdBindPipeline(cmd, m_lineSegmentPipeline2D.m_handle);
-
-			cmdBindVertexBuffer(cmd, 1, &vb.pBuffer, &stride, &vb.mOffset);
-			cmdBindIndexBuffer(cmd, ib.pBuffer, INDEX_TYPE_UINT32, ib.mOffset);
             cmdBindDescriptorSet(cmd, m_frameIndex, m_perFrameDescriptorSet.m_handle);
+			cmdBindVertexBuffer(cmd, 1, &vb.pBuffer, &stride, &vb.mOffset);
+			cmdBindIndexBuffer(cmd, ib.pBuffer, INDEX_TYPE_UINT16, ib.mOffset);
+
             cmdDrawIndexed(cmd, numVertices, 0, 0);
+        }
+
+        if(!m_lineSegments.empty()) {
+            struct PositionColorVertex {
+                float3 position;
+                float4 color;
+            };
+            std::sort(m_lineSegments.begin(), m_lineSegments.end(), [](const LineSegmentRequest& a, const LineSegmentRequest& b) {
+                return a.m_depthTest < b.m_depthTest;
+            });
+
+            const size_t numMaxVertices = m_lineSegments.size() * 2;
+            const size_t vertexBufferSize = sizeof(PositionColorVertex) * numMaxVertices;
+            const size_t indexBufferSize = sizeof(uint32_t) * numMaxVertices;
+			const uint32_t vertexBufferStride = sizeof(PositionColorVertex);
+		    GPURingBufferOffset vb = getGPURingBufferOffset(m_vertexBuffer, vertexBufferSize);
+		    GPURingBufferOffset ib = getGPURingBufferOffset(m_indexBuffer, indexBufferSize);
+            uint32_t indexBufferOffset = 0;
+            uint32_t vertexBufferOffset = 0;
+
+		    BufferUpdateDesc vertexUpdateDesc = { vb.pBuffer, vb.mOffset, vertexBufferSize};
+		    BufferUpdateDesc indexUpdateDesc = { ib.pBuffer, ib.mOffset, indexBufferSize};
+
+            beginUpdateResource(&vertexUpdateDesc);
+		    beginUpdateResource(&indexUpdateDesc);
+
+            auto it = m_lineSegments.begin();
+            auto lastIt = m_lineSegments.begin();
+            while (it != m_lineSegments.end()) {
+                size_t vertexBufferIndex = 0;
+                size_t indexBufferIndex = 0;
+                do {
+                    reinterpret_cast<uint16_t*>(indexUpdateDesc.pMappedData)[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex ;
+                    reinterpret_cast<PositionColorVertex*>(vertexUpdateDesc.pMappedData)[vertexBufferOffset + (vertexBufferIndex++)] = PositionColorVertex {
+                        float3(it->m_start.getX(), it->m_start.getY(), it->m_start.getZ()),
+                        float4(it->m_color.getX(), it->m_color.getY(), it->m_color.getZ(), it->m_color.getW())
+                    };
+                    reinterpret_cast<uint16_t*>(indexUpdateDesc.pMappedData)[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex;
+                    reinterpret_cast<PositionColorVertex*>(vertexUpdateDesc.pMappedData)[vertexBufferOffset + (vertexBufferIndex++)] = PositionColorVertex {
+                        float3(it->m_end.getX(), it->m_end.getY(), it->m_end.getZ()),
+                        float4(it->m_color.getX(), it->m_color.getY(), it->m_color.getZ(), it->m_color.getW())
+                    };
+
+                    lastIt = it;
+                    it++;
+                } while (it != m_lineSegments.end() && it->m_depthTest == lastIt->m_depthTest);
+
+                cmdBindPipeline(cmd, m_linePipeline[static_cast<size_t>(lastIt->m_depthTest)].m_handle);
+                cmdBindDescriptorSet(cmd, m_frameIndex, m_perFrameDescriptorSet.m_handle);
+			    cmdBindVertexBuffer(cmd, 1, &vb.pBuffer, &vertexBufferStride, &vb.mOffset);
+			    cmdBindIndexBuffer(cmd, ib.pBuffer, INDEX_TYPE_UINT16, ib.mOffset);
+                cmdDrawIndexed(cmd, indexBufferIndex, indexBufferOffset, vertexBufferOffset);
+
+                indexBufferOffset += indexBufferIndex;
+                vertexBufferOffset += vertexBufferIndex;
+            };
+
+            endUpdateResource(&vertexUpdateDesc, nullptr);
+            endUpdateResource(&indexUpdateDesc, nullptr);
         }
 
     //    if(!m_lineSegments.empty()) {

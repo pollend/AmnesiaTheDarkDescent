@@ -45,7 +45,7 @@ public:
 	cLuxPlayerState_InteractLever(cLuxPlayer *apPlayer);
 	virtual ~cLuxPlayerState_InteractLever();
 
-	virtual void DebugRenderSolid(ImmediateDrawBatch* apFunctions) override;
+	virtual void DebugRenderSolid(DebugDraw* apFunctions) override;
 
 	/////////////////////////////////
 	//Save data stuff

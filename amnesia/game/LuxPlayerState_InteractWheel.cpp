@@ -55,7 +55,7 @@ cLuxPlayerState_InteractWheel::~cLuxPlayerState_InteractWheel()
 
 //-----------------------------------------------------------------------
 
-void cLuxPlayerState_InteractWheel::DebugRenderSolid(ImmediateDrawBatch* apFunctions)
+void cLuxPlayerState_InteractWheel::DebugRenderSolid(DebugDraw* apFunctions)
 {
 	return;
 	cCamera *pCam = mpPlayer->GetCamera();

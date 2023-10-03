@@ -39,7 +39,7 @@
 #include "EntityIcon.h"
 #include "EngineEntity.h"
 #include "graphics/Color.h"
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 
 #include "math/MathTypes.h"
 
@@ -1360,7 +1360,7 @@ void iEntityWrapper::SetWorldMatrix(const cMatrixf& amtxX)
 
 //------------------------------------------------------------------
 
-void iEntityWrapper::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, iEditorEditMode* apEditMode, bool abIsSelected, const cColor& aHighlightCol, const cColor& aDisabledCol)
+void iEntityWrapper::Draw(cEditorWindowViewport* apViewport, DebugDraw* apFunctions, iEditorEditMode* apEditMode, bool abIsSelected, const cColor& aHighlightCol, const cColor& aDisabledCol)
 {
 	if(mpIcon)
 		mpIcon->DrawIcon(apViewport, apFunctions, apEditMode, mbSelected, mvPosition, mbActive && mpType->IsActive(), aDisabledCol);
@@ -1390,7 +1390,7 @@ void iEntityWrapper::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch*
 
 //------------------------------------------------------------------
 
-void iEntityWrapper::DrawProgram(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, const cColor& aCol)
+void iEntityWrapper::DrawProgram(cEditorWindowViewport* apViewport, DebugDraw* apFunctions, const cColor& aCol)
 {
 	if(mpEngineEntity)
 		mpEngineEntity->DrawSolid(apViewport, apFunctions, aCol);
@@ -2033,7 +2033,7 @@ iEditorAction* iEntityWrapper::SetUpAction(iEditorAction* apAction)
 
 //------------------------------------------------------------------
 
-void iEntityWrapper::DrawArrow(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, const cMatrixf& amtxTransform, float afLength, bool abKeepConstantSize, const cVector2f& avHeadSizeRatio, const cColor& aCol,float afOrthoConstant, float afPerspConstant)
+void iEntityWrapper::DrawArrow(cEditorWindowViewport* apViewport, DebugDraw* apFunctions, const cMatrixf& amtxTransform, float afLength, bool abKeepConstantSize, const cVector2f& avHeadSizeRatio, const cColor& aCol,float afOrthoConstant, float afPerspConstant)
 {
 	if(abKeepConstantSize)
 	{
@@ -2080,7 +2080,7 @@ void iEntityWrapper::DrawArrow(cEditorWindowViewport* apViewport, ImmediateDrawB
 
 	cMatrixf mtxWorld = cMath::MatrixMul(amtxTransform, cMath::MatrixTranslate(cVector3f(0,afLength,0)));;
 
-	ImmediateDrawBatch::DebugDrawOptions options;
+	DebugDraw::DebugDrawOptions options;
 	options.m_transform = cMath::ToForgeMat(mtxWorld.GetTranspose());
 
 	apFunctions->DebugDrawLine(Vector3(0,-afLength,0), Vector3(0), cMath::ToForgeVec4(aCol));

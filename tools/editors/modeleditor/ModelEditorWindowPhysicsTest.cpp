@@ -88,7 +88,7 @@ cModelEditorWindowPhysicsTest::cModelEditorWindowPhysicsTest(iEditorBase* apEdit
 	m_postSolidDraw = cViewport::PostSolidDraw::Handler([&](cViewport::PostSolidDrawPacket& payload) {
 		cMatrixf view = payload.m_frustum->GetViewMatrix().GetTranspose();
 		cMatrixf proj = payload.m_frustum->GetProjectionMatrix().GetTranspose();
-		hpl::ImmediateDrawBatch batch(Interface<ForgeRenderer>::Get());
+		hpl::DebugDraw batch(Interface<ForgeRenderer>::Get());
 
 		std::function<void(cNode3D* bone)> drawSkeletonRec;
 		drawSkeletonRec = [&](cNode3D* bone) {
@@ -99,8 +99,8 @@ cModelEditorWindowPhysicsTest::cModelEditorWindowPhysicsTest(iEditorBase* apEdit
 			cNode3DIterator it = bone->GetChildIterator();
 			while (it.HasNext()) {
 				cNode3D* pChild = static_cast<cNode3D*>(it.Next());
-				ImmediateDrawBatch::DebugDrawOptions options;
-				options.m_depthTest = DepthTest::Always;
+				DebugDraw::DebugDrawOptions options;
+				options.m_depthTest = DebugDraw::DebugDepthTest::Always;
 				batch.DebugDrawLine(cMath::ToForgeVec3(bone->GetWorldPosition()), cMath::ToForgeVec3(pChild->GetWorldPosition()), Vector4(1,1,1, 1), options);
 				drawSkeletonRec(pChild);
 			}

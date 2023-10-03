@@ -30,7 +30,7 @@
 class cLuxEnemyPathfinder;
 class cLuxEnemyMover;
 class cLuxProp_Object;
-class ImmediateDrawBatch;
+class DebugDraw;
 
 //----------------------------------------------
 
@@ -378,7 +378,7 @@ public:
 
 	void OnUpdate(float afTimeStep);
 
-	virtual void OnRenderSolid(hpl::ImmediateDrawBatch* apFunctions) override;
+	virtual void OnRenderSolid(hpl::DebugDraw* apFunctions) override;
 
 	bool CanInteract(iPhysicsBody *apBody);
 	bool OnInteract(iPhysicsBody *apBody, const cVector3f &avPos);
@@ -602,7 +602,7 @@ protected:
 	virtual void OnSetupAfterLoad(cWorld *apWorld)=0;
 	virtual void OnAfterWorldLoad()=0;
 	virtual void UpdateEnemySpecific(float afTimeStep)=0;
-	virtual void OnRenderSolidImplemented(hpl::ImmediateDrawBatch* apFunctions)=0;
+	virtual void OnRenderSolidImplemented(hpl::DebugDraw* apFunctions)=0;
 
 	//////////////
 	//Variables

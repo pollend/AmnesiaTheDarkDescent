@@ -297,7 +297,7 @@ float cLuxPlayerState_InteractSlide::DrawDebug(cGuiSet *apSet,iFontData *apFont,
 	return afStartY;
 }
 
-void cLuxPlayerState_InteractSlide::DebugRenderSolid(ImmediateDrawBatch* batch)
+void cLuxPlayerState_InteractSlide::DebugRenderSolid(DebugDraw* batch)
 {
 	return;
 

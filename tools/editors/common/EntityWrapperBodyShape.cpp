@@ -29,7 +29,7 @@
 #include "EntityWrapperBody.h"
 
 #include "EditorActionsBodies.h"
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 
 //---------------------------------------------------------------------------
 
@@ -198,7 +198,7 @@ bool cEntityWrapperBodyShape::GetProperty(int alPropID, tString& asX)
 
 //---------------------------------------------------------------------------
 
-void cEntityWrapperBodyShape::Draw(	cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions,
+void cEntityWrapperBodyShape::Draw(	cEditorWindowViewport* apViewport, DebugDraw* apFunctions,
 									iEditorEditMode* apEditMode,bool abIsSelected, const cColor& aHighlightCol, const cColor& aDisabledCol )
 {
 	// apFunctions->SetProgram(NULL);
@@ -207,7 +207,7 @@ void cEntityWrapperBodyShape::Draw(	cEditorWindowViewport* apViewport, Immediate
 	// apFunctions->SetDepthTest(true);
 	// apFunctions->SetDepthWrite(false);
 	cEngineEntityGeneratedMesh* pMesh = (cEngineEntityGeneratedMesh*)mpEngineEntity;
-	ImmediateDrawBatch::DebugDrawOptions options;
+	DebugDraw::DebugDrawOptions options;
 	options.m_transform = cMath::ToForgeMat(pMesh->GetMeshEntity()->GetSubMeshEntity(0)->GetModelMatrix(NULL)->GetTranspose());
 
 	cColor col = abIsSelected?cColor(1) : cColor(1,1,1,0.1f);

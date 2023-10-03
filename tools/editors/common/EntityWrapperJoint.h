@@ -223,7 +223,7 @@ public:
 
 	//void SaveToElement(cXmlElement* apElement);
 
-	void Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, iEditorEditMode* apEditMode, bool abIsSelected, const cColor& aHighlightCol, const cColor& aDisabledCol);
+	void Draw(cEditorWindowViewport* apViewport, DebugDraw* apFunctions, iEditorEditMode* apEditMode, bool abIsSelected, const cColor& aHighlightCol, const cColor& aDisabledCol);
 protected:
 	cEntityIcon* CreateIcon();
 	////////////////////////////////////////////

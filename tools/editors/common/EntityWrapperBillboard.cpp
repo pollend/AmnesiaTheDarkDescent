@@ -27,7 +27,7 @@
 #include "EditorWindowEntityEditBoxBillboard.h"
 
 #include "EntityWrapperLight.h"
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 
 //------------------------------------------------------------------------------
 
@@ -81,7 +81,7 @@ void cIconEntityBB::Update()
 	}
 }
 
-void cIconEntityBB::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, bool abIsSelected, bool abIsActive)
+void cIconEntityBB::Draw(cEditorWindowViewport* apViewport, DebugDraw* apFunctions, bool abIsSelected, bool abIsActive)
 {
 	iIconEntity::Draw(apViewport, apFunctions, abIsSelected, abIsActive);
 	if(abIsSelected==false)
@@ -414,7 +414,7 @@ bool cEntityWrapperBillboard::SetProperty(int alPropID, const cVector3f& avX)
 
 //------------------------------------------------------------------------------
 
-void cEntityWrapperBillboard::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, iEditorEditMode* apEditMode, bool abIsSelected, const cColor& aHighlightCol, const cColor& aDisabledCol)
+void cEntityWrapperBillboard::Draw(cEditorWindowViewport* apViewport, DebugDraw* apFunctions, iEditorEditMode* apEditMode, bool abIsSelected, const cColor& aHighlightCol, const cColor& aDisabledCol)
 {
 	iEntityWrapper::Draw(apViewport, apFunctions, apEditMode, abIsSelected, aHighlightCol);
 
@@ -431,7 +431,7 @@ void cEntityWrapperBillboard::Draw(cEditorWindowViewport* apViewport, ImmediateD
 		cMatrixf mtxTransform = mmtxTransform.GetRotation();
 		mtxTransform.SetTranslation(mvPosition);
 		cVector3f vHalfHaloSourceSize = mvHaloSourceSize*0.5f;
-		ImmediateDrawBatch::DebugDrawOptions options;
+		DebugDraw::DebugDrawOptions options;
 		options.m_transform = cMath::ToForgeMat(mtxTransform.GetTranspose());
 		apFunctions->DebugDrawBoxMinMax(cMath::ToForgeVec3(vHalfHaloSourceSize*-1), cMath::ToForgeVec3(vHalfHaloSourceSize), Vector4(0,1,0,1), options);
 	}

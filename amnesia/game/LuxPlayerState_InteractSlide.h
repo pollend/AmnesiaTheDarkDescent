@@ -67,7 +67,7 @@ public:
 
 	float DrawDebug(cGuiSet *apSet,iFontData *apFont, float afStartY);
 
-	virtual void DebugRenderSolid(ImmediateDrawBatch* apFunctions) override;
+	virtual void DebugRenderSolid(DebugDraw* apFunctions) override;
 
 	/////////////////////////////////
 	//Save data stuff

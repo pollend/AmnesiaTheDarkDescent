@@ -100,7 +100,7 @@ public:
 		m_postSolidDraw = cViewport::PostSolidDraw::Handler([&](hpl::cViewport::PostSolidDrawPacket& payload) {
 			cMatrixf view = payload.m_frustum->GetViewMatrix().GetTranspose();
 			cMatrixf proj = payload.m_frustum->GetProjectionMatrix().GetTranspose();
-			ImmediateDrawBatch batch(Interface<ForgeRenderer>::Get());
+			DebugDraw batch(Interface<ForgeRenderer>::Get());
 
 			if(gbDrawBoundingBox && gpParticleSystem)
 			{
@@ -129,8 +129,8 @@ public:
 			{
 				cVector3f vPosAdd = cVector3f(0, 0.01f, 0);
 				// apFunctions->SetDepthTest(false);
-				ImmediateDrawBatch::DebugDrawOptions options;
-				options.m_depthTest = DepthTest::Always;
+				DebugDraw::DebugDrawOptions options;
+				options.m_depthTest = DebugDraw::DebugDepthTest::Always;
 				batch.DebugDrawLine(Vector3(0),Vector3(1,0,0)+cMath::ToForgeVec3(vPosAdd), Vector4(1,0,0,1), options);
 				batch.DebugDrawLine(Vector3(0),Vector3(0,1,0)+cMath::ToForgeVec3(vPosAdd), Vector4(0,1,0,1), options);
 				batch.DebugDrawLine(Vector3(0),Vector3(0,0,1)+cMath::ToForgeVec3(vPosAdd), Vector4(0,0,1,1), options);

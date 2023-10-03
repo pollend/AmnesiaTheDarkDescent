@@ -296,8 +296,6 @@ public:
 		m_postSolidDraw = cViewport::PostSolidDraw::Handler([&](cViewport::PostSolidDrawPacket& payload) {
 			cMatrixf view = payload.m_frustum->GetViewMatrix().GetTranspose();
 			cMatrixf proj = payload.m_frustum->GetProjectionMatrix().GetTranspose();
-			ImmediateDrawBatch batch(Interface<ForgeRenderer>::Get());
-
 			std::function<void(iRenderableContainerNode *apNode, int alLevel)> nodeDebug;
 			nodeDebug = [&](iRenderableContainerNode *apNode, int alLevel) {
 				///////////////////////////////////////
@@ -326,7 +324,7 @@ public:
 						{
 							if(CheckEntityInsideBox(pObject, pCheckNode->GetMin(), pCheckNode->GetMax())==false)
 							{
-								batch.DebugDrawBoxMinMax(cMath::ToForgeVec3(pBV->GetMin()), cMath::ToForgeVec3(pBV->GetMax()),Vector4(1,0,0,1));
+								payload.m_debug->DebugDrawBoxMinMax(cMath::ToForgeVec3(pBV->GetMin()), cMath::ToForgeVec3(pBV->GetMax()),Vector4(1,0,0,1));
 								bObjectIsOutSide = true;
 							}
 							pCheckNode = pCheckNode->GetParent();
@@ -336,8 +334,8 @@ public:
 
 				if(bObjectIsOutSide)
 				{
-					batch.DebugDrawBoxMinMax(cMath::ToForgeVec3(apNode->GetMin()), cMath::ToForgeVec3(apNode->GetMax()),Vector4(0,1,0,1));
-					batch.DebugDrawBoxMinMax(cMath::ToForgeVec3(vBoxMin), cMath::ToForgeVec3(vBoxMin),Vector4(0,1,0,1));
+					payload.m_debug->DebugDrawBoxMinMax(cMath::ToForgeVec3(apNode->GetMin()), cMath::ToForgeVec3(apNode->GetMax()),Vector4(0,1,0,1));
+					payload.m_debug->DebugDrawBoxMinMax(cMath::ToForgeVec3(vBoxMin), cMath::ToForgeVec3(vBoxMin),Vector4(0,1,0,1));
 				}
 
 				////////////////////////
@@ -377,9 +375,9 @@ public:
 						int lColNum = lCount % glObjectDebugColorNum;
 						const cColor &currentColor = gObjectDebugColor[lColNum];
 
-						ImmediateDrawBatch::DebugDrawOptions options;
+						DebugDraw::DebugDrawOptions options;
 						options.m_transform = cMath::ToForgeMat(pSubEnt->GetModelMatrix(NULL)->GetTranspose());
-						batch.DebugWireFrameFromVertexBuffer(pSubEnt->GetVertexBuffer(), cMath::ToForgeVec4(currentColor), options);
+						payload.m_debug->DebugWireFrameFromVertexBuffer(pSubEnt->GetVertexBuffer(), cMath::ToForgeVec4(currentColor), options);
 
 						// batch.DebugDrawMesh(const GraphicsContext::LayoutStream &layout, const cColor &color)
 						// apFunctions->SetMatrix(pSubEnt->GetModelMatrix(NULL));
@@ -412,12 +410,12 @@ public:
 
 					if(pSound->Get3D() && pSound->GetPositionIsRelative() ==false)
 					{
-						ImmediateDrawBatch::DebugDrawOptions options;
-						options.m_depthTest = DepthTest::Always;
-						batch.DebugDrawSphere(cMath::ToForgeVec3(pSound->GetPosition()), 0.1f, Vector4(1,1,1,1), options);
+						DebugDraw::DebugDrawOptions options;
+						options.m_depthTest = DebugDraw::DebugDepthTest::Always;
+						payload.m_debug->DebugDrawSphere(cMath::ToForgeVec3(pSound->GetPosition()), 0.1f, Vector4(1,1,1,1), options);
 
-						batch.DebugDrawSphere(cMath::ToForgeVec3(pSound->GetPosition()), pSound->GetMinDistance(), Vector4(0.75f,0.75f,0.75f,1.0f), options);
-						batch.DebugDrawSphere(cMath::ToForgeVec3(pSound->GetPosition()), pSound->GetMaxDistance(), Vector4(0.5f,0.5f,0.5f,1.0f), options);
+						payload.m_debug->DebugDrawSphere(cMath::ToForgeVec3(pSound->GetPosition()), pSound->GetMinDistance(), Vector4(0.75f,0.75f,0.75f,1.0f), options);
+						payload.m_debug->DebugDrawSphere(cMath::ToForgeVec3(pSound->GetPosition()), pSound->GetMaxDistance(), Vector4(0.5f,0.5f,0.5f,1.0f), options);
 					}
 				}
 
@@ -431,10 +429,10 @@ public:
 				//cBoundingVolume *pBV = mBodyPicker.mpPickedBody->GetBV();
 				//mpLowLevelGraphics->DrawBoxMaxMin(pBV->GetMax(), pBV->GetMin(),cColor(1,0,1,1));
 
-				batch.DebugDrawSphere(cMath::ToForgeVec3(mBodyPicker.mvPos),0.1f, Vector4(1,0,0,1));
-				batch.DebugDrawSphere(cMath::ToForgeVec3(m_dragPos),0.1f, Vector4(1,0,0,1));
+				payload.m_debug->DebugDrawSphere(cMath::ToForgeVec3(mBodyPicker.mvPos),0.1f, Vector4(1,0,0,1));
+				payload.m_debug->DebugDrawSphere(cMath::ToForgeVec3(m_dragPos),0.1f, Vector4(1,0,0,1));
 
-				batch.DebugDrawLine(cMath::ToForgeVec3(mBodyPicker.mvPos), cMath::ToForgeVec3(m_dragPos), Vector4(1,1,1,1));
+				payload.m_debug->DebugDrawLine(cMath::ToForgeVec3(mBodyPicker.mvPos), cMath::ToForgeVec3(m_dragPos), Vector4(1,1,1,1));
 			}
 
 			/////////////////////////////////////////
@@ -467,9 +465,9 @@ public:
 
 					cColor col = CalcDistColorForRenderable(pObject);//cColor(1,1);//gObjectDebugColor[(size_t)pObject % glObjectDebugColorNum];
 
-					ImmediateDrawBatch::DebugDrawOptions options;
+					DebugDraw::DebugDrawOptions options;
 					options.m_transform = cMath::ToForgeMat(pObject->GetModelMatrix(payload.m_frustum)->GetTranspose());
-					batch.DebugWireFrameFromVertexBuffer(pObject->GetVertexBuffer(), cMath::ToForgeVec4(col), options);
+					payload.m_debug->DebugWireFrameFromVertexBuffer(pObject->GetVertexBuffer(), cMath::ToForgeVec4(col), options);
 
 				}
 
@@ -483,9 +481,9 @@ public:
 
 					cColor col = CalcDistColorForRenderable(pObject);//cColor(1,1);//gObjectDebugColor[(size_t)pObject % glObjectDebugColorNum];
 
-					ImmediateDrawBatch::DebugDrawOptions options;
+					DebugDraw::DebugDrawOptions options;
 					options.m_transform = cMath::ToForgeMat(pObject->GetModelMatrix(payload.m_frustum)->GetTranspose());
-					batch.DebugWireFrameFromVertexBuffer(pObject->GetVertexBuffer(), cMath::ToForgeVec4(col), options);
+					payload.m_debug->DebugWireFrameFromVertexBuffer(pObject->GetVertexBuffer(), cMath::ToForgeVec4(col), options);
 
 
 					// cColor col = CalcDistColor(pObject);//cColor(1,1);//gObjectDebugColor[(size_t)pObject % glObjectDebugColorNum];
@@ -514,7 +512,7 @@ public:
 
 					cColor col = pBody->GetCollide() ? cColor(1,1) : cColor(1,0,1,1);
 
-					pBody->RenderDebugGeometry(&batch,col);
+					pBody->RenderDebugGeometry(payload.m_debug,col);
 				}
 			}
 
@@ -528,26 +526,24 @@ public:
 				{
 					cAINode *pNode = gpNodeContainer->GetNode(i);
 
-					batch.DebugDrawSphere(cMath::ToForgeVec3(pNode->GetPosition()), 0.3f, Vector4(0.4f, 0.4f, 0.4f,1));
+					payload.m_debug->DebugDrawSphere(cMath::ToForgeVec3(pNode->GetPosition()), 0.3f, Vector4(0.4f, 0.4f, 0.4f,1));
 					// apFunctions->GetLowLevelGfx()->DrawSphere(pNode->GetPosition(), 0.3f,cColor(0.4f,1));
 
 					for(int j=0; j < pNode->GetEdgeNum(); ++j)
 					{
 						cAINodeEdge *pEdge = pNode->GetEdge(j);
-						batch.DebugDrawLine(cMath::ToForgeVec3(pNode->GetPosition()), cMath::ToForgeVec3(pEdge->mpNode->GetPosition()), Vector4(0.4f,0.4f,0.4f,1));
+						payload.m_debug->DebugDrawLine(cMath::ToForgeVec3(pNode->GetPosition()), cMath::ToForgeVec3(pEdge->mpNode->GetPosition()), Vector4(0.4f,0.4f,0.4f,1));
 						// apFunctions->GetLowLevelGfx()->DrawLine(pNode->GetPosition(),pEdge->mpNode->GetPosition(),cColor(0.4f,0.4f,0.4f,1));
 					}
 				}
 			}
-		    ASSERT(false && "TODO: add back batch");
-			//batch.flush(); // flush the batch
 
 		});
 
 		m_postTestSolidDraw = cViewport::PostSolidDraw::Handler([&](cViewport::PostSolidDrawPacket& payload) {
 			cMatrixf view = payload.m_frustum->GetViewMatrix().GetTranspose();
 			cMatrixf proj = payload.m_frustum->GetProjectionMatrix().GetTranspose();
-			ImmediateDrawBatch batch(Interface<ForgeRenderer>::Get());
+			DebugDraw batch(Interface<ForgeRenderer>::Get());
 
 			cRenderSettings *pSettings = gpSimpleCamera->GetViewport()->GetRenderSettings();
 			cRenderList *pRenderList = pSettings->mpRenderList;
@@ -561,7 +557,7 @@ public:
 				iRenderable *pObject = pRenderList->GetSolidObject(i);
 
 				cColor col = gObjectDebugColor[(size_t)pObject % glObjectDebugColorNum];
-				ImmediateDrawBatch::DebugDrawOptions options;
+				DebugDraw::DebugDrawOptions options;
 				options.m_transform = cMath::ToForgeMat(pObject->GetModelMatrix(nullptr)->GetTranspose());
 				// GraphicsContext::LayoutStream layoutStream;
 				// pObject->GetVertexBuffer()->GetLayoutStream(layoutStream);
@@ -582,7 +578,7 @@ public:
 
 				cColor col = gObjectDebugColor[(size_t)pObject % glObjectDebugColorNum];
 
-				ImmediateDrawBatch::DebugDrawOptions options;
+				DebugDraw::DebugDrawOptions options;
 				options.m_transform = cMath::ToForgeMat(pObject->GetModelMatrix(payload.m_frustum)->GetTranspose());
 				batch.DebugWireFrameFromVertexBuffer(pObject->GetVertexBuffer(), cMath::ToForgeVec4(col), options);
 

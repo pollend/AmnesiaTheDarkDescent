@@ -239,7 +239,7 @@ void cLuxEnemyPathfinder::OnUpdate(float afTimeStep)
 
 //-----------------------------------------------------------------------
 
-void cLuxEnemyPathfinder::OnRenderSolid(hpl::ImmediateDrawBatch* apFunctions)
+void cLuxEnemyPathfinder::OnRenderSolid(hpl::DebugDraw* apFunctions)
 {
 	if(mpNodeContainer==NULL) return;
 

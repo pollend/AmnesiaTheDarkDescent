@@ -159,7 +159,7 @@ void cEditorEditModeSelectTool::UpdateMouseRay()
 
 //----------------------------------------------------------------------
 
-void cEditorEditModeSelectTool::Draw(cEditorWindowViewport* apViewport,ImmediateDrawBatch *apFunctions)
+void cEditorEditModeSelectTool::Draw(cEditorWindowViewport* apViewport,DebugDraw *apFunctions)
 {
 	if(mpSelection->IsEmpty()) return;
 

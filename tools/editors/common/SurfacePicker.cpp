@@ -24,7 +24,7 @@
 #include "EditorWindowViewport.h"
 #include "EntityWrapper.h"
 #include "EditorHelper.h"
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 
 cSurfacePicker::cSurfacePicker(iEditorWorld* apWorld) : cEntityPicker(apWorld)
 {
@@ -73,7 +73,7 @@ int cSurfacePicker::ToSurfaceTypeID(int alTypeID)
 
 //----------------------------------------------------------------------
 
-void cSurfacePicker::OnDraw(ImmediateDrawBatch* apFunctions)
+void cSurfacePicker::OnDraw(DebugDraw* apFunctions)
 {
 	// apFunctions->SetMatrix(NULL);
 	// apFunctions->SetDepthTest(false);

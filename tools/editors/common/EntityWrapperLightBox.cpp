@@ -25,7 +25,7 @@
 #include "EditorWindowViewport.h"
 
 
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 //---------------------------------------------------------------------------
 
 cIconEntityLightBox::cIconEntityLightBox(iEntityWrapper* apParent) : iIconEntityLight(apParent, "Box")
@@ -158,7 +158,7 @@ bool cEntityWrapperLightBox::GetProperty(int alPropID, cVector3f& avX)
 
 //---------------------------------------------------------------------------
 
-void cEntityWrapperLightBox::DrawLightTypeSpecific(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions,
+void cEntityWrapperLightBox::DrawLightTypeSpecific(cEditorWindowViewport* apViewport, DebugDraw* apFunctions,
 												   iEditorEditMode* apEditMode, bool abIsSelected)
 {
 	if(abIsSelected==false) return;

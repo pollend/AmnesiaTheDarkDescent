@@ -117,7 +117,7 @@ public:
 
 	void SetVisible(bool abX);
 
-	void Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions,iEditorEditMode* apEditMode,
+	void Draw(cEditorWindowViewport* apViewport, DebugDraw* apFunctions,iEditorEditMode* apEditMode,
 						bool abIsSelected, const cColor& aHighlightCol=cColor(1,1), const cColor& aDisabledCol=cColor(0.5f,1));
 
 	//void SaveToElement(cXmlElement* apElement);

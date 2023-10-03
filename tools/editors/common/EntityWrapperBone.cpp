@@ -28,7 +28,7 @@
 #include "EditorWindowEntityEditBoxBone.h"
 
 #include "graphics/Color.h"
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 
 #include <algorithm>
 
@@ -275,7 +275,7 @@ void cEntityWrapperBone::RemoveChildBone(cEntityWrapperBone* apBone)
 
 //----------------------------------------------------------------------
 
-void cEntityWrapperBone::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions,
+void cEntityWrapperBone::Draw(cEditorWindowViewport* apViewport, DebugDraw* apFunctions,
 							  iEditorEditMode* apEditMode, bool abIsSelected, const cColor& aHighlightCol, const cColor& aDisabledCol)
 {
 	iEntityWrapper::Draw(apViewport, apFunctions, apEditMode, abIsSelected);
@@ -287,7 +287,7 @@ void cEntityWrapperBone::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBa
 		mvChildBones[i]->DrawBone(apViewport, apFunctions, apEditMode, abIsSelected);
 }
 
-void cEntityWrapperBone::DrawBone(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, iEditorEditMode* apEditMode, bool abIsSelected)
+void cEntityWrapperBone::DrawBone(cEditorWindowViewport* apViewport, DebugDraw* apFunctions, iEditorEditMode* apEditMode, bool abIsSelected)
 {
 	if(mpVBBone)
 	{

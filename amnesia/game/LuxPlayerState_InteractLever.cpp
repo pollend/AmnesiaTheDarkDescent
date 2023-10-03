@@ -53,7 +53,7 @@ cLuxPlayerState_InteractLever::~cLuxPlayerState_InteractLever()
 
 //-----------------------------------------------------------------------
 
-void cLuxPlayerState_InteractLever::DebugRenderSolid(ImmediateDrawBatch* batch)
+void cLuxPlayerState_InteractLever::DebugRenderSolid(DebugDraw* batch)
 {
 	return;
 

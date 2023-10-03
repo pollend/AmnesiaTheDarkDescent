@@ -25,7 +25,7 @@
 #include "resources/MeshManager.h"
 #include "resources/AnimationManager.h"
 
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 #include "graphics/DecalCreator.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/LowLevelGraphics.h"
@@ -400,7 +400,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cDecalCreator::DrawDebug(ImmediateDrawBatch* apFunctions, bool abDrawAxes, bool abDrawWireframe)
+	void cDecalCreator::DrawDebug(DebugDraw* apFunctions, bool abDrawAxes, bool abDrawWireframe)
 	{
 		if(mpDecalVB)
 		{
@@ -445,7 +445,7 @@ namespace hpl {
 
 			// apFunctions->SetMatrix(&mtxTransform);
 			//apFunctions->GetLowLevelGfx()->DrawSphere(0, 0.01f, 1);
-			ImmediateDrawBatch::DebugDrawOptions options;
+			DebugDraw::DebugDrawOptions options;
 		    options.m_transform = cMath::ToForgeMat(mtxTransform.GetTranspose());
 		    apFunctions->DebugDrawLine(Vector3(0),Vector3(vHalfDecalSize.x,0,0), Vector4(1,0,0,1), options);
 			apFunctions->DebugDrawLine(Vector3(0),Vector3(0,vHalfDecalSize.y,0), Vector4(0,1,0,1), options);

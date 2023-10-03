@@ -563,7 +563,7 @@ float cLuxPlayerState_InteractGrab::DrawDebug(cGuiSet *apSet,iFontData *apFont, 
 	return afStartY;
 }
 
-void cLuxPlayerState_InteractGrab::DebugRenderSolid(ImmediateDrawBatch* batch)
+void cLuxPlayerState_InteractGrab::DebugRenderSolid(DebugDraw* batch)
 {
 	return;
 	// apFunctions->SetMatrix(NULL);

@@ -91,7 +91,7 @@ public:
 	void RunScript(const tString& asCommand);
 	bool RecompileScript(tString *apOutput);
 
-	void OnRenderSolid(hpl::ImmediateDrawBatch* apFunctions);
+	void OnRenderSolid(hpl::DebugDraw* apFunctions);
 
 	cWorld* GetWorld(){ return mpWorld; }
 	iPhysicsWorld* GetPhysicsWorld(){ return mpPhysicsWorld; }

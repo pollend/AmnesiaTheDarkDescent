@@ -68,12 +68,12 @@ public:
 	virtual void UpdateVisibility()=0;
 
 	virtual void Draw(cEditorWindowViewport* apViewport,
-					  ImmediateDrawBatch* apFunctions,
+					  DebugDraw* apFunctions,
 					  bool abIsSelected,
 					  bool abIsActive,
 					  const cColor& aHighlightCol=cColor(1,1)) {};
 	virtual void DrawSolid(cEditorWindowViewport* apViewport,
-							 ImmediateDrawBatch* apFunctions,
+							 DebugDraw* apFunctions,
 							 const cColor& aCol) {}
 
 protected:
@@ -108,11 +108,11 @@ public:
 	void UpdateVisibility();
 
 	virtual void Draw(cEditorWindowViewport* apViewport,
-				ImmediateDrawBatch* apFunctions,
+				DebugDraw* apFunctions,
 				bool abIsSelected,
 				bool abIsActive, const cColor& aHighlightCol) override;
 	virtual void DrawSolid(cEditorWindowViewport* apViewport,
-					 ImmediateDrawBatch* apFunctions,
+					 DebugDraw* apFunctions,
 					 const cColor& aCol) override;
 
 	// Own funcs
@@ -206,7 +206,7 @@ public:
 	void UpdateVisibility() { Update(); }
 
 	void Draw(cEditorWindowViewport* apViewport,
-					  ImmediateDrawBatch* apFunctions,
+					  DebugDraw* apFunctions,
 					  bool abIsSelected,
 					  bool abIsActive,
 					  const cColor& aHighlightCol=cColor(1,1));

@@ -36,7 +36,7 @@ public:
 	void SetCullingOnPositiveSide(bool abX);
 	bool GetCullingOnPositiveSide() { return mbCullingOnPositiveSide; }
 
-	void Draw(ImmediateDrawBatch* apFunctions, const cVector3f& avPos);
+	void Draw(DebugDraw* apFunctions, const cVector3f& avPos);
 
 	void SetActive(bool abX);
 	bool IsActive() { return mbActive; }

@@ -28,7 +28,7 @@
 #include "EditorActionSelection.h"
 #include "EditorSelection.h"
 
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 
 cEditorEditModeSelectToolTranslate::cEditorEditModeSelectToolTranslate(cEditorEditModeSelect* apParent, cEditorSelection* apSelection) : cEditorEditModeSelectTool(eSelectToolMode_Translate,apParent, apSelection)
 {
@@ -221,7 +221,7 @@ void cEditorEditModeSelectToolTranslate::UpdateToolBoundingVolume()
 
 //----------------------------------------------------------------
 
-void cEditorEditModeSelectToolTranslate::DrawAxes(cEditorWindowViewport* apViewport, ImmediateDrawBatch *apFunctions, float afAxisLength)
+void cEditorEditModeSelectToolTranslate::DrawAxes(cEditorWindowViewport* apViewport, DebugDraw *apFunctions, float afAxisLength)
 {
 	cVector3f vAxes[3];
 	cColor col[3];
@@ -230,9 +230,9 @@ void cEditorEditModeSelectToolTranslate::DrawAxes(cEditorWindowViewport* apViewp
 	float fYZ = 0.05f*afAxisLength;
 
 	cMatrixf mtxTransform = cMath::MatrixTranslate(mpSelection->GetCenterTranslation());
-	ImmediateDrawBatch::DebugDrawOptions options;
+	DebugDraw::DebugDrawOptions options;
 	options.m_transform = cMath::ToForgeMat(mtxTransform.GetTranspose());
-	options.m_depthTest = DepthTest::Always;
+	options.m_depthTest = DebugDraw::DebugDepthTest::Always;
 
 	for(int i=eSelectToolAxis_X; i<eSelectToolAxis_LastEnum; ++i)
 	{
@@ -247,7 +247,7 @@ void cEditorEditModeSelectToolTranslate::DrawAxes(cEditorWindowViewport* apViewp
 		//apFunctions->GetLowLevelGfx()->DrawBoxMinMax(mvHeadMin[i], mvHeadMax[i], cColor(1,1));
 	}
 
-	auto drawArrowGeometry = [&](const cColor& c, const ImmediateDrawBatch::DebugDrawOptions& options) {
+	auto drawArrowGeometry = [&](const cColor& c, const DebugDraw::DebugDrawOptions& options) {
 		apFunctions->DrawQuad(
 			Vector3(0,0,0),
 			Vector3(-fX,fYZ,fYZ),
@@ -277,7 +277,7 @@ void cEditorEditModeSelectToolTranslate::DrawAxes(cEditorWindowViewport* apViewp
 			cMath::ToForgeVec4(c),options
 		);
 	};
-	ImmediateDrawBatch::DebugDrawOptions oo;
+	DebugDraw::DebugDrawOptions oo;
 	drawArrowGeometry(col[0], oo);
 
 	apFunctions->DebugDrawBoxMinMax(Vector3(0), cMath::ToForgeVec3(vAxes[0]+vAxes[1])*.2f, cMath::ToForgeVec4(col[0] + col[1]), options);

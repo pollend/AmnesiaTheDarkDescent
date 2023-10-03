@@ -21,7 +21,7 @@
 #include "EditorBaseClasses.h"
 #include "EditorEditMode.h"
 #include "EditorWindowViewport.h"
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 
 //-----------------------------------------------------------
 
@@ -50,7 +50,7 @@ void cBoxCreator::OnViewportMouseUp(int alButtons)
 
 //-----------------------------------------------------------
 
-void cBoxCreator::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions)
+void cBoxCreator::Draw(cEditorWindowViewport* apViewport, DebugDraw* apFunctions)
 {
 
 	if(mvPoints.empty()==false && mbDragging==true) {

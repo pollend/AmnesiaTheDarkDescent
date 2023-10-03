@@ -21,7 +21,7 @@
 #include "EntityWrapper.h"
 #include "EditorWorld.h"
 #include "EditorHelper.h"
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 
 //------------------------------------------------------------------
 
@@ -60,7 +60,7 @@ void cEditorClipPlane::SetCullingOnPositiveSide(bool abX)
 
 //------------------------------------------------------------------
 
-void cEditorClipPlane::Draw(ImmediateDrawBatch* apFunctions, const cVector3f& avPos)
+void cEditorClipPlane::Draw(DebugDraw* apFunctions, const cVector3f& avPos)
 {
 	if(IsActive()==false) return;
 

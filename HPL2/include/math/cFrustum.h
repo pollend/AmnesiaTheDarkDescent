@@ -34,7 +34,7 @@ namespace hpl {
 
 	class iLowLevelGraphics;
 	class iRenderableContainerNode;
-	class ImmediateDrawBatch;
+	class DebugDraw;
 
     //TODO: replace with a better abstraction
 	class cFrustum
@@ -96,7 +96,7 @@ namespace hpl {
 
 		cVector3f GetForward();
 
-		void Draw(ImmediateDrawBatch *apLowLevelGraphics, const cColor &aColor);
+		void Draw(DebugDraw *apLowLevelGraphics, const cColor &aColor);
 
 	private:
 		eCollision CollideFustrumSphere(const cVector3f& avCenter, float afRadius);

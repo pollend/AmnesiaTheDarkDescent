@@ -710,7 +710,7 @@ void iLuxEnemy::OnUpdate(float afTimeStep)
 
 //-----------------------------------------------------------------------
 
-void iLuxEnemy::OnRenderSolid(hpl::ImmediateDrawBatch* apFunctions)
+void iLuxEnemy::OnRenderSolid(hpl::DebugDraw* apFunctions)
 {
 	//return;
 	iPhysicsWorld *pPhysicsWorld = mpMap->GetPhysicsWorld();

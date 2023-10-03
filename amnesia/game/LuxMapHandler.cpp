@@ -106,7 +106,7 @@ cLuxMapHandler::cLuxMapHandler() : iLuxUpdateable("LuxMapHandler")
 	m_postDebugSolidDrawHandler = cViewport::PostSolidDraw::Handler([&](cViewport::PostSolidDrawPacket& payload) {
 		cMatrixf view = payload.m_frustum->GetViewMatrix().GetTranspose();
 		cMatrixf proj = payload.m_frustum->GetProjectionMatrix().GetTranspose();
-		//hpl::ImmediateDrawBatch batch(*payload.m_context, *payload.m_outputTarget,view, proj);
+		//hpl::DebugDraw batch(*payload.m_context, *payload.m_outputTarget,view, proj);
 
 		// if(mpCurrentMap && mpCurrentMap->GetPhysicsWorld())
 		// {
@@ -324,7 +324,7 @@ void cLuxMapHandler::SetUpdateActive(bool abX)
 
 //-----------------------------------------------------------------------
 
-void cLuxMapHandler::RenderSolid(hpl::ImmediateDrawBatch* apFunctions)
+void cLuxMapHandler::RenderSolid(hpl::DebugDraw* apFunctions)
 {
 	//mpViewport->GetRenderSettings()->mbLog = false;
 	if(mpCurrentMap) mpCurrentMap->OnRenderSolid(apFunctions);

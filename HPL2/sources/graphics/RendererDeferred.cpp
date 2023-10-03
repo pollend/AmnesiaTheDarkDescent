@@ -23,7 +23,7 @@
 #include "engine/Event.h"
 #include "engine/Interface.h"
 #include "graphics/ForgeHandles.h"
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 #include "graphics/MaterialResource.h"
 #include "math/cFrustum.h"
 #include "scene/ParticleEmitter.h"
@@ -551,7 +551,7 @@ namespace hpl {
         m_dissolveImage = mpResources->GetTextureManager()->Create2DImage("core_dissolve.tga", false);
         auto* forgeRenderer = Interface<ForgeRenderer>::Get();
 
-        m_drawBatch = std::make_unique<ImmediateDrawBatch>(forgeRenderer);
+        m_debug = std::make_unique<DebugDraw>(forgeRenderer);
         m_occlusionUniformBuffer.Load([&](Buffer** buffer) {
             BufferLoadDesc desc = {};
             desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_BUFFER;
@@ -4300,16 +4300,16 @@ void cRendererDeferred::Draw(
     }
 
     // notify post draw listeners
-    // ImmediateDrawBatch postSolidBatch(context, sharedData->m_gBuffer.m_outputTarget, mainFrustumView, mainFrustumProj);
+    // DebugDraw postSolidBatch(context, sharedData->m_gBuffer.m_outputTarget, mainFrustumView, mainFrustumProj);
     cViewport::PostSolidDrawPacket postSolidEvent = cViewport::PostSolidDrawPacket();
     postSolidEvent.m_frustum = apFrustum;
     postSolidEvent.m_frame = &frame;
     postSolidEvent.m_outputTarget = &currentGBuffer.m_outputBuffer;
     postSolidEvent.m_viewport = &viewport;
     postSolidEvent.m_renderSettings = mpCurrentSettings;
-    postSolidEvent.m_immediateDrawBatch = m_drawBatch.get();
+    postSolidEvent.m_debug = m_debug.get();
     viewport.SignalDraw(postSolidEvent);
-    m_drawBatch->flush(frame.m_cmd, currentGBuffer.m_outputBuffer, currentGBuffer.m_depthBuffer);
+    m_debug->flush(frame.m_cmd, viewport, *apFrustum, currentGBuffer.m_outputBuffer, currentGBuffer.m_depthBuffer);
 
     // ------------------------------------------------------------------------
     // Translucency Pass --> output target
@@ -4710,16 +4710,16 @@ void cRendererDeferred::Draw(
         cmdEndDebugMarker(frame.m_cmd);
     }
 
-    // ImmediateDrawBatch postTransBatch(context, sharedData->m_gBuffer.m_outputTarget, mainFrustumView, mainFrustumProj);
+    // DebugDraw postTransBatch(context, sharedData->m_gBuffer.m_outputTarget, mainFrustumView, mainFrustumProj);
     cViewport::PostTranslucenceDrawPacket translucenceEvent = cViewport::PostTranslucenceDrawPacket();
     translucenceEvent.m_frustum = apFrustum;
     translucenceEvent.m_frame = &frame;
     translucenceEvent.m_outputTarget = &currentGBuffer.m_outputBuffer;
     translucenceEvent.m_viewport = &viewport;
     translucenceEvent.m_renderSettings = mpCurrentSettings;
-    translucenceEvent.m_immediateDrawBatch = m_drawBatch.get();
+    translucenceEvent.m_debug = m_debug.get();
     viewport.SignalDraw(translucenceEvent);
-    m_drawBatch->flush(frame.m_cmd, currentGBuffer.m_outputBuffer, currentGBuffer.m_depthBuffer);
+    m_debug->flush(frame.m_cmd, viewport, *apFrustum, currentGBuffer.m_outputBuffer, currentGBuffer.m_depthBuffer);
 
     {
         cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);

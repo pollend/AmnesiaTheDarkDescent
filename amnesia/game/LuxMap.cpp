@@ -427,7 +427,7 @@ bool cLuxMap::RecompileScript(tString *apOutput)
 
 //-----------------------------------------------------------------------
 
-void cLuxMap::OnRenderSolid(hpl::ImmediateDrawBatch* apFunctions)
+void cLuxMap::OnRenderSolid(hpl::DebugDraw* apFunctions)
 {
 	if(gpBase->mpDebugHandler->GetShowEntityInfo()==false) return;
 

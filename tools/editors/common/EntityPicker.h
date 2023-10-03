@@ -83,7 +83,7 @@ public:
 	void SetPickFilter(iPickFilter* apFilter);
 	void SetPickMethod(iPickMethod* apMethod);
 
-	void DrawDebug(ImmediateDrawBatch* apFunctions);
+	void DrawDebug(DebugDraw* apFunctions);
 
 	int GetNumPicks();
 	cPickData* GetPick(int alX);
@@ -94,7 +94,7 @@ public:
 	void Update();
 protected:
 	virtual void Iterate();
-	virtual void OnDraw(ImmediateDrawBatch* apFunctions){}
+	virtual void OnDraw(DebugDraw* apFunctions){}
 
 	iEditorWorld* mpWorld;
 

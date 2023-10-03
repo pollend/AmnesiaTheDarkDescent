@@ -28,7 +28,7 @@
 #include "SurfacePicker.h"
 
 #include "EntityWrapper.h"
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 #include <utility>
 
 cEditorWindowViewport::cEditorWindowViewport(iEditorBase* apEditor,
@@ -44,12 +44,12 @@ cEditorWindowViewport::cEditorWindowViewport(iEditorBase* apEditor,
 		}
 
 
-		this->mpEditor->GetEditorWorld()->GetSurfacePicker()->DrawDebug(payload.m_immediateDrawBatch);
+		this->mpEditor->GetEditorWorld()->GetSurfacePicker()->DrawDebug(payload.m_debug);
 		if(GetDrawGrid())
 		{
 			cEditorGrid* pGrid = GetGrid();
 			if(pGrid) {
-				pGrid->Draw(payload.m_immediateDrawBatch, GetGridCenter());
+				pGrid->Draw(payload.m_debug, GetGridCenter());
 			}
 		}
 		if(GetDrawAxes())
@@ -64,16 +64,16 @@ cEditorWindowViewport::cEditorWindowViewport(iEditorBase* apEditor,
 				cVector3f vAxisEnd = 0;
 				vAxisStart.v[i] = vCenter.v[i] -1000.0f;
 				vAxisEnd.v[i] = vCenter.v[i] +1000.0f;
-				payload.m_immediateDrawBatch->DebugDrawLine(cMath::ToForgeVec3(vAxisStart), cMath::ToForgeVec3(vAxisEnd), cMath::ToForgeVec4(col));
+				payload.m_debug->DebugDrawLine(cMath::ToForgeVec3(vAxisStart), cMath::ToForgeVec3(vAxisEnd), cMath::ToForgeVec4(col));
 			}
 		}
 		tEditorClipPlaneVec& vClipPlanes = mpEditor->GetEditorWorld()->GetClipPlanes();
 		for(int i=0;i<(int)vClipPlanes.size();++i)
 		{
-			vClipPlanes[i]->Draw(payload.m_immediateDrawBatch, 0);
+			vClipPlanes[i]->Draw(payload.m_debug, 0);
 		}
 
-		payload.m_immediateDrawBatch->DebugDrawSphere(cMath::ToForgeVec3(GetVCamera()->GetTargetPosition()),0.1f, Vector4(0,1,1,1));
+		payload.m_debug->DebugDrawSphere(cMath::ToForgeVec3(GetVCamera()->GetTargetPosition()),0.1f, Vector4(0,1,1,1));
 
 		const cVector3f& vRefMousePos = GetVCamera()->GetTrackRefMousePos();
 		const cVector3f& vMouseNewPos = GetVCamera()->GetTrackNewMousePos();
@@ -87,10 +87,10 @@ cEditorWindowViewport::cEditorWindowViewport(iEditorBase* apEditor,
 			cVector3f& vGridPos = vDebugGridPos;
 			cVector3f& vSnapPos = vDebugSnappedGridPos;
 
-			payload.m_immediateDrawBatch->DebugDrawLine(cMath::ToForgeVec3(vPos1),cMath::ToForgeVec3(vPos2),Vector4(0,0,1,1));
-			payload.m_immediateDrawBatch->DebugDrawSphere(cMath::ToForgeVec3(vPos1), 0.01f, Vector4(0,1,0,1));
-			payload.m_immediateDrawBatch->DebugDrawSphere(cMath::ToForgeVec3(vPos2), 0.2f, Vector4(0,1,0,1));
-			payload.m_immediateDrawBatch->DebugDrawSphere(cMath::ToForgeVec3(vGridPos), 0.3f, Vector4(1,0,0,1));
+			payload.m_debug->DebugDrawLine(cMath::ToForgeVec3(vPos1),cMath::ToForgeVec3(vPos2),Vector4(0,0,1,1));
+			payload.m_debug->DebugDrawSphere(cMath::ToForgeVec3(vPos1), 0.01f, Vector4(0,1,0,1));
+			payload.m_debug->DebugDrawSphere(cMath::ToForgeVec3(vPos2), 0.2f, Vector4(0,1,0,1));
+			payload.m_debug->DebugDrawSphere(cMath::ToForgeVec3(vGridPos), 0.3f, Vector4(1,0,0,1));
 		}
 
 	});
@@ -103,12 +103,12 @@ cEditorWindowViewport::cEditorWindowViewport(iEditorBase* apEditor,
 		iEditorEditMode* pEditMode = mpEditor->GetCurrentEditMode();
 
 		if(pEditMode)
-			pEditMode->DrawPreGrid(this, payload.m_immediateDrawBatch, vMousePos);
+			pEditMode->DrawPreGrid(this, payload.m_debug, vMousePos);
 
 		// apFunctions->SetBlendMode(eMaterialBlendMode_None);
 
 		if(pEditMode)
-			pEditMode->DrawPostGrid(this, payload.m_immediateDrawBatch, vMousePos);
+			pEditMode->DrawPostGrid(this, payload.m_debug, vMousePos);
 
 
 		// batch.flush();

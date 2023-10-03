@@ -59,8 +59,9 @@ namespace hpl {
 
         m_updateEventHandler = IUpdateEventLoop::UpdateEvent::Handler([&](float dt) {
             if (m_dirtyViewport) {
-                if (m_size.x > 0 && m_size.y > 0 && m_target.IsValid()) {
+                if (m_size.x > 0 && m_size.y > 0) {
                     m_dirtyViewport = false;
+
                     m_viewportChanged.Signal();
                 }
             }

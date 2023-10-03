@@ -20,7 +20,7 @@
 #include "EntityPicker.h"
 #include "EditorWorld.h"
 
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 
 #include <algorithm>
 
@@ -59,7 +59,7 @@ void cEntityPicker::SetPickMethod(iPickMethod* apMethod)
 
 //-----------------------------------------------------------------------------
 
-void cEntityPicker::DrawDebug(ImmediateDrawBatch* batch)
+void cEntityPicker::DrawDebug(DebugDraw* batch)
 {
 	// apFunctions->SetMatrix(NULL);
 	for(int i=0;i<GetNumPicks();++i)

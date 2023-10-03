@@ -33,7 +33,7 @@
 
 #include "../leveleditor/LevelEditor.h"
 
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 
 cEditorEditModeStaticObjects::cEditorEditModeStaticObjects(iEditorBase* apEditor,
 														   iEditorWorld* apEditorWorld) : iEditorEditModeObjectCreator(apEditor,
@@ -42,7 +42,7 @@ cEditorEditModeStaticObjects::cEditorEditModeStaticObjects(iEditorBase* apEditor
 {
 }
 
-void cEditorEditModeStaticObjects::DrawObjectPreview(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, const cMatrixf& amtxTransform, bool abPreCreationActive)
+void cEditorEditModeStaticObjects::DrawObjectPreview(cEditorWindowViewport* apViewport, DebugDraw* apFunctions, const cMatrixf& amtxTransform, bool abPreCreationActive)
 {
 	// apFunctions->SetMatrix(NULL);
 	// apFunctions->SetBlendMode(eMaterialBlendMode_Alpha);
@@ -69,11 +69,11 @@ void cEditorEditModeStaticObjects::DrawObjectPreview(cEditorWindowViewport* apVi
 
 		if(abPreCreationActive)
 		{
-			ImmediateDrawBatch::DebugDrawOptions options;
-			options.m_depthTest = DepthTest::Greater;
+			DebugDraw::DebugDrawOptions options;
+			options.m_depthTest = DebugDraw::DebugDepthTest::Greater;
 			// apFunctions->SetDepthTestFunc(eDepthTestFunc_Greater);
 			apFunctions->DebugDrawBoxMinMax(cMath::ToForgeVec3(vBVMin),cMath::ToForgeVec3(vBVMax), Vector4(1,0,0,0.6f), options);
-			options.m_depthTest = DepthTest::Less;
+			options.m_depthTest = DebugDraw::DebugDepthTest::Less;
 			// apFunctions->SetDepthTestFunc(eDepthTestFunc_Less);
 			apFunctions->DebugDrawBoxMinMax(cMath::ToForgeVec3(vBVMin),cMath::ToForgeVec3(vBVMax), Vector4(0,1,0,0.6f), options);
 

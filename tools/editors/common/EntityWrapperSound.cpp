@@ -28,7 +28,7 @@
 
 #include "EditorWindowEntityEditBoxSound.h"
 
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 //---------------------------------------------------------------------------
 
 cEntityWrapperTypeSound::cEntityWrapperTypeSound() : iEntityWrapperType(eEditorEntityType_Sound, _W("Sound"), "Sound")
@@ -215,7 +215,7 @@ bool cEntityWrapperSound::SetProperty(int alPropID, const tString& asX)
 
 //---------------------------------------------------------------------------
 
-void cEntityWrapperSound::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, iEditorEditMode* apEditMode,
+void cEntityWrapperSound::Draw(cEditorWindowViewport* apViewport, DebugDraw* apFunctions, iEditorEditMode* apEditMode,
 								bool abIsSelected, const cColor& aHighlightCol, const cColor& aDisabledCol)
 {
 	iEntityWrapper::Draw(apViewport, apFunctions, apEditMode, abIsSelected);

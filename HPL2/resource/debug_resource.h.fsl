@@ -1,4 +1,3 @@
-
 CBUFFER(perFrameConstants, UPDATE_FREQ_PER_FRAME, b0, binding = 0)
 {
     DATA(float4x4, viewProjMat, None);

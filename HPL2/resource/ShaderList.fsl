@@ -225,16 +225,16 @@
     #include "hbao_prepareNativeDepths.comp.fsl"
 #end
 
-#vert immediate.vert
-    #include "immediate.vert.fsl"
+#vert debug.vert
+    #include "debug.vert.fsl"
 #end
 
-#vert immediate_2D.vert
-    #include "immediate_2D.vert.fsl"
+#vert debug_2D.vert
+    #include "debug_2D.vert.fsl"
 #end
 
-#frag immediate_color.frag
-    #include "immediate_color.frag.fsl"
+#frag debug.frag
+    #include "debug.frag.fsl"
 #end
 
 #vert wireframe.vert

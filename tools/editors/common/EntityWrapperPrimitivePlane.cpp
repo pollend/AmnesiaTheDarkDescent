@@ -25,7 +25,7 @@
 #include "EditorHelper.h"
 
 #include "EngineEntity.h"
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 
 
 //---------------------------------------------------------------------------
@@ -324,7 +324,7 @@ bool cEntityWrapperPrimitivePlane::SetProperty(int alPropID, const float& afX)
 }
 
 
-void cEntityWrapperPrimitivePlane::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, iEditorEditMode* apEditMode, bool abIsSelected,
+void cEntityWrapperPrimitivePlane::Draw(cEditorWindowViewport* apViewport, DebugDraw* apFunctions, iEditorEditMode* apEditMode, bool abIsSelected,
 										const cColor& aHighlightCol, const cColor& aDisabledCol)
 {
 	if(abIsSelected==false) return;

@@ -521,7 +521,7 @@ void cEntityWrapperDecal::OnPostDeployAll(bool abX)
 
 //-----------------------------------------------------------------------------------------
 
-void cEntityWrapperDecal::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions,iEditorEditMode* apEditMode,
+void cEntityWrapperDecal::Draw(cEditorWindowViewport* apViewport, DebugDraw* apFunctions,iEditorEditMode* apEditMode,
 						bool abIsSelected, const cColor& aHighlightCol, const cColor& aDisabledCol)
 {
 	iEntityWrapper::Draw(apViewport, apFunctions, apEditMode, abIsSelected);

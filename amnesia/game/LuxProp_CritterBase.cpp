@@ -242,7 +242,7 @@ eLuxFocusCrosshair iLuxProp_CritterBase::GetFocusCrosshair(iPhysicsBody *apBody,
 
 //-----------------------------------------------------------------------
 
-void iLuxProp_CritterBase::OnRenderSolid(hpl::ImmediateDrawBatch* apFunctions)
+void iLuxProp_CritterBase::OnRenderSolid(hpl::DebugDraw* apFunctions)
 {
 	return;
 	iPhysicsWorld *pPhysicsWorld = mpWorld->GetPhysicsWorld();

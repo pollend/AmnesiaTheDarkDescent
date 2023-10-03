@@ -108,7 +108,7 @@ public:
 
 	eLuxFocusCrosshair GetFocusCrosshair(iPhysicsBody *apBody, const cVector3f &avPos);
 
-	virtual void OnRenderSolid(hpl::ImmediateDrawBatch* apFunctions) override;
+	virtual void OnRenderSolid(hpl::DebugDraw* apFunctions) override;
 
 	void OnHealthChange();
 	void OnDamage(float afAmount, int alStrength);
