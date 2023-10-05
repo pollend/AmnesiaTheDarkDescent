@@ -52,6 +52,13 @@ namespace hpl {
             return Vector3(vec.x, vec.y, vec.z);
         }
 
+        static Vector2 ToForgeVec2(const cVector2f& vec) {
+            return Vector2(vec.x, vec.y);
+        }
+
+        static Vector4 ToForgeVec4(const cColor& vec) {
+            return Vector4(vec.r, vec.g, vec.b, vec.a);
+        }
 
         static cMatrixf FromForgeMat(const mat4& mat) {
             return cMatrixf(

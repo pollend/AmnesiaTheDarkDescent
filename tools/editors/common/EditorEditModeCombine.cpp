@@ -164,7 +164,7 @@ void cEditorEditModeCombine::OnEditorUpdate(float afTimeStep)
 
 //-------------------------------------------------------------
 
-void cEditorEditModeCombine::DrawPostGrid(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, const cVector3f& avPos)
+void cEditorEditModeCombine::DrawPostGrid(cEditorWindowViewport* apViewport, DebugDraw* apFunctions, const cVector3f& avPos)
 {
 	iEditorEditMode::DrawPostGrid(apViewport,apFunctions,avPos);
 
@@ -205,7 +205,7 @@ void cEditorEditModeCombine::DrawPostGrid(cEditorWindowViewport* apViewport, Imm
 	{
 		apFunctions->DebugDraw2DLineQuad(cRect2f((float)mMouseRect.x,(float)mMouseRect.y,
 															(float)mMouseRect.w,(float)mMouseRect.h),
-															cColor(1,1));
+															Vector4(1,1,1,1));
 	}
 }
 

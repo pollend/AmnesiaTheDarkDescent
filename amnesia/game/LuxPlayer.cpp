@@ -568,14 +568,14 @@ void cLuxPlayer::OnLeaveContainer(const tString& asNewContainer)
 
 //-----------------------------------------------------------------------
 
-void cLuxPlayer::RenderSolid(hpl::ImmediateDrawBatch* apFunctions)
+void cLuxPlayer::RenderSolid(hpl::DebugDraw* apFunctions)
 {
 	mvStates[mState]->DebugRenderSolid(apFunctions);
 
 	// for(size_t i=0; i<mvHelpers.size(); ++i) mvHelpers[i]->RenderSolid(apFunctions);
 }
 
-void cLuxPlayer::RenderTrans(hpl::ImmediateDrawBatch* apFunctions)
+void cLuxPlayer::RenderTrans(hpl::DebugDraw* apFunctions)
 {
 	mvStates[mState]->DebugRenderTrans(apFunctions);
 }

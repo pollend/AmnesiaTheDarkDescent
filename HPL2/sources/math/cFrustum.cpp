@@ -19,7 +19,7 @@
 
 #include "math/cFrustum.h"
 
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 #include "math/Math.h"
 #include "system/LowLevelSystem.h"
 #include "graphics/LowLevelGraphics.h"
@@ -674,7 +674,7 @@ namespace hpl {
 	}
 	//-----------------------------------------------------------------------
 
-	void cFrustum::Draw(ImmediateDrawBatch *drawBatch, const cColor &aColor)
+	void cFrustum::Draw(DebugDraw *drawBatch, const cColor &aColor)
 	{
 		if(mbObliqueNearPlane)
 		{
@@ -686,15 +686,15 @@ namespace hpl {
 		}
 
 		for(int i=0; i<4; ++i) {
-			drawBatch->DebugDrawLine(mvVertices[i==0?3:i-1], mvVertices[i],aColor);
+			drawBatch->DebugDrawLine(cMath::ToForgeVec3(mvVertices[i==0?3:i-1]), cMath::ToForgeVec3(mvVertices[i]),cMath::ToForgeVec4(aColor));
 		}
 
 		for(int i=4; i<8; ++i) {
-			drawBatch->DebugDrawLine(mvVertices[i==4?7:i-1], mvVertices[i],aColor);
+			drawBatch->DebugDrawLine(cMath::ToForgeVec3(mvVertices[i==4?7:i-1]), cMath::ToForgeVec3(mvVertices[i]),cMath::ToForgeVec4(aColor));
 		}
 
 		for(int i=0; i<4; ++i) {
-			drawBatch->DebugDrawLine(mvVertices[i], mvVertices[i+4],aColor);
+			drawBatch->DebugDrawLine(cMath::ToForgeVec3(mvVertices[i]), cMath::ToForgeVec3(mvVertices[i+4]),cMath::ToForgeVec4(aColor));
 		}
 
 		if(mbInvertsCullMode==false) return;

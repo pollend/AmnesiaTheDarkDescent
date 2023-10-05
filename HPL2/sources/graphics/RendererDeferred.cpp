@@ -23,7 +23,7 @@
 #include "engine/Event.h"
 #include "engine/Interface.h"
 #include "graphics/ForgeHandles.h"
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 #include "graphics/MaterialResource.h"
 #include "math/cFrustum.h"
 #include "scene/ParticleEmitter.h"
@@ -81,13 +81,14 @@
 #include <unordered_map>
 #include <utility>
 
+#include <folly/FixedString.h>
+#include <folly/hash/Hash.h>
+#include <folly/small_vector.h>
+
 #include "Common_3/Utilities/Math/MathTypes.h"
 #include "Common_3/Resources/ResourceLoader/Interfaces/IResourceLoader.h"
 #include "Common_3/Graphics/Interfaces/IGraphics.h"
 #include "FixPreprocessor.h"
-#include <folly/FixedString.h>
-#include <folly/hash/Hash.h>
-#include <folly/small_vector.h>
 
 namespace hpl {
 
@@ -533,7 +534,11 @@ namespace hpl {
         // Set up render specific things
 
         UVector3 shadowSizes[] = {
-            UVector3(128, 128, 1), UVector3(256, 256, 1), UVector3(256, 256, 1), UVector3(512, 512, 1), UVector3(1024, 1024, 1)
+            UVector3(128, 128, 1),
+            UVector3(256, 256, 1),
+            UVector3(256, 256, 1),
+            UVector3(512, 512, 1),
+            UVector3(1024, 1024, 1)
         };
         int startSize = 2;
         if (mShadowMapResolution == eShadowMapResolution_Medium) {
@@ -542,9 +547,11 @@ namespace hpl {
             startSize = 0;
         }
 
+
         m_dissolveImage = mpResources->GetTextureManager()->Create2DImage("core_dissolve.tga", false);
         auto* forgeRenderer = Interface<ForgeRenderer>::Get();
 
+        m_debug = std::make_unique<DebugDraw>(forgeRenderer);
         m_occlusionUniformBuffer.Load([&](Buffer** buffer) {
             BufferLoadDesc desc = {};
             desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_BUFFER;
@@ -4091,7 +4098,7 @@ void cRendererDeferred::Draw(
         };
         cmdBindRenderTargets(
             frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, nullptr, nullptr, -1, -1);
-        cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)common->m_size.x, (float)common->m_size.y, 0.0f, 1.0f);
+        cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, static_cast<float>(common->m_size.x), static_cast<float>(common->m_size.y), 0.0f, 1.0f);
         cmdSetScissor(frame.m_cmd, 0, 0, common->m_size.x, common->m_size.y);
         cmdBindPipeline(frame.m_cmd, m_solidIlluminationPipelineCCW.m_handle);
 
@@ -4293,14 +4300,16 @@ void cRendererDeferred::Draw(
     }
 
     // notify post draw listeners
-    // ImmediateDrawBatch postSolidBatch(context, sharedData->m_gBuffer.m_outputTarget, mainFrustumView, mainFrustumProj);
+    // DebugDraw postSolidBatch(context, sharedData->m_gBuffer.m_outputTarget, mainFrustumView, mainFrustumProj);
     cViewport::PostSolidDrawPacket postSolidEvent = cViewport::PostSolidDrawPacket();
     postSolidEvent.m_frustum = apFrustum;
     postSolidEvent.m_frame = &frame;
     postSolidEvent.m_outputTarget = &currentGBuffer.m_outputBuffer;
     postSolidEvent.m_viewport = &viewport;
     postSolidEvent.m_renderSettings = mpCurrentSettings;
+    postSolidEvent.m_debug = m_debug.get();
     viewport.SignalDraw(postSolidEvent);
+    m_debug->flush(frame, frame.m_cmd, viewport, *apFrustum, currentGBuffer.m_outputBuffer, currentGBuffer.m_depthBuffer);
 
     // ------------------------------------------------------------------------
     // Translucency Pass --> output target
@@ -4701,14 +4710,16 @@ void cRendererDeferred::Draw(
         cmdEndDebugMarker(frame.m_cmd);
     }
 
-    // ImmediateDrawBatch postTransBatch(context, sharedData->m_gBuffer.m_outputTarget, mainFrustumView, mainFrustumProj);
+    // DebugDraw postTransBatch(context, sharedData->m_gBuffer.m_outputTarget, mainFrustumView, mainFrustumProj);
     cViewport::PostTranslucenceDrawPacket translucenceEvent = cViewport::PostTranslucenceDrawPacket();
     translucenceEvent.m_frustum = apFrustum;
     translucenceEvent.m_frame = &frame;
     translucenceEvent.m_outputTarget = &currentGBuffer.m_outputBuffer;
     translucenceEvent.m_viewport = &viewport;
     translucenceEvent.m_renderSettings = mpCurrentSettings;
+    translucenceEvent.m_debug = m_debug.get();
     viewport.SignalDraw(translucenceEvent);
+    m_debug->flush(frame, frame.m_cmd, viewport, *apFrustum, currentGBuffer.m_outputBuffer, currentGBuffer.m_depthBuffer);
 
     {
         cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);

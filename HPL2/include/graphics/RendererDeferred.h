@@ -701,5 +701,6 @@ namespace hpl {
         cRenderList m_rendererList;
         cRenderList m_reflectionRendererList;
         std::unique_ptr<renderer::PassHBAOPlus> m_hbaoPlusPipeline;
+        std::unique_ptr<DebugDraw> m_debug;
     };
 }; // namespace hpl

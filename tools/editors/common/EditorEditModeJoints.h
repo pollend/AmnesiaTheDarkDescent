@@ -45,7 +45,7 @@ public:
 
 	iEditorAction* CreateObject(const cVector3f &avWorldPos);
 
-	void DrawObjectPreview(cEditorWindowViewport* apViewport, ImmediateDrawBatch *apFunctions, const cVector3f& avPos){}
+	void DrawObjectPreview(cEditorWindowViewport* apViewport, DebugDraw *apFunctions, const cVector3f& avPos){}
 protected:
 	iEditorWindow* CreateSpecificWindow();
 

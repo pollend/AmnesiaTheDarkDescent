@@ -22,7 +22,7 @@
 #include "EditorEditMode.h"
 #include "EditorWindowViewport.h"
 
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 
 cSphereCreator::cSphereCreator(iEditorEditMode* apEditMode) : iShapeCreator(apEditMode)
 {
@@ -43,7 +43,7 @@ void cSphereCreator::OnViewportMouseUp(int alButtons)
 		StoreMousePosition(mvTempPoint);
 }
 
-void cSphereCreator::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions)
+void cSphereCreator::Draw(cEditorWindowViewport* apViewport, DebugDraw* apFunctions)
 {
 	// apFunctions->SetProgram(NULL);
 	// apFunctions->SetTextureRange(NULL,0);
@@ -56,11 +56,11 @@ void cSphereCreator::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch*
 	*/
 	if(mvPoints.empty()==false && mbDragging==true)
 	{
-		apFunctions->DebugDrawLine(mvPoints[0]-cVector3f(0.05f,0,0), mvPoints[0]+cVector3f(0.05f,0,0), cColor(1,1));
-		apFunctions->DebugDrawLine(mvPoints[0]-cVector3f(0,0.05f,0), mvPoints[0]+cVector3f(0,0.05f,0), cColor(1,1));
-		apFunctions->DebugDrawLine(mvPoints[0]-cVector3f(0,0,0.05f), mvPoints[0]+cVector3f(0,0,0.05f), cColor(1,1));
-		apFunctions->DebugDrawLine(mvPoints[0], mvTempPoint, cColor(1,1));
-		apFunctions->DebugDrawSphere(mvPoints[0], mfRadius, cColor(1,1));
+		apFunctions->DebugDrawLine(cMath::ToForgeVec3(mvPoints[0]-cVector3f(0.05f,0,0)), cMath::ToForgeVec3(mvPoints[0]+cVector3f(0.05f,0,0)), Vector4(1,1,1,1));
+		apFunctions->DebugDrawLine(cMath::ToForgeVec3(mvPoints[0]-cVector3f(0,0.05f,0)), cMath::ToForgeVec3(mvPoints[0]+cVector3f(0,0.05f,0)), Vector4(1,1,1,1));
+		apFunctions->DebugDrawLine(cMath::ToForgeVec3(mvPoints[0]-cVector3f(0,0,0.05f)),cMath::ToForgeVec3(mvPoints[0]+cVector3f(0,0,0.05f)), Vector4(1,1,1,1));
+		apFunctions->DebugDrawLine(cMath::ToForgeVec3(mvPoints[0]), cMath::ToForgeVec3(mvTempPoint), Vector4(1,1,1,1));
+		apFunctions->DebugDrawSphere(cMath::ToForgeVec3(mvPoints[0]), mfRadius, Vector4(1,1,1,1));
 	}
 }
 

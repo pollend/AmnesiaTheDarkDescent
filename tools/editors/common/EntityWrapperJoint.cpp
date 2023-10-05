@@ -32,7 +32,7 @@
 
 #include "EntityIcon.h"
 
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 
 //-------------------------------------------------------------------
 
@@ -493,7 +493,7 @@ cEditorWindowEntityEditBox* iEntityWrapperJoint::CreateEditBox(cEditorEditModeSe
 
 //------------------------------------------------------------------------------
 
-void iEntityWrapperJoint::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, iEditorEditMode* apEditMode, bool abIsSelected, const cColor& aHighlightCol, const cColor& aDisabledCol)
+void iEntityWrapperJoint::Draw(cEditorWindowViewport* apViewport, DebugDraw* apFunctions, iEditorEditMode* apEditMode, bool abIsSelected, const cColor& aHighlightCol, const cColor& aDisabledCol)
 {
 	iEntityWrapper::Draw(apViewport, apFunctions, apEditMode, abIsSelected);
 	//DrawIcon(apViewport, apFunctions, apEditMode, abIsSelected, mvPosition);
@@ -507,13 +507,13 @@ void iEntityWrapperJoint::Draw(cEditorWindowViewport* apViewport, ImmediateDrawB
 	DrawArrow(apViewport, apFunctions, mtxTransRot, 1, true, cVector2f(0.05f, 0.2f), cColor(1));
 
 	// apFunctions->SetDepthTest(false);
-	apFunctions->DebugDrawSphere(mvPosition, 0.01f, cColor(1,1,0,1));
+	apFunctions->DebugDrawSphere(cMath::ToForgeVec3(mvPosition), 0.01f, Vector4(1,1,0,1));
 	// apFunctions->SetDepthTest(true);
 
 	if(mpParentBody)
-		apFunctions->DebugDrawLine(mvPosition, mpParentBody->GetPosition(), cColor(0,1,0,1));
+		apFunctions->DebugDrawLine(cMath::ToForgeVec3(mvPosition), cMath::ToForgeVec3(mpParentBody->GetPosition()), Vector4(0,1,0,1));
 	if(mpChildBody)
-		apFunctions->DebugDrawLine(mvPosition, mpChildBody->GetPosition(), cColor(0,0,1,1));
+		apFunctions->DebugDrawLine(cMath::ToForgeVec3(mvPosition), cMath::ToForgeVec3(mpChildBody->GetPosition()), Vector4(0,0,1,1));
 }
 
 //-------------------------------------------------------------------

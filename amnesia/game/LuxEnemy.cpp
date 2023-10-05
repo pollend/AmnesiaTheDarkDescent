@@ -710,7 +710,7 @@ void iLuxEnemy::OnUpdate(float afTimeStep)
 
 //-----------------------------------------------------------------------
 
-void iLuxEnemy::OnRenderSolid(hpl::ImmediateDrawBatch* apFunctions)
+void iLuxEnemy::OnRenderSolid(hpl::DebugDraw* apFunctions)
 {
 	//return;
 	iPhysicsWorld *pPhysicsWorld = mpMap->GetPhysicsWorld();
@@ -719,7 +719,7 @@ void iLuxEnemy::OnRenderSolid(hpl::ImmediateDrawBatch* apFunctions)
 
 	mpPathfinder->OnRenderSolid(apFunctions);
 
-	apFunctions->DebugDrawSphere(mvLastKnownPlayerPos, 0.3f, cColor(1,0,0));
+	apFunctions->DebugDrawSphere(cMath::ToForgeVec3(mvLastKnownPlayerPos), 0.3f, Vector4(1,0,0, 1));
 
 
 	////////////////////////////////////////
@@ -750,7 +750,7 @@ void iLuxEnemy::OnRenderSolid(hpl::ImmediateDrawBatch* apFunctions)
 	if(bCrouching)
 		fMaxRange = fMaxRange * mfCrouchVisibleRangeMul;
 
-	apFunctions->DebugDrawSphere(mpCharBody->GetPosition(), fMaxRange, cColor(0,1,1));
+	apFunctions->DebugDrawSphere(cMath::ToForgeVec3(mpCharBody->GetPosition()), fMaxRange, Vector4(0,1,1,1));
 
 	OnRenderSolidImplemented(apFunctions);
 }

@@ -1,0 +1,8 @@
+#define MAX_TEXTURE_UNITS 256U
+
+CBUFFER(perFrameConstants, UPDATE_FREQ_PER_FRAME, b0, binding = 0)
+{
+    DATA(float4x4, viewProjMat, None);
+    DATA(float4x4, viewProj2DMat, None);
+};
+

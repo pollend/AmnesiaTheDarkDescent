@@ -191,9 +191,6 @@ find_package(OpenGL REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(SDL2 CONFIG REQUIRED)
 find_package(folly CONFIG REQUIRED)
-# find_package(PNG REQUIRED)
-# find_package (Python COMPONENTS Interpreter)
-# find_package(Python3 COMPONENTS Interpreter)
 
 # setup HPL2 compile target
 
@@ -256,14 +253,11 @@ target_link_libraries(HPL2
   ${IL_LIBRARIES}
   ${PLATFORM_LIBS}
   )
- 
 
   file(GLOB shader_resources RELATIVE 
     "${CMAKE_CURRENT_SOURCE_DIR}/resource/*.sc"
     "${CMAKE_CURRENT_SOURCE_DIR}/resource/*.io"
     "${CMAKE_CURRENT_SOURCE_DIR}/resource/*.sh")
-
-
 
 set(HPL2_SHADER ${CMAKE_CURRENT_BINARY_DIR}/Shaders/)
 set(HPL2_COMPILEDSHADER ${CMAKE_CURRENT_BINARY_DIR}/CompiledShaders/)
@@ -349,4 +343,4 @@ endfunction()
 set(_HPL2_SHADER_ ${HPL2_SHADER} PARENT_SCOPE)
 set(_HPL2_COMPILEDSHADER_ ${HPL2_COMPILEDSHADER} PARENT_SCOPE)
 set(_SHADER_RESOURCE_PATH_  ${SHADER_RESOURCE_PATH} PARENT_SCOPE)
- add_dependencies(HPL2 HPL_SHADERS)
+add_dependencies(HPL2 HPL_SHADERS)

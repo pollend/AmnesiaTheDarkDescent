@@ -169,17 +169,6 @@ namespace hpl {
         }
     }
 
-   // cResourceVarsObject* cMaterial::GetVarsObject() {
-   //     cResourceVarsObject* pVarsObject = hplNew(cResourceVarsObject, ());
-   //     mpType->GetVariableValues(this, pVarsObject);
-
-   //     return pVarsObject;
-   // }
-
-   // void cMaterial::LoadVariablesFromVarsObject(cResourceVarsObject* apVarsObject) {
-   //     mpType->LoadVariables(this, apVarsObject);
-   // }
-
     void cMaterial::setTextureFilter(eTextureFilter filter) {
         m_textureFilter = filter;
         IncreaseGeneration();

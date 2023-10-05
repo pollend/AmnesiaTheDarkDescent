@@ -28,7 +28,7 @@
 #include "EditorHelper.h"
 
 #include "EditorWindowEntityEditBoxSubMesh.h"
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 
 #include <algorithm>
 
@@ -81,7 +81,7 @@ bool cEngineEntitySubMesh::CheckRayIntersect(cEditorWindowViewport* apViewport, 
 
 //---------------------------------------------------------------------------
 
-void cEngineEntitySubMesh::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions,
+void cEngineEntitySubMesh::Draw(cEditorWindowViewport* apViewport, DebugDraw* apFunctions,
 								bool abIsSelected, bool abIsActive, const cColor& aHighlightCol)
 {
 	if(abIsSelected==false)
@@ -95,12 +95,12 @@ void cEngineEntitySubMesh::Draw(cEditorWindowViewport* apViewport, ImmediateDraw
 	// apFunctions->SetMatrix(pSubMeshEntity->GetModelMatrix(NULL));
 	// apFunctions->DrawWireFrame(pSubMeshEntity->GetVertexBuffer(), cColor(1,1,1,0.25f));
 
-	ImmediateDrawBatch::DebugDrawOptions options;
-	options.m_transform = *pSubMeshEntity->GetModelMatrix(NULL);
+	DebugDraw::DebugDrawOptions options;
+	options.m_transform = cMath::ToForgeMat(pSubMeshEntity->GetModelMatrix(NULL)->GetTranspose());
 	//GraphicsContext::LayoutStream layoutStream;
 	//pSubMeshEntity->GetVertexBuffer()->GetLayoutStream(layoutStream);
 
-	apFunctions->DebugWireFrameFromVertexBuffer(pSubMeshEntity->GetVertexBuffer(), cColor(1,1,1,0.25f));
+	apFunctions->DebugWireFrameFromVertexBuffer(pSubMeshEntity->GetVertexBuffer(), Vector4(1,1,1,0.25f));
 	// apFunctions->SetMatrix(NULL);
 	// apFunctions->SetBlendMode(eMaterialBlendMode_None);
 	// apFunctions->SetDepthTest(false);

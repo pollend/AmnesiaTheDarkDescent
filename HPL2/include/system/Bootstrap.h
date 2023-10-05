@@ -1,12 +1,12 @@
 /**
 * Copyright 2023 Michael Pollind
-* 
+*
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
 * You may obtain a copy of the License at
-* 
+*
 *     http://www.apache.org/licenses/LICENSE-2.0
-* 
+*
 * Unless required by applicable law or agreed to in writing, software
 * distributed under the License is distributed on an "AS IS" BASIS,
 * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,6 +18,7 @@
 
 #include "engine/UpdateEventLoop.h"
 #include "graphics/ForgeRenderer.h"
+#include "graphics/DebugDraw.h"
 #include "windowing/NativeWindow.h"
 #include <cstdint>
 #include <engine/RTTI.h>
@@ -50,6 +51,7 @@ namespace hpl {
 
         std::unique_ptr<PrimaryViewport> m_primaryViewport;
         hpl::ForgeRenderer m_renderer;
+        //std::unique_ptr<hpl::DebugDraw> m_debug;
 
         UpdateEventLoop m_updateEventLoop;
         input::InputManager m_inputManager;

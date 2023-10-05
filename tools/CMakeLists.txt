@@ -1,6 +1,3 @@
-# cmake_minimum_required (VERSION 2.8.11)
-# project(Tools)
-
 find_file(TOOLINFO_PLIST Tool-Info.plist
         PATHS ${CMAKE_CURRENT_SOURCE_DIR}
         NO_DEFAULT_PATH
@@ -76,3 +73,5 @@ install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/resources/"
 
 target_link_libraries(MshConverter HPL2)
 
+get_filename_component(TOOL_RESOURCE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/resources" ABSOLUTE)
+set(_HPL_TOOL_RESOURCE_PATH_ "${TOOL_RESOURCE_PATH}" PARENT_SCOPE) 

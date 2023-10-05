@@ -33,7 +33,7 @@
 #include "EntityWrapperBody.h"
 #include "graphics/Enum.h"
 
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 //-----------------------------------------------------------------
 
 ///////////////////////////////////////////////////////////////////
@@ -55,10 +55,10 @@ cEditorEditModeBodies::cEditorEditModeBodies(iEditorBase* apEditor,
 
 //-----------------------------------------------------------------
 
-void cEditorEditModeBodies::DrawObjectPreview(cEditorWindowViewport* apViewport, ImmediateDrawBatch *apFunctions, const cVector3f& avPos, bool abPreCreationActive)
+void cEditorEditModeBodies::DrawObjectPreview(cEditorWindowViewport* apViewport, DebugDraw *apFunctions, const cVector3f& avPos, bool abPreCreationActive)
 {
 
-	apFunctions->DebugDrawSphere(mpEditor->GetPosOnGridFromMousePos(),0.1f,cColor(1,0,0,1));
+	apFunctions->DebugDrawSphere(cMath::ToForgeVec3(mpEditor->GetPosOnGridFromMousePos()),0.1f,Vector4(1,0,0,1));
 
 	eEditorBodyShape shapeType = ((cEditorWindowBodies*)mpWindow)->GetBodyShapeType();
 	cBoundingVolume shapeBV;
@@ -82,14 +82,14 @@ void cEditorEditModeBodies::DrawObjectPreview(cEditorWindowViewport* apViewport,
 
 	cMatrixf mtxObject = cMath::MatrixTranslate(avPos);
 
-	hpl::ImmediateDrawBatch::DebugDrawOptions options;
-	options.m_transform = mtxObject;
+	hpl::DebugDraw::DebugDrawOptions options;
+	options.m_transform = cMath::ToForgeMat(mtxObject.GetTranspose());
 	if(abPreCreationActive)
 	{
-		options.m_depthTest = DepthTest::Greater;
-		apFunctions->DebugDrawBoxMinMax(vBVMin,vBVMax, cColor(1,0,0,0.6f), options);
-		options.m_depthTest = DepthTest::Less;
-		apFunctions->DebugDrawBoxMinMax(vBVMin,vBVMax, cColor(0,1,0,0.6f), options);
+		options.m_depthTest = DebugDraw::DebugDepthTest::Greater;
+		    apFunctions->DebugDrawBoxMinMax(cMath::ToForgeVec3(vBVMin),cMath::ToForgeVec3(vBVMax), Vector4(1,0,0,0.6f), options);
+		options.m_depthTest = DebugDraw::DebugDepthTest::Less;
+		apFunctions->DebugDrawBoxMinMax(cMath::ToForgeVec3(vBVMin),cMath::ToForgeVec3(vBVMax), Vector4(0,1,0,0.6f), options);
 
 		/////////////////////////////////////////
 		// Draw Textured Mesh
@@ -102,7 +102,7 @@ void cEditorEditModeBodies::DrawObjectPreview(cEditorWindowViewport* apViewport,
 	}
 	else
 	{
-		apFunctions->DebugDrawBoxMinMax(vBVMin,vBVMax, cColor(1,0.5f), options);
+		apFunctions->DebugDrawBoxMinMax(cMath::ToForgeVec3(vBVMin),cMath::ToForgeVec3(vBVMax), Vector4(1,1,1,0.5f), options);
 	}
 
 

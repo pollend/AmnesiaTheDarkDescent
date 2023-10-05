@@ -27,7 +27,7 @@
 #include "EditorGrid.h"
 
 #include "EditorActionSelection.h"
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 
 
 //----------------------------------------------------------------------
@@ -48,7 +48,7 @@ bool cEditorEditModeSelectToolScale::IsActive()
 
 //----------------------------------------------------------------
 
-void cEditorEditModeSelectToolScale::DrawAxes(cEditorWindowViewport* apViewport, ImmediateDrawBatch *apFunctions, float afAxisLength)
+void cEditorEditModeSelectToolScale::DrawAxes(cEditorWindowViewport* apViewport, DebugDraw *apFunctions, float afAxisLength)
 {
 
 	float fHalfSide = 0.05f*afAxisLength;
@@ -96,63 +96,63 @@ void cEditorEditModeSelectToolScale::DrawAxes(cEditorWindowViewport* apViewport,
 
 	cColor col[3];
 
-	auto drawCubeQuads = [&](cColor& col, ImmediateDrawBatch::DebugDrawOptions& options) {
+	auto drawCubeQuads = [&](cColor& col, DebugDraw::DebugDrawOptions& options) {
 		apFunctions->DrawQuad(
-			cVector3f(fHalfSide,fHalfSide,fHalfSide),
-			cVector3f(fHalfSide,-fHalfSide,fHalfSide),
-			cVector3f(fHalfSide,fHalfSide,-fHalfSide),
-			cVector3f(fHalfSide,-fHalfSide,-fHalfSide),
-			col,
+			Vector3(fHalfSide,fHalfSide,fHalfSide),
+			Vector3(fHalfSide,-fHalfSide,fHalfSide),
+			Vector3(fHalfSide,fHalfSide,-fHalfSide),
+			Vector3(fHalfSide,-fHalfSide,-fHalfSide),
+			cMath::ToForgeVec4(col),
 			options
 		);
 		apFunctions->DrawQuad(
-			cVector3f(-fHalfSide,-fHalfSide,fHalfSide),
-			cVector3f(-fHalfSide,fHalfSide,fHalfSide),
-			cVector3f(-fHalfSide,-fHalfSide,-fHalfSide),
-			cVector3f(-fHalfSide,fHalfSide,-fHalfSide),
-			col,
+			Vector3(-fHalfSide,-fHalfSide,fHalfSide),
+			Vector3(-fHalfSide,fHalfSide,fHalfSide),
+			Vector3(-fHalfSide,-fHalfSide,-fHalfSide),
+			Vector3(-fHalfSide,fHalfSide,-fHalfSide),
+			cMath::ToForgeVec4(col),
 			options
 		);
 		apFunctions->DrawQuad(
-			cVector3f(-fHalfSide,fHalfSide,-fHalfSide),
-			cVector3f(fHalfSide,fHalfSide,-fHalfSide),
-			cVector3f(-fHalfSide,-fHalfSide,-fHalfSide),
-			cVector3f(fHalfSide,-fHalfSide,-fHalfSide),
-			col,
+			Vector3(-fHalfSide,fHalfSide,-fHalfSide),
+			Vector3(fHalfSide,fHalfSide,-fHalfSide),
+			Vector3(-fHalfSide,-fHalfSide,-fHalfSide),
+			Vector3(fHalfSide,-fHalfSide,-fHalfSide),
+			cMath::ToForgeVec4(col),
 			options
 		);
 		apFunctions->DrawQuad(
-			cVector3f(fHalfSide,-fHalfSide,fHalfSide),
-			cVector3f(fHalfSide,fHalfSide,fHalfSide),
-			cVector3f(-fHalfSide,-fHalfSide,fHalfSide),
-			cVector3f(-fHalfSide,fHalfSide,fHalfSide),
-			col,
+			Vector3(fHalfSide,-fHalfSide,fHalfSide),
+			Vector3(fHalfSide,fHalfSide,fHalfSide),
+			Vector3(-fHalfSide,-fHalfSide,fHalfSide),
+			Vector3(-fHalfSide,fHalfSide,fHalfSide),
+			cMath::ToForgeVec4(col),
 			options
 		);
 		apFunctions->DrawQuad(
-			cVector3f(fHalfSide,fHalfSide,fHalfSide),
-			cVector3f(fHalfSide,fHalfSide,-fHalfSide),
-			cVector3f(-fHalfSide,fHalfSide,fHalfSide),
-			cVector3f(-fHalfSide,fHalfSide,-fHalfSide),
-			col,
+			Vector3(fHalfSide,fHalfSide,fHalfSide),
+			Vector3(fHalfSide,fHalfSide,-fHalfSide),
+			Vector3(-fHalfSide,fHalfSide,fHalfSide),
+			Vector3(-fHalfSide,fHalfSide,-fHalfSide),
+			cMath::ToForgeVec4(col),
 			options
 		);
 		apFunctions->DrawQuad(
-			cVector3f(fHalfSide,-fHalfSide,-fHalfSide),
-			cVector3f(fHalfSide,-fHalfSide,fHalfSide),
-			cVector3f(-fHalfSide,-fHalfSide,-fHalfSide),
-			cVector3f(-fHalfSide,-fHalfSide,fHalfSide),
-			col,
+			Vector3(fHalfSide,-fHalfSide,-fHalfSide),
+			Vector3(fHalfSide,-fHalfSide,fHalfSide),
+			Vector3(-fHalfSide,-fHalfSide,-fHalfSide),
+			Vector3(-fHalfSide,-fHalfSide,fHalfSide),
+			cMath::ToForgeVec4(col),
 			options
 		);
 	};
 
-	ImmediateDrawBatch::DebugDrawOptions options;
-	options.m_transform = mtxTransform;
+	DebugDraw::DebugDrawOptions options;
+	options.m_transform = cMath::ToForgeMat(mtxTransform.GetTranspose());
 	for(int i=eSelectToolAxis_X; i<eSelectToolAxis_LastEnum; ++i)
 	{
 		col[i] = mvAxisSelected[i]?mColorSelected:(mvAxisMouseOver[i]?mColorMouseOver:mvAxisColor[i]);
-		apFunctions->DebugDrawLine(0, vAxes[i], col[i], options);
+	    apFunctions->DebugDrawLine(Vector3(0), cMath::ToForgeVec3(vAxes[i]), cMath::ToForgeVec4(col[i]), options);
 		cColor color = col[0] + col[1] + col[2];
 		drawCubeQuads(color, options);
 
@@ -169,7 +169,7 @@ void cEditorEditModeSelectToolScale::DrawAxes(cEditorWindowViewport* apViewport,
 
 	for(int i=0;i<3;++i)
 	{
-		options.m_transform = mtxTranslate[i];
+		options.m_transform = cMath::ToForgeMat(mtxTranslate[i].GetTranspose());
 		// apFunctions->SetMatrix(&mtxTranslate[i]);
 		for(int j=0; j<6;++j) {
 			drawCubeQuads(col[i], options);

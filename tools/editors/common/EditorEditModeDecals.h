@@ -48,7 +48,7 @@ public:
 						  iEditorWorld* apEditorWorld);
 	~cEditorEditModeDecals();
 
-	void DrawPostGrid(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, const cVector3f& avPos);
+	void DrawPostGrid(cEditorWindowViewport* apViewport, DebugDraw* apFunctions, const cVector3f& avPos);
 
 	void OnViewportMouseDown(int alButtons);
 	void OnViewportMouseUp(int alButtons);

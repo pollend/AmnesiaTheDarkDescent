@@ -1,0 +1,13 @@
+#include "debug_resource.h.fsl"
+
+STRUCT(PsIn)
+{
+    DATA(float4, Position, SV_Position);
+    DATA(float4, color, COLOR);
+};
+
+float4 PS_MAIN(PsIn In)
+{
+    INIT_MAIN;
+    RETURN(In.color);
+}

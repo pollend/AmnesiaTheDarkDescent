@@ -20,7 +20,7 @@
 #include "EntityWrapperFogArea.h"
 #include "EditorWorld.h"
 #include "EditorWindowEntityEditBoxFogArea.h"
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 
 //------------------------------------------------------------------------------
 
@@ -311,14 +311,14 @@ cEditorWindowEntityEditBox* cEntityWrapperFogArea::CreateEditBox(cEditorEditMode
 
 //------------------------------------------------------------------------------
 
-void cEntityWrapperFogArea::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, iEditorEditMode* apEditMode, bool abIsSelected, const cColor& aHighlightCol, const cColor& aDisabledCol)
+void cEntityWrapperFogArea::Draw(cEditorWindowViewport* apViewport, DebugDraw* apFunctions, iEditorEditMode* apEditMode, bool abIsSelected, const cColor& aHighlightCol, const cColor& aDisabledCol)
 {
 	iEntityWrapper::Draw(apViewport, apFunctions, apEditMode, abIsSelected);
 	if(mbSelected)
 	{
-		ImmediateDrawBatch::DebugDrawOptions options;
-		options.m_transform = mmtxTransform;
-		apFunctions->DebugDrawBoxMinMax(-0.5f, 0.5f, cColor(1,1), options);
+		DebugDraw::DebugDrawOptions options;
+		options.m_transform = cMath::ToForgeMat(mmtxTransform.GetTranspose());
+		apFunctions->DebugDrawBoxMinMax(Vector3(-0.5f), Vector3(0.5f), Vector4(1,1,1,1), options);
 	}
 }
 

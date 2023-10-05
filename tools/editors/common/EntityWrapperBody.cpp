@@ -26,7 +26,7 @@
 
 #include "EntityWrapperBodyShape.h"
 
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 
 #include <algorithm>
 
@@ -324,7 +324,7 @@ bool cEntityWrapperBody::GetProperty(int alPropID, tString& asX)
 
 //---------------------------------------------------------------------------
 
-void cEntityWrapperBody::Draw(	cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions,
+void cEntityWrapperBody::Draw(	cEditorWindowViewport* apViewport, DebugDraw* apFunctions,
 									iEditorEditMode* apEditMode,bool abIsSelected, const cColor& aHighlightCol, const cColor& aDisabledCol)
 {
 	iEntityWrapper::Draw(apViewport, apFunctions, apEditMode, abIsSelected);
@@ -334,12 +334,12 @@ void cEntityWrapperBody::Draw(	cEditorWindowViewport* apViewport, ImmediateDrawB
 		for(;itShapes!=mlstComponents.end();++itShapes)
 		{
 			iEntityWrapper* pShape = *itShapes;
-			
+
 			//apFunctions->GetLowLevelGfx()->DrawBoxMinMax(pShape->GetPickBV()->GetMin(), pShape->GetPickBV()->GetMax(), cColor(1));
 			pShape->Draw(apViewport, apFunctions, apEditMode, true, cColor(1,1,1,1));
 		}
 
-		apFunctions->DebugDrawSphere(mvPosition, 0.2f, cColor(1,0,0,1));
+		apFunctions->DebugDrawSphere(cMath::ToForgeVec3(mvPosition), 0.2f, Vector4(1,0,0,1));
 	}
 }
 

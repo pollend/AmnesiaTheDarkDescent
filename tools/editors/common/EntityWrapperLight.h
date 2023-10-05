@@ -285,7 +285,7 @@ public:
 	std::list<cEntityWrapperBillboard*>& GetConnectedBillboards() { return mlstConnectedBBs; }
 
 
-	void Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, iEditorEditMode* apEditMode, bool abIsSelected, const cColor& aHighlightCol, const cColor& aDisabledCol);
+	void Draw(cEditorWindowViewport* apViewport, DebugDraw* apFunctions, iEditorEditMode* apEditMode, bool abIsSelected, const cColor& aHighlightCol, const cColor& aDisabledCol);
 
 	void SaveToElement(cXmlElement* apElement);
 
@@ -297,7 +297,7 @@ protected:
 	void OnSetActive(bool abX);
 	///////////////////////////
 	// To be implemented
-	virtual void DrawLightTypeSpecific(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, iEditorEditMode* apEditMode, bool abIsSelectedc)=0;
+	virtual void DrawLightTypeSpecific(cEditorWindowViewport* apViewport, DebugDraw* apFunctions, iEditorEditMode* apEditMode, bool abIsSelectedc)=0;
 
 
 	//////////////////////

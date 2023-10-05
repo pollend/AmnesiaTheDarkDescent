@@ -67,7 +67,7 @@ namespace hpl {
             SharedRenderTarget* m_outputTarget;
             cViewport* m_viewport;
             cRenderSettings* m_renderSettings;
-            ImmediateDrawBatch* m_immediateDrawBatch;
+            DebugDraw* m_debug;
         };
         struct PostSolidDrawPacket : public DrawPayloadCommon {
         };
@@ -134,21 +134,11 @@ namespace hpl {
             return uint2(m_size.x, m_size.y);
         }
 
-        void setRenderTarget(std::shared_ptr<LegacyRenderTarget> renderTarget) {
-            m_renderTarget = renderTarget;
-            m_dirtyViewport = true;
-        }
-        // if a render target is not set then return an empty render target
-        // bgfx will draw to the back buffer in this case
-        LegacyRenderTarget& GetRenderTarget() {
-            if (m_renderTarget) {
-                return *m_renderTarget;
-            }
-            static LegacyRenderTarget emptyTarget = LegacyRenderTarget();
-            return emptyTarget;
-        }
-        SharedRenderTarget& Target() {
-            return m_target;
+        inline SharedRenderTarget& Target() { return m_target; }
+        void SetTarget(SharedRenderTarget& target);
+        void SetTarget(SharedRenderTarget&& target);
+        inline std::shared_ptr<Image>& GetImage() {
+            return m_image;
         }
 
         void bindToWindow(window::NativeWindowWrapper& window);
@@ -171,16 +161,14 @@ namespace hpl {
         bool m_dirtyViewport = false;
         size_t m_handle = 0;
 
-        cScene* mpScene;
-        cCamera* mpCamera;
-        cWorld* mpWorld;
-        iRenderer* mpRenderer;
-        cPostEffectComposite* mpPostEffectComposite;
-
-        // ImageDescriptor m_imageDescriptor;
+        cScene* mpScene = nullptr;
+        cCamera* mpCamera = nullptr;
+        cWorld* mpWorld = nullptr;
+        iRenderer* mpRenderer = nullptr;
+        cPostEffectComposite* mpPostEffectComposite = nullptr;
 
         SharedRenderTarget m_target;
-        std::shared_ptr<LegacyRenderTarget> m_renderTarget; // TODO: REMOVE
+        std::shared_ptr<hpl::Image> m_image;
 
         cVector2l m_size = { 0, 0 };
 
@@ -285,14 +273,6 @@ namespace hpl {
         PrimaryViewport(PrimaryViewport&& other) = delete;
         PrimaryViewport& operator=(const PrimaryViewport& other) = delete;
         PrimaryViewport& operator=(PrimaryViewport&& other) = delete;
-
-        // inline LegacyRenderTarget& GetRenderTarget() {
-        //     return m_renderTarget;
-        // }
-
-        // inline void Invalidate() {
-        //     m_renderTarget.Invalidate();
-        // }
 
         inline void ConnectViewportChanged(ViewportChange::Handler& handler) {
             handler.Connect(m_viewportChanged);

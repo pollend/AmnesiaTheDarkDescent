@@ -32,7 +32,7 @@
 #include "EditorEditModeSelect.h"
 
 #include "SurfacePicker.h"
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 
 //---------------------------------------------------------------------
 
@@ -73,7 +73,7 @@ void iEditorEditMode::SetCurrent(bool abX)
 }
 //---------------------------------------------------------------------
 
-void iEditorEditMode::DrawPreGrid(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, const cVector3f& avPos)
+void iEditorEditMode::DrawPreGrid(cEditorWindowViewport* apViewport, DebugDraw* apFunctions, const cVector3f& avPos)
 {
 /*	apFunctions->SetMatrix(NULL);
 	apFunctions->SetBlendMode(eMaterialBlendMode_None);
@@ -88,7 +88,7 @@ void iEditorEditMode::DrawPreGrid(cEditorWindowViewport* apViewport, ImmediateDr
 
 //---------------------------------------------------------------------
 
-void iEditorEditMode::DrawPostGrid(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, const cVector3f& avPos)
+void iEditorEditMode::DrawPostGrid(cEditorWindowViewport* apViewport, DebugDraw* apFunctions, const cVector3f& avPos)
 {
 
 	iEditorWorld* pEditorWorld = mpEditor->GetEditorWorld();
@@ -254,7 +254,7 @@ iEditorAction* iEditorEditModeObjectCreator::CreateObject(iEntityWrapperData* ap
 
 //-----------------------------------------------------------------
 
-void iEditorEditModeObjectCreator::DrawPostGrid(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, const cVector3f& avPos)
+void iEditorEditModeObjectCreator::DrawPostGrid(cEditorWindowViewport* apViewport, DebugDraw* apFunctions, const cVector3f& avPos)
 {
 	iEditorEditMode::DrawPostGrid(apViewport,apFunctions,avPos);
 
@@ -263,7 +263,7 @@ void iEditorEditModeObjectCreator::DrawPostGrid(cEditorWindowViewport* apViewpor
 			cMath::MatrixScale(GetCreatorScale())));
 
 	cColor col = mbPreCreationActive? cColor(0,1,0,1):cColor(1,0,0,1);
-	apFunctions->DebugDrawSphere(mtxTransform.GetTranslation(),0.1f,col);
+	apFunctions->DebugDrawSphere(cMath::ToForgeVec3(mtxTransform.GetTranslation()),0.1f,cMath::ToForgeVec4(col));
 
 	DrawObjectPreview(apViewport, apFunctions, mtxTransform, mbPreCreationActive);
 

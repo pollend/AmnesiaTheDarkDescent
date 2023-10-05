@@ -30,7 +30,7 @@ using namespace hpl;
 
 
 namespace hpl {
-	class ImmediateDrawBatch;
+	class DebugDraw;
 }
 
 //----------------------------------------------
@@ -641,8 +641,8 @@ public:
 	iLuxPlayerHelper(cLuxPlayer *apPlayer, const tString& asName) : mpPlayer(apPlayer) ,iLuxUpdateable(asName){}
 	virtual ~iLuxPlayerHelper(){}
 
-	// virtual void RenderSolid(hpl::ImmediateDrawBatch* apFunctions){}
-	// virtual void RenderTrans(hpl::ImmediateDrawBatch* apFunctions){}
+	// virtual void RenderSolid(hpl::DebugDraw* apFunctions){}
+	// virtual void RenderTrans(hpl::DebugDraw* apFunctions){}
 
 protected:
     cLuxPlayer *mpPlayer;

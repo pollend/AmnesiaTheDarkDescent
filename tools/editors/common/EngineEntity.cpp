@@ -25,7 +25,7 @@
 
 #include "EditorWindowViewport.h"
 #include "EditorHelper.h"
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 
 //-----------------------------------------------------------------------
 
@@ -184,7 +184,7 @@ void iEngineEntityMesh::UpdateVisibility()
 
 //-----------------------------------------------------------------------
 
-void iEngineEntityMesh::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, bool abIsSelected,	bool abIsActive, const cColor& aHighlightCol)
+void iEngineEntityMesh::Draw(cEditorWindowViewport* apViewport, DebugDraw* apFunctions, bool abIsSelected,	bool abIsActive, const cColor& aHighlightCol)
 {
 	if(!abIsSelected) {
 		return;
@@ -194,23 +194,23 @@ void iEngineEntityMesh::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBat
 	for(int i=0;i<pMeshEntity->GetSubMeshEntityNum();++i)
 	{
 		cSubMeshEntity* pSubMeshEntity = pMeshEntity->GetSubMeshEntity(i);
-		ImmediateDrawBatch::DebugDrawOptions options;
-		options.m_transform = *pSubMeshEntity->GetModelMatrix(NULL);
-		apFunctions->DebugWireFrameFromVertexBuffer(pSubMeshEntity->GetVertexBuffer(), aHighlightCol, options);
+		DebugDraw::DebugDrawOptions options;
+		options.m_transform = cMath::ToForgeMat(pSubMeshEntity->GetModelMatrix(NULL)->GetTranspose());
+		apFunctions->DebugWireFrameFromVertexBuffer(pSubMeshEntity->GetVertexBuffer(), cMath::ToForgeVec4(aHighlightCol), options);
 	}
 }
 
 //-----------------------------------------------------------------------
 
-void iEngineEntityMesh::DrawSolid(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, const cColor& aCol)
+void iEngineEntityMesh::DrawSolid(cEditorWindowViewport* apViewport, DebugDraw* apFunctions, const cColor& aCol)
 {
 	cMeshEntity* pMeshEntity = GetMeshEntity();
 	for(int i=0;i<pMeshEntity->GetSubMeshEntityNum();++i)
 	{
 		cSubMeshEntity* pSubMeshEntity = pMeshEntity->GetSubMeshEntity(i);
-		ImmediateDrawBatch::DebugDrawOptions options;
-		options.m_transform = *pSubMeshEntity->GetModelMatrix(NULL);
-		apFunctions->DebugSolidFromVertexBuffer(pSubMeshEntity->GetVertexBuffer(), aCol, options);
+		DebugDraw::DebugDrawOptions options;
+		options.m_transform = cMath::ToForgeMat(pSubMeshEntity->GetModelMatrix(NULL)->GetTranspose());
+		apFunctions->DebugSolidFromVertexBuffer(pSubMeshEntity->GetVertexBuffer(), cMath::ToForgeVec4(aCol), options);
 	}
 }
 
@@ -468,7 +468,7 @@ bool iIconEntity::CheckRayIntersect(cEditorWindowViewport* apViewport, cVector3f
 }
 
 void iIconEntity::Draw(cEditorWindowViewport* apViewport,
-					  ImmediateDrawBatch* apFunctions,
+					  DebugDraw* apFunctions,
 					  bool abIsSelected,
 					  bool abIsActive,
 					  const cColor& aHighlightCol)

@@ -90,7 +90,7 @@ public:
 
 	virtual void OnEditorUpdate() {}
 
-	virtual void Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions) {}
+	virtual void Draw(cEditorWindowViewport* apViewport, DebugDraw* apFunctions) {}
 
 	virtual void OnSetCurrent(bool abX) {}
 
@@ -132,7 +132,7 @@ public:
 	void OnViewportMouseDown(int alButtons);
 	void OnViewportMouseUp(int alButtons);
 
-	void DrawPostGrid(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, const cVector3f& avPos);
+	void DrawPostGrid(cEditorWindowViewport* apViewport, DebugDraw* apFunctions, const cVector3f& avPos);
 
 	//////////////////////////////////////////////////////////////////
 	// EditBox stuff
@@ -226,7 +226,7 @@ public:
 	bool OnViewportMouseUp();
 	void OnEditorUpdate();
 
-	virtual void Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions) override;
+	virtual void Draw(cEditorWindowViewport* apViewport, DebugDraw* apFunctions) override;
 
 	void OnSetCurrent(bool abX);
 
@@ -255,7 +255,7 @@ public:
 	virtual bool OnViewportMouseUp() override;
 	virtual void OnEditorUpdate() override;
 
-	virtual void Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions) override;
+	virtual void Draw(cEditorWindowViewport* apViewport, DebugDraw* apFunctions) override;
 	virtual void OnSetCurrent(bool abX) override;
 
 	cUIPickFilter* GetFilter() { return mpFilter; }

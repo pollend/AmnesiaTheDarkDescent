@@ -769,7 +769,7 @@ namespace hpl {
 
 			DescriptorData params[10]{};
 			uint32_t paramCount = 0;
-                        DescriptorDataRange range = { (uint32_t)uniformBlockOffset.mOffset, requestSize };
+            DescriptorDataRange range = { (uint32_t)uniformBlockOffset.mOffset, requestSize };
 			params[paramCount].pName = "uniformBlock";
 			params[paramCount].pRanges = &range;
 			params[paramCount++].ppBuffers = &uniformBlockOffset.pBuffer;
@@ -870,6 +870,7 @@ namespace hpl {
 							{ vtx.tex.x, vtx.tex.y},
 							{color.r, color.g, color.b, color.a}
 						};
+
 					}
 				}
 

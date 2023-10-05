@@ -83,7 +83,7 @@ cSimpleCamera::cSimpleCamera(const tString& asAppName,cEngine *apGame, cWorld *a
 	mpViewport->bindToWindow(*window);
 	//mpViewport = mpEngine->GetScene()->CreateViewport(NULL, NULL);
 
-	//mpViewport->SetRenderer(mpEngine->GetGraphics()->GetRenderer(eRenderer_WireFrame));
+	mpViewport->SetRenderer(mpEngine->GetGraphics()->GetRenderer(eRenderer_WireFrame));
 	//mpViewport->GetRenderSettings()->mClearColor = cColor(0.7f,1);
 
 	mpEngine->GetScene()->SetCurrentListener(mpViewport);
@@ -305,7 +305,7 @@ void cSimpleCamera::Update(float afFrameTime)
 				if(mpEngine->GetInput()->BecameTriggerd("WheelUp"))		mfMouseCameraDistance -= mfMouseCameraDistance *0.2f;
 				if(mpEngine->GetInput()->BecameTriggerd("WheelDown"))	mfMouseCameraDistance += mfMouseCameraDistance *0.2f;
 			}
-			
+
 
 			if( (bAltDown && mpEngine->GetInput()->IsTriggerd("RightMouse")) ||
 				(!bAltDown && mpEngine->GetInput()->IsTriggerd("MiddleMouse")) )

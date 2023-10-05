@@ -1,0 +1,20 @@
+
+#include "debug_resource.h.fsl"
+
+STRUCT(PsIn)
+{
+	DATA(float4, Position, SV_Position);
+	DATA(float2, texCoord, TEXCOORD0);
+	DATA(float4, color, COLOR);
+};
+
+RES(SamplerState, textureFilter, UPDATE_FREQ_NONE, s0, binding = 1);
+RES(Tex2D(float4), diffuseMap, UPDATE_FREQ_PER_BATCH,      t1, binding = 2);
+
+float4 PS_MAIN(PsIn In)
+{
+    INIT_MAIN;
+	  float4 result = SampleTex2D(Get(diffuseMap), Get(textureFilter), In.texCoord) * In.color;
+    RETURN(result);
+}
+

@@ -297,7 +297,7 @@ float cLuxPlayerState_InteractSlide::DrawDebug(cGuiSet *apSet,iFontData *apFont,
 	return afStartY;
 }
 
-void cLuxPlayerState_InteractSlide::DebugRenderSolid(ImmediateDrawBatch* batch)
+void cLuxPlayerState_InteractSlide::DebugRenderSolid(DebugDraw* batch)
 {
 	return;
 
@@ -312,16 +312,16 @@ void cLuxPlayerState_InteractSlide::DebugRenderSolid(ImmediateDrawBatch* batch)
 
 	cVector3f vWorldInteractPos = cMath::MatrixMul(mpCurrentBody->GetLocalMatrix(), mvLocalInteractPos);
 
-	batch->DebugDrawSphere(vWorldInteractPos, 0.1f, cColor(0,1,0,1));
+	batch->DebugDrawSphere(cMath::ToForgeVec3(vWorldInteractPos), 0.1f, Vector4(0,1,0,1));
 
 	cVector3f vMouseCamDir = vUp * mvLastMouseAdd.y + vRight * -mvLastMouseAdd.x;
 	float fSpeedAdd = cMath::Vector3Dot(vMouseCamDir, mpCurrentJoint->GetPinDir());
 
-	batch->DebugDrawLine(vWorldInteractPos, vWorldInteractPos+vMouseCamDir*50, cColor(1,0,0,1));
+	batch->DebugDrawLine(cMath::ToForgeVec3(vWorldInteractPos), cMath::ToForgeVec3(vWorldInteractPos+vMouseCamDir*50), Vector4(1,0,0,1));
 
-	batch->DebugDrawLine(vWorldInteractPos, vWorldInteractPos+mpCurrentJoint->GetPinDir(),cColor(0,0,0.3f,1));
-	batch->DebugDrawLine(vWorldInteractPos, vWorldInteractPos+mpCurrentJoint->GetPinDir()*fSpeedAdd*50,cColor(0,0,1,1));
-	
+	batch->DebugDrawLine(cMath::ToForgeVec3(vWorldInteractPos), cMath::ToForgeVec3(vWorldInteractPos+mpCurrentJoint->GetPinDir()),Vector4(0,0,0.3f,1));
+	batch->DebugDrawLine(cMath::ToForgeVec3(vWorldInteractPos), cMath::ToForgeVec3(vWorldInteractPos+mpCurrentJoint->GetPinDir()*fSpeedAdd*50),Vector4(0,0,1,1));
+
 
 	//apFunctions->GetLowLevelGfx()->DrawLine(vPos, vPos+vRight, cColor(1,0,1,1));
 }

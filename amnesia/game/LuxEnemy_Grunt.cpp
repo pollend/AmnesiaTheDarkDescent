@@ -891,7 +891,7 @@ bool cLuxEnemy_Grunt::StateEventImplement(int alState, eLuxEnemyStateEvent aEven
 
 //-----------------------------------------------------------------------
 
-void cLuxEnemy_Grunt::OnRenderSolidImplemented(hpl::ImmediateDrawBatch* apFunctions)
+void cLuxEnemy_Grunt::OnRenderSolidImplemented(hpl::DebugDraw* apFunctions)
 {
 	iPhysicsWorld *pPhysicsWorld = mpMap->GetPhysicsWorld();
 

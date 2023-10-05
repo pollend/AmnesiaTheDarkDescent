@@ -10,6 +10,7 @@
 #include <functional>
 #include <span>
 #include <folly/hash/Hash.h>
+#include "engine/Event.h"
 
 
 namespace hpl {

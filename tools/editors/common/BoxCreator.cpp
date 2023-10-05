@@ -21,7 +21,7 @@
 #include "EditorBaseClasses.h"
 #include "EditorEditMode.h"
 #include "EditorWindowViewport.h"
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 
 //-----------------------------------------------------------
 
@@ -50,11 +50,11 @@ void cBoxCreator::OnViewportMouseUp(int alButtons)
 
 //-----------------------------------------------------------
 
-void cBoxCreator::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions)
+void cBoxCreator::Draw(cEditorWindowViewport* apViewport, DebugDraw* apFunctions)
 {
 
 	if(mvPoints.empty()==false && mbDragging==true) {
-		apFunctions->DebugDrawBoxMinMax(mvPoints[0], mvTempPoint, cColor(1,1));
+		apFunctions->DebugDrawBoxMinMax(cMath::ToForgeVec3(mvPoints[0]), cMath::ToForgeVec3(mvTempPoint), Vector4(1,1,1,1));
 	}
 }
 

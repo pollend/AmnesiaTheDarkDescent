@@ -17,14 +17,14 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef HPL_RENDERER_WIRE_FRAME_H
-#define HPL_RENDERER_WIRE_FRAME_H
+#pragma once
 
 #include "graphics/ForgeHandles.h"
 #include "graphics/ForgeRenderer.h"
 #include "graphics/Image.h"
 #include "graphics/RenderTarget.h"
 #include "graphics/Renderer.h"
+#include <graphics/RenderList.h>
 
 namespace hpl {
 
@@ -40,27 +40,65 @@ namespace hpl {
 	class cRendererWireFrame : public  iRenderer
 	{
 	public:
+        static constexpr uint32_t NumberOfPerFrameUniforms = 64;
+        static constexpr uint32_t MaxObjectUniforms = 4096;
+
+        struct PerFrameUniform {
+            mat4 m_viewProject;
+        };
+        struct ObjectUniform {
+            mat4 m_modelMat;
+        };
+
 		cRendererWireFrame(cGraphics *apGraphics,cResources* apResources);
 		~cRendererWireFrame();
 
+        struct ViewportData {
+        public:
+            ViewportData() = default;
+            ViewportData(const ViewportData&) = delete;
+            ViewportData(ViewportData&& buffer)
+                : m_size(buffer.m_size)
+                , m_outputBuffer(std::move(buffer.m_outputBuffer)) {
+            }
+
+            ViewportData& operator=(const ViewportData&) = delete;
+
+            void operator=(ViewportData&& buffer) {
+                m_size = buffer.m_size;
+                m_outputBuffer = std::move(buffer.m_outputBuffer);
+            }
+
+            cVector2l m_size = cVector2l(0, 0);
+            std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_outputBuffer;
+        };
 		bool LoadData() override;
 		void DestroyData() override;
+		virtual SharedRenderTarget GetOutputImage(uint32_t frameIndex, cViewport& viewport) override;
 
-		virtual SharedRenderTarget GetOutputImage(uint32_t frameIndex, cViewport& viewport) override {
-			return SharedRenderTarget();
-		}
 	private:
+        uint32_t prepareObjectData(
+            const ForgeRenderer::Frame& frame,
+            iRenderable* apObject
+        );
 
 		virtual void Draw(const ForgeRenderer::Frame& context, cViewport& viewport, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings,
 		bool abSendFrameBufferToPostEffects) override;
 
-		void CopyToFrameBuffer();
-		void RenderObjects();
+        std::array<SharedBuffer, NumberOfPerFrameUniforms> m_frameBufferUniform;
+        uint32_t m_perFrameIndex = 0;
+        uint32_t m_activeFrame = 0;
+        uint32_t m_objectIndex = 0;
 
-
+        SharedDescriptorSet m_constDescriptorSet;
+        SharedDescriptorSet m_frameDescriptorSet;
+        UniqueViewportData<ViewportData> m_boundViewportData;
+        SharedRootSignature m_rootSignature;
+        SharedPipeline m_pipeline;
+        SharedShader m_shader;
+        cRenderList m_rendererList;
+        std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_objectUniformBuffer;
+        folly::F14ValueMap<iRenderable*, uint32_t> m_objectDescriptorLookup;
 	};
 
-	//---------------------------------------------
-
 };
-#endif // HPL_RENDERER_WIRE_FRAME_H

@@ -23,6 +23,7 @@ namespace hpl
         Greater,
         NotEqual,
         Always, // Always pass
+
     };
 
     enum class Write: uint32_t {

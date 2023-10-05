@@ -57,13 +57,13 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	cGui::cGui() 
+	cGui::cGui()
 	{
 		mpSetInFocus = NULL;
 
 		mlLastRenderTime = 0;
-		
-		m_guiDraw = IUpdateEventLoop::UpdateEvent::Handler([&](float afTimeStep) { 
+
+		m_guiDraw = IUpdateEventLoop::UpdateEvent::Handler([&](float afTimeStep) {
 
 			tGuiSetMapIt setIt = m_mapSets.begin();
 			for(; setIt != m_mapSets.end(); ++setIt)
@@ -72,7 +72,7 @@ namespace hpl {
 				pSet->DrawAll(afTimeStep);
 			}
 		});
-		m_postBufferSwap = IUpdateEventLoop::UpdateEvent::Handler([&](float afTimeStep) { 
+		m_postBufferSwap = IUpdateEventLoop::UpdateEvent::Handler([&](float afTimeStep) {
 			//////////////////////////////////
 			// Clear render sets in all sets
 			tGuiSetMapIt setIt = m_mapSets.begin();
@@ -388,7 +388,7 @@ namespace hpl {
 											bool flipUVY)
 	{
 		cGuiGfxElement *pGfxElem = hplNew( cGuiGfxElement, (this) );
-		
+
 		if(flipUVY) {
 			pGfxElem->SetFlipUvYAxis(true);
 		}
@@ -402,8 +402,6 @@ namespace hpl {
 
 		return pGfxElem;
 	}
-
-	//-----------------------------------------------------------------------
 
 	cGuiGfxElement* cGui::CreateGfxImageBuffer(	const tString &asFile,eGuiMaterial aMaterial,
 		bool abCreateAnimation,

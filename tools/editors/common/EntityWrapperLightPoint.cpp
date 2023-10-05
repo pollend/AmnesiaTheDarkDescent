@@ -28,7 +28,7 @@
 #include "EditorHelper.h"
 #include "graphics/Image.h"
 
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 //---------------------------------------------------------------------------
 
 cIconEntityLightPoint::cIconEntityLightPoint(iEntityWrapper* apParent) : iIconEntityLight(apParent, "Point")
@@ -118,12 +118,12 @@ void cEntityWrapperLightPoint::SetGobo(const tString& asGoboFilename)
 
 //---------------------------------------------------------------------------
 
-void cEntityWrapperLightPoint::DrawLightTypeSpecific(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions,
+void cEntityWrapperLightPoint::DrawLightTypeSpecific(cEditorWindowViewport* apViewport, DebugDraw* apFunctions,
 													 iEditorEditMode* apEditMode, bool abIsSelected)
 {
 	if(abIsSelected==false) return;
 
-	apFunctions->DebugDrawSphere(mvPosition, mfRadius, mcolDiffuseColor);
+	apFunctions->DebugDrawSphere(cMath::ToForgeVec3(mvPosition), mfRadius, cMath::ToForgeVec4(mcolDiffuseColor));
 }
 
 //---------------------------------------------------------------------------

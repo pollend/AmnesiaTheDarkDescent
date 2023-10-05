@@ -19,7 +19,9 @@
 
 #include <hpl.h>
 
-#include "../../tests/Common/SimpleCamera.h"
+#include "engine/Interface.h"
+#include "graphics/ForgeRenderer.h"
+#include "scene/SimpleCamera.h"
 
 using namespace hpl;
 
@@ -98,12 +100,12 @@ public:
 		m_postSolidDraw = cViewport::PostSolidDraw::Handler([&](hpl::cViewport::PostSolidDrawPacket& payload) {
 			cMatrixf view = payload.m_frustum->GetViewMatrix().GetTranspose();
 			cMatrixf proj = payload.m_frustum->GetProjectionMatrix().GetTranspose();
-			ImmediateDrawBatch batch;
+			DebugDraw batch(Interface<ForgeRenderer>::Get());
 
 			if(gbDrawBoundingBox && gpParticleSystem)
 			{
 				cBoundingVolume *pBV = gpParticleSystem->GetBoundingVolume();
-				batch.DebugDrawBoxMinMax(pBV->GetMin(),pBV->GetMax(), cColor(1,1));
+				batch.DebugDrawBoxMinMax(cMath::ToForgeVec3(pBV->GetMin()),cMath::ToForgeVec3(pBV->GetMax()), Vector4(1,1,1,1));
 			}
 
 			if(gbDrawGrid)
@@ -117,8 +119,8 @@ public:
 				for(int i=-lNum/2; i<lNum/2+1;++i)
 				{
 					float fPos = fSize * (float)i;
-					batch.DebugDrawLine(cVector3f(fPos,fY,fStart),cVector3f(fPos,fY,fEnd),cColor(0.5f,1));
-					batch.DebugDrawLine(cVector3f(fStart,fY,fPos),cVector3f(fEnd,fY,fPos),cColor(0.5f,1));
+					batch.DebugDrawLine(Vector3(fPos,fY,fStart),Vector3(fPos,fY,fEnd),Vector4(0.5f,0.5f,0.5f,1.0f));
+					batch.DebugDrawLine(Vector3(fStart,fY,fPos),Vector3(fEnd,fY,fPos),Vector4(0.5f,0.5f,0.5f,1.0f));
 				}
 
 			}
@@ -127,14 +129,15 @@ public:
 			{
 				cVector3f vPosAdd = cVector3f(0, 0.01f, 0);
 				// apFunctions->SetDepthTest(false);
-				ImmediateDrawBatch::DebugDrawOptions options;
-				options.m_depthTest = DepthTest::Always;
-				batch.DebugDrawLine(0,cVector3f(1,0,0)+vPosAdd,cColor(1,0,0,1), options);
-				batch.DebugDrawLine(0,cVector3f(0,1,0)+vPosAdd,cColor(0,1,0,1), options);
-				batch.DebugDrawLine(0,cVector3f(0,0,1)+vPosAdd,cColor(0,0,1,1), options);
+				DebugDraw::DebugDrawOptions options;
+				options.m_depthTest = DebugDraw::DebugDepthTest::Always;
+				batch.DebugDrawLine(Vector3(0),Vector3(1,0,0)+cMath::ToForgeVec3(vPosAdd), Vector4(1,0,0,1), options);
+				batch.DebugDrawLine(Vector3(0),Vector3(0,1,0)+cMath::ToForgeVec3(vPosAdd), Vector4(0,1,0,1), options);
+				batch.DebugDrawLine(Vector3(0),Vector3(0,0,1)+cMath::ToForgeVec3(vPosAdd), Vector4(0,0,1,1), options);
 				// apFunctions->SetDepthTest(true);
 			}
-			batch.flush();
+		    ASSERT(false && "TODO: add back batch");
+			//batch.flush(); // flush the batch
 		});
 
 		////////////////////////////////
@@ -667,7 +670,7 @@ int hplMain(const tString &asCommandline)
 	//iResourceBase::SetLogCreateAndDelete(true);
 	//iGpuProgram::SetLogDebugInformation(true);
 	// cRendererDeferred::SetGBufferType(eDeferredGBuffer_32Bit);
-	cRendererDeferred::SetSSAOLoaded(true);
+	//cRendererDeferred::SetSSAOLoaded(true);
 
 	SetLogFile(_W("particleview.log"));
 

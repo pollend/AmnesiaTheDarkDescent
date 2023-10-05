@@ -42,7 +42,6 @@ namespace hpl {
 
 	private:
 
-		void CopyToFrameBuffer();
 		void SetupRenderList();
 		void RenderObjects();
 

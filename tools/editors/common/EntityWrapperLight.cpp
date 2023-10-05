@@ -732,7 +732,7 @@ bool iEntityWrapperLight::EntitySpecificCheckCulled(cEditorClipPlane* apPlane)
 
 //------------------------------------------------------------------------------
 
-void iEntityWrapperLight::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, iEditorEditMode* apEditMode, bool abIsSelected, const cColor& aHighlightCol, const cColor& aDisabledCol)
+void iEntityWrapperLight::Draw(cEditorWindowViewport* apViewport, DebugDraw* apFunctions, iEditorEditMode* apEditMode, bool abIsSelected, const cColor& aHighlightCol, const cColor& aDisabledCol)
 {
 	iEntityWrapper::Draw(apViewport, apFunctions, apEditMode, abIsSelected, aHighlightCol);
 

@@ -17,11 +17,13 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "engine/Interface.h"
+#include "graphics/ForgeRenderer.h"
 #include "graphics/Image.h"
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 #include "hpl.h"
 
-#include "../../tests/Common/SimpleCamera.h"
+#include "scene/SimpleCamera.h"
 #include "system/Bootstrap.h"
 
 using namespace hpl;
@@ -197,17 +199,16 @@ public:
 		mpWorld->SetSkyBoxColor(cColor(0.0f, 1.0f));
 		mpWorld->SetSkyBoxActive(true);
 
-		m_postSolidDraw = cViewport::PostSolidDraw::Handler([&](cViewport::PostSolidDrawPacket& payload) {
+		m_postSolidDraw = cViewport::PostSolidDraw::Handler([&](cViewport::PostSolidDrawPacket& packet) {
 
-			cMatrixf view = payload.m_frustum->GetViewMatrix().GetTranspose();
-			cMatrixf proj = payload.m_frustum->GetProjectionMatrix().GetTranspose();
-			ImmediateDrawBatch batch;
+			cMatrixf view = packet.m_frustum->GetViewMatrix().GetTranspose();
+			cMatrixf proj = packet.m_frustum->GetProjectionMatrix().GetTranspose();
 
 			std::function<void(cNode3D* node)> drawSkeletonRec;
 			drawSkeletonRec = [&](cNode3D* node) {
-				cVector3f vCameraSpacePos = cMath::MatrixMul(payload.m_frustum->GetViewMatrix(), node->GetWorldPosition());
+				cVector3f vCameraSpacePos = cMath::MatrixMul(packet.m_frustum->GetViewMatrix(), node->GetWorldPosition());
 				float fSize = cMath::Min(-0.01f * vCameraSpacePos.z, 0.03f);
-				batch.DebugDrawSphere(node->GetWorldPosition(),fSize,cColor(1,0,0,1));
+				packet.m_debug->DebugDrawSphere(cMath::ToForgeVec3(node->GetWorldPosition()),fSize,Vector4(1,0,0,1));
 
 				//Draw bone bounding radii
 				/*int lBoneIdx = gpEntity->GetBoneStateIndexFromPtr(static_cast<cBoneState*>(apBoneState));
@@ -222,7 +223,7 @@ public:
 				while(it.HasNext())
 				{
 					cNode3D *pChild = static_cast<cNode3D*>(it.Next());
-					batch.DebugDrawLine(node->GetWorldPosition(), pChild->GetWorldPosition(), cColor(1,1));
+					packet.m_debug->DebugDrawLine(cMath::ToForgeVec3(node->GetWorldPosition()), cMath::ToForgeVec3(pChild->GetWorldPosition()), Vector4(1,1,1,1));
 					drawSkeletonRec(pChild);
 				}
 			};
@@ -270,13 +271,13 @@ public:
 						float fRadius = vCamPos.z * 0.02f;
 
 						if(bTooManyBinds && bBadNormal) {
-							batch.DebugDrawSphere(vPos,fRadius, cColor(1,1,0));
+							packet.m_debug->DebugDrawSphere(cMath::ToForgeVec3(vPos),fRadius, Vector4(1,1,0,1));
 						}
 						else if(bTooManyBinds) {
-							batch.DebugDrawSphere(vPos,fRadius, cColor(1,0,0));
+							packet.m_debug->DebugDrawSphere(cMath::ToForgeVec3(vPos),fRadius, Vector4(1,0,0,1));
 						}
 						else if(bBadNormal) {
-							batch.DebugDrawSphere(vPos,fRadius, cColor(0,1,0));
+							packet.m_debug->DebugDrawSphere(cMath::ToForgeVec3(vPos),fRadius, Vector4(0,1,0,1));
 						}
 					}
 				}
@@ -291,7 +292,7 @@ public:
 					cSubMeshEntity *pSubEnt = gpEntity->GetSubMeshEntity(i);
 
 					cBoundingVolume *pBV = pSubEnt->GetBoundingVolume();
-					batch.DebugDrawBoxMinMax(pBV->GetMin(),pBV->GetMax(), cColor(1,1));
+					packet.m_debug->DebugDrawBoxMinMax(cMath::ToForgeVec3(pBV->GetMin()),cMath::ToForgeVec3(pBV->GetMax()), Vector4(1,1,0,1));
 
 					cVector3f vLocalCenter = (pBV->GetLocalMin() + pBV->GetLocalMax())/2.0f;
 
@@ -300,7 +301,7 @@ public:
 					apFunctions->GetLowLevelGfx()->DrawSphere(vWorldCenter,0.01f, cColor(0,1,1));*/
 
 					vWorldCenter = cMath::MatrixMul(pSubEnt->GetWorldMatrix(), pBV->GetLocalCenter());
-					batch.DebugDrawSphere(vWorldCenter,0.01f, cColor(1,1,0));
+					packet.m_debug->DebugDrawSphere(cMath::ToForgeVec3(vWorldCenter),0.01f, Vector4(1,1,0,1));
 				}
 			}
 
@@ -325,10 +326,10 @@ public:
 				//cBoundingVolume *pBV = mBodyPicker.mpPickedBody->GetBV();
 				//mpLowLevelGraphics->DrawBoxMaxMin(pBV->GetMax(), pBV->GetMin(),cColor(1,0,1,1));
 
-				batch.DebugDrawSphere(mBodyPicker.mvPos,0.1f, cColor(1,0,0,1));
-				batch.DebugDrawSphere(m_dragPos,0.1f, cColor(1,0,0,1));
+				packet.m_debug->DebugDrawSphere(cMath::ToForgeVec3(mBodyPicker.mvPos),0.1f, Vector4(1,0,0,1));
+				packet.m_debug->DebugDrawSphere(cMath::ToForgeVec3(m_dragPos),0.1f, Vector4(1,0,0,1));
 
-				batch.DebugDrawLine(mBodyPicker.mvPos, m_dragPos, cColor(1,1,1,1));
+				packet.m_debug->DebugDrawLine(cMath::ToForgeVec3(mBodyPicker.mvPos), cMath::ToForgeVec3(m_dragPos), Vector4(1,1,1,1));
 			}
 
 			if(gbDrawGrid)
@@ -342,8 +343,8 @@ public:
 				for(int i=-lNum/2; i<lNum/2+1;++i)
 				{
 					float fPos = fSize * (float)i;
-					batch.DebugDrawLine(cVector3f(fPos,fY,fStart),cVector3f(fPos,fY,fEnd),cColor(0.5f,1));
-					batch.DebugDrawLine(cVector3f(fStart,fY,fPos),cVector3f(fEnd,fY,fPos),cColor(0.5f,1));
+					packet.m_debug->DebugDrawLine(Vector3(fPos,fY,fStart),Vector3(fPos,fY,fEnd),Vector4(0.5f,0.5f,0.5f,1.0f));
+					packet.m_debug->DebugDrawLine(Vector3(fStart,fY,fPos),Vector3(fEnd,fY,fPos),Vector4(0.5f,0.5f,0.5f,1.0f));
 				}
 
 			}
@@ -352,7 +353,7 @@ public:
 
 			if(gbPhysicsActive && gbDrawPhysicsDebug)
 			{
-				mpPhysicsWorld->RenderDebugGeometry(&batch,cColor(1,1,1,1));
+				mpPhysicsWorld->RenderDebugGeometry(packet.m_debug, cColor(1,1,1,1));
 
 				// apFunctions->SetDepthTest(false);
 				for(size_t i=0;i<gvJoints.size(); ++i)
@@ -361,8 +362,8 @@ public:
 					if(mpPhysicsWorld->JointExists(pJoint)==false) continue;
 
 					cVector3f vPivot = pJoint->GetPivotPoint();
-					batch.DebugDrawSphere(vPivot,0.2f,cColor(1,0,0,1));
-					batch.DebugDrawLine(vPivot,vPivot + pJoint->GetPinDir()*0.25 ,cColor(0,1,0,1));
+					packet.m_debug->DebugDrawSphere(cMath::ToForgeVec3(vPivot),0.2f,Vector4(1,0,0,1));
+					packet.m_debug->DebugDrawLine(cMath::ToForgeVec3(vPivot),cMath::ToForgeVec3(vPivot + pJoint->GetPinDir()*0.25),Vector4(0,1,0,1));
 				}
 				// apFunctions->SetDepthTest(true);
 			}
@@ -370,15 +371,14 @@ public:
 			if(gbDrawAxes)
 			{
 				// apFunctions->SetDepthTest(false);
-				ImmediateDrawBatch::DebugDrawOptions options;
-				options.m_depthTest = DepthTest::Always;
-				batch.DebugDrawLine(0,cVector3f(1,0,0),cColor(1,0,0,1), options);
-				batch.DebugDrawLine(0,cVector3f(0,1,0),cColor(0,1,0,1), options);
-				batch.DebugDrawLine(0,cVector3f(0,0,1),cColor(0,0,1,1), options);
+				DebugDraw::DebugDrawOptions options;
+				options.m_depthTest = DebugDraw::DebugDepthTest::Always;
+				packet.m_debug->DebugDrawLine(Vector3(0),Vector3(1,0,0),Vector4(1,0,0,1), options);
+				packet.m_debug->DebugDrawLine(Vector3(0),Vector3(0,1,0),Vector4(0,1,0,1), options);
+				packet.m_debug->DebugDrawLine(Vector3(0),Vector3(0,0,1),Vector4(0,0,1,1), options);
 				// apFunctions->SetDepthTest(true);
 			}
 
-			batch.flush();
 
 		});
 
@@ -1789,7 +1789,7 @@ public:
 				}
 			}
 
-			pMat->Compile();
+//			pMat->Compile();
 		}
 
 		return true;
@@ -2273,8 +2273,8 @@ int hplMain(const tString &asCommandline)
 	//iResourceBase::SetLogCreateAndDelete(true);
 	//iGpuProgram::SetLogDebugInformation(true);
 	// cRendererDeferred::SetGBufferType(eDeferredGBuffer_32Bit);
-	cRendererDeferred::SetSSAOLoaded(true);
-	cRendererDeferred::SetEdgeSmoothLoaded(true);
+   // cRendererDeferred::SetSSAOLoaded(true);
+   // cRendererDeferred::SetEdgeSmoothLoaded(true);
 	cRendererDeferred::SetShadowMapQuality(eShadowMapQuality_Medium);
 	//cRendererDeferred::SetParallaxQuality(eParallaxQuality_Low);
 

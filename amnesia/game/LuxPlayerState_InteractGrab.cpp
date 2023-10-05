@@ -563,7 +563,7 @@ float cLuxPlayerState_InteractGrab::DrawDebug(cGuiSet *apSet,iFontData *apFont, 
 	return afStartY;
 }
 
-void cLuxPlayerState_InteractGrab::DebugRenderSolid(ImmediateDrawBatch* batch)
+void cLuxPlayerState_InteractGrab::DebugRenderSolid(DebugDraw* batch)
 {
 	return;
 	// apFunctions->SetMatrix(NULL);
@@ -587,12 +587,12 @@ void cLuxPlayerState_InteractGrab::DebugRenderSolid(ImmediateDrawBatch* batch)
 	cVector3f vUp = mtxBodyInv.GetUp();
 	cVector3f vRight = mtxBodyInv.GetRight();
 
-	cVector3f vPos = mpCurrentBody->GetLocalPosition();
-	batch->DebugDrawLine(vPos, vPos+vWantedUp, cColor(0,1,0,1));
-	batch->DebugDrawLine(vPos, vPos+vUp, cColor(0,1,1,1));
+	Vector3 vPos = cMath::ToForgeVec3(mpCurrentBody->GetLocalPosition());
+	batch->DebugDrawLine(vPos, vPos+cMath::ToForgeVec3(vWantedUp), Vector4(0,1,0,1));
+	batch->DebugDrawLine(vPos, vPos+cMath::ToForgeVec3(vUp), Vector4(0,1,1,1));
 
-	batch->DebugDrawLine(vPos, vPos+vWantedRight, cColor(1,0,0,1));
-	batch->DebugDrawLine(vPos, vPos+vRight, cColor(1,0,1,1));
+	batch->DebugDrawLine(vPos, vPos+cMath::ToForgeVec3(vWantedRight), Vector4(1,0,0,1));
+	batch->DebugDrawLine(vPos, vPos+cMath::ToForgeVec3(vRight), Vector4(1,0,1,1));
 
 }
 

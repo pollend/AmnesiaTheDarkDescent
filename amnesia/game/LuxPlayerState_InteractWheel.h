@@ -45,7 +45,7 @@ public:
 	cLuxPlayerState_InteractWheel(cLuxPlayer *apPlayer);
 	virtual ~cLuxPlayerState_InteractWheel();
 
-	virtual void DebugRenderSolid(ImmediateDrawBatch* apFunctions) override;
+	virtual void DebugRenderSolid(DebugDraw* apFunctions) override;
 
 	/////////////////////////////////
 	//Save data stuff

@@ -67,7 +67,7 @@ cEditorEditModeLights::~cEditorEditModeLights()
 
 //-----------------------------------------------------------------
 
-void cEditorEditModeLights::DrawObjectPreview(cEditorWindowViewport* apViewport, ImmediateDrawBatch *apFunctions, const cMatrixf& amtxTransform, bool abPreCreationActive)
+void cEditorEditModeLights::DrawObjectPreview(cEditorWindowViewport* apViewport, DebugDraw *apFunctions, const cMatrixf& amtxTransform, bool abPreCreationActive)
 {
 	iEditorEditModeObjectCreator::DrawObjectPreview(apViewport, apFunctions, amtxTransform,abPreCreationActive);
 	if(mpCurrentCreator)

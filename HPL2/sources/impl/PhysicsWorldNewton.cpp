@@ -628,7 +628,7 @@ namespace hpl {
 						if(abCorrectNormalDirection && apShapeA->GetType() != eCollideShapeType_Mesh)
 							CorrectNormalDirection(CollPoint.mvNormal,CollPoint.mvPoint, a_mtxA.GetTranslation());
 					}
-	
+
 					lCollideDataStart += lNum;
 					aCollideData.mlNumOfPoints += lNum;
 
@@ -682,7 +682,7 @@ namespace hpl {
 	}
 
 	struct NewtonDebugData {
-		ImmediateDrawBatch* batch;
+		DebugDraw* batch;
 		cColor debugColor;
 	};
 
@@ -698,7 +698,7 @@ namespace hpl {
 		{
 			cVector3f vP1 (apFaceArray[i * 3 + 0], apFaceArray[i * 3 + 1], apFaceArray[i * 3 + 2]);
 
-			data->batch->DebugDrawLine(vP0, vP1, data->debugColor);
+			data->batch->DebugDrawLine(cMath::ToForgeVec3(vP0), cMath::ToForgeVec3(vP1), cMath::ToForgeVec4(data->debugColor));
 
 			vP0 = vP1;
 		}
@@ -708,7 +708,7 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 
 	void cPhysicsWorldNewton::RenderShapeDebugGeometry(	iCollideShape *apShape, const cMatrixf& a_mtxTransform,
-														ImmediateDrawBatch *apLowLevel, const cColor& aColor)
+														DebugDraw *apLowLevel, const cColor& aColor)
 	{
 		NewtonDebugData data {
 			apLowLevel,
@@ -724,7 +724,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cPhysicsWorldNewton::RenderDebugGeometry(ImmediateDrawBatch *apLowLevel,const cColor &aColor)
+	void cPhysicsWorldNewton::RenderDebugGeometry(DebugDraw *apLowLevel,const cColor &aColor)
 	{
 		tPhysicsBodyListIt it = mlstBodies.begin();
 		for(;it != mlstBodies.end(); ++it)

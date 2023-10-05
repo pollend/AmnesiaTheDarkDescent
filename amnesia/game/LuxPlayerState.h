@@ -35,7 +35,7 @@ class cLuxArea_Ladder;
 
 namespace hpl
 {
-	class ImmediateDrawBatch;
+	class DebugDraw;
 }
 //----------------------------------------------
 
@@ -122,8 +122,8 @@ public:
 	virtual bool AllowPlayerMenus(){ return true;}
 	virtual bool AllowLantern(){ return true;}
 
-	virtual void DebugRenderSolid(hpl::ImmediateDrawBatch* apFunctions){}
-	virtual void DebugRenderTrans(hpl::ImmediateDrawBatch* apFunctions){}
+	virtual void DebugRenderSolid(hpl::DebugDraw* apFunctions){}
+	virtual void DebugRenderTrans(hpl::DebugDraw* apFunctions){}
 
 	void SetPreviousState(eLuxPlayerState aState) { mPreviousState = aState; }
 

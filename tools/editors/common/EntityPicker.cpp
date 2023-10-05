@@ -20,7 +20,7 @@
 #include "EntityPicker.h"
 #include "EditorWorld.h"
 
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 
 #include <algorithm>
 
@@ -59,13 +59,13 @@ void cEntityPicker::SetPickMethod(iPickMethod* apMethod)
 
 //-----------------------------------------------------------------------------
 
-void cEntityPicker::DrawDebug(ImmediateDrawBatch* batch)
+void cEntityPicker::DrawDebug(DebugDraw* batch)
 {
 	// apFunctions->SetMatrix(NULL);
 	for(int i=0;i<GetNumPicks();++i)
 	{
 		cPickData* pData = GetPick(i);
-		batch->DebugDrawSphere(pData->mvIntersection, 0.1f, cColor(0,1,0,1));
+		batch->DebugDrawSphere(cMath::ToForgeVec3(pData->mvIntersection), 0.1f, Vector4(0,1,0,1));
 		// apFunctions->GetLowLevelGfx()->DrawSphere(pData->mvIntersection, 0.1f, cColor(0,1,0,1));
 	}
 
@@ -75,9 +75,9 @@ void cEntityPicker::DrawDebug(ImmediateDrawBatch* batch)
 		tVector3fVec& vTri = pData->mvTriangle;
 		if(vTri.empty()==false)
 		{
-			batch->DebugDrawLine(vTri[0], vTri[1],cColor(0,1,0,1));
-			batch->DebugDrawLine(vTri[1], vTri[2],cColor(0,1,0,1));
-			batch->DebugDrawLine(vTri[2], vTri[0],cColor(0,1,0,1));
+			batch->DebugDrawLine(cMath::ToForgeVec3(vTri[0]), cMath::ToForgeVec3(vTri[1]),Vector4(0,1,0,1));
+			batch->DebugDrawLine(cMath::ToForgeVec3(vTri[1]), cMath::ToForgeVec3(vTri[2]),Vector4(0,1,0,1));
+			batch->DebugDrawLine(cMath::ToForgeVec3(vTri[2]), cMath::ToForgeVec3(vTri[0]),Vector4(0,1,0,1));
 		}
 	}
 

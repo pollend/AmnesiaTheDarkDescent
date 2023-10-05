@@ -21,7 +21,7 @@
 
 #include "graphics/Enum.h"
 #include "graphics/GraphicsTypes.h"
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 #include "graphics/RenderTarget.h"
 #include "graphics/VertexBuffer.h"
 #include "math/Math.h"
@@ -260,7 +260,7 @@ namespace hpl
     //     }(mpCurrentRenderList->ArrayHasObjects(eRenderListType_Decal));
 
 
-    //     ImmediateDrawBatch postSolidBatch(context, viewport.GetRenderTarget(), frustumView, frustumProj);
+    //     DebugDraw postSolidBatch(context, viewport.GetRenderTarget(), frustumView, frustumProj);
 	// 	cViewport::PostSolidDrawPacket postSolidEvent = cViewport::PostSolidDrawPacket({
 	// 		.m_frustum = apFrustum,
 	// 		.m_context = &context,
@@ -320,7 +320,7 @@ namespace hpl
     //         }
     //     }(mpCurrentRenderList->ArrayHasObjects(eRenderListType_Translucent));
 
-    //     ImmediateDrawBatch postTransBatch(context, viewport.GetRenderTarget(), frustumView, frustumProj);
+    //     DebugDraw postTransBatch(context, viewport.GetRenderTarget(), frustumView, frustumProj);
 	// 	cViewport::PostTranslucenceDrawPacket translucenceEvent = cViewport::PostTranslucenceDrawPacket({
 	// 		.m_frustum = apFrustum,
 	// 		.m_context = &context,

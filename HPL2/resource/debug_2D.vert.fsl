@@ -1,0 +1,23 @@
+#include "debug_resource.h.fsl"
+
+STRUCT(VSInput)
+{
+	DATA(float3, Position, POSITION);
+	DATA(float4, color, COLOR);
+};
+
+STRUCT(VSOutput)
+{
+	DATA(float4, Position, SV_Position);
+	DATA(float4, color, COLOR);
+};
+
+VSOutput VS_MAIN(VSInput In)
+{
+    INIT_MAIN;
+    VSOutput Out;
+    Out.Position = mul(Get(viewProj2DMat), float4(In.Position.xyz, 1.0));
+    Out.color = In.color;
+    RETURN(Out);
+}
+

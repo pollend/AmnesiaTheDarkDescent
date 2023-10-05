@@ -93,7 +93,7 @@ public:
 
 	void SetAbsScale(const cVector3f& avScale, int alAxis=-1);
 
-	void DrawLightTypeSpecific(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, iEditorEditMode* apEditMode, bool abIsSelected);
+	void DrawLightTypeSpecific(cEditorWindowViewport* apViewport, DebugDraw* apFunctions, iEditorEditMode* apEditMode, bool abIsSelected);
 
 	void SaveToElement(cXmlElement* apElement);
 

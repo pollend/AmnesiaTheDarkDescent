@@ -52,7 +52,7 @@ public:
 	const cColor& GetColor() { return m_color; }
 	void SetColor(const cColor& aCol);
 
-	void Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions);
+	void Draw(cEditorWindowViewport* apViewport, DebugDraw* apFunctions);
 
 	bool Load(cXmlElement* apElement);
 	bool Save(cXmlElement* apElement);

@@ -46,4 +46,6 @@ option(WITH_TOOLS "build HPL2 with tools" ON)
 
 add_subdirectory(external)
 add_subdirectory(HPL2)
+add_subdirectory(tools)
 add_subdirectory(amnesia)
+

@@ -43,7 +43,7 @@
 
 #include "EntityWrapper.h"
 #include "EntityWrapperCompoundObject.h"
-#include "graphics/ImmediateDrawBatch.h"
+#include "graphics/DebugDraw.h"
 
 #include <algorithm>
 
@@ -443,7 +443,7 @@ void cEditorEditModeSelect::OnViewportMouseUp(int alButtons)
 
 //----------------------------------------------------------------------
 
-void cEditorEditModeSelect::DrawPostGrid(cEditorWindowViewport* apViewport, ImmediateDrawBatch *apFunctions, const cVector3f &avPos)
+void cEditorEditModeSelect::DrawPostGrid(cEditorWindowViewport* apViewport, DebugDraw *apFunctions, const cVector3f &avPos)
 {
 	iEditorEditMode::DrawPostGrid(apViewport,apFunctions,avPos);
 
@@ -972,7 +972,7 @@ void cEntitySelectorNormal::OnEditorUpdate()
 
 //----------------------------------------------------------------------
 
-void cEntitySelectorNormal::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions)
+void cEntitySelectorNormal::Draw(cEditorWindowViewport* apViewport, DebugDraw* apFunctions)
 {
 
 	///////////////////////////////////////////////////
@@ -1001,7 +1001,7 @@ void cEntitySelectorNormal::Draw(cEditorWindowViewport* apViewport, ImmediateDra
 	{
 		apFunctions->DebugDraw2DLineQuad(cRect2f((float)mMouseRect.x,(float)mMouseRect.y,
 															(float)mMouseRect.w,(float)mMouseRect.h),
-															cColor(1,1));
+															Vector4(1,1,1,1));
 	}
 }
 
@@ -1126,14 +1126,14 @@ void cEntitySelectorHighlighter::OnEditorUpdate()
 
 //----------------------------------------------------------------------------
 
-void cEntitySelectorHighlighter::Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions)
+void cEntitySelectorHighlighter::Draw(cEditorWindowViewport* apViewport, DebugDraw* apFunctions)
 {
 	cCamera* pCam = apViewport->GetCamera();
 	if(mpEntityUnderPointer)
 	{
 		//cBoundingVolume* pBV = mpEntityUnderPointer->GetPickBV(apViewport);
 		mpEntityUnderPointer->Draw(apViewport, apFunctions, NULL, true, cColor(0,0.5f,1,1));
-		apFunctions->DebugDrawSphere(mpEntityUnderPointer->GetPosition(), 0.1f, cColor(0,0.5f,1,1));
+		apFunctions->DebugDrawSphere(cMath::ToForgeVec3(mpEntityUnderPointer->GetPosition()), 0.1f, Vector4(0,0.5f,1,1));
 	}
 	tEntityWrapperListIt it = mlstHighlightedEntities.begin();
 	for(;it!=mlstHighlightedEntities.end();++it)

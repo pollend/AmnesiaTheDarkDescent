@@ -63,7 +63,7 @@ public:
 
 	void SetGobo(const tString& asGoboFilename);
 
-	void DrawLightTypeSpecific(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, iEditorEditMode* apEditMode, bool abIsSelected);
+	void DrawLightTypeSpecific(cEditorWindowViewport* apViewport, DebugDraw* apFunctions, iEditorEditMode* apEditMode, bool abIsSelected);
 
 protected:
 	iEngineEntity* CreateSpecificEngineEntity();

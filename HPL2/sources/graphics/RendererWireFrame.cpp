@@ -19,8 +19,10 @@
 
 #include "graphics/RendererWireFrame.h"
 
+#include "Common_3/Graphics/Interfaces/IGraphics.h"
 #include "graphics/RenderTarget.h"
 #include "graphics/VertexBuffer.h"
+#include "impl/LegacyVertexBuffer.h"
 #include "math/Math.h"
 
 #include "math/MathTypes.h"
@@ -56,24 +58,142 @@ namespace hpl {
 	cRendererWireFrame::cRendererWireFrame(cGraphics *apGraphics,cResources* apResources)
 		: iRenderer("WireFrame",apGraphics, apResources)
 	{
-		////////////////////////////////////
-		// Set up render specific things
+        auto* forgeRenderer = Interface<ForgeRenderer>::Get();
+	    m_shader.Load(forgeRenderer->Rend(), [&](Shader** shader) {
+            ShaderLoadDesc loadDesc = {};
+            loadDesc.mStages[0].pFileName = "wireframe.vert";
+            loadDesc.mStages[1].pFileName = "wireframe.frag";
+            addShader(forgeRenderer->Rend(), &loadDesc, shader);
+            return true;
+	    });
 
-//		m_boundOutputBuffer = std::move(UniqueViewportData<LegacyRenderTarget>([](cViewport& viewport) {
-//				auto colorImage = [&] {
-//				auto desc = ImageDescriptor::CreateTexture2D(viewport.GetSize().x, viewport.GetSize().y, false, bgfx::TextureFormat::Enum::RGBA8);
-//				desc.m_configuration.m_rt = RTType::RT_Write;
-//				auto image = std::make_shared<Image>();
-//				image->Initialize(desc);
-//				return image;
-//			};
-//			return std::make_unique<LegacyRenderTarget>(colorImage());
-//		}, [](cViewport& viewport, LegacyRenderTarget& target) {
-//			return target.GetImage()->GetImageSize() == viewport.GetSize();
-//		}));
+        for (auto& buffer : m_objectUniformBuffer) {
+            buffer.Load([&](Buffer** buffer) {
+                BufferLoadDesc desc = {};
+                desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_BUFFER;
+                desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
+                desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
+                desc.mDesc.mFirstElement = 0;
+                desc.mDesc.mElementCount = MaxObjectUniforms;
+                desc.mDesc.mStructStride = sizeof(ObjectUniform);
+                desc.mDesc.mSize = desc.mDesc.mElementCount * desc.mDesc.mStructStride;
+                desc.ppBuffer = buffer;
+                addResource(&desc, nullptr);
+                return true;
+            });
+        }
+        for(auto& buffer: m_frameBufferUniform) {
+            buffer.Load([&](Buffer** buffer) {
+                BufferLoadDesc desc = {};
+                desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_BUFFER;
+                desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
+                desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
+                desc.mDesc.mFirstElement = 0;
+                desc.mDesc.mElementCount = 1;
+                desc.mDesc.mStructStride = sizeof(PerFrameUniform);
+                desc.mDesc.mSize = desc.mDesc.mElementCount * desc.mDesc.mStructStride;
+                desc.ppBuffer = buffer;
+                addResource(&desc, nullptr);
+                return true;
+            });
+        }
 
-		// m_u_color.Initialize();
-		// m_colorProgram = hpl::loadProgram("vs_color", "fs_color");
+        m_rootSignature.Load(forgeRenderer ->Rend(), [&](RootSignature** sig) {
+            std::array shaders = {  m_shader.m_handle };
+            RootSignatureDesc rootSignatureDesc = {};
+            //const char* pStaticSamplers[] = { "depthSampler" };
+            //rootSignatureDesc.mStaticSamplerCount = 1;
+            //rootSignatureDesc.ppStaticSamplers = &m_bilinearSampler.m_handle;
+            //rootSignatureDesc.ppStaticSamplerNames = pStaticSamplers;
+            rootSignatureDesc.ppShaders = shaders.data();
+            rootSignatureDesc.mShaderCount = shaders.size();
+            addRootSignature(forgeRenderer->Rend(), &rootSignatureDesc, sig);
+            return true;
+        });
+        m_frameDescriptorSet.Load(forgeRenderer->Rend(), [&](DescriptorSet** set) {
+            DescriptorSetDesc setDesc = { m_rootSignature.m_handle,
+                                          DESCRIPTOR_UPDATE_FREQ_PER_FRAME,
+                                          NumberOfPerFrameUniforms  };
+            addDescriptorSet(forgeRenderer->Rend(), &setDesc, set);
+            return true;
+        });
+        for(uint32_t i = 0; i < NumberOfPerFrameUniforms; i++) {
+            std::array<DescriptorData, 1> params = {};
+            params[0].pName = "perFrameConstants";
+            params[0].ppBuffers = &m_frameBufferUniform[i].m_handle;
+            updateDescriptorSet(forgeRenderer->Rend(), i, m_frameDescriptorSet.m_handle, params.size(), params.data());
+        }
+
+        m_constDescriptorSet.Load(forgeRenderer->Rend(), [&](DescriptorSet** set) {
+            DescriptorSetDesc setDesc = { m_rootSignature.m_handle,
+                                          DESCRIPTOR_UPDATE_FREQ_NONE,
+                                          ForgeRenderer::SwapChainLength };
+            addDescriptorSet(forgeRenderer->Rend(), &setDesc, set);
+            return true;
+        });
+        for(uint32_t i = 0; i < ForgeRenderer::SwapChainLength; i++) {
+            std::array<DescriptorData, 1> params = {};
+            params[0].pName = "uniformObjectBuffer";
+            params[0].ppBuffers = &m_objectUniformBuffer[i].m_handle;
+            updateDescriptorSet(forgeRenderer->Rend(), i, m_constDescriptorSet.m_handle, params.size(), params.data());
+        }
+
+        m_pipeline.Load(forgeRenderer->Rend(), [&](Pipeline** pipline) {
+            std::array colorFormats = { TinyImageFormat_R8G8B8A8_UNORM };
+            VertexLayout vertexLayout = {};
+#ifndef USE_THE_FORGE_LEGACY
+            vertexLayout.mBindingCount = 1;
+            vertexLayout.mBindings[0].mStride = sizeof(float3);
+#endif
+            vertexLayout.mAttribCount = 1;
+            vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
+            vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
+            vertexLayout.mAttribs[0].mBinding = 0;
+            vertexLayout.mAttribs[0].mLocation = 0;
+            vertexLayout.mAttribs[0].mOffset = 0;
+
+            RasterizerStateDesc rasterizerStateDesc = {};
+            rasterizerStateDesc.mCullMode = CULL_MODE_BOTH;
+            rasterizerStateDesc.mFillMode = FILL_MODE_WIREFRAME;
+
+            DepthStateDesc depthStateDesc = {};
+            depthStateDesc.mDepthTest = false;
+            depthStateDesc.mDepthWrite = false;
+
+            BlendStateDesc blendStateDesc{};
+            blendStateDesc.mSrcFactors[0] = BC_ONE;
+            blendStateDesc.mDstFactors[0] = BC_ZERO;
+            blendStateDesc.mBlendModes[0] = BM_ADD;
+			blendStateDesc.mSrcAlphaFactors[0] = BC_ONE;
+			blendStateDesc.mDstAlphaFactors[0] = BC_ZERO;
+			blendStateDesc.mBlendAlphaModes[0] = BM_ADD;
+#ifdef USE_THE_FORGE_LEGACY
+            blendStateDesc.mMasks[0] = RED | GREEN | BLUE;
+#else
+            blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_RED | ColorMask::COLOR_MASK_GREEN | ColorMask::COLOR_MASK_BLUE;
+#endif
+            blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
+            blendStateDesc.mIndependentBlend = false;
+
+            PipelineDesc pipelineDesc = {};
+            pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+            auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
+            pipelineSettings.mDepthStencilFormat = TinyImageFormat_UNDEFINED;
+            pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+            pipelineSettings.mRenderTargetCount = colorFormats.size();
+            pipelineSettings.pColorFormats = colorFormats.data();
+            pipelineSettings.pDepthState = &depthStateDesc;
+            pipelineSettings.pBlendState = nullptr;
+            pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
+            pipelineSettings.pBlendState = &blendStateDesc;
+            pipelineSettings.mSampleQuality = 0;
+            pipelineSettings.pRootSignature = m_rootSignature.m_handle;
+            pipelineSettings.pShaderProgram = m_shader.m_handle;
+            pipelineSettings.pRasterizerState = &rasterizerStateDesc;
+            pipelineSettings.pVertexLayout = &vertexLayout;
+            addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipline);
+            return true;
+        });
 	}
 
 	//-----------------------------------------------------------------------
@@ -91,23 +211,130 @@ namespace hpl {
 	{
 	}
 
-	void cRendererWireFrame::CopyToFrameBuffer()
-	{
-		//Do Nothing
-	}
+    uint32_t cRendererWireFrame::prepareObjectData(
+        const ForgeRenderer::Frame& frame,
+        iRenderable* apObject
+    ) {
+        auto objectLookup = m_objectDescriptorLookup.find(apObject);
+        const bool isFound = objectLookup != m_objectDescriptorLookup.end();
+        uint32_t index = isFound ? objectLookup->second : m_objectIndex++;
+        if (!isFound) {
+            cMatrixf modelMat = apObject->GetModelMatrixPtr() ? *apObject->GetModelMatrixPtr() : cMatrixf::Identity;
 
-	// Texture* cRendererWireFrame::GetOutputImage(cViewport& viewport) {
-	// 	return nullptr;
-	// 	// return m_boundOutputBuffer.resolve(viewport).GetImage();
-	// }
+            BufferUpdateDesc updateDesc = { m_objectUniformBuffer[frame.m_frameIndex].m_handle,
+                                            sizeof(ObjectUniform) * index };
+            ObjectUniform uniformObjectData;
+            uniformObjectData.m_modelMat = cMath::ToForgeMat4(modelMat.GetTranspose());
+            beginUpdateResource(&updateDesc);
+            (*reinterpret_cast<ObjectUniform*>(updateDesc.pMappedData)) = uniformObjectData;
+            endUpdateResource(&updateDesc, NULL);
 
+            m_objectDescriptorLookup[apObject] = index;
+        }
+
+        return index;
+    }
+	SharedRenderTarget cRendererWireFrame::GetOutputImage(uint32_t frameIndex, cViewport& viewport) {
+        auto sharedData = m_boundViewportData.resolve(viewport);
+        if (!sharedData) {
+            return SharedRenderTarget();
+        }
+        return sharedData->m_outputBuffer[frameIndex];
+    }
 
 	void cRendererWireFrame::Draw(const ForgeRenderer::Frame& frame, cViewport& viewport, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, bool abSendFrameBufferToPostEffects) {
-		//BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects);
-        ASSERT(false && "TODO: need to implement bound Viewport");
-		// auto& rt = m_boundOutputBuffer.resolve(viewport);
+        auto* forgeRenderer = Interface<ForgeRenderer>::Get();
+        iRenderer::Draw(frame, viewport, afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects);
+        // keep around for the moment ...
+        BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects);
 
-		// [&]{
+        if (frame.m_currentFrame != m_activeFrame) {
+            m_objectIndex  = 0;
+            m_objectDescriptorLookup.clear();
+            m_activeFrame = frame.m_currentFrame;
+        }
+        auto common = m_boundViewportData.resolve(viewport);
+        if (!common || common->m_size != viewport.GetSize()) {
+            auto viewportData = std::make_unique<ViewportData>();
+            viewportData->m_size = viewport.GetSize();
+            for(auto& buffer: viewportData->m_outputBuffer) {
+                buffer.Load(forgeRenderer->Rend(), [&](RenderTarget** target) {
+                    ClearValue optimizedColorClearBlack = { { 0.0f, 0.0f, 0.0f, 0.0f } };
+                    RenderTargetDesc renderTargetDesc = {};
+                    renderTargetDesc.mArraySize = 1;
+                    renderTargetDesc.mClearValue = optimizedColorClearBlack;
+                    renderTargetDesc.mDepth = 1;
+                    renderTargetDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+                    renderTargetDesc.mWidth = viewportData->m_size.x;
+                    renderTargetDesc.mHeight = viewportData->m_size.y;
+                    renderTargetDesc.mSampleCount = SAMPLE_COUNT_1;
+                    renderTargetDesc.mSampleQuality = 0;
+                    renderTargetDesc.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
+                    renderTargetDesc.mFormat = TinyImageFormat_R8G8B8A8_UNORM;
+                    renderTargetDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+                    addRenderTarget(forgeRenderer->Rend(), &renderTargetDesc, target);
+                    return true;
+                });
+            }
+
+            common = m_boundViewportData.update(viewport, std::move(viewportData));
+        }
+
+        const cMatrixf mainFrustumView = apFrustum->GetViewMatrix();
+        const cMatrixf mainFrustumProj = apFrustum->GetProjectionMatrix();
+
+        m_rendererList.BeginAndReset(afFrameTime, apFrustum);
+        std::array<cPlanef, 0> occlusionPlanes = {};
+		rendering::detail::UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
+			&m_rendererList, apFrustum, apWorld->GetRenderableContainer(eWorldContainerType_Static), occlusionPlanes, 0);
+		rendering::detail::UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
+			&m_rendererList, apFrustum, apWorld->GetRenderableContainer(eWorldContainerType_Dynamic), occlusionPlanes, 0);
+
+		m_rendererList.End(	eRenderListCompileFlag_Diffuse |
+										eRenderListCompileFlag_Decal |
+										eRenderListCompileFlag_Translucent);
+
+
+	    m_perFrameIndex = (m_perFrameIndex + 1) % NumberOfPerFrameUniforms;
+        {
+            BufferUpdateDesc updateDesc = { m_frameBufferUniform[m_perFrameIndex].m_handle, 0, sizeof(PerFrameUniform)};
+            beginUpdateResource(&updateDesc);
+            PerFrameUniform uniformData;
+            uniformData.m_viewProject = cMath::ToForgeMat(cMath::MatrixMul(mainFrustumProj, mainFrustumView).GetTranspose());
+            (*reinterpret_cast<PerFrameUniform*>(updateDesc.pMappedData)) = uniformData;
+            endUpdateResource(&updateDesc, NULL);
+        }
+
+        uint32_t rootConstantIndex = getDescriptorIndexFromName(m_rootSignature.m_handle, "rootConstant");
+        std::array targets = {
+            common->m_outputBuffer[frame.m_frameIndex].m_handle,
+        };
+        LoadActionsDesc loadActions = {};
+        loadActions.mLoadActionsColor[0] = LOAD_ACTION_CLEAR;
+        cmdBindRenderTargets(frame.m_cmd, targets.size(), targets.data(), NULL, &loadActions, NULL, NULL, -1, -1);
+        cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, static_cast<float>(common->m_size.x), static_cast<float>(common->m_size.y), 0.0f, 1.0f);
+        cmdSetScissor(frame.m_cmd, 0, 0, common->m_size.x, common->m_size.y);
+
+        cmdBindPipeline(frame.m_cmd, m_pipeline.m_handle);
+        cmdBindDescriptorSet(frame.m_cmd, m_perFrameIndex, m_frameDescriptorSet.m_handle);
+        cmdBindDescriptorSet(frame.m_cmd, frame.m_frameIndex, m_constDescriptorSet.m_handle);
+        for (auto& diffuseItem : m_rendererList.GetRenderableItems(eRenderListType_Diffuse)) {
+            cMaterial* pMaterial = diffuseItem->GetMaterial();
+            iVertexBuffer* vertexBuffer = diffuseItem->GetVertexBuffer();
+            if (pMaterial == nullptr || vertexBuffer == nullptr) {
+                continue;
+            }
+            ASSERT(pMaterial->Descriptor().m_id == MaterialID::SolidDiffuse && "Invalid material type");
+            std::array targets = { eVertexBufferElement_Position };
+            LegacyVertexBuffer::GeometryBinding binding;
+            static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
+
+            LegacyVertexBuffer::cmdBindGeometry(frame.m_cmd, frame.m_resourcePool, binding);
+            uint32_t objectIndex = prepareObjectData(frame, diffuseItem);
+            cmdBindPushConstants(frame.m_cmd, m_rootSignature.m_handle, rootConstantIndex, &objectIndex);
+            cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+        }
+                // [&]{
 		// 	GraphicsContext::ViewConfiguration viewConfig {rt};
 		// 	viewConfig.m_viewRect = {0, 0, viewport.GetSize().x, viewport.GetSize().y};
 		// 	viewConfig.m_clear = {0, 1, 0, ClearOp::Depth | ClearOp::Stencil | ClearOp::Color};

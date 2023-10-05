@@ -61,7 +61,7 @@ public:
 
 	cVector3f GetProjectedPosOnPlane(const cVector3f& avWorldPos);
 
-	virtual void Draw(ImmediateDrawBatch* apFunctions, const cVector3f& avPos)=0;
+	virtual void Draw(DebugDraw* apFunctions, const cVector3f& avPos)=0;
 
 protected:
 	virtual void OnPlaneModified() {}

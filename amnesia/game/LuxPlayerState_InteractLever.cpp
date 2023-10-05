@@ -53,7 +53,7 @@ cLuxPlayerState_InteractLever::~cLuxPlayerState_InteractLever()
 
 //-----------------------------------------------------------------------
 
-void cLuxPlayerState_InteractLever::DebugRenderSolid(ImmediateDrawBatch* batch)
+void cLuxPlayerState_InteractLever::DebugRenderSolid(DebugDraw* batch)
 {
 	return;
 
@@ -78,10 +78,10 @@ void cLuxPlayerState_InteractLever::DebugRenderSolid(ImmediateDrawBatch* batch)
 	cVector3f vPushRotateDir = cMath::Vector3Cross(vJointToBody, vPushAmount);
 
 	cVector3f vPivot = mpCurrentJoint->GetPivotPoint();
-	batch->DebugDrawLine(vPivot, vPivot+vPushAmount*30, cColor(1,0,0,1));
-	batch->DebugDrawLine(vPivot, vPivot+vUpJointForward, cColor(1,0,1,1));
-	batch->DebugDrawLine(vPivot, vPivot+vJointToBody, cColor(0,1,0,1));
-	batch->DebugDrawLine(vPivot, vPivot+mpCurrentJoint->GetPinDir(), cColor(0,0,1,1));
+	batch->DebugDrawLine(cMath::ToForgeVec3(vPivot), cMath::ToForgeVec3(vPivot+vPushAmount*30), Vector4(1,0,0,1));
+	batch->DebugDrawLine(cMath::ToForgeVec3(vPivot), cMath::ToForgeVec3(vPivot+vUpJointForward), Vector4(1,0,1,1));
+	batch->DebugDrawLine(cMath::ToForgeVec3(vPivot), cMath::ToForgeVec3(vPivot+vJointToBody), Vector4(0,1,0,1));
+	batch->DebugDrawLine(cMath::ToForgeVec3(vPivot), cMath::ToForgeVec3(vPivot+mpCurrentJoint->GetPinDir()), Vector4(0,0,1,1));
 
 }
 

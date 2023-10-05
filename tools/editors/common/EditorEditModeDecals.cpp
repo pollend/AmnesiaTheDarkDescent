@@ -109,7 +109,7 @@ void cEditorEditModeDecals::OnEditorUpdate(float afTimeStep)
 
 //-----------------------------------------------------------------------------------
 
-void cEditorEditModeDecals::DrawPostGrid(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, const cVector3f& avPos)
+void cEditorEditModeDecals::DrawPostGrid(cEditorWindowViewport* apViewport, DebugDraw* apFunctions, const cVector3f& avPos)
 {
 	iEditorEditModeObjectCreator::DrawPostGrid(apViewport, apFunctions, avPos);
 	// apFunctions->SetTextureRange(NULL,0);

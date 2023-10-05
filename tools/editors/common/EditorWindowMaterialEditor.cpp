@@ -536,9 +536,9 @@ void cMaterialWrapper::Load(const tWString& asFilename)
 	if(pMat==NULL)
 		return;
 
-	SetType(cString::To16Char(pMat->GetType()->GetName()));
+	//SetType(cString::To16Char(pMat->GetType()->GetName()));
 	SetDepthTest(pMat->GetDepthTest());
-	SetUseAlpha(pMat->GetUseAlphaDissolveFilter());
+	//SetUseAlpha(pMat->GetUseAlphaDissolveFilter());
 	SetPhysicsMaterial(cString::To16Char(pMat->GetPhysicsMaterial()));
 
 	tWString sBlendMode = cString::To16Char(gsBlendModeStrings[pMat->GetBlendMode()]);
@@ -567,8 +567,8 @@ void cMaterialWrapper::Load(const tWString& asFilename)
 	// Load variables
 	if(mpClass)
 	{
-		cResourceVarsObject* pVars = pMat->GetVarsObject();
-		mpClass->LoadFromResourceVarsObject(pVars);
+	 //   cResourceVarsObject* pVars = pMat->GetVarsObject();
+	 //   mpClass->LoadFromResourceVarsObject(pVars);
 	}
 
 	pManager->Destroy(pMat);
@@ -665,9 +665,9 @@ void cMaterialWrapper::UpdateMaterialInMemory(const tString& asName)
 	if(pMat->HasUsers()==false)
 		return;
 
-	pMat->SetType(GetTypePointer());
+	//pMat->SetType(GetTypePointer());
 	pMat->SetPhysicsMaterial(cString::To8Char(msPhysicsMat));
-	pMat->SetBlendMode(pMatMgr->GetBlendMode(cString::To8Char(msBlendMode)));
+	//pMat->SetBlendMode(pMatMgr->GetBlendMode(cString::To8Char(msBlendMode)));
 	pMat->SetDepthTest(mbDepthTest);
 
 	for(int i=0;i<eMaterialTexture_LastEnum;++i)
@@ -723,7 +723,7 @@ void cMaterialWrapper::UpdateMaterialInMemory(const tString& asName)
 		cMaterialUvAnimation* pAnim = &(mvUVAnimations[i]);
 		pMat->AddUvAnimation(pAnim->mType,pAnim->mfSpeed,pAnim->mfSpeed,pAnim->mAxis);
 	}
-	pMat->Compile();
+	//pMat->Compile();
 }
 
 //------------------------------------------------------------------------------------
@@ -906,7 +906,7 @@ cMaterial* cMaterialWrapper::GetPreviewMaterial()
 			*/
 
 		mpPreviewMat->SetDepthTest(mbDepthTest);
-		mpPreviewMat->SetBlendMode(pManager->GetBlendMode(cString::To8Char(msBlendMode)));
+		//mpPreviewMat->SetBlendMode(pManager->GetBlendMode(cString::To8Char(msBlendMode)));
 
 		for(int i=0;i<eMaterialTexture_LastEnum;++i)
 		{
@@ -929,17 +929,17 @@ cMaterial* cMaterialWrapper::GetPreviewMaterial()
 
 		if(mpClass)
 		{
-			cResourceVarsObject* pVarsObject = mpPreviewMat->GetVarsObject();
-			for(int i=0;i<mpClass->GetVarInstanceNum();++i)
-			{
-				cEditorVarInstance* pVar = mpClass->GetVarInstance(i);
+	   // 	cResourceVarsObject* pVarsObject = mpPreviewMat->GetVarsObject();
+	   // 	for(int i=0;i<mpClass->GetVarInstanceNum();++i)
+	   // 	{
+	   // 		cEditorVarInstance* pVar = mpClass->GetVarInstance(i);
 
-				pVarsObject->SetUserVariable(cString::To8Char(pVar->GetName()), cString::To8Char(pVar->GetValue()));
-			}
-			mpPreviewMat->LoadVariablesFromVarsObject(pVarsObject);
+	   // 		pVarsObject->SetUserVariable(cString::To8Char(pVar->GetName()), cString::To8Char(pVar->GetValue()));
+	   // 	}
+	   // 	mpPreviewMat->LoadVariablesFromVarsObject(pVarsObject);
 		}
 
-		mpPreviewMat->Compile();
+		//mpPreviewMat->Compile();
 
 		mbPreviewUpdated=false;
 	}

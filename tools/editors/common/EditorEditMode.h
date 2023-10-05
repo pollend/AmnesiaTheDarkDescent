@@ -74,8 +74,8 @@ public:
 
 	virtual void OnSetCurrent(bool abX){}
 
-	virtual void DrawPreGrid(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, const cVector3f& avPos);
-	virtual void DrawPostGrid(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, const cVector3f& avPos);
+	virtual void DrawPreGrid(cEditorWindowViewport* apViewport, DebugDraw* apFunctions, const cVector3f& avPos);
+	virtual void DrawPostGrid(cEditorWindowViewport* apViewport, DebugDraw* apFunctions, const cVector3f& avPos);
 
 protected:
 	///////////////////////////////
@@ -118,8 +118,8 @@ public:
 	virtual iEntityWrapperData* CreateObjectData();
 	virtual iEditorAction* CreateObject(iEntityWrapperData* apData);
 
-	virtual void DrawPostGrid(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions, const cVector3f& avPos);
-	virtual void DrawObjectPreview(cEditorWindowViewport* apViewport, ImmediateDrawBatch *apFunctions, const cMatrixf& amtxTransform, bool abPreCreationActive){}
+	virtual void DrawPostGrid(cEditorWindowViewport* apViewport, DebugDraw* apFunctions, const cVector3f& avPos);
+	virtual void DrawObjectPreview(cEditorWindowViewport* apViewport, DebugDraw *apFunctions, const cMatrixf& amtxTransform, bool abPreCreationActive){}
 
 	void SetSubType(int alX) { mlSubType = alX; OnSetSubType(alX); }
 	int GetTypeNum();

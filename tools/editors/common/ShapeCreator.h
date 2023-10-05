@@ -31,7 +31,7 @@ public:
 	virtual void OnViewportMouseDown(int alButtons)=0;
 	virtual void OnViewportMouseUp(int alButtons)=0;
 
-	virtual void Draw(cEditorWindowViewport* apViewport, ImmediateDrawBatch* apFunctions)=0;
+	virtual void Draw(cEditorWindowViewport* apViewport, DebugDraw* apFunctions)=0;
 
 	virtual void OnEditorUpdate()=0;
 

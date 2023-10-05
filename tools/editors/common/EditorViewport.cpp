@@ -23,8 +23,11 @@
 #include "EditorGrid.h"
 #include "EditorSelection.h"
 #include "EditorWorld.h"
+#include "graphics/ForgeHandles.h"
+#include "graphics/ForgeRenderer.h"
 #include "graphics/Image.h"
 #include "graphics/RenderTarget.h"
+#include "math/MathTypes.h"
 #include <memory>
 #include <utility>
 
@@ -315,20 +318,6 @@ const cVector2f& cEditorViewportCamera::GetTargetSphCoords()
 
 	return mvTargetSphCoords;
 }
-
-//-------------------------------------------------------------
-
-//-------------------------------------------------------------
-
-//-------------------------------------------------------------
-
-//-------------------------------------------------------------
-
-//-------------------------------------------------------------
-
-//-------------------------------------------------------------
-
-//-------------------------------------------------------------
 
 void cEditorViewportCamera::FetchSettings()
 {
@@ -770,11 +759,6 @@ iEditorViewport::iEditorViewport(iEditorBase* apEditor, cWorld* apWorld, bool ab
 
 	mpGrid = hplNew(cEditorGrid, (this));
 
-	m_target = std::make_shared<LegacyRenderTarget>();
-	mpEngineViewport->setRenderTarget(m_target);
-	// auto desc = ImageDescriptor::CreateTexture2D(0, 0, false, bgfx::TextureFormat::Enum::RGBA8);
-	// desc.m_configuration.m_rt = RTType::RT_Write;
-	// mpEngineViewport->setImageDescriptor(desc);
 	mbViewportNeedsUpdate = true;
 }
 
@@ -788,11 +772,6 @@ iEditorViewport::~iEditorViewport()
 
 	hplDelete(mpGrid);
 
-	if(mbDestroyFBOnExit)
-	{
-		mpEngine->GetGraphics()->GetLowLevel()->SetCurrentFrameBuffer(NULL);
-		// mpEngine->GetGraphics()->DestroyFrameBuffer(mpFB);
-	}
 }
 
 //-------------------------------------------------------------
@@ -849,27 +828,31 @@ void iEditorViewport::SetRenderMode(eRenderer aMode)
 	SetClearColor(mpEditorBase->GetEditorWorld()->GetBGDefaultColor());
 }
 
-//-------------------------------------------------------------
-
-void iEditorViewport::SetFrameBuffer(std::shared_ptr<LegacyRenderTarget> target)
-{
-	m_target = target;
-	mpEngineViewport->setRenderTarget(target);
-	mbViewportNeedsUpdate = true;
-	UpdateViewport();
-}
-
-//-------------------------------------------------------------
-
 void iEditorViewport::UpdateViewport()
 {
 	if(mpImgViewport==NULL || mbViewportNeedsUpdate==false )
 		return;
 
-	if(!m_target->IsValid()) {
-		return;
-	}
-
+    auto forgeRenderer = Interface<ForgeRenderer>::Get();
+    SharedRenderTarget target;
+    target.Load(forgeRenderer->Rend(), [&](RenderTarget** target) {
+        ClearValue optimizedColorClearBlack = { { 0.0f, 0.0f, 0.0f, 0.0f } };
+        RenderTargetDesc renderTargetDesc = {};
+        renderTargetDesc.mArraySize = 1;
+        renderTargetDesc.mClearValue = optimizedColorClearBlack;
+        renderTargetDesc.mDepth = 1;
+        renderTargetDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+        renderTargetDesc.mWidth = mpEngineViewport->GetSize().x;
+        renderTargetDesc.mHeight = mpEngineViewport->GetSize().y;
+        renderTargetDesc.mSampleCount = SAMPLE_COUNT_1;
+        renderTargetDesc.mSampleQuality = 0;
+        renderTargetDesc.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
+        renderTargetDesc.mFormat = TinyImageFormat_R8G8B8A8_UNORM;
+        renderTargetDesc.mDescriptors = DESCRIPTOR_TYPE_RW_TEXTURE | DESCRIPTOR_TYPE_TEXTURE;
+        addRenderTarget(forgeRenderer->Rend(), &renderTargetDesc, target);
+        return true;
+    });
+    mpEngineViewport->SetTarget(std::move(target));
 	cGui* pGui = mpGuiSet->GetGui();
 
 	////////////////////////////////////////////
@@ -877,11 +860,9 @@ void iEditorViewport::UpdateViewport()
 	cGuiGfxElement* pImg = mpImgViewport->GetImage();
 	if(pImg) pGui->DestroyGfx(pImg);
 
-	////////////////////////////////////////////
-	// Set updated one
-	pImg = pGui->CreateGfxTexture(m_target->GetImage().get(), false, eGuiMaterial_Diffuse, cColor(1,1), true, mvUVStart, mvUVEnd, true);
-	mpImgViewport->SetImage(pImg);
+	pImg = pGui->CreateGfxTexture(mpEngineViewport->GetImage().get(), false, eGuiMaterial_Diffuse, cColor(1,1), true, cVector2f(0,0), cVector2f(1,1), false);
 
+	mpImgViewport->SetImage(pImg);
 	mbViewportNeedsUpdate = false;
 }
 
@@ -898,6 +879,10 @@ void iEditorViewport::SetGuiViewportPos(const cVector3f& avPos)
 
 //-------------------------------------------------------------
 
+void iEditorViewport::updateViewportSize(cVector2l size) {
+
+}
+
 void iEditorViewport::SetGuiViewportSize(const cVector2f& avSize)
 {
 	if(mvViewportSize==avSize) return;
@@ -907,6 +892,7 @@ void iEditorViewport::SetGuiViewportSize(const cVector2f& avSize)
 
 	if(mpImgViewport)
 		mpImgViewport->SetSize(mvViewportSize);
+
 }
 
 //-------------------------------------------------------------
@@ -914,8 +900,8 @@ void iEditorViewport::SetGuiViewportSize(const cVector2f& avSize)
 void iEditorViewport::SetEngineViewportPositionAndSize(const cVector2l& avPos, const cVector2l& avSize)
 {
 	if(mvEngineViewportPos==avPos && mvEngineViewportSize==avSize) return;
+    updateViewportSize(avSize);
 	mvEngineViewportPos = avPos;
-	// mpEngineViewport->SetPosition(mvEngineViewportPos);
 	mvEngineViewportSize = avSize;
 	mpEngineViewport->SetSize(mvEngineViewportSize);
 
@@ -930,9 +916,7 @@ void iEditorViewport::SetEngineViewportPositionAndSize(const cVector2l& avPos, c
 
 	if(mvUVStart.y>=1.0f) mvUVStart.y-=1.0f;
 
-	mvUVSize =  vSizeFloat/
-			   vFBSizeFloat;
-
+	mvUVSize =  vSizeFloat/ vFBSizeFloat;
 	mvUVEnd = mvUVStart + mvUVSize;
 
 	mbViewportNeedsUpdate = true;
@@ -943,10 +927,12 @@ void iEditorViewport::SetEngineViewportPositionAndSize(const cVector2l& avPos, c
 void iEditorViewport::SetEngineViewportSize(const cVector2l& avSize)
 {
 	if(mvEngineViewportSize==avSize) return;
+    updateViewportSize(avSize);
 	mvEngineViewportSize = avSize;
-	mpEngineViewport->SetSize(mvEngineViewportSize);
 
-	const cVector2l vFBSize = cVector2l(m_target->GetImage(0)->GetWidth(), m_target->GetImage(0)->GetHeight());
+	mpEngineViewport->SetSize(mvEngineViewportSize);
+    auto& image = mpEngineViewport->GetImage();
+	const cVector2l vFBSize = cVector2l(image->GetWidth(), image->GetHeight());
 
 	mvUVSize = cVector2f((float)mvEngineViewportSize.x, (float)mvEngineViewportSize.y) /
 			   cVector2f((float)vFBSize.x, (float)vFBSize.y);

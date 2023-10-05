@@ -93,7 +93,7 @@ public:
 
 	//////////////////////
 	//Debug
-	virtual void OnRenderSolidImplemented(hpl::ImmediateDrawBatch* apFunctions) override;
+	virtual void OnRenderSolidImplemented(hpl::DebugDraw* apFunctions) override;
 
 	//////////////////////
 	//Save data stuff
