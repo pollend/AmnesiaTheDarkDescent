@@ -501,25 +501,6 @@ namespace hpl {
         request.m_uvImage = image;
         request.m_color = aTint;
         m_uvQuads.push_back(request);
-
-       // Matrix4 rotation = Matrix4::identity(); // Eigen::Matrix4f::Identity();
-       // rotation.setUpper3x3(Matrix3(
-       //     Vector3(m_view[0][0], m_view[0][1], m_view[0][2]),
-       //     Vector3(m_view[1][0], m_view[1][1], m_view[1][2]),
-       //     Vector3(m_view[2][0], m_view[2][1], m_view[2][2])));
-
-       // Matrix4 billboard = Matrix4::identity();
-       // billboard[3][1] = pos.getX();
-       // billboard[3][2] = pos.getY();
-       // billboard[3][3] = pos.getZ();
-       // Matrix4 transform = billboard * rotation;
-
-       // Vector2 halfSize = Vector2(size.getX() / 2.0f, size.getY() / 2.0f);
-       // Vector4 v1 = (transform * Vector4(halfSize.getX(), halfSize.getY(), 0, 1));
-       // Vector4 v2 = (transform * Vector4(-halfSize.getX(), halfSize.getY(), 0, 1));
-       // Vector4 v3 = (transform * Vector4(halfSize.getX(), -halfSize.getY(), 0, 1));
-       // Vector4 v4 = (transform * Vector4(-halfSize.getX(), -halfSize.getY(), 0, 1));
-       // DrawQuad(v1.getXYZ(), v2.getXYZ(), v3.getXYZ(), v4.getXYZ(), uv0, uv1, image, aTint, options);
     }
 
     void DebugDraw::DebugDrawSphere(const Vector3& pos, float radius, const Vector4& color, const DebugDrawOptions& options) {
@@ -639,7 +620,7 @@ namespace hpl {
             beginUpdateResource(&updateDesc);
             FrameUniformBuffer  uniformData;
             uniformData.m_viewProjMat = cMath::ToForgeMat(cMath::MatrixMul(mainFrustumProj, mainFrustumView).GetTranspose());
-            uniformData.m_viewProj2DMat = Matrix4::frustum(0.0f, viewport.GetSizeU().x, viewport.GetSizeU().y, 0.0f, 0.0f, 1.0f);
+            uniformData.m_viewProj2DMat = Matrix4::orthographic(0.0f, targetBuffer.m_handle->mWidth, targetBuffer.m_handle->mHeight,0.0f, -1000.0f, 1000.0f);
             (*reinterpret_cast<FrameUniformBuffer*>(updateDesc.pMappedData)) = uniformData;
             endUpdateResource(&updateDesc, NULL);
         }
@@ -810,7 +791,7 @@ namespace hpl {
             };
             const size_t numVertices = m_line2DSegments.size() * 2;
             const size_t vbSize = sizeof(PositionColorVertex) * numVertices;
-            const size_t ibSize = sizeof(uint32_t) * numVertices;
+            const size_t ibSize = sizeof(uint16_t) * numVertices;
 			const uint32_t stride = sizeof(PositionColorVertex);
 		    GPURingBufferOffset vb = getGPURingBufferOffset(m_vertexBuffer, vbSize);
 		    GPURingBufferOffset ib = getGPURingBufferOffset(m_indexBuffer, ibSize);
@@ -840,7 +821,6 @@ namespace hpl {
             cmdBindDescriptorSet(cmd, m_frameIndex, m_perColorViewDescriptorSet.m_handle);
 			cmdBindVertexBuffer(cmd, 1, &vb.pBuffer, &stride, &vb.mOffset);
 			cmdBindIndexBuffer(cmd, ib.pBuffer, INDEX_TYPE_UINT16, ib.mOffset);
-
             cmdDrawIndexed(cmd, numVertices, 0, 0);
         }
 

@@ -76,8 +76,6 @@ class DebugDraw final {
         // scale based on distance from camera
         static float BillboardScale(cCamera* apCamera, const Eigen::Vector3f& pos);
     private:
-
-
         struct ColorQuadRequest {
             DebugDepthTest m_depthTest = DebugDepthTest::LessEqual;
             Vector3 m_v1;
