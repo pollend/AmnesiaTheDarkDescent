@@ -4309,7 +4309,7 @@ void cRendererDeferred::Draw(
     postSolidEvent.m_renderSettings = mpCurrentSettings;
     postSolidEvent.m_debug = m_debug.get();
     viewport.SignalDraw(postSolidEvent);
-    m_debug->flush(frame.m_cmd, viewport, *apFrustum, currentGBuffer.m_outputBuffer, currentGBuffer.m_depthBuffer);
+    m_debug->flush(frame, frame.m_cmd, viewport, *apFrustum, currentGBuffer.m_outputBuffer, currentGBuffer.m_depthBuffer);
 
     // ------------------------------------------------------------------------
     // Translucency Pass --> output target
@@ -4719,7 +4719,7 @@ void cRendererDeferred::Draw(
     translucenceEvent.m_renderSettings = mpCurrentSettings;
     translucenceEvent.m_debug = m_debug.get();
     viewport.SignalDraw(translucenceEvent);
-    m_debug->flush(frame.m_cmd, viewport, *apFrustum, currentGBuffer.m_outputBuffer, currentGBuffer.m_depthBuffer);
+    m_debug->flush(frame, frame.m_cmd, viewport, *apFrustum, currentGBuffer.m_outputBuffer, currentGBuffer.m_depthBuffer);
 
     {
         cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);

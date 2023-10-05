@@ -237,6 +237,14 @@
     #include "debug.frag.fsl"
 #end
 
+#frag debug_uv.frag
+  #include "debug_uv.frag.fsl"
+#end
+
+#vert debug_uv.vert
+   #include "debug_uv.vert.fsl"
+#end
+
 #vert wireframe.vert
     #include "wireframe.vert.fsl"
 #end

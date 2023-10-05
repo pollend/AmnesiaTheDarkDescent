@@ -42,7 +42,7 @@ namespace hpl {
             BufferDesc desc = {};
 			desc.mDescriptors = DESCRIPTOR_TYPE_VERTEX_BUFFER;
             desc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
-            desc.mSize = ImmediateIndexBufferSize;
+            desc.mSize = ImmediateVertexBufferSize;
             desc.pName = "Immediate Vertex Buffer";
 			addGPURingBuffer(renderer->Rend(), &desc, &m_vertexBuffer);
 	    }
@@ -54,6 +54,16 @@ namespace hpl {
             desc.pName = "Immediate Index Buffer";
 			addGPURingBuffer(renderer->Rend(), &desc, &m_indexBuffer);
 	    }
+        m_bilinearSampler.Load(renderer->Rend(), [&](Sampler** sampler) {
+            SamplerDesc bilinearClampDesc = { FILTER_NEAREST,
+                                              FILTER_NEAREST,
+                                              MIPMAP_MODE_NEAREST,
+                                              ADDRESS_MODE_CLAMP_TO_EDGE,
+                                              ADDRESS_MODE_CLAMP_TO_EDGE,
+                                              ADDRESS_MODE_CLAMP_TO_EDGE };
+            addSampler(renderer->Rend(), &bilinearClampDesc, sampler);
+            return true;
+        });
 	    m_colorShader.Load(renderer->Rend(), [&](Shader** shader) {
             ShaderLoadDesc loadDesc = {};
             loadDesc.mStages[0].pFileName = "debug_line.vert";
@@ -68,7 +78,14 @@ namespace hpl {
             addShader(renderer->Rend(), &loadDesc, shader);
             return true;
 	    });
-	    for(auto& buffer: m_frameBufferUniform) {
+	    m_textureShader.Load(renderer->Rend(), [&](Shader** shader) {
+            ShaderLoadDesc loadDesc = {};
+            loadDesc.mStages[0].pFileName = "debug_uv.vert";
+            loadDesc.mStages[1].pFileName = "debug_uv.frag";
+            addShader(renderer->Rend(), &loadDesc, shader);
+            return true;
+	    });
+	    for(auto& buffer: m_viewBufferUniform) {
             buffer.Load([&](Buffer** buffer) {
                 BufferLoadDesc desc = {};
                 desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_BUFFER;
@@ -83,32 +100,80 @@ namespace hpl {
                 return true;
             });
 	    }
-        m_rootSignature.Load(renderer->Rend(), [&](RootSignature** sig) {
+        m_colorRootSignature.Load(renderer->Rend(), [&](RootSignature** sig) {
             std::array shaders = {  m_colorShader.m_handle, m_color2DShader.m_handle};
             RootSignatureDesc rootSignatureDesc = {};
-            //const char* pStaticSamplers[] = { "depthSampler" };
-            //rootSignatureDesc.mStaticSamplerCount = 1;
-            //rootSignatureDesc.ppStaticSamplers = &m_bilinearSampler.m_handle;
-            //rootSignatureDesc.ppStaticSamplerNames = pStaticSamplers;
             rootSignatureDesc.ppShaders = shaders.data();
             rootSignatureDesc.mShaderCount = shaders.size();
             addRootSignature(renderer->Rend(), &rootSignatureDesc, sig);
             return true;
         });
-        m_perFrameDescriptorSet.Load(renderer->Rend(), [&](DescriptorSet** set) {
-            DescriptorSetDesc setDesc = { m_rootSignature.m_handle,
+        m_textureRootSignature.Load(renderer->Rend(), [&](RootSignature** sig) {
+            std::array shaders = {  m_textureShader.m_handle};
+            RootSignatureDesc rootSignatureDesc = {};
+            const char* pStaticSamplers[] = { "textureFilter" };
+            rootSignatureDesc.mStaticSamplerCount = 1;
+            rootSignatureDesc.ppStaticSamplers = &m_bilinearSampler.m_handle;
+            rootSignatureDesc.ppStaticSamplerNames = pStaticSamplers;
+            rootSignatureDesc.ppShaders = shaders.data();
+            rootSignatureDesc.mShaderCount = shaders.size();
+            addRootSignature(renderer->Rend(), &rootSignatureDesc, sig);
+            return true;
+        });
+        m_perColorViewDescriptorSet.Load(renderer->Rend(), [&](DescriptorSet** set) {
+            DescriptorSetDesc setDesc = { m_colorRootSignature.m_handle,
+                                          DESCRIPTOR_UPDATE_FREQ_PER_FRAME,
+                                          DebugDraw::NumberOfPerFrameUniforms };
+            addDescriptorSet(renderer->Rend(), &setDesc, set);
+            return true;
+        });
+        m_perTextureViewDescriptorSet.Load(renderer->Rend(), [&](DescriptorSet** set) {
+            DescriptorSetDesc setDesc = { m_textureRootSignature.m_handle,
                                           DESCRIPTOR_UPDATE_FREQ_PER_FRAME,
                                           DebugDraw::NumberOfPerFrameUniforms };
             addDescriptorSet(renderer->Rend(), &setDesc, set);
             return true;
         });
 
+        for(auto& desc: m_perTextureDrawDescriptorSet) {
+            desc.Load(renderer->Rend(), [&](DescriptorSet** set) {
+                DescriptorSetDesc setDesc = { m_textureRootSignature.m_handle, DESCRIPTOR_UPDATE_FREQ_PER_BATCH, NumberOfTextureUnits };
+                addDescriptorSet(renderer->Rend(), &setDesc, set);
+                return true;
+            });
+        }
+
         for(uint32_t i = 0; i < DebugDraw::NumberOfPerFrameUniforms; i++) {
             std::array<DescriptorData, 1> params = {};
             params[0].pName = "perFrameConstants";
-            params[0].ppBuffers = &m_frameBufferUniform[i].m_handle;
-            updateDescriptorSet(renderer->Rend(), i, m_perFrameDescriptorSet.m_handle, params.size(), params.data());
+            params[0].ppBuffers = &m_viewBufferUniform[i].m_handle;
+            updateDescriptorSet(renderer->Rend(), i, m_perColorViewDescriptorSet.m_handle, params.size(), params.data());
+            updateDescriptorSet(renderer->Rend(), i, m_perTextureViewDescriptorSet.m_handle, params.size(), params.data());
         }
+        VertexLayout uvVertexLayout = {};
+#ifndef USE_THE_FORGE_LEGACY
+        vertexLayout.mBindingCount = 1;
+        vertexLayout.mBindings[0].mStride = sizeof(float3);
+#endif
+        uvVertexLayout.mAttribCount = 3;
+        uvVertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
+        uvVertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
+        uvVertexLayout.mAttribs[0].mBinding = 0;
+        uvVertexLayout.mAttribs[0].mLocation = 0;
+        uvVertexLayout.mAttribs[0].mOffset = 0;
+
+        uvVertexLayout.mAttribs[1].mSemantic = SEMANTIC_TEXCOORD0;
+        uvVertexLayout.mAttribs[1].mFormat = TinyImageFormat_R32G32_SFLOAT;
+        uvVertexLayout.mAttribs[1].mBinding = 0;
+        uvVertexLayout.mAttribs[1].mLocation = 1;
+        uvVertexLayout.mAttribs[1].mOffset = sizeof(float) * 3;
+
+        uvVertexLayout.mAttribs[2].mSemantic = SEMANTIC_COLOR;
+        uvVertexLayout.mAttribs[2].mFormat = TinyImageFormat_R32G32B32A32_SFLOAT;
+        uvVertexLayout.mAttribs[2].mBinding = 0;
+        uvVertexLayout.mAttribs[2].mLocation = 2;
+        uvVertexLayout.mAttribs[2].mOffset = (sizeof(float) * 3) + (sizeof(float) * 2);
+
         VertexLayout colorVertexLayout = {};
 #ifndef USE_THE_FORGE_LEGACY
         vertexLayout.mBindingCount = 1;
@@ -127,12 +192,14 @@ namespace hpl {
         colorVertexLayout.mAttribs[1].mLocation = 1;
         colorVertexLayout.mAttribs[1].mOffset = sizeof(float) * 3;
 
-
-
         BlendStateDesc blendStateDesc{};
         blendStateDesc.mSrcFactors[0] = BC_ONE;
-        blendStateDesc.mDstFactors[0] = BC_ZERO;
+        blendStateDesc.mDstFactors[0] = BC_ONE;
         blendStateDesc.mBlendModes[0] = BM_ADD;
+
+        blendStateDesc.mSrcAlphaFactors[0] = BC_ONE;
+        blendStateDesc.mDstAlphaFactors[0] = BC_ONE;
+        blendStateDesc.mBlendAlphaModes[0] = BM_ADD;
 #ifdef USE_THE_FORGE_LEGACY
         blendStateDesc.mMasks[0] = RED | GREEN | BLUE;
 #else
@@ -163,12 +230,43 @@ namespace hpl {
             pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
             pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
             pipelineSettings.mSampleQuality = 0;
-            pipelineSettings.pRootSignature = m_rootSignature.m_handle;
+            pipelineSettings.pRootSignature = m_colorRootSignature.m_handle;
             pipelineSettings.pShaderProgram = m_color2DShader.m_handle;
             pipelineSettings.pRasterizerState = &rasterizerStateDesc;
             pipelineSettings.pVertexLayout = &colorVertexLayout;
 
             m_solidColorPipeline[depth].Load(renderer->Rend(), [&](Pipeline** pipline) {
+                addPipeline(renderer->Rend(), &pipelineDesc, pipline);
+                return true;
+            });
+        }
+        for(size_t depth = 0; depth < static_cast<size_t>(DebugDepthTest::Count); depth++){
+
+            DepthStateDesc depthStateDesc = {};
+            depthStateDesc.mDepthTest = true;
+            depthStateDesc.mDepthWrite = false;
+            depthStateDesc.mDepthFunc = details::toCompareMode(static_cast<DebugDraw::DebugDepthTest>(depth));
+
+            RasterizerStateDesc rasterizerStateDesc = {};
+            rasterizerStateDesc.mFillMode = FILL_MODE_SOLID;
+
+            PipelineDesc pipelineDesc = {};
+            pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+            auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
+            pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+            pipelineSettings.mRenderTargetCount = colorFormats.size();
+            pipelineSettings.pColorFormats = colorFormats.data();
+            pipelineSettings.pDepthState = &depthStateDesc;
+            pipelineSettings.pBlendState = &blendStateDesc;
+            pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
+            pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
+            pipelineSettings.mSampleQuality = 0;
+            pipelineSettings.pRootSignature = m_textureRootSignature.m_handle;
+            pipelineSettings.pShaderProgram = m_textureShader.m_handle;
+            pipelineSettings.pRasterizerState = &rasterizerStateDesc;
+            pipelineSettings.pVertexLayout = &uvVertexLayout;
+
+            m_texturePipeline[depth].Load(renderer->Rend(), [&](Pipeline** pipline) {
                 addPipeline(renderer->Rend(), &pipelineDesc, pipline);
                 return true;
             });
@@ -193,7 +291,7 @@ namespace hpl {
             pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
             pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
             pipelineSettings.mSampleQuality = 0;
-            pipelineSettings.pRootSignature = m_rootSignature.m_handle;
+            pipelineSettings.pRootSignature = m_colorRootSignature.m_handle;
             pipelineSettings.pShaderProgram = m_colorShader.m_handle;
             pipelineSettings.pRasterizerState = &rasterizerStateDesc;
             pipelineSettings.pVertexLayout = &colorVertexLayout;
@@ -223,7 +321,7 @@ namespace hpl {
             pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
             pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
             pipelineSettings.mSampleQuality = 0;
-            pipelineSettings.pRootSignature = m_rootSignature.m_handle;
+            pipelineSettings.pRootSignature = m_colorRootSignature.m_handle;
             pipelineSettings.pShaderProgram = m_color2DShader.m_handle;
             pipelineSettings.pRasterizerState = &rasterizerStateDesc;
             pipelineSettings.pVertexLayout = &colorVertexLayout;
@@ -323,7 +421,7 @@ namespace hpl {
         const Vector3& v4,
         const Vector2& uv0,
         const Vector2& uv1,
-        std::optional<SharedTexture> image,
+        SharedTexture image,
         const Vector4& aTint,
         const DebugDrawOptions& options) {
         Vector3 vv1 = (options.m_transform * Vector4(v1, 1.0f)).getXYZ();
@@ -332,14 +430,16 @@ namespace hpl {
         Vector3 vv4 = (options.m_transform * Vector4(v4, 1.0f)).getXYZ();
         UVQuadRequest request = {};
         request.m_depthTest = options.m_depthTest;
-        request.m_v1 = Vector3(vv1.getX(), vv1.getY(), vv1.getZ());
-        request.m_v2 = Vector3(vv2.getX(), vv2.getY(), vv2.getZ());
-        request.m_v3 = Vector3(vv3.getX(), vv3.getY(), vv3.getZ());
-        request.m_v4 = Vector3(vv4.getX(), vv4.getY(), vv4.getZ());
+        UVQuadRequest::Quad quad = UVQuadRequest::Quad{};
+        quad.m_v1 = vv1;
+        quad.m_v2 = vv2;
+        quad.m_v3 = vv3;
+        quad.m_v4 = vv4;
         request.m_uv0 = Vector2(uv0.getX(), uv0.getY());
         request.m_uv1 = Vector2(uv1.getX(), uv1.getY());
         request.m_uvImage = image;
         request.m_color = aTint;
+        request.m_type = quad;
         m_uvQuads.push_back(request);
     }
 
@@ -385,27 +485,41 @@ namespace hpl {
         const Vector2& size,
         const Vector2& uv0,
         const Vector2& uv1,
-        std::optional<SharedTexture> image,
+        SharedTexture image,
         const Vector4& aTint,
         const DebugDrawOptions& options) {
-        Matrix4 rotation = Matrix4::identity(); // Eigen::Matrix4f::Identity();
-        rotation.setUpper3x3(Matrix3(
-            Vector3(m_view[0][0], m_view[0][1], m_view[0][2]),
-            Vector3(m_view[1][0], m_view[1][1], m_view[1][2]),
-            Vector3(m_view[2][0], m_view[2][1], m_view[2][2])));
 
-        Matrix4 billboard = Matrix4::identity();
-        billboard[3][1] = pos.getX();
-        billboard[3][2] = pos.getY();
-        billboard[3][3] = pos.getZ();
-        Matrix4 transform = billboard * rotation;
+        UVQuadRequest request = {};
+        request.m_depthTest = options.m_depthTest;
+        UVQuadRequest::Billboard billboard = UVQuadRequest::Billboard {};
+        billboard.m_pos = pos;
+        billboard.m_transform = options.m_transform;
+        billboard.m_size = size;
+        request.m_type = billboard;
+        request.m_uv0 = uv0;
+        request.m_uv1 = uv1;
+        request.m_uvImage = image;
+        request.m_color = aTint;
+        m_uvQuads.push_back(request);
 
-        Vector2 halfSize = Vector2(size.getX() / 2.0f, size.getY() / 2.0f);
-        Vector4 v1 = (transform * Vector4(halfSize.getX(), halfSize.getY(), 0, 1));
-        Vector4 v2 = (transform * Vector4(-halfSize.getX(), halfSize.getY(), 0, 1));
-        Vector4 v3 = (transform * Vector4(halfSize.getX(), -halfSize.getY(), 0, 1));
-        Vector4 v4 = (transform * Vector4(-halfSize.getX(), -halfSize.getY(), 0, 1));
-        DrawQuad(v1.getXYZ(), v2.getXYZ(), v3.getXYZ(), v4.getXYZ(), uv0, uv1, image, aTint, options);
+       // Matrix4 rotation = Matrix4::identity(); // Eigen::Matrix4f::Identity();
+       // rotation.setUpper3x3(Matrix3(
+       //     Vector3(m_view[0][0], m_view[0][1], m_view[0][2]),
+       //     Vector3(m_view[1][0], m_view[1][1], m_view[1][2]),
+       //     Vector3(m_view[2][0], m_view[2][1], m_view[2][2])));
+
+       // Matrix4 billboard = Matrix4::identity();
+       // billboard[3][1] = pos.getX();
+       // billboard[3][2] = pos.getY();
+       // billboard[3][3] = pos.getZ();
+       // Matrix4 transform = billboard * rotation;
+
+       // Vector2 halfSize = Vector2(size.getX() / 2.0f, size.getY() / 2.0f);
+       // Vector4 v1 = (transform * Vector4(halfSize.getX(), halfSize.getY(), 0, 1));
+       // Vector4 v2 = (transform * Vector4(-halfSize.getX(), halfSize.getY(), 0, 1));
+       // Vector4 v3 = (transform * Vector4(halfSize.getX(), -halfSize.getY(), 0, 1));
+       // Vector4 v4 = (transform * Vector4(-halfSize.getX(), -halfSize.getY(), 0, 1));
+       // DrawQuad(v1.getXYZ(), v2.getXYZ(), v3.getXYZ(), v4.getXYZ(), uv0, uv1, image, aTint, options);
     }
 
     void DebugDraw::DebugDrawSphere(const Vector3& pos, float radius, const Vector4& color, const DebugDrawOptions& options) {
@@ -509,12 +623,19 @@ namespace hpl {
         }
     }
 
-    void DebugDraw::flush(Cmd* cmd, const cViewport& viewport, const cFrustum& frustum, SharedRenderTarget& targetBuffer, SharedRenderTarget& depthBuffer) {
+    void DebugDraw::flush(const ForgeRenderer::Frame& frame, Cmd* cmd, const cViewport& viewport, const cFrustum& frustum, SharedRenderTarget& targetBuffer, SharedRenderTarget& depthBuffer) {
+        if (frame.m_currentFrame != m_activeFrame) {
+            m_textureLookup.clear();
+            m_textureId = 0;
+            m_activeFrame = frame.m_currentFrame;
+        }
         m_frameIndex = (m_frameIndex + 1) % NumberOfPerFrameUniforms;
         const cMatrixf mainFrustumView = frustum.GetViewMatrix();
         const cMatrixf mainFrustumProj = frustum.GetProjectionMatrix();
+
+        const Matrix4 view = cMath::ToForgeMat(frustum.GetViewMatrix().GetTranspose());
         {
-            BufferUpdateDesc updateDesc = { m_frameBufferUniform[m_frameIndex].m_handle, 0, sizeof(FrameUniformBuffer)};
+            BufferUpdateDesc updateDesc = { m_viewBufferUniform[m_frameIndex].m_handle, 0, sizeof(FrameUniformBuffer)};
             beginUpdateResource(&updateDesc);
             FrameUniformBuffer  uniformData;
             uniformData.m_viewProjMat = cMath::ToForgeMat(cMath::MatrixMul(mainFrustumProj, mainFrustumView).GetTranspose());
@@ -535,7 +656,6 @@ namespace hpl {
         cmdSetScissor(cmd, 0, 0, static_cast<float>(targetBuffer.m_handle->mWidth), static_cast<float>(targetBuffer.m_handle->mHeight));
 
         if(!m_colorTriangles.empty()) {
-
             size_t vertexBufferOffset = 0;
             size_t indexBufferOffset = 0;
             struct PositionColorVertex {
@@ -550,7 +670,7 @@ namespace hpl {
             const size_t numVertices = m_colorTriangles.size() * 3;
             const size_t numIndices = m_colorTriangles.size() * 3;
             const size_t vertexBufferSize = sizeof(PositionColorVertex) * numVertices;
-            const size_t indexBufferSize = sizeof(uint32_t) * numIndices;
+            const size_t indexBufferSize = sizeof(uint16_t) * numIndices;
 			const uint32_t vertexBufferStride = sizeof(PositionColorVertex);
 
 		    GPURingBufferOffset vb = getGPURingBufferOffset(m_vertexBuffer, vertexBufferSize);
@@ -589,7 +709,7 @@ namespace hpl {
                 } while (it != m_colorTriangles.end() && it->m_depthTest == lastIt->m_depthTest);
 
                 cmdBindPipeline(cmd, m_solidColorPipeline[static_cast<size_t>(lastIt->m_depthTest)].m_handle);
-                cmdBindDescriptorSet(cmd, m_frameIndex, m_perFrameDescriptorSet.m_handle);
+                cmdBindDescriptorSet(cmd, m_frameIndex, m_perColorViewDescriptorSet.m_handle);
 			    cmdBindVertexBuffer(cmd, 1, &vb.pBuffer, &vertexBufferStride, &vb.mOffset);
 			    cmdBindIndexBuffer(cmd, ib.pBuffer, INDEX_TYPE_UINT16, ib.mOffset);
 
@@ -670,7 +790,7 @@ namespace hpl {
                 } while (it != m_colorQuads.end() && it->m_depthTest == lastIt->m_depthTest);
 
                 cmdBindPipeline(cmd, m_solidColorPipeline[static_cast<size_t>(lastIt->m_depthTest)].m_handle);
-                cmdBindDescriptorSet(cmd, m_frameIndex, m_perFrameDescriptorSet.m_handle);
+                cmdBindDescriptorSet(cmd, m_frameIndex, m_perColorViewDescriptorSet.m_handle);
 			    cmdBindVertexBuffer(cmd, 1, &vb.pBuffer, &vertexBufferStride, &vb.mOffset);
 			    cmdBindIndexBuffer(cmd, ib.pBuffer, INDEX_TYPE_UINT16, ib.mOffset);
 
@@ -717,11 +837,146 @@ namespace hpl {
             endUpdateResource(&vertexUpdateDesc, nullptr);
             endUpdateResource(&indexUpdateDesc, nullptr);
             cmdBindPipeline(cmd, m_lineSegmentPipeline2D.m_handle);
-            cmdBindDescriptorSet(cmd, m_frameIndex, m_perFrameDescriptorSet.m_handle);
+            cmdBindDescriptorSet(cmd, m_frameIndex, m_perColorViewDescriptorSet.m_handle);
 			cmdBindVertexBuffer(cmd, 1, &vb.pBuffer, &stride, &vb.mOffset);
 			cmdBindIndexBuffer(cmd, ib.pBuffer, INDEX_TYPE_UINT16, ib.mOffset);
 
             cmdDrawIndexed(cmd, numVertices, 0, 0);
+        }
+
+        if(!m_uvQuads.empty()) {
+            struct UVVertex {
+                float3 position;
+                float2 uv;
+                float4 color;
+            };
+            std::sort(m_uvQuads.begin(), m_uvQuads.end(), [](const UVQuadRequest& a, const UVQuadRequest& b) {
+                if(a.m_uvImage.m_handle != b.m_uvImage.m_handle) {
+                    return a.m_uvImage.m_handle < b.m_uvImage.m_handle;
+                }
+                return a.m_depthTest < b.m_depthTest;
+            });
+
+            const size_t vertexBufferSize = sizeof(UVVertex) * (m_uvQuads.size() * 4);
+            const size_t indexBufferSize = sizeof(uint16_t) * (m_uvQuads.size() * 6);
+			const uint32_t vertexBufferStride = sizeof(UVVertex);
+		    GPURingBufferOffset vb = getGPURingBufferOffset(m_vertexBuffer, vertexBufferSize);
+		    GPURingBufferOffset ib = getGPURingBufferOffset(m_indexBuffer, indexBufferSize);
+            uint32_t indexBufferOffset = 0;
+            uint32_t vertexBufferOffset = 0;
+
+		    BufferUpdateDesc vertexUpdateDesc = { vb.pBuffer, vb.mOffset, vertexBufferSize};
+		    BufferUpdateDesc indexUpdateDesc = { ib.pBuffer, ib.mOffset, indexBufferSize};
+
+            beginUpdateResource(&vertexUpdateDesc);
+		    beginUpdateResource(&indexUpdateDesc);
+
+            auto it = m_uvQuads.begin();
+            auto lastIt = m_uvQuads.begin();
+            while (it != m_uvQuads.end()) {
+                size_t vertexBufferIndex = 0;
+                size_t indexBufferIndex = 0;
+                do {
+
+                    std::visit([&](auto& type) {
+                        using T = std::decay_t<decltype(type)>;
+                        if constexpr (std::is_same_v<T, UVQuadRequest::Quad>) {
+                            reinterpret_cast<UVVertex*>(vertexUpdateDesc.pMappedData)[vertexBufferOffset + (vertexBufferIndex++)] = UVVertex {
+                                float3(type.m_v1.getX(), type.m_v1.getY(), type.m_v1.getZ()),
+                                float2(it->m_uv0.getX(), it->m_uv0.getY()),
+                                float4(it->m_color.getX(),it->m_color.getY(),it->m_color.getZ(),it->m_color.getW())
+                            };
+                            reinterpret_cast<UVVertex*>(vertexUpdateDesc.pMappedData)[vertexBufferOffset + (vertexBufferIndex++)] = UVVertex {
+                                float3(type.m_v2.getX(), type.m_v2.getY(), type.m_v2.getZ()),
+                                float2(it->m_uv1.getX(), it->m_uv0.getY()),
+                                float4(it->m_color.getX(),it->m_color.getY(),it->m_color.getZ(),it->m_color.getW())
+                            };
+                            reinterpret_cast<UVVertex*>(vertexUpdateDesc.pMappedData)[vertexBufferOffset + (vertexBufferIndex++)] = UVVertex {
+                                float3(type.m_v3.getX(), type.m_v3.getY(), type.m_v3.getZ()),
+                                float2(it->m_uv0.getX(), it->m_uv1.getY()),
+                                float4(it->m_color.getX(),it->m_color.getY(),it->m_color.getZ(),it->m_color.getW())
+                            };
+                            reinterpret_cast<UVVertex*>(vertexUpdateDesc.pMappedData)[vertexBufferOffset + (vertexBufferIndex++)] = UVVertex {
+                                float3(type.m_v4.getX(), type.m_v4.getY(), type.m_v4.getZ()),
+                                float2(it->m_uv1.getX(), it->m_uv1.getY()),
+                                float4(it->m_color.getX(),it->m_color.getY(),it->m_color.getZ(),it->m_color.getW())
+                            };
+                        } else if constexpr (std::is_same_v<T, UVQuadRequest::Billboard>) {
+                            Matrix4 rotation = Matrix4::identity(); // Eigen::Matrix4f::Identity();
+                            rotation.setUpper3x3(Matrix3(
+                                Vector3(view[0][0], view[1][0], view[2][0]),
+                                Vector3(view[0][1], view[1][1], view[2][1]),
+                                Vector3(view[0][2], view[1][2], view[2][2])));
+
+                            Matrix4 billboard = Matrix4::identity();
+                            billboard.setTranslation(type.m_pos);
+                            Matrix4 transform = billboard * rotation;
+
+                            Vector2 halfSize = Vector2(type.m_size.getX() / 2.0f, type.m_size.getY() / 2.0f);
+                            Vector4 v1 = ((type.m_transform * transform ) * Vector4(halfSize.getX(), halfSize.getY(), 0, 1));
+                            Vector4 v2 = ((type.m_transform * transform ) * Vector4(-halfSize.getX(), halfSize.getY(), 0, 1));
+                            Vector4 v3 = ((type.m_transform * transform ) * Vector4(halfSize.getX(), -halfSize.getY(), 0, 1));
+                            Vector4 v4 = ((type.m_transform * transform ) * Vector4(-halfSize.getX(), -halfSize.getY(), 0, 1));
+
+                            reinterpret_cast<UVVertex*>(vertexUpdateDesc.pMappedData)[vertexBufferOffset + (vertexBufferIndex++)] = UVVertex {
+                                float3(v1.getX(), v1.getY(), v1.getZ()),
+                                float2(it->m_uv0.getX(), it->m_uv0.getY()),
+                                float4(it->m_color.getX(),it->m_color.getY(),it->m_color.getZ(),it->m_color.getW())
+                            };
+                            reinterpret_cast<UVVertex*>(vertexUpdateDesc.pMappedData)[vertexBufferOffset + (vertexBufferIndex++)] = UVVertex {
+                                float3(v2.getX(), v2.getY(), v2.getZ()),
+                                float2(it->m_uv1.getX(), it->m_uv0.getY()),
+                                float4(it->m_color.getX(),it->m_color.getY(),it->m_color.getZ(),it->m_color.getW())
+                            };
+                            reinterpret_cast<UVVertex*>(vertexUpdateDesc.pMappedData)[vertexBufferOffset + (vertexBufferIndex++)] = UVVertex {
+                                float3(v3.getX(), v3.getY(), v3.getZ()),
+                                float2(it->m_uv0.getX(), it->m_uv1.getY()),
+                                float4(it->m_color.getX(),it->m_color.getY(),it->m_color.getZ(),it->m_color.getW())
+                            };
+                            reinterpret_cast<UVVertex*>(vertexUpdateDesc.pMappedData)[vertexBufferOffset + (vertexBufferIndex++)] = UVVertex {
+                                float3(v4.getX(), v4.getY(), v4.getZ()),
+                                float2(it->m_uv1.getX(), it->m_uv1.getY()),
+                                float4(it->m_color.getX(),it->m_color.getY(),it->m_color.getZ(),it->m_color.getW())
+                            };
+                        }
+                    }, it->m_type);
+
+                    reinterpret_cast<uint16_t*>(indexUpdateDesc.pMappedData)[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex - 4;
+                    reinterpret_cast<uint16_t*>(indexUpdateDesc.pMappedData)[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex - 3;
+                    reinterpret_cast<uint16_t*>(indexUpdateDesc.pMappedData)[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex - 2;
+                    reinterpret_cast<uint16_t*>(indexUpdateDesc.pMappedData)[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex - 3;
+                    reinterpret_cast<uint16_t*>(indexUpdateDesc.pMappedData)[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex - 2;
+                    reinterpret_cast<uint16_t*>(indexUpdateDesc.pMappedData)[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex - 1;
+
+                    lastIt = it;
+                    it++;
+                } while (it != m_uvQuads.end() &&
+                    it->m_depthTest == lastIt->m_depthTest &&
+                    it->m_uvImage.m_handle == lastIt->m_uvImage.m_handle);
+
+                {
+                    std::array<DescriptorData, 1> params = {};
+                    params[0].pName = "diffuseMap";
+                    params[0].ppTextures = &lastIt->m_uvImage.m_handle;
+                    updateDescriptorSet(frame.m_renderer->Rend(), m_textureId, m_perTextureDrawDescriptorSet[frame.m_frameIndex].m_handle, params.size(), params.data());
+                }
+                frame.m_resourcePool->Push(lastIt->m_uvImage);
+                cmdBindPipeline(cmd, m_texturePipeline[static_cast<size_t>(lastIt->m_depthTest)].m_handle);
+                cmdBindDescriptorSet(cmd, m_frameIndex, m_perTextureViewDescriptorSet.m_handle);
+                cmdBindDescriptorSet(cmd, m_textureId, m_perTextureDrawDescriptorSet[frame.m_frameIndex].m_handle);
+			    cmdBindVertexBuffer(cmd, 1, &vb.pBuffer, &vertexBufferStride, &vb.mOffset);
+			    cmdBindIndexBuffer(cmd, ib.pBuffer, INDEX_TYPE_UINT16, ib.mOffset);
+
+                cmdDrawIndexed(cmd, indexBufferIndex, indexBufferOffset, vertexBufferOffset);
+
+                indexBufferOffset += indexBufferIndex;
+                vertexBufferOffset += vertexBufferIndex;
+                m_textureId++;
+            }
+            endUpdateResource(&vertexUpdateDesc, nullptr);
+            endUpdateResource(&indexUpdateDesc, nullptr);
+
+            //auto lookup = m_textureLookup.find(apObject);
         }
 
         if(!m_lineSegments.empty()) {
@@ -754,12 +1009,12 @@ namespace hpl {
                 size_t vertexBufferIndex = 0;
                 size_t indexBufferIndex = 0;
                 do {
-                    reinterpret_cast<uint16_t*>(indexUpdateDesc.pMappedData)[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex ;
+                    reinterpret_cast<uint32_t*>(indexUpdateDesc.pMappedData)[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex ;
                     reinterpret_cast<PositionColorVertex*>(vertexUpdateDesc.pMappedData)[vertexBufferOffset + (vertexBufferIndex++)] = PositionColorVertex {
                         float3(it->m_start.getX(), it->m_start.getY(), it->m_start.getZ()),
                         float4(it->m_color.getX(), it->m_color.getY(), it->m_color.getZ(), it->m_color.getW())
                     };
-                    reinterpret_cast<uint16_t*>(indexUpdateDesc.pMappedData)[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex;
+                    reinterpret_cast<uint32_t*>(indexUpdateDesc.pMappedData)[indexBufferOffset + (indexBufferIndex++)] = vertexBufferIndex;
                     reinterpret_cast<PositionColorVertex*>(vertexUpdateDesc.pMappedData)[vertexBufferOffset + (vertexBufferIndex++)] = PositionColorVertex {
                         float3(it->m_end.getX(), it->m_end.getY(), it->m_end.getZ()),
                         float4(it->m_color.getX(), it->m_color.getY(), it->m_color.getZ(), it->m_color.getW())
@@ -770,9 +1025,9 @@ namespace hpl {
                 } while (it != m_lineSegments.end() && it->m_depthTest == lastIt->m_depthTest);
 
                 cmdBindPipeline(cmd, m_linePipeline[static_cast<size_t>(lastIt->m_depthTest)].m_handle);
-                cmdBindDescriptorSet(cmd, m_frameIndex, m_perFrameDescriptorSet.m_handle);
+                cmdBindDescriptorSet(cmd, m_frameIndex, m_perColorViewDescriptorSet.m_handle);
 			    cmdBindVertexBuffer(cmd, 1, &vb.pBuffer, &vertexBufferStride, &vb.mOffset);
-			    cmdBindIndexBuffer(cmd, ib.pBuffer, INDEX_TYPE_UINT16, ib.mOffset);
+			    cmdBindIndexBuffer(cmd, ib.pBuffer, INDEX_TYPE_UINT32, ib.mOffset);
                 cmdDrawIndexed(cmd, indexBufferIndex, indexBufferOffset, vertexBufferOffset);
 
                 indexBufferOffset += indexBufferIndex;

@@ -6,4 +6,3 @@ CBUFFER(perFrameConstants, UPDATE_FREQ_PER_FRAME, b0, binding = 0)
     DATA(float4x4, viewProj2DMat, None);
 };
 
-RES(Tex2D(float4), diffuseMaps[MAX_TEXTURE_UNITS ], UPDATE_FREQ_PER_FRAME, t0, binding = 1);
