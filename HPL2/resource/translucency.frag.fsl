@@ -45,7 +45,7 @@ PsOut PS_MAIN(PsIn In)
 
     switch(blendMode) {
         case BLEND_MODE_ADD: {
-            finalColor.xyz *= finalAlpha * Get(lightLevel);
+            finalColor.xyz *= finalAlpha * Get(uniformObjectBuffer)[Get(objectId)].lightLevel;
             break;
         }
         case BLEND_MODE_MUL: {
@@ -53,18 +53,18 @@ PsOut PS_MAIN(PsIn In)
             break;
         }
         case BLEND_MODE_MULX2: {
-            float fBlendMulAlpha = Get(lightLevel) * finalAlpha;
+            float fBlendMulAlpha = Get(uniformObjectBuffer)[Get(objectId)].lightLevel * finalAlpha;
             finalColor.xyz = mul(finalColor.xyz, fBlendMulAlpha) + mul(float3(0.5,0.5,0.5), (1.0 - fBlendMulAlpha));
             break;
         }
         case BLEND_MODE_ALPHA: {
-            finalColor.xyz *= Get(lightLevel);
+            finalColor.xyz *= Get(uniformObjectBuffer)[Get(objectId)].lightLevel;
             finalColor.a *= finalAlpha;
             break;
         }
         case BLEND_MODE_PREMUL_ALPHA: {
             finalColor *= finalAlpha;
-            finalColor.xyz *= Get(lightLevel);
+            finalColor.xyz *= Get(uniformObjectBuffer)[Get(objectId)].lightLevel;
             break;
         }
     }
@@ -131,7 +131,7 @@ PsOut PS_MAIN(PsIn In)
             reflectionColor *= fEnvMapAlpha;
         }
         
-        finalColor.xyz += reflectionColor.xyz * fFresnel * finalAlpha * Get(lightLevel);
+        finalColor.xyz += reflectionColor.xyz * fFresnel * finalAlpha * Get(uniformObjectBuffer)[Get(objectId)].lightLevel;
         
         ///////////////////////////////
         //Rim reflections
@@ -140,7 +140,7 @@ PsOut PS_MAIN(PsIn In)
             float fRimLight = dot(screenNormal, float3(0.0, 0.0, -1.0));
             fRimLight = pow(1.0 - abs(fRimLight), Get(uniformMaterialBuffer)[materialID].rimMulPower) * Get(uniformMaterialBuffer)[materialID].rimMulLight;	
             
-            finalColor.xyz += reflectionColor.xyz * fRimLight * finalAlpha * Get(lightLevel);
+            finalColor.xyz += reflectionColor.xyz * fRimLight * finalAlpha * Get(uniformObjectBuffer)[Get(objectId)].lightLevel;
         }
     }
 

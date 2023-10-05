@@ -114,9 +114,7 @@ namespace hpl {
         struct MaterialRootConstant {
             uint32_t objectId;
             uint32_t m_options;
-            float m_afT;
             float m_sceneAlpha;
-            float m_lightLevel;
         };
         union UniformLightData {
             struct LightUniformCommon {
@@ -167,7 +165,8 @@ namespace hpl {
         struct UniformObject {
             float m_dissolveAmount;
             uint m_materialIndex;
-            uint pad[2];
+            float m_lightLevel;
+            uint pad;
             mat4 m_modelMat;
             mat4 m_invModelMat;
             mat4 m_uvMat;
@@ -188,6 +187,7 @@ namespace hpl {
 
             float2 viewTexel;
             float2 viewportSize;
+            float afT;
         };
         struct UniformFogData {
             mat4 m_mvp;

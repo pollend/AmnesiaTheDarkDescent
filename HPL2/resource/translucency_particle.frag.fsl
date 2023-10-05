@@ -36,7 +36,7 @@ float4 PS_MAIN(PsIn In)
 
     switch(blendMode) {
         case BLEND_MODE_ADD: {
-            finalColor.xyz *= finalAlpha*Get(lightLevel);
+            finalColor.xyz *= finalAlpha * Get(uniformObjectBuffer)[Get(objectId)].lightLevel;
             break;
         }
         case BLEND_MODE_MUL: {
@@ -44,18 +44,18 @@ float4 PS_MAIN(PsIn In)
             break;
         }
         case BLEND_MODE_MULX2: {
-            float fBlendMulAlpha = Get(lightLevel) * finalAlpha;
+            float fBlendMulAlpha = Get(uniformObjectBuffer)[Get(objectId)].lightLevel * finalAlpha;
             finalColor.xyz = mul(finalColor.xyz, fBlendMulAlpha) + mul(float3(0.5,0.5,0.5), (1.0 - fBlendMulAlpha));
             break;
         }
         case BLEND_MODE_ALPHA: {
-            finalColor.xyz *= Get(lightLevel);
+            finalColor.xyz *= Get(uniformObjectBuffer)[Get(objectId)].lightLevel;
             finalColor.a *= finalAlpha;
             break;
         }
         case BLEND_MODE_PREMUL_ALPHA: {
            finalColor *= finalAlpha;
-           finalColor.xyz *= Get(lightLevel);
+           finalColor.xyz *= Get(uniformObjectBuffer)[Get(objectId)].lightLevel;
            break;
         }
     }

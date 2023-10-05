@@ -2487,6 +2487,7 @@ namespace hpl {
         uniformFrameData->m_invViewRotation = cMath::ToForgeMat((options.m_viewMat.GetTranspose()).GetRotation().GetTranspose());
         uniformFrameData->viewTexel = float2(1.0f / options.m_size.x, 1.0f / options.m_size.y);
         uniformFrameData->viewportSize = float2(options.m_size.x, options.m_size.y);
+        uniformFrameData->afT = GetTimeCount();
         const auto fogColor = apWorld->GetFogColor();
         uniformFrameData->fogColor = float4(fogColor.r, fogColor.g, fogColor.b, fogColor.a);
         endUpdateResource(&updatePerFrameConstantsDesc, NULL);
@@ -2515,13 +2516,8 @@ namespace hpl {
         cmdSetScissor(cmd, 0, 0, outputBuffer->mWidth, outputBuffer->mHeight);
         cmdBindPipeline(cmd, options.m_invert ? m_solidIlluminationPipelineCW.m_handle: m_solidIlluminationPipelineCCW.m_handle);
 
+        cmdBindDescriptorSet(cmd, frameDescriptorIndex, m_materialSet.m_frameSet[frame.m_frameIndex].m_handle);
 
-        // for DirectX12 these frame descriptors are not used so its ommitied for the draw
-//#if defined(VULKAN)
-//	    if (frame.m_renderer->GetApi() == RENDERER_API_VULKAN) {
-            cmdBindDescriptorSet(cmd, frameDescriptorIndex, m_materialSet.m_frameSet[frame.m_frameIndex].m_handle);
-//        }
-//#endif
         for (auto& illuminationItem : m_rendererList.GetRenderableItems(eRenderListType_Illumination)) {
             cMaterial* pMaterial = illuminationItem->GetMaterial();
             iVertexBuffer* vertexBuffer = illuminationItem->GetVertexBuffer();
@@ -2532,7 +2528,7 @@ namespace hpl {
             MaterialRootConstant materialConst = {};
             uint32_t instance = cmdBindMaterialAndObject(cmd, frame, pMaterial, illuminationItem);
             materialConst.objectId = instance;
-            materialConst.m_afT = illuminationItem->GetIlluminationAmount();
+            materialConst.m_sceneAlpha = illuminationItem->GetIlluminationAmount();
             std::array targets = {
                 eVertexBufferElement_Position,
                 eVertexBufferElement_Texture0,
@@ -3693,7 +3689,11 @@ namespace hpl {
     }
 
     uint32_t cRendererDeferred::cmdBindMaterialAndObject(
-        Cmd* cmd, const ForgeRenderer::Frame& frame, cMaterial* apMaterial, iRenderable* apObject, std::optional<cMatrixf> modelMatrix) {
+        Cmd* cmd,
+        const ForgeRenderer::Frame& frame,
+        cMaterial* apMaterial,
+        iRenderable* apObject,
+        std::optional<cMatrixf> modelMatrix) {
         uint32_t id = folly::hash::fnv32_buf(
             reinterpret_cast<const char*>(apObject),
             sizeof(apObject),
@@ -3704,7 +3704,6 @@ namespace hpl {
         auto& info = m_materialSet.m_materialInfo[apMaterial->Index()];
         auto& descInfo = info.m_materialDescInfo[frame.m_frameIndex];
         auto& materialDesc = apMaterial->Descriptor();
-
 
         auto metaInfo = std::find_if(cMaterial::MaterialMetaTable.begin(), cMaterial::MaterialMetaTable.end(), [&](auto& info) {
             return info.m_id == materialDesc.m_id;
@@ -3761,8 +3760,37 @@ namespace hpl {
             uniformObjectData.m_materialIndex = apMaterial->Index();
             uniformObjectData.m_modelMat = cMath::ToForgeMat4(modelMat.GetTranspose());
             uniformObjectData.m_invModelMat = cMath::ToForgeMat4(cMath::MatrixInverse(modelMat).GetTranspose());
+            uniformObjectData.m_lightLevel = 1.0f;
             if (apMaterial) {
                 uniformObjectData.m_uvMat = cMath::ToForgeMat4(apMaterial->GetUvMatrix());
+                if (apMaterial->IsAffectedByLightLevel()) {
+                    cVector3f vCenterPos = apObject->GetBoundingVolume()->GetWorldCenter();
+                    float fLightAmount = 0.0f;
+
+                    ////////////////////////////////////////
+                    // Iterate lights and add light amount
+                    for (auto& light : m_rendererList.GetLights()) {
+                        auto maxColorValue = [](const cColor& aCol) {
+                            return cMath::Max(cMath::Max(aCol.r, aCol.g), aCol.b);
+                        };
+                        // Check if there is an intersection
+                        if (light->CheckObjectIntersection(apObject)) {
+                            if (light->GetLightType() == eLightType_Box) {
+                                fLightAmount += maxColorValue(light->GetDiffuseColor());
+                            } else {
+                                float fDist = cMath::Vector3Dist(light->GetWorldPosition(), vCenterPos);
+
+                                fLightAmount += maxColorValue(light->GetDiffuseColor()) * cMath::Max(1.0f - (fDist / light->GetRadius()), 0.0f);
+                            }
+
+                            if (fLightAmount >= 1.0f) {
+                                fLightAmount = 1.0f;
+                                break;
+                            }
+                        }
+                    }
+                    uniformObjectData.m_lightLevel = fLightAmount;
+                }
             }
 
             BufferUpdateDesc updateDesc = { m_objectUniformBuffer[frame.m_frameIndex].m_handle,
@@ -4580,37 +4608,6 @@ void cRendererDeferred::Draw(
                 sceneAlpha *= detail::GetFogAreaVisibilityForObject(fogArea, *apFrustum, translucencyItem);
             }
             materialConst.m_sceneAlpha = sceneAlpha;
-            materialConst.m_lightLevel = 1.0f;
-
-            if (pMaterial->IsAffectedByLightLevel()) {
-                cVector3f vCenterPos = translucencyItem->GetBoundingVolume()->GetWorldCenter();
-                float fLightAmount = 0.0f;
-
-                ////////////////////////////////////////
-                // Iterate lights and add light amount
-                for (auto& light : m_rendererList.GetLights()) {
-                    auto maxColorValue = [](const cColor& aCol) {
-                        return cMath::Max(cMath::Max(aCol.r, aCol.g), aCol.b);
-                    };
-                    // Check if there is an intersection
-                    if (light->CheckObjectIntersection(translucencyItem)) {
-                        if (light->GetLightType() == eLightType_Box) {
-                            fLightAmount += maxColorValue(light->GetDiffuseColor());
-                        } else {
-                            float fDist = cMath::Vector3Dist(light->GetWorldPosition(), vCenterPos);
-
-                            fLightAmount += maxColorValue(light->GetDiffuseColor()) * cMath::Max(1.0f - (fDist / light->GetRadius()), 0.0f);
-                        }
-
-                        if (fLightAmount >= 1.0f) {
-                            fLightAmount = 1.0f;
-                            break;
-                        }
-                    }
-                }
-                materialConst.m_lightLevel = fLightAmount;
-            }
-            materialConst.m_afT = GetTimeCount();
 
             switch (pMaterial->Descriptor().m_id) {
             case MaterialID::Translucent:

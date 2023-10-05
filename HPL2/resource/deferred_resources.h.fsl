@@ -26,13 +26,14 @@ CBUFFER(perFrameConstants, UPDATE_FREQ_PER_FRAME, b0, binding = 0)
 
     DATA(float2, viewTexel, None);
     DATA(float2, viewportSize, None);
+    DATA(float, afT, None);
 };
 
 STRUCT(UniformObject) 
 {
     DATA(float, dissolveAmount, None);
     DATA(uint, materialID, None);
-    DATA(uint, __pad0, None);
+    DATA(float, lightLevel, None);
     DATA(uint, __pad1, None);
     DATA(float4x4, modelMat, None);
     DATA(float4x4, invModelMat, None);
@@ -119,9 +120,8 @@ PUSH_CONSTANT(materialRootConstant, b0)
 {
     DATA(uint, objectId, None);
     DATA(uint,  options,   None);
-    DATA(float, afT, None);
     DATA(float, sceneAlpha, None);
-    DATA(float, lightLevel, None);
+
 };
 
 // translucency 
