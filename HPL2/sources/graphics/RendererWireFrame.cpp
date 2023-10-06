@@ -302,12 +302,22 @@ namespace hpl {
             endUpdateResource(&updateDesc, NULL);
         }
 
+        {
+            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+            std::array rtBarriers = {
+                RenderTargetBarrier{ common->m_outputBuffer[frame.m_frameIndex].m_handle,
+                                     RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET,
+                                },
+            };
+            cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+        }
         uint32_t rootConstantIndex = getDescriptorIndexFromName(m_rootSignature.m_handle, "rootConstant");
         std::array targets = {
             common->m_outputBuffer[frame.m_frameIndex].m_handle,
         };
         LoadActionsDesc loadActions = {};
         loadActions.mLoadActionsColor[0] = LOAD_ACTION_CLEAR;
+        loadActions.mClearColorValues[0] =  ClearValue { .r = apSettings->mClearColor.r, .g = apSettings->mClearColor.g, .b = apSettings->mClearColor.b, .a = apSettings->mClearColor.a };
         cmdBindRenderTargets(frame.m_cmd, targets.size(), targets.data(), NULL, &loadActions, NULL, NULL, -1, -1);
         cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, static_cast<float>(common->m_size.x), static_cast<float>(common->m_size.y), 0.0f, 1.0f);
         cmdSetScissor(frame.m_cmd, 0, 0, common->m_size.x, common->m_size.y);
@@ -355,6 +365,15 @@ namespace hpl {
         viewport.SignalDraw(translucenceEvent);
         m_debug->flush(frame, frame.m_cmd, viewport, *apFrustum, common->m_outputBuffer[frame.m_frameIndex], invalidTarget);
 
+        {
+            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+            std::array rtBarriers = {
+                RenderTargetBarrier{ common->m_outputBuffer[frame.m_frameIndex].m_handle,
+                                      RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE,
+                                },
+            };
+            cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+        }
         // mpCurrentRenderList->Setup(mfCurrentFrameTime,apFrustum);
 
         // rendering::detail::UpdateRenderListWalkAllNodesTestFrustumAndVisibility(

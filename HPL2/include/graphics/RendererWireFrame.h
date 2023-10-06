@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include "graphics/Color.h"
 #include "graphics/ForgeHandles.h"
 #include "graphics/ForgeRenderer.h"
 #include "graphics/Image.h"
@@ -63,7 +64,8 @@ namespace hpl {
             ViewportData(const ViewportData&) = delete;
             ViewportData(ViewportData&& buffer)
                 : m_size(buffer.m_size)
-                , m_outputBuffer(std::move(buffer.m_outputBuffer)) {
+                , m_outputBuffer(std::move(buffer.m_outputBuffer))
+                , m_clearColor(buffer.m_clearColor) {
             }
 
             ViewportData& operator=(const ViewportData&) = delete;
@@ -71,8 +73,10 @@ namespace hpl {
             void operator=(ViewportData&& buffer) {
                 m_size = buffer.m_size;
                 m_outputBuffer = std::move(buffer.m_outputBuffer);
+                m_clearColor = buffer.m_clearColor;
             }
 
+            cColor m_clearColor = cColor(0, 0);
             cVector2l m_size = cVector2l(0, 0);
             std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_outputBuffer;
         };
