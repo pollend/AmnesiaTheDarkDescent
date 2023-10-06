@@ -24,7 +24,6 @@
 
 #include "EditorGrid.h"
 
-//#include "EditorActionSelectionTranslate.h"
 #include "EditorActionSelection.h"
 #include "EditorSelection.h"
 
@@ -34,14 +33,11 @@ cEditorEditModeSelectToolTranslate::cEditorEditModeSelectToolTranslate(cEditorEd
 {
 }
 
-//----------------------------------------------------------------
 
 bool cEditorEditModeSelectToolTranslate::IsActive()
 {
 	return mpSelection->CanTranslate();
 }
-
-//----------------------------------------------------------------
 
 bool cEditorEditModeSelectToolTranslate::CheckRayIntersectsAxis(eSelectToolAxis aeAxis, const cVector3f& avRayStart, const cVector3f& avRayEnd)
 {
@@ -51,7 +47,6 @@ bool cEditorEditModeSelectToolTranslate::CheckRayIntersectsAxis(eSelectToolAxis 
 	return cMath::CheckAABBLineIntersection(vMin,vMax,avRayStart,avRayEnd, NULL, NULL);
 }
 
-//----------------------------------------------------------------
 
 void cEditorEditModeSelectToolTranslate::CheckMouseOverAxis()
 {
@@ -247,7 +242,7 @@ void cEditorEditModeSelectToolTranslate::DrawAxes(cEditorWindowViewport* apViewp
 		//apFunctions->GetLowLevelGfx()->DrawBoxMinMax(mvHeadMin[i], mvHeadMax[i], cColor(1,1));
 	}
 
-	auto drawArrowGeometry = [&](const cColor& c, const DebugDraw::DebugDrawOptions& options) {
+	const auto drawArrowGeometry = [&](const cColor& c, const DebugDraw::DebugDrawOptions& options) {
 		apFunctions->DrawQuad(
 			Vector3(0,0,0),
 			Vector3(-fX,fYZ,fYZ),

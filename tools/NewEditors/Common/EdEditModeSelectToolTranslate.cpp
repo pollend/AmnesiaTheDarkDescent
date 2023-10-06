@@ -22,7 +22,6 @@
 #include "../Common/EdWindowViewport.h"
 #include "../Common/EdCamera.h"
 #include "../Common/EdScnObject.h"
-//#include "../Common/EdEditModeSelect.h"
 
 #include "../Common/Editor.h"
 

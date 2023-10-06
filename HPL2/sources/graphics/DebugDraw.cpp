@@ -67,15 +67,15 @@ namespace hpl {
         });
 	    m_colorShader.Load(renderer->Rend(), [&](Shader** shader) {
             ShaderLoadDesc loadDesc = {};
-            loadDesc.mStages[0].pFileName = "debug_line.vert";
-            loadDesc.mStages[1].pFileName = "debug_line.frag";
+            loadDesc.mStages[0].pFileName = "debug.vert";
+            loadDesc.mStages[1].pFileName = "debug.frag";
             addShader(renderer->Rend(), &loadDesc, shader);
             return true;
 	    });
 	    m_color2DShader.Load(renderer->Rend(), [&](Shader** shader) {
             ShaderLoadDesc loadDesc = {};
-            loadDesc.mStages[0].pFileName = "debug_line_2D.vert";
-            loadDesc.mStages[1].pFileName = "debug_line.frag";
+            loadDesc.mStages[0].pFileName = "debug_2D.vert";
+            loadDesc.mStages[1].pFileName = "debug.frag";
             addShader(renderer->Rend(), &loadDesc, shader);
             return true;
 	    });
@@ -223,7 +223,7 @@ namespace hpl {
             PipelineDesc pipelineDesc = {};
             pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
             auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
-            pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_LINE_LIST;
+            pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
             pipelineSettings.mRenderTargetCount = colorFormats.size();
             pipelineSettings.pColorFormats = colorFormats.data();
             pipelineSettings.pDepthState = &depthStateDesc;
@@ -232,7 +232,7 @@ namespace hpl {
             pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
             pipelineSettings.mSampleQuality = 0;
             pipelineSettings.pRootSignature = m_colorRootSignature.m_handle;
-            pipelineSettings.pShaderProgram = m_color2DShader.m_handle;
+            pipelineSettings.pShaderProgram = m_colorShader.m_handle;
             pipelineSettings.pRasterizerState = &rasterizerStateDesc;
             pipelineSettings.pVertexLayout = &colorVertexLayout;
 
