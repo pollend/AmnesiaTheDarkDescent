@@ -432,7 +432,7 @@ void cEntityWrapperBillboard::Draw(cEditorWindowViewport* apViewport, DebugDraw*
 		mtxTransform.SetTranslation(mvPosition);
 		cVector3f vHalfHaloSourceSize = mvHaloSourceSize*0.5f;
 		DebugDraw::DebugDrawOptions options;
-		options.m_transform = cMath::ToForgeMat(mtxTransform.GetTranspose());
+		options.m_transform = cMath::ToForgeMat4(mtxTransform.GetTranspose());
 		apFunctions->DebugDrawBoxMinMax(cMath::ToForgeVec3(vHalfHaloSourceSize*-1), cMath::ToForgeVec3(vHalfHaloSourceSize), Vector4(0,1,0,1), options);
 	}
 }

@@ -42,8 +42,6 @@
 namespace hpl {
 
     cPostEffectComposite::cPostEffectComposite(cGraphics* apGraphics) {
-        mpGraphics = apGraphics;
-        SetupRenderFunctions(mpGraphics->GetLowLevel());
     }
 
     cPostEffectComposite::~cPostEffectComposite() {

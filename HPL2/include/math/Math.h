@@ -39,12 +39,19 @@ namespace hpl {
 	class cMath
 	{
 	public:
-		static mat4 ToForgeMat(const cMatrixf& mat) {
-			return mat4(
+		static Matrix4 ToForgeMat4(const cMatrixf& mat) {
+			return Matrix4 (
 				Vector4(mat.m[0][0], mat.m[0][1], mat.m[0][2], mat.m[0][3]),
 				Vector4(mat.m[1][0], mat.m[1][1], mat.m[1][2], mat.m[1][3]),
 				Vector4(mat.m[2][0], mat.m[2][1], mat.m[2][2], mat.m[2][3]),
 				Vector4(mat.m[3][0], mat.m[3][1], mat.m[3][2], mat.m[3][3])
+			);
+		}
+		static Matrix3 ToForgeMat3(const cMatrixf& mat) {
+			return Matrix3(
+				Vector3(mat.m[0][0], mat.m[0][1], mat.m[0][2]),
+				Vector3(mat.m[1][0], mat.m[1][1], mat.m[1][2]),
+				Vector3(mat.m[2][0], mat.m[2][1], mat.m[2][2])
 			);
 		}
 
@@ -963,9 +970,7 @@ namespace hpl {
 		 */
 		static cMatrixf MatrixInverse(const cMatrixf &a_mtxA);
 
-		static mat4 ToForgeMat4(const cMatrixf &a_mtxA);
-		static mat3 ToForgeMat3(const cMatrixf &a_mtxA);
-		/**
+        /**
 		 * A mirror matrix for a plane
 		 */
 		static cMatrixf MatrixPlaneMirror(const cPlanef &aPlane);

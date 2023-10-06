@@ -231,7 +231,7 @@ void cEditorEditModeSelectToolTranslate::DrawAxes(cEditorWindowViewport* apViewp
 
 	cMatrixf mtxTransform = cMath::MatrixTranslate(mpSelection->GetCenterTranslation());
 	DebugDraw::DebugDrawOptions options;
-	options.m_transform = cMath::ToForgeMat(mtxTransform.GetTranspose());
+	options.m_transform = cMath::ToForgeMat4(mtxTransform.GetTranspose());
 	options.m_depthTest = DebugDraw::DebugDepthTest::Always;
 
 	for(int i=eSelectToolAxis_X; i<eSelectToolAxis_LastEnum; ++i)
@@ -290,13 +290,13 @@ void cEditorEditModeSelectToolTranslate::DrawAxes(cEditorWindowViewport* apViewp
 	cMatrixf mtxZAxisHeadTransform = cMath::MatrixMul(cMath::MatrixTranslate(cVector3f(0,0,afAxisLength)),
 													  cMath::MatrixMul(mtxTransform, cMath::MatrixRotate(cVector3f(0,-kPi2f,0),eEulerRotationOrder_XYZ)));
 
-	options.m_transform = cMath::ToForgeMat(mtxXAxisHeadTransform.GetTranspose());
+	options.m_transform = cMath::ToForgeMat4(mtxXAxisHeadTransform.GetTranspose());
 	drawArrowGeometry(col[0], options);
 
-	options.m_transform = cMath::ToForgeMat(mtxYAxisHeadTransform.GetTranspose());
+	options.m_transform = cMath::ToForgeMat4(mtxYAxisHeadTransform.GetTranspose());
 	drawArrowGeometry(col[1], options);
 
-	options.m_transform = cMath::ToForgeMat(mtxZAxisHeadTransform.GetTranspose());
+	options.m_transform = cMath::ToForgeMat4(mtxZAxisHeadTransform.GetTranspose());
 	drawArrowGeometry(col[2], options);
 }
 

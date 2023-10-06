@@ -25,6 +25,7 @@
 #include "graphics/RenderTarget.h"
 #include "graphics/Renderer.h"
 #include <graphics/RenderList.h>
+#include <memory>
 
 namespace hpl {
 
@@ -50,7 +51,10 @@ namespace hpl {
             mat4 m_modelMat;
         };
 
-		cRendererWireFrame(cGraphics *apGraphics,cResources* apResources);
+		cRendererWireFrame(
+		    cGraphics *apGraphics,
+		    cResources* apResources,
+		    std::shared_ptr<DebugDraw> debug);
 		~cRendererWireFrame();
 
         struct ViewportData {
@@ -99,6 +103,7 @@ namespace hpl {
         cRenderList m_rendererList;
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_objectUniformBuffer;
         folly::F14ValueMap<iRenderable*, uint32_t> m_objectDescriptorLookup;
+        std::shared_ptr<DebugDraw> m_debug;
 	};
 
 };

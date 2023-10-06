@@ -449,7 +449,7 @@ namespace hpl {
 			cVector2f avViewportToWorld;
 			avViewportToWorld.y = afNormalizedSlope * mfNearClipPlane * 2.0f;
 			avViewportToWorld.x = avViewportToWorld.y * mfAspect;
-	
+
 			cVector3f vDir(	vNormalizedScreen.x * avViewportToWorld.x,
 							vNormalizedScreen.y * avViewportToWorld.y,
 							-mfNearClipPlane);

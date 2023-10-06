@@ -1050,13 +1050,6 @@ void iEditorViewport::SetClearColor(const cColor& aX)
 	mpEngineViewport->GetRenderSettings()->mClearColor = clearCol;
 }
 
-//-------------------------------------------------------------
-
-//-------------------------------------------------------------
-
-//-------------------------------------------------------------
-
-//-------------------------------------------------------------
 
 bool iEditorViewport::Viewport_OnUpdate(iWidget* apWidget, const cGuiMessageData& aData)
 {

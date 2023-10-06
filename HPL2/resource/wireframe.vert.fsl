@@ -32,6 +32,6 @@ VSOutput VS_MAIN(VSInput In)
     float4x4 modelViewPrj = mul(Get(viewProjMat), Get(uniformObjectBuffer)[Get(objectId)].modelMat);
     VSOutput Out;
     Out.Position = mul(modelViewPrj, float4(In.Position.xyz, 1.0));
-    Out.Position.z = (Out.Position.z * 0.5) + 0.5;
+    //Out.Position.z = (Out.Position.z * 0.5) + 0.5;
     RETURN(Out);
 }

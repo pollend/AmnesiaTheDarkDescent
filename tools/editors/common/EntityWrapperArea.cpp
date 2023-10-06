@@ -309,7 +309,7 @@ void cEntityWrapperArea::Draw(cEditorWindowViewport* apViewport, DebugDraw* apFu
 
 	cMatrixf mtxRT = cMath::MatrixMul(cMath::MatrixTranslate(mvPosition), cMath::MatrixRotate(mvRotation, eEulerRotationOrder_XYZ));
 	DebugDraw::DebugDrawOptions options;
-	options.m_transform = cMath::ToForgeMat(mtxRT.GetTranspose());
+	options.m_transform = cMath::ToForgeMat4(mtxRT.GetTranspose());
 	apFunctions->DebugDrawLine(Vector3(-0.05f,0,0), Vector3(0.05f,0,0), cMath::ToForgeVec4(col), options);
 	apFunctions->DebugDrawLine(Vector3(0,-0.05f,0), Vector3(0,0.05f,0), cMath::ToForgeVec4(col), options);
 	apFunctions->DebugDrawLine(Vector3(0,0,-0.05f), Vector3(0,0,0.05f), cMath::ToForgeVec4(col), options);

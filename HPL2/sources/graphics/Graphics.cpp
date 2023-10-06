@@ -20,8 +20,10 @@
 #include "graphics/Graphics.h"
 
 #include "engine/EngineTypes.h"
+#include "engine/Interface.h"
 #include "engine/Updateable.h"
 
+#include "graphics/ForgeRenderer.h"
 #include "system/LowLevelSystem.h"
 #include "system/String.h"
 #include "system/Platform.h"
@@ -52,14 +54,10 @@
 #include "graphics/RendererDeferred.h"
 #include "graphics/RendererWireFrame.h"
 #include "graphics/RendererSimple.h"
+#include "graphics/DebugDraw.h"
+#include <memory>
 
 namespace hpl {
-
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	cGraphics::cGraphics(iLowLevelGraphics *apLowLevelGraphics, iLowLevelResources *apLowLevelResources)
 	{
@@ -160,9 +158,9 @@ namespace hpl {
 		{
 
 			mvRenderers.resize(2, NULL);
-
-			mvRenderers[eRenderer_Main] = new cRendererDeferred(this, apResources);
-		    mvRenderers[eRenderer_WireFrame] = new cRendererWireFrame(this, apResources);
+            m_debug = std::make_shared<DebugDraw>(Interface<ForgeRenderer>::Get());
+			mvRenderers[eRenderer_Main] = new cRendererDeferred(this, apResources, m_debug);
+		    mvRenderers[eRenderer_WireFrame] = new cRendererWireFrame(this, apResources, m_debug);
 
 			for(size_t i=0; i<mvRenderers.size(); ++i)
 			{

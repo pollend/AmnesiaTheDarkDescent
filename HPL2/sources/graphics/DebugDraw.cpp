@@ -1,6 +1,7 @@
 #include "graphics/DebugDraw.h"
 #include "Common_3/Graphics/Interfaces/IGraphics.h"
 #include "Common_3/Resources/ResourceLoader/Interfaces/IResourceLoader.h"
+#include "Common_3/Utilities/ThirdParty/OpenSource/ModifiedSonyMath/sse/vectormath.hpp"
 #include "graphics/VertexBuffer.h"
 
 #include "scene/Camera.h"
@@ -267,6 +268,36 @@ namespace hpl {
             pipelineSettings.pVertexLayout = &uvVertexLayout;
 
             m_texturePipeline[depth].Load(renderer->Rend(), [&](Pipeline** pipline) {
+                addPipeline(renderer->Rend(), &pipelineDesc, pipline);
+                return true;
+            });
+        }
+        {
+
+            DepthStateDesc depthStateDesc = {};
+            depthStateDesc.mDepthTest = false;
+            depthStateDesc.mDepthWrite = false;
+
+            RasterizerStateDesc rasterizerStateDesc = {};
+            rasterizerStateDesc.mFillMode = FILL_MODE_SOLID;
+
+            PipelineDesc pipelineDesc = {};
+            pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+            auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
+            pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+            pipelineSettings.mRenderTargetCount = colorFormats.size();
+            pipelineSettings.pColorFormats = colorFormats.data();
+            pipelineSettings.pDepthState = &depthStateDesc;
+            pipelineSettings.pBlendState = &blendStateDesc;
+            pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
+            pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
+            pipelineSettings.mSampleQuality = 0;
+            pipelineSettings.pRootSignature = m_textureRootSignature.m_handle;
+            pipelineSettings.pShaderProgram = m_textureShader.m_handle;
+            pipelineSettings.pRasterizerState = &rasterizerStateDesc;
+            pipelineSettings.pVertexLayout = &uvVertexLayout;
+
+            m_texturePipelineNoDepth.Load(renderer->Rend(), [&](Pipeline** pipline) {
                 addPipeline(renderer->Rend(), &pipelineDesc, pipline);
                 return true;
             });
@@ -611,19 +642,32 @@ namespace hpl {
             m_activeFrame = frame.m_currentFrame;
         }
         m_frameIndex = (m_frameIndex + 1) % NumberOfPerFrameUniforms;
-        const cMatrixf mainFrustumView = frustum.GetViewMatrix();
-        const cMatrixf mainFrustumProj = frustum.GetProjectionMatrix();
+        const Matrix4 matMainFrustumView = cMath::ToForgeMat4(frustum.GetViewMatrix().GetTranspose());
+        const Matrix4 matMainFrustumProj = cMath::ToForgeMat4(frustum.GetProjectionMatrix().GetTranspose());
 
-        const Matrix4 view = cMath::ToForgeMat(frustum.GetViewMatrix().GetTranspose());
+        Matrix4 correctionMatrix =
+            Matrix4(
+                Vector4(1.0f, 0, 0, 0),
+                Vector4(0, 1.0f, 0, 0),
+                Vector4(0, 0, 0.5f, 0),
+                Vector4(0, 0, 0.5f, 1.0f)
+            );
+
+
+        const Matrix4 view = cMath::ToForgeMat4(frustum.GetViewMatrix().GetTranspose());
         {
             BufferUpdateDesc updateDesc = { m_viewBufferUniform[m_frameIndex].m_handle, 0, sizeof(FrameUniformBuffer)};
             beginUpdateResource(&updateDesc);
             FrameUniformBuffer  uniformData;
-            uniformData.m_viewProjMat = cMath::ToForgeMat(cMath::MatrixMul(mainFrustumProj, mainFrustumView).GetTranspose());
+
+            uniformData.m_viewProjMat  = ((frustum.GetProjectionType() == eProjectionType_Perspective ? Matrix4::identity() : correctionMatrix) * matMainFrustumProj) * matMainFrustumView ;
+            //uniformData.m_viewProjMat = cMath::ToForgeMat4(cMath::MatrixMul(mainFrustumProj, mainFrustumView).GetTranspose());
             uniformData.m_viewProj2DMat = Matrix4::orthographic(0.0f, targetBuffer.m_handle->mWidth, targetBuffer.m_handle->mHeight,0.0f, -1000.0f, 1000.0f);
             (*reinterpret_cast<FrameUniformBuffer*>(updateDesc.pMappedData)) = uniformData;
             endUpdateResource(&updateDesc, NULL);
         }
+
+        const bool hasDepthBuffer = depthBuffer.IsValid();
 
         std::array targets = {
             targetBuffer.m_handle,
@@ -931,7 +975,7 @@ namespace hpl {
                     lastIt = it;
                     it++;
                 } while (it != m_uvQuads.end() &&
-                    it->m_depthTest == lastIt->m_depthTest &&
+                    (it->m_depthTest == lastIt->m_depthTest || !hasDepthBuffer) &&
                     it->m_uvImage.m_handle == lastIt->m_uvImage.m_handle);
 
                 {
@@ -941,7 +985,11 @@ namespace hpl {
                     updateDescriptorSet(frame.m_renderer->Rend(), m_textureId, m_perTextureDrawDescriptorSet[frame.m_frameIndex].m_handle, params.size(), params.data());
                 }
                 frame.m_resourcePool->Push(lastIt->m_uvImage);
-                cmdBindPipeline(cmd, m_texturePipeline[static_cast<size_t>(lastIt->m_depthTest)].m_handle);
+                if(hasDepthBuffer) {
+                    cmdBindPipeline(cmd, m_texturePipeline[static_cast<size_t>(lastIt->m_depthTest)].m_handle);
+                } else {
+                    cmdBindPipeline(cmd, m_texturePipelineNoDepth.m_handle);
+                }
                 cmdBindDescriptorSet(cmd, m_frameIndex, m_perTextureViewDescriptorSet.m_handle);
                 cmdBindDescriptorSet(cmd, m_textureId, m_perTextureDrawDescriptorSet[frame.m_frameIndex].m_handle);
 			    cmdBindVertexBuffer(cmd, 1, &vb.pBuffer, &vertexBufferStride, &vb.mOffset);

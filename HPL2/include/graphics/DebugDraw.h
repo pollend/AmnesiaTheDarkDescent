@@ -7,21 +7,19 @@
 #include "graphics/ForgeHandles.h"
 #include "graphics/ForgeRenderer.h"
 #include "graphics/Image.h"
-#include "scene/Camera.h"
 
 #include "math/MathTypes.h"
 #include "math/Matrix.h"
 
-#include "Common_3/Utilities/RingBuffer.h"
-#include "Common_3/Utilities/Math/MathTypes.h"
-#include "FixPreprocessor.h"
+#include "scene/Camera.h"
 #include "scene/Viewport.h"
 #include "tinyimageformat_base.h"
 
-class Texture;
+#include "Common_3/Utilities/RingBuffer.h"
+#include "Common_3/Utilities/Math/MathTypes.h"
+#include "FixPreprocessor.h"
 
-namespace hpl
-{
+namespace hpl {
 
 class DebugDraw final {
         HPL_RTTI_CLASS(iRenderer, "{3D3162A7-C473-4934-BCE0-5220A4FD0A76}")
@@ -163,6 +161,7 @@ class DebugDraw final {
         std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_perTextureDrawDescriptorSet;
         SharedShader m_textureShader;
         std::array<SharedPipeline, static_cast<uint32_t>(DebugDepthTest::Count)> m_texturePipeline;
+        SharedPipeline m_texturePipelineNoDepth;
         uint32_t m_textureId = 0;
 
         SharedSampler m_bilinearSampler;

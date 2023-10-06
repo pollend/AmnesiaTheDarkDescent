@@ -335,7 +335,10 @@ namespace hpl {
             std::shared_ptr<Image> m_refractionImage;
         };
 
-        cRendererDeferred(cGraphics* apGraphics, cResources* apResources);
+        cRendererDeferred(
+            cGraphics* apGraphics,
+            cResources* apResources,
+            std::shared_ptr<DebugDraw> debug);
         ~cRendererDeferred();
 
         inline ViewportData* GetSharedData(cViewport& viewport) {
@@ -374,6 +377,7 @@ namespace hpl {
         void RebuildGBuffer(ForgeRenderer& renderer,GBuffer& buffer, uint32_t width, uint32_t height);
         struct AdditionalGbufferPassOptions {
             bool m_invert = false;
+
         };
 
         void cmdBuildPrimaryGBuffer(const ForgeRenderer::Frame& frame, Cmd* cmd,
@@ -389,6 +393,7 @@ namespace hpl {
 
         struct AdditionalLightPassOptions {
             bool m_invert = false;
+            Vector4 m_clearColor = Vector4(0.0f,0.0f,0.0f,0.0f);
         };
         void cmdLightPass(Cmd* cmd,
             const ForgeRenderer::Frame& frame,
@@ -701,6 +706,6 @@ namespace hpl {
         cRenderList m_rendererList;
         cRenderList m_reflectionRendererList;
         std::unique_ptr<renderer::PassHBAOPlus> m_hbaoPlusPipeline;
-        std::unique_ptr<DebugDraw> m_debug;
+        std::shared_ptr<DebugDraw> m_debug;
     };
 }; // namespace hpl

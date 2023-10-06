@@ -20,6 +20,7 @@
 #include "graphics/RendererWireFrame.h"
 
 #include "Common_3/Graphics/Interfaces/IGraphics.h"
+#include "graphics/ForgeHandles.h"
 #include "graphics/RenderTarget.h"
 #include "graphics/VertexBuffer.h"
 #include "impl/LegacyVertexBuffer.h"
@@ -39,6 +40,7 @@
 #include "graphics/MaterialType.h"
 #include "graphics/Mesh.h"
 #include "graphics/SubMesh.h"
+#include "graphics/DebugDraw.h"
 
 #include "resources/Resources.h"
 
@@ -49,23 +51,17 @@
 
 namespace hpl {
 
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
-	cRendererWireFrame::cRendererWireFrame(cGraphics *apGraphics,cResources* apResources)
-		: iRenderer("WireFrame",apGraphics, apResources)
-	{
+    cRendererWireFrame::cRendererWireFrame(cGraphics* apGraphics, cResources* apResources, std::shared_ptr<DebugDraw> debug)
+        : iRenderer("WireFrame", apGraphics, apResources)
+        , m_debug(debug) {
         auto* forgeRenderer = Interface<ForgeRenderer>::Get();
-	    m_shader.Load(forgeRenderer->Rend(), [&](Shader** shader) {
+        m_shader.Load(forgeRenderer->Rend(), [&](Shader** shader) {
             ShaderLoadDesc loadDesc = {};
             loadDesc.mStages[0].pFileName = "wireframe.vert";
             loadDesc.mStages[1].pFileName = "wireframe.frag";
             addShader(forgeRenderer->Rend(), &loadDesc, shader);
             return true;
-	    });
+        });
 
         for (auto& buffer : m_objectUniformBuffer) {
             buffer.Load([&](Buffer** buffer) {
@@ -82,7 +78,7 @@ namespace hpl {
                 return true;
             });
         }
-        for(auto& buffer: m_frameBufferUniform) {
+        for (auto& buffer : m_frameBufferUniform) {
             buffer.Load([&](Buffer** buffer) {
                 BufferLoadDesc desc = {};
                 desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_BUFFER;
@@ -98,26 +94,24 @@ namespace hpl {
             });
         }
 
-        m_rootSignature.Load(forgeRenderer ->Rend(), [&](RootSignature** sig) {
-            std::array shaders = {  m_shader.m_handle };
+        m_rootSignature.Load(forgeRenderer->Rend(), [&](RootSignature** sig) {
+            std::array shaders = { m_shader.m_handle };
             RootSignatureDesc rootSignatureDesc = {};
-            //const char* pStaticSamplers[] = { "depthSampler" };
-            //rootSignatureDesc.mStaticSamplerCount = 1;
-            //rootSignatureDesc.ppStaticSamplers = &m_bilinearSampler.m_handle;
-            //rootSignatureDesc.ppStaticSamplerNames = pStaticSamplers;
+            // const char* pStaticSamplers[] = { "depthSampler" };
+            // rootSignatureDesc.mStaticSamplerCount = 1;
+            // rootSignatureDesc.ppStaticSamplers = &m_bilinearSampler.m_handle;
+            // rootSignatureDesc.ppStaticSamplerNames = pStaticSamplers;
             rootSignatureDesc.ppShaders = shaders.data();
             rootSignatureDesc.mShaderCount = shaders.size();
             addRootSignature(forgeRenderer->Rend(), &rootSignatureDesc, sig);
             return true;
         });
         m_frameDescriptorSet.Load(forgeRenderer->Rend(), [&](DescriptorSet** set) {
-            DescriptorSetDesc setDesc = { m_rootSignature.m_handle,
-                                          DESCRIPTOR_UPDATE_FREQ_PER_FRAME,
-                                          NumberOfPerFrameUniforms  };
+            DescriptorSetDesc setDesc = { m_rootSignature.m_handle, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, NumberOfPerFrameUniforms };
             addDescriptorSet(forgeRenderer->Rend(), &setDesc, set);
             return true;
         });
-        for(uint32_t i = 0; i < NumberOfPerFrameUniforms; i++) {
+        for (uint32_t i = 0; i < NumberOfPerFrameUniforms; i++) {
             std::array<DescriptorData, 1> params = {};
             params[0].pName = "perFrameConstants";
             params[0].ppBuffers = &m_frameBufferUniform[i].m_handle;
@@ -125,13 +119,11 @@ namespace hpl {
         }
 
         m_constDescriptorSet.Load(forgeRenderer->Rend(), [&](DescriptorSet** set) {
-            DescriptorSetDesc setDesc = { m_rootSignature.m_handle,
-                                          DESCRIPTOR_UPDATE_FREQ_NONE,
-                                          ForgeRenderer::SwapChainLength };
+            DescriptorSetDesc setDesc = { m_rootSignature.m_handle, DESCRIPTOR_UPDATE_FREQ_NONE, ForgeRenderer::SwapChainLength };
             addDescriptorSet(forgeRenderer->Rend(), &setDesc, set);
             return true;
         });
-        for(uint32_t i = 0; i < ForgeRenderer::SwapChainLength; i++) {
+        for (uint32_t i = 0; i < ForgeRenderer::SwapChainLength; i++) {
             std::array<DescriptorData, 1> params = {};
             params[0].pName = "uniformObjectBuffer";
             params[0].ppBuffers = &m_objectUniformBuffer[i].m_handle;
@@ -164,9 +156,9 @@ namespace hpl {
             blendStateDesc.mSrcFactors[0] = BC_ONE;
             blendStateDesc.mDstFactors[0] = BC_ZERO;
             blendStateDesc.mBlendModes[0] = BM_ADD;
-			blendStateDesc.mSrcAlphaFactors[0] = BC_ONE;
-			blendStateDesc.mDstAlphaFactors[0] = BC_ZERO;
-			blendStateDesc.mBlendAlphaModes[0] = BM_ADD;
+            blendStateDesc.mSrcAlphaFactors[0] = BC_ONE;
+            blendStateDesc.mDstAlphaFactors[0] = BC_ZERO;
+            blendStateDesc.mBlendAlphaModes[0] = BM_ADD;
 #ifdef USE_THE_FORGE_LEGACY
             blendStateDesc.mMasks[0] = RED | GREEN | BLUE;
 #else
@@ -194,35 +186,28 @@ namespace hpl {
             addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipline);
             return true;
         });
-	}
+    }
 
-	//-----------------------------------------------------------------------
+    //-----------------------------------------------------------------------
 
-	cRendererWireFrame::~cRendererWireFrame()
-	{
-	}
+    cRendererWireFrame::~cRendererWireFrame() {
+    }
 
-	bool cRendererWireFrame::LoadData()
-	{
-		return true;
-	}
+    bool cRendererWireFrame::LoadData() {
+        return true;
+    }
 
-	void cRendererWireFrame::DestroyData()
-	{
-	}
+    void cRendererWireFrame::DestroyData() {
+    }
 
-    uint32_t cRendererWireFrame::prepareObjectData(
-        const ForgeRenderer::Frame& frame,
-        iRenderable* apObject
-    ) {
+    uint32_t cRendererWireFrame::prepareObjectData(const ForgeRenderer::Frame& frame, iRenderable* apObject) {
         auto objectLookup = m_objectDescriptorLookup.find(apObject);
         const bool isFound = objectLookup != m_objectDescriptorLookup.end();
         uint32_t index = isFound ? objectLookup->second : m_objectIndex++;
         if (!isFound) {
             cMatrixf modelMat = apObject->GetModelMatrixPtr() ? *apObject->GetModelMatrixPtr() : cMatrixf::Identity;
 
-            BufferUpdateDesc updateDesc = { m_objectUniformBuffer[frame.m_frameIndex].m_handle,
-                                            sizeof(ObjectUniform) * index };
+            BufferUpdateDesc updateDesc = { m_objectUniformBuffer[frame.m_frameIndex].m_handle, sizeof(ObjectUniform) * index };
             ObjectUniform uniformObjectData;
             uniformObjectData.m_modelMat = cMath::ToForgeMat4(modelMat.GetTranspose());
             beginUpdateResource(&updateDesc);
@@ -234,7 +219,7 @@ namespace hpl {
 
         return index;
     }
-	SharedRenderTarget cRendererWireFrame::GetOutputImage(uint32_t frameIndex, cViewport& viewport) {
+    SharedRenderTarget cRendererWireFrame::GetOutputImage(uint32_t frameIndex, cViewport& viewport) {
         auto sharedData = m_boundViewportData.resolve(viewport);
         if (!sharedData) {
             return SharedRenderTarget();
@@ -242,14 +227,21 @@ namespace hpl {
         return sharedData->m_outputBuffer[frameIndex];
     }
 
-	void cRendererWireFrame::Draw(const ForgeRenderer::Frame& frame, cViewport& viewport, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings, bool abSendFrameBufferToPostEffects) {
+    void cRendererWireFrame::Draw(
+        const ForgeRenderer::Frame& frame,
+        cViewport& viewport,
+        float afFrameTime,
+        cFrustum* apFrustum,
+        cWorld* apWorld,
+        cRenderSettings* apSettings,
+        bool abSendFrameBufferToPostEffects) {
         auto* forgeRenderer = Interface<ForgeRenderer>::Get();
         iRenderer::Draw(frame, viewport, afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects);
         // keep around for the moment ...
         BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects);
 
         if (frame.m_currentFrame != m_activeFrame) {
-            m_objectIndex  = 0;
+            m_objectIndex = 0;
             m_objectDescriptorLookup.clear();
             m_activeFrame = frame.m_currentFrame;
         }
@@ -257,7 +249,7 @@ namespace hpl {
         if (!common || common->m_size != viewport.GetSize()) {
             auto viewportData = std::make_unique<ViewportData>();
             viewportData->m_size = viewport.GetSize();
-            for(auto& buffer: viewportData->m_outputBuffer) {
+            for (auto& buffer : viewportData->m_outputBuffer) {
                 buffer.Load(forgeRenderer->Rend(), [&](RenderTarget** target) {
                     ClearValue optimizedColorClearBlack = { { 0.0f, 0.0f, 0.0f, 0.0f } };
                     RenderTargetDesc renderTargetDesc = {};
@@ -280,27 +272,32 @@ namespace hpl {
             common = m_boundViewportData.update(viewport, std::move(viewportData));
         }
 
-        const cMatrixf mainFrustumView = apFrustum->GetViewMatrix();
-        const cMatrixf mainFrustumProj = apFrustum->GetProjectionMatrix();
+        Matrix4 correctionMatrix =
+            Matrix4(
+                Vector4(1.0f, 0, 0, 0),
+                Vector4(0, 1.0f, 0, 0),
+                Vector4(0, 0, 0.5f, 0),
+                Vector4(0, 0, 0.5f, 1.0f)
+            );
+
+        const Matrix4 matMainFrustumView = cMath::ToForgeMat4(apFrustum->GetViewMatrix().GetTranspose());
+        const Matrix4 matMainFrustumProj = cMath::ToForgeMat4(apFrustum->GetProjectionMatrix().GetTranspose());
 
         m_rendererList.BeginAndReset(afFrameTime, apFrustum);
         std::array<cPlanef, 0> occlusionPlanes = {};
-		rendering::detail::UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
-			&m_rendererList, apFrustum, apWorld->GetRenderableContainer(eWorldContainerType_Static), occlusionPlanes, 0);
-		rendering::detail::UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
-			&m_rendererList, apFrustum, apWorld->GetRenderableContainer(eWorldContainerType_Dynamic), occlusionPlanes, 0);
+        rendering::detail::UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
+            &m_rendererList, apFrustum, apWorld->GetRenderableContainer(eWorldContainerType_Static), occlusionPlanes, 0);
+        rendering::detail::UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
+            &m_rendererList, apFrustum, apWorld->GetRenderableContainer(eWorldContainerType_Dynamic), occlusionPlanes, 0);
 
-		m_rendererList.End(	eRenderListCompileFlag_Diffuse |
-										eRenderListCompileFlag_Decal |
-										eRenderListCompileFlag_Translucent);
+        m_rendererList.End(eRenderListCompileFlag_Diffuse | eRenderListCompileFlag_Decal | eRenderListCompileFlag_Translucent);
 
-
-	    m_perFrameIndex = (m_perFrameIndex + 1) % NumberOfPerFrameUniforms;
+        m_perFrameIndex = (m_perFrameIndex + 1) % NumberOfPerFrameUniforms;
         {
-            BufferUpdateDesc updateDesc = { m_frameBufferUniform[m_perFrameIndex].m_handle, 0, sizeof(PerFrameUniform)};
+            BufferUpdateDesc updateDesc = { m_frameBufferUniform[m_perFrameIndex].m_handle, 0, sizeof(PerFrameUniform) };
             beginUpdateResource(&updateDesc);
             PerFrameUniform uniformData;
-            uniformData.m_viewProject = cMath::ToForgeMat(cMath::MatrixMul(mainFrustumProj, mainFrustumView).GetTranspose());
+            uniformData.m_viewProject = ((apFrustum->GetProjectionType() == eProjectionType_Perspective ? Matrix4::identity() : correctionMatrix) * matMainFrustumProj) * matMainFrustumView ;
             (*reinterpret_cast<PerFrameUniform*>(updateDesc.pMappedData)) = uniformData;
             endUpdateResource(&updateDesc, NULL);
         }
@@ -334,131 +331,143 @@ namespace hpl {
             cmdBindPushConstants(frame.m_cmd, m_rootSignature.m_handle, rootConstantIndex, &objectIndex);
             cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
         }
-                // [&]{
-		// 	GraphicsContext::ViewConfiguration viewConfig {rt};
-		// 	viewConfig.m_viewRect = {0, 0, viewport.GetSize().x, viewport.GetSize().y};
-		// 	viewConfig.m_clear = {0, 1, 0, ClearOp::Depth | ClearOp::Stencil | ClearOp::Color};
-		// 	bgfx::touch(context.StartPass("Clear", viewConfig));
-		// }();
+
+        cViewport::PostSolidDrawPacket postSolidEvent = cViewport::PostSolidDrawPacket();
+        postSolidEvent.m_frustum = apFrustum;
+        postSolidEvent.m_frame = &frame;
+        postSolidEvent.m_outputTarget = &common->m_outputBuffer[frame.m_frameIndex];
+        postSolidEvent.m_viewport = &viewport;
+        postSolidEvent.m_renderSettings = mpCurrentSettings;
+        postSolidEvent.m_debug = m_debug.get();
+        viewport.SignalDraw(postSolidEvent);
+        SharedRenderTarget invalidTarget;
+        m_debug->flush(frame, frame.m_cmd, viewport, *apFrustum, common->m_outputBuffer[frame.m_frameIndex], invalidTarget);
 
 
-		// mpCurrentRenderList->Setup(mfCurrentFrameTime,apFrustum);
 
-		// rendering::detail::UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
-		// 	mpCurrentRenderList, apFrustum, mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static), mvCurrentOcclusionPlanes, 0);
-		// rendering::detail::UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
-		// 	mpCurrentRenderList, apFrustum, mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Dynamic), mvCurrentOcclusionPlanes, 0);
+        cViewport::PostTranslucenceDrawPacket translucenceEvent = cViewport::PostTranslucenceDrawPacket();
+        translucenceEvent.m_frustum = apFrustum;
+        translucenceEvent.m_frame = &frame;
+        translucenceEvent.m_outputTarget = &common->m_outputBuffer[frame.m_frameIndex];
+        translucenceEvent.m_viewport = &viewport;
+        translucenceEvent.m_renderSettings = mpCurrentSettings;
+        translucenceEvent.m_debug = m_debug.get();
+        viewport.SignalDraw(translucenceEvent);
+        m_debug->flush(frame, frame.m_cmd, viewport, *apFrustum, common->m_outputBuffer[frame.m_frameIndex], invalidTarget);
 
-		// mpCurrentRenderList->Compile(	eRenderListCompileFlag_Diffuse |
-		// 								eRenderListCompileFlag_Decal |
-		// 								eRenderListCompileFlag_Translucent);
+        // mpCurrentRenderList->Setup(mfCurrentFrameTime,apFrustum);
 
-		// // START_RENDER_PASS(WireFrame);
+        // rendering::detail::UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
+        // 	mpCurrentRenderList, apFrustum, mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Static),
+        // mvCurrentOcclusionPlanes, 0); rendering::detail::UpdateRenderListWalkAllNodesTestFrustumAndVisibility( 	mpCurrentRenderList,
+        // apFrustum, mpCurrentWorld->GetRenderableContainer(eWorldContainerType_Dynamic), mvCurrentOcclusionPlanes, 0);
 
-		// ////////////////////////////////////////////
-		// // Diffuse Objects
-		// // SetDepthTest(true);
-		// // SetDepthWrite(true);
-		// // SetBlendMode(eMaterialBlendMode_None);
-		// // SetAlphaMode(eMaterialAlphaMode_Solid);
-		// // SetChannelMode(eMaterialChannelMode_RGBA);
+        // mpCurrentRenderList->Compile(	eRenderListCompileFlag_Diffuse |
+        // 								eRenderListCompileFlag_Decal |
+        // 								eRenderListCompileFlag_Translucent);
 
-		// // SetTextureRange(NULL,0);
+        // // START_RENDER_PASS(WireFrame);
 
-		// int lCount =0;
+        // ////////////////////////////////////////////
+        // // Diffuse Objects
+        // // SetDepthTest(true);
+        // // SetDepthWrite(true);
+        // // SetBlendMode(eMaterialBlendMode_None);
+        // // SetAlphaMode(eMaterialAlphaMode_Solid);
+        // // SetChannelMode(eMaterialChannelMode_RGBA);
 
-		// GraphicsContext::ViewConfiguration viewConfig {rt};
-		// viewConfig.m_projection = apFrustum->GetProjectionMatrix().GetTranspose();
-		// viewConfig.m_view = apFrustum->GetViewMatrix().GetTranspose();
-		// viewConfig.m_viewRect = {0, 0, viewport.GetSize().x, viewport.GetSize().y};
-		// auto view = context.StartPass("Wireframe", viewConfig);
-		// for(auto& pObject: mpCurrentRenderList->GetRenderableItems(eRenderListType_Diffuse))
-		// {
-		// 	GraphicsContext::LayoutStream layoutStream;
+        // // SetTextureRange(NULL,0);
+
+        // int lCount =0;
+
+        // GraphicsContext::ViewConfiguration viewConfig {rt};
+        // viewConfig.m_projection = apFrustum->GetProjectionMatrix().GetTranspose();
+        // viewConfig.m_view = apFrustum->GetViewMatrix().GetTranspose();
+        // viewConfig.m_viewRect = {0, 0, viewport.GetSize().x, viewport.GetSize().y};
+        // auto view = context.StartPass("Wireframe", viewConfig);
+        // for(auto& pObject: mpCurrentRenderList->GetRenderableItems(eRenderListType_Diffuse))
+        // {
+        // 	GraphicsContext::LayoutStream layoutStream;
         //     GraphicsContext::ShaderProgram shaderProgram;
 
-		// 	if(pObject == nullptr)
-		// 	{
-		// 		continue;
-		// 	}
+        // 	if(pObject == nullptr)
+        // 	{
+        // 		continue;
+        // 	}
 
-		// 	iVertexBuffer* vertexBuffer = pObject->GetVertexBuffer();
-		// 	if(vertexBuffer == nullptr) {
-		// 		continue;
-		// 	}
+        // 	iVertexBuffer* vertexBuffer = pObject->GetVertexBuffer();
+        // 	if(vertexBuffer == nullptr) {
+        // 		continue;
+        // 	}
 
-		// 	struct {
-		// 		float m_r;
-		// 		float m_g;
-		// 		float m_b;
-		// 		float m_a;
-		// 	} color = { 1.0f, 1.0f,1.0f ,1.0f };
+        // 	struct {
+        // 		float m_r;
+        // 		float m_g;
+        // 		float m_b;
+        // 		float m_a;
+        // 	} color = { 1.0f, 1.0f,1.0f ,1.0f };
 
+        // 	shaderProgram.m_configuration.m_depthTest = DepthTest::LessEqual;
+        // 	shaderProgram.m_configuration.m_write = Write::RGBA;
+        // 	shaderProgram.m_configuration.m_cull = Cull::None;
+        // 	shaderProgram.m_handle = m_colorProgram;
 
-		// 	shaderProgram.m_configuration.m_depthTest = DepthTest::LessEqual;
-		// 	shaderProgram.m_configuration.m_write = Write::RGBA;
-		// 	shaderProgram.m_configuration.m_cull = Cull::None;
-		// 	shaderProgram.m_handle = m_colorProgram;
+        // 	shaderProgram.m_uniforms.push_back({ m_u_color, &color });
+        // 	shaderProgram.m_modelTransform = pObject->GetModelMatrixPtr() ?  pObject->GetModelMatrixPtr()->GetTranspose() :
+        // cMatrixf::Identity.GetTranspose();
 
-		// 	shaderProgram.m_uniforms.push_back({ m_u_color, &color });
-		// 	shaderProgram.m_modelTransform = pObject->GetModelMatrixPtr() ?  pObject->GetModelMatrixPtr()->GetTranspose() : cMatrixf::Identity.GetTranspose();
+        // 	vertexBuffer->GetLayoutStream(layoutStream, eVertexBufferDrawType_LineStrip);
+        // 	GraphicsContext::DrawRequest drawRequest {layoutStream, shaderProgram};
+        // 	context.Submit(view, drawRequest);
 
-		// 	vertexBuffer->GetLayoutStream(layoutStream, eVertexBufferDrawType_LineStrip);
-		// 	GraphicsContext::DrawRequest drawRequest {layoutStream, shaderProgram};
-		// 	context.Submit(view, drawRequest);
+        // 	lCount++;
+        // }
 
-		// 	lCount++;
-		// }
+        // ////////////////////////////////////////////
+        // // Decal Objects
+        // // SetDepthWrite(false);
 
-		// ////////////////////////////////////////////
-		// // Decal Objects
-		// // SetDepthWrite(false);
+        // for(auto& pObject: mpCurrentRenderList->GetRenderableItems(eRenderListType_Decal))
+        // {
+        // 	cMaterial *pMaterial = pObject->GetMaterial();
 
-		// for(auto& pObject: mpCurrentRenderList->GetRenderableItems(eRenderListType_Decal))
-		// {
-		// 	cMaterial *pMaterial = pObject->GetMaterial();
+        // 	// SetBlendMode(pMaterial->GetBlendMode());
 
-		// 	// SetBlendMode(pMaterial->GetBlendMode());
+        // 	// SetTexture(0,pMaterial->GetTexture(eMaterialTexture_Diffuse));
 
-		// 	// SetTexture(0,pMaterial->GetTexture(eMaterialTexture_Diffuse));
+        // 	// SetMatrix(pObject->GetModelMatrixPtr());
 
-		// 	// SetMatrix(pObject->GetModelMatrixPtr());
+        // 	// SetVertexBuffer(pObject->GetVertexBuffer());
 
-		// 	// SetVertexBuffer(pObject->GetVertexBuffer());
+        // 	// DrawCurrent(eVertexBufferDrawType_LineStrip);
+        // }
 
-		// 	// DrawCurrent(eVertexBufferDrawType_LineStrip);
-		// }
+        // // RunCallback(eRendererMessage_PostSolid);
 
-		// // RunCallback(eRendererMessage_PostSolid);
+        // ////////////////////////////////////////////
+        // // Trans Objects
+        // // SetDepthWrite(false);
 
+        // for(auto& pObject: mpCurrentRenderList->GetRenderableItems(eRenderListType_Translucent))
+        // {
+        // 	cMaterial *pMaterial = pObject->GetMaterial();
 
-		// ////////////////////////////////////////////
-		// // Trans Objects
-		// // SetDepthWrite(false);
+        // 	pObject->UpdateGraphicsForViewport(apFrustum, mfCurrentFrameTime);
 
-		// for(auto& pObject: mpCurrentRenderList->GetRenderableItems(eRenderListType_Translucent))
-		// {
-		// 	cMaterial *pMaterial = pObject->GetMaterial();
+        // 	// SetBlendMode(pMaterial->GetBlendMode());
 
-		// 	pObject->UpdateGraphicsForViewport(apFrustum, mfCurrentFrameTime);
+        // 	// SetTexture(0,pMaterial->GetTexture(eMaterialTexture_Diffuse));
 
-		// 	// SetBlendMode(pMaterial->GetBlendMode());
+        // 	// SetMatrix(pObject->GetModelMatrix(mpCurrentFrustum));
 
-		// 	// SetTexture(0,pMaterial->GetTexture(eMaterialTexture_Diffuse));
+        // 	// SetVertexBuffer(pObject->GetVertexBuffer());
 
-		// 	// SetMatrix(pObject->GetModelMatrix(mpCurrentFrustum));
+        // 	// DrawCurrent(eVertexBufferDrawType_LineStrip);
+        // }
 
-		// 	// SetVertexBuffer(pObject->GetVertexBuffer());
+        // // RunCallback(eRendererMessage_PostTranslucent);
 
-		// 	// DrawCurrent(eVertexBufferDrawType_LineStrip);
-		// }
+        // END_RENDER_PASS();
+    }
 
-		// // RunCallback(eRendererMessage_PostTranslucent);
-
-
-		// END_RENDER_PASS();
-	}
-
-	//-----------------------------------------------------------------------
-
-}
+} // namespace hpl

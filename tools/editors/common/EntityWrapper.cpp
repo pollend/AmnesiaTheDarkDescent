@@ -2081,7 +2081,7 @@ void iEntityWrapper::DrawArrow(cEditorWindowViewport* apViewport, DebugDraw* apF
 	cMatrixf mtxWorld = cMath::MatrixMul(amtxTransform, cMath::MatrixTranslate(cVector3f(0,afLength,0)));;
 
 	DebugDraw::DebugDrawOptions options;
-	options.m_transform = cMath::ToForgeMat(mtxWorld.GetTranspose());
+	options.m_transform = cMath::ToForgeMat4(mtxWorld.GetTranspose());
 
 	apFunctions->DebugDrawLine(Vector3(0,-afLength,0), Vector3(0), cMath::ToForgeVec4(aCol));
 	apFunctions->DrawQuad(

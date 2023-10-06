@@ -191,10 +191,6 @@ namespace hpl {
 		void SetProjectionMatrix(iLowLevelGraphics* apLowLevel);
 		cVector3f GetEyePosition();
 
-		//////////////////////////////////////////////////
-		////////// RENDER SPECIFIC ///////////////////////
-		//////////////////////////////////////////////////
-
 		void SetPrevView(const cMatrixf &a_mtxA){ m_mtxPrevView = a_mtxA;}
 		void SetPrevProjection(const cMatrixf &a_mtxA){m_mtxPrevProjection = a_mtxA;}
 

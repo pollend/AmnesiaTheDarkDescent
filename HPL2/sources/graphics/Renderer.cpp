@@ -364,13 +364,7 @@ namespace hpl
 
     iRenderer::iRenderer(const tString& asName, cGraphics* apGraphics, cResources* apResources)
     {
-        mpGraphics = apGraphics;
         mpResources = apResources;
-
-        /////////////////////////////////
-        // Set up the render functions
-        SetupRenderFunctions(mpGraphics->GetLowLevel());
-
         mfTimeCount = 0;
     }
 

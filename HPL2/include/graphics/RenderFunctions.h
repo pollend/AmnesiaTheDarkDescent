@@ -30,15 +30,7 @@ namespace hpl {
 	{
 	public:
 		virtual ~iRenderFunctions() { }
-
-		/*
-		 * This function must be set before the render functions can be used!
-	     */
-		void SetupRenderFunctions(iLowLevelGraphics *apLowLevelGraphics);
-
-
 	protected:
-		cGraphics *mpGraphics;
 		iLowLevelGraphics *mpLowLevelGraphics;
 	};
 

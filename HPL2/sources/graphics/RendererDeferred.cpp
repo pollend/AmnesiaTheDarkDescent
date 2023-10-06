@@ -527,8 +527,12 @@ namespace hpl {
 
     enum eDefferredProgramMode { eDefferredProgramMode_Lights, eDefferredProgramMode_Misc, eDefferredProgramMode_LastEnum };
 
-    cRendererDeferred::cRendererDeferred(cGraphics* apGraphics, cResources* apResources)
-        : iRenderer("Deferred", apGraphics, apResources) {
+    cRendererDeferred::cRendererDeferred(
+        cGraphics* apGraphics,
+        cResources* apResources,
+        std::shared_ptr<DebugDraw> debug)
+        : iRenderer("Deferred", apGraphics, apResources),
+        m_debug(debug) {
         m_hbaoPlusPipeline = std::make_unique<renderer::PassHBAOPlus>();
         ////////////////////////////////////
         // Set up render specific things
@@ -551,7 +555,6 @@ namespace hpl {
         m_dissolveImage = mpResources->GetTextureManager()->Create2DImage("core_dissolve.tga", false);
         auto* forgeRenderer = Interface<ForgeRenderer>::Get();
 
-        m_debug = std::make_unique<DebugDraw>(forgeRenderer);
         m_occlusionUniformBuffer.Load([&](Buffer** buffer) {
             BufferLoadDesc desc = {};
             desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_BUFFER;
@@ -2474,17 +2477,17 @@ namespace hpl {
         BufferUpdateDesc updatePerFrameConstantsDesc = { m_perFrameBuffer[index].m_handle, 0 };
         beginUpdateResource(&updatePerFrameConstantsDesc);
         auto* uniformFrameData = reinterpret_cast<UniformPerFrameData*>(updatePerFrameConstantsDesc.pMappedData);
-        uniformFrameData->m_viewMatrix = cMath::ToForgeMat(options.m_viewMat.GetTranspose());
-        uniformFrameData->m_invViewMatrix = cMath::ToForgeMat(cMath::MatrixInverse(options.m_viewMat).GetTranspose());
-        uniformFrameData->m_projectionMatrix = cMath::ToForgeMat(options.m_projectionMat.GetTranspose());
-        uniformFrameData->m_viewProjectionMatrix = cMath::ToForgeMat(cMath::MatrixMul(options.m_projectionMat, options.m_viewMat).GetTranspose());
+        uniformFrameData->m_viewMatrix = cMath::ToForgeMat4(options.m_viewMat.GetTranspose());
+        uniformFrameData->m_invViewMatrix = cMath::ToForgeMat4(cMath::MatrixInverse(options.m_viewMat).GetTranspose());
+        uniformFrameData->m_projectionMatrix = cMath::ToForgeMat4(options.m_projectionMat.GetTranspose());
+        uniformFrameData->m_viewProjectionMatrix = cMath::ToForgeMat4(cMath::MatrixMul(options.m_projectionMat, options.m_viewMat).GetTranspose());
 
         uniformFrameData->worldFogStart = apWorld->GetFogStart();
         uniformFrameData->worldFogLength = apWorld->GetFogEnd() - apWorld->GetFogStart();
         uniformFrameData->oneMinusFogAlpha = 1.0f - apWorld->GetFogColor().a;
         uniformFrameData->fogFalloffExp = apWorld->GetFogFalloffExp();
 
-        uniformFrameData->m_invViewRotation = cMath::ToForgeMat((options.m_viewMat.GetTranspose()).GetRotation().GetTranspose());
+        uniformFrameData->m_invViewRotation = cMath::ToForgeMat4((options.m_viewMat.GetTranspose()).GetRotation().GetTranspose());
         uniformFrameData->viewTexel = float2(1.0f / options.m_size.x, 1.0f / options.m_size.y);
         uniformFrameData->viewportSize = float2(options.m_size.x, options.m_size.y);
         uniformFrameData->afT = GetTimeCount();
@@ -2976,6 +2979,7 @@ namespace hpl {
                     loadActions.mLoadActionsColor[0] = LOAD_ACTION_CLEAR;
                     loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
                     loadActions.mLoadActionStencil = LOAD_ACTION_CLEAR;
+                    loadActions.mClearColorValues[0] = ClearValue{ .r = options.m_clearColor.getX(),.g = options.m_clearColor.getY(), .b = options.m_clearColor.getZ(),.a = options.m_clearColor.getW()};
                     std::array targets = {
                         outputBuffer,
                     };
@@ -3468,7 +3472,7 @@ namespace hpl {
                 if (TypeInfo<hpl::cBillboard>::IsType(*query.m_renderable)) {
                     cBillboard* pBillboard = static_cast<cBillboard*>(query.m_renderable);
 
-                    auto mvp = cMath::ToForgeMat(
+                    auto mvp = cMath::ToForgeMat4(
                         cMath::MatrixMul(
                             viewProj, cMath::MatrixMul(pBillboard->GetWorldMatrix(), cMath::MatrixScale(pBillboard->GetHaloSourceSize())))
                             .GetTranspose());
@@ -3760,7 +3764,6 @@ namespace hpl {
             uniformObjectData.m_materialIndex = apMaterial->Index();
             uniformObjectData.m_modelMat = cMath::ToForgeMat4(modelMat.GetTranspose());
             uniformObjectData.m_invModelMat = cMath::ToForgeMat4(cMath::MatrixInverse(modelMat).GetTranspose());
-            uniformObjectData.m_lightLevel = 1.0f;
             if (apMaterial) {
                 uniformObjectData.m_uvMat = cMath::ToForgeMat4(apMaterial->GetUvMatrix());
                 if (apMaterial->IsAffectedByLightLevel()) {
@@ -4104,7 +4107,9 @@ void cRendererDeferred::Draw(
         currentGBuffer.m_outputBuffer.m_handle,
         mainFrustumView,
         mainFrustumViewInv,
-        mainFrustumProj, {});
+        mainFrustumProj, {
+            .m_clearColor = Vector4(apSettings->mClearColor.r,apSettings->mClearColor.g,apSettings->mClearColor.b,apSettings->mClearColor.a)
+        });
 
     cmdIlluminationPass(
         frame.m_cmd,

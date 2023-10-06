@@ -90,7 +90,7 @@ void cEditorEditModeEntities::DrawObjectPreview(cEditorWindowViewport* apViewpor
 		{
 			DebugDraw::DebugDrawOptions options;
 			options.m_depthTest = DebugDraw::DebugDepthTest::Greater;
-			options.m_transform = cMath::ToForgeMat(amtxTransform.GetTranspose());
+			options.m_transform = cMath::ToForgeMat4(amtxTransform.GetTranspose());
 			apFunctions->DebugDrawBoxMinMax(cMath::ToForgeVec3(vBVMin),cMath::ToForgeVec3(vBVMax), Vector4(1,0,0,0.6f), options);
 			options.m_depthTest = DebugDraw::DebugDepthTest::Less;
 			apFunctions->DebugDrawBoxMinMax(cMath::ToForgeVec3(vBVMin),cMath::ToForgeVec3(vBVMax), Vector4(0,1,0,0.6f), options);

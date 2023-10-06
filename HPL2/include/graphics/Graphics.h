@@ -24,6 +24,7 @@
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
 #include "engine/Updateable.h"
+#include <memory>
 
 namespace hpl {
 
@@ -44,7 +45,7 @@ namespace hpl {
 	class iMaterialType;
 	class cPostEffectComposite;
 	class cParserVarContainer;
-
+    class DebugDraw;
 
 	typedef std::list<iFrameBuffer*> tFrameBufferList;
 	typedef tFrameBufferList::iterator tFrameBufferListIt;
@@ -111,6 +112,7 @@ namespace hpl {
 		cDecalCreator* mpDecalCreator;
 		cResources *mpResources;
 
+
 		std::vector<iRenderer*> mvRenderers;
 		std::vector<iPostEffectType*> mvPostEffectTypes;
 
@@ -121,6 +123,7 @@ namespace hpl {
 		tMaterialTypeMap m_mapMaterialTypes;
 		tPostEffectList mlstPostEffects;
 
+        std::shared_ptr<DebugDraw> m_debug;
 		bool mbScreenIsSetup;
 	};
 

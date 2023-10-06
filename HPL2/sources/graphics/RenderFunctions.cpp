@@ -18,10 +18,3 @@
  */
 #include "graphics/RenderFunctions.h"
 
-namespace hpl {
-
-    void iRenderFunctions::SetupRenderFunctions(iLowLevelGraphics* apLowLevelGraphics) {
-        mpLowLevelGraphics = apLowLevelGraphics;
-    }
-
-} // namespace hpl

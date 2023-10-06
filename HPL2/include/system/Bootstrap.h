@@ -51,7 +51,7 @@ namespace hpl {
 
         std::unique_ptr<PrimaryViewport> m_primaryViewport;
         hpl::ForgeRenderer m_renderer;
-        //std::unique_ptr<hpl::DebugDraw> m_debug;
+        std::unique_ptr<hpl::DebugDraw> m_debug;
 
         UpdateEventLoop m_updateEventLoop;
         input::InputManager m_inputManager;

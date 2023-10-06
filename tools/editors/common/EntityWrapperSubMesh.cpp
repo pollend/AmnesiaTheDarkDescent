@@ -96,7 +96,7 @@ void cEngineEntitySubMesh::Draw(cEditorWindowViewport* apViewport, DebugDraw* ap
 	// apFunctions->DrawWireFrame(pSubMeshEntity->GetVertexBuffer(), cColor(1,1,1,0.25f));
 
 	DebugDraw::DebugDrawOptions options;
-	options.m_transform = cMath::ToForgeMat(pSubMeshEntity->GetModelMatrix(NULL)->GetTranspose());
+	options.m_transform = cMath::ToForgeMat4(pSubMeshEntity->GetModelMatrix(NULL)->GetTranspose());
 	//GraphicsContext::LayoutStream layoutStream;
 	//pSubMeshEntity->GetVertexBuffer()->GetLayoutStream(layoutStream);
 
