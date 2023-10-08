@@ -100,20 +100,9 @@ namespace hpl {
     public:
         cRenderSettings(bool abIsReflection = false);
         ~cRenderSettings();
-
         ////////////////////////////
         //Helper methods
         void ResetVariables();
-
-        void SetupReflectionSettings();
-
-        cRenderList *mpRenderList;
-
-        cRenderSettings *mpReflectionSettings;
-
-        ////////////////////////////
-        //General settings
-        bool mbLog;
 
         cColor mClearColor;
         ////////////////////////////
@@ -123,17 +112,9 @@ namespace hpl {
         bool mbIsReflection;
         bool mbClipReflectionScreenRect;
 
-        bool mbUseOcclusionCulling;
-
         bool mbUseEdgeSmooth;
 
-        bool mbUseCallbacks;
-
         eShadowMapResolution mMaxShadowMapResolution;
-
-        bool mbUseScissorRect;
-        cVector2l mvScissorRectPos;
-        cVector2l mvScissorRectSize;
 
         bool mbRenderWorldReflection;
 
@@ -150,7 +131,6 @@ namespace hpl {
         ////////////////////////////
         //Output
         int mlNumberOfLightsRendered;
-        int mlNumberOfOcclusionQueries;
     };
 
     //---------------------------------------------
@@ -176,13 +156,14 @@ namespace hpl {
         // plan to just use the single draw call need to call BeginRendering to setup state
         // ensure the contents is copied to the RenderViewport
         virtual void Draw(
+            Cmd* cmd,
             const ForgeRenderer::Frame& context,
             cViewport& viewport,
             float afFrameTime,
             cFrustum* apFrustum,
             cWorld* apWorld,
             cRenderSettings* apSettings,
-            bool abSendFrameBufferToPostEffects){};
+            bool abSendFrameBufferToPostEffects) = 0;
 
         void Update(float afTimeStep);
 

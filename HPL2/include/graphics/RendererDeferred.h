@@ -78,6 +78,7 @@ namespace hpl {
         static constexpr TinyImageFormat SpecularBufferFormat = TinyImageFormat_R8G8_UNORM;
         static constexpr TinyImageFormat ColorBufferFormat = TinyImageFormat_R8G8B8A8_UNORM;
         static constexpr TinyImageFormat ShadowDepthBufferFormat = TinyImageFormat_D32_SFLOAT;
+
         static constexpr uint32_t MaxReflectionBuffers = 4;
         static constexpr uint32_t MaxObjectUniforms = 4096;
         static constexpr uint32_t MaxLightUniforms = 1024;
@@ -356,6 +357,7 @@ namespace hpl {
         virtual void DestroyData() override;
 
         virtual void Draw(
+            Cmd* cmd,
             const ForgeRenderer::Frame& frame,
             cViewport& viewport,
             float afFrameTime,

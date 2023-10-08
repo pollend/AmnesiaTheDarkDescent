@@ -26,6 +26,7 @@
 #include "graphics/ForgeHandles.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Image.h"
+#include "graphics/RenderList.h"
 #include "graphics/RenderTarget.h"
 
 #include "gui/GuiTypes.h"
@@ -68,6 +69,7 @@ namespace hpl {
             cViewport* m_viewport;
             cRenderSettings* m_renderSettings;
             DebugDraw* m_debug;
+            cRenderList* m_renderList;
         };
         struct PostSolidDrawPacket : public DrawPayloadCommon {
         };

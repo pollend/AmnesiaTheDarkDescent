@@ -22,7 +22,6 @@
 
 #include "math/MathTypes.h"
 #include "math/PidController.h"
-#include "math/Spring.h"
 
 #include "engine/SaveGame.h"
 

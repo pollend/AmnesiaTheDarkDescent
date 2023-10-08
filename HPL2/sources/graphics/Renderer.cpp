@@ -248,13 +248,8 @@ namespace hpl
     cRenderSettings::cRenderSettings(bool abIsReflection)
     {
         ////////////////////////
-        // Create data
-        mpRenderList = hplNew(cRenderList, ());
-
-        ////////////////////////
         // Set up General Variables
         mbIsReflection = abIsReflection;
-        mbLog = false;
 
         mClearColor = cColor(0, 0);
 
@@ -265,19 +260,14 @@ namespace hpl
                                                     // Minium num of object rendered until node visibility tests start!
         mlSampleVisiblilityLimit = 3;
 
-        mbUseCallbacks = true;
-
         mbUseEdgeSmooth = false;
 
-        mbUseOcclusionCulling = true;
-
         mMaxShadowMapResolution = eShadowMapResolution_High;
-        if (mbIsReflection)
+        if (mbIsReflection) {
             mMaxShadowMapResolution = eShadowMapResolution_Medium;
+        }
 
         mbClipReflectionScreenRect = true;
-
-        mbUseScissorRect = false;
 
         mbRenderWorldReflection = true;
 
@@ -294,72 +284,17 @@ namespace hpl
         ////////////////////////
         // Set up Output Variables
         mlNumberOfLightsRendered = 0;
-        mlNumberOfOcclusionQueries = 0;
 
-        ////////////////////////
-        // Set up Private Variables
-
-        ////////////////////////
-        // Create Reflection settings
-        mpReflectionSettings = NULL;
-        if (mbIsReflection == false)
-        {
-            mpReflectionSettings = hplNew(cRenderSettings, (true));
-        }
     }
 
     cRenderSettings::~cRenderSettings()
     {
-        hplDelete(mpRenderList);
-
-        if (mpReflectionSettings)
-            hplDelete(mpReflectionSettings);
     }
 
     //-----------------------------------------------------------------------
 
     void cRenderSettings::ResetVariables()
     {
-
-        if (mpReflectionSettings)
-            mpReflectionSettings->ResetVariables();
-    }
-
-//-----------------------------------------------------------------------
-
-//////////////////////////////////////////////////
-// The render settings will use the default setup, except for the variables below
-//  This means SSAO, edgesmooth, etc are always off for reflections.
-#define RenderSettingsCopy(aVar) mpReflectionSettings->aVar = aVar
-    void cRenderSettings::SetupReflectionSettings()
-    {
-        if (mpReflectionSettings == NULL)
-            return;
-        RenderSettingsCopy(mbLog);
-
-        RenderSettingsCopy(mClearColor);
-
-        ////////////////////////////
-        // Render settings
-        RenderSettingsCopy(mlMinimumObjectsBeforeOcclusionTesting);
-        RenderSettingsCopy(mlSampleVisiblilityLimit);
-
-        mpReflectionSettings->mbUseScissorRect = false;
-
-        ////////////////////////////
-        // Shadow settings
-        RenderSettingsCopy(mbRenderShadows);
-        RenderSettingsCopy(mfShadowMapBias);
-        RenderSettingsCopy(mfShadowMapSlopeScaleBias);
-
-        ////////////////////////////
-        // Light settings
-        // RenderSettingsCopy(mbSSAOActive);
-
-        ////////////////////////////
-        // Output
-        RenderSettingsCopy(mlNumberOfLightsRendered);
-        RenderSettingsCopy(mlNumberOfOcclusionQueries);
     }
 
     iRenderer::iRenderer(const tString& asName, cGraphics* apGraphics, cResources* apResources)

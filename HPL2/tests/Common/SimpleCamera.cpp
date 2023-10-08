@@ -455,7 +455,6 @@ void cSimpleCamera::OnDraw(float afFrameTime)
 
 void cSimpleCamera::OnPostRender(float afFrameTime)
 {
-	mpViewport->GetRenderSettings()->mbLog =false;
 }
 
 //-----------------------------------------------------------------------

@@ -624,6 +624,19 @@ namespace hpl {
 		}
         return std::span<iRenderable*>(m_sortedArrays[aType]);
     }
+	std::span<iRenderable*> cRenderList::GetSolidObjects() {
+		if(m_solidObjects.empty()) {
+			return std::span<iRenderable*>();
+		}
+        return std::span<iRenderable*>(m_solidObjects);
+    }
+
+	std::span<iRenderable*> cRenderList::GetTransObjects() {
+		if(m_transObjects.empty()) {
+			return std::span<iRenderable*>();
+		}
+        return std::span<iRenderable*>(m_transObjects);
+    }
 
     std::span<iRenderable*> cRenderList::GetOcclusionQueryItems() {
         return std::span<iRenderable*>(m_occlusionQueryObjects);

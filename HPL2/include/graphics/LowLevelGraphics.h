@@ -146,9 +146,6 @@ namespace hpl {
 		virtual void SetClearStencil(int alVal)=0;
 
 		[[deprecated("interface is deprecated")]]
-		virtual void FlushRendering()=0;
-
-		[[deprecated("interface is deprecated")]]
 		virtual void WaitAndFinishRendering()=0;
 
 		[[deprecated("interface is deprecated")]]

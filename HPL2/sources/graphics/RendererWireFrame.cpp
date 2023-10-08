@@ -188,8 +188,6 @@ namespace hpl {
         });
     }
 
-    //-----------------------------------------------------------------------
-
     cRendererWireFrame::~cRendererWireFrame() {
     }
 
@@ -228,6 +226,7 @@ namespace hpl {
     }
 
     void cRendererWireFrame::Draw(
+        Cmd* cmd,
         const ForgeRenderer::Frame& frame,
         cViewport& viewport,
         float afFrameTime,
@@ -236,7 +235,6 @@ namespace hpl {
         cRenderSettings* apSettings,
         bool abSendFrameBufferToPostEffects) {
         auto* forgeRenderer = Interface<ForgeRenderer>::Get();
-        iRenderer::Draw(frame, viewport, afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects);
         // keep around for the moment ...
         BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects);
 
@@ -352,8 +350,6 @@ namespace hpl {
         viewport.SignalDraw(postSolidEvent);
         SharedRenderTarget invalidTarget;
         m_debug->flush(frame, frame.m_cmd, viewport, *apFrustum, common->m_outputBuffer[frame.m_frameIndex], invalidTarget);
-
-
 
         cViewport::PostTranslucenceDrawPacket translucenceEvent = cViewport::PostTranslucenceDrawPacket();
         translucenceEvent.m_frustum = apFrustum;

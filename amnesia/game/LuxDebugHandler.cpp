@@ -1034,13 +1034,6 @@ void cLuxDebugHandler::CreateGuiWindow()
 		pCheckBox->AddCallback(eGuiMessage_CheckChange,this, kGuiCallback(ChangeDebugText));
 		vGroupPos.y += 22;
 
-		//Occlusion culling
-		pCheckBox = mpGuiSet->CreateWidgetCheckBox(vGroupPos,vSize,_W("Occlusion Culling"),pGroup);
-		pCheckBox->SetChecked(gpBase->mpMapHandler->GetViewport()->GetRenderSettings()->mbUseOcclusionCulling);
-		pCheckBox->SetUserValue(6);
-		pCheckBox->AddCallback(eGuiMessage_CheckChange,this, kGuiCallback(ChangeDebugText));
-		vGroupPos.y += 22;
-
 		//Physics debug drawing
 		pCheckBox = mpGuiSet->CreateWidgetCheckBox(vGroupPos, vSize, _W("Draw physics debug"), pGroup);
 		pCheckBox->SetChecked(mbDrawPhysics);
@@ -1575,7 +1568,6 @@ bool cLuxDebugHandler::ChangeDebugText(iWidget* apWidget, const cGuiMessageData&
 	else if(lNum == 3)	 mbShowSoundPlaying = bActive;
 	else if(lNum == 4)	 mbShowDebugMessages = bActive;
 	else if(lNum == 5)	 mbInspectionMode = bActive;
-	else if(lNum == 6)	 gpBase->mpMapHandler->GetViewport()->GetRenderSettings()->mbUseOcclusionCulling = bActive;
 	else if(lNum == 7)	 iResourceBase::SetLogCreateAndDelete(bActive);
 	else if(lNum == 8)	 mbReloadFromCurrentPosition = bActive;
 	else if(lNum == 9)	 gpBase->mpConfigHandler->mbFastPhysicsLoad = bActive;

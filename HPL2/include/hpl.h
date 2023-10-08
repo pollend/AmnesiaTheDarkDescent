@@ -51,7 +51,6 @@
 #include "graphics/Graphics.h"
 #include "graphics/LowLevelGraphics.h"
 #include "graphics/RendererDeferred.h"
-#include "graphics/RendererSimple.h"
 #include "graphics/RenderList.h"
 #include "graphics/MeshCreator.h"
 #include "graphics/TextureCreator.h"
@@ -84,7 +83,6 @@
 #include "math/Math.h"
 #include "math/BoundingVolume.h"
 #include "math/cFrustum.h"
-#include "math/Spring.h"
 #include "math/PidController.h"
 #include "math/CRC.h"
 

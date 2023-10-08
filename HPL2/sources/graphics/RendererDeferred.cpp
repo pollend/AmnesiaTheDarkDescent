@@ -103,23 +103,6 @@ namespace hpl {
     static constexpr uint32_t SSAONumOfSamples = 8;
 
     namespace detail {
-        void cmdDefaultLegacyGeomBinding(Cmd* cmd, const ForgeRenderer::Frame& frame, LegacyVertexBuffer::GeometryBinding& binding) {
-            folly::small_vector<Buffer*, 16> vbBuffer;
-            folly::small_vector<uint64_t, 16> vbOffsets;
-            folly::small_vector<uint32_t, 16> vbStride;
-
-            for (auto& element : binding.m_vertexElement) {
-                vbBuffer.push_back(element.element->m_buffer.m_handle);
-                vbOffsets.push_back(element.offset);
-                vbStride.push_back(element.element->Stride());
-                frame.m_resourcePool->Push(element.element->m_buffer);
-            }
-            frame.m_resourcePool->Push(*binding.m_indexBuffer.element);
-
-            cmdBindVertexBuffer(cmd, binding.m_vertexElement.size(), vbBuffer.data(), vbStride.data(), vbOffsets.data());
-            cmdBindIndexBuffer(cmd, binding.m_indexBuffer.element->m_handle, INDEX_TYPE_UINT32, binding.m_indexBuffer.offset);
-        }
-
         uint32_t resolveMaterialID(cMaterial::TextureAntistropy anisotropy, eTextureWrap wrap, eTextureFilter filter) {
             const uint32_t anisotropyGroup =
                 (static_cast<uint32_t>(eTextureFilter_LastEnum) * static_cast<uint32_t>(eTextureWrap_LastEnum)) *
@@ -2538,7 +2521,7 @@ namespace hpl {
             };
             LegacyVertexBuffer::GeometryBinding binding;
             static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
-            detail::cmdDefaultLegacyGeomBinding(cmd, frame, binding);
+            LegacyVertexBuffer::cmdBindGeometry(cmd, frame.m_resourcePool, binding);
             cmdBindPushConstants(cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
             cmdDrawIndexed(cmd, binding.m_indexBuffer.numIndicies, 0, 0);
         }
@@ -2789,7 +2772,7 @@ namespace hpl {
                                     LegacyVertexBuffer::GeometryBinding binding{};
                                     static_cast<LegacyVertexBuffer*>(vertexBuffer)
                                         ->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
-                                    detail::cmdDefaultLegacyGeomBinding(shadowMapData->m_cmd.m_handle, frame, binding);
+                                    LegacyVertexBuffer::cmdBindGeometry(shadowMapData->m_cmd.m_handle, frame.m_resourcePool, binding);
                                     cmdBindPushConstants(
                                         shadowMapData->m_cmd.m_handle, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
                                     cmdDrawIndexed(shadowMapData->m_cmd.m_handle, binding.m_indexBuffer.numIndicies, 0, 0);
@@ -3031,7 +3014,7 @@ namespace hpl {
                     auto lightShape = GetLightShape(light->m_light, eDeferredShapeQuality_High);
                     ASSERT(lightShape && "Light shape not found");
                     static_cast<LegacyVertexBuffer*>(lightShape)->resolveGeometryBinding(frame.m_currentFrame, elements, &binding);
-                    detail::cmdDefaultLegacyGeomBinding(cmd, frame, binding);
+                    LegacyVertexBuffer::cmdBindGeometry(cmd, frame.m_resourcePool, binding);
 
                     cmdBindPipeline(cmd, options.m_invert ? m_lightStencilPipelineCW.m_handle : m_lightStencilPipelineCCW.m_handle);
                     uint32_t instance = cmdBindLightDescriptor(light); // bind light descriptor light uniforms
@@ -3135,7 +3118,7 @@ namespace hpl {
                     static_cast<LegacyVertexBuffer*>(lightShape)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
 
                     uint32_t instance = cmdBindLightDescriptor(light);
-                    detail::cmdDefaultLegacyGeomBinding(cmd, frame, binding);
+                    LegacyVertexBuffer::cmdBindGeometry(cmd, frame.m_resourcePool, binding);
                     cmdBindPushConstants(cmd, m_lightPassRootSignature.m_handle, lightRootConstantIndex, &instance);
                     cmdDrawIndexed(cmd, binding.m_indexBuffer.numIndicies, 0, 0);
                 }
@@ -3190,7 +3173,7 @@ namespace hpl {
                                        eVertexBufferElement_Texture1Tangent };
                 LegacyVertexBuffer::GeometryBinding binding;
                 static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
-                detail::cmdDefaultLegacyGeomBinding(cmd, frame, binding);
+                LegacyVertexBuffer::cmdBindGeometry(cmd, frame.m_resourcePool, binding);
                 cmdBindPushConstants(cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
                 cmdDrawIndexed(cmd, binding.m_indexBuffer.numIndicies, 0, 0);
             }
@@ -3229,7 +3212,7 @@ namespace hpl {
                 materialConst.objectId = instance;
                 LegacyVertexBuffer::GeometryBinding binding;
                 static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
-                detail::cmdDefaultLegacyGeomBinding(cmd, frame, binding);
+                LegacyVertexBuffer::cmdBindGeometry(cmd, frame.m_resourcePool, binding);
                 cmdBindPushConstants(cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
                 cmdDrawIndexed(cmd, binding.m_indexBuffer.numIndicies, 0, 0);
             }
@@ -3442,7 +3425,7 @@ namespace hpl {
                                        eVertexBufferElement_Texture1Tangent };
                 LegacyVertexBuffer::GeometryBinding binding{};
                 static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
-                detail::cmdDefaultLegacyGeomBinding(m_prePassCmd.m_handle, frame, binding);
+                LegacyVertexBuffer::cmdBindGeometry(m_prePassCmd.m_handle, frame.m_resourcePool, binding);
                 cmdBindPushConstants(m_prePassCmd.m_handle, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
                 cmdDrawIndexed(m_prePassCmd.m_handle, binding.m_indexBuffer.numIndicies, 0, 0);
             }
@@ -3485,7 +3468,7 @@ namespace hpl {
                     cmdBindPushConstants(
                         m_prePassCmd.m_handle, m_rootSignatureOcclusuion.m_handle, occlusionObjectIndex, &m_occlusionIndex);
 
-                    detail::cmdDefaultLegacyGeomBinding(m_prePassCmd.m_handle, frame, binding);
+                    LegacyVertexBuffer::cmdBindGeometry(m_prePassCmd.m_handle, frame.m_resourcePool, binding);
 
                     QueryDesc queryDesc = {};
                     queryDesc.mIndex = queryIndex++;
@@ -3682,7 +3665,7 @@ namespace hpl {
                                            eVertexBufferElement_Texture1Tangent };
                     LegacyVertexBuffer::GeometryBinding binding{};
                     static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
-                    detail::cmdDefaultLegacyGeomBinding(cmd, frame, binding);
+                    LegacyVertexBuffer::cmdBindGeometry(cmd, frame.m_resourcePool, binding);
                     cmdBindPushConstants(cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
                     cmdDrawIndexed(cmd, binding.m_indexBuffer.numIndicies, 0, 0);
                 }
@@ -3764,6 +3747,7 @@ namespace hpl {
             uniformObjectData.m_materialIndex = apMaterial->Index();
             uniformObjectData.m_modelMat = cMath::ToForgeMat4(modelMat.GetTranspose());
             uniformObjectData.m_invModelMat = cMath::ToForgeMat4(cMath::MatrixInverse(modelMat).GetTranspose());
+            uniformObjectData.m_lightLevel = 1.0f;
             if (apMaterial) {
                 uniformObjectData.m_uvMat = cMath::ToForgeMat4(apMaterial->GetUvMatrix());
                 if (apMaterial->IsAffectedByLightLevel()) {
@@ -3910,6 +3894,7 @@ void cRendererDeferred::RebuildGBuffer(ForgeRenderer& renderer, GBuffer& buffer,
 }
 
 void cRendererDeferred::Draw(
+    Cmd* cmd,
     const ForgeRenderer::Frame& frame,
     cViewport& viewport,
     float afFrameTime,
@@ -3917,7 +3902,6 @@ void cRendererDeferred::Draw(
     cWorld* apWorld,
     cRenderSettings* apSettings,
     bool abSendFrameBufferToPostEffects) {
-    iRenderer::Draw(frame, viewport, afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects);
     // keep around for the moment ...
     BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects);
 
@@ -4153,7 +4137,7 @@ void cRendererDeferred::Draw(
             };
             LegacyVertexBuffer::GeometryBinding binding;
             static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
-            detail::cmdDefaultLegacyGeomBinding(frame.m_cmd, frame, binding);
+            LegacyVertexBuffer::cmdBindGeometry(frame.m_cmd, frame.m_resourcePool, binding);
             cmdBindPushConstants(frame.m_cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
             cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
         }
@@ -4238,7 +4222,7 @@ void cRendererDeferred::Draw(
         LegacyVertexBuffer::GeometryBinding binding{};
         std::array geometryStream = { eVertexBufferElement_Position };
         static_cast<LegacyVertexBuffer*>(m_box.get())->resolveGeometryBinding(frame.m_currentFrame, geometryStream, &binding);
-        detail::cmdDefaultLegacyGeomBinding(frame.m_cmd, frame, binding);
+        LegacyVertexBuffer::cmdBindGeometry(frame.m_cmd, frame.m_resourcePool, binding);
 
         {
             std::array<DescriptorData, 1> params = {};
@@ -4341,6 +4325,7 @@ void cRendererDeferred::Draw(
     postSolidEvent.m_viewport = &viewport;
     postSolidEvent.m_renderSettings = mpCurrentSettings;
     postSolidEvent.m_debug = m_debug.get();
+    postSolidEvent.m_renderList = &m_rendererList;
     viewport.SignalDraw(postSolidEvent);
     m_debug->flush(frame, frame.m_cmd, viewport, *apFrustum, currentGBuffer.m_outputBuffer, currentGBuffer.m_depthBuffer);
 
@@ -4654,7 +4639,7 @@ void cRendererDeferred::Draw(
                                        .m_handle));
                     }
 
-                    detail::cmdDefaultLegacyGeomBinding(frame.m_cmd, frame, binding);
+                    LegacyVertexBuffer::cmdBindGeometry(frame.m_cmd, frame.m_resourcePool, binding);
                     materialConst.m_options = (isFogActive ? TranslucencyFlags::UseFog : 0) |
                         (isRefraction ? TranslucencyFlags::UseRefractionTrans : 0) | translucencyBlendTable[pMaterial->GetBlendMode()];
 
@@ -4693,7 +4678,7 @@ void cRendererDeferred::Draw(
                     cRendererDeferred::TranslucencyPipeline::TranslucencyWaterKey key = {};
                     key.m_field.m_hasDepthTest = pMaterial->GetDepthTest();
 
-                    detail::cmdDefaultLegacyGeomBinding(frame.m_cmd, frame, binding);
+                    LegacyVertexBuffer::cmdBindGeometry(frame.m_cmd, frame.m_resourcePool, binding);
 
                     cmdBindPipeline(frame.m_cmd, m_materialTranslucencyPass.m_waterPipeline[key.m_id].m_handle);
                     uint32_t instance = cmdBindMaterialAndObject(
@@ -4720,6 +4705,7 @@ void cRendererDeferred::Draw(
     translucenceEvent.m_viewport = &viewport;
     translucenceEvent.m_renderSettings = mpCurrentSettings;
     translucenceEvent.m_debug = m_debug.get();
+    translucenceEvent.m_renderList = &m_rendererList;
     viewport.SignalDraw(translucenceEvent);
     m_debug->flush(frame, frame.m_cmd, viewport, *apFrustum, currentGBuffer.m_outputBuffer, currentGBuffer.m_depthBuffer);
 

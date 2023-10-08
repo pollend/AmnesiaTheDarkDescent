@@ -53,7 +53,6 @@
 
 #include "graphics/RendererDeferred.h"
 #include "graphics/RendererWireFrame.h"
-#include "graphics/RendererSimple.h"
 #include "graphics/DebugDraw.h"
 #include <memory>
 

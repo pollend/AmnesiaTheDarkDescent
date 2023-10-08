@@ -186,7 +186,6 @@ namespace hpl {
             if(!pViewPort->IsValid()) {
                 continue;
             }
-
             //////////////////////////////////////////////
             // Init vars
             cPostEffectComposite* pPostEffectComposite = pViewPort->GetPostEffectComposite();
@@ -206,6 +205,7 @@ namespace hpl {
                 if (pRenderer && pViewPort->GetWorld() && pFrustum) {
                     START_TIMING(RenderWorld)
                     pRenderer->Draw(
+                        frame.m_cmd,
                         frame,
                         *pViewPort,
                         afFrameTime,

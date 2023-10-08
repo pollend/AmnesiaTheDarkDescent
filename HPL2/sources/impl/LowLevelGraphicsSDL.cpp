@@ -317,11 +317,6 @@ namespace hpl {
 		// BX_ASSERT(false, "Deprecated");
 	}
 
-	void cLowLevelGraphicsSDL::FlushRendering()
-	{
-		// BX_ASSERT(false, "Deprecated");
-	}
-
 	void cLowLevelGraphicsSDL::SwapBuffers()
 	{
 		// BX_ASSERT(false, "Deprecated");

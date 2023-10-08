@@ -1,7 +1,7 @@
 #include "graphics/DebugDraw.h"
 #include "Common_3/Graphics/Interfaces/IGraphics.h"
+#include "Common_3/Utilities/Math/MathTypes.h"
 #include "Common_3/Resources/ResourceLoader/Interfaces/IResourceLoader.h"
-#include "Common_3/Utilities/ThirdParty/OpenSource/ModifiedSonyMath/sse/vectormath.hpp"
 #include "graphics/VertexBuffer.h"
 
 #include "scene/Camera.h"
@@ -497,8 +497,8 @@ namespace hpl {
     }
 
     // scale based on distance from camera
-    float DebugDraw::BillboardScale(cCamera* apCamera, const Eigen::Vector3f& pos) {
-        const auto avViewSpacePosition = cMath::MatrixMul(apCamera->GetViewMatrix(), cVector3f(pos.x(), pos.y(), pos.z()));
+    float DebugDraw::BillboardScale(cCamera* apCamera, const Vector3& pos) {
+        const auto avViewSpacePosition = cMath::MatrixMul(apCamera->GetViewMatrix(), cVector3f(pos.getX(), pos.getY(), pos.getZ()));
         switch (apCamera->GetProjectionType()) {
         case eProjectionType_Orthographic:
             return apCamera->GetOrthoViewSize().x * 0.25f;

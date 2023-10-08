@@ -90,8 +90,15 @@ namespace hpl {
             iRenderable* apObject
         );
 
-		virtual void Draw(const ForgeRenderer::Frame& context, cViewport& viewport, float afFrameTime, cFrustum *apFrustum, cWorld *apWorld, cRenderSettings *apSettings,
-		bool abSendFrameBufferToPostEffects) override;
+        virtual void Draw(
+            Cmd* cmd,
+            const ForgeRenderer::Frame& context,
+            cViewport& viewport,
+            float afFrameTime,
+            cFrustum* apFrustum,
+            cWorld* apWorld,
+            cRenderSettings* apSettings,
+            bool abSendFrameBufferToPostEffects) override;
 
         std::array<SharedBuffer, NumberOfPerFrameUniforms> m_frameBufferUniform;
         uint32_t m_perFrameIndex = 0;

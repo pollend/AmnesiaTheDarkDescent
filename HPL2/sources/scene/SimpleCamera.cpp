@@ -262,7 +262,6 @@ void cSimpleCamera::Update(float afFrameTime)
 		Log("Yaw(%f)\n", mpCamera->GetYaw());
 		Log("-----------------------------------\n");
 
-		mpViewport->GetRenderSettings()->mbLog =true;
 	}
 
 	if(mpEngine->GetInput()->BecameTriggerd("ListContainerInfo"))
@@ -455,7 +454,6 @@ void cSimpleCamera::OnDraw(float afFrameTime)
 
 void cSimpleCamera::OnPostRender(float afFrameTime)
 {
-	mpViewport->GetRenderSettings()->mbLog =false;
 }
 
 //-----------------------------------------------------------------------

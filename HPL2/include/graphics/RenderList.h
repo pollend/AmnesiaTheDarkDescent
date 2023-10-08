@@ -51,6 +51,8 @@ namespace hpl {
 
 		std::span<iRenderable*> GetRenderableItems(eRenderListType aType);
 		std::span<iRenderable*> GetOcclusionQueryItems();
+		std::span<iRenderable*> GetTransObjects();
+		std::span<iRenderable*> GetSolidObjects();
 		std::span<cFogArea*> GetFogAreas();
 		std::span<iLight*> GetLights();
 

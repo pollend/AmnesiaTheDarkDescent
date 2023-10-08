@@ -93,7 +93,7 @@ void cEntityIcon::DrawIcon(cEditorWindowViewport* apViewport,
 	{
 		cColor bbColor = abIsSelected ? cColor(1,1) : (abIsActive ? cColor(0.5f,1) : aDisabledCol);
 
-		float scale = DebugDraw::BillboardScale(apViewport->GetCamera(), Eigen::Vector3f(avPos.x, avPos.y, avPos.z));
+		float scale = DebugDraw::BillboardScale(apViewport->GetCamera(), Vector3(avPos.x, avPos.y, avPos.z));
 		apFunctions->DrawBillboard(cMath::ToForgeVec3(avPos),
 			                 cMath::ToForgeVec2(cVector2f(0.1f,0.1f) * scale),
 			                 cMath::ToForgeVec2(cVector2f(1.f, 0.f)), cMath::ToForgeVec2(cVector2f(0.f, 1.f)),

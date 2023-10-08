@@ -521,8 +521,6 @@ void cLuxInputHandler::Reset()
 
 void cLuxInputHandler::OnPostRender(float afFrameTime)
 {
-	//Turn of logging so it only happens one frame!
-	gpBase->mpMapHandler->GetViewport()->GetRenderSettings()->mbLog = false;
 }
 
 //-----------------------------------------------------------------------
@@ -741,9 +739,9 @@ void cLuxInputHandler::UpdateGlobalInput()
 
 	/////////////////
 	// Debug output
+	//TODO: remove eLuxAction_PrintInfo
 	if(mpInput->BecameTriggerd(eLuxAction_PrintInfo))
 	{
-		gpBase->mpMapHandler->GetViewport()->GetRenderSettings()->mbLog = true;
 	}
 
 	/////////////////

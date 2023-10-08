@@ -19,6 +19,7 @@
 
 #include "graphics/Enum.h"
 #include "graphics/ForgeRenderer.h"
+#include "graphics/GraphicsTypes.h"
 #include "graphics/Image.h"
 #include "graphics/RenderTarget.h"
 #include "hpl.h"
@@ -54,6 +55,10 @@ float gfScatterMinMaxVal = 0.08f;
 
 float gfScatterMaxMinVal = 0.1f;
 float gfScatterMaxMaxVal = 0.3f;
+int NumberOfShadowCasters = 0;
+int NumberOfLights = 0;
+int NumberOfSolidObjects = 0;
+int NumberOfTransObjects = 0;
 
 cAINodeContainer *gpNodeContainer=NULL;
 
@@ -296,6 +301,23 @@ public:
 		m_postSolidDraw = cViewport::PostSolidDraw::Handler([&](cViewport::PostSolidDrawPacket& payload) {
 			cMatrixf view = payload.m_frustum->GetViewMatrix().GetTranspose();
 			cMatrixf proj = payload.m_frustum->GetProjectionMatrix().GetTranspose();
+
+
+		    int shadowCasters = 0;
+		    auto& renderList = payload.m_renderList;
+			for(int i=0; i<renderList->GetLightNum(); ++i)
+			{
+				iLight *pLight = renderList->GetLight(i);
+				if(pLight->GetCastShadows() && pLight->GetLightType()==eLightType_Spot)
+				{
+					shadowCasters++;
+				}
+			}
+			NumberOfShadowCasters = shadowCasters;
+            NumberOfLights = renderList->GetLights().size();
+            NumberOfSolidObjects =  renderList->GetSolidObjects().size();
+
+
 			std::function<void(iRenderableContainerNode *apNode, int alLevel)> nodeDebug;
 			nodeDebug = [&](iRenderableContainerNode *apNode, int alLevel) {
 				///////////////////////////////////////
@@ -353,7 +375,6 @@ public:
 
 
 			cRenderSettings *pSettings = gpSimpleCamera->GetViewport()->GetRenderSettings();
-			cRenderList *pRenderList = pSettings->mpRenderList;
 
 			/////////////////////////////////////
 			//Draw outlines on objects, so you can see what mesh each belongs to (after having been combined)
@@ -457,10 +478,10 @@ public:
 
 				/////////////////////////
 				//Solid objects (reverse order = back to front)
-				int lNum = pRenderList->GetSolidObjectNum();
+				int lNum = payload.m_renderList->GetSolidObjectNum();
 				for(int i=lNum-1; i>=0; --i)
 				{
-					iRenderable *pObject = pRenderList->GetSolidObject(i);
+					iRenderable *pObject = payload.m_renderList->GetSolidObject(i);
 					if(gbDrawStaticOcclusionGfxInfo==false && pObject->IsStatic())continue;
 
 					cColor col = CalcDistColorForRenderable(pObject);//cColor(1,1);//gObjectDebugColor[(size_t)pObject % glObjectDebugColorNum];
@@ -473,10 +494,10 @@ public:
 
 				/////////////////////////
 				//Trans (reverse order = back to front)
-				lNum = pRenderList->GetTransObjectNum();
+				lNum = payload.m_renderList->GetTransObjectNum();
 				for(int i=lNum-1; i>=0; --i)
 				{
-					iRenderable *pObject = pRenderList->GetTransObject(i);
+					iRenderable *pObject = payload.m_renderList->GetTransObject(i);
 					if(gbDrawStaticOcclusionGfxInfo==false && pObject->IsStatic())continue;
 
 					cColor col = CalcDistColorForRenderable(pObject);//cColor(1,1);//gObjectDebugColor[(size_t)pObject % glObjectDebugColorNum];
@@ -546,15 +567,14 @@ public:
 			DebugDraw batch(Interface<ForgeRenderer>::Get());
 
 			cRenderSettings *pSettings = gpSimpleCamera->GetViewport()->GetRenderSettings();
-			cRenderList *pRenderList = pSettings->mpRenderList;
 
 			/////////////////////////
 			//Solid objects
 			int lCount =0;
-			int lNum = pRenderList->GetSolidObjectNum();
+			int lNum = payload.m_renderList->GetSolidObjectNum();
 			for(int i=0; i<lNum; ++i)
 			{
-				iRenderable *pObject = pRenderList->GetSolidObject(i);
+				iRenderable *pObject = payload.m_renderList->GetSolidObject(i);
 
 				cColor col = gObjectDebugColor[(size_t)pObject % glObjectDebugColorNum];
 				DebugDraw::DebugDrawOptions options;
@@ -571,10 +591,10 @@ public:
 
 			/////////////////////////
 			//Trans
-			lNum = pRenderList->GetTransObjectNum();
+			lNum = payload.m_renderList->GetTransObjectNum();
 			for(int i=0; i<lNum; ++i)
 			{
-				iRenderable *pObject = pRenderList->GetTransObject(i);
+				iRenderable *pObject = payload.m_renderList->GetTransObject(i);
 
 				cColor col = gObjectDebugColor[(size_t)pObject % glObjectDebugColorNum];
 
@@ -844,9 +864,9 @@ public:
 			if(abKeepPosition==false && gvStartPostions.size() > 0)
 				gpSimpleCamera->GetCamera()->SetPosition(gvStartPostions[0]);
 
-			//Force  a clearing of render list
-			cRenderList *pRenderList = gpSimpleCamera->GetViewport()->GetRenderSettings()->mpRenderList;
-			pRenderList->Clear();
+		   // //Force  a clearing of render list
+		   // cRenderList *pRenderList = gpSimpleCamera->GetViewport()->GetRenderSettings()->mpRenderList;
+		   // pRenderList->Clear();
 		}
 
 		//////////////////////////////////
@@ -1082,7 +1102,6 @@ public:
 
 	void SetPhysicsActive(bool abX)
 	{
-		//TODO?
 	}
 
 	//--------------------------------------------------------------
@@ -1340,12 +1359,6 @@ public:
 			//Group
 			vGroupPos = cVector3f(5,10,0.1f);
 			pGroup = pSet->CreateWidgetGroup(vPos,100,_W("Graphics"),mpOptionWindow);
-
-			//Occlusion test
-			pCheckBox = pSet->CreateWidgetCheckBox(vGroupPos,vSize,_W("Occlusion test"),pGroup);
-			pCheckBox->SetChecked(true);
-			pCheckBox->AddCallback(eGuiMessage_CheckChange,this, kGuiCallback(ChangeOcclusionTest));
-			vGroupPos.y += 22;
 
 			//Reflect world
 			pCheckBox = pSet->CreateWidgetCheckBox(vGroupPos,vSize,_W("Reflect World"),pGroup);
@@ -1621,7 +1634,6 @@ public:
 
 	bool ChangeOcclusionTest(iWidget* apWidget,const cGuiMessageData& aData)
 	{
-		gpSimpleCamera->GetViewport()->GetRenderSettings()->mbUseOcclusionCulling = aData.mlVal==1 ? true : false;
 		return true;
 	}
 	kGuiCallbackFuncEnd(cSimpleUpdate,ChangeOcclusionTest)
@@ -1657,6 +1669,7 @@ public:
 		apNode->UpdateBeforeUse();
 
 		cFrustum *pCurrentFrustum = gpSimpleCamera->GetCamera()->GetFrustum();
+
 
 		///////////////////////////////////////
 		//Get frustum collision, if previous was inside, then this is too!
@@ -1714,8 +1727,6 @@ public:
 	}
 
 
-	//--------------------------------------------------------------
-
 	void OnDraw(float afFrameTime)
 	{
 		if(gpSimpleCamera->GetFont()==NULL) return;
@@ -1756,33 +1767,18 @@ public:
 			////////////////////////////////
 			//Number of objects visible
 			cRenderSettings *pSettings = gpSimpleCamera->GetViewport()->GetRenderSettings();
-			cRenderList *pRenderList = pSettings->mpRenderList;
-
-			int lShadowCasters =0;
-			for(int i=0; i<pRenderList->GetLightNum(); ++i)
-			{
-				iLight *pLight = pRenderList->GetLight(i);
-				if(pLight->GetCastShadows() && pLight->GetLightType()==eLightType_Spot)
-				{
-					lShadowCasters++;
-				}
-			}
 
 			gpSimpleCamera->GetSet()->DrawFont(gpSimpleCamera->GetFont(),cVector3f(5,fY,0),14,cColor(1,1),
 																	_W("Num of lights: %d (%d) / %d ShadowCasters: %d"),
 																	pSettings->mlNumberOfLightsRendered,
-																	pRenderList->GetLightNum(),
+																	NumberOfLights,
 																	lLightsInFrustum,
-																	lShadowCasters);
+																	NumberOfShadowCasters);
 			fY+=16;
 			gpSimpleCamera->GetSet()->DrawFont(gpSimpleCamera->GetFont(),cVector3f(5,fY,0),14,cColor(1,1),
 																	_W("Num of objects: %d / %d"),
-																	pRenderList->GetSolidObjectNum() + pRenderList->GetTransObjectNum(),
+																	NumberOfSolidObjects + NumberOfTransObjects,
 																	lObjectsInFrustum);
-			fY+=16;
-			gpSimpleCamera->GetSet()->DrawFont(gpSimpleCamera->GetFont(),cVector3f(5,fY,0),14,cColor(1,1),
-																	_W("Queries: %d"),
-																		pSettings->mlNumberOfOcclusionQueries);
 			fY+=16;
 		}
 

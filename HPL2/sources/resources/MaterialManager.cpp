@@ -38,6 +38,7 @@
 
 #include "impl/tinyXML/tinyxml.h"
 
+#include "Common_3/Utilities/Log/Log.h"
 #include "Common_3/Utilities/Interfaces/ILog.h"
 #include <FixPreprocessor.h>
 
@@ -64,7 +65,7 @@ namespace hpl {
     cMaterialManager::~cMaterialManager() {
         DestroyAll();
 
-        Log(" Done with materials\n");
+        LOGF(LogLevel::eINFO," Done with materials\n");
     }
 
     cMaterial* cMaterialManager::CreateMaterial(const tString& asName) {
@@ -185,8 +186,6 @@ namespace hpl {
             return "";
     }
 
-    //-----------------------------------------------------------------------
-
     cMaterial* cMaterialManager::CreateCustomMaterial(const tString& asName, iMaterialType* apMaterialType) {
         cMaterial* pMat = hplNew(cMaterial, (asName, cString::To16Char(asName), mpResources));
         pMat->IncUserCount();
@@ -202,17 +201,17 @@ namespace hpl {
         }
 
         cXmlElement* pMain = pDoc->GetFirstElement("Main");
-        if (pMain == NULL) {
+        if (pMain == nullptr) {
             mpResources->DestroyXmlDocument(pDoc);
             Error("Main child not found.\n");
-            return NULL;
+            return nullptr;
         }
 
         tString sType = pMain->GetAttributeString("Type");
         if (sType == "") {
             mpResources->DestroyXmlDocument(pDoc);
             Error("Type not found.\n");
-            return NULL;
+            return nullptr;
         }
 
         /////////////////////////////
@@ -259,12 +258,11 @@ namespace hpl {
 
         for (eMaterialTexture textureType : metaInfo->m_usedTextures) {
             tString sTextureType = GetTextureString(textureType);
-
             cXmlElement* pTexChild = pTexRoot->GetFirstElement(sTextureType.c_str());
             if (pTexChild == NULL) {
-                // Log(" Texture unit element missing!\n");
-                /*hplDelete(pMat);
-                return NULL;*/
+                // LOGF(LogLevel::eERROR, "Invalid animation axis %s", sTextureType.c_str());
+                // hplDelete(pMat);
+                // return NULL;
                 continue;
             }
 
@@ -368,12 +366,6 @@ namespace hpl {
                 switch (meta.m_id) {
                 case MaterialID::SolidDiffuse:
                     {
-                        //	    type.m_data.m_solid.m_heightMapScale = userVars.GetVarFloat("HeightMapScale", 0.1f);
-                        //		type.m_data.m_solid.m_heightMapBias = userVars.GetVarFloat("HeightMapBias", 0);
-                        //		type.m_data.m_solid.m_frenselBias = userVars.GetVarFloat("FrenselBias", 0.2f);
-                        //		type.m_data.m_solid.m_frenselPow = userVars.GetVarFloat("FrenselPow", 8.0f);
-                        //		type.m_alphaDissolveFilter = userVars.GetVarBool("AlphaDissolveFilter", false);
-
                         materialDescriptor.m_solid.m_heightMapScale = userVars.GetVarFloat("HeightMapScale", 0.1f);
                         materialDescriptor.m_solid.m_heightMapBias = userVars.GetVarFloat("HeightMapBias", 0);
                         materialDescriptor.m_solid.m_frenselBias = userVars.GetVarFloat("FrenselBias", 0.2f);
@@ -383,17 +375,6 @@ namespace hpl {
                     }
                 case MaterialID::Translucent:
                     {
-                       // pMat->SetHasRefraction(userVars.GetVarBool("Refraction", false));
-                       // pMat->SetIsAffectedByLightLevel(userVars.GetVarBool("AffectedByLightLevel", false));
-                       // pMat->SetHasRefractionNormals(userVars.GetVarBool("RefractionNormals", true));
-                       // pMat->SetUseRefractionEdgeCheck(userVars.GetVarBool("RefractionEdgeCheck", true));
-                        //		type.m_data.m_translucentUniformBlock.mfRefractionScale =
-                        //userVars.GetVarFloat("RefractionScale", 1.0f); 		type.m_data.m_translucentUniformBlock.mfFrenselBias =
-                        //userVars.GetVarFloat("FrenselBias", 0.2f); 		type.m_data.m_translucentUniformBlock.mfFrenselPow =
-                        //userVars.GetVarFloat("FrenselPow", 8.0); 		type.m_data.m_translucentUniformBlock.mfRimLightMul =
-                        //userVars.GetVarFloat("RimLightMul", 0.0f); 		type.m_data.m_translucentUniformBlock.mfRimLightPow =
-                        //userVars.GetVarFloat("RimLightPow", 8.0f);
-
                         materialDescriptor.m_translucent.m_hasRefraction = userVars.GetVarBool("Refraction", false);
                         materialDescriptor.m_translucent.m_refractionNormals = userVars.GetVarBool("RefractionNormals", true);
                         materialDescriptor.m_translucent.m_refractionEdgeCheck = userVars.GetVarBool("RefractionEdgeCheck", true);
@@ -409,23 +390,6 @@ namespace hpl {
                     }
                 case MaterialID::Water:
                     {
-                        // type.m_data.m_waterUniformBlock.mbHasReflection = userVars.GetVarBool("HasReflection", true);
-                        //	type.m_data.m_waterUniformBlock.mfRefractionScale =
-                        // userVars.GetVarFloat("RefractionScale", 1.0f); 		type.m_data.m_waterUniformBlock.mfFrenselBias =
-                        // userVars.GetVarFloat("FrenselBias", 0.2f); 		type.m_data.m_waterUniformBlock.mfFrenselPow =
-                        // userVars.GetVarFloat("FrenselPow", 8.0f);
-                        //		type.m_data.m_waterUniformBlock.mfReflectionFadeStart =
-                        // userVars.GetVarFloat("ReflectionFadeStart", 0);
-                        //		type.m_data.m_waterUniformBlock.mfReflectionFadeEnd =
-                        // userVars.GetVarFloat("ReflectionFadeEnd", 0); 		type.m_data.m_waterUniformBlock.mfWaveSpeed =
-                        // userVars.GetVarFloat("WaveSpeed", 1.0f); 		type.m_data.m_waterUniformBlock.mfWaveAmplitude =
-                        // userVars.GetVarFloat("WaveAmplitude", 1.0f); 		type.m_data.m_waterUniformBlock.mfWaveFreq =
-                        // userVars.GetVarFloat("WaveFreq", 1.0f);
-
-                        //pMat->SetWorldReflectionOcclusionTest(userVars.GetVarBool("OcclusionCullWorldReflection", true));
-                        //pMat->SetMaxReflectionDistance(userVars.GetVarFloat("ReflectionFadeEnd", 0.0f));
-                        //pMat->SetLargeTransperantSurface(userVars.GetVarBool("LargeSurface", false));
-
                         materialDescriptor.m_water.m_hasReflection = userVars.GetVarBool("HasReflection", true);
                         materialDescriptor.m_water.m_refractionScale = userVars.GetVarFloat("RefractionScale", 1.0f);
                         materialDescriptor.m_water.m_frenselBias = userVars.GetVarFloat("FrenselBias", 0.2f);
@@ -437,7 +401,8 @@ namespace hpl {
                         materialDescriptor.m_water.m_waveFreq = userVars.GetVarFloat("WaveFreq", 1.0f);
 
                         materialDescriptor.m_water.m_isLargeSurface = userVars.GetVarBool("LargeSurface", false);
-                        materialDescriptor.m_water.m_worldReflectionOcclusionTest = userVars.GetVarBool("OcclusionCullWorldReflection", true);
+                        materialDescriptor.m_water.m_worldReflectionOcclusionTest =
+                            userVars.GetVarBool("OcclusionCullWorldReflection", true);
                         break;
                     }
                 case MaterialID::Decal:
@@ -455,26 +420,21 @@ namespace hpl {
         }
 
         mpResources->DestroyXmlDocument(pDoc);
-
-
         return pMat;
     }
 
-    //-----------------------------------------------------------------------
-
     eTextureType cMaterialManager::GetType(const tString& asType) {
-        if (cString::ToLowerCase(asType) == "cube")
+        if (cString::ToLowerCase(asType) == "cube") {
             return eTextureType_CubeMap;
-        else if (cString::ToLowerCase(asType) == "1d")
+        } else if (cString::ToLowerCase(asType) == "1d") {
             return eTextureType_1D;
-        else if (cString::ToLowerCase(asType) == "2d")
+        } else if (cString::ToLowerCase(asType) == "2d") {
             return eTextureType_2D;
-        else if (cString::ToLowerCase(asType) == "3d")
+        } else if (cString::ToLowerCase(asType) == "3d") {
             return eTextureType_3D;
-
+        }
         return eTextureType_2D;
     }
-    //-----------------------------------------------------------------------
 
     tString cMaterialManager::GetTextureString(eMaterialTexture aType) {
         switch (aType) {
@@ -496,30 +456,33 @@ namespace hpl {
             return "DissolveAlpha";
         case eMaterialTexture_CubeMapAlpha:
             return "CubeMapAlpha";
+        default:
+            break;
         }
-
         return "";
     }
 
     //-----------------------------------------------------------------------
 
     eTextureWrap cMaterialManager::GetWrap(const tString& asType) {
-        if (cString::ToLowerCase(asType) == "repeat")
+        if (cString::ToLowerCase(asType) == "repeat") {
             return eTextureWrap_Repeat;
-        else if (cString::ToLowerCase(asType) == "clamp")
+        } else if (cString::ToLowerCase(asType) == "clamp") {
             return eTextureWrap_Clamp;
-        else if (cString::ToLowerCase(asType) == "clamptoedge")
+        } else if (cString::ToLowerCase(asType) == "clamptoedge") {
             return eTextureWrap_ClampToEdge;
+        }
         return eTextureWrap_Repeat;
     }
 
     eTextureAnimMode cMaterialManager::GetAnimMode(const tString& asType) {
-        if (cString::ToLowerCase(asType) == "none")
+        if (cString::ToLowerCase(asType) == "none") {
             return eTextureAnimMode_None;
-        else if (cString::ToLowerCase(asType) == "loop")
+        } else if (cString::ToLowerCase(asType) == "loop") {
             return eTextureAnimMode_Loop;
-        else if (cString::ToLowerCase(asType) == "oscillate")
+        } else if (cString::ToLowerCase(asType) == "oscillate") {
             return eTextureAnimMode_Oscillate;
+        }
         return eTextureAnimMode_None;
     }
 
@@ -527,19 +490,23 @@ namespace hpl {
 
     eMaterialBlendMode cMaterialManager::GetBlendMode(const tString& asType) {
         tString sLow = cString::ToLowerCase(asType);
-        if (sLow == "add")
+        if (sLow == "add") {
             return eMaterialBlendMode_Add;
-        if (sLow == "mul")
+        }
+        if (sLow == "mul") {
             return eMaterialBlendMode_Mul;
-        if (sLow == "mulx2")
+        }
+        if (sLow == "mulx2") {
             return eMaterialBlendMode_MulX2;
-        if (sLow == "alpha")
+        }
+        if (sLow == "alpha") {
             return eMaterialBlendMode_Alpha;
-        if (sLow == "premulalpha")
+        }
+        if (sLow == "premulalpha") {
             return eMaterialBlendMode_PremulAlpha;
+        }
 
-        Warning("Material BlendMode '%s' does not exist!\n", asType.c_str());
-
+        LOGF(LogLevel::eERROR, "Material BlendMode '%s' does not exist!", asType.c_str());
         return eMaterialBlendMode_Add;
     }
 
@@ -553,14 +520,17 @@ namespace hpl {
 
         tString sLow = cString::ToLowerCase(apString);
 
-        if (sLow == "translate")
+        if (sLow == "translate") {
             return eMaterialUvAnimation_Translate;
-        if (sLow == "sin")
+        }
+        if (sLow == "sin") {
             return eMaterialUvAnimation_Sin;
-        if (sLow == "rotate")
+        }
+        if (sLow == "rotate") {
             return eMaterialUvAnimation_Rotate;
+        }
 
-        Error("Invalid uv animation type %s\n", apString);
+        LOGF(LogLevel::eERROR, "Invalid uv animation type %s", apString);
         return eMaterialUvAnimation_LastEnum;
     }
 
@@ -572,16 +542,17 @@ namespace hpl {
 
         tString sLow = cString::ToLowerCase(apString);
 
-        if (sLow == "x")
+        if (sLow == "x") {
             return eMaterialAnimationAxis_X;
-        if (sLow == "y")
+        }
+        if (sLow == "y") {
             return eMaterialAnimationAxis_Y;
-        if (sLow == "z")
+        }
+        if (sLow == "z") {
             return eMaterialAnimationAxis_Z;
-
-        Error("Invalid animation axis %s\n", apString);
+        }
+        LOGF(LogLevel::eERROR, "Invalid animation axis %s", apString);
         return eMaterialAnimationAxis_LastEnum;
     }
 
-    //-----------------------------------------------------------------------
 } // namespace hpl

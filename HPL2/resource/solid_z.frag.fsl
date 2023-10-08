@@ -26,7 +26,7 @@ float4 PS_MAIN(PsIn In)
             texCoord.xy += ParallaxAdvance(texCoord,
                 0.0,
                 16.0, 
-                Get(uniformMaterialBuffer)[materialID].heightMapScale * PARALAX_MULTIPLIER,
+                Get(uniformMaterialBuffer)[materialID].heightMapScale ,
                 In.pos,
                 In.normal,
                 In.tangent,

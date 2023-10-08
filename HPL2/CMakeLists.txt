@@ -246,7 +246,6 @@ target_link_libraries(HPL2
   Folly::folly 
   Folly::folly_deps
   TheForge
-  Eigen3::Eigen
   $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
   $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
   ZLIB::ZLIB

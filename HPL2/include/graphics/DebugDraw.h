@@ -1,8 +1,5 @@
 #pragma once
 
-#include <Eigen/Dense>
-
-
 #include "graphics/Enum.h"
 #include "graphics/ForgeHandles.h"
 #include "graphics/ForgeRenderer.h"
@@ -51,7 +48,6 @@ class DebugDraw final {
             Matrix4 m_transform = Matrix4::identity();
         };
 
-
         DebugDraw(ForgeRenderer* renderer);
         void Reset();
         void DrawQuad(const Vector3& v1, const Vector3& v2, const Vector3& v3, const Vector3& v4, const Vector2& uv0, const Vector2& uv1, SharedTexture image, const Vector4& aTint, const DebugDrawOptions& options = DebugDrawOptions());
@@ -72,7 +68,7 @@ class DebugDraw final {
         void flush(const ForgeRenderer::Frame& frame, Cmd* cmd, const cViewport& viewport, const cFrustum& frustum, SharedRenderTarget& targetBuffer, SharedRenderTarget& depthBuffer);
 
         // scale based on distance from camera
-        static float BillboardScale(cCamera* apCamera, const Eigen::Vector3f& pos);
+        static float BillboardScale(cCamera* apCamera, const Vector3& pos);
     private:
         struct ColorQuadRequest {
             DebugDepthTest m_depthTest = DebugDepthTest::LessEqual;

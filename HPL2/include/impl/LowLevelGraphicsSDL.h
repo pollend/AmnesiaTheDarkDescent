@@ -130,8 +130,6 @@ namespace hpl {
 		[[deprecated("replaced with BGFX")]]
 		void WaitAndFinishRendering();
 		[[deprecated("replaced with BGFX")]]
-		void FlushRendering();
-		[[deprecated("replaced with BGFX")]]
 		void SwapBuffers();
 
 		[[deprecated("replaced with BGFX")]]
