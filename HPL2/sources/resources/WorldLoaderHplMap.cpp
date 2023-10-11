@@ -1651,13 +1651,6 @@ namespace hpl {
 			return;
 		}
 
-		//////////////////////
-		//RENDER_DEBUG
-		/*cMeshEntity* pDebugMeshEntity = mpCurrentWorld->CreateMeshEntity(sName, pMesh);
-		pDebugMeshEntity->SetWorldMatrix(cMath::MatrixMul(cMath::MatrixRotate(vRotation, eEulerRotationOrder_XYZ),cMath::MatrixScale(vScale)));
-		pDebugMeshEntity->SetPosition(vPosition);
-		return;*/
-
 
 		cMeshEntity* pMeshEntity = hplNew( cMeshEntity, (sName,pMesh,
 														mpResources->GetMaterialManager(),

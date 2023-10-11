@@ -79,13 +79,6 @@ namespace hpl {
 		if(mpRootNode) hplDelete(mpRootNode);
 	}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	bool cMesh::CreateFromFile(const tString asFile)
 	{
@@ -290,7 +283,7 @@ namespace hpl {
 	cNode3D* cMesh::GetNodeByName(const tString &asName)
 	{
 		cNode3D *pNode = (cNode3D*)STLFindByName(mvNodes,asName);
-		
+
 		return pNode;
 	}
 

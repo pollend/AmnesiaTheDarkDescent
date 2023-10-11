@@ -60,24 +60,18 @@ namespace hpl {
 		void OnTransformUpdate(iEntity3D * apEntity);
 	};
 
-	//------------------------------------------
-
 	class cMeshEntityCallback
 	{
 	public:
 		virtual void AfterAnimationUpdate(cMeshEntity *apMeshEntity, float afTimeStep)=0;
 	};
 
-	//------------------------------------------
 
 	class cMeshEntity : public iEntity3D
 	{
-	#ifdef __GNUC__
-		typedef iRenderable __super;
-	#endif
-	friend class cSubMeshEntity;
-	friend class cMeshEntityRootNodeUpdate;
-	friend class cMesh;
+	    friend class cSubMeshEntity;
+	    friend class cMeshEntityRootNodeUpdate;
+	    friend class cMesh;
 	public:
 		cMeshEntity(const tString asName,cMesh* apMesh, cMaterialManager* apMaterialManager,
 					cMeshManager* apMeshManager, cAnimationManager *apAnimationManager);

@@ -186,13 +186,8 @@ namespace hpl {
         if (positionElement != m_vertexElements.end()) {
             ASSERT(positionElement->m_format == eVertexBufferElementFormat_Float && "Only float format supported");
             ASSERT(positionElement->m_num >= 3 && "Only 3 component format supported");
-            struct PackedVec3 {
-                float x;
-                float y;
-                float z;
-            };
             for (size_t i = 0; i < positionElement->NumElements(); i++) {
-                auto& position = positionElement->GetElement<PackedVec3>(i);
+                auto& position = positionElement->GetElement<float3>(i);
                 cVector3f outputPos = cMath::MatrixMul(mtxTransform, cVector3f(position.x, position.y, position.z));
                 position = { outputPos.x, outputPos.y, outputPos.z };
             }
@@ -204,13 +199,8 @@ namespace hpl {
         if (normalElement != m_vertexElements.end()) {
             ASSERT(normalElement->m_format == eVertexBufferElementFormat_Float && "Only float format supported");
             ASSERT(normalElement->m_num >= 3 && "Only 3 component format supported");
-            struct PackedVec3 {
-                float x;
-                float y;
-                float z;
-            };
             for (size_t i = 0; i < normalElement->NumElements(); i++) {
-                auto& normal = normalElement->GetElement<PackedVec3>(i);
+                auto& normal = normalElement->GetElement<float3>(i);
                 cVector3f outputNormal = cMath::MatrixMul(mtxNormalRot, cVector3f(normal.x, normal.y, normal.z));
                 normal = { outputNormal.x, outputNormal.y, outputNormal.z };
             }
@@ -222,13 +212,8 @@ namespace hpl {
         if (tangentElement != m_vertexElements.end()) {
             ASSERT(tangentElement->m_format == eVertexBufferElementFormat_Float && "Only float format supported");
             ASSERT(tangentElement->m_num >= 3 && "Only 4 component format supported");
-            struct PackedVec3 {
-                float x;
-                float y;
-                float z;
-            };
             for (size_t i = 0; i < normalElement->NumElements(); i++) {
-                auto& tangent = tangentElement->GetElement<PackedVec3>(i);
+                auto& tangent = tangentElement->GetElement<float3>(i);
                 cVector3f outputTangent = cMath::MatrixMul(mtxRot, cVector3f(tangent.x, tangent.y, tangent.z));
                 tangent = { outputTangent.x, outputTangent.y, outputTangent.z };
             }
@@ -448,9 +433,6 @@ namespace hpl {
         return bv;
     }
 
-    void LegacyVertexBuffer::Draw(eVertexBufferDrawType aDrawType) {
-    }
-
     void LegacyVertexBuffer::resolveGeometryBinding(
         uint32_t frameIndex, std::span<eVertexBufferElement> elements, GeometryBinding* binding) {
         if(m_updateFlags) {
@@ -537,10 +519,6 @@ namespace hpl {
         binding->m_indexBuffer = {
             &m_indexBuffer, m_indexBufferActiveCopy * m_indices.size() * sizeof(uint32_t), numIndecies
         };
-    }
-
-    void LegacyVertexBuffer::UnBind() {
-        return;
     }
 
     iVertexBuffer* LegacyVertexBuffer::CreateCopy(

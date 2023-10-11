@@ -45,26 +45,15 @@ namespace hpl {
 	class cMaterial;
 	class cBoneState;
 
-	//-----------------------------------------------------------------------
-
-
-
-
-	//-----------------------------------------------------------------------
-
 	class cSubMeshEntityBodyUpdate : public iEntityCallback
 	{
 	public:
 		void OnTransformUpdate(iEntity3D * apEntity);
 	};
 
-	//-----------------------------------------------------------------------
 
 	class cSubMeshEntity : public iRenderable
 	{
-	#ifdef __GNUC__
-		typedef iRenderable __super;
-	#endif
 		friend class cMeshEntity;
 	public:
 		cSubMeshEntity(const tString &asName,cMeshEntity *apMeshEntity, cSubMesh * apSubMesh,cMaterialManager* apMaterialManager);
@@ -92,14 +81,9 @@ namespace hpl {
 		void* GetUserData(){ return mpUserData;}
 		void SetUserData(void *apData){ mpUserData = apData;}
 
-		//Entity implementation
 		tString GetEntityType(){ return "SubMesh";}
 
 		void UpdateLogic(float afTimeStep);
-
-		cTriangleData& GetTriangle(int alIndex);
-		int GetTriangleNum();
-		tTriangleDataVec* GetTriangleVecPtr();
 
 		void SetUpdateBody(bool abX);
 		bool GetUpdateBody();
@@ -120,7 +104,6 @@ namespace hpl {
 		cMaterialManager* mpMaterialManager;
 
 		iVertexBuffer* mpDynVtxBuffer;
-		tTriangleDataVec mvDynTriangles;
 
 		cSubMeshEntityBodyUpdate* mpEntityCallback;
 		bool mbUpdateBody;

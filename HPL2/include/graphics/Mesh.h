@@ -20,9 +20,12 @@
 #ifndef HPL_MESH_H
 #define HPL_MESH_H
 
+#include <folly/small_vector.h>
 #include <vector>
 #include <map>
 
+#include "Common_3/Graphics/Interfaces/IGraphics.h"
+#include "graphics/ForgeHandles.h"
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
 #include "system/SystemTypes.h"
@@ -49,8 +52,6 @@ namespace hpl {
 	class cSoundEntity;
 	class cWorld;
 
-	//--------------------------------------------------
-
 	typedef std::vector<cAnimation*> tAnimationVec;
 	typedef tAnimationVec::iterator tAnimationVecIt;
 
@@ -66,12 +67,10 @@ namespace hpl {
 	typedef std::vector<cNode3D*> tNode3DVec;
 	typedef tNode3DVec::iterator tNode3DVecIt;
 
-	//--------------------------------------------------
-
-	class cMesh : public iResourceBase
+    class cMesh : public iResourceBase
 	{
-	friend class cSubMesh;
-	friend class cMeshEntity;
+	    friend class cSubMesh;
+	    friend class cMeshEntity;
 	public:
 		cMesh(const tString& asName, const tWString& asFullPath, cMaterialManager* apMaterialManager, cAnimationManager * apAnimationManager);
 		~cMesh();
@@ -111,8 +110,6 @@ namespace hpl {
 		cNode3D* GetNode(int alIdx);
 		cNode3D* GetNodeByName(const tString &asName);
 
-
-		//Resources implementation
 		bool Reload(){ return false;}
 		void Unload(){}
 		void Destroy(){}
@@ -121,8 +118,8 @@ namespace hpl {
 		cMaterialManager* mpMaterialManager;
 		cAnimationManager * mpAnimationManager;
 
-		tSubMeshVec mvSubMeshes;
-		tSubMeshMap m_mapSubMeshes;
+		std::vector<cSubMesh*> mvSubMeshes;
+		std::multimap<tString,cSubMesh*> m_mapSubMeshes;
 
 		cSkeleton *mpSkeleton;
 
@@ -133,7 +130,8 @@ namespace hpl {
 
 		cNode3D *mpRootNode;
         tNode3DVec mvNodes;
-	};
+	    std::array<SharedBuffer, MAX_VERTEX_BINDINGS> m_buffers;
+    };
 
 };
 #endif // HPL_MESH_H

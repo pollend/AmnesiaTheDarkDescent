@@ -37,7 +37,6 @@ namespace hpl {
     public:
         static size_t GetSizeFromHPL(eVertexBufferElementFormat format);
 
-
         struct VertexElement {
             SharedBuffer m_buffer;
             eVertexBufferElementFormat m_format = eVertexBufferElementFormat::eVertexBufferElementFormat_Float;
@@ -88,8 +87,6 @@ namespace hpl {
 
         virtual void Transform(const cMatrixf& mtxTransform) override;
 
-        virtual void Draw(eVertexBufferDrawType aDrawType = eVertexBufferDrawType_LastEnum) override;
-
         struct GeometryBinding {
             struct VertexGeometryEntry {
                 VertexElement* element;
@@ -105,8 +102,6 @@ namespace hpl {
         };
         static void cmdBindGeometry(Cmd* cmd, ForgeRenderer::CommandResourcePool* resourcePool, LegacyVertexBuffer::GeometryBinding& binding);
         void resolveGeometryBinding(uint32_t currentFrame, std::span<eVertexBufferElement> elements, GeometryBinding* binding);
-
-        virtual void UnBind() override;
 
         virtual iVertexBuffer* CreateCopy(
             eVertexBufferType aType, eVertexBufferUsageType aUsageType, tVertexElementFlag alVtxToCopy) override;

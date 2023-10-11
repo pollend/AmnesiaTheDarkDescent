@@ -17,9 +17,7 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef HPL_VERTEXBUFFER_H
-#define HPL_VERTEXBUFFER_H
-
+#pragma once
 #include "graphics/GraphicsTypes.h"
 #include "math/MathTypes.h"
 #include "system/SystemTypes.h"
@@ -60,11 +58,6 @@ namespace hpl {
 		 * Transform the entire buffer with transform.
 		*/
 		virtual void Transform(const cMatrixf &mtxTransform)=0;
-
-		virtual void Draw(eVertexBufferDrawType aDrawType = eVertexBufferDrawType_LastEnum)=0;
-
-		// virtual void Bind()=0;
-		virtual void UnBind()=0;
 
         virtual iVertexBuffer* CreateCopy(	eVertexBufferType aType,eVertexBufferUsageType aUsageType,
 											tVertexElementFlag alVtxToCopy)=0;
@@ -112,4 +105,3 @@ namespace hpl {
 	};
 
 };
-#endif // HPL_RENDERER3D_H

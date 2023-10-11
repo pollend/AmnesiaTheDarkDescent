@@ -41,9 +41,6 @@
 #include "math/Math.h"
 
 namespace hpl {
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
 
 	cSubMeshEntity::cSubMeshEntity(const tString &asName, cMeshEntity *apMeshEntity, cSubMesh * apSubMesh,
 								cMaterialManager* apMaterialManager) : iRenderable(asName)
@@ -61,7 +58,6 @@ namespace hpl {
 		if(mpMeshEntity->GetMesh()->GetSkeleton())
 		{
 			mpDynVtxBuffer = mpSubMesh->GetVertexBuffer()->CreateCopy(eVertexBufferType_Hardware,eVertexBufferUsageType_Dynamic,eFlagBit_All);
-			mvDynTriangles = *mpSubMesh->GetTriangleVecPtr();
 		}
 		else
 		{
@@ -94,15 +90,7 @@ namespace hpl {
 		if(mpMaterial) mpMaterialManager->Destroy(mpMaterial);
 	}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// BODY CALLBACK
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
-	void cSubMeshEntityBodyUpdate::OnTransformUpdate(iEntity3D* apEntity)
+    void cSubMeshEntityBodyUpdate::OnTransformUpdate(iEntity3D* apEntity)
 	{
 		/*cSubMeshEntity *pSubEntity = static_cast<cSubMeshEntity*>(apEntity);
 
@@ -286,8 +274,6 @@ namespace hpl {
 
 	}
 
-	//-----------------------------------------------------------------------
-
 
 	iVertexBuffer* cSubMeshEntity::GetVertexBuffer()
 	{
@@ -397,33 +383,6 @@ namespace hpl {
 		return mbUpdateBody;
 	}
 
-	//-----------------------------------------------------------------------
-
-	cTriangleData& cSubMeshEntity::GetTriangle(int alIndex)
-	{
-		if(mpDynVtxBuffer)
-			return mvDynTriangles[alIndex];
-		else
-			return (*mpSubMesh->GetTriangleVecPtr())[alIndex];
-	}
-	int cSubMeshEntity::GetTriangleNum()
-	{
-		if(mpDynVtxBuffer)
-			return (int)mvDynTriangles.size();
-		else
-			return (int)mpSubMesh->GetTriangleVecPtr()->size();
-	}
-
-	tTriangleDataVec* cSubMeshEntity::GetTriangleVecPtr()
-	{
-		if(mpDynVtxBuffer)
-			return &mvDynTriangles;
-		else
-			return mpSubMesh->GetTriangleVecPtr();
-	}
-
-	//-----------------------------------------------------------------------
-
 	void cSubMeshEntity::SetCustomMaterial(cMaterial *apMaterial, bool abDestroyOldCustom)
 	{
 		if(abDestroyOldCustom)
@@ -434,13 +393,6 @@ namespace hpl {
         mpMaterial = apMaterial;
 	}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	void cSubMeshEntity::OnTransformUpdated()
 	{

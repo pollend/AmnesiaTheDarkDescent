@@ -93,12 +93,6 @@
 
 namespace hpl {
 
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
 	cWorld::cWorld(tString asName,cGraphics *apGraphics,cResources *apResources,cSound* apSound,
 						cPhysics *apPhysics, cScene *apScene,cSystem *apSystem, cAI *apAI,
 						cHaptic *apHaptic)

@@ -26,6 +26,12 @@
 #include "math/MeshTypes.h"
 #include "physics/PhysicsTypes.h"
 
+#include "Common_3/Graphics/Interfaces/IGraphics.h"
+#include "Common_3/Resources/ResourceLoader/Interfaces/IResourceLoader.h"
+#include <FixPreprocessor.h>
+#include <folly/small_vector.h>
+#include <span>
+
 namespace hpl {
 
 	class cMaterial;
@@ -50,16 +56,36 @@ namespace hpl {
 		bool mbCharCollider;
 	};
 
-	typedef std::vector<cMeshCollider*> tMeshColliderVec;
-	typedef tMeshColliderVec::iterator tMeshColliderVecIt;
-
-	//--------------------------------------------------
-
-	class cSubMesh
+    class cSubMesh
 	{
-	friend class cMesh;
-	friend class cSubMeshEntity;
+	    friend class cMesh;
+	    friend class cSubMeshEntity;
 	public:
+        class VertexStream {
+
+            std::span<uint8_t> GetView();
+
+        protected:
+            //! Indicates a ModelLod::m_buffers entry
+            uint32_t m_bufferIndex;
+
+            ShaderSemantic m_semantic = SEMANTIC_UNDEFINED;
+
+            TinyImageFormat m_format;
+
+            //! Indicates a range within the ModelLod::m_buffers entry (because each buffer contains vertex data for all meshes in the LOD)
+            uint32_t m_byteOffset;
+            uint32_t m_byteCount;
+
+            //! Number of bytes in one element of the stream. This corresponds to m_format.
+            uint32_t m_stride;
+        };
+        class IndexStream {
+
+        };
+
+        cSubMesh(const tString &asName, cMaterialManager* apMaterialManager, std::span<VertexStream> stream);
+
 		cSubMesh(const tString &asName,cMaterialManager* apMaterialManager);
 		~cSubMesh();
 
@@ -90,13 +116,6 @@ namespace hpl {
 		void SetIsCollideShape(bool abX){mbCollideShape = abX;}
 		bool IsCollideShape(){ return mbCollideShape;}
 
-		const cTriEdge& GetEdge(int alIndex) const{ return mvEdges[alIndex];}
-		int GetEdgeNum(){ return (int)mvEdges.size();}
-
-		tTriEdgeVec* GetEdgeVecPtr(){ return &mvEdges;}
-
-		tTriangleDataVec* GetTriangleVecPtr(){ return &mvTriangles;}
-
 		void SetDoubleSided(bool abX){ mbDoubleSided = abX;}
 		bool GetDoubleSided(){ return mbDoubleSided;}
 
@@ -118,6 +137,9 @@ namespace hpl {
 		void CheckOneSided();
 		void CompileBonePairs();
 
+        folly::small_vector<VertexStream, 17> m_vertexStream;
+        IndexStream m_indexStream;
+
 		tString msName;
 
 		tString msMaterialName;
@@ -128,20 +150,15 @@ namespace hpl {
 
 		tVertexBonePairVec mvVtxBonePairs;
 
-		tMeshColliderVec mvColliders;
+		std::vector<cMeshCollider*> mvColliders;
 
 		float *mpVertexWeights;
 		unsigned char *mpVertexBones;
 
-		tTriEdgeVec mvEdges;
-		tTriangleDataVec mvTriangles;
-
 		cVector3f mvModelScale;
 
 		bool mbDoubleSided;
-
 		bool mbCollideShape;
-
 		bool mbIsOneSided;
 		cVector3f mvOneSidedNormal;
 		cVector3f mvOneSidedPoint;
