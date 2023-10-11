@@ -233,7 +233,7 @@ public:
 				for(int i=0; i<gpEntity->GetSubMeshEntityNum(); ++i)
 				{
 					cSubMeshEntity *pSubEnt = gpEntity->GetSubMeshEntity(i);
-					cSubMesh *pSubMesh = pSubEnt->GetSubMesh();
+					SubMeshAsset *pSubMesh = pSubEnt->GetSubMesh();
 					iVertexBuffer *pVtxBuff = pSubMesh->GetVertexBuffer();
 
 					tIntVec vVtxBindCount;
@@ -720,7 +720,7 @@ public:
 		tWString sMeshPath = cString::GetFilePathW(pMesh->GetFullPath());
 		for(int i=0; i< pMesh->GetSubMeshNum(); ++i)
 		{
-			cSubMesh *pSubMesh = pMesh->GetSubMesh(i);
+			SubMeshAsset *pSubMesh = pMesh->GetSubMesh(i);
 			cMaterial *pMat = pSubMesh->GetMaterial();
 			tString sMatName = pSubMesh->GetMaterialName();
 
@@ -920,7 +920,7 @@ public:
 		for(int i=0; i<pMesh->GetSubMeshNum(); ++i)
 		{
 			cSubMeshEntity *pSubEnt = gpEntity->GetSubMeshEntity(i);
-			cSubMesh *pSubMesh = pMesh->GetSubMesh(i);
+			SubMeshAsset *pSubMesh = pMesh->GetSubMesh(i);
 			int lPolygons = pSubMesh->GetVertexBuffer()->GetVertexNum()/3;
 
 			Log("   Name: '%s' \n", pSubMesh->GetName().c_str());
@@ -1074,7 +1074,7 @@ public:
 
 		for(int sub=0; sub<apMesh->GetSubMeshNum(); ++sub)
 		{
-			cSubMesh *pSubMesh = apMesh->GetSubMesh(sub);
+			SubMeshAsset *pSubMesh = apMesh->GetSubMesh(sub);
 			cSubMeshEntity *pSubEnt =  apEntity->GetSubMeshEntity(sub);
 			iPhysicsBody* pBody=NULL;
 
@@ -1128,7 +1128,7 @@ public:
 		cMesh *pMesh = gpEntity->GetMesh();
 		for(int i=0; i< pMesh->GetSubMeshNum(); ++i)
 		{
-			cSubMesh *pSubMesh = pMesh->GetSubMesh(i);
+			SubMeshAsset *pSubMesh = pMesh->GetSubMesh(i);
 			cMaterial *pMat = pSubMesh->GetMaterial();
 
 			cMaterialData *pMatData = GetMaterialData(pSubMesh->GetMaterialName(), true);
@@ -1158,7 +1158,7 @@ public:
 
 		for(int i=0; i< pMesh->GetSubMeshNum(); ++i)
 		{
-			cSubMesh *pSubMesh = pMesh->GetSubMesh(i);
+			SubMeshAsset *pSubMesh = pMesh->GetSubMesh(i);
 			cMaterial *pMat = pSubMesh->GetMaterial();
 
 			cMaterialData *pMatData = GetMaterialData(pSubMesh->GetMaterialName(), true);
@@ -1763,7 +1763,7 @@ public:
 		cMesh *pMesh = gpEntity->GetMesh();
 		for(int i=0; i< pMesh->GetSubMeshNum(); ++i)
 		{
-			cSubMesh *pSubMesh = pMesh->GetSubMesh(i);
+			SubMeshAsset *pSubMesh = pMesh->GetSubMesh(i);
 			cMaterial *pMat = pSubMesh->GetMaterial();
 
 			cMaterialData *pMatData = GetMaterialData(pSubMesh->GetMaterialName(), true);

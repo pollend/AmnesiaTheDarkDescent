@@ -391,7 +391,7 @@ namespace hpl {
 			return NULL;
 
 		cMesh *pMesh = hplNew( cMesh, ("", _W(""), mpResources->GetMaterialManager(), mpResources->GetAnimationManager()) );
-		cSubMesh* pSubMesh = pMesh->CreateSubMesh("Decal");
+		SubMeshAsset* pSubMesh = pMesh->CreateSubMesh("Decal");
 		pSubMesh->SetVertexBuffer(mpDecalVB->CreateCopy(eVertexBufferType_Hardware, eVertexBufferUsageType_Static, mpDecalVB->GetVertexElementFlags()));
 		pSubMesh->SetMaterial(pMat);
 

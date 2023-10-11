@@ -1493,7 +1493,7 @@ void cEditorWindowMaterialEditor::UpdatePreview(cMaterial* apMat)
 		cMesh* pMesh = mvPreviewEntities[i]->GetMesh();
 		for(int j=0;j<pMesh->GetSubMeshNum();++j)
 		{
-			cSubMesh* pSubMesh = pMesh->GetSubMesh(j);
+			SubMeshAsset* pSubMesh = pMesh->GetSubMesh(j);
 			pSubMesh->SetMaterial(apMat);
 			if(apMat)apMat->IncUserCount();
 		}

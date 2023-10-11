@@ -259,7 +259,7 @@ namespace hpl {
                 /////////////////////////////////
                 // Check so sub mesh is one sided
                 cSubMeshEntity* pSubEnt = static_cast<cSubMeshEntity*>(pObject);
-                cSubMesh* pSubMesh = pSubEnt->GetSubMesh();
+                SubMeshAsset* pSubMesh = pSubEnt->GetSubMesh();
                 if (pSubMesh->GetIsOneSided() == false) {
                     continue;
 				}
@@ -505,7 +505,7 @@ namespace hpl {
                 /////////////////////////////////
                 // Check so sub mesh is one sided
                 cSubMeshEntity* pSubEnt = static_cast<cSubMeshEntity*>(pObject);
-                cSubMesh* pSubMesh = pSubEnt->GetSubMesh();
+                SubMeshAsset* pSubMesh = pSubEnt->GetSubMesh();
                 if (pSubMesh->GetIsOneSided() == false) {
                     continue;
 				}

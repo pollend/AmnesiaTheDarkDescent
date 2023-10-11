@@ -313,7 +313,7 @@ void cEditorThumbnailBuilder::FocusCameraOnEntity(cMeshEntity *apEntity)
 	{
 		for(int i=0; i<pMesh->GetSubMeshNum(); ++i)
 		{
-			cSubMesh *pSubMesh = pMesh->GetSubMesh(i);
+			SubMeshAsset *pSubMesh = pMesh->GetSubMesh(i);
 			iVertexBuffer *pVtxBuffer = pSubMesh->GetVertexBuffer();
 
 			meshBV.AddArrayPoints(pVtxBuffer->GetFloatArray(eVertexBufferElement_Position), pVtxBuffer->GetVertexNum());
@@ -333,7 +333,7 @@ void cEditorThumbnailBuilder::FocusCameraOnEntity(cMeshEntity *apEntity)
 	float fVecCount=0;
 	for(int i=0; i<pMesh->GetSubMeshNum(); ++i)
 	{
-		cSubMesh *pSubMesh = pMesh->GetSubMesh(i);
+		SubMeshAsset *pSubMesh = pMesh->GetSubMesh(i);
 		cSubMeshEntity *pSubEnt = apEntity->GetSubMeshEntity(i);
 
 		cMatrixf mtxTransform = pSubEnt->GetWorldMatrix();

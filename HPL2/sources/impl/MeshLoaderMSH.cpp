@@ -173,7 +173,7 @@ namespace hpl {
 			bool bCollideShape = binBuff.GetBool();
 
 			//Create sub mesh and set up data
-			cSubMesh *pSubMesh = pMesh->CreateSubMesh(sName);
+			SubMeshAsset *pSubMesh = pMesh->CreateSubMesh(sName);
 
 			pSubMesh->SetLocalTransform(mtxTransform);
 			pSubMesh->SetModelScale(vModelScale);
@@ -363,7 +363,7 @@ namespace hpl {
 		// Sub Meshes
 		for(int sub=0; sub< apMesh->GetSubMeshNum(); sub++)
 		{
-			cSubMesh* pSubMesh = apMesh->GetSubMesh(sub);
+			SubMeshAsset* pSubMesh = apMesh->GetSubMesh(sub);
 			iVertexBuffer *pVtxBuff = pSubMesh->GetVertexBuffer();
 
 			////////////////////////////

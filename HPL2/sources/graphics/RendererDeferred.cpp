@@ -4394,7 +4394,7 @@ void cRendererDeferred::Draw(
                 if (bReflectionIsInRange) {
                         ///////////////////////////
                         // Make a frustum, mirrored along the plane
-                        cSubMesh* pSubMesh = pReflectionObject->GetSubMesh();
+                        SubMeshAsset* pSubMesh = pReflectionObject->GetSubMesh();
                         cVector3f vSurfaceNormal = cMath::Vector3Normalize(
                             cMath::MatrixMul3x3(pReflectionObject->GetWorldMatrix(), pSubMesh->GetOneSidedNormal()));
                         cVector3f vSurfacePos = cMath::MatrixMul(pReflectionObject->GetWorldMatrix(), pSubMesh->GetOneSidedPoint());

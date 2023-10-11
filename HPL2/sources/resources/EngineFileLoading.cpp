@@ -454,7 +454,7 @@ namespace hpl {
 		// Create the mesh
 		cMesh *pMesh = hplNew( cMesh, (asName, _W(""), apResources->GetMaterialManager(), apResources->GetAnimationManager()) );
 
-		cSubMesh *pSubMesh = pMesh->CreateSubMesh("Main");
+		SubMeshAsset *pSubMesh = pMesh->CreateSubMesh("Main");
 
 		cMaterial *pMat = apResources->GetMaterialManager()->CreateMaterial(asMaterial);
 		pSubMesh->SetMaterial(pMat);

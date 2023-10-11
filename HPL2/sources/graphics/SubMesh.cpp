@@ -43,7 +43,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	cSubMesh::cSubMesh(const tString &asName, cMaterialManager* apMaterialManager)
+	SubMeshAsset::SubMeshAsset(const tString &asName, cMaterialManager* apMaterialManager)
 	{
 		mpMaterialManager = apMaterialManager;
 
@@ -68,7 +68,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	cSubMesh::~cSubMesh()
+	SubMeshAsset::~SubMeshAsset()
 	{
 		if(mpMaterial)mpMaterialManager->Destroy(mpMaterial);
 		if(mpVtxBuffer) hplDelete(mpVtxBuffer);
@@ -86,7 +86,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cSubMesh::SetMaterial(cMaterial* apMaterial)
+	void SubMeshAsset::SetMaterial(cMaterial* apMaterial)
 	{
 		if(mpMaterial) mpMaterialManager->Destroy(mpMaterial);
 		mpMaterial = apMaterial;
@@ -94,7 +94,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cSubMesh::SetVertexBuffer(iVertexBuffer* apVtxBuffer)
+	void SubMeshAsset::SetVertexBuffer(iVertexBuffer* apVtxBuffer)
 	{
 		if(mpVtxBuffer == apVtxBuffer) return;
 
@@ -103,40 +103,40 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	cMaterial *cSubMesh::GetMaterial()
+	cMaterial *SubMeshAsset::GetMaterial()
 	{
 		return mpMaterial;
 	}
 
 	//-----------------------------------------------------------------------
 
-	iVertexBuffer* cSubMesh::GetVertexBuffer()
+	iVertexBuffer* SubMeshAsset::GetVertexBuffer()
 	{
 		return mpVtxBuffer;
 	}
 
 	//-----------------------------------------------------------------------
 
-	void cSubMesh::ResizeVertexBonePairs(int alSize)
+	void SubMeshAsset::ResizeVertexBonePairs(int alSize)
 	{
 		mvVtxBonePairs.resize(alSize);
 	}
 
-	int cSubMesh::GetVertexBonePairNum()
+	int SubMeshAsset::GetVertexBonePairNum()
 	{
 		return (int)mvVtxBonePairs.size();
 	}
-	cVertexBonePair& cSubMesh::GetVertexBonePair(int alNum)
+	cVertexBonePair& SubMeshAsset::GetVertexBonePair(int alNum)
 	{
 		return mvVtxBonePairs[alNum];
 	}
 
-	void cSubMesh::AddVertexBonePair(const cVertexBonePair &aPair)
+	void SubMeshAsset::AddVertexBonePair(const cVertexBonePair &aPair)
 	{
 		mvVtxBonePairs.push_back(aPair);
 	}
 
-	void cSubMesh::ClearVertexBonePairs()
+	void SubMeshAsset::ClearVertexBonePairs()
 	{
 		mvVtxBonePairs.clear();
 	}
@@ -145,7 +145,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	cMeshCollider* cSubMesh::CreateCollider(eCollideShapeType aType)
+	cMeshCollider* SubMeshAsset::CreateCollider(eCollideShapeType aType)
 	{
 		cMeshCollider* pColl = hplNew( cMeshCollider, () );
 		pColl->mType = aType;
@@ -155,17 +155,17 @@ namespace hpl {
 		return pColl;
 	}
 
-	cMeshCollider* cSubMesh::GetCollider(int alIdx)
+	cMeshCollider* SubMeshAsset::GetCollider(int alIdx)
 	{
 		return mvColliders[alIdx];
 	}
 
-	int cSubMesh::GetColliderNum()
+	int SubMeshAsset::GetColliderNum()
 	{
 		return (int) mvColliders.size();
 	}
 
-	iCollideShape* cSubMesh::CreateCollideShapeFromCollider(cMeshCollider *pCollider, iPhysicsWorld *apWorld, const cVector3f& avSizeMul, cMatrixf *apMtxOffset)
+	iCollideShape* SubMeshAsset::CreateCollideShapeFromCollider(cMeshCollider *pCollider, iPhysicsWorld *apWorld, const cVector3f& avSizeMul, cMatrixf *apMtxOffset)
 	{
 		cMatrixf *pOffset = apMtxOffset ? apMtxOffset : &pCollider->m_mtxOffset;
 
@@ -186,7 +186,7 @@ namespace hpl {
 		return NULL;
 	}
 
-	iCollideShape* cSubMesh::CreateCollideShape(iPhysicsWorld *apWorld)
+	iCollideShape* SubMeshAsset::CreateCollideShape(iPhysicsWorld *apWorld)
 	{
 		if(mvColliders.empty()) return NULL;
 
@@ -213,7 +213,7 @@ namespace hpl {
 	//-----------------------------------------------------------------------
 
 
-	void cSubMesh::Compile()
+	void SubMeshAsset::Compile()
 	{
 		CheckOneSided();
 		CompileBonePairs();
@@ -227,7 +227,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cSubMesh::CheckOneSided()
+	void SubMeshAsset::CheckOneSided()
 	{
 		//Log("--- %s\n",GetName().c_str());
 
@@ -291,7 +291,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	void cSubMesh::CompileBonePairs()
+	void SubMeshAsset::CompileBonePairs()
 	{
 		if(mvVtxBonePairs.empty()) return;
 

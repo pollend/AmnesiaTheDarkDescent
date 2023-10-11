@@ -189,7 +189,7 @@ void cLuxCommentaryIcon::OnUpdate(float afTimeStep)
 	for(int i=0; i<mpMeshEntity->GetSubMeshEntityNum(); ++i)
 	{
 		cSubMeshEntity *pSubEnt = mpMeshEntity->GetSubMeshEntity(i);
-		cSubMesh *pSubMesh = pSubEnt->GetSubMesh();
+		SubMeshAsset *pSubMesh = pSubEnt->GetSubMesh();
 		if(pSubMesh->GetName() != msRotateSubMesh) continue;
 
 		cMatrixf mtxTrans = cMath::MatrixMul(mvSubMeshMatrix[i], cMath::MatrixRotate(mvRotAngle, eEulerRotationOrder_XYZ));

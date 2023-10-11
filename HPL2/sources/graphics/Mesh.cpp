@@ -94,9 +94,9 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	cSubMesh* cMesh::CreateSubMesh(const tString &asName)
+	SubMeshAsset* cMesh::CreateSubMesh(const tString &asName)
 	{
-		cSubMesh* pSubMesh = hplNew( cSubMesh, (asName,mpMaterialManager) );
+		SubMeshAsset* pSubMesh = hplNew( SubMeshAsset, (asName,mpMaterialManager) );
 
 		pSubMesh->mpParent = this;
 
@@ -108,7 +108,7 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	cSubMesh* cMesh::GetSubMesh(unsigned int alIdx)
+	SubMeshAsset* cMesh::GetSubMesh(unsigned int alIdx)
 	{
 		if(alIdx >= mvSubMeshes.size()) return NULL;
 
@@ -125,7 +125,7 @@ namespace hpl {
 		return -1;
 	}
 
-	cSubMesh* cMesh::GetSubMeshName(const tString &asName)
+	SubMeshAsset* cMesh::GetSubMeshName(const tString &asName)
 	{
 		tSubMeshMapIt it = m_mapSubMeshes.find(asName);
 		if(it == m_mapSubMeshes.end())return NULL;
@@ -244,7 +244,7 @@ namespace hpl {
 		{
 			////////////////////////////
 			//Get the variables
-			cSubMesh *pSubMesh = mvSubMeshes[i];
+			SubMeshAsset *pSubMesh = mvSubMeshes[i];
 			iVertexBuffer *pVtxBuffer = pSubMesh->GetVertexBuffer();
 			float* pPosArray = pVtxBuffer->GetFloatArray(eVertexBufferElement_Position);
 			const int lVtxStride = pVtxBuffer->GetElementNum(eVertexBufferElement_Position);
@@ -290,7 +290,7 @@ namespace hpl {
 	cNode3D* cMesh::GetNodeByName(const tString &asName)
 	{
 		cNode3D *pNode = (cNode3D*)STLFindByName(mvNodes,asName);
-		
+
 		return pNode;
 	}
 

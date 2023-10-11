@@ -569,7 +569,7 @@ namespace hpl {
 			//////////////////////////////
 			// Create mesh and submesh
 			cMesh* pMesh = hplNew( cMesh, (sName, asFile,mpResources->GetMaterialManager(),mpResources->GetAnimationManager()) );
-			cSubMesh *pSubMesh = pMesh->CreateSubMesh("SubMesh");
+			SubMeshAsset *pSubMesh = pMesh->CreateSubMesh("SubMesh");
 
 			//////////////////
 			//Set material
@@ -776,7 +776,7 @@ namespace hpl {
 			// Get Data
 			cMeshEntity *pEntity = *it;
 			cSubMeshEntity *pSubEnt = pEntity->GetSubMeshEntity(0);
-			cSubMesh *pSubMesh = pSubEnt->GetSubMesh();
+			SubMeshAsset *pSubMesh = pSubEnt->GetSubMesh();
 			iVertexBuffer *pVtxBuff = pSubMesh->GetVertexBuffer();
 
 			////////////////////////////
@@ -1445,7 +1445,7 @@ namespace hpl {
 		cSubMeshEntity *pFirstSubEnt = static_cast<cSubMeshEntity*>(pFirstObject);
 		cMesh *pMesh = hplNew( cMesh, (sName, _W("") ,mpResources->GetMaterialManager(),mpResources->GetAnimationManager()) );
 
-		cSubMesh *pSubMesh = pMesh->CreateSubMesh("SubMesh");
+		SubMeshAsset *pSubMesh = pMesh->CreateSubMesh("SubMesh");
 
 		//Set the vertex buffer
 		pSubMesh->SetVertexBuffer(pVtxBuffer);
@@ -1538,7 +1538,7 @@ namespace hpl {
 
 			////////////////////////////
 			//Add colliders if any
-			cSubMesh *pSubMesh =  avObjects[vtxbuffer].mpObject->GetSubMesh();
+			SubMeshAsset *pSubMesh =  avObjects[vtxbuffer].mpObject->GetSubMesh();
 
 			//Do a special debug test and skip highpoly entities, loading the map faster.
 			if((mlCurrentFlags & eWorldLoadFlag_FastPhysicsLoad) && pSubMesh->GetVertexBuffer()->GetIndexNum() > lMaxIndices) continue;
@@ -1678,7 +1678,7 @@ namespace hpl {
 			for(int i=0; i<pMeshEntity->GetSubMeshEntityNum(); ++i)
 			{
 				cSubMeshEntity *pSubEnt = pMeshEntity->GetSubMeshEntity(i);
-				cSubMesh *pSubMesh = pSubEnt->GetSubMesh();
+				SubMeshAsset *pSubMesh = pSubEnt->GetSubMesh();
 				if( cString::Sub(pSubMesh->GetName(),0,1)== "_")
 				{
 					if( cString::Sub(pSubMesh->GetName(),0,9)== "_collider")
@@ -1695,7 +1695,7 @@ namespace hpl {
 		for(int i=0; i<pMeshEntity->GetSubMeshEntityNum(); ++i)
 		{
 			cSubMeshEntity *pSubEnt = pMeshEntity->GetSubMeshEntity(i);
-			cSubMesh *pSubMesh = pSubEnt->GetSubMesh();
+			SubMeshAsset *pSubMesh = pSubEnt->GetSubMesh();
 			cMaterial *pMaterial = pSubEnt->GetMaterial();
 
             ////////////////////////////////
@@ -1783,7 +1783,7 @@ namespace hpl {
 
 	void cWorldLoaderHplMap::CreateSubMeshShapeBodies(cSubMeshEntity *apSubEnt, const cMatrixf &a_mtxTransform, const cVector3f& avScale)
 	{
-		cSubMesh *pSubMesh = apSubEnt->GetSubMesh();
+		SubMeshAsset *pSubMesh = apSubEnt->GetSubMesh();
 		if(pSubMesh->GetColliderNum() <= 0) return;
 
 		std::vector<cHplMapShape*> vCharColliders;
@@ -1965,7 +1965,7 @@ namespace hpl {
 			for(int i=0; i<pMeshEntity->GetSubMeshEntityNum(); ++i)
 			{
 				cSubMeshEntity *pSubEnt = pMeshEntity->GetSubMeshEntity(i);
-				cSubMesh *pSubMesh = pSubEnt->GetSubMesh();
+				SubMeshAsset *pSubMesh = pSubEnt->GetSubMesh();
 				cMaterial *pMaterial = pSubEnt->GetMaterial();
 
 				cHplMapStaticUserData *pUserData = hplNew(cHplMapStaticUserData, ());

@@ -20,11 +20,20 @@
 #ifndef HPL_SUB_MESH_H
 #define HPL_SUB_MESH_H
 
-#include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
 #include "system/SystemTypes.h"
 #include "math/MeshTypes.h"
 #include "physics/PhysicsTypes.h"
+
+#include "Common_3/Graphics/Interfaces/IGraphics.h"
+#include "Common_3/Utilities/Math/MathTypes.h"
+#include "FixPreprocessor.h"
+
+#include <bits/iterator_concepts.h>
+#include <span>
+#include <iterator>
+
+
 
 namespace hpl {
 
@@ -36,8 +45,6 @@ namespace hpl {
 	class iCollideShape;
 
 	class cMaterialManager;
-
-	//--------------------------------------------------
 
 	class cMeshCollider
 	{
@@ -53,15 +60,56 @@ namespace hpl {
 	typedef std::vector<cMeshCollider*> tMeshColliderVec;
 	typedef tMeshColliderVec::iterator tMeshColliderVecIt;
 
-	//--------------------------------------------------
 
-	class cSubMesh
+	class SubMeshAsset
 	{
-	friend class cMesh;
-	friend class cSubMeshEntity;
+	    friend class cMesh;
+	    friend class cSubMeshEntity;
 	public:
-		cSubMesh(const tString &asName,cMaterialManager* apMaterialManager);
-		~cSubMesh();
+		SubMeshAsset(const tString &asName,cMaterialManager* apMaterialManager);
+		~SubMeshAsset();
+;
+        struct MeshCollider {
+
+        };
+
+        // asset stream just holds onto the data the
+        // actualy buffer is build in
+        struct VertexAssetStream {
+            std::span<uint8_t> ByteData() {
+                return m_buffer;
+            }
+
+            template<typename TData>
+            std::span<TData> GetElements() {
+                ASSERT(sizeof(TData) == m_stride && "Data must be same size as stride");
+                return std::span<TData*>(reinterpret_cast<TData*>(m_buffer.data()), m_buffer.size() / m_stride);
+            }
+
+            template<typename TData>
+            TData& GetElement(size_t index) {
+                ASSERT(sizeof(TData) <= m_stride && "Date must be less than or equal to stride");
+                return *reinterpret_cast<TData*>(m_buffer.data() + index * m_stride);
+            }
+
+        protected:
+
+            TinyImageFormat m_format;
+
+            //! Indicates a range within the ModelLod::m_buffers entry (because each buffer contains vertex data for all meshes in the LOD)
+            uint32_t m_byteCount;
+
+            //! Number of bytes in one element of the stream. This corresponds to m_format.
+            uint32_t m_stride;
+
+            ShaderSemantic m_semantic = SEMANTIC_UNDEFINED;
+
+            std::vector<uint8_t> m_buffer;
+        };
+
+        class ModelAsset {
+
+        };
 
 		void SetMaterial(cMaterial* apMaterial);
 		void SetVertexBuffer(iVertexBuffer* apVtxBuffer);

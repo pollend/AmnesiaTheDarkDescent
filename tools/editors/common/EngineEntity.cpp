@@ -240,7 +240,7 @@ bool iEngineEntityMesh::SetMaterial(const tString& asX)
 		{
 			for(int i=0;i<pMesh->GetSubMeshNum();++i)
 			{
-				cSubMesh* pSubMesh = pMesh->GetSubMesh(i);
+				SubMeshAsset* pSubMesh = pMesh->GetSubMesh(i);
 				pSubMesh->SetMaterial(pMat);
 			}
 		}

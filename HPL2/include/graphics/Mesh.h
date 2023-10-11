@@ -34,7 +34,7 @@ namespace hpl {
 
 	class cMaterialManager;
 	class cAnimationManager;
-	class cSubMesh;
+	class SubMeshAsset;
 	class cMeshEntity;
 	class cSkeleton;
 	class cAnimation;
@@ -57,20 +57,18 @@ namespace hpl {
 	typedef std::map<tString, int> tAnimationIndexMap;
 	typedef tAnimationIndexMap::iterator tAnimationIndexMapIt;
 
-	typedef std::vector<cSubMesh*> tSubMeshVec;
-	typedef std::vector<cSubMesh*>::iterator tSubMeshVecIt;
+	typedef std::vector<SubMeshAsset*> tSubMeshVec;
+	typedef std::vector<SubMeshAsset*>::iterator tSubMeshVecIt;
 
-	typedef std::multimap<tString,cSubMesh*> tSubMeshMap;
+	typedef std::multimap<tString,SubMeshAsset*> tSubMeshMap;
 	typedef tSubMeshMap::iterator tSubMeshMapIt;
 
 	typedef std::vector<cNode3D*> tNode3DVec;
 	typedef tNode3DVec::iterator tNode3DVecIt;
 
-	//--------------------------------------------------
-
 	class cMesh : public iResourceBase
 	{
-	friend class cSubMesh;
+	friend class SubMeshAsset;
 	friend class cMeshEntity;
 	public:
 		cMesh(const tString& asName, const tWString& asFullPath, cMaterialManager* apMaterialManager, cAnimationManager * apAnimationManager);
@@ -78,11 +76,11 @@ namespace hpl {
 
 		bool CreateFromFile(const tString asFile);
 
-		cSubMesh* CreateSubMesh(const tString &asName);
+		SubMeshAsset* CreateSubMesh(const tString &asName);
 
-		cSubMesh* GetSubMesh(unsigned int alIdx);
+		SubMeshAsset* GetSubMesh(unsigned int alIdx);
 		int GetSubMeshIndex(const tString &asName);
-		cSubMesh* GetSubMeshName(const tString &asName);
+		SubMeshAsset* GetSubMeshName(const tString &asName);
 		int GetSubMeshNum();
 
 		int GetTriangleCount();

@@ -39,7 +39,7 @@ namespace hpl {
 	class cMeshManager;
 	class cAnimationManager;
 	class cMesh;
-	class cSubMesh;
+	class SubMeshAsset;
 	class cMeshEntity;
 	class cAnimation;
 	class cAnimationState;

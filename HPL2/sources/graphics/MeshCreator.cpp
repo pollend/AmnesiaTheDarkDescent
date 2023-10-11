@@ -81,7 +81,7 @@ namespace hpl {
 	{
 		cMesh *pMesh = hplNew( cMesh, (asName, _W(""), mpResources->GetMaterialManager(), mpResources->GetAnimationManager()) );
 
-		cSubMesh *pSubMesh = pMesh->CreateSubMesh("Main");
+		SubMeshAsset *pSubMesh = pMesh->CreateSubMesh("Main");
 
 		cMaterial *pMat = mpResources->GetMaterialManager()->CreateMaterial(asMaterial);
 		pSubMesh->SetMaterial(pMat);
@@ -204,7 +204,7 @@ namespace hpl {
 
 		cMesh *pMesh = hplNew( cMesh, (asName, _W(""), mpResources->GetMaterialManager(), mpResources->GetAnimationManager()) );
 
-		cSubMesh *pSubMesh = pMesh->CreateSubMesh("Main");
+		SubMeshAsset *pSubMesh = pMesh->CreateSubMesh("Main");
 
 		cMaterial *pMat = mpResources->GetMaterialManager()->CreateMaterial(asMaterial);
 		pSubMesh->SetMaterial(pMat);
@@ -299,7 +299,7 @@ namespace hpl {
 		}
 
 		cMesh* pMesh = hplNew( cMesh, (asName, _W(""), mpResources->GetMaterialManager(), mpResources->GetAnimationManager()));
-		cSubMesh* pSubMesh = pMesh->CreateSubMesh("Main");
+		SubMeshAsset* pSubMesh = pMesh->CreateSubMesh("Main");
 
 		cMaterial *pMat = mpResources->GetMaterialManager()->CreateMaterial(asMaterial);
 		pSubMesh->SetMaterial(pMat);
@@ -375,7 +375,7 @@ namespace hpl {
 		}
 
 		cMesh* pMesh = hplNew( cMesh, (asName, _W(""), mpResources->GetMaterialManager(), mpResources->GetAnimationManager()));
-		cSubMesh* pSubMesh = pMesh->CreateSubMesh("Main");
+		SubMeshAsset* pSubMesh = pMesh->CreateSubMesh("Main");
 
 		cMaterial *pMat = mpResources->GetMaterialManager()->CreateMaterial(asMaterial);
 		pSubMesh->SetMaterial(pMat);
@@ -501,7 +501,7 @@ namespace hpl {
 		}
 
 		cMesh* pMesh = hplNew( cMesh, (asName, _W(""), mpResources->GetMaterialManager(), mpResources->GetAnimationManager()));
-		cSubMesh* pSubMesh = pMesh->CreateSubMesh("Main");
+		SubMeshAsset* pSubMesh = pMesh->CreateSubMesh("Main");
 
 		cMaterial *pMat = mpResources->GetMaterialManager()->CreateMaterial(asMaterial);
 		pSubMesh->SetMaterial(pMat);
@@ -580,7 +580,7 @@ namespace hpl {
 		}
 
 		cMesh* pMesh = hplNew( cMesh, (asName, _W(""), mpResources->GetMaterialManager(), mpResources->GetAnimationManager()));
-		cSubMesh* pSubMesh = pMesh->CreateSubMesh("Main");
+		SubMeshAsset* pSubMesh = pMesh->CreateSubMesh("Main");
 
 		cMaterial *pMat = mpResources->GetMaterialManager()->CreateMaterial(asMaterial);
 		pSubMesh->SetMaterial(pMat);

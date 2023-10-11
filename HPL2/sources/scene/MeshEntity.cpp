@@ -109,7 +109,7 @@ namespace hpl {
 		//Create sub entities
 		for(int i=0;i<mpMesh->GetSubMeshNum();i++)
 		{
-			cSubMesh *pSubMesh = mpMesh->GetSubMesh(i);
+			SubMeshAsset *pSubMesh = mpMesh->GetSubMesh(i);
 			cSubMeshEntity* pSub = hplNew( cSubMeshEntity, (asName + "_" + pSubMesh->GetName(),this,pSubMesh,mpMaterialManager) );
 
 			mvSubMeshes.push_back(pSub);
@@ -235,7 +235,7 @@ namespace hpl {
 			//Iterate and attach the sub meshes
 			for(size_t i=0; i< mvSubMeshes.size(); ++i)
 			{
-				cSubMesh *pSubMesh = mpMesh->GetSubMesh((int)i);
+				SubMeshAsset *pSubMesh = mpMesh->GetSubMesh((int)i);
 				cSubMeshEntity *pSubEnt = mvSubMeshes[i];
 
 				//If the mesh has nodes, search for right one and set matrix of submesh to it
@@ -456,7 +456,7 @@ namespace hpl {
 					while(BoneIt.HasNext())
 					{
 						cBoneState *pBoneState = static_cast<cBoneState*>(BoneIt.Next());
-	
+
 						SetBoneMatrixFromBodyRec(mpBoneStateRoot->GetWorldMatrix(),pBoneState);
 					}
 

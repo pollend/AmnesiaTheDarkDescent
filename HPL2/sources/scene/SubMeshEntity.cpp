@@ -45,7 +45,7 @@ namespace hpl {
 	// CONSTRUCTORS
 	//////////////////////////////////////////////////////////////////////////
 
-	cSubMeshEntity::cSubMeshEntity(const tString &asName, cMeshEntity *apMeshEntity, cSubMesh * apSubMesh,
+	cSubMeshEntity::cSubMeshEntity(const tString &asName, cMeshEntity *apMeshEntity, SubMeshAsset * apSubMesh,
 								cMaterialManager* apMaterialManager) : iRenderable(asName)
 	{
 		mpMeshEntity = apMeshEntity;

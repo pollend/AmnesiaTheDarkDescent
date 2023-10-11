@@ -460,7 +460,7 @@ namespace hpl {
 
 			// Sub mesh name and node name are the same.
 			//tString sSubMeshName = pNode->msName;
-			cSubMesh* pSubMesh = pMesh->CreateSubMesh(sNodeName);
+			SubMeshAsset* pSubMesh = pMesh->CreateSubMesh(sNodeName);
 
 			pSubMesh->SetLocalTransform(pGeomNode->m_mtxTransform);
 
@@ -479,7 +479,7 @@ namespace hpl {
 			eVertexBufferUsageType UsageType = eVertexBufferUsageType_Static;
 			iVertexBuffer *pVtxBuffer = CreateVertexBuffer(Geom, UsageType);//, vExtraVtxVec);
 			pSubMesh->SetVertexBuffer(pVtxBuffer);
-			
+
 			/////////////////////////////
 			//Add material
 			tString sNodeMaterial = pGeomNode->msInstanceMaterial != "" ? pGeomNode->msInstanceMaterial : Geom.msMaterial;
@@ -610,7 +610,7 @@ namespace hpl {
 			for(size_t i=0; i<vMeshColliders.size(); ++i)
 			{
 				cMeshCollider& meshCollider = vMeshColliders[i];
-				cSubMesh *pSubMesh = NULL;
+				SubMeshAsset *pSubMesh = NULL;
 				if(meshCollider.msGroup!="")
 				{
 					pSubMesh = pMesh->GetSubMeshName(meshCollider.msGroup);
@@ -648,7 +648,7 @@ namespace hpl {
 				cNode3D* pMeshNode = pMesh->GetNode(i);
 				cMatrixf mtxNode = pMeshNode->GetLocalMatrix();
 
-				cSubMesh *pSubMesh = pMesh->GetSubMeshName(pMeshNode->GetName());
+				SubMeshAsset *pSubMesh = pMesh->GetSubMeshName(pMeshNode->GetName());
 
 				if(pSubMesh)
 				{

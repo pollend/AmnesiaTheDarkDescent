@@ -35,7 +35,7 @@ namespace hpl {
 	class cMaterialManager;
 	class cMeshManager;
 	class cMesh;
-	class cSubMesh;
+	class SubMeshAsset;
 	class cMeshEntity;
 	class cAnimationState;
 	class cNodeState;
@@ -67,7 +67,7 @@ namespace hpl {
 	#endif
 		friend class cMeshEntity;
 	public:
-		cSubMeshEntity(const tString &asName,cMeshEntity *apMeshEntity, cSubMesh * apSubMesh,cMaterialManager* apMaterialManager);
+		cSubMeshEntity(const tString &asName,cMeshEntity *apMeshEntity, SubMeshAsset * apSubMesh,cMaterialManager* apMaterialManager);
 		~cSubMeshEntity();
 
 		cMaterial *GetMaterial();
@@ -84,7 +84,7 @@ namespace hpl {
 
 		eRenderableType GetRenderType(){ return eRenderableType_SubMesh;}
 
-		cSubMesh* GetSubMesh() const { return mpSubMesh;}
+		SubMeshAsset* GetSubMesh() const { return mpSubMesh;}
 
 		void SetLocalNode(cNode3D *apNode);
 		cNode3D* GetLocalNode();
@@ -110,7 +110,7 @@ namespace hpl {
 	private:
 		void OnTransformUpdated();
 
-		cSubMesh *mpSubMesh;
+		SubMeshAsset *mpSubMesh;
 		cMeshEntity *mpMeshEntity;
 
 		cMaterial *mpMaterial;
