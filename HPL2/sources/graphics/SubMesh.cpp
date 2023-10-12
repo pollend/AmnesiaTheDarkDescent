@@ -37,98 +37,75 @@
 
 namespace hpl {
 
-    cSubMesh::cSubMesh(const tString& asName, cMaterialManager* apMaterialManager) {
-        mpMaterialManager = apMaterialManager;
-
-        msName = asName;
-
-        mpMaterial = NULL;
-        mpVtxBuffer = NULL;
-
-        mbDoubleSided = false;
-
-        mbCollideShape = false;
-
-        m_mtxLocalTransform = cMatrixf::Identity;
-
-        mbIsOneSided = false;
-        mvOneSidedNormal = 0;
-        mvOneSidedPoint = 0;
+    cSubMesh::cSubMesh(const tString& asName, cMaterialManager* apMaterialManager):
+        m_materialManager(apMaterialManager),
+        m_name(asName) {
     }
 
-    //-----------------------------------------------------------------------
-
     cSubMesh::~cSubMesh() {
-        if (mpMaterial)
-            mpMaterialManager->Destroy(mpMaterial);
-        if (mpVtxBuffer)
-            hplDelete(mpVtxBuffer);
-        STLDeleteAll(mvColliders);
+        if (m_material)
+            m_materialManager->Destroy(m_material);
+        if (m_vtxBuffer)
+            hplDelete(m_vtxBuffer);
+        STLDeleteAll(m_colliders);
     }
 
     void cSubMesh::SetMaterial(cMaterial* apMaterial) {
-        if (mpMaterial)
-            mpMaterialManager->Destroy(mpMaterial);
-        mpMaterial = apMaterial;
+        if (m_material)
+            m_materialManager->Destroy(m_material);
+        m_material = apMaterial;
     }
-
-    //-----------------------------------------------------------------------
 
     void cSubMesh::SetVertexBuffer(iVertexBuffer* apVtxBuffer) {
-        if (mpVtxBuffer == apVtxBuffer)
+        if (m_vtxBuffer == apVtxBuffer)
             return;
 
-        mpVtxBuffer = apVtxBuffer;
+        m_vtxBuffer = apVtxBuffer;
     }
-
-    //-----------------------------------------------------------------------
 
     cMaterial* cSubMesh::GetMaterial() {
-        return mpMaterial;
+        return m_material;
     }
-
-    //-----------------------------------------------------------------------
 
     iVertexBuffer* cSubMesh::GetVertexBuffer() {
-        return mpVtxBuffer;
+        return m_vtxBuffer;
     }
 
-    //-----------------------------------------------------------------------
-
     void cSubMesh::ResizeVertexBonePairs(int alSize) {
-        mvVtxBonePairs.resize(alSize);
+        m_vtxBonePairs.resize(alSize);
     }
 
     int cSubMesh::GetVertexBonePairNum() {
-        return (int)mvVtxBonePairs.size();
+        return (int)m_vtxBonePairs.size();
     }
+
     cVertexBonePair& cSubMesh::GetVertexBonePair(int alNum) {
-        return mvVtxBonePairs[alNum];
+        return m_vtxBonePairs[alNum];
     }
 
     void cSubMesh::AddVertexBonePair(const cVertexBonePair& aPair) {
-        mvVtxBonePairs.push_back(aPair);
+        m_vtxBonePairs.push_back(aPair);
     }
 
     void cSubMesh::ClearVertexBonePairs() {
-        mvVtxBonePairs.clear();
+        m_vtxBonePairs.clear();
     }
 
     cMeshCollider* cSubMesh::CreateCollider(eCollideShapeType aType) {
         cMeshCollider* pColl = hplNew(cMeshCollider, ());
         pColl->mType = aType;
 
-        mvColliders.push_back(pColl);
+        m_colliders.push_back(pColl);
 
         return pColl;
     }
 
     cMeshCollider* cSubMesh::GetCollider(int alIdx) {
-        return mvColliders[alIdx];
+        return m_colliders[alIdx];
     }
 
     int cSubMesh::GetColliderNum() {
-        return (int)mvColliders.size();
+        return (int)m_colliders.size();
     }
 
     iCollideShape* cSubMesh::CreateCollideShapeFromCollider(
@@ -152,18 +129,18 @@ namespace hpl {
     }
 
     iCollideShape* cSubMesh::CreateCollideShape(iPhysicsWorld* apWorld) {
-        if (mvColliders.empty()) {
+        if (m_colliders.empty()) {
             return nullptr;
         }
 
         // Create a single object
-        if (mvColliders.size() == 1) {
-            return CreateCollideShapeFromCollider(mvColliders[0], apWorld, 1, NULL);
+        if (m_colliders.size() == 1) {
+            return CreateCollideShapeFromCollider(m_colliders[0], apWorld, 1, NULL);
         }
         std::vector<iCollideShape*> vShapes;
-        vShapes.reserve(mvColliders.size());
-        for (size_t i = 0; i < mvColliders.size(); ++i) {
-            vShapes.push_back(CreateCollideShapeFromCollider(mvColliders[i], apWorld, 1, NULL));
+        vShapes.reserve(m_colliders.size());
+        for (size_t i = 0; i < m_colliders.size(); ++i) {
+            vShapes.push_back(CreateCollideShapeFromCollider(m_colliders[i], apWorld, 1, NULL));
         }
 
         return apWorld->CreateCompundShape(vShapes);
@@ -173,17 +150,17 @@ namespace hpl {
 
     void cSubMesh::Compile() {
         // build plan normal?
-        if (mpVtxBuffer && mpVtxBuffer->GetIndexNum() <= 400 * 3) {
-            unsigned int* pIndices = mpVtxBuffer->GetIndices();
-            float* pPositions = mpVtxBuffer->GetFloatArray(eVertexBufferElement_Position);
+        if (m_vtxBuffer && m_vtxBuffer->GetIndexNum() <= 400 * 3) {
+            unsigned int* pIndices = m_vtxBuffer->GetIndices();
+            float* pPositions = m_vtxBuffer->GetFloatArray(eVertexBufferElement_Position);
 
             Vector3 normalSum = Vector3(0, 0, 0);
             Vector3 firstNormal = Vector3(0, 0, 0);
             Vector3 positionSum = Vector3(0, 0, 0);
-            const int vertexStride = mpVtxBuffer->GetElementNum(eVertexBufferElement_Position);
+            const int vertexStride = m_vtxBuffer->GetElementNum(eVertexBufferElement_Position);
             float triCount = 0;
 
-            for (int i = 0; i < mpVtxBuffer->GetIndexNum(); i += 3) {
+            for (int i = 0; i < m_vtxBuffer->GetIndexNum(); i += 3) {
                 uint32_t t1 = pIndices[i + 0];
                 uint32_t t2 = pIndices[i + 1];
                 uint32_t t3 = pIndices[i + 2];
@@ -210,16 +187,16 @@ namespace hpl {
 
                 triCount += 1;
             }
-            mbIsOneSided = true;
-            mvOneSidedNormal = cMath::FromForgeVector3(normalize(normalSum / triCount));
-            mvOneSidedPoint = cMath::FromForgeVector3(positionSum / triCount);
+            m_isOneSided = true;
+            m_oneSidedNormal = cMath::FromForgeVector3(normalize(normalSum / triCount));
+            m_oneSidedPoint = cMath::FromForgeVector3(positionSum / triCount);
         }
 
-        if (!mvVtxBonePairs.empty()) {
-            m_vertexWeights.resize(4 * mpVtxBuffer->GetVertexNum(), 0);
-            m_vertexBones.resize(4 * mpVtxBuffer->GetVertexNum(), 0);
-            for (size_t i = 0; i < mvVtxBonePairs.size(); i++) {
-                cVertexBonePair& pair = mvVtxBonePairs[i];
+        if (!m_vtxBonePairs.empty()) {
+            m_vertexWeights.resize(4 * m_vtxBuffer->GetVertexNum(), 0);
+            m_vertexBones.resize(4 * m_vtxBuffer->GetVertexNum(), 0);
+            for (size_t i = 0; i < m_vtxBonePairs.size(); i++) {
+                cVertexBonePair& pair = m_vtxBonePairs[i];
                 bool foundWeight = false;
                 size_t j = 0;
                 for (; j < 4; j++) {
@@ -233,7 +210,7 @@ namespace hpl {
                         LogLevel::eWARNING,
                         "More than 4 bones on a vertex in submesh '%s' in mesh '%s' !\n",
                         GetName().c_str(),
-                        mpParent->GetName().c_str());
+                        m_parent->GetName().c_str());
                     continue;
                 }
                 m_vertexWeights[(pair.vtxIdx * 4) + j] = pair.weight;
@@ -241,7 +218,7 @@ namespace hpl {
             }
             /////////////////////////////////
             // Normalize the weights
-            for (int vtx = 0; vtx < mpVtxBuffer->GetVertexNum(); ++vtx) {
+            for (int vtx = 0; vtx < m_vtxBuffer->GetVertexNum(); ++vtx) {
                 float total = 0;
                 size_t count = 0;
                 for (; count < 4; count++) {
@@ -257,7 +234,7 @@ namespace hpl {
                         LogLevel::eWARNING,
                         "Some vertices in sub mesh '%s' in mesh '%s' are not connected to a bone!\n",
                         GetName().c_str(),
-                        mpParent->GetName().c_str());
+                        m_parent->GetName().c_str());
                     continue;
                 }
 

@@ -90,7 +90,7 @@ namespace hpl {
 	{
 		cSubMesh* pSubMesh = hplNew( cSubMesh, (asName,mpMaterialManager) );
 
-		pSubMesh->mpParent = this;
+		pSubMesh->m_parent = this;
 
 		mvSubMeshes.push_back(pSubMesh);
 		m_mapSubMeshes.insert(std::pair{asName, pSubMesh});
@@ -235,9 +235,9 @@ namespace hpl {
 
 			////////////////////////////
 			//Iterate pairs and update the radii
-			for(size_t i=0; i < pSubMesh->mvVtxBonePairs.size(); i++)
+			for(size_t i=0; i < pSubMesh->m_vtxBonePairs.size(); i++)
 			{
-				cVertexBonePair &Pair = pSubMesh->mvVtxBonePairs[i];
+				cVertexBonePair &Pair = pSubMesh->m_vtxBonePairs[i];
 
 				float *pPos = &pPosArray[Pair.vtxIdx * lVtxStride];
 				cVector3f vPos(pPos[0], pPos[1],pPos[2]);

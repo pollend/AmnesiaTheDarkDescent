@@ -62,7 +62,7 @@ namespace hpl {
         iVertexBuffer* GetVertexBuffer();
 
         const tString& GetName() {
-            return msName;
+            return m_name;
         }
 
         // Vertex-Bone pairs
@@ -82,21 +82,21 @@ namespace hpl {
             cMeshCollider* pCollider, iPhysicsWorld* apWorld, const cVector3f& avSizeMul, cMatrixf* apMtxOffset);
 
         void SetIsCollideShape(bool abX) {
-            mbCollideShape = abX;
+            m_collideShape = abX;
         }
         bool IsCollideShape() {
-            return mbCollideShape;
+            return m_collideShape;
         }
 
         void SetDoubleSided(bool abX) {
-            mbDoubleSided = abX;
+            m_doubleSided = abX;
         }
         bool GetDoubleSided() {
-            return mbDoubleSided;
+            return m_doubleSided;
         }
 
-        inline void SetModelScale(const cVector3f& avScale) {mvModelScale = avScale;}
-        inline cVector3f GetModelScale() { return mvModelScale;}
+        inline void SetModelScale(const cVector3f& avScale) {m_modelScale = avScale;}
+        inline cVector3f GetModelScale() { return m_modelScale;}
 
         const cMatrixf& GetLocalTransform() {
             return m_mtxLocalTransform;
@@ -106,50 +106,49 @@ namespace hpl {
         }
 
         bool GetIsOneSided() {
-            return mbIsOneSided;
+            return m_isOneSided;
         }
         const cVector3f& GetOneSidedNormal() {
-            return mvOneSidedNormal;
+            return m_oneSidedNormal;
         }
         const cVector3f& GetOneSidedPoint() {
-            return mvOneSidedPoint;
+            return m_oneSidedPoint;
         }
 
         void SetMaterialName(const tString& asName) {
-            msMaterialName = asName;
+            m_materialName = asName;
         }
         const tString& GetMaterialName() {
-            return msMaterialName;
+            return m_materialName;
         }
 
         void Compile();
 
     private:
-        tString msName;
+        cMaterialManager* m_materialManager = nullptr;
+        tString m_name;
 
-        tString msMaterialName;
-        cMaterial* mpMaterial;
-        iVertexBuffer* mpVtxBuffer;
+        tString m_materialName;
+        cMaterial* m_material = nullptr;
+        iVertexBuffer* m_vtxBuffer = nullptr;
 
-        cMatrixf m_mtxLocalTransform;
+        cMatrixf m_mtxLocalTransform = cMatrixf::Identity;
 
-        tVertexBonePairVec mvVtxBonePairs;
-
-        std::vector<cMeshCollider*> mvColliders;
+        std::vector<cVertexBonePair> m_vtxBonePairs;
+        std::vector<cMeshCollider*> m_colliders;
 
         std::vector<float> m_vertexWeights;
         std::vector<uint8_t> m_vertexBones;
 
-        cVector3f mvModelScale;
-        bool mbDoubleSided;
-        bool mbCollideShape;
-        bool mbIsOneSided;
-        cVector3f mvOneSidedNormal;
-        cVector3f mvOneSidedPoint;
+        cVector3f m_modelScale;
+        bool m_doubleSided = false;
+        bool m_collideShape = false;
+        bool m_isOneSided = false;
+        cVector3f m_oneSidedNormal = 0;
+        cVector3f m_oneSidedPoint = 0;
 
-        cMaterialManager* mpMaterialManager;
 
-        cMesh* mpParent;
+        cMesh* m_parent;
     };
 
 }; // namespace hpl
