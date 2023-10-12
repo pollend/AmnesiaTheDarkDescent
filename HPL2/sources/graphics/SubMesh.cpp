@@ -37,9 +37,9 @@
 
 namespace hpl {
 
-    cSubMesh::cSubMesh(const tString& asName, cMaterialManager* apMaterialManager):
-        m_materialManager(apMaterialManager),
-        m_name(asName) {
+    cSubMesh::cSubMesh(const tString& asName, cMaterialManager* apMaterialManager)
+        : m_materialManager(apMaterialManager)
+        , m_name(asName) {
     }
 
     cSubMesh::~cSubMesh() {
@@ -151,45 +151,46 @@ namespace hpl {
     void cSubMesh::Compile() {
         // build plan normal?
         if (m_vtxBuffer && m_vtxBuffer->GetIndexNum() <= 400 * 3) {
-            unsigned int* pIndices = m_vtxBuffer->GetIndices();
-            float* pPositions = m_vtxBuffer->GetFloatArray(eVertexBufferElement_Position);
+            [&] {
+                unsigned int* pIndices = m_vtxBuffer->GetIndices();
+                float* pPositions = m_vtxBuffer->GetFloatArray(eVertexBufferElement_Position);
 
-            Vector3 normalSum = Vector3(0, 0, 0);
-            Vector3 firstNormal = Vector3(0, 0, 0);
-            Vector3 positionSum = Vector3(0, 0, 0);
-            const int vertexStride = m_vtxBuffer->GetElementNum(eVertexBufferElement_Position);
-            float triCount = 0;
+                Vector3 normalSum = Vector3(0, 0, 0);
+                Vector3 firstNormal = Vector3(0, 0, 0);
+                Vector3 positionSum = Vector3(0, 0, 0);
+                const int vertexStride = m_vtxBuffer->GetElementNum(eVertexBufferElement_Position);
+                float triCount = 0;
+                for (int i = 0; i < m_vtxBuffer->GetIndexNum(); i += 3) {
+                    uint32_t t1 = pIndices[i + 0];
+                    uint32_t t2 = pIndices[i + 1];
+                    uint32_t t3 = pIndices[i + 2];
 
-            for (int i = 0; i < m_vtxBuffer->GetIndexNum(); i += 3) {
-                uint32_t t1 = pIndices[i + 0];
-                uint32_t t2 = pIndices[i + 1];
-                uint32_t t3 = pIndices[i + 2];
+                    const float* pVtx0 = &pPositions[t1 * vertexStride];
+                    const float* pVtx1 = &pPositions[t2 * vertexStride];
+                    const float* pVtx2 = &pPositions[t3 * vertexStride];
 
-                const float* pVtx0 = &pPositions[t1 * vertexStride];
-                const float* pVtx1 = &pPositions[t2 * vertexStride];
-                const float* pVtx2 = &pPositions[t3 * vertexStride];
+                    Vector3 edge1(pVtx1[0] - pVtx0[0], pVtx1[1] - pVtx0[1], pVtx1[2] - pVtx0[2]);
+                    Vector3 edge2(pVtx2[0] - pVtx0[0], pVtx2[1] - pVtx0[1], pVtx2[2] - pVtx0[2]);
+                    Vector3 current = normalize(cross(edge2, edge1));
 
-                Vector3 vEdge1(pVtx1[0] - pVtx0[0], pVtx1[1] - pVtx0[1], pVtx1[2] - pVtx0[2]);
-                Vector3 vEdge2(pVtx2[0] - pVtx0[0], pVtx2[1] - pVtx0[1], pVtx2[2] - pVtx0[2]);
-                Vector3 vNormal = normalize(cross(vEdge2, vEdge1));
+                    positionSum += Vector3(pVtx0[0], pVtx0[1], pVtx0[2]);
 
-                positionSum += Vector3(pVtx0[0], pVtx0[1], pVtx0[2]);
-
-                if (i == 0) {
-                    firstNormal = vNormal;
-                    normalSum = vNormal;
-                } else {
-                    if (length(cross(firstNormal, vNormal)) < 0.9f) {
-                        return;
+                    if (i == 0) {
+                        firstNormal = current;
+                        normalSum = current;
+                    } else {
+                        float cosAngle = dot(firstNormal, current);
+                        if (cosAngle < 0.9f) {
+                            return;
+                        }
+                        normalSum += current;
                     }
-                    normalSum += vNormal;
+                    triCount += 1;
                 }
-
-                triCount += 1;
-            }
-            m_isOneSided = true;
-            m_oneSidedNormal = cMath::FromForgeVector3(normalize(normalSum / triCount));
-            m_oneSidedPoint = cMath::FromForgeVector3(positionSum / triCount);
+                m_isOneSided = true;
+                m_oneSidedNormal = cMath::FromForgeVector3(normalize(normalSum / triCount));
+                m_oneSidedPoint = cMath::FromForgeVector3(positionSum / triCount);
+            }();
         }
 
         if (!m_vtxBonePairs.empty()) {

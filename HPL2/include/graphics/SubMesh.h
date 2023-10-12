@@ -81,46 +81,23 @@ namespace hpl {
         static iCollideShape* CreateCollideShapeFromCollider(
             cMeshCollider* pCollider, iPhysicsWorld* apWorld, const cVector3f& avSizeMul, cMatrixf* apMtxOffset);
 
-        void SetIsCollideShape(bool abX) {
-            m_collideShape = abX;
-        }
-        bool IsCollideShape() {
-            return m_collideShape;
-        }
+        void SetIsCollideShape(bool abX) {m_collideShape = abX; }
+        bool IsCollideShape() { return m_collideShape; }
 
-        void SetDoubleSided(bool abX) {
-            m_doubleSided = abX;
-        }
-        bool GetDoubleSided() {
-            return m_doubleSided;
-        }
+        void SetDoubleSided(bool abX) {m_doubleSided = abX; }
+        bool GetDoubleSided() { return m_doubleSided; }
 
-        inline void SetModelScale(const cVector3f& avScale) {m_modelScale = avScale;}
-        inline cVector3f GetModelScale() { return m_modelScale;}
+        inline void SetModelScale(const cVector3f& avScale) { m_modelScale = avScale; }
+        inline cVector3f GetModelScale() { return m_modelScale; }
 
-        const cMatrixf& GetLocalTransform() {
-            return m_mtxLocalTransform;
-        }
-        void SetLocalTransform(const cMatrixf& a_mtxTrans) {
-            m_mtxLocalTransform = a_mtxTrans;
-        }
+        const cMatrixf& GetLocalTransform() { return m_mtxLocalTransform; }
+        void SetLocalTransform(const cMatrixf& a_mtxTrans) { m_mtxLocalTransform = a_mtxTrans; }
 
-        bool GetIsOneSided() {
-            return m_isOneSided;
-        }
-        const cVector3f& GetOneSidedNormal() {
-            return m_oneSidedNormal;
-        }
-        const cVector3f& GetOneSidedPoint() {
-            return m_oneSidedPoint;
-        }
-
-        void SetMaterialName(const tString& asName) {
-            m_materialName = asName;
-        }
-        const tString& GetMaterialName() {
-            return m_materialName;
-        }
+        bool GetIsOneSided() { return m_isOneSided; }
+        const cVector3f& GetOneSidedNormal() { return m_oneSidedNormal; }
+        const cVector3f& GetOneSidedPoint() { return m_oneSidedPoint; }
+        void SetMaterialName(const tString& asName) { m_materialName = asName; }
+        const tString& GetMaterialName() { return m_materialName; }
 
         void Compile();
 
@@ -146,7 +123,6 @@ namespace hpl {
         bool m_isOneSided = false;
         cVector3f m_oneSidedNormal = 0;
         cVector3f m_oneSidedPoint = 0;
-
 
         cMesh* m_parent;
     };
