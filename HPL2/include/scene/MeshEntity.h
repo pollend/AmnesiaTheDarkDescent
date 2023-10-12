@@ -237,8 +237,8 @@ namespace hpl {
 
 		bool mbStatic;
 
-		tSubMeshEntityVec mvSubMeshes;
-		tSubMeshEntityMap m_mapSubMeshes;
+		std::vector<cSubMeshEntity*> mvSubMeshes;
+		std::multimap<tString, cSubMeshEntity*> m_mapSubMeshes;
 
 		tAnimationStateVec mvAnimationStates;
 		tAnimationStateIndexMap m_mapAnimationStateIndices;

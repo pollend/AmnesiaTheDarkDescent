@@ -17,139 +17,139 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef HPL_SUB_MESH_H
-#define HPL_SUB_MESH_H
+#pragma once
 
-#include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
-#include "system/SystemTypes.h"
+#include "math/MathTypes.h"
 #include "math/MeshTypes.h"
 #include "physics/PhysicsTypes.h"
+#include "system/SystemTypes.h"
 
 namespace hpl {
 
-	class cMaterial;
-	class iVertexBuffer;
+    class cMaterial;
+    class iVertexBuffer;
 
-	class cMesh;
-	class iPhysicsWorld;
-	class iCollideShape;
+    class cMesh;
+    class iPhysicsWorld;
+    class iCollideShape;
 
-	class cMaterialManager;
+    class cMaterialManager;
 
-	//--------------------------------------------------
+    class cMeshCollider {
+    public:
+        tString msGroup; // Only used as temp var when loading!
 
-	class cMeshCollider
-	{
-	public:
-		tString msGroup; // Only used as temp var when loading!
+        eCollideShapeType mType;
+        cVector3f mvSize;
+        cMatrixf m_mtxOffset;
+        bool mbCharCollider;
+    };
 
-		eCollideShapeType mType;
-		cVector3f mvSize;
-		cMatrixf m_mtxOffset;
-		bool mbCharCollider;
-	};
+    class cSubMesh final {
+        friend class cMesh;
+        friend class cSubMeshEntity;
 
-	typedef std::vector<cMeshCollider*> tMeshColliderVec;
-	typedef tMeshColliderVec::iterator tMeshColliderVecIt;
+    public:
+        cSubMesh(const tString& asName, cMaterialManager* apMaterialManager);
+        ~cSubMesh();
 
-	//--------------------------------------------------
+        void SetMaterial(cMaterial* apMaterial);
+        void SetVertexBuffer(iVertexBuffer* apVtxBuffer);
 
-	class cSubMesh
-	{
-	friend class cMesh;
-	friend class cSubMeshEntity;
-	public:
-		cSubMesh(const tString &asName,cMaterialManager* apMaterialManager);
-		~cSubMesh();
+        // Renderable implementation.
+        cMaterial* GetMaterial();
+        iVertexBuffer* GetVertexBuffer();
 
-		void SetMaterial(cMaterial* apMaterial);
-		void SetVertexBuffer(iVertexBuffer* apVtxBuffer);
+        const tString& GetName() {
+            return msName;
+        }
 
-		//Renderable implementation.
-		cMaterial *GetMaterial();
-		iVertexBuffer* GetVertexBuffer();
+        // Vertex-Bone pairs
+        void ResizeVertexBonePairs(int alSize);
+        int GetVertexBonePairNum();
+        cVertexBonePair& GetVertexBonePair(int alNum);
 
-		const tString& GetName(){ return msName;}
+        void AddVertexBonePair(const cVertexBonePair& aPair);
+        void ClearVertexBonePairs();
 
-		//Vertex-Bone pairs
-		void ResizeVertexBonePairs(int alSize);
-		int GetVertexBonePairNum();
-		cVertexBonePair& GetVertexBonePair(int alNum);
+        // Colliders
+        cMeshCollider* CreateCollider(eCollideShapeType aType);
+        cMeshCollider* GetCollider(int alIdx);
+        int GetColliderNum();
+        iCollideShape* CreateCollideShape(iPhysicsWorld* apWorld);
+        static iCollideShape* CreateCollideShapeFromCollider(
+            cMeshCollider* pCollider, iPhysicsWorld* apWorld, const cVector3f& avSizeMul, cMatrixf* apMtxOffset);
 
-		void AddVertexBonePair(const cVertexBonePair &aPair);
-		void ClearVertexBonePairs();
+        void SetIsCollideShape(bool abX) {
+            mbCollideShape = abX;
+        }
+        bool IsCollideShape() {
+            return mbCollideShape;
+        }
 
-		//Colliders
-		cMeshCollider* CreateCollider(eCollideShapeType aType);
-		cMeshCollider* GetCollider(int alIdx);
-		int GetColliderNum();
-		iCollideShape* CreateCollideShape(iPhysicsWorld *apWorld);
-		static iCollideShape* CreateCollideShapeFromCollider(cMeshCollider *pCollider, iPhysicsWorld *apWorld, const cVector3f& avSizeMul, cMatrixf *apMtxOffset);
+        void SetDoubleSided(bool abX) {
+            mbDoubleSided = abX;
+        }
+        bool GetDoubleSided() {
+            return mbDoubleSided;
+        }
 
-		void SetIsCollideShape(bool abX){mbCollideShape = abX;}
-		bool IsCollideShape(){ return mbCollideShape;}
+        inline void SetModelScale(const cVector3f& avScale) {mvModelScale = avScale;}
+        inline cVector3f GetModelScale() { return mvModelScale;}
 
-		const cTriEdge& GetEdge(int alIndex) const{ return mvEdges[alIndex];}
-		int GetEdgeNum(){ return (int)mvEdges.size();}
+        const cMatrixf& GetLocalTransform() {
+            return m_mtxLocalTransform;
+        }
+        void SetLocalTransform(const cMatrixf& a_mtxTrans) {
+            m_mtxLocalTransform = a_mtxTrans;
+        }
 
-		tTriEdgeVec* GetEdgeVecPtr(){ return &mvEdges;}
+        bool GetIsOneSided() {
+            return mbIsOneSided;
+        }
+        const cVector3f& GetOneSidedNormal() {
+            return mvOneSidedNormal;
+        }
+        const cVector3f& GetOneSidedPoint() {
+            return mvOneSidedPoint;
+        }
 
-		tTriangleDataVec* GetTriangleVecPtr(){ return &mvTriangles;}
+        void SetMaterialName(const tString& asName) {
+            msMaterialName = asName;
+        }
+        const tString& GetMaterialName() {
+            return msMaterialName;
+        }
 
-		void SetDoubleSided(bool abX){ mbDoubleSided = abX;}
-		bool GetDoubleSided(){ return mbDoubleSided;}
+        void Compile();
 
-		void SetModelScale(const cVector3f& avScale){ mvModelScale = avScale;}
-		cVector3f GetModelScale(){ return mvModelScale;}
+    private:
+        tString msName;
 
-		const cMatrixf& GetLocalTransform(){ return m_mtxLocalTransform;}
-		void SetLocalTransform(const cMatrixf& a_mtxTrans){ m_mtxLocalTransform = a_mtxTrans;}
+        tString msMaterialName;
+        cMaterial* mpMaterial;
+        iVertexBuffer* mpVtxBuffer;
 
-		bool GetIsOneSided(){ return mbIsOneSided;}
-		const cVector3f& GetOneSidedNormal(){ return mvOneSidedNormal;}
-		const cVector3f& GetOneSidedPoint(){ return mvOneSidedPoint;}
+        cMatrixf m_mtxLocalTransform;
 
-		void SetMaterialName(const tString& asName){msMaterialName =asName;}
-		const tString& GetMaterialName(){ return msMaterialName;}
+        tVertexBonePairVec mvVtxBonePairs;
 
-		void Compile();
-	private:
-		void CheckOneSided();
-		void CompileBonePairs();
+        std::vector<cMeshCollider*> mvColliders;
 
-		tString msName;
+        std::vector<float> m_vertexWeights;
+        std::vector<uint8_t> m_vertexBones;
 
-		tString msMaterialName;
-		cMaterial* mpMaterial;
-		iVertexBuffer* mpVtxBuffer;
+        cVector3f mvModelScale;
+        bool mbDoubleSided;
+        bool mbCollideShape;
+        bool mbIsOneSided;
+        cVector3f mvOneSidedNormal;
+        cVector3f mvOneSidedPoint;
 
-		cMatrixf m_mtxLocalTransform;
+        cMaterialManager* mpMaterialManager;
 
-		tVertexBonePairVec mvVtxBonePairs;
+        cMesh* mpParent;
+    };
 
-		tMeshColliderVec mvColliders;
-
-		float *mpVertexWeights;
-		unsigned char *mpVertexBones;
-
-		tTriEdgeVec mvEdges;
-		tTriangleDataVec mvTriangles;
-
-		cVector3f mvModelScale;
-
-		bool mbDoubleSided;
-
-		bool mbCollideShape;
-
-		bool mbIsOneSided;
-		cVector3f mvOneSidedNormal;
-		cVector3f mvOneSidedPoint;
-
-		cMaterialManager* mpMaterialManager;
-
-		cMesh* mpParent;
-	};
-
-};
-#endif // HPL_SUB_MESH_H
+}; // namespace hpl
