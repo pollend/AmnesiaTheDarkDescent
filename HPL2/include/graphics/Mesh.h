@@ -17,8 +17,7 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef HPL_MESH_H
-#define HPL_MESH_H
+#pragma once
 
 #include <vector>
 #include <map>
@@ -49,29 +48,10 @@ namespace hpl {
 	class cSoundEntity;
 	class cWorld;
 
-	//--------------------------------------------------
-
-	typedef std::vector<cAnimation*> tAnimationVec;
-	typedef tAnimationVec::iterator tAnimationVecIt;
-
-	typedef std::map<tString, int> tAnimationIndexMap;
-	typedef tAnimationIndexMap::iterator tAnimationIndexMapIt;
-
-	typedef std::vector<cSubMesh*> tSubMeshVec;
-	typedef std::vector<cSubMesh*>::iterator tSubMeshVecIt;
-
-	typedef std::multimap<tString,cSubMesh*> tSubMeshMap;
-	typedef tSubMeshMap::iterator tSubMeshMapIt;
-
-	typedef std::vector<cNode3D*> tNode3DVec;
-	typedef tNode3DVec::iterator tNode3DVecIt;
-
-	//--------------------------------------------------
-
 	class cMesh : public iResourceBase
 	{
-	friend class cSubMesh;
-	friend class cMeshEntity;
+	    friend class cSubMesh;
+	    friend class cMeshEntity;
 	public:
 		cMesh(const tString& asName, const tWString& asFullPath, cMaterialManager* apMaterialManager, cAnimationManager * apAnimationManager);
 		~cMesh();
@@ -79,10 +59,10 @@ namespace hpl {
 		bool CreateFromFile(const tString asFile);
 
 		cSubMesh* CreateSubMesh(const tString &asName);
-
 		cSubMesh* GetSubMesh(unsigned int alIdx);
-		int GetSubMeshIndex(const tString &asName);
 		cSubMesh* GetSubMeshName(const tString &asName);
+
+		int GetSubMeshIndex(const tString &asName);
 		int GetSubMeshNum();
 
 		int GetTriangleCount();
@@ -111,7 +91,6 @@ namespace hpl {
 		cNode3D* GetNode(int alIdx);
 		cNode3D* GetNodeByName(const tString &asName);
 
-
 		//Resources implementation
 		bool Reload(){ return false;}
 		void Unload(){}
@@ -121,19 +100,18 @@ namespace hpl {
 		cMaterialManager* mpMaterialManager;
 		cAnimationManager * mpAnimationManager;
 
-		tSubMeshVec mvSubMeshes;
-		tSubMeshMap m_mapSubMeshes;
+		std::vector<cSubMesh*> mvSubMeshes;
+		std::multimap<tString, cSubMesh*> m_mapSubMeshes;
 
 		cSkeleton *mpSkeleton;
 
-		tAnimationVec mvAnimations;
-		tAnimationIndexMap m_mapAnimIndices;
+		std::vector<cAnimation*> mvAnimations;
+		std::map<tString, int> m_mapAnimIndices;
 
-		tFloatVec mvBoneBoundingRadii;
+		std::vector<float> mvBoneBoundingRadii;
 
 		cNode3D *mpRootNode;
-        tNode3DVec mvNodes;
+        std::vector<cNode3D*> mvNodes;
 	};
 
 };
-#endif // HPL_MESH_H

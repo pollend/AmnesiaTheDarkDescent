@@ -79,14 +79,6 @@ namespace hpl {
 		if(mpRootNode) hplDelete(mpRootNode);
 	}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
 	bool cMesh::CreateFromFile(const tString asFile)
 	{
 		return false;
@@ -101,12 +93,10 @@ namespace hpl {
 		pSubMesh->mpParent = this;
 
 		mvSubMeshes.push_back(pSubMesh);
-		m_mapSubMeshes.insert(tSubMeshMap::value_type(asName, pSubMesh));
+		m_mapSubMeshes.insert(std::pair{asName, pSubMesh});
 
 		return pSubMesh;
 	}
-
-	//-----------------------------------------------------------------------
 
 	cSubMesh* cMesh::GetSubMesh(unsigned int alIdx)
 	{
@@ -127,9 +117,10 @@ namespace hpl {
 
 	cSubMesh* cMesh::GetSubMeshName(const tString &asName)
 	{
-		tSubMeshMapIt it = m_mapSubMeshes.find(asName);
-		if(it == m_mapSubMeshes.end())return NULL;
-
+		auto it = m_mapSubMeshes.find(asName);
+		if(it == m_mapSubMeshes.end()) {
+		    return NULL;
+	    }
 		return it->second;
 	}
 
@@ -142,18 +133,13 @@ namespace hpl {
 
 	int cMesh::GetTriangleCount()
 	{
-		tSubMeshVecIt it = mvSubMeshes.begin();
-
 		int lTriangleCount = 0;
-
-		for(;it!=mvSubMeshes.end(); ++it)
-		{
-			iVertexBuffer* pVB = (*it)->GetVertexBuffer();
-
-			if(pVB)
-				lTriangleCount += (int)pVB->GetIndexNum()/3;
-		}
-
+	    for(auto& it: mvSubMeshes) {
+            iVertexBuffer* pVB = it->GetVertexBuffer();
+            if(pVB) {
+	            lTriangleCount += (int)pVB->GetIndexNum()/3;
+	        }
+	    }
 		return lTriangleCount;
 	}
 
@@ -173,9 +159,7 @@ namespace hpl {
 	void cMesh::AddAnimation(cAnimation *apAnimation)
 	{
 		mvAnimations.push_back(apAnimation);
-
-		tAnimationIndexMap::value_type value(apAnimation->GetName(), (int)mvAnimations.size() - 1);
-		m_mapAnimIndices.insert(value);
+		m_mapAnimIndices.emplace(apAnimation->GetName(), (int)mvAnimations.size() - 1);
 	}
 
 	cAnimation* cMesh::GetAnimation(int alIndex)
@@ -198,7 +182,7 @@ namespace hpl {
 
 	int cMesh::GetAnimationIndex(const tString& asName)
 	{
-		tAnimationIndexMapIt it = m_mapAnimIndices.find(asName);
+		auto it = m_mapAnimIndices.find(asName);
 		if(it !=  m_mapAnimIndices.end())
 		{
 			return it->second;
@@ -290,7 +274,7 @@ namespace hpl {
 	cNode3D* cMesh::GetNodeByName(const tString &asName)
 	{
 		cNode3D *pNode = (cNode3D*)STLFindByName(mvNodes,asName);
-		
+
 		return pNode;
 	}
 
@@ -299,14 +283,4 @@ namespace hpl {
 		return mvNodes[alIdx];
 	}
 
-	//-----------------------------------------------------------------------
-
-
-	//////////////////////////////////////////////////////////////////////////
-	// PRIAVTE METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
-	//-----------------------------------------------------------------------
 }
