@@ -48,6 +48,8 @@
 #include "system/Platform.h"
 
 #include "impl/tinyXML/tinyxml.h"
+#include "tinyxml2.h"
+
 
 namespace hpl {
 
@@ -111,6 +113,21 @@ namespace hpl {
 	}
 
 
+	void cResourceVarsObject::LoadVariables(const tinyxml2::XMLElement* apRootElem)
+	{
+		m_mapVars.clear();
+        auto* varIt = apRootElem->FirstChildElement();
+        for(;varIt != nullptr; varIt = varIt->NextSiblingElement()) {
+            const char* name = "";
+            const char* value = "";
+            if(
+                varIt->QueryStringAttribute("Name", &name) == tinyxml2::XMLError::XML_SUCCESS &&
+                varIt->QueryStringAttribute("Value", &value) == tinyxml2::XMLError::XML_SUCCESS
+            ) {
+			    m_mapVars.insert(tResourceVarMap::value_type(name, value));
+            }
+        }
+    }
 	void cResourceVarsObject::LoadVariables(cXmlElement *apRootElem)
 	{
 		//////////////////////

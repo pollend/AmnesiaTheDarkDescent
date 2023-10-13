@@ -15,6 +15,7 @@
     "openal-soft",
     "zlib",
     "folly",
+    "tinyxml2",
     {
       "name": "devil",
       "platform": "windows"

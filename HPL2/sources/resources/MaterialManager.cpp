@@ -18,6 +18,7 @@
  */
 
 #include "resources/MaterialManager.h"
+#include "resources/FileSearcher.h"
 
 #include "graphics/Image.h"
 #include "graphics/IndexPool.h"
@@ -41,6 +42,7 @@
 #include "Common_3/Utilities/Log/Log.h"
 #include "Common_3/Utilities/Interfaces/ILog.h"
 #include <FixPreprocessor.h>
+#include "tinyxml2.h"
 
 namespace hpl {
 
@@ -194,40 +196,48 @@ namespace hpl {
     }
 
     cMaterial* cMaterialManager::LoadFromFile(const tString& asName, const tWString& asPath) {
-        iXmlDocument* pDoc = mpResources->GetLowLevel()->CreateXmlDocument();
-        if (pDoc->CreateFromFile(asPath) == false) {
-            mpResources->DestroyXmlDocument(pDoc);
-            return NULL;
-        }
+        tinyxml2::XMLDocument document;
+		FILE *pFile = cPlatform::OpenFile(asPath, _W("rb"));
 
-        cXmlElement* pMain = pDoc->GetFirstElement("Main");
-        if (pMain == nullptr) {
-            mpResources->DestroyXmlDocument(pDoc);
-            Error("Main child not found.\n");
+        if(!pFile) {
+            LOGF(LogLevel::eERROR, "failed to load material: %s", asName.c_str());
+            return nullptr;
+        }
+        document.LoadFile(pFile);
+        fclose(pFile);
+
+        auto* rootElement = document.FirstChildElement();
+        if (rootElement == nullptr) {
+            LOGF(LogLevel::eERROR,"Material-%s: Root not found", asName.c_str());
+            return nullptr;
+        }
+        auto* mainElement = rootElement->FirstChildElement("Main");
+        if (mainElement  == nullptr) {
+            LOGF(LogLevel::eERROR,"Material-%s: Main child not found", asName.c_str());
             return nullptr;
         }
 
-        tString sType = pMain->GetAttributeString("Type");
-        if (sType == "") {
-            mpResources->DestroyXmlDocument(pDoc);
-            Error("Type not found.\n");
+        const char* sType = "";
+        if(mainElement->QueryAttribute("Type", &sType) != tinyxml2::XMLError::XML_SUCCESS) {
+            LOGF(LogLevel::eERROR,"Material-%s:Missing Type Attribute: ", asName.c_str());
             return nullptr;
         }
 
-        /////////////////////////////
-        // Get General Propertries
-        bool bDepthTest = pMain->GetAttributeBool("DepthTest", true);
-        float fValue = pMain->GetAttributeFloat("Value", 1);
-        tString sPhysicsMatName = pMain->GetAttributeString("PhysicsMaterial", "Default");
-        tString sBlendMode = pMain->GetAttributeString("BlendMode", "Add");
+        bool bDepthTest = true;
+        float fValue = 1;
+        const char* sPhysicsMatName = "Default"; //pMain->GetAttributeString("PhysicsMaterial", "Default");
+        const char* sBlendMode = "Add"; //pMain->GetAttributeString("BlendMode", "Add");
+
+        mainElement->QueryBoolAttribute("DepthTest", &bDepthTest);
+        mainElement->QueryFloatAttribute("Value", &fValue);
+        mainElement->QueryStringAttribute("PhysicsMaterial", &sPhysicsMatName);
+        mainElement->QueryStringAttribute("BlendMode", &sBlendMode);
 
         /////////////////////////////
         // Make a "fake" material, with a blank type
         if (mbDisableRenderDataLoading) {
             cMaterial* pMat = hplNew(cMaterial, (asName, asPath, mpResources));
             pMat->SetPhysicsMaterial(sPhysicsMatName);
-
-            mpResources->DestroyXmlDocument(pDoc);
             return pMat;
         }
 
@@ -239,8 +249,7 @@ namespace hpl {
         });
 
         if (metaInfo == cMaterial::MaterialMetaTable.end()) {
-            mpResources->DestroyXmlDocument(pDoc);
-            LOGF(eERROR, "Invalid material type %s", sType.c_str());
+            LOGF(eERROR, "Invalid material type %s", sType);
             return NULL;
         }
         cMaterial* pMat = new cMaterial(asName, asPath, mpResources);
@@ -249,35 +258,41 @@ namespace hpl {
 
         ///////////////////////////
         // Textures
-        cXmlElement* pTexRoot = pDoc->GetFirstElement("TextureUnits");
-        if (pTexRoot == NULL) {
-            mpResources->DestroyXmlDocument(pDoc);
-            Error("TextureUnits child not found.\n");
+        auto* textureUnits = rootElement->FirstChildElement("TextureUnits");
+        if (textureUnits == nullptr) {
+            LOGF(LogLevel::eERROR,"Material-%s: TextureUnits child not found", asName.c_str());
             return NULL;
         }
 
         for (eMaterialTexture textureType : metaInfo->m_usedTextures) {
-            tString sTextureType = GetTextureString(textureType);
-            cXmlElement* pTexChild = pTexRoot->GetFirstElement(sTextureType.c_str());
+            const char* sTextureType = GetTextureString(textureType);
+            auto* pTexChild = textureUnits->FirstChildElement(sTextureType);
             if (pTexChild == NULL) {
-                // LOGF(LogLevel::eERROR, "Invalid animation axis %s", sTextureType.c_str());
-                // hplDelete(pMat);
-                // return NULL;
                 continue;
             }
+            bool bMipMaps = true;
+            bool bCompress = false;
+            const char* textureTypeStr = "";
+            const char* wrapStr = "";
+            const char* sFileQuery = "";
+            const char* animModeStr = "None";
+            float fFrameTime = 1.0f;
 
-            eTextureType type = GetType(pTexChild->GetAttributeString("Type", ""));
-            tString sFile = pTexChild->GetAttributeString("File", "");
-            bool bMipMaps = pTexChild->GetAttributeBool("MipMaps", true);
-            bool bCompress = pTexChild->GetAttributeBool("Compress", false);
-            eTextureWrap wrap = GetWrap(pTexChild->GetAttributeString("Wrap", ""));
+            pTexChild->QueryStringAttribute("AnimMode", &animModeStr);
+            pTexChild->QueryStringAttribute("Wrap", &wrapStr);
+            pTexChild->QueryStringAttribute("Type", &textureTypeStr);
+            pTexChild->QueryStringAttribute("File", &sFileQuery );
+            pTexChild->QueryBoolAttribute("MipMaps", &bMipMaps);
+            pTexChild->QueryBoolAttribute("Compress", &bCompress);
+            pTexChild->QueryFloatAttribute("AnimFrameTime", &fFrameTime);
+            eTextureWrap wrap = GetWrap(wrapStr);
+            eTextureType type = GetType(textureTypeStr);
+            eTextureAnimMode animMode = GetAnimMode(animModeStr);
 
-            eTextureAnimMode animMode = GetAnimMode(pTexChild->GetAttributeString("AnimMode", "None"));
-            float fFrameTime = pTexChild->GetAttributeFloat("AnimFrameTime", 1.0f);
-
-            if (sFile == "")
+            if (strcmp(sFileQuery ,"") == 0) {
                 continue;
-
+            }
+            tString sFile = sFileQuery;
             if (cString::GetFilePath(sFile).length() <= 1) {
                 sFile = cString::SetFilePath(sFile, cString::To8Char(cString::GetFilePathW(asPath)));
             }
@@ -327,39 +342,41 @@ namespace hpl {
                 }
             }
             if (!pImageResource) {
-                mpResources->DestroyXmlDocument(pDoc);
                 hplDelete(pMat);
                 return nullptr;
             }
         }
-
         ///////////////////////////
         // Animations
-        cXmlElement* pUvAnimRoot = pDoc->GetFirstElement("UvAnimations");
+        auto* pUvAnimRoot  = rootElement->FirstChildElement("UvAnimations");
         if (pUvAnimRoot) {
-            cXmlNodeListIterator it = pUvAnimRoot->GetChildIterator();
-            while (it.HasNext()) {
-                cXmlElement* pAnimElem = it.Next()->ToElement();
+            auto animElement = pUvAnimRoot->FirstChildElement();
+            for(;animElement != nullptr; animElement = animElement->NextSiblingElement()) {
+                const char* animTypeStr = "";
+                const char* animAxisStr = "";
+                float fSpeed = 0;
+                float fAmp = 0;
+                auto* animationNode = animElement->ToElement();
+                animationNode->QueryStringAttribute("Type", &animTypeStr);
+                animationNode->QueryStringAttribute("Axis", &animAxisStr);
 
-                eMaterialUvAnimation animType = GetUvAnimType(pAnimElem->GetAttributeString("Type").c_str());
-                eMaterialAnimationAxis animAxis = GetAnimAxis(pAnimElem->GetAttributeString("Axis").c_str());
-                float fSpeed = pAnimElem->GetAttributeFloat("Speed", 0);
-                float fAmp = pAnimElem->GetAttributeFloat("Amplitude", 0);
-
+                eMaterialUvAnimation animType = GetUvAnimType(animTypeStr);
+                eMaterialAnimationAxis animAxis = GetAnimAxis(animAxisStr);
+                animationNode->QueryFloatAttribute("Speed", &fSpeed);
+                animationNode->QueryFloatAttribute("Amplitude", &fAmp);
                 pMat->AddUvAnimation(animType, fSpeed, fAmp, animAxis);
             }
         }
 
         ///////////////////////////
         // Variables
-        cXmlElement* pUserVarsRoot = pDoc->GetFirstElement("SpecificVariables");
         cResourceVarsObject userVars;
+        auto* pUserVarsRoot = rootElement->FirstChildElement("SpecificVariables");
         if (pUserVarsRoot)
             userVars.LoadVariables(pUserVarsRoot);
 
-        tString materialID = cString::ToLowerCase(sType);
         for (auto& meta : cMaterial::MaterialMetaTable) {
-            if (materialID == meta.m_name) {
+            if (normalizedMaterialName == meta.m_name) {
                 pMat->SetHandle(IndexPoolHandle(&internal::m_MaterialIndexPool));
                 MaterialDescriptor materialDescriptor;
                 materialDescriptor.m_id = meta.m_id;
@@ -418,25 +435,23 @@ namespace hpl {
                 break;
             }
         }
-
-        mpResources->DestroyXmlDocument(pDoc);
         return pMat;
     }
 
-    eTextureType cMaterialManager::GetType(const tString& asType) {
-        if (cString::ToLowerCase(asType) == "cube") {
+    eTextureType cMaterialManager::GetType(const char* asType) {
+        if (stricmp(asType, "cube") == 0) {
             return eTextureType_CubeMap;
-        } else if (cString::ToLowerCase(asType) == "1d") {
+        } else if (stricmp(asType, "1d")== 0) {
             return eTextureType_1D;
-        } else if (cString::ToLowerCase(asType) == "2d") {
+        } else if (stricmp(asType, "2d")== 0) {
             return eTextureType_2D;
-        } else if (cString::ToLowerCase(asType) == "3d") {
+        } else if (stricmp(asType, "3d")== 0) {
             return eTextureType_3D;
         }
         return eTextureType_2D;
     }
 
-    tString cMaterialManager::GetTextureString(eMaterialTexture aType) {
+    const char* cMaterialManager::GetTextureString(eMaterialTexture aType) {
         switch (aType) {
         case eMaterialTexture_Diffuse:
             return "Diffuse";
@@ -464,23 +479,23 @@ namespace hpl {
 
     //-----------------------------------------------------------------------
 
-    eTextureWrap cMaterialManager::GetWrap(const tString& asType) {
-        if (cString::ToLowerCase(asType) == "repeat") {
+    eTextureWrap cMaterialManager::GetWrap(const char* asType) {
+        if (stricmp(asType, "repeat")== 0) {
             return eTextureWrap_Repeat;
-        } else if (cString::ToLowerCase(asType) == "clamp") {
+        } else if (stricmp(asType, "clamp")== 0) {
             return eTextureWrap_Clamp;
-        } else if (cString::ToLowerCase(asType) == "clamptoedge") {
+        } else if (stricmp(asType, "clamptoedge")== 0) {
             return eTextureWrap_ClampToEdge;
         }
         return eTextureWrap_Repeat;
     }
 
-    eTextureAnimMode cMaterialManager::GetAnimMode(const tString& asType) {
-        if (cString::ToLowerCase(asType) == "none") {
+    eTextureAnimMode cMaterialManager::GetAnimMode(const char* asType) {
+        if (stricmp(asType, "none")== 0) {
             return eTextureAnimMode_None;
-        } else if (cString::ToLowerCase(asType) == "loop") {
+        } else if (stricmp(asType, "loop")== 0) {
             return eTextureAnimMode_Loop;
-        } else if (cString::ToLowerCase(asType) == "oscillate") {
+        } else if (stricmp(asType, "oscillate")== 0) {
             return eTextureAnimMode_Oscillate;
         }
         return eTextureAnimMode_None;
@@ -488,25 +503,24 @@ namespace hpl {
 
     //-----------------------------------------------------------------------
 
-    eMaterialBlendMode cMaterialManager::GetBlendMode(const tString& asType) {
-        tString sLow = cString::ToLowerCase(asType);
-        if (sLow == "add") {
+    eMaterialBlendMode cMaterialManager::GetBlendMode(const char* asType) {
+        if (stricmp(asType, "add")== 0) {
             return eMaterialBlendMode_Add;
         }
-        if (sLow == "mul") {
+        if (stricmp(asType, "mul")== 0) {
             return eMaterialBlendMode_Mul;
         }
-        if (sLow == "mulx2") {
+        if (stricmp(asType, "mulx2")== 0) {
             return eMaterialBlendMode_MulX2;
         }
-        if (sLow == "alpha") {
+        if (stricmp(asType, "alpha")== 0) {
             return eMaterialBlendMode_Alpha;
         }
-        if (sLow == "premulalpha") {
+        if (stricmp(asType, "premulalpha")== 0) {
             return eMaterialBlendMode_PremulAlpha;
         }
 
-        LOGF(LogLevel::eERROR, "Material BlendMode '%s' does not exist!", asType.c_str());
+        LOGF(LogLevel::eERROR, "Material BlendMode '%s' does not exist!", asType);
         return eMaterialBlendMode_Add;
     }
 
