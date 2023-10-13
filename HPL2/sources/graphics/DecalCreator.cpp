@@ -446,7 +446,7 @@ namespace hpl {
 			// apFunctions->SetMatrix(&mtxTransform);
 			//apFunctions->GetLowLevelGfx()->DrawSphere(0, 0.01f, 1);
 			DebugDraw::DebugDrawOptions options;
-		    options.m_transform = cMath::ToForgeMat4(mtxTransform.GetTranspose());
+		    options.m_transform = cMath::ToForgeMatrix4(mtxTransform);
 		    apFunctions->DebugDrawLine(Vector3(0),Vector3(vHalfDecalSize.x,0,0), Vector4(1,0,0,1), options);
 			apFunctions->DebugDrawLine(Vector3(0),Vector3(0,vHalfDecalSize.y,0), Vector4(0,1,0,1), options);
 			apFunctions->DebugDrawLine(Vector3(0),Vector3(0,0,vHalfDecalSize.z), Vector4(0,0,1,1), options);

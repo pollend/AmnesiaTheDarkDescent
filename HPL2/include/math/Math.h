@@ -39,19 +39,19 @@ namespace hpl {
 	class cMath
 	{
 	public:
-		static Matrix4 ToForgeMat4(const cMatrixf& mat) {
+		static Matrix4 ToForgeMatrix4(const cMatrixf& mat) {
 			return Matrix4 (
-				Vector4(mat.m[0][0], mat.m[0][1], mat.m[0][2], mat.m[0][3]),
-				Vector4(mat.m[1][0], mat.m[1][1], mat.m[1][2], mat.m[1][3]),
-				Vector4(mat.m[2][0], mat.m[2][1], mat.m[2][2], mat.m[2][3]),
-				Vector4(mat.m[3][0], mat.m[3][1], mat.m[3][2], mat.m[3][3])
+				Vector4(mat.m[0][0], mat.m[1][0], mat.m[2][0], mat.m[3][0]),
+				Vector4(mat.m[0][1], mat.m[1][1], mat.m[2][1], mat.m[3][1]),
+				Vector4(mat.m[0][2], mat.m[1][2], mat.m[2][2], mat.m[3][2]),
+				Vector4(mat.m[0][3], mat.m[1][3], mat.m[2][3], mat.m[3][3])
 			);
 		}
 		static Matrix3 ToForgeMat3(const cMatrixf& mat) {
 			return Matrix3(
-				Vector3(mat.m[0][0], mat.m[0][1], mat.m[0][2]),
-				Vector3(mat.m[1][0], mat.m[1][1], mat.m[1][2]),
-				Vector3(mat.m[2][0], mat.m[2][1], mat.m[2][2])
+				Vector3(mat.m[0][0], mat.m[1][0], mat.m[2][0]),
+				Vector3(mat.m[0][1], mat.m[1][1], mat.m[2][1]),
+				Vector3(mat.m[0][2], mat.m[1][2], mat.m[2][2])
 			);
 		}
 
@@ -78,9 +78,7 @@ namespace hpl {
         static cVector3f FromForgeVector3(const Vector3& v) {
             return cVector3f(v.getX(), v.getY(), v.getZ());
         }
-		 //////////////////////////////////////////////////////
-		////////// RANDOM GENERATION ////////////////////////
-		//////////////////////////////////////////////////////
+
 		/**
          * Generates a random integer from min to max
          * \param alMin

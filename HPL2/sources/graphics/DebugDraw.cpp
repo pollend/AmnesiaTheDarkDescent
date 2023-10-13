@@ -642,8 +642,8 @@ namespace hpl {
             m_activeFrame = frame.m_currentFrame;
         }
         m_frameIndex = (m_frameIndex + 1) % NumberOfPerFrameUniforms;
-        const Matrix4 matMainFrustumView = cMath::ToForgeMat4(frustum.GetViewMatrix().GetTranspose());
-        const Matrix4 matMainFrustumProj = cMath::ToForgeMat4(frustum.GetProjectionMatrix().GetTranspose());
+        const Matrix4 matMainFrustumView = cMath::ToForgeMatrix4(frustum.GetViewMatrix());
+        const Matrix4 matMainFrustumProj = cMath::ToForgeMatrix4(frustum.GetProjectionMatrix());
 
         Matrix4 correctionMatrix =
             Matrix4(
@@ -654,14 +654,13 @@ namespace hpl {
             );
 
 
-        const Matrix4 view = cMath::ToForgeMat4(frustum.GetViewMatrix().GetTranspose());
+        const Matrix4 view = cMath::ToForgeMatrix4(frustum.GetViewMatrix());
         {
             BufferUpdateDesc updateDesc = { m_viewBufferUniform[m_frameIndex].m_handle, 0, sizeof(FrameUniformBuffer)};
             beginUpdateResource(&updateDesc);
             FrameUniformBuffer  uniformData;
 
             uniformData.m_viewProjMat  = ((frustum.GetProjectionType() == eProjectionType_Perspective ? Matrix4::identity() : correctionMatrix) * matMainFrustumProj) * matMainFrustumView ;
-            //uniformData.m_viewProjMat = cMath::ToForgeMat4(cMath::MatrixMul(mainFrustumProj, mainFrustumView).GetTranspose());
             uniformData.m_viewProj2DMat = Matrix4::orthographic(0.0f, targetBuffer.m_handle->mWidth, targetBuffer.m_handle->mHeight,0.0f, -1000.0f, 1000.0f);
             (*reinterpret_cast<FrameUniformBuffer*>(updateDesc.pMappedData)) = uniformData;
             endUpdateResource(&updateDesc, NULL);

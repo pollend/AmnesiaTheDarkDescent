@@ -397,7 +397,7 @@ public:
 						const cColor &currentColor = gObjectDebugColor[lColNum];
 
 						DebugDraw::DebugDrawOptions options;
-						options.m_transform = cMath::ToForgeMat4(pSubEnt->GetModelMatrix(NULL)->GetTranspose());
+						options.m_transform = cMath::ToForgeMatrix4(*pSubEnt->GetModelMatrix(NULL));
 						payload.m_debug->DebugWireFrameFromVertexBuffer(pSubEnt->GetVertexBuffer(), cMath::ToForgeVec4(currentColor), options);
 
 						// batch.DebugDrawMesh(const GraphicsContext::LayoutStream &layout, const cColor &color)
@@ -487,7 +487,7 @@ public:
 					cColor col = CalcDistColorForRenderable(pObject);//cColor(1,1);//gObjectDebugColor[(size_t)pObject % glObjectDebugColorNum];
 
 					DebugDraw::DebugDrawOptions options;
-					options.m_transform = cMath::ToForgeMat4(pObject->GetModelMatrix(payload.m_frustum)->GetTranspose());
+					options.m_transform = cMath::ToForgeMatrix4(*pObject->GetModelMatrix(payload.m_frustum));
 					payload.m_debug->DebugWireFrameFromVertexBuffer(pObject->GetVertexBuffer(), cMath::ToForgeVec4(col), options);
 
 				}
@@ -503,7 +503,7 @@ public:
 					cColor col = CalcDistColorForRenderable(pObject);//cColor(1,1);//gObjectDebugColor[(size_t)pObject % glObjectDebugColorNum];
 
 					DebugDraw::DebugDrawOptions options;
-					options.m_transform = cMath::ToForgeMat4(pObject->GetModelMatrix(payload.m_frustum)->GetTranspose());
+					options.m_transform = cMath::ToForgeMatrix4(*pObject->GetModelMatrix(payload.m_frustum));
 					payload.m_debug->DebugWireFrameFromVertexBuffer(pObject->GetVertexBuffer(), cMath::ToForgeVec4(col), options);
 
 
@@ -578,7 +578,7 @@ public:
 
 				cColor col = gObjectDebugColor[(size_t)pObject % glObjectDebugColorNum];
 				DebugDraw::DebugDrawOptions options;
-				options.m_transform = cMath::ToForgeMat4(pObject->GetModelMatrix(nullptr)->GetTranspose());
+				options.m_transform = cMath::ToForgeMatrix4(*pObject->GetModelMatrix(nullptr));
 				// GraphicsContext::LayoutStream layoutStream;
 				// pObject->GetVertexBuffer()->GetLayoutStream(layoutStream);
 				batch.DebugWireFrameFromVertexBuffer(pObject->GetVertexBuffer(), cMath::ToForgeVec4(col), options);
@@ -599,7 +599,7 @@ public:
 				cColor col = gObjectDebugColor[(size_t)pObject % glObjectDebugColorNum];
 
 				DebugDraw::DebugDrawOptions options;
-				options.m_transform = cMath::ToForgeMat4(pObject->GetModelMatrix(payload.m_frustum)->GetTranspose());
+				options.m_transform = cMath::ToForgeMatrix4(*pObject->GetModelMatrix(payload.m_frustum));
 				batch.DebugWireFrameFromVertexBuffer(pObject->GetVertexBuffer(), cMath::ToForgeVec4(col), options);
 
 				// apFunctions->SetMatrix(pObject->GetModelMatrix(NULL));

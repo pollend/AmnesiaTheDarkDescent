@@ -679,9 +679,9 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
         const cMatrixf mvp = cMath::MatrixMul(mainFrustumViewProj, worldMatrix);
         LuxEffectObjectUniform::FlashUniform uniform{};
 
-        uniform.m_mvp = cMath::ToForgeMat4(mvp.GetTranspose());
+        uniform.m_mvp = cMath::ToForgeMatrix4(mvp);
         uniform.m_colorMul = float4(flashObject.mfAlpha * fGlobalAlpha);
-        uniform.m_normalMat = cMath::ToForgeMat3(cMath::MatrixInverse(modelViewMat));
+        uniform.m_normalMat = cMath::ToForgeMat3(cMath::MatrixInverse(modelViewMat).GetTranspose());
 
         std::array<DescriptorData, 2> params = {};
         DescriptorDataRange range = { (uint32_t)uniformBlockOffset.mOffset, requestSize };
@@ -730,9 +730,9 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
         const cMatrixf mvp = cMath::MatrixMul(mainFrustumViewProj, worldMatrix);
         LuxEffectObjectUniform::FlashUniform uniform{};
 
-        uniform.m_mvp = cMath::ToForgeMat4(mvp.GetTranspose());
+        uniform.m_mvp = cMath::ToForgeMatrix4(mvp);
         uniform.m_colorMul = float4(enemyGlow.mfAlpha * fGlobalAlpha);
-        uniform.m_normalMat = cMath::ToForgeMat3(cMath::MatrixInverse(modelViewMat));
+        uniform.m_normalMat = cMath::ToForgeMat3(cMath::MatrixInverse(modelViewMat).GetTranspose());
 
         std::array<DescriptorData, 2> params = {};
         DescriptorDataRange range = { (uint32_t)uniformBlockOffset.mOffset, requestSize };
@@ -795,7 +795,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
             const cMatrixf modelViewMat = cMath::MatrixMul(mainFrustumView, worldMatrix);
 
             LuxEffectObjectUniform::OutlineUniform  uniform{};
-            uniform.m_mvp = cMath::ToForgeMat4(cMath::MatrixMul(mainFrustumViewProj, worldMatrix).GetTranspose());
+            uniform.m_mvp = cMath::ToForgeMatrix4(cMath::MatrixMul(mainFrustumViewProj, worldMatrix));
             uniform.m_feature = hpl::material::UniformMaterialBlock::CreateMaterailConfigFlags(*pMaterial);
 
             BufferUpdateDesc updateDesc = { uniformBlockOffset.pBuffer, uniformBlockOffset.mOffset };
@@ -856,7 +856,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
             cMatrixf worldMatrix = pObject->GetModelMatrixPtr() ? *pObject->GetModelMatrixPtr() : cMatrixf::Identity;
 
             LuxEffectObjectUniform::OutlineUniform uniform{};
-            uniform.m_mvp = cMath::ToForgeMat4(cMath::MatrixMul(mainFrustumViewProj, cMath::MatrixMul(worldMatrix, mtxScale)).GetTranspose());
+            uniform.m_mvp = cMath::ToForgeMatrix4(cMath::MatrixMul(mainFrustumViewProj, cMath::MatrixMul(worldMatrix, mtxScale)));
             uniform.m_feature =hpl::material::UniformMaterialBlock::CreateMaterailConfigFlags(*pMaterial);
 
             BufferUpdateDesc updateDesc = { uniformBlockOffset.pBuffer, uniformBlockOffset.mOffset };

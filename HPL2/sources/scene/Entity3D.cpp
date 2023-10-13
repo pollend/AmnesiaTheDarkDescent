@@ -98,7 +98,7 @@ namespace hpl {
 	}
 
 	Matrix4 iEntity3D::GetLocalMat() {
-	   return cMath::ToForgeMat4(m_mtxLocalTransform.GetTranspose());
+	   return cMath::ToForgeMatrix4(m_mtxLocalTransform);
     }
 
 	cVector3f iEntity3D::GetWorldPosition()
@@ -120,7 +120,7 @@ namespace hpl {
 	Matrix4 iEntity3D::GetWorldMat() {
 		UpdateWorldTransform();
 
-        return cMath::ToForgeMat4(m_mtxWorldTransform.GetTranspose());
+        return cMath::ToForgeMatrix4(m_mtxWorldTransform);
     }
 	//-----------------------------------------------------------------------
 

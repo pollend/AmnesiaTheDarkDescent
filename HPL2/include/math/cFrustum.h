@@ -63,9 +63,9 @@ namespace hpl {
 		inline const cMatrixf& GetProjectionMatrix() const { return m_mtxProj;}
 		inline const cMatrixf& GetViewMatrix()const { return m_mtxView;}
 
-		inline const Matrix4 GetProjectionMat() const { return cMath::ToForgeMat4(m_mtxProj.GetTranspose());}
-		inline const Matrix4 GetViewMat()const { return cMath::ToForgeMat4(m_mtxView.GetTranspose());}
-		inline const Matrix4 GetViewpProjectionMat()const { return cMath::ToForgeMat4(m_mtxViewProj.GetTranspose());}
+		inline const Matrix4 GetProjectionMat() const { return cMath::ToForgeMatrix4(m_mtxProj);}
+		inline const Matrix4 GetViewMat()const { return cMath::ToForgeMatrix4(m_mtxView);}
+		inline const Matrix4 GetViewpProjectionMat()const { return cMath::ToForgeMatrix4(m_mtxViewProj);}
 
 		inline float GetFarPlane()const { return mfFarPlane;}
 		inline float GetNearPlane()const { return mfNearPlane;}

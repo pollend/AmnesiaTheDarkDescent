@@ -83,7 +83,7 @@ void cEditorEditModeBodies::DrawObjectPreview(cEditorWindowViewport* apViewport,
 	cMatrixf mtxObject = cMath::MatrixTranslate(avPos);
 
 	hpl::DebugDraw::DebugDrawOptions options;
-	options.m_transform = cMath::ToForgeMat4(mtxObject.GetTranspose());
+	options.m_transform = cMath::ToForgeMatrix4(mtxObject);
 	if(abPreCreationActive)
 	{
 		options.m_depthTest = DebugDraw::DebugDepthTest::Greater;
