@@ -1,5 +1,6 @@
 # Amnesia: The Dark Descent
 [![CI](https://github.com/pollend/AmnesiaTheDarkDescent/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/pollend/AmnesiaTheDarkDescent/actions/workflows/build.yml) [![Itch.io](https://img.shields.io/badge/Itch-%23FF0B34.svg?style=for-the-badge&logo=Itch.io&logoColor=white)](https://mpollind.itch.io/amnesia-the-dark-descent-redux)
+[![ModDB](https://button.moddb.com/popularity/medium/mods/59751.png)](https://www.moddb.com/mods/amnesia-redux)
 
 This is a heavy rework of the core engine, mostly an experiment in absurdity to see what can be restructured and improved. Note that this is still a work in progress, so a lot of stuff will be broken. It's far enough along that it's possible to play through the entire game. Currently, there are a lot of rendering artifacts, broken functionality, and various other problems that shouldn't be too hard to run into. A lot of bug fixing is needed before this gets to a usable state.
 
