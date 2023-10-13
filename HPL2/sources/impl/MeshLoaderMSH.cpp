@@ -206,14 +206,15 @@ namespace hpl {
 				for(int i=0; i<lColliderNum; ++i)
 				{
 					eCollideShapeType type = (eCollideShapeType)binBuff.GetShort16();
+                    cSubMesh::MeshCollisionResource resource = {};
+					binBuff.GetMatrixf(&resource.m_mtxOffset);
+					binBuff.GetVector3f(&resource.mvSize);
+					resource.mbCharCollider = binBuff.GetBool();
+				    resource.mType = type;
+				    pSubMesh->AddCollider(resource);
 
-					cMeshCollider *pCollider = pSubMesh->CreateCollider(type);
-					binBuff.GetMatrixf(&pCollider->m_mtxOffset);
-					binBuff.GetVector3f(&pCollider->mvSize);
-					pCollider->mbCharCollider = binBuff.GetBool();
-
-					if(gbLogMSHLoad) Log("  Collider%d: %d %s %s %d\n",i,	type, pCollider->m_mtxOffset.ToString().c_str(),
-																			pCollider->mvSize.ToString().c_str(), pCollider->mbCharCollider);
+					if(gbLogMSHLoad) Log("  Collider%d: %d %s %s %d\n",i,	type, resource.m_mtxOffset.ToString().c_str(),
+																			resource.mvSize.ToString().c_str(), resource.mbCharCollider);
 				}
 			}
 
@@ -376,26 +377,25 @@ namespace hpl {
 			binBuff.AddBool(pSubMesh->IsCollideShape());
 
 
-			if(gbLogMSHLoad) Log("Submesh %d: '%s' '%s'\n", sub, pSubMesh->GetName().c_str(), pSubMesh->GetMaterialName().c_str());
+			LOGF_IF(LogLevel::eDEBUG, gbLogMSHLoad,"Submesh %d: '%s' '%s'\n", sub, pSubMesh->GetName().c_str(), pSubMesh->GetMaterialName().c_str());
 
 			////////////////////
 			// Colliders
 			{
-				binBuff.AddInt32(pSubMesh->GetColliderNum());
+				binBuff.AddInt32(pSubMesh->GetColliders().size());
 
-				if(gbLogMSHLoad) Log(" Colliders: %d\n",pSubMesh->GetColliderNum());
+				LOGF_IF(LogLevel::eDEBUG, gbLogMSHLoad, "Colliders: %d", pSubMesh->GetColliders().size());
 
-				for(int i=0; i<pSubMesh->GetColliderNum(); ++i)
-				{
-					cMeshCollider *pCollider = pSubMesh->GetCollider(i);
+				//for(int i=0; i<pSubMesh->GetColliderNum(); ++i)
+				for(auto& collider: pSubMesh->GetColliders())
+			    {
 
-					binBuff.AddShort16(pCollider->mType);
-					binBuff.AddMatrixf(pCollider->m_mtxOffset);
-					binBuff.AddVector3f(pCollider->mvSize);
-					binBuff.AddBool(pCollider->mbCharCollider);
+					binBuff.AddShort16(collider.mType);
+					binBuff.AddMatrixf(collider.m_mtxOffset);
+					binBuff.AddVector3f(collider.mvSize);
+					binBuff.AddBool(collider.mbCharCollider);
 
-					if(gbLogMSHLoad) Log("  Collider%d: %d %s %s %d\n",i, pCollider->mType, pCollider->m_mtxOffset.ToString().c_str(),
-																		pCollider->mvSize.ToString().c_str(), pCollider->mbCharCollider);
+                    LOGF_IF(LogLevel::eDEBUG, gbLogMSHLoad, "-- Collider: %d %s %s %d",collider.mType, collider.m_mtxOffset.ToString().c_str(), collider.mvSize.ToString().c_str(), collider.mbCharCollider);
 				}
 			}
 

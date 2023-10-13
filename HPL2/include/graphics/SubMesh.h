@@ -25,6 +25,10 @@
 #include "physics/PhysicsTypes.h"
 #include "system/SystemTypes.h"
 
+#include <optional>
+#include <span>
+
+#include <folly/small_vector.h>
 namespace hpl {
 
     class cMaterial;
@@ -36,21 +40,26 @@ namespace hpl {
 
     class cMaterialManager;
 
-    class cMeshCollider {
-    public:
-        tString msGroup; // Only used as temp var when loading!
-
-        eCollideShapeType mType;
-        cVector3f mvSize;
-        cMatrixf m_mtxOffset;
-        bool mbCharCollider;
-    };
-
     class cSubMesh final {
         friend class cMesh;
         friend class cSubMeshEntity;
 
     public:
+        class MeshCollisionResource {
+        public:
+            eCollideShapeType mType;
+            cVector3f mvSize;
+            cMatrixf m_mtxOffset;
+            bool mbCharCollider;
+        };
+
+        static iCollideShape* CreateCollideShapeFromCollider(
+            const MeshCollisionResource& pCollider,
+            iPhysicsWorld* apWorld,
+            const cVector3f& avSizeMul,
+            const std::optional<cMatrixf> apMtxOffset = std::nullopt);
+        static iCollideShape* CreateCollideShape(iPhysicsWorld* apWorld, std::span<MeshCollisionResource> resource);
+
         cSubMesh(const tString& asName, cMaterialManager* apMaterialManager);
         ~cSubMesh();
 
@@ -73,31 +82,52 @@ namespace hpl {
         void AddVertexBonePair(const cVertexBonePair& aPair);
         void ClearVertexBonePairs();
 
-        // Colliders
-        cMeshCollider* CreateCollider(eCollideShapeType aType);
-        cMeshCollider* GetCollider(int alIdx);
-        int GetColliderNum();
-        iCollideShape* CreateCollideShape(iPhysicsWorld* apWorld);
-        static iCollideShape* CreateCollideShapeFromCollider(
-            cMeshCollider* pCollider, iPhysicsWorld* apWorld, const cVector3f& avSizeMul, cMatrixf* apMtxOffset);
+        void AddCollider(const MeshCollisionResource& def);
+        std::span<MeshCollisionResource> GetColliders();
 
-        void SetIsCollideShape(bool abX) {m_collideShape = abX; }
-        bool IsCollideShape() { return m_collideShape; }
+        void SetIsCollideShape(bool abX) {
+            m_collideShape = abX;
+        }
+        bool IsCollideShape() {
+            return m_collideShape;
+        }
 
-        void SetDoubleSided(bool abX) {m_doubleSided = abX; }
-        bool GetDoubleSided() { return m_doubleSided; }
+        void SetDoubleSided(bool abX) {
+            m_doubleSided = abX;
+        }
+        bool GetDoubleSided() {
+            return m_doubleSided;
+        }
 
-        inline void SetModelScale(const cVector3f& avScale) { m_modelScale = avScale; }
-        inline cVector3f GetModelScale() { return m_modelScale; }
+        inline void SetModelScale(const cVector3f& avScale) {
+            m_modelScale = avScale;
+        }
+        inline cVector3f GetModelScale() {
+            return m_modelScale;
+        }
 
-        const cMatrixf& GetLocalTransform() { return m_mtxLocalTransform; }
-        void SetLocalTransform(const cMatrixf& a_mtxTrans) { m_mtxLocalTransform = a_mtxTrans; }
+        const cMatrixf& GetLocalTransform() {
+            return m_mtxLocalTransform;
+        }
+        void SetLocalTransform(const cMatrixf& a_mtxTrans) {
+            m_mtxLocalTransform = a_mtxTrans;
+        }
 
-        bool GetIsOneSided() { return m_isOneSided; }
-        const cVector3f& GetOneSidedNormal() { return m_oneSidedNormal; }
-        const cVector3f& GetOneSidedPoint() { return m_oneSidedPoint; }
-        void SetMaterialName(const tString& asName) { m_materialName = asName; }
-        const tString& GetMaterialName() { return m_materialName; }
+        bool GetIsOneSided() {
+            return m_isOneSided;
+        }
+        const cVector3f& GetOneSidedNormal() {
+            return m_oneSidedNormal;
+        }
+        const cVector3f& GetOneSidedPoint() {
+            return m_oneSidedPoint;
+        }
+        void SetMaterialName(const tString& asName) {
+            m_materialName = asName;
+        }
+        const tString& GetMaterialName() {
+            return m_materialName;
+        }
 
         void Compile();
 
@@ -112,7 +142,7 @@ namespace hpl {
         cMatrixf m_mtxLocalTransform = cMatrixf::Identity;
 
         std::vector<cVertexBonePair> m_vtxBonePairs;
-        std::vector<cMeshCollider*> m_colliders;
+        folly::small_vector<MeshCollisionResource, 3> m_colliders;
 
         std::vector<float> m_vertexWeights;
         std::vector<uint8_t> m_vertexBones;

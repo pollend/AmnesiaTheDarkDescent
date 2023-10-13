@@ -34,6 +34,7 @@
 #include "system/MemoryManager.h"
 
 #include <cstring>
+#include <optional>
 
 namespace hpl {
 
@@ -47,7 +48,6 @@ namespace hpl {
             m_materialManager->Destroy(m_material);
         if (m_vtxBuffer)
             hplDelete(m_vtxBuffer);
-        STLDeleteAll(m_colliders);
     }
 
     void cSubMesh::SetMaterial(cMaterial* apMaterial) {
@@ -59,7 +59,6 @@ namespace hpl {
     void cSubMesh::SetVertexBuffer(iVertexBuffer* apVtxBuffer) {
         if (m_vtxBuffer == apVtxBuffer)
             return;
-
         m_vtxBuffer = apVtxBuffer;
     }
 
@@ -91,56 +90,49 @@ namespace hpl {
         m_vtxBonePairs.clear();
     }
 
-    cMeshCollider* cSubMesh::CreateCollider(eCollideShapeType aType) {
-        cMeshCollider* pColl = hplNew(cMeshCollider, ());
-        pColl->mType = aType;
-
-        m_colliders.push_back(pColl);
-
-        return pColl;
+    std::span<cSubMesh::MeshCollisionResource> cSubMesh::GetColliders() {
+        return m_colliders;
     }
 
-    cMeshCollider* cSubMesh::GetCollider(int alIdx) {
-        return m_colliders[alIdx];
-    }
-
-    int cSubMesh::GetColliderNum() {
-        return (int)m_colliders.size();
+    void cSubMesh::AddCollider(const MeshCollisionResource& def) {
+        m_colliders.push_back(def);
     }
 
     iCollideShape* cSubMesh::CreateCollideShapeFromCollider(
-        cMeshCollider* pCollider, iPhysicsWorld* apWorld, const cVector3f& avSizeMul, cMatrixf* apMtxOffset) {
-        cMatrixf* pOffset = apMtxOffset ? apMtxOffset : &pCollider->m_mtxOffset;
+        const MeshCollisionResource& pCollider, iPhysicsWorld* apWorld, const cVector3f& avSizeMul, const std::optional<cMatrixf> apMtxOffset) {
+        cMatrixf pOffset = apMtxOffset.value_or(pCollider.m_mtxOffset);
 
-        cVector3f vSize = pCollider->mvSize * avSizeMul;
+        cVector3f vSize = pCollider.mvSize * avSizeMul;
 
-        switch (pCollider->mType) {
+        switch (pCollider.mType) {
         case eCollideShapeType_Box:
-            return apWorld->CreateBoxShape(vSize, pOffset);
+            return apWorld->CreateBoxShape(vSize, &pOffset);
         case eCollideShapeType_Sphere:
-            return apWorld->CreateSphereShape(vSize, pOffset);
+            return apWorld->CreateSphereShape(vSize, &pOffset);
         case eCollideShapeType_Cylinder:
-            return apWorld->CreateCylinderShape(vSize.x, vSize.y, pOffset);
+            return apWorld->CreateCylinderShape(vSize.x, vSize.y, &pOffset);
         case eCollideShapeType_Capsule:
-            return apWorld->CreateCapsuleShape(vSize.x, vSize.y, pOffset);
+            return apWorld->CreateCapsuleShape(vSize.x, vSize.y, &pOffset);
+        default:
+            break;
         }
 
         return NULL;
     }
 
-    iCollideShape* cSubMesh::CreateCollideShape(iPhysicsWorld* apWorld) {
-        if (m_colliders.empty()) {
+    iCollideShape* cSubMesh::CreateCollideShape(iPhysicsWorld* apWorld, std::span<MeshCollisionResource> colliders) {
+        if (colliders.empty()) {
             return nullptr;
         }
 
         // Create a single object
-        if (m_colliders.size() == 1) {
-            return CreateCollideShapeFromCollider(m_colliders[0], apWorld, 1, NULL);
+        if (colliders.size() == 1) {
+            return CreateCollideShapeFromCollider(colliders[0], apWorld, 1, std::nullopt);
         }
         std::vector<iCollideShape*> vShapes;
-        vShapes.reserve(m_colliders.size());
-        for (size_t i = 0; i < m_colliders.size(); ++i) {
-            vShapes.push_back(CreateCollideShapeFromCollider(m_colliders[i], apWorld, 1, NULL));
+        vShapes.reserve(colliders.size());
+        for (size_t i = 0; i < colliders.size(); ++i) {
+            vShapes.push_back(CreateCollideShapeFromCollider(colliders[i], apWorld, 1, std::nullopt));
         }
 
         return apWorld->CreateCompundShape(vShapes);
