@@ -202,7 +202,7 @@ void cEditorEditModeSelectToolRotate::DrawAxes(cEditorWindowViewport* apViewport
 
 
 	DebugDraw::DebugDrawOptions options;
-	options.m_transform = cMath::ToForgeMat4(mtxTransform.GetTranspose());
+	options.m_transform = cMath::ToForgeMatrix4(mtxTransform);
 	// apFunctions->SetMatrix(&mtxTransform);
 
 

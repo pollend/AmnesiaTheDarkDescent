@@ -148,7 +148,7 @@ void cEditorEditModeSelectToolScale::DrawAxes(cEditorWindowViewport* apViewport,
 	};
 
 	DebugDraw::DebugDrawOptions options;
-	options.m_transform = cMath::ToForgeMat4(mtxTransform.GetTranspose());
+	options.m_transform = cMath::ToForgeMatrix4(mtxTransform);
 	for(int i=eSelectToolAxis_X; i<eSelectToolAxis_LastEnum; ++i)
 	{
 		col[i] = mvAxisSelected[i]?mColorSelected:(mvAxisMouseOver[i]?mColorMouseOver:mvAxisColor[i]);
@@ -169,7 +169,7 @@ void cEditorEditModeSelectToolScale::DrawAxes(cEditorWindowViewport* apViewport,
 
 	for(int i=0;i<3;++i)
 	{
-		options.m_transform = cMath::ToForgeMat4(mtxTranslate[i].GetTranspose());
+		options.m_transform = cMath::ToForgeMatrix4(mtxTranslate[i]);
 		// apFunctions->SetMatrix(&mtxTranslate[i]);
 		for(int j=0; j<6;++j) {
 			drawCubeQuads(col[i], options);

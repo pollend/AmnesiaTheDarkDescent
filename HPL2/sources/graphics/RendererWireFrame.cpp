@@ -207,7 +207,7 @@ namespace hpl {
 
             BufferUpdateDesc updateDesc = { m_objectUniformBuffer[frame.m_frameIndex].m_handle, sizeof(ObjectUniform) * index };
             ObjectUniform uniformObjectData;
-            uniformObjectData.m_modelMat = cMath::ToForgeMat4(modelMat.GetTranspose());
+            uniformObjectData.m_modelMat = cMath::ToForgeMatrix4(modelMat);
             beginUpdateResource(&updateDesc);
             (*reinterpret_cast<ObjectUniform*>(updateDesc.pMappedData)) = uniformObjectData;
             endUpdateResource(&updateDesc, NULL);
@@ -278,8 +278,8 @@ namespace hpl {
                 Vector4(0, 0, 0.5f, 1.0f)
             );
 
-        const Matrix4 matMainFrustumView = cMath::ToForgeMat4(apFrustum->GetViewMatrix().GetTranspose());
-        const Matrix4 matMainFrustumProj = cMath::ToForgeMat4(apFrustum->GetProjectionMatrix().GetTranspose());
+        const Matrix4 matMainFrustumView = cMath::ToForgeMatrix4(apFrustum->GetViewMatrix());
+        const Matrix4 matMainFrustumProj = cMath::ToForgeMatrix4(apFrustum->GetProjectionMatrix());
 
         m_rendererList.BeginAndReset(afFrameTime, apFrustum);
         std::array<cPlanef, 0> occlusionPlanes = {};

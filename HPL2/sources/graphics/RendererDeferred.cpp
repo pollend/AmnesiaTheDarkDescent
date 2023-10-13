@@ -2460,17 +2460,17 @@ namespace hpl {
         BufferUpdateDesc updatePerFrameConstantsDesc = { m_perFrameBuffer[index].m_handle, 0 };
         beginUpdateResource(&updatePerFrameConstantsDesc);
         auto* uniformFrameData = reinterpret_cast<UniformPerFrameData*>(updatePerFrameConstantsDesc.pMappedData);
-        uniformFrameData->m_viewMatrix = cMath::ToForgeMat4(options.m_viewMat.GetTranspose());
-        uniformFrameData->m_invViewMatrix = cMath::ToForgeMat4(cMath::MatrixInverse(options.m_viewMat).GetTranspose());
-        uniformFrameData->m_projectionMatrix = cMath::ToForgeMat4(options.m_projectionMat.GetTranspose());
-        uniformFrameData->m_viewProjectionMatrix = cMath::ToForgeMat4(cMath::MatrixMul(options.m_projectionMat, options.m_viewMat).GetTranspose());
+        uniformFrameData->m_viewMatrix = cMath::ToForgeMatrix4(options.m_viewMat);
+        uniformFrameData->m_invViewMatrix = cMath::ToForgeMatrix4(cMath::MatrixInverse(options.m_viewMat));
+        uniformFrameData->m_projectionMatrix = cMath::ToForgeMatrix4(options.m_projectionMat);
+        uniformFrameData->m_viewProjectionMatrix = cMath::ToForgeMatrix4(cMath::MatrixMul(options.m_projectionMat, options.m_viewMat));
 
         uniformFrameData->worldFogStart = apWorld->GetFogStart();
         uniformFrameData->worldFogLength = apWorld->GetFogEnd() - apWorld->GetFogStart();
         uniformFrameData->oneMinusFogAlpha = 1.0f - apWorld->GetFogColor().a;
         uniformFrameData->fogFalloffExp = apWorld->GetFogFalloffExp();
 
-        uniformFrameData->m_invViewRotation = cMath::ToForgeMat4((options.m_viewMat.GetTranspose()).GetRotation().GetTranspose());
+        uniformFrameData->m_invViewRotation = cMath::ToForgeMatrix4((options.m_viewMat.GetTranspose()).GetRotation());
         uniformFrameData->viewTexel = float2(1.0f / options.m_size.x, 1.0f / options.m_size.y);
         uniformFrameData->viewportSize = float2(options.m_size.x, options.m_size.y);
         uniformFrameData->afT = GetTimeCount();
@@ -2847,10 +2847,9 @@ namespace hpl {
                     switch (light->m_light->GetLightType()) {
                     case eLightType_Point:
                         {
-                            uniformObjectData.m_common.m_mvp = cMath::ToForgeMat4(
+                            uniformObjectData.m_common.m_mvp = cMath::ToForgeMatrix4(
                                 cMath::MatrixMul(
-                                    viewProjectionMat, cMath::MatrixMul(light->m_light->GetWorldMatrix(), detail::GetLightMtx(*light)))
-                                    .GetTranspose());
+                                    viewProjectionMat, cMath::MatrixMul(light->m_light->GetWorldMatrix(), detail::GetLightMtx(*light))));
 
                             cVector3f lightViewPos = cMath::MatrixMul(modelViewMtx, detail::GetLightMtx(*light)).GetTranslation();
                             const auto color = light->m_light->GetDiffuseColor();
@@ -2874,7 +2873,7 @@ namespace hpl {
                             uniformObjectData.m_pointLight.m_lightColor = float4(color.r, color.g, color.b, color.a);
                             cMatrixf mtxInvViewRotation =
                                 cMath::MatrixMul(light->m_light->GetWorldMatrix(), invViewMat).GetTranspose();
-                            uniformObjectData.m_pointLight.m_invViewRotation = cMath::ToForgeMat4(mtxInvViewRotation);
+                            uniformObjectData.m_pointLight.m_invViewRotation = cMath::ToForgeMatrix4(mtxInvViewRotation.GetTranspose());
                             break;
                         }
                     case eLightType_Spot:
@@ -2886,10 +2885,9 @@ namespace hpl {
                             cVector3f lightViewPos = cMath::MatrixMul(modelViewMtx, detail::GetLightMtx(*light)).GetTranslation();
                             const auto color = pLightSpot->GetDiffuseColor();
 
-                            uniformObjectData.m_common.m_mvp = cMath::ToForgeMat4(
+                            uniformObjectData.m_common.m_mvp = cMath::ToForgeMatrix4(
                                 cMath::MatrixMul(
-                                    viewProjectionMat, cMath::MatrixMul(light->m_light->GetWorldMatrix(), detail::GetLightMtx(*light)))
-                                    .GetTranspose());
+                                    viewProjectionMat, cMath::MatrixMul(light->m_light->GetWorldMatrix(), detail::GetLightMtx(*light))));
 
                             if (light->m_shadowMapData) {
                                 uniformObjectData.m_common.m_config |= LightConfiguration::HasShadowMap;
@@ -2900,7 +2898,7 @@ namespace hpl {
                                 params[paramCount].pName = "shadowOffsetMap";
                                 params[paramCount++].ppTextures = &m_shadowJitterTexture.m_handle;
                             }
-                            uniformObjectData.m_spotLight.m_spotViewProj = cMath::ToForgeMat4(spotViewProj);
+                            uniformObjectData.m_spotLight.m_spotViewProj = cMath::ToForgeMatrix4(spotViewProj.GetTranspose());
                             uniformObjectData.m_spotLight.m_oneMinusCosHalfSpotFOV = 1 - pLightSpot->GetCosHalfFOV();
                             uniformObjectData.m_spotLight.m_radius = light->m_light->GetRadius();
                             uniformObjectData.m_spotLight.m_forward = float3(forward.x, forward.y, forward.z);
@@ -2931,7 +2929,7 @@ namespace hpl {
                     case eLightType_Box:
                         {
                             uniformObjectData.m_common.m_mvp =
-                                cMath::ToForgeMat4(cMath::MatrixMul(viewProjectionMat, detail::GetLightMtx(*light)).GetTranspose());
+                                cMath::ToForgeMatrix4(cMath::MatrixMul(viewProjectionMat, detail::GetLightMtx(*light)));
 
                             cLightBox* pLightBox = static_cast<cLightBox*>(light->m_light);
                             const auto& color = light->m_light->GetDiffuseColor();
@@ -3455,10 +3453,9 @@ namespace hpl {
                 if (TypeInfo<hpl::cBillboard>::IsType(*query.m_renderable)) {
                     cBillboard* pBillboard = static_cast<cBillboard*>(query.m_renderable);
 
-                    auto mvp = cMath::ToForgeMat4(
+                    auto mvp = cMath::ToForgeMatrix4(
                         cMath::MatrixMul(
-                            viewProj, cMath::MatrixMul(pBillboard->GetWorldMatrix(), cMath::MatrixScale(pBillboard->GetHaloSourceSize())))
-                            .GetTranspose());
+                            viewProj, cMath::MatrixMul(pBillboard->GetWorldMatrix(), cMath::MatrixScale(pBillboard->GetHaloSourceSize()))));
 
                     BufferUpdateDesc updateDesc = { m_occlusionUniformBuffer.m_handle, m_occlusionIndex * sizeof(mat4) };
                     beginUpdateResource(&updateDesc);
@@ -3745,11 +3742,11 @@ namespace hpl {
             cRendererDeferred::UniformObject uniformObjectData = {};
             uniformObjectData.m_dissolveAmount = apObject->GetCoverageAmount();
             uniformObjectData.m_materialIndex = apMaterial->Index();
-            uniformObjectData.m_modelMat = cMath::ToForgeMat4(modelMat.GetTranspose());
-            uniformObjectData.m_invModelMat = cMath::ToForgeMat4(cMath::MatrixInverse(modelMat).GetTranspose());
+            uniformObjectData.m_modelMat = cMath::ToForgeMatrix4(modelMat);
+            uniformObjectData.m_invModelMat = cMath::ToForgeMatrix4(cMath::MatrixInverse(modelMat));
             uniformObjectData.m_lightLevel = 1.0f;
             if (apMaterial) {
-                uniformObjectData.m_uvMat = cMath::ToForgeMat4(apMaterial->GetUvMatrix());
+                uniformObjectData.m_uvMat = cMath::ToForgeMatrix4(apMaterial->GetUvMatrix().GetTranspose());
                 if (apMaterial->IsAffectedByLightLevel()) {
                     cVector3f vCenterPos = apObject->GetBoundingVolume()->GetWorldCenter();
                     float fLightAmount = 0.0f;
@@ -4167,7 +4164,7 @@ void cRendererDeferred::Draw(
                     cMath::PlaneToPointDist(cPlanef(1, 0, 0, 0.5f), vRayCastStart),
                     cMath::PlaneToPointDist(cPlanef(0, 1, 0, 0.5f), vRayCastStart),
                     cMath::PlaneToPointDist(cPlanef(0, 0, 1, 0.5f), vRayCastStart));
-                fogUniformData.m_invModelRotation = cMath::ToForgeMat4(mtxInvModelView.GetRotation().GetTranspose());
+                fogUniformData.m_invModelRotation = cMath::ToForgeMatrix4(mtxInvModelView.GetRotation());
                 fogUniformData.m_rayCastStart = float4(vRayCastStart.x, vRayCastStart.y, vRayCastStart.z, 0.0f);
                 fogUniformData.m_fogNegPlaneDistNeg =
                     float4(vNegPlaneDistNeg.x * -1.0f, vNegPlaneDistNeg.y * -1.0f, vNegPlaneDistNeg.z * -1.0f, 0.0f);
@@ -4183,9 +4180,9 @@ void cRendererDeferred::Draw(
             fogUniformData.m_falloffExp = fogArea->GetFalloffExp();
 
             const cMatrixf modelMat = fogArea->GetModelMatrixPtr() ? *fogArea->GetModelMatrixPtr() : cMatrixf::Identity;
-            fogUniformData.m_mv = cMath::ToForgeMat4(cMath::MatrixMul(mainFrustumView, modelMat).GetTranspose());
+            fogUniformData.m_mv = cMath::ToForgeMatrix4(cMath::MatrixMul(mainFrustumView, modelMat));
             fogUniformData.m_mvp =
-                cMath::ToForgeMat4(cMath::MatrixMul(cMath::MatrixMul(mainFrustumProj, mainFrustumView), modelMat).GetTranspose());
+                cMath::ToForgeMatrix4(cMath::MatrixMul(cMath::MatrixMul(mainFrustumProj, mainFrustumView), modelMat));
             return fogUniformData;
         };
         std::vector<cFogArea*> nearPlanFog;

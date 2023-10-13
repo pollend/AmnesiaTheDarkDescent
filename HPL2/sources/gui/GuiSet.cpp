@@ -781,7 +781,7 @@ namespace hpl {
 				gui::GuiTextures[frame.m_frameIndex][gui::descriptorIndex] = pTexture->GetTexture();
 				params[paramCount++].ppTextures = &pTexture->GetTexture().m_handle;
 			}
-			uniformBlock.mvp = cMath::ToForgeMat4(cMath::MatrixMul(cMath::MatrixMul(projectionMtx, viewMtx), modelMtx));
+			uniformBlock.mvp = cMath::ToForgeMatrix4(cMath::MatrixMul(cMath::MatrixMul(projectionMtx, viewMtx), modelMtx).GetTranspose());
 			auto& descriptorSet = gui::GuiUniformDescriptorSet[frame.m_frameIndex];
 			updateDescriptorSet(frame.m_renderer->Rend(), gui::descriptorIndex, descriptorSet, paramCount, params);
 
