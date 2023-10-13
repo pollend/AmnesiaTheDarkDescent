@@ -19,6 +19,7 @@
 
 #include "impl/MeshLoaderCollada.h"
 
+#include "Common_3/Utilities/Log/Log.h"
 #include "system/LowLevelSystem.h"
 #include "system/String.h"
 #include "system/System.h"
@@ -313,7 +314,11 @@ namespace hpl {
 
 		///////////////////////////
 		//Create Sub meshes
-		std::vector<cMeshCollider> vMeshColliders;
+		struct ColladaMeshColliderResource {
+            tString m_group = ""; // Only used as temp var when loading!
+            cSubMesh::MeshCollisionResource m_resource;
+	    };
+	    std::vector<ColladaMeshColliderResource> meshColliders;
 		for(size_t i=0;i<vColladaGeometries.size(); i++)
 		{
 			cColladaGeometry &Geom = vColladaGeometries[i];
@@ -386,10 +391,10 @@ namespace hpl {
 						vShapeSize.x *= 0.5;
 					}
 
-					cMeshCollider meshCollider;
-					meshCollider.mType = ShapeType;
-					meshCollider.mvSize = vShapeSize;
-					meshCollider.mbCharCollider = sSpecialName == "charcollider";
+					ColladaMeshColliderResource  meshCollider;
+					meshCollider.m_resource.mType = ShapeType;
+					meshCollider.m_resource.mvSize = vShapeSize;
+					meshCollider.m_resource.mbCharCollider = sSpecialName == "charcollider";
 
 					cColladaNode *pNode = ColladaScene.GetNodeFromSource(Geom.msId);
 					if(pNode==NULL){Warning("No node for geometry '%s' when creating collider!\n",Geom.msId.c_str()); continue;}
@@ -397,11 +402,7 @@ namespace hpl {
 					//Set the name of the group it is in.
 					if(pNode->pParent)
 					{
-						meshCollider.msGroup = pNode->pParent->msName;
-					}
-					else
-					{
-						meshCollider.msGroup = "";
+						meshCollider.m_group = pNode->pParent->msName;
 					}
 
 					//Set offset, some primitives are created with the centre at the bottom,
@@ -415,30 +416,30 @@ namespace hpl {
 						vOffset = vOffset * pNode->mvScale;
 
 						//World postion add
-						meshCollider.m_mtxOffset = pNode->m_mtxWorldTransform;
-						cVector3f vRotOffset = cMath::MatrixMul(meshCollider.m_mtxOffset.GetRotation(),
+						meshCollider.m_resource.m_mtxOffset = pNode->m_mtxWorldTransform;
+						cVector3f vRotOffset = cMath::MatrixMul(meshCollider.m_resource.m_mtxOffset.GetRotation(),
 																vOffset);
-						meshCollider.m_mtxOffset.SetTranslation(meshCollider.m_mtxOffset.GetTranslation() +
+						meshCollider.m_resource.m_mtxOffset.SetTranslation(meshCollider.m_resource.m_mtxOffset.GetTranslation() +
 																vRotOffset);
 					}
 					else
 					{
-						meshCollider.m_mtxOffset = pNode->m_mtxWorldTransform;
+						meshCollider.m_resource.m_mtxOffset = pNode->m_mtxWorldTransform;
 					}
 
 
 					//Add scale
-					meshCollider.mvSize = meshCollider.mvSize * pNode->mvScale;
+					meshCollider.m_resource.mvSize = meshCollider.m_resource.mvSize * pNode->mvScale;
 
 					//This is to orient the cylinder along y axis instead of x.
 					if(ShapeType == eCollideShapeType_Cylinder || ShapeType == eCollideShapeType_Capsule)
 					{
-						meshCollider.m_mtxOffset = cMath::MatrixMul(meshCollider.m_mtxOffset,
+						meshCollider.m_resource.m_mtxOffset = cMath::MatrixMul(meshCollider.m_resource.m_mtxOffset,
 																cMath::MatrixRotateZ(cMath::ToRad(90))
 																);
 					}
 
-					vMeshColliders.push_back(meshCollider);
+					meshColliders.push_back(meshCollider);
 				}
 
 				if(bCreateMesh==false)
@@ -479,7 +480,7 @@ namespace hpl {
 			eVertexBufferUsageType UsageType = eVertexBufferUsageType_Static;
 			iVertexBuffer *pVtxBuffer = CreateVertexBuffer(Geom, UsageType);//, vExtraVtxVec);
 			pSubMesh->SetVertexBuffer(pVtxBuffer);
-			
+
 			/////////////////////////////
 			//Add material
 			tString sNodeMaterial = pGeomNode->msInstanceMaterial != "" ? pGeomNode->msInstanceMaterial : Geom.msMaterial;
@@ -605,17 +606,17 @@ namespace hpl {
 
 		///////////////////////////////////////////////
 		// Set colliders to sub meshes
-		if(vMeshColliders.empty()==false && pMesh->GetSubMeshNum()>0)
+		if(meshColliders.empty()==false && pMesh->GetSubMeshNum()>0)
 		{
-			for(size_t i=0; i<vMeshColliders.size(); ++i)
+			for(size_t i=0; i<meshColliders.size(); ++i)
 			{
-				cMeshCollider& meshCollider = vMeshColliders[i];
+				auto& meshCollider = meshColliders[i];
 				cSubMesh *pSubMesh = NULL;
-				if(meshCollider.msGroup!="")
+				if(meshCollider.m_group != "")
 				{
-					pSubMesh = pMesh->GetSubMeshName(meshCollider.msGroup);
+					pSubMesh = pMesh->GetSubMeshName(meshCollider.m_group);
 					if(pSubMesh==NULL){
-						Log("Sub mesh '%s' for collider was not found!\n",meshCollider.msGroup.c_str());
+						LOGF(LogLevel::eWARNING, "Sub mesh '%s' for collider was not found!\n",meshCollider.m_group.c_str());
 						continue;
 					}
 				}
@@ -624,8 +625,7 @@ namespace hpl {
 					pSubMesh = pMesh->GetSubMesh(0);
 				}
 
-                cMeshCollider *pCollider = pSubMesh->CreateCollider(meshCollider.mType);
-				*pCollider = meshCollider;
+                pSubMesh->AddCollider(meshCollider.m_resource);
 			}
 		}
 

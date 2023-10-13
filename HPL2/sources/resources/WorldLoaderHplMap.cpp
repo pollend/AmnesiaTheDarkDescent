@@ -1703,11 +1703,11 @@ namespace hpl {
 			bool bCreateMeshCollider = bCollides;
 			if(bCreateMeshCollider)
 			{
-				for(int j=0; j<pSubMesh->GetColliderNum(); ++j)
-				{
-					if(pSubMesh->GetCollider(j)->mbCharCollider==false)
+			    for(auto& collider: pSubMesh->GetColliders()) {
+			        if(!collider.mbCharCollider) {
 						bCreateMeshCollider = false;
-				}
+			        }
+			    }
 			}
 
 			////////////////////////////////
@@ -1784,31 +1784,32 @@ namespace hpl {
 	void cWorldLoaderHplMap::CreateSubMeshShapeBodies(cSubMeshEntity *apSubEnt, const cMatrixf &a_mtxTransform, const cVector3f& avScale)
 	{
 		cSubMesh *pSubMesh = apSubEnt->GetSubMesh();
-		if(pSubMesh->GetColliderNum() <= 0) return;
+		auto colliders = pSubMesh->GetColliders();
+	    if(colliders.size() <= 0) return;
 
 		std::vector<cHplMapShape*> vCharColliders;
 		std::vector<cHplMapShape*> vNormalColliders;
 
-		vCharColliders.reserve(pSubMesh->GetColliderNum());
-		vNormalColliders.reserve(pSubMesh->GetColliderNum());
+		vCharColliders.reserve(colliders.size());
+		vNormalColliders.reserve(colliders.size());
 
 		//////////////////////////////////
 		//Iterate colliders and create shapes
-		for(int i=0; i<pSubMesh->GetColliderNum(); ++i)
-		{
-			cMeshCollider *pMeshCollider = pSubMesh->GetCollider(i);
-
+		//for(int i=0; i<pSubMesh->GetColliderNum(); ++i)
+		for(auto& collider: colliders)
+	    {
 			cHplMapShape *pMapShape = hplNew(cHplMapShape, ());
 
-			pMapShape->m_mtxOffset = pMeshCollider->m_mtxOffset;
-			pMapShape->m_mtxOffset.SetTranslation(pMeshCollider->m_mtxOffset.GetTranslation() * avScale);
-			pMapShape->mType = pMeshCollider->mType;
-			pMapShape->mvSize = pMeshCollider->mvSize * avScale;
+			pMapShape->m_mtxOffset = collider.m_mtxOffset;
+			pMapShape->m_mtxOffset.SetTranslation(collider.m_mtxOffset.GetTranslation() * avScale);
+			pMapShape->mType = collider.mType;
+			pMapShape->mvSize = collider.mvSize * avScale;
 
-			if(pMeshCollider->mbCharCollider)
+			if(collider.mbCharCollider) {
 				vCharColliders.push_back(pMapShape);
-			else
+		    } else {
 				vNormalColliders.push_back(pMapShape);
+		    }
 		}
 
 		//////////////////////////////////

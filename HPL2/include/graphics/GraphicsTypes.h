@@ -772,11 +772,6 @@ namespace hpl {
 	};
 
 
-	typedef std::vector<cVertexBonePair> tVertexBonePairVec;
-	typedef tVertexBonePairVec::iterator tVertexBonePairVecIt;
-
-	//---------------------------------------
-
 	class cVertex
 	{
 	public:

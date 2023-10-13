@@ -45,44 +45,27 @@ namespace hpl {
 	class cMaterial;
 	class cBoneState;
 
-	//-----------------------------------------------------------------------
-
-
-
-
-	//-----------------------------------------------------------------------
-
-	class cSubMeshEntityBodyUpdate : public iEntityCallback
-	{
-	public:
-		void OnTransformUpdate(iEntity3D * apEntity);
-	};
-
-	//-----------------------------------------------------------------------
-
 	class cSubMeshEntity : public iRenderable
 	{
-	#ifdef __GNUC__
-		typedef iRenderable __super;
-	#endif
+		HPL_RTTI_IMPL_CLASS(iRenderable, cSubMeshEntity, "{285bbdb4-de5b-4960-bf44-ae543432ff40}")
 		friend class cMeshEntity;
 	public:
 		cSubMeshEntity(const tString &asName,cMeshEntity *apMeshEntity, cSubMesh * apSubMesh,cMaterialManager* apMaterialManager);
 		~cSubMeshEntity();
 
-		cMaterial *GetMaterial();
+		virtual cMaterial *GetMaterial() override;
 
-		void UpdateGraphicsForFrame(float afFrameTime);
+		virtual void UpdateGraphicsForFrame(float afFrameTime) override;
 
-		iVertexBuffer* GetVertexBuffer();
+		virtual iVertexBuffer* GetVertexBuffer() override;
 
-		cBoundingVolume* GetBoundingVolume();
+		virtual cBoundingVolume* GetBoundingVolume() override;
 
-		cMatrixf* GetModelMatrix(cFrustum *apFrustum);
+		virtual cMatrixf* GetModelMatrix(cFrustum *apFrustum) override;
 
-		int GetMatrixUpdateCount();
+		virtual int GetMatrixUpdateCount() override;
 
-		eRenderableType GetRenderType(){ return eRenderableType_SubMesh;}
+		virtual eRenderableType GetRenderType() override { return eRenderableType_SubMesh;}
 
 		cSubMesh* GetSubMesh() const { return mpSubMesh;}
 
@@ -93,13 +76,9 @@ namespace hpl {
 		void SetUserData(void *apData){ mpUserData = apData;}
 
 		//Entity implementation
-		tString GetEntityType(){ return "SubMesh";}
+		virtual tString GetEntityType() override { return "SubMesh";}
 
-		void UpdateLogic(float afTimeStep);
-
-		cTriangleData& GetTriangle(int alIndex);
-		int GetTriangleNum();
-		tTriangleDataVec* GetTriangleVecPtr();
+		virtual void UpdateLogic(float afTimeStep) override;
 
 		void SetUpdateBody(bool abX);
 		bool GetUpdateBody();
@@ -108,7 +87,7 @@ namespace hpl {
 		cMaterial* GetCustomMaterial(){ return mpMaterial;}
 
 	private:
-		void OnTransformUpdated();
+		virtual void OnTransformUpdated() override;
 
 		cSubMesh *mpSubMesh;
 		cMeshEntity *mpMeshEntity;
@@ -119,10 +98,9 @@ namespace hpl {
 
 		cMaterialManager* mpMaterialManager;
 
-		iVertexBuffer* mpDynVtxBuffer;
+		iVertexBuffer* mpDynVtxBuffer = nullptr;
 		tTriangleDataVec mvDynTriangles;
 
-		cSubMeshEntityBodyUpdate* mpEntityCallback;
 		bool mbUpdateBody;
 
 		bool mbGraphicsUpdated;

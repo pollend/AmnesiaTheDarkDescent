@@ -41,10 +41,6 @@
 #include "math/Math.h"
 
 namespace hpl {
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
 	cSubMeshEntity::cSubMeshEntity(const tString &asName, cMeshEntity *apMeshEntity, cSubMesh * apSubMesh,
 								cMaterialManager* apMaterialManager) : iRenderable(asName)
 	{
@@ -61,16 +57,10 @@ namespace hpl {
 		if(mpMeshEntity->GetMesh()->GetSkeleton())
 		{
 			mpDynVtxBuffer = mpSubMesh->GetVertexBuffer()->CreateCopy(eVertexBufferType_Hardware,eVertexBufferUsageType_Dynamic,eFlagBit_All);
-			mvDynTriangles = *mpSubMesh->GetTriangleVecPtr();
-		}
-		else
-		{
-			mpDynVtxBuffer = NULL;
 		}
 
 		mpLocalNode = NULL;
 
-		mpEntityCallback = hplNew( cSubMeshEntityBodyUpdate, () );
 		mbUpdateBody = false;
 
 		mpMaterial = NULL;
@@ -86,53 +76,16 @@ namespace hpl {
 
 	cSubMeshEntity::~cSubMeshEntity()
 	{
-		hplDelete(mpEntityCallback);
-
 		if(mpDynVtxBuffer) hplDelete(mpDynVtxBuffer);
 
 		/* Clear any custom textures here*/
 		if(mpMaterial) mpMaterialManager->Destroy(mpMaterial);
 	}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// BODY CALLBACK
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
-	void cSubMeshEntityBodyUpdate::OnTransformUpdate(iEntity3D* apEntity)
-	{
-		/*cSubMeshEntity *pSubEntity = static_cast<cSubMeshEntity*>(apEntity);
-
-		if(pSubEntity->GetBody())
-		{
-			if(apEntity->GetWorldMatrix() != pSubEntity->GetBody()->GetLocalMatrix())
-			{
-				Log("Setting matrix on %s from\n",pSubEntity->GetBody()->GetName().c_str());
-				Log("  %s\n",apEntity->GetWorldMatrix().ToString().c_str());
-				Log("  %s\n",pSubEntity->GetBody()->GetLocalMatrix().ToString().c_str());
-
-				pSubEntity->GetBody()->SetMatrix(apEntity->GetWorldMatrix());
-			}
-		}*/
-	}
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
 	void cSubMeshEntity::UpdateLogic(float afTimeStep)
 	{
 
 	}
-
-	//-----------------------------------------------------------------------
 
 
 	cMaterial* cSubMeshEntity::GetMaterial()
@@ -217,10 +170,11 @@ namespace hpl {
 				//To count the bone bindings
 				int lCount = 0;
 				//Get pointer to weights and bone index.
-				const float *pWeight = &mpSubMesh->mpVertexWeights[vtx*4];
-				if(*pWeight==0) continue;
-
-				const unsigned char *pBoneIdx = &mpSubMesh->mpVertexBones[vtx*4];
+			    if(mpSubMesh->m_vertexWeights.size() == 0) {
+                    continue;
+			    }
+				const float *pWeight = &mpSubMesh->m_vertexWeights[vtx*4];
+				const unsigned char *pBoneIdx = &mpSubMesh->m_vertexBones[vtx*4];
 
 				const cMatrixf &mtxTransform = mpMeshEntity->mvBoneMatrices[*pBoneIdx];
 
@@ -258,35 +212,11 @@ namespace hpl {
 				pBindTangent += 4;
 				pSkinTangent += 4;
 			}
-
-			//No stencil shadows:
-			/*float *pSkinPosArray = mpDynVtxBuffer->GetArray(eVertexElementFlag_Position);
-			if(mpMeshEntity->GetRenderFlagBit(eRenderableFlag_ShadowCaster))
-			{
-				//Update the shadow double
-				memcpy(&pSkinPosArray[lVtxStride*lVtxNum],pSkinPosArray,sizeof(float)*lVtxStride*lVtxNum);
-				for(int vtx=lVtxStride*lVtxNum + lVtxStride-1; vtx < lVtxStride*lVtxNum*2; vtx+=lVtxStride)
-				{
-					pSkinPosArray[vtx] = 0;
-				}
-			}*/
-
 			//Update buffer
 			mpDynVtxBuffer->UpdateData(eVertexElementFlag_Position | eVertexElementFlag_Normal | eVertexElementFlag_Texture1,false);
-
-			//No stencil shadows:
-			/*if(mpMeshEntity->GetRenderFlagBit(eRenderableFlag_ShadowCaster))
-			{
-				//Update triangles
-				cMath::CreateTriangleData(mvDynTriangles,
-					mpDynVtxBuffer->GetIndices(), mpDynVtxBuffer->GetIndexNum(),
-					pSkinPosArray, lVtxStride, lVtxNum);
-			}*/
 		}
 
 	}
-
-	//-----------------------------------------------------------------------
 
 
 	iVertexBuffer* cSubMeshEntity::GetVertexBuffer()
@@ -300,9 +230,6 @@ namespace hpl {
 			return mpSubMesh->GetVertexBuffer();
 		}
 	}
-
-	//-----------------------------------------------------------------------
-
 
 	cBoundingVolume* cSubMeshEntity::GetBoundingVolume()
 	{
@@ -322,15 +249,10 @@ namespace hpl {
 		}
 	}
 
-	//-----------------------------------------------------------------------
-
-
 	int cSubMeshEntity::GetMatrixUpdateCount()
 	{
 		return GetTransformUpdateCount();
 	}
-
-	//-----------------------------------------------------------------------
 
 	cMatrixf* cSubMeshEntity::GetModelMatrix(cFrustum *apFrustum)
 	{
@@ -360,8 +282,6 @@ namespace hpl {
 		}
 	}
 
-	//-----------------------------------------------------------------------
-
 	void cSubMeshEntity::SetLocalNode(cNode3D *apNode)
 	{
 		mpLocalNode = apNode;
@@ -369,60 +289,21 @@ namespace hpl {
 		mpLocalNode->AddEntity(this);
 	}
 
-	//-----------------------------------------------------------------------
-
 	cNode3D* cSubMeshEntity::GetLocalNode()
 	{
 		return mpLocalNode;
 	}
 
-	//-----------------------------------------------------------------------
 
 	void cSubMeshEntity::SetUpdateBody(bool abX)
 	{
 		mbUpdateBody = abX;
-
-		/*if(mbUpdateBody)
-		{
-			AddCallback(mpEntityCallback);
-		}
-		else
-		{
-			RemoveCallback(mpEntityCallback);
-		}*/
 	}
 
 	bool cSubMeshEntity::GetUpdateBody()
 	{
 		return mbUpdateBody;
 	}
-
-	//-----------------------------------------------------------------------
-
-	cTriangleData& cSubMeshEntity::GetTriangle(int alIndex)
-	{
-		if(mpDynVtxBuffer)
-			return mvDynTriangles[alIndex];
-		else
-			return (*mpSubMesh->GetTriangleVecPtr())[alIndex];
-	}
-	int cSubMeshEntity::GetTriangleNum()
-	{
-		if(mpDynVtxBuffer)
-			return (int)mvDynTriangles.size();
-		else
-			return (int)mpSubMesh->GetTriangleVecPtr()->size();
-	}
-
-	tTriangleDataVec* cSubMeshEntity::GetTriangleVecPtr()
-	{
-		if(mpDynVtxBuffer)
-			return &mvDynTriangles;
-		else
-			return mpSubMesh->GetTriangleVecPtr();
-	}
-
-	//-----------------------------------------------------------------------
 
 	void cSubMeshEntity::SetCustomMaterial(cMaterial *apMaterial, bool abDestroyOldCustom)
 	{
@@ -434,19 +315,9 @@ namespace hpl {
         mpMaterial = apMaterial;
 	}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
 	void cSubMeshEntity::OnTransformUpdated()
 	{
 		mpMeshEntity->mbUpdateBoundingVolume = true;
 	}
-
-	//-----------------------------------------------------------------------
 
 }

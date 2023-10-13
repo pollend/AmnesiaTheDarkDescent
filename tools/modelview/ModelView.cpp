@@ -1093,7 +1093,7 @@ public:
 			// Normal Shape
 			else
 			{
-				iCollideShape *pShape = pSubMesh->CreateCollideShape(mpPhysicsWorld);
+				iCollideShape *pShape = cSubMesh::CreateCollideShape(mpPhysicsWorld, pSubMesh->GetColliders());
 
 				if(pShape != NULL)
 				{
