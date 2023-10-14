@@ -26,6 +26,7 @@
 #include "graphics/GraphicsTypes.h"
 #include "system/SystemTypes.h"
 #include "resources/ResourceBase.h"
+#include "graphics/SubMeshResource.h"
 
 #include "scene/Light.h"
 
@@ -57,6 +58,7 @@ namespace hpl {
 		~cMesh();
 
 		bool CreateFromFile(const tString asFile);
+
 
 		cSubMesh* CreateSubMesh(const tString &asName);
 		cSubMesh* GetSubMesh(unsigned int alIdx);
