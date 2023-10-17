@@ -19,6 +19,8 @@
 
 #include "impl/MeshLoaderMSH.h"
 
+#include "graphics/GraphicsTypes.h"
+#include "graphics/SubMeshResource.h"
 #include "system/LowLevelSystem.h"
 #include "graphics/LowLevelGraphics.h"
 #include "graphics/VertexBuffer.h"
@@ -38,24 +40,91 @@
 #include "scene/Node3D.h"
 
 #include "math/Math.h"
+#include <memory>
+
+#include "Common_3/Utilities/Log/Log.h"
 
 namespace hpl {
-
-	//////////////////////////////////////////////////////////////////////////
-	// PUBLIC DATA
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
 	bool gbLogMSHLoad = false;
 
-	//-----------------------------------------------------------------------
+    namespace detail {
+        void unpackVertexStreamResource(SubMeshResource::StreamBufferInfo* info, cBinaryBuffer* binaryBuffer, uint32_t numVerticies, eVertexBufferElement arrayType, eVertexBufferElementFormat elementFormat ) {
+            ASSERT(elementFormat == eVertexBufferElementFormat_Float); // assuming that everything is stored as float
+            switch(arrayType) {
+                case eVertexBufferElement_Position: {
+                    AssetBuffer::BufferStructuredView<float3> view;
+                    SubMeshResource::StreamBufferInfo::InitializeBuffer<SubMeshResource::PostionTrait>(info, &view);
+                    float4 val;
 
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
+                    for(size_t i = 0; i < numVerticies; i++) {
+                        float value =  binaryBuffer->GetFloat32();
+                        val[(i++) % 4] = static_cast<float>(value);
+                        if(i % 4 == 0) {
+                            view.Append(val.getXYZ());
+                        }
+                    }
 
-	//-----------------------------------------------------------------------
+                    break;
+                }
+                case eVertexBufferElement_Normal: {
+                    AssetBuffer::BufferStructuredView<float3> view;
+                    SubMeshResource::StreamBufferInfo::InitializeBuffer<SubMeshResource::NormalTrait>(info, &view);
+                    float3 val;
+                    for(size_t i = 0; i < numVerticies; i++) {
+                        float value =  binaryBuffer->GetFloat32();
+                        val[(i++) % 3] = static_cast<float>(value);
+                        if(i % 3 == 0) {
+                            view.Append(val);
+                        }
+                    }
+                    break;
+                }
+                case eVertexBufferElement_Color0: {
+                    AssetBuffer::BufferStructuredView<float4> view;
+                    SubMeshResource::StreamBufferInfo::InitializeBuffer<SubMeshResource::ColorTrait>(info, &view);
+                    float4 val;
+                    for(size_t i = 0; i < numVerticies; i++) {
+                        float value =  binaryBuffer->GetFloat32();
+                        val[(i++) % 4] = static_cast<float>(value);
+                        if(i % 4 == 0) {
+                            view.Append(val);
+                        }
+                    }
+                    break;
+                }
+                case eVertexBufferElement_Texture0:{
+                    AssetBuffer::BufferStructuredView<float2> view;
+                    SubMeshResource::StreamBufferInfo::InitializeBuffer<SubMeshResource::TextureTrait>(info, &view);
+                    float3 val;
+                    for(size_t i = 0; i < numVerticies; i++) {
+                        float value =  binaryBuffer->GetFloat32();
+                        val[(i++) % 3] = static_cast<float>(value);
+                        if(i % 3 == 0) {
+                            view.Append(val.getXY());
+                        }
+                    }
+                    break;
+                }
+                case eVertexBufferElement_Texture1Tangent: {
+                    AssetBuffer::BufferStructuredView<float3> view;
+                    SubMeshResource::StreamBufferInfo::InitializeBuffer<SubMeshResource::TangentTrait>(info, &view);
+                    float4 val; // backwards compatibility stored as 4 elements even though 3 are needed
+                    for(size_t i = 0; i < numVerticies; i++) {
+                        float value =  binaryBuffer->GetFloat32();
+                        val[(i++) % 4] = static_cast<float>(value);
+                        if(i % 4 == 0) {
+                            view.Append(val.getXYZ());
+                        }
+                    }
+                    break;
+                }
+                default:
+                    ASSERT(false);
+                    break;
+            }
+        }
+    }
+
 
 	cMeshLoaderMSH::cMeshLoaderMSH(iLowLevelGraphics *apLowLevelGraphics) : iMeshLoader(apLowLevelGraphics)
 	{
@@ -63,19 +132,9 @@ namespace hpl {
 			AddSupportedExtension("anm");
 	}
 
-	//-----------------------------------------------------------------------
-
 	cMeshLoaderMSH::~cMeshLoaderMSH()
 	{
 	}
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	cWorld* cMeshLoaderMSH::LoadWorld(const tWString& asFile, cScene* apScene,tWorldLoadFlag aFlags)
 	{
@@ -86,13 +145,13 @@ namespace hpl {
 
 	cMesh* cMeshLoaderMSH::LoadMesh(const tWString& asFile,tMeshLoadFlag aFlags)
 	{
-		if(gbLogMSHLoad) Log("------ Loading ---------\n");
-		/////////////////////////////////////////////////
+		LOGF_IF(LogLevel::eDEBUG, gbLogMSHLoad, "------ Loading ---------");
+	    /////////////////////////////////////////////////
 		// Load file
 		cBinaryBuffer binBuff(asFile);
 		if(binBuff.Load()==false)
 		{
-			Error("Could not load file '%s' in MSH loader.", cString::To8Char(asFile).c_str());
+		    LOGF(LogLevel::eERROR, "Could not load file '%s' in MSH loader.", cString::To8Char(asFile).c_str());
 			return NULL;
 		}
 
@@ -104,14 +163,14 @@ namespace hpl {
 		//Check magic number
 		if(lMagicNum != MSH_FORMAT_MAGIC_NUMBER)
 		{
-			Error("File '%s' does not have right MSH magic number! Invalid header!\n", cString::To8Char(asFile).c_str());
+		    LOGF(LogLevel::eERROR, "File '%s' does not have right MSH magic number! Invalid header!", cString::To8Char(asFile).c_str());
 			return NULL;
 		}
 
 		//Check so file has he right version
 		if(lVersion != MSH_FORMAT_VERSION)
 		{
-			Error("File '%s' does not have right MSH version!\n", cString::To8Char(asFile).c_str());
+		    LOGF(LogLevel::eERROR, "File '%s' does not have right MSH version!", cString::To8Char(asFile).c_str());
 			return NULL;
 		}
 
@@ -121,9 +180,9 @@ namespace hpl {
 		int lAnimationNum = binBuff.GetInt32();
 		bool bSkeleton = binBuff.GetBool();
 
-		if(gbLogMSHLoad) Log("General: %d %d %d\n", lSubMeshNum, lAnimationNum, bSkeleton);
+		LOGF_IF(LogLevel::eDEBUG, gbLogMSHLoad, "General: %d %d %d\n", lSubMeshNum, lAnimationNum, bSkeleton);
 
-		// Create the mesh
+	    // Create the mesh
 		tString sMeshName = cString::GetFileName(cString::To8Char(asFile));
 		cMesh* pMesh = hplNew( cMesh, (sMeshName, asFile,mpMaterialManager,mpAnimationManager) );
 
@@ -160,7 +219,6 @@ namespace hpl {
 		// Sub Meshes
 		for(int sub=0; sub<lSubMeshNum; ++sub)
 		{
-
 			/////////////////////////
 			// General Data
 			tString sName, sMaterial;
@@ -173,15 +231,15 @@ namespace hpl {
 			bool bCollideShape = binBuff.GetBool();
 
 			//Create sub mesh and set up data
-			cSubMesh *pSubMesh = pMesh->CreateSubMesh(sName);
-
-			pSubMesh->SetLocalTransform(mtxTransform);
-			pSubMesh->SetModelScale(vModelScale);
-			pSubMesh->SetIsCollideShape(bCollideShape);
+            std::shared_ptr<SubMeshResource> model = std::make_shared<SubMeshResource>(sName, mpMaterialManager);
+            pMesh->AddModel(model);
+			model->SetLocalTransform(cMath::ToForgeMatrix4(mtxTransform));
+			model->SetModelScale(cMath::ToForgeVec3(vModelScale));
+			model->SetIsCollideShape(bCollideShape);
 
 			//////////////////
 			//Set material
-			pSubMesh->SetMaterialName(sMaterial);
+			model->SetMaterialName(sMaterial);
 			if(sMaterial != "")
 			{
 				//Use fast load material if set.
@@ -191,101 +249,89 @@ namespace hpl {
 				}
 
 				cMaterial *pMaterial = mpMaterialManager->CreateMaterial(sMaterial);
-				pSubMesh->SetMaterial(pMaterial);
+				model->SetMaterial(pMaterial);
 			}
 
-			if(gbLogMSHLoad) Log("Submesh %d: '%s' '%s'\n", sub, sName.c_str(), sMaterial.c_str());
+			LOGF_IF(LogLevel::eDEBUG, gbLogMSHLoad,"Submesh %d: '%s' '%s'", sub, sName.c_str(), sMaterial.c_str());
 
 			////////////////////
 			// Colliders
 			{
 				int lColliderNum = binBuff.GetInt32();
 
-				if(gbLogMSHLoad) Log(" Colliders: %d\n",lColliderNum);
+				LOGF_IF(LogLevel::eDEBUG, gbLogMSHLoad," Colliders: %d",lColliderNum);
 
+                std::vector<SubMeshResource::MeshCollisionResource> colliders;
 				for(int i=0; i<lColliderNum; ++i)
 				{
 					eCollideShapeType type = (eCollideShapeType)binBuff.GetShort16();
-                    cSubMesh::MeshCollisionResource resource = {};
+                    SubMeshResource::MeshCollisionResource& resource = colliders.emplace_back();
 					binBuff.GetMatrixf(&resource.m_mtxOffset);
-					binBuff.GetVector3f(&resource.mvSize);
+					binBuff.GetVector3f(&resource.m_size);
 					resource.mbCharCollider = binBuff.GetBool();
 				    resource.mType = type;
-				    pSubMesh->AddCollider(resource);
 
-					if(gbLogMSHLoad) Log("  Collider%d: %d %s %s %d\n",i,	type, resource.m_mtxOffset.ToString().c_str(),
-																			resource.mvSize.ToString().c_str(), resource.mbCharCollider);
+				    //pSubMesh->AddCollider(resource);
+
+					LOGF_IF(LogLevel::eDEBUG, gbLogMSHLoad,"  Collider%d: %d %s %s %d\n",i,	type, resource.m_mtxOffset.ToString().c_str(),
+																			resource.m_size.ToString().c_str(), resource.mbCharCollider);
 				}
+			    model->SetCollisionResource(std::move(colliders));
 			}
 
 			////////////////////
 			// Vertex Bone Pairs
 			{
 				int lVtxBonePairNum = binBuff.GetInt32();
-				pSubMesh->ResizeVertexBonePairs(lVtxBonePairNum);
 
-				if(gbLogMSHLoad) Log(" VertexBonePairs: %d\n",pSubMesh->GetVertexBonePairNum(), lVtxBonePairNum);
-
-				for(int i=0; i<pSubMesh->GetVertexBonePairNum(); ++i)
+				LOGF_IF(LogLevel::eDEBUG, gbLogMSHLoad," VertexBonePairs: %d", lVtxBonePairNum, lVtxBonePairNum);
+                std::vector<cVertexBonePair> bonePairs;
+				for(int i=0; i< lVtxBonePairNum; ++i)
 				{
-					cVertexBonePair& vtxBonePair = pSubMesh->GetVertexBonePair(i);
+					cVertexBonePair& vtxBonePair = bonePairs.emplace_back(); //pSubMesh->GetVertexBonePair(i);
 					vtxBonePair.vtxIdx = binBuff.GetInt32();
 					vtxBonePair.boneIdx = binBuff.GetInt32();
 					vtxBonePair.weight = binBuff.GetFloat32();
 				}
+			    model->SetVertexBonePairs(std::move(bonePairs));
 			}
 
 
-			////////////////////
-			// Vertex data
-			iVertexBuffer* pVtxBuff = mpLowLevelGraphics->CreateVertexBuffer(	eVertexBufferType_Hardware, eVertexBufferDrawType_Tri,
-																				eVertexBufferUsageType_Static, 0, 0);
 			{
 				int lVtxNum = binBuff.GetInt32();
 				int lVtxTypeNum = binBuff.GetInt32();
 
-				if(gbLogMSHLoad) Log(" VertexBuffers num: %d typenum: %d\n",lVtxNum, lVtxTypeNum);
-
+				LOGF_IF(LogLevel::eDEBUG, gbLogMSHLoad," VertexBuffers num: %d typenum: %d",lVtxNum, lVtxTypeNum);
+                std::vector<SubMeshResource::StreamBufferInfo> streamBuffers;
 				////////////////////
 				// Get vertex arrays
 				for(int i=0; i< lVtxTypeNum; ++i)
 				{
 					//Get the settings
-					eVertexBufferElement arrayType = (eVertexBufferElement)binBuff.GetShort16();
-					eVertexBufferElementFormat elementFormat = (eVertexBufferElementFormat)binBuff.GetShort16();
-					int lProgramVarIndex = binBuff.GetInt32();
-					int lElementNum = binBuff.GetInt32();
+	                eVertexBufferElement arrayType = (eVertexBufferElement)binBuff.GetShort16();
+	                eVertexBufferElementFormat elementFormat = (eVertexBufferElementFormat)binBuff.GetShort16();
+		            int lProgramVarIndex = binBuff.GetInt32();
+		            int lElementNum = binBuff.GetInt32();
 
-					if(gbLogMSHLoad) Log("   Vtx %d: %d %d %d\n", i, arrayType, lProgramVarIndex, lElementNum);
-
-					//Create the array
-					pVtxBuff->CreateElementArray(arrayType, elementFormat, lElementNum, lProgramVarIndex);
-					pVtxBuff->ResizeArray(arrayType, lVtxNum * lElementNum);
-
-					//Get and fill the array data
-					void *pData = GetVertexBufferWithFormat(pVtxBuff, arrayType, elementFormat);
-					GetBinaryBufferDataWithFormat(&binBuff, pData, (size_t)(lVtxNum * lElementNum), elementFormat);
+					LOGF_IF(LogLevel::eDEBUG, gbLogMSHLoad,"   Vtx %d: %d %d %d", i, arrayType, lProgramVarIndex, lElementNum);
+                    auto& info = streamBuffers.emplace_back();
+                    detail::unpackVertexStreamResource(&info, &binBuff, lVtxNum, arrayType, elementFormat);
 				}
+			    model->SetStreamBuffer(std::move(streamBuffers));
 			}
 
-			////////////////////
-			//Get Indices
 			{
 				int lIdxNum =  binBuff.GetInt32();
 
-				if(gbLogMSHLoad) Log("Indices: %d\n", lIdxNum);
-
-				pVtxBuff->ResizeIndices(lIdxNum);
-				binBuff.GetInt32Array((int*)pVtxBuff->GetIndices(), lIdxNum);
+				LOGF_IF(LogLevel::eDEBUG, gbLogMSHLoad,"Indices: %d", lIdxNum);
+                 SubMeshResource::IndexBufferInfo indexInfo;
+                AssetBuffer::BufferIndexView view = indexInfo.GetView();
+                for(size_t i = 0; i < lIdxNum; i++) {
+                    view.Append(binBuff.GetInt32());
+                }
+               model->SetIndexBuffer(std::move(indexInfo));
 			}
 
-
-			///////////////////
-			//Compile vertex buffer and set to submesh
-			pVtxBuff->Compile(0);
-
-			pSubMesh->SetVertexBuffer(pVtxBuff);
-			pSubMesh->Compile();
 		}
 
 		////////////////////////////
@@ -297,7 +343,7 @@ namespace hpl {
 		// Animations
 		{
             int lAnimationNum = binBuff.GetInt32();
-			if(gbLogMSHLoad) Log(" Animation num: %d\n",lAnimationNum);
+			LOGF_IF(LogLevel::eDEBUG, gbLogMSHLoad," Animation num: %d",lAnimationNum);
 
 			for(int i=0; i<lAnimationNum; ++i)
 			{
@@ -350,7 +396,7 @@ namespace hpl {
 			cNode3D *pRootNode = apMesh->GetRootNode();
 			binBuff.AddInt32((int)pRootNode->GetChildList()->size());
 
-			if(gbLogMSHLoad) Log("Nodes num: %d\n", pRootNode->GetChildList()->size());
+			LOGF_IF(LogLevel::eDEBUG, gbLogMSHLoad,"Nodes num: %d\n", pRootNode->GetChildList()->size());
 
 			//Iterate child nodes
 			cNode3DIterator nodeIt = pRootNode->GetChildIterator();
@@ -375,7 +421,6 @@ namespace hpl {
 			binBuff.AddMatrixf(pSubMesh->GetLocalTransform());
 			binBuff.AddVector3f(pSubMesh->GetModelScale());
 			binBuff.AddBool(pSubMesh->IsCollideShape());
-
 
 			LOGF_IF(LogLevel::eDEBUG, gbLogMSHLoad,"Submesh %d: '%s' '%s'\n", sub, pSubMesh->GetName().c_str(), pSubMesh->GetMaterialName().c_str());
 
@@ -552,14 +597,6 @@ namespace hpl {
 
 		return bRet;
 	}
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PRIVATE METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	void cMeshLoaderMSH::AddAnimation(cAnimation *apAnimation, cBinaryBuffer* apBuffer)
 	{

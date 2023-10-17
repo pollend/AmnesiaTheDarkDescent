@@ -24,6 +24,9 @@
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
 
+#include "Common_3/Utilities/Math/MathTypes.h"
+#include "FixPreprocessor.h"
+
 namespace hpl {
 	class cBinaryBuffer
 	{
@@ -219,7 +222,7 @@ namespace hpl {
 		void GetShort16Array(short* apData, size_t alSize);
 		void GetInt32Array(int* apData, size_t alSize);
 		void GetFloat32Array(float* apData, size_t alSize);
-					        
+
 	private:
 		/**
 		 * Adds data to the buffer and will increase the pos to point at byte after written data (usually EOF). Will increase reserved size when it runs out of space.

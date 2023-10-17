@@ -653,7 +653,6 @@ namespace hpl {
 
 	iVertexBuffer * cMeshLoaderCollada::CreateVertexBuffer(cColladaGeometry & aGeometry,
 		eVertexBufferUsageType aUsageType)
-		//,tColladaExtraVtxListVec &vExtraVtxVec)
 	{
 		//tVertexVec vVertexVec;
 		//tUIntVec vIndexVec;
@@ -1711,7 +1710,7 @@ namespace hpl {
 				{
 					cColladaVtxIndex DataVec[3];
 					int lTriangleAdd = triangle*3*lTriElements;
-					
+
 					//Iterate the points in triangle
 					//If Z is used as y the order must be reversed.
 					//Turns out, it is not so... because x is negated.
@@ -1850,7 +1849,7 @@ namespace hpl {
 			Image.msName = cString::ToString(pImageElem->Attribute("name"),"");
 
 			TiXmlElement* pInitFromElem = pImageElem->FirstChildElement("init_from");
-			//COLLADA 1.4	
+			//COLLADA 1.4
 			if(pInitFromElem)
 			{
 				if(pInitFromElem->FirstChild())

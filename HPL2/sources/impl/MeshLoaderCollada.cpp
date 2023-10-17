@@ -20,6 +20,9 @@
 #include "impl/MeshLoaderCollada.h"
 
 #include "Common_3/Utilities/Log/Log.h"
+#include "graphics/AssetBuffer.h"
+#include "graphics/MeshUtility.h"
+#include "graphics/SubMeshResource.h"
 #include "system/LowLevelSystem.h"
 #include "system/String.h"
 #include "system/System.h"
@@ -56,6 +59,7 @@
 #include "impl/MeshLoaderMSH.h"
 
 #include "math/Math.h"
+#include <memory>
 
 namespace hpl {
 
@@ -316,19 +320,19 @@ namespace hpl {
 		//Create Sub meshes
 		struct ColladaMeshColliderResource {
             tString m_group = ""; // Only used as temp var when loading!
-            cSubMesh::MeshCollisionResource m_resource;
+            SubMeshResource::MeshCollisionResource m_resource;
 	    };
 	    std::vector<ColladaMeshColliderResource> meshColliders;
 		for(size_t i=0;i<vColladaGeometries.size(); i++)
 		{
-			cColladaGeometry &Geom = vColladaGeometries[i];
+			cColladaGeometry &geometry = vColladaGeometries[i];
 
-			cColladaNode *pGeomNode = ColladaScene.GetNodeFromSource(Geom.msId);
+			cColladaNode *pGeomNode = ColladaScene.GetNodeFromSource(geometry.msId);
 			if(pGeomNode==NULL)
 			{
-				pGeomNode = GetNodeFromController(Geom.msId,vColladaControllers,ColladaScene);
+				pGeomNode = GetNodeFromController(geometry.msId,vColladaControllers,ColladaScene);
 				if(pGeomNode==NULL){
-					Error("No node with geometry id '%s'\n",Geom.msId.c_str());
+					Error("No node with geometry id '%s'\n",geometry.msId.c_str());
 					continue;
 				}
 			}
@@ -357,7 +361,7 @@ namespace hpl {
 					bCreateMesh = false;
 
 					tFloatVec vVertexVec;
-					tVertexVec &vArray = Geom.mvVertexVec;
+					tVertexVec &vArray = geometry.mvVertexVec;
 					vVertexVec.resize(vArray.size() *3);
 
 					for(size_t vtx=0; vtx < vArray.size(); ++vtx)
@@ -393,11 +397,11 @@ namespace hpl {
 
 					ColladaMeshColliderResource  meshCollider;
 					meshCollider.m_resource.mType = ShapeType;
-					meshCollider.m_resource.mvSize = vShapeSize;
+					meshCollider.m_resource.m_size = vShapeSize;
 					meshCollider.m_resource.mbCharCollider = sSpecialName == "charcollider";
 
-					cColladaNode *pNode = ColladaScene.GetNodeFromSource(Geom.msId);
-					if(pNode==NULL){Warning("No node for geometry '%s' when creating collider!\n",Geom.msId.c_str()); continue;}
+					cColladaNode *pNode = ColladaScene.GetNodeFromSource(geometry.msId);
+					if(pNode==NULL){Warning("No node for geometry '%s' when creating collider!\n",geometry.msId.c_str()); continue;}
 
 					//Set the name of the group it is in.
 					if(pNode->pParent)
@@ -429,7 +433,7 @@ namespace hpl {
 
 
 					//Add scale
-					meshCollider.m_resource.mvSize = meshCollider.m_resource.mvSize * pNode->mvScale;
+					meshCollider.m_resource.m_size = meshCollider.m_resource.m_size * pNode->mvScale;
 
 					//This is to orient the cylinder along y axis instead of x.
 					if(ShapeType == eCollideShapeType_Cylinder || ShapeType == eCollideShapeType_Capsule)
@@ -461,29 +465,72 @@ namespace hpl {
 
 			// Sub mesh name and node name are the same.
 			//tString sSubMeshName = pNode->msName;
-			cSubMesh* pSubMesh = pMesh->CreateSubMesh(sNodeName);
-
-			pSubMesh->SetLocalTransform(pGeomNode->m_mtxTransform);
-
-			pSubMesh->SetIsCollideShape(bCollideMeshShape);
-
-			//Set the scale
-			pSubMesh->SetModelScale(pGeomNode->mvScale);
+			//cSubMesh* pSubMesh = pMesh->CreateSubMesh(sNodeName);
+            std::shared_ptr<SubMeshResource> subMeshResource = std::make_shared<SubMeshResource>(sNodeName, mpMaterialManager);
+			pMesh->AddModel(subMeshResource);
+		    subMeshResource->SetLocalTransform(cMath::ToForgeMatrix4(pGeomNode->m_mtxTransform));
+            subMeshResource->SetIsCollideShape(bCollideMeshShape);
+            subMeshResource->SetModelScale(cMath::ToForgeVec3(pGeomNode->mvScale));
+			subMeshResource->SetModelScale(cMath::ToForgeVec3(pGeomNode->mvScale));
 
 			//Log("Creating submesh: '%s'\n",Geom.msName.c_str());
 
+            std::vector<SubMeshResource::StreamBufferInfo> streamBuffers;
 			//To be filled by extra vertex positions (not used, use the one in Geometry)
-			tColladaExtraVtxListVec &vExtraVtxVec = Geom.mvExtraVtxVec;
+			tColladaExtraVtxListVec &vExtraVtxVec = geometry.mvExtraVtxVec;
+            auto position = AssetBuffer::BufferStructuredView<float3>();
+            auto color = AssetBuffer::BufferStructuredView<float4>();
+            auto normal = AssetBuffer::BufferStructuredView<float3>();
+            auto uv = AssetBuffer::BufferStructuredView<float2>();
+            auto tangent = AssetBuffer::BufferStructuredView<float3>();
+            SubMeshResource::IndexBufferInfo indexInfo;
+            SubMeshResource::StreamBufferInfo& positionInfo = streamBuffers.emplace_back();
+            SubMeshResource::StreamBufferInfo& tangentInfo = streamBuffers.emplace_back();
+            SubMeshResource::StreamBufferInfo& colorInfo = streamBuffers.emplace_back();
+            SubMeshResource::StreamBufferInfo& normalInfo = streamBuffers.emplace_back();
+            SubMeshResource::StreamBufferInfo& textureInfo = streamBuffers.emplace_back();
+            SubMeshResource::StreamBufferInfo::InitializeBuffer<SubMeshResource::PostionTrait>(&positionInfo,  &position);
+            SubMeshResource::StreamBufferInfo::InitializeBuffer<SubMeshResource::ColorTrait>(&colorInfo, &color);
+            SubMeshResource::StreamBufferInfo::InitializeBuffer<SubMeshResource::NormalTrait>(&normalInfo, &normal);
+            SubMeshResource::StreamBufferInfo::InitializeBuffer<SubMeshResource::TextureTrait>(&textureInfo, &uv);
+            SubMeshResource::StreamBufferInfo::InitializeBuffer<SubMeshResource::TangentTrait>(&tangentInfo, &tangent);
+            AssetBuffer::BufferIndexView indexView = indexInfo.GetView();
 
-			//////////////////////////////
+		    for(auto& vert: geometry.mvVertexVec) {
+                position.Append(float3(vert.pos.x, vert.pos.y, vert.pos.z));
+                normal.Append(float3(vert.norm.x, vert.norm.y, vert.norm.z));
+                uv.Append(float2(vert.tex.x, vert.tex.y));
+                color.Append(float4(1,1,1,1));
+            }
+            positionInfo.m_numberElements = geometry.mvVertexVec.size();
+            tangentInfo.m_numberElements = geometry.mvVertexVec.size();
+            colorInfo.m_numberElements = geometry.mvVertexVec.size();
+            normalInfo.m_numberElements = geometry.mvVertexVec.size();
+            textureInfo.m_numberElements = geometry.mvVertexVec.size();
+
+            for(size_t i = 0; i < geometry.mvTangents.size(); i++) {
+                if((i % 4) == 0 && (i + 4) <= geometry.mvTangents.size()) {
+                    tangent.Append(float3(geometry.mvTangents[i], geometry.mvTangents[i + 1], geometry.mvTangents[i + 2]));
+                }
+            }
+
+		    for(size_t j=0; j< geometry.mvIndexVec.size();j++)
+		    {
+			    //Flip order of indices
+			    size_t idx = (j/3)*3 + (2-(j%3));
+			    indexView.Append(geometry.mvIndexVec[idx]);
+		    }
+
+
+		    //////////////////////////////
 			// Create Vertex buffer
-			eVertexBufferUsageType UsageType = eVertexBufferUsageType_Static;
-			iVertexBuffer *pVtxBuffer = CreateVertexBuffer(Geom, UsageType);//, vExtraVtxVec);
-			pSubMesh->SetVertexBuffer(pVtxBuffer);
+		//	eVertexBufferUsageType UsageType = eVertexBufferUsageType_Static;
+		   // iVertexBuffer *pVtxBuffer = CreateVertexBuffer(geometry, UsageType);//, vExtraVtxVec);
+		   // pSubMesh->SetVertexBuffer(pVtxBuffer);
 
 			/////////////////////////////
 			//Add material
-			tString sNodeMaterial = pGeomNode->msInstanceMaterial != "" ? pGeomNode->msInstanceMaterial : Geom.msMaterial;
+			tString sNodeMaterial = pGeomNode->msInstanceMaterial != "" ? pGeomNode->msInstanceMaterial : geometry.msMaterial;
             tString sMatName = GetMaterialTextureFile(sNodeMaterial,vColladaMaterials,vColladaTextures,	vColladaImages);
 
 			//Log("Material name: '%s'\n",sMatName.c_str());
@@ -494,7 +541,7 @@ namespace hpl {
 				sMatName = cString::SetFilePath(sMatName, cString::To8Char(sRelativePath));
 
 				//Save the full path to material name!
-				pSubMesh->SetMaterialName(cString::SetFileExt(sMatName,"mat"));
+				subMeshResource->SetMaterialName(cString::SetFileExt(sMatName,"mat"));
 
 				//Use Fastload material if set
 				if(	mpMeshManager->GetUseFastloadMaterial())
@@ -515,15 +562,15 @@ namespace hpl {
 					cMaterial *pMaterial = mpMaterialManager->CreateMaterial(sMatName);
 					if(pMaterial==NULL)
 					{
-						Error("Couldn't create material '%s' for object '%s'\n",sMatName.c_str(), Geom.msName.c_str());
+						Error("Couldn't create material '%s' for object '%s'\n",sMatName.c_str(), geometry.msName.c_str());
 						//NOTE: Even if the material is null we still want to load the model!
 					}
-					pSubMesh->SetMaterial(pMaterial);
+					subMeshResource->SetMaterial(pMaterial);
 				}
 			}
 			else
 			{
-				pSubMesh->SetMaterialName("");
+				subMeshResource->SetMaterialName("");
 			}
 
 			/////////////////////////////
@@ -531,7 +578,7 @@ namespace hpl {
 			//First find the controller.
 			cColladaController *pCtrl =NULL;
 			for(size_t j=0; j<vColladaControllers.size(); j++){
-				if(vColladaControllers[j].msTarget == Geom.msId){
+				if(vColladaControllers[j].msTarget == geometry.msId){
 					pCtrl = &vColladaControllers[j];
 					break;
 				}
@@ -552,6 +599,7 @@ namespace hpl {
 			{
 				//Log("Adding vertex-bone pairs!\n");
 				//Iterate the pairs
+				std::vector<cVertexBonePair> bonePairs;
 				for(size_t j=0; j<pCtrl->mvPairs.size(); j++)
 				{
 					//Get all vertices for this vertex pos
@@ -562,28 +610,36 @@ namespace hpl {
 
 						//Iterate all the influences for this vertex.
 						tColladaJointPairListIt PairIt = pCtrl->mvPairs[j].begin();
-						for(; PairIt != pCtrl->mvPairs[j].end(); ++PairIt)
+
+					    for(; PairIt != pCtrl->mvPairs[j].end(); ++PairIt)
 						{
 							cColladaJointPair &SrcPair = *PairIt;
-							cVertexBonePair DestPair;
 
 							int lBoneIdx = pSkeleton->GetBoneIndexBySid(pCtrl->mvJoints[SrcPair.mlJoint]);
-                            DestPair.boneIdx = lBoneIdx;
-							DestPair.weight = pCtrl->mvWeights[SrcPair.mlWeight];
-							DestPair.vtxIdx = Extra.mlNewVtx;
+                            auto& bone = bonePairs.emplace_back();
+                            bone.boneIdx = lBoneIdx;
+							bone.weight = pCtrl->mvWeights[SrcPair.mlWeight];
+							bone.vtxIdx = Extra.mlNewVtx;
 
 							//Add pair in sub mesh
-							pSubMesh->AddVertexBonePair(DestPair);
 
 							//Log("Added pair: bone %d vtx %d weight: %f\n", DestPair.boneIdx,DestPair.vtxIdx,
 							//												DestPair.weight);
 						}
 					}
 				}
+				subMeshResource->SetVertexBonePairs(std::move(bonePairs));
 
 				//Transform the mesh according to the bind transform.
-				pVtxBuffer->Transform(cMath::MatrixMul(cMath::MatrixScale(mfUnitScale), pCtrl->m_mtxBindShapeMatrix));
-			}
+				//pVtxBuffer->Transform(cMath::MatrixMul(cMath::MatrixScale(mfUnitScale), pCtrl->m_mtxBindShapeMatrix));
+			    MeshUtility::Transform(
+                    positionInfo.m_numberElements,
+                    cMath::ToForgeMatrix4(cMath::MatrixMul(cMath::MatrixScale(mfUnitScale), pCtrl->m_mtxBindShapeMatrix)),
+                    &position,
+                    &normal,
+                    &tangent
+			    );
+		    }
 			//////////////////////////////////////////////////
 			//No controller, we have a non skinned mesh!
 			else
@@ -591,13 +647,22 @@ namespace hpl {
 				//If the buffer has animations or joints, we only add the scale part of the
 				//transform
 				cMatrixf mtxScale = cMath::MatrixScale(pGeomNode->mvScale * mfUnitScale);
-				pVtxBuffer->Transform(mtxScale);
+				//pVtxBuffer->Transform(mtxScale);
+			    MeshUtility::Transform(
+                    positionInfo.m_numberElements,
+                    cMath::ToForgeMatrix4(mtxScale),
+                    &position,
+                    &normal,
+                    &tangent
+			    );
 			}
 
-			pSubMesh->Compile();
+			//pSubMesh->Compile();
 
+		    subMeshResource->SetStreamBuffer(std::move(streamBuffers));
+		    subMeshResource->SetIndexBuffer(std::move(indexInfo));
 			//Compile the vertex buffer
-			pVtxBuffer->Compile(0);//eVertexCompileFlag_CreateTangents);
+			//pVtxBuffer->Compile(0);//eVertexCompileFlag_CreateTangents);
 		}
 
 		/////////////////////////////////////
@@ -608,25 +673,26 @@ namespace hpl {
 		// Set colliders to sub meshes
 		if(meshColliders.empty()==false && pMesh->GetSubMeshNum()>0)
 		{
-			for(size_t i=0; i<meshColliders.size(); ++i)
-			{
-				auto& meshCollider = meshColliders[i];
-				cSubMesh *pSubMesh = NULL;
-				if(meshCollider.m_group != "")
-				{
-					pSubMesh = pMesh->GetSubMeshName(meshCollider.m_group);
-					if(pSubMesh==NULL){
-						LOGF(LogLevel::eWARNING, "Sub mesh '%s' for collider was not found!\n",meshCollider.m_group.c_str());
-						continue;
-					}
-				}
-				else
-				{
-					pSubMesh = pMesh->GetSubMesh(0);
-				}
+            auto models = pMesh->GetModels();
+            for(size_t i = 0; i < models.size(); i++) {
+                std::vector<SubMeshResource::MeshCollisionResource> subMeshColliders;
+                for(auto it = meshColliders.begin(); it != meshColliders.end(); it++) {
+                    if(it->m_group != "") {
+                        if(it->m_group == models[i]->GetName()) {
+                            subMeshColliders.push_back(it->m_resource);
+                            meshColliders.erase(it);
+                        }
+                    } else if(i == 0){
+                        subMeshColliders.push_back(it->m_resource);
+                        meshColliders.erase(it);
+                    }
+                }
+                models[i]->SetCollisionResource(std::move(subMeshColliders));
+            }
+            for(auto& collider: meshColliders) {
+				LOGF(LogLevel::eWARNING, "Sub mesh '%s' for collider was not found!\n", collider.m_group.c_str());
+            }
 
-                pSubMesh->AddCollider(meshCollider.m_resource);
-			}
 		}
 
 		///////////////////////////////////////////////

@@ -84,7 +84,9 @@ namespace hpl {
 		return false;
 	}
 
-	//-----------------------------------------------------------------------
+    void cMesh::AddModel(std::shared_ptr<SubMeshResource> resource) {
+        m_models.push_back(resource);
+    }
 
 	cSubMesh* cMesh::CreateSubMesh(const tString &asName)
 	{
@@ -254,8 +256,9 @@ namespace hpl {
 		}
 	}
 
-	//-----------------------------------------------------------------------
-
+    std::span<std::shared_ptr<SubMeshResource>> cMesh::GetModels() {
+        return m_models;
+    }
 	cNode3D* cMesh::GetRootNode()
 	{
 		return mpRootNode;

@@ -20,10 +20,12 @@
 #ifndef HPL_DECALCREATOR_H
 #define HPL_DECALCREATOR_H
 
+#include "graphics/SubMeshResource.h"
 #include "math/MathTypes.h"
 #include "system/SystemTypes.h"
 #include "graphics/GraphicsTypes.h"
 #include "math/BoundingVolume.h"
+#include <memory>
 
 namespace hpl {
 
@@ -36,6 +38,7 @@ namespace hpl {
 	class cRendererCallbackFunctions;
 	class cBoundingVolume;
 	class DebugDraw;
+    class SubMeshResource;
 
 	class cDecalCreator
 	{
@@ -136,6 +139,8 @@ namespace hpl {
 
 		tVector3fVec mvTransformedBases;
 		tMatrixfVec mvMatrices;
+
+		std::shared_ptr<SubMeshResource> m_decalSubMesh;
 	};
 
 };

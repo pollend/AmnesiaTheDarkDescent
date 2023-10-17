@@ -17,6 +17,8 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "graphics/AssetBuffer.h"
+#include "graphics/SubMeshResource.h"
 #include "system/String.h"
 #include "system/LowLevelSystem.h"
 
@@ -34,6 +36,8 @@
 #include "graphics/SubMesh.h"
 #include "graphics/Renderer.h"
 #include "graphics/LowLevelGraphics.h"
+#include "graphics/SubMeshResource.h"
+
 
 #include "scene/MeshEntity.h"
 #include "math/Math.h"
@@ -41,11 +45,6 @@
 
 namespace hpl {
 
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	cDecalCreator::cDecalCreator(iLowLevelGraphics *apLowLevelGraphics, cResources *apResources) : mvDecalSize(0)
 	{
@@ -324,7 +323,22 @@ namespace hpl {
 				mpDecalVB = NULL;
 			}
 
-			mpDecalVB = mpLowLevelGraphics->CreateVertexBuffer(eVertexBufferType_Hardware,
+
+            auto position = AssetBuffer::BufferStructuredView<float3>();
+            auto color = AssetBuffer::BufferStructuredView<float4>();
+            auto normal = AssetBuffer::BufferStructuredView<float3>();
+            auto uv = AssetBuffer::BufferStructuredView<float2>();
+            SubMeshResource::StreamBufferInfo positionInfo;
+            SubMeshResource::StreamBufferInfo colorInfo;
+            SubMeshResource::StreamBufferInfo normalInfo;
+            SubMeshResource::StreamBufferInfo textureInfo;
+            SubMeshResource::StreamBufferInfo::InitializeBuffer<SubMeshResource::PostionTrait>(&positionInfo);
+            SubMeshResource::StreamBufferInfo::InitializeBuffer<SubMeshResource::ColorTrait>(&colorInfo);
+            SubMeshResource::StreamBufferInfo::InitializeBuffer<SubMeshResource::NormalTrait>(&normalInfo);
+            SubMeshResource::StreamBufferInfo::InitializeBuffer<SubMeshResource::TextureTrait>(&textureInfo);
+
+
+		    mpDecalVB = mpLowLevelGraphics->CreateVertexBuffer(eVertexBufferType_Hardware,
 																eVertexBufferDrawType_Tri,
 																eVertexBufferUsageType_Static);
 			mpDecalVB->CreateElementArray(eVertexBufferElement_Position, eVertexBufferElementFormat_Float, 4);

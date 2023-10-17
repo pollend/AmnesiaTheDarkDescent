@@ -19,7 +19,10 @@
 
 #include "resources/WorldLoaderHplMap.h"
 
+#include "Common_3/Utilities/Log/Log.h"
+#include "graphics/GraphicsTypes.h"
 #include "graphics/Image.h"
+#include "graphics/SubMeshResource.h"
 #include "impl/LegacyVertexBuffer.h"
 #include "system/String.h"
 #include "system/LowLevelSystem.h"
@@ -66,6 +69,8 @@
 
 #include "Common_3/Utilities/Interfaces/ILog.h"
 #include <FixPreprocessor.h>
+#include <memory>
+#include <variant>
 
 namespace hpl {
 
@@ -564,38 +569,43 @@ namespace hpl {
 			binBuff.GetString(&sMaterial);
 			bool bCastShadows = binBuff.GetBool();
 
-			if(gbLogCacheLoad) Log("Mesh %d: '%s' '%s'\n", mesh, sName.c_str(), sMaterial.c_str());
+			LOGF_IF(LogLevel::eDEBUG, gbLogCacheLoad,"Mesh %d: '%s' '%s'\n", mesh, sName.c_str(), sMaterial.c_str());
 
 			//////////////////////////////
 			// Create mesh and submesh
 			cMesh* pMesh = hplNew( cMesh, (sName, asFile,mpResources->GetMaterialManager(),mpResources->GetAnimationManager()) );
-			cSubMesh *pSubMesh = pMesh->CreateSubMesh("SubMesh");
+			//cSubMesh *pSubMesh = pMesh->CreateSubMesh("SubMesh");
+            //std::vector<SubMeshResource> subMeshes;
+            auto subMesh = std::make_shared<SubMeshResource>("SubMesh",mpResources->GetMaterialManager());
+
+            //SubMeshResource& subMesh = subMeshes.emplace_back("SubMesh",mpResources->GetMaterialManager());
 
 			//////////////////
 			//Set material
-			pSubMesh->SetMaterialName(sMaterial);
+			subMesh->SetMaterialName(sMaterial);
 			if(sMaterial != "")
 			{
 				if((mlCurrentFlags & eWorldLoadFlag_FastStaticLoad))
 					sMaterial = mpResources->GetMeshManager()->GetFastloadMaterial();
 
 				cMaterial *pMaterial = mpResources->GetMaterialManager()->CreateMaterial(sMaterial);
-				pSubMesh->SetMaterial(pMaterial);
+				subMesh->SetMaterial(pMaterial);
 			}
 
 			////////////////////
 			// Vertex data
-			iVertexBuffer* pVtxBuff = mpGraphics->GetLowLevel()->CreateVertexBuffer(eVertexBufferType_Hardware, eVertexBufferDrawType_Tri,
-																					eVertexBufferUsageType_Static, 0, 0);
+		   // iVertexBuffer* pVtxBuff = mpGraphics->GetLowLevel()->CreateVertexBuffer(eVertexBufferType_Hardware, eVertexBufferDrawType_Tri,
+		   // 																		eVertexBufferUsageType_Static, 0, 0);
 			{
 				int lVtxNum = binBuff.GetInt32();
 				int lVtxTypeNum = binBuff.GetInt32();
 
-				if(gbLogCacheLoad) Log(" VertexBuffers num: %d typenum: %d\n",lVtxNum, lVtxTypeNum);
+                LOGF_IF(LogLevel::eDEBUG, gbLogCacheLoad, " VertexBuffers num: %d typenum: %d\n",lVtxNum, lVtxTypeNum);
 
 				////////////////////
 				// Get vertex arrays
-				for(int i=0; i< lVtxTypeNum; ++i)
+                std::vector<SubMeshResource::StreamBufferInfo> streamBuffers;
+				for(int typeIndex = 0; typeIndex < lVtxTypeNum; ++typeIndex)
 				{
 					//Get the settings
 					eVertexBufferElement arrayType = (eVertexBufferElement)binBuff.GetShort16();
@@ -604,85 +614,171 @@ namespace hpl {
 					int lElementNum = binBuff.GetInt32();
 					int lCompressionType = binBuff.GetInt32();
 
-					if(gbLogCacheLoad) Log("   Vtx %d: %d %d %d\n", i, arrayType, lProgramVarIndex, lElementNum);
+				    LOGF_IF(LogLevel::eDEBUG, gbLogCacheLoad, "   Vtx %d: %d %d %d\n", typeIndex, arrayType, lProgramVarIndex, lElementNum);
 
-					//Create the array
-					pVtxBuff->CreateElementArray(arrayType, elementFormat, lElementNum, lProgramVarIndex);
-					pVtxBuff->ResizeArray(arrayType, lVtxNum * lElementNum);
+                    auto visitElementsInByteBuffer = [&](std::function<void(uint32_t index, std::variant<float, uint8_t, int>)> visit) {
+					    const size_t numElements = (size_t)(lVtxNum * lElementNum);
+					    if(lCompressionType == 0)
+					    {
+					        switch(elementFormat) {
+		                    case eVertexBufferElementFormat_Int:
+					            for(size_t i = 0; i < numElements ; i++) {
+					                visit(i, binBuff.GetInt32());
+                                }
+			                    break;
+		                    case eVertexBufferElementFormat_Float:
+					            for(size_t i = 0; i < numElements ; i++) {
+					                visit(i, binBuff.GetFloat32());
+                                }
+			                    break;
+		                    case eVertexBufferElementFormat_Byte:
+					            for(size_t i = 0; i < numElements ; i++) {
+					                visit(i, binBuff.GetChar());
+                                }
+			                    break;
+		                    default:
+			                    LOGF(LogLevel::eERROR, "Vertex buffer has incorrect format when getting binary data during loading of MSH file!\n");
+			                    break;
+					        }
+					    }
+					    else
+					    {
+						    //////////////////////
+						    // Byte Array
+						    if(lCompressionType <= 2)
+						    {
+							    ///////////////
+							    //0 - 255 -> 0-1
+							    if(lCompressionType == 1)
+							    {
+							        for(size_t i = 0; i < numElements; i++)
+								    {
+									    visit(i, mpBytePosFloatTable[binBuff.GetUnsignedChar()]);
+								    }
+							    }
+							    ///////////////
+							    //-127 - 127 -> -1 - 1
+							    else
+							    {
+							        for(size_t i = 0; i < numElements; i++)
+								    {
+									    visit(i, mpByteNegPosFloatTable[binBuff.GetUnsignedChar()]);
+								    }
+							    }
+						    }
+						    else
+						    {
+							    for(size_t i = 0; i < numElements; i++)
+							    {
+								    visit(i, mpShortNegPosFloatTable[binBuff.GetUnsignedShort16()]);
+							    }
+						    }
+					    }
+                    };
+                    SubMeshResource::StreamBufferInfo& info = streamBuffers.emplace_back();
+                    uint32_t elementCount = 0;
+                    switch(arrayType) {
+                        case eVertexBufferElement_Position: {
+                            AssetBuffer::BufferStructuredView<float3> view;
+                            SubMeshResource::StreamBufferInfo::InitializeBuffer<SubMeshResource::PostionTrait>(&info, &view);
+                            float4 val;
+                            visitElementsInByteBuffer([&](uint32_t index, auto element) {
+                                std::visit([&](auto value) {
+                                    val[(index++) % 4] = static_cast<float>(value);
+                                    if(index % 4 == 0) {
+                                        elementCount++;
+                                        view.Append(val.getXYZ());
+                                    }
+                                }, element);
+                            });
+                            break;
+                        }
+                        case eVertexBufferElement_Normal: {
+                            AssetBuffer::BufferStructuredView<float3> view;
+                            SubMeshResource::StreamBufferInfo::InitializeBuffer<SubMeshResource::NormalTrait>(&info, &view);
+                            float3 val;
+                            visitElementsInByteBuffer([&](uint32_t index,auto element) {
+                                std::visit([&](auto value) {
+                                    val[(index++) % 3] = static_cast<float>(value);
+                                    if(index % 3 == 0) {
+                                        view.Append(val);
+                                    }
+                                }, element);
+                            });
+                            break;
+                        }
+                        case eVertexBufferElement_Color0: {
+                            AssetBuffer::BufferStructuredView<float4> view;
+                            SubMeshResource::StreamBufferInfo::InitializeBuffer<SubMeshResource::ColorTrait>(&info, &view);
+                            float4 val;
+                            visitElementsInByteBuffer([&](uint32_t index,auto element) {
+                                std::visit([&](auto value) {
+                                    val[(index++) % 4] = static_cast<float>(value);
+                                    if(index % 4 == 0) {
+                                        view.Append(val);
+                                    }
+                                }, element);
+                            });
+                            break;
+                        }
+                        case eVertexBufferElement_Texture0:{
+                            AssetBuffer::BufferStructuredView<float2> view;
+                            SubMeshResource::StreamBufferInfo::InitializeBuffer<SubMeshResource::TextureTrait>(&info, &view);
+                            float3 val;
+                            visitElementsInByteBuffer([&](uint32_t index,auto element) {
+                                std::visit([&](auto value) {
+                                    val[(index++) % 3] = static_cast<float>(value);
+                                    if(index % 3 == 0) {
+                                        view.Append(val.getXY());
+                                    }
+                                }, element);
+                            });
+                            break;
+                        }
+                        case eVertexBufferElement_Texture1Tangent: {
+                            AssetBuffer::BufferStructuredView<float3> view;
+                            SubMeshResource::StreamBufferInfo::InitializeBuffer<SubMeshResource::TangentTrait>(&info, &view);
+                            float4 val; // backwards compatibility stored as 4 elements even though 3 are needed
+                            visitElementsInByteBuffer([&](uint32_t index,auto element) {
+                                std::visit([&](auto value) {
+                                    val[(index++) % 4] = static_cast<float>(value);
+                                    if(index % 4 == 0) {
+                                        view.Append(val.getXYZ());
+                                    }
+                                }, element);
+                            });
+                            break;
+                        }
+                        default:
+                            ASSERT(false);
+                            break;
+                    }
 
-					/////////////////////////
-					//Uncompressed: Get and fill the array data
-					if(lCompressionType ==0)
-					{
-						void *pData = GetVertexBufferWithFormat(pVtxBuff, arrayType, elementFormat);
-						GetBinaryBufferDataWithFormat(&binBuff, pData, (size_t)(lVtxNum * lElementNum), elementFormat);
-					}
-					/////////////////////////
-					// Compressed Get Data
-					else
-					{
-						float *pDestData = pVtxBuff->GetFloatArray(arrayType);
-						int lElemCount = lVtxNum * lElementNum;
-
-						//////////////////////
-						// Byte Array
-						if(lCompressionType <= 2)
-						{
-							///////////////
-							//0 - 255 -> 0-1
-							if(lCompressionType == 1)
-							{
-								while(lElemCount > 0)
-								{
-									*pDestData = mpBytePosFloatTable[binBuff.GetUnsignedChar()];
-
-									++pDestData; --lElemCount;
-								}
-							}
-							///////////////
-							//-127 - 127 -> -1 - 1
-							else
-							{
-								while(lElemCount > 0)
-								{
-									*pDestData = mpByteNegPosFloatTable[binBuff.GetUnsignedChar()];
-
-									++pDestData; --lElemCount;
-								}
-							}
-						}
-						//////////////////////
-						// Short Array
-						else
-						{
-							while(lElemCount > 0)
-							{
-								*pDestData = mpShortNegPosFloatTable[binBuff.GetUnsignedShort16()];
-
-								++pDestData; --lElemCount;
-							}
-						}
-					}
 				}
+			    subMesh->SetStreamBuffer(std::move(streamBuffers));
 			}
 
 			////////////////////
 			//Get Indices
 			{
 				int lIdxNum =  binBuff.GetInt32();
-
-				if(gbLogCacheLoad) Log("Indices: %d\n", lIdxNum);
-
-				pVtxBuff->ResizeIndices(lIdxNum);
-				binBuff.GetInt32Array((int*)pVtxBuff->GetIndices(), lIdxNum);
+				LOGF_IF(LogLevel::eDEBUG, gbLogCacheLoad,"Indices: %d\n", lIdxNum);
+                SubMeshResource::IndexBufferInfo indexInfo;
+                AssetBuffer::BufferIndexView view = indexInfo.GetView();
+                for(size_t i = 0; i < lIdxNum; i++) {
+                    view.Append(binBuff.GetInt32());
+                }
+               subMesh->SetIndexBuffer(std::move(indexInfo));
+			   // pVtxBuff->ResizeIndices(lIdxNum);
+			   // binBuff.GetInt32Array((int*)pVtxBuff->GetIndices(), lIdxNum);
 			}
-
+            pMesh->AddModel(subMesh);
 			///////////////////
 			//Compile vertex buffer and set to sub mesh
-			pVtxBuff->Compile(0);
+			//pVtxBuff->Compile(0);
 
-			pSubMesh->SetVertexBuffer(pVtxBuff);
-			pSubMesh->Compile();
+			//pSubMesh->SetVertexBuffer(pVtxBuff);
+			//pSubMesh->Compile();
 
 			///////////////////
 			//Create mesh entity
@@ -1798,6 +1894,8 @@ namespace hpl {
 		//for(int i=0; i<pSubMesh->GetColliderNum(); ++i)
 		for(auto& collider: colliders)
 	    {
+			//MeshCollisionResource *pMeshCollider = pSubMesh->GetCollider(i);
+
 			cHplMapShape *pMapShape = hplNew(cHplMapShape, ());
 
 			pMapShape->m_mtxOffset = collider.m_mtxOffset;
@@ -1807,9 +1905,8 @@ namespace hpl {
 
 			if(collider.mbCharCollider) {
 				vCharColliders.push_back(pMapShape);
-		    } else {
+		    } else {}
 				vNormalColliders.push_back(pMapShape);
-		    }
 		}
 
 		//////////////////////////////////
