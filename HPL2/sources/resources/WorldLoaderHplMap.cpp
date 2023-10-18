@@ -22,6 +22,7 @@
 #include "Common_3/Utilities/Log/Log.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Image.h"
+#include "graphics/MeshUtility.h"
 #include "graphics/SubMeshResource.h"
 #include "impl/LegacyVertexBuffer.h"
 #include "system/String.h"
@@ -686,8 +687,7 @@ namespace hpl {
                                 std::visit([&](auto value) {
                                     val[(index++) % 4] = static_cast<float>(value);
                                     if(index % 4 == 0) {
-                                        elementCount++;
-                                        view.Append(val.getXYZ());
+                                        view.Insert(elementCount++, val.getXYZ());
                                     }
                                 }, element);
                             });
@@ -701,7 +701,7 @@ namespace hpl {
                                 std::visit([&](auto value) {
                                     val[(index++) % 3] = static_cast<float>(value);
                                     if(index % 3 == 0) {
-                                        view.Append(val);
+                                        view.Insert(elementCount++,val);
                                     }
                                 }, element);
                             });
@@ -715,7 +715,7 @@ namespace hpl {
                                 std::visit([&](auto value) {
                                     val[(index++) % 4] = static_cast<float>(value);
                                     if(index % 4 == 0) {
-                                        view.Append(val);
+                                        view.Insert(elementCount++,val);
                                     }
                                 }, element);
                             });
@@ -729,7 +729,7 @@ namespace hpl {
                                 std::visit([&](auto value) {
                                     val[(index++) % 3] = static_cast<float>(value);
                                     if(index % 3 == 0) {
-                                        view.Append(val.getXY());
+                                        view.Insert(elementCount++, val.getXY());
                                     }
                                 }, element);
                             });
@@ -743,7 +743,7 @@ namespace hpl {
                                 std::visit([&](auto value) {
                                     val[(index++) % 4] = static_cast<float>(value);
                                     if(index % 4 == 0) {
-                                        view.Append(val.getXYZ());
+                                        view.Insert(elementCount++,val.getXYZ());
                                     }
                                 }, element);
                             });
@@ -766,7 +766,7 @@ namespace hpl {
                 SubMeshResource::IndexBufferInfo indexInfo;
                 AssetBuffer::BufferIndexView view = indexInfo.GetView();
                 for(size_t i = 0; i < lIdxNum; i++) {
-                    view.Append(binBuff.GetInt32());
+                    view.Insert(i, binBuff.GetInt32());
                 }
                subMesh->SetIndexBuffer(std::move(indexInfo));
 			   // pVtxBuff->ResizeIndices(lIdxNum);
@@ -2024,6 +2024,39 @@ namespace hpl {
 			for(int i=0;i<4;++i)
 				vUVCorners.push_back(apElement->GetAttributeVector2f("Corner" + cString::ToString(i+1) + "UV"));
 
+            std::vector<SubMeshResource::StreamBufferInfo> streamBuffers;
+            auto position = AssetBuffer::BufferStructuredView<float3>();
+            auto color = AssetBuffer::BufferStructuredView<float4>();
+            auto normal = AssetBuffer::BufferStructuredView<float3>();
+            auto uv = AssetBuffer::BufferStructuredView<float2>();
+            auto tangent = AssetBuffer::BufferStructuredView<float3>();
+            SubMeshResource::IndexBufferInfo indexInfo;
+            SubMeshResource::StreamBufferInfo& positionInfo = streamBuffers.emplace_back();
+            SubMeshResource::StreamBufferInfo& tangentInfo = streamBuffers.emplace_back();
+            SubMeshResource::StreamBufferInfo& colorInfo = streamBuffers.emplace_back();
+            SubMeshResource::StreamBufferInfo& normalInfo = streamBuffers.emplace_back();
+            SubMeshResource::StreamBufferInfo& textureInfo = streamBuffers.emplace_back();
+            SubMeshResource::StreamBufferInfo::InitializeBuffer<SubMeshResource::PostionTrait>(&positionInfo,  &position);
+            SubMeshResource::StreamBufferInfo::InitializeBuffer<SubMeshResource::ColorTrait>(&colorInfo, &color);
+            SubMeshResource::StreamBufferInfo::InitializeBuffer<SubMeshResource::NormalTrait>(&normalInfo, &normal);
+            SubMeshResource::StreamBufferInfo::InitializeBuffer<SubMeshResource::TextureTrait>(&textureInfo, &uv);
+            SubMeshResource::StreamBufferInfo::InitializeBuffer<SubMeshResource::TangentTrait>(&tangentInfo, &tangent);
+            AssetBuffer::BufferIndexView indexView = indexInfo.GetView();
+
+            MeshUtility::CreatePlane(
+                cMath::ToForgeVec3(vStartCorner),
+                cMath::ToForgeVec3(vEndCorner),
+                std::array<Vector2, 4>{
+                    cMath::ToForgeVec2(vUVCorners[0]),
+                    cMath::ToForgeVec2(vUVCorners[1]),
+                    cMath::ToForgeVec2(vUVCorners[2]),
+                    cMath::ToForgeVec2(vUVCorners[3])
+                }, nullptr, nullptr,
+                &uv,
+                &position,
+                &normal,
+                &indexView
+            );
 			//Create the mesh
 			cMesh *pMesh = mpGraphics->GetMeshCreator()->CreatePlane(sName,vStartCorner,vEndCorner,
 																	 vUVCorners[0],vUVCorners[1], vUVCorners[2], vUVCorners[3],

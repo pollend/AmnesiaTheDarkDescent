@@ -49,7 +49,7 @@ namespace hpl::MeshUtility {
     bool CreatePlane(
         const Vector3& p1,
         const Vector3& p2,
-        const std::array<Vector3, 4> uvPoints,
+        const std::array<Vector2, 4> uvPoints,
         uint32_t* indexOffset,
         uint32_t* vertexOffset,
         AssetBuffer::BufferStructuredView<float2>* uvs,
@@ -67,11 +67,12 @@ namespace hpl::MeshUtility {
         AssetBuffer::BufferIndexView* index);
 
     bool CreateBox(
-        const Vector3& size,
+        const Vector3& boxSize,
         uint32_t* indexOffset,
         uint32_t* vertexOffset,
         AssetBuffer::BufferStructuredView<float3>* position,
         AssetBuffer::BufferStructuredView<float3>* normal,
+        AssetBuffer::BufferStructuredView<float2>* uv0,
         AssetBuffer::BufferIndexView* index);
 
     void CreateUVSphere(

@@ -70,9 +70,7 @@ namespace hpl {
         cMaterial* GetMaterial();
         iVertexBuffer* GetVertexBuffer();
 
-        const tString& GetName() {
-            return m_name;
-        }
+        const tString& GetName() {return m_name;}
 
         // Vertex-Bone pairs
         void ResizeVertexBonePairs(int alSize);
@@ -130,7 +128,6 @@ namespace hpl {
         }
 
         void Compile();
-
     private:
         cMaterialManager* m_materialManager = nullptr;
         tString m_name;

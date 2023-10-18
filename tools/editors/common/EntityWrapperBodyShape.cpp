@@ -372,10 +372,13 @@ cMesh* cEntityWrapperBodyShape::CreateShape()
 	tString sMat = pType->GetMaterialFile(HasParentBody(), mbSelected);
 
 	int lMeshResolution = 18;
-	cMesh* pMesh = NULL;
-	cMeshCreator* pCreator = GetEditorWorld()->GetEditor()->GetEngine()->GetGraphics()->GetMeshCreator();
+    auto* resources = GetEditorWorld()->GetEditor()->GetEngine()->GetResources();
+	cMesh *pMesh = new cMesh("", _W(""), resources->GetMaterialManager(), resources->GetAnimationManager());
 
-    std::shared_ptr<SubMeshResource> model = std::make_shared<SubMeshResource>("", GetEditorWorld()->GetEditor()->GetEngine()->GetResources()->GetMaterialManager());
+    std::shared_ptr<SubMeshResource> model = std::make_shared<SubMeshResource>("Main", resources->GetMaterialManager());
+	cMaterial *pMat = resources->GetMaterialManager()->CreateMaterial(sMat);
+	model->SetMaterial(pMat);
+    pMesh->AddModel(model);
 
     std::vector<SubMeshResource::StreamBufferInfo> streamBuffers;
     auto position = AssetBuffer::BufferStructuredView<float3>();
@@ -395,29 +398,73 @@ cMesh* cEntityWrapperBodyShape::CreateShape()
     SubMeshResource::StreamBufferInfo::InitializeBuffer<SubMeshResource::TextureTrait>(&textureInfo, &uv);
     SubMeshResource::StreamBufferInfo::InitializeBuffer<SubMeshResource::TangentTrait>(&tangentInfo, &tangent);
     AssetBuffer::BufferIndexView indexView = indexInfo.GetView();
+    uint32_t verticesIdx = 0;
+    uint32_t indeciesIdx = 0;
 
-	switch(mShapeType)
-	{
-	case eEditorBodyShape_Box:		{
-	        MeshUtility::CreateBox(
-	            cMath::ToForgeVec3(mvScale),
-	            nullptr,
-	            nullptr,
-	            &position,
-	            &normal,
-	            &indexView
-	        );
-			break;
-	}
-	case eEditorBodyShape_Sphere:	pMesh = pCreator->CreateSphere("", mvScale.x, lMeshResolution, lMeshResolution, sMat); //mCustomBV.SetSize(cVector3f(2)); //diameter = radius*2 = 2
-									break;
-	case eEditorBodyShape_Cylinder:	pMesh = pCreator->CreateCylinder("", cVector2f(mvScale.x, mvScale.y), lMeshResolution, sMat); //mCustomBV.SetSize(cVector3f(2,1,2));  //diameter = radius*2 = 2
-									break;
-	case eEditorBodyShape_Capsule:	pMesh = pCreator->CreateCapsule("", cVector2f(mvScale.x, mvScale.y), lMeshResolution, 5, sMat); //mCustomBV.SetSize(cVector3f(2,1,2));  //diameter = radius*2 = 2//mCustomBV.SetSize(cVector3f(2,1,2));  //diameter = radius*2 = 2
-									break;
-	}
+    switch (mShapeType) {
+        case eEditorBodyShape_Box: {
+            MeshUtility::CreateBox(cMath::ToForgeVec3(mvScale),
+                                   &indeciesIdx,
+                                   &verticesIdx,
+                                   &position,
+                                   &normal,
+                                   &uv,
+                                   &indexView);
+            break;
+        }
+        case eEditorBodyShape_Sphere: {
+            MeshUtility::CreateUVSphere(
+                            mvScale.x,
+                            lMeshResolution,
+                            lMeshResolution,
+                            &indeciesIdx,
+                            &verticesIdx,
+                            &position,
+                            &normal,
+                            &indexView);
+            break;
+        }
+        case eEditorBodyShape_Cylinder:
+            MeshUtility::CreateCylinder(mvScale.x,
+                                        mvScale.y,
+                                        lMeshResolution,
+                                        &indeciesIdx,
+                                        &verticesIdx,
+                                        &position,
+                                        &normal,
+                                        &indexView);
+            break;
+        case eEditorBodyShape_Capsule:
+            MeshUtility::CreateCapsule(
+                mvScale.x,
+                mvScale.y,
+                lMeshResolution,
+                5,
+                &indeciesIdx,
+                &verticesIdx,
+                &position,
+                &normal,
+                &indexView);
+            break;
+        default:
+            ASSERT(false);
+            break;
+    }
 
-	return pMesh;
+    for(size_t i = 0; i < verticesIdx; i++) {
+        color.Insert(i, float4(1.0f, 1.0f, 1.0f, 1.0f));
+        uv.Insert(i,float2(0,0));
+        tangent.Insert(i,float3(0,0,0));
+    }
+    for(auto& stream: streamBuffers) {
+        stream.m_numberElements = verticesIdx;
+    }
+
+    model->SetStreamBuffer(std::move(streamBuffers));
+    model->SetIndexBuffer(std::move(indexInfo));
+
+
+    return pMesh;
 }
 
 //---------------------------------------------------------------------------

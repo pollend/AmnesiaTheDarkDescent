@@ -1,11 +1,13 @@
 #include "graphics/MeshUtility.h"
 #include "math/Math.h"
 
+
 #include "Common_3/Utilities/Math/MathTypes.h"
 #include "FixPreprocessor.h"
 
 #include <cfloat>
 #include <cstdint>
+
 
 namespace hpl::MeshUtility {
 
@@ -20,15 +22,15 @@ namespace hpl::MeshUtility {
             for(size_t i = 0; i < numElements; i++) {
                 if(position) {
                     float3 value = position->Get(i);
-                    position->Set(i, v3ToF3((transform * Vector4(f3Tov3(value), 1.0f)).getXYZ()));
+                    position->Insert(i, v3ToF3((transform * Vector4(f3Tov3(value), 1.0f)).getXYZ()));
                 }
                 if(normal) {
                     float3 value = normal->Get(i);
-                    normal->Set(i, v3ToF3(normalMat * f3Tov3(value)));
+                    normal->Insert(i, v3ToF3(normalMat * f3Tov3(value)));
                 }
                 if(tangent) {
                     float3 value = tangent->Get(i);
-                    tangent->Set(i, v3ToF3(normalMat * f3Tov3(value)));
+                    tangent->Insert(i, v3ToF3(normalMat * f3Tov3(value)));
                 }
 
             }
@@ -58,9 +60,9 @@ namespace hpl::MeshUtility {
 		const float halfPiOverSlices = (PI / 2.0f)* invSlices;
 
         const uint32_t topCenterVtxIdx = currentVertexIdx++;
-	    position->Append(float3(0.0f, max(halfHeight, radius), 0.0f));
+	    position->Insert(topCenterVtxIdx, float3(0.0f, max(halfHeight, radius), 0.0f));
         if(normal) {
-            normal->Append(float3(0.0f,1.0f,0.0f));
+            normal->Insert(topCenterVtxIdx,float3(0.0f,1.0f,0.0f));
         }
         {
             const uint32_t startEdgeIndex = currentVertexIdx;
@@ -70,32 +72,29 @@ namespace hpl::MeshUtility {
                 const float sliceRadius = radius * cos(asin(height / radius));
                 uint32_t edgeIndex = 0;
                 for (float angle = 0; angle <= (2.0f * PI - sectionStep); angle += sectionStep, edgeIndex++) {
-		            const Vector3 point = Vector3(cMath::RoundFloatToDecimals(sliceRadius*cos(angle), 6),
-										         cMath::RoundFloatToDecimals(height, 6),
-										         cMath::RoundFloatToDecimals(sliceRadius*sin(angle),6));
-			        Vector3 norm = normalize(point - Vector3(0, cylinderHalfHeight, 0));
-                    position->Append(v3ToF3(point));
+                    const Vector3 point = Vector3(cMath::RoundFloatToDecimals(sliceRadius*cos(angle), 6),
+                                                cMath::RoundFloatToDecimals(height, 6),
+                                                cMath::RoundFloatToDecimals(sliceRadius*sin(angle),6));
+                    Vector3 norm = normalize(point - Vector3(0, cylinderHalfHeight, 0));
+                    position->Insert(currentVertexIdx,v3ToF3(point));
                     if(normal) {
-                        normal->Append(v3ToF3(norm));
+                        normal->Insert(currentVertexIdx, v3ToF3(norm));
                     }
-			        if(i == 0) {
-                        currentIndexIdx += 3;
-                        index->Append(topCenterVtxIdx);
-                        index->Append(startEdgeIndex + edgeIndex - 1);
-                        index->Append(startEdgeIndex + edgeIndex);
+                    currentVertexIdx++;
+                    if(i == 0) {
+                        index->Insert(currentIndexIdx++, topCenterVtxIdx);
+                        index->Insert(currentIndexIdx++, startEdgeIndex + edgeIndex - 1);
+                        index->Insert(currentIndexIdx++, startEdgeIndex + edgeIndex);
 			        } else {
-                        currentIndexIdx += 3;
-                        index->Append(lastStartEdgeIndex + edgeIndex);
-                        index->Append(lastStartEdgeIndex + edgeIndex - 1);
-                        index->Append(startEdgeIndex + edgeIndex);
+                        index->Insert(currentIndexIdx++, lastStartEdgeIndex + edgeIndex);
+                        index->Insert(currentIndexIdx++, lastStartEdgeIndex + edgeIndex - 1);
+                        index->Insert(currentIndexIdx++, startEdgeIndex + edgeIndex);
 
-                        currentIndexIdx += 3;
-                        index->Append(startEdgeIndex + edgeIndex - 1);
-                        index->Append(lastStartEdgeIndex + edgeIndex - 1);
-                        index->Append(lastStartEdgeIndex + edgeIndex);
+                        index->Insert(currentIndexIdx++, startEdgeIndex + edgeIndex - 1);
+                        index->Insert(currentIndexIdx++, lastStartEdgeIndex + edgeIndex - 1);
+                        index->Insert(currentIndexIdx++, lastStartEdgeIndex + edgeIndex);
                     }
                 }
-                currentVertexIdx += edgeIndex;
                 lastStartEdgeIndex = startEdgeIndex;
             }
         }
@@ -114,35 +113,29 @@ namespace hpl::MeshUtility {
                     cMath::RoundFloatToDecimals(-cylinderHalfHeight, 6),
                     cMath::RoundFloatToDecimals(radius * sin(angle), 6));
 
-                position->Append(v3ToF3(p1));
-                position->Append(v3ToF3(p2));
+                position->Insert(currentVertexIdx++,v3ToF3(p1));
+                position->Insert(currentVertexIdx++,v3ToF3(p2));
                 if (normal) {
                     Vector3 norm = Vector3(cos(angle), 0.0f, sin(angle));
-                    normal->Append(v3ToF3(norm));
-                    normal->Append(v3ToF3(norm));
-                }
-                if(edgeIndex >= 2) {
-                    currentIndexIdx += 3;
-                    index->Append(startEdgeIndex + edgeIndex);
-                    index->Append(startEdgeIndex + edgeIndex - 2);
-                    index->Append(startEdgeIndex + edgeIndex - 1);
+                    normal->Insert(currentVertexIdx - 2, v3ToF3(norm));
+                    normal->Insert(currentVertexIdx - 1, v3ToF3(norm));
+                } if(edgeIndex >= 2) {
+                    index->Insert(currentIndexIdx++, startEdgeIndex + edgeIndex);
+                    index->Insert(currentIndexIdx++, startEdgeIndex + edgeIndex - 2);
+                    index->Insert(currentIndexIdx++, startEdgeIndex + edgeIndex - 1);
 
-                    currentIndexIdx += 3;
-                    index->Append(startEdgeIndex + edgeIndex);
-                    index->Append(startEdgeIndex + edgeIndex - 1);
-                    index->Append(startEdgeIndex + edgeIndex + 1);
+                    index->Insert(currentIndexIdx++, startEdgeIndex + edgeIndex);
+                    index->Insert(currentIndexIdx++, startEdgeIndex + edgeIndex - 1);
+                    index->Insert(currentIndexIdx++, startEdgeIndex + edgeIndex + 1);
                 }
             }
-            currentVertexIdx += edgeIndex;
-            currentIndexIdx += 3;
-            index->Append(startEdgeIndex + edgeIndex);
-            index->Append(startEdgeIndex);
-            index->Append(startEdgeIndex +  1);
+            index->Insert(currentIndexIdx++, startEdgeIndex + edgeIndex);
+            index->Insert(currentIndexIdx++, startEdgeIndex);
+            index->Insert(currentIndexIdx++, startEdgeIndex +  1);
 
-            currentIndexIdx += 3;
-            index->Append(startEdgeIndex + edgeIndex);
-            index->Append(startEdgeIndex + 1);
-            index->Append(startEdgeIndex + edgeIndex + 1);
+            index->Insert(currentIndexIdx++, startEdgeIndex + edgeIndex);
+            index->Insert(currentIndexIdx++, startEdgeIndex + 1);
+            index->Insert(currentIndexIdx++, startEdgeIndex + edgeIndex + 1);
         }
         {
             const uint32_t startEdgeIndex = currentVertexIdx;
@@ -156,28 +149,25 @@ namespace hpl::MeshUtility {
 										         cMath::RoundFloatToDecimals(-height, 6),
 										         cMath::RoundFloatToDecimals(sliceRadius*sin(angle),6));
 			        Vector3 norm = normalize(point + Vector3(0, cylinderHalfHeight, 0));
-                    position->Append(v3ToF3(point));
+                    position->Insert(currentVertexIdx, v3ToF3(point));
                     if(normal) {
-                        normal->Append(v3ToF3(norm));
+                        normal->Insert(currentVertexIdx,v3ToF3(norm));
                     }
+                    currentVertexIdx++;
 			        if(i == 0) {
-                        currentIndexIdx += 3;
-                        index->Append(topCenterVtxIdx);
-                        index->Append(startEdgeIndex + edgeIndex - 1);
-                        index->Append(startEdgeIndex + edgeIndex);
+                        index->Insert(currentIndexIdx++,topCenterVtxIdx);
+                        index->Insert(currentIndexIdx++,startEdgeIndex + edgeIndex - 1);
+                        index->Insert(currentIndexIdx++,startEdgeIndex + edgeIndex);
 			        } else {
-                        currentIndexIdx += 3;
-                        index->Append(lastStartEdgeIndex + edgeIndex);
-                        index->Append(lastStartEdgeIndex + edgeIndex - 1);
-                        index->Append(startEdgeIndex + edgeIndex);
+                        index->Insert(currentIndexIdx++,lastStartEdgeIndex + edgeIndex);
+                        index->Insert(currentIndexIdx++,lastStartEdgeIndex + edgeIndex - 1);
+                        index->Insert(currentIndexIdx++,startEdgeIndex + edgeIndex);
 
-                        currentIndexIdx += 3;
-                        index->Append(startEdgeIndex + edgeIndex - 1);
-                        index->Append(lastStartEdgeIndex + edgeIndex - 1);
-                        index->Append(lastStartEdgeIndex + edgeIndex);
+                        index->Insert(currentIndexIdx++,startEdgeIndex + edgeIndex - 1);
+                        index->Insert(currentIndexIdx++,lastStartEdgeIndex + edgeIndex - 1);
+                        index->Insert(currentIndexIdx++,lastStartEdgeIndex + edgeIndex);
                     }
                 }
-                currentVertexIdx += edgeIndex;
                 lastStartEdgeIndex = startEdgeIndex;
             }
         }
@@ -209,15 +199,15 @@ namespace hpl::MeshUtility {
         uint32_t currentVertexIdx = vertexOffset ? (*vertexOffset) : 0;
 
         const uint32_t topVertexIdx = (currentVertexIdx++);
-        position->Append(float3(0.0f, halfHeight, 0.0f));
+        position->Insert(topVertexIdx,float3(0.0f, halfHeight, 0.0f));
         if(normal) {
-            normal->Append(float3(0,1,0));
+            normal->Insert(topVertexIdx,float3(0,1,0));
         }
 
         const uint32_t bottomVertexIdx = (currentVertexIdx++);
-        position->Append(float3(0.0f, -halfHeight, 0.0f));
+        position->Insert(bottomVertexIdx,float3(0.0f, -halfHeight, 0.0f));
         if(normal) {
-            normal->Append(float3(0,-1,0));
+            normal->Insert(bottomVertexIdx,float3(0,-1,0));
         }
 
         uint32_t edgeIndex = 0;
@@ -226,37 +216,33 @@ namespace hpl::MeshUtility {
 			Vector3 point = Vector3(cMath::RoundFloatToDecimals(radius*cos(angle), 6),
 										 cMath::RoundFloatToDecimals(-height, 6),
 										 cMath::RoundFloatToDecimals(radius*sin(angle),6));
-            position->Append(v3ToF3(point));
-            Vector3 norm = normalize(point);
+            position->Insert(currentVertexIdx, v3ToF3(point));
             if(normal) {
-                normal->Append(v3ToF3(norm));
+                Vector3 norm = normalize(point);
+                normal->Insert(currentVertexIdx,v3ToF3(norm));
             }
+            currentVertexIdx++;
 
             if(edgeIndex > 0) {
-                currentIndexIdx += 3;
-                index->Append(topVertexIdx);
-                index->Append(startEdgeIndex + edgeIndex - 1);
-                index->Append(startEdgeIndex + edgeIndex);
+                index->Insert(currentIndexIdx++,topVertexIdx);
+                index->Insert(currentIndexIdx++,startEdgeIndex + edgeIndex - 1);
+                index->Insert(currentIndexIdx++,startEdgeIndex + edgeIndex);
 
-                currentIndexIdx += 3;
-                index->Append(bottomVertexIdx);
-                index->Append(startEdgeIndex + edgeIndex - 1);
-                index->Append(startEdgeIndex + edgeIndex);
+                index->Insert(currentIndexIdx++,bottomVertexIdx);
+                index->Insert(currentIndexIdx++,startEdgeIndex + edgeIndex - 1);
+                index->Insert(currentIndexIdx++,startEdgeIndex + edgeIndex);
 
             }
         }
-        currentVertexIdx += edgeIndex;
-        currentIndexIdx += 3;
         const uint32_t endEdgeIndex = currentVertexIdx - 1;
 
-        index->Append(topVertexIdx);
-        index->Append(startEdgeIndex);
-        index->Append(endEdgeIndex);
+        index->Insert(currentIndexIdx++, topVertexIdx);
+        index->Insert(currentIndexIdx++,startEdgeIndex);
+        index->Insert(currentIndexIdx++,endEdgeIndex);
 
-        currentIndexIdx += 3;
-        index->Append(bottomVertexIdx);
-        index->Append(startEdgeIndex);
-        index->Append(endEdgeIndex);
+        index->Insert(currentIndexIdx++,bottomVertexIdx);
+        index->Insert(currentIndexIdx++,startEdgeIndex);
+        index->Insert(currentIndexIdx++,endEdgeIndex);
         if(indexOffset) {
             (*indexOffset) = currentIndexIdx;
         }
@@ -284,10 +270,10 @@ namespace hpl::MeshUtility {
         const float halfHeight = height * 0.5f;
 
         uint32_t topCenterVtxIdx = currentVertexIdx++;
-        position->Append(float3(0.0f, halfHeight, 0.0f));
+        position->Insert(topCenterVtxIdx, float3(0.0f, halfHeight, 0.0f));
 
         uint32_t boffomCenterVtxIdx = currentVertexIdx++;
-        position->Append(float3(0.0f, -halfHeight, 0.0f));
+        position->Insert(boffomCenterVtxIdx, float3(0.0f, -halfHeight, 0.0f));
 
         const uint32_t topStartEdgeIndex = currentVertexIdx;
         uint32_t edgeIndex = 0;
@@ -296,25 +282,23 @@ namespace hpl::MeshUtility {
 			Vector3 point = Vector3(cMath::RoundFloatToDecimals(radius*cos(angle), 6),
 										 cMath::RoundFloatToDecimals(halfHeight, 6),
 										 cMath::RoundFloatToDecimals(radius*sin(angle),6));
-            position->Append(v3ToF3(point));
-            Vector3 norm = normalize(point);
+            position->Insert(currentVertexIdx,v3ToF3(point));
             if(normal) {
-                normal->Append(v3ToF3(norm));
+                Vector3 norm = normalize(point);
+                normal->Insert(currentVertexIdx,v3ToF3(norm));
             }
+            currentVertexIdx++;
 
             if(edgeIndex > 0) {
-                currentIndexIdx += 3;
-                index->Append(topCenterVtxIdx);
-                index->Append(topStartEdgeIndex  + edgeIndex - 1);
-                index->Append(topStartEdgeIndex  + edgeIndex);
+                index->Insert(currentIndexIdx++, topCenterVtxIdx);
+                index->Insert(currentIndexIdx++, topStartEdgeIndex  + edgeIndex - 1);
+                index->Insert(currentIndexIdx++, topStartEdgeIndex  + edgeIndex);
             }
         }
-        currentVertexIdx += edgeIndex;
         const uint32_t topEndEdgeIndex = currentVertexIdx - 1;
-        currentIndexIdx += 3;
-        index->Append(topCenterVtxIdx);
-        index->Append(edgeIndex - 1);
-        index->Append(topStartEdgeIndex + 1);
+        index->Insert(currentIndexIdx++,topCenterVtxIdx);
+        index->Insert(currentIndexIdx++,edgeIndex - 1);
+        index->Insert(currentIndexIdx++,topStartEdgeIndex + 1);
 
         const uint32_t bottomStartEdgeIndex = currentVertexIdx;
         edgeIndex = 0;
@@ -323,44 +307,38 @@ namespace hpl::MeshUtility {
 			Vector3 point = Vector3(cMath::RoundFloatToDecimals(radius*cos(angle), 6),
 										 cMath::RoundFloatToDecimals(-halfHeight, 6),
 										 cMath::RoundFloatToDecimals(radius*sin(angle),6));
-            position->Append(v3ToF3(point));
-            Vector3 norm = normalize(point);
+            position->Insert(currentVertexIdx, v3ToF3(point));
             if(normal) {
-                normal->Append(v3ToF3(norm));
+                Vector3 norm = normalize(point);
+                normal->Insert(currentVertexIdx,v3ToF3(norm));
             }
+            currentVertexIdx++;
             if(edgeIndex > 0) {
-                currentIndexIdx += 3;
-                index->Append(boffomCenterVtxIdx);
-                index->Append(bottomStartEdgeIndex  + edgeIndex - 1);
-                index->Append(bottomStartEdgeIndex  + edgeIndex);
+                index->Insert(currentIndexIdx++, boffomCenterVtxIdx);
+                index->Insert(currentIndexIdx++, bottomStartEdgeIndex  + edgeIndex - 1);
+                index->Insert(currentIndexIdx++, bottomStartEdgeIndex  + edgeIndex);
 
-                currentIndexIdx += 3;
-                index->Append(topStartEdgeIndex + edgeIndex);
-                index->Append(topStartEdgeIndex + edgeIndex - 1);
-                index->Append(bottomStartEdgeIndex  + edgeIndex);
+                index->Insert(currentIndexIdx++, topStartEdgeIndex + edgeIndex);
+                index->Insert(currentIndexIdx++, topStartEdgeIndex + edgeIndex - 1);
+                index->Insert(currentIndexIdx++, bottomStartEdgeIndex  + edgeIndex);
 
-                currentIndexIdx += 3;
-                index->Append(topStartEdgeIndex + edgeIndex - 1);
-                index->Append(bottomStartEdgeIndex + edgeIndex - 1);
-                index->Append(bottomStartEdgeIndex + edgeIndex);
+                index->Insert(currentIndexIdx++, topStartEdgeIndex + edgeIndex - 1);
+                index->Insert(currentIndexIdx++, bottomStartEdgeIndex + edgeIndex - 1);
+                index->Insert(currentIndexIdx++, bottomStartEdgeIndex + edgeIndex);
             }
         }
-        currentVertexIdx += edgeIndex;
-        currentIndexIdx += 3;
         const uint32_t bottomEndEdgeIndex = currentVertexIdx - 1;
-        index->Append(boffomCenterVtxIdx);
-        index->Append(edgeIndex - 1);
-        index->Append(bottomStartEdgeIndex + 1);
+        index->Insert(currentIndexIdx++, boffomCenterVtxIdx);
+        index->Insert(currentIndexIdx++, edgeIndex - 1);
+        index->Insert(currentIndexIdx++, bottomStartEdgeIndex + 1);
 
-        currentIndexIdx += 3;
-        index->Append(topEndEdgeIndex);
-        index->Append(bottomEndEdgeIndex);
-        index->Append(bottomStartEdgeIndex);
+        index->Insert(currentIndexIdx++, topEndEdgeIndex);
+        index->Insert(currentIndexIdx++, bottomEndEdgeIndex);
+        index->Insert(currentIndexIdx++, bottomStartEdgeIndex);
 
-        currentIndexIdx += 3;
-        index->Append(topStartEdgeIndex);
-        index->Append(topEndEdgeIndex);
-        index->Append(bottomStartEdgeIndex);
+        index->Insert(currentIndexIdx++, topStartEdgeIndex);
+        index->Insert(currentIndexIdx++, topEndEdgeIndex);
+        index->Insert(currentIndexIdx++, bottomStartEdgeIndex);
 
         if(indexOffset) {
             (*indexOffset) = currentIndexIdx;
@@ -383,13 +361,13 @@ namespace hpl::MeshUtility {
         AssetBuffer::BufferStructuredView<float3>* position,
         AssetBuffer::BufferStructuredView<float3>* normal,
         AssetBuffer::BufferIndexView* index) {
-
+        uint32_t currentVertexIdx = vertexOffset ? (*vertexOffset) : 0;
         if(CreatePlane(p1, p2, indexOffset, vertexOffset, position, normal, index)) {
             if(uvs) {
-                uvs->Append(v2ToF2(uvPoints[0]));
-                uvs->Append(v2ToF2(uvPoints[1]));
-                uvs->Append(v2ToF2(uvPoints[2]));
-                uvs->Append(v2ToF2(uvPoints[3]));
+                uvs->Insert(currentVertexIdx++, v2ToF2(uvPoints[0]));
+                uvs->Insert(currentVertexIdx++, v2ToF2(uvPoints[1]));
+                uvs->Insert(currentVertexIdx++, v2ToF2(uvPoints[2]));
+                uvs->Insert(currentVertexIdx++, v2ToF2(uvPoints[3]));
             }
             return true;
         }
@@ -410,27 +388,23 @@ namespace hpl::MeshUtility {
         std::array<float, 2> direction = { -1, 1 };
         auto addFace = [&](const std::array<Vector2, 4> texCoords, const std::array<Vector3, 4>& dirPoints, const Vector3& norm) {
             const uint32_t firstIndex = currentVertexIdx;
-            for (auto& scaler : dirPoints) {
-                position->Append(v3ToF3(mulPerElem(boxSize, scaler)));
+            for(size_t i = 0; i < 4; i++) {
+                position->Insert(currentVertexIdx, v3ToF3(mulPerElem(boxSize, dirPoints[i])));
                 if (normal) {
-                    normal->Append(v3ToF3(norm));
+                    normal->Insert(currentVertexIdx, v3ToF3(norm));
                 }
-            }
-            if (uv0) {
-                for (auto& coord : texCoords) {
-                    uv0->Append(v2ToF2(coord));
+                if(uv0) {
+                    uv0->Insert(currentVertexIdx, v2ToF2(texCoords[i]));
                 }
+                currentVertexIdx++;
             }
-            currentVertexIdx += 4;
-            currentIndexIdx += 3;
-            index->Append(firstIndex);
-            index->Append(firstIndex + 1);
-            index->Append(firstIndex + 2);
+            index->Insert(currentIndexIdx++,firstIndex);
+            index->Insert(currentIndexIdx++,firstIndex + 1);
+            index->Insert(currentIndexIdx++,firstIndex + 2);
 
-            currentIndexIdx += 3;
-            index->Append(firstIndex + 2);
-            index->Append(firstIndex + 3);
-            index->Append(firstIndex + 0);
+            index->Insert(currentIndexIdx++,firstIndex + 2);
+            index->Insert(currentIndexIdx++,firstIndex + 3);
+            index->Insert(currentIndexIdx++,firstIndex + 0);
         };
 
         for (auto& dir : direction) {
@@ -539,10 +513,11 @@ namespace hpl::MeshUtility {
         }
 
         auto pushVertex = [&](const Vector3& p,const Vector3& n) {
-            position->Append(v3ToF3(p));
+            position->Insert(currentVertexIdx, v3ToF3(p));
             if(normal) {
-                normal->Append(v3ToF3(n));
+                normal->Insert(currentVertexIdx,v3ToF3(n));
             }
+            currentVertexIdx++;
         };
 
         switch(axis) {
@@ -572,26 +547,24 @@ namespace hpl::MeshUtility {
                 break;
         }
         if(winding == PlaneWinding::CCW) {
-            index->Append(currentVertexIdx + 0);
-            index->Append(currentVertexIdx + 2);
-            index->Append(currentVertexIdx + 1);
+            index->Insert(currentIndexIdx++,currentVertexIdx + 0);
+            index->Insert(currentIndexIdx++,currentVertexIdx + 2);
+            index->Insert(currentIndexIdx++,currentVertexIdx + 1);
         } else {
-            index->Append(currentVertexIdx + 0);
-            index->Append(currentVertexIdx + 1);
-            index->Append(currentVertexIdx + 2);
+            index->Insert(currentIndexIdx++,currentVertexIdx + 0);
+            index->Insert(currentIndexIdx++,currentVertexIdx + 1);
+            index->Insert(currentIndexIdx++,currentVertexIdx + 2);
         }
 
         if(winding == PlaneWinding::CCW) {
-            index->Append(currentVertexIdx + 0);
-            index->Append(currentVertexIdx + 3);
-            index->Append(currentVertexIdx + 2);
+            index->Insert(currentIndexIdx++,currentVertexIdx + 0);
+            index->Insert(currentIndexIdx++,currentVertexIdx + 3);
+            index->Insert(currentIndexIdx++,currentVertexIdx + 2);
         } else {
-            index->Append(currentVertexIdx + 0);
-            index->Append(currentVertexIdx + 2);
-            index->Append(currentVertexIdx + 3);
+            index->Insert(currentIndexIdx++,currentVertexIdx + 0);
+            index->Insert(currentIndexIdx++,currentVertexIdx + 2);
+            index->Insert(currentIndexIdx++,currentVertexIdx + 3);
         }
-        currentVertexIdx += 4;
-        currentIndexIdx += 6;
 
         if(indexOffset) {
             (*indexOffset) = currentIndexIdx;
@@ -625,13 +598,15 @@ namespace hpl::MeshUtility {
         const float piOverSlices = PI * invSlices;
 
         const uint32_t topCenterVtxIdx = currentVertexIdx++;
-        position->Append(float3(0.0f,radius,0.0f));
-        normal->Append(float3(0.0f,1.0f, 0.0f));
+        position->Insert(topCenterVtxIdx, float3(0.0f,radius,0.0f));
+		if(normal) {
+            normal->Insert(topCenterVtxIdx,float3(0.0f,1.0f, 0.0f));
+        }
 
         const uint32_t bottomCenterVtxIdx = currentVertexIdx++;
-        position->Append(float3(0.0f,-radius,0.0f));
+        position->Insert(bottomCenterVtxIdx, float3(0.0f,-radius,0.0f));
 		if(normal) {
-            normal->Append(float3(0.0f,-1.0f, 0.0f));
+            normal->Insert(bottomCenterVtxIdx, float3(0.0f,-1.0f, 0.0f));
         }
         {
             uint32_t lastGroupIdx = 0;
@@ -646,34 +621,30 @@ namespace hpl::MeshUtility {
 										         cMath::RoundFloatToDecimals(height, 6),
 										         cMath::RoundFloatToDecimals(sliceRadius*sin(angle),6));
 			        Vector3 norm = normalize(point);
-			        position->Append(v3ToF3(point));
+			        position->Insert(currentVertexIdx, v3ToF3(point));
 			        if(normal) {
-			            normal->Append(v3ToF3(norm));
+			            normal->Insert(currentVertexIdx,v3ToF3(norm));
 			        }
+			        currentVertexIdx++;
 			        if(i == 0) {
-                        currentIndexIdx += 3;
-                        index->Append(topCenterVtxIdx);
-                        index->Append(startEdgeIndex + edgeIndex - 1);
-                        index->Append(startEdgeIndex + edgeIndex);
+                        index->Insert(currentIndexIdx++, topCenterVtxIdx);
+                        index->Insert(currentIndexIdx++, startEdgeIndex + edgeIndex - 1);
+                        index->Insert(currentIndexIdx++, startEdgeIndex + edgeIndex);
 			        } else {
-                        currentIndexIdx += 3;
-                        index->Append(lastGroupIdx + edgeIndex);
-                        index->Append(lastGroupIdx + edgeIndex - 1);
-                        index->Append(startEdgeIndex + edgeIndex);
+                        index->Insert(currentIndexIdx++, lastGroupIdx + edgeIndex);
+                        index->Insert(currentIndexIdx++, lastGroupIdx + edgeIndex - 1);
+                        index->Insert(currentIndexIdx++, startEdgeIndex + edgeIndex);
 
-                        currentIndexIdx += 3;
-                        index->Append(startEdgeIndex + edgeIndex - 1);
-                        index->Append(startEdgeIndex  + edgeIndex);
-                        index->Append(lastGroupIdx + edgeIndex);
+                        index->Insert(currentIndexIdx++, startEdgeIndex + edgeIndex - 1);
+                        index->Insert(currentIndexIdx++, startEdgeIndex  + edgeIndex);
+                        index->Insert(currentIndexIdx++, lastGroupIdx + edgeIndex);
                         if(i == horizontalSlices - 1) {
-                            currentIndexIdx += 3;
-                            index->Append(bottomCenterVtxIdx);
-                            index->Append(startEdgeIndex + edgeIndex - 1);
-                            index->Append(startEdgeIndex  + edgeIndex);
+                            index->Insert(currentIndexIdx++, bottomCenterVtxIdx);
+                            index->Insert(currentIndexIdx++, startEdgeIndex + edgeIndex - 1);
+                            index->Insert(currentIndexIdx++, startEdgeIndex  + edgeIndex);
                         }
 			        }
                 }
-                currentVertexIdx += edgeIndex;
                 lastGroupIdx = startEdgeIndex;
             }
         }

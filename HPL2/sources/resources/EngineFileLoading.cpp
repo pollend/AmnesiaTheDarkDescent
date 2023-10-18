@@ -424,22 +424,22 @@ namespace hpl {
 
             resolveBuffer("Positions", 4);
 		    for(int vtx=0; vtx < lNumOfVtx; ++vtx) {
-		       position.Append(float3(stageBuffer[(vtx * 4)],stageBuffer[(vtx * 4) + 1],stageBuffer[(vtx * 4) + 2]));
+		       position.Insert(vtx, float3(stageBuffer[(vtx * 4)],stageBuffer[(vtx * 4) + 1],stageBuffer[(vtx * 4) + 2]));
 	        }
 
             resolveBuffer("Normals", 3);
 		    for(int vtx=0; vtx < lNumOfVtx; ++vtx) {
-		       normal.Append(float3(stageBuffer[(vtx * 3)],stageBuffer[(vtx * 3) + 1],stageBuffer[(vtx * 3) + 2]));
+		       normal.Insert(vtx, float3(stageBuffer[(vtx * 3)],stageBuffer[(vtx * 3) + 1],stageBuffer[(vtx * 3) + 2]));
 	        }
 
             resolveBuffer("TexCoords", 3);
 		    for(int vtx=0; vtx < lNumOfVtx; ++vtx) {
-		       uv.Append(float2(stageBuffer[(vtx * 3)],stageBuffer[(vtx * 3) + 1]));
+		       uv.Insert(vtx, float2(stageBuffer[(vtx * 3)],stageBuffer[(vtx * 3) + 1]));
 	        }
 
             resolveBuffer("Tangents", 4);
 		    for(int vtx=0; vtx < lNumOfVtx; ++vtx) {
-		       tangent.Append(float3(stageBuffer[(vtx * 4)],stageBuffer[(vtx * 4) + 1],stageBuffer[(vtx * 4) + 2]));
+		       tangent.Insert(vtx, float3(stageBuffer[(vtx * 4)],stageBuffer[(vtx * 4) + 1],stageBuffer[(vtx * 4) + 2]));
 	        }
         }
         {
@@ -449,7 +449,7 @@ namespace hpl {
 		    cString::GetIntVec(pIndicesElem->GetAttributeString("Array"), indexArray,&sSepp);
             AssetBuffer::BufferIndexView view = indexInfo.GetView();
 		    for(int vtx=0; vtx < lNumOfVtx; ++vtx) {
-		       view.Append(indexArray[vtx]);
+		       view.Insert(vtx, indexArray[vtx]);
 		    }
         }
 

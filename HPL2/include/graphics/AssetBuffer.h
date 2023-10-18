@@ -48,9 +48,11 @@ namespace hpl {
                 m_byteOffset = view.m_byteOffset;
             }
 
-            void SetBytes(uint32_t byteOffset, std::span<uint8_t> data) {
+            void InsertBytes(uint32_t byteOffset, std::span<uint8_t> data) {
                 for(size_t i = 0; i < data.size(); i++) {
-                    m_asset->m_buffer[m_byteOffset + byteOffset + i] = data[i];
+
+                    m_asset->m_buffer.insert(
+                        m_asset->m_buffer.begin() + byteOffset, data.begin(), data.end());
                 }
             }
 
@@ -62,9 +64,6 @@ namespace hpl {
             void operator=(BufferRawView&& other)  {
                 m_asset = other.m_asset;
                 m_byteOffset = other.m_byteOffset;
-            }
-            void AppendBytes(std::span<uint8_t> bytes) {
-                std::copy(bytes.begin(), bytes.end(), std::back_inserter(m_asset->m_buffer));
             }
 
             inline std::span<uint8_t> RawView() { return m_asset->m_buffer; }
@@ -100,32 +99,27 @@ namespace hpl {
                 m_indexType = other.m_indexType;
             }
 
-            void Set(uint32_t index, uint32_t value) {
-                switch(m_indexType) {
-                    case IndexType::Uint32:
-                        *reinterpret_cast<uint32_t*>(m_asset->m_buffer.data() + (m_byteOffset + (index * sizeof(uint32_t)))) = value;
-                        break;
-                    case IndexType::Uint16:
-                        *reinterpret_cast<uint16_t*>(m_asset->m_buffer.data() + (m_byteOffset + (index * sizeof(uint16_t)))) = value;
-                        break;
-                }
-            }
-            void Append(uint32_t value) {
+            void Insert(uint32_t index, uint32_t value) {
                 switch(m_indexType) {
                     case IndexType::Uint32: {
-                        uint32_t res = value;
-                        uint8_t* ptr = reinterpret_cast<uint8_t*>(&res);
-                        std::copy(ptr, ptr + sizeof(uint32_t), std::back_inserter(m_asset->m_buffer));
+                        uint16_t v = value;
+                        auto buf = std::span(reinterpret_cast<const uint8_t*>(&v), sizeof(uint16_t));
+                        m_asset->m_buffer.insert(
+                            m_asset->m_buffer.begin() +
+                            (m_byteOffset + (index * sizeof(uint32_t))), buf.begin(), buf.end());
                         break;
                     }
-                    case IndexType::Uint16:{
-                        uint16_t res = value;
-                        uint8_t* ptr = reinterpret_cast<uint8_t*>(&res);
-                        std::copy(ptr, ptr + sizeof(uint16_t), std::back_inserter(m_asset->m_buffer));
+                    case IndexType::Uint16: {
+                        uint16_t v = value;
+                        auto buf = std::span(reinterpret_cast<const uint8_t*>(&v), sizeof(uint16_t));
+                        m_asset->m_buffer.insert(
+                            m_asset->m_buffer.begin() +
+                            (m_byteOffset + (index * sizeof(uint16_t))), buf.begin(), buf.end());
                         break;
                     }
                 }
             }
+
         private:
            IndexType m_indexType = IndexType::Uint32;
         };
@@ -164,19 +158,28 @@ namespace hpl {
                 return NumBytes() / m_byteStride;
             }
 
-            void Set(uint32_t index, const T& value) {
-                *reinterpret_cast<T*>(m_asset->m_buffer.data() + (m_byteOffset + (index * m_byteStride))) = value;
+            void Insert(uint32_t index, const T& value) {
+                auto buf = std::span(reinterpret_cast<const uint8_t*>(&value), sizeof(T));
+                m_asset->m_buffer.insert(
+                    m_asset->m_buffer.begin() +
+                    (m_byteOffset + (index * m_byteStride)), buf.begin(), buf.end());
             }
 
-            void Set(uint32_t index, const std::span<T> values) {
-                for (auto& v : values) {
-                    Set(index, v);
-                }
+            void Insert(uint32_t index, const std::span<T> values) {
+                auto buf = std::span<uint8_t>(
+                    reinterpret_cast<const uint8_t*>(values.data()),
+                    values.size() * sizeof(T));
+                m_asset->m_buffer.insert(
+                    m_asset->m_buffer.begin() +
+                    (m_byteOffset + (index * m_byteStride)), buf.begin(), buf.end());
             }
 
-            void Append(const T& value) {
-                const uint8_t* ptr = reinterpret_cast<const uint8_t*>(&value);
-                std::copy(ptr, ptr + sizeof(value), std::back_inserter(m_asset->m_buffer));
+            void ResizeElements(uint32_t numElements) {
+                m_asset->m_buffer.resize(m_byteOffset + (numElements * m_byteStride));
+            }
+
+            void ReserveElements(uint32_t numElements) {
+                m_asset->m_buffer.reserve(m_byteOffset + (numElements * m_byteStride));
             }
 
             T Get(uint32_t index) {

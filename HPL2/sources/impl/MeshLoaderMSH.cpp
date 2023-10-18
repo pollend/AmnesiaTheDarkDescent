@@ -60,7 +60,7 @@ namespace hpl {
                         float value =  binaryBuffer->GetFloat32();
                         val[(i++) % 4] = static_cast<float>(value);
                         if(i % 4 == 0) {
-                            view.Append(val.getXYZ());
+                            view.Insert(i/4,val.getXYZ());
                         }
                     }
 
@@ -74,7 +74,7 @@ namespace hpl {
                         float value =  binaryBuffer->GetFloat32();
                         val[(i++) % 3] = static_cast<float>(value);
                         if(i % 3 == 0) {
-                            view.Append(val);
+                            view.Insert(i/3, val);
                         }
                     }
                     break;
@@ -87,7 +87,7 @@ namespace hpl {
                         float value =  binaryBuffer->GetFloat32();
                         val[(i++) % 4] = static_cast<float>(value);
                         if(i % 4 == 0) {
-                            view.Append(val);
+                            view.Insert(i/4, val);
                         }
                     }
                     break;
@@ -100,7 +100,7 @@ namespace hpl {
                         float value =  binaryBuffer->GetFloat32();
                         val[(i++) % 3] = static_cast<float>(value);
                         if(i % 3 == 0) {
-                            view.Append(val.getXY());
+                            view.Insert(i/3, val.getXY());
                         }
                     }
                     break;
@@ -113,7 +113,7 @@ namespace hpl {
                         float value =  binaryBuffer->GetFloat32();
                         val[(i++) % 4] = static_cast<float>(value);
                         if(i % 4 == 0) {
-                            view.Append(val.getXYZ());
+                            view.Insert(i/4, val.getXYZ());
                         }
                     }
                     break;
@@ -327,7 +327,7 @@ namespace hpl {
                  SubMeshResource::IndexBufferInfo indexInfo;
                 AssetBuffer::BufferIndexView view = indexInfo.GetView();
                 for(size_t i = 0; i < lIdxNum; i++) {
-                    view.Append(binBuff.GetInt32());
+                    view.Insert(i, binBuff.GetInt32());
                 }
                model->SetIndexBuffer(std::move(indexInfo));
 			}

@@ -31,19 +31,11 @@
 
 namespace hpl {
 
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
 	cMeshCreator::cMeshCreator(iLowLevelGraphics *apLowLevelGraphics, cResources *apResources)
 	{
 		mpLowLevelGraphics = apLowLevelGraphics;
 		mpResources = apResources;
 	}
-
-	//-----------------------------------------------------------------------
 
 	cMeshCreator::~cMeshCreator()
 	{

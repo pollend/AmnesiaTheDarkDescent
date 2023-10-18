@@ -496,11 +496,12 @@ namespace hpl {
             SubMeshResource::StreamBufferInfo::InitializeBuffer<SubMeshResource::TangentTrait>(&tangentInfo, &tangent);
             AssetBuffer::BufferIndexView indexView = indexInfo.GetView();
 
-		    for(auto& vert: geometry.mvVertexVec) {
-                position.Append(float3(vert.pos.x, vert.pos.y, vert.pos.z));
-                normal.Append(float3(vert.norm.x, vert.norm.y, vert.norm.z));
-                uv.Append(float2(vert.tex.x, vert.tex.y));
-                color.Append(float4(1,1,1,1));
+		    for(size_t i = 0; i < geometry.mvVertexVec.size(); i++) {
+                auto& vert = geometry.mvVertexVec[i];
+                position.Insert(i, float3(vert.pos.x, vert.pos.y, vert.pos.z));
+                normal.Insert(i, float3(vert.norm.x, vert.norm.y, vert.norm.z));
+                uv.Insert(i, float2(vert.tex.x, vert.tex.y));
+                color.Insert(i, float4(1,1,1,1));
             }
             positionInfo.m_numberElements = geometry.mvVertexVec.size();
             tangentInfo.m_numberElements = geometry.mvVertexVec.size();
@@ -510,7 +511,7 @@ namespace hpl {
 
             for(size_t i = 0; i < geometry.mvTangents.size(); i++) {
                 if((i % 4) == 0 && (i + 4) <= geometry.mvTangents.size()) {
-                    tangent.Append(float3(geometry.mvTangents[i], geometry.mvTangents[i + 1], geometry.mvTangents[i + 2]));
+                    tangent.Insert(i, float3(geometry.mvTangents[i], geometry.mvTangents[i + 1], geometry.mvTangents[i + 2]));
                 }
             }
 
@@ -518,7 +519,7 @@ namespace hpl {
 		    {
 			    //Flip order of indices
 			    size_t idx = (j/3)*3 + (2-(j%3));
-			    indexView.Append(geometry.mvIndexVec[idx]);
+			    indexView.Insert(j, geometry.mvIndexVec[idx]);
 		    }
 
 
