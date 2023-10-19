@@ -39,6 +39,7 @@ namespace hpl {
 
 
         struct VertexElement {
+        public:
             SharedBuffer m_buffer;
             eVertexBufferElementFormat m_format = eVertexBufferElementFormat::eVertexBufferElementFormat_Float;
             eVertexBufferElement m_type = eVertexBufferElement::eVertexBufferElement_Position;
@@ -61,6 +62,12 @@ namespace hpl {
 
             template<typename TData>
             TData& GetElement(size_t index) {
+                ASSERT(sizeof(TData) <= Stride() && "Date must be less than or equal to stride");
+                return *reinterpret_cast<TData*>(m_shadowData.data() + index * Stride());
+            }
+
+            template<typename TData>
+            const TData& GetElement(size_t index) const {
                 ASSERT(sizeof(TData) <= Stride() && "Date must be less than or equal to stride");
                 return *reinterpret_cast<TData*>(m_shadowData.data() + index * Stride());
             }
