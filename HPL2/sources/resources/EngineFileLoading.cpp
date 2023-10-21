@@ -408,6 +408,7 @@ namespace hpl {
         {
 
             std::vector<float> stageBuffer;
+            stageBuffer.reserve(lNumOfVtx * 4);
             auto resolveBuffer = [&](const char* name, uint32_t units) {
                 stageBuffer.clear();
                 stageBuffer.reserve(lNumOfVtx * units);
@@ -435,7 +436,7 @@ namespace hpl {
 	        }
 
 		    for(int vtx=0; vtx < lNumOfVtx; ++vtx) {
-		       color.Write(vtx, float4(1,1,1,1));
+		       color.Write(vtx, float4(aColor.r, aColor.g, aColor.b, aColor.a));
 	        }
 
 	        positionInfo.m_numberElements = lNumOfVtx;

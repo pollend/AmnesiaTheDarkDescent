@@ -669,9 +669,6 @@ namespace hpl {
 		    pSubMesh->SetStreamBuffers(legacyBuffer,
                       std::move(vertexStreams), std::move(indexInfo));
 		    pSubMesh->Compile();
-
-			//Compile the vertex buffer
-			//pVtxBuffer->Compile(0);//eVertexCompileFlag_CreateTangents);
 		}
 
 		/////////////////////////////////////
