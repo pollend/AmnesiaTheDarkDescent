@@ -19,24 +19,68 @@
 
 #include "graphics/SubMesh.h"
 
-#include "system/String.h"
+#include "graphics/AssetBuffer.h"
+#include "graphics/GraphicsTypes.h"
+#include "impl/LegacyVertexBuffer.h"
 
 #include "graphics/Bone.h"
 #include "graphics/Material.h"
 #include "graphics/Mesh.h"
 #include "graphics/Skeleton.h"
 #include "graphics/VertexBuffer.h"
-#include "math/Math.h"
 #include "resources/MaterialManager.h"
 
 #include "physics/PhysicsWorld.h"
 
 #include "system/MemoryManager.h"
+#include "system/String.h"
 
+#include <algorithm>
+#include <cstdint>
 #include <cstring>
 #include <optional>
 
+#include "math/Math.h"
+
+#include "Common_3/Graphics/Interfaces/IGraphics.h"
+#include "Common_3/Utilities/Math/MathTypes.h"
+#include "FixPreprocessor.h"
+
 namespace hpl {
+    namespace detail {
+        template<typename Trait>
+        void TryCopyToStreamBuffers(LegacyVertexBuffer* buffer, eVertexBufferElement element, std::vector<cSubMesh::StreamBufferInfo>& vertexBuffers) {
+            auto* lvbElement = buffer->GetElement(element);
+            if(lvbElement) {
+                cSubMesh::StreamBufferInfo& info = vertexBuffers.emplace_back();
+                AssetBuffer::BufferStructuredView<typename Trait::Type> view;
+                cSubMesh::StreamBufferInfo::InitializeBuffer<Trait>(&info, &view);
+                uint32_t numElements = lvbElement->NumElements();
+                view.ReserveElements(numElements);
+                for(size_t i = 0; i < numElements; i++) {
+                    auto value = lvbElement->GetElement<typename Trait::Type>(i);
+                    view.Write(i, value);
+                }
+            }
+        }
+
+        void CopyStreamBufferVertexBuffer(cSubMesh::StreamBufferInfo& srcInfo, eVertexBufferElement element, uint32_t elementCount, LegacyVertexBuffer* target) {
+            auto* lvbElement = target->GetElement(element);
+            if(!lvbElement) {
+                target->CreateElementArray(element, eVertexBufferElementFormat_Float, elementCount);
+                lvbElement = target->GetElement(element);
+            }
+            ASSERT(lvbElement);
+            ASSERT(lvbElement->m_format == eVertexBufferElementFormat::eVertexBufferElementFormat_Float);
+            auto rawView = srcInfo.m_buffer.CreateViewRaw();
+            target->ResizeArray(element, elementCount * srcInfo.m_numberElements);
+            float* destData = target->GetFloatArray(element);
+            for(size_t idx = 0; idx < srcInfo.m_numberElements; idx++) {
+                auto buf = rawView.RawView();
+                std::memcpy(destData + (elementCount * idx), buf.data() + (srcInfo.m_stride * idx), std::min(srcInfo.m_stride, static_cast<uint32_t>(sizeof(float) * elementCount)));
+            }
+        }
+    }
 
     cSubMesh::cSubMesh(const tString& asName, cMaterialManager* apMaterialManager)
         : m_materialManager(apMaterialManager)
@@ -57,8 +101,6 @@ namespace hpl {
     }
 
     void cSubMesh::SetVertexBuffer(iVertexBuffer* apVtxBuffer) {
-        if (m_vtxBuffer == apVtxBuffer)
-            return;
         m_vtxBuffer = apVtxBuffer;
     }
 
@@ -98,6 +140,109 @@ namespace hpl {
         m_colliders.push_back(def);
     }
 
+    void cSubMesh::WriteToVertexBuffer(std::vector<StreamBufferInfo>& vertexBuffers, IndexBufferInfo& indexBuffer, iVertexBuffer* output) {
+        ASSERT(output);
+        LegacyVertexBuffer* target= static_cast<LegacyVertexBuffer*>(output);
+        {
+            output->ResizeIndices(indexBuffer.m_numberElements);
+            auto view = indexBuffer.GetView();
+            uint32_t* target = output->GetIndices();
+            for(size_t idx = 0; idx < indexBuffer.m_numberElements; idx++) {
+                uint32_t vtxIdx = view.Get(idx);
+                ASSERT(vtxIdx != UINT32_MAX);
+                target[idx] = view.Get(idx);
+            }
+        }
+        // this format is standard for how the engine creates vertex buffers same layout throughout the entire engine
+        struct {
+            ShaderSemantic srcSemantic;
+            eVertexBufferElement destSemantic;
+            uint32_t elementCount;
+        } mapping[] = {
+            {ShaderSemantic::SEMANTIC_POSITION, eVertexBufferElement_Position, 4},
+            {ShaderSemantic::SEMANTIC_NORMAL, eVertexBufferElement_Normal, 3},
+            {ShaderSemantic::SEMANTIC_COLOR, eVertexBufferElement_Color0, 4},
+            {ShaderSemantic::SEMANTIC_TEXCOORD0, eVertexBufferElement_Texture0, 3},
+            {ShaderSemantic::SEMANTIC_TANGENT, eVertexBufferElement_Texture1Tangent, 4}
+        };
+
+        for(auto& stream: vertexBuffers) {
+            for(auto tp: mapping) {
+                if(tp.srcSemantic == stream.m_semantic) {
+                    detail::CopyStreamBufferVertexBuffer(stream, tp.destSemantic, tp.elementCount, target);
+                    break;
+                }
+            }
+        }
+        output->Compile(0);
+    }
+
+    void cSubMesh::ReadFromVertexBuffer(iVertexBuffer* input, std::vector<StreamBufferInfo>& streamBuffers, IndexBufferInfo& indexBuffer) {
+        ASSERT(input);
+        LegacyVertexBuffer* lvb = static_cast<LegacyVertexBuffer*>(input);
+        detail::TryCopyToStreamBuffers<PostionTrait>(lvb, eVertexBufferElement_Position, streamBuffers);
+        detail::TryCopyToStreamBuffers<NormalTrait>(lvb, eVertexBufferElement_Normal, streamBuffers);
+        detail::TryCopyToStreamBuffers<ColorTrait>(lvb, eVertexBufferElement_Color0, streamBuffers);
+        detail::TryCopyToStreamBuffers<TangentTrait>(lvb, eVertexBufferElement_Texture1Tangent, streamBuffers);
+        detail::TryCopyToStreamBuffers<TextureTrait>(lvb, eVertexBufferElement_Texture0, streamBuffers);
+        {
+            auto indexView = indexBuffer.GetView();
+            auto* target = input->GetIndices();
+            for(size_t i = 0; i < indexBuffer.m_numberElements; i++) {
+                indexView.Write(i, target[i]);
+            }
+        }
+    }
+    void cSubMesh::SetStreamBuffers(iVertexBuffer* buffer, std::vector<StreamBufferInfo>&& vertexStreams, IndexBufferInfo&& indexStream) {
+        m_vertexStreams = std::move(vertexStreams);
+        m_indexStream = std::move(indexStream);
+
+        if(buffer) {
+            m_vtxBuffer = buffer;
+            WriteToVertexBuffer(m_vertexStreams, m_indexStream, m_vtxBuffer);
+        }
+        auto posStream = std::find_if(m_vertexStreams.begin(), m_vertexStreams.end(), [&](auto& stream) {
+            return stream.m_semantic == ShaderSemantic::SEMANTIC_POSITION;
+        });
+        if (m_indexStream.m_numberElements <= 400 * 3 && posStream != m_vertexStreams.end()) {
+            auto index = m_indexStream.GetView();
+            Vector3 normalSum = Vector3(0, 0, 0);
+            Vector3 firstNormal = Vector3(0, 0, 0);
+            Vector3 positionSum = Vector3(0, 0, 0);
+            float triCount = 0;
+            auto posView = posStream->GetStructuredView<float3>();
+            for(size_t i = 0; i < m_indexStream.m_numberElements; i += 3) {
+                uint32_t t1 = index.Get(i);
+                uint32_t t2 = index.Get(i);
+                uint32_t t3 = index.Get(i);
+                const float3 pVtx0 = posView.Get(t1);
+                const float3 pVtx1 = posView.Get(t2);
+                const float3 pVtx2 = posView.Get(t3);
+
+                Vector3 edge1(pVtx1[0] - pVtx0[0], pVtx1[1] - pVtx0[1], pVtx1[2] - pVtx0[2]);
+                Vector3 edge2(pVtx2[0] - pVtx0[0], pVtx2[1] - pVtx0[1], pVtx2[2] - pVtx0[2]);
+                Vector3 current = normalize(cross(edge2, edge1));
+
+                positionSum += Vector3(pVtx0[0], pVtx0[1], pVtx0[2]);
+
+                if (i == 0) {
+                    firstNormal = current;
+                    normalSum = current;
+                } else {
+                    float cosAngle = dot(firstNormal, current);
+                    if (cosAngle < 0.9f) {
+                        return;
+                    }
+                    normalSum += current;
+                }
+                triCount += 1;
+
+            }
+            m_isOneSided = true;
+            m_oneSidedNormal = cMath::FromForgeVector3(normalize(normalSum / triCount));
+            m_oneSidedPoint = cMath::FromForgeVector3(positionSum / triCount);
+        }
+    }
     iCollideShape* cSubMesh::CreateCollideShapeFromCollider(
         const MeshCollisionResource& pCollider, iPhysicsWorld* apWorld, const cVector3f& avSizeMul, const std::optional<cMatrixf> apMtxOffset) {
         cMatrixf pOffset = apMtxOffset.value_or(pCollider.m_mtxOffset);

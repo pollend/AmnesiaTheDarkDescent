@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include "graphics/AssetBuffer.h"
 #include "graphics/GraphicsTypes.h"
 #include "math/MathTypes.h"
 #include "math/MeshTypes.h"
@@ -40,11 +41,104 @@ namespace hpl {
 
     class cMaterialManager;
 
+
     class cSubMesh final {
         friend class cMesh;
         friend class cSubMeshEntity;
 
     public:
+        // preset traits that are expected throughout the engine
+        struct PostionTrait {
+            using Type = float3;
+            static constexpr uint32_t Stride = sizeof(float3);
+            static constexpr ShaderSemantic Semantic = ShaderSemantic::SEMANTIC_POSITION;
+        };
+        struct NormalTrait {
+            using Type = float3;
+            static constexpr uint32_t Stride = sizeof(float3);
+            static constexpr ShaderSemantic Semantic = ShaderSemantic::SEMANTIC_NORMAL;
+        };
+        struct ColorTrait {
+            using Type = float4;
+            static constexpr uint32_t Stride = sizeof(float4);
+            static constexpr ShaderSemantic Semantic = ShaderSemantic::SEMANTIC_COLOR;
+        };
+        struct TangentTrait {
+            using Type = float3;
+            static constexpr uint32_t Stride = sizeof(float3);
+            static constexpr ShaderSemantic Semantic = ShaderSemantic::SEMANTIC_TANGENT;
+        };
+        struct TextureTrait {
+            using Type = float2;
+            static constexpr uint32_t Stride = sizeof(float2);
+            static constexpr ShaderSemantic Semantic = ShaderSemantic::SEMANTIC_TEXCOORD0;
+        };
+
+        struct StreamBufferInfo {
+        public:
+            StreamBufferInfo() {
+            }
+
+            StreamBufferInfo(const StreamBufferInfo& other):
+                m_buffer(other.m_buffer),
+                m_semantic(other.m_semantic),
+                m_stride(other.m_stride),
+                m_numberElements(other.m_numberElements){
+            }
+            StreamBufferInfo(StreamBufferInfo&& other):
+                m_buffer(std::move(other.m_buffer)),
+                m_semantic(other.m_semantic),
+                m_stride(other.m_stride),
+                m_numberElements(other.m_numberElements){
+            }
+
+            void operator=(const StreamBufferInfo& other) {
+                m_buffer = other.m_buffer;
+                m_semantic = other.m_semantic;
+                m_stride = other.m_stride;
+                m_numberElements = other.m_numberElements;
+            }
+            void operator=(StreamBufferInfo&& other) {
+                m_buffer = std::move(other.m_buffer);
+                m_semantic = other.m_semantic;
+                m_stride = other.m_stride;
+                m_numberElements = other.m_numberElements;
+            }
+
+            // utility function to create buffers allows for consistancy for these types of buffers in the engine
+            template<typename Trait>
+            static void InitializeBuffer(StreamBufferInfo* info, AssetBuffer::BufferStructuredView<typename Trait::Type>* view = nullptr) {
+                info->m_stride = Trait::Stride;
+                info->m_semantic = Trait::Semantic;
+                if(view) {
+                    (*view) = info->GetStructuredView<typename Trait::Type>();
+                }
+            }
+
+            template<typename T>
+            constexpr AssetBuffer::BufferStructuredView<T> GetStructuredView(uint32_t byteOffset = 0) {
+                return m_buffer.CreateStructuredView<T>(byteOffset, m_stride);
+            }
+
+            AssetBuffer m_buffer;
+            uint32_t m_stride = 0;
+            uint32_t m_numberElements = 0;
+            ShaderSemantic m_semantic = ShaderSemantic::SEMANTIC_UNDEFINED;
+        };
+
+        struct IndexBufferInfo {
+        public:
+            IndexBufferInfo() {
+            }
+
+            AssetBuffer::BufferIndexView GetView() {
+                return m_buffer.CreateIndexView();
+            }
+
+            uint32_t m_numberElements = 0;
+            AssetBuffer m_buffer;
+        };
+
         class MeshCollisionResource {
         public:
             eCollideShapeType mType;
@@ -53,6 +147,8 @@ namespace hpl {
             bool mbCharCollider;
         };
 
+        static void WriteToVertexBuffer(std::vector<StreamBufferInfo>& vertexBuffers, IndexBufferInfo& indexBuffer, iVertexBuffer* ouput);
+        static void ReadFromVertexBuffer(iVertexBuffer* input, std::vector<StreamBufferInfo>& vertexBuffers, IndexBufferInfo& indexBuffer);
         static iCollideShape* CreateCollideShapeFromCollider(
             const MeshCollisionResource& pCollider,
             iPhysicsWorld* apWorld,
@@ -84,6 +180,8 @@ namespace hpl {
 
         void AddCollider(const MeshCollisionResource& def);
         std::span<MeshCollisionResource> GetColliders();
+        inline std::span<StreamBufferInfo> GetStreamBuffers() {return m_vertexStreams; }
+        inline IndexBufferInfo& IndexBuffer() {return m_indexStream; }
 
         void SetIsCollideShape(bool abX) {
             m_collideShape = abX;
@@ -129,8 +227,8 @@ namespace hpl {
             return m_materialName;
         }
 
+        void SetStreamBuffers(iVertexBuffer* buffer, std::vector<StreamBufferInfo>&& vertexStreams, IndexBufferInfo&& indexStream);
         void Compile();
-
     private:
         cMaterialManager* m_materialManager = nullptr;
         tString m_name;
@@ -143,6 +241,9 @@ namespace hpl {
 
         std::vector<cVertexBonePair> m_vtxBonePairs;
         folly::small_vector<MeshCollisionResource, 3> m_colliders;
+
+        std::vector<StreamBufferInfo> m_vertexStreams;
+        IndexBufferInfo m_indexStream;
 
         std::vector<float> m_vertexWeights;
         std::vector<uint8_t> m_vertexBones;

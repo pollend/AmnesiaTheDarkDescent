@@ -176,10 +176,6 @@ namespace hpl {
 		int mlStaticMeshBodiesCreated;
 		int mlStaticMeshEntitiesCreated;
 
-		float *mpShortNegPosFloatTable;
-		float *mpByteNegPosFloatTable;
-		float *mpBytePosFloatTable;
-
 		tWString msCacheFileExt;
 
 		tWorldLoadFlag mlCurrentFlags;

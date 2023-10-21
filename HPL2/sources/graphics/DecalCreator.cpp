@@ -243,8 +243,6 @@ namespace hpl {
 		mbUpdated = true;
 	}
 
-	//-----------------------------------------------------------------------
-
 	void cDecalCreator::SetColor(const cColor& aCol)
 	{
 		if(mColor==aCol)
@@ -254,8 +252,6 @@ namespace hpl {
 
 		mbUpdated = true;
 	}
-
-	//-----------------------------------------------------------------------
 
 	void cDecalCreator::SetUVSubDivisions(const cVector2l& avSubDiv)
 	{
@@ -267,8 +263,6 @@ namespace hpl {
 		mbUpdated = true;
 	}
 
-	//-----------------------------------------------------------------------
-
 	void cDecalCreator::SetCurrentSubDiv(int alSubDiv)
 	{
 		if(mlCurrentSubDiv==alSubDiv)
@@ -278,10 +272,6 @@ namespace hpl {
 
 		mbUpdated = true;
 	}
-
-	//-----------------------------------------------------------------------
-
-	//-----------------------------------------------------------------------
 
 	bool cDecalCreator::Compile()
 	{
@@ -337,7 +327,7 @@ namespace hpl {
 			for(size_t i=0;i<mvMeshes.size();++i)
 			{
 				cSubMeshEntity* pAffectedMesh = mvMeshes[i];
-				ClipMesh(pAffectedMesh, mpDecalVB);
+			    ClipMesh(pAffectedMesh, mpDecalVB);
 			}
 
 			//////////////////////////////////////////////////////////
@@ -502,15 +492,6 @@ namespace hpl {
 		return &mDecalBV;
 	}
 
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PRIVATE METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
 	void cDecalCreator::ComputeBasis()
 	{
 		cVector3f vUp = mvDecalUp;
@@ -518,8 +499,6 @@ namespace hpl {
 		cVector3f vFwd = mvDecalForward;
 		cMath::Vector3OrthonormalizeBasis(vUp, vRgt, vFwd, mvDecalUp, mvDecalRight, mvDecalForward);
 	}
-
-	//-----------------------------------------------------------------------
 
 	bool cDecalCreator::AddPolygon(	int alVertexCount, const cVector3f* apVertices, const cVector3f* apNormals, iVertexBuffer* apDecalVB,
 									const cMatrixf& amtxWorldMatrix, const cMatrixf& amtxWorldNormalRot)

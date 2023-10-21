@@ -20,6 +20,9 @@
 #include "impl/MeshLoaderCollada.h"
 
 #include "Common_3/Utilities/Log/Log.h"
+#include "graphics/GraphicsTypes.h"
+#include "graphics/MeshUtility.h"
+#include "impl/LegacyVertexBuffer.h"
 #include "system/LowLevelSystem.h"
 #include "system/String.h"
 #include "system/System.h"
@@ -474,12 +477,61 @@ namespace hpl {
 
 			//To be filled by extra vertex positions (not used, use the one in Geometry)
 			tColladaExtraVtxListVec &vExtraVtxVec = Geom.mvExtraVtxVec;
+            auto position = AssetBuffer::BufferStructuredView<float3>();
+            auto color = AssetBuffer::BufferStructuredView<float4>();
+            auto normal = AssetBuffer::BufferStructuredView<float3>();
+            auto uv = AssetBuffer::BufferStructuredView<float2>();
+            auto tangent = AssetBuffer::BufferStructuredView<float3>();
+            cSubMesh::IndexBufferInfo indexInfo;
+            cSubMesh::StreamBufferInfo positionInfo;
+            cSubMesh::StreamBufferInfo tangentInfo;
+            cSubMesh::StreamBufferInfo colorInfo;
+            cSubMesh::StreamBufferInfo normalInfo;
+            cSubMesh::StreamBufferInfo textureInfo;
+            cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::PostionTrait>(&positionInfo,  &position);
+            cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::ColorTrait>(&colorInfo, &color);
+            cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::NormalTrait>(&normalInfo, &normal);
+            cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::TextureTrait>(&textureInfo, &uv);
+            cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::TangentTrait>(&tangentInfo, &tangent);
+            AssetBuffer::BufferIndexView indexView = indexInfo.GetView();
+            for(size_t i = 0; i < Geom.mvVertexVec.size(); i++) {
+                auto& vert = Geom.mvVertexVec[i];
+                position.Write(i, float3(vert.pos.x, vert.pos.y, vert.pos.z));
+                normal.Write(i, float3(vert.norm.x, vert.norm.y, vert.norm.z));
+                uv.Write(i, float2(vert.tex.x, vert.tex.y));
+                color.Write(i, float4(1,1,1,1));
+            }
 
-			//////////////////////////////
-			// Create Vertex buffer
-			eVertexBufferUsageType UsageType = eVertexBufferUsageType_Static;
-			iVertexBuffer *pVtxBuffer = CreateVertexBuffer(Geom, UsageType);//, vExtraVtxVec);
-			pSubMesh->SetVertexBuffer(pVtxBuffer);
+            positionInfo.m_numberElements = Geom.mvVertexVec.size();
+            tangentInfo.m_numberElements = Geom.mvVertexVec.size();
+            colorInfo.m_numberElements = Geom.mvVertexVec.size();
+            normalInfo.m_numberElements = Geom.mvVertexVec.size();
+            textureInfo.m_numberElements = Geom.mvVertexVec.size();
+            indexInfo.m_numberElements = Geom.mvIndexVec.size();
+
+
+            for(size_t i = 0; i < Geom.mvTangents.size(); i++) {
+                if((i % 4) == 0 && (i + 4) <= Geom.mvTangents.size()) {
+                    tangent.Write(i, float3(Geom.mvTangents[i], Geom.mvTangents[i + 1], Geom.mvTangents[i + 2]));
+                }
+            }
+
+		    for(size_t j=0; j< Geom.mvIndexVec.size();j++)
+		    {
+			    //Flip order of indices
+			    size_t idx = (j/3)*3 + (2-(j%3));
+			    indexView.Write(j, Geom.mvIndexVec[idx]);
+		    }
+
+           // hpl::MeshUtility::MikktSpaceGenerate(
+           //     Geom.mvVertexVec.size(),
+           //     Geom.mvIndexVec.size(),
+           //     &indexView,
+           //     &position,
+           //     &uv,
+           //     &normal,
+           //     &tangent);
+
 
 			/////////////////////////////
 			//Add material
@@ -582,7 +634,13 @@ namespace hpl {
 				}
 
 				//Transform the mesh according to the bind transform.
-				pVtxBuffer->Transform(cMath::MatrixMul(cMath::MatrixScale(mfUnitScale), pCtrl->m_mtxBindShapeMatrix));
+			    MeshUtility::Transform(
+                    positionInfo.m_numberElements,
+                    cMath::ToForgeMatrix4(cMath::MatrixMul(cMath::MatrixScale(mfUnitScale), pCtrl->m_mtxBindShapeMatrix)),
+                    &position,
+                    &normal,
+                    &tangent
+			    );
 			}
 			//////////////////////////////////////////////////
 			//No controller, we have a non skinned mesh!
@@ -591,13 +649,26 @@ namespace hpl {
 				//If the buffer has animations or joints, we only add the scale part of the
 				//transform
 				cMatrixf mtxScale = cMath::MatrixScale(pGeomNode->mvScale * mfUnitScale);
-				pVtxBuffer->Transform(mtxScale);
+			    MeshUtility::Transform(
+                    positionInfo.m_numberElements,
+                    cMath::ToForgeMatrix4(mtxScale),
+                    &position,
+                    &normal,
+                    &tangent
+			    );
+				//pVtxBuffer->Transform(mtxScale);
 			}
 
-			pSubMesh->Compile();
-
-			//Compile the vertex buffer
-			pVtxBuffer->Compile(0);//eVertexCompileFlag_CreateTangents);
+            std::vector<cSubMesh::StreamBufferInfo> vertexStreams;
+            vertexStreams.push_back(std::move(positionInfo));
+            vertexStreams.push_back(std::move(tangentInfo));
+            vertexStreams.push_back(std::move(colorInfo));
+            vertexStreams.push_back(std::move(normalInfo));
+            vertexStreams.push_back(std::move(textureInfo));
+            LegacyVertexBuffer* legacyBuffer = new LegacyVertexBuffer(eVertexBufferDrawType_Tri, eVertexBufferUsageType_Static, 0, 0);
+		    pSubMesh->SetStreamBuffers(legacyBuffer,
+                      std::move(vertexStreams), std::move(indexInfo));
+		    pSubMesh->Compile();
 		}
 
 		/////////////////////////////////////
