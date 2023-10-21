@@ -45,7 +45,7 @@ namespace hpl {
 	class cMaterial;
 	class cBoneState;
 
-	class cSubMeshEntity : public iRenderable
+	class cSubMeshEntity final: public iRenderable
 	{
 		HPL_RTTI_IMPL_CLASS(iRenderable, cSubMeshEntity, "{285bbdb4-de5b-4960-bf44-ae543432ff40}")
 		friend class cMeshEntity;

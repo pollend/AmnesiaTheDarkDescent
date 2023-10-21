@@ -59,7 +59,7 @@ namespace hpl {
                 view.ReserveElements(numElements);
                 for(size_t i = 0; i < numElements; i++) {
                     auto value = lvbElement->GetElement<typename Trait::Type>(i);
-                    view.Insert(i, value);
+                    view.Write(i, value);
                 }
             }
         }
@@ -75,8 +75,9 @@ namespace hpl {
             auto rawView = srcInfo.m_buffer.CreateViewRaw();
             target->ResizeArray(element, elementCount * srcInfo.m_numberElements);
             float* destData = target->GetFloatArray(element);
-            for(size_t i = 0; i < srcInfo.m_numberElements; i++) {
-                std::memcpy(destData + (elementCount * i), rawView.RawView().data() + (srcInfo.m_stride * i), std::min(srcInfo.m_stride, static_cast<uint32_t>(sizeof(float) * elementCount)));
+            for(size_t idx = 0; idx < srcInfo.m_numberElements; idx++) {
+                auto buf = rawView.RawView();
+                std::memcpy(destData + (elementCount * idx), buf.data() + (srcInfo.m_stride * idx), std::min(srcInfo.m_stride, static_cast<uint32_t>(sizeof(float) * elementCount)));
             }
         }
     }
@@ -145,7 +146,7 @@ namespace hpl {
         {
             output->ResizeIndices(indexBuffer.m_numberElements);
             auto view = indexBuffer.GetView();
-            auto* target = output->GetIndices();
+            uint32_t* target = output->GetIndices();
             for(size_t idx = 0; idx < indexBuffer.m_numberElements; idx++) {
                 uint32_t vtxIdx = view.Get(idx);
                 ASSERT(vtxIdx != UINT32_MAX);
@@ -169,9 +170,11 @@ namespace hpl {
             for(auto tp: mapping) {
                 if(tp.srcSemantic == stream.m_semantic) {
                     detail::CopyStreamBufferVertexBuffer(stream, tp.destSemantic, tp.elementCount, target);
+                    break;
                 }
             }
         }
+        output->Compile(0);
     }
 
     void cSubMesh::ReadFromVertexBuffer(iVertexBuffer* input, std::vector<StreamBufferInfo>& streamBuffers, IndexBufferInfo& indexBuffer) {
@@ -186,7 +189,7 @@ namespace hpl {
             auto indexView = indexBuffer.GetView();
             auto* target = input->GetIndices();
             for(size_t i = 0; i < indexBuffer.m_numberElements; i++) {
-                indexView.Insert(i, target[i]);
+                indexView.Write(i, target[i]);
             }
         }
     }

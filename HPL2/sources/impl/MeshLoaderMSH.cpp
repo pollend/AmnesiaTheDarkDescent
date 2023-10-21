@@ -19,6 +19,11 @@
 
 #include "impl/MeshLoaderMSH.h"
 
+#include "Common_3/Graphics/Interfaces/IGraphics.h"
+#include "Common_3/Utilities/Log/Log.h"
+#include "graphics/Graphics.h"
+#include "graphics/GraphicsTypes.h"
+#include "graphics/MeshUtility.h"
 #include "system/LowLevelSystem.h"
 #include "graphics/LowLevelGraphics.h"
 #include "graphics/VertexBuffer.h"
@@ -41,21 +46,7 @@
 
 namespace hpl {
 
-	//////////////////////////////////////////////////////////////////////////
-	// PUBLIC DATA
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
-	bool gbLogMSHLoad = false;
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
+    bool gbLogMSHLoad = false;
 
 	cMeshLoaderMSH::cMeshLoaderMSH(iLowLevelGraphics *apLowLevelGraphics) : iMeshLoader(apLowLevelGraphics)
 	{
@@ -63,36 +54,24 @@ namespace hpl {
 			AddSupportedExtension("anm");
 	}
 
-	//-----------------------------------------------------------------------
 
 	cMeshLoaderMSH::~cMeshLoaderMSH()
 	{
 	}
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	cWorld* cMeshLoaderMSH::LoadWorld(const tWString& asFile, cScene* apScene,tWorldLoadFlag aFlags)
 	{
 		return NULL;	//Not used!
 	}
 
-	//-----------------------------------------------------------------------
-
 	cMesh* cMeshLoaderMSH::LoadMesh(const tWString& asFile,tMeshLoadFlag aFlags)
 	{
-		if(gbLogMSHLoad) Log("------ Loading ---------\n");
 		/////////////////////////////////////////////////
 		// Load file
 		cBinaryBuffer binBuff(asFile);
 		if(binBuff.Load()==false)
 		{
-			Error("Could not load file '%s' in MSH loader.", cString::To8Char(asFile).c_str());
+		    LOGF(LogLevel::eERROR, "Could not load file '%s' in MSH loader.", cString::To8Char(asFile).c_str());
 			return NULL;
 		}
 
@@ -104,14 +83,14 @@ namespace hpl {
 		//Check magic number
 		if(lMagicNum != MSH_FORMAT_MAGIC_NUMBER)
 		{
-			Error("File '%s' does not have right MSH magic number! Invalid header!\n", cString::To8Char(asFile).c_str());
+		    LOGF(LogLevel::eERROR, "File '%s' does not have right MSH magic number! Invalid header!", cString::To8Char(asFile).c_str());
 			return NULL;
 		}
 
 		//Check so file has he right version
 		if(lVersion != MSH_FORMAT_VERSION)
 		{
-			Error("File '%s' does not have right MSH version!\n", cString::To8Char(asFile).c_str());
+			LOGF(LogLevel::eERROR,"File '%s' does not have right MSH version!", cString::To8Char(asFile).c_str());
 			return NULL;
 		}
 
@@ -121,11 +100,11 @@ namespace hpl {
 		int lAnimationNum = binBuff.GetInt32();
 		bool bSkeleton = binBuff.GetBool();
 
-		if(gbLogMSHLoad) Log("General: %d %d %d\n", lSubMeshNum, lAnimationNum, bSkeleton);
+		LOGF_IF(LogLevel::eDEBUG, gbLogMSHLoad,"General: %d %d %d\n", lSubMeshNum, lAnimationNum, bSkeleton);
 
 		// Create the mesh
 		tString sMeshName = cString::GetFileName(cString::To8Char(asFile));
-		cMesh* pMesh = hplNew( cMesh, (sMeshName, asFile,mpMaterialManager,mpAnimationManager) );
+		cMesh* pMesh = hplNew(cMesh, (sMeshName, asFile,mpMaterialManager,mpAnimationManager) );
 
 		////////////////////////////
 		// Skeleton
@@ -148,7 +127,7 @@ namespace hpl {
 			cNode3D *pRootNode = pMesh->GetRootNode();
 
 			int lRootChildNum = binBuff.GetInt32();
-			if(gbLogMSHLoad) Log("Nodes num: %d\n", lRootChildNum);
+			LOGF_IF(LogLevel::eDEBUG, gbLogMSHLoad,"Nodes num: %d\n", lRootChildNum);
 
 			for(int i=0; i<lRootChildNum; ++i)
 			{
@@ -194,7 +173,7 @@ namespace hpl {
 				pSubMesh->SetMaterial(pMaterial);
 			}
 
-			if(gbLogMSHLoad) Log("Submesh %d: '%s' '%s'\n", sub, sName.c_str(), sMaterial.c_str());
+			LOGF_IF(LogLevel::eDEBUG, gbLogMSHLoad,"Submesh %d: '%s' '%s'", sub, sName.c_str(), sMaterial.c_str());
 
 			////////////////////
 			// Colliders
@@ -213,7 +192,7 @@ namespace hpl {
 				    resource.mType = type;
 				    pSubMesh->AddCollider(resource);
 
-					if(gbLogMSHLoad) Log("  Collider%d: %d %s %s %d\n",i,	type, resource.m_mtxOffset.ToString().c_str(),
+					LOGF_IF(LogLevel::eDEBUG, gbLogMSHLoad,"  Collider%d: %d %s %s %d",i,	type, resource.m_mtxOffset.ToString().c_str(),
 																			resource.mvSize.ToString().c_str(), resource.mbCharCollider);
 				}
 			}
@@ -224,7 +203,7 @@ namespace hpl {
 				int lVtxBonePairNum = binBuff.GetInt32();
 				pSubMesh->ResizeVertexBonePairs(lVtxBonePairNum);
 
-				if(gbLogMSHLoad) Log(" VertexBonePairs: %d\n",pSubMesh->GetVertexBonePairNum(), lVtxBonePairNum);
+				LOGF_IF(LogLevel::eDEBUG, gbLogMSHLoad," VertexBonePairs: %d\n",pSubMesh->GetVertexBonePairNum(), lVtxBonePairNum);
 
 				for(int i=0; i<pSubMesh->GetVertexBonePairNum(); ++i)
 				{
@@ -235,17 +214,27 @@ namespace hpl {
 				}
 			}
 
-
+            struct {
+                ShaderSemantic semantic;
+                eVertexBufferElement legacySemantic;
+                size_t streamBufferStride;
+            } mapping[] = {
+                {ShaderSemantic::SEMANTIC_POSITION, eVertexBufferElement_Position, cSubMesh::PostionTrait::Stride},
+                {ShaderSemantic::SEMANTIC_NORMAL, eVertexBufferElement_Normal, cSubMesh::NormalTrait::Stride},
+                {ShaderSemantic::SEMANTIC_COLOR, eVertexBufferElement_Color0, cSubMesh::ColorTrait::Stride},
+                {ShaderSemantic::SEMANTIC_TEXCOORD0, eVertexBufferElement_Texture0, cSubMesh::TextureTrait::Stride},
+                {ShaderSemantic::SEMANTIC_TANGENT, eVertexBufferElement_Texture1Tangent, cSubMesh::TangentTrait::Stride}
+            };
 			////////////////////
 			// Vertex data
-			iVertexBuffer* pVtxBuff = mpLowLevelGraphics->CreateVertexBuffer(	eVertexBufferType_Hardware, eVertexBufferDrawType_Tri,
-																				eVertexBufferUsageType_Static, 0, 0);
+            std::vector<cSubMesh::StreamBufferInfo> vertexStreams;
+            cSubMesh::IndexBufferInfo indexInfo;
+            AssetBuffer::BufferIndexView indexView = indexInfo.GetView();
 			{
 				int lVtxNum = binBuff.GetInt32();
 				int lVtxTypeNum = binBuff.GetInt32();
 
-				if(gbLogMSHLoad) Log(" VertexBuffers num: %d typenum: %d\n",lVtxNum, lVtxTypeNum);
-
+                LOGF_IF(LogLevel::eDEBUG, gbLogMSHLoad, " VertexBuffers num: %d typenum: %d",lVtxNum, lVtxTypeNum);
 				////////////////////
 				// Get vertex arrays
 				for(int i=0; i< lVtxTypeNum; ++i)
@@ -255,37 +244,67 @@ namespace hpl {
 					eVertexBufferElementFormat elementFormat = (eVertexBufferElementFormat)binBuff.GetShort16();
 					int lProgramVarIndex = binBuff.GetInt32();
 					int lElementNum = binBuff.GetInt32();
+                    ASSERT(elementFormat == eVertexBufferElementFormat::eVertexBufferElementFormat_Float);
 
-					if(gbLogMSHLoad) Log("   Vtx %d: %d %d %d\n", i, arrayType, lProgramVarIndex, lElementNum);
+                    size_t arrayLength = static_cast<size_t>(lVtxNum * lElementNum);
+                    for(auto& mp: mapping) {
+                        if(mp.legacySemantic == arrayType) {
+                            cSubMesh::StreamBufferInfo& streamBuffer = vertexStreams.emplace_back();
+                            streamBuffer.m_stride = mp.streamBufferStride;
+                            streamBuffer.m_semantic = mp.semantic;
+                            streamBuffer.m_numberElements = lVtxNum;
+                            AssetBuffer::BufferRawView rawView = streamBuffer.m_buffer.CreateViewRaw();
+                            std::array<float, 6> stage;
+                            std::span<float> floatSpan = rawView.RawDataView<float>();
+                            for(size_t vtxIdx = 0; vtxIdx < lVtxNum; vtxIdx++) {
+                                for(size_t eleIdx = 0; eleIdx < lElementNum; eleIdx++) {
+                                   stage[eleIdx] = binBuff.GetFloat32();
+                                }
+                                rawView.WriteRawType(vtxIdx * mp.streamBufferStride, std::span(stage).subspan(0, std::min<size_t>(lElementNum, mp.streamBufferStride / sizeof(float))));
+                            }
+                            break;
+                        }
+                    }
+				    LOGF_IF(LogLevel::eDEBUG, gbLogMSHLoad, "   Vtx %d: %d %d %d", i, arrayType, lProgramVarIndex, lElementNum);
 
-					//Create the array
-					pVtxBuff->CreateElementArray(arrayType, elementFormat, lElementNum, lProgramVarIndex);
-					pVtxBuff->ResizeArray(arrayType, lVtxNum * lElementNum);
-
-					//Get and fill the array data
-					void *pData = GetVertexBufferWithFormat(pVtxBuff, arrayType, elementFormat);
-					GetBinaryBufferDataWithFormat(&binBuff, pData, (size_t)(lVtxNum * lElementNum), elementFormat);
 				}
 			}
-
-			////////////////////
+		    ////////////////////
 			//Get Indices
 			{
 				int lIdxNum =  binBuff.GetInt32();
-
-				if(gbLogMSHLoad) Log("Indices: %d\n", lIdxNum);
-
-				pVtxBuff->ResizeIndices(lIdxNum);
-				binBuff.GetInt32Array((int*)pVtxBuff->GetIndices(), lIdxNum);
+				LOGF_IF(LogLevel::eDEBUG, gbLogMSHLoad,"Indices: %d\n", lIdxNum);
+                indexView.ReserveElements(lIdxNum);
+                indexInfo.m_numberElements = lIdxNum;
+                for(size_t i = 0; i < lIdxNum; i++) {
+                    indexView.Write(i, binBuff.GetInt32());
+                }
 			}
+// TODO: later view these changes
+//            {
+//                 auto positionInfo = std::find_if(vertexStreams.begin(), vertexStreams.end(), [&](auto& str) { return str.m_semantic == ShaderSemantic::SEMANTIC_POSITION;}) ;
+//                 auto tangentInfo = std::find_if(vertexStreams.begin(), vertexStreams.end(), [&](auto& str) { return str.m_semantic == ShaderSemantic::SEMANTIC_TANGENT;}) ;
+//                 auto normalInfo = std::find_if(vertexStreams.begin(), vertexStreams.end(), [&](auto& str) { return str.m_semantic == ShaderSemantic::SEMANTIC_NORMAL;}) ;
+//                 auto textureInfo = std::find_if(vertexStreams.begin(), vertexStreams.end(), [&](auto& str) { return str.m_semantic == ShaderSemantic::SEMANTIC_TEXCOORD0;}) ;
+//                 auto position = positionInfo->GetStructuredView<float3>();
+//                 auto normal = normalInfo->GetStructuredView<float3>();
+//                 auto uv = textureInfo->GetStructuredView<float2>();
+//                 auto tangent = tangentInfo->GetStructuredView<float3>();
+//                 hpl::MeshUtility::MikktSpaceGenerate(
+//                    positionInfo->m_numberElements,
+//                    indexInfo.m_numberElements,
+//                    &indexView,
+//                    &position,
+//                    &uv,
+//                    &normal,
+//                    &tangent);
+//		    }
 
 
-			///////////////////
-			//Compile vertex buffer and set to submesh
-			pVtxBuff->Compile(0);
-
-			pSubMesh->SetVertexBuffer(pVtxBuff);
-			pSubMesh->Compile();
+	        iVertexBuffer* pVtxBuff = mpLowLevelGraphics->CreateVertexBuffer(	eVertexBufferType_Hardware, eVertexBufferDrawType_Tri,
+																				        eVertexBufferUsageType_Static, 0, 0);
+            pSubMesh->SetStreamBuffers(pVtxBuff, std::move(vertexStreams), std::move(indexInfo));
+		    pSubMesh->Compile();
 		}
 
 		////////////////////////////
@@ -297,7 +316,7 @@ namespace hpl {
 		// Animations
 		{
             int lAnimationNum = binBuff.GetInt32();
-			if(gbLogMSHLoad) Log(" Animation num: %d\n",lAnimationNum);
+			LOGF_IF(LogLevel::eDEBUG, gbLogMSHLoad," Animation num: %d",lAnimationNum);
 
 			for(int i=0; i<lAnimationNum; ++i)
 			{
@@ -553,14 +572,6 @@ namespace hpl {
 		return bRet;
 	}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PRIVATE METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
 	void cMeshLoaderMSH::AddAnimation(cAnimation *apAnimation, cBinaryBuffer* apBuffer)
 	{
 		////////////////////////
@@ -569,7 +580,7 @@ namespace hpl {
 		apBuffer->AddFloat32(apAnimation->GetLength());
 		apBuffer->AddInt32(apAnimation->GetTrackNum());
 
-		if(gbLogMSHLoad) Log(" Animation %s: %f %d\n", apAnimation->GetName().c_str(), apAnimation->GetLength(), apAnimation->GetTrackNum());
+		LOGF_IF(LogLevel::eDEBUG, gbLogMSHLoad," Animation %s: %f %d\n", apAnimation->GetName().c_str(), apAnimation->GetLength(), apAnimation->GetTrackNum());
 
 		////////////////////////
 		// Tracks

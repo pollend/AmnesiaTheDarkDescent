@@ -7,9 +7,12 @@
 #include "physics/PhysicsTypes.h"
 #include "system/SystemTypes.h"
 
+#include <algorithm>
 #include <cstdint>
+#include <cstring>
 #include <optional>
 #include <span>
+#include <vector>
 
 #include "Common_3/Graphics/Interfaces/IGraphics.h"
 #include "Common_3/Resources/ResourceLoader/Interfaces/IResourceLoader.h"
@@ -17,6 +20,14 @@
 #include "FixPreprocessor.h"
 
 namespace hpl {
+    namespace details {
+        inline void testAndResize(std::vector<uint8_t>& data, size_t reqSize) {
+            if(reqSize > data.size()) {
+                data.resize(reqSize);
+            }
+        }
+    }
+
 
     class AssetBuffer final {
     public:
@@ -48,12 +59,26 @@ namespace hpl {
                 m_byteOffset = view.m_byteOffset;
             }
 
-            void InsertBytes(uint32_t byteOffset, std::span<uint8_t> data) {
-                for(size_t i = 0; i < data.size(); i++) {
+            /**
+            * When Writing a raw to a buffer the buffer will resize to accomidate
+            */
+            void WriteRaw(uint32_t byteOffset, std::span<uint8_t> data) {
+                details::testAndResize(m_asset->m_buffer, m_byteOffset + byteOffset + data.size());
+                std::copy(data.begin(), data.end(), m_asset->m_buffer.begin() + m_byteOffset + byteOffset);
+            }
 
-                    m_asset->m_buffer.insert(
-                        m_asset->m_buffer.begin() + byteOffset, data.begin(), data.end());
-                }
+            template<typename T>
+            void WriteRawType(uint32_t byteOffset, const T& data) {
+                std::span<uint8_t> raw(reinterpret_cast<uint8_t*>(&data), sizeof(T));
+                details::testAndResize(m_asset->m_buffer, m_byteOffset + byteOffset + raw.size());
+                std::copy(raw.begin(), raw.end(), m_asset->m_buffer.begin() + m_byteOffset + byteOffset);
+            }
+
+            template<typename T>
+            void WriteRawType(uint32_t byteOffset, const std::span<T>& data) {
+                std::span<const uint8_t> raw(reinterpret_cast<const uint8_t*>(data.data()), data.size() * sizeof(T));
+                details::testAndResize(m_asset->m_buffer, m_byteOffset + byteOffset + raw.size());
+                std::copy(raw.begin(), raw.end(), m_asset->m_buffer.begin() + m_byteOffset + byteOffset);
             }
 
             void operator=(const BufferRawView& other) {
@@ -66,7 +91,9 @@ namespace hpl {
                 m_byteOffset = other.m_byteOffset;
             }
 
-            inline std::span<uint8_t> RawView() { return m_asset->m_buffer; }
+            template<typename T>
+            inline std::span<T> RawDataView() { return std::span<T>(reinterpret_cast<T*>(m_asset->m_buffer.data() + m_byteOffset), (m_asset->m_buffer.size() - m_byteOffset) / sizeof(T));}
+            inline std::span<uint8_t> RawView() { return std::span(m_asset->m_buffer.data() + m_byteOffset, m_asset->m_buffer.size() - m_byteOffset); }
             inline uint32_t NumBytes() { return  (m_asset->m_buffer.size() - m_byteOffset); }
         protected:
             AssetBuffer* m_asset = nullptr;
@@ -101,7 +128,6 @@ namespace hpl {
 
 
             void ResizeElements(uint32_t numElements) {
-
                 switch(m_indexType) {
                     case IndexType::Uint32:
                         m_asset->m_buffer.resize(m_byteOffset + (numElements * sizeof(uint32_t)));
@@ -126,28 +152,30 @@ namespace hpl {
             uint32_t Get(uint32_t index) {
                 switch(m_indexType) {
                     case IndexType::Uint32:
+                        ASSERT(m_asset->m_buffer.begin() + (m_byteOffset + (index * sizeof(uint32_t))) < m_asset->m_buffer.end());
                         return *reinterpret_cast<uint32_t*>(m_asset->m_buffer.data() + (m_byteOffset + (index * sizeof(uint32_t))));
                     case IndexType::Uint16:
+                        ASSERT(m_asset->m_buffer.begin() + (m_byteOffset + (index * sizeof(uint16_t))) < m_asset->m_buffer.end());
                         return *reinterpret_cast<uint16_t*>(m_asset->m_buffer.data() + (m_byteOffset + (index * sizeof(uint16_t))));
                 }
                 return UINT32_MAX;
             }
-            void Insert(uint32_t index, uint32_t value) {
+            void Write(uint32_t index, uint32_t value) {
                 switch(m_indexType) {
                     case IndexType::Uint32: {
-                        uint16_t v = value;
-                        auto buf = std::span(reinterpret_cast<const uint8_t*>(&v), sizeof(uint16_t));
-                        m_asset->m_buffer.insert(
-                            m_asset->m_buffer.begin() +
-                            (m_byteOffset + (index * sizeof(uint32_t))), buf.begin(), buf.end());
+                        uint32_t v = value;
+                        auto buf = std::span(reinterpret_cast<const uint8_t*>(&v), sizeof(uint32_t));
+                        const size_t targetOffset = (m_byteOffset + (index * sizeof(uint32_t)));
+                        details::testAndResize(m_asset->m_buffer, targetOffset + buf.size());
+                        std::copy(buf.begin(), buf.end(), m_asset->m_buffer.begin() + targetOffset);
                         break;
                     }
                     case IndexType::Uint16: {
                         uint16_t v = value;
                         auto buf = std::span(reinterpret_cast<const uint8_t*>(&v), sizeof(uint16_t));
-                        m_asset->m_buffer.insert(
-                            m_asset->m_buffer.begin() +
-                            (m_byteOffset + (index * sizeof(uint16_t))), buf.begin(), buf.end());
+                        const size_t targetOffset = (m_byteOffset + (index * sizeof(uint16_t)));
+                        details::testAndResize(m_asset->m_buffer, targetOffset + buf.size());
+                        std::copy(buf.begin(), buf.end(), m_asset->m_buffer.begin() + targetOffset);
                         break;
                     }
                 }
@@ -191,20 +219,18 @@ namespace hpl {
                 return NumBytes() / m_byteStride;
             }
 
-            void Insert(uint32_t index, const T& value) {
+            void Write(uint32_t index, const T& value) {
                 auto buf = std::span(reinterpret_cast<const uint8_t*>(&value), sizeof(T));
-                m_asset->m_buffer.insert(
-                    m_asset->m_buffer.begin() +
-                    (m_byteOffset + (index * m_byteStride)), buf.begin(), buf.end());
+                const size_t targetOffset = (m_byteOffset + (index * m_byteStride));
+                details::testAndResize(m_asset->m_buffer, targetOffset + buf.size());
+                std::copy(buf.begin(), buf.end(), m_asset->m_buffer.begin() + targetOffset);
             }
 
-            void Insert(uint32_t index, const std::span<T> values) {
-                auto buf = std::span<uint8_t>(
-                    reinterpret_cast<const uint8_t*>(values.data()),
-                    values.size() * sizeof(T));
-                m_asset->m_buffer.insert(
-                    m_asset->m_buffer.begin() +
-                    (m_byteOffset + (index * m_byteStride)), buf.begin(), buf.end());
+            void Write(uint32_t index, const std::span<T> values) {
+                auto buf = std::span<uint8_t>(reinterpret_cast<const uint8_t*>(values.data()), values.size() * sizeof(T));
+                const size_t targetOffset = (m_byteOffset + (index * m_byteStride));
+                details::testAndResize(m_asset->m_buffer, targetOffset + buf.size());
+                std::copy(buf.begin(), buf.end(), m_asset->m_buffer.begin() + targetOffset);
             }
 
             void ResizeElements(uint32_t numElements) {
@@ -216,12 +242,8 @@ namespace hpl {
             }
 
             T Get(uint32_t index) {
+                ASSERT(m_asset->m_buffer.begin() + (m_byteOffset + (index * m_byteStride)) < m_asset->m_buffer.end());
                 return *reinterpret_cast<T*>(m_asset->m_buffer.data() + (m_byteOffset + (index * m_byteStride)));
-            }
-
-            std::span<T> View() {
-                ASSERT(m_byteStride == sizeof(T));
-                return std::span<T>(reinterpret_cast<T*>(m_asset->m_buffer.data() + m_byteOffset), NumBytes() / sizeof(T));
             }
         protected:
             uint32_t m_byteStride;

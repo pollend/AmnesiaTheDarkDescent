@@ -19,6 +19,8 @@
 
 #include "resources/WorldLoaderHplMap.h"
 
+#include "Common_3/Utilities/Log/Log.h"
+#include "graphics/AssetBuffer.h"
 #include "graphics/Image.h"
 #include "impl/LegacyVertexBuffer.h"
 #include "system/String.h"
@@ -61,19 +63,34 @@
 #include "math/Math.h"
 
 #include <algorithm>
+#include <cstdint>
 #include <cstring>
 #include <iterator>
 
 #include "Common_3/Utilities/Interfaces/ILog.h"
 #include <FixPreprocessor.h>
 
+
+
+
+
 namespace hpl {
+    namespace details {
 
-	//////////////////////////////////////////////////////////////////////////
-	// PUBLIC DATA
-	//////////////////////////////////////////////////////////////////////////
+        float fetchBufferElement(cBinaryBuffer* buffer, uint32_t compressionType) {
+            switch(compressionType) {
+                case 0:
+                   return buffer->GetFloat32();
+                case 1:
+                    return buffer->GetUnsignedChar() / 255.0f;
+                case 2:
+                    return (static_cast<int8_t>(buffer->GetUnsignedChar()) / 127.0f) - 1.0f;
+                default:
+                    return static_cast<int16_t>(buffer->GetUnsignedShort16()) / 32767.0f;
+            }
+        }
+    }
 
-	//-----------------------------------------------------------------------
 
 	bool gbLogCacheLoad = false;
 
@@ -81,14 +98,6 @@ namespace hpl {
 	static bool gbLogTiming = true;
 
 	#define kEncryptKey 0x4E5F16F0
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	cHplMapShapeBody::cHplMapShapeBody()
 	{
@@ -442,9 +451,6 @@ namespace hpl {
 
 	void cWorldLoaderHplMap::LoadCacheFile(const tWString& asFile)
 	{
-#if (defined(__PPC__) || defined(__ppc__))
-		return;
-#endif
 		tWString sCacheFile = cString::SetFileExtW(asFile, msCacheFileExt);
 
 		////////////////////////////////////////
@@ -564,7 +570,7 @@ namespace hpl {
 			binBuff.GetString(&sMaterial);
 			bool bCastShadows = binBuff.GetBool();
 
-			if(gbLogCacheLoad) Log("Mesh %d: '%s' '%s'\n", mesh, sName.c_str(), sMaterial.c_str());
+			LOGF(LogLevel::eDEBUG, "Mesh %d: '%s' '%s'", mesh, sName.c_str(), sMaterial.c_str());
 
 			//////////////////////////////
 			// Create mesh and submesh
@@ -583,16 +589,30 @@ namespace hpl {
 				pSubMesh->SetMaterial(pMaterial);
 			}
 
-			////////////////////
-			// Vertex data
-			iVertexBuffer* pVtxBuff = mpGraphics->GetLowLevel()->CreateVertexBuffer(eVertexBufferType_Hardware, eVertexBufferDrawType_Tri,
-																					eVertexBufferUsageType_Static, 0, 0);
+            std::vector<cSubMesh::StreamBufferInfo> vertexStreams;
+            cSubMesh::IndexBufferInfo indexInfo;
+            AssetBuffer::BufferIndexView indexView = indexInfo.GetView();
+		    // Vertex data
+		   // iVertexBuffer* pVtxBuff = mpGraphics->GetLowLevel()->CreateVertexBuffer(eVertexBufferType_Hardware, eVertexBufferDrawType_Tri,
+		   // 																		eVertexBufferUsageType_Static, 0, 0);
 			{
 				int lVtxNum = binBuff.GetInt32();
 				int lVtxTypeNum = binBuff.GetInt32();
 
-				if(gbLogCacheLoad) Log(" VertexBuffers num: %d typenum: %d\n",lVtxNum, lVtxTypeNum);
+				LOGF(LogLevel::eDEBUG," VertexBuffers num: %d typenum: %d\n",lVtxNum, lVtxTypeNum);
 
+                struct {
+                    ShaderSemantic semantic;
+                    eVertexBufferElement legacySemantic;
+                    uint32_t elementCount;
+                    size_t streamBufferStride;
+                } mapping[] = {
+                    {ShaderSemantic::SEMANTIC_POSITION, eVertexBufferElement_Position, 4, cSubMesh::PostionTrait::Stride},
+                    {ShaderSemantic::SEMANTIC_NORMAL, eVertexBufferElement_Normal, 3, cSubMesh::NormalTrait::Stride},
+                    {ShaderSemantic::SEMANTIC_COLOR, eVertexBufferElement_Color0, 4, cSubMesh::ColorTrait::Stride},
+                    {ShaderSemantic::SEMANTIC_TEXCOORD0, eVertexBufferElement_Texture0, 3, cSubMesh::TextureTrait::Stride},
+                    {ShaderSemantic::SEMANTIC_TANGENT, eVertexBufferElement_Texture1Tangent, 4, cSubMesh::TangentTrait::Stride}
+                };
 				////////////////////
 				// Get vertex arrays
 				for(int i=0; i< lVtxTypeNum; ++i)
@@ -604,65 +624,40 @@ namespace hpl {
 					int lElementNum = binBuff.GetInt32();
 					int lCompressionType = binBuff.GetInt32();
 
-					if(gbLogCacheLoad) Log("   Vtx %d: %d %d %d\n", i, arrayType, lProgramVarIndex, lElementNum);
+					LOGF(LogLevel::eDEBUG,"   Vtx %d: %d %d %d\n", i, arrayType, lProgramVarIndex, lElementNum);
 
-					//Create the array
-					pVtxBuff->CreateElementArray(arrayType, elementFormat, lElementNum, lProgramVarIndex);
-					pVtxBuff->ResizeArray(arrayType, lVtxNum * lElementNum);
-
-					/////////////////////////
-					//Uncompressed: Get and fill the array data
-					if(lCompressionType ==0)
-					{
-						void *pData = GetVertexBufferWithFormat(pVtxBuff, arrayType, elementFormat);
-						GetBinaryBufferDataWithFormat(&binBuff, pData, (size_t)(lVtxNum * lElementNum), elementFormat);
-					}
-					/////////////////////////
-					// Compressed Get Data
-					else
-					{
-						float *pDestData = pVtxBuff->GetFloatArray(arrayType);
-						int lElemCount = lVtxNum * lElementNum;
-
-						//////////////////////
-						// Byte Array
-						if(lCompressionType <= 2)
-						{
-							///////////////
-							//0 - 255 -> 0-1
-							if(lCompressionType == 1)
-							{
-								while(lElemCount > 0)
-								{
-									*pDestData = mpBytePosFloatTable[binBuff.GetUnsignedChar()];
-
-									++pDestData; --lElemCount;
-								}
-							}
-							///////////////
-							//-127 - 127 -> -1 - 1
-							else
-							{
-								while(lElemCount > 0)
-								{
-									*pDestData = mpByteNegPosFloatTable[binBuff.GetUnsignedChar()];
-
-									++pDestData; --lElemCount;
-								}
-							}
-						}
-						//////////////////////
-						// Short Array
-						else
-						{
-							while(lElemCount > 0)
-							{
-								*pDestData = mpShortNegPosFloatTable[binBuff.GetUnsignedShort16()];
-
-								++pDestData; --lElemCount;
-							}
-						}
-					}
+                    size_t arrayLength = static_cast<size_t>(lVtxNum * lElementNum);
+                    for(auto& mp: mapping) {
+                        if(mp.legacySemantic == arrayType) {
+                            cSubMesh::StreamBufferInfo& streamBuffer = vertexStreams.emplace_back();
+                            streamBuffer.m_stride = mp.streamBufferStride;
+                            streamBuffer.m_semantic = mp.semantic;
+                            streamBuffer.m_numberElements = lElementNum;
+                            AssetBuffer::BufferRawView rawView = streamBuffer.m_buffer.CreateViewRaw();
+                            std::array<float, 10> stage;
+                            std::span<float> floatSpan = rawView.RawDataView<float>();
+                            for(size_t vtxIdx = 0; vtxIdx < lVtxNum; vtxIdx++) {
+                                for(size_t eleIdx = 0; eleIdx < lElementNum; eleIdx++) {
+                                    switch(lCompressionType) {
+                                        case 0:
+                                           stage[eleIdx] = binBuff.GetFloat32();
+                                           break;
+                                        case 1:
+                                            stage[eleIdx] = binBuff.GetUnsignedChar() / 255.0f;
+                                            break;
+                                        case 2:
+                                            stage[eleIdx] = (static_cast<int8_t>(binBuff.GetUnsignedChar()) / 127.0f) - 1.0f;
+                                            break;
+                                        default:
+                                            stage[eleIdx] = static_cast<int16_t>(binBuff.GetUnsignedShort16()) / 32767.0f;
+                                            break;
+                                    }
+                                }
+                                rawView.WriteRawType(vtxIdx * lElementNum * sizeof(float), std::span(stage).subspan(0, std::min<size_t>(lElementNum, mp.streamBufferStride / sizeof(float))));
+                            }
+                            break;
+                        }
+                    }
 				}
 			}
 
@@ -671,18 +666,24 @@ namespace hpl {
 			{
 				int lIdxNum =  binBuff.GetInt32();
 
-				if(gbLogCacheLoad) Log("Indices: %d\n", lIdxNum);
-
-				pVtxBuff->ResizeIndices(lIdxNum);
-				binBuff.GetInt32Array((int*)pVtxBuff->GetIndices(), lIdxNum);
+				LOGF(LogLevel::eDEBUG,"Indices: %d\n", lIdxNum);
+                indexView.ReserveElements(lIdxNum);
+                for(size_t i = 0; i < lIdxNum; i++) {
+                    indexView.Write(i, binBuff.GetInt32());
+                }
 			}
 
 			///////////////////
 			//Compile vertex buffer and set to sub mesh
-			pVtxBuff->Compile(0);
+		   // pVtxBuff->Compile(0);
 
-			pSubMesh->SetVertexBuffer(pVtxBuff);
-			pSubMesh->Compile();
+		   // pSubMesh->SetVertexBuffer(pVtxBuff);
+		   // pSubMesh->Compile();
+		    iVertexBuffer* pVtxBuff = mpGraphics->GetLowLevel()->CreateVertexBuffer(eVertexBufferType_Hardware, eVertexBufferDrawType_Tri,
+		    																		eVertexBufferUsageType_Static, 0, 0);
+            pSubMesh->SetStreamBuffers(
+             pVtxBuff, std::move(vertexStreams), std::move(indexInfo));
+
 
 			///////////////////
 			//Create mesh entity
@@ -693,7 +694,7 @@ namespace hpl {
 
 		////////////////////////////////////////
 		// Done loading
-		Log("    Cache Loading: %d ms\n", cPlatform::GetApplicationTime() - lStartTime);
+		LOGF(LogLevel::eINFO, "    Cache Loading: %d ms\n", cPlatform::GetApplicationTime() - lStartTime);
 	}
 
 	//-----------------------------------------------------------------------

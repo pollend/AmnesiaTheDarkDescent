@@ -14,7 +14,8 @@ namespace hpl {
     AssetBuffer::AssetBuffer(const AssetBuffer& asset):
         m_buffer(asset.m_buffer){
     }
-    AssetBuffer::AssetBuffer(AssetBuffer&& asset) {
+    AssetBuffer::AssetBuffer(AssetBuffer&& asset):
+        m_buffer(std::move(asset.m_buffer)){
     }
     std::span<uint8_t> AssetBuffer::Data() {
         return m_buffer;
