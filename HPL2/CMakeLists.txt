@@ -191,6 +191,7 @@ find_package(OpenGL REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(SDL2 CONFIG REQUIRED)
 find_package(folly CONFIG REQUIRED)
+find_package(tinyxml2 CONFIG REQUIRED)
 
 # setup HPL2 compile target
 
@@ -245,6 +246,7 @@ target_link_libraries(HPL2
   Newton
   Folly::folly 
   Folly::folly_deps
+  tinyxml2::tinyxml2
   TheForge
   $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
   $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>

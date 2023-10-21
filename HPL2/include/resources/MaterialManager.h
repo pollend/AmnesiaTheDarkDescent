@@ -58,15 +58,15 @@ namespace hpl {
 
 		cMaterial* CreateCustomMaterial(const tString& asName, iMaterialType *apMaterialType);
 
-		tString GetTextureString(eMaterialTexture aType);
+		const char* GetTextureString(eMaterialTexture aType);
 
 		void SetDisableRenderDataLoading(bool abX){ mbDisableRenderDataLoading = abX;}
 
 		// Useful stuff if public
-		eTextureType GetType(const tString& asType);
-		eTextureWrap GetWrap(const tString& asType);
-		eTextureAnimMode GetAnimMode(const tString& asType);
-		eMaterialBlendMode GetBlendMode(const tString& asType);
+		eTextureType GetType(const char* asType);
+		eTextureWrap GetWrap(const char* asType);
+		eTextureAnimMode GetAnimMode(const char* asType);
+		eMaterialBlendMode GetBlendMode(const char* asType);
 
 		eMaterialUvAnimation GetUvAnimType(const char* apString);
 		eMaterialAnimationAxis GetAnimAxis(const char* apString);

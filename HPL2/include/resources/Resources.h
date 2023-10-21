@@ -29,6 +29,10 @@
 
 class TiXmlElement;
 
+namespace tinyxml2 {
+    class XMLElement;
+};
+
 namespace hpl {
 
 	class cImageEntity;
@@ -78,6 +82,7 @@ namespace hpl {
 	class cResourceVarsObject
 	{
 	public:
+		void LoadVariables(const tinyxml2::XMLElement* apRootElem);
 		void LoadVariables(cXmlElement *apRootElem);
 		void SetUserVariable(const tString& asName, const tString& asValue);
 		tString* GetUserVariable(const tString& asName);

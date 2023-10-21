@@ -287,7 +287,7 @@ void cTextureWrapper::Update()
 			return;
 
 		// uuh
-		eTextureWrap wrap = pMatMgr->GetWrap(msWrap);
+		eTextureWrap wrap = pMatMgr->GetWrap(msWrap.c_str());
 		// mpTexture->SetWrapR(wrap);
 		// mpTexture->SetWrapS(wrap);
 		// mpTexture->SetWrapT(wrap);
@@ -1069,7 +1069,7 @@ void cTextureUnitPanel::Update()
 	mpInpFile->SetInitialPath(mpWindow->msLastTexturePath);
 
 	mpInpMipMaps->SetValue(mpTextureWrapper->GetUseMipMaps(), false);
-	mpInpWrap->SetValue(mpWindow->GetEditor()->GetEngine()->GetResources()->GetMaterialManager()->GetWrap(mpTextureWrapper->GetWrap()), false);
+	mpInpWrap->SetValue(mpWindow->GetEditor()->GetEngine()->GetResources()->GetMaterialManager()->GetWrap(mpTextureWrapper->GetWrap().c_str()), false);
 
 
 	mpImgThumb->SetImage(pImg);
