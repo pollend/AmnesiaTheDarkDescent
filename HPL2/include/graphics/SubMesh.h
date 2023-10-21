@@ -180,6 +180,8 @@ namespace hpl {
 
         void AddCollider(const MeshCollisionResource& def);
         std::span<MeshCollisionResource> GetColliders();
+        inline std::span<StreamBufferInfo> GetStreamBuffers() {return m_vertexStreams; }
+        inline IndexBufferInfo& IndexBuffer() {return m_indexStream; }
 
         void SetIsCollideShape(bool abX) {
             m_collideShape = abX;
@@ -226,9 +228,7 @@ namespace hpl {
         }
 
         void SetStreamBuffers(iVertexBuffer* buffer, std::vector<StreamBufferInfo>&& vertexStreams, IndexBufferInfo&& indexStream);
-
         void Compile();
-
     private:
         cMaterialManager* m_materialManager = nullptr;
         tString m_name;

@@ -22,25 +22,25 @@
 #include "graphics/AssetBuffer.h"
 #include "graphics/GraphicsTypes.h"
 #include "impl/LegacyVertexBuffer.h"
-#include "system/String.h"
 
 #include "graphics/Bone.h"
 #include "graphics/Material.h"
 #include "graphics/Mesh.h"
 #include "graphics/Skeleton.h"
 #include "graphics/VertexBuffer.h"
-#include "math/Math.h"
 #include "resources/MaterialManager.h"
 
 #include "physics/PhysicsWorld.h"
 
 #include "system/MemoryManager.h"
+#include "system/String.h"
 
 #include <algorithm>
 #include <cstdint>
 #include <cstring>
 #include <optional>
 
+#include "math/Math.h"
 
 #include "Common_3/Graphics/Interfaces/IGraphics.h"
 #include "Common_3/Utilities/Math/MathTypes.h"

@@ -374,18 +374,8 @@ namespace hpl {
 		kEndWorldEntityLoad(pLight);
 	}
 
-
-	//-----------------------------------------------------------------------
-
-	int glDecalNumOfElements[4] = {4,3,3,4};
-	eVertexBufferElement glDecalElementType[4] = {	eVertexBufferElement_Position,
-													eVertexBufferElement_Normal,
-													eVertexBufferElement_Texture0,
-													eVertexBufferElement_Texture1Tangent};
 	cMesh* cEngineFileLoading::LoadDecalMeshHelper(cXmlElement* apElement, cGraphics* apGraphics, cResources* apResources, const tString& asName, const tString& asMaterial, const cColor& aColor)
 	{
-		////////////////////////////////
-		//Load Vertex data
 		if(apElement==NULL)return NULL;
 
 		int lNumOfVtx = apElement->GetAttributeInt("NumVerts", 0);
@@ -393,62 +383,78 @@ namespace hpl {
 
 		if(lNumOfIdx <=0 || lNumOfVtx<=0)
 		{
-			Warning("Decal %s is missing geometry, skipping!\n", asName.c_str());
+			LOGF(LogLevel::eWARNING, "Decal %s is missing geometry, skipping!", asName.c_str());
 			return NULL;
 		}
 
-		cXmlElement *pDataArrayElem[4];
-		pDataArrayElem[0] = apElement->GetFirstElement("Positions");
-		pDataArrayElem[1] = apElement->GetFirstElement("Normals");
-		pDataArrayElem[2] = apElement->GetFirstElement("TexCoords");
-		pDataArrayElem[3] = apElement->GetFirstElement("Tangents");
-		cXmlElement *pIndicesElem = apElement->GetFirstElement("Indices");
-
-		tFloatVec vDataArrays[4];
-		tIntVec vIdxArray;
 		tString sSepp=" ";
-		for(int i=0; i<4; ++i)
-		{
-			vDataArrays->reserve(lNumOfVtx * glDecalNumOfElements[i]);
-			cString::GetFloatVec(pDataArrayElem[i]->GetAttributeString("Array"), vDataArrays[i],&sSepp);
-		}
-		vIdxArray.reserve(lNumOfIdx);
-		cString::GetIntVec(pIndicesElem->GetAttributeString("Array"), vIdxArray,&sSepp);
+        auto position = AssetBuffer::BufferStructuredView<float3>();
+        auto color = AssetBuffer::BufferStructuredView<float4>();
+        auto normal = AssetBuffer::BufferStructuredView<float3>();
+        auto uv = AssetBuffer::BufferStructuredView<float2>();
+        auto tangent = AssetBuffer::BufferStructuredView<float3>();
+        cSubMesh::IndexBufferInfo indexInfo;
+        cSubMesh::StreamBufferInfo positionInfo;
+        cSubMesh::StreamBufferInfo tangentInfo;
+        cSubMesh::StreamBufferInfo colorInfo;
+        cSubMesh::StreamBufferInfo normalInfo;
+        cSubMesh::StreamBufferInfo textureInfo;
+        cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::PostionTrait>(&positionInfo,  &position);
+        cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::ColorTrait>(&colorInfo, &color);
+        cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::NormalTrait>(&normalInfo, &normal);
+        cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::TextureTrait>(&textureInfo, &uv);
+        cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::TangentTrait>(&tangentInfo, &tangent);
 
-		//////////////////////////////////
-		// Create vertex buffer
-		iVertexBuffer *pVtxBuffer = apGraphics->GetLowLevel()->CreateVertexBuffer(eVertexBufferType_Software, eVertexBufferDrawType_Tri,
-																					eVertexBufferUsageType_Static,lNumOfVtx, lNumOfIdx);
+        {
 
-		//Create arrays
-		for(int i=0; i<4; ++i)
-			pVtxBuffer->CreateElementArray(glDecalElementType[i],eVertexBufferElementFormat_Float, glDecalNumOfElements[i]);
-		pVtxBuffer->CreateElementArray(eVertexBufferElement_Color0,eVertexBufferElementFormat_Float,4);
+            std::vector<float> stageBuffer;
+            auto resolveBuffer = [&](const char* name, uint32_t units) {
+                stageBuffer.clear();
+                stageBuffer.reserve(lNumOfVtx * units);
+                cXmlElement* positionElement = apElement->GetFirstElement(name);
+		        cString::GetFloatVec(positionElement->GetAttributeString("Array"), stageBuffer,&sSepp);
+            };
+            resolveBuffer("Positions", 4);
+		    for(int vtx=0; vtx < lNumOfVtx; ++vtx) {
+		       position.Write(vtx, float3(stageBuffer[(vtx * 4)],stageBuffer[(vtx * 4) + 1],stageBuffer[(vtx * 4) + 2]));
+	        }
 
-		//Copy the data!
-		// TODO: This needs to be made faster so that data is loaded directly into mesh!
-		for(int vtx=0; vtx<lNumOfVtx; ++vtx)
-		{
-			for(int i=0; i<4; ++i)
-			{
-				float *pData = &vDataArrays[i][vtx*glDecalNumOfElements[i]];
+            resolveBuffer("Normals", 3);
+		    for(int vtx=0; vtx < lNumOfVtx; ++vtx) {
+		       normal.Write(vtx, float3(stageBuffer[(vtx * 3)],stageBuffer[(vtx * 3) + 1],stageBuffer[(vtx * 3) + 2]));
+	        }
 
-				if(glDecalNumOfElements[i]==2)
-					pVtxBuffer->AddVertexVec3f(glDecalElementType[i], cVector3f(pData[0],pData[1],0) );
-				else if(glDecalNumOfElements[i]==3)
-					pVtxBuffer->AddVertexVec3f(glDecalElementType[i], cVector3f(pData[0],pData[1],pData[2]) );
-				else if(glDecalNumOfElements[i]==4)
-					pVtxBuffer->AddVertexVec4f(glDecalElementType[i], cVector3f(pData[0],pData[1],pData[2]),pData[3]);
-			}
+            resolveBuffer("TexCoords", 3);
+		    for(int vtx=0; vtx < lNumOfVtx; ++vtx) {
+		       uv.Write(vtx, float2(stageBuffer[(vtx * 3)],stageBuffer[(vtx * 3) + 1]));
+	        }
 
-			pVtxBuffer->AddVertexColor(eVertexBufferElement_Color0, aColor);
-		}
+            resolveBuffer("Tangents", 4);
+		    for(int vtx=0; vtx < lNumOfVtx; ++vtx) {
+		       tangent.Write(vtx, float3(stageBuffer[(vtx * 4)],stageBuffer[(vtx * 4) + 1],stageBuffer[(vtx * 4) + 2]));
+	        }
 
-		for(int i=0; i<lNumOfIdx; ++i)
-			pVtxBuffer->AddIndex(vIdxArray[i]);
+		    for(int vtx=0; vtx < lNumOfVtx; ++vtx) {
+		       color.Write(vtx, float4(1,1,1,1));
+	        }
 
-		//Compile
-		pVtxBuffer->Compile(0);
+	        positionInfo.m_numberElements = lNumOfVtx;
+            tangentInfo.m_numberElements = lNumOfVtx;
+            colorInfo.m_numberElements = lNumOfVtx;
+            normalInfo.m_numberElements = lNumOfVtx;
+            textureInfo.m_numberElements = lNumOfVtx;
+        }
+        {
+		    cXmlElement *pIndicesElem = apElement->GetFirstElement("Indices");
+            std::vector<int> indexArray;
+		    indexArray.reserve(lNumOfIdx);
+		    cString::GetIntVec(pIndicesElem->GetAttributeString("Array"), indexArray,&sSepp);
+            AssetBuffer::BufferIndexView view = indexInfo.GetView();
+		    for(int idx=0; idx < lNumOfIdx; ++idx) {
+		       view.Write(idx, indexArray[idx]);
+		    }
+		    indexInfo.m_numberElements = lNumOfIdx;
+        }
 
 		/////////////////////////
 		// Create the mesh
@@ -456,22 +462,24 @@ namespace hpl {
 
 		cSubMesh *pSubMesh = pMesh->CreateSubMesh("Main");
 
+        std::vector<cSubMesh::StreamBufferInfo> vertexStreams;
+        vertexStreams.push_back(std::move(positionInfo));
+        vertexStreams.push_back(std::move(tangentInfo));
+        vertexStreams.push_back(std::move(colorInfo));
+        vertexStreams.push_back(std::move(normalInfo));
+        vertexStreams.push_back(std::move(textureInfo));
+		iVertexBuffer *legacyBuffer = apGraphics->GetLowLevel()->CreateVertexBuffer(eVertexBufferType_Software, eVertexBufferDrawType_Tri,
+																					eVertexBufferUsageType_Static,lNumOfVtx, lNumOfIdx);
 		cMaterial *pMat = apResources->GetMaterialManager()->CreateMaterial(asMaterial);
 		pSubMesh->SetMaterial(pMat);
-		pSubMesh->SetVertexBuffer(pVtxBuffer);
+		pSubMesh->SetStreamBuffers(legacyBuffer,
+                  std::move(vertexStreams), std::move(indexInfo));
 		pSubMesh->SetMaterialName(asMaterial);
-
 
 		return pMesh;
 	}
 
-	//////////////////////////////////////////////////////////////////////////
-	// PRIVATE METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
-	void cEngineFileLoading::SetupWorldEntity(iEntity3D *apEntity, cXmlElement* apElement)
+    void cEngineFileLoading::SetupWorldEntity(iEntity3D *apEntity, cXmlElement* apElement)
 	{
 		if(apEntity==NULL) return;
 
