@@ -19,7 +19,7 @@
 
 #include "graphics/SubMesh.h"
 
-#include "graphics/AssetBuffer.h"
+#include "graphics/GraphicsBuffer.h"
 #include "graphics/GraphicsTypes.h"
 #include "impl/LegacyVertexBuffer.h"
 
@@ -53,7 +53,7 @@ namespace hpl {
             auto* lvbElement = buffer->GetElement(element);
             if(lvbElement) {
                 cSubMesh::StreamBufferInfo& info = vertexBuffers.emplace_back();
-                AssetBuffer::BufferStructuredView<typename Trait::Type> view;
+                GraphicsBuffer::BufferStructuredView<typename Trait::Type> view;
                 cSubMesh::StreamBufferInfo::InitializeBuffer<Trait>(&info, &view);
                 uint32_t numElements = lvbElement->NumElements();
                 view.ReserveElements(numElements);

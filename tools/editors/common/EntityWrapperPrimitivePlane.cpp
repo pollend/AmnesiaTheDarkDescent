@@ -478,18 +478,18 @@ cMesh* cEntityWrapperPrimitivePlane::CreatePrimitiveMesh()
 			vEndCorner.v[i] /= vEndCorner.v[i];
 	}
 
-	auto position = AssetBuffer::BufferStructuredView<float3>();
-    auto color = AssetBuffer::BufferStructuredView<float4>();
-    auto normal = AssetBuffer::BufferStructuredView<float3>();
-    auto uv = AssetBuffer::BufferStructuredView<float2>();
-    auto tangent = AssetBuffer::BufferStructuredView<float3>();
+	auto position = GraphicsBuffer::BufferStructuredView<float3>();
+    auto color = GraphicsBuffer::BufferStructuredView<float4>();
+    auto normal = GraphicsBuffer::BufferStructuredView<float3>();
+    auto uv = GraphicsBuffer::BufferStructuredView<float2>();
+    auto tangent = GraphicsBuffer::BufferStructuredView<float3>();
     cSubMesh::IndexBufferInfo indexInfo;
     cSubMesh::StreamBufferInfo positionInfo;
     cSubMesh::StreamBufferInfo tangentInfo;
     cSubMesh::StreamBufferInfo colorInfo;
     cSubMesh::StreamBufferInfo normalInfo;
     cSubMesh::StreamBufferInfo textureInfo;
-    AssetBuffer::BufferIndexView index = indexInfo.GetView();
+    GraphicsBuffer::BufferIndexView index = indexInfo.GetView();
     cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::PostionTrait>(&positionInfo,  &position);
     cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::ColorTrait>(&colorInfo, &color);
     cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::NormalTrait>(&normalInfo, &normal);

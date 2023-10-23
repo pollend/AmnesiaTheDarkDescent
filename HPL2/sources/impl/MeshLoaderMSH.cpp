@@ -229,7 +229,7 @@ namespace hpl {
 			// Vertex data
             std::vector<cSubMesh::StreamBufferInfo> vertexStreams;
             cSubMesh::IndexBufferInfo indexInfo;
-            AssetBuffer::BufferIndexView indexView = indexInfo.GetView();
+            GraphicsBuffer::BufferIndexView indexView = indexInfo.GetView();
 			{
 				int lVtxNum = binBuff.GetInt32();
 				int lVtxTypeNum = binBuff.GetInt32();
@@ -253,7 +253,7 @@ namespace hpl {
                             streamBuffer.m_stride = mp.streamBufferStride;
                             streamBuffer.m_semantic = mp.semantic;
                             streamBuffer.m_numberElements = lVtxNum;
-                            AssetBuffer::BufferRawView rawView = streamBuffer.m_buffer.CreateViewRaw();
+                            GraphicsBuffer::BufferRawView rawView = streamBuffer.m_buffer.CreateViewRaw();
                             std::array<float, 6> stage;
                             std::span<float> floatSpan = rawView.RawDataView<float>();
                             for(size_t vtxIdx = 0; vtxIdx < lVtxNum; vtxIdx++) {

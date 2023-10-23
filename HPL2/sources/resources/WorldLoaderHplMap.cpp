@@ -20,7 +20,7 @@
 #include "resources/WorldLoaderHplMap.h"
 
 #include "Common_3/Utilities/Log/Log.h"
-#include "graphics/AssetBuffer.h"
+#include "graphics/GraphicsBuffer.h"
 #include "graphics/Image.h"
 #include "graphics/MeshUtility.h"
 #include "impl/LegacyVertexBuffer.h"
@@ -512,7 +512,7 @@ namespace hpl {
 
             std::vector<cSubMesh::StreamBufferInfo> vertexStreams;
             cSubMesh::IndexBufferInfo indexInfo;
-            AssetBuffer::BufferIndexView indexView = indexInfo.GetView();
+            GraphicsBuffer::BufferIndexView indexView = indexInfo.GetView();
 			{
 				int lVtxNum = binBuff.GetInt32();
 				int lVtxTypeNum = binBuff.GetInt32();
@@ -551,7 +551,7 @@ namespace hpl {
                             streamBuffer.m_stride = mp.streamBufferStride;
                             streamBuffer.m_semantic = mp.semantic;
                             streamBuffer.m_numberElements = lElementNum;
-                            AssetBuffer::BufferRawView rawView = streamBuffer.m_buffer.CreateViewRaw();
+                            GraphicsBuffer::BufferRawView rawView = streamBuffer.m_buffer.CreateViewRaw();
                             std::array<float, 10> stage;
                             std::span<float> floatSpan = rawView.RawDataView<float>();
                             for(size_t vtxIdx = 0; vtxIdx < lVtxNum; vtxIdx++) {
@@ -1840,11 +1840,11 @@ namespace hpl {
 		// Plane
 		if(sType == "Plane")
 		{
-            auto position = AssetBuffer::BufferStructuredView<float3>();
-            auto color = AssetBuffer::BufferStructuredView<float4>();
-            auto normal = AssetBuffer::BufferStructuredView<float3>();
-            auto uv = AssetBuffer::BufferStructuredView<float2>();
-            auto tangent = AssetBuffer::BufferStructuredView<float3>();
+            auto position = GraphicsBuffer::BufferStructuredView<float3>();
+            auto color = GraphicsBuffer::BufferStructuredView<float4>();
+            auto normal = GraphicsBuffer::BufferStructuredView<float3>();
+            auto uv = GraphicsBuffer::BufferStructuredView<float2>();
+            auto tangent = GraphicsBuffer::BufferStructuredView<float3>();
             cSubMesh::IndexBufferInfo indexInfo;
             cSubMesh::StreamBufferInfo positionInfo;
             cSubMesh::StreamBufferInfo tangentInfo;
@@ -1856,7 +1856,7 @@ namespace hpl {
             cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::NormalTrait>(&normalInfo, &normal);
             cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::TextureTrait>(&textureInfo, &uv);
             cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::TangentTrait>(&tangentInfo, &tangent);
-            AssetBuffer::BufferIndexView index = indexInfo.GetView();
+            GraphicsBuffer::BufferIndexView index = indexInfo.GetView();
 
 			cVector3f vStartCorner = apElement->GetAttributeVector3f("StartCorner",0);
 			cVector3f vEndCorner = apElement->GetAttributeVector3f("EndCorner",0);

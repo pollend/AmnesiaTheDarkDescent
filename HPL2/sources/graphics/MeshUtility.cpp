@@ -2,7 +2,7 @@
 #include "Common_3/Utilities/Log/Log.h"
 #include "Common_3/Utilities/ThirdParty/OpenSource/ModifiedSonyMath/common.hpp"
 #include "Common_3/Utilities/ThirdParty/OpenSource/ModifiedSonyMath/sse/vectormath.hpp"
-#include "graphics/AssetBuffer.h"
+#include "graphics/GraphicsBuffer.h"
 #include "graphics/mikktspace.h"
 #include "math/Math.h"
 
@@ -19,27 +19,27 @@ namespace hpl::MeshUtility {
         struct MikktSpaceUser {
             uint32_t m_numElements;
             uint32_t m_numIndices;
-            AssetBuffer::BufferIndexView* m_indexView;
-            AssetBuffer::BufferStructuredView<float3>* m_position;
-            AssetBuffer::BufferStructuredView<float2>* m_uv;
-            AssetBuffer::BufferStructuredView<float3>* m_normal;
-            AssetBuffer::BufferStructuredView<float3>* m_tangent;
+            GraphicsBuffer::BufferIndexView* m_indexView;
+            GraphicsBuffer::BufferStructuredView<float3>* m_position;
+            GraphicsBuffer::BufferStructuredView<float2>* m_uv;
+            GraphicsBuffer::BufferStructuredView<float3>* m_normal;
+            GraphicsBuffer::BufferStructuredView<float3>* m_tangent;
         };
 
         inline void CreateTriTangentVectorsHPL2(
             uint32_t numVerts,
             uint32_t numIndecies,
-            AssetBuffer::BufferIndexView* indexView,
-            AssetBuffer::BufferStructuredView<float3>* position,
-            AssetBuffer::BufferStructuredView<float2>* uv,
-            AssetBuffer::BufferStructuredView<float3>* normal,
+            GraphicsBuffer::BufferIndexView* indexView,
+            GraphicsBuffer::BufferStructuredView<float3>* position,
+            GraphicsBuffer::BufferStructuredView<float2>* uv,
+            GraphicsBuffer::BufferStructuredView<float3>* normal,
             std::function<void(uint32_t, float4)> handler
         ) {
 
         }
 
 
-        uint32_t WrapSides(uint32_t viewIndex, AssetBuffer::BufferIndexView* view, int alStartVertexIdx, int alSections) {
+        uint32_t WrapSides(uint32_t viewIndex, GraphicsBuffer::BufferIndexView* view, int alStartVertexIdx, int alSections) {
             // Create indices  like this		0 --- 1 --- 2 --- ... --- 0
             //									|   / |   / |
             //									|  /  |  /  |
@@ -91,7 +91,7 @@ namespace hpl::MeshUtility {
             }
         }
         uint32_t WrapLowerCap(
-            uint32_t viewIndex, AssetBuffer::BufferIndexView* view, int alCenterVertexIdx, int alStartVertexIdx, int alSections) {
+            uint32_t viewIndex, GraphicsBuffer::BufferIndexView* view, int alCenterVertexIdx, int alStartVertexIdx, int alSections) {
             for (int i = 0; i < alSections - 1; ++i) {
                 int lBase = alStartVertexIdx + i;
                 view->Write(viewIndex++, alCenterVertexIdx);
@@ -105,7 +105,7 @@ namespace hpl::MeshUtility {
             return viewIndex;
         }
         uint32_t WrapUpperCap(
-            uint32_t viewIndex, AssetBuffer::BufferIndexView* view, int alCenterVertexIdx, int alStartVertexIdx, int alSections) {
+            uint32_t viewIndex, GraphicsBuffer::BufferIndexView* view, int alCenterVertexIdx, int alStartVertexIdx, int alSections) {
             for (int i = 0; i < alSections - 1; ++i) {
                 int lBase = alStartVertexIdx + i;
                 view->Write(viewIndex++, alCenterVertexIdx);
@@ -165,9 +165,9 @@ namespace hpl::MeshUtility {
     void Transform(
         uint32_t numElements,
         const Matrix4& transform,
-        AssetBuffer::BufferStructuredView<float3>* position,
-        AssetBuffer::BufferStructuredView<float3>* normal,
-        AssetBuffer::BufferStructuredView<float3>* tangent) {
+        GraphicsBuffer::BufferStructuredView<float3>* position,
+        GraphicsBuffer::BufferStructuredView<float3>* normal,
+        GraphicsBuffer::BufferStructuredView<float3>* tangent) {
         Matrix3 normalMat = transpose(inverse(transform.getUpper3x3()));
         for (size_t i = 0; i < numElements; i++) {
             if (position) {
@@ -188,11 +188,11 @@ namespace hpl::MeshUtility {
     void CreateTriTangentVectorsHPL2(
         uint32_t numVerts,
         uint32_t numIndices,
-        AssetBuffer::BufferIndexView* indexView,
-        AssetBuffer::BufferStructuredView<float3>* position,
-        AssetBuffer::BufferStructuredView<float2>* uv,
-        AssetBuffer::BufferStructuredView<float3>* normal,
-        std::variant<AssetBuffer::BufferStructuredView<float3>*, AssetBuffer::BufferStructuredView<float4>*> tangent
+        GraphicsBuffer::BufferIndexView* indexView,
+        GraphicsBuffer::BufferStructuredView<float3>* position,
+        GraphicsBuffer::BufferStructuredView<float2>* uv,
+        GraphicsBuffer::BufferStructuredView<float3>* normal,
+        std::variant<GraphicsBuffer::BufferStructuredView<float3>*, GraphicsBuffer::BufferStructuredView<float4>*> tangent
     ) {
             struct TangentPairs {
                 float3 sDir;
@@ -281,10 +281,10 @@ namespace hpl::MeshUtility {
                 float fw = dot(cross(norm,f3Tov3(tangentPair.sDir)), f3Tov3(tangentPair.tDir)) < 0.0f ? -1.0f : 1.0f;
                 std::visit([&](auto& item) {
                     using T = std::decay_t<decltype(item)>;
-                    if constexpr (std::is_same_v<T,AssetBuffer::BufferStructuredView<float3>*>) {
+                    if constexpr (std::is_same_v<T,GraphicsBuffer::BufferStructuredView<float3>*>) {
                         item->Write(vtxIdx, v3ToF3(tang));
                     }
-                    if constexpr (std::is_same_v<T,AssetBuffer::BufferStructuredView<float4>*>) {
+                    if constexpr (std::is_same_v<T,GraphicsBuffer::BufferStructuredView<float4>*>) {
                         item->Write(vtxIdx, float4(v3ToF3(tang), fw));
                     }
                 }, tangent);
@@ -294,12 +294,12 @@ namespace hpl::MeshUtility {
         float afRadius,
         uint32_t alSections,
         uint32_t alSlices,
-        AssetBuffer::BufferIndexView* index,
-        AssetBuffer::BufferStructuredView<float3>* position,
-        AssetBuffer::BufferStructuredView<float4>* color,
-        AssetBuffer::BufferStructuredView<float3>* normal,
-        AssetBuffer::BufferStructuredView<float2>* uv,
-        std::variant<AssetBuffer::BufferStructuredView<float3>*, AssetBuffer::BufferStructuredView<float4>*> tangent) {
+        GraphicsBuffer::BufferIndexView* index,
+        GraphicsBuffer::BufferStructuredView<float3>* position,
+        GraphicsBuffer::BufferStructuredView<float4>* color,
+        GraphicsBuffer::BufferStructuredView<float3>* normal,
+        GraphicsBuffer::BufferStructuredView<float2>* uv,
+        std::variant<GraphicsBuffer::BufferStructuredView<float3>*, GraphicsBuffer::BufferStructuredView<float4>*> tangent) {
         ASSERT(index);
         ASSERT(position);
         ASSERT(color);
@@ -371,12 +371,12 @@ namespace hpl::MeshUtility {
     MeshCreateResult CreatePlane(
         const std::array<Vector3, 2> corners,
         const std::array<Vector2,4> uvCorners,
-        AssetBuffer::BufferIndexView* index,
-        AssetBuffer::BufferStructuredView<float3>* position,
-        AssetBuffer::BufferStructuredView<float4>* color,
-        AssetBuffer::BufferStructuredView<float3>* normal,
-        AssetBuffer::BufferStructuredView<float2>* uv,
-        std::variant<AssetBuffer::BufferStructuredView<float3>*, AssetBuffer::BufferStructuredView<float4>*> tangent
+        GraphicsBuffer::BufferIndexView* index,
+        GraphicsBuffer::BufferStructuredView<float3>* position,
+        GraphicsBuffer::BufferStructuredView<float4>* color,
+        GraphicsBuffer::BufferStructuredView<float3>* normal,
+        GraphicsBuffer::BufferStructuredView<float2>* uv,
+        std::variant<GraphicsBuffer::BufferStructuredView<float3>*, GraphicsBuffer::BufferStructuredView<float4>*> tangent
     ) {
         const Vector3 diff = corners[0] - corners[1];
         folly::small_vector<uint32_t, 4> vPlaneAxes;
@@ -459,12 +459,12 @@ namespace hpl::MeshUtility {
     }
 
     MeshCreateResult CreateCone(const float2 avSize, int alSections,
-        AssetBuffer::BufferIndexView* index,
-        AssetBuffer::BufferStructuredView<float3>* position,
-        AssetBuffer::BufferStructuredView<float4>* color,
-        AssetBuffer::BufferStructuredView<float3>* normal,
-        AssetBuffer::BufferStructuredView<float2>* uv,
-        std::variant<AssetBuffer::BufferStructuredView<float3>*, AssetBuffer::BufferStructuredView<float4>*> tangent) {
+        GraphicsBuffer::BufferIndexView* index,
+        GraphicsBuffer::BufferStructuredView<float3>* position,
+        GraphicsBuffer::BufferStructuredView<float4>* color,
+        GraphicsBuffer::BufferStructuredView<float3>* normal,
+        GraphicsBuffer::BufferStructuredView<float2>* uv,
+        std::variant<GraphicsBuffer::BufferStructuredView<float3>*, GraphicsBuffer::BufferStructuredView<float4>*> tangent) {
 
 		const float fAngleStep = k2Pif/(float)alSections;
 		const float fHalfHeight = avSize.y*0.5f;
@@ -503,12 +503,12 @@ namespace hpl::MeshUtility {
     }
     MeshCreateResult CreateBox(
         float3 size,
-        AssetBuffer::BufferIndexView* index,
-        AssetBuffer::BufferStructuredView<float3>* position,
-        AssetBuffer::BufferStructuredView<float4>* color,
-        AssetBuffer::BufferStructuredView<float3>* normal,
-        AssetBuffer::BufferStructuredView<float2>* uv,
-        std::variant<AssetBuffer::BufferStructuredView<float3>*, AssetBuffer::BufferStructuredView<float4>*> tangent
+        GraphicsBuffer::BufferIndexView* index,
+        GraphicsBuffer::BufferStructuredView<float3>* position,
+        GraphicsBuffer::BufferStructuredView<float4>* color,
+        GraphicsBuffer::BufferStructuredView<float3>* normal,
+        GraphicsBuffer::BufferStructuredView<float2>* uv,
+        std::variant<GraphicsBuffer::BufferStructuredView<float3>*, GraphicsBuffer::BufferStructuredView<float4>*> tangent
     ) {
         ASSERT(index);
         ASSERT(position);
@@ -623,12 +623,12 @@ namespace hpl::MeshUtility {
         Vector2 avSize,
         int alSections,
         int alSlices,
-        AssetBuffer::BufferIndexView* index,
-        AssetBuffer::BufferStructuredView<float3>* position,
-        AssetBuffer::BufferStructuredView<float4>* color,
-        AssetBuffer::BufferStructuredView<float3>* normal,
-        AssetBuffer::BufferStructuredView<float2>* uv,
-        std::variant<AssetBuffer::BufferStructuredView<float3>*, AssetBuffer::BufferStructuredView<float4>*> tangent
+        GraphicsBuffer::BufferIndexView* index,
+        GraphicsBuffer::BufferStructuredView<float3>* position,
+        GraphicsBuffer::BufferStructuredView<float4>* color,
+        GraphicsBuffer::BufferStructuredView<float3>* normal,
+        GraphicsBuffer::BufferStructuredView<float2>* uv,
+        std::variant<GraphicsBuffer::BufferStructuredView<float3>*, GraphicsBuffer::BufferStructuredView<float4>*> tangent
     ) {
 		const float fAngleStep = k2Pif/(float)alSections;
 		const float fRadius = avSize.getX();
@@ -717,12 +717,12 @@ namespace hpl::MeshUtility {
     MeshCreateResult CreateCylinder(
         Vector2 size,
         uint32_t sections,
-        AssetBuffer::BufferIndexView* index,
-        AssetBuffer::BufferStructuredView<float3>* position,
-        AssetBuffer::BufferStructuredView<float4>* color,
-        AssetBuffer::BufferStructuredView<float3>* normal,
-        AssetBuffer::BufferStructuredView<float2>* uv,
-        std::variant<AssetBuffer::BufferStructuredView<float3>*, AssetBuffer::BufferStructuredView<float4>*> tangent
+        GraphicsBuffer::BufferIndexView* index,
+        GraphicsBuffer::BufferStructuredView<float3>* position,
+        GraphicsBuffer::BufferStructuredView<float4>* color,
+        GraphicsBuffer::BufferStructuredView<float3>* normal,
+        GraphicsBuffer::BufferStructuredView<float2>* uv,
+        std::variant<GraphicsBuffer::BufferStructuredView<float3>*, GraphicsBuffer::BufferStructuredView<float4>*> tangent
     ) {
 
 		const float fAngleStep = k2Pif/(float)sections;
@@ -773,11 +773,11 @@ namespace hpl::MeshUtility {
     void MikkTSpaceGenerate(
         uint32_t numVerts,
         uint32_t numIndecies,
-        AssetBuffer::BufferIndexView* view,
-        AssetBuffer::BufferStructuredView<float3>* position,
-        AssetBuffer::BufferStructuredView<float2>* uv,
-        AssetBuffer::BufferStructuredView<float3>* normal,
-        AssetBuffer::BufferStructuredView<float3>* writeTangent) {
+        GraphicsBuffer::BufferIndexView* view,
+        GraphicsBuffer::BufferStructuredView<float3>* position,
+        GraphicsBuffer::BufferStructuredView<float2>* uv,
+        GraphicsBuffer::BufferStructuredView<float3>* normal,
+        GraphicsBuffer::BufferStructuredView<float3>* writeTangent) {
         details::MikktSpaceUser user;
         user.m_numElements = numVerts;
         user.m_numIndices = numIndecies;

@@ -29,23 +29,33 @@ namespace hpl {
     }
 
 
-    class AssetBuffer final {
+    class GraphicsBuffer final {
     public:
+        enum BufferType {
+            ResourceBuffer,
+            MappedBuffer
+        };
+        struct MappedBufferDesc {
+            uint64_t m_size;
+            uint64_t m_dstOffset;
+            void* m_mappedData;
+        };
+
         enum class IndexType : uint8_t { Uint16, Uint32 };
 
-        AssetBuffer() {}
-        explicit AssetBuffer(const AssetBuffer&);
-        explicit AssetBuffer(AssetBuffer&&);
-        explicit AssetBuffer(uint32_t numBytes);
+        GraphicsBuffer() {}
+        explicit GraphicsBuffer(const MappedBufferDesc& desc);
+        explicit GraphicsBuffer(const GraphicsBuffer&);
+        explicit GraphicsBuffer(GraphicsBuffer&&);
 
-        void operator=(const AssetBuffer& other);
-        void operator=(AssetBuffer&& other);
+        void operator=(const GraphicsBuffer& other);
+        void operator=(GraphicsBuffer&& other);
 
         class BufferRawView {
         public:
             BufferRawView() {
             }
-            BufferRawView(AssetBuffer* asset, uint32_t byteOffset) :
+            BufferRawView(GraphicsBuffer* asset, uint32_t byteOffset) :
                 m_asset(asset),
                 m_byteOffset(byteOffset) {
                 ASSERT(m_byteOffset <= m_asset->Data().size());
@@ -96,13 +106,13 @@ namespace hpl {
             inline std::span<uint8_t> RawView() { return std::span(m_asset->m_buffer.data() + m_byteOffset, m_asset->m_buffer.size() - m_byteOffset); }
             inline uint32_t NumBytes() { return  (m_asset->m_buffer.size() - m_byteOffset); }
         protected:
-            AssetBuffer* m_asset = nullptr;
+            GraphicsBuffer* m_asset = nullptr;
             uint32_t m_byteOffset = 0;
         };
 
         struct BufferIndexView: BufferRawView {
         public:
-            BufferIndexView(AssetBuffer* asset, uint32_t byteOffset, IndexType type)
+            BufferIndexView(GraphicsBuffer* asset, uint32_t byteOffset, IndexType type)
                 : BufferRawView(asset, byteOffset)
                 , m_indexType(type) {
             }
@@ -190,7 +200,7 @@ namespace hpl {
         public:
 
             BufferStructuredView() {}
-            BufferStructuredView(AssetBuffer* asset, uint32_t byteOffset, uint32_t byteStride)
+            BufferStructuredView(GraphicsBuffer* asset, uint32_t byteOffset, uint32_t byteStride)
                 : BufferRawView(asset, byteOffset)
                 , m_byteStride(byteStride) {
                 ASSERT(m_byteStride >= sizeof(T));
@@ -264,7 +274,13 @@ namespace hpl {
 
         std::span<uint8_t> Data();
     private:
+        struct {
+            uint64_t m_size;
+            uint64_t m_dstOffset;
+            void* m_mappedData;
+        } m_mapped;
         std::vector<uint8_t> m_buffer;
+        BufferType m_type = BufferType::ResourceBuffer;
     };
 
 

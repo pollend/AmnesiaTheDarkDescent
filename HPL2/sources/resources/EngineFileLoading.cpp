@@ -388,11 +388,11 @@ namespace hpl {
 		}
 
 		tString sSepp=" ";
-        auto position = AssetBuffer::BufferStructuredView<float3>();
-        auto color = AssetBuffer::BufferStructuredView<float4>();
-        auto normal = AssetBuffer::BufferStructuredView<float3>();
-        auto uv = AssetBuffer::BufferStructuredView<float2>();
-        auto tangent = AssetBuffer::BufferStructuredView<float3>();
+        auto position = GraphicsBuffer::BufferStructuredView<float3>();
+        auto color = GraphicsBuffer::BufferStructuredView<float4>();
+        auto normal = GraphicsBuffer::BufferStructuredView<float3>();
+        auto uv = GraphicsBuffer::BufferStructuredView<float2>();
+        auto tangent = GraphicsBuffer::BufferStructuredView<float3>();
         cSubMesh::IndexBufferInfo indexInfo;
         cSubMesh::StreamBufferInfo positionInfo;
         cSubMesh::StreamBufferInfo tangentInfo;
@@ -450,7 +450,7 @@ namespace hpl {
             std::vector<int> indexArray;
 		    indexArray.reserve(lNumOfIdx);
 		    cString::GetIntVec(pIndicesElem->GetAttributeString("Array"), indexArray,&sSepp);
-            AssetBuffer::BufferIndexView view = indexInfo.GetView();
+            GraphicsBuffer::BufferIndexView view = indexInfo.GetView();
 		    for(int idx=0; idx < lNumOfIdx; ++idx) {
 		       view.Write(idx, indexArray[idx]);
 		    }

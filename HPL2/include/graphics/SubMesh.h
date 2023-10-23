@@ -19,7 +19,7 @@
 
 #pragma once
 
-#include "graphics/AssetBuffer.h"
+#include "graphics/GraphicsBuffer.h"
 #include "graphics/GraphicsTypes.h"
 #include "math/MathTypes.h"
 #include "math/MeshTypes.h"
@@ -107,7 +107,7 @@ namespace hpl {
 
             // utility function to create buffers allows for consistancy for these types of buffers in the engine
             template<typename Trait>
-            static void InitializeBuffer(StreamBufferInfo* info, AssetBuffer::BufferStructuredView<typename Trait::Type>* view = nullptr) {
+            static void InitializeBuffer(StreamBufferInfo* info, GraphicsBuffer::BufferStructuredView<typename Trait::Type>* view = nullptr) {
                 info->m_stride = Trait::Stride;
                 info->m_semantic = Trait::Semantic;
                 if(view) {
@@ -116,11 +116,11 @@ namespace hpl {
             }
 
             template<typename T>
-            constexpr AssetBuffer::BufferStructuredView<T> GetStructuredView(uint32_t byteOffset = 0) {
+            constexpr GraphicsBuffer::BufferStructuredView<T> GetStructuredView(uint32_t byteOffset = 0) {
                 return m_buffer.CreateStructuredView<T>(byteOffset, m_stride);
             }
 
-            AssetBuffer m_buffer;
+            GraphicsBuffer m_buffer;
             uint32_t m_stride = 0;
             uint32_t m_numberElements = 0;
             ShaderSemantic m_semantic = ShaderSemantic::SEMANTIC_UNDEFINED;
@@ -131,12 +131,12 @@ namespace hpl {
             IndexBufferInfo() {
             }
 
-            AssetBuffer::BufferIndexView GetView() {
+            GraphicsBuffer::BufferIndexView GetView() {
                 return m_buffer.CreateIndexView();
             }
 
             uint32_t m_numberElements = 0;
-            AssetBuffer m_buffer;
+            GraphicsBuffer m_buffer;
         };
 
         class MeshCollisionResource {
