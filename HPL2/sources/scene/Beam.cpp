@@ -19,6 +19,7 @@
 
 #include "scene/Beam.h"
 
+#include "impl/LegacyVertexBuffer.h"
 #include "impl/tinyXML/tinyxml.h"
 
 #include "math/Math.h"
@@ -112,15 +113,12 @@ namespace hpl {
 		if(mpVtxBuffer) hplDelete(mpVtxBuffer);
 	}
 
-	//-----------------------------------------------------------------------
+    DrawPacket cBeam::ResolveDrawPacket(const ForgeRenderer::Frame& frame,std::span<eVertexBufferElement> elements) {
 
-	//////////////////////////////////////////////////////////////////////////
-	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
+	    return static_cast<LegacyVertexBuffer*>(mpVtxBuffer)->resolveGeometryBinding(frame.m_currentFrame, elements);
+    }
 
-	//-----------------------------------------------------------------------
-
-	void cBeam::SetSize(const cVector2f& avSize)
+    void cBeam::SetSize(const cVector2f& avSize)
 	{
 		mvSize = avSize;
 		mBoundingVolume.SetSize(cVector3f(mvSize.x, mvSize.y, mvSize.x));

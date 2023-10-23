@@ -20,6 +20,7 @@
 #ifndef HPL_DUMMY_RENDERABLE_H
 #define HPL_DUMMY_RENDERABLE_H
 
+#include "graphics/DrawPacket.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Renderable.h"
 
@@ -45,17 +46,23 @@ namespace hpl {
 
 		//////////////////////////////
 		//iEntity implementation
-		tString GetEntityType(){ return "cDummy";}
+		virtual tString GetEntityType() override{ return "cDummy";}
 
 		///////////////////////////////
 		//Renderable implementation:
-		cMaterial *GetMaterial(){ return NULL;}
-		iVertexBuffer* GetVertexBuffer(){ return NULL;}
+		virtual cMaterial *GetMaterial() override { return NULL;}
+		virtual iVertexBuffer* GetVertexBuffer() override{ return NULL;}
 
-		eRenderableType GetRenderType(){ return eRenderableType_Dummy;}
+        virtual DrawPacket ResolveDrawPacket(const ForgeRenderer::Frame& frame,std::span<eVertexBufferElement> elements) override {
+            DrawPacket packet;
+            packet.m_type = DrawPacket::Unknown;
+            return packet;
+        }
 
-		int GetMatrixUpdateCount(){ return GetTransformUpdateCount();}
-		cMatrixf* GetModelMatrix(cFrustum* apFrustum);
+		virtual eRenderableType GetRenderType() override{ return eRenderableType_Dummy;}
+
+		virtual int GetMatrixUpdateCount() override{ return GetTransformUpdateCount();}
+		virtual cMatrixf* GetModelMatrix(cFrustum* apFrustum) override;
 
 	private:
 		cMatrixf m_mtxModelOutput;

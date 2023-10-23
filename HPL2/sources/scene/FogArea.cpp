@@ -19,17 +19,12 @@
 
 #include "scene/FogArea.h"
 
+#include "graphics/DrawPacket.h"
 #include "math/Math.h"
 
 #include "resources/Resources.h"
 
 namespace hpl {
-
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	cFogArea::cFogArea(tString asName, cResources *apResources) : iRenderable(asName)
 	{
@@ -48,22 +43,19 @@ namespace hpl {
 		mBoundingVolume.SetSize(1);
 	}
 
-	//-----------------------------------------------------------------------
 
 	cFogArea::~cFogArea()
 	{
 	}
 
-	//-----------------------------------------------------------------------
 
-	//////////////////////////////////////////////////////////////////////////
-	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
+    DrawPacket cFogArea::ResolveDrawPacket(const ForgeRenderer::Frame& frame,std::span<eVertexBufferElement> elements) {
+        DrawPacket drawPacket;
+        drawPacket.m_type = DrawPacket::Unknown;
+        return drawPacket;
+    }
 
-
-	//-----------------------------------------------------------------------
-
-	void cFogArea::SetSize(const cVector3f& avSize)
+    void cFogArea::SetSize(const cVector3f& avSize)
 	{
 		mvSize = avSize;
 

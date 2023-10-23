@@ -19,6 +19,7 @@
 
 #include "scene/SubMeshEntity.h"
 
+#include "impl/LegacyVertexBuffer.h"
 #include "scene/MeshEntity.h"
 
 #include "resources/MaterialManager.h"
@@ -219,6 +220,13 @@ namespace hpl {
 	}
 
 
+    DrawPacket cSubMeshEntity::ResolveDrawPacket(const ForgeRenderer::Frame& frame,std::span<eVertexBufferElement> elements)  {
+		if(mpDynVtxBuffer)
+		{
+	        return static_cast<LegacyVertexBuffer*>(mpDynVtxBuffer)->resolveGeometryBinding(frame.m_currentFrame, elements);
+	    }
+	    return static_cast<LegacyVertexBuffer*>(mpSubMesh->GetVertexBuffer())->resolveGeometryBinding(frame.m_currentFrame, elements);
+    }
 	iVertexBuffer* cSubMeshEntity::GetVertexBuffer()
 	{
 		if(mpDynVtxBuffer)

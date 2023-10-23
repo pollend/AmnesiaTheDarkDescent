@@ -369,7 +369,6 @@ bool cEngineGeneratedMesh::ReCreate(cMesh* apMesh)
 	return Create(sName);
 }
 
-//-----------------------------------------------------------------------
 
 iVertexBuffer* cEngineGeneratedMesh::GetVertexBuffer()
 {
@@ -378,15 +377,6 @@ iVertexBuffer* cEngineGeneratedMesh::GetVertexBuffer()
 
 	return NULL;
 }
-
-//-----------------------------------------------------------------------
-
-//////////////////////////////////////////////////////////////////
-// ICON ENTITY - CONSTRUCTORS
-//////////////////////////////////////////////////////////////////
-
-//-----------------------------------------------------------------------
-
 
 iIconObject::iIconObject(iEdScnObject* apParent, const tString& asIconFile) : iEngineObject(apParent)
 {

@@ -36,13 +36,12 @@ namespace hpl {
 	class cMaterial;
 	class iVertexBuffer;
 
-	//------------------------------------------
 
 	class cBeam;
 	class cBeamEnd : public iEntity3D
 	{
-	friend class cBeam;
-	friend class cBeamEnd_UpdateCallback;
+	    friend class cBeam;
+	    friend class cBeamEnd_UpdateCallback;
 	public:
 		cBeamEnd(const tString asName, cBeam *apBeam) : iEntity3D(asName),
 						mColor(1,1),mpBeam(apBeam) {}
@@ -70,9 +69,6 @@ namespace hpl {
 
 	class cBeam : public iRenderable
 	{
-	#ifdef __GNUC__
-		typedef iRenderable __super;
-	#endif
 	friend class cBeamEnd;
 	public:
 		cBeam(const tString asName, cResources *apResources,cGraphics *apGraphics);
@@ -112,8 +108,9 @@ namespace hpl {
 		bool IsVisible();
 
 		//Renderable implementations
-		cMaterial *GetMaterial(){ return mpMaterial;}
-		iVertexBuffer* GetVertexBuffer(){return mpVtxBuffer;}
+		virtual cMaterial *GetMaterial() override{ return mpMaterial;}
+		virtual iVertexBuffer* GetVertexBuffer() override{return mpVtxBuffer;}
+        virtual DrawPacket ResolveDrawPacket(const ForgeRenderer::Frame& frame,std::span<eVertexBufferElement> elements) override;
 
 		void UpdateGraphicsForFrame(float afFrameTime);
 

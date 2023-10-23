@@ -22,6 +22,7 @@
 #include "Common_3/Utilities/Log/Log.h"
 #include "graphics/AssetBuffer.h"
 #include "graphics/Image.h"
+#include "graphics/MeshUtility.h"
 #include "impl/LegacyVertexBuffer.h"
 #include "system/String.h"
 #include "system/LowLevelSystem.h"
@@ -1839,16 +1840,63 @@ namespace hpl {
 		// Plane
 		if(sType == "Plane")
 		{
+            auto position = AssetBuffer::BufferStructuredView<float3>();
+            auto color = AssetBuffer::BufferStructuredView<float4>();
+            auto normal = AssetBuffer::BufferStructuredView<float3>();
+            auto uv = AssetBuffer::BufferStructuredView<float2>();
+            auto tangent = AssetBuffer::BufferStructuredView<float3>();
+            cSubMesh::IndexBufferInfo indexInfo;
+            cSubMesh::StreamBufferInfo positionInfo;
+            cSubMesh::StreamBufferInfo tangentInfo;
+            cSubMesh::StreamBufferInfo colorInfo;
+            cSubMesh::StreamBufferInfo normalInfo;
+            cSubMesh::StreamBufferInfo textureInfo;
+            cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::PostionTrait>(&positionInfo,  &position);
+            cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::ColorTrait>(&colorInfo, &color);
+            cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::NormalTrait>(&normalInfo, &normal);
+            cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::TextureTrait>(&textureInfo, &uv);
+            cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::TangentTrait>(&tangentInfo, &tangent);
+            AssetBuffer::BufferIndexView index = indexInfo.GetView();
+
 			cVector3f vStartCorner = apElement->GetAttributeVector3f("StartCorner",0);
 			cVector3f vEndCorner = apElement->GetAttributeVector3f("EndCorner",0);
-			tVector2fVec vUVCorners;
-			for(int i=0;i<4;++i)
-				vUVCorners.push_back(apElement->GetAttributeVector2f("Corner" + cString::ToString(i+1) + "UV"));
+		    std::array<Vector2, 4> vUVCorners;
+			for(int i=0;i<4;++i) {
+			    vUVCorners[i] = cMath::ToForgeVec2(apElement->GetAttributeVector2f("Corner" + cString::ToString(i+1) + "UV"));
+		    }
 
-			//Create the mesh
-			cMesh *pMesh = mpGraphics->GetMeshCreator()->CreatePlane(sName,vStartCorner,vEndCorner,
-																	 vUVCorners[0],vUVCorners[1], vUVCorners[2], vUVCorners[3],
-																	 sMaterial);
+            MeshUtility::MeshCreateResult result =  MeshUtility::CreatePlane(
+                {cMath::ToForgeVec3(vStartCorner), cMath::ToForgeVec3(vEndCorner)},
+                vUVCorners,
+                &index,
+                &position,
+                &color,
+                &normal,
+                &uv,
+                &tangent
+            );
+            positionInfo.m_numberElements = result.numVertices;
+            tangentInfo.m_numberElements = result.numVertices;
+            colorInfo.m_numberElements = result.numVertices;
+            normalInfo.m_numberElements = result.numVertices;
+            textureInfo.m_numberElements = result.numVertices;    		//Create the mesh
+            indexInfo.m_numberElements = result.numIndices;
+
+            std::vector<cSubMesh::StreamBufferInfo> vertexStreams;
+            vertexStreams.push_back(std::move(positionInfo));
+            vertexStreams.push_back(std::move(tangentInfo));
+            vertexStreams.push_back(std::move(colorInfo));
+            vertexStreams.push_back(std::move(normalInfo));
+            vertexStreams.push_back(std::move(textureInfo));
+
+		    iVertexBuffer* pVtxBuffer = mpGraphics->GetLowLevel()->CreateVertexBuffer(eVertexBufferType_Hardware, eVertexBufferDrawType_Tri,
+																	eVertexBufferUsageType_Static);
+		    cMesh* pMesh = hplNew( cMesh, (sName, _W(""), mpResources->GetMaterialManager(), mpResources->GetAnimationManager()));
+		    cSubMesh* pSubMesh = pMesh->CreateSubMesh("Main");
+		    cMaterial *pMat = mpResources->GetMaterialManager()->CreateMaterial(sMaterial);
+		    pSubMesh->SetMaterial(pMat);
+
+		    pSubMesh->SetStreamBuffers(pVtxBuffer, std::move(vertexStreams), std::move(indexInfo));
 
 			//////////////////////
 			//RENDER_DEBUG

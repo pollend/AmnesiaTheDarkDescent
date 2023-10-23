@@ -27,19 +27,6 @@
 
 class TiXmlElement;
 
-#define kSaveData_LoadFromBegin(aClass) \
-							__super::LoadFromSaveData(apSaveData); \
-							cSaveData_##aClass *pData = static_cast<cSaveData_##aClass*>(apSaveData);
-
-#define kSaveData_SaveToBegin(aClass) \
-							__super::SaveToSaveData(apSaveData);\
-							cSaveData_##aClass *pData = static_cast<cSaveData_##aClass*>(apSaveData);
-
-#define kSaveData_SetupBegin(aClass) \
-							__super::SaveDataSetup(apSaveObjectHandler,apGame);\
-							cSaveData_##aClass *pData = static_cast<cSaveData_##aClass*>(mpSaveData); \
-							const char *sClassNameString = #aClass;
-
 #define kSaveData_BaseClass(aClass) class cSaveData_##aClass : public iSaveData
 #define kSaveData_ChildClass(aParent, aChild) class cSaveData_##aChild : public cSaveData_##aParent
 

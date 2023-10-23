@@ -304,7 +304,6 @@ namespace hpl {
 				for(int j=0;j<2;++j)
 				{
 					mvClipPlanes.push_back(cPlanef(vAxes[i]*vSign[j], mvDecalPosition - vAdd*vSign[j]));
-					//Log("ClipPlane %i %s %f\n",i+j, mvClipPlanes.back().GetNormal().ToFileString().c_str(), mvClipPlanes.back().d);
 				}
 			}
 

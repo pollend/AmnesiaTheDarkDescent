@@ -22,6 +22,7 @@
 
 #include "engine/Event.h"
 #include "engine/Interface.h"
+#include "graphics/DrawPacket.h"
 #include "graphics/ForgeHandles.h"
 #include "graphics/DebugDraw.h"
 #include "graphics/MaterialResource.h"
@@ -2519,11 +2520,10 @@ namespace hpl {
                 eVertexBufferElement_Position,
                 eVertexBufferElement_Texture0,
             };
-            LegacyVertexBuffer::GeometryBinding binding;
-            static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
-            LegacyVertexBuffer::cmdBindGeometry(cmd, frame.m_resourcePool, binding);
+            DrawPacket pkt = illuminationItem->ResolveDrawPacket(frame, targets);
+            DrawPacket::cmdBindBuffers(cmd, frame.m_resourcePool, &pkt);
             cmdBindPushConstants(cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
-            cmdDrawIndexed(cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+            cmdDrawIndexed(cmd, pkt.m_numIndices, 0, 0);
         }
     }
     void cRendererDeferred::cmdLightPass(
@@ -2758,24 +2758,21 @@ namespace hpl {
                                         pObject->GetCoverageAmount() >= 1 ? eMaterialRenderMode_Z : eMaterialRenderMode_Z_Dissolve;
                                     cMaterial* pMaterial = pObject->GetMaterial();
                                     const MaterialDescriptor& descriptor = pMaterial->Descriptor();
-                                    iVertexBuffer* vertexBuffer = pObject->GetVertexBuffer();
-                                    if (vertexBuffer == nullptr || descriptor.m_id == MaterialID::Unknown) {
+                                    std::array targets = { eVertexBufferElement_Position,
+                                                           eVertexBufferElement_Texture0,
+                                                           eVertexBufferElement_Normal,
+                                                           eVertexBufferElement_Texture1Tangent };
+                                    DrawPacket packet =  pObject->ResolveDrawPacket(frame, targets);
+                                    if (packet.m_type == DrawPacket::Unknown || descriptor.m_id == MaterialID::Unknown) {
                                         return;
                                     }
                                     MaterialRootConstant materialConst = {};
                                     uint32_t instance = cmdBindMaterialAndObject(shadowMapData->m_cmd.m_handle, frame, pMaterial, pObject);
                                     materialConst.objectId = instance;
-                                    std::array targets = { eVertexBufferElement_Position,
-                                                           eVertexBufferElement_Texture0,
-                                                           eVertexBufferElement_Normal,
-                                                           eVertexBufferElement_Texture1Tangent };
-                                    LegacyVertexBuffer::GeometryBinding binding{};
-                                    static_cast<LegacyVertexBuffer*>(vertexBuffer)
-                                        ->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
-                                    LegacyVertexBuffer::cmdBindGeometry(shadowMapData->m_cmd.m_handle, frame.m_resourcePool, binding);
+                                    DrawPacket::cmdBindBuffers(shadowMapData->m_cmd.m_handle, frame.m_resourcePool, &packet);
                                     cmdBindPushConstants(
                                         shadowMapData->m_cmd.m_handle, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
-                                    cmdDrawIndexed(shadowMapData->m_cmd.m_handle, binding.m_indexBuffer.numIndicies, 0, 0);
+                                    cmdDrawIndexed(shadowMapData->m_cmd.m_handle, packet.m_numIndices, 0, 0);
                                 }
                                 {
                                     cmdBindRenderTargets(shadowMapData->m_cmd.m_handle, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
@@ -3008,16 +3005,15 @@ namespace hpl {
                     cmdSetStencilReferenceValue(cmd, 0xff);
 
                     std::array elements = { eVertexBufferElement_Position };
-                    LegacyVertexBuffer::GeometryBinding binding{};
                     auto lightShape = GetLightShape(light->m_light, eDeferredShapeQuality_High);
                     ASSERT(lightShape && "Light shape not found");
-                    static_cast<LegacyVertexBuffer*>(lightShape)->resolveGeometryBinding(frame.m_currentFrame, elements, &binding);
-                    LegacyVertexBuffer::cmdBindGeometry(cmd, frame.m_resourcePool, binding);
+                    DrawPacket packet = static_cast<LegacyVertexBuffer*>(lightShape)->resolveGeometryBinding(frame.m_currentFrame, elements);
+                    DrawPacket::cmdBindBuffers(cmd, frame.m_resourcePool, &packet);
 
                     cmdBindPipeline(cmd, options.m_invert ? m_lightStencilPipelineCW.m_handle : m_lightStencilPipelineCCW.m_handle);
                     uint32_t instance = cmdBindLightDescriptor(light); // bind light descriptor light uniforms
                     cmdBindPushConstants(cmd, m_lightPassRootSignature.m_handle, lightRootConstantIndex, &instance);
-                    cmdDrawIndexed(cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+                    cmdDrawIndexed(cmd, packet.m_numIndices, 0, 0);
 
                     switch (light->m_light->GetLightType()) {
                     case eLightType_Point:
@@ -3046,7 +3042,7 @@ namespace hpl {
                         break;
                     }
                     cmdBindPushConstants(cmd, m_lightPassRootSignature.m_handle, lightRootConstantIndex, &instance);
-                    cmdDrawIndexed(cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+                    cmdDrawIndexed(cmd, packet.m_numIndices, 0, 0);
                     {
                         LoadActionsDesc loadActions = {};
                         loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
@@ -3110,15 +3106,14 @@ namespace hpl {
                     }
 
                     std::array targets = { eVertexBufferElement_Position };
-                    LegacyVertexBuffer::GeometryBinding binding{};
                     auto lightShape = GetLightShape(light->m_light, eDeferredShapeQuality_High);
                     ASSERT(lightShape && "Light shape not found");
-                    static_cast<LegacyVertexBuffer*>(lightShape)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
+                    DrawPacket packet =  static_cast<LegacyVertexBuffer*>(lightShape)->resolveGeometryBinding(frame.m_currentFrame, targets);
 
                     uint32_t instance = cmdBindLightDescriptor(light);
-                    LegacyVertexBuffer::cmdBindGeometry(cmd, frame.m_resourcePool, binding);
+                    DrawPacket::cmdBindBuffers(cmd, frame.m_resourcePool, &packet);
                     cmdBindPushConstants(cmd, m_lightPassRootSignature.m_handle, lightRootConstantIndex, &instance);
-                    cmdDrawIndexed(cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+                    cmdDrawIndexed(cmd, packet.m_numIndices, 0, 0);
                 }
                 cmdEndDebugMarker(cmd);
             }
@@ -3156,8 +3151,12 @@ namespace hpl {
 
             for (auto& diffuseItem : renderList.GetRenderableItems(eRenderListType_Diffuse)) {
                 cMaterial* pMaterial = diffuseItem->GetMaterial();
-                iVertexBuffer* vertexBuffer = diffuseItem->GetVertexBuffer();
-                if (pMaterial == nullptr || vertexBuffer == nullptr) {
+                std::array targets = { eVertexBufferElement_Position,
+                                       eVertexBufferElement_Texture0,
+                                       eVertexBufferElement_Normal,
+                                       eVertexBufferElement_Texture1Tangent };
+                DrawPacket packet = diffuseItem->ResolveDrawPacket(frame, targets);
+                if (pMaterial == nullptr || packet.m_type == DrawPacket::Unknown) {
                     continue;
                 }
 
@@ -3165,15 +3164,9 @@ namespace hpl {
                 MaterialRootConstant materialConst = {};
                 uint32_t instance = cmdBindMaterialAndObject(cmd, frame, pMaterial, diffuseItem);
                 materialConst.objectId = instance;
-                std::array targets = { eVertexBufferElement_Position,
-                                       eVertexBufferElement_Texture0,
-                                       eVertexBufferElement_Normal,
-                                       eVertexBufferElement_Texture1Tangent };
-                LegacyVertexBuffer::GeometryBinding binding;
-                static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
-                LegacyVertexBuffer::cmdBindGeometry(cmd, frame.m_resourcePool, binding);
+                DrawPacket::cmdBindBuffers(cmd, frame.m_resourcePool, &packet);
                 cmdBindPushConstants(cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
-                cmdDrawIndexed(cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+                cmdDrawIndexed(cmd, packet.m_numIndices, 0, 0);
             }
             cmdEndDebugMarker(cmd);
         }
@@ -3196,23 +3189,22 @@ namespace hpl {
             cmdBindDescriptorSet(cmd, frameDescriptorIndex, m_materialSet.m_frameSet[frame.m_frameIndex].m_handle);
             for (auto& decalItem : m_rendererList.GetRenderableItems(eRenderListType_Decal)) {
                 cMaterial* pMaterial = decalItem->GetMaterial();
-                iVertexBuffer* vertexBuffer = decalItem->GetVertexBuffer();
-                if (pMaterial == nullptr || vertexBuffer == nullptr) {
+                std::array targets = { eVertexBufferElement_Position, eVertexBufferElement_Texture0, eVertexBufferElement_Color0 };
+                DrawPacket packet  = decalItem->ResolveDrawPacket(frame, targets);
+                if (pMaterial == nullptr || packet.m_type == DrawPacket::Unknown) {
                     continue;
                 }
                 ASSERT(pMaterial->GetBlendMode() < eMaterialBlendMode_LastEnum && "Invalid blend mode");
                 ASSERT(pMaterial->Descriptor().m_id == MaterialID::Decal && "Invalid material type");
                 cmdBindPipeline(cmd, options.m_invert ? m_decalPipelineCW[pMaterial->GetBlendMode()].m_handle : m_decalPipeline[pMaterial->GetBlendMode()].m_handle);
 
-                std::array targets = { eVertexBufferElement_Position, eVertexBufferElement_Texture0, eVertexBufferElement_Color0 };
                 MaterialRootConstant materialConst = {};
                 uint32_t instance = cmdBindMaterialAndObject(cmd, frame, pMaterial, decalItem);
                 materialConst.objectId = instance;
-                LegacyVertexBuffer::GeometryBinding binding;
-                static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
-                LegacyVertexBuffer::cmdBindGeometry(cmd, frame.m_resourcePool, binding);
+                //LegacyVertexBuffer::GeometryBinding binding;
+                DrawPacket::cmdBindBuffers(cmd, frame.m_resourcePool, &packet);
                 cmdBindPushConstants(cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
-                cmdDrawIndexed(cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+                cmdDrawIndexed(cmd, packet.m_numIndices, 0, 0);
             }
             cmdEndDebugMarker(cmd);
         }
@@ -3298,7 +3290,6 @@ namespace hpl {
                     test.m_renderable = pObject;
 
                     cMaterial* pMaterial = pObject->GetMaterial();
-                    iVertexBuffer* vertexBuffer = pObject->GetVertexBuffer();
 
                     if (pObject && pObject->GetRenderFrameCount() != iRenderer::GetRenderFrameCount()) {
                         pObject->SetRenderFrameCount(iRenderer::GetRenderFrameCount());
@@ -3397,7 +3388,6 @@ namespace hpl {
             for (size_t i = 0; i < uniformTest.size(); i++) {
                 auto& test = uniformTest[i];
                 cMaterial* pMaterial = test.m_renderable->GetMaterial();
-                iVertexBuffer* vertexBuffer = test.m_renderable->GetVertexBuffer();
 
                 ASSERT(uniformTest.size() < MaxObjectTest && "Too many renderables");
                 auto* pBoundingVolume = test.m_renderable->GetBoundingVolume();
@@ -3410,22 +3400,24 @@ namespace hpl {
                 reinterpret_cast<float4*>(updateDesc.pMappedData)[1] = float4(boundBoxMax.x, boundBoxMax.y, boundBoxMax.z, 0.0f);
                 endUpdateResource(&updateDesc, nullptr);
 
-                if (!test.m_preZPass || !vertexBuffer || !pMaterial || cMaterial::IsTranslucent(pMaterial->Descriptor().m_id)) {
+                if (!test.m_preZPass || !pMaterial || cMaterial::IsTranslucent(pMaterial->Descriptor().m_id)) {
                     continue;
                 }
 
-                MaterialRootConstant materialConst = {};
-                uint32_t instance = cmdBindMaterialAndObject(m_prePassCmd.m_handle, frame, pMaterial, test.m_renderable, {});
-                materialConst.objectId = instance;
                 std::array targets = { eVertexBufferElement_Position,
                                        eVertexBufferElement_Texture0,
                                        eVertexBufferElement_Normal,
                                        eVertexBufferElement_Texture1Tangent };
-                LegacyVertexBuffer::GeometryBinding binding{};
-                static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
-                LegacyVertexBuffer::cmdBindGeometry(m_prePassCmd.m_handle, frame.m_resourcePool, binding);
+                DrawPacket packet = test.m_renderable->ResolveDrawPacket(frame, targets);
+                if(packet.m_type == DrawPacket::Unknown) {
+                    continue;
+                }
+                MaterialRootConstant materialConst = {};
+                uint32_t instance = cmdBindMaterialAndObject(m_prePassCmd.m_handle, frame, pMaterial, test.m_renderable, {});
+                materialConst.objectId = instance;
+                DrawPacket::cmdBindBuffers(m_prePassCmd.m_handle, frame.m_resourcePool, &packet);
                 cmdBindPushConstants(m_prePassCmd.m_handle, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
-                cmdDrawIndexed(m_prePassCmd.m_handle, binding.m_indexBuffer.numIndicies, 0, 0);
+                cmdDrawIndexed(m_prePassCmd.m_handle, packet.m_numIndices, 0, 0);
             }
 
             uniformPropBlock.maxMipLevel = hiZBuffer->mMipLevels - 1;
@@ -3440,9 +3432,8 @@ namespace hpl {
         }
         {
             cmdBeginDebugMarker(m_prePassCmd.m_handle, 1, 1, 0, "Occlusion Query");
-            LegacyVertexBuffer::GeometryBinding binding{};
             std::array targets = { eVertexBufferElement_Position };
-            static_cast<LegacyVertexBuffer*>(m_box.get())->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
+            DrawPacket packet = static_cast<LegacyVertexBuffer*>(m_box.get())->resolveGeometryBinding(frame.m_currentFrame, targets);
 
             uint32_t occlusionObjectIndex = getDescriptorIndexFromName(m_rootSignatureOcclusuion.m_handle, "rootConstant");
             uint32_t occlusionIndex = 0;
@@ -3465,20 +3456,20 @@ namespace hpl {
                     cmdBindPushConstants(
                         m_prePassCmd.m_handle, m_rootSignatureOcclusuion.m_handle, occlusionObjectIndex, &m_occlusionIndex);
 
-                    LegacyVertexBuffer::cmdBindGeometry(m_prePassCmd.m_handle, frame.m_resourcePool, binding);
+                    DrawPacket::cmdBindBuffers(m_prePassCmd.m_handle, frame.m_resourcePool, &packet);
 
                     QueryDesc queryDesc = {};
                     queryDesc.mIndex = queryIndex++;
                     cmdBindPipeline(m_prePassCmd.m_handle, m_pipelineOcclusionQuery.m_handle);
                     cmdBeginQuery(m_prePassCmd.m_handle, m_occlusionQuery.m_handle, &queryDesc);
-                    cmdDrawIndexed(m_prePassCmd.m_handle, binding.m_indexBuffer.numIndicies, 0, 0);
+                    cmdDrawIndexed(m_prePassCmd.m_handle, packet.m_numIndices, 0, 0);
                     cmdEndQuery(m_prePassCmd.m_handle, m_occlusionQuery.m_handle, &queryDesc);
                     query.m_queryIndex = queryDesc.mIndex;
 
                     queryDesc.mIndex = queryIndex++;
                     cmdBindPipeline(m_prePassCmd.m_handle, m_pipelineMaxOcclusionQuery.m_handle);
                     cmdBeginQuery(m_prePassCmd.m_handle, m_occlusionQuery.m_handle, &queryDesc);
-                    cmdDrawIndexed(m_prePassCmd.m_handle, binding.m_indexBuffer.numIndicies, 0, 0);
+                    cmdDrawIndexed(m_prePassCmd.m_handle, packet.m_numIndices, 0, 0);
                     cmdEndQuery(m_prePassCmd.m_handle, m_occlusionQuery.m_handle, &queryDesc);
                     query.m_maxQueryIndex = queryDesc.mIndex;
 
@@ -3648,23 +3639,25 @@ namespace hpl {
                         renderable->GetCoverageAmount() >= 1 ? eMaterialRenderMode_Z : eMaterialRenderMode_Z_Dissolve;
 
                     cMaterial* pMaterial = renderable->GetMaterial();
-                    iVertexBuffer* vertexBuffer = renderable->GetVertexBuffer();
-                    if (!vertexBuffer || !pMaterial || cMaterial::IsTranslucent(pMaterial->Descriptor().m_id)) {
+                    if (!pMaterial || cMaterial::IsTranslucent(pMaterial->Descriptor().m_id)) {
                         continue;
                     }
-
-                    MaterialRootConstant materialConst = {};
-                    uint32_t instance = cmdBindMaterialAndObject(cmd, frame, pMaterial, renderable);
-                    materialConst.objectId = instance;
                     std::array targets = { eVertexBufferElement_Position,
                                            eVertexBufferElement_Texture0,
                                            eVertexBufferElement_Normal,
                                            eVertexBufferElement_Texture1Tangent };
-                    LegacyVertexBuffer::GeometryBinding binding{};
-                    static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
-                    LegacyVertexBuffer::cmdBindGeometry(cmd, frame.m_resourcePool, binding);
+                    DrawPacket drawPacket = renderable->ResolveDrawPacket(frame, targets);
+                    if(drawPacket.m_type == DrawPacket::Unknown) {
+                        continue;
+                    }
+
+
+                    MaterialRootConstant materialConst = {};
+                    uint32_t instance = cmdBindMaterialAndObject(cmd, frame, pMaterial, renderable);
+                    materialConst.objectId = instance;
+                    DrawPacket::cmdBindBuffers(frame.m_cmd, frame.m_resourcePool, &drawPacket);
                     cmdBindPushConstants(cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
-                    cmdDrawIndexed(cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+                    cmdDrawIndexed(cmd, drawPacket.m_numIndices, 0, 0);
                 }
             }
         }
@@ -4120,23 +4113,23 @@ void cRendererDeferred::Draw(
 
         for (auto& illuminationItem : m_rendererList.GetRenderableItems(eRenderListType_Illumination)) {
             cMaterial* pMaterial = illuminationItem->GetMaterial();
-            iVertexBuffer* vertexBuffer = illuminationItem->GetVertexBuffer();
-            if (pMaterial == nullptr || vertexBuffer == nullptr) {
+            std::array targets = {
+                eVertexBufferElement_Position,
+                eVertexBufferElement_Texture0,
+            };
+            DrawPacket packet = illuminationItem->ResolveDrawPacket(frame, targets);
+
+            if (pMaterial == nullptr || packet.m_type == DrawPacket::Unknown) {
                 continue;
             }
             ASSERT(pMaterial->Descriptor().m_id == MaterialID::SolidDiffuse && "Invalid material type");
             MaterialRootConstant materialConst = {};
             uint32_t instance = cmdBindMaterialAndObject(frame.m_cmd, frame, pMaterial, illuminationItem);
             materialConst.objectId = instance;
-            std::array targets = {
-                eVertexBufferElement_Position,
-                eVertexBufferElement_Texture0,
-            };
-            LegacyVertexBuffer::GeometryBinding binding;
-            static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
-            LegacyVertexBuffer::cmdBindGeometry(frame.m_cmd, frame.m_resourcePool, binding);
+
+            DrawPacket::cmdBindBuffers(cmd, frame.m_resourcePool, &packet);
             cmdBindPushConstants(frame.m_cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
-            cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+            cmdDrawIndexed(frame.m_cmd, packet.m_numIndices, 0, 0);
         }
     }
 
@@ -4216,10 +4209,9 @@ void cRendererDeferred::Draw(
 
         cmdBindPipeline(frame.m_cmd, m_fogPass.m_pipeline.m_handle);
 
-        LegacyVertexBuffer::GeometryBinding binding{};
         std::array geometryStream = { eVertexBufferElement_Position };
-        static_cast<LegacyVertexBuffer*>(m_box.get())->resolveGeometryBinding(frame.m_currentFrame, geometryStream, &binding);
-        LegacyVertexBuffer::cmdBindGeometry(frame.m_cmd, frame.m_resourcePool, binding);
+        DrawPacket drawPacket = static_cast<LegacyVertexBuffer*>(m_box.get())->resolveGeometryBinding(frame.m_currentFrame, geometryStream);
+        DrawPacket::cmdBindBuffers(frame.m_cmd, frame.m_resourcePool, &drawPacket);
 
         {
             std::array<DescriptorData, 1> params = {};
@@ -4236,7 +4228,7 @@ void cRendererDeferred::Draw(
 
         cmdBindDescriptorSet(frame.m_cmd, 0, m_fogPass.m_perFrameSet[frame.m_frameIndex]);
         cmdBindPushConstants(frame.m_cmd, m_fogPass.m_fogRootSignature.m_handle, rootConstantIndex, &fogConstant);
-        cmdDrawIndexedInstanced(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, fogIndex, 0, 0);
+        cmdDrawIndexedInstanced(frame.m_cmd, drawPacket.m_numIndices, 0, fogIndex, 0, 0);
 
         size_t offsetIndex = fogIndex;
         for (auto& fogArea : nearPlanFog) {
@@ -4251,7 +4243,7 @@ void cRendererDeferred::Draw(
         cmdBindPipeline(frame.m_cmd, m_fogPass.m_pipelineInsideNearFrustum.m_handle);
         fogConstant.m_instanceIndex = offsetIndex;
         cmdBindPushConstants(frame.m_cmd, m_fogPass.m_fogRootSignature.m_handle, rootConstantIndex, &fogConstant);
-        cmdDrawIndexedInstanced(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, fogIndex - offsetIndex, 0, 0);
+        cmdDrawIndexedInstanced(frame.m_cmd, drawPacket.m_numIndices, 0, fogIndex - offsetIndex, 0, 0);
 
         cmdEndDebugMarker(frame.m_cmd);
         if (apWorld->GetFogActive()) {
@@ -4354,8 +4346,7 @@ void cRendererDeferred::Draw(
         cmdBindDescriptorSet(frame.m_cmd, mainFrameIndex, m_materialSet.m_frameSet[frame.m_frameIndex].m_handle);
         for (auto& translucencyItem : m_rendererList.GetRenderableItems(eRenderListType_Translucent)) {
             cMaterial* pMaterial = translucencyItem->GetMaterial();
-            iVertexBuffer* vertexBuffer = translucencyItem->GetVertexBuffer();
-            if (pMaterial == nullptr || vertexBuffer == nullptr) {
+            if (pMaterial == nullptr) {
                 continue;
             }
 
@@ -4583,12 +4574,6 @@ void cRendererDeferred::Draw(
                 }
             }
 
-            if (isParticleEmitter) {
-                if (static_cast<LegacyVertexBuffer*>(vertexBuffer)->GetRequestNumberIndecies() == 0) {
-                    continue;
-                }
-            }
-
             MaterialRootConstant materialConst = { 0 };
             float sceneAlpha = 1;
             for (auto& fogArea : fogRenderData) {
@@ -4599,23 +4584,30 @@ void cRendererDeferred::Draw(
             switch (pMaterial->Descriptor().m_id) {
             case MaterialID::Translucent:
                 {
-                    uint32_t instance = cmdBindMaterialAndObject(
-                        frame.m_cmd, frame, pMaterial, translucencyItem, std::optional{ pMatrix ? *pMatrix : cMatrixf::Identity });
-                    materialConst.objectId = instance;
-                    LegacyVertexBuffer::GeometryBinding binding;
-
+                    //LegacyVertexBuffer::GeometryBinding binding;
+                    DrawPacket drawPacket;
                     if (isParticleEmitter) {
                         std::array targets = { eVertexBufferElement_Position, eVertexBufferElement_Texture0, eVertexBufferElement_Color0 };
-                        static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
+                        drawPacket = translucencyItem->ResolveDrawPacket(frame, targets);
+                        if(drawPacket.m_type == DrawPacket::Unknown && drawPacket.m_numIndices == 0) {
+                            break;
+                        }
+
                     } else {
                         std::array targets = { eVertexBufferElement_Position,
                                                eVertexBufferElement_Texture0,
                                                eVertexBufferElement_Normal,
                                                eVertexBufferElement_Texture1Tangent,
                                                eVertexBufferElement_Color0 };
-                        static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
+                            drawPacket = translucencyItem->ResolveDrawPacket(frame, targets);
+                            if(drawPacket.m_type == DrawPacket::Unknown && drawPacket.m_numIndices == 0) {
+                                break;
+                            }
                     }
 
+                    uint32_t instance = cmdBindMaterialAndObject(
+                        frame.m_cmd, frame, pMaterial, translucencyItem, std::optional{ pMatrix ? *pMatrix : cMatrixf::Identity });
+                    materialConst.objectId = instance;
                     cRendererDeferred::TranslucencyPipeline::TranslucencyKey key = {};
                     key.m_field.m_hasDepthTest = pMaterial->GetDepthTest();
 
@@ -4636,12 +4628,13 @@ void cRendererDeferred::Draw(
                                        .m_handle));
                     }
 
-                    LegacyVertexBuffer::cmdBindGeometry(frame.m_cmd, frame.m_resourcePool, binding);
+                    DrawPacket::cmdBindBuffers(frame.m_cmd, frame.m_resourcePool, &drawPacket);
+
                     materialConst.m_options = (isFogActive ? TranslucencyFlags::UseFog : 0) |
                         (isRefraction ? TranslucencyFlags::UseRefractionTrans : 0) | translucencyBlendTable[pMaterial->GetBlendMode()];
 
                     cmdBindPushConstants(frame.m_cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
-                    cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+                    cmdDrawIndexed(frame.m_cmd, drawPacket.m_numIndices, 0, 0);
 
                     if (cubeMap && !isRefraction) {
                         materialConst.m_options = TranslucencyFlags::UseIlluminationTrans | (isFogActive ? TranslucencyFlags::UseFog : 0) |
@@ -4651,19 +4644,21 @@ void cRendererDeferred::Draw(
                             frame.m_cmd,
                             m_materialTranslucencyPass.m_pipelines[TranslucencyPipeline::TranslucencyBlend::BlendAdd][key.m_id].m_handle);
                         cmdBindPushConstants(frame.m_cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
-                        cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+                        cmdDrawIndexed(frame.m_cmd, drawPacket.m_numIndices, 0, 0);
                     }
                 }
                 break;
             case MaterialID::Water:
                 {
-                    LegacyVertexBuffer::GeometryBinding binding;
                     std::array targets = { eVertexBufferElement_Position,
                                            eVertexBufferElement_Texture0,
                                            eVertexBufferElement_Normal,
                                            eVertexBufferElement_Texture1Tangent,
                                            eVertexBufferElement_Color0 };
-                    static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
+                    DrawPacket packet = translucencyItem->ResolveDrawPacket(frame, targets);
+                    if(packet.m_type == DrawPacket::Unknown) {
+                        break;
+                    }
 
                     materialConst.m_options = (isFogActive ? TranslucencyFlags::UseFog : 0) |
                         (isRefraction ? TranslucencyFlags::UseRefractionTrans : 0) |
@@ -4675,14 +4670,14 @@ void cRendererDeferred::Draw(
                     cRendererDeferred::TranslucencyPipeline::TranslucencyWaterKey key = {};
                     key.m_field.m_hasDepthTest = pMaterial->GetDepthTest();
 
-                    LegacyVertexBuffer::cmdBindGeometry(frame.m_cmd, frame.m_resourcePool, binding);
-
+                    //LegacyVertexBuffer::cmdBindGeometry(frame.m_cmd, frame.m_resourcePool, binding);
+                    DrawPacket::cmdBindBuffers(frame.m_cmd, frame.m_resourcePool, &packet);
                     cmdBindPipeline(frame.m_cmd, m_materialTranslucencyPass.m_waterPipeline[key.m_id].m_handle);
                     uint32_t instance = cmdBindMaterialAndObject(
                         frame.m_cmd, frame, pMaterial, translucencyItem, std::optional{ pMatrix ? *pMatrix : cMatrixf::Identity });
                     materialConst.objectId = instance;
                     cmdBindPushConstants(frame.m_cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
-                    cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+                    cmdDrawIndexed(frame.m_cmd, packet.m_numIndices, 0, 0);
 
                 }
                 break;

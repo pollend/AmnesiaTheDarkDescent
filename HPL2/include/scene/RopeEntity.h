@@ -16,9 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
-
-#ifndef HPL_ROPE_ENTITY_H
-#define HPL_ROPE_ENTITY_H
+#pragma once
 
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
@@ -82,11 +80,12 @@ namespace hpl {
 
 		/////////////////////////////////
 		//Renderable implementations
-		cMaterial *GetMaterial(){ return mpMaterial;}
-		iVertexBuffer* GetVertexBuffer(){return mpVtxBuffer;}
+		virtual cMaterial *GetMaterial() override{ return mpMaterial;}
+		virtual iVertexBuffer* GetVertexBuffer() override{return mpVtxBuffer;}
+        virtual DrawPacket ResolveDrawPacket(const ForgeRenderer::Frame& frame,std::span<eVertexBufferElement> elements) override;
 
-        void UpdateGraphicsForFrame(float afFrameTime);
-		bool UpdateGraphicsForViewport(cFrustum *apFrustum,float afFrameTime);
+        virtual void UpdateGraphicsForFrame(float afFrameTime) override;
+		virtual bool UpdateGraphicsForViewport(cFrustum *apFrustum,float afFrameTime) override;
 
 		cBoundingVolume* GetBoundingVolume();
 
@@ -117,4 +116,3 @@ namespace hpl {
 	};
 
 };
-#endif // HPL_ROPE_ENTITY_H

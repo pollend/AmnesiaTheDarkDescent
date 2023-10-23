@@ -40,23 +40,9 @@ namespace hpl {
 
 		iVertexBuffer* CreateWireframeVertexBuffer(iVertexBuffer *apSrc);
 
-        cMesh* CreateBox(const tString &asName, cVector3f avSize, const tString &asMaterial);
-
-		cMesh* CreatePlane(const tString &asName, const cVector3f& avCorner1, const cVector3f& avCorner2,
-						   const cVector2f& avCorner1UV, const cVector2f& avCorner2UV, const cVector2f& avCorner3UV, const cVector2f& avCorner4UV,
-						   const tString& asMaterial);
-
-		cMesh* CreateSphere(const tString &asName, float afRadius, int alSections, int alSlices, const tString& asMaterial);
-
-		cMesh* CreateCylinder(const tString &asName, const cVector2f &avSize, int alSections, const tString &asMaterial);
-
-		cMesh* CreateCapsule(const tString &asName, const cVector2f &avSize, int alSections, int alSlices, const tString &asMaterial);
-
 		cMesh* CreateCone(const tString &asName, const cVector2f &avSize, int alSections, const tString &asMaterial);
 
 		iVertexBuffer* CreateSkyBoxVertexBuffer(float afSize);
-		iVertexBuffer* CreateBoxVertexBuffer(cVector3f avSize);
-
 	private:
 		cVector3f GetBoxTex(int i,int x, int y, int z, cVector3f *vAdd);
 		int GetBoxIdx(int i,int x, int y, int z);

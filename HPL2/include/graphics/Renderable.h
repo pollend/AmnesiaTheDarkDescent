@@ -19,6 +19,8 @@
 
 #pragma once
 
+#include "graphics/DrawPacket.h"
+#include "graphics/ForgeRenderer.h"
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
 #include "system/SystemTypes.h"
@@ -41,8 +43,6 @@ namespace hpl {
 	class iPhysicsBody;
 	class iRenderer;
 
-	//------------------------------------------
-
 	class iRenderable : public iEntity3D
 	{
 		HPL_RTTI_IMPL_CLASS(iEntity3D, iRenderable, "{285bbdb4-de5b-4960-bf44-ae543432ff40}")
@@ -53,7 +53,7 @@ namespace hpl {
 
 		virtual cMaterial *GetMaterial()=0;
 		virtual iVertexBuffer* GetVertexBuffer()=0;
-
+        virtual DrawPacket ResolveDrawPacket(const ForgeRenderer::Frame& frame,std::span<eVertexBufferElement> elements) = 0;
 
 		virtual bool CollidesWithBV(cBoundingVolume *apBV);
 		virtual bool CollidesWithFrustum(cFrustum *apFrustum);

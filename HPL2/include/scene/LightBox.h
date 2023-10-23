@@ -17,8 +17,7 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef HPL_LIGHT_BOX_H
-#define HPL_LIGHT_BOX_H
+#pragma  once
 
 #include "scene/Light.h"
 #include "scene/SceneTypes.h"
@@ -52,4 +51,3 @@ namespace hpl {
 	};
 
 };
-#endif // HPL_LIGHT_BOX_H

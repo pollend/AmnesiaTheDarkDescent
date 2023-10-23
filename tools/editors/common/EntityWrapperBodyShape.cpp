@@ -29,7 +29,10 @@
 #include "EntityWrapperBody.h"
 
 #include "EditorActionsBodies.h"
+#include "graphics/AssetBuffer.h"
 #include "graphics/DebugDraw.h"
+#include "graphics/MeshUtility.h"
+#include "impl/LegacyVertexBuffer.h"
 
 //---------------------------------------------------------------------------
 
@@ -355,34 +358,68 @@ void cEntityWrapperBodyShape::SetAbsScale(const cVector3f& avScale, int alAxis)
 		((cEngineEntityGeneratedMesh*)mpEngineEntity)->ReCreate(CreateShape());
 }
 
-//---------------------------------------------------------------------------
-
-/////////////////////////////////////////////////////////////////////////////
-// PROTECTED METHODS
-/////////////////////////////////////////////////////////////////////////////
-
-//---------------------------------------------------------------------------
-
 cMesh* cEntityWrapperBodyShape::CreateShape()
 {
 	cEntityWrapperTypeBodyShape* pType = (cEntityWrapperTypeBodyShape*)mpType;
 	tString sMat = pType->GetMaterialFile(HasParentBody(), mbSelected);
 
-	int lMeshResolution = 18;
-	cMesh* pMesh = NULL;
-	cMeshCreator* pCreator = GetEditorWorld()->GetEditor()->GetEngine()->GetGraphics()->GetMeshCreator();
-	switch(mShapeType)
-	{
-	case eEditorBodyShape_Box:		pMesh = pCreator->CreateBox("", mvScale, sMat);
-									break;
-	case eEditorBodyShape_Sphere:	pMesh = pCreator->CreateSphere("", mvScale.x, lMeshResolution, lMeshResolution, sMat); //mCustomBV.SetSize(cVector3f(2)); //diameter = radius*2 = 2
-									break;
-	case eEditorBodyShape_Cylinder:	pMesh = pCreator->CreateCylinder("", cVector2f(mvScale.x, mvScale.y), lMeshResolution, sMat); //mCustomBV.SetSize(cVector3f(2,1,2));  //diameter = radius*2 = 2
-									break;
-	case eEditorBodyShape_Capsule:	pMesh = pCreator->CreateCapsule("", cVector2f(mvScale.x, mvScale.y), lMeshResolution, 5, sMat); //mCustomBV.SetSize(cVector3f(2,1,2));  //diameter = radius*2 = 2//mCustomBV.SetSize(cVector3f(2,1,2));  //diameter = radius*2 = 2
-									break;
-	}
+    auto position = AssetBuffer::BufferStructuredView<float3>();
+    auto color = AssetBuffer::BufferStructuredView<float4>();
+    auto normal = AssetBuffer::BufferStructuredView<float3>();
+    auto uv = AssetBuffer::BufferStructuredView<float2>();
+    auto tangent = AssetBuffer::BufferStructuredView<float3>();
+    cSubMesh::IndexBufferInfo indexInfo;
+    cSubMesh::StreamBufferInfo positionInfo;
+    cSubMesh::StreamBufferInfo tangentInfo;
+    cSubMesh::StreamBufferInfo colorInfo;
+    cSubMesh::StreamBufferInfo normalInfo;
+    cSubMesh::StreamBufferInfo textureInfo;
+    AssetBuffer::BufferIndexView index = indexInfo.GetView();
+    cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::PostionTrait>(&positionInfo,  &position);
+    cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::ColorTrait>(&colorInfo, &color);
+    cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::NormalTrait>(&normalInfo, &normal);
+    cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::TextureTrait>(&textureInfo, &uv);
+    cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::TangentTrait>(&tangentInfo, &tangent);
 
+    MeshUtility::MeshCreateResult result;
+    switch (mShapeType) {
+    case eEditorBodyShape_Box:
+        result = MeshUtility::CreateBox(v3ToF3(cMath::ToForgeVec3(mvScale)), &index, &position, &color, &normal, &uv, &tangent);
+        break;
+    case eEditorBodyShape_Sphere:
+        result = MeshUtility::CreateSphere(mvScale.x, 18, 18, &index, &position, &color, &normal, &uv, &tangent);
+        break;
+    case eEditorBodyShape_Cylinder:
+        result = MeshUtility::CreateCylinder(Vector2(mvScale.x, mvScale.y), 18, &index, &position, &color, &normal, &uv, &tangent);
+        break;
+    case eEditorBodyShape_Capsule:
+        result = MeshUtility::CreateCapsule(Vector2(mvScale.x, mvScale.y), 18, 5, &index, &position, &color, &normal, &uv, &tangent);
+        break;
+    default:
+        ASSERT(false);
+        break;
+    }
+
+    positionInfo.m_numberElements = result.numVertices;
+    tangentInfo.m_numberElements = result.numVertices;
+    colorInfo.m_numberElements = result.numVertices;
+    normalInfo.m_numberElements = result.numVertices;
+    textureInfo.m_numberElements = result.numVertices;    		//Create the mesh
+    indexInfo.m_numberElements = result.numIndices;
+    std::vector<cSubMesh::StreamBufferInfo> vertexStreams;
+    vertexStreams.push_back(std::move(positionInfo));
+    vertexStreams.push_back(std::move(tangentInfo));
+    vertexStreams.push_back(std::move(colorInfo));
+    vertexStreams.push_back(std::move(normalInfo));
+    vertexStreams.push_back(std::move(textureInfo));
+    auto* resouces = GetEditorWorld()->GetEditor()->GetEngine()->GetResources();
+    auto* graphics = GetEditorWorld()->GetEditor()->GetEngine()->GetGraphics();
+	cMesh* pMesh = hplNew( cMesh, ("", _W(""), resouces ->GetMaterialManager(), resouces->GetAnimationManager()));
+	cSubMesh* pSubMesh = pMesh->CreateSubMesh("Main");
+	cMaterial *pMat = resouces->GetMaterialManager()->CreateMaterial(sMat);
+	pSubMesh->SetMaterial(pMat);
+	iVertexBuffer* pVtxBuffer = new LegacyVertexBuffer(eVertexBufferDrawType_Tri, eVertexBufferUsageType_Static, 0, 0);
+	pSubMesh->SetStreamBuffers(pVtxBuffer, std::move(vertexStreams), std::move(indexInfo));
 	return pMesh;
 }
 

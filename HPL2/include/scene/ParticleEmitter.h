@@ -16,9 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
-
-#ifndef HPL_PARTICLE_EMITTER_H
-#define HPL_PARTICLE_EMITTER_H
+#pragma once
 
 #include "graphics/Renderable.h"
 #include "scene/Entity3D.h"
@@ -195,21 +193,22 @@ namespace hpl {
 		int GetParticleNum(){ return mlNumOfParticles;}
 
 		//Entity implementation
-		tString GetEntityType(){ return "ParticleEmitter"; }
-		bool IsVisible();
+		virtual tString GetEntityType() override { return "ParticleEmitter"; }
+		virtual bool IsVisible() override;
 
 		//Renderable implementation
-		bool UpdateGraphicsForViewport(cFrustum *apFrustum,float afFrameTime);
+		virtual bool UpdateGraphicsForViewport(cFrustum *apFrustum,float afFrameTime) override;
 
-		cMaterial *GetMaterial();
-		iVertexBuffer* GetVertexBuffer();
+		virtual cMaterial *GetMaterial() override;
+		virtual iVertexBuffer* GetVertexBuffer() override;
+        virtual DrawPacket ResolveDrawPacket(const ForgeRenderer::Frame& frame,std::span<eVertexBufferElement> elements) override;
 
-		cBoundingVolume* GetBoundingVolume();
+		virtual cBoundingVolume* GetBoundingVolume() override;
 
-		cMatrixf* GetModelMatrix(cFrustum *apFrustum);
+		virtual cMatrixf* GetModelMatrix(cFrustum *apFrustum) override;
 
-		int GetMatrixUpdateCount(){return GetTransformUpdateCount();}
-		eRenderableType GetRenderType(){ return eRenderableType_ParticleEmitter;}
+		int GetMatrixUpdateCount() override{return GetTransformUpdateCount();}
+		eRenderableType GetRenderType() override{ return eRenderableType_ParticleEmitter;}
 
 	protected:
 		void SwapRemove(unsigned int alIndex);
@@ -322,13 +321,8 @@ namespace hpl {
 		float mfWarmUpStepsPerSec;
 	};
 
-	//-----------------------------------------------------------------
-
 	typedef std::map<tString,iParticleEmitterData*> tParticleEmitterDataMap;
 	typedef tParticleEmitterDataMap::iterator tParticleEmitterDataMapIt;
-
-	//-----------------------------------------------------------------
 };
 
-#endif // HPL_PARTICLE_EMITTER_H
 
