@@ -255,7 +255,7 @@ namespace hpl {
                             streamBuffer.m_numberElements = lVtxNum;
                             GraphicsBuffer::BufferRawView rawView = streamBuffer.m_buffer.CreateViewRaw();
                             std::array<float, 6> stage;
-                            std::span<float> floatSpan = rawView.RawDataView<float>();
+                            std::span<float> floatSpan = rawView.rawSpanByType<float>();
                             for(size_t vtxIdx = 0; vtxIdx < lVtxNum; vtxIdx++) {
                                 for(size_t eleIdx = 0; eleIdx < lElementNum; eleIdx++) {
                                    stage[eleIdx] = binBuff.GetFloat32();

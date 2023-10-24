@@ -1,7 +1,5 @@
 #pragma once
 
-#include "Common_3/Graphics/Interfaces/IGraphics.h"
-#include "graphics/GraphicsTypes.h"
 #include "math/MathTypes.h"
 #include "math/MeshTypes.h"
 #include "physics/PhysicsTypes.h"
@@ -14,6 +12,10 @@
 #include <span>
 #include <vector>
 
+#include "graphics/GraphicsTypes.h"
+#include "graphics/Enum.h"
+
+#include "Common_3/Graphics/Interfaces/IGraphics.h"
 #include "Common_3/Graphics/Interfaces/IGraphics.h"
 #include "Common_3/Resources/ResourceLoader/Interfaces/IResourceLoader.h"
 #include "Common_3/Utilities/Math/MathTypes.h"
@@ -28,7 +30,6 @@ namespace hpl {
         }
     }
 
-
     class GraphicsBuffer final {
     public:
         enum BufferType {
@@ -37,11 +38,8 @@ namespace hpl {
         };
         struct MappedBufferDesc {
             uint64_t m_size;
-            uint64_t m_dstOffset;
             void* m_mappedData;
         };
-
-        enum class IndexType : uint8_t { Uint16, Uint32 };
 
         GraphicsBuffer() {}
         explicit GraphicsBuffer(const MappedBufferDesc& desc);
@@ -58,7 +56,6 @@ namespace hpl {
             BufferRawView(GraphicsBuffer* asset, uint32_t byteOffset) :
                 m_asset(asset),
                 m_byteOffset(byteOffset) {
-                ASSERT(m_byteOffset <= m_asset->Data().size());
             }
             BufferRawView(const BufferRawView& view):
                 m_asset(view.m_asset),
@@ -73,22 +70,47 @@ namespace hpl {
             * When Writing a raw to a buffer the buffer will resize to accomidate
             */
             void WriteRaw(uint32_t byteOffset, std::span<uint8_t> data) {
-                details::testAndResize(m_asset->m_buffer, m_byteOffset + byteOffset + data.size());
-                std::copy(data.begin(), data.end(), m_asset->m_buffer.begin() + m_byteOffset + byteOffset);
+                switch(m_asset->m_type) {
+                    case BufferType::ResourceBuffer: {
+                        details::testAndResize(m_asset->m_buffer, m_byteOffset + byteOffset + data.size());
+                        std::copy(data.begin(), data.end(), m_asset->m_buffer.begin() + m_byteOffset + byteOffset);
+                        break;
+                    }
+                    case BufferType::MappedBuffer: {
+                        ASSERT(m_asset->m_mapped.m_size == 0 || m_byteOffset + byteOffset + data.size() < m_asset->m_mapped.m_size);
+                        std::copy(data.begin(), data.end(), reinterpret_cast<uint8_t*>(m_asset->m_mapped.m_mappedData) + m_byteOffset + byteOffset);
+                        break;
+                    }
+                }
             }
 
             template<typename T>
             void WriteRawType(uint32_t byteOffset, const T& data) {
                 std::span<uint8_t> raw(reinterpret_cast<uint8_t*>(&data), sizeof(T));
-                details::testAndResize(m_asset->m_buffer, m_byteOffset + byteOffset + raw.size());
-                std::copy(raw.begin(), raw.end(), m_asset->m_buffer.begin() + m_byteOffset + byteOffset);
+                switch(m_asset->m_type) {
+                    case BufferType::ResourceBuffer:
+                        details::testAndResize(m_asset->m_buffer, m_byteOffset + byteOffset + raw.size());
+                        std::copy(raw.begin(), raw.end(), m_asset->m_buffer.begin() + m_byteOffset + byteOffset);
+                        break;
+                    case BufferType::MappedBuffer:
+                        std::copy(raw.begin(), raw.end(), reinterpret_cast<uint8_t*>(m_asset->m_mapped.m_mappedData) + m_byteOffset + byteOffset);
+                        break;
+                }
             }
 
             template<typename T>
             void WriteRawType(uint32_t byteOffset, const std::span<T>& data) {
                 std::span<const uint8_t> raw(reinterpret_cast<const uint8_t*>(data.data()), data.size() * sizeof(T));
-                details::testAndResize(m_asset->m_buffer, m_byteOffset + byteOffset + raw.size());
-                std::copy(raw.begin(), raw.end(), m_asset->m_buffer.begin() + m_byteOffset + byteOffset);
+                switch(m_asset->m_type) {
+                    case BufferType::ResourceBuffer:
+                        details::testAndResize(m_asset->m_buffer, m_byteOffset + byteOffset + raw.size());
+                        std::copy(raw.begin(), raw.end(), m_asset->m_buffer.begin() + m_byteOffset + byteOffset);
+                        break;
+                    case BufferType::MappedBuffer:
+                        ASSERT(m_asset->m_mapped.m_mappedData);
+                        std::copy(raw.begin(), raw.end(), reinterpret_cast<uint8_t*>(m_asset->m_mapped.m_mappedData) + m_byteOffset + byteOffset);
+                        break;
+                }
             }
 
             void operator=(const BufferRawView& other) {
@@ -102,17 +124,44 @@ namespace hpl {
             }
 
             template<typename T>
-            inline std::span<T> RawDataView() { return std::span<T>(reinterpret_cast<T*>(m_asset->m_buffer.data() + m_byteOffset), (m_asset->m_buffer.size() - m_byteOffset) / sizeof(T));}
-            inline std::span<uint8_t> RawView() { return std::span(m_asset->m_buffer.data() + m_byteOffset, m_asset->m_buffer.size() - m_byteOffset); }
-            inline uint32_t NumBytes() { return  (m_asset->m_buffer.size() - m_byteOffset); }
+            inline std::span<T> rawSpanByType() {
+                ASSERT(m_asset->m_type == BufferType::ResourceBuffer);
+                switch(m_asset->m_type) {
+                    case BufferType::ResourceBuffer:
+                        return std::span<T>(reinterpret_cast<T*>(m_asset->m_buffer.data() + m_byteOffset), (m_asset->m_buffer.size() - m_byteOffset) / sizeof(T));
+                    case BufferType::MappedBuffer: {
+                        ASSERT(m_asset->m_mapped.m_size > 0); // can't have a span over data with a unbounded buffer
+                        return std::span<T>(reinterpret_cast<T*>(reinterpret_cast<uint8_t*>(m_asset->m_mapped.m_mappedData) + m_byteOffset), (m_asset->m_mapped.m_size - m_byteOffset) / sizeof(T));
+                    }
+                }
+            }
+            inline std::span<uint8_t> rawByteSpan() {
+                switch(m_asset->m_type) {
+                    case BufferType::ResourceBuffer:
+                        return std::span(m_asset->m_buffer.data() + m_byteOffset, m_asset->m_buffer.size() - m_byteOffset);
+                    case BufferType::MappedBuffer:
+                        ASSERT(m_asset->m_mapped.m_size > 0); // can't have a span over data with a unbounded buffer
+                        return std::span<uint8_t>(reinterpret_cast<uint8_t*>(m_asset->m_mapped.m_mappedData) + m_byteOffset, m_asset->m_mapped.m_size - m_byteOffset);
+                }
+                return std::span<uint8_t>();
+            }
+            inline uint32_t NumBytes() {
+                switch(m_asset->m_type) {
+                    case BufferType::ResourceBuffer:
+                        return  (m_asset->m_buffer.size() - m_byteOffset);
+                    case BufferType::MappedBuffer:
+                        return (m_asset->m_mapped.m_size == 0) ? UINT32_MAX : m_asset->m_mapped.m_size - m_byteOffset;
+                }
+                return UINT32_MAX;
+            }
         protected:
             GraphicsBuffer* m_asset = nullptr;
             uint32_t m_byteOffset = 0;
         };
 
-        struct BufferIndexView: BufferRawView {
+        struct BufferIndexView final: BufferRawView {
         public:
-            BufferIndexView(GraphicsBuffer* asset, uint32_t byteOffset, IndexType type)
+            BufferIndexView(GraphicsBuffer* asset, uint32_t byteOffset, IndexBufferType type)
                 : BufferRawView(asset, byteOffset)
                 , m_indexType(type) {
             }
@@ -136,67 +185,123 @@ namespace hpl {
                 m_indexType = other.m_indexType;
             }
 
-
             void ResizeElements(uint32_t numElements) {
-                switch(m_indexType) {
-                    case IndexType::Uint32:
-                        m_asset->m_buffer.resize(m_byteOffset + (numElements * sizeof(uint32_t)));
+                switch(m_asset->m_type) {
+                    case BufferType::ResourceBuffer: {
+                        switch(m_indexType) {
+                            case IndexBufferType::Uint32:
+                                m_asset->m_buffer.resize(m_byteOffset + (numElements * sizeof(uint32_t)));
+                                break;
+                            case IndexBufferType::Uint16:
+                                m_asset->m_buffer.resize(m_byteOffset + (numElements * sizeof(uint16_t)));
+                                break;
+                        }
                         break;
-                    case IndexType::Uint16:
-                        m_asset->m_buffer.resize(m_byteOffset + (numElements * sizeof(uint16_t)));
+                    }
+                    case BufferType::MappedBuffer:
+                        ASSERT(false); // you can't resize a mapped buffer
                         break;
                 }
             }
 
             void ReserveElements(uint32_t numElements) {
-                switch(m_indexType) {
-                    case IndexType::Uint32:
-                        m_asset->m_buffer.reserve(m_byteOffset + (numElements * sizeof(uint32_t)));
+                switch(m_asset->m_type) {
+                    case BufferType::ResourceBuffer: {
+                        switch(m_indexType) {
+                            case IndexBufferType::Uint32:
+                                m_asset->m_buffer.reserve(m_byteOffset + (numElements * sizeof(uint32_t)));
+                                break;
+                            case IndexBufferType::Uint16:
+                                m_asset->m_buffer.reserve(m_byteOffset + (numElements * sizeof(uint16_t)));
+                                break;
+                        }
                         break;
-                    case IndexType::Uint16:
-                        m_asset->m_buffer.reserve(m_byteOffset + (numElements * sizeof(uint16_t)));
+                    }
+                    case BufferType::MappedBuffer:
+                        ASSERT(false);
                         break;
                 }
             }
 
             uint32_t Get(uint32_t index) {
-                switch(m_indexType) {
-                    case IndexType::Uint32:
-                        ASSERT(m_asset->m_buffer.begin() + (m_byteOffset + (index * sizeof(uint32_t))) < m_asset->m_buffer.end());
-                        return *reinterpret_cast<uint32_t*>(m_asset->m_buffer.data() + (m_byteOffset + (index * sizeof(uint32_t))));
-                    case IndexType::Uint16:
-                        ASSERT(m_asset->m_buffer.begin() + (m_byteOffset + (index * sizeof(uint16_t))) < m_asset->m_buffer.end());
-                        return *reinterpret_cast<uint16_t*>(m_asset->m_buffer.data() + (m_byteOffset + (index * sizeof(uint16_t))));
+                switch(m_asset->m_type) {
+                    case BufferType::ResourceBuffer: {
+                        switch(m_indexType) {
+                            case IndexBufferType::Uint32:
+                                ASSERT(m_asset->m_buffer.begin() + (m_byteOffset + (index * sizeof(uint32_t))) < m_asset->m_buffer.end());
+                                return *reinterpret_cast<uint32_t*>(m_asset->m_buffer.data() + (m_byteOffset + (index * sizeof(uint32_t))));
+                            case IndexBufferType::Uint16:
+                                ASSERT(m_asset->m_buffer.begin() + (m_byteOffset + (index * sizeof(uint16_t))) < m_asset->m_buffer.end());
+                                return *reinterpret_cast<uint16_t*>(m_asset->m_buffer.data() + (m_byteOffset + (index * sizeof(uint16_t))));
+                        }
+                    }
+                    case BufferType::MappedBuffer:
+                        switch(m_indexType) {
+                            case IndexBufferType::Uint32:
+                                ASSERT(m_asset->m_buffer.begin() + (m_byteOffset + (index * sizeof(uint32_t))) < m_asset->m_buffer.end());
+                                return *reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(m_asset->m_mapped.m_mappedData) + (m_byteOffset + (index * sizeof(uint32_t))));
+                            case IndexBufferType::Uint16:
+                                ASSERT(m_asset->m_buffer.begin() + (m_byteOffset + (index * sizeof(uint16_t))) < m_asset->m_buffer.end());
+                                return *reinterpret_cast<uint16_t*>(reinterpret_cast<uint8_t*>(m_asset->m_mapped.m_mappedData) + (m_byteOffset + (index * sizeof(uint16_t))));
+                        }
+                        break;
                 }
                 return UINT32_MAX;
             }
             void Write(uint32_t index, uint32_t value) {
-                switch(m_indexType) {
-                    case IndexType::Uint32: {
-                        uint32_t v = value;
-                        auto buf = std::span(reinterpret_cast<const uint8_t*>(&v), sizeof(uint32_t));
-                        const size_t targetOffset = (m_byteOffset + (index * sizeof(uint32_t)));
-                        details::testAndResize(m_asset->m_buffer, targetOffset + buf.size());
-                        std::copy(buf.begin(), buf.end(), m_asset->m_buffer.begin() + targetOffset);
+                switch(m_asset->m_type) {
+                    case BufferType::ResourceBuffer: {
+                        switch(m_indexType) {
+                            case IndexBufferType::Uint32: {
+                                uint32_t v = value;
+                                auto buf = std::span(reinterpret_cast<const uint8_t*>(&v), sizeof(uint32_t));
+                                const size_t targetOffset = (m_byteOffset + (index * sizeof(uint32_t)));
+                                details::testAndResize(m_asset->m_buffer, targetOffset + buf.size());
+                                std::copy(buf.begin(), buf.end(), m_asset->m_buffer.begin() + targetOffset);
+                                break;
+                            }
+                            case IndexBufferType::Uint16: {
+                                uint16_t v = value;
+                                auto buf = std::span(reinterpret_cast<const uint8_t*>(&v), sizeof(uint16_t));
+                                const size_t targetOffset = (m_byteOffset + (index * sizeof(uint16_t)));
+                                details::testAndResize(m_asset->m_buffer, targetOffset + buf.size());
+                                std::copy(buf.begin(), buf.end(), m_asset->m_buffer.begin() + targetOffset);
+                                break;
+                            }
+                        }
                         break;
                     }
-                    case IndexType::Uint16: {
-                        uint16_t v = value;
-                        auto buf = std::span(reinterpret_cast<const uint8_t*>(&v), sizeof(uint16_t));
-                        const size_t targetOffset = (m_byteOffset + (index * sizeof(uint16_t)));
-                        details::testAndResize(m_asset->m_buffer, targetOffset + buf.size());
-                        std::copy(buf.begin(), buf.end(), m_asset->m_buffer.begin() + targetOffset);
+                    case BufferType::MappedBuffer: {
+
+                        switch(m_indexType) {
+                            case IndexBufferType::Uint32: {
+                                uint32_t v = value;
+                                auto buf = std::span(reinterpret_cast<const uint8_t*>(&v), sizeof(uint32_t));
+                                const size_t targetOffset = (m_byteOffset + (index * sizeof(uint32_t)));
+                                details::testAndResize(m_asset->m_buffer, targetOffset + buf.size());
+                                std::copy(buf.begin(), buf.end(), reinterpret_cast<uint8_t*>(m_asset->m_mapped.m_mappedData) + targetOffset);
+                                break;
+                            }
+                            case IndexBufferType::Uint16: {
+                                uint16_t v = value;
+                                auto buf = std::span(reinterpret_cast<const uint8_t*>(&v), sizeof(uint16_t));
+                                const size_t targetOffset = (m_byteOffset + (index * sizeof(uint16_t)));
+                                details::testAndResize(m_asset->m_buffer, targetOffset + buf.size());
+                                std::copy(buf.begin(), buf.end(), reinterpret_cast<uint8_t*>(m_asset->m_mapped.m_mappedData) + targetOffset);
+                                break;
+                            }
+                        }
                         break;
                     }
                 }
             }
 
         private:
-           IndexType m_indexType = IndexType::Uint32;
+           IndexBufferType m_indexType = IndexBufferType::Uint32;
         };
 
         template<typename T>
-        struct BufferStructuredView: BufferRawView {
+        struct BufferStructuredView final: BufferRawView {
         public:
 
             BufferStructuredView() {}
@@ -232,28 +337,73 @@ namespace hpl {
             void Write(uint32_t index, const T& value) {
                 auto buf = std::span(reinterpret_cast<const uint8_t*>(&value), sizeof(T));
                 const size_t targetOffset = (m_byteOffset + (index * m_byteStride));
-                details::testAndResize(m_asset->m_buffer, targetOffset + buf.size());
-                std::copy(buf.begin(), buf.end(), m_asset->m_buffer.begin() + targetOffset);
+                switch(m_asset->m_type) {
+                    case BufferType::ResourceBuffer: {
+                        details::testAndResize(m_asset->m_buffer, targetOffset + buf.size());
+                        std::copy(buf.begin(), buf.end(), m_asset->m_buffer.begin() + targetOffset);
+                        break;
+                    }
+                    case BufferType::MappedBuffer: {
+                        std::copy(buf.begin(), buf.end(), reinterpret_cast<uint8_t*>(m_asset->m_mapped.m_mappedData) + targetOffset);
+                        break;
+                    }
+                }
             }
 
             void Write(uint32_t index, const std::span<T> values) {
                 auto buf = std::span<uint8_t>(reinterpret_cast<const uint8_t*>(values.data()), values.size() * sizeof(T));
                 const size_t targetOffset = (m_byteOffset + (index * m_byteStride));
-                details::testAndResize(m_asset->m_buffer, targetOffset + buf.size());
-                std::copy(buf.begin(), buf.end(), m_asset->m_buffer.begin() + targetOffset);
+                switch(m_asset->m_type) {
+                    case BufferType::ResourceBuffer: {
+                        details::testAndResize(m_asset->m_buffer, targetOffset + buf.size());
+                        std::copy(buf.begin(), buf.end(), m_asset->m_buffer.begin() + targetOffset);
+                        break;
+                    }
+                    case BufferType::MappedBuffer: {
+                        std::copy(buf.begin(), buf.end(), reinterpret_cast<uint8_t*>(m_asset->m_mapped.m_mappedData) + targetOffset);
+                        break;
+                    }
+                }
             }
 
             void ResizeElements(uint32_t numElements) {
-                m_asset->m_buffer.resize(m_byteOffset + (numElements * m_byteStride));
+                switch(m_asset->m_type) {
+                    case BufferType::ResourceBuffer: {
+                        m_asset->m_buffer.resize(m_byteOffset + (numElements * m_byteStride));
+                        break;
+                    }
+                    case BufferType::MappedBuffer: {
+                        ASSERT(false);
+                        break;
+                    }
+                }
             }
 
             void ReserveElements(uint32_t numElements) {
-                m_asset->m_buffer.reserve(m_byteOffset + (numElements * m_byteStride));
+                switch(m_asset->m_type) {
+                    case BufferType::ResourceBuffer: {
+                        m_asset->m_buffer.reserve(m_byteOffset + (numElements * m_byteStride));
+                        break;
+                    }
+                    case BufferType::MappedBuffer: {
+                        ASSERT(false);
+                        break;
+                    }
+                }
             }
 
             T Get(uint32_t index) {
-                ASSERT(m_asset->m_buffer.begin() + (m_byteOffset + (index * m_byteStride)) < m_asset->m_buffer.end());
-                return *reinterpret_cast<T*>(m_asset->m_buffer.data() + (m_byteOffset + (index * m_byteStride)));
+                switch(m_asset->m_type) {
+                    case BufferType::ResourceBuffer: {
+                        ASSERT(m_asset->m_buffer.begin() + (m_byteOffset + (index * m_byteStride)) < m_asset->m_buffer.end());
+                        return *reinterpret_cast<T*>(m_asset->m_buffer.data() + (m_byteOffset + (index * m_byteStride)));
+                    }
+                    case BufferType::MappedBuffer: {
+                        ASSERT(false);
+                        break;
+                    }
+                }
+                return T();
             }
         protected:
             uint32_t m_byteStride;
@@ -264,19 +414,16 @@ namespace hpl {
             return BufferStructuredView<Type>(this, byteOffset, (byteStride == 0) ? sizeof(Type) : byteStride);
         }
 
-        BufferIndexView CreateIndexView(uint32_t byteOffset = 0, IndexType type = IndexType::Uint32) {
+        BufferIndexView CreateIndexView(uint32_t byteOffset = 0, IndexBufferType type = IndexBufferType::Uint32) {
             return BufferIndexView(this, byteOffset, type);
         }
 
         BufferRawView CreateViewRaw(uint32_t byteOffset = 0) {
             return BufferRawView(this, byteOffset);
         }
-
-        std::span<uint8_t> Data();
     private:
         struct {
             uint64_t m_size;
-            uint64_t m_dstOffset;
             void* m_mappedData;
         } m_mapped;
         std::vector<uint8_t> m_buffer;

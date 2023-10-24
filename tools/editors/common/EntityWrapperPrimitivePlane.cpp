@@ -498,8 +498,8 @@ cMesh* cEntityWrapperPrimitivePlane::CreatePrimitiveMesh()
 
     MeshUtility::MeshCreateResult result;
     MeshUtility::CreatePlane(
-        {Vector3(0,0,0), cMath::ToForgeVec3(vEndCorner)},
-        {Vector2(1,0), Vector2(0,0), Vector2(0,1), Vector2(1,1)},
+        Vector3(0,0,0), cMath::ToForgeVec3(vEndCorner),
+        Vector2(1,0), Vector2(0,0), Vector2(0,1), Vector2(1,1),
         &index,
         &position,
         &color,

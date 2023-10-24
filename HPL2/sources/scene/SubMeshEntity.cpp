@@ -17,29 +17,37 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "scene/SubMeshEntity.h"
+#include "Common_3/Graphics/Interfaces/IGraphics.h"
+#include "Common_3/Resources/ResourceLoader/Interfaces/IResourceLoader.h"
+#include "FixPreprocessor.h"
 
-#include "impl/LegacyVertexBuffer.h"
-#include "scene/MeshEntity.h"
 
-#include "resources/MaterialManager.h"
-#include "resources/MeshManager.h"
 #include "graphics/VertexBuffer.h"
 #include "graphics/Material.h"
 #include "graphics/Mesh.h"
 #include "graphics/SubMesh.h"
-
 #include "graphics/Animation.h"
 #include "graphics/AnimationTrack.h"
 #include "graphics/Skeleton.h"
 #include "graphics/Bone.h"
+#include "graphics/DrawPacket.h"
+#include "graphics/Enum.h"
+#include "graphics/ForgeHandles.h"
+#include "impl/LegacyVertexBuffer.h"
 
 #include "scene/AnimationState.h"
 #include "scene/NodeState.h"
+#include "scene/MeshEntity.h"
+#include "scene/SubMeshEntity.h"
+
+#include "resources/MaterialManager.h"
+#include "resources/MeshManager.h"
 
 #include "physics/PhysicsBody.h"
 
 #include "math/Math.h"
+#include <algorithm>
+
 
 namespace hpl {
 	cSubMeshEntity::cSubMeshEntity(const tString &asName, cMeshEntity *apMeshEntity, cSubMesh * apSubMesh,
@@ -59,6 +67,40 @@ namespace hpl {
 		{
 			mpDynVtxBuffer = mpSubMesh->GetVertexBuffer()->CreateCopy(eVertexBufferType_Hardware,eVertexBufferUsageType_Dynamic,eFlagBit_All);
 		}
+
+        //if(mpSubMesh->hasMesh()) {
+            for(auto& stream: mpSubMesh->streamBuffers()) {
+                auto rawView = stream.m_buffer.CreateViewRaw();
+                StreamBufferInfo& info = m_vertexStreams.emplace_back();
+                info.m_buffer.Load([&](Buffer** buffer) {
+                    BufferLoadDesc loadDesc = {};
+                    loadDesc.ppBuffer = buffer;
+                    loadDesc.mDesc.mDescriptors = DESCRIPTOR_TYPE_VERTEX_BUFFER;
+                    loadDesc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_GPU_ONLY;
+                    loadDesc.mDesc.mSize = rawView.NumBytes();
+                    loadDesc.pData = rawView.rawByteSpan().data();
+                    addResource(&loadDesc, nullptr);
+                    return true;
+                });
+                info.m_stride = stream.m_stride;
+                info.m_semantic = stream.m_semantic;
+            }
+            {
+                auto& info = mpSubMesh->IndexStream();
+                auto rawView = info.m_buffer.CreateViewRaw();
+                m_indexBuffer.Load([&](Buffer** buffer) {
+                    BufferLoadDesc loadDesc = {};
+                    loadDesc.ppBuffer = buffer;
+                    loadDesc.mDesc.mDescriptors = DESCRIPTOR_TYPE_INDEX_BUFFER;
+                    loadDesc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_GPU_ONLY;
+                    loadDesc.mDesc.mSize = rawView.NumBytes();
+                    loadDesc.pData = rawView.rawByteSpan().data();
+                    addResource(&loadDesc, nullptr);
+                    return true;
+                });
+                m_numberIndecies = info.m_numberElements;
+            }
+        //}
 
 		mpLocalNode = NULL;
 
@@ -221,11 +263,33 @@ namespace hpl {
 
 
     DrawPacket cSubMeshEntity::ResolveDrawPacket(const ForgeRenderer::Frame& frame,std::span<eVertexBufferElement> elements)  {
-		if(mpDynVtxBuffer)
+		DrawPacket packet;
+	    packet.m_type = DrawPacket::Unknown;
+	    if(mpDynVtxBuffer)
 		{
 	        return static_cast<LegacyVertexBuffer*>(mpDynVtxBuffer)->resolveGeometryBinding(frame.m_currentFrame, elements);
 	    }
-	    return static_cast<LegacyVertexBuffer*>(mpSubMesh->GetVertexBuffer())->resolveGeometryBinding(frame.m_currentFrame, elements);
+	    if(m_numberIndecies == 0) {
+            return packet;
+	    }
+
+	    packet.m_type = DrawPacket::IndvidualBindings;
+	    packet.m_indvidual.m_numStreams = 0;
+	    for(auto& ele: elements) {
+	       ShaderSemantic semantic = hplToForgeShaderSemantic(ele);
+            auto found = std::find_if(m_vertexStreams.begin(), m_vertexStreams.end(), [&](auto& stream) {
+                return stream.m_semantic == semantic;
+            });
+            ASSERT(found != m_vertexStreams.end());
+	        auto& stream = packet.m_indvidual.m_vertexStream[packet.m_indvidual.m_numStreams++];
+	        stream.m_buffer = &found->m_buffer;
+	        stream.m_offset = 0;
+	        stream.m_stride = found->m_stride;
+	    }
+	    packet.m_indvidual.m_indexStream.m_offset = 0;
+	    packet.m_indvidual.m_indexStream.buffer = &m_indexBuffer;
+	    packet.m_numIndices = m_numberIndecies;
+	    return packet;
     }
 	iVertexBuffer* cSubMeshEntity::GetVertexBuffer()
 	{

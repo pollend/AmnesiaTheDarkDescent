@@ -369,8 +369,12 @@ namespace hpl::MeshUtility {
     }
 
     MeshCreateResult CreatePlane(
-        const std::array<Vector3, 2> corners,
-        const std::array<Vector2,4> uvCorners,
+        Vector3 p1,
+        Vector3 p2,
+        Vector2 uv1,
+        Vector2 uv2,
+        Vector2 uv3,
+        Vector2 uv4,
         GraphicsBuffer::BufferIndexView* index,
         GraphicsBuffer::BufferStructuredView<float3>* position,
         GraphicsBuffer::BufferStructuredView<float4>* color,
@@ -378,7 +382,7 @@ namespace hpl::MeshUtility {
         GraphicsBuffer::BufferStructuredView<float2>* uv,
         std::variant<GraphicsBuffer::BufferStructuredView<float3>*, GraphicsBuffer::BufferStructuredView<float4>*> tangent
     ) {
-        const Vector3 diff = corners[0] - corners[1];
+        const Vector3 diff = p1 - p2;
         folly::small_vector<uint32_t, 4> vPlaneAxes;
         int lPlaneNormalAxis = -1;
         int lNumSameCoords = 0;
@@ -396,11 +400,11 @@ namespace hpl::MeshUtility {
             LOGF(LogLevel::eERROR, "CreatePlane failed: plane corners are not coplanar");
             return MeshCreateResult{0};
         }
-        Vector3 vCenter = (corners[0] + corners[1]) * 0.5f;
+        Vector3 vCenter = (p1 + p2) * 0.5f;
 
         std::array<Vector3, 4> vTempCoords;
-        vTempCoords[0] = corners[0];
-        vTempCoords[1] = corners[1];
+        vTempCoords[0] = p1;
+        vTempCoords[1] = p2;
         Vector3 vTest1;
         Vector3 vTest2;
 
@@ -439,11 +443,17 @@ namespace hpl::MeshUtility {
         for (int i = 0; i < (int)vCoords.size(); ++i) {
             vCoords[i] -= vFirstCorner;
         }
+        std::array uvs = {
+            uv1,
+            uv2,
+            uv3,
+            uv4
+        };
         for (size_t i = 0; i < 4; i++) {
             position->Write(vertexBufIdx, v3ToF3(vCoords[i]));
             normal->Write(vertexBufIdx, float3(0.0f, 1.0f, 0.0f));
             color->Write(vertexBufIdx, float4(1.0f, 1.0f, 1.0f, 1.0f));
-            uv->Write(vertexBufIdx++, v2ToF2(uvCorners[i]));
+            uv->Write(vertexBufIdx++, v2ToF2(uvs[i]));
         }
         for (int i = 0; i < 3; i++) {
             index->Write(indexBufIndex++, i);

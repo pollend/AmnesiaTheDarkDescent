@@ -2507,8 +2507,12 @@ namespace hpl {
 
         for (auto& illuminationItem : m_rendererList.GetRenderableItems(eRenderListType_Illumination)) {
             cMaterial* pMaterial = illuminationItem->GetMaterial();
-            iVertexBuffer* vertexBuffer = illuminationItem->GetVertexBuffer();
-            if (pMaterial == nullptr || vertexBuffer == nullptr) {
+            std::array targets = {
+                eVertexBufferElement_Position,
+                eVertexBufferElement_Texture0,
+            };
+            DrawPacket drawPacket = illuminationItem->ResolveDrawPacket(frame, targets);
+            if (pMaterial == nullptr || drawPacket.m_type == DrawPacket::Unknown) {
                 continue;
             }
             ASSERT(pMaterial->Descriptor().m_id == MaterialID::SolidDiffuse && "Invalid material type");
@@ -2516,14 +2520,9 @@ namespace hpl {
             uint32_t instance = cmdBindMaterialAndObject(cmd, frame, pMaterial, illuminationItem);
             materialConst.objectId = instance;
             materialConst.m_sceneAlpha = illuminationItem->GetIlluminationAmount();
-            std::array targets = {
-                eVertexBufferElement_Position,
-                eVertexBufferElement_Texture0,
-            };
-            DrawPacket pkt = illuminationItem->ResolveDrawPacket(frame, targets);
-            DrawPacket::cmdBindBuffers(cmd, frame.m_resourcePool, &pkt);
+            DrawPacket::cmdBindBuffers(cmd, frame.m_resourcePool, &drawPacket);
             cmdBindPushConstants(cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
-            cmdDrawIndexed(cmd, pkt.m_numIndices, 0, 0);
+            cmdDrawIndexed(cmd, drawPacket.m_numIndices, 0, 0);
         }
     }
     void cRendererDeferred::cmdLightPass(

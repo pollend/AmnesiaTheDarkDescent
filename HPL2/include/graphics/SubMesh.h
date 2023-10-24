@@ -131,6 +131,22 @@ namespace hpl {
             IndexBufferInfo() {
             }
 
+            IndexBufferInfo (const IndexBufferInfo& other):
+                m_buffer(other.m_buffer),
+                m_numberElements(other.m_numberElements){
+            }
+            IndexBufferInfo(IndexBufferInfo&& other):
+                m_buffer(std::move(other.m_buffer)),
+                m_numberElements(other.m_numberElements){
+            }
+            void operator=(const IndexBufferInfo& other) {
+                m_buffer = other.m_buffer;
+                m_numberElements = other.m_numberElements;
+            }
+            void operator=(IndexBufferInfo&& other) {
+                m_buffer = std::move(other.m_buffer);
+                m_numberElements = other.m_numberElements;
+            }
             GraphicsBuffer::BufferIndexView GetView() {
                 return m_buffer.CreateIndexView();
             }
@@ -180,8 +196,8 @@ namespace hpl {
 
         void AddCollider(const MeshCollisionResource& def);
         std::span<MeshCollisionResource> GetColliders();
-        inline std::span<StreamBufferInfo> GetStreamBuffers() {return m_vertexStreams; }
-        inline IndexBufferInfo& IndexBuffer() {return m_indexStream; }
+        inline std::span<StreamBufferInfo> streamBuffers() {return m_vertexStreams; }
+        inline IndexBufferInfo& IndexStream() {return m_indexStream; }
 
         void SetIsCollideShape(bool abX) {
             m_collideShape = abX;
@@ -227,6 +243,7 @@ namespace hpl {
             return m_materialName;
         }
 
+        bool hasMesh();
         void SetStreamBuffers(iVertexBuffer* buffer, std::vector<StreamBufferInfo>&& vertexStreams, IndexBufferInfo&& indexStream);
         void Compile();
     private:

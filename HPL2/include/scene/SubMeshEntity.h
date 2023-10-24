@@ -17,12 +17,12 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef HPL_SUB_MESH_ENTITY_H
-#define HPL_SUB_MESH_ENTITY_H
-
+#pragma once
+#include <folly/small_vector.h>
 #include <vector>
 #include <map>
 
+#include "graphics/ForgeHandles.h"
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
 #include "system/SystemTypes.h"
@@ -50,7 +50,9 @@ namespace hpl {
 		HPL_RTTI_IMPL_CLASS(iRenderable, cSubMeshEntity, "{285bbdb4-de5b-4960-bf44-ae543432ff40}")
 		friend class cMeshEntity;
 	public:
-		cSubMeshEntity(const tString &asName,cMeshEntity *apMeshEntity, cSubMesh * apSubMesh,cMaterialManager* apMaterialManager);
+        static constexpr uint32_t MaxVertexBindings = 15;
+
+        cSubMeshEntity(const tString &asName,cMeshEntity *apMeshEntity, cSubMesh * apSubMesh,cMaterialManager* apMaterialManager);
 		~cSubMeshEntity();
 
 		virtual cMaterial *GetMaterial() override;
@@ -90,6 +92,15 @@ namespace hpl {
 	private:
 		virtual void OnTransformUpdated() override;
 
+        struct StreamBufferInfo {
+            SharedBuffer m_buffer;
+            ShaderSemantic m_semantic;
+            uint64_t m_stride;
+        };
+        uint32_t m_numberIndecies = 0;
+        SharedBuffer m_indexBuffer;
+        folly::small_vector<StreamBufferInfo, MaxVertexBindings> m_vertexStreams;
+
 		cSubMesh *mpSubMesh;
 		cMeshEntity *mpMeshEntity;
 
@@ -115,6 +126,4 @@ namespace hpl {
 
 	typedef std::multimap<tString,cSubMeshEntity*> tSubMeshEntityMap;
 	typedef tSubMeshEntityMap::iterator tSubMeshEntityMapIt;
-
 };
-#endif // HPL_SUB_MESH_ENTITY_H

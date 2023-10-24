@@ -91,8 +91,12 @@ namespace hpl::MeshUtility {
     );
 
     MeshCreateResult CreatePlane(
-        const std::array<Vector3, 2> corners,
-        const std::array<Vector2,4> uvCorners,
+        Vector3 p1,
+        Vector3 p2,
+        Vector2 uv1,
+        Vector2 uv2,
+        Vector2 uv3,
+        Vector2 uv4,
         GraphicsBuffer::BufferIndexView* index,
         GraphicsBuffer::BufferStructuredView<float3>* position,
         GraphicsBuffer::BufferStructuredView<float4>* color,

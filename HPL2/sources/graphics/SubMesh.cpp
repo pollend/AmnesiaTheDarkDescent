@@ -76,7 +76,7 @@ namespace hpl {
             target->ResizeArray(element, elementCount * srcInfo.m_numberElements);
             float* destData = target->GetFloatArray(element);
             for(size_t idx = 0; idx < srcInfo.m_numberElements; idx++) {
-                auto buf = rawView.RawView();
+                auto buf = rawView.rawByteSpan();
                 std::memcpy(destData + (elementCount * idx), buf.data() + (srcInfo.m_stride * idx), std::min(srcInfo.m_stride, static_cast<uint32_t>(sizeof(float) * elementCount)));
             }
         }
@@ -192,6 +192,9 @@ namespace hpl {
                 indexView.Write(i, target[i]);
             }
         }
+    }
+    bool cSubMesh::hasMesh() {
+        return m_vertexStreams.size() > 0 && m_indexStream.m_numberElements > 0;
     }
     void cSubMesh::SetStreamBuffers(iVertexBuffer* buffer, std::vector<StreamBufferInfo>&& vertexStreams, IndexBufferInfo&& indexStream) {
         m_vertexStreams = std::move(vertexStreams);
