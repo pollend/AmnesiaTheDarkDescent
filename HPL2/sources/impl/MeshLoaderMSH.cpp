@@ -280,25 +280,25 @@ namespace hpl {
                     indexView.Write(i, binBuff.GetInt32());
                 }
 			}
-// TODO: later view these changes
-//            {
-//                 auto positionInfo = std::find_if(vertexStreams.begin(), vertexStreams.end(), [&](auto& str) { return str.m_semantic == ShaderSemantic::SEMANTIC_POSITION;}) ;
-//                 auto tangentInfo = std::find_if(vertexStreams.begin(), vertexStreams.end(), [&](auto& str) { return str.m_semantic == ShaderSemantic::SEMANTIC_TANGENT;}) ;
-//                 auto normalInfo = std::find_if(vertexStreams.begin(), vertexStreams.end(), [&](auto& str) { return str.m_semantic == ShaderSemantic::SEMANTIC_NORMAL;}) ;
-//                 auto textureInfo = std::find_if(vertexStreams.begin(), vertexStreams.end(), [&](auto& str) { return str.m_semantic == ShaderSemantic::SEMANTIC_TEXCOORD0;}) ;
-//                 auto position = positionInfo->GetStructuredView<float3>();
-//                 auto normal = normalInfo->GetStructuredView<float3>();
-//                 auto uv = textureInfo->GetStructuredView<float2>();
-//                 auto tangent = tangentInfo->GetStructuredView<float3>();
-//                 hpl::MeshUtility::MikktSpaceGenerate(
-//                    positionInfo->m_numberElements,
-//                    indexInfo.m_numberElements,
-//                    &indexView,
-//                    &position,
-//                    &uv,
-//                    &normal,
-//                    &tangent);
-//		    }
+                // TODO: later view these changes
+           // {
+           //      auto positionInfo = std::find_if(vertexStreams.begin(), vertexStreams.end(), [&](auto& str) { return str.m_semantic == ShaderSemantic::SEMANTIC_POSITION;}) ;
+           //      auto tangentInfo = std::find_if(vertexStreams.begin(), vertexStreams.end(), [&](auto& str) { return str.m_semantic == ShaderSemantic::SEMANTIC_TANGENT;}) ;
+           //      auto normalInfo = std::find_if(vertexStreams.begin(), vertexStreams.end(), [&](auto& str) { return str.m_semantic == ShaderSemantic::SEMANTIC_NORMAL;}) ;
+           //      auto textureInfo = std::find_if(vertexStreams.begin(), vertexStreams.end(), [&](auto& str) { return str.m_semantic == ShaderSemantic::SEMANTIC_TEXCOORD0;}) ;
+           //      auto position = positionInfo->GetStructuredView<float3>();
+           //      auto normal = normalInfo->GetStructuredView<float3>();
+           //      auto uv = textureInfo->GetStructuredView<float2>();
+           //      auto tangent = tangentInfo->GetStructuredView<float3>();
+           //      hpl::MeshUtility::MikkTSpaceGenerate(
+           //         positionInfo->m_numberElements,
+           //         indexInfo.m_numberElements,
+           //         &indexView,
+           //         &position,
+           //         &uv,
+           //         &normal,
+           //         &tangent);
+		   // }
 
 
 	        iVertexBuffer* pVtxBuff = mpLowLevelGraphics->CreateVertexBuffer(	eVertexBufferType_Hardware, eVertexBufferDrawType_Tri,

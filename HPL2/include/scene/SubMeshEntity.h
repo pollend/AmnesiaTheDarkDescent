@@ -22,6 +22,7 @@
 #include <vector>
 #include <map>
 
+#include "Common_3/Graphics/Interfaces/IGraphics.h"
 #include "graphics/ForgeHandles.h"
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
@@ -92,32 +93,63 @@ namespace hpl {
 	private:
 		virtual void OnTransformUpdated() override;
 
-        struct StreamBufferInfo {
-            SharedBuffer m_buffer;
-            ShaderSemantic m_semantic;
-            uint64_t m_stride;
+        enum StreamBufferType {
+            StaticBuffer,
+            DynamicBuffer
         };
+
+        struct StreamBufferInfo {
+        public:
+            StreamBufferType m_type = StreamBufferType::StaticBuffer;
+            SharedBuffer m_buffer;
+            ShaderSemantic m_semantic = ShaderSemantic::SEMANTIC_UNDEFINED;
+            uint64_t m_stride = 0;
+            uint32_t m_numberElements = 0;
+            StreamBufferInfo() {}
+            StreamBufferInfo(const StreamBufferInfo& info) = delete;
+            StreamBufferInfo(StreamBufferInfo&& info):
+                m_type(info.m_type),
+                m_buffer(std::move(info.m_buffer)),
+                m_semantic(info.m_semantic),
+                m_stride(info.m_stride),
+                m_numberElements(info.m_numberElements) {
+            }
+            void operator=(const StreamBufferInfo& info) = delete;
+            void operator=(StreamBufferInfo&& info) {
+                m_type = info.m_type;
+                m_buffer = std::move(info.m_buffer);
+                m_semantic = info.m_semantic;
+                m_stride = info.m_stride;
+                m_numberElements = info.m_numberElements;
+            }
+
+        };
+        uint8_t m_activeCopy = 0;
         uint32_t m_numberIndecies = 0;
         SharedBuffer m_indexBuffer;
         folly::small_vector<StreamBufferInfo, MaxVertexBindings> m_vertexStreams;
 
-		cSubMesh *mpSubMesh;
-		cMeshEntity *mpMeshEntity;
+		cSubMesh *mpSubMesh= nullptr;
+		cMeshEntity *mpMeshEntity= nullptr;
 
-		cMaterial *mpMaterial;
+		cMaterial *mpMaterial= nullptr;
 
-		cNode3D *mpLocalNode;
+		cNode3D *mpLocalNode = nullptr;
 
-		cMaterialManager* mpMaterialManager;
+		cMaterialManager* mpMaterialManager= nullptr;
 
 		iVertexBuffer* mpDynVtxBuffer = nullptr;
 		tTriangleDataVec mvDynTriangles;
 
-		bool mbUpdateBody;
+		bool mbUpdateBody = false;
+		bool mbGraphicsUpdated = false;
+        bool m_skinnedMesh = false;
 
-		bool mbGraphicsUpdated;
-
-		char mlStaticNullMatrixCount;
+		//This is used to see if null should be returned.
+		// 0 = no check made, test if matrix is identity
+		// -1 = Matrix was not identity
+		// 1 = matrix was identiy
+		char mlStaticNullMatrixCount = 0;
 		void *mpUserData;
 	};
 

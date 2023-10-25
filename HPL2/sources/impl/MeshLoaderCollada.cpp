@@ -523,7 +523,7 @@ namespace hpl {
 			    indexView.Write(j, Geom.mvIndexVec[idx]);
 		    }
 
-           // hpl::MeshUtility::MikktSpaceGenerate(
+           // MeshUtility::MikkTSpaceGenerate(
            //     Geom.mvVertexVec.size(),
            //     Geom.mvIndexVec.size(),
            //     &indexView,

@@ -620,9 +620,6 @@ namespace hpl {
 
 	void cWorldLoaderHplMap::SaveCacheFile(const tWString& asFile)
 	{
-#if (defined(__PPC__) || defined(__ppc__))
-		return;
-#endif
 		if(mbLoadedCache) return; //No need to save if cache was loaded!
 		if(cResources::GetForceCacheLoadingAndSkipSaving()) return;
 

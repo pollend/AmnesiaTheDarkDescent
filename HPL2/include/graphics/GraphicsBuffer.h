@@ -42,6 +42,7 @@ namespace hpl {
         };
 
         GraphicsBuffer() {}
+        explicit GraphicsBuffer(const BufferUpdateDesc& desc);
         explicit GraphicsBuffer(const MappedBufferDesc& desc);
         explicit GraphicsBuffer(const GraphicsBuffer&);
         explicit GraphicsBuffer(GraphicsBuffer&&);

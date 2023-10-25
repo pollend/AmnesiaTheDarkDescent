@@ -70,12 +70,6 @@ namespace hpl {
         cMaterial* pMatB = apObjectB->GetMaterial();
 
         //////////////////////////
-        // Vertex buffer
-        if (apObjectA->GetVertexBuffer() != apObjectB->GetVertexBuffer()) {
-            return apObjectA->GetVertexBuffer() < apObjectB->GetVertexBuffer();
-        }
-
-        //////////////////////////
         // Matrix
         if (apObjectA->GetModelMatrixPtr() != apObjectB->GetModelMatrixPtr()) {
             return apObjectA->GetModelMatrixPtr() < apObjectB->GetModelMatrixPtr();
@@ -109,12 +103,6 @@ namespace hpl {
         }
 
         //////////////////////////
-        // Vertex buffer
-        if (apObjectA->GetVertexBuffer() != apObjectB->GetVertexBuffer()) {
-            return apObjectA->GetVertexBuffer() < apObjectB->GetVertexBuffer();
-        }
-
-        //////////////////////////
         // Matrix
         if (apObjectA->GetModelMatrixPtr() != apObjectB->GetModelMatrixPtr()) {
             return apObjectA->GetModelMatrixPtr() < apObjectB->GetModelMatrixPtr();
@@ -135,11 +123,6 @@ namespace hpl {
             return pMatA->GetImage(eMaterialTexture_Illumination) < pMatB->GetImage(eMaterialTexture_Illumination);
         }
 
-        //////////////////////////
-        // Vertex buffer
-        if (apObjectA->GetVertexBuffer() != apObjectB->GetVertexBuffer()) {
-            return apObjectA->GetVertexBuffer() < apObjectB->GetVertexBuffer();
-        }
 
         //////////////////////////
         // Matrix

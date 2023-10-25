@@ -19,6 +19,8 @@
 
 #pragma once
 
+#include "Common_3/Graphics/Interfaces/IGraphics.h"
+#include "graphics/ForgeHandles.h"
 #include "graphics/GraphicsBuffer.h"
 #include "graphics/GraphicsTypes.h"
 #include "math/MathTypes.h"
@@ -80,12 +82,14 @@ namespace hpl {
             }
 
             StreamBufferInfo(const StreamBufferInfo& other):
+                m_gpuBuffer(other.m_gpuBuffer),
                 m_buffer(other.m_buffer),
                 m_semantic(other.m_semantic),
                 m_stride(other.m_stride),
                 m_numberElements(other.m_numberElements){
             }
             StreamBufferInfo(StreamBufferInfo&& other):
+                m_gpuBuffer(std::move(other.m_gpuBuffer)),
                 m_buffer(std::move(other.m_buffer)),
                 m_semantic(other.m_semantic),
                 m_stride(other.m_stride),
@@ -93,12 +97,14 @@ namespace hpl {
             }
 
             void operator=(const StreamBufferInfo& other) {
+                m_gpuBuffer = other.m_gpuBuffer;
                 m_buffer = other.m_buffer;
                 m_semantic = other.m_semantic;
                 m_stride = other.m_stride;
                 m_numberElements = other.m_numberElements;
             }
             void operator=(StreamBufferInfo&& other) {
+                m_gpuBuffer = std::move(other.m_gpuBuffer);
                 m_buffer = std::move(other.m_buffer);
                 m_semantic = other.m_semantic;
                 m_stride = other.m_stride;
@@ -119,7 +125,9 @@ namespace hpl {
             constexpr GraphicsBuffer::BufferStructuredView<T> GetStructuredView(uint32_t byteOffset = 0) {
                 return m_buffer.CreateStructuredView<T>(byteOffset, m_stride);
             }
+            SharedBuffer CommitBuffer();
 
+            SharedBuffer m_gpuBuffer;
             GraphicsBuffer m_buffer;
             uint32_t m_stride = 0;
             uint32_t m_numberElements = 0;
@@ -246,6 +254,8 @@ namespace hpl {
         bool hasMesh();
         void SetStreamBuffers(iVertexBuffer* buffer, std::vector<StreamBufferInfo>&& vertexStreams, IndexBufferInfo&& indexStream);
         void Compile();
+
+        void CommitBuffer(ShaderSemantic semantic);
     private:
         cMaterialManager* m_materialManager = nullptr;
         tString m_name;

@@ -15,6 +15,13 @@ namespace hpl {
         m_type(BufferType::MappedBuffer){
     }
 
+    GraphicsBuffer::GraphicsBuffer(const BufferUpdateDesc& desc):
+        m_mapped({
+            desc.mSize,
+            desc.pMappedData
+        }),
+        m_type(BufferType::MappedBuffer){
+    }
     GraphicsBuffer::GraphicsBuffer(const GraphicsBuffer& asset):
         m_buffer(asset.m_buffer),
         m_mapped(asset.m_mapped),
