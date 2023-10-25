@@ -539,7 +539,7 @@ namespace hpl::MeshUtility {
             return idx;
         };
 
-        auto getBoxTex = [](int i, int x, int y, int z, std::array<float3, 4>& vAdd) {
+        auto getBoxTex = [](int i, int x, int y, int z, float3 vAdd[4]) {
             float3 vTex;
 
             if (std::abs(x)) {
@@ -573,7 +573,7 @@ namespace hpl::MeshUtility {
                     float3 vDir(0);
                     float3 vSide(0);
 
-                    std::array<float3, 4> vAdd;
+                    float3 vAdd[4];
                     if (std::abs(x)) {
                         vDir.x = (float)x;
 
