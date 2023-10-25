@@ -91,17 +91,7 @@ namespace hpl {
                     });
             } else {
                 info.m_type = StreamBufferType::StaticBuffer;
-                info.m_buffer = stream.CommitBuffer();
-                // info.m_buffer.Load([&](Buffer** buffer) {
-               //     BufferLoadDesc loadDesc = {};
-               //     loadDesc.ppBuffer = buffer;
-               //     loadDesc.mDesc.mDescriptors = DESCRIPTOR_TYPE_VERTEX_BUFFER;
-               //     loadDesc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_GPU_ONLY;
-               //     loadDesc.mDesc.mSize = rawView.NumBytes();
-               //     loadDesc.pData = rawView.rawByteSpan().data();
-               //     addResource(&loadDesc, nullptr);
-               //     return true;
-               // });
+                info.m_buffer = stream.CommitSharedBuffer();
             }
         }
         {
@@ -207,6 +197,9 @@ namespace hpl {
                 targetNormalIt != m_vertexStreams.end()  &&
                 targetTangentIt != m_vertexStreams.end()
             );
+            ASSERT(targetPositionIt->m_type == StreamBufferType::DynamicBuffer);
+            ASSERT(targetNormalIt->m_type == StreamBufferType::DynamicBuffer);
+            ASSERT(targetTangentIt->m_type == StreamBufferType::DynamicBuffer);
             BufferUpdateDesc positionUpdateDesc = { targetPositionIt->m_buffer.m_handle, m_activeCopy * (targetPositionIt->m_stride * targetPositionIt->m_numberElements), targetPositionIt->m_stride * targetPositionIt->m_numberElements};
             BufferUpdateDesc tangentUpdateDesc = { targetTangentIt->m_buffer.m_handle, m_activeCopy * (targetTangentIt->m_stride * targetTangentIt->m_numberElements), targetTangentIt->m_stride * targetTangentIt->m_numberElements };
             BufferUpdateDesc normalUpdateDesc = { targetNormalIt->m_buffer.m_handle, m_activeCopy * (targetNormalIt->m_stride * targetNormalIt->m_numberElements), targetNormalIt->m_stride * targetNormalIt->m_numberElements };

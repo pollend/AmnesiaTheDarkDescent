@@ -269,7 +269,7 @@ namespace hpl {
     }
 
     // not an ideal solution
-    SharedBuffer cSubMesh::StreamBufferInfo::CommitBuffer() {
+    SharedBuffer cSubMesh::StreamBufferInfo::CommitSharedBuffer() {
         if(!m_gpuBuffer.IsValid()) {
             auto rawView = m_buffer.CreateViewRaw();
             m_gpuBuffer.Load([&](Buffer** buffer) {

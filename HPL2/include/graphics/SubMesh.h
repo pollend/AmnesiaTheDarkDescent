@@ -125,7 +125,7 @@ namespace hpl {
             constexpr GraphicsBuffer::BufferStructuredView<T> GetStructuredView(uint32_t byteOffset = 0) {
                 return m_buffer.CreateStructuredView<T>(byteOffset, m_stride);
             }
-            SharedBuffer CommitBuffer();
+            SharedBuffer CommitSharedBuffer();
 
             SharedBuffer m_gpuBuffer;
             GraphicsBuffer m_buffer;
