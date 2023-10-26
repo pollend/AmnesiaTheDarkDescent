@@ -20,6 +20,7 @@ namespace hpl {
         public:
             OffsetAllocHandle(OffsetAllocator::Allocator* allocator, OffsetAllocator::Allocation allocation ,SharedBuffer buffer);
             OffsetAllocHandle();
+            
             ~OffsetAllocHandle();
             OffsetAllocHandle(OffsetAllocHandle&& handle);
             OffsetAllocHandle(const OffsetAllocHandle& handle) = delete;
