@@ -5,6 +5,7 @@
 
 #include "engine/IUpdateEventLoop.h"
 #include "engine/Interface.h"
+#include "graphics/GraphicsAllocator.h"
 #include "gui/GuiSet.h"
 #include "input/InputKeyboardDevice.h"
 #include "input/InputManager.h"
@@ -69,6 +70,9 @@ namespace hpl {
 
         // core renderer initialization
         m_renderer.InitializeRenderer(&m_window);
+
+        // graphics allocator
+        m_graphicsAlloc = std::make_unique<hpl::GraphicsAllocator>(&m_renderer);
 
         // initialize gui rendering
         initResourceLoaderInterface(m_renderer.Rend()); // initializes resources
