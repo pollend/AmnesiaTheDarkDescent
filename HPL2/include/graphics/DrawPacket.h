@@ -37,6 +37,9 @@ namespace hpl {
                 VertexStream m_vertexStream[MaxVertexBindings];
                 IndexStream m_indexStream;
             } m_indvidual;
+            struct {
+
+            } m_unified;
         };
     };
 

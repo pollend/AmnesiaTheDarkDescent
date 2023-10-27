@@ -71,11 +71,12 @@ namespace hpl {
         // core renderer initialization
         m_renderer.InitializeRenderer(&m_window);
 
+        // initialize gui rendering
+        initResourceLoaderInterface(m_renderer.Rend()); // initializes resources
+
         // graphics allocator
         m_graphicsAlloc = std::make_unique<hpl::GraphicsAllocator>(&m_renderer);
 
-        // initialize gui rendering
-        initResourceLoaderInterface(m_renderer.Rend()); // initializes resources
         m_renderer.InitializeResource();
         gui::InitializeGui(m_renderer);
 
@@ -90,7 +91,7 @@ namespace hpl {
         Interface<hpl::PrimaryViewport>::Register(m_primaryViewport.get());
         Interface<input::InputManager>::Register(&m_inputManager);
         Interface<window::NativeWindowWrapper>::Register(&m_window); // storing as a singleton means we can only have one window ...
-        //Interface<DebugDraw>::Register(m_debug.get());
+        Interface<hpl::GraphicsAllocator>::Register(m_graphicsAlloc.get());
     }
 
     void Bootstrap::Shutdown() {
@@ -99,7 +100,7 @@ namespace hpl {
         Interface<input::InputManager>::UnRegister(&m_inputManager);
         Interface<window::NativeWindowWrapper>::UnRegister(&m_window);
         Interface<IUpdateEventLoop>::UnRegister(&m_updateEventLoop);
-        //Interface<DebugDraw>::UnRegister(m_debug.get());
+        Interface<hpl::GraphicsAllocator>::UnRegister(m_graphicsAlloc.get());
         exitLog();
     }
 

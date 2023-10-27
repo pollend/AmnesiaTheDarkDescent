@@ -23,6 +23,7 @@
 
 
 #include "graphics/ForgeRenderer.h"
+#include "graphics/GraphicsAllocator.h"
 #include "graphics/GraphicsBuffer.h"
 #include "graphics/VertexBuffer.h"
 #include "graphics/Material.h"
@@ -61,60 +62,49 @@ namespace hpl {
         , mpMaterialManager(apMaterialManager) {
         mbIsOneSided = mpSubMesh->GetIsOneSided();
         mvOneSidedNormal = mpSubMesh->GetOneSidedNormal();
-        if (mpMeshEntity->GetMesh()->GetSkeleton()) {
-            mpDynVtxBuffer =
-                mpSubMesh->GetVertexBuffer()->CreateCopy(eVertexBufferType_Hardware, eVertexBufferUsageType_Dynamic, eFlagBit_All);
-        }
+        m_isSkinnedMesh  = mpMeshEntity->GetMesh()->GetSkeleton();
+        auto* graphicsAllocator = Interface<GraphicsAllocator>::Get();
+        ASSERT(graphicsAllocator);
 
-        m_skinnedMesh  = mpMeshEntity->GetMesh()->GetSkeleton();
-        for (auto& stream : mpSubMesh->streamBuffers()) {
-            auto rawView = stream.m_buffer.CreateViewRaw();
-            StreamBufferInfo& info = m_vertexStreams.emplace_back();
-            info.m_stride = stream.m_stride;
-            info.m_semantic = stream.m_semantic;
-            info.m_numberElements = stream.m_numberElements;
-            if(m_skinnedMesh
-                && (stream.m_semantic == ShaderSemantic::SEMANTIC_POSITION ||
-                    stream.m_semantic == ShaderSemantic::SEMANTIC_TANGENT ||
-                    stream.m_semantic == ShaderSemantic::SEMANTIC_NORMAL
-                )) {
-                    info.m_type = StreamBufferType::DynamicBuffer;
-                    info.m_buffer.Load([&](Buffer** buffer) {
-                        BufferLoadDesc loadDesc = {};
-                        loadDesc.ppBuffer = buffer;
-                        loadDesc.mDesc.mDescriptors = DESCRIPTOR_TYPE_VERTEX_BUFFER;
-                        loadDesc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
-                        loadDesc.mDesc.mSize = rawView.NumBytes() * ForgeRenderer::SwapChainLength; // will have a copy per frame
-                        loadDesc.pData = rawView.rawByteSpan().data();
-                        addResource(&loadDesc, nullptr);
-                        return true;
-                    });
-            } else {
-                info.m_type = StreamBufferType::StaticBuffer;
-                info.m_buffer = stream.CommitSharedBuffer();
+        auto vertexStreams = mpSubMesh->streamBuffers();
+        auto& indexStream = mpSubMesh->IndexStream();
+        auto& opaqueSet = graphicsAllocator->resolveSet(GraphicsAllocator::AllocationSet::OpaqueSet);
+
+        m_numberVertices = vertexStreams.begin()->m_numberElements;
+        m_numberIndecies  = indexStream.m_numberElements;
+
+        m_geometry = opaqueSet.allocate(m_numberVertices * (m_isSkinnedMesh ? 2 : 1), m_numberIndecies);
+        for(auto& localStream: vertexStreams) {
+            auto gpuStream = m_geometry->getStreamBySemantic(localStream.m_semantic);
+            ASSERT(gpuStream != m_geometry->vertexStreams().end());
+
+            BufferUpdateDesc updateDesc = { gpuStream->buffer().m_handle, gpuStream->stride() *  m_geometry->vertextOffset(),  gpuStream->stride() * m_numberVertices};
+            beginUpdateResource(&updateDesc);
+
+            GraphicsBuffer gpuBuffer(updateDesc);
+            auto dest = gpuBuffer.CreateViewRaw();
+            auto source = localStream.m_buffer.CreateViewRaw();
+            for(size_t i = 0; i < m_numberVertices; i++) {
+                auto sp = source.rawByteSpan().subspan(i * localStream.m_stride, std::min(gpuStream->stride(), localStream.m_stride));
+                dest.WriteRaw(i * gpuStream->stride(), sp);
             }
+            endUpdateResource(&updateDesc, nullptr);
         }
         {
-            auto& info = mpSubMesh->IndexStream();
-            auto rawView = info.m_buffer.CreateViewRaw();
-            m_indexBuffer.Load([&](Buffer** buffer) {
-                BufferLoadDesc loadDesc = {};
-                loadDesc.ppBuffer = buffer;
-                loadDesc.mDesc.mDescriptors = DESCRIPTOR_TYPE_INDEX_BUFFER;
-                loadDesc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_GPU_ONLY;
-                loadDesc.mDesc.mSize = rawView.NumBytes();
-                loadDesc.pData = rawView.rawByteSpan().data();
-                addResource(&loadDesc, nullptr);
-                return true;
-            });
-            m_numberIndecies = info.m_numberElements;
+            BufferUpdateDesc updateDesc = { m_geometry->indexBuffer().m_handle, m_geometry->indexOffset() * GeometrySet::IndexBufferStride,  GeometrySet::IndexBufferStride * m_numberIndecies};
+            beginUpdateResource(&updateDesc);
+            GraphicsBuffer gpuBuffer(updateDesc);
+            auto dest = gpuBuffer.CreateIndexView();
+            auto src = indexStream.m_buffer.CreateIndexView();
+            for(size_t i = 0; i < m_numberIndecies; i++) {
+                dest.Write(i, src.Get(i));
+            }
+            endUpdateResource(&updateDesc, nullptr);
         }
+
     }
 
     cSubMeshEntity::~cSubMeshEntity() {
-        if (mpDynVtxBuffer)
-            hplDelete(mpDynVtxBuffer);
-
         /* Clear any custom textures here*/
         if (mpMaterial)
             mpMaterialManager->Destroy(mpMaterial);
@@ -157,7 +147,7 @@ namespace hpl {
 
         ////////////////////////////////////
         // If it has dynamic mesh, update it.
-        if (m_skinnedMesh) {
+        if (m_isSkinnedMesh) {
             if (mpMeshEntity->mbSkeletonPhysicsSleeping && mbGraphicsUpdated) {
                 return;
             }
@@ -183,26 +173,17 @@ namespace hpl {
             auto bindNormalView = bindNormalIt->GetStructuredView<float3>();
             auto bindTangentView = bindTangentIt->GetStructuredView<float3>();
 
-            auto targetPositionIt = std::find_if(m_vertexStreams.begin(), m_vertexStreams.end(), [&](auto& stream) {
-                return stream.m_semantic == ShaderSemantic::SEMANTIC_POSITION;
-            });
-            auto targetNormalIt = std::find_if(m_vertexStreams.begin(), m_vertexStreams.end(), [&](auto& stream) {
-                return stream.m_semantic == ShaderSemantic::SEMANTIC_NORMAL;
-            });
-            auto targetTangentIt = std::find_if(m_vertexStreams.begin(), m_vertexStreams.end(), [&](auto& stream) {
-                return stream.m_semantic == ShaderSemantic::SEMANTIC_TANGENT;
-            });
+            auto targetPositionIt = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_POSITION);
+            auto targetNormalIt  = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_NORMAL);
+            auto targetTangentIt  = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_TANGENT);
 
-            ASSERT(targetPositionIt != m_vertexStreams.end() &&
-                targetNormalIt != m_vertexStreams.end()  &&
-                targetTangentIt != m_vertexStreams.end()
+            ASSERT(targetPositionIt != m_geometry->vertexStreams().end() &&
+                targetNormalIt != m_geometry->vertexStreams().end()  &&
+                targetTangentIt != m_geometry->vertexStreams().end()
             );
-            ASSERT(targetPositionIt->m_type == StreamBufferType::DynamicBuffer);
-            ASSERT(targetNormalIt->m_type == StreamBufferType::DynamicBuffer);
-            ASSERT(targetTangentIt->m_type == StreamBufferType::DynamicBuffer);
-            BufferUpdateDesc positionUpdateDesc = { targetPositionIt->m_buffer.m_handle, m_activeCopy * (targetPositionIt->m_stride * targetPositionIt->m_numberElements), targetPositionIt->m_stride * targetPositionIt->m_numberElements};
-            BufferUpdateDesc tangentUpdateDesc = { targetTangentIt->m_buffer.m_handle, m_activeCopy * (targetTangentIt->m_stride * targetTangentIt->m_numberElements), targetTangentIt->m_stride * targetTangentIt->m_numberElements };
-            BufferUpdateDesc normalUpdateDesc = { targetNormalIt->m_buffer.m_handle, m_activeCopy * (targetNormalIt->m_stride * targetNormalIt->m_numberElements), targetNormalIt->m_stride * targetNormalIt->m_numberElements };
+            BufferUpdateDesc positionUpdateDesc = { targetPositionIt->buffer().m_handle, m_activeCopy * (targetPositionIt->stride() * m_numberVertices), targetPositionIt->stride() * m_numberVertices};
+            BufferUpdateDesc tangentUpdateDesc = { targetTangentIt->buffer().m_handle, m_activeCopy * (targetTangentIt->stride() * m_numberVertices), targetTangentIt->stride() * m_numberVertices};
+            BufferUpdateDesc normalUpdateDesc = { targetNormalIt->buffer().m_handle, m_activeCopy * (targetNormalIt->stride() * m_numberVertices), targetNormalIt->stride() * m_numberVertices};
             beginUpdateResource(&positionUpdateDesc);
             beginUpdateResource(&tangentUpdateDesc);
             beginUpdateResource(&normalUpdateDesc);
@@ -210,9 +191,9 @@ namespace hpl {
             GraphicsBuffer positionMapping(positionUpdateDesc);
             GraphicsBuffer normalMapping(tangentUpdateDesc);
             GraphicsBuffer tangentMapping(normalUpdateDesc);
-            auto targetPositionView = positionMapping.CreateStructuredView<float3>(0, targetPositionIt->m_stride);
-            auto targetTangentView = tangentMapping.CreateStructuredView<float3>(0, targetTangentIt->m_stride);
-            auto targetNormalView = normalMapping.CreateStructuredView<float3>(0, targetNormalIt->m_stride);
+            auto targetPositionView = positionMapping.CreateStructuredView<float3>(0, targetPositionIt->stride());
+            auto targetTangentView = tangentMapping.CreateStructuredView<float3>(0, targetTangentIt->stride());
+            auto targetNormalView = normalMapping.CreateStructuredView<float3>(0, targetNormalIt->stride());
 
             for(size_t i = 0; i < bindPositionIt->m_numberElements; i++) {
 
@@ -257,33 +238,32 @@ namespace hpl {
 	    packet.m_indvidual.m_numStreams = 0;
 	    for(auto& ele: elements) {
 	       ShaderSemantic semantic = hplToForgeShaderSemantic(ele);
-            auto found = std::find_if(m_vertexStreams.begin(), m_vertexStreams.end(), [&](auto& stream) {
-                return stream.m_semantic == semantic;
-            });
-            ASSERT(found != m_vertexStreams.end());
+            auto found = m_geometry->getStreamBySemantic(semantic);
+            ASSERT(found != m_geometry->vertexStreams().end());
 	        auto& stream = packet.m_indvidual.m_vertexStream[packet.m_indvidual.m_numStreams++];
-	        stream.m_buffer = &found->m_buffer;
-	        stream.m_offset = 0;
-	        if(found->m_type == StreamBufferType::DynamicBuffer) {
-	            stream.m_offset = m_activeCopy * (found->m_numberElements * found->m_stride);
+	        stream.m_buffer = &found->buffer();
+	        stream.m_offset = m_geometry->vertextOffset() * found->stride();
+	        switch(found->semantic()) {
+	            case ShaderSemantic::SEMANTIC_POSITION:
+	            case ShaderSemantic::SEMANTIC_NORMAL:
+	            case ShaderSemantic::SEMANTIC_TANGENT:
+	                stream.m_offset += (m_activeCopy * (m_numberVertices * found->stride()));
+	                break;
+	            default:
+	                break;
+
 	        }
-	        stream.m_stride = found->m_stride;
+
+	        stream.m_stride = found->stride();
 	    }
-	    packet.m_indvidual.m_indexStream.m_offset = 0;
-	    packet.m_indvidual.m_indexStream.buffer = &m_indexBuffer;
+	    packet.m_indvidual.m_indexStream.m_offset = GeometrySet::IndexBufferStride * m_geometry->indexOffset();
+	    packet.m_indvidual.m_indexStream.buffer = &m_geometry->indexBuffer();
 	    packet.m_numIndices = m_numberIndecies;
 	    return packet;
     }
 	iVertexBuffer* cSubMeshEntity::GetVertexBuffer()
 	{
-		if(mpDynVtxBuffer)
-		{
-			return mpDynVtxBuffer;
-		}
-		else
-		{
-			return mpSubMesh->GetVertexBuffer();
-		}
+		return mpSubMesh->GetVertexBuffer();
 	}
 
 	cBoundingVolume* cSubMeshEntity::GetBoundingVolume()

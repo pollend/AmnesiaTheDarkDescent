@@ -24,6 +24,7 @@
 
 #include "Common_3/Graphics/Interfaces/IGraphics.h"
 #include "graphics/ForgeHandles.h"
+#include "graphics/GraphicsAllocator.h"
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
 #include "system/SystemTypes.h"
@@ -92,42 +93,10 @@ namespace hpl {
 
 	private:
 		virtual void OnTransformUpdated() override;
-
-        enum StreamBufferType {
-            StaticBuffer,
-            DynamicBuffer
-        };
-
-        struct StreamBufferInfo {
-        public:
-            StreamBufferType m_type = StreamBufferType::StaticBuffer;
-            SharedBuffer m_buffer;
-            ShaderSemantic m_semantic = ShaderSemantic::SEMANTIC_UNDEFINED;
-            uint64_t m_stride = 0;
-            uint32_t m_numberElements = 0;
-            StreamBufferInfo() {}
-            StreamBufferInfo(const StreamBufferInfo& info) = delete;
-            StreamBufferInfo(StreamBufferInfo&& info):
-                m_type(info.m_type),
-                m_buffer(std::move(info.m_buffer)),
-                m_semantic(info.m_semantic),
-                m_stride(info.m_stride),
-                m_numberElements(info.m_numberElements) {
-            }
-            void operator=(const StreamBufferInfo& info) = delete;
-            void operator=(StreamBufferInfo&& info) {
-                m_type = info.m_type;
-                m_buffer = std::move(info.m_buffer);
-                m_semantic = info.m_semantic;
-                m_stride = info.m_stride;
-                m_numberElements = info.m_numberElements;
-            }
-
-        };
+        std::shared_ptr<GeometrySet::GeometrySetSubAllocation> m_geometry;
         uint8_t m_activeCopy = 0;
         uint32_t m_numberIndecies = 0;
-        SharedBuffer m_indexBuffer;
-        folly::small_vector<StreamBufferInfo, MaxVertexBindings> m_vertexStreams;
+        uint32_t m_numberVertices = 0;
 
 		cSubMesh *mpSubMesh= nullptr;
 		cMeshEntity *mpMeshEntity= nullptr;
@@ -138,12 +107,9 @@ namespace hpl {
 
 		cMaterialManager* mpMaterialManager= nullptr;
 
-		iVertexBuffer* mpDynVtxBuffer = nullptr;
-		tTriangleDataVec mvDynTriangles;
-
 		bool mbUpdateBody = false;
 		bool mbGraphicsUpdated = false;
-        bool m_skinnedMesh = false;
+        bool m_isSkinnedMesh = false;
 
 		//This is used to see if null should be returned.
 		// 0 = no check made, test if matrix is identity

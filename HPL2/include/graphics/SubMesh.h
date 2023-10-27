@@ -43,7 +43,6 @@ namespace hpl {
 
     class cMaterialManager;
 
-
     class cSubMesh final {
         friend class cMesh;
         friend class cSubMeshEntity;

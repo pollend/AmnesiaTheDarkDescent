@@ -443,12 +443,11 @@ namespace hpl::MeshUtility {
         for (int i = 0; i < (int)vCoords.size(); ++i) {
             vCoords[i] -= vFirstCorner;
         }
-        std::array uvs = {
-            uv1,
-            uv2,
-            uv3,
-            uv4
-        };
+        std::array<Vector2, 4> uvs;
+        uvs[0] = uv1;
+        uvs[1] = uv2;
+        uvs[2] = uv3;
+        uvs[3] = uv4;
         for (size_t i = 0; i < 4; i++) {
             position->Write(vertexBufIdx, v3ToF3(vCoords[i]));
             normal->Write(vertexBufIdx, float3(0.0f, 1.0f, 0.0f));

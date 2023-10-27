@@ -78,7 +78,7 @@ namespace hpl {
                         break;
                     }
                     case BufferType::MappedBuffer: {
-                        ASSERT(m_asset->m_mapped.m_size == 0 || m_byteOffset + byteOffset + data.size() < m_asset->m_mapped.m_size);
+                        ASSERT(m_asset->m_mapped.m_size == 0 || m_byteOffset + byteOffset + data.size() <= m_asset->m_mapped.m_size);
                         std::copy(data.begin(), data.end(), reinterpret_cast<uint8_t*>(m_asset->m_mapped.m_mappedData) + m_byteOffset + byteOffset);
                         break;
                     }
