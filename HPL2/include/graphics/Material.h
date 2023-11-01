@@ -92,7 +92,7 @@ namespace hpl {
         MaterialIDCount
     };
 
-    struct MaterialDescriptor final {
+    struct ShaderMaterialData final {
         MaterialID m_id = MaterialID::Unknown;
         union {
             MaterialDecal m_decal;
@@ -216,11 +216,11 @@ namespace hpl {
 		void Unload(){}
 		void Destroy(){}
 
-        inline void SetDescriptor(const MaterialDescriptor& desc) {
+        inline void SetDescriptor(const ShaderMaterialData& desc) {
             m_descriptor = desc;
             IncreaseGeneration();
         }
-        inline const MaterialDescriptor& Descriptor() const {
+        inline const ShaderMaterialData& Descriptor() const {
             return m_descriptor;
         }
 
@@ -234,7 +234,7 @@ namespace hpl {
         eTextureFilter m_textureFilter = eTextureFilter::eTextureFilter_Nearest;
 
 		cResources *mpResources;
-	    MaterialDescriptor m_descriptor;
+	    ShaderMaterialData m_descriptor;
 		IndexPoolHandle m_handle;
 
 		std::array<ImageResourceWrapper, eMaterialTexture_LastEnum> m_image = {ImageResourceWrapper()};

@@ -1,0 +1,59 @@
+#include "forward_resource.h.fsl"
+
+STRUCT(PsIn) 
+{
+    DATA(float4, Position, SV_Position);
+    DATA(float3, pos, POSITION);
+    DATA(float2, uv, TEXCOORD0);
+    DATA(float3, normal, NORMAL);
+    DATA(float3, tangent, TANGENT);
+    DATA(float3, bitangent, BITANGENT);
+	DATA(FLAT(uint), drawId, TEXCOORD1);
+};
+
+STRUCT(PsOut)
+{
+    DATA(float4, diffuse, SV_Target0);
+    DATA(float4, test, SV_Target1);
+};
+
+
+PsOut PS_MAIN(PsIn In)
+{
+    INIT_MAIN; 
+    UniformObject object = Get(sceneObjects)[In.drawId];
+    DiffuseMaterial diffuseMat = Get(opaqueMaterial)[MATERIAL_ID(object)];  
+    uint diffuseTextureId = DiffuseMaterial_DiffuseTexture_ID(diffuseMat);
+    
+    float4 diffuseColor = float4(0,0,0,1);
+    if(diffuseTextureId < SCENE_MAX_TEXTURE_COUNT) {
+        BeginNonUniformResourceIndex(diffuseTextureId, SCENE_MAX_TEXTURE_COUNT);
+            diffuseColor = SampleTex2D(Get(sceneTextures)[diffuseTextureId], Get(nearestClampSampler), In.uv.xy);
+        EndNonUniformResourceIndex();
+    }
+
+    float3 normalizedNormal = normalize(In.normal.xyz);
+    float2 texelPos = (In.Position.xy * Get(viewTexel));
+	uint2 clusterCoords = uint2(floor(texelPos * float2(LIGHT_CLUSTER_WIDTH, LIGHT_CLUSTER_HEIGHT)));
+	uint numLightsInCluster = Get(lightClustersCount)[LIGHT_CLUSTER_COUNT_POS(clusterCoords.x, clusterCoords.y)];
+    float4 result = float4(0,0,0,1);
+    for(uint j = 0; j < numLightsInCluster; j++) {
+		uint lightId = Get(lightClusters)[LIGHT_CLUSTER_DATA_POS(j, clusterCoords.x, clusterCoords.y)];
+        PointLight pl = Get(pointLights)[lightId];
+	    float4 lightPosWorldSpace = float4(pl.lightPos.xyz, 1.0f);
+	    float4 lightCameraSpace = mul(Get(viewMat), lightPosWorldSpace);
+        
+        float3 lightDir = (lightCameraSpace.xyz  - In.pos) * (1.0 / pl.lightRadius);
+	    
+	    float attenuation = saturate(1.0f - dot(lightDir , lightDir));
+        float3 normalLightDir = normalize(lightDir);
+
+        float fLDotN = max(dot(normalizedNormal, normalLightDir), 0.0);
+        result += diffuseColor * (attenuation * fLDotN);
+    }
+
+    PsOut Out;
+    Out.test.x = diffuseTextureId; 
+    Out.diffuse = result;
+    RETURN(Out);
+}

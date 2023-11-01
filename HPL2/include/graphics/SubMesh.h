@@ -204,8 +204,12 @@ namespace hpl {
         void AddCollider(const MeshCollisionResource& def);
         std::span<MeshCollisionResource> GetColliders();
         inline std::span<StreamBufferInfo> streamBuffers() {return m_vertexStreams; }
+        inline std::span<StreamBufferInfo>::iterator getStreamBySemantic(ShaderSemantic semantic) {
+            return std::find_if(streamBuffers().begin(), streamBuffers().end(), [&](auto& stream) {
+                return stream.m_semantic == semantic;
+            });
+        }
         inline IndexBufferInfo& IndexStream() {return m_indexStream; }
-
         void SetIsCollideShape(bool abX) {
             m_collideShape = abX;
         }

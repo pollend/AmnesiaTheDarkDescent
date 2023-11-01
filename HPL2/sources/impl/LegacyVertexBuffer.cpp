@@ -455,7 +455,7 @@ namespace hpl {
     DrawPacket LegacyVertexBuffer::resolveGeometryBinding(
         uint32_t frameIndex, std::span<eVertexBufferElement> elements) {
         DrawPacket packet;
-        packet.m_type = DrawPacket::IndvidualBindings;
+        packet.m_type = DrawPacket::DrawIndvidualBuffers;
         if(m_updateFlags) {
             for (auto& element : m_vertexElements) {
                 const bool isDynamicAccess = detail::IsDynamicMemory(mUsageType);
@@ -542,7 +542,7 @@ namespace hpl {
         }
         uint32_t numIndecies = (GetRequestNumberIndecies() > 0) ? GetRequestNumberIndecies() : static_cast<uint32_t>(m_indices.size()) ;
         packet.m_indvidual.m_indexStream.m_offset = m_indexBufferActiveCopy * m_indices.size() * sizeof(uint32_t);
-        packet.m_numIndices = numIndecies;
+        packet.m_indvidual.m_numIndices = numIndecies;
         packet.m_indvidual.m_indexStream.buffer = &m_indexBuffer;
         return packet;
     }

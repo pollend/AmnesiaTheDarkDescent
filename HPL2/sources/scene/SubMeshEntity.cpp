@@ -71,7 +71,7 @@ namespace hpl {
         auto& opaqueSet = graphicsAllocator->resolveSet(GraphicsAllocator::AllocationSet::OpaqueSet);
 
         m_numberVertices = vertexStreams.begin()->m_numberElements;
-        m_numberIndecies  = indexStream.m_numberElements;
+        m_numberIndecies = indexStream.m_numberElements;
 
         m_geometry = opaqueSet.allocate(m_numberVertices * (m_isSkinnedMesh ? 2 : 1), m_numberIndecies);
         for(auto& localStream: vertexStreams) {
@@ -83,9 +83,9 @@ namespace hpl {
 
             GraphicsBuffer gpuBuffer(updateDesc);
             auto dest = gpuBuffer.CreateViewRaw();
-            auto source = localStream.m_buffer.CreateViewRaw();
+            auto src = localStream.m_buffer.CreateViewRaw();
             for(size_t i = 0; i < m_numberVertices; i++) {
-                auto sp = source.rawByteSpan().subspan(i * localStream.m_stride, std::min(gpuStream->stride(), localStream.m_stride));
+                auto sp = src.rawByteSpan().subspan(i * localStream.m_stride, std::min(gpuStream->stride(), localStream.m_stride));
                 dest.WriteRaw(i * gpuStream->stride(), sp);
             }
             endUpdateResource(&updateDesc, nullptr);
@@ -156,18 +156,12 @@ namespace hpl {
             mbGraphicsUpdated = true;
 
             auto staticBindBuffers = mpSubMesh->streamBuffers();
-            auto bindPositionIt = std::find_if(staticBindBuffers.begin(), staticBindBuffers.end(), [&](auto& stream) {
-                return stream.m_semantic == ShaderSemantic::SEMANTIC_POSITION;
-            });
-            auto bindNormalIt = std::find_if(staticBindBuffers.begin(), staticBindBuffers.end(), [&](auto& stream) {
-                return stream.m_semantic == ShaderSemantic::SEMANTIC_NORMAL;
-            });
-            auto bindTangentIt = std::find_if(staticBindBuffers.begin(), staticBindBuffers.end(), [&](auto& stream) {
-                return stream.m_semantic == ShaderSemantic::SEMANTIC_TANGENT;
-            });
-            ASSERT(bindPositionIt != staticBindBuffers.end() &&
-                bindNormalIt != staticBindBuffers.end()  &&
-                bindTangentIt != staticBindBuffers.end()
+            auto bindPositionIt = mpSubMesh->getStreamBySemantic(ShaderSemantic::SEMANTIC_POSITION);
+            auto bindNormalIt = mpSubMesh->getStreamBySemantic(ShaderSemantic::SEMANTIC_NORMAL);
+            auto bindTangentIt = mpSubMesh->getStreamBySemantic(ShaderSemantic::SEMANTIC_TANGENT);
+            ASSERT(bindPositionIt != mpSubMesh->streamBuffers().end() &&
+                bindNormalIt != mpSubMesh->streamBuffers().end()  &&
+                bindTangentIt != mpSubMesh->streamBuffers().end()
             );
             auto bindPositonView = bindPositionIt->GetStructuredView<float3>(); // the static buffer data is the fixed pose
             auto bindNormalView = bindNormalIt->GetStructuredView<float3>();
@@ -234,31 +228,16 @@ namespace hpl {
             return packet;
 	    }
 
-	    packet.m_type = DrawPacket::IndvidualBindings;
-	    packet.m_indvidual.m_numStreams = 0;
-	    for(auto& ele: elements) {
-	       ShaderSemantic semantic = hplToForgeShaderSemantic(ele);
-            auto found = m_geometry->getStreamBySemantic(semantic);
-            ASSERT(found != m_geometry->vertexStreams().end());
-	        auto& stream = packet.m_indvidual.m_vertexStream[packet.m_indvidual.m_numStreams++];
-	        stream.m_buffer = &found->buffer();
-	        stream.m_offset = m_geometry->vertextOffset() * found->stride();
-	        switch(found->semantic()) {
-	            case ShaderSemantic::SEMANTIC_POSITION:
-	            case ShaderSemantic::SEMANTIC_NORMAL:
-	            case ShaderSemantic::SEMANTIC_TANGENT:
-	                stream.m_offset += (m_activeCopy * (m_numberVertices * found->stride()));
-	                break;
-	            default:
-	                break;
-
-	        }
-
-	        stream.m_stride = found->stride();
-	    }
-	    packet.m_indvidual.m_indexStream.m_offset = GeometrySet::IndexBufferStride * m_geometry->indexOffset();
-	    packet.m_indvidual.m_indexStream.buffer = &m_geometry->indexBuffer();
-	    packet.m_numIndices = m_numberIndecies;
+        DrawPacket::GeometrySetBinding binding{};
+        packet.m_type = DrawPacket::DrawGeometryset;
+        std::copy(elements.begin(), elements.end(), binding.m_elements);
+        binding.m_numStreams = elements.size();
+        binding.m_subAllocation = m_geometry.get();
+        binding.m_indexOffset = 0;
+        binding.m_set = GraphicsAllocator::AllocationSet::OpaqueSet;
+        binding.m_numIndices = m_numberIndecies;
+	    binding.m_vertexOffset = (m_activeCopy * m_numberVertices);
+        packet.m_unified = binding;
 	    return packet;
     }
 	iVertexBuffer* cSubMeshEntity::GetVertexBuffer()

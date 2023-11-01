@@ -663,7 +663,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
         {
             continue;
         }
-       
+
 
         uint32_t requestSize = round_up(sizeof(LuxEffectObjectUniform::FlashUniform), 256);
         #ifdef USE_THE_FORGE_LEGACY
@@ -698,7 +698,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
         cmdBindDescriptorSet(input.m_frame->m_cmd, objectIndex++, m_perObjectDescriptorSet[frame->m_frameIndex]);
         DrawPacket::cmdBindBuffers(frame->m_cmd, frame->m_resourcePool, &packet);
         for(size_t i = 0; i < 2; i++) {
-            cmdDrawIndexed(input.m_frame->m_cmd, packet.m_numIndices, 0, 0);
+            cmdDrawIndexed(input.m_frame->m_cmd, packet.numberOfIndecies(), 0, 0);
         }
     }
     cmdEndDebugMarker(input.m_frame->m_cmd);
@@ -747,7 +747,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
 
         cmdBindDescriptorSet(input.m_frame->m_cmd, objectIndex++, m_perObjectDescriptorSet[frame->m_frameIndex]);
         DrawPacket::cmdBindBuffers(frame->m_cmd, frame->m_resourcePool, &packet);
-        cmdDrawIndexed(input.m_frame->m_cmd, packet.m_numIndices, 0, 0);
+        cmdDrawIndexed(input.m_frame->m_cmd, packet.numberOfIndecies(), 0, 0);
     }
     cmdEndDebugMarker(input.m_frame->m_cmd);
 
@@ -817,7 +817,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
 
             cmdBindDescriptorSet(input.m_frame->m_cmd, objectIndex++, m_perObjectDescriptorSet[frame->m_frameIndex]);
             DrawPacket::cmdBindBuffers(input.m_frame->m_cmd, frame->m_resourcePool, &packet);
-            cmdDrawIndexed(input.m_frame->m_cmd, packet.m_numIndices, 0, 0);
+            cmdDrawIndexed(input.m_frame->m_cmd, packet.numberOfIndecies(), 0, 0);
         }
         cmdEndDebugMarker(input.m_frame->m_cmd);
 
@@ -869,7 +869,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
 
             cmdBindDescriptorSet(input.m_frame->m_cmd, objectIndex++, m_perObjectDescriptorSet[frame->m_frameIndex]);
             DrawPacket::cmdBindBuffers(input.m_frame->m_cmd, input.m_frame->m_resourcePool, &drawPacket);
-            cmdDrawIndexed(input.m_frame->m_cmd, drawPacket.m_numIndices, 0, 0);
+            cmdDrawIndexed(input.m_frame->m_cmd, drawPacket.numberOfIndecies(), 0, 0);
         }
         cmdEndDebugMarker(input.m_frame->m_cmd);
 

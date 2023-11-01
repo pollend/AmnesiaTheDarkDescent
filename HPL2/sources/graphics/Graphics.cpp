@@ -24,6 +24,7 @@
 #include "engine/Updateable.h"
 
 #include "graphics/ForgeRenderer.h"
+#include "graphics/RendererForwardPlus.h"
 #include "system/LowLevelSystem.h"
 #include "system/String.h"
 #include "system/Platform.h"
@@ -88,7 +89,6 @@ namespace hpl {
 		{
 			if(mvRenderers[i])
 			{
-				mvRenderers[i]->DestroyData();
 				hplDelete(mvRenderers[i])
 			}
 		}
@@ -158,19 +158,12 @@ namespace hpl {
 
 			mvRenderers.resize(2, NULL);
             m_debug = std::make_shared<DebugDraw>(Interface<ForgeRenderer>::Get());
-			mvRenderers[eRenderer_Main] = new cRendererDeferred(this, apResources, m_debug);
+            #if USE_FORWARD_PLUS_BACKEND
+		        mvRenderers[eRenderer_Main] = new RendererForwardPlus(this, apResources, m_debug);
+            #else
+		        mvRenderers[eRenderer_Main] = new cRendererDeferred(this, apResources, m_debug);
+            #endif
 		    mvRenderers[eRenderer_WireFrame] = new cRendererWireFrame(this, apResources, m_debug);
-
-			for(size_t i=0; i<mvRenderers.size(); ++i)
-			{
-				if(mvRenderers[i])
-				{
-					if(mvRenderers[i]->LoadData()==false)
-					{
-						FatalError("Renderer #%d could not be initialized! Make sure your graphic card drivers are up to date. Check log file for more information.\n", i);
-					}
-				}
-			}
 		}
 		else
 		{

@@ -172,9 +172,6 @@ namespace hpl {
 
         float GetTimeCount(){ return mfTimeCount;}
 
-        virtual bool LoadData()=0;
-        virtual void DestroyData()=0;
-
         virtual SharedRenderTarget GetOutputImage(uint32_t frameIndex, cViewport& viewport) { return SharedRenderTarget();}
 
         //Static settings. Must be set before renderer data load.

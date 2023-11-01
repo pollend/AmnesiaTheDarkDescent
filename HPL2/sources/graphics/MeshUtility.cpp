@@ -1,18 +1,18 @@
+#include "Common_3/Utilities/Math/MathTypes.h"
+#include "FixPreprocessor.h"
+
 #include "graphics/MeshUtility.h"
 #include "Common_3/Utilities/Log/Log.h"
-#include "Common_3/Utilities/ThirdParty/OpenSource/ModifiedSonyMath/common.hpp"
-#include "Common_3/Utilities/ThirdParty/OpenSource/ModifiedSonyMath/sse/vectormath.hpp"
 #include "graphics/GraphicsBuffer.h"
 #include "graphics/mikktspace.h"
 #include "math/Math.h"
 
-#include "Common_3/Utilities/Math/MathTypes.h"
-#include "FixPreprocessor.h"
-
 #include <cfloat>
 #include <cstdint>
+#include <array>
 #include <folly/small_vector.h>
 #include <variant>
+
 
 namespace hpl::MeshUtility {
     namespace details {

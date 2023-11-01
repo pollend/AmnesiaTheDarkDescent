@@ -1,0 +1,66 @@
+#ifndef SHADER_DEFS_H
+#define SHADER_DEFS_H
+
+#define LIGHT_CLUSTER_WIDTH 8
+#define LIGHT_CLUSTER_HEIGHT 8
+#define LIGHT_CLUSTER_COUNT 128
+
+#define POINT_LIGHT_MAX_COUNT  1024
+#define SCENE_MAX_TEXTURE_COUNT  4096
+
+#define SCENE_OPAQUE_COUNT 512
+
+#define LIGHT_CLUSTER_COUNT_POS(ix, iy) ( ((iy)*LIGHT_CLUSTER_WIDTH)+(ix) )
+#define LIGHT_CLUSTER_DATA_POS(il, ix, iy) ( LIGHT_CLUSTER_COUNT_POS(ix, iy)*LIGHT_CLUSTER_COUNT + (il) )
+
+STRUCT(DiffuseMaterial) {
+    DATA(uint, tex[4], None);
+    DATA(uint, materialConfig, None);
+    DATA(float, heightMapScale, None);
+    DATA(float, heightMapBias, None);
+    DATA(float, frenselBias, None);
+    DATA(float, frenselPow, None);
+};
+uint DiffuseMaterial_DiffuseTexture_ID(DiffuseMaterial mat) {return mat.tex[0];}
+
+STRUCT(UniformObject) 
+{
+    DATA(float, dissolveAmount, None);
+    DATA(uint, materialID, None);
+    DATA(float, lightLevel, None);
+    DATA(uint, __pad1, None);
+    DATA(float4x4, modelMat, None);
+    DATA(float4x4, invModelMat, None);
+    DATA(float4x4, uvMat, None);
+};
+
+#define MATERIAL_ID(o) ((o).materialID)
+
+STRUCT(PointLight) {
+    DATA(float4x4, mvp, None);
+    DATA(float3, lightPos, none);
+    DATA(uint, config, none);
+    DATA(float4, lightColor, none);
+    DATA(float, lightRadius, none);
+};
+
+CBUFFER(perFrameConstants, UPDATE_FREQ_PER_FRAME, b0, binding = 0)
+{
+    DATA(float4x4, invViewRotationMat, None);
+    DATA(float4x4, viewMat, None);
+    DATA(float4x4, invViewMat, None);
+    DATA(float4x4, projMat, None);
+    DATA(float4x4, viewProjMat, None);
+
+    DATA(float, worldFogStart, None);
+    DATA(float, worldFogLength, None);
+    DATA(float, oneMinusFogAlpha, None);
+    DATA(float, fogFalloffExp, None);
+    DATA(float4, worldFogColor, None);
+
+    DATA(float2, viewTexel, None);
+    DATA(float2, viewportSize, None);
+    DATA(float, afT, None);
+};
+
+#endif

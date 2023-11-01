@@ -1,9 +1,11 @@
 #pragma once
 
+#include "graphics/ForgeHandles.h"
 #include <cstdint>
 
 #include <folly/small_vector.h>
 #include <set>
+#include <span>
 #include <vector>
 
 namespace hpl {
@@ -20,6 +22,7 @@ namespace hpl {
         };
         folly::small_vector<IdRange, 256> m_avaliable;
     };
+
 
     class IndexPoolHandle {
     public:
@@ -63,10 +66,92 @@ namespace hpl {
             handle.m_index = UINT32_MAX;
             return *this;
         }
+
+        inline IndexPool* pool() {
+            return m_pool;
+        }
     private:
         uint32_t m_index = UINT32_MAX;
         IndexPool* m_pool = nullptr;
     };
 
+    class IndexRingDisposable {
+    public:
+        struct DisposableResource {
+            IndexPoolHandle m_handle;
+            uint8_t m_count = 0;
+
+            DisposableResource(IndexPoolHandle&& handler): m_handle(std::move(handler)) {};
+            DisposableResource(DisposableResource&&) = default;
+            DisposableResource(const DisposableResource&) = delete;
+            void operator=(const DisposableResource&) = delete;
+            DisposableResource& operator=(DisposableResource&&) = default;
+        };
+
+        explicit inline IndexRingDisposable(uint32_t size) {
+            m_ring.resize(size);
+        }
+        void reset(std::function<void(IndexPoolHandle&)> handler) {
+            m_index = ((++m_index) % m_ring.size());
+            for (auto& resource : m_ring[m_index]) {
+                handler(resource.m_handle);
+                resource.m_count++;
+                if(resource.m_count <= m_ring.size()) {
+                    m_ring[(m_index + 1) % m_ring.size()].emplace_back(std::move(resource));
+                }
+            }
+            m_ring[m_index].clear();
+        }
+
+        void push(SharedResourceVariant resource, IndexPoolHandle&& handler) {
+            m_ring[m_index].emplace_back(DisposableResource(std::move(handler)));
+        }
+
+    private:
+        uint32_t m_index = 0;
+        folly::small_vector<std::vector<DisposableResource>, 4> m_ring;
+    };
+
+    template<class T>
+    class IndexResourceRingDisposable {
+    public:
+        struct DisposableResource {
+            T m_resource;
+            IndexPoolHandle m_handle;
+            uint8_t m_count = 0;
+
+            DisposableResource(T&& resource, IndexPoolHandle&& handler): m_resource(std::move(resource)), m_handle(std::move(handler)) {};
+            DisposableResource(DisposableResource&&) = default;
+            DisposableResource(const DisposableResource&) = delete;
+            void operator=(const DisposableResource&) = delete;
+            DisposableResource& operator=(DisposableResource&&) = default;
+        };
+
+        explicit IndexResourceRingDisposable(uint32_t size) {
+            m_ring.resize(size);
+        }
+        IndexResourceRingDisposable() {
+        }
+
+        void reset(std::function<void(T&, IndexPoolHandle&)> resetHandle) {
+            m_index = ((++m_index) % m_ring.size());
+            for (auto& resource : m_ring[m_index]) {
+                resetHandle(resource.m_resource, resource.m_handle);
+                resource.m_count++;
+                if(resource.m_count <= m_ring.size()) {
+                    m_ring[(m_index + 1) % m_ring.size()].emplace_back(std::move(resource));
+                }
+            }
+            m_ring[m_index].clear();
+        }
+
+        void push(T&& resource, IndexPoolHandle&& handler) {
+            m_ring[m_index].emplace_back(DisposableResource(std::move(resource), std::move(handler)));
+        }
+
+    private:
+        uint32_t m_index = 0;
+        folly::small_vector<std::vector<DisposableResource>, 4> m_ring;
+    };
 }
 

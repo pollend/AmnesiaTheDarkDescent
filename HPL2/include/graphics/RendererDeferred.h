@@ -340,7 +340,7 @@ namespace hpl {
             cGraphics* apGraphics,
             cResources* apResources,
             std::shared_ptr<DebugDraw> debug);
-        ~cRendererDeferred();
+        virtual ~cRendererDeferred();
 
         inline ViewportData* GetSharedData(cViewport& viewport) {
             return m_boundViewportData.resolve(viewport);
@@ -353,8 +353,6 @@ namespace hpl {
             return sharedData->m_gBuffer[frameIndex].m_outputBuffer;
         }
 
-        virtual bool LoadData() override;
-        virtual void DestroyData() override;
 
         virtual void Draw(
             Cmd* cmd,

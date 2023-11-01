@@ -192,13 +192,6 @@ namespace hpl {
     cRendererWireFrame::~cRendererWireFrame() {
     }
 
-    bool cRendererWireFrame::LoadData() {
-        return true;
-    }
-
-    void cRendererWireFrame::DestroyData() {
-    }
-
     uint32_t cRendererWireFrame::prepareObjectData(const ForgeRenderer::Frame& frame, iRenderable* apObject) {
         auto objectLookup = m_objectDescriptorLookup.find(apObject);
         const bool isFound = objectLookup != m_objectDescriptorLookup.end();
@@ -336,7 +329,7 @@ namespace hpl {
             DrawPacket::cmdBindBuffers(frame.m_cmd, frame.m_resourcePool, &packet);
             uint32_t objectIndex = prepareObjectData(frame, diffuseItem);
             cmdBindPushConstants(frame.m_cmd, m_rootSignature.m_handle, rootConstantIndex, &objectIndex);
-            cmdDrawIndexed(frame.m_cmd, packet.m_numIndices, 0, 0);
+            cmdDrawIndexed(frame.m_cmd, packet.numberOfIndecies(), 0, 0);
         }
 
         cViewport::PostSolidDrawPacket postSolidEvent = cViewport::PostSolidDrawPacket();
