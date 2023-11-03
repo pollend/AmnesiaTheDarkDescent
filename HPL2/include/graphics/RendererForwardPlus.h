@@ -107,7 +107,7 @@ namespace hpl {
             float m_dissolveAmount;
             uint m_materialIndex;
             float m_lightLevel;
-            uint pad;
+            float m_illuminationAmount;
             mat4 m_modelMat;
             mat4 m_invModelMat;
             mat4 m_uvMat;

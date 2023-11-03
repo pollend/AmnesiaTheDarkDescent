@@ -33,6 +33,7 @@ PsOut PS_MAIN(PsIn In)
     float2 specular = float2(0,0);
     const bool hasSpecular = fetchSceneTextureFloat2(DiffuseMaterial_SpecularTexture_ID(diffuseMat), In.uv, specular);
 
+
     float3 normal = float3(0,0,0);
     float3 normalSample = float3(0,0,0);
     const bool hasNormal = fetchSceneTextureFloat3(DiffuseMaterial_NormalTexture_ID(diffuseMat), In.uv, normalSample);
@@ -47,7 +48,7 @@ PsOut PS_MAIN(PsIn In)
     float2 texelPos = (In.Position.xy * Get(viewTexel));
 	uint2 clusterCoords = uint2(floor(texelPos * float2(LIGHT_CLUSTER_WIDTH, LIGHT_CLUSTER_HEIGHT)));
 	uint numLightsInCluster = Get(lightClustersCount)[LIGHT_CLUSTER_COUNT_POS(clusterCoords.x, clusterCoords.y)];
-    float3 result = float3(0,0,0);
+    float4 result = float4(0,0,0, 0);
     for(uint j = 0; j < numLightsInCluster; j++) {
 		uint lightId = Get(lightClusters)[LIGHT_CLUSTER_DATA_POS(j, clusterCoords.x, clusterCoords.y)];
         PointLight pl = Get(pointLights)[lightId];
@@ -68,10 +69,20 @@ PsOut PS_MAIN(PsIn In)
             specularValue = pl.lightColor.w * specIntensity *  pow( clamp( dot( halfVec, normalizedNormal), 0.0, 1.0), specPower );
         }
         
-        result += ((specularValue.xxx * pl.lightColor.xyz) + (diffuseColor.xyz * pl.lightColor.xyz * fLDotN)) * attenuation;
+        result += float4(((specularValue.xxx * pl.lightColor.xyz) + (diffuseColor.xyz * pl.lightColor.xyz * fLDotN)) * attenuation, 0.0);
+    }
+
+    float4 illumination = float4(0,0,0,0);
+    
+    if(object.illuminationAmount > 0) {
+        float4 illuminationColor = float4(0,0,0,0);
+        const bool hasIlluminiation = fetchSceneTextureFloat4(DiffuseMaterial_IlluminiationTexture_ID(diffuseMat), In.uv, illuminationColor);
+        if(hasIlluminiation) {
+            result += object.illuminationAmount * illuminationColor; 
+        }
     }
 
     PsOut Out;
-    Out.diffuse = float4(result, 1.0);
+    Out.diffuse = result;
     RETURN(Out);
 }

@@ -38,7 +38,7 @@ STRUCT(UniformObject)
     DATA(float, dissolveAmount, None);
     DATA(uint, materialID, None);
     DATA(float, lightLevel, None);
-    DATA(uint, __pad1, None);
+    DATA(float, illuminationAmount, None);
     DATA(float4x4, modelMat, None);
     DATA(float4x4, invModelMat, None);
     DATA(float4x4, uvMat, None);

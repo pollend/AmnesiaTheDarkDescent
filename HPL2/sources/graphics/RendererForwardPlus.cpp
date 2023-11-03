@@ -497,6 +497,7 @@ namespace hpl {
             uniformObjectData.m_modelMat = cMath::ToForgeMatrix4(modelMat);
             uniformObjectData.m_invModelMat = cMath::ToForgeMatrix4(cMath::MatrixInverse(modelMat));
             uniformObjectData.m_lightLevel = 1.0f;
+            uniformObjectData.m_illuminationAmount = apObject->GetIlluminationAmount();
             uniformObjectData.m_materialIndex = resolveMaterialID(frame, apMaterial);
             if(apMaterial) {
                 uniformObjectData.m_uvMat = cMath::ToForgeMatrix4(apMaterial->GetUvMatrix().GetTranspose());
