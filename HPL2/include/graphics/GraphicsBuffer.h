@@ -273,7 +273,6 @@ namespace hpl {
                         break;
                     }
                     case BufferType::MappedBuffer: {
-
                         switch(m_indexType) {
                             case IndexBufferType::Uint32: {
                                 uint32_t v = value;
@@ -345,7 +344,7 @@ namespace hpl {
                         break;
                     }
                     case BufferType::MappedBuffer: {
-                        std::copy(buf.begin(), buf.end(), reinterpret_cast<uint8_t*>(m_asset->m_mapped.m_mappedData) + targetOffset);
+                        std::copy(buf.begin(), buf.end(), reinterpret_cast<uint8_t*>(m_asset->m_mapped.m_mappedData) + m_byteOffset + targetOffset);
                         break;
                     }
                 }
@@ -361,7 +360,7 @@ namespace hpl {
                         break;
                     }
                     case BufferType::MappedBuffer: {
-                        std::copy(buf.begin(), buf.end(), reinterpret_cast<uint8_t*>(m_asset->m_mapped.m_mappedData) + targetOffset);
+                        std::copy(buf.begin(), buf.end(), reinterpret_cast<uint8_t*>(m_asset->m_mapped.m_mappedData) + m_byteOffset + targetOffset);
                         break;
                     }
                 }

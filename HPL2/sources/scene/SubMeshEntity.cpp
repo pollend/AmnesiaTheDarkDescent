@@ -62,7 +62,7 @@ namespace hpl {
         , mpMaterialManager(apMaterialManager) {
         mbIsOneSided = mpSubMesh->GetIsOneSided();
         mvOneSidedNormal = mpSubMesh->GetOneSidedNormal();
-        m_isSkinnedMesh  = mpMeshEntity->GetMesh()->GetSkeleton();
+        m_isSkinnedMesh  = (mpMeshEntity->GetMesh()->GetSkeleton() != nullptr);
         auto* graphicsAllocator = Interface<GraphicsAllocator>::Get();
         ASSERT(graphicsAllocator);
 
@@ -73,12 +73,13 @@ namespace hpl {
         m_numberVertices = vertexStreams.begin()->m_numberElements;
         m_numberIndecies = indexStream.m_numberElements;
 
-        m_geometry = opaqueSet.allocate(m_numberVertices * (m_isSkinnedMesh ? 2 : 1), m_numberIndecies);
+        const uint32_t reservedVerticies = m_numberVertices * (m_isSkinnedMesh ? 2 : 1);
+        m_geometry = opaqueSet.allocate(reservedVerticies, m_numberIndecies);
         for(auto& localStream: vertexStreams) {
             auto gpuStream = m_geometry->getStreamBySemantic(localStream.m_semantic);
             ASSERT(gpuStream != m_geometry->vertexStreams().end());
 
-            BufferUpdateDesc updateDesc = { gpuStream->buffer().m_handle, gpuStream->stride() *  m_geometry->vertextOffset(),  gpuStream->stride() * m_numberVertices};
+            BufferUpdateDesc updateDesc = { gpuStream->buffer().m_handle, gpuStream->stride() *  m_geometry->vertextOffset(),  gpuStream->stride() * reservedVerticies};
             beginUpdateResource(&updateDesc);
 
             GraphicsBuffer gpuBuffer(updateDesc);
@@ -87,6 +88,12 @@ namespace hpl {
             for(size_t i = 0; i < m_numberVertices; i++) {
                 auto sp = src.rawByteSpan().subspan(i * localStream.m_stride, std::min(gpuStream->stride(), localStream.m_stride));
                 dest.WriteRaw(i * gpuStream->stride(), sp);
+            }
+            if(m_isSkinnedMesh) {
+                for(size_t i = 0; i < m_numberVertices; i++) {
+                    auto sp = src.rawByteSpan().subspan(i * localStream.m_stride, std::min(gpuStream->stride(), localStream.m_stride));
+                    dest.WriteRaw(((i + m_numberVertices) * gpuStream->stride()), sp);
+                }
             }
             endUpdateResource(&updateDesc, nullptr);
         }
@@ -175,9 +182,10 @@ namespace hpl {
                 targetNormalIt != m_geometry->vertexStreams().end()  &&
                 targetTangentIt != m_geometry->vertexStreams().end()
             );
-            BufferUpdateDesc positionUpdateDesc = { targetPositionIt->buffer().m_handle, m_activeCopy * (targetPositionIt->stride() * m_numberVertices), targetPositionIt->stride() * m_numberVertices};
-            BufferUpdateDesc tangentUpdateDesc = { targetTangentIt->buffer().m_handle, m_activeCopy * (targetTangentIt->stride() * m_numberVertices), targetTangentIt->stride() * m_numberVertices};
-            BufferUpdateDesc normalUpdateDesc = { targetNormalIt->buffer().m_handle, m_activeCopy * (targetNormalIt->stride() * m_numberVertices), targetNormalIt->stride() * m_numberVertices};
+
+            BufferUpdateDesc positionUpdateDesc = { targetPositionIt->buffer().m_handle, (m_geometry->vertextOffset() * targetPositionIt->stride()) + m_activeCopy * (targetPositionIt->stride() * m_numberVertices), targetPositionIt->stride() * m_numberVertices};
+            BufferUpdateDesc tangentUpdateDesc = { targetTangentIt->buffer().m_handle, (m_geometry->vertextOffset() * targetTangentIt->stride()) + m_activeCopy * (targetTangentIt->stride() * m_numberVertices), targetTangentIt->stride() * m_numberVertices};
+            BufferUpdateDesc normalUpdateDesc = { targetNormalIt->buffer().m_handle, (m_geometry->vertextOffset() * targetNormalIt->stride()) + m_activeCopy * (targetNormalIt->stride() * m_numberVertices), targetNormalIt->stride() * m_numberVertices};
             beginUpdateResource(&positionUpdateDesc);
             beginUpdateResource(&tangentUpdateDesc);
             beginUpdateResource(&normalUpdateDesc);
@@ -189,8 +197,8 @@ namespace hpl {
             auto targetTangentView = tangentMapping.CreateStructuredView<float3>(0, targetTangentIt->stride());
             auto targetNormalView = normalMapping.CreateStructuredView<float3>(0, targetNormalIt->stride());
 
-            for(size_t i = 0; i < bindPositionIt->m_numberElements; i++) {
-
+            ASSERT(bindPositionIt->m_numberElements == m_numberVertices);
+            for(size_t i = 0; i < m_numberVertices; i++) {
                 const std::span<float> weights = std::span<float>(&mpSubMesh->m_vertexWeights[(i * 4)], 4);
                 const std::span<uint8_t> boneIdxs = std::span<uint8_t>(&mpSubMesh->m_vertexBones[(i * 4)], 4);
 
