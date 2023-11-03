@@ -103,7 +103,7 @@ namespace hpl {
     static constexpr uint32_t SSAONumOfSamples = 8;
 
     namespace detail {
-        uint32_t resolveMaterialID(cMaterial::TextureAntistropy anisotropy, eTextureWrap wrap, eTextureFilter filter) {
+        uint32_t resolveTextureFilterGroup(cMaterial::TextureAntistropy anisotropy, eTextureWrap wrap, eTextureFilter filter) {
             const uint32_t anisotropyGroup =
                 (static_cast<uint32_t>(eTextureFilter_LastEnum) * static_cast<uint32_t>(eTextureWrap_LastEnum)) *
                 static_cast<uint32_t>(anisotropy);
@@ -1579,7 +1579,7 @@ namespace hpl {
                 for (size_t antistropy = 0; antistropy < cMaterial::Antistropy_Count; antistropy++) {
                     for (size_t textureWrap = 0; textureWrap < eTextureWrap_LastEnum; textureWrap++) {
                         for (size_t textureFilter = 0; textureFilter < eTextureFilter_LastEnum; textureFilter++) {
-                            uint32_t materialID = detail::resolveMaterialID(
+                            uint32_t materialID = detail::resolveTextureFilterGroup(
                                 static_cast<cMaterial::TextureAntistropy>(antistropy),
                                 static_cast<eTextureWrap>(textureWrap),
                                 static_cast<eTextureFilter>(textureFilter));
@@ -3321,7 +3321,7 @@ namespace hpl {
                         pMaterial->Descriptor().m_id == MaterialID::Decal) {
                         // skip rendering if the update return false
                         if (pObject->UpdateGraphicsForViewport(apFrustum, frameTime) == false) {
-                            return;
+                            continue;
                         }
 
                         pObject->SetModelMatrixPtr(pObject->GetModelMatrix(apFrustum));
@@ -3787,7 +3787,7 @@ namespace hpl {
         }
         cmdBindDescriptorSet(
             cmd,
-            detail::resolveMaterialID(apMaterial->GetTextureAntistropy(), apMaterial->GetTextureWrap(), apMaterial->GetTextureFilter()),
+            detail::resolveTextureFilterGroup(apMaterial->GetTextureAntistropy(), apMaterial->GetTextureWrap(), apMaterial->GetTextureFilter()),
             m_materialSet.m_materialConstSet.m_handle);
         cmdBindDescriptorSet(cmd, apMaterial->Index(), m_materialSet.m_perBatchSet[frame.m_frameIndex].m_handle);
         return index;

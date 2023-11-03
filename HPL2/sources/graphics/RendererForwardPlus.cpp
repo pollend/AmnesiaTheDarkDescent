@@ -1,13 +1,16 @@
 #include "graphics/RendererForwardPlus.h"
 
-#include "Common_3/Utilities/ThirdParty/OpenSource/ModifiedSonyMath/common.hpp"
-#include "Common_3/Utilities/ThirdParty/OpenSource/ModifiedSonyMath/sse/vectormath.hpp"
 #include "graphics/Color.h"
 #include "graphics/ForgeHandles.h"
 #include "graphics/ForgeRenderer.h"
+#include "graphics/ForwardResources.h"
 #include "graphics/GraphicsAllocator.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/IndexPool.h"
+#include "graphics/Material.h"
+#include "graphics/Renderable.h"
+#include "graphics/Renderer.h"
+#include "graphics/TextureDescriptorPool.h"
 #include "scene/Light.h"
 #include "scene/RenderableContainer.h"
 
@@ -22,6 +25,16 @@
 
 namespace hpl {
 
+    namespace detail {
+        uint32_t resolveTextureFilterGroup(cMaterial::TextureAntistropy anisotropy, eTextureWrap wrap, eTextureFilter filter) {
+            const uint32_t anisotropyGroup =
+                (static_cast<uint32_t>(eTextureFilter_LastEnum) * static_cast<uint32_t>(eTextureWrap_LastEnum)) *
+                static_cast<uint32_t>(anisotropy);
+            return anisotropyGroup +
+                ((static_cast<uint32_t>(wrap) * static_cast<uint32_t>(eTextureFilter_LastEnum)) + static_cast<uint32_t>(filter));
+        }
+    }
+
     SharedRenderTarget RendererForwardPlus::GetOutputImage(uint32_t frameIndex, cViewport& viewport) {
         auto sharedData = m_boundViewportData.resolve(viewport);
         if (!sharedData) {
@@ -32,11 +45,10 @@ namespace hpl {
 
     RendererForwardPlus::RendererForwardPlus(cGraphics* apGraphics, cResources* apResources, std::shared_ptr<DebugDraw> debug)
         : iRenderer("ForwardPlus", apGraphics, apResources),
-            m_sceneTexturePool(MaxTextureCount),
-            m_sceneTextureDisposable(ForgeRenderer::SwapChainLength),
             m_opaqueMaterialPool(MaxOpaqueCount),
-            m_indexResourceDisposable(ForgeRenderer::SwapChainLength) {
+            m_sceneDescriptorPool(ForgeRenderer::SwapChainLength, MaxTextureCount) {
         auto* forgeRenderer = Interface<ForgeRenderer>::Get();
+
 
         // shaders
         m_nearestClampSampler.Load(forgeRenderer->Rend(), [&](Sampler** sampler) {
@@ -167,7 +179,7 @@ namespace hpl {
                 desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
                 desc.mDesc.mFirstElement = 0;
                 desc.mDesc.mElementCount = MaxOpaqueCount;
-                desc.mDesc.mStructStride = sizeof(DiffuseMat);
+                desc.mDesc.mStructStride = sizeof(resource::DiffuseMaterial);
                 desc.mDesc.mSize = desc.mDesc.mElementCount * desc.mDesc.mStructStride;
                 desc.ppBuffer = buffer;
                 addResource(&desc, nullptr);
@@ -320,6 +332,83 @@ namespace hpl {
             return true;
         });
 
+        m_opaqueBatchSet.Load(forgeRenderer->Rend(), [&](DescriptorSet** descSet) {
+            DescriptorSetDesc perFrameDescSet{ m_diffuseRootSignature.m_handle,
+                                               DESCRIPTOR_UPDATE_FREQ_PER_BATCH,
+                                               MaxMaterialSamplers };
+            addDescriptorSet(forgeRenderer->Rend(), &perFrameDescSet, descSet);
+            return true;
+        });
+        for (size_t antistropy = 0; antistropy < cMaterial::Antistropy_Count; antistropy++) {
+            for (size_t textureWrap = 0; textureWrap < eTextureWrap_LastEnum; textureWrap++) {
+                for (size_t textureFilter = 0; textureFilter < eTextureFilter_LastEnum; textureFilter++) {
+                    uint32_t batchID = detail::resolveTextureFilterGroup(
+                        static_cast<cMaterial::TextureAntistropy>(antistropy),
+                        static_cast<eTextureWrap>(textureWrap),
+                        static_cast<eTextureFilter>(textureFilter));
+                    m_batchSampler[batchID].Load(forgeRenderer->Rend(), [&](Sampler** sampler) {
+                        SamplerDesc samplerDesc = {};
+                        switch (textureWrap) {
+                        case eTextureWrap_Repeat:
+                            samplerDesc.mAddressU = ADDRESS_MODE_REPEAT;
+                            samplerDesc.mAddressV = ADDRESS_MODE_REPEAT;
+                            samplerDesc.mAddressW = ADDRESS_MODE_REPEAT;
+                            break;
+                        case eTextureWrap_Clamp:
+                            samplerDesc.mAddressU = ADDRESS_MODE_CLAMP_TO_EDGE;
+                            samplerDesc.mAddressV = ADDRESS_MODE_CLAMP_TO_EDGE;
+                            samplerDesc.mAddressW = ADDRESS_MODE_CLAMP_TO_EDGE;
+                            break;
+                        case eTextureWrap_ClampToBorder:
+                            samplerDesc.mAddressU = ADDRESS_MODE_CLAMP_TO_BORDER;
+                            samplerDesc.mAddressV = ADDRESS_MODE_CLAMP_TO_BORDER;
+                            samplerDesc.mAddressW = ADDRESS_MODE_CLAMP_TO_BORDER;
+                            break;
+                        default:
+                            ASSERT(false && "Invalid wrap mode");
+                            break;
+                        }
+                        switch (textureFilter) {
+                        case eTextureFilter_Nearest:
+                            samplerDesc.mMinFilter = FilterType::FILTER_NEAREST;
+                            samplerDesc.mMagFilter = FilterType::FILTER_NEAREST;
+                            samplerDesc.mMipMapMode = MipMapMode::MIPMAP_MODE_NEAREST;
+                            break;
+                        case eTextureFilter_Bilinear:
+                            samplerDesc.mMinFilter = FilterType::FILTER_LINEAR;
+                            samplerDesc.mMagFilter = FilterType::FILTER_LINEAR;
+                            samplerDesc.mMipMapMode = MipMapMode::MIPMAP_MODE_NEAREST;
+                            break;
+                        case eTextureFilter_Trilinear:
+                            samplerDesc.mMinFilter = FilterType::FILTER_LINEAR;
+                            samplerDesc.mMagFilter = FilterType::FILTER_LINEAR;
+                            samplerDesc.mMipMapMode = MipMapMode::MIPMAP_MODE_LINEAR;
+                            break;
+                        default:
+                            ASSERT(false && "Invalid filter");
+                            break;
+                        }
+                        switch (antistropy) {
+                        case cMaterial::Antistropy_8:
+                            samplerDesc.mMaxAnisotropy = 8.0f;
+                            break;
+                        case cMaterial::Antistropy_16:
+                            samplerDesc.mMaxAnisotropy = 16.0f;
+                            break;
+                        default:
+                            break;
+                        }
+                        addSampler(forgeRenderer->Rend(), &samplerDesc, sampler);
+                        return true;
+                    });
+                    std::array params = {
+                        DescriptorData {.pName = "materialSampler", .ppSamplers = &m_batchSampler[batchID].m_handle},
+                    };
+                    updateDescriptorSet(
+                        forgeRenderer->Rend(), batchID, m_opaqueBatchSet.m_handle, params.size(), params.data());
+                }
+            }
+        }
         for (size_t swapChainIndex = 0; swapChainIndex < ForgeRenderer::SwapChainLength; swapChainIndex++) {
             m_opaqueFrameSet[swapChainIndex].Load(forgeRenderer->Rend(), [&](DescriptorSet** descSet) {
                 DescriptorSetDesc perFrameDescSet{ m_diffuseRootSignature.m_handle,
@@ -440,8 +529,16 @@ namespace hpl {
 
         if (frame.m_currentFrame != m_activeFrame) {
             m_objectIndex = 0;
-            m_sceneTextureDisposable.reset([&](SharedTexture& texture, IndexPoolHandle& handler) {
-
+            m_sceneDescriptorPool.reset([&](TextureDescriptorPool::Action action, uint32_t slot, SharedTexture& texture) {
+                std::array<DescriptorData, 1> params = {
+                    DescriptorData {.pName = "sceneTextures", .mCount = 1, .mArrayOffset = slot, .ppTextures = (action == TextureDescriptorPool::Action::UpdateSlot ? &texture.m_handle: &m_emptyTexture.m_handle ) }
+                };
+                updateDescriptorSet(
+                    forgeRenderer->Rend(),
+                    0,
+                    m_opaqueConstSet[frame.m_frameIndex].m_handle,
+                    params.size(),
+                    params.data());
             });
             m_objectDescriptorLookup.clear();
             m_activeFrame = frame.m_currentFrame;
@@ -516,115 +613,97 @@ namespace hpl {
             .m_projectionMat = mainFrustumProjMat
         });
 
-        m_rendererList.BeginAndReset(frameTime, apFrustum);
-        struct RenderableContainer {
-            iRenderableContainer* m_continer;
-            eWorldContainerType m_type;
-        };
-        std::array worldContainers = {
-            RenderableContainer{ apWorld->GetRenderableContainer(eWorldContainerType_Dynamic), eWorldContainerType_Dynamic },
-            RenderableContainer{ apWorld->GetRenderableContainer(eWorldContainerType_Static), eWorldContainerType_Static }
-        };
+        {
+            m_rendererList.BeginAndReset(frameTime, apFrustum);
+            auto* dynamicContainer = apWorld->GetRenderableContainer(eWorldContainerType_Dynamic);
+            auto* staticContainer = apWorld->GetRenderableContainer(eWorldContainerType_Static);
+            dynamicContainer->UpdateBeforeRendering();
+            staticContainer->UpdateBeforeRendering();
 
-        for (auto& container : worldContainers) {
-            container.m_continer->UpdateBeforeRendering();
-        }
-        std::function<void(iRenderableContainerNode * childNode, eWorldContainerType staticGeometry)> walkRenderables;
-        walkRenderables = [&](iRenderableContainerNode* childNode, eWorldContainerType containerType) {
-            childNode->UpdateBeforeUse();
-            for (auto& childNode : childNode->GetChildNodes()) {
-                childNode->UpdateBeforeUse();
-                eCollision frustumCollision = apFrustum->CollideNode(childNode);
-                if (frustumCollision == eCollision_Outside) {
-                    continue;
-                }
-                if (apFrustum->CheckAABBNearPlaneIntersection(childNode->GetMin(), childNode->GetMax())) {
-                    cVector3f vViewSpacePos = cMath::MatrixMul(apFrustum->GetViewMatrix(), childNode->GetCenter());
-                    childNode->SetViewDistance(vViewSpacePos.z);
-                    childNode->SetInsideView(true);
-                } else {
-                    // Frustum origin is outside of node. Do intersection test.
-                    cVector3f vIntersection;
-                    cMath::CheckAABBLineIntersection(
-                        childNode->GetMin(), childNode->GetMax(), apFrustum->GetOrigin(), childNode->GetCenter(), &vIntersection, NULL);
-                    cVector3f vViewSpacePos = cMath::MatrixMul(apFrustum->GetViewMatrix(), vIntersection);
-                    childNode->SetViewDistance(vViewSpacePos.z);
-                    childNode->SetInsideView(false);
-                }
-                walkRenderables(childNode, containerType);
-            }
-            for (auto& pObject : childNode->GetObjects()) {
+            auto prepareObjectHandler = [&](iRenderable* pObject) {
                 if (!rendering::detail::IsObjectIsVisible(pObject, eRenderableFlag_VisibleInNonReflection, {})) {
-                    continue;
+                    return;
                 }
-                cMaterial* pMaterial = pObject->GetMaterial();
                 m_rendererList.AddObject(pObject);
-
-                if (pObject && pObject->GetRenderFrameCount() != iRenderer::GetRenderFrameCount()) {
-                    pObject->SetRenderFrameCount(iRenderer::GetRenderFrameCount());
-                    pObject->UpdateGraphicsForFrame(frameTime);
-                }
-
-                if (pMaterial && pMaterial->GetRenderFrameCount() != iRenderer::GetRenderFrameCount()) {
-                    pMaterial->SetRenderFrameCount(iRenderer::GetRenderFrameCount());
-                    pMaterial->UpdateBeforeRendering(frameTime);
-                }
-                ////////////////////////////////////////
-                // Update per viewport specific and set amtrix point
-                // Skip this for non-decal translucent! This is because the water rendering might mess it up otherwise!
-                if (pMaterial == NULL || cMaterial::IsTranslucent(pMaterial->Descriptor().m_id) == false ||
-                    pMaterial->Descriptor().m_id == MaterialID::Decal) {
-                    // skip rendering if the update return false
-                    if (pObject->UpdateGraphicsForViewport(apFrustum, frameTime) == false) {
-                        return;
-                    }
-
-                    pObject->SetModelMatrixPtr(pObject->GetModelMatrix(apFrustum));
-                }
-                // Only set a matrix used for sorting. Calculate the proper in the trans rendering!
-                else {
-                    pObject->SetModelMatrixPtr(pObject->GetModelMatrix(NULL));
-                }
-            }
-        };
-        for (auto& it : worldContainers) {
-            iRenderableContainerNode* pNode = it.m_continer->GetRoot();
-            pNode->UpdateBeforeUse(); // Make sure node is updated.
-            pNode->SetInsideView(true); // We never want to check root! Assume player is inside.
-            walkRenderables(pNode, it.m_type);
+            };
+            rendering::detail::WalkAndPrepareRenderList(dynamicContainer, apFrustum, prepareObjectHandler, eRenderableFlag_VisibleInNonReflection);
+            rendering::detail::WalkAndPrepareRenderList(staticContainer, apFrustum, prepareObjectHandler, eRenderableFlag_VisibleInNonReflection);
+            m_rendererList.End(
+                eRenderListCompileFlag_Diffuse | eRenderListCompileFlag_Translucent | eRenderListCompileFlag_Decal |
+                eRenderListCompileFlag_Illumination | eRenderListCompileFlag_FogArea);
         }
-        m_rendererList.End(
-            eRenderListCompileFlag_Diffuse | eRenderListCompileFlag_Translucent | eRenderListCompileFlag_Decal |
-            eRenderListCompileFlag_Illumination | eRenderListCompileFlag_FogArea);
-        // prepare point light data
 
         // diffuse
+        struct IndirectDrawGroup {
+            size_t m_offset;
+            uint32_t m_count;
+            uint32_t m_batchID;
+        };
+        std::vector<IndirectDrawGroup> diffuseFilterGroup;
         {
-            auto diffuseItems = m_rendererList.GetRenderableItems(eRenderListType_Diffuse);
+            std::vector<iRenderable*> renderables;
+            renderables.assign(m_rendererList.GetSolidObjects().begin(), m_rendererList.GetSolidObjects().end());
+            std::sort(renderables.begin(), renderables.end(), [](iRenderable* objectA, iRenderable* objectB) {
+                cMaterial* pMatA = objectA->GetMaterial();
+                cMaterial* pMatB = objectB->GetMaterial();
+                uint32_t filterA = detail::resolveTextureFilterGroup(
+                           pMatA->GetTextureAntistropy(), pMatA->GetTextureWrap(), pMatA->GetTextureFilter());
+
+                uint32_t filterB = detail::resolveTextureFilterGroup(
+                           pMatB->GetTextureAntistropy(), pMatB->GetTextureWrap(), pMatB->GetTextureFilter());
+                return filterA < filterB;
+            });
+
+
+            auto isSameGroup = [](iRenderable* objectA, iRenderable* objectB) {
+                cMaterial* pMatA = objectA->GetMaterial();
+                cMaterial* pMatB = objectB->GetMaterial();
+                return pMatA->GetTextureAntistropy() == pMatB->GetTextureAntistropy() &&
+                        pMatA->GetTextureWrap() == pMatB->GetTextureWrap() &&
+                        pMatA->GetTextureFilter() == pMatB->GetTextureFilter();
+            };
+
             BufferUpdateDesc updateDesc = { m_indirectDrawArgsBuffer[frame.m_frameIndex].m_handle,
                                             0,
-                                            sizeof(IndirectDrawIndexArguments) * diffuseItems.size()};
+                                            sizeof(IndirectDrawIndexArguments) * renderables.size()};
             beginUpdateResource(&updateDesc);
-            for (size_t i = 0; i < diffuseItems.size(); i++) {
-                cMaterial* pMaterial = diffuseItems[i]->GetMaterial();
-                std::array targets = { eVertexBufferElement_Position,
-                                       eVertexBufferElement_Texture0,
-                                       eVertexBufferElement_Normal,
-                                       eVertexBufferElement_Texture1Tangent };
-                DrawPacket packet = diffuseItems[i]->ResolveDrawPacket(frame, targets);
-                if (pMaterial == nullptr || packet.m_type == DrawPacket::Unknown) {
-                    continue;
-                }
-                ASSERT(pMaterial->Descriptor().m_id == MaterialID::SolidDiffuse && "Invalid material type");
-                ASSERT(packet.m_type == DrawPacket::DrawPacketType::DrawGeometryset);
-                ASSERT(packet.m_unified.m_set == GraphicsAllocator::AllocationSet::OpaqueSet);
 
-                auto& args = reinterpret_cast<IndirectDrawIndexArguments*>(updateDesc.pMappedData)[i];
-                args.mIndexCount = packet.m_unified.m_numIndices;
-                args.mStartIndex = packet.m_unified.m_subAllocation->indexOffset();
-                args.mVertexOffset = packet.m_unified.m_subAllocation->vertextOffset();
-                args.mStartInstance = resolveObjectId(frame, pMaterial, diffuseItems[i], {}); // for DX12 this won't work
-                args.mInstanceCount = 1;
+            auto it = renderables.begin();
+            auto lastIt = renderables.begin();
+            uint32_t index = 0;
+            uint32_t lastIndex = 0;
+            uint32_t lastBatchID = 0;
+            while(it != renderables.end()) {
+                lastIndex = index;
+                {
+                    cMaterial* pMaterial = (*it)->GetMaterial();
+                    lastBatchID =  detail::resolveTextureFilterGroup(
+                           pMaterial->GetTextureAntistropy(), pMaterial->GetTextureWrap(), pMaterial->GetTextureFilter());
+                }
+                do {
+                    cMaterial* pMaterial = (*it)->GetMaterial();
+                    std::array targets = { eVertexBufferElement_Position,
+                                           eVertexBufferElement_Texture0,
+                                           eVertexBufferElement_Normal,
+                                           eVertexBufferElement_Texture1Tangent };
+                    DrawPacket packet = (*it)->ResolveDrawPacket(frame, targets);
+                    if (pMaterial == nullptr || packet.m_type == DrawPacket::Unknown) {
+                        continue;
+                    }
+                    ASSERT(pMaterial->Descriptor().m_id == MaterialID::SolidDiffuse && "Invalid material type");
+                    ASSERT(packet.m_type == DrawPacket::DrawPacketType::DrawGeometryset);
+                    ASSERT(packet.m_unified.m_set == GraphicsAllocator::AllocationSet::OpaqueSet);
+
+                    auto& args = reinterpret_cast<IndirectDrawIndexArguments*>(updateDesc.pMappedData)[index++];
+                    args.mIndexCount = packet.m_unified.m_numIndices;
+                    args.mStartIndex = packet.m_unified.m_subAllocation->indexOffset();
+                    args.mVertexOffset = packet.m_unified.m_subAllocation->vertextOffset();
+                    args.mStartInstance = resolveObjectId(frame, pMaterial, (*it), {}); // for DX12 this won't work
+                    args.mInstanceCount = 1;
+                    lastIt = it;
+                    it++;
+                } while(it != renderables.end() && isSameGroup(*it, *lastIt));
+                diffuseFilterGroup.push_back({lastIndex * sizeof(IndirectDrawArguments), index - lastIndex, lastBatchID});
             }
             endUpdateResource(&updateDesc, nullptr);
         }
@@ -644,7 +723,6 @@ namespace hpl {
                     switch(light->GetLightType()) {
                         case eLightType_Point: {
                             m_pointLightAttenutation[frame.m_frameIndex][pointLightIndex] = light->GetFalloffMap()->GetTexture();
-
                             auto& data = reinterpret_cast<PointLightData*>(pointlightUpdateDesc.pMappedData)[pointLightIndex++];
                             const cColor color = light->GetDiffuseColor();
                             data.m_radius = light->GetRadius();
@@ -718,8 +796,11 @@ namespace hpl {
             cmdBindIndexBuffer(cmd, opaqueSet.indexBuffer().m_handle, INDEX_TYPE_UINT32, 0);
             cmdBindDescriptorSet(cmd, 0, m_opaqueConstSet[frame.m_frameIndex].m_handle);
             cmdBindDescriptorSet(cmd, mainFrameIndex, m_opaqueFrameSet[frame.m_frameIndex].m_handle);
-		    cmdExecuteIndirect(
-			    cmd, m_cmdSignatureVBPass, diffuseItems.size(), m_indirectDrawArgsBuffer[frame.m_frameIndex].m_handle, 0, nullptr, 0);
+            for(auto& group: diffuseFilterGroup) {
+                cmdBindDescriptorSet(cmd, group.m_batchID, m_opaqueBatchSet.m_handle);
+		        cmdExecuteIndirect(
+			        cmd, m_cmdSignatureVBPass, group.m_count, m_indirectDrawArgsBuffer[frame.m_frameIndex].m_handle, group.m_offset, nullptr, 0);
+            }
             cmdEndDebugMarker(cmd);
 	    }
         {
@@ -738,54 +819,32 @@ namespace hpl {
 
     }
 
+
     uint32_t RendererForwardPlus::resolveMaterialID(const ForgeRenderer::Frame& frame,cMaterial* material) {
         auto* forgeRenderer = Interface<ForgeRenderer>::Get();
         auto& sceneMaterial = m_sceneMaterial[material->Index()];
-        uint8_t writeMask = 1 << frame.m_frameIndex;
         if (sceneMaterial.m_material != material ||
-            sceneMaterial.m_version != material->Generation() ||
-            (sceneMaterial.m_writeMask & writeMask) == 0) {
+            sceneMaterial.m_version != material->Generation()) {
 
             auto& descriptor = material->Descriptor();
             sceneMaterial.m_version = material->Generation();
             sceneMaterial.m_material = material;
 
-            if(sceneMaterial.m_writeMask == 0) {
-                sceneMaterial.m_materialIndex = IndexPoolHandle(&m_opaqueMaterialPool);
-                for(auto& res: sceneMaterial.m_sceneTextures) {
-                    if(res.m_handle.isValid()) {
-                        m_sceneTextureDisposable.push(std::move(res.m_texture), std::move(res.m_handle));
-                    }
-                }
-                sceneMaterial.m_sceneTextures[eMaterialTexture_Diffuse] = SceneMaterial::SceneTextureEntry {
-                     IndexPoolHandle(&m_sceneTexturePool), material->GetImage(eMaterialTexture_Diffuse)->GetTexture()
-                };
-            }
-            sceneMaterial.m_writeMask |= writeMask;
-            for(auto& scene: sceneMaterial.m_sceneTextures) {
-                if(scene.m_handle.isValid()) {
-                    std::array<DescriptorData, 1> params = {
-                        DescriptorData {.pName = "sceneTextures", .mCount = 1, .mArrayOffset = scene.m_handle.get(), .ppTextures = &scene.m_texture.m_handle  }
-                    };
-                    updateDescriptorSet(
-                        forgeRenderer->Rend(),
-                        0,
-                        m_opaqueConstSet[frame.m_frameIndex].m_handle,
-                        params.size(),
-                        params.data());
-                }
-            }
-            {
+            resource::visitTextures(sceneMaterial.m_resource, [&](eMaterialTexture texture, uint32_t slot) {
+                m_sceneDescriptorPool.dispose(slot);
+            });
+            sceneMaterial.m_resource = hpl::resource::createMaterial(m_sceneDescriptorPool, material);
+            if(resource::DiffuseMaterial* mat = std::get_if<resource::DiffuseMaterial>(&sceneMaterial.m_resource)) {
+                sceneMaterial.m_slot = IndexPoolHandle(&m_opaqueMaterialPool);
                 BufferUpdateDesc updateDesc = { m_opaqueMaterialBuffer.m_handle,
-                                            sizeof(DiffuseMat) * sceneMaterial.m_materialIndex.get()};
+                                            sizeof(resource::DiffuseMaterial) * sceneMaterial.m_slot.get()};
                 beginUpdateResource(&updateDesc);
-                auto& material = (*reinterpret_cast<DiffuseMat*>(updateDesc.pMappedData));
-                material.m_texture[0] = sceneMaterial.m_sceneTextures[eMaterialTexture_Diffuse].m_handle.get();
+                (*reinterpret_cast<resource::DiffuseMaterial*>(updateDesc.pMappedData)) = *mat;
                 endUpdateResource(&updateDesc, NULL);
             }
+
         }
-        return sceneMaterial.m_materialIndex.get();
-        //return (sceneMaterial.m_materialIndex.get() << 8) | static_cast<uint8_t>(sceneMaterial.m_id) ;
+        return sceneMaterial.m_slot.get();
     }
 
     uint32_t RendererForwardPlus::updateFrameDescriptor( const ForgeRenderer::Frame& frame, Cmd* cmd, cWorld* apWorld, const PerFrameOption& options) {

@@ -13,6 +13,8 @@
 #define LIGHT_CLUSTER_COUNT_POS(ix, iy) ( ((iy)*LIGHT_CLUSTER_WIDTH)+(ix) )
 #define LIGHT_CLUSTER_DATA_POS(il, ix, iy) ( LIGHT_CLUSTER_COUNT_POS(ix, iy)*LIGHT_CLUSTER_COUNT + (il) )
 
+#define INVALID_TEXTURE_INDEX (0xffff)
+
 STRUCT(DiffuseMaterial) {
     DATA(uint, tex[4], None);
     DATA(uint, materialConfig, None);
@@ -21,7 +23,15 @@ STRUCT(DiffuseMaterial) {
     DATA(float, frenselBias, None);
     DATA(float, frenselPow, None);
 };
-uint DiffuseMaterial_DiffuseTexture_ID(DiffuseMaterial mat) {return mat.tex[0];}
+uint DiffuseMaterial_DiffuseTexture_ID(DiffuseMaterial mat) {return (mat.tex[0] & 0xffff);}
+uint DiffuseMaterial_NormalTexture_ID(DiffuseMaterial mat) {return ((mat.tex[0] >> 16) & 0xffff);}
+uint DiffuseMaterial_AlphaTexture_ID(DiffuseMaterial mat) {return (mat.tex[1] & 0xffff);}
+uint DiffuseMaterial_SpecularTexture_ID(DiffuseMaterial mat) {return ((mat.tex[1] >> 16) & 0xffff);}
+uint DiffuseMaterial_HeightTexture_ID(DiffuseMaterial mat) {return (mat.tex[2] & 0xffff);}
+uint DiffuseMaterial_IlluminiationTexture_ID(DiffuseMaterial mat) {return ((mat.tex[2] >> 16) & 0xffff);}
+uint DiffuseMaterial_DissolveAlphaTexture_ID(DiffuseMaterial mat) {return (mat.tex[3] & 0xffff);}
+uint DiffuseMaterial_CubeMapAlphaTexture_ID(DiffuseMaterial mat) {return ((mat.tex[3] >> 16) & 0xffff);}
+
 
 STRUCT(UniformObject) 
 {

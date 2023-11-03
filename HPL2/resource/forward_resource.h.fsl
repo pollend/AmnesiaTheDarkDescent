@@ -8,8 +8,36 @@ RES(Buffer(uint), lightClustersCount, UPDATE_FREQ_PER_FRAME, t2, binding = 3);
 RES(Buffer(uint), lightClusters,      UPDATE_FREQ_PER_FRAME, t3, binding = 4);
 RES(Buffer(PointLight),  pointLights, UPDATE_FREQ_PER_FRAME, t0, binding = 5);
 
-RES(Tex2D(float4), sceneTextures[SCENE_MAX_TEXTURE_COUNT],  UPDATE_FREQ_NONE, t0, binding = 10);
+RES(SamplerState, materialSampler, UPDATE_FREQ_PER_BATCH, s4, binding = 13); 
+
+RES(Tex2D(float4), sceneTextures[SCENE_MAX_TEXTURE_COUNT],  UPDATE_FREQ_NONE, t1, binding = 10);
 
 INLINE float3x3 ToNormalMat(float4x4 invModel, float4x4 invView) {
     return transpose(mul(float3x3(invModel[0].xyz, invModel[1].xyz, invModel[2].xyz), float3x3(invView[0].xyz, invView[1].xyz, invView[2].xyz)));
+}
+
+INLINE bool fetchSceneTextureFloat4(uint index, float2 uv, inout float4 value) { 
+    if(index < SCENE_MAX_TEXTURE_COUNT) {
+        BeginNonUniformResourceIndex(index, SCENE_MAX_TEXTURE_COUNT);
+            value = SampleTex2D(Get(sceneTextures)[index], Get(materialSampler), uv);
+        EndNonUniformResourceIndex(); 
+    }
+    return !(index == INVALID_TEXTURE_INDEX); 
+}
+INLINE bool fetchSceneTextureFloat3(uint index, float2 uv, inout float3 value) { 
+    if(index < SCENE_MAX_TEXTURE_COUNT) {
+        BeginNonUniformResourceIndex(index, SCENE_MAX_TEXTURE_COUNT);
+            value = SampleTex2D(Get(sceneTextures)[index], Get(materialSampler), uv).xyz;
+        EndNonUniformResourceIndex(); 
+    }
+    return !(index == INVALID_TEXTURE_INDEX); 
+}
+
+INLINE bool fetchSceneTextureFloat2(uint index, float2 uv, inout float2 value) { 
+    if(index < SCENE_MAX_TEXTURE_COUNT) {
+        BeginNonUniformResourceIndex(index, SCENE_MAX_TEXTURE_COUNT);
+            value = SampleTex2D(Get(sceneTextures)[index], Get(materialSampler), uv).xy;
+        EndNonUniformResourceIndex(); 
+    }
+    return !(index == INVALID_TEXTURE_INDEX); 
 }

@@ -278,6 +278,7 @@
 #end
 
 #frag forward_diffuse.frag
+  #define ALPHA_REJECT 0.5
   #include "forward_diffuse.frag.fsl"
 #end
 

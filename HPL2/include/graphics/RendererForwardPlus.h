@@ -3,8 +3,10 @@
 
 #include "engine/RTTI.h"
 
+#include "graphics/ForwardResources.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/IndexPool.h"
+#include "graphics/TextureDescriptorPool.h"
 #include "graphics/offsetAllocator.h"
 #include "scene/Viewport.h"
 #include "scene/World.h"
@@ -35,6 +37,8 @@ namespace hpl {
         static constexpr TinyImageFormat SpecularBufferFormat = TinyImageFormat_R8G8_UNORM;
         static constexpr TinyImageFormat ColorBufferFormat = TinyImageFormat_R8G8B8A8_UNORM;
         static constexpr TinyImageFormat ShadowDepthBufferFormat = TinyImageFormat_D32_SFLOAT;
+
+        static constexpr uint32_t MaxMaterialSamplers = static_cast<uint32_t>(eTextureWrap_LastEnum) * static_cast<uint32_t>(eTextureFilter_LastEnum) * static_cast<uint32_t>(cMaterial::TextureAntistropy::Antistropy_Count);
 
         static constexpr uint32_t MaxIndirectDrawArgs = 1024;
         static constexpr uint32_t MaxViewportFrameDescriptors = 256;
@@ -71,16 +75,6 @@ namespace hpl {
             std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_outputBuffer;
             std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_testBuffer;
             std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_depthBuffer;
-        };
-
-
-        struct DiffuseMat {
-            uint m_texture[4];
-            uint m_materialConfig;
-            float m_heightMapScale;
-            float m_hiehgtMapBias;
-            float m_frenselBias;
-            float m_frenselPow;
         };
 
         struct PointLightData {
@@ -151,6 +145,7 @@ namespace hpl {
         uint32_t updateFrameDescriptor(const ForgeRenderer::Frame& frame, Cmd* cmd, cWorld* apWorld, const PerFrameOption& options);
         uint32_t resolveMaterialID(const ForgeRenderer::Frame& frame,cMaterial* material);
 
+
         std::array<SharedBuffer, MaxViewportFrameDescriptors> m_perFrameBuffer;
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_objectUniformBuffer;
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_indirectDrawArgsBuffer;
@@ -180,30 +175,26 @@ namespace hpl {
         CommandSignature* m_cmdSignatureVBPass = NULL;
         std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_opaqueFrameSet;
         std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_opaqueConstSet;
+        SharedDescriptorSet m_opaqueBatchSet;
 
         struct SceneMaterial {
-            struct SceneTextureEntry {
-                IndexPoolHandle m_handle;
-                SharedTexture m_texture;
-            };
+        public:
             void* m_material = nullptr;
             uint32_t m_version = 0;
-            uint8_t m_writeMask = 0;
-            MaterialID m_id;
-
-            IndexPoolHandle m_materialIndex;
-            std::array<SceneTextureEntry, eMaterialTexture::eMaterialTexture_LastEnum> m_sceneTextures;
+            IndexPoolHandle m_slot;
+            resource::MaterialTypes m_resource = std::monostate{};
         };
+
+        std::array<SharedSampler, MaxMaterialSamplers> m_batchSampler;
         std::array<SceneMaterial, cMaterial::MaxMaterialID> m_sceneMaterial;
-        IndexResourceRingDisposable<SharedTexture> m_sceneTextureDisposable;
-        IndexRingDisposable m_indexResourceDisposable;
-        IndexPool m_sceneTexturePool;
         IndexPool m_opaqueMaterialPool;
+        TextureDescriptorPool m_sceneDescriptorPool;
 
         SharedTexture m_emptyTexture;
         SharedShader m_diffuseShader;
         SharedShader m_pointlightClusterShader;
         SharedShader m_clearClusterShader;
+        SharedTexture m_falloff;
 
         SharedSampler m_nearestClampSampler;
 

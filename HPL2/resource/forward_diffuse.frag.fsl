@@ -23,37 +23,55 @@ PsOut PS_MAIN(PsIn In)
     INIT_MAIN; 
     UniformObject object = Get(sceneObjects)[In.drawId];
     DiffuseMaterial diffuseMat = Get(opaqueMaterial)[MATERIAL_ID(object)];  
-    uint diffuseTextureId = DiffuseMaterial_DiffuseTexture_ID(diffuseMat);
     
     float4 diffuseColor = float4(0,0,0,1);
-    if(diffuseTextureId < SCENE_MAX_TEXTURE_COUNT) {
-        BeginNonUniformResourceIndex(diffuseTextureId, SCENE_MAX_TEXTURE_COUNT);
-            diffuseColor = SampleTex2D(Get(sceneTextures)[diffuseTextureId], Get(nearestClampSampler), In.uv.xy);
-        EndNonUniformResourceIndex();
+    const bool hasDiffuse = fetchSceneTextureFloat4(DiffuseMaterial_DiffuseTexture_ID(diffuseMat), In.uv, diffuseColor);
+    if(diffuseColor.w < ALPHA_REJECT ) {
+        discard;
+    }
+  
+    float2 specular = float2(0,0);
+    const bool hasSpecular = fetchSceneTextureFloat2(DiffuseMaterial_SpecularTexture_ID(diffuseMat), In.uv, specular);
+
+    float3 normal = float3(0,0,0);
+    float3 normalSample = float3(0,0,0);
+    const bool hasNormal = fetchSceneTextureFloat3(DiffuseMaterial_NormalTexture_ID(diffuseMat), In.uv, normalSample);
+    if (hasNormal) {
+        normalSample -=  0.5;
+        normal = normalize(normalSample.x * In.tangent + normalSample.y * In.bitangent + normalSample.z * In.normal);
+    } else {
+        normal = normalize(In.normal);
     }
 
     float3 normalizedNormal = normalize(In.normal.xyz);
     float2 texelPos = (In.Position.xy * Get(viewTexel));
 	uint2 clusterCoords = uint2(floor(texelPos * float2(LIGHT_CLUSTER_WIDTH, LIGHT_CLUSTER_HEIGHT)));
 	uint numLightsInCluster = Get(lightClustersCount)[LIGHT_CLUSTER_COUNT_POS(clusterCoords.x, clusterCoords.y)];
-    float4 result = float4(0,0,0,1);
+    float3 result = float3(0,0,0);
     for(uint j = 0; j < numLightsInCluster; j++) {
 		uint lightId = Get(lightClusters)[LIGHT_CLUSTER_DATA_POS(j, clusterCoords.x, clusterCoords.y)];
         PointLight pl = Get(pointLights)[lightId];
 	    float4 lightPosWorldSpace = float4(pl.lightPos.xyz, 1.0f);
 	    float4 lightCameraSpace = mul(Get(viewMat), lightPosWorldSpace);
         
-        float3 lightDir = (lightCameraSpace.xyz  - In.pos) * (1.0 / pl.lightRadius);
-	    
-	    float attenuation = saturate(1.0f - dot(lightDir , lightDir));
-        float3 normalLightDir = normalize(lightDir);
-
-        float fLDotN = max(dot(normalizedNormal, normalLightDir), 0.0);
-        result += diffuseColor * (attenuation * fLDotN);
+        const float3 lightDir = (lightCameraSpace.xyz  - In.pos) * (1.0 / pl.lightRadius);
+        const float3 normalLightDir = normalize(lightDir);
+	    const float attenuation = saturate(1.0f - dot(lightDir , lightDir));
+        const float fLDotN = max(dot(normalizedNormal, normalLightDir), 0.0);
+        
+        float specularValue = 0.0;
+        float3 lightDiffuseColor = pl.lightColor.xyz * fLDotN;
+        if(pl.lightColor.w > 0.0) {
+            float3 halfVec = normalize(normalLightDir + normalize(-In.pos.xyz));
+            float specIntensity = specular.x;
+            float specPower = exp2(specular.y * 10.0) + 1.0;
+            specularValue = pl.lightColor.w * specIntensity *  pow( clamp( dot( halfVec, normalizedNormal), 0.0, 1.0), specPower );
+        }
+        
+        result += ((specularValue.xxx * pl.lightColor.xyz) + (diffuseColor.xyz * pl.lightColor.xyz * fLDotN)) * attenuation;
     }
 
     PsOut Out;
-    Out.test.x = diffuseTextureId; 
-    Out.diffuse = result;
+    Out.diffuse = float4(result, 1.0);
     RETURN(Out);
 }

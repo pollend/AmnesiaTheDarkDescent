@@ -63,20 +63,15 @@ namespace hpl {
         // return apObjectA < apObjectB;
     }
 
-    //-----------------------------------------------------------------------
 
     static bool SortFunc_Diffuse(iRenderable* apObjectA, iRenderable* apObjectB) {
         cMaterial* pMatA = apObjectA->GetMaterial();
         cMaterial* pMatB = apObjectB->GetMaterial();
 
-        //////////////////////////
-        // Matrix
         if (apObjectA->GetModelMatrixPtr() != apObjectB->GetModelMatrixPtr()) {
             return apObjectA->GetModelMatrixPtr() < apObjectB->GetModelMatrixPtr();
         }
 
-        //////////////////////////
-        // Object
         return apObjectA < apObjectB;
     }
 
@@ -96,20 +91,14 @@ namespace hpl {
         cMaterial* pMatA = apObjectA->GetMaterial();
         cMaterial* pMatB = apObjectB->GetMaterial();
 
-        //////////////////////////
-        // Texture
         if (pMatA->GetImage(eMaterialTexture_Illumination) != pMatB->GetImage(eMaterialTexture_Illumination)) {
             return pMatA->GetImage(eMaterialTexture_Illumination) < pMatB->GetImage(eMaterialTexture_Illumination);
         }
 
-        //////////////////////////
-        // Matrix
         if (apObjectA->GetModelMatrixPtr() != apObjectB->GetModelMatrixPtr()) {
             return apObjectA->GetModelMatrixPtr() < apObjectB->GetModelMatrixPtr();
         }
 
-        //////////////////////////
-        // Vector (just so that order stays the same
         return apObjectA->GetWorldPosition() < apObjectB->GetWorldPosition();
     }
 
@@ -117,21 +106,14 @@ namespace hpl {
         cMaterial* pMatA = apObjectA->GetMaterial();
         cMaterial* pMatB = apObjectB->GetMaterial();
 
-        //////////////////////////
-        // Texture
         if (pMatA->GetImage(eMaterialTexture_Illumination) != pMatB->GetImage(eMaterialTexture_Illumination)) {
             return pMatA->GetImage(eMaterialTexture_Illumination) < pMatB->GetImage(eMaterialTexture_Illumination);
         }
 
-
-        //////////////////////////
-        // Matrix
         if (apObjectA->GetModelMatrixPtr() != apObjectB->GetModelMatrixPtr()) {
             return apObjectA->GetModelMatrixPtr() < apObjectB->GetModelMatrixPtr();
         }
 
-        //////////////////////////
-        // Illumination amount
         return apObjectA->GetIlluminationAmount() < apObjectB->GetIlluminationAmount();
     }
 
@@ -217,14 +199,12 @@ namespace hpl {
 			});
 		}
         if (aFlags & eRenderListCompileFlag_Translucent) {
-            ////////////////////////////////////
             // Setup variables
             cPlanef nearestSurfacePlane;
             bool bHasLargeSurfacePlane = false;
             float fClosestDist = 0;
             iRenderable* pLargeSurfaceObject = NULL;
 
-            ////////////////////////////////////
             // Find the neareest surface plane
             for (size_t i = 0; i < m_transObjects.size(); ++i) {
                 /////////////////////////////////
@@ -272,7 +252,6 @@ namespace hpl {
                 }
             }
 
-            ////////////////////////////////////
             // Check if objects are above or below surface plane
             if (bHasLargeSurfacePlane) {
                 for (size_t i = 0; i < m_transObjects.size(); ++i) {
@@ -403,143 +382,6 @@ namespace hpl {
                     m_illumObjects.push_back(apObject);
                 }
             }
-        }
-    }
-
-    //-----------------------------------------------------------------------
-
-    void cRenderList::Compile(tRenderListCompileFlag aFlags) {
-        auto sortRenderType = [&](eRenderListType type) {
-            switch (type) {
-                case eRenderListType_Translucent:
-                    m_sortedArrays[type] = m_transObjects;
-                    break;
-                case eRenderListType_Decal:
-                    m_sortedArrays[type] = m_decalObjects;
-                    break;
-                case eRenderListType_Illumination:
-                    m_sortedArrays[type] = m_illumObjects;
-                    break;
-                default:
-                    m_sortedArrays[type] = m_solidObjects;
-                    break;
-            }
-            switch (type) {
-                case eRenderListType_Z:
-                    std::sort(m_sortedArrays[type].begin(), m_sortedArrays[type].end(), SortFunc_Z);
-                    break;
-                case eRenderListType_Diffuse:
-                    std::sort(m_sortedArrays[type].begin(), m_sortedArrays[type].end(), SortFunc_Diffuse);
-                    break;
-                case eRenderListType_Translucent:
-                    std::sort(m_sortedArrays[type].begin(), m_sortedArrays[type].end(), SortFunc_Translucent);
-                    break;
-                case eRenderListType_Decal:
-                    std::sort(m_sortedArrays[type].begin(), m_sortedArrays[type].end(), SortFunc_Decal);
-                    break;
-                case eRenderListType_Illumination:
-                    std::sort(m_sortedArrays[type].begin(), m_sortedArrays[type].end(), SortFunc_Illumination);
-                    break;
-                default:
-                    break;
-            }
-        };
-
-        if (aFlags & eRenderListCompileFlag_Z) {
-            sortRenderType(eRenderListType_Z);
-        }
-        if (aFlags & eRenderListCompileFlag_Diffuse) {
-            sortRenderType(eRenderListType_Diffuse);
-        }
-        if (aFlags & eRenderListCompileFlag_Decal) {
-            sortRenderType(eRenderListType_Decal);
-        }
-        if (aFlags & eRenderListCompileFlag_Illumination) {
-            sortRenderType(eRenderListType_Illumination);
-        }
-		if(aFlags & eRenderListCompileFlag_FogArea) {
-			std::sort(m_fogAreas.begin(), m_fogAreas.end(), [](cFogArea* a, cFogArea* b) {
-				return a->GetViewSpaceZ() < b->GetViewSpaceZ();
-			});
-		}
-        if (aFlags & eRenderListCompileFlag_Translucent) {
-            ////////////////////////////////////
-            // Setup variables
-            cPlanef nearestSurfacePlane;
-            bool bHasLargeSurfacePlane = false;
-            float fClosestDist = 0;
-            iRenderable* pLargeSurfaceObject = NULL;
-
-            ////////////////////////////////////
-            // Find the neareest surface plane
-            for (size_t i = 0; i < m_transObjects.size(); ++i) {
-                /////////////////////////////////
-                // Check so object is of right type
-                iRenderable* pObject = m_transObjects[i];
-                if (pObject->GetRenderType() != eRenderableType_SubMesh) {
-                    continue;
-				}
-
-                cMaterial* pMat = pObject->GetMaterial();
-                if (pMat->GetLargeTransperantSurface() == false) {
-                    continue;
-				}
-
-                /////////////////////////////////
-                // Check so sub mesh is one sided
-                cSubMeshEntity* pSubEnt = static_cast<cSubMeshEntity*>(pObject);
-                cSubMesh* pSubMesh = pSubEnt->GetSubMesh();
-                if (pSubMesh->GetIsOneSided() == false) {
-                    continue;
-				}
-
-                cVector3f vSurfaceNormal =
-                    cMath::Vector3Normalize(cMath::MatrixMul3x3(pSubEnt->GetWorldMatrix(), pSubMesh->GetOneSidedNormal()));
-                cVector3f vSurfacePos = cMath::MatrixMul(pSubEnt->GetWorldMatrix(), pSubMesh->GetOneSidedPoint());
-
-                /////////////////////////////////
-                // Make sure it does not face away from frustum.
-                float fDot = cMath::Vector3Dot(vSurfacePos - m_frustum->GetOrigin(), vSurfaceNormal);
-                if (fDot >= 0) {
-                    continue;
-				}
-
-                /////////////////////////////////
-                // Create surface normal and check if nearest.
-                cPlanef surfacePlane;
-                surfacePlane.FromNormalPoint(vSurfaceNormal, vSurfacePos);
-
-                float fDist = cMath::PlaneToPointDist(surfacePlane, m_frustum->GetOrigin());
-                if (fDist < fClosestDist || bHasLargeSurfacePlane == false) {
-                    bHasLargeSurfacePlane = true;
-                    fClosestDist = fDist;
-                    nearestSurfacePlane = surfacePlane;
-                    pLargeSurfaceObject = pObject;
-                }
-            }
-
-            ////////////////////////////////////
-            // Check if objects are above or below surface plane
-            if (bHasLargeSurfacePlane) {
-                for (size_t i = 0; i < m_transObjects.size(); ++i) {
-                    iRenderable* pObject = m_transObjects[i];
-
-                    // If this is large plane, then set value to 0
-                    if (pObject == pLargeSurfaceObject) {
-                        pObject->SetLargePlaneSurfacePlacement(0);
-                        continue;
-                    }
-
-                    float fDist = cMath::PlaneToPointDist(nearestSurfacePlane, pObject->GetBoundingVolume()->GetWorldCenter());
-                    pObject->SetLargePlaneSurfacePlacement(fDist < 0 ? -1 : 1);
-                }
-            } else {
-                for (size_t i = 0; i < m_transObjects.size(); ++i) {
-                    iRenderable* pObject = m_transObjects[i];
-                    pObject->SetLargePlaneSurfacePlacement(0);
-                }
-            }
-            sortRenderType(eRenderListType_Translucent);
         }
     }
 
