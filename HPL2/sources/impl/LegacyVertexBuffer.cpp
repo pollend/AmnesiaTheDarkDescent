@@ -18,6 +18,7 @@
  */
 
 #include "impl/LegacyVertexBuffer.h"
+#include "graphics/DrawPacket.h"
 #include "graphics/ForgeRenderer.h"
 #include "math/Math.h"
 #include "system/LowLevelSystem.h"
@@ -84,22 +85,22 @@ namespace hpl {
         }
     }
 
-    void LegacyVertexBuffer::cmdBindGeometry(Cmd* cmd, ForgeRenderer::CommandResourcePool* resourcePool, LegacyVertexBuffer::GeometryBinding& binding) {
-        folly::small_vector<Buffer*, 16> vbBuffer;
-        folly::small_vector<uint64_t, 16> vbOffsets;
-        folly::small_vector<uint32_t, 16> vbStride;
+   // void LegacyVertexBuffer::cmdBindGeometry(Cmd* cmd, ForgeRenderer::CommandResourcePool* resourcePool, LegacyVertexBuffer::GeometryBinding& binding) {
+   //     folly::small_vector<Buffer*, 16> vbBuffer;
+   //     folly::small_vector<uint64_t, 16> vbOffsets;
+   //     folly::small_vector<uint32_t, 16> vbStride;
 
-        for (auto& element : binding.m_vertexElement) {
-            vbBuffer.push_back(element.element->m_buffer.m_handle);
-            vbOffsets.push_back(element.offset);
-            vbStride.push_back(element.element->Stride());
-            resourcePool->Push(element.element->m_buffer);
-        }
-        resourcePool->Push(*binding.m_indexBuffer.element);
+   //     for (auto& element : binding.m_vertexElement) {
+   //         vbBuffer.push_back(element.element->m_buffer.m_handle);
+   //         vbOffsets.push_back(element.offset);
+   //         vbStride.push_back(element.element->Stride());
+   //         resourcePool->Push(element.element->m_buffer);
+   //     }
+   //     resourcePool->Push(*binding.m_indexBuffer.element);
 
-        cmdBindVertexBuffer(cmd, binding.m_vertexElement.size(), vbBuffer.data(), vbStride.data(), vbOffsets.data());
-        cmdBindIndexBuffer(cmd, binding.m_indexBuffer.element->m_handle, INDEX_TYPE_UINT32, binding.m_indexBuffer.offset);
-    }
+   //     cmdBindVertexBuffer(cmd, binding.m_vertexElement.size(), vbBuffer.data(), vbStride.data(), vbOffsets.data());
+   //     cmdBindIndexBuffer(cmd, binding.m_indexBuffer.element->m_handle, INDEX_TYPE_UINT32, binding.m_indexBuffer.offset);
+   // }
     void LegacyVertexBuffer::PushVertexElements(
         std::span<const float> values, eVertexBufferElement elementType, std::span<LegacyVertexBuffer::VertexElement> elements) {
         for (auto& element : elements) {
@@ -451,8 +452,10 @@ namespace hpl {
     void LegacyVertexBuffer::Draw(eVertexBufferDrawType aDrawType) {
     }
 
-    void LegacyVertexBuffer::resolveGeometryBinding(
-        uint32_t frameIndex, std::span<eVertexBufferElement> elements, GeometryBinding* binding) {
+    DrawPacket LegacyVertexBuffer::resolveGeometryBinding(
+        uint32_t frameIndex, std::span<eVertexBufferElement> elements) {
+        DrawPacket packet;
+        packet.m_type = DrawPacket::DrawIndvidualBuffers;
         if(m_updateFlags) {
             for (auto& element : m_vertexElements) {
                 const bool isDynamicAccess = detail::IsDynamicMemory(mUsageType);
@@ -526,17 +529,22 @@ namespace hpl {
         }
 
         // GeometryBinding binding = {};
+        packet.m_indvidual.m_numStreams = 0;
         for (auto& targetEle : elements) {
             auto found = std::find_if(m_vertexElements.begin(), m_vertexElements.end(), [&](auto& element) {
                 return element.m_type == targetEle;
             });
             ASSERT(found != m_vertexElements.end() && "Element not found");
-            binding->m_vertexElement.push_back({found, found->m_activeCopy * found->m_shadowData.size() });
+            auto& stream = packet.m_indvidual.m_vertexStream[packet.m_indvidual.m_numStreams++];
+            stream.m_buffer = &found->m_buffer;
+            stream.m_offset = found->m_activeCopy * found->m_shadowData.size();
+            stream.m_stride = found->Stride();
         }
         uint32_t numIndecies = (GetRequestNumberIndecies() > 0) ? GetRequestNumberIndecies() : static_cast<uint32_t>(m_indices.size()) ;
-        binding->m_indexBuffer = {
-            &m_indexBuffer, m_indexBufferActiveCopy * m_indices.size() * sizeof(uint32_t), numIndecies
-        };
+        packet.m_indvidual.m_indexStream.m_offset = m_indexBufferActiveCopy * m_indices.size() * sizeof(uint32_t);
+        packet.m_indvidual.m_numIndices = numIndecies;
+        packet.m_indvidual.m_indexStream.buffer = &m_indexBuffer;
+        return packet;
     }
 
     void LegacyVertexBuffer::UnBind() {

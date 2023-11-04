@@ -229,7 +229,7 @@ namespace hpl {
 			// Vertex data
             std::vector<cSubMesh::StreamBufferInfo> vertexStreams;
             cSubMesh::IndexBufferInfo indexInfo;
-            AssetBuffer::BufferIndexView indexView = indexInfo.GetView();
+            GraphicsBuffer::BufferIndexView indexView = indexInfo.GetView();
 			{
 				int lVtxNum = binBuff.GetInt32();
 				int lVtxTypeNum = binBuff.GetInt32();
@@ -253,9 +253,9 @@ namespace hpl {
                             streamBuffer.m_stride = mp.streamBufferStride;
                             streamBuffer.m_semantic = mp.semantic;
                             streamBuffer.m_numberElements = lVtxNum;
-                            AssetBuffer::BufferRawView rawView = streamBuffer.m_buffer.CreateViewRaw();
+                            GraphicsBuffer::BufferRawView rawView = streamBuffer.m_buffer.CreateViewRaw();
                             std::array<float, 6> stage;
-                            std::span<float> floatSpan = rawView.RawDataView<float>();
+                            std::span<float> floatSpan = rawView.rawSpanByType<float>();
                             for(size_t vtxIdx = 0; vtxIdx < lVtxNum; vtxIdx++) {
                                 for(size_t eleIdx = 0; eleIdx < lElementNum; eleIdx++) {
                                    stage[eleIdx] = binBuff.GetFloat32();
@@ -280,25 +280,25 @@ namespace hpl {
                     indexView.Write(i, binBuff.GetInt32());
                 }
 			}
-// TODO: later view these changes
-//            {
-//                 auto positionInfo = std::find_if(vertexStreams.begin(), vertexStreams.end(), [&](auto& str) { return str.m_semantic == ShaderSemantic::SEMANTIC_POSITION;}) ;
-//                 auto tangentInfo = std::find_if(vertexStreams.begin(), vertexStreams.end(), [&](auto& str) { return str.m_semantic == ShaderSemantic::SEMANTIC_TANGENT;}) ;
-//                 auto normalInfo = std::find_if(vertexStreams.begin(), vertexStreams.end(), [&](auto& str) { return str.m_semantic == ShaderSemantic::SEMANTIC_NORMAL;}) ;
-//                 auto textureInfo = std::find_if(vertexStreams.begin(), vertexStreams.end(), [&](auto& str) { return str.m_semantic == ShaderSemantic::SEMANTIC_TEXCOORD0;}) ;
-//                 auto position = positionInfo->GetStructuredView<float3>();
-//                 auto normal = normalInfo->GetStructuredView<float3>();
-//                 auto uv = textureInfo->GetStructuredView<float2>();
-//                 auto tangent = tangentInfo->GetStructuredView<float3>();
-//                 hpl::MeshUtility::MikktSpaceGenerate(
-//                    positionInfo->m_numberElements,
-//                    indexInfo.m_numberElements,
-//                    &indexView,
-//                    &position,
-//                    &uv,
-//                    &normal,
-//                    &tangent);
-//		    }
+                // TODO: later view these changes
+           // {
+           //      auto positionInfo = std::find_if(vertexStreams.begin(), vertexStreams.end(), [&](auto& str) { return str.m_semantic == ShaderSemantic::SEMANTIC_POSITION;}) ;
+           //      auto tangentInfo = std::find_if(vertexStreams.begin(), vertexStreams.end(), [&](auto& str) { return str.m_semantic == ShaderSemantic::SEMANTIC_TANGENT;}) ;
+           //      auto normalInfo = std::find_if(vertexStreams.begin(), vertexStreams.end(), [&](auto& str) { return str.m_semantic == ShaderSemantic::SEMANTIC_NORMAL;}) ;
+           //      auto textureInfo = std::find_if(vertexStreams.begin(), vertexStreams.end(), [&](auto& str) { return str.m_semantic == ShaderSemantic::SEMANTIC_TEXCOORD0;}) ;
+           //      auto position = positionInfo->GetStructuredView<float3>();
+           //      auto normal = normalInfo->GetStructuredView<float3>();
+           //      auto uv = textureInfo->GetStructuredView<float2>();
+           //      auto tangent = tangentInfo->GetStructuredView<float3>();
+           //      hpl::MeshUtility::MikkTSpaceGenerate(
+           //         positionInfo->m_numberElements,
+           //         indexInfo.m_numberElements,
+           //         &indexView,
+           //         &position,
+           //         &uv,
+           //         &normal,
+           //         &tangent);
+		   // }
 
 
 	        iVertexBuffer* pVtxBuff = mpLowLevelGraphics->CreateVertexBuffer(	eVertexBufferType_Hardware, eVertexBufferDrawType_Tri,

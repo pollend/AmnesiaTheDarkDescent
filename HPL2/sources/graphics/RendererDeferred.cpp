@@ -19,11 +19,11 @@
 
 #include "graphics/RendererDeferred.h"
 
-
 #include "engine/Event.h"
 #include "engine/Interface.h"
-#include "graphics/ForgeHandles.h"
 #include "graphics/DebugDraw.h"
+#include "graphics/DrawPacket.h"
+#include "graphics/ForgeHandles.h"
 #include "graphics/MaterialResource.h"
 #include "math/cFrustum.h"
 #include "scene/ParticleEmitter.h"
@@ -85,9 +85,9 @@
 #include <folly/hash/Hash.h>
 #include <folly/small_vector.h>
 
-#include "Common_3/Utilities/Math/MathTypes.h"
-#include "Common_3/Resources/ResourceLoader/Interfaces/IResourceLoader.h"
 #include "Common_3/Graphics/Interfaces/IGraphics.h"
+#include "Common_3/Resources/ResourceLoader/Interfaces/IResourceLoader.h"
+#include "Common_3/Utilities/Math/MathTypes.h"
 #include "FixPreprocessor.h"
 
 namespace hpl {
@@ -103,7 +103,7 @@ namespace hpl {
     static constexpr uint32_t SSAONumOfSamples = 8;
 
     namespace detail {
-        uint32_t resolveMaterialID(cMaterial::TextureAntistropy anisotropy, eTextureWrap wrap, eTextureFilter filter) {
+        uint32_t resolveTextureFilterGroup(cMaterial::TextureAntistropy anisotropy, eTextureWrap wrap, eTextureFilter filter) {
             const uint32_t anisotropyGroup =
                 (static_cast<uint32_t>(eTextureFilter_LastEnum) * static_cast<uint32_t>(eTextureWrap_LastEnum)) *
                 static_cast<uint32_t>(anisotropy);
@@ -510,22 +510,15 @@ namespace hpl {
 
     enum eDefferredProgramMode { eDefferredProgramMode_Lights, eDefferredProgramMode_Misc, eDefferredProgramMode_LastEnum };
 
-    cRendererDeferred::cRendererDeferred(
-        cGraphics* apGraphics,
-        cResources* apResources,
-        std::shared_ptr<DebugDraw> debug)
-        : iRenderer("Deferred", apGraphics, apResources),
-        m_debug(debug) {
+    cRendererDeferred::cRendererDeferred(cGraphics* apGraphics, cResources* apResources, std::shared_ptr<DebugDraw> debug)
+        : iRenderer("Deferred", apGraphics, apResources)
+        , m_debug(debug) {
         m_hbaoPlusPipeline = std::make_unique<renderer::PassHBAOPlus>();
         ////////////////////////////////////
         // Set up render specific things
 
         UVector3 shadowSizes[] = {
-            UVector3(128, 128, 1),
-            UVector3(256, 256, 1),
-            UVector3(256, 256, 1),
-            UVector3(512, 512, 1),
-            UVector3(1024, 1024, 1)
+            UVector3(128, 128, 1), UVector3(256, 256, 1), UVector3(256, 256, 1), UVector3(512, 512, 1), UVector3(1024, 1024, 1)
         };
         int startSize = 2;
         if (mShadowMapResolution == eShadowMapResolution_Medium) {
@@ -533,7 +526,6 @@ namespace hpl {
         } else if (mShadowMapResolution == eShadowMapResolution_Low) {
             startSize = 0;
         }
-
 
         m_dissolveImage = mpResources->GetTextureManager()->Create2DImage("core_dissolve.tga", false);
         auto* forgeRenderer = Interface<ForgeRenderer>::Get();
@@ -1256,7 +1248,9 @@ namespace hpl {
             m_materialRootSignature.Load(forgeRenderer->Rend(), [&](RootSignature** signature) {
                 RootSignatureDesc rootSignatureDesc = {};
                 const char* pStaticSamplersNames[] = { "nearestSampler", "refractionSampler", "dissolveSampler" };
-                Sampler* pStaticSampler[] = { m_samplerPointClampToBorder.m_handle, m_samplerPointClampToEdge.m_handle, m_samplerPointWrap.m_handle };
+                Sampler* pStaticSampler[] = { m_samplerPointClampToBorder.m_handle,
+                                              m_samplerPointClampToEdge.m_handle,
+                                              m_samplerPointWrap.m_handle };
                 rootSignatureDesc.mStaticSamplerCount = std::size(pStaticSamplersNames);
                 rootSignatureDesc.ppStaticSamplerNames = pStaticSamplersNames;
                 rootSignatureDesc.ppStaticSamplers = pStaticSampler;
@@ -1379,7 +1373,6 @@ namespace hpl {
 
                 RasterizerStateDesc rasterizerStateDesc = {};
                 rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
-
 
                 DepthStateDesc depthStateDesc = {};
                 depthStateDesc.mDepthTest = true;
@@ -1586,7 +1579,7 @@ namespace hpl {
                 for (size_t antistropy = 0; antistropy < cMaterial::Antistropy_Count; antistropy++) {
                     for (size_t textureWrap = 0; textureWrap < eTextureWrap_LastEnum; textureWrap++) {
                         for (size_t textureFilter = 0; textureFilter < eTextureFilter_LastEnum; textureFilter++) {
-                            uint32_t materialID = detail::resolveMaterialID(
+                            uint32_t materialID = detail::resolveTextureFilterGroup(
                                 static_cast<cMaterial::TextureAntistropy>(antistropy),
                                 static_cast<eTextureWrap>(textureWrap),
                                 static_cast<eTextureFilter>(textureFilter));
@@ -1685,7 +1678,7 @@ namespace hpl {
 #ifdef USE_THE_FORGE_LEGACY
                 blendStateDesc.mMasks[0] = ALL;
 #else
-                    blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_ALL;
+                blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_ALL;
 #endif
                 blendStateDesc.mSrcFactors[0] = BC_ONE;
                 blendStateDesc.mDstFactors[0] = BC_ONE;
@@ -1728,7 +1721,6 @@ namespace hpl {
                     addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipline);
                     return true;
                 });
-
             }
 
             // translucency pass
@@ -2353,11 +2345,11 @@ namespace hpl {
                 m_lightPerFrameSet[setIndex].Load(forgeRenderer->Rend(), [&](DescriptorSet** set) {
                     DescriptorSetDesc perFrameDescSet{ m_lightPassRootSignature.m_handle,
                                                        DESCRIPTOR_UPDATE_FREQ_PER_FRAME,
-                                                       MaxViewportFrameDescriptors  };
+                                                       MaxViewportFrameDescriptors };
                     addDescriptorSet(forgeRenderer->Rend(), &perFrameDescSet, set);
                     return true;
                 });
-                for(uint32_t i = 0; i < MaxViewportFrameDescriptors; i++) {
+                for (uint32_t i = 0; i < MaxViewportFrameDescriptors; i++) {
                     std::array<DescriptorData, 1> params = {};
                     params[0].pName = "lightObjectBuffer";
                     params[0].ppBuffers = &m_lightPassBuffer[setIndex].m_handle;
@@ -2399,13 +2391,13 @@ namespace hpl {
                 return true;
             });
 
-            shadowMapData.m_cmd.Load(forgeRenderer->Rend(),  [&](Cmd** cmd) {
+            shadowMapData.m_cmd.Load(forgeRenderer->Rend(), [&](Cmd** cmd) {
                 CmdDesc cmdDesc = {};
                 cmdDesc.pPool = shadowMapData.m_pool.m_handle;
                 addCmd(forgeRenderer->Rend(), &cmdDesc, cmd);
                 return true;
             });
-            shadowMapData.m_shadowFence.Load(forgeRenderer->Rend(), [&](Fence**  fence) {
+            shadowMapData.m_shadowFence.Load(forgeRenderer->Rend(), [&](Fence** fence) {
                 addFence(forgeRenderer->Rend(), fence);
                 return true;
             });
@@ -2416,7 +2408,8 @@ namespace hpl {
             m_shadowMapData[eShadowMapResolution_High].emplace_back(createShadowMap(shadowSizes[startSize + eShadowMapResolution_High]));
         }
         for (size_t i = 0; i < 32; ++i) {
-            m_shadowMapData[eShadowMapResolution_Medium].emplace_back(createShadowMap(shadowSizes[startSize + eShadowMapResolution_Medium]));
+            m_shadowMapData[eShadowMapResolution_Medium].emplace_back(
+                createShadowMap(shadowSizes[startSize + eShadowMapResolution_Medium]));
         }
         for (size_t i = 0; i < 32; ++i) {
             m_shadowMapData[eShadowMapResolution_Low].emplace_back(createShadowMap(shadowSizes[startSize + eShadowMapResolution_Low]));
@@ -2447,13 +2440,6 @@ namespace hpl {
     cRendererDeferred::~cRendererDeferred() {
     }
 
-    bool cRendererDeferred::LoadData() {
-        return true;
-    }
-
-    void cRendererDeferred::DestroyData() {
-    }
-
     uint32_t cRendererDeferred::updateFrameDescriptor(
         const ForgeRenderer::Frame& frame, Cmd* cmd, cWorld* apWorld, const PerFrameOption& options) {
         uint32_t index = m_materialSet.m_frameIndex;
@@ -2482,14 +2468,14 @@ namespace hpl {
         return index;
     }
 
-    void cRendererDeferred::cmdIlluminationPass(Cmd* cmd,
+    void cRendererDeferred::cmdIlluminationPass(
+        Cmd* cmd,
         const ForgeRenderer::Frame& frame,
         cRenderList& renderList,
         uint32_t frameDescriptorIndex,
         RenderTarget* depthBuffer,
         RenderTarget* outputBuffer,
-        AdditionalIlluminationPassOptions options
-    ) {
+        AdditionalIlluminationPassOptions options) {
         uint32_t materialObjectIndex = getDescriptorIndexFromName(m_materialRootSignature.m_handle, "materialRootConstant");
         LoadActionsDesc loadActions = {};
         loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
@@ -2500,14 +2486,18 @@ namespace hpl {
         cmdBindRenderTargets(cmd, targets.size(), targets.data(), depthBuffer, &loadActions, nullptr, nullptr, -1, -1);
         cmdSetViewport(cmd, 0.0f, 0.0f, outputBuffer->mWidth, outputBuffer->mHeight, 0.0f, 1.0f);
         cmdSetScissor(cmd, 0, 0, outputBuffer->mWidth, outputBuffer->mHeight);
-        cmdBindPipeline(cmd, options.m_invert ? m_solidIlluminationPipelineCW.m_handle: m_solidIlluminationPipelineCCW.m_handle);
+        cmdBindPipeline(cmd, options.m_invert ? m_solidIlluminationPipelineCW.m_handle : m_solidIlluminationPipelineCCW.m_handle);
 
         cmdBindDescriptorSet(cmd, frameDescriptorIndex, m_materialSet.m_frameSet[frame.m_frameIndex].m_handle);
 
         for (auto& illuminationItem : m_rendererList.GetRenderableItems(eRenderListType_Illumination)) {
             cMaterial* pMaterial = illuminationItem->GetMaterial();
-            iVertexBuffer* vertexBuffer = illuminationItem->GetVertexBuffer();
-            if (pMaterial == nullptr || vertexBuffer == nullptr) {
+            std::array targets = {
+                eVertexBufferElement_Position,
+                eVertexBufferElement_Texture0,
+            };
+            DrawPacket drawPacket = illuminationItem->ResolveDrawPacket(frame, targets);
+            if (pMaterial == nullptr || drawPacket.m_type == DrawPacket::Unknown) {
                 continue;
             }
             ASSERT(pMaterial->Descriptor().m_id == MaterialID::SolidDiffuse && "Invalid material type");
@@ -2515,15 +2505,9 @@ namespace hpl {
             uint32_t instance = cmdBindMaterialAndObject(cmd, frame, pMaterial, illuminationItem);
             materialConst.objectId = instance;
             materialConst.m_sceneAlpha = illuminationItem->GetIlluminationAmount();
-            std::array targets = {
-                eVertexBufferElement_Position,
-                eVertexBufferElement_Texture0,
-            };
-            LegacyVertexBuffer::GeometryBinding binding;
-            static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
-            LegacyVertexBuffer::cmdBindGeometry(cmd, frame.m_resourcePool, binding);
+            DrawPacket::cmdBindBuffers(cmd, frame.m_resourcePool, &drawPacket);
             cmdBindPushConstants(cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
-            cmdDrawIndexed(cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+            cmdDrawIndexed(cmd, drawPacket.numberOfIndecies(), 0, 0);
         }
     }
     void cRendererDeferred::cmdLightPass(
@@ -2546,7 +2530,7 @@ namespace hpl {
         uint32_t materialObjectIndex = getDescriptorIndexFromName(m_materialRootSignature.m_handle, "materialRootConstant");
 
         folly::small_vector<cPlanef, 3> occlusionPlanes;
-        if(apWorld->GetFogActive() && apWorld->GetFogColor().a >= 1.0f && apWorld->GetFogCulling()) {
+        if (apWorld->GetFogActive() && apWorld->GetFogColor().a >= 1.0f && apWorld->GetFogCulling()) {
             cPlanef fogPlane;
             fogPlane.FromNormalPoint(apFrustum->GetForward(), apFrustum->GetOrigin() + apFrustum->GetForward() * -apWorld->GetFogEnd());
             occlusionPlanes.push_back(fogPlane);
@@ -2556,7 +2540,6 @@ namespace hpl {
         // Render Light Pass
         // --------------------------------------------------------------------
         {
-
             float fScreenArea = (float)(outputBuffer->mWidth * outputBuffer->mHeight);
             int mlMinLargeLightArea = (int)(MinLargeLightNormalizedArea * fScreenArea);
 
@@ -2585,7 +2568,12 @@ namespace hpl {
                             apFrustum,
                             kLightRadiusMul_Medium);
                         deferredLightData.m_clipRect = cMath::GetClipRectFromSphere(
-                            deferredLightData.m_mtxViewSpaceRender.GetTranslation(), light->GetRadius(), apFrustum, cVector2l(outputBuffer->mWidth, outputBuffer->mHeight), true, 0);
+                            deferredLightData.m_mtxViewSpaceRender.GetTranslation(),
+                            light->GetRadius(),
+                            apFrustum,
+                            cVector2l(outputBuffer->mWidth, outputBuffer->mHeight),
+                            true,
+                            0);
                         break;
                     }
                 case eLightType_Spot:
@@ -2598,7 +2586,12 @@ namespace hpl {
                             light,
                             apFrustum,
                             kLightRadiusMul_Medium);
-                        cMath::GetClipRectFromBV(deferredLightData.m_clipRect, *light->GetBoundingVolume(), apFrustum, cVector2l(outputBuffer->mWidth, outputBuffer->mHeight), 0);
+                        cMath::GetClipRectFromBV(
+                            deferredLightData.m_clipRect,
+                            *light->GetBoundingVolume(),
+                            apFrustum,
+                            cVector2l(outputBuffer->mWidth, outputBuffer->mHeight),
+                            0);
                         break;
                     }
                 default:
@@ -2659,8 +2652,7 @@ namespace hpl {
 
                     cFrustum* pLightFrustum = pLightSpot->GetFrustum();
                     std::vector<iRenderable*> shadowCasters;
-                    if (castShadow &&
-                        detail::SetupShadowMapRendering(shadowCasters, apWorld, pLightFrustum, pLightSpot, occlusionPlanes)) {
+                    if (castShadow && detail::SetupShadowMapRendering(shadowCasters, apWorld, pLightFrustum, pLightSpot, occlusionPlanes)) {
                         auto findBestShadowMap = [&](eShadowMapResolution resolution, iLight* light) -> cRendererDeferred::ShadowMapData* {
                             auto& shadowMapVec = m_shadowMapData[resolution];
                             uint32_t maxFrameDistance = 0;
@@ -2719,7 +2711,8 @@ namespace hpl {
                                         RenderTargetBarrier{
                                             shadowMapData->m_target.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_DEPTH_WRITE },
                                     };
-                                    cmdResourceBarrier(shadowMapData->m_cmd.m_handle, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+                                    cmdResourceBarrier(
+                                        shadowMapData->m_cmd.m_handle, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
                                 }
 
                                 LoadActionsDesc loadActions = {};
@@ -2727,7 +2720,15 @@ namespace hpl {
                                 loadActions.mLoadActionStencil = LOAD_ACTION_DONTCARE;
                                 loadActions.mClearDepth = { .depth = 1.0f, .stencil = 0 };
                                 cmdBindRenderTargets(
-                                    shadowMapData->m_cmd.m_handle, 0, NULL, shadowMapData->m_target.m_handle, &loadActions, NULL, NULL, -1, -1);
+                                    shadowMapData->m_cmd.m_handle,
+                                    0,
+                                    NULL,
+                                    shadowMapData->m_target.m_handle,
+                                    &loadActions,
+                                    NULL,
+                                    NULL,
+                                    -1,
+                                    -1);
                                 cmdSetViewport(
                                     shadowMapData->m_cmd.m_handle,
                                     0.0f,
@@ -2742,7 +2743,9 @@ namespace hpl {
                                     0,
                                     shadowMapData->m_target.m_handle->mWidth,
                                     shadowMapData->m_target.m_handle->mHeight);
-                                cmdBindPipeline(shadowMapData->m_cmd.m_handle, options.m_invert ? m_zPassShadowPipelineCCW.m_handle : m_zPassShadowPipelineCW.m_handle);
+                                cmdBindPipeline(
+                                    shadowMapData->m_cmd.m_handle,
+                                    options.m_invert ? m_zPassShadowPipelineCCW.m_handle : m_zPassShadowPipelineCW.m_handle);
 
                                 uint32_t shadowFrameIndex = updateFrameDescriptor(
                                     frame,
@@ -2757,25 +2760,25 @@ namespace hpl {
                                     eMaterialRenderMode renderMode =
                                         pObject->GetCoverageAmount() >= 1 ? eMaterialRenderMode_Z : eMaterialRenderMode_Z_Dissolve;
                                     cMaterial* pMaterial = pObject->GetMaterial();
-                                    const MaterialDescriptor& descriptor = pMaterial->Descriptor();
-                                    iVertexBuffer* vertexBuffer = pObject->GetVertexBuffer();
-                                    if (vertexBuffer == nullptr || descriptor.m_id == MaterialID::Unknown) {
+                                    const ShaderMaterialData& descriptor = pMaterial->Descriptor();
+                                    std::array targets = { eVertexBufferElement_Position,
+                                                           eVertexBufferElement_Texture0,
+                                                           eVertexBufferElement_Normal,
+                                                           eVertexBufferElement_Texture1Tangent };
+                                    DrawPacket packet = pObject->ResolveDrawPacket(frame, targets);
+                                    if (packet.m_type == DrawPacket::Unknown || descriptor.m_id == MaterialID::Unknown) {
                                         return;
                                     }
                                     MaterialRootConstant materialConst = {};
                                     uint32_t instance = cmdBindMaterialAndObject(shadowMapData->m_cmd.m_handle, frame, pMaterial, pObject);
                                     materialConst.objectId = instance;
-                                    std::array targets = { eVertexBufferElement_Position,
-                                                           eVertexBufferElement_Texture0,
-                                                           eVertexBufferElement_Normal,
-                                                           eVertexBufferElement_Texture1Tangent };
-                                    LegacyVertexBuffer::GeometryBinding binding{};
-                                    static_cast<LegacyVertexBuffer*>(vertexBuffer)
-                                        ->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
-                                    LegacyVertexBuffer::cmdBindGeometry(shadowMapData->m_cmd.m_handle, frame.m_resourcePool, binding);
+                                    DrawPacket::cmdBindBuffers(shadowMapData->m_cmd.m_handle, frame.m_resourcePool, &packet);
                                     cmdBindPushConstants(
-                                        shadowMapData->m_cmd.m_handle, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
-                                    cmdDrawIndexed(shadowMapData->m_cmd.m_handle, binding.m_indexBuffer.numIndicies, 0, 0);
+                                        shadowMapData->m_cmd.m_handle,
+                                        m_materialRootSignature.m_handle,
+                                        materialObjectIndex,
+                                        &materialConst);
+                                    cmdDrawIndexed(shadowMapData->m_cmd.m_handle, packet.numberOfIndecies(), 0, 0);
                                 }
                                 {
                                     cmdBindRenderTargets(shadowMapData->m_cmd.m_handle, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
@@ -2783,7 +2786,8 @@ namespace hpl {
                                         RenderTargetBarrier{
                                             shadowMapData->m_target.m_handle, RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_SHADER_RESOURCE },
                                     };
-                                    cmdResourceBarrier(shadowMapData->m_cmd.m_handle, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+                                    cmdResourceBarrier(
+                                        shadowMapData->m_cmd.m_handle, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
                                 }
                                 endCmd(shadowMapData->m_cmd.m_handle);
                                 QueueSubmitDesc submitDesc = {};
@@ -2847,9 +2851,8 @@ namespace hpl {
                     switch (light->m_light->GetLightType()) {
                     case eLightType_Point:
                         {
-                            uniformObjectData.m_common.m_mvp = cMath::ToForgeMatrix4(
-                                cMath::MatrixMul(
-                                    viewProjectionMat, cMath::MatrixMul(light->m_light->GetWorldMatrix(), detail::GetLightMtx(*light))));
+                            uniformObjectData.m_common.m_mvp = cMath::ToForgeMatrix4(cMath::MatrixMul(
+                                viewProjectionMat, cMath::MatrixMul(light->m_light->GetWorldMatrix(), detail::GetLightMtx(*light))));
 
                             cVector3f lightViewPos = cMath::MatrixMul(modelViewMtx, detail::GetLightMtx(*light)).GetTranslation();
                             const auto color = light->m_light->GetDiffuseColor();
@@ -2871,8 +2874,7 @@ namespace hpl {
                             uniformObjectData.m_pointLight.m_radius = light->m_light->GetRadius();
                             uniformObjectData.m_pointLight.m_lightPos = float3(lightViewPos.x, lightViewPos.y, lightViewPos.z);
                             uniformObjectData.m_pointLight.m_lightColor = float4(color.r, color.g, color.b, color.a);
-                            cMatrixf mtxInvViewRotation =
-                                cMath::MatrixMul(light->m_light->GetWorldMatrix(), invViewMat).GetTranspose();
+                            cMatrixf mtxInvViewRotation = cMath::MatrixMul(light->m_light->GetWorldMatrix(), invViewMat).GetTranspose();
                             uniformObjectData.m_pointLight.m_invViewRotation = cMath::ToForgeMatrix4(mtxInvViewRotation.GetTranspose());
                             break;
                         }
@@ -2885,9 +2887,8 @@ namespace hpl {
                             cVector3f lightViewPos = cMath::MatrixMul(modelViewMtx, detail::GetLightMtx(*light)).GetTranslation();
                             const auto color = pLightSpot->GetDiffuseColor();
 
-                            uniformObjectData.m_common.m_mvp = cMath::ToForgeMatrix4(
-                                cMath::MatrixMul(
-                                    viewProjectionMat, cMath::MatrixMul(light->m_light->GetWorldMatrix(), detail::GetLightMtx(*light))));
+                            uniformObjectData.m_common.m_mvp = cMath::ToForgeMatrix4(cMath::MatrixMul(
+                                viewProjectionMat, cMath::MatrixMul(light->m_light->GetWorldMatrix(), detail::GetLightMtx(*light))));
 
                             if (light->m_shadowMapData) {
                                 uniformObjectData.m_common.m_config |= LightConfiguration::HasShadowMap;
@@ -2913,7 +2914,8 @@ namespace hpl {
                                 params[paramCount].pName = "goboMap";
                                 params[paramCount++].ppTextures = &light->m_light->GetGoboTexture()->GetTexture().m_handle;
                                 frame.m_resourcePool->Push(light->m_light->GetGoboTexture()->GetTexture());
-                                m_lightResources[frame.m_frameIndex][m_lightIndex].m_goboMap = light->m_light->GetGoboTexture()->GetTexture();
+                                m_lightResources[frame.m_frameIndex][m_lightIndex].m_goboMap =
+                                    light->m_light->GetGoboTexture()->GetTexture();
                             } else {
                                 params[paramCount].pName = "falloffMap";
                                 params[paramCount++].ppTextures = &spotFallOffImage->GetTexture().m_handle;
@@ -2943,7 +2945,8 @@ namespace hpl {
                         }
                     }
 
-                    BufferUpdateDesc updateDesc = { m_lightPassBuffer[frame.m_frameIndex].m_handle, m_lightIndex* sizeof(UniformLightData) };
+                    BufferUpdateDesc updateDesc = { m_lightPassBuffer[frame.m_frameIndex].m_handle,
+                                                    m_lightIndex * sizeof(UniformLightData) };
                     beginUpdateResource(&updateDesc);
                     memcpy(updateDesc.pMappedData, &uniformObjectData, sizeof(UniformLightData));
                     endUpdateResource(&updateDesc, NULL);
@@ -2960,20 +2963,14 @@ namespace hpl {
                     loadActions.mLoadActionsColor[0] = LOAD_ACTION_CLEAR;
                     loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
                     loadActions.mLoadActionStencil = LOAD_ACTION_CLEAR;
-                    loadActions.mClearColorValues[0] = ClearValue{ .r = options.m_clearColor.getX(),.g = options.m_clearColor.getY(), .b = options.m_clearColor.getZ(),.a = options.m_clearColor.getW()};
+                    loadActions.mClearColorValues[0] = ClearValue{ .r = options.m_clearColor.getX(),
+                                                                   .g = options.m_clearColor.getY(),
+                                                                   .b = options.m_clearColor.getZ(),
+                                                                   .a = options.m_clearColor.getW() };
                     std::array targets = {
                         outputBuffer,
                     };
-                    cmdBindRenderTargets(
-                        cmd,
-                        targets.size(),
-                        targets.data(),
-                        depthBuffer,
-                        &loadActions,
-                        nullptr,
-                        nullptr,
-                        -1,
-                        -1);
+                    cmdBindRenderTargets(cmd, targets.size(), targets.data(), depthBuffer, &loadActions, nullptr, nullptr, -1, -1);
                 }
                 cmdSetViewport(cmd, 0.0f, 0.0f, outputBuffer->mWidth, outputBuffer->mHeight, 0.0f, 1.0f);
                 cmdSetScissor(cmd, 0, 0, outputBuffer->mWidth, outputBuffer->mHeight);
@@ -2992,7 +2989,12 @@ namespace hpl {
                     params[paramCount++].ppTextures = &positionBuffer->pTexture;
                     params[paramCount].pName = "specularMap";
                     params[paramCount++].ppTextures = &specularBuffer->pTexture;
-                    updateDescriptorSet(frame.m_renderer->Rend(), frameDescriptorIndex, m_lightPerFrameSet[frame.m_frameIndex].m_handle, paramCount, params);
+                    updateDescriptorSet(
+                        frame.m_renderer->Rend(),
+                        frameDescriptorIndex,
+                        m_lightPerFrameSet[frame.m_frameIndex].m_handle,
+                        paramCount,
+                        params);
                 }
 
                 cmdBindDescriptorSet(cmd, frameDescriptorIndex, m_lightPerFrameSet[frame.m_frameIndex].m_handle);
@@ -3008,37 +3010,43 @@ namespace hpl {
                     cmdSetStencilReferenceValue(cmd, 0xff);
 
                     std::array elements = { eVertexBufferElement_Position };
-                    LegacyVertexBuffer::GeometryBinding binding{};
                     auto lightShape = GetLightShape(light->m_light, eDeferredShapeQuality_High);
                     ASSERT(lightShape && "Light shape not found");
-                    static_cast<LegacyVertexBuffer*>(lightShape)->resolveGeometryBinding(frame.m_currentFrame, elements, &binding);
-                    LegacyVertexBuffer::cmdBindGeometry(cmd, frame.m_resourcePool, binding);
+                    DrawPacket packet =
+                        static_cast<LegacyVertexBuffer*>(lightShape)->resolveGeometryBinding(frame.m_currentFrame, elements);
+                    DrawPacket::cmdBindBuffers(cmd, frame.m_resourcePool, &packet);
 
                     cmdBindPipeline(cmd, options.m_invert ? m_lightStencilPipelineCW.m_handle : m_lightStencilPipelineCCW.m_handle);
                     uint32_t instance = cmdBindLightDescriptor(light); // bind light descriptor light uniforms
                     cmdBindPushConstants(cmd, m_lightPassRootSignature.m_handle, lightRootConstantIndex, &instance);
-                    cmdDrawIndexed(cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+                    cmdDrawIndexed(cmd, packet.numberOfIndecies(), 0, 0);
 
                     switch (light->m_light->GetLightType()) {
                     case eLightType_Point:
                         cmdBindPipeline(
                             cmd,
                             m_pointLightPipeline
-                                [(options.m_invert ? LightPipelineVariants::LightPipelineVariant_CCW : LightPipelineVariants::LightPipelineVariant_CW) | LightPipelineVariants::LightPipelineVariant_StencilTest]
+                                [(options.m_invert ? LightPipelineVariants::LightPipelineVariant_CCW
+                                                   : LightPipelineVariants::LightPipelineVariant_CW) |
+                                 LightPipelineVariants::LightPipelineVariant_StencilTest]
                                     .m_handle);
                         break;
                     case eLightType_Spot:
                         cmdBindPipeline(
                             cmd,
                             m_spotLightPipeline
-                                [(options.m_invert ? LightPipelineVariants::LightPipelineVariant_CCW : LightPipelineVariants::LightPipelineVariant_CW) | LightPipelineVariants::LightPipelineVariant_StencilTest]
+                                [(options.m_invert ? LightPipelineVariants::LightPipelineVariant_CCW
+                                                   : LightPipelineVariants::LightPipelineVariant_CW) |
+                                 LightPipelineVariants::LightPipelineVariant_StencilTest]
                                     .m_handle);
                         break;
                     case eLightType_Box:
                         cmdBindPipeline(
                             cmd,
                             m_boxLightPipeline
-                                [(options.m_invert ? LightPipelineVariants::LightPipelineVariant_CCW : LightPipelineVariants::LightPipelineVariant_CW) | LightPipelineVariants::LightPipelineVariant_StencilTest]
+                                [(options.m_invert ? LightPipelineVariants::LightPipelineVariant_CCW
+                                                   : LightPipelineVariants::LightPipelineVariant_CW) |
+                                 LightPipelineVariants::LightPipelineVariant_StencilTest]
                                     .m_handle);
                         break;
                     default:
@@ -3046,7 +3054,7 @@ namespace hpl {
                         break;
                     }
                     cmdBindPushConstants(cmd, m_lightPassRootSignature.m_handle, lightRootConstantIndex, &instance);
-                    cmdDrawIndexed(cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+                    cmdDrawIndexed(cmd, packet.numberOfIndecies(), 0, 0);
                     {
                         LoadActionsDesc loadActions = {};
                         loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
@@ -3058,29 +3066,18 @@ namespace hpl {
                         cmdBindRenderTargets(cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
                         {
                             std::array rtBarriers = {
-                                RenderTargetBarrier{
-                                    depthBuffer, RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_PRESENT },
+                                RenderTargetBarrier{ depthBuffer, RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_PRESENT },
                             };
                             cmdResourceBarrier(cmd, 0, NULL, 0, nullptr, rtBarriers.size(), rtBarriers.data());
                         }
                         {
                             std::array rtBarriers = {
-                                RenderTargetBarrier{
-                                   depthBuffer, RESOURCE_STATE_PRESENT, RESOURCE_STATE_DEPTH_WRITE },
+                                RenderTargetBarrier{ depthBuffer, RESOURCE_STATE_PRESENT, RESOURCE_STATE_DEPTH_WRITE },
                             };
                             cmdResourceBarrier(cmd, 0, NULL, 0, nullptr, rtBarriers.size(), rtBarriers.data());
                         }
 
-                        cmdBindRenderTargets(
-                            cmd,
-                            targets.size(),
-                            targets.data(),
-                            depthBuffer,
-                            &loadActions,
-                            nullptr,
-                            nullptr,
-                            -1,
-                            -1);
+                        cmdBindRenderTargets(cmd, targets.size(), targets.data(), depthBuffer, &loadActions, nullptr, nullptr, -1, -1);
                     }
                 }
                 cmdEndDebugMarker(cmd);
@@ -3097,12 +3094,20 @@ namespace hpl {
                                     .m_handle);
                         break;
                     case eLightType_Spot:
-                        cmdBindPipeline(cmd, m_spotLightPipeline[options.m_invert ? LightPipelineVariants::LightPipelineVariant_CCW
-                                                  : LightPipelineVariants::LightPipelineVariant_CW].m_handle);
+                        cmdBindPipeline(
+                            cmd,
+                            m_spotLightPipeline
+                                [options.m_invert ? LightPipelineVariants::LightPipelineVariant_CCW
+                                                  : LightPipelineVariants::LightPipelineVariant_CW]
+                                    .m_handle);
                         break;
                     case eLightType_Box:
-                        cmdBindPipeline(cmd, m_boxLightPipeline[options.m_invert ? LightPipelineVariants::LightPipelineVariant_CCW
-                                                  : LightPipelineVariants::LightPipelineVariant_CW].m_handle);
+                        cmdBindPipeline(
+                            cmd,
+                            m_boxLightPipeline
+                                [options.m_invert ? LightPipelineVariants::LightPipelineVariant_CCW
+                                                  : LightPipelineVariants::LightPipelineVariant_CW]
+                                    .m_handle);
                         break;
                     default:
                         ASSERT(false && "Unsupported light type");
@@ -3110,15 +3115,14 @@ namespace hpl {
                     }
 
                     std::array targets = { eVertexBufferElement_Position };
-                    LegacyVertexBuffer::GeometryBinding binding{};
                     auto lightShape = GetLightShape(light->m_light, eDeferredShapeQuality_High);
                     ASSERT(lightShape && "Light shape not found");
-                    static_cast<LegacyVertexBuffer*>(lightShape)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
+                    DrawPacket packet = static_cast<LegacyVertexBuffer*>(lightShape)->resolveGeometryBinding(frame.m_currentFrame, targets);
 
                     uint32_t instance = cmdBindLightDescriptor(light);
-                    LegacyVertexBuffer::cmdBindGeometry(cmd, frame.m_resourcePool, binding);
+                    DrawPacket::cmdBindBuffers(cmd, frame.m_resourcePool, &packet);
                     cmdBindPushConstants(cmd, m_lightPassRootSignature.m_handle, lightRootConstantIndex, &instance);
-                    cmdDrawIndexed(cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+                    cmdDrawIndexed(cmd, packet.numberOfIndecies(), 0, 0);
                 }
                 cmdEndDebugMarker(cmd);
             }
@@ -3150,14 +3154,21 @@ namespace hpl {
             cmdBindRenderTargets(cmd, targets.size(), targets.data(), depthBuffer, &loadActions, NULL, NULL, -1, -1);
             cmdSetViewport(cmd, 0.0f, 0.0f, colorBuffer->mWidth, colorBuffer->mHeight, 0.0f, 1.0f);
             cmdSetScissor(cmd, 0, 0, colorBuffer->mWidth, colorBuffer->mHeight);
-            cmdBindPipeline(cmd, options.m_invert ? m_materialSolidPass.m_solidDiffuseParallaxPipelineCW.m_handle: m_materialSolidPass.m_solidDiffuseParallaxPipeline.m_handle);
+            cmdBindPipeline(
+                cmd,
+                options.m_invert ? m_materialSolidPass.m_solidDiffuseParallaxPipelineCW.m_handle
+                                 : m_materialSolidPass.m_solidDiffuseParallaxPipeline.m_handle);
 
             cmdBindDescriptorSet(cmd, frameDescriptorIndex, m_materialSet.m_frameSet[frame.m_frameIndex].m_handle);
 
             for (auto& diffuseItem : renderList.GetRenderableItems(eRenderListType_Diffuse)) {
                 cMaterial* pMaterial = diffuseItem->GetMaterial();
-                iVertexBuffer* vertexBuffer = diffuseItem->GetVertexBuffer();
-                if (pMaterial == nullptr || vertexBuffer == nullptr) {
+                std::array targets = { eVertexBufferElement_Position,
+                                       eVertexBufferElement_Texture0,
+                                       eVertexBufferElement_Normal,
+                                       eVertexBufferElement_Texture1Tangent };
+                DrawPacket packet = diffuseItem->ResolveDrawPacket(frame, targets);
+                if (pMaterial == nullptr || packet.m_type == DrawPacket::Unknown) {
                     continue;
                 }
 
@@ -3165,15 +3176,9 @@ namespace hpl {
                 MaterialRootConstant materialConst = {};
                 uint32_t instance = cmdBindMaterialAndObject(cmd, frame, pMaterial, diffuseItem);
                 materialConst.objectId = instance;
-                std::array targets = { eVertexBufferElement_Position,
-                                       eVertexBufferElement_Texture0,
-                                       eVertexBufferElement_Normal,
-                                       eVertexBufferElement_Texture1Tangent };
-                LegacyVertexBuffer::GeometryBinding binding;
-                static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
-                LegacyVertexBuffer::cmdBindGeometry(cmd, frame.m_resourcePool, binding);
+                DrawPacket::cmdBindBuffers(cmd, frame.m_resourcePool, &packet);
                 cmdBindPushConstants(cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
-                cmdDrawIndexed(cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+                cmdDrawIndexed(cmd, packet.numberOfIndecies(), 0, 0);
             }
             cmdEndDebugMarker(cmd);
         }
@@ -3196,23 +3201,25 @@ namespace hpl {
             cmdBindDescriptorSet(cmd, frameDescriptorIndex, m_materialSet.m_frameSet[frame.m_frameIndex].m_handle);
             for (auto& decalItem : m_rendererList.GetRenderableItems(eRenderListType_Decal)) {
                 cMaterial* pMaterial = decalItem->GetMaterial();
-                iVertexBuffer* vertexBuffer = decalItem->GetVertexBuffer();
-                if (pMaterial == nullptr || vertexBuffer == nullptr) {
+                std::array targets = { eVertexBufferElement_Position, eVertexBufferElement_Texture0, eVertexBufferElement_Color0 };
+                DrawPacket packet = decalItem->ResolveDrawPacket(frame, targets);
+                if (pMaterial == nullptr || packet.m_type == DrawPacket::Unknown) {
                     continue;
                 }
                 ASSERT(pMaterial->GetBlendMode() < eMaterialBlendMode_LastEnum && "Invalid blend mode");
                 ASSERT(pMaterial->Descriptor().m_id == MaterialID::Decal && "Invalid material type");
-                cmdBindPipeline(cmd, options.m_invert ? m_decalPipelineCW[pMaterial->GetBlendMode()].m_handle : m_decalPipeline[pMaterial->GetBlendMode()].m_handle);
+                cmdBindPipeline(
+                    cmd,
+                    options.m_invert ? m_decalPipelineCW[pMaterial->GetBlendMode()].m_handle
+                                     : m_decalPipeline[pMaterial->GetBlendMode()].m_handle);
 
-                std::array targets = { eVertexBufferElement_Position, eVertexBufferElement_Texture0, eVertexBufferElement_Color0 };
                 MaterialRootConstant materialConst = {};
                 uint32_t instance = cmdBindMaterialAndObject(cmd, frame, pMaterial, decalItem);
                 materialConst.objectId = instance;
-                LegacyVertexBuffer::GeometryBinding binding;
-                static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
-                LegacyVertexBuffer::cmdBindGeometry(cmd, frame.m_resourcePool, binding);
+                // LegacyVertexBuffer::GeometryBinding binding;
+                DrawPacket::cmdBindBuffers(cmd, frame.m_resourcePool, &packet);
                 cmdBindPushConstants(cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
-                cmdDrawIndexed(cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+                cmdDrawIndexed(cmd, packet.numberOfIndecies(), 0, 0);
             }
             cmdEndDebugMarker(cmd);
         }
@@ -3232,7 +3239,6 @@ namespace hpl {
         cMatrixf viewMat,
         cMatrixf projectionMat,
         AdditionalZPassOptions options) {
-
         ASSERT(depthBuffer && "Depth buffer not created");
         ASSERT(hiZBuffer && "Depth buffer not created");
 
@@ -3298,7 +3304,6 @@ namespace hpl {
                     test.m_renderable = pObject;
 
                     cMaterial* pMaterial = pObject->GetMaterial();
-                    iVertexBuffer* vertexBuffer = pObject->GetVertexBuffer();
 
                     if (pObject && pObject->GetRenderFrameCount() != iRenderer::GetRenderFrameCount()) {
                         pObject->SetRenderFrameCount(iRenderer::GetRenderFrameCount());
@@ -3312,10 +3317,11 @@ namespace hpl {
                     ////////////////////////////////////////
                     // Update per viewport specific and set amtrix point
                     // Skip this for non-decal translucent! This is because the water rendering might mess it up otherwise!
-                    if (pMaterial == NULL || cMaterial::IsTranslucent(pMaterial->Descriptor().m_id) == false || pMaterial->Descriptor().m_id == MaterialID::Decal) {
+                    if (pMaterial == NULL || cMaterial::IsTranslucent(pMaterial->Descriptor().m_id) == false ||
+                        pMaterial->Descriptor().m_id == MaterialID::Decal) {
                         // skip rendering if the update return false
                         if (pObject->UpdateGraphicsForViewport(apFrustum, frameTime) == false) {
-                            return;
+                            continue;
                         }
 
                         pObject->SetModelMatrixPtr(pObject->GetModelMatrix(apFrustum));
@@ -3383,12 +3389,7 @@ namespace hpl {
                 static_cast<float>(depthBuffer->mHeight),
                 0.0f,
                 1.0f);
-            cmdSetScissor(
-                m_prePassCmd.m_handle,
-                0,
-                0,
-                static_cast<float>(depthBuffer->mWidth),
-                static_cast<float>(depthBuffer->mHeight));
+            cmdSetScissor(m_prePassCmd.m_handle, 0, 0, static_cast<float>(depthBuffer->mWidth), static_cast<float>(depthBuffer->mHeight));
             cmdBindPipeline(m_prePassCmd.m_handle, options.m_invert ? m_zPassPipelineCW.m_handle : m_zPassPipelineCCW.m_handle);
 
             cmdBindDescriptorSet(m_prePassCmd.m_handle, frameDescriptorIndex, m_materialSet.m_frameSet[frame.m_frameIndex].m_handle);
@@ -3397,7 +3398,6 @@ namespace hpl {
             for (size_t i = 0; i < uniformTest.size(); i++) {
                 auto& test = uniformTest[i];
                 cMaterial* pMaterial = test.m_renderable->GetMaterial();
-                iVertexBuffer* vertexBuffer = test.m_renderable->GetVertexBuffer();
 
                 ASSERT(uniformTest.size() < MaxObjectTest && "Too many renderables");
                 auto* pBoundingVolume = test.m_renderable->GetBoundingVolume();
@@ -3410,22 +3410,24 @@ namespace hpl {
                 reinterpret_cast<float4*>(updateDesc.pMappedData)[1] = float4(boundBoxMax.x, boundBoxMax.y, boundBoxMax.z, 0.0f);
                 endUpdateResource(&updateDesc, nullptr);
 
-                if (!test.m_preZPass || !vertexBuffer || !pMaterial || cMaterial::IsTranslucent(pMaterial->Descriptor().m_id)) {
+                if (!test.m_preZPass || !pMaterial || cMaterial::IsTranslucent(pMaterial->Descriptor().m_id)) {
                     continue;
                 }
 
-                MaterialRootConstant materialConst = {};
-                uint32_t instance = cmdBindMaterialAndObject(m_prePassCmd.m_handle, frame, pMaterial, test.m_renderable, {});
-                materialConst.objectId = instance;
                 std::array targets = { eVertexBufferElement_Position,
                                        eVertexBufferElement_Texture0,
                                        eVertexBufferElement_Normal,
                                        eVertexBufferElement_Texture1Tangent };
-                LegacyVertexBuffer::GeometryBinding binding{};
-                static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
-                LegacyVertexBuffer::cmdBindGeometry(m_prePassCmd.m_handle, frame.m_resourcePool, binding);
+                DrawPacket packet = test.m_renderable->ResolveDrawPacket(frame, targets);
+                if (packet.m_type == DrawPacket::Unknown) {
+                    continue;
+                }
+                MaterialRootConstant materialConst = {};
+                uint32_t instance = cmdBindMaterialAndObject(m_prePassCmd.m_handle, frame, pMaterial, test.m_renderable, {});
+                materialConst.objectId = instance;
+                DrawPacket::cmdBindBuffers(m_prePassCmd.m_handle, frame.m_resourcePool, &packet);
                 cmdBindPushConstants(m_prePassCmd.m_handle, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
-                cmdDrawIndexed(m_prePassCmd.m_handle, binding.m_indexBuffer.numIndicies, 0, 0);
+                cmdDrawIndexed(m_prePassCmd.m_handle, packet.numberOfIndecies(), 0, 0);
             }
 
             uniformPropBlock.maxMipLevel = hiZBuffer->mMipLevels - 1;
@@ -3440,9 +3442,8 @@ namespace hpl {
         }
         {
             cmdBeginDebugMarker(m_prePassCmd.m_handle, 1, 1, 0, "Occlusion Query");
-            LegacyVertexBuffer::GeometryBinding binding{};
             std::array targets = { eVertexBufferElement_Position };
-            static_cast<LegacyVertexBuffer*>(m_box.get())->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
+            DrawPacket packet = static_cast<LegacyVertexBuffer*>(m_box.get())->resolveGeometryBinding(frame.m_currentFrame, targets);
 
             uint32_t occlusionObjectIndex = getDescriptorIndexFromName(m_rootSignatureOcclusuion.m_handle, "rootConstant");
             uint32_t occlusionIndex = 0;
@@ -3453,9 +3454,8 @@ namespace hpl {
                 if (TypeInfo<hpl::cBillboard>::IsType(*query.m_renderable)) {
                     cBillboard* pBillboard = static_cast<cBillboard*>(query.m_renderable);
 
-                    auto mvp = cMath::ToForgeMatrix4(
-                        cMath::MatrixMul(
-                            viewProj, cMath::MatrixMul(pBillboard->GetWorldMatrix(), cMath::MatrixScale(pBillboard->GetHaloSourceSize()))));
+                    auto mvp = cMath::ToForgeMatrix4(cMath::MatrixMul(
+                        viewProj, cMath::MatrixMul(pBillboard->GetWorldMatrix(), cMath::MatrixScale(pBillboard->GetHaloSourceSize()))));
 
                     BufferUpdateDesc updateDesc = { m_occlusionUniformBuffer.m_handle, m_occlusionIndex * sizeof(mat4) };
                     beginUpdateResource(&updateDesc);
@@ -3465,20 +3465,20 @@ namespace hpl {
                     cmdBindPushConstants(
                         m_prePassCmd.m_handle, m_rootSignatureOcclusuion.m_handle, occlusionObjectIndex, &m_occlusionIndex);
 
-                    LegacyVertexBuffer::cmdBindGeometry(m_prePassCmd.m_handle, frame.m_resourcePool, binding);
+                    DrawPacket::cmdBindBuffers(m_prePassCmd.m_handle, frame.m_resourcePool, &packet);
 
                     QueryDesc queryDesc = {};
                     queryDesc.mIndex = queryIndex++;
                     cmdBindPipeline(m_prePassCmd.m_handle, m_pipelineOcclusionQuery.m_handle);
                     cmdBeginQuery(m_prePassCmd.m_handle, m_occlusionQuery.m_handle, &queryDesc);
-                    cmdDrawIndexed(m_prePassCmd.m_handle, binding.m_indexBuffer.numIndicies, 0, 0);
+                    cmdDrawIndexed(m_prePassCmd.m_handle, packet.numberOfIndecies(), 0, 0);
                     cmdEndQuery(m_prePassCmd.m_handle, m_occlusionQuery.m_handle, &queryDesc);
                     query.m_queryIndex = queryDesc.mIndex;
 
                     queryDesc.mIndex = queryIndex++;
                     cmdBindPipeline(m_prePassCmd.m_handle, m_pipelineMaxOcclusionQuery.m_handle);
                     cmdBeginQuery(m_prePassCmd.m_handle, m_occlusionQuery.m_handle, &queryDesc);
-                    cmdDrawIndexed(m_prePassCmd.m_handle, binding.m_indexBuffer.numIndicies, 0, 0);
+                    cmdDrawIndexed(m_prePassCmd.m_handle, packet.numberOfIndecies(), 0, 0);
                     cmdEndQuery(m_prePassCmd.m_handle, m_occlusionQuery.m_handle, &queryDesc);
                     query.m_maxQueryIndex = queryDesc.mIndex;
 
@@ -3558,7 +3558,8 @@ namespace hpl {
                 cmdResourceBarrier(m_prePassCmd.m_handle, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
             }
             {
-                std::array rtBarriers = { RenderTargetBarrier { hiZBuffer, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE } };
+                std::array rtBarriers = { RenderTargetBarrier{
+                    hiZBuffer, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE } };
                 cmdResourceBarrier(m_prePassCmd.m_handle, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
             }
             cmdEndDebugMarker(m_prePassCmd.m_handle);
@@ -3582,14 +3583,14 @@ namespace hpl {
                 cmdBindPipeline(m_prePassCmd.m_handle, m_pipelineAABBOcclusionTest.m_handle);
                 cmdDispatch(m_prePassCmd.m_handle, static_cast<uint32_t>(uniformTest.size() / 128) + 1, 1, 1);
                 {
-                    std::array rtBarriers = { RenderTargetBarrier { hiZBuffer, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_UNORDERED_ACCESS } };
+                    std::array rtBarriers = { RenderTargetBarrier{
+                        hiZBuffer, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_UNORDERED_ACCESS } };
                     cmdResourceBarrier(m_prePassCmd.m_handle, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
                 }
             }
             cmdEndDebugMarker(m_prePassCmd.m_handle);
             cmdResolveQuery(m_prePassCmd.m_handle, m_occlusionQuery.m_handle, m_occlusionReadBackBuffer.m_handle, 0, queryIndex);
             endCmd(m_prePassCmd.m_handle);
-
 
             // Submit the gpu work.
             QueueSubmitDesc submitDesc = {};
@@ -3648,23 +3649,24 @@ namespace hpl {
                         renderable->GetCoverageAmount() >= 1 ? eMaterialRenderMode_Z : eMaterialRenderMode_Z_Dissolve;
 
                     cMaterial* pMaterial = renderable->GetMaterial();
-                    iVertexBuffer* vertexBuffer = renderable->GetVertexBuffer();
-                    if (!vertexBuffer || !pMaterial || cMaterial::IsTranslucent(pMaterial->Descriptor().m_id)) {
+                    if (!pMaterial || cMaterial::IsTranslucent(pMaterial->Descriptor().m_id)) {
+                        continue;
+                    }
+                    std::array targets = { eVertexBufferElement_Position,
+                                           eVertexBufferElement_Texture0,
+                                           eVertexBufferElement_Normal,
+                                           eVertexBufferElement_Texture1Tangent };
+                    DrawPacket drawPacket = renderable->ResolveDrawPacket(frame, targets);
+                    if (drawPacket.m_type == DrawPacket::Unknown) {
                         continue;
                     }
 
                     MaterialRootConstant materialConst = {};
                     uint32_t instance = cmdBindMaterialAndObject(cmd, frame, pMaterial, renderable);
                     materialConst.objectId = instance;
-                    std::array targets = { eVertexBufferElement_Position,
-                                           eVertexBufferElement_Texture0,
-                                           eVertexBufferElement_Normal,
-                                           eVertexBufferElement_Texture1Tangent };
-                    LegacyVertexBuffer::GeometryBinding binding{};
-                    static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
-                    LegacyVertexBuffer::cmdBindGeometry(cmd, frame.m_resourcePool, binding);
+                    DrawPacket::cmdBindBuffers(frame.m_cmd, frame.m_resourcePool, &drawPacket);
                     cmdBindPushConstants(cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
-                    cmdDrawIndexed(cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+                    cmdDrawIndexed(cmd, drawPacket.numberOfIndecies(), 0, 0);
                 }
             }
         }
@@ -3673,11 +3675,7 @@ namespace hpl {
     }
 
     uint32_t cRendererDeferred::cmdBindMaterialAndObject(
-        Cmd* cmd,
-        const ForgeRenderer::Frame& frame,
-        cMaterial* apMaterial,
-        iRenderable* apObject,
-        std::optional<cMatrixf> modelMatrix) {
+        Cmd* cmd, const ForgeRenderer::Frame& frame, cMaterial* apMaterial, iRenderable* apObject, std::optional<cMatrixf> modelMatrix) {
         uint32_t id = folly::hash::fnv32_buf(
             reinterpret_cast<const char*>(apObject),
             sizeof(apObject),
@@ -3700,7 +3698,8 @@ namespace hpl {
             BufferUpdateDesc updateDesc = { m_materialSet.m_materialUniformBuffer.m_handle,
                                             apMaterial->Index() * sizeof(hpl::material::UniformMaterialBlock) };
             beginUpdateResource(&updateDesc);
-            (*reinterpret_cast<material::UniformMaterialBlock*>(updateDesc.pMappedData)) = material::UniformMaterialBlock::CreateFromMaterial(*apMaterial);
+            (*reinterpret_cast<material::UniformMaterialBlock*>(updateDesc.pMappedData)) =
+                material::UniformMaterialBlock::CreateFromMaterial(*apMaterial);
             endUpdateResource(&updateDesc, NULL);
 
             std::array<DescriptorData, 32> params{};
@@ -3764,7 +3763,8 @@ namespace hpl {
                             } else {
                                 float fDist = cMath::Vector3Dist(light->GetWorldPosition(), vCenterPos);
 
-                                fLightAmount += maxColorValue(light->GetDiffuseColor()) * cMath::Max(1.0f - (fDist / light->GetRadius()), 0.0f);
+                                fLightAmount +=
+                                    maxColorValue(light->GetDiffuseColor()) * cMath::Max(1.0f - (fDist / light->GetRadius()), 0.0f);
                             }
 
                             if (fLightAmount >= 1.0f) {
@@ -3787,414 +3787,472 @@ namespace hpl {
         }
         cmdBindDescriptorSet(
             cmd,
-            detail::resolveMaterialID(apMaterial->GetTextureAntistropy(), apMaterial->GetTextureWrap(), apMaterial->GetTextureFilter()),
+            detail::resolveTextureFilterGroup(apMaterial->GetTextureAntistropy(), apMaterial->GetTextureWrap(), apMaterial->GetTextureFilter()),
             m_materialSet.m_materialConstSet.m_handle);
         cmdBindDescriptorSet(cmd, apMaterial->Index(), m_materialSet.m_perBatchSet[frame.m_frameIndex].m_handle);
         return index;
     }
 
-void cRendererDeferred::RebuildGBuffer(ForgeRenderer& renderer, GBuffer& buffer, uint32_t width, uint32_t height) {
-    ClearValue optimizedColorClearBlack = { { 0.0f, 0.0f, 0.0f, 0.0f } };
-    auto deferredRenderTargetDesc = [&]() {
-        RenderTargetDesc renderTarget = {};
-        renderTarget.mArraySize = 1;
-        renderTarget.mClearValue = optimizedColorClearBlack;
-        renderTarget.mDepth = 1;
-        renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
-        renderTarget.mWidth = width;
-        renderTarget.mHeight = height;
-        renderTarget.mSampleCount = SAMPLE_COUNT_1;
-        renderTarget.mSampleQuality = 0;
-        renderTarget.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
-        return renderTarget;
-    };
-    buffer.m_hizDepthBuffer.Load(renderer.Rend(), [&](RenderTarget** handle) {
-        RenderTargetDesc renderTargetDesc = {};
-        renderTargetDesc.mArraySize = 1;
-        renderTargetDesc.mDepth = 1;
-        renderTargetDesc.mMipLevels = std::min<uint8_t>(std::floor(std::log2(std::max(width, height))), MaxHiZMipLevels);
-        renderTargetDesc.mFormat = TinyImageFormat_R32_SFLOAT;
-        renderTargetDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE | DESCRIPTOR_TYPE_RW_TEXTURE;
-        renderTargetDesc.mWidth = width;
-        renderTargetDesc.mHeight = height;
-        renderTargetDesc.mSampleCount = SAMPLE_COUNT_1;
-        renderTargetDesc.mSampleQuality = 0;
-        renderTargetDesc.mStartState = RESOURCE_STATE_UNORDERED_ACCESS;
-        renderTargetDesc.pName = "hi-z depth buffer";
-        addRenderTarget(renderer.Rend(), &renderTargetDesc, handle);
-        return true;
-    });
-
-    buffer.m_depthBuffer.Load(renderer.Rend(), [&](RenderTarget** handle) {
-        auto targetDesc = deferredRenderTargetDesc();
-        targetDesc.mFormat = DepthBufferFormat;
-        targetDesc.mStartState = RESOURCE_STATE_DEPTH_WRITE;
-        targetDesc.pName = "Depth RT";
-        addRenderTarget(renderer.Rend(), &targetDesc, handle);
-        return true;
-    });
-    buffer.m_normalBuffer.Load(renderer.Rend(), [&](RenderTarget** handle) {
-        auto targetDesc = deferredRenderTargetDesc();
-        targetDesc.mFormat = NormalBufferFormat;
-        targetDesc.pName = "Normal RT";
-        addRenderTarget(renderer.Rend(), &targetDesc, handle);
-        return true;
-    });
-    buffer.m_positionBuffer.Load(renderer.Rend(), [&](RenderTarget** handle) {
-        auto targetDesc = deferredRenderTargetDesc();
-        targetDesc.mFormat = PositionBufferFormat;
-        targetDesc.pName = "Position RT";
-        addRenderTarget(renderer.Rend(), &targetDesc, handle);
-        return true;
-    });
-    buffer.m_specularBuffer.Load(renderer.Rend(), [&](RenderTarget** handle) {
-        auto targetDesc = deferredRenderTargetDesc();
-        targetDesc.mFormat = SpecularBufferFormat;
-        targetDesc.pName = "Specular RT";
-        addRenderTarget(renderer.Rend(), &targetDesc, handle);
-        return true;
-    });
-    buffer.m_colorBuffer.Load(renderer.Rend(), [&](RenderTarget** handle) {
-        auto targetDesc = deferredRenderTargetDesc();
-        targetDesc.mFormat = ColorBufferFormat;
-        targetDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE | DESCRIPTOR_TYPE_RW_TEXTURE;
-        targetDesc.pName = "Color RT";
-        addRenderTarget(renderer.Rend(), &targetDesc, handle);
-        return true;
-    });
-    buffer.m_refractionImage.Load([&](Texture** texture) {
-        TextureLoadDesc loadDesc = {};
-        loadDesc.ppTexture = texture;
-        TextureDesc refractionImageDesc = {};
-        refractionImageDesc.mArraySize = 1;
-        refractionImageDesc.mDepth = 1;
-        refractionImageDesc.mMipLevels = 1;
-        refractionImageDesc.mFormat = TinyImageFormat_R8G8B8A8_UNORM;
-        refractionImageDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE | DESCRIPTOR_TYPE_RW_TEXTURE;
-        refractionImageDesc.mWidth = width;
-        refractionImageDesc.mHeight = height;
-        refractionImageDesc.mSampleCount = SAMPLE_COUNT_1;
-        refractionImageDesc.mSampleQuality = 0;
-        refractionImageDesc.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
-        refractionImageDesc.pName = "Refraction Image";
-        loadDesc.pDesc = &refractionImageDesc;
-        addResource(&loadDesc, nullptr);
-        return true;
-    });
-    buffer.m_outputBuffer.Load(renderer.Rend(), [&](RenderTarget** handle) {
-        auto targetDesc = deferredRenderTargetDesc();
-        targetDesc.mFormat = ColorBufferFormat;
-        targetDesc.mDescriptors = DESCRIPTOR_TYPE_RW_TEXTURE | DESCRIPTOR_TYPE_TEXTURE;
-        addRenderTarget(renderer.Rend(), &targetDesc, handle);
-        return true;
-    });
-}
-
-void cRendererDeferred::Draw(
-    Cmd* cmd,
-    const ForgeRenderer::Frame& frame,
-    cViewport& viewport,
-    float afFrameTime,
-    cFrustum* apFrustum,
-    cWorld* apWorld,
-    cRenderSettings* apSettings,
-    bool abSendFrameBufferToPostEffects) {
-    // keep around for the moment ...
-    BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects);
-
-    if (frame.m_currentFrame != m_activeFrame) {
-        m_materialSet.m_objectIndex = 0;
-        m_materialSet.m_objectDescriptorLookup.clear();
-        m_lightIndex = 0;
-        m_lightDescriptorLookup.clear();
-        m_activeFrame = frame.m_currentFrame;
-    }
-
-    const cMatrixf mainFrustumViewInv = cMath::MatrixInverse(apFrustum->GetViewMatrix());
-    const cMatrixf mainFrustumView = apFrustum->GetViewMatrix();
-    const cMatrixf mainFrustumProj = apFrustum->GetProjectionMatrix();
-
-    const Matrix4 mainFrustumViewInvMat = inverse(apFrustum->GetViewMat());
-    const Matrix4 mainFrustumViewMat = apFrustum->GetViewMat();
-    const Matrix4 mainFrustumProjMat = apFrustum->GetProjectionMat();
-
-    // auto& swapChainImage = frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex];
-    auto common = m_boundViewportData.resolve(viewport);
-    if (!common || common->m_size != viewport.GetSize()) {
-        auto* forgeRenderer = Interface<ForgeRenderer>::Get();
-        auto viewportData = std::make_unique<ViewportData>();
-        viewportData->m_size = viewport.GetSize();
-        for (auto& b : viewportData->m_gBuffer) {
-            RebuildGBuffer(*forgeRenderer, b, viewportData->m_size.x, viewportData->m_size.y);
-        }
-        if(common) { // reusing state from gbuffer
-            viewportData->m_reflectionBuffer = std::move(common->m_reflectionBuffer);
-        }
-        for(auto& reflection: viewportData->m_reflectionBuffer) {
-            RebuildGBuffer(*forgeRenderer, reflection.m_buffer, viewportData->m_size.x / 2, viewportData->m_size.y / 2);
-            reflection.m_target = nullptr;// we are clearing targets they are irrelevant when the gbuffer is discarded
-            if(!reflection.m_pool.IsValid() ||
-                !reflection.m_cmd.IsValid() ||
-                !reflection.m_fence.IsValid()) {
-                reflection.m_pool.Load(forgeRenderer->Rend(), [&](CmdPool** pool) {
-                    CmdPoolDesc cmdPoolDesc = {};
-                    cmdPoolDesc.pQueue = forgeRenderer->GetGraphicsQueue();
-                    addCmdPool(forgeRenderer->Rend(), &cmdPoolDesc, pool);
-                    return true;
-                });
-                reflection.m_cmd.Load(forgeRenderer->Rend(),  [&](Cmd** cmd) {
-                    CmdDesc cmdDesc = {};
-                    cmdDesc.pPool = reflection.m_pool.m_handle;
-                    addCmd(forgeRenderer->Rend(), &cmdDesc, cmd);
-                    return true;
-                });
-                reflection.m_fence.Load(forgeRenderer->Rend(), [&](Fence**  fence) {
-                    addFence(forgeRenderer->Rend(), fence);
-                    return true;
-                });
-            }
-        }
-
-        common = m_boundViewportData.update(viewport, std::move(viewportData));
-    }
-
-    auto& currentGBuffer = common->m_gBuffer[frame.m_frameIndex];
-    uint32_t materialObjectIndex = getDescriptorIndexFromName(m_materialRootSignature.m_handle, "materialRootConstant");
-
-    const uint32_t mainFrameIndex = updateFrameDescriptor(
-        frame,
-        frame.m_cmd,
-        apWorld,
-        { .m_size = float2(common->m_size.x, common->m_size.y), .m_viewMat = mainFrustumView, .m_projectionMat = mainFrustumProj });
-
-    {
-
-        std::array<Texture*, MaxReflectionBuffers> reflectionBuffers;
-        for(size_t i = 0; i < common->m_reflectionBuffer.size(); i++) {
-            reflectionBuffers[i] = common->m_reflectionBuffer[i].m_buffer.m_outputBuffer.m_handle->pTexture;
-        }
-        std::array<DescriptorData, 2> params = {};
-        params[0].pName = "refractionMap";
-        params[0].ppTextures = &currentGBuffer.m_refractionImage.m_handle;
-        params[1].pName = "reflectionMap";
-        params[1].ppTextures = reflectionBuffers.data();
-        params[1].mCount = reflectionBuffers.size();
-        updateDescriptorSet(
-            frame.m_renderer->Rend(), mainFrameIndex, m_materialSet.m_frameSet[frame.m_frameIndex].m_handle, params.size(), params.data());
-    }
-
-    frame.m_resourcePool->Push(currentGBuffer.m_colorBuffer);
-    frame.m_resourcePool->Push(currentGBuffer.m_normalBuffer);
-    frame.m_resourcePool->Push(currentGBuffer.m_positionBuffer);
-    frame.m_resourcePool->Push(currentGBuffer.m_specularBuffer);
-    frame.m_resourcePool->Push(currentGBuffer.m_depthBuffer);
-    frame.m_resourcePool->Push(currentGBuffer.m_outputBuffer);
-    frame.m_resourcePool->Push(currentGBuffer.m_refractionImage);
-    // Setup far plane coordinates
-
-    ///////////////////////////
-    // Occlusion testing
-    m_rendererList.BeginAndReset(afFrameTime, apFrustum);
-    cmdPreAndPostZ(
-        frame.m_cmd,
-        apWorld,
-        currentGBuffer.m_preZPassRenderables,
-        frame,
-        m_rendererList,
-        afFrameTime,
-        currentGBuffer.m_depthBuffer.m_handle,
-        currentGBuffer.m_hizDepthBuffer.m_handle,
-        apFrustum,
-        mainFrameIndex,
-        mainFrustumView,
-        mainFrustumProj, {});
-    m_rendererList.End(
-        eRenderListCompileFlag_Diffuse | eRenderListCompileFlag_Translucent | eRenderListCompileFlag_Decal |
-        eRenderListCompileFlag_Illumination | eRenderListCompileFlag_FogArea);
-
-    {
-        cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
-        std::array rtBarriers = {
-            RenderTargetBarrier{ currentGBuffer.m_colorBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
-            RenderTargetBarrier{ currentGBuffer.m_normalBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
-            RenderTargetBarrier{ currentGBuffer.m_positionBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
-            RenderTargetBarrier{ currentGBuffer.m_specularBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
+    void cRendererDeferred::RebuildGBuffer(ForgeRenderer& renderer, GBuffer& buffer, uint32_t width, uint32_t height) {
+        ClearValue optimizedColorClearBlack = { { 0.0f, 0.0f, 0.0f, 0.0f } };
+        auto deferredRenderTargetDesc = [&]() {
+            RenderTargetDesc renderTarget = {};
+            renderTarget.mArraySize = 1;
+            renderTarget.mClearValue = optimizedColorClearBlack;
+            renderTarget.mDepth = 1;
+            renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+            renderTarget.mWidth = width;
+            renderTarget.mHeight = height;
+            renderTarget.mSampleCount = SAMPLE_COUNT_1;
+            renderTarget.mSampleQuality = 0;
+            renderTarget.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
+            return renderTarget;
         };
-        cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
-    }
-    cmdBuildPrimaryGBuffer(frame, frame.m_cmd, mainFrameIndex,
-        m_rendererList,
-        currentGBuffer.m_colorBuffer.m_handle,
-        currentGBuffer.m_normalBuffer.m_handle,
-        currentGBuffer.m_positionBuffer.m_handle,
-        currentGBuffer.m_specularBuffer.m_handle,
-        currentGBuffer.m_depthBuffer.m_handle, {
-            .m_invert = false
+        buffer.m_hizDepthBuffer.Load(renderer.Rend(), [&](RenderTarget** handle) {
+            RenderTargetDesc renderTargetDesc = {};
+            renderTargetDesc.mArraySize = 1;
+            renderTargetDesc.mDepth = 1;
+            renderTargetDesc.mMipLevels = std::min<uint8_t>(std::floor(std::log2(std::max(width, height))), MaxHiZMipLevels);
+            renderTargetDesc.mFormat = TinyImageFormat_R32_SFLOAT;
+            renderTargetDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE | DESCRIPTOR_TYPE_RW_TEXTURE;
+            renderTargetDesc.mWidth = width;
+            renderTargetDesc.mHeight = height;
+            renderTargetDesc.mSampleCount = SAMPLE_COUNT_1;
+            renderTargetDesc.mSampleQuality = 0;
+            renderTargetDesc.mStartState = RESOURCE_STATE_UNORDERED_ACCESS;
+            renderTargetDesc.pName = "hi-z depth buffer";
+            addRenderTarget(renderer.Rend(), &renderTargetDesc, handle);
+            return true;
         });
 
-    {
-        cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
-        std::array rtBarriers = {
-            RenderTargetBarrier{ currentGBuffer.m_colorBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
-            RenderTargetBarrier{ currentGBuffer.m_normalBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
-            RenderTargetBarrier{ currentGBuffer.m_positionBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
-            RenderTargetBarrier{ currentGBuffer.m_specularBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
-            RenderTargetBarrier{ currentGBuffer.m_outputBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
-
-        };
-        cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+        buffer.m_depthBuffer.Load(renderer.Rend(), [&](RenderTarget** handle) {
+            auto targetDesc = deferredRenderTargetDesc();
+            targetDesc.mFormat = DepthBufferFormat;
+            targetDesc.mStartState = RESOURCE_STATE_DEPTH_WRITE;
+            targetDesc.pName = "Depth RT";
+            addRenderTarget(renderer.Rend(), &targetDesc, handle);
+            return true;
+        });
+        buffer.m_normalBuffer.Load(renderer.Rend(), [&](RenderTarget** handle) {
+            auto targetDesc = deferredRenderTargetDesc();
+            targetDesc.mFormat = NormalBufferFormat;
+            targetDesc.pName = "Normal RT";
+            addRenderTarget(renderer.Rend(), &targetDesc, handle);
+            return true;
+        });
+        buffer.m_positionBuffer.Load(renderer.Rend(), [&](RenderTarget** handle) {
+            auto targetDesc = deferredRenderTargetDesc();
+            targetDesc.mFormat = PositionBufferFormat;
+            targetDesc.pName = "Position RT";
+            addRenderTarget(renderer.Rend(), &targetDesc, handle);
+            return true;
+        });
+        buffer.m_specularBuffer.Load(renderer.Rend(), [&](RenderTarget** handle) {
+            auto targetDesc = deferredRenderTargetDesc();
+            targetDesc.mFormat = SpecularBufferFormat;
+            targetDesc.pName = "Specular RT";
+            addRenderTarget(renderer.Rend(), &targetDesc, handle);
+            return true;
+        });
+        buffer.m_colorBuffer.Load(renderer.Rend(), [&](RenderTarget** handle) {
+            auto targetDesc = deferredRenderTargetDesc();
+            targetDesc.mFormat = ColorBufferFormat;
+            targetDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE | DESCRIPTOR_TYPE_RW_TEXTURE;
+            targetDesc.pName = "Color RT";
+            addRenderTarget(renderer.Rend(), &targetDesc, handle);
+            return true;
+        });
+        buffer.m_refractionImage.Load([&](Texture** texture) {
+            TextureLoadDesc loadDesc = {};
+            loadDesc.ppTexture = texture;
+            TextureDesc refractionImageDesc = {};
+            refractionImageDesc.mArraySize = 1;
+            refractionImageDesc.mDepth = 1;
+            refractionImageDesc.mMipLevels = 1;
+            refractionImageDesc.mFormat = TinyImageFormat_R8G8B8A8_UNORM;
+            refractionImageDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE | DESCRIPTOR_TYPE_RW_TEXTURE;
+            refractionImageDesc.mWidth = width;
+            refractionImageDesc.mHeight = height;
+            refractionImageDesc.mSampleCount = SAMPLE_COUNT_1;
+            refractionImageDesc.mSampleQuality = 0;
+            refractionImageDesc.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
+            refractionImageDesc.pName = "Refraction Image";
+            loadDesc.pDesc = &refractionImageDesc;
+            addResource(&loadDesc, nullptr);
+            return true;
+        });
+        buffer.m_outputBuffer.Load(renderer.Rend(), [&](RenderTarget** handle) {
+            auto targetDesc = deferredRenderTargetDesc();
+            targetDesc.mFormat = ColorBufferFormat;
+            targetDesc.mDescriptors = DESCRIPTOR_TYPE_RW_TEXTURE | DESCRIPTOR_TYPE_TEXTURE;
+            addRenderTarget(renderer.Rend(), &targetDesc, handle);
+            return true;
+        });
     }
 
-    if (mpCurrentSettings->mbSSAOActive) {
-        ASSERT(m_hbaoPlusPipeline && "Invalid pipeline");
-        ASSERT(currentGBuffer.m_depthBuffer.IsValid() && "Invalid depth buffer");
-        ASSERT(currentGBuffer.m_normalBuffer.IsValid() && "Invalid depth buffer");
-        ASSERT(currentGBuffer.m_colorBuffer.IsValid() && "Invalid depth buffer");
-        {
-            std::array rtBarriers = {
-                RenderTargetBarrier{ currentGBuffer.m_depthBuffer.m_handle, RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_SHADER_RESOURCE },
-                RenderTargetBarrier{ currentGBuffer.m_colorBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_UNORDERED_ACCESS },
-            };
-            cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+    void cRendererDeferred::Draw(
+        Cmd* cmd,
+        const ForgeRenderer::Frame& frame,
+        cViewport& viewport,
+        float afFrameTime,
+        cFrustum* apFrustum,
+        cWorld* apWorld,
+        cRenderSettings* apSettings,
+        bool abSendFrameBufferToPostEffects) {
+        // keep around for the moment ...
+        BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects);
+
+        if (frame.m_currentFrame != m_activeFrame) {
+            m_materialSet.m_objectIndex = 0;
+            m_materialSet.m_objectDescriptorLookup.clear();
+            m_lightIndex = 0;
+            m_lightDescriptorLookup.clear();
+            m_activeFrame = frame.m_currentFrame;
         }
-        m_hbaoPlusPipeline->cmdDraw(
+
+        const cMatrixf mainFrustumViewInv = cMath::MatrixInverse(apFrustum->GetViewMatrix());
+        const cMatrixf mainFrustumView = apFrustum->GetViewMatrix();
+        const cMatrixf mainFrustumProj = apFrustum->GetProjectionMatrix();
+
+        const Matrix4 mainFrustumViewInvMat = inverse(apFrustum->GetViewMat());
+        const Matrix4 mainFrustumViewMat = apFrustum->GetViewMat();
+        const Matrix4 mainFrustumProjMat = apFrustum->GetProjectionMat();
+
+        // auto& swapChainImage = frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex];
+        auto common = m_boundViewportData.resolve(viewport);
+        if (!common || common->m_size != viewport.GetSize()) {
+            auto* forgeRenderer = Interface<ForgeRenderer>::Get();
+            auto viewportData = std::make_unique<ViewportData>();
+            viewportData->m_size = viewport.GetSize();
+            for (auto& b : viewportData->m_gBuffer) {
+                RebuildGBuffer(*forgeRenderer, b, viewportData->m_size.x, viewportData->m_size.y);
+            }
+            if (common) { // reusing state from gbuffer
+                viewportData->m_reflectionBuffer = std::move(common->m_reflectionBuffer);
+            }
+            for (auto& reflection : viewportData->m_reflectionBuffer) {
+                RebuildGBuffer(*forgeRenderer, reflection.m_buffer, viewportData->m_size.x / 2, viewportData->m_size.y / 2);
+                reflection.m_target = nullptr; // we are clearing targets they are irrelevant when the gbuffer is discarded
+                if (!reflection.m_pool.IsValid() || !reflection.m_cmd.IsValid() || !reflection.m_fence.IsValid()) {
+                    reflection.m_pool.Load(forgeRenderer->Rend(), [&](CmdPool** pool) {
+                        CmdPoolDesc cmdPoolDesc = {};
+                        cmdPoolDesc.pQueue = forgeRenderer->GetGraphicsQueue();
+                        addCmdPool(forgeRenderer->Rend(), &cmdPoolDesc, pool);
+                        return true;
+                    });
+                    reflection.m_cmd.Load(forgeRenderer->Rend(), [&](Cmd** cmd) {
+                        CmdDesc cmdDesc = {};
+                        cmdDesc.pPool = reflection.m_pool.m_handle;
+                        addCmd(forgeRenderer->Rend(), &cmdDesc, cmd);
+                        return true;
+                    });
+                    reflection.m_fence.Load(forgeRenderer->Rend(), [&](Fence** fence) {
+                        addFence(forgeRenderer->Rend(), fence);
+                        return true;
+                    });
+                }
+            }
+
+            common = m_boundViewportData.update(viewport, std::move(viewportData));
+        }
+
+        auto& currentGBuffer = common->m_gBuffer[frame.m_frameIndex];
+        uint32_t materialObjectIndex = getDescriptorIndexFromName(m_materialRootSignature.m_handle, "materialRootConstant");
+
+        const uint32_t mainFrameIndex = updateFrameDescriptor(
             frame,
-            apFrustum,
-            &viewport,
-            currentGBuffer.m_depthBuffer.m_handle->pTexture,
-            currentGBuffer.m_normalBuffer.m_handle->pTexture,
-            currentGBuffer.m_colorBuffer.m_handle->pTexture);
+            frame.m_cmd,
+            apWorld,
+            { .m_size = float2(common->m_size.x, common->m_size.y), .m_viewMat = mainFrustumView, .m_projectionMat = mainFrustumProj });
+
         {
+            std::array<Texture*, MaxReflectionBuffers> reflectionBuffers;
+            for (size_t i = 0; i < common->m_reflectionBuffer.size(); i++) {
+                reflectionBuffers[i] = common->m_reflectionBuffer[i].m_buffer.m_outputBuffer.m_handle->pTexture;
+            }
+            std::array<DescriptorData, 2> params = {};
+            params[0].pName = "refractionMap";
+            params[0].ppTextures = &currentGBuffer.m_refractionImage.m_handle;
+            params[1].pName = "reflectionMap";
+            params[1].ppTextures = reflectionBuffers.data();
+            params[1].mCount = reflectionBuffers.size();
+            updateDescriptorSet(
+                frame.m_renderer->Rend(),
+                mainFrameIndex,
+                m_materialSet.m_frameSet[frame.m_frameIndex].m_handle,
+                params.size(),
+                params.data());
+        }
+
+        frame.m_resourcePool->Push(currentGBuffer.m_colorBuffer);
+        frame.m_resourcePool->Push(currentGBuffer.m_normalBuffer);
+        frame.m_resourcePool->Push(currentGBuffer.m_positionBuffer);
+        frame.m_resourcePool->Push(currentGBuffer.m_specularBuffer);
+        frame.m_resourcePool->Push(currentGBuffer.m_depthBuffer);
+        frame.m_resourcePool->Push(currentGBuffer.m_outputBuffer);
+        frame.m_resourcePool->Push(currentGBuffer.m_refractionImage);
+        // Setup far plane coordinates
+
+        ///////////////////////////
+        // Occlusion testing
+        m_rendererList.BeginAndReset(afFrameTime, apFrustum);
+        cmdPreAndPostZ(
+            frame.m_cmd,
+            apWorld,
+            currentGBuffer.m_preZPassRenderables,
+            frame,
+            m_rendererList,
+            afFrameTime,
+            currentGBuffer.m_depthBuffer.m_handle,
+            currentGBuffer.m_hizDepthBuffer.m_handle,
+            apFrustum,
+            mainFrameIndex,
+            mainFrustumView,
+            mainFrustumProj,
+            {});
+        m_rendererList.End(
+            eRenderListCompileFlag_Diffuse | eRenderListCompileFlag_Translucent | eRenderListCompileFlag_Decal |
+            eRenderListCompileFlag_Illumination | eRenderListCompileFlag_FogArea);
+
+        {
+            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
             std::array rtBarriers = {
-                RenderTargetBarrier{ currentGBuffer.m_depthBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_DEPTH_WRITE },
-                RenderTargetBarrier{ currentGBuffer.m_colorBuffer.m_handle, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE },
+                RenderTargetBarrier{ currentGBuffer.m_colorBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
+                RenderTargetBarrier{ currentGBuffer.m_normalBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
+                RenderTargetBarrier{
+                    currentGBuffer.m_positionBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
+                RenderTargetBarrier{
+                    currentGBuffer.m_specularBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
             };
             cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
         }
-    }
+        cmdBuildPrimaryGBuffer(
+            frame,
+            frame.m_cmd,
+            mainFrameIndex,
+            m_rendererList,
+            currentGBuffer.m_colorBuffer.m_handle,
+            currentGBuffer.m_normalBuffer.m_handle,
+            currentGBuffer.m_positionBuffer.m_handle,
+            currentGBuffer.m_specularBuffer.m_handle,
+            currentGBuffer.m_depthBuffer.m_handle,
+            { .m_invert = false });
 
-    cmdLightPass(
-        frame.m_cmd,
-        frame,
-        apWorld,
-        apFrustum,
-        m_rendererList,
-        mainFrameIndex,
-        currentGBuffer.m_colorBuffer.m_handle,
-        currentGBuffer.m_normalBuffer.m_handle,
-        currentGBuffer.m_positionBuffer.m_handle,
-        currentGBuffer.m_specularBuffer.m_handle,
-        currentGBuffer.m_depthBuffer.m_handle,
-        currentGBuffer.m_outputBuffer.m_handle,
-        mainFrustumView,
-        mainFrustumViewInv,
-        mainFrustumProj, {
-            .m_clearColor = Vector4(apSettings->mClearColor.r,apSettings->mClearColor.g,apSettings->mClearColor.b,apSettings->mClearColor.a)
-        });
+        {
+            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+            std::array rtBarriers = {
+                RenderTargetBarrier{ currentGBuffer.m_colorBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
+                RenderTargetBarrier{ currentGBuffer.m_normalBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
+                RenderTargetBarrier{
+                    currentGBuffer.m_positionBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
+                RenderTargetBarrier{
+                    currentGBuffer.m_specularBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
+                RenderTargetBarrier{ currentGBuffer.m_outputBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
 
-    cmdIlluminationPass(
-        frame.m_cmd,
-        frame,
-        m_rendererList,
-        mainFrameIndex,
-        currentGBuffer.m_depthBuffer.m_handle,
-        currentGBuffer.m_outputBuffer.m_handle,
-        {});
-    // ------------------------------------------------------------------------
-    // Render Illumination Pass --> renders to output target
-    // ------------------------------------------------------------------------
-    {
-        LoadActionsDesc loadActions = {};
-        loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
-        loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
-        std::array targets = {
-            currentGBuffer.m_outputBuffer.m_handle,
-        };
-        cmdBindRenderTargets(
-            frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, nullptr, nullptr, -1, -1);
-        cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, static_cast<float>(common->m_size.x), static_cast<float>(common->m_size.y), 0.0f, 1.0f);
-        cmdSetScissor(frame.m_cmd, 0, 0, common->m_size.x, common->m_size.y);
-        cmdBindPipeline(frame.m_cmd, m_solidIlluminationPipelineCCW.m_handle);
-
-        cmdBindDescriptorSet(frame.m_cmd, mainFrameIndex, m_materialSet.m_frameSet[frame.m_frameIndex].m_handle);
-
-        for (auto& illuminationItem : m_rendererList.GetRenderableItems(eRenderListType_Illumination)) {
-            cMaterial* pMaterial = illuminationItem->GetMaterial();
-            iVertexBuffer* vertexBuffer = illuminationItem->GetVertexBuffer();
-            if (pMaterial == nullptr || vertexBuffer == nullptr) {
-                continue;
-            }
-            ASSERT(pMaterial->Descriptor().m_id == MaterialID::SolidDiffuse && "Invalid material type");
-            MaterialRootConstant materialConst = {};
-            uint32_t instance = cmdBindMaterialAndObject(frame.m_cmd, frame, pMaterial, illuminationItem);
-            materialConst.objectId = instance;
-            std::array targets = {
-                eVertexBufferElement_Position,
-                eVertexBufferElement_Texture0,
             };
-            LegacyVertexBuffer::GeometryBinding binding;
-            static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
-            LegacyVertexBuffer::cmdBindGeometry(frame.m_cmd, frame.m_resourcePool, binding);
-            cmdBindPushConstants(frame.m_cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
-            cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+            cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
         }
-    }
 
-    // ------------------------------------------------------------------------
-    // Render Fog Pass --> output target
-    // ------------------------------------------------------------------------
-    auto fogRenderData = detail::createFogRenderData(m_rendererList.GetFogAreas(), apFrustum);
-    {
-        cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "Fog Box Pass ");
-
-        auto createUniformFog = [&](bool isInsideNearPlane, cFogArea* fogArea) {
-            UniformFogData fogUniformData = {};
-            if (isInsideNearPlane) {
-                fogUniformData.m_flags |= (fogArea->GetShowBacksideWhenInside() ? Fog::PipelineUseBackSide : Fog::PipelineVariantEmpty);
-            } else {
-                cMatrixf mtxInvModelView =
-                    cMath::MatrixInverse(cMath::MatrixMul(apFrustum->GetViewMatrix(), *fogArea->GetModelMatrixPtr()));
-                cVector3f vRayCastStart = cMath::MatrixMul(mtxInvModelView, cVector3f(0));
-
-                cVector3f vNegPlaneDistNeg(
-                    cMath::PlaneToPointDist(cPlanef(-1, 0, 0, 0.5f), vRayCastStart),
-                    cMath::PlaneToPointDist(cPlanef(0, -1, 0, 0.5f), vRayCastStart),
-                    cMath::PlaneToPointDist(cPlanef(0, 0, -1, 0.5f), vRayCastStart));
-                cVector3f vNegPlaneDistPos(
-                    cMath::PlaneToPointDist(cPlanef(1, 0, 0, 0.5f), vRayCastStart),
-                    cMath::PlaneToPointDist(cPlanef(0, 1, 0, 0.5f), vRayCastStart),
-                    cMath::PlaneToPointDist(cPlanef(0, 0, 1, 0.5f), vRayCastStart));
-                fogUniformData.m_invModelRotation = cMath::ToForgeMatrix4(mtxInvModelView.GetRotation());
-                fogUniformData.m_rayCastStart = float4(vRayCastStart.x, vRayCastStart.y, vRayCastStart.z, 0.0f);
-                fogUniformData.m_fogNegPlaneDistNeg =
-                    float4(vNegPlaneDistNeg.x * -1.0f, vNegPlaneDistNeg.y * -1.0f, vNegPlaneDistNeg.z * -1.0f, 0.0f);
-                fogUniformData.m_fogNegPlaneDistPos =
-                    float4(vNegPlaneDistPos.x * -1.0f, vNegPlaneDistPos.y * -1.0f, vNegPlaneDistPos.z * -1.0f, 0.0f);
-                fogUniformData.m_flags |= Fog::PipelineUseOutsideBox;
-                fogUniformData.m_flags |= fogArea->GetShowBacksideWhenOutside() ? Fog::PipelineUseBackSide : Fog::PipelineVariantEmpty;
+        if (mpCurrentSettings->mbSSAOActive) {
+            ASSERT(m_hbaoPlusPipeline && "Invalid pipeline");
+            ASSERT(currentGBuffer.m_depthBuffer.IsValid() && "Invalid depth buffer");
+            ASSERT(currentGBuffer.m_normalBuffer.IsValid() && "Invalid depth buffer");
+            ASSERT(currentGBuffer.m_colorBuffer.IsValid() && "Invalid depth buffer");
+            {
+                std::array rtBarriers = {
+                    RenderTargetBarrier{
+                        currentGBuffer.m_depthBuffer.m_handle, RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_SHADER_RESOURCE },
+                    RenderTargetBarrier{
+                        currentGBuffer.m_colorBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_UNORDERED_ACCESS },
+                };
+                cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
             }
-            const auto fogColor = fogArea->GetColor();
-            fogUniformData.m_color = float4(fogColor.r, fogColor.g, fogColor.b, fogColor.a);
-            fogUniformData.m_start = fogArea->GetStart();
-            fogUniformData.m_length = fogArea->GetEnd() - fogArea->GetStart();
-            fogUniformData.m_falloffExp = fogArea->GetFalloffExp();
+            m_hbaoPlusPipeline->cmdDraw(
+                frame,
+                apFrustum,
+                &viewport,
+                currentGBuffer.m_depthBuffer.m_handle->pTexture,
+                currentGBuffer.m_normalBuffer.m_handle->pTexture,
+                currentGBuffer.m_colorBuffer.m_handle->pTexture);
+            {
+                std::array rtBarriers = {
+                    RenderTargetBarrier{
+                        currentGBuffer.m_depthBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_DEPTH_WRITE },
+                    RenderTargetBarrier{
+                        currentGBuffer.m_colorBuffer.m_handle, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE },
+                };
+                cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+            }
+        }
 
-            const cMatrixf modelMat = fogArea->GetModelMatrixPtr() ? *fogArea->GetModelMatrixPtr() : cMatrixf::Identity;
-            fogUniformData.m_mv = cMath::ToForgeMatrix4(cMath::MatrixMul(mainFrustumView, modelMat));
-            fogUniformData.m_mvp =
-                cMath::ToForgeMatrix4(cMath::MatrixMul(cMath::MatrixMul(mainFrustumProj, mainFrustumView), modelMat));
-            return fogUniformData;
-        };
-        std::vector<cFogArea*> nearPlanFog;
-        size_t fogIndex = 0;
-        for (const auto& fogArea : fogRenderData) {
-            cMatrixf mtxInvBoxSpace = cMath::MatrixInverse(*fogArea.m_fogArea->GetModelMatrixPtr());
-            cVector3f boxSpaceFrustumOrigin = cMath::MatrixMul(mtxInvBoxSpace, apFrustum->GetOrigin());
-            // test if inside near plane
-            if (fogArea.m_insideNearFrustum) {
-                nearPlanFog.emplace_back(fogArea.m_fogArea);
-            } else {
-                UniformFogData uniformData = createUniformFog(false, fogArea.m_fogArea);
+        cmdLightPass(
+            frame.m_cmd,
+            frame,
+            apWorld,
+            apFrustum,
+            m_rendererList,
+            mainFrameIndex,
+            currentGBuffer.m_colorBuffer.m_handle,
+            currentGBuffer.m_normalBuffer.m_handle,
+            currentGBuffer.m_positionBuffer.m_handle,
+            currentGBuffer.m_specularBuffer.m_handle,
+            currentGBuffer.m_depthBuffer.m_handle,
+            currentGBuffer.m_outputBuffer.m_handle,
+            mainFrustumView,
+            mainFrustumViewInv,
+            mainFrustumProj,
+            { .m_clearColor =
+                  Vector4(apSettings->mClearColor.r, apSettings->mClearColor.g, apSettings->mClearColor.b, apSettings->mClearColor.a) });
+
+        cmdIlluminationPass(
+            frame.m_cmd,
+            frame,
+            m_rendererList,
+            mainFrameIndex,
+            currentGBuffer.m_depthBuffer.m_handle,
+            currentGBuffer.m_outputBuffer.m_handle,
+            {});
+        // ------------------------------------------------------------------------
+        // Render Illumination Pass --> renders to output target
+        // ------------------------------------------------------------------------
+        {
+            LoadActionsDesc loadActions = {};
+            loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
+            loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
+            std::array targets = {
+                currentGBuffer.m_outputBuffer.m_handle,
+            };
+            cmdBindRenderTargets(
+                frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, nullptr, nullptr, -1, -1);
+            cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, static_cast<float>(common->m_size.x), static_cast<float>(common->m_size.y), 0.0f, 1.0f);
+            cmdSetScissor(frame.m_cmd, 0, 0, common->m_size.x, common->m_size.y);
+            cmdBindPipeline(frame.m_cmd, m_solidIlluminationPipelineCCW.m_handle);
+
+            cmdBindDescriptorSet(frame.m_cmd, mainFrameIndex, m_materialSet.m_frameSet[frame.m_frameIndex].m_handle);
+
+            for (auto& illuminationItem : m_rendererList.GetRenderableItems(eRenderListType_Illumination)) {
+                cMaterial* pMaterial = illuminationItem->GetMaterial();
+                std::array targets = {
+                    eVertexBufferElement_Position,
+                    eVertexBufferElement_Texture0,
+                };
+                DrawPacket packet = illuminationItem->ResolveDrawPacket(frame, targets);
+
+                if (pMaterial == nullptr || packet.m_type == DrawPacket::Unknown) {
+                    continue;
+                }
+                ASSERT(pMaterial->Descriptor().m_id == MaterialID::SolidDiffuse && "Invalid material type");
+                MaterialRootConstant materialConst = {};
+                uint32_t instance = cmdBindMaterialAndObject(frame.m_cmd, frame, pMaterial, illuminationItem);
+                materialConst.objectId = instance;
+
+                DrawPacket::cmdBindBuffers(cmd, frame.m_resourcePool, &packet);
+                cmdBindPushConstants(frame.m_cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
+                cmdDrawIndexed(frame.m_cmd, packet.numberOfIndecies(), 0, 0);
+            }
+        }
+
+        // ------------------------------------------------------------------------
+        // Render Fog Pass --> output target
+        // ------------------------------------------------------------------------
+        auto fogRenderData = detail::createFogRenderData(m_rendererList.GetFogAreas(), apFrustum);
+        {
+            cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "Fog Box Pass ");
+
+            auto createUniformFog = [&](bool isInsideNearPlane, cFogArea* fogArea) {
+                UniformFogData fogUniformData = {};
+                if (isInsideNearPlane) {
+                    fogUniformData.m_flags |= (fogArea->GetShowBacksideWhenInside() ? Fog::PipelineUseBackSide : Fog::PipelineVariantEmpty);
+                } else {
+                    cMatrixf mtxInvModelView =
+                        cMath::MatrixInverse(cMath::MatrixMul(apFrustum->GetViewMatrix(), *fogArea->GetModelMatrixPtr()));
+                    cVector3f vRayCastStart = cMath::MatrixMul(mtxInvModelView, cVector3f(0));
+
+                    cVector3f vNegPlaneDistNeg(
+                        cMath::PlaneToPointDist(cPlanef(-1, 0, 0, 0.5f), vRayCastStart),
+                        cMath::PlaneToPointDist(cPlanef(0, -1, 0, 0.5f), vRayCastStart),
+                        cMath::PlaneToPointDist(cPlanef(0, 0, -1, 0.5f), vRayCastStart));
+                    cVector3f vNegPlaneDistPos(
+                        cMath::PlaneToPointDist(cPlanef(1, 0, 0, 0.5f), vRayCastStart),
+                        cMath::PlaneToPointDist(cPlanef(0, 1, 0, 0.5f), vRayCastStart),
+                        cMath::PlaneToPointDist(cPlanef(0, 0, 1, 0.5f), vRayCastStart));
+                    fogUniformData.m_invModelRotation = cMath::ToForgeMatrix4(mtxInvModelView.GetRotation());
+                    fogUniformData.m_rayCastStart = float4(vRayCastStart.x, vRayCastStart.y, vRayCastStart.z, 0.0f);
+                    fogUniformData.m_fogNegPlaneDistNeg =
+                        float4(vNegPlaneDistNeg.x * -1.0f, vNegPlaneDistNeg.y * -1.0f, vNegPlaneDistNeg.z * -1.0f, 0.0f);
+                    fogUniformData.m_fogNegPlaneDistPos =
+                        float4(vNegPlaneDistPos.x * -1.0f, vNegPlaneDistPos.y * -1.0f, vNegPlaneDistPos.z * -1.0f, 0.0f);
+                    fogUniformData.m_flags |= Fog::PipelineUseOutsideBox;
+                    fogUniformData.m_flags |= fogArea->GetShowBacksideWhenOutside() ? Fog::PipelineUseBackSide : Fog::PipelineVariantEmpty;
+                }
+                const auto fogColor = fogArea->GetColor();
+                fogUniformData.m_color = float4(fogColor.r, fogColor.g, fogColor.b, fogColor.a);
+                fogUniformData.m_start = fogArea->GetStart();
+                fogUniformData.m_length = fogArea->GetEnd() - fogArea->GetStart();
+                fogUniformData.m_falloffExp = fogArea->GetFalloffExp();
+
+                const cMatrixf modelMat = fogArea->GetModelMatrixPtr() ? *fogArea->GetModelMatrixPtr() : cMatrixf::Identity;
+                fogUniformData.m_mv = cMath::ToForgeMatrix4(cMath::MatrixMul(mainFrustumView, modelMat));
+                fogUniformData.m_mvp =
+                    cMath::ToForgeMatrix4(cMath::MatrixMul(cMath::MatrixMul(mainFrustumProj, mainFrustumView), modelMat));
+                return fogUniformData;
+            };
+            std::vector<cFogArea*> nearPlanFog;
+            size_t fogIndex = 0;
+            for (const auto& fogArea : fogRenderData) {
+                cMatrixf mtxInvBoxSpace = cMath::MatrixInverse(*fogArea.m_fogArea->GetModelMatrixPtr());
+                cVector3f boxSpaceFrustumOrigin = cMath::MatrixMul(mtxInvBoxSpace, apFrustum->GetOrigin());
+                // test if inside near plane
+                if (fogArea.m_insideNearFrustum) {
+                    nearPlanFog.emplace_back(fogArea.m_fogArea);
+                } else {
+                    UniformFogData uniformData = createUniformFog(false, fogArea.m_fogArea);
+                    BufferUpdateDesc updateDesc = { m_fogPass.m_fogUniformBuffer[frame.m_frameIndex].m_handle,
+                                                    fogIndex * sizeof(UniformFogData) };
+                    beginUpdateResource(&updateDesc);
+                    (*reinterpret_cast<UniformFogData*>(updateDesc.pMappedData)) = uniformData;
+                    endUpdateResource(&updateDesc, NULL);
+                    fogIndex++;
+                }
+            }
+            std::array targets = {
+                currentGBuffer.m_outputBuffer.m_handle,
+            };
+            LoadActionsDesc loadActions = {};
+            loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
+            loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
+            cmdBindRenderTargets(
+                frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, nullptr, nullptr, -1, -1);
+            cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)common->m_size.x, (float)common->m_size.y, 0.0f, 1.0f);
+            cmdSetScissor(frame.m_cmd, 0, 0, common->m_size.x, common->m_size.y);
+
+            cmdBindPipeline(frame.m_cmd, m_fogPass.m_pipeline.m_handle);
+
+            std::array geometryStream = { eVertexBufferElement_Position };
+            DrawPacket drawPacket =
+                static_cast<LegacyVertexBuffer*>(m_box.get())->resolveGeometryBinding(frame.m_currentFrame, geometryStream);
+            DrawPacket::cmdBindBuffers(frame.m_cmd, frame.m_resourcePool, &drawPacket);
+
+            {
+                std::array<DescriptorData, 1> params = {};
+                params[0].pName = "positionMap";
+                params[0].ppTextures = &currentGBuffer.m_positionBuffer.m_handle->pTexture;
+                updateDescriptorSet(frame.m_renderer->Rend(), 0, m_fogPass.m_perFrameSet[frame.m_frameIndex], params.size(), params.data());
+            }
+            uint32_t rootConstantIndex = getDescriptorIndexFromName(m_fogPass.m_fogRootSignature.m_handle, "rootConstant");
+            struct {
+                float2 viewTexel;
+                uint32_t m_instanceIndex;
+                uint32_t pad0;
+            } fogConstant = { float2(1.0f / static_cast<float>(common->m_size.x), 1.0f / static_cast<float>(common->m_size.y)) };
+
+            cmdBindDescriptorSet(frame.m_cmd, 0, m_fogPass.m_perFrameSet[frame.m_frameIndex]);
+            cmdBindPushConstants(frame.m_cmd, m_fogPass.m_fogRootSignature.m_handle, rootConstantIndex, &fogConstant);
+            cmdDrawIndexedInstanced(frame.m_cmd, drawPacket.numberOfIndecies(), 0, fogIndex, 0, 0);
+
+            size_t offsetIndex = fogIndex;
+            for (auto& fogArea : nearPlanFog) {
+                UniformFogData uniformData = createUniformFog(true, fogArea);
                 BufferUpdateDesc updateDesc = { m_fogPass.m_fogUniformBuffer[frame.m_frameIndex].m_handle,
                                                 fogIndex * sizeof(UniformFogData) };
                 beginUpdateResource(&updateDesc);
@@ -4202,181 +4260,138 @@ void cRendererDeferred::Draw(
                 endUpdateResource(&updateDesc, NULL);
                 fogIndex++;
             }
+
+            cmdBindPipeline(frame.m_cmd, m_fogPass.m_pipelineInsideNearFrustum.m_handle);
+            fogConstant.m_instanceIndex = offsetIndex;
+            cmdBindPushConstants(frame.m_cmd, m_fogPass.m_fogRootSignature.m_handle, rootConstantIndex, &fogConstant);
+            cmdDrawIndexedInstanced(frame.m_cmd, drawPacket.numberOfIndecies(), 0, fogIndex - offsetIndex, 0, 0);
+
+            cmdEndDebugMarker(frame.m_cmd);
+            if (apWorld->GetFogActive()) {
+                BufferUpdateDesc updateDesc = { m_fogPass.m_fogFullscreenUniformBuffer[frame.m_frameIndex].m_handle };
+                beginUpdateResource(&updateDesc);
+                auto* fogData = reinterpret_cast<UniformFullscreenFogData*>(updateDesc.pMappedData);
+                auto fogColor = apWorld->GetFogColor();
+                fogData->m_color = float4(fogColor.r, fogColor.g, fogColor.b, fogColor.a);
+                fogData->m_fogStart = apWorld->GetFogStart();
+                fogData->m_fogLength = apWorld->GetFogEnd() - apWorld->GetFogStart();
+                fogData->m_fogFalloffExp = apWorld->GetFogFalloffExp();
+                endUpdateResource(&updateDesc, NULL);
+
+                cmdBindDescriptorSet(frame.m_cmd, 0, m_fogPass.m_perFrameSet[frame.m_frameIndex]);
+                cmdBindPipeline(frame.m_cmd, m_fogPass.m_fullScreenPipeline.m_handle);
+                cmdDraw(frame.m_cmd, 3, 0);
+            }
         }
-        std::array targets = {
-            currentGBuffer.m_outputBuffer.m_handle,
-        };
-        LoadActionsDesc loadActions = {};
-        loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
-        loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
-        cmdBindRenderTargets(
-            frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, nullptr, nullptr, -1, -1);
-        cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, (float)common->m_size.x, (float)common->m_size.y, 0.0f, 1.0f);
-        cmdSetScissor(frame.m_cmd, 0, 0, common->m_size.x, common->m_size.y);
-
-        cmdBindPipeline(frame.m_cmd, m_fogPass.m_pipeline.m_handle);
-
-        LegacyVertexBuffer::GeometryBinding binding{};
-        std::array geometryStream = { eVertexBufferElement_Position };
-        static_cast<LegacyVertexBuffer*>(m_box.get())->resolveGeometryBinding(frame.m_currentFrame, geometryStream, &binding);
-        LegacyVertexBuffer::cmdBindGeometry(frame.m_cmd, frame.m_resourcePool, binding);
-
-        {
-            std::array<DescriptorData, 1> params = {};
-            params[0].pName = "positionMap";
-            params[0].ppTextures = &currentGBuffer.m_positionBuffer.m_handle->pTexture;
-            updateDescriptorSet(frame.m_renderer->Rend(), 0, m_fogPass.m_perFrameSet[frame.m_frameIndex], params.size(), params.data());
-        }
-        uint32_t rootConstantIndex = getDescriptorIndexFromName(m_fogPass.m_fogRootSignature.m_handle, "rootConstant");
-        struct {
-            float2 viewTexel;
-            uint32_t m_instanceIndex;
-            uint32_t pad0;
-        } fogConstant = { float2(1.0f / static_cast<float>(common->m_size.x), 1.0f / static_cast<float>(common->m_size.y)) };
-
-        cmdBindDescriptorSet(frame.m_cmd, 0, m_fogPass.m_perFrameSet[frame.m_frameIndex]);
-        cmdBindPushConstants(frame.m_cmd, m_fogPass.m_fogRootSignature.m_handle, rootConstantIndex, &fogConstant);
-        cmdDrawIndexedInstanced(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, fogIndex, 0, 0);
-
-        size_t offsetIndex = fogIndex;
-        for (auto& fogArea : nearPlanFog) {
-            UniformFogData uniformData = createUniformFog(true, fogArea);
-            BufferUpdateDesc updateDesc = { m_fogPass.m_fogUniformBuffer[frame.m_frameIndex].m_handle, fogIndex * sizeof(UniformFogData) };
-            beginUpdateResource(&updateDesc);
-            (*reinterpret_cast<UniformFogData*>(updateDesc.pMappedData)) = uniformData;
-            endUpdateResource(&updateDesc, NULL);
-            fogIndex++;
-        }
-
-        cmdBindPipeline(frame.m_cmd, m_fogPass.m_pipelineInsideNearFrustum.m_handle);
-        fogConstant.m_instanceIndex = offsetIndex;
-        cmdBindPushConstants(frame.m_cmd, m_fogPass.m_fogRootSignature.m_handle, rootConstantIndex, &fogConstant);
-        cmdDrawIndexedInstanced(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, fogIndex - offsetIndex, 0, 0);
-
         cmdEndDebugMarker(frame.m_cmd);
-        if (apWorld->GetFogActive()) {
-            BufferUpdateDesc updateDesc = { m_fogPass.m_fogFullscreenUniformBuffer[frame.m_frameIndex].m_handle };
-            beginUpdateResource(&updateDesc);
-            auto* fogData = reinterpret_cast<UniformFullscreenFogData*>(updateDesc.pMappedData);
-            auto fogColor = apWorld->GetFogColor();
-            fogData->m_color = float4(fogColor.r, fogColor.g, fogColor.b, fogColor.a);
-            fogData->m_fogStart = apWorld->GetFogStart();
-            fogData->m_fogLength = apWorld->GetFogEnd() - apWorld->GetFogStart();
-            fogData->m_fogFalloffExp = apWorld->GetFogFalloffExp();
-            endUpdateResource(&updateDesc, NULL);
-
-            cmdBindDescriptorSet(frame.m_cmd, 0, m_fogPass.m_perFrameSet[frame.m_frameIndex]);
-            cmdBindPipeline(frame.m_cmd, m_fogPass.m_fullScreenPipeline.m_handle);
-            cmdDraw(frame.m_cmd, 3, 0);
-        }
-    }
-    cmdEndDebugMarker(frame.m_cmd);
-
-    {
-        cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
 
         {
-            std::array textureBarriers = {
-                TextureBarrier{
-                    currentGBuffer.m_refractionImage.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_UNORDERED_ACCESS },
-            };
-            std::array rtBarriers = {
-                RenderTargetBarrier{ currentGBuffer.m_outputBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
-            };
-            cmdResourceBarrier(frame.m_cmd, 0, NULL, textureBarriers.size(), textureBarriers.data(), rtBarriers.size(), rtBarriers.data());
+            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+
+            {
+                std::array textureBarriers = {
+                    TextureBarrier{
+                        currentGBuffer.m_refractionImage.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_UNORDERED_ACCESS },
+                };
+                std::array rtBarriers = {
+                    RenderTargetBarrier{
+                        currentGBuffer.m_outputBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
+                };
+                cmdResourceBarrier(
+                    frame.m_cmd, 0, NULL, textureBarriers.size(), textureBarriers.data(), rtBarriers.size(), rtBarriers.data());
+            }
+
+            cmdBindPipeline(frame.m_cmd, m_materialTranslucencyPass.m_refractionCopyPipeline.m_handle);
+            DescriptorData params[2] = {};
+            params[0].pName = "sourceInput";
+            params[0].ppTextures = &currentGBuffer.m_outputBuffer.m_handle->pTexture;
+            params[1].pName = "destOutput";
+            params[1].ppTextures = &currentGBuffer.m_refractionImage.m_handle;
+            updateDescriptorSet(
+                frame.m_renderer->Rend(), 0, m_materialTranslucencyPass.m_refractionPerFrameSet[frame.m_frameIndex].m_handle, 2, params);
+            cmdBindDescriptorSet(frame.m_cmd, 0, m_materialTranslucencyPass.m_refractionPerFrameSet[frame.m_frameIndex].m_handle);
+            cmdDispatch(
+                frame.m_cmd,
+                static_cast<uint32_t>(static_cast<float>(common->m_size.x) / 16.0f) + 1,
+                static_cast<uint32_t>(static_cast<float>(common->m_size.y) / 16.0f) + 1,
+                1);
+            {
+                std::array textureBarriers = {
+                    TextureBarrier{
+                        currentGBuffer.m_refractionImage.m_handle, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE },
+                };
+
+                std::array rtBarriers = {
+                    RenderTargetBarrier{
+                        currentGBuffer.m_outputBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
+                };
+                cmdResourceBarrier(
+                    frame.m_cmd, 0, NULL, textureBarriers.size(), textureBarriers.data(), rtBarriers.size(), rtBarriers.data());
+            }
         }
 
-        cmdBindPipeline(frame.m_cmd, m_materialTranslucencyPass.m_refractionCopyPipeline.m_handle);
-        DescriptorData params[2] = {};
-        params[0].pName = "sourceInput";
-        params[0].ppTextures = &currentGBuffer.m_outputBuffer.m_handle->pTexture;
-        params[1].pName = "destOutput";
-        params[1].ppTextures = &currentGBuffer.m_refractionImage.m_handle;
-        updateDescriptorSet(
-            frame.m_renderer->Rend(), 0, m_materialTranslucencyPass.m_refractionPerFrameSet[frame.m_frameIndex].m_handle, 2, params);
-        cmdBindDescriptorSet(frame.m_cmd, 0, m_materialTranslucencyPass.m_refractionPerFrameSet[frame.m_frameIndex].m_handle);
-        cmdDispatch(
-            frame.m_cmd,
-            static_cast<uint32_t>(static_cast<float>(common->m_size.x) / 16.0f) + 1,
-            static_cast<uint32_t>(static_cast<float>(common->m_size.y) / 16.0f) + 1,
-            1);
+        // notify post draw listeners
+        // DebugDraw postSolidBatch(context, sharedData->m_gBuffer.m_outputTarget, mainFrustumView, mainFrustumProj);
+        cViewport::PostSolidDrawPacket postSolidEvent = cViewport::PostSolidDrawPacket();
+        postSolidEvent.m_frustum = apFrustum;
+        postSolidEvent.m_frame = &frame;
+        postSolidEvent.m_outputTarget = &currentGBuffer.m_outputBuffer;
+        postSolidEvent.m_viewport = &viewport;
+        postSolidEvent.m_renderSettings = mpCurrentSettings;
+        postSolidEvent.m_debug = m_debug.get();
+        postSolidEvent.m_renderList = &m_rendererList;
+        viewport.SignalDraw(postSolidEvent);
+        m_debug->flush(frame, frame.m_cmd, viewport, *apFrustum, currentGBuffer.m_outputBuffer, currentGBuffer.m_depthBuffer);
+
+        // ------------------------------------------------------------------------
+        // Translucency Pass --> output target
+        // ------------------------------------------------------------------------
         {
-            std::array textureBarriers = {
-                TextureBarrier{
-                    currentGBuffer.m_refractionImage.m_handle, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE },
+            LoadActionsDesc loadActions = {};
+            loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
+            loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
+            std::array targets = {
+                currentGBuffer.m_outputBuffer.m_handle,
             };
+            cmdBindRenderTargets(
+                frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, nullptr, nullptr, -1, -1);
+            cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, static_cast<float>(common->m_size.x), static_cast<float>(common->m_size.y), 0.0f, 1.0f);
+            cmdSetScissor(frame.m_cmd, 0, 0, common->m_size.x, common->m_size.y);
 
-            std::array rtBarriers = {
-                RenderTargetBarrier{ currentGBuffer.m_outputBuffer.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
-            };
-            cmdResourceBarrier(frame.m_cmd, 0, NULL, textureBarriers.size(), textureBarriers.data(), rtBarriers.size(), rtBarriers.data());
-        }
-    }
+            std::array<TranslucencyPipeline::TranslucencyBlend, eMaterialBlendMode_LastEnum> translucencyBlendTable;
+            translucencyBlendTable[eMaterialBlendMode_None] = TranslucencyPipeline::TranslucencyBlend::BlendAdd;
+            translucencyBlendTable[eMaterialBlendMode_Add] = TranslucencyPipeline::TranslucencyBlend::BlendAdd;
+            translucencyBlendTable[eMaterialBlendMode_Mul] = TranslucencyPipeline::TranslucencyBlend::BlendMul;
+            translucencyBlendTable[eMaterialBlendMode_MulX2] = TranslucencyPipeline::TranslucencyBlend::BlendMulX2;
+            translucencyBlendTable[eMaterialBlendMode_Alpha] = TranslucencyPipeline::TranslucencyBlend::BlendAlpha;
+            translucencyBlendTable[eMaterialBlendMode_PremulAlpha] = TranslucencyPipeline::TranslucencyBlend::BlendPremulAlpha;
 
-    // notify post draw listeners
-    // DebugDraw postSolidBatch(context, sharedData->m_gBuffer.m_outputTarget, mainFrustumView, mainFrustumProj);
-    cViewport::PostSolidDrawPacket postSolidEvent = cViewport::PostSolidDrawPacket();
-    postSolidEvent.m_frustum = apFrustum;
-    postSolidEvent.m_frame = &frame;
-    postSolidEvent.m_outputTarget = &currentGBuffer.m_outputBuffer;
-    postSolidEvent.m_viewport = &viewport;
-    postSolidEvent.m_renderSettings = mpCurrentSettings;
-    postSolidEvent.m_debug = m_debug.get();
-    postSolidEvent.m_renderList = &m_rendererList;
-    viewport.SignalDraw(postSolidEvent);
-    m_debug->flush(frame, frame.m_cmd, viewport, *apFrustum, currentGBuffer.m_outputBuffer, currentGBuffer.m_depthBuffer);
+            cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "Translucency Pass");
+            cmdBindDescriptorSet(frame.m_cmd, mainFrameIndex, m_materialSet.m_frameSet[frame.m_frameIndex].m_handle);
+            for (auto& translucencyItem : m_rendererList.GetRenderableItems(eRenderListType_Translucent)) {
+                cMaterial* pMaterial = translucencyItem->GetMaterial();
+                if (pMaterial == nullptr) {
+                    continue;
+                }
 
-    // ------------------------------------------------------------------------
-    // Translucency Pass --> output target
-    // ------------------------------------------------------------------------
-    {
-        LoadActionsDesc loadActions = {};
-        loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
-        loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
-        std::array targets = {
-            currentGBuffer.m_outputBuffer.m_handle,
-        };
-        cmdBindRenderTargets(
-            frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, nullptr, nullptr, -1, -1);
-        cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, static_cast<float>(common->m_size.x), static_cast<float>(common->m_size.y), 0.0f, 1.0f);
-        cmdSetScissor(frame.m_cmd, 0, 0, common->m_size.x, common->m_size.y);
+                const bool isRefraction = iRenderer::GetRefractionEnabled() && pMaterial->HasRefraction();
+                const bool isReflection = pMaterial->HasWorldReflection() && translucencyItem->GetRenderType() == eRenderableType_SubMesh &&
+                    mpCurrentSettings->mbRenderWorldReflection;
+                const bool isFogActive = apWorld->GetFogActive();
+                const bool isParticleEmitter = TypeInfo<iParticleEmitter>::IsSubtype(*translucencyItem);
+                const auto cubeMap = pMaterial->GetImage(eMaterialTexture_CubeMap);
+                uint32_t reflectionBufferIndex = 0;
+                cMatrixf* pMatrix = translucencyItem->GetModelMatrix(apFrustum);
 
+                if (translucencyItem->UpdateGraphicsForViewport(apFrustum, afFrameTime) == false) {
+                    continue;
+                }
 
-        std::array<TranslucencyPipeline::TranslucencyBlend, eMaterialBlendMode_LastEnum> translucencyBlendTable;
-        translucencyBlendTable[eMaterialBlendMode_None] = TranslucencyPipeline::TranslucencyBlend::BlendAdd;
-        translucencyBlendTable[eMaterialBlendMode_Add] = TranslucencyPipeline::TranslucencyBlend::BlendAdd;
-        translucencyBlendTable[eMaterialBlendMode_Mul] = TranslucencyPipeline::TranslucencyBlend::BlendMul;
-        translucencyBlendTable[eMaterialBlendMode_MulX2] = TranslucencyPipeline::TranslucencyBlend::BlendMulX2;
-        translucencyBlendTable[eMaterialBlendMode_Alpha] = TranslucencyPipeline::TranslucencyBlend::BlendAlpha;
-        translucencyBlendTable[eMaterialBlendMode_PremulAlpha] = TranslucencyPipeline::TranslucencyBlend::BlendPremulAlpha;
+                if (isReflection) {
+                    cSubMeshEntity* pReflectionObject = static_cast<cSubMeshEntity*>(translucencyItem);
 
-        cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "Translucency Pass");
-        cmdBindDescriptorSet(frame.m_cmd, mainFrameIndex, m_materialSet.m_frameSet[frame.m_frameIndex].m_handle);
-        for (auto& translucencyItem : m_rendererList.GetRenderableItems(eRenderListType_Translucent)) {
-            cMaterial* pMaterial = translucencyItem->GetMaterial();
-            iVertexBuffer* vertexBuffer = translucencyItem->GetVertexBuffer();
-            if (pMaterial == nullptr || vertexBuffer == nullptr) {
-                continue;
-            }
-
-            const bool isRefraction = iRenderer::GetRefractionEnabled() && pMaterial->HasRefraction();
-            const bool isReflection = pMaterial->HasWorldReflection() && translucencyItem->GetRenderType() == eRenderableType_SubMesh &&
-                mpCurrentSettings->mbRenderWorldReflection;
-            const bool isFogActive = apWorld->GetFogActive();
-            const bool isParticleEmitter = TypeInfo<iParticleEmitter>::IsSubtype(*translucencyItem);
-            const auto cubeMap = pMaterial->GetImage(eMaterialTexture_CubeMap);
-            uint32_t reflectionBufferIndex = 0;
-            cMatrixf* pMatrix = translucencyItem->GetModelMatrix(apFrustum);
-
-            if (translucencyItem->UpdateGraphicsForViewport(apFrustum, afFrameTime) == false) {
-                continue;
-            }
-
-            if (isReflection) {
-                cSubMeshEntity* pReflectionObject = static_cast<cSubMeshEntity*>(translucencyItem);
-
-                bool bReflectionIsInRange = true;
-                if (pMaterial->GetMaxReflectionDistance() > 0) {
+                    bool bReflectionIsInRange = true;
+                    if (pMaterial->GetMaxReflectionDistance() > 0) {
                         cVector3f vPoint = apFrustum->GetOrigin() + apFrustum->GetForward() * -1 * pMaterial->GetMaxReflectionDistance();
                         cVector3f vNormal = apFrustum->GetForward();
 
@@ -4387,8 +4402,8 @@ void cRendererDeferred::Draw(
                             eCollision_Outside) {
                             bReflectionIsInRange = false;
                         }
-                }
-                if (bReflectionIsInRange) {
+                    }
+                    if (bReflectionIsInRange) {
                         ///////////////////////////
                         // Make a frustum, mirrored along the plane
                         cSubMesh* pSubMesh = pReflectionObject->GetSubMesh();
@@ -4479,7 +4494,7 @@ void cRendererDeferred::Draw(
                             });
                         m_reflectionRendererList.End(
                             eRenderListCompileFlag_Diffuse | eRenderListCompileFlag_Translucent | eRenderListCompileFlag_Decal |
-                            eRenderListCompileFlag_Illumination );
+                            eRenderListCompileFlag_Illumination);
 
                         {
                             cmdBindRenderTargets(resolveReflectionBuffer.m_cmd.m_handle, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
@@ -4580,152 +4595,158 @@ void cRendererDeferred::Draw(
                         submitDesc.pSignalFence = resolveReflectionBuffer.m_fence.m_handle;
                         submitDesc.mSubmitDone = true;
                         queueSubmit(frame.m_renderer->GetGraphicsQueue(), &submitDesc);
+                    }
                 }
-            }
 
-            if (isParticleEmitter) {
-                if (static_cast<LegacyVertexBuffer*>(vertexBuffer)->GetRequestNumberIndecies() == 0) {
-                    continue;
+                MaterialRootConstant materialConst = { 0 };
+                float sceneAlpha = 1;
+                for (auto& fogArea : fogRenderData) {
+                    sceneAlpha *= detail::GetFogAreaVisibilityForObject(fogArea, *apFrustum, translucencyItem);
                 }
-            }
+                materialConst.m_sceneAlpha = sceneAlpha;
 
-            MaterialRootConstant materialConst = { 0 };
-            float sceneAlpha = 1;
-            for (auto& fogArea : fogRenderData) {
-                sceneAlpha *= detail::GetFogAreaVisibilityForObject(fogArea, *apFrustum, translucencyItem);
-            }
-            materialConst.m_sceneAlpha = sceneAlpha;
+                switch (pMaterial->Descriptor().m_id) {
+                case MaterialID::Translucent:
+                    {
+                        // LegacyVertexBuffer::GeometryBinding binding;
+                        DrawPacket drawPacket;
+                        if (isParticleEmitter) {
+                            std::array targets = { eVertexBufferElement_Position,
+                                                   eVertexBufferElement_Texture0,
+                                                   eVertexBufferElement_Color0 };
+                            drawPacket = translucencyItem->ResolveDrawPacket(frame, targets);
+                            if (drawPacket.m_type == DrawPacket::Unknown && drawPacket.numberOfIndecies() == 0) {
+                                break;
+                            }
 
-            switch (pMaterial->Descriptor().m_id) {
-            case MaterialID::Translucent:
-                {
-                    uint32_t instance = cmdBindMaterialAndObject(
-                        frame.m_cmd, frame, pMaterial, translucencyItem, std::optional{ pMatrix ? *pMatrix : cMatrixf::Identity });
-                    materialConst.objectId = instance;
-                    LegacyVertexBuffer::GeometryBinding binding;
+                        } else {
+                            std::array targets = { eVertexBufferElement_Position,
+                                                   eVertexBufferElement_Texture0,
+                                                   eVertexBufferElement_Normal,
+                                                   eVertexBufferElement_Texture1Tangent,
+                                                   eVertexBufferElement_Color0 };
+                            drawPacket = translucencyItem->ResolveDrawPacket(frame, targets);
+                            if (drawPacket.m_type == DrawPacket::Unknown && drawPacket.numberOfIndecies() == 0) {
+                                break;
+                            }
+                        }
 
-                    if (isParticleEmitter) {
-                        std::array targets = { eVertexBufferElement_Position, eVertexBufferElement_Texture0, eVertexBufferElement_Color0 };
-                        static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
-                    } else {
+                        uint32_t instance = cmdBindMaterialAndObject(
+                            frame.m_cmd, frame, pMaterial, translucencyItem, std::optional{ pMatrix ? *pMatrix : cMatrixf::Identity });
+                        materialConst.objectId = instance;
+                        cRendererDeferred::TranslucencyPipeline::TranslucencyKey key = {};
+                        key.m_field.m_hasDepthTest = pMaterial->GetDepthTest();
+
+                        ASSERT(
+                            pMaterial->GetBlendMode() < eMaterialBlendMode_LastEnum &&
+                            pMaterial->GetBlendMode() != eMaterialBlendMode_None && "Invalid blend mode");
+                        if (isParticleEmitter) {
+                            cmdBindPipeline(
+                                frame.m_cmd,
+                                m_materialTranslucencyPass.m_particlePipelines[translucencyBlendTable[pMaterial->GetBlendMode()]][key.m_id]
+                                    .m_handle);
+                        } else {
+                            cmdBindPipeline(
+                                frame.m_cmd,
+                                (isRefraction
+                                     ? m_materialTranslucencyPass.m_refractionPipeline[key.m_id].m_handle
+                                     : m_materialTranslucencyPass.m_pipelines[translucencyBlendTable[pMaterial->GetBlendMode()]][key.m_id]
+                                           .m_handle));
+                        }
+
+                        DrawPacket::cmdBindBuffers(frame.m_cmd, frame.m_resourcePool, &drawPacket);
+
+                        materialConst.m_options = (isFogActive ? TranslucencyFlags::UseFog : 0) |
+                            (isRefraction ? TranslucencyFlags::UseRefractionTrans : 0) | translucencyBlendTable[pMaterial->GetBlendMode()];
+
+                        cmdBindPushConstants(frame.m_cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
+                        cmdDrawIndexed(frame.m_cmd, drawPacket.numberOfIndecies(), 0, 0);
+
+                        if (cubeMap && !isRefraction) {
+                            materialConst.m_options = TranslucencyFlags::UseIlluminationTrans |
+                                (isFogActive ? TranslucencyFlags::UseFog : 0) | TranslucencyPipeline::TranslucencyBlend::BlendAdd;
+
+                            cmdBindPipeline(
+                                frame.m_cmd,
+                                m_materialTranslucencyPass.m_pipelines[TranslucencyPipeline::TranslucencyBlend::BlendAdd][key.m_id]
+                                    .m_handle);
+                            cmdBindPushConstants(frame.m_cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
+                            cmdDrawIndexed(frame.m_cmd, drawPacket.numberOfIndecies(), 0, 0);
+                        }
+                    }
+                    break;
+                case MaterialID::Water:
+                    {
                         std::array targets = { eVertexBufferElement_Position,
                                                eVertexBufferElement_Texture0,
                                                eVertexBufferElement_Normal,
                                                eVertexBufferElement_Texture1Tangent,
                                                eVertexBufferElement_Color0 };
-                        static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
-                    }
+                        DrawPacket packet = translucencyItem->ResolveDrawPacket(frame, targets);
+                        if (packet.m_type == DrawPacket::Unknown) {
+                            break;
+                        }
 
-                    cRendererDeferred::TranslucencyPipeline::TranslucencyKey key = {};
-                    key.m_field.m_hasDepthTest = pMaterial->GetDepthTest();
+                        materialConst.m_options = (isFogActive ? TranslucencyFlags::UseFog : 0) |
+                            (isRefraction ? TranslucencyFlags::UseRefractionTrans : 0) |
+                            (isReflection ? TranslucencyFlags::UseReflectionTrans : 0) |
+                            (isRefraction ? translucencyBlendTable[eMaterialBlendMode_None]
+                                          : translucencyBlendTable[eMaterialBlendMode_Mul]) |
+                            (((reflectionBufferIndex & TranslucencyReflectionBufferMask) << TranslucencyReflectionBufferOffset));
 
-                    ASSERT(
-                        pMaterial->GetBlendMode() < eMaterialBlendMode_LastEnum && pMaterial->GetBlendMode() != eMaterialBlendMode_None &&
-                        "Invalid blend mode");
-                    if (isParticleEmitter) {
-                        cmdBindPipeline(
-                            frame.m_cmd,
-                            m_materialTranslucencyPass.m_particlePipelines[translucencyBlendTable[pMaterial->GetBlendMode()]][key.m_id]
-                                .m_handle);
-                    } else {
-                        cmdBindPipeline(
-                            frame.m_cmd,
-                            (isRefraction
-                                 ? m_materialTranslucencyPass.m_refractionPipeline[key.m_id].m_handle
-                                 : m_materialTranslucencyPass.m_pipelines[translucencyBlendTable[pMaterial->GetBlendMode()]][key.m_id]
-                                       .m_handle));
-                    }
+                        cRendererDeferred::TranslucencyPipeline::TranslucencyWaterKey key = {};
+                        key.m_field.m_hasDepthTest = pMaterial->GetDepthTest();
 
-                    LegacyVertexBuffer::cmdBindGeometry(frame.m_cmd, frame.m_resourcePool, binding);
-                    materialConst.m_options = (isFogActive ? TranslucencyFlags::UseFog : 0) |
-                        (isRefraction ? TranslucencyFlags::UseRefractionTrans : 0) | translucencyBlendTable[pMaterial->GetBlendMode()];
-
-                    cmdBindPushConstants(frame.m_cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
-                    cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
-
-                    if (cubeMap && !isRefraction) {
-                        materialConst.m_options = TranslucencyFlags::UseIlluminationTrans | (isFogActive ? TranslucencyFlags::UseFog : 0) |
-                            TranslucencyPipeline::TranslucencyBlend::BlendAdd;
-
-                        cmdBindPipeline(
-                            frame.m_cmd,
-                            m_materialTranslucencyPass.m_pipelines[TranslucencyPipeline::TranslucencyBlend::BlendAdd][key.m_id].m_handle);
+                        // LegacyVertexBuffer::cmdBindGeometry(frame.m_cmd, frame.m_resourcePool, binding);
+                        DrawPacket::cmdBindBuffers(frame.m_cmd, frame.m_resourcePool, &packet);
+                        cmdBindPipeline(frame.m_cmd, m_materialTranslucencyPass.m_waterPipeline[key.m_id].m_handle);
+                        uint32_t instance = cmdBindMaterialAndObject(
+                            frame.m_cmd, frame, pMaterial, translucencyItem, std::optional{ pMatrix ? *pMatrix : cMatrixf::Identity });
+                        materialConst.objectId = instance;
                         cmdBindPushConstants(frame.m_cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
-                        cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+                        cmdDrawIndexed(frame.m_cmd, packet.numberOfIndecies(), 0, 0);
                     }
+                    break;
+                default:
+                    ASSERT(false && "Invalid material type");
+                    continue;
                 }
-                break;
-            case MaterialID::Water:
-                {
-                    LegacyVertexBuffer::GeometryBinding binding;
-                    std::array targets = { eVertexBufferElement_Position,
-                                           eVertexBufferElement_Texture0,
-                                           eVertexBufferElement_Normal,
-                                           eVertexBufferElement_Texture1Tangent,
-                                           eVertexBufferElement_Color0 };
-                    static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
-
-                    materialConst.m_options = (isFogActive ? TranslucencyFlags::UseFog : 0) |
-                        (isRefraction ? TranslucencyFlags::UseRefractionTrans : 0) |
-                        (isReflection ? TranslucencyFlags::UseReflectionTrans : 0) |
-                        (isRefraction ? translucencyBlendTable[eMaterialBlendMode_None]: translucencyBlendTable[eMaterialBlendMode_Mul]) |
-                        (((reflectionBufferIndex & TranslucencyReflectionBufferMask) << TranslucencyReflectionBufferOffset));
-
-
-                    cRendererDeferred::TranslucencyPipeline::TranslucencyWaterKey key = {};
-                    key.m_field.m_hasDepthTest = pMaterial->GetDepthTest();
-
-                    LegacyVertexBuffer::cmdBindGeometry(frame.m_cmd, frame.m_resourcePool, binding);
-
-                    cmdBindPipeline(frame.m_cmd, m_materialTranslucencyPass.m_waterPipeline[key.m_id].m_handle);
-                    uint32_t instance = cmdBindMaterialAndObject(
-                        frame.m_cmd, frame, pMaterial, translucencyItem, std::optional{ pMatrix ? *pMatrix : cMatrixf::Identity });
-                    materialConst.objectId = instance;
-                    cmdBindPushConstants(frame.m_cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
-                    cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
-
-                }
-                break;
-            default:
-                ASSERT(false && "Invalid material type");
-                continue;
             }
+            cmdEndDebugMarker(frame.m_cmd);
         }
-        cmdEndDebugMarker(frame.m_cmd);
+
+        // DebugDraw postTransBatch(context, sharedData->m_gBuffer.m_outputTarget, mainFrustumView, mainFrustumProj);
+        cViewport::PostTranslucenceDrawPacket translucenceEvent = cViewport::PostTranslucenceDrawPacket();
+        translucenceEvent.m_frustum = apFrustum;
+        translucenceEvent.m_frame = &frame;
+        translucenceEvent.m_outputTarget = &currentGBuffer.m_outputBuffer;
+        translucenceEvent.m_viewport = &viewport;
+        translucenceEvent.m_renderSettings = mpCurrentSettings;
+        translucenceEvent.m_debug = m_debug.get();
+        translucenceEvent.m_renderList = &m_rendererList;
+        viewport.SignalDraw(translucenceEvent);
+        m_debug->flush(frame, frame.m_cmd, viewport, *apFrustum, currentGBuffer.m_outputBuffer, currentGBuffer.m_depthBuffer);
+
+        {
+            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+            std::array rtBarriers = {
+                RenderTargetBarrier{ currentGBuffer.m_outputBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
+            };
+            cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+        }
     }
 
-    // DebugDraw postTransBatch(context, sharedData->m_gBuffer.m_outputTarget, mainFrustumView, mainFrustumProj);
-    cViewport::PostTranslucenceDrawPacket translucenceEvent = cViewport::PostTranslucenceDrawPacket();
-    translucenceEvent.m_frustum = apFrustum;
-    translucenceEvent.m_frame = &frame;
-    translucenceEvent.m_outputTarget = &currentGBuffer.m_outputBuffer;
-    translucenceEvent.m_viewport = &viewport;
-    translucenceEvent.m_renderSettings = mpCurrentSettings;
-    translucenceEvent.m_debug = m_debug.get();
-    translucenceEvent.m_renderList = &m_rendererList;
-    viewport.SignalDraw(translucenceEvent);
-    m_debug->flush(frame, frame.m_cmd, viewport, *apFrustum, currentGBuffer.m_outputBuffer, currentGBuffer.m_depthBuffer);
-
-    {
-        cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
-        std::array rtBarriers = {
-            RenderTargetBarrier{ currentGBuffer.m_outputBuffer.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
-        };
-        cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+    iVertexBuffer* cRendererDeferred::GetLightShape(iLight* apLight, eDeferredShapeQuality aQuality) const {
+        switch (apLight->GetLightType()) {
+        case eLightType_Point:
+            return m_shapeSphere[aQuality].get();
+        case eLightType_Spot:
+            return m_shapePyramid.get();
+        case eLightType_Box:
+            return m_box.get();
+        default:
+            break;
+        }
+        return nullptr;
     }
-}
-
-iVertexBuffer* cRendererDeferred::GetLightShape(iLight* apLight, eDeferredShapeQuality aQuality) const {
-    switch (apLight->GetLightType()) {
-    case eLightType_Point:
-        return m_shapeSphere[aQuality].get();
-    case eLightType_Spot:
-        return m_shapePyramid.get();
-    case eLightType_Box:
-        return m_box.get();
-    default:
-        break;
-    }
-    return nullptr;
-}
 } // namespace hpl

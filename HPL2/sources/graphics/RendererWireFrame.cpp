@@ -20,6 +20,7 @@
 #include "graphics/RendererWireFrame.h"
 
 #include "Common_3/Graphics/Interfaces/IGraphics.h"
+#include "graphics/DrawPacket.h"
 #include "graphics/ForgeHandles.h"
 #include "graphics/RenderTarget.h"
 #include "graphics/VertexBuffer.h"
@@ -191,13 +192,6 @@ namespace hpl {
     cRendererWireFrame::~cRendererWireFrame() {
     }
 
-    bool cRendererWireFrame::LoadData() {
-        return true;
-    }
-
-    void cRendererWireFrame::DestroyData() {
-    }
-
     uint32_t cRendererWireFrame::prepareObjectData(const ForgeRenderer::Frame& frame, iRenderable* apObject) {
         auto objectLookup = m_objectDescriptorLookup.find(apObject);
         const bool isFound = objectLookup != m_objectDescriptorLookup.end();
@@ -325,19 +319,17 @@ namespace hpl {
         cmdBindDescriptorSet(frame.m_cmd, frame.m_frameIndex, m_constDescriptorSet.m_handle);
         for (auto& diffuseItem : m_rendererList.GetRenderableItems(eRenderListType_Diffuse)) {
             cMaterial* pMaterial = diffuseItem->GetMaterial();
-            iVertexBuffer* vertexBuffer = diffuseItem->GetVertexBuffer();
-            if (pMaterial == nullptr || vertexBuffer == nullptr) {
+            std::array targets = { eVertexBufferElement_Position };
+            DrawPacket packet = diffuseItem->ResolveDrawPacket(frame, targets);
+            if (pMaterial == nullptr || packet.m_type == DrawPacket::Unknown) {
                 continue;
             }
             ASSERT(pMaterial->Descriptor().m_id == MaterialID::SolidDiffuse && "Invalid material type");
-            std::array targets = { eVertexBufferElement_Position };
-            LegacyVertexBuffer::GeometryBinding binding;
-            static_cast<LegacyVertexBuffer*>(vertexBuffer)->resolveGeometryBinding(frame.m_currentFrame, targets, &binding);
 
-            LegacyVertexBuffer::cmdBindGeometry(frame.m_cmd, frame.m_resourcePool, binding);
+            DrawPacket::cmdBindBuffers(frame.m_cmd, frame.m_resourcePool, &packet);
             uint32_t objectIndex = prepareObjectData(frame, diffuseItem);
             cmdBindPushConstants(frame.m_cmd, m_rootSignature.m_handle, rootConstantIndex, &objectIndex);
-            cmdDrawIndexed(frame.m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+            cmdDrawIndexed(frame.m_cmd, packet.numberOfIndecies(), 0, 0);
         }
 
         cViewport::PostSolidDrawPacket postSolidEvent = cViewport::PostSolidDrawPacket();

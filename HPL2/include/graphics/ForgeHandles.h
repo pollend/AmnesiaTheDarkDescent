@@ -10,6 +10,7 @@
 #include <functional>
 #include <span>
 #include <folly/hash/Hash.h>
+#include <variant>
 #include "engine/Event.h"
 
 
@@ -622,6 +623,11 @@ namespace hpl {
             Renderer* m_renderer = nullptr;
             friend struct RefHandle<SharedQueryPool, QueryPool>;
     };
+
+    using SharedResourceVariant = std::variant<SharedSwapChain,
+                SharedTexture,
+                SharedBuffer,
+                SharedRenderTarget>;
 }
 
 static bool operator==(const SamplerDesc& lhs, const SamplerDesc& rhs) {

@@ -28,6 +28,7 @@
 #include <memory>
 #include <vector>
 
+#include "graphics/DrawPacket.h"
 #include "graphics/ForgeRenderer.h"
 #include "graphics/GraphicsTypes.h"
 
@@ -656,15 +657,12 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
     cmdBindPipeline(input.m_frame->m_cmd, m_flashPipeline);
     for(auto& flashObject: mvFlashObjects) {
         auto* pObject = flashObject.mpObject;
-
-        auto* vertexBuffer = pObject->GetVertexBuffer();
-        if (!pObject->CollidesWithFrustum(input.m_frustum))
+        std::array targets = { eVertexBufferElement_Position, eVertexBufferElement_Normal, eVertexBufferElement_Texture0 };
+        DrawPacket packet = pObject->ResolveDrawPacket(*frame, targets);
+        if (!pObject->CollidesWithFrustum(input.m_frustum) && packet.m_type == DrawPacket::Unknown)
         {
             continue;
         }
-        LegacyVertexBuffer::GeometryBinding binding{};
-        std::array targets = { eVertexBufferElement_Position, eVertexBufferElement_Normal, eVertexBufferElement_Texture0 };
-        static_cast<LegacyVertexBuffer*>(pObject->GetVertexBuffer())->resolveGeometryBinding(frame->m_currentFrame, targets, &binding);
 
 
         uint32_t requestSize = round_up(sizeof(LuxEffectObjectUniform::FlashUniform), 256);
@@ -698,9 +696,9 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
         endUpdateResource(&updateDesc, NULL);
 
         cmdBindDescriptorSet(input.m_frame->m_cmd, objectIndex++, m_perObjectDescriptorSet[frame->m_frameIndex]);
-        LegacyVertexBuffer::cmdBindGeometry(frame->m_cmd, frame->m_resourcePool, binding);
+        DrawPacket::cmdBindBuffers(frame->m_cmd, frame->m_resourcePool, &packet);
         for(size_t i = 0; i < 2; i++) {
-            cmdDrawIndexed(input.m_frame->m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+            cmdDrawIndexed(input.m_frame->m_cmd, packet.numberOfIndecies(), 0, 0);
         }
     }
     cmdEndDebugMarker(input.m_frame->m_cmd);
@@ -715,9 +713,8 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
         if (!pObject->CollidesWithFrustum(input.m_frustum)) {
             continue;
         }
-        LegacyVertexBuffer::GeometryBinding binding{};
         std::array targets = { eVertexBufferElement_Position, eVertexBufferElement_Normal, eVertexBufferElement_Texture0 };
-        static_cast<LegacyVertexBuffer*>(pObject->GetVertexBuffer())->resolveGeometryBinding(frame->m_currentFrame, targets, &binding);
+        DrawPacket packet = pObject->ResolveDrawPacket(*frame, targets);
 
         uint32_t requestSize = round_up(sizeof(LuxEffectObjectUniform::FlashUniform), 256);
         #ifdef USE_THE_FORGE_LEGACY
@@ -749,8 +746,8 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
         endUpdateResource(&updateDesc, NULL);
 
         cmdBindDescriptorSet(input.m_frame->m_cmd, objectIndex++, m_perObjectDescriptorSet[frame->m_frameIndex]);
-        LegacyVertexBuffer::cmdBindGeometry(frame->m_cmd, frame->m_resourcePool, binding);
-        cmdDrawIndexed(input.m_frame->m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+        DrawPacket::cmdBindBuffers(frame->m_cmd, frame->m_resourcePool, &packet);
+        cmdDrawIndexed(input.m_frame->m_cmd, packet.numberOfIndecies(), 0, 0);
     }
     cmdEndDebugMarker(input.m_frame->m_cmd);
 
@@ -780,15 +777,14 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
                 continue;
             }
             auto* imageAlpha = pMaterial->GetImage(eMaterialTexture_Alpha);
-            LegacyVertexBuffer::GeometryBinding binding{};
             std::array targets = { eVertexBufferElement_Position, eVertexBufferElement_Texture0 };
-            static_cast<LegacyVertexBuffer*>(pObject->GetVertexBuffer())->resolveGeometryBinding(frame->m_currentFrame, targets, &binding);
+            DrawPacket packet = pObject->ResolveDrawPacket(*frame, targets);
 
             uint32_t requestSize = round_up(sizeof(LuxEffectObjectUniform::OutlineUniform), 256);
             #ifdef USE_THE_FORGE_LEGACY
-            GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(m_uniformBuffer, requestSize);
+                GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(m_uniformBuffer, requestSize);
             #else
-            GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(&m_uniformBuffer, requestSize);
+                GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(&m_uniformBuffer, requestSize);
             #endif
 
             cMatrixf worldMatrix = pObject->GetModelMatrixPtr() ? *pObject->GetModelMatrixPtr() : cMatrixf::Identity;
@@ -820,8 +816,8 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
             updateDescriptorSet(frame->m_renderer->Rend(), objectIndex, m_perObjectDescriptorSet[frame->m_frameIndex], params.size(), params.data());
 
             cmdBindDescriptorSet(input.m_frame->m_cmd, objectIndex++, m_perObjectDescriptorSet[frame->m_frameIndex]);
-            LegacyVertexBuffer::cmdBindGeometry(frame->m_cmd, frame->m_resourcePool, binding);
-            cmdDrawIndexed(input.m_frame->m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+            DrawPacket::cmdBindBuffers(input.m_frame->m_cmd, frame->m_resourcePool, &packet);
+            cmdDrawIndexed(input.m_frame->m_cmd, packet.numberOfIndecies(), 0, 0);
         }
         cmdEndDebugMarker(input.m_frame->m_cmd);
 
@@ -831,14 +827,12 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
         for(auto& pObject: filteredObjects) {
             auto* vertexBuffer = pObject->GetVertexBuffer();
             auto* pMaterial = pObject->GetMaterial();
-            if (!pObject->CollidesWithFrustum(input.m_frustum)) {
+
+            std::array targets = { eVertexBufferElement_Position, eVertexBufferElement_Texture0 };
+            DrawPacket drawPacket = pObject->ResolveDrawPacket(*frame, targets);
+            if (!pObject->CollidesWithFrustum(input.m_frustum) || drawPacket.m_type == DrawPacket::Unknown) {
                 continue;
             }
-
-            LegacyVertexBuffer::GeometryBinding binding{};
-            std::array targets = { eVertexBufferElement_Position, eVertexBufferElement_Texture0 };
-            static_cast<LegacyVertexBuffer*>(pObject->GetVertexBuffer())->resolveGeometryBinding(frame->m_currentFrame, targets, &binding);
-
 
             uint32_t requestSize = round_up(sizeof(LuxEffectObjectUniform::OutlineUniform), 256);
             #ifdef USE_THE_FORGE_LEGACY
@@ -874,8 +868,8 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
             updateDescriptorSet(frame->m_renderer->Rend(), objectIndex, m_perObjectDescriptorSet[frame->m_frameIndex], params.size(), params.data());
 
             cmdBindDescriptorSet(input.m_frame->m_cmd, objectIndex++, m_perObjectDescriptorSet[frame->m_frameIndex]);
-            LegacyVertexBuffer::cmdBindGeometry(frame->m_cmd, frame->m_resourcePool, binding);
-            cmdDrawIndexed(input.m_frame->m_cmd, binding.m_indexBuffer.numIndicies, 0, 0);
+            DrawPacket::cmdBindBuffers(input.m_frame->m_cmd, input.m_frame->m_resourcePool, &drawPacket);
+            cmdDrawIndexed(input.m_frame->m_cmd, drawPacket.numberOfIndecies(), 0, 0);
         }
         cmdEndDebugMarker(input.m_frame->m_cmd);
 

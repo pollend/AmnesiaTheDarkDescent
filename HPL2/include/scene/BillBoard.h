@@ -17,8 +17,7 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef HPL_BILLBOARD_H
-#define HPL_BILLBOARD_H
+#pragma once
 
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
@@ -83,8 +82,9 @@ namespace hpl {
 		//Renderable implementations
 		cMaterial *GetMaterial() override{ return mpMaterial;}
 		iVertexBuffer* GetVertexBuffer()override{return mpVtxBuffer;}
+        virtual DrawPacket ResolveDrawPacket(const ForgeRenderer::Frame& frame,std::span<eVertexBufferElement> elements) override;
 
-		cMatrixf* GetModelMatrix(cFrustum *apFrustum)override;
+        cMatrixf* GetModelMatrix(cFrustum *apFrustum)override;
 
 		int GetMatrixUpdateCount()override;
 
@@ -120,4 +120,3 @@ namespace hpl {
 	};
 
 };
-#endif // HPL_BILLBOARD_H

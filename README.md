@@ -61,3 +61,4 @@ on the system path.
 - Any code published by `Frictional` is under a GNU GENERAL PUBLIC LICENSE
 - Some code published by `Open 3D Engine` which is under an Apache-2.0 OR MIT
 - Any new code that is under my name will use an Apache-2.0 LICENSE 
+- Sebastian Aaltonen 2023 (MIT License (see file: LICENSE))

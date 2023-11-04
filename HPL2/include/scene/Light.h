@@ -16,11 +16,10 @@
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
-
-#ifndef HPL_LIGHT_H
-#define HPL_LIGHT_H
+#pragma once
 
 #include "graphics/AnimatedImage.h"
+#include "graphics/DrawPacket.h"
 #include "graphics/Image.h"
 #include "graphics/ImageResourceWrapper.h"
 #include "scene/Entity3D.h"
@@ -109,8 +108,12 @@ namespace hpl {
 
 		///////////////////////////////
 		//Renderable implementation:
-		cMaterial *GetMaterial(){ return NULL;}
-		iVertexBuffer* GetVertexBuffer(){ return NULL;}
+		virtual cMaterial *GetMaterial() override{ return NULL;}
+		virtual iVertexBuffer* GetVertexBuffer() override{ return NULL;}
+
+        virtual DrawPacket ResolveDrawPacket(const ForgeRenderer::Frame& frame,std::span<eVertexBufferElement> elements) override {
+            return DrawPacket();
+        }
 
 		eRenderableType GetRenderType(){ return eRenderableType_Light;}
 
@@ -297,4 +300,3 @@ namespace hpl {
 	typedef std::list<iLight*> tLightList;
 	typedef tLightList::iterator tLightListIt;
 };
-#endif // HPL_LIGHT_H

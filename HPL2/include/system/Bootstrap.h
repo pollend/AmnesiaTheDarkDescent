@@ -19,6 +19,7 @@
 #include "engine/UpdateEventLoop.h"
 #include "graphics/ForgeRenderer.h"
 #include "graphics/DebugDraw.h"
+#include "graphics/GraphicsAllocator.h"
 #include "windowing/NativeWindow.h"
 #include <cstdint>
 #include <engine/RTTI.h>
@@ -52,6 +53,7 @@ namespace hpl {
         std::unique_ptr<PrimaryViewport> m_primaryViewport;
         hpl::ForgeRenderer m_renderer;
         std::unique_ptr<hpl::DebugDraw> m_debug;
+        std::unique_ptr<GraphicsAllocator> m_graphicsAlloc;
 
         UpdateEventLoop m_updateEventLoop;
         input::InputManager m_inputManager;

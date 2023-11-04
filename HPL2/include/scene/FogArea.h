@@ -17,22 +17,18 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef HPL_FOG_AREA_H
-#define HPL_FOG_AREA_H
+#pragma once
 
 #include "graphics/GraphicsTypes.h"
 #include "graphics/Renderable.h"
 
 namespace hpl {
 
-	//------------------------------------------
-
 	class cCamera;
 	class cFrustum;
 	class iTexture;
 	class cResources;
 
-	//------------------------------------------
 
 	class cFogArea : public iRenderable
 	{
@@ -70,7 +66,7 @@ namespace hpl {
 		//Renderable implementation:
 		cMaterial *GetMaterial(){ return NULL;}
 		iVertexBuffer* GetVertexBuffer(){ return NULL;}
-
+        virtual DrawPacket ResolveDrawPacket(const ForgeRenderer::Frame& frame,std::span<eVertexBufferElement> elements) override;
 		eRenderableType GetRenderType(){ return eRenderableType_FogArea;}
 
 		int GetMatrixUpdateCount(){ return GetTransformUpdateCount();}
@@ -90,4 +86,3 @@ namespace hpl {
 	};
 
 };
-#endif // HPL_FOG_AREA_H

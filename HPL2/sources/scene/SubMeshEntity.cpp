@@ -17,218 +17,240 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "scene/SubMeshEntity.h"
+#include "Common_3/Graphics/Interfaces/IGraphics.h"
+#include "Common_3/Resources/ResourceLoader/Interfaces/IResourceLoader.h"
+#include "FixPreprocessor.h"
 
-#include "scene/MeshEntity.h"
 
-#include "resources/MaterialManager.h"
-#include "resources/MeshManager.h"
+#include "graphics/ForgeRenderer.h"
+#include "graphics/GraphicsAllocator.h"
+#include "graphics/GraphicsBuffer.h"
 #include "graphics/VertexBuffer.h"
 #include "graphics/Material.h"
 #include "graphics/Mesh.h"
 #include "graphics/SubMesh.h"
-
 #include "graphics/Animation.h"
 #include "graphics/AnimationTrack.h"
 #include "graphics/Skeleton.h"
 #include "graphics/Bone.h"
+#include "graphics/DrawPacket.h"
+#include "graphics/Enum.h"
+#include "graphics/ForgeHandles.h"
+#include "impl/LegacyVertexBuffer.h"
 
+#include "math/MathTypes.h"
 #include "scene/AnimationState.h"
 #include "scene/NodeState.h"
+#include "scene/MeshEntity.h"
+#include "scene/SubMeshEntity.h"
+
+#include "resources/MaterialManager.h"
+#include "resources/MeshManager.h"
 
 #include "physics/PhysicsBody.h"
 
 #include "math/Math.h"
+#include <algorithm>
+#include <cstdint>
 
 namespace hpl {
-	cSubMeshEntity::cSubMeshEntity(const tString &asName, cMeshEntity *apMeshEntity, cSubMesh * apSubMesh,
-								cMaterialManager* apMaterialManager) : iRenderable(asName)
-	{
-		mpMeshEntity = apMeshEntity;
-		mpSubMesh = apSubMesh;
+    cSubMeshEntity::cSubMeshEntity(
+        const tString& asName, cMeshEntity* apMeshEntity, cSubMesh* apSubMesh, cMaterialManager* apMaterialManager)
+        : iRenderable(asName)
+        , mpMeshEntity(apMeshEntity)
+        , mpSubMesh(apSubMesh)
+        , mpMaterialManager(apMaterialManager) {
+        mbIsOneSided = mpSubMesh->GetIsOneSided();
+        mvOneSidedNormal = mpSubMesh->GetOneSidedNormal();
+        m_isSkinnedMesh  = (mpMeshEntity->GetMesh()->GetSkeleton() != nullptr);
+        auto* graphicsAllocator = Interface<GraphicsAllocator>::Get();
+        ASSERT(graphicsAllocator);
 
-		mbIsOneSided = mpSubMesh->GetIsOneSided();
-		mvOneSidedNormal = mpSubMesh->GetOneSidedNormal();
+        auto vertexStreams = mpSubMesh->streamBuffers();
+        auto& indexStream = mpSubMesh->IndexStream();
+        auto& opaqueSet = graphicsAllocator->resolveSet(GraphicsAllocator::AllocationSet::OpaqueSet);
 
-		mpMaterialManager = apMaterialManager;
+        m_numberVertices = vertexStreams.begin()->m_numberElements;
+        m_numberIndecies = indexStream.m_numberElements;
 
-		mbGraphicsUpdated = false;
+        const uint32_t reservedVerticies = m_numberVertices * (m_isSkinnedMesh ? 2 : 1);
+        m_geometry = opaqueSet.allocate(reservedVerticies, m_numberIndecies);
+        for(auto& localStream: vertexStreams) {
+            auto gpuStream = m_geometry->getStreamBySemantic(localStream.m_semantic);
+            ASSERT(gpuStream != m_geometry->vertexStreams().end());
 
-		if(mpMeshEntity->GetMesh()->GetSkeleton())
-		{
-			mpDynVtxBuffer = mpSubMesh->GetVertexBuffer()->CreateCopy(eVertexBufferType_Hardware,eVertexBufferUsageType_Dynamic,eFlagBit_All);
+            BufferUpdateDesc updateDesc = { gpuStream->buffer().m_handle, gpuStream->stride() *  m_geometry->vertextOffset(),  gpuStream->stride() * reservedVerticies};
+            beginUpdateResource(&updateDesc);
+
+            GraphicsBuffer gpuBuffer(updateDesc);
+            auto dest = gpuBuffer.CreateViewRaw();
+            auto src = localStream.m_buffer.CreateViewRaw();
+            for(size_t i = 0; i < m_numberVertices; i++) {
+                auto sp = src.rawByteSpan().subspan(i * localStream.m_stride, std::min(gpuStream->stride(), localStream.m_stride));
+                dest.WriteRaw(i * gpuStream->stride(), sp);
+            }
+            if(m_isSkinnedMesh) {
+                for(size_t i = 0; i < m_numberVertices; i++) {
+                    auto sp = src.rawByteSpan().subspan(i * localStream.m_stride, std::min(gpuStream->stride(), localStream.m_stride));
+                    dest.WriteRaw(((i + m_numberVertices) * gpuStream->stride()), sp);
+                }
+            }
+            endUpdateResource(&updateDesc, nullptr);
+        }
+        {
+            BufferUpdateDesc updateDesc = { m_geometry->indexBuffer().m_handle, m_geometry->indexOffset() * GeometrySet::IndexBufferStride,  GeometrySet::IndexBufferStride * m_numberIndecies};
+            beginUpdateResource(&updateDesc);
+            GraphicsBuffer gpuBuffer(updateDesc);
+            auto dest = gpuBuffer.CreateIndexView();
+            auto src = indexStream.m_buffer.CreateIndexView();
+            for(size_t i = 0; i < m_numberIndecies; i++) {
+                dest.Write(i, src.Get(i));
+            }
+            endUpdateResource(&updateDesc, nullptr);
+        }
+
+    }
+
+    cSubMeshEntity::~cSubMeshEntity() {
+        /* Clear any custom textures here*/
+        if (mpMaterial)
+            mpMaterialManager->Destroy(mpMaterial);
+    }
+
+    void cSubMeshEntity::UpdateLogic(float afTimeStep) {
+    }
+
+    cMaterial* cSubMeshEntity::GetMaterial() {
+        if (mpMaterial == NULL && mpSubMesh->GetMaterial() == NULL) {
+            // Error("Materials for sub entity %s are NULL!\n",GetName().c_str());
+        }
+
+        if (mpMaterial)
+            return mpMaterial;
+        else
+            return mpSubMesh->GetMaterial();
+    }
+
+    static inline float3 WeightTransform(const cMatrixf& a_mtxA, float3 src, float weight) {
+
+        return float3((a_mtxA.m[0][0] * src[0] + a_mtxA.m[0][1] * src[1] + a_mtxA.m[0][2] * src[2] + a_mtxA.m[0][3]) * weight,
+                      (a_mtxA.m[1][0] * src[0] + a_mtxA.m[1][1] * src[1] + a_mtxA.m[1][2] * src[2] + a_mtxA.m[1][3]) * weight,
+                      (a_mtxA.m[2][0] * src[0] + a_mtxA.m[2][1] * src[1] + a_mtxA.m[2][2] * src[2] + a_mtxA.m[2][3]) * weight);
+
+    }
+    static inline float3 WeightTransformRotation(const cMatrixf& a_mtxA, float3 src, float weight) {
+
+        return float3((a_mtxA.m[0][0] * src[0] + a_mtxA.m[0][1] * src[1] + a_mtxA.m[0][2] * src[2]) * weight,
+                      (a_mtxA.m[1][0] * src[0] + a_mtxA.m[1][1] * src[1] + a_mtxA.m[1][2] * src[2]) * weight,
+                      (a_mtxA.m[2][0] * src[0] + a_mtxA.m[2][1] * src[1] + a_mtxA.m[2][2] * src[2]) * weight);
+
+    }
+
+
+    void cSubMeshEntity::UpdateGraphicsForFrame(float afFrameTime) {
+        ////////////////////////////////////
+        // Update things in parent first.
+        mpMeshEntity->UpdateGraphicsForFrame(afFrameTime);
+
+        ////////////////////////////////////
+        // If it has dynamic mesh, update it.
+        if (m_isSkinnedMesh) {
+            if (mpMeshEntity->mbSkeletonPhysicsSleeping && mbGraphicsUpdated) {
+                return;
+            }
+
+            m_activeCopy = (m_activeCopy + 1) % ForgeRenderer::SwapChainLength;
+            mbGraphicsUpdated = true;
+
+            auto staticBindBuffers = mpSubMesh->streamBuffers();
+            auto bindPositionIt = mpSubMesh->getStreamBySemantic(ShaderSemantic::SEMANTIC_POSITION);
+            auto bindNormalIt = mpSubMesh->getStreamBySemantic(ShaderSemantic::SEMANTIC_NORMAL);
+            auto bindTangentIt = mpSubMesh->getStreamBySemantic(ShaderSemantic::SEMANTIC_TANGENT);
+            ASSERT(bindPositionIt != mpSubMesh->streamBuffers().end() &&
+                bindNormalIt != mpSubMesh->streamBuffers().end()  &&
+                bindTangentIt != mpSubMesh->streamBuffers().end()
+            );
+            auto bindPositonView = bindPositionIt->GetStructuredView<float3>(); // the static buffer data is the fixed pose
+            auto bindNormalView = bindNormalIt->GetStructuredView<float3>();
+            auto bindTangentView = bindTangentIt->GetStructuredView<float3>();
+
+            auto targetPositionIt = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_POSITION);
+            auto targetNormalIt  = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_NORMAL);
+            auto targetTangentIt  = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_TANGENT);
+
+            ASSERT(targetPositionIt != m_geometry->vertexStreams().end() &&
+                targetNormalIt != m_geometry->vertexStreams().end()  &&
+                targetTangentIt != m_geometry->vertexStreams().end()
+            );
+
+            BufferUpdateDesc positionUpdateDesc = { targetPositionIt->buffer().m_handle, (m_geometry->vertextOffset() * targetPositionIt->stride()) + m_activeCopy * (targetPositionIt->stride() * m_numberVertices), targetPositionIt->stride() * m_numberVertices};
+            BufferUpdateDesc tangentUpdateDesc = { targetTangentIt->buffer().m_handle, (m_geometry->vertextOffset() * targetTangentIt->stride()) + m_activeCopy * (targetTangentIt->stride() * m_numberVertices), targetTangentIt->stride() * m_numberVertices};
+            BufferUpdateDesc normalUpdateDesc = { targetNormalIt->buffer().m_handle, (m_geometry->vertextOffset() * targetNormalIt->stride()) + m_activeCopy * (targetNormalIt->stride() * m_numberVertices), targetNormalIt->stride() * m_numberVertices};
+            beginUpdateResource(&positionUpdateDesc);
+            beginUpdateResource(&tangentUpdateDesc);
+            beginUpdateResource(&normalUpdateDesc);
+
+            GraphicsBuffer positionMapping(positionUpdateDesc);
+            GraphicsBuffer normalMapping(tangentUpdateDesc);
+            GraphicsBuffer tangentMapping(normalUpdateDesc);
+            auto targetPositionView = positionMapping.CreateStructuredView<float3>(0, targetPositionIt->stride());
+            auto targetTangentView = tangentMapping.CreateStructuredView<float3>(0, targetTangentIt->stride());
+            auto targetNormalView = normalMapping.CreateStructuredView<float3>(0, targetNormalIt->stride());
+
+            ASSERT(bindPositionIt->m_numberElements == m_numberVertices);
+            for(size_t i = 0; i < m_numberVertices; i++) {
+                const std::span<float> weights = std::span<float>(&mpSubMesh->m_vertexWeights[(i * 4)], 4);
+                const std::span<uint8_t> boneIdxs = std::span<uint8_t>(&mpSubMesh->m_vertexBones[(i * 4)], 4);
+
+                float3 bindPos = bindPositonView.Get(i);
+                float3 bindNormal = bindNormalView.Get(i);
+                float3 bindTangent = bindTangentView.Get(i);
+
+                float3 accmulatedPos = float3(0);
+                float3 accmulatedNormal = float3(0);
+                float3 accmulatedTangent = float3(0);
+
+                for(size_t boneIdx = 0; boneIdx < 4 && weights[boneIdx] != 0; boneIdx++) {
+                    const float weight = weights[boneIdx];
+                    const cMatrixf& transform = mpMeshEntity->mvBoneMatrices[boneIdxs[boneIdx]];
+                    accmulatedPos += WeightTransform(transform, bindPos, weight);
+                    accmulatedNormal += WeightTransformRotation(transform, bindNormal, weight);
+                    accmulatedTangent += WeightTransformRotation(transform, bindTangent, weight);
+                }
+                targetPositionView.Write(i, accmulatedPos);
+                targetNormalView.Write(i, accmulatedNormal);
+                targetTangentView.Write(i, accmulatedTangent);
+            }
+
+            endUpdateResource(&positionUpdateDesc, nullptr);
+            endUpdateResource(&tangentUpdateDesc, nullptr);
+            endUpdateResource(&normalUpdateDesc, nullptr);
 		}
 
-		mpLocalNode = NULL;
-
-		mbUpdateBody = false;
-
-		mpMaterial = NULL;
-
-		mpUserData = NULL;
-
-		//This is used to see if null should be returned.
-		// 0 = no check made, test if matrix is identity
-		// -1 = Matrix was not identity
-		// 1 = matrix was identiy
-		mlStaticNullMatrixCount =0;
-	}
-
-	cSubMeshEntity::~cSubMeshEntity()
-	{
-		if(mpDynVtxBuffer) hplDelete(mpDynVtxBuffer);
-
-		/* Clear any custom textures here*/
-		if(mpMaterial) mpMaterialManager->Destroy(mpMaterial);
-	}
-
-	void cSubMeshEntity::UpdateLogic(float afTimeStep)
-	{
-
 	}
 
 
-	cMaterial* cSubMeshEntity::GetMaterial()
-	{
-		if(mpMaterial==NULL && mpSubMesh->GetMaterial()==NULL)
-		{
-			//Error("Materials for sub entity %s are NULL!\n",GetName().c_str());
-		}
+    DrawPacket cSubMeshEntity::ResolveDrawPacket(const ForgeRenderer::Frame& frame,std::span<eVertexBufferElement> elements)  {
+		DrawPacket packet;
+	    if(m_numberIndecies == 0) {
+            return packet;
+	    }
 
-		if(mpMaterial)
-			return mpMaterial;
-		else
-			return mpSubMesh->GetMaterial();
-	}
-
-	//-----------------------------------------------------------------------
-
-	// Set Src as private variable to give this a little boost! Or?
-	static inline void MatrixFloatTransformSet(float *pDest, const cMatrixf &a_mtxA, const float* pSrc, const float fWeight)
-	{
-		pDest[0] = ( a_mtxA.m[0][0] * pSrc[0] + a_mtxA.m[0][1] * pSrc[1] + a_mtxA.m[0][2] * pSrc[2] + a_mtxA.m[0][3] ) * fWeight;
-		pDest[1] = ( a_mtxA.m[1][0] * pSrc[0] + a_mtxA.m[1][1] * pSrc[1] + a_mtxA.m[1][2] * pSrc[2] + a_mtxA.m[1][3] ) * fWeight;
-		pDest[2] = ( a_mtxA.m[2][0] * pSrc[0] + a_mtxA.m[2][1] * pSrc[1] + a_mtxA.m[2][2] * pSrc[2] + a_mtxA.m[2][3] ) * fWeight;
-	}
-
-	static inline void MatrixFloatRotateSet(float *pDest, const cMatrixf &a_mtxA, const float* pSrc, const float fWeight)
-	{
-		pDest[0] = ( a_mtxA.m[0][0] * pSrc[0] + a_mtxA.m[0][1] * pSrc[1] + a_mtxA.m[0][2] * pSrc[2] ) * fWeight;
-		pDest[1] = ( a_mtxA.m[1][0] * pSrc[0] + a_mtxA.m[1][1] * pSrc[1] + a_mtxA.m[1][2] * pSrc[2] ) * fWeight;
-		pDest[2] = ( a_mtxA.m[2][0] * pSrc[0] + a_mtxA.m[2][1] * pSrc[1] + a_mtxA.m[2][2] * pSrc[2] ) * fWeight;
-	}
-
-	//-----------------------------------------------------------------------
-
-	// Set Src as private variable to give this a little boost!Or?
-	static inline void MatrixFloatTransformAdd(float *pDest, const cMatrixf &a_mtxA, const float* pSrc, const float fWeight)
-	{
-		pDest[0] += ( a_mtxA.m[0][0] * pSrc[0] + a_mtxA.m[0][1] * pSrc[1] + a_mtxA.m[0][2] * pSrc[2] + a_mtxA.m[0][3] ) * fWeight;
-		pDest[1] += ( a_mtxA.m[1][0] * pSrc[0] + a_mtxA.m[1][1] * pSrc[1] + a_mtxA.m[1][2] * pSrc[2] + a_mtxA.m[1][3] ) * fWeight;
-		pDest[2] += ( a_mtxA.m[2][0] * pSrc[0] + a_mtxA.m[2][1] * pSrc[1] + a_mtxA.m[2][2] * pSrc[2] + a_mtxA.m[2][3] ) * fWeight;
-	}
-
-	static inline void MatrixFloatRotateAdd(float *pDest, const cMatrixf &a_mtxA, const float* pSrc, const float fWeight)
-	{
-		pDest[0] += ( a_mtxA.m[0][0] * pSrc[0] + a_mtxA.m[0][1] * pSrc[1] + a_mtxA.m[0][2] * pSrc[2] ) * fWeight;
-		pDest[1] += ( a_mtxA.m[1][0] * pSrc[0] + a_mtxA.m[1][1] * pSrc[1] + a_mtxA.m[1][2] * pSrc[2] ) * fWeight;
-		pDest[2] += ( a_mtxA.m[2][0] * pSrc[0] + a_mtxA.m[2][1] * pSrc[1] + a_mtxA.m[2][2] * pSrc[2] ) * fWeight;
-	}
-
-	//-----------------------------------------------------------------------
-
-	void cSubMeshEntity::UpdateGraphicsForFrame(float afFrameTime)
-	{
-		////////////////////////////////////
-		//Update things in parent first.
-		mpMeshEntity->UpdateGraphicsForFrame(afFrameTime);
-
-		////////////////////////////////////
-		// If it has dynamic mesh, update it.
-		if(mpDynVtxBuffer)
-		{
-			if(mpMeshEntity->mbSkeletonPhysicsSleeping && mbGraphicsUpdated)
-			{
-				return;
-			}
-
-			mbGraphicsUpdated = true;
-
-			const float *pBindPos = mpSubMesh->GetVertexBuffer()->GetFloatArray(eVertexBufferElement_Position);
-			const float *pBindNormal = mpSubMesh->GetVertexBuffer()->GetFloatArray(eVertexBufferElement_Normal);
-			const float *pBindTangent = mpSubMesh->GetVertexBuffer()->GetFloatArray(eVertexBufferElement_Texture1Tangent);
-
-			float *pSkinPos = mpDynVtxBuffer->GetFloatArray(eVertexBufferElement_Position);
-			float *pSkinNormal = mpDynVtxBuffer->GetFloatArray(eVertexBufferElement_Normal);
-			float *pSkinTangent = mpDynVtxBuffer->GetFloatArray(eVertexBufferElement_Texture1Tangent);
-
-			const int lVtxStride = mpDynVtxBuffer->GetElementNum(eVertexBufferElement_Position);
-			const int lVtxNum = mpDynVtxBuffer->GetVertexNum();
-
-			for(int vtx=0; vtx < lVtxNum; vtx++)
-			{
-				//To count the bone bindings
-				int lCount = 0;
-				//Get pointer to weights and bone index.
-			    if(mpSubMesh->m_vertexWeights.size() == 0) {
-                    continue;
-			    }
-				const float *pWeight = &mpSubMesh->m_vertexWeights[vtx*4];
-				const unsigned char *pBoneIdx = &mpSubMesh->m_vertexBones[vtx*4];
-
-				const cMatrixf &mtxTransform = mpMeshEntity->mvBoneMatrices[*pBoneIdx];
-
-
-				MatrixFloatTransformSet(pSkinPos,mtxTransform, pBindPos, *pWeight);
-
-				MatrixFloatRotateSet(pSkinNormal,mtxTransform, pBindNormal, *pWeight);
-
-				MatrixFloatRotateSet(pSkinTangent,mtxTransform, pBindTangent, *pWeight);
-
-				++pWeight; ++pBoneIdx; ++lCount;
-
-				//Iterate weights until 0 is found or count < 4
-				while(*pWeight != 0 && lCount < 4)
-				{
-					//Log("Boneidx: %d Count %d Weight: %f\n",(int)*pBoneIdx,lCount, *pWeight);
-					const cMatrixf &mtxTransform = mpMeshEntity->mvBoneMatrices[*pBoneIdx];
-
-					//Transform with the local movement of the bone.
-					MatrixFloatTransformAdd(pSkinPos,mtxTransform, pBindPos, *pWeight);
-
-					MatrixFloatRotateAdd(pSkinNormal,mtxTransform, pBindNormal, *pWeight);
-
-					MatrixFloatRotateAdd(pSkinTangent,mtxTransform, pBindTangent, *pWeight);
-
-					++pWeight; ++pBoneIdx; ++lCount;
-				}
-
-				pBindPos += lVtxStride;
-				pSkinPos += lVtxStride;
-
-				pBindNormal += 3;
-				pSkinNormal += 3;
-
-				pBindTangent += 4;
-				pSkinTangent += 4;
-			}
-			//Update buffer
-			mpDynVtxBuffer->UpdateData(eVertexElementFlag_Position | eVertexElementFlag_Normal | eVertexElementFlag_Texture1,false);
-		}
-
-	}
-
-
+        DrawPacket::GeometrySetBinding binding{};
+        packet.m_type = DrawPacket::DrawGeometryset;
+        std::copy(elements.begin(), elements.end(), binding.m_elements);
+        binding.m_numStreams = elements.size();
+        binding.m_subAllocation = m_geometry.get();
+        binding.m_indexOffset = 0;
+        binding.m_set = GraphicsAllocator::AllocationSet::OpaqueSet;
+        binding.m_numIndices = m_numberIndecies;
+	    binding.m_vertexOffset = (m_activeCopy * m_numberVertices);
+        packet.m_unified = binding;
+	    return packet;
+    }
 	iVertexBuffer* cSubMeshEntity::GetVertexBuffer()
 	{
-		if(mpDynVtxBuffer)
-		{
-			return mpDynVtxBuffer;
-		}
-		else
-		{
-			return mpSubMesh->GetVertexBuffer();
-		}
+		return mpSubMesh->GetVertexBuffer();
 	}
 
 	cBoundingVolume* cSubMeshEntity::GetBoundingVolume()
@@ -320,4 +342,4 @@ namespace hpl {
 		mpMeshEntity->mbUpdateBoundingVolume = true;
 	}
 
-}
+} // namespace hpl

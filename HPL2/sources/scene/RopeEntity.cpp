@@ -19,6 +19,7 @@
 
 #include "scene/RopeEntity.h"
 
+#include "impl/LegacyVertexBuffer.h"
 #include "math/Math.h"
 
 #include "graphics/Graphics.h"
@@ -36,12 +37,6 @@
 #include "physics/PhysicsRope.h"
 
 namespace hpl {
-
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	cRopeEntity::cRopeEntity(const tString& asName, cResources *apResources,cGraphics *apGraphics,
 								iPhysicsRope *apRope, int alMaxSegments) :	iRenderable(asName)
@@ -96,19 +91,17 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-	cRopeEntity::~cRopeEntity()
+    DrawPacket cRopeEntity::ResolveDrawPacket(const ForgeRenderer::Frame& frame,std::span<eVertexBufferElement> elements)  {
+
+	    return static_cast<LegacyVertexBuffer*>(mpVtxBuffer)->resolveGeometryBinding(frame.m_currentFrame, elements);
+    }
+
+    cRopeEntity::~cRopeEntity()
 	{
 		if(mpMaterial) mpMaterialManager->Destroy(mpMaterial);
 		if(mpVtxBuffer) hplDelete(mpVtxBuffer);
 	}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	void cRopeEntity::SetMultiplyAlphaWithColor(bool abX)
 	{

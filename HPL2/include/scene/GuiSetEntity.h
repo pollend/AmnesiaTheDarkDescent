@@ -16,9 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
-
-#ifndef HPL_GUI_SET_ENTITY_H
-#define HPL_GUI_SET_ENTITY_H
+#pragma once
 
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
@@ -39,9 +37,6 @@ namespace hpl {
 
 	class cGuiSetEntity : public iRenderable
 	{
-	#ifdef __GNUC__
-		typedef iRenderable __super;
-	#endif
 	public:
 		cGuiSetEntity(const tString asName,cGuiSet *apSet);
 		~cGuiSetEntity();
@@ -57,6 +52,7 @@ namespace hpl {
 		//Renderable implementations
 		cMaterial *GetMaterial(){ return NULL;}
 		iVertexBuffer* GetVertexBuffer(){return NULL;}
+        virtual DrawPacket ResolveDrawPacket(const ForgeRenderer::Frame& frame,std::span<eVertexBufferElement> elements) { return DrawPacket();}
 
 		eRenderableType GetRenderType(){ return eRenderableType_GuiSet;}
 		cMatrixf* GetModelMatrix(cFrustum *apFrustum);
@@ -69,4 +65,3 @@ namespace hpl {
 	};
 
 };
-#endif // HPL_GUI_SET_ENTITY_H

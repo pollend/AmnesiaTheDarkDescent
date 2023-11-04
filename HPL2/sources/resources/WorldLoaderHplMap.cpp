@@ -19,9 +19,12 @@
 
 #include "resources/WorldLoaderHplMap.h"
 
+#include "Common_3/Graphics/Interfaces/IGraphics.h"
 #include "Common_3/Utilities/Log/Log.h"
-#include "graphics/AssetBuffer.h"
+#include "engine/RTTI.h"
+#include "graphics/GraphicsBuffer.h"
 #include "graphics/Image.h"
+#include "graphics/MeshUtility.h"
 #include "impl/LegacyVertexBuffer.h"
 #include "system/String.h"
 #include "system/LowLevelSystem.h"
@@ -69,8 +72,7 @@
 
 #include "Common_3/Utilities/Interfaces/ILog.h"
 #include <FixPreprocessor.h>
-
-
+#include <numeric>
 
 
 
@@ -511,7 +513,7 @@ namespace hpl {
 
             std::vector<cSubMesh::StreamBufferInfo> vertexStreams;
             cSubMesh::IndexBufferInfo indexInfo;
-            AssetBuffer::BufferIndexView indexView = indexInfo.GetView();
+            GraphicsBuffer::BufferIndexView indexView = indexInfo.GetView();
 			{
 				int lVtxNum = binBuff.GetInt32();
 				int lVtxTypeNum = binBuff.GetInt32();
@@ -550,9 +552,9 @@ namespace hpl {
                             streamBuffer.m_stride = mp.streamBufferStride;
                             streamBuffer.m_semantic = mp.semantic;
                             streamBuffer.m_numberElements = lElementNum;
-                            AssetBuffer::BufferRawView rawView = streamBuffer.m_buffer.CreateViewRaw();
+                            GraphicsBuffer::BufferRawView rawView = streamBuffer.m_buffer.CreateViewRaw();
                             std::array<float, 10> stage;
-                            std::span<float> floatSpan = rawView.RawDataView<float>();
+                            std::span<float> floatSpan = rawView.rawSpanByType<float>();
                             for(size_t vtxIdx = 0; vtxIdx < lVtxNum; vtxIdx++) {
                                 for(size_t eleIdx = 0; eleIdx < lElementNum; eleIdx++) {
                                     switch(lCompressionType) {
@@ -618,9 +620,6 @@ namespace hpl {
 
 	void cWorldLoaderHplMap::SaveCacheFile(const tWString& asFile)
 	{
-#if (defined(__PPC__) || defined(__ppc__))
-		return;
-#endif
 		if(mbLoadedCache) return; //No need to save if cache was loaded!
 		if(cResources::GetForceCacheLoadingAndSkipSaving()) return;
 
@@ -1239,7 +1238,7 @@ namespace hpl {
 
 	void cWorldLoaderHplMap::CombineObjectsAndCreateMeshEntity(tRenderableVec &avObjects, int alFirstIdx, int alLastIdx)
 	{
-		if(gbLog) Log("  Combining objects %d -> %d\n", alFirstIdx, alLastIdx);
+		LOGF_IF(LogLevel::eDEBUG, gbLog,"  Combining objects %d -> %d\n", alFirstIdx, alLastIdx);
 
 		///////////////////////////////////////////
 		//Iterate objects to get the total amount of vertex data
@@ -1249,18 +1248,26 @@ namespace hpl {
 		for(int i=alFirstIdx; i<=alLastIdx; ++i)
 		{
 			//Check if the sub mesh is visible, else skip
-			cHplMapStaticUserData*pUserData = (cHplMapStaticUserData*)static_cast<cSubMeshEntity*>(avObjects[i])->GetUserData();
-			if(pUserData->mbVisible==false) continue;
+		    ASSERT(TypeInfo<cSubMeshEntity>::IsSubtype(*avObjects[i]));
+		    cSubMeshEntity* subMeshEntity = static_cast<cSubMeshEntity*>(avObjects[i]);
+			cHplMapStaticUserData* pUserData = reinterpret_cast<cHplMapStaticUserData*>(subMeshEntity->GetUserData());
+			if(pUserData->mbVisible == false) {
+			    continue;
+		    }
+            cSubMesh* mesh = subMeshEntity->GetSubMesh();
+            auto streams = mesh->streamBuffers();
+            auto& indexStream = mesh->IndexStream();
+            auto streamPos = std::find_if(streams.begin(), streams.end(), [&](auto& stream) {
+                return stream.m_semantic == ShaderSemantic::SEMANTIC_POSITION;
+            });
+            ASSERT(streamPos != streams.end());
 
-			//Check add the vertex num and index num from vertex buffer
-			iVertexBuffer *pVtxBuffer = avObjects[i]->GetVertexBuffer();
+            lTotalIdxAmount += indexStream.m_numberElements;
+			lTotalVtxAmount += streamPos->m_numberElements;
 
-			lTotalVtxAmount += pVtxBuffer->GetVertexNum();
-			lTotalIdxAmount += pVtxBuffer->GetIndexNum();
-
-			if(gbLog) Log("   '%s' has %d vtx and %d idx\n",avObjects[i]->GetName().c_str(),pVtxBuffer->GetVertexNum(),pVtxBuffer->GetIndexNum());
+			LOGF_IF(LogLevel::eDEBUG, gbLog,"   '%s' has %d vtx and %d idx",avObjects[i]->GetName().c_str(),lTotalVtxAmount,lTotalIdxAmount);
 		}
-		if(gbLog) Log("   Total amount %d vtx and %d idx\n",lTotalVtxAmount, lTotalIdxAmount);
+		LOGF_IF(LogLevel::eDEBUG, gbLog,"   Total amount %d vtx and %d idx",lTotalVtxAmount, lTotalIdxAmount);
 
 		///////////////////////////////////////////
 		//If no vertices, return and skip creation
@@ -1274,99 +1281,105 @@ namespace hpl {
 
 		///////////////////////////////////////////
 		//Create the vertex buffer (skipping color!)
-		iVertexBuffer *pVtxBuffer = mpGraphics->GetLowLevel()->CreateVertexBuffer(eVertexBufferType_Hardware, eVertexBufferDrawType_Tri,
-																					eVertexBufferUsageType_Static,lTotalVtxAmount, lTotalIdxAmount);
 
-		//Set up what data arrays to use
-		struct VertexDataTable {
-			eVertexBufferElement mType;
-			int mlElementNum;
-			const hpl::LegacyVertexBuffer::VertexElement* m_targetElement;
-			size_t offset;
-		} lDataArrayTypes[5] = {
-			{eVertexBufferElement_Position, 4, nullptr, 0},
-			{eVertexBufferElement_Normal, 3, nullptr, 0},
-			{eVertexBufferElement_Color0, 4, nullptr, 0},
-			{eVertexBufferElement_Texture0, 3, nullptr, 0},
-			{eVertexBufferElement_Texture1Tangent, 4, nullptr, 0}
-		};
-		//Set up the data arrays
-		for(int i=0;i< std::size(lDataArrayTypes); ++i)
-		{
-			pVtxBuffer->CreateElementArray(lDataArrayTypes[i].mType,eVertexBufferElementFormat_Float, lDataArrayTypes[i].mlElementNum);
-			pVtxBuffer->ResizeArray(lDataArrayTypes[i].mType, lTotalVtxAmount * lDataArrayTypes[i].mlElementNum);
-			lDataArrayTypes[i].m_targetElement = static_cast<hpl::LegacyVertexBuffer*>(pVtxBuffer)->GetElement(lDataArrayTypes[i].mType);
-			ASSERT(lDataArrayTypes[i].m_targetElement != nullptr && "Element not found");
-		}
+        cSubMesh::IndexBufferInfo indexInfo;
+        cSubMesh::StreamBufferInfo positionInfo;
+        cSubMesh::StreamBufferInfo tangentInfo;
+        cSubMesh::StreamBufferInfo colorInfo;
+        cSubMesh::StreamBufferInfo normalInfo;
+        cSubMesh::StreamBufferInfo textureInfo;
+        cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::PostionTrait>(&positionInfo);
+        cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::ColorTrait>(&colorInfo);
+        cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::NormalTrait>(&normalInfo);
+        cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::TextureTrait>(&textureInfo);
+        cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::TangentTrait>(&tangentInfo);
 
-		//Set up and get indices
-		pVtxBuffer->ResizeIndices(lTotalIdxAmount);
-		unsigned int* pIndexArray = pVtxBuffer->GetIndices();
+        cSubMesh::StreamBufferInfo* vertexLayouts[] = {
+            &positionInfo,
+            &tangentInfo,
+            &normalInfo,
+            &colorInfo,
+            &textureInfo
+        };
 
-		///////////////////////////////////////////
-		//Fill vertex buffer with data
-		int lIdxOffset =0;
-		for(int vtxbuffer = alFirstIdx; vtxbuffer <= alLastIdx; ++vtxbuffer)
-		{
-			//Check if the sub mesh is visible, else skip
-			cHplMapStaticUserData*pUserData = (cHplMapStaticUserData*)static_cast<cSubMeshEntity*>(avObjects[vtxbuffer])->GetUserData();
-			if(pUserData->mbVisible==false) continue;
+        uint32_t vertexIdx = 0;
+        uint32_t indexIdx = 0;
+		for(int subMeshIdx = alFirstIdx; subMeshIdx <= alLastIdx; ++subMeshIdx) {
+		    ASSERT(TypeInfo<cSubMeshEntity>::IsSubtype(*avObjects[subMeshIdx]));
+		    cSubMeshEntity* subMeshEntity = static_cast<cSubMeshEntity*>(avObjects[subMeshIdx]);
+			cHplMapStaticUserData* pUserData = reinterpret_cast<cHplMapStaticUserData*>(subMeshEntity->GetUserData());
+			if(pUserData->mbVisible == false) {
+			    continue;
+		    }
+            cSubMesh* mesh = subMeshEntity->GetSubMesh();
 
-			iRenderable *pObject = avObjects[vtxbuffer];
+            std::span<cSubMesh::StreamBufferInfo> vertexstreams = mesh->streamBuffers();
+            cSubMesh::IndexBufferInfo& indexStream = mesh->IndexStream();
+            uint32_t minimumElements = std::accumulate(vertexstreams.begin(), vertexstreams.end(), static_cast<uint32_t>(UINT32_MAX), [](uint32_t size, auto& stream) {
+                if(stream.m_numberElements == 0) {
+                    return size;
+                }
+                return std::min(size, stream.m_numberElements);
+            });
 
-			if(gbLog) Log("   Copying data from '%s'\n", pObject->GetName().c_str());
+            for(auto& stream: vertexstreams) {
+                if(stream.m_numberElements == 0) {
+                    continue;
+                }
+                auto foundLayout = std::find_if(std::begin(vertexLayouts), std::end(vertexLayouts), [&](auto& entry) {
+                    return entry->m_semantic == stream.m_semantic;
+                });
+                uint32_t localIdx = vertexIdx;
+                if(foundLayout != std::end(vertexLayouts)) {
+                    auto src = stream.m_buffer.CreateViewRaw();
+                    auto dest = (*foundLayout)->m_buffer.CreateViewRaw();
+                    auto srcRawSpan = src.rawByteSpan();
+                    for(size_t eleIdx = 0; eleIdx < minimumElements; eleIdx++) {
+                        auto buf = std::span(srcRawSpan.begin() + (eleIdx * stream.m_stride), std::min(stream.m_stride, (*foundLayout)->m_stride));
+                        dest.WriteRaw((localIdx * (*foundLayout)->m_stride), buf);
+                        localIdx++;
+                    }
+                }
+            }
+            {
+               auto position = positionInfo.GetStructuredView<float3>((vertexIdx * positionInfo.m_stride));
+               auto normal = normalInfo.GetStructuredView<float3>((vertexIdx * normalInfo.m_stride));
+               auto tangent = tangentInfo.GetStructuredView<float3>((vertexIdx * tangentInfo.m_stride));
+               MeshUtility::Transform(minimumElements, cMath::ToForgeMatrix4(subMeshEntity->GetWorldMatrix()), &position, &normal, &tangent);
+            }
 
-			/////////////////////////////////////
-			// Create a copy of the vertex buffer and transform it according to object
-			iVertexBuffer *pSubVtxBuffer = pObject->GetVertexBuffer();
-			auto* pTransformedVtxBuffer = static_cast<hpl::LegacyVertexBuffer*>(pSubVtxBuffer->CreateCopy(	eVertexBufferType_Software, eVertexBufferUsageType_Static,
-																				pSubVtxBuffer->GetVertexElementFlags()));
-			pTransformedVtxBuffer->Transform(pObject->GetWorldMatrix());
+            {
+                auto srcIndexView = indexStream.GetView();
+                auto destIndexView = indexInfo.GetView();
+                for(size_t i = 0; i < indexStream.m_numberElements; i++) {
+                     destIndexView.Write(indexIdx++, srcIndexView.Get(i) + vertexIdx);
+                }
+            }
+            vertexIdx += minimumElements;
+	    }
+        positionInfo.m_numberElements = vertexIdx;
+        tangentInfo.m_numberElements = vertexIdx;
+        colorInfo.m_numberElements = vertexIdx;
+        normalInfo.m_numberElements = vertexIdx;
+        textureInfo.m_numberElements = vertexIdx;
+        indexInfo.m_numberElements = indexIdx;
 
-			//////////////////////////////////////////////////
-			//Copy to each data array and increase the data pointer
-            for(int i=0; i< std::size(lDataArrayTypes);++i)
-			{
-				auto* sourceElement = pTransformedVtxBuffer->GetElement(lDataArrayTypes[i].mType);
-				auto& targetElement = lDataArrayTypes[i].m_targetElement;
-				ASSERT(targetElement != nullptr && "lDataArrayTypes[i].m_data != nullptr");
-				ASSERT(sourceElement != nullptr && "sourceElement != nullptr");
-				ASSERT(targetElement->m_type == sourceElement->m_type && "lDataArrayTypes[i].m_data->m_type == sourceElement->m_type");
-				ASSERT(targetElement->m_num == sourceElement->m_num && "lDataArrayTypes[i].m_targetElement->m_num == sourceElement->m_num");
-
-				auto targetElementStart = &(targetElement->Data().data()[lDataArrayTypes[i].offset]);
-				std::copy(sourceElement->Data().begin(), sourceElement->Data().end(), targetElementStart);
-				lDataArrayTypes[i].offset += sourceElement->Data().size();
-			}
-
-			//////////////////////////////////////////////
-			//Copy to index array (using offset from previous max) and increase index pointer and offset
-			unsigned int* pTransIdxArray = pTransformedVtxBuffer->GetIndices();
-			for(int i=0; i<pTransformedVtxBuffer->GetIndexNum(); ++i)
-			{
-				pIndexArray[i] = pTransIdxArray[i] + lIdxOffset;
-			}
-
-			lIdxOffset += pTransformedVtxBuffer->GetVertexNum();
-			pIndexArray += pTransformedVtxBuffer->GetIndexNum();
-
-			hplDelete(pTransformedVtxBuffer);
-		}
-
-		///////////////////////
-		// All meshes batched into one buffer, compile it.
-		pVtxBuffer->Compile(0);
-
-		///////////////////////////////////////////
-		//Create the mesh
-		iRenderable *pFirstObject = avObjects[alFirstIdx];
+	    iRenderable *pFirstObject = avObjects[alFirstIdx];
 		cSubMeshEntity *pFirstSubEnt = static_cast<cSubMeshEntity*>(pFirstObject);
 		cMesh *pMesh = hplNew( cMesh, (sName, _W("") ,mpResources->GetMaterialManager(),mpResources->GetAnimationManager()) );
 
 		cSubMesh *pSubMesh = pMesh->CreateSubMesh("SubMesh");
 
-		//Set the vertex buffer
-		pSubMesh->SetVertexBuffer(pVtxBuffer);
+        std::vector<cSubMesh::StreamBufferInfo> vertexStreams;
+        vertexStreams.push_back(std::move(positionInfo));
+        vertexStreams.push_back(std::move(tangentInfo));
+        vertexStreams.push_back(std::move(colorInfo));
+        vertexStreams.push_back(std::move(normalInfo));
+        vertexStreams.push_back(std::move(textureInfo));
+		iVertexBuffer *pVtxBuffer = mpGraphics->GetLowLevel()->CreateVertexBuffer(eVertexBufferType_Hardware, eVertexBufferDrawType_Tri,
+																					eVertexBufferUsageType_Static,0, 0);
+		pSubMesh->SetStreamBuffers(pVtxBuffer,
+                  std::move(vertexStreams), std::move(indexInfo));
 
 		//Set material
 		cMaterial *pMaterial = pFirstObject->GetMaterial();
@@ -1839,16 +1852,67 @@ namespace hpl {
 		// Plane
 		if(sType == "Plane")
 		{
+            auto position = GraphicsBuffer::BufferStructuredView<float3>();
+            auto color = GraphicsBuffer::BufferStructuredView<float4>();
+            auto normal = GraphicsBuffer::BufferStructuredView<float3>();
+            auto uv = GraphicsBuffer::BufferStructuredView<float2>();
+            auto tangent = GraphicsBuffer::BufferStructuredView<float3>();
+            cSubMesh::IndexBufferInfo indexInfo;
+            cSubMesh::StreamBufferInfo positionInfo;
+            cSubMesh::StreamBufferInfo tangentInfo;
+            cSubMesh::StreamBufferInfo colorInfo;
+            cSubMesh::StreamBufferInfo normalInfo;
+            cSubMesh::StreamBufferInfo textureInfo;
+            cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::PostionTrait>(&positionInfo,  &position);
+            cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::ColorTrait>(&colorInfo, &color);
+            cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::NormalTrait>(&normalInfo, &normal);
+            cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::TextureTrait>(&textureInfo, &uv);
+            cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::TangentTrait>(&tangentInfo, &tangent);
+            GraphicsBuffer::BufferIndexView index = indexInfo.GetView();
+
 			cVector3f vStartCorner = apElement->GetAttributeVector3f("StartCorner",0);
 			cVector3f vEndCorner = apElement->GetAttributeVector3f("EndCorner",0);
-			tVector2fVec vUVCorners;
-			for(int i=0;i<4;++i)
-				vUVCorners.push_back(apElement->GetAttributeVector2f("Corner" + cString::ToString(i+1) + "UV"));
+		    std::array<Vector2, 4> vUVCorners;
+			for(int i=0;i<4;++i) {
+			    vUVCorners[i] = cMath::ToForgeVec2(apElement->GetAttributeVector2f("Corner" + cString::ToString(i+1) + "UV"));
+		    }
 
-			//Create the mesh
-			cMesh *pMesh = mpGraphics->GetMeshCreator()->CreatePlane(sName,vStartCorner,vEndCorner,
-																	 vUVCorners[0],vUVCorners[1], vUVCorners[2], vUVCorners[3],
-																	 sMaterial);
+            MeshUtility::MeshCreateResult result =  MeshUtility::CreatePlane(
+                cMath::ToForgeVec3(vStartCorner),
+                cMath::ToForgeVec3(vEndCorner),
+                vUVCorners[0],
+                vUVCorners[1],
+                vUVCorners[2],
+                vUVCorners[3],
+                &index,
+                &position,
+                &color,
+                &normal,
+                &uv,
+                &tangent
+            );
+            positionInfo.m_numberElements = result.numVertices;
+            tangentInfo.m_numberElements = result.numVertices;
+            colorInfo.m_numberElements = result.numVertices;
+            normalInfo.m_numberElements = result.numVertices;
+            textureInfo.m_numberElements = result.numVertices;    		//Create the mesh
+            indexInfo.m_numberElements = result.numIndices;
+
+            std::vector<cSubMesh::StreamBufferInfo> vertexStreams;
+            vertexStreams.push_back(std::move(positionInfo));
+            vertexStreams.push_back(std::move(tangentInfo));
+            vertexStreams.push_back(std::move(colorInfo));
+            vertexStreams.push_back(std::move(normalInfo));
+            vertexStreams.push_back(std::move(textureInfo));
+
+		    iVertexBuffer* pVtxBuffer = mpGraphics->GetLowLevel()->CreateVertexBuffer(eVertexBufferType_Hardware, eVertexBufferDrawType_Tri,
+																	eVertexBufferUsageType_Static);
+		    cMesh* pMesh = hplNew( cMesh, (sName, _W(""), mpResources->GetMaterialManager(), mpResources->GetAnimationManager()));
+		    cSubMesh* pSubMesh = pMesh->CreateSubMesh("Main");
+		    cMaterial *pMat = mpResources->GetMaterialManager()->CreateMaterial(sMaterial);
+		    pSubMesh->SetMaterial(pMat);
+
+		    pSubMesh->SetStreamBuffers(pVtxBuffer, std::move(vertexStreams), std::move(indexInfo));
 
 			//////////////////////
 			//RENDER_DEBUG

@@ -18,6 +18,7 @@
  */
 #pragma once
 
+#include "graphics/DrawPacket.h"
 #include <folly/small_vector.h>
 #include <graphics/VertexBuffer.h>
 
@@ -110,8 +111,7 @@ namespace hpl {
             folly::small_vector<VertexGeometryEntry, eVertexBufferElement_LastEnum> m_vertexElement; // elements are in the order they are requested
             VertexIndexEntry m_indexBuffer;
         };
-        static void cmdBindGeometry(Cmd* cmd, ForgeRenderer::CommandResourcePool* resourcePool, LegacyVertexBuffer::GeometryBinding& binding);
-        void resolveGeometryBinding(uint32_t currentFrame, std::span<eVertexBufferElement> elements, GeometryBinding* binding);
+        DrawPacket resolveGeometryBinding(uint32_t currentFrame, std::span<eVertexBufferElement> elements);
 
         virtual void UnBind() override;
 

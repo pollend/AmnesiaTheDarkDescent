@@ -131,6 +131,9 @@ namespace hpl {
         const cVector2l GetSize() {
             return m_size;
         }
+        const uint2 GetSizeU2() {
+            return uint2(m_size.x, m_size.y);
+        }
 
         uint2 GetSizeU() const {
             return uint2(m_size.x, m_size.y);

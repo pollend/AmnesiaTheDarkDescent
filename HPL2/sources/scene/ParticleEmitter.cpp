@@ -19,6 +19,7 @@
 
 #include "scene/ParticleEmitter.h"
 
+#include "impl/LegacyVertexBuffer.h"
 #include "system/LowLevelSystem.h"
 
 #include "resources/Resources.h"
@@ -678,7 +679,11 @@ namespace hpl {
 		return true;
 	}
 
-	//-----------------------------------------------------------------------
+
+	DrawPacket iParticleEmitter::ResolveDrawPacket(const ForgeRenderer::Frame& frame,std::span<eVertexBufferElement> elements)
+	{
+	    return static_cast<LegacyVertexBuffer*>(mpVtxBuffer)->resolveGeometryBinding(frame.m_currentFrame, elements);
+	}
 
 	iVertexBuffer* iParticleEmitter::GetVertexBuffer()
 	{

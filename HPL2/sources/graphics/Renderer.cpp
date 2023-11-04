@@ -96,6 +96,46 @@ namespace hpl
             return clipRect;
         }
 
+        void WalkAndPrepareRenderList(iRenderableContainer* container,cFrustum* frustum, std::function<void(iRenderable*)> handler, tRenderableFlag renderableFlag) {
+
+            std::function<void(iRenderableContainerNode * childNode)> walkRenderables;
+            walkRenderables = [&](iRenderableContainerNode* childNode) {
+                childNode->UpdateBeforeUse();
+                for (auto& childNode : childNode->GetChildNodes()) {
+                    childNode->UpdateBeforeUse();
+                    eCollision frustumCollision = frustum->CollideNode(childNode);
+                    if (frustumCollision == eCollision_Outside) {
+                        continue;
+                    }
+                    if (frustum->CheckAABBNearPlaneIntersection(childNode->GetMin(), childNode->GetMax())) {
+                        cVector3f vViewSpacePos = cMath::MatrixMul(frustum->GetViewMatrix(), childNode->GetCenter());
+                        childNode->SetViewDistance(vViewSpacePos.z);
+                        childNode->SetInsideView(true);
+                    } else {
+                        // Frustum origin is outside of node. Do intersection test.
+                        cVector3f vIntersection;
+                        cMath::CheckAABBLineIntersection(
+                            childNode->GetMin(), childNode->GetMax(), frustum->GetOrigin(), childNode->GetCenter(), &vIntersection, NULL);
+                        cVector3f vViewSpacePos = cMath::MatrixMul(frustum->GetViewMatrix(), vIntersection);
+                        childNode->SetViewDistance(vViewSpacePos.z);
+                        childNode->SetInsideView(false);
+                    }
+                    walkRenderables(childNode);
+                }
+                for (auto& pObject : childNode->GetObjects()) {
+                    if (!rendering::detail::IsObjectIsVisible(pObject, renderableFlag, {})) {
+                        continue;
+                    }
+                    handler(pObject);
+                }
+            };
+            auto rootNode = container->GetRoot();
+            rootNode->UpdateBeforeUse();
+            rootNode->SetInsideView(true);
+            walkRenderables(rootNode);
+        }
+
+
         void UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
             cRenderList* apRenderList,
             cFrustum* frustum,
@@ -296,6 +336,7 @@ namespace hpl
     void cRenderSettings::ResetVariables()
     {
     }
+
 
     iRenderer::iRenderer(const tString& asName, cGraphics* apGraphics, cResources* apResources)
     {

@@ -378,7 +378,7 @@ namespace hpl {
         for (auto& meta : cMaterial::MaterialMetaTable) {
             if (normalizedMaterialName == meta.m_name) {
                 pMat->SetHandle(IndexPoolHandle(&internal::m_MaterialIndexPool));
-                MaterialDescriptor materialDescriptor;
+                ShaderMaterialData materialDescriptor;
                 materialDescriptor.m_id = meta.m_id;
                 switch (meta.m_id) {
                 case MaterialID::SolidDiffuse:

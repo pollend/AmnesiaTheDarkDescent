@@ -26,6 +26,8 @@
 
 #include "EngineEntity.h"
 #include "graphics/DebugDraw.h"
+#include "graphics/MeshUtility.h"
+#include "impl/LegacyVertexBuffer.h"
 
 
 //---------------------------------------------------------------------------
@@ -475,10 +477,60 @@ cMesh* cEntityWrapperPrimitivePlane::CreatePrimitiveMesh()
 		if(vEndCorner.v[i]!=0)
 			vEndCorner.v[i] /= vEndCorner.v[i];
 	}
-	cMesh* pMesh = GetEditorWorld()->GetEditor()->GetEngine()->GetGraphics()->GetMeshCreator()->CreatePlane("", 0, vEndCorner,
-																											cVector2f(1,0), 0,
-																											cVector2f(0,1), 1,
-																											msMaterial);
+
+	auto position = GraphicsBuffer::BufferStructuredView<float3>();
+    auto color = GraphicsBuffer::BufferStructuredView<float4>();
+    auto normal = GraphicsBuffer::BufferStructuredView<float3>();
+    auto uv = GraphicsBuffer::BufferStructuredView<float2>();
+    auto tangent = GraphicsBuffer::BufferStructuredView<float3>();
+    cSubMesh::IndexBufferInfo indexInfo;
+    cSubMesh::StreamBufferInfo positionInfo;
+    cSubMesh::StreamBufferInfo tangentInfo;
+    cSubMesh::StreamBufferInfo colorInfo;
+    cSubMesh::StreamBufferInfo normalInfo;
+    cSubMesh::StreamBufferInfo textureInfo;
+    GraphicsBuffer::BufferIndexView index = indexInfo.GetView();
+    cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::PostionTrait>(&positionInfo,  &position);
+    cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::ColorTrait>(&colorInfo, &color);
+    cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::NormalTrait>(&normalInfo, &normal);
+    cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::TextureTrait>(&textureInfo, &uv);
+    cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::TangentTrait>(&tangentInfo, &tangent);
+
+    MeshUtility::MeshCreateResult result;
+    MeshUtility::CreatePlane(
+        Vector3(0,0,0), cMath::ToForgeVec3(vEndCorner),
+        Vector2(1,0), Vector2(0,0), Vector2(0,1), Vector2(1,1),
+        &index,
+        &position,
+        &color,
+        &normal,
+        &uv,
+        &tangent);
+
+    positionInfo.m_numberElements = result.numVertices;
+    tangentInfo.m_numberElements = result.numVertices;
+    colorInfo.m_numberElements = result.numVertices;
+    normalInfo.m_numberElements = result.numVertices;
+    textureInfo.m_numberElements = result.numVertices;    		//Create the mesh
+    indexInfo.m_numberElements = result.numIndices;
+    std::vector<cSubMesh::StreamBufferInfo> vertexStreams;
+    vertexStreams.push_back(std::move(positionInfo));
+    vertexStreams.push_back(std::move(tangentInfo));
+    vertexStreams.push_back(std::move(colorInfo));
+    vertexStreams.push_back(std::move(normalInfo));
+    vertexStreams.push_back(std::move(textureInfo));
+    auto* resouces = GetEditorWorld()->GetEditor()->GetEngine()->GetResources();
+    auto* graphics = GetEditorWorld()->GetEditor()->GetEngine()->GetGraphics();
+	cMesh* pMesh = hplNew( cMesh, ("", _W(""), resouces ->GetMaterialManager(), resouces->GetAnimationManager()));
+	cSubMesh* pSubMesh = pMesh->CreateSubMesh("Main");
+	cMaterial *pMat = resouces->GetMaterialManager()->CreateMaterial(msMaterial);
+	pSubMesh->SetMaterial(pMat);
+	iVertexBuffer* pVtxBuffer = new LegacyVertexBuffer(eVertexBufferDrawType_Tri, eVertexBufferUsageType_Static, 0, 0);
+	pSubMesh->SetStreamBuffers(pVtxBuffer, std::move(vertexStreams), std::move(indexInfo));
+	//cMesh* pMesh = GetEditorWorld()->GetEditor()->GetEngine()->GetGraphics()->GetMeshCreator()->CreatePlane("", 0, vEndCorner,
+   // 																										cVector2f(1,0), 0,
+   // 																										cVector2f(0,1), 1,
+   // 																										msMaterial);
 
 	return pMesh;
 }

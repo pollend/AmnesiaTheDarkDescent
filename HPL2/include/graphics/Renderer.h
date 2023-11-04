@@ -78,6 +78,8 @@ namespace hpl {
         bool IsRenderableNodeIsVisible(iRenderableContainerNode* apNode, std::span<cPlanef> clipPlanes);
         bool IsObjectIsVisible(iRenderable* object, tRenderableFlag neededFlags, std::span<cPlanef> clipPlanes = {});
 
+        void WalkAndPrepareRenderList(iRenderableContainer* container,cFrustum* frustum, std::function<void(iRenderable*)> handler, tRenderableFlag renderableFlag);
+
         void UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
             cRenderList* apRenderList,
             cFrustum* frustum,
@@ -171,9 +173,6 @@ namespace hpl {
         inline static void IncRenderFrameCount() { ++mlRenderFrameCount;}
 
         float GetTimeCount(){ return mfTimeCount;}
-
-        virtual bool LoadData()=0;
-        virtual void DestroyData()=0;
 
         virtual SharedRenderTarget GetOutputImage(uint32_t frameIndex, cViewport& viewport) { return SharedRenderTarget();}
 

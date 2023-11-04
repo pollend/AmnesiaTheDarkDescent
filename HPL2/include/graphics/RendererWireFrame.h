@@ -30,14 +30,10 @@
 
 namespace hpl {
 
-    //---------------------------------------------
-
 	class iFrameBuffer;
 	class iDepthStencilBuffer;
 	class iTexture;
 	class iLight;
-
-	//---------------------------------------------
 
 	class cRendererWireFrame : public  iRenderer
 	{
@@ -80,8 +76,6 @@ namespace hpl {
             cVector2l m_size = cVector2l(0, 0);
             std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_outputBuffer;
         };
-		bool LoadData() override;
-		void DestroyData() override;
 		virtual SharedRenderTarget GetOutputImage(uint32_t frameIndex, cViewport& viewport) override;
 
 	private:

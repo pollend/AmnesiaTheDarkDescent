@@ -19,7 +19,7 @@
 
 #include "graphics/SubMesh.h"
 
-#include "graphics/AssetBuffer.h"
+#include "graphics/GraphicsBuffer.h"
 #include "graphics/GraphicsTypes.h"
 #include "impl/LegacyVertexBuffer.h"
 
@@ -53,7 +53,7 @@ namespace hpl {
             auto* lvbElement = buffer->GetElement(element);
             if(lvbElement) {
                 cSubMesh::StreamBufferInfo& info = vertexBuffers.emplace_back();
-                AssetBuffer::BufferStructuredView<typename Trait::Type> view;
+                GraphicsBuffer::BufferStructuredView<typename Trait::Type> view;
                 cSubMesh::StreamBufferInfo::InitializeBuffer<Trait>(&info, &view);
                 uint32_t numElements = lvbElement->NumElements();
                 view.ReserveElements(numElements);
@@ -76,7 +76,7 @@ namespace hpl {
             target->ResizeArray(element, elementCount * srcInfo.m_numberElements);
             float* destData = target->GetFloatArray(element);
             for(size_t idx = 0; idx < srcInfo.m_numberElements; idx++) {
-                auto buf = rawView.RawView();
+                auto buf = rawView.rawByteSpan();
                 std::memcpy(destData + (elementCount * idx), buf.data() + (srcInfo.m_stride * idx), std::min(srcInfo.m_stride, static_cast<uint32_t>(sizeof(float) * elementCount)));
             }
         }
@@ -193,6 +193,9 @@ namespace hpl {
             }
         }
     }
+    bool cSubMesh::hasMesh() {
+        return m_vertexStreams.size() > 0 && m_indexStream.m_numberElements > 0;
+    }
     void cSubMesh::SetStreamBuffers(iVertexBuffer* buffer, std::vector<StreamBufferInfo>&& vertexStreams, IndexBufferInfo&& indexStream) {
         m_vertexStreams = std::move(vertexStreams);
         m_indexStream = std::move(indexStream);
@@ -263,6 +266,24 @@ namespace hpl {
         }
 
         return NULL;
+    }
+
+    // not an ideal solution
+    SharedBuffer cSubMesh::StreamBufferInfo::CommitSharedBuffer() {
+        if(!m_gpuBuffer.IsValid()) {
+            auto rawView = m_buffer.CreateViewRaw();
+            m_gpuBuffer.Load([&](Buffer** buffer) {
+                BufferLoadDesc loadDesc = {};
+                loadDesc.ppBuffer = buffer;
+                loadDesc.mDesc.mDescriptors = DESCRIPTOR_TYPE_VERTEX_BUFFER;
+                loadDesc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_GPU_ONLY;
+                loadDesc.mDesc.mSize = rawView.NumBytes();
+                loadDesc.pData = rawView.rawByteSpan().data();
+                addResource(&loadDesc, nullptr);
+                return true;
+            });
+        }
+        return m_gpuBuffer;
     }
 
     iCollideShape* cSubMesh::CreateCollideShape(iPhysicsWorld* apWorld, std::span<MeshCollisionResource> colliders) {

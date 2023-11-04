@@ -19,7 +19,9 @@
 #pragma once
 
 #include "graphics/Enum.h"
+#include <functional>
 #include <graphics/GraphicsTypes.h>
+#include <optional>
 #include <span>
 #include <array>
 
@@ -29,10 +31,17 @@ namespace hpl {
 	class iLight;
 	class cFrustum;
 	class cFogArea;
+    class iRenderableContainer;
+
 
 	class cRenderList
 	{
 	public:
+//        static bool DefaultSortZ(iRenderable* apObjectA, iRenderable* apObjectB);
+//        static bool DefaultSortDiffuse(iRenderable* apObjectA, iRenderable* apObjectB);
+//        static bool DefaultSortTranslucent(iRenderable* apObjectA, iRenderable* apObjectB);
+//        static bool DefaultSortDecal(iRenderable* apObjectA, iRenderable* apObjectB);
+//        static bool DefaultSortIllumination(iRenderable* apObjectA, iRenderable* apObjectB);
 
 		cRenderList();
 		~cRenderList();
@@ -43,9 +52,6 @@ namespace hpl {
 		void Clear();
 
 		void AddObject(iRenderable *apObject);
-
-        [[deprecated("Use End")]]
-		void Compile(tRenderListCompileFlag aFlags);
 
 		bool ArrayHasObjects(eRenderListType aType);
 
@@ -58,6 +64,7 @@ namespace hpl {
 
         void BeginAndReset(float frameTime, cFrustum* frustum);
         void End(tRenderListCompileFlag aFlags);
+
 
 		iLight* GetLight(int alIdx){ return m_lights[alIdx];}
 		int GetLightNum(){ return(int)m_lights.size();}

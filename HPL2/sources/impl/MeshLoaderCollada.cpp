@@ -477,11 +477,11 @@ namespace hpl {
 
 			//To be filled by extra vertex positions (not used, use the one in Geometry)
 			tColladaExtraVtxListVec &vExtraVtxVec = Geom.mvExtraVtxVec;
-            auto position = AssetBuffer::BufferStructuredView<float3>();
-            auto color = AssetBuffer::BufferStructuredView<float4>();
-            auto normal = AssetBuffer::BufferStructuredView<float3>();
-            auto uv = AssetBuffer::BufferStructuredView<float2>();
-            auto tangent = AssetBuffer::BufferStructuredView<float3>();
+            auto position = GraphicsBuffer::BufferStructuredView<float3>();
+            auto color = GraphicsBuffer::BufferStructuredView<float4>();
+            auto normal = GraphicsBuffer::BufferStructuredView<float3>();
+            auto uv = GraphicsBuffer::BufferStructuredView<float2>();
+            auto tangent = GraphicsBuffer::BufferStructuredView<float3>();
             cSubMesh::IndexBufferInfo indexInfo;
             cSubMesh::StreamBufferInfo positionInfo;
             cSubMesh::StreamBufferInfo tangentInfo;
@@ -493,7 +493,7 @@ namespace hpl {
             cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::NormalTrait>(&normalInfo, &normal);
             cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::TextureTrait>(&textureInfo, &uv);
             cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::TangentTrait>(&tangentInfo, &tangent);
-            AssetBuffer::BufferIndexView indexView = indexInfo.GetView();
+            GraphicsBuffer::BufferIndexView indexView = indexInfo.GetView();
             for(size_t i = 0; i < Geom.mvVertexVec.size(); i++) {
                 auto& vert = Geom.mvVertexVec[i];
                 position.Write(i, float3(vert.pos.x, vert.pos.y, vert.pos.z));
@@ -523,7 +523,7 @@ namespace hpl {
 			    indexView.Write(j, Geom.mvIndexVec[idx]);
 		    }
 
-           // hpl::MeshUtility::MikktSpaceGenerate(
+           // MeshUtility::MikkTSpaceGenerate(
            //     Geom.mvVertexVec.size(),
            //     Geom.mvIndexVec.size(),
            //     &indexView,

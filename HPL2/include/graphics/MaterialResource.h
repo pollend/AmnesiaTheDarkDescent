@@ -5,8 +5,11 @@
 
 namespace hpl {
     class cMaterial;
-
     namespace material {
+        namespace forward {
+
+        }
+
         enum TextureConfigFlags {
             EnableDiffuse = 1 << 0,
             EnableNormal = 1 << 1,

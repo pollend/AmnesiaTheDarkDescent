@@ -19,6 +19,7 @@
 
 #include "scene/BillBoard.h"
 
+#include "impl/LegacyVertexBuffer.h"
 #include "impl/tinyXML/tinyxml.h"
 
 #include "math/MathTypes.h"
@@ -126,15 +127,12 @@ namespace hpl {
 
 	}
 
-	//-----------------------------------------------------------------------
 
-	//////////////////////////////////////////////////////////////////////////
-	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
+    DrawPacket cBillboard::ResolveDrawPacket(const ForgeRenderer::Frame& frame,std::span<eVertexBufferElement> elements)  {
+	    return static_cast<LegacyVertexBuffer*>(mpVtxBuffer)->resolveGeometryBinding(frame.m_currentFrame, elements);
+    }
 
-	//-----------------------------------------------------------------------
-
-	void cBillboard::SetSize(const cVector2f& avSize)
+    void cBillboard::SetSize(const cVector2f& avSize)
 	{
 		mvSize = avSize;
 		mBoundingVolume.SetSize(cVector3f(mvSize.x, mvSize.y, mvSize.x));

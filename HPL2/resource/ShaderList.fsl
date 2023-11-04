@@ -272,3 +272,20 @@
 #frag final_posteffect.frag
     #include "final_posteffect.frag.fsl"
 #end
+
+#vert forward_diffuse.vert
+  #include "forward_diffuse.vert.fsl"
+#end
+
+#frag forward_diffuse.frag
+  #define ALPHA_REJECT 0.5
+  #include "forward_diffuse.frag.fsl"
+#end
+
+#comp point_light_clusters.comp
+  #include "point_light_clusters.comp.fsl"
+#end
+
+#comp light_clusters_clear.comp
+  #include "light_clusters_clear.comp.fsl"
+#end

@@ -16,6 +16,7 @@ include("${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake")
 
 add_definitions(
     -DUSE_THE_FORGE_LEGACY
+    # -DUSE_FORWARD_PLUS_BACKEND # prototype forward renderer
 )
 
 
@@ -36,10 +37,6 @@ execute_process(
 if(WIN32)
     add_compile_definitions("NOMINMAX=1")
 endif()
-
-add_definitions(
-    -DUSE_THE_FORGE_LEGACY
-)
 
 option(COPY_GAME_ASSETS "copy games assets into output directory" OFF)
 option(WITH_TOOLS "build HPL2 with tools" ON)

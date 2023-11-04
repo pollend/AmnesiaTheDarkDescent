@@ -19,7 +19,9 @@
 
 #pragma once
 
-#include "graphics/AssetBuffer.h"
+#include "Common_3/Graphics/Interfaces/IGraphics.h"
+#include "graphics/ForgeHandles.h"
+#include "graphics/GraphicsBuffer.h"
 #include "graphics/GraphicsTypes.h"
 #include "math/MathTypes.h"
 #include "math/MeshTypes.h"
@@ -40,7 +42,6 @@ namespace hpl {
     class iCollideShape;
 
     class cMaterialManager;
-
 
     class cSubMesh final {
         friend class cMesh;
@@ -80,12 +81,14 @@ namespace hpl {
             }
 
             StreamBufferInfo(const StreamBufferInfo& other):
+                m_gpuBuffer(other.m_gpuBuffer),
                 m_buffer(other.m_buffer),
                 m_semantic(other.m_semantic),
                 m_stride(other.m_stride),
                 m_numberElements(other.m_numberElements){
             }
             StreamBufferInfo(StreamBufferInfo&& other):
+                m_gpuBuffer(std::move(other.m_gpuBuffer)),
                 m_buffer(std::move(other.m_buffer)),
                 m_semantic(other.m_semantic),
                 m_stride(other.m_stride),
@@ -93,12 +96,14 @@ namespace hpl {
             }
 
             void operator=(const StreamBufferInfo& other) {
+                m_gpuBuffer = other.m_gpuBuffer;
                 m_buffer = other.m_buffer;
                 m_semantic = other.m_semantic;
                 m_stride = other.m_stride;
                 m_numberElements = other.m_numberElements;
             }
             void operator=(StreamBufferInfo&& other) {
+                m_gpuBuffer = std::move(other.m_gpuBuffer);
                 m_buffer = std::move(other.m_buffer);
                 m_semantic = other.m_semantic;
                 m_stride = other.m_stride;
@@ -107,7 +112,7 @@ namespace hpl {
 
             // utility function to create buffers allows for consistancy for these types of buffers in the engine
             template<typename Trait>
-            static void InitializeBuffer(StreamBufferInfo* info, AssetBuffer::BufferStructuredView<typename Trait::Type>* view = nullptr) {
+            static void InitializeBuffer(StreamBufferInfo* info, GraphicsBuffer::BufferStructuredView<typename Trait::Type>* view = nullptr) {
                 info->m_stride = Trait::Stride;
                 info->m_semantic = Trait::Semantic;
                 if(view) {
@@ -116,11 +121,13 @@ namespace hpl {
             }
 
             template<typename T>
-            constexpr AssetBuffer::BufferStructuredView<T> GetStructuredView(uint32_t byteOffset = 0) {
+            constexpr GraphicsBuffer::BufferStructuredView<T> GetStructuredView(uint32_t byteOffset = 0) {
                 return m_buffer.CreateStructuredView<T>(byteOffset, m_stride);
             }
+            SharedBuffer CommitSharedBuffer();
 
-            AssetBuffer m_buffer;
+            SharedBuffer m_gpuBuffer;
+            GraphicsBuffer m_buffer;
             uint32_t m_stride = 0;
             uint32_t m_numberElements = 0;
             ShaderSemantic m_semantic = ShaderSemantic::SEMANTIC_UNDEFINED;
@@ -131,12 +138,28 @@ namespace hpl {
             IndexBufferInfo() {
             }
 
-            AssetBuffer::BufferIndexView GetView() {
+            IndexBufferInfo (const IndexBufferInfo& other):
+                m_buffer(other.m_buffer),
+                m_numberElements(other.m_numberElements){
+            }
+            IndexBufferInfo(IndexBufferInfo&& other):
+                m_buffer(std::move(other.m_buffer)),
+                m_numberElements(other.m_numberElements){
+            }
+            void operator=(const IndexBufferInfo& other) {
+                m_buffer = other.m_buffer;
+                m_numberElements = other.m_numberElements;
+            }
+            void operator=(IndexBufferInfo&& other) {
+                m_buffer = std::move(other.m_buffer);
+                m_numberElements = other.m_numberElements;
+            }
+            GraphicsBuffer::BufferIndexView GetView() {
                 return m_buffer.CreateIndexView();
             }
 
             uint32_t m_numberElements = 0;
-            AssetBuffer m_buffer;
+            GraphicsBuffer m_buffer;
         };
 
         class MeshCollisionResource {
@@ -180,9 +203,13 @@ namespace hpl {
 
         void AddCollider(const MeshCollisionResource& def);
         std::span<MeshCollisionResource> GetColliders();
-        inline std::span<StreamBufferInfo> GetStreamBuffers() {return m_vertexStreams; }
-        inline IndexBufferInfo& IndexBuffer() {return m_indexStream; }
-
+        inline std::span<StreamBufferInfo> streamBuffers() {return m_vertexStreams; }
+        inline std::span<StreamBufferInfo>::iterator getStreamBySemantic(ShaderSemantic semantic) {
+            return std::find_if(streamBuffers().begin(), streamBuffers().end(), [&](auto& stream) {
+                return stream.m_semantic == semantic;
+            });
+        }
+        inline IndexBufferInfo& IndexStream() {return m_indexStream; }
         void SetIsCollideShape(bool abX) {
             m_collideShape = abX;
         }
@@ -227,8 +254,11 @@ namespace hpl {
             return m_materialName;
         }
 
+        bool hasMesh();
         void SetStreamBuffers(iVertexBuffer* buffer, std::vector<StreamBufferInfo>&& vertexStreams, IndexBufferInfo&& indexStream);
         void Compile();
+
+        void CommitBuffer(ShaderSemantic semantic);
     private:
         cMaterialManager* m_materialManager = nullptr;
         tString m_name;
