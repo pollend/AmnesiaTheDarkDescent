@@ -1,15 +1,14 @@
 #include "light_cull_resources.h.fsl"
 
-
 NUM_THREADS(LIGHT_CLUSTER_WIDTH, LIGHT_CLUSTER_HEIGHT, 1)
 void CS_MAIN(SV_GroupThreadID(uint3) threadInGroupId, SV_GroupID(uint3) groupId)
 {
 	INIT_MAIN;
 	const float invClusterWidth  = 1.0f / float(LIGHT_CLUSTER_WIDTH);
 	const float invClusterHeight = 1.0f / float(LIGHT_CLUSTER_HEIGHT);
-	const float2 windowSize      = Get(windowSize);
+	const float2 size = Get(windowSize);
 	
-	const float aspectRatio = windowSize.x / windowSize.y;
+	const float aspectRatio = size.x / size.y;
 
   PointLight lightData = Get(pointLights)[groupId.x];
 	
@@ -20,7 +19,7 @@ void CS_MAIN(SV_GroupThreadID(uint3) threadInGroupId, SV_GroupID(uint3) groupId)
 
 	float fov = 2.0 * atan(1.0/Get(projMat)[1][1]);
 	float projRadius = 2.0f * lightData.lightRadius * (1 / tan(fov * 0.5f)) * invLightPosW;
-	projRadius *= windowSize.x > windowSize.y ? aspectRatio : 1 / aspectRatio;
+	projRadius *= size.x > size.y ? aspectRatio : 1 / aspectRatio;
 	
 	// Early exit light if it's behind the camera
 	if (lightPosClipSpace.w < 0.0f && -lightPosClipSpace.w > lightData.lightRadius) {
