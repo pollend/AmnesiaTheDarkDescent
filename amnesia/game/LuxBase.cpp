@@ -1135,7 +1135,6 @@ bool cLuxBase::InitEngine()
 	//Other vars
 	cResources::SetForceCacheLoadingAndSkipSaving(mpConfigHandler->mbForceCacheLoadingAndSkipSaving);
 	cResources::SetCreateAndLoadCompressedMaps(false);
-	//cResources::SetCreateAndLoadCompressedMaps(mbPTestActivated || mpConfigHandler->mbCreateAndLoadCompressedMaps);
 
 	/////////////////////////
 	// Create the engine

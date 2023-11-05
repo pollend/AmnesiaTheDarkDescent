@@ -68,8 +68,6 @@ namespace hpl {
 
 
         SetWindowGrab(true);
-
-
 		//Turn off cursor as default
 		ShowCursor(false);
 

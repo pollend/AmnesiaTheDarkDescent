@@ -92,6 +92,7 @@ protected:
 class cLuxMainMenu : public iLuxUpdateable
 {
 public:
+
 	cLuxMainMenu();
 	~cLuxMainMenu();
 
@@ -148,9 +149,7 @@ private:
 	void SetupTopMenuLabel(cWidgetLabel *apLabel);
 
 	void CreateBackground();
-	void CreateScreenTextures();
-	void RenderBlurTexture();
-	// void RenderBlur(iTexture *apInputTexture, iTexture *apTempTexture, iFrameBuffer **apBlurBuffers);
+    void UpdateBackground();
 
 	void DestroyBackground();
 

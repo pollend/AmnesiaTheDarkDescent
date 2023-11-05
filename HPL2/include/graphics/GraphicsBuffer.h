@@ -344,7 +344,7 @@ namespace hpl {
                         break;
                     }
                     case BufferType::MappedBuffer: {
-                        std::copy(buf.begin(), buf.end(), reinterpret_cast<uint8_t*>(m_asset->m_mapped.m_mappedData) + m_byteOffset + targetOffset);
+                        std::copy(buf.begin(), buf.end(), reinterpret_cast<uint8_t*>(m_asset->m_mapped.m_mappedData) + targetOffset);
                         break;
                     }
                 }
@@ -360,7 +360,7 @@ namespace hpl {
                         break;
                     }
                     case BufferType::MappedBuffer: {
-                        std::copy(buf.begin(), buf.end(), reinterpret_cast<uint8_t*>(m_asset->m_mapped.m_mappedData) + m_byteOffset + targetOffset);
+                        std::copy(buf.begin(), buf.end(), reinterpret_cast<uint8_t*>(m_asset->m_mapped.m_mappedData)  + targetOffset);
                         break;
                     }
                 }
@@ -393,10 +393,11 @@ namespace hpl {
             }
 
             T Get(uint32_t index) {
+                const size_t targetOffset = (m_byteOffset + (index * m_byteStride));
                 switch(m_asset->m_type) {
                     case BufferType::ResourceBuffer: {
-                        ASSERT(m_asset->m_buffer.begin() + (m_byteOffset + (index * m_byteStride)) < m_asset->m_buffer.end());
-                        return *reinterpret_cast<T*>(m_asset->m_buffer.data() + (m_byteOffset + (index * m_byteStride)));
+                        ASSERT(m_asset->m_buffer.begin() + targetOffset < m_asset->m_buffer.end());
+                        return *reinterpret_cast<T*>(m_asset->m_buffer.data() + targetOffset);
                     }
                     case BufferType::MappedBuffer: {
                         ASSERT(false);

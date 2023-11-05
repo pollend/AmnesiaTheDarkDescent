@@ -42,6 +42,8 @@
 #include "Common_3/Utilities/Interfaces/ILog.h"
 #include <FixPreprocessor.h>
 
+#include "math/Uuid.h"
+
 namespace hpl {
 
     class cScene;
@@ -57,7 +59,9 @@ namespace hpl {
     class cViewport final {
         HPL_RTTI_CLASS(cViewport, "{f5d42b52-6e84-4486-afa0-a5888f3513a0}")
     public:
+        static constexpr Uuid PrimaryViewportTag = hpl::detail::From("{f5d42b52-6e84-4486-afa0-a5888f3513a0}");
         static constexpr size_t MaxViewportHandles = 9;
+
         using ResizeEvent = hpl::Event<hpl::cVector2l&>;
         using ViewportDispose = hpl::Event<>;
         using ViewportChange = hpl::Event<>;
@@ -159,6 +163,9 @@ namespace hpl {
         inline void SignalDraw(PostSolidDrawPacket& payload) { m_postSolidDraw.Signal(payload);}
         inline void SignalDraw(PostTranslucenceDrawPacket& payload) { m_postTranslucenceDraw.Signal(payload);}
 
+        inline void SetTag(const Uuid& tag) { m_tag = tag; }
+        inline Uuid Tag() { return m_tag; }
+
     private:
         bool mbActive;
         bool mbVisible;
@@ -176,6 +183,7 @@ namespace hpl {
         std::shared_ptr<hpl::Image> m_image;
 
         cVector2l m_size = { 0, 0 };
+        Uuid m_tag;
 
         IUpdateEventLoop::UpdateEvent::Handler m_updateEventHandler;
 
@@ -190,6 +198,7 @@ namespace hpl {
         tGuiSetList m_guiSets;
 
         std::unique_ptr<cRenderSettings> mpRenderSettings;
+
 
         template<typename TData>
         friend class UniqueViewportData;
@@ -265,39 +274,6 @@ namespace hpl {
         uint32_t m_revision = 0;
         std::array<cViewport::ViewportDispose::Handler, cViewport::MaxViewportHandles> m_disposeHandlers;
         std::array<std::unique_ptr<TData>, cViewport::MaxViewportHandles> m_targets;
-    };
-
-    class PrimaryViewport final {
-        HPL_RTTI_CLASS(PrimaryViewport, "{98010986-a128-44ec-b0f8-45e69e5a7786}")
-    public:
-        using ViewportChange = hpl::Event<>;
-
-        PrimaryViewport();
-        PrimaryViewport(window::NativeWindowWrapper& window);
-        PrimaryViewport(const PrimaryViewport& other) = delete;
-        PrimaryViewport(PrimaryViewport&& other) = delete;
-        PrimaryViewport& operator=(const PrimaryViewport& other) = delete;
-        PrimaryViewport& operator=(PrimaryViewport&& other) = delete;
-
-        inline void ConnectViewportChanged(ViewportChange::Handler& handler) {
-            handler.Connect(m_viewportChanged);
-        }
-
-        inline void SetSize(const cVector2l& size) {
-            m_size = size;
-            m_dirtyViewport = true;
-        }
-    private:
-
-        void CreateEventHandler();
-
-        cVector2l m_size = { 0, 0 };
-        // LegacyRenderTarget m_renderTarget;
-        bool m_dirtyViewport = false;
-
-        IUpdateEventLoop::UpdateEvent::Handler m_updateEventHandler;
-        window::WindowEvent::Handler m_windowEventHandler;
-        ViewportChange m_viewportChanged;
     };
 
 }; // namespace hpl

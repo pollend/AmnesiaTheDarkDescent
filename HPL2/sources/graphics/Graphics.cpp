@@ -106,13 +106,6 @@ namespace hpl {
 		Log("--------------------------------------------------------\n\n");
 	}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	bool cGraphics::Init(	int alWidth, int alHeight, int alDisplay, int alBpp, int abFullscreen,
 							int alMultisampling,eGpuProgramFormat aGpuProgramFormat,
@@ -135,7 +128,6 @@ namespace hpl {
 		// LowLevel Init
 		if(alHplSetupFlags & eHplSetup_Screen)
 		{
-			Log("Init lowlevel graphics: %dx%d disp:%d bpp:%d fs:%d ms:%d gpufmt:%d cap:'%s' pos:(%dx%d)\n",alWidth,alHeight,alDisplay,alBpp,abFullscreen,alMultisampling,aGpuProgramFormat, asWindowCaption.c_str(), avWindowPos.x,avWindowPos.y);
 			mpLowLevelGraphics->Init(alWidth,alHeight,alDisplay,alBpp,abFullscreen,alMultisampling,aGpuProgramFormat,asWindowCaption,
 									avWindowPos);
 			mbScreenIsSetup = true;

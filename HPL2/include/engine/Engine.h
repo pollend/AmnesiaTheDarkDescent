@@ -197,13 +197,9 @@ namespace hpl {
 		void CheckAndBroadcastDeviceChange();
 
 		bool mbGameIsDone;
-
 		bool mbRenderOnce;
-
 		bool mbPaused;
-
 		float mfFrameTime;
-
 		double mfGameTime;
 
 		iLowLevelEngineSetup *mpGameSetup;

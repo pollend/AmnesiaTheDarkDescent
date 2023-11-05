@@ -34,10 +34,6 @@ namespace hpl {
 		cLowLevelGraphicsSDL();
 		~cLowLevelGraphicsSDL();
 
-		/////////////////////////////////////////////////////
-		/////////////// GENERAL SETUP ///////////////////////
-		/////////////////////////////////////////////////////
-
 		[[deprecated("replaced with BGFX")]]
 		bool Init(	int alWidth, int alHeight, int alDisplay, int alBpp, int abFullscreen, int alMultisampling,
 					eGpuProgramFormat aGpuProgramFormat,const tString& asWindowCaption,
@@ -114,7 +110,6 @@ namespace hpl {
 		[[deprecated("replaced with BGFX")]]
 		void ClearFrameBuffer(tClearFrameBufferFlag aFlags);
 
-		[[deprecated("replaced with BGFX")]]
 		void SetClearColor(const cColor& aCol);
 		[[deprecated("replaced with BGFX")]]
 		void SetClearDepth(float afDepth);

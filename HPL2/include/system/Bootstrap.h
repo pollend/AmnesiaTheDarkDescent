@@ -50,7 +50,6 @@ namespace hpl {
     private:
         static void BootstrapThreadHandler(void* _userData);
 
-        std::unique_ptr<PrimaryViewport> m_primaryViewport;
         hpl::ForgeRenderer m_renderer;
         std::unique_ptr<hpl::DebugDraw> m_debug;
         std::unique_ptr<GraphicsAllocator> m_graphicsAlloc;

@@ -128,7 +128,8 @@ cLuxMapHandler::cLuxMapHandler() : iLuxUpdateable("LuxMapHandler")
 	//////////////////////////
 	//Create and setup view port
 	mpViewport = gpBase->mpEngine->GetScene()->CreateViewport();
-	mpViewport->bindToWindow(*Interface<window::NativeWindowWrapper>::Get());
+    mpViewport->SetSize(cVector2l(gpBase->mpConfigHandler->mvScreenSize.x, gpBase->mpConfigHandler->mvScreenSize.y));
+	mpViewport->SetTag(cViewport::PrimaryViewportTag);
 	gpBase->mpEngine->GetScene()->SetCurrentListener(mpViewport);
 
 	//////////////////////////

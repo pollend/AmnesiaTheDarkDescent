@@ -156,33 +156,4 @@ namespace hpl {
         //m_dirtyViewport = true;
     }
 
-    PrimaryViewport::PrimaryViewport() {
-
-    }
-
-    PrimaryViewport::PrimaryViewport(window::NativeWindowWrapper& window) {
-        m_windowEventHandler = window::WindowEvent::Handler([&](window::WindowEventPayload& event) {
-            switch (event.m_type) {
-            case window::WindowEventType::ResizeWindowEvent:
-                SetSize(cVector2l(event.payload.m_resizeWindow.m_width, event.payload.m_resizeWindow.m_height));
-                break;
-            default:
-                break;
-            }
-        });
-
-        m_updateEventHandler = IUpdateEventLoop::UpdateEvent::Handler([&](float dt) {
-            if (m_dirtyViewport) {
-                 if (m_size.x > 0 && m_size.y > 0) {
-                     m_dirtyViewport = false;
-                }
-                m_viewportChanged.Signal();
-            }
-        });
-
-        window.ConnectWindowEventHandler(m_windowEventHandler);
-        SetSize(window.GetWindowSize());
-        Interface<IUpdateEventLoop>::Get()->Subscribe(BroadcastEvent::PreUpdate, m_updateEventHandler);
-    }
-
 } // namespace hpl

@@ -81,14 +81,12 @@ namespace hpl {
         gui::InitializeGui(m_renderer);
 
         // this is safe because the render target is scheduled on the api thread
-        m_primaryViewport = std::make_unique<hpl::PrimaryViewport>(m_window);
 
         // register input devices
         m_inputManager.Register(input::InputManager::KeyboardDeviceID, std::make_shared<input::InputKeyboardDevice>(std::move(keyboardHandle)));
         m_inputManager.Register(input::InputManager::MouseDeviceID, std::make_shared<input::InputMouseDevice>(std::move(mouseHandle)));
 
         Interface<hpl::ForgeRenderer>::Register(&m_renderer);
-        Interface<hpl::PrimaryViewport>::Register(m_primaryViewport.get());
         Interface<input::InputManager>::Register(&m_inputManager);
         Interface<window::NativeWindowWrapper>::Register(&m_window); // storing as a singleton means we can only have one window ...
         Interface<hpl::GraphicsAllocator>::Register(m_graphicsAlloc.get());
@@ -96,7 +94,6 @@ namespace hpl {
 
     void Bootstrap::Shutdown() {
         Interface<hpl::ForgeRenderer>::UnRegister(&m_renderer);
-        Interface<hpl::PrimaryViewport>::UnRegister(m_primaryViewport.get());
         Interface<input::InputManager>::UnRegister(&m_inputManager);
         Interface<window::NativeWindowWrapper>::UnRegister(&m_window);
         Interface<IUpdateEventLoop>::UnRegister(&m_updateEventLoop);

@@ -191,8 +191,8 @@ namespace hpl {
             beginUpdateResource(&normalUpdateDesc);
 
             GraphicsBuffer positionMapping(positionUpdateDesc);
-            GraphicsBuffer normalMapping(tangentUpdateDesc);
-            GraphicsBuffer tangentMapping(normalUpdateDesc);
+            GraphicsBuffer normalMapping(normalUpdateDesc);
+            GraphicsBuffer tangentMapping(tangentUpdateDesc);
             auto targetPositionView = positionMapping.CreateStructuredView<float3>(0, targetPositionIt->stride());
             auto targetTangentView = tangentMapping.CreateStructuredView<float3>(0, targetTangentIt->stride());
             auto targetNormalView = normalMapping.CreateStructuredView<float3>(0, targetNormalIt->stride());

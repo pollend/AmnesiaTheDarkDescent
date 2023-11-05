@@ -19,6 +19,7 @@
 
 #include "LuxMainMenu_Options.h"
 
+#include "LuxBase.h"
 #include "LuxMap.h"
 #include "LuxMapHandler.h"
 #include "LuxInputHandler.h"
@@ -29,6 +30,9 @@
 #include "LuxPlayerHelpers.h"
 #include "LuxPlayer.h"
 #include "LuxHelpFuncs.h"
+#include "math/MathTypes.h"
+#include "scene/Viewport.h"
+#include "windowing/NativeWindow.h"
 
 //////////////////////////////////////////////////////////////////////////
 // HELPERS
@@ -1433,8 +1437,20 @@ void cLuxMainMenu_Options::ApplyChanges()
 //		pCfgHdr->mbAdaptiveVSync = mpChBAdaptiveVSync->IsChecked();
 		pGfx->GetLowLevel()->SetVsyncActive(pCfgHdr->mbVSync, pCfgHdr->mbAdaptiveVSync);
 	    Interface<ForgeRenderer>::Get()->SetGamma(GetGamma());
-		Interface<window::NativeWindowWrapper>::Get()->SetWindowSize(cVector2l(pCfgHdr->mvScreenSize.x, pCfgHdr->mvScreenSize.y));
 
+		if(pCfgHdr->mbFullscreen) {
+		    Interface<window::NativeWindowWrapper>::Get()->SetWindowFullscreen(window::WindowFullscreen::Borderless);
+		} else {
+		    Interface<window::NativeWindowWrapper>::Get()->SetWindowFullscreen(window::WindowFullscreen::Window);
+		    Interface<window::NativeWindowWrapper>::Get()->SetWindowSize(cVector2l(pCfgHdr->mvScreenSize.x, pCfgHdr->mvScreenSize.y));
+		}
+
+        auto* scene = gpBase->mpEngine->GetScene();
+        for(auto& viewport: scene->Viewports()) {
+            if(viewport->Tag() == cViewport::PrimaryViewportTag) {
+                viewport->SetSize(cVector2l(pCfgHdr->mvScreenSize.x, pCfgHdr->mvScreenSize.y));
+            }
+        }
 
 		// Parallax
 		//int lParallax = (int)mpCBParallaxQuality->GetSelectedItem() - 1;

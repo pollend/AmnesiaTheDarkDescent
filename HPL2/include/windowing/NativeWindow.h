@@ -64,6 +64,7 @@ namespace hpl::window {
         WindowStatusWindowMaximized = 0x08,
         WindowStatusVisible = 0x10,
     };
+    enum class WindowFullscreen : uint8_t { Window, Fullscreen, Borderless };
 
     struct InternalEvent {
         union {
@@ -90,7 +91,6 @@ namespace hpl::window {
     };
     using WindowEvent = hpl::Event<WindowEventPayload&>;
 
-    enum class WindowType : uint8_t { Window, Fullscreen, Borderless };
     namespace internal {
 
         using WindowInternalEvent = hpl::Event<InternalEvent&>;
@@ -109,6 +109,7 @@ namespace hpl::window {
         void SetWindowTitle(NativeWindowHandler& handler, const std::string_view title);
         void SetWindowSize(NativeWindowHandler& handler, const cVector2l& size);
         void SetWindowBrightness(NativeWindowHandler& handler, float brightness);
+        void SetWindowFullscreen(NativeWindowHandler& handler, WindowFullscreen flag);
 
         WindowHandle ForgeWindowHandle(NativeWindowHandler& handler);
         cVector2l GetWindowSize(NativeWindowHandler& handler);
@@ -175,6 +176,11 @@ namespace hpl::window {
             internal::ConnectInternalEventHandler(m_impl, handler);
         }
 
+        inline void SetWindowFullscreen(WindowFullscreen flag) {
+            ASSERT(m_impl && "NativeWindowHandle is null");
+            return internal::SetWindowFullscreen(m_impl, flag);
+        }
+
         inline internal::WindowInternalEvent& NativeInternalEvent() {
             ASSERT(m_impl && "NativeWindowHandle is null");
             return internal::NativeInternalEvent(m_impl);
@@ -224,10 +230,6 @@ namespace hpl::window {
         inline void UnconstrainCursor() {
             ASSERT(m_impl && "NativeWindowHandle is null");
             internal::UnconstrainCursor(m_impl);
-        }
-
-        inline WindowType GetWindowType() {
-            return WindowType::Window;
         }
 
     private:

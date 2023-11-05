@@ -20,11 +20,9 @@
 #ifndef LUX_JOURNAL_H
 #define LUX_JOURNAL_H
 
-//----------------------------------------------
 
 #include "LuxBase.h"
 
-//----------------------------------------
 
 enum eLuxJournalState
 {
@@ -212,8 +210,6 @@ private:
 	void CreateOpenNoteGui();
 
 	void CreateBackground();
-	void RenderBackgroundImage();
-	void CreateScreenTextures();
 	void DestroyBackground();
 
 	///////////////////////

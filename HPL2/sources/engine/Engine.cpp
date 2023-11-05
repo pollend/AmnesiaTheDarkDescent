@@ -278,6 +278,12 @@ namespace hpl {
 		//Init the resources
 		mpResources->Init(mpGraphics,mpSystem, mpSound,mpScene,mpGui, mpPhysics);
 
+	    if(apVars->mGraphics.mbFullscreen) {
+		    Interface<window::NativeWindowWrapper>::Get()->SetWindowFullscreen(window::WindowFullscreen::Borderless);
+	    } else {
+		    Interface<window::NativeWindowWrapper>::Get()->SetWindowFullscreen(window::WindowFullscreen::Window);
+		    Interface<window::NativeWindowWrapper>::Get()->SetWindowSize(cVector2l(apVars->mGraphics.mvScreenSize.x, apVars->mGraphics.mvScreenSize.y));
+	    }
 		//Init the graphics
 		mpGraphics->Init(	apVars->mGraphics.mvScreenSize.x,
 							apVars->mGraphics.mvScreenSize.y,
@@ -289,7 +295,6 @@ namespace hpl {
 							apVars->mGraphics.msWindowCaption,
 							apVars->mGraphics.mvWindowPosition,
 							mpResources,alHplSetupFlags);
-		Interface<window::NativeWindowWrapper>::Get()->SetWindowSize(cVector2l(apVars->mGraphics.mvScreenSize.x, apVars->mGraphics.mvScreenSize.y));
 
 		//Init Sound
 		mpSound->Init(mpResources, apVars->mSound.mlSoundDeviceID,
@@ -402,14 +407,6 @@ namespace hpl {
 
 		Log("HPL Exit was successful!\n");
 	}
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// PUBLIC METHOD
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	int glClearUpdateCheck=0;
 	void cEngine::Run()

@@ -40,11 +40,6 @@ namespace hpl {
 	public:
 		virtual ~iLowLevelGraphics(){}
 
-
-		/////////////////////////////////////////////////////
-		/////////////// GENERAL SETUP ///////////////////////
-		/////////////////////////////////////////////////////
-
 		virtual bool Init(	int alWidth, int alHeight, int alDisplay, int alBpp, int abFullscreen, int alMultisampling,
 							eGpuProgramFormat aGpuProgramFormat, const tString& asWindowCaption,
 							const cVector2l &avWindowPos)=0;
@@ -354,11 +349,6 @@ namespace hpl {
 		[[deprecated("interface is deprecated")]]
 		virtual void DrawLineQuad(const cVector3f &avPos,const cVector2f &avSize, cColor aCol)=0;
 
-		/////////////////////////////////////////////////////
-		/////////// VERTEX BATCHING /////////////////////////
-		/////////////////////////////////////////////////////
-
-
 		[[deprecated("interface is deprecated")]]
 		virtual void AddVertexToBatch(const cVertex *apVtx)=0;
 
@@ -395,18 +385,5 @@ namespace hpl {
 
 		[[deprecated("interface is deprecated")]]
 		virtual void ClearBatch()=0;
-
-		/////////////////////////////////////////////////////
-		/////////// STATIC VARIABLES /////////////////////////
-		/////////////////////////////////////////////////////
-
-		[[deprecated("interface is deprecated")]]
-		static void SetForceShaderModel3And4Off(bool abX){ mbForceShaderModel3And4Off = abX;}
-
-		[[deprecated("interface is deprecated")]]
-		static bool GetForceShaderModel3And4Off(){	return mbForceShaderModel3And4Off;}
-
-	protected:
-		static bool mbForceShaderModel3And4Off;
 	};
 };

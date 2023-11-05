@@ -127,6 +127,23 @@ namespace hpl::window::internal {
     }
 
 
+    void SetWindowFullscreen(NativeWindowHandler& handler, WindowFullscreen  flag) {
+        auto impl = static_cast<NativeWindowImpl*>(handler.Get());
+        InternalHandleCmd(*impl, [flag](NativeWindowImpl& impl) {
+            switch(flag) {
+                case WindowFullscreen::Fullscreen:
+                    SDL_SetWindowFullscreen(impl.m_window, SDL_WINDOW_FULLSCREEN);
+                    break;
+                case WindowFullscreen::Borderless:
+                    SDL_SetWindowFullscreen(impl.m_window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+                    break;
+                default:
+                    SDL_SetWindowFullscreen(impl.m_window, 0);
+                    break;
+            }
+        });
+    }
+
     cVector2l GetWindowSize(NativeWindowHandler& handler) {
         auto impl = static_cast<NativeWindowImpl*>(handler.Get());
         ASSERT(impl->m_window && "Window is not initialized");

@@ -89,6 +89,8 @@ namespace hpl {
 		bool WorldExists(cWorld* apWorld);
 		cViewport* PrimaryViewport();
 
+        inline std::span<cViewport*> Viewports() { return m_viewports; }
+
 	private:
 		void Render3DGui(const ForgeRenderer::Frame&,cViewport* apViewPort,cFrustum *apFrustum,float afTimeStep);
 		void RenderScreenGui(const ForgeRenderer::Frame&,  cViewport* apViewPort, float afTimeStep);

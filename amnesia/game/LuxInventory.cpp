@@ -1577,123 +1577,105 @@ bool cLuxInventory::CheckSpecialCombineAction(cLuxInventory_Item *apItemA, cLuxI
 
 void cLuxInventory::CreateBackground()
 {
-	CreateScreenTextures();
-	RenderBackgroundImage();
-}
-
-//-----------------------------------------------------------------------
-
-void cLuxInventory::CreateScreenTextures()
-{
-	iLowLevelGraphics *pLowGfx = mpGraphics->GetLowLevel();
-	cVector3l vTexSize = pLowGfx->GetScreenSizeInt();
-	vTexSize.z = 0;
-
-    auto* forgeRenderer = Interface<ForgeRenderer>::Get();
-    m_screenBgTarget.Load(forgeRenderer->Rend(),[&](RenderTarget** texture) {
-        RenderTargetDesc renderTarget = {};
-        renderTarget.mArraySize = 1;
-        renderTarget.mDepth = 1;
-        renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
-        renderTarget.mWidth = vTexSize.x;
-        renderTarget.mHeight = vTexSize.y;
-        renderTarget.mSampleCount = SAMPLE_COUNT_1;
-        renderTarget.mSampleQuality = 0;
-        renderTarget.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
-        renderTarget.mFormat = TinyImageFormat_R8G8B8A8_UNORM;
-        addRenderTarget(forgeRenderer->Rend(), &renderTarget, texture);
-        return true;
-    });
-
-    m_screenTarget.Load(forgeRenderer->Rend(),[&](RenderTarget** texture) {
-        RenderTargetDesc renderTarget = {};
-        renderTarget.mArraySize = 1;
-        renderTarget.mDepth = 1;
-        renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
-        renderTarget.mWidth = vTexSize.x;
-        renderTarget.mHeight = vTexSize.y;
-        renderTarget.mSampleCount = SAMPLE_COUNT_1;
-        renderTarget.mSampleQuality = 0;
-        renderTarget.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
-        renderTarget.mFormat = TinyImageFormat_R8G8B8A8_UNORM;
-        addRenderTarget(forgeRenderer->Rend(), &renderTarget, texture);
-        return true;
-    });
-
-    {
-        SharedTexture texture;
-        texture.SetRenderTarget(m_screenTarget);
-        m_screenImage = std::make_shared<Image>();
-        m_screenImage->SetForgeTexture(std::move(texture));
-        mpScreenGfx = mpGui->CreateGfxTexture(m_screenImage.get(),false,eGuiMaterial_Diffuse, cColor(1,1), true, 0, 1, false);
-    }
-    {
-
-        SharedTexture texture;
-        texture.SetRenderTarget(m_screenBgTarget);
-        m_screenBgTexture = std::make_shared<Image>();
-        m_screenBgTexture->SetForgeTexture(std::move(texture));
-        mpScreenBgGfx = mpGui->CreateGfxTexture(m_screenBgTexture.get(),false,eGuiMaterial_Alpha, cColor(1,1), true, 0, 1, false);
-    }
-
-}
-
-void cLuxInventory::RenderBackgroundImage()
-{
-	iLowLevelGraphics *pLowGfx = mpGraphics->GetLowLevel();
-
 	EngineInterface* engine = Interface<EngineInterface>::Get();
 	auto* forgeRenderer = Interface<ForgeRenderer>::Get();
 	auto* viewport = gpBase->mpMapHandler->GetViewport();
-	auto* renderer = viewport->GetRenderer();
-    auto frame = forgeRenderer->GetFrame();
-
-	auto screenSize = viewport->GetSize();
-
-    auto outputRt = renderer->GetOutputImage(frame.m_frameIndex, *viewport);
     {
-        cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
-        std::array rtBarriers = {
-            RenderTargetBarrier{ m_screenTarget.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
-        };
-        cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+
+        auto* forgeRenderer = Interface<ForgeRenderer>::Get();
+        m_screenBgTarget.Load(forgeRenderer->Rend(),[&](RenderTarget** texture) {
+            RenderTargetDesc renderTarget = {};
+            renderTarget.mArraySize = 1;
+            renderTarget.mDepth = 1;
+            renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+            renderTarget.mWidth = viewport->GetSizeU2().x;
+            renderTarget.mHeight = viewport->GetSizeU2().y;
+            renderTarget.mSampleCount = SAMPLE_COUNT_1;
+            renderTarget.mSampleQuality = 0;
+            renderTarget.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
+            renderTarget.mFormat = TinyImageFormat_R8G8B8A8_UNORM;
+            addRenderTarget(forgeRenderer->Rend(), &renderTarget, texture);
+            return true;
+        });
+
+        m_screenTarget.Load(forgeRenderer->Rend(),[&](RenderTarget** texture) {
+            RenderTargetDesc renderTarget = {};
+            renderTarget.mArraySize = 1;
+            renderTarget.mDepth = 1;
+            renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+            renderTarget.mWidth = viewport->GetSizeU2().x;
+            renderTarget.mHeight = viewport->GetSizeU2().y;
+            renderTarget.mSampleCount = SAMPLE_COUNT_1;
+            renderTarget.mSampleQuality = 0;
+            renderTarget.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
+            renderTarget.mFormat = TinyImageFormat_R8G8B8A8_UNORM;
+            addRenderTarget(forgeRenderer->Rend(), &renderTarget, texture);
+            return true;
+        });
+
+        {
+            SharedTexture texture;
+            texture.SetRenderTarget(m_screenTarget);
+            m_screenImage = std::make_shared<Image>();
+            m_screenImage->SetForgeTexture(std::move(texture));
+            mpScreenGfx = mpGui->CreateGfxTexture(m_screenImage.get(),false,eGuiMaterial_Diffuse, cColor(1,1), true, 0, 1, false);
+        }
+        {
+
+            SharedTexture texture;
+            texture.SetRenderTarget(m_screenBgTarget);
+            m_screenBgTexture = std::make_shared<Image>();
+            m_screenBgTexture->SetForgeTexture(std::move(texture));
+            mpScreenBgGfx = mpGui->CreateGfxTexture(m_screenBgTexture.get(),false,eGuiMaterial_Alpha, cColor(1,1), true, 0, 1, false);
+        }
     }
-    forgeRenderer->cmdCopyTexture(frame.m_cmd, outputRt.m_handle->pTexture, m_screenTarget.m_handle);
     {
-        cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
-        std::array rtBarriers = {
-            RenderTargetBarrier{ m_screenTarget.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
-            RenderTargetBarrier{ m_screenBgTarget.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
-        };
-        cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
-    }
+	    auto* renderer = viewport->GetRenderer();
+        auto frame = forgeRenderer->GetFrame();
+	    auto screenSize = viewport->GetSize();
+        auto outputRt = renderer->GetOutputImage(frame.m_frameIndex, *viewport);
+        {
+            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+            std::array rtBarriers = {
+                RenderTargetBarrier{ m_screenTarget.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
+            };
+            cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+        }
+        forgeRenderer->cmdCopyTexture(frame.m_cmd, outputRt.m_handle->pTexture, m_screenTarget.m_handle);
+        {
+            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+            std::array rtBarriers = {
+                RenderTargetBarrier{ m_screenTarget.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
+                RenderTargetBarrier{ m_screenBgTarget.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
+            };
+            cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+        }
 
-	{
-        cmdBindRenderTargets(frame.m_cmd, 1, &m_screenBgTarget.m_handle, NULL, NULL, NULL, NULL, -1, -1);
+	    {
+            cmdBindRenderTargets(frame.m_cmd, 1, &m_screenBgTarget.m_handle, NULL, NULL, NULL, NULL, -1, -1);
 
-        std::array<DescriptorData, 1> params = {};
-        params[0].pName = "sourceInput";
-        params[0].ppTextures = &m_screenTarget.m_handle->pTexture;
-        updateDescriptorSet(frame.m_renderer->Rend(), m_setIndex, m_perFrameInvetoryScreenDescriptorSet[frame.m_frameIndex], params.size(), params.data());
+            std::array<DescriptorData, 1> params = {};
+            params[0].pName = "sourceInput";
+            params[0].ppTextures = &m_screenTarget.m_handle->pTexture;
+            updateDescriptorSet(frame.m_renderer->Rend(), m_setIndex, m_perFrameInvetoryScreenDescriptorSet[frame.m_frameIndex], params.size(), params.data());
 
-        cmdBindDescriptorSet(frame.m_cmd, m_setIndex, m_perFrameInvetoryScreenDescriptorSet[frame.m_frameIndex]);
-        cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, static_cast<float>(screenSize.x), static_cast<float>(screenSize.y), 0.0f, 1.0f);
-        cmdSetScissor(frame.m_cmd, 0, 0, static_cast<float>(screenSize.x), static_cast<float>(screenSize.y));
-        cmdBindPipeline(frame.m_cmd, m_invetoryPipeline);
-        cmdDraw(frame.m_cmd, 3, 0);
+            cmdBindDescriptorSet(frame.m_cmd, m_setIndex, m_perFrameInvetoryScreenDescriptorSet[frame.m_frameIndex]);
+            cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, static_cast<float>(screenSize.x), static_cast<float>(screenSize.y), 0.0f, 1.0f);
+            cmdSetScissor(frame.m_cmd, 0, 0, static_cast<float>(screenSize.x), static_cast<float>(screenSize.y));
+            cmdBindPipeline(frame.m_cmd, m_invetoryPipeline);
+            cmdDraw(frame.m_cmd, 3, 0);
 
-        m_setIndex = (m_setIndex + 1) % cLuxInventory::DescriptorSetSize;
-	}
-    {
-        cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
-        std::array rtBarriers = {
-            RenderTargetBarrier{ m_screenBgTarget.m_handle, RESOURCE_STATE_RENDER_TARGET , RESOURCE_STATE_SHADER_RESOURCE},
-        };
-        cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+            m_setIndex = (m_setIndex + 1) % cLuxInventory::DescriptorSetSize;
+	    }
+        {
+            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+            std::array rtBarriers = {
+                RenderTargetBarrier{ m_screenBgTarget.m_handle, RESOURCE_STATE_RENDER_TARGET , RESOURCE_STATE_SHADER_RESOURCE},
+            };
+            cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+        }
     }
 }
-
-//-----------------------------------------------------------------------
 
 void cLuxInventory::DestroyBackground()
 {

@@ -277,8 +277,6 @@ private:
 	bool CheckSpecialCombineAction(cLuxInventory_Item *apItemA, cLuxInventory_Item *apItemB, int alSlotIndex);
 
 	void CreateBackground();
-	void RenderBackgroundImage();
-	void CreateScreenTextures();
 	void DestroyBackground();
 
 	void CreateGui();
