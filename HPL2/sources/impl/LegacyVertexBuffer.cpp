@@ -540,7 +540,8 @@ namespace hpl {
             stream.m_offset = found->m_activeCopy * found->m_shadowData.size();
             stream.m_stride = found->Stride();
         }
-        uint32_t numIndecies = (GetRequestNumberIndecies() > 0) ? GetRequestNumberIndecies() : static_cast<uint32_t>(m_indices.size()) ;
+        const int requestNumIndecies = GetRequestNumberIndecies();
+        const uint32_t numIndecies = (requestNumIndecies >= 0) ? requestNumIndecies : static_cast<uint32_t>(m_indices.size()) ;
         packet.m_indvidual.m_indexStream.m_offset = m_indexBufferActiveCopy * m_indices.size() * sizeof(uint32_t);
         packet.m_indvidual.m_numIndices = numIndecies;
         packet.m_indvidual.m_indexStream.buffer = &m_indexBuffer;

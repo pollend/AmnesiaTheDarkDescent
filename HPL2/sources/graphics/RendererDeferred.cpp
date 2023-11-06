@@ -2433,8 +2433,6 @@ namespace hpl {
             std::unique_ptr<iVertexBuffer>(loadVertexBufferFromMesh("core_5_5_sphere.dae", lVtxFlag));
         m_shapePyramid = std::unique_ptr<iVertexBuffer>(loadVertexBufferFromMesh("core_pyramid.dae", lVtxFlag));
         m_box = std::unique_ptr<iVertexBuffer>(loadVertexBufferFromMesh("core_box.dae", lVtxFlag));
-        ////////////////////////////////////
-        // Batch vertex buffer
     }
 
     cRendererDeferred::~cRendererDeferred() {
@@ -4608,17 +4606,12 @@ namespace hpl {
                 switch (pMaterial->Descriptor().m_id) {
                 case MaterialID::Translucent:
                     {
-                        // LegacyVertexBuffer::GeometryBinding binding;
                         DrawPacket drawPacket;
                         if (isParticleEmitter) {
                             std::array targets = { eVertexBufferElement_Position,
                                                    eVertexBufferElement_Texture0,
                                                    eVertexBufferElement_Color0 };
                             drawPacket = translucencyItem->ResolveDrawPacket(frame, targets);
-                            if (drawPacket.m_type == DrawPacket::Unknown && drawPacket.numberOfIndecies() == 0) {
-                                break;
-                            }
-
                         } else {
                             std::array targets = { eVertexBufferElement_Position,
                                                    eVertexBufferElement_Texture0,
@@ -4626,10 +4619,12 @@ namespace hpl {
                                                    eVertexBufferElement_Texture1Tangent,
                                                    eVertexBufferElement_Color0 };
                             drawPacket = translucencyItem->ResolveDrawPacket(frame, targets);
-                            if (drawPacket.m_type == DrawPacket::Unknown && drawPacket.numberOfIndecies() == 0) {
-                                break;
-                            }
                         }
+                        if (drawPacket.m_type == DrawPacket::Unknown ||
+                            drawPacket.numberOfIndecies() == 0) {
+                            break;
+                        }
+
 
                         uint32_t instance = cmdBindMaterialAndObject(
                             frame.m_cmd, frame, pMaterial, translucencyItem, std::optional{ pMatrix ? *pMatrix : cMatrixf::Identity });
@@ -4657,7 +4652,8 @@ namespace hpl {
                         DrawPacket::cmdBindBuffers(frame.m_cmd, frame.m_resourcePool, &drawPacket);
 
                         materialConst.m_options = (isFogActive ? TranslucencyFlags::UseFog : 0) |
-                            (isRefraction ? TranslucencyFlags::UseRefractionTrans : 0) | translucencyBlendTable[pMaterial->GetBlendMode()];
+                            (isRefraction ? TranslucencyFlags::UseRefractionTrans : 0) |
+                            translucencyBlendTable[pMaterial->GetBlendMode()];
 
                         cmdBindPushConstants(frame.m_cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
                         cmdDrawIndexed(frame.m_cmd, drawPacket.numberOfIndecies(), 0, 0);

@@ -60,7 +60,7 @@ float4 PS_MAIN(PsIn In)
         }
     }
 
-    if(finalColor.a == 0.0) {
+    if(finalColor.a < 0.01) {
         discard;
     }
     RETURN(finalColor);

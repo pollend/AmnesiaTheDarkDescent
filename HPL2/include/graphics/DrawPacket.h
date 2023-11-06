@@ -47,12 +47,9 @@ namespace hpl {
                     return m_unified.m_numIndices;
                 case DrawPacketType::DrawIndvidualBuffers:
                     return m_indvidual.m_numIndices;
-                default:
-                    break;
             }
             return 0;
         }
-
 
         static void cmdBindBuffers(Cmd* cmd, ForgeRenderer::CommandResourcePool* resourcePool, DrawPacket* packet);
 
