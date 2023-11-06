@@ -3160,6 +3160,7 @@ namespace hpl {
             cmdBindDescriptorSet(cmd, frameDescriptorIndex, m_materialSet.m_frameSet[frame.m_frameIndex].m_handle);
 
             for (auto& diffuseItem : renderList.GetRenderableItems(eRenderListType_Diffuse)) {
+
                 cMaterial* pMaterial = diffuseItem->GetMaterial();
                 std::array targets = { eVertexBufferElement_Position,
                                        eVertexBufferElement_Texture0,
@@ -3214,7 +3215,6 @@ namespace hpl {
                 MaterialRootConstant materialConst = {};
                 uint32_t instance = cmdBindMaterialAndObject(cmd, frame, pMaterial, decalItem);
                 materialConst.objectId = instance;
-                // LegacyVertexBuffer::GeometryBinding binding;
                 DrawPacket::cmdBindBuffers(cmd, frame.m_resourcePool, &packet);
                 cmdBindPushConstants(cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
                 cmdDrawIndexed(cmd, packet.numberOfIndecies(), 0, 0);
@@ -3363,7 +3363,6 @@ namespace hpl {
                     }
                 }
 
-                //////////////////////////
                 // View space depth, no need to test further since Z should almost never be the same for two objects.
                 //  use ">" since we want to render things closest to the screen first.
                 return apObjectA.m_renderable->GetViewSpaceZ() > apObjectB.m_renderable->GetViewSpaceZ();

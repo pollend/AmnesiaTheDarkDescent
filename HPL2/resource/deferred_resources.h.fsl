@@ -2,7 +2,7 @@
 /// Copyright 2023 Michael Pollind
 /// SPDX-License-Identifier: GPL-3.0
 
-#define PARALAX_MULTIPLIER 0.7
+#define PARALLAX_MULTIPLIER 0.7
 
 #define BLEND_MODE_ADD 0
 #define BLEND_MODE_MUL 1
