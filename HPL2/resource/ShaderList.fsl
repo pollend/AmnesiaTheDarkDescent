@@ -1,9 +1,17 @@
 /// Copyright © 2009-2020 Frictional Games
 /// Copyright 2023 Michael Pollind
 /// SPDX-License-Identifier: GPL-3.0
-
-#vert solid_z.vert
+#vert solid_z_shadow.vert
     #include "solid_z.vert.fsl"
+#end
+
+#frag solid_z_shadow.frag
+    #define ALPHA_REJECT 0.5
+    #include "solid_z_shadow.frag.fsl"
+#end
+
+#vert solid_z_shadow.vert
+    #include "solid_z_shadow.vert.fsl"
 #end
 
 #frag solid_z.frag
