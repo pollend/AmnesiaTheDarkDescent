@@ -597,6 +597,7 @@ namespace hpl {
         std::array<std::array<LightResourceEntry, MaxLightUniforms>, ForgeRenderer::SwapChainLength> m_lightResources{};
         // z pass
         SharedShader m_zPassShader;
+        SharedShader m_zPassShadowShader;
         SharedPipeline m_zPassPipelineCCW;
         SharedPipeline m_zPassPipelineCW;
 

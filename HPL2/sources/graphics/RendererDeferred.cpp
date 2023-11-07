@@ -187,14 +187,10 @@ namespace hpl {
                     }
                 }
 
-                ////////////////////////
-                // Iterate children
                 for (auto& childNode : apNode->GetChildNodes()) {
                     walkShadowCasters(childNode, frustumCollision);
                 }
 
-                /////////////////////////////
-                // Iterate objects
                 for (auto& object : apNode->GetObjects()) {
                     // Check so visible and shadow caster
                     if (rendering::detail::IsObjectIsVisible(object, eRenderableFlag_ShadowCaster, clipPlanes) == false ||
@@ -1133,6 +1129,13 @@ namespace hpl {
         //---------------- Diffuse Pipeline  ------------------------
         {
             // z pass
+            m_zPassShadowShader.Load(forgeRenderer->Rend(), [&](Shader** shader) {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0].pFileName = "solid_z_shadow.vert";
+                loadDesc.mStages[1].pFileName = "solid_z_shadow.frag";
+                addShader(forgeRenderer->Rend(), &loadDesc, shader);
+                return true;
+            });
             m_zPassShader.Load(forgeRenderer->Rend(), [&](Shader** shader) {
                 ShaderLoadDesc loadDesc = {};
                 loadDesc.mStages[0].pFileName = "solid_z.vert";
@@ -1301,8 +1304,8 @@ namespace hpl {
 
                 DepthStateDesc depthStateDesc = {};
                 depthStateDesc.mDepthTest = true;
-                depthStateDesc.mDepthWrite = false;
-                depthStateDesc.mDepthFunc = CMP_EQUAL;
+                depthStateDesc.mDepthWrite = true;
+                depthStateDesc.mDepthFunc = CMP_LEQUAL;
 
                 std::array colorFormats = { ColorBufferFormat, NormalBufferFormat, PositionBufferFormat, SpecularBufferFormat };
 
@@ -1537,7 +1540,7 @@ namespace hpl {
                     pipelineSettings.mDepthStencilFormat = ShadowDepthBufferFormat;
                     pipelineSettings.mSampleQuality = 0;
                     pipelineSettings.pRootSignature = m_materialRootSignature.m_handle;
-                    pipelineSettings.pShaderProgram = m_zPassShader.m_handle;
+                    pipelineSettings.pShaderProgram = m_zPassShadowShader.m_handle;
                     pipelineSettings.pRasterizerState = &rasterizerStateDesc;
                     pipelineSettings.pVertexLayout = &vertexLayout;
                     addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
@@ -1564,7 +1567,7 @@ namespace hpl {
                     pipelineSettings.mDepthStencilFormat = ShadowDepthBufferFormat;
                     pipelineSettings.mSampleQuality = 0;
                     pipelineSettings.pRootSignature = m_materialRootSignature.m_handle;
-                    pipelineSettings.pShaderProgram = m_zPassShader.m_handle;
+                    pipelineSettings.pShaderProgram = m_zPassShadowShader.m_handle;
                     pipelineSettings.pRasterizerState = &rasterizerStateDesc;
                     pipelineSettings.pVertexLayout = &vertexLayout;
                     addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
@@ -2760,9 +2763,7 @@ namespace hpl {
                                     cMaterial* pMaterial = pObject->GetMaterial();
                                     const ShaderMaterialData& descriptor = pMaterial->Descriptor();
                                     std::array targets = { eVertexBufferElement_Position,
-                                                           eVertexBufferElement_Texture0,
-                                                           eVertexBufferElement_Normal,
-                                                           eVertexBufferElement_Texture1Tangent };
+                                                           eVertexBufferElement_Texture0 };
                                     DrawPacket packet = pObject->ResolveDrawPacket(frame, targets);
                                     if (packet.m_type == DrawPacket::Unknown || descriptor.m_id == MaterialID::Unknown) {
                                         return;
@@ -3240,6 +3241,23 @@ namespace hpl {
         ASSERT(depthBuffer && "Depth buffer not created");
         ASSERT(hiZBuffer && "Depth buffer not created");
 
+        auto isValidForPreAndPostZ = [](cMaterial* material, iRenderable* renderable ) {
+            if (!material) {
+                return false;
+            }
+            if(renderable->GetCoverageAmount() < 1.0) {
+                return false;
+            }
+            if(cMaterial::IsTranslucent(material->Descriptor().m_id)) {
+                return false;
+            }
+            if(material->GetImage(eMaterialTexture_Alpha)) {
+                return false;
+            }
+
+            return true;
+        };
+
         FenceStatus fenceStatus;
         getFenceStatus(frame.m_renderer->Rend(), m_prePassFence.m_handle, &fenceStatus);
         if (fenceStatus == FENCE_STATUS_INCOMPLETE) {
@@ -3407,14 +3425,11 @@ namespace hpl {
                 reinterpret_cast<float4*>(updateDesc.pMappedData)[1] = float4(boundBoxMax.x, boundBoxMax.y, boundBoxMax.z, 0.0f);
                 endUpdateResource(&updateDesc, nullptr);
 
-                if (!test.m_preZPass || !pMaterial || cMaterial::IsTranslucent(pMaterial->Descriptor().m_id)) {
+                if (!test.m_preZPass || !isValidForPreAndPostZ(pMaterial, test.m_renderable)) {
                     continue;
                 }
 
-                std::array targets = { eVertexBufferElement_Position,
-                                       eVertexBufferElement_Texture0,
-                                       eVertexBufferElement_Normal,
-                                       eVertexBufferElement_Texture1Tangent };
+                std::array targets = { eVertexBufferElement_Position};
                 DrawPacket packet = test.m_renderable->ResolveDrawPacket(frame, targets);
                 if (packet.m_type == DrawPacket::Unknown) {
                     continue;
@@ -3646,13 +3661,10 @@ namespace hpl {
                         renderable->GetCoverageAmount() >= 1 ? eMaterialRenderMode_Z : eMaterialRenderMode_Z_Dissolve;
 
                     cMaterial* pMaterial = renderable->GetMaterial();
-                    if (!pMaterial || cMaterial::IsTranslucent(pMaterial->Descriptor().m_id)) {
+                    if (!isValidForPreAndPostZ(pMaterial, renderable)) {
                         continue;
                     }
-                    std::array targets = { eVertexBufferElement_Position,
-                                           eVertexBufferElement_Texture0,
-                                           eVertexBufferElement_Normal,
-                                           eVertexBufferElement_Texture1Tangent };
+                    std::array targets = { eVertexBufferElement_Position };
                     DrawPacket drawPacket = renderable->ResolveDrawPacket(frame, targets);
                     if (drawPacket.m_type == DrawPacket::Unknown) {
                         continue;
@@ -3991,7 +4003,6 @@ namespace hpl {
         // Setup far plane coordinates
 
         ///////////////////////////
-        // Occlusion testing
         m_rendererList.BeginAndReset(afFrameTime, apFrustum);
         cmdPreAndPostZ(
             frame.m_cmd,
