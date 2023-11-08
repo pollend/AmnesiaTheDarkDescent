@@ -7,7 +7,8 @@
 
 namespace hpl {
 
-    IndexPool::IndexPool(uint32_t reserve) {
+    IndexPool::IndexPool(uint32_t reserve):
+        m_reserve(reserve) {
         m_avaliable.push_back({0, reserve - 1});
     }
 

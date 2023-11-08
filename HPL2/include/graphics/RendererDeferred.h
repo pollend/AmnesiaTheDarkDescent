@@ -20,6 +20,7 @@
 
 #include "engine/RTTI.h"
 
+#include "graphics/ShadowCache.h"
 #include "scene/Viewport.h"
 #include "scene/World.h"
 #include "windowing/NativeWindow.h"
@@ -597,6 +598,7 @@ namespace hpl {
         std::array<std::array<LightResourceEntry, MaxLightUniforms>, ForgeRenderer::SwapChainLength> m_lightResources{};
         // z pass
         SharedShader m_zPassShader;
+        SharedShader m_zPassShadowShader;
         SharedPipeline m_zPassPipelineCCW;
         SharedPipeline m_zPassPipelineCW;
 
@@ -707,5 +709,6 @@ namespace hpl {
         cRenderList m_reflectionRendererList;
         std::unique_ptr<renderer::PassHBAOPlus> m_hbaoPlusPipeline;
         std::shared_ptr<DebugDraw> m_debug;
+        ShadowCache m_shadowCache;
     };
 }; // namespace hpl
