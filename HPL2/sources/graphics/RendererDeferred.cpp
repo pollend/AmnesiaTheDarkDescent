@@ -508,7 +508,8 @@ namespace hpl {
 
     cRendererDeferred::cRendererDeferred(cGraphics* apGraphics, cResources* apResources, std::shared_ptr<DebugDraw> debug)
         : iRenderer("Deferred", apGraphics, apResources)
-        , m_debug(debug) {
+        , m_debug(debug)
+        , m_shadowCache(8192, 4096, 8, 4, 3) {
         m_hbaoPlusPipeline = std::make_unique<renderer::PassHBAOPlus>();
         ////////////////////////////////////
         // Set up render specific things

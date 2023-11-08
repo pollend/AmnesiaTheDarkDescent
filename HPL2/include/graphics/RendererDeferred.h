@@ -20,6 +20,7 @@
 
 #include "engine/RTTI.h"
 
+#include "graphics/ShadowCache.h"
 #include "scene/Viewport.h"
 #include "scene/World.h"
 #include "windowing/NativeWindow.h"
@@ -708,5 +709,6 @@ namespace hpl {
         cRenderList m_reflectionRendererList;
         std::unique_ptr<renderer::PassHBAOPlus> m_hbaoPlusPipeline;
         std::shared_ptr<DebugDraw> m_debug;
+        ShadowCache m_shadowCache;
     };
 }; // namespace hpl
