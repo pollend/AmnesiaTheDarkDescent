@@ -20,6 +20,7 @@
 
 #include "engine/RTTI.h"
 
+#include "graphics/CommandBufferPool.h"
 #include "graphics/ShadowCache.h"
 #include "scene/Viewport.h"
 #include "scene/World.h"
@@ -458,6 +459,11 @@ namespace hpl {
         std::unique_ptr<iVertexBuffer> m_box;
         std::array<folly::small_vector<ShadowMapData, 32>, eShadowMapResolution_LastEnum> m_shadowMapData;
 
+
+        SharedRenderTarget m_shadowTarget;
+        ShadowCache<ShadowMapData> m_shadowCache;
+        CommandBufferPool<16> m_shadowCmdPool;
+
         UniqueViewportData<ViewportData> m_boundViewportData;
 
         SharedTexture m_shadowJitterTexture;
@@ -709,6 +715,5 @@ namespace hpl {
         cRenderList m_reflectionRendererList;
         std::unique_ptr<renderer::PassHBAOPlus> m_hbaoPlusPipeline;
         std::shared_ptr<DebugDraw> m_debug;
-        ShadowCache m_shadowCache;
     };
 }; // namespace hpl

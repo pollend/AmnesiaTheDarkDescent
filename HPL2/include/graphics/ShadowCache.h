@@ -2,6 +2,7 @@
 
 #include "graphics/IndexPool.h"
 #include <cstdint>
+#include <optional>
 #include <vector>
 
 #include <folly/small_vector.h>
@@ -10,60 +11,146 @@
 #include <Common_3/Utilities/RingBuffer.h>
 #include <FixPreprocessor.h>
 
-
 namespace hpl {
+    template<typename MetaInfo>
     class ShadowCache {
     public:
+        static constexpr uint32_t MinimumAge = 3;
+        static constexpr uint4 InvalidQuad = uint4(0, 0, 0, 0);
+        struct ShadowSlot {
+            uint32_t m_age = 0;
+            uint16_t m_hash = 0;
+            MetaInfo m_info = {};
+        };
 
-        struct ShadowGroup {
+        struct ShadowContainer {
         public:
-            static constexpr uint8_t IsLeaf = 0x1;
-            static constexpr uint8_t HasLeafs = 0x2;
-            static constexpr uint8_t HasGroups = 0x4;
+            uint16_t m_x = 0;
+            uint16_t m_y = 0;
+            uint8_t m_level = 0;
+            uint32_t m_age = 0;
+            folly::small_vector<ShadowSlot, 24> m_slots;
+        };
 
-            uint16_t m_idx;
+        ShadowCache() = default;
+        ShadowCache(uint32_t width, uint32_t height, uint32_t numColumns, uint32_t numRows, uint8_t maxLevels)
+            : m_maxLevels(maxLevels)
+            , m_numRows(numRows)
+            , m_numColumns(numColumns)
+            , m_size(width, height)
+            , m_quadSize(width / numColumns, height / numRows) {
+            m_containers.resize(numColumns * numRows);
+            for(size_t i = 0; i < m_containers.size(); i++) {
+                m_containers[i].m_slots.resize(1);
+                m_containers[i].m_x = m_quadSize.x * (i % numColumns);
+                m_containers[i].m_y = m_quadSize.y * (i / numColumns);
+            }
 
-            uint16_t m_x;
-            uint16_t m_y;
+        }
+        struct ShadowMapResult {
+        public:
+            ShadowMapResult(ShadowCache<MetaInfo>* cache, ShadowContainer* container, uint32_t slotIdx, uint32_t age)
+                : m_cache(cache)
+                , m_container(container)
+                , m_slotIdx(slotIdx)
+                , m_age(age) {
+            }
+            // mark shadowmap as used
+            void Mark() {
+                m_container->m_age = m_age;
+                m_container->m_slots[m_slotIdx].m_age = m_age;
+            }
+
+            inline float4 NormalizedRect() {
+                uint4 quad = Rect();
+                return float4(
+                    static_cast<float>(quad.x) / static_cast<float>(m_cache->m_size.x),
+                    static_cast<float>(quad.y) / static_cast<float>(m_cache->m_size.y),
+                    static_cast<float>(quad.z) / static_cast<float>(m_cache->m_size.x),
+                    static_cast<float>(quad.w) / static_cast<float>(m_cache->m_size.y));
+            }
+
+            inline MetaInfo& Meta() {
+                return m_container->m_slots[m_slotIdx].m_info;
+            }
+
+            inline uint4 Rect() {
+                const uint8_t div = (1 << m_container->m_level);
+                const uint2 size = (m_cache->m_quadSize / div);
+                return uint4(
+                    m_container->m_x + ((m_slotIdx % div) * size.x),
+                    m_container->m_y + ((m_slotIdx / div) * size.y),
+                    size.x, size.y);
+            }
+
+        private:
+            ShadowCache<MetaInfo>* m_cache;
+            ShadowContainer* m_container;
+            size_t m_slotIdx;
             uint32_t m_age;
-
-            uint16_t m_parent; // the parent of the cache entry
-            uint16_t m_child; // the start of the group
-
-            // linked list for all cut levels at the same cut
-            uint16_t m_next;
-            uint16_t m_prev;
-
-            uint8_t m_flags;
-            uint8_t m_occupyMask: 4; // mask for the entires occuped
-            uint8_t m_slot: 4; // the slot index
-            uint8_t m_level;
-
-            uint16_t m_hashes[4];
         };
 
+        std::optional<ShadowMapResult> Search(uint16_t hash, uint8_t targetLevel, uint32_t age) {
+            uint8_t level = std::min(m_maxLevels, targetLevel);
+            const uint8_t divisions = (1 << level);
+            uint2 shadowSize = m_quadSize / divisions;
+            struct Candidate {
+                ShadowContainer* m_container;
+                uint32_t m_slotIdx;
+            };
 
-        struct CutLevel {
-            uint16_t m_begin = UINT16_MAX;
-        };
+            Candidate bestCandidate{};
+            ShadowContainer* replaceCandidate = nullptr;
+            for (auto& container : m_containers) {
+                if (container.m_level == level) {
+                    for (size_t i = 0; i < (divisions * divisions); i++) {
+                        auto& slot = container.m_slots[i];
+                        if (age - container.m_age > MinimumAge &&
+                            (bestCandidate.m_container == nullptr ||
+                             bestCandidate.m_container->m_slots[bestCandidate.m_slotIdx].m_age > slot.m_age)) {
+                            bestCandidate.m_container = &container;
+                            bestCandidate.m_slotIdx = i;
+                            if (slot.m_hash == hash) {
+                                return ShadowMapResult(this, &container, i, age);
+                            }
+                        }
+                    }
+                } else {
+                    if (age - container.m_age > MinimumAge && (replaceCandidate == nullptr || replaceCandidate->m_age > container.m_age)) {
+                        replaceCandidate = &container;
+                    }
+                }
+            }
+            if (bestCandidate.m_container != nullptr) {
+                return ShadowMapResult(this, bestCandidate.m_container, bestCandidate.m_slotIdx, age);
+            }
 
-        ShadowCache(uint32_t width, uint32_t height, uint32_t hDivisions, uint32_t vDivision, uint8_t maxCuts);
-        void reset(uint32_t age);
-        uint4 find(uint16_t hash, uint8_t level, uint32_t age);
+            if (replaceCandidate) {
+                replaceCandidate->m_level = level;
+                replaceCandidate->m_slots.clear();
+                replaceCandidate->m_slots.resize(divisions * divisions);
+                return ShadowMapResult(this, replaceCandidate, 0, age);
+            }
+
+            return std::nullopt;
+        }
+
+        inline uint2 quadSize() {
+            return m_quadSize;
+        }
+        inline uint2 size() {
+            return m_size;
+        }
+        inline uint8_t maxLevels() {
+            return m_maxLevels;
+        }
+
     private:
-        ShadowGroup* allocGroup();
-        ShadowCache::ShadowGroup* createCut(ShadowGroup* group);
-
-        void freeGroup(ShadowGroup* group);
-        void freeChildren(ShadowGroup* group);
-
-        void updateAge(ShadowCache::ShadowGroup* current, uint32_t age);
-        void insertAfter(ShadowCache::ShadowGroup* current, ShadowCache::ShadowGroup* grp);
-        void insertBefore(ShadowCache::ShadowGroup* current, ShadowCache::ShadowGroup* grp);
-
+        uint8_t m_maxLevels;
+        uint16_t m_numRows;
+        uint16_t m_numColumns;
+        uint2 m_size;
         uint2 m_quadSize;
-        hpl::IndexPool m_pool;
-        std::vector<ShadowGroup> m_alloc; // a reserved pool of entries will contain the max possible i.e all the quads are at its lowest cut
-        std::vector<CutLevel> m_cut; // cut levels for each quad
+        std::vector<ShadowContainer> m_containers;
     };
-}
+} // namespace hpl

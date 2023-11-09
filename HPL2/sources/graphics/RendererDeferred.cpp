@@ -21,10 +21,13 @@
 
 #include "engine/Event.h"
 #include "engine/Interface.h"
+#include "graphics/CommandBufferPool.h"
 #include "graphics/DebugDraw.h"
 #include "graphics/DrawPacket.h"
 #include "graphics/ForgeHandles.h"
+#include "graphics/ForgeRenderer.h"
 #include "graphics/MaterialResource.h"
+#include "graphics/ShadowCache.h"
 #include "math/cFrustum.h"
 #include "scene/ParticleEmitter.h"
 #include "scene/Viewport.h"
@@ -527,6 +530,7 @@ namespace hpl {
         m_dissolveImage = mpResources->GetTextureManager()->Create2DImage("core_dissolve.tga", false);
         auto* forgeRenderer = Interface<ForgeRenderer>::Get();
 
+        m_shadowCmdPool = CommandBufferPool<16>(forgeRenderer->Rend(), forgeRenderer->GetGraphicsQueue());
         m_occlusionUniformBuffer.Load([&](Buffer** buffer) {
             BufferLoadDesc desc = {};
             desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_BUFFER;
@@ -2408,6 +2412,23 @@ namespace hpl {
             return shadowMapData;
         };
 
+        m_shadowTarget.Load(forgeRenderer->Rend(), [&](RenderTarget** target) {
+            RenderTargetDesc renderTarget = {};
+            renderTarget.mArraySize = 1;
+            renderTarget.mClearValue.depth = 1.0f;
+            renderTarget.mDepth = 1;
+            renderTarget.mFormat = ShadowDepthBufferFormat;
+            renderTarget.mWidth = m_shadowCache.size().x;
+            renderTarget.mHeight = m_shadowCache.size().y;
+            renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+            renderTarget.mSampleCount = SAMPLE_COUNT_1;
+            renderTarget.mSampleQuality = 0;
+            renderTarget.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
+            renderTarget.pName = "ShadowMaps RTs";
+            addRenderTarget(forgeRenderer->Rend(), &renderTarget, target);
+            return true;
+        });
+
         for (size_t i = 0; i < 32; ++i) {
             m_shadowMapData[eShadowMapResolution_High].emplace_back(createShadowMap(shadowSizes[startSize + eShadowMapResolution_High]));
         }
@@ -2530,6 +2551,8 @@ namespace hpl {
         cMatrixf projectionMat,
         AdditionalLightPassOptions options) {
         uint32_t materialObjectIndex = getDescriptorIndexFromName(m_materialRootSignature.m_handle, "materialRootConstant");
+
+
 
         folly::small_vector<cPlanef, 3> occlusionPlanes;
         if (apWorld->GetFogActive() && apWorld->GetFogColor().a >= 1.0f && apWorld->GetFogCulling()) {
@@ -2655,147 +2678,132 @@ namespace hpl {
                     cFrustum* pLightFrustum = pLightSpot->GetFrustum();
                     std::vector<iRenderable*> shadowCasters;
                     if (castShadow && detail::SetupShadowMapRendering(shadowCasters, apWorld, pLightFrustum, pLightSpot, occlusionPlanes)) {
-                        auto findBestShadowMap = [&](eShadowMapResolution resolution, iLight* light) -> cRendererDeferred::ShadowMapData* {
-                            auto& shadowMapVec = m_shadowMapData[resolution];
-                            uint32_t maxFrameDistance = 0;
-                            size_t bestIndex = 0;
-                            for (size_t i = 0; i < shadowMapVec.size(); ++i) {
-                                auto& shadowMap = shadowMapVec[i];
-                                if (shadowMap.m_light == light) {
-                                    shadowMap.m_frameCount = frame.m_currentFrame;
-                                    return &shadowMap;
-                                }
+                        const int count = pLightSpot->GetTransformUpdateCount();
+                        uint32_t id = folly::hash::fnv32_buf(&pLightSpot, sizeof(void*));
+                        if (auto result = m_shadowCache.Search(id, shadowMapResolution, frame.m_currentFrame)) {
+                            auto poolEntry = m_shadowCmdPool.findAvaliableEntry();
+                            if (poolEntry) {
+                                auto& meta = result->Meta();
+                                result->Mark(); // mark the slot for this frame
 
-                                const uint32_t frameDist = frame.m_currentFrame - shadowMap.m_frameCount;
-                                if (frameDist > maxFrameDistance) {
-                                    maxFrameDistance = frameDist;
-                                    bestIndex = i;
-                                }
-                            }
-                            shadowMapVec[bestIndex].m_frameCount = frame.m_currentFrame;
-                            return &shadowMapVec[bestIndex];
-                        };
-                        auto* shadowMapData = findBestShadowMap(shadowMapResolution, pLightSpot);
-                        if (shadowMapData) {
-                            deferredLight.m_shadowMapData = shadowMapData;
-                            // testing if the shadow map needs to be updated
-                            if (shadowMapData->m_transformCount != pLightSpot->GetTransformUpdateCount() || [&]() -> bool {
-                                    // Check if texture map and light are valid
-                                    if (pLightSpot->GetOcclusionCullShadowCasters()) {
-                                        return true;
+                                if (meta.m_transformCount != pLightSpot->GetTransformUpdateCount() || [&]() -> bool {
+                                        // Check if texture map and light are valid
+                                        if (pLightSpot->GetOcclusionCullShadowCasters()) {
+                                            return true;
+                                        }
+
+                                        if (pLightSpot->GetLightType() == eLightType_Spot &&
+                                            (pLightSpot->GetAspect() != meta.m_aspect || pLightSpot->GetFOV() != meta.m_fov)) {
+                                            return true;
+                                        }
+                                        return !pLightSpot->ShadowCastersAreUnchanged(shadowCasters);
+                                    }()) {
+                                    meta.m_light = pLightSpot;
+                                    meta.m_transformCount = pLightSpot->GetTransformUpdateCount();
+                                    meta.m_radius = pLightSpot->GetRadius();
+                                    meta.m_aspect = pLightSpot->GetAspect();
+                                    meta.m_fov = pLightSpot->GetFOV();
+
+                                    pLightSpot->SetShadowCasterCacheFromVec(shadowCasters);
+
+                                    resetCmdPool(frame.m_renderer->Rend(), poolEntry->m_pool.m_handle);
+
+                                    beginCmd(poolEntry->m_cmd.m_handle);
+                                    {
+                                        cmdBindRenderTargets(poolEntry->m_cmd.m_handle, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+                                        std::array rtBarriers = {
+                                            RenderTargetBarrier{ m_shadowTarget.m_handle,
+                                                                 RESOURCE_STATE_SHADER_RESOURCE,
+                                                                 RESOURCE_STATE_DEPTH_WRITE },
+                                        };
+                                        cmdResourceBarrier(
+                                            poolEntry->m_cmd.m_handle, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
                                     }
 
-                                    if (pLightSpot->GetLightType() == eLightType_Spot &&
-                                        (pLightSpot->GetAspect() != shadowMapData->m_aspect ||
-                                         pLightSpot->GetFOV() != shadowMapData->m_fov)) {
-                                        return true;
+                                    LoadActionsDesc loadActions = {};
+                                    loadActions.mLoadActionDepth = LOAD_ACTION_CLEAR;
+                                    loadActions.mLoadActionStencil = LOAD_ACTION_DONTCARE;
+                                    loadActions.mClearDepth = { .depth = 1.0f, .stencil = 0 };
+                                    cmdBindRenderTargets(
+                                        poolEntry->m_cmd.m_handle,
+                                        0,
+                                        NULL,
+                                        m_shadowTarget.m_handle,
+                                        &loadActions,
+                                        NULL,
+                                        NULL,
+                                        -1,
+                                        -1);
+                                    uint4 rectangle = result->Rect();
+                                    cmdSetViewport(
+                                        poolEntry->m_cmd.m_handle,
+                                        static_cast<float>(rectangle.x),
+                                        static_cast<float>(rectangle.y + rectangle.w),
+                                        static_cast<float>(rectangle.z),
+                                        -static_cast<float>(rectangle.w),
+                                        0.0f,
+                                        1.0f);
+                                    cmdSetScissor(
+                                        poolEntry->m_cmd.m_handle,
+                                        0,
+                                        0,
+                                        rectangle.z,
+                                        rectangle.w);
+                                    cmdBindPipeline(
+                                        poolEntry->m_cmd.m_handle,
+                                        options.m_invert ? m_zPassShadowPipelineCCW.m_handle : m_zPassShadowPipelineCW.m_handle);
+
+                                    uint32_t shadowFrameIndex = updateFrameDescriptor(
+                                        frame,
+                                        poolEntry->m_cmd.m_handle,
+                                        apWorld,
+                                        { .m_size = float2(outputBuffer->mWidth, outputBuffer->mHeight),
+                                          .m_viewMat = pLightFrustum->GetViewMatrix(),
+                                          .m_projectionMat = pLightFrustum->GetProjectionMatrix() });
+                                    cmdBindDescriptorSet(
+                                        poolEntry->m_cmd.m_handle,
+                                        shadowFrameIndex,
+                                        m_materialSet.m_frameSet[frame.m_frameIndex].m_handle);
+                                    for (auto& pObject : shadowCasters) {
+                                        eMaterialRenderMode renderMode =
+                                            pObject->GetCoverageAmount() >= 1 ? eMaterialRenderMode_Z : eMaterialRenderMode_Z_Dissolve;
+                                        cMaterial* pMaterial = pObject->GetMaterial();
+                                        const ShaderMaterialData& descriptor = pMaterial->Descriptor();
+                                        std::array targets = { eVertexBufferElement_Position, eVertexBufferElement_Texture0 };
+                                        DrawPacket packet = pObject->ResolveDrawPacket(frame, targets);
+                                        if (packet.m_type == DrawPacket::Unknown || descriptor.m_id == MaterialID::Unknown) {
+                                            return;
+                                        }
+                                        MaterialRootConstant materialConst = {};
+                                        uint32_t instance =
+                                            cmdBindMaterialAndObject(poolEntry->m_cmd.m_handle, frame, pMaterial, pObject);
+                                        materialConst.objectId = instance;
+                                        DrawPacket::cmdBindBuffers(poolEntry->m_cmd.m_handle, frame.m_resourcePool, &packet);
+                                        cmdBindPushConstants(
+                                            poolEntry->m_cmd.m_handle,
+                                            m_materialRootSignature.m_handle,
+                                            materialObjectIndex,
+                                            &materialConst);
+                                        cmdDrawIndexed(poolEntry->m_cmd.m_handle, packet.numberOfIndecies(), 0, 0);
                                     }
-                                    return !pLightSpot->ShadowCastersAreUnchanged(shadowCasters);
-                                }()) {
-                                shadowMapData->m_light = pLightSpot;
-                                shadowMapData->m_transformCount = pLightSpot->GetTransformUpdateCount();
-                                shadowMapData->m_radius = pLightSpot->GetRadius();
-                                shadowMapData->m_aspect = pLightSpot->GetAspect();
-                                shadowMapData->m_fov = pLightSpot->GetFOV();
-
-                                pLightSpot->SetShadowCasterCacheFromVec(shadowCasters);
-
-                                FenceStatus fenceStatus;
-                                getFenceStatus(frame.m_renderer->Rend(), shadowMapData->m_shadowFence.m_handle, &fenceStatus);
-                                if (fenceStatus == FENCE_STATUS_INCOMPLETE)
-                                    waitForFences(frame.m_renderer->Rend(), 1, &shadowMapData->m_shadowFence.m_handle);
-                                resetCmdPool(frame.m_renderer->Rend(), shadowMapData->m_pool.m_handle);
-
-                                beginCmd(shadowMapData->m_cmd.m_handle);
-                                {
-                                    cmdBindRenderTargets(shadowMapData->m_cmd.m_handle, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
-                                    std::array rtBarriers = {
-                                        RenderTargetBarrier{
-                                            shadowMapData->m_target.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_DEPTH_WRITE },
-                                    };
-                                    cmdResourceBarrier(
-                                        shadowMapData->m_cmd.m_handle, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
-                                }
-
-                                LoadActionsDesc loadActions = {};
-                                loadActions.mLoadActionDepth = LOAD_ACTION_CLEAR;
-                                loadActions.mLoadActionStencil = LOAD_ACTION_DONTCARE;
-                                loadActions.mClearDepth = { .depth = 1.0f, .stencil = 0 };
-                                cmdBindRenderTargets(
-                                    shadowMapData->m_cmd.m_handle,
-                                    0,
-                                    NULL,
-                                    shadowMapData->m_target.m_handle,
-                                    &loadActions,
-                                    NULL,
-                                    NULL,
-                                    -1,
-                                    -1);
-                                cmdSetViewport(
-                                    shadowMapData->m_cmd.m_handle,
-                                    0.0f,
-                                    static_cast<float>(shadowMapData->m_target.m_handle->mHeight),
-                                    static_cast<float>(shadowMapData->m_target.m_handle->mWidth),
-                                    -static_cast<float>(shadowMapData->m_target.m_handle->mHeight),
-                                    0.0f,
-                                    1.0f);
-                                cmdSetScissor(
-                                    shadowMapData->m_cmd.m_handle,
-                                    0,
-                                    0,
-                                    shadowMapData->m_target.m_handle->mWidth,
-                                    shadowMapData->m_target.m_handle->mHeight);
-                                cmdBindPipeline(
-                                    shadowMapData->m_cmd.m_handle,
-                                    options.m_invert ? m_zPassShadowPipelineCCW.m_handle : m_zPassShadowPipelineCW.m_handle);
-
-                                uint32_t shadowFrameIndex = updateFrameDescriptor(
-                                    frame,
-                                    shadowMapData->m_cmd.m_handle,
-                                    apWorld,
-                                    { .m_size = float2(outputBuffer->mWidth, outputBuffer->mHeight),
-                                      .m_viewMat = pLightFrustum->GetViewMatrix(),
-                                      .m_projectionMat = pLightFrustum->GetProjectionMatrix() });
-                                cmdBindDescriptorSet(
-                                    shadowMapData->m_cmd.m_handle, shadowFrameIndex, m_materialSet.m_frameSet[frame.m_frameIndex].m_handle);
-                                for (auto& pObject : shadowCasters) {
-                                    eMaterialRenderMode renderMode =
-                                        pObject->GetCoverageAmount() >= 1 ? eMaterialRenderMode_Z : eMaterialRenderMode_Z_Dissolve;
-                                    cMaterial* pMaterial = pObject->GetMaterial();
-                                    const ShaderMaterialData& descriptor = pMaterial->Descriptor();
-                                    std::array targets = { eVertexBufferElement_Position,
-                                                           eVertexBufferElement_Texture0 };
-                                    DrawPacket packet = pObject->ResolveDrawPacket(frame, targets);
-                                    if (packet.m_type == DrawPacket::Unknown || descriptor.m_id == MaterialID::Unknown) {
-                                        return;
+                                    {
+                                        cmdBindRenderTargets(poolEntry->m_cmd.m_handle, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+                                        std::array rtBarriers = {
+                                            RenderTargetBarrier{ m_shadowTarget.m_handle,
+                                                                 RESOURCE_STATE_DEPTH_WRITE,
+                                                                 RESOURCE_STATE_SHADER_RESOURCE },
+                                        };
+                                        cmdResourceBarrier(
+                                            poolEntry->m_cmd.m_handle, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
                                     }
-                                    MaterialRootConstant materialConst = {};
-                                    uint32_t instance = cmdBindMaterialAndObject(shadowMapData->m_cmd.m_handle, frame, pMaterial, pObject);
-                                    materialConst.objectId = instance;
-                                    DrawPacket::cmdBindBuffers(shadowMapData->m_cmd.m_handle, frame.m_resourcePool, &packet);
-                                    cmdBindPushConstants(
-                                        shadowMapData->m_cmd.m_handle,
-                                        m_materialRootSignature.m_handle,
-                                        materialObjectIndex,
-                                        &materialConst);
-                                    cmdDrawIndexed(shadowMapData->m_cmd.m_handle, packet.numberOfIndecies(), 0, 0);
+                                    endCmd(poolEntry->m_cmd.m_handle);
+                                    QueueSubmitDesc submitDesc = {};
+                                    submitDesc.mCmdCount = 1;
+                                    submitDesc.ppCmds = &poolEntry->m_cmd.m_handle;
+                                    submitDesc.pSignalFence = poolEntry->m_fence.m_handle;
+                                    submitDesc.mSubmitDone = true;
+                                    queueSubmit(frame.m_renderer->GetGraphicsQueue(), &submitDesc);
                                 }
-                                {
-                                    cmdBindRenderTargets(shadowMapData->m_cmd.m_handle, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
-                                    std::array rtBarriers = {
-                                        RenderTargetBarrier{
-                                            shadowMapData->m_target.m_handle, RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_SHADER_RESOURCE },
-                                    };
-                                    cmdResourceBarrier(
-                                        shadowMapData->m_cmd.m_handle, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
-                                }
-                                endCmd(shadowMapData->m_cmd.m_handle);
-                                QueueSubmitDesc submitDesc = {};
-                                submitDesc.mCmdCount = 1;
-                                submitDesc.ppCmds = &shadowMapData->m_cmd.m_handle;
-                                submitDesc.pSignalFence = shadowMapData->m_shadowFence.m_handle;
-                                submitDesc.mSubmitDone = true;
-                                queueSubmit(frame.m_renderer->GetGraphicsQueue(), &submitDesc);
                             }
                         }
                     }
