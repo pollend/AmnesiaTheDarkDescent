@@ -20,6 +20,8 @@
 
 #include "engine/RTTI.h"
 
+#include "graphics/CommandBufferPool.h"
+#include "graphics/ShadowCache.h"
 #include "scene/Viewport.h"
 #include "scene/World.h"
 #include "windowing/NativeWindow.h"
@@ -457,6 +459,11 @@ namespace hpl {
         std::unique_ptr<iVertexBuffer> m_box;
         std::array<folly::small_vector<ShadowMapData, 32>, eShadowMapResolution_LastEnum> m_shadowMapData;
 
+
+        SharedRenderTarget m_shadowTarget;
+        ShadowCache<ShadowMapData> m_shadowCache;
+        CommandBufferPool<16> m_shadowCmdPool;
+
         UniqueViewportData<ViewportData> m_boundViewportData;
 
         SharedTexture m_shadowJitterTexture;
@@ -597,6 +604,7 @@ namespace hpl {
         std::array<std::array<LightResourceEntry, MaxLightUniforms>, ForgeRenderer::SwapChainLength> m_lightResources{};
         // z pass
         SharedShader m_zPassShader;
+        SharedShader m_zPassShadowShader;
         SharedPipeline m_zPassPipelineCCW;
         SharedPipeline m_zPassPipelineCW;
 

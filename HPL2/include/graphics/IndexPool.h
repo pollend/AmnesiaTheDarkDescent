@@ -14,12 +14,14 @@ namespace hpl {
         IndexPool(uint32_t reserve);
 
         uint32_t requestId();
+        inline uint32_t reserve() {return m_reserve;}
         void returnId(uint32_t);
     private:
         struct IdRange {
             uint32_t m_start;
             uint32_t m_end;
         };
+        uint32_t m_reserve;
         folly::small_vector<IdRange, 256> m_avaliable;
     };
 
