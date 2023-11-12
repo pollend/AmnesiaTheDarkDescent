@@ -19,7 +19,6 @@ namespace hpl {
         static constexpr uint4 InvalidQuad = uint4(0, 0, 0, 0);
         struct ShadowSlot {
             uint32_t m_age = 0;
-            uint16_t m_hash = 0;
             MetaInfo m_info = {};
         };
 
@@ -90,7 +89,7 @@ namespace hpl {
             uint32_t m_age;
         };
 
-        std::optional<ShadowMapResult> Search(uint16_t hash, uint8_t targetLevel, uint32_t age) {
+        std::optional<ShadowMapResult> Search(uint8_t targetLevel, uint32_t age, std::function<bool(MetaInfo&)> foundHandler) {
             uint8_t level = std::min(m_maxLevels, targetLevel);
             const uint8_t divisions = (1 << level);
             uint2 shadowSize = m_quadSize / divisions;
@@ -105,18 +104,19 @@ namespace hpl {
                 if (container.m_level == level) {
                     for (size_t i = 0; i < (divisions * divisions); i++) {
                         auto& slot = container.m_slots[i];
+                        if (foundHandler(slot.m_info)) {
+                            return ShadowMapResult(this, &container, i, age);
+                        }
+
                         if (age - container.m_age > MinimumAge &&
                             (bestCandidate.m_container == nullptr ||
-                             bestCandidate.m_container->m_slots[bestCandidate.m_slotIdx].m_age > slot.m_age)) {
+                             bestCandidate.m_container->m_slots[bestCandidate.m_slotIdx].m_age < slot.m_age)) {
                             bestCandidate.m_container = &container;
                             bestCandidate.m_slotIdx = i;
-                            if (slot.m_hash == hash) {
-                                return ShadowMapResult(this, &container, i, age);
-                            }
                         }
                     }
                 } else {
-                    if (age - container.m_age > MinimumAge && (replaceCandidate == nullptr || replaceCandidate->m_age > container.m_age)) {
+                    if (age - container.m_age > MinimumAge && (replaceCandidate == nullptr || replaceCandidate->m_age < container.m_age)) {
                         replaceCandidate = &container;
                     }
                 }

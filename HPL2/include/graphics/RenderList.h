@@ -19,82 +19,93 @@
 #pragma once
 
 #include "graphics/Enum.h"
+#include <array>
 #include <functional>
 #include <graphics/GraphicsTypes.h>
 #include <optional>
 #include <span>
-#include <array>
 
 namespace hpl {
 
-	class iRenderable;
-	class iLight;
-	class cFrustum;
-	class cFogArea;
+    class iRenderable;
+    class iLight;
+    class cFrustum;
+    class cFogArea;
     class iRenderableContainer;
+    class iRenderableContainerNode;
 
+    class cRenderList {
+    public:
+        cRenderList();
+        ~cRenderList();
 
-	class cRenderList
-	{
-	public:
-//        static bool DefaultSortZ(iRenderable* apObjectA, iRenderable* apObjectB);
-//        static bool DefaultSortDiffuse(iRenderable* apObjectA, iRenderable* apObjectB);
-//        static bool DefaultSortTranslucent(iRenderable* apObjectA, iRenderable* apObjectB);
-//        static bool DefaultSortDecal(iRenderable* apObjectA, iRenderable* apObjectB);
-//        static bool DefaultSortIllumination(iRenderable* apObjectA, iRenderable* apObjectB);
+        // can probably be repalced with iRenderableContainer::walkREnderableContainer
+        static void UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
+            cRenderList& renderList,
+            cFrustum& frustum,
+            iRenderableContainerNode& apNode,
+            std::span<cPlanef> clipPlanes,
+            tRenderableFlag neededFlags);
 
-		cRenderList();
-		~cRenderList();
+        void AddObject(iRenderable* apObject);
 
-        [[deprecated("use BeginAndReset")]]
-		void Setup(float afFrameTime, cFrustum *apFrustum);
-        [[deprecated("Use BeginAndReset")]]
-		void Clear();
+        bool ArrayHasObjects(eRenderListType aType);
 
-		void AddObject(iRenderable *apObject);
-
-		bool ArrayHasObjects(eRenderListType aType);
-
-		std::span<iRenderable*> GetRenderableItems(eRenderListType aType);
-		std::span<iRenderable*> GetOcclusionQueryItems();
-		std::span<iRenderable*> GetTransObjects();
-		std::span<iRenderable*> GetSolidObjects();
-		std::span<cFogArea*> GetFogAreas();
-		std::span<iLight*> GetLights();
+        std::span<iRenderable*> GetRenderableItems(eRenderListType aType);
+        std::span<iRenderable*> GetOcclusionQueryItems();
+        std::span<iRenderable*> GetTransObjects();
+        std::span<iRenderable*> GetSolidObjects();
+        std::span<cFogArea*> GetFogAreas();
+        std::span<iLight*> GetLights();
 
         void BeginAndReset(float frameTime, cFrustum* frustum);
         void End(tRenderListCompileFlag aFlags);
 
+        iLight* GetLight(int alIdx) {
+            return m_lights[alIdx];
+        }
+        int GetLightNum() {
+            return (int)m_lights.size();
+        }
 
-		iLight* GetLight(int alIdx){ return m_lights[alIdx];}
-		int GetLightNum(){ return(int)m_lights.size();}
+        cFogArea* GetFogArea(int alIdx) {
+            return m_fogAreas[alIdx];
+        }
+        int GetFogAreaNum() {
+            return (int)m_fogAreas.size();
+        }
 
-		cFogArea* GetFogArea(int alIdx){ return m_fogAreas[alIdx];}
-		int GetFogAreaNum(){ return(int)m_fogAreas.size();}
+        void PrintAllObjects();
 
-		void PrintAllObjects();
+        // Temp:
+        int GetSolidObjectNum() {
+            return (int)m_solidObjects.size();
+        }
+        iRenderable* GetSolidObject(int alIdx) {
+            return m_solidObjects[alIdx];
+        }
 
-		//Temp:
-		int GetSolidObjectNum(){ return (int)m_solidObjects.size();}
-		iRenderable* GetSolidObject(int alIdx){ return m_solidObjects[alIdx];}
+        int GetTransObjectNum() {
+            return (int)m_transObjects.size();
+        }
+        iRenderable* GetTransObject(int alIdx) {
+            return m_transObjects[alIdx];
+        }
 
-		int GetTransObjectNum(){ return (int)m_transObjects.size();}
-		iRenderable* GetTransObject(int alIdx){ return m_transObjects[alIdx];}
+    private:
+        float m_frameTime = 0.0f;
+        cFrustum* m_frustum = nullptr;
 
-	private:
-		float m_frameTime = 0.0f;
-		cFrustum* m_frustum = nullptr;
+        std::vector<iRenderable*> m_occlusionQueryObjects;
+        std::vector<iRenderable*> m_solidObjects;
+        std::vector<iRenderable*> m_transObjects;
+        std::vector<iRenderable*> m_decalObjects;
+        std::vector<iRenderable*> m_illumObjects;
+        std::vector<iLight*> m_lights;
+        std::vector<cFogArea*> m_fogAreas;
+        std::array<std::vector<iRenderable*>, eRenderListType_LastEnum> m_sortedArrays;
+    };
 
-		std::vector<iRenderable*> m_occlusionQueryObjects;
-		std::vector<iRenderable*> m_solidObjects;
-		std::vector<iRenderable*> m_transObjects;
-		std::vector<iRenderable*> m_decalObjects;
-		std::vector<iRenderable*> m_illumObjects;
-		std::vector<iLight*> m_lights;
-		std::vector<cFogArea*> m_fogAreas;
-		std::array<std::vector<iRenderable*>,eRenderListType_LastEnum> m_sortedArrays;
-	};
+    //---------------------------------------------
 
-	//---------------------------------------------
-
-};
+}; // namespace hpl

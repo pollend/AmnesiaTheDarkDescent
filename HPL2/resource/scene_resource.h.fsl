@@ -1,0 +1,121 @@
+#ifndef _SCENE_RESOURCE_DEFS_H_
+#define _SCENE_RESOURCE_DEFS_H_
+
+#define LIGHT_CLUSTER_WIDTH 8
+#define LIGHT_CLUSTER_HEIGHT 8
+#define LIGHT_CLUSTER_COUNT 128
+
+#define POINT_LIGHT_MAX_COUNT  1024
+#define SCENE_MAX_TEXTURE_COUNT  4096
+
+#define SCENE_OPAQUE_COUNT 512
+
+#define LIGHT_CLUSTER_COUNT_POS(ix, iy) ( ((iy)*LIGHT_CLUSTER_WIDTH)+(ix) )
+#define LIGHT_CLUSTER_DATA_POS(il, ix, iy) ( LIGHT_CLUSTER_COUNT_POS(ix, iy)*LIGHT_CLUSTER_COUNT + (il) )
+
+#define INVALID_TEXTURE_INDEX (0xffff)
+
+STRUCT(DiffuseMaterial) {
+    DATA(uint, tex[4], None);
+    DATA(uint, materialConfig, None);
+    DATA(float, heightMapScale, None);
+    DATA(float, heightMapBias, None);
+    DATA(float, frenselBias, None);
+    DATA(float, frenselPow, None);
+};
+uint DiffuseMaterial_DiffuseTexture_ID(DiffuseMaterial mat) {return (mat.tex[0] & 0xffff);}
+uint DiffuseMaterial_NormalTexture_ID(DiffuseMaterial mat) {return ((mat.tex[0] >> 16) & 0xffff);}
+uint DiffuseMaterial_AlphaTexture_ID(DiffuseMaterial mat) {return (mat.tex[1] & 0xffff);}
+uint DiffuseMaterial_SpecularTexture_ID(DiffuseMaterial mat) {return ((mat.tex[1] >> 16) & 0xffff);}
+uint DiffuseMaterial_HeightTexture_ID(DiffuseMaterial mat) {return (mat.tex[2] & 0xffff);}
+uint DiffuseMaterial_IlluminiationTexture_ID(DiffuseMaterial mat) {return ((mat.tex[2] >> 16) & 0xffff);}
+uint DiffuseMaterial_DissolveAlphaTexture_ID(DiffuseMaterial mat) {return (mat.tex[3] & 0xffff);}
+uint DiffuseMaterial_CubeMapAlphaTexture_ID(DiffuseMaterial mat) {return ((mat.tex[3] >> 16) & 0xffff);}
+
+
+STRUCT(UniformObject) 
+{
+    DATA(float, dissolveAmount, None);
+    DATA(uint, materialID, None);
+    DATA(float, lightLevel, None);
+    DATA(float, illuminationAmount, None);
+    DATA(float4x4, modelMat, None);
+    DATA(float4x4, invModelMat, None);
+    DATA(float4x4, uvMat, None);
+};
+
+#define MATERIAL_ID(o) ((o).materialID)
+
+STRUCT(PointLight) {
+    DATA(float4x4, mvp, None);
+    DATA(float3, lightPos, none);
+    DATA(uint, config, none);
+    DATA(float4, lightColor, none);
+    DATA(float, lightRadius, none);
+};
+
+STRUCT(WorldInfo) {
+    DATA(float, worldFogStart, None);
+    DATA(float, worldFogLength, None);
+    DATA(float, oneMinusFogAlpha, None);
+    DATA(float, fogFalloffExp, None);
+    DATA(float4, worldFogColor, None);
+}
+
+STRUCT(ViewportInfo) {
+    DATA(float4x4, invViewMat, None);
+    DATA(float4x4, viewMat, None);
+    DATA(float4x4, projMat, None);
+}
+
+INLINE bool fetchSceneTextureFloat4(uint index, float2 uv, inout float4 value) { 
+    if(index < SCENE_MAX_TEXTURE_COUNT) {
+        BeginNonUniformResourceIndex(index, SCENE_MAX_TEXTURE_COUNT);
+            value = SampleTex2D(Get(sceneTextures)[index], Get(materialSampler), uv);
+        EndNonUniformResourceIndex(); 
+    }
+    return !(index == INVALID_TEXTURE_INDEX); 
+}
+INLINE bool fetchSceneTextureFloat3(uint index, float2 uv, inout float3 value) { 
+    if(index < SCENE_MAX_TEXTURE_COUNT) {
+        BeginNonUniformResourceIndex(index, SCENE_MAX_TEXTURE_COUNT);
+            value = SampleTex2D(Get(sceneTextures)[index], Get(materialSampler), uv).xyz;
+        EndNonUniformResourceIndex(); 
+    }
+    return !(index == INVALID_TEXTURE_INDEX); 
+}
+
+INLINE bool fetchSceneTextureFloat2(uint index, float2 uv, inout float2 value) { 
+    if(index < SCENE_MAX_TEXTURE_COUNT) {
+        BeginNonUniformResourceIndex(index, SCENE_MAX_TEXTURE_COUNT);
+            value = SampleTex2D(Get(sceneTextures)[index], Get(materialSampler), uv).xy;
+        EndNonUniformResourceIndex(); 
+    }
+    return !(index == INVALID_TEXTURE_INDEX); 
+}
+
+
+#endif
+
+
+
+
+
+//RES(SamplerState, nearestClampSampler, UPDATE_FREQ_NONE, s0, binding = 0);
+//
+//RES(Buffer(UniformObject), sceneObjects, UPDATE_FREQ_NONE, t0, binding = 1);
+//RES(Buffer(DiffuseMaterial), opaqueMaterial, UPDATE_FREQ_NONE, t1, binding = 2);
+//
+//RES(Buffer(uint), lightClustersCount, UPDATE_FREQ_PER_FRAME, t2, binding = 3);
+//RES(Buffer(uint), lightClusters,      UPDATE_FREQ_PER_FRAME, t3, binding = 4);
+//RES(Buffer(PointLight),  pointLights, UPDATE_FREQ_PER_FRAME, t4, binding = 5);
+//
+//RES(SamplerState, materialSampler, UPDATE_FREQ_PER_BATCH, s1, binding = 13); 
+//
+//RES(Tex2D(float4), sceneTextures[SCENE_MAX_TEXTURE_COUNT],  UPDATE_FREQ_NONE, t5, binding = 10);
+//
+//INLINE float3x3 ToNormalMat(float4x4 invModel, float4x4 invView) {
+//    return transpose(mul(float3x3(invModel[0].xyz, invModel[1].xyz, invModel[2].xyz), float3x3(invView[0].xyz, invView[1].xyz, invView[2].xyz)));
+//}
+//
+

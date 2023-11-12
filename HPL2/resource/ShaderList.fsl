@@ -25,6 +25,14 @@
     #include "gui.vert.fsl"
 #end
 
+#vert depth_clear.vert
+    #include "depth_clear.vert.fsl"
+#end
+
+#frag empty.frag
+    #include "empty.frag.fsl"
+#end
+
 #frag gui.frag
     #include "gui.frag.fsl"
 #end

@@ -21,11 +21,14 @@
 #include <graphics/RenderTarget.h>
 #include <graphics/Renderable.h>
 #include <graphics/Renderer.h>
+#include <graphics/SceneResource.h>
 #include <math/MathTypes.h>
 
 #include <Common_3/Graphics/Interfaces/IGraphics.h>
 #include <Common_3/Utilities/RingBuffer.h>
 #include <FixPreprocessor.h>
+
+
 
 namespace hpl {
     class RendererForwardPlus : public iRenderer {

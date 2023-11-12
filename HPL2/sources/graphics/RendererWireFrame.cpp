@@ -277,10 +277,10 @@ namespace hpl {
 
         m_rendererList.BeginAndReset(afFrameTime, apFrustum);
         std::array<cPlanef, 0> occlusionPlanes = {};
-        rendering::detail::UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
-            &m_rendererList, apFrustum, apWorld->GetRenderableContainer(eWorldContainerType_Static), occlusionPlanes, 0);
-        rendering::detail::UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
-            &m_rendererList, apFrustum, apWorld->GetRenderableContainer(eWorldContainerType_Dynamic), occlusionPlanes, 0);
+        cRenderList::UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
+            m_rendererList, *apFrustum, *apWorld->GetRenderableContainer(eWorldContainerType_Static)->GetRoot(), occlusionPlanes, 0);
+        cRenderList::UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
+            m_rendererList, *apFrustum, *apWorld->GetRenderableContainer(eWorldContainerType_Dynamic)->GetRoot(), occlusionPlanes, 0);
 
         m_rendererList.End(eRenderListCompileFlag_Diffuse | eRenderListCompileFlag_Decal | eRenderListCompileFlag_Translucent);
 

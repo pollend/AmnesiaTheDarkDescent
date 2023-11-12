@@ -622,13 +622,13 @@ namespace hpl {
             staticContainer->UpdateBeforeRendering();
 
             auto prepareObjectHandler = [&](iRenderable* pObject) {
-                if (!rendering::detail::IsObjectIsVisible(pObject, eRenderableFlag_VisibleInNonReflection, {})) {
+                if (!iRenderable::IsObjectIsVisible(*pObject, eRenderableFlag_VisibleInNonReflection, {})) {
                     return;
                 }
                 m_rendererList.AddObject(pObject);
             };
-            rendering::detail::WalkAndPrepareRenderList(dynamicContainer, apFrustum, prepareObjectHandler, eRenderableFlag_VisibleInNonReflection);
-            rendering::detail::WalkAndPrepareRenderList(staticContainer, apFrustum, prepareObjectHandler, eRenderableFlag_VisibleInNonReflection);
+            iRenderableContainer::WalkRenderableContainer(*dynamicContainer, apFrustum, prepareObjectHandler, eRenderableFlag_VisibleInNonReflection);
+            iRenderableContainer::WalkRenderableContainer(*staticContainer, apFrustum, prepareObjectHandler, eRenderableFlag_VisibleInNonReflection);
             m_rendererList.End(
                 eRenderListCompileFlag_Diffuse | eRenderListCompileFlag_Translucent | eRenderListCompileFlag_Decal |
                 eRenderListCompileFlag_Illumination | eRenderListCompileFlag_FogArea);

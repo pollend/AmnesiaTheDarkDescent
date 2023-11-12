@@ -58,7 +58,7 @@ namespace hpl {
            for(auto& entry: m_pool) {
                 FenceStatus status{};
                 getFenceStatus(m_renderer, entry.m_fence.m_handle, &status);
-                if(status == FENCE_STATUS_COMPLETE) {
+                if(status != FENCE_STATUS_INCOMPLETE) {
                     return &entry;
                 }
            }

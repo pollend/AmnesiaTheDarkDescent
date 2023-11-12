@@ -626,7 +626,6 @@ namespace hpl {
 		eShadowMapResolution_LastEnum,
 	};
 
-	//---------------------------------------
 
 	enum eShadowMapQuality
 	{
@@ -847,7 +846,9 @@ namespace hpl {
 
 	//---------------------------------------
 
-	extern tVertexElementFlag GetVertexElementFlagFromEnum(eVertexBufferElement aElement);
+    extern eShadowMapResolution GetShadowMapResolution(eShadowMapResolution aWanted, eShadowMapResolution aMax);
+
+    extern tVertexElementFlag GetVertexElementFlagFromEnum(eVertexBufferElement aElement);
 	extern int GetVertexFormatByteSize(eVertexBufferElementFormat aFormat);
 	extern int GetVertexElementTextureUnit(eVertexBufferElement aElement);
 

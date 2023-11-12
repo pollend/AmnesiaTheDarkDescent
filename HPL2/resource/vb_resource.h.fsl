@@ -1,0 +1,7 @@
+CBUFFER(sceneInfo, UPDATE_FREQ_NONE, b0, binding = 0) {
+  DATA(WorldInfo, worldInfo, None);
+  DATA(ViewportInfo, viewports[128], None);
+}
+RES(Tex2D(float4), sceneTextures[SCENE_MAX_TEXTURE_COUNT],  UPDATE_FREQ_NONE, t5, binding = 10);
+
+

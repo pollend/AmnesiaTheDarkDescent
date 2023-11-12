@@ -1,0 +1,2 @@
+#include "scene_resource.h.fsl"
+#include "vb_resource.h.fsl"

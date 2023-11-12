@@ -24,6 +24,7 @@
 #include "graphics/Renderable.h"
 #include "graphics/Renderer.h"
 #include "graphics/SubMesh.h"
+#include "scene/RenderableContainer.h"
 
 #include "scene/FogArea.h"
 #include "scene/Light.h"
@@ -37,6 +38,50 @@
 #include <span>
 
 namespace hpl {
+
+    void cRenderList::UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
+        cRenderList& renderList,
+        cFrustum& frustum,
+        iRenderableContainerNode& apNode,
+        std::span<cPlanef> clipPlanes,
+        tRenderableFlag neededFlags) {
+
+        apNode.UpdateBeforeUse();
+
+        // Get frustum collision, if previous was inside, then this is too!
+        eCollision frustumCollision = frustum.CollideNode(&apNode);
+
+        // Do a visible check but always iterate the root node!
+        if (apNode.GetParent()) {
+            if (frustumCollision == eCollision_Outside) {
+                return;
+            }
+            if (iRenderableContainer::IsRenderableNodeIsVisible(apNode, clipPlanes) == false) {
+                return;
+            }
+        }
+
+        // Iterate children
+        if (apNode.HasChildNodes()) {
+            for(auto& node: apNode.GetChildNodes()) {
+                UpdateRenderListWalkAllNodesTestFrustumAndVisibility(renderList, frustum, *node, clipPlanes, neededFlags);
+            }
+        }
+
+        // Iterate objects
+        if (apNode.HasObjects()) {
+            for(auto& object: apNode.GetObjects()) {
+                if (iRenderable::IsObjectIsVisible(*object, neededFlags) == false) {
+                    continue;
+                }
+
+                if (frustumCollision == eCollision_Inside || object->CollidesWithFrustum(&frustum)) {
+                    renderList.AddObject(object);
+                }
+            }
+        }
+    }
+
 
     static bool SortFunc_Z(iRenderable* apObjectA, iRenderable* apObjectB) {
         cMaterial* pMatA = apObjectA->GetMaterial();
@@ -276,11 +321,6 @@ namespace hpl {
         }
     }
 
-    void cRenderList::Setup(float afFrameTime, cFrustum* apFrustum) {
-        m_frameTime = afFrameTime;
-        m_frustum = apFrustum;
-    }
-
     void cRenderList::AddObject(iRenderable* apObject) {
         ASSERT(m_frustum && "call begin with frustum");
 
@@ -382,23 +422,6 @@ namespace hpl {
                     m_illumObjects.push_back(apObject);
                 }
             }
-        }
-    }
-
-    void cRenderList::Clear() {
-        // Use resize instead of clear, because that way capacity is preserved and allocation is never
-        // needed unless there is a need to increase the vector size.
-
-        m_occlusionQueryObjects.resize(0);
-        m_transObjects.resize(0);
-        m_decalObjects.resize(0);
-        m_solidObjects.resize(0);
-        m_illumObjects.resize(0);
-        m_lights.resize(0);
-        m_fogAreas.resize(0);
-
-        for (int i = 0; i < eRenderListType_LastEnum; ++i) {
-            m_sortedArrays[i].resize(0);
         }
     }
 
