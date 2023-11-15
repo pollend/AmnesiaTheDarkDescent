@@ -1,121 +1,85 @@
-#ifndef _SCENE_RESOURCE_DEFS_H_
-#define _SCENE_RESOURCE_DEFS_H_
+#include "scene_defs.h.fsl"
 
-#define LIGHT_CLUSTER_WIDTH 8
-#define LIGHT_CLUSTER_HEIGHT 8
-#define LIGHT_CLUSTER_COUNT 128
-
-#define POINT_LIGHT_MAX_COUNT  1024
-#define SCENE_MAX_TEXTURE_COUNT  4096
-
-#define SCENE_OPAQUE_COUNT 512
-
-#define LIGHT_CLUSTER_COUNT_POS(ix, iy) ( ((iy)*LIGHT_CLUSTER_WIDTH)+(ix) )
-#define LIGHT_CLUSTER_DATA_POS(il, ix, iy) ( LIGHT_CLUSTER_COUNT_POS(ix, iy)*LIGHT_CLUSTER_COUNT + (il) )
-
-#define INVALID_TEXTURE_INDEX (0xffff)
-
-STRUCT(DiffuseMaterial) {
-    DATA(uint, tex[4], None);
-    DATA(uint, materialConfig, None);
-    DATA(float, heightMapScale, None);
-    DATA(float, heightMapBias, None);
-    DATA(float, frenselBias, None);
-    DATA(float, frenselPow, None);
+CBUFFER(sceneInfo, UPDATE_FREQ_PER_FRAME, b0, binding = 0) {
+  DATA(WorldInfo, worldInfo, None);
+  DATA(ViewportInfo, viewports[64], None);
 };
-uint DiffuseMaterial_DiffuseTexture_ID(DiffuseMaterial mat) {return (mat.tex[0] & 0xffff);}
-uint DiffuseMaterial_NormalTexture_ID(DiffuseMaterial mat) {return ((mat.tex[0] >> 16) & 0xffff);}
-uint DiffuseMaterial_AlphaTexture_ID(DiffuseMaterial mat) {return (mat.tex[1] & 0xffff);}
-uint DiffuseMaterial_SpecularTexture_ID(DiffuseMaterial mat) {return ((mat.tex[1] >> 16) & 0xffff);}
-uint DiffuseMaterial_HeightTexture_ID(DiffuseMaterial mat) {return (mat.tex[2] & 0xffff);}
-uint DiffuseMaterial_IlluminiationTexture_ID(DiffuseMaterial mat) {return ((mat.tex[2] >> 16) & 0xffff);}
-uint DiffuseMaterial_DissolveAlphaTexture_ID(DiffuseMaterial mat) {return (mat.tex[3] & 0xffff);}
-uint DiffuseMaterial_CubeMapAlphaTexture_ID(DiffuseMaterial mat) {return ((mat.tex[3] >> 16) & 0xffff);}
+RES(Buffer(UniformObject), sceneObjects, UPDATE_FREQ_PER_FRAME, t1, binding = 1);
 
+// indirect DrawArg to resolve the triangle
+RES(Buffer(uint), indirectDrawArgs, UPDATE_FREQ_PER_FRAME, t2, binding = 2);
 
-STRUCT(UniformObject) 
-{
-    DATA(float, dissolveAmount, None);
-    DATA(uint, materialID, None);
-    DATA(float, lightLevel, None);
-    DATA(float, illuminationAmount, None);
-    DATA(float4x4, modelMat, None);
-    DATA(float4x4, invModelMat, None);
-    DATA(float4x4, uvMat, None);
-};
+// opaque geometry set
+RES(ByteBuffer,   vtxOpaqueIndex,     UPDATE_FREQ_NONE, t2, binding = 3);
+RES(ByteBuffer,   vtxOpaquePosition,  UPDATE_FREQ_NONE, t2, binding = 3);
+RES(ByteBuffer,   vtxOpaqueTangnet,   UPDATE_FREQ_NONE, t3, binding = 4);
+RES(ByteBuffer,   vtxOpaqueNormal,    UPDATE_FREQ_NONE, t4, binding = 5);
+RES(ByteBuffer,   vtxOpaqueUv,        UPDATE_FREQ_NONE, t4, binding = 6);
+RES(ByteBuffer,   vtxOpaqueColor,     UPDATE_FREQ_NONE, t4, binding = 7);
 
-#define MATERIAL_ID(o) ((o).materialID)
+RES(Buffer(DiffuseMaterial), sceneDiffuseMat, UPDATE_FREQ_NONE, t0, binding = 8);
 
-STRUCT(PointLight) {
-    DATA(float4x4, mvp, None);
-    DATA(float3, lightPos, none);
-    DATA(uint, config, none);
-    DATA(float4, lightColor, none);
-    DATA(float, lightRadius, none);
-};
+RES(SamplerState,  linearBorderClamp, UPDATE_FREQ_PER_FRAME, s1, binding = 9);
+RES(Tex2D(float4), visibilityTexture,      UPDATE_FREQ_PER_FRAME, t0, binding = 10);
 
-STRUCT(WorldInfo) {
-    DATA(float, worldFogStart, None);
-    DATA(float, worldFogLength, None);
-    DATA(float, oneMinusFogAlpha, None);
-    DATA(float, fogFalloffExp, None);
-    DATA(float4, worldFogColor, None);
-}
+RES(SamplerState, sceneFilters[SCENE_MAX_FILTER_COUNT], UPDATE_FREQ_NONE, s1, binding = 20); 
+RES(Tex2D(float4), sceneTextures[SCENE_MAX_TEXTURE_COUNT],  UPDATE_FREQ_PER_FRAME, t5, binding = 20 + SCENE_MAX_FILTER_COUNT);
 
-STRUCT(ViewportInfo) {
-    DATA(float4x4, invViewMat, None);
-    DATA(float4x4, viewMat, None);
-    DATA(float4x4, projMat, None);
-}
+#define SCENE_OBJECT_ID_BIT 19 // 13  bits for ObjectID 
+#define SCENE_PRIM_ID_BIT  0 // 19 bits for PrimitiveID
 
-INLINE bool fetchSceneTextureFloat4(uint index, float2 uv, inout float4 value) { 
-    if(index < SCENE_MAX_TEXTURE_COUNT) {
-        BeginNonUniformResourceIndex(index, SCENE_MAX_TEXTURE_COUNT);
-            value = SampleTex2D(Get(sceneTextures)[index], Get(materialSampler), uv);
-        EndNonUniformResourceIndex(); 
+#define SCENE_OBJECT_ID_MASK 0xFFF80000 // 1111 1111 1111 1000 0000 0000 0000 0000
+#define SCENE_PRIM_ID_MASK 0x0007FFFF   // 0000 0000 0000 0111 1111 1111 1111 1111
+#define SCENE_VIZ_ID(objectId, primitiveId) (((objectId << SCENE_OBJECT_ID_BIT) & SCENE_OBJECT_ID_MASK) | ((primitiveId << SCENE_PRIM_ID_BIT) & SCENE_PRIM_ID_MASK)) 
+
+#define SCENE_VIZ_OBJECT_ID(id) (((id) & SCENE_OBJECT_ID_MASK) >> SCENE_OBJECT_ID_BIT)
+#define SCENE_VIZ_PRIM_ID(id) (((id) & SCENE_PRIM_ID_MASK) >> SCENE_OBJECT_ID_BIT)
+
+INLINE bool fetchSceneTextureFloat4(uint filterIdx, uint textureIdx, float2 uv, inout float4 value) { 
+    switch(filterIdx) {
+        SCENE_FILTER_SWITCH_CASE { 
+            if(textureIdx < SCENE_MAX_TEXTURE_COUNT) {
+                BeginNonUniformResourceIndex(textureIdx, SCENE_MAX_TEXTURE_COUNT);
+                    value = SampleTex2D(Get(sceneTextures)[textureIdx], Get(sceneFilters)[filterIdx], uv);
+                EndNonUniformResourceIndex(); 
+            }
+            break;
+        }
+        default:
+            break;
     }
-    return !(index == INVALID_TEXTURE_INDEX); 
+    return !(textureIdx == INVALID_TEXTURE_INDEX); 
 }
-INLINE bool fetchSceneTextureFloat3(uint index, float2 uv, inout float3 value) { 
-    if(index < SCENE_MAX_TEXTURE_COUNT) {
-        BeginNonUniformResourceIndex(index, SCENE_MAX_TEXTURE_COUNT);
-            value = SampleTex2D(Get(sceneTextures)[index], Get(materialSampler), uv).xyz;
-        EndNonUniformResourceIndex(); 
+
+INLINE bool fetchSceneTextureFloat3(uint filterIdx, uint textureIdx, float2 uv, inout float3 value) { 
+    switch(filterIdx) {
+        SCENE_FILTER_SWITCH_CASE { 
+            if(textureIdx < SCENE_MAX_TEXTURE_COUNT) {
+                BeginNonUniformResourceIndex(textureIdx, SCENE_MAX_TEXTURE_COUNT);
+                    value = SampleTex2D(Get(sceneTextures)[textureIdx], Get(sceneFilters)[filterIdx], uv).xyz;
+                EndNonUniformResourceIndex(); 
+            }
+            break;
+        }
+        default:
+            break;
     }
-    return !(index == INVALID_TEXTURE_INDEX); 
+    return !(textureIdx == INVALID_TEXTURE_INDEX); 
 }
 
-INLINE bool fetchSceneTextureFloat2(uint index, float2 uv, inout float2 value) { 
-    if(index < SCENE_MAX_TEXTURE_COUNT) {
-        BeginNonUniformResourceIndex(index, SCENE_MAX_TEXTURE_COUNT);
-            value = SampleTex2D(Get(sceneTextures)[index], Get(materialSampler), uv).xy;
-        EndNonUniformResourceIndex(); 
+INLINE bool fetchSceneTextureFloat2(uint filterIdx, uint textureIdx, float2 uv, inout float2 value) { 
+    switch(filterIdx) {
+        SCENE_FILTER_SWITCH_CASE { 
+            if(textureIdx < SCENE_MAX_TEXTURE_COUNT) {
+                BeginNonUniformResourceIndex(textureIdx, SCENE_MAX_TEXTURE_COUNT);
+                    value = SampleTex2D(Get(sceneTextures)[textureIdx], Get(sceneFilters)[filterIdx], uv).xy;
+                EndNonUniformResourceIndex(); 
+            }
+        break;
     }
-    return !(index == INVALID_TEXTURE_INDEX); 
+    default:
+        break;
+    }
+    return !(textureIdx == INVALID_TEXTURE_INDEX); 
 }
-
-
-#endif
-
-
-
-
-
-//RES(SamplerState, nearestClampSampler, UPDATE_FREQ_NONE, s0, binding = 0);
-//
-//RES(Buffer(UniformObject), sceneObjects, UPDATE_FREQ_NONE, t0, binding = 1);
-//RES(Buffer(DiffuseMaterial), opaqueMaterial, UPDATE_FREQ_NONE, t1, binding = 2);
-//
-//RES(Buffer(uint), lightClustersCount, UPDATE_FREQ_PER_FRAME, t2, binding = 3);
-//RES(Buffer(uint), lightClusters,      UPDATE_FREQ_PER_FRAME, t3, binding = 4);
-//RES(Buffer(PointLight),  pointLights, UPDATE_FREQ_PER_FRAME, t4, binding = 5);
-//
-//RES(SamplerState, materialSampler, UPDATE_FREQ_PER_BATCH, s1, binding = 13); 
-//
-//RES(Tex2D(float4), sceneTextures[SCENE_MAX_TEXTURE_COUNT],  UPDATE_FREQ_NONE, t5, binding = 10);
-//
-//INLINE float3x3 ToNormalMat(float4x4 invModel, float4x4 invView) {
-//    return transpose(mul(float3x3(invModel[0].xyz, invModel[1].xyz, invModel[2].xyz), float3x3(invView[0].xyz, invView[1].xyz, invView[2].xyz)));
-//}
-//
 

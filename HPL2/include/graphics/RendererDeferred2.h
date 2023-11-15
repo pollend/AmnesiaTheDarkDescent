@@ -21,7 +21,9 @@
 #include "engine/RTTI.h"
 
 #include "graphics/CommandBufferPool.h"
+#include "graphics/SceneResource.h"
 #include "graphics/ShadowCache.h"
+#include "graphics/TextureDescriptorPool.h"
 #include "scene/Viewport.h"
 #include "scene/World.h"
 #include "windowing/NativeWindow.h"
@@ -58,21 +60,8 @@ namespace hpl {
     class iLight;
     class cSubMeshEntity;
 
-    enum eDeferredShapeQuality {
-        eDeferredShapeQuality_Low,
-        eDeferredShapeQuality_Medium,
-        eDeferredShapeQuality_High,
-        eDeferredShapeQuality_LastEnum,
-    };
-
-    enum eDeferredSSAO {
-        eDeferredSSAO_InBoxLight,
-        eDeferredSSAO_OnColorBuffer,
-        eDeferredSSAO_LastEnum,
-    };
-
-    class cRendererDeferred : public iRenderer {
-        HPL_RTTI_IMPL_CLASS(iRenderer, cRendererDeferred, "{A3E5E5A1-1F9C-4F5C-9B9B-5B9B9B5B9B9B}")
+    class cRendererDeferred2 : public iRenderer {
+        HPL_RTTI_IMPL_CLASS(iRenderer, cRendererDeferred, "{B3E5E5A1-1F9C-4F5C-9B9B-5B9B9B5B9B9B}")
     public:
         static constexpr TinyImageFormat DepthBufferFormat = TinyImageFormat_D32_SFLOAT_S8_UINT;
         static constexpr TinyImageFormat NormalBufferFormat = TinyImageFormat_R16G16B16A16_SFLOAT;
@@ -86,13 +75,10 @@ namespace hpl {
         static constexpr uint32_t MaxLightUniforms = 1024;
         static constexpr uint32_t MaxHiZMipLevels = 10;
         static constexpr uint32_t MaxViewportFrameDescriptors = 256;
-        static constexpr uint32_t MaxMaterialSamplers = static_cast<uint32_t>(eTextureWrap_LastEnum) * static_cast<uint32_t>(eTextureFilter_LastEnum) * static_cast<uint32_t>(cMaterial::TextureAntistropy::Antistropy_Count);
         static constexpr uint32_t MaxObjectTest = 32768;
         static constexpr uint32_t MaxOcclusionDescSize = 4096;
         static constexpr uint32_t MaxQueryPoolSize = MaxOcclusionDescSize * 2;
         static constexpr uint32_t MaxIndirectDrawArgs = 4096;
-
-        static constexpr uint32_t MaxDiffuseMaterials = 512;
 
         static constexpr uint32_t TranslucencyBlendModeMask = 0xf;
 
@@ -103,20 +89,84 @@ namespace hpl {
         static constexpr float ShadowDistanceLow = 20;
         static constexpr float ShadowDistanceNone = 40;
 
+        static constexpr uint32_t MaxSolidDiffuseMaterials = 512;
+
+        struct ViewportData {
+        public:
+            ViewportData() = default;
+            ViewportData(const ViewportData&) = delete;
+            ViewportData(ViewportData&& buffer)= default;
+            ViewportData& operator=(const ViewportData&) = delete;
+            ViewportData& operator=(ViewportData&& buffer) = default;
+
+            uint2 m_size = uint2(0, 0);
+            std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_outputBuffer;
+            std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_depthBuffer;
+            std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_visiblityBuffer;
+        };
+
+        cRendererDeferred2(
+            cGraphics* apGraphics,
+            cResources* apResources,
+            std::shared_ptr<DebugDraw> debug);
+        virtual ~cRendererDeferred2();
+
+        virtual SharedRenderTarget GetOutputImage(uint32_t frameIndex, cViewport& viewport) override;
+        virtual void Draw(
+            Cmd* cmd,
+            const ForgeRenderer::Frame& frame,
+            cViewport& viewport,
+            float afFrameTime,
+            cFrustum* apFrustum,
+            cWorld* apWorld,
+            cRenderSettings* apSettings,
+            bool abSendFrameBufferToPostEffects) override;
+
     private:
-        SharedRootSignature m_shadowClearRootSignature;
-        SharedShader m_shaderShadowClear;
-        SharedPipeline m_shadowClearPipeline;
 
         struct SceneMaterial {
         public:
             void* m_material = nullptr;
             uint32_t m_version = 0;
             IndexPoolHandle m_slot;
+            resource::MaterialTypes m_resource = std::monostate{};
         };
+        cRendererDeferred2::SceneMaterial& resolveMaterial(const ForgeRenderer::Frame& frame,cMaterial* material);
+        uint32_t resolveObjectIndex(
+            const ForgeRenderer::Frame& frame, iRenderable* apObject, std::optional<Matrix4> modelMatrix);
 
+        UniqueViewportData<ViewportData> m_boundViewportData;
+
+        std::array<SceneMaterial, cMaterial::MaxMaterialID> m_sceneMaterial;
+        TextureDescriptorPool m_sceneTexture2DPool;
+
+        CommandSignature* m_cmdSignatureVBPass = NULL;
+
+        SharedShader m_visibilityPassShader;
+
+        // diffuse
+        IndexPool m_diffuseIndexPool;
+        SharedBuffer m_diffuseSolidMaterialUniformBuffer;
+
+        SharedRootSignature m_sceneRootSignature;
+        SharedDescriptorSet m_sceneDescriptorConstSet;
+        std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_sceneDescriptorPerFrameSet;
+
+        SharedPipeline m_visibilityPass;
+        std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_objectUniformBuffer;
+        std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_perSceneInfoBuffer;
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_indirectDrawArgsBuffer;
-        std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_perSceneBuffer;
+
+        std::array<SharedSampler, resource::MaterialSceneSamplersCount> m_materialSampler;
+        folly::F14ValueMap<iRenderable*, uint32_t> m_objectDescriptorLookup;
+
+        SharedTexture m_emptyTexture;
+
+        uint32_t m_activeFrame = 0;
+        uint32_t m_objectIndex = 0;
+        uint32_t m_indirectDrawIndex = 0;
+
+        cRenderList m_rendererList;
     };
 }; // namespace hpl
 

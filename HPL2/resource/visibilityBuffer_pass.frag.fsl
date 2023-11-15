@@ -1,0 +1,15 @@
+#include "scene_resource.h.fsl"
+#include "packing.h.fsl"
+
+STRUCT(PsIn)
+{
+	DATA(float4,     position,  SV_Position);
+  DATA(FLAT(uint), drawID,   TEXCOORD0);
+};
+
+float4 PS_MAIN(PsIn In, SV_PrimitiveID(uint) primitiveID)
+{
+	INIT_MAIN;
+  RETURN(unpackUnorm4x8(SCENE_VIZ_ID(In.drawID, primitiveID)));
+}
+

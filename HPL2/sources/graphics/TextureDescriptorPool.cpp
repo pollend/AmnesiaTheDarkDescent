@@ -8,6 +8,11 @@ namespace hpl {
         m_ring.resize(ringsize);
         m_slot.resize(poolSize);
     }
+    TextureDescriptorPool::TextureDescriptorPool():
+        m_pool(0) {
+        m_ring.resize(0);
+        m_slot.resize(0);
+    }
     void TextureDescriptorPool::reset(DescriptorHandler handler) {
         m_actionHandler = handler;
         m_index = (m_index + 1) % m_ring.size();

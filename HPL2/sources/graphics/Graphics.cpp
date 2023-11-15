@@ -24,6 +24,7 @@
 #include "engine/Updateable.h"
 
 #include "graphics/ForgeRenderer.h"
+#include "graphics/RendererDeferred2.h"
 #include "graphics/RendererForwardPlus.h"
 #include "system/LowLevelSystem.h"
 #include "system/String.h"
@@ -153,7 +154,7 @@ namespace hpl {
             #if USE_FORWARD_PLUS_BACKEND
 		        mvRenderers[eRenderer_Main] = new RendererForwardPlus(this, apResources, m_debug);
             #else
-		        mvRenderers[eRenderer_Main] = new cRendererDeferred(this, apResources, m_debug);
+		        mvRenderers[eRenderer_Main] = new cRendererDeferred2(this, apResources, m_debug);
             #endif
 		    mvRenderers[eRenderer_WireFrame] = new cRendererWireFrame(this, apResources, m_debug);
 		}

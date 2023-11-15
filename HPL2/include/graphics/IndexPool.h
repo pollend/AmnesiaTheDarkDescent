@@ -11,7 +11,8 @@
 namespace hpl {
     class IndexPool {
     public:
-        IndexPool(uint32_t reserve);
+        explicit IndexPool(uint32_t reserve);
+        IndexPool();
 
         uint32_t requestId();
         inline uint32_t reserve() {return m_reserve;}

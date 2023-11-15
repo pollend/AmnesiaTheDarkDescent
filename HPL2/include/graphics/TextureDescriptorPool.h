@@ -11,7 +11,8 @@ namespace hpl {
             RemoveSlot
         };
         using DescriptorHandler = std::function<void(Action action, uint32_t slot, SharedTexture& texture)>;
-        TextureDescriptorPool(uint32_t ringsize, uint32_t poolSize);
+        TextureDescriptorPool();
+        explicit TextureDescriptorPool(uint32_t ringsize, uint32_t poolSize);
         void reset(DescriptorHandler handler);
         uint32_t request(SharedTexture& texture);
         void dispose(uint32_t slot);

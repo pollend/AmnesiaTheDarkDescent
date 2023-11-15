@@ -25,15 +25,6 @@
 
 namespace hpl {
 
-    namespace detail {
-        uint32_t resolveTextureFilterGroup(cMaterial::TextureAntistropy anisotropy, eTextureWrap wrap, eTextureFilter filter) {
-            const uint32_t anisotropyGroup =
-                (static_cast<uint32_t>(eTextureFilter_LastEnum) * static_cast<uint32_t>(eTextureWrap_LastEnum)) *
-                static_cast<uint32_t>(anisotropy);
-            return anisotropyGroup +
-                ((static_cast<uint32_t>(wrap) * static_cast<uint32_t>(eTextureFilter_LastEnum)) + static_cast<uint32_t>(filter));
-        }
-    }
 
     SharedRenderTarget RendererForwardPlus::GetOutputImage(uint32_t frameIndex, cViewport& viewport) {
         auto sharedData = m_boundViewportData.resolve(viewport);
@@ -335,15 +326,15 @@ namespace hpl {
         m_opaqueBatchSet.Load(forgeRenderer->Rend(), [&](DescriptorSet** descSet) {
             DescriptorSetDesc perFrameDescSet{ m_diffuseRootSignature.m_handle,
                                                DESCRIPTOR_UPDATE_FREQ_PER_BATCH,
-                                               MaxMaterialSamplers };
+                                               hpl::resource::MaterialSceneSamplersCount };
             addDescriptorSet(forgeRenderer->Rend(), &perFrameDescSet, descSet);
             return true;
         });
-        for (size_t antistropy = 0; antistropy < cMaterial::Antistropy_Count; antistropy++) {
+        for (size_t antistropy = 0; antistropy < static_cast<uint8_t>(TextureAntistropy::Antistropy_Count); antistropy++) {
             for (size_t textureWrap = 0; textureWrap < eTextureWrap_LastEnum; textureWrap++) {
                 for (size_t textureFilter = 0; textureFilter < eTextureFilter_LastEnum; textureFilter++) {
-                    uint32_t batchID = detail::resolveTextureFilterGroup(
-                        static_cast<cMaterial::TextureAntistropy>(antistropy),
+                    uint32_t batchID = hpl::resource::textureFilterIdx(
+                        static_cast<TextureAntistropy>(antistropy),
                         static_cast<eTextureWrap>(textureWrap),
                         static_cast<eTextureFilter>(textureFilter));
                     m_batchSampler[batchID].Load(forgeRenderer->Rend(), [&](Sampler** sampler) {
@@ -388,11 +379,11 @@ namespace hpl {
                             ASSERT(false && "Invalid filter");
                             break;
                         }
-                        switch (antistropy) {
-                        case cMaterial::Antistropy_8:
+                        switch (static_cast<TextureAntistropy>(antistropy)) {
+                        case TextureAntistropy::Antistropy_8:
                             samplerDesc.mMaxAnisotropy = 8.0f;
                             break;
-                        case cMaterial::Antistropy_16:
+                        case TextureAntistropy::Antistropy_16:
                             samplerDesc.mMaxAnisotropy = 16.0f;
                             break;
                         default:
@@ -493,7 +484,6 @@ namespace hpl {
 
             UniformObject uniformObjectData = {};
             uniformObjectData.m_dissolveAmount = apObject->GetCoverageAmount();
-            uniformObjectData.m_materialIndex = apMaterial->Index();
             uniformObjectData.m_modelMat = cMath::ToForgeMatrix4(modelMat);
             uniformObjectData.m_invModelMat = cMath::ToForgeMatrix4(cMath::MatrixInverse(modelMat));
             uniformObjectData.m_lightLevel = 1.0f;
@@ -647,10 +637,10 @@ namespace hpl {
             std::sort(renderables.begin(), renderables.end(), [](iRenderable* objectA, iRenderable* objectB) {
                 cMaterial* pMatA = objectA->GetMaterial();
                 cMaterial* pMatB = objectB->GetMaterial();
-                uint32_t filterA = detail::resolveTextureFilterGroup(
+                uint32_t filterA = hpl::resource::textureFilterIdx(
                            pMatA->GetTextureAntistropy(), pMatA->GetTextureWrap(), pMatA->GetTextureFilter());
 
-                uint32_t filterB = detail::resolveTextureFilterGroup(
+                uint32_t filterB = hpl::resource::textureFilterIdx(
                            pMatB->GetTextureAntistropy(), pMatB->GetTextureWrap(), pMatB->GetTextureFilter());
                 return filterA < filterB;
             });
@@ -678,7 +668,7 @@ namespace hpl {
                 lastIndex = index;
                 {
                     cMaterial* pMaterial = (*it)->GetMaterial();
-                    lastBatchID =  detail::resolveTextureFilterGroup(
+                    lastBatchID =  hpl::resource::textureFilterIdx(
                            pMaterial->GetTextureAntistropy(), pMaterial->GetTextureWrap(), pMaterial->GetTextureFilter());
                 }
                 do {
@@ -819,7 +809,6 @@ namespace hpl {
         }
 
     }
-
 
     uint32_t RendererForwardPlus::resolveMaterialID(const ForgeRenderer::Frame& frame,cMaterial* material) {
         auto* forgeRenderer = Interface<ForgeRenderer>::Get();

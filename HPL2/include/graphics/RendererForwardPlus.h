@@ -41,8 +41,6 @@ namespace hpl {
         static constexpr TinyImageFormat ColorBufferFormat = TinyImageFormat_R8G8B8A8_UNORM;
         static constexpr TinyImageFormat ShadowDepthBufferFormat = TinyImageFormat_D32_SFLOAT;
 
-        static constexpr uint32_t MaxMaterialSamplers = static_cast<uint32_t>(eTextureWrap_LastEnum) * static_cast<uint32_t>(eTextureFilter_LastEnum) * static_cast<uint32_t>(cMaterial::TextureAntistropy::Antistropy_Count);
-
         static constexpr uint32_t MaxIndirectDrawArgs = 1024;
         static constexpr uint32_t MaxViewportFrameDescriptors = 256;
         static constexpr uint32_t MaxObjectUniforms = 4096;
@@ -188,7 +186,7 @@ namespace hpl {
             resource::MaterialTypes m_resource = std::monostate{};
         };
 
-        std::array<SharedSampler, MaxMaterialSamplers> m_batchSampler;
+        std::array<SharedSampler, hpl::resource::MaterialSceneSamplersCount> m_batchSampler;
         std::array<SceneMaterial, cMaterial::MaxMaterialID> m_sceneMaterial;
         IndexPool m_opaqueMaterialPool;
         TextureDescriptorPool m_sceneDescriptorPool;

@@ -25,6 +25,7 @@
 #include "graphics/DrawPacket.h"
 #include "graphics/ForgeHandles.h"
 #include "graphics/MaterialResource.h"
+#include "graphics/SceneResource.h"
 #include "math/cFrustum.h"
 #include "scene/ParticleEmitter.h"
 #include "scene/Viewport.h"
@@ -103,14 +104,6 @@ namespace hpl {
     static constexpr uint32_t SSAONumOfSamples = 8;
 
     namespace detail {
-        uint32_t resolveTextureFilterGroup(cMaterial::TextureAntistropy anisotropy, eTextureWrap wrap, eTextureFilter filter) {
-            const uint32_t anisotropyGroup =
-                (static_cast<uint32_t>(eTextureFilter_LastEnum) * static_cast<uint32_t>(eTextureWrap_LastEnum)) *
-                static_cast<uint32_t>(anisotropy);
-            return anisotropyGroup +
-                ((static_cast<uint32_t>(wrap) * static_cast<uint32_t>(eTextureFilter_LastEnum)) + static_cast<uint32_t>(filter));
-        }
-
         struct DeferredLight {
         public:
             DeferredLight() = default;
@@ -1579,15 +1572,15 @@ namespace hpl {
                 });
 
                 m_materialSet.m_materialConstSet.Load(forgeRenderer->Rend(), [&](DescriptorSet** handle) {
-                    DescriptorSetDesc setDesc{ m_materialRootSignature.m_handle, DESCRIPTOR_UPDATE_FREQ_NONE, MaxMaterialSamplers };
+                    DescriptorSetDesc setDesc{ m_materialRootSignature.m_handle, DESCRIPTOR_UPDATE_FREQ_NONE, hpl::resource::MaterialSceneSamplersCount };
                     addDescriptorSet(forgeRenderer->Rend(), &setDesc, handle);
                     return true;
                 });
-                for (size_t antistropy = 0; antistropy < cMaterial::Antistropy_Count; antistropy++) {
+                for (size_t antistropy = 0; antistropy < static_cast<size_t>(TextureAntistropy::Antistropy_Count); antistropy++) {
                     for (size_t textureWrap = 0; textureWrap < eTextureWrap_LastEnum; textureWrap++) {
                         for (size_t textureFilter = 0; textureFilter < eTextureFilter_LastEnum; textureFilter++) {
-                            uint32_t materialID = detail::resolveTextureFilterGroup(
-                                static_cast<cMaterial::TextureAntistropy>(antistropy),
+                            uint32_t materialID = hpl::resource::textureFilterIdx(
+                                static_cast<TextureAntistropy>(antistropy),
                                 static_cast<eTextureWrap>(textureWrap),
                                 static_cast<eTextureFilter>(textureFilter));
                             m_materialSet.m_samplers[materialID].Load(forgeRenderer->Rend(), [&](Sampler** sampler) {
@@ -1632,11 +1625,11 @@ namespace hpl {
                                     ASSERT(false && "Invalid filter");
                                     break;
                                 }
-                                switch (antistropy) {
-                                case cMaterial::Antistropy_8:
+                                switch (static_cast<TextureAntistropy>(antistropy)) {
+                                case TextureAntistropy::Antistropy_8:
                                     samplerDesc.mMaxAnisotropy = 8.0f;
                                     break;
-                                case cMaterial::Antistropy_16:
+                                case TextureAntistropy::Antistropy_16:
                                     samplerDesc.mMaxAnisotropy = 16.0f;
                                     break;
                                 default:
@@ -3802,7 +3795,7 @@ namespace hpl {
         }
         cmdBindDescriptorSet(
             cmd,
-            detail::resolveTextureFilterGroup(apMaterial->GetTextureAntistropy(), apMaterial->GetTextureWrap(), apMaterial->GetTextureFilter()),
+           hpl::resource::textureFilterIdx(apMaterial->GetTextureAntistropy(), apMaterial->GetTextureWrap(), apMaterial->GetTextureFilter()),
             m_materialSet.m_materialConstSet.m_handle);
         cmdBindDescriptorSet(cmd, apMaterial->Index(), m_materialSet.m_perBatchSet[frame.m_frameIndex].m_handle);
         return index;

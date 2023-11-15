@@ -12,6 +12,11 @@ namespace hpl {
         m_avaliable.push_back({0, reserve - 1});
     }
 
+    IndexPool::IndexPool():
+        m_reserve(0) {
+
+    }
+
     uint32_t IndexPool::requestId() {
         if(m_avaliable.size() > 0) {
             auto& entry = m_avaliable[m_avaliable.size() - 1];

@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <list>
 #include <vector>
 #include "graphics/Color.h"
@@ -403,8 +404,12 @@ namespace hpl {
 		eTextureType_LastEnum
 	};
 
-	//-----------------------------------------
-
+    enum class TextureAntistropy: uint8_t{
+        Antistropy_None = 0,
+        Antistropy_8 = 1,
+        Antistropy_16 = 2,
+        Antistropy_Count = 3
+    };
 
 	enum eTextureWrap
 	{

@@ -305,3 +305,19 @@
 #comp light_clusters_clear.comp
   #include "light_clusters_clear.comp.fsl"
 #end
+
+#vert visibilityBuffer_pass.vert
+  #include "visibilityBuffer_pass.vert.fsl"
+#end
+
+#frag visibilityBuffer_pass.frag
+  #include "visibilityBuffer_pass.frag.fsl"
+#end
+
+#vert visibility_shade_pass.vert
+  #include "visibility_shade_pass.vert.fsl"
+#end
+
+#frag visibility_shade_pass.frag
+  #include "visibility_shade_pass.frag.fsl"
+#end
