@@ -14,12 +14,12 @@
 #endif
 #include "renderdoc_app.h"
 #endif
-extern RendererApi gSelectedRendererApi;
+//extern RendererApi gSelectedRendererApi;
 
 namespace hpl {
-    RendererApi ForgeRenderer::GetApi() {
-        return gSelectedRendererApi;
-    }
+   // RendererApi ForgeRenderer::GetApi() {
+   //     return gSelectedRendererApi;
+   // }
 
     void ForgeRenderer::IncrementFrame() {
         // Stall if CPU is running "Swap Chain Buffer Count" frames ahead of GPU
@@ -86,13 +86,18 @@ namespace hpl {
         }
         endCmd(m_cmds[CurrentFrameIndex()]);
 
+		FlushResourceUpdateDesc flushUpdateDesc = {};
+		flushUpdateDesc.mNodeIndex = 0;
+		flushResourceUpdates(&flushUpdateDesc);
+		std::array waitSemaphores = { flushUpdateDesc.pOutSubmittedSemaphore, m_imageAcquiredSemaphore };
+
         QueueSubmitDesc submitDesc = {};
         submitDesc.mCmdCount = 1;
         submitDesc.mSignalSemaphoreCount = 1;
-        submitDesc.mWaitSemaphoreCount = 1;
+        submitDesc.mWaitSemaphoreCount = waitSemaphores.size();
         submitDesc.ppCmds = &frame.m_cmd;
         submitDesc.ppSignalSemaphores = &frame.m_renderCompleteSemaphore;
-        submitDesc.ppWaitSemaphores = &m_imageAcquiredSemaphore;
+        submitDesc.ppWaitSemaphores = waitSemaphores.data();
         submitDesc.pSignalFence = frame.m_renderCompleteFence;
         queueSubmit(m_graphicsQueue, &submitDesc);
 
@@ -153,7 +158,7 @@ namespace hpl {
             swapChainDesc.mWidth = windowSize.x;
             swapChainDesc.mHeight = windowSize.y;
             swapChainDesc.mImageCount = SwapChainLength;
-            swapChainDesc.mColorFormat = getRecommendedSwapchainFormat(false, false);
+            swapChainDesc.mColorFormat = TinyImageFormat_B8G8R8A8_UNORM;//getRecommendedSwapchainFormat(false, false);
             swapChainDesc.mColorClearValue = { { 1, 1, 1, 1 } };
             swapChainDesc.mEnableVsync = false;
             addSwapChain(m_renderer, &swapChainDesc, handle);
@@ -327,7 +332,7 @@ namespace hpl {
                         swapChainDesc.mWidth = windowSize.x;
                         swapChainDesc.mHeight = windowSize.y;
                         swapChainDesc.mImageCount = SwapChainLength;
-                        swapChainDesc.mColorFormat = getRecommendedSwapchainFormat(false, false);
+                        swapChainDesc.mColorFormat = TinyImageFormat_R8G8B8A8_UNORM;//getRecommendedSwapchainFormat(false, false);
                         swapChainDesc.mColorClearValue = { { 1, 1, 1, 1 } };
                         swapChainDesc.mEnableVsync = false;
                         addSwapChain(m_renderer, &swapChainDesc, handle);
@@ -381,7 +386,7 @@ namespace hpl {
         cmdSetScissor(cmd, 0, 0, dstTexture->mWidth, dstTexture->mHeight);
 
         updateDescriptorSet(m_renderer, m_copyRegionDescriptorIndex, m_copyPostProcessingDescriptorSet, params.size(), params.data());
-        auto swapChainFormat = getRecommendedSwapchainFormat(false, false);
+        auto swapChainFormat = TinyImageFormat_R8G8B8A8_UNORM;//getSupportedSwapchainFormat(m_renderer, false, false);
         switch(dstTexture->mFormat) {
             case TinyImageFormat_R8G8B8A8_UNORM:
                 cmdBindPipeline(cmd, m_copyPostProcessingPipelineToUnormR8G8B8A8);

@@ -1,8 +1,19 @@
+#ifndef _VISIBILITY_UTILITY_DEFS_H_
+#define _VISIBILITY_UTILITY_DEFS_H_
+
 struct BarycentricDeriv
 {
 	float3 m_lambda;
 	float3 m_ddx;
 	float3 m_ddy;
+};
+
+// 2D interpolation results for texture gradient values
+struct GradientInterpolationResults
+{
+	float2 interp;
+	float2 dx;
+	float2 dy;
 };
 
 
@@ -68,3 +79,59 @@ BarycentricDeriv CalcFullBary(float4 pt0, float4 pt1, float4 pt2, float2 pixelNd
 	return ret;
 }
 
+// Helper functions to interpolate vertex attributes using derivatives.
+
+// Interpolate a float3 vector.
+float InterpolateWithDeriv_float3(BarycentricDeriv deriv, float3 v)
+{
+	return dot(v,deriv.m_lambda);
+}
+
+// Interpolate single values over triangle vertices.
+float InterpolateWithDeriv(BarycentricDeriv deriv, float v0, float v1, float v2)
+{
+	float3 mergedV = float3(v0, v1, v2);
+	return InterpolateWithDeriv_float3(deriv,mergedV);
+}
+
+// Interpolate a float3 attribute for each vertex of the triangle.
+// Attribute parameters: a 3x3 matrix (Row denotes attributes per vertex).
+float3 InterpolateWithDeriv_float3x3(BarycentricDeriv deriv,f3x3 attributes)
+{
+	float3 attr0 = getCol0(attributes);
+	float3 attr1 = getCol1(attributes);
+	float3 attr2 = getCol2(attributes);
+	return float3(dot(attr0,deriv.m_lambda),dot(attr1,deriv.m_lambda),dot(attr2,deriv.m_lambda));
+}
+
+// Interpolate 2D attributes using the partial derivatives and generates dx and dy for texture sampling.
+// Attribute paramters: a 3x2 matrix of float2 attributes (Column denotes attribuets per vertex).
+GradientInterpolationResults Interpolate2DWithDeriv(BarycentricDeriv deriv,f3x2 attributes)
+{
+	float3 attr0 = getRow0(attributes);
+	float3 attr1 = getRow1(attributes);
+	
+	GradientInterpolationResults result;
+	// independently interpolate x and y attributes.
+	result.interp.x = InterpolateWithDeriv_float3(deriv,attr0);
+	result.interp.y = InterpolateWithDeriv_float3(deriv,attr1);
+
+	// Calculate attributes' dx and dy (for texture sampling).
+	result.dx.x = dot(attr0,deriv.m_ddx);
+	result.dx.y = dot(attr1,deriv.m_ddx);
+	result.dy.x = dot(attr0,deriv.m_ddy);
+	result.dy.y = dot(attr1,deriv.m_ddy);
+	return result;
+}
+
+float depthLinearization(float depth, float near, float far)
+{
+	return (2.0 * near) / (far + near - depth * (far - near));
+}
+
+float depthLinearizationRevZ(float depth, float near, float far)
+{
+	return (far * near) / (depth * (far - near) + near);
+}
+
+#endif

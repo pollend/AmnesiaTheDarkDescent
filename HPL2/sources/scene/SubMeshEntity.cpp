@@ -95,7 +95,7 @@ namespace hpl {
                     dest.WriteRaw(((i + m_numberVertices) * gpuStream->stride()), sp);
                 }
             }
-            endUpdateResource(&updateDesc, nullptr);
+            endUpdateResource(&updateDesc);
         }
         {
             BufferUpdateDesc updateDesc = { m_geometry->indexBuffer().m_handle, m_geometry->indexOffset() * GeometrySet::IndexBufferStride,  GeometrySet::IndexBufferStride * m_numberIndecies};
@@ -106,7 +106,7 @@ namespace hpl {
             for(size_t i = 0; i < m_numberIndecies; i++) {
                 dest.Write(i, src.Get(i));
             }
-            endUpdateResource(&updateDesc, nullptr);
+            endUpdateResource(&updateDesc);
         }
 
     }
@@ -222,9 +222,9 @@ namespace hpl {
                 targetTangentView.Write(i, accmulatedTangent);
             }
 
-            endUpdateResource(&positionUpdateDesc, nullptr);
-            endUpdateResource(&tangentUpdateDesc, nullptr);
-            endUpdateResource(&normalUpdateDesc, nullptr);
+            endUpdateResource(&positionUpdateDesc);
+            endUpdateResource(&tangentUpdateDesc);
+            endUpdateResource(&normalUpdateDesc);
 		}
 
 	}

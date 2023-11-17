@@ -693,7 +693,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
         BufferUpdateDesc updateDesc = { uniformBlockOffset.pBuffer, uniformBlockOffset.mOffset };
         beginUpdateResource(&updateDesc);
         (*reinterpret_cast<LuxEffectObjectUniform::FlashUniform*>(updateDesc.pMappedData)) = uniform;
-        endUpdateResource(&updateDesc, NULL);
+        endUpdateResource(&updateDesc);
 
         cmdBindDescriptorSet(input.m_frame->m_cmd, objectIndex++, m_perObjectDescriptorSet[frame->m_frameIndex]);
         DrawPacket::cmdBindBuffers(frame->m_cmd, frame->m_resourcePool, &packet);
@@ -743,7 +743,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
         BufferUpdateDesc updateDesc = { uniformBlockOffset.pBuffer, uniformBlockOffset.mOffset };
         beginUpdateResource(&updateDesc);
         (*reinterpret_cast<LuxEffectObjectUniform::FlashUniform*>(updateDesc.pMappedData)) = uniform;
-        endUpdateResource(&updateDesc, NULL);
+        endUpdateResource(&updateDesc);
 
         cmdBindDescriptorSet(input.m_frame->m_cmd, objectIndex++, m_perObjectDescriptorSet[frame->m_frameIndex]);
         DrawPacket::cmdBindBuffers(frame->m_cmd, frame->m_resourcePool, &packet);
@@ -797,7 +797,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
             BufferUpdateDesc updateDesc = { uniformBlockOffset.pBuffer, uniformBlockOffset.mOffset };
             beginUpdateResource(&updateDesc);
             (*reinterpret_cast<LuxEffectObjectUniform::OutlineUniform*>(updateDesc.pMappedData)) = uniform;
-            endUpdateResource(&updateDesc, NULL);
+            endUpdateResource(&updateDesc);
 
             folly::small_vector<DescriptorData, 2 > params = {};
             DescriptorDataRange range = { (uint32_t)uniformBlockOffset.mOffset, requestSize };
@@ -856,7 +856,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
             BufferUpdateDesc updateDesc = { uniformBlockOffset.pBuffer, uniformBlockOffset.mOffset };
             beginUpdateResource(&updateDesc);
             (*reinterpret_cast<LuxEffectObjectUniform::OutlineUniform*>(updateDesc.pMappedData)) = uniform;
-            endUpdateResource(&updateDesc, NULL);
+            endUpdateResource(&updateDesc);
 
             std::array<DescriptorData, 2> params = {};
             DescriptorDataRange range = { (uint32_t)uniformBlockOffset.mOffset, requestSize };

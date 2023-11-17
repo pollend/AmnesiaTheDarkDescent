@@ -488,7 +488,7 @@ namespace hpl {
                         updateDesc.mDstOffset = element.m_activeCopy * updateDesc.mSize;
                         beginUpdateResource(&updateDesc);
                         std::copy(element.m_shadowData.begin(), element.m_shadowData.end(), reinterpret_cast<uint8_t*>(updateDesc.pMappedData));
-                        endUpdateResource(&updateDesc, &m_bufferSync);
+                        endUpdateResource(&updateDesc);
                     }
                 }
             }
@@ -523,7 +523,7 @@ namespace hpl {
                 updateDesc.mDstOffset = m_indexBufferActiveCopy * updateDesc.mSize;
                 beginUpdateResource(&updateDesc);
                 std::copy(m_indices.begin(), m_indices.end(), reinterpret_cast<uint32_t*>(updateDesc.pMappedData));
-                endUpdateResource(&updateDesc, &m_bufferSync);
+                endUpdateResource(&updateDesc);
             }
             m_updateIndices = false;
         }

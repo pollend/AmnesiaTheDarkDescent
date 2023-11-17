@@ -34,9 +34,15 @@ namespace hpl::resource {
 
     struct ViewportInfo {
         static constexpr uint32_t PrmaryViewportIndex = 0;
-        mat4 m_invViewMath;
+        mat4 m_invViewMat;
+        mat4 m_invViewProj;
         mat4 m_viewMat;
         mat4 m_projMat;
+        float4 m_rect;
+        float m_zNear;
+        float m_zFar;
+        uint m_pad0;
+        uint m_pad1;
     };
 
     struct WorldInfo {
@@ -91,7 +97,6 @@ namespace hpl::resource {
         float m_frenselPow;
         uint m_pad0;
         uint m_pad1;
-        uint m_pad2;
     };
 
     using MaterialTypes = std::variant<DiffuseMaterial, std::monostate>;

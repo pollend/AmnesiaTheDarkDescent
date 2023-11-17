@@ -102,6 +102,7 @@ namespace hpl {
             uint2 m_size = uint2(0, 0);
             std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_outputBuffer;
             std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_depthBuffer;
+            std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_testBuffer;
             std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_visiblityBuffer;
         };
 
@@ -132,17 +133,14 @@ namespace hpl {
             resource::MaterialTypes m_resource = std::monostate{};
         };
         cRendererDeferred2::SceneMaterial& resolveMaterial(const ForgeRenderer::Frame& frame,cMaterial* material);
-        uint32_t resolveObjectIndex(
-            const ForgeRenderer::Frame& frame, iRenderable* apObject, std::optional<Matrix4> modelMatrix);
+        uint32_t resolveObjectIndex(const ForgeRenderer::Frame& frame, iRenderable* apObject, uint32_t drawArgOffset, std::optional<Matrix4> modelMatrix);
 
         UniqueViewportData<ViewportData> m_boundViewportData;
 
+        SharedSampler m_nearEdgeClamp;
         std::array<SceneMaterial, cMaterial::MaxMaterialID> m_sceneMaterial;
         TextureDescriptorPool m_sceneTexture2DPool;
-
         CommandSignature* m_cmdSignatureVBPass = NULL;
-
-        SharedShader m_visibilityPassShader;
 
         // diffuse
         IndexPool m_diffuseIndexPool;
@@ -152,7 +150,11 @@ namespace hpl {
         SharedDescriptorSet m_sceneDescriptorConstSet;
         std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_sceneDescriptorPerFrameSet;
 
-        SharedPipeline m_visibilityPass;
+        SharedShader m_visibilityBufferPassShader;
+        SharedShader m_visibilityShadePassShader;
+
+        SharedPipeline m_visibilityBufferPass;
+        SharedPipeline m_visiblityShadePass;
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_objectUniformBuffer;
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_perSceneInfoBuffer;
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_indirectDrawArgsBuffer;

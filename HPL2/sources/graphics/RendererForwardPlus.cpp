@@ -498,7 +498,7 @@ namespace hpl {
                                             sizeof(UniformObject) * index };
             beginUpdateResource(&updateDesc);
             (*reinterpret_cast<UniformObject*>(updateDesc.pMappedData)) = uniformObjectData;
-            endUpdateResource(&updateDesc, NULL);
+            endUpdateResource(&updateDesc);
 
             m_objectDescriptorLookup[apObject] = index;
         }
@@ -696,7 +696,7 @@ namespace hpl {
                 } while(it != renderables.end() && isSameGroup(*it, *lastIt));
                 diffuseFilterGroup.push_back({lastIndex * sizeof(IndirectDrawArguments), index - lastIndex, lastBatchID});
             }
-            endUpdateResource(&updateDesc, nullptr);
+            endUpdateResource(&updateDesc);
         }
 
         {
@@ -725,7 +725,7 @@ namespace hpl {
                             break;
                     }
                 }
-                endUpdateResource(&pointlightUpdateDesc, nullptr);
+                endUpdateResource(&pointlightUpdateDesc);
             }
             cmdBindRenderTargets(cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
 
@@ -830,7 +830,7 @@ namespace hpl {
                                             sizeof(resource::DiffuseMaterial) * sceneMaterial.m_slot.get()};
                 beginUpdateResource(&updateDesc);
                 (*reinterpret_cast<resource::DiffuseMaterial*>(updateDesc.pMappedData)) = *mat;
-                endUpdateResource(&updateDesc, NULL);
+                endUpdateResource(&updateDesc);
             }
 
         }
@@ -858,7 +858,7 @@ namespace hpl {
         uniformFrameData->afT = GetTimeCount();
         const auto fogColor = apWorld->GetFogColor();
         uniformFrameData->fogColor = float4(fogColor.r, fogColor.g, fogColor.b, fogColor.a);
-        endUpdateResource(&updatePerFrameConstantsDesc, NULL);
+        endUpdateResource(&updatePerFrameConstantsDesc);
         m_frameIndex = (m_frameIndex + 1) % MaxViewportFrameDescriptors;
         return index;
     }

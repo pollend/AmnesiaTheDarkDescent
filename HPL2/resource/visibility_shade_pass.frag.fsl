@@ -1,6 +1,7 @@
 #include "scene_resource.h.fsl"
 #include "packing.h.fsl"
 #include "visiblity_defs.h.fsl"
+#include "visibility_utility.h.fsl"
 
 STRUCT(PsIn)
 {
@@ -8,8 +9,15 @@ STRUCT(PsIn)
 	DATA(float2, screenPos, TEXCOORD0);
 };
 
+STRUCT(PsOut)
+{
+    DATA(float4, color, SV_Target0);
+    DATA(uint, test, SV_Target1);
+};
 
-float4 PS_MAIN(PsIn In)
+
+
+PsOut PS_MAIN(PsIn In)
 {
 	INIT_MAIN;
 	
@@ -26,29 +34,68 @@ float4 PS_MAIN(PsIn In)
 	UniformObject obj = Get(sceneObjects)[objectId];
 	uint startIndex = Get(indirectDrawArgs)[obj.indirectDrawOffset + INDIRECT_DRAW_ARGUMENTS_START_INDEX_OFFSET];
 	uint vertexOffset = Get(indirectDrawArgs)[obj.indirectDrawOffset + INDIRECT_DRAW_ARGUMENTS_VERTEX_OFFSET_OFFSET];
-  ViewportInfo info = Get(viewports)[PRIMARY_VIEWPORT_INDEX];
+  ViewportInfo viewInfo = Get(viewports)[PRIMARY_VIEWPORT_INDEX];
 
 	//uint materialID = MATERIAL_ID(obj.materialID);
 	uint triIdx0 = (triId * 3 + 0) + startIndex;
 	uint triIdx1 = (triId * 3 + 1) + startIndex;
 	uint triIdx2 = (triId * 3 + 2) + startIndex;
 
-	uint vtxIndex0 = LoadByte(Get(vtxOpaqueIndex), (triIdx0 + vertexOffset) << 2);
-	uint vtxIndex1 = LoadByte(Get(vtxOpaqueIndex), (triIdx1 + vertexOffset) << 2);
-	uint vtxIndex2 = LoadByte(Get(vtxOpaqueIndex), (triIdx2 + vertexOffset) << 2);
+	uint vtxIndex0 = LoadByte(Get(vtxOpaqueIndex), triIdx0 << 2) + vertexOffset;
+	uint vtxIndex1 = LoadByte(Get(vtxOpaqueIndex), triIdx1 << 2) + vertexOffset;
+	uint vtxIndex2 = LoadByte(Get(vtxOpaqueIndex), triIdx2 << 2) + vertexOffset;
 	
 	// Load vertex data of the 3 vertices
 	float3 v0pos = asfloat(LoadByte4(Get(vtxOpaquePosition), vtxIndex0 * 12)).xyz;
 	float3 v1pos = asfloat(LoadByte4(Get(vtxOpaquePosition), vtxIndex1 * 12)).xyz;
 	float3 v2pos = asfloat(LoadByte4(Get(vtxOpaquePosition), vtxIndex2 * 12)).xyz;
 
-  float4x4 vp = mul(info.projMat, info.viewMat);
+	// TEXTURE COORD INTERPOLATION
+	f3x2 texCoords = make_f3x2_cols(
+			asfloat(LoadByte4(Get(vtxOpaqueUv), vtxIndex0 * 8)).xy, // LoadByte2 is not avaliable 
+			asfloat(LoadByte4(Get(vtxOpaqueUv), vtxIndex1 * 8)).xy,
+			asfloat(LoadByte4(Get(vtxOpaqueUv), vtxIndex2 * 8)).xy 
+	);
+
+	float2 twoOverWindowSize = 2.0 / viewInfo.rect.zw; 
+  float4x4 vp = mul(viewInfo.projMat, viewInfo.viewMat);
 	float4x4 mvp = mul(vp, obj.modelMat);
 
 	float4 clipPos0 = mul(mvp, float4(v0pos, 1.0f));
 	float4 clipPos1 = mul(mvp, float4(v1pos, 1.0f));
 	float4 clipPos2 = mul(mvp, float4(v2pos, 1.0f));
+	
+	BarycentricDeriv derivativesOut = CalcFullBary(clipPos0, clipPos1, clipPos2, In.screenPos, twoOverWindowSize);
+	
+	// Interpolate the 1/w (one_over_w) for all three vertices of the triangle using the barycentric coordinates and the delta vector
+	float w = dot(float3(clipPos0.w, clipPos1.w, clipPos2.w), derivativesOut.m_lambda);
 
-	RETURN(float4(0,0,0,0));
+	// Reconstruct the Z value at this screen point performing only the necessary matrix * vector multiplication operations that involve computing Z
+	float z = w * getElem(viewInfo.projMat, 2, 2) + getElem(viewInfo.projMat, 3, 2);
+
+	// Calculate the world position coordinates:
+	// First the projected coordinates at this point are calculated using In.screenPos and the computed Z value at this point.
+	// Then, multiplying the perspective projected coordinates by the inverse view-projection matrix (invVP) produces world coordinates
+	float3 position = mul(viewInfo.invViewMat, float4(In.screenPos * w, z, w)).xyz;
+
+	GradientInterpolationResults results = Interpolate2DWithDeriv(derivativesOut, texCoords);
+
+	float linearZ = depthLinearization(z/w, viewInfo.zNear, viewInfo.zFar);
+	float mip = pow(pow(linearZ, 0.9f) * 5.0f, 1.5f);
+	
+	float2 texCoordDX = results.dx * mip;
+	float2 texCoordDY = results.dy * mip;
+	float2 texCoord = results.interp;
+
+  uint materialIndex = MATERIAL_INDEX(obj.materialID);
+  DiffuseMaterial diffuseMat = Get(sceneDiffuseMat)[materialIndex];  
+	float4 result = float4(0,0,0,0);
+	fetchSceneTextureFloat4Grad(diffuseMat.samplerIndex, DiffuseMaterial_DiffuseTexture_ID(diffuseMat), texCoord, texCoordDX, texCoordDY, result);
+
+  PsOut Out;
+	Out.color = result;
+	Out.test = vertexOffset;
+	RETURN(Out);
 }
+
 

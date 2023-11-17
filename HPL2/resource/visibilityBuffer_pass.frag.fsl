@@ -10,6 +10,8 @@ STRUCT(PsIn)
 float4 PS_MAIN(PsIn In, SV_PrimitiveID(uint) primitiveID)
 {
 	INIT_MAIN;
-  RETURN(unpackUnorm4x8(SCENE_VIZ_ID(In.drawID, primitiveID)));
+	float4 result;
+	result = unpackUnorm4x8(SCENE_VIZ_ID(In.drawID, primitiveID)); 
+  RETURN(result);
 }
 

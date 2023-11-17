@@ -872,10 +872,8 @@ namespace hpl {
 
             {
                 VertexLayout vertexLayout = {};
-#ifndef USE_THE_FORGE_LEGACY
                 vertexLayout.mBindingCount = 1;
                 vertexLayout.mBindings[0].mStride = sizeof(float3);
-#endif
                 vertexLayout.mAttribCount = 1;
                 vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
                 vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
@@ -1973,11 +1971,7 @@ namespace hpl {
                         key.m_id = pipelineKey;
                         m_materialTranslucencyPass.m_refractionPipeline[key.m_id].Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
                             BlendStateDesc blendStateDesc{};
-#ifdef USE_THE_FORGE_LEGACY
-                            blendStateDesc.mMasks[0] = ALL;
-#else
-                                blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_ALL;
-#endif
+                            blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_ALL;
                             blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
                             blendStateDesc.mIndependentBlend = false;
 
@@ -2222,11 +2216,7 @@ namespace hpl {
             blendStateDesc.mSrcAlphaFactors[0] = BC_ONE;
             blendStateDesc.mDstAlphaFactors[0] = BC_ONE;
             blendStateDesc.mBlendAlphaModes[0] = BM_ADD;
-#ifdef USE_THE_FORGE_LEGACY
-            blendStateDesc.mMasks[0] = RED | GREEN | BLUE;
-#else
             blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_RED | ColorMask::COLOR_MASK_GREEN | ColorMask::COLOR_MASK_BLUE;
-#endif
             blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
             blendStateDesc.mIndependentBlend = false;
 
@@ -2460,7 +2450,7 @@ namespace hpl {
         uniformFrameData->afT = GetTimeCount();
         const auto fogColor = apWorld->GetFogColor();
         uniformFrameData->fogColor = float4(fogColor.r, fogColor.g, fogColor.b, fogColor.a);
-        endUpdateResource(&updatePerFrameConstantsDesc, NULL);
+        endUpdateResource(&updatePerFrameConstantsDesc);
 
         m_materialSet.m_frameIndex = (m_materialSet.m_frameIndex + 1) % MaxViewportFrameDescriptors;
         return index;
@@ -2947,7 +2937,7 @@ namespace hpl {
                                                     m_lightIndex * sizeof(UniformLightData) };
                     beginUpdateResource(&updateDesc);
                     memcpy(updateDesc.pMappedData, &uniformObjectData, sizeof(UniformLightData));
-                    endUpdateResource(&updateDesc, NULL);
+                    endUpdateResource(&updateDesc);
 
                     updateDescriptorSet(
                         frame.m_renderer->Rend(), m_lightIndex, m_lightPerLightSet[frame.m_frameIndex].m_handle, paramCount, params);
@@ -3422,7 +3412,7 @@ namespace hpl {
                 beginUpdateResource(&updateDesc);
                 reinterpret_cast<float4*>(updateDesc.pMappedData)[0] = float4(boundBoxMin.x, boundBoxMin.y, boundBoxMin.z, 0.0f);
                 reinterpret_cast<float4*>(updateDesc.pMappedData)[1] = float4(boundBoxMax.x, boundBoxMax.y, boundBoxMax.z, 0.0f);
-                endUpdateResource(&updateDesc, nullptr);
+                endUpdateResource(&updateDesc);
 
                 if (!test.m_preZPass || !isValidForPreAndPostZ(pMaterial, test.m_renderable)) {
                     continue;
@@ -3448,7 +3438,7 @@ namespace hpl {
             BufferUpdateDesc updateDesc = { m_hiZOcclusionUniformBuffer.m_handle, 0, sizeof(UniformPropBlock) };
             beginUpdateResource(&updateDesc);
             (*reinterpret_cast<UniformPropBlock*>(updateDesc.pMappedData)) = uniformPropBlock;
-            endUpdateResource(&updateDesc, nullptr);
+            endUpdateResource(&updateDesc);
             cmdEndDebugMarker(m_prePassCmd.m_handle);
         }
         {
@@ -3471,7 +3461,7 @@ namespace hpl {
                     BufferUpdateDesc updateDesc = { m_occlusionUniformBuffer.m_handle, m_occlusionIndex * sizeof(mat4) };
                     beginUpdateResource(&updateDesc);
                     (*reinterpret_cast<mat4*>(updateDesc.pMappedData)) = mvp;
-                    endUpdateResource(&updateDesc, NULL);
+                    endUpdateResource(&updateDesc);
 
                     cmdBindPushConstants(
                         m_prePassCmd.m_handle, m_rootSignatureOcclusuion.m_handle, occlusionObjectIndex, &m_occlusionIndex);
@@ -3600,7 +3590,8 @@ namespace hpl {
                 }
             }
             cmdEndDebugMarker(m_prePassCmd.m_handle);
-            cmdResolveQuery(m_prePassCmd.m_handle, m_occlusionQuery.m_handle, m_occlusionReadBackBuffer.m_handle, 0, queryIndex);
+            ASSERT(false && "API has changed");
+            //cmdResolveQuery(m_prePassCmd.m_handle, m_occlusionQuery.m_handle, m_occlusionReadBackBuffer.m_handle, 0, queryIndex);
             endCmd(m_prePassCmd.m_handle);
 
             // Submit the gpu work.
@@ -3708,7 +3699,7 @@ namespace hpl {
             beginUpdateResource(&updateDesc);
             (*reinterpret_cast<material::UniformMaterialBlock*>(updateDesc.pMappedData)) =
                 material::UniformMaterialBlock::CreateFromMaterial(*apMaterial);
-            endUpdateResource(&updateDesc, NULL);
+            endUpdateResource(&updateDesc);
 
             std::array<DescriptorData, 32> params{};
             size_t paramCount = 0;
@@ -3789,7 +3780,7 @@ namespace hpl {
                                             sizeof(cRendererDeferred::UniformObject) * index };
             beginUpdateResource(&updateDesc);
             (*reinterpret_cast<cRendererDeferred::UniformObject*>(updateDesc.pMappedData)) = uniformObjectData;
-            endUpdateResource(&updateDesc, NULL);
+            endUpdateResource(&updateDesc);
 
             m_materialSet.m_objectDescriptorLookup[apObject] = index;
         }
@@ -4219,7 +4210,7 @@ namespace hpl {
                                                     fogIndex * sizeof(UniformFogData) };
                     beginUpdateResource(&updateDesc);
                     (*reinterpret_cast<UniformFogData*>(updateDesc.pMappedData)) = uniformData;
-                    endUpdateResource(&updateDesc, NULL);
+                    endUpdateResource(&updateDesc);
                     fogIndex++;
                 }
             }
@@ -4265,7 +4256,7 @@ namespace hpl {
                                                 fogIndex * sizeof(UniformFogData) };
                 beginUpdateResource(&updateDesc);
                 (*reinterpret_cast<UniformFogData*>(updateDesc.pMappedData)) = uniformData;
-                endUpdateResource(&updateDesc, NULL);
+                endUpdateResource(&updateDesc);
                 fogIndex++;
             }
 
@@ -4284,7 +4275,7 @@ namespace hpl {
                 fogData->m_fogStart = apWorld->GetFogStart();
                 fogData->m_fogLength = apWorld->GetFogEnd() - apWorld->GetFogStart();
                 fogData->m_fogFalloffExp = apWorld->GetFogFalloffExp();
-                endUpdateResource(&updateDesc, NULL);
+                endUpdateResource(&updateDesc);
 
                 cmdBindDescriptorSet(frame.m_cmd, 0, m_fogPass.m_perFrameSet[frame.m_frameIndex]);
                 cmdBindPipeline(frame.m_cmd, m_fogPass.m_fullScreenPipeline.m_handle);

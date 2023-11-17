@@ -220,7 +220,7 @@ namespace hpl {
         desc.mArraySize = options.m_useArray ? bitmap.GetNumOfImages() : 1;
         desc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
         desc.mFormat = detail::ToGraphicsCardSupportedFormat(bitmap.GetPixelFormat());
-	    desc.mStartState = RESOURCE_STATE_COMMON;
+	    desc.mStartState = RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
         if(options.m_useCubeMap) {
             desc.mDescriptors |= DESCRIPTOR_TYPE_TEXTURE_CUBE;
             if(options.m_useArray) {
@@ -239,16 +239,16 @@ namespace hpl {
             addResource(&textureLoadDesc, &token);
             return true;
         });
+	    waitForToken(&token);
 
         auto sourceImageFormat = FromHPLPixelFormat(bitmap.GetPixelFormat());
         auto isCompressed  = TinyImageFormat_IsCompressed(desc.mFormat);
+        TextureUpdateDesc update = {handle.m_handle, 0, desc.mMipLevels, 0, desc.mArraySize, RESOURCE_STATE_PIXEL_SHADER_RESOURCE};
+        beginUpdateResource(&update);
         for(uint32_t arrIndex = 0; arrIndex < desc.mArraySize; arrIndex++) {
             for(uint32_t mipLevel = 0; mipLevel < desc.mMipLevels; mipLevel++) {
-                TextureUpdateDesc update = {handle.m_handle, mipLevel, arrIndex};
                 const auto& input = bitmap.GetData(arrIndex, mipLevel);
-                //auto data = std::span<uint8_t>(input->mpData, static_cast<size_t>(input->mlSize));
-                beginUpdateResource(&update);
-         
+
                 uint32_t sourceRowStride;
                 uint32_t destRowStride;
                 if (!util_get_surface_info(
@@ -274,25 +274,25 @@ namespace hpl {
 
                 uint32_t dstElementStride = destRowStride / desc.mWidth;
 
+                TextureSubresourceUpdate updateSubResource = update.getSubresourceUpdateDesc(mipLevel, arrIndex);
                 for (size_t z = 0; z < desc.mDepth; ++z)
                 {
-                    uint8_t* dstData = update.pMappedData + (update.mDstSliceStride * z);
-                    auto srcData = input->mpData + update.mSrcSliceStride * z;
-                    for (uint32_t row = 0; row < update.mRowCount; ++row) {
+                    uint8_t* dstData = updateSubResource.pMappedData + (updateSubResource.mDstSliceStride * z);
+                    auto srcData = input->mpData + updateSubResource.mSrcSliceStride * z;
+                    for (uint32_t row = 0; row < updateSubResource.mRowCount; ++row) {
                         if(isCompressed) {
-                             std::memcpy(dstData + (row * update.mDstRowStride), srcData + (row * update.mSrcRowStride), update.mSrcRowStride);
+                             std::memcpy(dstData + (row * updateSubResource.mDstRowStride), srcData + (row * updateSubResource.mSrcRowStride), updateSubResource.mSrcRowStride);
                         } else {
                             for(uint32_t column = 0;  column < desc.mWidth; column++) {
-                                std::memset(dstData + (row * update.mDstRowStride + column * dstElementStride), 0xff, dstElementStride);
-                                std::memcpy(dstData + (row * update.mDstRowStride + column * dstElementStride), srcData + (row * sourceRowStride + column * srcElementStride), std::min(dstElementStride, srcElementStride));
+                                std::memset(dstData + (row * updateSubResource.mDstRowStride + column * dstElementStride), 0xff, dstElementStride);
+                                std::memcpy(dstData + (row * updateSubResource.mDstRowStride + column * dstElementStride), srcData + (row * sourceRowStride + column * srcElementStride), std::min(dstElementStride, srcElementStride));
                             }
                         }
                     }
                 }
-                endUpdateResource(&update, &token);
             }
         }
-        waitForToken(&token);
+        endUpdateResource(&update);
         return handle;
     }
     SharedTexture SharedTexture::CreateCubemapFromHPLBitmaps(const std::span<cBitmap*> bitmaps, const BitmapCubmapLoadOptions& options) {
@@ -306,7 +306,7 @@ namespace hpl {
         desc.mArraySize = 6;
         desc.mFormat = FromHPLPixelFormat(bitmaps[0]->GetPixelFormat());
         desc.mMipLevels = options.m_useMipmaps ? bitmaps[0]->GetNumOfMipMaps() : 1;
-	    desc.mStartState = RESOURCE_STATE_COMMON;
+	    desc.mStartState = RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
         desc.mSampleCount = SAMPLE_COUNT_1;
         desc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE | DESCRIPTOR_TYPE_TEXTURE_CUBE;
 
@@ -317,6 +317,10 @@ namespace hpl {
             addResource(&textureLoadDesc, &token);
             return true;
         });
+	    waitForToken(&token);
+
+        TextureUpdateDesc update = {handle.m_handle, 0, desc.mMipLevels, 0, desc.mArraySize, RESOURCE_STATE_PIXEL_SHADER_RESOURCE};
+        beginUpdateResource(&update);
 
         for(auto& bitmap : bitmaps) {
             ASSERT((options.m_useMipmaps || (bitmap->GetNumOfMipMaps() == desc.mMipLevels)) && "All bitmaps must have the same number of mipmaps");
@@ -334,29 +338,28 @@ namespace hpl {
 
             for(uint32_t arrIndex = 0; arrIndex < desc.mArraySize; arrIndex++) {
                 for(uint32_t mipLevel = 0; mipLevel < desc.mMipLevels; mipLevel++) {
-                    TextureUpdateDesc update = {handle.m_handle, mipLevel, arrIndex};
                     const auto& input = bitmap->GetData(arrIndex, mipLevel);
                     auto data = std::span<unsigned char>(input->mpData, static_cast<size_t>(input->mlSize));
-                    beginUpdateResource(&update);
+                    auto updateSubResource = update.getSubresourceUpdateDesc(mipLevel, arrIndex);
                     for (uint32_t z = 0; z < desc.mDepth; ++z) {
-                        uint32_t dstElementStride = update.mDstRowStride / desc.mWidth;
-                        uint8_t* dstData = update.pMappedData + update.mDstSliceStride * z;
-                        auto srcData = data.begin() + update.mSrcSliceStride * z;
+                        uint32_t dstElementStride = updateSubResource .mDstRowStride / desc.mWidth;
+                        uint8_t* dstData = updateSubResource.pMappedData + updateSubResource.mDstSliceStride * z;
+                        auto srcData = data.begin() + updateSubResource.mSrcSliceStride * z;
 
-                        for (uint32_t row = 0; row < update.mRowCount; ++row) {
+                        for (uint32_t row = 0; row < updateSubResource.mRowCount; ++row) {
                             if(isCompressed) {
-                                std::memcpy(dstData + row * update.mDstRowStride, &srcData[row * update.mSrcRowStride], update.mSrcRowStride);
+                                std::memcpy(dstData + row * updateSubResource.mDstRowStride, &srcData[row * updateSubResource.mSrcRowStride], updateSubResource.mSrcRowStride);
                             } else {
                                 for(uint32_t column = 0;  column < desc.mWidth; column++) {
-                                    std::memcpy(dstData + row * update.mDstRowStride + column * dstElementStride, &srcData[row * sourceRowStride + column * srcElementStride], std::min(dstElementStride, srcElementStride));
+                                    std::memcpy(dstData + row * updateSubResource.mDstRowStride + column * dstElementStride, &srcData[row * sourceRowStride + column * srcElementStride], std::min(dstElementStride, srcElementStride));
                                 }
                             }
                         }
                     }
-                    endUpdateResource(&update, &token);
                 }
             }
         }
+        endUpdateResource(&update);
         return handle;
     }
 

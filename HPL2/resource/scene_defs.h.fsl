@@ -38,7 +38,7 @@
 
 STRUCT(DiffuseMaterial) {
     DATA(uint,  tex[4], None);
-    DATA(uint,  samplerID, None);
+    DATA(uint,  samplerIndex, None);
     DATA(uint,  materialConfig, None);
     DATA(float, heightMapScale, None);
     DATA(float, heightMapBias, None);
@@ -46,7 +46,6 @@ STRUCT(DiffuseMaterial) {
     DATA(float, frenselPow, None);
     DATA(uint, __pad0, NONE);
     DATA(uint, __pad1, NONE);
-    DATA(uint, __pad2, NONE);
 };
 uint DiffuseMaterial_DiffuseTexture_ID(DiffuseMaterial mat) {return (mat.tex[0] & 0xffff);}
 uint DiffuseMaterial_NormalTexture_ID(DiffuseMaterial mat) {return ((mat.tex[0] >> 16) & 0xffff);}
@@ -103,8 +102,14 @@ STRUCT(WorldInfo) {
 
 STRUCT(ViewportInfo) {
     DATA(float4x4, invViewMat, None);
+    DATA(float4x4, invViewProj, None);
     DATA(float4x4, viewMat, None);
     DATA(float4x4, projMat, None);
+    DATA(float4, rect, None);    
+    DATA(float, zNear, None);
+    DATA(float, zFar, None);
+    DATA(uint, __pad0, NONE);
+    DATA(uint, __pad1, NONE);
 };
 
 #endif

@@ -138,6 +138,7 @@ namespace hpl::resource  {
                         (*tex.m_value) = static_cast<uint16_t>(handle);
                     }
                 }
+                result.m_samplerIndex = textureFilterNonAnistropyIdx(material->GetTextureWrap(), material->GetTextureFilter());
                 result.m_heightMapScale = descriptor.m_solid.m_heightMapScale;
                 result.m_heigtMapBias = descriptor.m_solid.m_heightMapBias;
                 result.m_frenselBias = descriptor.m_solid.m_frenselBias;

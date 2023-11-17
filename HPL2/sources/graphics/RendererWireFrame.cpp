@@ -204,7 +204,7 @@ namespace hpl {
             uniformObjectData.m_modelMat = cMath::ToForgeMatrix4(modelMat);
             beginUpdateResource(&updateDesc);
             (*reinterpret_cast<ObjectUniform*>(updateDesc.pMappedData)) = uniformObjectData;
-            endUpdateResource(&updateDesc, NULL);
+            endUpdateResource(&updateDesc);
 
             m_objectDescriptorLookup[apObject] = index;
         }
@@ -291,7 +291,7 @@ namespace hpl {
             PerFrameUniform uniformData;
             uniformData.m_viewProject = ((apFrustum->GetProjectionType() == eProjectionType_Perspective ? Matrix4::identity() : correctionMatrix) * matMainFrustumProj) * matMainFrustumView ;
             (*reinterpret_cast<PerFrameUniform*>(updateDesc.pMappedData)) = uniformData;
-            endUpdateResource(&updateDesc, NULL);
+            endUpdateResource(&updateDesc);
         }
 
         {
