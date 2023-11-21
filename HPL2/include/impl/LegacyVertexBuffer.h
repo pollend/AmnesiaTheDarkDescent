@@ -111,7 +111,7 @@ namespace hpl {
             folly::small_vector<VertexGeometryEntry, eVertexBufferElement_LastEnum> m_vertexElement; // elements are in the order they are requested
             VertexIndexEntry m_indexBuffer;
         };
-        DrawPacket resolveGeometryBinding(uint32_t currentFrame, std::span<eVertexBufferElement> elements);
+        DrawPacket resolveGeometryBinding(uint32_t currentFrame);
 
         virtual void UnBind() override;
 

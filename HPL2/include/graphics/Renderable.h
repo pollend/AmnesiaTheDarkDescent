@@ -56,7 +56,7 @@ namespace hpl {
 
 		virtual cMaterial *GetMaterial()=0;
 		virtual iVertexBuffer* GetVertexBuffer()=0;
-        virtual DrawPacket ResolveDrawPacket(const ForgeRenderer::Frame& frame,std::span<eVertexBufferElement> elements) = 0;
+        virtual DrawPacket ResolveDrawPacket(const ForgeRenderer::Frame& frame) = 0;
 
 		virtual bool CollidesWithBV(cBoundingVolume *apBV);
 		virtual bool CollidesWithFrustum(cFrustum *apFrustum);

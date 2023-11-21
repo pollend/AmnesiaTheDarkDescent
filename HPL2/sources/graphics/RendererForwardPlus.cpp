@@ -677,7 +677,7 @@ namespace hpl {
                                            eVertexBufferElement_Texture0,
                                            eVertexBufferElement_Normal,
                                            eVertexBufferElement_Texture1Tangent };
-                    DrawPacket packet = (*it)->ResolveDrawPacket(frame, targets);
+                    DrawPacket packet = (*it)->ResolveDrawPacket(frame);
                     if (pMaterial == nullptr || packet.m_type == DrawPacket::Unknown) {
                         continue;
                     }

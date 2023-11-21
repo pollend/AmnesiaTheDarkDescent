@@ -378,6 +378,7 @@ namespace hpl {
 			// Perspective projection
 			if(mProjectionType == eProjectionType_Perspective)
 			{
+
 				m_mtxProjection = cMath::MatrixPerspectiveProjection(mfNearClipPlane, mfFarClipPlane, mfFOV, mfAspect, mbInfFarPlane);
 			}
 			//////////////////////////////////////////////

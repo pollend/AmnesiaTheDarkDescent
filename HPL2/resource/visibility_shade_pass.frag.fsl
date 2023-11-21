@@ -2,6 +2,8 @@
 #include "packing.h.fsl"
 #include "visiblity_defs.h.fsl"
 #include "visibility_utility.h.fsl"
+#include "math_utils.h.fsl"
+#include "parallax_bindless.h.fsl"
 
 STRUCT(PsIn)
 {
@@ -12,10 +14,8 @@ STRUCT(PsIn)
 STRUCT(PsOut)
 {
     DATA(float4, color, SV_Target0);
-    DATA(uint, test, SV_Target1);
+    DATA(float4, test, SV_Target1);
 };
-
-
 
 PsOut PS_MAIN(PsIn In)
 {
@@ -35,6 +35,11 @@ PsOut PS_MAIN(PsIn In)
 	uint startIndex = Get(indirectDrawArgs)[obj.indirectDrawOffset + INDIRECT_DRAW_ARGUMENTS_START_INDEX_OFFSET];
 	uint vertexOffset = Get(indirectDrawArgs)[obj.indirectDrawOffset + INDIRECT_DRAW_ARGUMENTS_VERTEX_OFFSET_OFFSET];
   ViewportInfo viewInfo = Get(viewports)[PRIMARY_VIEWPORT_INDEX];
+	
+  float4x4 vp = mul(viewInfo.projMat, viewInfo.viewMat);
+	float4x4 mvp = mul(vp, obj.modelMat);
+	float4x4 mv = mul(viewInfo.viewMat, obj.modelMat);
+  float3x3 normalMat = ToNormalMat(obj.invModelMat, viewInfo.invViewMat);
 
 	//uint materialID = MATERIAL_ID(obj.materialID);
 	uint triIdx0 = (triId * 3 + 0) + startIndex;
@@ -44,7 +49,7 @@ PsOut PS_MAIN(PsIn In)
 	uint vtxIndex0 = LoadByte(Get(vtxOpaqueIndex), triIdx0 << 2) + vertexOffset;
 	uint vtxIndex1 = LoadByte(Get(vtxOpaqueIndex), triIdx1 << 2) + vertexOffset;
 	uint vtxIndex2 = LoadByte(Get(vtxOpaqueIndex), triIdx2 << 2) + vertexOffset;
-	
+
 	// Load vertex data of the 3 vertices
 	float3 v0pos = asfloat(LoadByte4(Get(vtxOpaquePosition), vtxIndex0 * 12)).xyz;
 	float3 v1pos = asfloat(LoadByte4(Get(vtxOpaquePosition), vtxIndex1 * 12)).xyz;
@@ -56,29 +61,42 @@ PsOut PS_MAIN(PsIn In)
 			asfloat(LoadByte4(Get(vtxOpaqueUv), vtxIndex1 * 8)).xy,
 			asfloat(LoadByte4(Get(vtxOpaqueUv), vtxIndex2 * 8)).xy 
 	);
+	
+	f3x3 normals = make_f3x3_rows(
+		asfloat(LoadByte3(Get(vtxOpaqueNormal), vtxIndex0 * 12)),
+		asfloat(LoadByte3(Get(vtxOpaqueNormal), vtxIndex1 * 12)),
+		asfloat(LoadByte3(Get(vtxOpaqueNormal), vtxIndex2 * 12))
+	);
 
-	float2 twoOverWindowSize = 2.0 / viewInfo.rect.zw; 
-  float4x4 vp = mul(viewInfo.projMat, viewInfo.viewMat);
-	float4x4 mvp = mul(vp, obj.modelMat);
+	f3x3 tangents = make_f3x3_rows(
+		asfloat(LoadByte3(Get(vtxOpaqueTangnet), vtxIndex0 * 12)),
+		asfloat(LoadByte3(Get(vtxOpaqueTangnet), vtxIndex1 * 12)),
+		asfloat(LoadByte3(Get(vtxOpaqueTangnet), vtxIndex2 * 12))
+	);
 
 	float4 clipPos0 = mul(mvp, float4(v0pos, 1.0f));
 	float4 clipPos1 = mul(mvp, float4(v1pos, 1.0f));
 	float4 clipPos2 = mul(mvp, float4(v2pos, 1.0f));
-	
+
+
+	float2 twoOverWindowSize = 2.0 / viewInfo.rect.wz; 
 	BarycentricDeriv derivativesOut = CalcFullBary(clipPos0, clipPos1, clipPos2, In.screenPos, twoOverWindowSize);
-	
 	// Interpolate the 1/w (one_over_w) for all three vertices of the triangle using the barycentric coordinates and the delta vector
 	float w = dot(float3(clipPos0.w, clipPos1.w, clipPos2.w), derivativesOut.m_lambda);
 
 	// Reconstruct the Z value at this screen point performing only the necessary matrix * vector multiplication operations that involve computing Z
-	float z = w * getElem(viewInfo.projMat, 2, 2) + getElem(viewInfo.projMat, 3, 2);
+	float z = ((w * viewInfo.zFar) / (viewInfo.zFar - viewInfo.zNear)) - ((2.0 * viewInfo.zNear * viewInfo.zFar) / (viewInfo.zFar - viewInfo.zNear));
+	//float z = w * getElem(viewInfo.projMat, 2, 2) + getElem(viewInfo.projMat, 3, 2);
 
 	// Calculate the world position coordinates:
 	// First the projected coordinates at this point are calculated using In.screenPos and the computed Z value at this point.
 	// Then, multiplying the perspective projected coordinates by the inverse view-projection matrix (invVP) produces world coordinates
-	float3 position = mul(viewInfo.invViewMat, float4(In.screenPos * w, z, w)).xyz;
+	float3 position = mul(viewInfo.invViewProj, float4(In.screenPos * w, z, w)).xyz;
+	float3 viewPosition = mul(viewInfo.viewMat, float4(position, 1.0)).xyz;
 
 	GradientInterpolationResults results = Interpolate2DWithDeriv(derivativesOut, texCoords);
+	float3 normal = InterpolateWithDeriv_float3x3(derivativesOut, normals);
+	float3 tangent = InterpolateWithDeriv_float3x3(derivativesOut, tangents);
 
 	float linearZ = depthLinearization(z/w, viewInfo.zNear, viewInfo.zFar);
 	float mip = pow(pow(linearZ, 0.9f) * 5.0f, 1.5f);
@@ -86,16 +104,42 @@ PsOut PS_MAIN(PsIn In)
 	float2 texCoordDX = results.dx * mip;
 	float2 texCoordDY = results.dy * mip;
 	float2 texCoord = results.interp;
+    
+  float3 worldNormal = normalize(mul(normalMat, normal.xyz));
+  float3 worldTangent = normalize(mul(normalMat, tangent.xyz));
+  float3 worldBitangent = normalize(mul(normalMat, cross(tangent, normal)));
 
   uint materialIndex = MATERIAL_INDEX(obj.materialID);
   DiffuseMaterial diffuseMat = Get(sceneDiffuseMat)[materialIndex];  
-	float4 result = float4(0,0,0,0);
-	fetchSceneTextureFloat4Grad(diffuseMat.samplerIndex, DiffuseMaterial_DiffuseTexture_ID(diffuseMat), texCoord, texCoordDX, texCoordDY, result);
+	float4 color = float4(0,0,0,0);
+
+	SceneTexture tex;
+	tex.filterID = diffuseMat.samplerIndex; 
+
+	SceneTexture diffuseTex = CreateGradientSceneTexture(diffuseMat.samplerIndex, DiffuseMaterial_DiffuseTexture_ID(diffuseMat), texCoordDX, texCoordDY);
+	SceneTexture heightTexture = CreateGradientSceneTexture(diffuseMat.samplerIndex, DiffuseMaterial_HeightTexture_ID(diffuseMat), texCoordDX, texCoordDY);
+
+  if(IsSceneTextureValid(heightTexture)) {
+      texCoord += ParallaxAdvance(
+          texCoord, 
+          0.0,
+          32.0, 
+          diffuseMat.heightMapScale * PARALLAX_MULTIPLIER,
+          viewPosition.xyz,
+          worldNormal,
+          worldTangent,
+          worldBitangent,
+          heightTexture,
+          (diffuseMat.materialConfig & MATERIAL_IS_HEIGHT_SINGLE_CHANNEL) > 0);
+  }
+    
+	SampleSceneTextureFloat4(diffuseTex, texCoord, color);
 
   PsOut Out;
-	Out.color = result;
-	Out.test = vertexOffset;
+	Out.color = color;
+	Out.test = float4(viewPosition, w);
 	RETURN(Out);
+
 }
 
 

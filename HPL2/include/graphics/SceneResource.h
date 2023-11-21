@@ -32,6 +32,9 @@ namespace hpl::resource {
     static constexpr uint32_t MaterialIndexMask =  0xffff00; // 0000 0000 1111 1111 1111 1111 0000 0000
     uint32_t encodeMaterialID(hpl::MaterialID id, uint32_t handle);
 
+
+    uint32_t constexpr IsAlphaSingleChannel = 0x1;
+    uint32_t constexpr IsHeightSingleChannel = 0x2;
     struct ViewportInfo {
         static constexpr uint32_t PrmaryViewportIndex = 0;
         mat4 m_invViewMat;
@@ -39,9 +42,10 @@ namespace hpl::resource {
         mat4 m_viewMat;
         mat4 m_projMat;
         float4 m_rect;
+        float3 m_cameraPosition;
+        uint m_pad0;
         float m_zNear;
         float m_zFar;
-        uint m_pad0;
         uint m_pad1;
     };
 

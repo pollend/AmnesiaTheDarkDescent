@@ -230,7 +230,7 @@ namespace hpl {
 	}
 
 
-    DrawPacket cSubMeshEntity::ResolveDrawPacket(const ForgeRenderer::Frame& frame,std::span<eVertexBufferElement> elements)  {
+    DrawPacket cSubMeshEntity::ResolveDrawPacket(const ForgeRenderer::Frame& frame)  {
 		DrawPacket packet;
 	    if(m_numberIndecies == 0) {
             return packet;
@@ -238,8 +238,8 @@ namespace hpl {
 
         DrawPacket::GeometrySetBinding binding{};
         packet.m_type = DrawPacket::DrawGeometryset;
-        std::copy(elements.begin(), elements.end(), binding.m_elements);
-        binding.m_numStreams = elements.size();
+        //std::copy(elements.begin(), elements.end(), binding.m_elements);
+        //binding.m_numStreams = elements.size();
         binding.m_subAllocation = m_geometry.get();
         binding.m_indexOffset = 0;
         binding.m_set = GraphicsAllocator::AllocationSet::OpaqueSet;

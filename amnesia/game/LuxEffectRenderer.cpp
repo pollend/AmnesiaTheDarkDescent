@@ -658,7 +658,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
     for(auto& flashObject: mvFlashObjects) {
         auto* pObject = flashObject.mpObject;
         std::array targets = { eVertexBufferElement_Position, eVertexBufferElement_Normal, eVertexBufferElement_Texture0 };
-        DrawPacket packet = pObject->ResolveDrawPacket(*frame, targets);
+        DrawPacket packet = pObject->ResolveDrawPacket(*frame);
         if (!pObject->CollidesWithFrustum(input.m_frustum) && packet.m_type == DrawPacket::Unknown)
         {
             continue;
@@ -696,7 +696,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
         endUpdateResource(&updateDesc);
 
         cmdBindDescriptorSet(input.m_frame->m_cmd, objectIndex++, m_perObjectDescriptorSet[frame->m_frameIndex]);
-        DrawPacket::cmdBindBuffers(frame->m_cmd, frame->m_resourcePool, &packet);
+        DrawPacket::cmdBindBuffers(frame->m_cmd, frame->m_resourcePool, &packet, targets);
         for(size_t i = 0; i < 2; i++) {
             cmdDrawIndexed(input.m_frame->m_cmd, packet.numberOfIndecies(), 0, 0);
         }
@@ -714,7 +714,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
             continue;
         }
         std::array targets = { eVertexBufferElement_Position, eVertexBufferElement_Normal, eVertexBufferElement_Texture0 };
-        DrawPacket packet = pObject->ResolveDrawPacket(*frame, targets);
+        DrawPacket packet = pObject->ResolveDrawPacket(*frame);
 
         uint32_t requestSize = round_up(sizeof(LuxEffectObjectUniform::FlashUniform), 256);
         #ifdef USE_THE_FORGE_LEGACY
@@ -746,7 +746,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
         endUpdateResource(&updateDesc);
 
         cmdBindDescriptorSet(input.m_frame->m_cmd, objectIndex++, m_perObjectDescriptorSet[frame->m_frameIndex]);
-        DrawPacket::cmdBindBuffers(frame->m_cmd, frame->m_resourcePool, &packet);
+        DrawPacket::cmdBindBuffers(frame->m_cmd, frame->m_resourcePool, &packet, targets);
         cmdDrawIndexed(input.m_frame->m_cmd, packet.numberOfIndecies(), 0, 0);
     }
     cmdEndDebugMarker(input.m_frame->m_cmd);
@@ -778,7 +778,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
             }
             auto* imageAlpha = pMaterial->GetImage(eMaterialTexture_Alpha);
             std::array targets = { eVertexBufferElement_Position, eVertexBufferElement_Texture0 };
-            DrawPacket packet = pObject->ResolveDrawPacket(*frame, targets);
+            DrawPacket packet = pObject->ResolveDrawPacket(*frame);
 
             uint32_t requestSize = round_up(sizeof(LuxEffectObjectUniform::OutlineUniform), 256);
             #ifdef USE_THE_FORGE_LEGACY
@@ -816,7 +816,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
             updateDescriptorSet(frame->m_renderer->Rend(), objectIndex, m_perObjectDescriptorSet[frame->m_frameIndex], params.size(), params.data());
 
             cmdBindDescriptorSet(input.m_frame->m_cmd, objectIndex++, m_perObjectDescriptorSet[frame->m_frameIndex]);
-            DrawPacket::cmdBindBuffers(input.m_frame->m_cmd, frame->m_resourcePool, &packet);
+            DrawPacket::cmdBindBuffers(input.m_frame->m_cmd, frame->m_resourcePool, &packet,targets);
             cmdDrawIndexed(input.m_frame->m_cmd, packet.numberOfIndecies(), 0, 0);
         }
         cmdEndDebugMarker(input.m_frame->m_cmd);
@@ -829,7 +829,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
             auto* pMaterial = pObject->GetMaterial();
 
             std::array targets = { eVertexBufferElement_Position, eVertexBufferElement_Texture0 };
-            DrawPacket drawPacket = pObject->ResolveDrawPacket(*frame, targets);
+            DrawPacket drawPacket = pObject->ResolveDrawPacket(*frame);
             if (!pObject->CollidesWithFrustum(input.m_frustum) || drawPacket.m_type == DrawPacket::Unknown) {
                 continue;
             }
@@ -868,7 +868,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
             updateDescriptorSet(frame->m_renderer->Rend(), objectIndex, m_perObjectDescriptorSet[frame->m_frameIndex], params.size(), params.data());
 
             cmdBindDescriptorSet(input.m_frame->m_cmd, objectIndex++, m_perObjectDescriptorSet[frame->m_frameIndex]);
-            DrawPacket::cmdBindBuffers(input.m_frame->m_cmd, input.m_frame->m_resourcePool, &drawPacket);
+            DrawPacket::cmdBindBuffers(input.m_frame->m_cmd, input.m_frame->m_resourcePool, &drawPacket, targets);
             cmdDrawIndexed(input.m_frame->m_cmd, drawPacket.numberOfIndecies(), 0, 0);
         }
         cmdEndDebugMarker(input.m_frame->m_cmd);

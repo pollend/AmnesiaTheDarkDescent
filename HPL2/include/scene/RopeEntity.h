@@ -82,7 +82,7 @@ namespace hpl {
 		//Renderable implementations
 		virtual cMaterial *GetMaterial() override{ return mpMaterial;}
 		virtual iVertexBuffer* GetVertexBuffer() override{return mpVtxBuffer;}
-        virtual DrawPacket ResolveDrawPacket(const ForgeRenderer::Frame& frame,std::span<eVertexBufferElement> elements) override;
+        virtual DrawPacket ResolveDrawPacket(const ForgeRenderer::Frame& frame) override;
 
         virtual void UpdateGraphicsForFrame(float afFrameTime) override;
 		virtual bool UpdateGraphicsForViewport(cFrustum *apFrustum,float afFrameTime) override;

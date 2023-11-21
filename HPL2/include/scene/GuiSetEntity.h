@@ -46,17 +46,17 @@ namespace hpl {
 
 		/////////////////////////////////
 		//Entity implementation
-		tString GetEntityType(){ return "GuiSetEntity";}
+		virtual tString GetEntityType() override{ return "GuiSetEntity";}
 
 		/////////////////////////////////
 		//Renderable implementations
-		cMaterial *GetMaterial(){ return NULL;}
-		iVertexBuffer* GetVertexBuffer(){return NULL;}
-        virtual DrawPacket ResolveDrawPacket(const ForgeRenderer::Frame& frame,std::span<eVertexBufferElement> elements) { return DrawPacket();}
+		virtual cMaterial *GetMaterial() override{ return NULL;}
+		virtual iVertexBuffer* GetVertexBuffer() override{return NULL;}
+        virtual DrawPacket ResolveDrawPacket(const ForgeRenderer::Frame& frame) override { return DrawPacket();}
 
-		eRenderableType GetRenderType(){ return eRenderableType_GuiSet;}
-		cMatrixf* GetModelMatrix(cFrustum *apFrustum);
-		int GetMatrixUpdateCount();
+		virtual eRenderableType GetRenderType() override { return eRenderableType_GuiSet;}
+		virtual cMatrixf* GetModelMatrix(cFrustum *apFrustum)override;
+		virtual int GetMatrixUpdateCount()override;
 
 	private:
 		cGuiSet *mpGuiSet;

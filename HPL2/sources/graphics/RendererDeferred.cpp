@@ -2484,7 +2484,7 @@ namespace hpl {
                 eVertexBufferElement_Position,
                 eVertexBufferElement_Texture0,
             };
-            DrawPacket drawPacket = illuminationItem->ResolveDrawPacket(frame, targets);
+            DrawPacket drawPacket = illuminationItem->ResolveDrawPacket(frame);
             if (pMaterial == nullptr || drawPacket.m_type == DrawPacket::Unknown) {
                 continue;
             }
@@ -2493,7 +2493,7 @@ namespace hpl {
             uint32_t instance = cmdBindMaterialAndObject(cmd, frame, pMaterial, illuminationItem);
             materialConst.objectId = instance;
             materialConst.m_sceneAlpha = illuminationItem->GetIlluminationAmount();
-            DrawPacket::cmdBindBuffers(cmd, frame.m_resourcePool, &drawPacket);
+            DrawPacket::cmdBindBuffers(cmd, frame.m_resourcePool, &drawPacket,targets);
             cmdBindPushConstants(cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
             cmdDrawIndexed(cmd, drawPacket.numberOfIndecies(), 0, 0);
         }
@@ -2753,14 +2753,14 @@ namespace hpl {
                                                            eVertexBufferElement_Texture0,
                                                            eVertexBufferElement_Normal,
                                                            eVertexBufferElement_Texture1Tangent };
-                                    DrawPacket packet = pObject->ResolveDrawPacket(frame, targets);
+                                    DrawPacket packet = pObject->ResolveDrawPacket(frame);
                                     if (packet.m_type == DrawPacket::Unknown || descriptor.m_id == MaterialID::Unknown) {
                                         return;
                                     }
                                     MaterialRootConstant materialConst = {};
                                     uint32_t instance = cmdBindMaterialAndObject(shadowMapData->m_cmd.m_handle, frame, pMaterial, pObject);
                                     materialConst.objectId = instance;
-                                    DrawPacket::cmdBindBuffers(shadowMapData->m_cmd.m_handle, frame.m_resourcePool, &packet);
+                                    DrawPacket::cmdBindBuffers(shadowMapData->m_cmd.m_handle, frame.m_resourcePool, &packet, targets);
                                     cmdBindPushConstants(
                                         shadowMapData->m_cmd.m_handle,
                                         m_materialRootSignature.m_handle,
@@ -3001,8 +3001,8 @@ namespace hpl {
                     auto lightShape = GetLightShape(light->m_light, eDeferredShapeQuality_High);
                     ASSERT(lightShape && "Light shape not found");
                     DrawPacket packet =
-                        static_cast<LegacyVertexBuffer*>(lightShape)->resolveGeometryBinding(frame.m_currentFrame, elements);
-                    DrawPacket::cmdBindBuffers(cmd, frame.m_resourcePool, &packet);
+                        static_cast<LegacyVertexBuffer*>(lightShape)->resolveGeometryBinding(frame.m_currentFrame);
+                    DrawPacket::cmdBindBuffers(cmd, frame.m_resourcePool, &packet, elements);
 
                     cmdBindPipeline(cmd, options.m_invert ? m_lightStencilPipelineCW.m_handle : m_lightStencilPipelineCCW.m_handle);
                     uint32_t instance = cmdBindLightDescriptor(light); // bind light descriptor light uniforms
@@ -3105,10 +3105,10 @@ namespace hpl {
                     std::array targets = { eVertexBufferElement_Position };
                     auto lightShape = GetLightShape(light->m_light, eDeferredShapeQuality_High);
                     ASSERT(lightShape && "Light shape not found");
-                    DrawPacket packet = static_cast<LegacyVertexBuffer*>(lightShape)->resolveGeometryBinding(frame.m_currentFrame, targets);
+                    DrawPacket packet = static_cast<LegacyVertexBuffer*>(lightShape)->resolveGeometryBinding(frame.m_currentFrame);
 
                     uint32_t instance = cmdBindLightDescriptor(light);
-                    DrawPacket::cmdBindBuffers(cmd, frame.m_resourcePool, &packet);
+                    DrawPacket::cmdBindBuffers(cmd, frame.m_resourcePool, &packet, targets);
                     cmdBindPushConstants(cmd, m_lightPassRootSignature.m_handle, lightRootConstantIndex, &instance);
                     cmdDrawIndexed(cmd, packet.numberOfIndecies(), 0, 0);
                 }
@@ -3156,7 +3156,7 @@ namespace hpl {
                                        eVertexBufferElement_Texture0,
                                        eVertexBufferElement_Normal,
                                        eVertexBufferElement_Texture1Tangent };
-                DrawPacket packet = diffuseItem->ResolveDrawPacket(frame, targets);
+                DrawPacket packet = diffuseItem->ResolveDrawPacket(frame);
                 if (pMaterial == nullptr || packet.m_type == DrawPacket::Unknown) {
                     continue;
                 }
@@ -3165,7 +3165,7 @@ namespace hpl {
                 MaterialRootConstant materialConst = {};
                 uint32_t instance = cmdBindMaterialAndObject(cmd, frame, pMaterial, diffuseItem);
                 materialConst.objectId = instance;
-                DrawPacket::cmdBindBuffers(cmd, frame.m_resourcePool, &packet);
+                DrawPacket::cmdBindBuffers(cmd, frame.m_resourcePool, &packet, targets);
                 cmdBindPushConstants(cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
                 cmdDrawIndexed(cmd, packet.numberOfIndecies(), 0, 0);
             }
@@ -3191,7 +3191,7 @@ namespace hpl {
             for (auto& decalItem : m_rendererList.GetRenderableItems(eRenderListType_Decal)) {
                 cMaterial* pMaterial = decalItem->GetMaterial();
                 std::array targets = { eVertexBufferElement_Position, eVertexBufferElement_Texture0, eVertexBufferElement_Color0 };
-                DrawPacket packet = decalItem->ResolveDrawPacket(frame, targets);
+                DrawPacket packet = decalItem->ResolveDrawPacket(frame);
                 if (pMaterial == nullptr || packet.m_type == DrawPacket::Unknown) {
                     continue;
                 }
@@ -3205,7 +3205,7 @@ namespace hpl {
                 MaterialRootConstant materialConst = {};
                 uint32_t instance = cmdBindMaterialAndObject(cmd, frame, pMaterial, decalItem);
                 materialConst.objectId = instance;
-                DrawPacket::cmdBindBuffers(cmd, frame.m_resourcePool, &packet);
+                DrawPacket::cmdBindBuffers(cmd, frame.m_resourcePool, &packet, targets);
                 cmdBindPushConstants(cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
                 cmdDrawIndexed(cmd, packet.numberOfIndecies(), 0, 0);
             }
@@ -3419,14 +3419,14 @@ namespace hpl {
                 }
 
                 std::array targets = { eVertexBufferElement_Position};
-                DrawPacket packet = test.m_renderable->ResolveDrawPacket(frame, targets);
+                DrawPacket packet = test.m_renderable->ResolveDrawPacket(frame);
                 if (packet.m_type == DrawPacket::Unknown) {
                     continue;
                 }
                 MaterialRootConstant materialConst = {};
                 uint32_t instance = cmdBindMaterialAndObject(m_prePassCmd.m_handle, frame, pMaterial, test.m_renderable, {});
                 materialConst.objectId = instance;
-                DrawPacket::cmdBindBuffers(m_prePassCmd.m_handle, frame.m_resourcePool, &packet);
+                DrawPacket::cmdBindBuffers(m_prePassCmd.m_handle, frame.m_resourcePool, &packet, targets);
                 cmdBindPushConstants(m_prePassCmd.m_handle, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
                 cmdDrawIndexed(m_prePassCmd.m_handle, packet.numberOfIndecies(), 0, 0);
             }
@@ -3444,7 +3444,7 @@ namespace hpl {
         {
             cmdBeginDebugMarker(m_prePassCmd.m_handle, 1, 1, 0, "Occlusion Query");
             std::array targets = { eVertexBufferElement_Position };
-            DrawPacket packet = static_cast<LegacyVertexBuffer*>(m_box.get())->resolveGeometryBinding(frame.m_currentFrame, targets);
+            DrawPacket packet = static_cast<LegacyVertexBuffer*>(m_box.get())->resolveGeometryBinding(frame.m_currentFrame);
 
             uint32_t occlusionObjectIndex = getDescriptorIndexFromName(m_rootSignatureOcclusuion.m_handle, "rootConstant");
             uint32_t occlusionIndex = 0;
@@ -3466,7 +3466,7 @@ namespace hpl {
                     cmdBindPushConstants(
                         m_prePassCmd.m_handle, m_rootSignatureOcclusuion.m_handle, occlusionObjectIndex, &m_occlusionIndex);
 
-                    DrawPacket::cmdBindBuffers(m_prePassCmd.m_handle, frame.m_resourcePool, &packet);
+                    DrawPacket::cmdBindBuffers(m_prePassCmd.m_handle, frame.m_resourcePool, &packet, targets);
 
                     QueryDesc queryDesc = {};
                     queryDesc.mIndex = queryIndex++;
@@ -3655,7 +3655,7 @@ namespace hpl {
                         continue;
                     }
                     std::array targets = { eVertexBufferElement_Position };
-                    DrawPacket drawPacket = renderable->ResolveDrawPacket(frame, targets);
+                    DrawPacket drawPacket = renderable->ResolveDrawPacket(frame);
                     if (drawPacket.m_type == DrawPacket::Unknown) {
                         continue;
                     }
@@ -3663,7 +3663,7 @@ namespace hpl {
                     MaterialRootConstant materialConst = {};
                     uint32_t instance = cmdBindMaterialAndObject(cmd, frame, pMaterial, renderable);
                     materialConst.objectId = instance;
-                    DrawPacket::cmdBindBuffers(frame.m_cmd, frame.m_resourcePool, &drawPacket);
+                    DrawPacket::cmdBindBuffers(frame.m_cmd, frame.m_resourcePool, &drawPacket, targets);
                     cmdBindPushConstants(cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
                     cmdDrawIndexed(cmd, drawPacket.numberOfIndecies(), 0, 0);
                 }
@@ -4135,7 +4135,7 @@ namespace hpl {
                     eVertexBufferElement_Position,
                     eVertexBufferElement_Texture0,
                 };
-                DrawPacket packet = illuminationItem->ResolveDrawPacket(frame, targets);
+                DrawPacket packet = illuminationItem->ResolveDrawPacket(frame);
 
                 if (pMaterial == nullptr || packet.m_type == DrawPacket::Unknown) {
                     continue;
@@ -4145,7 +4145,7 @@ namespace hpl {
                 uint32_t instance = cmdBindMaterialAndObject(frame.m_cmd, frame, pMaterial, illuminationItem);
                 materialConst.objectId = instance;
 
-                DrawPacket::cmdBindBuffers(cmd, frame.m_resourcePool, &packet);
+                DrawPacket::cmdBindBuffers(cmd, frame.m_resourcePool, &packet, targets);
                 cmdBindPushConstants(frame.m_cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
                 cmdDrawIndexed(frame.m_cmd, packet.numberOfIndecies(), 0, 0);
             }
@@ -4229,8 +4229,8 @@ namespace hpl {
 
             std::array geometryStream = { eVertexBufferElement_Position };
             DrawPacket drawPacket =
-                static_cast<LegacyVertexBuffer*>(m_box.get())->resolveGeometryBinding(frame.m_currentFrame, geometryStream);
-            DrawPacket::cmdBindBuffers(frame.m_cmd, frame.m_resourcePool, &drawPacket);
+                static_cast<LegacyVertexBuffer*>(m_box.get())->resolveGeometryBinding(frame.m_currentFrame);
+            DrawPacket::cmdBindBuffers(frame.m_cmd, frame.m_resourcePool, &drawPacket, geometryStream);
 
             {
                 std::array<DescriptorData, 1> params = {};
@@ -4609,17 +4609,9 @@ namespace hpl {
                     {
                         DrawPacket drawPacket;
                         if (isParticleEmitter) {
-                            std::array targets = { eVertexBufferElement_Position,
-                                                   eVertexBufferElement_Texture0,
-                                                   eVertexBufferElement_Color0 };
-                            drawPacket = translucencyItem->ResolveDrawPacket(frame, targets);
+                            drawPacket = translucencyItem->ResolveDrawPacket(frame);
                         } else {
-                            std::array targets = { eVertexBufferElement_Position,
-                                                   eVertexBufferElement_Texture0,
-                                                   eVertexBufferElement_Normal,
-                                                   eVertexBufferElement_Texture1Tangent,
-                                                   eVertexBufferElement_Color0 };
-                            drawPacket = translucencyItem->ResolveDrawPacket(frame, targets);
+                            drawPacket = translucencyItem->ResolveDrawPacket(frame);
                         }
                         if (drawPacket.m_type == DrawPacket::Unknown ||
                             drawPacket.numberOfIndecies() == 0) {
@@ -4637,20 +4629,29 @@ namespace hpl {
                             pMaterial->GetBlendMode() < eMaterialBlendMode_LastEnum &&
                             pMaterial->GetBlendMode() != eMaterialBlendMode_None && "Invalid blend mode");
                         if (isParticleEmitter) {
+                            std::array targets = { eVertexBufferElement_Position,
+                                                   eVertexBufferElement_Texture0,
+                                                   eVertexBufferElement_Color0 };
                             cmdBindPipeline(
                                 frame.m_cmd,
                                 m_materialTranslucencyPass.m_particlePipelines[translucencyBlendTable[pMaterial->GetBlendMode()]][key.m_id]
                                     .m_handle);
+                            DrawPacket::cmdBindBuffers(frame.m_cmd, frame.m_resourcePool, &drawPacket, targets);
                         } else {
+                            std::array targets = { eVertexBufferElement_Position,
+                                                   eVertexBufferElement_Texture0,
+                                                   eVertexBufferElement_Normal,
+                                                   eVertexBufferElement_Texture1Tangent,
+                                                   eVertexBufferElement_Color0 };
                             cmdBindPipeline(
                                 frame.m_cmd,
                                 (isRefraction
                                      ? m_materialTranslucencyPass.m_refractionPipeline[key.m_id].m_handle
                                      : m_materialTranslucencyPass.m_pipelines[translucencyBlendTable[pMaterial->GetBlendMode()]][key.m_id]
                                            .m_handle));
+                            DrawPacket::cmdBindBuffers(frame.m_cmd, frame.m_resourcePool, &drawPacket, targets);
                         }
 
-                        DrawPacket::cmdBindBuffers(frame.m_cmd, frame.m_resourcePool, &drawPacket);
 
                         materialConst.m_options = (isFogActive ? TranslucencyFlags::UseFog : 0) |
                             (isRefraction ? TranslucencyFlags::UseRefractionTrans : 0) |
@@ -4679,7 +4680,7 @@ namespace hpl {
                                                eVertexBufferElement_Normal,
                                                eVertexBufferElement_Texture1Tangent,
                                                eVertexBufferElement_Color0 };
-                        DrawPacket packet = translucencyItem->ResolveDrawPacket(frame, targets);
+                        DrawPacket packet = translucencyItem->ResolveDrawPacket(frame);
                         if (packet.m_type == DrawPacket::Unknown) {
                             break;
                         }
@@ -4695,7 +4696,7 @@ namespace hpl {
                         key.m_field.m_hasDepthTest = pMaterial->GetDepthTest();
 
                         // LegacyVertexBuffer::cmdBindGeometry(frame.m_cmd, frame.m_resourcePool, binding);
-                        DrawPacket::cmdBindBuffers(frame.m_cmd, frame.m_resourcePool, &packet);
+                        DrawPacket::cmdBindBuffers(frame.m_cmd, frame.m_resourcePool, &packet, targets);
                         cmdBindPipeline(frame.m_cmd, m_materialTranslucencyPass.m_waterPipeline[key.m_id].m_handle);
                         uint32_t instance = cmdBindMaterialAndObject(
                             frame.m_cmd, frame, pMaterial, translucencyItem, std::optional{ pMatrix ? *pMatrix : cMatrixf::Identity });

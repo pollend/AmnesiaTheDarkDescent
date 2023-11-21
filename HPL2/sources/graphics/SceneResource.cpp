@@ -1,5 +1,6 @@
 #include "graphics/SceneResource.h"
 #include "graphics/Material.h"
+#include "tinyimageformat_query.h"
 
 namespace hpl::resource  {
 
@@ -138,6 +139,13 @@ namespace hpl::resource  {
                         (*tex.m_value) = static_cast<uint16_t>(handle);
                     }
                 }
+
+	            const auto alphaMapImage = material->GetImage(eMaterialTexture_Alpha);
+		        const auto heightMapImage = material->GetImage(eMaterialTexture_Height);
+
+                result.m_materialConfig =
+			        ((alphaMapImage && TinyImageFormat_ChannelCount(static_cast<TinyImageFormat>(alphaMapImage->GetTexture().m_handle->mFormat)) == 1) ? IsAlphaSingleChannel: 0) |
+			        ((heightMapImage && TinyImageFormat_ChannelCount(static_cast<TinyImageFormat>(heightMapImage->GetTexture().m_handle->mFormat)) == 1) ? IsHeightSingleChannel : 0);
                 result.m_samplerIndex = textureFilterNonAnistropyIdx(material->GetTextureWrap(), material->GetTextureFilter());
                 result.m_heightMapScale = descriptor.m_solid.m_heightMapScale;
                 result.m_heigtMapBias = descriptor.m_solid.m_heightMapBias;

@@ -218,7 +218,6 @@ namespace hpl {
                     }
                     case eMaterialUvAnimation_Rotate: {
                         cVector3f vDir = GetAxisVector(pAnim->mAxis);
-
                         cMatrixf mtxRot = cMath::MatrixRotate(vDir * pAnim->mfSpeed * mfAnimTime, eEulerRotationOrder_XYZ);
                         m_mtxUV = cMath::MatrixMul(m_mtxUV, mtxRot);
                         break;

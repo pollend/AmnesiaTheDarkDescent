@@ -321,3 +321,12 @@
 #frag visibility_shade_pass.frag
   #include "visibility_shade_pass.frag.fsl"
 #end
+
+#vert visibilityBuffer_alpha_pass.vert
+  #include "visibilityBuffer_alpha_pass.vert.fsl"
+#end
+
+#frag visibilityBuffer_alpha_pass.frag
+  #include "visibilityBuffer_alpha_pass.frag.fsl"
+#end
+  

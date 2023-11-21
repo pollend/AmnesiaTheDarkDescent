@@ -1,6 +1,8 @@
 #ifndef _SCENE_RESOURCE_DEFS_H_
 #define _SCENE_RESOURCE_DEFS_H_
 
+#define PARALLAX_MULTIPLIER 0.7
+
 #define LIGHT_CLUSTER_WIDTH 8
 #define LIGHT_CLUSTER_HEIGHT 8
 #define LIGHT_CLUSTER_COUNT 128
@@ -56,6 +58,35 @@ uint DiffuseMaterial_IlluminiationTexture_ID(DiffuseMaterial mat) {return ((mat.
 uint DiffuseMaterial_DissolveAlphaTexture_ID(DiffuseMaterial mat) {return (mat.tex[3] & 0xffff);}
 uint DiffuseMaterial_CubeMapAlphaTexture_ID(DiffuseMaterial mat) {return ((mat.tex[3] >> 16) & 0xffff);}
 
+STRUCT(SceneTexture) 
+{
+    DATA(bool, hasGradient, None);
+    DATA(float2, texCoordDX, None);
+    DATA(float2, texCoordDY, None);
+    
+    DATA(uint, filterID, None);
+    DATA(uint, textureID, None);
+};
+bool IsSceneTextureValid(SceneTexture tex) {
+    return !(tex.textureID == INVALID_TEXTURE_INDEX);
+}
+SceneTexture CreateGradientSceneTexture(uint filterID, uint textureID, float2 texCoordDX, float2 texCoordDY) {
+    SceneTexture tex;
+    tex.filterID = filterID;
+    tex.textureID = textureID;
+    tex.texCoordDX = texCoordDX;
+    tex.texCoordDY = texCoordDY;
+    tex.hasGradient = true;
+    return tex;
+}
+SceneTexture CreateSceneTexture(uint filterID, uint textureID) {
+    SceneTexture tex;
+    tex.filterID = filterID;
+    tex.textureID = textureID;
+    tex.hasGradient = false;
+    return tex;
+}
+
 STRUCT(UniformObject) 
 {
     DATA(uint,     indirectDrawOffset, None);
@@ -70,6 +101,10 @@ STRUCT(UniformObject)
     DATA(float4x4, invModelMat, None);
     DATA(float4x4, uvMat, None);
 };
+
+#define MATERIAL_IS_ALPHA_SINGLE_CHANNEL (0x1)
+#define MATERIAL_IS_HEIGHT_SINGLE_CHANNEL (0x2)
+
 #define MATERIAL_TYPE_SOLID_DIFFUSE     1
 #define MATERIAL_TYPE_SOLID_TRANSLUCENT 2
 #define MATERIAL_TYPE_SOLID_WATER       3
@@ -106,9 +141,10 @@ STRUCT(ViewportInfo) {
     DATA(float4x4, viewMat, None);
     DATA(float4x4, projMat, None);
     DATA(float4, rect, None);    
+    DATA(float3, cameraPosition, None);
+    DATA(uint, __pad0, NONE);
     DATA(float, zNear, None);
     DATA(float, zFar, None);
-    DATA(uint, __pad0, NONE);
     DATA(uint, __pad1, NONE);
 };
 

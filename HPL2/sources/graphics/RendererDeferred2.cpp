@@ -1,6 +1,7 @@
 #include "graphics/RendererDeferred2.h"
 #include "Common_3/Graphics/Interfaces/IGraphics.h"
 #include "Common_3/Resources/ResourceLoader/Interfaces/IResourceLoader.h"
+#include "Common_3/Utilities/ThirdParty/OpenSource/ModifiedSonyMath/common.hpp"
 #include "graphics/DrawPacket.h"
 #include "graphics/ForgeRenderer.h"
 #include "graphics/GraphicsTypes.h"
@@ -11,6 +12,27 @@
 #include <memory>
 
 namespace hpl {
+    struct RangeSubsetAlloc {
+    public:
+        struct RangeSubset {
+            uint32_t m_start;
+            uint32_t m_end;
+            inline uint32_t size() { return m_end - m_start; }
+
+        };
+        uint32_t& m_index;
+        uint32_t m_start;
+        RangeSubsetAlloc(uint32_t& index): m_index(index), m_start(index) {
+        }
+        uint32_t Increment() {
+            return (m_index++);
+        }
+        RangeSubset End() {
+            uint32_t start = m_start;
+            m_start = m_index;
+            return RangeSubset{start, m_index};
+        }
+    };
 
     cRendererDeferred2::cRendererDeferred2(cGraphics* apGraphics, cResources* apResources, std::shared_ptr<DebugDraw> debug)
         : iRenderer("Deferred2", apGraphics, apResources) {
@@ -38,6 +60,7 @@ namespace hpl {
             addSampler(forgeRenderer->Rend(), &bilinearClampDesc, sampler);
             return true;
         });
+
         m_emptyTexture.Load([&](Texture** texture) {
             TextureDesc textureDesc = {};
             textureDesc.mArraySize = 1;
@@ -62,10 +85,16 @@ namespace hpl {
             loadDesc.mStages[0].pFileName = "visibilityBuffer_pass.vert";
             loadDesc.mStages[1].pFileName = "visibilityBuffer_pass.frag";
             addShader(forgeRenderer->Rend(), &loadDesc, shader);
-
             return true;
         });
 
+        m_visibilityBufferAlphaPassShader.Load(forgeRenderer->Rend(), [&](Shader** shader) {
+            ShaderLoadDesc loadDesc = {};
+            loadDesc.mStages[0].pFileName = "visibilityBuffer_alpha_pass.vert";
+            loadDesc.mStages[1].pFileName = "visibilityBuffer_alpha_pass.frag";
+            addShader(forgeRenderer->Rend(), &loadDesc, shader);
+            return true;
+        });
         m_visibilityShadePassShader.Load(forgeRenderer->Rend(), [&](Shader** shader) {
             ShaderLoadDesc loadDesc = {};
             loadDesc.mStages[0].pFileName = "visibility_shade_pass.vert";
@@ -75,7 +104,7 @@ namespace hpl {
             return true;
         });
         m_sceneRootSignature.Load(forgeRenderer->Rend(), [&](RootSignature** signature) {
-            std::array shaders = { m_visibilityBufferPassShader.m_handle, m_visibilityShadePassShader.m_handle };
+            std::array shaders = { m_visibilityBufferAlphaPassShader.m_handle ,m_visibilityBufferPassShader.m_handle, m_visibilityShadePassShader.m_handle };
             Sampler* vbShadeSceneSamplers[] = { m_nearEdgeClamp.m_handle };
             const char* vbShadeSceneSamplersNames[] = { "linearBorderClamp" };
             RootSignatureDesc rootSignatureDesc = {};
@@ -90,7 +119,7 @@ namespace hpl {
         m_visiblityShadePass.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
             std::array colorFormats = {
                 ColorBufferFormat,
-                TinyImageFormat_R32_UINT
+                TinyImageFormat_R16G16B16A16_SFLOAT
             };
             RasterizerStateDesc rasterizerStateDesc = {};
             rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
@@ -113,6 +142,71 @@ namespace hpl {
             pipelineSettings.pRasterizerState = &rasterizerStateDesc;
             pipelineSettings.pDepthState = &depthStateDisabledDesc;
             pipelineSettings.pVertexLayout = nullptr;
+            addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
+            return true;
+        });
+        m_visbilityAlphaBufferPass.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
+            VertexLayout vertexLayout = {};
+            vertexLayout.mBindingCount = 4;
+            vertexLayout.mBindings[0] = {.mStride = sizeof(float3)};
+            vertexLayout.mBindings[1] = {.mStride = sizeof(float2)};
+            vertexLayout.mBindings[2] = {.mStride = sizeof(float3)};
+            vertexLayout.mBindings[3] = {.mStride = sizeof(float3)};
+            vertexLayout.mAttribCount = 4;
+            vertexLayout.mAttribs[0] = VertexAttrib {
+                .mSemantic = SEMANTIC_POSITION,
+                .mFormat = TinyImageFormat_R32G32B32_SFLOAT,
+                .mBinding = 0,
+                .mLocation = 0,
+                .mOffset = 0
+            };
+            vertexLayout.mAttribs[1] = VertexAttrib {
+                .mSemantic = SEMANTIC_TEXCOORD0,
+                .mFormat = TinyImageFormat_R32G32_SFLOAT,
+                .mBinding = 1,
+                .mLocation = 1,
+                .mOffset = 0
+            };
+            vertexLayout.mAttribs[2] = VertexAttrib {
+                .mSemantic = SEMANTIC_NORMAL,
+                .mFormat = TinyImageFormat_R32G32B32_SFLOAT,
+                .mBinding = 2,
+                .mLocation = 2,
+                .mOffset = 0
+            };
+            vertexLayout.mAttribs[3] = VertexAttrib {
+                .mSemantic = SEMANTIC_TANGENT,
+                .mFormat = TinyImageFormat_R32G32B32_SFLOAT,
+                .mBinding = 3,
+                .mLocation = 3,
+                .mOffset = 0
+            };
+            std::array colorFormats = { ColorBufferFormat, TinyImageFormat_R8G8_UNORM };
+            DepthStateDesc depthStateDesc = {
+                .mDepthTest = true,
+                .mDepthWrite = true,
+                .mDepthFunc = CMP_LEQUAL
+            };
+
+            RasterizerStateDesc rasterizerStateDesc = {};
+            rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
+            rasterizerStateDesc.mFrontFace = FRONT_FACE_CCW;
+
+            PipelineDesc pipelineDesc = {};
+            pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+            auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
+            pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+            pipelineSettings.mRenderTargetCount = colorFormats.size();
+            pipelineSettings.pColorFormats = colorFormats.data();
+            pipelineSettings.pDepthState = &depthStateDesc;
+            pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
+            pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
+            pipelineSettings.mSampleQuality = 0;
+            pipelineSettings.pRootSignature = m_sceneRootSignature.m_handle;
+            pipelineSettings.pShaderProgram = m_visibilityBufferAlphaPassShader.m_handle;
+            pipelineSettings.pRasterizerState = &rasterizerStateDesc;
+            pipelineSettings.pVertexLayout = &vertexLayout;
+            pipelineSettings.mSupportIndirectCommandBuffer = true;
             addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
             return true;
         });
@@ -268,10 +362,10 @@ namespace hpl {
                 DescriptorData{ .pName = "sceneFilters", .mCount = samplers.size(), .ppSamplers = samplers.data()},
                 DescriptorData{ .pName = "vtxOpaqueIndex", .ppBuffers = &opaqueSet.indexBuffer().m_handle },
                 DescriptorData{ .pName = "vtxOpaquePosition", .ppBuffers = &opaqueSet.getStreamBySemantic(ShaderSemantic::SEMANTIC_POSITION)->buffer().m_handle },
-        //        DescriptorData{ .pName = "vtxOpaqueTangnet", .ppBuffers  = &opaqueSet.getStreamBySemantic(ShaderSemantic::SEMANTIC_TANGENT)->buffer().m_handle },
-        //        DescriptorData{ .pName = "vtxOpaqueNormal", .ppBuffers  = &opaqueSet.getStreamBySemantic(ShaderSemantic::SEMANTIC_NORMAL)->buffer().m_handle },
+                DescriptorData{ .pName = "vtxOpaqueTangnet", .ppBuffers  = &opaqueSet.getStreamBySemantic(ShaderSemantic::SEMANTIC_TANGENT)->buffer().m_handle },
+                DescriptorData{ .pName = "vtxOpaqueNormal", .ppBuffers  = &opaqueSet.getStreamBySemantic(ShaderSemantic::SEMANTIC_NORMAL)->buffer().m_handle },
                 DescriptorData{ .pName = "vtxOpaqueUv", .ppBuffers = &opaqueSet.getStreamBySemantic(ShaderSemantic::SEMANTIC_TEXCOORD0)->buffer().m_handle  },
-        //        DescriptorData{ .pName = "vtxOpaqueColor", .ppBuffers = &opaqueSet.getStreamBySemantic(ShaderSemantic::SEMANTIC_COLOR)->buffer().m_handle },
+                //DescriptorData{ .pName = "vtxOpaqueColor", .ppBuffers = &opaqueSet.getStreamBySemantic(ShaderSemantic::SEMANTIC_COLOR)->buffer().m_handle },
             };
             updateDescriptorSet(forgeRenderer->Rend(), 0, m_sceneDescriptorConstSet.m_handle, params.size(), params.data());
         }
@@ -403,24 +497,24 @@ namespace hpl {
                     renderTargetDesc.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
                     renderTargetDesc.mFormat = TinyImageFormat_R8G8B8A8_UNORM;
                     renderTargetDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+                    renderTargetDesc.pName = "output RT";
                     addRenderTarget(forgeRenderer->Rend(), &renderTargetDesc, target);
                     return true;
                 });
 
                 updateDatum->m_testBuffer[i].Load(forgeRenderer->Rend(), [&](RenderTarget** target) {
-                    ClearValue optimizedColorClearBlack = { { 0.0f, 0.0f, 0.0f, 0.0f } };
                     RenderTargetDesc renderTargetDesc = {};
                     renderTargetDesc.mArraySize = 1;
-                    renderTargetDesc.mClearValue = optimizedColorClearBlack;
+                    renderTargetDesc.mClearValue = { .depth = 1.0f, .stencil = 0 };
                     renderTargetDesc.mDepth = 1;
                     renderTargetDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
                     renderTargetDesc.mWidth = updateDatum->m_size.x;
                     renderTargetDesc.mHeight = updateDatum->m_size.y;
                     renderTargetDesc.mSampleCount = SAMPLE_COUNT_1;
                     renderTargetDesc.mSampleQuality = 0;
+                    renderTargetDesc.mFormat = TinyImageFormat_R16G16B16A16_SFLOAT;
                     renderTargetDesc.mStartState = RESOURCE_STATE_RENDER_TARGET;
-                    renderTargetDesc.mFormat = TinyImageFormat_R32_UINT;
-                    renderTargetDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+                    renderTargetDesc.pName = "parallax RT";
                     addRenderTarget(forgeRenderer->Rend(), &renderTargetDesc, target);
                     return true;
                 });
@@ -462,11 +556,12 @@ namespace hpl {
             viewportDatum = m_boundViewportData.update(viewport, std::move(updateDatum));
         }
         {
-          std::array params = {
-                DescriptorData{ .pName = "visibilityTexture", .ppTextures = &viewportDatum->m_visiblityBuffer[frame.m_frameIndex].m_handle->pTexture },
+            std::array params = {
+                DescriptorData{ .pName = "visibilityTexture",
+                                .ppTextures = &viewportDatum->m_visiblityBuffer[frame.m_frameIndex].m_handle->pTexture },
             };
-            updateDescriptorSet(forgeRenderer->Rend(), 0,
-                               m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle, params.size(), params.data());
+            updateDescriptorSet(
+                forgeRenderer->Rend(), 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle, params.size(), params.data());
         }
         {
             BufferUpdateDesc updateDesc = {m_perSceneInfoBuffer[frame.m_frameIndex].m_handle, 0,
@@ -481,14 +576,14 @@ namespace hpl {
             sceneInfo->m_worldInfo.m_fogFalloffExp = apWorld->GetFogFalloffExp();
 
             auto& primaryViewport = sceneInfo->m_viewports[resource::ViewportInfo::PrmaryViewportIndex];
-            primaryViewport.m_invViewMat = inverse(apFrustum->GetViewMat());
             primaryViewport.m_viewMat = apFrustum->GetViewMat();
             primaryViewport.m_projMat = apFrustum->GetProjectionMat();
-            primaryViewport.m_invViewProj = primaryViewport.m_projMat * primaryViewport.m_viewMat;
+            primaryViewport.m_invViewMat = inverse(apFrustum->GetViewMat());
+            primaryViewport.m_invViewProj= inverse(primaryViewport.m_projMat * primaryViewport.m_viewMat);
             primaryViewport.m_zFar = apFrustum->GetFarPlane();
             primaryViewport.m_zNear = apFrustum->GetNearPlane();
             primaryViewport.m_rect = float4(0.0f,0.0f, static_cast<float>(viewportDatum->m_size.x), static_cast<float>(viewportDatum->m_size.y));
-
+            primaryViewport.m_cameraPosition = v3ToF3(cMath::ToForgeVec3(apFrustum->GetOrigin()));
             endUpdateResource(&updateDesc);
         }
 
@@ -512,20 +607,20 @@ namespace hpl {
                 eRenderListCompileFlag_Illumination | eRenderListCompileFlag_FogArea);
         }
 
-        std::vector<iRenderable*> postTranslucenctRenderables;
-        uint32_t m_indirectStartIndex = 0;
+        std::vector<iRenderable*> translucenctRenderables;
+        RangeSubsetAlloc indirectAllocSession(m_indirectDrawIndex);
+
         for(auto& renderable: m_rendererList.GetSolidObjects()) {
             cMaterial* material = renderable->GetMaterial();
             if(!material ||
                 renderable->GetCoverageAmount() < 1.0 ||
                 cMaterial::IsTranslucent(material->Descriptor().m_id) ||
                 material->GetImage(eMaterialTexture_Alpha)) {
-                postTranslucenctRenderables.push_back(renderable);
+                translucenctRenderables.push_back(renderable);
                 continue;
             }
 
-            std::array targets = { eVertexBufferElement_Position };
-            DrawPacket packet = renderable->ResolveDrawPacket(frame, targets);
+            DrawPacket packet = renderable->ResolveDrawPacket(frame);
             if(packet.m_type == DrawPacket::Unknown) {
                 continue;
             }
@@ -533,7 +628,7 @@ namespace hpl {
             ASSERT(material->Descriptor().m_id == MaterialID::SolidDiffuse && "Invalid material type");
             ASSERT(packet.m_type == DrawPacket::DrawPacketType::DrawGeometryset);
             ASSERT(packet.m_unified.m_set == GraphicsAllocator::AllocationSet::OpaqueSet);
-            BufferUpdateDesc updateDesc = {m_indirectDrawArgsBuffer[frame.m_frameIndex].m_handle, (m_indirectDrawIndex++) * sizeof(IndirectDrawIndexArguments),
+            BufferUpdateDesc updateDesc = {m_indirectDrawArgsBuffer[frame.m_frameIndex].m_handle,  indirectAllocSession.Increment() * sizeof(IndirectDrawIndexArguments),
                                            sizeof(IndirectDrawIndexArguments)  };
             beginUpdateResource(&updateDesc);
             auto* indirectDrawArgs = reinterpret_cast<IndirectDrawIndexArguments*>(updateDesc.pMappedData);
@@ -544,6 +639,34 @@ namespace hpl {
             indirectDrawArgs->mInstanceCount = 1;
             endUpdateResource(&updateDesc);
         }
+        RangeSubsetAlloc::RangeSubset opaqueIndirectArgs = indirectAllocSession.End();
+
+        for(auto& renderable: translucenctRenderables) {
+            cMaterial* material = renderable->GetMaterial();
+            if(!material) {
+                continue;
+            }
+            DrawPacket packet = renderable->ResolveDrawPacket(frame);
+            if(packet.m_type == DrawPacket::Unknown) {
+                continue;
+            }
+
+            ASSERT(material->Descriptor().m_id == MaterialID::SolidDiffuse && "Invalid material type");
+            ASSERT(packet.m_type == DrawPacket::DrawPacketType::DrawGeometryset);
+            ASSERT(packet.m_unified.m_set == GraphicsAllocator::AllocationSet::OpaqueSet);
+            BufferUpdateDesc updateDesc = {m_indirectDrawArgsBuffer[frame.m_frameIndex].m_handle,  indirectAllocSession.Increment() * sizeof(IndirectDrawIndexArguments),
+                                           sizeof(IndirectDrawIndexArguments)  };
+            beginUpdateResource(&updateDesc);
+            auto* indirectDrawArgs = reinterpret_cast<IndirectDrawIndexArguments*>(updateDesc.pMappedData);
+            indirectDrawArgs->mIndexCount = packet.m_unified.m_numIndices;
+            indirectDrawArgs->mStartIndex = packet.m_unified.m_subAllocation->indexOffset();
+            indirectDrawArgs->mVertexOffset = packet.m_unified.m_subAllocation->vertextOffset();
+            indirectDrawArgs->mStartInstance = resolveObjectIndex(frame, renderable, updateDesc.mDstOffset / sizeof(uint32_t), {}); // for DX12 this won't work
+            indirectDrawArgs->mInstanceCount = 1;
+            endUpdateResource(&updateDesc);
+
+        }
+        RangeSubsetAlloc::RangeSubset translucentIndirectArgs = indirectAllocSession.End();
 
         {
             cmdBindRenderTargets(cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
@@ -555,27 +678,60 @@ namespace hpl {
         }
         {
             auto& opaqueSet = graphicsAllocator->resolveSet(GraphicsAllocator::AllocationSet::OpaqueSet);
-            std::array semantics = { ShaderSemantic::SEMANTIC_POSITION };
             cmdBeginDebugMarker(cmd, 0, 1, 0, "Visibility Buffer Pass");
-            LoadActionsDesc loadActions = {};
-            loadActions.mLoadActionsColor[0] = LOAD_ACTION_CLEAR;
-            loadActions.mLoadActionsColor[1] = LOAD_ACTION_CLEAR;
-            loadActions.mClearColorValues[0] = { .r = 1.0f, .g = 1.0f, .b = 1.0f, .a = 1.0f };
-            loadActions.mClearDepth = { .depth = 1.0f, .stencil = 0 };
-            loadActions.mLoadActionDepth = LOAD_ACTION_CLEAR;
-            std::array targets = {
-                viewportDatum->m_visiblityBuffer[frame.m_frameIndex].m_handle
-            };
-            cmdBindRenderTargets(cmd, targets.size(), targets.data(), viewportDatum->m_depthBuffer[frame.m_frameIndex].m_handle, &loadActions, NULL, NULL, -1, -1);
-            cmdSetViewport(cmd, 0.0f, 0.0f, viewportDatum->m_size.x, viewportDatum->m_size.y, 0.0f, 1.0f);
-            cmdSetScissor(cmd, 0, 0, viewportDatum->m_size.x, viewportDatum->m_size.y);
+            {
+                std::array semantics = { ShaderSemantic::SEMANTIC_POSITION };
+                LoadActionsDesc loadActions = {};
+                loadActions.mLoadActionsColor[0] = LOAD_ACTION_CLEAR;
+                loadActions.mLoadActionsColor[1] = LOAD_ACTION_CLEAR;
+                loadActions.mClearColorValues[0] = { .r = 1.0f, .g = 1.0f, .b = 1.0f, .a = 1.0f };
+                loadActions.mClearDepth = { .depth = 1.0f, .stencil = 0 };
+                loadActions.mLoadActionDepth = LOAD_ACTION_CLEAR;
 
-            cmdBindPipeline(cmd, m_visibilityBufferPass.m_handle);
-            opaqueSet.cmdBindGeometrySet(cmd, semantics);
-            cmdBindIndexBuffer(cmd, opaqueSet.indexBuffer().m_handle, INDEX_TYPE_UINT32, 0);
-            cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorConstSet.m_handle);
-            cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
-		    cmdExecuteIndirect(cmd, m_cmdSignatureVBPass, m_indirectDrawIndex - m_indirectStartIndex, m_indirectDrawArgsBuffer[frame.m_frameIndex].m_handle, m_indirectStartIndex * sizeof(IndirectDrawIndexArguments) , nullptr, 0);
+                std::array targets = {
+                    viewportDatum->m_visiblityBuffer[frame.m_frameIndex].m_handle
+                };
+                cmdBindRenderTargets(cmd, targets.size(), targets.data(), viewportDatum->m_depthBuffer[frame.m_frameIndex].m_handle, &loadActions, NULL, NULL, -1, -1);
+                cmdSetViewport(cmd, 0.0f, 0.0f, viewportDatum->m_size.x, viewportDatum->m_size.y, 0.0f, 1.0f);
+                cmdSetScissor(cmd, 0, 0, viewportDatum->m_size.x, viewportDatum->m_size.y);
+
+                cmdBindPipeline(cmd, m_visibilityBufferPass.m_handle);
+                opaqueSet.cmdBindGeometrySet(cmd, semantics);
+                cmdBindIndexBuffer(cmd, opaqueSet.indexBuffer().m_handle, INDEX_TYPE_UINT32, 0);
+                cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorConstSet.m_handle);
+                cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
+		        cmdExecuteIndirect(cmd, m_cmdSignatureVBPass,  opaqueIndirectArgs.size(), m_indirectDrawArgsBuffer[frame.m_frameIndex].m_handle, opaqueIndirectArgs.m_start * sizeof(IndirectDrawIndexArguments) , nullptr, 0);
+            }
+            {
+                std::array semantics = {
+                    ShaderSemantic::SEMANTIC_POSITION,
+                    ShaderSemantic::SEMANTIC_TEXCOORD0,
+                    ShaderSemantic::SEMANTIC_NORMAL,
+                    ShaderSemantic::SEMANTIC_TANGENT
+                };
+                LoadActionsDesc loadActions = {};
+                loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
+                loadActions.mLoadActionsColor[1] = LOAD_ACTION_CLEAR;
+                loadActions.mClearColorValues[0] = { .r = 1.0f, .g = 1.0f, .b = 1.0f, .a = 1.0f };
+                loadActions.mClearColorValues[1] = { .r = 0.0f, .g = 0.0f, .b = 0.0f, .a = 0.0f };
+                loadActions.mClearDepth = { .depth = 1.0f, .stencil = 0 };
+                loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
+
+                std::array targets = {
+                    viewportDatum->m_visiblityBuffer[frame.m_frameIndex].m_handle,
+                    viewportDatum->m_testBuffer[frame.m_frameIndex].m_handle
+                };
+                cmdBindRenderTargets(cmd, targets.size(), targets.data(), viewportDatum->m_depthBuffer[frame.m_frameIndex].m_handle, &loadActions, NULL, NULL, -1, -1);
+                cmdSetViewport(cmd, 0.0f, 0.0f, viewportDatum->m_size.x, viewportDatum->m_size.y, 0.0f, 1.0f);
+                cmdSetScissor(cmd, 0, 0, viewportDatum->m_size.x, viewportDatum->m_size.y);
+
+                cmdBindPipeline(cmd, m_visbilityAlphaBufferPass.m_handle);
+                opaqueSet.cmdBindGeometrySet(cmd, semantics);
+                cmdBindIndexBuffer(cmd, opaqueSet.indexBuffer().m_handle, INDEX_TYPE_UINT32, 0);
+                cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorConstSet.m_handle);
+                cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
+		        cmdExecuteIndirect(cmd, m_cmdSignatureVBPass,  translucentIndirectArgs.size(), m_indirectDrawArgsBuffer[frame.m_frameIndex].m_handle, translucentIndirectArgs.m_start * sizeof(IndirectDrawIndexArguments) , nullptr, 0);
+            }
             cmdEndDebugMarker(cmd);
         }
         {

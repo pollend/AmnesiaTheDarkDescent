@@ -1,0 +1,23 @@
+#ifndef _MATH_UTILITIES_H_
+#define _MATH_UTILITIES_H_
+
+INLINE float3x3 ToNormalMat(float4x4 invModel, float4x4 invView) {
+    return transpose(mul(float3x3(invModel[0].xyz, invModel[1].xyz, invModel[2].xyz), float3x3(invView[0].xyz, invView[1].xyz, invView[2].xyz)));
+}
+
+float Fresnel(float afEDotN, float afFresnelBias, float afFresnelPow)
+{
+    float fFacing = 1.0 - afEDotN;
+    return max(afFresnelBias+ (1.0-afFresnelBias)* pow(abs(fFacing),afFresnelPow), 0.0); 
+}
+
+float3 WorldSpaceToTangent(float3 dir, float3 normal, float3 tangent, float3 bitangent)
+{
+    float a = dot(tangent, dir);
+    float b = dot(bitangent, dir);
+    float c = dot(normal, dir);
+
+    return float3(a,b,c);
+}
+
+#endif

@@ -33,8 +33,8 @@ class DebugDraw final {
             Count
         };
 
-        static constexpr uint32_t ImmediateVertexBufferSize = 1 << 25;
-        static constexpr uint32_t ImmediateIndexBufferSize = 1 << 23;
+        static constexpr uint32_t ImmediateVertexBufferSize = 1 << 10;
+        static constexpr uint32_t ImmediateIndexBufferSize = 1 << 10;
         static constexpr uint32_t NumberOfPerFrameUniforms = 32;
         static constexpr uint32_t NumberOfTextureUnits = 512;
 

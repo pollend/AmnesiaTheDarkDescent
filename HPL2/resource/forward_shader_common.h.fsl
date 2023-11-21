@@ -23,7 +23,7 @@ STRUCT(DiffuseMaterial) {
     DATA(float, frenselBias, None);
     DATA(float, frenselPow, None);
 };
-uint DiffuseMaterial_DiffuseTexture_ID(DiffuseMaterial mat) {return (mat.tex[0] & 0xffff);}
+uint DiffuseMaterial_DiffuseTexture_ID(DiffuseMaterial mat) {return (mat.tex[0] & 0xffff); }
 uint DiffuseMaterial_NormalTexture_ID(DiffuseMaterial mat) {return ((mat.tex[0] >> 16) & 0xffff);}
 uint DiffuseMaterial_AlphaTexture_ID(DiffuseMaterial mat) {return (mat.tex[1] & 0xffff);}
 uint DiffuseMaterial_SpecularTexture_ID(DiffuseMaterial mat) {return ((mat.tex[1] >> 16) & 0xffff);}

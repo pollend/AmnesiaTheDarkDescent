@@ -91,9 +91,9 @@ namespace hpl {
 
 	//-----------------------------------------------------------------------
 
-    DrawPacket cRopeEntity::ResolveDrawPacket(const ForgeRenderer::Frame& frame,std::span<eVertexBufferElement> elements)  {
+    DrawPacket cRopeEntity::ResolveDrawPacket(const ForgeRenderer::Frame& frame)  {
 
-	    return static_cast<LegacyVertexBuffer*>(mpVtxBuffer)->resolveGeometryBinding(frame.m_currentFrame, elements);
+	    return static_cast<LegacyVertexBuffer*>(mpVtxBuffer)->resolveGeometryBinding(frame.m_currentFrame);
     }
 
     cRopeEntity::~cRopeEntity()

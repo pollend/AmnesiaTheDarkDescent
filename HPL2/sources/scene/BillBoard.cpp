@@ -128,8 +128,8 @@ namespace hpl {
 	}
 
 
-    DrawPacket cBillboard::ResolveDrawPacket(const ForgeRenderer::Frame& frame,std::span<eVertexBufferElement> elements)  {
-	    return static_cast<LegacyVertexBuffer*>(mpVtxBuffer)->resolveGeometryBinding(frame.m_currentFrame, elements);
+    DrawPacket cBillboard::ResolveDrawPacket(const ForgeRenderer::Frame& frame)  {
+	    return static_cast<LegacyVertexBuffer*>(mpVtxBuffer)->resolveGeometryBinding(frame.m_currentFrame);
     }
 
     void cBillboard::SetSize(const cVector2f& avSize)

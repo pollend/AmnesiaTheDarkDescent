@@ -63,6 +63,7 @@ namespace hpl {
     class cRendererDeferred2 : public iRenderer {
         HPL_RTTI_IMPL_CLASS(iRenderer, cRendererDeferred, "{B3E5E5A1-1F9C-4F5C-9B9B-5B9B9B5B9B9B}")
     public:
+
         static constexpr TinyImageFormat DepthBufferFormat = TinyImageFormat_D32_SFLOAT_S8_UINT;
         static constexpr TinyImageFormat NormalBufferFormat = TinyImageFormat_R16G16B16A16_SFLOAT;
         static constexpr TinyImageFormat PositionBufferFormat = TinyImageFormat_R32G32B32A32_SFLOAT;
@@ -102,7 +103,7 @@ namespace hpl {
             uint2 m_size = uint2(0, 0);
             std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_outputBuffer;
             std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_depthBuffer;
-            std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_testBuffer;
+            std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_testBuffer; //encodes the parallax
             std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_visiblityBuffer;
         };
 
@@ -151,9 +152,11 @@ namespace hpl {
         std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_sceneDescriptorPerFrameSet;
 
         SharedShader m_visibilityBufferPassShader;
+        SharedShader m_visibilityBufferAlphaPassShader;
         SharedShader m_visibilityShadePassShader;
 
         SharedPipeline m_visibilityBufferPass;
+        SharedPipeline m_visbilityAlphaBufferPass;
         SharedPipeline m_visiblityShadePass;
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_objectUniformBuffer;
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_perSceneInfoBuffer;

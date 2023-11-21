@@ -320,13 +320,13 @@ namespace hpl {
         for (auto& diffuseItem : m_rendererList.GetRenderableItems(eRenderListType_Diffuse)) {
             cMaterial* pMaterial = diffuseItem->GetMaterial();
             std::array targets = { eVertexBufferElement_Position };
-            DrawPacket packet = diffuseItem->ResolveDrawPacket(frame, targets);
+            DrawPacket packet = diffuseItem->ResolveDrawPacket(frame);
             if (pMaterial == nullptr || packet.m_type == DrawPacket::Unknown) {
                 continue;
             }
             ASSERT(pMaterial->Descriptor().m_id == MaterialID::SolidDiffuse && "Invalid material type");
 
-            DrawPacket::cmdBindBuffers(frame.m_cmd, frame.m_resourcePool, &packet);
+            DrawPacket::cmdBindBuffers(frame.m_cmd, frame.m_resourcePool, &packet, targets);
             uint32_t objectIndex = prepareObjectData(frame, diffuseItem);
             cmdBindPushConstants(frame.m_cmd, m_rootSignature.m_handle, rootConstantIndex, &objectIndex);
             cmdDrawIndexed(frame.m_cmd, packet.numberOfIndecies(), 0, 0);
