@@ -1,10 +1,8 @@
 #pragma once
 
-
 #include "graphics/GraphicsTypes.h"
 #include "graphics/TextureDescriptorPool.h"
 #include "graphics/Material.h"
-
 
 #include "Common_3/Utilities/Math/MathTypes.h"
 #include <FixPreprocessor.h>
@@ -35,6 +33,8 @@ namespace hpl::resource {
 
     uint32_t constexpr IsAlphaSingleChannel = 0x1;
     uint32_t constexpr IsHeightSingleChannel = 0x2;
+    uint32_t constexpr UseAlphaDissolveFilter = 0x4;
+
     struct ViewportInfo {
         static constexpr uint32_t PrmaryViewportIndex = 0;
         mat4 m_invViewMat;
@@ -74,6 +74,14 @@ namespace hpl::resource {
         mat4 m_modelMat;
         mat4 m_invModelMat;
         mat4 m_uvMat;
+    };
+
+    struct ScenePointLight {
+        mat4 m_mvp;
+        float3 m_lightPos;
+        uint m_config;
+        float4 m_lightColor;
+        float m_radius;
     };
 
     struct DiffuseMaterial {

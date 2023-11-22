@@ -1,15 +1,18 @@
 #include "graphics/RendererDeferred2.h"
-#include "Common_3/Graphics/Interfaces/IGraphics.h"
-#include "Common_3/Resources/ResourceLoader/Interfaces/IResourceLoader.h"
-#include "Common_3/Utilities/ThirdParty/OpenSource/ModifiedSonyMath/common.hpp"
 #include "graphics/DrawPacket.h"
 #include "graphics/ForgeRenderer.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/SceneResource.h"
 #include "graphics/TextureDescriptorPool.h"
+#include "resources/TextureManager.h"
 #include "scene/RenderableContainer.h"
 #include "tinyimageformat_base.h"
 #include <memory>
+
+#include "Common_3/Graphics/Interfaces/IGraphics.h"
+#include "Common_3/Resources/ResourceLoader/Interfaces/IResourceLoader.h"
+#include "Common_3/Utilities/ThirdParty/OpenSource/ModifiedSonyMath/common.hpp"
+#include "FixPreprocessor.h"
 
 namespace hpl {
     struct RangeSubsetAlloc {
@@ -17,12 +20,15 @@ namespace hpl {
         struct RangeSubset {
             uint32_t m_start;
             uint32_t m_end;
-            inline uint32_t size() { return m_end - m_start; }
-
+            inline uint32_t size() {
+                return m_end - m_start;
+            }
         };
         uint32_t& m_index;
         uint32_t m_start;
-        RangeSubsetAlloc(uint32_t& index): m_index(index), m_start(index) {
+        RangeSubsetAlloc(uint32_t& index)
+            : m_index(index)
+            , m_start(index) {
         }
         uint32_t Increment() {
             return (m_index++);
@@ -30,7 +36,7 @@ namespace hpl {
         RangeSubset End() {
             uint32_t start = m_start;
             m_start = m_index;
-            return RangeSubset{start, m_index};
+            return RangeSubset{ start, m_index };
         }
     };
 
@@ -50,7 +56,7 @@ namespace hpl {
             vbPassDesc.mPacked = true;
             addIndirectCommandSignature(forgeRenderer->Rend(), &vbPassDesc, &m_cmdSignatureVBPass);
         }
-        m_nearEdgeClamp.Load(forgeRenderer->Rend(), [&](Sampler** sampler) {
+        m_samplerNearEdgeClamp.Load(forgeRenderer->Rend(), [&](Sampler** sampler) {
             SamplerDesc bilinearClampDesc = { FILTER_NEAREST,
                                               FILTER_NEAREST,
                                               MIPMAP_MODE_NEAREST,
@@ -60,7 +66,13 @@ namespace hpl {
             addSampler(forgeRenderer->Rend(), &bilinearClampDesc, sampler);
             return true;
         });
-
+        m_samplerPointWrap.Load(forgeRenderer->Rend(), [&](Sampler** sampler) {
+            SamplerDesc pointSamplerDesc = { FILTER_NEAREST,      FILTER_NEAREST,      MIPMAP_MODE_NEAREST,
+                                             ADDRESS_MODE_REPEAT, ADDRESS_MODE_REPEAT, ADDRESS_MODE_REPEAT };
+            addSampler(forgeRenderer->Rend(), &pointSamplerDesc, sampler);
+            return true;
+        });
+        m_dissolveImage = mpResources->GetTextureManager()->Create2DImage("core_dissolve.tga", false);
         m_emptyTexture.Load([&](Texture** texture) {
             TextureDesc textureDesc = {};
             textureDesc.mArraySize = 1;
@@ -87,6 +99,18 @@ namespace hpl {
             addShader(forgeRenderer->Rend(), &loadDesc, shader);
             return true;
         });
+        m_lightClusterShader.Load(forgeRenderer->Rend(), [&](Shader** shader) {
+            ShaderLoadDesc loadDesc = {};
+            loadDesc.mStages[0].pFileName = "scene_light_cluster.comp";
+            addShader(forgeRenderer->Rend(), &loadDesc, shader);
+            return true;
+        });
+        m_clearLightClusterShader.Load(forgeRenderer->Rend(), [&](Shader** shader) {
+            ShaderLoadDesc loadDesc = {};
+            loadDesc.mStages[0].pFileName = "scene_light_cluster_clear.comp";
+            addShader(forgeRenderer->Rend(), &loadDesc, shader);
+            return true;
+        });
 
         m_visibilityBufferAlphaPassShader.Load(forgeRenderer->Rend(), [&](Shader** shader) {
             ShaderLoadDesc loadDesc = {};
@@ -104,9 +128,13 @@ namespace hpl {
             return true;
         });
         m_sceneRootSignature.Load(forgeRenderer->Rend(), [&](RootSignature** signature) {
-            std::array shaders = { m_visibilityBufferAlphaPassShader.m_handle ,m_visibilityBufferPassShader.m_handle, m_visibilityShadePassShader.m_handle };
-            Sampler* vbShadeSceneSamplers[] = { m_nearEdgeClamp.m_handle };
-            const char* vbShadeSceneSamplersNames[] = { "linearBorderClamp" };
+            std::array shaders = { m_lightClusterShader.m_handle,
+                                   m_clearLightClusterShader.m_handle,
+                                   m_visibilityBufferAlphaPassShader.m_handle,
+                                   m_visibilityBufferPassShader.m_handle,
+                                   m_visibilityShadePassShader.m_handle };
+            Sampler* vbShadeSceneSamplers[] = { m_samplerNearEdgeClamp.m_handle };
+            const char* vbShadeSceneSamplersNames[] = { "nearEdgeClampSampler", "pointWrapSampler" };
             RootSignatureDesc rootSignatureDesc = {};
             rootSignatureDesc.ppShaders = shaders.data();
             rootSignatureDesc.mShaderCount = shaders.size();
@@ -117,10 +145,7 @@ namespace hpl {
             return true;
         });
         m_visiblityShadePass.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
-            std::array colorFormats = {
-                ColorBufferFormat,
-                TinyImageFormat_R16G16B16A16_SFLOAT
-            };
+            std::array colorFormats = { ColorBufferFormat, TinyImageFormat_R16G16B16A16_SFLOAT };
             RasterizerStateDesc rasterizerStateDesc = {};
             rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
             rasterizerStateDesc.mFrontFace = FRONT_FACE_CCW;
@@ -148,45 +173,25 @@ namespace hpl {
         m_visbilityAlphaBufferPass.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
             VertexLayout vertexLayout = {};
             vertexLayout.mBindingCount = 4;
-            vertexLayout.mBindings[0] = {.mStride = sizeof(float3)};
-            vertexLayout.mBindings[1] = {.mStride = sizeof(float2)};
-            vertexLayout.mBindings[2] = {.mStride = sizeof(float3)};
-            vertexLayout.mBindings[3] = {.mStride = sizeof(float3)};
+            vertexLayout.mBindings[0] = { .mStride = sizeof(float3) };
+            vertexLayout.mBindings[1] = { .mStride = sizeof(float2) };
+            vertexLayout.mBindings[2] = { .mStride = sizeof(float3) };
+            vertexLayout.mBindings[3] = { .mStride = sizeof(float3) };
             vertexLayout.mAttribCount = 4;
-            vertexLayout.mAttribs[0] = VertexAttrib {
-                .mSemantic = SEMANTIC_POSITION,
-                .mFormat = TinyImageFormat_R32G32B32_SFLOAT,
-                .mBinding = 0,
-                .mLocation = 0,
-                .mOffset = 0
+            vertexLayout.mAttribs[0] = VertexAttrib{
+                .mSemantic = SEMANTIC_POSITION, .mFormat = TinyImageFormat_R32G32B32_SFLOAT, .mBinding = 0, .mLocation = 0, .mOffset = 0
             };
-            vertexLayout.mAttribs[1] = VertexAttrib {
-                .mSemantic = SEMANTIC_TEXCOORD0,
-                .mFormat = TinyImageFormat_R32G32_SFLOAT,
-                .mBinding = 1,
-                .mLocation = 1,
-                .mOffset = 0
+            vertexLayout.mAttribs[1] = VertexAttrib{
+                .mSemantic = SEMANTIC_TEXCOORD0, .mFormat = TinyImageFormat_R32G32_SFLOAT, .mBinding = 1, .mLocation = 1, .mOffset = 0
             };
-            vertexLayout.mAttribs[2] = VertexAttrib {
-                .mSemantic = SEMANTIC_NORMAL,
-                .mFormat = TinyImageFormat_R32G32B32_SFLOAT,
-                .mBinding = 2,
-                .mLocation = 2,
-                .mOffset = 0
+            vertexLayout.mAttribs[2] = VertexAttrib{
+                .mSemantic = SEMANTIC_NORMAL, .mFormat = TinyImageFormat_R32G32B32_SFLOAT, .mBinding = 2, .mLocation = 2, .mOffset = 0
             };
-            vertexLayout.mAttribs[3] = VertexAttrib {
-                .mSemantic = SEMANTIC_TANGENT,
-                .mFormat = TinyImageFormat_R32G32B32_SFLOAT,
-                .mBinding = 3,
-                .mLocation = 3,
-                .mOffset = 0
+            vertexLayout.mAttribs[3] = VertexAttrib{
+                .mSemantic = SEMANTIC_TANGENT, .mFormat = TinyImageFormat_R32G32B32_SFLOAT, .mBinding = 3, .mLocation = 3, .mOffset = 0
             };
             std::array colorFormats = { ColorBufferFormat, TinyImageFormat_R8G8_UNORM };
-            DepthStateDesc depthStateDesc = {
-                .mDepthTest = true,
-                .mDepthWrite = true,
-                .mDepthFunc = CMP_LEQUAL
-            };
+            DepthStateDesc depthStateDesc = { .mDepthTest = true, .mDepthWrite = true, .mDepthFunc = CMP_LEQUAL };
 
             RasterizerStateDesc rasterizerStateDesc = {};
             rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
@@ -213,23 +218,13 @@ namespace hpl {
         m_visibilityBufferPass.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
             VertexLayout vertexLayout = {};
             vertexLayout.mBindingCount = 1;
-            vertexLayout.mBindings[0] = {
-                .mStride = sizeof(float3)
-            };
+            vertexLayout.mBindings[0] = { .mStride = sizeof(float3) };
             vertexLayout.mAttribCount = 1;
-            vertexLayout.mAttribs[0] = VertexAttrib {
-                .mSemantic = SEMANTIC_POSITION,
-                .mFormat = TinyImageFormat_R32G32B32_SFLOAT,
-                .mBinding = 0,
-                .mLocation = 0,
-                .mOffset = 0
+            vertexLayout.mAttribs[0] = VertexAttrib{
+                .mSemantic = SEMANTIC_POSITION, .mFormat = TinyImageFormat_R32G32B32_SFLOAT, .mBinding = 0, .mLocation = 0, .mOffset = 0
             };
             std::array colorFormats = { ColorBufferFormat };
-            DepthStateDesc depthStateDesc = {
-                .mDepthTest = true,
-                .mDepthWrite = true,
-                .mDepthFunc = CMP_LEQUAL
-            };
+            DepthStateDesc depthStateDesc = { .mDepthTest = true, .mDepthWrite = true, .mDepthFunc = CMP_LEQUAL };
 
             RasterizerStateDesc rasterizerStateDesc = {};
             rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
@@ -254,11 +249,54 @@ namespace hpl {
             return true;
         });
 
-
         for (size_t i = 0; i < ForgeRenderer::SwapChainLength; i++) {
             ASSERT(m_objectUniformBuffer.size() == ForgeRenderer::SwapChainLength);
             ASSERT(m_perSceneInfoBuffer.size() == ForgeRenderer::SwapChainLength);
             ASSERT(m_indirectDrawArgsBuffer.size() == ForgeRenderer::SwapChainLength);
+            m_lightClustersBuffer[i].Load([&](Buffer** buffer) {
+                BufferLoadDesc bufferDesc = {};
+                bufferDesc.mDesc.mElementCount = LightClusterLightCount * LightClusterWidth * LightClusterHeight;
+                bufferDesc.mDesc.mSize = bufferDesc.mDesc.mElementCount * sizeof(uint32_t);
+                bufferDesc.mDesc.mDescriptors = DESCRIPTOR_TYPE_BUFFER_RAW | DESCRIPTOR_TYPE_RW_BUFFER;
+                bufferDesc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_GPU_ONLY;
+                bufferDesc.mDesc.mFirstElement = 0;
+                bufferDesc.mDesc.mStructStride = sizeof(uint32_t);
+                bufferDesc.mDesc.mStartState = RESOURCE_STATE_UNORDERED_ACCESS;
+                bufferDesc.mDesc.pName = "Light Cluster";
+                bufferDesc.ppBuffer = buffer;
+                addResource(&bufferDesc, nullptr);
+                return true;
+            });
+            m_lightClusterCountBuffer[i].Load([&](Buffer** buffer) {
+                BufferLoadDesc bufferDesc = {};
+                bufferDesc.mDesc.mElementCount = LightClusterWidth * LightClusterHeight;
+                bufferDesc.mDesc.mSize = bufferDesc.mDesc.mElementCount * sizeof(uint32_t);
+                bufferDesc.mDesc.mDescriptors = DESCRIPTOR_TYPE_BUFFER_RAW | DESCRIPTOR_TYPE_RW_BUFFER;
+                bufferDesc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_GPU_ONLY;
+                bufferDesc.mDesc.mFirstElement = 0;
+                bufferDesc.mDesc.mStructStride = sizeof(uint32_t);
+                bufferDesc.mDesc.mStartState = RESOURCE_STATE_UNORDERED_ACCESS;
+                bufferDesc.pData = nullptr;
+                bufferDesc.mDesc.pName = "Light Cluster Count";
+                bufferDesc.ppBuffer = buffer;
+                addResource(&bufferDesc, nullptr);
+                return true;
+            });
+            m_pointLightBuffer[i].Load([&](Buffer** buffer) {
+                BufferLoadDesc bufferDesc = {};
+                bufferDesc.mDesc.mDescriptors = DESCRIPTOR_TYPE_BUFFER_RAW | DESCRIPTOR_TYPE_RW_BUFFER;
+                bufferDesc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
+                bufferDesc.mDesc.mFirstElement = 0;
+                bufferDesc.mDesc.mStructStride = sizeof(resource::ScenePointLight);
+                bufferDesc.mDesc.mElementCount = PointLightCount;
+                bufferDesc.mDesc.mSize = bufferDesc.mDesc.mElementCount * bufferDesc.mDesc.mStructStride;
+                bufferDesc.mDesc.mStartState = RESOURCE_STATE_UNORDERED_ACCESS;
+                bufferDesc.pData = nullptr;
+                bufferDesc.mDesc.pName = "Point Light";
+                bufferDesc.ppBuffer = buffer;
+                addResource(&bufferDesc, nullptr);
+                return true;
+            });
 
             m_objectUniformBuffer[i].Load([&](Buffer** buffer) {
                 BufferLoadDesc desc = {};
@@ -338,8 +376,8 @@ namespace hpl {
                 DescriptorData{ .pName = "sceneInfo", .ppBuffers = &m_perSceneInfoBuffer[swapchainIndex].m_handle },
                 DescriptorData{ .pName = "indirectDrawArgs", .ppBuffers = &m_indirectDrawArgsBuffer[swapchainIndex].m_handle },
             };
-            updateDescriptorSet(forgeRenderer->Rend(), 0,
-                               m_sceneDescriptorPerFrameSet[swapchainIndex].m_handle, params.size(), params.data());
+            updateDescriptorSet(
+                forgeRenderer->Rend(), 0, m_sceneDescriptorPerFrameSet[swapchainIndex].m_handle, params.size(), params.data());
         }
         {
             std::array<Sampler*, resource::MaterailSamplerNonAntistropyCount> samplers;
@@ -358,14 +396,20 @@ namespace hpl {
             auto& opaqueSet = graphicsAllocator->resolveSet(GraphicsAllocator::AllocationSet::OpaqueSet);
 
             std::array params = {
+                DescriptorData{ .pName = "dissolveTexture", .ppTextures = &m_dissolveImage->GetTexture().m_handle },
                 DescriptorData{ .pName = "sceneDiffuseMat", .ppBuffers = &m_diffuseSolidMaterialUniformBuffer.m_handle },
-                DescriptorData{ .pName = "sceneFilters", .mCount = samplers.size(), .ppSamplers = samplers.data()},
+                DescriptorData{ .pName = "sceneFilters", .mCount = samplers.size(), .ppSamplers = samplers.data() },
                 DescriptorData{ .pName = "vtxOpaqueIndex", .ppBuffers = &opaqueSet.indexBuffer().m_handle },
-                DescriptorData{ .pName = "vtxOpaquePosition", .ppBuffers = &opaqueSet.getStreamBySemantic(ShaderSemantic::SEMANTIC_POSITION)->buffer().m_handle },
-                DescriptorData{ .pName = "vtxOpaqueTangnet", .ppBuffers  = &opaqueSet.getStreamBySemantic(ShaderSemantic::SEMANTIC_TANGENT)->buffer().m_handle },
-                DescriptorData{ .pName = "vtxOpaqueNormal", .ppBuffers  = &opaqueSet.getStreamBySemantic(ShaderSemantic::SEMANTIC_NORMAL)->buffer().m_handle },
-                DescriptorData{ .pName = "vtxOpaqueUv", .ppBuffers = &opaqueSet.getStreamBySemantic(ShaderSemantic::SEMANTIC_TEXCOORD0)->buffer().m_handle  },
-                //DescriptorData{ .pName = "vtxOpaqueColor", .ppBuffers = &opaqueSet.getStreamBySemantic(ShaderSemantic::SEMANTIC_COLOR)->buffer().m_handle },
+                DescriptorData{ .pName = "vtxOpaquePosition",
+                                .ppBuffers = &opaqueSet.getStreamBySemantic(ShaderSemantic::SEMANTIC_POSITION)->buffer().m_handle },
+                DescriptorData{ .pName = "vtxOpaqueTangnet",
+                                .ppBuffers = &opaqueSet.getStreamBySemantic(ShaderSemantic::SEMANTIC_TANGENT)->buffer().m_handle },
+                DescriptorData{ .pName = "vtxOpaqueNormal",
+                                .ppBuffers = &opaqueSet.getStreamBySemantic(ShaderSemantic::SEMANTIC_NORMAL)->buffer().m_handle },
+                DescriptorData{ .pName = "vtxOpaqueUv",
+                                .ppBuffers = &opaqueSet.getStreamBySemantic(ShaderSemantic::SEMANTIC_TEXCOORD0)->buffer().m_handle },
+                // DescriptorData{ .pName = "vtxOpaqueColor", .ppBuffers =
+                // &opaqueSet.getStreamBySemantic(ShaderSemantic::SEMANTIC_COLOR)->buffer().m_handle },
             };
             updateDescriptorSet(forgeRenderer->Rend(), 0, m_sceneDescriptorConstSet.m_handle, params.size(), params.data());
         }
@@ -401,7 +445,7 @@ namespace hpl {
     uint32_t cRendererDeferred2::resolveObjectIndex(
         const ForgeRenderer::Frame& frame, iRenderable* apObject, uint32_t drawArgOffset, std::optional<Matrix4> modelMatrix) {
         auto* forgeRenderer = Interface<ForgeRenderer>::Get();
-        cMaterial* material =  apObject->GetMaterial();
+        cMaterial* material = apObject->GetMaterial();
 
         ASSERT(material);
 
@@ -414,11 +458,11 @@ namespace hpl {
         const bool isFound = objectLookup != m_objectDescriptorLookup.end();
         uint32_t index = isFound ? objectLookup->second : m_objectIndex++;
         if (!isFound) {
-            Matrix4 modelMat = modelMatrix.value_or(apObject->GetModelMatrixPtr() ? cMath::ToForgeMatrix4(*apObject->GetModelMatrixPtr()) : Matrix4::identity());
+            Matrix4 modelMat = modelMatrix.value_or(
+                apObject->GetModelMatrixPtr() ? cMath::ToForgeMatrix4(*apObject->GetModelMatrixPtr()) : Matrix4::identity());
 
             auto& sceneMaterial = resolveMaterial(frame, material);
-            BufferUpdateDesc updateDesc = { m_objectUniformBuffer[frame.m_frameIndex].m_handle,
-                                            sizeof(resource::SceneObject) * index };
+            BufferUpdateDesc updateDesc = { m_objectUniformBuffer[frame.m_frameIndex].m_handle, sizeof(resource::SceneObject) * index };
             beginUpdateResource(&updateDesc);
             auto& uniformObjectData = (*reinterpret_cast<resource::SceneObject*>(updateDesc.pMappedData));
             uniformObjectData.m_dissolveAmount = apObject->GetCoverageAmount();
@@ -428,7 +472,7 @@ namespace hpl {
             uniformObjectData.m_illuminationAmount = apObject->GetIlluminationAmount();
             uniformObjectData.m_materialId = resource::encodeMaterialID(material->Descriptor().m_id, sceneMaterial.m_slot.get());
             uniformObjectData.m_indirectOffset = drawArgOffset; // we only care about the first offset
-            if(material) {
+            if (material) {
                 uniformObjectData.m_uvMat = cMath::ToForgeMatrix4(material->GetUvMatrix().GetTranspose());
             } else {
                 uniformObjectData.m_uvMat = Matrix4::identity();
@@ -445,7 +489,6 @@ namespace hpl {
             return SharedRenderTarget();
         }
         return sharedData->m_outputBuffer[frameIndex];
-
     }
 
     void cRendererDeferred2::Draw(
@@ -462,15 +505,13 @@ namespace hpl {
         if (frame.m_currentFrame != m_activeFrame) {
             m_objectIndex = 0;
             m_sceneTexture2DPool.reset([&](TextureDescriptorPool::Action action, uint32_t slot, SharedTexture& texture) {
-                std::array<DescriptorData, 1> params = {
-                    DescriptorData {.pName = "sceneTextures", .mCount = 1, .mArrayOffset = slot, .ppTextures = (action == TextureDescriptorPool::Action::UpdateSlot ? &texture.m_handle: &m_emptyTexture.m_handle ) }
-                };
+                std::array<DescriptorData, 1> params = { DescriptorData{
+                    .pName = "sceneTextures",
+                    .mCount = 1,
+                    .mArrayOffset = slot,
+                    .ppTextures = (action == TextureDescriptorPool::Action::UpdateSlot ? &texture.m_handle : &m_emptyTexture.m_handle) } };
                 updateDescriptorSet(
-                    forgeRenderer->Rend(),
-                    0,
-                    m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle,
-                    params.size(),
-                    params.data());
+                    forgeRenderer->Rend(), 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle, params.size(), params.data());
             });
             m_objectDescriptorLookup.clear();
             m_indirectDrawIndex = 0;
@@ -479,10 +520,10 @@ namespace hpl {
         }
 
         auto viewportDatum = m_boundViewportData.resolve(viewport);
-        if(!viewportDatum || viewportDatum->m_size != viewport.GetSizeU2()) {
+        if (!viewportDatum || viewportDatum->m_size != viewport.GetSizeU2()) {
             auto updateDatum = std::make_unique<ViewportData>();
             updateDatum->m_size = viewport.GetSizeU2();
-            for(size_t i = 0; i < ForgeRenderer::SwapChainLength; i++) {
+            for (size_t i = 0; i < ForgeRenderer::SwapChainLength; i++) {
                 updateDatum->m_outputBuffer[i].Load(forgeRenderer->Rend(), [&](RenderTarget** target) {
                     ClearValue optimizedColorClearBlack = { { 0.0f, 0.0f, 0.0f, 0.0f } };
                     RenderTargetDesc renderTargetDesc = {};
@@ -564,8 +605,7 @@ namespace hpl {
                 forgeRenderer->Rend(), 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle, params.size(), params.data());
         }
         {
-            BufferUpdateDesc updateDesc = {m_perSceneInfoBuffer[frame.m_frameIndex].m_handle, 0,
-                                           sizeof(resource::SceneInfoResource)};
+            BufferUpdateDesc updateDesc = { m_perSceneInfoBuffer[frame.m_frameIndex].m_handle, 0, sizeof(resource::SceneInfoResource) };
             beginUpdateResource(&updateDesc);
             resource::SceneInfoResource* sceneInfo = reinterpret_cast<resource::SceneInfoResource*>(updateDesc.pMappedData);
             const auto fogColor = apWorld->GetFogColor();
@@ -579,10 +619,11 @@ namespace hpl {
             primaryViewport.m_viewMat = apFrustum->GetViewMat();
             primaryViewport.m_projMat = apFrustum->GetProjectionMat();
             primaryViewport.m_invViewMat = inverse(apFrustum->GetViewMat());
-            primaryViewport.m_invViewProj= inverse(primaryViewport.m_projMat * primaryViewport.m_viewMat);
+            primaryViewport.m_invViewProj = inverse(primaryViewport.m_projMat * primaryViewport.m_viewMat);
             primaryViewport.m_zFar = apFrustum->GetFarPlane();
             primaryViewport.m_zNear = apFrustum->GetNearPlane();
-            primaryViewport.m_rect = float4(0.0f,0.0f, static_cast<float>(viewportDatum->m_size.x), static_cast<float>(viewportDatum->m_size.y));
+            primaryViewport.m_rect =
+                float4(0.0f, 0.0f, static_cast<float>(viewportDatum->m_size.x), static_cast<float>(viewportDatum->m_size.y));
             primaryViewport.m_cameraPosition = v3ToF3(cMath::ToForgeVec3(apFrustum->GetOrigin()));
             endUpdateResource(&updateDesc);
         }
@@ -600,8 +641,10 @@ namespace hpl {
                 }
                 m_rendererList.AddObject(pObject);
             };
-            iRenderableContainer::WalkRenderableContainer(*dynamicContainer, apFrustum, prepareObjectHandler, eRenderableFlag_VisibleInNonReflection);
-            iRenderableContainer::WalkRenderableContainer(*staticContainer, apFrustum, prepareObjectHandler, eRenderableFlag_VisibleInNonReflection);
+            iRenderableContainer::WalkRenderableContainer(
+                *dynamicContainer, apFrustum, prepareObjectHandler, eRenderableFlag_VisibleInNonReflection);
+            iRenderableContainer::WalkRenderableContainer(
+                *staticContainer, apFrustum, prepareObjectHandler, eRenderableFlag_VisibleInNonReflection);
             m_rendererList.End(
                 eRenderListCompileFlag_Diffuse | eRenderListCompileFlag_Translucent | eRenderListCompileFlag_Decal |
                 eRenderListCompileFlag_Illumination | eRenderListCompileFlag_FogArea);
@@ -610,71 +653,73 @@ namespace hpl {
         std::vector<iRenderable*> translucenctRenderables;
         RangeSubsetAlloc indirectAllocSession(m_indirectDrawIndex);
 
-        for(auto& renderable: m_rendererList.GetSolidObjects()) {
+        for (auto& renderable : m_rendererList.GetSolidObjects()) {
             cMaterial* material = renderable->GetMaterial();
-            if(!material ||
-                renderable->GetCoverageAmount() < 1.0 ||
-                cMaterial::IsTranslucent(material->Descriptor().m_id) ||
+            if (!material || renderable->GetCoverageAmount() < 1.0 || cMaterial::IsTranslucent(material->Descriptor().m_id) ||
                 material->GetImage(eMaterialTexture_Alpha)) {
                 translucenctRenderables.push_back(renderable);
                 continue;
             }
 
             DrawPacket packet = renderable->ResolveDrawPacket(frame);
-            if(packet.m_type == DrawPacket::Unknown) {
+            if (packet.m_type == DrawPacket::Unknown) {
                 continue;
             }
 
             ASSERT(material->Descriptor().m_id == MaterialID::SolidDiffuse && "Invalid material type");
             ASSERT(packet.m_type == DrawPacket::DrawPacketType::DrawGeometryset);
             ASSERT(packet.m_unified.m_set == GraphicsAllocator::AllocationSet::OpaqueSet);
-            BufferUpdateDesc updateDesc = {m_indirectDrawArgsBuffer[frame.m_frameIndex].m_handle,  indirectAllocSession.Increment() * sizeof(IndirectDrawIndexArguments),
-                                           sizeof(IndirectDrawIndexArguments)  };
+            BufferUpdateDesc updateDesc = { m_indirectDrawArgsBuffer[frame.m_frameIndex].m_handle,
+                                            indirectAllocSession.Increment() * sizeof(IndirectDrawIndexArguments),
+                                            sizeof(IndirectDrawIndexArguments) };
             beginUpdateResource(&updateDesc);
             auto* indirectDrawArgs = reinterpret_cast<IndirectDrawIndexArguments*>(updateDesc.pMappedData);
             indirectDrawArgs->mIndexCount = packet.m_unified.m_numIndices;
             indirectDrawArgs->mStartIndex = packet.m_unified.m_subAllocation->indexOffset();
             indirectDrawArgs->mVertexOffset = packet.m_unified.m_subAllocation->vertextOffset();
-            indirectDrawArgs->mStartInstance = resolveObjectIndex(frame, renderable, updateDesc.mDstOffset / sizeof(uint32_t), {}); // for DX12 this won't work
+            indirectDrawArgs->mStartInstance =
+                resolveObjectIndex(frame, renderable, updateDesc.mDstOffset / sizeof(uint32_t), {}); // for DX12 this won't work
             indirectDrawArgs->mInstanceCount = 1;
             endUpdateResource(&updateDesc);
         }
         RangeSubsetAlloc::RangeSubset opaqueIndirectArgs = indirectAllocSession.End();
 
-        for(auto& renderable: translucenctRenderables) {
+        for (auto& renderable : translucenctRenderables) {
             cMaterial* material = renderable->GetMaterial();
-            if(!material) {
+            if (!material) {
                 continue;
             }
             DrawPacket packet = renderable->ResolveDrawPacket(frame);
-            if(packet.m_type == DrawPacket::Unknown) {
+            if (packet.m_type == DrawPacket::Unknown) {
                 continue;
             }
 
             ASSERT(material->Descriptor().m_id == MaterialID::SolidDiffuse && "Invalid material type");
             ASSERT(packet.m_type == DrawPacket::DrawPacketType::DrawGeometryset);
             ASSERT(packet.m_unified.m_set == GraphicsAllocator::AllocationSet::OpaqueSet);
-            BufferUpdateDesc updateDesc = {m_indirectDrawArgsBuffer[frame.m_frameIndex].m_handle,  indirectAllocSession.Increment() * sizeof(IndirectDrawIndexArguments),
-                                           sizeof(IndirectDrawIndexArguments)  };
+            BufferUpdateDesc updateDesc = { m_indirectDrawArgsBuffer[frame.m_frameIndex].m_handle,
+                                            indirectAllocSession.Increment() * sizeof(IndirectDrawIndexArguments),
+                                            sizeof(IndirectDrawIndexArguments) };
             beginUpdateResource(&updateDesc);
             auto* indirectDrawArgs = reinterpret_cast<IndirectDrawIndexArguments*>(updateDesc.pMappedData);
             indirectDrawArgs->mIndexCount = packet.m_unified.m_numIndices;
             indirectDrawArgs->mStartIndex = packet.m_unified.m_subAllocation->indexOffset();
             indirectDrawArgs->mVertexOffset = packet.m_unified.m_subAllocation->vertextOffset();
-            indirectDrawArgs->mStartInstance = resolveObjectIndex(frame, renderable, updateDesc.mDstOffset / sizeof(uint32_t), {}); // for DX12 this won't work
+            indirectDrawArgs->mStartInstance =
+                resolveObjectIndex(frame, renderable, updateDesc.mDstOffset / sizeof(uint32_t), {}); // for DX12 this won't work
             indirectDrawArgs->mInstanceCount = 1;
             endUpdateResource(&updateDesc);
-
         }
         RangeSubsetAlloc::RangeSubset translucentIndirectArgs = indirectAllocSession.End();
 
         {
             cmdBindRenderTargets(cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
             std::array rtBarriers = {
-                RenderTargetBarrier{ viewportDatum->m_visiblityBuffer[frame.m_frameIndex].m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
+                RenderTargetBarrier{ viewportDatum->m_visiblityBuffer[frame.m_frameIndex].m_handle,
+                                     RESOURCE_STATE_SHADER_RESOURCE,
+                                     RESOURCE_STATE_RENDER_TARGET },
             };
-            cmdResourceBarrier(
-                cmd, 0, nullptr, 0, nullptr, rtBarriers.size(), rtBarriers.data());
+            cmdResourceBarrier(cmd, 0, nullptr, 0, nullptr, rtBarriers.size(), rtBarriers.data());
         }
         {
             auto& opaqueSet = graphicsAllocator->resolveSet(GraphicsAllocator::AllocationSet::OpaqueSet);
@@ -688,10 +733,17 @@ namespace hpl {
                 loadActions.mClearDepth = { .depth = 1.0f, .stencil = 0 };
                 loadActions.mLoadActionDepth = LOAD_ACTION_CLEAR;
 
-                std::array targets = {
-                    viewportDatum->m_visiblityBuffer[frame.m_frameIndex].m_handle
-                };
-                cmdBindRenderTargets(cmd, targets.size(), targets.data(), viewportDatum->m_depthBuffer[frame.m_frameIndex].m_handle, &loadActions, NULL, NULL, -1, -1);
+                std::array targets = { viewportDatum->m_visiblityBuffer[frame.m_frameIndex].m_handle };
+                cmdBindRenderTargets(
+                    cmd,
+                    targets.size(),
+                    targets.data(),
+                    viewportDatum->m_depthBuffer[frame.m_frameIndex].m_handle,
+                    &loadActions,
+                    NULL,
+                    NULL,
+                    -1,
+                    -1);
                 cmdSetViewport(cmd, 0.0f, 0.0f, viewportDatum->m_size.x, viewportDatum->m_size.y, 0.0f, 1.0f);
                 cmdSetScissor(cmd, 0, 0, viewportDatum->m_size.x, viewportDatum->m_size.y);
 
@@ -700,15 +752,20 @@ namespace hpl {
                 cmdBindIndexBuffer(cmd, opaqueSet.indexBuffer().m_handle, INDEX_TYPE_UINT32, 0);
                 cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorConstSet.m_handle);
                 cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
-		        cmdExecuteIndirect(cmd, m_cmdSignatureVBPass,  opaqueIndirectArgs.size(), m_indirectDrawArgsBuffer[frame.m_frameIndex].m_handle, opaqueIndirectArgs.m_start * sizeof(IndirectDrawIndexArguments) , nullptr, 0);
+                cmdExecuteIndirect(
+                    cmd,
+                    m_cmdSignatureVBPass,
+                    opaqueIndirectArgs.size(),
+                    m_indirectDrawArgsBuffer[frame.m_frameIndex].m_handle,
+                    opaqueIndirectArgs.m_start * sizeof(IndirectDrawIndexArguments),
+                    nullptr,
+                    0);
             }
             {
-                std::array semantics = {
-                    ShaderSemantic::SEMANTIC_POSITION,
-                    ShaderSemantic::SEMANTIC_TEXCOORD0,
-                    ShaderSemantic::SEMANTIC_NORMAL,
-                    ShaderSemantic::SEMANTIC_TANGENT
-                };
+                std::array semantics = { ShaderSemantic::SEMANTIC_POSITION,
+                                         ShaderSemantic::SEMANTIC_TEXCOORD0,
+                                         ShaderSemantic::SEMANTIC_NORMAL,
+                                         ShaderSemantic::SEMANTIC_TANGENT };
                 LoadActionsDesc loadActions = {};
                 loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
                 loadActions.mLoadActionsColor[1] = LOAD_ACTION_CLEAR;
@@ -717,11 +774,18 @@ namespace hpl {
                 loadActions.mClearDepth = { .depth = 1.0f, .stencil = 0 };
                 loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
 
-                std::array targets = {
-                    viewportDatum->m_visiblityBuffer[frame.m_frameIndex].m_handle,
-                    viewportDatum->m_testBuffer[frame.m_frameIndex].m_handle
-                };
-                cmdBindRenderTargets(cmd, targets.size(), targets.data(), viewportDatum->m_depthBuffer[frame.m_frameIndex].m_handle, &loadActions, NULL, NULL, -1, -1);
+                std::array targets = { viewportDatum->m_visiblityBuffer[frame.m_frameIndex].m_handle,
+                                       viewportDatum->m_testBuffer[frame.m_frameIndex].m_handle };
+                cmdBindRenderTargets(
+                    cmd,
+                    targets.size(),
+                    targets.data(),
+                    viewportDatum->m_depthBuffer[frame.m_frameIndex].m_handle,
+                    &loadActions,
+                    NULL,
+                    NULL,
+                    -1,
+                    -1);
                 cmdSetViewport(cmd, 0.0f, 0.0f, viewportDatum->m_size.x, viewportDatum->m_size.y, 0.0f, 1.0f);
                 cmdSetScissor(cmd, 0, 0, viewportDatum->m_size.x, viewportDatum->m_size.y);
 
@@ -730,19 +794,28 @@ namespace hpl {
                 cmdBindIndexBuffer(cmd, opaqueSet.indexBuffer().m_handle, INDEX_TYPE_UINT32, 0);
                 cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorConstSet.m_handle);
                 cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
-		        cmdExecuteIndirect(cmd, m_cmdSignatureVBPass,  translucentIndirectArgs.size(), m_indirectDrawArgsBuffer[frame.m_frameIndex].m_handle, translucentIndirectArgs.m_start * sizeof(IndirectDrawIndexArguments) , nullptr, 0);
+                cmdExecuteIndirect(
+                    cmd,
+                    m_cmdSignatureVBPass,
+                    translucentIndirectArgs.size(),
+                    m_indirectDrawArgsBuffer[frame.m_frameIndex].m_handle,
+                    translucentIndirectArgs.m_start * sizeof(IndirectDrawIndexArguments),
+                    nullptr,
+                    0);
             }
             cmdEndDebugMarker(cmd);
         }
         {
-
             cmdBindRenderTargets(cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
             std::array rtBarriers = {
-                RenderTargetBarrier{ viewportDatum->m_visiblityBuffer[frame.m_frameIndex].m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
-                RenderTargetBarrier{ viewportDatum->m_outputBuffer[frame.m_frameIndex].m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
+                RenderTargetBarrier{ viewportDatum->m_visiblityBuffer[frame.m_frameIndex].m_handle,
+                                     RESOURCE_STATE_RENDER_TARGET,
+                                     RESOURCE_STATE_SHADER_RESOURCE },
+                RenderTargetBarrier{ viewportDatum->m_outputBuffer[frame.m_frameIndex].m_handle,
+                                     RESOURCE_STATE_SHADER_RESOURCE,
+                                     RESOURCE_STATE_RENDER_TARGET },
             };
-            cmdResourceBarrier(
-                cmd, 0, nullptr, 0, nullptr, rtBarriers.size(), rtBarriers.data());
+            cmdResourceBarrier(cmd, 0, nullptr, 0, nullptr, rtBarriers.size(), rtBarriers.data());
         }
         {
             cmdBeginDebugMarker(cmd, 0, 1, 0, "Visibility Output Buffer Pass");
@@ -751,21 +824,27 @@ namespace hpl {
             loadActions.mClearColorValues[0] = { .r = 0.0f, .g = 0.0f, .b = 0.0f, .a = 0.0f };
             loadActions.mClearDepth = { .depth = 1.0f, .stencil = 0 };
             loadActions.mLoadActionDepth = LOAD_ACTION_CLEAR;
-            std::array targets = {
-                viewportDatum->m_outputBuffer[frame.m_frameIndex].m_handle,
-                viewportDatum->m_testBuffer[frame.m_frameIndex].m_handle
-            };
-            cmdBindRenderTargets(cmd, targets.size(), targets.data(), viewportDatum->m_depthBuffer[frame.m_frameIndex].m_handle, &loadActions, NULL, NULL, -1, -1);
+            std::array targets = { viewportDatum->m_outputBuffer[frame.m_frameIndex].m_handle,
+                                   viewportDatum->m_testBuffer[frame.m_frameIndex].m_handle };
+            cmdBindRenderTargets(
+                cmd,
+                targets.size(),
+                targets.data(),
+                viewportDatum->m_depthBuffer[frame.m_frameIndex].m_handle,
+                &loadActions,
+                NULL,
+                NULL,
+                -1,
+                -1);
             cmdSetViewport(cmd, 0.0f, 0.0f, viewportDatum->m_size.x, viewportDatum->m_size.y, 0.0f, 1.0f);
             cmdSetScissor(cmd, 0, 0, viewportDatum->m_size.x, viewportDatum->m_size.y);
             cmdBindPipeline(cmd, m_visiblityShadePass.m_handle);
             cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorConstSet.m_handle);
             cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
-		    cmdDraw(cmd, 3, 0);
+            cmdDraw(cmd, 3, 0);
 
             cmdEndDebugMarker(cmd);
         }
-
     }
 
 } // namespace hpl

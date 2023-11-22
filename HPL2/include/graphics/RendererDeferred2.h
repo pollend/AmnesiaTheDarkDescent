@@ -81,16 +81,18 @@ namespace hpl {
         static constexpr uint32_t MaxQueryPoolSize = MaxOcclusionDescSize * 2;
         static constexpr uint32_t MaxIndirectDrawArgs = 4096;
 
-        static constexpr uint32_t TranslucencyBlendModeMask = 0xf;
-
-        static constexpr uint32_t TranslucencyReflectionBufferMask = 0x7;
-        static constexpr uint32_t TranslucencyReflectionBufferOffset = 4;
-
+        static constexpr uint32_t PointLightCount = 256;
         static constexpr float ShadowDistanceMedium = 10;
         static constexpr float ShadowDistanceLow = 20;
         static constexpr float ShadowDistanceNone = 40;
 
         static constexpr uint32_t MaxSolidDiffuseMaterials = 512;
+
+        static constexpr uint32_t LightClusterWidth = 8;
+        static constexpr uint32_t LightClusterHeight = 8;
+        static constexpr uint32_t LightClusterLightCount = 128;
+
+
 
         struct ViewportData {
         public:
@@ -138,7 +140,8 @@ namespace hpl {
 
         UniqueViewportData<ViewportData> m_boundViewportData;
 
-        SharedSampler m_nearEdgeClamp;
+        SharedSampler m_samplerNearEdgeClamp;
+        SharedSampler m_samplerPointWrap;
         std::array<SceneMaterial, cMaterial::MaxMaterialID> m_sceneMaterial;
         TextureDescriptorPool m_sceneTexture2DPool;
         CommandSignature* m_cmdSignatureVBPass = NULL;
@@ -155,6 +158,9 @@ namespace hpl {
         SharedShader m_visibilityBufferAlphaPassShader;
         SharedShader m_visibilityShadePassShader;
 
+        SharedShader m_lightClusterShader;
+        SharedShader m_clearLightClusterShader;
+
         SharedPipeline m_visibilityBufferPass;
         SharedPipeline m_visbilityAlphaBufferPass;
         SharedPipeline m_visiblityShadePass;
@@ -166,12 +172,18 @@ namespace hpl {
         folly::F14ValueMap<iRenderable*, uint32_t> m_objectDescriptorLookup;
 
         SharedTexture m_emptyTexture;
+        Image* m_dissolveImage;
 
         uint32_t m_activeFrame = 0;
         uint32_t m_objectIndex = 0;
         uint32_t m_indirectDrawIndex = 0;
 
         cRenderList m_rendererList;
+
+        // Lights
+        std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_lightClustersBuffer;
+        std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_lightClusterCountBuffer;
+        std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_pointLightBuffer;
     };
 }; // namespace hpl
 

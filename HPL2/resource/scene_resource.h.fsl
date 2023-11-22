@@ -22,8 +22,15 @@ RES(ByteBuffer,   vtxOpaqueColor,     UPDATE_FREQ_NONE, t4, binding = 8);
 
 RES(Buffer(DiffuseMaterial), sceneDiffuseMat, UPDATE_FREQ_NONE, t0, binding = 9);
 
-RES(SamplerState,  linearBorderClamp, UPDATE_FREQ_PER_FRAME, s1, binding = 10);
-RES(Tex2D(float4), visibilityTexture,    UPDATE_FREQ_PER_FRAME, t0, binding = 11);
+RES(SamplerState,  nearEdgeClampSampler, UPDATE_FREQ_NONE, s1, binding = 10);
+RES(SamplerState,  nearPointWrapSampler, UPDATE_FREQ_NONE, s1, binding = 11);
+
+RES(Tex2D(float4), visibilityTexture,    UPDATE_FREQ_PER_FRAME, t0, binding = 12);
+RES(Tex2D(float4), dissolveTexture,    UPDATE_FREQ_NONE, t0, binding = 13);
+
+RES(Buffer(PointLight),    pointLights,        UPDATE_FREQ_PER_FRAME, t0, binding = 14);
+RES(RWBuffer(atomic_uint), lightClustersCount, UPDATE_FREQ_PER_FRAME, u0, binding = 15);
+RES(RWBuffer(atomic_uint), lightClusters,      UPDATE_FREQ_PER_FRAME, u1, binding = 16);
 
 RES(SamplerState, sceneFilters[SCENE_MAX_FILTER_COUNT], UPDATE_FREQ_NONE, s1, binding = 20); 
 RES(Tex2D(float4), sceneTextures[SCENE_MAX_TEXTURE_COUNT],  UPDATE_FREQ_PER_FRAME, t5, binding = 20 + SCENE_MAX_FILTER_COUNT);

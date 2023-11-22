@@ -21,7 +21,7 @@ PsOut PS_MAIN(PsIn In)
 {
 	INIT_MAIN;
 	
-	float4 visRaw = LoadTex2D(Get(visibilityTexture), Get(linearBorderClamp), uint2(In.position.xy), 0);
+	float4 visRaw = LoadTex2D(Get(visibilityTexture), Get(nearEdgeClampSampler), uint2(In.position.xy), 0);
 	// Unpack float4 render target data into uint to extract data
 	uint objectId_triId = packUnorm4x8(visRaw);
 	uint objectId = SCENE_VIZ_OBJECT_ID(objectId_triId);

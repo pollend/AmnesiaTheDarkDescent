@@ -145,7 +145,9 @@ namespace hpl::resource  {
 
                 result.m_materialConfig =
 			        ((alphaMapImage && TinyImageFormat_ChannelCount(static_cast<TinyImageFormat>(alphaMapImage->GetTexture().m_handle->mFormat)) == 1) ? IsAlphaSingleChannel: 0) |
-			        ((heightMapImage && TinyImageFormat_ChannelCount(static_cast<TinyImageFormat>(heightMapImage->GetTexture().m_handle->mFormat)) == 1) ? IsHeightSingleChannel : 0);
+			        ((heightMapImage && TinyImageFormat_ChannelCount(static_cast<TinyImageFormat>(heightMapImage->GetTexture().m_handle->mFormat)) == 1) ? IsHeightSingleChannel : 0) |
+			        (descriptor.m_solid.m_alphaDissolveFilter ? UseAlphaDissolveFilter : 0);
+
                 result.m_samplerIndex = textureFilterNonAnistropyIdx(material->GetTextureWrap(), material->GetTextureFilter());
                 result.m_heightMapScale = descriptor.m_solid.m_heightMapScale;
                 result.m_heigtMapBias = descriptor.m_solid.m_heightMapBias;
