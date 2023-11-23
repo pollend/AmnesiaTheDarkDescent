@@ -154,7 +154,7 @@ namespace hpl {
 
         // light clusters
         SharedRootSignature m_lightClusterRootSignature;
-        SharedPipeline m_PointLightClusterPipeline;
+        SharedPipeline m_pointLightClusterPipeline;
         SharedPipeline m_clearClusterPipeline;
         std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_perFrameLightCluster;
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_lightClustersBuffer;

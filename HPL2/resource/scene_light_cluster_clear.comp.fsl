@@ -1,4 +1,4 @@
-#include "scene_resource.h.fsl"
+#include "scene_light_cluster_resource.h.fsl"
 
 NUM_THREADS(LIGHT_CLUSTER_WIDTH, LIGHT_CLUSTER_HEIGHT, 1)
 void CS_MAIN(SV_DispatchThreadID(uint3) threadID)

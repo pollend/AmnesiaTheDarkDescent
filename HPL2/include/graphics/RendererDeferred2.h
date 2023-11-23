@@ -88,11 +88,9 @@ namespace hpl {
 
         static constexpr uint32_t MaxSolidDiffuseMaterials = 512;
 
-        static constexpr uint32_t LightClusterWidth = 8;
-        static constexpr uint32_t LightClusterHeight = 8;
+        static constexpr uint32_t LightClusterWidth = 16;
+        static constexpr uint32_t LightClusterHeight = 16;
         static constexpr uint32_t LightClusterLightCount = 128;
-
-
 
         struct ViewportData {
         public:
@@ -158,9 +156,6 @@ namespace hpl {
         SharedShader m_visibilityBufferAlphaPassShader;
         SharedShader m_visibilityShadePassShader;
 
-        SharedShader m_lightClusterShader;
-        SharedShader m_clearLightClusterShader;
-
         SharedPipeline m_visibilityBufferPass;
         SharedPipeline m_visbilityAlphaBufferPass;
         SharedPipeline m_visiblityShadePass;
@@ -181,6 +176,12 @@ namespace hpl {
         cRenderList m_rendererList;
 
         // Lights
+        SharedRootSignature m_lightClusterRootSignature;
+        std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_lightDescriptorPerFrameSet;
+        SharedShader m_lightClusterShader;
+        SharedShader m_clearLightClusterShader;
+        SharedPipeline m_pointLightClusterPipeline;
+        SharedPipeline m_clearClusterPipeline;
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_lightClustersBuffer;
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_lightClusterCountBuffer;
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_pointLightBuffer;

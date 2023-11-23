@@ -73,7 +73,7 @@ namespace hpl {
         m_indexBuffer.Load([&](Buffer** buffer) {
             BufferLoadDesc loadDesc = {};
             loadDesc.ppBuffer = buffer;
-            loadDesc.mDesc.mDescriptors = DESCRIPTOR_TYPE_INDEX_BUFFER;
+            loadDesc.mDesc.mDescriptors = DESCRIPTOR_TYPE_INDEX_BUFFER | (DESCRIPTOR_TYPE_BUFFER | DESCRIPTOR_TYPE_RW_BUFFER);
             loadDesc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
             loadDesc.mDesc.mSize = numIndecies * sizeof(uint32_t);
             loadDesc.mDesc.pName = "GeometrySet Index";

@@ -304,7 +304,7 @@ namespace hpl {
             });
         }
 
-        m_PointLightClusterPipeline.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
+        m_pointLightClusterPipeline.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
             PipelineDesc pipelineDesc = {};
             pipelineDesc.mType = PIPELINE_TYPE_COMPUTE;
             ComputePipelineDesc& computePipelineDesc = pipelineDesc.mComputeDesc;
@@ -743,7 +743,7 @@ namespace hpl {
             }
 
             cmdBindDescriptorSet(frame.m_cmd, mainFrameIndex, m_perFrameLightCluster[frame.m_frameIndex].m_handle);
-            cmdBindPipeline(cmd, m_PointLightClusterPipeline.m_handle);
+            cmdBindPipeline(cmd, m_pointLightClusterPipeline.m_handle);
             cmdDispatch(cmd, numPointLights, 1, 1);
         }
         {

@@ -5,6 +5,7 @@
 #include "graphics/SceneResource.h"
 #include "graphics/TextureDescriptorPool.h"
 #include "resources/TextureManager.h"
+#include "scene/Light.h"
 #include "scene/RenderableContainer.h"
 #include "tinyimageformat_base.h"
 #include <memory>
@@ -111,7 +112,6 @@ namespace hpl {
             addShader(forgeRenderer->Rend(), &loadDesc, shader);
             return true;
         });
-
         m_visibilityBufferAlphaPassShader.Load(forgeRenderer->Rend(), [&](Shader** shader) {
             ShaderLoadDesc loadDesc = {};
             loadDesc.mStages[0].pFileName = "visibilityBuffer_alpha_pass.vert";
@@ -124,12 +124,23 @@ namespace hpl {
             loadDesc.mStages[0].pFileName = "visibility_shade_pass.vert";
             loadDesc.mStages[1].pFileName = "visibility_shade_pass.frag";
             addShader(forgeRenderer->Rend(), &loadDesc, shader);
-
+            return true;
+        });
+        m_lightClusterRootSignature.Load(forgeRenderer->Rend(), [&](RootSignature** signature) {
+            RootSignatureDesc rootSignatureDesc = {};
+            std::array shaders = { m_lightClusterShader.m_handle, m_clearLightClusterShader.m_handle };
+            rootSignatureDesc.ppShaders = shaders.data();
+            rootSignatureDesc.mShaderCount = shaders.size();
+            addRootSignature(forgeRenderer->Rend(), &rootSignatureDesc, signature);
             return true;
         });
         m_sceneRootSignature.Load(forgeRenderer->Rend(), [&](RootSignature** signature) {
-            std::array shaders = { m_lightClusterShader.m_handle,
-                                   m_clearLightClusterShader.m_handle,
+            ASSERT(m_lightClusterShader.IsValid());
+            ASSERT(m_clearLightClusterShader.IsValid());
+            ASSERT(m_visibilityBufferAlphaPassShader.IsValid());
+            ASSERT(m_visibilityBufferPassShader.IsValid());
+            ASSERT(m_visibilityShadePassShader.IsValid());
+            std::array shaders = {
                                    m_visibilityBufferAlphaPassShader.m_handle,
                                    m_visibilityBufferPassShader.m_handle,
                                    m_visibilityShadePassShader.m_handle };
@@ -190,7 +201,7 @@ namespace hpl {
             vertexLayout.mAttribs[3] = VertexAttrib{
                 .mSemantic = SEMANTIC_TANGENT, .mFormat = TinyImageFormat_R32G32B32_SFLOAT, .mBinding = 3, .mLocation = 3, .mOffset = 0
             };
-            std::array colorFormats = { ColorBufferFormat, TinyImageFormat_R8G8_UNORM };
+            std::array colorFormats = { ColorBufferFormat, TinyImageFormat_R16G16B16A16_SFLOAT };
             DepthStateDesc depthStateDesc = { .mDepthTest = true, .mDepthWrite = true, .mDepthFunc = CMP_LEQUAL };
 
             RasterizerStateDesc rasterizerStateDesc = {};
@@ -245,6 +256,24 @@ namespace hpl {
             pipelineSettings.pRasterizerState = &rasterizerStateDesc;
             pipelineSettings.pVertexLayout = &vertexLayout;
             pipelineSettings.mSupportIndirectCommandBuffer = true;
+            addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
+            return true;
+        });
+        m_pointLightClusterPipeline.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
+            PipelineDesc pipelineDesc = {};
+            pipelineDesc.mType = PIPELINE_TYPE_COMPUTE;
+            ComputePipelineDesc& computePipelineDesc = pipelineDesc.mComputeDesc;
+            computePipelineDesc.pShaderProgram = m_lightClusterShader.m_handle;
+            computePipelineDesc.pRootSignature = m_lightClusterRootSignature.m_handle;
+            addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
+            return true;
+        });
+        m_clearClusterPipeline.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
+            PipelineDesc pipelineDesc = {};
+            pipelineDesc.mType = PIPELINE_TYPE_COMPUTE;
+            ComputePipelineDesc& computePipelineDesc = pipelineDesc.mComputeDesc;
+            computePipelineDesc.pShaderProgram = m_clearLightClusterShader.m_handle;
+            computePipelineDesc.pRootSignature = m_lightClusterRootSignature.m_handle;
             addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
             return true;
         });
@@ -361,23 +390,42 @@ namespace hpl {
             addDescriptorSet(forgeRenderer->Rend(), &descriptorSetDesc, descSet);
             return true;
         });
-        for (size_t i = 0; i < ForgeRenderer::SwapChainLength; i++) {
-            m_sceneDescriptorPerFrameSet[i].Load(forgeRenderer->Rend(), [&](DescriptorSet** descSet) {
+        // update descriptorSet
+        for (size_t swapchainIndex = 0; swapchainIndex < ForgeRenderer::SwapChainLength; swapchainIndex++) {
+            m_sceneDescriptorPerFrameSet[swapchainIndex].Load(forgeRenderer->Rend(), [&](DescriptorSet** descSet) {
                 DescriptorSetDesc descriptorSetDesc{ m_sceneRootSignature.m_handle, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, 1 };
                 addDescriptorSet(forgeRenderer->Rend(), &descriptorSetDesc, descSet);
                 return true;
             });
-        }
 
-        // update descriptorSet
-        for (size_t swapchainIndex = 0; swapchainIndex < ForgeRenderer::SwapChainLength; swapchainIndex++) {
-            std::array params = {
-                DescriptorData{ .pName = "sceneObjects", .ppBuffers = &m_objectUniformBuffer[swapchainIndex].m_handle },
-                DescriptorData{ .pName = "sceneInfo", .ppBuffers = &m_perSceneInfoBuffer[swapchainIndex].m_handle },
-                DescriptorData{ .pName = "indirectDrawArgs", .ppBuffers = &m_indirectDrawArgsBuffer[swapchainIndex].m_handle },
-            };
-            updateDescriptorSet(
-                forgeRenderer->Rend(), 0, m_sceneDescriptorPerFrameSet[swapchainIndex].m_handle, params.size(), params.data());
+            m_lightDescriptorPerFrameSet[swapchainIndex].Load(forgeRenderer->Rend(), [&](DescriptorSet** descSet) {
+                DescriptorSetDesc descriptorSetDesc{ m_lightClusterRootSignature.m_handle, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, 1 };
+                addDescriptorSet(forgeRenderer->Rend(), &descriptorSetDesc, descSet);
+                return true;
+            });
+            {
+                std::array params = {
+                    DescriptorData{ .pName = "pointLights", .ppBuffers = &m_pointLightBuffer[swapchainIndex].m_handle },
+                    DescriptorData{ .pName = "lightClustersCount", .ppBuffers = &m_lightClusterCountBuffer[swapchainIndex].m_handle },
+                    DescriptorData{ .pName = "lightClusters", .ppBuffers = &m_lightClustersBuffer[swapchainIndex].m_handle },
+                    DescriptorData{ .pName = "sceneObjects", .ppBuffers = &m_objectUniformBuffer[swapchainIndex].m_handle },
+                    DescriptorData{ .pName = "sceneInfo", .ppBuffers = &m_perSceneInfoBuffer[swapchainIndex].m_handle },
+                    DescriptorData{ .pName = "indirectDrawArgs", .ppBuffers = &m_indirectDrawArgsBuffer[swapchainIndex].m_handle },
+                };
+                updateDescriptorSet(
+                    forgeRenderer->Rend(), 0, m_sceneDescriptorPerFrameSet[swapchainIndex].m_handle, params.size(), params.data());
+            }
+            {
+                std::array params = {
+                    DescriptorData{ .pName = "pointLights", .ppBuffers = &m_pointLightBuffer[swapchainIndex].m_handle },
+                    DescriptorData{ .pName = "lightClustersCount", .ppBuffers = &m_lightClusterCountBuffer[swapchainIndex].m_handle },
+                    DescriptorData{ .pName = "lightClusters", .ppBuffers = &m_lightClustersBuffer[swapchainIndex].m_handle },
+                    DescriptorData{ .pName = "sceneInfo", .ppBuffers = &m_perSceneInfoBuffer[swapchainIndex].m_handle },
+                };
+                updateDescriptorSet(
+                    forgeRenderer->Rend(), 0, m_lightDescriptorPerFrameSet[swapchainIndex].m_handle, params.size(), params.data());
+
+            }
         }
         {
             std::array<Sampler*, resource::MaterailSamplerNonAntistropyCount> samplers;
@@ -396,6 +444,7 @@ namespace hpl {
             auto& opaqueSet = graphicsAllocator->resolveSet(GraphicsAllocator::AllocationSet::OpaqueSet);
 
             std::array params = {
+
                 DescriptorData{ .pName = "dissolveTexture", .ppTextures = &m_dissolveImage->GetTexture().m_handle },
                 DescriptorData{ .pName = "sceneDiffuseMat", .ppBuffers = &m_diffuseSolidMaterialUniformBuffer.m_handle },
                 DescriptorData{ .pName = "sceneFilters", .mCount = samplers.size(), .ppSamplers = samplers.data() },
@@ -596,6 +645,10 @@ namespace hpl {
             }
             viewportDatum = m_boundViewportData.update(viewport, std::move(updateDatum));
         }
+        frame.m_resourcePool->Push(viewportDatum->m_testBuffer[frame.m_frameIndex]);
+        frame.m_resourcePool->Push(viewportDatum->m_visiblityBuffer[frame.m_frameIndex]);
+        frame.m_resourcePool->Push(viewportDatum->m_depthBuffer[frame.m_frameIndex]);
+        frame.m_resourcePool->Push(viewportDatum->m_outputBuffer[frame.m_frameIndex]);
         {
             std::array params = {
                 DescriptorData{ .pName = "visibilityTexture",
@@ -628,6 +681,7 @@ namespace hpl {
             endUpdateResource(&updateDesc);
         }
 
+        // setup render list
         {
             m_rendererList.BeginAndReset(frameTime, apFrustum);
             auto* dynamicContainer = apWorld->GetRenderableContainer(eWorldContainerType_Dynamic);
@@ -711,6 +765,47 @@ namespace hpl {
             endUpdateResource(&updateDesc);
         }
         RangeSubsetAlloc::RangeSubset translucentIndirectArgs = indirectAllocSession.End();
+
+        {
+            cmdBindRenderTargets(cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+            uint32_t pointlightCount = 0;
+            for(auto& light: m_rendererList.GetLights()) {
+                switch(light->GetLightType()) {
+                    case eLightType_Point: {
+                        BufferUpdateDesc pointlightUpdateDesc = { m_pointLightBuffer[frame.m_frameIndex].m_handle,
+                                                                  (pointlightCount++) * sizeof(resource::ScenePointLight),
+                                                                  sizeof(resource::ScenePointLight) };
+                        beginUpdateResource(&pointlightUpdateDesc);
+                        auto pointLightData = reinterpret_cast<resource::ScenePointLight*>(pointlightUpdateDesc.pMappedData);
+                        const cColor color = light->GetDiffuseColor();
+                        pointLightData->m_radius = light->GetRadius();
+                        pointLightData->m_lightPos = v3ToF3(cMath::ToForgeVec3(light->GetWorldPosition()));
+                        pointLightData->m_lightColor = float4(color.r, color.g, color.b, color.a);
+                        endUpdateResource(&pointlightUpdateDesc);
+                        break;
+                    }
+                    default:
+                        break;
+                }
+            }
+
+            cmdBindDescriptorSet(cmd, 0, m_lightDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
+            cmdBindPipeline(cmd, m_clearClusterPipeline.m_handle);
+            cmdDispatch(cmd, 1, 1, 1);
+            {
+                std::array barriers = { BufferBarrier{ m_lightClusterCountBuffer[frame.m_frameIndex].m_handle,
+                                                       RESOURCE_STATE_UNORDERED_ACCESS,
+                                                       RESOURCE_STATE_UNORDERED_ACCESS } };
+                cmdResourceBarrier(
+                    cmd, barriers.size(), barriers.data(), 0, nullptr, 0, nullptr);
+
+            }
+
+            cmdBindPipeline(cmd, m_pointLightClusterPipeline.m_handle);
+            cmdBindDescriptorSet(cmd, 0, m_lightDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
+            cmdDispatch(cmd, pointlightCount, 1, 1);
+
+        }
 
         {
             cmdBindRenderTargets(cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
@@ -807,6 +902,17 @@ namespace hpl {
         }
         {
             cmdBindRenderTargets(cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+            std::array barriers = {
+                BufferBarrier{ m_lightClusterCountBuffer[frame.m_frameIndex].m_handle,
+                                                   RESOURCE_STATE_UNORDERED_ACCESS,
+                                                   RESOURCE_STATE_UNORDERED_ACCESS },
+                BufferBarrier{ m_lightClustersBuffer[frame.m_frameIndex].m_handle,
+                                                   RESOURCE_STATE_UNORDERED_ACCESS,
+                                                   RESOURCE_STATE_UNORDERED_ACCESS },
+                BufferBarrier{ m_pointLightBuffer[frame.m_frameIndex].m_handle,
+                                                   RESOURCE_STATE_UNORDERED_ACCESS,
+                                                   RESOURCE_STATE_UNORDERED_ACCESS }
+            };
             std::array rtBarriers = {
                 RenderTargetBarrier{ viewportDatum->m_visiblityBuffer[frame.m_frameIndex].m_handle,
                                      RESOURCE_STATE_RENDER_TARGET,
@@ -815,7 +921,7 @@ namespace hpl {
                                      RESOURCE_STATE_SHADER_RESOURCE,
                                      RESOURCE_STATE_RENDER_TARGET },
             };
-            cmdResourceBarrier(cmd, 0, nullptr, 0, nullptr, rtBarriers.size(), rtBarriers.data());
+            cmdResourceBarrier(cmd, barriers.size(), barriers.data(), 0, nullptr, rtBarriers.size(), rtBarriers.data());
         }
         {
             cmdBeginDebugMarker(cmd, 0, 1, 0, "Visibility Output Buffer Pass");
@@ -830,7 +936,7 @@ namespace hpl {
                 cmd,
                 targets.size(),
                 targets.data(),
-                viewportDatum->m_depthBuffer[frame.m_frameIndex].m_handle,
+                nullptr,
                 &loadActions,
                 NULL,
                 NULL,
@@ -844,6 +950,15 @@ namespace hpl {
             cmdDraw(cmd, 3, 0);
 
             cmdEndDebugMarker(cmd);
+        }
+        {
+            cmdBindRenderTargets(cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+            std::array rtBarriers = {
+                RenderTargetBarrier{ viewportDatum->m_outputBuffer[frame.m_frameIndex].m_handle,
+                                     RESOURCE_STATE_RENDER_TARGET,
+                                     RESOURCE_STATE_SHADER_RESOURCE },
+            };
+            cmdResourceBarrier(cmd, 0, nullptr, 0, nullptr, rtBarriers.size(), rtBarriers.data());
         }
     }
 

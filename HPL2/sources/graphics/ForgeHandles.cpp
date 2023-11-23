@@ -4,6 +4,7 @@
 #include "graphics/Bitmap.h"
 
 #include "Common_3/Resources/ResourceLoader/TextureContainers.h"
+#include "graphics/ForgeRenderer.h"
 #include "tinyimageformat_base.h"
 #include "tinyimageformat_query.h"
 #include <FixPreprocessor.h>
@@ -239,7 +240,11 @@ namespace hpl {
             addResource(&textureLoadDesc, &token);
             return true;
         });
+        // hack to keep texture valid for the frame
 	    waitForToken(&token);
+        ForgeRenderer* renderer = Interface<ForgeRenderer>::Get();
+        renderer->GetFrame().m_resourcePool->Push(handle);
+
 
         auto sourceImageFormat = FromHPLPixelFormat(bitmap.GetPixelFormat());
         auto isCompressed  = TinyImageFormat_IsCompressed(desc.mFormat);

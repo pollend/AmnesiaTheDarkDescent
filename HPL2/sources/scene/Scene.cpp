@@ -268,8 +268,7 @@ namespace hpl {
                  } else {
                     auto size = pViewPort->GetSize();
                     cRect2l rect = cRect2l(0, 0, size.x, size.y);
-                    forgeRenderer->cmdCopyTexture(frame.m_cmd, outputImage.m_handle->pTexture,
-                        target);
+                    forgeRenderer->cmdCopyTexture(frame.m_cmd, outputImage.m_handle->pTexture, target);
                  }
             }
 

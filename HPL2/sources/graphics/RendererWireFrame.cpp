@@ -82,7 +82,7 @@ namespace hpl {
         for (auto& buffer : m_frameBufferUniform) {
             buffer.Load([&](Buffer** buffer) {
                 BufferLoadDesc desc = {};
-                desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_BUFFER;
+                desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_BUFFER | DESCRIPTOR_TYPE_UNIFORM_BUFFER;
                 desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
                 desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
                 desc.mDesc.mFirstElement = 0;
