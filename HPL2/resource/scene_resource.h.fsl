@@ -50,7 +50,33 @@ RES(Tex2D(float4), sceneTextures[SCENE_MAX_TEXTURE_COUNT],  UPDATE_FREQ_PER_FRAM
 #define SCENE_VIZ_OBJECT_ID(id) (((id) & SCENE_OBJECT_ID_MASK) >> SCENE_OBJECT_ID_BIT)
 #define SCENE_VIZ_PRIM_ID(id) (((id) & SCENE_PRIM_ID_MASK) >> SCENE_PRIM_ID_BIT)
 
-INLINE bool SampleSceneTextureFloat4(SceneTexture tex, float2 uv, inout float4 value) {
+INLINE bool SampleSceneTextureProjFloat4(uint textureIdx,SamplerState sh, float4 projectUV, inout float4 value) {
+    if(textureIdx < SCENE_MAX_TEXTURE_COUNT) {
+        BeginNonUniformResourceIndex(textureIdx, SCENE_MAX_TEXTURE_COUNT);
+            value = SampleTex2DProj(Get(sceneTextures)[textureIdx], sh, projectUV);
+        EndNonUniformResourceIndex(); 
+    }
+    return !(textureIdx == INVALID_TEXTURE_INDEX); 
+}
+
+INLINE bool SampleSceneTextureFloat4(uint textureIdx,SamplerState sh, float2 uv, inout float4 value) {
+    if(textureIdx < SCENE_MAX_TEXTURE_COUNT) {
+        BeginNonUniformResourceIndex(textureIdx, SCENE_MAX_TEXTURE_COUNT);
+            value = SampleTex2D(Get(sceneTextures)[textureIdx], sh, uv);
+        EndNonUniformResourceIndex(); 
+    }
+    return !(textureIdx == INVALID_TEXTURE_INDEX); 
+}
+INLINE bool SampleSceneTextureGradFloat4(uint textureIdx, SamplerState sh, float2 uv, float2 texCoordDX, float2 texCoordDY, inout float4 value) {
+    if(textureIdx < SCENE_MAX_TEXTURE_COUNT) {
+        BeginNonUniformResourceIndex(textureIdx, SCENE_MAX_TEXTURE_COUNT);
+		    value = SampleGradTex2D(Get(sceneTextures)[textureIdx], sh, uv, texCoordDX, texCoordDY);
+        EndNonUniformResourceIndex(); 
+    }
+    return !(textureIdx == INVALID_TEXTURE_INDEX); 
+}
+
+INLINE bool SampleMaterialTextureFloat4(MaterialTexture tex, float2 uv, inout float4 value) {
     uint textureIdx = tex.textureID; 
     uint filterIdx = tex.filterID; 
     if(textureIdx < SCENE_MAX_TEXTURE_COUNT) {

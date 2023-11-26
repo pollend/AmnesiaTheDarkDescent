@@ -43,7 +43,6 @@ namespace hpl {
         }
     }
     ImageBindlessPool::~ImageBindlessPool() {
-
         while(m_headIndex != UINT16_MAX) {
             auto& head = m_pool[m_headIndex];
             m_texturePool->dispose(head.m_handle);

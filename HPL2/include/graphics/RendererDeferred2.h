@@ -146,6 +146,7 @@ namespace hpl {
         SharedSampler m_samplerPointWrap;
         std::array<SceneMaterial, cMaterial::MaxMaterialID> m_sceneMaterial;
         TextureDescriptorPool m_sceneTexture2DPool;
+        ImageBindlessPool m_sceneTransientImage2DPool;
         CommandSignature* m_cmdSignatureVBPass = NULL;
 
         // diffuse
@@ -180,7 +181,6 @@ namespace hpl {
         cRenderList m_rendererList;
 
         // Lights
-        ImageBindlessPool m_transientImagePool;
         SharedRootSignature m_lightClusterRootSignature;
         std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_lightDescriptorPerFrameSet;
         SharedShader m_lightClusterShader;

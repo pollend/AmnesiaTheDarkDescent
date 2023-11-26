@@ -4,10 +4,10 @@
 #ifndef _PARALLAX_BINDLESS_H
 #define _PARALLAX_BINDLESS_H
 
-float GetNormalizedDepth(SceneTexture heightMap,float startDepth, float stopDepth, float inverseDepthRange, float2 uv, bool isHeightMapSingleChannel) {
+float GetNormalizedDepth(MaterialTexture heightMap,float startDepth, float stopDepth, float inverseDepthRange, float2 uv, bool isHeightMapSingleChannel) {
     float currentSample = 0.0;
     float4 value;
-    if(SampleSceneTextureFloat4(heightMap, uv, value)) {
+    if(SampleMaterialTextureFloat4(heightMap, uv, value)) {
       if(isHeightMapSingleChannel) {
         currentSample = value.r;
       } else {
@@ -32,7 +32,7 @@ float2 ParallaxAdvance(float2 uv,
     float3 normal,
     float3 tangent,
     float3 bitangent,
-    SceneTexture heightMap,
+    MaterialTexture heightMap,
     bool isHeightMapSingleChannel) {
 
     float3 dirToCameraTS = normalize(WorldSpaceToTangent(dir, normal, tangent, bitangent));
@@ -54,7 +54,7 @@ float2 ParallaxAdvance(float2 uv,
    
     float currentSample;
     float4 value;
-    if(SampleSceneTextureFloat4(heightMap, uv.xy + parallaxOffset.xy, value)) {
+    if(SampleMaterialTextureFloat4(heightMap, uv.xy + parallaxOffset.xy, value)) {
       if(isHeightMapSingleChannel) {
         currentSample = value.r;
       } else {

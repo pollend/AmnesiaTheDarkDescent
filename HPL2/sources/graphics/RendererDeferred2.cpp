@@ -46,7 +46,7 @@ namespace hpl {
     cRendererDeferred2::cRendererDeferred2(cGraphics* apGraphics, cResources* apResources, std::shared_ptr<DebugDraw> debug)
         : iRenderer("Deferred2", apGraphics, apResources) {
         m_sceneTexture2DPool = TextureDescriptorPool(ForgeRenderer::SwapChainLength, resource::MaxSceneTextureCount);
-        m_transientImagePool = ImageBindlessPool(&m_sceneTexture2DPool, TransientImagePoolCount);
+        m_sceneTransientImage2DPool = ImageBindlessPool(&m_sceneTexture2DPool, TransientImagePoolCount);
         // Indirect Argument signature
         auto* forgeRenderer = Interface<ForgeRenderer>::Get();
         {
@@ -602,7 +602,7 @@ namespace hpl {
                 updateDescriptorSet(
                     forgeRenderer->Rend(), 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle, params.size(), params.data());
             });
-            m_transientImagePool.reset(frame);
+            m_sceneTransientImage2DPool.reset(frame);
             m_objectDescriptorLookup.clear();
             m_indirectDrawIndex = 0;
             m_objectIndex = 0;
@@ -839,6 +839,8 @@ namespace hpl {
                         const cColor color = light->GetDiffuseColor();
                         //mtxDestRender = cMath::MatrixMul(mtxDestTransform, mtxDestRender);
 
+                        Matrix4 spotViewProj = cMath::ToForgeMatrix4(pLightSpot->GetViewProjMatrix()); //* inverse(apFrustum->GetViewMat());
+
                         BufferUpdateDesc spotlightUpdateDesc = { m_spotlightBuffer[frame.m_frameIndex].m_handle,
                                                                   (spotlightCount++) * sizeof(resource::SceneSpotLight),
                                                                   sizeof(resource::SceneSpotLight) };
@@ -850,7 +852,9 @@ namespace hpl {
                         spotLightData->m_lightColor = float4(color.r, color.g, color.b, color.a);
                         spotLightData->m_worldPos = v3ToF3(cMath::ToForgeVec3(light->GetWorldPosition()));
                         spotLightData->m_angle = pLightSpot->GetFOV();
-                        spotLightData->m_viewProjection = cMath::ToForgeMatrix4(mtxDestTransform);
+                        spotLightData->m_viewProjection = spotViewProj;
+                        auto goboImage = pLightSpot->GetGoboTexture();
+                        spotLightData->m_goboTexture = goboImage ? m_sceneTransientImage2DPool.request(goboImage) : resource::InvalidSceneTexsture;
                         endUpdateResource(&spotlightUpdateDesc);
                         break;
                     }

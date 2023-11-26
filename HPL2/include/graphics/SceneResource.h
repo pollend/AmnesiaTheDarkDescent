@@ -28,6 +28,7 @@ namespace hpl::resource {
 
     static constexpr uint32_t MaterialIDMask =         0xff; // 0000 0000 0000 0000 0000 0000 1111 1111
     static constexpr uint32_t MaterialIndexMask =  0xffff00; // 0000 0000 1111 1111 1111 1111 0000 0000
+    static constexpr uint32_t InvalidSceneTexsture = 0xffff;
     uint32_t encodeMaterialID(hpl::MaterialID id, uint32_t handle);
 
 
@@ -94,7 +95,7 @@ namespace hpl::resource {
         float m_angle;
         float4 m_lightColor;
         float m_radius;
-        uint32_t m_pad0;
+        uint32_t m_goboTexture;
         uint32_t m_pad1;
         uint32_t m_pad2;
     };

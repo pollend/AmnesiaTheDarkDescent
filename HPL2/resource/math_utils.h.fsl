@@ -22,6 +22,7 @@ float3 WorldSpaceToTangent(float3 dir, float3 normal, float3 tangent, float3 bit
     return float3(a,b,c);
 }
 
+// https://bartwronski.com/2017/04/13/cull-that-cone/
 float4 boundingSphereForSpotlight(in float3 origin, in float3 forward, in float size, in float angle)
 {
     float4 boundingSphere;
