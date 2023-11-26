@@ -121,12 +121,39 @@ STRUCT(UniformObject)
 #define MATERIAL_INDEX(id) ((MATERIAL_INDEX_MASK & (id)) >> MATERIAL_INDEX_BIT) 
 
 STRUCT(PointLight) {
-    DATA(float4x4, mvp, None);
     DATA(float3, lightPos, none);
     DATA(uint, config, none);
     DATA(float4, lightColor, none);
     DATA(float, lightRadius, none);
+    DATA(uint, __pad0, NONE);
+    DATA(uint, __pad1, NONE);
+    DATA(uint, __pad2, NONE);
 };
+
+STRUCT(SpotLight) {
+    DATA(mat4, viewProjection, none);
+    DATA(float3, lightPos, none);
+    DATA(uint, config, none);
+    DATA(float3, direction, none);
+    DATA(float, angle, none);
+    DATA(float4, lightColor, none);
+    DATA(float, radius, none);
+    DATA(uint, __pad0, NONE);
+    DATA(uint, __pad1, NONE);
+    DATA(uint, __pad2, NONE);
+};
+#define LIGHT_TYPE_POINT_LIGHT 1
+#define LIGHT_TYPE_SPOT_LIGHT 2 
+
+#define LIGHT_ID_BIT    0
+#define LIGHT_INDEX_BIT 8
+
+#define LIGHT_ID_MASK         0xff // 0000 0000 0000 0000 0000 0000 1111 1111
+#define LIGHT_INDEX_MASK  0xffff00 // 0000 0000 1111 1111 1111 1111 0000 0000
+
+#define LIGHT_ID(id) ((LIGHT_ID_MASK & (id)) >> LIGHT_ID_BIT)
+#define LIGHT_INDEX(id) ((LIGHT_INDEX_MASK & (id)) >> LIGHT_INDEX_BIT) 
+#define LIGHT_ENCODE(id, index) (((id << LIGHT_ID_BIT) & LIGHT_ID_MASK) | ((index << LIGHT_INDEX_BIT) & LIGHT_INDEX_MASK)) 
 
 STRUCT(WorldInfo) {
     DATA(float, worldFogStart, None);

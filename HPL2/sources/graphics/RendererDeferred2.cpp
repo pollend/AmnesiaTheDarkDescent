@@ -2,10 +2,12 @@
 #include "graphics/DrawPacket.h"
 #include "graphics/ForgeRenderer.h"
 #include "graphics/GraphicsTypes.h"
+#include "graphics/ImageBindlessPool.h"
 #include "graphics/SceneResource.h"
 #include "graphics/TextureDescriptorPool.h"
 #include "resources/TextureManager.h"
 #include "scene/Light.h"
+#include "scene/LightSpot.h"
 #include "scene/RenderableContainer.h"
 #include "tinyimageformat_base.h"
 #include <memory>
@@ -44,6 +46,7 @@ namespace hpl {
     cRendererDeferred2::cRendererDeferred2(cGraphics* apGraphics, cResources* apResources, std::shared_ptr<DebugDraw> debug)
         : iRenderer("Deferred2", apGraphics, apResources) {
         m_sceneTexture2DPool = TextureDescriptorPool(ForgeRenderer::SwapChainLength, resource::MaxSceneTextureCount);
+        m_transientImagePool = ImageBindlessPool(&m_sceneTexture2DPool, TransientImagePoolCount);
         // Indirect Argument signature
         auto* forgeRenderer = Interface<ForgeRenderer>::Get();
         {
@@ -106,6 +109,12 @@ namespace hpl {
             addShader(forgeRenderer->Rend(), &loadDesc, shader);
             return true;
         });
+        m_lightClusterSpotlightShader.Load(forgeRenderer->Rend(), [&](Shader** shader) {
+            ShaderLoadDesc loadDesc = {};
+            loadDesc.mStages[0].pFileName = "scene_light_cluster_spotlight.comp";
+            addShader(forgeRenderer->Rend(), &loadDesc, shader);
+            return true;
+        });
         m_clearLightClusterShader.Load(forgeRenderer->Rend(), [&](Shader** shader) {
             ShaderLoadDesc loadDesc = {};
             loadDesc.mStages[0].pFileName = "scene_light_cluster_clear.comp";
@@ -128,7 +137,9 @@ namespace hpl {
         });
         m_lightClusterRootSignature.Load(forgeRenderer->Rend(), [&](RootSignature** signature) {
             RootSignatureDesc rootSignatureDesc = {};
-            std::array shaders = { m_lightClusterShader.m_handle, m_clearLightClusterShader.m_handle };
+            std::array shaders = { m_lightClusterSpotlightShader.m_handle,
+                                   m_lightClusterShader.m_handle,
+                                   m_clearLightClusterShader.m_handle };
             rootSignatureDesc.ppShaders = shaders.data();
             rootSignatureDesc.mShaderCount = shaders.size();
             addRootSignature(forgeRenderer->Rend(), &rootSignatureDesc, signature);
@@ -268,6 +279,16 @@ namespace hpl {
             addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
             return true;
         });
+        m_spotLightClusterPipeline.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
+            PipelineDesc pipelineDesc = {};
+            pipelineDesc.mType = PIPELINE_TYPE_COMPUTE;
+            ComputePipelineDesc& computePipelineDesc = pipelineDesc.mComputeDesc;
+            computePipelineDesc.pShaderProgram = m_lightClusterSpotlightShader.m_handle;
+            computePipelineDesc.pRootSignature = m_lightClusterRootSignature.m_handle;
+            addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
+            return true;
+        });
+
         m_clearClusterPipeline.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
             PipelineDesc pipelineDesc = {};
             pipelineDesc.mType = PIPELINE_TYPE_COMPUTE;
@@ -321,9 +342,26 @@ namespace hpl {
                 bufferDesc.mDesc.mSize = bufferDesc.mDesc.mElementCount * bufferDesc.mDesc.mStructStride;
                 bufferDesc.mDesc.mStartState = RESOURCE_STATE_UNORDERED_ACCESS;
                 bufferDesc.pData = nullptr;
-                bufferDesc.mDesc.pName = "Point Light";
+                bufferDesc.mDesc.pName = "PointLight";
                 bufferDesc.ppBuffer = buffer;
                 addResource(&bufferDesc, nullptr);
+                return true;
+            });
+
+            m_spotlightBuffer[i].Load([&](Buffer** buffer) {
+                BufferLoadDesc bufferDesc = {};
+                bufferDesc.mDesc.mDescriptors = DESCRIPTOR_TYPE_BUFFER_RAW | DESCRIPTOR_TYPE_RW_BUFFER;
+                bufferDesc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
+                bufferDesc.mDesc.mFirstElement = 0;
+                bufferDesc.mDesc.mStructStride = sizeof(resource::SceneSpotLight);
+                bufferDesc.mDesc.mElementCount = SpotLightCount;
+                bufferDesc.mDesc.mSize = bufferDesc.mDesc.mElementCount * bufferDesc.mDesc.mStructStride;
+                bufferDesc.mDesc.mStartState = RESOURCE_STATE_UNORDERED_ACCESS;
+                bufferDesc.pData = nullptr;
+                bufferDesc.mDesc.pName = "SpotLight";
+                bufferDesc.ppBuffer = buffer;
+                addResource(&bufferDesc, nullptr);
+
                 return true;
             });
 
@@ -406,6 +444,7 @@ namespace hpl {
             {
                 std::array params = {
                     DescriptorData{ .pName = "pointLights", .ppBuffers = &m_pointLightBuffer[swapchainIndex].m_handle },
+                    DescriptorData{ .pName = "spotLights", .ppBuffers = &m_spotlightBuffer[swapchainIndex].m_handle },
                     DescriptorData{ .pName = "lightClustersCount", .ppBuffers = &m_lightClusterCountBuffer[swapchainIndex].m_handle },
                     DescriptorData{ .pName = "lightClusters", .ppBuffers = &m_lightClustersBuffer[swapchainIndex].m_handle },
                     DescriptorData{ .pName = "sceneObjects", .ppBuffers = &m_objectUniformBuffer[swapchainIndex].m_handle },
@@ -417,6 +456,7 @@ namespace hpl {
             }
             {
                 std::array params = {
+                    DescriptorData{ .pName = "spotLights", .ppBuffers = &m_spotlightBuffer[swapchainIndex].m_handle },
                     DescriptorData{ .pName = "pointLights", .ppBuffers = &m_pointLightBuffer[swapchainIndex].m_handle },
                     DescriptorData{ .pName = "lightClustersCount", .ppBuffers = &m_lightClusterCountBuffer[swapchainIndex].m_handle },
                     DescriptorData{ .pName = "lightClusters", .ppBuffers = &m_lightClustersBuffer[swapchainIndex].m_handle },
@@ -562,6 +602,7 @@ namespace hpl {
                 updateDescriptorSet(
                     forgeRenderer->Rend(), 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle, params.size(), params.data());
             });
+            m_transientImagePool.reset(frame);
             m_objectDescriptorLookup.clear();
             m_indirectDrawIndex = 0;
             m_objectIndex = 0;
@@ -706,7 +747,7 @@ namespace hpl {
 
         std::vector<iRenderable*> translucenctRenderables;
         RangeSubsetAlloc indirectAllocSession(m_indirectDrawIndex);
-
+        // diffuse - building indirect draw list
         for (auto& renderable : m_rendererList.GetSolidObjects()) {
             cMaterial* material = renderable->GetMaterial();
             if (!material || renderable->GetCoverageAmount() < 1.0 || cMaterial::IsTranslucent(material->Descriptor().m_id) ||
@@ -738,6 +779,7 @@ namespace hpl {
         }
         RangeSubsetAlloc::RangeSubset opaqueIndirectArgs = indirectAllocSession.End();
 
+        // diffuse build indirect list for opaque
         for (auto& renderable : translucenctRenderables) {
             cMaterial* material = renderable->GetMaterial();
             if (!material) {
@@ -764,11 +806,12 @@ namespace hpl {
             indirectDrawArgs->mInstanceCount = 1;
             endUpdateResource(&updateDesc);
         }
+        // diffuse translucent indirect
         RangeSubsetAlloc::RangeSubset translucentIndirectArgs = indirectAllocSession.End();
-
         {
             cmdBindRenderTargets(cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
             uint32_t pointlightCount = 0;
+            uint32_t spotlightCount = 0;
             for(auto& light: m_rendererList.GetLights()) {
                 switch(light->GetLightType()) {
                     case eLightType_Point: {
@@ -779,9 +822,36 @@ namespace hpl {
                         auto pointLightData = reinterpret_cast<resource::ScenePointLight*>(pointlightUpdateDesc.pMappedData);
                         const cColor color = light->GetDiffuseColor();
                         pointLightData->m_radius = light->GetRadius();
-                        pointLightData->m_lightPos = v3ToF3(cMath::ToForgeVec3(light->GetWorldPosition()));
+                        pointLightData->m_worldPos = v3ToF3(cMath::ToForgeVec3(light->GetWorldPosition()));
                         pointLightData->m_lightColor = float4(color.r, color.g, color.b, color.a);
                         endUpdateResource(&pointlightUpdateDesc);
+                        break;
+                    }
+                    case eLightType_Spot: {
+                        cLightSpot* pLightSpot = static_cast<cLightSpot*>(light);
+                        float fFarHeight = pLightSpot->GetTanHalfFOV() * pLightSpot->GetRadius() * 2.0f;
+                        // Note: Aspect might be wonky if there is no gobo.
+                        float fFarWidth = fFarHeight * pLightSpot->GetAspect();
+                        cMatrixf mtxDestRender =
+                            cMath::MatrixScale(cVector3f(fFarWidth, fFarHeight, pLightSpot->GetRadius())); // x and y = "far plane", z = radius
+                        cMatrixf mtxDestTransform = cMath::MatrixMul(apFrustum->GetViewMatrix(), pLightSpot->GetWorldMatrix());
+                        cVector3f forward = cMath::MatrixMul3x3(mtxDestTransform, cVector3f(0, 0, 1));
+                        const cColor color = light->GetDiffuseColor();
+                        //mtxDestRender = cMath::MatrixMul(mtxDestTransform, mtxDestRender);
+
+                        BufferUpdateDesc spotlightUpdateDesc = { m_spotlightBuffer[frame.m_frameIndex].m_handle,
+                                                                  (spotlightCount++) * sizeof(resource::SceneSpotLight),
+                                                                  sizeof(resource::SceneSpotLight) };
+                        beginUpdateResource(&spotlightUpdateDesc);
+                        auto spotLightData = reinterpret_cast<resource::SceneSpotLight*>(spotlightUpdateDesc.pMappedData);
+                        //cVector3f forward = cMath::MatrixMul3x3(light->m_mtxViewSpaceTransform, cVector3f(0, 0, 1));
+                        spotLightData->m_radius = light->GetRadius();
+                        spotLightData->m_direction = normalize(float3(forward.x, forward.y, forward.z));
+                        spotLightData->m_lightColor = float4(color.r, color.g, color.b, color.a);
+                        spotLightData->m_worldPos = v3ToF3(cMath::ToForgeVec3(light->GetWorldPosition()));
+                        spotLightData->m_angle = pLightSpot->GetFOV();
+                        spotLightData->m_viewProjection = cMath::ToForgeMatrix4(mtxDestTransform);
+                        endUpdateResource(&spotlightUpdateDesc);
                         break;
                     }
                     default:
@@ -804,7 +874,16 @@ namespace hpl {
             cmdBindPipeline(cmd, m_pointLightClusterPipeline.m_handle);
             cmdBindDescriptorSet(cmd, 0, m_lightDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
             cmdDispatch(cmd, pointlightCount, 1, 1);
+          //  {
+          //      std::array barriers = { BufferBarrier{ m_lightClusterCountBuffer[frame.m_frameIndex].m_handle,
+          //                                             RESOURCE_STATE_UNORDERED_ACCESS,
+          //                                             RESOURCE_STATE_UNORDERED_ACCESS } };
+          //      cmdResourceBarrier(
+          //          cmd, barriers.size(), barriers.data(), 0, nullptr, 0, nullptr);
 
+          //  }
+            cmdBindPipeline(cmd, m_spotLightClusterPipeline.m_handle);
+            cmdDispatch(cmd, spotlightCount, 1, 1);
         }
 
         {

@@ -79,7 +79,7 @@ PsOut PS_MAIN(PsIn In)
 	float4 clipPos2 = mul(mvp, float4(v2pos, 1.0f));
 
 
-	float2 twoOverWindowSize = 2.0 / viewInfo.rect.zw; 
+	float2 twoOverWindowSize = 1.5 / viewInfo.rect.zw; 
 	BarycentricDeriv derivativesOut = CalcFullBary(clipPos0, clipPos1, clipPos2, In.screenPos, twoOverWindowSize);
 	// Interpolate the 1/w (one_over_w) for all three vertices of the triangle using the barycentric coordinates and the delta vector
 	float w = dot(float3(clipPos0.w, clipPos1.w, clipPos2.w), derivativesOut.m_lambda);
@@ -151,25 +151,64 @@ PsOut PS_MAIN(PsIn In)
 	uint numLightsInCluster = Get(lightClustersCount)[LIGHT_CLUSTER_COUNT_POS(clusterCoords.x, clusterCoords.y)];
   float4 outputColor = float4(0.0,0,0, 0);
   for(uint j = 0; j < numLightsInCluster; j++) {
-		uint lightId = Get(lightClusters)[LIGHT_CLUSTER_DATA_POS(j, clusterCoords.x, clusterCoords.y)];
-    PointLight pl = Get(pointLights)[lightId];
-	  float4 lightPosWorldSpace = float4(pl.lightPos.xyz, 1.0f);
-	  float4 lightCameraSpace = mul(viewInfo.viewMat, lightPosWorldSpace);
-      
-    const float3 lightDir = (lightCameraSpace.xyz  - viewPosition) * (1.0 / pl.lightRadius);
-    const float3 normalLightDir = normalize(lightDir);
-	  const float attenuation = saturate(1.0f - dot(lightDir , lightDir));
-    const float fLDotN = max(dot(worldNormal, normalLightDir), 0.0);
-    
-    float specularValue = 0.0;
-    float3 lightDiffuseColor = pl.lightColor.xyz * fLDotN;
-    if(pl.lightColor.w > 0.0) {
-        float3 halfVec = normalize(normalLightDir + normalize(-viewPosition.xyz));
-        float specIntensity = specular.x;
-        float specPower = exp2(specular.y * 10.0) + 1.0;
-        specularValue = pl.lightColor.w * specIntensity *  pow( clamp( dot( halfVec, worldNormal), 0.0, 1.0), specPower );
-    }
-    outputColor += float4(((specularValue.xxx * pl.lightColor.xyz) + (diffuseColor.xyz * pl.lightColor.xyz * fLDotN)) * attenuation, 0.0);
+		uint lightEncoding = Get(lightClusters)[LIGHT_CLUSTER_DATA_POS(j, clusterCoords.x, clusterCoords.y)];
+   	uint id = LIGHT_ID(lightEncoding);
+   	uint index = LIGHT_INDEX(lightEncoding);
+
+		switch(id) {
+			case LIGHT_TYPE_POINT_LIGHT: {
+    		PointLight pl = Get(pointLights)[index];
+	  		float4 lightPosWorldSpace = float4(pl.lightPos.xyz, 1.0f);
+	  		float4 lightCameraSpace = mul(viewInfo.viewMat, lightPosWorldSpace);
+      		
+    		const float3 lightDir = (lightCameraSpace.xyz  - viewPosition) * (1.0 / pl.lightRadius);
+    		const float3 normalLightDir = normalize(lightDir);
+	  		const float attenuation = saturate(1.0f - dot(lightDir , lightDir));
+    		const float fLDotN = max(dot(worldNormal, normalLightDir), 0.0);
+    		
+    		float specularValue = 0.0;
+    		float3 lightDiffuseColor = pl.lightColor.xyz * fLDotN;
+    		if(pl.lightColor.w > 0.0) {
+        		float3 halfVec = normalize(normalLightDir + normalize(-viewPosition.xyz));
+        		float specIntensity = specular.x;
+        		float specPower = exp2(specular.y * 10.0) + 1.0;
+        		specularValue = pl.lightColor.w * specIntensity *  pow( clamp( dot( halfVec, worldNormal), 0.0, 1.0), specPower );
+    		}
+    		outputColor += float4(((specularValue.xxx * pl.lightColor.xyz) + (diffuseColor.xyz * pl.lightColor.xyz * fLDotN)) * attenuation, 0.0);
+				break;
+			}
+			case LIGHT_TYPE_SPOT_LIGHT: {
+    			SpotLight spotlight = Get(spotLights)[index];
+
+	  			float4 lightPosWorldSpace = float4(spotlight.lightPos.xyz, 1.0f);
+	  			float4 lightCameraSpace = mul(viewInfo.viewMat, lightPosWorldSpace);
+      			
+    			const float3 lightDir = (lightCameraSpace.xyz  - viewPosition) * (1.0 / spotlight.radius);
+    			const float3 normalLightDir = normalize(lightDir);
+	  			float attenuation = saturate(1.0f - dot(lightDir , lightDir));
+    			const float fLDotN = max(dot(worldNormal, normalLightDir), 0.0);
+
+          float oneMinusCos = 1.0 - dot(normalLightDir,  spotlight.direction);
+				  attenuation *= saturate(1.0 - (oneMinusCos / (1.0 - cos(spotlight.angle * 0.5))));
+					
+    			float4 projectionUV = mul(spotlight.viewProjection, float4(position, 1.0));
+    			projectionUV.xyz = (projectionUV.xyz / projectionUV.w);
+    			projectionUV.xy = projectionUV.xy * 0.5 + 0.5;
+    			projectionUV.w = 1.0;
+    		
+    			float specularValue = 0.0;
+    			float3 lightDiffuseColor = spotlight.lightColor.xyz * fLDotN;
+    			if(spotlight.lightColor.w > 0.0) {
+        			float3 halfVec = normalize(normalLightDir + normalize(-viewPosition.xyz));
+        			float specIntensity = specular.x;
+        			float specPower = exp2(specular.y * 10.0) + 1.0;
+        			specularValue = spotlight.lightColor.w * specIntensity *  pow( clamp( dot( halfVec, worldNormal), 0.0, 1.0), specPower );
+    			}
+    			outputColor += float4(((specularValue.xxx * spotlight.lightColor.xyz) + (diffuseColor.xyz * spotlight.lightColor.xyz * fLDotN)) * attenuation, 0.0);
+				break;
+			}
+		}
+
   }
 
   float4 illuminationSample = float4(0,0,0,0);

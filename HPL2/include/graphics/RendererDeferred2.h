@@ -21,6 +21,7 @@
 #include "engine/RTTI.h"
 
 #include "graphics/CommandBufferPool.h"
+#include "graphics/ImageBindlessPool.h"
 #include "graphics/SceneResource.h"
 #include "graphics/ShadowCache.h"
 #include "graphics/TextureDescriptorPool.h"
@@ -82,6 +83,7 @@ namespace hpl {
         static constexpr uint32_t MaxIndirectDrawArgs = 4096;
 
         static constexpr uint32_t PointLightCount = 256;
+        static constexpr uint32_t SpotLightCount = 256;
         static constexpr float ShadowDistanceMedium = 10;
         static constexpr float ShadowDistanceLow = 20;
         static constexpr float ShadowDistanceNone = 40;
@@ -91,6 +93,8 @@ namespace hpl {
         static constexpr uint32_t LightClusterWidth = 16;
         static constexpr uint32_t LightClusterHeight = 16;
         static constexpr uint32_t LightClusterLightCount = 128;
+        static constexpr uint32_t TransientImagePoolCount = 256;
+
 
         struct ViewportData {
         public:
@@ -176,15 +180,19 @@ namespace hpl {
         cRenderList m_rendererList;
 
         // Lights
+        ImageBindlessPool m_transientImagePool;
         SharedRootSignature m_lightClusterRootSignature;
         std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_lightDescriptorPerFrameSet;
         SharedShader m_lightClusterShader;
+        SharedShader m_lightClusterSpotlightShader;
         SharedShader m_clearLightClusterShader;
         SharedPipeline m_pointLightClusterPipeline;
+        SharedPipeline m_spotLightClusterPipeline;
         SharedPipeline m_clearClusterPipeline;
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_lightClustersBuffer;
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_lightClusterCountBuffer;
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_pointLightBuffer;
+        std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_spotlightBuffer;
     };
 }; // namespace hpl
 

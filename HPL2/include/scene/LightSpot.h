@@ -33,9 +33,6 @@ namespace hpl {
 
 	class cLightSpot : public iLight
 	{
-	#ifdef __GNUC__
-		typedef iLight __super;
-	#endif
 	public:
 		cLightSpot(tString asName, cResources *apResources);
 		~cLightSpot();

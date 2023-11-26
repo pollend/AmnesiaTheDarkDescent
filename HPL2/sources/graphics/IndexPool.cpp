@@ -29,7 +29,7 @@ namespace hpl {
             entry.m_end--;
             return res;
         }
-        return UINT32_MAX;
+        return IndexPool::InvalidHandle;
     }
 
     void IndexPool::returnId(uint32_t index) {

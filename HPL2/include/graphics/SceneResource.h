@@ -77,11 +77,26 @@ namespace hpl::resource {
     };
 
     struct ScenePointLight {
-        mat4 m_mvp;
-        float3 m_lightPos;
-        uint m_config;
+        float3 m_worldPos;
+        uint32_t m_config;
         float4 m_lightColor;
         float m_radius;
+        uint32_t m_pad0;
+        uint32_t m_pad1;
+        uint32_t m_pad2;
+    };
+
+    struct SceneSpotLight {
+        mat4 m_viewProjection;
+        float3 m_worldPos;
+        uint m_config;
+        float3 m_direction;
+        float m_angle;
+        float4 m_lightColor;
+        float m_radius;
+        uint32_t m_pad0;
+        uint32_t m_pad1;
+        uint32_t m_pad2;
     };
 
     struct DiffuseMaterial {

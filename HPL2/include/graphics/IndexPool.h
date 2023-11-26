@@ -13,6 +13,7 @@ namespace hpl {
     public:
         explicit IndexPool(uint32_t reserve);
         IndexPool();
+        static constexpr uint32_t InvalidHandle = UINT32_MAX;
 
         uint32_t requestId();
         inline uint32_t reserve() {return m_reserve;}

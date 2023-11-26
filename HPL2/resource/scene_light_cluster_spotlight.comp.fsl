@@ -1,4 +1,6 @@
 #include "scene_light_cluster_resource.h.fsl"
+#include "math_utils.h.fsl"
+
 
 NUM_THREADS(LIGHT_CLUSTER_WIDTH, LIGHT_CLUSTER_HEIGHT, 1)
 void CS_MAIN(SV_GroupThreadID(uint3) threadInGroupId, SV_GroupID(uint3) groupId)
@@ -12,19 +14,21 @@ void CS_MAIN(SV_GroupThreadID(uint3) threadInGroupId, SV_GroupID(uint3) groupId)
 
 	// aspect ratio is hard coded to 4/3
 	const float aspectRatio = 4.0/3.0;
-  PointLight lightData = Get(pointLights)[groupId.x];
-	
-	float4 lightPosWorldSpace = float4(lightData.lightPos.xyz, 1.0f);
+  SpotLight lightData = Get(spotLights)[groupId.x];
+
+  float4 sphere = boundingSphereForSpotlight(lightData.lightPos, lightData.direction, lightData.radius,  lightData.angle);
+
+	float4 lightPosWorldSpace = float4(sphere.xyz, 1.0f);
 	float4 lightPosClipSpace  = mul(viewProjMat, lightPosWorldSpace);
 	float invLightPosW = 1.0f / lightPosClipSpace.w;
 	float3 lightPos = lightPosClipSpace.xyz * invLightPosW;
 
 	float fov = 2.0 * atan((2.0 * viewInfo.zNear)/viewInfo.projMat[1][1]);
-	float projRadius = 2.0f * lightData.lightRadius * (1 / tan(fov * 0.5f)) * invLightPosW;
+	float projRadius = 2.0f * sphere.w * (1 / tan(fov * 0.5f)) * invLightPosW;
 	projRadius *= size.x > size.y ? aspectRatio : 1 / aspectRatio;
 	
 	// Early exit light if it's behind the camera
-	if (lightPosClipSpace.w < 0.0f && -lightPosClipSpace.w > lightData.lightRadius) {
+	if (lightPosClipSpace.w < 0.0f && -lightPosClipSpace.w > sphere.w) {
 		RETURN();
 	}
 	
@@ -59,7 +63,8 @@ void CS_MAIN(SV_GroupThreadID(uint3) threadInGroupId, SV_GroupID(uint3) groupId)
 		AtomicAdd(Get(lightClustersCount)[LIGHT_CLUSTER_COUNT_POS(threadInGroupId.x, threadInGroupId.y)], 1, lightArrayPos);
 
 		// Add light id to cluster
-		AtomicExchange(Get(lightClusters)[LIGHT_CLUSTER_DATA_POS(lightArrayPos, threadInGroupId.x, threadInGroupId.y)], LIGHT_ENCODE(LIGHT_TYPE_POINT_LIGHT, groupId.x), lightArrayPos);
+		AtomicExchange(Get(lightClusters)[LIGHT_CLUSTER_DATA_POS(lightArrayPos, threadInGroupId.x, threadInGroupId.y)], LIGHT_ENCODE(LIGHT_TYPE_SPOT_LIGHT, groupId.x), lightArrayPos);
 	}
 }
+
 
