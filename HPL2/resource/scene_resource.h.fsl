@@ -76,18 +76,16 @@ INLINE bool SampleSceneTextureGradFloat4(uint textureIdx, SamplerState sh, float
     return !(textureIdx == INVALID_TEXTURE_INDEX); 
 }
 
-INLINE bool SampleMaterialTextureFloat4(MaterialTexture tex, float2 uv, inout float4 value) {
+INLINE bool SampleMaterialTextureFloat4(MaterialTexture tex, float2 uv, inout(float4) value) {
     uint textureIdx = tex.textureID; 
     uint filterIdx = tex.filterID; 
     if(textureIdx < SCENE_MAX_TEXTURE_COUNT) {
         if(tex.hasGradient) {
             switch(filterIdx) {
                 SCENE_FILTER_SWITCH_CASE { 
-                    if(textureIdx < SCENE_MAX_TEXTURE_COUNT) {
-                        BeginNonUniformResourceIndex(textureIdx, SCENE_MAX_TEXTURE_COUNT);
-		                    value = SampleGradTex2D(Get(sceneTextures)[textureIdx], Get(sceneFilters)[filterIdx], uv, tex.texCoordDX, tex.texCoordDY);
-                        EndNonUniformResourceIndex(); 
-                    }
+                    BeginNonUniformResourceIndex(textureIdx, SCENE_MAX_TEXTURE_COUNT);
+		                value = SampleGradTex2D(Get(sceneTextures)[textureIdx], Get(sceneFilters)[filterIdx], uv, tex.texCoordDX, tex.texCoordDY);
+                    EndNonUniformResourceIndex(); 
                     break;
                 }
                 default:
@@ -96,11 +94,9 @@ INLINE bool SampleMaterialTextureFloat4(MaterialTexture tex, float2 uv, inout fl
         } else {
             switch(filterIdx) {
                 SCENE_FILTER_SWITCH_CASE { 
-                    if(textureIdx < SCENE_MAX_TEXTURE_COUNT) {
-                        BeginNonUniformResourceIndex(textureIdx, SCENE_MAX_TEXTURE_COUNT);
-                            value = SampleTex2D(Get(sceneTextures)[textureIdx], Get(sceneFilters)[filterIdx], uv);
-                        EndNonUniformResourceIndex(); 
-                    }
+                    BeginNonUniformResourceIndex(textureIdx, SCENE_MAX_TEXTURE_COUNT);
+                        value = SampleTex2D(Get(sceneTextures)[textureIdx], Get(sceneFilters)[filterIdx], uv);
+                    EndNonUniformResourceIndex(); 
                     break;
                 }
                 default:

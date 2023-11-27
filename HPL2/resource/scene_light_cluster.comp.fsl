@@ -11,7 +11,7 @@ void CS_MAIN(SV_GroupThreadID(uint3) threadInGroupId, SV_GroupID(uint3) groupId)
   float4x4 viewProjMat = mul(viewInfo.projMat, viewInfo.viewMat);
 
 	// aspect ratio is hard coded to 4/3
-	const float aspectRatio = 4.0/3.0;
+	const float aspectRatio = size.x / size.y ;
   PointLight lightData = Get(pointLights)[groupId.x];
 	
 	float4 lightPosWorldSpace = float4(lightData.lightPos.xyz, 1.0f);
@@ -19,9 +19,10 @@ void CS_MAIN(SV_GroupThreadID(uint3) threadInGroupId, SV_GroupID(uint3) groupId)
 	float invLightPosW = 1.0f / lightPosClipSpace.w;
 	float3 lightPos = lightPosClipSpace.xyz * invLightPosW;
 
-	float fov = 2.0 * atan((2.0 * viewInfo.zNear)/viewInfo.projMat[1][1]);
-	float projRadius = 2.0f * lightData.lightRadius * (1 / tan(fov * 0.5f)) * invLightPosW;
-	projRadius *= size.x > size.y ? aspectRatio : 1 / aspectRatio;
+	float fov = 2.0 * atan(1/viewInfo.projMat[1][1]);
+  float projRadius = 2.0f * lightData.lightRadius * (1 / tan(fov * 0.5f)) * invLightPosW;
+  projRadius *= size.x > size.y ? aspectRatio : 1 / aspectRatio;
+  //float projRadius =  lightData.lightRadius * invLightPosW;
 	
 	// Early exit light if it's behind the camera
 	if (lightPosClipSpace.w < 0.0f && -lightPosClipSpace.w > lightData.lightRadius) {
@@ -36,6 +37,8 @@ void CS_MAIN(SV_GroupThreadID(uint3) threadInGroupId, SV_GroupID(uint3) groupId)
 	float clusterRight  = clusterLeft + invClusterWidth;
 	float clusterBottom = clusterTop + invClusterHeight;
 
+  float mip = max(floor(log2(max(invClusterWidth * size.x, invClusterHeight * size.y))), 16);
+
 	// Transform coordinates from range [0..1] to range [-1..1]
 	clusterLeft   = clusterLeft   * 2.0f - 1.0f;
 	clusterTop    = clusterTop    * 2.0f - 1.0f;
@@ -49,17 +52,23 @@ void CS_MAIN(SV_GroupThreadID(uint3) threadInGroupId, SV_GroupID(uint3) groupId)
 	float clusterCenterY = (clusterTop + clusterBottom) * 0.5f;
 	float clusterRadius  = distance(float2(clusterLeft, clusterTop), float2(clusterRight, clusterBottom)) * 0.5f;
 
+  float clipDepth = max( 
+  	max(
+  		SampleLvlTex2D(Get(hiZTexture), Get(depthSampler), (float2(clusterLeft, clusterTop) * float2(0.5, -0.5) + float2(0.5, 0.5)), mip).r,
+  		SampleLvlTex2D(Get(hiZTexture), Get(depthSampler), (float2(clusterRight, clusterTop) * float2(0.5, -0.5) + float2(0.5, 0.5)), mip).r),
+  	max(
+  		SampleLvlTex2D(Get(hiZTexture), Get(depthSampler), (float2(clusterLeft, clusterBottom) * float2(0.5, -0.5) + float2(0.5, 0.5)), mip).r,
+  		SampleLvlTex2D(Get(hiZTexture), Get(depthSampler), (float2(clusterRight, clusterBottom) * float2(0.5, -0.5) + float2(0.5, 0.5)), mip).r));
+
 	// Check if the light projection overlaps the cluster: add the light bit to this cluster coords
 	float distanceToCenter = distance(float2(clusterCenterX, clusterCenterY), lightPos.xy);
-
-	if (distanceToCenter - clusterRadius < abs(projRadius))
-	{
+	if ((lightPos.z + abs(projRadius) * 2.0f) > clipDepth && distanceToCenter - clusterRadius < abs(projRadius)) {
 		// Increase light count on this cluster
 		uint lightArrayPos = 0;
 		AtomicAdd(Get(lightClustersCount)[LIGHT_CLUSTER_COUNT_POS(threadInGroupId.x, threadInGroupId.y)], 1, lightArrayPos);
 
 		// Add light id to cluster
-		AtomicExchange(Get(lightClusters)[LIGHT_CLUSTER_DATA_POS(lightArrayPos, threadInGroupId.x, threadInGroupId.y)], LIGHT_ENCODE(LIGHT_TYPE_POINT_LIGHT, groupId.x), lightArrayPos);
+		AtomicExchange(Get(lightClusters)[LIGHT_CLUSTER_DATA_POS(lightArrayPos, threadInGroupId.x, threadInGroupId.y)], groupId.x, lightArrayPos);
 	}
 }
 

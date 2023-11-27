@@ -75,8 +75,7 @@ namespace hpl {
         static constexpr uint32_t MaxReflectionBuffers = 4;
         static constexpr uint32_t MaxObjectUniforms = 4096;
         static constexpr uint32_t MaxLightUniforms = 1024;
-        static constexpr uint32_t MaxHiZMipLevels = 10;
-        static constexpr uint32_t MaxViewportFrameDescriptors = 256;
+        static constexpr uint32_t MaxHiZMipLevels = 16;
         static constexpr uint32_t MaxObjectTest = 32768;
         static constexpr uint32_t MaxOcclusionDescSize = 4096;
         static constexpr uint32_t MaxQueryPoolSize = MaxOcclusionDescSize * 2;
@@ -90,8 +89,8 @@ namespace hpl {
 
         static constexpr uint32_t MaxSolidDiffuseMaterials = 512;
 
-        static constexpr uint32_t LightClusterWidth = 16;
-        static constexpr uint32_t LightClusterHeight = 16;
+        static constexpr uint32_t LightClusterWidth = 24;
+        static constexpr uint32_t LightClusterHeight = 24;
         static constexpr uint32_t LightClusterLightCount = 128;
         static constexpr uint32_t TransientImagePoolCount = 256;
 
@@ -109,6 +108,8 @@ namespace hpl {
             std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_depthBuffer;
             std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_testBuffer; //encodes the parallax
             std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_visiblityBuffer;
+
+            std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_hizDepthBuffer;
         };
 
         cRendererDeferred2(
@@ -144,6 +145,7 @@ namespace hpl {
 
         SharedSampler m_samplerNearEdgeClamp;
         SharedSampler m_samplerPointWrap;
+        SharedSampler m_samplerPointClampToBorder;
         std::array<SceneMaterial, cMaterial::MaxMaterialID> m_sceneMaterial;
         TextureDescriptorPool m_sceneTexture2DPool;
         ImageBindlessPool m_sceneTransientImage2DPool;
@@ -156,6 +158,16 @@ namespace hpl {
         SharedRootSignature m_sceneRootSignature;
         SharedDescriptorSet m_sceneDescriptorConstSet;
         std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_sceneDescriptorPerFrameSet;
+
+        std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_HIZGenerateConstSet;
+        SharedRootSignature m_generateHiZSignature;
+        SharedPipeline m_generateHiZPass;
+        SharedShader m_generateHiZShader;
+
+        SharedRootSignature m_rootSignatureCopyDepth;
+        std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_descriptorCopyDepth;
+        SharedPipeline m_pipelineCopyDepth;
+        SharedShader m_copyDepthShader;
 
         SharedShader m_visibilityBufferPassShader;
         SharedShader m_visibilityBufferAlphaPassShader;

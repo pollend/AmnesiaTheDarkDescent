@@ -4,10 +4,10 @@
 #ifndef _PARALLAX_BINDLESS_H
 #define _PARALLAX_BINDLESS_H
 
-float GetNormalizedDepth(MaterialTexture heightMap,float startDepth, float stopDepth, float inverseDepthRange, float2 uv, bool isHeightMapSingleChannel) {
+float GetNormalizedDepth(SamplerState sh, uint heightIdx, float startDepth, float stopDepth, float inverseDepthRange, float2 uv, bool isHeightMapSingleChannel) {
     float currentSample = 0.0;
     float4 value;
-    if(SampleMaterialTextureFloat4(heightMap, uv, value)) {
+    if(SampleSceneTextureFloat4(heightIdx, sh, uv, value)) {
       if(isHeightMapSingleChannel) {
         currentSample = value.r;
       } else {
@@ -24,7 +24,8 @@ float GetNormalizedDepth(MaterialTexture heightMap,float startDepth, float stopD
     return normalizedDepth; 
 }
 
-float2 ParallaxAdvance(float2 uv,
+float2 ParallaxAdvance(
+    float2 uv,
     float depthOffset, 
     float numberOfSteps, 
     float heightMapScale, 
@@ -32,7 +33,8 @@ float2 ParallaxAdvance(float2 uv,
     float3 normal,
     float3 tangent,
     float3 bitangent,
-    MaterialTexture heightMap,
+    uint heightIdx, 
+    SamplerState sh,
     bool isHeightMapSingleChannel) {
 
     float3 dirToCameraTS = normalize(WorldSpaceToTangent(dir, normal, tangent, bitangent));
@@ -54,7 +56,7 @@ float2 ParallaxAdvance(float2 uv,
    
     float currentSample;
     float4 value;
-    if(SampleMaterialTextureFloat4(heightMap, uv.xy + parallaxOffset.xy, value)) {
+    if(SampleSceneTextureFloat4(heightIdx, sh, uv.xy + parallaxOffset.xy, value)) {
       if(isHeightMapSingleChannel) {
         currentSample = value.r;
       } else {
@@ -69,7 +71,7 @@ float2 ParallaxAdvance(float2 uv,
         parallaxOffset += delta;
                 
         prevSample = currentSample;
-        currentSample = GetNormalizedDepth(heightMap, depthSearchStart, depthSearchEnd, inverseDepthFactor, uv.xy + parallaxOffset.xy, isHeightMapSingleChannel);
+        currentSample = GetNormalizedDepth(sh, heightIdx, depthSearchStart, depthSearchEnd, inverseDepthFactor, uv.xy + parallaxOffset.xy, isHeightMapSingleChannel);
     }
 
     if(currentStep > 0.0)
@@ -93,7 +95,7 @@ float2 ParallaxAdvance(float2 uv,
             parallaxOffset += adjustedDelta;
             prevSample = currentSample;
 
-            currentSample = GetNormalizedDepth(heightMap, depthSearchStart, depthSearchEnd, inverseDepthFactor, uv.xy + parallaxOffset.xy, isHeightMapSingleChannel);
+            currentSample = GetNormalizedDepth(sh, heightIdx, depthSearchStart, depthSearchEnd, inverseDepthFactor, uv.xy + parallaxOffset.xy, isHeightMapSingleChannel);
         }
     }
     if(parallaxOffset.z > 0.0)

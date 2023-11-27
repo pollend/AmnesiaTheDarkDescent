@@ -45,8 +45,6 @@ namespace hpl {
         };
         frame.m_resourcePool->Push(m_finalRenderTarget[frame.m_frameIndex]);
         cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
-
-
     }
 
     void ForgeRenderer::SubmitFrame() {
