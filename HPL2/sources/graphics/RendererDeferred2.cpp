@@ -219,7 +219,7 @@ namespace hpl {
             return true;
         });
         m_visiblityShadePass.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
-            std::array colorFormats = { ColorBufferFormat }; //, TinyImageFormat_R16G16B16A16_SFLOAT };
+            std::array colorFormats = { ColorBufferFormat , TinyImageFormat_R16G16B16A16_SFLOAT };
             RasterizerStateDesc rasterizerStateDesc = {};
             rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
             rasterizerStateDesc.mFrontFace = FRONT_FACE_CCW;
@@ -393,7 +393,7 @@ namespace hpl {
             ASSERT(m_indirectDrawArgsBuffer.size() == ForgeRenderer::SwapChainLength);
             m_lightClustersBuffer[i].Load([&](Buffer** buffer) {
                 BufferLoadDesc bufferDesc = {};
-                bufferDesc.mDesc.mElementCount = LightClusterLightCount * LightClusterWidth * LightClusterHeight;
+                bufferDesc.mDesc.mElementCount = LightClusterLightCount * LightClusterWidth * LightClusterHeight * LightClusterSlices;
                 bufferDesc.mDesc.mSize = bufferDesc.mDesc.mElementCount * sizeof(uint32_t);
                 bufferDesc.mDesc.mDescriptors = DESCRIPTOR_TYPE_BUFFER_RAW | DESCRIPTOR_TYPE_RW_BUFFER;
                 bufferDesc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_GPU_ONLY;
@@ -407,7 +407,7 @@ namespace hpl {
             });
             m_lightClusterCountBuffer[i].Load([&](Buffer** buffer) {
                 BufferLoadDesc bufferDesc = {};
-                bufferDesc.mDesc.mElementCount = LightClusterWidth * LightClusterHeight;
+                bufferDesc.mDesc.mElementCount = LightClusterWidth * LightClusterHeight * LightClusterSlices;
                 bufferDesc.mDesc.mSize = bufferDesc.mDesc.mElementCount * sizeof(uint32_t);
                 bufferDesc.mDesc.mDescriptors = DESCRIPTOR_TYPE_BUFFER_RAW | DESCRIPTOR_TYPE_RW_BUFFER;
                 bufferDesc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_GPU_ONLY;
@@ -802,14 +802,14 @@ namespace hpl {
             }
             viewportDatum = m_boundViewportData.update(viewport, std::move(updateDatum));
         }
-        {
+       // {
 
-            std::array params = {
-                DescriptorData{ .pName = "hiZTexture", .ppTextures = &viewportDatum->m_hizDepthBuffer[frame.m_frameIndex].m_handle->pTexture },
-            };
-            updateDescriptorSet(
-                forgeRenderer->Rend(), 0, m_lightDescriptorPerFrameSet[frame.m_frameIndex].m_handle, params.size(), params.data());
-        }
+       //     std::array params = {
+       //         DescriptorData{ .pName = "hiZTexture", .ppTextures = &viewportDatum->m_hizDepthBuffer[frame.m_frameIndex].m_handle->pTexture },
+       //     };
+       //     updateDescriptorSet(
+       //         forgeRenderer->Rend(), 0, m_lightDescriptorPerFrameSet[frame.m_frameIndex].m_handle, params.size(), params.data());
+       // }
 
         frame.m_resourcePool->Push(viewportDatum->m_testBuffer[frame.m_frameIndex]);
         frame.m_resourcePool->Push(viewportDatum->m_visiblityBuffer[frame.m_frameIndex]);
@@ -837,6 +837,7 @@ namespace hpl {
             auto& primaryViewport = sceneInfo->m_viewports[resource::ViewportInfo::PrmaryViewportIndex];
             primaryViewport.m_viewMat = apFrustum->GetViewMat();
             primaryViewport.m_projMat = apFrustum->GetProjectionMat();
+            primaryViewport.m_invProjMat = inverse(apFrustum->GetProjectionMat());
             primaryViewport.m_invViewMat = inverse(apFrustum->GetViewMat());
             primaryViewport.m_invViewProj = inverse(primaryViewport.m_projMat * primaryViewport.m_viewMat);
             primaryViewport.m_zFar = apFrustum->GetFarPlane();
@@ -1054,8 +1055,7 @@ namespace hpl {
                 loadActions.mClearDepth = { .depth = 1.0f, .stencil = 0 };
                 loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
 
-                std::array targets = { viewportDatum->m_visiblityBuffer[frame.m_frameIndex].m_handle,
-                                       viewportDatum->m_testBuffer[frame.m_frameIndex].m_handle };
+                std::array targets = { viewportDatum->m_visiblityBuffer[frame.m_frameIndex].m_handle};
                 cmdBindRenderTargets(
                     cmd,
                     targets.size(),
@@ -1177,7 +1177,7 @@ namespace hpl {
 
             cmdBindDescriptorSet(cmd, 0, m_lightDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
             cmdBindPipeline(cmd, m_clearClusterPipeline.m_handle);
-            cmdDispatch(cmd, 1, 1, 1);
+            cmdDispatch(cmd, 1, 1, LightClusterSlices);
             {
                 std::array barriers = { BufferBarrier{ m_lightClusterCountBuffer[frame.m_frameIndex].m_handle,
                                                        RESOURCE_STATE_UNORDERED_ACCESS,
@@ -1189,7 +1189,7 @@ namespace hpl {
 
             cmdBindPipeline(cmd, m_pointLightClusterPipeline.m_handle);
             cmdBindDescriptorSet(cmd, 0, m_lightDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
-            cmdDispatch(cmd, pointlightCount, 1, 1);
+            cmdDispatch(cmd, pointlightCount, 1, LightClusterSlices);
           //  {
           //      std::array barriers = { BufferBarrier{ m_lightClusterCountBuffer[frame.m_frameIndex].m_handle,
           //                                             RESOURCE_STATE_UNORDERED_ACCESS,
@@ -1231,7 +1231,7 @@ namespace hpl {
             loadActions.mClearColorValues[0] = { .r = 0.0f, .g = 0.0f, .b = 0.0f, .a = 0.0f };
             loadActions.mClearDepth = { .depth = 1.0f, .stencil = 0 };
             loadActions.mLoadActionDepth = LOAD_ACTION_CLEAR;
-            std::array targets = { viewportDatum->m_outputBuffer[frame.m_frameIndex].m_handle};
+            std::array targets = { viewportDatum->m_outputBuffer[frame.m_frameIndex].m_handle, viewportDatum->m_testBuffer[frame.m_frameIndex].m_handle};
             cmdBindRenderTargets(
                 cmd,
                 targets.size(),

@@ -89,8 +89,9 @@ namespace hpl {
 
         static constexpr uint32_t MaxSolidDiffuseMaterials = 512;
 
-        static constexpr uint32_t LightClusterWidth = 24;
-        static constexpr uint32_t LightClusterHeight = 24;
+        static constexpr uint32_t LightClusterWidth = 16;
+        static constexpr uint32_t LightClusterHeight = 9;
+        static constexpr uint32_t LightClusterSlices = 24;
         static constexpr uint32_t LightClusterLightCount = 128;
         static constexpr uint32_t TransientImagePoolCount = 256;
 

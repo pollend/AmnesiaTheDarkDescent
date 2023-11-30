@@ -1,4 +1,6 @@
 #include "scene_light_cluster_resource.h.fsl"
+#include "math_utils.h.fsl"
+
 
 NUM_THREADS(LIGHT_CLUSTER_WIDTH, LIGHT_CLUSTER_HEIGHT, 1)
 void CS_MAIN(SV_GroupThreadID(uint3) threadInGroupId, SV_GroupID(uint3) groupId)
@@ -6,69 +8,48 @@ void CS_MAIN(SV_GroupThreadID(uint3) threadInGroupId, SV_GroupID(uint3) groupId)
 	INIT_MAIN;
 	const float invClusterWidth  = 1.0f / float(LIGHT_CLUSTER_WIDTH);
 	const float invClusterHeight = 1.0f / float(LIGHT_CLUSTER_HEIGHT);
+  
   ViewportInfo viewInfo = Get(viewports)[PRIMARY_VIEWPORT_INDEX];
-  float2 size = viewInfo.rect.zw;
-  float4x4 viewProjMat = mul(viewInfo.projMat, viewInfo.viewMat);
+	mat4 invProjMat = mul(viewInfo.viewMat, viewInfo.invViewProj);
+  //float4x4 viewProjMat = mul(viewInfo.projMat, viewInfo.viewMat);
+  float2 screenDim = viewInfo.rect.zw;
 
-	// aspect ratio is hard coded to 4/3
-	const float aspectRatio = size.x / size.y ;
-  PointLight lightData = Get(pointLights)[groupId.x];
+  //Near and far values of the cluster in view space
 	
-	float4 lightPosWorldSpace = float4(lightData.lightPos.xyz, 1.0f);
-	float4 lightPosClipSpace  = mul(viewProjMat, lightPosWorldSpace);
-	float invLightPosW = 1.0f / lightPosClipSpace.w;
-	float3 lightPos = lightPosClipSpace.xyz * invLightPosW;
+	const float tileNear = -getDepthClipPlane(float(groupId.z), LIGHT_CLUSTER_SLICE, viewInfo.zNear, viewInfo.zFar);
+	const float tileFar = -getDepthClipPlane(float(groupId.z) + 1.0, LIGHT_CLUSTER_SLICE, viewInfo.zNear, viewInfo.zFar);
 
-	float fov = 2.0 * atan(1/viewInfo.projMat[1][1]);
-  float projRadius = 2.0f * lightData.lightRadius * (1 / tan(fov * 0.5f)) * invLightPosW;
-  projRadius *= size.x > size.y ? aspectRatio : 1 / aspectRatio;
-  //float projRadius =  lightData.lightRadius * invLightPosW;
-	
-	// Early exit light if it's behind the camera
-	if (lightPosClipSpace.w < 0.0f && -lightPosClipSpace.w > lightData.lightRadius) {
-		RETURN();
-	}
-	
-	lightPos.x *= aspectRatio;
-	
 	// Cluster coordinates in post perspective clip space
-	float clusterLeft   = float(threadInGroupId.x) * invClusterWidth;
-	float clusterTop    = float(threadInGroupId.y) * invClusterHeight;
-	float clusterRight  = clusterLeft + invClusterWidth;
-	float clusterBottom = clusterTop + invClusterHeight;
-
-  float mip = max(floor(log2(max(invClusterWidth * size.x, invClusterHeight * size.y))), 16);
-
 	// Transform coordinates from range [0..1] to range [-1..1]
-	clusterLeft   = clusterLeft   * 2.0f - 1.0f;
-	clusterTop    = clusterTop    * 2.0f - 1.0f;
-	clusterRight  = clusterRight  * 2.0f - 1.0f;
-	clusterBottom = clusterBottom * 2.0f - 1.0f;
+	float clusterLeft   = (float(threadInGroupId.x) * invClusterWidth) * 2.0f - 1.0f;
+	float clusterTop    = (float(threadInGroupId.y) * invClusterHeight) * 2.0f - 1.0f;
+	float clusterRight  = (clusterLeft + invClusterWidth) * 2.0f - 1.0f;
+	float clusterBottom = (clusterTop + invClusterHeight) * 2.0f - 1.0f;
 
-	clusterLeft  *= aspectRatio;
-	clusterRight *= aspectRatio;
+	clusterTop *= -1.0;
+	clusterBottom *= -1.0;
 
-	float clusterCenterX = (clusterLeft + clusterRight) * 0.5f;
-	float clusterCenterY = (clusterTop + clusterBottom) * 0.5f;
-	float clusterRadius  = distance(float2(clusterLeft, clusterTop), float2(clusterRight, clusterBottom)) * 0.5f;
+	float3 minPointViewSpace = ndcToViewSpace(float4(clusterLeft, clusterTop, -1.0, 1.0), viewInfo.invProjMat).xyz;
+	float3 maxPointViewSpace = ndcToViewSpace(float4(clusterRight, clusterBottom, -1.0, 1.0), viewInfo.invProjMat).xyz;
 
-  float clipDepth = max( 
-  	max(
-  		SampleLvlTex2D(Get(hiZTexture), Get(depthSampler), (float2(clusterLeft, clusterTop) * float2(0.5, -0.5) + float2(0.5, 0.5)), mip).r,
-  		SampleLvlTex2D(Get(hiZTexture), Get(depthSampler), (float2(clusterRight, clusterTop) * float2(0.5, -0.5) + float2(0.5, 0.5)), mip).r),
-  	max(
-  		SampleLvlTex2D(Get(hiZTexture), Get(depthSampler), (float2(clusterLeft, clusterBottom) * float2(0.5, -0.5) + float2(0.5, 0.5)), mip).r,
-  		SampleLvlTex2D(Get(hiZTexture), Get(depthSampler), (float2(clusterRight, clusterBottom) * float2(0.5, -0.5) + float2(0.5, 0.5)), mip).r));
+	float3 viewSpaceNearP1 = lineIntersectionToZPlane(float3(0,0,0), minPointViewSpace, tileNear);
+	float3 viewSpaceNearP2 = lineIntersectionToZPlane(float3(0,0,0), maxPointViewSpace , tileNear);
+	float3 viewSpaceFarP1 = lineIntersectionToZPlane(float3(0,0,0), minPointViewSpace, tileFar);
+	float3 viewSpaceFarP2 = lineIntersectionToZPlane(float3(0,0,0), maxPointViewSpace, tileFar);
 
-	// Check if the light projection overlaps the cluster: add the light bit to this cluster coords
-	float distanceToCenter = distance(float2(clusterCenterX, clusterCenterY), lightPos.xy);
-	if ((lightPos.z + abs(projRadius) * 2.0f) > clipDepth && distanceToCenter - clusterRadius < abs(projRadius)) {
-		// Increase light count on this cluster
-		uint lightArrayPos = 0;
-		AtomicAdd(Get(lightClustersCount)[LIGHT_CLUSTER_COUNT_POS(threadInGroupId.x, threadInGroupId.y)], 1, lightArrayPos);
+	float3 minPointAABB = min(min(viewSpaceNearP1, viewSpaceNearP2), min(viewSpaceFarP1, viewSpaceFarP2));
+	float3 maxPointAABB = max(max(viewSpaceNearP1, viewSpaceNearP2), max(viewSpaceFarP1, viewSpaceFarP2));
+	
+  PointLight lightData = Get(pointLights)[groupId.x];
+	float4 lightViewPos = mul(viewInfo.viewMat, float4(lightData.lightPos.xyz, 1.0f));
+  if (testSphereAABB(lightViewPos.xyz, lightData.lightRadius, minPointAABB, maxPointAABB)) {
+  	// Increase light count on this cluster
+  	uint lightArrayPos = 0;
+  	AtomicAdd(Get(lightClustersCount)[LIGHT_FROXEL_COUNT_POS(threadInGroupId.x, threadInGroupId.y, groupId.z)], 1, lightArrayPos);
 
-		// Add light id to cluster
-		AtomicExchange(Get(lightClusters)[LIGHT_CLUSTER_DATA_POS(lightArrayPos, threadInGroupId.x, threadInGroupId.y)], groupId.x, lightArrayPos);
-	}
+  	// Add light id to cluster
+  	AtomicExchange(Get(lightClusters)[LIGHT_FROXEL_DATA_POS(threadInGroupId.x, threadInGroupId.y, groupId.z, lightArrayPos)], groupId.x, lightArrayPos);
+  }
+
 }
 

@@ -3,12 +3,16 @@
 
 #define PARALLAX_MULTIPLIER 0.7
 
-#define LIGHT_CLUSTER_WIDTH 24 
-#define LIGHT_CLUSTER_HEIGHT 24 
+#define LIGHT_CLUSTER_WIDTH 16 
+#define LIGHT_CLUSTER_HEIGHT 9 
+#define LIGHT_CLUSTER_SLICE  24
 #define LIGHT_CLUSTER_COUNT 128
 
 #define POINT_LIGHT_MAX_COUNT  (256)
 #define SCENE_OPAQUE_COUNT (512)
+
+#define LIGHT_FROXEL_COUNT_POS(ix, iy, iz) ( (LIGHT_CLUSTER_WIDTH * LIGHT_CLUSTER_HEIGHT * (iz)) + ((iy)*LIGHT_CLUSTER_WIDTH) + (ix) )
+#define LIGHT_FROXEL_DATA_POS(ix, iy, iz, il) ( LIGHT_FROXEL_COUNT_POS(ix, iy, iz) * LIGHT_CLUSTER_COUNT + (il) )
 
 #define LIGHT_CLUSTER_COUNT_POS(ix, iy) ( ((iy)*LIGHT_CLUSTER_WIDTH)+(ix) )
 #define LIGHT_CLUSTER_DATA_POS(il, ix, iy) ( LIGHT_CLUSTER_COUNT_POS(ix, iy)*LIGHT_CLUSTER_COUNT + (il) )
@@ -122,12 +126,8 @@ STRUCT(UniformObject)
 
 STRUCT(PointLight) {
     DATA(float3, lightPos, none);
-    DATA(uint, config, none);
-    DATA(float4, lightColor, none);
     DATA(float, lightRadius, none);
-    DATA(uint, __pad0, NONE);
-    DATA(uint, __pad1, NONE);
-    DATA(uint, __pad2, NONE);
+    DATA(float4, lightColor, none);
 };
 
 STRUCT(SpotLight) {
@@ -165,6 +165,7 @@ STRUCT(WorldInfo) {
 
 STRUCT(ViewportInfo) {
     DATA(float4x4, invViewMat, None);
+    DATA(float4x4, invProjMat, None);
     DATA(float4x4, invViewProj, None);
     DATA(float4x4, viewMat, None);
     DATA(float4x4, projMat, None);

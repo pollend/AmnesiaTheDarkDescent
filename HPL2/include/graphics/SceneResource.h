@@ -39,6 +39,7 @@ namespace hpl::resource {
     struct ViewportInfo {
         static constexpr uint32_t PrmaryViewportIndex = 0;
         mat4 m_invViewMat;
+        mat4 m_invProjMat;
         mat4 m_invViewProj;
         mat4 m_viewMat;
         mat4 m_projMat;
@@ -79,12 +80,8 @@ namespace hpl::resource {
 
     struct ScenePointLight {
         float3 m_worldPos;
-        uint32_t m_config;
-        float4 m_lightColor;
         float m_radius;
-        uint32_t m_pad0;
-        uint32_t m_pad1;
-        uint32_t m_pad2;
+        float4 m_lightColor;
     };
 
     struct SceneSpotLight {
