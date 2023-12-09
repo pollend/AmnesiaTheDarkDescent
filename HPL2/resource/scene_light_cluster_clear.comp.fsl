@@ -1,0 +1,11 @@
+#include "scene_light_cluster_resource.h.fsl"
+
+NUM_THREADS(LIGHT_CLUSTER_WIDTH, LIGHT_CLUSTER_HEIGHT, 1)
+void CS_MAIN(SV_GroupThreadID(uint3) threadInGroupId, SV_GroupID(uint3) groupId)
+{
+	INIT_MAIN;
+	AtomicStore(Get(lightClustersCount)[LIGHT_FROXEL_COUNT_POS(threadInGroupId.x, threadInGroupId.y, groupId.z)], 0);
+	RETURN();
+}
+
+

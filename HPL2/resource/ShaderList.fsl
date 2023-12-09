@@ -1,9 +1,17 @@
 /// Copyright © 2009-2020 Frictional Games
 /// Copyright 2023 Michael Pollind
 /// SPDX-License-Identifier: GPL-3.0
-
-#vert solid_z.vert
+#vert solid_z_shadow.vert
     #include "solid_z.vert.fsl"
+#end
+
+#frag solid_z_shadow.frag
+    #define ALPHA_REJECT 0.5
+    #include "solid_z_shadow.frag.fsl"
+#end
+
+#vert solid_z_shadow.vert
+    #include "solid_z_shadow.vert.fsl"
 #end
 
 #frag solid_z.frag
@@ -15,6 +23,14 @@
 
 #vert gui.vert
     #include "gui.vert.fsl"
+#end
+
+#vert depth_clear.vert
+    #include "depth_clear.vert.fsl"
+#end
+
+#frag empty.frag
+    #include "empty.frag.fsl"
 #end
 
 #frag gui.frag
@@ -289,3 +305,42 @@
 #comp light_clusters_clear.comp
   #include "light_clusters_clear.comp.fsl"
 #end
+
+#vert visibilityBuffer_pass.vert
+  #include "visibilityBuffer_pass.vert.fsl"
+#end
+
+#frag visibilityBuffer_pass.frag
+  #include "visibilityBuffer_pass.frag.fsl"
+#end
+
+#vert visibility_shade_pass.vert
+  #include "visibility_shade_pass.vert.fsl"
+#end
+
+#frag visibility_shade_pass.frag
+  #include "visibility_shade_pass.frag.fsl"
+#end
+
+#vert visibilityBuffer_alpha_pass.vert
+  #include "visibilityBuffer_alpha_pass.vert.fsl"
+#end
+
+#frag visibilityBuffer_alpha_pass.frag
+  #include "visibilityBuffer_alpha_pass.frag.fsl"
+#end
+
+#comp scene_light_cluster.comp
+  #include "scene_light_cluster.comp.fsl"
+#end
+
+#comp scene_light_cluster_spotlight.comp
+  #include "scene_light_cluster_spotlight.comp.fsl"
+#end
+
+#comp scene_light_cluster_clear.comp
+  #include "scene_light_cluster_clear.comp.fsl"
+#end
+
+
+  

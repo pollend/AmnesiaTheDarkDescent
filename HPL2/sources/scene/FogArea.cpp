@@ -49,7 +49,7 @@ namespace hpl {
 	}
 
 
-    DrawPacket cFogArea::ResolveDrawPacket(const ForgeRenderer::Frame& frame,std::span<eVertexBufferElement> elements) {
+    DrawPacket cFogArea::ResolveDrawPacket(const ForgeRenderer::Frame& frame) {
         DrawPacket drawPacket;
         drawPacket.m_type = DrawPacket::Unknown;
         return drawPacket;

@@ -26,6 +26,47 @@
 
 namespace hpl {
 
+    cRect2l iRenderable::GetClipRectFromObject(iRenderable& object,float afPaddingPercent, cFrustum* apFrustum, const cVector2l& avScreenSize) {
+        cBoundingVolume* pBV = object.GetBoundingVolume();
+
+        const float halfFovTan = tan(apFrustum->GetFOV() * 0.5f);
+        cRect2l clipRect;
+        cMath::GetClipRectFromBV(clipRect, *pBV, apFrustum, avScreenSize, halfFovTan);
+
+        // Add 20% padding on clip rect
+        int lXInc = (int)((float)clipRect.w * halfFovTan);
+        int lYInc = (int)((float)clipRect.h * halfFovTan);
+
+        clipRect.x = cMath::Max(clipRect.x - lXInc, 0);
+        clipRect.y = cMath::Max(clipRect.y - lYInc, 0);
+        clipRect.w = cMath::Min(clipRect.w + lXInc * 2, avScreenSize.x - clipRect.x);
+        clipRect.h = cMath::Min(clipRect.h + lYInc * 2, avScreenSize.y - clipRect.y);
+
+        return clipRect;
+    }
+
+    bool iRenderable::IsObjectIsVisible(iRenderable& object, tRenderableFlag neededFlags, std::span<cPlanef> clipPlanes) {
+        if (!object.IsVisible())
+        {
+            return false;
+        }
+
+        if ((object.GetRenderFlags() & neededFlags) != neededFlags)
+        {
+            return false;
+        }
+
+        for (auto& plane : clipPlanes)
+        {
+            cBoundingVolume* pBV = object.GetBoundingVolume();
+            if (cMath::CheckPlaneBVCollision(plane, *pBV) == eCollision_Outside)
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
 	iRenderable::iRenderable(const tString &asName) : iEntity3D(asName)
 	{
 

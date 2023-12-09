@@ -1,0 +1,86 @@
+#ifndef _MATH_UTILITIES_H_
+#define _MATH_UTILITIES_H_
+
+#define PI 3.141592654f
+
+INLINE float3x3 ToNormalMat(float4x4 invModel, float4x4 invView) {
+    return transpose(mul(float3x3(invModel[0].xyz, invModel[1].xyz, invModel[2].xyz), float3x3(invView[0].xyz, invView[1].xyz, invView[2].xyz)));
+}
+
+float Fresnel(float afEDotN, float afFresnelBias, float afFresnelPow)
+{
+    float fFacing = 1.0 - afEDotN;
+    return max(afFresnelBias+ (1.0-afFresnelBias)* pow(abs(fFacing),afFresnelPow), 0.0); 
+}
+
+float3 WorldSpaceToTangent(float3 dir, float3 normal, float3 tangent, float3 bitangent)
+{
+    float a = dot(tangent, dir);
+    float b = dot(bitangent, dir);
+    float c = dot(normal, dir);
+
+    return float3(a,b,c);
+}
+
+// https://bartwronski.com/2017/04/13/cull-that-cone/
+float4 boundingSphereForSpotlight(in float3 origin, in float3 forward, in float size, in float angle)
+{
+    float4 boundingSphere;
+    if(angle > PI/4.0f)
+    {
+        boundingSphere.xyz = origin + cos(angle) * size * forward;
+        boundingSphere.w   = sin(angle) * size;
+    }
+    else
+    {
+        boundingSphere.xyz = origin + size / (2.0f * cos(angle)) * forward;
+        boundingSphere.w   = size / (2.0f * cos(angle));
+    }
+ 
+    return boundingSphere;
+}
+
+// ref: https://realtimecollisiondetection.net/books/rtcd/
+// ref: https://gamedev.stackexchange.com/questions/156870/how-do-i-implement-a-aabb-sphere-collision
+float sqDistPointAABB(float3 point, float3 min, float3 max) {
+    float sqDist = 0.0f;
+    if(point.x < min.x) sqDist += pow(min.x - point.x, 2);
+    if(point.x > max.x) sqDist += pow(point.x - max.x, 2);
+    if(point.y < min.y) sqDist += pow(min.y - point.y, 2);
+    if(point.y > max.y) sqDist += pow(point.y - max.y, 2);
+    if(point.z < min.z) sqDist += pow(min.z - point.z, 2);
+    if(point.z > max.z) sqDist += pow(point.z - max.z, 2);
+    return sqDist;
+}
+
+bool testSphereAABB(float3 point, float radius,float3 min, float3 max) {
+    return sqDistPointAABB(point, min, max) <= (radius * radius);
+}
+
+
+float4 ndcToViewSpace(float4 ndc, mat4 inverseProjection) {
+    vec4 view = mul(inverseProjection, ndc);
+    view = view / view.w;
+    return view;
+}
+
+float3 lineIntersectionToZPlane(float3 start, float3 end, float zDistance){
+    const float3 normal = float3(0.0, 0.0, 1.0);
+    const float3 dir =  end - start;
+    const float t = (zDistance - dot(normal, start)) / dot(normal, dir);
+    return start + t * dir;
+}
+
+
+// http://www.aortiz.me/2018/12/21/CG.html#clustered-shading
+// 
+float getDepthClipPlane(float slice, float numSlices, float zNear, float zFar) {
+    return zNear * pow(zFar / zNear, slice / numSlices);
+}
+
+
+uint calcDepthSlice(float numSlices, float depth, float zNear, float zFar) {
+    return uint(floor((log(depth) * (numSlices / log(zFar/zNear))) - ((numSlices * log(zNear))/log(zFar/zNear))));
+}
+
+#endif

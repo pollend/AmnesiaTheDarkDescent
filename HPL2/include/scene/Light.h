@@ -103,7 +103,7 @@ namespace hpl {
 		//iEntity implementation
 		tString GetEntityType(){ return "iLight";}
 
-		virtual bool IsVisible();
+		virtual bool IsVisible() override;
 		void OnChangeVisible();
 
 		///////////////////////////////
@@ -111,7 +111,7 @@ namespace hpl {
 		virtual cMaterial *GetMaterial() override{ return NULL;}
 		virtual iVertexBuffer* GetVertexBuffer() override{ return NULL;}
 
-        virtual DrawPacket ResolveDrawPacket(const ForgeRenderer::Frame& frame,std::span<eVertexBufferElement> elements) override {
+        virtual DrawPacket ResolveDrawPacket(const ForgeRenderer::Frame& frame) override {
             return DrawPacket();
         }
 

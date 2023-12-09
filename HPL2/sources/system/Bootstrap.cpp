@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <memory>
 
+#include "Common_3/Utilities/Interfaces/IFileSystem.h"
 #include "engine/IUpdateEventLoop.h"
 #include "engine/Interface.h"
 #include "graphics/GraphicsAllocator.h"
@@ -51,7 +52,9 @@ namespace hpl {
 
         initLog("HPL2", DEFAULT_LOG_LEVEL);
         fsSetPathForResourceDir(pSystemFileIO, RM_CONTENT, RD_SHADER_BINARIES, "./CompiledShaders");
-        fsSetPathForResourceDir(pSystemFileIO, RM_CONTENT, RD_SHADER_SOURCES, "./Shaders");
+        fsSetPathForResourceDir(pSystemFileIO, RM_CONTENT, RD_LOG, "./log");
+        fsSetPathForResourceDir(pSystemFileIO, RM_CONTENT, RD_GPU_CONFIG, "./");
+        //fsSetPathForResourceDir(pSystemFileIO, RM_CONTENT, RD_SHADER_SOURCES, "./Shaders");
 
         Interface<IUpdateEventLoop>::Register(&m_updateEventLoop);
 

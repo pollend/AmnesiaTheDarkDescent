@@ -24,6 +24,7 @@
 #include "graphics/GraphicsTypes.h"
 #include "system/SystemTypes.h"
 #include "scene/SceneTypes.h"
+#include <functional>
 #include <span>
 
 namespace hpl {
@@ -129,6 +130,10 @@ namespace hpl {
 	{
 	public:
 		virtual ~iRenderableContainer(){}
+
+        static void WalkRenderableContainer(
+            iRenderableContainer& container, cFrustum* frustum, std::function<void(iRenderable*)> handler, tRenderableFlag renderableFlag);
+		static bool IsRenderableNodeIsVisible(iRenderableContainerNode& apNode, std::span<cPlanef> clipPlanes);
 
 		void UpdateBeforeRendering();
 

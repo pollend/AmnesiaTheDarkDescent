@@ -1,8 +1,8 @@
 #ifndef FORWARD_COMMON_DEFS_H
 #define FORWARD_COMMON_DEFS_H
 
-#define LIGHT_CLUSTER_WIDTH 8
-#define LIGHT_CLUSTER_HEIGHT 8
+#define LIGHT_CLUSTER_WIDTH 16
+#define LIGHT_CLUSTER_HEIGHT 16 
 #define LIGHT_CLUSTER_COUNT 128
 
 #define POINT_LIGHT_MAX_COUNT  1024
@@ -23,7 +23,7 @@ STRUCT(DiffuseMaterial) {
     DATA(float, frenselBias, None);
     DATA(float, frenselPow, None);
 };
-uint DiffuseMaterial_DiffuseTexture_ID(DiffuseMaterial mat) {return (mat.tex[0] & 0xffff);}
+uint DiffuseMaterial_DiffuseTexture_ID(DiffuseMaterial mat) {return (mat.tex[0] & 0xffff); }
 uint DiffuseMaterial_NormalTexture_ID(DiffuseMaterial mat) {return ((mat.tex[0] >> 16) & 0xffff);}
 uint DiffuseMaterial_AlphaTexture_ID(DiffuseMaterial mat) {return (mat.tex[1] & 0xffff);}
 uint DiffuseMaterial_SpecularTexture_ID(DiffuseMaterial mat) {return ((mat.tex[1] >> 16) & 0xffff);}

@@ -25,15 +25,6 @@
 
 namespace hpl {
 
-    namespace detail {
-        uint32_t resolveTextureFilterGroup(cMaterial::TextureAntistropy anisotropy, eTextureWrap wrap, eTextureFilter filter) {
-            const uint32_t anisotropyGroup =
-                (static_cast<uint32_t>(eTextureFilter_LastEnum) * static_cast<uint32_t>(eTextureWrap_LastEnum)) *
-                static_cast<uint32_t>(anisotropy);
-            return anisotropyGroup +
-                ((static_cast<uint32_t>(wrap) * static_cast<uint32_t>(eTextureFilter_LastEnum)) + static_cast<uint32_t>(filter));
-        }
-    }
 
     SharedRenderTarget RendererForwardPlus::GetOutputImage(uint32_t frameIndex, cViewport& viewport) {
         auto sharedData = m_boundViewportData.resolve(viewport);
@@ -313,7 +304,7 @@ namespace hpl {
             });
         }
 
-        m_PointLightClusterPipeline.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
+        m_pointLightClusterPipeline.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
             PipelineDesc pipelineDesc = {};
             pipelineDesc.mType = PIPELINE_TYPE_COMPUTE;
             ComputePipelineDesc& computePipelineDesc = pipelineDesc.mComputeDesc;
@@ -335,15 +326,15 @@ namespace hpl {
         m_opaqueBatchSet.Load(forgeRenderer->Rend(), [&](DescriptorSet** descSet) {
             DescriptorSetDesc perFrameDescSet{ m_diffuseRootSignature.m_handle,
                                                DESCRIPTOR_UPDATE_FREQ_PER_BATCH,
-                                               MaxMaterialSamplers };
+                                               hpl::resource::MaterialSceneSamplersCount };
             addDescriptorSet(forgeRenderer->Rend(), &perFrameDescSet, descSet);
             return true;
         });
-        for (size_t antistropy = 0; antistropy < cMaterial::Antistropy_Count; antistropy++) {
+        for (size_t antistropy = 0; antistropy < static_cast<uint8_t>(TextureAntistropy::Antistropy_Count); antistropy++) {
             for (size_t textureWrap = 0; textureWrap < eTextureWrap_LastEnum; textureWrap++) {
                 for (size_t textureFilter = 0; textureFilter < eTextureFilter_LastEnum; textureFilter++) {
-                    uint32_t batchID = detail::resolveTextureFilterGroup(
-                        static_cast<cMaterial::TextureAntistropy>(antistropy),
+                    uint32_t batchID = hpl::resource::textureFilterIdx(
+                        static_cast<TextureAntistropy>(antistropy),
                         static_cast<eTextureWrap>(textureWrap),
                         static_cast<eTextureFilter>(textureFilter));
                     m_batchSampler[batchID].Load(forgeRenderer->Rend(), [&](Sampler** sampler) {
@@ -388,11 +379,11 @@ namespace hpl {
                             ASSERT(false && "Invalid filter");
                             break;
                         }
-                        switch (antistropy) {
-                        case cMaterial::Antistropy_8:
+                        switch (static_cast<TextureAntistropy>(antistropy)) {
+                        case TextureAntistropy::Antistropy_8:
                             samplerDesc.mMaxAnisotropy = 8.0f;
                             break;
-                        case cMaterial::Antistropy_16:
+                        case TextureAntistropy::Antistropy_16:
                             samplerDesc.mMaxAnisotropy = 16.0f;
                             break;
                         default:
@@ -493,7 +484,6 @@ namespace hpl {
 
             UniformObject uniformObjectData = {};
             uniformObjectData.m_dissolveAmount = apObject->GetCoverageAmount();
-            uniformObjectData.m_materialIndex = apMaterial->Index();
             uniformObjectData.m_modelMat = cMath::ToForgeMatrix4(modelMat);
             uniformObjectData.m_invModelMat = cMath::ToForgeMatrix4(cMath::MatrixInverse(modelMat));
             uniformObjectData.m_lightLevel = 1.0f;
@@ -508,7 +498,7 @@ namespace hpl {
                                             sizeof(UniformObject) * index };
             beginUpdateResource(&updateDesc);
             (*reinterpret_cast<UniformObject*>(updateDesc.pMappedData)) = uniformObjectData;
-            endUpdateResource(&updateDesc, NULL);
+            endUpdateResource(&updateDesc);
 
             m_objectDescriptorLookup[apObject] = index;
         }
@@ -622,13 +612,13 @@ namespace hpl {
             staticContainer->UpdateBeforeRendering();
 
             auto prepareObjectHandler = [&](iRenderable* pObject) {
-                if (!rendering::detail::IsObjectIsVisible(pObject, eRenderableFlag_VisibleInNonReflection, {})) {
+                if (!iRenderable::IsObjectIsVisible(*pObject, eRenderableFlag_VisibleInNonReflection, {})) {
                     return;
                 }
                 m_rendererList.AddObject(pObject);
             };
-            rendering::detail::WalkAndPrepareRenderList(dynamicContainer, apFrustum, prepareObjectHandler, eRenderableFlag_VisibleInNonReflection);
-            rendering::detail::WalkAndPrepareRenderList(staticContainer, apFrustum, prepareObjectHandler, eRenderableFlag_VisibleInNonReflection);
+            iRenderableContainer::WalkRenderableContainer(*dynamicContainer, apFrustum, prepareObjectHandler, eRenderableFlag_VisibleInNonReflection);
+            iRenderableContainer::WalkRenderableContainer(*staticContainer, apFrustum, prepareObjectHandler, eRenderableFlag_VisibleInNonReflection);
             m_rendererList.End(
                 eRenderListCompileFlag_Diffuse | eRenderListCompileFlag_Translucent | eRenderListCompileFlag_Decal |
                 eRenderListCompileFlag_Illumination | eRenderListCompileFlag_FogArea);
@@ -647,10 +637,10 @@ namespace hpl {
             std::sort(renderables.begin(), renderables.end(), [](iRenderable* objectA, iRenderable* objectB) {
                 cMaterial* pMatA = objectA->GetMaterial();
                 cMaterial* pMatB = objectB->GetMaterial();
-                uint32_t filterA = detail::resolveTextureFilterGroup(
+                uint32_t filterA = hpl::resource::textureFilterIdx(
                            pMatA->GetTextureAntistropy(), pMatA->GetTextureWrap(), pMatA->GetTextureFilter());
 
-                uint32_t filterB = detail::resolveTextureFilterGroup(
+                uint32_t filterB = hpl::resource::textureFilterIdx(
                            pMatB->GetTextureAntistropy(), pMatB->GetTextureWrap(), pMatB->GetTextureFilter());
                 return filterA < filterB;
             });
@@ -678,7 +668,7 @@ namespace hpl {
                 lastIndex = index;
                 {
                     cMaterial* pMaterial = (*it)->GetMaterial();
-                    lastBatchID =  detail::resolveTextureFilterGroup(
+                    lastBatchID =  hpl::resource::textureFilterIdx(
                            pMaterial->GetTextureAntistropy(), pMaterial->GetTextureWrap(), pMaterial->GetTextureFilter());
                 }
                 do {
@@ -687,7 +677,7 @@ namespace hpl {
                                            eVertexBufferElement_Texture0,
                                            eVertexBufferElement_Normal,
                                            eVertexBufferElement_Texture1Tangent };
-                    DrawPacket packet = (*it)->ResolveDrawPacket(frame, targets);
+                    DrawPacket packet = (*it)->ResolveDrawPacket(frame);
                     if (pMaterial == nullptr || packet.m_type == DrawPacket::Unknown) {
                         continue;
                     }
@@ -706,7 +696,7 @@ namespace hpl {
                 } while(it != renderables.end() && isSameGroup(*it, *lastIt));
                 diffuseFilterGroup.push_back({lastIndex * sizeof(IndirectDrawArguments), index - lastIndex, lastBatchID});
             }
-            endUpdateResource(&updateDesc, nullptr);
+            endUpdateResource(&updateDesc);
         }
 
         {
@@ -735,7 +725,7 @@ namespace hpl {
                             break;
                     }
                 }
-                endUpdateResource(&pointlightUpdateDesc, nullptr);
+                endUpdateResource(&pointlightUpdateDesc);
             }
             cmdBindRenderTargets(cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
 
@@ -753,7 +743,7 @@ namespace hpl {
             }
 
             cmdBindDescriptorSet(frame.m_cmd, mainFrameIndex, m_perFrameLightCluster[frame.m_frameIndex].m_handle);
-            cmdBindPipeline(cmd, m_PointLightClusterPipeline.m_handle);
+            cmdBindPipeline(cmd, m_pointLightClusterPipeline.m_handle);
             cmdDispatch(cmd, numPointLights, 1, 1);
         }
         {
@@ -820,7 +810,6 @@ namespace hpl {
 
     }
 
-
     uint32_t RendererForwardPlus::resolveMaterialID(const ForgeRenderer::Frame& frame,cMaterial* material) {
         auto* forgeRenderer = Interface<ForgeRenderer>::Get();
         auto& sceneMaterial = m_sceneMaterial[material->Index()];
@@ -841,7 +830,7 @@ namespace hpl {
                                             sizeof(resource::DiffuseMaterial) * sceneMaterial.m_slot.get()};
                 beginUpdateResource(&updateDesc);
                 (*reinterpret_cast<resource::DiffuseMaterial*>(updateDesc.pMappedData)) = *mat;
-                endUpdateResource(&updateDesc, NULL);
+                endUpdateResource(&updateDesc);
             }
 
         }
@@ -869,7 +858,7 @@ namespace hpl {
         uniformFrameData->afT = GetTimeCount();
         const auto fogColor = apWorld->GetFogColor();
         uniformFrameData->fogColor = float4(fogColor.r, fogColor.g, fogColor.b, fogColor.a);
-        endUpdateResource(&updatePerFrameConstantsDesc, NULL);
+        endUpdateResource(&updatePerFrameConstantsDesc);
         m_frameIndex = (m_frameIndex + 1) % MaxViewportFrameDescriptors;
         return index;
     }

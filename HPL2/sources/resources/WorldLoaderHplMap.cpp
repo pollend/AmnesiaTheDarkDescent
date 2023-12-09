@@ -1853,10 +1853,10 @@ namespace hpl {
 		if(sType == "Plane")
 		{
             auto position = GraphicsBuffer::BufferStructuredView<float3>();
-            auto color = GraphicsBuffer::BufferStructuredView<float4>();
-            auto normal = GraphicsBuffer::BufferStructuredView<float3>();
+            auto color = GraphicsBuffer::BufferStructuredView<uint32_t>();
+            auto normal = GraphicsBuffer::BufferStructuredView<uint32_t>();
             auto uv = GraphicsBuffer::BufferStructuredView<float2>();
-            auto tangent = GraphicsBuffer::BufferStructuredView<float3>();
+            auto tangent = GraphicsBuffer::BufferStructuredView<uint32_t>();
             cSubMesh::IndexBufferInfo indexInfo;
             cSubMesh::StreamBufferInfo positionInfo;
             cSubMesh::StreamBufferInfo tangentInfo;

@@ -20,6 +20,7 @@
 
 #include "engine/RTTI.h"
 
+#include "graphics/SceneResource.h"
 #include "scene/Viewport.h"
 #include "scene/World.h"
 #include "windowing/NativeWindow.h"
@@ -84,7 +85,6 @@ namespace hpl {
         static constexpr uint32_t MaxLightUniforms = 1024;
         static constexpr uint32_t MaxHiZMipLevels = 10;
         static constexpr uint32_t MaxViewportFrameDescriptors = 256;
-        static constexpr uint32_t MaxMaterialSamplers = static_cast<uint32_t>(eTextureWrap_LastEnum) * static_cast<uint32_t>(eTextureFilter_LastEnum) * static_cast<uint32_t>(cMaterial::TextureAntistropy::Antistropy_Count);
         static constexpr uint32_t MaxObjectTest = 32768;
         static constexpr uint32_t MaxOcclusionDescSize = 4096;
         static constexpr uint32_t MaxQueryPoolSize = MaxOcclusionDescSize * 2;
@@ -596,6 +596,7 @@ namespace hpl {
         folly::F14ValueMap<iRenderable*, uint32_t> m_lightDescriptorLookup;
         std::array<std::array<LightResourceEntry, MaxLightUniforms>, ForgeRenderer::SwapChainLength> m_lightResources{};
         // z pass
+        SharedShader m_zPassShadowShader;
         SharedShader m_zPassShader;
         SharedPipeline m_zPassPipelineCCW;
         SharedPipeline m_zPassPipelineCW;
@@ -622,7 +623,7 @@ namespace hpl {
             };
 
             std::array<MaterialInfo, cMaterial::MaxMaterialID> m_materialInfo;
-            std::array<SharedSampler, MaxMaterialSamplers> m_samplers;
+            std::array<SharedSampler, hpl::resource::MaterialSceneSamplersCount> m_samplers;
             SharedDescriptorSet m_materialConstSet;
             SharedBuffer m_materialUniformBuffer;
         } m_materialSet;

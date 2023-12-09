@@ -46,7 +46,7 @@ float4 PS_MAIN(PsIn In)
     float3 diffuseColor = color.xyz * Get(lightObjectBuffer)[Get(lightId)].lightColor.xyz * fLDotN;
     float t = 0;
     if(HasShadowMap(Get(lightObjectBuffer)[Get(lightId)].config)) {
-	const float depthBias = 0.0005;
+	    const float depthBias = 0.0005;
         
         #ifdef SHADOW_JITTER_SIZE
             float2 shadowTexelSize = 1.0/ GetDimensions(Get(shadowMap), NO_SAMPLER).xy;

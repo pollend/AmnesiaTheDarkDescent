@@ -82,7 +82,7 @@ namespace hpl {
         for (auto& buffer : m_frameBufferUniform) {
             buffer.Load([&](Buffer** buffer) {
                 BufferLoadDesc desc = {};
-                desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_BUFFER;
+                desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_BUFFER | DESCRIPTOR_TYPE_UNIFORM_BUFFER;
                 desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
                 desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
                 desc.mDesc.mFirstElement = 0;
@@ -204,7 +204,7 @@ namespace hpl {
             uniformObjectData.m_modelMat = cMath::ToForgeMatrix4(modelMat);
             beginUpdateResource(&updateDesc);
             (*reinterpret_cast<ObjectUniform*>(updateDesc.pMappedData)) = uniformObjectData;
-            endUpdateResource(&updateDesc, NULL);
+            endUpdateResource(&updateDesc);
 
             m_objectDescriptorLookup[apObject] = index;
         }
@@ -277,10 +277,10 @@ namespace hpl {
 
         m_rendererList.BeginAndReset(afFrameTime, apFrustum);
         std::array<cPlanef, 0> occlusionPlanes = {};
-        rendering::detail::UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
-            &m_rendererList, apFrustum, apWorld->GetRenderableContainer(eWorldContainerType_Static), occlusionPlanes, 0);
-        rendering::detail::UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
-            &m_rendererList, apFrustum, apWorld->GetRenderableContainer(eWorldContainerType_Dynamic), occlusionPlanes, 0);
+        cRenderList::UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
+            m_rendererList, *apFrustum, *apWorld->GetRenderableContainer(eWorldContainerType_Static)->GetRoot(), occlusionPlanes, 0);
+        cRenderList::UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
+            m_rendererList, *apFrustum, *apWorld->GetRenderableContainer(eWorldContainerType_Dynamic)->GetRoot(), occlusionPlanes, 0);
 
         m_rendererList.End(eRenderListCompileFlag_Diffuse | eRenderListCompileFlag_Decal | eRenderListCompileFlag_Translucent);
 
@@ -291,7 +291,7 @@ namespace hpl {
             PerFrameUniform uniformData;
             uniformData.m_viewProject = ((apFrustum->GetProjectionType() == eProjectionType_Perspective ? Matrix4::identity() : correctionMatrix) * matMainFrustumProj) * matMainFrustumView ;
             (*reinterpret_cast<PerFrameUniform*>(updateDesc.pMappedData)) = uniformData;
-            endUpdateResource(&updateDesc, NULL);
+            endUpdateResource(&updateDesc);
         }
 
         {
@@ -320,13 +320,13 @@ namespace hpl {
         for (auto& diffuseItem : m_rendererList.GetRenderableItems(eRenderListType_Diffuse)) {
             cMaterial* pMaterial = diffuseItem->GetMaterial();
             std::array targets = { eVertexBufferElement_Position };
-            DrawPacket packet = diffuseItem->ResolveDrawPacket(frame, targets);
+            DrawPacket packet = diffuseItem->ResolveDrawPacket(frame);
             if (pMaterial == nullptr || packet.m_type == DrawPacket::Unknown) {
                 continue;
             }
             ASSERT(pMaterial->Descriptor().m_id == MaterialID::SolidDiffuse && "Invalid material type");
 
-            DrawPacket::cmdBindBuffers(frame.m_cmd, frame.m_resourcePool, &packet);
+            DrawPacket::cmdBindBuffers(frame.m_cmd, frame.m_resourcePool, &packet, targets);
             uint32_t objectIndex = prepareObjectData(frame, diffuseItem);
             cmdBindPushConstants(frame.m_cmd, m_rootSignature.m_handle, rootConstantIndex, &objectIndex);
             cmdDrawIndexed(frame.m_cmd, packet.numberOfIndecies(), 0, 0);
