@@ -109,8 +109,6 @@ namespace hpl {
             std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_depthBuffer;
             std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_testBuffer; //encodes the parallax
             std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_visiblityBuffer;
-
-            std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_hizDepthBuffer;
         };
 
         cRendererDeferred2(
@@ -159,11 +157,6 @@ namespace hpl {
         SharedRootSignature m_sceneRootSignature;
         SharedDescriptorSet m_sceneDescriptorConstSet;
         std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_sceneDescriptorPerFrameSet;
-
-        std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_HIZGenerateConstSet;
-        SharedRootSignature m_generateHiZSignature;
-        SharedPipeline m_generateHiZPass;
-        SharedShader m_generateHiZShader;
 
         SharedRootSignature m_rootSignatureCopyDepth;
         std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_descriptorCopyDepth;

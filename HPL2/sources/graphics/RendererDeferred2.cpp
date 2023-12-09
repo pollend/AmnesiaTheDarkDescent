@@ -149,12 +149,6 @@ namespace hpl {
             addShader(forgeRenderer->Rend(), &loadDesc, shader);
             return true;
         });
-        m_generateHiZShader.Load(forgeRenderer->Rend(), [&](Shader** shader) {
-            ShaderLoadDesc loadDesc = {};
-            loadDesc.mStages[0].pFileName = "generate_hi_z.comp";
-            addShader(forgeRenderer->Rend(), &loadDesc, shader);
-            return true;
-        });
         m_copyDepthShader.Load(forgeRenderer->Rend(), [&](Shader** shader) {
             ShaderLoadDesc loadDesc = {};
             loadDesc.mStages[0].pFileName = "fullscreen.vert";
@@ -172,14 +166,6 @@ namespace hpl {
             rootSignatureDesc.mStaticSamplerCount = 1;
             rootSignatureDesc.ppStaticSamplers = &m_samplerPointClampToBorder.m_handle;
             rootSignatureDesc.ppStaticSamplerNames = pStaticSamplers;
-            addRootSignature(forgeRenderer->Rend(), &rootSignatureDesc, signature);
-            return true;
-        });
-        m_generateHiZSignature.Load(forgeRenderer->Rend(), [&](RootSignature** signature) {
-            std::array shaders = { m_generateHiZShader.m_handle};
-            RootSignatureDesc rootSignatureDesc = {};
-            rootSignatureDesc.ppShaders = shaders.data();
-            rootSignatureDesc.mShaderCount = shaders.size();
             addRootSignature(forgeRenderer->Rend(), &rootSignatureDesc, signature);
             return true;
         });
@@ -269,15 +255,6 @@ namespace hpl {
             graphicsPipelineDesc.pDepthState = &depthStateDisabledDesc;
             graphicsPipelineDesc.pBlendState = NULL;
             addPipeline(forgeRenderer->Rend(), &pipelineDesc, handle);
-            return true;
-        });
-        m_generateHiZPass.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
-            PipelineDesc pipelineDesc = {};
-            pipelineDesc.mType = PIPELINE_TYPE_COMPUTE;
-            ComputePipelineDesc& computePipelineDesc = pipelineDesc.mComputeDesc;
-            computePipelineDesc.pShaderProgram = m_generateHiZShader.m_handle;
-            computePipelineDesc.pRootSignature = m_generateHiZSignature.m_handle;
-            addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
             return true;
         });
         m_visbilityAlphaBufferPass.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
@@ -523,12 +500,6 @@ namespace hpl {
                 DescriptorSetDesc setDesc = { m_rootSignatureCopyDepth.m_handle, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, 1 };
                 addDescriptorSet(forgeRenderer->Rend(), &setDesc, handle);
                 return true;
-            });
-            m_HIZGenerateConstSet[swapchainIndex].Load(forgeRenderer->Rend(), [&](DescriptorSet** descSet) {
-                DescriptorSetDesc descriptorSetDesc{ m_generateHiZSignature.m_handle, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, 1};
-                addDescriptorSet(forgeRenderer->Rend(), &descriptorSetDesc, descSet);
-                return true;
-
             });
             m_sceneDescriptorPerFrameSet[swapchainIndex].Load(forgeRenderer->Rend(), [&](DescriptorSet** descSet) {
                 DescriptorSetDesc descriptorSetDesc{ m_sceneRootSignature.m_handle, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, 1 };
@@ -784,33 +755,9 @@ namespace hpl {
                     addRenderTarget(forgeRenderer->Rend(), &renderTargetDesc, target);
                     return true;
                 });
-                updateDatum->m_hizDepthBuffer[i].Load(forgeRenderer->Rend(), [&](RenderTarget** handle) {
-                    RenderTargetDesc renderTargetDesc = {};
-                    renderTargetDesc.mArraySize = 1;
-                    renderTargetDesc.mDepth = 1;
-                    renderTargetDesc.mMipLevels = std::min<uint8_t>(std::floor(std::log2(std::max(updateDatum->m_size.x, updateDatum->m_size.y))), MaxHiZMipLevels);
-                    renderTargetDesc.mFormat = TinyImageFormat_R32_SFLOAT;
-                    renderTargetDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE | DESCRIPTOR_TYPE_RW_TEXTURE;
-                    renderTargetDesc.mWidth = updateDatum->m_size.x;
-                    renderTargetDesc.mHeight = updateDatum->m_size.y;
-                    renderTargetDesc.mSampleCount = SAMPLE_COUNT_1;
-                    renderTargetDesc.mSampleQuality = 0;
-                    renderTargetDesc.mStartState = RESOURCE_STATE_UNORDERED_ACCESS;
-                    renderTargetDesc.pName = "hi-z depth buffer";
-                    addRenderTarget(forgeRenderer->Rend(), &renderTargetDesc, handle);
-                    return true;
-                });
             }
             viewportDatum = m_boundViewportData.update(viewport, std::move(updateDatum));
         }
-       // {
-
-       //     std::array params = {
-       //         DescriptorData{ .pName = "hiZTexture", .ppTextures = &viewportDatum->m_hizDepthBuffer[frame.m_frameIndex].m_handle->pTexture },
-       //     };
-       //     updateDescriptorSet(
-       //         forgeRenderer->Rend(), 0, m_lightDescriptorPerFrameSet[frame.m_frameIndex].m_handle, params.size(), params.data());
-       // }
 
         frame.m_resourcePool->Push(viewportDatum->m_testBuffer[frame.m_frameIndex]);
         frame.m_resourcePool->Push(viewportDatum->m_visiblityBuffer[frame.m_frameIndex]);
@@ -1086,78 +1033,6 @@ namespace hpl {
             }
             cmdEndDebugMarker(cmd);
         }
-        // generate hi-z buffer
-        {
-            auto hizTarget = viewportDatum->m_hizDepthBuffer[frame.m_frameIndex].m_handle;
-            uint32_t width = static_cast<float>(viewportDatum->m_size.x);
-            uint32_t height = static_cast<float>(viewportDatum->m_size.y);
-            uint32_t rootConstantIndex = getDescriptorIndexFromName(m_generateHiZSignature.m_handle, "uRootConstants");
-            {
-                std::array<DescriptorData, 1> params = {
-                    DescriptorData {.pName = "depthInput", .mBindMipChain = true, .ppTextures = &hizTarget->pTexture }
-                };
-                updateDescriptorSet(
-                    frame.m_renderer->Rend(), 0, m_HIZGenerateConstSet[frame.m_frameIndex].m_handle, params.size(), params.data());
-            }
-            {
-                std::array<DescriptorData, 1> params = {
-                    DescriptorData { .pName = "sourceInput", .ppTextures = &viewportDatum->m_depthBuffer[frame.m_frameIndex].m_handle->pTexture }
-                };
-                updateDescriptorSet(frame.m_renderer->Rend(), 0, m_descriptorCopyDepth[frame.m_frameIndex].m_handle, params.size(), params.data());
-            }
-            {
-                cmdBindRenderTargets(cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
-                std::array rtBarriers = {
-                    RenderTargetBarrier{ viewportDatum->m_depthBuffer[frame.m_frameIndex].m_handle, RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_SHADER_RESOURCE },
-                    RenderTargetBarrier{ viewportDatum->m_hizDepthBuffer[frame.m_frameIndex].m_handle, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_RENDER_TARGET },
-                };
-                cmdResourceBarrier(cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
-            }
-            {
-                LoadActionsDesc loadActions = {};
-                loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
-                loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
-                loadActions.mClearColorValues[0] = { .r = 1.0f, .g = 0.0f, .b = 0.0f, .a = 0.0f };
-                cmdBindRenderTargets(cmd, 1, &viewportDatum->m_hizDepthBuffer[frame.m_frameIndex].m_handle, NULL, &loadActions, NULL, NULL, -1, -1);
-
-                cmdSetViewport(cmd, 0.0f, 0.0f, viewportDatum->m_size.x, viewportDatum->m_size.y, 0.0f, 1.0f);
-                cmdSetScissor(cmd, 0, 0, viewportDatum->m_size.x, viewportDatum->m_size.y);
-                cmdBindPipeline(cmd, m_pipelineCopyDepth.m_handle);
-
-                cmdBindDescriptorSet(cmd, 0, m_descriptorCopyDepth[frame.m_frameIndex].m_handle);
-                cmdDraw(cmd, 3, 0);
-            }
-            {
-                cmdBindRenderTargets(cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
-                std::array rtBarriers = {
-                    RenderTargetBarrier{ viewportDatum->m_depthBuffer[frame.m_frameIndex].m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_DEPTH_WRITE },
-                    RenderTargetBarrier{ viewportDatum->m_hizDepthBuffer[frame.m_frameIndex].m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_UNORDERED_ACCESS },
-                };
-                cmdResourceBarrier(cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
-            }
-            for (uint32_t lod = 1; lod < hizTarget->mMipLevels; lod++) {
-                width /= 2;
-                height /= 2;
-                struct {
-                        uint2 screenDim;
-                        uint32_t mipLevel;
-                } pushConstants = {};
-
-                pushConstants.mipLevel = lod;
-                pushConstants.screenDim = uint2(viewportDatum->m_size.x, viewportDatum->m_size.y);
-
-                // bind lod to push constant
-                cmdBindPushConstants(cmd, m_generateHiZSignature.m_handle, rootConstantIndex, &pushConstants);
-                cmdBindDescriptorSet(cmd, 0, m_HIZGenerateConstSet[frame.m_frameIndex].m_handle);
-                cmdBindPipeline(cmd, m_generateHiZPass.m_handle);
-                cmdDispatch(cmd, static_cast<uint32_t>(width / 16) + 1, static_cast<uint32_t>(height / 16) + 1, 1);
-
-                std::array rtBarriers = {
-                    RenderTargetBarrier{ hizTarget, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_UNORDERED_ACCESS },
-                };
-                cmdResourceBarrier(cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
-            }
-        }
         {
             {
                 std::array barriers = {
@@ -1191,16 +1066,6 @@ namespace hpl {
             cmdBindPipeline(cmd, m_pointLightClusterPipeline.m_handle);
             cmdBindDescriptorSet(cmd, 0, m_lightDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
             cmdDispatch(cmd, pointlightCount, 1, LightClusterSlices);
-          //  {
-          //      std::array barriers = { BufferBarrier{ m_lightClusterCountBuffer[frame.m_frameIndex].m_handle,
-          //                                             RESOURCE_STATE_UNORDERED_ACCESS,
-          //                                             RESOURCE_STATE_UNORDERED_ACCESS } };
-          //      cmdResourceBarrier(
-          //          cmd, barriers.size(), barriers.data(), 0, nullptr, 0, nullptr);
-
-          //  }
-           // cmdBindPipeline(cmd, m_spotLightClusterPipeline.m_handle);
-           // cmdDispatch(cmd, spotlightCount, 1, 1);
         }
         {
             cmdBindRenderTargets(cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
