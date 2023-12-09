@@ -295,10 +295,10 @@ namespace hpl {
                 .mSemantic = SEMANTIC_TEXCOORD0, .mFormat = TinyImageFormat_R32G32_SFLOAT, .mBinding = 1, .mLocation = 1, .mOffset = 0
             };
             vertexLayout.mAttribs[2] = VertexAttrib{
-                .mSemantic = SEMANTIC_NORMAL, .mFormat = TinyImageFormat_R32G32B32_SFLOAT, .mBinding = 2, .mLocation = 2, .mOffset = 0
+                .mSemantic = SEMANTIC_NORMAL, .mFormat = TinyImageFormat_R8G8B8_SNORM, .mBinding = 2, .mLocation = 2, .mOffset = 0
             };
             vertexLayout.mAttribs[3] = VertexAttrib{
-                .mSemantic = SEMANTIC_TANGENT, .mFormat = TinyImageFormat_R32G32B32_SFLOAT, .mBinding = 3, .mLocation = 3, .mOffset = 0
+                .mSemantic = SEMANTIC_TANGENT, .mFormat = TinyImageFormat_R8G8B8_SNORM, .mBinding = 3, .mLocation = 3, .mOffset = 0
             };
             std::array colorFormats = { ColorBufferFormat, TinyImageFormat_R16G16B16A16_SFLOAT };
             DepthStateDesc depthStateDesc = { .mDepthTest = true, .mDepthWrite = true, .mDepthFunc = CMP_LEQUAL };

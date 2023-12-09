@@ -85,16 +85,20 @@ namespace hpl {
             GraphicsBuffer gpuBuffer(updateDesc);
             auto dest = gpuBuffer.CreateViewRaw();
             auto src = localStream.m_buffer.CreateViewRaw();
-            for(size_t i = 0; i < m_numberVertices; i++) {
-                auto sp = src.rawByteSpan().subspan(i * localStream.m_stride, std::min(gpuStream->stride(), localStream.m_stride));
-                dest.WriteRaw(i * gpuStream->stride(), sp);
-            }
-            if(m_isSkinnedMesh) {
-                for(size_t i = 0; i < m_numberVertices; i++) {
-                    auto sp = src.rawByteSpan().subspan(i * localStream.m_stride, std::min(gpuStream->stride(), localStream.m_stride));
-                    dest.WriteRaw(((i + m_numberVertices) * gpuStream->stride()), sp);
-                }
-            }
+            ASSERT(localStream.m_stride == gpuStream->stride());
+            dest.WriteRaw(0, src.rawByteSpan());
+            dest.WriteRaw(m_numberVertices * gpuStream->stride(), src.rawByteSpan());
+
+//            for(size_t i = 0; i < m_numberVertices; i++) {
+//                auto sp = src.rawByteSpan().subspan(i * localStream.m_stride, std::min(gpuStream->stride(), localStream.m_stride));
+//                dest.WriteRaw(i * gpuStream->stride(), sp);
+//            }
+//            if(m_isSkinnedMesh) {
+//                for(size_t i = 0; i < m_numberVertices; i++) {
+//                    auto sp = src.rawByteSpan().subspan(i * localStream.m_stride, std::min(gpuStream->stride(), localStream.m_stride));
+//                    dest.WriteRaw(((i + m_numberVertices) * gpuStream->stride()), sp);
+//                }
+//            }
             endUpdateResource(&updateDesc);
         }
         {

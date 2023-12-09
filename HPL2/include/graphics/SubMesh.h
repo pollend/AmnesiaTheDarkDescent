@@ -28,6 +28,7 @@
 #include "physics/PhysicsTypes.h"
 #include "system/SystemTypes.h"
 
+#include <cstdint>
 #include <optional>
 #include <span>
 
@@ -55,18 +56,18 @@ namespace hpl {
             static constexpr ShaderSemantic Semantic = ShaderSemantic::SEMANTIC_POSITION;
         };
         struct NormalTrait {
-            using Type = float3;
-            static constexpr uint32_t Stride = sizeof(float3);
+            using Type = uint32_t;
+            static constexpr uint32_t Stride = sizeof(uint32_t);
             static constexpr ShaderSemantic Semantic = ShaderSemantic::SEMANTIC_NORMAL;
         };
         struct ColorTrait {
-            using Type = float4;
-            static constexpr uint32_t Stride = sizeof(float4);
+            using Type = uint32_t;
+            static constexpr uint32_t Stride = sizeof(uint32_t);
             static constexpr ShaderSemantic Semantic = ShaderSemantic::SEMANTIC_COLOR;
         };
         struct TangentTrait {
-            using Type = float3;
-            static constexpr uint32_t Stride = sizeof(float3);
+            using Type = uint32_t;
+            static constexpr uint32_t Stride = sizeof(uint32_t);
             static constexpr ShaderSemantic Semantic = ShaderSemantic::SEMANTIC_TANGENT;
         };
         struct TextureTrait {

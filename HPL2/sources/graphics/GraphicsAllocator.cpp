@@ -1,5 +1,6 @@
 #include "graphics/GraphicsAllocator.h"
 #include "graphics/ForgeRenderer.h"
+#include <cstdint>
 #include <memory>
 
 namespace hpl {
@@ -13,10 +14,10 @@ namespace hpl {
         {
             std::array streamDesc = {
                 GeometrySet::GeometryStreamDesc("opaque_position", ShaderSemantic::SEMANTIC_POSITION, sizeof(float3)),
-                GeometrySet::GeometryStreamDesc("opaque_tangent", ShaderSemantic::SEMANTIC_TANGENT, sizeof(float3)),
-                GeometrySet::GeometryStreamDesc("opaque_normal", ShaderSemantic::SEMANTIC_NORMAL, sizeof(float3)),
+                GeometrySet::GeometryStreamDesc("opaque_tangent", ShaderSemantic::SEMANTIC_TANGENT, sizeof(uint32_t)),
+                GeometrySet::GeometryStreamDesc("opaque_normal", ShaderSemantic::SEMANTIC_NORMAL, sizeof(uint32_t)),
                 GeometrySet::GeometryStreamDesc("opaque_uv0", ShaderSemantic::SEMANTIC_TEXCOORD0, sizeof(float2)),
-                GeometrySet::GeometryStreamDesc("opaque_color", ShaderSemantic::SEMANTIC_COLOR, sizeof(float4)),
+                GeometrySet::GeometryStreamDesc("opaque_color", ShaderSemantic::SEMANTIC_COLOR, sizeof(uint32_t)),
             };
             m_geometrySets[AllocationSet::OpaqueSet] = GeometrySet(OpaqueVertexBufferSize, OpaqueIndexBufferSize, streamDesc);
         }
@@ -46,12 +47,4 @@ namespace hpl {
         return getGPURingBufferOffset(&m_transientIndeciesBuffer, size);
     }
 
-    //    GraphicsAllocator::OffsetAllocHandle GraphicsAllocator::allocVertexFromSharedBuffer(uint32_t size) {
-    //        OffsetAllocator::Allocation alloc = m_vertexBufferAllocator.allocate(size);
-    //        return OffsetAllocHandle(&m_vertexBufferAllocator, alloc, m_sharedVertexBuffer);
-    //    }
-    //    GraphicsAllocator::OffsetAllocHandle  GraphicsAllocator::allocIndeciesFromSharedBuffer(uint32_t size) {
-    //        OffsetAllocator::Allocation alloc = m_indexBufferAllocator.allocate(size);
-    //        return OffsetAllocHandle(&m_indexBufferAllocator, alloc, m_sharedIndexBuffer);
-    //    }
 } // namespace hpl

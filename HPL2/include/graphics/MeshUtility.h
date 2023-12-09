@@ -9,7 +9,12 @@
 #include "Common_3/Utilities/Math/MathTypes.h"
 #include "FixPreprocessor.h"
 
+
+
 namespace hpl::MeshUtility {
+    using snorm4_t = uint32_t;
+    using unorm4_t = uint32_t;
+
     struct MeshCreateResult {
         uint32_t numVertices;
         uint32_t numIndices;
@@ -32,7 +37,9 @@ namespace hpl::MeshUtility {
         GraphicsBuffer::BufferIndexView* view,
         GraphicsBuffer::BufferStructuredView<float3>* position,
         GraphicsBuffer::BufferStructuredView<float2>* uv,
-        GraphicsBuffer::BufferStructuredView<float3>* normal,
+        std::variant<
+            GraphicsBuffer::BufferStructuredView<snorm4_t>*,
+            GraphicsBuffer::BufferStructuredView<float3>*> normal,
         GraphicsBuffer::BufferStructuredView<float3>* writeTangent
     );
 
@@ -42,8 +49,12 @@ namespace hpl::MeshUtility {
         GraphicsBuffer::BufferIndexView* index,
         GraphicsBuffer::BufferStructuredView<float3>* position,
         GraphicsBuffer::BufferStructuredView<float2>* uv,
-        GraphicsBuffer::BufferStructuredView<float3>* normal,
-        std::variant<GraphicsBuffer::BufferStructuredView<float3>*, GraphicsBuffer::BufferStructuredView<float4>*> tangent
+        std::variant<
+            GraphicsBuffer::BufferStructuredView<snorm4_t>*,
+            GraphicsBuffer::BufferStructuredView<float3>*> normal,
+        std::variant<
+            GraphicsBuffer::BufferStructuredView<snorm4_t>*,
+            GraphicsBuffer::BufferStructuredView<float3>*> tangent
     );
 
     MeshCreateResult CreateSphere(
@@ -52,30 +63,47 @@ namespace hpl::MeshUtility {
         uint32_t alSlices,
         GraphicsBuffer::BufferIndexView* index,
         GraphicsBuffer::BufferStructuredView<float3>* position,
-        GraphicsBuffer::BufferStructuredView<float4>* color,
-        GraphicsBuffer::BufferStructuredView<float3>* normal,
+        std::variant<
+            GraphicsBuffer::BufferStructuredView<unorm4_t>*,
+            GraphicsBuffer::BufferStructuredView<float4>*> color,
+        std::variant<
+            GraphicsBuffer::BufferStructuredView<snorm4_t>*,
+            GraphicsBuffer::BufferStructuredView<float3>*> normal,
         GraphicsBuffer::BufferStructuredView<float2>* uv,
-        std::variant<GraphicsBuffer::BufferStructuredView<float3>*, GraphicsBuffer::BufferStructuredView<float4>*> tangent
+        std::variant<
+            GraphicsBuffer::BufferStructuredView<snorm4_t>*,
+            GraphicsBuffer::BufferStructuredView<float3>*> tangent
     );
 
     MeshCreateResult CreateBox(
         float3 size,
         GraphicsBuffer::BufferIndexView* index,
         GraphicsBuffer::BufferStructuredView<float3>* position,
-        GraphicsBuffer::BufferStructuredView<float4>* color,
-        GraphicsBuffer::BufferStructuredView<float3>* normal,
+        std::variant<
+            GraphicsBuffer::BufferStructuredView<uint32_t>*,
+            GraphicsBuffer::BufferStructuredView<float4>*> color,
+        std::variant<
+            GraphicsBuffer::BufferStructuredView<snorm4_t>*,
+            GraphicsBuffer::BufferStructuredView<float3>*> normal,
         GraphicsBuffer::BufferStructuredView<float2>* uv,
-        std::variant<GraphicsBuffer::BufferStructuredView<float3>*, GraphicsBuffer::BufferStructuredView<float4>*> tangent
-    );
+        std::variant<
+            GraphicsBuffer::BufferStructuredView<snorm4_t>*,
+            GraphicsBuffer::BufferStructuredView<float3>*> tangent);
     MeshCreateResult CreateCylinder(
         Vector2 size,
         uint32_t sections,
         GraphicsBuffer::BufferIndexView* index,
         GraphicsBuffer::BufferStructuredView<float3>* position,
-        GraphicsBuffer::BufferStructuredView<float4>* color,
-        GraphicsBuffer::BufferStructuredView<float3>* normal,
+        std::variant<
+            GraphicsBuffer::BufferStructuredView<uint32_t>*,
+            GraphicsBuffer::BufferStructuredView<float4>*> color,
+        std::variant<
+            GraphicsBuffer::BufferStructuredView<snorm4_t>*,
+            GraphicsBuffer::BufferStructuredView<float3>*> normal,
         GraphicsBuffer::BufferStructuredView<float2>* uv,
-        std::variant<GraphicsBuffer::BufferStructuredView<float3>*, GraphicsBuffer::BufferStructuredView<float4>*> tangent);
+        std::variant<
+            GraphicsBuffer::BufferStructuredView<snorm4_t>*,
+            GraphicsBuffer::BufferStructuredView<float3>*> tangent);
 
     MeshCreateResult CreateCapsule(
         Vector2 avSize,
@@ -83,12 +111,16 @@ namespace hpl::MeshUtility {
         int alSlices,
         GraphicsBuffer::BufferIndexView* index,
         GraphicsBuffer::BufferStructuredView<float3>* position,
-        GraphicsBuffer::BufferStructuredView<float4>* color,
-        GraphicsBuffer::BufferStructuredView<float3>* normal,
+        std::variant<
+            GraphicsBuffer::BufferStructuredView<unorm4_t>*,
+            GraphicsBuffer::BufferStructuredView<float4>*> color,
+        std::variant<
+            GraphicsBuffer::BufferStructuredView<snorm4_t>*,
+            GraphicsBuffer::BufferStructuredView<float3>*> normal,
         GraphicsBuffer::BufferStructuredView<float2>* uv,
-        std::variant<GraphicsBuffer::BufferStructuredView<float3>*, GraphicsBuffer::BufferStructuredView<float4>*> tangent
-
-    );
+        std::variant<
+            GraphicsBuffer::BufferStructuredView<snorm4_t>*,
+            GraphicsBuffer::BufferStructuredView<float3>*> tangent);
 
     MeshCreateResult CreatePlane(
         Vector3 p1,
@@ -99,18 +131,29 @@ namespace hpl::MeshUtility {
         Vector2 uv4,
         GraphicsBuffer::BufferIndexView* index,
         GraphicsBuffer::BufferStructuredView<float3>* position,
-        GraphicsBuffer::BufferStructuredView<float4>* color,
-        GraphicsBuffer::BufferStructuredView<float3>* normal,
+        std::variant<
+            GraphicsBuffer::BufferStructuredView<uint32_t>*,
+            GraphicsBuffer::BufferStructuredView<float4>*> color,
+        std::variant<
+            GraphicsBuffer::BufferStructuredView<snorm4_t>*,
+            GraphicsBuffer::BufferStructuredView<float3>*> normal,
         GraphicsBuffer::BufferStructuredView<float2>* uv,
-        std::variant<GraphicsBuffer::BufferStructuredView<float3>*, GraphicsBuffer::BufferStructuredView<float4>*> tangent
-    );
+        std::variant<
+            GraphicsBuffer::BufferStructuredView<snorm4_t>*,
+            GraphicsBuffer::BufferStructuredView<float3>*> tangent);
 
     MeshCreateResult CreateCone(const float2 avSize, int alSections,
         GraphicsBuffer::BufferStructuredView<float3>* position,
-        GraphicsBuffer::BufferStructuredView<float4>* color,
-        GraphicsBuffer::BufferStructuredView<float3>* normal,
+        std::variant<
+            GraphicsBuffer::BufferStructuredView<unorm4_t>*,
+            GraphicsBuffer::BufferStructuredView<float4>*> color,
+        std::variant<
+            GraphicsBuffer::BufferStructuredView<snorm4_t>*,
+            GraphicsBuffer::BufferStructuredView<float3>*> normal,
         GraphicsBuffer::BufferStructuredView<float2>* uv,
-        std::variant<GraphicsBuffer::BufferStructuredView<float3>*, GraphicsBuffer::BufferStructuredView<float4>*> tangent);
+        std::variant<
+            GraphicsBuffer::BufferStructuredView<snorm4_t>*,
+            GraphicsBuffer::BufferStructuredView<float3>*> tangent);
 }
 
 

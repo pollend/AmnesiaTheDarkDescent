@@ -6,6 +6,7 @@
 #include "graphics/GraphicsBuffer.h"
 #include "graphics/mikktspace.h"
 #include "math/Math.h"
+#include "math/Vector.h"
 
 #include <cfloat>
 #include <cstdint>
@@ -32,7 +33,7 @@ namespace hpl::MeshUtility {
             GraphicsBuffer::BufferIndexView* indexView,
             GraphicsBuffer::BufferStructuredView<float3>* position,
             GraphicsBuffer::BufferStructuredView<float2>* uv,
-            GraphicsBuffer::BufferStructuredView<float3>* normal,
+            GraphicsBuffer::BufferStructuredView<uint32_t>* normal,
             std::function<void(uint32_t, float4)> handler
         ) {
 
@@ -377,10 +378,10 @@ namespace hpl::MeshUtility {
         Vector2 uv4,
         GraphicsBuffer::BufferIndexView* index,
         GraphicsBuffer::BufferStructuredView<float3>* position,
-        GraphicsBuffer::BufferStructuredView<float4>* color,
-        GraphicsBuffer::BufferStructuredView<float3>* normal,
+        GraphicsBuffer::BufferStructuredView<uint32_t>* color,
+        GraphicsBuffer::BufferStructuredView<uint32_t>* normal,
         GraphicsBuffer::BufferStructuredView<float2>* uv,
-        std::variant<GraphicsBuffer::BufferStructuredView<float3>*, GraphicsBuffer::BufferStructuredView<float4>*> tangent
+        GraphicsBuffer::BufferStructuredView<uint32_t> tangent
     ) {
         const Vector3 diff = p1 - p2;
         folly::small_vector<uint32_t, 4> vPlaneAxes;
@@ -450,8 +451,8 @@ namespace hpl::MeshUtility {
         uvs[3] = uv4;
         for (size_t i = 0; i < 4; i++) {
             position->Write(vertexBufIdx, v3ToF3(vCoords[i]));
-            normal->Write(vertexBufIdx, float3(0.0f, 1.0f, 0.0f));
-            color->Write(vertexBufIdx, float4(1.0f, 1.0f, 1.0f, 1.0f));
+            normal->Write(vertexBufIdx, hpl::math::float3ToSnorm8(float3(0.0f, 1.0f, 0.0f)));
+            color->Write(vertexBufIdx, hpl::math::float4ToUnorm8(float4(1.0f, 1.0f, 1.0f, 1.0f)));
             uv->Write(vertexBufIdx++, v2ToF2(uvs[i]));
         }
         for (int i = 0; i < 3; i++) {
