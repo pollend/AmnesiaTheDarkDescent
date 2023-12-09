@@ -1,6 +1,7 @@
 #include "graphics/SceneResource.h"
 #include "graphics/Material.h"
 #include "tinyimageformat_query.h"
+#include <cstdint>
 
 namespace hpl::resource  {
 
@@ -94,19 +95,19 @@ namespace hpl::resource  {
         if (auto* item = std::get_if<DiffuseMaterial>(&material)) {
             struct {
                 eMaterialTexture m_type;
-                uint16_t* m_value;
+                uint32_t* m_value;
             } m_textures[] = {
-                { eMaterialTexture_Diffuse, &item->m_tex.m_diffues },
-                { eMaterialTexture_NMap, &item->m_tex.m_normal },
-                { eMaterialTexture_Specular, &item->m_tex.m_specular },
-                { eMaterialTexture_Alpha, &item->m_tex.m_alpha },
-                { eMaterialTexture_Height, &item->m_tex.m_height },
-                { eMaterialTexture_Illumination, &item->m_tex.m_illuminiation },
-                { eMaterialTexture_DissolveAlpha, &item->m_tex.m_dissolveAlpha },
-                { eMaterialTexture_CubeMapAlpha, &item->m_tex.m_cubeMapAlpha },
+                { eMaterialTexture_Diffuse, &item->m_diffuseTextureIndex},
+                { eMaterialTexture_NMap, &item->m_normalTextureIndex},
+                { eMaterialTexture_Specular, &item->m_specularTextureIndex},
+                { eMaterialTexture_Alpha, &item->m_alphaTextureIndex},
+                { eMaterialTexture_Height, &item->m_heightTextureIndex },
+                { eMaterialTexture_Illumination, &item->m_illuminiationTextureIndex},
+                { eMaterialTexture_DissolveAlpha, &item->m_dissolveAlphaTextureIndex},
+                { eMaterialTexture_CubeMapAlpha, &item->m_cubeMapAlphaTextureIndex},
             };
             for (auto& tex : m_textures) {
-                if (*tex.m_value != UINT16_MAX) {
+                if (*tex.m_value != UINT32_MAX) {
                     handler(tex.m_type, *tex.m_value);
                 }
             }
@@ -120,20 +121,20 @@ namespace hpl::resource  {
                 DiffuseMaterial result = {};
                 struct {
                     eMaterialTexture m_type;
-                    uint16_t* m_value;
+                    uint32_t* m_value;
                 } m_textures[] = {
-                    {eMaterialTexture_Diffuse, &result.m_tex.m_diffues},
-                    {eMaterialTexture_NMap, &result.m_tex.m_normal},
-                    {eMaterialTexture_Alpha, &result.m_tex.m_alpha},
-                    {eMaterialTexture_Specular, &result.m_tex.m_specular},
-                    {eMaterialTexture_Height, &result.m_tex.m_height},
-                    {eMaterialTexture_Illumination, &result.m_tex.m_illuminiation},
-                    {eMaterialTexture_DissolveAlpha, &result.m_tex.m_dissolveAlpha},
-                    {eMaterialTexture_CubeMapAlpha, &result.m_tex.m_cubeMapAlpha},
+                    {eMaterialTexture_Diffuse, &result.m_diffuseTextureIndex},
+                    {eMaterialTexture_NMap, &result.m_normalTextureIndex},
+                    {eMaterialTexture_Alpha, &result.m_alphaTextureIndex},
+                    {eMaterialTexture_Specular, &result.m_specularTextureIndex},
+                    {eMaterialTexture_Height, &result.m_heightTextureIndex},
+                    {eMaterialTexture_Illumination, &result.m_illuminiationTextureIndex},
+                    {eMaterialTexture_DissolveAlpha, &result.m_dissolveAlphaTextureIndex},
+                    {eMaterialTexture_CubeMapAlpha, &result.m_cubeMapAlphaTextureIndex},
                 };
                 for(auto& tex: m_textures) {
                     auto* image = material->GetImage(tex.m_type);
-                    (*tex.m_value) = UINT16_MAX;
+                    (*tex.m_value) = UINT32_MAX;
                     if(image) {
                         uint32_t handle = pool.request(image->GetTexture());
                         (*tex.m_value) = static_cast<uint16_t>(handle);

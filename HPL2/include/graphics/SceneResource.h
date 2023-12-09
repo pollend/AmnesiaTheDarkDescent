@@ -39,6 +39,7 @@ namespace hpl::resource {
     struct ViewportInfo {
         static constexpr uint32_t PrmaryViewportIndex = 0;
         mat4 m_invViewMat;
+        mat4 m_invProjMat;
         mat4 m_invViewProj;
         mat4 m_viewMat;
         mat4 m_projMat;
@@ -64,14 +65,14 @@ namespace hpl::resource {
     };
 
     struct SceneObject {
-        uint m_indirectOffset;
-        float m_dissolveAmount;
+        uint32_t m_indexOffset;
+        uint32_t m_vertexOffset;
         uint32_t m_materialId;
+        float m_dissolveAmount;
         float m_lightLevel;
         float m_illuminationAmount;
         uint32_t m_pad0;
         uint32_t m_pad1;
-        uint32_t m_pad2;
         mat4 m_modelMat;
         mat4 m_invModelMat;
         mat4 m_uvMat;
@@ -79,12 +80,8 @@ namespace hpl::resource {
 
     struct ScenePointLight {
         float3 m_worldPos;
-        uint32_t m_config;
-        float4 m_lightColor;
         float m_radius;
-        uint32_t m_pad0;
-        uint32_t m_pad1;
-        uint32_t m_pad2;
+        float4 m_lightColor;
     };
 
     struct SceneSpotLight {
@@ -101,23 +98,16 @@ namespace hpl::resource {
     };
 
     struct DiffuseMaterial {
-        union {
-            uint m_texture[4];
-            struct {
-                uint16_t m_diffues;
-                uint16_t m_normal;
-
-                uint16_t m_alpha;
-                uint16_t m_specular;
-
-                uint16_t m_height;
-                uint16_t m_illuminiation;
-
-                uint16_t m_dissolveAlpha;
-                uint16_t m_cubeMapAlpha;
-            } m_tex;
-        };
+        uint m_diffuseTextureIndex;
+        uint m_normalTextureIndex;
+        uint m_alphaTextureIndex;
+        uint m_specularTextureIndex;
+        uint m_heightTextureIndex;
+        uint m_illuminiationTextureIndex;
+        uint m_dissolveAlphaTextureIndex;
+        uint m_cubeMapAlphaTextureIndex;
         uint m_samplerIndex;
+
         uint m_materialConfig;
         float m_heightMapScale;
         float m_heigtMapBias;
