@@ -34,7 +34,7 @@ PsOut PS_MAIN(PsIn In, SV_PrimitiveID(uint) primitiveID)
     float diffuseAlpha = 1.0;
 
     float2 texCoord = In.uv;
-    if(DiffuseMaterial_HeightTexture_ID(diffuseMat) != INVALID_TEXTURE_INDEX) {
+    if(isTextureIndexValid(diffuseMat.heightTextureIndex)) {
         texCoord += ParallaxAdvance(
             In.uv, 
             0.0,
@@ -44,14 +44,14 @@ PsOut PS_MAIN(PsIn In, SV_PrimitiveID(uint) primitiveID)
             In.normal,
             In.tangent,
             In.bitangent,
-            DiffuseMaterial_HeightTexture_ID(diffuseMat),
+            diffuseMat.heightTextureIndex,
             Get(sceneFilters)[diffuseMat.samplerIndex],
             (diffuseMat.materialConfig & MATERIAL_IS_HEIGHT_SINGLE_CHANNEL) > 0);
     }
 
 
     float4 value; 
-    if(SampleSceneTextureFloat4(DiffuseMaterial_AlphaTexture_ID(diffuseMat),Get(sceneFilters)[diffuseMat.samplerIndex], texCoord, value)) {
+    if(SampleSceneTextureFloat4(diffuseMat.alphaTextureIndex,Get(sceneFilters)[diffuseMat.samplerIndex], texCoord, value)) {
         if((diffuseMat.materialConfig & MATERIAL_IS_ALPHA_SINGLE_CHANNEL) > 0) {
             diffuseAlpha = value.r;
         } else {
@@ -59,16 +59,14 @@ PsOut PS_MAIN(PsIn In, SV_PrimitiveID(uint) primitiveID)
         }
     }
 
-    if(obj.dissolveAmount < 1.0 || (DiffuseMaterial_AlphaTexture_ID(diffuseMat) != INVALID_TEXTURE_INDEX) || (diffuseMat.materialConfig & MATERIAL_USE_ALPHA_DISSOLVE_FILTER) > 0) {
+    if(obj.dissolveAmount < 1.0 || isTextureIndexValid(diffuseMat.alphaTextureIndex) || (diffuseMat.materialConfig & MATERIAL_USE_ALPHA_DISSOLVE_FILTER) > 0) {
         const float2 dissolveCoord = In.Position.xy * (1.0/128.0); //128 = size of dissolve texture.
         float fDissolve = SampleTex2D(Get(dissolveTexture), Get(nearPointWrapSampler), dissolveCoord).x;
         
-        if(DiffuseMaterial_DissolveAlphaTexture_ID(diffuseMat) != INVALID_TEXTURE_INDEX) {
+        float4 alphaValue;
+        if(SampleSceneTextureFloat4(diffuseMat.dissolveAlphaTextureIndex, Get(sceneFilters)[diffuseMat.samplerIndex], texCoord, alphaValue)) {
             //Get in 0.75 - 1 range
             fDissolve = fDissolve * 0.25 + 0.75;
-
-            float4 alphaValue;
-	        SampleSceneTextureFloat4(DiffuseMaterial_DissolveAlphaTexture_ID(diffuseMat), Get(sceneFilters)[diffuseMat.samplerIndex], texCoord, alphaValue);
             float fDissolveAlpha = alphaValue.r;
             fDissolve -= (0.25 - fDissolveAlpha * 0.25);
         } else {

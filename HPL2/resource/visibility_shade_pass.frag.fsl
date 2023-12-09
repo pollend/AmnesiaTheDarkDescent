@@ -32,8 +32,8 @@ PsOut PS_MAIN(PsIn In)
   }
 
   UniformObject obj = Get(sceneObjects)[objectId];
-  uint startIndex = Get(indirectDrawArgs)[obj.indirectDrawOffset + INDIRECT_DRAW_ARGUMENTS_START_INDEX_OFFSET];
-  uint vertexOffset = Get(indirectDrawArgs)[obj.indirectDrawOffset + INDIRECT_DRAW_ARGUMENTS_VERTEX_OFFSET_OFFSET];
+  uint startIndex = obj.indexOffset;
+  uint vertexOffset = obj.vertexOffset;
   ViewportInfo viewInfo = Get(viewports)[PRIMARY_VIEWPORT_INDEX];
     
   float4x4 vp = mul(viewInfo.projMat, viewInfo.viewMat);
@@ -104,7 +104,7 @@ PsOut PS_MAIN(PsIn In)
   DiffuseMaterial diffuseMat = Get(sceneDiffuseMat)[materialIndex];  
 
   float2 texCoord = results.interp;
-  if(DiffuseMaterial_HeightTexture_ID(diffuseMat) != INVALID_TEXTURE_INDEX) {
+  if(isTextureIndexValid(diffuseMat.heightTextureIndex)) {
       texCoord += ParallaxAdvance(
           results.interp, 
           0.0,
@@ -114,20 +114,20 @@ PsOut PS_MAIN(PsIn In)
           worldNormal,
           worldTangent,
           worldBitangent,
-          DiffuseMaterial_HeightTexture_ID(diffuseMat),
+          diffuseMat.heightTextureIndex,
           Get(sceneFilters)[diffuseMat.samplerIndex],
           (diffuseMat.materialConfig & MATERIAL_IS_HEIGHT_SINGLE_CHANNEL) > 0);
   }
   float4 diffuseColor = float4(0,0,0,0);
   float4 normalSample = float4(0,0,0,0);
 	float3 shadedColor = f3(0.0f);
-  SampleSceneTextureGradFloat4(DiffuseMaterial_DiffuseTexture_ID(diffuseMat), Get(sceneFilters)[diffuseMat.samplerIndex], texCoord, texCoordDX, texCoordDY, diffuseColor);
-  if (SampleSceneTextureGradFloat4(DiffuseMaterial_NormalTexture_ID(diffuseMat), Get(sceneFilters)[diffuseMat.samplerIndex], texCoord, texCoordDX, texCoordDY, normalSample)) {
+  SampleSceneTextureGradFloat4(diffuseMat.diffuseTextureIndex, Get(sceneFilters)[diffuseMat.samplerIndex], texCoord, texCoordDX, texCoordDY, diffuseColor);
+  if (SampleSceneTextureGradFloat4(diffuseMat.normalTextureIndex, Get(sceneFilters)[diffuseMat.samplerIndex], texCoord, texCoordDX, texCoordDY, normalSample)) {
       normalSample -=  0.5;
       worldNormal = normalize(normalSample.x * worldTangent + normalSample.y * worldBitangent+ normalSample.z * worldNormal);
   } 
   float4 illuminationSample = float4(0,0,0,0);
-  if(obj.illuminationAmount > 0 && SampleSceneTextureGradFloat4(DiffuseMaterial_IlluminiationTexture_ID(diffuseMat), Get(sceneFilters)[diffuseMat.samplerIndex], texCoord, texCoordDX, texCoordDY, illuminationSample)) {
+  if(obj.illuminationAmount > 0 && SampleSceneTextureGradFloat4(diffuseMat.illuminiationTextureIndex, Get(sceneFilters)[diffuseMat.samplerIndex], texCoord, texCoordDX, texCoordDY, illuminationSample)) {
      shadedColor += (obj.illuminationAmount * illuminationSample.xyz); 
   }
 
@@ -136,7 +136,7 @@ PsOut PS_MAIN(PsIn In)
   const uint slice = calcDepthSlice(float(LIGHT_CLUSTER_SLICE), z, viewInfo.zNear, viewInfo.zFar);
   const uint numLightsInCluster = Get(lightClustersCount)[LIGHT_FROXEL_COUNT_POS(clusterCoords.x, clusterCoords.y, slice)];
   float4 specular = float4(0,0,0,0);	
-  SampleSceneTextureGradFloat4(DiffuseMaterial_SpecularTexture_ID(diffuseMat), Get(sceneFilters)[diffuseMat.samplerIndex], texCoord, texCoordDX, texCoordDY, specular);
+  SampleSceneTextureGradFloat4(diffuseMat.specularTextureIndex, Get(sceneFilters)[diffuseMat.samplerIndex], texCoord, texCoordDX, texCoordDY, specular);
   for(uint j = 0; j < numLightsInCluster; ++j) {
     uint index = LoadByte(Get(lightClusters),LIGHT_FROXEL_DATA_POS(clusterCoords.x, clusterCoords.y, slice, j) << 2);
     const PointLight pl = Get(pointLights)[index];

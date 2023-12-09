@@ -55,8 +55,9 @@ INLINE bool SampleSceneTextureProjFloat4(uint textureIdx,SamplerState sh, float4
         BeginNonUniformResourceIndex(textureIdx, SCENE_MAX_TEXTURE_COUNT);
             value = SampleTex2DProj(Get(sceneTextures)[textureIdx], sh, projectUV);
         EndNonUniformResourceIndex(); 
+        return true;
     }
-    return !(textureIdx == INVALID_TEXTURE_INDEX); 
+    return false;
 }
 
 INLINE bool SampleSceneTextureFloat4(uint textureIdx,SamplerState sh, float2 uv, inout float4 value) {
@@ -64,47 +65,18 @@ INLINE bool SampleSceneTextureFloat4(uint textureIdx,SamplerState sh, float2 uv,
         BeginNonUniformResourceIndex(textureIdx, SCENE_MAX_TEXTURE_COUNT);
             value = SampleTex2D(Get(sceneTextures)[textureIdx], sh, uv);
         EndNonUniformResourceIndex(); 
+        return true;
     }
-    return !(textureIdx == INVALID_TEXTURE_INDEX); 
+    return false;
 }
 INLINE bool SampleSceneTextureGradFloat4(uint textureIdx, SamplerState sh, float2 uv, float2 texCoordDX, float2 texCoordDY, inout float4 value) {
     if(textureIdx < SCENE_MAX_TEXTURE_COUNT) {
         BeginNonUniformResourceIndex(textureIdx, SCENE_MAX_TEXTURE_COUNT);
 		    value = SampleGradTex2D(Get(sceneTextures)[textureIdx], sh, uv, texCoordDX, texCoordDY);
         EndNonUniformResourceIndex(); 
+        return true;
     }
-    return !(textureIdx == INVALID_TEXTURE_INDEX); 
+    return false;
 }
 
-INLINE bool SampleMaterialTextureFloat4(MaterialTexture tex, float2 uv, inout(float4) value) {
-    uint textureIdx = tex.textureID; 
-    uint filterIdx = tex.filterID; 
-    if(textureIdx < SCENE_MAX_TEXTURE_COUNT) {
-        if(tex.hasGradient) {
-            switch(filterIdx) {
-                SCENE_FILTER_SWITCH_CASE { 
-                    BeginNonUniformResourceIndex(textureIdx, SCENE_MAX_TEXTURE_COUNT);
-		                value = SampleGradTex2D(Get(sceneTextures)[textureIdx], Get(sceneFilters)[filterIdx], uv, tex.texCoordDX, tex.texCoordDY);
-                    EndNonUniformResourceIndex(); 
-                    break;
-                }
-                default:
-                    break;
-            }
-        } else {
-            switch(filterIdx) {
-                SCENE_FILTER_SWITCH_CASE { 
-                    BeginNonUniformResourceIndex(textureIdx, SCENE_MAX_TEXTURE_COUNT);
-                        value = SampleTex2D(Get(sceneTextures)[textureIdx], Get(sceneFilters)[filterIdx], uv);
-                    EndNonUniformResourceIndex(); 
-                    break;
-                }
-                default:
-                    break;
-            }
-        }
-    }
-    return !(textureIdx == INVALID_TEXTURE_INDEX); 
-
-}
 #endif

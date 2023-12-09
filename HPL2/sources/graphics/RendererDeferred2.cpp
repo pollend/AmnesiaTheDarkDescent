@@ -549,7 +549,6 @@ namespace hpl {
                     DescriptorData{ .pName = "lightClusters", .ppBuffers = &m_lightClustersBuffer[swapchainIndex].m_handle },
                     DescriptorData{ .pName = "sceneObjects", .ppBuffers = &m_objectUniformBuffer[swapchainIndex].m_handle },
                     DescriptorData{ .pName = "sceneInfo", .ppBuffers = &m_perSceneInfoBuffer[swapchainIndex].m_handle },
-                    DescriptorData{ .pName = "indirectDrawArgs", .ppBuffers = &m_indirectDrawArgsBuffer[swapchainIndex].m_handle },
                 };
                 updateDescriptorSet(
                     forgeRenderer->Rend(), 0, m_sceneDescriptorPerFrameSet[swapchainIndex].m_handle, params.size(), params.data());
@@ -649,6 +648,7 @@ namespace hpl {
         if (!isFound) {
             Matrix4 modelMat = modelMatrix.value_or(
                 apObject->GetModelMatrixPtr() ? cMath::ToForgeMatrix4(*apObject->GetModelMatrixPtr()) : Matrix4::identity());
+            DrawPacket packet = apObject->ResolveDrawPacket(frame);
 
             auto& sceneMaterial = resolveMaterial(frame, material);
             BufferUpdateDesc updateDesc = { m_objectUniformBuffer[frame.m_frameIndex].m_handle, sizeof(resource::SceneObject) * index };
@@ -660,7 +660,8 @@ namespace hpl {
             uniformObjectData.m_lightLevel = 1.0f;
             uniformObjectData.m_illuminationAmount = apObject->GetIlluminationAmount();
             uniformObjectData.m_materialId = resource::encodeMaterialID(material->Descriptor().m_id, sceneMaterial.m_slot.get());
-            uniformObjectData.m_indirectOffset = drawArgOffset; // we only care about the first offset
+            uniformObjectData.m_vertexOffset = packet.m_unified.m_subAllocation->vertextOffset(); // we only care about the first offset
+            uniformObjectData.m_indexOffset = packet.m_unified.m_subAllocation->indexOffset(); // we only care about the first offset
             if (material) {
                 uniformObjectData.m_uvMat = cMath::ToForgeMatrix4(material->GetUvMatrix().GetTranspose());
             } else {

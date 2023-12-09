@@ -43,8 +43,16 @@
 #define SCENE_FILTER_SWITCH_CASE case 0: case 1: case 2: case 3: case 4: case 5: case 6: case 7: case 8: 
 
 STRUCT(DiffuseMaterial) {
-    DATA(uint,  tex[4], None);
+    DATA(uint, diffuseTextureIndex, None);
+    DATA(uint, normalTextureIndex, None);
+    DATA(uint, alphaTextureIndex, None);
+    DATA(uint, specularTextureIndex, None);
+    DATA(uint, heightTextureIndex, None);
+    DATA(uint, illuminiationTextureIndex, None);
+    DATA(uint, dissolveAlphaTextureIndex, None);
+    DATA(uint, cubeMapAlphaTextureIndex, None);
     DATA(uint,  samplerIndex, None);
+
     DATA(uint,  materialConfig, None);
     DATA(float, heightMapScale, None);
     DATA(float, heightMapBias, None);
@@ -53,14 +61,10 @@ STRUCT(DiffuseMaterial) {
     DATA(uint, __pad0, NONE);
     DATA(uint, __pad1, NONE);
 };
-uint DiffuseMaterial_DiffuseTexture_ID(DiffuseMaterial mat) {return (mat.tex[0] & 0xffff);}
-uint DiffuseMaterial_NormalTexture_ID(DiffuseMaterial mat) {return ((mat.tex[0] >> 16) & 0xffff);}
-uint DiffuseMaterial_AlphaTexture_ID(DiffuseMaterial mat) {return (mat.tex[1] & 0xffff);}
-uint DiffuseMaterial_SpecularTexture_ID(DiffuseMaterial mat) {return ((mat.tex[1] >> 16) & 0xffff);}
-uint DiffuseMaterial_HeightTexture_ID(DiffuseMaterial mat) {return (mat.tex[2] & 0xffff);}
-uint DiffuseMaterial_IlluminiationTexture_ID(DiffuseMaterial mat) {return ((mat.tex[2] >> 16) & 0xffff);}
-uint DiffuseMaterial_DissolveAlphaTexture_ID(DiffuseMaterial mat) {return (mat.tex[3] & 0xffff);}
-uint DiffuseMaterial_CubeMapAlphaTexture_ID(DiffuseMaterial mat) {return ((mat.tex[3] >> 16) & 0xffff);}
+
+bool isTextureIndexValid(uint index) {
+    return index < SCENE_MAX_TEXTURE_COUNT;
+}
 
 STRUCT(MaterialTexture) 
 {
@@ -71,36 +75,18 @@ STRUCT(MaterialTexture)
     DATA(uint, filterID, None);
     DATA(uint, textureID, None);
 };
-bool IsMaterialTextureValid(MaterialTexture tex) {
-    return !(tex.textureID == INVALID_TEXTURE_INDEX);
-}
-MaterialTexture CreateGradientMaterialTexture(uint filterID, uint textureID, float2 texCoordDX, float2 texCoordDY) {
-    MaterialTexture tex;
-    tex.filterID = filterID;
-    tex.textureID = textureID;
-    tex.texCoordDX = texCoordDX;
-    tex.texCoordDY = texCoordDY;
-    tex.hasGradient = true;
-    return tex;
-}
-MaterialTexture CreateMaterialTexture(uint filterID, uint textureID) {
-    MaterialTexture tex;
-    tex.filterID = filterID;
-    tex.textureID = textureID;
-    tex.hasGradient = false;
-    return tex;
-}
 
 STRUCT(UniformObject) 
 {
-    DATA(uint,     indirectDrawOffset, None);
-    DATA(float,    dissolveAmount, None);
+    DATA(uint,     indexOffset, None);
+    DATA(uint,     vertexOffset, None);
     DATA(uint,     materialID, None);
+    
+    DATA(float,    dissolveAmount, None);
     DATA(float,    lightLevel, None);
     DATA(float,    illuminationAmount, None);
     DATA(uint, __pad0, NONE);
     DATA(uint, __pad1, NONE);
-    DATA(uint, __pad2, NONE);
     DATA(float4x4, modelMat, None);
     DATA(float4x4, invModelMat, None);
     DATA(float4x4, uvMat, None);
