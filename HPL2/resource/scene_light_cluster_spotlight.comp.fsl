@@ -45,7 +45,7 @@ void CS_MAIN(SV_GroupThreadID(uint3) threadInGroupId, SV_GroupID(uint3) groupId)
 	
   float4 sphere = boundingSphereForSpotlight(lightData.lightPos, lightData.direction, lightData.radius,  lightData.angle);
 	float4 lightViewPos = mul(viewInfo.viewMat, float4(sphere.xyz, 1.0f));
-  if (testSphereAABB(lightViewPos.xyz, sphere.w * 1.2f, minPointAABB, maxPointAABB)) {
+  if (testSphereAABB(lightViewPos.xyz, sphere.w * 1.1f, minPointAABB, maxPointAABB)) {
   	// Increase light count on this cluster
   	uint lightArrayPos = 0;
   	const uint froxelIndex = LIGHT_FROXEL_COUNT_POS(threadInGroupId.x, threadInGroupId.y, groupId.z);

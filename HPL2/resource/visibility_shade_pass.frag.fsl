@@ -38,7 +38,8 @@ PsOut PS_MAIN(PsIn In)
     
   float4x4 vp = mul(viewInfo.projMat, viewInfo.viewMat);
   float4x4 mvp = mul(vp, obj.modelMat);
-  float3x3 normalMat = ToNormalMat(obj.invModelMat, viewInfo.invViewMat);
+  float3x3 normalMat = transpose(to_f3x3(obj.invModelMat));
+  float3x3 viewNormalMat = ToNormalMat(obj.invModelMat, viewInfo.invViewMat);
 
   //uint materialID = MATERIAL_ID(obj.materialID);
   uint triIdx0 = (triId * 3 + 0) + startIndex;
@@ -80,6 +81,10 @@ PsOut PS_MAIN(PsIn In)
   float3 worldTangent = normalize(mul(normalMat, tangent.xyz));
   float3 worldBitangent = normalize(mul(normalMat, cross(tangent, normal)));
   float3 worldNormal = normalize(mul(normalMat, normal.xyz));
+  
+  float3 viewTangent = normalize(mul(viewNormalMat, tangent.xyz));
+  float3 viewBitangent = normalize(mul(viewNormalMat, cross(tangent, normal)));
+  float3 viewNormal = normalize(mul(viewNormalMat, normal.xyz));
 
   // Interpolate the 1/w (one_over_w) for all three vertices of the triangle using the barycentric coordinates and the delta vector
   const float w = dot(float3(clipPos0.w, clipPos1.w, clipPos2.w), derivativesOut.m_lambda);
@@ -111,9 +116,9 @@ PsOut PS_MAIN(PsIn In)
           32.0, 
           diffuseMat.heightMapScale * PARALLAX_MULTIPLIER,
           viewPosition.xyz,
-          worldNormal,
-          worldTangent,
-          worldBitangent,
+          viewNormal,
+          viewTangent,
+          viewBitangent,
           diffuseMat.heightTextureIndex,
           Get(sceneFilters)[diffuseMat.samplerIndex],
           (diffuseMat.materialConfig & MATERIAL_IS_HEIGHT_SINGLE_CHANNEL) > 0);
@@ -143,8 +148,7 @@ PsOut PS_MAIN(PsIn In)
     uint index = LoadByte(Get(lightClusters),LIGHT_FROXEL_DATA_POS(clusterCoords.x, clusterCoords.y, slice, j) << 2);
     const PointLight pl = Get(pointLights)[index];
     
-    const float4 lightCameraSpace = mul(viewInfo.viewMat, float4(pl.lightPos.xyz, 1.0f));
-    const float3 lightDir = (lightCameraSpace.xyz  - viewPosition) * (1.0f / pl.lightRadius);
+    const float3 lightDir = (pl.lightPos.xyz - position) * (1.0f / pl.lightRadius);
     const float3 normalLightDir = normalize(lightDir);
     float attenuation = saturate(1.0f - dot(lightDir , lightDir)) * max(dot(worldNormal, normalLightDir), 0.0f);
     
@@ -159,15 +163,15 @@ PsOut PS_MAIN(PsIn In)
     uint index = LoadByte(Get(lightClusters), LIGHT_FROXEL_DATA_POS(clusterCoords.x, clusterCoords.y, slice, pointLightClusterCount + j) << 2);
     SpotLight spotlight = Get(spotLights)[index];
     
-    const float3 lightCameraDirection = -mul(to_f3x3(viewInfo.viewMat), spotlight.direction.xyz);
-    float4 lightCameraSpace = mul(viewInfo.viewMat, float4(spotlight.lightPos.xyz, 1.0f));
+   // const float3 lightCameraDirection = -mul(to_f3x3(viewInfo.viewMat), spotlight.direction.xyz);
+   // float4 lightCameraSpace = mul(viewInfo.viewMat, float4(spotlight.lightPos.xyz, 1.0f));
 
-    const float3 lightDir = (lightCameraSpace.xyz  - viewPosition) * (1.0 / spotlight.radius);
+    const float3 lightDir = (spotlight.lightPos.xyz - position) * (1.0f / spotlight.radius);
     const float3 normalLightDir = normalize(lightDir);
     float attenuation = saturate(1.0f - dot(lightDir , lightDir));
     const float fLDotN = max(dot(worldNormal, normalLightDir), 0.0);
 
-    if(acos(dot(normalLightDir, lightCameraDirection)) > spotlight.angle) {
+    if(acos(dot(normalLightDir, -spotlight.direction.xyz)) > spotlight.angle) {
       continue;
     }
 
@@ -181,18 +185,15 @@ PsOut PS_MAIN(PsIn In)
     if(SampleSceneTextureProjFloat4(spotlight.goboTexture, Get(nearEdgeClampSampler), projectionUV, shadowSample)) {
       attenuation *= shadowSample.x; 
     } else {
-      float oneMinusCos = 1.0 - dot(normalLightDir, lightCameraDirection);
+      float oneMinusCos = 1.0 - dot(normalLightDir, -spotlight.direction.xyz);
       attenuation *= saturate(1.0 - (oneMinusCos / (1.0 - cos(spotlight.angle * 0.5))));
     }
 
-    float specularValue = 0.0;
     float3 lightDiffuseColor = spotlight.lightColor.xyz * fLDotN;
-    if(spotlight.lightColor.w > 0.0) {
-        float3 halfVec = normalize(normalLightDir + normalize(-viewPosition.xyz));
-        float specIntensity = specular.x;
-        float specPower = exp2(specular.y * 10.0) + 1.0;
-        specularValue = spotlight.lightColor.w * specIntensity *  pow( clamp( dot( halfVec, worldNormal), 0.0, 1.0), specPower );
-    }
+    const float3 halfVec = normalize(normalLightDir + normalize(-viewPosition.xyz));
+    const float specIntensity = specular.x;
+    const float specPower = exp2(specular.y * 10.0) + 1.0;
+    const float specularValue = spotlight.lightColor.w * specIntensity *  pow( clamp( dot( halfVec, worldNormal), 0.0, 1.0), specPower );
     shadedColor += ((specularValue.xxx * spotlight.lightColor.xyz) + (diffuseColor.xyz * spotlight.lightColor.xyz * fLDotN)) * attenuation;
   }
 

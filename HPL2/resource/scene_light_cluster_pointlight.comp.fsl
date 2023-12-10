@@ -44,7 +44,7 @@ void CS_MAIN(SV_GroupThreadID(uint3) threadInGroupId, SV_GroupID(uint3) groupId)
 	
   PointLight lightData = Get(pointLights)[groupId.x];
 	float4 lightViewPos = mul(viewInfo.viewMat, float4(lightData.lightPos.xyz, 1.0f));
-  if (testSphereAABB(lightViewPos.xyz, lightData.lightRadius * 1.2f, minPointAABB, maxPointAABB)) {
+  if (testSphereAABB(lightViewPos.xyz, lightData.lightRadius * 1.1f, minPointAABB, maxPointAABB)) {
   	// Increase light count on this cluster
   	uint lightArrayPos = 0;
   	AtomicAdd(Get(pointLightClustersCount)[LIGHT_FROXEL_COUNT_POS(threadInGroupId.x, threadInGroupId.y, groupId.z)], 1, lightArrayPos);
