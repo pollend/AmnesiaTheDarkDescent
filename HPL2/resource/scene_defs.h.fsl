@@ -116,20 +116,38 @@ STRUCT(PointLight) {
     DATA(float4, lightColor, none);
 };
 
-STRUCT(SpotLight) {
-    DATA(mat4, viewProjection, none);
-    DATA(float3, lightPos, none);
-    DATA(uint, config, none);
+#define LIGHT_TYPE_POINT_LIGHT 0 
+#define LIGHT_TYPE_SPOT_LIGHT 1 
+
+STRUCT(Light) {
     DATA(float3, direction, none);
-    DATA(float, angle, none);
-    DATA(float4, lightColor, none);
+    DATA(uint, lightType, none);
+
+    DATA(float3, position, none);
     DATA(float, radius, none);
-    DATA(uint, goboTexture, NONE);
-    DATA(uint, __pad1, NONE);
+    
+    DATA(float4, color, none);
+    
+    DATA(uint, attenuationTexture, NONE);
+    DATA(float, angle, none);
+    DATA(uint, goboTextureIndex, NONE);
     DATA(uint, __pad2, NONE);
+
+    DATA(mat4, viewProjection, none);
 };
-#define LIGHT_TYPE_POINT_LIGHT 1
-#define LIGHT_TYPE_SPOT_LIGHT 2 
+
+//STRUCT(SpotLight) {
+//    DATA(mat4, viewProjection, none);
+//    DATA(float3, lightPos, none);
+//    DATA(uint, config, none);
+//    DATA(float3, direction, none);
+//    DATA(float, angle, none);
+//    DATA(float4, lightColor, none);
+//    DATA(float, radius, none);
+//    DATA(uint, goboTexture, NONE);
+//    DATA(uint, __pad1, NONE);
+//    DATA(uint, __pad2, NONE);
+//};
 
 #define LIGHT_ID_BIT    0
 #define LIGHT_INDEX_BIT 8

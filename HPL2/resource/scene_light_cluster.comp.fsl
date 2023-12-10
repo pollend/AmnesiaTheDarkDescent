@@ -42,12 +42,23 @@ void CS_MAIN(SV_GroupThreadID(uint3) threadInGroupId, SV_GroupID(uint3) groupId)
 	float3 minPointAABB = min(min(viewSpaceNearP1, viewSpaceNearP2), min(viewSpaceFarP1, viewSpaceFarP2));
 	float3 maxPointAABB = max(max(viewSpaceNearP1, viewSpaceNearP2), max(viewSpaceFarP1, viewSpaceFarP2));
 	
-  PointLight lightData = Get(pointLights)[groupId.x];
-	float4 lightViewPos = mul(viewInfo.viewMat, float4(lightData.lightPos.xyz, 1.0f));
-  if (testSphereAABB(lightViewPos.xyz, lightData.lightRadius * 1.2f, minPointAABB, maxPointAABB)) {
+  Light light = Get(lights)[groupId.x];
+	float4 sphere; //= mul(viewInfo.viewMat, float4(lightData.lightPos.xyz, 1.0f));
+
+  switch(light.lightType) {
+  	case LIGHT_TYPE_POINT_LIGHT:	
+  		sphere = float4(mul(viewInfo.viewMat, float4(light.position.xyz, 1.0f)).xyz, light.radius * 1.2f);
+  		break;
+  	case LIGHT_TYPE_SPOT_LIGHT:			
+  		float4 boundingSphere = boundingSphereForSpotlight(light.position, light.direction, light.radius,  light.angle);
+  		sphere = float4(mul(viewInfo.viewMat, float4(boundingSphere.xyz, 1.0f)).xyz, boundingSphere.w);
+  		break;
+  }
+
+  if (testSphereAABB(sphere.xyz, sphere.w, minPointAABB, maxPointAABB)) {
   	// Increase light count on this cluster
   	uint lightArrayPos = 0;
-  	AtomicAdd(Get(pointLightClustersCount)[LIGHT_FROXEL_COUNT_POS(threadInGroupId.x, threadInGroupId.y, groupId.z)], 1, lightArrayPos);
+  	AtomicAdd(Get(lightClustersCount)[LIGHT_FROXEL_COUNT_POS(threadInGroupId.x, threadInGroupId.y, groupId.z)], 1, lightArrayPos);
 
   	// Add light id to cluster
   	AtomicExchange(Get(lightClusters)[LIGHT_FROXEL_DATA_POS(threadInGroupId.x, threadInGroupId.y, groupId.z, lightArrayPos)], groupId.x, lightArrayPos);

@@ -28,8 +28,13 @@ namespace hpl::resource {
 
     static constexpr uint32_t MaterialIDMask =         0xff; // 0000 0000 0000 0000 0000 0000 1111 1111
     static constexpr uint32_t MaterialIndexMask =  0xffff00; // 0000 0000 1111 1111 1111 1111 0000 0000
-    static constexpr uint32_t InvalidSceneTexsture = 0xffff;
+    static constexpr uint32_t InvalidSceneTexture = 0xffff;
     uint32_t encodeMaterialID(hpl::MaterialID id, uint32_t handle);
+
+    enum LightType {
+       PointLight = 0,
+       SpotLight = 1
+    };
 
 
     uint32_t constexpr IsAlphaSingleChannel = 0x1;
@@ -78,23 +83,40 @@ namespace hpl::resource {
         mat4 m_uvMat;
     };
 
-    struct ScenePointLight {
-        float3 m_worldPos;
-        float m_radius;
-        float4 m_lightColor;
-    };
+ //   struct ScenePointLight {
+ //       float3 m_worldPos;
+ //       float m_radius;
+ //       float4 m_lightColor;
+ //   };
 
-    struct SceneSpotLight {
-        mat4 m_viewProjection;
-        float3 m_worldPos;
-        uint m_config;
+ //   struct SceneSpotLight {
+ //       mat4 m_viewProjection;
+ //       float3 m_worldPos;
+ //       uint m_config;
+ //       float3 m_direction;
+ //       float m_angle;
+ //       float4 m_lightColor;
+ //       float m_radius;
+ //       uint32_t m_goboTexture;
+ //       uint32_t m_pad1;
+ //       uint32_t m_pad2;
+ //   };
+
+    struct LightConstant {
         float3 m_direction;
-        float m_angle;
-        float4 m_lightColor;
+        uint m_lightType;
+
+        float3 m_position;
         float m_radius;
-        uint32_t m_goboTexture;
-        uint32_t m_pad1;
-        uint32_t m_pad2;
+
+        float4 m_color;
+
+        uint m_attenuationTexture;
+        float m_angle;
+        uint m_goboTexture;
+        uint m_pad2;
+
+        mat4 m_viewProjection;
     };
 
     struct DiffuseMaterial {

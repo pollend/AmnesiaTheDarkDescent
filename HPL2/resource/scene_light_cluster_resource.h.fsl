@@ -5,13 +5,7 @@ CBUFFER(sceneInfo, UPDATE_FREQ_PER_FRAME, b0, binding = 0) {
   DATA(ViewportInfo, viewports[64], None);
 };
 
-RES(Buffer(SpotLight),     spotLights,         UPDATE_FREQ_PER_FRAME, t0, binding = 1);
-RES(Buffer(PointLight),    pointLights,        UPDATE_FREQ_PER_FRAME, t0, binding = 2);
+RES(Buffer(Light),     lights,         UPDATE_FREQ_PER_FRAME, t0, binding = 1);
+RES(RWBuffer(atomic_uint), lightClustersCount, UPDATE_FREQ_PER_FRAME, u0, binding = 2);
+RES(RWBuffer(atomic_uint), lightClusters,      UPDATE_FREQ_PER_FRAME, u1, binding = 3);
 
-// cluster counts 
-RES(RWBuffer(atomic_uint), pointLightClustersCount, UPDATE_FREQ_PER_FRAME, u0, binding = 3);
-RES(RWBuffer(atomic_uint), spotLightClustersCount, UPDATE_FREQ_PER_FRAME, u0, binding = 4);
-
-RES(RWBuffer(atomic_uint), lightClusters,      UPDATE_FREQ_PER_FRAME, u1, binding = 5);
-RES(Tex2D(float),          hiZTexture,         UPDATE_FREQ_PER_FRAME, t0, binding = 6);
-RES(SamplerState,          depthSampler,       UPDATE_FREQ_NONE, s0, binding = 7);
