@@ -5,6 +5,7 @@
 #include "graphics/ImageBindlessPool.h"
 #include "graphics/SceneResource.h"
 #include "graphics/TextureDescriptorPool.h"
+#include "math/MathTypes.h"
 #include "resources/TextureManager.h"
 #include "scene/Light.h"
 #include "scene/LightSpot.h"
@@ -117,13 +118,13 @@ namespace hpl {
             addShader(forgeRenderer->Rend(), &loadDesc, shader);
             return true;
         });
-        m_lightClusterShader.Load(forgeRenderer->Rend(), [&](Shader** shader) {
+        m_lightClusterPointLightShader.Load(forgeRenderer->Rend(), [&](Shader** shader) {
             ShaderLoadDesc loadDesc = {};
-            loadDesc.mStages[0].pFileName = "scene_light_cluster.comp";
+            loadDesc.mStages[0].pFileName = "scene_light_cluster_pointlight.comp";
             addShader(forgeRenderer->Rend(), &loadDesc, shader);
             return true;
         });
-        m_lightClusterSpotlightShader.Load(forgeRenderer->Rend(), [&](Shader** shader) {
+        m_lightClusterSpotLightShader.Load(forgeRenderer->Rend(), [&](Shader** shader) {
             ShaderLoadDesc loadDesc = {};
             loadDesc.mStages[0].pFileName = "scene_light_cluster_spotlight.comp";
             addShader(forgeRenderer->Rend(), &loadDesc, shader);
@@ -171,8 +172,8 @@ namespace hpl {
         });
         m_lightClusterRootSignature.Load(forgeRenderer->Rend(), [&](RootSignature** signature) {
             RootSignatureDesc rootSignatureDesc = {};
-            std::array shaders = { m_lightClusterSpotlightShader.m_handle,
-                                   m_lightClusterShader.m_handle,
+            std::array shaders = { m_lightClusterSpotLightShader.m_handle,
+                                   m_lightClusterPointLightShader.m_handle,
                                    m_clearLightClusterShader.m_handle };
             const char* pStaticSamplers[] = { "depthSampler" };
             rootSignatureDesc.ppShaders = shaders.data();
@@ -184,7 +185,7 @@ namespace hpl {
             return true;
         });
         m_sceneRootSignature.Load(forgeRenderer->Rend(), [&](RootSignature** signature) {
-            ASSERT(m_lightClusterShader.IsValid());
+            ASSERT(m_lightClusterPointLightShader.IsValid());
             ASSERT(m_clearLightClusterShader.IsValid());
             ASSERT(m_visibilityBufferAlphaPassShader.IsValid());
             ASSERT(m_visibilityBufferPassShader.IsValid());
@@ -339,7 +340,7 @@ namespace hpl {
             PipelineDesc pipelineDesc = {};
             pipelineDesc.mType = PIPELINE_TYPE_COMPUTE;
             ComputePipelineDesc& computePipelineDesc = pipelineDesc.mComputeDesc;
-            computePipelineDesc.pShaderProgram = m_lightClusterShader.m_handle;
+            computePipelineDesc.pShaderProgram = m_lightClusterPointLightShader.m_handle;
             computePipelineDesc.pRootSignature = m_lightClusterRootSignature.m_handle;
             addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
             return true;
@@ -348,7 +349,7 @@ namespace hpl {
             PipelineDesc pipelineDesc = {};
             pipelineDesc.mType = PIPELINE_TYPE_COMPUTE;
             ComputePipelineDesc& computePipelineDesc = pipelineDesc.mComputeDesc;
-            computePipelineDesc.pShaderProgram = m_lightClusterSpotlightShader.m_handle;
+            computePipelineDesc.pShaderProgram = m_lightClusterSpotLightShader.m_handle;
             computePipelineDesc.pRootSignature = m_lightClusterRootSignature.m_handle;
             addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
             return true;
@@ -382,7 +383,7 @@ namespace hpl {
                 addResource(&bufferDesc, nullptr);
                 return true;
             });
-            m_lightClusterCountBuffer[i].Load([&](Buffer** buffer) {
+            m_spotLightClusterCountBuffer[i].Load([&](Buffer** buffer) {
                 BufferLoadDesc bufferDesc = {};
                 bufferDesc.mDesc.mElementCount = LightClusterWidth * LightClusterHeight * LightClusterSlices;
                 bufferDesc.mDesc.mSize = bufferDesc.mDesc.mElementCount * sizeof(uint32_t);
@@ -392,7 +393,22 @@ namespace hpl {
                 bufferDesc.mDesc.mStructStride = sizeof(uint32_t);
                 bufferDesc.mDesc.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
                 bufferDesc.pData = nullptr;
-                bufferDesc.mDesc.pName = "Light Cluster Count";
+                bufferDesc.mDesc.pName = "pointlight Cluster Count";
+                bufferDesc.ppBuffer = buffer;
+                addResource(&bufferDesc, nullptr);
+                return true;
+            });
+            m_pointLightClusterCountBuffer[i].Load([&](Buffer** buffer) {
+                BufferLoadDesc bufferDesc = {};
+                bufferDesc.mDesc.mElementCount = LightClusterWidth * LightClusterHeight * LightClusterSlices;
+                bufferDesc.mDesc.mSize = bufferDesc.mDesc.mElementCount * sizeof(uint32_t);
+                bufferDesc.mDesc.mDescriptors = DESCRIPTOR_TYPE_BUFFER_RAW | DESCRIPTOR_TYPE_RW_BUFFER;
+                bufferDesc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_GPU_ONLY;
+                bufferDesc.mDesc.mFirstElement = 0;
+                bufferDesc.mDesc.mStructStride = sizeof(uint32_t);
+                bufferDesc.mDesc.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
+                bufferDesc.pData = nullptr;
+                bufferDesc.mDesc.pName = "spotlight Cluster Count";
                 bufferDesc.ppBuffer = buffer;
                 addResource(&bufferDesc, nullptr);
                 return true;
@@ -515,8 +531,9 @@ namespace hpl {
             {
                 std::array params = {
                     DescriptorData{ .pName = "pointLights", .ppBuffers = &m_pointLightBuffer[swapchainIndex].m_handle },
-                    //DescriptorData{ .pName = "spotLights", .ppBuffers = &m_spotlightBuffer[swapchainIndex].m_handle },
-                    DescriptorData{ .pName = "lightClustersCount", .ppBuffers = &m_lightClusterCountBuffer[swapchainIndex].m_handle },
+                    DescriptorData{ .pName = "spotLights", .ppBuffers = &m_spotlightBuffer[swapchainIndex].m_handle },
+                    DescriptorData{ .pName = "pointLightClustersCount", .ppBuffers = &m_pointLightClusterCountBuffer[swapchainIndex].m_handle },
+                    DescriptorData{ .pName = "spotLightClustersCount", .ppBuffers = &m_spotLightClusterCountBuffer[swapchainIndex].m_handle },
                     DescriptorData{ .pName = "lightClusters", .ppBuffers = &m_lightClustersBuffer[swapchainIndex].m_handle },
                     DescriptorData{ .pName = "sceneObjects", .ppBuffers = &m_objectUniformBuffer[swapchainIndex].m_handle },
                     DescriptorData{ .pName = "sceneInfo", .ppBuffers = &m_perSceneInfoBuffer[swapchainIndex].m_handle },
@@ -528,7 +545,8 @@ namespace hpl {
                 std::array params = {
                     DescriptorData{ .pName = "spotLights", .ppBuffers = &m_spotlightBuffer[swapchainIndex].m_handle },
                     DescriptorData{ .pName = "pointLights", .ppBuffers = &m_pointLightBuffer[swapchainIndex].m_handle },
-                    DescriptorData{ .pName = "lightClustersCount", .ppBuffers = &m_lightClusterCountBuffer[swapchainIndex].m_handle },
+                    DescriptorData{ .pName = "pointLightClustersCount", .ppBuffers = &m_pointLightClusterCountBuffer[swapchainIndex].m_handle },
+                    DescriptorData{ .pName = "spotLightClustersCount", .ppBuffers = &m_spotLightClusterCountBuffer[swapchainIndex].m_handle },
                     DescriptorData{ .pName = "lightClusters", .ppBuffers = &m_lightClustersBuffer[swapchainIndex].m_handle },
                     DescriptorData{ .pName = "sceneInfo", .ppBuffers = &m_perSceneInfoBuffer[swapchainIndex].m_handle },
                 };
@@ -906,21 +924,20 @@ namespace hpl {
                         float fFarHeight = pLightSpot->GetTanHalfFOV() * pLightSpot->GetRadius() * 2.0f;
                         // Note: Aspect might be wonky if there is no gobo.
                         float fFarWidth = fFarHeight * pLightSpot->GetAspect();
-                        cMatrixf mtxDestRender =
-                            cMath::MatrixScale(cVector3f(fFarWidth, fFarHeight, pLightSpot->GetRadius())); // x and y = "far plane", z = radius
-                        cMatrixf mtxDestTransform = cMath::MatrixMul(apFrustum->GetViewMatrix(), pLightSpot->GetWorldMatrix());
-                        cVector3f forward = cMath::MatrixMul3x3(mtxDestTransform, cVector3f(0, 0, 1));
+                       // cMatrixf mtxDestRender =
+                       //     cMath::MatrixScale(cVector3f(fFarWidth, fFarHeight, pLightSpot->GetRadius())); // x and y = "far plane", z = radius
+                        //cMatrixf mtxDestTransform = cMath::MatrixMul(apFrustum->GetViewMatrix(), pLightSpot->GetWorldMatrix());
+
                         const cColor color = light->GetDiffuseColor();
-                        //mtxDestRender = cMath::MatrixMul(mtxDestTransform, mtxDestRender);
 
                         Matrix4 spotViewProj = cMath::ToForgeMatrix4(pLightSpot->GetViewProjMatrix()); //* inverse(apFrustum->GetViewMat());
 
+                        cVector3f forward = cMath::MatrixMul3x3(pLightSpot->GetWorldMatrix(), cVector3f(0,0,-1));
                         BufferUpdateDesc spotlightUpdateDesc = { m_spotlightBuffer[frame.m_frameIndex].m_handle,
                                                                   (spotlightCount++) * sizeof(resource::SceneSpotLight),
                                                                   sizeof(resource::SceneSpotLight) };
                         beginUpdateResource(&spotlightUpdateDesc);
                         auto spotLightData = reinterpret_cast<resource::SceneSpotLight*>(spotlightUpdateDesc.pMappedData);
-                        //cVector3f forward = cMath::MatrixMul3x3(light->m_mtxViewSpaceTransform, cVector3f(0, 0, 1));
                         spotLightData->m_radius = light->GetRadius();
                         spotLightData->m_direction = normalize(float3(forward.x, forward.y, forward.z));
                         spotLightData->m_lightColor = float4(color.r, color.g, color.b, color.a);
@@ -940,9 +957,14 @@ namespace hpl {
 
         {
             cmdBindRenderTargets(cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
-            std::array barriers = { BufferBarrier{ m_lightClusterCountBuffer[frame.m_frameIndex].m_handle,
+            std::array barriers = {
+                BufferBarrier{ m_pointLightClusterCountBuffer[frame.m_frameIndex].m_handle,
                                                    RESOURCE_STATE_UNORDERED_ACCESS,
-                                                   RESOURCE_STATE_SHADER_RESOURCE } };
+                                                   RESOURCE_STATE_SHADER_RESOURCE },
+                BufferBarrier{ m_spotLightClusterCountBuffer[frame.m_frameIndex].m_handle,
+                                                   RESOURCE_STATE_UNORDERED_ACCESS,
+                                                   RESOURCE_STATE_SHADER_RESOURCE },
+            };
             std::array rtBarriers = {
                 RenderTargetBarrier{ viewportDatum->m_visiblityBuffer[frame.m_frameIndex].m_handle,
                                      RESOURCE_STATE_SHADER_RESOURCE,
@@ -1036,7 +1058,10 @@ namespace hpl {
         {
             {
                 std::array barriers = {
-                    BufferBarrier{ m_lightClusterCountBuffer[frame.m_frameIndex].m_handle,
+                    BufferBarrier{ m_pointLightClusterCountBuffer[frame.m_frameIndex].m_handle,
+                                                       RESOURCE_STATE_SHADER_RESOURCE,
+                                                       RESOURCE_STATE_UNORDERED_ACCESS },
+                    BufferBarrier{ m_spotLightClusterCountBuffer[frame.m_frameIndex].m_handle,
                                                        RESOURCE_STATE_SHADER_RESOURCE,
                                                        RESOURCE_STATE_UNORDERED_ACCESS },
                     BufferBarrier{ m_lightClustersBuffer[frame.m_frameIndex].m_handle,
@@ -1044,7 +1069,11 @@ namespace hpl {
                                                        RESOURCE_STATE_UNORDERED_ACCESS },
                     BufferBarrier{ m_pointLightBuffer[frame.m_frameIndex].m_handle,
                                                        RESOURCE_STATE_SHADER_RESOURCE,
-                                                       RESOURCE_STATE_UNORDERED_ACCESS  }
+                                                       RESOURCE_STATE_UNORDERED_ACCESS  },
+                    BufferBarrier{ m_spotlightBuffer[frame.m_frameIndex].m_handle,
+                                                       RESOURCE_STATE_SHADER_RESOURCE,
+                                                       RESOURCE_STATE_UNORDERED_ACCESS  },
+
                 };
                 cmdResourceBarrier(
                     cmd, barriers.size(), barriers.data(), 0, nullptr, 0, nullptr);
@@ -1055,9 +1084,14 @@ namespace hpl {
             cmdBindPipeline(cmd, m_clearClusterPipeline.m_handle);
             cmdDispatch(cmd, 1, 1, LightClusterSlices);
             {
-                std::array barriers = { BufferBarrier{ m_lightClusterCountBuffer[frame.m_frameIndex].m_handle,
+                std::array barriers = {
+                    BufferBarrier{ m_pointLightClusterCountBuffer[frame.m_frameIndex].m_handle,
                                                        RESOURCE_STATE_UNORDERED_ACCESS,
-                                                       RESOURCE_STATE_UNORDERED_ACCESS } };
+                                                       RESOURCE_STATE_UNORDERED_ACCESS },
+                    BufferBarrier{ m_spotLightClusterCountBuffer[frame.m_frameIndex].m_handle,
+                                                       RESOURCE_STATE_UNORDERED_ACCESS,
+                                                       RESOURCE_STATE_UNORDERED_ACCESS },
+                };
                 cmdResourceBarrier(
                     cmd, barriers.size(), barriers.data(), 0, nullptr, 0, nullptr);
 
@@ -1066,17 +1100,42 @@ namespace hpl {
             cmdBindPipeline(cmd, m_pointLightClusterPipeline.m_handle);
             cmdBindDescriptorSet(cmd, 0, m_lightDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
             cmdDispatch(cmd, pointlightCount, 1, LightClusterSlices);
+
+            {
+                std::array barriers = {
+                    BufferBarrier{ m_pointLightClusterCountBuffer[frame.m_frameIndex].m_handle,
+                                                       RESOURCE_STATE_UNORDERED_ACCESS,
+                                                       RESOURCE_STATE_UNORDERED_ACCESS },
+                    BufferBarrier{ m_spotLightClusterCountBuffer[frame.m_frameIndex].m_handle,
+                                                       RESOURCE_STATE_UNORDERED_ACCESS,
+                                                       RESOURCE_STATE_UNORDERED_ACCESS },
+
+                };
+                cmdResourceBarrier(
+                    cmd, barriers.size(), barriers.data(), 0, nullptr, 0, nullptr);
+
+            }
+
+            cmdBindPipeline(cmd, m_spotLightClusterPipeline.m_handle);
+            cmdBindDescriptorSet(cmd, 0, m_lightDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
+            cmdDispatch(cmd, spotlightCount, 1, LightClusterSlices);
         }
         {
             cmdBindRenderTargets(cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
             std::array barriers = {
-                BufferBarrier{ m_lightClusterCountBuffer[frame.m_frameIndex].m_handle,
+                BufferBarrier{ m_pointLightClusterCountBuffer[frame.m_frameIndex].m_handle,
+                                                   RESOURCE_STATE_UNORDERED_ACCESS,
+                                                   RESOURCE_STATE_SHADER_RESOURCE  },
+                BufferBarrier{ m_spotLightClusterCountBuffer[frame.m_frameIndex].m_handle,
                                                    RESOURCE_STATE_UNORDERED_ACCESS,
                                                    RESOURCE_STATE_SHADER_RESOURCE  },
                 BufferBarrier{ m_lightClustersBuffer[frame.m_frameIndex].m_handle,
                                                    RESOURCE_STATE_UNORDERED_ACCESS,
                                                    RESOURCE_STATE_SHADER_RESOURCE },
                 BufferBarrier{ m_pointLightBuffer[frame.m_frameIndex].m_handle,
+                                                   RESOURCE_STATE_UNORDERED_ACCESS,
+                                                   RESOURCE_STATE_SHADER_RESOURCE  },
+                BufferBarrier{ m_spotlightBuffer[frame.m_frameIndex].m_handle,
                                                    RESOURCE_STATE_UNORDERED_ACCESS,
                                                    RESOURCE_STATE_SHADER_RESOURCE  }
             };

@@ -13,7 +13,6 @@ void CS_MAIN(SV_GroupThreadID(uint3) threadInGroupId, SV_GroupID(uint3) groupId)
   float2 screenDim = viewInfo.rect.zw;
 
   //Near and far values of the cluster in view space
-	
 	const float tileNear = -getDepthClipPlane(float(groupId.z), LIGHT_CLUSTER_SLICE, viewInfo.zNear, viewInfo.zFar);
 	const float tileFar = -getDepthClipPlane(float(groupId.z) + 1.0, LIGHT_CLUSTER_SLICE, viewInfo.zNear, viewInfo.zFar);
 
@@ -48,7 +47,7 @@ void CS_MAIN(SV_GroupThreadID(uint3) threadInGroupId, SV_GroupID(uint3) groupId)
   if (testSphereAABB(lightViewPos.xyz, lightData.lightRadius * 1.2f, minPointAABB, maxPointAABB)) {
   	// Increase light count on this cluster
   	uint lightArrayPos = 0;
-  	AtomicAdd(Get(lightClustersCount)[LIGHT_FROXEL_COUNT_POS(threadInGroupId.x, threadInGroupId.y, groupId.z)], 1, lightArrayPos);
+  	AtomicAdd(Get(pointLightClustersCount)[LIGHT_FROXEL_COUNT_POS(threadInGroupId.x, threadInGroupId.y, groupId.z)], 1, lightArrayPos);
 
   	// Add light id to cluster
   	AtomicExchange(Get(lightClusters)[LIGHT_FROXEL_DATA_POS(threadInGroupId.x, threadInGroupId.y, groupId.z, lightArrayPos)], groupId.x, lightArrayPos);

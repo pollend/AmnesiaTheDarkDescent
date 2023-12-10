@@ -57,7 +57,6 @@ bool testSphereAABB(float3 point, float radius,float3 min, float3 max) {
     return sqDistPointAABB(point, min, max) <= (radius * radius);
 }
 
-
 float4 ndcToViewSpace(float4 ndc, mat4 inverseProjection) {
     vec4 view = mul(inverseProjection, ndc);
     view = view / view.w;

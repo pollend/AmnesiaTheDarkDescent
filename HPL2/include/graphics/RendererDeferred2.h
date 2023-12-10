@@ -189,14 +189,15 @@ namespace hpl {
         // Lights
         SharedRootSignature m_lightClusterRootSignature;
         std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_lightDescriptorPerFrameSet;
-        SharedShader m_lightClusterShader;
-        SharedShader m_lightClusterSpotlightShader;
+        SharedShader m_lightClusterPointLightShader;
+        SharedShader m_lightClusterSpotLightShader;
         SharedShader m_clearLightClusterShader;
         SharedPipeline m_pointLightClusterPipeline;
         SharedPipeline m_spotLightClusterPipeline;
         SharedPipeline m_clearClusterPipeline;
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_lightClustersBuffer;
-        std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_lightClusterCountBuffer;
+        std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_pointLightClusterCountBuffer;
+        std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_spotLightClusterCountBuffer;
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_pointLightBuffer;
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_spotlightBuffer;
     };

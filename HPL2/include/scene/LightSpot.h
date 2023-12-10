@@ -84,7 +84,6 @@ namespace hpl {
 		float mfTanHalfFOV;
 		float mfCosHalfFOV;
 
-
 		bool mbProjectionUpdated;
 		bool mbViewProjUpdated;
 		bool mbFrustumUpdated;

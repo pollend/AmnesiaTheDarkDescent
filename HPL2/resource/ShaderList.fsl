@@ -330,8 +330,8 @@
   #include "visibilityBuffer_alpha_pass.frag.fsl"
 #end
 
-#comp scene_light_cluster.comp
-  #include "scene_light_cluster.comp.fsl"
+#comp scene_light_cluster_pointlight.comp
+  #include "scene_light_cluster_pointlight.comp.fsl"
 #end
 
 #comp scene_light_cluster_spotlight.comp
