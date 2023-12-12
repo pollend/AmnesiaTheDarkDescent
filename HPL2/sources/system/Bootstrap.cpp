@@ -49,6 +49,14 @@ namespace hpl {
         {
             return;
         }
+        
+	    FileSystemInitDesc fsDesc = {};
+        fsDesc.pAppName = "HPL2";
+
+        if (!initFileSystem(&fsDesc)) {
+            LOGF(eERROR, "Filesystem failed to initialize.");
+        }
+	
 
         initLog("HPL2", DEFAULT_LOG_LEVEL);
         fsSetPathForResourceDir(pSystemFileIO, RM_CONTENT, RD_SHADER_BINARIES, "./CompiledShaders");

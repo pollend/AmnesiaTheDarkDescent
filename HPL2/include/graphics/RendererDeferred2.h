@@ -79,10 +79,9 @@ namespace hpl {
         static constexpr uint32_t MaxObjectTest = 32768;
         static constexpr uint32_t MaxOcclusionDescSize = 4096;
         static constexpr uint32_t MaxQueryPoolSize = MaxOcclusionDescSize * 2;
-        static constexpr uint32_t MaxIndirectDrawArgs = 4096;
+        static constexpr uint32_t MaxIndirectDrawElements = 4096;
 
         static constexpr uint32_t PointLightCount = 256;
-        static constexpr uint32_t SpotLightCount = 256;
         static constexpr float ShadowDistanceMedium = 10;
         static constexpr float ShadowDistanceLow = 20;
         static constexpr float ShadowDistanceNone = 40;
@@ -94,6 +93,18 @@ namespace hpl {
         static constexpr uint32_t LightClusterSlices = 24;
         static constexpr uint32_t LightClusterLightCount = 128;
         static constexpr uint32_t TransientImagePoolCount = 256;
+
+        static constexpr uint32_t IndirectArgumentSize = 8 * sizeof(uint32_t);
+
+
+        struct RootConstantDrawIndexArguments {
+            uint32_t mDrawId;
+            uint32_t mIndexCount;
+            uint32_t mInstanceCount;
+            uint32_t mStartIndex;
+            uint32_t mVertexOffset;
+            uint32_t mStartInstance;
+        };
 
 
         struct ViewportData {
@@ -158,10 +169,9 @@ namespace hpl {
         SharedDescriptorSet m_sceneDescriptorConstSet;
         std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_sceneDescriptorPerFrameSet;
 
-        SharedRootSignature m_rootSignatureCopyDepth;
-        std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_descriptorCopyDepth;
-        SharedPipeline m_pipelineCopyDepth;
-        SharedShader m_copyDepthShader;
+        //SharedRootSignature m_rootSignatureCopyDepth;
+        //std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_descriptorCopyDepth;
+        //SharedShader m_copyDepthShader;
 
         SharedShader m_visibilityBufferPassShader;
         SharedShader m_visibilityBufferAlphaPassShader;
@@ -196,6 +206,12 @@ namespace hpl {
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_lightClustersBuffer;
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_lightClusterCountBuffer;
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_lightBuffer;
+
+        Queue* m_computeQueue = nullptr;
+        GpuCmdRing m_computeRing = {};
+
+
+        bool m_supportIndirectRootConstant = false;
     };
 }; // namespace hpl
 

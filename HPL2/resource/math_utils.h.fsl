@@ -42,23 +42,23 @@ float4 boundingSphereForSpotlight(in float3 origin, in float3 forward, in float 
 
 // ref: https://realtimecollisiondetection.net/books/rtcd/
 // ref: https://gamedev.stackexchange.com/questions/156870/how-do-i-implement-a-aabb-sphere-collision
-float sqDistPointAABB(float3 point, float3 min, float3 max) {
+float sqDistPointAABB(float3 p, float3 start, float3 end) {
     float sqDist = 0.0f;
-    if(point.x < min.x) sqDist += pow(min.x - point.x, 2);
-    if(point.x > max.x) sqDist += pow(point.x - max.x, 2);
-    if(point.y < min.y) sqDist += pow(min.y - point.y, 2);
-    if(point.y > max.y) sqDist += pow(point.y - max.y, 2);
-    if(point.z < min.z) sqDist += pow(min.z - point.z, 2);
-    if(point.z > max.z) sqDist += pow(point.z - max.z, 2);
+    if(p.x < start.x) sqDist += pow(start.x - p.x, 2);
+    if(p.x > end.x) sqDist += pow(p.x - end.x, 2);
+    if(p.y < start.y) sqDist += pow(start.y - p.y, 2);
+    if(p.y > end.y) sqDist += pow(p.y - end.y, 2);
+    if(p.z < start.z) sqDist += pow(start.z - p.z, 2);
+    if(p.z > end.z) sqDist += pow(p.z - end.z, 2);
     return sqDist;
 }
 
-bool testSphereAABB(float3 point, float radius,float3 min, float3 max) {
-    return sqDistPointAABB(point, min, max) <= (radius * radius);
+bool testSphereAABB(float3 p, float radius,float3 min, float3 max) {
+    return sqDistPointAABB(p, min, max) <= (radius * radius);
 }
 
-float4 ndcToViewSpace(float4 ndc, mat4 inverseProjection) {
-    vec4 view = mul(inverseProjection, ndc);
+float4 ndcToViewSpace(float4 ndc, float4x4 inverseProjection) {
+    float4 view = mul(inverseProjection, ndc);
     view = view / view.w;
     return view;
 }

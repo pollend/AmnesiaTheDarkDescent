@@ -115,6 +115,7 @@ namespace hpl {
             Semaphore* m_renderCompleteSemaphore = nullptr;
             CommandResourcePool* m_resourcePool = nullptr;
             RenderTarget* m_finalRenderTarget = nullptr;
+            std::vector<Semaphore*>* m_waitSemaphores;
         };
 
 
@@ -132,6 +133,7 @@ namespace hpl {
             frame.m_renderCompleteSemaphore = m_renderCompleteSemaphores[CurrentFrameIndex()];
             frame.m_resourcePool = &m_resourcePool[CurrentFrameIndex()];
             frame.m_finalRenderTarget = m_finalRenderTarget[CurrentFrameIndex()].m_handle;
+            frame.m_waitSemaphores = &m_waitSemaphores[CurrentFrameIndex()];
             return frame;
         }
         // void BeginFrame() {}
@@ -163,6 +165,9 @@ namespace hpl {
         std::array<CmdPool*, SwapChainLength> m_cmdPools;
         std::array<Cmd*, SwapChainLength> m_cmds;
         std::array<SharedRenderTarget, SwapChainLength> m_finalRenderTarget;
+
+        std::array<std::vector<Semaphore*>, SwapChainLength> m_waitSemaphores;
+
 
         float m_gamma = 1.0f;
 

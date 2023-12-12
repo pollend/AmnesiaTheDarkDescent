@@ -11,8 +11,8 @@
 #define POINT_LIGHT_MAX_COUNT  (256)
 #define SCENE_OPAQUE_COUNT (512)
 
-#define LIGHT_FROXEL_COUNT_POS(ix, iy, iz) ( (LIGHT_CLUSTER_WIDTH * LIGHT_CLUSTER_HEIGHT * (iz)) + ((iy)*LIGHT_CLUSTER_WIDTH) + (ix) )
-#define LIGHT_FROXEL_DATA_POS(ix, iy, iz, il) ( LIGHT_FROXEL_COUNT_POS(ix, iy, iz) * LIGHT_CLUSTER_COUNT + (il) )
+#define LIGHT_FROXEL_COUNT_POS(ix, iy, iz) ((LIGHT_CLUSTER_WIDTH * LIGHT_CLUSTER_HEIGHT * (iz)) + ((iy)*LIGHT_CLUSTER_WIDTH) + (ix))
+#define LIGHT_FROXEL_DATA_POS(ix, iy, iz, il) (LIGHT_FROXEL_COUNT_POS(ix, iy, iz) * LIGHT_CLUSTER_COUNT + (il))
 
 #define LIGHT_CLUSTER_COUNT_POS(ix, iy) ( ((iy)*LIGHT_CLUSTER_WIDTH)+(ix) )
 #define LIGHT_CLUSTER_DATA_POS(il, ix, iy) ( LIGHT_CLUSTER_COUNT_POS(ix, iy)*LIGHT_CLUSTER_COUNT + (il) )
@@ -110,44 +110,26 @@ STRUCT(UniformObject)
 #define MATERIAL_ID(id) ((MATERIAL_ID_MASK & (id)) >> MATERIAL_ID_BIT)
 #define MATERIAL_INDEX(id) ((MATERIAL_INDEX_MASK & (id)) >> MATERIAL_INDEX_BIT) 
 
-STRUCT(PointLight) {
-    DATA(float3, lightPos, none);
-    DATA(float, lightRadius, none);
-    DATA(float4, lightColor, none);
-};
 
 #define LIGHT_TYPE_POINT_LIGHT 0 
 #define LIGHT_TYPE_SPOT_LIGHT 1 
 
 STRUCT(Light) {
+    DATA(float4, color, none);
     DATA(float3, direction, none);
     DATA(uint, lightType, none);
-
+    
     DATA(float3, position, none);
     DATA(float, radius, none);
     
-    DATA(float4, color, none);
     
     DATA(uint, attenuationTexture, NONE);
     DATA(float, angle, none);
     DATA(uint, goboTextureIndex, NONE);
     DATA(uint, __pad2, NONE);
 
-    DATA(mat4, viewProjection, none);
+    DATA(float4x4, viewProjection, none);
 };
-
-//STRUCT(SpotLight) {
-//    DATA(mat4, viewProjection, none);
-//    DATA(float3, lightPos, none);
-//    DATA(uint, config, none);
-//    DATA(float3, direction, none);
-//    DATA(float, angle, none);
-//    DATA(float4, lightColor, none);
-//    DATA(float, radius, none);
-//    DATA(uint, goboTexture, NONE);
-//    DATA(uint, __pad1, NONE);
-//    DATA(uint, __pad2, NONE);
-//};
 
 #define LIGHT_ID_BIT    0
 #define LIGHT_INDEX_BIT 8

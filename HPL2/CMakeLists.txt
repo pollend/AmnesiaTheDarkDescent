@@ -319,10 +319,10 @@ function(copy_shader_to_target_dir TARGET)
             -d "$<TARGET_FILE_DIR:${TARGET}>/Shaders"
             --verbose 
             -b  "$<TARGET_FILE_DIR:${TARGET}>/CompiledShaders"
+            --debug
             --incremental 
             --compile ${_SHADER_RESOURCE_PATH_}/ShaderList.fsl
         )
-           
     else()
         add_custom_command(
             TARGET ${TARGET}_HPL_SHADERS

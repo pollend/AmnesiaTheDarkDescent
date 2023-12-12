@@ -56,7 +56,7 @@ file(GLOB ZSTD_FILESYSTEM_SOURCES
      ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/zstd/common/*.c
      ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/zstd/compress/*.c
      ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/zstd/decompress/*.c
-     ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/zstd/decompress/huf_decompress_amd64.S
+     #${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/zstd/decompress/huf_decompress_amd64.S
 )
 add_library(zstd_filesystem OBJECT ${ZSTD_FILESYSTEM_SOURCES}) 
 target_include_directories(zstd_filesystem   PUBLIC ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/zstd)
@@ -109,40 +109,39 @@ add_library(tinyktx INTERFACE)
 target_include_directories(tinyktx INTERFACE 
     ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/tinyktx)
 
-# ga input
-file(GLOB GAINPUT_SOURCES 
-        ${THE_FORGE_DIR}/Common_3/Application/ThirdParty/OpenSource/gainput/lib/source/gainput/*.cpp
-        ${THE_FORGE_DIR}/Common_3/Application/ThirdParty/OpenSource/gainput/lib/source/gainput/builtin/*.cpp
-        ${THE_FORGE_DIR}/Common_3/Application/ThirdParty/OpenSource/gainput/lib/source/gainput/dev/*.cpp
-        ${THE_FORGE_DIR}/Common_3/Application/ThirdParty/OpenSource/gainput/lib/source/gainput/gestures/*.cpp
-        ${THE_FORGE_DIR}/Common_3/Application/ThirdParty/OpenSource/gainput/lib/source/gainput/keyboard/*.cpp
-        ${THE_FORGE_DIR}/Common_3/Application/ThirdParty/OpenSource/gainput/lib/source/gainput/mouse/*.cpp
-        ${THE_FORGE_DIR}/Common_3/Application/ThirdParty/OpenSource/gainput/lib/source/gainput/pad/*.cpp
-        ${THE_FORGE_DIR}/Common_3/Application/ThirdParty/OpenSource/gainput/lib/source/gainput/recorder/*.cpp
-    )
 
-if(CMAKE_SYSTEM_NAME MATCHES "Darwin")
-    file(GLOB GAINPUT_SOURCES_MACOS
-        ${THE_FORGE_DIR}/Common_3/Application/ThirdParts/OpenSource/gainput/lib/source/hidapi/mac/*.c
-        ${THE_FORGE_DIR}/Common_3/Application/ThirdParts/OpenSource/gainput/lib/source/gainput/*.mm)
-    list(APPEND GAINPUT_SOURCES ${GAINPUT_SOURCES_MACOS})
-elseif(CMAKE_SYSTEM_NAME MATCHES "Windows")
-    file(GLOB GAINPUT_SOURCES_WINDOWS
-        ${THE_FORGE_DIR}/Common_3/Application/ThirdParts/OpenSource/gainput/lib/source/hidapi/windows/*.c
-        ${THE_FORGE_DIR}/Common_3/Application/ThirdParty/OpenSource/gainput/lib/source/gainput/hid/*.cpp
-        ${THE_FORGE_DIR}/Common_3/Application/ThirdParty/OpenSource/gainput/lib/source/gainput/hid/hidparsers/*.cpp
-    )
-    list(APPEND GAINPUT_SOURCES ${GAINPUT_SOURCES_WINDOWS})
-elseif(CMAKE_SYSTEM_NAME MATCHES "Linux")
-    file(GLOB GAINPUT_SOURCES_LINUX
-        ${THE_FORGE_DIR}/Common_3/Application/ThirdParts/OpenSource/gainput/lib/source/hidapi/linux/*.c)
-    list(APPEND GAINPUT_SOURCES ${GAINPUT_SOURCES_LINUX})
-endif()
-
-add_library(ga STATIC ${GAINPUT_SOURCES})
-target_include_directories(ga PUBLIC ${THE_FORGE_DIR}/Common_3/ThirdParty/OpenSource/lua)
-
-
+# # ga input
+# file(GLOB GAINPUT_SOURCES 
+#         ${THE_FORGE_DIR}/Common_3/Application/ThirdParty/OpenSource/gainput/lib/source/gainput/*.cpp
+#         ${THE_FORGE_DIR}/Common_3/Application/ThirdParty/OpenSource/gainput/lib/source/gainput/builtin/*.cpp
+#         ${THE_FORGE_DIR}/Common_3/Application/ThirdParty/OpenSource/gainput/lib/source/gainput/dev/*.cpp
+#         ${THE_FORGE_DIR}/Common_3/Application/ThirdParty/OpenSource/gainput/lib/source/gainput/gestures/*.cpp
+#         ${THE_FORGE_DIR}/Common_3/Application/ThirdParty/OpenSource/gainput/lib/source/gainput/keyboard/*.cpp
+#         ${THE_FORGE_DIR}/Common_3/Application/ThirdParty/OpenSource/gainput/lib/source/gainput/mouse/*.cpp
+#         ${THE_FORGE_DIR}/Common_3/Application/ThirdParty/OpenSource/gainput/lib/source/gainput/pad/*.cpp
+#         ${THE_FORGE_DIR}/Common_3/Application/ThirdParty/OpenSource/gainput/lib/source/gainput/recorder/*.cpp
+#     )
+# 
+# if(CMAKE_SYSTEM_NAME MATCHES "Darwin")
+#     file(GLOB GAINPUT_SOURCES_MACOS
+#         ${THE_FORGE_DIR}/Common_3/Application/ThirdParts/OpenSource/gainput/lib/source/hidapi/mac/*.c
+#         ${THE_FORGE_DIR}/Common_3/Application/ThirdParts/OpenSource/gainput/lib/source/gainput/*.mm)
+#     list(APPEND GAINPUT_SOURCES ${GAINPUT_SOURCES_MACOS})
+# elseif(CMAKE_SYSTEM_NAME MATCHES "Windows")
+#     file(GLOB GAINPUT_SOURCES_WINDOWS
+#         ${THE_FORGE_DIR}/Common_3/Application/ThirdParts/OpenSource/gainput/lib/source/hidapi/windows/*.c
+#         ${THE_FORGE_DIR}/Common_3/Application/ThirdParty/OpenSource/gainput/lib/source/gainput/hid/*.cpp
+#         ${THE_FORGE_DIR}/Common_3/Application/ThirdParty/OpenSource/gainput/lib/source/gainput/hid/hidparsers/*.cpp
+#     )
+#     list(APPEND GAINPUT_SOURCES ${GAINPUT_SOURCES_WINDOWS})
+# elseif(CMAKE_SYSTEM_NAME MATCHES "Linux")
+#     file(GLOB GAINPUT_SOURCES_LINUX
+#         ${THE_FORGE_DIR}/Common_3/Application/ThirdParts/OpenSource/gainput/lib/source/hidapi/linux/*.c)
+#     list(APPEND GAINPUT_SOURCES ${GAINPUT_SOURCES_LINUX})
+# endif()
+# 
+# add_library(ga STATIC ${GAINPUT_SOURCES})
+# target_include_directories(ga PUBLIC ${THE_FORGE_DIR}/Common_3/ThirdParty/OpenSource/lua)
 
 file(GLOB THE_FORGE_SOURCES
     ${THE_FORGE_DIR}/Common_3/Graphics/*.cpp
@@ -164,16 +163,16 @@ file(GLOB THE_FORGE_SOURCES
     ${THE_FORGE_DIR}/Common_3/Utilities/Threading/*.c
     ${THE_FORGE_DIR}/Common_3/Utilities/*.c
 
-    ${THE_FORGE_DIR}/Common_3/Application/InputSystem.cpp
+   # ${THE_FORGE_DIR}/Common_3/Application/InputSystem.cpp
 
-    ${THE_FORGE_DIR}/Common_3/Game/Scripting/*.cpp
+   # ${THE_FORGE_DIR}/Common_3/Game/Scripting/*.cpp
 )
 
 # volk
 add_library(volk STATIC 
     ${THE_FORGE_DIR}/Common_3/Graphics/ThirdParty/OpenSource/volk/volk.c)
 if(WIN32)
-    target_include_directories(volk  PUBLIC ${THE_FORGE_DIR}/Common_3/Graphics/ThirdParty/OpenSource/Vulkan-Headers)
+    target_include_directories(volk  PUBLIC ${THE_FORGE_DIR}/Common_3/Graphics/ThirdParty/OpenSource/VulkanSDK/include)
 endif()
 target_include_directories(volk PUBLIC ${THE_FORGE_DIR}/Common_3/Graphics/ThirdParty/OpenSource/volk)
 
@@ -189,7 +188,10 @@ target_include_directories(imgui PUBLIC ${THE_FORGE_DIR}/Common_3/ThirdParty/Ope
 
 
 add_library(TheForge STATIC ${THE_FORGE_SOURCES})
-target_link_libraries(TheForge PUBLIC cpu_features imgui cgltf Bstr basis_universal lz4 zstd_filesystem meshoptimizer tinydds tinyimageformat tinyktx ga)
+target_compile_definitions(
+    TheForge PRIVATE -DSTB_TRUETYPE_IMPLEMENTATION
+)
+target_link_libraries(TheForge PUBLIC cpu_features imgui cgltf Bstr basis_universal lz4 zstd_filesystem meshoptimizer tinydds tinyimageformat tinyktx)
 target_include_directories(TheForge PUBLIC ${THE_FORGE_DIR})
 
 IF(CMAKE_SYSTEM_NAME MATCHES "Darwin")
@@ -248,11 +250,13 @@ if(CMAKE_SYSTEM_NAME MATCHES "Windows")
     file(GLOB GRAPHICS_D3D12_SOURCE
         "${THE_FORGE_DIR}/Common_3/Graphics/Direct3D12/*.cpp")
     target_sources(TheForge PRIVATE ${GRAPHICS_D3D12_SOURCE})
+
     target_include_directories(TheForge PRIVATE ${THE_FORGE_DIR}/Common_3/Graphics/ThirdParty/OpenSource/D3D12MemoryAllocator)
     target_link_libraries(TheForge PRIVATE Nvapi ags)
 
-    file(GLOB GRAPHICS_D3D11_SOURCE "${THE_FORGE_DIR}/Common_3/Graphics/Direct3D11/*.cpp")
-    target_sources(TheForge PRIVATE ${GRAPHICS_D3D11_SOURCE})
+    #file(GLOB GRAPHICS_D3D11_SOURCE "${THE_FORGE_DIR}/Common_3/Graphics/Direct3D11/*.cpp")
+    #target_sources(TheForge PRIVATE ${GRAPHICS_D3D11_SOURCE})
+    # "dxguid.lib"
     target_link_libraries(TheForge PRIVATE DirectXShaderCompiler "d3d11.lib")
     target_link_libraries(TheForge PRIVATE WinPixEventRuntime)
 endif()

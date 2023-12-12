@@ -3,48 +3,52 @@
 #ifndef _SCENE_RESOURCE_H
 #define _SCENE_RESOURCE_H
 
-CBUFFER(sceneInfo, UPDATE_FREQ_PER_FRAME, b0, binding = 0) {
+#if defined(DIRECT3D12)
+	PUSH_CONSTANT(indirectRootConstant, b1)
+	{
+		DATA(uint, indirectDrawId, None);
+	};
+
+	#define INDIRECT_ROOT_CONSTANT 1
+#endif
+
+CBUFFER(sceneInfo, UPDATE_FREQ_PER_FRAME, b2, binding = 0) {
   DATA(WorldInfo, worldInfo, None);
   DATA(ViewportInfo, viewports[64], None);
 };
-RES(Buffer(UniformObject), sceneObjects, UPDATE_FREQ_PER_FRAME, t1, binding = 1);
 
-// indirect DrawArg to resolve the triangle
-RES(Buffer(uint), indirectDrawArgs, UPDATE_FREQ_PER_FRAME, t2, binding = 2);
+RES(Buffer(UniformObject), sceneObjects, UPDATE_FREQ_PER_FRAME, t0, binding = 1);
+RES(Buffer(Light), lights,        UPDATE_FREQ_PER_FRAME, t1, binding = 14);
 
 // opaque geometry set
 RES(ByteBuffer,   vtxOpaqueIndex,     UPDATE_FREQ_NONE, t2, binding = 3);
-RES(ByteBuffer,   vtxOpaquePosition,  UPDATE_FREQ_NONE, t2, binding = 4);
-RES(ByteBuffer,   vtxOpaqueTangnet,   UPDATE_FREQ_NONE, t3, binding = 5);
-RES(ByteBuffer,   vtxOpaqueNormal,    UPDATE_FREQ_NONE, t4, binding = 6);
-RES(ByteBuffer,   vtxOpaqueUv,        UPDATE_FREQ_NONE, t4, binding = 7);
-RES(ByteBuffer,   vtxOpaqueColor,     UPDATE_FREQ_NONE, t4, binding = 8);
+RES(ByteBuffer,   vtxOpaquePosition,  UPDATE_FREQ_NONE, t3, binding = 4);
+RES(ByteBuffer,   vtxOpaqueTangnet,   UPDATE_FREQ_NONE, t4, binding = 5);
+RES(ByteBuffer,   vtxOpaqueNormal,    UPDATE_FREQ_NONE, t5, binding = 6);
+RES(ByteBuffer,   vtxOpaqueUv,        UPDATE_FREQ_NONE, t6, binding = 7);
+RES(ByteBuffer,   vtxOpaqueColor,     UPDATE_FREQ_NONE, t7, binding = 8);
 
-RES(Buffer(DiffuseMaterial), sceneDiffuseMat, UPDATE_FREQ_NONE, t0, binding = 9);
+RES(Buffer(DiffuseMaterial), sceneDiffuseMat, UPDATE_FREQ_NONE, t8, binding = 9);
 
-RES(SamplerState,  nearEdgeClampSampler, UPDATE_FREQ_NONE, s1, binding = 10);
+RES(SamplerState,  nearEdgeClampSampler, UPDATE_FREQ_NONE, s0, binding = 10);
 RES(SamplerState,  nearPointWrapSampler, UPDATE_FREQ_NONE, s1, binding = 11);
 
-RES(Tex2D(float4), visibilityTexture,    UPDATE_FREQ_PER_FRAME, t0, binding = 12);
-RES(Tex2D(float4), dissolveTexture,    UPDATE_FREQ_NONE, t0, binding = 13);
+RES(Tex2D(float4), visibilityTexture,    UPDATE_FREQ_PER_FRAME, t9, binding = 12);
+RES(Tex2D(float4), dissolveTexture,    UPDATE_FREQ_NONE, t10, binding = 13);
 
-RES(Buffer(Light),     lights,        UPDATE_FREQ_PER_FRAME, t0, binding = 14);
-//RES(Buffer(PointLight),    pointLights,        UPDATE_FREQ_PER_FRAME, t0, binding = 15);
 
-RES(RWBuffer(atomic_uint), lightClustersCount, UPDATE_FREQ_PER_FRAME, u0, binding = 16);
-//RES(RWBuffer(atomic_uint), spotLightClustersCount, UPDATE_FREQ_PER_FRAME, u0, binding = 17);
+RES(ByteBuffer, lightClustersCount, UPDATE_FREQ_PER_FRAME, t12, binding = 16);
+RES(ByteBuffer, lightClusters,      UPDATE_FREQ_PER_FRAME, t13, binding = 18);
 
-RES(RWBuffer(atomic_uint), lightClusters,      UPDATE_FREQ_PER_FRAME, u1, binding = 18);
-
-RES(SamplerState, sceneFilters[SCENE_MAX_FILTER_COUNT], UPDATE_FREQ_NONE, s1, binding = 20); 
-RES(Tex2D(float4), sceneTextures[SCENE_MAX_TEXTURE_COUNT],  UPDATE_FREQ_PER_FRAME, t5, binding = 20 + SCENE_MAX_FILTER_COUNT);
+RES(SamplerState, sceneFilters[SCENE_MAX_FILTER_COUNT], UPDATE_FREQ_NONE, s2, binding = 20); 
+RES(Tex2D(float4), sceneTextures[SCENE_MAX_TEXTURE_COUNT],  UPDATE_FREQ_PER_FRAME, t14, binding = 20 + SCENE_MAX_FILTER_COUNT);
 
 #define SCENE_OBJECT_ID_BIT 19 // 13  bits for ObjectID 
 #define SCENE_PRIM_ID_BIT  0 // 19 bits for PrimitiveID
 
 // reserve a bit for alpha
 #define SCENE_ALPHA_MASK_FLAG 0x80000000   // 1111 1111 1111 1000 0000 0000 0000 0000
-#define SCENE_OBJECT_ID_MASK  0x7FF80000   // 1111 1111 1111 1000 0000 0000 0000 0000
+#define SCENE_OBJECT_ID_MASK  0x7FF80000   // 1111 1111 1111 1000 0000 0000 0000 0000 
 #define SCENE_PRIM_ID_MASK    0x0007FFFF   // 0000 0000 0000 0111 1111 1111 1111 1111
 
 #define SCENE_VIZ_ALPHA_ID(objectId, primitiveId) ((SCENE_ALPHA_MASK_FLAG) | ((objectId << SCENE_OBJECT_ID_BIT) & SCENE_OBJECT_ID_MASK) | ((primitiveId << SCENE_PRIM_ID_BIT) & SCENE_PRIM_ID_MASK)) 

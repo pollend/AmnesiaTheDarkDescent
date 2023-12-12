@@ -7,7 +7,9 @@ STRUCT(PsIn)
         DATA(float4,     Position,  SV_Position);
         DATA(float3,     pos,       POSITION);
         DATA(float2,     uv,        TEXCOORD0);
+#if !defined(INDIRECT_ROOT_CONSTANT)
         DATA(FLAT(uint), drawID,    TEXCOORD1);
+#endif
         DATA(float3,     normal,    NORMAL);
         DATA(float3,     tangent,   TANGENT);
         DATA(float3,     bitangent, BITANGENT);
@@ -15,7 +17,7 @@ STRUCT(PsIn)
 
 STRUCT(PsOut)
 {
-    DATA(float4, visility, SV_Target0);
+    DATA(float4, visibility, SV_Target0);
 };
 
 PsOut PS_MAIN(PsIn In, SV_PrimitiveID(uint) primitiveID)
@@ -23,7 +25,14 @@ PsOut PS_MAIN(PsIn In, SV_PrimitiveID(uint) primitiveID)
     INIT_MAIN;
     PsOut Out;
 
-    UniformObject obj = Get(sceneObjects)[In.drawID];
+
+    #if !defined(INDIRECT_ROOT_CONSTANT)
+        UniformObject obj = Get(sceneObjects)[In.drawID];
+    #else 
+        UniformObject obj = Get(sceneObjects)[Get(indirectDrawId)];
+    #endif
+
+
     uint materialIndex = MATERIAL_INDEX(obj.materialID);
     DiffuseMaterial diffuseMat = Get(sceneDiffuseMat)[materialIndex];  
 
@@ -80,7 +89,11 @@ PsOut PS_MAIN(PsIn In, SV_PrimitiveID(uint) primitiveID)
         discard;
     }
     
-    Out.visility = unpackUnorm4x8(SCENE_VIZ_ALPHA_ID(In.drawID, primitiveID)); 
+    #if !defined(INDIRECT_ROOT_CONSTANT)
+        Out.visibility = unpackUnorm4x8(SCENE_VIZ_ALPHA_ID(In.drawID, primitiveID)); 
+    #else 
+        Out.visibility = unpackUnorm4x8(SCENE_VIZ_ALPHA_ID(Get(indirectDrawId), primitiveID)); 
+    #endif
     RETURN(Out);
 }
 

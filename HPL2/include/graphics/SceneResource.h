@@ -10,7 +10,7 @@
 #include <functional>
 #include <variant>
 
-class Renderer;
+struct Renderer;
 
 // this is the resource model for the renderer
 namespace hpl::resource {
@@ -35,7 +35,6 @@ namespace hpl::resource {
        PointLight = 0,
        SpotLight = 1
     };
-
 
     uint32_t constexpr IsAlphaSingleChannel = 0x1;
     uint32_t constexpr IsHeightSingleChannel = 0x2;
@@ -102,14 +101,14 @@ namespace hpl::resource {
  //       uint32_t m_pad2;
  //   };
 
-    struct LightConstant {
+    struct SceneLight {
+        float4 m_color;
+
         float3 m_direction;
         uint m_lightType;
 
         float3 m_position;
         float m_radius;
-
-        float4 m_color;
 
         uint m_attenuationTexture;
         float m_angle;

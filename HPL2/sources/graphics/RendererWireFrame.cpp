@@ -146,7 +146,7 @@ namespace hpl {
             vertexLayout.mAttribs[0].mOffset = 0;
 
             RasterizerStateDesc rasterizerStateDesc = {};
-            rasterizerStateDesc.mCullMode = CULL_MODE_BOTH;
+            //rasterizerStateDesc.mCullMode = CULL_MODE_BOTH;
             rasterizerStateDesc.mFillMode = FILL_MODE_WIREFRAME;
 
             DepthStateDesc depthStateDesc = {};
