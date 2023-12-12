@@ -848,8 +848,6 @@ namespace hpl {
         RangeSubsetAlloc::RangeSubset translucentIndirectArgs = indirectAllocSession.End();
         uint32_t lightCount = 0;
         {
-            cmdBindRenderTargets(cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
-
             for(auto& light: m_rendererList.GetLights()) {
                 switch(light->GetLightType()) {
                     case eLightType_Point: {
@@ -918,7 +916,7 @@ namespace hpl {
                 cmdBindDescriptorSet(computeCmd, 0, m_lightDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
                 cmdDispatch(computeCmd, 1, 1, LightClusterSlices);
                 {
-                        std::array barriers = { BufferBarrier{ m_lightClusterCountBuffer[frame.m_frameIndex].m_handle,
+                    std::array barriers = { BufferBarrier{ m_lightClusterCountBuffer[frame.m_frameIndex].m_handle,
                                                                 RESOURCE_STATE_UNORDERED_ACCESS,
                                                                 RESOURCE_STATE_UNORDERED_ACCESS } };
                    cmdResourceBarrier(computeCmd, barriers.size(), barriers.data(), 0, nullptr, 0, nullptr);
@@ -926,6 +924,12 @@ namespace hpl {
                 cmdBindPipeline(computeCmd, m_lightClusterPipeline.m_handle);
                 cmdBindDescriptorSet(computeCmd, 0, m_lightDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
                 cmdDispatch(computeCmd, lightCount, 1, LightClusterSlices);
+                {
+                   std::array barriers = { BufferBarrier{ m_lightClustersBuffer[frame.m_frameIndex].m_handle,
+                                                          RESOURCE_STATE_UNORDERED_ACCESS,
+                                                          RESOURCE_STATE_UNORDERED_ACCESS } };
+                   cmdResourceBarrier(computeCmd, barriers.size(), barriers.data(), 0, nullptr, 0, nullptr);
+                }
 
             	endCmd(computeCmd);
 
