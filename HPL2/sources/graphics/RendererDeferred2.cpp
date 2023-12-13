@@ -707,6 +707,9 @@ namespace hpl {
         frame.m_resourcePool->Push(viewportDatum->m_visiblityBuffer[frame.m_frameIndex]);
         frame.m_resourcePool->Push(viewportDatum->m_depthBuffer[frame.m_frameIndex]);
         frame.m_resourcePool->Push(viewportDatum->m_outputBuffer[frame.m_frameIndex]);
+        // ----------------
+        // Setup Data
+        // -----------------
         {
             std::array params = {
                 DescriptorData{ .pName = "visibilityTexture",
@@ -806,7 +809,6 @@ namespace hpl {
             endUpdateResource(&updateDesc);
         }
         RangeSubsetAlloc::RangeSubset opaqueIndirectArgs = indirectAllocSession.End();
-
         // diffuse build indirect list for opaque
         for (auto& renderable : translucenctRenderables) {
             cMaterial* material = renderable->GetMaterial();
@@ -896,66 +898,71 @@ namespace hpl {
                         break;
                 }
             }
-
-            
-            {
-                GpuCmdRingElement computeElem = getNextGpuCmdRingElement(&m_computeRing, true, 1);
-
-                // check to see if we can use the cmd buffer
-                FenceStatus fenceStatus;
-                getFenceStatus(forgeRenderer->Rend(), computeElem.pFence, &fenceStatus);
-                if (fenceStatus == FENCE_STATUS_INCOMPLETE) {
-                   waitForFences(forgeRenderer->Rend(), 1, &computeElem.pFence);
-                }
-
-                Cmd* computeCmd = computeElem.pCmds[0];
-                resetCmdPool(forgeRenderer->Rend(), computeElem.pCmdPool);
-                beginCmd(computeCmd);
-
-                cmdBindPipeline(computeCmd, m_clearClusterPipeline.m_handle);
-                cmdBindDescriptorSet(computeCmd, 0, m_lightDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
-                cmdDispatch(computeCmd, 1, 1, LightClusterSlices);
-                {
-                    std::array barriers = { BufferBarrier{ m_lightClusterCountBuffer[frame.m_frameIndex].m_handle,
-                                                                RESOURCE_STATE_UNORDERED_ACCESS,
-                                                                RESOURCE_STATE_UNORDERED_ACCESS } };
-                   cmdResourceBarrier(computeCmd, barriers.size(), barriers.data(), 0, nullptr, 0, nullptr);
-                }
-                cmdBindPipeline(computeCmd, m_lightClusterPipeline.m_handle);
-                cmdBindDescriptorSet(computeCmd, 0, m_lightDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
-                cmdDispatch(computeCmd, lightCount, 1, LightClusterSlices);
-                {
-                   std::array barriers = { BufferBarrier{ m_lightClustersBuffer[frame.m_frameIndex].m_handle,
-                                                          RESOURCE_STATE_UNORDERED_ACCESS,
-                                                          RESOURCE_STATE_UNORDERED_ACCESS } };
-                   cmdResourceBarrier(computeCmd, barriers.size(), barriers.data(), 0, nullptr, 0, nullptr);
-                }
-
-            	endCmd(computeCmd);
-
-                static Semaphore* prevGraphicsSemaphore = NULL;
-                FlushResourceUpdateDesc flushUpdateDesc = {};
-                flushUpdateDesc.mNodeIndex = 0;
-                flushResourceUpdates(&flushUpdateDesc);
-                Semaphore* waitSemaphores[] = { flushUpdateDesc.pOutSubmittedSemaphore, frame.m_currentFrame > 1 ? prevGraphicsSemaphore : NULL };
-                prevGraphicsSemaphore = frame.m_renderCompleteSemaphore;
-
-                QueueSubmitDesc submitDesc = {};
-                submitDesc.mCmdCount = 1;
-                submitDesc.mSignalSemaphoreCount = 1;
-                submitDesc.mWaitSemaphoreCount = waitSemaphores[1] ? TF_ARRAY_COUNT(waitSemaphores) : 1;
-                submitDesc.ppCmds = &computeCmd;
-                submitDesc.ppSignalSemaphores = &computeElem.pSemaphore;
-                submitDesc.ppWaitSemaphores = waitSemaphores;
-                submitDesc.pSignalFence = computeElem.pFence;
-                submitDesc.mSubmitDone = (frame.m_currentFrame < 1);
-                queueSubmit(m_computeQueue, &submitDesc);
-
-                frame.m_waitSemaphores->push_back(computeElem.pSemaphore);
-
-            }
         }
 
+        // ----------------
+        // Compute pipeline
+        // -----------------
+        {
+            GpuCmdRingElement computeElem = getNextGpuCmdRingElement(&m_computeRing, true, 1);
+
+            // check to see if we can use the cmd buffer
+            FenceStatus fenceStatus;
+            getFenceStatus(forgeRenderer->Rend(), computeElem.pFence, &fenceStatus);
+            if (fenceStatus == FENCE_STATUS_INCOMPLETE) {
+                waitForFences(forgeRenderer->Rend(), 1, &computeElem.pFence);
+            }
+
+            Cmd* computeCmd = computeElem.pCmds[0];
+            resetCmdPool(forgeRenderer->Rend(), computeElem.pCmdPool);
+            beginCmd(computeCmd);
+
+            cmdBindPipeline(computeCmd, m_clearClusterPipeline.m_handle);
+            cmdBindDescriptorSet(computeCmd, 0, m_lightDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
+            cmdDispatch(computeCmd, 1, 1, LightClusterSlices);
+            {
+                std::array barriers = { BufferBarrier{ m_lightClusterCountBuffer[frame.m_frameIndex].m_handle,
+                                                       RESOURCE_STATE_UNORDERED_ACCESS,
+                                                       RESOURCE_STATE_UNORDERED_ACCESS } };
+                cmdResourceBarrier(computeCmd, barriers.size(), barriers.data(), 0, nullptr, 0, nullptr);
+            }
+            cmdBindPipeline(computeCmd, m_lightClusterPipeline.m_handle);
+            cmdBindDescriptorSet(computeCmd, 0, m_lightDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
+            cmdDispatch(computeCmd, lightCount, 1, LightClusterSlices);
+            {
+                std::array barriers = { BufferBarrier{ m_lightClustersBuffer[frame.m_frameIndex].m_handle,
+                                                       RESOURCE_STATE_UNORDERED_ACCESS,
+                                                       RESOURCE_STATE_UNORDERED_ACCESS } };
+                cmdResourceBarrier(computeCmd, barriers.size(), barriers.data(), 0, nullptr, 0, nullptr);
+            }
+
+            endCmd(computeCmd);
+
+            static Semaphore* prevGraphicsSemaphore = NULL;
+            FlushResourceUpdateDesc flushUpdateDesc = {};
+            flushUpdateDesc.mNodeIndex = 0;
+            flushResourceUpdates(&flushUpdateDesc);
+            Semaphore* waitSemaphores[] = { flushUpdateDesc.pOutSubmittedSemaphore,
+                                            frame.m_currentFrame > 1 ? prevGraphicsSemaphore : NULL };
+            prevGraphicsSemaphore = frame.m_renderCompleteSemaphore;
+
+            QueueSubmitDesc submitDesc = {};
+            submitDesc.mCmdCount = 1;
+            submitDesc.mSignalSemaphoreCount = 1;
+            submitDesc.mWaitSemaphoreCount = waitSemaphores[1] ? TF_ARRAY_COUNT(waitSemaphores) : 1;
+            submitDesc.ppCmds = &computeCmd;
+            submitDesc.ppSignalSemaphores = &computeElem.pSemaphore;
+            submitDesc.ppWaitSemaphores = waitSemaphores;
+            submitDesc.pSignalFence = computeElem.pFence;
+            submitDesc.mSubmitDone = (frame.m_currentFrame < 1);
+            queueSubmit(m_computeQueue, &submitDesc);
+
+            frame.m_waitSemaphores->push_back(computeElem.pSemaphore);
+        }
+
+        // ----------------
+        // Visibility pass
+        // -----------------
         {
             cmdBindRenderTargets(cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
             std::array rtBarriers = {
@@ -1095,6 +1102,13 @@ namespace hpl {
 
             cmdEndDebugMarker(cmd);
         }
+
+        // --------------------
+        // Translucency
+        // --------------------
+
+
+
         {
             cmdBindRenderTargets(cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
             std::array barriers = { BufferBarrier{ m_lightClusterCountBuffer[frame.m_frameIndex].m_handle,

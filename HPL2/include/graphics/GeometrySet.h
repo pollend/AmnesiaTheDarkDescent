@@ -77,7 +77,7 @@ namespace hpl {
         inline SharedBuffer& indexBuffer() { return m_indexBuffer; }
         void operator=(GeometrySet&& set);
         void operator=(const GeometrySet& set) = delete;
-        std::shared_ptr<GeometrySetSubAllocation> allocate(uint32_t numElements, uint32_t numIndecies);
+        std::shared_ptr<GeometrySet::GeometrySetSubAllocation> allocate(uint32_t numElements, uint32_t numIndecies);
     private:
         OffsetAllocator::Allocator m_vertexStreamAllocator;
         OffsetAllocator::Allocator m_indexStreamAllocator;

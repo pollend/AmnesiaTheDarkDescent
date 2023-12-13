@@ -65,7 +65,7 @@ namespace hpl {
         HPL_RTTI_IMPL_CLASS(iRenderer, cRendererDeferred, "{B3E5E5A1-1F9C-4F5C-9B9B-5B9B9B5B9B9B}")
     public:
 
-        static constexpr TinyImageFormat DepthBufferFormat = TinyImageFormat_D32_SFLOAT_S8_UINT;
+        static constexpr TinyImageFormat DepthBufferFormat = TinyImageFormat_D32_SFLOAT;
         static constexpr TinyImageFormat NormalBufferFormat = TinyImageFormat_R16G16B16A16_SFLOAT;
         static constexpr TinyImageFormat PositionBufferFormat = TinyImageFormat_R32G32B32A32_SFLOAT;
         static constexpr TinyImageFormat SpecularBufferFormat = TinyImageFormat_R8G8_UNORM;
@@ -168,10 +168,6 @@ namespace hpl {
         SharedRootSignature m_sceneRootSignature;
         SharedDescriptorSet m_sceneDescriptorConstSet;
         std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_sceneDescriptorPerFrameSet;
-
-        //SharedRootSignature m_rootSignatureCopyDepth;
-        //std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_descriptorCopyDepth;
-        //SharedShader m_copyDepthShader;
 
         SharedShader m_visibilityBufferPassShader;
         SharedShader m_visibilityBufferAlphaPassShader;
