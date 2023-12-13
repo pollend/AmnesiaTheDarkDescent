@@ -86,4 +86,21 @@ INLINE bool SampleSceneTextureGradFloat4(uint textureIdx, SamplerState sh, float
     return false;
 }
 
+INLINE bool SampleSceneTextureSampleIndexFloat4(uint textureIdx,uint filterIdx, float2 uv, inout float4 value) {
+    if(textureIdx < SCENE_MAX_TEXTURE_COUNT) {
+        switch(filterIdx) {
+            SCENE_FILTER_SWITCH_CASE {  
+                BeginNonUniformResourceIndex(textureIdx, SCENE_MAX_TEXTURE_COUNT);
+                    value = SampleTex2D(Get(sceneTextures)[textureIdx], Get(sceneFilters)[filterIdx], uv);
+                EndNonUniformResourceIndex();
+                break;
+            }
+        }
+        return true;
+    }
+    return false;
+}
+
+
+
 #endif

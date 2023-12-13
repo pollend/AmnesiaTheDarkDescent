@@ -174,8 +174,8 @@ namespace hpl {
                                    m_visibilityBufferAlphaPassShader.m_handle,
                                    m_visibilityBufferPassShader.m_handle,
                                    m_visibilityShadePassShader.m_handle };
-            Sampler* vbShadeSceneSamplers[] = { m_samplerNearEdgeClamp.m_handle };
-            const char* vbShadeSceneSamplersNames[] = { "nearEdgeClampSampler", "pointWrapSampler" };
+            Sampler* vbShadeSceneSamplers[] = { m_samplerNearEdgeClamp.m_handle, m_samplerPointWrap.m_handle};
+            const char* vbShadeSceneSamplersNames[] = { "nearEdgeClampSampler", "nearPointWrapSampler" };
             RootSignatureDesc rootSignatureDesc = {};
             rootSignatureDesc.ppShaders = shaders.data();
             rootSignatureDesc.mShaderCount = shaders.size();
@@ -406,7 +406,7 @@ namespace hpl {
                 return true;
             });
 
-            
+
             m_perSceneInfoBuffer[i].Load([&](Buffer** buffer) {
                 BufferLoadDesc desc = {};
                 desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -824,7 +824,7 @@ namespace hpl {
             ASSERT(packet.m_unified.m_set == GraphicsAllocator::AllocationSet::OpaqueSet);
             BufferUpdateDesc updateDesc = { m_indirectDrawArgsBuffer[frame.m_frameIndex].m_handle,
                                             instanceIndex * IndirectArgumentSize };
-         
+
             beginUpdateResource(&updateDesc);
             if (m_supportIndirectRootConstant) {
                 auto* indirectDrawArgs = reinterpret_cast<RootConstantDrawIndexArguments*>(updateDesc.pMappedData);
@@ -897,7 +897,7 @@ namespace hpl {
                 }
             }
 
-            
+
             {
                 GpuCmdRingElement computeElem = getNextGpuCmdRingElement(&m_computeRing, true, 1);
 
@@ -972,7 +972,6 @@ namespace hpl {
                 std::array semantics = { ShaderSemantic::SEMANTIC_POSITION };
                 LoadActionsDesc loadActions = {};
                 loadActions.mLoadActionsColor[0] = LOAD_ACTION_CLEAR;
-                loadActions.mLoadActionsColor[1] = LOAD_ACTION_CLEAR;
                 loadActions.mClearColorValues[0] = { .r = 1.0f, .g = 1.0f, .b = 1.0f, .a = 1.0f };
                 loadActions.mClearDepth = { .depth = 1.0f, .stencil = 0 };
                 loadActions.mLoadActionDepth = LOAD_ACTION_CLEAR;
@@ -1012,12 +1011,9 @@ namespace hpl {
                                          ShaderSemantic::SEMANTIC_TANGENT };
                 LoadActionsDesc loadActions = {};
                 loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
-                loadActions.mLoadActionsColor[1] = LOAD_ACTION_CLEAR;
-                loadActions.mClearColorValues[0] = { .r = 1.0f, .g = 1.0f, .b = 1.0f, .a = 1.0f };
-                loadActions.mClearColorValues[1] = { .r = 0.0f, .g = 0.0f, .b = 0.0f, .a = 0.0f };
                 loadActions.mClearDepth = { .depth = 1.0f, .stencil = 0 };
                 loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
-            
+
                 std::array targets = { viewportDatum->m_visiblityBuffer[frame.m_frameIndex].m_handle};
                 cmdBindRenderTargets(
                     cmd,
@@ -1031,7 +1027,7 @@ namespace hpl {
                     -1);
                 cmdSetViewport(cmd, 0.0f, 0.0f, viewportDatum->m_size.x, viewportDatum->m_size.y, 0.0f, 1.0f);
                 cmdSetScissor(cmd, 0, 0, viewportDatum->m_size.x, viewportDatum->m_size.y);
-            
+
                 cmdBindPipeline(cmd, m_visbilityAlphaBufferPass.m_handle);
                 opaqueSet.cmdBindGeometrySet(cmd, semantics);
                 cmdBindIndexBuffer(cmd, opaqueSet.indexBuffer().m_handle, INDEX_TYPE_UINT32, 0);
