@@ -42,6 +42,7 @@ namespace hpl {
     }
     uint32_t TextureDescriptorPool::request(SharedTexture& texture) {
         uint32_t slot = m_pool.requestId();
+        ASSERT(slot != IndexPool::InvalidHandle);
         m_slot[slot] = texture;
         m_actionHandler(Action::UpdateSlot, slot, m_slot[slot]);
         if(m_ring.size() > 1) {
@@ -50,6 +51,7 @@ namespace hpl {
         return slot;
     }
     void TextureDescriptorPool::dispose(uint32_t slot) {
+        ASSERT(slot < m_slot.size());
         m_ring[(m_index + 1) % m_ring.size()].push_back(RingEntry {Action::RemoveSlot, slot, 0});
     }
 } // namespace hpl

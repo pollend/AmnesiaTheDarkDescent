@@ -17,6 +17,7 @@ namespace hpl {
 
         enum AllocationSet {
             OpaqueSet,
+            ParticleSet,
             NumOfAllocationSets
         };
 
@@ -24,6 +25,9 @@ namespace hpl {
 
         static constexpr uint32_t OpaqueVertexBufferSize = 0xf << 18;
         static constexpr uint32_t OpaqueIndexBufferSize = 0xf << 18;
+
+        static constexpr uint32_t ParticleVertexBufferSize = 0xf << 12;
+        static constexpr uint32_t ParticleIndexBufferSize = 0xf << 12;
 
         static constexpr uint32_t ImmediateVertexBufferSize = 1;
         static constexpr uint32_t ImmediateIndexBufferSize = 1;

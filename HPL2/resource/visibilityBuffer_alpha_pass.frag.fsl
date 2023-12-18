@@ -32,14 +32,8 @@ PsOut PS_MAIN(PsIn In, SV_PrimitiveID(uint) primitiveID)
         UniformObject obj = Get(sceneObjects)[Get(indirectDrawId)];
     #endif
 
+    DiffuseMaterial diffuseMat = Get(sceneDiffuseMat)[obj.materialIndex];  
 
-    uint materialIndex = MATERIAL_INDEX(obj.materialID);
-    DiffuseMaterial diffuseMat = Get(sceneDiffuseMat)[materialIndex];  
-
-  //  MaterialTexture alphaTexture = CreateMaterialTexture(diffuseMat.samplerIndex, DiffuseMaterial_AlphaTexture_ID(diffuseMat));
-  //  MaterialTexture heightTexture = CreateMaterialTexture(diffuseMat.samplerIndex, DiffuseMaterial_HeightTexture_ID(diffuseMat));
-  //  MaterialTexture dissolveAlphaTexture = CreateMaterialTexture(diffuseMat.samplerIndex, DiffuseMaterial_DissolveAlphaTexture_ID(diffuseMat));
-  
     float diffuseAlpha = 1.0;
 
     float2 texCoord = In.uv;

@@ -34,13 +34,13 @@ namespace hpl {
 	class iVertexBuffer;
 	class iPhysicsRope;
 
-	//------------------------------------------
-
 	class cRopeEntity : public iRenderable
 	{
 	public:
 		cRopeEntity(const tString& asName, cResources *apResources,cGraphics *apGraphics, iPhysicsRope *apRope, int alMaxSegments);
 		~cRopeEntity();
+
+        static constexpr uint32_t NumberOfCopies = 2;
 
 		const tString& GetName(){return msName;}
 

@@ -40,7 +40,6 @@ PsOut PS_MAIN(PsIn In)
   float4x4 mvp = mul(vp, obj.modelMat);
   float3x3 normalMat = ToNormalMat(obj.invModelMat, viewInfo.invViewMat);
 
-  //uint materialID = MATERIAL_ID(obj.materialID);
   uint triIdx0 = (triId * 3 + 0) + startIndex;
   uint triIdx1 = (triId * 3 + 1) + startIndex;
   uint triIdx2 = (triId * 3 + 2) + startIndex;
@@ -99,7 +98,7 @@ PsOut PS_MAIN(PsIn In)
   float2 texCoordDX = results.dx * mip;
   float2 texCoordDY = results.dy * mip;
 
-  uint materialIndex = MATERIAL_INDEX(obj.materialID);
+  uint materialIndex = obj.materialIndex;
   DiffuseMaterial diffuseMat = Get(sceneDiffuseMat)[materialIndex];  
 
   float2 texCoord = results.interp;
@@ -183,9 +182,8 @@ PsOut PS_MAIN(PsIn In)
       }
   }
 
-
   PsOut Out;
-  Out.outColor = float4(shadedColor, 0.0f); //+ float4(qt.x, qt.y,0,0)  * (numLightsInCluster /  float(LIGHT_CLUSTER_COUNT));
+  Out.outColor = float4(shadedColor, 0.0f); 
   Out.test = float4(clusterCoords.x,clusterCoords.y,slice, lightClusterCount);
   RETURN(Out);
 

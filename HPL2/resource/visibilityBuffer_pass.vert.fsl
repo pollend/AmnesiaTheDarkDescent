@@ -28,6 +28,5 @@ VSOutput VS_MAIN(VSInput In, SV_InstanceID(uint) InstanceID)
     
     float4x4 modelViewPrj = mul(info.projMat, modelView);
     Out.Position = mul(modelViewPrj, float4(In.Position.xyz, 1.0));
-
     RETURN(Out);
 }

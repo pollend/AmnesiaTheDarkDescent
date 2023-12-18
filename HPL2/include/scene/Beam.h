@@ -62,15 +62,13 @@ namespace hpl {
         cBeam* mpBeam;
     };
 
-    //------------------------------------------
-
+   
     class cBeamEnd_UpdateCallback : public iEntityCallback {
     public:
         void OnTransformUpdate(iEntity3D* apEntity);
     };
 
-    //------------------------------------------
-
+    
     class cBeam : public iRenderable {
         friend class cBeamEnd;
 

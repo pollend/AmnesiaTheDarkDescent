@@ -162,7 +162,6 @@ namespace hpl {
 	{
 		hplDelete(mpEnd);
 		if(mpMaterial) mpMaterialManager->Destroy(mpMaterial);
-		//if(mpVtxBuffer) hplDelete(mpVtxBuffer);
 	}
 
     DrawPacket cBeam::ResolveDrawPacket(const ForgeRenderer::Frame& frame) {

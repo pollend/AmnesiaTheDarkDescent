@@ -69,12 +69,24 @@ namespace hpl {
             auto textureStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_TEXCOORD0);
             auto tangentStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_TANGENT);
 
-            BufferUpdateDesc indexUpdateDesc = { indexStream.m_handle, 0, GeometrySet::IndexBufferStride * 6 * mlMaxSegments};
-            BufferUpdateDesc positionUpdateDesc = { positionStream->buffer().m_handle, 0, positionStream->stride() * 4 * mlMaxSegments };
-            BufferUpdateDesc normalUpdateDesc = { normalStream->buffer().m_handle, 0, normalStream->stride() * 4 * mlMaxSegments};
-            BufferUpdateDesc colorUpdateDesc = { colorStream->buffer().m_handle, 0, colorStream->stride() * 4 * mlMaxSegments};
-            BufferUpdateDesc textureUpdateDesc = { textureStream->buffer().m_handle, 0, textureStream->stride() * 4 * mlMaxSegments};
-            BufferUpdateDesc tangentUpdateDesc = { tangentStream->buffer().m_handle, 0, tangentStream->stride() * 4 * mlMaxSegments};
+            BufferUpdateDesc indexUpdateDesc = { indexStream.m_handle,
+                                                 0,
+                                                 GeometrySet::IndexBufferStride * 6 * mlMaxSegments * NumberOfCopies };
+            BufferUpdateDesc positionUpdateDesc = { positionStream->buffer().m_handle,
+                                                    0,
+                                                    positionStream->stride() * 4 * mlMaxSegments * NumberOfCopies };
+            BufferUpdateDesc normalUpdateDesc = { normalStream->buffer().m_handle,
+                                                  0,
+                                                  normalStream->stride() * 4 * mlMaxSegments * NumberOfCopies };
+            BufferUpdateDesc colorUpdateDesc = { colorStream->buffer().m_handle,
+                                                 0,
+                                                 colorStream->stride() * 4 * mlMaxSegments * NumberOfCopies };
+            BufferUpdateDesc textureUpdateDesc = { textureStream->buffer().m_handle,
+                                                   0,
+                                                   textureStream->stride() * 4 * mlMaxSegments * NumberOfCopies };
+            BufferUpdateDesc tangentUpdateDesc = { tangentStream->buffer().m_handle,
+                                                   0,
+                                                   tangentStream->stride() * 4 * mlMaxSegments * NumberOfCopies };
 
             beginUpdateResource(&indexUpdateDesc);
             beginUpdateResource(&positionUpdateDesc);
@@ -133,8 +145,6 @@ namespace hpl {
 		mlLastUpdateCount = -1;
 	}
 
-	//-----------------------------------------------------------------------
-
     DrawPacket cRopeEntity::ResolveDrawPacket(const ForgeRenderer::Frame& frame)  {
   		DrawPacket packet;
 		if(m_numberSegments <= 0) {
@@ -147,16 +157,14 @@ namespace hpl {
         binding.m_indexOffset = 0;
         binding.m_set = GraphicsAllocator::AllocationSet::OpaqueSet;
         binding.m_numIndices = 6 * m_numberSegments;
-        binding.m_vertexOffset = (m_activeCopy * mlMaxSegments * 4) + (m_numberSegments * 4);
+        binding.m_vertexOffset = (m_activeCopy * mlMaxSegments * 4);
         packet.m_unified = binding;
         return packet;
-	// return static_cast<LegacyVertexBuffer*>(mpVtxBuffer)->resolveGeometryBinding(frame.m_currentFrame);
     }
 
     cRopeEntity::~cRopeEntity()
 	{
 		if(mpMaterial) mpMaterialManager->Destroy(mpMaterial);
-		//if(mpVtxBuffer) hplDelete(mpVtxBuffer);
 	}
 
 
@@ -175,36 +183,14 @@ namespace hpl {
 
 		mColor = aColor;
 
-		//float *pColors = mpVtxBuffer->GetFloatArray(eVertexBufferElement_Color0);
-        //
-		//cColor finalColor = mColor;
-		//if(mbMultiplyAlphaWithColor)
-		//{
-		//	finalColor.r = finalColor.r * mColor.a;
-		//	finalColor.g = finalColor.g * mColor.a;
-		//	finalColor.b = finalColor.b * mColor.a;
-		//}
-        //
-		//for(int i=0; i<mlMaxSegments * 4; ++i)
-		//{
-		//	pColors[0] = finalColor.r;
-		//	pColors[1] = finalColor.g;
-		//	pColors[2] = finalColor.b;
-		//	pColors[3] = finalColor.a;
-		//	pColors+=4;
-		//}
-        //
-		//mpVtxBuffer->UpdateData(eVertexElementFlag_Color0,false);
 	}
 
-	//-----------------------------------------------------------------------
 
 	void cRopeEntity::SetMaterial(cMaterial * apMaterial)
 	{
 		mpMaterial = apMaterial;
 	}
 
-	//-----------------------------------------------------------------------
 
 	cBoundingVolume* cRopeEntity::GetBoundingVolume()
 	{
@@ -243,7 +229,7 @@ namespace hpl {
 
 	bool cRopeEntity::UpdateGraphicsForViewport(cFrustum *apFrustum,float afFrameTime)
 	{
-        m_activeCopy = (m_activeCopy + 1) % ForgeRenderer::SwapChainLength;
+        m_activeCopy = (m_activeCopy + 1) % NumberOfCopies;
 		cColor finalColor = mColor;
 		if(mbMultiplyAlphaWithColor)
 		{
@@ -375,8 +361,6 @@ namespace hpl {
         endUpdateResource(&normalUpdateDesc);
         endUpdateResource(&tangentUpdateDesc);
 		m_numberSegments = lCount - 1;
-		//mpVtxBuffer->SetElementNum((lCount-1) * 6);
-		//mpVtxBuffer->UpdateData(eVertexElementFlag_Position | eVertexElementFlag_Texture0 | eVertexElementFlag_Texture1 | eVertexElementFlag_Normal, false);
 
 		return true;
 	}
@@ -399,8 +383,5 @@ namespace hpl {
 
 		return mbIsVisible;
 	}
-
-
-
 
 }

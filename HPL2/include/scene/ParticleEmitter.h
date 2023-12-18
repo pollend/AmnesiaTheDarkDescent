@@ -32,7 +32,6 @@ namespace hpl {
 	class cWorld;
 	class cParticleSystem;
 
-	//-------------------------------------------------------------------
 
 	enum ePEType
 	{
@@ -41,8 +40,6 @@ namespace hpl {
 		ePEType_LastEnum,
 	};
 
-
-	//-------------------------------------------------------------------
 
 	enum eParticleEmitterType
 	{
@@ -60,7 +57,6 @@ namespace hpl {
 		eParticleEmitterCoordSystem_LastEnum,
 	};
 
-	//------------------------------------------
 
 	class cPESubDivision
 	{
@@ -68,7 +64,6 @@ namespace hpl {
 		cVector3f mvUV[4];
 	};
 
-	//-------------------------------------------------------------------
 
 	enum ePENoiseType
 	{
@@ -88,16 +83,6 @@ namespace hpl {
 		int					lHighFreqNoiseIdx;
 		ePENoiseType	noiseType;
 	} tBeamNoisePoint;
-
-
-	//-------------------------------------------------------------------
-
-
-	//////////////////////////////////////////////////////
-	/////////////// PARTICLE /////////////////////////////
-	//////////////////////////////////////////////////////
-
-	//-------------------------------------------------------------------
 
 	class cParticle
 	{
@@ -149,20 +134,11 @@ namespace hpl {
 		int mlHighFreqPoints;
 		std::vector<cVector3f> mvBeamPoints;
 
-		// ---
-
 	};
-
-	//-------------------------------------------------------------------
 
 	typedef std::vector<cParticle*> tParticleVec;
 	typedef tParticleVec::iterator tParticleVecIt;
 
-	//-------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////
-	/////////////// PARTICLE SYSTEM //////////////////////
-	//////////////////////////////////////////////////////
 
 	class iParticleEmitter :public iRenderable
 	{
@@ -213,6 +189,7 @@ namespace hpl {
 	protected:
 		void SwapRemove(unsigned int alIndex);
 		cParticle* CreateParticle();
+        static constexpr uint32_t NumberActiveCopies = 2;
 
 		virtual void UpdateMotion(float afTimeStep)=0;
 		virtual void SetParticleDefaults(cParticle *apParticle)=0;
@@ -239,8 +216,6 @@ namespace hpl {
 
 		bool mbUpdateGfx;
 		bool mbUpdateBV;
-
-		iVertexBuffer *mpVtxBuffer;
 
 		std::vector<cPESubDivision> mvSubDivUV;
 
@@ -271,20 +246,14 @@ namespace hpl {
 		bool mbUseRevolution;
 
 		ePEType mPEType;
-	};
 
-	//-----------------------------------------------------------------
+        std::shared_ptr<GeometrySet::GeometrySetSubAllocation> m_geometry;
+        uint32_t m_numberParticlesRender = 0;
+        uint8_t m_activeCopy = 0;
+	};
 
 	typedef std::list<iParticleEmitter*> tParticleEmitterList;
 	typedef tParticleEmitterList::iterator tParticleEmitterListIt;
-
-	//-----------------------------------------------------------------
-
-	//////////////////////////////////////////////////////
-	/////////////// PARTICLE EMITTER DATA ////////////////
-	//////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------
 
 	class cResources;
 
@@ -321,8 +290,6 @@ namespace hpl {
 		float mfWarmUpStepsPerSec;
 	};
 
-	typedef std::map<tString,iParticleEmitterData*> tParticleEmitterDataMap;
-	typedef tParticleEmitterDataMap::iterator tParticleEmitterDataMapIt;
 };
 
 

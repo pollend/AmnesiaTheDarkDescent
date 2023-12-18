@@ -120,7 +120,8 @@ namespace hpl {
 	class cMaterial : public iResourceBase {
 	friend class iMaterialType;
 	public:
-		static constexpr uint32_t MaxMaterialID = 2048;
+        static constexpr uint32_t MaxMaterialID = 2048;
+        static constexpr uint32_t MaxParticleMaterialID = 1024;
         static constexpr bool IsTranslucent(const MaterialID id) {
             return id == MaterialID::Water ||
                 id == MaterialID::Translucent ||
