@@ -18,9 +18,6 @@ add_definitions(
     # -DUSE_FORWARD_PLUS_BACKEND # prototype forward renderer
 )
 
-set(CMAKE_C_FLAGS_DEBUG "-g -DDEBUG")
-set(CMAKE_CXX_FLAGS_DEBUG "-g -DDEBUG")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 # hack to get to build on windwos
 # HACK to correctly set Linux property for newer cmake

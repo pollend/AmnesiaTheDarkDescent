@@ -10,7 +10,7 @@
 #include <functional>
 #include <variant>
 
-class Renderer;
+struct Renderer;
 
 // this is the resource model for the renderer
 namespace hpl::resource {
@@ -36,7 +36,6 @@ namespace hpl::resource {
        SpotLight = 1
     };
 
-
     uint32_t constexpr IsAlphaSingleChannel = 0x1;
     uint32_t constexpr IsHeightSingleChannel = 0x2;
     uint32_t constexpr UseAlphaDissolveFilter = 0x4;
@@ -56,11 +55,16 @@ namespace hpl::resource {
         uint m_pad1;
     };
 
+    static constexpr uint32_t WorldFogEnabled = 2;
     struct WorldInfo {
+        uint m_flags;
         float m_worldFogStart;
         float m_worldFogLength;
         float m_oneMinusFogAlpha;
         float m_fogFalloffExp;
+        uint32_t m_pad0;
+        uint32_t m_pad1;
+        uint32_t m_pad2;
         float4 m_fogColor;
     };
 
@@ -72,44 +76,26 @@ namespace hpl::resource {
     struct SceneObject {
         uint32_t m_indexOffset;
         uint32_t m_vertexOffset;
-        uint32_t m_materialId;
+        uint32_t m_materialType;
+        uint32_t m_materialIndex;
+
         float m_dissolveAmount;
         float m_lightLevel;
         float m_illuminationAmount;
         uint32_t m_pad0;
-        uint32_t m_pad1;
         mat4 m_modelMat;
         mat4 m_invModelMat;
         mat4 m_uvMat;
     };
 
- //   struct ScenePointLight {
- //       float3 m_worldPos;
- //       float m_radius;
- //       float4 m_lightColor;
- //   };
+    struct SceneLight {
+        float4 m_color;
 
- //   struct SceneSpotLight {
- //       mat4 m_viewProjection;
- //       float3 m_worldPos;
- //       uint m_config;
- //       float3 m_direction;
- //       float m_angle;
- //       float4 m_lightColor;
- //       float m_radius;
- //       uint32_t m_goboTexture;
- //       uint32_t m_pad1;
- //       uint32_t m_pad2;
- //   };
-
-    struct LightConstant {
         float3 m_direction;
         uint m_lightType;
 
         float3 m_position;
         float m_radius;
-
-        float4 m_color;
 
         uint m_attenuationTexture;
         float m_angle;
@@ -117,6 +103,15 @@ namespace hpl::resource {
         uint m_pad2;
 
         mat4 m_viewProjection;
+    };
+
+    struct SceneParticle {
+       uint32_t diffuseTextureIndex;
+       uint32_t sampleIndex;
+       float sceneAlpha;
+       float lightLevel;
+       mat4 modelMat;
+       mat4 uvMat;
     };
 
     struct DiffuseMaterial {
@@ -138,6 +133,12 @@ namespace hpl::resource {
         uint m_pad0;
         uint m_pad1;
     };
+
+    struct ParticleMaterial {
+        uint m_blendMode;
+        uint m_diffuseTextureIndex;
+    };
+
 
     using MaterialTypes = std::variant<DiffuseMaterial, std::monostate>;
     void visitTextures(MaterialTypes& material, std::function<void(eMaterialTexture, uint32_t slot)> handler);

@@ -21,7 +21,6 @@
 #include "Common_3/Resources/ResourceLoader/Interfaces/IResourceLoader.h"
 #include "FixPreprocessor.h"
 
-
 #include "graphics/ForgeRenderer.h"
 #include "graphics/GraphicsAllocator.h"
 #include "graphics/GraphicsBuffer.h"

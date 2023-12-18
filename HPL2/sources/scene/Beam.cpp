@@ -35,6 +35,9 @@
 #include "graphics/Material.h"
 #include "graphics/MaterialType.h"
 #include "graphics/LowLevelGraphics.h"
+#include "graphics/GraphicsBuffer.h"
+#include "graphics/GeometrySet.h"
+#include "graphics/MeshUtility.h"
 
 #include "scene/Camera.h"
 #include "scene/World.h"
@@ -42,7 +45,10 @@
 
 #include "engine/Engine.h"
 
+#include "Common_3/Utilities/Math/MathTypes.h"
+
 namespace hpl {
+    const uint32_t BeamNumberVerts = 4;
 
 	cBeam::cBeam(const tString asName, cResources *apResources,cGraphics *apGraphics) :
 	iRenderable(asName)
@@ -63,37 +69,83 @@ namespace hpl {
 
 		mlLastRenderCount = -1;
 
+        auto* graphicsAllocator = Interface<GraphicsAllocator>::Get();
+        auto& opaqueSet = graphicsAllocator->resolveSet(GraphicsAllocator::AllocationSet::OpaqueSet);
+        m_geometry = opaqueSet.allocate(4 * 2, 6);
 
-		mpVtxBuffer = mpLowLevelGraphics->CreateVertexBuffer(
-								eVertexBufferType_Hardware,
-								eVertexBufferDrawType_Tri, eVertexBufferUsageType_Dynamic,4,6);
-		mpVtxBuffer->CreateElementArray(eVertexBufferElement_Position,eVertexBufferElementFormat_Float,4);
-		mpVtxBuffer->CreateElementArray(eVertexBufferElement_Normal,eVertexBufferElementFormat_Float,3);
-		mpVtxBuffer->CreateElementArray(eVertexBufferElement_Color0,eVertexBufferElementFormat_Float,4);
-		mpVtxBuffer->CreateElementArray(eVertexBufferElement_Texture0,eVertexBufferElementFormat_Float,3);
+        std::array<float3, BeamNumberVerts> positionCoords = { float3((mvSize.x / 2), -(mvSize.y / 2), 0.0f),
+                              float3(-(mvSize.x / 2), -(mvSize.y / 2), 0.0f),
+                              float3(-(mvSize.x / 2), (mvSize.y / 2), 0.0f),
+                              float3((mvSize.x / 2), (mvSize.y / 2), 0.0f) };
 
-		cVector3f vCoords[4] = {cVector3f((mvSize.x/2),-(mvSize.y/2),0),
-								cVector3f(-(mvSize.x/2),-(mvSize.y/2),0),
-								cVector3f(-(mvSize.x/2),(mvSize.y/2),0),
-								cVector3f((mvSize.x/2),(mvSize.y/2),0)};
+        std::array<float2, BeamNumberVerts> texcoords = { (float2(1.0f, 1.0f) + float2(1,1)) / 2.0f, // Bottom left
+                                                          (float2(-1.0f, 1.0f) + float2(1, 1)) / 2.0f, // Bottom right
+                                                          (float2(-1.0f, -1.0f) + float2(1, 1)) / 2.0f, // Top left
+                                                          (float2(1.0f, -1.0f) + float2(1, 1)) / 2.0f }; // Top right
+        {
+            auto& indexStream = m_geometry->indexBuffer();
+            auto positionStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_POSITION);
+            auto normalStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_NORMAL);
+            auto colorStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_COLOR);
+            auto textureStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_TEXCOORD0);
+            auto tangentStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_TANGENT);
 
-		cVector3f vTexCoords[4] = {cVector3f(1,1,0),	//Bottom left
-									cVector3f(-1,1,0),	//Bottom right
-									cVector3f(-1,-1,0),	//Top left
-									cVector3f(1,-1,0)};	//Top right
+            BufferUpdateDesc indexUpdateDesc = { indexStream.m_handle, 0, GeometrySet::IndexBufferStride * 6 };
+            BufferUpdateDesc positionUpdateDesc = { positionStream->buffer().m_handle, 0, positionStream->stride() * BeamNumberVerts * 2 };
+            BufferUpdateDesc normalUpdateDesc = { normalStream->buffer().m_handle, 0, normalStream->stride() * BeamNumberVerts  * 2};
+            BufferUpdateDesc colorUpdateDesc = { colorStream->buffer().m_handle, 0, colorStream->stride() * BeamNumberVerts  * 2};
+            BufferUpdateDesc textureUpdateDesc = { textureStream->buffer().m_handle, 0, textureStream->stride() * BeamNumberVerts * 2};
+            BufferUpdateDesc tangentUpdateDesc = { tangentStream->buffer().m_handle, 0, tangentStream->stride() * BeamNumberVerts * 2};
 
-		for(int i=0;i<4;i++)
-		{
-			mpVtxBuffer->AddVertexVec3f(eVertexBufferElement_Position, vCoords[i]);
-			mpVtxBuffer->AddVertexColor(eVertexBufferElement_Color0, cColor(1,1,1,1));
-			mpVtxBuffer->AddVertexVec3f(eVertexBufferElement_Texture0, (vTexCoords[i] + cVector2f(1,1))/2);
-			mpVtxBuffer->AddVertexVec3f(eVertexBufferElement_Normal,cVector3f(0,0,1));
-		}
+            beginUpdateResource(&indexUpdateDesc);
+            beginUpdateResource(&positionUpdateDesc);
+            beginUpdateResource(&normalUpdateDesc);
+            beginUpdateResource(&colorUpdateDesc);
+            beginUpdateResource(&textureUpdateDesc);
+            beginUpdateResource(&tangentUpdateDesc);
 
-		for(int i=0;i<3;i++) mpVtxBuffer->AddIndex(i);
-		for(int i=2;i<5;i++) mpVtxBuffer->AddIndex(i==4?0:i);
+            GraphicsBuffer gpuIndexBuffer(indexUpdateDesc);
+            GraphicsBuffer gpuPositionBuffer(positionUpdateDesc);
+            GraphicsBuffer gpuNormalBuffer(normalUpdateDesc);
+            GraphicsBuffer gpuColorBuffer(colorUpdateDesc);
+            GraphicsBuffer gpuTextureBuffer(textureUpdateDesc);
+            GraphicsBuffer gpuTangentBuffer(tangentUpdateDesc);
 
-		mpVtxBuffer->Compile(eVertexCompileFlag_CreateTangents);
+            auto indexView = gpuIndexBuffer.CreateIndexView();
+            {
+                uint32_t index = 0;
+                for (int i = 0; i < 3; i++) {
+                    indexView.Write(index++, i);
+                }
+                for (int i = 2; i < 5; i++) {
+                    indexView.Write(index++, i == 4 ? 0 : i);
+                }
+            }
+            for(size_t copyIdx  = 0; copyIdx < 2; copyIdx++) {
+                auto positionView = gpuPositionBuffer.CreateStructuredView<float3>(positionStream->stride() * copyIdx * 4) ;
+                auto normalView = gpuNormalBuffer.CreateStructuredView<float3>(normalStream->stride() * copyIdx * 4);
+                auto colorView = gpuColorBuffer.CreateStructuredView<float4>(colorStream->stride() * copyIdx * 4);
+                auto textureView = gpuTextureBuffer.CreateStructuredView<float2>(textureStream->stride() * copyIdx * 4);
+                auto tangentView = gpuTangentBuffer.CreateStructuredView<float3>(tangentStream->stride() * copyIdx * 4);
+                for (size_t i = 0; i < 4; i++) {
+                    positionView.Write(i, positionCoords[i]);
+                    normalView.Write(i, float3(0.0f, 0.0f, 1.0f));
+                    colorView.Write(i, float4(1,1,1,1));
+                    textureView.Write(i, texcoords[i]);
+                }
+                Matrix4 trans = Matrix4::identity();
+                hpl::MeshUtility::MikkTSpaceGenerate(4, 6, &indexView, &positionView, &textureView, &normalView, &tangentView);
+            }
+
+            endUpdateResource(&indexUpdateDesc);
+            endUpdateResource(&positionUpdateDesc);
+            endUpdateResource(&normalUpdateDesc);
+            endUpdateResource(&colorUpdateDesc);
+            endUpdateResource(&textureUpdateDesc);
+            endUpdateResource(&tangentUpdateDesc);
+        }
+
+		//mpVtxBuffer->Compile(eVertexCompileFlag_CreateTangents);
 
 		mpEnd = hplNew( cBeamEnd, (asName + "_end",this));
 		mpEnd->AddCallback(&mEndCallback);
@@ -110,12 +162,21 @@ namespace hpl {
 	{
 		hplDelete(mpEnd);
 		if(mpMaterial) mpMaterialManager->Destroy(mpMaterial);
-		if(mpVtxBuffer) hplDelete(mpVtxBuffer);
 	}
 
     DrawPacket cBeam::ResolveDrawPacket(const ForgeRenderer::Frame& frame) {
 
-	    return static_cast<LegacyVertexBuffer*>(mpVtxBuffer)->resolveGeometryBinding(frame.m_currentFrame);
+        DrawPacket packet;
+
+        DrawPacket::GeometrySetBinding binding{};
+        packet.m_type = DrawPacket::DrawGeometryset;
+        binding.m_subAllocation = m_geometry.get();
+        binding.m_indexOffset = 0;
+        binding.m_set = GraphicsAllocator::AllocationSet::OpaqueSet;
+        binding.m_numIndices = 6;
+        binding.m_vertexOffset = (m_activeCopy * 4);
+        packet.m_unified = binding;
+        return packet;
     }
 
     void cBeam::SetSize(const cVector2f& avSize)
@@ -153,43 +214,12 @@ namespace hpl {
 		if(mColor == aColor) return;
 
 		mColor = aColor;
-
-		float *pColors = mpVtxBuffer->GetFloatArray(eVertexBufferElement_Color0);
-
-		//Change "lower colors"
-		if(mbMultiplyAlphaWithColor)
-		{
-			for(int i=0; i<2;++i)
-			{
-				pColors[0] = mColor.r * mColor.a;
-				pColors[1] = mColor.g * mColor.a;
-				pColors[2] = mColor.b * mColor.a;
-				pColors[3] = mColor.a;
-				pColors+=4;
-			}
-		}
-		else
-		{
-			for(int i=0; i<2;++i)
-			{
-				pColors[0] = mColor.r;
-				pColors[1] = mColor.g;
-				pColors[2] = mColor.b;
-				pColors[3] = mColor.a;
-				pColors+=4;
-			}
-		}
-		mpVtxBuffer->UpdateData(eVertexElementFlag_Color0,false);
 	}
-
-	//-----------------------------------------------------------------------
 
 	void cBeam::SetMaterial(cMaterial * apMaterial)
 	{
 		mpMaterial = apMaterial;
 	}
-
-	//-----------------------------------------------------------------------
 
 	cBoundingVolume* cBeam::GetBoundingVolume()
 	{
@@ -218,8 +248,6 @@ namespace hpl {
 		return &mBoundingVolume;
 	}
 
-	//-----------------------------------------------------------------------
-
 	void cBeam::UpdateGraphicsForFrame(float afFrameTime)
 	{
 		if(	mlStartTransformCount == GetTransformUpdateCount() &&
@@ -227,67 +255,82 @@ namespace hpl {
 		{
 			return;
 		}
+        m_activeCopy = (m_activeCopy + 1) % ForgeRenderer::SwapChainLength;
 
 		////////////////////////////////
 		//Get Axis
 		mvAxis = mpEnd->GetWorldPosition() - GetWorldPosition();
 
-		mvMidPosition =GetWorldPosition() + mvAxis*0.5f;
+		mvMidPosition = GetWorldPosition() + mvAxis*0.5f;
 		float fDist = mvAxis.Length();
 
 		mvAxis.Normalize();
 
-		////////////////////////////////
 		//Update vertex buffer
 		cVector2f vBeamSize = cVector2f(mvSize.x, fDist);
+        const std::array<float3, BeamNumberVerts> vCoords = { float3((vBeamSize.x / 2), -(vBeamSize.y / 2), 0.0f),
+                                                                   float3(-(vBeamSize.x / 2), -(vBeamSize.y / 2), 0.0f),
+                                                                   float3(-(vBeamSize.x / 2), (vBeamSize.y / 2), 0.0f),
+                                                                   float3((vBeamSize.x / 2), (vBeamSize.y / 2), 0.0f) };
 
-		float *pPos = mpVtxBuffer->GetFloatArray(eVertexBufferElement_Position);
-		float *pTex = mpVtxBuffer->GetFloatArray(eVertexBufferElement_Texture0);
+	    const std::array<float2, BeamNumberVerts> vTexCoords = mbTileHeight ? std::array<float2, BeamNumberVerts> {
+			float2(1.0f,1.0f),	//Bottom left
+			float2(0.0f,1.0f),	//Bottom right
+			float2(0.0f,-fDist/mvSize.y),	//Top left
+			float2(1.0f,-fDist/mvSize.y)	//Top right
+	    } : std::array<float2, BeamNumberVerts> {
+			float2(1.0f,1.0f),	//Bottom left
+			float2(0.0f,1.0f),	//Bottom right
+			float2(0.0f,0.0f),	//Top left
+			 float2(1.0f,0.0f)	//Top right
+	    };
 
-		cVector3f vCoords[4] = {cVector3f((vBeamSize.x/2),-(vBeamSize.y/2),0),
-								cVector3f(-(vBeamSize.x/2),-(vBeamSize.y/2),0),
-								cVector3f(-(vBeamSize.x/2),(vBeamSize.y/2),0),
-								cVector3f((vBeamSize.x/2),(vBeamSize.y/2),0)};
+        {
+            auto positionStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_POSITION);
+            auto colorStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_COLOR);
+            auto textureStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_TEXCOORD0);
 
-		cVector3f vTexCoords[4];
-		if(mbTileHeight)
-		{
-			vTexCoords[0] = cVector3f(1,1,0);	//Bottom left
-			vTexCoords[1] = cVector3f(0,1,0);	//Bottom right
-			vTexCoords[2] = cVector3f(0,-fDist/mvSize.y,0);	//Top left
-			vTexCoords[3] = cVector3f(1,-fDist/mvSize.y,0);	//Top right
-		}
-		else
-		{
-			vTexCoords[0] = cVector3f(1,1,0);	//Bottom left
-			vTexCoords[1] = cVector3f(0,1,0);	//Bottom right
-			vTexCoords[2] = cVector3f(0,0,0);	//Top left
-			vTexCoords[3] = cVector3f(1,0,0);	//Top right
-		}
+            BufferUpdateDesc positionUpdateDesc = { positionStream->buffer().m_handle, positionStream->stride() * 4 * m_activeCopy, positionStream->stride() * 4};
+            BufferUpdateDesc textureUpdateDesc = { textureStream->buffer().m_handle, textureStream->stride() * 4 * m_activeCopy, textureStream->stride() * 4};
+            BufferUpdateDesc colorUpdateDesc = { colorStream->buffer().m_handle, colorStream->stride() * 4 * m_activeCopy, colorStream->stride() * 4};
+            beginUpdateResource(&positionUpdateDesc);
+            beginUpdateResource(&textureUpdateDesc);
+            beginUpdateResource(&colorUpdateDesc);
+            GraphicsBuffer gpuPositionBuffer(positionUpdateDesc);
+            GraphicsBuffer gpuTextureBuffer(textureUpdateDesc);
+            GraphicsBuffer gpuColorBuffer(colorUpdateDesc);
 
-		for(int i=0; i<4;++i)
-		{
-			pPos[0] = vCoords[i].x;
-			pPos[1] = vCoords[i].y;
-			pPos[2] = vCoords[i].z;
-			pPos+=4;
+            auto positionView = gpuPositionBuffer.CreateStructuredView<float3>();
+            auto textureView = gpuTextureBuffer.CreateStructuredView<float2>();
+            auto colorView = gpuTextureBuffer.CreateStructuredView<float4>();
+		    for(int i=0; i < BeamNumberVerts ;++i)
+		    {
+                positionView.Write(i, vCoords[i]);
+                textureView.Write(i, vTexCoords[i]);
+             }
+            cColor endColor = mpEnd->mColor;
+            cColor startColor = mColor;
+		    if(mbMultiplyAlphaWithColor) {
+                colorView.Write(
+                    0, float4(startColor.r * startColor.a, startColor.g * startColor.a, startColor.b * startColor.a, startColor.a));
+                colorView.Write(
+                    1, float4(startColor.r * startColor.a, startColor.g * startColor.a, startColor.b * startColor.a, startColor.a));
+                colorView.Write(2, float4(endColor.r * endColor.a, endColor.g * endColor.a, endColor.b * endColor.a, endColor.a));
+                colorView.Write(3, float4(endColor.r * endColor.a, endColor.g * endColor.a, endColor.b * endColor.a, endColor.a));
+		    } else {
+                colorView.Write(
+                    0, float4(startColor.r, startColor.g, startColor.b , startColor.a));
+                colorView.Write(
+                    1, float4(startColor.r, startColor.g, startColor.b, startColor.a));
+                colorView.Write(2, float4(endColor.r, endColor.g, endColor.b, endColor.a));
+                colorView.Write(3, float4(endColor.r, endColor.g, endColor.b, endColor.a));
+		    }
 
-			pTex[0] = vTexCoords[i].x;
-			pTex[1] = vTexCoords[i].y;
-			pTex+=3;
-		}
-
-		if(cMaterial::IsTranslucent(mpMaterial->Descriptor().m_id))
-		{
-			mpVtxBuffer->UpdateData(eVertexElementFlag_Position | eVertexElementFlag_Texture0,false);
-		}
-		else
-		{
-			mpVtxBuffer->UpdateData(eVertexElementFlag_Position | eVertexElementFlag_Texture0,false);
-		}
+            endUpdateResource(&positionUpdateDesc);
+            endUpdateResource(&textureUpdateDesc);
+            endUpdateResource(&colorUpdateDesc);
+        }
 	}
-
-	//-----------------------------------------------------------------------
 
 	cMatrixf* cBeam::GetModelMatrix(cFrustum *apFrustum)
 	{
@@ -333,17 +376,12 @@ namespace hpl {
 		return &m_mtxTempTransform;
 	}
 
-	//-----------------------------------------------------------------------
-
 	int cBeam::GetMatrixUpdateCount()
 	{
 		return GetTransformUpdateCount();
 	}
 
-	//-----------------------------------------------------------------------
-
-
-	bool cBeam::LoadXMLProperties(const tString asFile)
+    bool cBeam::LoadXMLProperties(const tString asFile)
 	{
 		msFileName = asFile;
 
@@ -411,8 +449,6 @@ namespace hpl {
 		return true;
 	}
 
-	//-----------------------------------------------------------------------
-
 	bool cBeam::IsVisible()
 	{
 		if(mColor.r <= 0 && mColor.g <= 0 && mColor.b <= 0) return false;
@@ -420,13 +456,6 @@ namespace hpl {
 		return mbIsVisible;
 	}
 
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// BEAM END TRANSFORM UPDATE CALLBACK
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	void cBeamEnd_UpdateCallback::OnTransformUpdate(iEntity3D * apEntity)
 	{
@@ -435,68 +464,10 @@ namespace hpl {
 		pEnd->mpBeam->SetTransformUpdated(true);
 	}
 
-	//-----------------------------------------------------------------------
-
-
-	//////////////////////////////////////////////////////////////////////////
-	// BEAM END
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
 	void cBeamEnd::SetColor(const cColor &aColor)
 	{
 		if(mColor == aColor) return;
-
 		mColor = aColor;
-
-		float *pColors = mpBeam->mpVtxBuffer->GetFloatArray(eVertexBufferElement_Color0);
-
-		//Change "upper colors"
-		pColors+= 4*2;
-		if(mpBeam->mbMultiplyAlphaWithColor)
-		{
-			for(int i=0; i<2;++i)
-			{
-				pColors[0] = mColor.r * mColor.a;
-				pColors[1] = mColor.g * mColor.a;
-				pColors[2] = mColor.b * mColor.a;
-				pColors[3] = mColor.a;
-				pColors+=4;
-			}
-		}
-		else
-		{
-			for(int i=0; i<2;++i)
-			{
-				pColors[0] = mColor.r;
-				pColors[1] = mColor.g;
-				pColors[2] = mColor.b;
-				pColors[3] = mColor.a;
-				pColors+=4;
-			}
-		}
-
-		mpBeam->mpVtxBuffer->UpdateData(eVertexElementFlag_Color0,false);
 	}
-
-	//-----------------------------------------------------------------------
-
-
-	//////////////////////////////////////////////////////////////////////////
-	// PRIVATE METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
-	//-----------------------------------------------------------------------
-
-	//////////////////////////////////////////////////////////////////////////
-	// SAVE OBJECT STUFF
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
-	//-----------------------------------------------------------------------
 
 }

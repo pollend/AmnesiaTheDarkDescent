@@ -14,12 +14,9 @@
 #endif
 #include "renderdoc_app.h"
 #endif
-//extern RendererApi gSelectedRendererApi;
 
 namespace hpl {
-   // RendererApi ForgeRenderer::GetApi() {
-   //     return gSelectedRendererApi;
-   // }
+ 
 
     void ForgeRenderer::IncrementFrame() {
         // Stall if CPU is running "Swap Chain Buffer Count" frames ahead of GPU
@@ -49,6 +46,7 @@ namespace hpl {
 
     void ForgeRenderer::SubmitFrame() {
         auto frame = GetFrame();
+        auto& waitSemaphores = m_waitSemaphores[frame.m_frameIndex];
         auto& swapChainTarget = frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex];
         {
             cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
@@ -82,12 +80,14 @@ namespace hpl {
             };
             cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
         }
-        endCmd(m_cmds[CurrentFrameIndex()]);
+        endCmd(m_cmds[frame.m_frameIndex]);
 
 		FlushResourceUpdateDesc flushUpdateDesc = {};
 		flushUpdateDesc.mNodeIndex = 0;
 		flushResourceUpdates(&flushUpdateDesc);
-		std::array waitSemaphores = { flushUpdateDesc.pOutSubmittedSemaphore, m_imageAcquiredSemaphore };
+        waitSemaphores.push_back(flushUpdateDesc.pOutSubmittedSemaphore);
+        waitSemaphores.push_back(m_imageAcquiredSemaphore);
+
 
         QueueSubmitDesc submitDesc = {};
         submitDesc.mCmdCount = 1;
@@ -106,6 +106,8 @@ namespace hpl {
         presentDesc.ppWaitSemaphores = &frame.m_renderCompleteSemaphore;
         presentDesc.mSubmitDone = true;
         queuePresent(m_graphicsQueue, &presentDesc);
+
+        waitSemaphores.clear();
     }
 
     void ForgeRenderer::InitializeRenderer(window::NativeWindowWrapper* window) {
@@ -156,7 +158,7 @@ namespace hpl {
             swapChainDesc.mWidth = windowSize.x;
             swapChainDesc.mHeight = windowSize.y;
             swapChainDesc.mImageCount = SwapChainLength;
-            swapChainDesc.mColorFormat = TinyImageFormat_B8G8R8A8_UNORM;//getRecommendedSwapchainFormat(false, false);
+            swapChainDesc.mColorFormat = TinyImageFormat_R8G8B8A8_UNORM;//getRecommendedSwapchainFormat(false, false);
             swapChainDesc.mColorClearValue = { { 1, 1, 1, 1 } };
             swapChainDesc.mEnableVsync = false;
             addSwapChain(m_renderer, &swapChainDesc, handle);

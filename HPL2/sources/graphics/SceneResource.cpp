@@ -159,6 +159,7 @@ namespace hpl::resource  {
             case hpl::MaterialID::Decal:
                 break;
             case hpl::MaterialID::Translucent:
+
                 break;
             case hpl::MaterialID::Water:
                 break;

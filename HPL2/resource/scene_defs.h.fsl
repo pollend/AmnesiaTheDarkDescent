@@ -11,8 +11,8 @@
 #define POINT_LIGHT_MAX_COUNT  (256)
 #define SCENE_OPAQUE_COUNT (512)
 
-#define LIGHT_FROXEL_COUNT_POS(ix, iy, iz) ( (LIGHT_CLUSTER_WIDTH * LIGHT_CLUSTER_HEIGHT * (iz)) + ((iy)*LIGHT_CLUSTER_WIDTH) + (ix) )
-#define LIGHT_FROXEL_DATA_POS(ix, iy, iz, il) ( LIGHT_FROXEL_COUNT_POS(ix, iy, iz) * LIGHT_CLUSTER_COUNT + (il) )
+#define LIGHT_FROXEL_COUNT_POS(ix, iy, iz) ((LIGHT_CLUSTER_WIDTH * LIGHT_CLUSTER_HEIGHT * (iz)) + ((iy)*LIGHT_CLUSTER_WIDTH) + (ix))
+#define LIGHT_FROXEL_DATA_POS(ix, iy, iz, il) (LIGHT_FROXEL_COUNT_POS(ix, iy, iz) * LIGHT_CLUSTER_COUNT + (il))
 
 #define LIGHT_CLUSTER_COUNT_POS(ix, iy) ( ((iy)*LIGHT_CLUSTER_WIDTH)+(ix) )
 #define LIGHT_CLUSTER_DATA_POS(il, ix, iy) ( LIGHT_CLUSTER_COUNT_POS(ix, iy)*LIGHT_CLUSTER_COUNT + (il) )
@@ -62,6 +62,16 @@ STRUCT(DiffuseMaterial) {
     DATA(uint, __pad1, NONE);
 };
 
+
+STRUCT(Particle) {
+    DATA(uint, diffuseTextureIndex, None);
+    DATA(uint,  samplerIndex, None);
+    DATA(float, sceneAlpha, NONE);
+    DATA(float, lightLevel, NONE);
+    DATA(float4x4, modelMat, None);
+    DATA(float4x4, uvMat, None);
+};
+
 bool isTextureIndexValid(uint index) {
     return index < SCENE_MAX_TEXTURE_COUNT;
 }
@@ -80,12 +90,12 @@ STRUCT(UniformObject)
 {
     DATA(uint,     indexOffset, None);
     DATA(uint,     vertexOffset, None);
-    DATA(uint,     materialID, None);
+    DATA(uint,     materialType, None);
+    DATA(uint,     materialIndex, None);
     
     DATA(float,    dissolveAmount, None);
     DATA(float,    lightLevel, None);
     DATA(float,    illuminationAmount, None);
-    DATA(uint, __pad0, NONE);
     DATA(uint, __pad1, NONE);
     DATA(float4x4, modelMat, None);
     DATA(float4x4, invModelMat, None);
@@ -101,53 +111,24 @@ STRUCT(UniformObject)
 #define MATERIAL_TYPE_SOLID_WATER       3
 #define MATERIAL_TYPE_SOLID_DECAL       4
 
-#define MATERIAL_ID_BIT    0
-#define MATERIAL_INDEX_BIT 8
-
-#define MATERIAL_ID_MASK         0xff // 0000 0000 0000 0000 0000 0000 1111 1111
-#define MATERIAL_INDEX_MASK  0xffff00 // 0000 0000 1111 1111 1111 1111 0000 0000
-
-#define MATERIAL_ID(id) ((MATERIAL_ID_MASK & (id)) >> MATERIAL_ID_BIT)
-#define MATERIAL_INDEX(id) ((MATERIAL_INDEX_MASK & (id)) >> MATERIAL_INDEX_BIT) 
-
-STRUCT(PointLight) {
-    DATA(float3, lightPos, none);
-    DATA(float, lightRadius, none);
-    DATA(float4, lightColor, none);
-};
-
 #define LIGHT_TYPE_POINT_LIGHT 0 
 #define LIGHT_TYPE_SPOT_LIGHT 1 
 
 STRUCT(Light) {
+    DATA(float4, color, none);
     DATA(float3, direction, none);
     DATA(uint, lightType, none);
-
+    
     DATA(float3, position, none);
     DATA(float, radius, none);
-    
-    DATA(float4, color, none);
     
     DATA(uint, attenuationTexture, NONE);
     DATA(float, angle, none);
     DATA(uint, goboTextureIndex, NONE);
     DATA(uint, __pad2, NONE);
 
-    DATA(mat4, viewProjection, none);
+    DATA(float4x4, viewProjection, none);
 };
-
-//STRUCT(SpotLight) {
-//    DATA(mat4, viewProjection, none);
-//    DATA(float3, lightPos, none);
-//    DATA(uint, config, none);
-//    DATA(float3, direction, none);
-//    DATA(float, angle, none);
-//    DATA(float4, lightColor, none);
-//    DATA(float, radius, none);
-//    DATA(uint, goboTexture, NONE);
-//    DATA(uint, __pad1, NONE);
-//    DATA(uint, __pad2, NONE);
-//};
 
 #define LIGHT_ID_BIT    0
 #define LIGHT_INDEX_BIT 8
@@ -159,11 +140,17 @@ STRUCT(Light) {
 #define LIGHT_INDEX(id) ((LIGHT_INDEX_MASK & (id)) >> LIGHT_INDEX_BIT) 
 #define LIGHT_ENCODE(id, index) (((id << LIGHT_ID_BIT) & LIGHT_ID_MASK) | ((index << LIGHT_INDEX_BIT) & LIGHT_INDEX_MASK)) 
 
+#define WORLD_FLAG_IS_FOG_ENABLED       1
+
 STRUCT(WorldInfo) {
+    DATA(uint,  worldFlags, None);
     DATA(float, worldFogStart, None);
     DATA(float, worldFogLength, None);
     DATA(float, oneMinusFogAlpha, None);
     DATA(float, fogFalloffExp, None);
+    DATA(uint, __pad0, NONE);
+    DATA(uint, __pad1, NONE);
+    DATA(uint, __pad2, NONE);
     DATA(float4, worldFogColor, None);
 };
 

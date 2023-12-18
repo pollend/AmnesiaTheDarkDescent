@@ -64,8 +64,32 @@ namespace hpl {
     class cRendererDeferred2 : public iRenderer {
         HPL_RTTI_IMPL_CLASS(iRenderer, cRendererDeferred, "{B3E5E5A1-1F9C-4F5C-9B9B-5B9B9B5B9B9B}")
     public:
+        struct RangeSubsetAlloc {
+        public:
+            struct RangeSubset {
+                uint32_t m_start = 0;
+                uint32_t m_end = 0;
+                inline uint32_t size() {
+                    return m_end - m_start;
+                }
+            };
+            uint32_t& m_index;
+            uint32_t m_start;
+            RangeSubsetAlloc(uint32_t& index)
+                : m_index(index)
+                , m_start(index) {
+            }
+            uint32_t Increment() {
+                return (m_index++);
+            }
+            RangeSubset End() {
+                uint32_t start = m_start;
+                m_start = m_index;
+                return RangeSubset{ start, m_index };
+            }
+        };
 
-        static constexpr TinyImageFormat DepthBufferFormat = TinyImageFormat_D32_SFLOAT_S8_UINT;
+        static constexpr TinyImageFormat DepthBufferFormat = TinyImageFormat_D32_SFLOAT;
         static constexpr TinyImageFormat NormalBufferFormat = TinyImageFormat_R16G16B16A16_SFLOAT;
         static constexpr TinyImageFormat PositionBufferFormat = TinyImageFormat_R32G32B32A32_SFLOAT;
         static constexpr TinyImageFormat SpecularBufferFormat = TinyImageFormat_R8G8_UNORM;
@@ -75,14 +99,10 @@ namespace hpl {
         static constexpr uint32_t MaxReflectionBuffers = 4;
         static constexpr uint32_t MaxObjectUniforms = 4096;
         static constexpr uint32_t MaxLightUniforms = 1024;
-        static constexpr uint32_t MaxHiZMipLevels = 16;
-        static constexpr uint32_t MaxObjectTest = 32768;
-        static constexpr uint32_t MaxOcclusionDescSize = 4096;
-        static constexpr uint32_t MaxQueryPoolSize = MaxOcclusionDescSize * 2;
-        static constexpr uint32_t MaxIndirectDrawArgs = 4096;
+        static constexpr uint32_t MaxParticleUniform = 1024;
+        static constexpr uint32_t MaxIndirectDrawElements = 4096;
 
         static constexpr uint32_t PointLightCount = 256;
-        static constexpr uint32_t SpotLightCount = 256;
         static constexpr float ShadowDistanceMedium = 10;
         static constexpr float ShadowDistanceLow = 20;
         static constexpr float ShadowDistanceNone = 40;
@@ -94,6 +114,17 @@ namespace hpl {
         static constexpr uint32_t LightClusterSlices = 24;
         static constexpr uint32_t LightClusterLightCount = 128;
         static constexpr uint32_t TransientImagePoolCount = 256;
+
+        static constexpr uint32_t IndirectArgumentSize = 8 * sizeof(uint32_t);
+
+        struct RootConstantDrawIndexArguments {
+            uint32_t mDrawId;
+            uint32_t mIndexCount;
+            uint32_t mInstanceCount;
+            uint32_t mStartIndex;
+            uint32_t mVertexOffset;
+            uint32_t mStartInstance;
+        };
 
 
         struct ViewportData {
@@ -110,6 +141,13 @@ namespace hpl {
             std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_testBuffer; //encodes the parallax
             std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_visiblityBuffer;
         };
+
+         struct FogRendererData {
+            cFogArea* m_fogArea;
+            bool m_insideNearFrustum;
+            cVector3f m_boxSpaceFrustumOrigin;
+            cMatrixf m_mtxInvBoxSpace;
+         };
 
         cRendererDeferred2(
             cGraphics* apGraphics,
@@ -130,22 +168,38 @@ namespace hpl {
 
     private:
 
-        struct SceneMaterial {
+        
+        void setIndirectDrawArg(const ForgeRenderer::Frame& frame, uint32_t drawArgIndex, uint32_t slot, DrawPacket& packet);
+
+        enum MaterialSetType {
+            PrimarySet = 0,
+            ParticleSet = 1
+        };
+        struct MaterialSet {
+            MaterialSetType m_type;
+            IndexPoolHandle m_slot;
+        };
+
+        struct SharedMaterial {
         public:
             void* m_material = nullptr;
             uint32_t m_version = 0;
-            IndexPoolHandle m_slot;
-            resource::MaterialTypes m_resource = std::monostate{};
+            folly::small_vector<MaterialSet, 2> m_sets;
+            std::array<uint32_t, eMaterialTexture_LastEnum> m_textureHandles;
+
+            MaterialSet& resolveSet(MaterialSetType set);
         };
-        cRendererDeferred2::SceneMaterial& resolveMaterial(const ForgeRenderer::Frame& frame,cMaterial* material);
-        uint32_t resolveObjectIndex(const ForgeRenderer::Frame& frame, iRenderable* apObject, uint32_t drawArgOffset, std::optional<Matrix4> modelMatrix);
+        SharedMaterial& resolveSharedMaterial(cMaterial* material);
+        uint32_t resolveObjectIndex(const ForgeRenderer::Frame& frame,
+            iRenderable* apObject,
+            std::optional<Matrix4> modelMatrix);
 
         UniqueViewportData<ViewportData> m_boundViewportData;
 
         SharedSampler m_samplerNearEdgeClamp;
         SharedSampler m_samplerPointWrap;
         SharedSampler m_samplerPointClampToBorder;
-        std::array<SceneMaterial, cMaterial::MaxMaterialID> m_sceneMaterial;
+        std::array<SharedMaterial, cMaterial::MaxMaterialID> m_sharedMaterial;
         TextureDescriptorPool m_sceneTexture2DPool;
         ImageBindlessPool m_sceneTransientImage2DPool;
         CommandSignature* m_cmdSignatureVBPass = NULL;
@@ -157,11 +211,6 @@ namespace hpl {
         SharedRootSignature m_sceneRootSignature;
         SharedDescriptorSet m_sceneDescriptorConstSet;
         std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_sceneDescriptorPerFrameSet;
-
-        SharedRootSignature m_rootSignatureCopyDepth;
-        std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_descriptorCopyDepth;
-        SharedPipeline m_pipelineCopyDepth;
-        SharedShader m_copyDepthShader;
 
         SharedShader m_visibilityBufferPassShader;
         SharedShader m_visibilityBufferAlphaPassShader;
@@ -196,6 +245,35 @@ namespace hpl {
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_lightClustersBuffer;
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_lightClusterCountBuffer;
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_lightBuffer;
+        std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_particleBuffer;
+
+
+
+        SharedShader m_particleShaderAdd;
+        SharedShader m_particleShaderMul;
+        SharedShader m_particleShaderMulX2;
+        SharedShader m_particleShaderAlpha;
+        SharedShader m_particleShaderPremulAlpha;
+
+        SharedPipeline m_particleBlendAdd;
+        SharedPipeline m_particleBlendAddNoDepth;
+
+        SharedPipeline m_particleBlendMul;
+        SharedPipeline m_particleBlendMulNoDepth;
+
+        SharedPipeline m_particleBlendMulX2;
+        SharedPipeline m_particleBlendMulX2NoDepth;
+
+        SharedPipeline m_particleBlendAlpha;
+        SharedPipeline m_particleBlendAlphaNoDepth;
+
+        SharedPipeline m_particleBlendPremulAlpha;
+        SharedPipeline m_particleBlendPremulAlphaNoDepth;
+
+        Queue* m_computeQueue = nullptr;
+        GpuCmdRing m_computeRing = {};
+
+        bool m_supportIndirectRootConstant = false;
     };
 }; // namespace hpl
 

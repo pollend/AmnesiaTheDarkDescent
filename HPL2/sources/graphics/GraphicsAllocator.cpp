@@ -20,6 +20,14 @@ namespace hpl {
             };
             m_geometrySets[AllocationSet::OpaqueSet] = GeometrySet(OpaqueVertexBufferSize, OpaqueIndexBufferSize, streamDesc);
         }
+        {
+            std::array streamDesc = {
+                GeometrySet::GeometryStreamDesc("opaque_position", ShaderSemantic::SEMANTIC_POSITION, sizeof(float3)),
+                GeometrySet::GeometryStreamDesc("opaque_uv0", ShaderSemantic::SEMANTIC_TEXCOORD0, sizeof(float2)),
+                GeometrySet::GeometryStreamDesc("opaque_color", ShaderSemantic::SEMANTIC_COLOR, sizeof(float4)),
+            };
+            m_geometrySets[AllocationSet::ParticleSet] = GeometrySet(ParticleVertexBufferSize, ParticleIndexBufferSize, streamDesc);
+        }
 
         {
             BufferDesc desc = {};

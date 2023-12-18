@@ -334,13 +334,37 @@
   #include "scene_light_cluster.comp.fsl"
 #end
 
-//#comp scene_light_cluster_spotlight.comp
-//  #include "scene_light_cluster_spotlight.comp.fsl"
-//#end
-
 #comp scene_light_cluster_clear.comp
   #include "scene_light_cluster_clear.comp.fsl"
 #end
 
+#vert particle_shade.vert
+  #include "particle_shade.vert.fsl"
+#end
 
-  
+#frag particle_shade_add.frag
+  #define USE_BLEND_MODE_ADD 1
+  #include "particle_shade.frag.fsl"
+#end
+
+#frag particle_shade_mul.frag
+  #define USE_BLEND_MODE_MUL 1
+  #include "particle_shade.frag.fsl"
+#end
+
+#frag particle_shade_mulX2.frag
+  #define USE_BLEND_MODE_MULX2 1
+  #include "particle_shade.frag.fsl"
+#end
+
+#frag particle_shade_alpha.frag
+  #define USE_BLEND_MODE_ALPHA 1
+  #include "particle_shade.frag.fsl"
+#end
+
+#frag particle_shade_premul_alpha.frag
+  #define USE_BLEND_MODE_PREMUL_ALPHA 1
+  #include "particle_shade.frag.fsl"
+#end
+
+
