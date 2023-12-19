@@ -322,6 +322,10 @@
   #include "visibility_shade_pass.frag.fsl"
 #end
 
+#frag visibility_emit_shade_pass.frag
+  #include "visibility_emit_shade_pass.frag.fsl"
+#end
+
 #vert visibilityBuffer_alpha_pass.vert
   #include "visibilityBuffer_alpha_pass.vert.fsl"
 #end
@@ -367,4 +371,11 @@
   #include "particle_shade.frag.fsl"
 #end
 
+#frag decal_shade.frag
+    #include "decal_shade.frag.fsl"
+#end
+
+#vert decal_shade.vert
+    #include "decal_shade.vert.fsl"
+#end
 

@@ -95,11 +95,11 @@ namespace hpl {
 
         //////////////////////////
         // If alpha, sort by texture (we know alpha is same for both materials, so can just test one)
-        if (pMatA->GetAlphaMode() == eMaterialAlphaMode_Trans) {
-            if (pMatA->GetImage(eMaterialTexture_Diffuse) != pMatB->GetImage(eMaterialTexture_Diffuse)) {
-                return pMatA->GetImage(eMaterialTexture_Diffuse) < pMatB->GetImage(eMaterialTexture_Diffuse);
-            }
-        }
+        //if (pMatA->GetAlphaMode() == eMaterialAlphaMode_Trans) {
+        //    if (pMatA->GetImage(eMaterialTexture_Diffuse) != pMatB->GetImage(eMaterialTexture_Diffuse)) {
+        //        return pMatA->GetImage(eMaterialTexture_Diffuse) < pMatB->GetImage(eMaterialTexture_Diffuse);
+        //    }
+        //}
 
         //////////////////////////
         // View space depth, no need to test further since Z should almost never be the same for two objects.
@@ -110,14 +110,14 @@ namespace hpl {
 
 
     static bool SortFunc_Diffuse(iRenderable* apObjectA, iRenderable* apObjectB) {
-        cMaterial* pMatA = apObjectA->GetMaterial();
-        cMaterial* pMatB = apObjectB->GetMaterial();
+       // cMaterial* pMatA = apObjectA->GetMaterial();
+       // cMaterial* pMatB = apObjectB->GetMaterial();
+       //
+       // if (apObjectA->GetModelMatrixPtr() != apObjectB->GetModelMatrixPtr()) {
+       //     return apObjectA->GetModelMatrixPtr() < apObjectB->GetModelMatrixPtr();
+       // }
 
-        if (apObjectA->GetModelMatrixPtr() != apObjectB->GetModelMatrixPtr()) {
-            return apObjectA->GetModelMatrixPtr() < apObjectB->GetModelMatrixPtr();
-        }
-
-        return apObjectA < apObjectB;
+       return apObjectA->GetViewSpaceZ() > apObjectB->GetViewSpaceZ();
     }
 
     static bool SortFunc_Translucent(iRenderable* apObjectA, iRenderable* apObjectB) {

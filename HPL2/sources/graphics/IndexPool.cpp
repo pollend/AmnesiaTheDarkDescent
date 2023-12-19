@@ -29,6 +29,7 @@ namespace hpl {
             entry.m_end--;
             return res;
         }
+        LOGF(LogLevel::eERROR, "ran out of index in pool.");
         return IndexPool::InvalidHandle;
     }
 

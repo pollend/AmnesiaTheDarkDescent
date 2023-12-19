@@ -21,7 +21,7 @@ namespace hpl::resource {
     static constexpr uint32_t MaterailSamplerNonAntistropyCount = static_cast<uint32_t>(eTextureWrap_LastEnum) * static_cast<uint32_t>(eTextureFilter_LastEnum);
     uint32_t textureFilterNonAnistropyIdx(eTextureWrap wrap, eTextureFilter filter);
 
-    static constexpr uint32_t MaxSceneTextureCount = 4096;
+    static constexpr uint32_t MaxSceneTextureCount = 100000;
 
     static constexpr uint32_t MaterialIdBit =  0;
     static constexpr uint32_t MaterialIndexBit = 8;
@@ -110,6 +110,16 @@ namespace hpl::resource {
        uint32_t sampleIndex;
        float sceneAlpha;
        float lightLevel;
+       mat4 modelMat;
+       mat4 uvMat;
+    };
+
+    
+    struct SceneDecal {
+       uint32_t diffuseTextureIndex;
+       uint32_t sampleIndex;
+       uint m_pad0;
+       uint m_pad1;
        mat4 modelMat;
        mat4 uvMat;
     };

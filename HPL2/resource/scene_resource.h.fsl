@@ -20,28 +20,32 @@ CBUFFER(sceneInfo, UPDATE_FREQ_PER_FRAME, b2, binding = 0) {
 RES(Buffer(UniformObject), sceneObjects, UPDATE_FREQ_PER_FRAME, t0, binding = 1);
 RES(Buffer(Light), lights,               UPDATE_FREQ_PER_FRAME, t1, binding = 14);
 RES(Buffer(Particle), particles,         UPDATE_FREQ_PER_FRAME, t2, binding = 15);
+RES(Buffer(Decal), decals,               UPDATE_FREQ_PER_FRAME, t3, binding = 16);
 
 // opaque geometry set
-RES(ByteBuffer,   vtxOpaqueIndex,     UPDATE_FREQ_NONE, t3, binding = 3);
-RES(ByteBuffer,   vtxOpaquePosition,  UPDATE_FREQ_NONE, t4, binding = 4);
-RES(ByteBuffer,   vtxOpaqueTangnet,   UPDATE_FREQ_NONE, t5, binding = 5);
-RES(ByteBuffer,   vtxOpaqueNormal,    UPDATE_FREQ_NONE, t6, binding = 6);
-RES(ByteBuffer,   vtxOpaqueUv,        UPDATE_FREQ_NONE, t7, binding = 7);
-RES(ByteBuffer,   vtxOpaqueColor,     UPDATE_FREQ_NONE, t8, binding = 8);
+RES(ByteBuffer,   vtxOpaqueIndex,     UPDATE_FREQ_NONE, t4, binding = 3);
+RES(ByteBuffer,   vtxOpaquePosition,  UPDATE_FREQ_NONE, t5, binding = 4);
+RES(ByteBuffer,   vtxOpaqueTangnet,   UPDATE_FREQ_NONE, t6, binding = 5);
+RES(ByteBuffer,   vtxOpaqueNormal,    UPDATE_FREQ_NONE, t7, binding = 6);
+RES(ByteBuffer,   vtxOpaqueUv,        UPDATE_FREQ_NONE, t8, binding = 7);
+RES(ByteBuffer,   vtxOpaqueColor,     UPDATE_FREQ_NONE, t9, binding = 8);
 
-RES(Buffer(DiffuseMaterial), sceneDiffuseMat, UPDATE_FREQ_NONE, t9, binding = 9);
+RES(Buffer(DiffuseMaterial), sceneDiffuseMat, UPDATE_FREQ_NONE, t10, binding = 9);
 
 RES(SamplerState,  nearEdgeClampSampler, UPDATE_FREQ_NONE, s0, binding = 10);
 RES(SamplerState,  nearPointWrapSampler, UPDATE_FREQ_NONE, s1, binding = 11);
 
-RES(Tex2D(float4), visibilityTexture,    UPDATE_FREQ_PER_FRAME, t10, binding = 12);
-RES(Tex2D(float4), dissolveTexture,    UPDATE_FREQ_NONE, t11, binding = 13);
+RES(Tex2D(float4), visibilityTexture,   UPDATE_FREQ_PER_FRAME, t11, binding = 12);
+RES(Tex2D(float4), albedoTexture,      UPDATE_FREQ_PER_FRAME, t12, binding = 12);
+RES(Tex2D(float4), parallaxTexture,    UPDATE_FREQ_PER_FRAME, t13, binding = 12);
 
-RES(ByteBuffer, lightClustersCount, UPDATE_FREQ_PER_FRAME, t12, binding = 16);
-RES(ByteBuffer, lightClusters,      UPDATE_FREQ_PER_FRAME, t13, binding = 18);
+RES(Tex2D(float4), dissolveTexture,    UPDATE_FREQ_NONE, t14, binding = 13);
+
+RES(ByteBuffer, lightClustersCount, UPDATE_FREQ_PER_FRAME, t15, binding = 16);
+RES(ByteBuffer, lightClusters,      UPDATE_FREQ_PER_FRAME, t16, binding = 18);
 
 RES(SamplerState, sceneFilters[SCENE_MAX_FILTER_COUNT], UPDATE_FREQ_NONE, s2, binding = 20); 
-RES(Tex2D(float4), sceneTextures[SCENE_MAX_TEXTURE_COUNT],  UPDATE_FREQ_PER_FRAME, t14, binding = 20 + SCENE_MAX_FILTER_COUNT);
+RES(Tex2D(float4), sceneTextures[SCENE_MAX_TEXTURE_COUNT],  UPDATE_FREQ_PER_FRAME, t17, binding = 20 + SCENE_MAX_FILTER_COUNT);
 
 #define SCENE_OBJECT_ID_BIT 19 // 13  bits for ObjectID 
 #define SCENE_PRIM_ID_BIT  0 // 19 bits for PrimitiveID

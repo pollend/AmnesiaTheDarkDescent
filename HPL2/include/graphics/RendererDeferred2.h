@@ -99,6 +99,7 @@ namespace hpl {
         static constexpr uint32_t MaxReflectionBuffers = 4;
         static constexpr uint32_t MaxObjectUniforms = 4096;
         static constexpr uint32_t MaxLightUniforms = 1024;
+        static constexpr uint32_t MaxDecalUniforms = 1024;
         static constexpr uint32_t MaxParticleUniform = 1024;
         static constexpr uint32_t MaxIndirectDrawElements = 4096;
 
@@ -138,6 +139,9 @@ namespace hpl {
             uint2 m_size = uint2(0, 0);
             std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_outputBuffer;
             std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_depthBuffer;
+            std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_parallaxBuffer;
+            std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_albedoBuffer; // this is used for the adding decals to albedo
+
             std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_testBuffer; //encodes the parallax
             std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_visiblityBuffer;
         };
@@ -214,10 +218,12 @@ namespace hpl {
 
         SharedShader m_visibilityBufferPassShader;
         SharedShader m_visibilityBufferAlphaPassShader;
+        SharedShader m_visibilityBufferEmitPassShader;
         SharedShader m_visibilityShadePassShader;
 
         SharedPipeline m_visibilityBufferPass;
         SharedPipeline m_visbilityAlphaBufferPass;
+        SharedPipeline m_visbilityEmitBufferPass;
         SharedPipeline m_visiblityShadePass;
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_objectUniformBuffer;
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_perSceneInfoBuffer;
@@ -241,13 +247,12 @@ namespace hpl {
         SharedShader m_lightClusterShader;
         SharedShader m_clearLightClusterShader;
         SharedPipeline m_lightClusterPipeline;
-        SharedPipeline m_clearClusterPipeline;
+        SharedPipeline m_clearClusterPipeline; 
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_lightClustersBuffer;
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_lightClusterCountBuffer;
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_lightBuffer;
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_particleBuffer;
-
-
+        std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_decalBuffer;
 
         SharedShader m_particleShaderAdd;
         SharedShader m_particleShaderMul;
@@ -269,6 +274,13 @@ namespace hpl {
 
         SharedPipeline m_particleBlendPremulAlpha;
         SharedPipeline m_particleBlendPremulAlphaNoDepth;
+
+        SharedShader m_decalShader;
+        SharedPipeline m_decalPipelineAdd;
+        SharedPipeline m_decalPipelineMul;
+        SharedPipeline m_decalPipelineMulX2;
+        SharedPipeline m_decalPipelineAlpha;
+        SharedPipeline m_decalPipelinePremulAlpha;
 
         Queue* m_computeQueue = nullptr;
         GpuCmdRing m_computeRing = {};

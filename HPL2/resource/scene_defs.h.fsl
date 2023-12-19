@@ -38,7 +38,7 @@
 
 #define SCENE_SAMPLER(wrap, filter) ((wrap * SCENE_TEXTURE_FILTER_COUNT) + filter)
 
-#define SCENE_MAX_TEXTURE_COUNT  (4096)
+#define SCENE_MAX_TEXTURE_COUNT  (100000)
 #define SCENE_MAX_FILTER_COUNT (SCENE_TEXTURE_FILTER_COUNT * SCENE_TEXTURE_WRAP_COUNT) 
 #define SCENE_FILTER_SWITCH_CASE case 0: case 1: case 2: case 3: case 4: case 5: case 6: case 7: case 8: 
 
@@ -62,6 +62,15 @@ STRUCT(DiffuseMaterial) {
     DATA(uint, __pad1, NONE);
 };
 
+
+STRUCT(Decal) {
+    DATA(uint, diffuseTextureIndex, None);
+    DATA(uint,  samplerIndex, None);
+    DATA(uint, __pad0, NONE);
+    DATA(uint, __pad1, NONE);
+    DATA(float4x4, modelMat, None);
+    DATA(float4x4, uvMat, None);
+};
 
 STRUCT(Particle) {
     DATA(uint, diffuseTextureIndex, None);
