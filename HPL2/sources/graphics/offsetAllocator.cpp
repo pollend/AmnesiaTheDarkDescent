@@ -2,21 +2,10 @@
 // MIT License (see file: LICENSE)
 
 #include "graphics/offsetAllocator.h"
-
-#ifdef DEBUG
-#include <assert.h>
-#define ASSERT(x) assert(x)
-//#define DEBUG_VERBOSE
-#else
-#define ASSERT(x)
-#endif
-
-#ifdef DEBUG_VERBOSE
-#include <stdio.h>
-#endif
+#include "Common_3/Utilities/Interfaces/ILog.h"
 
 #ifdef _MSC_VER
-#include <intrin.h>
+    #include <intrin.h>
 #endif
 
 #include <cstring>
@@ -271,9 +260,7 @@ namespace OffsetAllocator
         m_binIndices[binIndex] = node.binListNext;
         if (node.binListNext != Node::unused) m_nodes[node.binListNext].binListPrev = Node::unused;
         m_freeStorage -= nodeTotalSize;
-#ifdef DEBUG_VERBOSE
-        printf("Free storage: %u (-%u) (allocate)\n", m_freeStorage, nodeTotalSize);
-#endif
+        LOGF(LogLevel::eRAW, "Free storage: %u (-%u) (allocate)", m_freeStorage, nodeTotalSize);
 
         // Bin empty?
         if (m_binIndices[binIndex] == Node::unused)
@@ -352,9 +339,7 @@ namespace OffsetAllocator
         uint32 neighborPrev = node.neighborPrev;
 
         // Insert the removed node to freelist
-#ifdef DEBUG_VERBOSE
-        printf("Putting node %u into freelist[%u] (free)\n", nodeIndex, m_freeOffset + 1);
-#endif
+        LOGF(LogLevel::eRAW, "Putting node %u into freelist[%u] (free)\n", nodeIndex, m_freeOffset + 1);
         m_freeNodes[++m_freeOffset] = nodeIndex;
 
         // Insert the (combined) free node to bin
@@ -392,18 +377,16 @@ namespace OffsetAllocator
         // Take a freelist node and insert on top of the bin linked list (next = old top)
         uint32 topNodeIndex = m_binIndices[binIndex];
         uint32 nodeIndex = m_freeNodes[m_freeOffset--];
-#ifdef DEBUG_VERBOSE
-        printf("Getting node %u from freelist[%u]\n", nodeIndex, m_freeOffset + 1);
-#endif
+        LOGF(LogLevel::eRAW, "Getting node %u from freelist[%u]", nodeIndex, m_freeOffset + 1);
+
+
         m_nodes[nodeIndex] = {.dataOffset = dataOffset, .dataSize = size, .binListNext = topNodeIndex};
         if (topNodeIndex != Node::unused) m_nodes[topNodeIndex].binListPrev = nodeIndex;
         m_binIndices[binIndex] = nodeIndex;
 
         m_freeStorage += size;
-#ifdef DEBUG_VERBOSE
-        printf("Free storage: %u (+%u) (insertNodeIntoBin)\n", m_freeStorage, size);
-#endif
 
+        LOGF(LogLevel::eRAW, "Free storage: %u (+%u) (insertNodeIntoBin)", m_freeStorage, size);
         return nodeIndex;
     }
 
@@ -446,15 +429,13 @@ namespace OffsetAllocator
         }
 
         // Insert the node to freelist
-#ifdef DEBUG_VERBOSE
-        printf("Putting node %u into freelist[%u] (removeNodeFromBin)\n", nodeIndex, m_freeOffset + 1);
-#endif
+        LOGF(LogLevel::eRAW," node %u into freelist[%u] (removeNodeFromBin)", nodeIndex, m_freeOffset + 1);
+
         m_freeNodes[++m_freeOffset] = nodeIndex;
 
         m_freeStorage -= node.dataSize;
-#ifdef DEBUG_VERBOSE
-        printf("Free storage: %u (-%u) (removeNodeFromBin)\n", m_freeStorage, node.dataSize);
-#endif
+
+        LOGF(LogLevel::eRAW, "Free storage: %u (-%u) (removeNodeFromBin)", m_freeStorage, node.dataSize);
     }
 
     uint32 Allocator::allocationSize(Allocation allocation) const

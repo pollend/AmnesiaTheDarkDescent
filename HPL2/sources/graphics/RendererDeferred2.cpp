@@ -1058,7 +1058,7 @@ namespace hpl {
                             struct {
                                 eMaterialTexture m_type;
                                 uint32_t* m_value;
-                            } m_textures[] = {
+                            } textures[] = {
                                 { eMaterialTexture_Diffuse, &result.m_diffuseTextureIndex },
                                 { eMaterialTexture_NMap, &result.m_normalTextureIndex },
                                 { eMaterialTexture_Alpha, &result.m_alphaTextureIndex },
@@ -1068,7 +1068,7 @@ namespace hpl {
                                 { eMaterialTexture_DissolveAlpha, &result.m_dissolveAlphaTextureIndex },
                                 { eMaterialTexture_CubeMapAlpha, &result.m_cubeMapAlphaTextureIndex },
                             };
-                            for (auto& tex : m_textures) {
+                            for (auto& tex : textures) {
                                 (*tex.m_value) = sharedMaterial.m_textureHandles[tex.m_type];
                             }
                             result.m_materialConfig = ((alphaMapImage &&
@@ -1299,6 +1299,30 @@ namespace hpl {
             viewportDatum = m_boundViewportData.update(viewport, std::move(updateDatum));
         }
 
+        // setup render list
+        {
+            m_rendererList.BeginAndReset(frameTime, apFrustum);
+            auto* dynamicContainer = apWorld->GetRenderableContainer(eWorldContainerType_Dynamic);
+            auto* staticContainer = apWorld->GetRenderableContainer(eWorldContainerType_Static);
+            dynamicContainer->UpdateBeforeRendering();
+            staticContainer->UpdateBeforeRendering();
+
+            auto prepareObjectHandler = [&](iRenderable* pObject) {
+                if (!iRenderable::IsObjectIsVisible(*pObject, eRenderableFlag_VisibleInNonReflection, {})) {
+                    return;
+                }
+
+                m_rendererList.AddObject(pObject);
+            };
+            iRenderableContainer::WalkRenderableContainer(
+                *dynamicContainer, apFrustum, prepareObjectHandler, eRenderableFlag_VisibleInNonReflection);
+            iRenderableContainer::WalkRenderableContainer(
+                *staticContainer, apFrustum, prepareObjectHandler, eRenderableFlag_VisibleInNonReflection);
+            m_rendererList.End(
+                eRenderListCompileFlag_Diffuse | eRenderListCompileFlag_Translucent | eRenderListCompileFlag_Decal |
+                eRenderListCompileFlag_Illumination | eRenderListCompileFlag_FogArea);
+        }
+
         frame.m_resourcePool->Push(viewportDatum->m_testBuffer[frame.m_frameIndex]);
         frame.m_resourcePool->Push(viewportDatum->m_visiblityBuffer[frame.m_frameIndex]);
         frame.m_resourcePool->Push(viewportDatum->m_depthBuffer[frame.m_frameIndex]);
@@ -1340,33 +1364,9 @@ namespace hpl {
             primaryViewport.m_invViewProj = inverse(primaryViewport.m_projMat * primaryViewport.m_viewMat);
             primaryViewport.m_zFar = apFrustum->GetFarPlane();
             primaryViewport.m_zNear = apFrustum->GetNearPlane();
-            primaryViewport.m_rect =
-                float4(0.0f, 0.0f, static_cast<float>(viewportDatum->m_size.x), static_cast<float>(viewportDatum->m_size.y));
+            primaryViewport.m_rect = float4(0.0f, 0.0f, static_cast<float>(viewportDatum->m_size.x), static_cast<float>(viewportDatum->m_size.y));
             primaryViewport.m_cameraPosition = v3ToF3(cMath::ToForgeVec3(apFrustum->GetOrigin()));
             endUpdateResource(&updateDesc);
-        }
-
-        // setup render list
-        {
-            m_rendererList.BeginAndReset(frameTime, apFrustum);
-            auto* dynamicContainer = apWorld->GetRenderableContainer(eWorldContainerType_Dynamic);
-            auto* staticContainer = apWorld->GetRenderableContainer(eWorldContainerType_Static);
-            dynamicContainer->UpdateBeforeRendering();
-            staticContainer->UpdateBeforeRendering();
-
-            auto prepareObjectHandler = [&](iRenderable* pObject) {
-                if (!iRenderable::IsObjectIsVisible(*pObject, eRenderableFlag_VisibleInNonReflection, {})) {
-                    return;
-                }
-                m_rendererList.AddObject(pObject);
-            };
-            iRenderableContainer::WalkRenderableContainer(
-                *dynamicContainer, apFrustum, prepareObjectHandler, eRenderableFlag_VisibleInNonReflection);
-            iRenderableContainer::WalkRenderableContainer(
-                *staticContainer, apFrustum, prepareObjectHandler, eRenderableFlag_VisibleInNonReflection);
-            m_rendererList.End(
-                eRenderListCompileFlag_Diffuse | eRenderListCompileFlag_Translucent | eRenderListCompileFlag_Decal |
-                eRenderListCompileFlag_Illumination | eRenderListCompileFlag_FogArea);
         }
 
         RangeSubsetAlloc::RangeSubset opaqueIndirectArgs;
@@ -1478,6 +1478,104 @@ namespace hpl {
                 decalIndirectArgs.push_back({ indirectAllocSession.End(), lastBlendMode });
             }
         }
+        enum class TranslucencyDrawType : uint8_t {
+            Default,
+            Particle,
+            Water,
+        };
+
+        struct TranslucencyArgs {
+            TranslucencyDrawType drawType = TranslucencyDrawType::Default;
+            eMaterialBlendMode blendMode = eMaterialBlendMode::eMaterialBlendMode_Add;
+            RangeSubsetAlloc::RangeSubset drawArgs = RangeSubsetAlloc::RangeSubset();
+        };
+
+        std::vector<TranslucencyArgs> translucencyArgs;
+
+        {
+            uint32_t translucencyIndex = 0;
+            uint32_t particleIndex = 0;
+
+            for (auto& translucencyItem : m_rendererList.GetRenderableItems(eRenderListType_Translucent)) {
+                cMaterial* pMaterial = translucencyItem->GetMaterial();
+                if (!pMaterial) {
+                    continue;
+                }
+                if (!translucencyItem->UpdateGraphicsForViewport(apFrustum, frameTime)) {
+                    continue;
+                }
+                TranslucencyDrawType drawType = TranslucencyDrawType::Default;
+                eMaterialBlendMode blendMode = pMaterial->GetBlendMode();
+                const bool isParticleEmitter = TypeInfo<iParticleEmitter>::IsSubtype(*translucencyItem);
+                if (isParticleEmitter) {
+                    drawType = TranslucencyDrawType::Particle;
+                } else if (pMaterial->Descriptor().m_id == MaterialID::Water) {
+                    drawType = TranslucencyDrawType::Water;
+                }
+
+                if (translucencyArgs.empty() || !([&]() {
+                        auto& arg = translucencyArgs.back();
+                        return arg.drawType == drawType && arg.blendMode == blendMode;
+                    })()) {
+                    if (!translucencyArgs.empty() && translucencyArgs.back().drawArgs.isEmpty()) {
+                        translucencyArgs.back().drawArgs = indirectAllocSession.End();
+                    }
+                    auto& arg = translucencyArgs.emplace_back();
+                    arg.drawType = drawType;
+                    arg.blendMode = blendMode;
+                }
+
+                auto& sharedMaterial = resolveSharedMaterial(pMaterial);
+
+                cMatrixf* pMatrix = translucencyItem->GetModelMatrix(apFrustum);
+
+                switch (drawType) {
+                case TranslucencyDrawType::Particle: {
+                        DrawPacket packet = translucencyItem->ResolveDrawPacket(frame);
+                        ASSERT(packet.m_type == DrawPacket::DrawPacketType::DrawGeometryset);
+
+                        BufferUpdateDesc updateDesc = { m_particleBuffer[frame.m_frameIndex].m_handle,
+                                                        particleIndex * sizeof(resource::SceneParticle) };
+                        beginUpdateResource(&updateDesc);
+                        auto* sceneParticle = static_cast<resource::SceneParticle*>(updateDesc.pMappedData);
+                        sceneParticle->diffuseTextureIndex = sharedMaterial.m_textureHandles[eMaterialTexture_Diffuse];
+                        sceneParticle->sceneAlpha = 1.0f;
+                        for (auto& fogArea : fogRenderData) {
+                            sceneParticle->sceneAlpha *= detail::GetFogAreaVisibilityForObject(fogArea, *apFrustum, translucencyItem);
+                        }
+                        sceneParticle->lightLevel = 1.0f;
+                        if (pMaterial->IsAffectedByLightLevel()) {
+                            sceneParticle->lightLevel = detail::calcLightLevel(m_rendererList.GetLights(), translucencyItem);
+                        }
+                        sceneParticle->sampleIndex =
+                            resource::textureFilterNonAnistropyIdx(pMaterial->GetTextureWrap(), pMaterial->GetTextureFilter());
+                        sceneParticle->modelMat = cMath::ToForgeMatrix4(pMatrix ? *pMatrix : cMatrixf::Identity);
+                        sceneParticle->uvMat = cMath::ToForgeMatrix4(pMaterial->GetUvMatrix().GetTranspose());
+                        endUpdateResource(&updateDesc);
+                        setIndirectDrawArg(frame, indirectAllocSession.Increment(), particleIndex++, packet);
+                        break;
+                    }
+                case TranslucencyDrawType::Default:
+                case TranslucencyDrawType::Water: {
+                        DrawPacket packet = translucencyItem->ResolveDrawPacket(frame);
+                        if (packet.m_type == DrawPacket::Unknown) {
+                            continue;
+                        }
+                        ASSERT(packet.m_type == DrawPacket::DrawPacketType::DrawGeometryset);
+                        ASSERT(packet.m_unified.m_set == GraphicsAllocator::AllocationSet::OpaqueSet);
+                        setIndirectDrawArg(
+                            frame,
+                            indirectAllocSession.Increment(),
+                            resolveObjectIndex(frame, translucencyItem, cMath::ToForgeMatrix4(pMatrix ? *pMatrix : cMatrixf::Identity)),
+                            packet);
+                        break;
+                    }
+                }
+            }
+            if (!translucencyArgs.empty() && translucencyArgs.back().drawArgs.isEmpty()) {
+                translucencyArgs.back().drawArgs = indirectAllocSession.End();
+            }
+        }
 
         {
             std::array<std::vector<iRenderable*>, eMaterialBlendMode_LastEnum> particleBatches;
@@ -1574,6 +1672,7 @@ namespace hpl {
                         // Note: Aspect might be wonky if there is no gobo.
                         float fFarWidth = fFarHeight * pLightSpot->GetAspect();
                         const cColor color = light->GetDiffuseColor();
+                           
                         Matrix4 spotViewProj = cMath::ToForgeMatrix4(pLightSpot->GetViewProjMatrix()); //* inverse(apFrustum->GetViewMat());
 
                         cVector3f forward = cMath::MatrixMul3x3(pLightSpot->GetWorldMatrix(), cVector3f(0,0,-1));

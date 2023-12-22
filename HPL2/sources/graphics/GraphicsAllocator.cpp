@@ -54,12 +54,4 @@ namespace hpl {
         return getGPURingBufferOffset(&m_transientIndeciesBuffer, size);
     }
 
-    //    GraphicsAllocator::OffsetAllocHandle GraphicsAllocator::allocVertexFromSharedBuffer(uint32_t size) {
-    //        OffsetAllocator::Allocation alloc = m_vertexBufferAllocator.allocate(size);
-    //        return OffsetAllocHandle(&m_vertexBufferAllocator, alloc, m_sharedVertexBuffer);
-    //    }
-    //    GraphicsAllocator::OffsetAllocHandle  GraphicsAllocator::allocIndeciesFromSharedBuffer(uint32_t size) {
-    //        OffsetAllocator::Allocation alloc = m_indexBufferAllocator.allocate(size);
-    //        return OffsetAllocHandle(&m_indexBufferAllocator, alloc, m_sharedIndexBuffer);
-    //    }
 } // namespace hpl

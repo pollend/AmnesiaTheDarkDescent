@@ -62,6 +62,53 @@ STRUCT(DiffuseMaterial) {
     DATA(uint, __pad1, NONE);
 };
 
+STRUCT(DiffuseWater) {
+    DATA(uint, diffuseTextureIndex, None);
+    DATA(uint, normalTextureIndex, None);
+    DATA(uint, alphaTextureIndex, None);
+    DATA(uint, specularTextureIndex, None);
+    DATA(uint, heightTextureIndex, None);
+    DATA(uint, illuminiationTextureIndex, None);
+    DATA(uint, dissolveAlphaTextureIndex, None);
+    DATA(uint, cubeMapAlphaTextureIndex, None);
+    DATA(uint,  samplerIndex, None);
+
+    DATA(uint, materialConfig, None);
+    DATA(float, refractionScale, None);
+    DATA(float, frenselBias, None);
+    DATA(float, frenselPow, None);
+
+    DATA(float, reflectionFadeStart, None);
+    DATA(float, reflectionFadeEnd, None);
+    DATA(float, waveSpeed, None);
+    DATA(float, waveAmplitude, None);
+        
+    DATA(float, waveFreq, None);
+    DATA(uint, __pad0, NONE);
+    DATA(uint, __pad1, NONE);
+};
+
+STRUCT(DiffuseTranslucent) {
+    DATA(uint, diffuseTextureIndex, None);
+    DATA(uint, normalTextureIndex, None);
+    DATA(uint, alphaTextureIndex, None);
+    DATA(uint, specularTextureIndex, None);
+    DATA(uint, heightTextureIndex, None);
+    DATA(uint, illuminiationTextureIndex, None);
+    DATA(uint, dissolveAlphaTextureIndex, None);
+    DATA(uint, cubeMapAlphaTextureIndex, None);
+    DATA(uint,  samplerIndex, None);
+
+    DATA(uint, materialConfig, None);
+    DATA(float, refractionScale, None);
+    DATA(float, frenselBias, None);
+    DATA(float, frenselPos, None);
+
+    DATA(float, rimMulLight, None);
+    DATA(float, rimMulPower, None);
+    DATA(uint, __pad0, NONE);
+};
+
 
 STRUCT(Decal) {
     DATA(uint, diffuseTextureIndex, None);

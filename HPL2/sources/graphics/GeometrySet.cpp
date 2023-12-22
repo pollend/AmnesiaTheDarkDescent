@@ -23,16 +23,25 @@ namespace hpl {
         subAllocation->m_indexAllocation = m_indexStreamAllocator.allocate(numIndecies);
         subAllocation->m_vertexAllocation = m_vertexStreamAllocator.allocate(numElements);
 
-        auto vertexStorageReport = m_vertexStreamAllocator.storageReport();
-        auto indexStorageReport = m_indexStreamAllocator.storageReport();
-        LOGF(LogLevel::eINFO, "vertex storage total free space: %d largest region: %d", vertexStorageReport.totalFreeSpace, vertexStorageReport.largestFreeRegion);
-        LOGF(LogLevel::eINFO, "index storage total free space: %d largest region: %d", indexStorageReport.totalFreeSpace, indexStorageReport.largestFreeRegion);
+       // auto vertexStorageReport = m_vertexStreamAllocator.storageReport();
+       // auto indexStorageReport = m_indexStreamAllocator.storageReport();
+       // LOGF(
+       //     LogLevel::eRAW,
+       //     "vertex storage total free space: %d largest region: %d",
+       //     vertexStorageReport.totalFreeSpace,
+       //     vertexStorageReport.largestFreeRegion);
+       // LOGF(
+       //     LogLevel::eRAW,
+       //     "index storage total free space: %d largest region: %d",
+       //     indexStorageReport.totalFreeSpace,
+       //     indexStorageReport.largestFreeRegion);
+
+    
 
         ASSERT(subAllocation->m_indexAllocation.offset != OffsetAllocator::Allocation::NO_SPACE);
         ASSERT(subAllocation->m_indexAllocation.metadata != OffsetAllocator::Allocation::NO_SPACE);
         ASSERT(subAllocation->m_vertexAllocation.offset != OffsetAllocator::Allocation::NO_SPACE);
         ASSERT(subAllocation->m_vertexAllocation.metadata != OffsetAllocator::Allocation::NO_SPACE);
-
 
         subAllocation->m_geometrySet = this;
 

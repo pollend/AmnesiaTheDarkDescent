@@ -55,12 +55,6 @@
 
 namespace hpl {
 
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
 	iLight::iLight(tString asName, cResources *apResources) : iRenderable(asName)
 	{
 		///////////////////////////////
@@ -506,8 +500,6 @@ namespace hpl {
 		m_mapShadowCasterCache.clear();
 	}
 
-	//-----------------------------------------------------------------------
-
 	void iLight::LoadXMLProperties(const tString asFile)
 	{
 		tWString sPath = mpFileSearcher->GetFilePath(asFile);
@@ -568,8 +560,6 @@ namespace hpl {
 		mvBillboards.push_back(bbConnection);
 	}
 
-	//-----------------------------------------------------------------------
-
 	void iLight::RemoveBillboard(cBillboard *apBillboard)
 	{
 		std::vector<cLightBillboardConnection>::iterator it = mvBillboards.begin();
@@ -584,15 +574,6 @@ namespace hpl {
 		}
 	}
 
-	//-----------------------------------------------------------------------
-
-
-
-	//////////////////////////////////////////////////////////////////////////
-	// PROTECTED METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	void iLight::RenderShadow(iRenderable *apObject,cRenderSettings *apRenderSettings,
 				iLowLevelGraphics *apLowLevelGraphics)
@@ -600,8 +581,6 @@ namespace hpl {
 
 	}
 
-
-	//-----------------------------------------------------------------------
 
 	void iLight::OnFlickerOff()
 	{
@@ -612,7 +591,6 @@ namespace hpl {
 		}
 	}
 
-	//-----------------------------------------------------------------------
 
 	void iLight::OnFlickerOn()
 	{
@@ -624,8 +602,6 @@ namespace hpl {
 
 	}
 
-	//-----------------------------------------------------------------------
-
 	void iLight::OnSetDiffuse()
 	{
 		for(size_t i =0; i<mvBillboards.size(); ++i)
@@ -634,7 +610,5 @@ namespace hpl {
 		}
 	}
 
-
-	//-----------------------------------------------------------------------
 
 }

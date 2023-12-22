@@ -50,7 +50,7 @@ void CS_MAIN(SV_GroupThreadID(uint3) threadInGroupId, SV_GroupID(uint3) groupId)
   	        sphere = float4(mul(viewInfo.viewMat, float4(light.position.xyz, 1.0f)).xyz, light.radius * 1.2f);
   	        break;
         case LIGHT_TYPE_SPOT_LIGHT:			
-  	        float4 boundingSphere = boundingSphereForSpotlight(light.position, light.direction, light.radius,  light.angle);
+  	        float4 boundingSphere = boundingSphereForSpotlight(light.position, light.direction, light.radius * 2.0, light.angle);
   	        sphere = float4(mul(viewInfo.viewMat, float4(boundingSphere.xyz, 1.0f)).xyz, boundingSphere.w);
   	        break;
     }

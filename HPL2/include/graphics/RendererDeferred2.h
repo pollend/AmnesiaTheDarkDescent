@@ -72,6 +72,9 @@ namespace hpl {
                 inline uint32_t size() {
                     return m_end - m_start;
                 }
+                bool isEmpty() const {
+                    return (m_end - m_start) == 0;
+                }
             };
             uint32_t& m_index;
             uint32_t m_start;
@@ -79,6 +82,7 @@ namespace hpl {
                 : m_index(index)
                 , m_start(index) {
             }
+
             uint32_t Increment() {
                 return (m_index++);
             }
@@ -199,7 +203,7 @@ namespace hpl {
             std::optional<Matrix4> modelMatrix);
 
         UniqueViewportData<ViewportData> m_boundViewportData;
-
+        
         SharedSampler m_samplerNearEdgeClamp;
         SharedSampler m_samplerPointWrap;
         SharedSampler m_samplerPointClampToBorder;
@@ -210,6 +214,8 @@ namespace hpl {
 
         // diffuse
         IndexPool m_diffuseIndexPool;
+        IndexPool m_TranslucencyIndexPool;
+        IndexPool m_WaterIndexPool;
         SharedBuffer m_diffuseSolidMaterialUniformBuffer;
 
         SharedRootSignature m_sceneRootSignature;

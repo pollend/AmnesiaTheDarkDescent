@@ -7,6 +7,8 @@ INLINE float3x3 ToNormalMat(float4x4 invModel, float4x4 invView) {
     return transpose(mul(float3x3(invModel[0].xyz, invModel[1].xyz, invModel[2].xyz), float3x3(invView[0].xyz, invView[1].xyz, invView[2].xyz)));
 }
 
+#define square(a) (a * a)
+
 float Fresnel(float afEDotN, float afFresnelBias, float afFresnelPow)
 {
     float fFacing = 1.0 - afEDotN;
@@ -21,6 +23,77 @@ float3 WorldSpaceToTangent(float3 dir, float3 normal, float3 tangent, float3 bit
 
     return float3(a,b,c);
 }
+
+float Lambert(float3 normal, float3 lightIncident)
+{
+    return max(0, -dot(normal, lightIncident)) / PI;
+}
+
+float Schlick_Fresnel(float F0, float VdotH)
+{
+    return F0 + (1 - F0) * pow(max(1 - VdotH, 0), 5);
+}
+
+float3 Schlick_FresnelF3(float3 F0, float VdotH)
+{
+    return F0 + (1 - F0) * pow(max(1 - VdotH, 0), 5);
+}
+
+float3 slerp(float3 a, float3 b, float angle, float t)
+{
+    t = saturate(t);
+    float sin1 = sin(angle * t);
+    float sin2 = sin(angle * (1 - t));
+    float ta = sin1 / (sin1 + sin2);
+    float3 result = lerp(a, b, ta);
+    return normalize(result);
+}
+
+float SpecPowerToRoughness(in float s) {
+    return clamp(sqrt(max(0, 2.0f / (s + 2.0f))), 0, 1);
+}
+
+
+float3 GGX_AnalyticalLights_times_NdotL(float3 lightIncident, float3 viewIncident, float3 normal, float roughness, float3 specularF0, float halfAngularSize)
+{
+    float3 N = normal;
+    float3 V = -viewIncident;
+    float3 L = -lightIncident;
+    float3 R = reflect(viewIncident, N);
+
+    // Correction of light vector L for spherical / directional area lights.
+    // Inspired by "Real Shading in Unreal Engine 4" by B. Karis, 
+    // re-formulated to work in spherical coordinates instead of world space.
+    float AngleLR = acos(clamp(dot(R, L), -1, 1));
+
+    float3 CorrectedL = (AngleLR > 0) ? slerp(L, R, AngleLR, saturate(halfAngularSize / AngleLR)) : L;
+    float3 H = normalize(CorrectedL + V);
+
+    float NdotH = saturate(dot(N, H));
+    float NdotL = saturate(dot(N, CorrectedL));
+    float NdotV = saturate(dot(N, V));
+    float VdotH = saturate(dot(V, H));
+
+    float Alpha = max(0.01, roughness * roughness);
+
+    // Normalization for the widening of D, see the paper referenced above.
+    float CorrectedAlpha = saturate(Alpha + 0.5 * tan(halfAngularSize));
+    float SphereNormalization = square(Alpha / CorrectedAlpha);
+
+    // GGX / Trowbridge-Reitz NDF with normalization for sphere lights
+    float D = square(Alpha) / (PI * square(square(NdotH) * (square(Alpha) - 1) + 1)) * SphereNormalization;
+
+    // Schlick model for geometric attenuation
+    // The (NdotL * NdotV) term in the numerator is cancelled out by the same term in the denominator of the final result.
+    float k = square(roughness + 1) / 8.0;
+    float G = 1 / ((NdotL * (1 - k) + k) * (NdotV * (1 - k) + k));
+
+    float3 F = Schlick_FresnelF3(specularF0, VdotH);
+
+    return F * (D * G * NdotL/ 4);
+}
+
+
 
 // https://bartwronski.com/2017/04/13/cull-that-cone/
 float4 boundingSphereForSpotlight(in float3 origin, in float3 forward, in float size, in float angle)

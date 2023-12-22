@@ -44,7 +44,7 @@ RES(Tex2D(float4), dissolveTexture,    UPDATE_FREQ_NONE, t14, binding = 13);
 RES(ByteBuffer, lightClustersCount, UPDATE_FREQ_PER_FRAME, t15, binding = 16);
 RES(ByteBuffer, lightClusters,      UPDATE_FREQ_PER_FRAME, t16, binding = 18);
 
-RES(SamplerState, sceneFilters[SCENE_MAX_FILTER_COUNT], UPDATE_FREQ_NONE, s2, binding = 20); 
+RES(SamplerState, sceneFilters[SCENE_MAX_FILTER_COUNT], UPDATE_FREQ_NONE, s3, binding = 20); 
 RES(Tex2D(float4), sceneTextures[SCENE_MAX_TEXTURE_COUNT],  UPDATE_FREQ_PER_FRAME, t17, binding = 20 + SCENE_MAX_FILTER_COUNT);
 
 #define SCENE_OBJECT_ID_BIT 19 // 13  bits for ObjectID 
