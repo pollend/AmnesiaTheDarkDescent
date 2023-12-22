@@ -14,7 +14,6 @@ STRUCT(PsIn)
 STRUCT(PsOut)
 {
     DATA(float4, albedoColor , SV_Target0);
-    DATA(float2, parallax, SV_Target1);
 };
 
 PsOut PS_MAIN(PsIn In)
@@ -104,7 +103,7 @@ PsOut PS_MAIN(PsIn In)
   float2 texCoord = results.interp;
   PsOut Out;
   if(isTextureIndexValid(diffuseMat.heightTextureIndex)) {
-      Out.parallax = ParallaxAdvance(
+      texCoord += ParallaxAdvance(
           results.interp, 
           0.0,
           32.0, 
@@ -116,7 +115,6 @@ PsOut PS_MAIN(PsIn In)
           diffuseMat.heightTextureIndex,
           Get(sceneFilters)[diffuseMat.samplerIndex],
           (diffuseMat.materialConfig & MATERIAL_IS_HEIGHT_SINGLE_CHANNEL) > 0);
-        texCoord += Out.parallax;
   }
   float4 diffuseColor = float4(0,0,0,0);
   float3 shadedColor = f3(0.0f);

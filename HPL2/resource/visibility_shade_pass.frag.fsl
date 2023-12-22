@@ -20,6 +20,7 @@ STRUCT(PsOut)
 PsOut PS_MAIN(PsIn In)
 {
   INIT_MAIN;
+  PsOut Out;
     
   const float4 visRaw = LoadTex2D(Get(visibilityTexture), Get(nearEdgeClampSampler), uint2(In.position.xy), 0);
   // Unpack float4 render target data into uint to extract data
@@ -118,7 +119,7 @@ PsOut PS_MAIN(PsIn In)
           (diffuseMat.materialConfig & MATERIAL_IS_HEIGHT_SINGLE_CHANNEL) > 0);
   }
   float4 normalSample = float4(0,0,0,0);
-  float3 shadedColor = f3(0.0f);  
+  float3 shadedColor = float3(0.0f);  
 
   if (SampleSceneTextureGradFloat4(diffuseMat.normalTextureIndex, Get(sceneFilters)[diffuseMat.samplerIndex], texCoord, texCoordDX, texCoordDY, normalSample)) {
       normalSample -=  0.5;
@@ -182,8 +183,8 @@ PsOut PS_MAIN(PsIn In)
       }
   }
 
-  PsOut Out;
   Out.outColor = float4(shadedColor, 0.0f); 
+  //Out.outColor = float4(diffuseColor.rgb, 0.0f); 
   Out.test = float4(clusterCoords.x,clusterCoords.y,slice, lightClusterCount);
   RETURN(Out);
 

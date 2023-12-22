@@ -10,9 +10,9 @@
     #include "solid_z_shadow.frag.fsl"
 #end
 
-#vert solid_z_shadow.vert
-    #include "solid_z_shadow.vert.fsl"
-#end
+//#vert solid_z_shadow.vert
+//    #include "solid_z_shadow.vert.fsl"
+//#end
 
 #frag solid_z.frag
     #define SEARCH_SAMPLE_COUNT 4

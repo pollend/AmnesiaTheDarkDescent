@@ -139,7 +139,6 @@ namespace hpl {
             uint2 m_size = uint2(0, 0);
             std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_outputBuffer;
             std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_depthBuffer;
-            std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_parallaxBuffer;
             std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_albedoBuffer; // this is used for the adding decals to albedo
 
             std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_testBuffer; //encodes the parallax
@@ -172,7 +171,7 @@ namespace hpl {
 
     private:
 
-        
+
         void setIndirectDrawArg(const ForgeRenderer::Frame& frame, uint32_t drawArgIndex, uint32_t slot, DrawPacket& packet);
 
         enum MaterialSetType {
@@ -186,11 +185,11 @@ namespace hpl {
 
         struct SharedMaterial {
         public:
+            SharedMaterial();
             void* m_material = nullptr;
             uint32_t m_version = 0;
             folly::small_vector<MaterialSet, 2> m_sets;
             std::array<uint32_t, eMaterialTexture_LastEnum> m_textureHandles;
-
             MaterialSet& resolveSet(MaterialSetType set);
         };
         SharedMaterial& resolveSharedMaterial(cMaterial* material);
@@ -247,7 +246,7 @@ namespace hpl {
         SharedShader m_lightClusterShader;
         SharedShader m_clearLightClusterShader;
         SharedPipeline m_lightClusterPipeline;
-        SharedPipeline m_clearClusterPipeline; 
+        SharedPipeline m_clearClusterPipeline;
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_lightClustersBuffer;
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_lightClusterCountBuffer;
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_lightBuffer;
