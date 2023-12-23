@@ -115,18 +115,18 @@ PsOut PS_MAIN(PsIn In)
           worldTangent,
           worldBitangent,
           diffuseMat.heightTextureIndex,
-          Get(sceneFilters)[diffuseMat.samplerIndex],
+          Get(sceneSampler),
           (diffuseMat.materialConfig & MATERIAL_IS_HEIGHT_SINGLE_CHANNEL) > 0);
   }
   float4 normalSample = float4(0,0,0,0);
   float3 shadedColor = float3(0.0f);  
 
-  if (SampleSceneTextureGradFloat4(diffuseMat.normalTextureIndex, Get(sceneFilters)[diffuseMat.samplerIndex], texCoord, texCoordDX, texCoordDY, normalSample)) {
+  if (SampleSceneTextureGradFloat4(diffuseMat.normalTextureIndex, Get(sceneSampler), texCoord, texCoordDX, texCoordDY, normalSample)) {
       normalSample -=  0.5;
       worldNormal = normalize(normalSample.x * worldTangent + normalSample.y * worldBitangent+ normalSample.z * worldNormal);
   } 
   float4 illuminationSample = float4(0,0,0,0);
-  if(obj.illuminationAmount > 0 && SampleSceneTextureGradFloat4(diffuseMat.illuminiationTextureIndex, Get(sceneFilters)[diffuseMat.samplerIndex], texCoord, texCoordDX, texCoordDY, illuminationSample)) {
+  if(obj.illuminationAmount > 0 && SampleSceneTextureGradFloat4(diffuseMat.illuminiationTextureIndex, Get(sceneSampler), texCoord, texCoordDX, texCoordDY, illuminationSample)) {
      shadedColor += (obj.illuminationAmount * illuminationSample.xyz); 
   }
 
@@ -136,7 +136,7 @@ PsOut PS_MAIN(PsIn In)
   
   const uint lightClusterCount = LoadByte(Get(lightClustersCount), LIGHT_FROXEL_COUNT_POS(clusterCoords.x, clusterCoords.y, slice) << 2);
   float4 specular = float4(0,0,0,0);	
-  SampleSceneTextureGradFloat4(diffuseMat.specularTextureIndex, Get(sceneFilters)[diffuseMat.samplerIndex], texCoord, texCoordDX, texCoordDY, specular);
+  SampleSceneTextureGradFloat4(diffuseMat.specularTextureIndex, Get(sceneSampler), texCoord, texCoordDX, texCoordDY, specular);
   for(uint j = 0; j < lightClusterCount; ++j) {
       const uint index = LoadByte(Get(lightClusters), LIGHT_FROXEL_DATA_POS(clusterCoords.x, clusterCoords.y, slice, j) << 2);
       const Light light = Get(lights)[index];

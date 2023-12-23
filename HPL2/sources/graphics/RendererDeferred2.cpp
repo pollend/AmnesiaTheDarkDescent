@@ -224,14 +224,14 @@ namespace hpl {
             addQueue(forgeRenderer->Rend(), &computeQueueDesc, &m_computeQueue);
         }
 
-        {
-            GpuCmdRingDesc cmdRingDesc = {};
-            cmdRingDesc.pQueue = m_computeQueue;
-            cmdRingDesc.mPoolCount = 2;
-            cmdRingDesc.mCmdPerPoolCount = 1;
-            cmdRingDesc.mAddSyncPrimitives = true;
-            addGpuCmdRing(forgeRenderer->Rend(), &cmdRingDesc, &m_computeRing);
-        }
+        //{
+        //    GpuCmdRingDesc cmdRingDesc = {};
+        //    cmdRingDesc.pQueue = m_computeQueue;
+        //    cmdRingDesc.mPoolCount = 2;
+        //    cmdRingDesc.mCmdPerPoolCount = 1;
+        //    cmdRingDesc.mAddSyncPrimitives = true;
+        //    addGpuCmdRing(forgeRenderer->Rend(), &cmdRingDesc, &m_computeRing);
+        //}
 
 
         m_samplerNearEdgeClamp.Load(forgeRenderer->Rend(), [&](Sampler** sampler) {
@@ -258,6 +258,16 @@ namespace hpl {
             SamplerDesc pointSamplerDesc = { FILTER_NEAREST,
                                              FILTER_NEAREST,
                                              MIPMAP_MODE_NEAREST,
+                                             ADDRESS_MODE_REPEAT,
+                                             ADDRESS_MODE_REPEAT,
+                                             ADDRESS_MODE_REPEAT };
+            addSampler(forgeRenderer->Rend(), &pointSamplerDesc, sampler);
+            return true;
+        });
+        m_samplerMaterial.Load(forgeRenderer->Rend(), [&](Sampler** sampler) {
+            SamplerDesc pointSamplerDesc = { FILTER_LINEAR,
+                                             FILTER_LINEAR,
+                                             MIPMAP_MODE_LINEAR,
                                              ADDRESS_MODE_REPEAT,
                                              ADDRESS_MODE_REPEAT,
                                              ADDRESS_MODE_REPEAT };
@@ -404,8 +414,8 @@ namespace hpl {
                 m_particleShaderPremulAlpha.m_handle,
                 m_decalShader.m_handle
             };
-            Sampler* vbShadeSceneSamplers[] = { m_samplerNearEdgeClamp.m_handle, m_samplerPointWrap.m_handle };
-            const char* vbShadeSceneSamplersNames[] = { "nearEdgeClampSampler", "nearPointWrapSampler" };
+            Sampler* vbShadeSceneSamplers[] = { m_samplerMaterial.m_handle, m_samplerNearEdgeClamp.m_handle, m_samplerPointWrap.m_handle };
+            const char* vbShadeSceneSamplersNames[] = {"sceneSampler" , "nearEdgeClampSampler", "nearPointWrapSampler" };
             RootSignatureDesc rootSignatureDesc = {};
             rootSignatureDesc.ppShaders = shaders.data();
             rootSignatureDesc.mShaderCount = shaders.size();
@@ -430,6 +440,75 @@ namespace hpl {
             CommandSignatureDesc vbPassDesc = { m_sceneRootSignature.m_handle, indirectArgs.data(), indirectArgCount };
             addIndirectCommandSignature(forgeRenderer->Rend(), &vbPassDesc, &m_cmdSignatureVBPass);
         }
+
+        m_lightClusterPipeline.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
+            PipelineDesc pipelineDesc = {};
+            pipelineDesc.mType = PIPELINE_TYPE_COMPUTE;
+            pipelineDesc.pName = "light cluster pipeline";
+            ComputePipelineDesc& computePipelineDesc = pipelineDesc.mComputeDesc;
+            computePipelineDesc.pShaderProgram = m_lightClusterShader.m_handle;
+            computePipelineDesc.pRootSignature = m_lightClusterRootSignature.m_handle;
+            addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
+            return true;
+        });
+
+        m_clearClusterPipeline.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
+            PipelineDesc pipelineDesc = {};
+            pipelineDesc.mType = PIPELINE_TYPE_COMPUTE;
+            pipelineDesc.pName = "light cluster clear pipeline";
+            ComputePipelineDesc& computePipelineDesc = pipelineDesc.mComputeDesc;
+            computePipelineDesc.pShaderProgram = m_clearLightClusterShader.m_handle;
+            computePipelineDesc.pRootSignature = m_lightClusterRootSignature.m_handle;
+            addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
+            return true;
+        });
+         m_visbilityAlphaBufferPass.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
+            VertexLayout vertexLayout = {};
+            vertexLayout.mBindingCount = 4;
+            vertexLayout.mBindings[0] = { .mStride = sizeof(float3) };
+            vertexLayout.mBindings[1] = { .mStride = sizeof(float2) };
+            vertexLayout.mBindings[2] = { .mStride = sizeof(float3) };
+            vertexLayout.mBindings[3] = { .mStride = sizeof(float3) };
+            vertexLayout.mAttribCount = 4;
+            vertexLayout.mAttribs[0] = VertexAttrib{
+                .mSemantic = SEMANTIC_POSITION, .mFormat = TinyImageFormat_R32G32B32_SFLOAT, .mBinding = 0, .mLocation = 0, .mOffset = 0
+            };
+            vertexLayout.mAttribs[1] = VertexAttrib{
+                .mSemantic = SEMANTIC_TEXCOORD0, .mFormat = TinyImageFormat_R32G32_SFLOAT, .mBinding = 1, .mLocation = 1, .mOffset = 0
+            };
+            vertexLayout.mAttribs[2] = VertexAttrib{
+                .mSemantic = SEMANTIC_NORMAL, .mFormat = TinyImageFormat_R32G32B32_SFLOAT, .mBinding = 2, .mLocation = 2, .mOffset = 0
+            };
+            vertexLayout.mAttribs[3] = VertexAttrib{
+                .mSemantic = SEMANTIC_TANGENT, .mFormat = TinyImageFormat_R32G32B32_SFLOAT, .mBinding = 3, .mLocation = 3, .mOffset = 0
+            };
+            std::array colorFormats = { ColorBufferFormat};
+            DepthStateDesc depthStateDesc = { .mDepthTest = true, .mDepthWrite = true, .mDepthFunc = CMP_LEQUAL };
+
+            RasterizerStateDesc rasterizerStateDesc = {};
+            rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
+            rasterizerStateDesc.mFrontFace = FRONT_FACE_CCW;
+
+            PipelineDesc pipelineDesc = {};
+            pipelineDesc.pName = "visibility alpha pass";
+            pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+            auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
+            pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+            pipelineSettings.mRenderTargetCount = colorFormats.size();
+            pipelineSettings.pColorFormats = colorFormats.data();
+            pipelineSettings.pDepthState = &depthStateDesc;
+            pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
+            pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
+            pipelineSettings.mSampleQuality = 0;
+            pipelineSettings.pRootSignature = m_sceneRootSignature.m_handle;
+            pipelineSettings.pShaderProgram = m_visibilityBufferAlphaPassShader.m_handle;
+            pipelineSettings.pRasterizerState = &rasterizerStateDesc;
+            pipelineSettings.pVertexLayout = &vertexLayout;
+            pipelineSettings.mSupportIndirectCommandBuffer = true;
+            addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
+            return true;
+        });
+
         m_visiblityShadePass.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
             std::array colorFormats = { ColorBufferFormat , TinyImageFormat_R16G16B16A16_SFLOAT };
             RasterizerStateDesc rasterizerStateDesc = {};
@@ -487,52 +566,7 @@ namespace hpl {
         });
 
 
-        m_visbilityAlphaBufferPass.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
-            VertexLayout vertexLayout = {};
-            vertexLayout.mBindingCount = 4;
-            vertexLayout.mBindings[0] = { .mStride = sizeof(float3) };
-            vertexLayout.mBindings[1] = { .mStride = sizeof(float2) };
-            vertexLayout.mBindings[2] = { .mStride = sizeof(float3) };
-            vertexLayout.mBindings[3] = { .mStride = sizeof(float3) };
-            vertexLayout.mAttribCount = 4;
-            vertexLayout.mAttribs[0] = VertexAttrib{
-                .mSemantic = SEMANTIC_POSITION, .mFormat = TinyImageFormat_R32G32B32_SFLOAT, .mBinding = 0, .mLocation = 0, .mOffset = 0
-            };
-            vertexLayout.mAttribs[1] = VertexAttrib{
-                .mSemantic = SEMANTIC_TEXCOORD0, .mFormat = TinyImageFormat_R32G32_SFLOAT, .mBinding = 1, .mLocation = 1, .mOffset = 0
-            };
-            vertexLayout.mAttribs[2] = VertexAttrib{
-                .mSemantic = SEMANTIC_NORMAL, .mFormat = TinyImageFormat_R32G32B32_SFLOAT, .mBinding = 2, .mLocation = 2, .mOffset = 0
-            };
-            vertexLayout.mAttribs[3] = VertexAttrib{
-                .mSemantic = SEMANTIC_TANGENT, .mFormat = TinyImageFormat_R32G32B32_SFLOAT, .mBinding = 3, .mLocation = 3, .mOffset = 0
-            };
-            std::array colorFormats = { ColorBufferFormat};
-            DepthStateDesc depthStateDesc = { .mDepthTest = true, .mDepthWrite = true, .mDepthFunc = CMP_LEQUAL };
 
-            RasterizerStateDesc rasterizerStateDesc = {};
-            rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
-            rasterizerStateDesc.mFrontFace = FRONT_FACE_CCW;
-
-            PipelineDesc pipelineDesc = {};
-            pipelineDesc.pName = "visibility alpha pass";
-            pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
-            auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
-            pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
-            pipelineSettings.mRenderTargetCount = colorFormats.size();
-            pipelineSettings.pColorFormats = colorFormats.data();
-            pipelineSettings.pDepthState = &depthStateDesc;
-            pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
-            pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
-            pipelineSettings.mSampleQuality = 0;
-            pipelineSettings.pRootSignature = m_sceneRootSignature.m_handle;
-            pipelineSettings.pShaderProgram = m_visibilityBufferAlphaPassShader.m_handle;
-            pipelineSettings.pRasterizerState = &rasterizerStateDesc;
-            pipelineSettings.pVertexLayout = &vertexLayout;
-            pipelineSettings.mSupportIndirectCommandBuffer = true;
-            addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
-            return true;
-        });
         m_visibilityBufferPass.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
             VertexLayout vertexLayout = {};
             vertexLayout.mBindingCount = 1;
@@ -564,27 +598,6 @@ namespace hpl {
             pipelineSettings.pRasterizerState = &rasterizerStateDesc;
             pipelineSettings.pVertexLayout = &vertexLayout;
             pipelineSettings.mSupportIndirectCommandBuffer = true;
-            addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
-            return true;
-        });
-        m_lightClusterPipeline.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
-            PipelineDesc pipelineDesc = {};
-            pipelineDesc.mType = PIPELINE_TYPE_COMPUTE;
-            pipelineDesc.pName = "light cluster pipeline";
-            ComputePipelineDesc& computePipelineDesc = pipelineDesc.mComputeDesc;
-            computePipelineDesc.pShaderProgram = m_lightClusterShader.m_handle;
-            computePipelineDesc.pRootSignature = m_lightClusterRootSignature.m_handle;
-            addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
-            return true;
-        });
-
-        m_clearClusterPipeline.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
-            PipelineDesc pipelineDesc = {};
-            pipelineDesc.mType = PIPELINE_TYPE_COMPUTE;
-            pipelineDesc.pName = "light cluster clear pipeline";
-            ComputePipelineDesc& computePipelineDesc = pipelineDesc.mComputeDesc;
-            computePipelineDesc.pShaderProgram = m_clearLightClusterShader.m_handle;
-            computePipelineDesc.pRootSignature = m_lightClusterRootSignature.m_handle;
             addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
             return true;
         });
@@ -965,7 +978,7 @@ namespace hpl {
 
                 DescriptorData{ .pName = "dissolveTexture", .ppTextures = &m_dissolveImage->GetTexture().m_handle },
                 DescriptorData{ .pName = "sceneDiffuseMat", .ppBuffers = &m_diffuseSolidMaterialUniformBuffer.m_handle },
-                DescriptorData{ .pName = "sceneFilters", .mCount = samplers.size(), .ppSamplers = samplers.data() },
+                //DescriptorData{ .pName = "sceneFilters", .mCount = samplers.size(), .ppSamplers = samplers.data() },
                 DescriptorData{ .pName = "vtxOpaqueIndex", .ppBuffers = &opaqueSet.indexBuffer().m_handle },
                 DescriptorData{ .pName = "vtxOpaquePosition",
                                 .ppBuffers = &opaqueSet.getStreamBySemantic(ShaderSemantic::SEMANTIC_POSITION)->buffer().m_handle },
@@ -1380,6 +1393,7 @@ namespace hpl {
                     translucenctRenderables.push_back(renderable);
                     continue;
                 }
+
 
                 DrawPacket packet = renderable->ResolveDrawPacket(frame);
                 if (packet.m_type == DrawPacket::Unknown) {

@@ -113,12 +113,12 @@ PsOut PS_MAIN(PsIn In)
           worldTangent,
           worldBitangent,
           diffuseMat.heightTextureIndex,
-          Get(sceneFilters)[diffuseMat.samplerIndex],
+          Get(sceneSampler),
           (diffuseMat.materialConfig & MATERIAL_IS_HEIGHT_SINGLE_CHANNEL) > 0);
   }
   float4 diffuseColor = float4(0,0,0,0);
   float3 shadedColor = f3(0.0f);
-  SampleSceneTextureGradFloat4(diffuseMat.diffuseTextureIndex, Get(sceneFilters)[diffuseMat.samplerIndex], texCoord, texCoordDX, texCoordDY, diffuseColor);
+  SampleSceneTextureGradFloat4(diffuseMat.diffuseTextureIndex, Get(sceneSampler), texCoord, texCoordDX, texCoordDY, diffuseColor);
   Out.albedoColor = diffuseColor;
   RETURN(Out);
 

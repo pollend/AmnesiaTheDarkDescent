@@ -26,6 +26,8 @@ PsOut PS_MAIN(PsIn In, SV_PrimitiveID(uint) primitiveID)
     PsOut Out;
 
 
+
+
     #if !defined(INDIRECT_ROOT_CONSTANT)
         UniformObject obj = Get(sceneObjects)[In.drawID];
     #else 
@@ -35,8 +37,8 @@ PsOut PS_MAIN(PsIn In, SV_PrimitiveID(uint) primitiveID)
     DiffuseMaterial diffuseMat = Get(sceneDiffuseMat)[obj.materialIndex];  
 
     float diffuseAlpha = 1.0;
-
     float2 texCoord = In.uv;
+    
     if(isTextureIndexValid(diffuseMat.heightTextureIndex)) {
         texCoord += ParallaxAdvance(
             In.uv, 
@@ -48,13 +50,13 @@ PsOut PS_MAIN(PsIn In, SV_PrimitiveID(uint) primitiveID)
             In.tangent,
             In.bitangent,
             diffuseMat.heightTextureIndex,
-            Get(sceneFilters)[diffuseMat.samplerIndex],
+            Get(sceneSampler),
             (diffuseMat.materialConfig & MATERIAL_IS_HEIGHT_SINGLE_CHANNEL) > 0);
     }
 
 
     float4 value; 
-    if(SampleSceneTextureFloat4(diffuseMat.alphaTextureIndex,Get(sceneFilters)[diffuseMat.samplerIndex], texCoord, value)) {
+    if(SampleSceneTextureFloat4(diffuseMat.alphaTextureIndex,Get(sceneSampler), texCoord, value)) {
         if((diffuseMat.materialConfig & MATERIAL_IS_ALPHA_SINGLE_CHANNEL) > 0) {
             diffuseAlpha = value.r;
         } else {
@@ -67,7 +69,7 @@ PsOut PS_MAIN(PsIn In, SV_PrimitiveID(uint) primitiveID)
         float fDissolve = SampleTex2D(Get(dissolveTexture), Get(nearPointWrapSampler), dissolveCoord).x;
         
         float4 alphaValue;
-        if(SampleSceneTextureFloat4(diffuseMat.dissolveAlphaTextureIndex, Get(sceneFilters)[diffuseMat.samplerIndex], texCoord, alphaValue)) {
+        if(SampleSceneTextureFloat4(diffuseMat.dissolveAlphaTextureIndex, Get(sceneSampler), texCoord, alphaValue)) {
             //Get in 0.75 - 1 range
             fDissolve = fDissolve * 0.25 + 0.75;
             float fDissolveAlpha = alphaValue.r;

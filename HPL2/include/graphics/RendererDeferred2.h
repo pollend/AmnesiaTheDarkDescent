@@ -50,8 +50,6 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
-#include <unordered_map>
-#include <vector>
 
 namespace hpl {
 
@@ -127,7 +125,6 @@ namespace hpl {
             uint32_t mStartInstance;
         };
 
-
         struct ViewportData {
         public:
             ViewportData() = default;
@@ -202,6 +199,7 @@ namespace hpl {
         SharedSampler m_samplerNearEdgeClamp;
         SharedSampler m_samplerPointWrap;
         SharedSampler m_samplerPointClampToBorder;
+        SharedSampler m_samplerMaterial;
         std::array<SharedMaterial, cMaterial::MaxMaterialID> m_sharedMaterial;
         TextureDescriptorPool m_sceneTexture2DPool;
         ImageBindlessPool m_sceneTransientImage2DPool;
