@@ -113,7 +113,7 @@ namespace hpl::resource  {
             }
         }
     }
-    std::variant<DiffuseMaterial, std::monostate> createMaterial(TextureDescriptorPool& pool, cMaterial* material) {
+    std::variant<DiffuseMaterial, std::monostate> createMaterial(BindlessDescriptorPool& pool, cMaterial* material) {
         ASSERT(material);
         auto& descriptor = material->Descriptor();
         switch (descriptor.m_id) {

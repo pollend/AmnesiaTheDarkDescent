@@ -9,7 +9,7 @@
 
 namespace hpl {
     class Image;
-    class TextureDescriptorPool;
+    class BindlessDescriptorPool;
     class ImageBindlessPool {
     public:
         static uint32_t constexpr MinimumFrameCount = ForgeRenderer::SwapChainLength * 4;
@@ -22,14 +22,14 @@ namespace hpl {
             Image* m_image = nullptr;
         };
         ImageBindlessPool();
-        ImageBindlessPool(TextureDescriptorPool* pool, uint32_t reserveSize);
+        ImageBindlessPool(BindlessDescriptorPool* pool, uint32_t reserveSize);
         ~ImageBindlessPool();
         void reset(const ForgeRenderer::Frame& frame); // reset and prepare for the next frame
         uint32_t request(Image* image);
 
     private:
 
-        TextureDescriptorPool* m_texturePool = nullptr;
+        BindlessDescriptorPool* m_texturePool = nullptr;
         std::vector<ImageReserveEntry> m_pool;
         uint32_t m_allocSize = 0;
 

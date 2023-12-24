@@ -1,7 +1,7 @@
 #pragma once
 
 #include "graphics/GraphicsTypes.h"
-#include "graphics/TextureDescriptorPool.h"
+#include "graphics/BindlessDescriptorPool.h"
 #include "graphics/Material.h"
 
 #include "Common_3/Utilities/Math/MathTypes.h"
@@ -21,8 +21,8 @@ namespace hpl::resource {
     static constexpr uint32_t MaterailSamplerNonAntistropyCount = static_cast<uint32_t>(eTextureWrap_LastEnum) * static_cast<uint32_t>(eTextureFilter_LastEnum);
     uint32_t textureFilterNonAnistropyIdx(eTextureWrap wrap, eTextureFilter filter);
 
-    static constexpr uint32_t MaxScene2DTextureCount = 4096;
-    static constexpr uint32_t MaxSceneCubeTextureCount = 4096;
+    static constexpr uint32_t MaxScene2DTextureCount = 10000;
+    static constexpr uint32_t MaxSceneCubeTextureCount = 5000;
 
     static constexpr uint32_t MaterialIdBit =  0;
     static constexpr uint32_t MaterialIndexBit = 8;
@@ -153,5 +153,5 @@ namespace hpl::resource {
 
     using MaterialTypes = std::variant<DiffuseMaterial, std::monostate>;
     void visitTextures(MaterialTypes& material, std::function<void(eMaterialTexture, uint32_t slot)> handler);
-    MaterialTypes createMaterial(TextureDescriptorPool& pool, cMaterial* material);
+    MaterialTypes createMaterial(BindlessDescriptorPool& pool, cMaterial* material);
 }

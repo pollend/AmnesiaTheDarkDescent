@@ -3,14 +3,13 @@
 #include "graphics/Color.h"
 #include "graphics/ForgeHandles.h"
 #include "graphics/ForgeRenderer.h"
-#include "graphics/ForwardResources.h"
 #include "graphics/GraphicsAllocator.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/IndexPool.h"
 #include "graphics/Material.h"
 #include "graphics/Renderable.h"
 #include "graphics/Renderer.h"
-#include "graphics/TextureDescriptorPool.h"
+#include "graphics/BindlessDescriptorPool.h"
 #include "scene/Light.h"
 #include "scene/RenderableContainer.h"
 
@@ -20,7 +19,6 @@
 #include "FixPreprocessor.h"
 #include "tinyimageformat_base.h"
 #include <algorithm>
-#include <cmath>
 #include <optional>
 
 namespace hpl {
@@ -520,9 +518,9 @@ namespace hpl {
 
         if (frame.m_currentFrame != m_activeFrame) {
             m_objectIndex = 0;
-            m_sceneDescriptorPool.reset([&](TextureDescriptorPool::Action action, uint32_t slot, SharedTexture& texture) {
+            m_sceneDescriptorPool.reset([&](BindlessDescriptorPool::Action action, uint32_t slot, SharedTexture& texture) {
                 std::array<DescriptorData, 1> params = {
-                    DescriptorData {.pName = "sceneTextures", .mCount = 1, .mArrayOffset = slot, .ppTextures = (action == TextureDescriptorPool::Action::UpdateSlot ? &texture.m_handle: &m_emptyTexture.m_handle ) }
+                    DescriptorData {.pName = "sceneTextures", .mCount = 1, .mArrayOffset = slot, .ppTextures = (action == BindlessDescriptorPool::Action::UpdateSlot ? &texture.m_handle: &m_emptyTexture.m_handle ) }
                 };
                 updateDescriptorSet(
                     forgeRenderer->Rend(),

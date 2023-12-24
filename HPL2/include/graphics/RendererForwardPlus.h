@@ -6,7 +6,7 @@
 #include "graphics/ForwardResources.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/IndexPool.h"
-#include "graphics/TextureDescriptorPool.h"
+#include "graphics/BindlessDescriptorPool.h"
 #include "graphics/offsetAllocator.h"
 #include "scene/Viewport.h"
 #include "scene/World.h"
@@ -189,7 +189,7 @@ namespace hpl {
         std::array<SharedSampler, hpl::resource::MaterialSceneSamplersCount> m_batchSampler;
         std::array<SceneMaterial, cMaterial::MaxMaterialID> m_sceneMaterial;
         IndexPool m_opaqueMaterialPool;
-        TextureDescriptorPool m_sceneDescriptorPool;
+        BindlessDescriptorPool m_sceneDescriptorPool;
 
         SharedTexture m_emptyTexture;
         SharedShader m_diffuseShader;

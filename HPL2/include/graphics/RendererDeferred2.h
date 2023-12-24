@@ -24,7 +24,7 @@
 #include "graphics/ImageBindlessPool.h"
 #include "graphics/SceneResource.h"
 #include "graphics/ShadowCache.h"
-#include "graphics/TextureDescriptorPool.h"
+#include "graphics/BindlessDescriptorPool.h"
 #include "scene/Viewport.h"
 #include "scene/World.h"
 #include "windowing/NativeWindow.h"
@@ -199,8 +199,8 @@ namespace hpl {
         SharedSampler m_samplerPointClampToBorder;
         SharedSampler m_samplerMaterial;
         std::array<SharedMaterial, cMaterial::MaxMaterialID> m_sharedMaterial;
-        TextureDescriptorPool m_sceneTexture2DPool;
-        TextureDescriptorPool m_sceneTextureCubePool;
+        BindlessDescriptorPool m_sceneTexture2DPool;
+        BindlessDescriptorPool m_sceneTextureCubePool;
         ImageBindlessPool m_sceneTransientImage2DPool;
         CommandSignature* m_cmdSignatureVBPass = NULL;
 

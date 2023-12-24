@@ -4,7 +4,7 @@
 #include "graphics/GraphicsTypes.h"
 #include "graphics/ImageBindlessPool.h"
 #include "graphics/SceneResource.h"
-#include "graphics/TextureDescriptorPool.h"
+#include "graphics/ImageBindlessPool.h"
 
 #include "scene/Light.h"
 #include "scene/LightSpot.h"
@@ -213,8 +213,8 @@ namespace hpl {
     cRendererDeferred2::cRendererDeferred2(cGraphics* apGraphics, cResources* apResources, std::shared_ptr<DebugDraw> debug)
         : iRenderer("Deferred2", apGraphics, apResources) {
         auto* forgeRenderer = Interface<ForgeRenderer>::Get();
-        m_sceneTexture2DPool = TextureDescriptorPool(ForgeRenderer::SwapChainLength, resource::MaxScene2DTextureCount);
-        m_sceneTextureCubePool = TextureDescriptorPool(ForgeRenderer::SwapChainLength, resource::MaxSceneCubeTextureCount);
+        m_sceneTexture2DPool = BindlessDescriptorPool(ForgeRenderer::SwapChainLength, resource::MaxScene2DTextureCount);
+        m_sceneTextureCubePool = BindlessDescriptorPool(ForgeRenderer::SwapChainLength, resource::MaxSceneCubeTextureCount);
         m_sceneTransientImage2DPool = ImageBindlessPool(&m_sceneTexture2DPool, TransientImagePoolCount);
         m_supportIndirectRootConstant =  forgeRenderer->Rend()->pGpu->mSettings.mIndirectRootConstant;
 
@@ -1207,16 +1207,16 @@ namespace hpl {
         auto* graphicsAllocator = Interface<GraphicsAllocator>::Get();
         if (frame.m_currentFrame != m_activeFrame) {
             m_objectIndex = 0;
-            m_sceneTexture2DPool.reset([&](TextureDescriptorPool::Action action, uint32_t slot, SharedTexture& texture) {
+            m_sceneTexture2DPool.reset([&](BindlessDescriptorPool::Action action, uint32_t slot, SharedTexture& texture) {
                 std::array<DescriptorData, 1> params = { DescriptorData{
                     .pName = "sceneTextures",
                     .mCount = 1,
                     .mArrayOffset = slot,
-                    .ppTextures = (action == TextureDescriptorPool::Action::UpdateSlot ? &texture.m_handle : &m_emptyTexture2D.m_handle) } };
+                    .ppTextures = (action == BindlessDescriptorPool::Action::UpdateSlot ? &texture.m_handle : &m_emptyTexture2D.m_handle) } };
                 updateDescriptorSet(
                     forgeRenderer->Rend(), 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle, params.size(), params.data());
             });
-            m_sceneTextureCubePool.reset([&](TextureDescriptorPool::Action action, uint32_t slot, SharedTexture& texture) {
+            m_sceneTextureCubePool.reset([&](BindlessDescriptorPool::Action action, uint32_t slot, SharedTexture& texture) {
                // std::array<DescriptorData, 1> params = { DescriptorData{
                //     .pName = "sceneCubeTextures",
                //     .mCount = 1,

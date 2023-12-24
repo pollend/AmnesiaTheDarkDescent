@@ -1,7 +1,7 @@
 #include "graphics/ImageBindlessPool.h"
 #include "graphics/Image.h"
 #include "graphics/IndexPool.h"
-#include "graphics/TextureDescriptorPool.h"
+#include "graphics/BindlessDescriptorPool.h"
 
 #include <cstdint>
 
@@ -11,7 +11,7 @@ namespace hpl {
     ImageBindlessPool::ImageBindlessPool() {
 
     }
-    ImageBindlessPool::ImageBindlessPool(TextureDescriptorPool* pool, uint32_t minimumReserve):
+    ImageBindlessPool::ImageBindlessPool(BindlessDescriptorPool* pool, uint32_t minimumReserve):
         m_texturePool(pool),
         m_allocSize(minimumReserve) {
         m_pool.resize(m_allocSize * 1.5f);
