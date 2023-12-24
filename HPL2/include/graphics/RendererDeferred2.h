@@ -167,8 +167,6 @@ namespace hpl {
             bool abSendFrameBufferToPostEffects) override;
 
     private:
-
-
         void setIndirectDrawArg(const ForgeRenderer::Frame& frame, uint32_t drawArgIndex, uint32_t slot, DrawPacket& packet);
 
         enum MaterialSetType {
@@ -202,6 +200,7 @@ namespace hpl {
         SharedSampler m_samplerMaterial;
         std::array<SharedMaterial, cMaterial::MaxMaterialID> m_sharedMaterial;
         TextureDescriptorPool m_sceneTexture2DPool;
+        TextureDescriptorPool m_sceneTextureCubePool;
         ImageBindlessPool m_sceneTransientImage2DPool;
         CommandSignature* m_cmdSignatureVBPass = NULL;
 
@@ -229,7 +228,8 @@ namespace hpl {
         std::array<SharedSampler, resource::MaterialSceneSamplersCount> m_materialSampler;
         folly::F14ValueMap<iRenderable*, uint32_t> m_objectDescriptorLookup;
 
-        SharedTexture m_emptyTexture;
+        SharedTexture m_emptyTexture2D;
+        SharedTexture m_emptyTextureCube;
         Image* m_dissolveImage;
 
         uint32_t m_activeFrame = 0;
@@ -278,9 +278,6 @@ namespace hpl {
         SharedPipeline m_decalPipelineMulX2;
         SharedPipeline m_decalPipelineAlpha;
         SharedPipeline m_decalPipelinePremulAlpha;
-
-        Queue* m_computeQueue = nullptr;
-        GpuCmdRing m_computeRing = {};
 
         bool m_supportIndirectRootConstant = false;
     };

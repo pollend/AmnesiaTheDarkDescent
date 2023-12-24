@@ -21,7 +21,8 @@ namespace hpl::resource {
     static constexpr uint32_t MaterailSamplerNonAntistropyCount = static_cast<uint32_t>(eTextureWrap_LastEnum) * static_cast<uint32_t>(eTextureFilter_LastEnum);
     uint32_t textureFilterNonAnistropyIdx(eTextureWrap wrap, eTextureFilter filter);
 
-    static constexpr uint32_t MaxSceneTextureCount = 4096;
+    static constexpr uint32_t MaxScene2DTextureCount = 4096;
+    static constexpr uint32_t MaxSceneCubeTextureCount = 4096;
 
     static constexpr uint32_t MaterialIdBit =  0;
     static constexpr uint32_t MaterialIndexBit = 8;

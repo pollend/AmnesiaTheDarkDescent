@@ -45,6 +45,7 @@ RES(ByteBuffer, lightClusters,      UPDATE_FREQ_PER_FRAME, t16, binding = 19);
 
 RES(SamplerState, sceneSampler, UPDATE_FREQ_NONE, s2, binding = 20); 
 RES(Tex2D(float4), sceneTextures[SCENE_MAX_TEXTURE_COUNT],  UPDATE_FREQ_PER_FRAME, t17, binding = 21);
+RES(TexCube(float4), sceneCubeTextures[SCENE_MAX_TEXTURE_COUNT],  UPDATE_FREQ_PER_FRAME, t18, binding = 22 + SCENE_MAX_TEXTURE_CUBE_COUNT);
 
 #define SCENE_OBJECT_ID_BIT 19 // 13  bits for ObjectID 
 #define SCENE_PRIM_ID_BIT  0 // 19 bits for PrimitiveID

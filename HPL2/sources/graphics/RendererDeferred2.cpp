@@ -213,26 +213,10 @@ namespace hpl {
     cRendererDeferred2::cRendererDeferred2(cGraphics* apGraphics, cResources* apResources, std::shared_ptr<DebugDraw> debug)
         : iRenderer("Deferred2", apGraphics, apResources) {
         auto* forgeRenderer = Interface<ForgeRenderer>::Get();
-        m_sceneTexture2DPool = TextureDescriptorPool(ForgeRenderer::SwapChainLength, resource::MaxSceneTextureCount);
+        m_sceneTexture2DPool = TextureDescriptorPool(ForgeRenderer::SwapChainLength, resource::MaxScene2DTextureCount);
+        m_sceneTextureCubePool = TextureDescriptorPool(ForgeRenderer::SwapChainLength, resource::MaxSceneCubeTextureCount);
         m_sceneTransientImage2DPool = ImageBindlessPool(&m_sceneTexture2DPool, TransientImagePoolCount);
         m_supportIndirectRootConstant =  forgeRenderer->Rend()->pGpu->mSettings.mIndirectRootConstant;
-
-        {
-            QueueDesc computeQueueDesc = {};
-            computeQueueDesc.mType = QUEUE_TYPE_COMPUTE;
-            computeQueueDesc.mFlag = QUEUE_FLAG_INIT_MICROPROFILE;
-            addQueue(forgeRenderer->Rend(), &computeQueueDesc, &m_computeQueue);
-        }
-
-        //{
-        //    GpuCmdRingDesc cmdRingDesc = {};
-        //    cmdRingDesc.pQueue = m_computeQueue;
-        //    cmdRingDesc.mPoolCount = 2;
-        //    cmdRingDesc.mCmdPerPoolCount = 1;
-        //    cmdRingDesc.mAddSyncPrimitives = true;
-        //    addGpuCmdRing(forgeRenderer->Rend(), &cmdRingDesc, &m_computeRing);
-        //}
-
 
         m_samplerNearEdgeClamp.Load(forgeRenderer->Rend(), [&](Sampler** sampler) {
             SamplerDesc bilinearClampDesc = { FILTER_NEAREST,
@@ -275,7 +259,7 @@ namespace hpl {
             return true;
         });
         m_dissolveImage = mpResources->GetTextureManager()->Create2DImage("core_dissolve.tga", false);
-        m_emptyTexture.Load([&](Texture** texture) {
+        m_emptyTexture2D.Load([&](Texture** texture) {
             TextureDesc textureDesc = {};
             textureDesc.mArraySize = 1;
             textureDesc.mMipLevels = 1;
@@ -293,6 +277,25 @@ namespace hpl {
             addResource(&loadDesc, nullptr);
             return true;
         });
+        m_emptyTextureCube.Load([&](Texture** texture) {
+            TextureDesc textureDesc = {};
+            textureDesc.mArraySize = 6;
+            textureDesc.mMipLevels = 1;
+            textureDesc.mDepth = 1;
+            textureDesc.mFormat = TinyImageFormat_R8G8B8A8_UNORM;
+            textureDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE_CUBE;
+            textureDesc.mWidth = 16;
+            textureDesc.mHeight = 16;
+            textureDesc.mSampleCount = SAMPLE_COUNT_1;
+            textureDesc.mStartState = RESOURCE_STATE_COMMON;
+            textureDesc.pName = "empty texture";
+            TextureLoadDesc loadDesc = {};
+            loadDesc.ppTexture = texture;
+            loadDesc.pDesc = &textureDesc;
+            addResource(&loadDesc, nullptr);
+            return true;
+        });
+
         m_materialSampler = hpl::resource::createSceneSamplers(forgeRenderer->Rend());
         m_visibilityBufferPassShader.Load(forgeRenderer->Rend(), [&](Shader** shader) {
             ShaderLoadDesc loadDesc = {};
@@ -422,7 +425,7 @@ namespace hpl {
             rootSignatureDesc.mStaticSamplerCount = std::size(vbShadeSceneSamplersNames);
             rootSignatureDesc.ppStaticSamplers = vbShadeSceneSamplers;
             rootSignatureDesc.ppStaticSamplerNames = vbShadeSceneSamplersNames;
-            rootSignatureDesc.mMaxBindlessTextures = hpl::resource::MaxSceneTextureCount;
+            rootSignatureDesc.mMaxBindlessTextures = hpl::resource::MaxScene2DTextureCount;
             addRootSignature(forgeRenderer->Rend(), &rootSignatureDesc, signature);
             return true;
         });
@@ -1018,25 +1021,39 @@ namespace hpl {
         }
     }
 
-
     cRendererDeferred2::SharedMaterial& cRendererDeferred2::resolveSharedMaterial(cMaterial* material) {
         auto* forgeRenderer = Interface<ForgeRenderer>::Get();
         auto& sharedMat = m_sharedMaterial[material->Index()];
-        if (sharedMat.m_material != material ||
-            sharedMat.m_version != material->Generation()) {
+        if (sharedMat.m_material != material || sharedMat.m_version != material->Generation()) {
             sharedMat.m_material = material;
 
-            for (auto& slot : sharedMat.m_textureHandles) {
-                if (slot < resource::MaxSceneTextureCount) {
-                    m_sceneTexture2DPool.dispose(slot);
-                }
-            }
-
-            for (uint32_t i = 0; i < eMaterialTexture_LastEnum; i++) {
-                auto* image = material->GetImage(static_cast<eMaterialTexture>(i));
-                sharedMat.m_textureHandles[i] = std::numeric_limits<uint32_t>::max();
-                if (image) {
-                    sharedMat.m_textureHandles[i] = m_sceneTexture2DPool.request(image->GetTexture());
+            for (uint32_t slot = 0; slot < eMaterialTexture_LastEnum; slot++) {
+                eMaterialTexture textureType = static_cast<eMaterialTexture>(slot);
+                auto* image = material->GetImage(textureType);
+                auto& textureHandle = sharedMat.m_textureHandles[slot];
+                switch (textureType) {
+                    case eMaterialTexture_Diffuse:
+                    case eMaterialTexture_NMap:
+                    case eMaterialTexture_Specular:
+                    case eMaterialTexture_Alpha:
+                    case eMaterialTexture_Height:
+                    case eMaterialTexture_Illumination:
+                    case eMaterialTexture_DissolveAlpha:
+                    case eMaterialTexture_CubeMapAlpha:
+                        if (textureHandle < resource::MaxScene2DTextureCount) {
+                            m_sceneTexture2DPool.dispose(textureHandle);
+                        }
+                        textureHandle = image ? m_sceneTexture2DPool.request(image->GetTexture()) : std::numeric_limits<uint32_t>::max();
+                        break;
+                    case eMaterialTexture_CubeMap:
+                        if (textureHandle  < resource::MaxScene2DTextureCount) {
+                            m_sceneTextureCubePool.dispose(textureHandle);
+                        }
+                        textureHandle = image ? m_sceneTextureCubePool.request(image->GetTexture()) : std::numeric_limits<uint32_t>::max();
+                        break;
+                    default:
+                        ASSERT(false);
+                        break;
                 }
             }
             sharedMat.m_sets.clear();
@@ -1195,9 +1212,18 @@ namespace hpl {
                     .pName = "sceneTextures",
                     .mCount = 1,
                     .mArrayOffset = slot,
-                    .ppTextures = (action == TextureDescriptorPool::Action::UpdateSlot ? &texture.m_handle : &m_emptyTexture.m_handle) } };
+                    .ppTextures = (action == TextureDescriptorPool::Action::UpdateSlot ? &texture.m_handle : &m_emptyTexture2D.m_handle) } };
                 updateDescriptorSet(
                     forgeRenderer->Rend(), 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle, params.size(), params.data());
+            });
+            m_sceneTextureCubePool.reset([&](TextureDescriptorPool::Action action, uint32_t slot, SharedTexture& texture) {
+               // std::array<DescriptorData, 1> params = { DescriptorData{
+               //     .pName = "sceneCubeTextures",
+               //     .mCount = 1,
+               //     .mArrayOffset = slot,
+               //     .ppTextures = (action == TextureDescriptorPool::Action::UpdateSlot ? &texture.m_handle : &m_emptyTextureCube.m_handle) } };
+               // updateDescriptorSet(
+               //     forgeRenderer->Rend(), 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle, params.size(), params.data());
             });
             m_sceneTransientImage2DPool.reset(frame);
             m_objectDescriptorLookup.clear();
