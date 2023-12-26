@@ -1404,22 +1404,22 @@ namespace hpl {
         };
 
         std::vector<DecalArg> decalIndirectArgs;
-        std::array<RangeSubsetAlloc::RangeSubset, eMaterialBlendMode_LastEnum> particleIndirectArgs;
-        std::array<RangeSubsetAlloc::RangeSubset, eMaterialBlendMode_LastEnum> particleNoDepthIndirectArgs;
-        auto fogRenderData = detail::createFogRenderData(m_rendererList.GetFogAreas(), apFrustum);
+        std::vector<cRendererDeferred2::FogRendererData> fogRenderData = detail::createFogRenderData(m_rendererList.GetFogAreas(), apFrustum);
+        std::vector<iRenderable*> translucenctRenderables;
 
         RangeSubsetAlloc indirectAllocSession(m_indirectDrawIndex);
+
+
         {
-            std::vector<iRenderable*> translucenctRenderables;
+            std::vector<iRenderable*> diffuseCutRenderables;
             // diffuse - building indirect draw list
             for (auto& renderable : m_rendererList.GetRenderableItems(eRenderListType_Diffuse)) {
                 cMaterial* material = renderable->GetMaterial();
                 if (!material || renderable->GetCoverageAmount() < 1.0 || cMaterial::IsTranslucent(material->Descriptor().m_id) ||
                     material->GetImage(eMaterialTexture_Alpha)) {
-                    translucenctRenderables.push_back(renderable);
+                    diffuseCutRenderables.push_back(renderable);
                     continue;
                 }
-
 
                 DrawPacket packet = renderable->ResolveDrawPacket(frame);
                 if (packet.m_type == DrawPacket::Unknown) {
@@ -1433,7 +1433,7 @@ namespace hpl {
             }
             opaqueIndirectArgs = indirectAllocSession.End();
             // diffuse build indirect list for opaque
-            for (auto& renderable : translucenctRenderables) {
+            for (auto& renderable : diffuseCutRenderables) {
                 cMaterial* material = renderable->GetMaterial();
                 if (!material) {
                     continue;
@@ -1506,74 +1506,75 @@ namespace hpl {
             }
         }
 
-        {
-            std::array<std::vector<iRenderable*>, eMaterialBlendMode_LastEnum> particleBatches;
-            std::array<std::vector<iRenderable*>, eMaterialBlendMode_LastEnum> particleBatchesNoDepth;
-            for (auto& translucencyItem : m_rendererList.GetRenderableItems(eRenderListType_Translucent)) {
-                cMaterial* pMaterial = translucencyItem->GetMaterial();
-                if (!pMaterial) {
-                    continue;
-                }
-                if (!translucencyItem->UpdateGraphicsForViewport(apFrustum, frameTime)) {
-                    continue;
-                }
 
-                if (TypeInfo<iParticleEmitter>::IsSubtype(*translucencyItem)) {
-                    ASSERT(pMaterial->GetBlendMode() < eMaterialBlendMode_LastEnum);
-                    if (pMaterial->GetDepthTest()) {
-                        particleBatches[pMaterial->GetBlendMode()].push_back(translucencyItem);
-                    } else {
-                        particleBatchesNoDepth[pMaterial->GetBlendMode()].push_back(translucencyItem);
-                    }
-                }
-            }
+       // {
+       //     std::array<std::vector<iRenderable*>, eMaterialBlendMode_LastEnum> particleBatches;
+       //     std::array<std::vector<iRenderable*>, eMaterialBlendMode_LastEnum> particleBatchesNoDepth;
+       //     for (auto& translucencyItem : m_rendererList.GetRenderableItems(eRenderListType_Translucent)) {
+       //         cMaterial* pMaterial = translucencyItem->GetMaterial();
+       //         if (!pMaterial) {
+       //             continue;
+       //         }
+       //         if (!translucencyItem->UpdateGraphicsForViewport(apFrustum, frameTime)) {
+       //             continue;
+       //         }
 
-            uint32_t particleIndex = 0;
-            for (uint32_t i = 0; i < eMaterialBlendMode::eMaterialBlendMode_LastEnum; i++) {
-                const eMaterialBlendMode blendMode = static_cast<eMaterialBlendMode>(i);
-                struct {
-                     std::span<iRenderable*> items;
-                     RangeSubsetAlloc::RangeSubset* targets;
-                } items[] = { { std::span<iRenderable*>(particleBatches[i]), &particleIndirectArgs[i] },
-                              { std::span<iRenderable*>(particleBatchesNoDepth[i]), &particleNoDepthIndirectArgs[i] } };
-                for (auto& it : items) {
-                     for (auto& renderable : it.items) {
-                        cMaterial* material = renderable->GetMaterial();
-                        DrawPacket packet = renderable->ResolveDrawPacket(frame);
-                        if (packet.m_type == DrawPacket::Unknown) {
-                            continue;
-                        }
-                        auto& sharedMaterial = resolveSharedMaterial(material);
+       //         if (TypeInfo<iParticleEmitter>::IsSubtype(*translucencyItem)) {
+       //             ASSERT(pMaterial->GetBlendMode() < eMaterialBlendMode_LastEnum);
+       //             if (pMaterial->GetDepthTest()) {
+       //                 particleBatches[pMaterial->GetBlendMode()].push_back(translucencyItem);
+       //             } else {
+       //                 particleBatchesNoDepth[pMaterial->GetBlendMode()].push_back(translucencyItem);
+       //             }
+       //         }
+       //     }
 
-                        ASSERT(packet.m_type == DrawPacket::DrawPacketType::DrawGeometryset);
-                        BufferUpdateDesc updateDesc = { m_particleBuffer[frame.m_frameIndex].m_handle,
-                                                        particleIndex * sizeof(resource::SceneParticle) };
-                        beginUpdateResource(&updateDesc);
-                        cMatrixf* pMatrix = renderable->GetModelMatrix(apFrustum);
-                        auto* sceneParticle = static_cast<resource::SceneParticle*>(updateDesc.pMappedData);
-                        sceneParticle->diffuseTextureIndex = sharedMaterial.m_textureHandles[eMaterialTexture_Diffuse];
-                        sceneParticle->sceneAlpha = 1.0f;
-                        for (auto& fogArea : fogRenderData) {
-                            sceneParticle->sceneAlpha *= detail::GetFogAreaVisibilityForObject(fogArea, *apFrustum, renderable);
-                        }
-                        sceneParticle->lightLevel = 1.0f;
-                        if (material->IsAffectedByLightLevel()) {
-                            sceneParticle->lightLevel = detail::calcLightLevel(m_rendererList.GetLights(), renderable);
-                        }
-                        sceneParticle->sampleIndex =
-                            resource::textureFilterNonAnistropyIdx(material->GetTextureWrap(), material->GetTextureFilter());
-                        sceneParticle->modelMat = cMath::ToForgeMatrix4(pMatrix ? *pMatrix : cMatrixf::Identity);
-                        sceneParticle->uvMat = cMath::ToForgeMatrix4(material->GetUvMatrix().GetTranspose());
-                        endUpdateResource(&updateDesc);
-                        setIndirectDrawArg(frame, indirectAllocSession.Increment(), particleIndex, packet);
-                        particleIndex++;
+       //     uint32_t particleIndex = 0;
+       //     for (uint32_t i = 0; i < eMaterialBlendMode::eMaterialBlendMode_LastEnum; i++) {
+       //         const eMaterialBlendMode blendMode = static_cast<eMaterialBlendMode>(i);
+       //         struct {
+       //              std::span<iRenderable*> items;
+       //              RangeSubsetAlloc::RangeSubset* targets;
+       //         } items[] = { { std::span<iRenderable*>(particleBatches[i]), &particleIndirectArgs[i] },
+       //                       { std::span<iRenderable*>(particleBatchesNoDepth[i]), &particleNoDepthIndirectArgs[i] } };
+       //         for (auto& it : items) {
+       //              for (auto& renderable : it.items) {
+       //                 cMaterial* material = renderable->GetMaterial();
+       //                 DrawPacket packet = renderable->ResolveDrawPacket(frame);
+       //                 if (packet.m_type == DrawPacket::Unknown) {
+       //                     continue;
+       //                 }
+       //                 auto& sharedMaterial = resolveSharedMaterial(material);
 
-                     }
-                     (*it.targets) = indirectAllocSession.End();
-                }
+       //                 ASSERT(packet.m_type == DrawPacket::DrawPacketType::DrawGeometryset);
+       //                 BufferUpdateDesc updateDesc = { m_particleBuffer[frame.m_frameIndex].m_handle,
+       //                                                 particleIndex * sizeof(resource::SceneParticle) };
+       //                 beginUpdateResource(&updateDesc);
+       //                 cMatrixf* pMatrix = renderable->GetModelMatrix(apFrustum);
+       //                 auto* sceneParticle = static_cast<resource::SceneParticle*>(updateDesc.pMappedData);
+       //                 sceneParticle->diffuseTextureIndex = sharedMaterial.m_textureHandles[eMaterialTexture_Diffuse];
+       //                 sceneParticle->sceneAlpha = 1.0f;
+       //                 for (auto& fogArea : fogRenderData) {
+       //                     sceneParticle->sceneAlpha *= detail::GetFogAreaVisibilityForObject(fogArea, *apFrustum, renderable);
+       //                 }
+       //                 sceneParticle->lightLevel = 1.0f;
+       //                 if (material->IsAffectedByLightLevel()) {
+       //                     sceneParticle->lightLevel = detail::calcLightLevel(m_rendererList.GetLights(), renderable);
+       //                 }
+       //                 sceneParticle->sampleIndex =
+       //                     resource::textureFilterNonAnistropyIdx(material->GetTextureWrap(), material->GetTextureFilter());
+       //                 sceneParticle->modelMat = cMath::ToForgeMatrix4(pMatrix ? *pMatrix : cMatrixf::Identity);
+       //                 sceneParticle->uvMat = cMath::ToForgeMatrix4(material->GetUvMatrix().GetTranspose());
+       //                 endUpdateResource(&updateDesc);
+       //                 setIndirectDrawArg(frame, indirectAllocSession.Increment(), particleIndex, packet);
+       //                 particleIndex++;
 
-            }
-        }
+       //              }
+       //              (*it.targets) = indirectAllocSession.End();
+       //         }
+
+       //     }
+       // }
 
         uint32_t lightCount = 0;
         {
@@ -1912,89 +1913,281 @@ namespace hpl {
             cmdEndDebugMarker(cmd);
         }
 
-
-
         {
-            auto& particleSet = graphicsAllocator->resolveSet(GraphicsAllocator::AllocationSet::ParticleSet);
-            struct {
-                SharedPipeline* pipeline;
-                RangeSubsetAlloc::RangeSubset* indirectArgs;
-            } drawArgs[] = {
-                { &m_particleBlendAdd, &particleIndirectArgs[eMaterialBlendMode_Add] },
-                { &m_particleBlendMul, &particleIndirectArgs[eMaterialBlendMode_Mul] },
-                { &m_particleBlendMulX2, &particleIndirectArgs[eMaterialBlendMode_MulX2] },
-                { &m_particleBlendAlpha, &particleIndirectArgs[eMaterialBlendMode_Alpha] },
-                { &m_particleBlendPremulAlpha, &particleIndirectArgs[eMaterialBlendMode_PremulAlpha] },
-                { &m_particleBlendAddNoDepth, &particleNoDepthIndirectArgs[eMaterialBlendMode_Add] },
-                { &m_particleBlendMulNoDepth, &particleNoDepthIndirectArgs[eMaterialBlendMode_Mul] },
-                { &m_particleBlendMulX2NoDepth, &particleNoDepthIndirectArgs[eMaterialBlendMode_MulX2] },
-                { &m_particleBlendAlphaNoDepth, &particleNoDepthIndirectArgs[eMaterialBlendMode_Alpha] },
-                { &m_particleBlendPremulAlphaNoDepth, &particleNoDepthIndirectArgs[eMaterialBlendMode_PremulAlpha] }
+            std::array<SharedPipeline*, eMaterialBlendMode_LastEnum> particlePipelines{
+                &m_particleBlendAdd, // eMaterialBlendMode_None,
+                &m_particleBlendAdd, // eMaterialBlendMode_Add,
+                &m_particleBlendMul, // eMaterialBlendMode_Mul,
+                &m_particleBlendMulX2, // eMaterialBlendMode_MulX2,
+                &m_particleBlendAlpha, // eMaterialBlendMode_Alpha,
+                &m_particleBlendPremulAlpha, // eMaterialBlendMode_PremulAlpha,
             };
-            cmdBeginDebugMarker(cmd, 0, 1, 0, "Particle Buffer Pass");
-            for (auto& arg : drawArgs) {
-                if (arg.indirectArgs->size() == 0) {
+            std::array<SharedPipeline*, eMaterialBlendMode_LastEnum> particlePipelineNoDepth{
+                &m_particleBlendAddNoDepth, // eMaterialBlendMode_None,
+                &m_particleBlendAddNoDepth, // eMaterialBlendMode_Add,
+                &m_particleBlendMulNoDepth, // eMaterialBlendMode_Mul,
+                &m_particleBlendMulX2NoDepth, // eMaterialBlendMode_MulX2,
+                &m_particleBlendAlphaNoDepth, // eMaterialBlendMode_Alpha,
+                &m_particleBlendPremulAlphaNoDepth, // eMaterialBlendMode_PremulAlpha,
+            };
+            uint32_t particleIndex = 0;
+            auto& particleSet = graphicsAllocator->resolveSet(GraphicsAllocator::AllocationSet::ParticleSet);
+            LoadActionsDesc loadActions = {};
+            loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
+            loadActions.mClearColorValues[0] = { .r = 0.0f, .g = 0.0f, .b = 0.0f, .a = 0.0f };
+            loadActions.mClearDepth = { .depth = 1.0f, .stencil = 0 };
+            loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
+            std::array targets = { viewportDatum->m_outputBuffer[frame.m_frameIndex].m_handle };
+            cmdBindRenderTargets(
+                cmd,
+                targets.size(),
+                targets.data(),
+                viewportDatum->m_depthBuffer[frame.m_frameIndex].m_handle,
+                &loadActions,
+                NULL,
+                NULL,
+                -1,
+                -1);
+            cmdSetViewport(cmd, 0.0f, 0.0f, viewportDatum->m_size.x, viewportDatum->m_size.y, 0.0f, 1.0f);
+            cmdSetScissor(cmd, 0, 0, viewportDatum->m_size.x, viewportDatum->m_size.y);
+
+            for (auto& translucencyItem : m_rendererList.GetRenderableItems(eRenderListType_Translucent)) {
+                cMaterial* pMaterial = translucencyItem->GetMaterial();
+                if (pMaterial == nullptr) {
                     continue;
                 }
-                std::array semantics = { ShaderSemantic::SEMANTIC_POSITION,
-                                         ShaderSemantic::SEMANTIC_TEXCOORD0,
-                                         ShaderSemantic::SEMANTIC_COLOR };
+                if (!translucencyItem->UpdateGraphicsForViewport(apFrustum, frameTime)) {
+                    continue;
+                }
+                if (TypeInfo<iParticleEmitter>::IsSubtype(*translucencyItem)) {
+                    cMaterial* material = translucencyItem->GetMaterial();
+                    DrawPacket packet = translucencyItem->ResolveDrawPacket(frame);
+                    if (packet.m_type == DrawPacket::Unknown) {
+                        continue;
+                    }
+                    auto& sharedMaterial = resolveSharedMaterial(material);
+                    ASSERT(packet.m_type == DrawPacket::DrawPacketType::DrawGeometryset);
+                    BufferUpdateDesc updateDesc = { m_particleBuffer[frame.m_frameIndex].m_handle,
+                                                    particleIndex * sizeof(resource::SceneParticle) };
+                    beginUpdateResource(&updateDesc);
+                    cMatrixf* pMatrix = translucencyItem->GetModelMatrix(apFrustum);
+                    auto* sceneParticle = static_cast<resource::SceneParticle*>(updateDesc.pMappedData);
+                    sceneParticle->diffuseTextureIndex = sharedMaterial.m_textureHandles[eMaterialTexture_Diffuse];
+                    sceneParticle->sceneAlpha = 1.0f;
+                    for (auto& fogArea : fogRenderData) {
+                        sceneParticle->sceneAlpha *= detail::GetFogAreaVisibilityForObject(fogArea, *apFrustum, translucencyItem);
+                    }
+                    sceneParticle->lightLevel = 1.0f;
+                    if (material->IsAffectedByLightLevel()) {
+                        sceneParticle->lightLevel = detail::calcLightLevel(m_rendererList.GetLights(), translucencyItem);
+                    }
+                    sceneParticle->sampleIndex =
+                        resource::textureFilterNonAnistropyIdx(material->GetTextureWrap(), material->GetTextureFilter());
+                    sceneParticle->modelMat = cMath::ToForgeMatrix4(pMatrix ? *pMatrix : cMatrixf::Identity);
+                    sceneParticle->uvMat = cMath::ToForgeMatrix4(material->GetUvMatrix().GetTranspose());
+                    endUpdateResource(&updateDesc);
 
-                LoadActionsDesc loadActions = {};
-                loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
-                loadActions.mClearColorValues[0] = { .r = 0.0f, .g = 0.0f, .b = 0.0f, .a = 0.0f };
-                loadActions.mClearDepth = { .depth = 1.0f, .stencil = 0 };
-                loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
-                std::array targets = { viewportDatum->m_outputBuffer[frame.m_frameIndex].m_handle };
-                cmdBindRenderTargets(
-                    cmd,
-                    targets.size(),
-                    targets.data(),
-                    viewportDatum->m_depthBuffer[frame.m_frameIndex].m_handle,
-                    &loadActions,
-                    NULL,
-                    NULL,
-                    -1,
-                    -1);
-                cmdSetViewport(cmd, 0.0f, 0.0f, viewportDatum->m_size.x, viewportDatum->m_size.y, 0.0f, 1.0f);
-                cmdSetScissor(cmd, 0, 0, viewportDatum->m_size.x, viewportDatum->m_size.y);
-                particleSet.cmdBindGeometrySet(cmd, semantics);
-                cmdBindPipeline(cmd, arg.pipeline->m_handle);
-                cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorConstSet.m_handle);
-                cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
-                cmdExecuteIndirect(
-                    cmd,
-                    m_cmdSignatureVBPass,
-                    arg.indirectArgs->size(),
-                    m_indirectDrawArgsBuffer[frame.m_frameIndex].m_handle,
-                    arg.indirectArgs->m_start * IndirectArgumentSize,
-                    nullptr,
-                    0);
+                    std::array semantics = { ShaderSemantic::SEMANTIC_POSITION,
+                                             ShaderSemantic::SEMANTIC_TEXCOORD0,
+                                             ShaderSemantic::SEMANTIC_COLOR };
+                    particleSet.cmdBindGeometrySet(cmd, semantics);
+                    cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorConstSet.m_handle);
+                    cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
+                    if (material->GetDepthTest()) {
+                        cmdBindPipeline(cmd, particlePipelines[material->GetBlendMode()]->m_handle);
+                    } else {
+                        cmdBindPipeline(cmd, particlePipelineNoDepth[material->GetBlendMode()]->m_handle);
+                    }
+
+                    if (m_supportIndirectRootConstant) {
+                        const uint32_t pushConstantIndex =
+                            getDescriptorIndexFromName(m_sceneRootSignature.m_handle, "indirectRootConstant");
+                        cmdBindPushConstants(cmd, m_sceneRootSignature.m_handle, pushConstantIndex, &particleIndex);
+                    }
+                    cmdDrawIndexedInstanced(
+                        cmd,
+                        packet.m_unified.m_numIndices,
+                        packet.m_unified.m_subAllocation->indexOffset(),
+                        1,
+                        packet.m_unified.m_subAllocation->vertextOffset(),
+                        particleIndex);
+
+                    particleIndex++;
+                } else {
+                }
             }
         }
-        cmdEndDebugMarker(cmd);
+
+       // {
+       //     auto& particleSet = graphicsAllocator->resolveSet(GraphicsAllocator::AllocationSet::ParticleSet);
+       //     struct {
+       //         SharedPipeline* pipeline;
+       //         RangeSubsetAlloc::RangeSubset* indirectArgs;
+       //     } drawArgs[] = {
+       //         { &m_particleBlendAdd, &particleIndirectArgs[eMaterialBlendMode_Add] },
+       //         { &m_particleBlendMul, &particleIndirectArgs[eMaterialBlendMode_Mul] },
+       //         { &m_particleBlendMulX2, &particleIndirectArgs[eMaterialBlendMode_MulX2] },
+       //         { &m_particleBlendAlpha, &particleIndirectArgs[eMaterialBlendMode_Alpha] },
+       //         { &m_particleBlendPremulAlpha, &particleIndirectArgs[eMaterialBlendMode_PremulAlpha] },
+       //         { &m_particleBlendAddNoDepth, &particleNoDepthIndirectArgs[eMaterialBlendMode_Add] },
+       //         { &m_particleBlendMulNoDepth, &particleNoDepthIndirectArgs[eMaterialBlendMode_Mul] },
+       //         { &m_particleBlendMulX2NoDepth, &particleNoDepthIndirectArgs[eMaterialBlendMode_MulX2] },
+       //         { &m_particleBlendAlphaNoDepth, &particleNoDepthIndirectArgs[eMaterialBlendMode_Alpha] },
+       //         { &m_particleBlendPremulAlphaNoDepth, &particleNoDepthIndirectArgs[eMaterialBlendMode_PremulAlpha] }
+       //     };
+       //     cmdBeginDebugMarker(cmd, 0, 1, 0, "Particle Buffer Pass");
+       //     for (auto& arg : drawArgs) {
+       //         if (arg.indirectArgs->size() == 0) {
+       //             continue;
+       //         }
+       //         std::array semantics = { ShaderSemantic::SEMANTIC_POSITION,
+       //                                  ShaderSemantic::SEMANTIC_TEXCOORD0,
+       //                                  ShaderSemantic::SEMANTIC_COLOR };
+
+       //         LoadActionsDesc loadActions = {};
+       //         loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
+       //         loadActions.mClearColorValues[0] = { .r = 0.0f, .g = 0.0f, .b = 0.0f, .a = 0.0f };
+       //         loadActions.mClearDepth = { .depth = 1.0f, .stencil = 0 };
+       //         loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
+       //         std::array targets = { viewportDatum->m_outputBuffer[frame.m_frameIndex].m_handle };
+       //         cmdBindRenderTargets(
+       //             cmd,
+       //             targets.size(),
+       //             targets.data(),
+       //             viewportDatum->m_depthBuffer[frame.m_frameIndex].m_handle,
+       //             &loadActions,
+       //             NULL,
+       //             NULL,
+       //             -1,
+       //             -1);
+       //         cmdSetViewport(cmd, 0.0f, 0.0f, viewportDatum->m_size.x, viewportDatum->m_size.y, 0.0f, 1.0f);
+       //         cmdSetScissor(cmd, 0, 0, viewportDatum->m_size.x, viewportDatum->m_size.y);
+       //         particleSet.cmdBindGeometrySet(cmd, semantics);
+       //         cmdBindPipeline(cmd, arg.pipeline->m_handle);
+       //         cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorConstSet.m_handle);
+       //         cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
+       //         cmdExecuteIndirect(
+       //             cmd,
+       //             m_cmdSignatureVBPass,
+       //             arg.indirectArgs->size(),
+       //             m_indirectDrawArgsBuffer[frame.m_frameIndex].m_handle,
+       //             arg.indirectArgs->m_start * IndirectArgumentSize,
+       //             nullptr,
+       //             0);
+       //     }
+       // }
+       // cmdEndDebugMarker(cmd);
 
         // --------------------
         // Translucency
         // --------------------
+        // {
+        //     std::array<SharedPipeline*, eMaterialBlendMode_LastEnum> particlePipelines {
+        //         &m_particleBlendAdd,         // eMaterialBlendMode_None,
+        //         &m_particleBlendAdd,         // eMaterialBlendMode_Add,
+        //         &m_particleBlendMul,         // eMaterialBlendMode_Mul,
+        //         &m_particleBlendMulX2,       // eMaterialBlendMode_MulX2,
+        //         &m_particleBlendAlpha,       // eMaterialBlendMode_Alpha,
+        //         &m_particleBlendPremulAlpha, // eMaterialBlendMode_PremulAlpha,
+        //     };
+        //     std::array<SharedPipeline*, eMaterialBlendMode_LastEnum> particlePipelineNoDepth {
+        //         &m_particleBlendAddNoDepth,         // eMaterialBlendMode_None,
+        //         &m_particleBlendAddNoDepth,         // eMaterialBlendMode_Add,
+        //         &m_particleBlendMulNoDepth,         // eMaterialBlendMode_Mul,
+        //         &m_particleBlendMulX2NoDepth,       // eMaterialBlendMode_MulX2,
+        //         &m_particleBlendAlphaNoDepth,       // eMaterialBlendMode_Alpha,
+        //         &m_particleBlendPremulAlphaNoDepth, // eMaterialBlendMode_PremulAlpha,
+        //     };
 
-        //for (auto& translucencyItem : m_rendererList.GetRenderableItems(eRenderListType_Translucent)) {
-        //    cMaterial* pMaterial = translucencyItem->GetMaterial();
-        //    if (pMaterial == nullptr) {
-        //        continue;
-        //    }
-        //
-        //    if (translucencyItem->UpdateGraphicsForViewport(apFrustum, frameTime) == false) {
-        //        continue;
-        //    }
-        //    const bool isParticleEmitter = TypeInfo<iParticleEmitter>::IsSubtype(*translucencyItem);
-        //    if (isParticleEmitter) {
-        //        DrawPacket drawPacket;
-        //
-        //    }
-        //
-        //
-        //}
+
+        //     LoadActionsDesc loadActions = {};
+        //     loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
+        //     loadActions.mClearColorValues[0] = { .r = 0.0f, .g = 0.0f, .b = 0.0f, .a = 0.0f };
+        //     loadActions.mClearDepth = { .depth = 1.0f, .stencil = 0 };
+        //     loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
+        //     std::array targets = { viewportDatum->m_outputBuffer[frame.m_frameIndex].m_handle };
+        //     cmdBindRenderTargets(
+        //         cmd,
+        //         targets.size(),
+        //         targets.data(),
+        //         viewportDatum->m_depthBuffer[frame.m_frameIndex].m_handle,
+        //         &loadActions,
+        //         NULL,
+        //         NULL,
+        //         -1,
+        //         -1);
+        //     cmdSetViewport(cmd, 0.0f, 0.0f, viewportDatum->m_size.x, viewportDatum->m_size.y, 0.0f, 1.0f);
+        //     cmdSetScissor(cmd, 0, 0, viewportDatum->m_size.x, viewportDatum->m_size.y);
+        //     auto& particleSet = graphicsAllocator->resolveSet(GraphicsAllocator::AllocationSet::ParticleSet);
+
+        //     uint32_t particleIndex = 0;
+        //     for (auto& translucencyItem : m_rendererList.GetRenderableItems(eRenderListType_Translucent)) {
+        //         cMaterial* pMaterial = translucencyItem->GetMaterial();
+        //         if (pMaterial == nullptr) {
+        //             continue;
+        //         }
+
+        //        // if (translucencyItem->UpdateGraphicsForViewport(apFrustum, frameTime) == false) {
+        //        //     continue;
+        //        // }
+        //         if (TypeInfo<iParticleEmitter>::IsSubtype(*translucencyItem)) {
+        //             cMaterial* material = translucencyItem->GetMaterial();
+        //             DrawPacket packet = translucencyItem->ResolveDrawPacket(frame);
+        //             if (packet.m_type == DrawPacket::Unknown) {
+        //                 continue;
+        //             }
+        //             auto& sharedMaterial = resolveSharedMaterial(material);
+        //             ASSERT(packet.m_type == DrawPacket::DrawPacketType::DrawGeometryset);
+        //             BufferUpdateDesc updateDesc = { m_particleBuffer[frame.m_frameIndex].m_handle,
+        //                                             particleIndex * sizeof(resource::SceneParticle) };
+        //            // beginUpdateResource(&updateDesc);
+        //            // cMatrixf* pMatrix = translucencyItem->GetModelMatrix(apFrustum);
+        //            // auto* sceneParticle = static_cast<resource::SceneParticle*>(updateDesc.pMappedData);
+        //            // sceneParticle->diffuseTextureIndex = sharedMaterial.m_textureHandles[eMaterialTexture_Diffuse];
+        //            // sceneParticle->sceneAlpha = 1.0f;
+        //            // for (auto& fogArea : fogRenderData) {
+        //            //     sceneParticle->sceneAlpha *= detail::GetFogAreaVisibilityForObject(fogArea, *apFrustum, translucencyItem);
+        //            // }
+        //            // sceneParticle->lightLevel = 1.0f;
+        //            // if (material->IsAffectedByLightLevel()) {
+        //            //     sceneParticle->lightLevel = detail::calcLightLevel(m_rendererList.GetLights(), translucencyItem);
+        //            // }
+        //            // sceneParticle->sampleIndex = resource::textureFilterNonAnistropyIdx(material->GetTextureWrap(), material->GetTextureFilter());
+        //            // sceneParticle->modelMat = cMath::ToForgeMatrix4(pMatrix ? *pMatrix : cMatrixf::Identity);
+        //            // sceneParticle->uvMat = cMath::ToForgeMatrix4(material->GetUvMatrix().GetTranspose());
+        //            // endUpdateResource(&updateDesc);
+
+        //             std::array semantics = { ShaderSemantic::SEMANTIC_POSITION,
+        //                                      ShaderSemantic::SEMANTIC_TEXCOORD0,
+        //                                      ShaderSemantic::SEMANTIC_COLOR };
+
+        //         //    cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorConstSet.m_handle);
+        //         //    cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
+        //         //    particleSet.cmdBindGeometrySet(cmd, semantics);
+        //         //    if(material->GetDepthTest()) {
+        //         //        cmdBindPipeline(cmd,  particlePipelines[material->GetBlendMode()]->m_handle);
+        //         //    } else {
+        //         //        cmdBindPipeline(cmd,  particlePipelineNoDepth [material->GetBlendMode()]->m_handle);
+        //         //    }
+
+        //         //    if (m_supportIndirectRootConstant) {
+        //         //        const uint32_t pushConstantIndex =
+        //         //            getDescriptorIndexFromName(m_sceneRootSignature.m_handle, "indirectRootConstant");
+        //         //        cmdBindPushConstants(cmd, m_sceneRootSignature.m_handle, pushConstantIndex, &particleIndex);
+        //         //    }
+        //         //    cmdDrawIndexedInstanced(
+        //         //        cmd,
+        //         //        packet.m_unified.m_numIndices,
+        //         //        packet.m_unified.m_subAllocation->indexOffset(),
+        //         //        1,
+        //         //        packet.m_unified.m_subAllocation->vertextOffset(),
+        //         //        particleIndex);
+
+        //         //    particleIndex++;
+        //         } else {
+        //         }
+        //     }
+        // }
 
 
         {
