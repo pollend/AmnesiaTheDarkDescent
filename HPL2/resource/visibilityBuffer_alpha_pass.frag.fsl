@@ -25,51 +25,48 @@ PsOut PS_MAIN(PsIn In, SV_PrimitiveID(uint) primitiveID)
     INIT_MAIN;
     PsOut Out;
 
-
-
-
     #if !defined(INDIRECT_ROOT_CONSTANT)
         UniformObject obj = Get(sceneObjects)[In.drawID];
     #else 
         UniformObject obj = Get(sceneObjects)[Get(indirectDrawId)];
     #endif
 
-    DiffuseMaterial diffuseMat = Get(sceneDiffuseMat)[obj.materialIndex];  
+    DiffuseMaterial material = Get(sceneDiffuseMat)[obj.materialIndex];  
 
     float diffuseAlpha = 1.0;
     float2 texCoord = In.uv;
     
-    if(isTextureIndexValid(diffuseMat.heightTextureIndex)) {
+    if(isTextureIndexValid(material.heightTextureIndex)) {
         texCoord += ParallaxAdvance(
             In.uv, 
             0.0,
             32.0, 
-            diffuseMat.heightMapScale * PARALLAX_MULTIPLIER,
+            material.heightMapScale * PARALLAX_MULTIPLIER,
             In.pos,
             In.normal,
             In.tangent,
             In.bitangent,
-            diffuseMat.heightTextureIndex,
+            material.heightTextureIndex,
             Get(sceneSampler),
-            (diffuseMat.materialConfig & MATERIAL_IS_HEIGHT_SINGLE_CHANNEL) > 0);
+            (material.config & MATERIAL_IS_HEIGHT_SINGLE_CHANNEL) > 0);
     }
 
 
     float4 value; 
-    if(SampleSceneTextureFloat4(diffuseMat.alphaTextureIndex,Get(sceneSampler), texCoord, value)) {
-        if((diffuseMat.materialConfig & MATERIAL_IS_ALPHA_SINGLE_CHANNEL) > 0) {
+    if(SampleSceneTextureFloat4(material.alphaTextureIndex,Get(sceneSampler), texCoord, value)) {
+        if((material.config & MATERIAL_IS_ALPHA_SINGLE_CHANNEL) > 0) {
             diffuseAlpha = value.r;
         } else {
             diffuseAlpha = value.a;
         }
     }
 
-    if(obj.dissolveAmount < 1.0 || isTextureIndexValid(diffuseMat.alphaTextureIndex) || (diffuseMat.materialConfig & MATERIAL_USE_ALPHA_DISSOLVE_FILTER) > 0) {
+    if(obj.dissolveAmount < 1.0 || isTextureIndexValid(material.alphaTextureIndex) || (material.config & MATERIAL_USE_ALPHA_DISSOLVE_FILTER) > 0) {
         const float2 dissolveCoord = In.Position.xy * (1.0/128.0); //128 = size of dissolve texture.
         float fDissolve = SampleTex2D(Get(dissolveTexture), Get(nearPointWrapSampler), dissolveCoord).x;
         
         float4 alphaValue;
-        if(SampleSceneTextureFloat4(diffuseMat.dissolveAlphaTextureIndex, Get(sceneSampler), texCoord, alphaValue)) {
+        if(SampleSceneTextureFloat4(material.dissolveAlphaTextureIndex, Get(sceneSampler), texCoord, alphaValue)) {
             //Get in 0.75 - 1 range
             fDissolve = fDissolve * 0.25 + 0.75;
             float fDissolveAlpha = alphaValue.r;

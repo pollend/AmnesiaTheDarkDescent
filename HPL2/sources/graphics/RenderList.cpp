@@ -358,7 +358,6 @@ namespace hpl {
             apObject->SetModelMatrixPtr(apObject->GetModelMatrix(NULL));
         }
 
-        ////////////////////////////////////////
         // Calculate the View Z value
         //  For transparent and non decals!
         if (isValidMaterial && cMaterial::IsTranslucent(pMaterial->Descriptor().m_id) && pMaterial->Descriptor().m_id != MaterialID::Decal) {

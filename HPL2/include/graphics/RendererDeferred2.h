@@ -178,19 +178,17 @@ namespace hpl {
             IndexPoolHandle m_slot;
         };
 
-        struct SharedMaterial {
+        struct ResourceMaterial {
         public:
-            SharedMaterial();
+            ResourceMaterial();
             void* m_material = nullptr;
             uint32_t m_version = 0;
             folly::small_vector<MaterialSet, 2> m_sets;
             std::array<uint32_t, eMaterialTexture_LastEnum> m_textureHandles;
             MaterialSet& resolveSet(MaterialSetType set);
         };
-        SharedMaterial& resolveSharedMaterial(cMaterial* material);
-        uint32_t resolveObjectIndex(const ForgeRenderer::Frame& frame,
-            iRenderable* apObject,
-            std::optional<Matrix4> modelMatrix);
+        ResourceMaterial& resolveResourceMaterial(cMaterial* material);
+        uint32_t resolveObjectSlot(uint32_t uid, std::function<void(uint32_t)> initializeHandler);
 
         UniqueViewportData<ViewportData> m_boundViewportData;
 
@@ -198,7 +196,7 @@ namespace hpl {
         SharedSampler m_samplerPointWrap;
         SharedSampler m_samplerPointClampToBorder;
         SharedSampler m_samplerMaterial;
-        std::array<SharedMaterial, cMaterial::MaxMaterialID> m_sharedMaterial;
+        std::array<ResourceMaterial, cMaterial::MaxMaterialID> m_sharedMaterial;
         BindlessDescriptorPool m_sceneTexture2DPool;
         BindlessDescriptorPool m_sceneTextureCubePool;
         ImageBindlessPool m_sceneTransientImage2DPool;
@@ -226,7 +224,7 @@ namespace hpl {
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_indirectDrawArgsBuffer;
 
         std::array<SharedSampler, resource::MaterialSceneSamplersCount> m_materialSampler;
-        folly::F14ValueMap<iRenderable*, uint32_t> m_objectDescriptorLookup;
+        folly::F14ValueMap<uint32_t, uint32_t> m_objectDescriptorLookup;
 
         SharedTexture m_emptyTexture2D;
         SharedTexture m_emptyTextureCube;
@@ -256,6 +254,12 @@ namespace hpl {
         SharedShader m_particleShaderMulX2;
         SharedShader m_particleShaderAlpha;
         SharedShader m_particleShaderPremulAlpha;
+
+        SharedShader m_translucencyShaderAdd;
+        SharedShader m_translucencyShaderMul;
+        SharedShader m_translucencyShaderMulX2;
+        SharedShader m_translucencyShaderAlpha;
+        SharedShader m_translucencyShaderPremulAlpha;
 
         SharedPipeline m_particleBlendAdd;
         SharedPipeline m_particleBlendAddNoDepth;

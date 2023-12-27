@@ -31,21 +31,25 @@ RES(ByteBuffer,   vtxOpaqueUv,        UPDATE_FREQ_NONE, t8, binding = 9);
 RES(ByteBuffer,   vtxOpaqueColor,     UPDATE_FREQ_NONE, t9, binding = 10);
 
 RES(Buffer(DiffuseMaterial), sceneDiffuseMat, UPDATE_FREQ_NONE, t10, binding = 11);
+RES(Buffer(TranslucentMaterial), sceneTranslucentMat, UPDATE_FREQ_NONE, t10, binding = 12);
+RES(Buffer(WaterMaterial), sceneWaterMat, UPDATE_FREQ_NONE, t10, binding = 13);
 
-RES(SamplerState,  nearEdgeClampSampler, UPDATE_FREQ_NONE, s0, binding = 12);
-RES(SamplerState,  nearPointWrapSampler, UPDATE_FREQ_NONE, s1, binding = 13);
+RES(SamplerState,  nearEdgeClampSampler, UPDATE_FREQ_NONE, s0, binding = 14);
+RES(SamplerState,  nearPointWrapSampler, UPDATE_FREQ_NONE, s1, binding = 15);
+RES(SamplerState,  linearBorderSampler, UPDATE_FREQ_NONE, s1, binding = 16);
 
-RES(Tex2D(float4), visibilityTexture,   UPDATE_FREQ_PER_FRAME, t11, binding = 14);
-RES(Tex2D(float4), albedoTexture,      UPDATE_FREQ_PER_FRAME, t12, binding = 15);
+RES(Tex2D(float4), visibilityTexture,   UPDATE_FREQ_PER_FRAME, t11, binding = 17);
+RES(Tex2D(float4), albedoTexture,      UPDATE_FREQ_PER_FRAME, t12, binding = 18);
+RES(Tex2D(float4), refractionTexture,      UPDATE_FREQ_PER_FRAME, t12, binding = 19);
 
-RES(Tex2D(float4), dissolveTexture,    UPDATE_FREQ_NONE, t14, binding = 17);
+RES(Tex2D(float4), dissolveTexture,    UPDATE_FREQ_NONE, t14, binding = 20);
 
-RES(ByteBuffer, lightClustersCount, UPDATE_FREQ_PER_FRAME, t15, binding = 18);
-RES(ByteBuffer, lightClusters,      UPDATE_FREQ_PER_FRAME, t16, binding = 19);
+RES(ByteBuffer, lightClustersCount, UPDATE_FREQ_PER_FRAME, t15, binding = 21);
+RES(ByteBuffer, lightClusters,      UPDATE_FREQ_PER_FRAME, t16, binding = 22);
 
-RES(SamplerState, sceneSampler, UPDATE_FREQ_NONE, s2, binding = 20); 
-RES(Tex2D(float4), sceneTextures[SCENE_MAX_TEXTURE_COUNT],  UPDATE_FREQ_PER_FRAME, t17, binding = 21);
-RES(TexCube(float4), sceneCubeTextures[SCENE_MAX_TEXTURE_COUNT],  UPDATE_FREQ_PER_FRAME, t18, binding = 22 + SCENE_MAX_TEXTURE_CUBE_COUNT);
+RES(SamplerState, sceneSampler, UPDATE_FREQ_NONE, s2, binding = 23); 
+RES(Tex2D(float4), sceneTextures[SCENE_MAX_TEXTURE_COUNT],  UPDATE_FREQ_PER_FRAME, t17, binding = 24);
+RES(TexCube(float4), sceneCubeTextures[SCENE_MAX_TEXTURE_CUBE_COUNT],  UPDATE_FREQ_PER_FRAME, t18, binding = 25 + SCENE_MAX_TEXTURE_CUBE_COUNT);
 
 #define SCENE_OBJECT_ID_BIT 19 // 13  bits for ObjectID 
 #define SCENE_PRIM_ID_BIT  0 // 19 bits for PrimitiveID
@@ -66,6 +70,16 @@ bool SampleSceneTextureProjFloat4(uint textureIdx, SamplerState sh, float4 proje
         BeginNonUniformResourceIndex(textureIdx, SCENE_MAX_TEXTURE_COUNT);
             value = SampleTex2DProj(Get(sceneTextures)[textureIdx], sh, projectUV);
         EndNonUniformResourceIndex(); 
+        return true;
+    }
+    return false;
+}
+
+bool SampleSceneCubeTextureFloat4(uint textureIdx, SamplerState sh, float3 uv, inout float4 value) {
+    if(textureIdx < SCENE_MAX_TEXTURE_CUBE_COUNT) {
+        BeginNonUniformResourceIndex(textureIdx, SCENE_MAX_TEXTURE_CUBE_COUNT);
+            value = SampleTexCube(Get(sceneCubeTextures)[textureIdx], sh, uv);
+	    EndNonUniformResourceIndex();
         return true;
     }
     return false;

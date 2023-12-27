@@ -98,27 +98,27 @@ PsOut PS_MAIN(PsIn In)
   float2 texCoordDY = results.dy * mip;
 
   uint materialIndex = obj.materialIndex;
-  DiffuseMaterial diffuseMat = Get(sceneDiffuseMat)[materialIndex];  
+  DiffuseMaterial material = Get(sceneDiffuseMat)[materialIndex];  
 
   float2 texCoord = results.interp;
   PsOut Out;
-  if(isTextureIndexValid(diffuseMat.heightTextureIndex)) {
+  if(isTextureIndexValid(material.heightTextureIndex)) {
       texCoord += ParallaxAdvance(
           results.interp, 
           0.0,
           32.0, 
-          diffuseMat.heightMapScale * PARALLAX_MULTIPLIER,
+          material.heightMapScale * PARALLAX_MULTIPLIER,
           viewPosition.xyz,
           worldNormal,
           worldTangent,
           worldBitangent,
-          diffuseMat.heightTextureIndex,
+          material.heightTextureIndex,
           Get(sceneSampler),
-          (diffuseMat.materialConfig & MATERIAL_IS_HEIGHT_SINGLE_CHANNEL) > 0);
+          (material.config & MATERIAL_IS_HEIGHT_SINGLE_CHANNEL) > 0);
   }
   float4 diffuseColor = float4(0,0,0,0);
   float3 shadedColor = f3(0.0f);
-  SampleSceneTextureGradFloat4(diffuseMat.diffuseTextureIndex, Get(sceneSampler), texCoord, texCoordDX, texCoordDY, diffuseColor);
+  SampleSceneTextureGradFloat4(material.diffuseTextureIndex, Get(sceneSampler), texCoord, texCoordDX, texCoordDY, diffuseColor);
   Out.albedoColor = diffuseColor;
   RETURN(Out);
 

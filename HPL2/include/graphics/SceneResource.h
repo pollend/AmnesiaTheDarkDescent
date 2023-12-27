@@ -30,7 +30,6 @@ namespace hpl::resource {
     static constexpr uint32_t MaterialIDMask =         0xff; // 0000 0000 0000 0000 0000 0000 1111 1111
     static constexpr uint32_t MaterialIndexMask =  0xffff00; // 0000 0000 1111 1111 1111 1111 0000 0000
     static constexpr uint32_t InvalidSceneTexture = 0xffff;
-    uint32_t encodeMaterialID(hpl::MaterialID id, uint32_t handle);
 
     enum LightType {
        PointLight = 0,
@@ -83,7 +82,8 @@ namespace hpl::resource {
         float m_dissolveAmount;
         float m_lightLevel;
         float m_illuminationAmount;
-        uint32_t m_pad0;
+        float m_alphaAmount;
+
         mat4 m_modelMat;
         mat4 m_invModelMat;
         mat4 m_uvMat;
@@ -133,25 +133,18 @@ namespace hpl::resource {
         uint m_heightTextureIndex;
         uint m_illuminiationTextureIndex;
         uint m_dissolveAlphaTextureIndex;
-        uint m_cubeMapAlphaTextureIndex;
-        uint m_samplerIndex;
-
         uint m_materialConfig;
         float m_heightMapScale;
         float m_heigtMapBias;
         float m_frenselBias;
         float m_frenselPow;
-        uint m_pad0;
-        uint m_pad1;
     };
 
-    struct ParticleMaterial {
-        uint m_blendMode;
-        uint m_diffuseTextureIndex;
+    struct TranslucentMaterial {
+
     };
 
+    struct WaterMaterial {
 
-    using MaterialTypes = std::variant<DiffuseMaterial, std::monostate>;
-    void visitTextures(MaterialTypes& material, std::function<void(eMaterialTexture, uint32_t slot)> handler);
-    MaterialTypes createMaterial(BindlessDescriptorPool& pool, cMaterial* material);
+    };
 }
