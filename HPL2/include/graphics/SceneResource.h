@@ -24,12 +24,21 @@ namespace hpl::resource {
     static constexpr uint32_t MaxScene2DTextureCount = 10000;
     static constexpr uint32_t MaxSceneCubeTextureCount = 5000;
 
-    static constexpr uint32_t MaterialIdBit =  0;
-    static constexpr uint32_t MaterialIndexBit = 8;
+    static constexpr uint32_t MaxReflectionBuffers = 4;
+    static constexpr uint32_t MaxObjectUniforms = 4096;
 
-    static constexpr uint32_t MaterialIDMask =         0xff; // 0000 0000 0000 0000 0000 0000 1111 1111
-    static constexpr uint32_t MaterialIndexMask =  0xffff00; // 0000 0000 1111 1111 1111 1111 0000 0000
-    static constexpr uint32_t InvalidSceneTexture = 0xffff;
+    static constexpr uint32_t MaxSolidDiffuseMaterials = 2048;
+    static constexpr uint32_t MaxWaterMaterials = 16;
+    static constexpr uint32_t MaxTranslucenctMaterials = 512;
+
+    static constexpr uint32_t MaxLightUniforms = 1024;
+    static constexpr uint32_t MaxDecalUniforms = 1024;
+    static constexpr uint32_t MaxParticleUniform = 1024;
+    static constexpr uint32_t MaxIndirectDrawElements = 4096;
+
+    static constexpr uint32_t LightClusterLightCount = 128;
+
+    static constexpr uint32_t InvalidSceneTexture = std::numeric_limits<uint32_t>::max();
 
     enum LightType {
        PointLight = 0,
@@ -55,7 +64,7 @@ namespace hpl::resource {
         uint m_pad1;
     };
 
-    static constexpr uint32_t WorldFogEnabled = 2;
+    static constexpr uint32_t WorldFogEnabled = 0x2;
     struct WorldInfo {
         uint m_flags;
         float m_worldFogStart;
@@ -141,7 +150,24 @@ namespace hpl::resource {
     };
 
     struct TranslucentMaterial {
+        uint32_t m_diffuseTextureIndex;
+        uint32_t m_normalTextureIndex;
+        uint32_t m_alphaTextureIndex;
+        uint32_t m_specularTextureIndex;
+        uint32_t m_heightTextureIndex;
+        uint32_t m_illuminiationTextureIndex;
+        uint32_t m_dissolveAlphaTextureIndex;
+        uint32_t m_cubeMapTextureIndex;
+        uint32_t m_cubeMapAlphaTextureIndex;
 
+        uint32_t m_config;
+        float m_refractionScale;
+        float m_frenselBias;
+        float m_frenselPow;
+
+        float m_rimMulLight;
+        float m_rimMulPower;
+	    float m_pad0;
     };
 
     struct WaterMaterial {

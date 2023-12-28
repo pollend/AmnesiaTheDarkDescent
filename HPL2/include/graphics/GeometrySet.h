@@ -52,7 +52,7 @@ namespace hpl {
             inline SharedBuffer& indexBuffer() { return m_geometrySet->m_indexBuffer; }
             inline std::span<GeometryStream> vertexStreams() { return m_geometrySet->m_vertexStreams; }
             inline std::span<GeometryStream>::iterator getStreamBySemantic(ShaderSemantic semantic) {return m_geometrySet->getStreamBySemantic(semantic);}
-            inline uint32_t vertextOffset() { return m_vertexAllocation.offset; }
+            inline uint32_t vertexOffset() { return m_vertexAllocation.offset; }
             inline uint32_t indexOffset() { return m_indexAllocation.offset; }
 
         private:

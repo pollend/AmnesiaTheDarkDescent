@@ -90,12 +90,12 @@ namespace hpl {
             auto textureStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_TEXCOORD0);
             auto tangentStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_TANGENT);
 
-            BufferUpdateDesc indexUpdateDesc = { indexStream.m_handle, 0, GeometrySet::IndexBufferStride * 6 };
-            BufferUpdateDesc positionUpdateDesc = { positionStream->buffer().m_handle, 0, positionStream->stride() * BeamNumberVerts * 2 };
-            BufferUpdateDesc normalUpdateDesc = { normalStream->buffer().m_handle, 0, normalStream->stride() * BeamNumberVerts  * 2};
-            BufferUpdateDesc colorUpdateDesc = { colorStream->buffer().m_handle, 0, colorStream->stride() * BeamNumberVerts  * 2};
-            BufferUpdateDesc textureUpdateDesc = { textureStream->buffer().m_handle, 0, textureStream->stride() * BeamNumberVerts * 2};
-            BufferUpdateDesc tangentUpdateDesc = { tangentStream->buffer().m_handle, 0, tangentStream->stride() * BeamNumberVerts * 2};
+            BufferUpdateDesc indexUpdateDesc = { indexStream.m_handle, m_geometry->indexOffset() * GeometrySet::IndexBufferStride, GeometrySet::IndexBufferStride * 6 };
+            BufferUpdateDesc positionUpdateDesc = { positionStream->buffer().m_handle, m_geometry->vertexOffset() * positionStream->stride(), positionStream->stride() * BeamNumberVerts * 2 };
+            BufferUpdateDesc normalUpdateDesc = { normalStream->buffer().m_handle, m_geometry->vertexOffset() * normalStream->stride(), normalStream->stride() * BeamNumberVerts  * 2};
+            BufferUpdateDesc colorUpdateDesc = { colorStream->buffer().m_handle, m_geometry->vertexOffset() * colorStream->stride(), colorStream->stride() * BeamNumberVerts  * 2};
+            BufferUpdateDesc textureUpdateDesc = { textureStream->buffer().m_handle, m_geometry->vertexOffset() * textureStream->stride(), textureStream->stride() * BeamNumberVerts * 2};
+            BufferUpdateDesc tangentUpdateDesc = { tangentStream->buffer().m_handle, m_geometry->vertexOffset() * tangentStream->stride(), tangentStream->stride() * BeamNumberVerts * 2};
 
             beginUpdateResource(&indexUpdateDesc);
             beginUpdateResource(&positionUpdateDesc);
@@ -255,7 +255,7 @@ namespace hpl {
 		{
 			return;
 		}
-        m_activeCopy = (m_activeCopy + 1) % ForgeRenderer::SwapChainLength;
+        m_activeCopy = (m_activeCopy + 1) % 2;
 
 		////////////////////////////////
 		//Get Axis
@@ -290,9 +290,9 @@ namespace hpl {
             auto colorStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_COLOR);
             auto textureStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_TEXCOORD0);
 
-            BufferUpdateDesc positionUpdateDesc = { positionStream->buffer().m_handle, positionStream->stride() * 4 * m_activeCopy, positionStream->stride() * 4};
-            BufferUpdateDesc textureUpdateDesc = { textureStream->buffer().m_handle, textureStream->stride() * 4 * m_activeCopy, textureStream->stride() * 4};
-            BufferUpdateDesc colorUpdateDesc = { colorStream->buffer().m_handle, colorStream->stride() * 4 * m_activeCopy, colorStream->stride() * 4};
+            BufferUpdateDesc positionUpdateDesc = { positionStream->buffer().m_handle, positionStream->stride() * ((4 * m_activeCopy) + m_geometry->vertexOffset()), positionStream->stride() * 4};
+            BufferUpdateDesc textureUpdateDesc = { textureStream->buffer().m_handle, textureStream->stride() * ((4 * m_activeCopy) + m_geometry->vertexOffset()), textureStream->stride() * 4};
+            BufferUpdateDesc colorUpdateDesc = { colorStream->buffer().m_handle, colorStream->stride() * ((4 * m_activeCopy) + m_geometry->vertexOffset()), colorStream->stride() * 4};
             beginUpdateResource(&positionUpdateDesc);
             beginUpdateResource(&textureUpdateDesc);
             beginUpdateResource(&colorUpdateDesc);
@@ -303,28 +303,25 @@ namespace hpl {
             auto positionView = gpuPositionBuffer.CreateStructuredView<float3>();
             auto textureView = gpuTextureBuffer.CreateStructuredView<float2>();
             auto colorView = gpuTextureBuffer.CreateStructuredView<float4>();
-		    for(int i=0; i < BeamNumberVerts ;++i)
-		    {
+            for (int i = 0; i < BeamNumberVerts; ++i) {
                 positionView.Write(i, vCoords[i]);
                 textureView.Write(i, vTexCoords[i]);
-             }
+            }
             cColor endColor = mpEnd->mColor;
             cColor startColor = mColor;
-		    if(mbMultiplyAlphaWithColor) {
+            if (mbMultiplyAlphaWithColor) {
                 colorView.Write(
                     0, float4(startColor.r * startColor.a, startColor.g * startColor.a, startColor.b * startColor.a, startColor.a));
                 colorView.Write(
                     1, float4(startColor.r * startColor.a, startColor.g * startColor.a, startColor.b * startColor.a, startColor.a));
                 colorView.Write(2, float4(endColor.r * endColor.a, endColor.g * endColor.a, endColor.b * endColor.a, endColor.a));
                 colorView.Write(3, float4(endColor.r * endColor.a, endColor.g * endColor.a, endColor.b * endColor.a, endColor.a));
-		    } else {
-                colorView.Write(
-                    0, float4(startColor.r, startColor.g, startColor.b , startColor.a));
-                colorView.Write(
-                    1, float4(startColor.r, startColor.g, startColor.b, startColor.a));
+            } else {
+                colorView.Write(0, float4(startColor.r, startColor.g, startColor.b, startColor.a));
+                colorView.Write(1, float4(startColor.r, startColor.g, startColor.b, startColor.a));
                 colorView.Write(2, float4(endColor.r, endColor.g, endColor.b, endColor.a));
                 colorView.Write(3, float4(endColor.r, endColor.g, endColor.b, endColor.a));
-		    }
+            }
 
             endUpdateResource(&positionUpdateDesc);
             endUpdateResource(&textureUpdateDesc);

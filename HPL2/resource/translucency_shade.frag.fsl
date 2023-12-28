@@ -13,6 +13,7 @@ STRUCT(PsIn)
         DATA(float3,     normal,    NORMAL);
         DATA(float3,     tangent,   TANGENT);
         DATA(float3,     bitangent, BITANGENT);
+	    DATA(float4, color, COLOR);
 };
 
 STRUCT(PsOut)
@@ -33,13 +34,17 @@ PsOut PS_MAIN(PsIn In, SV_PrimitiveID(uint) primitiveID)
 
     TranslucentMaterial material = Get(sceneTranslucentMat)[obj.materialIndex];  
     float4 finalColor = float4(0.0, 0.0 ,0.0, 1.0);
- 
+
+#ifndef USE_ILLUMINATION  
+    SampleSceneTextureFloat4(material.diffuseTextureIndex, Get(sceneSampler), In.uv.xy, finalColor);
+    finalColor *= In.color;
+#endif
+
     float finalAlpha = obj.alphaAmount;
     if ((Get(worldInfo).worldFlags & WORLD_FLAG_IS_FOG_ENABLED) > 0) {
         float fFogAmount =  pow(clamp((-In.pos.z - Get(worldInfo).worldFogStart) / Get(worldInfo).worldFogLength, 0.0, 1.0), Get(worldInfo).fogFalloffExp);
         finalAlpha = (Get(worldInfo).oneMinusFogAlpha * fFogAmount + (1.0 - fFogAmount)) * finalAlpha;
     }
-
     #ifdef USE_BLEND_MODE_ADD 
         finalColor.xyz *= finalAlpha * obj.lightLevel;
     #endif
@@ -66,70 +71,64 @@ PsOut PS_MAIN(PsIn In, SV_PrimitiveID(uint) primitiveID)
     float3 mapNormal = float3(0,0,0);
     float3 screenNormal = float3(0,0,0);
 
-    if(((material.config & MATERIAL_USE_REFRACTION)  > 0) || isTextureCubeIndexValid(material.cubeMapTextureIndex)) {
-        float4 normalSample;
-        if(SampleSceneTextureFloat4(material.normalTextureIndex, Get(sceneSampler), In.uv, normalSample)) {
-            mapNormal = normalSample.xyz * 2.0 - 1.0;
-            screenNormal = normalize(mapNormal.x * In.tangent + mapNormal.y * In.bitangent + mapNormal.z * In.normal);
-        } else {
-            screenNormal = normalize(In.normal);
-        }
+    float4 normalSample;
+    if(SampleSceneTextureFloat4(material.normalTextureIndex, Get(sceneSampler), In.uv, normalSample)) {
+        mapNormal = normalSample.xyz * 2.0 - 1.0;
+        screenNormal = normalize(mapNormal.x * In.tangent + mapNormal.y * In.bitangent + mapNormal.z * In.normal);
+    } else {
+        screenNormal = normalize(In.normal);
     }
     
-    if((material.config & MATERIAL_USE_REFRACTION) > 0) {
-        float invDist = min(1.0/In.pos.z, 10.0);
-        // Sample refaraction map (using distorted coords)
-        float2 distortedScreenPos = float2(0,0);
-        
-        if (isTextureIndexValid(material.normalTextureIndex)) {
-            float2 refractOffset = ((material.config & MATERIAL_USE_REFRACTION_NORMALS) > 0) ? screenNormal.xy : mapNormal.xy;
-            distortedScreenPos += (In.Position.xy * (1.0 / viewInfo.rect.zw)) + (refractOffset * material.refractionScale * invDist);
-        } else {
-            distortedScreenPos += (In.Position.xy * (1.0 / viewInfo.rect.zw)) + (screenNormal.xy * material.refractionScale * invDist);
-        }
-        float4 refractionColor = SampleTex2D(Get(refractionTexture), Get(linearBorderSampler), distortedScreenPos);
-        #ifdef USE_BLEND_MODE_ADD 
-              finalColor.xyz = finalColor.xyz + refractionColor.xyz;
-        #endif
-
-        #ifdef USE_BLEND_MODE_MUL 
-              finalColor.xyz = finalColor.xyz * refractionColor.xyz;
-        #endif
-
-        #ifdef USE_BLEND_MODE_MULX2
-              finalColor.xyz = finalColor.xyz * refractionColor.xyz * 2.0;
-        #endif
-
-        #ifdef USE_BLEND_MODE_ALPHA
-              finalColor.xyz = finalColor.xyz * finalColor.a + refractionColor.xyz * (1.0 - finalColor.a);
-        #endif
-
-        #ifdef USE_BLEND_MODE_PREMUL_ALPHA
-              finalColor.xyz = finalColor.xyz + refractionColor.xyz * (1.0 - finalColor.a);
-        #endif
+#ifdef USE_REFRACTION
+    float invDist = min(1.0/In.pos.z, 10.0);
+    // Sample refaraction map (using distorted coords)
+    float2 distortedScreenPos = float2(0,0);
+    
+    if (isTextureIndexValid(material.normalTextureIndex)) {
+        float2 refractOffset = screenNormal.xy;
+        distortedScreenPos += (In.Position.xy * (1.0 / viewInfo.rect.zw)) + (refractOffset * material.refractionScale * invDist);
+    } else {
+        distortedScreenPos += (In.Position.xy * (1.0 / viewInfo.rect.zw)) + (screenNormal.xy * material.refractionScale * invDist);
     }
+    float4 refractionColor = SampleTex2D(Get(refractionTexture), Get(linearBorderSampler), distortedScreenPos);
+    #ifdef USE_BLEND_MODE_ADD 
+          finalColor.xyz = finalColor.xyz + refractionColor.xyz;
+    #endif
 
-    if(isTextureIndexValid(material.cubeMapTextureIndex)) {
-        float3 eyeVec = normalize(In.pos);
-        
+    #ifdef USE_BLEND_MODE_MUL 
+          finalColor.xyz = finalColor.xyz * refractionColor.xyz;
+    #endif
+
+    #ifdef USE_BLEND_MODE_MULX2
+          finalColor.xyz = finalColor.xyz * refractionColor.xyz * 2.0;
+    #endif
+
+    #ifdef USE_BLEND_MODE_ALPHA
+          finalColor.xyz = finalColor.xyz * finalColor.a + refractionColor.xyz * (1.0 - finalColor.a);
+    #endif
+
+    #ifdef USE_BLEND_MODE_PREMUL_ALPHA
+          finalColor.xyz = finalColor.xyz + refractionColor.xyz * (1.0 - finalColor.a);
+    #endif
+#endif 
+
+    float3 eyeVec = normalize(In.pos);
+    float3 vEnvUv = reflect(eyeVec, screenNormal);
+    vEnvUv = mul(transpose(float3x3(
+      viewInfo.viewMat[0].xyz,
+      viewInfo.viewMat[1].xyz,
+      viewInfo.viewMat[2].xyz)), vEnvUv);
+    float4 reflectionColor;
+    if(SampleSceneCubeTextureFloat4(material.cubeMapTextureIndex, Get(sceneSampler), vEnvUv, reflectionColor)) {
         float afEDotN = max(dot(-eyeVec, screenNormal),0.0);
         float fFresnel = Fresnel(afEDotN, material.frenselBias, material.frenselPos);
-        
-        float3 vEnvUv = reflect(eyeVec, screenNormal);
-        
-        vEnvUv = mul(transpose(float3x3(
-          viewInfo.viewMat[0].xyz,
-          viewInfo.viewMat[1].xyz,
-          viewInfo.viewMat[2].xyz)), vEnvUv);
 
-        float4 reflectionColor; //= SampleTexCube(Get(cubeMap),  Get(sceneSampler), vEnvUv);
-        SampleSceneCubeTextureFloat4(material.cubeMapTextureIndex, Get(sceneSampler), vEnvUv, reflectionColor);
         //Alpha for environment map
         float4 specular = float4(0);
-        if(SampleSceneTextureFloat4(material.specularTextureIndex, Get(sceneSampler), In.uv.xy, specular)) {
+        if(SampleSceneTextureFloat4(material.cubeMapAlphaTextureIndex, Get(sceneSampler), In.uv.xy, specular)) {
             reflectionColor *= specular.w;
         }
-        
+
         finalColor.xyz += reflectionColor.xyz * fFresnel * finalAlpha * obj.lightLevel;
         
         //Rim reflections

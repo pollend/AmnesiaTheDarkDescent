@@ -35,12 +35,13 @@ namespace hpl {
 	class cMaterial;
 	class iVertexBuffer;
 
-	//------------------------------------------
-
 	class cBillboard : public iRenderable
 	{
 		HPL_RTTI_IMPL_CLASS(iRenderable, cBillboard, "{e64fb526-0674-4970-b408-a68a7c2cf584}")
 	public:
+
+        static constexpr uint32_t NumberVerts = 4;
+
 		cBillboard(const tString asName,const cVector2f& avSize,eBillboardType aType, cResources *apResources,cGraphics *apGraphics);
 		~cBillboard();
 
@@ -63,7 +64,6 @@ namespace hpl {
 		void SetHaloAlpha(float afX);
 		float GetHaloAlpha(){ return mfHaloAlpha;}
 
-		/////////////////////////////////
 		//Halo stuff
 		void SetIsHalo(bool abX);
 		bool IsHalo(){ return mbIsHalo;}
@@ -73,7 +73,6 @@ namespace hpl {
 
 		bool UsesOcclusionQuery() override;
 
-		/////////////////////////////////
 		//Entity implementation
 		tString GetEntityType() override{ return "Billboard";}
 
@@ -81,7 +80,7 @@ namespace hpl {
 
 		//Renderable implementations
 		cMaterial *GetMaterial() override{ return mpMaterial;}
-		iVertexBuffer* GetVertexBuffer()override{return mpVtxBuffer;}
+		iVertexBuffer* GetVertexBuffer()override{return nullptr;}
         virtual DrawPacket ResolveDrawPacket(const ForgeRenderer::Frame& frame) override;
 
         cMatrixf* GetModelMatrix(cFrustum *apFrustum)override;
@@ -90,14 +89,13 @@ namespace hpl {
 
 		eRenderableType GetRenderType()override{ return eRenderableType_Billboard;}
 
-
         float getAreaOfScreenSpace(cFrustum* frustum );
 	private:
+        std::shared_ptr<GeometrySet::GeometrySetSubAllocation> m_geometry;
 		cMaterialManager* mpMaterialManager;
 		iLowLevelGraphics* mpLowLevelGraphics;
 
 		cMaterial *mpMaterial;
-		iVertexBuffer* mpVtxBuffer;
 
 		cMatrixf m_mtxHaloOcclusionMatrix;
 		cMatrixf m_mtxTempTransform;
@@ -117,6 +115,9 @@ namespace hpl {
 		float mfForwardOffset;
 		cColor mColor;
 		float mfHaloAlpha;
-	};
+        uint32_t m_frameIndex = 0;
+	    bool m_dirtyBuffer = true;
+        uint8_t m_activeCopy = false;
+    };
 
 };

@@ -33,7 +33,7 @@ namespace hpl {
                 ShaderSemantic semantic = hplToForgeShaderSemantic(elements[i]);
                 auto stream = packet->m_unified.m_subAllocation->getStreamBySemantic(semantic);
                 vbBuffer.push_back(stream->buffer().m_handle);
-                vbOffsets.push_back((packet->m_unified.m_vertexOffset + packet->m_unified.m_subAllocation->vertextOffset()) * stream->stride());
+                vbOffsets.push_back((packet->m_unified.m_vertexOffset + packet->m_unified.m_subAllocation->vertexOffset()) * stream->stride());
                 vbStride.push_back(stream->stride());
             }
             cmdBindVertexBuffer(cmd, elements.size(), vbBuffer.data(), vbStride.data(), vbOffsets.data());

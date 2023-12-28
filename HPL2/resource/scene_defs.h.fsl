@@ -3,13 +3,13 @@
 
 #define PARALLAX_MULTIPLIER 0.7
 
+#define POINT_LIGHT_MAX_COUNT  (256)
+#define SCENE_OPAQUE_COUNT (512)
+
 #define LIGHT_CLUSTER_WIDTH 16 
 #define LIGHT_CLUSTER_HEIGHT 9 
 #define LIGHT_CLUSTER_SLICE  24
 #define LIGHT_CLUSTER_COUNT 128
-
-#define POINT_LIGHT_MAX_COUNT  (256)
-#define SCENE_OPAQUE_COUNT (512)
 
 #define LIGHT_FROXEL_COUNT_POS(ix, iy, iz) ((LIGHT_CLUSTER_WIDTH * LIGHT_CLUSTER_HEIGHT * (iz)) + ((iy)*LIGHT_CLUSTER_WIDTH) + (ix))
 #define LIGHT_FROXEL_DATA_POS(ix, iy, iz, il) (LIGHT_FROXEL_COUNT_POS(ix, iy, iz) * LIGHT_CLUSTER_COUNT + (il))
@@ -17,14 +17,10 @@
 #define LIGHT_CLUSTER_COUNT_POS(ix, iy) ( ((iy)*LIGHT_CLUSTER_WIDTH)+(ix) )
 #define LIGHT_CLUSTER_DATA_POS(il, ix, iy) ( LIGHT_CLUSTER_COUNT_POS(ix, iy)*LIGHT_CLUSTER_COUNT + (il) )
 
-#define INVALID_TEXTURE_INDEX (0xffff)
-
 #define PRIMARY_VIEWPORT_INDEX 0
 
 #define SCENE_MAX_TEXTURE_COUNT 10000 
 #define SCENE_MAX_TEXTURE_CUBE_COUNT 5000 
-#define SCENE_MAX_FILTER_COUNT (SCENE_TEXTURE_FILTER_COUNT * SCENE_TEXTURE_WRAP_COUNT) 
-#define SCENE_FILTER_SWITCH_CASE case 0: case 1: case 2: case 3: case 4: case 5: case 6: case 7: case 8: 
 
 STRUCT(TranslucentMaterial) {
     DATA(uint, diffuseTextureIndex, None);
@@ -44,10 +40,7 @@ STRUCT(TranslucentMaterial) {
 
     DATA(float, rimMulLight, None);
     DATA(float, rimMulPower, None);
-	DATA(uint, _pad0, None);
-	DATA(uint, _pad1, None);
-	
-	DATA(float4, _pad2, None);
+	DATA(float, _pad2, None);
 };
 
 STRUCT(WaterMaterial) {
@@ -141,9 +134,6 @@ STRUCT(UniformObject)
 #define MATERIAL_IS_ALPHA_SINGLE_CHANNEL (0x1)
 #define MATERIAL_IS_HEIGHT_SINGLE_CHANNEL (0x2)
 #define MATERIAL_USE_ALPHA_DISSOLVE_FILTER (0x4)
-#define MATERIAL_USE_FOG (0x8)
-#define MATERIAL_USE_REFRACTION (0x16)
-#define MATERIAL_USE_REFRACTION_NORMALS (0x32)
 
 #define MATERIAL_TYPE_SOLID_DIFFUSE     1
 #define MATERIAL_TYPE_SOLID_TRANSLUCENT 2
@@ -169,17 +159,7 @@ STRUCT(Light) {
     DATA(float4x4, viewProjection, none);
 };
 
-#define LIGHT_ID_BIT    0
-#define LIGHT_INDEX_BIT 8
-
-#define LIGHT_ID_MASK         0xff // 0000 0000 0000 0000 0000 0000 1111 1111
-#define LIGHT_INDEX_MASK  0xffff00 // 0000 0000 1111 1111 1111 1111 0000 0000
-
-#define LIGHT_ID(id) ((LIGHT_ID_MASK & (id)) >> LIGHT_ID_BIT)
-#define LIGHT_INDEX(id) ((LIGHT_INDEX_MASK & (id)) >> LIGHT_INDEX_BIT) 
-#define LIGHT_ENCODE(id, index) (((id << LIGHT_ID_BIT) & LIGHT_ID_MASK) | ((index << LIGHT_INDEX_BIT) & LIGHT_INDEX_MASK)) 
-
-#define WORLD_FLAG_IS_FOG_ENABLED       1
+#define WORLD_FLAG_IS_FOG_ENABLED (0x1)
 
 STRUCT(WorldInfo) {
     DATA(uint,  worldFlags, None);
