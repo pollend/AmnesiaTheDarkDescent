@@ -18,17 +18,18 @@ namespace hpl {
         m_index = (m_index + 1) % m_ring.size();
         for(auto& ringEntry: m_ring[m_index]) {
             handler(ringEntry.m_action, ringEntry.slot, m_slot[ringEntry.slot]);
+            ringEntry.m_count++;
             switch (ringEntry.m_action) {
             case Action::UpdateSlot:
                 {
-                    if ((++ringEntry.m_count) < m_ring.size()) {
+                    if (ringEntry.m_count < m_ring.size()) {
                         m_ring[(m_index + 1) % m_ring.size()].push_back(ringEntry);
                     }
                     break;
                 }
             case Action::RemoveSlot:
                 {
-                    if ((++ringEntry.m_count) <= m_ring.size()) {
+                    if (ringEntry.m_count <= m_ring.size()) {
                         m_ring[(m_index + 1) % m_ring.size()].push_back(ringEntry);
                     } else {
                         m_pool.returnId(ringEntry.slot);

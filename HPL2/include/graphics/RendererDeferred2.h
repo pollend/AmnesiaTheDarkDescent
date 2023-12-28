@@ -185,6 +185,7 @@ namespace hpl {
         SharedSampler m_samplerNearEdgeClamp;
         SharedSampler m_samplerPointWrap;
         SharedSampler m_samplerPointClampToBorder;
+        SharedSampler m_samplerLinearClampToBorder;
         SharedSampler m_samplerMaterial;
         std::array<ResourceMaterial, cMaterial::MaxMaterialID> m_sharedMaterial;
         BindlessDescriptorPool m_sceneTexture2DPool;

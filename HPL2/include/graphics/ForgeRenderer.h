@@ -106,7 +106,6 @@ namespace hpl {
         struct Frame {
             uint32_t m_currentFrame = 0;
             uint32_t m_frameIndex = 0;
-            uint32_t m_swapChainIndex = 0;
             ForgeRenderer* m_renderer = nullptr;
             SwapChain* m_swapChain = nullptr;
             Cmd* m_cmd = nullptr;
@@ -123,7 +122,6 @@ namespace hpl {
             Frame frame;
             frame.m_currentFrame = FrameCount();
             frame.m_frameIndex = CurrentFrameIndex();
-            frame.m_swapChainIndex = SwapChainIndex();
             frame.m_renderer = this;
             frame.m_swapChain = m_swapChain.m_handle;
 

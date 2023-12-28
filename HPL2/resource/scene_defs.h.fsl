@@ -80,16 +80,16 @@ STRUCT(DiffuseMaterial) {
 
 STRUCT(Decal) {
     DATA(uint, diffuseTextureIndex, None);
-    DATA(uint,  samplerIndex, None);
     DATA(uint, __pad0, NONE);
     DATA(uint, __pad1, NONE);
+    DATA(uint, __pad2, NONE);
     DATA(float4x4, modelMat, None);
     DATA(float4x4, uvMat, None);
 };
 
 STRUCT(Particle) {
     DATA(uint, diffuseTextureIndex, None);
-    DATA(uint,  samplerIndex, None);
+    DATA(uint,  __pad0, None);
     DATA(float, sceneAlpha, NONE);
     DATA(float, lightLevel, NONE);
     DATA(float4x4, modelMat, None);

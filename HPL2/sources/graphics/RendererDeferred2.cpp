@@ -240,6 +240,16 @@ namespace hpl {
             addSampler(forgeRenderer->Rend(), &pointSamplerDesc, sampler);
             return true;
         });
+        m_samplerLinearClampToBorder.Load(forgeRenderer->Rend(), [&](Sampler** sampler) {
+            SamplerDesc pointSamplerDesc = { FILTER_LINEAR,
+                                             FILTER_LINEAR,
+                                             MIPMAP_MODE_LINEAR,
+                                             ADDRESS_MODE_CLAMP_TO_BORDER,
+                                             ADDRESS_MODE_CLAMP_TO_BORDER,
+                                             ADDRESS_MODE_CLAMP_TO_BORDER };
+            addSampler(forgeRenderer->Rend(), &pointSamplerDesc, sampler);
+            return true;
+        });
         m_samplerPointWrap.Load(forgeRenderer->Rend(), [&](Sampler** sampler) {
             SamplerDesc pointSamplerDesc = { FILTER_NEAREST,
                                              FILTER_NEAREST,
@@ -445,8 +455,8 @@ namespace hpl {
                                    m_translucencyRefractionShaderAlpha.m_handle,
                                    m_translucencyRefractionShaderPremulAlpha.m_handle,
                                    m_translucencyIlluminationShaderPremulAlpha.m_handle };
-            Sampler* vbShadeSceneSamplers[] = { m_samplerMaterial.m_handle, m_samplerNearEdgeClamp.m_handle, m_samplerPointWrap.m_handle };
-            const char* vbShadeSceneSamplersNames[] = {"sceneSampler" , "nearEdgeClampSampler", "nearPointWrapSampler" };
+            Sampler* vbShadeSceneSamplers[] = { m_samplerMaterial.m_handle, m_samplerNearEdgeClamp.m_handle, m_samplerPointWrap.m_handle, m_samplerLinearClampToBorder.m_handle};
+            const char* vbShadeSceneSamplersNames[] = {"sceneSampler" , "nearEdgeClampSampler", "nearPointWrapSampler", "linearBorderSampler" };
             RootSignatureDesc rootSignatureDesc = {};
             rootSignatureDesc.ppShaders = shaders.data();
             rootSignatureDesc.mShaderCount = shaders.size();
@@ -1756,8 +1766,6 @@ namespace hpl {
                     if (material->IsAffectedByLightLevel()) {
                         sceneParticle->lightLevel = detail::calcLightLevel(m_rendererList.GetLights(), renderable);
                     }
-                    sceneParticle->sampleIndex =
-                        resource::textureFilterNonAnistropyIdx(material->GetTextureWrap(), material->GetTextureFilter());
                     sceneParticle->modelMat = modelMat;
                     sceneParticle->uvMat = cMath::ToForgeMatrix4(material->GetUvMatrix().GetTranspose());
                     endUpdateResource(&updateDesc);
@@ -1937,7 +1945,6 @@ namespace hpl {
                         beginUpdateResource(&updateDesc);
                         auto* sceneDecal = static_cast<resource::SceneDecal*>(updateDesc.pMappedData);
                         sceneDecal->diffuseTextureIndex = sharedMaterial.m_textureHandles[eMaterialTexture_Diffuse];
-                        sceneDecal->sampleIndex = resource::textureFilterNonAnistropyIdx(material->GetTextureWrap(), material->GetTextureFilter());
                         sceneDecal->modelMat = (*it)->GetModelMatrixPtr() ? cMath::ToForgeMatrix4(*(*it)->GetModelMatrixPtr()) : Matrix4::identity();
                         sceneDecal->uvMat = cMath::ToForgeMatrix4(material->GetUvMatrix().GetTranspose());
                         endUpdateResource(&updateDesc);
@@ -2020,25 +2027,20 @@ namespace hpl {
         // -----------------
         {
             cmdBindRenderTargets(cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
-
             cmdBindPipeline(cmd, m_clearClusterPipeline.m_handle);
             cmdBindDescriptorSet(cmd, 0, m_lightDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
             cmdDispatch(cmd, 1, 1, LightClusterSlices);
             {
-                std::array barriers = { BufferBarrier{ m_lightClusterCountBuffer[frame.m_frameIndex].m_handle,
+                std::array barriers = {
+                    BufferBarrier{ m_lightClusterCountBuffer[frame.m_frameIndex].m_handle,
                                                        RESOURCE_STATE_UNORDERED_ACCESS,
-                                                       RESOURCE_STATE_UNORDERED_ACCESS } };
+                                                       RESOURCE_STATE_UNORDERED_ACCESS }
+                };
                 cmdResourceBarrier(cmd, barriers.size(), barriers.data(), 0, nullptr, 0, nullptr);
             }
             cmdBindPipeline(cmd, m_lightClusterPipeline.m_handle);
             cmdBindDescriptorSet(cmd, 0, m_lightDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
             cmdDispatch(cmd, lightCount, 1, LightClusterSlices);
-            {
-                std::array barriers = { BufferBarrier{ m_lightClustersBuffer[frame.m_frameIndex].m_handle,
-                                                       RESOURCE_STATE_UNORDERED_ACCESS,
-                                                       RESOURCE_STATE_UNORDERED_ACCESS } };
-                cmdResourceBarrier(cmd, barriers.size(), barriers.data(), 0, nullptr, 0, nullptr);
-            }
         }
 
         // ----------------
@@ -2138,14 +2140,6 @@ namespace hpl {
         }
         {
             cmdBindRenderTargets(cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
-            std::array barriers = {
-                BufferBarrier{ m_lightClusterCountBuffer[frame.m_frameIndex].m_handle,
-                                                   RESOURCE_STATE_UNORDERED_ACCESS,
-                                                   RESOURCE_STATE_SHADER_RESOURCE },
-                BufferBarrier{ m_lightClustersBuffer[frame.m_frameIndex].m_handle,
-                                                   RESOURCE_STATE_UNORDERED_ACCESS,
-                                                   RESOURCE_STATE_SHADER_RESOURCE }
-            };
             std::array rtBarriers = {
                 RenderTargetBarrier{ viewportDatum->m_visiblityBuffer[frame.m_frameIndex].m_handle,
                                      RESOURCE_STATE_RENDER_TARGET,
@@ -2157,7 +2151,7 @@ namespace hpl {
                                      RESOURCE_STATE_SHADER_RESOURCE,
                                      RESOURCE_STATE_RENDER_TARGET },
             };
-            cmdResourceBarrier(cmd, barriers.size(), barriers.data(), 0, nullptr, rtBarriers.size(), rtBarriers.data());
+            cmdResourceBarrier(cmd, 0, nullptr, 0, nullptr, rtBarriers.size(), rtBarriers.data());
         }
         {
             cmdBeginDebugMarker(cmd, 0, 1, 0, "Visibility Emit Buffer Pass");
@@ -2236,7 +2230,15 @@ namespace hpl {
                                      RESOURCE_STATE_RENDER_TARGET,
                                      RESOURCE_STATE_SHADER_RESOURCE },
             };
-            cmdResourceBarrier(cmd, 0, nullptr, 0, nullptr, rtBarriers.size(), rtBarriers.data());
+            std::array barriers = {
+                BufferBarrier{ m_lightClusterCountBuffer[frame.m_frameIndex].m_handle,
+                                                   RESOURCE_STATE_UNORDERED_ACCESS,
+                                                   RESOURCE_STATE_SHADER_RESOURCE },
+                BufferBarrier{ m_lightClustersBuffer[frame.m_frameIndex].m_handle,
+                                                   RESOURCE_STATE_UNORDERED_ACCESS,
+                                                   RESOURCE_STATE_SHADER_RESOURCE }
+            };
+            cmdResourceBarrier(cmd, barriers.size(), barriers.data(), 0, nullptr, rtBarriers.size(), rtBarriers.data());
         }
         {
             cmdBeginDebugMarker(cmd, 0, 1, 0, "Visibility Output Buffer Pass");
