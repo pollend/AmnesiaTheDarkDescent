@@ -208,8 +208,8 @@ namespace hpl {
 
 
     DrawPacket cBillboard::ResolveDrawPacket(const ForgeRenderer::Frame& frame)  {
-	    if((frame.m_frameIndex - m_frameIndex) >= ForgeRenderer::SwapChainLength - 1 && m_dirtyBuffer) {
-	        m_frameIndex = frame.m_frameIndex;
+	    if((frame.m_currentFrame - m_frameIndex) >= ForgeRenderer::SwapChainLength - 1 && m_dirtyBuffer) {
+	        m_frameIndex = frame.m_currentFrame;
 	        m_activeCopy = (m_activeCopy + 1) % 2;
 	        m_dirtyBuffer = false;
 

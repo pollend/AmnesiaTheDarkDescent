@@ -16,7 +16,7 @@
 #endif
 
 namespace hpl {
- 
+
 
     void ForgeRenderer::IncrementFrame() {
         // Stall if CPU is running "Swap Chain Buffer Count" frames ahead of GPU
@@ -24,8 +24,9 @@ namespace hpl {
         m_currentFrameCount++;
         auto frame = GetFrame();
 
-        FenceStatus fenceStatus;
         auto& completeFence = frame.m_renderCompleteFence;
+
+        FenceStatus fenceStatus;
         getFenceStatus(m_renderer, completeFence, &fenceStatus);
         if (fenceStatus == FENCE_STATUS_INCOMPLETE) {
             waitForFences(m_renderer, 1, &completeFence);
@@ -46,8 +47,9 @@ namespace hpl {
 
     void ForgeRenderer::SubmitFrame() {
         auto frame = GetFrame();
+
         auto& waitSemaphores = m_waitSemaphores[frame.m_frameIndex];
-        auto& swapChainTarget = frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex];
+        auto& swapChainTarget = frame.m_swapChain->ppRenderTargets[m_swapChainIndex];
         {
             cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
             std::array rtBarriers = {
@@ -80,14 +82,13 @@ namespace hpl {
             };
             cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
         }
-        endCmd(m_cmds[frame.m_frameIndex]);
+        endCmd(frame.m_cmd);
 
 		FlushResourceUpdateDesc flushUpdateDesc = {};
 		flushUpdateDesc.mNodeIndex = 0;
 		flushResourceUpdates(&flushUpdateDesc);
         waitSemaphores.push_back(flushUpdateDesc.pOutSubmittedSemaphore);
         waitSemaphores.push_back(m_imageAcquiredSemaphore);
-
 
         QueueSubmitDesc submitDesc = {};
         submitDesc.mCmdCount = 1;
