@@ -3,13 +3,13 @@
 
 #define PARALLAX_MULTIPLIER 0.7
 
+#define POINT_LIGHT_MAX_COUNT  (256)
+#define SCENE_OPAQUE_COUNT (512)
+
 #define LIGHT_CLUSTER_WIDTH 16 
 #define LIGHT_CLUSTER_HEIGHT 9 
 #define LIGHT_CLUSTER_SLICE  24
 #define LIGHT_CLUSTER_COUNT 128
-
-#define POINT_LIGHT_MAX_COUNT  (256)
-#define SCENE_OPAQUE_COUNT (512)
 
 #define LIGHT_FROXEL_COUNT_POS(ix, iy, iz) ((LIGHT_CLUSTER_WIDTH * LIGHT_CLUSTER_HEIGHT * (iz)) + ((iy)*LIGHT_CLUSTER_WIDTH) + (ix))
 #define LIGHT_FROXEL_DATA_POS(ix, iy, iz, il) (LIGHT_FROXEL_COUNT_POS(ix, iy, iz) * LIGHT_CLUSTER_COUNT + (il))
@@ -17,30 +17,49 @@
 #define LIGHT_CLUSTER_COUNT_POS(ix, iy) ( ((iy)*LIGHT_CLUSTER_WIDTH)+(ix) )
 #define LIGHT_CLUSTER_DATA_POS(il, ix, iy) ( LIGHT_CLUSTER_COUNT_POS(ix, iy)*LIGHT_CLUSTER_COUNT + (il) )
 
-#define INVALID_TEXTURE_INDEX (0xffff)
-
 #define PRIMARY_VIEWPORT_INDEX 0
 
-#define SCENE_TEXTURE_WRAP_CLAMP (0)
-#define SCENE_TEXTURE_WRAP_REPEAT (1) 
-#define SCENE_TEXTURE_WRAP_CLAMP_TO_BORDER (2)
-#define SCENE_TEXTURE_WRAP_COUNT (3)
+#define SCENE_MAX_TEXTURE_COUNT 10000 
+#define SCENE_MAX_TEXTURE_CUBE_COUNT 5000 
 
-#define SCENE_TEXTURE_FILTER_NEAR (0)
-#define SCENE_TEXTURE_FILTER_BILINEAR (1) 
-#define SCENE_TEXTURE_FILTER_TRILINEAR (2)
-#define SCENE_TEXTURE_FILTER_COUNT (3)
+STRUCT(TranslucentMaterial) {
+    DATA(uint, diffuseTextureIndex, None);
+    DATA(uint, normalTextureIndex, None);
+    DATA(uint, alphaTextureIndex, None);
+    DATA(uint, specularTextureIndex, None);
+    DATA(uint, heightTextureIndex, None);
+    DATA(uint, illuminiationTextureIndex, None);
+    DATA(uint, dissolveAlphaTextureIndex, None);
+    DATA(uint, cubeMapTextureIndex, None);
+    DATA(uint, cubeMapAlphaTextureIndex, None);
 
-#define SCENE_TEXTURE_ANTISTROPY_NONE (0)
-#define SCENE_TEXTURE_ANTISTROPY_8 (1) 
-#define SCENE_TEXTURE_ANTISTROPY_16 (2)
-#define SCENE_TEXTURE_ANTISTROPY_COUNT (3)
+    DATA(uint, config, None);
+    DATA(float, refractionScale, None);
+    DATA(float, frenselBias, None);
+    DATA(float, frenselPos, None);
 
-#define SCENE_SAMPLER(wrap, filter) ((wrap * SCENE_TEXTURE_FILTER_COUNT) + filter)
+    DATA(float, rimMulLight, None);
+    DATA(float, rimMulPower, None);
+	DATA(float, _pad2, None);
+};
 
-#define SCENE_MAX_TEXTURE_COUNT  (100000)
-#define SCENE_MAX_FILTER_COUNT (SCENE_TEXTURE_FILTER_COUNT * SCENE_TEXTURE_WRAP_COUNT) 
-#define SCENE_FILTER_SWITCH_CASE case 0: case 1: case 2: case 3: case 4: case 5: case 6: case 7: case 8: 
+STRUCT(WaterMaterial) {
+    DATA(uint, config, None);
+    DATA(float, refractionScale, None);
+    DATA(float, frenselBias, None);
+    DATA(float, frenselPow, None);
+
+    DATA(float, reflectionFadeStart, None);
+    DATA(float, reflectionFadeEnd, None);
+    DATA(float, waveSpeed, None);
+    DATA(float, waveAmplitude, None);
+    
+    DATA(float, waveFreq, None);
+	DATA(uint, _pad0, None);
+	DATA(uint, _pad1, None);
+	DATA(uint, _pad2, None);
+};
+
 
 STRUCT(DiffuseMaterial) {
     DATA(uint, diffuseTextureIndex, None);
@@ -50,16 +69,12 @@ STRUCT(DiffuseMaterial) {
     DATA(uint, heightTextureIndex, None);
     DATA(uint, illuminiationTextureIndex, None);
     DATA(uint, dissolveAlphaTextureIndex, None);
-    DATA(uint, cubeMapAlphaTextureIndex, None);
-    DATA(uint,  samplerIndex, None);
+    DATA(uint, config, None);
 
-    DATA(uint,  materialConfig, None);
     DATA(float, heightMapScale, None);
     DATA(float, heightMapBias, None);
     DATA(float, frenselBias, None);
     DATA(float, frenselPow, None);
-    DATA(uint, __pad0, NONE);
-    DATA(uint, __pad1, NONE);
 };
 
 
@@ -85,6 +100,10 @@ bool isTextureIndexValid(uint index) {
     return index < SCENE_MAX_TEXTURE_COUNT;
 }
 
+bool isTextureCubeIndexValid(uint index) {
+    return index < SCENE_MAX_TEXTURE_CUBE_COUNT;
+}
+
 STRUCT(MaterialTexture) 
 {
     DATA(bool, hasGradient, None);
@@ -105,7 +124,8 @@ STRUCT(UniformObject)
     DATA(float,    dissolveAmount, None);
     DATA(float,    lightLevel, None);
     DATA(float,    illuminationAmount, None);
-    DATA(uint, __pad1, NONE);
+    DATA(float,    alphaAmount, None);
+    
     DATA(float4x4, modelMat, None);
     DATA(float4x4, invModelMat, None);
     DATA(float4x4, uvMat, None);
@@ -139,17 +159,7 @@ STRUCT(Light) {
     DATA(float4x4, viewProjection, none);
 };
 
-#define LIGHT_ID_BIT    0
-#define LIGHT_INDEX_BIT 8
-
-#define LIGHT_ID_MASK         0xff // 0000 0000 0000 0000 0000 0000 1111 1111
-#define LIGHT_INDEX_MASK  0xffff00 // 0000 0000 1111 1111 1111 1111 0000 0000
-
-#define LIGHT_ID(id) ((LIGHT_ID_MASK & (id)) >> LIGHT_ID_BIT)
-#define LIGHT_INDEX(id) ((LIGHT_INDEX_MASK & (id)) >> LIGHT_INDEX_BIT) 
-#define LIGHT_ENCODE(id, index) (((id << LIGHT_ID_BIT) & LIGHT_ID_MASK) | ((index << LIGHT_INDEX_BIT) & LIGHT_INDEX_MASK)) 
-
-#define WORLD_FLAG_IS_FOG_ENABLED       1
+#define WORLD_FLAG_IS_FOG_ENABLED (0x1)
 
 STRUCT(WorldInfo) {
     DATA(uint,  worldFlags, None);

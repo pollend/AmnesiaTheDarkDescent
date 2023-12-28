@@ -43,9 +43,6 @@ namespace hpl {
 	class iPhysicsBody;
 	class iRenderer;
 
-    namespace details::renderable {
-    }
-
 	class iRenderable : public iEntity3D
 	{
 		HPL_RTTI_IMPL_CLASS(iEntity3D, iRenderable, "{285bbdb4-de5b-4960-bf44-ae543432ff40}")

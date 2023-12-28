@@ -23,15 +23,9 @@
 #include "graphics/ForgeHandles.h"
 #include "graphics/Graphics.h"
 
-#include "graphics/FrameBuffer.h"
-#include "graphics/Image.h"
-#include "graphics/LowLevelGraphics.h"
 #include "graphics/PostEffectComposite.h"
-#include "graphics/RenderTarget.h"
-#include "graphics/Texture.h"
 
 #include "math/MathTypes.h"
-#include "system/PreprocessParser.h"
 #include <memory>
 
 namespace hpl
@@ -253,6 +247,7 @@ namespace hpl
 
                 cmdBindDescriptorSet(frame.m_cmd, mpBloomType->m_setIndex, mpBloomType->m_perFrameDescriptorSets[frame.m_frameIndex].m_handle);
                 float2 blurScale = float2(mParams.mfBlurSize, 0.0f);
+                cmdBindPushConstants(frame.m_cmd, mpBloomType->m_blurSignature.m_handle, blurPostEffectConstIndex, &blurScale);
                 cmdDraw(frame.m_cmd, 3, 0);
 
                 mpBloomType->m_setIndex = (mpBloomType->m_setIndex + 1) % cPostEffectType_Bloom::DescriptorSetSize;

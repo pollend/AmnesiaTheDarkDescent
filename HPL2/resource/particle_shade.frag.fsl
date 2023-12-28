@@ -25,7 +25,7 @@ float4 PS_MAIN(PsIn In)
     #endif
 
     float4 finalColor = float4(0.0, 0.0 ,0.0, 1.0);
-    SampleSceneTextureFloat4(particle.diffuseTextureIndex, Get(sceneFilters)[particle.samplerIndex], In.uv, finalColor);
+    SampleSceneTextureFloat4(particle.diffuseTextureIndex, Get(sceneSampler), In.uv, finalColor);
     finalColor *= In.color;
 
     float finalAlpha = particle.sceneAlpha;

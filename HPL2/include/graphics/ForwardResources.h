@@ -1,7 +1,7 @@
 #pragma once
 
 #include "graphics/GraphicsTypes.h"
-#include "graphics/TextureDescriptorPool.h"
+#include "graphics/BindlessDescriptorPool.h"
 #include "scene/LightPoint.h"
 #include <Common_3/Graphics/Interfaces/IGraphics.h>
 #include <Common_3/Utilities/RingBuffer.h>

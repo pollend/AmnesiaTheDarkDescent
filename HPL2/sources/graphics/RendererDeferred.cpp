@@ -1808,11 +1808,7 @@ namespace hpl {
 
                         pipelineBlendGroup[key.m_id].Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
                             BlendStateDesc blendStateDesc{};
-#ifdef USE_THE_FORGE_LEGACY
-                            blendStateDesc.mMasks[0] = ALL;
-#else
-                                blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_ALL;
-#endif
+                            blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_ALL;
                             blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
                             blendStateDesc.mIndependentBlend = false;
 

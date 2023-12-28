@@ -89,7 +89,7 @@ namespace hpl {
 
         auto* graphicsAllocator = Interface<GraphicsAllocator>::Get();
         auto& particleSet = graphicsAllocator->resolveSet(GraphicsAllocator::AllocationSet::ParticleSet);
-        m_geometry = particleSet.allocate(4 * mlMaxParticles * NumberActiveCopies, 6 * mlMaxParticles * NumberActiveCopies);
+        m_geometry = particleSet.allocate(4 * mlMaxParticles * NumberActiveCopies, 6 * mlMaxParticles);
 
         auto positionStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_POSITION);
         auto colorStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_COLOR);
@@ -101,13 +101,13 @@ namespace hpl {
                                              m_geometry->indexOffset() * GeometrySet::IndexBufferStride,
                                              GeometrySet::IndexBufferStride * 6 };
         BufferUpdateDesc positionUpdateDesc = { positionStream->buffer().m_handle,
-                                                (m_geometry->vertextOffset() * positionStream->stride()),
+                                                (m_geometry->vertexOffset() * positionStream->stride()),
                                                 positionStream->stride() * 4 * mlMaxParticles * NumberActiveCopies };
         BufferUpdateDesc colorUpdateDesc = { colorStream->buffer().m_handle,
-                                             (m_geometry->vertextOffset() * colorStream->stride()),
+                                             (m_geometry->vertexOffset() * colorStream->stride()),
                                              colorStream->stride() * 4 * mlMaxParticles * NumberActiveCopies };
         BufferUpdateDesc uvUpdateDesc = { uvStream->buffer().m_handle,
-                                          (m_geometry->vertextOffset() * colorStream->stride()),
+                                          (m_geometry->vertexOffset() * uvStream->stride()),
                                           uvStream->stride() * 4 * mlMaxParticles * NumberActiveCopies };
 
         beginUpdateResource(&indexUpdateDesc);
@@ -136,13 +136,13 @@ namespace hpl {
         auto colorView = gpuColorBuffer.CreateStructuredView<float4>();
         auto uvView = gpuUvBuffer.CreateStructuredView<float2>();
 
-        for (size_t i = 0; i < alMaxParticles * NumberActiveCopies; i++) {
+        for (size_t i = 0; i < mlMaxParticles * NumberActiveCopies; i++) {
             uvView.Write((i * 4) + 0, float2(1, 1));
             uvView.Write((i * 4) + 1, float2(0, 1));
             uvView.Write((i * 4) + 2, float2(0, 0));
             uvView.Write((i * 4) + 3, float2(1, 0));
         }
-        for (size_t i = 0; i < alMaxParticles * NumberActiveCopies * 4; i++) {
+        for (size_t i = 0; i < mlMaxParticles * NumberActiveCopies * 4; i++) {
             colorView.Write(i, float4(1, 1, 1, 1));
             positionView.Write(i, float3(0, 0, 0));
         }
@@ -264,6 +264,12 @@ namespace hpl {
     }
 
     bool iParticleEmitter::UpdateGraphicsForViewport(cFrustum* apFrustum, float afFrameTime) {
+        if(mlMaxParticles == 0) {
+            return true;
+        }
+        ASSERT(mlNumOfParticles <= mlMaxParticles);
+
+
         m_activeCopy = (m_activeCopy + 1) % NumberActiveCopies;
 
         auto positionStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_POSITION);
@@ -272,13 +278,13 @@ namespace hpl {
 
 
         BufferUpdateDesc positionUpdateDesc = { positionStream->buffer().m_handle,
-                                                positionStream->stride() * ((mlMaxParticles * m_activeCopy * 4) + m_geometry->vertextOffset()),
+                                                positionStream->stride() * ((mlMaxParticles * m_activeCopy * 4) + m_geometry->vertexOffset()),
                                                 positionStream->stride() * mlNumOfParticles * 4 };
         BufferUpdateDesc textureUpdateDesc = { uvStream->buffer().m_handle,
-                                               uvStream->stride() * ((mlMaxParticles * m_activeCopy * 4) + m_geometry->vertextOffset()),
+                                               uvStream->stride() * ((mlMaxParticles * m_activeCopy * 4) + m_geometry->vertexOffset()),
                                                uvStream->stride() * mlNumOfParticles * 4 };
         BufferUpdateDesc colorUpdateDesc = { colorStream->buffer().m_handle,
-                                             colorStream->stride() * ((mlMaxParticles * m_activeCopy * 4) + m_geometry->vertextOffset()),
+                                             colorStream->stride() * ((mlMaxParticles * m_activeCopy * 4) + m_geometry->vertexOffset()),
                                              colorStream->stride() * mlNumOfParticles * 4 };
 
         // Set up color mul
@@ -324,11 +330,11 @@ namespace hpl {
             m_numberParticlesRender = 0;
             return false;
         }
-        
+
         if (mPEType == ePEType_Beam) {
             // something something beam Idunno
         } else {
-            
+
             if (mvSubDivUV.size() > 1) {
                 beginUpdateResource(&textureUpdateDesc);
                 GraphicsBuffer gpuUvBuffer(textureUpdateDesc);

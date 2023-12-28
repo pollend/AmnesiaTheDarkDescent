@@ -78,7 +78,7 @@ namespace hpl {
             auto gpuStream = m_geometry->getStreamBySemantic(localStream.m_semantic);
             ASSERT(gpuStream != m_geometry->vertexStreams().end());
 
-            BufferUpdateDesc updateDesc = { gpuStream->buffer().m_handle, gpuStream->stride() *  m_geometry->vertextOffset(),  gpuStream->stride() * reservedVerticies};
+            BufferUpdateDesc updateDesc = { gpuStream->buffer().m_handle, gpuStream->stride() *  m_geometry->vertexOffset(),  gpuStream->stride() * reservedVerticies};
             beginUpdateResource(&updateDesc);
 
             GraphicsBuffer gpuBuffer(updateDesc);
@@ -182,9 +182,9 @@ namespace hpl {
                 targetTangentIt != m_geometry->vertexStreams().end()
             );
 
-            BufferUpdateDesc positionUpdateDesc = { targetPositionIt->buffer().m_handle, (m_geometry->vertextOffset() * targetPositionIt->stride()) + m_activeCopy * (targetPositionIt->stride() * m_numberVertices), targetPositionIt->stride() * m_numberVertices};
-            BufferUpdateDesc tangentUpdateDesc = { targetTangentIt->buffer().m_handle, (m_geometry->vertextOffset() * targetTangentIt->stride()) + m_activeCopy * (targetTangentIt->stride() * m_numberVertices), targetTangentIt->stride() * m_numberVertices};
-            BufferUpdateDesc normalUpdateDesc = { targetNormalIt->buffer().m_handle, (m_geometry->vertextOffset() * targetNormalIt->stride()) + m_activeCopy * (targetNormalIt->stride() * m_numberVertices), targetNormalIt->stride() * m_numberVertices};
+            BufferUpdateDesc positionUpdateDesc = { targetPositionIt->buffer().m_handle, (m_geometry->vertexOffset() * targetPositionIt->stride()) + (m_activeCopy * targetPositionIt->stride() * m_numberVertices), targetPositionIt->stride() * m_numberVertices};
+            BufferUpdateDesc tangentUpdateDesc = { targetTangentIt->buffer().m_handle, (m_geometry->vertexOffset() * targetTangentIt->stride()) + (m_activeCopy * targetTangentIt->stride() * m_numberVertices), targetTangentIt->stride() * m_numberVertices};
+            BufferUpdateDesc normalUpdateDesc = { targetNormalIt->buffer().m_handle, (m_geometry->vertexOffset() * targetNormalIt->stride()) + (m_activeCopy * targetNormalIt->stride() * m_numberVertices), targetNormalIt->stride() * m_numberVertices};
             beginUpdateResource(&positionUpdateDesc);
             beginUpdateResource(&tangentUpdateDesc);
             beginUpdateResource(&normalUpdateDesc);

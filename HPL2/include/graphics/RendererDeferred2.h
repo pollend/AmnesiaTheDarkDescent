@@ -21,10 +21,11 @@
 #include "engine/RTTI.h"
 
 #include "graphics/CommandBufferPool.h"
+#include "graphics/GraphicsTypes.h"
 #include "graphics/ImageBindlessPool.h"
 #include "graphics/SceneResource.h"
 #include "graphics/ShadowCache.h"
-#include "graphics/TextureDescriptorPool.h"
+#include "graphics/BindlessDescriptorPool.h"
 #include "scene/Viewport.h"
 #include "scene/World.h"
 #include "windowing/NativeWindow.h"
@@ -50,8 +51,6 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
-#include <unordered_map>
-#include <vector>
 
 namespace hpl {
 
@@ -96,24 +95,13 @@ namespace hpl {
         static constexpr TinyImageFormat ColorBufferFormat = TinyImageFormat_R8G8B8A8_UNORM;
         static constexpr TinyImageFormat ShadowDepthBufferFormat = TinyImageFormat_D32_SFLOAT;
 
-        static constexpr uint32_t MaxReflectionBuffers = 4;
-        static constexpr uint32_t MaxObjectUniforms = 4096;
-        static constexpr uint32_t MaxLightUniforms = 1024;
-        static constexpr uint32_t MaxDecalUniforms = 1024;
-        static constexpr uint32_t MaxParticleUniform = 1024;
-        static constexpr uint32_t MaxIndirectDrawElements = 4096;
-
-        static constexpr uint32_t PointLightCount = 256;
         static constexpr float ShadowDistanceMedium = 10;
         static constexpr float ShadowDistanceLow = 20;
         static constexpr float ShadowDistanceNone = 40;
 
-        static constexpr uint32_t MaxSolidDiffuseMaterials = 512;
-
         static constexpr uint32_t LightClusterWidth = 16;
         static constexpr uint32_t LightClusterHeight = 9;
         static constexpr uint32_t LightClusterSlices = 24;
-        static constexpr uint32_t LightClusterLightCount = 128;
         static constexpr uint32_t TransientImagePoolCount = 256;
 
         static constexpr uint32_t IndirectArgumentSize = 8 * sizeof(uint32_t);
@@ -127,7 +115,6 @@ namespace hpl {
             uint32_t mStartInstance;
         };
 
-
         struct ViewportData {
         public:
             ViewportData() = default;
@@ -139,7 +126,6 @@ namespace hpl {
             uint2 m_size = uint2(0, 0);
             std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_outputBuffer;
             std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_depthBuffer;
-            std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_parallaxBuffer;
             std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_albedoBuffer; // this is used for the adding decals to albedo
 
             std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_testBuffer; //encodes the parallax
@@ -171,8 +157,6 @@ namespace hpl {
             bool abSendFrameBufferToPostEffects) override;
 
     private:
-
-        
         void setIndirectDrawArg(const ForgeRenderer::Frame& frame, uint32_t drawArgIndex, uint32_t slot, DrawPacket& packet);
 
         enum MaterialSetType {
@@ -184,33 +168,34 @@ namespace hpl {
             IndexPoolHandle m_slot;
         };
 
-        struct SharedMaterial {
+        struct ResourceMaterial {
         public:
+            ResourceMaterial();
             void* m_material = nullptr;
             uint32_t m_version = 0;
             folly::small_vector<MaterialSet, 2> m_sets;
             std::array<uint32_t, eMaterialTexture_LastEnum> m_textureHandles;
-
             MaterialSet& resolveSet(MaterialSetType set);
         };
-        SharedMaterial& resolveSharedMaterial(cMaterial* material);
-        uint32_t resolveObjectIndex(const ForgeRenderer::Frame& frame,
-            iRenderable* apObject,
-            std::optional<Matrix4> modelMatrix);
+        ResourceMaterial& resolveResourceMaterial(cMaterial* material);
+        uint32_t resolveObjectSlot(uint32_t uid, std::function<void(uint32_t)> initializeHandler);
 
         UniqueViewportData<ViewportData> m_boundViewportData;
 
         SharedSampler m_samplerNearEdgeClamp;
         SharedSampler m_samplerPointWrap;
         SharedSampler m_samplerPointClampToBorder;
-        std::array<SharedMaterial, cMaterial::MaxMaterialID> m_sharedMaterial;
-        TextureDescriptorPool m_sceneTexture2DPool;
+        SharedSampler m_samplerMaterial;
+        std::array<ResourceMaterial, cMaterial::MaxMaterialID> m_sharedMaterial;
+        BindlessDescriptorPool m_sceneTexture2DPool;
+        BindlessDescriptorPool m_sceneTextureCubePool;
         ImageBindlessPool m_sceneTransientImage2DPool;
         CommandSignature* m_cmdSignatureVBPass = NULL;
 
         // diffuse
         IndexPool m_diffuseIndexPool;
-        SharedBuffer m_diffuseSolidMaterialUniformBuffer;
+        IndexPool m_translucencyIndexPool;
+        IndexPool m_waterIndexPool;
 
         SharedRootSignature m_sceneRootSignature;
         SharedDescriptorSet m_sceneDescriptorConstSet;
@@ -230,9 +215,10 @@ namespace hpl {
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_indirectDrawArgsBuffer;
 
         std::array<SharedSampler, resource::MaterialSceneSamplersCount> m_materialSampler;
-        folly::F14ValueMap<iRenderable*, uint32_t> m_objectDescriptorLookup;
+        folly::F14ValueMap<uint32_t, uint32_t> m_objectDescriptorLookup;
 
-        SharedTexture m_emptyTexture;
+        SharedTexture m_emptyTexture2D;
+        SharedTexture m_emptyTextureCube;
         Image* m_dissolveImage;
 
         uint32_t m_activeFrame = 0;
@@ -241,18 +227,20 @@ namespace hpl {
 
         cRenderList m_rendererList;
 
-        // Lights
         SharedRootSignature m_lightClusterRootSignature;
         std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_lightDescriptorPerFrameSet;
         SharedShader m_lightClusterShader;
         SharedShader m_clearLightClusterShader;
         SharedPipeline m_lightClusterPipeline;
-        SharedPipeline m_clearClusterPipeline; 
+        SharedPipeline m_clearClusterPipeline;
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_lightClustersBuffer;
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_lightClusterCountBuffer;
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_lightBuffer;
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_particleBuffer;
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_decalBuffer;
+        SharedBuffer m_translucencyMatBuffer;
+        SharedBuffer m_waterMatBuffer;
+        SharedBuffer m_diffuseMatUniformBuffer;
 
         SharedShader m_particleShaderAdd;
         SharedShader m_particleShaderMul;
@@ -260,30 +248,68 @@ namespace hpl {
         SharedShader m_particleShaderAlpha;
         SharedShader m_particleShaderPremulAlpha;
 
-        SharedPipeline m_particleBlendAdd;
-        SharedPipeline m_particleBlendAddNoDepth;
+        SharedShader m_translucencyShaderAdd;
+        SharedShader m_translucencyShaderMul;
+        SharedShader m_translucencyShaderMulX2;
+        SharedShader m_translucencyShaderAlpha;
+        SharedShader m_translucencyShaderPremulAlpha;
 
-        SharedPipeline m_particleBlendMul;
-        SharedPipeline m_particleBlendMulNoDepth;
+        SharedShader m_translucencyRefractionShaderAdd;
+        SharedShader m_translucencyRefractionShaderMul;
+        SharedShader m_translucencyRefractionShaderMulX2;
+        SharedShader m_translucencyRefractionShaderAlpha;
+        SharedShader m_translucencyRefractionShaderPremulAlpha;
 
-        SharedPipeline m_particleBlendMulX2;
-        SharedPipeline m_particleBlendMulX2NoDepth;
+        SharedShader m_translucencyIlluminationShaderAdd;
+        SharedShader m_translucencyIlluminationShaderMul;
+        SharedShader m_translucencyIlluminationShaderMulX2;
+        SharedShader m_translucencyIlluminationShaderAlpha;
+        SharedShader m_translucencyIlluminationShaderPremulAlpha;
 
-        SharedPipeline m_particleBlendAlpha;
-        SharedPipeline m_particleBlendAlphaNoDepth;
+        struct DisableEnableDepthPipelines {
+            SharedPipeline m_enableDepth;
+            SharedPipeline m_disableDepth;
+        };
 
-        SharedPipeline m_particleBlendPremulAlpha;
-        SharedPipeline m_particleBlendPremulAlphaNoDepth;
+        struct BlendPipelines {
+            SharedPipeline m_pipelineBlendAdd;
+            SharedPipeline m_pipelineBlendMul;
+            SharedPipeline m_pipelineBlendMulX2;
+            SharedPipeline m_pipelineBlendAlpha;
+            SharedPipeline m_pipelineBlendPremulAlpha;
+            SharedPipeline& getPipelineByBlendMode(eMaterialBlendMode mode) {
+                switch (mode) {
+                case eMaterialBlendMode_None:
+                case eMaterialBlendMode_Add:
+                    return m_pipelineBlendAdd;
+                case eMaterialBlendMode_Mul:
+                    return m_pipelineBlendMul;
+                case eMaterialBlendMode_MulX2:
+                    return m_pipelineBlendMulX2;
+                case eMaterialBlendMode_Alpha:
+                    return m_pipelineBlendAlpha;
+                case eMaterialBlendMode_PremulAlpha:
+                    return m_pipelineBlendPremulAlpha;
+                default:
+                    break;
+                }
+                return m_pipelineBlendAdd;
+            }
+        };
+        BlendPipelines m_particlePipeline;
+        BlendPipelines m_particlePipelineNoDepth;
 
         SharedShader m_decalShader;
-        SharedPipeline m_decalPipelineAdd;
-        SharedPipeline m_decalPipelineMul;
-        SharedPipeline m_decalPipelineMulX2;
-        SharedPipeline m_decalPipelineAlpha;
-        SharedPipeline m_decalPipelinePremulAlpha;
+        BlendPipelines m_decalPipelines;
 
-        Queue* m_computeQueue = nullptr;
-        GpuCmdRing m_computeRing = {};
+        BlendPipelines m_translucencyPipline;
+        BlendPipelines m_translucencyPiplineNoDepth;
+
+        BlendPipelines m_translucencyRefractionPipline;
+        BlendPipelines m_translucencyRefractionPiplineNoDepth;
+
+        BlendPipelines m_translucencyIlluminationPipline;
+        BlendPipelines m_translucencyIlluminationPiplineNoDepth;
 
         bool m_supportIndirectRootConstant = false;
     };

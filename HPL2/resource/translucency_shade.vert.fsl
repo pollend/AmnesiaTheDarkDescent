@@ -7,19 +7,21 @@ STRUCT(VSInput)
 	DATA(float2, TexCoord, TEXCOORD0);
 	DATA(float3, Normal, NORMAL);
 	DATA(float3, Tangent, TANGENT);
+	DATA(float4, Color, COLOR);
 };
 
 STRUCT(VSOutput)
 {
-	DATA(float4,     Position,  SV_Position);
-	DATA(float3,     pos,       POSITION);
-	DATA(float2,     uv,        TEXCOORD0);
+        DATA(float4,     Position,  SV_Position);
+        DATA(float3,     pos,       POSITION);
+        DATA(float2,     uv,        TEXCOORD0);
 #if !defined(INDIRECT_ROOT_CONSTANT)
-    DATA(FLAT(uint), drawID,    TEXCOORD1);
+        DATA(FLAT(uint), drawID,    TEXCOORD1);
 #endif
-	DATA(float3,     normal,    NORMAL);
-	DATA(float3,     tangent,   TANGENT);
-	DATA(float3,     bitangent, BITANGENT);
+        DATA(float3,     normal,    NORMAL);
+        DATA(float3,     tangent,   TANGENT);
+        DATA(float3,     bitangent, BITANGENT);
+	    DATA(float4, color, COLOR);
 };
 
 VSOutput VS_MAIN(VSInput In, SV_InstanceID(uint) InstanceID)
@@ -44,7 +46,9 @@ VSOutput VS_MAIN(VSInput In, SV_InstanceID(uint) InstanceID)
     Out.tangent = normalize(mul(normalMat, In.Tangent.xyz));
     Out.bitangent = normalize(mul(normalMat, cross(In.Tangent.xyz, In.Normal.xyz)));
     Out.Position = mul(modelViewPrj, float4(In.Position.xyz, 1.0));
+    Out.color = In.Color;
 
     RETURN(Out);
 }
+
 

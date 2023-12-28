@@ -10,9 +10,9 @@
     #include "solid_z_shadow.frag.fsl"
 #end
 
-#vert solid_z_shadow.vert
-    #include "solid_z_shadow.vert.fsl"
-#end
+//#vert solid_z_shadow.vert
+//    #include "solid_z_shadow.vert.fsl"
+//#end
 
 #frag solid_z.frag
     #define SEARCH_SAMPLE_COUNT 4
@@ -289,23 +289,6 @@
     #include "final_posteffect.frag.fsl"
 #end
 
-#vert forward_diffuse.vert
-  #include "forward_diffuse.vert.fsl"
-#end
-
-#frag forward_diffuse.frag
-  #define ALPHA_REJECT 0.5
-  #include "forward_diffuse.frag.fsl"
-#end
-
-#comp point_light_clusters.comp
-  #include "point_light_clusters.comp.fsl"
-#end
-
-#comp light_clusters_clear.comp
-  #include "light_clusters_clear.comp.fsl"
-#end
-
 #vert visibilityBuffer_pass.vert
   #include "visibilityBuffer_pass.vert.fsl"
 #end
@@ -377,5 +360,94 @@
 
 #vert decal_shade.vert
     #include "decal_shade.vert.fsl"
+#end
+
+#vert translucency_shade.vert
+  #include "translucency_shade.vert.fsl"
+#end
+
+#frag translucency_refraction_shade_add.frag
+  #define USE_REFRACTION 1
+  #define USE_BLEND_MODE_ADD 1
+  #include "translucency_shade.frag.fsl"
+#end
+
+#frag translucency_refraction_shade_mul.frag
+  #define USE_REFRACTION 1
+  #define USE_BLEND_MODE_MUL 1
+  #include "translucency_shade.frag.fsl"
+#end
+
+#frag translucency_refraction_shade_mulX2.frag
+  #define USE_REFRACTION 1
+  #define USE_BLEND_MODE_MULX2 1
+  #include "translucency_shade.frag.fsl"
+#end
+
+#frag translucency_refraction_shade_alpha.frag
+  #define USE_REFRACTION 1
+  #define USE_BLEND_MODE_ALPHA 1
+  #include "translucency_shade.frag.fsl"
+#end
+
+#frag translucency_refraction_shade_premul_alpha.frag
+  #define USE_REFRACTION 1
+  #define USE_BLEND_MODE_PREMUL_ALPHA 1
+  #include "translucency_shade.frag.fsl"
+#end
+
+#frag translucency_shade_add.frag
+  #define USE_BLEND_MODE_ADD 1
+  #include "translucency_shade.frag.fsl"
+#end
+
+#frag translucency_shade_mul.frag
+  #define USE_BLEND_MODE_MUL 1
+  #include "translucency_shade.frag.fsl"
+#end
+
+#frag translucency_shade_mulX2.frag
+  #define USE_BLEND_MODE_MULX2 1
+  #include "translucency_shade.frag.fsl"
+#end
+
+#frag translucency_shade_alpha.frag
+  #define USE_BLEND_MODE_ALPHA 1
+  #include "translucency_shade.frag.fsl"
+#end
+
+#frag translucency_shade_premul_alpha.frag
+  #define USE_BLEND_MODE_PREMUL_ALPHA 1
+  #include "translucency_shade.frag.fsl"
+#end
+
+#frag translucency_shade_illumination_add.frag
+  #define USE_ILLUMINATION 1 
+  #define USE_BLEND_MODE_ADD 1
+  #include "translucency_shade.frag.fsl"
+#end
+
+#frag translucency_shade_illumination_mul.frag
+  #define USE_ILLUMINATION 1 
+  #define USE_BLEND_MODE_MUL 1
+  #include "translucency_shade.frag.fsl"
+#end
+
+#frag translucency_shade_illumination_mulX2.frag
+  #define USE_ILLUMINATION 1 
+  #define USE_BLEND_MODE_MULX2 1
+  #include "translucency_shade.frag.fsl"
+#end
+
+#frag translucency_shade_illumination_alpha.frag
+  #define USE_ILLUMINATION 1 
+  #define USE_BLEND_MODE_ALPHA 1
+  #include "translucency_shade.frag.fsl"
+#end
+
+#frag translucency_shade_illumination_premul_alpha.frag
+  #define USE_ILLUMINATION 1 
+  #define USE_BLEND_MODE_PREMUL_ALPHA 1
+  #include "translucency_shade.frag.fsl"
 #end
 

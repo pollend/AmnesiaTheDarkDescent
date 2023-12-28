@@ -22,7 +22,7 @@ float4 PS_MAIN(PsIn In, SV_PrimitiveID(uint) primitiveID)
     #endif
 
     float4 diffuseColor;
-    SampleSceneTextureFloat4(decal.diffuseTextureIndex, Get(sceneFilters)[decal.samplerIndex], In.uv, diffuseColor);
+    SampleSceneTextureFloat4(decal.diffuseTextureIndex, Get(sceneSampler), In.uv, diffuseColor);
     if(diffuseColor.w < 0.01 ) {
         discard;
     }

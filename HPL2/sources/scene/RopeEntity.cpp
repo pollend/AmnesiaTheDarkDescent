@@ -70,22 +70,22 @@ namespace hpl {
             auto tangentStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_TANGENT);
 
             BufferUpdateDesc indexUpdateDesc = { indexStream.m_handle,
-                                                 0,
+                                                 m_geometry->indexOffset() * GeometrySet::IndexBufferStride,
                                                  GeometrySet::IndexBufferStride * 6 * mlMaxSegments * NumberOfCopies };
             BufferUpdateDesc positionUpdateDesc = { positionStream->buffer().m_handle,
-                                                    0,
+                                                    m_geometry->vertexOffset() * positionStream->stride(),
                                                     positionStream->stride() * 4 * mlMaxSegments * NumberOfCopies };
             BufferUpdateDesc normalUpdateDesc = { normalStream->buffer().m_handle,
-                                                  0,
+                                                  m_geometry->vertexOffset() * normalStream->stride(),
                                                   normalStream->stride() * 4 * mlMaxSegments * NumberOfCopies };
             BufferUpdateDesc colorUpdateDesc = { colorStream->buffer().m_handle,
-                                                 0,
+                                                 m_geometry->vertexOffset() * colorStream->stride(),
                                                  colorStream->stride() * 4 * mlMaxSegments * NumberOfCopies };
             BufferUpdateDesc textureUpdateDesc = { textureStream->buffer().m_handle,
-                                                   0,
+                                                   m_geometry->vertexOffset() * textureStream->stride(),
                                                    textureStream->stride() * 4 * mlMaxSegments * NumberOfCopies };
             BufferUpdateDesc tangentUpdateDesc = { tangentStream->buffer().m_handle,
-                                                   0,
+                                                   m_geometry->vertexOffset() * tangentStream->stride(),
                                                    tangentStream->stride() * 4 * mlMaxSegments * NumberOfCopies };
 
             beginUpdateResource(&indexUpdateDesc);
@@ -245,11 +245,11 @@ namespace hpl {
         auto normalStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_NORMAL);
         auto tangentStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_TANGENT);
 
-        BufferUpdateDesc positionUpdateDesc = { positionStream->buffer().m_handle, positionStream->stride()  * mlMaxSegments * 4 * m_activeCopy, positionStream->stride() * mlMaxSegments * 4 };
-        BufferUpdateDesc textureUpdateDesc = { textureStream->buffer().m_handle, textureStream->stride()  * mlMaxSegments * 4 * m_activeCopy, textureStream->stride() * mlMaxSegments * 4 };
-        BufferUpdateDesc colorUpdateDesc = { colorStream->buffer().m_handle, colorStream->stride()  * mlMaxSegments * 4 * m_activeCopy, colorStream->stride() * mlMaxSegments * 4 };
-        BufferUpdateDesc normalUpdateDesc = { normalStream->buffer().m_handle, normalStream->stride()  * mlMaxSegments * 4 * m_activeCopy, normalStream->stride() * mlMaxSegments * 4 };
-        BufferUpdateDesc tangentUpdateDesc = { tangentStream->buffer().m_handle, tangentStream->stride()  * mlMaxSegments * 4 * m_activeCopy, tangentStream->stride() * mlMaxSegments * 4 };
+        BufferUpdateDesc positionUpdateDesc = { positionStream->buffer().m_handle, positionStream->stride()  * ((mlMaxSegments * 4 * m_activeCopy) + m_geometry->vertexOffset()), positionStream->stride() * mlMaxSegments * 4 };
+        BufferUpdateDesc textureUpdateDesc = { textureStream->buffer().m_handle, textureStream->stride()  * ((mlMaxSegments * 4 * m_activeCopy)+ m_geometry->vertexOffset()), textureStream->stride() * mlMaxSegments * 4 };
+        BufferUpdateDesc colorUpdateDesc = { colorStream->buffer().m_handle, colorStream->stride()  * ((mlMaxSegments * 4 * m_activeCopy)+ m_geometry->vertexOffset()), colorStream->stride() * mlMaxSegments * 4 };
+        BufferUpdateDesc normalUpdateDesc = { normalStream->buffer().m_handle, normalStream->stride()  * ((mlMaxSegments * 4 * m_activeCopy)+ m_geometry->vertexOffset()), normalStream->stride() * mlMaxSegments * 4 };
+        BufferUpdateDesc tangentUpdateDesc = { tangentStream->buffer().m_handle, tangentStream->stride()  * ((mlMaxSegments * 4 * m_activeCopy)+ m_geometry->vertexOffset()), tangentStream->stride() * mlMaxSegments * 4 };
 
         beginUpdateResource(&positionUpdateDesc);
         beginUpdateResource(&textureUpdateDesc);

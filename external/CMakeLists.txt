@@ -15,6 +15,7 @@ add_library(cpu_features OBJECT
      ${THE_FORGE_DIR}/Common_3/OS/ThirdParty/OpenSource/cpu_features/src/impl_x86_macos.c
      ${THE_FORGE_DIR}/Common_3/OS/ThirdParty/OpenSource/cpu_features/src/impl_aarch64_iOS.c
      ${THE_FORGE_DIR}/Common_3/OS/ThirdParty/OpenSource/cpu_features/src/impl_x86_windows.c
+     ${THE_FORGE_DIR}/Common_3/OS/ThirdParty/OpenSource/cpu_features/src/impl_x86_linux_or_android.c
 )
 
 file(GLOB BASIS_UNVERSAL_SOURCES 
@@ -56,7 +57,7 @@ file(GLOB ZSTD_FILESYSTEM_SOURCES
      ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/zstd/common/*.c
      ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/zstd/compress/*.c
      ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/zstd/decompress/*.c
-     #${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/zstd/decompress/huf_decompress_amd64.S
+     ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/zstd/decompress/huf_decompress_amd64.S
 )
 add_library(zstd_filesystem OBJECT ${ZSTD_FILESYSTEM_SOURCES}) 
 target_include_directories(zstd_filesystem   PUBLIC ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/zstd)
@@ -148,7 +149,7 @@ file(GLOB THE_FORGE_SOURCES
     ${THE_FORGE_DIR}/Common_3/Application/*.cpp
     ${THE_FORGE_DIR}/Common_3/Application/Profiler/*.cpp
     ${THE_FORGE_DIR}/Common_3/Application/Fonts/FontSystem.cpp
-    ${THE_FORGE_DIR}/Common_3/Application/UI/UI.cpp
+    # ${THE_FORGE_DIR}/Common_3/Application/UI/UI.cpp
     ${THE_FORGE_DIR}/Common_3/Application/Profiler/*.cpp
     ${THE_FORGE_DIR}/Common_3/OS/WindowSystem/*.cpp
     ${THE_FORGE_DIR}/Common_3/OS/*.cpp
@@ -162,6 +163,9 @@ file(GLOB THE_FORGE_SOURCES
     ${THE_FORGE_DIR}/Common_3/Utilities/MemoryTracking/*.c
     ${THE_FORGE_DIR}/Common_3/Utilities/Threading/*.c
     ${THE_FORGE_DIR}/Common_3/Utilities/*.c
+    
+    ${THE_FORGE_DIR}/Common_3/Renderer/ShaderServer/Network.c
+    ${THE_FORGE_DIR}/Common_3/Renderer/ShaderServer/ShaderServer.cpp
 
    # ${THE_FORGE_DIR}/Common_3/Application/InputSystem.cpp
 
@@ -239,7 +243,6 @@ set_property(TARGET DirectXShaderCompiler PROPERTY IMPORTED_LOCATION
 set_property(TARGET DirectXShaderCompiler PROPERTY IMPORTED_IMPLIB
     ${THE_FORGE_DIR}/Common_3/Graphics/ThirdParty/OpenSource/DirectXShaderCompiler/lib/x64/dxcompiler.lib)     
 
-
 # Nvapi
 add_library(Nvapi STATIC IMPORTED)
 set_property(TARGET Nvapi PROPERTY IMPORTED_LOCATION
@@ -260,7 +263,10 @@ if(CMAKE_SYSTEM_NAME MATCHES "Windows")
     target_link_libraries(TheForge PRIVATE DirectXShaderCompiler "d3d11.lib")
     target_link_libraries(TheForge PRIVATE WinPixEventRuntime)
 endif()
-
+if(CMAKE_SYSTEM_NAME MATCHES "Linux")
+    find_package(X11 REQUIRED)
+    target_link_libraries(TheForge PRIVATE X11 X11::Xrandr)
+endif()
 
 set(HPL_3RDPARTY_TARGETS
 	Newton

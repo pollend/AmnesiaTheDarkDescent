@@ -21,7 +21,7 @@ STRUCT(VSOutput)
     #endif
 };
 
-VSOutput VS_MAIN(VSInput In)
+VSOutput VS_MAIN(VSInput In, SV_InstanceID(uint) InstanceID)
 {
     INIT_MAIN;
     

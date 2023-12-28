@@ -1,7 +1,7 @@
 #pragma once
 
 #include "graphics/GraphicsTypes.h"
-#include "graphics/TextureDescriptorPool.h"
+#include "graphics/BindlessDescriptorPool.h"
 #include "graphics/Material.h"
 
 #include "Common_3/Utilities/Math/MathTypes.h"
@@ -21,15 +21,24 @@ namespace hpl::resource {
     static constexpr uint32_t MaterailSamplerNonAntistropyCount = static_cast<uint32_t>(eTextureWrap_LastEnum) * static_cast<uint32_t>(eTextureFilter_LastEnum);
     uint32_t textureFilterNonAnistropyIdx(eTextureWrap wrap, eTextureFilter filter);
 
-    static constexpr uint32_t MaxSceneTextureCount = 100000;
+    static constexpr uint32_t MaxScene2DTextureCount = 10000;
+    static constexpr uint32_t MaxSceneCubeTextureCount = 5000;
 
-    static constexpr uint32_t MaterialIdBit =  0;
-    static constexpr uint32_t MaterialIndexBit = 8;
+    static constexpr uint32_t MaxReflectionBuffers = 4;
+    static constexpr uint32_t MaxObjectUniforms = 4096;
 
-    static constexpr uint32_t MaterialIDMask =         0xff; // 0000 0000 0000 0000 0000 0000 1111 1111
-    static constexpr uint32_t MaterialIndexMask =  0xffff00; // 0000 0000 1111 1111 1111 1111 0000 0000
-    static constexpr uint32_t InvalidSceneTexture = 0xffff;
-    uint32_t encodeMaterialID(hpl::MaterialID id, uint32_t handle);
+    static constexpr uint32_t MaxSolidDiffuseMaterials = 2048;
+    static constexpr uint32_t MaxWaterMaterials = 16;
+    static constexpr uint32_t MaxTranslucenctMaterials = 512;
+
+    static constexpr uint32_t MaxLightUniforms = 1024;
+    static constexpr uint32_t MaxDecalUniforms = 1024;
+    static constexpr uint32_t MaxParticleUniform = 1024;
+    static constexpr uint32_t MaxIndirectDrawElements = 4096;
+
+    static constexpr uint32_t LightClusterLightCount = 128;
+
+    static constexpr uint32_t InvalidSceneTexture = std::numeric_limits<uint32_t>::max();
 
     enum LightType {
        PointLight = 0,
@@ -55,7 +64,7 @@ namespace hpl::resource {
         uint m_pad1;
     };
 
-    static constexpr uint32_t WorldFogEnabled = 2;
+    static constexpr uint32_t WorldFogEnabled = 0x2;
     struct WorldInfo {
         uint m_flags;
         float m_worldFogStart;
@@ -82,7 +91,8 @@ namespace hpl::resource {
         float m_dissolveAmount;
         float m_lightLevel;
         float m_illuminationAmount;
-        uint32_t m_pad0;
+        float m_alphaAmount;
+
         mat4 m_modelMat;
         mat4 m_invModelMat;
         mat4 m_uvMat;
@@ -114,7 +124,7 @@ namespace hpl::resource {
        mat4 uvMat;
     };
 
-    
+
     struct SceneDecal {
        uint32_t diffuseTextureIndex;
        uint32_t sampleIndex;
@@ -132,25 +142,35 @@ namespace hpl::resource {
         uint m_heightTextureIndex;
         uint m_illuminiationTextureIndex;
         uint m_dissolveAlphaTextureIndex;
-        uint m_cubeMapAlphaTextureIndex;
-        uint m_samplerIndex;
-
         uint m_materialConfig;
         float m_heightMapScale;
         float m_heigtMapBias;
         float m_frenselBias;
         float m_frenselPow;
-        uint m_pad0;
-        uint m_pad1;
     };
 
-    struct ParticleMaterial {
-        uint m_blendMode;
-        uint m_diffuseTextureIndex;
+    struct TranslucentMaterial {
+        uint32_t m_diffuseTextureIndex;
+        uint32_t m_normalTextureIndex;
+        uint32_t m_alphaTextureIndex;
+        uint32_t m_specularTextureIndex;
+        uint32_t m_heightTextureIndex;
+        uint32_t m_illuminiationTextureIndex;
+        uint32_t m_dissolveAlphaTextureIndex;
+        uint32_t m_cubeMapTextureIndex;
+        uint32_t m_cubeMapAlphaTextureIndex;
+
+        uint32_t m_config;
+        float m_refractionScale;
+        float m_frenselBias;
+        float m_frenselPow;
+
+        float m_rimMulLight;
+        float m_rimMulPower;
+	    float m_pad0;
     };
 
+    struct WaterMaterial {
 
-    using MaterialTypes = std::variant<DiffuseMaterial, std::monostate>;
-    void visitTextures(MaterialTypes& material, std::function<void(eMaterialTexture, uint32_t slot)> handler);
-    MaterialTypes createMaterial(TextureDescriptorPool& pool, cMaterial* material);
+    };
 }
