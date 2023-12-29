@@ -150,42 +150,6 @@ namespace hpl {
             endUpdateResource(&textureUpdateDesc);
             endUpdateResource(&tangentUpdateDesc);
         }
-	   // mpVtxBuffer = mpLowLevelGraphics->CreateVertexBuffer(eVertexBufferType_Hardware,eVertexBufferDrawType_Tri, eVertexBufferUsageType_Dynamic,4,6);
-
-	   // mpVtxBuffer->CreateElementArray(eVertexBufferElement_Position,eVertexBufferElementFormat_Float,4);
-	   // mpVtxBuffer->CreateElementArray(eVertexBufferElement_Normal,eVertexBufferElementFormat_Float,3);
-	   // mpVtxBuffer->CreateElementArray(eVertexBufferElement_Color0,eVertexBufferElementFormat_Float,4);
-	   // mpVtxBuffer->CreateElementArray(eVertexBufferElement_Texture0,eVertexBufferElementFormat_Float,3);
-
-	   // cVector3f vCoords[4] = {cVector3f((mvSize.x/2),-(mvSize.y/2),0),
-	   // 						cVector3f(-(mvSize.x/2),-(mvSize.y/2),0),
-	   // 						cVector3f(-(mvSize.x/2),(mvSize.y/2),0),
-	   // 						cVector3f((mvSize.x/2),(mvSize.y/2),0)};
-
-	   // cVector3f vTexCoords[4] = {cVector3f(1,-1,0),
-	   // 						cVector3f(-1,-1,0),
-	   // 						cVector3f(-1,1,0),
-	   // 						cVector3f(1,1,0)};
-	   // for(int i=0;i<4;i++)
-	   // {
-	   // 	mpVtxBuffer->AddVertexVec3f(eVertexBufferElement_Position, vCoords[i]);
-	   // 	mpVtxBuffer->AddVertexColor(eVertexBufferElement_Color0, cColor(1,1,1,1));
-	   // 	mpVtxBuffer->AddVertexVec3f(eVertexBufferElement_Texture0, (vTexCoords[i] + cVector2f(1,1))/2 );
-	   // 	mpVtxBuffer->AddVertexVec3f(eVertexBufferElement_Normal,cVector3f(0,0,1));
-	   // }
-
-	   // for(int i=0;i<3;i++) mpVtxBuffer->AddIndex(i);
-	   // for(int i=2;i<5;i++) mpVtxBuffer->AddIndex(i==4?0:i);
-
-	   // //If the type is fixed, then we need a backside too
-	   // //To do this, just all all the same indices in reversed order.
-	   // if(mType == eBillboardType_FixedAxis)
-	   // {
-	   // 	for(int i=2; i>=0; i--) mpVtxBuffer->AddIndex(i);
-	   // 	for(int i=4; i>=2; i--) mpVtxBuffer->AddIndex(i==4?0:i);
-	   // }
-
-	   // mpVtxBuffer->Compile(eVertexCompileFlag_CreateTangents);
 
 		mbIsHalo = false;
 		mvHaloSourceSize = 1;
@@ -208,8 +172,8 @@ namespace hpl {
 
 
     DrawPacket cBillboard::ResolveDrawPacket(const ForgeRenderer::Frame& frame)  {
-	    if((frame.m_frameIndex - m_frameIndex) >= ForgeRenderer::SwapChainLength - 1 && m_dirtyBuffer) {
-	        m_frameIndex = frame.m_frameIndex;
+	    if((frame.m_currentFrame - m_frameIndex) >= ForgeRenderer::SwapChainLength - 1 && m_dirtyBuffer) {
+	        m_frameIndex = frame.m_currentFrame;
 	        m_activeCopy = (m_activeCopy + 1) % 2;
 	        m_dirtyBuffer = false;
 

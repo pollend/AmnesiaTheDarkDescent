@@ -21,7 +21,7 @@ namespace hpl {
     void ImageBindlessPool::reset(const ForgeRenderer::Frame& frame) {
         m_currentFrame = frame.m_currentFrame;
         while(m_headIndex != UINT16_MAX &&
-            (m_currentFrame - m_pool[m_headIndex].m_frameCount) <= MinimumFrameCount) {
+            (m_currentFrame - m_pool[m_headIndex].m_frameCount) >= MinimumFrameCount) {
             auto& head = m_pool[m_headIndex];
             // free data
             m_texturePool->dispose(head.m_handle);

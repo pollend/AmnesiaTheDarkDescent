@@ -117,7 +117,7 @@ namespace hpl::resource {
 
     struct SceneParticle {
        uint32_t diffuseTextureIndex;
-       uint32_t sampleIndex;
+       uint32_t m_pad0;
        float sceneAlpha;
        float lightLevel;
        mat4 modelMat;
@@ -127,9 +127,9 @@ namespace hpl::resource {
 
     struct SceneDecal {
        uint32_t diffuseTextureIndex;
-       uint32_t sampleIndex;
-       uint m_pad0;
-       uint m_pad1;
+       uint32_t m_pad0;
+       uint32_t m_pad1;
+       uint32_t m_pad2;
        mat4 modelMat;
        mat4 uvMat;
     };
