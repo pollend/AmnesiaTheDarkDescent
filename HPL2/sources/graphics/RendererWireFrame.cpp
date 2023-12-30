@@ -227,10 +227,10 @@ namespace hpl {
         cFrustum* apFrustum,
         cWorld* apWorld,
         cRenderSettings* apSettings,
-        bool abSendFrameBufferToPostEffects) {
+        RenderTargetScopedBarrier& output) {
         auto* forgeRenderer = Interface<ForgeRenderer>::Get();
         // keep around for the moment ...
-        BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects);
+        BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, false);
 
         if (frame.m_currentFrame != m_activeFrame) {
             m_objectIndex = 0;

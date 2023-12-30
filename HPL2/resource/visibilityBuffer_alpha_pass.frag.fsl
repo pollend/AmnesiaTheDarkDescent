@@ -15,15 +15,10 @@ STRUCT(PsIn)
         DATA(float3,     bitangent, BITANGENT);
 };
 
-STRUCT(PsOut)
-{
-    DATA(float4, visibility, SV_Target0);
-};
 
-PsOut PS_MAIN(PsIn In, SV_PrimitiveID(uint) primitiveID)
+float4 PS_MAIN(PsIn In, SV_PrimitiveID(uint) primitiveID)
 {
     INIT_MAIN;
-    PsOut Out;
 
     #if !defined(INDIRECT_ROOT_CONSTANT)
         UniformObject obj = Get(sceneObjects)[In.drawID];
@@ -37,18 +32,17 @@ PsOut PS_MAIN(PsIn In, SV_PrimitiveID(uint) primitiveID)
     float2 texCoord = In.uv;
     
     if(isTextureIndexValid(material.heightTextureIndex)) {
-        texCoord += ParallaxAdvance(
-            In.uv, 
-            0.0,
-            32.0, 
-            material.heightMapScale * PARALLAX_MULTIPLIER,
-            In.pos,
-            In.normal,
-            In.tangent,
-            In.bitangent,
-            material.heightTextureIndex,
-            Get(sceneSampler),
-            (material.config & MATERIAL_IS_HEIGHT_SINGLE_CHANNEL) > 0);
+       // texCoord += ParallaxAdvance(
+       //     In.uv, 
+       //     0.0,
+       //     32.0, 
+       //     material.heightMapScale * PARALLAX_MULTIPLIER,
+       //     In.pos,
+       //     In.normal,
+       //     In.tangent,
+       //     In.bitangent,
+       //     material.heightTextureIndex,
+       //     (material.config & MATERIAL_IS_HEIGHT_SINGLE_CHANNEL) > 0);
     }
 
 
@@ -69,7 +63,7 @@ PsOut PS_MAIN(PsIn In, SV_PrimitiveID(uint) primitiveID)
         if(SampleSceneTextureFloat4(material.dissolveAlphaTextureIndex, Get(sceneSampler), texCoord, alphaValue)) {
             //Get in 0.75 - 1 range
             fDissolve = fDissolve * 0.25 + 0.75;
-            float fDissolveAlpha = alphaValue.r;
+            float fDissolveAlpha = ((material.config & MATERIAL_IS_ALPHA_SINGLE_CHANNEL) > 0) ? alphaValue.r : alphaValue.a;
             fDissolve -= (0.25 - fDissolveAlpha * 0.25);
         } else {
             //Get in 0.5 - 1 range.
@@ -83,11 +77,10 @@ PsOut PS_MAIN(PsIn In, SV_PrimitiveID(uint) primitiveID)
     }
     
     #if !defined(INDIRECT_ROOT_CONSTANT)
-        Out.visibility = unpackUnorm4x8(SCENE_VIZ_ALPHA_ID(In.drawID, primitiveID)); 
+        RETURN(unpackUnorm4x8(SCENE_VIZ_ALPHA_ID(In.drawID, primitiveID))); 
     #else 
-        Out.visibility = unpackUnorm4x8(SCENE_VIZ_ALPHA_ID(Get(indirectDrawId), primitiveID)); 
+        RETURN(unpackUnorm4x8(SCENE_VIZ_ALPHA_ID(Get(indirectDrawId), primitiveID))); 
     #endif
-    RETURN(Out);
 }
 
 

@@ -3889,9 +3889,9 @@ namespace hpl {
         cFrustum* apFrustum,
         cWorld* apWorld,
         cRenderSettings* apSettings,
-        bool abSendFrameBufferToPostEffects) {
+        RenderTargetScopedBarrier& output) {
         // keep around for the moment ...
-        BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects);
+        BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, false);
 
         if (frame.m_currentFrame != m_activeFrame) {
             m_materialSet.m_objectIndex = 0;

@@ -29,6 +29,7 @@
 #include "math/MathTypes.h"
 #include "scene/SceneTypes.h"
 
+#include "graphics/ScopedBarrier.h"
 #include "graphics/RenderFunctions.h"
 #include "scene/Viewport.h"
 #include <cstdint>
@@ -155,7 +156,8 @@ namespace hpl {
             cFrustum* apFrustum,
             cWorld* apWorld,
             cRenderSettings* apSettings,
-            bool abSendFrameBufferToPostEffects) = 0;
+            RenderTargetScopedBarrier& output
+            ) = 0;
 
         void Update(float afTimeStep);
 

@@ -92,7 +92,7 @@ namespace hpl {
             cFrustum* apFrustum,
             cWorld* apWorld,
             cRenderSettings* apSettings,
-            bool abSendFrameBufferToPostEffects) override;
+        RenderTargetScopedBarrier& output) override;
 
         std::array<SharedBuffer, NumberOfPerFrameUniforms> m_frameBufferUniform;
         uint32_t m_perFrameIndex = 0;

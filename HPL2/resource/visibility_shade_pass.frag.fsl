@@ -11,16 +11,10 @@ STRUCT(PsIn)
     DATA(float2, screenPos, TEXCOORD0);
 };
 
-STRUCT(PsOut)
-{
-    DATA(float4, outColor , SV_Target0);
-    DATA(float4, test, SV_Target1);
-};
 
-PsOut PS_MAIN(PsIn In)
+float4 PS_MAIN(PsIn In)
 {
   INIT_MAIN;
-  PsOut Out;
     
   const float4 visRaw = LoadTex2D(Get(visibilityTexture), Get(nearEdgeClampSampler), uint2(In.position.xy), 0);
   const uint objectId_triId = packUnorm4x8(visRaw);
@@ -103,89 +97,89 @@ PsOut PS_MAIN(PsIn In)
 
   float2 texCoord = results.interp;
   float4 diffuseColor = LoadTex2D(Get(albedoTexture), Get(nearEdgeClampSampler), uint2(In.position.xy), 0);
-  if(isTextureIndexValid(material.heightTextureIndex)) {
-      texCoord += ParallaxAdvance(
-          results.interp, 
-          0.0,
-          32.0, 
-          material.heightMapScale * PARALLAX_MULTIPLIER,
-          viewPosition.xyz,
-          worldNormal,
-          worldTangent,
-          worldBitangent,
-          material.heightTextureIndex,
-          Get(sceneSampler),
-          (material.config & MATERIAL_IS_HEIGHT_SINGLE_CHANNEL) > 0);
-  }
-  float4 normalSample = float4(0,0,0,0);
-  float3 shadedColor = float3(0.0f);  
-
-  if (SampleSceneTextureGradFloat4(material.normalTextureIndex, Get(sceneSampler), texCoord, texCoordDX, texCoordDY, normalSample)) {
-      normalSample -=  0.5;
-      worldNormal = normalize(normalSample.x * worldTangent + normalSample.y * worldBitangent+ normalSample.z * worldNormal);
-  } 
-  float4 illuminationSample = float4(0,0,0,0);
-  if(obj.illuminationAmount > 0 && SampleSceneTextureGradFloat4(material.illuminiationTextureIndex, Get(sceneSampler), texCoord, texCoordDX, texCoordDY, illuminationSample)) {
-     shadedColor += (obj.illuminationAmount * illuminationSample.xyz); 
-  }
-
-  float2 texelPos = (In.position.xy / viewInfo.rect.zw);
-  const uint2 clusterCoords = uint2(floor(texelPos * float2(LIGHT_CLUSTER_WIDTH, LIGHT_CLUSTER_HEIGHT)));
-  const uint slice = calcDepthSlice(float(LIGHT_CLUSTER_SLICE), z, viewInfo.zNear, viewInfo.zFar);
   
-  const uint lightClusterCount = LoadByte(Get(lightClustersCount), LIGHT_FROXEL_COUNT_POS(clusterCoords.x, clusterCoords.y, slice) << 2);
-  float4 specular = float4(0,0,0,0);	
-  SampleSceneTextureGradFloat4(material.specularTextureIndex, Get(sceneSampler), texCoord, texCoordDX, texCoordDY, specular);
-  for(uint j = 0; j < lightClusterCount; ++j) {
-      const uint index = LoadByte(Get(lightClusters), LIGHT_FROXEL_DATA_POS(clusterCoords.x, clusterCoords.y, slice, j) << 2);
-      const Light light = Get(lights)[index];
-            
-      float4 lightCameraSpace = mul(viewInfo.viewMat, float4(light.position.xyz, 1.0f));
-      
-      const float3 lightDir = (lightCameraSpace.xyz  - viewPosition) * (1.0 / light.radius);
-      const float3 normalLightDir = normalize(lightDir);
-      const float fLDotN = max(dot(worldNormal, normalLightDir), 0.0);
-      
-      const float3 lightDiffuseColor = light.color.xyz * fLDotN;
-      const float3 halfVec = normalize(normalLightDir + normalize(-viewPosition.xyz));
-      const float specIntensity = specular.x;
-      const float specPower = exp2(specular.y * 10.0) + 1.0;
-      const float specularValue = light.color.w * specIntensity *  pow( clamp( dot( halfVec, worldNormal), 0.0, 1.0), specPower );
-      
-      switch(light.lightType) {
-        case LIGHT_TYPE_SPOT_LIGHT: {
-            const float3 lightCameraDirection = -mul(to_f3x3(viewInfo.viewMat), light.direction);
-            float attenuation = saturate(1.0f - dot(lightDir , lightDir));
-            if(acos(dot(normalLightDir, lightCameraDirection)) > light.angle) {
-              break;
-            }
-            float4 projectionUV = mul(light.viewProjection, float4(position.xyz,1.0));
-            projectionUV.xyz = (projectionUV.xyz / projectionUV.w);
-            projectionUV.xy = projectionUV.xy * 0.5 + 0.5;
-            projectionUV.w = 1.0;
+ // if(isTextureIndexValid(material.heightTextureIndex)) {
+ //     texCoord += ParallaxAdvance(
+ //         results.interp, 
+ //         0.0,
+ //         32.0, 
+ //         material.heightMapScale * PARALLAX_MULTIPLIER,
+ //         viewPosition.xyz,
+ //         worldNormal,
+ //         worldTangent,
+ //         worldBitangent,
+ //         material.heightTextureIndex,
+ //         Get(sceneSampler),
+ //         (material.config & MATERIAL_IS_HEIGHT_SINGLE_CHANNEL) > 0);
+ // }
+ // float4 normalSample = float4(0,0,0,0);
+ // float3 shadedColor = float3(0.0f);  
 
-            float4 shadowSample;
-            if(SampleSceneTextureProjFloat4(light.goboTextureIndex, Get(nearEdgeClampSampler), projectionUV, shadowSample)) {
-              attenuation *= shadowSample.x; 
-            } else {
-              float oneMinusCos = 1.0 - dot(normalLightDir, lightCameraDirection);
-              attenuation *= saturate(1.0 - (oneMinusCos / (1.0 - cos(light.angle * 0.5))));
-            }
-            shadedColor += ((specularValue.xxx * light.color.xyz) + (diffuseColor.xyz * light.color.xyz * fLDotN)) * attenuation;
-          break;
-        }
-        default: {
-          const float attenuation = saturate(1.0f - dot(lightDir , lightDir)) * max(dot(worldNormal, normalLightDir), 0.0f);
-          shadedColor += (specularValue.xxx + diffuseColor.xyz ) * light.color.xyz * attenuation;
-          break;
-        }
-      }
-  }
+ // if (SampleSceneTextureGradFloat4(material.normalTextureIndex, Get(sceneSampler), texCoord, texCoordDX, texCoordDY, normalSample)) {
+ //     normalSample -=  0.5;
+ //     worldNormal = normalize(normalSample.x * worldTangent + normalSample.y * worldBitangent+ normalSample.z * worldNormal);
+ // } 
+ // float4 illuminationSample = float4(0,0,0,0);
+ // if(obj.illuminationAmount > 0 && SampleSceneTextureGradFloat4(material.illuminiationTextureIndex, Get(sceneSampler), texCoord, texCoordDX, texCoordDY, illuminationSample)) {
+ //    shadedColor += (obj.illuminationAmount * illuminationSample.xyz); 
+ // }
 
-  Out.outColor = float4(shadedColor, 0.0f); 
+ // float2 texelPos = (In.position.xy / viewInfo.rect.zw);
+ // const uint2 clusterCoords = uint2(floor(texelPos * float2(LIGHT_CLUSTER_WIDTH, LIGHT_CLUSTER_HEIGHT)));
+ // const uint slice = calcDepthSlice(float(LIGHT_CLUSTER_SLICE), z, viewInfo.zNear, viewInfo.zFar);
+ // 
+ // const uint lightClusterCount = LoadByte(Get(lightClustersCount), LIGHT_FROXEL_COUNT_POS(clusterCoords.x, clusterCoords.y, slice) << 2);
+ // float4 specular = float4(0,0,0,0);	
+ // SampleSceneTextureGradFloat4(material.specularTextureIndex, Get(sceneSampler), texCoord, texCoordDX, texCoordDY, specular);
+ // for(uint j = 0; j < lightClusterCount; ++j) {
+ //     const uint index = LoadByte(Get(lightClusters), LIGHT_FROXEL_DATA_POS(clusterCoords.x, clusterCoords.y, slice, j) << 2);
+ //     const Light light = Get(lights)[index];
+ //           
+ //     float4 lightCameraSpace = mul(viewInfo.viewMat, float4(light.position.xyz, 1.0f));
+ //     
+ //     const float3 lightDir = (lightCameraSpace.xyz  - viewPosition) * (1.0 / light.radius);
+ //     const float3 normalLightDir = normalize(lightDir);
+ //     const float fLDotN = max(dot(worldNormal, normalLightDir), 0.0);
+ //     
+ //     const float3 lightDiffuseColor = light.color.xyz * fLDotN;
+ //     const float3 halfVec = normalize(normalLightDir + normalize(-viewPosition.xyz));
+ //     const float specIntensity = specular.x;
+ //     const float specPower = exp2(specular.y * 10.0) + 1.0;
+ //     const float specularValue = light.color.w * specIntensity *  pow( clamp( dot( halfVec, worldNormal), 0.0, 1.0), specPower );
+ //     
+ //     switch(light.lightType) {
+ //       case LIGHT_TYPE_SPOT_LIGHT: {
+ //           const float3 lightCameraDirection = -mul(to_f3x3(viewInfo.viewMat), light.direction);
+ //           float attenuation = saturate(1.0f - dot(lightDir , lightDir));
+ //           if(acos(dot(normalLightDir, lightCameraDirection)) > light.angle) {
+ //             break;
+ //           }
+ //           float4 projectionUV = mul(light.viewProjection, float4(position.xyz,1.0));
+ //           projectionUV.xyz = (projectionUV.xyz / projectionUV.w);
+ //           projectionUV.xy = projectionUV.xy * 0.5 + 0.5;
+ //           projectionUV.w = 1.0;
+
+ //           float4 shadowSample;
+ //           if(SampleSceneTextureProjFloat4(light.goboTextureIndex, Get(nearEdgeClampSampler), projectionUV, shadowSample)) {
+ //             attenuation *= shadowSample.x; 
+ //           } else {
+ //             float oneMinusCos = 1.0 - dot(normalLightDir, lightCameraDirection);
+ //             attenuation *= saturate(1.0 - (oneMinusCos / (1.0 - cos(light.angle * 0.5))));
+ //           }
+ //           shadedColor += ((specularValue.xxx * light.color.xyz) + (diffuseColor.xyz * light.color.xyz * fLDotN)) * attenuation;
+ //         break;
+ //       }
+ //       default: {
+ //         const float attenuation = saturate(1.0f - dot(lightDir , lightDir)) * max(dot(worldNormal, normalLightDir), 0.0f);
+ //         shadedColor += (specularValue.xxx + diffuseColor.xyz ) * light.color.xyz * attenuation;
+ //         break;
+ //       }
+ //     }
+ // }
+
   //Out.outColor = float4(diffuseColor.rgb, 0.0f); 
-  Out.test = float4(clusterCoords.x,clusterCoords.y,slice, lightClusterCount);
-  RETURN(Out);
+  //Out.test = float4(clusterCoords.x,clusterCoords.y,slice, lightClusterCount);
+  RETURN(diffuseColor);
 
 }
 

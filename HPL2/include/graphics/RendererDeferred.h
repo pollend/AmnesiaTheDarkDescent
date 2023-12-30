@@ -21,6 +21,7 @@
 #include "engine/RTTI.h"
 
 #include "graphics/SceneResource.h"
+#include "graphics/ScopedBarrier.h"
 #include "scene/Viewport.h"
 #include "scene/World.h"
 #include "windowing/NativeWindow.h"
@@ -362,7 +363,7 @@ namespace hpl {
             cFrustum* apFrustum,
             cWorld* apWorld,
             cRenderSettings* apSettings,
-            bool abSendFrameBufferToPostEffects) override;
+            RenderTargetScopedBarrier& output) override;
 
     private:
         iVertexBuffer* GetLightShape(iLight* apLight, eDeferredShapeQuality aQuality) const;

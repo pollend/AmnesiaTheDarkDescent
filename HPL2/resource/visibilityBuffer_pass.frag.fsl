@@ -12,12 +12,10 @@ STRUCT(PsIn)
 float4 PS_MAIN(PsIn In, SV_PrimitiveID(uint) primitiveID)
 {
 	INIT_MAIN;
-	float4 result;
 	#if !defined(INDIRECT_ROOT_CONSTANT)
-        result  = unpackUnorm4x8(SCENE_VIZ_ALPHA_ID(In.drawID, primitiveID)); 
-    #else 
-        result = unpackUnorm4x8(SCENE_VIZ_ALPHA_ID(Get(indirectDrawId), primitiveID)); 
-    #endif
-  RETURN(result);
+        RETURN(unpackUnorm4x8(SCENE_VIZ_ALPHA_ID(In.drawID, primitiveID))); 
+  #else 
+        RETURN(unpackUnorm4x8(SCENE_VIZ_ALPHA_ID(Get(indirectDrawId), primitiveID))); 
+  #endif
 }
 

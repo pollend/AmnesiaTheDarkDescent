@@ -24,6 +24,7 @@
 #include "graphics/GraphicsTypes.h"
 #include "graphics/ImageBindlessPool.h"
 #include "graphics/SceneResource.h"
+#include "graphics/ScopedBarrier.h"
 #include "graphics/ShadowCache.h"
 #include "graphics/BindlessDescriptorPool.h"
 #include "scene/Viewport.h"
@@ -120,8 +121,8 @@ namespace hpl {
             ViewportData() = default;
             ViewportData(const ViewportData&) = delete;
             ViewportData(ViewportData&& buffer)= default;
-            ViewportData& operator=(const ViewportData&) = delete;
             ViewportData& operator=(ViewportData&& buffer) = default;
+            ViewportData& operator=(const ViewportData&) = delete;
 
             uint2 m_size = uint2(0, 0);
             std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_outputBuffer;
@@ -154,7 +155,7 @@ namespace hpl {
             cFrustum* apFrustum,
             cWorld* apWorld,
             cRenderSettings* apSettings,
-            bool abSendFrameBufferToPostEffects) override;
+            RenderTargetScopedBarrier& output) override;
 
     private:
         void setIndirectDrawArg(const ForgeRenderer::Frame& frame, uint32_t drawArgIndex, uint32_t slot, DrawPacket& packet);

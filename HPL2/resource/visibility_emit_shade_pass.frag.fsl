@@ -11,12 +11,8 @@ STRUCT(PsIn)
     DATA(float2, screenPos, TEXCOORD0);
 };
 
-STRUCT(PsOut)
-{
-    DATA(float4, albedoColor , SV_Target0);
-};
 
-PsOut PS_MAIN(PsIn In)
+float4 PS_MAIN(PsIn In)
 {
   INIT_MAIN;
     
@@ -101,7 +97,6 @@ PsOut PS_MAIN(PsIn In)
   DiffuseMaterial material = Get(sceneDiffuseMat)[materialIndex];  
 
   float2 texCoord = results.interp;
-  PsOut Out;
   if(isTextureIndexValid(material.heightTextureIndex)) {
       texCoord += ParallaxAdvance(
           results.interp, 
@@ -113,14 +108,19 @@ PsOut PS_MAIN(PsIn In)
           worldTangent,
           worldBitangent,
           material.heightTextureIndex,
-          Get(sceneSampler),
           (material.config & MATERIAL_IS_HEIGHT_SINGLE_CHANNEL) > 0);
   }
   float4 diffuseColor = float4(0,0,0,0);
   float3 shadedColor = f3(0.0f);
-  SampleSceneTextureGradFloat4(material.diffuseTextureIndex, Get(sceneSampler), texCoord, texCoordDX, texCoordDY, diffuseColor);
-  Out.albedoColor = diffuseColor;
-  RETURN(Out);
+  
+  if(isTextureIndexValid(material.diffuseTextureIndex)) {
+    const uint diffuseTextureIdx = material.diffuseTextureIndex;
+    BeginNonUniformResourceIndex(diffuseTextureIdx);
+	    diffuseColor = SampleGradTex2D(Get(sceneTextures)[diffuseTextureIdx], Get(sceneSampler), texCoord, texCoordDX, texCoordDY);
+    EndNonUniformResourceIndex(); 
+  }
+
+  RETURN(diffuseColor);
 
 }
 
