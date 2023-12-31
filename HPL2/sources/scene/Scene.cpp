@@ -196,8 +196,6 @@ namespace hpl {
             cCamera* pCamera = pViewPort->GetCamera();
             cFrustum* pFrustum = pCamera ? pCamera->GetFrustum() : NULL;
 
-            RenderTargetScopedBarrier outputScopeBarrier;
-            //////////////////////////////////////////////
             // Render world and call callbacks
             if (alFlags & tSceneRenderFlag_World) {
                 pViewPort->RunViewportCallbackMessage(eViewportMessage_OnPreWorldDraw);
@@ -215,8 +213,7 @@ namespace hpl {
                         afFrameTime,
                         pFrustum,
                         pViewPort->GetWorld(),
-                        pViewPort->GetRenderSettings(),
-                        outputScopeBarrier);
+                        pViewPort->GetRenderSettings());
                     STOP_TIMING(RenderWorld)
                 } else {
                     // If no renderer sets up viewport do that by our selves.
@@ -239,14 +236,8 @@ namespace hpl {
             auto forgeRenderer = Interface<ForgeRenderer>::Get();
 
             // Render Post effects
-            //auto outputImage = pRenderer->GetOutputImage(frame.m_frameIndex, *pViewPort);
-            if(outputScopeBarrier.IsValid()) {
-
-                {
-                    cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
-                    std::array scopeTransition{ RenderTargetTransition{ &outputScopeBarrier, RESOURCE_STATE_PIXEL_SHADER_RESOURCE} };
-                    ScopedBarrier::Transition(frame.m_cmd, scopeTransition);
-                }
+            auto outputImage = pRenderer->GetOutputImage(frame.m_frameIndex, *pViewPort);
+            if(outputImage.IsValid()) {
 
                 const bool isViewportTarget = pViewPort->Target().IsValid();
                 auto target = isViewportTarget ? pViewPort->Target().m_handle : frame.finalTarget();
@@ -264,7 +255,7 @@ namespace hpl {
                         frame,
                         *pViewPort,
                          afFrameTime,
-                         outputScopeBarrier.Target()->pTexture,
+                         outputImage.m_handle->pTexture,
                         target);
                     if (isViewportTarget) {
                         cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
@@ -277,15 +268,8 @@ namespace hpl {
                  } else {
                     auto size = pViewPort->GetSize();
                     cRect2l rect = cRect2l(0, 0, size.x, size.y);
-                    forgeRenderer->cmdCopyTexture(frame.m_cmd, outputScopeBarrier.Target()->pTexture, target);
+                    forgeRenderer->cmdCopyTexture(frame.m_cmd, outputImage.m_handle->pTexture, target);
                  }
-            }
-            {
-                cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
-                std::array rtBarriers = {
-                    &outputScopeBarrier
-                };
-                ScopedBarrier::End(frame.m_cmd, rtBarriers);
             }
             //if(outputImage.IsValid()) {
             //    cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);

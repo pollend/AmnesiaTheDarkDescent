@@ -210,7 +210,8 @@ namespace hpl {
     } // namespace detail
 
     cRendererDeferred2::cRendererDeferred2(cGraphics* apGraphics, cResources* apResources, std::shared_ptr<DebugDraw> debug)
-        : iRenderer("Deferred2", apGraphics, apResources) {
+        : iRenderer("Deferred2", apGraphics, apResources),
+            m_copySubpass(*Interface<ForgeRenderer>::Get()){
         auto* forgeRenderer = Interface<ForgeRenderer>::Get();
         m_sceneTexture2DPool = BindlessDescriptorPool(ForgeRenderer::SwapChainLength, resource::MaxScene2DTextureCount);
         m_sceneTextureCubePool = BindlessDescriptorPool(ForgeRenderer::SwapChainLength, resource::MaxSceneCubeTextureCount);
@@ -441,11 +442,11 @@ namespace hpl {
                                    m_translucencyRefractionShaderAlpha.m_handle,
                                    m_translucencyRefractionShaderPremulAlpha.m_handle,
                                    m_translucencyIlluminationShaderPremulAlpha.m_handle };
-        std::array vbShadeSceneSamplers = { m_samplerLinearClampToBorder.m_handle,
+            std::array vbShadeSceneSamplers = { m_samplerLinearClampToBorder.m_handle,
                                                 m_samplerMaterial.m_handle,
                                                 m_samplerNearEdgeClamp.m_handle,
                                                 m_samplerPointWrap.m_handle };
-        std::array vbShadeSceneSamplersNames = {
+            std::array vbShadeSceneSamplersNames = {
                 "linearBorderSampler", "sceneSampler", "nearEdgeClampSampler", "nearPointWrapSampler"
             };
             RootSignatureDesc rootSignatureDesc = {};
@@ -458,6 +459,9 @@ namespace hpl {
             addRootSignature(forgeRenderer->Rend(), &rootSignatureDesc, signature);
             return true;
         });
+
+
+
         // Indirect Argument signature
         {
             uint32_t indirectArgCount = 0;
@@ -1294,9 +1298,9 @@ namespace hpl {
                 std::array params = {
                     DescriptorData{ .pName = "decals", .ppBuffers = &m_decalBuffer[swapchainIndex].m_handle },
                     DescriptorData{ .pName = "particles", .ppBuffers = &m_particleBuffer[swapchainIndex].m_handle },
-              //     DescriptorData{ .pName = "lights", .ppBuffers = &m_lightBuffer[swapchainIndex].m_handle },
-              //     DescriptorData{ .pName = "lightClustersCount", .ppBuffers = &m_lightClusterCountBuffer[swapchainIndex].m_handle },
-              //     DescriptorData{ .pName = "lightClusters", .ppBuffers = &m_lightClustersBuffer[swapchainIndex].m_handle },
+                    DescriptorData{ .pName = "lights", .ppBuffers = &m_lightBuffer[swapchainIndex].m_handle },
+                    DescriptorData{ .pName = "lightClustersCount", .ppBuffers = &m_lightClusterCountBuffer[swapchainIndex].m_handle },
+                    DescriptorData{ .pName = "lightClusters", .ppBuffers = &m_lightClustersBuffer[swapchainIndex].m_handle },
                     DescriptorData{ .pName = "sceneObjects", .ppBuffers = &m_objectUniformBuffer[swapchainIndex].m_handle },
                     DescriptorData{ .pName = "sceneInfo", .ppBuffers = &m_perSceneInfoBuffer[swapchainIndex].m_handle },
                 };
@@ -1334,6 +1338,7 @@ namespace hpl {
 
                 DescriptorData{ .pName = "dissolveTexture", .ppTextures = &m_dissolveImage->GetTexture().m_handle },
                 DescriptorData{ .pName = "sceneDiffuseMat", .ppBuffers = &m_diffuseMatUniformBuffer.m_handle },
+                DescriptorData{ .pName = "sceneTranslucentMat", .ppBuffers = &m_translucencyMatBuffer.m_handle },
                 // DescriptorData{ .pName = "sceneFilters", .mCount = samplers.size(), .ppSamplers = samplers.data() },
                 DescriptorData{ .pName = "vtxOpaqueIndex", .ppBuffers = &opaqueSet.indexBuffer().m_handle },
                 DescriptorData{ .pName = "vtxOpaquePosition",
@@ -1460,13 +1465,12 @@ namespace hpl {
 
     void cRendererDeferred2::Draw(
         Cmd* cmd,
-        const ForgeRenderer::Frame& frame,
+        ForgeRenderer::Frame& frame,
         cViewport& viewport,
         float frameTime,
         cFrustum* apFrustum,
         cWorld* apWorld,
-        cRenderSettings* apSettings,
-        RenderTargetScopedBarrier& output) {
+        cRenderSettings* apSettings) {
 
         BeginRendering(frameTime, apFrustum, apWorld, apSettings, false);
 
@@ -1516,9 +1520,9 @@ namespace hpl {
                     renderTargetDesc.mHeight = updateDatum->m_size.y;
                     renderTargetDesc.mSampleCount = SAMPLE_COUNT_1;
                     renderTargetDesc.mSampleQuality = 0;
-                    renderTargetDesc.mStartState = RESOURCE_STATE_RENDER_TARGET ;
+                    renderTargetDesc.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
                     renderTargetDesc.mFormat = TinyImageFormat_R8G8B8A8_UNORM;
-                    renderTargetDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+                    renderTargetDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE | DESCRIPTOR_TYPE_RW_TEXTURE;
                     renderTargetDesc.pName = "output RT";
                     addRenderTarget(forgeRenderer->Rend(), &renderTargetDesc, target);
                     return true;
@@ -1574,6 +1578,25 @@ namespace hpl {
                     return true;
                 });
 
+                updateDatum->m_refractionImage[i].Load([&](Texture** texture) {
+                    TextureLoadDesc loadDesc = {};
+                    loadDesc.ppTexture = texture;
+                    TextureDesc refractionImageDesc = {};
+                    refractionImageDesc.mArraySize = 1;
+                    refractionImageDesc.mDepth = 1;
+                    refractionImageDesc.mMipLevels = 1;
+                    refractionImageDesc.mFormat = TinyImageFormat_R8G8B8A8_UNORM;
+                    refractionImageDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE | DESCRIPTOR_TYPE_RW_TEXTURE;
+                    refractionImageDesc.mWidth = updateDatum->m_size.x;
+                    refractionImageDesc.mHeight = updateDatum->m_size.y;
+                    refractionImageDesc.mSampleCount = SAMPLE_COUNT_1;
+                    refractionImageDesc.mSampleQuality = 0;
+                    refractionImageDesc.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
+                    refractionImageDesc.pName = "Refraction Image";
+                    loadDesc.pDesc = &refractionImageDesc;
+                    addResource(&loadDesc, nullptr);
+                    return true;
+                });
                 updateDatum->m_visiblityBuffer[i].Load(forgeRenderer->Rend(), [&](RenderTarget** target) {
                     ClearValue optimizedColorClearBlack = { { 0.0f, 0.0f, 0.0f, 0.0f } };
                     RenderTargetDesc renderTargetDesc = {};
@@ -1600,6 +1623,7 @@ namespace hpl {
         frame.m_resourcePool->Push(viewportDatum->m_depthBuffer[frame.m_frameIndex]);
         frame.m_resourcePool->Push(viewportDatum->m_outputBuffer[frame.m_frameIndex]);
         frame.m_resourcePool->Push(viewportDatum->m_albedoBuffer[frame.m_frameIndex]);
+        frame.m_resourcePool->Push(viewportDatum->m_refractionImage[frame.m_frameIndex]);
         // ----------------
         // Setup Data
         // -----------------
@@ -1609,6 +1633,8 @@ namespace hpl {
                                 .ppTextures = &viewportDatum->m_visiblityBuffer[frame.m_frameIndex].m_handle->pTexture },
                 DescriptorData{ .pName = "albedoTexture",
                                 .ppTextures = &viewportDatum->m_albedoBuffer[frame.m_frameIndex].m_handle->pTexture },
+                DescriptorData{ .pName = "refractionTexture",
+                                .ppTextures = &viewportDatum->m_refractionImage[frame.m_frameIndex].m_handle },
             };
             updateDescriptorSet(
                 forgeRenderer->Rend(), 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle, params.size(), params.data());
@@ -2263,184 +2289,219 @@ namespace hpl {
             cmdDraw(cmd, 3, 0);
             //cmdEndDebugMarker(cmd);
         }
-       // {
-       //     //cmdBeginDebugMarker(cmd, 0, 1, 0, "Decal Output Buffer Pass");
-       //     auto& opaqueSet = graphicsAllocator->resolveSet(GraphicsAllocator::AllocationSet::OpaqueSet);
-       //     std::array semantics = { ShaderSemantic::SEMANTIC_POSITION,
-       //                              ShaderSemantic::SEMANTIC_TEXCOORD0,
-       //                              ShaderSemantic::SEMANTIC_COLOR };
-       //     LoadActionsDesc loadActions = {};
-       //     loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
-       //     loadActions.mClearColorValues[0] = { .r = 0.0f, .g = 0.0f, .b = 0.0f, .a = 0.0f };
-       //     loadActions.mClearDepth = { .depth = 1.0f, .stencil = 0 };
-       //     loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
-       //     std::array targets = { viewportDatum->m_albedoBuffer[frame.m_frameIndex].m_handle };
-       //     cmdBindRenderTargets(
-       //         cmd,
-       //         targets.size(),
-       //         targets.data(),
-       //         viewportDatum->m_depthBuffer[frame.m_frameIndex].m_handle,
-       //         &loadActions,
-       //         NULL,
-       //         NULL,
-       //         -1,
-       //         -1);
-       //     cmdSetViewport(cmd, 0.0f, 0.0f, viewportDatum->m_size.x, viewportDatum->m_size.y, 0.0f, 1.0f);
-       //     cmdSetScissor(cmd, 0, 0, viewportDatum->m_size.x, viewportDatum->m_size.y);
-       //     opaqueSet.cmdBindGeometrySet(cmd, semantics);
-       //     cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorConstSet.m_handle);
-       //     cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
+        {
+            //cmdBeginDebugMarker(cmd, 0, 1, 0, "Decal Output Buffer Pass");
+            auto& opaqueSet = graphicsAllocator->resolveSet(GraphicsAllocator::AllocationSet::OpaqueSet);
+            std::array semantics = { ShaderSemantic::SEMANTIC_POSITION,
+                                     ShaderSemantic::SEMANTIC_TEXCOORD0,
+                                     ShaderSemantic::SEMANTIC_COLOR };
+            LoadActionsDesc loadActions = {};
+            loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
+            loadActions.mClearColorValues[0] = { .r = 0.0f, .g = 0.0f, .b = 0.0f, .a = 0.0f };
+            loadActions.mClearDepth = { .depth = 1.0f, .stencil = 0 };
+            loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
+            std::array targets = { viewportDatum->m_albedoBuffer[frame.m_frameIndex].m_handle };
+            cmdBindRenderTargets(
+                cmd,
+                targets.size(),
+                targets.data(),
+                viewportDatum->m_depthBuffer[frame.m_frameIndex].m_handle,
+                &loadActions,
+                NULL,
+                NULL,
+                -1,
+                -1);
+            cmdSetViewport(cmd, 0.0f, 0.0f, viewportDatum->m_size.x, viewportDatum->m_size.y, 0.0f, 1.0f);
+            cmdSetScissor(cmd, 0, 0, viewportDatum->m_size.x, viewportDatum->m_size.y);
+            opaqueSet.cmdBindGeometrySet(cmd, semantics);
+            cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorConstSet.m_handle);
+            cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
 
-       //     struct DecalDrawArg {
-       //         SharedPipeline* pipeline;
-       //     } drawArgsType[] = {
-       //         { &m_decalPipelines.m_pipelineBlendAdd }, /* eMaterialBlendMode_None */
-       //         { &m_decalPipelines.m_pipelineBlendAdd }, /* eMaterialBlendMode_Add */
-       //         { &m_decalPipelines.m_pipelineBlendMul }, /* eMaterialBlendMode_Mul */
-       //         { &m_decalPipelines.m_pipelineBlendMulX2 }, /* eMaterialBlendMode_MulX2 */
-       //         { &m_decalPipelines.m_pipelineBlendAlpha }, /* eMaterialBlendMode_Alpha */
-       //         { &m_decalPipelines.m_pipelineBlendPremulAlpha }, /* eMaterialBlendMode_PremulAlpha */
-       //     };
+            struct DecalDrawArg {
+                SharedPipeline* pipeline;
+            } drawArgsType[] = {
+                { &m_decalPipelines.m_pipelineBlendAdd }, /* eMaterialBlendMode_None */
+                { &m_decalPipelines.m_pipelineBlendAdd }, /* eMaterialBlendMode_Add */
+                { &m_decalPipelines.m_pipelineBlendMul }, /* eMaterialBlendMode_Mul */
+                { &m_decalPipelines.m_pipelineBlendMulX2 }, /* eMaterialBlendMode_MulX2 */
+                { &m_decalPipelines.m_pipelineBlendAlpha }, /* eMaterialBlendMode_Alpha */
+                { &m_decalPipelines.m_pipelineBlendPremulAlpha }, /* eMaterialBlendMode_PremulAlpha */
+            };
 
-       //     for (auto& indirectArg : decalIndirectArgs) {
-       //         cmdBindPipeline(cmd, drawArgsType[indirectArg.blend].pipeline->m_handle);
-       //         cmdExecuteIndirect(
-       //             cmd,
-       //             m_cmdSignatureVBPass,
-       //             indirectArg.range.size(),
-       //             m_indirectDrawArgsBuffer[frame.m_frameIndex].m_handle,
-       //             indirectArg.range.m_start * IndirectArgumentSize,
-       //             nullptr,
-       //             0);
-       //     }
+            for (auto& indirectArg : decalIndirectArgs) {
+                cmdBindPipeline(cmd, drawArgsType[indirectArg.blend].pipeline->m_handle);
+                cmdExecuteIndirect(
+                    cmd,
+                    m_cmdSignatureVBPass,
+                    indirectArg.range.size(),
+                    m_indirectDrawArgsBuffer[frame.m_frameIndex].m_handle,
+                    indirectArg.range.m_start * IndirectArgumentSize,
+                    nullptr,
+                    0);
+            }
 
-       //     //cmdEndDebugMarker(cmd);
-       // }
-       // {
-       //     cmdBindRenderTargets(cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
-       //     std::array rtBarriers = {
-       //         RenderTargetBarrier{ viewportDatum->m_albedoBuffer[frame.m_frameIndex].m_handle,
-       //                              RESOURCE_STATE_RENDER_TARGET,
-       //                              RESOURCE_STATE_SHADER_RESOURCE},
-       //     };
-       //     cmdResourceBarrier(cmd, 0, nullptr, 0, nullptr, rtBarriers.size(), rtBarriers.data());
-       // }
-       // {
-       //     //cmdBeginDebugMarker(cmd, 0, 1, 0, "Visibility Output Buffer Pass");
-       //     LoadActionsDesc loadActions = {};
-       //     loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
-       //     loadActions.mClearDepth = { .depth = 1.0f, .stencil = 0 };
-       //     loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
-       //     std::array targets = { viewportDatum->m_outputBuffer[frame.m_frameIndex].m_handle};
-       //     cmdBindRenderTargets(cmd, targets.size(), targets.data(), nullptr, &loadActions, NULL, NULL, -1, -1);
-       //     cmdSetViewport(cmd, 0.0f, 0.0f, viewportDatum->m_size.x, viewportDatum->m_size.y, 0.0f, 1.0f);
-       //     cmdSetScissor(cmd, 0, 0, viewportDatum->m_size.x, viewportDatum->m_size.y);
-       //     cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorConstSet.m_handle);
-       //     cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
-       //     cmdBindPipeline(cmd, m_visiblityShadePass.m_handle);
-       //     cmdDraw(cmd, 3, 0);
-       //     //cmdEndDebugMarker(cmd);
-       // }
+            //cmdEndDebugMarker(cmd);
+        }
+        {
+            cmdBindRenderTargets(cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+            std::array rtBarriers = {
+                RenderTargetBarrier{ viewportDatum->m_albedoBuffer[frame.m_frameIndex].m_handle,
+                                     RESOURCE_STATE_RENDER_TARGET,
+                                     RESOURCE_STATE_SHADER_RESOURCE},
+                RenderTargetBarrier{ viewportDatum->m_outputBuffer[frame.m_frameIndex].m_handle,
+                                     RESOURCE_STATE_SHADER_RESOURCE,
+                                     RESOURCE_STATE_RENDER_TARGET},
+            };
+            cmdResourceBarrier(cmd, 0, nullptr, 0, nullptr, rtBarriers.size(), rtBarriers.data());
+        }
+        {
+            //cmdBeginDebugMarker(cmd, 0, 1, 0, "Visibility Output Buffer Pass");
+            LoadActionsDesc loadActions = {};
+            loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
+            loadActions.mClearDepth = { .depth = 1.0f, .stencil = 0 };
+            loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
+            std::array targets = { viewportDatum->m_outputBuffer[frame.m_frameIndex].m_handle};
+            cmdBindRenderTargets(cmd, targets.size(), targets.data(), nullptr, &loadActions, NULL, NULL, -1, -1);
+            cmdSetViewport(cmd, 0.0f, 0.0f, viewportDatum->m_size.x, viewportDatum->m_size.y, 0.0f, 1.0f);
+            cmdSetScissor(cmd, 0, 0, viewportDatum->m_size.x, viewportDatum->m_size.y);
+            cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorConstSet.m_handle);
+            cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
+            cmdBindPipeline(cmd, m_visiblityShadePass.m_handle);
+            cmdDraw(cmd, 3, 0);
+            // cmdEndDebugMarker(cmd);
+        }
+        {
+            cmdBindRenderTargets(cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+            std::array textureBarriers = {
+                TextureBarrier{ viewportDatum->m_refractionImage[frame.m_frameIndex].m_handle,
+                                RESOURCE_STATE_SHADER_RESOURCE,
+                                RESOURCE_STATE_UNORDERED_ACCESS },
+            };
+            std::array rtBarriers = {
+                RenderTargetBarrier{ viewportDatum->m_outputBuffer[frame.m_frameIndex].m_handle,
+                                     RESOURCE_STATE_RENDER_TARGET,
+                                     RESOURCE_STATE_SHADER_RESOURCE },
+            };
+            cmdResourceBarrier(frame.m_cmd, 0, NULL, textureBarriers.size(), textureBarriers.data(), rtBarriers.size(), rtBarriers.data());
+        }
+        m_copySubpass.Dispatch(
+            frame,
+            viewportDatum->m_outputBuffer[frame.m_frameIndex].m_handle->pTexture,
+            viewportDatum->m_refractionImage[frame.m_frameIndex].m_handle);
+        {
+            std::array textureBarriers = {
+                TextureBarrier{ viewportDatum->m_refractionImage[frame.m_frameIndex].m_handle,
+                                RESOURCE_STATE_UNORDERED_ACCESS,
+                                RESOURCE_STATE_SHADER_RESOURCE },
+            };
+            std::array rtBarriers = {
+                RenderTargetBarrier{
+                    viewportDatum->m_outputBuffer[frame.m_frameIndex].m_handle,
+                    RESOURCE_STATE_SHADER_RESOURCE,
+                    RESOURCE_STATE_RENDER_TARGET,
+                },
+            };
+            cmdResourceBarrier(frame.m_cmd, 0, NULL, textureBarriers.size(), textureBarriers.data(), rtBarriers.size(), rtBarriers.data());
+        }
+        {
+            auto& particleSet = graphicsAllocator->resolveSet(GraphicsAllocator::AllocationSet::ParticleSet);
+            auto& opaqueSet = graphicsAllocator->resolveSet(GraphicsAllocator::AllocationSet::OpaqueSet);
+            LoadActionsDesc loadActions = {};
+            loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
+            loadActions.mClearColorValues[0] = { .r = 0.0f, .g = 0.0f, .b = 0.0f, .a = 0.0f };
+            loadActions.mClearDepth = { .depth = 1.0f, .stencil = 0 };
+            loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
+            std::array targets = { viewportDatum->m_outputBuffer[frame.m_frameIndex].m_handle };
+            cmdBindRenderTargets(
+                cmd,
+                targets.size(),
+                targets.data(),
+                viewportDatum->m_depthBuffer[frame.m_frameIndex].m_handle,
+                &loadActions,
+                NULL,
+                NULL,
+                -1,
+                -1);
+            cmdSetViewport(cmd, 0.0f, 0.0f, viewportDatum->m_size.x, viewportDatum->m_size.y, 0.0f, 1.0f);
+            cmdSetScissor(cmd, 0, 0, viewportDatum->m_size.x, viewportDatum->m_size.y);
 
-       // {
-       //     auto& particleSet = graphicsAllocator->resolveSet(GraphicsAllocator::AllocationSet::ParticleSet);
-       //     auto& opaqueSet = graphicsAllocator->resolveSet(GraphicsAllocator::AllocationSet::OpaqueSet);
-       //     LoadActionsDesc loadActions = {};
-       //     loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
-       //     loadActions.mClearColorValues[0] = { .r = 0.0f, .g = 0.0f, .b = 0.0f, .a = 0.0f };
-       //     loadActions.mClearDepth = { .depth = 1.0f, .stencil = 0 };
-       //     loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
-       //     std::array targets = { viewportDatum->m_outputBuffer[frame.m_frameIndex].m_handle };
-       //     cmdBindRenderTargets(
-       //         cmd,
-       //         targets.size(),
-       //         targets.data(),
-       //         viewportDatum->m_depthBuffer[frame.m_frameIndex].m_handle,
-       //         &loadActions,
-       //         NULL,
-       //         NULL,
-       //         -1,
-       //         -1);
-       //     cmdSetViewport(cmd, 0.0f, 0.0f, viewportDatum->m_size.x, viewportDatum->m_size.y, 0.0f, 1.0f);
-       //     cmdSetScissor(cmd, 0, 0, viewportDatum->m_size.x, viewportDatum->m_size.y);
+            for (auto& arg : translucenctArgs) {
+                cMaterial* pMaterial = arg.renderable->GetMaterial();
+                switch (arg.type) {
+                case TranslucentDrawType::Particle:
+                    {
+                        std::array semantics = { ShaderSemantic::SEMANTIC_POSITION,
+                                                 ShaderSemantic::SEMANTIC_TEXCOORD0,
+                                                 ShaderSemantic::SEMANTIC_COLOR };
+                        particleSet.cmdBindGeometrySet(cmd, semantics);
+                        cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorConstSet.m_handle);
+                        cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
+                        if (pMaterial->GetDepthTest()) {
+                            cmdBindPipeline(cmd, m_particlePipeline.getPipelineByBlendMode(pMaterial->GetBlendMode()).m_handle);
+                        } else {
+                            cmdBindPipeline(cmd, m_particlePipelineNoDepth.getPipelineByBlendMode(pMaterial->GetBlendMode()).m_handle);
+                        }
 
-       //     for (auto& arg : translucenctArgs) {
-       //         cMaterial* pMaterial = arg.renderable->GetMaterial();
-       //         switch (arg.type) {
-       //         case TranslucentDrawType::Particle:
-       //             {
-       //                 std::array semantics = { ShaderSemantic::SEMANTIC_POSITION,
-       //                                          ShaderSemantic::SEMANTIC_TEXCOORD0,
-       //                                          ShaderSemantic::SEMANTIC_COLOR };
-       //                 particleSet.cmdBindGeometrySet(cmd, semantics);
-       //                 cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorConstSet.m_handle);
-       //                 cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
-       //                 if (pMaterial->GetDepthTest()) {
-       //                     cmdBindPipeline(cmd, m_particlePipeline.getPipelineByBlendMode(pMaterial->GetBlendMode()).m_handle);
-       //                 } else {
-       //                     cmdBindPipeline(cmd, m_particlePipelineNoDepth.getPipelineByBlendMode(pMaterial->GetBlendMode()).m_handle);
-       //                 }
+                        if (m_supportIndirectRootConstant) {
+                            const uint32_t pushConstantIndex =
+                                getDescriptorIndexFromName(m_sceneRootSignature.m_handle, "indirectRootConstant");
+                            cmdBindPushConstants(cmd, m_sceneRootSignature.m_handle, pushConstantIndex, &arg.indirectDrawIndex);
+                        }
+                        cmdDrawIndexedInstanced(cmd, arg.numberIndecies, arg.indexOffset, 1, arg.vertexOffset, arg.indirectDrawIndex);
+                        break;
+                    }
+                case TranslucentDrawType::TranslucencyIllumination:
+                case TranslucentDrawType::Translucency:
+                    {
+                        std::array semantics = { ShaderSemantic::SEMANTIC_POSITION,
+                                                 ShaderSemantic::SEMANTIC_TEXCOORD0,
+                                                 ShaderSemantic::SEMANTIC_NORMAL,
+                                                 ShaderSemantic::SEMANTIC_TANGENT,
+                                                 ShaderSemantic::SEMANTIC_COLOR };
+                        opaqueSet.cmdBindGeometrySet(cmd, semantics);
+                        cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorConstSet.m_handle);
+                        cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
 
-       //                 if (m_supportIndirectRootConstant) {
-       //                     const uint32_t pushConstantIndex =
-       //                         getDescriptorIndexFromName(m_sceneRootSignature.m_handle, "indirectRootConstant");
-       //                     cmdBindPushConstants(cmd, m_sceneRootSignature.m_handle, pushConstantIndex, &arg.indirectDrawIndex);
-       //                 }
-       //                 cmdDrawIndexedInstanced(cmd, arg.numberIndecies, arg.indexOffset, 1, arg.vertexOffset, arg.indirectDrawIndex);
-       //                 break;
-       //             }
-       //         case TranslucentDrawType::TranslucencyIllumination:
-       //         case TranslucentDrawType::Translucency:
-       //             {
-       //                 std::array semantics = { ShaderSemantic::SEMANTIC_POSITION,
-       //                                          ShaderSemantic::SEMANTIC_TEXCOORD0,
-       //                                          ShaderSemantic::SEMANTIC_NORMAL,
-       //                                          ShaderSemantic::SEMANTIC_TANGENT,
-       //                                          ShaderSemantic::SEMANTIC_COLOR };
-       //                 opaqueSet.cmdBindGeometrySet(cmd, semantics);
-       //                 cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorConstSet.m_handle);
-       //                 cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
+                        if (arg.m_refraction) {
+                            if (pMaterial->GetDepthTest()) {
+                                cmdBindPipeline(
+                                    cmd, m_translucencyRefractionPipline.getPipelineByBlendMode(pMaterial->GetBlendMode()).m_handle);
+                            } else {
+                                cmdBindPipeline(
+                                    cmd, m_translucencyRefractionPiplineNoDepth.getPipelineByBlendMode(pMaterial->GetBlendMode()).m_handle);
+                            }
+                        } else {
+                            if (pMaterial->GetDepthTest()) {
+                                cmdBindPipeline(cmd, m_translucencyPipline.getPipelineByBlendMode(pMaterial->GetBlendMode()).m_handle);
+                            } else {
+                                cmdBindPipeline(
+                                    cmd, m_translucencyPiplineNoDepth.getPipelineByBlendMode(pMaterial->GetBlendMode()).m_handle);
+                            }
+                        }
 
-       //                 if (arg.m_refraction) {
-       //                     if (pMaterial->GetDepthTest()) {
-       //                         cmdBindPipeline(
-       //                             cmd, m_translucencyRefractionPipline.getPipelineByBlendMode(pMaterial->GetBlendMode()).m_handle);
-       //                     } else {
-       //                         cmdBindPipeline(
-       //                             cmd, m_translucencyRefractionPiplineNoDepth.getPipelineByBlendMode(pMaterial->GetBlendMode()).m_handle);
-       //                     }
-       //                 } else {
-       //                     if (pMaterial->GetDepthTest()) {
-       //                         cmdBindPipeline(cmd, m_translucencyPipline.getPipelineByBlendMode(pMaterial->GetBlendMode()).m_handle);
-       //                     } else {
-       //                         cmdBindPipeline(
-       //                             cmd, m_translucencyPiplineNoDepth.getPipelineByBlendMode(pMaterial->GetBlendMode()).m_handle);
-       //                     }
-       //                 }
+                        if (m_supportIndirectRootConstant) {
+                            const uint32_t pushConstantIndex =
+                                getDescriptorIndexFromName(m_sceneRootSignature.m_handle, "indirectRootConstant");
+                            cmdBindPushConstants(cmd, m_sceneRootSignature.m_handle, pushConstantIndex, &arg.indirectDrawIndex);
+                        }
+                        cmdDrawIndexedInstanced(cmd, arg.numberIndecies, arg.indexOffset, 1, arg.vertexOffset, arg.indirectDrawIndex);
 
-       //                 if (m_supportIndirectRootConstant) {
-       //                     const uint32_t pushConstantIndex =
-       //                         getDescriptorIndexFromName(m_sceneRootSignature.m_handle, "indirectRootConstant");
-       //                     cmdBindPushConstants(cmd, m_sceneRootSignature.m_handle, pushConstantIndex, &arg.indirectDrawIndex);
-       //                 }
-       //                 cmdDrawIndexedInstanced(cmd, arg.numberIndecies, arg.indexOffset, 1, arg.vertexOffset, arg.indirectDrawIndex);
-
-       //                 if (arg.type == TranslucentDrawType::TranslucencyIllumination) {
-       //                     if (pMaterial->GetDepthTest()) {
-       //                         cmdBindPipeline(cmd, m_translucencyPipline.getPipelineByBlendMode(pMaterial->GetBlendMode()).m_handle);
-       //                     } else {
-       //                         cmdBindPipeline(
-       //                             cmd, m_translucencyPiplineNoDepth.getPipelineByBlendMode(pMaterial->GetBlendMode()).m_handle);
-       //                     }
-       //                     cmdDrawIndexedInstanced(cmd, arg.numberIndecies, arg.indexOffset, 1, arg.vertexOffset, arg.indirectDrawIndex);
-       //                 }
-       //                 break;
-       //             }
-       //         default:
-       //             break;
-       //         }
-       //     }
-       // }
+                        if (arg.type == TranslucentDrawType::TranslucencyIllumination) {
+                            if (pMaterial->GetDepthTest()) {
+                                cmdBindPipeline(cmd, m_translucencyPipline.getPipelineByBlendMode(pMaterial->GetBlendMode()).m_handle);
+                            } else {
+                                cmdBindPipeline(
+                                    cmd, m_translucencyPiplineNoDepth.getPipelineByBlendMode(pMaterial->GetBlendMode()).m_handle);
+                            }
+                            cmdDrawIndexedInstanced(cmd, arg.numberIndecies, arg.indexOffset, 1, arg.vertexOffset, arg.indirectDrawIndex);
+                        }
+                        break;
+                    }
+                default:
+                    break;
+                }
+            }
+        }
 
         {
             cmdBindRenderTargets(cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
@@ -2451,23 +2512,16 @@ namespace hpl {
                                                    RESOURCE_STATE_SHADER_RESOURCE,
                                                    RESOURCE_STATE_UNORDERED_ACCESS } };
             std::array rtBarriers = {
-       //         RenderTargetBarrier{ viewportDatum->m_albedoBuffer[frame.m_frameIndex].m_handle,
-       //                              RESOURCE_STATE_SHADER_RESOURCE,
-       //                             RESOURCE_STATE_RENDER_TARGET},
                 RenderTargetBarrier{ viewportDatum->m_visiblityBuffer[frame.m_frameIndex].m_handle,
                                      RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
                                      RESOURCE_STATE_RENDER_TARGET},
-                RenderTargetBarrier{ viewportDatum->m_albedoBuffer[frame.m_frameIndex].m_handle,
+                RenderTargetBarrier{ viewportDatum->m_outputBuffer[frame.m_frameIndex].m_handle,
                                      RESOURCE_STATE_RENDER_TARGET,
-                                     RESOURCE_STATE_SHADER_RESOURCE},
-             //   RenderTargetBarrier{ viewportDatum->m_outputBuffer[frame.m_frameIndex].m_handle,
-             //                        RESOURCE_STATE_RENDER_TARGET,
-             //                        RESOURCE_STATE_SHADER_RESOURCE },
+                                     RESOURCE_STATE_SHADER_RESOURCE },
             };
             cmdResourceBarrier(cmd, barriers.size(), barriers.data(), 0, nullptr, rtBarriers.size(), rtBarriers.data());
         }
 
-        output.Set(viewportDatum->m_albedoBuffer[frame.m_frameIndex].m_handle, ResourceState::RESOURCE_STATE_SHADER_RESOURCE, ResourceState::RESOURCE_STATE_SHADER_RESOURCE);
 
     }
 

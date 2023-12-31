@@ -221,13 +221,12 @@ namespace hpl {
 
     void cRendererWireFrame::Draw(
         Cmd* cmd,
-        const ForgeRenderer::Frame& frame,
+        ForgeRenderer::Frame& frame,
         cViewport& viewport,
         float afFrameTime,
         cFrustum* apFrustum,
         cWorld* apWorld,
-        cRenderSettings* apSettings,
-        RenderTargetScopedBarrier& output) {
+        cRenderSettings* apSettings) {
         auto* forgeRenderer = Interface<ForgeRenderer>::Get();
         // keep around for the moment ...
         BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, false);

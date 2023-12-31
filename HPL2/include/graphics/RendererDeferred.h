@@ -357,13 +357,12 @@ namespace hpl {
 
         virtual void Draw(
             Cmd* cmd,
-            const ForgeRenderer::Frame& frame,
+            ForgeRenderer::Frame& frame,
             cViewport& viewport,
             float afFrameTime,
             cFrustum* apFrustum,
             cWorld* apWorld,
-            cRenderSettings* apSettings,
-            RenderTargetScopedBarrier& output) override;
+            cRenderSettings* apSettings) override;
 
     private:
         iVertexBuffer* GetLightShape(iLight* apLight, eDeferredShapeQuality aQuality) const;

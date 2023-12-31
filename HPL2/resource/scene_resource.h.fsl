@@ -39,7 +39,6 @@ RES(Buffer(DiffuseMaterial), sceneDiffuseMat, UPDATE_FREQ_NONE, t10, binding = 1
 RES(Buffer(TranslucentMaterial), sceneTranslucentMat, UPDATE_FREQ_NONE, t10, binding = 16);
 RES(Buffer(WaterMaterial), sceneWaterMat, UPDATE_FREQ_NONE, t10, binding = 17);
 
-
 RES(Tex2D(float4), visibilityTexture,   UPDATE_FREQ_PER_FRAME, t11, binding = 18);
 RES(Tex2D(float4), albedoTexture,      UPDATE_FREQ_PER_FRAME, t12, binding = 19);
 RES(Tex2D(float4), refractionTexture,      UPDATE_FREQ_PER_FRAME, t12, binding = 20);

@@ -32,17 +32,17 @@ float4 PS_MAIN(PsIn In, SV_PrimitiveID(uint) primitiveID)
     float2 texCoord = In.uv;
     
     if(isTextureIndexValid(material.heightTextureIndex)) {
-       // texCoord += ParallaxAdvance(
-       //     In.uv, 
-       //     0.0,
-       //     32.0, 
-       //     material.heightMapScale * PARALLAX_MULTIPLIER,
-       //     In.pos,
-       //     In.normal,
-       //     In.tangent,
-       //     In.bitangent,
-       //     material.heightTextureIndex,
-       //     (material.config & MATERIAL_IS_HEIGHT_SINGLE_CHANNEL) > 0);
+        texCoord += ParallaxAdvance(
+            In.uv, 
+            0.0,
+            32.0, 
+            material.heightMapScale * PARALLAX_MULTIPLIER,
+            In.pos,
+            In.normal,
+            In.tangent,
+            In.bitangent,
+            material.heightTextureIndex,
+            (material.config & MATERIAL_IS_HEIGHT_SINGLE_CHANNEL) > 0);
     }
 
 

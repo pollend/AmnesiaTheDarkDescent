@@ -150,13 +150,12 @@ namespace hpl {
         // ensure the contents is copied to the RenderViewport
         virtual void Draw(
             Cmd* cmd,
-            const ForgeRenderer::Frame& context,
+            ForgeRenderer::Frame& context,
             cViewport& viewport,
             float afFrameTime,
             cFrustum* apFrustum,
             cWorld* apWorld,
-            cRenderSettings* apSettings,
-            RenderTargetScopedBarrier& output
+            cRenderSettings* apSettings
             ) = 0;
 
         void Update(float afTimeStep);
