@@ -6,6 +6,7 @@
 #include "windowing/NativeWindow.h"
 
 #include "Common_3/Graphics/Interfaces/IGraphics.h"
+#include "Common_3/Utilities/RingBuffer.h"
 
 #ifdef HPL2_RENDERDOC_ENABLED
 #ifdef WIN32
@@ -16,104 +17,109 @@
 #endif
 
 namespace hpl {
- 
 
     void ForgeRenderer::IncrementFrame() {
+        if (!m_frame.m_isFinished) {
+            return;
+        }
+        m_frame.m_isFinished = false;
+
         // Stall if CPU is running "Swap Chain Buffer Count" frames ahead of GPU
         // m_resourcePoolIndex = (m_resourcePoolIndex + 1) % ResourcePoolSize;
-        m_currentFrameCount++;
-        auto frame = GetFrame();
+        //m_currentFrameCount++;
+        m_frame.m_cmdRingElement = getNextGpuCmdRingElement(&m_graphicsCmdRing, true, 1);
+        m_frame.m_currentFrame++;
+        m_frame.m_frameIndex = (m_frame.m_frameIndex + 1) % ForgeRenderer::SwapChainLength;
+        //m_frame.m_swapChainTarget = m_swapChain.m_handle->ppRenderTargets[m_frame.m_swapChainIndex];
+        m_frame.m_finalRenderTarget = m_finalRenderTarget[m_frame.index()].m_handle;
+        m_frame.m_resourcePool = &m_resourcePool[m_frame.index()];
+        m_frame.m_cmd = m_frame.cmd();
+        m_frame.m_renderer = this;
 
         FenceStatus fenceStatus;
-        auto& completeFence = frame.m_renderCompleteFence;
-        getFenceStatus(m_renderer, completeFence, &fenceStatus);
-        if (fenceStatus == FENCE_STATUS_INCOMPLETE) {
-            waitForFences(m_renderer, 1, &completeFence);
-        }
-        acquireNextImage(m_renderer, m_swapChain.m_handle, m_imageAcquiredSemaphore, nullptr, &m_swapChainIndex);
+        getFenceStatus(m_renderer, m_frame.m_cmdRingElement.pFence, &fenceStatus);
+        if (fenceStatus == FENCE_STATUS_INCOMPLETE)
+            waitForFences(m_renderer, 1, &m_frame.m_cmdRingElement.pFence);
 
-        resetCmdPool(m_renderer, frame.m_cmdPool);
-        frame.m_resourcePool->ResetPool();
-        beginCmd(frame.m_cmd);
+        resetCmdPool(m_renderer, m_frame.m_cmdRingElement.pCmdPool);
+        m_frame.m_resourcePool->ResetPool();
+        beginCmd(m_frame.cmd());
 
-        auto& swapChainImage = frame.m_swapChain->ppRenderTargets[m_swapChainIndex];
         std::array rtBarriers = {
-            RenderTargetBarrier { swapChainImage, RESOURCE_STATE_PRESENT, RESOURCE_STATE_RENDER_TARGET },
+            RenderTargetBarrier { m_frame.finalTarget(), RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
         };
-        frame.m_resourcePool->Push(m_finalRenderTarget[frame.m_frameIndex]);
-        cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+
+        m_frame.pushResource(m_finalRenderTarget[m_frame.index()]);
+        cmdResourceBarrier(m_frame.cmd(), 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
     }
 
     void ForgeRenderer::SubmitFrame() {
-        auto frame = GetFrame();
-        auto& waitSemaphores = m_waitSemaphores[frame.m_frameIndex];
-        auto& swapChainTarget = frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex];
+        uint32_t swapChainIndex = 0;
+        acquireNextImage(m_renderer, m_swapChain.m_handle, m_imageAcquiredSemaphore, NULL, &swapChainIndex);
+        RenderTarget* swapChainTarget = m_swapChain.m_handle->ppRenderTargets[swapChainIndex];
+
         {
-            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+            cmdBindRenderTargets(m_frame.cmd(), 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
             std::array rtBarriers = {
-                RenderTargetBarrier{ m_finalRenderTarget[frame.m_frameIndex].m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE},
+                RenderTargetBarrier { swapChainTarget, RESOURCE_STATE_PRESENT, RESOURCE_STATE_RENDER_TARGET },
+                RenderTargetBarrier{ m_frame.finalTarget(), RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE},
             };
-            cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+            cmdResourceBarrier(m_frame.cmd(), 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
         }
         {
-            cmdBindRenderTargets(frame.m_cmd, 1, &swapChainTarget, NULL, NULL, NULL, NULL, -1, -1);
+            cmdBindRenderTargets(m_frame.cmd(), 1, &swapChainTarget, NULL, NULL, NULL, NULL, -1, -1);
             uint32_t rootConstantIndex = getDescriptorIndexFromName(m_finalRootSignature , "uRootConstants");
 
-            cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, static_cast<float>(swapChainTarget->mWidth), static_cast<float>(swapChainTarget->mHeight), 0.0f, 1.0f);
-            cmdSetScissor(frame.m_cmd, 0, 0, static_cast<float>(swapChainTarget->mWidth), static_cast<float>(swapChainTarget->mHeight));
-            cmdBindPipeline(frame.m_cmd, m_finalPipeline.m_handle);
-            cmdBindPushConstants(frame.m_cmd, m_finalRootSignature, rootConstantIndex, &m_gamma);
+            cmdSetViewport(m_frame.cmd(), 0.0f, 0.0f, m_frame.finalTarget()->mWidth, m_frame.finalTarget()->mHeight, 0.0f, 1.0f);
+            cmdSetScissor(m_frame.cmd(), 0, 0, m_frame.finalTarget()->mWidth, m_frame.finalTarget()->mHeight);
+            cmdBindPipeline(m_frame.cmd(), m_finalPipeline.m_handle);
+            cmdBindPushConstants(m_frame.cmd(), m_finalRootSignature, rootConstantIndex, &m_gamma);
 
-            std::array<DescriptorData, 1> params = {};
-            params[0].pName = "sourceInput";
-            params[0].ppTextures = &m_finalRenderTarget[frame.m_frameIndex].m_handle->pTexture;
-            updateDescriptorSet(
-                    frame.m_renderer->Rend(), 0, m_finalPerFrameDescriptorSet[frame.m_frameIndex].m_handle, params.size(), params.data());
-            cmdBindDescriptorSet(frame.m_cmd, 0, m_finalPerFrameDescriptorSet[frame.m_frameIndex].m_handle);
-            cmdDraw(frame.m_cmd, 3, 0);
+            std::array params = {
+              DescriptorData {.pName = "sourceInput", .ppTextures = &m_frame.finalTarget()->pTexture}
+            };
+            updateDescriptorSet(m_renderer, 0, m_finalPerFrameDescriptorSet[m_frame.index()].m_handle, params.size(), params.data());
+            cmdBindDescriptorSet(m_frame.cmd(), 0, m_finalPerFrameDescriptorSet[m_frame.index()].m_handle);
+            cmdDraw(m_frame.cmd(), 3, 0);
         }
         {
-            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+            cmdBindRenderTargets(m_frame.cmd(), 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
             std::array rtBarriers = {
-                RenderTargetBarrier{ m_finalRenderTarget[frame.m_frameIndex].m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET},
                 RenderTargetBarrier{ swapChainTarget, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_PRESENT },
             };
-            cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+            cmdResourceBarrier(m_frame.cmd(), 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
         }
-        endCmd(m_cmds[frame.m_frameIndex]);
-
 		FlushResourceUpdateDesc flushUpdateDesc = {};
 		flushUpdateDesc.mNodeIndex = 0;
 		flushResourceUpdates(&flushUpdateDesc);
-        waitSemaphores.push_back(flushUpdateDesc.pOutSubmittedSemaphore);
-        waitSemaphores.push_back(m_imageAcquiredSemaphore);
+        endCmd(m_frame.cmd());
 
+        std::array waitSemaphores = {flushUpdateDesc.pOutSubmittedSemaphore, m_imageAcquiredSemaphore};
 
         QueueSubmitDesc submitDesc = {};
-        submitDesc.mCmdCount = 1;
-        submitDesc.mSignalSemaphoreCount = 1;
         submitDesc.mWaitSemaphoreCount = waitSemaphores.size();
-        submitDesc.ppCmds = &frame.m_cmd;
-        submitDesc.ppSignalSemaphores = &frame.m_renderCompleteSemaphore;
         submitDesc.ppWaitSemaphores = waitSemaphores.data();
-        submitDesc.pSignalFence = frame.m_renderCompleteFence;
+        submitDesc.mCmdCount = 1;
+        submitDesc.ppCmds = m_frame.RingElement().pCmds;
+        submitDesc.mSignalSemaphoreCount = 1;
+        submitDesc.ppSignalSemaphores = &m_frame.RingElement().pSemaphore;
+        submitDesc.pSignalFence = m_frame.RingElement().pFence;
         queueSubmit(m_graphicsQueue, &submitDesc);
 
         QueuePresentDesc presentDesc = {};
-        presentDesc.mIndex = m_swapChainIndex;
+        presentDesc.mIndex = swapChainIndex;
         presentDesc.mWaitSemaphoreCount = 1;
         presentDesc.pSwapChain = m_swapChain.m_handle;
-        presentDesc.ppWaitSemaphores = &frame.m_renderCompleteSemaphore;
+        presentDesc.ppWaitSemaphores = &m_frame.RingElement().pSemaphore;
         presentDesc.mSubmitDone = true;
         queuePresent(m_graphicsQueue, &presentDesc);
 
-        waitSemaphores.clear();
+        m_frame.m_isFinished = true;
     }
 
     void ForgeRenderer::InitializeRenderer(window::NativeWindowWrapper* window) {
         m_window = window;
         SyncToken token = {};
-        RendererDesc desc{};
         #ifdef HPL2_RENDERDOC_ENABLED
 
             static RENDERDOC_API_1_1_2* rdoc_api = NULL;
@@ -133,32 +139,35 @@ namespace hpl {
 
         #endif
 
-        initRenderer("test", &desc, &m_renderer);
+		RendererDesc settings;
+		memset(&settings, 0, sizeof(settings));
+        initRenderer("HPL2", &settings, &m_renderer);
 
         QueueDesc queueDesc = {};
         queueDesc.mType = QUEUE_TYPE_GRAPHICS;
         queueDesc.mFlag = QUEUE_FLAG_INIT_MICROPROFILE;
         addQueue(m_renderer, &queueDesc, &m_graphicsQueue);
 
-        for (size_t i = 0; i < m_cmds.size(); i++) {
-            CmdPoolDesc cmdPoolDesc = {};
-            cmdPoolDesc.pQueue = m_graphicsQueue;
-            addCmdPool(m_renderer, &cmdPoolDesc, &m_cmdPools[i]);
-            CmdDesc cmdDesc = {};
-            cmdDesc.pPool = m_cmdPools[i];
-            addCmd(m_renderer, &cmdDesc, &m_cmds[i]);
-        }
+		GpuCmdRingDesc cmdRingDesc = {};
+		cmdRingDesc.pQueue = m_graphicsQueue;
+		cmdRingDesc.mPoolCount = SwapChainLength;
+		cmdRingDesc.mCmdPerPoolCount = 1;
+		cmdRingDesc.mAddSyncPrimitives = true;
+		addGpuCmdRing(m_renderer, &cmdRingDesc, &m_graphicsCmdRing);
+
 
         const auto windowSize = window->GetWindowSize();
         m_swapChain.Load(m_renderer, [&](SwapChain** handle) {
             SwapChainDesc swapChainDesc = {};
             swapChainDesc.mWindowHandle = m_window->ForgeWindowHandle();
+		    m_swapChainCount = getRecommendedSwapchainImageCount(m_renderer, &swapChainDesc.mWindowHandle);
             swapChainDesc.mPresentQueueCount = 1;
             swapChainDesc.ppPresentQueues = &m_graphicsQueue;
             swapChainDesc.mWidth = windowSize.x;
             swapChainDesc.mHeight = windowSize.y;
-            swapChainDesc.mImageCount = SwapChainLength;
+            swapChainDesc.mImageCount = m_swapChainCount;
             swapChainDesc.mColorFormat = TinyImageFormat_R8G8B8A8_UNORM;//getRecommendedSwapchainFormat(false, false);
+		    swapChainDesc.mColorSpace = COLOR_SPACE_SDR_LINEAR;
             swapChainDesc.mColorClearValue = { { 1, 1, 1, 1 } };
             swapChainDesc.mEnableVsync = false;
             addSwapChain(m_renderer, &swapChainDesc, handle);
@@ -168,12 +177,6 @@ namespace hpl {
         addRootSignature(m_renderer, &graphRootDesc, &m_pipelineSignature);
 
         addSemaphore(m_renderer, &m_imageAcquiredSemaphore);
-        for (auto& completeSem : m_renderCompleteSemaphores) {
-            addSemaphore(m_renderer, &completeSem);
-        }
-        for (auto& completeFence : m_renderCompleteFences) {
-            addFence(m_renderer, &completeFence);
-        }
         for(auto& rt: m_finalRenderTarget) {
             rt.Load(m_renderer,[&](RenderTarget** target) {
                 RenderTargetDesc renderTarget = {};
@@ -186,8 +189,8 @@ namespace hpl {
                 renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
                 renderTarget.mSampleCount = SAMPLE_COUNT_1;
                 renderTarget.mSampleQuality = 0;
-                renderTarget.mStartState = RESOURCE_STATE_RENDER_TARGET;
-                renderTarget.pName = "final RT";
+                renderTarget.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
+                renderTarget.pName = "final output RT";
                 addRenderTarget(m_renderer, &renderTarget, target);
                 return true;
             });
@@ -263,7 +266,8 @@ namespace hpl {
             RootSignatureDesc rootDesc = { &m_copyShader, 1 };
             addRootSignature(m_renderer, &rootDesc, &m_copyPostProcessingRootSignature);
             DescriptorSetDesc setDesc = { m_copyPostProcessingRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_DRAW, MaxCopyFrames };
-            addDescriptorSet(m_renderer, &setDesc, &m_copyPostProcessingDescriptorSet);
+            addDescriptorSet(m_renderer, &setDesc, &m_copyPostProcessingDescriptorSet[0]);
+            addDescriptorSet(m_renderer, &setDesc, &m_copyPostProcessingDescriptorSet[1]);
 
             DepthStateDesc depthStateDisabledDesc = {};
             depthStateDisabledDesc.mDepthWrite = false;
@@ -302,6 +306,7 @@ namespace hpl {
         }
 
         m_windowEventHandler.Connect(window->NativeWindowEvent());
+        IncrementFrame();
     }
 
     Sampler* ForgeRenderer::resolve(SamplerPoolKey key) {
@@ -331,10 +336,11 @@ namespace hpl {
                         swapChainDesc.ppPresentQueues = &m_graphicsQueue;
                         swapChainDesc.mWidth = windowSize.x;
                         swapChainDesc.mHeight = windowSize.y;
-                        swapChainDesc.mImageCount = SwapChainLength;
+                        swapChainDesc.mImageCount = m_swapChainCount;
                         swapChainDesc.mColorFormat = TinyImageFormat_R8G8B8A8_UNORM;//getRecommendedSwapchainFormat(false, false);
+		                swapChainDesc.mColorSpace = COLOR_SPACE_SDR_LINEAR;
                         swapChainDesc.mColorClearValue = { { 1, 1, 1, 1 } };
-                        swapChainDesc.mEnableVsync = false;
+                        swapChainDesc.mEnableVsync = true;
                         addSwapChain(m_renderer, &swapChainDesc, handle);
                         return true;
                     });
@@ -352,7 +358,7 @@ namespace hpl {
                             renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
                             renderTarget.mSampleCount = SAMPLE_COUNT_1;
                             renderTarget.mSampleQuality = 0;
-                            renderTarget.mStartState = RESOURCE_STATE_RENDER_TARGET;
+                            renderTarget.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
                             renderTarget.pName = "final RT";
                             addRenderTarget(m_renderer, &renderTarget, target);
                             return true;
@@ -366,16 +372,15 @@ namespace hpl {
         }){
     }
 
-    void ForgeRenderer::InitializeResource() {
-    }
 
     void ForgeRenderer::cmdCopyTexture(Cmd* cmd, Texture* srcTexture, RenderTarget* dstTexture) {
         ASSERT(srcTexture !=  nullptr);
         ASSERT(dstTexture !=  nullptr);
+        m_copyRegionDescriptorIndex = (m_copyRegionDescriptorIndex + 1) % MaxCopyFrames;
 
-        std::array<DescriptorData, 1> params = {};
-        params[0].pName = "inputMap";
-        params[0].ppTextures = &srcTexture;
+        std::array params = {
+           DescriptorData { .pName = "inputMap", .ppTextures = &srcTexture}
+        };
 
         LoadActionsDesc loadActions = {};
         loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
@@ -385,7 +390,7 @@ namespace hpl {
         cmdSetViewport(cmd, 0.0f, 0.0f, static_cast<float>(dstTexture->mWidth), static_cast<float>(dstTexture->mHeight), 0.0f, 1.0f);
         cmdSetScissor(cmd, 0, 0, dstTexture->mWidth, dstTexture->mHeight);
 
-        updateDescriptorSet(m_renderer, m_copyRegionDescriptorIndex, m_copyPostProcessingDescriptorSet, params.size(), params.data());
+        updateDescriptorSet(m_renderer, m_copyRegionDescriptorIndex, m_copyPostProcessingDescriptorSet[m_frame.index()], params.size(), params.data());
         auto swapChainFormat = TinyImageFormat_R8G8B8A8_UNORM;//getSupportedSwapchainFormat(m_renderer, false, false);
         switch(dstTexture->mFormat) {
             case TinyImageFormat_R8G8B8A8_UNORM:
@@ -396,9 +401,8 @@ namespace hpl {
                 break;
         }
 
-        cmdBindDescriptorSet(cmd, m_copyRegionDescriptorIndex, m_copyPostProcessingDescriptorSet);
+        cmdBindDescriptorSet(cmd, m_copyRegionDescriptorIndex, m_copyPostProcessingDescriptorSet[m_frame.index()]);
         cmdDraw(cmd, 3, 0);
-        m_copyRegionDescriptorIndex = (m_copyRegionDescriptorIndex + 1) % MaxCopyFrames;
     }
 
 }; // namespace hpl

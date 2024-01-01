@@ -29,6 +29,7 @@
 #include "math/MathTypes.h"
 #include "scene/SceneTypes.h"
 
+#include "graphics/ScopedBarrier.h"
 #include "graphics/RenderFunctions.h"
 #include "scene/Viewport.h"
 #include <cstdint>
@@ -149,13 +150,13 @@ namespace hpl {
         // ensure the contents is copied to the RenderViewport
         virtual void Draw(
             Cmd* cmd,
-            const ForgeRenderer::Frame& context,
+            ForgeRenderer::Frame& context,
             cViewport& viewport,
             float afFrameTime,
             cFrustum* apFrustum,
             cWorld* apWorld,
-            cRenderSettings* apSettings,
-            bool abSendFrameBufferToPostEffects) = 0;
+            cRenderSettings* apSettings
+            ) = 0;
 
         void Update(float afTimeStep);
 

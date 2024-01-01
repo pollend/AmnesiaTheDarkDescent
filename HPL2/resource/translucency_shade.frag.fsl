@@ -124,7 +124,7 @@ PsOut PS_MAIN(PsIn In, SV_PrimitiveID(uint) primitiveID)
         float fFresnel = Fresnel(afEDotN, material.frenselBias, material.frenselPos);
 
         //Alpha for environment map
-        float4 specular = float4(0);
+        float4 specular;
         if(SampleSceneTextureFloat4(material.cubeMapAlphaTextureIndex, Get(sceneSampler), In.uv.xy, specular)) {
             reflectionColor *= specular.w;
         }

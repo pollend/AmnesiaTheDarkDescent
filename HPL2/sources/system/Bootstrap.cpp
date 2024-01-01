@@ -49,14 +49,14 @@ namespace hpl {
         {
             return;
         }
-        
+
 	    FileSystemInitDesc fsDesc = {};
         fsDesc.pAppName = "HPL2";
 
         if (!initFileSystem(&fsDesc)) {
             LOGF(eERROR, "Filesystem failed to initialize.");
         }
-	
+
 
         initLog("HPL2", DEFAULT_LOG_LEVEL);
         fsSetPathForResourceDir(pSystemFileIO, RM_CONTENT, RD_SHADER_BINARIES, "./CompiledShaders");
@@ -88,7 +88,6 @@ namespace hpl {
         // graphics allocator
         m_graphicsAlloc = std::make_unique<hpl::GraphicsAllocator>(&m_renderer);
 
-        m_renderer.InitializeResource();
         gui::InitializeGui(m_renderer);
 
         // this is safe because the render target is scheduled on the api thread

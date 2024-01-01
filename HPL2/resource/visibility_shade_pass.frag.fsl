@@ -11,16 +11,10 @@ STRUCT(PsIn)
     DATA(float2, screenPos, TEXCOORD0);
 };
 
-STRUCT(PsOut)
-{
-    DATA(float4, outColor , SV_Target0);
-    DATA(float4, test, SV_Target1);
-};
 
-PsOut PS_MAIN(PsIn In)
+float4 PS_MAIN(PsIn In)
 {
   INIT_MAIN;
-  PsOut Out;
     
   const float4 visRaw = LoadTex2D(Get(visibilityTexture), Get(nearEdgeClampSampler), uint2(In.position.xy), 0);
   const uint objectId_triId = packUnorm4x8(visRaw);
@@ -103,6 +97,7 @@ PsOut PS_MAIN(PsIn In)
 
   float2 texCoord = results.interp;
   float4 diffuseColor = LoadTex2D(Get(albedoTexture), Get(nearEdgeClampSampler), uint2(In.position.xy), 0);
+  
   if(isTextureIndexValid(material.heightTextureIndex)) {
       texCoord += ParallaxAdvance(
           results.interp, 
@@ -114,11 +109,10 @@ PsOut PS_MAIN(PsIn In)
           worldTangent,
           worldBitangent,
           material.heightTextureIndex,
-          Get(sceneSampler),
           (material.config & MATERIAL_IS_HEIGHT_SINGLE_CHANNEL) > 0);
   }
   float4 normalSample = float4(0,0,0,0);
-  float3 shadedColor = float3(0.0f);  
+  float3 shadedColor = float3(0.0,0.0,0.0);  
 
   if (SampleSceneTextureGradFloat4(material.normalTextureIndex, Get(sceneSampler), texCoord, texCoordDX, texCoordDY, normalSample)) {
       normalSample -=  0.5;
@@ -182,11 +176,9 @@ PsOut PS_MAIN(PsIn In)
       }
   }
 
-  Out.outColor = float4(shadedColor, 0.0f); 
   //Out.outColor = float4(diffuseColor.rgb, 0.0f); 
-  Out.test = float4(clusterCoords.x,clusterCoords.y,slice, lightClusterCount);
-  RETURN(Out);
-
+  //Out.test = float4(clusterCoords.x,clusterCoords.y,slice, lightClusterCount);
+  RETURN(float4(shadedColor, 0.0));
 }
 
 

@@ -3883,15 +3883,14 @@ namespace hpl {
 
     void cRendererDeferred::Draw(
         Cmd* cmd,
-        const ForgeRenderer::Frame& frame,
+        ForgeRenderer::Frame& frame,
         cViewport& viewport,
         float afFrameTime,
         cFrustum* apFrustum,
         cWorld* apWorld,
-        cRenderSettings* apSettings,
-        bool abSendFrameBufferToPostEffects) {
+        cRenderSettings* apSettings) {
         // keep around for the moment ...
-        BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects);
+        BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, false);
 
         if (frame.m_currentFrame != m_activeFrame) {
             m_materialSet.m_objectIndex = 0;

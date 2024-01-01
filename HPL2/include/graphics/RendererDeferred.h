@@ -21,6 +21,7 @@
 #include "engine/RTTI.h"
 
 #include "graphics/SceneResource.h"
+#include "graphics/ScopedBarrier.h"
 #include "scene/Viewport.h"
 #include "scene/World.h"
 #include "windowing/NativeWindow.h"
@@ -356,13 +357,12 @@ namespace hpl {
 
         virtual void Draw(
             Cmd* cmd,
-            const ForgeRenderer::Frame& frame,
+            ForgeRenderer::Frame& frame,
             cViewport& viewport,
             float afFrameTime,
             cFrustum* apFrustum,
             cWorld* apWorld,
-            cRenderSettings* apSettings,
-            bool abSendFrameBufferToPostEffects) override;
+            cRenderSettings* apSettings) override;
 
     private:
         iVertexBuffer* GetLightShape(iLight* apLight, eDeferredShapeQuality aQuality) const;

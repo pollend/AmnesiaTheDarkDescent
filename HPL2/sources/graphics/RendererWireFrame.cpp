@@ -221,16 +221,15 @@ namespace hpl {
 
     void cRendererWireFrame::Draw(
         Cmd* cmd,
-        const ForgeRenderer::Frame& frame,
+        ForgeRenderer::Frame& frame,
         cViewport& viewport,
         float afFrameTime,
         cFrustum* apFrustum,
         cWorld* apWorld,
-        cRenderSettings* apSettings,
-        bool abSendFrameBufferToPostEffects) {
+        cRenderSettings* apSettings) {
         auto* forgeRenderer = Interface<ForgeRenderer>::Get();
         // keep around for the moment ...
-        BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects);
+        BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, false);
 
         if (frame.m_currentFrame != m_activeFrame) {
             m_objectIndex = 0;

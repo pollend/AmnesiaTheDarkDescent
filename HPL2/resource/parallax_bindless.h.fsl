@@ -4,16 +4,10 @@
 #ifndef _PARALLAX_BINDLESS_H
 #define _PARALLAX_BINDLESS_H
 
-float GetNormalizedDepth(SamplerState sh, uint heightIdx, float startDepth, float stopDepth, float inverseDepthRange, float2 uv, bool isHeightMapSingleChannel) {
-    float currentSample = 0.0;
-    float4 value;
-    if(SampleSceneTextureFloat4(heightIdx, sh, uv, value)) {
-      if(isHeightMapSingleChannel) {
-        currentSample = value.r;
-      } else {
-        currentSample = value.a;
-      }
-    }
+INLINE float GetNormalizedDepth(float currentSample, float startDepth, float stopDepth, float inverseDepthRange) {
+    //float currentSample = 0.0;
+   //   BeginNonUniformResourceIndex(heightIdx);
+    //  EndNonUniformResourceIndex(); 
 
     float normalizedDepth = 0.0;
     if(stopDepth - startDepth > 0.0001)
@@ -33,8 +27,7 @@ float2 ParallaxAdvance(
     float3 normal,
     float3 tangent,
     float3 bitangent,
-    uint heightIdx, 
-    SamplerState sh,
+    uint heightTextureIndex, 
     bool isHeightMapSingleChannel) {
 
     float3 dirToCameraTS = normalize(WorldSpaceToTangent(dir, normal, tangent, bitangent));
@@ -54,16 +47,12 @@ float2 ParallaxAdvance(
     // It is adjusted according to the depthOffset, raising or lowering the whole surface by depthOffset units.
     float3 parallaxOffset = -dirToCameraTS.xyz * dirToCameraZInverse * depthOffset;
    
-    float currentSample;
-    float4 value;
-    if(SampleSceneTextureFloat4(heightIdx, sh, uv.xy + parallaxOffset.xy, value)) {
-      if(isHeightMapSingleChannel) {
-        currentSample = value.r;
-      } else {
-        currentSample = value.a;
-      }
-    }
-    float prevSample;
+    float currentSample = 0.0;
+    uint index2 = heightTextureIndex;
+    BeginNonUniformResourceIndex(index2);
+      currentSample =  isHeightMapSingleChannel ? SampleTex2D(Get(sceneTextures)[index2], Get(sceneSampler),  uv.xy + parallaxOffset.xy).r : SampleTex2D(Get(sceneTextures)[index2], Get(sceneSampler),  uv.xy + parallaxOffset.xy).a;
+    EndNonUniformResourceIndex(); 
+    float prevSample = 0.0;
 
     // Do a basic search for the intersect step
     while(currentSample > currentStep) {
@@ -71,7 +60,12 @@ float2 ParallaxAdvance(
         parallaxOffset += delta;
                 
         prevSample = currentSample;
-        currentSample = GetNormalizedDepth(sh, heightIdx, depthSearchStart, depthSearchEnd, inverseDepthFactor, uv.xy + parallaxOffset.xy, isHeightMapSingleChannel);
+        float newSample;
+        uint index = heightTextureIndex;
+        BeginNonUniformResourceIndex(index);
+            newSample =  isHeightMapSingleChannel ? SampleTex2D(Get(sceneTextures)[index], Get(sceneSampler),  uv.xy + parallaxOffset.xy).r : SampleTex2D(Get(sceneTextures)[index], Get(sceneSampler),  uv.xy + parallaxOffset.xy).a;
+        EndNonUniformResourceIndex(); 
+        currentSample = GetNormalizedDepth(newSample, depthSearchStart, depthSearchEnd, inverseDepthFactor);
     }
 
     if(currentStep > 0.0)
@@ -95,7 +89,12 @@ float2 ParallaxAdvance(
             parallaxOffset += adjustedDelta;
             prevSample = currentSample;
 
-            currentSample = GetNormalizedDepth(sh, heightIdx, depthSearchStart, depthSearchEnd, inverseDepthFactor, uv.xy + parallaxOffset.xy, isHeightMapSingleChannel);
+            float newSample;
+            uint index = heightTextureIndex;
+            BeginNonUniformResourceIndex(index);
+                newSample =  isHeightMapSingleChannel ? SampleTex2D(Get(sceneTextures)[index], Get(sceneSampler),  uv.xy + parallaxOffset.xy).r : SampleTex2D(Get(sceneTextures)[index], Get(sceneSampler),  uv.xy + parallaxOffset.xy).a;
+            EndNonUniformResourceIndex(); 
+            currentSample = GetNormalizedDepth(newSample, depthSearchStart, depthSearchEnd, inverseDepthFactor);
         }
     }
     if(parallaxOffset.z > 0.0)

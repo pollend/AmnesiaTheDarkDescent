@@ -210,7 +210,8 @@ namespace hpl {
     } // namespace detail
 
     cRendererDeferred2::cRendererDeferred2(cGraphics* apGraphics, cResources* apResources, std::shared_ptr<DebugDraw> debug)
-        : iRenderer("Deferred2", apGraphics, apResources) {
+        : iRenderer("Deferred2", apGraphics, apResources),
+            m_copySubpass(*Interface<ForgeRenderer>::Get()){
         auto* forgeRenderer = Interface<ForgeRenderer>::Get();
         m_sceneTexture2DPool = BindlessDescriptorPool(ForgeRenderer::SwapChainLength, resource::MaxScene2DTextureCount);
         m_sceneTextureCubePool = BindlessDescriptorPool(ForgeRenderer::SwapChainLength, resource::MaxSceneCubeTextureCount);
@@ -244,7 +245,7 @@ namespace hpl {
             return true;
         });
         m_samplerMaterial.Load(forgeRenderer->Rend(), [&](Sampler** sampler) {
-            SamplerDesc pointSamplerDesc = { FILTER_LINEAR,       FILTER_LINEAR,       MIPMAP_MODE_LINEAR,
+            SamplerDesc pointSamplerDesc = { FILTER_LINEAR,       FILTER_LINEAR,       MIPMAP_MODE_NEAREST,
                                              ADDRESS_MODE_REPEAT, ADDRESS_MODE_REPEAT, ADDRESS_MODE_REPEAT };
             addSampler(forgeRenderer->Rend(), &pointSamplerDesc, sampler);
             return true;
@@ -441,23 +442,26 @@ namespace hpl {
                                    m_translucencyRefractionShaderAlpha.m_handle,
                                    m_translucencyRefractionShaderPremulAlpha.m_handle,
                                    m_translucencyIlluminationShaderPremulAlpha.m_handle };
-            Sampler* vbShadeSceneSamplers[] = { m_samplerLinearClampToBorder.m_handle,
+            std::array vbShadeSceneSamplers = { m_samplerLinearClampToBorder.m_handle,
                                                 m_samplerMaterial.m_handle,
                                                 m_samplerNearEdgeClamp.m_handle,
                                                 m_samplerPointWrap.m_handle };
-            const char* vbShadeSceneSamplersNames[] = {
+            std::array vbShadeSceneSamplersNames = {
                 "linearBorderSampler", "sceneSampler", "nearEdgeClampSampler", "nearPointWrapSampler"
             };
             RootSignatureDesc rootSignatureDesc = {};
             rootSignatureDesc.ppShaders = shaders.data();
             rootSignatureDesc.mShaderCount = shaders.size();
-            rootSignatureDesc.mStaticSamplerCount = std::size(vbShadeSceneSamplersNames);
-            rootSignatureDesc.ppStaticSamplers = vbShadeSceneSamplers;
-            rootSignatureDesc.ppStaticSamplerNames = vbShadeSceneSamplersNames;
+            rootSignatureDesc.mStaticSamplerCount = vbShadeSceneSamplersNames.size();
+            rootSignatureDesc.ppStaticSamplers = vbShadeSceneSamplers.data();
+            rootSignatureDesc.ppStaticSamplerNames = vbShadeSceneSamplersNames.data();
             rootSignatureDesc.mMaxBindlessTextures = hpl::resource::MaxScene2DTextureCount;
             addRootSignature(forgeRenderer->Rend(), &rootSignatureDesc, signature);
             return true;
         });
+
+
+
         // Indirect Argument signature
         {
             uint32_t indirectArgCount = 0;
@@ -540,35 +544,6 @@ namespace hpl {
             addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
             return true;
         });
-
-        m_visiblityShadePass.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
-            std::array colorFormats = { ColorBufferFormat, TinyImageFormat_R16G16B16A16_SFLOAT };
-            RasterizerStateDesc rasterizerStateDesc = {};
-            rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
-            rasterizerStateDesc.mFrontFace = FRONT_FACE_CCW;
-
-            DepthStateDesc depthStateDisabledDesc = {};
-            depthStateDisabledDesc.mDepthWrite = false;
-            depthStateDisabledDesc.mDepthTest = false;
-
-            PipelineDesc pipelineDesc = {};
-            pipelineDesc.pName = "visibility shade pass";
-            pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
-            auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
-            pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
-            pipelineSettings.mRenderTargetCount = colorFormats.size();
-            pipelineSettings.pColorFormats = colorFormats.data();
-            pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
-            pipelineSettings.mSampleQuality = 0;
-            pipelineSettings.pRootSignature = m_sceneRootSignature.m_handle;
-            pipelineSettings.pShaderProgram = m_visibilityShadePassShader.m_handle;
-            pipelineSettings.pRasterizerState = &rasterizerStateDesc;
-            pipelineSettings.pDepthState = &depthStateDisabledDesc;
-            pipelineSettings.pVertexLayout = nullptr;
-            addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
-            return true;
-        });
-
         m_visbilityEmitBufferPass.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
             std::array colorFormats = { ColorBufferFormat };
             RasterizerStateDesc rasterizerStateDesc = {};
@@ -597,6 +572,37 @@ namespace hpl {
             return true;
         });
 
+        m_visiblityShadePass.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
+            std::array colorFormats = { ColorBufferFormat };
+            RasterizerStateDesc rasterizerStateDesc = {};
+            rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
+            rasterizerStateDesc.mFrontFace = FRONT_FACE_CCW;
+
+
+            DepthStateDesc depthStateDisabledDesc = {};
+            depthStateDisabledDesc.mDepthWrite = false;
+            depthStateDisabledDesc.mDepthTest = false;
+
+            PipelineDesc pipelineDesc = {};
+            pipelineDesc.pName = "visibility shade pass";
+            pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+            auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
+            pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+            pipelineSettings.mRenderTargetCount = colorFormats.size();
+            pipelineSettings.pColorFormats = colorFormats.data();
+            pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
+            pipelineSettings.mSampleQuality = 0;
+            pipelineSettings.pRootSignature = m_sceneRootSignature.m_handle;
+            pipelineSettings.pShaderProgram = m_visibilityShadePassShader.m_handle;
+            pipelineSettings.pRasterizerState = &rasterizerStateDesc;
+            pipelineSettings.pDepthState = &depthStateDisabledDesc;
+            pipelineSettings.pVertexLayout = nullptr;
+           // pipelineSettings.pBlendState = &blendStateDesc;
+            addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
+            return true;
+        });
+
+       
         m_visibilityBufferPass.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
             VertexLayout vertexLayout = {};
             vertexLayout.mBindingCount = 1;
@@ -1322,6 +1328,7 @@ namespace hpl {
 
                 DescriptorData{ .pName = "dissolveTexture", .ppTextures = &m_dissolveImage->GetTexture().m_handle },
                 DescriptorData{ .pName = "sceneDiffuseMat", .ppBuffers = &m_diffuseMatUniformBuffer.m_handle },
+                DescriptorData{ .pName = "sceneTranslucentMat", .ppBuffers = &m_translucencyMatBuffer.m_handle },
                 // DescriptorData{ .pName = "sceneFilters", .mCount = samplers.size(), .ppSamplers = samplers.data() },
                 DescriptorData{ .pName = "vtxOpaqueIndex", .ppBuffers = &opaqueSet.indexBuffer().m_handle },
                 DescriptorData{ .pName = "vtxOpaquePosition",
@@ -1448,13 +1455,15 @@ namespace hpl {
 
     void cRendererDeferred2::Draw(
         Cmd* cmd,
-        const ForgeRenderer::Frame& frame,
+        ForgeRenderer::Frame& frame,
         cViewport& viewport,
         float frameTime,
         cFrustum* apFrustum,
         cWorld* apWorld,
-        cRenderSettings* apSettings,
-        bool abSendFrameBufferToPostEffects) {
+        cRenderSettings* apSettings) {
+
+        BeginRendering(frameTime, apFrustum, apWorld, apSettings, false);
+
         auto* forgeRenderer = Interface<ForgeRenderer>::Get();
         auto* graphicsAllocator = Interface<GraphicsAllocator>::Get();
         if (frame.m_currentFrame != m_activeFrame) {
@@ -1485,7 +1494,6 @@ namespace hpl {
             m_objectIndex = 0;
             m_activeFrame = frame.m_currentFrame;
         }
-        const bool supportIndirectRootConstant = forgeRenderer->Rend()->pGpu->mSettings.mIndirectRootConstant;
 
         auto viewportDatum = m_boundViewportData.resolve(viewport);
         if (!viewportDatum || viewportDatum->m_size != viewport.GetSizeU2()) {
@@ -1498,14 +1506,13 @@ namespace hpl {
                     renderTargetDesc.mArraySize = 1;
                     renderTargetDesc.mClearValue = optimizedColorClearBlack;
                     renderTargetDesc.mDepth = 1;
-                    renderTargetDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
                     renderTargetDesc.mWidth = updateDatum->m_size.x;
                     renderTargetDesc.mHeight = updateDatum->m_size.y;
                     renderTargetDesc.mSampleCount = SAMPLE_COUNT_1;
                     renderTargetDesc.mSampleQuality = 0;
                     renderTargetDesc.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
                     renderTargetDesc.mFormat = TinyImageFormat_R8G8B8A8_UNORM;
-                    renderTargetDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+                    renderTargetDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE | DESCRIPTOR_TYPE_RW_TEXTURE;
                     renderTargetDesc.pName = "output RT";
                     addRenderTarget(forgeRenderer->Rend(), &renderTargetDesc, target);
                     return true;
@@ -1561,6 +1568,25 @@ namespace hpl {
                     return true;
                 });
 
+                updateDatum->m_refractionImage[i].Load([&](Texture** texture) {
+                    TextureLoadDesc loadDesc = {};
+                    loadDesc.ppTexture = texture;
+                    TextureDesc refractionImageDesc = {};
+                    refractionImageDesc.mArraySize = 1;
+                    refractionImageDesc.mDepth = 1;
+                    refractionImageDesc.mMipLevels = 1;
+                    refractionImageDesc.mFormat = TinyImageFormat_R8G8B8A8_UNORM;
+                    refractionImageDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE | DESCRIPTOR_TYPE_RW_TEXTURE;
+                    refractionImageDesc.mWidth = updateDatum->m_size.x;
+                    refractionImageDesc.mHeight = updateDatum->m_size.y;
+                    refractionImageDesc.mSampleCount = SAMPLE_COUNT_1;
+                    refractionImageDesc.mSampleQuality = 0;
+                    refractionImageDesc.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
+                    refractionImageDesc.pName = "Refraction Image";
+                    loadDesc.pDesc = &refractionImageDesc;
+                    addResource(&loadDesc, nullptr);
+                    return true;
+                });
                 updateDatum->m_visiblityBuffer[i].Load(forgeRenderer->Rend(), [&](RenderTarget** target) {
                     ClearValue optimizedColorClearBlack = { { 0.0f, 0.0f, 0.0f, 0.0f } };
                     RenderTargetDesc renderTargetDesc = {};
@@ -1572,7 +1598,7 @@ namespace hpl {
                     renderTargetDesc.mHeight = updateDatum->m_size.y;
                     renderTargetDesc.mSampleCount = SAMPLE_COUNT_1;
                     renderTargetDesc.mSampleQuality = 0;
-                    renderTargetDesc.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
+                    renderTargetDesc.mStartState = RESOURCE_STATE_RENDER_TARGET;
                     renderTargetDesc.mFormat = TinyImageFormat_R8G8B8A8_UNORM;
                     renderTargetDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
                     addRenderTarget(forgeRenderer->Rend(), &renderTargetDesc, target);
@@ -1587,6 +1613,7 @@ namespace hpl {
         frame.m_resourcePool->Push(viewportDatum->m_depthBuffer[frame.m_frameIndex]);
         frame.m_resourcePool->Push(viewportDatum->m_outputBuffer[frame.m_frameIndex]);
         frame.m_resourcePool->Push(viewportDatum->m_albedoBuffer[frame.m_frameIndex]);
+        frame.m_resourcePool->Push(viewportDatum->m_refractionImage[frame.m_frameIndex]);
         // ----------------
         // Setup Data
         // -----------------
@@ -1596,6 +1623,8 @@ namespace hpl {
                                 .ppTextures = &viewportDatum->m_visiblityBuffer[frame.m_frameIndex].m_handle->pTexture },
                 DescriptorData{ .pName = "albedoTexture",
                                 .ppTextures = &viewportDatum->m_albedoBuffer[frame.m_frameIndex].m_handle->pTexture },
+                DescriptorData{ .pName = "refractionTexture",
+                                .ppTextures = &viewportDatum->m_refractionImage[frame.m_frameIndex].m_handle },
             };
             updateDescriptorSet(
                 forgeRenderer->Rend(), 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle, params.size(), params.data());
@@ -2131,16 +2160,17 @@ namespace hpl {
         // -----------------
         {
             cmdBindRenderTargets(cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
-            std::array rtBarriers = {
-                RenderTargetBarrier{ viewportDatum->m_visiblityBuffer[frame.m_frameIndex].m_handle,
-                                     RESOURCE_STATE_SHADER_RESOURCE,
-                                     RESOURCE_STATE_RENDER_TARGET },
-            };
-            cmdResourceBarrier(cmd, 0, nullptr, 0, nullptr, rtBarriers.size(), rtBarriers.data());
+            std::array barriers = { BufferBarrier{ m_lightClusterCountBuffer[frame.m_frameIndex].m_handle,
+                                                   RESOURCE_STATE_UNORDERED_ACCESS,
+                                                   RESOURCE_STATE_SHADER_RESOURCE },
+                                    BufferBarrier{ m_lightClustersBuffer[frame.m_frameIndex].m_handle,
+                                                   RESOURCE_STATE_UNORDERED_ACCESS,
+                                                   RESOURCE_STATE_SHADER_RESOURCE} };
+            cmdResourceBarrier(cmd, barriers.size(), barriers.data(), 0, nullptr, 0, nullptr);
         }
         {
             auto& opaqueSet = graphicsAllocator->resolveSet(GraphicsAllocator::AllocationSet::OpaqueSet);
-            cmdBeginDebugMarker(cmd, 0, 1, 0, "Visibility Buffer Pass");
+            //cmdBeginDebugMarker(cmd, 0, 1, 0, "Visibility Buffer Pass");
             {
                 std::array semantics = { ShaderSemantic::SEMANTIC_POSITION };
                 LoadActionsDesc loadActions = {};
@@ -2219,31 +2249,21 @@ namespace hpl {
                     nullptr,
                     0);
             }
-            cmdEndDebugMarker(cmd);
         }
         {
             cmdBindRenderTargets(cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
-            std::array barriers = { BufferBarrier{ m_lightClusterCountBuffer[frame.m_frameIndex].m_handle,
-                                                   RESOURCE_STATE_UNORDERED_ACCESS,
-                                                   RESOURCE_STATE_SHADER_RESOURCE },
-                                    BufferBarrier{ m_lightClustersBuffer[frame.m_frameIndex].m_handle,
-                                                   RESOURCE_STATE_UNORDERED_ACCESS,
-                                                   RESOURCE_STATE_SHADER_RESOURCE } };
             std::array rtBarriers = {
                 RenderTargetBarrier{ viewportDatum->m_visiblityBuffer[frame.m_frameIndex].m_handle,
                                      RESOURCE_STATE_RENDER_TARGET,
-                                     RESOURCE_STATE_SHADER_RESOURCE },
+                                     RESOURCE_STATE_PIXEL_SHADER_RESOURCE},
                 RenderTargetBarrier{ viewportDatum->m_albedoBuffer[frame.m_frameIndex].m_handle,
                                      RESOURCE_STATE_SHADER_RESOURCE,
-                                     RESOURCE_STATE_RENDER_TARGET },
-                RenderTargetBarrier{ viewportDatum->m_outputBuffer[frame.m_frameIndex].m_handle,
-                                     RESOURCE_STATE_SHADER_RESOURCE,
-                                     RESOURCE_STATE_RENDER_TARGET },
+                                     RESOURCE_STATE_RENDER_TARGET},
             };
-            cmdResourceBarrier(cmd, barriers.size(), barriers.data(), 0, nullptr, rtBarriers.size(), rtBarriers.data());
+            cmdResourceBarrier(cmd, 0, nullptr, 0, nullptr, rtBarriers.size(), rtBarriers.data());
         }
         {
-            cmdBeginDebugMarker(cmd, 0, 1, 0, "Visibility Emit Buffer Pass");
+            //cmdBeginDebugMarker(cmd, 0, 1, 0, "Visibility Emit Buffer Pass");
             LoadActionsDesc loadActions = {};
             loadActions.mLoadActionsColor[0] = LOAD_ACTION_CLEAR;
             loadActions.mClearColorValues[0] = { .r = 0.0f, .g = 0.0f, .b = 0.0f, .a = 0.0f };
@@ -2257,10 +2277,10 @@ namespace hpl {
             cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorConstSet.m_handle);
             cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
             cmdDraw(cmd, 3, 0);
-            cmdEndDebugMarker(cmd);
+            //cmdEndDebugMarker(cmd);
         }
         {
-            cmdBeginDebugMarker(cmd, 0, 1, 0, "Decal Output Buffer Pass");
+            //cmdBeginDebugMarker(cmd, 0, 1, 0, "Decal Output Buffer Pass");
             auto& opaqueSet = graphicsAllocator->resolveSet(GraphicsAllocator::AllocationSet::OpaqueSet);
             std::array semantics = { ShaderSemantic::SEMANTIC_POSITION,
                                      ShaderSemantic::SEMANTIC_TEXCOORD0,
@@ -2310,36 +2330,69 @@ namespace hpl {
                     0);
             }
 
-            cmdEndDebugMarker(cmd);
+            //cmdEndDebugMarker(cmd);
         }
         {
             cmdBindRenderTargets(cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
             std::array rtBarriers = {
                 RenderTargetBarrier{ viewportDatum->m_albedoBuffer[frame.m_frameIndex].m_handle,
                                      RESOURCE_STATE_RENDER_TARGET,
-                                     RESOURCE_STATE_SHADER_RESOURCE },
+                                     RESOURCE_STATE_SHADER_RESOURCE},
+                RenderTargetBarrier{ viewportDatum->m_outputBuffer[frame.m_frameIndex].m_handle,
+                                     RESOURCE_STATE_SHADER_RESOURCE,
+                                     RESOURCE_STATE_RENDER_TARGET},
             };
             cmdResourceBarrier(cmd, 0, nullptr, 0, nullptr, rtBarriers.size(), rtBarriers.data());
         }
         {
-            cmdBeginDebugMarker(cmd, 0, 1, 0, "Visibility Output Buffer Pass");
+            //cmdBeginDebugMarker(cmd, 0, 1, 0, "Visibility Output Buffer Pass");
             LoadActionsDesc loadActions = {};
-            loadActions.mLoadActionsColor[0] = LOAD_ACTION_CLEAR;
-            loadActions.mClearColorValues[0] = { .r = 0.0f, .g = 0.0f, .b = 0.0f, .a = 0.0f };
+            loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
             loadActions.mClearDepth = { .depth = 1.0f, .stencil = 0 };
             loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
-            std::array targets = { viewportDatum->m_outputBuffer[frame.m_frameIndex].m_handle,
-                                   viewportDatum->m_testBuffer[frame.m_frameIndex].m_handle };
+            std::array targets = { viewportDatum->m_outputBuffer[frame.m_frameIndex].m_handle};
             cmdBindRenderTargets(cmd, targets.size(), targets.data(), nullptr, &loadActions, NULL, NULL, -1, -1);
             cmdSetViewport(cmd, 0.0f, 0.0f, viewportDatum->m_size.x, viewportDatum->m_size.y, 0.0f, 1.0f);
             cmdSetScissor(cmd, 0, 0, viewportDatum->m_size.x, viewportDatum->m_size.y);
-            cmdBindPipeline(cmd, m_visiblityShadePass.m_handle);
             cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorConstSet.m_handle);
             cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
+            cmdBindPipeline(cmd, m_visiblityShadePass.m_handle);
             cmdDraw(cmd, 3, 0);
-            cmdEndDebugMarker(cmd);
+            // cmdEndDebugMarker(cmd);
         }
-
+        {
+            cmdBindRenderTargets(cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+            std::array textureBarriers = {
+                TextureBarrier{ viewportDatum->m_refractionImage[frame.m_frameIndex].m_handle,
+                                RESOURCE_STATE_SHADER_RESOURCE,
+                                RESOURCE_STATE_UNORDERED_ACCESS },
+            };
+            std::array rtBarriers = {
+                RenderTargetBarrier{ viewportDatum->m_outputBuffer[frame.m_frameIndex].m_handle,
+                                     RESOURCE_STATE_RENDER_TARGET,
+                                     RESOURCE_STATE_SHADER_RESOURCE },
+            };
+            cmdResourceBarrier(frame.m_cmd, 0, NULL, textureBarriers.size(), textureBarriers.data(), rtBarriers.size(), rtBarriers.data());
+        }
+        m_copySubpass.Dispatch(
+            frame,
+            viewportDatum->m_outputBuffer[frame.m_frameIndex].m_handle->pTexture,
+            viewportDatum->m_refractionImage[frame.m_frameIndex].m_handle);
+        {
+            std::array textureBarriers = {
+                TextureBarrier{ viewportDatum->m_refractionImage[frame.m_frameIndex].m_handle,
+                                RESOURCE_STATE_UNORDERED_ACCESS,
+                                RESOURCE_STATE_SHADER_RESOURCE },
+            };
+            std::array rtBarriers = {
+                RenderTargetBarrier{
+                    viewportDatum->m_outputBuffer[frame.m_frameIndex].m_handle,
+                    RESOURCE_STATE_SHADER_RESOURCE,
+                    RESOURCE_STATE_RENDER_TARGET,
+                },
+            };
+            cmdResourceBarrier(frame.m_cmd, 0, NULL, textureBarriers.size(), textureBarriers.data(), rtBarriers.size(), rtBarriers.data());
+        }
         {
             auto& particleSet = graphicsAllocator->resolveSet(GraphicsAllocator::AllocationSet::ParticleSet);
             auto& opaqueSet = graphicsAllocator->resolveSet(GraphicsAllocator::AllocationSet::OpaqueSet);
@@ -2449,12 +2502,17 @@ namespace hpl {
                                                    RESOURCE_STATE_SHADER_RESOURCE,
                                                    RESOURCE_STATE_UNORDERED_ACCESS } };
             std::array rtBarriers = {
+                RenderTargetBarrier{ viewportDatum->m_visiblityBuffer[frame.m_frameIndex].m_handle,
+                                     RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+                                     RESOURCE_STATE_RENDER_TARGET},
                 RenderTargetBarrier{ viewportDatum->m_outputBuffer[frame.m_frameIndex].m_handle,
                                      RESOURCE_STATE_RENDER_TARGET,
                                      RESOURCE_STATE_SHADER_RESOURCE },
             };
             cmdResourceBarrier(cmd, barriers.size(), barriers.data(), 0, nullptr, rtBarriers.size(), rtBarriers.data());
         }
+
+
     }
 
 } // namespace hpl

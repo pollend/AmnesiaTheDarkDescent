@@ -21,9 +21,11 @@
 #include "engine/RTTI.h"
 
 #include "graphics/CommandBufferPool.h"
+#include "graphics/CopyTextureSubpass4.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/ImageBindlessPool.h"
 #include "graphics/SceneResource.h"
+#include "graphics/ScopedBarrier.h"
 #include "graphics/ShadowCache.h"
 #include "graphics/BindlessDescriptorPool.h"
 #include "scene/Viewport.h"
@@ -120,13 +122,14 @@ namespace hpl {
             ViewportData() = default;
             ViewportData(const ViewportData&) = delete;
             ViewportData(ViewportData&& buffer)= default;
-            ViewportData& operator=(const ViewportData&) = delete;
             ViewportData& operator=(ViewportData&& buffer) = default;
+            ViewportData& operator=(const ViewportData&) = delete;
 
             uint2 m_size = uint2(0, 0);
             std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_outputBuffer;
             std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_depthBuffer;
             std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_albedoBuffer; // this is used for the adding decals to albedo
+            std::array<SharedTexture, ForgeRenderer::SwapChainLength> m_refractionImage;
 
             std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_testBuffer; //encodes the parallax
             std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_visiblityBuffer;
@@ -148,13 +151,12 @@ namespace hpl {
         virtual SharedRenderTarget GetOutputImage(uint32_t frameIndex, cViewport& viewport) override;
         virtual void Draw(
             Cmd* cmd,
-            const ForgeRenderer::Frame& frame,
+            ForgeRenderer::Frame& frame,
             cViewport& viewport,
             float afFrameTime,
             cFrustum* apFrustum,
             cWorld* apWorld,
-            cRenderSettings* apSettings,
-            bool abSendFrameBufferToPostEffects) override;
+            cRenderSettings* apSettings) override;
 
     private:
         void setIndirectDrawArg(const ForgeRenderer::Frame& frame, uint32_t drawArgIndex, uint32_t slot, DrawPacket& packet);
@@ -311,6 +313,8 @@ namespace hpl {
 
         BlendPipelines m_translucencyIlluminationPipline;
         BlendPipelines m_translucencyIlluminationPiplineNoDepth;
+
+        CopyTextureSubpass4 m_copySubpass;
 
         bool m_supportIndirectRootConstant = false;
     };
