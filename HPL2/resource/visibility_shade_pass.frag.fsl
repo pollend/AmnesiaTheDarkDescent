@@ -112,7 +112,7 @@ float4 PS_MAIN(PsIn In)
           (material.config & MATERIAL_IS_HEIGHT_SINGLE_CHANNEL) > 0);
   }
   float4 normalSample = float4(0,0,0,0);
-  float3 shadedColor = float3(0.0f);  
+  float3 shadedColor = float3(0.0,0.0,0.0);  
 
   if (SampleSceneTextureGradFloat4(material.normalTextureIndex, Get(sceneSampler), texCoord, texCoordDX, texCoordDY, normalSample)) {
       normalSample -=  0.5;

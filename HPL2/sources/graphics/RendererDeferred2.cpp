@@ -544,47 +544,6 @@ namespace hpl {
             addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
             return true;
         });
-
-        m_visiblityShadePass.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
-            std::array colorFormats = { ColorBufferFormat };
-            RasterizerStateDesc rasterizerStateDesc = {};
-            rasterizerStateDesc.mCullMode = CULL_MODE_NONE;
-
-            BlendStateDesc blendStateDesc{};
-            blendStateDesc.mSrcFactors[0] = BC_ONE;
-            blendStateDesc.mDstFactors[0] = BC_ZERO;
-            blendStateDesc.mBlendModes[0] = BM_ADD;
-            blendStateDesc.mSrcAlphaFactors[0] = BC_ONE;
-            blendStateDesc.mDstAlphaFactors[0] = BC_ZERO;
-            blendStateDesc.mBlendAlphaModes[0] = BM_ADD;
-            blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_RED | ColorMask::COLOR_MASK_GREEN | ColorMask::COLOR_MASK_BLUE;
-            blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
-            blendStateDesc.mIndependentBlend = false;
-
-            DepthStateDesc depthStateDisabledDesc = {};
-            depthStateDisabledDesc.mDepthWrite = false;
-            depthStateDisabledDesc.mDepthTest = false;
-
-            PipelineDesc pipelineDesc = {};
-            pipelineDesc.pName = "visibility shade pass";
-            pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
-            auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
-            pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
-            pipelineSettings.mRenderTargetCount = colorFormats.size();
-            pipelineSettings.pColorFormats = colorFormats.data();
-            pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
-            pipelineSettings.mDepthStencilFormat = TinyImageFormat_UNDEFINED;
-            pipelineSettings.mSampleQuality = 1;
-            pipelineSettings.pRootSignature = m_sceneRootSignature.m_handle;
-            pipelineSettings.pShaderProgram = m_visibilityShadePassShader.m_handle;
-            pipelineSettings.pRasterizerState = &rasterizerStateDesc;
-            pipelineSettings.pDepthState = &depthStateDisabledDesc;
-            pipelineSettings.pVertexLayout = nullptr;
-            pipelineSettings.pBlendState = &blendStateDesc;
-            addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
-            return true;
-        });
-
         m_visbilityEmitBufferPass.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
             std::array colorFormats = { ColorBufferFormat };
             RasterizerStateDesc rasterizerStateDesc = {};
@@ -613,6 +572,37 @@ namespace hpl {
             return true;
         });
 
+        m_visiblityShadePass.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
+            std::array colorFormats = { ColorBufferFormat };
+            RasterizerStateDesc rasterizerStateDesc = {};
+            rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
+            rasterizerStateDesc.mFrontFace = FRONT_FACE_CCW;
+
+
+            DepthStateDesc depthStateDisabledDesc = {};
+            depthStateDisabledDesc.mDepthWrite = false;
+            depthStateDisabledDesc.mDepthTest = false;
+
+            PipelineDesc pipelineDesc = {};
+            pipelineDesc.pName = "visibility shade pass";
+            pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+            auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
+            pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+            pipelineSettings.mRenderTargetCount = colorFormats.size();
+            pipelineSettings.pColorFormats = colorFormats.data();
+            pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
+            pipelineSettings.mSampleQuality = 0;
+            pipelineSettings.pRootSignature = m_sceneRootSignature.m_handle;
+            pipelineSettings.pShaderProgram = m_visibilityShadePassShader.m_handle;
+            pipelineSettings.pRasterizerState = &rasterizerStateDesc;
+            pipelineSettings.pDepthState = &depthStateDisabledDesc;
+            pipelineSettings.pVertexLayout = nullptr;
+           // pipelineSettings.pBlendState = &blendStateDesc;
+            addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
+            return true;
+        });
+
+       
         m_visibilityBufferPass.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
             VertexLayout vertexLayout = {};
             vertexLayout.mBindingCount = 1;
