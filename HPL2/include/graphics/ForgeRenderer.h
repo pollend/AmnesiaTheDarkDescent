@@ -103,6 +103,7 @@ namespace hpl {
         /**
         * tracks the resources used by a single command buffer
         */
+        //TODO: transiation this to Frame.h
         struct Frame {
         public:
             uint32_t m_currentFrame = 0;
@@ -125,6 +126,11 @@ namespace hpl {
             inline void pushResource(const T& ele) {
                 m_resourcePool->Push(ele);
             }
+
+            inline uint32_t FrameCount() {
+                return m_currentFrame;
+            }
+
             inline uint32_t index() {
                 return m_frameIndex;
             }

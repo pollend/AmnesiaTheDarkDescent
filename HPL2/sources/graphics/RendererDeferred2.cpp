@@ -1466,8 +1466,8 @@ namespace hpl {
 
         auto* forgeRenderer = Interface<ForgeRenderer>::Get();
         auto* graphicsAllocator = Interface<GraphicsAllocator>::Get();
-        if (frame.m_currentFrame != m_activeFrame) {
-            m_objectIndex = 0;
+
+        if (m_resetHandler.Check(frame)) {
             m_sceneTexture2DPool.reset([&](BindlessDescriptorPool::Action action, uint32_t slot, SharedTexture& texture) {
                 std::array<DescriptorData, 1> params = { DescriptorData{
                     .pName = "sceneTextures",
@@ -1479,19 +1479,29 @@ namespace hpl {
                     forgeRenderer->Rend(), 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle, params.size(), params.data());
             });
             m_sceneTextureCubePool.reset([&](BindlessDescriptorPool::Action action, uint32_t slot, SharedTexture& texture) {
-                // std::array<DescriptorData, 1> params = { DescriptorData{
-                //     .pName = "sceneCubeTextures",
-                //     .mCount = 1,
-                //     .mArrayOffset = slot,
-                //     .ppTextures = (action == TextureDescriptorPool::Action::UpdateSlot ? &texture.m_handle :
-                //     &m_emptyTextureCube.m_handle) } };
-                // updateDescriptorSet(
-                //     forgeRenderer->Rend(), 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle, params.size(), params.data());
+                std::array<DescriptorData, 1> params = { DescriptorData{
+                    .pName = "sceneCubeTextures",
+                    .mCount = 1,
+                    .mArrayOffset = slot,
+                    .ppTextures =
+                        (action == BindlessDescriptorPool::Action::UpdateSlot ? &texture.m_handle : &m_emptyTextureCube.m_handle) } };
+                updateDescriptorSet(
+                    forgeRenderer->Rend(), 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle, params.size(), params.data());
             });
-            m_sceneTransientImage2DPool.reset(frame);
+            m_sceneTransientImage2DPool.reset(frame);  // this is bad need something different ...
+        }
+
+        auto& frameVars = m_variables.Fetch(frame, [&](TransientFrameVars& vars) {
+            vars.m_objectIndex = 0;
+            vars.m_indirectIndex = 0;
+            vars.m_particleIndex = 0;
+            vars.m_objectSlotIndex.clear();
+        });
+
+        if (frame.m_currentFrame != m_activeFrame) {
+            m_objectIndex = 0;
             m_objectDescriptorLookup.clear();
             m_indirectDrawIndex = 0;
-            m_objectIndex = 0;
             m_activeFrame = frame.m_currentFrame;
         }
 
@@ -1699,8 +1709,7 @@ namespace hpl {
 
         std::vector<DecalArg> decalIndirectArgs;
         std::vector<TranslucentArgs> translucenctArgs;
-        std::vector<cRendererDeferred2::FogRendererData> fogRenderData =
-            detail::createFogRenderData(m_rendererList.GetFogAreas(), apFrustum);
+        std::vector<cRendererDeferred2::FogRendererData> fogRenderData = detail::createFogRenderData(m_rendererList.GetFogAreas(), apFrustum);
 
         RangeSubsetAlloc indirectAllocSession(m_indirectDrawIndex);
         {
@@ -1813,7 +1822,6 @@ namespace hpl {
                         };
                 };
 
-            uint32_t particleIndex = 0;
             for (auto& renderable : m_rendererList.GetRenderableItems(eRenderListType_Translucent)) {
                 cMaterial* material = renderable->GetMaterial();
                 if (material == nullptr) {
@@ -1838,7 +1846,7 @@ namespace hpl {
                     auto& sharedMaterial = resolveResourceMaterial(material);
 
                     BufferUpdateDesc updateDesc = { m_particleBuffer[frame.m_frameIndex].m_handle,
-                                                    particleIndex * sizeof(resource::SceneParticle) };
+                                                    frameVars.m_particleIndex * sizeof(resource::SceneParticle) };
                     beginUpdateResource(&updateDesc);
                     auto* sceneParticle = static_cast<resource::SceneParticle*>(updateDesc.pMappedData);
                     sceneParticle->diffuseTextureIndex = sharedMaterial.m_textureHandles[eMaterialTexture_Diffuse];
@@ -1859,20 +1867,20 @@ namespace hpl {
                         renderable,
                         false,
                         false,
-                        particleIndex,
+                        frameVars.m_particleIndex++,
                         packet.m_unified.m_numIndices,
                         packet.m_unified.m_subAllocation->indexOffset(),
                         packet.m_unified.m_subAllocation->vertexOffset(),
                     });
-                    particleIndex++;
                 } else {
                     const bool isRefraction = iRenderer::GetRefractionEnabled() && material->HasRefraction();
                     const bool isReflection = material->HasWorldReflection() && renderable->GetRenderType() == eRenderableType_SubMesh &&
                         mpCurrentSettings->mbRenderWorldReflection;
                     const auto cubeMap = material->GetImage(eMaterialTexture_CubeMap);
 
-                    uint32_t uid = folly::hash::fnv32_buf(
-                        reinterpret_cast<const char*>(&renderable), sizeof(void*), folly::hash::fnv32_buf(&modelMat, sizeof(Matrix4)));
+                    
+                    //uint32_t uid = folly::hash::fnv32_buf(
+                    //    reinterpret_cast<const char*>(&renderable), sizeof(void*), folly::hash::fnv32_buf(&modelMat, sizeof(Matrix4)));
                     if (cubeMap && !isRefraction) {
                         translucenctArgs.push_back({
                             TranslucentDrawType::TranslucencyIllumination,

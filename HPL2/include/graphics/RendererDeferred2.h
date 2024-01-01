@@ -41,6 +41,7 @@
 #include <graphics/RenderTarget.h>
 #include <graphics/Renderable.h>
 #include <graphics/Renderer.h>
+#include <graphics/Frame.h>
 #include <math/MathTypes.h>
 
 #include <Common_3/Graphics/Interfaces/IGraphics.h>
@@ -269,11 +270,6 @@ namespace hpl {
         SharedShader m_translucencyIlluminationShaderAlpha;
         SharedShader m_translucencyIlluminationShaderPremulAlpha;
 
-        struct DisableEnableDepthPipelines {
-            SharedPipeline m_enableDepth;
-            SharedPipeline m_disableDepth;
-        };
-
         struct BlendPipelines {
             SharedPipeline m_pipelineBlendAdd;
             SharedPipeline m_pipelineBlendMul;
@@ -315,6 +311,17 @@ namespace hpl {
         BlendPipelines m_translucencyIlluminationPiplineNoDepth;
 
         CopyTextureSubpass4 m_copySubpass;
+
+
+        // variables that are persistent for the frame
+        struct TransientFrameVars {
+            folly::F14ValueMap<iRenderable*, uint32_t> m_objectSlotIndex;
+            uint32_t m_objectIndex = 0;
+            uint32_t m_indirectIndex = 0;
+            uint32_t m_particleIndex = 0;
+        };
+        ResetFrameHandler m_resetHandler;
+        TransientFrameVariable<TransientFrameVars> m_variables;
 
         bool m_supportIndirectRootConstant = false;
     };
